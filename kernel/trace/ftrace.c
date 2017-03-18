@@ -1071,7 +1071,7 @@ struct ftrace_func_probe {
 	unsigned long		flags;
 	unsigned long		ip;
 	void			*data;
-	struct list_head	free_list;
+	struct rcu_head		rcu;
 };
 
 struct ftrace_func_entry {
@@ -3062,27 +3062,28 @@ static void __disable_ftrace_function_probe(void)
 }
 
 
-static void ftrace_free_entry(struct ftrace_func_probe *entry)
+static void ftrace_free_entry_rcu(struct rcu_head *rhp)
 {
+	struct ftrace_func_probe *entry =
+		container_of(rhp, struct ftrace_func_probe, rcu);
+
 	if (entry->ops->free)
-		entry->ops->free(entry->ops, entry->ip, &entry->data);
+		entry->ops->free(&entry->data);
 	kfree(entry);
 }
+
 
 int
 register_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 			      void *data)
 {
 	struct ftrace_func_probe *entry;
-	struct ftrace_hash **orig_hash = &trace_probe_ops.filter_hash;
-	struct ftrace_hash *hash;
 	struct ftrace_page *pg;
 	struct dyn_ftrace *rec;
 	int type, len, not;
 	unsigned long key;
 	int count = 0;
 	char *search;
-	int ret;
 
 	type = filter_parse_regex(glob, strlen(glob), &search, &not);
 	len = strlen(search);
@@ -3093,16 +3094,8 @@ register_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 
 	mutex_lock(&ftrace_lock);
 
-	hash = alloc_and_copy_ftrace_hash(FTRACE_HASH_DEFAULT_BITS, *orig_hash);
-	if (!hash) {
-		count = -ENOMEM;
+	if (unlikely(ftrace_disabled))
 		goto out_unlock;
-	}
-
-	if (unlikely(ftrace_disabled)) {
-		count = -ENODEV;
-		goto out_unlock;
-	}
 
 	do_for_each_ftrace_rec(pg, rec) {
 
@@ -3126,19 +3119,12 @@ register_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 		 * for each function we find. We call the callback
 		 * to give the caller an opportunity to do so.
 		 */
-		if (ops->init) {
-			if (ops->init(ops, rec->ip, &entry->data) < 0) {
+		if (ops->callback) {
+			if (ops->callback(rec->ip, &entry->data) < 0) {
 				/* caller does not like this func */
 				kfree(entry);
 				continue;
 			}
-		}
-
-		ret = enter_record(hash, rec, 0);
-		if (ret < 0) {
-			kfree(entry);
-			count = ret;
-			goto out_unlock;
 		}
 
 		entry->ops = ops;
@@ -3148,16 +3134,10 @@ register_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 		hlist_add_head_rcu(&entry->node, &ftrace_func_hash[key]);
 
 	} while_for_each_ftrace_rec();
-
-	ret = ftrace_hash_move(&trace_probe_ops, 1, orig_hash, hash);
-	if (ret < 0)
-		count = ret;
-
 	__enable_ftrace_function_probe();
 
  out_unlock:
 	mutex_unlock(&ftrace_lock);
-	free_ftrace_hash(hash);
 
 	return count;
 }
@@ -3171,12 +3151,7 @@ static void
 __unregister_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 				  void *data, int flags)
 {
-	struct ftrace_func_entry *rec_entry;
 	struct ftrace_func_probe *entry;
-	struct ftrace_func_probe *p;
-	struct ftrace_hash **orig_hash = &trace_probe_ops.filter_hash;
-	struct list_head free_list;
-	struct ftrace_hash *hash;
 	struct hlist_node *tmp;
 	char str[KSYM_SYMBOL_LEN];
 	int type = MATCH_FULL;
@@ -3197,14 +3172,6 @@ __unregister_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 	}
 
 	mutex_lock(&ftrace_lock);
-
-	hash = alloc_and_copy_ftrace_hash(FTRACE_HASH_DEFAULT_BITS, *orig_hash);
-	if (!hash)
-		/* Hmm, should report this somehow */
-		goto out_unlock;
-
-	INIT_LIST_HEAD(&free_list);
-
 	for (i = 0; i < FTRACE_FUNC_HASHSIZE; i++) {
 		struct hlist_head *hhd = &ftrace_func_hash[i];
 
@@ -3225,30 +3192,12 @@ __unregister_ftrace_function_probe(char *glob, struct ftrace_probe_ops *ops,
 					continue;
 			}
 
-			rec_entry = ftrace_lookup_ip(hash, entry->ip);
-			/* It is possible more than one entry had this ip */
-			if (rec_entry)
-				free_hash_entry(hash, rec_entry);
-
 			hlist_del_rcu(&entry->node);
-			list_add(&entry->free_list, &free_list);
+			call_rcu_sched(&entry->rcu, ftrace_free_entry_rcu);
 		}
 	}
 	__disable_ftrace_function_probe();
-	/*
-	 * Remove after the disable is called. Otherwise, if the last
-	 * probe is removed, a null hash means *all enabled*.
-	 */
-	ftrace_hash_move(&trace_probe_ops, 1, orig_hash, hash);
-	synchronize_sched();
-	list_for_each_entry_safe(entry, p, &free_list, free_list) {
-		list_del(&entry->free_list);
-		ftrace_free_entry(entry);
-	}
-		
- out_unlock:
 	mutex_unlock(&ftrace_lock);
-	free_ftrace_hash(hash);
 }
 
 void

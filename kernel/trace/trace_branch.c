@@ -32,7 +32,6 @@ probe_likely_condition(struct ftrace_branch_data *f, int val, int expect)
 {
 	struct ftrace_event_call *call = &event_branch;
 	struct trace_array *tr = branch_tracer;
-	struct trace_array_cpu *data;
 	struct ring_buffer_event *event;
 	struct trace_branch *entry;
 	struct ring_buffer *buffer;
@@ -52,12 +51,11 @@ probe_likely_condition(struct ftrace_branch_data *f, int val, int expect)
 
 	local_irq_save(flags);
 	cpu = raw_smp_processor_id();
-	data = per_cpu_ptr(tr->trace_buffer.data, cpu);
-	if (atomic_inc_return(&data->disabled) != 1)
+	if (atomic_inc_return(&tr->data[cpu]->disabled) != 1)
 		goto out;
 
 	pc = preempt_count();
-	buffer = tr->trace_buffer.buffer;
+	buffer = tr->buffer;
 	event = trace_buffer_lock_reserve(buffer, TRACE_BRANCH,
 					  sizeof(*entry), flags, pc);
 	if (!event)
@@ -82,7 +80,7 @@ probe_likely_condition(struct ftrace_branch_data *f, int val, int expect)
 		__buffer_unlock_commit(buffer, event);
 
  out:
-	atomic_dec(&data->disabled);
+	atomic_dec(&tr->data[cpu]->disabled);
 	local_irq_restore(flags);
 }
 

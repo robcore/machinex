@@ -13,11 +13,6 @@
 #include <linux/trace_seq.h>
 #include <linux/ftrace_event.h>
 
-#ifdef CONFIG_FTRACE_SYSCALLS
-#include <asm/unistd.h>		/* For NR_SYSCALLS	     */
-#include <asm/syscall.h>	/* some archs define it here */
-#endif
-
 enum trace_type {
 	__TRACE_FIRST_TYPE = 0,
 
@@ -34,7 +29,6 @@ enum trace_type {
 	TRACE_GRAPH_ENT,
 	TRACE_USER_STACK,
 	TRACE_BLK,
-	TRACE_BPUTS,
 
 	__TRACE_LAST_TYPE,
 };
@@ -133,21 +127,12 @@ enum trace_flag_type {
 
 #define TRACE_BUF_SIZE		1024
 
-struct trace_array;
-
-struct trace_cpu {
-	struct trace_array	*tr;
-	struct dentry		*dir;
-	int			cpu;
-};
-
 /*
  * The CPU trace array - it consists of thousands of trace entries
  * plus some other descriptor data: (for example which task started
  * the trace, etc.)
  */
 struct trace_array_cpu {
-	struct trace_cpu	trace_cpu;
 	atomic_t		disabled;
 	void			*buffer_page;	/* ring buffer spare */
 
@@ -166,82 +151,19 @@ struct trace_array_cpu {
 	char			comm[TASK_COMM_LEN];
 };
 
-struct tracer;
-
-struct trace_buffer {
-	struct trace_array		*tr;
-	struct ring_buffer		*buffer;
-	struct trace_array_cpu __percpu	*data;
-	cycle_t				time_start;
-	int				cpu;
-};
-
 /*
  * The trace array - an array of per-CPU trace arrays. This is the
  * highest level data structure that individual tracers deal with.
  * They have on/off state as well:
  */
 struct trace_array {
-	struct list_head	list;
-	char			*name;
-	struct trace_buffer	trace_buffer;
-#ifdef CONFIG_TRACER_MAX_TRACE
-	/*
-	 * The max_buffer is used to snapshot the trace when a maximum
-	 * latency is reached, or when the user initiates a snapshot.
-	 * Some tracers will use this to store a maximum trace while
-	 * it continues examining live traces.
-	 *
-	 * The buffers for the max_buffer are set up the same as the trace_buffer
-	 * When a snapshot is taken, the buffer of the max_buffer is swapped
-	 * with the buffer of the trace_buffer and the buffers are reset for
-	 * the trace_buffer so the tracing can continue.
-	 */
-	struct trace_buffer	max_buffer;
-	bool			allocated_snapshot;
-#endif
+	struct ring_buffer	*buffer;
+	int			cpu;
 	int			buffer_disabled;
-	struct trace_cpu	trace_cpu;	/* place holder */
-#ifdef CONFIG_FTRACE_SYSCALLS
-	int			sys_refcount_enter;
-	int			sys_refcount_exit;
-	DECLARE_BITMAP(enabled_enter_syscalls, NR_syscalls);
-	DECLARE_BITMAP(enabled_exit_syscalls, NR_syscalls);
-#endif
-	int			stop_count;
-	int			clock_id;
-	struct tracer		*current_trace;
-	unsigned int		flags;
-	raw_spinlock_t		start_lock;
-	struct dentry		*dir;
-	struct dentry		*options;
-	struct dentry		*percpu_dir;
-	struct dentry		*event_dir;
-	struct list_head	systems;
-	struct list_head	events;
+	cycle_t			time_start;
 	struct task_struct	*waiter;
-	int			ref;
+	struct trace_array_cpu	*data[NR_CPUS];
 };
-
-enum {
-	TRACE_ARRAY_FL_GLOBAL	= (1 << 0)
-};
-
-extern struct list_head ftrace_trace_arrays;
-
-/*
- * The global tracer (top) should be the first trace array added,
- * but we check the flag anyway.
- */
-static inline struct trace_array *top_trace_array(void)
-{
-	struct trace_array *tr;
-
-	tr = list_entry(ftrace_trace_arrays.prev,
-			typeof(*tr), list);
-	WARN_ON(!(tr->flags & TRACE_ARRAY_FL_GLOBAL));
-	return tr;
-}
 
 #define FTRACE_CMP_TYPE(var, type) \
 	__builtin_types_compatible_p(typeof(var), type *)
@@ -278,7 +200,6 @@ extern void __ftrace_bad_type(void);
 		IF_ASSIGN(var, ent, struct userstack_entry, TRACE_USER_STACK);\
 		IF_ASSIGN(var, ent, struct print_entry, TRACE_PRINT);	\
 		IF_ASSIGN(var, ent, struct bprint_entry, TRACE_BPRINT);	\
-		IF_ASSIGN(var, ent, struct bputs_entry, TRACE_BPUTS);	\
 		IF_ASSIGN(var, ent, struct trace_mmiotrace_rw,		\
 			  TRACE_MMIO_RW);				\
 		IF_ASSIGN(var, ent, struct trace_mmiotrace_map,		\
@@ -368,11 +289,8 @@ struct tracer {
 	struct tracer		*next;
 	struct tracer_flags	*flags;
 	bool			print_max;
-	bool			enabled;
-#ifdef CONFIG_TRACER_MAX_TRACE
 	bool			use_max_tr;
-#endif
-	bool			allocated_snapshot;
+	bool			enabled;
 };
 
 
@@ -401,6 +319,8 @@ struct tracer {
 #define trace_recursion_clear(bit)	do { (current)->trace_recursion &= ~(bit); } while (0)
 #define trace_recursion_test(bit)	((current)->trace_recursion & (bit))
 
+#define TRACE_PIPE_ALL_CPU	-1
+
 static inline struct ring_buffer_iter *
 trace_buffer_iter(struct trace_iterator *iter, int cpu)
 {
@@ -411,10 +331,10 @@ trace_buffer_iter(struct trace_iterator *iter, int cpu)
 
 int tracer_init(struct tracer *t, struct trace_array *tr);
 int tracing_is_enabled(void);
-void tracing_reset(struct trace_buffer *buf, int cpu);
-void tracing_reset_online_cpus(struct trace_buffer *buf);
+void tracing_reset(struct trace_array *tr, int cpu);
+void tracing_reset_online_cpus(struct trace_array *tr);
 void tracing_reset_current(int cpu);
-void tracing_reset_all_online_cpus(void);
+void tracing_reset_current_online_cpus(void);
 int tracing_open_generic(struct inode *inode, struct file *filp);
 struct dentry *trace_create_file(const char *name,
 				 umode_t mode,
@@ -422,7 +342,6 @@ struct dentry *trace_create_file(const char *name,
 				 void *data,
 				 const struct file_operations *fops);
 
-struct dentry *tracing_init_dentry_tr(struct trace_array *tr);
 struct dentry *tracing_init_dentry(void);
 
 struct ring_buffer_event;
@@ -556,7 +475,7 @@ extern int DYN_FTRACE_TEST_NAME(void);
 #define DYN_FTRACE_TEST_NAME2 trace_selftest_dynamic_test_func2
 extern int DYN_FTRACE_TEST_NAME2(void);
 
-extern bool ring_buffer_expanded;
+extern int ring_buffer_expanded;
 extern bool tracing_selftest_disabled;
 DECLARE_PER_CPU(int, ftrace_cpu_disabled);
 
@@ -592,12 +511,12 @@ trace_array_vprintk(struct trace_array *tr,
 		    unsigned long ip, const char *fmt, va_list args);
 int trace_array_printk(struct trace_array *tr,
 		       unsigned long ip, const char *fmt, ...);
-int trace_array_printk_buf(struct ring_buffer *buffer,
-			   unsigned long ip, const char *fmt, ...);
 void trace_printk_seq(struct trace_seq *s);
 enum print_line_t print_trace_line(struct trace_iterator *iter);
 
 extern unsigned long trace_flags;
+
+extern int trace_clock_id;
 
 /* Standard output formatting function used for function return traces */
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
@@ -806,8 +725,8 @@ enum {
 
 struct ftrace_event_field {
 	struct list_head	link;
-	const char		*name;
-	const char		*type;
+	char			*name;
+	char			*type;
 	int			filter_type;
 	int			offset;
 	int			size;
@@ -825,17 +744,10 @@ struct event_filter {
 struct event_subsystem {
 	struct list_head	list;
 	const char		*name;
+	struct dentry		*entry;
 	struct event_filter	*filter;
+	int			nr_events;
 	int			ref_count;
-};
-
-struct ftrace_subsystem_dir {
-	struct list_head		list;
-	struct event_subsystem		*subsystem;
-	struct trace_array		*tr;
-	struct dentry			*entry;
-	int				ref_count;
-	int				nr_events;
 };
 
 #define FILTER_PRED_INVALID	((unsigned short)-1)
@@ -887,20 +799,22 @@ struct filter_pred {
 	unsigned short		right;
 };
 
+extern struct list_head ftrace_common_fields;
+
 extern enum regex_type
 filter_parse_regex(char *buff, int len, char **search, int *not);
 extern void print_event_filter(struct ftrace_event_call *call,
 			       struct trace_seq *s);
 extern int apply_event_filter(struct ftrace_event_call *call,
 			      char *filter_string);
-extern int apply_subsystem_event_filter(struct ftrace_subsystem_dir *dir,
+extern int apply_subsystem_event_filter(struct event_subsystem *system,
 					char *filter_string);
 extern void print_subsystem_event_filter(struct event_subsystem *system,
 					 struct trace_seq *s);
 extern int filter_assign_type(const char *type);
 
-struct ftrace_event_field *
-trace_find_event_field(struct ftrace_event_call *call, char *name);
+struct list_head *
+trace_get_fields(struct ftrace_event_call *event_call);
 
 static inline int
 filter_check_discard(struct ftrace_event_call *call, void *rec,
@@ -917,8 +831,6 @@ filter_check_discard(struct ftrace_event_call *call, void *rec,
 }
 
 extern void trace_event_enable_cmd_record(bool enable);
-extern int event_trace_add_tracer(struct dentry *parent, struct trace_array *tr);
-extern int event_trace_del_tracer(struct trace_array *tr);
 
 extern struct mutex event_mutex;
 extern struct list_head ftrace_events;
@@ -927,24 +839,13 @@ extern const char *__start___trace_bprintk_fmt[];
 extern const char *__stop___trace_bprintk_fmt[];
 
 int trace_keep_overwrite(struct tracer *tracer, u32 mask, int set);
-int set_tracer_flag(struct trace_array *tr, unsigned int mask, int enabled);
+int set_tracer_flag(unsigned int mask, int enabled);
 
 extern const char *__start___tracepoint_str[];
 extern const char *__stop___tracepoint_str[];
 
 void trace_printk_init_buffers(void);
 void trace_printk_start_comm(void);
-
-/*
- * Normal trace_printk() and friends allocates special buffers
- * to do the manipulation, as well as saves the print formats
- * into sections to display. But the trace infrastructure wants
- * to use these without the added overhead at the price of being
- * a bit slower (used mainly for warnings, where we don't care
- * about performance). The internal_trace_puts() is for such
- * a purpose.
- */
-#define internal_trace_puts(str) __trace_puts(_THIS_IP_, str, strlen(str))
 
 #undef FTRACE_ENTRY
 #define FTRACE_ENTRY(call, struct_name, id, tstruct, print, filter)	\

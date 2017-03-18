@@ -8,7 +8,6 @@
 #include <linux/perf_event.h>
 
 struct trace_array;
-struct trace_buffer;
 struct tracer;
 struct dentry;
 
@@ -39,12 +38,6 @@ const char *ftrace_print_symbols_seq_u64(struct trace_seq *p,
 const char *ftrace_print_hex_seq(struct trace_seq *p,
 				 const unsigned char *buf, int len);
 
-struct trace_iterator;
-struct trace_event;
-
-int ftrace_raw_output_prep(struct trace_iterator *iter,
-			   struct trace_event *event);
-
 /*
  * The trace entry - the most basic unit of tracing. This is what
  * is printed in the end as a single line in the trace output, such as:
@@ -68,7 +61,6 @@ struct trace_entry {
 struct trace_iterator {
 	struct trace_array	*tr;
 	struct tracer		*trace;
-	struct trace_buffer	*trace_buffer;
 	void			*private;
 	int			cpu_file;
 	struct mutex		mutex;
@@ -79,9 +71,6 @@ struct trace_iterator {
 	struct trace_seq	tmp_seq;
 
 	cpumask_var_t		started;
-
-	/* it's true when current open file is snapshot */
-	bool			snapshot;
 
 	/* The below is zeroed out in pipe_read */
 	struct trace_seq	seq;
@@ -104,6 +93,8 @@ enum trace_iter_flags {
 	TRACE_FILE_TIME_IN_NS	= 4,
 };
 
+
+struct trace_event;
 
 typedef enum print_line_t (*trace_print_func)(struct trace_iterator *iter,
 				      int flags, struct trace_event *event);
@@ -136,13 +127,6 @@ enum print_line_t {
 void tracing_generic_entry_update(struct trace_entry *entry,
 				  unsigned long flags,
 				  int pc);
-struct ftrace_event_file;
-
-struct ring_buffer_event *
-trace_event_buffer_lock_reserve(struct ring_buffer **current_buffer,
-				struct ftrace_event_file *ftrace_file,
-				int type, unsigned long len,
-				unsigned long flags, int pc);
 struct ring_buffer_event *
 trace_current_buffer_lock_reserve(struct ring_buffer **current_buffer,
 				  int type, unsigned long len,
@@ -201,7 +185,6 @@ enum {
 	TRACE_EVENT_FL_CAP_ANY_BIT,
 	TRACE_EVENT_FL_NO_SET_FILTER_BIT,
 	TRACE_EVENT_FL_IGNORE_ENABLE_BIT,
-	TRACE_EVENT_FL_WAS_ENABLED_BIT,
 };
 
 /*
@@ -210,16 +193,12 @@ enum {
  *  CAP_ANY	  - Any user can enable for perf
  *  NO_SET_FILTER - Set when filter has error and is to be ignored
  *  IGNORE_ENABLE - For ftrace internal events, do not enable with debugfs file
- *  WAS_ENABLED   - Set and stays set when an event was ever enabled
- *                    (used for module unloading, if a module event is enabled,
- *                     it is best to clear the buffers that used it).
  */
 enum {
 	TRACE_EVENT_FL_FILTERED		= (1 << TRACE_EVENT_FL_FILTERED_BIT),
 	TRACE_EVENT_FL_CAP_ANY		= (1 << TRACE_EVENT_FL_CAP_ANY_BIT),
 	TRACE_EVENT_FL_NO_SET_FILTER	= (1 << TRACE_EVENT_FL_NO_SET_FILTER_BIT),
 	TRACE_EVENT_FL_IGNORE_ENABLE	= (1 << TRACE_EVENT_FL_IGNORE_ENABLE_BIT),
-	TRACE_EVENT_FL_WAS_ENABLED	= (1 << TRACE_EVENT_FL_WAS_ENABLED_BIT),
 };
 
 struct ftrace_event_call {
@@ -253,23 +232,16 @@ struct ftrace_subsystem_dir;
 enum {
 	FTRACE_EVENT_FL_ENABLED_BIT,
 	FTRACE_EVENT_FL_RECORDED_CMD_BIT,
-	FTRACE_EVENT_FL_SOFT_MODE_BIT,
-	FTRACE_EVENT_FL_SOFT_DISABLED_BIT,
 };
 
 /*
  * Ftrace event file flags:
  *  ENABLED	  - The event is enabled
  *  RECORDED_CMD  - The comms should be recorded at sched_switch
- *  SOFT_MODE     - The event is enabled/disabled by SOFT_DISABLED
- *  SOFT_DISABLED - When set, do not trace the event (even though its
- *                   tracepoint may be enabled)
  */
 enum {
 	FTRACE_EVENT_FL_ENABLED		= (1 << FTRACE_EVENT_FL_ENABLED_BIT),
 	FTRACE_EVENT_FL_RECORDED_CMD	= (1 << FTRACE_EVENT_FL_RECORDED_CMD_BIT),
-	FTRACE_EVENT_FL_SOFT_MODE	= (1 << FTRACE_EVENT_FL_SOFT_MODE_BIT),
-	FTRACE_EVENT_FL_SOFT_DISABLED	= (1 << FTRACE_EVENT_FL_SOFT_DISABLED_BIT),
 };
 
 struct ftrace_event_file {
@@ -283,18 +255,22 @@ struct ftrace_event_file {
 	 * 32 bit flags:
 	 *   bit 0:		enabled
 	 *   bit 1:		enabled cmd record
-	 *   bit 2:		enable/disable with the soft disable bit
-	 *   bit 3:		soft disabled
 	 *
-	 * Note: The bits must be set atomically to prevent races
-	 * from other writers. Reads of flags do not need to be in
-	 * sync as they occur in critical sections. But the way flags
-	 * is currently used, these changes do not affect the code
+	 * Changes to flags must hold the event_mutex.
+	 *
+	 * Note: Reads of flags do not hold the event_mutex since
+	 * they occur in critical sections. But the way flags
+	 * is currently used, these changes do no affect the code
 	 * except that when a change is made, it may have a slight
 	 * delay in propagating the changes to other CPUs due to
-	 * caching and such. Which is mostly OK ;-)
+	 * caching and such.
 	 */
-	unsigned long		flags;
+	unsigned int		flags;
+
+#ifdef CONFIG_PERF_EVENTS
+	int				perf_refcount;
+	struct hlist_head __percpu	*perf_events;
+#endif
 };
 
 #define __TRACE_EVENT_FLAGS(name, value)				\
