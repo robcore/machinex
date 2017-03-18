@@ -20,6 +20,7 @@
  *   Authors: Anthony Liguori <aliguori@us.ibm.com>
  */
 
+#include <linux/context_tracking.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/kvm_para.h>
