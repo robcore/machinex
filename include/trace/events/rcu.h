@@ -49,7 +49,7 @@ TRACE_EVENT(rcu_utilization,
  * callbacks to RCU_NEXT_READY_TAIL ("AccReadyCB"), and a CPU
  * accelerating its new callbacks to RCU_WAIT_TAIL ("AccWaitCB").
  */
-TRACE_EVENT(rcu_grace_period,
+TRACE_EVENT(rcu_future_grace_period,
 
 	TP_PROTO(char *rcuname, unsigned long gpnum, char *gpevent),
 
