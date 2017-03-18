@@ -1,0 +1,16 @@
+drivers/cpufreq/cpufreq_arteractive.c
+drivers/input/keyboard/cypress_touchkey_236/cypress-touchkey-236.c
+drivers/input/touchscreen/cyttsp4_mt_common.c
+drivers/input/touchscreen/cyttsp4_mt_common.h
+drivers/input/touchscreen/mxts.c
+drivers/input/touchscreen/mxts_msm8930.c
+drivers/input/touchscreen/mxts_sec_msm8930.c
+drivers/input/touchscreen/rmi_f54.c
+drivers/input/touchscreen/rmi_fw_update.c
+drivers/input/touchscreen/synaptics_i2c_rmi.c
+drivers/input/touchscreen/synaptics_i2c_rmi.h
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.c
+drivers/input/touchscreen/synaptics_i2c_rmi_msm8930.h
+include/linux/i2c/cypress_touchkey.h
+include/linux/i2c/mxts.h
+include/linux/i2c/mxts_msm8930.h

@@ -12,8 +12,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * along with this program; if not, you can access it online at
+ * http://www.gnu.org/licenses/gpl-2.0.html.
  *
  * Copyright IBM Corporation, 2008
  *
@@ -209,38 +209,6 @@ static const struct file_operations rcuexp_fops = {
 	.release = single_release,
 };
 
-static int show_rcuexp(struct seq_file *m, void *v)
-{
-	struct rcu_state *rsp = (struct rcu_state *)m->private;
-
-	seq_printf(m, "s=%lu d=%lu w=%lu tf=%lu wd1=%lu wd2=%lu n=%lu sc=%lu dt=%lu dl=%lu dx=%lu\n",
-		   atomic_long_read(&rsp->expedited_start),
-		   atomic_long_read(&rsp->expedited_done),
-		   atomic_long_read(&rsp->expedited_wrap),
-		   atomic_long_read(&rsp->expedited_tryfail),
-		   atomic_long_read(&rsp->expedited_workdone1),
-		   atomic_long_read(&rsp->expedited_workdone2),
-		   atomic_long_read(&rsp->expedited_normal),
-		   atomic_long_read(&rsp->expedited_stoppedcpus),
-		   atomic_long_read(&rsp->expedited_done_tries),
-		   atomic_long_read(&rsp->expedited_done_lost),
-		   atomic_long_read(&rsp->expedited_done_exit));
-	return 0;
-}
-
-static int rcuexp_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, show_rcuexp, inode->i_private);
-}
-
-static const struct file_operations rcuexp_fops = {
-	.owner = THIS_MODULE,
-	.open = rcuexp_open,
-	.read = seq_read,
-	.llseek = no_llseek,
-	.release = seq_release,
-};
-
 #ifdef CONFIG_RCU_BOOST
 
 static void print_one_rcu_node_boost(struct seq_file *m, struct rcu_node *rnp)
@@ -305,7 +273,7 @@ static void print_one_rcu_state(struct seq_file *m, struct rcu_state *rsp)
 	seq_printf(m, "nfqs=%lu/nfqsng=%lu(%lu) fqlh=%lu oqlen=%ld/%ld\n",
 		   rsp->n_force_qs, rsp->n_force_qs_ngp,
 		   rsp->n_force_qs - rsp->n_force_qs_ngp,
-		   rsp->n_force_qs_lh, rsp->qlen_lazy, rsp->qlen);
+		   ACCESS_ONCE(rsp->n_force_qs_lh), rsp->qlen_lazy, rsp->qlen);
 	for (rnp = &rsp->node[0]; rnp - &rsp->node[0] < rcu_num_nodes; rnp++) {
 		if (rnp->level != level) {
 			seq_puts(m, "\n");
@@ -396,9 +364,10 @@ static void print_one_rcu_pending(struct seq_file *m, struct rcu_data *rdp)
 		   rdp->n_rp_report_qs,
 		   rdp->n_rp_cb_ready,
 		   rdp->n_rp_cpu_needs_gp);
-	seq_printf(m, "gpc=%ld gps=%ld nn=%ld\n",
+	seq_printf(m, "gpc=%ld gps=%ld nn=%ld ndw%ld\n",
 		   rdp->n_rp_gp_completed,
 		   rdp->n_rp_gp_started,
+		   rdp->n_rp_nocb_defer_wakeup,
 		   rdp->n_rp_need_nothing);
 }
 
@@ -478,11 +447,6 @@ static int __init rcutree_trace_init(void)
 		if (!retval)
 			goto free_out;
 
-		retval = debugfs_create_file("rcuexp", 0444,
-				rspdir, rsp, &rcuexp_fops);
-		if (!retval)
-			goto free_out;
-
 		retval = debugfs_create_file("rcu_pending", 0444,
 				rspdir, rsp, &rcu_pending_fops);
 		if (!retval)
@@ -535,5 +499,3 @@ module_exit(rcutree_trace_cleanup);
 MODULE_AUTHOR("Paul E. McKenney");
 MODULE_DESCRIPTION("Read-Copy Update tracing for hierarchical implementation");
 MODULE_LICENSE("GPL");
-
-
