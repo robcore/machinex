@@ -378,6 +378,7 @@ void cpufreq_notify_transition(struct cpufreq_policy *policy,
 {
 	for_each_cpu(freqs->cpu, policy->cpus)
 		__cpufreq_notify_transition(policy, freqs, state);
+}
 /**
  * cpufreq_notify_utilization - notify CPU userspace about CPU utilization
  * change
@@ -1540,7 +1541,7 @@ static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 	freqs.new = new_freq;
 	spin_lock_irqsave(&cpufreq_driver_lock, flags);
 	policy = per_cpu(cpufreq_cpu_data, cpu);
-	spin_lock_irqrestore(&cpufreq_driver_lock, flags);
+	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
