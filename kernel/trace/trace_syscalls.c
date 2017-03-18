@@ -228,7 +228,7 @@ static void __init free_syscall_print_fmt(struct ftrace_event_call *call)
 		kfree(call->print_fmt);
 }
 
-static int syscall_enter_define_fields(struct ftrace_event_call *call)
+static int __init syscall_enter_define_fields(struct ftrace_event_call *call)
 {
 	struct syscall_trace_enter trace;
 	struct syscall_metadata *meta = call->data;
@@ -251,7 +251,7 @@ static int syscall_enter_define_fields(struct ftrace_event_call *call)
 	return ret;
 }
 
-static int syscall_exit_define_fields(struct ftrace_event_call *call)
+static int __init syscall_exit_define_fields(struct ftrace_event_call *call)
 {
 	struct syscall_trace_exit trace;
 	int ret;
