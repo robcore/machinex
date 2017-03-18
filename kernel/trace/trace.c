@@ -5043,6 +5043,9 @@ tracing_stats_read(struct file *filp, char __user *ubuf,
 	cnt = ring_buffer_read_events_cpu(trace_buf->buffer, cpu);
 	trace_seq_printf(s, "read events: %ld\n", cnt);
 
+	cnt = ring_buffer_read_events_cpu(tr->buffer, cpu);
+	trace_seq_printf(s, "read events: %ld\n", cnt);
+
 	count = simple_read_from_buffer(ubuf, count, ppos, s->buffer, s->len);
 
 	kfree(s);
