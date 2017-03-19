@@ -419,7 +419,7 @@ static int posix_cpu_timer_del(struct k_itimer *timer)
 		 * We raced with the reaping of the task.
 		 * The deletion should have cleared us off the list.
 		 */
-		BUG_ON(!list_empty(&timer->it.cpu.entry));
+		WARN_ON_ONCE(!list_empty(&timer->it.cpu.entry));
 	} else {
 		if (timer->it.cpu.firing)
 			ret = TIMER_RETRY;
@@ -664,7 +664,7 @@ static int posix_cpu_timer_set(struct k_itimer *timer, int timer_flags,
 	/*
 	 * Disarm any old timer after extracting its expiry time.
 	 */
-	BUG_ON(!irqs_disabled());
+	WARN_ON_ONCE(!irqs_disabled());
 
 	ret = 0;
 	old_incr = timer->it.cpu.incr;
@@ -1085,7 +1085,7 @@ void posix_cpu_timer_schedule(struct k_itimer *timer)
 	/*
 	 * Now re-arm for the new expiry time.
 	 */
-	BUG_ON(!irqs_disabled());
+	WARN_ON_ONCE(!irqs_disabled());
 	arm_timer(timer);
 	unlock_task_sighand(p, &flags);
 
@@ -1174,7 +1174,7 @@ void run_posix_cpu_timers(struct task_struct *tsk)
 	struct k_itimer *timer, *next;
 	unsigned long flags;
 
-	BUG_ON(!irqs_disabled());
+	WARN_ON_ONCE(!irqs_disabled());
 
 	/*
 	 * The fast path checks that there are no expired thread or thread
@@ -1241,7 +1241,7 @@ void set_process_cpu_timer(struct task_struct *tsk, unsigned int clock_idx,
 {
 	unsigned long long now;
 
-	BUG_ON(clock_idx == CPUCLOCK_SCHED);
+	WARN_ON_ONCE(clock_idx == CPUCLOCK_SCHED);
 	cpu_timer_sample_group(clock_idx, tsk, &now);
 
 	if (oldval) {
