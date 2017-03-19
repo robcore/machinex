@@ -518,7 +518,8 @@ static void reduce_input_current(struct max77693_charger_data *charger, int cur)
 	u8 set_value;
 
 	if ((!charger->is_charging) || mutex_is_locked(&charger->ops_lock) ||
-			(charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS))
+		(!unstable_power_detection) ||
+		(charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS))
 		return;
 	set_reg = MAX77693_CHG_REG_CHG_CNFG_09;
 	if (!max77693_read_reg(charger->max77693->i2c,
@@ -1305,7 +1306,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 			stable_count++;
 		else
 			stable_count = 0;
-		if ((stable_count > 10) && (unstable_power_detection)) {
+		if (stable_count > 10) {
 			pr_debug("%s: irq(%d), chgin(0x%x), chg_dtls(0x%x) prev 0x%x\n",
 					__func__, charger->irq_chgin,
 					chgin_dtls, chg_dtls, prev_chgin_dtls);
@@ -1353,7 +1354,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		if (charger->is_charging) {
 			/* reduce only at CC MODE */
 			if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
-					(chg_dtls == 0x01) && (stable_count > 2) && (unstable_power_detection))
+					(chg_dtls == 0x01) && (stable_count > 2))
 				reduce_input_current(charger, REDUCE_CURRENT_STEP);
 		}
 		prev_chgin_dtls = chgin_dtls;
