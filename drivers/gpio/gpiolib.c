@@ -335,7 +335,7 @@ static ssize_t gpio_value_store(struct device *dev,
 	else {
 		long		value;
 
-		status = strict_strtol(buf, 0, &value);
+		status = kstrtol(buf, 0, &value);
 		if (status == 0) {
 			if (test_bit(FLAG_ACTIVE_LOW, &desc->flags))
 				value = !value;
@@ -561,7 +561,7 @@ static ssize_t gpio_active_low_store(struct device *dev,
 	} else {
 		long		value;
 
-		status = strict_strtol(buf, 0, &value);
+		status = kstrtol(buf, 0, &value);
 		if (status == 0)
 			status = sysfs_set_active_low(desc, dev, value != 0);
 	}
@@ -669,7 +669,7 @@ static ssize_t export_store(struct class *class,
 	long	gpio;
 	int	status;
 
-	status = strict_strtol(buf, 0, &gpio);
+	status = kstrtol(buf, 0, &gpio);
 	if (status < 0)
 		goto done;
 
@@ -703,7 +703,7 @@ static ssize_t unexport_store(struct class *class,
 	long	gpio;
 	int	status;
 
-	status = strict_strtol(buf, 0, &gpio);
+	status = kstrtol(buf, 0, &gpio);
 	if (status < 0)
 		goto done;
 
