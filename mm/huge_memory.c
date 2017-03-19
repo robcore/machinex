@@ -1313,51 +1313,32 @@ out:
 int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 				unsigned long addr, pmd_t pmd, pmd_t *pmdp)
 {
-	struct anon_vma *anon_vma = NULL;
 	struct page *page;
 	unsigned long haddr = addr & HPAGE_PMD_MASK;
-	int page_nid = -1, this_nid = numa_node_id();
 	int target_nid;
-	bool page_locked;
-	bool migrated = false;
+	int current_nid = -1;
+	bool migrated;
 
 	spin_lock(&mm->page_table_lock);
 	if (unlikely(!pmd_same(pmd, *pmdp)))
 		goto out_unlock;
 
 	page = pmd_page(pmd);
-	page_nid = page_to_nid(page);
+	get_page(page);
+	current_nid = page_to_nid(page);
 	count_vm_numa_event(NUMA_HINT_FAULTS);
-	if (page_nid == this_nid)
+	if (current_nid == numa_node_id())
 		count_vm_numa_event(NUMA_HINT_FAULTS_LOCAL);
 
-	/*
-	 * Acquire the page lock to serialise THP migrations but avoid dropping
-	 * page_table_lock if at all possible
-	 */
-	page_locked = trylock_page(page);
 	target_nid = mpol_misplaced(page, vma, haddr);
 	if (target_nid == -1) {
-		/* If the page was locked, there are no parallel migrations */
-		if (page_locked) {
-			unlock_page(page);
-			goto clear_pmdnuma;
-		}
-
-		/* Otherwise wait for potential migrations and retry fault */
-		spin_unlock(&mm->page_table_lock);
-		wait_on_page_locked(page);
-		goto out;
+		put_page(page);
+		goto clear_pmdnuma;
 	}
 
-	/* Page is misplaced, serialise migrations and parallel THP splits */
-	get_page(page);
+	/* Acquire the page lock to serialise THP migrations */
 	spin_unlock(&mm->page_table_lock);
-	if (!page_locked) {
-		lock_page(page);
-		page_locked = true;
-	}
-	anon_vma = page_lock_anon_vma_read(page);
+	lock_page(page);
 
 	/* Confirm the PMD did not change while page_table_lock was released */
 	spin_lock(&mm->page_table_lock);
@@ -1366,24 +1347,21 @@ int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		put_page(page);
 		goto out_unlock;
 	}
+	spin_unlock(&mm->page_table_lock);
 
 	/* Migrate the THP to the requested node */
-	spin_unlock(&mm->page_table_lock);
 	migrated = migrate_misplaced_transhuge_page(mm, vma,
 				pmdp, pmd, addr, page, target_nid);
-	if (migrated)
-		page_nid = target_nid;
-	else
+	if (!migrated)
 		goto check_same;
 
-	goto out;
+	task_numa_fault(target_nid, HPAGE_PMD_NR, true);
+	return 0;
 
 check_same:
 	spin_lock(&mm->page_table_lock);
-	if (unlikely(!pmd_same(pmd, *pmdp))) {
-		page_nid = -1;
+	if (unlikely(!pmd_same(pmd, *pmdp)))
 		goto out_unlock;
-	}
 clear_pmdnuma:
 	pmd = pmd_mknonnuma(pmd);
 	set_pmd_at(mm, haddr, pmdp, pmd);
@@ -1391,14 +1369,8 @@ clear_pmdnuma:
 	update_mmu_cache_pmd(vma, addr, pmdp);
 out_unlock:
 	spin_unlock(&mm->page_table_lock);
-
-out:
-	if (anon_vma)
-		page_unlock_anon_vma_read(anon_vma);
-
-	if (page_nid != -1)
-		task_numa_fault(page_nid, HPAGE_PMD_NR, migrated);
-
+	if (current_nid != -1)
+		task_numa_fault(current_nid, HPAGE_PMD_NR, false);
 	return 0;
 }
 
