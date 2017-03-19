@@ -826,13 +826,11 @@ update_stats_curr_start(struct cfs_rq *cfs_rq, struct sched_entity *se)
 
 #ifdef CONFIG_NUMA_BALANCING
 /*
- * Approximate time to scan a full NUMA task in ms. The task scan period is
- * calculated based on the tasks virtual memory size and
- * numa_balancing_scan_size.
+ * numa task sample period in ms
  */
-unsigned int sysctl_numa_balancing_scan_period_min = 1000;
-unsigned int sysctl_numa_balancing_scan_period_max = 60000;
-unsigned int sysctl_numa_balancing_scan_period_reset = 60000;
+unsigned int sysctl_numa_balancing_scan_period_min = 100;
+unsigned int sysctl_numa_balancing_scan_period_max = 100*50;
+unsigned int sysctl_numa_balancing_scan_period_reset = 100*600;
 
 /* Portion of address space to scan in MB */
 unsigned int sysctl_numa_balancing_scan_size = 256;
@@ -840,212 +838,41 @@ unsigned int sysctl_numa_balancing_scan_size = 256;
 /* Scan @scan_size MB every @scan_period after an initial @scan_delay in ms */
 unsigned int sysctl_numa_balancing_scan_delay = 1000;
 
-static unsigned int task_nr_scan_windows(struct task_struct *p)
-{
-	unsigned long rss = 0;
-	unsigned long nr_scan_pages;
-
-	/*
-	 * Calculations based on RSS as non-present and empty pages are skipped
-	 * by the PTE scanner and NUMA hinting faults should be trapped based
-	 * on resident pages
-	 */
-	nr_scan_pages = sysctl_numa_balancing_scan_size << (20 - PAGE_SHIFT);
-	rss = get_mm_rss(p->mm);
-	if (!rss)
-		rss = nr_scan_pages;
-
-	rss = round_up(rss, nr_scan_pages);
-	return rss / nr_scan_pages;
-}
-
-/* For sanitys sake, never scan more PTEs than MAX_SCAN_WINDOW MB/sec. */
-#define MAX_SCAN_WINDOW 2560
-
-static unsigned int task_scan_min(struct task_struct *p)
-{
-	unsigned int scan, floor;
-	unsigned int windows = 1;
-
-	if (sysctl_numa_balancing_scan_size < MAX_SCAN_WINDOW)
-		windows = MAX_SCAN_WINDOW / sysctl_numa_balancing_scan_size;
-	floor = 1000 / windows;
-
-	scan = sysctl_numa_balancing_scan_period_min / task_nr_scan_windows(p);
-	return max_t(unsigned int, floor, scan);
-}
-
-static unsigned int task_scan_max(struct task_struct *p)
-{
-	unsigned int smin = task_scan_min(p);
-	unsigned int smax;
-
-	/* Watch for min being lower than max due to floor calculations */
-	smax = sysctl_numa_balancing_scan_period_max / task_nr_scan_windows(p);
-	return max(smin, smax);
-}
-
-/*
- * Once a preferred node is selected the scheduler balancer will prefer moving
- * a task to that node for sysctl_numa_balancing_settle_count number of PTE
- * scans. This will give the process the chance to accumulate more faults on
- * the preferred node but still allow the scheduler to move the task again if
- * the nodes CPUs are overloaded.
- */
-unsigned int sysctl_numa_balancing_settle_count __read_mostly = 3;
-
-static inline int task_faults_idx(int nid, int priv)
-{
-	return 2 * nid + priv;
-}
-
-static inline unsigned long task_faults(struct task_struct *p, int nid)
-{
-	if (!p->numa_faults)
-		return 0;
-
-	return p->numa_faults[task_faults_idx(nid, 0)] +
-		p->numa_faults[task_faults_idx(nid, 1)];
-}
-
-static unsigned long weighted_cpuload(const int cpu);
-
-
-static int
-find_idlest_cpu_node(int this_cpu, int nid)
-{
-	unsigned long load, min_load = ULONG_MAX;
-	int i, idlest_cpu = this_cpu;
-
-	BUG_ON(cpu_to_node(this_cpu) == nid);
-
-	rcu_read_lock();
-	for_each_cpu(i, cpumask_of_node(nid)) {
-		load = weighted_cpuload(i);
-
-		if (load < min_load) {
-			min_load = load;
-			idlest_cpu = i;
-		}
-	}
-	rcu_read_unlock();
-
-	return idlest_cpu;
-}
-
 static void task_numa_placement(struct task_struct *p)
 {
-	int seq, nid, max_nid = -1;
-	unsigned long max_faults = 0;
+	int seq;
 
+	if (!p->mm)	/* for example, ksmd faulting in a user's mm */
+		return;
 	seq = ACCESS_ONCE(p->mm->numa_scan_seq);
 	if (p->numa_scan_seq == seq)
 		return;
 	p->numa_scan_seq = seq;
-	p->numa_migrate_seq++;
-	p->numa_scan_period_max = task_scan_max(p);
 
-	/* Find the node with the highest number of faults */
-	for_each_online_node(nid) {
-		unsigned long faults;
-		int priv, i;
-
-		for (priv = 0; priv < 2; priv++) {
-			i = task_faults_idx(nid, priv);
-
-			/* Decay existing window, copy faults since last scan */
-			p->numa_faults[i] >>= 1;
-			p->numa_faults[i] += p->numa_faults_buffer[i];
-			p->numa_faults_buffer[i] = 0;
-		}
-
-		/* Find maximum private faults */
-		faults = p->numa_faults[task_faults_idx(nid, 1)];
-		if (faults > max_faults) {
-			max_faults = faults;
-			max_nid = nid;
-		}
-	}
-
-	/*
-	 * Record the preferred node as the node with the most faults,
-	 * requeue the task to be running on the idlest CPU on the
-	 * preferred node and reset the scanning rate to recheck
-	 * the working set placement.
-	 */
-	if (max_faults && max_nid != p->numa_preferred_nid) {
-		int preferred_cpu;
-
-		/*
-		 * If the task is not on the preferred node then find the most
-		 * idle CPU to migrate to.
-		 */
-		preferred_cpu = task_cpu(p);
-		if (cpu_to_node(preferred_cpu) != max_nid) {
-			preferred_cpu = find_idlest_cpu_node(preferred_cpu,
-							     max_nid);
-		}
-
-		/* Update the preferred nid and migrate task if possible */
-		p->numa_preferred_nid = max_nid;
-		p->numa_migrate_seq = 0;
-		migrate_task_to(p, preferred_cpu);
-	}
+	/* FIXME: Scheduling placement policy hints go here */
 }
 
 /*
  * Got a PROT_NONE fault for a page on @node.
  */
-void task_numa_fault(int last_nidpid, int node, int pages, bool migrated)
+void task_numa_fault(int node, int pages, bool migrated)
 {
 	struct task_struct *p = current;
-	int priv;
 
 	if (!numabalancing_enabled)
 		return;
 
-	/* for example, ksmd faulting in a user's mm */
-	if (!p->mm)
-		return;
-
-	/*
-	 * First accesses are treated as private, otherwise consider accesses
-	 * to be private if the accessing pid has not changed
-	 */
-	if (!nidpid_pid_unset(last_nidpid))
-		priv = ((p->pid & LAST__PID_MASK) == nidpid_to_pid(last_nidpid));
-	else
-		priv = 1;
-
-	/* Allocate buffer to track faults on a per-node basis */
-	if (unlikely(!p->numa_faults)) {
-		int size = sizeof(*p->numa_faults) * 2 * nr_node_ids;
-
-		/* numa_faults and numa_faults_buffer share the allocation */
-		p->numa_faults = kzalloc(size * 2, GFP_KERNEL|__GFP_NOWARN);
-		if (!p->numa_faults)
-			return;
-
-		BUG_ON(p->numa_faults_buffer);
-		p->numa_faults_buffer = p->numa_faults + (2 * nr_node_ids);
-	}
+	/* FIXME: Allocate task-specific structure for placement policy here */
 
 	/*
 	 * If pages are properly placed (did not migrate) then scan slower.
 	 * This is reset periodically in case of phase changes
 	 */
-	if (!migrated) {
-		/* Initialise if necessary */
-		if (!p->numa_scan_period_max)
-			p->numa_scan_period_max = task_scan_max(p);
-
-		p->numa_scan_period = min(p->numa_scan_period_max,
-			p->numa_scan_period + 10);
-	}
+        if (!migrated)
+		p->numa_scan_period = min(sysctl_numa_balancing_scan_period_max,
+			p->numa_scan_period + jiffies_to_msecs(10));
 
 	task_numa_placement(p);
-
-	p->numa_faults_buffer[task_faults_idx(node, priv)] += pages;
 }
 
 static void reset_ptenuma_scan(struct task_struct *p)
@@ -1065,7 +892,6 @@ void task_numa_work(struct callback_head *work)
 	struct mm_struct *mm = p->mm;
 	struct vm_area_struct *vma;
 	unsigned long start, end;
-	unsigned long nr_pte_updates = 0;
 	long pages;
 
 	WARN_ON_ONCE(p != container_of(work, struct task_struct, numa_work));
@@ -1082,11 +908,22 @@ void task_numa_work(struct callback_head *work)
 	if (p->flags & PF_EXITING)
 		return;
 
-	if (!mm->numa_next_reset || !mm->numa_next_scan) {
-		mm->numa_next_scan = now +
-			msecs_to_jiffies(sysctl_numa_balancing_scan_delay);
-		mm->numa_next_reset = now +
-			msecs_to_jiffies(sysctl_numa_balancing_scan_period_reset);
+	/*
+	 * We do not care about task placement until a task runs on a node
+	 * other than the first one used by the address space. This is
+	 * largely because migrations are driven by what CPU the task
+	 * is running on. If it's never scheduled on another node, it'll
+	 * not migrate so why bother trapping the fault.
+	 */
+	if (mm->first_nid == NUMA_PTE_SCAN_INIT)
+		mm->first_nid = numa_node_id();
+	if (mm->first_nid != NUMA_PTE_SCAN_ACTIVE) {
+		/* Are we running on a new node yet? */
+		if (numa_node_id() == mm->first_nid &&
+		    !sched_feat_numa(NUMA_FORCE))
+			return;
+
+		mm->first_nid = NUMA_PTE_SCAN_ACTIVE;
 	}
 
 	/*
@@ -1097,7 +934,7 @@ void task_numa_work(struct callback_head *work)
 	 */
 	migrate = mm->numa_next_reset;
 	if (time_after(now, migrate)) {
-		p->numa_scan_period = task_scan_min(p);
+		p->numa_scan_period = sysctl_numa_balancing_scan_period_min;
 		next_scan = now + msecs_to_jiffies(sysctl_numa_balancing_scan_period_reset);
 		xchg(&mm->numa_next_reset, next_scan);
 	}
@@ -1109,20 +946,20 @@ void task_numa_work(struct callback_head *work)
 	if (time_before(now, migrate))
 		return;
 
-	if (p->numa_scan_period == 0) {
-		p->numa_scan_period_max = task_scan_max(p);
-		p->numa_scan_period = task_scan_min(p);
-	}
+	if (p->numa_scan_period == 0)
+		p->numa_scan_period = sysctl_numa_balancing_scan_period_min;
 
 	next_scan = now + msecs_to_jiffies(p->numa_scan_period);
 	if (cmpxchg(&mm->numa_next_scan, migrate, next_scan) != migrate)
 		return;
 
 	/*
-	 * Delay this task enough that another task of this mm will likely win
-	 * the next time around.
+	 * Do not set pte_numa if the current running node is rate-limited.
+	 * This loses statistics on the fault but if we are unwilling to
+	 * migrate to this node, it is less likely we can do useful work
 	 */
-	p->node_stamp += 2 * TICK_NSEC;
+	if (migrate_ratelimited(numa_node_id()))
+		return;
 
 	start = mm->numa_scan_offset;
 	pages = sysctl_numa_balancing_scan_size;
@@ -1149,15 +986,7 @@ void task_numa_work(struct callback_head *work)
 			start = max(start, vma->vm_start);
 			end = ALIGN(start + (pages << PAGE_SHIFT), HPAGE_SIZE);
 			end = min(end, vma->vm_end);
-			nr_pte_updates += change_prot_numa(vma, start, end);
-
-			/*
-			 * Scan sysctl_numa_balancing_scan_size but ensure that
-			 * at least one PTE is updated so that unused virtual
-			 * address space is quickly skipped.
-			 */
-			if (nr_pte_updates)
-				pages -= (end - start) >> PAGE_SHIFT;
+			pages -= change_prot_numa(vma, start, end);
 
 			start = end;
 			if (pages <= 0)
@@ -1166,18 +995,6 @@ void task_numa_work(struct callback_head *work)
 	}
 
 out:
-	/*
-	 * If the whole process was scanned without updates then no NUMA
-	 * hinting faults are being recorded and scan rate should be lower.
-	 */
-	if (mm->numa_scan_offset == 0 && !nr_pte_updates) {
-		p->numa_scan_period = min(p->numa_scan_period_max,
-			p->numa_scan_period << 1);
-
-		next_scan = now + msecs_to_jiffies(p->numa_scan_period);
-		mm->numa_next_scan = next_scan;
-	}
-
 	/*
 	 * It is possible to reach the end of the VMA list but the last few
 	 * VMAs are not guaranteed to the vma_migratable. If they are not, we
@@ -1216,8 +1033,8 @@ void task_tick_numa(struct rq *rq, struct task_struct *curr)
 
 	if (now - curr->node_stamp > period) {
 		if (!curr->node_stamp)
-			curr->numa_scan_period = task_scan_min(curr);
-		curr->node_stamp += period;
+			curr->numa_scan_period = sysctl_numa_balancing_scan_period_min;
+		curr->node_stamp = now;
 
 		if (!time_before(jiffies, curr->mm->numa_next_scan)) {
 			init_task_work(work, task_numa_work); /* TODO: move this into sched_fork() */
@@ -4287,69 +4104,6 @@ task_hot(struct task_struct *p, u64 now, struct sched_domain *sd)
 	return delta < (s64)sysctl_sched_migration_cost;
 }
 
-#ifdef CONFIG_NUMA_BALANCING
-/* Returns true if the destination node has incurred more faults */
-static bool migrate_improves_locality(struct task_struct *p, struct lb_env *env)
-{
-	int src_nid, dst_nid;
-
-	if (!sched_feat(NUMA_FAVOUR_HIGHER) || !p->numa_faults ||
-	    !(env->sd->flags & SD_NUMA)) {
-		return false;
-	}
-
-	src_nid = cpu_to_node(env->src_cpu);
-	dst_nid = cpu_to_node(env->dst_cpu);
-
-	if (src_nid == dst_nid ||
-	    p->numa_migrate_seq >= sysctl_numa_balancing_settle_count)
-		return false;
-
-	if (dst_nid == p->numa_preferred_nid ||
-	    task_faults(p, dst_nid) > task_faults(p, src_nid))
-		return true;
-
-	return false;
-}
-
-
-static bool migrate_degrades_locality(struct task_struct *p, struct lb_env *env)
-{
-	int src_nid, dst_nid;
-
-	if (!sched_feat(NUMA) || !sched_feat(NUMA_RESIST_LOWER))
-		return false;
-
-	if (!p->numa_faults || !(env->sd->flags & SD_NUMA))
-		return false;
-
-	src_nid = cpu_to_node(env->src_cpu);
-	dst_nid = cpu_to_node(env->dst_cpu);
-
-	if (src_nid == dst_nid ||
-	    p->numa_migrate_seq >= sysctl_numa_balancing_settle_count)
-		return false;
-
-	if (task_faults(p, dst_nid) < task_faults(p, src_nid))
-		return true;
-
-	return false;
-}
-
-#else
-static inline bool migrate_improves_locality(struct task_struct *p,
-					     struct lb_env *env)
-{
-	return false;
-}
-
-static inline bool migrate_degrades_locality(struct task_struct *p,
-					     struct lb_env *env)
-{
-	return false;
-}
-#endif
-
 /*
  * can_migrate_task - may task p from runqueue rq be migrated to this_cpu?
  */
@@ -4380,24 +4134,11 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 
 	/*
 	 * Aggressive migration if:
-	 * 1) destination numa is preferred
-	 * 2) task is cache cold, or
-	 * 3) too many balance attempts have failed.
+	 * 1) task is cache cold, or
+	 * 2) too many balance attempts have failed.
 	 */
+
 	tsk_cache_hot = task_hot(p, rq_clock_task(env->src_rq), env->sd);
-	if (!tsk_cache_hot)
-		tsk_cache_hot = migrate_degrades_locality(p, env);
-
-	if (migrate_improves_locality(p, env)) {
-#ifdef CONFIG_SCHEDSTATS
-		if (tsk_cache_hot) {
-			schedstat_inc(env->sd, lb_hot_gained[env->idle]);
-			schedstat_inc(p, se.statistics.nr_forced_migrations);
-		}
-#endif
-		return 1;
-	}
-
 	if (!tsk_cache_hot ||
 		env->sd->nr_balance_failed > env->sd->cache_nice_tries) {
 

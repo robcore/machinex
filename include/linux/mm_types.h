@@ -175,8 +175,8 @@ struct page {
 	void *shadow;
 #endif
 
-#ifdef LAST_NIDPID_NOT_IN_PAGE_FLAGS
-	int _last_nidpid;
+#ifdef LAST_NID_NOT_IN_PAGE_FLAGS
+	int _last_nid;
 #endif
 }
 /*
@@ -435,8 +435,13 @@ struct mm_struct {
 	 * The first node a task was scheduled on. If a task runs on
 	 * a different node than Make PTE Scan Go Now.
 	 */
+	int first_nid;
 #endif
 };
+
+/* first nid will either be a valid NID or one of these values */
+#define NUMA_PTE_SCAN_INIT	-1
+#define NUMA_PTE_SCAN_ACTIVE	-2
 
 static inline void mm_init_cpumask(struct mm_struct *mm)
 {

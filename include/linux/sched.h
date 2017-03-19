@@ -787,7 +787,6 @@ enum cpu_idle_type {
 #define SD_ASYM_PACKING		0x0800  /* Place busy groups earlier in the domain */
 #define SD_PREFER_SIBLING	0x1000	/* Prefer to place tasks in a sibling domain */
 #define SD_OVERLAP		0x2000	/* sched_domains of this level overlap */
-#define SD_NUMA			0x4000	/* cross-node balancing */
 
 extern int __weak arch_sd_sibiling_asym_packing(void);
 
@@ -1443,25 +1442,8 @@ struct task_struct {
 	int numa_scan_seq;
 	int numa_migrate_seq;
 	unsigned int numa_scan_period;
-	unsigned int numa_scan_period_max;
 	u64 node_stamp;			/* migration stamp  */
 	struct callback_head numa_work;
-
-	/*
-	 * Exponential decaying average of faults on a per-node basis.
-	 * Scheduling placement decisions are made based on the these counts.
-	 * The values remain static for the duration of a PTE scan
-	 */
-	unsigned long *numa_faults;
-
-	/*
-	 * numa_faults_buffer records faults per node during the current
-	 * scan window. When the scan completes, the counts in numa_faults
-	 * decay and these values are copied.
-	 */
-	unsigned long *numa_faults_buffer;
-
-	int numa_preferred_nid;
 #endif /* CONFIG_NUMA_BALANCING */
 
 	struct rcu_head rcu;
@@ -1538,11 +1520,10 @@ struct task_struct {
 #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
 
 #ifdef CONFIG_NUMA_BALANCING
-extern void task_numa_fault(int last_node, int node, int pages, bool migrated);
+extern void task_numa_fault(int node, int pages, bool migrated);
 extern void set_numabalancing_state(bool enabled);
 #else
-static inline void task_numa_fault(int last_node, int node, int pages,
-				   bool migrated)
+static inline void task_numa_fault(int node, int pages, bool migrated)
 {
 }
 static inline void set_numabalancing_state(bool enabled)
