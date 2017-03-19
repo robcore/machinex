@@ -834,8 +834,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 					/* We are in basic Fast Charge mode, so we substitute AC to WIRELESS levels */
 					charger->charging_current_max = WIRELESS_CHARGE_1000;
 					charger->charging_current = WIRELESS_CHARGE_1000 + 100;
-				} else if ((force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) ||
-							(force_fast_charge == FAST_CHARGE_FORCE_GLOBAL)) {
+				} else if (force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) {
 					/* We are in custom current Fast Charge mode for WIRELESS */
 					charger->charging_current_max = wireless_charge_level;
 					charger->charging_current = min(wireless_charge_level+100, MAX_CHARGE_LEVEL);
@@ -1306,7 +1305,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 			stable_count++;
 		else
 			stable_count = 0;
-		if (stable_count > 10) {
+		if ((stable_count > 10) && (unstable_power_detection)) {
 			pr_debug("%s: irq(%d), chgin(0x%x), chg_dtls(0x%x) prev 0x%x\n",
 					__func__, charger->irq_chgin,
 					chgin_dtls, chg_dtls, prev_chgin_dtls);
@@ -1354,7 +1353,7 @@ static void max77693_chgin_isr_work(struct work_struct *work)
 		if (charger->is_charging) {
 			/* reduce only at CC MODE */
 			if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
-					(chg_dtls == 0x01) && (stable_count > 2))
+					(chg_dtls == 0x01) && (stable_count > 2) && (unstable_power_detection))
 				reduce_input_current(charger, REDUCE_CURRENT_STEP);
 		}
 		prev_chgin_dtls = chgin_dtls;
