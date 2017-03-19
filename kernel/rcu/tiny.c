@@ -174,7 +174,7 @@ void rcu_irq_enter(void)
 }
 EXPORT_SYMBOL_GPL(rcu_irq_enter);
 
-#if defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE)
+#ifdef CONFIG_DEBUG_LOCK_ALLOC
 
 /*
  * Test whether RCU thinks that the current CPU is idle.
@@ -185,7 +185,7 @@ int rcu_is_cpu_idle(void)
 }
 EXPORT_SYMBOL(rcu_is_cpu_idle);
 
-#endif /* defined(CONFIG_DEBUG_LOCK_ALLOC) || defined(CONFIG_RCU_TRACE) */
+#endif /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
 
 /*
  * Test whether the current CPU was interrupted from idle.  Nested
