@@ -2187,8 +2187,8 @@ ext4_ext_put_gap_in_cache(struct inode *inode, struct ext4_ext_path *path,
 				ext4_lblk_t block)
 {
 	int depth = ext_depth(inode);
-	unsigned long len;
-	ext4_lblk_t lblock;
+	unsigned long len = 0;
+	ext4_lblk_t lblock = 0;
 	struct ext4_extent *ex;
 
 	ex = path[depth].p_ext;
@@ -2218,7 +2218,6 @@ ext4_ext_put_gap_in_cache(struct inode *inode, struct ext4_ext_path *path,
 		BUG_ON(next == lblock);
 		len = next - lblock;
 	} else {
-		lblock = len = 0;
 		BUG();
 	}
 
