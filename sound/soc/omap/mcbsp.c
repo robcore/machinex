@@ -737,7 +737,7 @@ static ssize_t prop##_store(struct device *dev,				\
 	unsigned long val;						\
 	int status;							\
 									\
-	status = strict_strtoul(buf, 0, &val);				\
+	status = kstrtoul(buf, 0, &val);				\
 	if (status)							\
 		return status;						\
 									\

@@ -295,7 +295,7 @@ static ssize_t type##_store(struct device *dev,			\
 	struct snd_hwdep *hwdep = dev_get_drvdata(dev);		\
 	struct hda_codec *codec = hwdep->private_data;		\
 	unsigned long val;					\
-	int err = strict_strtoul(buf, 0, &val);			\
+	int err = kstrtoul(buf, 0, &val);			\
 	if (err < 0)						\
 		return err;					\
 	codec->type = val;					\
@@ -701,7 +701,7 @@ static void parse_##name##_mode(char *buf, struct hda_bus *bus, \
 				 struct hda_codec **codecp) \
 { \
 	unsigned long val; \
-	if (!strict_strtoul(buf, 0, &val)) \
+	if (!kstrtoul(buf, 0, &val)) \
 		(*codecp)->name = val; \
 }
 
