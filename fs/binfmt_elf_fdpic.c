@@ -1791,11 +1791,9 @@ static int elf_fdpic_core_dump(struct coredump_params *cprm)
 			goto end_coredump;
 	}
 
-	cprm->written = size;
-	if (!elf_core_write_extra_phdrs(cprm, offset))
+	if (!elf_core_write_extra_phdrs(cprm->file, offset, &size, cprm->limit))
 		goto end_coredump;
 
-	size = cprm->written;
  	/* write out the notes section */
 	for (i = 0; i < numnote; i++)
 		if (!writenote(notes + i, cprm->file, &foffset))
