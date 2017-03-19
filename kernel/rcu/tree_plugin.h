@@ -107,7 +107,7 @@ static void __init rcu_bootup_announce_oddness(void)
 				    rcu_nocb_mask);
 		}
 		cpulist_scnprintf(nocb_buf, sizeof(nocb_buf), rcu_nocb_mask);
-		pr_info("\ttOffload RCU callbacks from CPUs: %s.\n", nocb_buf);
+		pr_info("\tOffload RCU callbacks from CPUs: %s.\n", nocb_buf);
 		if (rcu_nocb_poll)
 			pr_info("\tPoll for callbacks from no-CBs CPUs.\n");
 	}
@@ -1627,6 +1627,7 @@ static void rcu_prepare_for_idle(int cpu)
  */
 #define RCU_IDLE_GP_DELAY 4		/* Roughly one grace period. */
 #define RCU_IDLE_LAZY_GP_DELAY (6 * HZ)	/* Roughly six seconds. */
+
 static int rcu_idle_gp_delay = RCU_IDLE_GP_DELAY;
 module_param(rcu_idle_gp_delay, int, 0644);
 static int rcu_idle_lazy_gp_delay = RCU_IDLE_LAZY_GP_DELAY;
