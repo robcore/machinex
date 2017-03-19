@@ -53,7 +53,7 @@ static int __trace_define_field(struct list_head *head, const char *type,
 
 	field = kzalloc(sizeof(*field), GFP_KERNEL);
 	if (!field)
-		goto err;
+		return -ENOMEM;
 
 	field->name = kstrdup(name, GFP_KERNEL);
 	if (!field->name)
