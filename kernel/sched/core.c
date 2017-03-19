@@ -1915,8 +1915,8 @@ void sched_fork(struct task_struct *p)
 		p->prio = p->normal_prio = __normal_prio(p);
 		set_load_weight(p);
 
-		if (prev->sched_class->task_dead)
-			prev->sched_class->task_dead(prev);
+		if (p->sched_class->task_dead)
+			p->sched_class->task_dead(p);
 
 		/*
 		 * We don't need the reset flag anymore after the fork. It has
