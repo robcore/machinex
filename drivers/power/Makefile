@@ -73,4 +73,3 @@ obj-$(CONFIG_BATTERY_SAMSUNG_STRETTO)	+= stretto_battery.o	\
 obj-$(CONFIG_BATTERY_MAX17047_FUELGAUGE)	+= max17047_fuelgauge.o
 obj-$(CONFIG_BATTERY_MAX77693_CHARGER)		+= max77693_charger.o
 obj-$(CONFIG_POWER_RESET)	+= reset/
-obj-$(CONFIG_BATTERY_BCL)		+= battery_current_limit.o
