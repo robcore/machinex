@@ -25,6 +25,7 @@
 #include <linux/mutex.h>
 #include <linux/async.h>
 #include <linux/pm_runtime.h>
+#include <linux/sysfs.h>
 
 #include "base.h"
 #include "power/power.h"
