@@ -553,6 +553,7 @@ static bool rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 				      struct rcu_data *rdp);
 static void rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp);
 static void rcu_spawn_nocb_kthreads(struct rcu_state *rsp);
+static void rcu_kick_nohz_cpu(int cpu);
 static bool init_nocb_callback_list(struct rcu_data *rdp);
 static void rcu_sysidle_enter(struct rcu_dynticks *rdtp, int irq);
 static void rcu_sysidle_exit(struct rcu_dynticks *rdtp, int irq);
@@ -563,7 +564,6 @@ static void rcu_sysidle_report_gp(struct rcu_state *rsp, int isidle,
 				  unsigned long maxj);
 static void rcu_bind_gp_kthread(void);
 static void rcu_sysidle_init_percpu_data(struct rcu_dynticks *rdtp);
-static void rcu_kick_nohz_cpu(int cpu);
 
 #endif /* #ifndef RCU_TREE_NONCORE */
 
@@ -583,4 +583,3 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 }
 #endif /* #else #ifdef CONFIG_RCU_NOCB_CPU */
 #endif /* #ifdef CONFIG_RCU_TRACE */
-
