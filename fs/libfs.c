@@ -202,7 +202,7 @@ const struct file_operations simple_dir_operations = {
 	.release	= dcache_dir_close,
 	.llseek		= dcache_dir_lseek,
 	.read		= generic_read_dir,
-	.iterate	= dcache_readdir,
+	.readdir	= dcache_readdir,
 	.fsync		= noop_fsync,
 };
 
