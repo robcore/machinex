@@ -5065,9 +5065,8 @@ static void perf_event_mmap_event(struct perf_mmap_event *mmap_event)
 	unsigned int size;
 	char tmp[16];
 	char *buf = NULL;
-	const char *name;
 
-	memset(tmp, 0, sizeof(tmp));
+	char *name;
 
 	if (file) {
 		/*
@@ -5075,7 +5074,7 @@ static void perf_event_mmap_event(struct perf_mmap_event *mmap_event)
 		 * need to add enough zero bytes after the string to handle
 		 * the 64bit alignment we do later.
 		 */
-		buf = kzalloc(PATH_MAX + sizeof(u64), GFP_KERNEL);
+		buf = kmalloc(PATH_MAX + sizeof(u64), GFP_KERNEL);
 		if (!buf) {
 			name = strncpy(tmp, "//enomem", sizeof(tmp));
 			goto got_name;
@@ -5086,7 +5085,7 @@ static void perf_event_mmap_event(struct perf_mmap_event *mmap_event)
 			goto got_name;
 		}
 	} else {
-		name = arch_vma_name(vma);
+		name = (char *)arch_vma_name(vma);
 		if (name) {
 			name = strncpy(tmp, name, sizeof(tmp) - 1);
 			tmp[sizeof(tmp) - 1] = '\0';
@@ -5109,7 +5108,14 @@ static void perf_event_mmap_event(struct perf_mmap_event *mmap_event)
 	}
 
 got_name:
-	size = ALIGN(strlen(name)+1, sizeof(u64));
+	/*
+	 * Since our buffer works in 8 byte units we need to align our string
+	 * size to a multiple of 8. However, we must guarantee the tail end is
+	 * zero'd out to avoid leaking random bits to userspace.
+	 */
+	size = strlen(name)+1;
+	while (!IS_ALIGNED(size, sizeof(u64)))
+		name[size++] = '\0';
 
 	mmap_event->file_name = name;
 	mmap_event->file_size = size;
