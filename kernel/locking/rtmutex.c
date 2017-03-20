@@ -263,7 +263,7 @@ static void __rt_mutex_adjust_prio(struct task_struct *task)
 {
 	int prio = rt_mutex_getprio(task);
 
-	if (task->prio != prio)
+	if (task->prio != prio || dl_prio(prio))
 		rt_mutex_setprio(task, prio);
 }
 
@@ -602,7 +602,7 @@ static int rt_mutex_adjust_prio_chain(struct task_struct *task,
 
 	/* [7] Requeue the waiter in the lock waiter list. */
 	rt_mutex_dequeue(lock, waiter);
-	waiter->task->prio = task->prio;
+	waiter->prio = task->prio;
 	rt_mutex_enqueue(lock, waiter);
 
 	/* [8] Release the task */
@@ -875,6 +875,7 @@ static int task_blocks_on_rt_mutex(struct rt_mutex *lock,
 	__rt_mutex_adjust_prio(task);
 	waiter->task = task;
 	waiter->lock = lock;
+	waiter->prio = task->prio;
 
 	/* Get the top priority waiter on the lock */
 	if (rt_mutex_has_waiters(lock))
