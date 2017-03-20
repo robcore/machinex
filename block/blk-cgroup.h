@@ -327,6 +327,27 @@ void blkiocg_update_io_add_stats(struct blkio_group *blkg,
 		struct blkio_group *curr_blkg, bool direction, bool sync);
 void blkiocg_update_io_remove_stats(struct blkio_group *blkg,
 					bool direction, bool sync);
+static inline struct blkcg *css_to_blkcg(struct cgroup_subsys_state *css)
+{
+	return css ? container_of(css, struct blkcg, css) : NULL;
+}
+
+static inline struct blkcg *cgroup_to_blkcg(struct cgroup *cgroup)
+{
+	return css_to_blkcg(cgroup_css(cgroup, blkio_subsys_id));
+}
+
+static inline struct blkcg *task_blkcg(struct task_struct *tsk)
+{
+	return css_to_blkcg(task_css(tsk, blkio_subsys_id));
+}
+
+static inline struct blkcg *bio_blkcg(struct bio *bio)
+{
+ 	if (bio && bio->bi_css)
+		return css_to_blkcg(bio->bi_css);
+	return task_blkcg(current);
+}
 #else
 struct cgroup;
 static inline struct blkio_cgroup *
