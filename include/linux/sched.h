@@ -56,66 +56,6 @@ struct sched_param {
 
 #include <asm/processor.h>
 
-#define SCHED_ATTR_SIZE_VER0	48	/* sizeof first published struct */
-
-/*
- * Extended scheduling parameters data structure.
- *
- * This is needed because the original struct sched_param can not be
- * altered without introducing ABI issues with legacy applications
- * (e.g., in sched_getparam()).
- *
- * However, the possibility of specifying more than just a priority for
- * the tasks may be useful for a wide variety of application fields, e.g.,
- * multimedia, streaming, automation and control, and many others.
- *
- * This variant (sched_attr) is meant at describing a so-called
- * sporadic time-constrained task. In such model a task is specified by:
- *  - the activation period or minimum instance inter-arrival time;
- *  - the maximum (or average, depending on the actual scheduling
- *    discipline) computation time of all instances, a.k.a. runtime;
- *  - the deadline (relative to the actual activation time) of each
- *    instance.
- * Very briefly, a periodic (sporadic) task asks for the execution of
- * some specific computation --which is typically called an instance--
- * (at most) every period. Moreover, each instance typically lasts no more
- * than the runtime and must be completed by time instant t equal to
- * the instance activation time + the deadline.
- *
- * This is reflected by the actual fields of the sched_attr structure:
- *
- *  @size		size of the structure, for fwd/bwd compat.
- *
- *  @sched_policy	task's scheduling policy
- *  @sched_flags	for customizing the scheduler behaviour
- *  @sched_nice		task's nice value      (SCHED_NORMAL/BATCH)
- *  @sched_priority	task's static priority (SCHED_FIFO/RR)
- *  @sched_deadline	representative of the task's deadline
- *  @sched_runtime	representative of the task's runtime
- *  @sched_period	representative of the task's period
- *
- * Given this task model, there are a multiplicity of scheduling algorithms
- * and policies, that can be used to ensure all the tasks will make their
- * timing constraints.
- */
-struct sched_attr {
-	u32 size;
-
-	u32 sched_policy;
-	u64 sched_flags;
-
-	/* SCHED_NORMAL, SCHED_BATCH */
-	s32 sched_nice;
-
-	/* SCHED_FIFO, SCHED_RR */
-	u32 sched_priority;
-
-	/* SCHED_DEADLINE */
-	u64 sched_runtime;
-	u64 sched_deadline;
-	u64 sched_period;
-};
-
 struct futex_pi_state;
 struct robust_list_head;
 struct bio_list;
@@ -847,7 +787,6 @@ enum cpu_idle_type {
 #define SD_ASYM_PACKING		0x0800  /* Place busy groups earlier in the domain */
 #define SD_PREFER_SIBLING	0x1000	/* Prefer to place tasks in a sibling domain */
 #define SD_OVERLAP		0x2000	/* sched_domains of this level overlap */
-#define SD_NUMA			0x4000	/* cross-node balancing */
 
 extern int __weak arch_sd_sibiling_asym_packing(void);
 
@@ -1195,8 +1134,6 @@ struct task_struct {
 	struct task_struct *last_wakee;
 	unsigned long wakee_flips;
 	unsigned long wakee_flip_decay_ts;
-
-	int wake_cpu;
 #endif
 	int on_rq;
 
@@ -1494,41 +1431,10 @@ struct task_struct {
 #endif
 #ifdef CONFIG_NUMA_BALANCING
 	int numa_scan_seq;
+	int numa_migrate_seq;
 	unsigned int numa_scan_period;
-	unsigned int numa_scan_period_max;
-	int numa_preferred_nid;
-	int numa_migrate_deferred;
-	unsigned long numa_migrate_retry;
 	u64 node_stamp;			/* migration stamp  */
 	struct callback_head numa_work;
-
-	struct list_head numa_entry;
-	struct numa_group *numa_group;
-
-	/*
-	 * Exponential decaying average of faults on a per-node basis.
-	 * Scheduling placement decisions are made based on the these counts.
-	 * The values remain static for the duration of a PTE scan
-	 */
-	unsigned long *numa_faults;
-	unsigned long total_numa_faults;
-
-	/*
-	 * numa_faults_buffer records faults per node during the current
-	 * scan window. When the scan completes, the counts in numa_faults
-	 * decay and these values are copied.
-	 */
-	unsigned long *numa_faults_buffer;
-
-	/*
-	 * numa_faults_locality tracks if faults recorded during the last
-	 * scan window were remote/local. The task scan period is adapted
-	 * based on the locality of the faults with different weights
-	 * depending on whether they were shared or private faults
-	 */
-	unsigned long numa_faults_locality[2];
-
-	unsigned long numa_pages_migrated;
 #endif /* CONFIG_NUMA_BALANCING */
 
 	struct rcu_head rcu;
@@ -1604,31 +1510,14 @@ struct task_struct {
 /* Future-safe accessor for struct task_struct's cpus_allowed. */
 #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
 
-#define TNF_MIGRATED	0x01
-#define TNF_NO_GROUP	0x02
-#define TNF_SHARED	0x04
-#define TNF_FAULT_LOCAL	0x08
-
 #ifdef CONFIG_NUMA_BALANCING
-extern void task_numa_fault(int last_node, int node, int pages, int flags);
-extern pid_t task_numa_group_id(struct task_struct *p);
+extern void task_numa_fault(int node, int pages, bool migrated);
 extern void set_numabalancing_state(bool enabled);
-extern void task_numa_free(struct task_struct *p);
-
-extern unsigned int sysctl_numa_balancing_migrate_deferred;
 #else
-static inline void task_numa_fault(int last_node, int node, int pages,
-				   int flags)
+static inline void task_numa_fault(int node, int pages, bool migrated)
 {
-}
-static inline pid_t task_numa_group_id(struct task_struct *p)
-{
-	return 0;
 }
 static inline void set_numabalancing_state(bool enabled)
-{
-}
-static inline void task_numa_free(struct task_struct *p)
 {
 }
 #endif
@@ -2193,8 +2082,6 @@ extern int sched_setscheduler(struct task_struct *, int,
 			      const struct sched_param *);
 extern int sched_setscheduler_nocheck(struct task_struct *, int,
 				      const struct sched_param *);
-extern int sched_setattr(struct task_struct *,
-			 const struct sched_attr *);
 extern struct task_struct *idle_task(int cpu);
 /**
  * is_idle_task - is the specified task an idle task?
@@ -2270,7 +2157,7 @@ extern void wake_up_new_task(struct task_struct *tsk);
 #else
  static inline void kick_process(struct task_struct *tsk) { }
 #endif
-extern void sched_fork(unsigned long clone_flags, struct task_struct *p);
+extern void sched_fork(struct task_struct *p);
 extern void sched_dead(struct task_struct *p);
 
 extern void proc_caches_init(void);
@@ -2904,11 +2791,6 @@ static inline void ptrace_signal_wake_up(struct task_struct *t, bool resume)
 static inline unsigned int task_cpu(const struct task_struct *p)
 {
 	return task_thread_info(p)->cpu;
-}
-
-static inline int task_node(const struct task_struct *p)
-{
-	return cpu_to_node(task_cpu(p));
 }
 
 extern void set_task_cpu(struct task_struct *p, unsigned int cpu);

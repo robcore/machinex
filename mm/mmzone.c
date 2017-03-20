@@ -99,20 +99,20 @@ void lruvec_init(struct lruvec *lruvec, struct zone *zone)
 #endif
 }
 
-#if defined(CONFIG_NUMA_BALANCING) && !defined(LAST_CPUPID_NOT_IN_PAGE_FLAGS)
-int page_cpupid_xchg_last(struct page *page, int cpupid)
+#if defined(CONFIG_NUMA_BALANCING) && !defined(LAST_NID_NOT_IN_PAGE_FLAGS)
+int page_xchg_last_nid(struct page *page, int nid)
 {
 	unsigned long old_flags, flags;
-	int last_cpupid;
+	int last_nid;
 
 	do {
 		old_flags = flags = page->flags;
-		last_cpupid = page_cpupid_last(page);
+		last_nid = page_last_nid(page);
 
-		flags &= ~(LAST_CPUPID_MASK << LAST_CPUPID_PGSHIFT);
-		flags |= (cpupid & LAST_CPUPID_MASK) << LAST_CPUPID_PGSHIFT;
+		flags &= ~(LAST_NID_MASK << LAST_NID_PGSHIFT);
+		flags |= (nid & LAST_NID_MASK) << LAST_NID_PGSHIFT;
 	} while (unlikely(cmpxchg(&page->flags, old_flags, flags) != old_flags));
 
-	return last_cpupid;
+	return last_nid;
 }
 #endif

@@ -37,12 +37,14 @@ static inline pgprot_t pgprot_modify(pgprot_t oldprot, pgprot_t newprot)
 
 static unsigned long change_pte_range(struct vm_area_struct *vma, pmd_t *pmd,
 		unsigned long addr, unsigned long end, pgprot_t newprot,
-		int dirty_accountable, int prot_numa)
+		int dirty_accountable, int prot_numa, bool *ret_all_same_node)
 {
 	struct mm_struct *mm = vma->vm_mm;
 	pte_t *pte, oldpte;
 	spinlock_t *ptl;
 	unsigned long pages = 0;
+	bool all_same_node = true;
+	int last_nid = -1;
 
 	pte = pte_offset_map_lock(mm, pmd, addr, &ptl);
 	arch_enter_lazy_mmu_mode();
@@ -61,7 +63,15 @@ static unsigned long change_pte_range(struct vm_area_struct *vma, pmd_t *pmd,
 
 				page = vm_normal_page(vma, addr, oldpte);
 				if (page) {
-					if (!pte_numa(oldpte)) {
+					int this_nid = page_to_nid(page);
+					if (last_nid == -1)
+						last_nid = this_nid;
+					if (last_nid != this_nid)
+						all_same_node = false;
+
+					/* only check non-shared pages */
+					if (!pte_numa(oldpte) &&
+					    page_mapcount(page) == 1) {
 						ptent = pte_mknuma(ptent);
 						updated = true;
 					}
@@ -91,16 +101,32 @@ static unsigned long change_pte_range(struct vm_area_struct *vma, pmd_t *pmd,
 				make_migration_entry_read(&entry);
 				set_pte_at(mm, addr, pte,
 					swp_entry_to_pte(entry));
-
-				pages++;
 			}
+			pages++;
 		}
 	} while (pte++, addr += PAGE_SIZE, addr != end);
 	arch_leave_lazy_mmu_mode();
 	pte_unmap_unlock(pte - 1, ptl);
 
+	*ret_all_same_node = all_same_node;
 	return pages;
 }
+
+#ifdef CONFIG_NUMA_BALANCING
+static inline void change_pmd_protnuma(struct mm_struct *mm, unsigned long addr,
+				       pmd_t *pmd)
+{
+	spin_lock(&mm->page_table_lock);
+	set_pmd_at(mm, addr & PMD_MASK, pmd, pmd_mknuma(*pmd));
+	spin_unlock(&mm->page_table_lock);
+}
+#else
+static inline void change_pmd_protnuma(struct mm_struct *mm, unsigned long addr,
+				       pmd_t *pmd)
+{
+	BUG();
+}
+#endif /* CONFIG_NUMA_BALANCING */
 
 static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 		pud_t *pud, unsigned long addr, unsigned long end,
@@ -109,33 +135,34 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 	pmd_t *pmd;
 	unsigned long next;
 	unsigned long pages = 0;
+	bool all_same_node;
 
 	pmd = pmd_offset(pud, addr);
 	do {
-		unsigned long this_pages;
-
 		next = pmd_addr_end(addr, end);
 		if (pmd_trans_huge(*pmd)) {
 			if (next - addr != HPAGE_PMD_SIZE)
 				split_huge_page_pmd(vma, addr, pmd);
-			else {
-				int nr_ptes = change_huge_pmd(vma, pmd, addr,
-						newprot, prot_numa);
-
-				if (nr_ptes) {
-					if (nr_ptes == HPAGE_PMD_NR)
-						pages++;
-
-					continue;
-				}
+			else if (change_huge_pmd(vma, pmd, addr, newprot,
+						 prot_numa)) {
+				pages += HPAGE_PMD_NR;
+				continue;
 			}
 			/* fall through */
 		}
 		if (pmd_none_or_clear_bad(pmd))
 			continue;
-		this_pages = change_pte_range(vma, pmd, addr, next, newprot,
-				 dirty_accountable, prot_numa);
-		pages += this_pages;
+		pages += change_pte_range(vma, pmd, addr, next, newprot,
+				 dirty_accountable, prot_numa, &all_same_node);
+
+		/*
+		 * If we are changing protections for NUMA hinting faults then
+		 * set pmd_numa if the examined pages were all on the same
+		 * node. This allows a regular PMD to be handled as one fault
+		 * and effectively batches the taking of the PTL
+		 */
+		if (prot_numa && all_same_node)
+			change_pmd_protnuma(vma->vm_mm, addr, pmd);
 	} while (pmd++, addr = next, addr != end);
 
 	return pages;

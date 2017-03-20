@@ -6,7 +6,6 @@
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
 #include <linux/tick.h>
-#include <linux/slab.h>
 #include <linux/printk.h>
 
 #include "cpupri.h"
@@ -84,14 +83,11 @@ extern __read_mostly int scheduler_running;
  */
 #define RUNTIME_INF	((u64)~0ULL)
 
-static inline int fair_policy(int policy)
-{
-	return policy == SCHED_NORMAL || policy == SCHED_BATCH;
-}
-
 static inline int rt_policy(int policy)
 {
-	return policy == SCHED_FIFO || policy == SCHED_RR;
+	if (policy == SCHED_FIFO || policy == SCHED_RR)
+		return 1;
+	return 0;
 }
 
 static inline int task_has_rt_policy(struct task_struct *p)
@@ -421,10 +417,6 @@ struct rq {
 	 * remote CPUs use both these fields when doing load calculation.
 	 */
 	unsigned int nr_running;
-#ifdef CONFIG_NUMA_BALANCING
-	unsigned int nr_numa_running;
-	unsigned int nr_preferred_running;
-#endif
 	#define CPU_LOAD_IDX_MAX 5
 	unsigned long cpu_load[CPU_LOAD_IDX_MAX];
 	unsigned long last_load_update_tick;
@@ -605,12 +597,6 @@ struct nr_stats_s {
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
 
-#ifdef CONFIG_NUMA_BALANCING
-extern void sched_setnuma(struct task_struct *p, int node);
-extern int migrate_task_to(struct task_struct *p, int cpu);
-extern int migrate_swap(struct task_struct *, struct task_struct *);
-#endif /* CONFIG_NUMA_BALANCING */
-
 #ifdef CONFIG_SMP
 
 #define rcu_dereference_check_sched_domain(p) \
@@ -652,22 +638,9 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 	return hsd;
 }
 
-static inline struct sched_domain *lowest_flag_domain(int cpu, int flag)
-{
-	struct sched_domain *sd;
-
-	for_each_domain(cpu, sd) {
-		if (sd->flags & flag)
-			break;
-	}
-
-	return sd;
-}
-
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
-DECLARE_PER_CPU(struct sched_domain *, sd_numa);
 
 #endif /* CONFIG_SMP */
 
@@ -780,7 +753,6 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 	 */
 	smp_wmb();
 	task_thread_info(p)->cpu = cpu;
-	p->wake_cpu = cpu;
 #endif
 }
 
@@ -1041,7 +1013,7 @@ struct sched_class {
 	void (*put_prev_task) (struct rq *rq, struct task_struct *p);
 
 #ifdef CONFIG_SMP
-	int  (*select_task_rq)(struct task_struct *p, int task_cpu, int sd_flag, int flags);
+	int  (*select_task_rq)(struct task_struct *p, int sd_flag, int flags);
 	void (*migrate_task_rq)(struct task_struct *p, int next_cpu);
 
 	void (*pre_schedule) (struct rq *this_rq, struct task_struct *task);
