@@ -135,17 +135,20 @@
  * The waiter reads the futex value in user space and calls
  * futex_wait(). This function computes the hash bucket and acquires
  * the hash bucket lock. After that it reads the futex user space value
- * again and verifies that the data has not changed. If it has not
- * changed it enqueues itself into the hash bucket, releases the hash
- * bucket lock and schedules.
+ * again and verifies that the data has not changed. If it has not changed
+ * it enqueues itself into the hash bucket, releases the hash bucket lock
+ * and schedules.
  *
  * The waker side modifies the user space value of the futex and calls
- * futex_wake(). This functions computes the hash bucket and acquires
- * the hash bucket lock. Then it looks for waiters on that futex in the
- * hash bucket and wakes them.
+ * futex_wake(). This function computes the hash bucket and acquires the
+ * hash bucket lock. Then it looks for waiters on that futex in the hash
+ * bucket and wakes them.
  *
- * Note that the spin_lock serializes waiters and wakers, so that the
- * following scenario is avoided:
+ * In futex wake up scenarios where no tasks are blocked on a futex, taking
+ * the hb spinlock can be avoided and simply return. In order for this
+ * optimization to work, ordering guarantees must exist so that the waiter
+ * being added to the list is acknowledged when the list is concurrently being
+ * checked by the waker, avoiding scenarios like the following:
  *
  * CPU 0                               CPU 1
  * val = *futex;
@@ -251,24 +254,52 @@
  * This would cause the waiter on CPU 0 to wait forever because it
  * missed the transition of the user space value from val to newval
  * and the waker did not find the waiter in the hash bucket queue.
- * The spinlock serializes that:
  *
- * CPU 0                               CPU 1
+ * The correct serialization ensures that a waiter either observes
+ * the changed user space value before blocking or is woken by a
+ * concurrent waker:
+ *
+ * CPU 0                                 CPU 1
  * val = *futex;
  * sys_futex(WAIT, futex, val);
  *   futex_wait(futex, val);
- *   lock(hash_bucket(futex));
- *   uval = *futex;
- *                                     *futex = newval;
- *                                     sys_futex(WAKE, futex);
- *                                       futex_wake(futex);
- *                                       lock(hash_bucket(futex));
+ *
+ *   waiters++;
+ *   mb(); (A) <-- paired with -.
+ *                              |
+ *   lock(hash_bucket(futex));  |
+ *                              |
+ *   uval = *futex;             |
+ *                              |        *futex = newval;
+ *                              |        sys_futex(WAKE, futex);
+ *                              |          futex_wake(futex);
+ *                              |
+ *                              `------->  mb(); (B)
  *   if (uval == val)
- *      queue();
+ *     queue();
  *     unlock(hash_bucket(futex));
- *     schedule();                       if (!queue_empty())
- *                                         wake_waiters(futex);
- *                                       unlock(hash_bucket(futex));
+ *     schedule();                         if (waiters)
+ *                                           lock(hash_bucket(futex));
+ *                                           wake_waiters(futex);
+ *                                           unlock(hash_bucket(futex));
+ *
+ * Where (A) orders the waiters increment and the futex value read -- this
+ * is guaranteed by the head counter in the hb spinlock; and where (B)
+ * orders the write to futex and the waiters read -- this is done by the
+ * barriers in get_futex_key_refs(), through either ihold or atomic_inc,
+ * depending on the futex type.
+ *
+ * This yields the following case (where X:=waiters, Y:=futex):
+ *
+ *	X = Y = 0
+ *
+ *	w[X]=1		w[Y]=1
+ *	MB		MB
+ *	r[Y]=y		r[X]=x
+ *
+ * Which guarantees that x==0 && y==0 is impossible; which translates back into
+ * the guarantee that we cannot both miss the futex variable change and the
+ * enqueue.
  */
 
 int __read_mostly futex_cmpxchg_enabled;
@@ -341,6 +372,36 @@ static const struct futex_q futex_q_init = {
 	.key = FUTEX_KEY_INIT,
 	.bitset = FUTEX_BITSET_MATCH_ANY
 };
+
+static inline void futex_get_mm(union futex_key *key)
+{
+	atomic_inc(&key->private.mm->mm_count);
+	/*
+	 * Ensure futex_get_mm() implies a full barrier such that
+	 * get_futex_key() implies a full barrier. This is relied upon
+	 * as full barrier (B), see the ordering comment above.
+	 */
+	smp_mb__after_atomic_inc();
+}
+
+static inline bool hb_waiters_pending(struct futex_hash_bucket *hb)
+{
+#ifdef CONFIG_SMP
+	/*
+	 * Tasks trying to enter the critical region are most likely
+	 * potential waiters that will be added to the plist. Ensure
+	 * that wakers won't miss to-be-slept tasks in the window between
+	 * the wait call and the actual plist_add.
+	 */
+	if (spin_is_locked(&hb->lock))
+		return true;
+	smp_rmb(); /* Make sure we check the lock state first */
+
+	return !plist_head_empty(&hb->chain);
+#else
+	return true;
+#endif
+}
 
 /*
  * Hash buckets are shared by all the futex_keys that hash to the same
@@ -2500,6 +2561,11 @@ retry:
 		goto out;
 
 	hb = hash_futex(&key);
+
+	/* Make sure we really have tasks to wakeup */
+	if (!hb_waiters_pending(hb))
+		goto out_put_key;
+
 	spin_lock(&hb->lock);
 
 	/*
@@ -2544,6 +2610,7 @@ retry:
 
 out_unlock:
 	spin_unlock(&hb->lock);
+out_put_key:
 	put_futex_key(&key);
 
 out:
