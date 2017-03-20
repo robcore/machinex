@@ -348,6 +348,10 @@ static inline struct blkcg *bio_blkcg(struct bio *bio)
 		return css_to_blkcg(bio->bi_css);
 	return task_blkcg(current);
 }
+static inline struct blkcg *blkcg_parent(struct blkcg *blkcg)
+{
+	return css_to_blkcg(css_parent(&blkcg->css));
+}
 #else
 struct cgroup;
 static inline struct blkio_cgroup *
