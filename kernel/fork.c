@@ -1165,7 +1165,6 @@ static void rt_mutex_init_task(struct task_struct *p)
 	p->pi_waiters = RB_ROOT;
 	p->pi_waiters_leftmost = NULL;
 	p->pi_blocked_on = NULL;
-	p->pi_top_task = NULL;
 #endif
 }
 
@@ -1373,9 +1372,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 #endif
 
 	/* Perform scheduler related setup. Assign this task to a CPU. */
-	retval = sched_fork(p);
-	if (retval)
-		goto bad_fork_cleanup_policy;
+	sched_fork(p);
 
 	retval = perf_event_init_task(p);
 	if (retval)
