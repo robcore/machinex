@@ -7964,10 +7964,11 @@ static struct cgroup_css *perf_cgroup_css_alloc(struct cgroup *cont)
 	return &jc->css;
 }
 
-static void perf_cgroup_css_free(struct cgroup_subsys_state *css)
+static void perf_cgroup_css_free(struct cgroup *cont)
 {
-	struct perf_cgroup *jc = container_of(css, struct perf_cgroup, css);
-
+	struct perf_cgroup *jc;
+	jc = container_of(cgroup_css(cont, perf_subsys_id),
+			  struct perf_cgroup, css);
 	free_percpu(jc->info);
 	kfree(jc);
 }
@@ -7979,17 +7980,15 @@ static int __perf_cgroup_move(void *info)
 	return 0;
 }
 
-static void perf_cgroup_attach(struct cgroup_subsys_state *css,
-			       struct cgroup_taskset *tset)
+static void perf_cgroup_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 
-	cgroup_taskset_for_each(task, css->cgroup, tset)
+	cgroup_taskset_for_each(task, cgrp, tset)
 		task_function_call(task, __perf_cgroup_move, task);
 }
 
-static void perf_cgroup_exit(struct cgroup_subsys_state *css,
-			     struct cgroup_subsys_state *old_css,
+static void perf_cgroup_exit(struct cgroup *cgrp, struct cgroup *old_cgrp,
 			     struct task_struct *task)
 {
 	/*

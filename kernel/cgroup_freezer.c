@@ -45,24 +45,25 @@ struct freezer {
 	spinlock_t			lock;
 };
 
-static inline struct freezer *css_freezer(struct cgroup_subsys_state *css)
-{
-	return css ? container_of(css, struct freezer, css) : NULL;
-}
-
 static inline struct freezer *cgroup_freezer(struct cgroup *cgroup)
 {
-	return css_freezer(cgroup_css(cgroup, freezer_subsys_id));
+	return container_of(cgroup_css(cgroup, freezer_subsys_id),
+			    struct freezer, css);
 }
 
 static inline struct freezer *task_freezer(struct task_struct *task)
 {
-	return css_freezer(task_css(task, freezer_subsys_id));
+	return container_of(task_css(task, freezer_subsys_id),
+			    struct freezer, css);
 }
 
 static struct freezer *parent_freezer(struct freezer *freezer)
 {
-	return css_freezer(css_parent(&freezer->css));
+	struct cgroup *pcg = freezer->css.cgroup->parent;
+
+	if (pcg)
+		return cgroup_freezer(pcg);
+	return NULL;
 }
 
 bool cgroup_freezing(struct task_struct *task)
@@ -104,16 +105,16 @@ static struct cgroup_css *freezer_css_alloc(struct cgroup *cgroup)
 }
 
 /**
- * freezer_css_online - commit creation of a freezer css
- * @css: css being created
+ * freezer_css_online - commit creation of a freezer cgroup
+ * @cgroup: cgroup being created
  *
- * We're committing to creation of @css.  Mark it online and inherit
+ * We're committing to creation of @cgroup.  Mark it online and inherit
  * parent's freezing state while holding both parent's and our
  * freezer->lock.
  */
-static int freezer_css_online(struct cgroup_subsys_state *css)
+static int freezer_css_online(struct cgroup *cgroup)
 {
-	struct freezer *freezer = css_freezer(css);
+	struct freezer *freezer = cgroup_freezer(cgroup);
 	struct freezer *parent = parent_freezer(freezer);
 
 	/*
@@ -140,15 +141,15 @@ static int freezer_css_online(struct cgroup_subsys_state *css)
 }
 
 /**
- * freezer_css_offline - initiate destruction of a freezer css
- * @css: css being destroyed
+ * freezer_css_offline - initiate destruction of @cgroup
+ * @cgroup: cgroup being destroyed
  *
- * @css is going away.  Mark it dead and decrement system_freezing_count if
- * it was holding one.
+ * @cgroup is going away.  Mark it dead and decrement system_freezing_count
+ * if it was holding one.
  */
-static void freezer_css_offline(struct cgroup_subsys_state *css)
+static void freezer_css_offline(struct cgroup *cgroup)
 {
-	struct freezer *freezer = css_freezer(css);
+	struct freezer *freezer = cgroup_freezer(cgroup);
 
 	spin_lock_irq(&freezer->lock);
 
@@ -160,9 +161,9 @@ static void freezer_css_offline(struct cgroup_subsys_state *css)
 	spin_unlock_irq(&freezer->lock);
 }
 
-static void freezer_css_free(struct cgroup_subsys_state *css)
+static void freezer_css_free(struct cgroup *cgroup)
 {
-	kfree(css_freezer(css));
+	kfree(cgroup_freezer(cgroup));
 }
 
 /*
@@ -174,26 +175,25 @@ static void freezer_css_free(struct cgroup_subsys_state *css)
  * @freezer->lock.  freezer_attach() makes the new tasks conform to the
  * current state and all following state changes can see the new tasks.
  */
-static void freezer_attach(struct cgroup_subsys_state *new_css,
-			   struct cgroup_taskset *tset)
+static void freezer_attach(struct cgroup *new_cgrp, struct cgroup_taskset *tset)
 {
-	struct freezer *freezer = css_freezer(new_css);
+	struct freezer *freezer = cgroup_freezer(new_cgrp);
 	struct task_struct *task;
 	bool clear_frozen = false;
 
 	spin_lock_irq(&freezer->lock);
 
 	/*
-	 * Make the new tasks conform to the current state of @new_css.
+	 * Make the new tasks conform to the current state of @new_cgrp.
 	 * For simplicity, when migrating any task to a FROZEN cgroup, we
 	 * revert it to FREEZING and let update_if_frozen() determine the
 	 * correct state later.
 	 *
-	 * Tasks in @tset are on @new_css but may not conform to its
+	 * Tasks in @tset are on @new_cgrp but may not conform to its
 	 * current state before executing the following - !frozen tasks may
 	 * be visible in a FROZEN cgroup and frozen tasks in a THAWED one.
 	 */
-	cgroup_taskset_for_each(task, new_css->cgroup, tset) {
+	cgroup_taskset_for_each(task, new_cgrp, tset) {
 		if (!(freezer->state & CGROUP_FREEZING)) {
 			__thaw_task(task);
 		} else {
@@ -231,7 +231,7 @@ static void freezer_fork(struct task_struct *task)
 	 * The root cgroup is non-freezable, so we can skip the
 	 * following check.
 	 */
-	if (!parent_freezer(freezer))
+	if (!freezer->css.cgroup->parent)
 		goto out;
 
 	spin_lock_irq(&freezer->lock);

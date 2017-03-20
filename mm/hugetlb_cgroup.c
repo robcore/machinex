@@ -36,7 +36,7 @@ static struct hugetlb_cgroup *root_h_cgroup __read_mostly;
 static inline
 struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_css *s)
 {
-	return s ? container_of(s, struct hugetlb_cgroup, css) : NULL;
+	return container_of(s, struct hugetlb_cgroup, css);
 }
 
 static inline
@@ -99,11 +99,11 @@ static struct cgroup_css *hugetlb_cgroup_css_alloc(struct cgroup *cgroup)
 	return &h_cgroup->css;
 }
 
-static void hugetlb_cgroup_css_free(struct cgroup_subsys_state *css)
+static void hugetlb_cgroup_css_free(struct cgroup *cgroup)
 {
 	struct hugetlb_cgroup *h_cgroup;
 
-	h_cgroup = hugetlb_cgroup_from_css(css);
+	h_cgroup = hugetlb_cgroup_from_cgroup(cgroup);
 	kfree(h_cgroup);
 }
 

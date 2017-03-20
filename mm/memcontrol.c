@@ -529,7 +529,7 @@ struct vmpressure *css_to_vmpressure(struct cgroup_css *css)
 static inline
 struct mem_cgroup *mem_cgroup_from_css(struct cgroup_css *s)
 {
-	return s ? container_of(s, struct mem_cgroup, css) : NULL;
+	return container_of(s, struct mem_cgroup, css);
 }
 
 /* Writing them here to avoid exposing memcg's inner layout */
@@ -1488,8 +1488,10 @@ static unsigned long mem_cgroup_margin(struct mem_cgroup *memcg)
 
 int mem_cgroup_swappiness(struct mem_cgroup *memcg)
 {
+	struct cgroup *cgrp = memcg->css.cgroup;
+
 	/* root ? */
-	if (!css_parent(&memcg->css))
+	if (cgrp->parent == NULL)
 		return vm_swappiness;
 
 	return memcg->swappiness;
@@ -4960,7 +4962,11 @@ static int mem_cgroup_hierarchy_write(struct cgroup *cont, struct cftype *cft,
 {
 	int retval = 0;
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
-	struct mem_cgroup *parent_memcg = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct cgroup *parent = cont->parent;
+	struct mem_cgroup *parent_memcg = NULL;
+
+	if (parent)
+		parent_memcg = mem_cgroup_from_cont(parent);
 
 	mutex_lock(&memcg_create_mutex);
 
@@ -5218,15 +5224,18 @@ static int mem_cgroup_write(struct cgroup *cont, struct cftype *cft,
 static void memcg_get_hierarchical_limit(struct mem_cgroup *memcg,
 		unsigned long long *mem_limit, unsigned long long *memsw_limit)
 {
+	struct cgroup *cgroup;
 	unsigned long long min_limit, min_memsw_limit, tmp;
 
 	min_limit = res_counter_read_u64(&memcg->res, RES_LIMIT);
 	min_memsw_limit = res_counter_read_u64(&memcg->memsw, RES_LIMIT);
+	cgroup = memcg->css.cgroup;
 	if (!memcg->use_hierarchy)
 		goto out;
 
-	while (css_parent(&memcg->css)) {
-		memcg = mem_cgroup_from_css(css_parent(&memcg->css));
+	while (cgroup->parent) {
+		cgroup = cgroup->parent;
+		memcg = mem_cgroup_from_cont(cgroup);
 		if (!memcg->use_hierarchy)
 			break;
 		tmp = res_counter_read_u64(&memcg->res, RES_LIMIT);
@@ -5456,10 +5465,15 @@ static int mem_cgroup_swappiness_write(struct cgroup *cgrp, struct cftype *cft,
 				       u64 val)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
-	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct mem_cgroup *parent;
 
-	if (val > 100 || !parent)
+	if (val > 100)
 		return -EINVAL;
+
+	if (cgrp->parent == NULL)
+		return -EINVAL;
+
+	parent = mem_cgroup_from_cont(cgrp->parent);
 
 	mutex_lock(&memcg_create_mutex);
 
@@ -5796,11 +5810,13 @@ static int mem_cgroup_oom_control_write(struct cgroup *cgrp,
 	struct cftype *cft, u64 val)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
-	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct mem_cgroup *parent;
 
 	/* cannot set to root cgroup and only 0 and 1 are allowed */
-	if (!parent || !((val == 0) || (val == 1)))
+	if (!cgrp->parent || !((val == 0) || (val == 1)))
 		return -EINVAL;
+
+	parent = mem_cgroup_from_cont(cgrp->parent);
 
 	mutex_lock(&memcg_create_mutex);
 	/* oom-kill-disable is a flag for subhierarchy. */
@@ -6194,7 +6210,7 @@ mem_cgroup_css_alloc(struct cgroup *cont)
 			goto free_out;
 
 	/* root ? */
-	if (parent_css == NULL) {
+	if (cont->parent == NULL) {
 		root_mem_cgroup = memcg;
 		res_counter_init(&memcg->res, NULL);
 		res_counter_init(&memcg->memsw, NULL);
@@ -6216,16 +6232,17 @@ free_out:
 }
 
 static int
-mem_cgroup_css_online(struct cgroup_subsys_state *css)
+mem_cgroup_css_online(struct cgroup *cont)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
-	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(css));
+	struct mem_cgroup *memcg, *parent;
 	int error = 0;
 
-	if (!parent)
+	if (!cont->parent)
 		return 0;
 
 	mutex_lock(&memcg_create_mutex);
+	memcg = mem_cgroup_from_cont(cont);
+	parent = mem_cgroup_from_cont(cont->parent);
 
 	memcg->use_hierarchy = parent->use_hierarchy;
 	memcg->oom_kill_disable = parent->oom_kill_disable;
@@ -6272,17 +6289,17 @@ mem_cgroup_css_online(struct cgroup_subsys_state *css)
 	return error;
 }
 
-static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
+static void mem_cgroup_css_offline(struct cgroup *cont)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 
 	mem_cgroup_reparent_charges(memcg);
 	mem_cgroup_destroy_all_caches(memcg);
 }
 
-static void mem_cgroup_css_free(struct cgroup_subsys_state *css)
+static void mem_cgroup_css_free(struct cgroup *cont)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 
 	kmem_cgroup_destroy(memcg);
 
@@ -6647,12 +6664,12 @@ static void mem_cgroup_clear_mc(void)
 	mem_cgroup_end_move(from);
 }
 
-static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
+static int mem_cgroup_can_attach(struct cgroup *cgroup,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *p = cgroup_taskset_first(tset);
 	int ret = 0;
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgroup);
 	unsigned long move_charge_at_immigrate;
 
 	/*
@@ -6694,7 +6711,7 @@ static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
 	return ret;
 }
 
-static void mem_cgroup_cancel_attach(struct cgroup_subsys_state *css,
+static void mem_cgroup_cancel_attach(struct cgroup *cgroup,
 				     struct cgroup_taskset *tset)
 {
 	mem_cgroup_clear_mc();
@@ -6842,7 +6859,7 @@ retry:
 	up_read(&mm->mmap_sem);
 }
 
-static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
+static void mem_cgroup_move_task(struct cgroup *cont,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *p = cgroup_taskset_first(tset);
@@ -6857,16 +6874,16 @@ static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
 		mem_cgroup_clear_mc();
 }
 #else	/* !CONFIG_MMU */
-static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
+static int mem_cgroup_can_attach(struct cgroup *cgroup,
 				 struct cgroup_taskset *tset)
 {
 	return 0;
 }
-static void mem_cgroup_cancel_attach(struct cgroup_subsys_state *css,
+static void mem_cgroup_cancel_attach(struct cgroup *cgroup,
 				     struct cgroup_taskset *tset)
 {
 }
-static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
+static void mem_cgroup_move_task(struct cgroup *cont,
 				 struct cgroup_taskset *tset)
 {
 }
@@ -6876,15 +6893,15 @@ static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
  * Cgroup retains root cgroups across [un]mount cycles making it necessary
  * to verify sane_behavior flag on each mount attempt.
  */
-static void mem_cgroup_bind(struct cgroup_subsys_state *root_css)
+static void mem_cgroup_bind(struct cgroup *root)
 {
 	/*
 	 * use_hierarchy is forced with sane_behavior.  cgroup core
 	 * guarantees that @root doesn't have any children, so turning it
 	 * on for the root memcg is enough.
 	 */
-	if (cgroup_sane_behavior(root_css->cgroup))
-		mem_cgroup_from_css(root_css)->use_hierarchy = true;
+	if (cgroup_sane_behavior(root))
+		mem_cgroup_from_cont(root)->use_hierarchy = true;
 }
 
 struct cgroup_subsys mem_cgroup_subsys = {

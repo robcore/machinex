@@ -7079,15 +7079,11 @@ int sched_rt_handler(struct ctl_table *table, int write,
 
 #ifdef CONFIG_CGROUP_SCHED
 
-static inline struct task_group *css_tg(struct cgroup_subsys_state *css)
-{
-	return css ? container_of(css, struct task_group, css) : NULL;
-}
-
 /* return corresponding task_group object of a cgroup */
 static inline struct task_group *cgroup_tg(struct cgroup *cgrp)
 {
-	return css_tg(cgroup_css(cgrp, cpu_cgroup_subsys_id));
+	return container_of(cgroup_css(cgrp, cpu_cgroup_subsys_id),
+			    struct task_group, css);
 }
 
 static struct cgroup_css *cpu_cgroup_css_alloc(struct cgroup *cgrp)
@@ -7107,38 +7103,41 @@ static struct cgroup_css *cpu_cgroup_css_alloc(struct cgroup *cgrp)
 	return &tg->css;
 }
 
-static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
+static int cpu_cgroup_css_online(struct cgroup *cgrp)
 {
-	struct task_group *tg = css_tg(css);
-	struct task_group *parent = css_tg(css_parent(css));
+	struct task_group *tg = cgroup_tg(cgrp);
+	struct task_group *parent;
 
-	if (parent)
-		sched_online_group(tg, parent);
+	if (!cgrp->parent)
+		return 0;
+
+	parent = cgroup_tg(cgrp->parent);
+	sched_online_group(tg, parent);
 	return 0;
 }
 
-static void cpu_cgroup_css_free(struct cgroup_subsys_state *css)
+static void cpu_cgroup_css_free(struct cgroup *cgrp)
 {
-	struct task_group *tg = css_tg(css);
+	struct task_group *tg = cgroup_tg(cgrp);
 
 	sched_destroy_group(tg);
 }
 
-static void cpu_cgroup_css_offline(struct cgroup_subsys_state *css)
+static void cpu_cgroup_css_offline(struct cgroup *cgrp)
 {
-	struct task_group *tg = css_tg(css);
+	struct task_group *tg = cgroup_tg(cgrp);
 
 	sched_offline_group(tg);
 }
 
-static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
+static int cpu_cgroup_can_attach(struct cgroup *cgrp,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 
-	cgroup_taskset_for_each(task, css->cgroup, tset) {
+	cgroup_taskset_for_each(task, cgrp, tset) {
 #ifdef CONFIG_RT_GROUP_SCHED
-		if (!sched_rt_can_attach(css_tg(css), task))
+		if (!sched_rt_can_attach(cgroup_tg(cgrp), task))
 			return -EINVAL;
 #else
 		/* We don't support RT-tasks being in separate groups */
@@ -7149,18 +7148,18 @@ static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static void cpu_cgroup_attach(struct cgroup_subsys_state *css,
+static void cpu_cgroup_attach(struct cgroup *cgrp,
 			      struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 
-	cgroup_taskset_for_each(task, css->cgroup, tset)
+	cgroup_taskset_for_each(task, cgrp, tset)
 		sched_move_task(task);
 }
 
-static void cpu_cgroup_exit(struct cgroup_subsys_state *css,
-			    struct cgroup_subsys_state *old_css,
-			    struct task_struct *task)
+static void
+cpu_cgroup_exit(struct cgroup *cgrp, struct cgroup *old_cgrp,
+		struct task_struct *task)
 {
 	/*
 	 * cgroup_exit() is called in the copy_process() failure path.
