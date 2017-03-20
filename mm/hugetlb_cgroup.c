@@ -99,11 +99,11 @@ static struct cgroup_css *hugetlb_cgroup_css_alloc(struct cgroup *cgroup)
 	return &h_cgroup->css;
 }
 
-static void hugetlb_cgroup_css_free(struct cgroup *cgroup)
+static void hugetlb_cgroup_css_free(struct cgroup_subsys_state *css)
 {
 	struct hugetlb_cgroup *h_cgroup;
 
-	h_cgroup = hugetlb_cgroup_from_cgroup(cgroup);
+	h_cgroup = hugetlb_cgroup_from_css(css);
 	kfree(h_cgroup);
 }
 

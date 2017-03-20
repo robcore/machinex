@@ -51,19 +51,19 @@ static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
 	return &cs->css;
 }
 
-static int cgrp_css_online(struct cgroup *cgrp)
+static int cgrp_css_online(struct cgroup_subsys_state *css)
 {
-	struct cgroup_cls_state *cs = cgrp_cls_state(cgrp);
-	struct cgroup_cls_state *parent = css_cls_state(css_parent(&cs->css));
+	struct cgroup_cls_state *cs = css_cls_state(css);
+	struct cgroup_cls_state *parent = css_cls_state(css_parent(css));
 
 	if (parent)
 		cs->classid = parent->classid;
 	return 0;
 }
 
-static void cgrp_css_free(struct cgroup *cgrp)
+static void cgrp_css_free(struct cgroup_subsys_state *css)
 {
-	kfree(cgrp_cls_state(cgrp));
+	kfree(css_cls_state(css));
 }
 
 static u64 read_classid(struct cgroup *cgrp, struct cftype *cft)
