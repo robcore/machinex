@@ -4674,8 +4674,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			struct sched_group *group, int load_idx,
 			int local_group, struct sg_lb_stats *sgs)
 {
-	unsigned long scaled_load, load, max_cpu_load, min_cpu_load, max_nr_running;
-	unsigned long avg_load_per_task = 0;
+	unsigned long nr_running, max_nr_running, min_nr_running;
+	unsigned long scaled_load, load, max_cpu_load, min_cpu_load;
 	int i;
 
 	/* Tally up the load of all CPUs in the group */
@@ -4724,12 +4724,11 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	 *      the hierarchy?
 	 */
 	if (sgs->sum_nr_running) {
-		avg_load_per_task = sgs->sum_weighted_load * SCHED_POWER_SCALE
-					/ group->sgp->power;
-		avg_load_per_task /= sgs->sum_nr_running;
+		sgs->load_per_task = sgs->sum_weighted_load / sgs->sum_nr_running;
 	}
 
-	if ((max_cpu_load - min_cpu_load) >= avg_load_per_task && max_nr_running > 1)
+	if ((max_cpu_load - min_cpu_load) >= sgs->load_per_task &&
+	    (max_nr_running - min_nr_running) > 1)
 		sgs->group_imb = 1;
 
 	sgs->group_capacity =
@@ -4982,15 +4981,8 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 	struct sg_lb_stats *local, *busiest;
 
 	local = &sds->local_stat;
-	if (local->sum_nr_running) {
-		local->load_per_task =
-			local->sum_weighted_load / local->sum_nr_running;
-	}
 
 	busiest = &sds->busiest_stat;
-	/* busiest must have some tasks */
-	busiest->load_per_task =
-		busiest->sum_weighted_load / busiest->sum_nr_running;
 
 	if (busiest->group_imb) {
 		busiest->load_per_task =
