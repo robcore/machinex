@@ -3825,9 +3825,9 @@ preempt:
 
 static struct task_struct *pick_next_task_fair(struct rq *rq)
 {
+	struct task_struct *p;
 	struct cfs_rq *cfs_rq = &rq->cfs;
 	struct sched_entity *se;
-	struct task_struct *p;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	if (!cfs_rq->nr_running)
@@ -4756,6 +4756,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 
 		nr_running = rq->nr_running;
 
+		/* Bias balancing toward cpus of our domain */
 		if (local_group)
 			load = target_load(i, load_idx);
 		else
@@ -4772,9 +4773,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	sgs->group_power = group->sgp->power;
 	sgs->avg_load = (sgs->group_load*SCHED_POWER_SCALE) / sgs->group_power;
 
-	if (sgs->sum_nr_running) {
+	if (sgs->sum_nr_running)
 		sgs->load_per_task = sgs->sum_weighted_load / sgs->sum_nr_running;
-	}
 
 	sgs->group_weight = group->group_weight;
 
@@ -5805,7 +5805,6 @@ static inline void nohz_balance_exit_idle(int cpu)
 static inline void set_cpu_sd_state_busy(void)
 {
 	struct sched_domain *sd;
-	int cpu = smp_processor_id();
 
 	rcu_read_lock();
 	sd = rcu_dereference_check_sched_domain(this_rq()->sd);
@@ -5815,7 +5814,7 @@ static inline void set_cpu_sd_state_busy(void)
 	sd->nohz_idle = 0;
 
 	for (; sd; sd = sd->parent)
-	atomic_inc(&sd->groups->sgp->nr_busy_cpus);
+		atomic_inc(&sd->groups->sgp->nr_busy_cpus);
 unlock:
 	rcu_read_unlock();
 }
@@ -5832,7 +5831,7 @@ void set_cpu_sd_state_idle(void)
 	sd->nohz_idle = 1;
 
 	for (; sd; sd = sd->parent)
-	atomic_dec(&sd->groups->sgp->nr_busy_cpus);
+		atomic_dec(&sd->groups->sgp->nr_busy_cpus);
 unlock:
 	rcu_read_unlock();
 }
@@ -5914,12 +5913,13 @@ static void rebalance_domains(int cpu, enum cpu_idle_type idle)
 			need_decay = 1;
 		}
 		max_cost += sd->max_newidle_lb_cost;
+
 		if (!(sd->flags & SD_LOAD_BALANCE))
 			continue;
 
 		/*
 		 * Stop the load balance at this level. There is another
-		 * * CPU in our sched group which is doing load balancing more
+		 * CPU in our sched group which is doing load balancing more
 		 * actively.
 		 */
 		if (!continue_balancing) {
@@ -6159,6 +6159,9 @@ static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
 		cfs_rq = cfs_rq_of(se);
 		entity_tick(cfs_rq, se, queued);
 	}
+
+	if (numabalancing_enabled)
+		task_tick_numa(rq, curr);
 
 	update_rq_runnable_avg(rq, 1);
 }
@@ -6606,4 +6609,3 @@ __init void init_sched_fair_class(void)
 #endif /* SMP */
 
 }
-
