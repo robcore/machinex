@@ -1989,7 +1989,6 @@ static int msm_hsic_pm_resume(struct device *dev)
 	return 0;
 }
 #endif
-
 #ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
 {
