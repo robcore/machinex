@@ -4633,7 +4633,6 @@ fix_small_capacity(struct sched_domain *sd, struct sched_group *group)
  * @idle: Idle status of this_cpu
  * @load_idx: Load index of sched_domain of this_cpu for load calc.
  * @local_group: Does group contain this_cpu.
- * @cpus: Set of cpus considered for load balancing.
  * @balance: Should we balance.
  * @sgs: variable to hold the statistics for this group.
  */
@@ -5662,7 +5661,7 @@ static inline void set_cpu_sd_state_busy(void)
 	sd->nohz_idle = 0;
 
 	for (; sd; sd = sd->parent)
-	atomic_inc(&sd->groups->sgp->nr_busy_cpus);
+		atomic_inc(&sd->groups->sgp->nr_busy_cpus);
 unlock:
 	rcu_read_unlock();
 }
@@ -5679,7 +5678,7 @@ void set_cpu_sd_state_idle(void)
 	sd->nohz_idle = 1;
 
 	for (; sd; sd = sd->parent)
-	atomic_dec(&sd->groups->sgp->nr_busy_cpus);
+		atomic_dec(&sd->groups->sgp->nr_busy_cpus);
 unlock:
 	rcu_read_unlock();
 }
