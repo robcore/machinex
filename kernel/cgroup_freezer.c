@@ -262,7 +262,7 @@ out:
 static void update_if_frozen(struct cgroup *cgroup)
 {
 	struct freezer *freezer = cgroup_freezer(cgroup);
-	struct cgroup *pos;
+	struct cgroup_subsys_state *pos;
 	struct cgroup_iter it;
 	struct task_struct *task;
 
@@ -275,8 +275,8 @@ static void update_if_frozen(struct cgroup *cgroup)
 		goto out_unlock;
 
 	/* are all (live) children frozen? */
-	cgroup_for_each_child(pos, cgroup) {
-		struct freezer *child = cgroup_freezer(pos);
+	css_for_each_child(pos, css) {
+		struct freezer *child = css_freezer(pos);
 
 		if ((child->state & CGROUP_FREEZER_ONLINE) &&
 		    !(child->state & CGROUP_FROZEN))
@@ -309,12 +309,12 @@ out_unlock:
 static int freezer_read(struct cgroup *cgroup, struct cftype *cft,
 			struct seq_file *m)
 {
-	struct cgroup *pos;
+	struct cgroup_subsys_state *pos;
 
 	rcu_read_lock();
 
 	/* update states bottom-up */
-	cgroup_for_each_descendant_post(pos, cgroup)
+	css_for_each_descendant_post(pos, css)
 		update_if_frozen(pos);
 	update_if_frozen(cgroup);
 
