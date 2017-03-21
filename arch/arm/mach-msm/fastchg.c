@@ -424,10 +424,10 @@ static ssize_t info_show(struct kobject *kobj,
 		"Custom USB level : %dmA/h\n"
 		"Custom Wireless level : %dmA/h\n"
 		"Failsafe mode : %s\n"
-		"Unstable Power Detection : %s\n"
 		"Valid AC  levels : %s\n"
 		"Valid USB levels : %s\n"
 		"Valid Wireless levels : %s\n",
+		"Unstable Power Detection : %s\n"
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	       ? "0 - Disabled (default)" :
 		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
@@ -442,9 +442,9 @@ static ssize_t info_show(struct kobject *kobj,
 		 wireless_charge_level,
 		 failsafe          == FAIL_SAFE_DISABLED           ? "0 - Failsafe disabled - please be careful !" :
 		(failsafe          == FAIL_SAFE_ENABLED            ? "1 - Failsafe active (default)" : "Problem : value out of range"),
-		 failsafe          == FAIL_SAFE_ENABLED            ? AC_LEVELS : ANY_LEVELS,
-		 failsafe          == FAIL_SAFE_ENABLED            ? USB_LEVELS : ANY_LEVELS,
-		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS,
+		 failsafe          == FAIL_SAFE_ENABLED            ? AC_LEVELS : ANY_LEVELS_AC,
+		 failsafe          == FAIL_SAFE_ENABLED            ? USB_LEVELS : ANY_LEVELS_USB,
+		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS_WL,
 		 unstable_power_detection == UNSTABLE_POWER_DETECTION_DISABLED           ? "0 - Unstable Power Detection Disabled - please be careful !" :
 		(unstable_power_detection == UNSTABLE_POWER_DETECTION_ENABLED            ? "1 - Unstable Power Detection active (default)" : "Problem : value out of range")
 		);
