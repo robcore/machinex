@@ -4036,7 +4036,8 @@ static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
 #define LBF_ALL_PINNED	0x01
 #define LBF_NEED_BREAK	0x02
-#define LBF_SOME_PINNED 0x04
+#define LBF_DST_PINNED  0x04
+#define LBF_SOME_PINNED	0x08
 
 struct lb_env {
 	struct sched_domain	*sd;
@@ -4132,6 +4133,8 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 
 		schedstat_inc(p, se.statistics.nr_failed_migrations_affine);
 
+		env->flags |= LBF_SOME_PINNED;
+
 		/*
 		 * Remember if this task can be migrated to any other cpu in
 		 * our sched_group. We may want to revisit it if we couldn't
@@ -4140,13 +4143,13 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 		 * Also avoid computing new_dst_cpu if we have already computed
 		 * one in current iteration.
 		 */
-		if (!env->dst_grpmask || (env->flags & LBF_SOME_PINNED))
+		if (!env->dst_grpmask || (env->flags & LBF_DST_PINNED))
 			return 0;
 
 		/* Prevent to re-select dst_cpu via env's cpus */
 		for_each_cpu_and(cpu, env->dst_grpmask, env->cpus) {
 			if (cpumask_test_cpu(cpu, tsk_cpus_allowed(p))) {
-				env->flags |= LBF_SOME_PINNED;
+				env->flags |= LBF_DST_PINNED;
 				env->new_dst_cpu = cpu;
 				break;
 			}
@@ -4677,13 +4680,12 @@ fix_small_capacity(struct sched_domain *sd, struct sched_group *group)
  * cpu 3 and leave one of the cpus in the second group unused.
  *
  * The current solution to this issue is detecting the skew in the first group
- * by noticing it has a cpu that is overloaded while the remaining cpus are
- * idle -- or rather, there's a distinct imbalance in the cpus; see
- * sg_imbalanced().
+ * by noticing the lower domain failed to reach balance and had difficulty
+ * moving tasks due to affinity constraints.
  *
  * When this is so detected; this group becomes a candidate for busiest; see
  * update_sd_pick_busiest(). And calculcate_imbalance() and
- * find_busiest_group() avoid some of the usual balance conditional to allow it
+ * find_busiest_group() avoid some of the usual balance conditions to allow it
  * to create an effective group imbalance.
  *
  * This is a somewhat tricky proposition since the next run might not find the
@@ -4691,49 +4693,9 @@ fix_small_capacity(struct sched_domain *sd, struct sched_group *group)
  * subtle and fragile situation.
  */
 
-struct sg_imb_stats {
-	unsigned long max_nr_running, min_nr_running;
-	unsigned long max_cpu_load, min_cpu_load;
-};
-
-static inline void init_sg_imb_stats(struct sg_imb_stats *sgi)
+static inline int sg_imbalanced(struct sched_group *group)
 {
-	sgi->max_cpu_load = sgi->max_nr_running = 0UL;
-	sgi->min_cpu_load = sgi->min_nr_running = ~0UL;
-}
-
-static inline void
-update_sg_imb_stats(struct sg_imb_stats *sgi,
-		    unsigned long load, unsigned long nr_running)
-{
-	if (load > sgi->max_cpu_load)
-		sgi->max_cpu_load = load;
-	if (sgi->min_cpu_load > load)
-		sgi->min_cpu_load = load;
-
-	if (nr_running > sgi->max_nr_running)
-		sgi->max_nr_running = nr_running;
-	if (sgi->min_nr_running > nr_running)
-		sgi->min_nr_running = nr_running;
-}
-
-static inline int
-sg_imbalanced(struct sg_lb_stats *sgs, struct sg_imb_stats *sgi)
-{
-	/*
-	 * Consider the group unbalanced when the imbalance is larger
-	 * than the average weight of a task.
-	 *
-	 * APZ: with cgroup the avg task weight can vary wildly and
-	 *      might not be a suitable number - should we keep a
-	 *      normalized nr_running number somewhere that negates
-	 *      the hierarchy?
-	 */
-	if ((sgi->max_cpu_load - sgi->min_cpu_load) >= sgs->load_per_task &&
-	    (sgi->max_nr_running - sgi->min_nr_running) > 1)
-		return 1;
-
-	return 0;
+	return group->sgp->imbalance;
 }
 
 /**
@@ -4750,21 +4712,19 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			struct sched_group *group, int load_idx,
 			int local_group, struct sg_lb_stats *sgs)
 {
-	struct sg_imb_stats sgi;
 	unsigned long nr_running;
 	unsigned long load;
 	int i;
 
-	init_sg_imb_stats(&sgi);
-
 	for_each_cpu_and(i, sched_group_cpus(group), env->cpus) {
 		struct rq *rq = cpu_rq(i);
 
-			load = target_load(i, load_idx);
-		} else {
-			load = source_load(i, load_idx);
+		nr_running = rq->nr_running;
 
-		update_sg_imb_stats(&sgi, load, nr_running);
+		if (local_group)
+			load = target_load(i, load_idx);
+		else
+			load = source_load(i, load_idx);
 
 		sgs->group_load += load;
 		sgs->sum_nr_running += rq->cfs.h_nr_running;
@@ -4785,7 +4745,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		sgs->load_per_task = sgs->sum_weighted_load / sgs->sum_nr_running;
 	}
 
-	sgs->group_imb = sg_imbalanced(sgs, &sgi);
+	sgs->group_imb = sg_imbalanced(group);
 
 	sgs->group_capacity =
 		DIV_ROUND_CLOSEST(sgs->group_power, SCHED_POWER_SCALE);
@@ -5325,6 +5285,7 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 			int *continue_balancing)
 {
 	int ld_moved, cur_ld_moved, active_balance = 0;
+	struct sched_domain *sd_parent = sd->parent;
 	struct sched_group *group;
 	struct rq *busiest = NULL;
 	unsigned long flags;
@@ -5432,12 +5393,12 @@ more_balance:
 		 * moreover subsequent load balance cycles should correct the
 		 * excess load moved.
 		 */
-		if ((env.flags & LBF_SOME_PINNED) && env.imbalance > 0) {
+		if ((env.flags & LBF_DST_PINNED) && env.imbalance > 0) {
 
 			this_rq		 = cpu_rq(env.new_dst_cpu);
 			env.dst_rq	 = this_rq;
 			env.dst_cpu	 = env.new_dst_cpu;
-			env.flags	&= ~LBF_SOME_PINNED;
+			env.flags	&= ~LBF_DST_PINNED;
 			env.loop	 = 0;
 			env.loop_break	 = sched_nr_migrate_break;
 
@@ -5448,6 +5409,18 @@ more_balance:
 			 * need to continue with same src_cpu.
 			 */
 			goto more_balance;
+		}
+
+		/*
+		 * We failed to reach balance because of affinity.
+		 */
+		if (sd_parent) {
+			int *group_imbalance = &sd_parent->groups->sgp->imbalance;
+
+			if ((env.flags & LBF_SOME_PINNED) && env.imbalance > 0) {
+				*group_imbalance = 1;
+			} else if (*group_imbalance)
+				*group_imbalance = 0;
 		}
 
 		/* All tasks on this runqueue were pinned by CPU affinity */
@@ -5938,7 +5911,7 @@ static void rebalance_domains(int cpu, enum cpu_idle_type idle)
 		if (time_after_eq(jiffies, sd->last_balance + interval)) {
 			if (load_balance(cpu, rq, sd, idle, &continue_balancing)) {
 				/*
-				 * The LBF_SOME_PINNED logic could have changed
+				 * The LBF_DST_PINNED logic could have changed
 				 * env->dst_cpu, so we can't know our idle
 				 * state even if we migrated tasks. Update it.
 				 */
