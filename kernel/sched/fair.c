@@ -4951,7 +4951,7 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
 {
 	unsigned long tmp, pwr_now = 0, pwr_move = 0;
 	unsigned int imbn = 2;
-	unsigned long scaled_busy_load_per_task, scaled_this_load_per_task;
+	unsigned long scaled_busy_load_per_task;
 	struct sg_lb_stats *local, *busiest;
 
 	local = &sds->local_stat;
@@ -4972,9 +4972,6 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
 		return;
 	}
 
-	scaled_this_load_per_task = sds->this_load_per_task
-					 * SCHED_POWER_SCALE;
-	scaled_this_load_per_task /= sds->this->sgp->power;
 	/*
 	 * OK, we don't have enough imbalance to justify moving tasks,
 	 * however we may be able to increase total CPU power used by
@@ -4995,6 +4992,7 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
 			    min(busiest->load_per_task,
 				busiest->avg_load - tmp);
 	}
+
 	/* Amount of load we'd add */
 	if (busiest->avg_load * busiest->group_power <
 	    busiest->load_per_task * SCHED_POWER_SCALE) {
@@ -5009,12 +5007,6 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
 	pwr_move /= SCHED_POWER_SCALE;
 
 	/* Move if we gain throughput */
-	/*
-	 * The only possibilty for below statement be true, is:
-	 * sds->max_load is larger than scaled_busy_load_per_task, while,
-	 * scaled_this_load_per_task is larger than sds->this_load plus by
-	 * the scaled scaled_busy_load_per_task moved into this queue
-	 */
 	if (pwr_move > pwr_now)
 		env->imbalance = busiest->load_per_task;
 }
@@ -5031,7 +5023,6 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 	struct sg_lb_stats *local, *busiest;
 
 	local = &sds->local_stat;
-
 	busiest = &sds->busiest_stat;
 
 	if (busiest->group_imb) {
@@ -5212,9 +5203,6 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 
 		if (!capacity)
 			capacity = fix_small_capacity(env->sd, group);
-
-		if (!cpumask_test_cpu(i, env->cpus))
-			continue;
 
 		rq = cpu_rq(i);
 		wl = weighted_cpuload(i);
