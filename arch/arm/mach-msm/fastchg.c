@@ -426,8 +426,8 @@ static ssize_t info_show(struct kobject *kobj,
 		"Failsafe mode : %s\n"
 		"Valid AC  levels : %s\n"
 		"Valid USB levels : %s\n"
-		"Valid Wireless levels : %s\n",
-		"Unstable Power Detection : %s\n"
+		"Valid Wireless levels : %s\n"
+		"Unstable Power Detection : %s\n",
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	       ? "0 - Disabled (default)" :
 		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
@@ -497,8 +497,8 @@ int force_fast_charge_init(void)
 	use_mtp_during_fast_charge = USE_MTP_DURING_FAST_CHARGE_ENABLED;
 	/* Use Samsung Screen ON current limit while charging, enabled by default */
 	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_ENABLED;
-	/* Default AC charge level to 1000mA/h    */
-	ac_charge_level   = AC_CHARGE_1000;
+	/* Default AC charge level to 1200mA/h    */
+	ac_charge_level   = AC_CHARGE_1200;
 	/* Default UNSTABLE CHARGING POWER DETECTION    */
 	unstable_power_detection   = UNSTABLE_POWER_DETECTION_ENABLED;
 	/* Default USB charge level to 460mA/h    */
