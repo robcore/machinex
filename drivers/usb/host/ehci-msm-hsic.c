@@ -2028,7 +2028,7 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	.suspend_noirq = msm_hsic_pm_suspend_noirq, \
 	.suspend = msm_hsic_pm_suspend, \
 	.resume = msm_hsic_pm_resume,
-	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume, NULL)
+	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
 	.runtime_suspend = msm_hsic_runtime_suspend, \
 	.runtime_resume = msm_hsic_runtime_resume, \
