@@ -3127,7 +3127,7 @@ struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
 		pos = cgroup;
 
 	/* visit the first child if exists */
-	next = list_first_or_null_rcu(&pos->children, struct cgroup, sibling);
+	next = cgroup_next_child(NULL, pos);
 	if (next)
 		return next;
 
@@ -3166,7 +3166,7 @@ struct cgroup *cgroup_rightmost_descendant(struct cgroup *pos)
 		last = pos;
 		/* ->prev isn't RCU safe, walk ->next till the end */
 		pos = NULL;
-		list_for_each_entry_rcu(tmp, &last->children, sibling)
+		cgroup_for_each_child(tmp, last)
 			pos = tmp;
 	} while (pos);
 
@@ -3180,8 +3180,7 @@ static struct cgroup *cgroup_leftmost_descendant(struct cgroup *pos)
 
 	do {
 		last = pos;
-		pos = list_first_or_null_rcu(&pos->children, struct cgroup,
-					     sibling);
+		pos = cgroup_next_child(NULL, pos);
 	} while (pos);
 
 	return last;
