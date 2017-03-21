@@ -170,7 +170,7 @@ use_mtp_during_fast_charge_show, use_mtp_during_fast_charge_store);
 /* sysfs interface for "screen_on_current_limit" */
 static ssize_t screen_on_current_limit_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
-{failsafe
+{
 	return sprintf(buf, "%d\n", screen_on_current_limit);
 }
 
@@ -554,7 +554,7 @@ static ssize_t info_show(struct kobject *kobj,
 {
 	return sprintf(
 		buf,
-		"Forced Fast Charge for Samsung Galaxy S4 Qualcomm %s\n\n"
+		"Forced Fast Charge for Samsung Galaxy S4 Qualcomm %s\n"
 		"Fast charge mode : %s\n"
 		"MTP while charging mode : %s\n"
 		"Screen on Current Limit mode : %s\n"
@@ -567,8 +567,8 @@ static ssize_t info_show(struct kobject *kobj,
 		"Failsafe mode : %s\n"
 		"Valid AC  levels : %s\n"
 		"Valid USB levels : %s\n"
-		"Valid Wireless levels : %s\n",
-		"Unstable Power Detection : %s\n"
+		"Valid Wireless levels : %s\n"
+		"Unstable Power Detection : %s\n",
 		 FAST_CHARGE_VERSION,
 		 force_fast_charge == FAST_CHARGE_DISABLED 	       ? "0 - Disabled (default)" :
 		(force_fast_charge == FAST_CHARGE_FORCE_AC         ? "1 - Use stock AC level on USB" :
@@ -586,9 +586,9 @@ static ssize_t info_show(struct kobject *kobj,
 		 wireless_failsafe_level,
 		 failsafe          == FAIL_SAFE_DISABLED           ? "0 - Failsafe disabled - please be careful !" :
 		(failsafe          == FAIL_SAFE_ENABLED            ? "1 - Failsafe active (default)" : "Problem : value out of range"),
-		 failsafe          == FAIL_SAFE_ENABLED            ? AC_LEVELS : ANY_LEVELS_AC,
-		 failsafe          == FAIL_SAFE_ENABLED            ? USB_LEVELS : ANY_LEVELS_USB,
-		 failsafe          == FAIL_SAFE_ENABLED            ? WIRELESS_LEVELS : ANY_LEVELS_WL,
+		 ANY_LEVELS_AC,
+		 ANY_LEVELS_USB,
+		 ANY_LEVELS_WL,
 		 unstable_power_detection == UNSTABLE_POWER_DETECTION_DISABLED           ? "0 - Unstable Power Detection Disabled - please be careful !" :
 		(unstable_power_detection == UNSTABLE_POWER_DETECTION_ENABLED            ? "1 - Unstable Power Detection active (default)" : "Problem : value out of range")
 		);
@@ -646,7 +646,7 @@ int force_fast_charge_init(void)
 	/* Default USB failsafe level to 460mA/h    */
 	usb_failsafe_level  = USB_FAIL_SAFE_460;
 	/* Default USB failsafe level to 650mA/h    */
-	wireless_failsafe_level = WIRELESS_FAIL_SAFE_650;
+	wireless_failsafe_level = WL_FAIL_SAFE_650;
 	/* Default AC charge level to 1200mA/h    */
 	ac_charge_level   = AC_CHARGE_1200;
 	/* Default USB charge level to 460mA/h    */
