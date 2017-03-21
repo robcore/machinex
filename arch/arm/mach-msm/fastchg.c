@@ -209,10 +209,6 @@ static ssize_t ac_failsafe_level_store(struct kobject *kobj,
 
 	sscanf(buf, "%du", &new_ac_failsafe_level);
 
-		if (new_ac_failsafe_level <= MAX_CHARGE_LEVEL) {
-		ac_failsafe_level = new_ac_failsafe_level;
-		return count;
-	} else {
 		switch (new_ac_failsafe_level) {
 			case AC_FAIL_SAFE_1000:
 			case AC_FAIL_SAFE_1100:
@@ -231,7 +227,6 @@ static ssize_t ac_failsafe_level_store(struct kobject *kobj,
 		default:
 			return -EINVAL;
 		}
-	}
 	return -EINVAL;
 }
 
@@ -253,14 +248,6 @@ static ssize_t usb_failsafe_level_store(struct kobject *kobj,
 
 	sscanf(buf, "%du", &new_usb_failsafe_level);
 
-	if (failsafe == FAIL_SAFE_DISABLED &&
-		new_usb_failsafe_level <= MAX_CHARGE_LEVEL) {
-
-		usb_failsafe_level = new_usb_failsafe_level;
-		return count;
-
-	} else {
-
 	switch (new_usb_failsafe_level) {
 		case USB_FAIL_SAFE_460:
 		case USB_FAIL_SAFE_500:
@@ -276,7 +263,6 @@ static ssize_t usb_failsafe_level_store(struct kobject *kobj,
 		default:
 			return -EINVAL;
 		}
-	}
 	return -EINVAL;
 }
 
@@ -298,12 +284,6 @@ static ssize_t wireless_failsafe_level_store(struct kobject *kobj,
 
 	sscanf(buf, "%du", &new_wireless_failsafe_level);
 
-	if (failsafe == FAIL_SAFE_DISABLED &&
-		new_wireless_failsafe_level <= MAX_CHARGE_LEVEL) {
-
-		wireless_failsafe_level = new_wireless_failsafe_level;
-		return count;
-	} else {
 		switch (new_wireless_failsafe_level) {
 			case WL_FAIL_SAFE_650:
 			case WL_FAIL_SAFE_800:
@@ -316,7 +296,6 @@ static ssize_t wireless_failsafe_level_store(struct kobject *kobj,
 			default:
 				return -EINVAL;
 		}
-	}
 	return -EINVAL;
 }
 
