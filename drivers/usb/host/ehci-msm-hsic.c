@@ -1989,15 +1989,14 @@ static int msm_hsic_pm_resume(struct device *dev)
 	return 0;
 }
 #endif
-#if 0
+
+#ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "EHCI runtime idle\n");
 	return 0;
 }
-#endif
 
-#ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
@@ -2030,10 +2029,10 @@ static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	.suspend = msm_hsic_pm_suspend, \
 	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume, NULL)
-				//msm_hsic_runtime_idle)
+				msm_hsic_runtime_idle)
 	.runtime_suspend = msm_hsic_runtime_suspend, \
 	.runtime_resume = msm_hsic_runtime_resume, \
-	.runtime_idle = NULL, //msm_hsic_runtime_idle,
+	.runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
