@@ -750,7 +750,7 @@ static inline struct cgroup* task_cgroup(struct task_struct *task,
 	return task_css(task, subsys_id)->cgroup;
 }
 
-struct cgroup *cgroup_next_sibling(struct cgroup *pos);
+struct cgroup *cgroup_next_child(struct cgroup *pos, struct cgroup *cgrp);
 
 /**
  * cgroup_for_each_child - iterate through children of a cgroup
@@ -773,7 +773,7 @@ struct cgroup *cgroup_next_sibling(struct cgroup *pos);
 #define cgroup_for_each_child(pos, cgrp)				\
 	for ((pos) = list_first_or_null_rcu(&(cgrp)->children,		\
 					    struct cgroup, sibling);	\
-	     (pos); (pos) = cgroup_next_sibling((pos)))
+	     (pos); (pos) = cgroup_next_child((pos), (cgrp)))
 
 struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
 					  struct cgroup *cgroup);
