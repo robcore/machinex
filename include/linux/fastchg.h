@@ -22,7 +22,7 @@
 #ifndef _LINUX_FASTCHG_H
 #define _LINUX_FASTCHG_H
 
-#define FAST_CHARGE_VERSION "v2.1 by Yank555.lu, ktoonsez, Tkkg1994, & robcore"
+#define FAST_CHARGE_VERSION "v2.2 by Yank555.lu, ktoonsez, Tkkg1994, & robcore"
 #define AC_LEVELS  "1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100"
 #define USB_LEVELS "460 500 600 700 800 900 1000 1100 1200"
 #define WIRELESS_LEVELS "650 800 900 1000 1100 1200"
@@ -50,6 +50,48 @@ extern int screen_on_current_limit;
 extern int failsafe;
 #define FAIL_SAFE_ENABLED 1	/* default */
 #define FAIL_SAFE_DISABLED 0
+
+extern int ac_failsafe_level;
+#define AC_FAIL_SAFE_1000 1000
+#define AC_FAIL_SAFE_1100 1100
+#define AC_FAIL_SAFE_1200 1200
+#define AC_FAIL_SAFE_1300 1300
+#define AC_FAIL_SAFE_1400 1400
+#define AC_FAIL_SAFE_1500 1500
+#define AC_FAIL_SAFE_1600 1600
+#define AC_FAIL_SAFE_1700 1700
+#define AC_FAIL_SAFE_1800 1800
+#define AC_FAIL_SAFE_1900 1900
+#define AC_FAIL_SAFE_2000 2000
+#define AC_FAIL_SAFE_2100 2100
+
+extern int usb_failsafe_level;
+#define USB_FAIL_SAFE_460 460
+#define USB_FAIL_SAFE_500 500
+#define USB_FAIL_SAFE_600 600
+#define USB_FAIL_SAFE_700 700
+#define USB_FAIL_SAFE_800 800
+#define USB_FAIL_SAFE_900 900
+#define USB_FAIL_SAFE_1000 1000
+#define USB_FAIL_SAFE_1100 1100
+#define USB_FAIL_SAFE_1200 1200
+
+extern int wireless_failsafe_level;
+#define WL_FAIL_SAFE_650 650
+#define WL_FAIL_SAFE_800 800
+#define WL_FAIL_SAFE_900 900
+#define WL_FAIL_SAFE_1000 1000
+#define WL_FAIL_SAFE_1100 1100
+#define WL_FAIL_SAFE_1200 1200
+#define WL_FAIL_SAFE_1300 1300
+#define WL_FAIL_SAFE_1400 1400
+#define WL_FAIL_SAFE_1500 1500
+#define WL_FAIL_SAFE_1600 1600
+#define WL_FAIL_SAFE_1700 1700
+#define WL_FAIL_SAFE_1800 1800
+#define WL_FAIL_SAFE_1900 1900
+#define WL_FAIL_SAFE_2000 2000
+#define WL_FAIL_SAFE_2100 2100
 
 extern int unstable_power_detection;
 #define UNSTABLE_POWER_DETECTION_ENABLED 1	/* default */

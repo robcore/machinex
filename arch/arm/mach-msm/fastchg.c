@@ -5,7 +5,7 @@
  * Adapted for 9505 from Note 3:
  * Paul Reioux <reioux@gmail.com>
  *
- * Modded by ktoonsez and Tkkg1994 from Jean-Pierre and Faux's original implementation:
+ * Modded by ktoonsez, yank555, Tkkg1994, and robcore from Jean-Pierre and Faux's original implementation:
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -44,13 +44,26 @@
  *
  * /sys/kernel/fast_charge/usb_charge_level (r/w)
  *
- *   rate at which to charge when on USB (0.460A/h to 1.0A/h)
+ *   rate at which to charge when on USB (0.460A/h to 1.2A/h)
  *
  * /sys/kernel/fast_charge/wireless_charge_level (r/w)
  *
  *   rate at which to charge when on WIRELESS (0.650A/h to 1.2A/h)
+*
+ * /sys/kernel/fast_charge/ac_failsafe_level (rw)
+ *
+ *   failsafe when on AC (1.0A/h to 2.1A/h)
+ *
+ * /sys/kernel/fast_charge/usb_failsafe_level (r/w)
+ *
+ *   failsafe when on USB (0.460A/h to 1.2A/h)
+ *
+ * /sys/kernel/fast_charge/wireless_failsafe_level (r/w)
+ *
+ *   failsafe when on WIRELESS (0.650A/h to 1.2A/h)
  *
  * /sys/kernel/fast_charge/unstable_power_detection (rw)
+ *	 allows full charge levels even when cable/connector lines are interrupted
  *
  * /sys/kernel/fast_charge/failsafe (rw)
  *
@@ -92,6 +105,9 @@ int unstable_power_detection;
 int ac_charge_level;
 int usb_charge_level;
 int wireless_charge_level;
+int ac_failsafe_level;
+int usb_failsafe_level;
+int wireless_failsafe_level;
 
 
 /* sysfs interface for "force_fast_charge" */
@@ -154,7 +170,7 @@ use_mtp_during_fast_charge_show, use_mtp_during_fast_charge_store);
 /* sysfs interface for "screen_on_current_limit" */
 static ssize_t screen_on_current_limit_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
-{
+{failsafe
 	return sprintf(buf, "%d\n", screen_on_current_limit);
 }
 
@@ -179,9 +195,169 @@ static struct kobj_attribute screen_on_current_limit_attribute =
 __ATTR(screen_on_current_limit, 0666,
 screen_on_current_limit_show, screen_on_current_limit_store);
 
+/* sysfs interface for "ac_failsafe_level" */
+static ssize_t ac_failsafe_level_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", ac_failsafe_level);
+}
+
+static ssize_t ac_failsafe_level_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int new_ac_failsafe_level;
+
+	sscanf(buf, "%du", &new_ac_failsafe_level);
+
+		if (new_ac_failsafe_level <= MAX_CHARGE_LEVEL) {
+		ac_failsafe_level = new_ac_failsafe_level;
+		return count;
+	} else {
+		switch (new_ac_failsafe_level) {
+			case AC_FAIL_SAFE_1000:
+			case AC_FAIL_SAFE_1100:
+			case AC_FAIL_SAFE_1200:
+			case AC_FAIL_SAFE_1300:
+			case AC_FAIL_SAFE_1400:
+			case AC_FAIL_SAFE_1500:
+			case AC_FAIL_SAFE_1600:
+			case AC_FAIL_SAFE_1700:
+			case AC_FAIL_SAFE_1800:
+			case AC_FAIL_SAFE_1900:
+			case AC_FAIL_SAFE_2000:
+			case AC_FAIL_SAFE_2100:
+				ac_failsafe_level = new_ac_failsafe_level;
+			return count;
+		default:
+			return -EINVAL;
+		}
+	}
+	return -EINVAL;
+}
+
+static struct kobj_attribute ac_failsafe_level_attribute =
+__ATTR(ac_charge_level, 0666,
+ac_failsafe_level_show, ac_failsafe_level_store);
+
+/* sysfs interface for "usb_failsafe_level" */
+static ssize_t usb_failsafe_level_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", usb_failsafe_level);
+}
+
+static ssize_t usb_failsafe_level_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int new_usb_failsafe_level;
+
+	sscanf(buf, "%du", &new_usb_failsafe_level);
+
+	if (failsafe == FAIL_SAFE_DISABLED &&
+		new_usb_failsafe_level <= MAX_CHARGE_LEVEL) {
+
+		usb_failsafe_level = new_usb_failsafe_level;
+		return count;
+
+	} else {
+
+	switch (new_usb_failsafe_level) {
+		case USB_FAIL_SAFE_460:
+		case USB_FAIL_SAFE_500:
+		case USB_FAIL_SAFE_600:
+		case USB_FAIL_SAFE_700:
+		case USB_FAIL_SAFE_800:
+		case USB_FAIL_SAFE_900:
+		case USB_FAIL_SAFE_1000:
+		case USB_FAIL_SAFE_1100:
+		case USB_FAIL_SAFE_1200:
+				usb_failsafe_level = new_usb_failsafe_level;
+			return count;
+		default:
+			return -EINVAL;
+		}
+	}
+	return -EINVAL;
+}
+
+static struct kobj_attribute usb_failsafe_level_attribute =
+__ATTR(usb_failsafe_level, 0666,
+usb_failsafe_level_show, usb_failsafe_level_store);
+
+/* sysfs interface for "wireless_failsafe_level" */
+static ssize_t wireless_failsafe_level_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", wireless_failsafe_level);
+}
+
+static ssize_t wireless_failsafe_level_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int new_wireless_failsafe_level;
+
+	sscanf(buf, "%du", &new_wireless_failsafe_level);
+
+	if (failsafe == FAIL_SAFE_DISABLED &&
+		new_wireless_failsafe_level <= MAX_CHARGE_LEVEL) {
+
+		wireless_failsafe_level = new_wireless_failsafe_level;
+		return count;
+	} else {
+		switch (new_wireless_failsafe_level) {
+			case WL_FAIL_SAFE_650:
+			case WL_FAIL_SAFE_800:
+			case WL_FAIL_SAFE_900:
+			case WL_FAIL_SAFE_1000:
+			case WL_FAIL_SAFE_1100:
+			case WL_FAIL_SAFE_1200:
+				wireless_failsafe_level = new_wireless_failsafe_level;
+				return count;
+			default:
+				return -EINVAL;
+		}
+	}
+	return -EINVAL;
+}
+
+static struct kobj_attribute wireless_failsafe_level_attribute =
+__ATTR(wireless_failsafe_level, 0666,
+wireless_failsafe_level_show, wireless_failsafe_level_store);
+
+/* sysfs interface for "failsafe" */
+static ssize_t failsafe_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", failsafe);
+}
+
+static ssize_t failsafe_store(struct kobject *kobj,
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
+{
+	int new_failsafe;
+
+	sscanf(buf, "%du", &new_failsafe);
+
+	switch (new_failsafe) {
+		case FAIL_SAFE_ENABLED:
+			usb_charge_level = usb_failsafe_level;
+			ac_charge_level = ac_failsafe_level;
+			wireless_charge_level = wireless_failsafe_level;
+			failsafe = new_failsafe;
+			return count;
+		case FAIL_SAFE_DISABLED:
+			failsafe = new_failsafe;
+			return count;
+		default:
+			return -EINVAL;
+	}
+}
+
+static struct kobj_attribute failsafe_attribute =
+__ATTR(failsafe, 0666, failsafe_show, failsafe_store);
 
 /* sysfs interface for "ac_charge_level" */
-
 static ssize_t ac_charge_level_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {
@@ -227,8 +403,6 @@ __ATTR(ac_charge_level, 0666,
 ac_charge_level_show, ac_charge_level_store);
 
 /* sysfs interface for "usb_charge_level" */
-
-
 static ssize_t usb_charge_level_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -274,7 +448,6 @@ __ATTR(usb_charge_level, 0666,
 usb_charge_level_show, usb_charge_level_store);
 
 /* sysfs interface for "wireless_charge_level" */
-
 static ssize_t wireless_charge_level_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -315,42 +488,7 @@ static struct kobj_attribute wireless_charge_level_attribute =
 __ATTR(wireless_charge_level, 0666,
 wireless_charge_level_show, wireless_charge_level_store);
 
-/* sysfs interface for "failsafe" */
-
-static ssize_t failsafe_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", failsafe);
-}
-
-static ssize_t failsafe_store(struct kobject *kobj,
-		struct kobj_attribute *attr,
-		const char *buf, size_t count)
-{
-	int new_failsafe;
-
-	sscanf(buf, "%du", &new_failsafe);
-
-	switch (new_failsafe) {
-		case FAIL_SAFE_ENABLED:
-			usb_charge_level = USB_CHARGE_460;
-			ac_charge_level = AC_CHARGE_1200;
-			wireless_charge_level = WIRELESS_CHARGE_650;
-			failsafe = new_failsafe;
-			return count;
-		case FAIL_SAFE_DISABLED:
-			failsafe = new_failsafe;
-			return count;
-		default:
-			return -EINVAL;
-	}
-}
-
-static struct kobj_attribute failsafe_attribute =
-__ATTR(failsafe, 0666, failsafe_show, failsafe_store);
-
 /* sysfs interface for "unstable_power_detection" */
-
 static ssize_t unstable_power_detection_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {
@@ -423,6 +561,9 @@ static ssize_t info_show(struct kobject *kobj,
 		"Custom  AC level : %dmA/h\n"
 		"Custom USB level : %dmA/h\n"
 		"Custom Wireless level : %dmA/h\n"
+		"Custom AC Failsafe level : %dmA/h\n"
+		"Custom USB Failsafe level : %dmA/h\n"
+		"Custom Wireless Failsafe level : %dmA/h\n"
 		"Failsafe mode : %s\n"
 		"Valid AC  levels : %s\n"
 		"Valid USB levels : %s\n"
@@ -440,6 +581,9 @@ static ssize_t info_show(struct kobject *kobj,
 		 ac_charge_level,
 		 usb_charge_level,
 		 wireless_charge_level,
+		 ac_failsafe_level,
+		 usb_failsafe_level,
+		 wireless_failsafe_level,
 		 failsafe          == FAIL_SAFE_DISABLED           ? "0 - Failsafe disabled - please be careful !" :
 		(failsafe          == FAIL_SAFE_ENABLED            ? "1 - Failsafe active (default)" : "Problem : value out of range"),
 		 failsafe          == FAIL_SAFE_ENABLED            ? AC_LEVELS : ANY_LEVELS_AC,
@@ -497,14 +641,20 @@ int force_fast_charge_init(void)
 	use_mtp_during_fast_charge = USE_MTP_DURING_FAST_CHARGE_ENABLED;
 	/* Use Samsung Screen ON current limit while charging, enabled by default */
 	screen_on_current_limit = SCREEN_ON_CURRENT_LIMIT_ENABLED;
-	/* Default AC charge level to 1000mA/h    */
-	ac_charge_level   = AC_CHARGE_1000;
-	/* Default UNSTABLE CHARGING POWER DETECTION    */
-	unstable_power_detection   = UNSTABLE_POWER_DETECTION_ENABLED;
+	/* Default AC charge level to 1200mA/h    */
+	ac_failsafe_level   = AC_FAIL_SAFE_1200;
+	/* Default USB failsafe level to 460mA/h    */
+	usb_failsafe_level  = USB_FAIL_SAFE_460;
+	/* Default USB failsafe level to 650mA/h    */
+	wireless_failsafe_level = WIRELESS_FAIL_SAFE_650;
+	/* Default AC charge level to 1200mA/h    */
+	ac_charge_level   = AC_CHARGE_1200;
 	/* Default USB charge level to 460mA/h    */
 	usb_charge_level  = USB_CHARGE_460;
 	/* Default USB charge level to 650mA/h    */
 	wireless_charge_level = WIRELESS_CHARGE_650;
+	/* Default UNSTABLE CHARGING POWER DETECTION    */
+	unstable_power_detection   = UNSTABLE_POWER_DETECTION_ENABLED;
 	/* Allow only values in list by default   */
 	failsafe = FAIL_SAFE_ENABLED;
 
