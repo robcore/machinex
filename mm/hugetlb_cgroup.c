@@ -36,7 +36,7 @@ static struct hugetlb_cgroup *root_h_cgroup __read_mostly;
 static inline
 struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_css *s)
 {
-	return s ? container_of(s, struct hugetlb_cgroup, css) : NULL;
+	return container_of(s, struct hugetlb_cgroup, css);
 }
 
 static inline
@@ -56,15 +56,17 @@ static inline bool hugetlb_cgroup_is_root(struct hugetlb_cgroup *h_cg)
 	return (h_cg == root_h_cgroup);
 }
 
-static inline struct hugetlb_cgroup *
-parent_hugetlb_cgroup(struct hugetlb_cgroup *h_cg)
+static inline struct hugetlb_cgroup *parent_hugetlb_cgroup(struct cgroup *cg)
 {
-	return hugetlb_cgroup_from_css(css_parent(&h_cg->css));
+	if (!cg->parent)
+		return NULL;
+	return hugetlb_cgroup_from_cgroup(cg->parent);
 }
 
-static inline bool hugetlb_cgroup_have_usage(struct hugetlb_cgroup *h_cg)
+static inline bool hugetlb_cgroup_have_usage(struct cgroup *cg)
 {
 	int idx;
+	struct hugetlb_cgroup *h_cg = hugetlb_cgroup_from_cgroup(cg);
 
 	for (idx = 0; idx < hugetlb_max_hstate; idx++) {
 		if ((res_counter_read_u64(&h_cg->hugepage[idx], RES_USAGE)) > 0)
@@ -73,18 +75,19 @@ static inline bool hugetlb_cgroup_have_usage(struct hugetlb_cgroup *h_cg)
 	return false;
 }
 
-static struct cgroup_subsys_state *
-hugetlb_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css *hugetlb_cgroup_css_alloc(struct cgroup *cgroup)
 {
-	struct hugetlb_cgroup *parent_h_cgroup = hugetlb_cgroup_from_css(parent_css);
-	struct hugetlb_cgroup *h_cgroup;
 	int idx;
+	struct cgroup *parent_cgroup;
+	struct hugetlb_cgroup *h_cgroup, *parent_h_cgroup;
 
 	h_cgroup = kzalloc(sizeof(*h_cgroup), GFP_KERNEL);
 	if (!h_cgroup)
 		return ERR_PTR(-ENOMEM);
 
-	if (parent_h_cgroup) {
+	parent_cgroup = cgroup->parent;
+	if (parent_cgroup) {
+		parent_h_cgroup = hugetlb_cgroup_from_cgroup(parent_cgroup);
 		for (idx = 0; idx < HUGE_MAX_HSTATE; idx++)
 			res_counter_init(&h_cgroup->hugepage[idx],
 					 &parent_h_cgroup->hugepage[idx]);
@@ -96,11 +99,11 @@ hugetlb_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &h_cgroup->css;
 }
 
-static void hugetlb_cgroup_css_free(struct cgroup_subsys_state *css)
+static void hugetlb_cgroup_css_free(struct cgroup *cgroup)
 {
 	struct hugetlb_cgroup *h_cgroup;
 
-	h_cgroup = hugetlb_cgroup_from_css(css);
+	h_cgroup = hugetlb_cgroup_from_cgroup(cgroup);
 	kfree(h_cgroup);
 }
 
@@ -112,14 +115,15 @@ static void hugetlb_cgroup_css_free(struct cgroup_subsys_state *css)
  * page reference and test for page active here. This function
  * cannot fail.
  */
-static void hugetlb_cgroup_move_parent(int idx, struct hugetlb_cgroup *h_cg,
+static void hugetlb_cgroup_move_parent(int idx, struct cgroup *cgroup,
 				       struct page *page)
 {
 	int csize;
 	struct res_counter *counter;
 	struct res_counter *fail_res;
 	struct hugetlb_cgroup *page_hcg;
-	struct hugetlb_cgroup *parent = parent_hugetlb_cgroup(h_cg);
+	struct hugetlb_cgroup *h_cg   = hugetlb_cgroup_from_cgroup(cgroup);
+	struct hugetlb_cgroup *parent = parent_hugetlb_cgroup(cgroup);
 
 	page_hcg = hugetlb_cgroup_from_page(page);
 	/*
@@ -149,9 +153,8 @@ out:
  * Force the hugetlb cgroup to empty the hugetlb resources by moving them to
  * the parent cgroup.
  */
-static void hugetlb_cgroup_css_offline(struct cgroup_subsys_state *css)
+static void hugetlb_cgroup_css_offline(struct cgroup *cgroup)
 {
-	struct hugetlb_cgroup *h_cg = hugetlb_cgroup_from_css(css);
 	struct hstate *h;
 	struct page *page;
 	int idx = 0;
@@ -160,13 +163,13 @@ static void hugetlb_cgroup_css_offline(struct cgroup_subsys_state *css)
 		for_each_hstate(h) {
 			spin_lock(&hugetlb_lock);
 			list_for_each_entry(page, &h->hugepage_activelist, lru)
-				hugetlb_cgroup_move_parent(idx, h_cg, page);
+				hugetlb_cgroup_move_parent(idx, cgroup, page);
 
 			spin_unlock(&hugetlb_lock);
 			idx++;
 		}
 		cond_resched();
-	} while (hugetlb_cgroup_have_usage(h_cg));
+	} while (hugetlb_cgroup_have_usage(cgroup));
 }
 
 int hugetlb_cgroup_charge_cgroup(int idx, unsigned long nr_pages,

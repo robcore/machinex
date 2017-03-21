@@ -66,11 +66,12 @@ enum cgroup_subsys_id {
 
 /* Per-subsystem/per-cgroup state maintained by the system. */
 struct cgroup_css {
-	/* the cgroup that this css is attached to */
+	/*
+	 * The cgroup that this subsystem is attached to. Useful
+	 * for subsystems that want to know about the cgroup
+	 * hierarchy structure
+	 */
 	struct cgroup *cgroup;
-
-	/* the cgroup subsystem that this css is attached to */
-	struct cgroup_subsys *ss;
 
 	/* reference count - access via css_[try]get() and css_put() */
 	struct percpu_ref refcnt;
@@ -220,9 +221,6 @@ struct cgroup {
 	 */
 	struct list_head pidlists;
 	struct mutex pidlist_mutex;
-
-	/* dummy css with NULL ->ss, points back to this cgroup */
-	struct cgroup_subsys_state dummy_css;
 
 	/* For css percpu_ref killing and RCU-protected deletion */
 	struct rcu_head rcu_head;
@@ -423,12 +421,6 @@ struct cftype {
 	/* CFTYPE_* flags */
 	unsigned int flags;
 
-	/*
-	 * The subsys this file belongs to.  Initialized automatically
-	 * during registration.  NULL for cgroup core files.
-	 */
-	struct cgroup_subsys *ss;
-
 	int (*open)(struct inode *inode, struct file *file);
 	ssize_t (*read)(struct cgroup *cgrp, struct cftype *cft,
 			struct file *file,
@@ -542,7 +534,7 @@ static inline const char *cgroup_name(const struct cgroup *cgrp)
 }
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
-int cgroup_rm_cftypes(struct cftype *cfts);
+int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
 int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
@@ -577,23 +569,18 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
-	int (*css_online)(struct cgroup_subsys_state *css);
-	void (*css_offline)(struct cgroup_subsys_state *css);
-	void (*css_free)(struct cgroup_subsys_state *css);
-
-	int (*can_attach)(struct cgroup_subsys_state *css,
-			  struct cgroup_taskset *tset);
-	void (*cancel_attach)(struct cgroup_subsys_state *css,
-			      struct cgroup_taskset *tset);
-	void (*attach)(struct cgroup_subsys_state *css,
-		       struct cgroup_taskset *tset);
+	struct cgroup_css *(*css_alloc)(struct cgroup *cgrp);
+	int (*css_online)(struct cgroup *cgrp);
+	void (*css_offline)(struct cgroup *cgrp);
+	void (*css_free)(struct cgroup *cgrp);
 	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	int (*can_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	void (*cancel_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	void (*attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
-	void (*exit)(struct cgroup_subsys_state *css,
-		     struct cgroup_subsys_state *old_css,
+	void (*exit)(struct cgroup *cgrp, struct cgroup *old_cgrp,
 		     struct task_struct *task);
-	void (*bind)(struct cgroup_subsys_state *root_css);
+	void (*bind)(struct cgroup *root);
 
 	int subsys_id;
 	int active;
@@ -649,27 +636,6 @@ struct cgroup_subsys {
 #include <linux/cgroup_subsys.h>
 #undef IS_SUBSYS_ENABLED
 #undef SUBSYS
-
-/**
- * css_parent - find the parent css
- * @css: the target cgroup_subsys_state
- *
- * Return the parent css of @css.  This function is guaranteed to return
- * non-NULL parent as long as @css isn't the root.
- */
-static inline
-struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
-{
-	struct cgroup *parent_cgrp = css->cgroup->parent;
-
-	if (!parent_cgrp)
-		return NULL;
-
-	if (css->ss)
-		return parent_cgrp->subsys[css->ss->subsys_id];
-	else
-		return &parent_cgrp->dummy_css;
-}
 
 /**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
@@ -750,7 +716,7 @@ static inline struct cgroup* task_cgroup(struct task_struct *task,
 	return task_css(task, subsys_id)->cgroup;
 }
 
-struct cgroup *cgroup_next_child(struct cgroup *pos, struct cgroup *cgrp);
+struct cgroup *cgroup_next_sibling(struct cgroup *pos);
 
 /**
  * cgroup_for_each_child - iterate through children of a cgroup
@@ -771,8 +737,9 @@ struct cgroup *cgroup_next_child(struct cgroup *pos, struct cgroup *cgrp);
  * the start of the next iteration by, for example, bumping the css refcnt.
  */
 #define cgroup_for_each_child(pos, cgrp)				\
-	for ((pos) = cgroup_next_child(NULL, (cgrp)); (pos);		\
-	     (pos) = cgroup_next_child((pos), (cgrp)))
+	for ((pos) = list_first_or_null_rcu(&(cgrp)->children,		\
+					    struct cgroup, sibling);	\
+	     (pos); (pos) = cgroup_next_sibling((pos)))
 
 struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
 					  struct cgroup *cgroup);
@@ -856,16 +823,31 @@ struct cgroup *cgroup_next_descendant_post(struct cgroup *pos,
 	for (pos = cgroup_next_descendant_post(NULL, (cgroup)); (pos);	\
 	     pos = cgroup_next_descendant_post((pos), (cgroup)))
 
-/* A cgroup_task_iter should be treated as an opaque object */
-struct cgroup_task_iter {
-	struct list_head		*cset_link;
-	struct list_head		*task;
+/* A cgroup_iter should be treated as an opaque object */
+struct cgroup_iter {
+	struct list_head *cset_link;
+	struct list_head *task;
 };
 
-void cgroup_task_iter_start(struct cgroup *cgrp, struct cgroup_task_iter *it);
-struct task_struct *cgroup_task_iter_next(struct cgroup *cgrp,
-					  struct cgroup_task_iter *it);
-void cgroup_task_iter_end(struct cgroup *cgrp, struct cgroup_task_iter *it);
+/*
+ * To iterate across the tasks in a cgroup:
+ *
+ * 1) call cgroup_iter_start to initialize an iterator
+ *
+ * 2) call cgroup_iter_next() to retrieve member tasks until it
+ *    returns NULL or until you want to end the iteration
+ *
+ * 3) call cgroup_iter_end() to destroy the iterator.
+ *
+ * Or, call cgroup_scan_tasks() to iterate through every task in a
+ * cgroup - cgroup_scan_tasks() holds the css_set_lock when calling
+ * the test_task() callback, but not while calling the process_task()
+ * callback.
+ */
+void cgroup_iter_start(struct cgroup *cgrp, struct cgroup_iter *it);
+struct task_struct *cgroup_iter_next(struct cgroup *cgrp,
+					struct cgroup_iter *it);
+void cgroup_iter_end(struct cgroup *cgrp, struct cgroup_iter *it);
 int cgroup_scan_tasks(struct cgroup_scanner *scan);
 int cgroup_attach_task_all(struct task_struct *from, struct task_struct *);
 int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
