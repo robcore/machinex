@@ -263,7 +263,7 @@ static void update_if_frozen(struct cgroup *cgroup)
 {
 	struct freezer *freezer = cgroup_freezer(cgroup);
 	struct cgroup_subsys_state *pos;
-	struct cgroup_iter it;
+	struct cgroup_task_iter it;
 	struct task_struct *task;
 
 	WARN_ON_ONCE(!rcu_read_lock_held());
@@ -328,25 +328,25 @@ static int freezer_read(struct cgroup *cgroup, struct cftype *cft,
 static void freeze_cgroup(struct freezer *freezer)
 {
 	struct cgroup *cgroup = freezer->css.cgroup;
-	struct cgroup_iter it;
+	struct cgroup_task_iter it;
 	struct task_struct *task;
 
-	cgroup_iter_start(cgroup, &it);
-	while ((task = cgroup_iter_next(cgroup, &it)))
+	cgroup_task_iter_start(cgroup, &it);
+	while ((task = cgroup_task_iter_next(cgroup, &it)))
 		freeze_task(task);
-	cgroup_iter_end(cgroup, &it);
+	cgroup_task_iter_end(cgroup, &it);
 }
 
 static void unfreeze_cgroup(struct freezer *freezer)
 {
 	struct cgroup *cgroup = freezer->css.cgroup;
-	struct cgroup_iter it;
+	struct cgroup_task_iter it;
 	struct task_struct *task;
 
-	cgroup_iter_start(cgroup, &it);
-	while ((task = cgroup_iter_next(cgroup, &it)))
+	cgroup_task_iter_start(cgroup, &it);
+	while ((task = cgroup_task_iter_next(cgroup, &it)))
 		__thaw_task(task);
-	cgroup_iter_end(cgroup, &it);
+	cgroup_task_iter_end(cgroup, &it);
 }
 
 /**
