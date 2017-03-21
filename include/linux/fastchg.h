@@ -24,7 +24,7 @@
 
 #define FAST_CHARGE_VERSION "v2.1 by Yank555.lu, ktoonsez, Tkkg1994, & robcore"
 #define AC_LEVELS  "1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100"
-#define USB_LEVELS "460 500 600 700 800 900 1000"
+#define USB_LEVELS "460 500 600 700 800 900 1000 1100 1200"
 #define WIRELESS_LEVELS "650 800 900 1000 1100 1200"
 #define ANY_LEVELS "0 to 2100"
 
@@ -76,6 +76,8 @@ extern int usb_charge_level;
 #define USB_CHARGE_800 800
 #define USB_CHARGE_900 900
 #define USB_CHARGE_1000 1000
+#define USB_CHARGE_1100 1100
+#define USB_CHARGE_1200 1200
 
 extern int wireless_charge_level;
 
