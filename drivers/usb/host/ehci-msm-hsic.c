@@ -700,7 +700,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 
 	if (mehci->bus_perf_client && debug_bus_voting_enabled) {
 		mehci->bus_vote = false;
-		queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
+		queue_work(ehci_wq, &mehci->bus_vote_w);
 	}
 
 	atomic_set(&mehci->in_lpm, 1);
@@ -736,8 +736,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
 
-	wake_lock(&mehci->wlock);
-
 	spin_lock_irqsave(&mehci->wakeup_lock, flags);
 	if (mehci->wakeup_irq_enabled) {
 		disable_irq_wake(mehci->wakeup_irq);
@@ -746,11 +744,11 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	}
 	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
-	wake_unlock(&mehci->wlock);
+	wake_lock(&mehci->wlock);
 
 	if (mehci->bus_perf_client && debug_bus_voting_enabled) {
 		mehci->bus_vote = true;
-		queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
+		queue_work(ehci_wq, &mehci->bus_vote_w);
 	}
 
 	min_vol = vdd_val[mehci->vdd_type][VDD_MIN];
@@ -764,8 +762,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	clk_prepare_enable(mehci->phy_clk);
 	clk_prepare_enable(mehci->cal_clk);
 	clk_prepare_enable(mehci->ahb_clk);
-
-	wake_unlock(&mehci->wlock);
 
 	temp = readl_relaxed(USB_USBCMD);
 	temp &= ~ASYNC_INTR_CTRL;
@@ -786,7 +782,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 		cnt++;
 	}
 
-	if (cnt > PHY_RESUME_TIMEOUT_USEC) {
+	if (cnt >= PHY_RESUME_TIMEOUT_USEC) {
 		/*
 		 * This is a fatal error. Reset the link and
 		 * PHY to make hsic working.
@@ -797,6 +793,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	}
 
 skip_phy_resume:
+
 	usb_hcd_resume_root_hub(hcd);
 
 	atomic_set(&mehci->in_lpm, 0);
@@ -1453,8 +1450,6 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 	}
 	spin_unlock(&mehci->wakeup_lock);
 
-	wake_unlock(&mehci->wlock);
-
 	if (!atomic_read(&mehci->pm_usage_cnt)) {
 		ret = pm_runtime_get(mehci->dev);
 		/*
@@ -1765,7 +1760,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		goto deinit_vddcx;
 	}
 
-	ehci_wq = alloc_workqueue("ehci_wq", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+	ehci_wq = alloc_workqueue("ehci_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!ehci_wq) {
 		dev_err(&pdev->dev, "unable to create workqueue\n");
 		ret = -ENOMEM;
@@ -1824,7 +1819,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		/* Configure BUS performance parameters for MAX bandwidth */
 		if (mehci->bus_perf_client) {
 			mehci->bus_vote = true;
-			queue_work_on(0, ehci_wq, &mehci->bus_vote_w);
+			queue_work(ehci_wq, &mehci->bus_vote_w);
 		} else {
 			dev_err(&pdev->dev, "%s: Failed to register BUS "
 						"scaling client!!\n", __func__);
@@ -1989,6 +1984,7 @@ static int msm_hsic_pm_resume(struct device *dev)
 	return 0;
 }
 #endif
+
 #ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
 {

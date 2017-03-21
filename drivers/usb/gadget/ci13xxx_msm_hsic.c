@@ -408,7 +408,7 @@ static int msm_hsic_suspend(struct msm_hsic_per *mhsic)
 	enable_irq(mhsic->irq);
 	wake_unlock(&mhsic->wlock);
 
-	dev_info(mhsic->dev, "ROBHOOK-HSIC-USB in low power mode\n");
+	dev_info(mhsic->dev, "HSIC-USB in low power mode\n");
 
 	return 0;
 }
@@ -469,7 +469,7 @@ static int msm_hsic_resume(struct msm_hsic_per *mhsic)
 		 * This is a fatal error. Reset the link and
 		 * PHY to make hsic working.
 		 */
-		dev_err(mhsic->dev, "ROBHOOK-Unable to resume USB. Reset the hsic\n");
+		dev_err(mhsic->dev, "Unable to resume USB. Reset the hsic\n");
 		msm_hsic_reset(mhsic);
 	}
 skip_phy_resume:
@@ -483,7 +483,7 @@ skip_phy_resume:
 		enable_irq(mhsic->irq);
 	}
 
-	dev_info(mhsic->dev, "ROBHOOK-HSIC-USB exited from low power mode\n");
+	dev_info(mhsic->dev, "HSIC-USB exited from low power mode\n");
 
 	return 0;
 }
@@ -526,16 +526,14 @@ static void msm_hsic_pm_suspend_work(struct work_struct *w)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#if 0
+#ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "MSM HSIC Peripheral runtime idle\n");
 
 	return 0;
 }
-#endif
 
-#ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_runtime_suspend(struct device *dev)
 {
 	struct msm_hsic_per *mhsic = dev_get_drvdata(dev);
@@ -560,7 +558,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
-				NULL)
+				msm_hsic_runtime_idle)
 };
 #endif
 
@@ -612,7 +610,7 @@ static void ci13xxx_msm_hsic_notify_event(struct ci13xxx *udc, unsigned event)
 		break;
 	case CI13XXX_CONTROLLER_SUSPEND_EVENT:
 		dev_info(dev, "CI13XXX_CONTROLLER_SUSPEND_EVENT received\n");
-		queue_work_on(0, mhsic->wq, &mhsic->suspend_w);
+		queue_work(mhsic->wq, &mhsic->suspend_w);
 		break;
 	case CI13XXX_CONTROLLER_REMOTE_WAKEUP_EVENT:
 		dev_info(dev, "CI13XXX_CONTROLLER_REMOTE_WAKEUP_EVENT received\n");
@@ -627,7 +625,7 @@ static void ci13xxx_msm_hsic_notify_event(struct ci13xxx *udc, unsigned event)
 		 */
 		hw_device_state(_udc->ep0out.qh.dma);
 		msm_hsic_start();
-		mdelay(10);
+		usleep(10000);
 
 		mhsic->connected = false;
 		pm_runtime_put_noidle(the_mhsic->dev);
@@ -683,7 +681,7 @@ static int msm_hsic_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	mhsic->wq = alloc_workqueue("mhsic_wq", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+	mhsic->wq = alloc_workqueue("mhsic_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!mhsic->wq) {
 		pr_err("%s: Unable to create workqueue mhsic wq\n",
 				__func__);
