@@ -5449,7 +5449,7 @@ out:
  * idle_balance is called by schedule() if this_cpu is about to become
  * idle. Attempts to pull tasks from other CPUs.
  */
-void idle_balance(struct rq *this_rq)
+int idle_balance(struct rq *this_rq)
 {
 	struct sched_domain *sd;
 	int pulled_task = 0;
@@ -5457,10 +5457,8 @@ void idle_balance(struct rq *this_rq)
 	u64 curr_cost = 0;
 	int this_cpu = this_rq->cpu;
 
-	this_rq->idle_stamp = rq_clock(this_rq);
-
 	if (this_rq->avg_idle < this_rq->max_idle_balance_cost)
-		return;
+		return 0;
 
 	/*
 	 * Drop the rq->lock, but keep IRQ/preempt disabled.
@@ -5504,7 +5502,6 @@ void idle_balance(struct rq *this_rq)
 		 * now runnable tasks on this rq.
 		 */
 		if (pulled_task || this_rq->nr_running > 0) {
-			this_rq->idle_stamp = 0;
 			break;
 		}
 	}
@@ -5517,7 +5514,7 @@ void idle_balance(struct rq *this_rq)
 	 * A task could have be enqueued in the meantime
 	 */
 	if (this_rq->nr_running && !pulled_task)
-		return;
+		return 1;
 
 	if (!pulled_task || time_after(jiffies, this_rq->next_balance)) {
 		/*
@@ -5529,6 +5526,8 @@ void idle_balance(struct rq *this_rq)
 
 	if (curr_cost > this_rq->max_idle_balance_cost)
 		this_rq->max_idle_balance_cost = curr_cost;
+
+	return pulled_task;
 }
 
 /*
