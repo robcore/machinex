@@ -1488,8 +1488,10 @@ static unsigned long mem_cgroup_margin(struct mem_cgroup *memcg)
 
 int mem_cgroup_swappiness(struct mem_cgroup *memcg)
 {
+	struct cgroup *cgrp = memcg->css.cgroup;
+
 	/* root ? */
-	if (!css_parent(&memcg->css))
+	if (cgrp->parent == NULL)
 		return vm_swappiness;
 
 	return memcg->swappiness;
@@ -4960,7 +4962,11 @@ static int mem_cgroup_hierarchy_write(struct cgroup *cont, struct cftype *cft,
 {
 	int retval = 0;
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
-	struct mem_cgroup *parent_memcg = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct cgroup *parent = cont->parent;
+	struct mem_cgroup *parent_memcg = NULL;
+
+	if (parent)
+		parent_memcg = mem_cgroup_from_cont(parent);
 
 	mutex_lock(&memcg_create_mutex);
 
@@ -5218,15 +5224,18 @@ static int mem_cgroup_write(struct cgroup *cont, struct cftype *cft,
 static void memcg_get_hierarchical_limit(struct mem_cgroup *memcg,
 		unsigned long long *mem_limit, unsigned long long *memsw_limit)
 {
+	struct cgroup *cgroup;
 	unsigned long long min_limit, min_memsw_limit, tmp;
 
 	min_limit = res_counter_read_u64(&memcg->res, RES_LIMIT);
 	min_memsw_limit = res_counter_read_u64(&memcg->memsw, RES_LIMIT);
+	cgroup = memcg->css.cgroup;
 	if (!memcg->use_hierarchy)
 		goto out;
 
-	while (css_parent(&memcg->css)) {
-		memcg = mem_cgroup_from_css(css_parent(&memcg->css));
+	while (cgroup->parent) {
+		cgroup = cgroup->parent;
+		memcg = mem_cgroup_from_cont(cgroup);
 		if (!memcg->use_hierarchy)
 			break;
 		tmp = res_counter_read_u64(&memcg->res, RES_LIMIT);
@@ -5456,10 +5465,15 @@ static int mem_cgroup_swappiness_write(struct cgroup *cgrp, struct cftype *cft,
 				       u64 val)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
-	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct mem_cgroup *parent;
 
-	if (val > 100 || !parent)
+	if (val > 100)
 		return -EINVAL;
+
+	if (cgrp->parent == NULL)
+		return -EINVAL;
+
+	parent = mem_cgroup_from_cont(cgrp->parent);
 
 	mutex_lock(&memcg_create_mutex);
 
@@ -5796,11 +5810,13 @@ static int mem_cgroup_oom_control_write(struct cgroup *cgrp,
 	struct cftype *cft, u64 val)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
-	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct mem_cgroup *parent;
 
 	/* cannot set to root cgroup and only 0 and 1 are allowed */
-	if (!parent || !((val == 0) || (val == 1)))
+	if (!cgrp->parent || !((val == 0) || (val == 1)))
 		return -EINVAL;
+
+	parent = mem_cgroup_from_cont(cgrp->parent);
 
 	mutex_lock(&memcg_create_mutex);
 	/* oom-kill-disable is a flag for subhierarchy. */
@@ -6218,14 +6234,15 @@ free_out:
 static int
 mem_cgroup_css_online(struct cgroup *cont)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
-	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
+	struct mem_cgroup *memcg, *parent;
 	int error = 0;
 
-	if (!parent)
+	if (!cont->parent)
 		return 0;
 
 	mutex_lock(&memcg_create_mutex);
+	memcg = mem_cgroup_from_cont(cont);
+	parent = mem_cgroup_from_cont(cont->parent);
 
 	memcg->use_hierarchy = parent->use_hierarchy;
 	memcg->oom_kill_disable = parent->oom_kill_disable;

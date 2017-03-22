@@ -7167,10 +7167,13 @@ static struct cgroup_css *cpu_cgroup_css_alloc(struct cgroup *cgrp)
 static int cpu_cgroup_css_online(struct cgroup *cgrp)
 {
 	struct task_group *tg = cgroup_tg(cgrp);
-	struct task_group *parent = css_tg(css_parent(&tg->css));
+	struct task_group *parent;
 
-	if (parent)
-		sched_online_group(tg, parent);
+	if (!cgrp->parent)
+		return 0;
+
+	parent = cgroup_tg(cgrp->parent);
+	sched_online_group(tg, parent);
 	return 0;
 }
 
