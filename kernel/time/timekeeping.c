@@ -355,7 +355,7 @@ ktime_t ktime_get(void)
 	unsigned int seq;
 	s64 secs, nsecs;
 
-	WARN_ON(timekeeping_suspended);
+	WARN_ON_ONCE(timekeeping_suspended);
 
 	do {
 		seq = read_seqcount_begin(&timekeeper_seq);
