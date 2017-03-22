@@ -846,6 +846,12 @@ config NUMA_BALANCING
 
 	  This system will be inactive on UMA systems.
 
+#
+# For architectures that know their GCC __int128 support is sound
+#
+config ARCH_SUPPORTS_INT128
+	bool
+
 menuconfig CGROUPS
 	boolean "Control Group support"
 	depends on EVENTFD
