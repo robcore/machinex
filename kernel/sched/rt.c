@@ -723,11 +723,18 @@ static void __enable_runtime(struct rq *rq)
 	}
 }
 
+static unsigned int Lrt_runtime_sharing = 0;
+
+void relay_rtrs(unsigned int rtrs)
+{
+	Lrt_runtime_sharing = rtrs;
+}
+
 static int balance_runtime(struct rt_rq *rt_rq)
 {
 	int more = 0;
 
-	if (!sched_feat(RT_RUNTIME_SHARE))
+	if (!Lrt_runtime_sharing)
 		return more;
 
 	if (rt_rq->rt_time > rt_rq->rt_runtime) {

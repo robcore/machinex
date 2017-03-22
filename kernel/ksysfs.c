@@ -217,6 +217,8 @@ static unsigned int Lgentle_fair_sleepers = 1;
 extern void relay_gfs(unsigned int gfs);
 static unsigned int Larch_power = 0;
 extern void relay_ap(unsigned int ap);
+static unsigned int Lrt_runtime_sharing;
+extern void relay_rtrs(unsigned int rtrs);
 
 static ssize_t gentle_fair_sleepers_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -256,9 +258,29 @@ static ssize_t arch_power_store(struct kobject *kobj, struct kobj_attribute *att
 }
 KERNEL_ATTR_RW(arch_power);
 
+static ssize_t rt_runtime_sharing_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+ return sprintf(buf, "%u\n", Lrt_runtime_sharing);
+}
+
+static ssize_t rt_runtime_sharing_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+ unsigned int input;
+ int ret;
+ ret = sscanf(buf, "%u", &input);
+ if (input != 0 && input != 1)
+ input = 0;
+
+ Lrt_runtime_sharing = input;
+ relay_rtrs(Lrt_runtime_sharing);
+ return count;
+}
+KERNEL_ATTR_RW(rt_runtime_sharing);
+
 static struct attribute * sched_features_attrs[] = {
  &gentle_fair_sleepers_attr.attr,
  &arch_power_attr.attr,
+ &rt_untime_sharing_attr.attr;
        NULL
 };
 
