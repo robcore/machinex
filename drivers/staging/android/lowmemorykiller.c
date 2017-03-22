@@ -30,6 +30,7 @@
  *
  */
 
+#define REALLY_WANT_TRACEPOINTS
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -520,6 +521,11 @@ static int android_oom_handler(struct notifier_block *nb,
 #else
 			continue;
 #endif
+		}
+		if (fatal_signal_pending(p)) {
+			lowmem_print(2, "skip slow dying process %d\n", p->pid);
+			task_unlock(p);
+			continue;
 		}
 		tasksize = get_mm_rss(p->mm);
 		task_unlock(p);
