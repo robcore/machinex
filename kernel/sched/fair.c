@@ -4653,7 +4653,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			struct sched_group *group, int load_idx,
 			int local_group, struct sg_lb_stats *sgs)
 {
-	unsigned long scaled_load, load, max_cpu_load, min_cpu_load, max_nr_running;
+	unsigned long nr_running, max_nr_running, min_nr_running;
+	unsigned long scaled_load, load, max_cpu_load, min_cpu_load;
 	unsigned long balance_load = ~0UL;
 	unsigned long avg_load_per_task = 0;
 	int i;
@@ -4666,6 +4667,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	for_each_cpu_and(i, sched_group_cpus(group), env->cpus) {
 		struct rq *rq = cpu_rq(i);
 
+		nr_running = rq->cfs.h_nr_running;
+
 		/* Bias balancing toward cpus of our domain */
 		if (local_group) {
 			load = target_load(i, load_idx);
@@ -4673,16 +4676,19 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			load = source_load(i, load_idx);
 			scaled_load = load * SCHED_POWER_SCALE
 					/ cpu_rq(i)->cpu_power;
-			if (scaled_load > max_cpu_load) {
+			if (scaled_load > max_cpu_load)
 				max_cpu_load = scaled_load;
-				max_nr_running = rq->cfs.h_nr_running;
-			}
 			if (min_cpu_load > scaled_load)
 				min_cpu_load = scaled_load;
+
+			if (nr_running > max_nr_running)
+				max_nr_running = nr_running;
+			if (min_nr_running > nr_running)
+				min_nr_running = nr_running;
 		}
 
 		sgs->group_load += load;
-		sgs->sum_nr_running += rq->cfs.h_nr_running;
+		sgs->sum_nr_running += nr_running;
 		sgs->sum_weighted_load += weighted_cpuload(i);
 		if (idle_cpu(i))
 			sgs->idle_cpus++;
@@ -4710,7 +4716,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		avg_load_per_task /= sgs->sum_nr_running;
 	}
 
-	if ((max_cpu_load - min_cpu_load) >= avg_load_per_task && max_nr_running > 1)
+	if ((max_cpu_load - min_cpu_load) >= avg_load_per_task &&
+	    (max_nr_running - min_nr_running) > 1)
 		sgs->group_imb = 1;
 
 	sgs->group_capacity =
