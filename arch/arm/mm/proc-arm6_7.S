@@ -240,8 +240,6 @@ ENDPROC(cpu_arm6_reset)
 ENDPROC(cpu_arm7_reset)
 		.popsection
 
-		__CPUINIT
-
 		.type	__arm6_setup, #function
 __arm6_setup:	mov	r0, #0
 		mcr	p15, 0, r0, c7, c0		@ flush caches on v3
