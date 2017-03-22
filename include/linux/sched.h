@@ -2826,9 +2826,6 @@ struct migration_notify_data {
 	int dest_cpu;
 	int load;
 };
-#ifdef CONFIG_ANDROID_BG_SCAN_MEM
-extern struct raw_notifier_head bgtsk_migration_notifier_head;
-#endif
 
 extern struct atomic_notifier_head migration_notifier_head;
 
