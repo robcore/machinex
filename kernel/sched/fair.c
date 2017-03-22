@@ -4946,15 +4946,7 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 	struct sg_lb_stats *local, *busiest;
 
 	local = &sds->local_stat;
-	if (local->sum_nr_running) {
-		local->load_per_task =
-			local->sum_weighted_load / local->sum_nr_running;
-	}
-
 	busiest = &sds->busiest_stat;
-	/* busiest must have some tasks */
-	busiest->load_per_task =
-		busiest->sum_weighted_load / busiest->sum_nr_running;
 
 	if (busiest->group_imb) {
 		busiest->load_per_task =
