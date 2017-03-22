@@ -280,7 +280,7 @@ KERNEL_ATTR_RW(rt_runtime_sharing);
 static struct attribute * sched_features_attrs[] = {
  &gentle_fair_sleepers_attr.attr,
  &arch_power_attr.attr,
- &rt_runtime_sharing_attr.attr;
+ &rt_runtime_sharing_attr.attr,
        NULL
 };
 
