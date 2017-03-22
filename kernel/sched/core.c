@@ -7136,7 +7136,7 @@ int sched_rt_handler(struct ctl_table *table, int write,
 
 #ifdef CONFIG_CGROUP_SCHED
 
-static inline struct task_group *css_tg(struct cgroup_subsys_state *css)
+static inline struct task_group *css_tg(struct cgroup_css *css)
 {
 	return css ? container_of(css, struct task_group, css) : NULL;
 }

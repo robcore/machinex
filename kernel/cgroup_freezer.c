@@ -45,7 +45,7 @@ struct freezer {
 	spinlock_t			lock;
 };
 
-static inline struct freezer *css_freezer(struct cgroup_subsys_state *css)
+static inline struct freezer *css_freezer(struct cgroup_css *css)
 {
 	return css ? container_of(css, struct freezer, css) : NULL;
 }

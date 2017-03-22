@@ -33,7 +33,7 @@ struct cpuacct {
 	struct kernel_cpustat __percpu *cpustat;
 };
 
-static inline struct cpuacct *css_ca(struct cgroup_subsys_state *css)
+static inline struct cpuacct *css_ca(struct cgroup_css *css)
 {
 	return css ? container_of(css, struct cpuacct, css) : NULL;
 }
