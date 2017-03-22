@@ -6666,16 +6666,6 @@ void __init sched_init_smp(void)
 }
 #endif /* CONFIG_SMP */
 
-/*
- * Maximum bandwidth available for all -deadline tasks and groups
- * (if group scheduling is configured) on each CPU.
- *
- * default: 5%
- */
-unsigned int sysctl_sched_dl_period = 1000000;
-int sysctl_sched_dl_runtime = 50000;
-
-
 #ifdef CONFIG_SCHED_FREQ_INPUT
 /*
  * Maximum possible frequency across all cpus. Task demand and cpu
