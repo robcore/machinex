@@ -30,7 +30,6 @@
  *
  */
 
-#define REALLY_WANT_TRACEPOINTS
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -47,9 +46,6 @@
 #include <linux/swap.h>
 #include <linux/fs.h>
 #endif /* CONFIG_ZSWAP */
-#include <linux/powersuspend.h>
-
-#include <trace/events/memkill.h>
 
 #ifdef ENHANCED_LMK_ROUTINE
 #define ENHANCED_LMK_ROUTINE
@@ -79,75 +75,28 @@ static uint32_t oom_count = 0;
 #endif
 
 static uint32_t lowmem_debug_level = 1;
-static uint32_t lowmem_auto_oom = 1;
 static short lowmem_adj[6] = {
 	0,
 	1,
 	6,
 	12,
-	13,
-	15,
 };
-static int lowmem_adj_size = 6;
+static int lowmem_adj_size = 4;
 static int lowmem_minfree[6] = {
 	3 * 512,	/* 6MB */
 	2 * 1024,	/* 8MB */
 	4 * 1024,	/* 16MB */
 	16 * 1024,	/* 64MB */
-	28 * 1024,	/* 112MB */
-	32 * 1024,	/* 131MB */
 };
-static int lowmem_minfree_screen_off[6] = {
-	3 * 512,	/* 6MB */
-	2 * 1024,	/* 8MB */
-	4 * 1024,	/* 16MB */
-	16 * 1024,	/* 64MB */
-	28 * 1024,	/* 112MB */
-	32 * 1024,	/* 131MB */
-};
-static int lowmem_minfree_screen_on[6] = {
-	3 * 512,	/* 6MB */
-	2 * 1024,	/* 8MB */
-	4 * 1024,	/* 16MB */
-	16 * 1024,	/* 64MB */
-	28 * 1024,	/* 112MB */
-	32 * 1024,	/* 131MB */
-};
-static int lowmem_minfree_size = 6;
+static int lowmem_minfree_size = 4;
 
 static unsigned long lowmem_deathpending_timeout;
 
 #define lowmem_print(level, x...)			\
 	do {						\
 		if (lowmem_debug_level >= (level))	\
-			pr_info(x);			\
+			printk(x);			\
 	} while (0)
-
-static bool avoid_to_kill(uid_t uid)
-{
-	/* uid info
-	 * uid == 0 > root
-	 * uid == 1001 > radio
-	 * uid == 1002 > bluetooth
-	 * uid == 1010 > wifi
-	 * uid == 1014 > dhcp
-	 */
-	if (uid == 0 || uid == 1001 || uid == 1002 || uid == 1010 ||
-			uid == 1014) {
-		return 1;
-	}
-	return 0;
-}
-
-static bool protected_apps(char *comm)
-{
-	if (strcmp(comm, "d.process.acore") == 0 ||
-			strcmp(comm, "ndroid.systemui") == 0 ||
-			strcmp(comm, "ndroid.contacts") == 0) {
-		return 1;
-	}
-	return 0;
-}
 
 #if defined(CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE)
 static void dump_tasks_info(void)
@@ -229,8 +178,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #else
 	struct task_struct *selected = NULL;
 #endif
-	const struct cred *cred = current_cred(), *pcred;
-	unsigned int uid = 0;
 #ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO
 #ifdef CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE
 	static DEFINE_RATELIMIT_STATE(lmk_rs, DEFAULT_RATELIMIT_INTERVAL, 0);
@@ -251,9 +198,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int minfree = 0;
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
-#endif
-#ifdef CONFIG_ANDROID_BG_SCAN_MEM
-	int minfree = 0;
 #endif
 #ifdef CONFIG_SAMP_HOTNESS
 	int selected_hotness_adj = 0;
@@ -350,13 +294,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			task_unlock(p);
 			continue;
 		}
-#ifdef
-		if (fatal_signal_pending(p)) {
-			lowmem_print(2, "skip slow dying process %d\n", p->pid);
-			task_unlock(p);
-			continue;
-		}
-#endif
 		tasksize = get_mm_rss(p->mm);
 #if defined(CONFIG_ZSWAP)
 		if (atomic_read(&zswap_stored_pages)) {
@@ -583,11 +520,6 @@ static int android_oom_handler(struct notifier_block *nb,
 #else
 			continue;
 #endif
-		}
-		if (fatal_signal_pending(p)) {
-			lowmem_print(2, "skip slow dying process %d\n", p->pid);
-			task_unlock(p);
-			continue;
 		}
 		tasksize = get_mm_rss(p->mm);
 		task_unlock(p);
