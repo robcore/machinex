@@ -5278,7 +5278,6 @@ build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 		if ((!groups && cpumask_test_cpu(cpu, sg_span)) ||
 			       group_balance_cpu(sg) == cpu)
 			groups = sg;
-		}
 
 		if (!first)
 			first = sg;
