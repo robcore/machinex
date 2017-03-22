@@ -1792,6 +1792,7 @@ static void try_to_wake_up_local(struct task_struct *p)
 	ttwu_stat(p, smp_processor_id(), 0);
 out:
 	raw_spin_unlock(&p->pi_lock);
+	/* Todo : Send cpufreq notifier */
 }
 
 /**
@@ -1916,9 +1917,6 @@ void sched_fork(struct task_struct *p)
 
 		p->prio = p->normal_prio = __normal_prio(p);
 		set_load_weight(p);
-
-		if (p->sched_class->task_dead)
-			p->sched_class->task_dead(p);
 
 		/*
 		 * We don't need the reset flag anymore after the fork. It has
@@ -2124,6 +2122,9 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 	if (mm)
 		mmdrop(mm);
 	if (unlikely(prev_state == TASK_DEAD)) {
+		if (prev->sched_class->task_dead)
+			prev->sched_class->task_dead(prev);
+
 		/*
 		 * Remove function-return probe instances associated with this
 		 * task and put them back on the free list.
