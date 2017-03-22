@@ -65,41 +65,4 @@ static inline void context_tracking_task_switch(struct task_struct *prev,
 						struct task_struct *next) { }
 #endif /* !CONFIG_CONTEXT_TRACKING */
 
-#ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
-static inline void guest_enter(void)
-{
-	if (vtime_accounting_enabled())
-		vtime_guest_enter(current);
-	else
-		current->flags |= PF_VCPU;
-}
-
-static inline void guest_exit(void)
-{
-	if (vtime_accounting_enabled())
-		vtime_guest_exit(current);
-	else
-		current->flags &= ~PF_VCPU;
-}
-
-#else
-static inline void guest_enter(void)
-{
-	/*
-	 * This is running in ioctl context so its safe
-	 * to assume that it's the stime pending cputime
-	 * to flush.
-	 */
-	vtime_account_system(current);
-	current->flags |= PF_VCPU;
-}
-
-static inline void guest_exit(void)
-{
-	/* Flush the guest cputime we spent on the guest */
-	vtime_account_system(current);
-	current->flags &= ~PF_VCPU;
-}
-#endif /* CONFIG_VIRT_CPU_ACCOUNTING_GEN */
-
 #endif
