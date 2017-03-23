@@ -7077,6 +7077,7 @@ static inline unsigned long load_scale_cpu_freq(int cpu)
 		rq->active_balance = 0;
 		rq->next_balance = jiffies;
 		rq->push_cpu = 0;
+		rq->push_task = NULL;
 		rq->cpu = i;
 		rq->online = 0;
 		rq->idle_stamp = 0;
