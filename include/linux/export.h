@@ -59,7 +59,7 @@ extern struct module __this_module;
 	static const char __kstrtab_##sym[]			\
 	__attribute__((section("__ksymtab_strings"), aligned(1))) \
 	= VMLINUX_SYMBOL_STR(sym);				\
-	static const struct kernel_symbol __ksymtab_##sym	\
+	extern const struct kernel_symbol __ksymtab_##sym;	\
 	__used							\
 	__attribute__((section("___ksymtab" sec "+" #sym), unused))	\
 	= { (unsigned long)&sym, __kstrtab_##sym }
