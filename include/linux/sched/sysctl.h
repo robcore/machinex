@@ -55,6 +55,7 @@ extern unsigned int sysctl_sched_upmigrate_pct;
 extern unsigned int sysctl_sched_downmigrate_pct;
 extern int sysctl_sched_upmigrate_min_nice;
 extern unsigned int sysctl_sched_enable_power_aware;
+extern unsigned int sysctl_sched_boost;
 
 #else /* CONFIG_SCHED_HMP */
 
@@ -87,6 +88,9 @@ extern int sched_migrate_notify_proc_handler(struct ctl_table *table,
 
 extern int sched_hmp_proc_update_handler(struct ctl_table *table,
 		int write, void __user *buffer, size_t *lenp, loff_t *ppos);
+
+extern int sched_boost_handler(struct ctl_table *table, int write,
+		void __user *buffer, size_t *lenp, loff_t *ppos);
 
 #ifdef CONFIG_SCHED_DEBUG
 static inline unsigned int get_sysctl_timer_migration(void)
