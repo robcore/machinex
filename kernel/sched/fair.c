@@ -1754,6 +1754,11 @@ static inline int power_cost(struct task_struct *p, int cpu)
 	return SCHED_POWER_SCALE;
 }
 
+static unsigned int power_cost_at_freq(int cpu, unsigned int freq)
+{
+	return 1;
+}
+
 static inline int mostly_idle_cpu(int cpu)
 {
 	return 0;
@@ -6130,14 +6135,38 @@ int idle_balance(struct rq *this_rq)
 	if (this_rq->avg_idle < this_rq->max_idle_balance_cost)
 		return 0;
 
+	/* If this CPU is not the most power-efficient idle CPU in the
+	 * lowest level domain, run load balance on behalf of that
+	 * most power-efficient idle CPU. */
+	rcu_read_lock();
+	sd = rcu_dereference_check_sched_domain(this_rq->sd);
+	if (sd && sysctl_sched_enable_power_aware) {
+		for_each_cpu(i, sched_domain_span(sd)) {
+			if (i == this_cpu || idle_cpu(i)) {
+				cost = power_cost_at_freq(i, 0);
+				if (cost < min_power) {
+					min_power = cost;
+					balance_cpu = i;
+				}
+			}
+		}
+		BUG_ON(balance_cpu == -1);
+
+	} else {
+		balance_cpu = this_cpu;
+	}
+	rcu_read_unlock();
+	balance_rq = cpu_rq(balance_cpu);
+
+
 	/*
 	 * Drop the rq->lock, but keep IRQ/preempt disabled.
 	 */
 	raw_spin_unlock(&this_rq->lock);
 
-	update_blocked_averages(this_cpu);
+	update_blocked_averages(balance_cpu);
 	rcu_read_lock();
-	for_each_domain(this_cpu, sd) {
+	for_each_domain(balance_cpu, sd) {
 		unsigned long interval;
 		int continue_balancing = 1;
 		u64 t0, domain_cost;
@@ -6186,7 +6215,8 @@ int idle_balance(struct rq *this_rq)
 	if (this_rq->nr_running && !pulled_task)
 		return 1;
 
-	if (!pulled_task || time_after(jiffies, this_rq->next_balance)) {
+	if (balance_cpu == this_cpu &&
+	    (!pulled_task || time_after(jiffies, this_rq->next_balance))) {
 		/*
 		 * We are going idle. next_balance may be set based on
 		 * a busy processor. So reset next_balance.
