@@ -213,11 +213,11 @@ static struct attribute_group kernel_attr_group = {
 	.attrs = kernel_attrs,
 };
 
-static unsigned int Lgentle_fair_sleepers = 1;
+extern unsigned int Lgentle_fair_sleepers;
 extern void relay_gfs(unsigned int gfs);
-static unsigned int Larch_power = 0;
+extern unsigned int Larch_power;
 extern void relay_ap(unsigned int ap);
-static unsigned int Lrt_runtime_sharing = 0;
+extern unsigned int Lrt_runtime_sharing;
 extern void relay_rtrs(unsigned int rtrs);
 
 static ssize_t gentle_fair_sleepers_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
