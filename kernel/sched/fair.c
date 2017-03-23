@@ -1275,7 +1275,7 @@ static inline unsigned int max_task_load(void)
 #ifdef CONFIG_SCHED_HMP
 
 /* Use this knob to turn on or off HMP-aware task placement logic */
-unsigned int __read_mostly sysctl_sched_enable_hmp_task_placement = 1;
+unsigned int __read_mostly sysctl_sched_enable_hmp_task_placement = 0;
 
 /*
  * A cpu is considered practically idle, if:
@@ -4090,8 +4090,10 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	if (p->nr_cpus_allowed == 1)
 		return prev_cpu;
 
+#ifdef CONFIG_HMP
 	if (sysctl_sched_enable_hmp_task_placement)
 		return select_best_cpu(p, prev_cpu);
+#endif
 
 	if (sd_flag & SD_BALANCE_WAKE) {
 		if (cpumask_test_cpu(cpu, tsk_cpus_allowed(p)))
@@ -5926,7 +5928,7 @@ more_balance:
 		 * moreover subsequent load balance cycles should correct the
 		 * excess load moved.
 		 */
-		if ((env.flags & LBF_SOME_PINNED) && imbalance > 0 &&
+		if ((env.flags & LBF_SOME_PINNED) && env.imbalance > 0 &&
 				lb_iterations++ < max_lb_iterations) {
 
 			this_rq		 = cpu_rq(env.new_dst_cpu);
@@ -6256,8 +6258,10 @@ static inline int find_new_ilb(void)
 {
 	int ilb;
 
+#ifdef CONFIG_HMP
 	if (sysctl_sched_enable_hmp_task_placement)
 		return find_new_hmp_ilb(call_cpu);
+#endif
 
 	ilb = cpumask_first(nohz.idle_cpus_mask);
 
