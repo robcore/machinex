@@ -576,7 +576,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	 * out of PM_SUSPEND_FREEZE state -> Rob: but should also go through the proper process
 	 * of calling pm_abort_suspend so as to minimize the potential damage caused by aborting
 	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
-	 * the freezer and be patient for the fucking 7ms or whatever it takes for it to complete?
+	 * the freezer and be patient for the fucking 2-7ms or whatever it takes for it to complete?
 	 */
 	if (freezing_in_progress) {
 		DEFINE_WAIT(wait);
