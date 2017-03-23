@@ -6,19 +6,64 @@
 #include <asm/vtime.h>
 #endif
 
+
 struct task_struct;
 
+/*
+ * vtime_accounting_enabled() definitions/declarations
+ */
+#ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
+static inline bool vtime_accounting_enabled(void) { return true; }
+#endif /* CONFIG_VIRT_CPU_ACCOUNTING_NATIVE */
+
+#ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
+static inline bool vtime_accounting_enabled(void)
+{
+	if (static_key_false(&context_tracking_enabled)) {
+		if (context_tracking_active())
+			return true;
+	}
+
+	return false;
+}
+#endif /* CONFIG_VIRT_CPU_ACCOUNTING_GEN */
+
+#ifndef CONFIG_VIRT_CPU_ACCOUNTING
+static inline bool vtime_accounting_enabled(void) { return false; }
+#endif /* !CONFIG_VIRT_CPU_ACCOUNTING */
+
+
+/*
+ * Common vtime APIs
+ */
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING
+
+#ifdef __ARCH_HAS_VTIME_TASK_SWITCH
 extern void vtime_task_switch(struct task_struct *prev);
+#else
+extern void vtime_common_task_switch(struct task_struct *prev);
+static inline void vtime_task_switch(struct task_struct *prev)
+{
+	if (vtime_accounting_enabled())
+		vtime_common_task_switch(prev);
+}
+#endif /* __ARCH_HAS_VTIME_TASK_SWITCH */
+
 extern void vtime_account_system(struct task_struct *tsk);
 extern void vtime_account_system_irqsafe(struct task_struct *tsk);
 extern void vtime_account_idle(struct task_struct *tsk);
 extern void vtime_account_user(struct task_struct *tsk);
-extern void vtime_account_irq_enter(struct task_struct *tsk);
 
-#ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
-static inline bool vtime_accounting_enabled(void) { return true; }
-#endif
+#ifdef __ARCH_HAS_VTIME_ACCOUNT
+extern void vtime_account_irq_enter(struct task_struct *tsk);
+#else
+extern void vtime_common_account_irq_enter(struct task_struct *tsk);
+static inline void vtime_account_irq_enter(struct task_struct *tsk)
+{
+	if (vtime_accounting_enabled())
+		vtime_common_account_irq_enter(tsk);
+}
+#endif /* __ARCH_HAS_VTIME_ACCOUNT */
 
 #else /* !CONFIG_VIRT_CPU_ACCOUNTING */
 
