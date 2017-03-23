@@ -6484,7 +6484,7 @@ static struct {
 	unsigned long next_balance;     /* in jiffy units */
 } nohz ____cacheline_aligned;
 
-static inline int find_new_ilb(int cpu, int type))
+static inline int find_new_ilb(int cpu, int type)
 {
 	int ilb;
 
