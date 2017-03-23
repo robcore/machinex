@@ -441,8 +441,10 @@ void account_process_tick(struct task_struct *p, int user_tick)
 	cputime_t one_jiffy_scaled = cputime_to_scaled(cputime_one_jiffy);
 	struct rq *rq = this_rq();
 
+#ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
 	if (vtime_accounting_enabled())
 		return;
+#endif
 
 	if (sched_clock_irqtime) {
 		irqtime_account_process_tick(p, user_tick, rq);
@@ -540,12 +542,13 @@ static void cputime_adjust(struct task_cputime *curr,
 {
 	cputime_t rtime, stime, utime;
 
+#ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
 	if (vtime_accounting_enabled()) {
 		*ut = curr->utime;
 		*st = curr->stime;
 		return;
 	}
-
+#endif
 	/*
 	 * Tick based cputime accounting depend on random scheduling
 	 * timeslices of a task to be interrupted or not by the timer.
