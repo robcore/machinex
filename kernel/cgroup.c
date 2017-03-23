@@ -4186,10 +4186,10 @@ err:
 	return ret;
 }
 
-static void css_dput_fn(struct work_struct *work)
+static void css_free_work_fn(struct work_struct *work)
 {
 	struct cgroup_css *css =
-		container_of(work, struct cgroup_css, dput_work);
+		container_of(work, struct cgroup_css, destroy_work);
 
 	cgroup_dput(css->cgroup);
 }
@@ -4199,7 +4199,14 @@ static void css_release(struct percpu_ref *ref)
 	struct cgroup_css *css =
 		container_of(ref, struct cgroup_css, refcnt);
 
-	schedule_work(&css->dput_work);
+	/*
+	 * css holds an extra ref to @cgrp->dentry which is put on the last
+	 * css_put().  dput() requires process context, which css_put() may
+	 * be called without.  @css->destroy_work will be used to invoke
+	 * dput() asynchronously from css_put().
+	 */
+	INIT_WORK(&css->destroy_work, css_free_work_fn);
+	schedule_work(&css->destroy_work);
 }
 
 static void init_cgroup_css(struct cgroup_css *css,
@@ -4213,14 +4220,6 @@ static void init_cgroup_css(struct cgroup_css *css,
 		css->flags |= CSS_ROOT;
 	BUG_ON(cgrp->subsys[ss->subsys_id]);
 	cgrp->subsys[ss->subsys_id] = css;
-
-	/*
-	 * css holds an extra ref to @cgrp->dentry which is put on the last
-	 * css_put().  dput() requires process context, which css_put() may
-	 * be called without.  @css->dput_work will be used to invoke
-	 * dput() asynchronously from css_put().
-	 */
-	INIT_WORK(&css->dput_work, css_dput_fn);
 }
 
 /* invoke ->css_online() on a new CSS and mark it online if successful */
