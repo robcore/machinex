@@ -4146,10 +4146,8 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	if (p->nr_cpus_allowed == 1)
 		return prev_cpu;
 
-#ifdef CONFIG_HMP
 	if (sysctl_sched_enable_hmp_task_placement)
 		return select_best_cpu(p, prev_cpu);
-#endif
 
 	if (sd_flag & SD_BALANCE_WAKE) {
 		if (cpumask_test_cpu(cpu, tsk_cpus_allowed(p)))
@@ -6314,10 +6312,8 @@ static inline int find_new_ilb(void)
 {
 	int ilb;
 
-#ifdef CONFIG_HMP
 	if (sysctl_sched_enable_hmp_task_placement)
 		return find_new_hmp_ilb(call_cpu);
-#endif
 
 	ilb = cpumask_first(nohz.idle_cpus_mask);
 
