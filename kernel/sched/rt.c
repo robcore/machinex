@@ -723,7 +723,7 @@ static void __enable_runtime(struct rq *rq)
 	}
 }
 
-static unsigned int Lrt_runtime_sharing = 0;
+unsigned int Lrt_runtime_sharing = 1;
 
 void relay_rtrs(unsigned int rtrs)
 {

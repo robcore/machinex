@@ -217,7 +217,7 @@ static unsigned int Lgentle_fair_sleepers = 1;
 extern void relay_gfs(unsigned int gfs);
 static unsigned int Larch_power = 0;
 extern void relay_ap(unsigned int ap);
-static unsigned int Lrt_runtime_sharing = 0;
+extern unsigned int Lrt_runtime_sharing = 1;
 extern void relay_rtrs(unsigned int rtrs);
 
 static ssize_t gentle_fair_sleepers_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
