@@ -720,7 +720,7 @@ struct nr_stats_s {
  * 25 ~=  33554432ns =  33.5ms
  * 24 ~=  16777216ns =  16.8ms
  */
-#define NR_AVE_PERIOD_EXP	27
+#define NR_AVE_PERIOD_EXP	28
 #define NR_AVE_SCALE(x)		((x) << FSHIFT)
 #define NR_AVE_PERIOD		(1 << NR_AVE_PERIOD_EXP)
 #define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
@@ -771,6 +771,8 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
+DEFINE_PER_CPU(struct sched_domain *, sd_busy);
+DEFINE_PER_CPU(struct sched_domain *, sd_asym);
 
 extern int group_balance_cpu(struct sched_group *sg);
 
