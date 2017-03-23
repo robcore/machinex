@@ -4,6 +4,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/static_key.h>
 #include <linux/context_tracking.h>
+#include <linux/vtime.h>
 #include "sched.h"
 
 
