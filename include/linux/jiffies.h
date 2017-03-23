@@ -325,6 +325,11 @@ extern unsigned int __jiffies_to_usecs(const unsigned long j);
 	 __inline_jiffies_to_usecs(x) :		\
 	 __jiffies_to_usecs(x))
 
+
+static inline u64 jiffies_to_nsecs(const unsigned long j)
+{
+	return (u64)jiffies_to_usecs(j) * NSEC_PER_USEC;
+}
 /*
  * When we convert to jiffies then we interpret incoming values
  * the following way:
