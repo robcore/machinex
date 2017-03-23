@@ -601,7 +601,6 @@ struct rq {
 	int post_schedule;
 	int active_balance;
 	int push_cpu;
-	struct task_struct *push_task;
 	struct cpu_stop_work active_balance_work;
 	/* cpu of this runqueue: */
 	int cpu;
@@ -618,20 +617,13 @@ struct rq {
 	u64 max_idle_balance_cost;
 #endif
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 	/*
 	 * max_freq = user or thermal defined maximum
 	 * max_possible_freq = maximum supported by hardware
 	 */
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
 	u64 cumulative_runnable_avg;
-	int efficiency; /* Differentiate cpus with different IPC capability */
-	int load_scale_factor;
-	int capacity;
-#endif
-
-#ifdef CONFIG_SCHED_HMP
-	int nr_small_tasks, nr_big_tasks;
 #endif
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
@@ -720,7 +712,7 @@ struct nr_stats_s {
  * 25 ~=  33554432ns =  33.5ms
  * 24 ~=  16777216ns =  16.8ms
  */
-#define NR_AVE_PERIOD_EXP	28
+#define NR_AVE_PERIOD_EXP	27
 #define NR_AVE_SCALE(x)		((x) << FSHIFT)
 #define NR_AVE_PERIOD		(1 << NR_AVE_PERIOD_EXP)
 #define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
@@ -771,8 +763,6 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
 DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
-DEFINE_PER_CPU(struct sched_domain *, sd_busy);
-DEFINE_PER_CPU(struct sched_domain *, sd_asym);
 
 extern int group_balance_cpu(struct sched_group *sg);
 
@@ -781,26 +771,13 @@ extern int group_balance_cpu(struct sched_group *sg);
 #include "stats.h"
 #include "auto_group.h"
 
-extern void init_new_task_load(struct task_struct *p);
-
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 
 extern unsigned int sched_ravg_window;
 extern unsigned int max_possible_freq;
 extern unsigned int min_max_freq;
 extern unsigned int pct_task_load(struct task_struct *p);
-extern unsigned int max_possible_efficiency;
-extern unsigned int min_possible_efficiency;
-extern unsigned int max_capacity;
-extern unsigned int min_capacity;
-extern unsigned long capacity_scale_cpu_efficiency(int cpu);
-extern unsigned long capacity_scale_cpu_freq(int cpu);
-extern unsigned int sched_mostly_idle_load;
-extern unsigned int sched_small_task;
-extern unsigned int sched_upmigrate;
-extern unsigned int sched_downmigrate;
-extern unsigned int sched_init_task_load_pelt;
-extern unsigned int sched_init_task_load_windows;
+extern void init_new_task_load(struct task_struct *p);
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
@@ -815,7 +792,7 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
 }
 
-#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else	/* CONFIG_SCHED_FREQ_INPUT */
 
 static inline int pct_task_load(struct task_struct *p) { return 0; }
 
@@ -829,43 +806,9 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
 }
 
-static inline unsigned long capacity_scale_cpu_efficiency(int cpu)
-{
-	return SCHED_LOAD_SCALE;
-}
+static inline void init_new_task_load(struct task_struct *p) { }
 
-static inline unsigned long capacity_scale_cpu_freq(int cpu)
-{
-	return SCHED_LOAD_SCALE;
-}
-
-#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
-
-#ifdef CONFIG_SCHED_HMP
-
-extern void check_for_migration(struct rq *rq, struct task_struct *p);
-extern void pre_big_small_task_count_change(void);
-extern void post_big_small_task_count_change(void);
-extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
-extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
-extern void set_hmp_defaults(void);
-
-#else /* CONFIG_SCHED_HMP */
-
-static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
-static inline void pre_big_small_task_count_change(void) { }
-static inline void post_big_small_task_count_change(void) { }
-static inline void set_hmp_defaults(void) { }
-
-static inline void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
-{
-}
-
-static inline void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
-{
-}
-
-#endif /* CONFIG_SCHED_HMP */
+#endif	/* CONFIG_SCHED_FREQ_INPUT */
 
 #ifdef CONFIG_CGROUP_SCHED
 
