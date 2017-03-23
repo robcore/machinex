@@ -558,8 +558,11 @@ static ssize_t store_##file_name					\
 									\
 	return ret ? ret : count;					\
 }
+
+#if 0
 store_one(scaling_min_freq, min);
 store_one(scaling_max_freq, max);
+#endif
 
 ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
 {
@@ -848,8 +851,8 @@ cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
 cpufreq_freq_attr_ro(cpu_utilization);
 cpufreq_freq_attr_rw(util_threshold);
-cpufreq_freq_attr_rw(scaling_min_freq);
-cpufreq_freq_attr_rw(scaling_max_freq);
+cpufreq_freq_attr_ro(scaling_min_freq);
+cpufreq_freq_attr_ro(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
