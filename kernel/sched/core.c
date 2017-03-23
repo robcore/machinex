@@ -74,6 +74,7 @@
 #include <linux/binfmts.h>
 #include <linux/context_tracking.h>
 #include <linux/cpufreq.h>
+#include <linux/sched/deadline.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
