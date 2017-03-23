@@ -1376,6 +1376,8 @@ update_history(struct rq *rq, struct task_struct *p, u32 runtime, int samples)
 	if (p->on_rq) {
 		rq->cumulative_runnable_avg -= p->ravg.demand;
 		BUG_ON((s64)rq->cumulative_runnable_avg < 0);
+		if (p->sched_class == &fair_sched_class)
+			dec_nr_big_small_task(rq, p);
 	}
 
 	avg = div64_u64(sum, RAVG_HIST_SIZE);
@@ -1389,8 +1391,11 @@ update_history(struct rq *rq, struct task_struct *p, u32 runtime, int samples)
 
 	p->ravg.demand = demand;
 
-	if (p->on_rq)
+	if (p->on_rq) {
 		rq->cumulative_runnable_avg += p->ravg.demand;
+		if (p->sched_class == &fair_sched_class)
+			inc_nr_big_small_task(rq, p);
+	}
 }
 
 static int __init set_sched_ravg_window(char *str)
@@ -7204,6 +7209,9 @@ static inline unsigned long load_scale_cpu_freq(int cpu)
 		rq->capacity = 1024;
 		rq->load_scale_factor = 1024;
 #endif
+#ifdef CONFIG_SCHED_HMP
+		rq->nr_small_tasks = rq->nr_big_tasks = 0;
+#endif
 
 		INIT_LIST_HEAD(&rq->cfs_tasks);
 
@@ -7579,6 +7587,12 @@ static inline int tg_has_rt_tasks(struct task_group *tg)
 	load_scale *= load_scale_cpu_freq(cpu);
 	load_scale >>= 10;
 
+	/*
+	 * Changed load_scale_factor can trigger reclassification of tasks as
+	 * big or small. Make this change "atomic" so that tasks are accounted
+	 * properly due to changed load_scale_factor
+	 */
+	pre_big_small_task_count_change();
 	for_each_cpu(i, policy->related_cpus) {
 		struct rq *rq = cpu_rq(i);
 
@@ -7587,6 +7601,7 @@ static inline int tg_has_rt_tasks(struct task_group *tg)
 	}
 
 	update_min_max_capacity();
+	post_big_small_task_count_change();
 
 	return 0;
 }
