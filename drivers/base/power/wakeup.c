@@ -578,16 +578,17 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
 	 * the freezer and be patient for the fucking 2-7ms or whatever it takes for it to complete?
 	 */
-	if (freezing_in_progress) {
+	if (freezing_in_progress == true) {
 		DEFINE_WAIT(wait);
 
-		for (;;) {
+		//for (;;) {
+		while (freezing_in_progress == true) {
 			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
 					TASK_INTERRUPTIBLE);
 			if (freezing_in_progress == false)
 				break;
 
-			pm_system_wakeup();
+			//pm_system_wakeup();
 		}
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
 	} else
@@ -864,10 +865,11 @@ bool pm_wakeup_pending(void)
 	spin_unlock_irqrestore(&events_lock, flags);
 
 	if (ret) {
-		if (freezing_in_progress) {
+		if (freezing_in_progress == true) {
 			DEFINE_WAIT(wait);
 
-			for (;;) {
+			//for (;;)
+			while (freezing_in_progress == true) {
 				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
 						TASK_INTERRUPTIBLE);
 				if (freezing_in_progress == false)
