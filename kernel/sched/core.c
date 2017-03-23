@@ -3318,6 +3318,117 @@ static bool check_same_owner(struct task_struct *p)
 	return match;
 }
 
+unsigned long to_ratio(u64 period, u64 runtime)
+{
+	if (runtime == RUNTIME_INF)
+		return 1ULL << 20;
+
+	/*
+	 * Doing this here saves a lot of checks in all
+	 * the calling paths, and returning zero seems
+	 * safe for them anyway.
+	 */
+	if (period == 0)
+		return 0;
+
+	return div64_u64(runtime << 20, period);
+}
+
+#ifdef CONFIG_SMP
+inline struct dl_bw *dl_bw_of(int i)
+{
+	return &cpu_rq(i)->rd->dl_bw;
+}
+
+static inline int dl_bw_cpus(int i)
+{
+	struct root_domain *rd = cpu_rq(i)->rd;
+	int cpus = 0;
+
+	for_each_cpu_and(i, rd->span, cpu_active_mask)
+		cpus++;
+
+	return cpus;
+}
+#else
+inline struct dl_bw *dl_bw_of(int i)
+{
+	return &cpu_rq(i)->dl.dl_bw;
+}
+
+static inline int dl_bw_cpus(int i)
+{
+	return 1;
+}
+#endif
+
+static inline
+void __dl_clear(struct dl_bw *dl_b, u64 tsk_bw)
+{
+	dl_b->total_bw -= tsk_bw;
+}
+
+static inline
+void __dl_add(struct dl_bw *dl_b, u64 tsk_bw)
+{
+	dl_b->total_bw += tsk_bw;
+}
+
+static inline
+bool __dl_overflow(struct dl_bw *dl_b, int cpus, u64 old_bw, u64 new_bw)
+{
+	return dl_b->bw != -1 &&
+	       dl_b->bw * cpus < dl_b->total_bw - old_bw + new_bw;
+}
+
+/*
+ * We must be sure that accepting a new task (or allowing changing the
+ * parameters of an existing one) is consistent with the bandwidth
+ * constraints. If yes, this function also accordingly updates the currently
+ * allocated bandwidth to reflect the new situation.
+ *
+ * This function is called while holding p's rq->lock.
+ */
+static int dl_overflow(struct task_struct *p, int policy,
+		       const struct sched_attr *attr)
+{
+
+	struct dl_bw *dl_b = dl_bw_of(task_cpu(p));
+	u64 period = attr->sched_period ?: attr->sched_deadline;
+	u64 runtime = attr->sched_runtime;
+	u64 new_bw = dl_policy(policy) ? to_ratio(period, runtime) : 0;
+	int cpus, err = -1;
+
+	if (new_bw == p->dl.dl_bw)
+		return 0;
+
+	/*
+	 * Either if a task, enters, leave, or stays -deadline but changes
+	 * its parameters, we may need to update accordingly the total
+	 * allocated bandwidth of the container.
+	 */
+	raw_spin_lock(&dl_b->lock);
+	cpus = dl_bw_cpus(task_cpu(p));
+	if (dl_policy(policy) && !task_has_dl_policy(p) &&
+	    !__dl_overflow(dl_b, cpus, 0, new_bw)) {
+		__dl_add(dl_b, new_bw);
+		err = 0;
+	} else if (dl_policy(policy) && task_has_dl_policy(p) &&
+		   !__dl_overflow(dl_b, cpus, p->dl.dl_bw, new_bw)) {
+		__dl_clear(dl_b, p->dl.dl_bw);
+		__dl_add(dl_b, new_bw);
+		err = 0;
+	} else if (!dl_policy(policy) && task_has_dl_policy(p)) {
+		__dl_clear(dl_b, p->dl.dl_bw);
+		err = 0;
+	}
+	raw_spin_unlock(&dl_b->lock);
+
+	return err;
+}
+
+extern void init_dl_bw(struct dl_bw *dl_b);
+
 static int __sched_setscheduler(struct task_struct *p,
 				const struct sched_attr *attr,
 				bool user)
@@ -7931,117 +8042,6 @@ struct cfs_schedulable_data {
 	struct task_group *tg;
 	u64 period, quota;
 };
-
-unsigned long to_ratio(u64 period, u64 runtime)
-{
-	if (runtime == RUNTIME_INF)
-		return 1ULL << 20;
-
-	/*
-	 * Doing this here saves a lot of checks in all
-	 * the calling paths, and returning zero seems
-	 * safe for them anyway.
-	 */
-	if (period == 0)
-		return 0;
-
-	return div64_u64(runtime << 20, period);
-}
-
-#ifdef CONFIG_SMP
-inline struct dl_bw *dl_bw_of(int i)
-{
-	return &cpu_rq(i)->rd->dl_bw;
-}
-
-static inline int dl_bw_cpus(int i)
-{
-	struct root_domain *rd = cpu_rq(i)->rd;
-	int cpus = 0;
-
-	for_each_cpu_and(i, rd->span, cpu_active_mask)
-		cpus++;
-
-	return cpus;
-}
-#else
-inline struct dl_bw *dl_bw_of(int i)
-{
-	return &cpu_rq(i)->dl.dl_bw;
-}
-
-static inline int dl_bw_cpus(int i)
-{
-	return 1;
-}
-#endif
-
-static inline
-void __dl_clear(struct dl_bw *dl_b, u64 tsk_bw)
-{
-	dl_b->total_bw -= tsk_bw;
-}
-
-static inline
-void __dl_add(struct dl_bw *dl_b, u64 tsk_bw)
-{
-	dl_b->total_bw += tsk_bw;
-}
-
-static inline
-bool __dl_overflow(struct dl_bw *dl_b, int cpus, u64 old_bw, u64 new_bw)
-{
-	return dl_b->bw != -1 &&
-	       dl_b->bw * cpus < dl_b->total_bw - old_bw + new_bw;
-}
-
-/*
- * We must be sure that accepting a new task (or allowing changing the
- * parameters of an existing one) is consistent with the bandwidth
- * constraints. If yes, this function also accordingly updates the currently
- * allocated bandwidth to reflect the new situation.
- *
- * This function is called while holding p's rq->lock.
- */
-static int dl_overflow(struct task_struct *p, int policy,
-		       const struct sched_attr *attr)
-{
-
-	struct dl_bw *dl_b = dl_bw_of(task_cpu(p));
-	u64 period = attr->sched_period ?: attr->sched_deadline;
-	u64 runtime = attr->sched_runtime;
-	u64 new_bw = dl_policy(policy) ? to_ratio(period, runtime) : 0;
-	int cpus, err = -1;
-
-	if (new_bw == p->dl.dl_bw)
-		return 0;
-
-	/*
-	 * Either if a task, enters, leave, or stays -deadline but changes
-	 * its parameters, we may need to update accordingly the total
-	 * allocated bandwidth of the container.
-	 */
-	raw_spin_lock(&dl_b->lock);
-	cpus = dl_bw_cpus(task_cpu(p));
-	if (dl_policy(policy) && !task_has_dl_policy(p) &&
-	    !__dl_overflow(dl_b, cpus, 0, new_bw)) {
-		__dl_add(dl_b, new_bw);
-		err = 0;
-	} else if (dl_policy(policy) && task_has_dl_policy(p) &&
-		   !__dl_overflow(dl_b, cpus, p->dl.dl_bw, new_bw)) {
-		__dl_clear(dl_b, p->dl.dl_bw);
-		__dl_add(dl_b, new_bw);
-		err = 0;
-	} else if (!dl_policy(policy) && task_has_dl_policy(p)) {
-		__dl_clear(dl_b, p->dl.dl_bw);
-		err = 0;
-	}
-	raw_spin_unlock(&dl_b->lock);
-
-	return err;
-}
-
-extern void init_dl_bw(struct dl_bw *dl_b);
 
 /*
  * normalize group quota/period to be quota/max_period

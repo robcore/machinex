@@ -921,6 +921,7 @@ lookup_pi_state(u32 uval, struct futex_hash_bucket *hb,
 	struct futex_pi_state *pi_state = NULL;
 	struct futex_q *this, *next;
 	struct task_struct *p;
+	struct task_struct *task;
 	pid_t pid = uval & FUTEX_TID_MASK;
 
 	plist_for_each_entry_safe(this, next, &hb->chain, list) {
