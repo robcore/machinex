@@ -1,6 +1,7 @@
 #ifndef _LINUX_KERNEL_VTIME_H
 #define _LINUX_KERNEL_VTIME_H
 
+#include <linux/context_tracking_state.h>
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
 #include <asm/vtime.h>
 #endif
@@ -26,14 +27,20 @@ static inline void vtime_account_system(struct task_struct *tsk) { }
 static inline void vtime_account_system_irqsafe(struct task_struct *tsk) { }
 static inline void vtime_account_user(struct task_struct *tsk) { }
 static inline void vtime_account_irq_enter(struct task_struct *tsk) { }
-static inline bool vtime_accounting_enabled(void) { return false; }
-#endif
+#endif /* !CONFIG_VIRT_CPU_ACCOUNTING */
 
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
 extern void arch_vtime_task_switch(struct task_struct *tsk);
-extern void vtime_account_irq_exit(struct task_struct *tsk);
-extern bool vtime_accounting_enabled(void);
+extern void vtime_gen_account_irq_exit(struct task_struct *tsk);
+
+static inline void vtime_account_irq_exit(struct task_struct *tsk)
+{
+	if (vtime_accounting_enabled())
+		vtime_gen_account_irq_exit(tsk);
+}
+
 extern void vtime_user_enter(struct task_struct *tsk);
+
 static inline void vtime_user_exit(struct task_struct *tsk)
 {
 	vtime_account_user(tsk);
@@ -41,7 +48,7 @@ static inline void vtime_user_exit(struct task_struct *tsk)
 extern void vtime_guest_enter(struct task_struct *tsk);
 extern void vtime_guest_exit(struct task_struct *tsk);
 extern void vtime_init_idle(struct task_struct *tsk, int cpu);
-#else
+#else /* !CONFIG_VIRT_CPU_ACCOUNTING_GEN  */
 static inline void vtime_account_irq_exit(struct task_struct *tsk)
 {
 	/* On hard|softirq exit we always account to hard|softirq cputime */
