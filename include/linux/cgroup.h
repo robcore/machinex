@@ -76,15 +76,12 @@ struct cgroup_css {
 	/* reference count - access via css_[try]get() and css_put() */
 	struct percpu_ref refcnt;
 
-	/* the parent css */
-	struct cgroup_subsys_state *parent;
-
 	unsigned long flags;
 	/* ID for this css, if possible */
 	struct css_id __rcu *id;
 
 	/* Used to put @cgroup->dentry on the last css_put() */
-	struct work_struct destroy_work;
+	struct work_struct dput_work;
 };
 
 /* bits in struct cgroup_css flags field */

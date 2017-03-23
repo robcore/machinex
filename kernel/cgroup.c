@@ -4186,13 +4186,10 @@ err:
 	return ret;
 }
 
-static void css_free_work_fn(struct work_struct *work)
+static void css_dput_fn(struct work_struct *work)
 {
 	struct cgroup_css *css =
-		container_of(work, struct cgroup_css, destroy_work);
-
-	if (css->parent)
-		css_put(css->parent);
+		container_of(work, struct cgroup_css, dput_work);
 
 	cgroup_dput(css->cgroup);
 }
@@ -4202,14 +4199,7 @@ static void css_release(struct percpu_ref *ref)
 	struct cgroup_css *css =
 		container_of(ref, struct cgroup_css, refcnt);
 
-	/*
-	 * css holds an extra ref to @cgrp->dentry which is put on the last
-	 * css_put().  dput() requires process context, which css_put() may
-	 * be called without.  @css->destroy_work will be used to invoke
-	 * dput() asynchronously from css_put().
-	 */
-	INIT_WORK(&css->destroy_work, css_free_work_fn);
-	schedule_work(&css->destroy_work);
+	schedule_work(&css->dput_work);
 }
 
 static void init_cgroup_css(struct cgroup_css *css,
@@ -4219,12 +4209,18 @@ static void init_cgroup_css(struct cgroup_css *css,
 	css->cgroup = cgrp;
 	css->flags = 0;
 	css->id = NULL;
-	if (cgrp->parent)
-		css->parent = cgroup_css(cgrp->parent, ss->subsys_id);
-	else
+	if (cgrp == cgroup_dummy_top)
 		css->flags |= CSS_ROOT;
 	BUG_ON(cgrp->subsys[ss->subsys_id]);
 	cgrp->subsys[ss->subsys_id] = css;
+
+	/*
+	 * css holds an extra ref to @cgrp->dentry which is put on the last
+	 * css_put().  dput() requires process context, which css_put() may
+	 * be called without.  @css->dput_work will be used to invoke
+	 * dput() asynchronously from css_put().
+	 */
+	INIT_WORK(&css->dput_work, css_dput_fn);
 }
 
 /* invoke ->css_online() on a new CSS and mark it online if successful */
@@ -4314,7 +4310,6 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	cgrp->dentry = dentry;
 
 	cgrp->parent = parent;
-	cgrp->dummy_css.parent = &parent->dummy_css;
 	cgrp->root = parent->root;
 
 	if (notify_on_release(parent))
@@ -4363,13 +4358,9 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	list_add_tail_rcu(&cgrp->sibling, &cgrp->parent->children);
 	root->number_of_cgroups++;
 
-	/* each css holds a ref to the cgroup's dentry and the parent css */
-	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
-
+	/* each css holds a ref to the cgroup's dentry */
+	for_each_root_subsys(root, ss)
 		dget(dentry);
-		percpu_ref_get(&css->parent->refcnt);
-	}
 
 	/* hold a ref to the parent's dentry */
 	dget(parent->dentry);
