@@ -30,6 +30,7 @@
 #define MINIMUM_INPUT_CURRENT	300
 #define SIOP_INPUT_LIMIT_CURRENT 1200
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
+#define DISCHARGE_CURRENT 460
 
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
@@ -277,7 +278,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 					charger->aicl_on = true;
 				else
 					charger->aicl_on = false;
-				msleep(50);
+				mdelay(50);
 			} else
 				break;
 		}
@@ -288,7 +289,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 		now_current_reg = SOFT_CHG_START_CURR / 20;
 		max77693_write_reg(charger->max77693->i2c,
 			set_reg, now_current_reg);
-		msleep(SOFT_CHG_START_DUR);
+		mdelay(SOFT_CHG_START_DUR);
 	} else
 		now_current_reg = reg_data;
 
@@ -307,7 +308,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 		now_current_reg = min(now_current_reg, set_current_reg);
 		max77693_write_reg(charger->max77693->i2c,
 			set_reg, now_current_reg);
-		msleep(delay);
+		mdelay(delay);
 
 		vbus_state = max77693_get_vbus_state(charger);
 		if (((vbus_state == 0x00) || (vbus_state == 0x01)) &&
@@ -335,7 +336,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 					charger->aicl_on = false;
 				goto exit;
 			}
-			msleep(50);
+			mdelay(50);
 		} else
 			now_current_reg += (curr_step);
 	}
@@ -799,9 +800,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 			charger->aicl_on = false;
 			charger->soft_reg_recovery_cnt = 0;
 			set_charging_current = 0;
-			set_charging_current_max =
-				charger->pdata->charging_current[
-				POWER_SUPPLY_TYPE_USB].input_current_limit;
+			set_charging_current_max = DISCHARGE_CURRENT;
 
 			if (charger->wc_w_state) {
 				cancel_delayed_work_sync(&charger->wpc_work);
