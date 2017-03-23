@@ -138,7 +138,7 @@ void context_tracking_user_exit(void)
 	local_irq_restore(flags);
 }
 
-void context_tracking_task_switch(struct task_struct *prev,
+void __context_tracking_task_switch(struct task_struct *prev,
 			     struct task_struct *next)
 {
 	if (__this_cpu_read(context_tracking.active)) {
