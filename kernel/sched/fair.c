@@ -6392,8 +6392,8 @@ static inline int find_new_ilb(void)
 {
 	int ilb;
 
-	if (sysctl_sched_enable_hmp_task_placement)
-		return find_new_hmp_ilb(call_cpu);
+	//if (sysctl_sched_enable_hmp_task_placement)
+		//return find_new_hmp_ilb(call_cpu);
 
 	ilb = cpumask_first(nohz.idle_cpus_mask);
 
