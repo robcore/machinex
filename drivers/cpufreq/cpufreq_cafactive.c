@@ -1363,7 +1363,7 @@ static int cpufreq_governor_cafactive(struct cpufreq_policy *policy,
 		if (!have_governor_per_policy())
 			common_tunables = tunables;
 
-		rc = sysfs_create_group(get_governor_parent_kobj(policy),
+		rc = sysfs_create_group(cpufreq_global_kobject,
 				get_sysfs_attr());
 		if (rc) {
 			kfree(tunables);
@@ -1389,7 +1389,7 @@ static int cpufreq_governor_cafactive(struct cpufreq_policy *policy,
 				idle_notifier_unregister(&cpufreq_cafactive_idle_nb);
 			}
 
-			sysfs_remove_group(get_governor_parent_kobj(policy),
+			sysfs_remove_group(cpufreq_global_kobject,
 					get_sysfs_attr());
 			common_tunables = NULL;
 		}
