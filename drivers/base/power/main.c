@@ -587,7 +587,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
  Out:
 	complete_all(&dev->power.completion);
 	TRACE_RESUME(error);
-	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -1288,10 +1287,8 @@ static int __device_suspend_late(struct device *dev, pm_message_t state, bool as
 	error = dpm_run_callback(callback, dev, state, info);
 	if (!error)
 		dev->power.is_late_suspended = true;
-	else {
-		pm_runtime_enable(dev);
+	else
 		async_error = error;
-	}
 
 Complete:
 	complete_all(&dev->power.completion);
