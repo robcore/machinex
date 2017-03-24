@@ -745,7 +745,7 @@ static void dpm_resume_early(pm_message_t state)
 {
 	struct device *dev;
 	ktime_t starttime = ktime_get();
-	print_active_wakeup_sources();
+	//print_active_wakeup_sources();
 
 	mutex_lock(&dpm_list_mtx);
 	pm_transition = state;
