@@ -586,7 +586,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
  Out:
 	complete_all(&dev->power.completion);
 	TRACE_RESUME(error);
-	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -840,8 +839,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
+		goto Driver;
 	}
 
 	if (dev->type && dev->type->pm) {
@@ -1489,21 +1487,20 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto Run;
+		goto Run;
 	}
 
 	if (dev->type && dev->type->pm) {
 		info = "type ";
 		callback = pm_op(dev->type->pm, state);
-		goto Driver;
+		goto Run;
 	}
 
 	if (dev->class) {
 		if (dev->class->pm) {
 			info = "class ";
 			callback = pm_op(dev->class->pm, state);
-			goto Driver;
+			goto Run;
 		} else if (dev->class->suspend) {
 			pm_dev_dbg(dev, state, "legacy class ");
 			error = legacy_suspend(dev, state, dev->class->suspend,
@@ -1524,21 +1521,29 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		}
 	}
 
- Driver:
+ Run:
 	if (!callback && dev->driver && dev->driver->pm) {
 		info = "driver ";
 		callback = pm_op(dev->driver->pm, state);
 	}
 
- Run:
 	error = dpm_run_callback(callback, dev, state, info);
 
  End:
 	if (!error) {
+		struct device *parent = dev->parent;
+
 		dev->power.is_suspended = true;
-		if (dev->power.wakeup_path
-		    && dev->parent && !dev->parent->power.ignore_children)
-			dev->parent->power.wakeup_path = true;
+		if (parent) {
+			spin_lock_irq(&parent->power.lock);
+
+			dev->parent->power.direct_complete = false;
+			if (dev->power.wakeup_path
+			    && !dev->parent->power.ignore_children)
+				dev->parent->power.wakeup_path = true;
+
+			spin_unlock_irq(&parent->power.lock);
+		}
 	}
 
 	device_unlock(dev);
