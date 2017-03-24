@@ -68,6 +68,8 @@ void __weak arch_cpu_idle(void)
  */
 static void cpu_idle_loop(void)
 {
+	int cpu = smp_processor_id();
+
 	while (1) {
 		tick_nohz_idle_enter();
 
