@@ -906,7 +906,8 @@ static inline notrace void rcu_read_unlock_sched_notrace(void)
  * impossible-to-diagnose memory corruption.  So please be careful.
  * See the RCU_INIT_POINTER() comment header for details.
  */
-#define rcu_assign_pointer(p, v) smp_store_release(&p, RCU_INITIALIZER(v))
+#define rcu_assign_pointer(p, v) \
+	__rcu_assign_pointer((p), (v), __rcu)
 
 /**
  * RCU_INIT_POINTER() - initialize an RCU protected pointer
