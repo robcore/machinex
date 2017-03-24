@@ -1272,6 +1272,9 @@ static int legacy_suspend(struct device *dev, pm_message_t state,
 	if (error)
 		pm_runtime_put(dev);
 
+	if (error)
+		pm_runtime_put(dev);
+
 	return error;
 }
 
