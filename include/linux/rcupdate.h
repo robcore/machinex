@@ -961,14 +961,6 @@ static inline notrace void rcu_read_unlock_sched_notrace(void)
 #define RCU_POINTER_INITIALIZER(p, v) \
 		.p = (typeof(*v) __force __rcu *)(v)
 
-/**
- * RCU_POINTER_INITIALIZER() - statically initialize an RCU protected pointer
- *
- * GCC-style initialization for an RCU-protected pointer in a structure field.
- */
-#define RCU_POINTER_INITIALIZER(p, v) \
-		.p = RCU_INITIALIZER(v)
-
 /*
  * Does the specified offset indicate that the corresponding rcu_head
  * structure can be handled by kfree_rcu()?
