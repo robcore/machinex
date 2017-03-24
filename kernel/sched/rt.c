@@ -1905,7 +1905,7 @@ static void switched_from_rt(struct rq *rq, struct task_struct *p)
 		resched_task(rq->curr);
 }
 
-void init_sched_rt_class(void)
+void __init init_sched_rt_class(void)
 {
 	unsigned int i;
 
