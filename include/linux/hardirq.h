@@ -6,12 +6,8 @@
 #include <linux/ftrace_irq.h>
 #include <linux/vtime.h>
 
-
-#if defined(CONFIG_SMP) || defined(CONFIG_GENERIC_HARDIRQS)
 extern void synchronize_irq(unsigned int irq);
-#else
-# define synchronize_irq(irq)	barrier()
-#endif
+extern void synchronize_hardirq(unsigned int irq);
 
 #if defined(CONFIG_TINY_RCU)
 
