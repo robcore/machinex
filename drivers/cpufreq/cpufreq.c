@@ -1124,8 +1124,7 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 
 
 /* symlink affected CPUs */
-static int cpufreq_add_dev_symlink(unsigned int cpu,
-				   struct cpufreq_policy *policy)
+static int cpufreq_add_dev_symlink(struct cpufreq_policy *policy)
 {
 	unsigned int j;
 	int ret = 0;
@@ -1134,13 +1133,13 @@ static int cpufreq_add_dev_symlink(unsigned int cpu,
 		struct cpufreq_policy *managed_policy;
 		struct device *cpu_dev;
 
-		if (j == cpu)
+		if (j == policy->cpu)
 			continue;
 		if (!cpu_online(j))
 			continue;
 
 		pr_debug("CPU %u already managed, adding link\n", j);
-		managed_policy = cpufreq_cpu_get(cpu);
+		managed_policy = cpufreq_cpu_get(policy->cpu);
 		cpu_dev = get_cpu_device(j);
 		ret = sysfs_create_link(&cpu_dev->kobj, policy->kobj,
 					"cpufreq");
@@ -1152,8 +1151,7 @@ static int cpufreq_add_dev_symlink(unsigned int cpu,
 	return ret;
 }
 
-static int cpufreq_add_dev_interface(unsigned int cpu,
-				     struct cpufreq_policy *policy,
+static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 				     struct device *dev)
 {
 	struct cpufreq_policy new_policy;
@@ -1170,7 +1168,7 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 	}
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
-	ret = cpufreq_add_dev_symlink(cpu, policy);
+	ret = cpufreq_add_dev_symlink(policy);
 	if (ret)
 		goto err_out_kobj_put;
 
@@ -1314,7 +1312,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		goto err_unlock_policy;
 	}
 
-	ret = cpufreq_add_dev_interface(cpu, policy, dev);
+	ret = cpufreq_add_dev_interface(policy, dev);
 	if (ret)
 		goto err_out_unregister;
 
