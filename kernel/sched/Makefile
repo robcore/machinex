@@ -13,7 +13,7 @@ endif
 
 obj-y += core.o proc.o clock.o idle_task.o cputime.o
 obj-y += fair.o rt.o deadline.o stop_task.o sched_avg.o
-obj-y += wait.o completion.o
+obj-y += wait.o completion.o idle.o
 obj-$(CONFIG_SMP) += cpupri.o cpudeadline.o
 obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
 obj-$(CONFIG_SCHEDSTATS) += stats.o

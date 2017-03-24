@@ -68,14 +68,15 @@ void __weak arch_cpu_idle(void)
  */
 static void cpu_idle_loop(void)
 {
-	int cpu = smp_processor_id();
-
 	while (1) {
 		tick_nohz_idle_enter();
 
 		while (!need_resched()) {
 			check_pgt_cache();
 			rmb();
+
+			if (cpu_is_offline(smp_processor_id()))
+				arch_cpu_idle_dead();
 
 			local_irq_disable();
 			arch_cpu_idle_enter();
@@ -107,12 +108,18 @@ static void cpu_idle_loop(void)
 				__current_set_polling();
 			}
 			arch_cpu_idle_exit();
+			/*
+			 * We need to test and propagate the TIF_NEED_RESCHED
+			 * bit here because we might not have send the
+			 * reschedule IPI to idle tasks.
+			 */
+			if (tif_need_resched())
+				set_preempt_need_resched();
 		}
 		tick_nohz_idle_exit();
 		schedule_preempt_disabled();
-		if (cpu_is_offline(cpu))
-			arch_cpu_idle_dead();
-
+		//if (cpu_is_offline(cpu))
+			//arch_cpu_idle_dead();
 	}
 }
 
