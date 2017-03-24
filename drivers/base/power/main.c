@@ -1266,15 +1266,6 @@ static int legacy_suspend(struct device *dev, pm_message_t state,
 
 	initcall_debug_report(dev, calltime, error, state, info);
 
-	if (error)
-		pm_runtime_put(dev);
-
-	if (error)
-		pm_runtime_put(dev);
-
-	if (error)
-		pm_runtime_put(dev);
-
 	return error;
 }
 
@@ -1524,7 +1515,6 @@ static int device_prepare(struct device *dev, pm_message_t state)
 
 	if (error)
 		pm_runtime_put(dev);
-
 
 	return error;
 }
