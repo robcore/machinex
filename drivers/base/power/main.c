@@ -1135,10 +1135,8 @@ static int __device_suspend_noirq(struct device *dev, pm_message_t state, bool a
 	error = dpm_run_callback(callback, dev, state, info);
 	if (!error)
 		dev->power.is_noirq_suspended = true;
-	else {
-		pm_runtime_enable(dev);
+	else
 		async_error = error;
-	}
 
 Complete:
 	complete_all(&dev->power.completion);
@@ -1425,6 +1423,9 @@ static int legacy_suspend(struct device *dev, pm_message_t state,
 
 	initcall_debug_report(dev, calltime, error, state, info);
 
+	if (error)
+		pm_runtime_put(dev);
+
 	return error;
 }
 
@@ -1466,6 +1467,17 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 
 	if (dev->power.syscore)
 		goto Complete;
+
+	if (dev->power.direct_complete) {
+		if (pm_runtime_status_suspended(dev)) {
+			pm_runtime_disable(dev);
+			if (pm_runtime_suspended_if_enabled(dev))
+				goto Complete;
+
+			pm_runtime_enable(dev);
+		}
+		dev->power.direct_complete = false;
+	}
 
 	dpm_wd_set(&wd, dev);
 	device_lock(dev);
@@ -1636,6 +1648,7 @@ static int device_prepare(struct device *dev, pm_message_t state)
 	 */
 	pm_runtime_get_noresume(dev);
 
+	dpm_watchdog_set(&wd, dev);
 	device_lock(dev);
 
 	dev->power.wakeup_path = device_may_wakeup(dev);
