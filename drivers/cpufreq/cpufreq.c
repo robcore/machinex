@@ -1093,7 +1093,7 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 			cpumask_and(managed_policy->cpus,
 					managed_policy->cpus, cpu_online_mask);
 			per_cpu(cpufreq_cpu_data, cpu) = managed_policy;
-			write_lock_irqrestore(&cpufreq_driver_lock, flags);
+			write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 			__cpufreq_governor(managed_policy, CPUFREQ_GOV_START);
 			__cpufreq_governor(managed_policy, CPUFREQ_GOV_LIMITS);
