@@ -332,7 +332,6 @@ do {									\
 	P(sched_goidle);
 #ifdef CONFIG_SMP
 	P64(avg_idle);
-	P64(max_idle_balance_cost);
 #endif
 
 	P(ttwu_count);
