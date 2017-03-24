@@ -1634,18 +1634,6 @@ static int device_prepare(struct device *dev, pm_message_t state)
 	 */
 	pm_runtime_get_noresume(dev);
 
-	if (dev->power.direct_complete) {
-		if (pm_runtime_status_suspended(dev)) {
-			pm_runtime_disable(dev);
-			if (pm_runtime_suspended_if_enabled(dev))
-				goto Complete;
-
-			pm_runtime_enable(dev);
-		}
-		dev->power.direct_complete = false;
-	}
-
-	dpm_watchdog_set(&wd, dev);
 	device_lock(dev);
 
 	dev->power.wakeup_path = device_may_wakeup(dev);
