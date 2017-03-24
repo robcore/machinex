@@ -233,9 +233,6 @@ static void initcall_debug_report(struct device *dev, ktime_t calltime,
 		pr_info("call %s+ returned %d after %Ld usecs\n", dev_name(dev),
 			error, (unsigned long long)nsecs >> 10);
 	}
-
-	trace_device_pm_report_time(dev, info, nsecs, pm_verb(state.event),
-				    error);
 }
 
 /**
@@ -406,7 +403,9 @@ static int dpm_run_callback(pm_callback_t cb, struct device *dev,
 	calltime = initcall_debug_start(dev);
 
 	pm_dev_dbg(dev, state, info);
+	trace_device_pm_callback_start(dev, info, state.event);
 	error = cb(dev);
+	trace_device_pm_callback_end(dev, error);
 	suspend_report_result(cb, error);
 
 	initcall_debug_report(dev, calltime, error, state, info);
@@ -1001,7 +1000,9 @@ static void device_complete(struct device *dev, pm_message_t state)
  End:
 	if (callback) {
 		pm_dev_dbg(dev, state, info);
+		trace_device_pm_callback_start(dev, info, state.event);
 		callback(dev);
+		trace_device_pm_callback_end(dev, 0);
 	}
 
 	device_unlock(dev);
@@ -1419,7 +1420,9 @@ static int legacy_suspend(struct device *dev, pm_message_t state,
 
 	calltime = initcall_debug_start(dev);
 
+	trace_device_pm_callback_start(dev, info, state.event);
 	error = cb(dev, state);
+	trace_device_pm_callback_end(dev, error);
 	suspend_report_result(cb, error);
 
 	initcall_debug_report(dev, calltime, error, state, info);
@@ -1636,7 +1639,7 @@ static int device_prepare(struct device *dev, pm_message_t state)
 {
 	int (*callback)(struct device *) = NULL;
 	char *info = NULL;
-	int error = 0;
+	int ret = 0;
 
 	if (dev->power.syscore)
 		return 0;
@@ -1679,17 +1682,31 @@ static int device_prepare(struct device *dev, pm_message_t state)
 
  End:
 	if (callback) {
-		error = callback(dev);
+		trace_device_pm_callback_start(dev, info, state.event);
+		ret = callback(dev);
+		trace_device_pm_callback_end(dev, ret);
 		suspend_report_result(callback, error);
 	}
 
 	device_unlock(dev);
 	dpm_watchdog_clear(&wd);
 
-	if (error)
+	if (ret < 0) {
+		suspend_report_result(callback, ret);
 		pm_runtime_put(dev);
-
-	return error;
+		return ret;
+	}
+	/*
+	 * A positive return value from ->prepare() means "this device appears
+	 * to be runtime-suspended and its state is fine, so if it really is
+	 * runtime-suspended, you can leave it in that state provided that you
+	 * will do the same thing with all of its descendants".  This only
+	 * applies to suspend transitions, however.
+	 */
+	spin_lock_irq(&dev->power.lock);
+	dev->power.direct_complete = ret > 0 && state.event == PM_EVENT_SUSPEND;
+	spin_unlock_irq(&dev->power.lock);
+	return 0;
 }
 
 /**
