@@ -214,7 +214,7 @@ EXPORT_SYMBOL(local_bh_enable_ip);
 #define MAX_SOFTIRQ_TIME  msecs_to_jiffies(2)
 #define MAX_SOFTIRQ_RESTART 10
 
-asmlinkage __visible void __do_softirq(void)
+asmlinkage void __do_softirq(void)
 {
 	struct softirq_action *h;
 	__u32 pending;
@@ -289,7 +289,7 @@ restart:
 	WARN_ON_ONCE(in_interrupt());
 }
 
-asmlinkage __visible void do_softirq(void)
+asmlinkage void do_softirq(void)
 {
 	__u32 pending;
 	unsigned long flags;

@@ -2,7 +2,6 @@
 #include <linux/suspend_ioctls.h>
 #include <linux/utsname.h>
 #include <linux/freezer.h>
-#include <linux/compiler.h>
 
 struct swsusp_info {
 	struct new_utsname	uts;
@@ -12,7 +11,7 @@ struct swsusp_info {
 	unsigned long		image_pages;
 	unsigned long		pages;
 	unsigned long		size;
-} __aligned(PAGE_SIZE);
+} __attribute__((aligned(PAGE_SIZE)));
 
 #ifdef CONFIG_HIBERNATION
 /* kernel/power/snapshot.c */
@@ -178,8 +177,13 @@ extern void swsusp_show_speed(struct timeval *, struct timeval *,
 				unsigned int, char *);
 
 #ifdef CONFIG_SUSPEND
+struct pm_sleep_state {
+	const char *label;
+	suspend_state_t state;
+};
+
 /* kernel/power/suspend.c */
-extern const char *pm_states[];
+extern struct pm_sleep_state pm_states[];
 
 extern int suspend_devices_and_enter(suspend_state_t state);
 #else /* !CONFIG_SUSPEND */

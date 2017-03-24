@@ -73,7 +73,6 @@
 #include <linux/init_task.h>
 #include <linux/binfmts.h>
 #include <linux/context_tracking.h>
-#include <linux/compiler.h>
 #include <linux/cpufreq.h>
 #include <linux/sched/deadline.h>
 
@@ -569,14 +568,11 @@ void resched_cpu(int cpu)
  * selecting an idle cpu will add more delays to the timers than intended
  * (as that cpu's timer base may not be uptodate wrt jiffies etc).
  */
-int get_nohz_timer_target(int pinned)
+int get_nohz_timer_target(void)
 {
 	int cpu = smp_processor_id();
 	int i;
 	struct sched_domain *sd;
-
-	if (pinned || !get_sysctl_timer_migration() || !idle_cpu(cpu))
-		return cpu;
 
 	rcu_read_lock();
 	for_each_domain(cpu, sd) {
@@ -829,13 +825,19 @@ static void update_rq_clock_task(struct rq *rq, s64 delta)
 #endif
 #ifdef CONFIG_PARAVIRT_TIME_ACCOUNTING
 	if (static_key_false((&paravirt_steal_rq_enabled))) {
+		u64 st;
+
 		steal = paravirt_steal_clock(cpu_of(rq));
 		steal -= rq->prev_steal_time_rq;
 
 		if (unlikely(steal > delta))
 			steal = delta;
 
+		st = steal_ticks(steal);
+		steal = st * TICK_NSEC;
+
 		rq->prev_steal_time_rq += steal;
+
 		delta -= steal;
 	}
 #endif
@@ -2154,6 +2156,13 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 
 #ifdef CONFIG_SMP
 
+/* assumes rq->lock is held */
+static inline void pre_schedule(struct rq *rq, struct task_struct *prev)
+{
+	if (prev->sched_class->pre_schedule)
+		prev->sched_class->pre_schedule(rq, prev);
+}
+
 /* rq->lock is NOT held, but preemption is disabled */
 static inline void post_schedule(struct rq *rq)
 {
@@ -2171,6 +2180,10 @@ static inline void post_schedule(struct rq *rq)
 
 #else
 
+static inline void pre_schedule(struct rq *rq, struct task_struct *p)
+{
+}
+
 static inline void post_schedule(struct rq *rq)
 {
 }
@@ -2181,7 +2194,7 @@ static inline void post_schedule(struct rq *rq)
  * schedule_tail - first thing a freshly forked thread must call.
  * @prev: the thread we just switched away from.
  */
-asmlinkage __visible void schedule_tail(struct task_struct *prev)
+asmlinkage void schedule_tail(struct task_struct *prev)
 	__releases(rq->lock)
 {
 	struct rq *rq = this_rq();
@@ -2576,27 +2589,24 @@ static inline void schedule_debug(struct task_struct *prev)
 static inline struct task_struct *
 pick_next_task(struct rq *rq, struct task_struct *prev)
 {
-	const struct sched_class *class = &fair_sched_class;
+	const struct sched_class *class;
 	struct task_struct *p;
 
 	/*
 	 * Optimization: we know that if all tasks are in
 	 * the fair class we can call that function directly:
 	 */
-	if (likely(prev->sched_class == class &&
-		   rq->nr_running == rq->cfs.h_nr_running)) {
+	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq, prev);
-		if (likely(p && p != RETRY_TASK)) {
+		if (likely(p)) {
 			update_task_ravg(p, rq, 1);
 			return p;
 		}
 	}
-again:
+
 	for_each_class(class) {
 		p = class->pick_next_task(rq, prev);
 		if (p) {
-			if (unlikely(p == RETRY_TASK))
-				goto again;
 			update_task_ravg(p, rq, 1);
 			return p;
 		}
@@ -2693,6 +2703,18 @@ need_resched:
 		switch_count = &prev->nvcsw;
 	}
 
+	pre_schedule(rq, prev);
+
+	if (unlikely(!rq->nr_running)) {
+		/*
+		 * We must set idle_stamp _before_ calling idle_balance(), such
+		 * that we measure the duration of idle_balance() as idle time.
+		 */
+		rq->idle_stamp = rq_clock(rq);
+		if (idle_balance(rq))
+			rq->idle_stamp = 0;
+	}
+
 	if (prev->on_rq || rq->skip_clock_update < 0)
 		update_rq_clock(rq);
 
@@ -2739,7 +2761,7 @@ static inline void sched_submit_work(struct task_struct *tsk)
 		blk_schedule_flush_plug(tsk);
 }
 
-asmlinkage __visible void __sched schedule(void)
+asmlinkage void __sched schedule(void)
 {
 	struct task_struct *tsk = current;
 
@@ -2749,7 +2771,7 @@ asmlinkage __visible void __sched schedule(void)
 EXPORT_SYMBOL(schedule);
 
 #ifdef CONFIG_CONTEXT_TRACKING
-asmlinkage __visible void __sched schedule_user(void)
+asmlinkage void __sched schedule_user(void)
 {
 	/*
 	 * If we come here after a random call to set_need_resched(),
@@ -2781,7 +2803,7 @@ void __sched schedule_preempt_disabled(void)
  * off of preempt_enable. Kernel preemptions off return from interrupt
  * occur there and call schedule directly.
  */
-asmlinkage __visible void __sched notrace preempt_schedule(void)
+asmlinkage void __sched notrace preempt_schedule(void)
 {
 	/*
 	 * If there is a non-zero preempt_count or interrupts are disabled,
@@ -2811,7 +2833,7 @@ EXPORT_SYMBOL(preempt_schedule);
  * Note, that this is called and return with irqs disabled. This will
  * protect us against recursive calling from irq.
  */
-asmlinkage __visible void __sched preempt_schedule_irq(void)
+asmlinkage void __sched preempt_schedule_irq(void)
 {
 	struct thread_info *ti = current_thread_info();
 	enum ctx_state prev_state;
@@ -2901,8 +2923,7 @@ EXPORT_SYMBOL(sleep_on_timeout);
  * This function changes the 'effective' priority of a task. It does
  * not touch ->normal_prio like __setscheduler().
  *
- * Used by the rt_mutex code to implement priority inheritance
- * logic. Call site only calls if the priority of the task changed.
+ * Used by the rt_mutex code to implement priority inheritance logic.
  */
 void rt_mutex_setprio(struct task_struct *p, int prio)
 {
@@ -2992,7 +3013,7 @@ void set_user_nice(struct task_struct *p, long nice)
 	unsigned long flags;
 	struct rq *rq;
 
-	if (task_nice(p) == nice || nice < MIN_NICE || nice > MAX_NICE)
+	if (task_nice(p) == nice || nice < -20 || nice > 19)
 		return;
 	/*
 	 * We have to be careful, if called from sys_setpriority(),
@@ -3071,10 +3092,10 @@ SYSCALL_DEFINE1(nice, int, increment)
 		increment = 40;
 
 	nice = task_nice(current) + increment;
-	if (nice < MIN_NICE)
-		nice = MIN_NICE;
-	if (nice > MAX_NICE)
-		nice = MAX_NICE;
+	if (nice < -20)
+		nice = -20;
+	if (nice > 19)
+		nice = 19;
 
 	if (increment < 0 && !can_nice(current, nice))
 		return -EPERM;
@@ -3172,8 +3193,9 @@ __setparam_dl(struct task_struct *p, const struct sched_attr *attr)
 	dl_se->dl_yielded = 0;
 }
 
-static void __setscheduler_params(struct task_struct *p,
-		const struct sched_attr *attr)
+/* Actually do priority change: must hold pi & rq lock. */
+static void __setscheduler(struct rq *rq, struct task_struct *p,
+			   const struct sched_attr *attr)
 {
 	int policy = attr->sched_policy;
 
@@ -3193,21 +3215,9 @@ static void __setscheduler_params(struct task_struct *p,
 	 * getparam()/getattr() don't report silly values for !rt tasks.
 	 */
 	p->rt_priority = attr->sched_priority;
+
 	p->normal_prio = normal_prio(p);
-	set_load_weight(p);
-}
-
-/* Actually do priority change: must hold pi & rq lock. */
-static void __setscheduler(struct rq *rq, struct task_struct *p,
-			   const struct sched_attr *attr)
-{
-	__setscheduler_params(p, attr);
-
-	/*
-	 * If we get here, there was no pi waiters boosting the
-	 * task. It is safe to use the normal prio.
-	 */
-	p->prio = normal_prio(p);
+	p->prio = rt_mutex_getprio(p);
 
 	if (dl_prio(p->prio))
 		p->sched_class = &dl_sched_class;
@@ -3215,6 +3225,8 @@ static void __setscheduler(struct rq *rq, struct task_struct *p,
 		p->sched_class = &rt_sched_class;
 	else
 		p->sched_class = &fair_sched_class;
+
+	set_load_weight(p);
 }
 
 static void
@@ -3404,8 +3416,6 @@ static int __sched_setscheduler(struct task_struct *p,
 				const struct sched_attr *attr,
 				bool user)
 {
-	int newprio = dl_policy(attr->sched_policy) ? MAX_DL_PRIO - 1 :
-		      MAX_RT_PRIO - 1 - attr->sched_priority;
 	int retval, oldprio, oldpolicy = -1, on_rq, running;
 	int policy = attr->sched_policy;
 	unsigned long flags;
@@ -3520,8 +3530,7 @@ recheck:
 	}
 
 	/*
-	 * If not changing anything there's no need to proceed further,
-	 * but store a possible modification of reset_on_fork.
+	 * If not changing anything there's no need to proceed further:
 	 */
 	if (unlikely(policy == p->policy)) {
 		if (fair_policy(policy) && attr->sched_nice != task_nice(p))
@@ -3531,7 +3540,6 @@ recheck:
 		if (dl_policy(policy))
 			goto change;
 
-		p->sched_reset_on_fork = reset_on_fork;
 		task_rq_unlock(rq, p, &flags);
 		return 0;
 	}
@@ -3584,24 +3592,6 @@ change:
 		return -EBUSY;
 	}
 
-	p->sched_reset_on_fork = reset_on_fork;
-	oldprio = p->prio;
-
-	/*
-	 * Special case for priority boosted tasks.
-	 *
-	 * If the new priority is lower or equal (user space view)
-	 * than the current (boosted) priority, we just store the new
-	 * normal parameters and do not touch the scheduler class and
-	 * the runqueue. This will be done when the task deboost
-	 * itself.
-	 */
-	if (rt_mutex_check_prio(p, newprio)) {
-		__setscheduler_params(p, attr);
-		task_rq_unlock(rq, p, &flags);
-		return 0;
-	}
-
 	on_rq = p->on_rq;
 	running = task_current(rq, p);
 	if (on_rq)
@@ -3609,6 +3599,9 @@ change:
 	if (running)
 		p->sched_class->put_prev_task(rq, p);
 
+	p->sched_reset_on_fork = reset_on_fork;
+
+	oldprio = p->prio;
 	prev_class = p->sched_class;
 	__setscheduler(rq, p, attr);
 
@@ -3776,7 +3769,7 @@ static int sched_copy_attr(struct sched_attr __user *uattr,
 	 * XXX: do we want to be lenient like existing syscalls; or do we want
 	 * to be strict and return an error on out-of-bounds values?
 	 */
-	attr->sched_nice = clamp(attr->sched_nice, MIN_NICE, MAX_NICE);
+	attr->sched_nice = clamp(attr->sched_nice, -20, 19);
 
 	return 0;
 
@@ -4637,7 +4630,6 @@ void init_idle(struct task_struct *idle, int cpu)
 	rcu_read_unlock();
 
 	rq->curr = rq->idle = idle;
-	idle->on_rq = 1;
 #if defined(CONFIG_SMP)
 	idle->on_cpu = 1;
 #endif
@@ -4842,22 +4834,6 @@ static void calc_load_migrate(struct rq *rq)
 		atomic_long_add(delta, &calc_load_tasks);
 }
 
-static void put_prev_task_fake(struct rq *rq, struct task_struct *prev)
-{
-}
-
-static const struct sched_class fake_sched_class = {
-	.put_prev_task = put_prev_task_fake,
-};
-
-static struct task_struct fake_task = {
-	/*
-	 * Avoid pull_{rt,dl}_task()
-	 */
-	.prio = MAX_PRIO + 1,
-	.sched_class = &fake_sched_class,
-};
-
 /*
  * Migrate all tasks from the rq, sleeping tasks will be migrated by
  * try_to_wake_up()->select_task_rq().
@@ -4911,7 +4887,7 @@ static void migrate_tasks(unsigned int dead_cpu)
 		if (rq->nr_running == 1)
 			break;
 
-		next = pick_next_task(rq, &fake_task);
+		next = pick_next_task(rq, NULL);
 		BUG_ON(!next);
 		next->sched_class->put_prev_task(rq, next);
 
@@ -5001,7 +4977,7 @@ set_table_entry(struct ctl_table *entry,
 static struct ctl_table *
 sd_alloc_ctl_domain_table(struct sched_domain *sd)
 {
-	struct ctl_table *table = sd_alloc_ctl_entry(14);
+	struct ctl_table *table = sd_alloc_ctl_entry(13);
 
 	if (table == NULL)
 		return NULL;
@@ -5029,12 +5005,9 @@ sd_alloc_ctl_domain_table(struct sched_domain *sd)
 		sizeof(int), 0644, proc_dointvec_minmax, false);
 	set_table_entry(&table[10], "flags", &sd->flags,
 		sizeof(int), 0644, proc_dointvec_minmax, false);
-	set_table_entry(&table[11], "max_newidle_lb_cost",
-		&sd->max_newidle_lb_cost,
-		sizeof(long), 0644, proc_doulongvec_minmax, false);
-	set_table_entry(&table[12], "name", sd->name,
+	set_table_entry(&table[11], "name", sd->name,
 		CORENAME_MAX_SIZE, 0444, proc_dostring, false);
-	/* &table[13] is terminator */
+	/* &table[12] is terminator */
 
 	return table;
 }
@@ -6576,7 +6549,7 @@ static cpumask_var_t fallback_doms;
  * cpu core maps. It is supposed to return 1 if the topology changed
  * or 0 if it stayed the same.
  */
-int __weak arch_update_cpu_topology(void)
+int __attribute__((weak)) arch_update_cpu_topology(void)
 {
 	return 0;
 }
@@ -7057,6 +7030,7 @@ void __init sched_init(void)
 
 		rq->rt.rt_runtime = def_rt_bandwidth.rt_runtime;
 #ifdef CONFIG_RT_GROUP_SCHED
+		INIT_LIST_HEAD(&rq->leaf_rt_rq_list);
 		init_tg_rt_entry(&root_task_group, &rq->rt, NULL, i, NULL);
 #endif
 
@@ -7161,8 +7135,7 @@ void __might_sleep(const char *file, int line, int preempt_offset)
 	static unsigned long prev_jiffy;	/* ratelimiting */
 
 	rcu_sleep_check(); /* WARN_ON_ONCE() by default, no rate limit reqd. */
-	if ((preempt_count_equals(preempt_offset) && !irqs_disabled() &&
-	     !is_idle_task(current)) ||
+	if ((preempt_count_equals(preempt_offset) && !irqs_disabled()) ||
 	    oops_in_progress)
 		return;
 	if (system_state != SYSTEM_RUNNING &&

@@ -1,1 +1,0 @@
-/media/root/robcore/android/linaro-8064-lt/kernel/patches/3patches/1944-smp-Iterate-functions-through-llist_for_each_entry_s.patch

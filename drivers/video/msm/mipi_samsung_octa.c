@@ -548,6 +548,7 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 
 	mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_DISABLE, false);
 	smart_dimming_init(&(msd.mpd->smart_se6e8fa));
+	panel_load_colors(Lpanel_colors);
 
 }
 
@@ -1679,7 +1680,6 @@ static int mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_tuning.attr.name);
 	}
 #endif
-	panel_load_colors(Lpanel_colors);
 
 	ret = sysfs_create_file(&lcd_device->dev.kobj,
 			&dev_attr_panel_colors.attr);
@@ -1808,6 +1808,8 @@ static int __init mipi_samsung_disp_init(void)
 	}
 
 	ldi_chip();
+
+	Lpanel_colors = 2;
 
 	mipi_dsi_buf_alloc(&msd.samsung_tx_buf, DSI_BUF_SIZE);
 	mipi_dsi_buf_alloc(&msd.samsung_rx_buf, DSI_BUF_SIZE);

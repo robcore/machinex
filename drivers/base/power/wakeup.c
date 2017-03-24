@@ -327,9 +327,7 @@ int device_wakeup_disable(struct device *dev)
 		return -EINVAL;
 
 	ws = device_wakeup_detach(dev);
-	if (ws)
-		wakeup_source_unregister(ws);
-
+	wakeup_source_unregister(ws);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(device_wakeup_disable);
@@ -529,37 +527,6 @@ void pm_wakeup_clear(void)
  * function executed when the timer expires, whichever comes first.
  */
 
-static bool wakeup_source_blocker(struct wakeup_source *ws)
-{
-	unsigned int wslen = 0;
-
-	if (ws && ws->active) {
-		wslen = strlen(ws->name);
-
-	if (((!enable_gps_ws &&
-			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
-		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) ||
-		(!enable_msm_hsic_ws &&
-			!strcmp(ws->name, "msm_hsic_host")) ||
-		(!enable_wlan_rx_wake_ws &&
-			!strcmp(ws->name, "wlan_rx_wake")) ||
-		(!enable_wlan_ctrl_wake_ws &&
-			!strcmp(ws->name, "wlan_ctrl_wake")) ||
-		(!enable_wlan_wake_ws &&
-			!strcmp(ws->name, "wlan_wake")) ||
-		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) ||
-		(!enable_ssp_sensorhub_ws &&
-			!strcmp(ws->name, "ssp_wake_lock")))) {
-			wakeup_source_deactivate(ws);
-			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
-			return true;
-		}
-	}
-	return false;
-}
-
 /**
  * wakup_source_activate - Mark given wakeup source as active.
  * @ws: Wakeup source to handle.
@@ -577,13 +544,32 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			"unregistered wakeup source\n"))
 		return;
 
+	if (((!enable_gps_ws &&
+			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
+		(!enable_bluesleep_ws &&
+			!strcmp(ws->name, "bluesleep")) ||
+		(!enable_msm_hsic_ws &&
+			!strcmp(ws->name, "msm_hsic_host")) ||
+		(!enable_wlan_rx_wake_ws &&
+			!strcmp(ws->name, "wlan_rx_wake")) ||
+		(!enable_wlan_ctrl_wake_ws &&
+			!strcmp(ws->name, "wlan_ctrl_wake")) ||
+		(!enable_wlan_wake_ws &&
+			!strcmp(ws->name, "wlan_wake")) ||
+		(!enable_bluesleep_ws &&
+			!strcmp(ws->name, "bluesleep")) ||
+		(!enable_ssp_sensorhub_ws &&
+			!strcmp(ws->name, "ssp_wake_lock")))) {
 		/*
 		 * let's try and deactivate this wakeup source since the user
 		 * clearly doesn't want it. The user is responsible for any
 		 * adverse effects and has been warned about it
 		 */
-	if (wakeup_source_blocker(ws))
+		if (ws->active)
+			wakeup_source_deactivate(ws);
+
 		return;
+	}
 
 	/*
 	 * active wakeup source should bring the system
@@ -605,9 +591,8 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			//pm_system_wakeup();
 		}
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
-	}
-
-	freeze_wake();
+	} else
+		freeze_wake();
 
 	ws->active = true;
 	ws->active_count++;
@@ -839,8 +824,7 @@ void pm_print_active_wakeup_sources(void)
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
 			pr_info("active wakeup source: %s\n", ws->name);
-			if (!wakeup_source_blocker(ws))
-				active = 1;
+			active = 1;
 		} else if (!active &&
 			   (!last_activity_ws ||
 			    ktime_to_ns(ws->last_time) >
@@ -892,8 +876,9 @@ bool pm_wakeup_pending(void)
 					break;
 			}
 
-		finish_wait(&wakeup_freezer_wait_queue, &wait);
 		pr_info("Machinex: Wakeup pending, aborting suspend after freeze is complete\n");
+		finish_wait(&wakeup_freezer_wait_queue, &wait);
+
 		} else {
 			pr_info("PM: Wakeup pending, aborting suspend\n");
 		}

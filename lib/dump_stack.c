@@ -12,7 +12,7 @@
  *
  * Architectures can override this implementation by implementing its own.
  */
-asmlinkage __visible void dump_stack(void)
+void dump_stack(void)
 {
 	dump_stack_print_info(KERN_DEFAULT);
 	show_stack(NULL, NULL);

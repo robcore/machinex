@@ -549,7 +549,7 @@ static void __init integrity_mem_reserve(void) {
 // change@ksingh.sra-dallas - end
 #endif // CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
 
-asmlinkage __visible void __init start_kernel(void)
+asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];

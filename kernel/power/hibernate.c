@@ -228,23 +228,19 @@ static void platform_recover(int platform_mode)
 void swsusp_show_speed(struct timeval *start, struct timeval *stop,
 			unsigned nr_pages, char *msg)
 {
-	u64 elapsed_centisecs64;
-	unsigned int centisecs;
-	unsigned int k;
-	unsigned int kps;
+	s64 elapsed_centisecs64;
+	int centisecs;
+	int k;
+	int kps;
 
 	elapsed_centisecs64 = timeval_to_ns(stop) - timeval_to_ns(start);
-	/*
-	 * If "(s64)elapsed_centisecs64 < 0", it will print long elapsed time,
-	 * it is obvious enough for what went wrong.
-	 */
 	do_div(elapsed_centisecs64, NSEC_PER_SEC / 100);
 	centisecs = elapsed_centisecs64;
 	if (centisecs == 0)
 		centisecs = 1;	/* avoid div-by-zero */
 	k = nr_pages * (PAGE_SIZE / 1024);
 	kps = (k * 100) / centisecs;
-	printk(KERN_INFO "PM: %s %u kbytes in %u.%02u seconds (%u.%02u MB/s)\n",
+	printk(KERN_INFO "PM: %s %d kbytes in %d.%02d seconds (%d.%02d MB/s)\n",
 			msg, k,
 			centisecs / 100, centisecs % 100,
 			kps / 1000, (kps % 1000) / 10);
@@ -605,8 +601,7 @@ static void power_down(void)
 	case HIBERNATION_PLATFORM:
 		hibernation_platform_enter();
 	case HIBERNATION_SHUTDOWN:
-		if (pm_power_off)
-			kernel_power_off();
+		kernel_power_off();
 		break;
 #ifdef CONFIG_SUSPEND
 	case HIBERNATION_SUSPEND:
@@ -634,8 +629,7 @@ static void power_down(void)
 	 * corruption after resume.
 	 */
 	printk(KERN_CRIT "PM: Please power down manually\n");
-	while (1)
-		cpu_relax();
+	while(1);
 }
 
 /**
@@ -985,20 +979,16 @@ static ssize_t resume_show(struct kobject *kobj, struct kobj_attribute *attr,
 static ssize_t resume_store(struct kobject *kobj, struct kobj_attribute *attr,
 			    const char *buf, size_t n)
 {
+	unsigned int maj, min;
 	dev_t res;
-	int len = n;
-	char *name;
+	int ret = -EINVAL;
 
-	if (len && buf[len-1] == '\n')
-		len--;
-	name = kstrndup(buf, len, GFP_KERNEL);
-	if (!name)
-		return -ENOMEM;
+	if (sscanf(buf, "%u:%u", &maj, &min) != 2)
+		goto out;
 
-	res = name_to_dev_t(name);
-	kfree(name);
-	if (!res)
-		return -EINVAL;
+	res = MKDEV(maj,min);
+	if (maj != MAJOR(res) || min != MINOR(res))
+		goto out;
 
 	lock_system_sleep();
 	swsusp_resume_device = res;
@@ -1006,7 +996,9 @@ static ssize_t resume_store(struct kobject *kobj, struct kobj_attribute *attr,
 	printk(KERN_INFO "PM: Starting manual resume from disk\n");
 	noresume = 0;
 	software_resume();
-	return n;
+	ret = n;
+ out:
+	return ret;
 }
 
 power_attr(resume);

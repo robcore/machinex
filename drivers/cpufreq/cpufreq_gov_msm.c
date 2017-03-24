@@ -131,19 +131,10 @@ static void msm_gov_check_limits(struct cpufreq_policy *policy)
 {
 	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
 
-	if (policy->max < gov->cur_freq)
-		__cpufreq_driver_target(policy, policy->max,
-				CPUFREQ_RELATION_H);
-	else if (policy->min > gov->cur_freq)
-		__cpufreq_driver_target(policy, policy->min,
-				CPUFREQ_RELATION_L);
-	else
-		__cpufreq_driver_target(policy, gov->cur_freq,
-				CPUFREQ_RELATION_L);
+	policy->cur = gov->cur_freq;
+	policy->min = gov->min_freq;
+	policy->max = gov->max_freq;
 
-	gov->cur_freq = policy->cur;
-	gov->min_freq = policy->min;
-	gov->max_freq = policy->max;
 	msm_dcvs_update_limits(gov->dcvs_core_id);
 }
 
@@ -288,4 +279,3 @@ static int __init cpufreq_gov_msm_init(void)
 	return platform_driver_register(&msm_gov_driver);
 }
 late_initcall(cpufreq_gov_msm_init);
-

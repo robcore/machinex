@@ -32,7 +32,6 @@
 #include <linux/vmalloc.h>
 #include <linux/swap.h>
 #include <linux/syscore_ops.h>
-#include <linux/compiler.h>
 
 #include <asm/page.h>
 #include <asm/uaccess.h>
@@ -1230,7 +1229,7 @@ static int __init crash_notes_memory_init(void)
 	}
 	return 0;
 }
-subsys_initcall(crash_notes_memory_init);
+module_init(crash_notes_memory_init)
 
 
 /*
@@ -1436,10 +1435,10 @@ void vmcoreinfo_append_str(const char *fmt, ...)
  * provide an empty default implementation here -- architecture
  * code may override this
  */
-void __weak arch_crash_save_vmcoreinfo(void)
+void __attribute__ ((weak)) arch_crash_save_vmcoreinfo(void)
 {}
 
-unsigned long __weak paddr_vmcoreinfo_note(void)
+unsigned long __attribute__ ((weak)) paddr_vmcoreinfo_note(void)
 {
 	return __pa((unsigned long)(char *)&vmcoreinfo_note);
 }
@@ -1514,7 +1513,7 @@ static int __init crash_save_vmcoreinfo_init(void)
 	return 0;
 }
 
-subsys_initcall(crash_save_vmcoreinfo_init);
+module_init(crash_save_vmcoreinfo_init)
 
 /*
  * Move into place and start executing a preloaded standalone
