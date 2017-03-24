@@ -605,8 +605,9 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			//pm_system_wakeup();
 		}
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
-	} else
-		freeze_wake();
+	}
+
+	freeze_wake();
 
 	ws->active = true;
 	ws->active_count++;
@@ -891,9 +892,8 @@ bool pm_wakeup_pending(void)
 					break;
 			}
 
-		pr_info("Machinex: Wakeup pending, aborting suspend after freeze is complete\n");
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
-
+		pr_info("Machinex: Wakeup pending, aborting suspend after freeze is complete\n");
 		} else {
 			pr_info("PM: Wakeup pending, aborting suspend\n");
 		}
