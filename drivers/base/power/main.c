@@ -233,6 +233,7 @@ static void initcall_debug_report(struct device *dev, ktime_t calltime,
 		pr_info("call %s+ returned %d after %Ld usecs\n", dev_name(dev),
 			error, (unsigned long long)nsecs >> 10);
 	}
+
 	trace_device_pm_report_time(dev, info, nsecs, pm_verb(state.event),
 				    error);
 }
@@ -586,6 +587,7 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
  Out:
 	complete_all(&dev->power.completion);
 	TRACE_RESUME(error);
+	pm_runtime_enable(dev);
 	return error;
 }
 
@@ -614,7 +616,7 @@ static void async_resume_noirq(void *data, async_cookie_t cookie)
  * Call the "noirq" resume handlers for all devices in dpm_noirq_list and
  * enable device drivers to receive interrupts.
  */
-void dpm_resume_noirq(pm_message_t state)
+static void dpm_resume_noirq(pm_message_t state)
 {
 	struct device *dev;
 	ktime_t starttime = ktime_get();
@@ -739,7 +741,7 @@ static void async_resume_early(void *data, async_cookie_t cookie)
  * dpm_resume_early - Execute "early resume" callbacks for all devices.
  * @state: PM transition of the system being carried out.
  */
-void dpm_resume_early(pm_message_t state)
+static void dpm_resume_early(pm_message_t state)
 {
 	struct device *dev;
 	ktime_t starttime = ktime_get();
@@ -839,7 +841,8 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		goto Driver;
+		if (callback)
+			goto End;
 	}
 
 	if (dev->type && dev->type->pm) {
@@ -1173,7 +1176,7 @@ static int device_suspend_noirq(struct device *dev)
  * Prevent device drivers from receiving interrupts and call the "noirq" suspend
  * handlers for all non-sysdev devices.
  */
-int dpm_suspend_noirq(pm_message_t state)
+static int dpm_suspend_noirq(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
@@ -1325,7 +1328,7 @@ static int device_suspend_late(struct device *dev)
  * dpm_suspend_late - Execute "late suspend" callbacks for all devices.
  * @state: PM transition of the system being carried out.
  */
-int dpm_suspend_late(pm_message_t state)
+static int dpm_suspend_late(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
@@ -1483,20 +1486,21 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		goto Run;
+		if (callback)
+			goto Run;
 	}
 
 	if (dev->type && dev->type->pm) {
 		info = "type ";
 		callback = pm_op(dev->type->pm, state);
-		goto Run;
+		goto Driver;
 	}
 
 	if (dev->class) {
 		if (dev->class->pm) {
 			info = "class ";
 			callback = pm_op(dev->class->pm, state);
-			goto Run;
+			goto Driver;
 		} else if (dev->class->suspend) {
 			pm_dev_dbg(dev, state, "legacy class ");
 			error = legacy_suspend(dev, state, dev->class->suspend,
@@ -1517,29 +1521,21 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		}
 	}
 
- Run:
+ Driver:
 	if (!callback && dev->driver && dev->driver->pm) {
 		info = "driver ";
 		callback = pm_op(dev->driver->pm, state);
 	}
 
+ Run:
 	error = dpm_run_callback(callback, dev, state, info);
 
  End:
 	if (!error) {
-		struct device *parent = dev->parent;
-
 		dev->power.is_suspended = true;
-		if (parent) {
-			spin_lock_irq(&parent->power.lock);
-
-			dev->parent->power.direct_complete = false;
-			if (dev->power.wakeup_path
-			    && !dev->parent->power.ignore_children)
-				dev->parent->power.wakeup_path = true;
-
-			spin_unlock_irq(&parent->power.lock);
-		}
+		if (dev->power.wakeup_path
+		    && dev->parent && !dev->parent->power.ignore_children)
+			dev->parent->power.wakeup_path = true;
 	}
 
 	device_unlock(dev);
@@ -1640,7 +1636,7 @@ static int device_prepare(struct device *dev, pm_message_t state)
 {
 	int (*callback)(struct device *) = NULL;
 	char *info = NULL;
-	int ret = 0;
+	int error = 0;
 
 	if (dev->power.syscore)
 		return 0;
@@ -1683,29 +1679,17 @@ static int device_prepare(struct device *dev, pm_message_t state)
 
  End:
 	if (callback) {
-		ret = callback(dev);
-		suspend_report_result(callback, ret);
+		error = callback(dev);
+		suspend_report_result(callback, error);
 	}
 
 	device_unlock(dev);
 	dpm_watchdog_clear(&wd);
 
-	if (ret < 0) {
-		suspend_report_result(callback, ret);
+	if (error)
 		pm_runtime_put(dev);
-		return ret;
-	}
-	/*
-	 * A positive return value from ->prepare() means "this device appears
-	 * to be runtime-suspended and its state is fine, so if it really is
-	 * runtime-suspended, you can leave it in that state provided that you
-	 * will do the same thing with all of its descendants".  This only
-	 * applies to suspend transitions, however.
-	 */
-	spin_lock_irq(&dev->power.lock);
-	dev->power.direct_complete = ret > 0 && state.event == PM_EVENT_SUSPEND;
-	spin_unlock_irq(&dev->power.lock);
-	return 0;
+
+	return error;
 }
 
 /**
