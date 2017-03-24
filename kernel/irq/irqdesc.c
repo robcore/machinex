@@ -518,6 +518,11 @@ void dynamic_irq_cleanup(unsigned int irq)
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 }
 
+void kstat_incr_irq_this_cpu(unsigned int irq)
+{
+	kstat_incr_irqs_this_cpu(irq, irq_to_desc(irq));
+}
+
 /**
  * kstat_irqs_cpu - Get the statistics for an interrupt on a cpu
  * @irq:	The interrupt number
