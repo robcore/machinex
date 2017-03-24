@@ -474,9 +474,9 @@ extern void tty_port_put(struct tty_port *port);
 
 static inline struct tty_port *tty_port_get(struct tty_port *port)
 {
-	if (port)
-		kref_get(&port->kref);
-	return port;
+	if (port && kref_get_unless_zero(&port->kref))
+		return port;
+	return NULL;
 }
 
 extern struct tty_struct *tty_port_tty_get(struct tty_port *port);
