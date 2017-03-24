@@ -166,7 +166,7 @@ int core_scsi3_ua_allocate(
 		spin_unlock_irq(&nacl->device_list_lock);
 
 		atomic_inc(&deve->ua_count);
-		smp_mb__after_atomic_inc();
+		smp_mb__after_atomic();
 		return 0;
 	}
 	list_add_tail(&ua->ua_nacl_list, &deve->ua_list);
@@ -179,7 +179,7 @@ int core_scsi3_ua_allocate(
 		asc, ascq);
 
 	atomic_inc(&deve->ua_count);
-	smp_mb__after_atomic_inc();
+	smp_mb__after_atomic();
 	return 0;
 }
 
@@ -194,7 +194,7 @@ void core_scsi3_ua_release_all(
 		kmem_cache_free(se_ua_cache, ua);
 
 		atomic_dec(&deve->ua_count);
-		smp_mb__after_atomic_dec();
+		smp_mb__after_atomic();
 	}
 	spin_unlock(&deve->ua_lock);
 }
@@ -255,7 +255,7 @@ void core_scsi3_ua_for_check_condition(
 		kmem_cache_free(se_ua_cache, ua);
 
 		atomic_dec(&deve->ua_count);
-		smp_mb__after_atomic_dec();
+		smp_mb__after_atomic();
 	}
 	spin_unlock(&deve->ua_lock);
 	spin_unlock_irq(&nacl->device_list_lock);
@@ -314,7 +314,7 @@ int core_scsi3_ua_clear_for_request_sense(
 		kmem_cache_free(se_ua_cache, ua);
 
 		atomic_dec(&deve->ua_count);
-		smp_mb__after_atomic_dec();
+		smp_mb__after_atomic();
 	}
 	spin_unlock(&deve->ua_lock);
 	spin_unlock_irq(&nacl->device_list_lock);
