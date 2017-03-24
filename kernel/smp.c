@@ -250,39 +250,57 @@ static DEFINE_PER_CPU_SHARED_ALIGNED(struct call_single_data, csd_data);
  * smp_call_function_single - Run a function on a specific CPU
  * @func: The function to run. This must be fast and non-blocking.
  * @info: An arbitrary pointer to pass to the function.
+ * @wait: If true, wait until function has completed on other CPUs.
  *
  * Returns 0 on success, else a negative status code.
  */
-int smp_call_function_single(int cpu, smp_call_func_t func, void *info)
+int smp_call_function_single(int cpu, smp_call_func_t func, void *info,
+			     int wait)
 {
 	struct call_single_data d = {
 		.flags = 0,
 	};
 	unsigned long flags;
+	int this_cpu;
 	int err = 0;
+
+	/*
+	 * prevent preemption and reschedule on another processor,
+	 * as well as CPU removal
+	 */
+	this_cpu = get_cpu();
 
 	if (cpu == this_cpu) {
 		local_irq_save(flags);
 		func(info);
 		local_irq_restore(flags);
 	} else {
+		/*
+		 * Can deadlock when called with interrupts disabled.
+		 * We allow cpu's that are not yet online though, as no one else
+		 * can send smp call function interrupt to this cpu and as such
+		 * deadlocks can't happen.
+		 */
+		WARN_ON_ONCE(cpu_online(this_cpu) && irqs_disabled()
+			     && !oops_in_progress);
 
 		if ((unsigned)cpu < nr_cpu_ids && cpu_online(cpu)) {
 			struct call_single_data *csd = &d;
 
-			csd = &__get_cpu_var(csd_data);
+			if (!wait)
+				csd = &__get_cpu_var(csd_data);
 
 			csd_lock(csd);
 
 			csd->func = func;
 			csd->info = info;
-			preempt_disable();
-			generic_exec_single(cpu, csd);
-			preempt_enable();
+			generic_exec_single(cpu, csd, wait);
 		} else {
 			err = -ENXIO;	/* CPU not online */
 		}
 	}
+
+	put_cpu();
 
 	return err;
 }
