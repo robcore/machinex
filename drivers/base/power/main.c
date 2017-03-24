@@ -233,6 +233,8 @@ static void initcall_debug_report(struct device *dev, ktime_t calltime,
 		pr_info("call %s+ returned %d after %Ld usecs\n", dev_name(dev),
 			error, (unsigned long long)nsecs >> 10);
 	}
+	trace_device_pm_report_time(dev, info, nsecs, pm_verb(state.event),
+				    error);
 }
 
 /**
@@ -403,9 +405,7 @@ static int dpm_run_callback(pm_callback_t cb, struct device *dev,
 	calltime = initcall_debug_start(dev);
 
 	pm_dev_dbg(dev, state, info);
-	trace_device_pm_callback_start(dev, info, state.event);
 	error = cb(dev);
-	trace_device_pm_callback_end(dev, error);
 	suspend_report_result(cb, error);
 
 	initcall_debug_report(dev, calltime, error, state, info);
@@ -998,9 +998,7 @@ static void device_complete(struct device *dev, pm_message_t state)
  End:
 	if (callback) {
 		pm_dev_dbg(dev, state, info);
-		trace_device_pm_callback_start(dev, info, state.event);
 		callback(dev);
-		trace_device_pm_callback_end(dev, 0);
 	}
 
 	device_unlock(dev);
@@ -1418,9 +1416,7 @@ static int legacy_suspend(struct device *dev, pm_message_t state,
 
 	calltime = initcall_debug_start(dev);
 
-	trace_device_pm_callback_start(dev, info, state.event);
 	error = cb(dev, state);
-	trace_device_pm_callback_end(dev, error);
 	suspend_report_result(cb, error);
 
 	initcall_debug_report(dev, calltime, error, state, info);
@@ -1687,10 +1683,8 @@ static int device_prepare(struct device *dev, pm_message_t state)
 
  End:
 	if (callback) {
-		trace_device_pm_callback_start(dev, info, state.event);
 		ret = callback(dev);
-		trace_device_pm_callback_end(dev, ret);
-		suspend_report_result(callback, error);
+		suspend_report_result(callback, ret);
 	}
 
 	device_unlock(dev);
