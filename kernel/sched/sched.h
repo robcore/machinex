@@ -1184,6 +1184,11 @@ extern void trigger_load_balance(struct rq *rq);
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
 
+#else
+
+static inline void idle_enter_fair(struct rq *rq) { }
+static inline void idle_exit_fair(struct rq *rq) { }
+
 #endif
 
 #ifdef CONFIG_SYSRQ_SCHED_DEBUG
