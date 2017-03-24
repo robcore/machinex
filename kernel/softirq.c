@@ -101,13 +101,13 @@ void __local_bh_disable_ip(unsigned long ip, unsigned int cnt)
 
 	raw_local_irq_save(flags);
 	/*
-	 * The preempt tracer hooks into preempt_count_add and will break
+	 * The preempt tracer hooks into add_preempt_count and will break
 	 * lockdep because it calls back into lockdep after SOFTIRQ_OFFSET
 	 * is set and before current->softirq_enabled is cleared.
 	 * We must manually increment preempt_count here and manually
 	 * call the trace_preempt_off later.
 	 */
-	__preempt_count_add(cnt);
+	add_preempt_count_notrace(cnt);
 	/*
 	 * Were softirqs turned off above:
 	 */
@@ -127,7 +127,7 @@ static void __local_bh_enable(unsigned int cnt)
 
 	if (softirq_count() == (cnt & SOFTIRQ_MASK))
 		trace_softirqs_on(_RET_IP_);
-	preempt_count_sub(cnt);
+	sub_preempt_count(cnt);
 }
 
 /*
@@ -353,7 +353,7 @@ void irq_exit(void)
 
 	account_irq_exit_time(current);
 	trace_hardirq_exit();
-	preempt_count_sub(HARDIRQ_OFFSET);
+	sub_preempt_count(HARDIRQ_OFFSET);
 	if (!in_interrupt() && local_softirq_pending())
 		invoke_softirq();
 
