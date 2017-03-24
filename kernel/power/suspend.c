@@ -34,11 +34,8 @@
 
 #include "power.h"
 
-struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
-	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },
-	[PM_SUSPEND_STANDBY] = { .label = "standby", },
-	[PM_SUSPEND_MEM] = { .label = "mem", },
-};
+static const char *pm_labels[] = { "mem", "standby", "freeze", };
+const char *pm_states[PM_SUSPEND_MAX];
 
 static const struct platform_suspend_ops *suspend_ops;
 static const struct platform_freeze_ops *freeze_ops;
@@ -98,10 +95,7 @@ static bool relative_states;
 static int __init sleep_states_setup(char *str)
 {
 	relative_states = !strncmp(str, "1", 1);
-	if (relative_states) {
-		pm_states[PM_SUSPEND_MEM].state = PM_SUSPEND_FREEZE;
-		pm_states[PM_SUSPEND_FREEZE].state = 0;
-	}
+	pm_states[PM_SUSPEND_FREEZE] = pm_labels[relative_states ? 0 : 2];
 	return 1;
 }
 
@@ -114,20 +108,20 @@ __setup("relative_sleep_states=", sleep_states_setup);
 void suspend_set_ops(const struct platform_suspend_ops *ops)
 {
 	suspend_state_t i;
-	int j = PM_SUSPEND_MAX - 1;
+	int j = 0;
 
 	lock_system_sleep();
 
 	suspend_ops = ops;
 	for (i = PM_SUSPEND_MEM; i >= PM_SUSPEND_STANDBY; i--)
-		if (valid_state(i))
-			pm_states[j--].state = i;
-		else if (!relative_states)
-			pm_states[j--].state = 0;
+		if (valid_state(i)) {
+			pm_states[i] = pm_labels[j++];
+		} else if (!relative_states) {
+			pm_states[i] = NULL;
+			j++;
+		}
 
-	pm_states[j--].state = PM_SUSPEND_FREEZE;
-	while (j >= PM_SUSPEND_MIN)
-		pm_states[j--].state = 0;
+	pm_states[PM_SUSPEND_FREEZE] = pm_labels[j];
 
 	unlock_system_sleep();
 }
@@ -498,7 +492,7 @@ static int enter_state(suspend_state_t state)
 		printk("done.\n");
 	}
 
-	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state].label);
+	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state]);
 	error = suspend_prepare(state);
 	if (error)
 		goto Unlock;
@@ -506,7 +500,7 @@ static int enter_state(suspend_state_t state)
 	if (suspend_test(TEST_FREEZER))
 		goto Finish;
 
-	pr_debug("PM: Entering %s sleep\n", pm_states[state].label);
+	pr_debug("PM: Entering %s sleep\n", pm_states[state]);
 	pm_restrict_gfp_mask();
 	error = suspend_devices_and_enter(state);
 	pm_restore_gfp_mask();
