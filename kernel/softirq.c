@@ -93,7 +93,7 @@ static void wakeup_softirqd(void)
  * where hardirqs are disabled legitimately:
  */
 #ifdef CONFIG_TRACE_IRQFLAGS
-void __local_bh_disable_ip(unsigned long ip, unsigned int cnt)
+static void __local_bh_disable(unsigned long ip, unsigned int cnt)
 {
 	unsigned long flags;
 
@@ -118,8 +118,20 @@ void __local_bh_disable_ip(unsigned long ip, unsigned int cnt)
 	if (preempt_count() == cnt)
 		trace_preempt_off(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
 }
-EXPORT_SYMBOL(__local_bh_disable_ip);
+#else /* !CONFIG_TRACE_IRQFLAGS */
+static inline void __local_bh_disable(unsigned long ip, unsigned int cnt)
+{
+	add_preempt_count(cnt);
+	barrier();
+}
 #endif /* CONFIG_TRACE_IRQFLAGS */
+
+void local_bh_disable(void)
+{
+	__local_bh_disable(_RET_IP_, SOFTIRQ_DISABLE_OFFSET);
+}
+
+EXPORT_SYMBOL(local_bh_disable);
 
 static void __local_bh_enable(unsigned int cnt)
 {
@@ -143,7 +155,7 @@ void _local_bh_enable(void)
 
 EXPORT_SYMBOL(_local_bh_enable);
 
-void __local_bh_enable_ip(unsigned long ip, unsigned int cnt)
+static inline void _local_bh_enable_ip(unsigned long ip)
 {
 	WARN_ON_ONCE(in_irq());
 #ifdef CONFIG_TRACE_IRQFLAGS
@@ -158,7 +170,7 @@ void __local_bh_enable_ip(unsigned long ip, unsigned int cnt)
 	 * Keep preemption disabled until we are done with
 	 * softirq processing:
  	 */
-	preempt_count_sub(cnt - 1);
+	sub_preempt_count(SOFTIRQ_DISABLE_OFFSET - 1);
 
 	if (unlikely(!in_interrupt() && local_softirq_pending())) {
 		/*
@@ -174,7 +186,18 @@ void __local_bh_enable_ip(unsigned long ip, unsigned int cnt)
 #endif
 	preempt_check_resched();
 }
-EXPORT_SYMBOL(__local_bh_enable_ip);
+
+void local_bh_enable(void)
+{
+	_local_bh_enable_ip(_RET_IP_);
+}
+EXPORT_SYMBOL(local_bh_enable);
+
+void local_bh_enable_ip(unsigned long ip)
+{
+	_local_bh_enable_ip(ip);
+}
+EXPORT_SYMBOL(local_bh_enable_ip);
 
 /*
  * We restart softirq processing for at most MAX_SOFTIRQ_RESTART times,
@@ -211,7 +234,7 @@ asmlinkage void __do_softirq(void)
 	pending = local_softirq_pending();
 	account_irq_enter_time(current);
 
-	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);
+	__local_bh_disable(_RET_IP_, SOFTIRQ_OFFSET);
 	tsk_restore_flags(current, old_flags, PF_MEMALLOC);
 	lockdep_softirq_enter();
 
