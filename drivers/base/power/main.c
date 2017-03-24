@@ -74,6 +74,8 @@ void device_pm_sleep_init(struct device *dev)
 {
 	dev->power.is_prepared = false;
 	dev->power.is_suspended = false;
+	dev->power.is_noirq_suspended = false;
+	dev->power.is_late_suspended = false;
 	init_completion(&dev->power.completion);
 	complete_all(&dev->power.completion);
 	dev->power.wakeup = NULL;
@@ -544,6 +546,9 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 	if (dev->power.syscore)
 		goto Out;
 
+	if (!dev->power.is_noirq_suspended)
+		goto Out;
+
 	if (dev->pm_domain) {
 		info = "noirq power domain ";
 		callback = pm_noirq_op(&dev->pm_domain->ops, state);
@@ -569,6 +574,7 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 
  End:
 	error = dpm_run_callback(callback, dev, state, info);
+	dev->power.is_noirq_suspended = false;
 
  Out:
 	TRACE_RESUME(error);
@@ -658,6 +664,9 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 	if (dev->power.syscore)
 		goto Out;
 
+	if (!dev->power.is_late_suspended)
+		goto Out;
+
 	if (dev->pm_domain) {
 		info = "early power domain ";
 		callback = pm_late_early_op(&dev->pm_domain->ops, state);
@@ -683,6 +692,7 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 
  End:
 	error = dpm_run_callback(callback, dev, state, info);
+	dev->power.is_late_suspended = false;
 
  Out:
 	TRACE_RESUME(error);
@@ -902,6 +912,7 @@ static void device_complete(struct device *dev, pm_message_t state)
 {
 	void (*callback)(struct device *) = NULL;
 	char *info = NULL;
+	int error;
 
 	if (dev->power.syscore)
 		return;
@@ -1056,8 +1067,13 @@ static int device_suspend_noirq(struct device *dev, pm_message_t state)
 
  End:
 	error = dpm_run_callback(callback, dev, state, info);
-	if (error)
+	error = dpm_run_callback(callback, dev, state, info);
+	if (!error)
+		dev->power.is_noirq_suspended = true;
+	else if (error) {
+		dev->power.is_noirq_suspended = false;
 		pm_runtime_enable(dev);
+	}
 
 	return error;
 }
@@ -1158,12 +1174,16 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 
  End:
 	error = dpm_run_callback(callback, dev, state, info);
-	if (error)
+	if (!error)
+		dev->power.is_late_suspended = true;
+	else if (error) {
+		dev->power.is_late_suspended = false;
 		/*
 		 * dpm_resume_early wouldn't be run for this failed device,
 		 * hence enable runtime_pm now
 		 */
 		pm_runtime_enable(dev);
+	}
 
 	return error;
 }
