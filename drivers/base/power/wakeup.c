@@ -527,22 +527,12 @@ void pm_wakeup_clear(void)
  * function executed when the timer expires, whichever comes first.
  */
 
-/**
- * wakup_source_activate - Mark given wakeup source as active.
- * @ws: Wakeup source to handle.
- *
- * Update the @ws' statistics and, if @ws has just been activated, notify the PM
- * core of the event by incrementing the counter of of wakeup events being
- * processed.
- */
-static void wakeup_source_activate(struct wakeup_source *ws)
+static bool wakeup_source_blocker(struct wakeup_source *ws)
 {
-	unsigned int cec;
-	bool freezing_in_progress;
+	unsigned int wslen = 0;
 
-	if (WARN_ONCE(wakeup_source_not_registered(ws),
-			"unregistered wakeup source\n"))
-		return;
+	if (ws && ws->active) {
+		wslen = strlen(ws->name);
 
 	if (((!enable_gps_ws &&
 			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
@@ -560,16 +550,38 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			!strcmp(ws->name, "bluesleep")) ||
 		(!enable_ssp_sensorhub_ws &&
 			!strcmp(ws->name, "ssp_wake_lock")))) {
+			wakeup_source_deactivate(ws);
+			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * wakup_source_activate - Mark given wakeup source as active.
+ * @ws: Wakeup source to handle.
+ *
+ * Update the @ws' statistics and, if @ws has just been activated, notify the PM
+ * core of the event by incrementing the counter of of wakeup events being
+ * processed.
+ */
+static void wakeup_source_activate(struct wakeup_source *ws)
+{
+	unsigned int cec;
+	bool freezing_in_progress;
+
+	if (WARN_ONCE(wakeup_source_not_registered(ws),
+			"unregistered wakeup source\n"))
+		return;
+
 		/*
 		 * let's try and deactivate this wakeup source since the user
 		 * clearly doesn't want it. The user is responsible for any
 		 * adverse effects and has been warned about it
 		 */
-		if (ws->active)
-			wakeup_source_deactivate(ws);
-
+	if (wakeup_source_blocker(ws))
 		return;
-	}
 
 	/*
 	 * active wakeup source should bring the system
