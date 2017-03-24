@@ -52,6 +52,7 @@ else
 obj-$(CONFIG_SPI_QSD)			+= spi_qsd.o
 obj-$(CONFIG_SPI_QUP)			+= spi_qsd.o
 endif
+obj-$(CONFIG_NEW_SPI_QUP)		+= spi-qup.o
 obj-$(CONFIG_SPI_RSPI)			+= spi-rspi.o
 obj-$(CONFIG_SPI_S3C24XX)		+= spi-s3c24xx-hw.o
 spi-s3c24xx-hw-y			:= spi-s3c24xx.o
