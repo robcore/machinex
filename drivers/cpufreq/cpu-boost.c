@@ -326,7 +326,7 @@ static int state_notifier_callback(struct notifier_block *this,
 			break;
 		case STATE_NOTIFIER_SUSPEND:
 			cancel_delayed_work(&input_boost_rem);
-			cancel_delayed_work(&input_boost_work);
+			cancel_work(&input_boost_work);
 			break;
 		default:
 			break;
