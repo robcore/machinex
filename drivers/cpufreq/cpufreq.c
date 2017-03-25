@@ -412,6 +412,7 @@ extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 		if (policy != NULL) {
 			policy->user_policy.min = policy->min = freq_min;
 			policy->user_policy.max = policy->max = freq_max;
+		}
 	}
 }
 #endif
