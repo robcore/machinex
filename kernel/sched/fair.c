@@ -4895,7 +4895,7 @@ static inline void update_sd_lb_stats(struct lb_env *env,
 next_group:
 		/* Now, start updating sd_lb_stats */
 		sds->total_load += sgs->group_load;
-		sds->total_pwr += sgs->group_power;
+		sds->total_pwr += sg->sgp->power;
 
 		sg = sg->next;
 	} while (sg != env->sd->groups);
