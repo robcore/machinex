@@ -365,7 +365,7 @@ static struct global_attr _name =		\
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
 struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu);
-void cpufreq_cpu_put(struct cpufreq_policy *data);
+void cpufreq_cpu_put(struct cpufreq_policy *policy);
 const char *cpufreq_get_current_driver(void);
 
 /*********************************************************************
