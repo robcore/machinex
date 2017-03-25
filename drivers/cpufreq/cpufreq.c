@@ -2108,12 +2108,12 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 		cpu0_policy = cpufreq_cpu_get(0);
 		policy->min = cpu0_policy->min;
 		policy->max = cpu0_policy->max;
+		policy->util_thres = cpu0_policy->util_thres;
 	} else {
 		policy->min = new_policy->min;
 		policy->max = new_policy->max;
+		policy->util_thres = new_policy->util_thres;
 	}
-
-	policy->util_thres = new_policy->util_thres;
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
 					policy->min, policy->max);

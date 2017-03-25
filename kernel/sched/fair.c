@@ -4726,8 +4726,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	min_cpu_load = ~0UL;
 	max_nr_running = 0;
 
-	memset(sgs, 0, sizeof(*sgs));
-
 	for_each_cpu_and(i, sched_group_cpus(group), env->cpus) {
 		struct rq *rq = cpu_rq(i);
 
@@ -4757,6 +4755,10 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		if (idle_cpu(i))
 			sgs->idle_cpus++;
 	}
+
+	if (local_group && (env->idle != CPU_NEWLY_IDLE ||
+			time_after_eq(jiffies, group->sgp->next_update)))
+		update_group_power(env->sd, env->dst_cpu);
 
 	/* Adjust by relative CPU power of the group */
 	sgs->avg_load = (sgs->group_load*SCHED_POWER_SCALE) / group->sgp->power;
@@ -4862,16 +4864,10 @@ static inline void update_sd_lb_stats(struct lb_env *env,
 		if (local_group) {
 			sds->local = sg;
 			sgs = &sds->local_stat;
-
-			if (env->idle != CPU_NEWLY_IDLE ||
-			    time_after_eq(jiffies, sg->sgp->next_update))
-				update_group_power(env->sd, env->dst_cpu);
 		}
 
+		memset(sgs, 0, sizeof(*sgs));
 		update_sg_lb_stats(env, sg, load_idx, local_group, sgs);
-
-		if (local_group)
-			goto next_group;
 
 		/*
 		 * In case the child domain prefers tasks go to siblings
@@ -4883,19 +4879,18 @@ static inline void update_sd_lb_stats(struct lb_env *env,
 		 * heaviest group when it is already under-utilized (possible
 		 * with a large weight task outweighs the tasks on the system).
 		 */
-		if (prefer_sibling && sds->local &&
-		    sds->local_stat.group_has_capacity)
+		if (prefer_sibling && !local_group &&
+				sds->local && sds->local_stat.group_has_capacity)
 			sgs->group_capacity = min(sgs->group_capacity, 1U);
 
-		if (update_sd_pick_busiest(env, sds, sg, sgs)) {
-			sds->busiest = sg;
-			sds->busiest_stat = *sgs;
-		}
-
-next_group:
 		/* Now, start updating sd_lb_stats */
 		sds->total_load += sgs->group_load;
 		sds->total_pwr += sg->sgp->power;
+
+		if (!local_group && update_sd_pick_busiest(env, sds, sg, sgs)) {
+			sds->busiest = sg;
+			sds->busiest_stat = *sgs;
+		}
 
 		sg = sg->next;
 	} while (sg != env->sd->groups);
