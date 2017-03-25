@@ -316,13 +316,13 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	if ((stat) == NULL)
 		return -ENOMEM;
 
-	policy = cpufreq_cpu_get(cpu);
-	if (policy == NULL) {
+	current_policy = cpufreq_cpu_get(cpu);
+	if (current_policy == NULL) {
 		ret = -EINVAL;
 		goto error_get_fail;
 	}
 
-	ret = sysfs_create_group(policy->kobj, &stats_attr_group);
+	ret = sysfs_create_group(current_policy->kobj, &stats_attr_group);
 	if (ret)
 		goto error_out;
 
