@@ -624,7 +624,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
 
-	sysfs_notify(&policy->kobj, NULL, "scaling_governor");
+	sysfs_notify(policy->kobj, NULL, "scaling_governor");
 
 	kobject_uevent(cpufreq_global_kobject, KOBJ_ADD);
 
@@ -1125,7 +1125,7 @@ static int cpufreq_add_dev_symlink(unsigned int cpu,
 		pr_debug("CPU %u already managed, adding link\n", j);
 		managed_policy = cpufreq_cpu_get(cpu);
 		cpu_dev = get_cpu_device(j);
-		ret = sysfs_create_link(&cpu_dev->kobj, &policy->kobj,
+		ret = sysfs_create_link(&cpu_dev->kobj, policy->kobj,
 					"cpufreq");
 		if (ret) {
 			cpufreq_cpu_put(managed_policy);
@@ -1314,14 +1314,14 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	module_put(cpufreq_driver->owner);
 	pr_debug("initialization complete\n");
 
-	return 0;
+	return 0;s
 
 err_out_unregister:
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 	for_each_cpu(j, policy->cpus)
 		per_cpu(cpufreq_cpu_data, j) = NULL;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-	kobject_put(&policy->kobj);
+	kobject_put(policy->kobj);
 err_unlock_policy:
 	unlock_policy_rwsem_write(cpu);
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
