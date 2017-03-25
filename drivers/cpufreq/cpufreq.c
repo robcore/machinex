@@ -371,7 +371,7 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 				CPUFREQ_POSTCHANGE, freqs);
 		if (likely(policy) && likely(policy->cpu == freqs->cpu)) {
 			policy->cur = freqs->new;
-			sysfs_notify(&policy->kobj, NULL, "scaling_cur_freq");
+			sysfs_notify(policy->kobj, NULL, "scaling_cur_freq");
 		}
 		break;
 	}
