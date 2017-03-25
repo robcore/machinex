@@ -1,11 +1,13 @@
 # CPUfreq core
 obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o
+# CPUfreq cross-arch helpers
+obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 # CPUfreq stats
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
-# CPU boost
-obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 # CPUfreq hardlimit
 obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
+# CPU boost
+obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 # CPUfreq limit API
 #obj-$(CONFIG_CPU_FREQ_LIMIT)             += cpufreq_limit.o i meant to disable this ages ago
 # CPUfreq governors
@@ -76,8 +78,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_HYPERX)	   += cpufreq_hyperx.o
 obj-$(CONFIG_CPU_FREQ_GOV_XPERIENCE)	+= cpufreq_xperience.o
 obj-$(CONFIG_CPU_FREQ_GOV_WHISKYACTIVE)	+= cpufreq_whiskyactive.o
 
-# CPUfreq cross-arch helpers
-obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
+
 
 obj-$(CONFIG_GENERIC_CPUFREQ_CPU0)	+= cpufreq-cpu0.o
 

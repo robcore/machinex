@@ -247,6 +247,8 @@ err_out:
 
 struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu)
 {
+	if (cpufreq_disabled())
+		return NULL;
 	return __cpufreq_cpu_get(cpu, false);
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_get);
@@ -392,9 +394,8 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 
 	if (util > policy->util_thres && policy->util < 100)
 		policy->util++;
-	else if (policy->util > 0 && util < policy->util_thres)
+	else if (policy->util > 0)
 		policy->util--;
-
 }
 
 /* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
@@ -528,7 +529,7 @@ static ssize_t store_##file_name					\
 	int ret;						\
 	struct cpufreq_policy new_policy;				\
 									\
-	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy);			\
+	memcpy(&new_policy, policy, sizeof(*policy));			\
 									\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
@@ -607,7 +608,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
-	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
+	memcpy(&new_policy, policy, sizeof(*policy));
 
 	ret = sscanf(buf, "%15s", str_governor);
 	if (ret != 1)
@@ -746,37 +747,6 @@ static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 		return sprintf(buf, "<unsupported>\n");
 
 	return policy->governor->show_setspeed(policy, buf);
-}
-
-static struct cpufreq_policy *cpufreq_policy_alloc(void)
-{
-	struct cpufreq_policy *policy;
-
-	policy = kzalloc(sizeof(*policy), GFP_KERNEL);
-	if (!policy)
-		return NULL;
-
-	if (!alloc_cpumask_var(&policy->cpus, GFP_KERNEL))
-		goto err_free_policy;
-
-	if (!zalloc_cpumask_var(&policy->related_cpus, GFP_KERNEL))
-		goto err_free_cpumask;
-
-	return policy;
-
-err_free_cpumask:
-	free_cpumask_var(policy->cpus);
-err_free_policy:
-	kfree(policy);
-
-	return NULL;
-}
-
-static void cpufreq_policy_free(struct cpufreq_policy *policy)
-{
-	free_cpumask_var(policy->related_cpus);
-	free_cpumask_var(policy->cpus);
-	kfree(policy);
 }
 
 /**
@@ -1177,7 +1147,7 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 		if (!cpu_online(j))
 			continue;
 		per_cpu(cpufreq_cpu_data, j) = policy;
-		per_cpu(cpufreq_policy_cpu, j) = policy->cpu;
+		per_cpu(cpufreq_policy_cpu, j) = cpu;
 	}
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
@@ -1248,10 +1218,16 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		goto module_out;
 	}
 
-	policy = cpufreq_policy_alloc();
+	ret = -ENOMEM;
+	policy = kzalloc(sizeof(struct cpufreq_policy), GFP_KERNEL);
 	if (!policy)
-		ret = -ENOMEM;
 		goto nomem_out;
+
+	if (!alloc_cpumask_var(&policy->cpus, GFP_KERNEL))
+		goto err_free_policy;
+
+	if (!zalloc_cpumask_var(&policy->related_cpus, GFP_KERNEL))
+		goto err_free_cpumask;
 
 	policy->cpu = cpu;
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
@@ -1268,8 +1244,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 #ifdef CONFIG_HOTPLUG_CPU
 	for_each_online_cpu(sibling) {
 		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
-		if (cp && cp->governor &&
-			(cpumask_test_cpu(cpu, cp->related_cpus))) {
+		if (cp && cp->governor) {
 			policy->governor = cp->governor;
 			policy->min = cp->min;
 			policy->max = cp->max;
@@ -1346,7 +1321,11 @@ err_unlock_policy:
 	unlock_policy_rwsem_write(cpu);
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_REMOVE_POLICY, policy);
-	cpufreq_policy_free(policy);
+	free_cpumask_var(policy->related_cpus);
+err_free_cpumask:
+	free_cpumask_var(policy->cpus);
+err_free_policy:
+	kfree(policy);
 nomem_out:
 	module_put(cpufreq_driver->owner);
 module_out:
@@ -1462,7 +1441,9 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 	}
 #endif
 
-	cpufreq_policy_free(policy);
+	free_cpumask_var(policy->related_cpus);
+	free_cpumask_var(policy->cpus);
+	kfree(policy);
 
 	return 0;
 }
@@ -2126,8 +2107,6 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 		policy->max = new_policy->max;
 	}
 
-	policy->util_thres = new_policy->util_thres;
-
 	pr_debug("new min and max freqs are %u - %u kHz\n",
 					policy->min, policy->max);
 
@@ -2221,7 +2200,7 @@ int cpufreq_update_policy(unsigned int cpu)
 			pr_debug("Driver did not initialize current freq");
 			policy->cur = new_policy.cur;
 		} else {
-			if (policy->cur != new_policy.cur && cpufreq_driver->target)
+			if (policy->cur != new_policy.cur)
 				cpufreq_out_of_sync(cpu, policy->cur,
 								new_policy.cur);
 		}

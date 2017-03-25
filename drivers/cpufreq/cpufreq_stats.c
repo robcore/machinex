@@ -113,7 +113,7 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	for (i = 0; i < stat->state_num; i++) {
 		len += sprintf(buf + len, "%u %llu\n", stat->freq_table[i],
 			(unsigned long long)
-			jiffies_64_to_clock_t(stat->time_in_state[i]));
+			cputime64_to_clock_t(stat->time_in_state[i]));
 	}
 	return len;
 }
@@ -311,7 +311,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	unsigned int cpu = policy->cpu;
 
 	if (per_cpu(cpufreq_stats_table, cpu))
-		return -EBUSY;
+		return 0;
 
 	stat = kzalloc(sizeof(struct cpufreq_stats), GFP_KERNEL);
 	if ((stat) == NULL)
@@ -319,7 +319,8 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 
 	current_policy = cpufreq_cpu_get(cpu);
 	if (current_policy == NULL) {
-		return -EINVAL;
+		ret = -EINVAL;
+		goto error_get_fail;
 	}
 
 	ret = sysfs_create_group(current_policy->kobj, &stats_attr_group);
@@ -345,7 +346,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	stat->time_in_state = kzalloc(alloc_size, GFP_KERNEL);
 	if (!stat->time_in_state) {
 		ret = -ENOMEM;
-		goto error_alloc;
+		goto error_out;
 	}
 	stat->freq_table = (unsigned int *)(stat->time_in_state + count);
 
@@ -367,10 +368,9 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	spin_unlock(&cpufreq_stats_lock);
 	cpufreq_cpu_put(current_policy);
 	return 0;
-error_alloc:
-	sysfs_remove_group(current_policy->kobj, &stats_attr_group);
 error_out:
 	cpufreq_cpu_put(current_policy);
+error_get_fail:
 	kfree(stat);
 	per_cpu(cpufreq_stats_table, cpu) = NULL;
 	return ret;
@@ -561,6 +561,10 @@ static int cpufreq_stat_cpu_callback(struct notifier_block *nfb,
 	unsigned int cpu = (unsigned long)hcpu;
 
 	switch (action) {
+	case CPU_ONLINE:
+	case CPU_ONLINE_FROZEN:
+		cpufreq_update_policy(cpu);
+		break;
 	case CPU_DOWN_PREPARE:
 	case CPU_DOWN_PREPARE_FROZEN:
 		cpufreq_stats_free_sysfs(cpu);
@@ -603,6 +607,8 @@ static int __init cpufreq_stats_init(void)
 		return ret;
 
 	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
+	for_each_online_cpu(cpu)
+		cpufreq_update_policy(cpu);
 
 	ret = cpufreq_register_notifier(&notifier_trans_block,
 				CPUFREQ_TRANSITION_NOTIFIER);

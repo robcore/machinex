@@ -142,8 +142,8 @@ static void update_policy_online(void)
 {
 	unsigned int i;
 
-	get_online_cpus();
 	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
+	get_online_cpus();
 	for_each_online_cpu(i) {
 		pr_debug("Updating policy for CPU%d\n", i);
 		cpufreq_update_policy(i);

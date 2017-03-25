@@ -358,7 +358,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
 		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
-#if defined(CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
+#if defined(CONFIG_MSM_USE_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
 		policy->cpuinfo.min_freq = check_cpufreq_hardlimit(policy->min);
 		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
 #endif
@@ -367,7 +367,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
 	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
-#if defined(CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
+#if defined(MSM_USE_CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
 	policy->min = check_cpufreq_hardlimit(policy->min);
 	policy->max = check_cpufreq_hardlimit(policy->max);
 #endif
