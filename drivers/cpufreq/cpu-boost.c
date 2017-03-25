@@ -142,11 +142,13 @@ static void update_policy_online(void)
 {
 	unsigned int i;
 
+	get_online_cpus();
 	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
 	for_each_online_cpu(i) {
 		pr_debug("Updating policy for CPU%d\n", i);
 		cpufreq_update_policy(i);
 	}
+	put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
@@ -321,7 +323,6 @@ static int state_notifier_callback(struct notifier_block *this,
 {
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
-			if (wakeup_boost)
 				__wakeup_boost();
 			break;
 		case STATE_NOTIFIER_SUSPEND:

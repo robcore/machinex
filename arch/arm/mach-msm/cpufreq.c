@@ -34,6 +34,7 @@
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
 #include <linux/sched/rt.h>
+#include <linux/cpufreq_hardlimit.h>
 
 #include "acpuclock.h"
 
@@ -356,11 +357,17 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
 		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
+#else if defined(CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
+		policy->cpuinfo.min_freq = check_cpufreq_hardlimit(policy->min);
+		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
 #endif
 	}
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
 	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
+#else if defined(CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
+	policy->min = check_cpufreq_hardlimit(policy->min);
+	policy->max = check_cpufreq_hardlimit(policy->max);
 #endif
 
 	if (is_clk)
