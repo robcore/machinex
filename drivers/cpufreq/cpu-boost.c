@@ -27,9 +27,6 @@
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-#include <linux/cpufreq_hardlimit.h>
-#endif
 
 struct cpu_sync {
 	int cpu;
@@ -40,7 +37,7 @@ struct cpu_sync {
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
-static struct delayed_work input_boost_work;
+static struct work_struct input_boost_work;
 static struct delayed_work input_boost_rem;
 
 #ifdef CONFIG_STATE_NOTIFIER
@@ -125,7 +122,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 		 cpu, policy->min);
 	pr_debug("CPU%u boost min: %u kHz\n", cpu, min);
 
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#if 0
 	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
 #else
 	cpufreq_verify_within_limits(policy, min, UINT_MAX);
@@ -146,12 +143,10 @@ static void update_policy_online(void)
 	unsigned int i;
 
 	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
-	get_online_cpus();
 	for_each_online_cpu(i) {
 		pr_debug("Updating policy for CPU%d\n", i);
 		cpufreq_update_policy(i);
 	}
-	put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
@@ -200,7 +195,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	u64 now;
 	unsigned int min_interval;
 
-	if (state_suspended || !input_boost_enabled)
+	if (state_suspended || work_pending(&input_boost_work) || !input_boost_enabled)
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -210,7 +205,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		return;
 
 	pr_debug("Input boost for input event.\n");
-	mod_delayed_work(cpu_boost_wq, &input_boost_work, 0);
+	queue_work(cpu_boost_wq, &input_boost_work);
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -295,10 +290,12 @@ static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 		case CPU_ONLINE:
-			if (hotplug_boost)
-				pr_debug("Hotplug boost for CPU%lu\n", (long)hcpu);
-				mod_delayed_work(cpu_boost_wq, &input_boost_work, 0);
+			if (work_pending(&input_boost_work))
+				break;
+			if (hotplug_boost || input_boost_enabled) {
+				queue_work(cpu_boost_wq, &input_boost_work);
 				last_input_time = ktime_to_us(ktime_get());
+			}
 				break;
 			default:
 				break;
@@ -312,8 +309,10 @@ static struct notifier_block __refdata cpu_nblk = {
 
 static void __wakeup_boost(void)
 {
+	if (!wakeup_boost || work_pending(&input_boost_work))
+		return;
 	pr_debug("Wakeup boost for display on event.\n");
-	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
+	queue_work(cpu_boost_wq, &input_boost_work);
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -345,7 +344,7 @@ static int cpu_boost_init(void)
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
-	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
+	INIT_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	for_each_possible_cpu(cpu) {

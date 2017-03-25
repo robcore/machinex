@@ -311,7 +311,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	unsigned int cpu = policy->cpu;
 
 	if (per_cpu(cpufreq_stats_table, cpu))
-		return 0;
+		return -EBUSY;
 
 	stat = kzalloc(sizeof(struct cpufreq_stats), GFP_KERNEL);
 	if ((stat) == NULL)
@@ -319,8 +319,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 
 	current_policy = cpufreq_cpu_get(cpu);
 	if (current_policy == NULL) {
-		ret = -EINVAL;
-		goto error_get_fail;
+		return -EINVAL;
 	}
 
 	ret = sysfs_create_group(current_policy->kobj, &stats_attr_group);
@@ -346,7 +345,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	stat->time_in_state = kzalloc(alloc_size, GFP_KERNEL);
 	if (!stat->time_in_state) {
 		ret = -ENOMEM;
-		goto error_out;
+		goto error_alloc;
 	}
 	stat->freq_table = (unsigned int *)(stat->time_in_state + count);
 
@@ -368,9 +367,10 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	spin_unlock(&cpufreq_stats_lock);
 	cpufreq_cpu_put(current_policy);
 	return 0;
+error_alloc:
+	sysfs_remove_group(current_policy->kobj, &stats_attr_group);
 error_out:
 	cpufreq_cpu_put(current_policy);
-error_get_fail:
 	kfree(stat);
 	per_cpu(cpufreq_stats_table, cpu) = NULL;
 	return ret;
