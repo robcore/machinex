@@ -1647,10 +1647,6 @@ static struct msm_bus_paths qseecom_hw_bus_scale_usecases[] = {
 		ARRAY_SIZE(qseecom_enable_dfab_sfpb_vectors),
 		qseecom_enable_dfab_sfpb_vectors,
 	},
-	{
-		ARRAY_SIZE(qseecom_enable_dfab_sfpb_vectors),
-		qseecom_enable_dfab_sfpb_vectors,
-	},
 };
 
 static struct msm_bus_scale_pdata qseecom_bus_pdata = {
