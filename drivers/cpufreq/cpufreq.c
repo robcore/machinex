@@ -785,8 +785,7 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 	if (buf[0] == '-') {
 		sign = -1;
 		i++;
-	}
-	else if (buf[0] == '+') {
+	} else if (buf[0] == '+') {
 		sign = 1;
 		i++;
 	}
@@ -816,11 +815,9 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 			acpuclk_set_vdd(0, sign * pair[0]);
 			pr_warn("faux123: user voltage table modified!\n");
 		}
-	} else {
-		if ((pair[0] > 0) && (pair[1] > 0)) {
+	} else if ((pair[0] > 0) && (pair[1] > 0)) {
 			acpuclk_set_vdd((unsigned)pair[0], pair[1]);
 			pr_warn("faux123: user voltage table modified!\n");
-		}
 	} else
 			return -EINVAL;
 
@@ -1314,7 +1311,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	module_put(cpufreq_driver->owner);
 	pr_debug("initialization complete\n");
 
-	return 0;s
+	return 0;
 
 err_out_unregister:
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
