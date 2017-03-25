@@ -369,8 +369,10 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 		trace_cpu_frequency(freqs->new, freqs->cpu);
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
-		if (likely(policy) && likely(policy->cpu == freqs->cpu))
+		if (likely(policy) && likely(policy->cpu == freqs->cpu)) {
 			policy->cur = freqs->new;
+			sysfs_notify(&policy->kobj, NULL, "scaling_cur_freq");
+		}
 		break;
 	}
 }
@@ -390,8 +392,9 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 
 	if (util > policy->util_thres && policy->util < 100)
 		policy->util++;
-	else if (policy->util < policy->util_thres)
+	else if (policy->util > 0 && util < policy->util_thres)
 		policy->util--;
+
 }
 
 /* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
@@ -1240,7 +1243,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 #ifdef CONFIG_HOTPLUG_CPU
 	for_each_online_cpu(sibling) {
 		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
-		if (cp && cp->governor) {
+		if (cp && cp->governor &&
+			(cpumask_test_cpu(cpu, cp->related_cpus))) {
 			policy->governor = cp->governor;
 			policy->min = cp->min;
 			policy->max = cp->max;
@@ -1264,9 +1268,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
-
-	/* related cpus should atleast have policy->cpus */
-	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
 
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
@@ -2294,6 +2295,7 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 		case CPU_ONLINE:
 		case CPU_ONLINE_FROZEN:
 			cpufreq_add_dev(dev, NULL);
+			cpufreq_update_policy(cpu);
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:

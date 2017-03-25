@@ -89,7 +89,6 @@ extern const struct cpumask *const cpu_online_mask;
 extern const struct cpumask *const cpu_present_mask;
 extern const struct cpumask *const cpu_active_mask;
 
-#if NR_CPUS > 1
 #define num_online_cpus()	cpumask_weight(cpu_online_mask)
 #define num_possible_cpus()	cpumask_weight(cpu_possible_mask)
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
@@ -98,16 +97,6 @@ extern const struct cpumask *const cpu_active_mask;
 #define cpu_possible(cpu)	cpumask_test_cpu((cpu), cpu_possible_mask)
 #define cpu_present(cpu)	cpumask_test_cpu((cpu), cpu_present_mask)
 #define cpu_active(cpu)		cpumask_test_cpu((cpu), cpu_active_mask)
-#else
-#define num_online_cpus()	1U
-#define num_possible_cpus()	1U
-#define num_present_cpus()	1U
-#define num_active_cpus()	1U
-#define cpu_online(cpu)		((cpu) == 0)
-#define cpu_possible(cpu)	((cpu) == 0)
-#define cpu_present(cpu)	((cpu) == 0)
-#define cpu_active(cpu)		((cpu) == 0)
-#endif
 
 /* verify cpu argument to cpumask_* operators */
 static inline unsigned int cpumask_check(unsigned int cpu)
@@ -685,8 +674,9 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 #define cpu_none_mask to_cpumask(cpu_bit_bitmap[0])
 
 #define for_each_possible_cpu(cpu) for_each_cpu((cpu), cpu_possible_mask)
-#define for_each_online_cpu(cpu)   for_each_cpu((cpu), cpu_online_mask)
 #define for_each_present_cpu(cpu)  for_each_cpu((cpu), cpu_present_mask)
+#define for_each_online_cpu(cpu)   for_each_cpu((cpu), cpu_online_mask)
+#define for_each_active_cpu(cpu)  for_each_cpu((cpu), cpu_active_mask)
 
 /* Wrappers for arch boot code to manipulate normally-constant masks */
 void set_cpu_possible(unsigned int cpu, bool possible);
