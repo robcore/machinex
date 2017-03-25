@@ -23,16 +23,22 @@
 #define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
 #define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
 
+#ifdef SUPERFLUOUS
 #define CPUFREQ_HARDLIMIT_WAKEUP_KICK_FREQ		1890000
 
-#define CPUFREQ_HARDLIMIT_TOUCHBOOST_DELAY_DEFAULT	750
-#define CPUFREQ_HARDLIMIT_TOUCHBOOST_LO_DEFAULT	1350000
-#define CPUFREQ_HARDLIMIT_TOUCHBOOST_HI_DEFAULT	1350000
-
+#define CPUFREQ_HARDLIMIT_TOUCHBOOST_LO_DEFAULT	918000
+#define CPUFREQ_HARDLIMIT_TOUCHBOOST_HI_DEFAULT	1134000
+#endif
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
 
 /* Userspace access to scaling min/max */
+#ifdef CONFIG_SEC_DVFS
+#define CPUFREQ_HARDLIMIT_USERSPACE_DVFS_ALLOW	0
+#define CPUFREQ_HARDLIMIT_USERSPACE_DVFS_IGNORE	1
+#define CPUFREQ_HARDLIMIT_USERSPACE_DVFS_REFUSE	2
+#endif
+#ifdef SUPERFLUOUS
 #define CPUFREQ_HARDLIMIT_WAKEUP_KICK_DELAY_MAX	10000	/* Don't allow for more than 10 seconds */
 
 #define CPUFREQ_HARDLIMIT_WAKEUP_KICK_INACTIVE	0
@@ -45,22 +51,22 @@
 #define CPUFREQ_HARDLIMIT_TOUCHBOOST_ACTIVE_LO	1
 #define CPUFREQ_HARDLIMIT_TOUCHBOOST_ACTIVE_HI	2
 
-#define CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS	1
+#define CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS	3
 #define CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS_MIN	1
 #define CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS_MAX	10
 
 #define CPUFREQ_HARDLIMIT_TOUCHBOOST_DISABLED	0
 #define CPUFREQ_HARDLIMIT_TOUCHBOOST_DELAY_MAX	5000	/* Don't allow for more than 5 seconds */
+#endif
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
+#ifdef CONFIG_SEC_DVFS
+/* Scaling min/max lock */
+unsigned int userspace_dvfs_lock_status(void);
+#endif
+
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
-
-#ifndef CONFIG_POWERSUSPEND
-/* Hook in mdss display panel for screen on/off callback if powersuspend unavailable */
-void cpufreq_hardlimit_screen_off(void);
-void cpufreq_hardlimit_screen_on(void);
-#endif
 
 #endif

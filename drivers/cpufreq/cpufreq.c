@@ -404,15 +404,14 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 {
+	int cpu;
 	struct cpufreq_policy *policy;
-/*
- * Updating CPU0 policy only, since all other CPUs will be set accordingly
- * --> "cpufreq: force cpuN policy to match cpu0 when setting min freq" (Imoseyon)
- */
-	policy = cpufreq_cpu_get(0);
-	if (policy != NULL) {
-		policy->user_policy.min = policy->min = freq_min;
-		policy->user_policy.max = policy->max = freq_max;
+
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get(cpu);
+		if (policy != NULL) {
+			policy->user_policy.min = policy->min = freq_min;
+			policy->user_policy.max = policy->max = freq_max;
 	}
 }
 #endif
@@ -528,12 +527,10 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 static ssize_t store_##file_name					\
 (struct cpufreq_policy *policy, const char *buf, size_t count)		\
 {									\
-	int ret;							\
+	int ret;						\
 	struct cpufreq_policy new_policy;				\
 									\
-	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
-	if (ret)							\
-		return -EINVAL;						\
+	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy);			\
 									\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
@@ -612,9 +609,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
-	ret = cpufreq_get_policy(&new_policy, policy->cpu);
-	if (ret)
-		return ret;
+	memcpy(&new_policy, policy, sizeof(*policy));
 
 	ret = sscanf(buf, "%15s", str_governor);
 	if (ret != 1)
@@ -1114,9 +1109,9 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 	return ret;
 }
 
-
 /* symlink affected CPUs */
-static int cpufreq_add_dev_symlink(unsigned int cpu, struct cpufreq_policy *policy)
+static int cpufreq_add_dev_symlink(unsigned int cpu,
+				   struct cpufreq_policy *policy)
 {
 	unsigned int j;
 	int ret = 0;
@@ -1143,7 +1138,8 @@ static int cpufreq_add_dev_symlink(unsigned int cpu, struct cpufreq_policy *poli
 	return ret;
 }
 
-static int cpufreq_add_dev_interface(unsigned int cpu, struct cpufreq_policy *policy,
+static int cpufreq_add_dev_interface(unsigned int cpu,
+					struct cpufreq_policy *policy,
 				     struct device *dev)
 {
 	struct cpufreq_policy new_policy;
@@ -1164,7 +1160,7 @@ static int cpufreq_add_dev_interface(unsigned int cpu, struct cpufreq_policy *po
 	if (ret)
 		goto err_out_kobj_put;
 
-	memcpy(&new_policy, policy, sizeof(*policy));
+	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
 	/* assure that the starting sequence is run in __cpufreq_set_policy */
 	if (policy)
 		policy->governor = NULL;
@@ -1669,23 +1665,23 @@ static int cpufreq_bp_suspend(void)
 	int ret = 0;
 
 	int cpu = smp_processor_id();
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy *cpu_policy;
 
 	pr_debug("suspending cpu %u\n", cpu);
 
 	/* If there's no policy for the boot CPU, we have nothing to do. */
-	policy = cpufreq_cpu_get(cpu);
-	if (!policy)
+	cpu_policy = cpufreq_cpu_get(cpu);
+	if (!cpu_policy)
 		return 0;
 
 	if (cpufreq_driver->suspend) {
-		ret = cpufreq_driver->suspend(policy);
+		ret = cpufreq_driver->suspend(cpu_policy);
 		if (ret)
 			printk(KERN_ERR "cpufreq: suspend failed in ->suspend "
-					"step on CPU %u\n", policy->cpu);
+					"step on CPU %u\n", cpu_policy->cpu);
 	}
 
-	cpufreq_cpu_put(policy);
+	cpufreq_cpu_put(cpu_policy);
 	return ret;
 }
 
@@ -1707,28 +1703,28 @@ static void cpufreq_bp_resume(void)
 	int ret = 0;
 
 	int cpu = smp_processor_id();
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy *cpu_policy;
 
 	pr_debug("resuming cpu %u\n", cpu);
 
 	/* If there's no policy for the boot CPU, we have nothing to do. */
-	policy = cpufreq_cpu_get(cpu);
-	if (!policy)
+	cpu_policy = cpufreq_cpu_get(cpu);
+	if (!cpu_policy)
 		return;
 
 	if (cpufreq_driver->resume) {
-		ret = cpufreq_driver->resume(policy);
+		ret = cpufreq_driver->resume(cpu_policy);
 		if (ret) {
 			printk(KERN_ERR "cpufreq: resume failed in ->resume "
-					"step on CPU %u\n", policy->cpu);
+					"step on CPU %u\n", cpu_policy->cpu);
 			goto fail;
 		}
 	}
 
-	schedule_work(&policy->update);
+	schedule_work(&cpu_policy->update);
 
 fail:
-	cpufreq_cpu_put(policy);
+	cpufreq_cpu_put(cpu_policy);
 }
 
 static struct syscore_ops cpufreq_syscore_ops = {
@@ -2054,7 +2050,7 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu)
 	if (!cpu_policy)
 		return -EINVAL;
 
-	memcpy(policy, cpu_policy, sizeof(*policy));
+	memcpy(policy, cpu_policy, sizeof(struct cpufreq_policy));
 
 	cpufreq_cpu_put(cpu_policy);
 	return 0;
@@ -2074,7 +2070,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n", new_policy->cpu,
 		new_policy->min, new_policy->max);
 
-	memcpy(&new_policy->cpuinfo, &policy->cpuinfo, sizeof(policy->cpuinfo));
+	memcpy(&new_policy->cpuinfo, &policy->cpuinfo, sizeof(struct cpufreq_cpuinfo));
 
 	if (new_policy->min > policy->user_policy.max
 		|| new_policy->max < policy->user_policy.min) {
@@ -2111,7 +2107,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 		cpu0_policy = cpufreq_cpu_get(0);
 		policy->min = cpu0_policy->min;
 		policy->max = cpu0_policy->max;
-		policy->util_thres = policy->user_policy.util_thres;
+		policy->util_thres = cpu0_policy->util_thres;
 	} else {
 		policy->min = new_policy->min;
 		policy->max = new_policy->max;
@@ -2157,7 +2153,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 			/* might be a policy change, too, so fall through */
 		}
 		pr_debug("governor: change or update limits\n");
-		ret = __cpufreq_governor(policy, CPUFREQ_GOV_LIMITS);
+		__cpufreq_governor(policy, CPUFREQ_GOV_LIMITS);
 	}
 
 error_out:
@@ -2188,7 +2184,7 @@ int cpufreq_update_policy(unsigned int cpu)
 	}
 
 	pr_debug("updating policy for CPU %u\n", cpu);
-	memcpy(&new_policy, policy, sizeof(*policy));
+	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 	/* Yank555.lu - Enforce hardlimit */
 	new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
@@ -2304,7 +2300,6 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 		case CPU_ONLINE:
 		case CPU_ONLINE_FROZEN:
 			cpufreq_add_dev(dev, NULL);
-			cpufreq_update_policy(cpu);
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:

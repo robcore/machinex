@@ -89,51 +89,50 @@
 #include <linux/sysfs.h>
 #include <linux/cpufreq_hardlimit.h>
 #include <linux/cpufreq.h>
-#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
-#endif
 #include <linux/jiffies.h>
 #include <linux/workqueue.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#ifdef SUPERFLUOUS
 #include <linux/input.h>
+#endif
 
 unsigned int hardlimit_max_screen_on  = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;  /* default to stock behaviour */
 unsigned int hardlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK; /* default to stock behaviour */
 unsigned int hardlimit_min_screen_on  = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;  /* default to stock behaviour */
 unsigned int hardlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; /* default to stock behaviour */
-unsigned int wakeup_kick_freq         = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;  /* default to stock behaviour */
-unsigned int wakeup_kick_delay        = 750;
+#ifdef SUPERFLUOUS
+unsigned int wakeup_kick_freq         = CPUFREQ_HARDLIMIT_WAKEUP_KICK_FREQ;     /* default to better behaviour */
+unsigned int wakeup_kick_delay        = CPUFREQ_HARDLIMIT_WAKEUP_KICK_DISABLED; /* default to stock behaviour */
 unsigned int wakeup_kick_active       = CPUFREQ_HARDLIMIT_WAKEUP_KICK_INACTIVE;
 unsigned int touchboost_lo_freq       = CPUFREQ_HARDLIMIT_TOUCHBOOST_LO_DEFAULT;
 unsigned int touchboost_hi_freq       = CPUFREQ_HARDLIMIT_TOUCHBOOST_HI_DEFAULT;
-unsigned int touchboost_active        = 1;
-unsigned int touchboost_delay         = CPUFREQ_HARDLIMIT_TOUCHBOOST_DELAY_DEFAULT;	/* default to stock behaviour */
-unsigned int touchboost_eventcount    = CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS;    /* default to 3 touches to jump to hi */
+unsigned int touchboost_active        = CPUFREQ_HARDLIMIT_TOUCHBOOST_INACTIVE;
+unsigned int touchboost_delay         = CPUFREQ_HARDLIMIT_TOUCHBOOST_DISABLED;	/* default to stock behaviour */
+unsigned int touchboost_eventcount    = CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS;    /* default to 5 touches to jump to hi */
 unsigned int touchevent_count         = 0;
 unsigned int touchinput_fingers       = 0;
 unsigned int touchinput_prev_fingers  = 0;
+#endif
+
+#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
+char         touchinput_dev_name[30];
+#endif
+
+#ifdef CONFIG_SEC_DVFS
+unsigned int userspace_dvfs_lock      = CPUFREQ_HARDLIMIT_USERSPACE_DVFS_ALLOW;	/* default allows userspace dvfs interaction */
+#endif
 
 unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
 
-/* ------------------------------------------------------------------------------ */
-/* Delayed work                                                                   */
-/* ------------------------------------------------------------------------------ */
+#ifdef SUPERFLUOUS
+struct delayed_work stop_wakeup_kick_work;
 
-static struct delayed_work stop_wakeup_kick_work;
-static struct workqueue_struct *wakeup_kick_wq;
-
-static struct delayed_work stop_touchboost_work;
-static struct workqueue_struct *touchboost_wq;
-
-static struct work_struct screen_off_work;
-static struct workqueue_struct *screen_off_wq;
-
-static struct work_struct screen_on_work;
-static struct workqueue_struct *screen_on_wq;
-
+struct delayed_work stop_touchboost_work;
+#endif
 /* ------------------------------------------------------------------------------ */
 /* Externally reachable function                                                  */
 /* ------------------------------------------------------------------------------ */
@@ -141,6 +140,15 @@ static struct workqueue_struct *screen_on_wq;
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
+// Called way too often, even when debugging
+//	#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
+//	pr_info("[HARDLIMIT] check_cpufreq_hardlimit : min = %u / max = %u / freq = %u / result = %u \n",
+//			current_limit_min,
+//			current_limit_max,
+//			freq,
+//			max(current_limit_min, min(current_limit_max, freq))
+//		);
+//	#endif
 	return max(current_limit_min, min(current_limit_max, freq));
 }
 
@@ -156,45 +164,57 @@ void reapply_hard_limits(void)
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-
+#ifdef SUPERFLUOUS
 		if(wakeup_kick_active == CPUFREQ_HARDLIMIT_WAKEUP_KICK_ACTIVE) {
 
-			current_limit_min = wakeup_kick_freq;
-			current_limit_max = max(hardlimit_max_screen_on, min(hardlimit_max_screen_on, wakeup_kick_freq));
+			current_limit_min  = wakeup_kick_freq;
+			current_limit_max  = max(hardlimit_max_screen_on, min(hardlimit_max_screen_on, wakeup_kick_freq));
 
 		} else if(touchboost_active != CPUFREQ_HARDLIMIT_TOUCHBOOST_INACTIVE) {
 
 			if (touchboost_active == CPUFREQ_HARDLIMIT_TOUCHBOOST_ACTIVE_LO) {
-				current_limit_min = touchboost_lo_freq;
-				current_limit_max = hardlimit_max_screen_on;
+				current_limit_min  = touchboost_lo_freq;
 			} else {
-				current_limit_min = touchboost_hi_freq;
-				current_limit_max = hardlimit_max_screen_on;
+				current_limit_min  = touchboost_hi_freq;
 			}
+			current_limit_max  = hardlimit_max_screen_on;
 
 		} else {
+#endif
+			current_limit_min  = hardlimit_min_screen_on;
+			current_limit_max  = hardlimit_max_screen_on;
 
-			current_limit_min = hardlimit_min_screen_on;
-			current_limit_max = hardlimit_max_screen_on;
-		}
+		//}
 
 	} else {
 
-		current_limit_min = hardlimit_min_screen_off;
-		current_limit_max = hardlimit_max_screen_off;
+		current_limit_min  = hardlimit_min_screen_off;
+		current_limit_max  = hardlimit_max_screen_off;
 
 	}
 
+	#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
+	pr_info("[HARDLIMIT] reapply_hard_limits - after : min = %u / max = %u \n",
+			current_limit_min,
+			current_limit_max
+		);
+	#endif
 	update_scaling_limits(current_limit_min, current_limit_max);
-	return;
 }
 
+#ifdef CONFIG_SEC_DVFS
+/* Scaling min/max lock */
+unsigned int userspace_dvfs_lock_status(void)
+{
+	return userspace_dvfs_lock;
+}
+#endif
 
 /* ------------------------------------------------------------------------------ */
-/* Screen on/off work functions                                                   */
+/* Powersuspend callback functions                                                */
 /* ------------------------------------------------------------------------------ */
 
-static void cpufreq_hardlimit_screen_off_work(struct work_struct *work)
+static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 {
 	#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
 	pr_info("[HARDLIMIT] suspend : old_min = %u / old_max = %u / new_min = %u / new_max = %u \n",
@@ -209,35 +229,35 @@ static void cpufreq_hardlimit_screen_off_work(struct work_struct *work)
 	return;
 }
 
-static void cpufreq_hardlimit_screen_on_work(struct work_struct *work)
+static void cpufreq_hardlimit_resume(struct power_suspend * h)
 {
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-
+#ifdef SUPERFLUOUS
 	if(wakeup_kick_delay == CPUFREQ_HARDLIMIT_WAKEUP_KICK_DISABLED) {
+		#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
+		pr_info("[HARDLIMIT] resume (no wakeup kick) : old_min = %u / old_max = %u / new_min = %u / new_max = %u \n",
+				current_limit_min,
+				current_limit_max,
+				hardlimit_min_screen_on,
+				hardlimit_max_screen_on
+			);
+		#endif
 		wakeup_kick_active = CPUFREQ_HARDLIMIT_WAKEUP_KICK_INACTIVE;
 	} else {
+		#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
+		pr_info("[HARDLIMIT] resume (with wakeup kick) : old_min = %u / old_max = %u / new_min = %u / new_max = %u \n",
+				current_limit_min,
+				current_limit_max,
+				wakeup_kick_freq,
+				max(hardlimit_max_screen_on, min(hardlimit_max_screen_on, wakeup_kick_freq))
+			);
+		#endif
 		wakeup_kick_active = CPUFREQ_HARDLIMIT_WAKEUP_KICK_ACTIVE;
 		/* Schedule delayed work to restore stock scaling min after wakeup kick delay */
-		queue_delayed_work(wakeup_kick_wq, &stop_wakeup_kick_work, usecs_to_jiffies(wakeup_kick_delay * 1000));
+		schedule_delayed_work(&stop_wakeup_kick_work, usecs_to_jiffies(wakeup_kick_delay * 1000));
 	}
+#endif
 	reapply_hard_limits();
-	return;
-}
-
-#ifdef CONFIG_POWERSUSPEND
-/* ------------------------------------------------------------------------------ */
-/* Powersuspend callback functions                                                */
-/* ------------------------------------------------------------------------------ */
-
-static void cpufreq_hardlimit_suspend(struct power_suspend *h)
-{
-	queue_work(screen_off_wq, &screen_off_work);
-	return;
-}
-
-static void cpufreq_hardlimit_resume(struct power_suspend *h)
-{
-	queue_work(screen_on_wq, &screen_on_work);
 	return;
 }
 
@@ -247,25 +267,7 @@ static struct power_suspend cpufreq_hardlimit_suspend_data =
 	.resume = cpufreq_hardlimit_resume,
 };
 
-#else
-
-/* ------------------------------------------------------------------------------ */
-/* Screen on/off callback functions                                               */
-/* ------------------------------------------------------------------------------ */
-
-void cpufreq_hardlimit_screen_off(void)
-{
-	queue_work(screen_off_wq, &screen_off_work);
-	return;
-}
-
-void cpufreq_hardlimit_screen_on(void)
-{
-	queue_work(screen_on_wq, &screen_on_work);
-	return;
-}
-#endif
-
+#ifdef SUPERFLUOUS
 /* ------------------------------------------------------------------------------ */
 /* Wakeup kick delayed work                                                       */
 /* ------------------------------------------------------------------------------ */
@@ -304,7 +306,7 @@ void touchboost_report_touch(void)
 			touchboost_active = CPUFREQ_HARDLIMIT_TOUCHBOOST_ACTIVE_LO;
 			touchevent_count = 1; // Start counting events
 			/* Schedule delayed work to restore stock scaling min after touchboost delay */
-			queue_delayed_work(touchboost_wq, &stop_touchboost_work, usecs_to_jiffies(touchboost_delay * 1000));
+			schedule_delayed_work(&stop_touchboost_work, usecs_to_jiffies(touchboost_delay * 1000));
 			reapply_hard_limits();
 		}
 
@@ -328,7 +330,7 @@ void touchboost_report_touch(void)
 			}
 			/* Reschedule delayed work to turn touchboost off */
 			cancel_delayed_work(&stop_touchboost_work);
-			queue_delayed_work(touchboost_wq, &stop_touchboost_work, usecs_to_jiffies(touchboost_delay * 1000));
+			schedule_delayed_work(&stop_touchboost_work, usecs_to_jiffies(touchboost_delay * 1000));
 		}
 	}
 	touchinput_prev_fingers = touchinput_fingers; /* Remember fingercount */
@@ -403,7 +405,6 @@ static int input_dev_filter(const char *input_dev_name)
 	if (strstr(input_dev_name, "touchscreen") ||
 		strstr(input_dev_name, "sec_touchscreen") ||
 		strstr(input_dev_name, "touch_dev") ||
-		strstr(input_dev_name, "atmel_mxt_ts") ||
 		strstr(input_dev_name, "-keypad") ||
 		strstr(input_dev_name, "-nav") ||
 		strstr(input_dev_name, "-oj")) {
@@ -474,6 +475,7 @@ static struct input_handler hardlimit_input_handler = {
 	.name           = "hardlimit_handler",
 	.id_table       = hardlimit_ids,
 };
+#endif
 
 /* ------------------------------------------------------------------------------ */
 /* sysfs interface functions                                                      */
@@ -504,8 +506,10 @@ static ssize_t hardlimit_max_screen_on_store(struct kobject *kobj, struct kobj_a
 		if (table[i].frequency == new_hardlimit) {
 			hardlimit_max_screen_on = new_hardlimit;
 			/* Wakeup kick can never be higher than CPU max. hardlimit */
+#ifdef SUPERFLUOUS
 			if(hardlimit_max_screen_on < wakeup_kick_freq)
 				wakeup_kick_freq = hardlimit_max_screen_on;
+#endif
 			reapply_hard_limits();
 			return count;
 		}
@@ -571,8 +575,10 @@ static ssize_t hardlimit_min_screen_on_store(struct kobject *kobj, struct kobj_a
 		if (table[i].frequency == new_hardlimit) {
 			hardlimit_min_screen_on = new_hardlimit;
 			/* Wakeup kick can never be higher than CPU max. hardlimit */
+#ifdef SUPERFLUOUS
 			if(hardlimit_min_screen_on > wakeup_kick_freq)
 				wakeup_kick_freq = hardlimit_min_screen_on;
+#endif
 			reapply_hard_limits();
 			return count;
 		}
@@ -613,6 +619,7 @@ static ssize_t hardlimit_min_screen_off_store(struct kobject *kobj, struct kobj_
 
 }
 
+#ifdef SUPERFLUOUS
 /* sysfs interface for "wakeup_kick_freq" */
 static ssize_t wakeup_kick_freq_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -801,12 +808,46 @@ static ssize_t touchboost_eventcount_store(struct kobject *kobj, struct kobj_att
 	return -EINVAL;
 
 }
-
+#endif
 #ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
 /* sysfs interface for "touchinput_dev_name" */
 static ssize_t touchinput_dev_name_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%s\n", touchinput_dev_name);
+}
+#endif
+
+#ifdef CONFIG_SEC_DVFS
+/* sysfs interface for "userspace_dvfs_lock" */
+static ssize_t userspace_dvfs_lock_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", userspace_dvfs_lock);
+}
+
+static ssize_t userspace_dvfs_lock_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+
+	unsigned int new_userspace_dvfs_lock;
+
+	if (!sscanf(buf, "%du", &new_userspace_dvfs_lock))
+		return -EINVAL;
+
+	if (new_userspace_dvfs_lock == userspace_dvfs_lock)
+		return count;
+
+	switch (new_userspace_dvfs_lock) {
+		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_ALLOW :
+		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_IGNORE :
+		case CPUFREQ_HARDLIMIT_USERSPACE_DVFS_REFUSE :
+			userspace_dvfs_lock = new_userspace_dvfs_lock;
+			return count;
+		default:
+			return -EINVAL;
+	}
+
+	/* We should never get here */
+	return -EINVAL;
+
 }
 #endif
 
@@ -865,6 +906,7 @@ __ATTR(scaling_min_freq_screen_on, 0666, hardlimit_min_screen_on_show, hardlimit
 static struct kobj_attribute hardlimit_min_screen_off_attribute =
 __ATTR(scaling_min_freq_screen_off, 0666, hardlimit_min_screen_off_show, hardlimit_min_screen_off_store);
 
+#ifdef SUPERFLUOUS
 static struct kobj_attribute wakeup_kick_freq_attribute =
 __ATTR(wakeup_kick_freq, 0666, wakeup_kick_freq_show, wakeup_kick_freq_store);
 
@@ -882,10 +924,16 @@ __ATTR(touchboost_delay, 0666, touchboost_delay_show, touchboost_delay_store);
 
 static struct kobj_attribute touchboost_eventcount_attribute =
 __ATTR(touchboost_eventcount, 0666, touchboost_eventcount_show, touchboost_eventcount_store);
+#endif
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
 static struct kobj_attribute touchinput_dev_name_attribute =
 __ATTR(touchinput_dev_name, 0444, touchinput_dev_name_show, NULL);
+#endif
+
+#ifdef CONFIG_SEC_DVFS
+static struct kobj_attribute userspace_dvfs_lock_attribute =
+__ATTR(userspace_dvfs_lock, 0666, userspace_dvfs_lock_show, userspace_dvfs_lock_store);
 #endif
 
 static struct kobj_attribute available_frequencies_attribute =
@@ -905,12 +953,20 @@ static struct attribute *hardlimit_attrs[] = {
 	&hardlimit_max_screen_off_attribute.attr,
 	&hardlimit_min_screen_on_attribute.attr,
 	&hardlimit_min_screen_off_attribute.attr,
+#ifdef SUPERFLUOUS
 	&wakeup_kick_freq_attribute.attr,
 	&wakeup_kick_delay_attribute.attr,
 	&touchboost_lo_freq_attribute.attr,
 	&touchboost_hi_freq_attribute.attr,
 	&touchboost_delay_attribute.attr,
 	&touchboost_eventcount_attribute.attr,
+#endif
+#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
+	&touchinput_dev_name_attribute.attr,
+#endif
+#ifdef CONFIG_SEC_DVFS
+	&userspace_dvfs_lock_attribute.attr,
+#endif
 	&available_frequencies_attribute.attr,
 	&current_limit_min_attribute.attr,
 	&current_limit_max_attribute.attr,
@@ -941,22 +997,14 @@ int hardlimit_init(void)
 
         if (!hardlimit_retval) {
 		/* Only register to powersuspend and delayed work if we were able to create the sysfs interface */
+#ifdef SUPERFLUOUS
 		hardlimit_input_retval = input_register_handler(&hardlimit_input_handler);
-#ifdef CONFIG_POWERSUSPEND
-		register_power_suspend(&cpufreq_hardlimit_suspend_data);
 #endif
-
-		wakeup_kick_wq = alloc_workqueue("hardlimit_wakeup_kick", WQ_HIGHPRI | WQ_UNBOUND, 1);
-		INIT_DELAYED_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
-
-		touchboost_wq  = alloc_workqueue("hardlimit_touchboost", WQ_HIGHPRI | WQ_UNBOUND, 1);
-		INIT_DELAYED_WORK(&stop_touchboost_work, stop_touchboost);
-
-		screen_off_wq  = alloc_workqueue("hardlimit_screen_off", WQ_HIGHPRI | WQ_UNBOUND, 1);
-		INIT_WORK(&screen_off_work, cpufreq_hardlimit_screen_off_work);
-
-		screen_on_wq   = alloc_workqueue("hardlimit_screen_on", WQ_HIGHPRI | WQ_UNBOUND, 1);
-		INIT_WORK(&screen_on_work, cpufreq_hardlimit_screen_on_work);
+		register_power_suspend(&cpufreq_hardlimit_suspend_data);
+#ifdef SUPERFLUOUS
+		INIT_DEFERRABLE_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
+		INIT_DEFERRABLE_WORK(&stop_touchboost_work, stop_touchboost);
+#endif
 	}
 
         return (hardlimit_retval);
@@ -964,10 +1012,10 @@ int hardlimit_init(void)
 
 void hardlimit_exit(void)
 {
-#ifdef CONFIG_POWERSUSPEND
-	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
-#endif
+#ifdef SUPERFLUOUS
 	input_unregister_handler(&hardlimit_input_handler);
+#endif
+	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
 	kobject_put(hardlimit_kobj);
 }
 

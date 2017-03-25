@@ -16,10 +16,11 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
-#include <linux/moduleparam.h>
+#include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
@@ -48,7 +49,7 @@ static struct notifier_block notif;
 static bool input_boost_enabled = false;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_ms = 50;
+static unsigned int input_boost_ms = 60;
 module_param(input_boost_ms, uint, 0644);
 
 static bool hotplug_boost = false;
@@ -199,12 +200,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	u64 now;
 	unsigned int min_interval;
 
-#ifdef CONFIG_STATE_NOTIFIER
-	if (state_suspended)
-		return;
-#endif
-
-	if (!input_boost_enabled || work_pending(&input_boost_work))
+	if (state_suspended || !input_boost_enabled)
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -214,7 +210,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		return;
 
 	pr_debug("Input boost for input event.\n");
-	queue_work(cpu_boost_wq, &input_boost_work);
+	mod_work(cpu_boost_wq, &input_boost_work);
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -299,14 +295,13 @@ static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 		case CPU_ONLINE:
-			if (!hotplug_boost || work_pending(&input_boost_work))
+			if (hotplug_boost)
+				pr_debug("Hotplug boost for CPU%lu\n", (long)hcpu);
+				mod_work(cpu_boost_wq, &input_boost_work);
+				last_input_time = ktime_to_us(ktime_get());
 				break;
-			pr_debug("Hotplug boost for CPU%lu\n", (long)hcpu);
-			queue_work(cpu_boost_wq, &input_boost_work);
-			last_input_time = ktime_to_us(ktime_get());
-			break;
-		default:
-			break;
+			default:
+				break;
 	}
 	return NOTIFY_OK;
 }
@@ -315,13 +310,10 @@ static struct notifier_block __refdata cpu_nblk = {
         .notifier_call = cpuboost_cpu_callback,
 };
 
-#ifdef CONFIG_STATE_NOTIFIER
 static void __wakeup_boost(void)
 {
-	if (!wakeup_boost || work_pending(&input_boost_work))
-		return;
 	pr_debug("Wakeup boost for display on event.\n");
-	queue_work(cpu_boost_wq, &input_boost_work);
+	mod_work_on(0, cpu_boost_wq, &input_boost_work);
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -330,7 +322,12 @@ static int state_notifier_callback(struct notifier_block *this,
 {
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
-			__wakeup_boost();
+			if (wakeup_boost)
+				__wakeup_boost();
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			cancel_delayed_work(&input_boost_rem, do_input_boost_rem);
+			cancel_work(cpu_boost_wq, &input_boost_work);
 			break;
 		default:
 			break;
@@ -338,7 +335,6 @@ static int state_notifier_callback(struct notifier_block *this,
 
 	return NOTIFY_OK;
 }
-#endif
 
 static int cpu_boost_init(void)
 {
@@ -375,3 +371,6 @@ static int cpu_boost_init(void)
 	return ret;
 }
 late_initcall(cpu_boost_init);
+MODULE_AUTHOR("Mostly Neobuddy89, and some others");
+MODULE_DESCRIPTION("'cpu_boost' - Does what it says");
+MODULE_LICENSE("GPL v2");
