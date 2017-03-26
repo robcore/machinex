@@ -1123,7 +1123,7 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 
 	unlock_policy_rwsem_write(cpu);
 
-	ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
+	ret = sysfs_create_link(&dev->kobj, policy->kobj, "cpufreq");
 	if (ret) {
 		cpufreq_cpu_put(policy);
 		return ret;
