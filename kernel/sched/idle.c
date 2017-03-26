@@ -127,7 +127,7 @@ static void cpu_idle_loop(void)
 		 * polling is set.  That means that clearing polling
 		 * needs to be visible before rescheduling.
 		 */
-		smp_mb__after_atomic();
+	smp_mb__after_clear_bit();
 
 		schedule_preempt_disabled();
 		if (cpu_is_offline(cpu))
