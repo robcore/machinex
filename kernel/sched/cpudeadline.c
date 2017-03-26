@@ -223,4 +223,5 @@ int cpudl_init(struct cpudl *cp)
 void cpudl_cleanup(struct cpudl *cp)
 {
 	free_cpumask_var(cp->free_cpus);
+	kfree(cp->elements);
 }
