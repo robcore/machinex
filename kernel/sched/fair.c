@@ -1681,33 +1681,6 @@ static inline int find_new_hmp_ilb(int call_cpu)
 }
 
 /*
- * For the current task's CPU, we don't check whether there are
- * multiple tasks. Just see if running the task on another CPU is
- * lower power than running only this task on the current CPU. This is
- * not the most accurate model, but we should be load balanced most of
- * the time anyway. */
-static int lower_power_cpu_available(struct task_struct *p, int cpu)
-{
-	int i;
-	int lowest_power_cpu = task_cpu(p);
-	int lowest_power = power_cost(p, task_cpu(p));
-
-	/* Is a lower-powered idle CPU available which will fit this task? */
-	for_each_cpu_and(i, tsk_cpus_allowed(p), cpu_online_mask) {
-		if (idle_cpu(i) && task_will_fit(p, i)) {
-			int idle_power_cost = power_cost(p, i);
-			if (idle_power_cost < lowest_power) {
-				lowest_power_cpu = i;
-				lowest_power = idle_power_cost;
-			}
-		}
-	}
-
-	return (lowest_power_cpu != task_cpu(p));
-}
-
-
-/*
  * Check if a task is on the "wrong" cpu (i.e its current cpu is not the ideal
  * cpu as per its demand or priority)
  */
@@ -1720,14 +1693,7 @@ static inline int migration_needed(struct rq *rq, struct task_struct *p)
 		rq->capacity > min_capacity)
 			return 1;
 
-	if (!task_will_fit(p, cpu_of(rq)))
-		return 1;
-
-	if (sysctl_sched_enable_power_aware &&
-	    lower_power_cpu_available(p, cpu_of(rq)))
-		return 1;
-
-	return 0;
+	return !task_will_fit(p, cpu_of(rq));
 }
 
 /*
@@ -5415,11 +5381,26 @@ static bool update_sd_pick_busiest(struct lb_env *env,
 	if (sgs->avg_load <= sds->busiest_stat.avg_load)
 		return false;
 
-	if (sgs->sum_nr_running > sgs->group_capacity)
+	if (sgs->sum_nr_running > sgs->group_capacity) {
+		env->flags &= ~LBF_PWR_ACTIVE_BALANCE;
 		return true;
+	}
 
-	if (sgs->group_imb)
+	if (sgs->group_imb) {
+		env->flags &= ~LBF_PWR_ACTIVE_BALANCE;
 		return true;
+	}
+
+	/* Mark a less power-efficient CPU as busy only if we haven't
+	 * seen a busy group yet. We want to prioritize spreading
+	 * work over power optimization. */
+	if (!sds->busiest && sg->group_weight == 1 &&
+	    sgs->sum_nr_running &&
+	    power_cost_at_freq(env->dst_cpu, 0) <
+	    power_cost_at_freq(cpumask_first(sched_group_cpus(sg)), 0)) {
+		env->flags |= LBF_PWR_ACTIVE_BALANCE;
+		return true;
+	}
 
 	/*
 	 * ASYM_PACKING needs to move all the work to the lowest
@@ -5853,6 +5834,9 @@ static int need_active_balance(struct lb_env *env)
 {
 	struct sched_domain *sd = env->sd;
 
+	if (env->flags & LBF_PWR_ACTIVE_BALANCE)
+		return 1;
+
 	if (env->idle == CPU_NEWLY_IDLE) {
 
 		/*
@@ -6039,14 +6023,17 @@ more_balance:
 	}
 
 	if (!ld_moved) {
-		schedstat_inc(sd, lb_failed[idle]);
+		if (!(env.flags & LBF_PWR_ACTIVE_BALANCE))
+			schedstat_inc(sd, lb_failed[idle]);
+
 		/*
 		 * Increment the failure counter only on periodic balance.
 		 * We do not want newidle balance, which can be very
 		 * frequent, pollute the failure counter causing
 		 * excessive cache_hot migrations and active balances.
 		 */
-		if (idle != CPU_NEWLY_IDLE)
+		if (idle != CPU_NEWLY_IDLE &&
+		    !(env.flags & LBF_PWR_ACTIVE_BALANCE))
 			sd->nr_balance_failed++;
 
 		if (need_active_balance(&env)) {
@@ -6136,27 +6123,6 @@ out_one_pinned:
 	ld_moved = 0;
 out:
 	return ld_moved;
-}
-
-static int select_lowest_power_cpu(struct cpumask *cpus)
-{
-	int i, cost;
-	int lowest_power_cpu = -1;
-	int lowest_power = INT_MAX;
-
-	if (sysctl_sched_enable_power_aware) {
-		for_each_cpu(i, cpus) {
-			cost = power_cost_at_freq(i, 0);
-			if (cost < lowest_power) {
-				lowest_power_cpu = i;
-				lowest_power = cost;
-			}
-		}
-		BUG_ON(lowest_power_cpu == -1);
-		return lowest_power_cpu;
-	} else {
-		return cpumask_first(cpus);
-	}
 }
 
 /*
@@ -6597,18 +6563,12 @@ static void nohz_idle_balance(struct rq *this_rq, enum cpu_idle_type idle)
 	int this_cpu = this_rq->cpu;
 	struct rq *rq;
 	int balance_cpu;
-	struct cpumask cpus_to_balance;
 
 	if (idle != CPU_IDLE ||
 	    !test_bit(NOHZ_BALANCE_KICK, nohz_flags(this_cpu)))
 		goto end;
 
-	cpumask_copy(&cpus_to_balance, nohz.idle_cpus_mask);
-
-	while (!cpumask_empty(&cpus_to_balance)) {
-		balance_cpu = select_lowest_power_cpu(&cpus_to_balance);
-
-		cpumask_clear_cpu(balance_cpu, &cpus_to_balance);
+	for_each_cpu(balance_cpu, nohz.idle_cpus_mask) {
 		if (balance_cpu == this_cpu || !idle_cpu(balance_cpu))
 			continue;
 
