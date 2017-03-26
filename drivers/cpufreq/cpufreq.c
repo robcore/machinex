@@ -1113,10 +1113,10 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 
 	__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
 
-	spin_lock_irqsave(&cpufreq_driver_lock, flags);
+	write_lock_irqsave(&cpufreq_driver_lock, flags);
 	cpumask_set_cpu(cpu, policy->cpus);
 	per_cpu(cpufreq_cpu_data, cpu) = policy;
-	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
+	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 	__cpufreq_governor(policy, CPUFREQ_GOV_START);
 	__cpufreq_governor(policy, CPUFREQ_GOV_LIMITS);
