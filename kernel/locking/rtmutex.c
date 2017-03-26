@@ -892,7 +892,7 @@ static int task_blocks_on_rt_mutex(struct rt_mutex *lock,
 	 * which is wrong, as the other waiter is not in a deadlock
 	 * situation.
 	 */
-	if (owner == task)
+	if ((detect_deadlock && owner == task) || (owner == task))
 		return -EDEADLK;
 
 	raw_spin_lock_irqsave(&task->pi_lock, flags);
