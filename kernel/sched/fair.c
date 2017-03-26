@@ -1749,6 +1749,11 @@ static inline int power_cost(struct task_struct *p, int cpu)
 	return SCHED_POWER_SCALE;
 }
 
+static unsigned int power_cost_at_freq(int cpu, unsigned int freq)
+{
+	return 1;
+}
+
 static inline int mostly_idle_cpu(int cpu)
 {
 	return 0;
@@ -4626,6 +4631,7 @@ static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
 #define LBF_ALL_PINNED	0x01
 #define LBF_NEED_BREAK	0x02
+#define LBF_SOME_PINNED 0x04
 
 struct lb_env {
 	struct sched_domain	*sd;
@@ -4636,6 +4642,8 @@ struct lb_env {
 	int			dst_cpu;
 	struct rq		*dst_rq;
 
+	struct cpumask		*dst_grpmask;
+	int			new_dst_cpu;
 	enum cpu_idle_type	idle;
 	long			imbalance;
 	/* The set of CPUs under consideration for load-balancing */
@@ -4715,9 +4723,31 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 		return 0;
 
 	if (!cpumask_test_cpu(env->dst_cpu, tsk_cpus_allowed(p))) {
+		int new_dst_cpu;
+
 		schedstat_inc(p, se.statistics.nr_failed_migrations_affine);
+
+		/*
+		 * Remember if this task can be migrated to any other cpu in
+		 * our sched_group. We may want to revisit it if we couldn't
+		 * meet load balance goals by pulling other tasks on src_cpu.
+		 *
+		 * Also avoid computing new_dst_cpu if we have already computed
+		 * one in current iteration.
+		 */
+		if (!env->dst_grpmask || (env->flags & LBF_SOME_PINNED))
+			return 0;
+
+		new_dst_cpu = cpumask_first_and(env->dst_grpmask,
+						tsk_cpus_allowed(p));
+		if (new_dst_cpu < nr_cpu_ids) {
+			env->flags |= LBF_SOME_PINNED;
+			env->new_dst_cpu = new_dst_cpu;
+		}
 		return 0;
 	}
+
+	/* Record that we found atleast one task that could run on dst_cpu */
 	env->flags &= ~LBF_ALL_PINNED;
 
 	if (task_running(env->src_rq, p)) {
@@ -5924,8 +5954,43 @@ more_balance:
 		/*
 		 * some other cpu did the load balance for us.
 		 */
-		if (ld_moved && this_cpu != smp_processor_id())
-			resched_cpu(this_cpu);
+		if (cur_ld_moved && env.dst_cpu != smp_processor_id())
+			resched_cpu(env.dst_cpu);
+
+		/*
+		 * Revisit (affine) tasks on src_cpu that couldn't be moved to
+		 * us and move them to an alternate dst_cpu in our sched_group
+		 * where they can run. The upper limit on how many times we
+		 * iterate on same src_cpu is dependent on number of cpus in our
+		 * sched_group.
+		 *
+		 * This changes load balance semantics a bit on who can move
+		 * load to a given_cpu. In addition to the given_cpu itself
+		 * (or a ilb_cpu acting on its behalf where given_cpu is
+		 * nohz-idle), we now have balance_cpu in a position to move
+		 * load to given_cpu. In rare situations, this may cause
+		 * conflicts (balance_cpu and given_cpu/ilb_cpu deciding
+		 * _independently_ and at _same_ time to move some load to
+		 * given_cpu) causing exceess load to be moved to given_cpu.
+		 * This however should not happen so much in practice and
+		 * moreover subsequent load balance cycles should correct the
+		 * excess load moved.
+		 */
+		if ((env.flags & LBF_SOME_PINNED) && env.imbalance > 0 &&
+				lb_iterations++ < max_lb_iterations) {
+
+			this_rq		 = cpu_rq(env.new_dst_cpu);
+			env.dst_rq	 = this_rq;
+			env.dst_cpu	 = env.new_dst_cpu;
+			env.flags	&= ~LBF_SOME_PINNED;
+			env.loop	 = 0;
+			env.loop_break	 = sched_nr_migrate_break;
+			/*
+			 * Go back to "more_balance" rather than "redo" since we
+			 * need to continue with same src_cpu.
+			 */
+			goto more_balance;
+		}
 
 		if (env.flags & LBF_NEED_BREAK) {
 			env.flags &= ~LBF_NEED_BREAK;
@@ -6055,18 +6120,46 @@ int idle_balance(struct rq *this_rq)
 	unsigned long next_balance = jiffies + HZ;
 	u64 curr_cost = 0;
 	int this_cpu = this_rq->cpu;
+	int i, cost;
+	int min_power = INT_MAX;
+	int balance_cpu = -1;
+	struct rq *balance_rq = NULL;
 
 	if (this_rq->avg_idle < this_rq->max_idle_balance_cost)
 		return 0;
+
+	/* If this CPU is not the most power-efficient idle CPU in the
+	 * lowest level domain, run load balance on behalf of that
+	 * most power-efficient idle CPU. */
+	rcu_read_lock();
+	sd = rcu_dereference_check_sched_domain(this_rq->sd);
+	if (sd && sysctl_sched_enable_power_aware) {
+		for_each_cpu(i, sched_domain_span(sd)) {
+			if (i == this_cpu || idle_cpu(i)) {
+				cost = power_cost_at_freq(i, 0);
+				if (cost < min_power) {
+					min_power = cost;
+					balance_cpu = i;
+				}
+			}
+		}
+		BUG_ON(balance_cpu == -1);
+
+	} else {
+		balance_cpu = this_cpu;
+	}
+	rcu_read_unlock();
+	balance_rq = cpu_rq(balance_cpu);
+
 
 	/*
 	 * Drop the rq->lock, but keep IRQ/preempt disabled.
 	 */
 	raw_spin_unlock(&this_rq->lock);
 
-	update_blocked_averages(this_cpu);
+	update_blocked_averages(balance_cpu);
 	rcu_read_lock();
-	for_each_domain(this_cpu, sd) {
+	for_each_domain(balance_cpu, sd) {
 		unsigned long interval;
 		int continue_balancing = 1;
 		u64 t0, domain_cost;
@@ -6115,7 +6208,8 @@ int idle_balance(struct rq *this_rq)
 	if (this_rq->nr_running && !pulled_task)
 		return 1;
 
-	if (!pulled_task || time_after(jiffies, this_rq->next_balance)) {
+	if (balance_cpu == this_cpu &&
+	    (!pulled_task || time_after(jiffies, this_rq->next_balance))) {
 		/*
 		 * We are going idle. next_balance may be set based on
 		 * a busy processor. So reset next_balance.
