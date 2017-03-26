@@ -4720,7 +4720,7 @@ void init_idle(struct task_struct *idle, int cpu)
 #if defined(CONFIG_SMP)
 	sprintf(idle->comm, "%s/%d", INIT_TASK_COMM, cpu);
 #endif
-	check_for_migration(rq, curr);
+	check_for_migration(rq, rq->curr);
 }
 
 #ifdef CONFIG_SMP
