@@ -6854,7 +6854,7 @@ void __init sched_init_smp(void)
  * Maximum possible frequency across all cpus. Task demand and cpu
  * capacity (cpu_power) metrics are scaled in reference to it.
  */
-unsigned int max_possible_freq = 1;
+unsigned int max_possible_freq = 0;
 
 /*
  * Minimum possible max_freq across all cpus. This will be same as
@@ -6862,7 +6862,7 @@ unsigned int max_possible_freq = 1;
  * max_possible_freq on heterogenous systems. min_max_freq is used to derive
  * capacity (cpu_power) of cpus.
  */
-unsigned int min_max_freq = 1;
+unsigned int min_max_freq = 0;
 
 static int cpufreq_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
