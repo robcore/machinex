@@ -1030,7 +1030,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 		atomic_notifier_call_chain(&task_migration_notifier, 0, &tmn);
 
 		if (p->state == TASK_RUNNING)
-			update_task_ravg(p, task_rq(p), 1);
+			update_task_ravg(p, task_rq(p), 0);
 	}
 
 	__set_task_cpu(p, new_cpu);
@@ -2682,7 +2682,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq, prev);
 		if (likely(p)) {
-			update_task_ravg(p, rq, 1);
+			update_task_ravg(p, rq, 0);
 			return p;
 		}
 	}
@@ -2690,7 +2690,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 	for_each_class(class) {
 		p = class->pick_next_task(rq, prev);
 		if (p) {
-			update_task_ravg(p, rq, 1);
+			update_task_ravg(p, rq, 0);
 			return p;
 		}
 	}
