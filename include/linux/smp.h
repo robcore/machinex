@@ -106,6 +106,7 @@ void kick_all_cpus_sync(void);
 /*
  * Generic and arch helpers
  */
+#ifdef CONFIG_USE_GENERIC_SMP_HELPERS
 void __init call_function_init(void);
 void generic_smp_call_function_single_interrupt(void);
 void ipi_call_lock(void);
@@ -114,6 +115,9 @@ void ipi_call_lock_irq(void);
 void ipi_call_unlock_irq(void);
 #define generic_smp_call_function_interrupt \
 	generic_smp_call_function_single_interrupt
+#else
+static inline void call_function_init(void) { }
+#endif
 
 /*
  * Mark the boot cpu "online" so that it can call console drivers in

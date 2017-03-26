@@ -86,32 +86,6 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 power_attr(pm_async);
 
-/* See suspend.c for details. */
-int relative_states = 0;
-
-static ssize_t relative_states_show(struct kobject *kobj, struct kobj_attribute *attr,
-			     char *buf)
-{
-	return sprintf(buf, "%d\n", relative_states);
-}
-
-static ssize_t relative_states_store(struct kobject *kobj, struct kobj_attribute *attr,
-			      const char *buf, size_t n)
-{
-	unsigned long val;
-
-	if (kstrtoul(buf, 10, &val))
-		return -EINVAL;
-
-	if (val > 1)
-		return -EINVAL;
-
-	relative_states = val;
-	return n;
-}
-
-power_attr(relative_states);
-
 static ssize_t
 touch_event_show(struct kobject *kobj,
 		 struct kobj_attribute *attr, char *buf)
@@ -765,7 +739,6 @@ static struct attribute * g[] = {
 #endif
 #ifdef CONFIG_PM_SLEEP
 	&pm_async_attr.attr,
-	&relative_states_attr.attr,
 	&wakeup_count_attr.attr,
 	&touch_event_attr.attr,
 	&touch_event_timer_attr.attr,

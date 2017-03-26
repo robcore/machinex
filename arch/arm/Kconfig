@@ -1596,6 +1596,7 @@ config SMP
 	depends on GENERIC_CLOCKEVENTS
 	depends on HAVE_SMP
 	depends on MMU
+	select USE_GENERIC_SMP_HELPERS
 	select HAVE_ARM_SCU
 	help
 	  This enables support for systems with more than one CPU. If you have
@@ -1716,7 +1717,7 @@ config NR_CPUS
 
 config HOTPLUG_CPU
 	bool "Support for hot-pluggable CPUs"
-	depends on SMP
+	depends on SMP && HOTPLUG
 	help
 	  Say Y here to experiment with turning CPUs off and on.  CPUs
 	  can be controlled through /sys/devices/system/cpu.
