@@ -4578,6 +4578,7 @@ static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 #define LBF_NEED_BREAK	0x02
 #define LBF_SOME_PINNED 0x04
 #define LBF_IGNORE_SMALL_TASKS 0x08
+#define LBF_PWR_ACTIVE_BALANCE 0x10
 
 struct lb_env {
 	struct sched_domain	*sd;
@@ -5879,6 +5880,9 @@ DEFINE_PER_CPU(cpumask_var_t, load_balance_mask);
 static int need_active_balance(struct lb_env *env)
 {
 	struct sched_domain *sd = env->sd;
+
+	if (env->flags & LBF_PWR_ACTIVE_BALANCE)
+		return 1;
 
 	if (env->flags & LBF_PWR_ACTIVE_BALANCE)
 		return 1;
