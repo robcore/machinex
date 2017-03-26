@@ -11,13 +11,12 @@
 #include <linux/list.h>
 #include <linux/cpumask.h>
 #include <linux/init.h>
-#include <linux/llist.h>
 
 extern void cpu_idle(void);
 
 typedef void (*smp_call_func_t)(void *info);
 struct call_single_data {
-	struct llist_node llist;
+	struct list_head list;
 	smp_call_func_t func;
 	void *info;
 	u16 flags;
@@ -49,8 +48,6 @@ void on_each_cpu_mask(const struct cpumask *mask, smp_call_func_t func,
 void on_each_cpu_cond(bool (*cond_func)(int cpu, void *info),
 		smp_call_func_t func, void *info, bool wait,
 		gfp_t gfp_flags);
-
-int smp_call_function_single_async(int cpu, struct call_single_data *csd);
 
 #ifdef CONFIG_SMP
 
@@ -98,6 +95,9 @@ int smp_call_function(smp_call_func_t func, void *info, int wait);
 void smp_call_function_many(const struct cpumask *mask,
 			    smp_call_func_t func, void *info, bool wait);
 
+void __smp_call_function_single(int cpuid, struct call_single_data *data,
+				int wait);
+
 int smp_call_function_any(const struct cpumask *mask,
 			  smp_call_func_t func, void *info, int wait);
 
@@ -106,10 +106,18 @@ void kick_all_cpus_sync(void);
 /*
  * Generic and arch helpers
  */
+#ifdef CONFIG_USE_GENERIC_SMP_HELPERS
 void __init call_function_init(void);
 void generic_smp_call_function_single_interrupt(void);
+void ipi_call_lock(void);
+void ipi_call_unlock(void);
+void ipi_call_lock_irq(void);
+void ipi_call_unlock_irq(void);
 #define generic_smp_call_function_interrupt \
 	generic_smp_call_function_single_interrupt
+#else
+static inline void call_function_init(void) { }
+#endif
 
 /*
  * Mark the boot cpu "online" so that it can call console drivers in
@@ -183,9 +191,6 @@ static inline void kick_all_cpus_sync(void) {  }
  * boot command line:
  */
 extern void arch_disable_smp_support(void);
-
-extern void arch_enable_nonboot_cpus_begin(void);
-extern void arch_enable_nonboot_cpus_end(void);
 
 void smp_setup_processor_id(void);
 
