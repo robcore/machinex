@@ -4155,9 +4155,6 @@ long sched_getaffinity(pid_t pid, struct cpumask *mask)
 	unsigned long flags;
 	int retval;
 
-	if (attr.sched_policy < 0)
-		return -EINVAL;
-
 	rcu_read_lock();
 
 	retval = -ESRCH;
