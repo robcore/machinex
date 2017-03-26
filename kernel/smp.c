@@ -252,34 +252,11 @@ EXPORT_SYMBOL(smp_call_function_single);
  * pre-allocated data structure. Useful for embedding @data inside
  * other structures, for instance.
  */
-int __smp_call_function_single(int cpu, struct call_single_data *csd, int wait)
+int __smp_call_function_single(int cpu, struct call_single_data *csd)
 {
-	unsigned int this_cpu;
-	unsigned long flags;
-	int err = 0;
-
-	this_cpu = get_cpu();
-
-	if (cpu == this_cpu) {
-		local_irq_save(flags);
-		csd->func(csd->info);
-		local_irq_restore(flags);
-	} else if ((unsigned)cpu < nr_cpu_ids && cpu_online(cpu)) {
-		/*
-		 * Can deadlock when called with interrupts disabled.
-		 * We allow cpu's that are not yet online though, as no one else
-		 * can send smp call function interrupt to this cpu and as such
-		 * deadlocks can't happen.
-		 */
-		WARN_ON_ONCE(cpu_online(smp_processor_id()) && wait
-			     && irqs_disabled() && !oops_in_progress);
-
-		csd_lock(csd);
-		generic_exec_single(cpu, csd, wait);
-	} else {
-		err = -ENXIO;	/* CPU not online */
-	}
-	put_cpu();
+	preempt_disable();
+	err = generic_exec_single(cpu, csd);
+	preempt_enable();
 	return err;
 }
 EXPORT_SYMBOL_GPL(__smp_call_function_single);

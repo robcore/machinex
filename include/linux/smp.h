@@ -99,7 +99,7 @@ int smp_call_function(smp_call_func_t func, void *info, int wait);
 void smp_call_function_many(const struct cpumask *mask,
 			    smp_call_func_t func, void *info, bool wait);
 
-int __smp_call_function_single(int cpu, struct call_single_data *csd, int wait);
+int __smp_call_function_single(int cpu, struct call_single_data *csd);
 
 int smp_call_function_any(const struct cpumask *mask,
 			  smp_call_func_t func, void *info, int wait);
