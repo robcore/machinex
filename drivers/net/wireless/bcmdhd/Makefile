@@ -3,6 +3,9 @@
 # SDIO Basic feature
 #####################
 
+# GCC 4.8 + fix
+CFLAGS_dhd_linux.o += -Wframe-larger-than=1100
+
 DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER             \
         -DBCMDONGLEHOST -DUNRELEASEDCHIP -DBCMDMA32 -DBCMFILEIMAGE            \
         -DDHDTHREAD -DBDC -DOOB_INTR_ONLY                \
