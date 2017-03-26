@@ -86,8 +86,8 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 power_attr(pm_async);
 
-/* If set, devices may be suspended and resumed asynchronously. */
-extern int relative_states;
+/* See suspend.c for details. */
+int relative_states = 0;
 
 static ssize_t relative_states_show(struct kobject *kobj, struct kobj_attribute *attr,
 			     char *buf)

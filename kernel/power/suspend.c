@@ -94,7 +94,7 @@ static bool valid_state(suspend_state_t state)
  * Machinex update: configurable at runtime in /sys/power/relative_states
  * See main.c in this directory for the ksysfs interface setup.
  */
-int relative_states = 0;
+extern int relative_states;
 
 /**
  * suspend_set_ops - Set the global suspend method table.
