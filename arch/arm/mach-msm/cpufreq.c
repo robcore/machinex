@@ -36,6 +36,8 @@
 #include <linux/sched/rt.h>
 #include <linux/cpufreq_hardlimit.h>
 
+#include "acpuclock.h"
+
 static DEFINE_MUTEX(l2bw_lock);
 
 static struct clk *cpu_clk[NR_CPUS];
@@ -43,8 +45,8 @@ static struct clk *l2_clk;
 static unsigned int freq_index[NR_CPUS];
 static struct cpufreq_frequency_table *freq_table;
 static unsigned int *l2_khz;
+static bool is_clk;
 static bool is_sync;
-static bool hotplug_ready;
 static struct msm_bus_vectors *bus_vec_lst;
 static struct msm_bus_scale_pdata bus_bw = {
 	.name = "msm-cpufreq",
@@ -120,7 +122,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpufreq_freqs freqs;
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
-	unsigned long rate;
 	struct cpufreq_frequency_table *table;
 
 	if (limit->limits_init) {
@@ -147,7 +148,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 
 	/*
 	 * Put the caller into SCHED_FIFO priority to avoid cpu starvation
-	 * while increasing frequencies
+	 * in the acpuclk_set_rate path while increasing frequencies
 	 */
 
 	if (freqs.new > freqs.old && current->policy != SCHED_FIFO) {
@@ -158,14 +159,20 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
-	rate = new_freq * 1000;
-	rate = clk_round_rate(cpu_clk[policy->cpu], rate);
-	ret = clk_set_rate(cpu_clk[policy->cpu], rate);
-	if (!ret) {
-		freq_index[policy->cpu] = index;
-		update_l2_bw(NULL);
-		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+	if (is_clk) {
+		unsigned long rate = new_freq * 1000;
+		rate = clk_round_rate(cpu_clk[policy->cpu], rate);
+		ret = clk_set_rate(cpu_clk[policy->cpu], rate);
+		if (!ret) {
+			freq_index[policy->cpu] = index;
+			update_l2_bw(NULL);
+		}
+	} else {
+		ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
 	}
+
+	if (!ret)
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	/* Restore priority after clock ramp-up */
 	if (freqs.new > freqs.old && saved_sched_policy >= 0) {
@@ -246,7 +253,13 @@ static int msm_cpufreq_verify(struct cpufreq_policy *policy)
 
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
-	return clk_get_rate(cpu_clk[cpu]) / 1000;
+	if (is_clk && is_sync)
+		cpu = 0;
+
+	if (is_clk)
+		return clk_get_rate(cpu_clk[cpu]) / 1000;
+
+	return acpuclk_get_rate(cpu);
 }
 
 static inline int msm_cpufreq_limits_init(void)
@@ -328,8 +341,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * be changed independently. Each cpu is bound to
 	 * same frequency. Hence set the cpumask to all cpu.
 	 */
- 	if (cpu_is_msm8625() || cpu_is_msm8625q() || cpu_is_msm8226()
-		|| cpu_is_msm8610() || is_sync)
+	if (is_sync)
 		cpumask_setall(policy->cpus);
 
 	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
@@ -337,7 +349,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	init_completion(&cpu_work->complete);
 
 	/* synchronous cpus share the same policy */
-	if (!cpu_clk[policy->cpu])
+	if (is_clk && !cpu_clk[policy->cpu])
 		return 0;
 
 
@@ -360,7 +372,10 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->max = check_cpufreq_hardlimit(policy->max);
 #endif
 
-	cur_freq = clk_get_rate(cpu_clk[policy->cpu])/1000;
+	if (is_clk)
+		cur_freq = clk_get_rate(cpu_clk[policy->cpu])/1000;
+	else
+		cur_freq = acpuclk_get_rate(policy->cpu);
 
 	if (cpufreq_frequency_table_target(policy, table, cur_freq,
 	    CPUFREQ_RELATION_H, &index) &&
@@ -383,6 +398,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->cur = table[index].frequency;
 
+	policy->cpuinfo.transition_latency =
+		acpuclk_get_switch_time() * NSEC_PER_USEC;
+
 	return 0;
 }
 
@@ -392,44 +410,44 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 	unsigned int cpu = (unsigned long)hcpu;
 	int rc;
 
-	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready)
-		return NOTIFY_BAD;
-
 	switch (action & ~CPU_TASKS_FROZEN) {
 	/*
 	 * Scale down clock/power of CPU that is dead and scale it back up
 	 * before the CPU is brought up.
 	 */
 	case CPU_DEAD:
-		clk_disable_unprepare(cpu_clk[cpu]);
-		clk_disable_unprepare(l2_clk);
-		update_l2_bw(NULL);
+		if (is_clk) {
+			clk_disable_unprepare(cpu_clk[cpu]);
+			clk_disable_unprepare(l2_clk);
+			update_l2_bw(NULL);
+		}
 		break;
 	case CPU_UP_CANCELED:
-		clk_unprepare(cpu_clk[cpu]);
-		clk_unprepare(l2_clk);
-		update_l2_bw(NULL);
+		if (is_clk) {
+			clk_unprepare(cpu_clk[cpu]);
+			clk_unprepare(l2_clk);
+			update_l2_bw(NULL);
+		}
 		break;
 	case CPU_UP_PREPARE:
-		rc = clk_prepare(l2_clk);
-		if (rc < 0)
-			return NOTIFY_BAD;
-		rc = clk_prepare(cpu_clk[cpu]);
-		if (rc < 0) {
-			clk_unprepare(l2_clk);
-			return NOTIFY_BAD;
+		if (is_clk) {
+			rc = clk_prepare(l2_clk);
+			if (rc < 0)
+				return NOTIFY_BAD;
+			rc = clk_prepare(cpu_clk[cpu]);
+			if (rc < 0)
+				return NOTIFY_BAD;
+			update_l2_bw(&cpu);
 		}
-		update_l2_bw(&cpu);
 		break;
 	case CPU_STARTING:
-		rc = clk_enable(l2_clk);
-		if (rc < 0)
-			return NOTIFY_BAD;
-		rc = clk_enable(cpu_clk[cpu]);
-		if (rc) {
-			clk_disable(l2_clk);
-			return NOTIFY_BAD;
+		if (is_clk) {
+			rc = clk_enable(l2_clk);
+			if (rc < 0)
+				return NOTIFY_BAD;
+			rc = clk_enable(cpu_clk[cpu]);
+			if (rc < 0)
+				return NOTIFY_BAD;
 		}
 		break;
 	default:
@@ -679,7 +697,6 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 
 	if (!cpu_clk[0])
 		return -ENODEV;
-	hotplug_ready = true;
 
 	ret = cpufreq_parse_dt(dev);
 	if (ret)
@@ -695,6 +712,7 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 			dev_warn(dev, "Unable to register bus client\n");
 	}
 
+	is_clk = true;
 	return 0;
 }
 
@@ -713,33 +731,18 @@ static struct platform_driver msm_cpufreq_plat_driver = {
 
 static int __init msm_cpufreq_register(void)
 {
-	int cpu, rc;
+	int cpu;
 
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(cpufreq_suspend, cpu).suspend_mutex));
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 	}
 
-	rc = platform_driver_probe(&msm_cpufreq_plat_driver,
-				   msm_cpufreq_probe);
-	if (rc < 0) {
-		/* Unblock hotplug if msm-cpufreq probe fails */
-		unregister_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
-		for_each_possible_cpu(cpu)
-			mutex_destroy(&(per_cpu(cpufreq_suspend, cpu).
-					suspend_mutex));
-		return rc;
-	}
+	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
 	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI, 0);
 	register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
-device_initcall(msm_cpufreq_register);
-
-static int __init msm_cpufreq_early_register(void)
-{
-	return register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
-}
-core_initcall(msm_cpufreq_early_register);
+late_initcall(msm_cpufreq_register);
