@@ -371,8 +371,10 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 		trace_cpu_frequency(freqs->new, freqs->cpu);
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
-		if (likely(policy) && likely(policy->cpu == freqs->cpu))
+		if (likely(policy) && likely(policy->cpu == freqs->cpu)) {
 			policy->cur = freqs->new;
+			sysfs_notify(policy->kobj, NULL, "scaling_cur_freq");
+		}
 		break;
 	}
 }
@@ -1123,7 +1125,7 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 
 	unlock_policy_rwsem_write(cpu);
 
-	ret = sysfs_create_link(&dev->kobj, policy->kobj, "cpufreq");
+	ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
 	if (ret) {
 		cpufreq_cpu_put(policy);
 		return ret;
@@ -1144,12 +1146,12 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
  */
 static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 {
-	unsigned int j, cpu = dev->id;
-	int ret = -ENOMEM, found = 0;
+	unsigned int cpu = dev->id;
+	int ret = 0, found = 0;
 	struct cpufreq_policy *policy;
 	unsigned long flags;
+	unsigned int j;
 #ifdef CONFIG_HOTPLUG_CPU
-	struct cpufreq_governor *gov;
 	int sibling;
 #endif
 
@@ -1166,15 +1168,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		cpufreq_cpu_put(policy);
 		return 0;
 	}
-
-#ifdef CONFIG_HOTPLUG_CPU
-	/* Check if this cpu was hot-unplugged earlier and has siblings */
-	for_each_online_cpu(sibling) {
-		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
-		if (cp && cpumask_test_cpu(cpu, cp->related_cpus))
-			return cpufreq_add_policy_cpu(cpu, sibling, dev);
-	}
-#endif
 #endif
 
 	if (!try_module_get(cpufreq_driver->owner)) {
@@ -1182,6 +1175,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		goto module_out;
 	}
 
+	ret = -ENOMEM;
 	policy = kzalloc(sizeof(struct cpufreq_policy), GFP_KERNEL);
 	if (!policy)
 		goto nomem_out;
@@ -1232,9 +1226,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		goto err_unlock_policy;
 	}
 
-	/* related cpus should atleast have policy->cpus */
-	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
-
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
 	 * managing offline cpus here.
@@ -1252,14 +1243,14 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 
 	policy->kobj = &cpu_sysnode[cpu].cpu_kobj;
 
-#ifdef CONFIG_HOTPLUG_CPU
-	gov = __find_governor(per_cpu(cpufreq_policy_save, cpu).gov);
-	if (gov) {
-		policy->governor = gov;
-		pr_debug("Restoring governor %s for cpu %d\n",
-		       policy->governor->name, cpu);
+	ret = cpufreq_add_dev_policy(cpu, policy, dev);
+	if (ret) {
+		if (ret > 0)
+			/* This is a managed cpu, symlink created,
+			   exit with 0 */
+			ret = 0;
+		goto err_unlock_policy;
 	}
-#endif
 
 	ret = cpufreq_add_dev_interface(cpu, policy, dev);
 	if (ret)
@@ -1298,6 +1289,42 @@ module_out:
 	return ret;
 }
 
+#ifdef CONFIG_HOTPLUG_CPU
+static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
+				  struct device *dev)
+{
+	struct cpufreq_policy *policy;
+	int ret = 0;
+	unsigned long flags;
+
+	policy = cpufreq_cpu_get(sibling);
+	WARN_ON(!policy);
+
+	per_cpu(cpufreq_policy_cpu, cpu) = policy->cpu;
+
+	lock_policy_rwsem_write(cpu);
+
+	__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
+
+	spin_lock_irqsave(&cpufreq_driver_lock, flags);
+	cpumask_set_cpu(cpu, policy->cpus);
+	per_cpu(cpufreq_cpu_data, cpu) = policy;
+	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
+
+	__cpufreq_governor(policy, CPUFREQ_GOV_START);
+	__cpufreq_governor(policy, CPUFREQ_GOV_LIMITS);
+
+	unlock_policy_rwsem_write(cpu);
+
+	ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
+	if (ret) {
+		cpufreq_cpu_put(policy);
+		return ret;
+	}
+
+	return 0;
+}
+#endif
 
 /**
  * __cpufreq_remove_dev - remove a CPU device
@@ -1346,6 +1373,15 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 		sysfs_remove_link(kobj, "cpufreq");
 		return 0;
 	}
+
+#ifdef CONFIG_HOTPLUG_CPU
+	/* Check if this cpu was hot-unplugged earlier and has siblings */
+	for_each_online_cpu(sibling) {
+		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
+		if (cp && cpumask_test_cpu(cpu, cp->related_cpus))
+			return cpufreq_add_policy_cpu(cpu, sibling, dev);
+	}
+#endif
 #endif
 
 #ifdef CONFIG_SMP
@@ -2051,6 +2087,9 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	/* adjust if necessary - hardware incompatibility*/
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_INCOMPATIBLE, new_policy);
+
+	/* related cpus should atleast have policy->cpus */
+	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
 
 	/*
 	 * verify the cpu speed can be set within this limit, which might be
