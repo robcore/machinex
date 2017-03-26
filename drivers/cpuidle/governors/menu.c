@@ -122,8 +122,9 @@ struct menu_device {
 	int		last_state_idx;
 	int             needs_update;
 
-	unsigned int	next_timer_us;
+	unsigned int	expected_us;
 	unsigned int	predicted_us;
+	unsigned int	exit_us;
 	unsigned int	bucket;
 	unsigned int	correction_factor[BUCKETS];
 	unsigned int	intervals[INTERVALS];
@@ -205,7 +206,7 @@ static void detect_repeating_patterns(struct menu_device *data)
 	avg = avg / INTERVALS;
 
 	/* if the avg is beyond the known next tick, it's worthless */
-	if (avg > data->next_timer_us)
+	if (avg > data->expected_us)
 		return;
 
 	for (i = 0; i < INTERVALS; i++)
@@ -233,7 +234,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	struct menu_device *data = &__get_cpu_var(menu_devices);
 	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
 	int i;
-	unsigned int interactivity_req;
+	int multiplier;
 	struct timespec t;
 
 	if (data->needs_update) {
@@ -242,6 +243,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	}
 
 	data->last_state_idx = 0;
+	data->exit_us = 0;
 
 	/* Special case when user has set very strict latency requirement */
 	if (unlikely(latency_req == 0))
@@ -249,11 +251,13 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 
 	/* determine the expected residency time, round up */
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-	data->next_timer_us =
+	data->expected_us =
 		t.tv_sec * USEC_PER_SEC + t.tv_nsec / NSEC_PER_USEC;
 
 
-	data->bucket = which_bucket(data->next_timer_us);
+	data->bucket = which_bucket(data->expected_us);
+
+	multiplier = performance_multiplier();
 
 	/*
 	 * if the correction factor is 0 (eg first time init or cpu hotplug
@@ -267,26 +271,17 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	 * operands are 32 bits.
 	 * Make sure to round up for half microseconds.
 	 */
-	data->predicted_us = div_round64((uint64_t)data->next_timer_us *
+	data->predicted_us = div_round64((uint64_t)data->expected_us *
 					 data->correction_factor[data->bucket],
 					 RESOLUTION * DECAY);
 
 	detect_repeating_patterns(data);
 
 	/*
-	 * Performance multiplier defines a minimum predicted idle
-	 * duration / latency ratio. Adjust the latency limit if
-	 * necessary.
-	 */
-	interactivity_req = data->predicted_us / performance_multiplier();
-	if (latency_req > interactivity_req)
-		latency_req = interactivity_req;
-
-	/*
 	 * We want to default to C1 (hlt), not to busy polling
 	 * unless the timer is happening really really soon.
 	 */
-	if (data->next_timer_us > 5 &&
+	if (data->expected_us > 5 &&
 	    !drv->states[CPUIDLE_DRIVER_STATE_START].disabled &&
 		dev->states_usage[CPUIDLE_DRIVER_STATE_START].disable == 0)
 		data->last_state_idx = CPUIDLE_DRIVER_STATE_START;
@@ -305,8 +300,11 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 			continue;
 		if (s->exit_latency > latency_req)
 			continue;
+		if (s->exit_latency * multiplier > data->predicted_us)
+			continue;
 
 		data->last_state_idx = i;
+		data->exit_us = s->exit_latency;
 	}
 
 	return data->last_state_idx;
@@ -337,47 +335,36 @@ static void menu_update(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 {
 	struct menu_device *data = &__get_cpu_var(menu_devices);
 	int last_idx = data->last_state_idx;
+	unsigned int last_idle_us = cpuidle_get_last_residency(dev);
 	struct cpuidle_state *target = &drv->states[last_idx];
 	unsigned int measured_us;
 	unsigned int new_factor;
 
 	/*
-	 * Try to figure out how much time passed between entry to low
-	 * power state and occurrence of the wakeup event.
-	 *
-	 * If the entered idle state didn't support residency measurements,
-	 * we are basically lost in the dark how much time passed.
-	 * As a compromise, assume we slept for the whole expected time.
-	 *
-	 * Any measured amount of time will include the exit latency.
-	 * Since we are interested in when the wakeup begun, not when it
-	 * was completed, we must substract the exit latency. However, if
-	 * the measured amount of time is less than the exit latency,
-	 * assume the state was never reached and the exit latency is 0.
+	 * Ugh, this idle state doesn't support residency measurements, so we
+	 * are basically lost in the dark.  As a compromise, assume we slept
+	 * for the whole expected time.
 	 */
-	if (unlikely(!(target->flags & CPUIDLE_FLAG_TIME_VALID))) {
-		/* Use timer value as is */
-		measured_us = data->next_timer_us;
+	if (unlikely(!(target->flags & CPUIDLE_FLAG_TIME_VALID)))
+		last_idle_us = data->expected_us;
 
-	} else {
-		/* Use measured value */
-		measured_us = cpuidle_get_last_residency(dev);
 
-		/* Deduct exit latency */
-		if (measured_us > target->exit_latency)
-			measured_us -= target->exit_latency;
+	measured_us = last_idle_us;
 
-		/* Make sure our coefficients do not exceed unity */
-		if (measured_us > data->next_timer_us)
-			measured_us = data->next_timer_us;
-	}
+	/*
+	 * We correct for the exit latency; we are assuming here that the
+	 * exit latency happens after the event that we're interested in.
+	 */
+	if (measured_us > data->exit_us)
+		measured_us -= data->exit_us;
+
 
 	/* Update our correction ratio */
 	new_factor = data->correction_factor[data->bucket];
 	new_factor -= new_factor / DECAY;
 
-	if (data->next_timer_us > 0 && measured_us < MAX_INTERESTING)
-		new_factor += RESOLUTION * measured_us / data->next_timer_us;
+	if (data->expected_us > 0 && measured_us < MAX_INTERESTING)
+		new_factor += RESOLUTION * measured_us / data->expected_us;
 	else
 		/*
 		 * we were idle so long that we count it as a perfect
@@ -397,7 +384,7 @@ static void menu_update(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	data->correction_factor[data->bucket] = new_factor;
 
 	/* update the repeating-pattern data */
-	data->intervals[data->interval_ptr++] = measured_us;
+	data->intervals[data->interval_ptr++] = last_idle_us;
 	if (data->interval_ptr >= INTERVALS)
 		data->interval_ptr = 0;
 }

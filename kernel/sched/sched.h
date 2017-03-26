@@ -598,26 +598,13 @@ struct rq {
 	u64 max_idle_balance_cost;
 #endif
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 	/*
 	 * max_freq = user or thermal defined maximum
 	 * max_possible_freq = maximum supported by hardware
 	 */
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
-	struct cpumask freq_domain_cpumask;
-
 	u64 cumulative_runnable_avg;
-	int efficiency; /* Differentiate cpus with different IPC capability */
-	int load_scale_factor;
-	int capacity;
-	u64 window_start;
-
-	unsigned int curr_runnable_sum;
-	unsigned int prev_runnable_sum;
-#endif
-
-#ifdef CONFIG_SCHED_HMP
-	int nr_small_tasks, nr_big_tasks;
 #endif
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
@@ -765,54 +752,28 @@ extern int group_balance_cpu(struct sched_group *sg);
 #include "stats.h"
 #include "auto_group.h"
 
-extern void init_new_task_load(struct task_struct *p);
-
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 
 extern unsigned int sched_ravg_window;
-extern unsigned int sched_use_pelt;
 extern unsigned int max_possible_freq;
 extern unsigned int min_max_freq;
 extern unsigned int pct_task_load(struct task_struct *p);
-extern unsigned int max_possible_efficiency;
-extern unsigned int min_possible_efficiency;
-extern unsigned int max_capacity;
-extern unsigned int min_capacity;
-extern unsigned long capacity_scale_cpu_efficiency(int cpu);
-extern unsigned long capacity_scale_cpu_freq(int cpu);
-extern unsigned int sched_mostly_idle_load;
-extern unsigned int sched_small_task;
-extern unsigned int sched_upmigrate;
-extern unsigned int sched_downmigrate;
-extern unsigned int sched_init_task_load_pelt;
-extern unsigned int sched_init_task_load_windows;
-extern void fixup_nr_big_small_task(int cpu);
-
-u64 scale_task_load(u64 load, int cpu);
-unsigned int max_task_load(void);
+extern void init_new_task_load(struct task_struct *p);
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
-	if (sched_use_pelt)
-		rq->cumulative_runnable_avg +=
-				p->se.avg.runnable_avg_sum_scaled;
-	else
-		rq->cumulative_runnable_avg += p->ravg.demand;
+	rq->cumulative_runnable_avg += p->ravg.demand;
 }
 
 static inline void
 dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
-	if (sched_use_pelt)
-		rq->cumulative_runnable_avg -=
-				p->se.avg.runnable_avg_sum_scaled;
-	else
-		rq->cumulative_runnable_avg -= p->ravg.demand;
+	rq->cumulative_runnable_avg -= p->ravg.demand;
 	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
 }
 
-#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else	/* CONFIG_SCHED_FREQ_INPUT */
 
 static inline int pct_task_load(struct task_struct *p) { return 0; }
 
@@ -826,45 +787,9 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
 }
 
-static inline unsigned long capacity_scale_cpu_efficiency(int cpu)
-{
-	return SCHED_LOAD_SCALE;
-}
+static inline void init_new_task_load(struct task_struct *p) { }
 
-static inline unsigned long capacity_scale_cpu_freq(int cpu)
-{
-	return SCHED_LOAD_SCALE;
-}
-
-#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
-
-#ifdef CONFIG_SCHED_HMP
-
-int mostly_idle_cpu(int cpu);
-extern void check_for_migration(struct rq *rq, struct task_struct *p);
-extern void pre_big_small_task_count_change(void);
-extern void post_big_small_task_count_change(void);
-extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
-extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
-extern void set_hmp_defaults(void);
-extern unsigned int power_cost_at_freq(int cpu, unsigned int freq);
-
-#else /* CONFIG_SCHED_HMP */
-
-static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
-static inline void pre_big_small_task_count_change(void) { }
-static inline void post_big_small_task_count_change(void) { }
-static inline void set_hmp_defaults(void) { }
-
-static inline void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
-{
-}
-
-static inline void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
-{
-}
-
-#endif /* CONFIG_SCHED_HMP */
+#endif	/* CONFIG_SCHED_FREQ_INPUT */
 
 #ifdef CONFIG_CGROUP_SCHED
 
