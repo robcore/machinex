@@ -91,20 +91,10 @@ static bool valid_state(suspend_state_t state)
  * available, the "standby" label corresponds to the second deepest sleep state
  * available (if any), and the "freeze" label corresponds to the remaining
  * available sleep state (if there is one).
+ * Machinex update: configurable at runtime in /sys/power/relative_states
+ * See main.c in this directory for the ksysfs interface setup.
  */
-static bool relative_states;
-
-static int __init sleep_states_setup(char *str)
-{
-	relative_states = !strncmp(str, "1", 1);
-	if (relative_states) {
-		pm_states[PM_SUSPEND_MEM].state = PM_SUSPEND_FREEZE;
-		pm_states[PM_SUSPEND_FREEZE].state = 0;
-	}
-	return 1;
-}
-
-__setup("relative_sleep_states=", sleep_states_setup);
+int relative_states = 0;
 
 /**
  * suspend_set_ops - Set the global suspend method table.
@@ -118,7 +108,12 @@ void suspend_set_ops(const struct platform_suspend_ops *ops)
 	lock_system_sleep();
 
 	suspend_ops = ops;
+
 	for (i = PM_SUSPEND_MEM; i >= PM_SUSPEND_STANDBY; i--)
+		if (relative_states) {
+			pm_states[PM_SUSPEND_MEM].state = PM_SUSPEND_FREEZE;
+			pm_states[PM_SUSPEND_FREEZE].state = 0;
+		}
 		if (valid_state(i))
 			pm_states[j--].state = i;
 		else if (!relative_states)
