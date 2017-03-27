@@ -554,7 +554,6 @@ struct rq {
 	/* time-based average load */
 	u64 nr_last_stamp;
 	unsigned int ave_nr_running;
-	seqcount_t ave_seqcnt;
 
 	/* capture load from *all* tasks on this cpu: */
 	struct load_weight load;
@@ -1232,23 +1231,21 @@ unsigned long to_ratio(u64 period, u64 runtime);
 
 extern void update_idle_cpu_load(struct rq *this_rq);
 
-static inline unsigned int do_avg_nr_running(struct rq *rq)
+static inline void do_avg_nr_running(struct rq *rq)
 {
 
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-	unsigned int ave_nr_running = nr_stats->ave_nr_running;
 	s64 nr, deltax;
 
 	deltax = rq->clock_task - nr_stats->nr_last_stamp;
+	rq->nr_last_stamp = rq->clock_task;
 	nr = NR_AVE_SCALE(rq->nr_running);
 
 	if (deltax > NR_AVE_PERIOD)
-		ave_nr_running = nr;
+		rq->ave_nr_running = nr;
 	else
-		ave_nr_running +=
-			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
-
-	return ave_nr_running;
+		rq->ave_nr_running +=
+			NR_AVE_DIV_PERIOD(deltax * (nr - rq->ave_nr_running));
 }
 
 extern void init_task_runnable_average(struct task_struct *p);
@@ -1268,20 +1265,8 @@ static inline void inc_nr_running(struct rq *rq)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 
 	sched_update_nr_prod(cpu_of(rq), rq->nr_running, true);
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
+	do_avg_nr_running(rq);
 	rq->nr_running++;
-#ifdef CONFIG_NO_HZ_FULL
-	if (rq->nr_running == 2) {
-		if (tick_nohz_full_cpu(rq->cpu)) {
-			/* Order rq->nr_running write against the IPI */
-			smp_wmb();
-			smp_send_reschedule(rq->cpu);
-		}
-       }
-#endif
-	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
 
 static inline void dec_nr_running(struct rq *rq)
@@ -1289,11 +1274,8 @@ static inline void dec_nr_running(struct rq *rq)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 
 	sched_update_nr_prod(cpu_of(rq), rq->nr_running, false);
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
+	do_avg_nr_running(rq);
 	rq->nr_running--;
-	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
 
 static inline void rq_last_tick_reset(struct rq *rq)
