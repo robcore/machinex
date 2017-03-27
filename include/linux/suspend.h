@@ -201,7 +201,6 @@ extern void suspend_set_ops(const struct platform_suspend_ops *ops);
 extern int suspend_valid_only_mem(suspend_state_t state);
 extern void freeze_set_ops(const struct platform_freeze_ops *ops);
 extern void freeze_wake(void);
-extern bool freezing_in_progress;
 
 /**
  * arch_suspend_disable_irqs - disable IRQs for suspend
