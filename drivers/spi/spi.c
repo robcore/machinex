@@ -1002,10 +1002,10 @@ int spi_master_resume(struct spi_master *master)
 }
 EXPORT_SYMBOL_GPL(spi_master_resume);
 
-static int __spi_master_match(struct device *dev, const void *data)
+static int __spi_master_match(struct device *dev, void *data)
 {
 	struct spi_master *m;
-	const u16 *bus_num = data;
+	u16 *bus_num = data;
 
 	m = container_of(dev, struct spi_master, dev);
 	return m->bus_num == *bus_num;
