@@ -1024,6 +1024,10 @@ static void zswap_frontswap_invalidate_area(unsigned type)
 	tree->rbroot = RB_ROOT;
 	INIT_LIST_HEAD(&tree->lru);
 	spin_unlock(&tree->lock);
+
+	zswap_free_entry(tree, entry);
+	kfree(tree);
+	zswap_trees[type] = NULL;
 }
 
 /* NOTE: this is called in atomic context from swapon and must not sleep */
