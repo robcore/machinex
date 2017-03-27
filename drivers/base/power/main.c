@@ -33,7 +33,6 @@
 #include <linux/wakeup_reason.h>
 #include <linux/timer.h>
 
-#include <linux/cpuidle.h>
 #include "../base.h"
 #include "power.h"
 
@@ -636,7 +635,6 @@ static void dpm_resume_noirq(pm_message_t state)
 	async_synchronize_full();
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
-	cpuidle_resume();
 }
 
 /**
@@ -1077,7 +1075,6 @@ static int dpm_suspend_noirq(pm_message_t state)
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int error = 0;
 
-	cpuidle_pause();
 	suspend_device_irqs();
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_late_early_list)) {
