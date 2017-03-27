@@ -23,9 +23,6 @@ extern void update_cpu_load_active(struct rq *this_rq);
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_MIGRATING	2
 
-/* task_struct::on_rq states: */
-#define TASK_ON_RQ_QUEUED	1
-
 extern __read_mostly int scheduler_running;
 
 /*
@@ -551,6 +548,11 @@ struct rq {
 #endif
 	int skip_clock_update;
 
+	/* time-based average load */
+	u64 nr_last_stamp;
+	unsigned int ave_nr_running;
+	seqcount_t ave_seqcnt;
+
 	/* capture load from *all* tasks on this cpu: */
 	struct load_weight load;
 	unsigned long nr_load_updates;
@@ -697,7 +699,6 @@ DECLARE_PER_CPU(struct rq, runqueues);
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
 #define raw_rq()		(&__raw_get_cpu_var(runqueues))
 
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 struct nr_stats_s {
 	/* time-based average load */
 	u64 nr_last_stamp;
@@ -711,7 +712,7 @@ struct nr_stats_s {
 #define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
-#endif
+
 #ifdef CONFIG_SMP
 
 #define rcu_dereference_check_sched_domain(p) \
@@ -961,10 +962,6 @@ static inline int task_running(struct rq *rq, struct task_struct *p)
 #endif
 }
 
-static inline int task_on_rq_queued(struct task_struct *p)
-{
-	return p->on_rq == TASK_ON_RQ_QUEUED;
-}
 
 static inline int task_on_rq_migrating(struct task_struct *p)
 {
@@ -1172,10 +1169,6 @@ struct sched_class {
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	void (*task_move_group) (struct task_struct *p, int on_rq);
 #endif
-#ifdef CONFIG_SCHED_HMP
-	void (*inc_hmp_sched_stats)(struct rq *rq, struct task_struct *p);
-	void (*dec_hmp_sched_stats)(struct rq *rq, struct task_struct *p);
-#endif
 };
 
 #define sched_class_highest (&stop_sched_class)
@@ -1196,17 +1189,8 @@ extern void update_group_power(struct sched_domain *sd, int cpu);
 extern void trigger_load_balance(struct rq *rq);
 extern int idle_balance(struct rq *this_rq);
 
-/*
- * Only depends on SMP, FAIR_GROUP_SCHED may be removed when runnable_avg
- * becomes useful in lb
- */
-#if defined(CONFIG_FAIR_GROUP_SCHED)
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
-#else
-static inline void idle_enter_fair(struct rq *this_rq) {}
-static inline void idle_exit_fair(struct rq *this_rq) {}
-#endif
 
 #else	/* CONFIG_SMP */
 
@@ -1241,19 +1225,6 @@ unsigned long to_ratio(u64 period, u64 runtime);
 
 extern void update_idle_cpu_load(struct rq *this_rq);
 
-extern void init_task_runnable_average(struct task_struct *p);
-
-#ifdef CONFIG_PARAVIRT
-static inline u64 steal_ticks(u64 steal)
-{
-	if (unlikely(steal > NSEC_PER_SEC))
-		return div_u64(steal, TICK_NSEC);
-
-	return __iter_div_u64_rem(steal, TICK_NSEC, &steal);
-}
-#endif
-
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 static inline unsigned int do_avg_nr_running(struct rq *rq)
 {
 
@@ -1272,55 +1243,50 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 
 	return ave_nr_running;
 }
+
+extern void init_task_runnable_average(struct task_struct *p);
+
+#ifdef CONFIG_PARAVIRT
+static inline u64 steal_ticks(u64 steal)
+{
+	if (unlikely(steal > NSEC_PER_SEC))
+		return div_u64(steal, TICK_NSEC);
+
+	return __iter_div_u64_rem(steal, TICK_NSEC, &steal);
+}
 #endif
 
 static inline void inc_nr_running(struct rq *rq)
 {
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-#endif
-	sched_update_nr_prod(cpu_of(rq), 1, true);
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+
+	sched_update_nr_prod(cpu_of(rq), rq->nr_running, true);
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
-#endif
 	rq->nr_running++;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_end(&nr_stats->ave_seqcnt);
-#endif
-
-	if (rq->nr_running == 2) {
-#if 0
-		if (!rq->rd->overload)
-			rq->rd->overload = true;
-#endif
-
 #ifdef CONFIG_NO_HZ_FULL
+	if (rq->nr_running == 2) {
 		if (tick_nohz_full_cpu(rq->cpu)) {
 			/* Order rq->nr_running write against the IPI */
 			smp_wmb();
 			smp_send_reschedule(rq->cpu);
 		}
+       }
 #endif
-	}
+	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
 
 static inline void dec_nr_running(struct rq *rq)
 {
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-#endif
-	sched_update_nr_prod(cpu_of(rq), 1, false);
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+
+	sched_update_nr_prod(cpu_of(rq), rq->nr_running, false);
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
-#endif
 	rq->nr_running--;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
-#endif
 }
 
 static inline void rq_last_tick_reset(struct rq *rq)
