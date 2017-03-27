@@ -696,6 +696,7 @@ int sps_bam_pipe_connect(struct sps_pipe *bam_pipe,
 	void *desc_buf = NULL;
 	u32 pipe_index;
 	int result;
+	unsigned long flags;
 
 	/* Clear the client pipe state and hw init struct */
 	pipe_clear(bam_pipe);
@@ -883,8 +884,10 @@ int sps_bam_pipe_connect(struct sps_pipe *bam_pipe,
 
 	/* Indicate initialization is complete */
 	dev->pipes[pipe_index] = bam_pipe;
+	spin_lock_irqsave(&dev->isr_lock, flags);
 	dev->pipe_active_mask |= 1UL << pipe_index;
 	list_add_tail(&bam_pipe->list, &dev->pipes_q);
+	spin_unlock_irqrestore(&dev->isr_lock, flags);
 
 	bam_pipe->state |= BAM_STATE_INIT;
 	result = 0;
@@ -908,6 +911,7 @@ int sps_bam_pipe_disconnect(struct sps_bam *dev, u32 pipe_index)
 {
 	struct sps_pipe *pipe;
 	int result;
+	unsigned long flags;
 
 	if (pipe_index >= dev->props.num_pipes) {
 		SPS_ERR("sps:Invalid BAM 0x%x pipe: %d", BAM_ID(dev),
@@ -919,8 +923,10 @@ int sps_bam_pipe_disconnect(struct sps_bam *dev, u32 pipe_index)
 	pipe = dev->pipes[pipe_index];
 	if (BAM_PIPE_IS_ASSIGNED(pipe)) {
 		if ((dev->pipe_active_mask & (1UL << pipe_index))) {
+			spin_lock_irqsave(&dev->isr_lock, flags);
 			list_del(&pipe->list);
 			dev->pipe_active_mask &= ~(1UL << pipe_index);
+			spin_unlock_irqrestore(&dev->isr_lock, flags);
 		}
 		dev->pipe_remote_mask &= ~(1UL << pipe_index);
 		bam_pipe_exit(dev->base, pipe_index, dev->props.ee);
@@ -1917,6 +1923,7 @@ int sps_bam_get_free_count(struct sps_bam *dev, u32 pipe_index,
 int sps_bam_set_satellite(struct sps_bam *dev, u32 pipe_index)
 {
 	struct sps_pipe *pipe = dev->pipes[pipe_index];
+	unsigned long flags;
 
 	/*
 	 * Switch to satellite control is only supported on processor
@@ -1957,8 +1964,10 @@ int sps_bam_set_satellite(struct sps_bam *dev, u32 pipe_index)
 	}
 
 	/* Indicate satellite control */
+	spin_lock_irqsave(&dev->isr_lock, flags);
 	list_del(&pipe->list);
 	dev->pipe_active_mask &= ~(1UL << pipe_index);
+	spin_unlock_irqrestore(&dev->isr_lock, flags);
 	dev->pipe_remote_mask |= pipe->pipe_index_mask;
 	pipe->state |= BAM_STATE_REMOTE;
 
