@@ -697,6 +697,7 @@ DECLARE_PER_CPU(struct rq, runqueues);
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
 #define raw_rq()		(&__raw_get_cpu_var(runqueues))
 
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 struct nr_stats_s {
 	/* time-based average load */
 	u64 nr_last_stamp;
@@ -704,8 +705,13 @@ struct nr_stats_s {
 	seqcount_t ave_seqcnt;
 };
 
-DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
+#define NR_AVE_PERIOD_EXP	28
+#define NR_AVE_SCALE(x)		((x) << FSHIFT)
+#define NR_AVE_PERIOD		(1 << NR_AVE_PERIOD_EXP)
+#define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
 
+DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
+#endif
 #ifdef CONFIG_SMP
 
 #define rcu_dereference_check_sched_domain(p) \
@@ -955,6 +961,10 @@ static inline int task_running(struct rq *rq, struct task_struct *p)
 #endif
 }
 
+static inline int task_on_rq_queued(struct task_struct *p)
+{
+	return p->on_rq == TASK_ON_RQ_QUEUED;
+}
 
 static inline int task_on_rq_migrating(struct task_struct *p)
 {
@@ -1162,6 +1172,10 @@ struct sched_class {
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	void (*task_move_group) (struct task_struct *p, int on_rq);
 #endif
+#ifdef CONFIG_SCHED_HMP
+	void (*inc_hmp_sched_stats)(struct rq *rq, struct task_struct *p);
+	void (*dec_hmp_sched_stats)(struct rq *rq, struct task_struct *p);
+#endif
 };
 
 #define sched_class_highest (&stop_sched_class)
@@ -1174,31 +1188,6 @@ extern const struct sched_class rt_sched_class;
 extern const struct sched_class fair_sched_class;
 extern const struct sched_class idle_sched_class;
 
-static inline int task_on_rq_queued(struct task_struct *p)
-{
-	return p->on_rq == TASK_ON_RQ_QUEUED;
-}
-
-#ifdef CONFIG_INTELLI_PLUG
-struct nr_stats_s {
-	/* time-based average load */
-	u64 nr_last_stamp;
-	unsigned int ave_nr_running;
-	seqcount_t ave_seqcnt;
-};
-
-/* 27 ~= 134217728ns = 134.2ms
- * 26 ~=  67108864ns =  67.1ms
- * 25 ~=  33554432ns =  33.5ms
- * 24 ~=  16777216ns =  16.8ms
- */
-#define NR_AVE_PERIOD_EXP	27
-#define NR_AVE_SCALE(x)		((x) << FSHIFT)
-#define NR_AVE_PERIOD		(1 << NR_AVE_PERIOD_EXP)
-#define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
-
-DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
-#endif
 
 #ifdef CONFIG_SMP
 
@@ -1207,8 +1196,17 @@ extern void update_group_power(struct sched_domain *sd, int cpu);
 extern void trigger_load_balance(struct rq *rq);
 extern int idle_balance(struct rq *this_rq);
 
+/*
+ * Only depends on SMP, FAIR_GROUP_SCHED may be removed when runnable_avg
+ * becomes useful in lb
+ */
+#if defined(CONFIG_FAIR_GROUP_SCHED)
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
+#else
+static inline void idle_enter_fair(struct rq *this_rq) {}
+static inline void idle_exit_fair(struct rq *this_rq) {}
+#endif
 
 #else	/* CONFIG_SMP */
 
@@ -1293,7 +1291,7 @@ static inline void inc_nr_running(struct rq *rq)
 #endif
 
 	if (rq->nr_running == 2) {
-#ifdef CONFIG_SMP
+#if 0
 		if (!rq->rd->overload)
 			rq->rd->overload = true;
 #endif

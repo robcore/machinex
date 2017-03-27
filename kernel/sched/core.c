@@ -118,7 +118,7 @@ DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct nr_stats_s, runqueue_stats);
 
-#ifdef CONFIG_INTELLI_PLUG
+#ifdef CONFIG_INTELLI_HOTPLUG
 DEFINE_PER_CPU_SHARED_ALIGNED(struct nr_stats_s, runqueue_stats);
 #endif
 
@@ -982,7 +982,247 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 	if (task_on_rq_queued(rq->curr) && test_tsk_need_resched(rq->curr))
 		rq->skip_clock_update = 1;
 }
+#ifdef CONFIG_SCHED_FREQ_INPUT
+/*
+ * Maximum possible frequency across all cpus. Task demand and cpu
+ * capacity (cpu_power) metrics are scaled in reference to it.
+ */
+unsigned int max_possible_freq = 1;
 
+/*
+ * Minimum possible max_freq across all cpus. This will be same as
+ * max_possible_freq on homogeneous systems and could be different from
+ * max_possible_freq on heterogenous systems. min_max_freq is used to derive
+ * capacity (cpu_power) of cpus.
+ */
+unsigned int min_max_freq = 1;
+
+/* Window size (in ns) */
+__read_mostly unsigned int sched_ravg_window = 10000000;
+
+/* Min window size (in ns) = 10ms */
+__read_mostly unsigned int min_sched_ravg_window = 10000000;
+
+/* Max window size (in ns) = 1s */
+__read_mostly unsigned int max_sched_ravg_window = 1000000000;
+
+#define WINDOW_STATS_USE_RECENT        0
+#define WINDOW_STATS_USE_MAX   1
+#define WINDOW_STATS_USE_AVG   2
+
+__read_mostly unsigned int sysctl_sched_window_stats_policy =
+	WINDOW_STATS_USE_AVG;
+
+/*
+ * Called when new window is starting for a task, to record cpu usage over
+ * recently concluded window(s). Normally 'samples' should be 1. It can be > 1
+ * when, say, a real-time task runs without preemption for several windows at a
+ * stretch.
+ */
+static void update_history(struct rq *rq, struct task_struct *p,
+			u32 runtime, int samples)
+{
+	u32 *hist = &p->ravg.sum_history[0];
+	int ridx, widx;
+	u32 max = 0, avg, demand;
+	u64 sum = 0;
+
+	p->ravg.prev_window = runtime;
+
+	/* Ignore windows where task had no activity */
+	if (!runtime)
+		return;
+
+	/* Push new 'runtime' value onto stack */
+	widx = RAVG_HIST_SIZE - 1;
+	ridx = widx - samples;
+	for (; ridx >= 0; --widx, --ridx) {
+		hist[widx] = hist[ridx];
+		sum += hist[widx];
+		if (hist[widx] > max)
+			max = hist[widx];
+	}
+
+	for (widx = 0; widx < samples && widx < RAVG_HIST_SIZE; widx++) {
+		hist[widx] = runtime;
+		sum += hist[widx];
+		if (hist[widx] > max)
+			max = hist[widx];
+	}
+
+	p->ravg.sum = 0;
+	if (task_on_rq_queued(p)) {
+		rq->cumulative_runnable_avg -= p->ravg.demand;
+		BUG_ON((s64)rq->cumulative_runnable_avg < 0);
+	}
+
+	avg = div64_u64(sum, RAVG_HIST_SIZE);
+
+	if (sysctl_sched_window_stats_policy == WINDOW_STATS_USE_RECENT)
+		demand = runtime;
+	else if (sysctl_sched_window_stats_policy == WINDOW_STATS_USE_MAX)
+		demand = max;
+	else
+		demand = max(avg, runtime);
+
+	p->ravg.demand = demand;
+
+	if (!task_on_rq_queued(p))
+		rq->cumulative_runnable_avg += p->ravg.demand;
+}
+
+static int __init set_sched_ravg_window(char *str)
+{
+	get_option(&str, &sched_ravg_window);
+
+	return 0;
+}
+
+early_param("sched_ravg_window", set_sched_ravg_window);
+
+void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
+{
+	u32 window_size = sched_ravg_window;
+	int new_window;
+	u64 wallclock = sched_clock();
+
+	if (is_idle_task(p) || (sched_ravg_window < min_sched_ravg_window))
+		return;
+
+	do {
+		s64 delta = 0;
+		int n;
+		u64 now = wallclock;
+
+		new_window = 0;
+		delta = now - p->ravg.window_start;
+		BUG_ON(delta < 0);
+		if (delta > window_size) {
+			p->ravg.window_start += window_size;
+			now = p->ravg.window_start;
+			new_window = 1;
+		}
+
+		if (update_sum) {
+			unsigned int cur_freq = rq->cur_freq;
+
+			delta = now - p->ravg.mark_start;
+			BUG_ON(delta < 0);
+
+			if (unlikely(cur_freq > max_possible_freq ||
+				     (cur_freq == rq->max_freq &&
+				      rq->max_freq < rq->max_possible_freq)))
+				cur_freq = rq->max_possible_freq;
+
+			delta = div64_u64(delta  * cur_freq,
+							max_possible_freq);
+			p->ravg.sum += delta;
+			WARN_ON(p->ravg.sum > window_size);
+		}
+
+		if (!new_window)
+			break;
+
+		update_history(rq, p, p->ravg.sum, 1);
+
+		delta = wallclock - p->ravg.window_start;
+		BUG_ON(delta < 0);
+		n = div64_u64(delta, window_size);
+		if (n) {
+			if (!update_sum)
+				p->ravg.window_start = wallclock;
+			else
+				p->ravg.window_start += (u64)n *
+							 (u64)window_size;
+			BUG_ON(p->ravg.window_start > wallclock);
+			if (update_sum)
+				update_history(rq, p, window_size, n);
+		}
+		p->ravg.mark_start =  p->ravg.window_start;
+	} while (new_window);
+
+	p->ravg.mark_start = wallclock;
+}
+
+static int cpufreq_notifier_policy(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct cpufreq_policy *policy = (struct cpufreq_policy *)data;
+	int i;
+	unsigned int min_max = min_max_freq;
+
+	if (val != CPUFREQ_NOTIFY)
+		return 0;
+
+	for_each_cpu(i, policy->related_cpus) {
+		cpu_rq(i)->min_freq = policy->min;
+		cpu_rq(i)->max_freq = policy->max;
+		cpu_rq(i)->max_possible_freq = policy->cpuinfo.max_freq;
+	}
+
+	max_possible_freq = max(max_possible_freq, policy->cpuinfo.max_freq);
+	if (min_max_freq == 1)
+		min_max = UINT_MAX;
+	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
+	BUG_ON(!min_max_freq);
+	BUG_ON(!policy->max);
+
+	return 0;
+}
+
+static int cpufreq_notifier_trans(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct cpufreq_freqs *freq = (struct cpufreq_freqs *)data;
+	unsigned int cpu = freq->cpu, new_freq = freq->new;
+
+	if (val != CPUFREQ_POSTCHANGE)
+		return 0;
+
+	BUG_ON(!new_freq);
+	cpu_rq(cpu)->cur_freq = new_freq;
+
+	return 0;
+}
+
+static struct notifier_block notifier_policy_block = {
+	.notifier_call = cpufreq_notifier_policy
+};
+
+static struct notifier_block notifier_trans_block = {
+	.notifier_call = cpufreq_notifier_trans
+};
+
+static int register_sched_callback(void)
+{
+	int ret;
+
+	ret = cpufreq_register_notifier(&notifier_policy_block,
+						CPUFREQ_POLICY_NOTIFIER);
+
+	if (!ret)
+		ret = cpufreq_register_notifier(&notifier_trans_block,
+						CPUFREQ_TRANSITION_NOTIFIER);
+
+	return 0;
+}
+
+/*
+ * cpufreq callbacks can be registered at core_initcall or later time.
+ * Any registration done prior to that is "forgotten" by cpufreq. See
+ * initialization of variable init_cpufreq_transition_notifier_list_called
+ * for further information.
+ */
+core_initcall(register_sched_callback);
+
+#else	/* CONFIG_SCHED_FREQ_INPUT */
+
+static inline void
+update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
+{
+}
+
+#endif	/* CONFIG_SCHED_FREQ_INPUT */
 #ifdef CONFIG_SMP
 void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 {
@@ -1320,164 +1560,6 @@ static void ttwu_activate(struct rq *rq, struct task_struct *p, int en_flags)
 	if (p->flags & PF_WQ_WORKER)
 		wq_worker_waking_up(p, cpu_of(rq));
 }
-
-#ifdef CONFIG_SCHED_FREQ_INPUT
-
-/* Window size (in ns) */
-__read_mostly unsigned int sched_ravg_window = 10000000;
-
-/* Min window size (in ns) = 10ms */
-__read_mostly unsigned int min_sched_ravg_window = 10000000;
-
-/* Max window size (in ns) = 1s */
-__read_mostly unsigned int max_sched_ravg_window = 1000000000;
-
-#define WINDOW_STATS_USE_RECENT        0
-#define WINDOW_STATS_USE_MAX   1
-#define WINDOW_STATS_USE_AVG   2
-
-__read_mostly unsigned int sysctl_sched_window_stats_policy =
-	WINDOW_STATS_USE_AVG;
-
-/*
- * Called when new window is starting for a task, to record cpu usage over
- * recently concluded window(s). Normally 'samples' should be 1. It can be > 1
- * when, say, a real-time task runs without preemption for several windows at a
- * stretch.
- */
-static inline void
-update_history(struct rq *rq, struct task_struct *p, u32 runtime, int samples)
-{
-	u32 *hist = &p->ravg.sum_history[0];
-	int ridx, widx;
-	u32 max = 0, avg, demand;
-	u64 sum = 0;
-
-	p->ravg.prev_window = runtime;
-
-	/* Ignore windows where task had no activity */
-	if (!runtime)
-		return;
-
-	/* Push new 'runtime' value onto stack */
-	widx = RAVG_HIST_SIZE - 1;
-	ridx = widx - samples;
-	for (; ridx >= 0; --widx, --ridx) {
-		hist[widx] = hist[ridx];
-		sum += hist[widx];
-		if (hist[widx] > max)
-			max = hist[widx];
-	}
-
-	for (widx = 0; widx < samples && widx < RAVG_HIST_SIZE; widx++) {
-		hist[widx] = runtime;
-		sum += hist[widx];
-		if (hist[widx] > max)
-			max = hist[widx];
-	}
-
-	p->ravg.sum = 0;
-	if (task_on_rq_queued(p)) {
-		rq->cumulative_runnable_avg -= p->ravg.demand;
-		BUG_ON((s64)rq->cumulative_runnable_avg < 0);
-	}
-
-	avg = div64_u64(sum, RAVG_HIST_SIZE);
-
-	if (sysctl_sched_window_stats_policy == WINDOW_STATS_USE_RECENT)
-		demand = runtime;
-	else if (sysctl_sched_window_stats_policy == WINDOW_STATS_USE_MAX)
-		demand = max;
-	else
-		demand = max(avg, runtime);
-
-	p->ravg.demand = demand;
-
-	if (!task_on_rq_queued(p)) {
-		rq->cumulative_runnable_avg += p->ravg.demand;
-}
-
-static int __init set_sched_ravg_window(char *str)
-{
-	get_option(&str, &sched_ravg_window);
-
-	return 0;
-}
-
-early_param("sched_ravg_window", set_sched_ravg_window);
-
-void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
-{
-	u32 window_size = sched_ravg_window;
-	int new_window;
-	u64 wallclock = sched_clock();
-
-	if (is_idle_task(p) || (sched_ravg_window < min_sched_ravg_window))
-		return;
-
-	do {
-		s64 delta = 0;
-		int n;
-		u64 now = wallclock;
-
-		new_window = 0;
-		delta = now - p->ravg.window_start;
-		BUG_ON(delta < 0);
-		if (delta > window_size) {
-			p->ravg.window_start += window_size;
-			now = p->ravg.window_start;
-			new_window = 1;
-		}
-
-		if (update_sum) {
-			unsigned int cur_freq = rq->cur_freq;
-
-			delta = now - p->ravg.mark_start;
-			BUG_ON(delta < 0);
-
-			if (unlikely(cur_freq > max_possible_freq ||
-				     (cur_freq == rq->max_freq &&
-				      rq->max_freq < rq->max_possible_freq)))
-				cur_freq = rq->max_possible_freq;
-
-			delta = div64_u64(delta  * cur_freq,
-							max_possible_freq);
-			p->ravg.sum += delta;
-			WARN_ON(p->ravg.sum > window_size);
-		}
-
-		if (!new_window)
-			break;
-
-		update_history(rq, p, p->ravg.sum, 1);
-
-		delta = wallclock - p->ravg.window_start;
-		BUG_ON(delta < 0);
-		n = div64_u64(delta, window_size);
-		if (n) {
-			if (!update_sum)
-				p->ravg.window_start = wallclock;
-			else
-				p->ravg.window_start += (u64)n *
-							 (u64)window_size;
-			BUG_ON(p->ravg.window_start > wallclock);
-			if (update_sum)
-				update_history(rq, p, window_size, n);
-		}
-		p->ravg.mark_start =  p->ravg.window_start;
-	} while (new_window);
-
-	p->ravg.mark_start = wallclock;
-}
-
-#else	/* CONFIG_SCHED_FREQ_INPUT */
-
-static inline void
-update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
-{
-}
-
-#endif	/* CONFIG_SCHED_FREQ_INPUT */
 
 /*
  * Mark the task runnable and perform wakeup-preemption.
@@ -2307,8 +2389,8 @@ unsigned long nr_iowait(void)
 {
 	unsigned long i, sum = 0;
 
-	for_each_online_cpu(i)
-		sum += cpu_rq(i)->ave_nr_running;
+	for_each_possible_cpu(i)
+		sum += atomic_read(&cpu_rq(i)->nr_iowait);
 
 	return sum;
 }
@@ -3136,60 +3218,6 @@ int task_nice(const struct task_struct *p)
 }
 EXPORT_SYMBOL(task_nice);
 
-#ifdef CONFIG_INTELLI_PLUG
-unsigned long avg_nr_running(void)
-{
-	unsigned long i, sum = 0;
-	unsigned int seqcnt, ave_nr_running;
-
-	for_each_online_cpu(i) {
-		struct nr_stats_s *stats = &per_cpu(runqueue_stats, i);
-		struct rq *q = cpu_rq(i);
-
-		/*
-		 * Update average to avoid reading stalled value if there were
-		 * no run-queue changes for a long time. On the other hand if
-		 * the changes are happening right now, just read current value
-		 * directly.
-		 */
-		seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
-		ave_nr_running = do_avg_nr_running(q);
-		if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
-			read_seqcount_begin(&stats->ave_seqcnt);
-			ave_nr_running = stats->ave_nr_running;
-		}
-
-		sum += ave_nr_running;
-	}
-
-	return sum;
-}
-EXPORT_SYMBOL(avg_nr_running);
-
-unsigned long avg_cpu_nr_running(unsigned int cpu)
-{
-	unsigned int seqcnt, ave_nr_running;
-
-	struct nr_stats_s *stats = &per_cpu(runqueue_stats, cpu);
-	struct rq *q = cpu_rq(cpu);
-
-	/*
-	 * Update average to avoid reading stalled value if there were
-	 * no run-queue changes for a long time. On the other hand if
-	 * the changes are happening right now, just read current value
-	 * directly.
-	 */
-	seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
-	ave_nr_running = do_avg_nr_running(q);
-	if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
-		read_seqcount_begin(&stats->ave_seqcnt);
-		ave_nr_running = stats->ave_nr_running;
-	}
-
-	return ave_nr_running;
-}
-EXPORT_SYMBOL(avg_cpu_nr_running);
-#endif
 
 /**
  * idle_cpu - is a given cpu idle currently?
@@ -4847,9 +4875,9 @@ static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
 	 * placed properly.
 	 */
 	if (task_on_rq_queued(p)) {
-		dequeue_task(rq_src, p, DEQUEUE_MIGRATING);
+		dequeue_task(rq_src, p, 0);
 		set_task_cpu(p, dest_cpu);
-		enqueue_task(rq_dest, p, ENQUEUE_MIGRATING);
+		enqueue_task(rq_dest, p, 0);
 		check_preempt_curr(rq_dest, p, 0);
 		moved = true;
 	}
@@ -5233,7 +5261,6 @@ migration_call(struct notifier_block *nfb, unsigned long action, void *hcpu)
 		sched_ttwu_pending();
 		/* Update our root-domain */
 		raw_spin_lock_irqsave(&rq->lock, flags);
-		migrate_sync_cpu(cpu);
 
 		if (rq->rd) {
 			BUG_ON(!cpumask_test_cpu(cpu, rq->rd->span));
@@ -6923,94 +6950,6 @@ void __init sched_init_smp(void)
 }
 #endif /* CONFIG_SMP */
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
-/*
- * Maximum possible frequency across all cpus. Task demand and cpu
- * capacity (cpu_power) metrics are scaled in reference to it.
- */
-unsigned int max_possible_freq = 1;
-
-/*
- * Minimum possible max_freq across all cpus. This will be same as
- * max_possible_freq on homogeneous systems and could be different from
- * max_possible_freq on heterogenous systems. min_max_freq is used to derive
- * capacity (cpu_power) of cpus.
- */
-unsigned int min_max_freq = 1;
-
-static int cpufreq_notifier_policy(struct notifier_block *nb,
-		unsigned long val, void *data)
-{
-	struct cpufreq_policy *policy = (struct cpufreq_policy *)data;
-	int i;
-	unsigned int min_max = min_max_freq;
-
-	if (val != CPUFREQ_NOTIFY)
-		return 0;
-
-	for_each_cpu(i, policy->related_cpus) {
-		cpu_rq(i)->min_freq = policy->min;
-		cpu_rq(i)->max_freq = policy->max;
-		cpu_rq(i)->max_possible_freq = policy->cpuinfo.max_freq;
-	}
-
-	max_possible_freq = max(max_possible_freq, policy->cpuinfo.max_freq);
-	if (min_max_freq == 1)
-		min_max = UINT_MAX;
-	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
-	BUG_ON(!min_max_freq);
-	BUG_ON(!policy->max);
-
-	return 0;
-}
-
-static int cpufreq_notifier_trans(struct notifier_block *nb,
-		unsigned long val, void *data)
-{
-	struct cpufreq_freqs *freq = (struct cpufreq_freqs *)data;
-	unsigned int cpu = freq->cpu, new_freq = freq->new;
-
-	if (val != CPUFREQ_POSTCHANGE)
-		return 0;
-
-	BUG_ON(!new_freq);
-	cpu_rq(cpu)->cur_freq = new_freq;
-
-	return 0;
-}
-
-static struct notifier_block notifier_policy_block = {
-	.notifier_call = cpufreq_notifier_policy
-};
-
-static struct notifier_block notifier_trans_block = {
-	.notifier_call = cpufreq_notifier_trans
-};
-
-static int register_sched_callback(void)
-{
-	int ret;
-
-	ret = cpufreq_register_notifier(&notifier_policy_block,
-						CPUFREQ_POLICY_NOTIFIER);
-
-	if (!ret)
-		ret = cpufreq_register_notifier(&notifier_trans_block,
-						CPUFREQ_TRANSITION_NOTIFIER);
-
-	return 0;
-}
-
-/*
- * cpufreq callbacks can be registered at core_initcall or later time.
- * Any registration done prior to that is "forgotten" by cpufreq. See
- * initialization of variable init_cpufreq_transition_notifier_list_called
- * for further information.
- */
-core_initcall(register_sched_callback);
-
-#endif /* CONFIG_SCHED_FREQ_INPUT */
-
 const_debug unsigned int sysctl_timer_migration = 1;
 
 int in_sched_functions(unsigned long addr)
@@ -7146,7 +7085,7 @@ void __init sched_init(void)
 		rq->sd = NULL;
 		rq->rd = NULL;
 		rq->cpu_power = SCHED_POWER_SCALE;
-		rq->post_schedule = NULL;
+		rq->post_schedule = 0;
 		rq->active_balance = 0;
 		rq->next_balance = jiffies;
 		rq->push_cpu = 0;
