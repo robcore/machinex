@@ -18,6 +18,7 @@
 #include <trace/events/power.h>
 #include <linux/resume-trace.h>
 #include <linux/moduleparam.h>
+#include <linux/mx_freeze.h>
 
 static bool enable_gps_ws = true;
 module_param(enable_gps_ws, bool, 0644);
@@ -34,7 +35,7 @@ module_param(enable_bluesleep_ws, bool, 0644);
 static bool enable_ssp_sensorhub_ws = true;
 module_param(enable_ssp_sensorhub_ws, bool, 0644);
 
-extern bool freezing_in_progress;
+bool mx_freezing_in_progress = freezing_in_progress();
 
 #include "power.h"
 
@@ -571,7 +572,6 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
-	bool freezing_in_progress;
 
 	if (WARN_ONCE(wakeup_source_not_registered(ws),
 			"unregistered wakeup source\n"))
@@ -592,14 +592,14 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
 	 * the freezer and be patient for the fucking 2-7ms or whatever it takes for it to complete?
 	 */
-	if (freezing_in_progress == true) {
+	if (mx_freezing_in_progress == true) {
 		DEFINE_WAIT(wait);
 
 		//for (;;) {
-		while (freezing_in_progress == true) {
+		while (mx_freezing_in_progress == true) {
 			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
 					TASK_INTERRUPTIBLE);
-			if (freezing_in_progress == false)
+			if (mx_freezing_in_progress == false)
 				break;
 
 			//pm_system_wakeup();
@@ -867,7 +867,6 @@ EXPORT_SYMBOL_GPL(pm_print_active_wakeup_sources);
 bool pm_wakeup_pending(void)
 {
 	unsigned long flags;
-	bool freezing_in_progress;
 	bool ret = false;
 
 	spin_lock_irqsave(&events_lock, flags);
@@ -881,14 +880,14 @@ bool pm_wakeup_pending(void)
 	spin_unlock_irqrestore(&events_lock, flags);
 
 	if (ret) {
-		if (freezing_in_progress == true) {
+		if (mx_freezing_in_progress == true) {
 			DEFINE_WAIT(wait);
 
 			//for (;;)
-			while (freezing_in_progress == true) {
+			while (mx_freezing_in_progress == true) {
 				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
 						TASK_INTERRUPTIBLE);
-				if (freezing_in_progress == false)
+				if (mx_freezing_in_progress == false)
 					break;
 			}
 

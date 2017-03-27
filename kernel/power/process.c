@@ -26,8 +26,6 @@
  */
 unsigned int __read_mostly freeze_timeout_msecs = 20 * MSEC_PER_SEC;
 
-bool freezing_in_progress;
-
 static int try_to_freeze_tasks(bool user_only)
 {
 	struct task_struct *g, *p;
