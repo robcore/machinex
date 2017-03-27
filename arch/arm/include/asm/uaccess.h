@@ -138,6 +138,12 @@ extern int __get_user_4(void *);
 		__e;							\
 	})
 
+#define __get_user_check(x,p)							\
+	({								\
+		might_fault();						\
+		__get_user_check(x,p);					\
+	 })
+
 #define get_user(x,p)							\
 	({								\
 		might_fault();						\
@@ -180,6 +186,12 @@ extern int __put_user_8(void *, unsigned long long);
 		}							\
 		__e;							\
 	})
+
+#define __put_user_check(x,p)							\
+	({								\
+		might_fault();						\
+		__put_user_check(x,p);					\
+	 })
 
 #define put_user(x,p)							\
 	({								\
