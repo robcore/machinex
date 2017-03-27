@@ -35,8 +35,6 @@ module_param(enable_bluesleep_ws, bool, 0644);
 static bool enable_ssp_sensorhub_ws = true;
 module_param(enable_ssp_sensorhub_ws, bool, 0644);
 
-bool mx_freezing_in_progress = freezing_in_progress();
-
 #include "power.h"
 
 /*
@@ -572,6 +570,7 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
+	bool mx_freezing_in_progress = freezing_in_progress();
 
 	if (WARN_ONCE(wakeup_source_not_registered(ws),
 			"unregistered wakeup source\n"))
@@ -868,6 +867,7 @@ bool pm_wakeup_pending(void)
 {
 	unsigned long flags;
 	bool ret = false;
+	bool mx_freezing_in_progress = freezing_in_progress();
 
 	spin_lock_irqsave(&events_lock, flags);
 	if (events_check_enabled) {
