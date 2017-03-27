@@ -1,4 +1,3 @@
-#include <linux/cpufreq.h>
 #include <linux/export.h>
 #include <linux/sched.h>
 #include <linux/tsacct_kern.h>
@@ -144,7 +143,7 @@ void account_user_time(struct task_struct *p, cputime_t cputime,
 	p->utimescaled += cputime_scaled;
 	account_group_user_time(p, cputime);
 
-	index = (TASK_NICE(p) > 0) ? CPUTIME_NICE : CPUTIME_USER;
+	index = (task_nice(p) > 0) ? CPUTIME_NICE : CPUTIME_USER;
 
 	/* Add user time to cpustat. */
 	task_group_account_field(p, index, (__force u64) cputime);
@@ -171,7 +170,7 @@ static void account_guest_time(struct task_struct *p, cputime_t cputime,
 	p->gtime += cputime;
 
 	/* Add guest time to cpustat. */
-	if (TASK_NICE(p) > 0) {
+	if (task_nice(p) > 0) {
 		cpustat[CPUTIME_NICE] += (__force u64) cputime;
 		cpustat[CPUTIME_GUEST_NICE] += (__force u64) cputime;
 	} else {
@@ -368,9 +367,6 @@ EXPORT_SYMBOL_GPL(vtime_account_system_irqsafe);
 #ifndef __ARCH_HAS_VTIME_TASK_SWITCH
 void vtime_common_task_switch(struct task_struct *prev)
 {
-	if (!vtime_accounting_enabled())
-		return;
-
 	if (is_idle_task(prev))
 		vtime_account_idle(prev);
 	else
@@ -394,9 +390,6 @@ void vtime_common_task_switch(struct task_struct *prev)
 #ifndef __ARCH_HAS_VTIME_ACCOUNT
 void vtime_common_account_irq_enter(struct task_struct *tsk)
 {
-	if (!vtime_accounting_enabled())
-		return;
-
 	if (!in_interrupt()) {
 		/*
 		 * If we interrupted user, context_tracking_in_user()
@@ -655,9 +648,6 @@ static void __vtime_account_system(struct task_struct *tsk)
 
 void vtime_account_system(struct task_struct *tsk)
 {
-	if (!vtime_accounting_enabled())
-		return;
-
 	write_seqlock(&tsk->vtime_seqlock);
 	__vtime_account_system(tsk);
 	write_sequnlock(&tsk->vtime_seqlock);
@@ -665,13 +655,10 @@ void vtime_account_system(struct task_struct *tsk)
 
 void vtime_gen_account_irq_exit(struct task_struct *tsk)
 {
-	if (!vtime_accounting_enabled())
-		return;
-
 	write_seqlock(&tsk->vtime_seqlock);
+	__vtime_account_system(tsk);
 	if (context_tracking_in_user())
 		tsk->vtime_snap_whence = VTIME_USER;
-	__vtime_account_system(tsk);
 	write_sequnlock(&tsk->vtime_seqlock);
 }
 
@@ -679,12 +666,8 @@ void vtime_account_user(struct task_struct *tsk)
 {
 	cputime_t delta_cpu;
 
-	if (!vtime_accounting_enabled())
-		return;
-
-	delta_cpu = get_vtime_delta(tsk);
-
 	write_seqlock(&tsk->vtime_seqlock);
+	delta_cpu = get_vtime_delta(tsk);
 	tsk->vtime_snap_whence = VTIME_SYS;
 	account_user_time(tsk, delta_cpu, cputime_to_scaled(delta_cpu));
 	write_sequnlock(&tsk->vtime_seqlock);
@@ -692,12 +675,9 @@ void vtime_account_user(struct task_struct *tsk)
 
 void vtime_user_enter(struct task_struct *tsk)
 {
-	if (!vtime_accounting_enabled())
-		return;
-
 	write_seqlock(&tsk->vtime_seqlock);
-	tsk->vtime_snap_whence = VTIME_USER;
 	__vtime_account_system(tsk);
+	tsk->vtime_snap_whence = VTIME_USER;
 	write_sequnlock(&tsk->vtime_seqlock);
 }
 
@@ -731,11 +711,6 @@ void vtime_account_idle(struct task_struct *tsk)
 	cputime_t delta_cpu = get_vtime_delta(tsk);
 
 	account_idle_time(delta_cpu);
-}
-
-bool vtime_accounting_enabled(void)
-{
-	return context_tracking_active();
 }
 
 void arch_vtime_task_switch(struct task_struct *prev)

@@ -3875,6 +3875,10 @@ pick_next_task_fair(struct rq *rq, struct task_struct *prev)
 
 	cfs_rq = &rq->cfs;
 #endif
+
+	if (!cfs_rq->h_nr_running)
+		return NULL;
+
 	if (prev)
 		prev->sched_class->put_prev_task(rq, prev);
 
@@ -3885,6 +3889,7 @@ pick_next_task_fair(struct rq *rq, struct task_struct *prev)
 	} while (cfs_rq);
 
 	p = task_of(se);
+
 	if (hrtick_enabled(rq))
 		hrtick_start_fair(rq, p);
 
@@ -3959,7 +3964,121 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
 
 #ifdef CONFIG_SMP
 /**************************************************
- * Fair scheduling class load-balancing methods:
+ * Fair scheduling class load-balancing methods.
+ *
+ * BASICS
+ *
+ * The purpose of load-balancing is to achieve the same basic fairness the
+ * per-cpu scheduler provides, namely provide a proportional amount of compute
+ * time to each task. This is expressed in the following equation:
+ *
+ *   W_i,n/P_i == W_j,n/P_j for all i,j                               (1)
+ *
+ * Where W_i,n is the n-th weight average for cpu i. The instantaneous weight
+ * W_i,0 is defined as:
+ *
+ *   W_i,0 = \Sum_j w_i,j                                             (2)
+ *
+ * Where w_i,j is the weight of the j-th runnable task on cpu i. This weight
+ * is derived from the nice value as per prio_to_weight[].
+ *
+ * The weight average is an exponential decay average of the instantaneous
+ * weight:
+ *
+ *   W'_i,n = (2^n - 1) / 2^n * W_i,n + 1 / 2^n * W_i,0               (3)
+ *
+ * P_i is the cpu power (or compute capacity) of cpu i, typically it is the
+ * fraction of 'recent' time available for SCHED_OTHER task execution. But it
+ * can also include other factors [XXX].
+ *
+ * To achieve this balance we define a measure of imbalance which follows
+ * directly from (1):
+ *
+ *   imb_i,j = max{ avg(W/P), W_i/P_i } - min{ avg(W/P), W_j/P_j }    (4)
+ *
+ * We them move tasks around to minimize the imbalance. In the continuous
+ * function space it is obvious this converges, in the discrete case we get
+ * a few fun cases generally called infeasible weight scenarios.
+ *
+ * [XXX expand on:
+ *     - infeasible weights;
+ *     - local vs global optima in the discrete case. ]
+ *
+ *
+ * SCHED DOMAINS
+ *
+ * In order to solve the imbalance equation (4), and avoid the obvious O(n^2)
+ * for all i,j solution, we create a tree of cpus that follows the hardware
+ * topology where each level pairs two lower groups (or better). This results
+ * in O(log n) layers. Furthermore we reduce the number of cpus going up the
+ * tree to only the first of the previous level and we decrease the frequency
+ * of load-balance at each level inv. proportional to the number of cpus in
+ * the groups.
+ *
+ * This yields:
+ *
+ *     log_2 n     1     n
+ *   \Sum       { --- * --- * 2^i } = O(n)                            (5)
+ *     i = 0      2^i   2^i
+ *                               `- size of each group
+ *         |         |     `- number of cpus doing load-balance
+ *         |         `- freq
+ *         `- sum over all levels
+ *
+ * Coupled with a limit on how many tasks we can migrate every balance pass,
+ * this makes (5) the runtime complexity of the balancer.
+ *
+ * An important property here is that each CPU is still (indirectly) connected
+ * to every other cpu in at most O(log n) steps:
+ *
+ * The adjacency matrix of the resulting graph is given by:
+ *
+ *             log_2 n
+ *   A_i,j = \Union     (i % 2^k == 0) && i / 2^(k+1) == j / 2^(k+1)  (6)
+ *             k = 0
+ *
+ * And you'll find that:
+ *
+ *   A^(log_2 n)_i,j != 0  for all i,j                                (7)
+ *
+ * Showing there's indeed a path between every cpu in at most O(log n) steps.
+ * The task movement gives a factor of O(m), giving a convergence complexity
+ * of:
+ *
+ *   O(nm log n),  n := nr_cpus, m := nr_tasks                        (8)
+ *
+ *
+ * WORK CONSERVING
+ *
+ * In order to avoid CPUs going idle while there's still work to do, new idle
+ * balancing is more aggressive and has the newly idle cpu iterate up the domain
+ * tree itself instead of relying on other CPUs to bring it work.
+ *
+ * This adds some complexity to both (5) and (8) but it reduces the total idle
+ * time.
+ *
+ * [XXX more?]
+ *
+ *
+ * CGROUPS
+ *
+ * Cgroups make a horror show out of (2), instead of a simple sum we get:
+ *
+ *                                s_k,i
+ *   W_i,0 = \Sum_j \Prod_k w_k * -----                               (9)
+ *                                 S_k
+ *
+ * Where
+ *
+ *   s_k,i = \Sum_j w_i,j,k  and  S_k = \Sum_i s_k,i                 (10)
+ *
+ * w_i,j,k is the weight of the j-th runnable task in the k-th cgroup on cpu i.
+ *
+ * The big problem is S_k, its a global sum needed to compute a local (W_i)
+ * property.
+ *
+ * [XXX write more on how we solve this.. _after_ merging pjt's patches that
+ *      rewrite all of this once again.]
  */
 
 static unsigned long __read_mostly max_load_balance_interval = HZ/10;
@@ -6051,7 +6170,7 @@ static void task_fork_fair(struct task_struct *p)
 static void
 prio_changed_fair(struct rq *rq, struct task_struct *p, int oldprio)
 {
-	if (!task_on_rq_queued(p))
+	if (!p->se.on_rq)
 		return;
 
 	/*
@@ -6076,11 +6195,11 @@ static void switched_from_fair(struct rq *rq, struct task_struct *p)
 	 * switched back to the fair class the enqueue_entity(.flags=0) will
 	 * do the right thing.
 	 *
-	 * If it's queued, then the dequeue_entity(.flags=0) will already
-	 * have normalized the vruntime, if it's !queued, then only when
+	 * If it's on_rq, then the dequeue_entity(.flags=0) will already
+	 * have normalized the vruntime, if it's !on_rq, then only when
 	 * the task is sleeping will it still have non-normalized vruntime.
 	 */
-	if (!task_on_rq_queued(p) && p->state != TASK_RUNNING) {
+	if (!p->on_rq && p->state != TASK_RUNNING) {
 		/*
 		 * Fix up our vruntime so that the current sleep doesn't
 		 * cause 'unlimited' sleep bonus.
@@ -6107,7 +6226,7 @@ static void switched_from_fair(struct rq *rq, struct task_struct *p)
  */
 static void switched_to_fair(struct rq *rq, struct task_struct *p)
 {
-	if (!task_on_rq_queued(p))
+	if (!p->se.on_rq)
 		return;
 
 	/*
@@ -6153,7 +6272,7 @@ void init_cfs_rq(struct cfs_rq *cfs_rq)
 }
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
-static void task_move_group_fair(struct task_struct *p, int queued)
+static void task_move_group_fair(struct task_struct *p, int on_rq)
 {
 	struct sched_entity *se = &p->se;
 	struct cfs_rq *cfs_rq;
@@ -6172,7 +6291,7 @@ static void task_move_group_fair(struct task_struct *p, int queued)
 	 * fair sleeper stuff for the first placement, but who cares.
 	 */
 	/*
-	 * When !queued, vruntime of the task has usually NOT been normalized.
+	 * When !on_rq, vruntime of the task has usually NOT been normalized.
 	 * But there are some cases where it has already been normalized:
 	 *
 	 * - Moving a forked child which is waiting for being woken up by
@@ -6183,14 +6302,14 @@ static void task_move_group_fair(struct task_struct *p, int queued)
 	 * To prevent boost or penalty in the new cfs_rq caused by delta
 	 * min_vruntime between the two cfs_rqs, we skip vruntime adjustment.
 	 */
-	if (!queued && (!se->sum_exec_runtime || p->state == TASK_WAKING))
-		queued = 1;
+	if (!on_rq && (!se->sum_exec_runtime || p->state == TASK_WAKING))
+		on_rq = 1;
 
-	if (!queued)
+	if (!on_rq)
 		se->vruntime -= cfs_rq_of(se)->min_vruntime;
 	set_task_rq(p, task_cpu(p));
 	se->depth = se->parent ? se->parent->depth + 1 : 0;
-	if (!queued) {
+	if (!on_rq) {
 		cfs_rq = cfs_rq_of(se);
 		se->vruntime += cfs_rq->min_vruntime;
 #ifdef CONFIG_SMP
