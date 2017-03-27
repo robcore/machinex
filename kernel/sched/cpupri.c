@@ -62,7 +62,7 @@ static int convert_prio(int prio)
  * any discrepancies created by racing against the uncertainty of the current
  * priority configuration.
  *
- * Return: (int)bool - CPUs were found
+ * Returns: (int)bool - CPUs were found
  */
 int cpupri_find(struct cpupri *cp, struct task_struct *p,
 		struct cpumask *lowest_mask)
@@ -202,7 +202,7 @@ void cpupri_set(struct cpupri *cp, int cpu, int newpri)
  * cpupri_init - initialize the cpupri structure
  * @cp: The cpupri context
  *
- * Return: -ENOMEM on memory allocation failure.
+ * Returns: -ENOMEM if memory fails.
  */
 int cpupri_init(struct cpupri *cp)
 {
