@@ -351,6 +351,7 @@ restart:	adr	r0, LC0
 dtb_check_done:
 #endif
 
+	.arch	armv7-a
 /*
  * Check to see if we will overwrite ourselves.
  *   r4  = final kernel address
