@@ -226,7 +226,7 @@ static int audit_match_signal(struct audit_entry *entry)
 #endif
 
 /* Common user-space to kernel rule translation. */
-static inline struct audit_entry *audit_to_entry_common(struct audit_rule_data *rule)
+static inline struct audit_entry *audit_to_entry_common(struct audit_rule *rule)
 {
 	unsigned listnr;
 	struct audit_entry *entry;
@@ -434,7 +434,7 @@ static struct audit_entry *audit_data_to_entry(struct audit_rule_data *data,
 	int i;
 	char *str;
 
-	entry = audit_to_entry_common(data);
+	entry = audit_to_entry_common((struct audit_rule *)data);
 	if (IS_ERR(entry))
 		goto exit_nofree;
 
