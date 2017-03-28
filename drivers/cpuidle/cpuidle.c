@@ -19,7 +19,6 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
-#include <linux/tick.h>
 
 #include "cpuidle.h"
 
@@ -143,7 +142,7 @@ int cpuidle_idle_call(void)
 	broadcast = !!(drv->states[next_state].flags & CPUIDLE_FLAG_TIMER_STOP);
 
 	if (broadcast)
-		tick_broadcast_enter()
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &dev->cpu);
 
 	if (cpuidle_state_is_coupled(dev, drv, next_state))
 		entered_state = cpuidle_enter_state_coupled(dev, drv,
@@ -152,7 +151,7 @@ int cpuidle_idle_call(void)
 		entered_state = cpuidle_enter_state(dev, drv, next_state);
 
 	if (broadcast)
-		tick_broadcast_exit();
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &dev->cpu);
 
 	/* give the governor an opportunity to reflect on the outcome */
 	if (cpuidle_curr_governor->reflect)
