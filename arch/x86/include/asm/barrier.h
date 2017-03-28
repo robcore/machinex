@@ -24,6 +24,7 @@
 #define wmb()	asm volatile("sfence" ::: "memory")
 #endif
 
+<<<<<<< HEAD
 /**
  * read_barrier_depends - Flush all pending reads that subsequents reads
  * depend on.
@@ -80,24 +81,88 @@
 
 #ifdef CONFIG_SMP
 #define smp_mb()	mb()
+=======
+>>>>>>> 1077fa3... arch: Add lightweight memory barriers dma_rmb() and dma_wmb()
 #ifdef CONFIG_X86_PPRO_FENCE
-# define smp_rmb()	rmb()
+#define dma_rmb()	rmb()
 #else
-# define smp_rmb()	barrier()
+#define dma_rmb()	barrier()
 #endif
+<<<<<<< HEAD
 #ifdef CONFIG_X86_OOSTORE
 # define smp_wmb() 	wmb()
 #else
 # define smp_wmb()	barrier()
 #endif
 #define smp_read_barrier_depends()	read_barrier_depends()
+=======
+#define dma_wmb()	barrier()
+
+#ifdef CONFIG_SMP
+#define smp_mb()	mb()
+#define smp_rmb()	dma_rmb()
+#define smp_wmb()	barrier()
+<<<<<<< HEAD
+>>>>>>> 1077fa3... arch: Add lightweight memory barriers dma_rmb() and dma_wmb()
 #define set_mb(var, value) do { (void)xchg(&var, value); } while (0)
-#else
+=======
+#define smp_store_mb(var, value) do { (void)xchg(&var, value); } while (0)
+>>>>>>> b92b8b3... locking/arch: Rename set_mb() to smp_store_mb()
+#else /* !SMP */
 #define smp_mb()	barrier()
 #define smp_rmb()	barrier()
 #define smp_wmb()	barrier()
+<<<<<<< HEAD
+<<<<<<< HEAD
 #define smp_read_barrier_depends()	do { } while (0)
 #define set_mb(var, value) do { var = value; barrier(); } while (0)
+=======
+#define set_mb(var, value) do { WRITE_ONCE(var, value); barrier(); } while (0)
+>>>>>>> ab3f02f... locking/arch: Add WRITE_ONCE() to set_mb()
+=======
+#define smp_store_mb(var, value) do { WRITE_ONCE(var, value); barrier(); } while (0)
+>>>>>>> b92b8b3... locking/arch: Rename set_mb() to smp_store_mb()
+#endif /* SMP */
+
+#if defined(CONFIG_X86_OOSTORE) || defined(CONFIG_X86_PPRO_FENCE)
+
+/*
+ * For either of these options x86 doesn't have a strong TSO memory
+ * model and we should fall back to full barriers.
+ */
+
+#define smp_store_release(p, v)						\
+do {									\
+	compiletime_assert_atomic_type(*p);				\
+	smp_mb();							\
+	ACCESS_ONCE(*p) = (v);						\
+} while (0)
+
+#define smp_load_acquire(p)						\
+({									\
+	typeof(*p) ___p1 = ACCESS_ONCE(*p);				\
+	compiletime_assert_atomic_type(*p);				\
+	smp_mb();							\
+	___p1;								\
+})
+
+#else /* regular x86 TSO memory ordering */
+
+#define smp_store_release(p, v)						\
+do {									\
+	compiletime_assert_atomic_type(*p);				\
+	barrier();							\
+	ACCESS_ONCE(*p) = (v);						\
+} while (0)
+
+#define smp_load_acquire(p)						\
+({									\
+	typeof(*p) ___p1 = ACCESS_ONCE(*p);				\
+	compiletime_assert_atomic_type(*p);				\
+	barrier();							\
+	___p1;								\
+})
+
 #endif
 
 /*

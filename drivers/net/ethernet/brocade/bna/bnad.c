@@ -317,7 +317,7 @@ bnad_tx(struct bnad *bnad, struct bna_tcb *tcb)
 	if (likely(test_bit(BNAD_TXQ_TX_STARTED, &tcb->flags)))
 		bna_ib_ack(tcb->i_dbell, sent);
 
-	smp_mb__before_clear_bit();
+	smp_mb__before_atomic();
 	clear_bit(BNAD_TXQ_FREE_SENT, &tcb->flags);
 
 	return sent;
@@ -939,7 +939,7 @@ bnad_cb_tx_resume(struct bnad *bnad, struct bna_tx *tx)
 		unmap_q->producer_index = 0;
 		unmap_q->consumer_index = 0;
 
-		smp_mb__before_clear_bit();
+		smp_mb__before_atomic();
 		clear_bit(BNAD_TXQ_FREE_SENT, &tcb->flags);
 
 		set_bit(BNAD_TXQ_TX_STARTED, &tcb->flags);
