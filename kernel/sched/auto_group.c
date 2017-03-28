@@ -203,7 +203,7 @@ int proc_sched_autogroup_set_nice(struct task_struct *p, int nice)
 	struct autogroup *ag;
 	int err;
 
-	if (nice < MIN_NICE || nice > MAX_NICE)
+	if (nice < -20 || nice > 19)
 		return -EINVAL;
 
 	err = security_task_setnice(current, nice);

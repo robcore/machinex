@@ -19,8 +19,6 @@
 #include <linux/sched.h>
 #include <linux/capability.h>
 
-#include <linux/rcupdate.h>	/* rcu_expedited */
-
 #define KERNEL_ATTR_RO(_name) \
 static struct kobj_attribute _name##_attr = __ATTR_RO(_name)
 

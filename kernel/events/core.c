@@ -265,7 +265,7 @@ void perf_sample_event_took(u64 sample_len_ns)
 	printk_ratelimited(KERN_WARNING
 			"perf samples too long (%lld > %lld), lowering "
 			"kernel.perf_event_max_sample_rate to %d\n",
-			avg_local_sample_len, allowed_ns >> 1,
+			avg_local_sample_len, allowed_ns,
 			sysctl_perf_event_sample_rate);
 
 	update_perf_cpu_limits();
@@ -6234,7 +6234,7 @@ static int perf_event_idx_default(struct perf_event *event)
  * Ensures all contexts with the same task_ctx_nr have the same
  * pmu_cpu_context too.
  */
-static struct perf_cpu_context __percpu *find_pmu_context(int ctxn)
+static void *find_pmu_context(int ctxn)
 {
 	struct pmu *pmu;
 

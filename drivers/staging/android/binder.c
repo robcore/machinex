@@ -455,7 +455,7 @@ static void binder_set_nice(long nice)
 		__set_user_nice_no_resched(nice);
 		return;
 	}
-	min_nice = rlimit_to_nice(current->signal->rlim[RLIMIT_NICE].rlim_cur);
+	min_nice = 20 - current->signal->rlim[RLIMIT_NICE].rlim_cur;
 	binder_debug(BINDER_DEBUG_PRIORITY_CAP,
 		     "binder: %d: nice value %ld not allowed use "
 		     "%ld instead\n", current->pid, nice, min_nice);

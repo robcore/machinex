@@ -192,10 +192,10 @@ SYSCALL_DEFINE3(setpriority, int, which, int, who, int, niceval)
 
 	/* normalize: avoid signed division (rounding problems) */
 	error = -ESRCH;
-	if (niceval < MIN_NICE)
-		niceval = MIN_NICE;
-	if (niceval > MAX_NICE)
-		niceval = MAX_NICE;
+	if (niceval < -20)
+		niceval = -20;
+	if (niceval > 19)
+		niceval = 19;
 
 	rcu_read_lock();
 	read_lock(&tasklist_lock);
@@ -272,7 +272,7 @@ SYSCALL_DEFINE2(getpriority, int, which, int, who)
 			else
 				p = current;
 			if (p) {
-				niceval = nice_to_rlimit(task_nice(p));
+				niceval = 20 - task_nice(p);
 				if (niceval > retval)
 					retval = niceval;
 			}
@@ -283,7 +283,7 @@ SYSCALL_DEFINE2(getpriority, int, which, int, who)
 			else
 				pgrp = task_pgrp(current);
 			do_each_pid_thread(pgrp, PIDTYPE_PGID, p) {
-				niceval = nice_to_rlimit(task_nice(p));
+				niceval = 20 - task_nice(p);
 				if (niceval > retval)
 					retval = niceval;
 			} while_each_pid_thread(pgrp, PIDTYPE_PGID, p);
@@ -302,7 +302,7 @@ SYSCALL_DEFINE2(getpriority, int, which, int, who)
 				const struct cred *tcred = __task_cred(p);
 				kuid_t tcred_uid = make_kuid(tcred->user_ns, tcred->uid);
 				if (uid_eq(tcred_uid, uid)) {
-					niceval = nice_to_rlimit(task_nice(p));
+					niceval = 20 - task_nice(p);
 					if (niceval > retval)
 						retval = niceval;
 				}

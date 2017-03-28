@@ -48,7 +48,6 @@
 #include <linux/slab.h>
 #include <linux/trace_clock.h>
 #include <asm/byteorder.h>
-#include <linux/torture.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Paul E. McKenney <paulmck@us.ibm.com> and Josh Triplett <josh@freedesktop.org>");
@@ -59,43 +58,78 @@ MODULE_ALIAS("rcutorture");
 #endif
 #define MODULE_PARAM_PREFIX "rcutorture."
 
-torture_param(int, fqs_duration, 0,
-	      "Duration of fqs bursts (us), 0 to disable");
-torture_param(int, fqs_holdoff, 0, "Holdoff time within fqs bursts (us)");
-torture_param(int, fqs_stutter, 3, "Wait time between fqs bursts (s)");
-torture_param(bool, gp_exp, false, "Use expedited GP wait primitives");
-torture_param(bool, gp_normal, false,
-	     "Use normal (non-expedited) GP wait primitives");
-torture_param(int, irqreader, 1, "Allow RCU readers from irq handlers");
-torture_param(int, n_barrier_cbs, 0,
-	     "# of callbacks/kthreads for barrier testing");
-torture_param(int, nfakewriters, 4, "Number of RCU fake writer threads");
-torture_param(int, nreaders, -1, "Number of RCU reader threads");
-torture_param(int, object_debug, 0,
-	     "Enable debug-object double call_rcu() testing");
-torture_param(int, onoff_holdoff, 0, "Time after boot before CPU hotplugs (s)");
-torture_param(int, onoff_interval, 0,
-	     "Time between CPU hotplugs (s), 0=disable");
-torture_param(int, shuffle_interval, 3, "Number of seconds between shuffles");
-torture_param(int, shutdown_secs, 0, "Shutdown time (s), <= zero to disable.");
-torture_param(int, stall_cpu, 0, "Stall duration (s), zero to disable.");
-torture_param(int, stall_cpu_holdoff, 10,
-	     "Time to wait before starting stall (s).");
-torture_param(int, stat_interval, 60,
-	     "Number of seconds between stats printk()s");
-torture_param(int, stutter, 5, "Number of seconds to run/halt test");
-torture_param(int, test_boost, 1, "Test RCU prio boost: 0=no, 1=maybe, 2=yes.");
-torture_param(int, test_boost_duration, 4,
-	     "Duration of each boost test, seconds.");
-torture_param(int, test_boost_interval, 7,
-	     "Interval between boost tests, seconds.");
-torture_param(bool, test_no_idle_hz, true,
-	     "Test support for tickless idle CPUs");
-torture_param(bool, verbose, false, "Enable verbose debugging printk()s");
-
+static int fqs_duration;
+module_param(fqs_duration, int, 0444);
+MODULE_PARM_DESC(fqs_duration, "Duration of fqs bursts (us), 0 to disable");
+static int fqs_holdoff;
+module_param(fqs_holdoff, int, 0444);
+MODULE_PARM_DESC(fqs_holdoff, "Holdoff time within fqs bursts (us)");
+static int fqs_stutter = 3;
+module_param(fqs_stutter, int, 0444);
+MODULE_PARM_DESC(fqs_stutter, "Wait time between fqs bursts (s)");
+static bool gp_exp;
+module_param(gp_exp, bool, 0444);
+MODULE_PARM_DESC(gp_exp, "Use expedited GP wait primitives");
+static bool gp_normal;
+module_param(gp_normal, bool, 0444);
+MODULE_PARM_DESC(gp_normal, "Use normal (non-expedited) GP wait primitives");
+static int irqreader = 1;
+module_param(irqreader, int, 0444);
+MODULE_PARM_DESC(irqreader, "Allow RCU readers from irq handlers");
+static int n_barrier_cbs;
+module_param(n_barrier_cbs, int, 0444);
+MODULE_PARM_DESC(n_barrier_cbs, "# of callbacks/kthreads for barrier testing");
+static int nfakewriters = 4;
+module_param(nfakewriters, int, 0444);
+MODULE_PARM_DESC(nfakewriters, "Number of RCU fake writer threads");
+static int nreaders = -1;
+module_param(nreaders, int, 0444);
+MODULE_PARM_DESC(nreaders, "Number of RCU reader threads");
+static int object_debug;
+module_param(object_debug, int, 0444);
+MODULE_PARM_DESC(object_debug, "Enable debug-object double call_rcu() testing");
+static int onoff_holdoff;
+module_param(onoff_holdoff, int, 0444);
+MODULE_PARM_DESC(onoff_holdoff, "Time after boot before CPU hotplugs (s)");
+static int onoff_interval;
+module_param(onoff_interval, int, 0444);
+MODULE_PARM_DESC(onoff_interval, "Time between CPU hotplugs (s), 0=disable");
+static int shuffle_interval = 3;
+module_param(shuffle_interval, int, 0444);
+MODULE_PARM_DESC(shuffle_interval, "Number of seconds between shuffles");
+static int shutdown_secs;
+module_param(shutdown_secs, int, 0444);
+MODULE_PARM_DESC(shutdown_secs, "Shutdown time (s), <= zero to disable.");
+static int stall_cpu;
+module_param(stall_cpu, int, 0444);
+MODULE_PARM_DESC(stall_cpu, "Stall duration (s), zero to disable.");
+static int stall_cpu_holdoff = 10;
+module_param(stall_cpu_holdoff, int, 0444);
+MODULE_PARM_DESC(stall_cpu_holdoff, "Time to wait before starting stall (s).");
+static int stat_interval = 60;
+module_param(stat_interval, int, 0644);
+MODULE_PARM_DESC(stat_interval, "Number of seconds between stats printk()s");
+static int stutter = 5;
+module_param(stutter, int, 0444);
+MODULE_PARM_DESC(stutter, "Number of seconds to run/halt test");
+static int test_boost = 1;
+module_param(test_boost, int, 0444);
+MODULE_PARM_DESC(test_boost, "Test RCU prio boost: 0=no, 1=maybe, 2=yes.");
+static int test_boost_duration = 4;
+module_param(test_boost_duration, int, 0444);
+MODULE_PARM_DESC(test_boost_duration, "Duration of each boost test, seconds.");
+static int test_boost_interval = 7;
+module_param(test_boost_interval, int, 0444);
+MODULE_PARM_DESC(test_boost_interval, "Interval between boost tests, seconds.");
+static bool test_no_idle_hz = true;
+module_param(test_no_idle_hz, bool, 0444);
+MODULE_PARM_DESC(test_no_idle_hz, "Test support for tickless idle CPUs");
 static char *torture_type = "rcu";
 module_param(torture_type, charp, 0444);
 MODULE_PARM_DESC(torture_type, "Type of RCU to torture (rcu, rcu_bh, ...)");
+static bool verbose;
+module_param(verbose, bool, 0444);
+MODULE_PARM_DESC(verbose, "Enable verbose debugging printk()s");
 
 #define TORTURE_FLAG "-torture:"
 #define PRINTK_STRING(s) \
@@ -136,10 +170,10 @@ static struct rcu_torture __rcu *rcu_torture_current;
 static unsigned long rcu_torture_current_version;
 static struct rcu_torture rcu_tortures[10 * RCU_TORTURE_PIPE_LEN];
 static DEFINE_SPINLOCK(rcu_torture_lock);
-static DEFINE_PER_CPU(long [RCU_TORTURE_PIPE_LEN + 1],
-		      rcu_torture_count) = { 0 };
-static DEFINE_PER_CPU(long [RCU_TORTURE_PIPE_LEN + 1],
-		      rcu_torture_batch) = { 0 };
+static DEFINE_PER_CPU(long [RCU_TORTURE_PIPE_LEN + 1], rcu_torture_count) =
+	{ 0 };
+static DEFINE_PER_CPU(long [RCU_TORTURE_PIPE_LEN + 1], rcu_torture_batch) =
+	{ 0 };
 static atomic_t rcu_torture_wcount[RCU_TORTURE_PIPE_LEN + 1];
 static atomic_t n_rcu_torture_alloc;
 static atomic_t n_rcu_torture_alloc_fail;
@@ -286,6 +320,32 @@ rcu_torture_free(struct rcu_torture *p)
 	spin_unlock_bh(&rcu_torture_lock);
 }
 
+struct rcu_random_state {
+	unsigned long rrs_state;
+	long rrs_count;
+};
+
+#define RCU_RANDOM_MULT 39916801  /* prime */
+#define RCU_RANDOM_ADD	479001701 /* prime */
+#define RCU_RANDOM_REFRESH 10000
+
+#define DEFINE_RCU_RANDOM(name) struct rcu_random_state name = { 0, 0 }
+
+/*
+ * Crude but fast random-number generator.  Uses a linear congruential
+ * generator, with occasional help from cpu_clock().
+ */
+static unsigned long
+rcu_random(struct rcu_random_state *rrsp)
+{
+	if (--rrsp->rrs_count < 0) {
+		rrsp->rrs_state += (unsigned long)local_clock();
+		rrsp->rrs_count = RCU_RANDOM_REFRESH;
+	}
+	rrsp->rrs_state = rrsp->rrs_state * RCU_RANDOM_MULT + RCU_RANDOM_ADD;
+	return swahw32(rrsp->rrs_state);
+}
+
 static void
 rcu_stutter_wait(const char *title)
 {
@@ -305,7 +365,7 @@ rcu_stutter_wait(const char *title)
 struct rcu_torture_ops {
 	void (*init)(void);
 	int (*readlock)(void);
-	void (*read_delay)(struct torture_random_state *rrsp);
+	void (*read_delay)(struct rcu_random_state *rrsp);
 	void (*readunlock)(int idx);
 	int (*completed)(void);
 	void (*deferred_free)(struct rcu_torture *p);
@@ -332,7 +392,7 @@ static int rcu_torture_read_lock(void) __acquires(RCU)
 	return 0;
 }
 
-static void rcu_read_delay(struct torture_random_state *rrsp)
+static void rcu_read_delay(struct rcu_random_state *rrsp)
 {
 	const unsigned long shortdelay_us = 200;
 	const unsigned long longdelay_ms = 50;
@@ -341,13 +401,12 @@ static void rcu_read_delay(struct torture_random_state *rrsp)
 	 * period, and we want a long delay occasionally to trigger
 	 * force_quiescent_state. */
 
-	if (!(torture_random(rrsp) % (nrealreaders * 2000 * longdelay_ms)))
+	if (!(rcu_random(rrsp) % (nrealreaders * 2000 * longdelay_ms)))
 		mdelay(longdelay_ms);
-	if (!(torture_random(rrsp) % (nrealreaders * 2 * shortdelay_us)))
+	if (!(rcu_random(rrsp) % (nrealreaders * 2 * shortdelay_us)))
 		udelay(shortdelay_us);
 #ifdef CONFIG_PREEMPT
-	if (!preempt_count() &&
-	    !(torture_random(rrsp) % (nrealreaders * 20000)))
+	if (!preempt_count() && !(rcu_random(rrsp) % (nrealreaders * 20000)))
 		preempt_schedule();  /* No QS if preempt_disable() in effect */
 #endif
 }
@@ -471,7 +530,7 @@ static int srcu_torture_read_lock(void) __acquires(&srcu_ctl)
 	return srcu_read_lock(&srcu_ctl);
 }
 
-static void srcu_read_delay(struct torture_random_state *rrsp)
+static void srcu_read_delay(struct rcu_random_state *rrsp)
 {
 	long delay;
 	const long uspertick = 1000000 / HZ;
@@ -479,8 +538,7 @@ static void srcu_read_delay(struct torture_random_state *rrsp)
 
 	/* We want there to be long-running readers, but not all the time. */
 
-	delay = torture_random(rrsp) %
-		(nrealreaders * 2 * longdelay * uspertick);
+	delay = rcu_random(rrsp) % (nrealreaders * 2 * longdelay * uspertick);
 	if (!delay)
 		schedule_timeout_interruptible(longdelay);
 	else
@@ -744,10 +802,10 @@ rcu_torture_writer(void *arg)
 	struct rcu_torture *rp;
 	struct rcu_torture *rp1;
 	struct rcu_torture *old_rp;
-	static DEFINE_TORTURE_RANDOM(rand);
+	static DEFINE_RCU_RANDOM(rand);
 
 	VERBOSE_PRINTK_STRING("rcu_torture_writer task started");
-	set_user_nice(current, MAX_NICE);
+	set_user_nice(current, 19);
 
 	do {
 		schedule_timeout_uninterruptible(1);
@@ -755,7 +813,7 @@ rcu_torture_writer(void *arg)
 		if (rp == NULL)
 			continue;
 		rp->rtort_pipe_count = 0;
-		udelay(torture_random(&rand) & 0x3ff);
+		udelay(rcu_random(&rand) & 0x3ff);
 		old_rp = rcu_dereference_check(rcu_torture_current,
 					       current == writer_task);
 		rp->rtort_mbtest = 1;
@@ -768,7 +826,7 @@ rcu_torture_writer(void *arg)
 			atomic_inc(&rcu_torture_wcount[i]);
 			old_rp->rtort_pipe_count++;
 			if (gp_normal == gp_exp)
-				exp = !!(torture_random(&rand) & 0x80);
+				exp = !!(rcu_random(&rand) & 0x80);
 			else
 				exp = gp_exp;
 			if (!exp) {
@@ -810,19 +868,19 @@ rcu_torture_writer(void *arg)
 static int
 rcu_torture_fakewriter(void *arg)
 {
-	DEFINE_TORTURE_RANDOM(rand);
+	DEFINE_RCU_RANDOM(rand);
 
 	VERBOSE_PRINTK_STRING("rcu_torture_fakewriter task started");
-	set_user_nice(current, MAX_NICE);
+	set_user_nice(current, 19);
 
 	do {
-		schedule_timeout_uninterruptible(1 + torture_random(&rand)%10);
-		udelay(torture_random(&rand) & 0x3ff);
+		schedule_timeout_uninterruptible(1 + rcu_random(&rand)%10);
+		udelay(rcu_random(&rand) & 0x3ff);
 		if (cur_ops->cb_barrier != NULL &&
-		    torture_random(&rand) % (nfakewriters * 8) == 0) {
+		    rcu_random(&rand) % (nfakewriters * 8) == 0) {
 			cur_ops->cb_barrier();
 		} else if (gp_normal == gp_exp) {
-			if (torture_random(&rand) & 0x80)
+			if (rcu_random(&rand) & 0x80)
 				cur_ops->sync();
 			else
 				cur_ops->exp_sync();
@@ -863,7 +921,7 @@ static void rcu_torture_timer(unsigned long unused)
 	int idx;
 	int completed;
 	int completed_end;
-	static DEFINE_TORTURE_RANDOM(rand);
+	static DEFINE_RCU_RANDOM(rand);
 	static DEFINE_SPINLOCK(rand_lock);
 	struct rcu_torture *p;
 	int pipe_count;
@@ -922,14 +980,14 @@ rcu_torture_reader(void *arg)
 	int completed;
 	int completed_end;
 	int idx;
-	DEFINE_TORTURE_RANDOM(rand);
+	DEFINE_RCU_RANDOM(rand);
 	struct rcu_torture *p;
 	int pipe_count;
 	struct timer_list t;
 	unsigned long long ts;
 
 	VERBOSE_PRINTK_STRING("rcu_torture_reader task started");
-	set_user_nice(current, MAX_NICE);
+	set_user_nice(current, 19);
 	if (irqreader && cur_ops->irq_capable)
 		setup_timer_on_stack(&t, rcu_torture_timer, 0);
 
@@ -1331,7 +1389,7 @@ rcu_torture_onoff(void *arg)
 	int cpu;
 	unsigned long delta;
 	int maxcpu = -1;
-	DEFINE_TORTURE_RANDOM(rand);
+	DEFINE_RCU_RANDOM(rand);
 	int ret;
 	unsigned long starttime;
 
@@ -1345,7 +1403,7 @@ rcu_torture_onoff(void *arg)
 		VERBOSE_PRINTK_STRING("rcu_torture_onoff end holdoff");
 	}
 	while (!kthread_should_stop()) {
-		cpu = (torture_random(&rand) >> 4) % (maxcpu + 1);
+		cpu = (rcu_random(&rand) >> 4) % (maxcpu + 1);
 		if (cpu_online(cpu) && cpu_is_hotpluggable(cpu)) {
 			if (verbose)
 				pr_alert("%s" TORTURE_FLAG
@@ -1526,7 +1584,7 @@ static int rcu_torture_barrier_cbs(void *arg)
 
 	init_rcu_head_on_stack(&rcu);
 	VERBOSE_PRINTK_STRING("rcu_torture_barrier_cbs task started");
-	set_user_nice(current, MAX_NICE);
+	set_user_nice(current, 19);
 	do {
 		wait_event(barrier_cbs_wq[myid],
 			   (newphase =

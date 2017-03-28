@@ -36,6 +36,8 @@
 #include <linux/delay.h>
 #include <linux/srcu.h>
 
+#include <trace/events/rcu.h>
+
 #include "rcu.h"
 
 /*

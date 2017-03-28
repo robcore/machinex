@@ -2625,27 +2625,26 @@ static inline void schedule_debug(struct task_struct *prev)
 static inline struct task_struct *
 pick_next_task(struct rq *rq, struct task_struct *prev)
 {
-	const struct sched_class *class = &fair_sched_class;
+	const struct sched_class *class;
 	struct task_struct *p;
 
 	/*
 	 * Optimization: we know that if all tasks are in
 	 * the fair class we can call that function directly:
 	 */
-	if (likely(prev->sched_class == class &&
+	if (likely(prev->sched_class == &fair_sched_class &&
 		   rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq, prev);
-		if (likely(p && p != RETRY_TASK))
+		if (likely(p)) {
 			update_task_ravg(p, rq, 1);
 			return p;
 		}
-again:
+	}
+
 	for_each_class(class) {
 		p = class->pick_next_task(rq, prev);
 		if (p) {
 			update_task_ravg(p, rq, 1);
-			if (unlikely(p == RETRY_TASK))
-				goto again;
 			return p;
 		}
 	}
@@ -3050,7 +3049,7 @@ void set_user_nice(struct task_struct *p, long nice)
 	unsigned long flags;
 	struct rq *rq;
 
-	if (task_nice(p) == nice || nice < MIN_NICE || nice > MAX_NICE)
+	if (task_nice(p) == nice || nice < -20 || nice > 19)
 		return;
 	/*
 	 * We have to be careful, if called from sys_setpriority(),
@@ -3099,7 +3098,7 @@ EXPORT_SYMBOL(set_user_nice);
 int can_nice(const struct task_struct *p, const int nice)
 {
 	/* convert nice value [19,-20] to rlimit style value [1,40] */
-	int nice_rlim = nice_to_rlimit(nice);
+	int nice_rlim = 20 - nice;
 
 	return (nice_rlim <= task_rlimit(p, RLIMIT_NICE) ||
 		capable(CAP_SYS_NICE));
@@ -3129,10 +3128,10 @@ SYSCALL_DEFINE1(nice, int, increment)
 		increment = 40;
 
 	nice = task_nice(current) + increment;
-	if (nice < MIN_NICE)
-		nice = MIN_NICE;
-	if (nice > MAX_NICE)
-		nice = MAX_NICE;
+	if (nice < -20)
+		nice = -20;
+	if (nice > 19)
+		nice = 19;
 
 	if (increment < 0 && !can_nice(current, nice))
 		return -EPERM;
@@ -3830,7 +3829,7 @@ static int sched_copy_attr(struct sched_attr __user *uattr,
 	 * XXX: do we want to be lenient like existing syscalls; or do we want
 	 * to be strict and return an error on out-of-bounds values?
 	 */
-	attr->sched_nice = clamp(attr->sched_nice, MIN_NICE, MAX_NICE);
+	attr->sched_nice = clamp(attr->sched_nice, -20, 19);
 
 	return 0;
 
