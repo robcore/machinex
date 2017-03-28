@@ -446,7 +446,7 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	void *hcpu = (void *)(long)cpu;
 	unsigned long mod = tasks_frozen ? CPU_TASKS_FROZEN : 0;
 	struct task_struct *idle;
-	static bool core_control = thermal_mitigation();
+	bool core_control = thermal_mitigation();
 
 	cpu_hotplug_begin();
 
