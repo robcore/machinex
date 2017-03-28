@@ -379,7 +379,7 @@ static inline void futex_get_mm(union futex_key *key)
 	 * get_futex_key() implies a full barrier. This is relied upon
 	 * as full barrier (B), see the ordering comment above.
 	 */
-	smp_mb__after_atomic();
+	smp_mb__after_atomic_inc();
 }
 
 /*
@@ -392,7 +392,7 @@ static inline void hb_waiters_inc(struct futex_hash_bucket *hb)
 	/*
 	 * Full barrier (A), see the ordering comment above.
 	 */
-	smp_mb__after_atomic();
+	smp_mb__after_atomic_inc();
 #endif
 }
 
@@ -2207,7 +2207,7 @@ static void futex_wait_queue_me(struct futex_hash_bucket *hb, struct futex_q *q,
 {
 	/*
 	 * The task state is guaranteed to be set before another task can
-	 * wake it. set_current_state() is implemented using smp_store_mb() and
+	 * wake it. set_current_state() is implemented using set_mb() and
 	 * queue_me() calls spin_unlock() upon completion, both serializing
 	 * access to the hash list and forcing another memory barrier.
 	 */

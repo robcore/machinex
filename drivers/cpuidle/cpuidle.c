@@ -19,7 +19,6 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
-#include <linux/tick.h>
 
 #include "cpuidle.h"
 
@@ -541,4 +540,3 @@ static int __init cpuidle_init(void)
 
 module_param(off, int, 0444);
 core_initcall(cpuidle_init);
-
