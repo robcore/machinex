@@ -281,19 +281,6 @@ void unmask_irq(struct irq_desc *desc)
 	}
 }
 
-void unmask_threaded_irq(struct irq_desc *desc)
-{
-	struct irq_chip *chip = desc->irq_data.chip;
-
-	if (chip->flags & IRQCHIP_EOI_THREADED)
-		chip->irq_eoi(&desc->irq_data);
-
-	if (chip->irq_unmask) {
-		chip->irq_unmask(&desc->irq_data);
-		irq_state_clr_masked(desc);
-	}
-}
-
 /*
  *	handle_nested_irq - Handle a nested irq from a irq thread
  *	@irq:	the interrupt number
@@ -470,27 +457,6 @@ static inline void preflow_handler(struct irq_desc *desc)
 static inline void preflow_handler(struct irq_desc *desc) { }
 #endif
 
-static void cond_unmask_eoi_irq(struct irq_desc *desc, struct irq_chip *chip)
-{
-	if (!(desc->istate & IRQS_ONESHOT)) {
-		chip->irq_eoi(&desc->irq_data);
-		return;
-	}
-	/*
-	 * We need to unmask in the following cases:
-	 * - Oneshot irq which did not wake the thread (caused by a
-	 *   spurious interrupt or a primary handler handling it
-	 *   completely).
-	 */
-	if (!irqd_irq_disabled(&desc->irq_data) &&
-	    irqd_irq_masked(&desc->irq_data) && !desc->threads_oneshot) {
-		chip->irq_eoi(&desc->irq_data);
-		unmask_irq(desc);
-	} else if (!(chip->flags & IRQCHIP_EOI_THREADED)) {
-		chip->irq_eoi(&desc->irq_data);
-	}
-}
-
 /**
  *	handle_fasteoi_irq - irq handler for transparent controllers
  *	@irq:	the interrupt number
@@ -504,7 +470,6 @@ static void cond_unmask_eoi_irq(struct irq_desc *desc, struct irq_chip *chip)
 bool
 handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 {
-	struct irq_chip *chip = desc->irq_data.chip;
 	bool handled = false;
 
 	raw_spin_lock(&desc->lock);
@@ -521,7 +486,8 @@ handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 	 * then mask it and get out of here:
 	 */
 	if (unlikely(!desc->action || irqd_irq_disabled(&desc->irq_data))) {
-		desc->istate |= IRQS_PENDING;
+		if (!irq_settings_is_level(desc))
+			desc->istate |= IRQS_PENDING;
 		mask_irq(desc);
 		goto out;
 	}
@@ -532,19 +498,21 @@ handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 	preflow_handler(desc);
 	handle_irq_event(desc);
 
-	cond_unmask_eoi_irq(desc, chip);
+	if (desc->istate & IRQS_ONESHOT)
+		cond_unmask_irq(desc);
 
 	handled = true;
 
+out_eoi:
+	desc->irq_data.chip->irq_eoi(&desc->irq_data);
+out_unlock:
 	raw_spin_unlock(&desc->lock);
 	return handled;
 out:
-	if (!(chip->flags & IRQCHIP_EOI_IF_HANDLED))
-		chip->irq_eoi(&desc->irq_data);
-	raw_spin_unlock(&desc->lock);
-	return handled;
+	if (!(desc->irq_data.chip->flags & IRQCHIP_EOI_IF_HANDLED))
+		goto out_eoi;
+	goto out_unlock;
 }
-EXPORT_SYMBOL_GPL(handle_fasteoi_irq);
 
 /**
  *	handle_edge_irq - edge type IRQ handler
