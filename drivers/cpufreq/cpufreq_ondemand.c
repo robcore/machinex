@@ -23,7 +23,9 @@
 #include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/ktime.h>
+#include <linux/kthread.h>
 #include <linux/sched.h>
+#include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 
@@ -36,7 +38,7 @@
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(85)
+#define DEF_FREQUENCY_UP_THRESHOLD		(80)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 
 #define DEF_MIDDLE_GRID_STEP			(14)
@@ -45,11 +47,10 @@
 #define DEF_HIGH_GRID_LOAD			(89)
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
-#define DEF_SAMPLING_RATE			(50000)
+#define DEF_SAMPLING_RATE			(60000)
 
 #define DEF_SYNC_FREQUENCY			(1242000)
 #define DEF_OPTIMAL_FREQUENCY			(1134000)
-#define DEF_OPTIMAL_MAX_FREQ			(1890000)
 
 /* Kernel tunabble controls */
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
@@ -80,7 +81,8 @@ static unsigned int min_sampling_rate;
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
 
 static void do_dbs_timer(struct work_struct *work);
-
+static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
+				unsigned int event);
 /* Sampling types */
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
@@ -161,9 +163,9 @@ static struct dbs_tuners {
 	.high_grid_load = DEF_HIGH_GRID_LOAD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = DEF_SYNC_FREQUENCY,
-	.optimal_freq = DEF_OPTIMAL_FREQUENCY,
-	.optimal_max_freq = DEF_OPTIMAL_MAX_FREQ,
+	.sync_freq = 918000,
+	.optimal_freq = 1566000,
+	.optimal_max_freq = DEF_OPTIMAL_FREQ,
 	.input_boost = 0,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
@@ -426,7 +428,6 @@ static ssize_t store_high_grid_step(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 	dbs_tuners_ins.high_grid_step = input;
-
 	return count;
 }
 
@@ -439,10 +440,7 @@ static ssize_t store_optimal_max_freq(struct kobject *a, struct attribute *b,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-	if (input <= 1890000)
-		return count;
 	dbs_tuners_ins.optimal_max_freq = input;
-
 	return count;
 }
 
@@ -547,7 +545,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 		struct cpu_dbs_info_s *dbs_info;
 		dbs_info = &per_cpu(od_cpu_dbs_info, j);
 		dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-			&dbs_info->prev_cpu_wall, dbs_tuners_ins.io_is_busy);
+						&dbs_info->prev_cpu_wall, 0);
 		if (dbs_tuners_ins.ignore_nice)
 			dbs_info->prev_cpu_nice =
 					kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -620,7 +618,10 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 					/* restart dbs timer */
 					mutex_lock(&dbs_info->timer_mutex);
 					dbs_timer_init(dbs_info);
+					/* Enable frequency synchronization
+					 * of CPUs */
 					mutex_unlock(&dbs_info->timer_mutex);
+					atomic_set(&dbs_info->sync_enabled, 1);
 				}
 skip_this_cpu:
 				unlock_policy_rwsem_write(cpu);
@@ -651,6 +652,10 @@ skip_this_cpu:
 			if (dbs_info->cur_policy) {
 				/* cpu using ondemand, cancel dbs timer */
 				dbs_timer_exit(dbs_info);
+				/* Disable frequency synchronization of
+				 * CPUs to avoid re-queueing of work from
+				 * sync_thread */
+				atomic_set(&dbs_info->sync_enabled, 0);
 
 				mutex_lock(&dbs_info->timer_mutex);
 				ondemand_powersave_bias_setspeed(
