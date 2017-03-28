@@ -26,16 +26,10 @@
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
 #include <mach/cpufreq.h>
-#include <linux/suspend.h>
 
 #define DEFAULT_POLLING_MS	500
 /* last 3 minutes based on 250ms polling cycle */
 #define MAX_HISTORY_SZ		((3*60*1000) / DEFAULT_POLLING_MS)
-static bool tmc;
-bool thermal_mitigation(void)
-{
-	return tmc;
-}
 
 struct msm_thermal_stat_data {
 	int32_t temp_history[MAX_HISTORY_SZ];
@@ -135,7 +129,6 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 	return ret;
 }
 
-
 #ifdef CONFIG_SMP
 static void __ref do_core_control(long temp)
 {
@@ -160,11 +153,10 @@ static void __ref do_core_control(long temp)
 				pr_err("%s: Error %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
 			cpus_offlined |= BIT(i);
-			tmc = true;
 			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
-		temp < (msm_thermal_info.core_limit_temp_degC -
+		temp <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) {
 		for (i = 0; i < num_possible_cpus(); i++) {
 			if (!(cpus_offlined & BIT(i)))
@@ -181,7 +173,6 @@ static void __ref do_core_control(long temp)
 			if (ret)
 				pr_err("%s: Error %d online core %d\n",
 						KBUILD_MODNAME, ret, i);
-			tmc = false;
 			break;
 		}
 	}
