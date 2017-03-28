@@ -2349,10 +2349,10 @@ void cpuset_cpus_allowed(struct task_struct *tsk, struct cpumask *pmask)
 	struct cpuset *cpus_cs;
 
 	mutex_lock(&callback_mutex);
-	task_lock(tsk);
+	rcu_read_lock();
 	cpus_cs = effective_cpumask_cpuset(task_cs(tsk));
 	guarantee_online_cpus(cpus_cs, pmask);
-	task_unlock(tsk);
+	rcu_read_unlock();
 	mutex_unlock(&callback_mutex);
 }
 
@@ -2405,10 +2405,10 @@ nodemask_t cpuset_mems_allowed(struct task_struct *tsk)
 	nodemask_t mask;
 
 	mutex_lock(&callback_mutex);
-	task_lock(tsk);
+	rcu_read_lock();
 	mems_cs = effective_nodemask_cpuset(task_cs(tsk));
 	guarantee_online_mems(mems_cs, &mask);
-	task_unlock(tsk);
+	rcu_read_unlock();
 	mutex_unlock(&callback_mutex);
 
 	return mask;
@@ -2524,10 +2524,10 @@ int __cpuset_node_allowed_softwall(int node, gfp_t gfp_mask)
 	/* Not hardwall and node outside mems_allowed: scan up cpusets */
 	mutex_lock(&callback_mutex);
 
-	task_lock(current);
+	rcu_read_lock();
 	cs = nearest_hardwall_ancestor(task_cs(current));
 	allowed = node_isset(node, cs->mems_allowed);
-	task_unlock(current);
+	rcu_read_unlock();
 
 	mutex_unlock(&callback_mutex);
 	return allowed;
@@ -2704,9 +2704,9 @@ int cpuset_memory_pressure_enabled __read_mostly;
 
 void __cpuset_memory_pressure_bump(void)
 {
-	task_lock(current);
+	rcu_read_lock();
 	fmeter_markevent(&task_cs(current)->fmeter);
-	task_unlock(current);
+	rcu_read_unlock();
 }
 
 #ifdef CONFIG_PROC_PID_CPUSET
