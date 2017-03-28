@@ -12,8 +12,6 @@
 
 #include <trace/events/power.h>
 
-#include "sched.h"
-
 int __read_mostly cpu_idle_force_poll;
 
 void cpu_idle_poll_ctrl(bool enable)
@@ -65,73 +63,13 @@ void __weak arch_cpu_idle(void)
 	local_irq_enable();
 }
 
-/**
- * cpuidle_idle_call - the main idle function
- *
- * NOTE: no locks or semaphores should be used here
- * return non-zero on failure
- */
-static int cpuidle_idle_call(void)
-{
-	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
-	struct cpuidle_driver *drv;
-	int next_state, entered_state;
-	bool broadcast;
-
-	if (off || !initialized)
-		return -ENODEV;
-
-	/* check if the device is ready */
-	if (!dev || !dev->enabled)
-		return -EBUSY;
-
-	drv = cpuidle_get_cpu_driver(dev);
-
-	/* ask the governor for the next state */
-	next_state = cpuidle_curr_governor->select(drv, dev);
-	if (need_resched()) {
-		dev->last_residency = 0;
-		/* give the governor an opportunity to reflect on the outcome */
-		if (cpuidle_curr_governor->reflect)
-			cpuidle_curr_governor->reflect(dev, next_state);
-		local_irq_enable();
-		return 0;
-	}
-
-	broadcast = !!(drv->states[next_state].flags & CPUIDLE_FLAG_TIMER_STOP);
-
-	if (broadcast)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &dev->cpu);
-
-	if (cpuidle_state_is_coupled(dev, drv, next_state))
-		entered_state = cpuidle_enter_state_coupled(dev, drv,
-							    next_state);
-	else
-		entered_state = cpuidle_enter_state(dev, drv, next_state);
-
-	if (broadcast)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &dev->cpu);
-
-	/* give the governor an opportunity to reflect on the outcome */
-	if (cpuidle_curr_governor->reflect)
-		cpuidle_curr_governor->reflect(dev, entered_state);
-
-		arch_cpu_idle();
-
-	return 0;
-}
-#else
-static inline int cpuidle_idle_call(void)
-{
-	return -ENODEV;
-}
-#endif
-
 /*
  * Generic idle loop implementation
  */
 static void cpu_idle_loop(void)
 {
+	int cpu = smp_processor_id();
+
 	while (1) {
 		tick_nohz_idle_enter();
 
@@ -139,8 +77,8 @@ static void cpu_idle_loop(void)
 			check_pgt_cache();
 			rmb();
 
-			if (cpu_is_offline(smp_processor_id()))
-				arch_cpu_idle_dead();
+		if (cpu_is_offline(cpu))
+			arch_cpu_idle_dead();
 
 			local_irq_disable();
 			arch_cpu_idle_enter();
@@ -173,16 +111,6 @@ static void cpu_idle_loop(void)
 			}
 			arch_cpu_idle_exit();
 		}
-
-		/*
-		 * Since we fell out of the loop above, we know
-		 * TIF_NEED_RESCHED must be set, propagate it into
-		 * PREEMPT_NEED_RESCHED.
-		 *
-		 * This is required because for polling idle loops we will
-		 * not have had an IPI to fold the state for us.
-		 */
-		preempt_set_need_resched();
 		tick_nohz_idle_exit();
 		schedule_preempt_disabled();
 	}
