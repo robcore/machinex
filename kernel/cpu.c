@@ -439,6 +439,8 @@ void smpboot_thread_init(void)
 	register_cpu_notifier(&smpboot_thread_notifier);
 }
 
+static bool cc_in_progress;
+
 /* Requires cpu_add_remove_lock to be held */
 static int _cpu_up(unsigned int cpu, int tasks_frozen)
 {
@@ -446,7 +448,7 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	void *hcpu = (void *)(long)cpu;
 	unsigned long mod = tasks_frozen ? CPU_TASKS_FROZEN : 0;
 	struct task_struct *idle;
-	bool core_control = thermal_mitigation();
+	bool cc_in_progress = thermal_mitigation();
 
 	cpu_hotplug_begin();
 
@@ -468,7 +470,7 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	ret = __cpu_notify(CPU_UP_PREPARE | mod, hcpu, -1, &nr_calls);
 	if (ret) {
 		nr_calls--;
-		if (!core_control)
+		if (!cc_in_progress)
 			pr_warn_ratelimited("%s: attempt to bring up CPU %u failed\n",
 			__func__, cpu);
 		goto out_notify;
