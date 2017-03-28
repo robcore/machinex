@@ -2613,7 +2613,8 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 	 * Optimization: we know that if all tasks are in
 	 * the fair class we can call that function directly:
 	 */
-	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
+	if (likely(prev->sched_class == &fair_sched_class &&
+		   rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq, prev);
 		if (likely(p)) {
 			update_task_ravg(p, rq, 1);
@@ -2718,18 +2719,6 @@ need_resched:
 			}
 		}
 		switch_count = &prev->nvcsw;
-	}
-
-	pre_schedule(rq, prev);
-
-	if (unlikely(!rq->nr_running)) {
-		/*
-		 * We must set idle_stamp _before_ calling idle_balance(), such
-		 * that we measure the duration of idle_balance() as idle time.
-		 */
-		rq->idle_stamp = rq_clock(rq);
-		if (idle_balance(rq))
-			rq->idle_stamp = 0;
 	}
 
 	if (prev->on_rq || rq->skip_clock_update < 0)
@@ -4860,6 +4849,22 @@ static void calc_load_migrate(struct rq *rq)
 		atomic_long_add(delta, &calc_load_tasks);
 }
 
+static void put_prev_task_fake(struct rq *rq, struct task_struct *prev)
+{
+}
+
+static const struct sched_class fake_sched_class = {
+	.put_prev_task = put_prev_task_fake,
+};
+
+static struct task_struct fake_task = {
+	/*
+	 * Avoid pull_{rt,dl}_task()
+	 */
+	.prio = MAX_PRIO + 1,
+	.sched_class = &fake_sched_class,
+};
+
 /*
  * Migrate all tasks from the rq, sleeping tasks will be migrated by
  * try_to_wake_up()->select_task_rq().
@@ -4913,7 +4918,7 @@ static void migrate_tasks(unsigned int dead_cpu)
 		if (rq->nr_running == 1)
 			break;
 
-		next = pick_next_task(rq, NULL);
+		next = pick_next_task(rq, &fake_task);
 		BUG_ON(!next);
 		next->sched_class->put_prev_task(rq, next);
 
