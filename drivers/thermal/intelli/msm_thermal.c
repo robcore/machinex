@@ -156,7 +156,7 @@ static void __ref do_core_control(long temp)
 			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
-		temp <= (msm_thermal_info.core_limit_temp_degC -
+		temp < (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) {
 		for (i = 0; i < num_possible_cpus(); i++) {
 			if (!(cpus_offlined & BIT(i)))
