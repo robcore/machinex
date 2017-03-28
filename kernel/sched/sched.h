@@ -1240,16 +1240,6 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 
 extern void init_task_runnable_average(struct task_struct *p);
 
-#ifdef CONFIG_PARAVIRT
-static inline u64 steal_ticks(u64 steal)
-{
-	if (unlikely(steal > NSEC_PER_SEC))
-		return div_u64(steal, TICK_NSEC);
-
-	return __iter_div_u64_rem(steal, TICK_NSEC, &steal);
-}
-#endif
-
 static inline void inc_nr_running(struct rq *rq)
 {
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
