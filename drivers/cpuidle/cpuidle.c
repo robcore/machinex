@@ -157,8 +157,6 @@ int cpuidle_idle_call(void)
 	if (cpuidle_curr_governor->reflect)
 		cpuidle_curr_governor->reflect(dev, entered_state);
 
-	arch_cpu_idle();
-
 	return 0;
 }
 

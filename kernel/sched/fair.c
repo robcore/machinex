@@ -3595,14 +3595,13 @@ done:
 }
 
 /*
- * select_task_rq_fair: Select target runqueue for the waking task in domains
- * that have the 'sd_flag' flag set. In practice, this is SD_BALANCE_WAKE,
- * SD_BALANCE_FORK, or SD_BALANCE_EXEC.
+ * sched_balance_self: balance the current task (running on cpu) in domains
+ * that have the 'flag' flag set. In practice, this is SD_BALANCE_FORK and
+ * SD_BALANCE_EXEC.
  *
- * Balances load by selecting the idlest cpu in the idlest group, or under
- * certain conditions an idle sibling cpu if the domain has SD_WAKE_AFFINE set.
+ * Balance, ie. select the least loaded group.
  *
- * Returns the target cpu number.
+ * Returns the target CPU number, or the same CPU if no balancing is needed.
  *
  * preempt must be disabled.
  */
@@ -4224,7 +4223,7 @@ static void move_task(struct task_struct *p, struct lb_env *env)
  * Is this task likely cache-hot:
  */
 static int
-task_hot(struct task_struct *p, u64 now)
+task_hot(struct task_struct *p, u64 now, struct sched_domain *sd)
 {
 	s64 delta;
 
@@ -4313,7 +4312,7 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	 * 2) too many balance attempts have failed.
 	 */
 
-	tsk_cache_hot = task_hot(p, rq_clock_task(env->src_rq));
+	tsk_cache_hot = task_hot(p, rq_clock_task(env->src_rq), env->sd);
 	if (!tsk_cache_hot ||
 		env->sd->nr_balance_failed > env->sd->cache_nice_tries) {
 
@@ -5821,7 +5820,7 @@ static int idle_balance(struct rq *this_rq)
 	 * While browsing the domains, we released the rq lock.
 	 * A task could have be enqueued in the meantime
 	 */
-	if (this_rq->cfs.h_nr_running && !pulled_task) {
+	if (this_rq->nr_running && !pulled_task) {
 		pulled_task = 1;
 		goto out;
 	}
@@ -5838,12 +5837,6 @@ static int idle_balance(struct rq *this_rq)
 		this_rq->max_idle_balance_cost = curr_cost;
 
 out:
- 	/* Is there a task of a high priority class? */
-	if (this_rq->nr_running != this_rq->cfs.h_nr_running &&
-	    (this_rq->dl.dl_nr_running ||
-	     (this_rq->rt.rt_nr_running && !rt_rq_throttled(&this_rq->rt))))
-		pulled_task = -1;
-
 	if (pulled_task)
 		this_rq->idle_stamp = 0;
 
