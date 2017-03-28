@@ -30,10 +30,6 @@
 #endif  /* CONFIG_POWERSUSPEND*/
 
 struct hotplug_cpuinfo {
-#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
-	u64 prev_cpu_wall;
-	u64 prev_cpu_idle;
-#endif
 	unsigned int up_load;
 	unsigned int down_load;
 	unsigned int up_freq;
@@ -191,39 +187,11 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	for_each_online_cpu(cpu) {
 		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 		unsigned int upcpu = (cpu + 1);
-#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
-		u64 cur_wall_time, cur_idle_time;
-		unsigned int wall_time, idle_time;
-#endif
 		int cur_load = -1;
 		unsigned int cur_freq = 0;
 		bool check_up = false, check_down = false;
 
-#ifdef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 		cur_load = cpufreq_quick_get_util(cpu);
-#else
-		cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, io_busy);
-
-		wall_time = (unsigned int)
-				(cur_wall_time -
-					pcpu_info->prev_cpu_wall);
-		pcpu_info->prev_cpu_wall = cur_wall_time;
-
-		idle_time = (unsigned int)
-				(cur_idle_time -
-					pcpu_info->prev_cpu_idle);
-		pcpu_info->prev_cpu_idle = cur_idle_time;
-
-		/* if wall_time < idle_time, evaluate cpu load next time */
-		if (wall_time >= idle_time) {
-			/*
-			 * if wall_time is equal to idle_time,
-			 * cpu_load is equal to 0
-			 */
-			cur_load = wall_time > idle_time ? (100 *
-				(wall_time - idle_time)) / wall_time : 0;
-		}
-#endif
 
 		/* if cur_load < 0, evaluate cpu load next time */
 		if (cur_load >= 0) {
@@ -315,9 +283,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 							  delay);
 }
 
-#ifdef CONFIG_POWERSUSPEND
 static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
-#endif
 {
 	if ((hotplug_tuners_ins.hotplug_enable)
 		&& (hotplug_tuners_ins.hotplug_suspend)) {
@@ -327,9 +293,7 @@ static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
 	}
 }
 
-#ifdef CONFIG_POWERSUSPEND
 static void __ref alucard_hotplug_resume(struct power_suspend *handler)
-#endif
 {
 	if ((hotplug_tuners_ins.hotplug_enable)
 		&& (hotplug_tuners_ins.hotplug_suspend)) {
@@ -341,12 +305,10 @@ static void __ref alucard_hotplug_resume(struct power_suspend *handler)
 	}
 }
 
-#ifdef CONFIG_POWERSUSPEND
 static struct power_suspend alucard_hotplug_power_suspend_driver = {
 	.suspend = alucard_hotplug_suspend,
 	.resume = alucard_hotplug_resume,
 };
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 static int hotplug_start(void)
 {
@@ -369,19 +331,13 @@ static int hotplug_start(void)
 		return ret;
 	}
 
-#if defined(CONFIG_POWERSUSPEND)
 	hotplug_tuners_ins.suspended = false;
 	hotplug_tuners_ins.force_cpu_up = false;
-#endif
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 
-#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
-		pcpu_info->prev_cpu_idle = get_cpu_idle_time(cpu,
-				&pcpu_info->prev_cpu_wall, hotplug_tuners_ins.hp_io_is_busy);
-#endif
 		pcpu_info->cur_up_rate = 1;
 		pcpu_info->cur_down_rate = 1;
 	}
@@ -392,26 +348,18 @@ static int hotplug_start(void)
 	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
 						msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate));
 
-#if defined(CONFIG_POWERSUSPEND)
 	mutex_init(&hotplug_tuners_ins.alu_hotplug_mutex);
-#endif
 
-#if defined(CONFIG_POWERSUSPEND)
 	register_power_suspend(&alucard_hotplug_power_suspend_driver);
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_POWERSUSPEND */
 
 	return 0;
 }
 
 static void hotplug_stop(void)
 {
-#if defined(CONFIG_POWERSUSPEND)
 	mutex_destroy(&hotplug_tuners_ins.alu_hotplug_mutex);
-#endif
 
-#if defined(CONFIG_POWERSUSPEND)
 	unregister_power_suspend(&alucard_hotplug_power_suspend_driver);
-#endif  /* CONFIG_POWERSUSPEND */
 
 	cancel_delayed_work_sync(&alucard_hotplug_work);
 
@@ -434,9 +382,7 @@ show_one(min_cpus_online, min_cpus_online);
 show_one(max_cpus_online, max_cpus_online);
 show_one(max_cpus_online_susp, max_cpus_online_susp);
 show_one(hp_io_is_busy, hp_io_is_busy);
-#if defined(CONFIG_POWERSUSPEND)
 show_one(hotplug_suspend, hotplug_suspend);
-#endif
 
 #define show_pcpu_param(file_name, var_name, num_core)		\
 static ssize_t show_##file_name		\
@@ -684,16 +630,7 @@ static ssize_t store_hp_io_is_busy(struct kobject *a, struct attribute *b,
 		return count;
 
 	hotplug_tuners_ins.hp_io_is_busy = !!input;
-#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
-	/* we need to re-evaluate prev_cpu_idle */
-	if (hotplug_tuners_ins.hotplug_enable) {
-		for_each_online_cpu(j) {
-			struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, j);
-			pcpu_info->prev_cpu_idle = get_cpu_idle_time(j,
-					&pcpu_info->prev_cpu_wall, hotplug_tuners_ins.hp_io_is_busy);
-		}
-	}
-#endif
+
 	return count;
 }
 
@@ -702,7 +639,6 @@ static ssize_t store_hp_io_is_busy(struct kobject *a, struct attribute *b,
  * if set = 1 hotplug will sleep,
  * if set = 0, then hoplug will be active all the time.
  */
-#if defined(CONFIG_POWERSUSPEND)
 static ssize_t store_hotplug_suspend(struct kobject *a,
 				struct attribute *b,
 				const char *buf, size_t count)
@@ -728,7 +664,6 @@ static ssize_t store_hotplug_suspend(struct kobject *a,
 
 	return count;
 }
-#endif
 
 define_one_global_rw(hotplug_sampling_rate);
 define_one_global_rw(hotplug_enable);
@@ -736,9 +671,7 @@ define_one_global_rw(min_cpus_online);
 define_one_global_rw(max_cpus_online);
 define_one_global_rw(max_cpus_online_susp);
 define_one_global_rw(hp_io_is_busy);
-#if defined(CONFIG_POWERSUSPEND)
 define_one_global_rw(hotplug_suspend);
-#endif
 
 static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_sampling_rate.attr,
@@ -771,9 +704,7 @@ static struct attribute *alucard_hotplug_attributes[] = {
 	&max_cpus_online.attr,
 	&max_cpus_online_susp.attr,
 	&hp_io_is_busy.attr,
-#if defined(CONFIG_POWERSUSPEND)
 	&hotplug_suspend.attr,
-#endif
 	NULL
 };
 
@@ -788,9 +719,9 @@ static int __init alucard_hotplug_init(void)
 	unsigned int cpu;
 	unsigned int hotplug_freq[NR_CPUS][2] = {
 		{0, 1242000},
-		{1134000, 1458000},
-		{1026000, 1566000},
-		{1242000, 0}
+		{1350000, 1458000},
+		{1134000, 1566000},
+		{1026000, 0}
 	};
 	unsigned int hotplug_load[NR_CPUS][2] = {
 		{0, 60},
