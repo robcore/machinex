@@ -85,6 +85,7 @@ unsigned long get_wchan(struct task_struct *p);
 #endif
 
 void cpu_idle_wait(void);
+#define cpu_relax_lowlatency()                cpu_relax()
 
 #define task_pt_regs(p) \
 	((struct pt_regs *)(THREAD_START_SP + task_stack_page(p)) - 1)
