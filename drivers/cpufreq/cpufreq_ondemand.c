@@ -165,7 +165,7 @@ static struct dbs_tuners {
 	.powersave_bias = 0,
 	.sync_freq = 918000,
 	.optimal_freq = 1566000,
-	.optimal_max_freq = DEF_OPTIMAL_FREQ,
+	.optimal_max_freq = DEF_OPTIMAL_FREQUENCY,
 	.input_boost = 0,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
