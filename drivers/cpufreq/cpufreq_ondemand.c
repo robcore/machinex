@@ -384,8 +384,6 @@ static ssize_t store_optimal_freq(struct kobject *a, struct attribute *b,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-	if (input <= 810000)
-		return count;
 	dbs_tuners_ins.optimal_freq = input;
 	return count;
 }
