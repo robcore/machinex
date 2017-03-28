@@ -5837,14 +5837,8 @@ static int idle_balance(struct rq *this_rq)
 		this_rq->max_idle_balance_cost = curr_cost;
 
 out:
-	/* Is there a task of a high priority class? */
-	if (this_rq->nr_running != this_rq->cfs.h_nr_running)
-		pulled_task = -1;
-
-	if (pulled_task) {
-		idle_exit_fair(this_rq);
+	if (pulled_task)
 		this_rq->idle_stamp = 0;
-	}
 
 	return pulled_task;
 }
