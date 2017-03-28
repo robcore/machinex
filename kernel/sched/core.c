@@ -2639,7 +2639,6 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 			update_task_ravg(p, rq, 1);
 			return p;
 		}
-	}
 again:
 	for_each_class(class) {
 		p = class->pick_next_task(rq, prev);
