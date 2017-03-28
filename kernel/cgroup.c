@@ -88,6 +88,11 @@ static DEFINE_MUTEX(cgroup_mutex);
 
 static DEFINE_MUTEX(cgroup_root_mutex);
 
+#define cgroup_assert_mutex_or_rcu_locked()				\
+	rcu_lockdep_assert(rcu_read_lock_held() ||			\
+			   lockdep_is_held(&cgroup_mutex),		\
+			   "cgroup_mutex or RCU read lock required");
+
 /*
  * Generate an array of cgroup subsystem pointers. At boot time, this is
  * populated with the built in subsystems, and modular subsystems are
@@ -3030,7 +3035,7 @@ struct cgroup *cgroup_next_sibling(struct cgroup *pos)
 {
 	struct cgroup *next;
 
-	WARN_ON_ONCE(!rcu_read_lock_held());
+	cgroup_assert_mutex_or_rcu_locked();
 
 	/*
 	 * @pos could already have been removed.  Once a cgroup is removed,
@@ -3085,7 +3090,7 @@ struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
 {
 	struct cgroup *next;
 
-	WARN_ON_ONCE(!rcu_read_lock_held());
+	cgroup_assert_mutex_or_rcu_locked();
 
 	/* if first iteration, pretend we just visited @cgroup */
 	if (!pos)
@@ -3160,17 +3165,18 @@ static struct cgroup *cgroup_leftmost_descendant(struct cgroup *pos)
  * To be used by cgroup_for_each_descendant_post().  Find the next
  * descendant to visit for post-order traversal of @cgroup's descendants.
  *
- * While this function requires RCU read locking, it doesn't require the
- * whole traversal to be contained in a single RCU critical section.  This
- * function will return the correct next descendant as long as both @pos
- * and @cgroup are accessible and @pos is a descendant of @cgroup.
+ * While this function requires cgroup_mutex or RCU read locking, it
+ * doesn't require the whole traversal to be contained in a single critical
+ * section.  This function will return the correct next descendant as long
+ * as both @pos and @cgroup are accessible and @pos is a descendant of
+ * @cgroup.
  */
 struct cgroup *cgroup_next_descendant_post(struct cgroup *pos,
 					   struct cgroup *cgroup)
 {
 	struct cgroup *next;
 
-	WARN_ON_ONCE(!rcu_read_lock_held());
+	cgroup_assert_mutex_or_rcu_locked();
 
 	/* if first iteration, visit the leftmost descendant */
 	if (!pos) {
