@@ -124,6 +124,9 @@ static unsigned int get_nr_run_avg(void)
 	int64_t cur_time;
 	unsigned int nr_run_avg;
 
+	if (!hotplug_tuners_ins.hotplug_enable)
+		return 0;
+
 	cur_time = ktime_to_ns(ktime_get());
 
 	spin_lock_irqsave(&rq_data->lock, flags);
@@ -168,12 +171,12 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 #if defined(CONFIG_POWERSUSPEND)
 	bool force_up = hotplug_tuners_ins.force_cpu_up;
 #endif
+	if (!hotplug_tuners_ins.hotplug_enable)
+		return;
+
 	HOTPLUG_STATUS hotplug_onoff[NR_CPUS] = {IDLE, IDLE, IDLE, IDLE};
 	int delay;
 	int io_busy = hotplug_tuners_ins.hp_io_is_busy;
-
-	if (!hotplug_tuners_ins.hotplug_enable)
-		return;
 
 	rq_avg = get_nr_run_avg();
 
@@ -362,6 +365,9 @@ static int hotplug_start(void)
 {
 	unsigned int cpu;
 	int ret = 0;
+
+	if (!hotplug_tuners_ins.hotplug_enable)
+		return -EINVAL;
 
 	alucardhp_wq = alloc_workqueue("alucardhp_wq", WQ_HIGHPRI, 0);
 
@@ -795,9 +801,9 @@ static int __init alucard_hotplug_init(void)
 	unsigned int cpu;
 	unsigned int hotplug_freq[NR_CPUS][2] = {
 		{0, 1242000},
-		{810000, 1566000},
-		{918000, 1674000},
-		{1026000, 0}
+		{1134000, 1458000},
+		{1026000, 1566000},
+		{1242000, 0}
 	};
 	unsigned int hotplug_load[NR_CPUS][2] = {
 		{0, 60},
