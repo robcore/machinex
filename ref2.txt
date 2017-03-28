@@ -1,0 +1,12 @@
+root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd) -type f -exec grep -rl '/kernel/power/qos.c' '{}' \; | sort -d
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/11patches/6404-PM-QoS-Fix-workqueue-deadlock-when-using-pm_qos_upda.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/12patches/5473-PM-QoS-correct-the-valid-range-of-pm_qos_class.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/12patches/5872-PM-QoS-Add-pm_qos_update_target-flags-tracepoints.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/12patches/5873-PM-QoS-Add-pm_qos_request-tracepoints.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/1patches/3583-PM-QoS-Add-PM_QOS_MEMORY_BANDWIDTH-class.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/7patches/5821-PM-QoS-Add-no_constraints_value-field-to-struct-pm_q.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/7patches/5822-PM-QoS-Introcuce-latency-tolerance-device-PM-QoS-typ.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/2604-PM-QoS-simplify-pm_qos_power_write.patch
+
+
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0534-sched-nohz-Exclude-isolated-cores-from-load-balancin.patch
