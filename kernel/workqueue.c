@@ -1839,12 +1839,6 @@ static void send_mayday(struct work_struct *work)
 
 	/* mayday mayday mayday */
 	if (list_empty(&pwq->mayday_node)) {
-		/*
-		 * If @pwq is for an unbound wq, its base ref may be put at
-		 * any time due to an attribute change.  Pin @pwq until the
-		 * rescuer is done with it.
-		 */
-		get_pwq(pwq);
 		list_add_tail(&pwq->mayday_node, &wq->maydays);
 		wake_up_process(wq->rescuer->task);
 	}
@@ -2319,7 +2313,6 @@ static int rescuer_thread(void *__rescuer)
 	struct worker *rescuer = __rescuer;
 	struct workqueue_struct *wq = rescuer->rescue_wq;
 	struct list_head *scheduled = &rescuer->scheduled;
-	bool should_stop;
 
 	set_user_nice(current, RESCUER_NICE_LEVEL);
 
@@ -2331,15 +2324,11 @@ static int rescuer_thread(void *__rescuer)
 repeat:
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	/*
-	 * By the time the rescuer is requested to stop, the workqueue
-	 * shouldn't have any work pending, but @wq->maydays may still have
-	 * pwq(s) queued.  This can happen by non-rescuer workers consuming
-	 * all the work items before the rescuer got to them.  Go through
-	 * @wq->maydays processing before acting on should_stop so that the
-	 * list is always empty on exit.
-	 */
-	should_stop = kthread_should_stop();
+	if (kthread_should_stop()) {
+		__set_current_state(TASK_RUNNING);
+		rescuer->task->flags &= ~PF_WQ_WORKER;
+		return 0;
+	}
 
 	/* see whether any pwq is asking for help */
 	spin_lock_irq(&wq_mayday_lock);
@@ -2371,12 +2360,6 @@ repeat:
 		process_scheduled_works(rescuer);
 
 		/*
-		 * Put the reference grabbed by send_mayday().  @pool won't
-		 * go away while we're holding its lock.
-		 */
-		put_pwq(pwq);
-
-		/*
 		 * Leave this pool.  If keep_working() is %true, notify a
 		 * regular worker; otherwise, we end up with 0 concurrency
 		 * and stalling the execution.
@@ -2390,12 +2373,6 @@ repeat:
 	}
 
 	spin_unlock_irq(&wq_mayday_lock);
-
-	if (should_stop) {
-		__set_current_state(TASK_RUNNING);
-		rescuer->task->flags &= ~PF_WQ_WORKER;
-		return 0;
-	}
 
 	/* rescuers should never participate in concurrency management */
 	WARN_ON_ONCE(!(rescuer->flags & WORKER_NOT_RUNNING));
