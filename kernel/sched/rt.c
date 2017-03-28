@@ -1376,17 +1376,6 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev)
 	struct task_struct *p;
 	struct rt_rq *rt_rq = &rq->rt;
 
-	if (need_pull_rt_task(rq, p)) {
-		pull_rt_task(rq);
-		/*
-		 * pull_rt_task() can drop (and re-acquire) rq->lock; this
-		 * means a dl task can slip in, in which case we need to
-		 * re-start task selection.
-		 */
-		if (unlikely(rq->dl.dl_nr_running))
-			return RETRY_TASK;
-	}
-
 	if (!rt_rq->rt_nr_running)
 		return NULL;
 
