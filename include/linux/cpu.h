@@ -302,5 +302,6 @@ void arch_cpu_idle_prepare(void);
 void arch_cpu_idle_enter(void);
 void arch_cpu_idle_exit(void);
 void arch_cpu_idle_dead(void);
+bool thermal_mitigation(void);
 
 #endif /* _LINUX_CPU_H_ */

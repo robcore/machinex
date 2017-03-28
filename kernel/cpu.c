@@ -446,6 +446,7 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	void *hcpu = (void *)(long)cpu;
 	unsigned long mod = tasks_frozen ? CPU_TASKS_FROZEN : 0;
 	struct task_struct *idle;
+	static bool core_control = thermal_mitigation();
 
 	cpu_hotplug_begin();
 
@@ -467,7 +468,8 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	ret = __cpu_notify(CPU_UP_PREPARE | mod, hcpu, -1, &nr_calls);
 	if (ret) {
 		nr_calls--;
-		pr_warn_ratelimited("%s: attempt to bring up CPU %u failed\n",
+		if (!core_control)
+			pr_warn_ratelimited("%s: attempt to bring up CPU %u failed\n",
 			__func__, cpu);
 		goto out_notify;
 	}
