@@ -821,7 +821,7 @@ function_profile_call(unsigned long ip, unsigned long parent_ip,
 
 	local_irq_save(flags);
 
-	stat = this_cpu_ptr(&ftrace_profile_stats);
+	stat = &__get_cpu_var(ftrace_profile_stats);
 	if (!stat->hash || !ftrace_profile_enabled)
 		goto out;
 
@@ -852,7 +852,7 @@ static void profile_graph_return(struct ftrace_graph_ret *trace)
 	unsigned long flags;
 
 	local_irq_save(flags);
-	stat = this_cpu_ptr(&ftrace_profile_stats);
+	stat = &__get_cpu_var(ftrace_profile_stats);
 	if (!stat->hash || !ftrace_profile_enabled)
 		goto out;
 
