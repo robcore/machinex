@@ -63,6 +63,66 @@ void __weak arch_cpu_idle(void)
 	local_irq_enable();
 }
 
+/**
+ * cpuidle_idle_call - the main idle function
+ *
+ * NOTE: no locks or semaphores should be used here
+ * return non-zero on failure
+ */
+static int cpuidle_idle_call(void)
+{
+	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
+	struct cpuidle_driver *drv;
+	int next_state, entered_state;
+	bool broadcast;
+
+	if (off || !initialized)
+		return -ENODEV;
+
+	/* check if the device is ready */
+	if (!dev || !dev->enabled)
+		return -EBUSY;
+
+	drv = cpuidle_get_cpu_driver(dev);
+
+	/* ask the governor for the next state */
+	next_state = cpuidle_curr_governor->select(drv, dev);
+	if (need_resched()) {
+		dev->last_residency = 0;
+		/* give the governor an opportunity to reflect on the outcome */
+		if (cpuidle_curr_governor->reflect)
+			cpuidle_curr_governor->reflect(dev, next_state);
+		local_irq_enable();
+		return 0;
+	}
+
+	broadcast = !!(drv->states[next_state].flags & CPUIDLE_FLAG_TIMER_STOP);
+
+	if (broadcast)
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &dev->cpu);
+
+	if (cpuidle_state_is_coupled(dev, drv, next_state))
+		entered_state = cpuidle_enter_state_coupled(dev, drv,
+							    next_state);
+	else
+		entered_state = cpuidle_enter_state(dev, drv, next_state);
+
+	if (broadcast)
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &dev->cpu);
+
+	/* give the governor an opportunity to reflect on the outcome */
+	if (cpuidle_curr_governor->reflect)
+		cpuidle_curr_governor->reflect(dev, entered_state);
+
+	return 0;
+}
+#else
+static inline int cpuidle_idle_call(void)
+{
+	return -ENODEV;
+}
+#endif
+
 /*
  * Generic idle loop implementation
  */
