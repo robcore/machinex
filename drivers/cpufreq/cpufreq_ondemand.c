@@ -618,10 +618,7 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 					/* restart dbs timer */
 					mutex_lock(&dbs_info->timer_mutex);
 					dbs_timer_init(dbs_info);
-					/* Enable frequency synchronization
-					 * of CPUs */
 					mutex_unlock(&dbs_info->timer_mutex);
-					atomic_set(&dbs_info->sync_enabled, 1);
 				}
 skip_this_cpu:
 				unlock_policy_rwsem_write(cpu);
@@ -652,10 +649,6 @@ skip_this_cpu:
 			if (dbs_info->cur_policy) {
 				/* cpu using ondemand, cancel dbs timer */
 				dbs_timer_exit(dbs_info);
-				/* Disable frequency synchronization of
-				 * CPUs to avoid re-queueing of work from
-				 * sync_thread */
-				atomic_set(&dbs_info->sync_enabled, 0);
 
 				mutex_lock(&dbs_info->timer_mutex);
 				ondemand_powersave_bias_setspeed(
