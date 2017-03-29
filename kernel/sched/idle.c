@@ -25,6 +25,7 @@ void cpu_idle_poll_ctrl(bool enable)
 		cpu_idle_force_poll--;
 		WARN_ON_ONCE(cpu_idle_force_poll < 0);
 	}
+
 	/* Make sure poll mode is entered on all CPUs after the flag is set */
 	mb();
 }
@@ -101,7 +102,7 @@ static void default_idle_call(void)
 }
 
 /**
- * cpuidle_idle_call - the main idle loop
+ * cpuidle_idle_call - the main idle function
  *
  * NOTE: no locks or semaphores should be used here
  *
@@ -202,8 +203,6 @@ exit_idle:
  */
 static void cpu_idle_loop(void)
 {
-	int cpu = smp_processor_id();
-
 	while (1) {
 		/*
 		 * If the arch has a polling bit, we maintain an invariant:
@@ -253,7 +252,7 @@ static void cpu_idle_loop(void)
 		smp_mb__after_atomic();
 
 		schedule_preempt_disabled();
-		if (cpu_is_offline(cpu))
+		if (cpu_is_offline(smp_processor_id()))
 			arch_cpu_idle_dead();
 	}
 }
