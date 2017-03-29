@@ -64,14 +64,6 @@
 #include <linux/atomic.h>
 
 /*
- * pidlists linger the following amount before being destroyed.  The goal
- * is avoiding frequent destruction in the middle of consecutive read calls
- * Expiring in the middle is a performance problem not a correctness one.
- * 1 sec should be enough.
- */
-#define CGROUP_PIDLIST_DESTROY_DELAY	HZ
-
-/*
  * cgroup_mutex is the master lock.  Any modification to cgroup or its
  * hierarchy must be performed while holding it.
  *
@@ -103,12 +95,6 @@ static DEFINE_MUTEX(cgroup_root_mutex);
  * which may lead to deadlock.
  */
 static struct workqueue_struct *cgroup_destroy_wq;
-
-/*
- * pidlist destructions need to be flushed on cgroup destruction.  Use a
- * separate workqueue as flush domain.
- */
-static struct workqueue_struct *cgroup_pidlist_destroy_wq;
 
 /*
  * Generate an array of cgroup subsystem pointers. At boot time, this is
@@ -244,7 +230,6 @@ static void cgroup_offline_fn(struct work_struct *work);
 static int cgroup_destroy_locked(struct cgroup *cgrp);
 static int cgroup_addrm_files(struct cgroup *cgrp, struct cgroup_subsys *subsys,
 			      struct cftype cfts[], bool is_add);
-static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
 
 /* convenient tests for these bits */
 static inline bool cgroup_is_dead(const struct cgroup *cgrp)
@@ -864,7 +849,11 @@ static void cgroup_free_fn(struct work_struct *work)
 	 */
 	deactivate_super(cgrp->root->sb);
 
-	cgroup_pidlist_destroy_all(cgrp);
+	/*
+	 * if we're getting rid of the cgroup, refcount should ensure
+	 * that there are no pidlists left.
+	 */
+	BUG_ON(!list_empty(&cgrp->pidlists));
 
 	simple_xattrs_free(&cgrp->xattrs);
 
@@ -3027,14 +3016,9 @@ static void cgroup_enable_task_cg_lists(void)
 		 * We should check if the process is exiting, otherwise
 		 * it will race with cgroup_exit() in that the list
 		 * entry won't be deleted though the process has exited.
-		 * Do it while holding siglock so that we don't end up
-		 * racing against cgroup_exit().
 		 */
-		spin_lock_irq(&p->sighand->siglock);
 		if (!(p->flags & PF_EXITING) && list_empty(&p->cg_list))
 			list_add(&p->cg_list, &task_css_set(p)->tasks);
-		spin_unlock_irq(&p->sighand->siglock);
-
 		task_unlock(p);
 	} while_each_thread(g, p);
 	read_unlock(&tasklist_lock);
@@ -3486,8 +3470,8 @@ struct cgroup_pidlist {
 	struct list_head links;
 	/* pointer to the cgroup we belong to, for list removal purposes */
 	struct cgroup *owner;
-	/* for delayed destruction */
-	struct delayed_work destroy_dwork;
+	/* protects the other fields */
+	struct rw_semaphore rwsem;
 };
 
 /*
@@ -3503,54 +3487,12 @@ static void *pidlist_allocate(int count)
 	else
 		return kmalloc(count * sizeof(pid_t), GFP_KERNEL);
 }
-
 static void pidlist_free(void *p)
 {
 	if (is_vmalloc_addr(p))
 		vfree(p);
 	else
 		kfree(p);
-}
-
-/*
- * Used to destroy all pidlists lingering waiting for destroy timer.  None
- * should be left afterwards.
- */
-static void cgroup_pidlist_destroy_all(struct cgroup *cgrp)
-{
-	struct cgroup_pidlist *l, *tmp_l;
-
-	mutex_lock(&cgrp->pidlist_mutex);
-	list_for_each_entry_safe(l, tmp_l, &cgrp->pidlists, links)
-		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork, 0);
-	mutex_unlock(&cgrp->pidlist_mutex);
-
-	flush_workqueue(cgroup_pidlist_destroy_wq);
-	BUG_ON(!list_empty(&cgrp->pidlists));
-}
-
-static void cgroup_pidlist_destroy_work_fn(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct cgroup_pidlist *l = container_of(dwork, struct cgroup_pidlist,
-						destroy_dwork);
-	struct cgroup_pidlist *tofree = NULL;
-
-	mutex_lock(&l->owner->pidlist_mutex);
-
-	/*
-	 * Destroy iff we didn't race with a new user or get queued again.
-	 * Queued state won't change as it can only be queued while locked.
-	 */
-	if (!l->use_count && !delayed_work_pending(dwork)) {
-		list_del(&l->links);
-		pidlist_free(l->list);
-		put_pid_ns(l->key.ns);
-		tofree = l;
-	}
-
-	mutex_unlock(&l->owner->pidlist_mutex);
-	kfree(tofree);
 }
 
 /*
@@ -3588,6 +3530,12 @@ static int cmppid(const void *a, const void *b)
 	return *(pid_t *)a - *(pid_t *)b;
 }
 
+/*
+ * find the appropriate pidlist for our purpose (given procs vs tasks)
+ * returns with the lock on that pidlist already held, and takes care
+ * of the use count, or returns NULL with no locks held if we're out of
+ * memory.
+ */
 static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
 						  enum cgroup_filetype type)
 {
@@ -3595,42 +3543,34 @@ static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
 	/* don't need task_nsproxy() if we're looking at ourself */
 	struct pid_namespace *ns = task_active_pid_ns(current);
 
-	lockdep_assert_held(&cgrp->pidlist_mutex);
-
-	list_for_each_entry(l, &cgrp->pidlists, links)
-		if (l->key.type == type && l->key.ns == ns)
+	/*
+	 * We can't drop the pidlist_mutex before taking the l->rwsem in case
+	 * the last ref-holder is trying to remove l from the list at the same
+	 * time. Holding the pidlist_mutex precludes somebody taking whichever
+	 * list we find out from under us - compare release_pid_array().
+	 */
+	mutex_lock(&cgrp->pidlist_mutex);
+	list_for_each_entry(l, &cgrp->pidlists, links) {
+		if (l->key.type == type && l->key.ns == ns) {
+			/* make sure l doesn't vanish out from under us */
+			down_write(&l->rwsem);
+			mutex_unlock(&cgrp->pidlist_mutex);
 			return l;
-	return NULL;
-}
-
-/*
- * find the appropriate pidlist for our purpose (given procs vs tasks)
- * returns with the lock on that pidlist already held, and takes care
- * of the use count, or returns NULL with no locks held if we're out of
- * memory.
- */
-static struct cgroup_pidlist *cgroup_pidlist_find_create(struct cgroup *cgrp,
-						enum cgroup_filetype type)
-{
-	struct cgroup_pidlist *l;
-
-	lockdep_assert_held(&cgrp->pidlist_mutex);
-
-	l = cgroup_pidlist_find(cgrp, type);
-	if (l)
-		return l;
-
+		}
+	}
 	/* entry not found; create a new one */
 	l = kzalloc(sizeof(struct cgroup_pidlist), GFP_KERNEL);
-	if (!l)
+	if (!l) {
+		mutex_unlock(&cgrp->pidlist_mutex);
 		return l;
-
-	INIT_DELAYED_WORK(&l->destroy_dwork, cgroup_pidlist_destroy_work_fn);
+	}
+	init_rwsem(&l->rwsem);
+	down_write(&l->rwsem);
 	l->key.type = type;
-	/* don't need task_nsproxy() if we're looking at ourself */
-	l->key.ns = get_pid_ns(task_active_pid_ns(current));
+	l->key.ns = get_pid_ns(ns);
 	l->owner = cgrp;
 	list_add(&l->links, &cgrp->pidlists);
+	mutex_unlock(&cgrp->pidlist_mutex);
 	return l;
 }
 
@@ -3676,24 +3616,17 @@ static int pidlist_array_load(struct cgroup *cgrp, enum cgroup_filetype type,
 	sort(array, length, sizeof(pid_t), cmppid, NULL);
 	if (type == CGROUP_FILE_PROCS)
 		length = pidlist_uniq(array, length);
-
-	mutex_lock(&cgrp->pidlist_mutex);
-
-	l = cgroup_pidlist_find_create(cgrp, type);
+	l = cgroup_pidlist_find(cgrp, type);
 	if (!l) {
-		mutex_unlock(&cgrp->pidlist_mutex);
 		pidlist_free(array);
 		return -ENOMEM;
 	}
-
-	/* store array, freeing old if necessary */
+	/* store array, freeing old if necessary - lock already held */
 	pidlist_free(l->list);
 	l->list = array;
 	l->length = length;
 	l->use_count++;
-
-	mutex_unlock(&cgrp->pidlist_mutex);
-
+	up_write(&l->rwsem);
 	*lp = l;
 	return 0;
 }
@@ -3772,7 +3705,7 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 	int index = 0, pid = *pos;
 	int *iter;
 
-	mutex_lock(&of->cgrp->pidlist_mutex);
+	down_read(&l->rwsem);
 	if (pid) {
 		int end = l->length;
 
@@ -3799,7 +3732,7 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 static void cgroup_pidlist_stop(struct seq_file *s, void *v)
 {
 	struct cgroup_pidlist *l = s->private;
-	mutex_unlock(&of->cgrp->pidlist_mutex);
+	up_read(&l->rwsem);
 }
 
 static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
@@ -3838,19 +3771,38 @@ static const struct seq_operations cgroup_pidlist_seq_operations = {
 
 static void cgroup_release_pid_array(struct cgroup_pidlist *l)
 {
+	/*
+	 * the case where we're the last user of this particular pidlist will
+	 * have us remove it from the cgroup's list, which entails taking the
+	 * mutex. since in pidlist_find the pidlist->lock depends on cgroup->
+	 * pidlist_mutex, we have to take pidlist_mutex first.
+	 */
 	mutex_lock(&l->owner->pidlist_mutex);
+	down_write(&l->rwsem);
 	BUG_ON(!l->use_count);
-	/* if the last user, arm the destroy work */
-	if (!--l->use_count)
-		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork,
-				 CGROUP_PIDLIST_DESTROY_DELAY);
+	if (!--l->use_count) {
+		/* we're the last user if refcount is 0; remove and free */
+		list_del(&l->links);
+		mutex_unlock(&l->owner->pidlist_mutex);
+		pidlist_free(l->list);
+		put_pid_ns(l->key.ns);
+		up_write(&l->rwsem);
+		kfree(l);
+		return;
+	}
 	mutex_unlock(&l->owner->pidlist_mutex);
+	up_write(&l->rwsem);
 }
 
 static int cgroup_pidlist_release(struct inode *inode, struct file *file)
 {
 	struct cgroup_pidlist *l;
-
+	if (!(file->f_mode & FMODE_READ))
+		return 0;
+	/*
+	 * the seq_file will only be initialized if the file was opened for
+	 * reading; hence we check if it's not null only in that case.
+	 */
 	l = ((struct seq_file *)file->private_data)->private;
 	cgroup_release_pid_array(l);
 	return seq_release(inode, file);
@@ -3874,6 +3826,10 @@ static int cgroup_pidlist_open(struct file *file, enum cgroup_filetype type)
 	struct cgroup *cgrp = __d_cgrp(file->f_dentry->d_parent);
 	struct cgroup_pidlist *l;
 	int retval;
+
+	/* Nothing to do for write-only files */
+	if (!(file->f_mode & FMODE_READ))
+		return 0;
 
 	/* have the array populated */
 	retval = pidlist_array_load(cgrp, type, &l);
@@ -4143,6 +4099,7 @@ static struct cftype cgroup_base_files[] = {
 		.name = "cgroup.procs",
 		.open = cgroup_procs_open,
 		.write_u64 = cgroup_procs_write,
+		.release = cgroup_pidlist_release,
 		.mode = S_IRUGO | S_IWUSR,
 	},
 	{
@@ -4172,6 +4129,7 @@ static struct cftype cgroup_base_files[] = {
 		.flags = CFTYPE_INSANE,		/* use "procs" instead */
 		.open = cgroup_tasks_open,
 		.write_u64 = cgroup_tasks_write,
+		.release = cgroup_pidlist_release,
 		.mode = S_IRUGO | S_IWUSR,
 	},
 	{
@@ -5038,15 +4996,6 @@ static int __init cgroup_wq_init(void)
 	 */
 	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
 	BUG_ON(!cgroup_destroy_wq);
-
-	/*
-	 * Used to destroy pidlists and separate to serve as flush domain.
-	 * Cap @max_active to 1 too.
-	 */
-	cgroup_pidlist_destroy_wq = alloc_workqueue("cgroup_pidlist_destroy",
-						    0, 1);
-	BUG_ON(!cgroup_pidlist_destroy_wq);
-
 	return 0;
 }
 core_initcall(cgroup_wq_init);
