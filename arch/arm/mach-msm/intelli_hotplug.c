@@ -305,7 +305,7 @@ static void __ref intelli_plug_suspend(void)
 		/*
 		 * Enable core 1,2 so we will have 0-2 online
 		 * when screen is OFF to reduce system lags and reboots.
-		 * Rob note: Nope, 
+		 * Rob note: Nope,
 		 * cpu_up(1);
 		 * cpu_up(2);
 		 */
@@ -497,13 +497,13 @@ static int __ref intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	/* Put all sibling cores to sleep to release all locks
+	/* Put all sibling cores to sleep to release all locks */
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
 		cpu_down(cpu);
 	}
- */
+#if 0
 	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
@@ -511,6 +511,7 @@ static int __ref intelli_plug_start(void)
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
+#endif
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
