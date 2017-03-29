@@ -386,7 +386,7 @@ static void gpio_keys_timer(unsigned long _data)
 {
 	struct gpio_button_data *data = (struct gpio_button_data *)_data;
 
-	schedule_work(&data->work);
+	queue_work_on(0, system_freezable_wq, &data->work);
 }
 
 static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
@@ -400,7 +400,7 @@ static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
 	else
-		schedule_work(&bdata->work);
+		queue_work_on(0, system_freezable_wq, &bdata->work);
 
 	printk(KERN_ALERT" gpio-keys (keypad) handled : %s\n",__func__);
 
