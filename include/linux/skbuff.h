@@ -1871,7 +1871,7 @@ static inline struct sk_buff *netdev_alloc_skb_ip_align(struct net_device *dev,
 }
 
 /**
- * skb_frag_page - retrieve the page refered to by a paged fragment
+ * skb_frag_page - retrieve the page referred to by a paged fragment
  * @frag: the paged fragment
  *
  * Returns the &struct page associated with @frag.
