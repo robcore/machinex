@@ -34,9 +34,7 @@ pick_next_task_idle(struct rq *rq, struct task_struct *prev)
 	put_prev_task(rq, prev);
 
 	schedstat_inc(rq, sched_goidle);
-#ifdef CONFIG_SMP
 	idle_enter_fair(rq);
-#endif
 	return rq->idle;
 }
 
