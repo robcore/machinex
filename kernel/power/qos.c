@@ -206,6 +206,7 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 			 enum pm_qos_req_action action, int value)
 {
 	int prev_value, curr_value, new_value, ret;
+	int ret;
 
 	mutex_lock(&pm_qos_lock);
 	prev_value = pm_qos_get_value(c);
@@ -243,10 +244,11 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 
 	trace_pm_qos_update_target(action, prev_value, curr_value);
 	if (prev_value != curr_value) {
-		blocking_notifier_call_chain(c->notifiers,
-					     (unsigned long)curr_value,
-					     NULL);
 		ret = 1;
+		if (c->notifiers)
+			blocking_notifier_call_chain(c->notifiers,
+						     (unsigned long)curr_value,
+						     NULL);
 	} else {
 		ret = 0;
 	}
