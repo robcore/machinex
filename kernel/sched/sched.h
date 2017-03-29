@@ -23,6 +23,8 @@ extern void update_cpu_load_active(struct rq *this_rq);
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_MIGRATING	2
 
+struct cpuidle_state;
+
 extern __read_mostly int scheduler_running;
 
 /*
@@ -650,6 +652,10 @@ struct rq {
 #endif
 
 	struct sched_avg avg;
+#ifdef CONFIG_CPU_IDLE
+	/* Must be inspected within a rcu lock section */
+	struct cpuidle_state *idle_state;
+#endif
 };
 
 static inline u64 rq_clock(struct rq *rq)
@@ -1176,6 +1182,30 @@ extern void trigger_load_balance(struct rq *rq);
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
 
+#endif
+
+#ifdef CONFIG_CPU_IDLE
+static inline void idle_set_state(struct rq *rq,
+				  struct cpuidle_state *idle_state)
+{
+	rq->idle_state = idle_state;
+}
+
+static inline struct cpuidle_state *idle_get_state(struct rq *rq)
+{
+	WARN_ON(!rcu_read_lock_held());
+	return rq->idle_state;
+}
+#else
+static inline void idle_set_state(struct rq *rq,
+				  struct cpuidle_state *idle_state)
+{
+}
+
+static inline struct cpuidle_state *idle_get_state(struct rq *rq)
+{
+	return NULL;
+}
 #endif
 
 #ifdef CONFIG_SYSRQ_SCHED_DEBUG
