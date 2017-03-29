@@ -234,7 +234,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	struct menu_device *data = &__get_cpu_var(menu_devices);
 	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
 	int i;
-	int multiplier;
+	unsigned int interactivity_req;
 	struct timespec t;
 
 	if (data->needs_update) {
@@ -257,8 +257,6 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 
 	data->bucket = which_bucket(data->expected_us);
 
-	multiplier = performance_multiplier();
-
 	/*
 	 * if the correction factor is 0 (eg first time init or cpu hotplug
 	 * etc), we actually want to start out with a unity factor.
@@ -276,6 +274,15 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 					 RESOLUTION * DECAY);
 
 	detect_repeating_patterns(data);
+
+	/*
+	 * Performance multiplier defines a minimum predicted idle
+	 * duration / latency ratio. Adjust the latency limit if
+	 * necessary.
+	 */
+	interactivity_req = data->predicted_us / performance_multiplier();
+	if (latency_req > interactivity_req)
+		latency_req = interactivity_req;
 
 	/*
 	 * We want to default to C1 (hlt), not to busy polling
@@ -299,8 +306,6 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 		if (s->target_residency > data->predicted_us)
 			continue;
 		if (s->exit_latency > latency_req)
-			continue;
-		if (s->exit_latency * multiplier > data->predicted_us)
 			continue;
 
 		data->last_state_idx = i;
