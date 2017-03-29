@@ -139,7 +139,7 @@ extern bool ap_fw_loaded;
 #endif /* CUSTOMER_HW4 */
 
 #ifdef ENABLE_ADAPTIVE_SCHED
-#define DEFAULT_CPUFREQ_THRESH		1000000	/* threshold frequency : 1000000 = 1GHz */
+#define DEFAULT_CPUFREQ_THRESH		1026000	/* threshold frequency : 1000000 = 1GHz */
 #ifndef CUSTOM_CPUFREQ_THRESH
 #define CUSTOM_CPUFREQ_THRESH	DEFAULT_CPUFREQ_THRESH
 #endif /* CUSTOM_CPUFREQ_THRESH */
