@@ -145,7 +145,7 @@ static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 		BUG_ON(state_count > msm_cpuidle_driver.state_count);
 	}
 
-	drv->state_count = state_count; /* Per cpu state count */
+	dev->state_count = state_count; /* Per cpu state count */
 }
 
 int __init msm_cpuidle_init(void)
