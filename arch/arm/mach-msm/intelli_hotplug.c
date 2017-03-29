@@ -288,7 +288,7 @@ static void __ref intelli_plug_suspend(void)
 		min_cpus_online_res = min_cpus_online;
 		min_cpus_online = 1;
 		max_cpus_online_res = max_cpus_online;
-		max_cpus_online = 1;
+		max_cpus_online = NR_CPUS;
 		mutex_unlock(&intelli_plug_mutex);
 
 		/* Flush hotplug workqueue */
@@ -352,7 +352,7 @@ static void __ref intelli_plug_resume(void)
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	if (atomic_read(&intelli_plug_active) == 0 || !hotplug_suspend)
+	if (atomic_read(&intelli_plug_active) == 0)
 		return NOTIFY_OK;
 
 	switch (event) {
@@ -497,21 +497,20 @@ static int __ref intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	/* Put all sibling cores to sleep to release all locks */
+	/* Put all sibling cores to sleep to release all locks
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
 		cpu_down(cpu);
 	}
-
-	/* Fire up all CPUs to boost performance
+ */
+	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
- */
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
