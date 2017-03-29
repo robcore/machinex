@@ -24,6 +24,8 @@ void cpu_idle_poll_ctrl(bool enable)
 		cpu_idle_force_poll--;
 		WARN_ON_ONCE(cpu_idle_force_poll < 0);
 	}
+	/* Make sure poll mode is entered on all CPUs after the flag is set */
+	mb();
 }
 
 #ifdef CONFIG_GENERIC_IDLE_POLL_SETUP
@@ -155,14 +157,12 @@ static void cpuidle_idle_call(void)
 		goto exit_idle;
 	}
 
-	if (broadcast)
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &dev->cpu);
-
 	/*
 	 * Give the governor an opportunity to reflect on the outcome
 	 */
 	cpuidle_reflect(dev, entered_state);
 
+exit_idle:
 	__current_set_polling();
 
 	/*
@@ -201,9 +201,6 @@ static void cpu_idle_loop(void)
 			check_pgt_cache();
 			rmb();
 
-		if (cpu_is_offline(cpu))
-			arch_cpu_idle_dead();
-
 			local_irq_disable();
 			arch_cpu_idle_enter();
 
@@ -234,6 +231,8 @@ static void cpu_idle_loop(void)
 		smp_mb__after_atomic();
 
 		schedule_preempt_disabled();
+		if (cpu_is_offline(cpu))
+			arch_cpu_idle_dead();
 	}
 }
 
