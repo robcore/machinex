@@ -110,9 +110,9 @@ static int sec_fg_get_property(struct power_supply *psy,
 			/* capacity should be between 0% and 100%
 			 * (0.1% degree)
 			 */
-			if (val->intval > 1000)
+			if (val->intval >= 1000)
 				val->intval = 1000;
-			if (val->intval < 0)
+			if (val->intval <= 0)
 				val->intval = 0;
 
 			/* get only integer part */
