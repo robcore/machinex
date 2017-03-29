@@ -28,7 +28,7 @@
 #define INTELLI_PLUG_MAJOR_VERSION	5
 #define INTELLI_PLUG_MINOR_VERSION	4
 
-#define DEF_SAMPLING_MS			30
+#define DEF_SAMPLING_MS			40
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			20000
 #define MIN_INPUT_INTERVAL		500 * 1000L
@@ -62,17 +62,17 @@ static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
-static unsigned int full_mode_profile = 0; /* performance profile */
+static unsigned int full_mode_profile = 0; /* balance profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended;
-static unsigned int min_cpus_online_res = 2;
+static unsigned int min_cpus_online_res = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
 /*
  * suspend mode, if set = 1 hotplug will sleep,
  * if set = 0, then hoplug will be active all the time.
  */
-static unsigned int hotplug_suspend = 0;
+static unsigned int hotplug_suspend = 1;
 
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus = 0;
@@ -282,18 +282,18 @@ static void __ref intelli_plug_suspend(void)
 	if (!hotplug_suspend)
 		return;
 
-	if (hotplug_suspended == false) {
+	if (!hotplug_suspended) {
 		mutex_lock(&intelli_plug_mutex);
 		hotplug_suspended = true;
 		min_cpus_online_res = min_cpus_online;
 		min_cpus_online = 1;
 		max_cpus_online_res = max_cpus_online;
-		max_cpus_online = 3;
+		max_cpus_online = NR_CPUS;
 		mutex_unlock(&intelli_plug_mutex);
 
 		/* Flush hotplug workqueue */
-		flush_workqueue(intelliplug_wq);
 		cancel_delayed_work_sync(&intelli_plug_work);
+		flush_workqueue(intelliplug_wq);
 
 		/* Put sibling cores to sleep */
 		for_each_online_cpu(cpu) {
@@ -305,10 +305,10 @@ static void __ref intelli_plug_suspend(void)
 		/*
 		 * Enable core 1,2 so we will have 0-2 online
 		 * when screen is OFF to reduce system lags and reboots.
+		 * Rob note: Nope, 
+		 * cpu_up(1);
+		 * cpu_up(2);
 		 */
-		cpu_up(1);
-		cpu_up(2);
-
 		dprintk("%s: suspended!\n", INTELLI_PLUG);
 	}
 }
@@ -352,8 +352,7 @@ static void __ref intelli_plug_resume(void)
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	if ((atomic_read(&intelli_plug_active) == 0) ||
-			hotplug_suspended)
+	if (atomic_read(&intelli_plug_active) == 0)
 		return NOTIFY_OK;
 
 	switch (event) {
@@ -498,13 +497,13 @@ static int __ref intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	/* Put all sibling cores to sleep to release all locks */
+	/* Put all sibling cores to sleep to release all locks
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
 		cpu_down(cpu);
 	}
-
+ */
 	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
@@ -533,9 +532,10 @@ static void intelli_plug_stop(void)
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
-	flush_workqueue(intelliplug_wq);
+
 	cancel_work_sync(&up_down_work);
 	cancel_delayed_work_sync(&intelli_plug_work);
+	flush_workqueue(intelliplug_wq);
 	mutex_destroy(&intelli_plug_mutex);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
