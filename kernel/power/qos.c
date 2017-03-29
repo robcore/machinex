@@ -228,7 +228,7 @@ static inline void pm_qos_set_value(struct pm_qos_constraints *c, s32 value)
 int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 			 enum pm_qos_req_action action, int value)
 {
-	int prev_value, curr_value, new_value, ret;
+	int prev_value, curr_value, new_value;
 	int ret;
 
 	mutex_lock(&pm_qos_lock);
