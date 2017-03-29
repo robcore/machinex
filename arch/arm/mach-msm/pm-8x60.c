@@ -731,7 +731,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 	else
 		time_param.next_event_us = 0;
 
-	for (i = 0; i < dev->state_count; i++) {
+	for (i = 0; i < drv->state_count; i++) {
 		struct cpuidle_state *state = &drv->states[i];
 		struct cpuidle_state_usage *st_usage = &dev->states_usage[i];
 		enum msm_pm_sleep_mode mode;
