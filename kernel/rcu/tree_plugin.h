@@ -2808,6 +2808,7 @@ bool rcu_sys_is_idle(void)
 		call_rcu(&rsh.rh, rcu_sysidle_cb);
 	return false;
 }
+#endif /* #ifndef CONFIG_RCU_NOCB_CPU_ALL */
 
 /*
  * Initialize dynticks sysidle state for CPUs coming online.
