@@ -561,9 +561,8 @@ static int state_notifier_callback(struct notifier_block *this,
 			default:
 				break;
 		}
-
-		return NOTIFY_OK;
 	}
+		return NOTIFY_OK;
 }
 #endif
 
