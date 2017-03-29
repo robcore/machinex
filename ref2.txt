@@ -257,3 +257,11 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/4756-serial-omap-fix-a-few-checkpatch-warnings.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/6390-mmc-sh_mmcif-Convert-to-clk_prepare-unprepare.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/7605-ACPI-driver-core-Store-an-ACPI-device-pointer-in-str.patch
+
+root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd) -type f -exec grep -rl 'if (need_pull_' '{}' \; | sort -d
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/3167-sched-Check-for-stop-task-appearance-when-balancing-.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0426-sched-Remove-some-ifdeffery.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/1560-sched-Guarantee-task-priority-in-pick_next_task.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/4442-sched-rt-Fix-picking-RT-and-DL-tasks-from-empty-queu.patch
+
+
