@@ -25,6 +25,7 @@
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
 #include <linux/workqueue.h>
+#include <linux/wakelock.h>
 #include <linux/gpio.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
@@ -51,6 +52,8 @@ extern int wakeup_gpio_num;
 static int force_wakeup_evt;
 #endif
 #endif
+
+static struct wake_lock machinex_keyhelper;
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -647,6 +650,8 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 		}
 
 		bdata->key_pressed = true;
+		wake_lock_timeout(&machinex_keyhelper,
+			msecs_to_jiffies(1));
 	}
 
 	if (bdata->timer_debounce)
@@ -1110,6 +1115,9 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
+	wake_lock_init(&machinex_keyhelper, WAKE_LOCK_SUSPEND,
+		       "machinex_keyhelper");
+
 	return 0;
 
  fail3:
@@ -1138,6 +1146,8 @@ static int gpio_keys_remove(struct platform_device *pdev)
 	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 
 	device_init_wakeup(&pdev->dev, 0);
+
+	wake_lock_destroy(&machinex_keyhelper);
 
 	for (i = 0; i < ddata->n_buttons; i++)
 		gpio_remove_key(&ddata->data[i]);
