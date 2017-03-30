@@ -5802,7 +5802,7 @@ static unsigned long scale_rt_capacity(int cpu)
 	if (unlikely((s64)total < SCHED_CAPACITY_SCALE))
 		total = SCHED_CAPACITY_SCALE;
 
-	total >>= SCHED_CAPACITY_SCALE;
+	total >>= SCHED_CAPACITY_SHIFT;
 
 	return div_u64(available, total);
 }
