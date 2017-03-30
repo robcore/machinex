@@ -2184,13 +2184,6 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 
 #ifdef CONFIG_SMP
 
-/* assumes rq->lock is held */
-static inline void pre_schedule(struct rq *rq, struct task_struct *prev)
-{
-	if (prev->sched_class->pre_schedule)
-		prev->sched_class->pre_schedule(rq, prev);
-}
-
 /* rq->lock is NOT held, but preemption is disabled */
 static inline void post_schedule(struct rq *rq)
 {
@@ -2207,10 +2200,6 @@ static inline void post_schedule(struct rq *rq)
 }
 
 #else
-
-static inline void pre_schedule(struct rq *rq, struct task_struct *p)
-{
-}
 
 static inline void post_schedule(struct rq *rq)
 {
@@ -2749,16 +2738,6 @@ need_resched:
 			}
 		}
 		switch_count = &prev->nvcsw;
-	}
-
-	pre_schedule(rq, prev);
-
-	if (unlikely(!rq->nr_running)) {
-		/*
-		 * We must set idle_stamp _before_ calling idle_balance(), such
-		 * that we measure the duration of idle_balance() as idle time.
-		 */
-		rq->idle_stamp = rq_clock(rq);
 	}
 
 	if (prev->on_rq || rq->skip_clock_update < 0)

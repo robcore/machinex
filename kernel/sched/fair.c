@@ -1697,7 +1697,7 @@ static inline int idle_balance(struct rq *rq)
 {
 	return 0;
 }
-#endif
+#endif /* CONFIG_SMP */
 
 #ifdef CONFIG_SCHED_FREQ_INPUT
 
@@ -3865,8 +3865,8 @@ preempt:
 	/*
 	 * Only set the backward buddy when the current task is still
 	 * on the rq. This can happen when a wakeup gets interleaved
-	 * with schedule on the ->pre_schedule() or idle_balance()
-	 * point, either of which can * drop the rq lock.
+	 * with schedule on the idle_balance() point, which can
+	 * drop the rq lock.
 	 *
 	 * Also, during early boot the idle thread is in the fair class,
 	 * for obvious reasons its a bad idea to schedule back to it.
@@ -3885,7 +3885,7 @@ pick_next_task_fair(struct rq *rq, struct task_struct *prev)
 	struct sched_entity *se;
 	struct task_struct *p;
 
-again:
+again:  __maybe_unused
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	if (!cfs_rq->h_nr_running)
 		goto idle;
@@ -3982,8 +3982,18 @@ simple:
 	return p;
 
 idle:
-	if (idle_balance(rq)) /* drops rq->lock */
+#ifdef CONFIG_SMP
+	idle_enter_fair(rq);
+	/*
+	 * We must set idle_stamp _before_ calling idle_balance(), such that we
+	 * measure the duration of idle_balance() as idle time.
+	 */
+	rq->idle_stamp = rq_clock(rq);
+	if (idle_balance(rq)) { /* drops rq->lock */
+		rq->idle_stamp = 0;
 		goto again;
+	}
+#endif
 
 	return NULL;
 }

@@ -250,6 +250,8 @@ static inline bool need_pull_rt_task(struct rq *rq, struct task_struct *prev)
 	return rq->rt.highest_prio.curr > prev->prio;
 }
 
+static int pull_rt_task(struct rq *this_rq);
+
 static inline int rt_overloaded(struct rq *rq)
 {
 	return atomic_read(&rq->rd->rto_count);
@@ -574,6 +576,12 @@ static inline struct rt_rq *group_rt_rq(struct sched_rt_entity *rt_se)
 static inline void sched_rt_rq_enqueue(struct rt_rq *rt_rq)
 {
 	struct rq *rq = rq_of_rt_rq(rt_rq);
+
+#ifdef CONFIG_SMP
+	/* Try to pull RT tasks here if we lower this rq's prio */
+	if (rq->rt.highest_prio.curr > prev->prio)
+		pull_rt_task(rq);
+#endif
 
 	if (!rt_rq->rt_nr_running)
 		return;
@@ -1874,13 +1882,6 @@ skip:
 	return ret;
 }
 
-static void pre_schedule_rt(struct rq *rq, struct task_struct *prev)
-{
-	/* Try to pull RT tasks here if we lower this rq's prio */
-	if (rq->rt.highest_prio.curr > prev->prio)
-		pull_rt_task(rq);
-}
-
 static void post_schedule_rt(struct rq *rq)
 {
 	push_rt_tasks(rq);
@@ -2157,7 +2158,6 @@ const struct sched_class rt_sched_class = {
 	.set_cpus_allowed       = set_cpus_allowed_rt,
 	.rq_online              = rq_online_rt,
 	.rq_offline             = rq_offline_rt,
-	.pre_schedule		= pre_schedule_rt,
 	.post_schedule		= post_schedule_rt,
 	.task_woken		= task_woken_rt,
 	.switched_from		= switched_from_rt,
