@@ -5678,6 +5678,7 @@ struct sg_lb_stats {
 	unsigned long group_load; /* Total load over the CPUs of the group */
 	unsigned long sum_weighted_load; /* Weighted load of group's tasks */
 	unsigned long load_per_task;
+	unsigned long group_capacity;
 	unsigned int sum_nr_running; /* Nr tasks running in the group */
 	unsigned int group_capacity_factor;
 	unsigned int idle_cpus;
@@ -6511,7 +6512,7 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 		 * When comparing with imbalance, use weighted_cpuload()
 		 * which is not scaled with the cpu power.
 		 */
-		if (capacity && rq->cfs.h_nr_running == 1 && wl > env->imbalance)
+		if (capacity_factor && rq->cfs.h_nr_running == 1 && wl > env->imbalance)
 			continue;
 
 		/*
