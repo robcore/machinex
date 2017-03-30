@@ -25,6 +25,7 @@
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
+#include <linux/machinex_defines.h>
 
 #define DEBUG				0
 
@@ -43,7 +44,7 @@
 #define MIN_CPU_UP_TIME			(300)
 
 #define DEFAULT_BOOST_LOCK_DUR		500 * 1000L
-#define DEFAULT_NR_CPUS_BOOSTED		2
+#define DEFAULT_NR_CPUS_BOOSTED		4
 #define MIN_INPUT_INTERVAL		150 * 1000L
 
 static bool isSuspended = false;
@@ -77,7 +78,7 @@ static struct thunder_param_struct {
 	int resume_cpu_num;
 	int max_cpus_online;
 	int min_cpus_online;
-	int tplug_hp_enabled;
+	int hotplug_enabled;
 	int load_threshold;
 	struct work_struct up_work;
 	struct notifier_block thunder_state_notif;
@@ -90,7 +91,7 @@ static struct thunder_param_struct {
 	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
 	.sampling_time = DEF_SAMPLING_MS,
 	.load_threshold = DEFAULT_CPU_LOAD_THRESHOLD,
-	.tplug_hp_enabled = HOTPLUG_ENABLED,
+	.hotplug_enabled = HOTPLUG_ENABLED,
 	.hotplug_suspend = 0,
 };
 
@@ -195,7 +196,7 @@ static ssize_t __ref thunderplug_max_cpus_online_store(struct kobject *kobj,
 		case 2:
 		case 3:
 		case 4:
-			if (thunder_param.tplug_hp_enabled &&
+			if (thunder_param.hotplug_enabled &&
 					thunder_param.max_cpus_online != val) {
 				thunder_param.max_cpus_online = val;
 				offline_cpus();
@@ -229,7 +230,7 @@ static ssize_t __ref thunderplug_min_cpus_online_store(struct kobject *kobj,
 		case 2:
 		case 3:
 		case 4:
-			if (thunder_param.tplug_hp_enabled &&
+			if (thunder_param.hotplug_enabled &&
 					thunder_param.min_cpus_online != val) {
 				thunder_param.min_cpus_online = val;
 				offline_cpus();
@@ -365,7 +366,7 @@ static void tplug_work_fn(struct work_struct *work)
 	unsigned int nr_cpu_online;
 	u64 time_now;
 
-	if (!thunder_param.tplug_hp_enabled)
+	if (!thunder_param.hotplug_enabled)
 		return;
 
 	for (i = 0 ; i < thunder_param.max_cpus_online - 1; i++) {
@@ -454,7 +455,7 @@ static int state_notifier_callback(struct notifier_block *this,
 	if (!thunder_param.hotplug_suspend)
 		return NOTIFY_OK;
 
-	if (!thunder_param.tplug_hp_enabled)
+	if (!thunder_param.hotplug_enabled)
 		return NOTIFY_OK;
 
 	switch (event) {
@@ -510,7 +511,7 @@ static void thunder_input_event(struct input_handle *handle, unsigned int type,
 
 	if (isSuspended == true)
 		return;
-	if (!thunder_param.tplug_hp_enabled)
+	if (!thunder_param.hotplug_enabled)
 		return;
 
 	time_now = ktime_to_us(ktime_get());
@@ -595,7 +596,7 @@ static struct input_handler thunder_input_handler = {
 static ssize_t thunderplug_hp_enabled_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d", thunder_param.tplug_hp_enabled);
+	return sprintf(buf, "%d", thunder_param.hotplug_enabled);
 }
 
 static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj,
@@ -607,25 +608,25 @@ static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	last_val = thunder_param.tplug_hp_enabled;
+	last_val = thunder_param.hotplug_enabled;
 	switch(val) {
 		case 0:
 		case 1:
-			thunder_param.tplug_hp_enabled = val;
+			thunder_param.hotplug_enabled = val;
 			break;
 		default:
 			pr_info("%s : invalid choice\n", THUNDERPLUG);
 			break;
 	}
 
-	if (thunder_param.tplug_hp_enabled == 1 && !last_val) {
+	if (thunder_param.hotplug_enabled == 1 && !last_val) {
 		pr_info("%s : Starting hotplug driver\n", THUNDERPLUG);
 		tplug_wq = alloc_workqueue("tplug",
 				WQ_HIGHPRI | WQ_FREEZABLE, 0);
 		if (!tplug_wq) {
 			pr_err("%s: Failed to allocate hotplug workqueue\n",
 				__FUNCTION__);
-			thunder_param.tplug_hp_enabled = 0;
+			thunder_param.hotplug_enabled = 0;
 			return 0;
 		}
 		ret = input_register_handler(&thunder_input_handler);
@@ -638,9 +639,9 @@ static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj,
 		INIT_WORK(&thunder_param.up_work, cpu_up_work);
 		mod_delayed_work_on(0, tplug_wq, &tplug_work,
 				msecs_to_jiffies(thunder_param.sampling_time));
-	} else if (thunder_param.tplug_hp_enabled == 1 && last_val == 1) {
+	} else if (thunder_param.hotplug_enabled == 1 && last_val == 1) {
 		pr_info("%s : Already Working\n", THUNDERPLUG);
-	} else if (thunder_param.tplug_hp_enabled == 0 && last_val == 0) {
+	} else if (thunder_param.hotplug_enabled == 0 && last_val == 0) {
 		pr_info("%s : Already Offline\n", THUNDERPLUG);
 	} else {
 		if (last_val) {
@@ -761,7 +762,7 @@ static int __init thunderplug_init(void)
 		kobject_put(thunderplug_kobj);
 	}
 
-	if (thunder_param.tplug_hp_enabled) {
+	if (thunder_param.hotplug_enabled) {
 		tplug_wq = alloc_workqueue("tplug",
 				WQ_HIGHPRI | WQ_FREEZABLE, 0);
 		if (!tplug_wq) {
@@ -790,13 +791,13 @@ static int __init thunderplug_init(void)
 	return ret;
 
 err_out:
-	thunder_param.tplug_hp_enabled = 0;
+	thunder_param.hotplug_enabled = 0;
 	destroy_workqueue(tplug_wq);
 
 	return ret;
 }
 
-MODULE_LICENSE("GPL and additional rights");
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Varun Chitre <varun.chitre15@gmail.com>");
 MODULE_DESCRIPTION("Hotplug driver for ARM SoCs");
 late_initcall(thunderplug_init);
