@@ -1449,8 +1449,6 @@ static int br_multicast_ipv6_rcv(struct net_bridge *br,
 	default:
 		err = 0;
 		goto out;
-	} else if (!group) {
-		goto out;
 	}
 
 	/* Okay, we found MLD message. Check further. */
