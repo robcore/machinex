@@ -76,7 +76,6 @@
 #include <linux/compiler.h>
 #include <linux/cpufreq.h>
 #include <linux/sched/deadline.h>
-#include <linux/machinex_defines.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
