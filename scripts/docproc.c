@@ -153,7 +153,7 @@ int symfilecnt = 0;
 static void add_new_symbol(struct symfile *sym, char * symname)
 {
 	sym->symbollist =
-          realloc(sym->symbollist, (sym->symbolcnt + 1) * sizeof(char *));
+	  realloc(sym->symbollist, (sym->symbolcnt + 1) * sizeof(char *));
 	sym->symbollist[sym->symbolcnt++].name = strdup(symname);
 }
 
@@ -214,7 +214,7 @@ static void find_export_symbols(char * filename)
 			char *p;
 			char *e;
 			if (((p = strstr(line, "EXPORT_SYMBOL_GPL")) != NULL) ||
-                            ((p = strstr(line, "EXPORT_SYMBOL")) != NULL)) {
+			    ((p = strstr(line, "EXPORT_SYMBOL")) != NULL)) {
 				/* Skip EXPORT_SYMBOL{_GPL} */
 				while (isalnum(*p) || *p == '_')
 					p++;
@@ -456,14 +456,14 @@ static void parse_file(FILE *infile)
 					break;
 				case 'D':
 					while (*s && !isspace(*s)) s++;
-                                        *s = '\0';
-                                        symbolsonly(line+2);
-                                        break;
+					*s = '\0';
+					symbolsonly(line+2);
+					break;
 				case 'F':
 					/* filename */
 					while (*s && !isspace(*s)) s++;
 					*s++ = '\0';
-                                        /* function names */
+					/* function names */
 					while (isspace(*s))
 						s++;
 					singlefunctions(line +2, s);
@@ -511,11 +511,11 @@ int main(int argc, char *argv[])
 	}
 	/* Open file, exit on error */
 	infile = fopen(argv[2], "r");
-        if (infile == NULL) {
-                fprintf(stderr, "docproc: ");
-                perror(argv[2]);
-                exit(2);
-        }
+	if (infile == NULL) {
+		fprintf(stderr, "docproc: ");
+		perror(argv[2]);
+		exit(2);
+	}
 
 	if (strcmp("doc", argv[1]) == 0) {
 		/* Need to do this in two passes.
