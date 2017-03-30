@@ -5815,7 +5815,7 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 
 	if ((sd->flags & SD_SHARE_CPUCAPACITY) && weight > 1) {
 	if (Larch_power)
-		capacity *= arch_scale_cpu_capacity(sd, cpu);
+		capacity *= default_scale_smt_power(sd, cpu);
 	else
 		capacity *= default_scale_cpu_capacity(sd, cpu);
 

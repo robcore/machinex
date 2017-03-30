@@ -1070,7 +1070,7 @@ struct load_weight {
 struct sched_avg {
 	/*
 	 * These sums represent an infinite geometric series and so are bound
-	 * above by 1024/(1-y).  Thus we only need a u32 to store them for for all
+	 * above by 1024/(1-y).  Thus we only need a u32 to store them for all
 	 * choices of y < 1-2^(-32)*1024.
 	 */
 	u32 runnable_avg_sum, runnable_avg_period;
@@ -1192,7 +1192,6 @@ struct sched_rt_entity {
 	struct rt_rq		*my_q;
 #endif
 };
-
 
 struct sched_dl_entity {
 	struct rb_node	rb_node;
@@ -1358,7 +1357,6 @@ struct task_struct {
 	/* Canary value for the -fstack-protector gcc feature */
 	unsigned long stack_canary;
 #endif
-
 	/*
 	 * pointers to (original) parent process, youngest child, younger sibling,
 	 * older sibling, respectively.  (p->father can be replaced with
@@ -2796,26 +2794,6 @@ static inline int signal_pending_state(long state, struct task_struct *p)
 	return (state & TASK_INTERRUPTIBLE) || __fatal_signal_pending(p);
 }
 
-static inline void current_clr_polling(void)
-{
-	__current_clr_polling();
-
-	/*
-	 * Ensure we check TIF_NEED_RESCHED after we clear the polling bit.
-	 * Once the bit is cleared, we'll get IPIs with every new
-	 * TIF_NEED_RESCHED and the IPI handler, scheduler_ipi(), will also
-	 * fold.
-	 */
-	smp_mb(); /* paired with resched_task() */
-
-	preempt_fold_need_resched();
-}
-
-static inline int need_resched(void)
-{
-	return unlikely(test_thread_flag(TIF_NEED_RESCHED));
-}
-
 /*
  * cond_resched() and cond_resched_lock(): latency reduction via
  * explicit rescheduling in places that are safe. The return
@@ -2967,6 +2945,26 @@ static inline bool __must_check current_clr_polling_and_test(void)
 }
 #endif
 
+static inline void current_clr_polling(void)
+{
+	__current_clr_polling();
+
+	/*
+	 * Ensure we check TIF_NEED_RESCHED after we clear the polling bit.
+	 * Once the bit is cleared, we'll get IPIs with every new
+	 * TIF_NEED_RESCHED and the IPI handler, scheduler_ipi(), will also
+	 * fold.
+	 */
+	smp_mb(); /* paired with resched_curr() */
+
+	preempt_fold_need_resched();
+}
+
+static __always_inline bool need_resched(void)
+{
+	return unlikely(tif_need_resched());
+}
+
 /*
  * Thread group CPU time accounting.
  */
@@ -3084,7 +3082,7 @@ static inline void inc_syscw(struct task_struct *tsk)
 #define TASK_SIZE_OF(tsk)	TASK_SIZE
 #endif
 
-#ifdef CONFIG_MM_OWNER
+#ifdef CONFIG_MEMCG
 extern void mm_update_next_owner(struct mm_struct *mm);
 extern void mm_init_owner(struct mm_struct *mm, struct task_struct *p);
 #else
@@ -3095,7 +3093,7 @@ static inline void mm_update_next_owner(struct mm_struct *mm)
 static inline void mm_init_owner(struct mm_struct *mm, struct task_struct *p)
 {
 }
-#endif /* CONFIG_MM_OWNER */
+#endif /* CONFIG_MEMCG */
 
 static inline unsigned long task_rlimit(const struct task_struct *tsk,
 		unsigned int limit)
@@ -3126,4 +3124,3 @@ static inline unsigned long task_get_effective_timer_slack(
 }
 
 #endif
-
