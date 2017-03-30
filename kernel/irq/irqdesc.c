@@ -297,11 +297,7 @@ struct irq_desc *irq_to_desc(unsigned int irq)
 }
 EXPORT_SYMBOL(irq_to_desc);
 
-/**
- * dynamic_irq_cleanup - cleanup a dynamically allocated irq
- * @irq:	irq number to initialize
- */
-void dynamic_irq_cleanup(unsigned int irq)
+static void free_desc(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 	unsigned long flags;
@@ -309,11 +305,6 @@ void dynamic_irq_cleanup(unsigned int irq)
 	raw_spin_lock_irqsave(&desc->lock, flags);
 	desc_set_defaults(irq, desc, desc_node(desc), NULL);
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
-}
-
-static void free_desc(unsigned int irq)
-{
-	dynamic_irq_cleanup(irq);
 }
 
 static inline int alloc_descs(unsigned int start, unsigned int cnt, int node,
@@ -344,7 +335,7 @@ void irq_mark_irq(unsigned int irq)
 #ifdef CONFIG_GENERIC_IRQ_LEGACY
 void irq_init_desc(unsigned int irq)
 {
-	dynamic_irq_cleanup(irq);
+	free_desc(irq);
 }
 #endif
 
