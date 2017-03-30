@@ -5330,8 +5330,7 @@ static void move_task(struct task_struct *p, struct lb_env *env)
 /*
  * Is this task likely cache-hot:
  */
-static int
-task_hot(struct task_struct *p, u64 now)
+static int task_hot(struct task_struct *p, struct lb_env *env)
 {
 	s64 delta;
 
@@ -5344,7 +5343,7 @@ task_hot(struct task_struct *p, u64 now)
 	/*
 	 * Buddy candidates are cache hot:
 	 */
-	if (sched_feat(CACHE_HOT_BUDDY) && this_rq()->nr_running &&
+	if (sched_feat(CACHE_HOT_BUDDY) && env->dst_rq->nr_running &&
 			(&p->se == cfs_rq_of(&p->se)->next ||
 			 &p->se == cfs_rq_of(&p->se)->last))
 		return 1;
@@ -5354,7 +5353,7 @@ task_hot(struct task_struct *p, u64 now)
 	if (sysctl_sched_migration_cost == 0)
 		return 0;
 
-	delta = now - p->se.exec_start;
+	delta = rq_clock_task(env->src_rq) - p->se.exec_start;
 
 	return delta < (s64)sysctl_sched_migration_cost;
 }
@@ -5420,7 +5419,7 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	 * 2) too many balance attempts have failed.
 	 */
 
-	tsk_cache_hot = task_hot(p, rq_clock_task(env->src_rq));
+	tsk_cache_hot = task_hot(p, env);
 	if (!tsk_cache_hot ||
 		env->sd->nr_balance_failed > env->sd->cache_nice_tries) {
 
