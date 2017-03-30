@@ -169,7 +169,7 @@ torture_onoff(void *arg)
 		}
 		schedule_timeout_interruptible(onoff_interval);
 	}
-	VERBOSE_TOROUT_STRING("torture_onoff task stopping");
+	torture_kthread_stopping("torture_onoff");
 	return 0;
 }
 
@@ -180,22 +180,16 @@ torture_onoff(void *arg)
  */
 int torture_onoff_init(long ooholdoff, long oointerval)
 {
-#ifdef CONFIG_HOTPLUG_CPU
-	int ret;
+	int ret = 0;
 
+#ifdef CONFIG_HOTPLUG_CPU
 	onoff_holdoff = ooholdoff;
 	onoff_interval = oointerval;
 	if (onoff_interval <= 0)
 		return 0;
-	onoff_task = kthread_run(torture_onoff, NULL, "torture_onoff");
-	if (IS_ERR(onoff_task)) {
-		ret = PTR_ERR(onoff_task);
-		onoff_task = NULL;
-		return ret;
-	}
-	torture_shuffle_task_register(onoff_task);
+	ret = torture_create_kthread(torture_onoff, NULL, onoff_task);
 #endif /* #ifdef CONFIG_HOTPLUG_CPU */
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL_GPL(torture_onoff_init);
 
@@ -369,7 +363,7 @@ static int torture_shuffle(void *arg)
 		torture_shuffle_tasks();
 		torture_shutdown_absorb("torture_shuffle");
 	} while (!torture_must_stop());
-	VERBOSE_TOROUT_STRING("torture_shuffle task stopping");
+	torture_kthread_stopping("torture_shuffle");
 	return 0;
 }
 
@@ -378,8 +372,6 @@ static int torture_shuffle(void *arg)
  */
 int torture_shuffle_init(long shuffint)
 {
-	int ret;
-
 	shuffle_interval = shuffint;
 
 	shuffle_idle_cpu = -1;
@@ -390,16 +382,7 @@ int torture_shuffle_init(long shuffint)
 	}
 
 	/* Create the shuffler thread */
-	shuffler_task = kthread_run(torture_shuffle, NULL, "torture_shuffle");
-	if (IS_ERR(shuffler_task)) {
-		ret = PTR_ERR(shuffler_task);
-		free_cpumask_var(shuffle_tmp_mask);
-		VERBOSE_TOROUT_ERRSTRING("Failed to create shuffler");
-		shuffler_task = NULL;
-		return ret;
-	}
-	torture_shuffle_task_register(shuffler_task);
-	return 0;
+	return torture_create_kthread(torture_shuffle, NULL, shuffler_task);
 }
 EXPORT_SYMBOL_GPL(torture_shuffle_init);
 
@@ -463,7 +446,7 @@ static int torture_shutdown(void *arg)
 		jiffies_snap = jiffies;
 	}
 	if (torture_must_stop()) {
-		VERBOSE_TOROUT_STRING("torture_shutdown task stopping");
+		torture_kthread_stopping("torture_shutdown");
 		return 0;
 	}
 
@@ -471,7 +454,10 @@ static int torture_shutdown(void *arg)
 
 	VERBOSE_TOROUT_STRING("torture_shutdown task shutting down system");
 	shutdown_task = NULL;	/* Avoid self-kill deadlock. */
-	torture_shutdown_hook();/* Shut down the enclosing torture test. */
+	if (torture_shutdown_hook)
+		torture_shutdown_hook();
+	else
+		VERBOSE_TOROUT_STRING("No torture_shutdown_hook(), skipping.");
 	kernel_power_off();	/* Shut down the system. */
 	return 0;
 }
@@ -481,40 +467,18 @@ static int torture_shutdown(void *arg)
  */
 int torture_shutdown_init(int ssecs, void (*cleanup)(void))
 {
-	int ret;
+	int ret = 0;
 
 	shutdown_secs = ssecs;
 	torture_shutdown_hook = cleanup;
 	if (shutdown_secs > 0) {
 		shutdown_time = jiffies + shutdown_secs * HZ;
-		shutdown_task = kthread_create(torture_shutdown, NULL,
-					       "torture_shutdown");
-		if (IS_ERR(shutdown_task)) {
-			ret = PTR_ERR(shutdown_task);
-			VERBOSE_TOROUT_ERRSTRING("Failed to create shutdown");
-			shutdown_task = NULL;
-			return ret;
-		}
-		torture_shuffle_task_register(shutdown_task);
-		wake_up_process(shutdown_task);
+		ret = torture_create_kthread(torture_shutdown, NULL,
+					     shutdown_task);
 	}
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL_GPL(torture_shutdown_init);
-
-/*
- * Shut down the shutdown task.  Say what???  Heh!  This can happen if
- * the torture module gets an rmmod before the shutdown time arrives.  ;-)
- */
-void torture_shutdown_cleanup(void)
-{
-	if (shutdown_task != NULL) {
-		VERBOSE_TOROUT_STRING("Stopping torture_shutdown task");
-		kthread_stop(shutdown_task);
-	}
-	shutdown_task = NULL;
-}
-EXPORT_SYMBOL_GPL(torture_shutdown_cleanup);
 
 /*
  * Detect and respond to a system shutdown.
@@ -536,6 +500,20 @@ static int torture_shutdown_notify(struct notifier_block *unused1,
 static struct notifier_block torture_shutdown_nb = {
 	.notifier_call = torture_shutdown_notify,
 };
+
+/*
+ * Shut down the shutdown task.  Say what???  Heh!  This can happen if
+ * the torture module gets an rmmod before the shutdown time arrives.  ;-)
+ */
+static void torture_shutdown_cleanup(void)
+{
+	unregister_reboot_notifier(&torture_shutdown_nb);
+	if (shutdown_task != NULL) {
+		VERBOSE_TOROUT_STRING("Stopping torture_shutdown task");
+		kthread_stop(shutdown_task);
+	}
+	shutdown_task = NULL;
+}
 
 /*
  * Variables for stuttering, which means to periodically pause and
@@ -580,7 +558,7 @@ static int torture_stutter(void *arg)
 		ACCESS_ONCE(stutter_pause_test) = 0;
 		torture_shutdown_absorb("torture_stutter");
 	} while (!torture_must_stop());
-	VERBOSE_TOROUT_STRING("torture_stutter task stopping");
+	torture_kthread_stopping("torture_stutter");
 	return 0;
 }
 
@@ -592,22 +570,15 @@ int torture_stutter_init(int s)
 	int ret;
 
 	stutter = s;
-	stutter_task = kthread_run(torture_stutter, NULL, "torture_stutter");
-	if (IS_ERR(stutter_task)) {
-		ret = PTR_ERR(stutter_task);
-		VERBOSE_TOROUT_ERRSTRING("Failed to create stutter");
-		stutter_task = NULL;
-		return ret;
-	}
-	torture_shuffle_task_register(stutter_task);
-	return 0;
+	ret = torture_create_kthread(torture_stutter, NULL, stutter_task);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(torture_stutter_init);
 
 /*
  * Cleanup after the torture_stutter kthread.
  */
-void torture_stutter_cleanup(void)
+static void torture_stutter_cleanup(void)
 {
 	if (!stutter_task)
 		return;
@@ -615,7 +586,6 @@ void torture_stutter_cleanup(void)
 	kthread_stop(stutter_task);
 	stutter_task = NULL;
 }
-EXPORT_SYMBOL_GPL(torture_stutter_cleanup);
 
 /*
  * Initialize torture module.  Please note that this is -not- invoked via
@@ -651,7 +621,8 @@ EXPORT_SYMBOL_GPL(torture_init_end);
  * Clean up torture module.  Please note that this is -not- invoked via
  * the usual module_exit() mechanism, but rather by an explicit call from
  * the client torture module.  Returns true if a race with system shutdown
- * is detected.
+ * is detected, otherwise, all kthreads started by functions in this file
+ * will be shut down.
  *
  * This must be called before the caller starts shutting down its own
  * kthreads.
@@ -667,8 +638,9 @@ bool torture_cleanup(void)
 	}
 	ACCESS_ONCE(fullstop) = FULLSTOP_RMMOD;
 	mutex_unlock(&fullstop_mutex);
-	unregister_reboot_notifier(&torture_shutdown_nb);
+	torture_shutdown_cleanup();
 	torture_shuffle_cleanup();
+	torture_stutter_cleanup();
 	torture_onoff_cleanup();
 	return false;
 }
@@ -692,3 +664,56 @@ bool torture_must_stop_irq(void)
 	return ACCESS_ONCE(fullstop) != FULLSTOP_DONTSTOP;
 }
 EXPORT_SYMBOL_GPL(torture_must_stop_irq);
+
+/*
+ * Each kthread must wait for kthread_should_stop() before returning from
+ * its top-level function, otherwise segfaults ensue.  This function
+ * prints a "stopping" message and waits for kthread_should_stop(), and
+ * should be called from all torture kthreads immediately prior to
+ * returning.
+ */
+void torture_kthread_stopping(char *title)
+{
+	if (verbose)
+		VERBOSE_TOROUT_STRING(title);
+	while (!kthread_should_stop()) {
+		torture_shutdown_absorb(title);
+		schedule_timeout_uninterruptible(1);
+	}
+}
+EXPORT_SYMBOL_GPL(torture_kthread_stopping);
+
+/*
+ * Create a generic torture kthread that is immediately runnable.  If you
+ * need the kthread to be stopped so that you can do something to it before
+ * it starts, you will need to open-code your own.
+ */
+int _torture_create_kthread(int (*fn)(void *arg), void *arg, char *s, char *m,
+			    char *f, struct task_struct **tp)
+{
+	int ret = 0;
+
+	VERBOSE_TOROUT_STRING(m);
+	*tp = kthread_run(fn, arg, s);
+	if (IS_ERR(*tp)) {
+		ret = PTR_ERR(*tp);
+		VERBOSE_TOROUT_ERRSTRING(f);
+		*tp = NULL;
+	}
+	torture_shuffle_task_register(*tp);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(_torture_create_kthread);
+
+/*
+ * Stop a generic kthread, emitting a message.
+ */
+void _torture_stop_kthread(char *m, struct task_struct **tp)
+{
+	if (*tp == NULL)
+		return;
+	VERBOSE_TOROUT_STRING(m);
+	kthread_stop(*tp);
+	*tp = NULL;
+}
+EXPORT_SYMBOL_GPL(_torture_stop_kthread);

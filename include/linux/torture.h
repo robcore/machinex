@@ -45,9 +45,9 @@
 #define TOROUT_STRING(s) \
 	pr_alert("%s" TORTURE_FLAG s "\n", torture_type)
 #define VERBOSE_TOROUT_STRING(s) \
-	do { if (verbose) pr_alert("%s" TORTURE_FLAG s "\n", torture_type); } while (0)
+	do { if (verbose) pr_alert("%s" TORTURE_FLAG " %s\n", torture_type, s); } while (0)
 #define VERBOSE_TOROUT_ERRSTRING(s) \
-	do { if (verbose) pr_alert("%s" TORTURE_FLAG "!!! " s "\n", torture_type); } while (0)
+	do { if (verbose) pr_alert("%s" TORTURE_FLAG "!!! %s\n", torture_type, s); } while (0)
 
 /* Definitions for a non-string torture-test module parameter. */
 #define torture_parm(type, name, init, msg) \
@@ -75,12 +75,10 @@ int torture_shuffle_init(long shuffint);
 /* Test auto-shutdown handling. */
 void torture_shutdown_absorb(const char *title);
 int torture_shutdown_init(int ssecs, void (*cleanup)(void));
-void torture_shutdown_cleanup(void);
 
 /* Task stuttering, which forces load/no-load transitions. */
 void stutter_wait(const char *title);
 int torture_stutter_init(int s);
-void torture_stutter_cleanup(void);
 
 /* Initialization and cleanup. */
 void torture_init_begin(char *ttype, bool v, int *runnable);
@@ -88,5 +86,15 @@ void torture_init_end(void);
 bool torture_cleanup(void);
 bool torture_must_stop(void);
 bool torture_must_stop_irq(void);
+void torture_kthread_stopping(char *title);
+int _torture_create_kthread(int (*fn)(void *arg), void *arg, char *s, char *m,
+			     char *f, struct task_struct **tp);
+void _torture_stop_kthread(char *m, struct task_struct **tp);
+
+#define torture_create_kthread(n, arg, tp) \
+	_torture_create_kthread(n, (arg), #n, "Creating " #n " task", \
+				"Failed to create " #n, &(tp))
+#define torture_stop_kthread(n, tp) \
+	_torture_stop_kthread("Stopping " #n " task", &(tp))
 
 #endif /* __LINUX_TORTURE_H */
