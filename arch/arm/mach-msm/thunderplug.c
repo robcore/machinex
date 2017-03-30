@@ -593,13 +593,13 @@ static struct input_handler thunder_input_handler = {
 	.id_table	= thunder_ids,
 };
 
-static ssize_t thunderplug_hp_enabled_show(struct kobject *kobj,
+static ssize_t thunderplug_hotplug_enabled_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d", thunder_param.hotplug_enabled);
 }
 
-static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj,
+static ssize_t __ref thunderplug_hotplug_enabled_store(struct kobject *kobj,
 			struct kobj_attribute *attr,
 			const char *buf, size_t count)
 {
@@ -664,10 +664,10 @@ static ssize_t __ref thunderplug_hp_enabled_store(struct kobject *kobj,
 	return count;
 }
 
-static struct kobj_attribute thunderplug_hp_enabled_attribute =
+static struct kobj_attribute thunderplug_hotplug_enabled_attribute =
 	__ATTR(hotplug_enabled,
-		0666, thunderplug_hp_enabled_show,
-		thunderplug_hp_enabled_store);
+		0666, thunderplug_hotplug_enabled_show,
+		thunderplug_hotplug_enabled_store);
 
 static ssize_t thunderplug_ver_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
@@ -728,7 +728,7 @@ static struct attribute *thunderplug_attrs[] = {
 	&thunderplug_min_cpus_online_attribute.attr,
 	&thunderplug_sampling_attribute.attr,
 	&thunderplug_load_attribute.attr,
-	&thunderplug_hp_enabled_attribute.attr,
+	&thunderplug_hotplug_enabled_attribute.attr,
 	&thunderplug_boost_lock_duration_attribute.attr,
 	&thunderplug_cpus_boosted_attribute.attr,
 	NULL,
