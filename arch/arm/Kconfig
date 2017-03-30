@@ -165,6 +165,13 @@ config ARCH_HAS_ILOG2_U32
 config ARCH_HAS_ILOG2_U64
 	bool
 
+config ARCH_HAS_CPUFREQ
+	bool
+	help
+	  Internal node to signify that the ARCH has CPUFREQ support
+	  and that the relevant menu configurations are displayed for
+	  it.
+
 config ARCH_HAS_CPU_IDLE_WAIT
        def_bool y
 
@@ -317,6 +324,7 @@ choice
 config ARCH_INTEGRATOR
 	bool "ARM Ltd. Integrator family"
 	select ARM_AMBA
+	select ARCH_HAS_CPUFREQ
 	select CLKDEV_LOOKUP
 	select HAVE_MACH_CLKDEV
 	select HAVE_TCM
@@ -710,6 +718,7 @@ config ARCH_TEGRA
 	select HAVE_SMP
 	select MIGHT_HAVE_CACHE_L2X0
 	select NEED_MACH_IO_H if PCI
+	select ARCH_HAS_CPUFREQ
 	help
 	  This enables support for NVIDIA Tegra based systems (Tegra APX,
 	  Tegra 6xx and Tegra 2 series).
@@ -744,6 +753,7 @@ config ARCH_PXA
 	bool "PXA2xx/PXA3xx-based"
 	depends on MMU
 	select ARCH_MTD_XIP
+	select ARCH_HAS_CPUFREQ
 	select CLKDEV_LOOKUP
 	select CLKSRC_MMIO
 	select ARCH_REQUIRE_GPIOLIB
@@ -764,6 +774,7 @@ config ARCH_MSM
 	select GENERIC_CLOCKEVENTS
 	select ARCH_REQUIRE_GPIOLIB
 	select CLKDEV_LOOKUP
+	select ARCH_HAS_CPUFREQ
 	select GENERIC_GPIO
 	select GENERIC_TIME
 	select GENERIC_ALLOCATOR
@@ -819,6 +830,7 @@ config ARCH_SA1100
 	select ISA
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_MTD_XIP
+	select ARCH_HAS_CPUFREQ
 	select CPU_FREQ
 	select GENERIC_CLOCKEVENTS
 	select CLKDEV_LOOKUP
@@ -832,6 +844,7 @@ config ARCH_SA1100
 config ARCH_S3C24XX
 	bool "Samsung S3C24XX SoCs"
 	select GENERIC_GPIO
+	select ARCH_HAS_CPUFREQ
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
 	select ARCH_USES_GETTIMEOFFSET
@@ -855,6 +868,7 @@ config ARCH_S3C64XX
 	select CLKDEV_LOOKUP
 	select NO_IOPORT
 	select ARCH_USES_GETTIMEOFFSET
+	select ARCH_HAS_CPUFREQ
 	select ARCH_REQUIRE_GPIOLIB
 	select SAMSUNG_CLKSRC
 	select SAMSUNG_IRQ_VIC_TIMER
@@ -904,6 +918,7 @@ config ARCH_S5PV210
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
 	select CLKSRC_MMIO
+	select ARCH_HAS_CPUFREQ
 	select GENERIC_CLOCKEVENTS
 	select HAVE_S3C2410_I2C if I2C
 	select HAVE_S3C_RTC if RTC_CLASS
@@ -920,6 +935,7 @@ config ARCH_EXYNOS
 	select GENERIC_GPIO
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
+	select ARCH_HAS_CPUFREQ
 	select GENERIC_CLOCKEVENTS
 	select HAVE_S3C_RTC if RTC_CLASS
 	select HAVE_S3C2410_I2C if I2C
@@ -967,6 +983,7 @@ config ARCH_U8500
 	select GENERIC_CLOCKEVENTS
 	select CLKDEV_LOOKUP
 	select ARCH_REQUIRE_GPIOLIB
+	select ARCH_HAS_CPUFREQ
 	select HAVE_SMP
 	select MIGHT_HAVE_CACHE_L2X0
 	help
@@ -1001,6 +1018,7 @@ config ARCH_OMAP
 	bool "TI OMAP"
 	select HAVE_CLK
 	select ARCH_REQUIRE_GPIOLIB
+	select ARCH_HAS_CPUFREQ
 	select CLKSRC_MMIO
 	select GENERIC_CLOCKEVENTS
 	select ARCH_HAS_HOLES_MEMORYMODEL
@@ -1022,6 +1040,7 @@ config ARCH_VT8500
 	bool "VIA/WonderMedia 85xx"
 	select CPU_ARM926T
 	select GENERIC_GPIO
+	select ARCH_HAS_CPUFREQ
 	select GENERIC_CLOCKEVENTS
 	select ARCH_REQUIRE_GPIOLIB
 	select HAVE_PWM
@@ -2347,6 +2366,8 @@ config AUTO_ZRELADDR
 endmenu
 
 menu "CPU Power Management"
+
+if ARCH_HAS_CPUFREQ
 
 source "drivers/cpufreq/Kconfig"
 
