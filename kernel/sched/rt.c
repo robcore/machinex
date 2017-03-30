@@ -508,11 +508,6 @@ int unthrottle_rt_rq(struct rq *rq)
 	return 0;
 }
 
-static inline int rt_rq_throttled(struct rt_rq *rt_rq)
-{
-	return rt_rq->rt_throttled && !rt_rq->rt_nr_boosted;
-}
-
 static int rt_se_boosted(struct sched_rt_entity *rt_se)
 {
 	struct rt_rq *rt_rq = group_rt_rq(rt_se);
@@ -600,11 +595,6 @@ static inline void sched_rt_rq_enqueue(struct rt_rq *rt_rq)
 static inline void sched_rt_rq_dequeue(struct rt_rq *rt_rq)
 {
 	dequeue_top_rt_rq(rt_rq);
-}
-
-static inline int rt_rq_throttled(struct rt_rq *rt_rq)
-{
-	return rt_rq->rt_throttled;
 }
 
 static inline const struct cpumask *sched_rt_period_mask(void)
