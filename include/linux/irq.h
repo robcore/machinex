@@ -539,16 +539,6 @@ extern unsigned int create_irq_nr(unsigned int irq_want, int node);
 extern int create_irq(void);
 extern void destroy_irq(unsigned int irq);
 
-/*
- * Dynamic irq helper functions. Obsolete. Use irq_alloc_desc* and
- * irq_free_desc instead.
- */
-extern void dynamic_irq_cleanup(unsigned int irq);
-static inline void dynamic_irq_init(unsigned int irq)
-{
-	dynamic_irq_cleanup(irq);
-}
-
 /* Set/get chip/data for an IRQ: */
 extern int irq_set_chip(unsigned int irq, struct irq_chip *chip);
 extern int irq_set_handler_data(unsigned int irq, void *data);
@@ -631,16 +621,9 @@ int __irq_alloc_descs(int irq, unsigned int from, unsigned int cnt, int node,
 	irq_alloc_descs(-1, from, cnt, node)
 
 void irq_free_descs(unsigned int irq, unsigned int cnt);
-int irq_reserve_irqs(unsigned int from, unsigned int cnt);
-
 static inline void irq_free_desc(unsigned int irq)
 {
 	irq_free_descs(irq, 1);
-}
-
-static inline int irq_reserve_irq(unsigned int irq)
-{
-	return irq_reserve_irqs(irq, 1);
 }
 
 #ifdef CONFIG_GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
@@ -656,6 +639,10 @@ static inline void irq_free_hwirq(unsigned int irq)
 }
 int arch_setup_hwirq(unsigned int irq, int node);
 void arch_teardown_hwirq(unsigned int irq);
+#endif
+
+#ifdef CONFIG_GENERIC_IRQ_LEGACY
+void irq_init_desc(unsigned int irq);
 #endif
 
 #ifndef irq_reg_writel

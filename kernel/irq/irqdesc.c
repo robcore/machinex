@@ -297,11 +297,7 @@ struct irq_desc *irq_to_desc(unsigned int irq)
 }
 EXPORT_SYMBOL(irq_to_desc);
 
-/**
- * dynamic_irq_cleanup - cleanup a dynamically allocated irq
- * @irq:	irq number to initialize
- */
-void dynamic_irq_cleanup(unsigned int irq)
+static void free_desc(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 	unsigned long flags;
@@ -309,11 +305,6 @@ void dynamic_irq_cleanup(unsigned int irq)
 	raw_spin_lock_irqsave(&desc->lock, flags);
 	desc_set_defaults(irq, desc, desc_node(desc), NULL);
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
-}
-
-static void free_desc(unsigned int irq)
-{
-	dynamic_irq_cleanup(irq);
 }
 
 static inline int alloc_descs(unsigned int start, unsigned int cnt, int node,
@@ -333,6 +324,20 @@ static int irq_expand_nr_irqs(unsigned int nr)
 {
 	return -ENOMEM;
 }
+
+void irq_mark_irq(unsigned int irq)
+{
+	mutex_lock(&sparse_irq_lock);
+	bitmap_set(allocated_irqs, irq, 1);
+	mutex_unlock(&sparse_irq_lock);
+}
+
+#ifdef CONFIG_GENERIC_IRQ_LEGACY
+void irq_init_desc(unsigned int irq)
+{
+	free_desc(irq);
+}
+#endif
 
 #endif /* !CONFIG_SPARSE_IRQ */
 
@@ -489,31 +494,6 @@ void irq_free_hwirqs(unsigned int from, int cnt)
 }
 EXPORT_SYMBOL_GPL(irq_free_hwirqs);
 #endif
-
-/**
- * irq_reserve_irqs - mark irqs allocated
- * @from:	mark from irq number
- * @cnt:	number of irqs to mark
- *
- * Returns 0 on success or an appropriate error code
- */
-int irq_reserve_irqs(unsigned int from, unsigned int cnt)
-{
-	unsigned int start;
-	int ret = 0;
-
-	if (!cnt || (from + cnt) > nr_irqs)
-		return -EINVAL;
-
-	mutex_lock(&sparse_irq_lock);
-	start = bitmap_find_next_zero_area(allocated_irqs, nr_irqs, from, cnt, 0);
-	if (start == from)
-		bitmap_set(allocated_irqs, start, cnt);
-	else
-		ret = -EEXIST;
-	mutex_unlock(&sparse_irq_lock);
-	return ret;
-}
 
 /**
  * irq_get_next_irq - get next allocated irq number
