@@ -395,7 +395,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-
 		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -std=gnu89 \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label  -Wno-logical-not-parentheses \
-		   -fno-delete-null-pointer-checks -Wno-cpp -fno-var-tracking-assignments \
+		   -Wno-cpp -fno-var-tracking-assignments \
 		   -fno-aggressive-loop-optimizations -Wno-sequence-point
 #-Wno-array-bounds -Wno-declaration-after-statement -Wno-sizeof-pointer-memaccess
 KBUILD_AFLAGS_KERNEL :=
@@ -615,6 +615,10 @@ include $(srctree)/arch/$(SRCARCH)/Makefile
 # ifneq ($(CONFIG_FRAME_WARN),0)
 # KBUILD_CFLAGS += $(call cc-option,-Wframe-larger-than=${CONFIG_FRAME_WARN})
 # endif
+KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
+# Fix false positives for non-zero returns for __builtin_return_address in
+# newer versions of gcc
+KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
