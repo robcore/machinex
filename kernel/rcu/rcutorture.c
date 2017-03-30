@@ -758,7 +758,6 @@ rcu_torture_writer(void *arg)
 	int nsynctypes = 0;
 
 	VERBOSE_TOROUT_STRING("rcu_torture_writer task started");
-	set_user_nice(current, MAX_NICE);
 
 	/* Initialize synctype[] array.  If none set, take default. */
 	if (!gp_cond1 && !gp_exp1 && !gp_normal1 && !gp_sync)
@@ -1023,8 +1022,10 @@ rcu_torture_reader(void *arg)
 		cond_resched();
 		stutter_wait("rcu_torture_reader");
 	} while (!torture_must_stop());
-	if (irqreader && cur_ops->irq_capable)
+	if (irqreader && cur_ops->irq_capable) {
 		del_timer_sync(&t);
+		destroy_timer_on_stack(&t);
+	}
 	torture_kthread_stopping("rcu_torture_reader");
 	return 0;
 }
@@ -1535,7 +1536,8 @@ rcu_torture_init(void)
 		&rcu_ops, &rcu_bh_ops, &rcu_busted_ops, &srcu_ops, &sched_ops,
 	};
 
-	torture_init_begin(torture_type, verbose, &rcutorture_runnable);
+	if (!torture_init_begin(torture_type, verbose, &rcutorture_runnable))
+		return -EBUSY;
 
 	/* Process args and tell the world that the torturer is on the job. */
 	for (i = 0; i < ARRAY_SIZE(torture_ops); i++) {
