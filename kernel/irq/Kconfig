@@ -38,6 +38,11 @@ config GENERIC_IRQ_SHOW_WAKEUP_COUNT
 
 	  If you don't know what to do here, say N.
 
+# Facility to allocate a hardware interrupt. This is legacy support
+# and should not be used in new code. Use irq domains instead.
+config GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
+       bool
+
 # Support for delayed migration from interrupt context
 config GENERIC_PENDING_IRQ
 	bool
