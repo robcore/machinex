@@ -36,20 +36,15 @@
 #include <linux/completion.h>
 #include <linux/workqueue.h>
 #include <linux/clk.h>
-#include <linux/mfd/pmic8058.h>
-#include <linux/msm_charm.h>
 #include <asm/mach-types.h>
 #include <asm/uaccess.h>
-#include <mach/mdm2.h>
-#include <mach/restart.h>
-#include <mach/subsystem_notif.h>
-#include <mach/subsystem_restart.h>
-#include <mach/rpm.h>
-#include <mach/gpiomux.h>
 #include <linux/notifier.h>
-#include <linux/platform_device.h>
 
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 
+/* fake tracing */
+void trace_sched_wake_idle_without_ipi(int cpu)
+{
+}
 #endif
