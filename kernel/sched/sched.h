@@ -1291,7 +1291,7 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 
 extern void init_task_runnable_average(struct task_struct *p);
 
-static inline void add_nr_running(struct rq *rq, unsigned count)
+static inline void inc_nr_running(struct rq *rq)
 {
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 
@@ -1299,12 +1299,9 @@ static inline void add_nr_running(struct rq *rq, unsigned count)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
-	unsigned prev_nr = rq->nr_running;
-
-	rq->nr_running = prev_nr + count;
-
+	rq->nr_running++;
 #ifdef CONFIG_NO_HZ_FULL
-	if (prev_nr < 2 && rq->nr_running >= 2) {
+	if (rq->nr_running == 2) {
 		if (tick_nohz_full_cpu(rq->cpu)) {
 			/* Order rq->nr_running write against the IPI */
 			smp_wmb();
@@ -1315,7 +1312,7 @@ static inline void add_nr_running(struct rq *rq, unsigned count)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
 
-static inline void sub_nr_running(struct rq *rq, unsigned count)
+static inline void dec_nr_running(struct rq *rq)
 {
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 
@@ -1323,7 +1320,7 @@ static inline void sub_nr_running(struct rq *rq, unsigned count)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
-	rq->nr_running -= count;
+	rq->nr_running--;
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
 

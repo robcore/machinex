@@ -41,13 +41,13 @@ pick_next_task_stop(struct rq *rq, struct task_struct *prev)
 static void
 enqueue_task_stop(struct rq *rq, struct task_struct *p, int flags)
 {
-	add_nr_running(rq, 1);
+	inc_nr_running(rq);
 }
 
 static void
 dequeue_task_stop(struct rq *rq, struct task_struct *p, int flags)
 {
-	sub_nr_running(rq, 1);
+	dec_nr_running(rq);
 }
 
 static void yield_task_stop(struct rq *rq)
