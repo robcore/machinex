@@ -813,14 +813,14 @@ void do_exit(long code)
 	if (group_dead)
 		disassociate_ctty(1);
 
-	proc_exit_connector(tsk);
-
 	/*
 	 * FIXME: do that only when needed, using sched_exit tracepoint
 	 */
 	ptrace_put_breakpoints(tsk);
 
 	exit_notify(tsk, group_dead);
+
+	proc_exit_connector(tsk);
 #ifdef CONFIG_NUMA
 	task_lock(tsk);
 	mpol_put(tsk->mempolicy);
