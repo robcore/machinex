@@ -1407,7 +1407,7 @@ static int rcu_gp_init(struct rcu_state *rsp)
 	smp_mb__after_unlock_lock(); /* ->gpnum increment before GP! */
 
 	/*
-	 * Set the quiescent-state-needed bits in all the rcu_nodesmp_mb__after_unlock_lock(); /* ->gpnum increment before GP! */
+	 * Set the quiescent-state-needed bits in all the rcu_node
 	 * structures for all currently online CPUs in breadth-first order,
 	 * starting from the root rcu_node structure, relying on the layout
 	 * of the tree within the rsp->node[] array.  Note that other CPUs
