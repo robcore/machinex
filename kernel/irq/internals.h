@@ -84,12 +84,6 @@ static inline void irq_lock_sparse(void) { }
 static inline void irq_unlock_sparse(void) { }
 #endif
 
-#ifdef CONFIG_SPARSE_IRQ
-static inline void irq_mark_irq(unsigned int irq) { }
-#else
-extern void irq_mark_irq(unsigned int irq);
-#endif
-
 extern void init_kstat_irqs(struct irq_desc *desc, int node, int nr);
 
 irqreturn_t handle_irq_event_percpu(struct irq_desc *desc, struct irqaction *action);
