@@ -1517,6 +1517,7 @@ static void ipgre_tap_setup(struct net_device *dev)
 	ether_setup(dev);
 
 	dev->netdev_ops		= &ipgre_tap_netdev_ops;
+	dev->priv_flags 	|= IFF_LIVE_ADDR_CHANGE;
 	dev->destructor 	= ipgre_dev_free;
 
 	dev->iflink		= 0;
