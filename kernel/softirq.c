@@ -222,7 +222,6 @@ asmlinkage void __do_softirq(void)
 	__u32 pending;
 	int softirq_bit;
 	unsigned long end = jiffies + MAX_SOFTIRQ_TIME;
-	int cpu;
 	int max_restart = MAX_SOFTIRQ_RESTART;
 	unsigned long old_flags = current->flags;
 
@@ -240,7 +239,6 @@ asmlinkage void __do_softirq(void)
 	tsk_restore_flags(current, old_flags, PF_MEMALLOC);
 	lockdep_softirq_enter();
 
-	cpu = smp_processor_id();
 restart:
 	/* Reset the pending bitmask before enabling irqs */
 	set_softirq_pending(0);
@@ -269,11 +267,11 @@ restart:
 			       prev_count, preempt_count());
 			preempt_count_set(prev_count);
 		}
-		rcu_bh_qs(cpu);
 		h++;
 		pending >>= softirq_bit;
 	}
 
+	rcu_bh_qs(smp_processor_id());
 	local_irq_disable();
 
 	pending = local_softirq_pending();
