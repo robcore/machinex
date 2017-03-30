@@ -2643,7 +2643,6 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 			p = idle_sched_class.pick_next_task(rq, prev);
 			update_task_ravg(p, rq, 1);
 			return p;
-		}
 	}
 
 again:
