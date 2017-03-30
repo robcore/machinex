@@ -244,13 +244,13 @@ int alloc_rt_sched_group(struct task_group *tg, struct task_group *parent)
 
 #ifdef CONFIG_SMP
 
+static int pull_rt_task(struct rq *this_rq);
+
 static inline bool need_pull_rt_task(struct rq *rq, struct task_struct *prev)
 {
 	/* Try to pull RT tasks here if we lower this rq's prio */
 	return rq->rt.highest_prio.curr > prev->prio;
 }
-
-static int pull_rt_task(struct rq *this_rq);
 
 static inline int rt_overloaded(struct rq *rq)
 {
