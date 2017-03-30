@@ -1757,8 +1757,7 @@ extern void task_numa_free(struct task_struct *p);
 extern bool should_numa_migrate_memory(struct task_struct *p, struct page *page,
 					int src_nid, int dst_cpu);
 #else
-static inline void task_numa_fault(int last_node, int node, int pages,
-				   int flags)
+static inline void task_numa_fault(int node, int pages, bool migrated)
 {
 }
 static inline pid_t task_numa_group_id(struct task_struct *p)
