@@ -5758,7 +5758,7 @@ unsigned long __weak arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
 	return default_scale_freq_capacity(sd, cpu);
 }
 
-static unsigned long default_scale_smt_capacity(struct sched_domain *sd, int cpu)
+static unsigned long default_scale_cpu_capacity(struct sched_domain *sd, int cpu)
 {
 	unsigned long weight = sd->span_weight;
 	unsigned long smt_gain = sd->smt_gain;
@@ -5768,9 +5768,9 @@ static unsigned long default_scale_smt_capacity(struct sched_domain *sd, int cpu
 	return smt_gain;
 }
 
-unsigned long __weak arch_scale_smt_capacity(struct sched_domain *sd, int cpu)
+unsigned long __weak arch_scale_cpu_capacity(struct sched_domain *sd, int cpu)
 {
-	return default_scale_smt_capacity(sd, cpu);
+	return default_scale_cpu_capacity(sd, cpu);
 }
 
 static unsigned long scale_rt_capacity(int cpu)
@@ -5815,7 +5815,7 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 
 	if ((sd->flags & SD_SHARE_CPUCAPACITY) && weight > 1) {
 	if (Larch_power)
-		capacity *= default_scale_smt_power(sd, cpu);
+		capacity *= arch_scale_cpu_capacity(sd, cpu);
 	else
 		capacity *= default_scale_cpu_capacity(sd, cpu);
 
@@ -5827,7 +5827,7 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 	if (Larch_power)
 		capacity *= arch_scale_freq_capacity(sd, cpu);
 	else
-		capacity *= default_scale_capacity(sd, cpu);
+		capacity *= default_scale_freq_capacity(sd, cpu);
 
 	capacity >>= SCHED_CAPACITY_SHIFT;
 
@@ -6059,7 +6059,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	}
 
 	if (local_group && (env->idle != CPU_NEWLY_IDLE ||
-			time_after_eq(jiffies, group->sgp->next_update)))
+			time_after_eq(jiffies, group->sgc->next_update)))
 		update_group_capacity(env->sd, env->dst_cpu);
 
 	/* Adjust by relative CPU capacity of the group */
@@ -6086,7 +6086,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		sgs->group_imb = 1;
 
 	sgs->group_capacity =
-		DIV_ROUND_CLOSEST(group->sgp->capacity, SCHED_CAPACITY_SCALE);
+		DIV_ROUND_CLOSEST(group->sgc->capacity, SCHED_CAPACITY_SCALE);
 
 	if (!sgs->group_capacity)
 		sgs->group_capacity = fix_small_capacity(env->sd, group);
