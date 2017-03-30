@@ -7369,9 +7369,6 @@ out:
 		rq->max_idle_balance_cost =
 			max((u64)sysctl_sched_migration_cost, max_cost);
 	}
-	for (sd = last; sd; sd = sd->child)
-		(void)cmpxchg(&sd->groups->balance_cpu, cpu, -1);
-
 	rcu_read_unlock();
 
 	/*
