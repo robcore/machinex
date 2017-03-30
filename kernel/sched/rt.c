@@ -1461,8 +1461,16 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 	struct task_struct *p;
 	struct rt_rq *rt_rq  = &rq->rt;
 
-	if (need_pull_rt_task(rq, prev))
+	if (need_pull_rt_task(rq, prev)) {
  		pull_rt_task(rq);
+		/*
+		 * pull_rt_task() can drop (and re-acquire) rq->lock; this
+		 * means a dl task can slip in, in which case we need to
+		 * re-start task selection.
+		 */
+		if (unlikely(rq->dl.dl_nr_running))
+			return RETRY_TASK;
+	}
 
 	do {
 		rt_se = pick_next_rt_entity(rq, rt_rq);

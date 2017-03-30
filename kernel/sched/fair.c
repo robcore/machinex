@@ -3884,6 +3884,7 @@ pick_next_task_fair(struct rq *rq, struct task_struct *prev)
 	struct cfs_rq *cfs_rq = &rq->cfs;
 	struct sched_entity *se;
 	struct task_struct *p;
+	int new_tasks;
 
 again:  __maybe_unused
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -3982,18 +3983,18 @@ simple:
 	return p;
 
 idle:
-#ifdef CONFIG_SMP
-	idle_enter_fair(rq);
 	/*
-	 * We must set idle_stamp _before_ calling idle_balance(), such that we
-	 * measure the duration of idle_balance() as idle time.
+	 * Because idle_balance() releases (and re-acquires) rq->lock, it is
+	 * possible for any higher priority task to appear. In that case we
+	 * must re-start the pick_next_entity() loop.
 	 */
-	rq->idle_stamp = rq_clock(rq);
-	if (idle_balance(rq)) { /* drops rq->lock */
-		rq->idle_stamp = 0;
+	new_tasks = idle_balance(rq);
+
+	if (rq->nr_running != rq->cfs.h_nr_running)
+		return RETRY_TASK;
+
+	if (new_tasks)
 		goto again;
-	}
-#endif
 
 	return NULL;
 }
