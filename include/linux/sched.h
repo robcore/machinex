@@ -2956,8 +2956,6 @@ static inline void current_clr_polling(void)
 	 * fold.
 	 */
 	smp_mb(); /* paired with resched_curr() */
-
-	preempt_fold_need_resched();
 }
 
 static __always_inline bool need_resched(void)
