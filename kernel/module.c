@@ -1014,7 +1014,7 @@ static size_t module_flags_taint(struct module *mod, char *buf)
 	if (mod->taints & (1 << TAINT_CRAP))
 		buf[l++] = 'C';
 	if (mod->taints & (1 << TAINT_UNSIGNED_MODULE))
-		buf[l++] = 'X';
+		buf[l++] = 'E';
 	/*
 	 * TAINT_FORCED_RMMOD: could be added.
 	 * TAINT_CPU_OUT_OF_SPEC, TAINT_MACHINE_CHECK, TAINT_BAD_PAGE don't
