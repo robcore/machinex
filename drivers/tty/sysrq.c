@@ -43,7 +43,6 @@
 #include <linux/input.h>
 #include <linux/uaccess.h>
 #include <linux/moduleparam.h>
-#include <linux/rcupdate.h>
 
 #include <asm/ptrace.h>
 #include <asm/irq_regs.h>
@@ -505,7 +504,6 @@ void __handle_sysrq(int key, bool check_mask)
 	int orig_log_level;
 	int i;
 
-	rcu_sysrq_start();
 	rcu_read_lock();
 	/*
 	 * Raise the apparent loglevel to maximum so that the sysrq header
@@ -549,7 +547,6 @@ void __handle_sysrq(int key, bool check_mask)
 		console_loglevel = orig_log_level;
 	}
 	rcu_read_unlock();
-	rcu_sysrq_end();
 }
 
 void handle_sysrq(int key)
