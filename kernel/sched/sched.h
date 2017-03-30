@@ -1294,29 +1294,23 @@ extern void init_task_runnable_average(struct task_struct *p);
 static inline void add_nr_running(struct rq *rq, unsigned count)
 {
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-	unsigned prev_nr = rq->nr_running;
 
 	sched_update_nr_prod(cpu_of(rq), rq->nr_running, true);
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
+	unsigned prev_nr = rq->nr_running;
 
 	rq->nr_running = prev_nr + count;
 
 #ifdef CONFIG_NO_HZ_FULL
 	if (prev_nr < 2 && rq->nr_running >= 2) {
 		if (tick_nohz_full_cpu(rq->cpu)) {
-			/*
-			 * Tick is needed if more than one task runs on a CPU.
-			 * Send the target an IPI to kick it out of nohz mode.
-			 *
-			 * We assume that IPI implies full memory barrier and the
-			 * new value of rq->nr_running is visible on reception
-			 * from the target.
-			 */
-			tick_nohz_full_kick_cpu(rq->cpu);
+			/* Order rq->nr_running write against the IPI */
+			smp_wmb();
+			smp_send_reschedule(rq->cpu);
 		}
-	}
+       }
 #endif
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
