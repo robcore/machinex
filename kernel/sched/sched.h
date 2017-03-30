@@ -1399,7 +1399,6 @@ static inline void inc_nr_running(struct rq *rq)
 	if (rq->nr_running == 2) {
 		if (tick_nohz_full_cpu(rq->cpu)) {
 			/* Order rq->nr_running write against the IPI */
-			smp_wmb();
 			tick_nohz_full_kick_cpu(rq->cpu);
 		}
 	}
