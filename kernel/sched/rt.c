@@ -1482,7 +1482,8 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev)
 		 * means a dl or stop task can slip in, in which case we need
 		 * to re-start task selection.
 		 */
-		if (unlikely(rq->dl.dl_nr_running))
+		if (unlikely((rq->stop && rq->stop->on_rq) ||
+			     rq->dl.dl_nr_running))
 			return RETRY_TASK;
 	}
 
