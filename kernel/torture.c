@@ -58,6 +58,7 @@ static bool verbose;
 #define FULLSTOP_RMMOD    2	/* Normal rmmod of torture. */
 static int fullstop = FULLSTOP_RMMOD;
 static DEFINE_MUTEX(fullstop_mutex);
+static int *torture_runnable;
 
 #ifdef CONFIG_HOTPLUG_CPU
 
@@ -418,6 +419,15 @@ static void torture_shuffle_cleanup(void)
 EXPORT_SYMBOL_GPL(torture_shuffle_cleanup);
 
 /*
+ * Variables for auto-shutdown.  This allows "lights out" torture runs
+ * to be fully scripted.
+ */
+static int shutdown_secs;		/* desired test duration in seconds. */
+static struct task_struct *shutdown_task;
+static unsigned long shutdown_time;	/* jiffies to system shutdown. */
+static void (*torture_shutdown_hook)(void);
+
+/*
  * Absorb kthreads into a kernel function that won't return, so that
  * they won't ever access module text or data again.
  */
@@ -432,16 +442,93 @@ void torture_shutdown_absorb(const char *title)
 EXPORT_SYMBOL_GPL(torture_shutdown_absorb);
 
 /*
+ * Cause the torture test to shutdown the system after the test has
+ * run for the time specified by the shutdown_secs parameter.
+ */
+static int torture_shutdown(void *arg)
+{
+	long delta;
+	unsigned long jiffies_snap;
+
+	VERBOSE_TOROUT_STRING("torture_shutdown task started");
+	jiffies_snap = jiffies;
+	while (ULONG_CMP_LT(jiffies_snap, shutdown_time) &&
+	       !torture_must_stop()) {
+		delta = shutdown_time - jiffies_snap;
+		if (verbose)
+			pr_alert("%s" TORTURE_FLAG
+				 "torture_shutdown task: %lu jiffies remaining\n",
+				 torture_type, delta);
+		schedule_timeout_interruptible(delta);
+		jiffies_snap = jiffies;
+	}
+	if (torture_must_stop()) {
+		VERBOSE_TOROUT_STRING("torture_shutdown task stopping");
+		return 0;
+	}
+
+	/* OK, shut down the system. */
+
+	VERBOSE_TOROUT_STRING("torture_shutdown task shutting down system");
+	shutdown_task = NULL;	/* Avoid self-kill deadlock. */
+	torture_shutdown_hook();/* Shut down the enclosing torture test. */
+	kernel_power_off();	/* Shut down the system. */
+	return 0;
+}
+
+/*
+ * Start up the shutdown task.
+ */
+int torture_shutdown_init(int ssecs, void (*cleanup)(void))
+{
+	int ret;
+
+	shutdown_secs = ssecs;
+	torture_shutdown_hook = cleanup;
+	if (shutdown_secs > 0) {
+		shutdown_time = jiffies + shutdown_secs * HZ;
+		shutdown_task = kthread_create(torture_shutdown, NULL,
+					       "torture_shutdown");
+		if (IS_ERR(shutdown_task)) {
+			ret = PTR_ERR(shutdown_task);
+			VERBOSE_TOROUT_ERRSTRING("Failed to create shutdown");
+			shutdown_task = NULL;
+			return ret;
+		}
+		torture_shuffle_task_register(shutdown_task);
+		wake_up_process(shutdown_task);
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(torture_shutdown_init);
+
+/*
+ * Shut down the shutdown task.  Say what???  Heh!  This can happen if
+ * the torture module gets an rmmod before the shutdown time arrives.  ;-)
+ */
+void torture_shutdown_cleanup(void)
+{
+	if (shutdown_task != NULL) {
+		VERBOSE_TOROUT_STRING("Stopping torture_shutdown task");
+		kthread_stop(shutdown_task);
+	}
+	shutdown_task = NULL;
+}
+EXPORT_SYMBOL_GPL(torture_shutdown_cleanup);
+
+/*
  * Detect and respond to a system shutdown.
  */
 static int torture_shutdown_notify(struct notifier_block *unused1,
 				   unsigned long unused2, void *unused3)
 {
 	mutex_lock(&fullstop_mutex);
-	if (fullstop == FULLSTOP_DONTSTOP)
-		fullstop = FULLSTOP_SHUTDOWN;
-	else
+	if (ACCESS_ONCE(fullstop) == FULLSTOP_DONTSTOP) {
+		VERBOSE_TOROUT_STRING("Unscheduled system shutdown detected");
+		ACCESS_ONCE(fullstop) = FULLSTOP_SHUTDOWN;
+	} else {
 		pr_warn("Concurrent rmmod and shutdown illegal!\n");
+	}
 	mutex_unlock(&fullstop_mutex);
 	return NOTIFY_DONE;
 }
@@ -451,16 +538,100 @@ static struct notifier_block torture_shutdown_nb = {
 };
 
 /*
+ * Variables for stuttering, which means to periodically pause and
+ * restart testing in order to catch bugs that appear when load is
+ * suddenly applied to or removed from the system.
+ */
+static struct task_struct *stutter_task;
+static int stutter_pause_test;
+static int stutter;
+
+/*
+ * Block until the stutter interval ends.  This must be called periodically
+ * by all running kthreads that need to be subject to stuttering.
+ */
+void stutter_wait(const char *title)
+{
+	while (ACCESS_ONCE(stutter_pause_test) ||
+	       (torture_runnable && !ACCESS_ONCE(*torture_runnable))) {
+		if (stutter_pause_test)
+			schedule_timeout_interruptible(1);
+		else
+			schedule_timeout_interruptible(round_jiffies_relative(HZ));
+		torture_shutdown_absorb(title);
+	}
+}
+EXPORT_SYMBOL_GPL(stutter_wait);
+
+/*
+ * Cause the torture test to "stutter", starting and stopping all
+ * threads periodically.
+ */
+static int torture_stutter(void *arg)
+{
+	VERBOSE_TOROUT_STRING("torture_stutter task started");
+	do {
+		if (!torture_must_stop()) {
+			schedule_timeout_interruptible(stutter);
+			ACCESS_ONCE(stutter_pause_test) = 1;
+		}
+		if (!torture_must_stop())
+			schedule_timeout_interruptible(stutter);
+		ACCESS_ONCE(stutter_pause_test) = 0;
+		torture_shutdown_absorb("torture_stutter");
+	} while (!torture_must_stop());
+	VERBOSE_TOROUT_STRING("torture_stutter task stopping");
+	return 0;
+}
+
+/*
+ * Initialize and kick off the torture_stutter kthread.
+ */
+int torture_stutter_init(int s)
+{
+	int ret;
+
+	stutter = s;
+	stutter_task = kthread_run(torture_stutter, NULL, "torture_stutter");
+	if (IS_ERR(stutter_task)) {
+		ret = PTR_ERR(stutter_task);
+		VERBOSE_TOROUT_ERRSTRING("Failed to create stutter");
+		stutter_task = NULL;
+		return ret;
+	}
+	torture_shuffle_task_register(stutter_task);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(torture_stutter_init);
+
+/*
+ * Cleanup after the torture_stutter kthread.
+ */
+void torture_stutter_cleanup(void)
+{
+	if (!stutter_task)
+		return;
+	VERBOSE_TOROUT_STRING("Stopping torture_stutter task");
+	kthread_stop(stutter_task);
+	stutter_task = NULL;
+}
+EXPORT_SYMBOL_GPL(torture_stutter_cleanup);
+
+/*
  * Initialize torture module.  Please note that this is -not- invoked via
  * the usual module_init() mechanism, but rather by an explicit call from
  * the client torture module.  This call must be paired with a later
  * torture_init_end().
+ *
+ * The runnable parameter points to a flag that controls whether or not
+ * the test is currently runnable.  If there is no such flag, pass in NULL.
  */
-void __init torture_init_begin(char *ttype, bool v)
+void __init torture_init_begin(char *ttype, bool v, int *runnable)
 {
 	mutex_lock(&fullstop_mutex);
 	torture_type = ttype;
 	verbose = v;
+	torture_runnable = runnable;
 	fullstop = FULLSTOP_DONTSTOP;
 
 }
@@ -488,13 +659,13 @@ EXPORT_SYMBOL_GPL(torture_init_end);
 bool torture_cleanup(void)
 {
 	mutex_lock(&fullstop_mutex);
-	if (fullstop == FULLSTOP_SHUTDOWN) {
+	if (ACCESS_ONCE(fullstop) == FULLSTOP_SHUTDOWN) {
 		pr_warn("Concurrent rmmod and shutdown illegal!\n");
 		mutex_unlock(&fullstop_mutex);
 		schedule_timeout_uninterruptible(10);
 		return true;
 	}
-	fullstop = FULLSTOP_RMMOD;
+	ACCESS_ONCE(fullstop) = FULLSTOP_RMMOD;
 	mutex_unlock(&fullstop_mutex);
 	unregister_reboot_notifier(&torture_shutdown_nb);
 	torture_shuffle_cleanup();
@@ -518,6 +689,6 @@ EXPORT_SYMBOL_GPL(torture_must_stop);
  */
 bool torture_must_stop_irq(void)
 {
-	return fullstop != FULLSTOP_DONTSTOP;
+	return ACCESS_ONCE(fullstop) != FULLSTOP_DONTSTOP;
 }
 EXPORT_SYMBOL_GPL(torture_must_stop_irq);

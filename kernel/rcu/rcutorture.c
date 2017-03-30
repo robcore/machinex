@@ -103,10 +103,8 @@ static struct task_struct *writer_task;
 static struct task_struct **fakewriter_tasks;
 static struct task_struct **reader_tasks;
 static struct task_struct *stats_task;
-static struct task_struct *stutter_task;
 static struct task_struct *fqs_task;
 static struct task_struct *boost_tasks[NR_CPUS];
-static struct task_struct *shutdown_task;
 static struct task_struct *stall_task;
 static struct task_struct **barrier_cbs_tasks;
 static struct task_struct *barrier_task;
@@ -145,8 +143,6 @@ static long n_barrier_attempts;
 static long n_barrier_successes;
 static struct list_head rcu_torture_removed;
 
-static int stutter_pause_test;
-
 #if defined(MODULE) || defined(CONFIG_RCU_TORTURE_TEST_RUNNABLE)
 #define RCUTORTURE_RUNNABLE_INIT 1
 #else
@@ -176,7 +172,6 @@ static u64 notrace rcu_trace_clock_local(void)
 }
 #endif /* #else #ifdef CONFIG_RCU_TRACE */
 
-static unsigned long shutdown_time;	/* jiffies to system shutdown. */
 static unsigned long boost_starttime;	/* jiffies of next boost test start. */
 DEFINE_MUTEX(boost_mutex);		/* protect setting boost_starttime */
 					/*  and boost task create/destroy. */
@@ -185,9 +180,6 @@ static bool barrier_phase;		/* Test phase. */
 static atomic_t barrier_cbs_invoked;	/* Barrier callbacks invoked. */
 static wait_queue_head_t *barrier_cbs_wq; /* Coordinate barrier testing. */
 static DECLARE_WAIT_QUEUE_HEAD(barrier_wq);
-
-/* Forward reference. */
-static void rcu_torture_cleanup(void);
 
 /*
  * Allocate an element from the rcu_tortures pool.
@@ -220,18 +212,6 @@ rcu_torture_free(struct rcu_torture *p)
 	spin_lock_bh(&rcu_torture_lock);
 	list_add_tail(&p->rtort_free, &rcu_torture_freelist);
 	spin_unlock_bh(&rcu_torture_lock);
-}
-
-static void
-rcu_stutter_wait(const char *title)
-{
-	while (stutter_pause_test || !rcutorture_runnable) {
-		if (rcutorture_runnable)
-			schedule_timeout_interruptible(1);
-		else
-			schedule_timeout_interruptible(round_jiffies_relative(HZ));
-		torture_shutdown_absorb(title);
-	}
 }
 
 /*
@@ -571,7 +551,7 @@ static int rcu_torture_boost(void *arg)
 		oldstarttime = boost_starttime;
 		while (ULONG_CMP_LT(jiffies, oldstarttime)) {
 			schedule_timeout_interruptible(oldstarttime - jiffies);
-			rcu_stutter_wait("rcu_torture_boost");
+			stutter_wait("rcu_torture_boost");
 			if (torture_must_stop())
 				goto checkwait;
 		}
@@ -593,7 +573,7 @@ static int rcu_torture_boost(void *arg)
 				call_rcu_time = jiffies;
 			}
 			cond_resched();
-			rcu_stutter_wait("rcu_torture_boost");
+			stutter_wait("rcu_torture_boost");
 			if (torture_must_stop())
 				goto checkwait;
 		}
@@ -618,7 +598,7 @@ static int rcu_torture_boost(void *arg)
 		}
 
 		/* Go do the stutter. */
-checkwait:	rcu_stutter_wait("rcu_torture_boost");
+checkwait:	stutter_wait("rcu_torture_boost");
 	} while (!torture_must_stop());
 
 	/* Clean up and exit. */
@@ -656,7 +636,7 @@ rcu_torture_fqs(void *arg)
 			udelay(fqs_holdoff);
 			fqs_burst_remaining -= fqs_holdoff;
 		}
-		rcu_stutter_wait("rcu_torture_fqs");
+		stutter_wait("rcu_torture_fqs");
 	} while (!torture_must_stop());
 	VERBOSE_TOROUT_STRING("rcu_torture_fqs task stopping");
 	torture_shutdown_absorb("rcu_torture_fqs");
@@ -728,7 +708,7 @@ rcu_torture_writer(void *arg)
 			}
 		}
 		rcutorture_record_progress(++rcu_torture_current_version);
-		rcu_stutter_wait("rcu_torture_writer");
+		stutter_wait("rcu_torture_writer");
 	} while (!torture_must_stop());
 	VERBOSE_TOROUT_STRING("rcu_torture_writer task stopping");
 	torture_shutdown_absorb("rcu_torture_writer");
@@ -765,7 +745,7 @@ rcu_torture_fakewriter(void *arg)
 		} else {
 			cur_ops->exp_sync();
 		}
-		rcu_stutter_wait("rcu_torture_fakewriter");
+		stutter_wait("rcu_torture_fakewriter");
 	} while (!torture_must_stop());
 
 	VERBOSE_TOROUT_STRING("rcu_torture_fakewriter task stopping");
@@ -910,7 +890,7 @@ rcu_torture_reader(void *arg)
 		preempt_enable();
 		cur_ops->readunlock(idx);
 		schedule();
-		rcu_stutter_wait("rcu_torture_reader");
+		stutter_wait("rcu_torture_reader");
 	} while (!torture_must_stop());
 	VERBOSE_TOROUT_STRING("rcu_torture_reader task stopping");
 	torture_shutdown_absorb("rcu_torture_reader");
@@ -1034,25 +1014,6 @@ rcu_torture_stats(void *arg)
 	return 0;
 }
 
-/* Cause the rcutorture test to "stutter", starting and stopping all
- * threads periodically.
- */
-static int
-rcu_torture_stutter(void *arg)
-{
-	VERBOSE_TOROUT_STRING("rcu_torture_stutter task started");
-	do {
-		schedule_timeout_interruptible(stutter * HZ);
-		stutter_pause_test = 1;
-		if (!kthread_should_stop())
-			schedule_timeout_interruptible(stutter * HZ);
-		stutter_pause_test = 0;
-		torture_shutdown_absorb("rcu_torture_stutter");
-	} while (!kthread_should_stop());
-	VERBOSE_TOROUT_STRING("rcu_torture_stutter task stopping");
-	return 0;
-}
-
 static inline void
 rcu_torture_print_module_parms(struct rcu_torture_ops *cur_ops, const char *tag)
 {
@@ -1117,42 +1078,6 @@ static int rcutorture_booster_init(int cpu)
 	kthread_bind(boost_tasks[cpu], cpu);
 	wake_up_process(boost_tasks[cpu]);
 	mutex_unlock(&boost_mutex);
-	return 0;
-}
-
-/*
- * Cause the rcutorture test to shutdown the system after the test has
- * run for the time specified by the shutdown_secs module parameter.
- */
-static int
-rcu_torture_shutdown(void *arg)
-{
-	long delta;
-	unsigned long jiffies_snap;
-
-	VERBOSE_TOROUT_STRING("rcu_torture_shutdown task started");
-	jiffies_snap = jiffies;
-	while (ULONG_CMP_LT(jiffies_snap, shutdown_time) &&
-	       !kthread_should_stop()) {
-		delta = shutdown_time - jiffies_snap;
-		if (verbose)
-			pr_alert("%s" TORTURE_FLAG
-				 "rcu_torture_shutdown task: %lu jiffies remaining\n",
-				 torture_type, delta);
-		schedule_timeout_interruptible(delta);
-		jiffies_snap = jiffies;
-	}
-	if (kthread_should_stop()) {
-		VERBOSE_TOROUT_STRING("rcu_torture_shutdown task stopping");
-		return 0;
-	}
-
-	/* OK, shut down the system. */
-
-	VERBOSE_TOROUT_STRING("rcu_torture_shutdown task shutting down system");
-	shutdown_task = NULL;	/* Avoid self-kill deadlock. */
-	rcu_torture_cleanup();	/* Get the success/failure message. */
-	kernel_power_off();	/* Shut down the system. */
 	return 0;
 }
 
@@ -1403,11 +1328,7 @@ rcu_torture_cleanup(void)
 
 	rcu_torture_barrier_cleanup();
 	rcu_torture_stall_cleanup();
-	if (stutter_task) {
-		VERBOSE_TOROUT_STRING("Stopping rcu_torture_stutter task");
-		kthread_stop(stutter_task);
-	}
-	stutter_task = NULL;
+	torture_stutter_cleanup();
 
 	if (writer_task) {
 		VERBOSE_TOROUT_STRING("Stopping rcu_torture_writer task");
@@ -1459,11 +1380,7 @@ rcu_torture_cleanup(void)
 		for_each_possible_cpu(i)
 			rcutorture_booster_cleanup(i);
 	}
-	if (shutdown_task != NULL) {
-		VERBOSE_TOROUT_STRING("Stopping rcu_torture_shutdown task");
-		kthread_stop(shutdown_task);
-	}
-	shutdown_task = NULL;
+	torture_shutdown_cleanup();
 
 	/* Wait for all RCU callbacks to fire.  */
 
@@ -1548,7 +1465,7 @@ rcu_torture_init(void)
 		&rcu_ops, &rcu_bh_ops, &srcu_ops, &sched_ops,
 	};
 
-	torture_init_begin(torture_type, verbose);
+	torture_init_begin(torture_type, verbose, &rcutorture_runnable);
 
 	/* Process args and tell the world that the torturer is on the job. */
 	for (i = 0; i < ARRAY_SIZE(torture_ops); i++) {
@@ -1682,21 +1599,14 @@ rcu_torture_init(void)
 	if (stutter < 0)
 		stutter = 0;
 	if (stutter) {
-		/* Create the stutter thread */
-		stutter_task = kthread_run(rcu_torture_stutter, NULL,
-					  "rcu_torture_stutter");
-		if (IS_ERR(stutter_task)) {
-			firsterr = PTR_ERR(stutter_task);
-			VERBOSE_TOROUT_ERRSTRING("Failed to create stutter");
-			stutter_task = NULL;
+		firsterr = torture_stutter_init(stutter * HZ);
+		if (firsterr)
 			goto unwind;
-		}
-		torture_shuffle_task_register(stutter_task);
 	}
 	if (fqs_duration < 0)
 		fqs_duration = 0;
 	if (fqs_duration) {
-		/* Create the stutter thread */
+		/* Create the fqs thread */
 		fqs_task = kthread_run(rcu_torture_fqs, NULL,
 				       "rcu_torture_fqs");
 		if (IS_ERR(fqs_task)) {
@@ -1726,18 +1636,10 @@ rcu_torture_init(void)
 			}
 		}
 	}
-	if (shutdown_secs > 0) {
-		shutdown_time = jiffies + shutdown_secs * HZ;
-		shutdown_task = kthread_create(rcu_torture_shutdown, NULL,
-					       "rcu_torture_shutdown");
-		if (IS_ERR(shutdown_task)) {
-			firsterr = PTR_ERR(shutdown_task);
-			VERBOSE_TOROUT_ERRSTRING("Failed to create shutdown");
-			shutdown_task = NULL;
-			goto unwind;
-		}
-		torture_shuffle_task_register(shutdown_task);
-		wake_up_process(shutdown_task);
+	i = torture_shutdown_init(shutdown_secs, rcu_torture_cleanup);
+	if (i != 0) {
+		firsterr = i;
+		goto unwind;
 	}
 	i = torture_onoff_init(onoff_holdoff * HZ, onoff_interval * HZ);
 	if (i != 0) {
