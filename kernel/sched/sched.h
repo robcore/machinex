@@ -1336,8 +1336,8 @@ static inline void inc_nr_running(struct rq *rq)
 			smp_wmb();
 			smp_send_reschedule(rq->cpu);
 		}
-#endif
 	}
+#endif
 }
 
 static inline void dec_nr_running(struct rq *rq)

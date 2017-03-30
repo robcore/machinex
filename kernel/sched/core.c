@@ -3728,9 +3728,6 @@ do_sched_setscheduler(pid_t pid, int policy, struct sched_param __user *param)
 	if (copy_from_user(&lparam, param, sizeof(struct sched_param)))
 		return -EFAULT;
 
-	if (attr.sched_policy < 0)
-		return -EINVAL;
-
 	rcu_read_lock();
 	retval = -ESRCH;
 	p = find_process_by_pid(pid);
