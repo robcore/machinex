@@ -423,7 +423,7 @@ static void tplug_work_fn(struct work_struct *work)
 	}
 
 reschedule:
-	mod_delayed_work_on(0, tplug_wq, &tplug_work,
+	queue_delayed_work_on(0, tplug_wq, &tplug_work,
 			msecs_to_jiffies(thunder_param.sampling_time));
 }
 
@@ -444,7 +444,7 @@ static void __ref thunderplug_resume(void)
 		isSuspended = false;
 		cpus_online_all();
 		pr_info("%s: resume\n", THUNDERPLUG);
-		mod_delayed_work_on(0, tplug_wq, &tplug_work,
+		queue_delayed_work_on(0, tplug_wq, &tplug_work,
 				msecs_to_jiffies(thunder_param.sampling_time));
 	}
 }
@@ -637,7 +637,7 @@ static ssize_t __ref thunderplug_hotplug_enabled_store(struct kobject *kobj,
 		}
 		INIT_DELAYED_WORK(&tplug_work, tplug_work_fn);
 		INIT_WORK(&thunder_param.up_work, cpu_up_work);
-		mod_delayed_work_on(0, tplug_wq, &tplug_work,
+		queue_delayed_work_on(0, tplug_wq, &tplug_work,
 				msecs_to_jiffies(thunder_param.sampling_time));
 	} else if (thunder_param.hotplug_enabled == 1 && last_val == 1) {
 		pr_info("%s : Already Working\n", THUNDERPLUG);
@@ -772,7 +772,7 @@ static int __init thunderplug_init(void)
 			goto err_out;
 		}
 		INIT_DELAYED_WORK(&tplug_work, tplug_work_fn);
-		mod_delayed_work_on(0, tplug_wq, &tplug_work,
+		queue_delayed_work_on(0, tplug_wq, &tplug_work,
 					msecs_to_jiffies(STARTDELAY));
 	}
 
