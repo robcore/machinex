@@ -959,19 +959,6 @@ do {									\
 	__ret;								\
 })
 
-
-/*
- * These are the old interfaces to sleep waiting for an event.
- * They are racy.  DO NOT use them, use the wait_event* interfaces above.
- * We plan to remove these interfaces.
- */
-extern void sleep_on(wait_queue_head_t *q);
-extern long sleep_on_timeout(wait_queue_head_t *q,
-				      signed long timeout);
-extern void interruptible_sleep_on(wait_queue_head_t *q);
-extern long interruptible_sleep_on_timeout(wait_queue_head_t *q,
-					   signed long timeout);
-
 /*
  * Waitqueues which are removed from the waitqueue_head at wakeup time
  */
@@ -1074,5 +1061,5 @@ int wait_on_atomic_t(atomic_t *val, int (*action)(atomic_t *), unsigned mode)
 		return 0;
 	return out_of_line_wait_on_atomic_t(val, action, mode);
 }
-	
+
 #endif
