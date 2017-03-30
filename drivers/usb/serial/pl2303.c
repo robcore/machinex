@@ -583,6 +583,8 @@ static int pl2303_carrier_raised(struct usb_serial_port *port)
 	return 0;
 }
 
+static DECLARE_WAIT_QUEUE_HEAD(haxxors_wait_queue);
+
 static int wait_modem_info(struct usb_serial_port *port, unsigned int arg)
 {
 	struct pl2303_private *priv = usb_get_serial_port_data(port);
@@ -596,7 +598,7 @@ static int wait_modem_info(struct usb_serial_port *port, unsigned int arg)
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	while (1) {
-		interruptible_sleep_on(&port->delta_msr_wait);
+		wait_event_interruptible(haxxors_wait_queue, &port->delta_msr_wait);
 		/* see if a signal did it */
 		if (signal_pending(current))
 			return -ERESTARTSYS;
