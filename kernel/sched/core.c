@@ -5983,8 +5983,6 @@ build_sched_groups(struct sched_domain *sd, int cpu)
 			continue;
 
 		group = get_group(i, sdd, &sg);
-		cpumask_clear(sched_group_cpus(sg));
-		sg->sgp->power = 0;
 		cpumask_setall(sched_group_mask(sg));
 		sg->balance_cpu = -1;
 
