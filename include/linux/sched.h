@@ -863,27 +863,6 @@ enum cpu_idle_type {
 
 extern int __weak arch_sd_sibiling_asym_packing(void);
 
-#ifdef CONFIG_SCHED_SMT
-static inline const int cpu_smt_flags(void)
-{
-	return SD_SHARE_CPUPOWER | SD_SHARE_PKG_RESOURCES;
-}
-#endif
-
-#ifdef CONFIG_SCHED_MC
-static inline const int cpu_core_flags(void)
-{
-	return SD_SHARE_PKG_RESOURCES;
-}
-#endif
-
-#ifdef CONFIG_NUMA
-static inline const int cpu_numa_flags(void)
-{
-	return SD_NUMA;
-}
-#endif
-
 struct sched_group_power {
 	atomic_t ref;
 	/*
