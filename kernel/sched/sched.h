@@ -676,6 +676,13 @@ static inline int cpu_of(struct rq *rq)
 	return 0;
 #endif
 }
+#ifdef CONFIG_NUMA_BALANCING_ENABLED
+extern int migrate_task_to(struct task_struct *p, int cpu);
+static inline void task_numa_free(struct task_struct *p)
+{
+	kfree(p->numa_faults);
+}
+#endif
 
 DECLARE_PER_CPU(struct rq, runqueues);
 
