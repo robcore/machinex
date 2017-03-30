@@ -266,7 +266,7 @@ void perf_sample_event_took(u64 sample_len_ns)
 	printk_ratelimited(KERN_WARNING
 			"perf samples too long (%lld > %lld), lowering "
 			"kernel.perf_event_max_sample_rate to %d\n",
-			avg_local_sample_len, allowed_ns,
+			avg_local_sample_len, allowed_ns >> 1,
 			sysctl_perf_event_sample_rate);
 
 	update_perf_cpu_limits();
