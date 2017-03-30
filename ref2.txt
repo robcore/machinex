@@ -172,7 +172,8 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/3071-serial-omap-free-the-wakeup-settings-in-remove.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/3080-serial-omap-Fix-missing-pm_runtime_resume-handling-b.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/3394-staging-rtl8187se-fix-pointer-and-return-statement-s.patch
-/media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/4477-tty-serial-omap-remove-some-dead-code.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/4477-tt/media/root/robcore/android/linaro-8064-lt/3.18/patches/4patches/5873-sched-Final-power-vs.-capacity-cleanups.patch
+y-serial-omap-remove-some-dead-code.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/4478-tty-serial-omap-remove-unneeded-singlethread-workque.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/5157-cfg80211-Dynamic-channel-bandwidth-changes-in-AP-mod.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/5645-cpuidle-menu-Return-1-if-there-are-no-suitable-state.patch
@@ -264,4 +265,5 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/1560-sched-Guarantee-task-priority-in-pick_next_task.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/4442-sched-rt-Fix-picking-RT-and-DL-tasks-from-empty-queu.patch
 
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/4patches/5873-sched-Final-power-vs.-capacity-cleanups.patch
 
