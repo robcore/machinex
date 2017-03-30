@@ -84,6 +84,7 @@ extern unsigned long rcutorture_vernum;
 extern long rcu_batches_completed(void);
 extern long rcu_batches_completed_bh(void);
 extern long rcu_batches_completed_sched(void);
+void show_rcu_gp_kthreads(void);
 
 extern void rcu_force_quiescent_state(void);
 extern void rcu_bh_force_quiescent_state(void);
