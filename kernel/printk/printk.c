@@ -1431,6 +1431,7 @@ static int console_trylock_for_printk(void)
 		return 0;
 	}
 	return 1;
+}
 
 int printk_delay_msec __read_mostly;
 
