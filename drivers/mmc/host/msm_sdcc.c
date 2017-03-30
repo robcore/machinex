@@ -3662,6 +3662,11 @@ static void msmsdcc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 }
 
 #ifdef CONFIG_PM_RUNTIME
+
+
+int panic_on_warn = 0;
+module_param(panic_on_warn, int, 0644);
+
 static void msmsdcc_print_rpm_info(struct msmsdcc_host *host)
 {
 	struct device *dev = mmc_dev(host->mmc);
@@ -3710,11 +3715,16 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 	rc = pm_runtime_get_sync(dev);
 
 out_recover:
-	if (rc < 0) {
-		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
-		     __func__, rc);
+	if (panic_on_warn)
+		BUG_ON(rc < 0);
+	else {
+		if (rc < 0) {
+			WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+			     __func__, rc);
+
 		rc = __pm_runtime_set_status(dev, RPM_ACTIVE);
 		return rc;
+		}
 	}
 out:
 	return 0;
@@ -3736,11 +3746,14 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 		return -ENOTSUPP;
 
 	rc = pm_runtime_put_sync(mmc->parent);
-	if (rc < 0) {
-		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
-		     __func__, rc);
+	if (panic_on_warn)
+		BUG_ON(rc < 0);
+	else
+		if (rc < 0)
+			WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
+			     __func__, rc);
 		goto out_recover;
-	}
+
 out_recover:
 	rc = __pm_runtime_set_status(mmc->parent, RPM_SUSPENDED);
 	return rc;

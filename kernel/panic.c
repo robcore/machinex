@@ -438,6 +438,8 @@ static void warn_slowpath_common(const char *file, int line, void *caller,
 	add_taint(taint, LOCKDEP_STILL_OK);
 }
 
+
+
 void warn_slowpath_fmt(const char *file, int line, const char *fmt, ...)
 {
 	struct slowpath_args args;
@@ -445,7 +447,7 @@ void warn_slowpath_fmt(const char *file, int line, const char *fmt, ...)
 	args.fmt = fmt;
 	va_start(args.args, fmt);
 	warn_slowpath_common(file, line, __builtin_return_address(0),
-			     TAINT_WARN, &args);
+				TAINT_WARN, &args);
 	va_end(args.args);
 }
 EXPORT_SYMBOL(warn_slowpath_fmt);
