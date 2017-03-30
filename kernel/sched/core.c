@@ -5661,11 +5661,6 @@ static void destroy_sched_domains(struct sched_domain *sd, int cpu)
  * SD_SHARE_PKG_RESOURCE set (Last Level Cache Domain) for this
  * allows us to avoid some pointer chasing select_idle_sibling().
  *
- * Iterate domains and sched_groups downward, assigning CPUs to be
- * select_idle_sibling() hw buddy.  Cross-wiring hw makes bouncing
- * due to random perturbation self canceling, ie sw buddies pull
- * their counterpart to their CPU's hw counterpart.
- *
  * Also keep a unique ID per domain (we use the first cpu number in
  * the cpumask of the domain), this allows us to quickly tell if
  * two cpus are in the same cache domain, see cpus_share_cache().
@@ -5908,9 +5903,8 @@ build_overlap_sched_groups(struct sched_domain *sd, int cpu)
 		 * canonical balance cpu. Otherwise the sched_domain iteration
 		 * breaks. See update_sg_lb_stats().
 		 */
-
 		if ((!groups && cpumask_test_cpu(cpu, sg_span)) ||
-			       group_balance_cpu(sg) == cpu)
+			group_balance_cpu(sg) == cpu)
 			groups = sg;
 
 		if (!first)
@@ -6132,9 +6126,7 @@ static void claim_allocations(int cpu, struct sched_domain *sd)
 }
 
 #ifdef CONFIG_NUMA
-
 static int sched_domains_numa_levels;
-static int sched_domains_numa_scale;
 static int *sched_domains_numa_distance;
 static struct cpumask ***sched_domains_numa_masks;
 static int sched_domains_curr_level;
@@ -6463,9 +6455,6 @@ static int sched_domains_numa_masks_update(struct notifier_block *nfb,
 	return 0;
 }
 #endif /* CONFIG_NUMA */
-
-#define for_each_sd_topology(tl)			\
-	for (tl = sched_domain_topology; tl->init; tl++)
 
 static int __sdt_alloc(const struct cpumask *cpu_map)
 {

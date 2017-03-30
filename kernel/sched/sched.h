@@ -296,7 +296,9 @@ extern void sched_online_group(struct task_group *tg,
 			       struct task_group *parent);
 extern void sched_destroy_group(struct task_group *tg);
 extern void sched_offline_group(struct task_group *tg);
+
 extern void sched_move_task(struct task_struct *tsk);
+
 #ifdef CONFIG_FAIR_GROUP_SCHED
 extern int sched_group_set_shares(struct task_group *tg, unsigned long shares);
 #endif
@@ -522,6 +524,10 @@ struct rq {
 	 * remote CPUs use both these fields when doing load calculation.
 	 */
 	unsigned int nr_running;
+#ifdef CONFIG_NUMA_BALANCING
+	unsigned int nr_numa_running;
+	unsigned int nr_preferred_running;
+#endif
 	#define CPU_LOAD_IDX_MAX 5
 	unsigned long cpu_load[CPU_LOAD_IDX_MAX];
 	unsigned long last_load_update_tick;
@@ -594,7 +600,7 @@ struct rq {
 	u64 idle_stamp;
 	u64 avg_idle;
 
-	/* Set to max idle balance cost for any one sched domain */
+	/* This is used to determine avg_idle's max value */
 	u64 max_idle_balance_cost;
 #endif
 
@@ -647,6 +653,7 @@ struct rq {
 	unsigned int ttwu_count;
 	unsigned int ttwu_local;
 #endif
+
 #ifdef CONFIG_SMP
 	struct llist_head wake_list;
 #endif
@@ -676,13 +683,6 @@ static inline int cpu_of(struct rq *rq)
 	return 0;
 #endif
 }
-#ifdef CONFIG_NUMA_BALANCING_ENABLED
-extern int migrate_task_to(struct task_struct *p, int cpu);
-static inline void task_numa_free(struct task_struct *p)
-{
-	kfree(p->numa_faults);
-}
-#endif
 
 DECLARE_PER_CPU(struct rq, runqueues);
 
@@ -705,6 +705,12 @@ struct nr_stats_s {
 #define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
+
+#ifdef CONFIG_NUMA_BALANCING
+extern void sched_setnuma(struct task_struct *p, int node);
+extern int migrate_task_to(struct task_struct *p, int cpu);
+extern int migrate_swap(struct task_struct *, struct task_struct *);
+#endif /* CONFIG_NUMA_BALANCING */
 
 #ifdef CONFIG_SMP
 
