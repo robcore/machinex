@@ -36,7 +36,7 @@ void bacct_add_tsk(struct taskstats *stats, struct task_struct *tsk)
 	BUILD_BUG_ON(TS_COMM_LEN < TASK_COMM_LEN);
 
 	/* calculate task elapsed time in timespec */
-	do_posix_clock_monotonic_gettime(&uptime);
+	ktime_get_ts(&uptime);
 	ts = timespec_sub(uptime, tsk->start_time);
 	/* rebase elapsed time to usec (should never be negative) */
 	ac_etime = timespec_to_ns(&ts);
