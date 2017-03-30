@@ -1095,7 +1095,7 @@ static void update_numa_stats(struct numa_stats *ns, int nid)
 	if (!cpus)
 		return;
 
-	/* smt := ceil(cpus / capacity), assumes: 1 < smt_power < 2 */
+	/* smt := ceil(cpus / capacity), assumes: 1 < smt_capacity < 2 */
 	smt = DIV_ROUND_UP(SCHED_CAPACITY_SCALE * cpus, ns->compute_capacity);
 	capacity = cpus / smt; /* cores */
 
@@ -4266,9 +4266,9 @@ static unsigned long target_load(int cpu, int type)
 	return max(rq->cpu_load[type-1], total);
 }
 
-static unsigned long power_of(int cpu)
+static unsigned long capacity_of(int cpu)
 {
-	return cpu_rq(cpu)->cpu_power;
+	return cpu_rq(cpu)->cpu_capacity;
 }
 
 static unsigned long cpu_avg_load_per_task(int cpu)
@@ -4512,12 +4512,12 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p, int sync)
 		s64 this_eff_load, prev_eff_load;
 
 		this_eff_load = 100;
-		this_eff_load *= power_of(prev_cpu);
+		this_eff_load *= capacity_of(prev_cpu);
 		this_eff_load *= this_load +
 			effective_load(tg, this_cpu, weight, weight);
 
 		prev_eff_load = 100 + (sd->imbalance_pct - 100) / 2;
-		prev_eff_load *= power_of(this_cpu);
+		prev_eff_load *= capacity_of(this_cpu);
 		prev_eff_load *= load + effective_load(tg, prev_cpu, 0, weight);
 
 		balanced = this_eff_load <= prev_eff_load;
@@ -5186,7 +5186,7 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
  *
  *   W'_i,n = (2^n - 1) / 2^n * W_i,n + 1 / 2^n * W_i,0               (3)
  *
- * P_i is the cpu power (or compute capacity) of cpu i, typically it is the
+ * P_i is the cpu capacity (or compute capacity) of cpu i, typically it is the
  * fraction of 'recent' time available for SCHED_OTHER task execution. But it
  * can also include other factors [XXX].
  *
@@ -5749,17 +5749,17 @@ static inline int get_sd_load_idx(struct sched_domain *sd,
 	return load_idx;
 }
 
-static unsigned long default_scale_freq_power(struct sched_domain *sd, int cpu)
+static unsigned long default_scale_freq_capacity(struct sched_domain *sd, int cpu)
 {
 	return SCHED_CAPACITY_SCALE;
 }
 
-unsigned long __weak arch_scale_freq_power(struct sched_domain *sd, int cpu)
+unsigned long __weak arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
 {
-	return default_scale_freq_power(sd, cpu);
+	return default_scale_freq_capacity(sd, cpu);
 }
 
-static unsigned long default_scale_smt_power(struct sched_domain *sd, int cpu)
+static unsigned long default_scale_smt_capacity(struct sched_domain *sd, int cpu)
 {
 	unsigned long weight = sd->span_weight;
 	unsigned long smt_gain = sd->smt_gain;
@@ -5769,12 +5769,12 @@ static unsigned long default_scale_smt_power(struct sched_domain *sd, int cpu)
 	return smt_gain;
 }
 
-unsigned long __weak arch_scale_smt_power(struct sched_domain *sd, int cpu)
+unsigned long __weak arch_scale_smt_capacity(struct sched_domain *sd, int cpu)
 {
-	return default_scale_smt_power(sd, cpu);
+	return default_scale_smt_capacity(sd, cpu);
 }
 
-static unsigned long scale_rt_power(int cpu)
+static unsigned long scale_rt_capacity(int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 	u64 total, available, age_stamp, avg;
@@ -5794,7 +5794,7 @@ static unsigned long scale_rt_power(int cpu)
 	total = sched_avg_period() + delta;
 
 	if (unlikely(total < avg)) {
-		/* Ensures that power won't end up being negative */
+		/* Ensures that capacity won't end up being negative */
 		available = 0;
 	} else {
 		available = total - avg;
