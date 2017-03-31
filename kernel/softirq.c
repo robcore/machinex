@@ -638,7 +638,6 @@ static void __local_trigger(struct call_single_data *cp, int softirq)
 		raise_softirq_irqoff(softirq);
 }
 
-#ifdef CONFIG_USE_GENERIC_SMP_HELPERS
 static void remote_softirq_receive(void *data)
 {
 	struct call_single_data *cp = data;
@@ -658,17 +657,11 @@ static int __try_remote_softirq(struct call_single_data *cp, int cpu, int softir
 		cp->info = &softirq;
 		cp->flags = 0;
 
-		__smp_call_function_single(cpu, cp, 0);
+		smp_call_function_single_async(cpu, cp);
 		return 0;
 	}
 	return 1;
 }
-#else /* CONFIG_USE_GENERIC_SMP_HELPERS */
-static int __try_remote_softirq(struct call_single_data *cp, int cpu, int softirq)
-{
-	return 1;
-}
-#endif
 
 /**
  * __send_remote_softirq - try to schedule softirq work on a remote cpu

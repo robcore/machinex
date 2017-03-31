@@ -124,7 +124,7 @@ static DEFINE_PER_CPU(struct call_single_data, cpuidle_coupled_poke_cb);
 
 /*
  * The cpuidle_coupled_poke_pending mask is used to avoid calling
- * __smp_call_function_single with the per cpu call_single_data struct already
+ * smp_call_function_single_async with the per cpu call_single_data struct already
  * in use.  This prevents a deadlock where two cpus are waiting for each others
  * call_single_data struct to be available
  */
@@ -323,7 +323,7 @@ static void cpuidle_coupled_poke(int cpu)
 	struct call_single_data *csd = &per_cpu(cpuidle_coupled_poke_cb, cpu);
 
 	if (!cpumask_test_and_set_cpu(cpu, &cpuidle_coupled_poke_pending))
-		__smp_call_function_single(cpu, csd, 0);
+		smp_call_function_single_async(cpu, csd);
 }
 
 /**

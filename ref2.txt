@@ -267,3 +267,31 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/4patches/5873-sched-Final-power-vs.-capacity-cleanups.patch
 
+
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/1patches/2107-smp-Add-new-wake_up_all_idle_cpus-function.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/2patches/2375-kernel-smp.c-on_each_cpu_cond-fix-warning-in-fallbac.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/2patches/5159-kernel-misc-Replace-__get_cpu_var-uses.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/3patches/0724-CPU-hotplug-smp-flush-any-pending-IPI-callbacks-befo.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/4patches/6195-smp-print-more-useful-debug-info-upon-receiving-IPI-.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/4patches/7139-irq_work-Implement-remote-queueing.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0980-smp-Iterate-functions-through-llist_for_each_entry_s.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0982-smp-Teach-__smp_call_function_single-to-check-for-of.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0983-smp-Consolidate-the-various-smp_call_function_single.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0984-smp-Move-__smp_call_function_single-below-its-safe-v.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0986-smp-Remove-wait-argument-from-__smp_call_function_si.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0987-smp-Rename-__smp_call_function_single-to-smp_call_fu.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/7patches/4235-kernel-use-lockless-list-for-smp_call_function_singl.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/7patches/4236-kernel-smp.c-remove-cpumask_ipi.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/4020-smp-export-__smp_call_function_single.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/4021-smp-don-t-warn-about-csd-flags-having-CSD_FLAG_LOCK-.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/7687-kernel-remove-CONFIG_USE_GENERIC_SMP_HELPERS.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/9patches/7690-kernel-fix-generic_exec_single-indentation.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/10patches/3795-kernel-smp.c-free-related-resources-when-failure-occ.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/10patches/3802-kernel-smp.c-quit-unconditionally-enabling-irqs-in-o.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/10patches/7172-x86-boot-Further-compress-CPUs-bootup-message.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/11patches/1297-kernel-delete-__cpuinit-usage-from-all-core-kernel-f.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/11patches/3897-generic-ipi-Kill-unnecessary-variable-csd_flags.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/11patches/7282-generic-ipi-locking-Fix-misleading-smp_call_function.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/13patches/4563-kernel-smp.c-use-for-csd_lock.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/13patches/4566-kernel-smp.c-cleanups.patch
+

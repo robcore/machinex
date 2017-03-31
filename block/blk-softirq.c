@@ -36,7 +36,7 @@ static void blk_done_softirq(struct softirq_action *h)
 	}
 }
 
-#if defined(CONFIG_SMP) && defined(CONFIG_USE_GENERIC_SMP_HELPERS)
+#ifdef CONFIG_SMP
 static void trigger_softirq(void *data)
 {
 	struct request *rq = data;
@@ -65,13 +65,13 @@ static int raise_blk_irq(int cpu, struct request *rq)
 		data->info = rq;
 		data->flags = 0;
 
-		__smp_call_function_single(cpu, data, 0);
+		smp_call_function_single_async(cpu, data);
 		return 0;
 	}
 
 	return 1;
 }
-#else /* CONFIG_SMP && CONFIG_USE_GENERIC_SMP_HELPERS */
+#else /* CONFIG_SMP */
 static int raise_blk_irq(int cpu, struct request *rq)
 {
 	return 1;
