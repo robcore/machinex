@@ -24,7 +24,7 @@ extern void __local_bh_enable_ip(unsigned long ip, unsigned int cnt);
 
 static inline void local_bh_enable_ip(unsigned long ip)
 {
-	__local_bh_enable_ip(ip, SOFTIRQ_DISABLE_OFFSET);
+	__local_bh_enable_ip(unsigned long ip, SOFTIRQ_DISABLE_OFFSET);
 }
 
 static inline void local_bh_enable(void)
