@@ -1,15 +1,14 @@
 /*
  * include/linux/cpu.h - generic cpu definition
  *
- * This is mainly for topological representation. We define the
- * basic 'struct cpu' here, which can be embedded in per-arch
+ * This is mainly for topological representation. We define the 
+ * basic 'struct cpu' here, which can be embedded in per-arch 
  * definitions of processors.
  *
  * Basic handling of the devices is done in drivers/base/cpu.c
- * and system devices are handled in drivers/base/sys.c.
  *
- * CPUs are exported via sysfs in the class/cpu/devices/
- * directory.
+ * CPUs are exported via sysfs in the devices/system/cpu
+ * directory. 
  */
 #ifndef _LINUX_CPU_H_
 #define _LINUX_CPU_H_
@@ -97,6 +96,8 @@ enum {
 					* Called on the new cpu, just before
 					* enabling interrupts. Must not sleep,
 					* must not fail */
+#define CPU_DYING_IDLE		0x000B /* CPU (unsigned)v dying, reached
+					* idle loop. */
 #define CPU_BROKEN		0x000C /* CPU (unsigned)v did not die properly,
 					* perhaps due to preemption. */
 
@@ -219,6 +220,10 @@ static inline void cpu_notifier_register_done(void)
 {
 }
 
+static inline void smpboot_thread_init(void)
+{
+}
+
 #endif /* CONFIG_SMP */
 extern struct bus_type cpu_subsys;
 
@@ -228,6 +233,7 @@ extern struct bus_type cpu_subsys;
 extern void cpu_hotplug_begin(void);
 extern void cpu_hotplug_done(void);
 extern void get_online_cpus(void);
+extern bool try_get_online_cpus(void);
 extern void put_online_cpus(void);
 extern void cpu_hotplug_disable(void);
 extern void cpu_hotplug_enable(void);
@@ -258,6 +264,7 @@ static inline void cpu_hotplug_driver_unlock(void)
 static inline void cpu_hotplug_begin(void) {}
 static inline void cpu_hotplug_done(void) {}
 #define get_online_cpus()	do { } while (0)
+#define try_get_online_cpus()	true
 #define put_online_cpus()	do { } while (0)
 #define cpu_hotplug_disable()	do { } while (0)
 #define cpu_hotplug_enable()	do { } while (0)
