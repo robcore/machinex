@@ -158,7 +158,7 @@ static struct hrtimer pm_hrtimer;
 static struct msm_pm_sleep_ops pm_sleep_ops;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 
-static bool msm_pm_ldo_retention_enabled = true;
+static bool msm_pm_ldo_retention_enabled = false;
 module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
 
