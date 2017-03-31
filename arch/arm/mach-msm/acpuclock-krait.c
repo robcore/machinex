@@ -110,7 +110,9 @@ static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
 			.sc = sc,
 			.src_sel = pri_src_sel,
 		};
+		preempt_disable();
 		smp_call_function_single(cpu, __set_cpu_pri_clk_src, &args, 1);
+		preempt_disable();
 	} else {
 		__set_pri_clk_src(sc, pri_src_sel);
 	}
@@ -614,9 +616,9 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	 */
 	spin_lock(&l2_lock);
 	tgt_l2_l = compute_l2_level(&drv.scalable[cpu], tgt->l2_level);
-	spin_unlock(&l2_lock);
 	set_speed(&drv.scalable[L2],
 			&drv.l2_freq_tbl[tgt_l2_l].speed, true);
+	spin_unlock(&l2_lock);
 
 	/* Nothing else to do for power collapse or SWFI. */
 	if (reason == SETRATE_PC || reason == SETRATE_SWFI)
