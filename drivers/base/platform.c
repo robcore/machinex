@@ -781,7 +781,7 @@ int platform_pm_suspend(struct device *dev)
 	}
 
 	if (ret < 0)
-		platform_pm_resume(drv);
+		platform_pm_resume(dev);
 
 	return ret;
 }
