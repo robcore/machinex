@@ -49,9 +49,6 @@
 #include <asm/mach/arch.h>
 #include <asm/mpu.h>
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/ipi.h>
-
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
  * so we need some other way of telling a new secondary core
@@ -463,7 +460,7 @@ void __init set_smp_cross_call(void (*fn)(const struct cpumask *, unsigned int))
 		smp_cross_call = fn;
 }
 
-static const char *ipi_types[NR_IPI] __tracepoint_string = {
+static const char *ipi_types[NR_IPI] = {
 #define S(x,s)	[x] = s
 	S(IPI_WAKEUP, "CPU wakeup interrupts"),
 	S(IPI_TIMER, "Timer broadcast interrupts"),
@@ -478,7 +475,6 @@ static const char *ipi_types[NR_IPI] __tracepoint_string = {
 
 static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
 {
-	trace_ipi_raise(target, ipi_types[ipinr]);
 	__smp_cross_call(target, ipinr);
 }
 
@@ -704,8 +700,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 	unsigned int cpu = smp_processor_id();
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
-	if ((unsigned)ipinr < NR_IPI) {
-		trace_ipi_entry(ipi_types[ipinr]);
 		__inc_irq_stat(cpu, ipi_irqs[ipinr]);
 	}
 
@@ -765,8 +759,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 	}
 
-	if ((unsigned)ipinr < NR_IPI)
-		trace_ipi_exit(ipi_types[ipinr]);
 	set_irq_regs(old_regs);
 }
 
