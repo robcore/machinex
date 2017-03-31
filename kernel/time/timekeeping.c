@@ -152,10 +152,16 @@ static void tk_setup_internals(struct timekeeper *tk, struct clocksource *clock)
 /* Timekeeper helper functions. */
 
 #ifdef CONFIG_ARCH_USES_GETTIMEOFFSET
-static u32 default_arch_gettimeoffset(void) { return 0; }
-u32 (*arch_gettimeoffset)(void) = default_arch_gettimeoffset;
+u32 (*arch_gettimeoffset)(void);
+
+u32 get_arch_timeoffset(void)
+{
+	if (likely(arch_gettimeoffset))
+		return arch_gettimeoffset();
+	return 0;
+}
 #else
-static inline u32 arch_gettimeoffset(void) { return 0; }
+static inline u32 get_arch_timeoffset(void) { return 0; }
 #endif
 
 static inline s64 timekeeping_get_ns(struct timekeeper *tk)
@@ -175,7 +181,7 @@ static inline s64 timekeeping_get_ns(struct timekeeper *tk)
 	nsec >>= tk->shift;
 
 	/* If arch requires, add in get_arch_timeoffset() */
-	return nsec + arch_gettimeoffset();
+	return nsec + get_arch_timeoffset();
 }
 
 static inline s64 timekeeping_get_ns_raw(struct timekeeper *tk)
@@ -195,7 +201,7 @@ static inline s64 timekeeping_get_ns_raw(struct timekeeper *tk)
 	nsec = clocksource_cyc2ns(cycle_delta, clock->mult, clock->shift);
 
 	/* If arch requires, add in get_arch_timeoffset() */
-	return nsec + arch_gettimeoffset();
+	return nsec + get_arch_timeoffset();
 }
 
 /*
@@ -290,7 +296,7 @@ static void timekeeping_forward_now(struct timekeeper *tk)
 	tk->xtime_nsec += cycle_delta * tk->mult;
 
 	/* If arch requires, add in get_arch_timeoffset() */
-	tk->xtime_nsec += (u64)arch_gettimeoffset() << tk->shift;
+	tk->xtime_nsec += (u64)get_arch_timeoffset() << tk->shift;
 
 	tk_normalize_xtime(tk);
 
@@ -1598,39 +1604,29 @@ void do_timer(unsigned long ticks)
 }
 
 /**
- * ktime_get_update_offsets_tick - hrtimer helper
- * @offs_real:	pointer to storage for monotonic -> realtime offset
- * @offs_boot:	pointer to storage for monotonic -> boottime offset
- * @offs_tai:	pointer to storage for monotonic -> clock tai offset
- *
- * Returns monotonic time at last tick and various offsets
+ * get_xtime_and_monotonic_and_sleep_offset() - get xtime, wall_to_monotonic,
+ *    and sleep offsets.
+ * @xtim:	pointer to timespec to be set with xtime
+ * @wtom:	pointer to timespec to be set with wall_to_monotonic
+ * @sleep:	pointer to timespec to be set with time in suspend
  */
-ktime_t ktime_get_update_offsets_tick(ktime_t *offs_real, ktime_t *offs_boot,
-							ktime_t *offs_tai)
+void get_xtime_and_monotonic_and_sleep_offset(struct timespec *xtim,
+				struct timespec *wtom, struct timespec *sleep)
 {
 	struct timekeeper *tk = &timekeeper;
-	struct timespec ts;
-	ktime_t now;
-	unsigned int seq;
+	unsigned long seq;
 
 	do {
 		seq = read_seqcount_begin(&timekeeper_seq);
-
-		ts = tk_xtime(tk);
-
-		*offs_real = tk->offs_real;
-		*offs_boot = tk->offs_boot;
-		*offs_tai = tk->offs_tai;
+		*xtim = tk_xtime(tk);
+		*wtom = tk->wall_to_monotonic;
+		*sleep = tk->total_sleep_time;
 	} while (read_seqcount_retry(&timekeeper_seq, seq));
-
-	now = ktime_set(ts.tv_sec, ts.tv_nsec);
-	now = ktime_sub(now, *offs_real);
-	return now;
 }
 
 #ifdef CONFIG_HIGH_RES_TIMERS
 /**
- * ktime_get_update_offsets_now - hrtimer helper
+ * ktime_get_update_offsets - hrtimer helper
  * @offs_real:	pointer to storage for monotonic -> realtime offset
  * @offs_boot:	pointer to storage for monotonic -> boottime offset
  * @offs_tai:	pointer to storage for monotonic -> clock tai offset
@@ -1638,7 +1634,7 @@ ktime_t ktime_get_update_offsets_tick(ktime_t *offs_real, ktime_t *offs_boot,
  * Returns current monotonic time and updates the offsets
  * Called from hrtimer_interrupt() or retrigger_next_event()
  */
-ktime_t ktime_get_update_offsets_now(ktime_t *offs_real, ktime_t *offs_boot,
+ktime_t ktime_get_update_offsets(ktime_t *offs_real, ktime_t *offs_boot,
 							ktime_t *offs_tai)
 {
 	struct timekeeper *tk = &timekeeper;

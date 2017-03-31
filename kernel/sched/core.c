@@ -1667,7 +1667,8 @@ void wake_up_if_idle(int cpu)
 		return;
 
 	if (set_nr_if_polling(rq->idle)) {
-		trace_sched_wake_idle_without_ipi(cpu);
+		//trace_sched_wake_idle_without_ipi(cpu);
+		pr_debug("suck an egg\n");
 	} else {
 		raw_spin_lock_irqsave(&rq->lock, flags);
 		if (is_idle_task(rq->curr))
