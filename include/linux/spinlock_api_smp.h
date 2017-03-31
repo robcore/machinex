@@ -1,6 +1,7 @@
 #ifndef __LINUX_SPINLOCK_API_SMP_H
 #define __LINUX_SPINLOCK_API_SMP_H
 #include <linux/preempt.h>
+#include <linux/bottom_half.h>
 #ifndef __LINUX_SPINLOCK_H
 # error "please don't include this file directly"
 #endif
