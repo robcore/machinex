@@ -2747,7 +2747,6 @@ void preempt_count_add(int val)
 	}
 }
 EXPORT_SYMBOL(preempt_count_add);
-NOKPROBE_SYMBOL(preempt_count_add);
 
 void preempt_count_sub(int val)
 {
@@ -2770,7 +2769,6 @@ void preempt_count_sub(int val)
 	__preempt_count_sub(val);
 }
 EXPORT_SYMBOL(preempt_count_sub);
-NOKPROBE_SYMBOL(preempt_count_sub);
 
 #endif
 
@@ -3057,7 +3055,6 @@ asmlinkage void __sched notrace preempt_schedule(void)
 		barrier();
 	} while (need_resched());
 }
-NOKPROBE_SYMBOL(preempt_schedule);
 EXPORT_SYMBOL(preempt_schedule);
 
 #ifdef CONFIG_CONTEXT_TRACKING
