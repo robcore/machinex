@@ -518,9 +518,7 @@ struct task_cputime {
  * We include PREEMPT_ACTIVE to avoid cond_resched() from working
  * before the scheduler is active -- see should_resched().
  */
-#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE + PREEMPT_NEED_RESCHED)
-#define PREEMPT_ENABLED		(PREEMPT_NEED_RESCHED)
-#define PREEMPT_DISABLED	(1 + PREEMPT_NEED_RESCHED)
+#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE)
 
 /**
  * struct thread_group_cputimer - thread group interval timer counts
