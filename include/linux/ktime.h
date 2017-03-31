@@ -27,22 +27,42 @@
 /*
  * ktime_t:
  *
- * A single 64-bit variable is used to store the hrtimers
+ * On 64-bit CPUs a single 64-bit variable is used to store the hrtimers
  * internal representation of time values in scalar nanoseconds. The
  * design plays out best on 64-bit CPUs, where most conversions are
  * NOPs and most arithmetic ktime_t operations are plain arithmetic
  * operations.
  *
+ * On 32-bit CPUs an optimized representation of the timespec structure
+ * is used to avoid expensive conversions from and to timespecs. The
+ * endian-aware order of the tv struct members is chosen to allow
+ * mathematical operations on the tv64 member of the union too, which
+ * for certain operations produces better code.
+ *
+ * For architectures with efficient support for 64/32-bit conversions the
+ * plain scalar nanosecond based representation can be selected by the
+ * config switch CONFIG_KTIME_SCALAR.
  */
 union ktime {
 	s64	tv64;
+#if BITS_PER_LONG != 64 && !defined(CONFIG_KTIME_SCALAR)
+	struct {
+# ifdef __BIG_ENDIAN
+	s32	sec, nsec;
+# else
+	s32	nsec, sec;
+# endif
+	} tv;
+#endif
 };
 
 typedef union ktime ktime_t;		/* Kill this */
 
-/* Located here for timespec_valid_strict */
-#define KTIME_MAX			((s64)~((u64)1 << 63))
-#define KTIME_SEC_MAX			(KTIME_MAX / NSEC_PER_SEC)
+/*
+ * ktime_t definitions when using the 64-bit scalar representation:
+ */
+
+#if (BITS_PER_LONG == 64) || defined(CONFIG_KTIME_SCALAR)
 
 /**
  * ktime_set - Set a ktime_t variable from a seconds/nanoseconds value

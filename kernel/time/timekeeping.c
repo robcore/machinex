@@ -358,8 +358,11 @@ ktime_t ktime_get(void)
 		nsecs = timekeeping_get_ns(tk) + tk->wall_to_monotonic.tv_nsec;
 
 	} while (read_seqcount_retry(&timekeeper_seq, seq));
-
-	return ktime_set(secs, nsecs);
+	/*
+	 * Use ktime_set/ktime_add_ns to create a proper ktime on
+	 * 32-bit architectures without CONFIG_KTIME_SCALAR.
+	 */
+	return ktime_add_ns(ktime_set(secs, 0), nsecs);
 }
 EXPORT_SYMBOL_GPL(ktime_get);
 
