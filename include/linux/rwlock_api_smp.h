@@ -250,7 +250,7 @@ static inline void __raw_read_unlock_bh(rwlock_t *lock)
 {
 	rwlock_release(&lock->dep_map, 1, _RET_IP_);
 	do_raw_read_unlock(lock);
-	preempt_enable_no_resched();
+	preempt_enable();
 	local_bh_enable_ip((unsigned long)__builtin_return_address(0));
 }
 
@@ -275,7 +275,7 @@ static inline void __raw_write_unlock_bh(rwlock_t *lock)
 {
 	rwlock_release(&lock->dep_map, 1, _RET_IP_);
 	do_raw_write_unlock(lock);
-	preempt_enable_no_resched();
+	preempt_enable();
 	local_bh_enable_ip((unsigned long)__builtin_return_address(0));
 }
 
