@@ -6235,7 +6235,7 @@ static inline void update_sd_lb_stats(struct lb_env *env, struct sd_lb_stats *sd
 		}
 
 		memset(sgs, 0, sizeof(*sgs));
-		update_sg_lb_stats(env, sg, load_idx, local_group, sgs
+		update_sg_lb_stats(env, sg, load_idx, local_group, sgs,
 						&overload);
 
 		if (local_group)
@@ -6268,8 +6268,8 @@ next_group:
 		sg = sg->next;
 	} while (sg != env->sd->groups);
 
-	if (env->sd->flags & SD_NUMA)
-		env->fbq_type = fbq_classify_group(&sds->busiest_stat);
+	//if (env->sd->flags & SD_NUMA)
+		//env->fbq_type = fbq_classify_group(&sds->busiest_stat);
 
 	if (!env->sd->parent) {
 		/* update overload indicator if we are at root domain */
