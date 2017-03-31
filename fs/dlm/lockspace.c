@@ -35,11 +35,8 @@ static struct task_struct *	scand_task;
 static ssize_t dlm_control_store(struct dlm_ls *ls, const char *buf, size_t len)
 {
 	ssize_t ret = len;
-	int n;
-	int rc = kstrtoint(buf, 0, &n);
+	int n = simple_strtol(buf, NULL, 0);
 
-	if (rc)
-		return rc;
 	ls = dlm_find_lockspace_local(ls->ls_local_handle);
 	if (!ls)
 		return -EINVAL;
@@ -60,10 +57,7 @@ static ssize_t dlm_control_store(struct dlm_ls *ls, const char *buf, size_t len)
 
 static ssize_t dlm_event_store(struct dlm_ls *ls, const char *buf, size_t len)
 {
-	int rc = kstrtoint(buf, 0, &ls->ls_uevent_result);
-
-	if (rc)
-		return rc;
+	ls->ls_uevent_result = simple_strtol(buf, NULL, 0);
 	set_bit(LSFL_UEVENT_WAIT, &ls->ls_flags);
 	wake_up(&ls->ls_uevent_wait);
 	return len;
@@ -76,10 +70,7 @@ static ssize_t dlm_id_show(struct dlm_ls *ls, char *buf)
 
 static ssize_t dlm_id_store(struct dlm_ls *ls, const char *buf, size_t len)
 {
-	int rc = kstrtouint(buf, 0, &ls->ls_global_id);
-
-	if (rc)
-		return rc;
+	ls->ls_global_id = simple_strtoul(buf, NULL, 0);
 	return len;
 }
 

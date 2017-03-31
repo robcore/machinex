@@ -361,16 +361,21 @@ out:
 	return NULL;
 }
 
-static struct fdtable *close_files(struct files_struct * files)
+static void close_files(struct files_struct * files)
 {
+	int i, j;
+	struct fdtable *fdt;
+
+	j = 0;
+
 	/*
 	 * It is safe to dereference the fd table without RCU or
 	 * ->file_lock because this is the last reference to the
-	 * files structure.
+	 * files structure.  But use RCU to shut RCU-lockdep up.
 	 */
-	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
-	int i, j = 0;
-
+	rcu_read_lock();
+	fdt = files_fdtable(files);
+	rcu_read_unlock();
 	for (;;) {
 		unsigned long set;
 		i = j * BITS_PER_LONG;
@@ -389,8 +394,6 @@ static struct fdtable *close_files(struct files_struct * files)
 			set >>= 1;
 		}
 	}
-
-	return fdt;
 }
 
 struct files_struct *get_files_struct(struct task_struct *task)
@@ -408,9 +411,14 @@ struct files_struct *get_files_struct(struct task_struct *task)
 
 void put_files_struct(struct files_struct *files)
 {
-	if (atomic_dec_and_test(&files->count)) {
-		struct fdtable *fdt = close_files(files);
+	struct fdtable *fdt;
 
+	if (atomic_dec_and_test(&files->count)) {
+		close_files(files);
+		/* not really needed, since nobody can see us */
+		rcu_read_lock();
+		fdt = files_fdtable(files);
+		rcu_read_unlock();
 		/* free the arrays if they are not embedded */
 		if (fdt != &files->fdtab)
 			__free_fdtable(fdt);
@@ -644,16 +652,16 @@ void do_close_on_exec(struct files_struct *files)
 	spin_unlock(&files->file_lock);
 }
 
-static struct file *__fget(unsigned int fd, fmode_t mask)
+struct file *fget(unsigned int fd)
 {
-	struct files_struct *files = current->files;
 	struct file *file;
+	struct files_struct *files = current->files;
 
 	rcu_read_lock();
 	file = fcheck_files(files, fd);
 	if (file) {
 		/* File object ref couldn't be taken */
-		if ((file->f_mode & mask) ||
+		if (file->f_mode & FMODE_PATH ||
 		    !atomic_long_inc_not_zero(&file->f_count))
 			file = NULL;
 	}
@@ -662,16 +670,25 @@ static struct file *__fget(unsigned int fd, fmode_t mask)
 	return file;
 }
 
-struct file *fget(unsigned int fd)
-{
-	return __fget(fd, FMODE_PATH);
-}
 EXPORT_SYMBOL(fget);
 
 struct file *fget_raw(unsigned int fd)
 {
-	return __fget(fd, 0);
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	rcu_read_lock();
+	file = fcheck_files(files, fd);
+	if (file) {
+		/* File object ref couldn't be taken */
+		if (!atomic_long_inc_not_zero(&file->f_count))
+			file = NULL;
+	}
+	rcu_read_unlock();
+
+	return file;
 }
+
 EXPORT_SYMBOL(fget_raw);
 
 /*
@@ -690,33 +707,56 @@ EXPORT_SYMBOL(fget_raw);
  * The fput_needed flag returned by fget_light should be passed to the
  * corresponding fput_light.
  */
-struct file *__fget_light(unsigned int fd, fmode_t mask, int *fput_needed)
+struct file *fget_light(unsigned int fd, int *fput_needed)
 {
-	struct files_struct *files = current->files;
 	struct file *file;
+	struct files_struct *files = current->files;
 
 	*fput_needed = 0;
 	if (atomic_read(&files->count) == 1) {
 		file = __fcheck_files(files, fd);
-		if (file && (file->f_mode & mask))
+		if (file && (file->f_mode & FMODE_PATH))
 			file = NULL;
 	} else {
-		file = __fget(fd, mask);
-		if (file)
-			*fput_needed = 1;
+		rcu_read_lock();
+		file = fcheck_files(files, fd);
+		if (file) {
+			if (!(file->f_mode & FMODE_PATH) &&
+			    atomic_long_inc_not_zero(&file->f_count))
+				*fput_needed = 1;
+			else
+				/* Didn't get the reference, someone's freed */
+				file = NULL;
+		}
+		rcu_read_unlock();
 	}
 
 	return file;
-}
-struct file *fget_light(unsigned int fd, int *fput_needed)
-{
-	return __fget_light(fd, FMODE_PATH, fput_needed);
 }
 EXPORT_SYMBOL(fget_light);
 
 struct file *fget_raw_light(unsigned int fd, int *fput_needed)
 {
-	return __fget_light(fd, 0, fput_needed);
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	*fput_needed = 0;
+	if (atomic_read(&files->count) == 1) {
+		file = __fcheck_files(files, fd);
+	} else {
+		rcu_read_lock();
+		file = fcheck_files(files, fd);
+		if (file) {
+			if (atomic_long_inc_not_zero(&file->f_count))
+				*fput_needed = 1;
+			else
+				/* Didn't get the reference, someone's freed */
+				file = NULL;
+		}
+		rcu_read_unlock();
+	}
+
+	return file;
 }
 
 void set_close_on_exec(unsigned int fd, int flag)
