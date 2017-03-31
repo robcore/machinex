@@ -2959,11 +2959,6 @@ static inline void current_clr_polling(void)
 	preempt_fold_need_resched();
 }
 
-static __always_inline bool need_resched(void)
-{
-	return unlikely(tif_need_resched());
-}
-
 /*
  * Thread group CPU time accounting.
  */

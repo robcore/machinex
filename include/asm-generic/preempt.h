@@ -47,6 +47,16 @@ static __always_inline bool test_preempt_need_resched(void)
 	return false;
 }
 
+#ifdef CONFIG_PREEMPT
+extern asmlinkage void preempt_schedule(void);
+#define __preempt_schedule() preempt_schedule()
+
+#ifdef CONFIG_CONTEXT_TRACKING
+extern asmlinkage void preempt_schedule_context(void);
+#define __preempt_schedule_context() preempt_schedule_context()
+#endif
+#endif /* CONFIG_PREEMPT */
+
 /*
  * The various preempt_count add/sub methods
  */
@@ -63,12 +73,15 @@ static __always_inline void __preempt_count_sub(int val)
 
 static __always_inline bool __preempt_count_dec_and_test(void)
 {
-	/*
-	 * Because of load-store architectures cannot do per-cpu atomic
-	 * operations; we cannot use PREEMPT_NEED_RESCHED because it might get
-	 * lost.
-	 */
-	return !--*preempt_count_ptr() && tif_need_resched();
+	return !--*preempt_count_ptr();
+}
+
+/*
+ * Returns true when we need to resched -- even if we can not.
+ */
+static __always_inline bool need_resched(void)
+{
+	return unlikely(test_preempt_need_resched());
 }
 
 /*
@@ -76,17 +89,7 @@ static __always_inline bool __preempt_count_dec_and_test(void)
  */
 static __always_inline bool should_resched(void)
 {
-	return unlikely(!preempt_count() && tif_need_resched());
+	return unlikely(!*preempt_count_ptr());
 }
-
-#ifdef CONFIG_PREEMPT
-extern asmlinkage void preempt_schedule(void);
-#define __preempt_schedule() preempt_schedule()
-
-#ifdef CONFIG_CONTEXT_TRACKING
-extern asmlinkage void preempt_schedule_context(void);
-#define __preempt_schedule_context() preempt_schedule_context()
-#endif
-#endif /* CONFIG_PREEMPT */
 
 #endif /* __ASM_PREEMPT_H */
