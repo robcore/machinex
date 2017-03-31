@@ -6028,7 +6028,8 @@ static inline int sg_capacity_factor(struct lb_env *env, struct sched_group *gro
  */
 static inline void update_sg_lb_stats(struct lb_env *env,
 			struct sched_group *group, int load_idx,
-			int local_group, struct sg_lb_stats *sgs)
+			int local_group, struct sg_lb_stats *sgs,
+			bool *overload)
 {
 	unsigned long nr_running, max_nr_running, min_nr_running;
 	unsigned long scaled_load, load, max_cpu_load, min_cpu_load;
@@ -6068,6 +6069,9 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 
 		sgs->group_load += load;
 		sgs->sum_nr_running += rq->cfs.h_nr_running;
+
+		if (rq->nr_running > 1)
+			*overload = true;
 
 #ifdef CONFIG_NUMA_BALANCING
 		sgs->nr_numa_running += rq->nr_numa_running;
@@ -6209,6 +6213,7 @@ static inline void update_sd_lb_stats(struct lb_env *env, struct sd_lb_stats *sd
 	struct sched_group *sg = env->sd->groups;
 	struct sg_lb_stats tmp_sgs;
 	int load_idx, prefer_sibling = 0;
+	bool overload = false;
 
 	if (child && child->flags & SD_PREFER_SIBLING)
 		prefer_sibling = 1;
@@ -6230,7 +6235,11 @@ static inline void update_sd_lb_stats(struct lb_env *env, struct sd_lb_stats *sd
 		}
 
 		memset(sgs, 0, sizeof(*sgs));
-		update_sg_lb_stats(env, sg, load_idx, local_group, sgs);
+		update_sg_lb_stats(env, sg, load_idx, local_group, sgs
+						&overload);
+
+		if (local_group)
+			goto next_group;
 
 		/*
 		 * In case the child domain prefers tasks go to siblings
@@ -6242,21 +6251,32 @@ static inline void update_sd_lb_stats(struct lb_env *env, struct sd_lb_stats *sd
 		 * heaviest group when it is already under-utilized (possible
 		 * with a large weight task outweighs the tasks on the system).
 		 */
-		if (prefer_sibling && !local_group &&
-				sds->local && sds->local_stat.group_has_free_capacity)
+		if (prefer_sibling && sds->local &&
+		    sds->local_stat.group_has_free_capacity)
 			sgs->group_capacity_factor = min(sgs->group_capacity_factor, 1U);
 
-		/* Now, start updating sd_lb_stats */
-		sds->total_load += sgs->group_load;
-		sds->total_capacity += sg->sgc->capacity;
-
-		if (!local_group && update_sd_pick_busiest(env, sds, sg, sgs)) {
+		if (update_sd_pick_busiest(env, sds, sg, sgs)) {
 			sds->busiest = sg;
 			sds->busiest_stat = *sgs;
 		}
 
+next_group:
+		/* Now, start updating sd_lb_stats */
+		sds->total_load += sgs->group_load;
+		sds->total_capacity += sgs->group_capacity;
+
 		sg = sg->next;
 	} while (sg != env->sd->groups);
+
+	if (env->sd->flags & SD_NUMA)
+		env->fbq_type = fbq_classify_group(&sds->busiest_stat);
+
+	if (!env->sd->parent) {
+		/* update overload indicator if we are at root domain */
+		if (env->dst_rq->rd->overload != overload)
+			env->dst_rq->rd->overload = overload;
+	}
+
 }
 
 /**
@@ -6661,7 +6681,7 @@ static int should_we_balance(struct lb_env *env)
 	 * First idle cpu or the first cpu(busiest) in this sched group
 	 * is eligible for doing load balancing at this and above domains.
 	 */
-	return balance_cpu != env->dst_cpu;
+	return balance_cpu == env->dst_cpu;
 }
 
 /*
@@ -6970,7 +6990,8 @@ static int idle_balance(struct rq *this_rq)
 	 */
 	this_rq->idle_stamp = rq_clock(this_rq);
 
-	if (this_rq->avg_idle < sysctl_sched_migration_cost) {
+	if (this_rq->avg_idle < sysctl_sched_migration_cost ||
+	    !this_rq->rd->overload) {
 		rcu_read_lock();
 		sd = rcu_dereference_check_sched_domain(this_rq->sd);
 		if (sd)
