@@ -1,6 +1,6 @@
 #ifndef __LINUX_SPINLOCK_API_SMP_H
 #define __LINUX_SPINLOCK_API_SMP_H
-
+#include <linux/preempt.h>
 #ifndef __LINUX_SPINLOCK_H
 # error "please don't include this file directly"
 #endif
@@ -174,7 +174,7 @@ static inline void __raw_spin_unlock_bh(raw_spinlock_t *lock)
 {
 	spin_release(&lock->dep_map, 1, _RET_IP_);
 	do_raw_spin_unlock(lock);
-	preempt_enable_no_resched();
+	sched_preempt_enable_no_resched();
 	local_bh_enable_ip((unsigned long)__builtin_return_address(0));
 }
 
@@ -186,7 +186,7 @@ static inline int __raw_spin_trylock_bh(raw_spinlock_t *lock)
 		spin_acquire(&lock->dep_map, 0, 1, _RET_IP_);
 		return 1;
 	}
-	preempt_enable_no_resched();
+	sched_preempt_enable_no_resched();
 	local_bh_enable_ip((unsigned long)__builtin_return_address(0));
 	return 0;
 }
