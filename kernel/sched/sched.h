@@ -980,10 +980,20 @@ enum {
 #undef SCHED_FEAT
 
 #if defined(CONFIG_SCHED_DEBUG) && defined(HAVE_JUMP_LABEL)
+static __always_inline bool static_branch__true(struct static_key *key)
+{
+	return static_key_true(key); /* Not out of line branch. */
+}
+
+static __always_inline bool static_branch__false(struct static_key *key)
+{
+	return static_key_false(key); /* Out of line branch. */
+}
+
 #define SCHED_FEAT(name, enabled)					\
 static __always_inline bool static_branch_##name(struct static_key *key) \
 {									\
-	return static_key_##enabled(key);				\
+	return static_branch__##enabled(key);				\
 }
 
 #include "features.h"
@@ -1325,7 +1335,7 @@ extern void init_sched_rt_class(void);
 extern void init_sched_fair_class(void);
 extern void init_sched_dl_class(void);
 
-extern void resched_curr(struct rq *rq);
+extern void resched_task(struct task_struct *p);
 extern void resched_cpu(int cpu);
 
 extern struct rt_bandwidth def_rt_bandwidth;

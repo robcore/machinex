@@ -605,7 +605,7 @@ static int module_unload_init(struct module *mod)
 	INIT_LIST_HEAD(&mod->target_list);
 
 	/* Hold reference count during initialization. */
-	raw_cpu_write(mod->refptr->incs, 1);
+	__this_cpu_write(mod->refptr->incs, 1);
 	/* Backwards compatibility macros put refcount during init. */
 	mod->waiter = current;
 

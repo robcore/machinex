@@ -463,10 +463,9 @@ static void dequeue_rt_entity(struct sched_rt_entity *rt_se);
 static void sched_rt_rq_enqueue(struct rt_rq *rt_rq)
 {
 	struct task_struct *curr = rq_of_rt_rq(rt_rq)->curr;
-	struct rq *rq = rq_of_rt_rq(rt_rq);
 	struct sched_rt_entity *rt_se;
 
-	int cpu = cpu_of(rq);
+	int cpu = cpu_of(rq_of_rt_rq(rt_rq));
 
 	rt_se = rt_rq->tg->rt_se[cpu];
 
@@ -477,7 +476,7 @@ static void sched_rt_rq_enqueue(struct rt_rq *rt_rq)
 			enqueue_rt_entity(rt_se, false);
 
 		if (rt_rq->highest_prio.curr < curr->prio)
-			resched_curr(rq);
+			resched_task(curr);
 	}
 }
 
@@ -582,7 +581,7 @@ static inline void sched_rt_rq_enqueue(struct rt_rq *rt_rq)
 		return;
 
 	enqueue_top_rt_rq(rt_rq);
-	resched_curr(rq);
+	resched_task(rq->curr);
 }
 
 static inline void sched_rt_rq_dequeue(struct rt_rq *rt_rq)
@@ -982,7 +981,7 @@ static void update_curr_rt(struct rq *rq)
 			raw_spin_lock(&rt_rq->rt_runtime_lock);
 			rt_rq->rt_time += delta_exec;
 			if (sched_rt_runtime_exceeded(rt_rq))
-				resched_curr(rq);
+				resched_task(curr);
 			raw_spin_unlock(&rt_rq->rt_runtime_lock);
 		}
 	}
@@ -1405,7 +1404,7 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 	 * to try and push current away:
 	 */
 	requeue_task_rt(rq, p, 1);
-	resched_curr(rq);
+	resched_task(rq->curr);
 }
 
 #endif /* CONFIG_SMP */
@@ -1416,7 +1415,7 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 static void check_preempt_curr_rt(struct rq *rq, struct task_struct *p, int flags)
 {
 	if (p->prio < rq->curr->prio) {
-		resched_curr(rq);
+		resched_task(rq->curr);
 		return;
 	}
 
@@ -1751,7 +1750,7 @@ retry:
 	 * just reschedule current.
 	 */
 	if (unlikely(next_task->prio < rq->curr->prio)) {
-		resched_curr(rq);
+		resched_task(rq->curr);
 		return 0;
 	}
 
@@ -1798,7 +1797,7 @@ retry:
 	activate_task(lowest_rq, next_task, 0);
 	ret = 1;
 
-	resched_curr(lowest_rq);
+	resched_task(lowest_rq->curr);
 
 	double_unlock_balance(rq, lowest_rq);
 
@@ -1997,7 +1996,7 @@ static void switched_from_rt(struct rq *rq, struct task_struct *p)
 		return;
 
 	if (pull_rt_task(rq))
-		resched_curr(rq);
+		resched_task(rq->curr);
 }
 
 void __init init_sched_rt_class(void)
@@ -2035,7 +2034,7 @@ static void switched_to_rt(struct rq *rq, struct task_struct *p)
 			check_resched = 0;
 #endif /* CONFIG_SMP */
 		if (check_resched && p->prio < rq->curr->prio)
-			resched_curr(rq);
+			resched_task(rq->curr);
 	}
 }
 
@@ -2064,11 +2063,11 @@ prio_changed_rt(struct rq *rq, struct task_struct *p, int oldprio)
 		 * Only reschedule if p is still on the same runqueue.
 		 */
 		if (p->prio > rq->rt.highest_prio.curr && rq->curr == p)
-			resched_curr(rq);
+			resched_task(p);
 #else
 		/* For UP simply resched on drop of prio */
 		if (oldprio < p->prio)
-			resched_curr(rq);
+			resched_task(p);
 #endif /* CONFIG_SMP */
 	} else {
 		/*
@@ -2077,7 +2076,7 @@ prio_changed_rt(struct rq *rq, struct task_struct *p, int oldprio)
 		 * then reschedule.
 		 */
 		if (p->prio < rq->curr->prio)
-			resched_curr(rq);
+			resched_task(rq->curr);
 	}
 }
 

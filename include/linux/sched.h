@@ -25,7 +25,6 @@ struct sched_param {
 #include <linux/errno.h>
 #include <linux/nodemask.h>
 #include <linux/mm_types.h>
-#include <linux/preempt.h>
 #include <linux/preempt_mask.h>
 
 #include <asm/page.h>
@@ -512,12 +511,6 @@ struct task_cputime {
 		.sum_exec_runtime = 0,				\
 	}
 
-#ifdef CONFIG_PREEMPT_COUNT
-#define PREEMPT_DISABLED	(1 + PREEMPT_ENABLED)
-#else
-#define PREEMPT_DISABLED	PREEMPT_ENABLED
-#endif
-
 /*
  * Disable preemption until the scheduler is running.
  * Reset by start_kernel()->sched_init()->init_idle().
@@ -525,7 +518,7 @@ struct task_cputime {
  * We include PREEMPT_ACTIVE to avoid cond_resched() from working
  * before the scheduler is active -- see should_resched().
  */
-#define INIT_PREEMPT_COUNT	(PREEMPT_DISABLED + PREEMPT_ACTIVE)
+#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE)
 
 /**
  * struct thread_group_cputimer - thread group interval timer counts
@@ -1310,6 +1303,9 @@ struct task_struct {
 #ifdef CONFIG_TREE_PREEMPT_RCU
 	struct rcu_node *rcu_blocked_node;
 #endif /* #ifdef CONFIG_TREE_PREEMPT_RCU */
+#ifdef CONFIG_RCU_BOOST
+	struct rt_mutex *rcu_boost_mutex;
+#endif /* #ifdef CONFIG_RCU_BOOST */
 
 #if defined(CONFIG_SCHEDSTATS) || defined(CONFIG_TASK_DELAY_ACCT)
 	struct sched_info sched_info;
@@ -1480,6 +1476,8 @@ struct task_struct {
 	struct rb_node *pi_waiters_leftmost;
 	/* Deadlock detection and priority inheritance handling */
 	struct rt_mutex_waiter *pi_blocked_on;
+	/* Top pi_waiters task */
+	struct task_struct *pi_top_task;
 #endif
 
 #ifdef CONFIG_DEBUG_MUTEXES
@@ -2052,6 +2050,9 @@ static inline void rcu_copy_process(struct task_struct *p)
 #ifdef CONFIG_TREE_PREEMPT_RCU
 	p->rcu_blocked_node = NULL;
 #endif /* #ifdef CONFIG_TREE_PREEMPT_RCU */
+#ifdef CONFIG_RCU_BOOST
+	p->rcu_boost_mutex = NULL;
+#endif /* #ifdef CONFIG_RCU_BOOST */
 	INIT_LIST_HEAD(&p->rcu_node_entry);
 }
 
@@ -2863,7 +2864,7 @@ static inline bool __must_check current_set_polling_and_test(void)
 
 	/*
 	 * Polling state must be visible before we test NEED_RESCHED,
-	 * paired by resched_curr()
+	 * paired by resched_task()
 	 */
 	smp_mb();
 
@@ -2881,7 +2882,7 @@ static inline bool __must_check current_clr_polling_and_test(void)
 
 	/*
 	 * Polling state must be visible before we test NEED_RESCHED,
-	 * paired by resched_curr()
+	 * paired by resched_task()
 	 */
 	smp_mb();
 
@@ -2904,7 +2905,7 @@ static inline bool __must_check current_set_polling_and_test(void)
 
 	/*
 	 * Polling state must be visible before we test NEED_RESCHED,
-	 * paired by resched_curr()
+	 * paired by resched_task()
 	 */
 	smp_mb__after_atomic();
 
@@ -2922,7 +2923,7 @@ static inline bool __must_check current_clr_polling_and_test(void)
 
 	/*
 	 * Polling state must be visible before we test NEED_RESCHED,
-	 * paired by resched_curr()
+	 * paired by resched_task()
 	 */
 	smp_mb__after_atomic();
 
@@ -2954,9 +2955,12 @@ static inline void current_clr_polling(void)
 	 * TIF_NEED_RESCHED and the IPI handler, scheduler_ipi(), will also
 	 * fold.
 	 */
-	smp_mb(); /* paired with resched_task() */
+	smp_mb(); /* paired with resched_curr() */
+}
 
-	preempt_fold_need_resched();
+static __always_inline bool need_resched(void)
+{
+	return unlikely(tif_need_resched());
 }
 
 /*

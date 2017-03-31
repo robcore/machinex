@@ -251,7 +251,6 @@ sched_feat_write(struct file *filp, const char __user *ubuf,
 	char buf[64];
 	char *cmp;
 	int i;
-	struct inode *inode;
 
 	if (cnt > 63)
 		cnt = 63;
@@ -262,11 +261,7 @@ sched_feat_write(struct file *filp, const char __user *ubuf,
 	buf[cnt] = 0;
 	cmp = strstrip(buf);
 
-	/* Ensure the static_key remains in a consistent state */
-	inode = file_inode(filp);
-	mutex_lock(&inode->i_mutex);
 	i = sched_feat_set(cmp);
-	mutex_unlock(&inode->i_mutex);
 	if (i == __SCHED_FEAT_NR)
 		return -EINVAL;
 
@@ -573,32 +568,23 @@ static bool set_nr_if_polling(struct task_struct *p)
 #endif
 #endif
 
-/*
- * resched_curr - mark rq's current task 'to be rescheduled now'.
- *
- * On UP this means the setting of the need_resched flag, on SMP it
- * might also involve a cross-CPU call to trigger the scheduler on
- * the target CPU.
- */
-void resched_curr(struct rq *rq)
+void resched_task(struct task_struct *p)
 {
-	struct task_struct *curr = rq->curr;
 	int cpu;
 
-	lockdep_assert_held(&rq->lock);
+	assert_raw_spin_locked(&task_rq(p)->lock);
 
-	if (test_tsk_need_resched(curr))
+	if (test_tsk_need_resched(p))
 		return;
 
-	cpu = cpu_of(rq);
+	cpu = task_cpu(p);
 
 	if (cpu == smp_processor_id()) {
-		set_tsk_need_resched(curr);
-		set_preempt_need_resched();
+		set_tsk_need_resched(p);
 		return;
 	}
 
-	if (set_nr_and_not_polling(curr))
+	if (set_nr_and_not_polling(p))
 		smp_send_reschedule(cpu);
 	//else
 		//trace_sched_wake_idle_without_ipi(cpu);
@@ -611,7 +597,7 @@ void resched_cpu(int cpu)
 
 	if (!raw_spin_trylock_irqsave(&rq->lock, flags))
 		return;
-	resched_curr(rq);
+	resched_task(cpu_curr(cpu));
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
 
@@ -1015,7 +1001,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 			if (class == rq->curr->sched_class)
 				break;
 			if (class == p->sched_class) {
-				resched_curr(rq);
+				resched_task(rq->curr);
 				break;
 			}
 		}
@@ -1616,7 +1602,7 @@ void scheduler_ipi(void)
 	 * TIF_NEED_RESCHED remotely (for the first time) will also send
 	 * this IPI.
 	 */
-	preempt_fold_need_resched();
+//	preempt_fold_need_resched();
 
 	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick())
 		return;
@@ -2078,7 +2064,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 #endif
 #ifdef CONFIG_PREEMPT_COUNT
 	/* Want to start with kernel preemption disabled. */
-	task_thread_info(p)->preempt_count = PREEMPT_DISABLED;
+	task_thread_info(p)->preempt_count = 1;
 #endif
 #ifdef CONFIG_SMP
 	plist_node_init(&p->pushable_tasks, MAX_PRIO);
@@ -2721,7 +2707,7 @@ notrace unsigned long get_parent_ip(unsigned long addr)
 #if defined(CONFIG_PREEMPT) && (defined(CONFIG_DEBUG_PREEMPT) || \
 				defined(CONFIG_PREEMPT_TRACER))
 
-void preempt_count_add(int val)
+void __kprobes add_preempt_count(int val)
 {
 #ifdef CONFIG_DEBUG_PREEMPT
 	/*
@@ -2730,7 +2716,7 @@ void preempt_count_add(int val)
 	if (DEBUG_LOCKS_WARN_ON((preempt_count() < 0)))
 		return;
 #endif
-	__preempt_count_add(val);
+	add_preempt_count_notrace(val);
 #ifdef CONFIG_DEBUG_PREEMPT
 	/*
 	 * Spinlock count overflowing soon?
@@ -2746,9 +2732,9 @@ void preempt_count_add(int val)
 		trace_preempt_off(CALLER_ADDR0, ip);
 	}
 }
-EXPORT_SYMBOL(preempt_count_add);
+EXPORT_SYMBOL(add_preempt_count);
 
-void preempt_count_sub(int val)
+void __kprobes sub_preempt_count(int val)
 {
 #ifdef CONFIG_DEBUG_PREEMPT
 	/*
@@ -2766,9 +2752,9 @@ void preempt_count_sub(int val)
 
 	if (preempt_count() == val)
 		trace_preempt_on(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
-	__preempt_count_sub(val);
+	sub_preempt_count_notrace(val);
 }
-EXPORT_SYMBOL(preempt_count_sub);
+EXPORT_SYMBOL(sub_preempt_count);
 
 #endif
 
@@ -2950,7 +2936,6 @@ need_resched:
 
 	next = pick_next_task(rq, prev);
 	clear_tsk_need_resched(prev);
-	clear_preempt_need_resched();
 	rq->skip_clock_update = 0;
 
 	if (likely(prev != next)) {
@@ -3044,9 +3029,9 @@ asmlinkage void __sched notrace preempt_schedule(void)
 		return;
 
 	do {
-		__preempt_count_add(PREEMPT_ACTIVE);
+		add_preempt_count_notrace(PREEMPT_ACTIVE);
 		__schedule();
-		__preempt_count_sub(PREEMPT_ACTIVE);
+		sub_preempt_count_notrace(PREEMPT_ACTIVE);
 
 		/*
 		 * Check again in case we missed a preemption opportunity
@@ -3056,47 +3041,6 @@ asmlinkage void __sched notrace preempt_schedule(void)
 	} while (need_resched());
 }
 EXPORT_SYMBOL(preempt_schedule);
-
-#ifdef CONFIG_CONTEXT_TRACKING
-/**
- * preempt_schedule_context - preempt_schedule called by tracing
- *
- * The tracing infrastructure uses preempt_enable_notrace to prevent
- * recursion and tracing preempt enabling caused by the tracing
- * infrastructure itself. But as tracing can happen in areas coming
- * from userspace or just about to enter userspace, a preempt enable
- * can occur before user_exit() is called. This will cause the scheduler
- * to be called when the system is still in usermode.
- *
- * To prevent this, the preempt_enable_notrace will use this function
- * instead of preempt_schedule() to exit user context if needed before
- * calling the scheduler.
- */
-asmlinkage __visible void __sched notrace preempt_schedule_context(void)
-{
-	enum ctx_state prev_ctx;
-
-	if (likely(!preemptible()))
-		return;
-
-	do {
-		__preempt_count_add(PREEMPT_ACTIVE);
-		/*
-		 * Needs preempt disabled in case user_exit() is traced
-		 * and the tracer calls preempt_enable_notrace() causing
-		 * an infinite recursion.
-		 */
-		prev_ctx = exception_enter();
-		__schedule();
-		exception_exit(prev_ctx);
-
-		__preempt_count_sub(PREEMPT_ACTIVE);
-		barrier();
-	} while (need_resched());
-}
-EXPORT_SYMBOL_GPL(preempt_schedule_context);
-#endif /* CONFIG_CONTEXT_TRACKING */
-
 #endif /* CONFIG_PREEMPT */
 
 /*
@@ -3107,19 +3051,20 @@ EXPORT_SYMBOL_GPL(preempt_schedule_context);
  */
 asmlinkage void __sched preempt_schedule_irq(void)
 {
+	struct thread_info *ti = current_thread_info();
 	enum ctx_state prev_state;
 
 	/* Catch callers which need to be fixed */
-	BUG_ON(preempt_count() || !irqs_disabled());
+	BUG_ON(ti->preempt_count || !irqs_disabled());
 
 	prev_state = exception_enter();
 
 	do {
-		__preempt_count_add(PREEMPT_ACTIVE);
+		add_preempt_count(PREEMPT_ACTIVE);
 		local_irq_enable();
 		__schedule();
 		local_irq_disable();
-		__preempt_count_sub(PREEMPT_ACTIVE);
+		sub_preempt_count(PREEMPT_ACTIVE);
 
 		/*
 		 * Check again in case we missed a preemption opportunity
@@ -3180,6 +3125,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 	}
 
 	trace_sched_pi_setprio(p, prio);
+	p->pi_top_task = rt_mutex_get_top_task(p);
 	oldprio = p->prio;
 	prev_class = p->sched_class;
 	on_rq = p->on_rq;
@@ -3199,9 +3145,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 	 *          running task
 	 */
 	if (dl_prio(prio)) {
-		struct task_struct *pi_task = rt_mutex_get_top_task(p);
-		if (!dl_prio(p->normal_prio) ||
-		    (pi_task && dl_entity_preempt(&pi_task->dl, &p->dl))) {
+		if (!dl_prio(p->normal_prio) || (p->pi_top_task &&
+			dl_entity_preempt(&p->pi_top_task->dl, &p->dl))) {
 			p->dl.dl_boosted = 1;
 			p->dl.dl_throttled = 0;
 			enqueue_flag = ENQUEUE_REPLENISH;
@@ -3273,7 +3218,7 @@ void set_user_nice(struct task_struct *p, long nice)
 		 * lowered its priority, then reschedule its CPU:
 		 */
 		if (delta < 0 || (delta > 0 && task_running(rq, p)))
-			resched_curr(rq);
+			resched_task(rq->curr);
 	}
 out_unlock:
 	task_rq_unlock(rq, p, &flags);
@@ -4359,11 +4304,16 @@ SYSCALL_DEFINE0(sched_yield)
 	return 0;
 }
 
+static inline int should_resched(void)
+{
+	return need_resched() && !(preempt_count() & PREEMPT_ACTIVE);
+}
+
 static void __cond_resched(void)
 {
-	__preempt_count_add(PREEMPT_ACTIVE);
+	add_preempt_count(PREEMPT_ACTIVE);
 	__schedule();
-	__preempt_count_sub(PREEMPT_ACTIVE);
+	sub_preempt_count(PREEMPT_ACTIVE);
 }
 
 int __sched _cond_resched(void)
@@ -4506,7 +4456,7 @@ again:
 		 * fairness.
 		 */
 		if (preempt && rq != p_rq)
-			resched_curr(p_rq);
+			resched_task(p_rq->curr);
 	}
 
 out_unlock:
@@ -4777,7 +4727,7 @@ void init_idle(struct task_struct *idle, int cpu)
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
 	/* Set the preempt count _outside_ the spinlocks! */
-	task_thread_info(idle)->preempt_count = PREEMPT_ENABLED;
+	task_thread_info(idle)->preempt_count = 0;
 
 	/*
 	 * The idle tasks have their own, simple scheduling class:
@@ -7393,7 +7343,7 @@ static void normalize_task(struct rq *rq, struct task_struct *p)
 	__setscheduler(rq, p, &attr);
 	if (on_rq) {
 		enqueue_task(rq, p, 0);
-		resched_curr(rq);
+		resched_task(rq->curr);
 	}
 
 	check_class_changed(rq, p, prev_class, old_prio);

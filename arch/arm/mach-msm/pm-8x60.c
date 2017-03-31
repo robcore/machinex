@@ -162,7 +162,7 @@ static bool msm_pm_ldo_retention_enabled = false;
 module_param_named(ldo_retention_enabled,
 	msm_pm_ldo_retention_enabled, bool, 0664);
 
-static bool msm_pm_use_sync_timer = false;
+static bool msm_pm_use_sync_timer = true;
 module_param_named(use_sync_timer,
 	msm_pm_use_sync_timer, bool, 0664);
 

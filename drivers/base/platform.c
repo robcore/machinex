@@ -744,24 +744,6 @@ static int platform_legacy_resume(struct device *dev)
 
 #ifdef CONFIG_SUSPEND
 
-int platform_pm_resume(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->resume)
-			ret = drv->pm->resume(dev);
-	} else {
-		ret = platform_legacy_resume(dev);
-	}
-
-	return ret;
-}
-
 int platform_pm_suspend(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
@@ -780,8 +762,23 @@ int platform_pm_suspend(struct device *dev)
 		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
-	if (ret < 0)
-		platform_pm_resume(dev);
+	return ret;
+}
+
+int platform_pm_resume(struct device *dev)
+{
+	struct device_driver *drv = dev->driver;
+	int ret = 0;
+
+	if (!drv)
+		return 0;
+
+	if (drv->pm) {
+		if (drv->pm->resume)
+			ret = drv->pm->resume(dev);
+	} else {
+		ret = platform_legacy_resume(dev);
+	}
 
 	return ret;
 }
