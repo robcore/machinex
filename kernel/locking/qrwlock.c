@@ -20,6 +20,7 @@
 #include <linux/cpumask.h>
 #include <linux/percpu.h>
 #include <linux/hardirq.h>
+#include <linux/mutex.h>
 #include <asm/qrwlock.h>
 
 /**
@@ -34,7 +35,7 @@ static __always_inline void
 rspin_until_writer_unlock(struct qrwlock *lock, u32 cnts)
 {
 	while ((cnts & _QW_WMASK) == _QW_LOCKED) {
-		cpu_relax_lowlatency();
+		arch_mutex_cpu_relax();
 		cnts = smp_load_acquire((u32 *)&lock->cnts);
 	}
 }
@@ -74,7 +75,7 @@ void queue_read_lock_slowpath(struct qrwlock *lock)
 	 * to make sure that the write lock isn't taken.
 	 */
 	while (atomic_read(&lock->cnts) & _QW_WMASK)
-		cpu_relax_lowlatency();
+		arch_mutex_cpu_relax();
 
 	cnts = atomic_add_return(_QR_BIAS, &lock->cnts) - _QR_BIAS;
 	rspin_until_writer_unlock(lock, cnts);
@@ -113,7 +114,7 @@ void queue_write_lock_slowpath(struct qrwlock *lock)
 				    cnts | _QW_WAITING) == cnts))
 			break;
 
-		cpu_relax_lowlatency();
+		arch_mutex_cpu_relax();
 	}
 
 	/* When no more readers, set the locked flag */
@@ -124,7 +125,7 @@ void queue_write_lock_slowpath(struct qrwlock *lock)
 				    _QW_LOCKED) == _QW_WAITING))
 			break;
 
-		cpu_relax_lowlatency();
+		arch_mutex_cpu_relax();
 	}
 unlock:
 	arch_spin_unlock(&lock->lock);
