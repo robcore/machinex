@@ -537,7 +537,7 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	struct vdd_data vdd_data;
 	bool skip_regulators;
 	int rc = 0;
-	int flags;
+	unsigned long flags;
 
 	if (cpu > num_possible_cpus())
 		return -EINVAL;
