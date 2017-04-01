@@ -537,6 +537,7 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	struct vdd_data vdd_data;
 	bool skip_regulators;
 	int rc = 0;
+	int flags;
 
 	if (cpu > num_possible_cpus())
 		return -EINVAL;
@@ -612,11 +613,11 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	 * called from an atomic context and the driver_lock mutex is not
 	 * acquired.
 	 */
-	spin_lock(&l2_lock);
+	spin_lock_irqsave(&l2_lock, flags);
 	tgt_l2_l = compute_l2_level(&drv.scalable[cpu], tgt->l2_level);
 	set_speed(&drv.scalable[L2],
 			&drv.l2_freq_tbl[tgt_l2_l].speed, true);
-	spin_unlock(&l2_lock);
+	spin_unlock_irqrestore(&l2_lock, flags);
 
 	/* Nothing else to do for power collapse or SWFI. */
 	if (reason == SETRATE_PC || reason == SETRATE_SWFI)
