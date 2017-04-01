@@ -725,7 +725,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 
 	if (!dev->cpu)
 		time_param.next_event_us =
-			(uint32_t) (ktime_to_us(get_next_event_time())
+			(uint32_t) (ktime_to_us(get_next_event_time(dev->cpu))
 								& UINT_MAX);
 	else
 		time_param.next_event_us = 0;
