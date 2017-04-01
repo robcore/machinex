@@ -1674,7 +1674,8 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 	return ERR_PTR(ret);
 }
 
-static void cgroup_kill_sb(struct super_block *sb) {
+static void cgroup_kill_sb(struct super_block *sb)
+{
 	struct cgroupfs_root *root = sb->s_fs_info;
 	struct cgroup *cgrp = &root->top_cgroup;
 	struct cgrp_cset_link *link, *tmp_link;
@@ -2158,7 +2159,7 @@ retry_find_task:
 		tsk = find_task_by_vpid(pid);
 		if (!tsk) {
 			rcu_read_unlock();
-			ret= -ESRCH;
+			ret = -ESRCH;
 			goto out_unlock_cgroup;
 		}
 		/*
@@ -3247,8 +3248,7 @@ static inline int started_after_time(struct task_struct *t1,
 				     struct timespec *time,
 				     struct task_struct *t2)
 {
-	t1->start_time = __current_kernel_time();
-	int start_diff = timespec_compare(&t1->start_time, &time);
+	int start_diff = timespec_compare(&t1->start_time, time);
 	if (start_diff > 0) {
 		return 1;
 	} else if (start_diff < 0) {
