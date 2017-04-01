@@ -10,9 +10,6 @@
 #include <linux/jiffies.h>
 #include <linux/time.h>
 
-extern ktime_t ntp_get_next_leap(void);
-extern int __do_adjtimex(struct timex *, struct timespec *, s32 *);
-
 /**
  * struct tk_read_base - base structure for timekeeping readout
  * @clock:	Current clocksource used for timekeeping.
@@ -130,3 +127,4 @@ static inline void update_vsyscall_tz(void)
 #endif
 
 #endif /* _LINUX_TIMEKEEPER_INTERNAL_H */
+
