@@ -3695,13 +3695,6 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 	if (mmc->card && mmc_card_sdio(mmc->card))
 		goto out;
 
-	if (host->sdcc_suspended && host->pending_resume) {
-		host->pending_resume = false;
-		pm_runtime_get_noresume(dev);
-		rc = msmsdcc_runtime_resume(dev);
-		goto out_recover;
-	}
-
 	if (dev->power.runtime_status == RPM_SUSPENDING) {
 		if (mmc->suspend_task == current) {
 			pm_runtime_get_noresume(dev);
@@ -3710,6 +3703,13 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 	} else if (dev->power.runtime_status == RPM_RESUMING) {
 		pm_runtime_get_noresume(dev);
 		goto out;
+	}
+
+	if (host->sdcc_suspended && host->pending_resume) {
+		host->pending_resume = false;
+		pm_runtime_get_noresume(dev);
+		rc = msmsdcc_runtime_resume(dev);
+		goto out_recover;
 	}
 
 	rc = pm_runtime_get_sync(dev);
