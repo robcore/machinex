@@ -442,7 +442,7 @@ static int calculate_vdd_dig(const struct acpu_level *tgt)
 
 	l2_pll_vdd_dig = get_src_dig(&drv.l2_freq_tbl[tgt->l2_level].speed);
 	cpu_pll_vdd_dig = get_src_dig(&tgt->speed);
-
+rch/arm/mach-msm/cpuidle.c 
 	return max(drv.l2_freq_tbl[tgt->l2_level].vdd_dig,
 		   max(l2_pll_vdd_dig, cpu_pll_vdd_dig));
 }
@@ -512,7 +512,6 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	struct vdd_data vdd_data;
 	bool skip_regulators;
 	int rc = 0;
-	unsigned long flags;
 
 	if (cpu > num_possible_cpus())
 		return -EINVAL;
@@ -588,11 +587,11 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	 * called from an atomic context and the driver_lock mutex is not
 	 * acquired.
 	 */
-	spin_lock_irqsave(&l2_lock, flags);
+	spin_lock(&l2_lock);
 	tgt_l2_l = compute_l2_level(&drv.scalable[cpu], tgt->l2_level);
 	set_speed(&drv.scalable[L2],
 			&drv.l2_freq_tbl[tgt_l2_l].speed, true);
-	spin_unlock_irqrestore(&l2_lock, flags);
+	spin_unlock(&l2_lock);
 
 	/* Nothing else to do for power collapse or SWFI. */
 	if (reason == SETRATE_PC || reason == SETRATE_SWFI)
