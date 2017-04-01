@@ -32,6 +32,10 @@ extern int __do_adjtimex(struct timex *, struct timespec *, s32 *);
 struct timekeeper {
 	/* Current clocksource used for timekeeping. */
 	struct clocksource	*clock;
+	/* Read function of @clock */
+	cycle_t			(*read)(struct clocksource *cs);
+	/* Bitmask for two's complement subtraction of non 64bit counters */
+	cycle_t			mask;
 	/* Last cycle value */
 	cycle_t			cycle_last;
 	/* NTP adjusted clock multiplier */
