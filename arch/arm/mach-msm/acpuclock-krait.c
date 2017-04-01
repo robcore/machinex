@@ -442,7 +442,7 @@ static int calculate_vdd_dig(const struct acpu_level *tgt)
 
 	l2_pll_vdd_dig = get_src_dig(&drv.l2_freq_tbl[tgt->l2_level].speed);
 	cpu_pll_vdd_dig = get_src_dig(&tgt->speed);
-rch/arm/mach-msm/cpuidle.c 
+
 	return max(drv.l2_freq_tbl[tgt->l2_level].vdd_dig,
 		   max(l2_pll_vdd_dig, cpu_pll_vdd_dig));
 }
