@@ -60,7 +60,6 @@ int g_pvs_bin;
 
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
-static DEFINE_PER_CPU(struct call_single_data, l2_csd);
 
 static struct drv_data {
 	struct acpu_level *acpu_freq_tbl;
@@ -106,19 +105,12 @@ static void __set_cpu_pri_clk_src(void *data)
 static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
 {
 	int cpu = sc - drv.scalable;
-	struct call_single_data *csd = &per_cpu(l2_csd, cpu);
-
 	if (sc != &drv.scalable[L2] && cpu_online(cpu)) {
 		struct set_clk_src_args args = {
 			.sc = sc,
 			.src_sel = pri_src_sel,
 		};
-
-		csd = &per_cpu(l2_csd, cpu);
-		csd->func = __set_cpu_pri_clk_src;
-		csd->info = &args;
-
-		smp_call_function_single_async(cpu, csd);
+		smp_call_function_single(cpu, __set_cpu_pri_clk_src, &args, 1);
 	} else {
 		__set_pri_clk_src(sc, pri_src_sel);
 	}
@@ -1353,3 +1345,4 @@ int __init acpuclk_krait_init(struct device *dev,
 
 	return 0;
 }
+
