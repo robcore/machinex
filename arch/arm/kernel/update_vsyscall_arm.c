@@ -10,9 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/export.h>
-#include <linux/clocksource.h>
-#include <linux/time.h>
 #include "update_vsyscall_arm.h"
 /*
  * See entry-armv.S for the offsets into the kernel user helper for
@@ -31,7 +28,7 @@
 #define ARM_VSYSCALL_TIMER_TV_NSEC		0xf5c
 
 struct kernel_gtod_t {
-	u64  cycle_last;
+	cycles_t  cycle_last;
 	u64  mask;
 	u32  mult;
 	u32  shift;
@@ -55,8 +52,8 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall(struct timespec *ts, struct timespec *wtm,
-	struct clocksource *c, u32 mult)
+update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
+	struct clocksource *c, u32 mult, cycles_t cycle_last)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
@@ -65,10 +62,12 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
+	struct timekeeper *tk = tk;
+	struct tk_read_base *tkr;
 
 	write_legacy_seqlock_irqsave(&kuh_time_lock, flags);
 	*seqnum = kuh_time_lock.sequence;
-	dgtod->cycle_last = c->cycle_last;
+	dgtod->cycle_last = tk->tkr.cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
 	dgtod->shift = c->shift;
@@ -79,7 +78,7 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	*seqnum = kuh_time_lock.sequence + 1;
 	write_legacy_sequnlock_irqrestore(&kuh_time_lock, flags);
 }
-EXPORT_SYMBOL(update_vsyscall);
+EXPORT_SYMBOL(update_vsyscall_old);
 
 void
 update_vsyscall_tz(void)
