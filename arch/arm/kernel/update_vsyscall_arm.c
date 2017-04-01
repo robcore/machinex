@@ -63,7 +63,8 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
 	struct timekeeper *tk = tk;
-	struct tk_read_base *tkr = tkr;
+	struct tk_read_base *tkr;
+	tk->tkr.cycle_last = tk->tkr.read(c);
 
 	write_legacy_seqlock_irqsave(&kuh_time_lock, flags);
 	*seqnum = kuh_time_lock.sequence;

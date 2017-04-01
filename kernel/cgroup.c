@@ -3247,7 +3247,8 @@ static inline int started_after_time(struct task_struct *t1,
 				     struct timespec *time,
 				     struct task_struct *t2)
 {
-	int start_diff = timespec_compare(&t1->start_time, time);
+	t1->start_time = __current_kernel_time();
+	int start_diff = timespec_compare(&t1->start_time, &time);
 	if (start_diff > 0) {
 		return 1;
 	} else if (start_diff < 0) {
