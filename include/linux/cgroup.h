@@ -81,7 +81,7 @@ struct cgroup_css {
 	struct css_id __rcu *id;
 
 	/* Used to put @cgroup->dentry on the last css_put() */
-	struct work_struct destroy_work;
+	struct work_struct dput_work;
 };
 
 /* bits in struct cgroup_css flags field */
