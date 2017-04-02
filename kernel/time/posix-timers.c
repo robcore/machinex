@@ -51,8 +51,6 @@
 #include <linux/timekeeper_internal.h>
 #include <linux/hashtable.h>
 
-#include "timekeeping.h"
-
 /*
  * Management arrays for POSIX timers. Timers are now kept in static hash table
  * with 512 entries.

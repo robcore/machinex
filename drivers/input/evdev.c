@@ -125,7 +125,7 @@ static void evdev_event(struct input_handle *handle,
 	else
 		time_mono = ktime_get();
 
-	time_real = ktime_mono_to_real(time_mono);
+	time_real = ktime_sub(time_mono, ktime_get_monotonic_offset());
 
 	event.type = type;
 	event.code = code;
