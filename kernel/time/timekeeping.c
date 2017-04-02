@@ -465,6 +465,26 @@ ktime_t ktime_get_with_offset(enum tk_offsets offs)
 EXPORT_SYMBOL_GPL(ktime_get_with_offset);
 
 /**
+ * ktime_mono_to_any() - convert mononotic time to any other time
+ * @tmono:	time to convert.
+ * @offs:	which offset to use
+ */
+ktime_t ktime_mono_to_any(ktime_t tmono, enum tk_offsets offs)
+{
+	ktime_t *offset = offsets[offs];
+	unsigned long seq;
+	ktime_t tconv;
+
+	do {
+		seq = read_seqcount_begin(&tk_core.seq);
+		tconv = ktime_add(tmono, *offset);
+	} while (read_seqcount_retry(&tk_core.seq, seq));
+
+	return tconv;
+}
+EXPORT_SYMBOL_GPL(ktime_mono_to_any);
+
+/**
  * ktime_get_ts64 - get the monotonic clock in timespec64 format
  * @ts:		pointer to timespec variable
  *
@@ -525,21 +545,6 @@ void timekeeping_clocktai(struct timespec *ts)
 
 }
 EXPORT_SYMBOL(timekeeping_clocktai);
-
-
-/**
- * ktime_get_clocktai - Returns the TAI time of day in a ktime
- *
- * Returns the time of day in a ktime.
- */
-ktime_t ktime_get_clocktai(void)
-{
-	struct timespec ts;
-
-	timekeeping_clocktai(&ts);
-	return timespec_to_ktime(ts);
-}
-EXPORT_SYMBOL(ktime_get_clocktai);
 
 #ifdef CONFIG_NTP_PPS
 
@@ -785,21 +790,6 @@ int timekeeping_notify(struct clocksource *clock)
 	tick_clock_notify();
 	return tk->clock == clock ? 0 : -1;
 }
-
-/**
- * ktime_get_real - get the real (wall-) time in ktime_t format
- *
- * returns the time in ktime_t format
- */
-ktime_t ktime_get_real(void)
-{
-	struct timespec64 now;
-
-	getnstimeofday64(&now);
-
-	return timespec64_to_ktime(now);
-}
-EXPORT_SYMBOL_GPL(ktime_get_real);
 
 /**
  * getrawmonotonic - Returns the raw monotonic time in a timespec
@@ -1598,23 +1588,6 @@ void get_monotonic_boottime(struct timespec *ts)
 EXPORT_SYMBOL_GPL(get_monotonic_boottime);
 
 /**
- * ktime_get_boottime - Returns monotonic time since boot in a ktime
- *
- * Returns the monotonic time since boot in a ktime
- *
- * This is similar to CLOCK_MONTONIC/ktime_get, but also
- * includes the time spent in suspend.
- */
-ktime_t ktime_get_boottime(void)
-{
-	struct timespec ts;
-
-	get_monotonic_boottime(&ts);
-	return timespec_to_ktime(ts);
-}
-EXPORT_SYMBOL_GPL(ktime_get_boottime);
-
-/**
  * monotonic_to_bootbased - Convert the monotonic time to boot based.
  * @ts:		pointer to the timespec to be converted
  */
@@ -1700,22 +1673,22 @@ ktime_t ktime_get_update_offsets_tick(ktime_t *offs_real, ktime_t *offs_boot,
 							ktime_t *offs_tai)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
-	struct timespec64 ts;
-	ktime_t now;
 	unsigned int seq;
+	ktime_t base;
+	u64 nsecs;
 
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
 
-		ts = tk_xtime(tk);
+		base = tk->base_mono;
+		nsecs = tk->xtime_nsec >> tk->shift;
+
 		*offs_real = tk->offs_real;
 		*offs_boot = tk->offs_boot;
 		*offs_tai = tk->offs_tai;
 	} while (read_seqcount_retry(&tk_core.seq, seq));
 
-	now = ktime_set(ts.tv_sec, ts.tv_nsec);
-	now = ktime_sub(now, *offs_real);
-	return now;
+	return ktime_add_ns(base, nsecs);
 }
 
 #ifdef CONFIG_HIGH_RES_TIMERS
@@ -1732,14 +1705,14 @@ ktime_t ktime_get_update_offsets_now(ktime_t *offs_real, ktime_t *offs_boot,
 							ktime_t *offs_tai)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
-	ktime_t now;
 	unsigned int seq;
-	u64 secs, nsecs;
+	ktime_t base;
+	u64 nsecs;
 
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
 
-		secs = tk->xtime_sec;
+		base = tk->base_mono;
 		nsecs = timekeeping_get_ns(tk);
 
 		*offs_real = tk->offs_real;
@@ -1747,9 +1720,7 @@ ktime_t ktime_get_update_offsets_now(ktime_t *offs_real, ktime_t *offs_boot,
 		*offs_tai = tk->offs_tai;
 	} while (read_seqcount_retry(&tk_core.seq, seq));
 
-	now = ktime_add_ns(ktime_set(secs, 0), nsecs);
-	now = ktime_sub(now, *offs_real);
-	return now;
+	return ktime_add_ns(base, nsecs);
 }
 #endif
 
