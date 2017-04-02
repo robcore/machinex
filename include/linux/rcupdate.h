@@ -47,9 +47,6 @@
 #include <asm/barrier.h>
 
 extern int rcu_expedited; /* for sysctl */
-#ifdef CONFIG_RCU_TORTURE_TEST
-extern int rcutorture_runnable; /* for sysctl */
-#endif /* #ifdef CONFIG_RCU_TORTURE_TEST */
 
 enum rcutorture_type {
 	RCU_FLAVOR,
@@ -289,6 +286,14 @@ extern void rcu_user_exit(void);
 static inline void rcu_user_enter(void) { }
 static inline void rcu_user_exit(void) { }
 #endif /* CONFIG_RCU_USER_QS */
+
+#ifdef CONFIG_RCU_NOCB_CPU
+void rcu_init_nohz(void);
+#else /* #ifdef CONFIG_RCU_NOCB_CPU */
+static inline void rcu_init_nohz(void)
+{
+}
+#endif /* #else #ifdef CONFIG_RCU_NOCB_CPU */
 
 /**
  * RCU_NONIDLE - Indicate idle-loop code that needs RCU readers
