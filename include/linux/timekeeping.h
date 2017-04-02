@@ -179,21 +179,6 @@ static inline u64 ktime_get_boot_ns(void)
 	return ktime_to_ns(ktime_get_boottime());
 }
 
-static inline u64 ktime_get_ns(void)
-{
-	return ktime_to_ns(ktime_get());
-}
-
-static inline u64 ktime_get_real_ns(void)
-{
-	return ktime_to_ns(ktime_get_real());
-}
-
-static inline u64 ktime_get_boot_ns(void)
-{
-	return ktime_to_ns(ktime_get_boottime());
-}
-
 /*
  * RTC specific
  */
