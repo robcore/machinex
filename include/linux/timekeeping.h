@@ -144,6 +144,21 @@ static inline ktime_t ktime_mono_to_real(ktime_t mono)
 	return ktime_mono_to_any(mono, TK_OFFS_REAL);
 }
 
+static inline u64 ktime_get_ns(void)
+{
+	return ktime_to_ns(ktime_get());
+}
+
+static inline u64 ktime_get_real_ns(void)
+{
+	return ktime_to_ns(ktime_get_real());
+}
+
+static inline u64 ktime_get_boot_ns(void)
+{
+	return ktime_to_ns(ktime_get_boottime());
+}
+
 static inline u64 ktime_get_raw_ns(void)
 {
 	return ktime_to_ns(ktime_get_raw());
@@ -162,21 +177,6 @@ static inline void get_monotonic_boottime(struct timespec *ts)
 static inline void timekeeping_clocktai(struct timespec *ts)
 {
 	*ts = ktime_to_timespec(ktime_get_clocktai());
-}
-
-static inline u64 ktime_get_ns(void)
-{
-	return ktime_to_ns(ktime_get());
-}
-
-static inline u64 ktime_get_real_ns(void)
-{
-	return ktime_to_ns(ktime_get_real());
-}
-
-static inline u64 ktime_get_boot_ns(void)
-{
-	return ktime_to_ns(ktime_get_boottime());
 }
 
 /*
