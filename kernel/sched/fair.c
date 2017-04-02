@@ -1315,13 +1315,6 @@ balance:
 	if (!cur)
 		env->dst_cpu = select_idle_sibling(env->p, env->dst_cpu);
 
-	/*
-	 * One idle CPU per node is evaluated for a task numa move.
-	 * Call select_idle_sibling to maybe find a better one.
-	 */
-	if (!cur)
-		env->dst_cpu = select_idle_sibling(env->p, env->dst_cpu);
-
 assign:
 	task_numa_assign(env, cur, imp);
 unlock:
