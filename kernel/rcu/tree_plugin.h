@@ -2695,6 +2695,10 @@ static void rcu_sysidle_enter(struct rcu_dynticks *rdtp, int irq)
 {
 	unsigned long j;
 
+	/* If there are no nohz_full= CPUs, no need to track this. */
+	if (!tick_nohz_full_enabled())
+		return;
+
 	/* Adjust nesting, check for fully idle. */
 	if (irq) {
 		rdtp->dynticks_idle_nesting--;
@@ -2760,6 +2764,10 @@ void rcu_sysidle_force_exit(void)
  */
 static void rcu_sysidle_exit(struct rcu_dynticks *rdtp, int irq)
 {
+	/* If there are no nohz_full= CPUs, no need to track this. */
+	if (!tick_nohz_full_enabled())
+		return;
+
 	/* Adjust nesting, check for already non-idle. */
 	if (irq) {
 		rdtp->dynticks_idle_nesting++;
@@ -2813,6 +2821,10 @@ static void rcu_sysidle_check_cpu(struct rcu_data *rdp, bool *isidle,
 	int cur;
 	unsigned long j;
 	struct rcu_dynticks *rdtp = rdp->dynticks;
+
+	/* If there are no nohz_full= CPUs, don't check system-wide idleness. */
+	if (!tick_nohz_full_enabled())
+		return;
 
 	/*
 	 * If some other CPU has already reported non-idle, if this is
@@ -2940,6 +2952,10 @@ static void rcu_sysidle_report(struct rcu_state *rsp, int isidle,
 static void rcu_sysidle_report_gp(struct rcu_state *rsp, int isidle,
 				  unsigned long maxj)
 {
+	/* If there are no nohz_full= CPUs, no need to track this. */
+	if (!tick_nohz_full_enabled())
+		return;
+
 	rcu_sysidle_report(rsp, isidle, maxj, true);
 }
 
