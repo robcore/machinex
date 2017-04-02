@@ -812,7 +812,11 @@ void synchronize_rcu_expedited(void)
 	 * being boosted.  This simplifies the process of moving tasks
 	 * from leaf to root rcu_node structures.
 	 */
-	get_online_cpus();
+	if (!try_get_online_cpus()) {
+		/* CPU-hotplug operation in flight, fall back to normal GP. */
+		wait_rcu_gp(call_rcu);
+		return;
+	}
 
 	/*
 	 * Acquire lock, falling back to synchronize_rcu() if too many
@@ -2040,7 +2044,7 @@ static void wake_nocb_leader(struct rcu_data *rdp, bool force)
 	if (!ACCESS_ONCE(rdp_leader->nocb_kthread))
 		return;
 	if (ACCESS_ONCE(rdp_leader->nocb_leader_sleep) || force) {
-		/* Prior xchg orders against prior callback enqueue. */
+		/* Prior smp_mb__after_atomic() orders against prior enqueue. */
 		ACCESS_ONCE(rdp_leader->nocb_leader_sleep) = false;
 		wake_up(&rdp_leader->nocb_wq);
 	}
@@ -2069,6 +2073,7 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 	ACCESS_ONCE(*old_rhpp) = rhp;
 	atomic_long_add(rhcount, &rdp->nocb_q_count);
 	atomic_long_add(rhcount_lazy, &rdp->nocb_q_count_lazy);
+	smp_mb__after_atomic(); /* Store *old_rhpp before _wake test. */
 
 	/* If we are not being polled and there is a kthread, awaken it ... */
 	t = ACCESS_ONCE(rdp->nocb_kthread);
@@ -2277,6 +2282,7 @@ wait_again:
 		atomic_long_add(rdp->nocb_gp_count, &rdp->nocb_follower_count);
 		atomic_long_add(rdp->nocb_gp_count_lazy,
 				&rdp->nocb_follower_count_lazy);
+		smp_mb__after_atomic(); /* Store *tail before wakeup. */
 		if (rdp != my_rdp && tail == &rdp->nocb_follower_head) {
 			/*
 			 * List was empty, wake up the follower.
@@ -2392,6 +2398,7 @@ static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
 static void do_nocb_deferred_wakeup(struct rcu_data *rdp)
 {
 	int ndw;
+
 	if (!rcu_nocb_need_deferred_wakeup(rdp))
 		return;
 	ndw = ACCESS_ONCE(rdp->nocb_defer_wakeup);
@@ -2671,16 +2678,6 @@ static void __maybe_unused rcu_kick_nohz_cpu(int cpu)
 
 #ifdef CONFIG_NO_HZ_FULL_SYSIDLE
 
-/*
- * Define RCU flavor that holds sysidle state.  This needs to be the
- * most active flavor of RCU.
- */
-#ifdef CONFIG_PREEMPT_RCU
-static struct rcu_state *rcu_sysidle_state = &rcu_preempt_state;
-#else /* CONFIG_PREEMPT_RCU */
-static struct rcu_state *rcu_sysidle_state = &rcu_sched_state;
-#endif /* CONFIG_PREEMPT_RCU */
-
 static int full_sysidle_state;		/* Current system-idle state. */
 #define RCU_SYSIDLE_NOT		0	/* Some CPU is not idle. */
 #define RCU_SYSIDLE_SHORT	1	/* All CPUs idle for brief period. */
@@ -2718,9 +2715,9 @@ static void rcu_sysidle_enter(struct rcu_dynticks *rdtp, int irq)
 	/* Record start of fully idle period. */
 	j = jiffies;
 	ACCESS_ONCE(rdtp->dynticks_idle_jiffies) = j;
-	smp_mb__before_atomic_inc();
+	smp_mb__before_atomic();
 	atomic_inc(&rdtp->dynticks_idle);
-	smp_mb__after_atomic_inc();
+	smp_mb__after_atomic();
 	WARN_ON_ONCE(atomic_read(&rdtp->dynticks_idle) & 0x1);
 }
 
@@ -2785,9 +2782,9 @@ static void rcu_sysidle_exit(struct rcu_dynticks *rdtp, int irq)
 	}
 
 	/* Record end of idle period. */
-	smp_mb__before_atomic_inc();
+	smp_mb__before_atomic();
 	atomic_inc(&rdtp->dynticks_idle);
-	smp_mb__after_atomic_inc();
+	smp_mb__after_atomic();
 	WARN_ON_ONCE(!(atomic_read(&rdtp->dynticks_idle) & 0x1));
 
 	/*
@@ -2822,7 +2819,7 @@ static void rcu_sysidle_check_cpu(struct rcu_data *rdp, bool *isidle,
 	 * not the flavor of RCU that tracks sysidle state, or if this
 	 * is an offline or the timekeeping CPU, nothing to do.
 	 */
-	if (!*isidle || rdp->rsp != rcu_sysidle_state ||
+	if (!*isidle || rdp->rsp != rcu_state_p ||
 	    cpu_is_offline(rdp->cpu) || rdp->cpu == tick_do_timer_cpu)
 		return;
 	if (rcu_gp_in_progress(rdp->rsp))
@@ -2848,7 +2845,7 @@ static void rcu_sysidle_check_cpu(struct rcu_data *rdp, bool *isidle,
  */
 static bool is_sysidle_rcu_state(struct rcu_state *rsp)
 {
-	return rsp == rcu_sysidle_state;
+	return rsp == rcu_state_p;
 }
 
 /*
@@ -2926,7 +2923,7 @@ static void rcu_sysidle_cancel(void)
 static void rcu_sysidle_report(struct rcu_state *rsp, int isidle,
 			       unsigned long maxj, bool gpkt)
 {
-	if (rsp != rcu_sysidle_state)
+	if (rsp != rcu_state_p)
 		return;  /* Wrong flavor, ignore. */
 	if (gpkt && nr_cpu_ids <= CONFIG_NO_HZ_FULL_SYSIDLE_SMALL)
 		return;  /* Running state machine from timekeeping CPU. */
@@ -2969,7 +2966,8 @@ static void rcu_sysidle_cb(struct rcu_head *rhp)
 
 /*
  * Check to see if the system is fully idle, other than the timekeeping CPU.
- * The caller must have disabled interrupts.
+ * The caller must have disabled interrupts.  This is not intended to be
+ * called unless tick_nohz_full_enabled().
  */
 bool rcu_sys_is_idle(void)
 {
@@ -2995,13 +2993,12 @@ bool rcu_sys_is_idle(void)
 
 			/* Scan all the CPUs looking for nonidle CPUs. */
 			for_each_possible_cpu(cpu) {
-				rdp = per_cpu_ptr(rcu_sysidle_state->rda, cpu);
+				rdp = per_cpu_ptr(rcu_state_p->rda, cpu);
 				rcu_sysidle_check_cpu(rdp, &isidle, &maxj);
 				if (!isidle)
 					break;
 			}
-			rcu_sysidle_report(rcu_sysidle_state,
-					   isidle, maxj, false);
+			rcu_sysidle_report(rcu_state_p, isidle, maxj, false);
 			oldrss = rss;
 			rss = ACCESS_ONCE(full_sysidle_state);
 		}
@@ -3028,7 +3025,7 @@ bool rcu_sys_is_idle(void)
 	 * provided by the memory allocator.
 	 */
 	if (nr_cpu_ids > CONFIG_NO_HZ_FULL_SYSIDLE_SMALL &&
-	    !rcu_gp_in_progress(rcu_sysidle_state) &&
+	    !rcu_gp_in_progress(rcu_state_p) &&
 	    !rsh.inuse && xchg(&rsh.inuse, 1) == 0)
 		call_rcu(&rsh.rh, rcu_sysidle_cb);
 	return false;
