@@ -1762,7 +1762,7 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			if (rcu_gp_init(rsp))
 				break;
 			cond_resched();
-			flush_signals(current);
+			WARN_ON(signal_pending(current));
 		}
 
 		/* Handle quiescent-state forcing. */
@@ -1796,7 +1796,7 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			} else {
 				/* Deal with stray signal. */
 				cond_resched();
-				flush_signals(current);
+				WARN_ON(signal_pending(current));
 			}
 			j = jiffies_till_next_fqs;
 			if (j > HZ) {
