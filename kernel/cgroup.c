@@ -3420,15 +3420,26 @@ static void cgroup_transfer_one_task(struct task_struct *task,
  */
 int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
 {
-	struct cgroup_scanner scan;
+	struct css_task_iter it;
+	struct task_struct *task;
+	int ret = 0;
 
-	scan.cgrp = from;
-	scan.test_task = NULL; /* select all tasks in cgroup */
-	scan.process_task = cgroup_transfer_one_task;
-	scan.heap = NULL;
-	scan.data = to;
+	do {
+		css_task_iter_start(&from->dummy_css, &it);
+		task = css_task_iter_next(&it);
+		if (task)
+			get_task_struct(task);
+		css_task_iter_end(&it);
 
-	return cgroup_scan_tasks(&scan);
+		if (task) {
+			mutex_lock(&cgroup_mutex);
+			ret = cgroup_attach_task(to, task, false);
+			mutex_unlock(&cgroup_mutex);
+			put_task_struct(task);
+		}
+	} while (task && !ret);
+
+	return ret;
 }
 
 /*
