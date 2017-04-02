@@ -1674,8 +1674,7 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 	return ERR_PTR(ret);
 }
 
-static void cgroup_kill_sb(struct super_block *sb)
-{
+static void cgroup_kill_sb(struct super_block *sb) {
 	struct cgroupfs_root *root = sb->s_fs_info;
 	struct cgroup *cgrp = &root->top_cgroup;
 	struct cgrp_cset_link *link, *tmp_link;
@@ -2159,7 +2158,7 @@ retry_find_task:
 		tsk = find_task_by_vpid(pid);
 		if (!tsk) {
 			rcu_read_unlock();
-			ret = -ESRCH;
+			ret= -ESRCH;
 			goto out_unlock_cgroup;
 		}
 		/*
@@ -2956,7 +2955,7 @@ int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
  *
  * Return the number of tasks in the cgroup.
  */
-static int cgroup_task_count(const struct cgroup *cgrp)
+int cgroup_task_count(const struct cgroup *cgrp)
 {
 	int count = 0;
 	struct cgrp_cset_link *link;
@@ -3245,14 +3244,16 @@ void cgroup_iter_end(struct cgroup *cgrp, struct cgroup_iter *it)
 }
 
 static inline int started_after_time(struct task_struct *t1,
-				     const struct timespec *time,
+				     struct timespec *time,
 				     struct task_struct *t2)
 {
-	if (timespec_compare(t1, time) > 0)
+	t1->start_time = __current_kernel_time();
+	int start_diff = timespec_compare(&t1->start_time, &time);
+	if (start_diff > 0) {
 		return 1;
-	else if (timespec_compare(t1, time) < 0)
+	} else if (start_diff < 0) {
 		return 0;
-	else
+	} else {
 		/*
 		 * Arbitrarily, if two processes started at the same
 		 * time, we'll say that the lower pointer value
@@ -3262,6 +3263,7 @@ static inline int started_after_time(struct task_struct *t1,
 		 * between two tasks started (effectively) simultaneously.
 		 */
 		return t1 > t2;
+	}
 }
 
 /*
@@ -3420,26 +3422,15 @@ static void cgroup_transfer_one_task(struct task_struct *task,
  */
 int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
 {
-	struct css_task_iter it;
-	struct task_struct *task;
-	int ret = 0;
+	struct cgroup_scanner scan;
 
-	do {
-		css_task_iter_start(&from->dummy_css, &it);
-		task = css_task_iter_next(&it);
-		if (task)
-			get_task_struct(task);
-		css_task_iter_end(&it);
+	scan.cgrp = from;
+	scan.test_task = NULL; /* select all tasks in cgroup */
+	scan.process_task = cgroup_transfer_one_task;
+	scan.heap = NULL;
+	scan.data = to;
 
-		if (task) {
-			mutex_lock(&cgroup_mutex);
-			ret = cgroup_attach_task(to, task, false);
-			mutex_unlock(&cgroup_mutex);
-			put_task_struct(task);
-		}
-	} while (task && !ret);
-
-	return ret;
+	return cgroup_scan_tasks(&scan);
 }
 
 /*
@@ -4295,18 +4286,13 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 		return -ENOMEM;
 
 	name = cgroup_alloc_name(dentry);
-	if (!name) {
-		err = -ENOMEM;
+	if (!name)
 		goto err_free_cgrp;
-	}
-
 	rcu_assign_pointer(cgrp->name, name);
 
 	cgrp->id = ida_simple_get(&root->cgroup_ida, 1, 0, GFP_KERNEL);
-	if (cgrp->id < 0) {
-		err = -ENOMEM;
+	if (cgrp->id < 0)
 		goto err_free_name;
-	}
 
 	/*
 	 * Only live parents can have children.  Note that the liveliness
