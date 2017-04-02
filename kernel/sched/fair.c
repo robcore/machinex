@@ -5285,6 +5285,12 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
 
 static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
+enum group_type {
+	group_other = 0,
+	group_imbalanced,
+	group_overloaded,
+};
+
 #define LBF_ALL_PINNED	0x01
 #define LBF_NEED_BREAK	0x02
 #define LBF_DST_PINNED  0x04
@@ -5672,12 +5678,6 @@ static unsigned long task_h_load(struct task_struct *p)
 #endif
 
 /********** Helpers for find_busiest_group ************************/
-
-enum group_type {
-	group_other = 0,
-	group_imbalanced,
-	group_overloaded,
-};
 
 /*
  * sg_lb_stats - stats of a sched_group required for load_balancing
@@ -6109,10 +6109,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		avg_load_per_task /= sgs->sum_nr_running;
 	}
 
-	if ((max_cpu_load - min_cpu_load) >= avg_load_per_task &&
-	    (max_nr_running - min_nr_running) > 1)
-		sgs->group_imb = 1;
-
 	sgs->group_capacity =
 		DIV_ROUND_CLOSEST(group->sgc->capacity, SCHED_CAPACITY_SCALE);
 
@@ -6272,9 +6268,6 @@ next_group:
 
 		sg = sg->next;
 	} while (sg != env->sd->groups);
-
-	//if (env->sd->flags & SD_NUMA)
-		//env->fbq_type = fbq_classify_group(&sds->busiest_stat);
 
 	if (!env->sd->parent) {
 		/* update overload indicator if we are at root domain */
