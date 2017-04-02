@@ -13,7 +13,22 @@
 extern ktime_t ntp_get_next_leap(void);
 extern int __do_adjtimex(struct timex *, struct timespec *, s32 *);
 
-/* Structure holding internal timekeeping values. */
+/*
+ * Structure holding internal timekeeping values.
+ *
+ * Note: wall_to_monotonic is what we need to add to xtime (or xtime
+ * corrected for sub jiffie times) to get to monotonic time.
+ * Monotonic is pegged at zero at system boot time, so
+ * wall_to_monotonic will be negative, however, we will ALWAYS keep
+ * the tv_nsec part positive so we can use the usual normalization.
+ *
+ * wall_to_monotonic is moved after resume from suspend for the
+ * monotonic time not to jump. We need to add total_sleep_time to
+ * wall_to_monotonic to get the real boot based time offset.
+ *
+ * - wall_to_monotonic is no longer the boot time, getboottime must be
+ * used instead.
+ */
 struct timekeeper {
 	/* Current clocksource used for timekeeping. */
 	struct clocksource	*clock;
@@ -23,6 +38,28 @@ struct timekeeper {
 	u32			shift;
 	/* CLOCK_MONOTONIC time value of a pending leap-second*/
 	ktime_t	next_leap_ktime;
+	/* Clock shifted nano seconds */
+	u64			xtime_nsec;
+
+	/* Current CLOCK_REALTIME time in seconds */
+	u64			xtime_sec;
+	/* CLOCK_REALTIME to CLOCK_MONOTONIC offset */
+	struct timespec64	wall_to_monotonic;
+
+	/* Offset clock monotonic -> clock realtime */
+	ktime_t			offs_real;
+	/* Offset clock monotonic -> clock boottime */
+	ktime_t			offs_boot;
+	/* Offset clock monotonic -> clock tai */
+	ktime_t			offs_tai;
+
+	/* time spent in suspend */
+	struct timespec64	total_sleep_time;
+	/* The current UTC to TAI offset in seconds */
+	s32			tai_offset;
+
+	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
+	struct timespec64	raw_time;
 	/* Number of clock cycles in one NTP interval. */
 	cycle_t			cycle_interval;
 	/* Last cycle value (also stored in clock->cycle_last) */
@@ -34,49 +71,16 @@ struct timekeeper {
 	/* Raw nano seconds accumulated per NTP interval. */
 	u32			raw_interval;
 
-	/* Current CLOCK_REALTIME time in seconds */
-	u64			xtime_sec;
-	/* Clock shifted nano seconds */
-	u64			xtime_nsec;
-
-	/* Difference between accumulated time and NTP time in ntp
-	 * shifted nano seconds. */
-	s64			ntp_error;
-	/* Shift conversion between clock shifted nano seconds and
-	 * ntp shifted nano seconds. */
-	u32			ntp_error_shift;
-
-	/* The current time */
-	struct timespec xtime;
-
 	/*
-	 * wall_to_monotonic is what we need to add to xtime (or xtime corrected
-	 * for sub jiffie times) to get to monotonic time.  Monotonic is pegged
-	 * at zero at system boot time, so wall_to_monotonic will be negative,
-	 * however, we will ALWAYS keep the tv_nsec part positive so we can use
-	 * the usual normalization.
-	 *
-	 * wall_to_monotonic is moved after resume from suspend for the
-	 * monotonic time not to jump. We need to add total_sleep_time to
-	 * wall_to_monotonic to get the real boot based time offset.
-	 *
-	 * - wall_to_monotonic is no longer the boot time, getboottime must be
-	 * used instead.
+	 * Difference between accumulated time and NTP time in ntp
+	 * shifted nano seconds.
 	 */
-	struct timespec64	wall_to_monotonic;
-	/* Offset clock monotonic -> clock realtime */
-	ktime_t			offs_real;
-	/* time spent in suspend */
-	struct timespec64	total_sleep_time;
-	/* Offset clock monotonic -> clock boottime */
-	ktime_t			offs_boot;
-	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
-	struct timespec64	raw_time;
-	/* The current UTC to TAI offset in seconds */
-	s32			tai_offset;
-	/* Offset clock monotonic -> clock tai */
-	ktime_t			offs_tai;
-
+	s64			ntp_error;
+	/*
+	 * Shift conversion between clock shifted nano seconds and
+	 * ntp shifted nano seconds.
+	 */
+	u32			ntp_error_shift;
 };
 
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
