@@ -2956,7 +2956,7 @@ int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
  *
  * Return the number of tasks in the cgroup.
  */
-int cgroup_task_count(const struct cgroup *cgrp)
+static int cgroup_task_count(const struct cgroup *cgrp)
 {
 	int count = 0;
 	struct cgrp_cset_link *link;
@@ -3245,15 +3245,14 @@ void cgroup_iter_end(struct cgroup *cgrp, struct cgroup_iter *it)
 }
 
 static inline int started_after_time(struct task_struct *t1,
-				     struct timespec *time,
+				     const struct timespec *time,
 				     struct task_struct *t2)
 {
-	int start_diff = timespec_compare(&t1->start_time, time);
-	if (start_diff > 0) {
+	if (timespec_compare(t1, time) > 0)
 		return 1;
-	} else if (start_diff < 0) {
+	else if (timespec_compare(t1, time) < 0)
 		return 0;
-	} else {
+	else
 		/*
 		 * Arbitrarily, if two processes started at the same
 		 * time, we'll say that the lower pointer value
@@ -3263,7 +3262,6 @@ static inline int started_after_time(struct task_struct *t1,
 		 * between two tasks started (effectively) simultaneously.
 		 */
 		return t1 > t2;
-	}
 }
 
 /*
@@ -4286,13 +4284,18 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 		return -ENOMEM;
 
 	name = cgroup_alloc_name(dentry);
-	if (!name)
+	if (!name) {
+		err = -ENOMEM;
 		goto err_free_cgrp;
+	}
+
 	rcu_assign_pointer(cgrp->name, name);
 
 	cgrp->id = ida_simple_get(&root->cgroup_ida, 1, 0, GFP_KERNEL);
-	if (cgrp->id < 0)
+	if (cgrp->id < 0) {
+		err = -ENOMEM;
 		goto err_free_name;
+	}
 
 	/*
 	 * Only live parents can have children.  Note that the liveliness
