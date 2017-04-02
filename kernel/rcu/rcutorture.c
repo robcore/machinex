@@ -157,9 +157,9 @@ static int rcu_torture_writer_state;
 #else
 #define RCUTORTURE_RUNNABLE_INIT 0
 #endif
-static int torture_runnable = RCUTORTURE_RUNNABLE_INIT;
-module_param(torture_runnable, int, 0444);
-MODULE_PARM_DESC(torture_runnable, "Start rcutorture at boot");
+int rcutorture_runnable = RCUTORTURE_RUNNABLE_INIT;
+module_param(rcutorture_runnable, int, 0444);
+MODULE_PARM_DESC(rcutorture_runnable, "Start rcutorture at boot");
 
 #if defined(CONFIG_RCU_BOOST) && !defined(CONFIG_HOTPLUG_CPU)
 #define rcu_can_boost() 1
@@ -182,7 +182,7 @@ static u64 notrace rcu_trace_clock_local(void)
 #endif /* #else #ifdef CONFIG_RCU_TRACE */
 
 static unsigned long boost_starttime;	/* jiffies of next boost test start. */
-static DEFINE_MUTEX(boost_mutex);	/* protect setting boost_starttime */
+DEFINE_MUTEX(boost_mutex);		/* protect setting boost_starttime */
 					/*  and boost task create/destroy. */
 static atomic_t barrier_cbs_count;	/* Barrier callbacks registered. */
 static bool barrier_phase;		/* Test phase. */
@@ -242,7 +242,7 @@ struct rcu_torture_ops {
 	void (*call)(struct rcu_head *head, void (*func)(struct rcu_head *rcu));
 	void (*cb_barrier)(void);
 	void (*fqs)(void);
-	void (*stats)(void);
+	void (*stats)(char *page);
 	int irq_capable;
 	int can_boost;
 	const char *name;
@@ -525,21 +525,21 @@ static void srcu_torture_barrier(void)
 	srcu_barrier(&srcu_ctl);
 }
 
-static void srcu_torture_stats(void)
+static void srcu_torture_stats(char *page)
 {
 	int cpu;
 	int idx = srcu_ctl.completed & 0x1;
 
-	pr_alert("%s%s per-CPU(idx=%d):",
-		 torture_type, TORTURE_FLAG, idx);
+	page += sprintf(page, "%s%s per-CPU(idx=%d):",
+		       torture_type, TORTURE_FLAG, idx);
 	for_each_possible_cpu(cpu) {
 		long c0, c1;
 
 		c0 = (long)per_cpu_ptr(srcu_ctl.per_cpu_ref, cpu)->c[!idx];
 		c1 = (long)per_cpu_ptr(srcu_ctl.per_cpu_ref, cpu)->c[idx];
-		pr_cont(" %d(%ld,%ld)", cpu, c0, c1);
+		page += sprintf(page, " %d(%ld,%ld)", cpu, c0, c1);
 	}
-	pr_cont("\n");
+	sprintf(page, "\n");
 }
 
 static void srcu_torture_synchronize_expedited(void)
@@ -600,52 +600,6 @@ static struct rcu_torture_ops sched_ops = {
 	.irq_capable	= 1,
 	.name		= "sched"
 };
-
-#ifdef CONFIG_TASKS_RCU
-
-/*
- * Definitions for RCU-tasks torture testing.
- */
-
-static int tasks_torture_read_lock(void)
-{
-	return 0;
-}
-
-static void tasks_torture_read_unlock(int idx)
-{
-}
-
-static void rcu_tasks_torture_deferred_free(struct rcu_torture *p)
-{
-	call_rcu_tasks(&p->rtort_rcu, rcu_torture_cb);
-}
-
-static struct rcu_torture_ops tasks_ops = {
-	.ttype		= RCU_TASKS_FLAVOR,
-	.init		= rcu_sync_torture_init,
-	.readlock	= tasks_torture_read_lock,
-	.read_delay	= rcu_read_delay,  /* just reuse rcu's version. */
-	.readunlock	= tasks_torture_read_unlock,
-	.completed	= rcu_no_completed,
-	.deferred_free	= rcu_tasks_torture_deferred_free,
-	.sync		= synchronize_rcu_tasks,
-	.exp_sync	= synchronize_rcu_tasks,
-	.call		= call_rcu_tasks,
-	.cb_barrier	= rcu_barrier_tasks,
-	.fqs		= NULL,
-	.stats		= NULL,
-	.irq_capable	= 1,
-	.name		= "tasks"
-};
-
-#define RCUTORTURE_TASKS_OPS &tasks_ops,
-
-#else /* #ifdef CONFIG_TASKS_RCU */
-
-#define RCUTORTURE_TASKS_OPS
-
-#endif /* #else #ifdef CONFIG_TASKS_RCU */
 
 /*
  * RCU torture priority-boost testing.  Runs one real-time thread per
@@ -713,7 +667,7 @@ static int rcu_torture_boost(void *arg)
 				}
 				call_rcu_time = jiffies;
 			}
-			cond_resched_rcu_qs();
+			cond_resched();
 			stutter_wait("rcu_torture_boost");
 			if (torture_must_stop())
 				goto checkwait;
@@ -1065,7 +1019,7 @@ rcu_torture_reader(void *arg)
 		__this_cpu_inc(rcu_torture_batch[completed]);
 		preempt_enable();
 		cur_ops->readunlock(idx);
-		cond_resched_rcu_qs();
+		cond_resched();
 		stutter_wait("rcu_torture_reader");
 	} while (!torture_must_stop());
 	if (irqreader && cur_ops->irq_capable) {
@@ -1077,15 +1031,10 @@ rcu_torture_reader(void *arg)
 }
 
 /*
- * Print torture statistics.  Caller must ensure that there is only
- * one call to this function at a given time!!!  This is normally
- * accomplished by relying on the module system to only have one copy
- * of the module loaded, and then by giving the rcu_torture_stats
- * kthread full control (or the init/cleanup functions when rcu_torture_stats
- * thread is not running).
+ * Create an RCU-torture statistics message in the specified buffer.
  */
 static void
-rcu_torture_stats_print(void)
+rcu_torture_printk(char *page)
 {
 	int cpu;
 	int i;
@@ -1103,60 +1052,55 @@ rcu_torture_stats_print(void)
 		if (pipesummary[i] != 0)
 			break;
 	}
-
-	pr_alert("%s%s ", torture_type, TORTURE_FLAG);
-	pr_cont("rtc: %p ver: %lu tfle: %d rta: %d rtaf: %d rtf: %d ",
-		rcu_torture_current,
-		rcu_torture_current_version,
-		list_empty(&rcu_torture_freelist),
-		atomic_read(&n_rcu_torture_alloc),
-		atomic_read(&n_rcu_torture_alloc_fail),
-		atomic_read(&n_rcu_torture_free));
-	pr_cont("rtmbe: %d rtbke: %ld rtbre: %ld ",
-		atomic_read(&n_rcu_torture_mberror),
-		n_rcu_torture_boost_ktrerror,
-		n_rcu_torture_boost_rterror);
-	pr_cont("rtbf: %ld rtb: %ld nt: %ld ",
-		n_rcu_torture_boost_failure,
-		n_rcu_torture_boosts,
-		n_rcu_torture_timers);
-	torture_onoff_stats();
-	pr_cont("barrier: %ld/%ld:%ld\n",
-		n_barrier_successes,
-		n_barrier_attempts,
-		n_rcu_torture_barrier_error);
-
-	pr_alert("%s%s ", torture_type, TORTURE_FLAG);
+	page += sprintf(page, "%s%s ", torture_type, TORTURE_FLAG);
+	page += sprintf(page,
+		       "rtc: %p ver: %lu tfle: %d rta: %d rtaf: %d rtf: %d ",
+		       rcu_torture_current,
+		       rcu_torture_current_version,
+		       list_empty(&rcu_torture_freelist),
+		       atomic_read(&n_rcu_torture_alloc),
+		       atomic_read(&n_rcu_torture_alloc_fail),
+		       atomic_read(&n_rcu_torture_free));
+	page += sprintf(page, "rtmbe: %d rtbke: %ld rtbre: %ld ",
+		       atomic_read(&n_rcu_torture_mberror),
+		       n_rcu_torture_boost_ktrerror,
+		       n_rcu_torture_boost_rterror);
+	page += sprintf(page, "rtbf: %ld rtb: %ld nt: %ld ",
+		       n_rcu_torture_boost_failure,
+		       n_rcu_torture_boosts,
+		       n_rcu_torture_timers);
+	page = torture_onoff_stats(page);
+	page += sprintf(page, "barrier: %ld/%ld:%ld",
+		       n_barrier_successes,
+		       n_barrier_attempts,
+		       n_rcu_torture_barrier_error);
+	page += sprintf(page, "\n%s%s ", torture_type, TORTURE_FLAG);
 	if (atomic_read(&n_rcu_torture_mberror) != 0 ||
 	    n_rcu_torture_barrier_error != 0 ||
 	    n_rcu_torture_boost_ktrerror != 0 ||
 	    n_rcu_torture_boost_rterror != 0 ||
 	    n_rcu_torture_boost_failure != 0 ||
 	    i > 1) {
-		pr_cont("%s", "!!! ");
+		page += sprintf(page, "!!! ");
 		atomic_inc(&n_rcu_torture_error);
 		WARN_ON_ONCE(1);
 	}
-	pr_cont("Reader Pipe: ");
+	page += sprintf(page, "Reader Pipe: ");
 	for (i = 0; i < RCU_TORTURE_PIPE_LEN + 1; i++)
-		pr_cont(" %ld", pipesummary[i]);
-	pr_cont("\n");
-
-	pr_alert("%s%s ", torture_type, TORTURE_FLAG);
-	pr_cont("Reader Batch: ");
+		page += sprintf(page, " %ld", pipesummary[i]);
+	page += sprintf(page, "\n%s%s ", torture_type, TORTURE_FLAG);
+	page += sprintf(page, "Reader Batch: ");
 	for (i = 0; i < RCU_TORTURE_PIPE_LEN + 1; i++)
-		pr_cont(" %ld", batchsummary[i]);
-	pr_cont("\n");
-
-	pr_alert("%s%s ", torture_type, TORTURE_FLAG);
-	pr_cont("Free-Block Circulation: ");
+		page += sprintf(page, " %ld", batchsummary[i]);
+	page += sprintf(page, "\n%s%s ", torture_type, TORTURE_FLAG);
+	page += sprintf(page, "Free-Block Circulation: ");
 	for (i = 0; i < RCU_TORTURE_PIPE_LEN + 1; i++) {
-		pr_cont(" %d", atomic_read(&rcu_torture_wcount[i]));
+		page += sprintf(page, " %d",
+			       atomic_read(&rcu_torture_wcount[i]));
 	}
-	pr_cont("\n");
-
+	page += sprintf(page, "\n");
 	if (cur_ops->stats)
-		cur_ops->stats();
+		cur_ops->stats(page);
 	if (rtcv_snap == rcu_torture_current_version &&
 	    rcu_torture_current != NULL) {
 		int __maybe_unused flags;
@@ -1165,13 +1109,38 @@ rcu_torture_stats_print(void)
 
 		rcutorture_get_gp_data(cur_ops->ttype,
 				       &flags, &gpnum, &completed);
-		pr_alert("??? Writer stall state %d g%lu c%lu f%#x\n",
-			 rcu_torture_writer_state,
-			 gpnum, completed, flags);
+		page += sprintf(page,
+				"??? Writer stall state %d g%lu c%lu f%#x\n",
+				rcu_torture_writer_state,
+				gpnum, completed, flags);
 		show_rcu_gp_kthreads();
 		rcutorture_trace_dump();
 	}
 	rtcv_snap = rcu_torture_current_version;
+}
+
+/*
+ * Print torture statistics.  Caller must ensure that there is only
+ * one call to this function at a given time!!!  This is normally
+ * accomplished by relying on the module system to only have one copy
+ * of the module loaded, and then by giving the rcu_torture_stats
+ * kthread full control (or the init/cleanup functions when rcu_torture_stats
+ * thread is not running).
+ */
+static void
+rcu_torture_stats_print(void)
+{
+	int size = nr_cpu_ids * 200 + 8192;
+	char *buf;
+
+	buf = kmalloc(size, GFP_KERNEL);
+	if (!buf) {
+		pr_err("rcu-torture: Out of memory, need: %d", size);
+		return;
+	}
+	rcu_torture_printk(buf);
+	pr_alert("%s", buf);
+	kfree(buf);
 }
 
 /*
@@ -1326,8 +1295,7 @@ static int rcu_torture_barrier_cbs(void *arg)
 		if (atomic_dec_and_test(&barrier_cbs_count))
 			wake_up(&barrier_wq);
 	} while (!torture_must_stop());
-	if (cur_ops->cb_barrier != NULL)
-		cur_ops->cb_barrier();
+	cur_ops->cb_barrier();
 	destroy_rcu_head_on_stack(&rcu);
 	torture_kthread_stopping("rcu_torture_barrier_cbs");
 	return 0;
@@ -1450,7 +1418,7 @@ rcu_torture_cleanup(void)
 	int i;
 
 	rcutorture_record_test_transition();
-	if (torture_cleanup_begin()) {
+	if (torture_cleanup()) {
 		if (cur_ops->cb_barrier != NULL)
 			cur_ops->cb_barrier();
 		return;
@@ -1500,7 +1468,6 @@ rcu_torture_cleanup(void)
 					       "End of test: RCU_HOTPLUG");
 	else
 		rcu_torture_print_module_parms(cur_ops, "End of test: SUCCESS");
-	torture_cleanup_end();
 }
 
 #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD
@@ -1567,10 +1534,9 @@ rcu_torture_init(void)
 	int firsterr = 0;
 	static struct rcu_torture_ops *torture_ops[] = {
 		&rcu_ops, &rcu_bh_ops, &rcu_busted_ops, &srcu_ops, &sched_ops,
-		RCUTORTURE_TASKS_OPS
 	};
 
-	if (!torture_init_begin(torture_type, verbose, &torture_runnable))
+	if (!torture_init_begin(torture_type, verbose, &rcutorture_runnable))
 		return -EBUSY;
 
 	/* Process args and tell the world that the torturer is on the job. */

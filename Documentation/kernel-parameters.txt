@@ -2545,7 +2545,7 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Set time (s) between CPU-hotplug operations, or
 			zero to disable CPU-hotplug testing.
 
-	rcutorture.torture_runnable= [BOOT]
+	rcutorture.rcutorture_runnable= [BOOT]
 			Start rcutorture running at boot time.
 
 	rcutorture.shuffle_interval= [KNL]
@@ -2606,11 +2606,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	rcupdate.rcu_cpu_stall_timeout= [KNL]
 			Set timeout for RCU CPU stall warning messages.
-
-	rcupdate.rcu_task_stall_timeout= [KNL]
-			Set timeout in jiffies for RCU task stall warning
-			messages.  Disable with a value less than or equal
-			to zero.
 
 	rdinit=		[KNL]
 			Format: <full_path>

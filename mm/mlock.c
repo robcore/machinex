@@ -270,7 +270,7 @@ void munlock_vma_pages_range(struct vm_area_struct *vma,
 		}
 		page_increm = 1 + (~(start >> PAGE_SHIFT) & page_mask);
 		start += page_increm * PAGE_SIZE;
-		cond_resched_rcu_qs();
+		cond_resched();
 	}
 }
 

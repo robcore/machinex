@@ -191,7 +191,7 @@ struct cfs_bandwidth {
 	raw_spinlock_t lock;
 	ktime_t period;
 	u64 quota, runtime;
-	s64 hierarchical_quota;
+	s64 hierarchal_quota;
 	u64 runtime_expires;
 
 	int idle, timer_active;

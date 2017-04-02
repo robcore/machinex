@@ -78,11 +78,6 @@ static inline void kfree_call_rcu(struct rcu_head *head,
 	call_rcu(head, func);
 }
 
-static inline void rcu_note_context_switch(int cpu)
-{
-	rcu_sched_qs();
-}
-
 /*
  * Return the number of grace periods.
  */
