@@ -228,12 +228,6 @@ void cpuidle_install_idle_handler(void)
 		smp_wmb();
 		initialized = 1;
 	}
-
-	/*
-	 * Make sure external observers (such as the scheduler)
-	 * are done looking at pointed idle states.
-	 */
-	synchronize_rcu();
 }
 
 /**

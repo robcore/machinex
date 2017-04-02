@@ -148,9 +148,6 @@ static void cpuidle_idle_call(void)
 		goto exit_idle;
 	}
 
-	/* Take note of the planned idle state. */
-	idle_set_state(this_rq(), &drv->states[next_state]);
-
 	/*
 	 * The idle task must be scheduled, it is pointless to
 	 * go to idle, just update no idle residency and get
