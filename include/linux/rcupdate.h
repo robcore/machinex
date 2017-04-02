@@ -261,8 +261,8 @@ static inline int rcu_preempt_depth(void)
 
 /* Internal to kernel */
 extern void rcu_init(void);
-extern void rcu_sched_qs(int cpu);
-extern void rcu_bh_qs(int cpu);
+void rcu_sched_qs(void);
+void rcu_bh_qs(void);
 extern void rcu_check_callbacks(int cpu, int user);
 struct notifier_block;
 extern void rcu_idle_enter(void);
