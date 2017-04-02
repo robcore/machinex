@@ -248,24 +248,11 @@ static void *chain_alloc(struct chain_allocator *ca, unsigned int size)
  *	information is stored (in the form of a block of bitmap)
  *	It also contains the pfns that correspond to the start and end of
  *	the represented memory area.
- *
- *	The memory bitmap is organized as a radix tree to guarantee fast random
- *	access to the bits. There is one radix tree for each zone (as returned
- *	from create_mem_extents).
- *
- *	One radix tree is represented by one struct mem_zone_bm_rtree. There are
- *	two linked lists for the nodes of the tree, one for the inner nodes and
- *	one for the leave nodes. The linked leave nodes are used for fast linear
- *	access of the memory bitmap.
- *
- *	The struct rtree_node represents one node of the radix tree.
  */
 
 #define BM_END_OF_MAP	(~0UL)
 
 #define BM_BITS_PER_BLOCK	(PAGE_SIZE * BITS_PER_BYTE)
-#define BM_BLOCK_SHIFT		(PAGE_SHIFT + 3)
-#define BM_BLOCK_MASK		((1UL << BM_BLOCK_SHIFT) - 1)
 
 struct bm_block {
 	struct list_head hook;	/* hook into a list of bitmap blocks */
@@ -279,45 +266,14 @@ static inline unsigned long bm_block_bits(struct bm_block *bb)
 	return bb->end_pfn - bb->start_pfn;
 }
 
-/*
- * struct rtree_node is a wrapper struct to link the nodes
- * of the rtree together for easy linear iteration over
- * bits and easy freeing
- */
-struct rtree_node {
-	struct list_head list;
-	unsigned long *data;
-};
-
-/*
- * struct mem_zone_bm_rtree represents a bitmap used for one
- * populated memory zone.
- */
-struct mem_zone_bm_rtree {
-	struct list_head list;		/* Link Zones together         */
-	struct list_head nodes;		/* Radix Tree inner nodes      */
-	struct list_head leaves;	/* Radix Tree leaves           */
-	unsigned long start_pfn;	/* Zone start page frame       */
-	unsigned long end_pfn;		/* Zone end page frame + 1     */
-	struct rtree_node *rtree;	/* Radix Tree Root             */
-	int levels;			/* Number of Radix Tree Levels */
-	unsigned int blocks;		/* Number of Bitmap Blocks     */
-};
-
 /* strcut bm_position is used for browsing memory bitmaps */
 
 struct bm_position {
 	struct bm_block *block;
 	int bit;
-
-	struct mem_zone_bm_rtree *zone;
-	struct rtree_node *node;
-	unsigned long node_pfn;
-	int node_bit;
 };
 
 struct memory_bitmap {
-	struct list_head zones;
 	struct list_head blocks;	/* list of bitmap blocks */
 	struct linked_page *p_list;	/* list of pages used to store zone
 					 * bitmap objects and bitmap block
@@ -328,177 +284,10 @@ struct memory_bitmap {
 
 /* Functions that operate on memory bitmaps */
 
-#define BM_ENTRIES_PER_LEVEL	(PAGE_SIZE / sizeof(unsigned long))
-#if BITS_PER_LONG == 32
-#define BM_RTREE_LEVEL_SHIFT	(PAGE_SHIFT - 2)
-#else
-#define BM_RTREE_LEVEL_SHIFT	(PAGE_SHIFT - 3)
-#endif
-#define BM_RTREE_LEVEL_MASK	((1UL << BM_RTREE_LEVEL_SHIFT) - 1)
-
-/*
- *	alloc_rtree_node - Allocate a new node and add it to the radix tree.
- *
- *	This function is used to allocate inner nodes as well as the
- *	leave nodes of the radix tree. It also adds the node to the
- *	corresponding linked list passed in by the *list parameter.
- */
-static struct rtree_node *alloc_rtree_node(gfp_t gfp_mask, int safe_needed,
-					   struct chain_allocator *ca,
-					   struct list_head *list)
-{
-	struct rtree_node *node;
-
-	node = chain_alloc(ca, sizeof(struct rtree_node));
-	if (!node)
-		return NULL;
-
-	node->data = get_image_page(gfp_mask, safe_needed);
-	if (!node->data)
-		return NULL;
-
-	list_add_tail(&node->list, list);
-
-	return node;
-}
-
-/*
- *	add_rtree_block - Add a new leave node to the radix tree
- *
- *	The leave nodes need to be allocated in order to keep the leaves
- *	linked list in order. This is guaranteed by the zone->blocks
- *	counter.
- */
-static int add_rtree_block(struct mem_zone_bm_rtree *zone, gfp_t gfp_mask,
-			   int safe_needed, struct chain_allocator *ca)
-{
-	struct rtree_node *node, *block, **dst;
-	unsigned int levels_needed, block_nr;
-	int i;
-
-	block_nr = zone->blocks;
-	levels_needed = 0;
-
-	/* How many levels do we need for this block nr? */
-	while (block_nr) {
-		levels_needed += 1;
-		block_nr >>= BM_RTREE_LEVEL_SHIFT;
-	}
-
-	/* Make sure the rtree has enough levels */
-	for (i = zone->levels; i < levels_needed; i++) {
-		node = alloc_rtree_node(gfp_mask, safe_needed, ca,
-					&zone->nodes);
-		if (!node)
-			return -ENOMEM;
-
-		node->data[0] = (unsigned long)zone->rtree;
-		zone->rtree = node;
-		zone->levels += 1;
-	}
-
-	/* Allocate new block */
-	block = alloc_rtree_node(gfp_mask, safe_needed, ca, &zone->leaves);
-	if (!block)
-		return -ENOMEM;
-
-	/* Now walk the rtree to insert the block */
-	node = zone->rtree;
-	dst = &zone->rtree;
-	block_nr = zone->blocks;
-	for (i = zone->levels; i > 0; i--) {
-		int index;
-
-		if (!node) {
-			node = alloc_rtree_node(gfp_mask, safe_needed, ca,
-						&zone->nodes);
-			if (!node)
-				return -ENOMEM;
-			*dst = node;
-		}
-
-		index = block_nr >> ((i - 1) * BM_RTREE_LEVEL_SHIFT);
-		index &= BM_RTREE_LEVEL_MASK;
-		dst = (struct rtree_node **)&((*dst)->data[index]);
-		node = *dst;
-	}
-
-	zone->blocks += 1;
-	*dst = block;
-
-	return 0;
-}
-
-static void free_zone_bm_rtree(struct mem_zone_bm_rtree *zone,
-			       int clear_nosave_free);
-
-/*
- *	create_zone_bm_rtree - create a radix tree for one zone
- *
- *	Allocated the mem_zone_bm_rtree structure and initializes it.
- *	This function also allocated and builds the radix tree for the
- *	zone.
- */
-static struct mem_zone_bm_rtree *
-create_zone_bm_rtree(gfp_t gfp_mask, int safe_needed,
-		     struct chain_allocator *ca,
-		     unsigned long start, unsigned long end)
-{
-	struct mem_zone_bm_rtree *zone;
-	unsigned int i, nr_blocks;
-	unsigned long pages;
-
-	pages = end - start;
-	zone  = chain_alloc(ca, sizeof(struct mem_zone_bm_rtree));
-	if (!zone)
-		return NULL;
-
-	INIT_LIST_HEAD(&zone->nodes);
-	INIT_LIST_HEAD(&zone->leaves);
-	zone->start_pfn = start;
-	zone->end_pfn = end;
-	nr_blocks = DIV_ROUND_UP(pages, BM_BITS_PER_BLOCK);
-
-	for (i = 0; i < nr_blocks; i++) {
-		if (add_rtree_block(zone, gfp_mask, safe_needed, ca)) {
-			free_zone_bm_rtree(zone, PG_UNSAFE_CLEAR);
-			return NULL;
-		}
-	}
-
-	return zone;
-}
-
-/*
- *	free_zone_bm_rtree - Free the memory of the radix tree
- *
- *	Free all node pages of the radix tree. The mem_zone_bm_rtree
- *	structure itself is not freed here nor are the rtree_node
- *	structs.
- */
-static void free_zone_bm_rtree(struct mem_zone_bm_rtree *zone,
-			       int clear_nosave_free)
-{
-	struct rtree_node *node;
-
-	list_for_each_entry(node, &zone->nodes, list)
-		free_image_page(node->data, clear_nosave_free);
-
-	list_for_each_entry(node, &zone->leaves, list)
-		free_image_page(node->data, clear_nosave_free);
-}
-
 static void memory_bm_position_reset(struct memory_bitmap *bm)
 {
 	bm->cur.block = list_entry(bm->blocks.next, struct bm_block, hook);
 	bm->cur.bit = 0;
-
-	bm->cur.zone = list_entry(bm->zones.next, struct mem_zone_bm_rtree,
-				  list);
-	bm->cur.node = list_entry(bm->cur.zone->leaves.next,
-				  struct rtree_node, list);
-	bm->cur.node_pfn = 0;
-	bm->cur.node_bit = 0;
 }
 
 static void memory_bm_free(struct memory_bitmap *bm, int clear_nosave_free);
@@ -619,14 +408,12 @@ memory_bm_create(struct memory_bitmap *bm, gfp_t gfp_mask, int safe_needed)
 
 	chain_init(&ca, gfp_mask, safe_needed);
 	INIT_LIST_HEAD(&bm->blocks);
-	INIT_LIST_HEAD(&bm->zones);
 
 	error = create_mem_extents(&mem_extents, gfp_mask);
 	if (error)
 		return error;
 
 	list_for_each_entry(ext, &mem_extents, hook) {
-		struct mem_zone_bm_rtree *zone;
 		struct bm_block *bb;
 		unsigned long pfn = ext->start;
 		unsigned long pages = ext->end - ext->start;
@@ -654,12 +441,6 @@ memory_bm_create(struct memory_bitmap *bm, gfp_t gfp_mask, int safe_needed)
 			}
 			bb->end_pfn = pfn;
 		}
-
-		zone = create_zone_bm_rtree(gfp_mask, safe_needed, &ca,
-					    ext->start, ext->end);
-		if (!zone)
-			goto Error;
-		list_add_tail(&zone->list, &bm->zones);
 	}
 
 	bm->p_list = ca.chain;
@@ -679,19 +460,14 @@ memory_bm_create(struct memory_bitmap *bm, gfp_t gfp_mask, int safe_needed)
   */
 static void memory_bm_free(struct memory_bitmap *bm, int clear_nosave_free)
 {
-	struct mem_zone_bm_rtree *zone;
 	struct bm_block *bb;
 
 	list_for_each_entry(bb, &bm->blocks, hook)
 		if (bb->data)
 			free_image_page(bb->data, clear_nosave_free);
 
-	list_for_each_entry(zone, &bm->zones, list)
-		free_zone_bm_rtree(zone, clear_nosave_free);
-
 	free_list_of_pages(bm->p_list, clear_nosave_free);
 
-	INIT_LIST_HEAD(&bm->zones);
 	INIT_LIST_HEAD(&bm->blocks);
 }
 
@@ -732,73 +508,6 @@ static int memory_bm_find_bit(struct memory_bitmap *bm, unsigned long pfn,
 	return 0;
 }
 
-/*
- *	memory_rtree_find_bit - Find the bit for pfn in the memory
- *				bitmap
- *
- *	Walks the radix tree to find the page which contains the bit for
- *	pfn and returns the bit position in **addr and *bit_nr.
- */
-static int memory_rtree_find_bit(struct memory_bitmap *bm, unsigned long pfn,
-				 void **addr, unsigned int *bit_nr)
-{
-	struct mem_zone_bm_rtree *curr, *zone;
-	struct rtree_node *node;
-	int i, block_nr;
-
-	zone = bm->cur.zone;
-
-	if (pfn >= zone->start_pfn && pfn < zone->end_pfn)
-		goto zone_found;
-
-	zone = NULL;
-
-	/* Find the right zone */
-	list_for_each_entry(curr, &bm->zones, list) {
-		if (pfn >= curr->start_pfn && pfn < curr->end_pfn) {
-			zone = curr;
-			break;
-		}
-	}
-
-	if (!zone)
-		return -EFAULT;
-
-zone_found:
-	/*
-	 * We have a zone. Now walk the radix tree to find the leave
-	 * node for our pfn.
-	 */
-
-	node = bm->cur.node;
-	if (((pfn - zone->start_pfn) & ~BM_BLOCK_MASK) == bm->cur.node_pfn)
-		goto node_found;
-
-	node      = zone->rtree;
-	block_nr  = (pfn - zone->start_pfn) >> BM_BLOCK_SHIFT;
-
-	for (i = zone->levels; i > 0; i--) {
-		int index;
-
-		index = block_nr >> ((i - 1) * BM_RTREE_LEVEL_SHIFT);
-		index &= BM_RTREE_LEVEL_MASK;
-		BUG_ON(node->data[index] == 0);
-		node = (struct rtree_node *)node->data[index];
-	}
-
-node_found:
-	/* Update last position */
-	bm->cur.zone = zone;
-	bm->cur.node = node;
-	bm->cur.node_pfn = (pfn - zone->start_pfn) & ~BM_BLOCK_MASK;
-
-	/* Set return values */
-	*addr = node->data;
-	*bit_nr = (pfn - zone->start_pfn) & BM_BLOCK_MASK;
-
-	return 0;
-}
-
 static void memory_bm_set_bit(struct memory_bitmap *bm, unsigned long pfn)
 {
 	void *addr;
@@ -806,10 +515,6 @@ static void memory_bm_set_bit(struct memory_bitmap *bm, unsigned long pfn)
 	int error;
 
 	error = memory_bm_find_bit(bm, pfn, &addr, &bit);
-	BUG_ON(error);
-	set_bit(bit, addr);
-
-	error = memory_rtree_find_bit(bm, pfn, &addr, &bit);
 	BUG_ON(error);
 	set_bit(bit, addr);
 }
@@ -823,13 +528,6 @@ static int mem_bm_set_bit_check(struct memory_bitmap *bm, unsigned long pfn)
 	error = memory_bm_find_bit(bm, pfn, &addr, &bit);
 	if (!error)
 		set_bit(bit, addr);
-	else
-		return error;
-
-	error = memory_rtree_find_bit(bm, pfn, &addr, &bit);
-	if (!error)
-		set_bit(bit, addr);
-
 	return error;
 }
 
@@ -842,42 +540,25 @@ static void memory_bm_clear_bit(struct memory_bitmap *bm, unsigned long pfn)
 	error = memory_bm_find_bit(bm, pfn, &addr, &bit);
 	BUG_ON(error);
 	clear_bit(bit, addr);
-
-	error = memory_rtree_find_bit(bm, pfn, &addr, &bit);
-	BUG_ON(error);
-	clear_bit(bit, addr);
 }
 
 static int memory_bm_test_bit(struct memory_bitmap *bm, unsigned long pfn)
 {
 	void *addr;
 	unsigned int bit;
-	int error, error2;
-	int v;
+	int error;
 
 	error = memory_bm_find_bit(bm, pfn, &addr, &bit);
 	BUG_ON(error);
-	v = test_bit(bit, addr);
-
-	error2 = memory_rtree_find_bit(bm, pfn, &addr, &bit);
-	BUG_ON(error2);
-
-	WARN_ON_ONCE(v != test_bit(bit, addr));
-
-	return v;
+	return test_bit(bit, addr);
 }
 
 static bool memory_bm_pfn_present(struct memory_bitmap *bm, unsigned long pfn)
 {
 	void *addr;
 	unsigned int bit;
-	int present;
 
-	present = !memory_bm_find_bit(bm, pfn, &addr, &bit);
-
-	WARN_ON_ONCE(present != !memory_rtree_find_bit(bm, pfn, &addr, &bit));
-
-	return present;
+	return !memory_bm_find_bit(bm, pfn, &addr, &bit);
 }
 
 /**
@@ -889,15 +570,10 @@ static bool memory_bm_pfn_present(struct memory_bitmap *bm, unsigned long pfn)
  *	this function.
  */
 
-static unsigned long memory_bm_rtree_next_pfn(struct memory_bitmap *bm);
-
 static unsigned long memory_bm_next_pfn(struct memory_bitmap *bm)
 {
-	unsigned long rtree_pfn;
 	struct bm_block *bb;
 	int bit;
-
-	rtree_pfn = memory_bm_rtree_next_pfn(bm);
 
 	bb = bm->cur.block;
 	do {
@@ -912,75 +588,11 @@ static unsigned long memory_bm_next_pfn(struct memory_bitmap *bm)
 	} while (&bb->hook != &bm->blocks);
 
 	memory_bm_position_reset(bm);
-	WARN_ON_ONCE(rtree_pfn != BM_END_OF_MAP);
 	return BM_END_OF_MAP;
 
  Return_pfn:
-	WARN_ON_ONCE(bb->start_pfn + bit != rtree_pfn);
 	bm->cur.bit = bit + 1;
 	return bb->start_pfn + bit;
-}
-
-/*
- *	rtree_next_node - Jumps to the next leave node
- *
- *	Sets the position to the beginning of the next node in the
- *	memory bitmap. This is either the next node in the current
- *	zone's radix tree or the first node in the radix tree of the
- *	next zone.
- *
- *	Returns true if there is a next node, false otherwise.
- */
-static bool rtree_next_node(struct memory_bitmap *bm)
-{
-	bm->cur.node = list_entry(bm->cur.node->list.next,
-				  struct rtree_node, list);
-	if (&bm->cur.node->list != &bm->cur.zone->leaves) {
-		bm->cur.node_pfn += BM_BITS_PER_BLOCK;
-		bm->cur.node_bit  = 0;
-		return true;
-	}
-
-	/* No more nodes, goto next zone */
-	bm->cur.zone = list_entry(bm->cur.zone->list.next,
-				  struct mem_zone_bm_rtree, list);
-	if (&bm->cur.zone->list != &bm->zones) {
-		bm->cur.node = list_entry(bm->cur.zone->leaves.next,
-					  struct rtree_node, list);
-		bm->cur.node_pfn = 0;
-		bm->cur.node_bit = 0;
-		return true;
-	}
-
-	/* No more zones */
-	return false;
-}
-
-/*
- *	memory_bm_rtree_next_pfn - Find the next set bit
- *
- *	Starting from the last returned position this function searches
- *	for the next set bit in the memory bitmap and returns its
- *	number. If no more bit is set BM_END_OF_MAP is returned.
- */
-static unsigned long memory_bm_rtree_next_pfn(struct memory_bitmap *bm)
-{
-	unsigned long bits, pfn, pages;
-	int bit;
-
-	do {
-		pages	  = bm->cur.zone->end_pfn - bm->cur.zone->start_pfn;
-		bits      = min(pages - bm->cur.node_pfn, BM_BITS_PER_BLOCK);
-		bit	  = find_next_bit(bm->cur.node->data, bits,
-					  bm->cur.node_bit);
-		if (bit < bits) {
-			pfn = bm->cur.zone->start_pfn + bm->cur.node_pfn + bit;
-			bm->cur.node_bit = bit + 1;
-			return pfn;
-		}
-	} while (rtree_next_node(bm));
-
-	return BM_END_OF_MAP;
 }
 
 /**
@@ -1204,21 +816,12 @@ void free_basic_memory_bitmaps(void)
 
 unsigned int snapshot_additional_pages(struct zone *zone)
 {
-	unsigned int rtree, nodes;
 	unsigned int res;
 
 	res = DIV_ROUND_UP(zone->spanned_pages, BM_BITS_PER_BLOCK);
 	res += DIV_ROUND_UP(res * sizeof(struct bm_block),
 			    LINKED_PAGE_DATA_SIZE);
-	rtree = nodes = DIV_ROUND_UP(zone->spanned_pages, BM_BITS_PER_BLOCK);
-	rtree += DIV_ROUND_UP(rtree * sizeof(struct rtree_node),
-			      LINKED_PAGE_DATA_SIZE);
-	while (nodes > 1) {
-		nodes = DIV_ROUND_UP(nodes, BM_ENTRIES_PER_LEVEL);
-		rtree += nodes;
-	}
-
-	return 2 * (res + rtree);
+	return 2 * res;
 }
 
 #ifdef CONFIG_HIGHMEM

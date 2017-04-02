@@ -256,9 +256,11 @@ static struct nsm_handle *nsm_lookup_priv(const struct nsm_private *priv)
 static void nsm_init_private(struct nsm_handle *nsm)
 {
 	u64 *p = (u64 *)&nsm->sm_priv.data;
+	struct timespec ts;
 	s64 ns;
 
-	ns = ktime_get_ns();
+	ktime_get_ts(&ts);
+	ns = timespec_to_ns(&ts);
 	put_unaligned(ns, p);
 	put_unaligned((unsigned long)nsm, p + 1);
 }

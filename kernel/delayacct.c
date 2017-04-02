@@ -46,25 +46,32 @@ void __delayacct_tsk_init(struct task_struct *tsk)
 }
 
 /*
- * Finish delay accounting for a statistic using its timestamps (@start),
- * accumalator (@total) and @count
+ * Finish delay accounting for a statistic using
+ * its timestamps (@start, @end), accumalator (@total) and @count
  */
-static void delayacct_end(u64 *start, u64 *total, u32 *count)
+
+static void delayacct_end(struct timespec *start, struct timespec *end,
+				u64 *total, u32 *count)
 {
-	s64 ns = ktime_get_ns() - *start;
+	struct timespec ts;
+	s64 ns;
 	unsigned long flags;
 
-	if (ns > 0) {
-		spin_lock_irqsave(&current->delays->lock, flags);
-		*total += ns;
-		(*count)++;
-		spin_unlock_irqrestore(&current->delays->lock, flags);
-	}
+	ktime_get_ts(end);
+	ts = timespec_sub(*end, *start);
+	ns = timespec_to_ns(&ts);
+	if (ns < 0)
+		return;
+
+	spin_lock_irqsave(&current->delays->lock, flags);
+	*total += ns;
+	(*count)++;
+	spin_unlock_irqrestore(&current->delays->lock, flags);
 }
 
 void __delayacct_blkio_start(void)
 {
-	current->delays->blkio_start = ktime_get_ns();
+	ktime_get_ts(&current->delays->blkio_start);
 }
 
 void __delayacct_blkio_end(void)
@@ -72,29 +79,35 @@ void __delayacct_blkio_end(void)
 	if (current->delays->flags & DELAYACCT_PF_SWAPIN)
 		/* Swapin block I/O */
 		delayacct_end(&current->delays->blkio_start,
+			&current->delays->blkio_end,
 			&current->delays->swapin_delay,
 			&current->delays->swapin_count);
 	else	/* Other block I/O */
 		delayacct_end(&current->delays->blkio_start,
+			&current->delays->blkio_end,
 			&current->delays->blkio_delay,
 			&current->delays->blkio_count);
 }
 
 int __delayacct_add_tsk(struct taskstats *d, struct task_struct *tsk)
 {
-	cputime_t utime, stime, stimescaled, utimescaled;
-	unsigned long long t2, t3;
-	unsigned long flags, t1;
 	s64 tmp;
+	unsigned long t1;
+	unsigned long long t2, t3;
+	unsigned long flags;
+	struct timespec ts;
+	cputime_t utime, stime, stimescaled, utimescaled;
 
-	task_cputime(tsk, &utime, &stime);
 	tmp = (s64)d->cpu_run_real_total;
-	tmp += cputime_to_nsecs(utime + stime);
+	task_cputime(tsk, &utime, &stime);
+	cputime_to_timespec(utime + stime, &ts);
+	tmp += timespec_to_ns(&ts);
 	d->cpu_run_real_total = (tmp < (s64)d->cpu_run_real_total) ? 0 : tmp;
 
-	task_cputime_scaled(tsk, &utimescaled, &stimescaled);
 	tmp = (s64)d->cpu_scaled_run_real_total;
-	tmp += cputime_to_nsecs(utimescaled + stimescaled);
+	task_cputime_scaled(tsk, &utimescaled, &stimescaled);
+	cputime_to_timespec(utimescaled + stimescaled, &ts);
+	tmp += timespec_to_ns(&ts);
 	d->cpu_scaled_run_real_total =
 		(tmp < (s64)d->cpu_scaled_run_real_total) ? 0 : tmp;
 
@@ -146,12 +159,13 @@ __u64 __delayacct_blkio_ticks(struct task_struct *tsk)
 
 void __delayacct_freepages_start(void)
 {
-	current->delays->freepages_start = ktime_get_ns();
+	ktime_get_ts(&current->delays->freepages_start);
 }
 
 void __delayacct_freepages_end(void)
 {
 	delayacct_end(&current->delays->freepages_start,
+			&current->delays->freepages_end,
 			&current->delays->freepages_delay,
 			&current->delays->freepages_count);
 }
