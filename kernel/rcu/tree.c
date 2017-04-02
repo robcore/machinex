@@ -808,7 +808,7 @@ bool __rcu_is_watching(void)
  */
 bool rcu_is_watching(void)
 {
-	int ret;
+	bool ret;
 
 	preempt_disable();
 	ret = __rcu_is_watching();
