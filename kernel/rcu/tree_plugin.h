@@ -2115,9 +2115,9 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 {
 
 	if (!rcu_is_nocb_cpu(rdp->cpu))
-		return 0;
+		return false;
 	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy, flags);
-	return 1;
+	return true;
 }
 
 /*
@@ -2133,7 +2133,7 @@ static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 
 	/* If this is not a no-CBs CPU, tell the caller to do it the old way. */
 	if (!rcu_is_nocb_cpu(smp_processor_id()))
-		return 0;
+		return false;
 	rsp->qlen = 0;
 	rsp->qlen_lazy = 0;
 
@@ -2152,7 +2152,7 @@ static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 		rsp->orphan_nxtlist = NULL;
 		rsp->orphan_nxttail = &rsp->orphan_nxtlist;
 	}
-	return 1;
+	return true;
 }
 
 /*
