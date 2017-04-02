@@ -9,7 +9,6 @@
 #include <linux/irq.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
-#include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/wakeup_reason.h>
 
@@ -69,16 +68,8 @@ static void suspend_irq(struct irq_desc *desc, int irq)
 	if (no_suspend)
 		return;
 
-	if (irqd_is_wakeup_set(&desc->irq_data)) {
+	if (irqd_is_wakeup_set(&desc->irq_data))
 		irqd_set(&desc->irq_data, IRQD_WAKEUP_ARMED);
-		/*
-		 * We return true here to force the caller to issue
-		 * synchronize_irq(). We need to make sure that the
-		 * IRQD_WAKEUP_ARMED is visible before we return from
-		 * suspend_device_irqs().
-		 */
-		return true;
-	}
 
 	desc->istate |= IRQS_SUSPENDED;
 
