@@ -5679,6 +5679,13 @@ static unsigned long task_h_load(struct task_struct *p)
 #endif
 
 /********** Helpers for find_busiest_group ************************/
+
+enum group_type {
+	group_other = 0,
+	group_imbalanced,
+	group_overloaded,
+};
+
 /*
  * sg_lb_stats - stats of a sched_group required for load_balancing
  */
@@ -5692,7 +5699,7 @@ struct sg_lb_stats {
 	unsigned int group_capacity_factor;
 	unsigned int idle_cpus;
 	unsigned int group_weight;
-	int group_imb; /* Is there an imbalance in the group ? */
+	enum group_type group_type;
 	int group_has_free_capacity;
 };
 
@@ -5726,6 +5733,8 @@ static inline void init_sd_lb_stats(struct sd_lb_stats *sds)
 		.total_capacity = 0UL,
 		.busiest_stat = {
 			.avg_load = 0UL,
+			.sum_nr_running = 0,
+			.group_type = group_other,
 		},
 	};
 }
@@ -6007,6 +6016,18 @@ static inline int sg_capacity_factor(struct lb_env *env, struct sched_group *gro
 	return capacity_factor;
 }
 
+static enum group_type
+group_classify(struct sched_group *group, struct sg_lb_stats *sgs)
+{
+	if (sgs->sum_nr_running > sgs->group_capacity_factor)
+		return group_overloaded;
+
+	if (sg_imbalanced(group))
+		return group_imbalanced;
+
+	return group_other;
+}
+
 /**
  * update_sg_lb_stats - Update sched_group's statistics for load balancing.
  * @env: The load balancing environment.
@@ -6106,9 +6127,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		sgs->group_capacity = fix_small_capacity(env->sd, group);
 
 	sgs->group_weight = group->group_weight;
-
-	sgs->group_imb = sg_imbalanced(group);
 	sgs->group_capacity_factor = sg_capacity_factor(env, group);
+	sgs->group_type = group_classify(group, sgs);
 
 	if (sgs->group_capacity_factor > sgs->sum_nr_running)
 		sgs->group_has_free_capacity = 1;
@@ -6132,14 +6152,19 @@ static bool update_sd_pick_busiest(struct lb_env *env,
 				   struct sched_group *sg,
 				   struct sg_lb_stats *sgs)
 {
-	if (sgs->avg_load <= sds->avg_load)
-		return false;
+	struct sg_lb_stats *busiest = &sds->busiest_stat;
 
-	if (sgs->sum_nr_running > sgs->group_capacity_factor)
-		return true;
+	if (sgs->group_type > busiest->group_type)
+ 		return true;
 
 	if (sgs->group_imb)
 		return true;
+
+	if (sgs->group_type < busiest->group_type)
+		return false;
+
+	if (sgs->avg_load <= busiest->avg_load)
+		return false;
 
 	/* This is the busiest node in its class. */
 	if (!(env->sd->flags & SD_ASYM_PACKING))
@@ -6405,7 +6430,7 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 	busiest->load_per_task =
 		busiest->sum_weighted_load / busiest->sum_nr_running;
 
-	if (busiest->group_imb) {
+	if (busiest->group_type == group_imbalanced) {
 		busiest->load_per_task =
 			min(busiest->load_per_task, sds->avg_load);
 	}
@@ -6421,7 +6446,7 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 		return fix_small_imbalance(env, sds);
 	}
 
-	if (busiest->sum_nr_running > busiest->group_capacity_factor) {
+	if (busiest->group_type == group_overloaded) {
 		/*
 		 * Don't want to pull so many tasks that a group would go idle.
 		 */
@@ -6508,7 +6533,7 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	 * work because they assumes all things are equal, which typically
 	 * isn't true due to cpus_allowed constraints and the like.
 	 */
-	if (busiest->group_imb)
+	if (busiest->group_type == group_imbalanced)
 		goto force_balance;
 
 	/* SD_BALANCE_NEWIDLE trumps SMP nice when underutilized */
