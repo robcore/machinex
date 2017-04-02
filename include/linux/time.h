@@ -99,25 +99,7 @@ static inline bool timespec_valid_strict(const struct timespec *ts)
 	return true;
 }
 
-extern bool persistent_clock_exist;
-
-static inline bool has_persistent_clock(void)
-{
-	return persistent_clock_exist;
-}
-
-extern void read_persistent_clock(struct timespec *ts);
-extern void read_boot_clock(struct timespec *ts);
-extern int persistent_clock_is_local;
-extern int update_persistent_clock(struct timespec now);
-void timekeeping_init(void);
-extern int timekeeping_suspended;
-
-unsigned long get_seconds(void);
-struct timespec current_kernel_time(void);
-struct timespec __current_kernel_time(void); /* does not take xtime_lock */
-struct timespec get_monotonic_coarse(void);
-void timekeeping_inject_sleeptime(struct timespec *delta);
+extern struct timespec timespec_trunc(struct timespec t, unsigned gran);
 
 #define CURRENT_TIME		(current_kernel_time())
 #define CURRENT_TIME_SEC	((struct timespec) { get_seconds(), 0 })
@@ -261,5 +243,7 @@ static __always_inline void timespec_add_ns(struct timespec *a, u64 ns)
 	a->tv_sec += __iter_div_u64_rem(a->tv_nsec + ns, NSEC_PER_SEC, &ns);
 	a->tv_nsec = ns;
 }
+
+# include <linux/timekeeping.h>
 
 #endif
