@@ -28,7 +28,7 @@ pick_next_task_stop(struct rq *rq, struct task_struct *prev)
 {
 	struct task_struct *stop = rq->stop;
 
-	if (!stop || !task_on_rq_queued(stop))
+	if (!stop || !stop->on_rq)
 		return NULL;
 
 	put_prev_task(rq, prev);

@@ -1008,7 +1008,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 	 * A queue event has occurred, and we're going to schedule.  In
 	 * this case, we can save a useless back to back clock update.
 	 */
-	if (task_on_rq_queued(rq->curr) && test_tsk_need_resched(rq->curr))
+	if (rq->curr->on_rq && test_tsk_need_resched(rq->curr))
 		rq->skip_clock_update = 1;
 }
 
@@ -1077,7 +1077,7 @@ static int migration_cpu_stop(void *data);
 unsigned long wait_task_inactive(struct task_struct *p, long match_state)
 {
 	unsigned long flags;
-	int running, queued;
+	int running, on_rq;
 	unsigned long ncsw;
 	struct rq *rq;
 
@@ -1115,7 +1115,7 @@ unsigned long wait_task_inactive(struct task_struct *p, long match_state)
 		rq = task_rq_lock(p, &flags);
 		trace_sched_wait_task(p);
 		running = task_running(rq, p);
-		queued = task_on_rq_queued(p);
+		on_rq = p->on_rq;
 		ncsw = 0;
 		if (!match_state || p->state == match_state)
 			ncsw = p->nvcsw | LONG_MIN; /* sets MSB */
@@ -1341,7 +1341,7 @@ ttwu_stat(struct task_struct *p, int cpu, int wake_flags)
 static void ttwu_activate(struct rq *rq, struct task_struct *p, int en_flags)
 {
 	activate_task(rq, p, en_flags);
-	p->on_rq = TASK_ON_RQ_QUEUED;
+	p->on_rq = 1;
 
 	/* if a worker is waking up, notify workqueue */
 	if (p->flags & PF_WQ_WORKER)
@@ -1559,7 +1559,7 @@ static int ttwu_remote(struct task_struct *p, int wake_flags)
 	int ret = 0;
 
 	rq = __task_rq_lock(p);
-	if (task_on_rq_queued(p)) {
+	if (p->on_rq) {
 		/* check_preempt_curr() may use rq clock */
 		update_rq_clock(rq);
 		ttwu_do_wakeup(rq, p, wake_flags);
@@ -1856,7 +1856,7 @@ static void try_to_wake_up_local(struct task_struct *p)
 	if (!(p->state & TASK_NORMAL))
 		goto out;
 
-	if (!task_on_rq_queued(p))
+	if (!p->on_rq)
 		ttwu_activate(rq, p, ENQUEUE_WAKEUP);
 
 	ttwu_do_wakeup(rq, p, 0);
@@ -2233,7 +2233,7 @@ void wake_up_new_task(struct task_struct *p)
 	init_task_runnable_average(p);
 	rq = __task_rq_lock(p);
 	activate_task(rq, p, 0);
-	p->on_rq = TASK_ON_RQ_QUEUED;
+	p->on_rq = 1;
 	trace_sched_wakeup_new(p, true);
 	check_preempt_curr(rq, p, WF_FORK);
 #ifdef CONFIG_SMP
@@ -2599,7 +2599,7 @@ static u64 do_task_delta_exec(struct task_struct *p, struct rq *rq)
 	 * project cycles that may never be accounted to this
 	 * thread, breaking clock_gettime().
 	 */
-	if (task_current(rq, p) && task_on_rq_queued(p)) {
+	if (task_current(rq, p) && p->on_rq) {
 		update_rq_clock(rq);
 		ns = rq_clock_task(rq) - p->se.exec_start;
 		if ((s64)ns < 0)
@@ -2645,7 +2645,7 @@ unsigned long long task_sched_runtime(struct task_struct *p)
 	 * If we see ->on_cpu without ->on_rq, the task is leaving, and has
 	 * been accounted, so we're correct here as well.
 	 */
-	if (!p->on_cpu || !task_on_rq_queued(p))
+	if (!p->on_cpu || !p->on_rq)
 		return p->se.sum_exec_runtime;
 #endif
 
@@ -2948,7 +2948,7 @@ need_resched:
 		switch_count = &prev->nvcsw;
 	}
 
-	if (task_on_rq_queued(prev) || rq->skip_clock_update < 0)
+	if (prev->on_rq || rq->skip_clock_update < 0)
 		update_rq_clock(rq);
 
 	next = pick_next_task(rq, prev);
@@ -3115,7 +3115,7 @@ EXPORT_SYMBOL(default_wake_function);
  */
 void rt_mutex_setprio(struct task_struct *p, int prio)
 {
-	int oldprio, queued, running, enqueue_flag = 0;
+	int oldprio, on_rq, running, enqueue_flag = 0;
 	struct rq *rq;
 	const struct sched_class *prev_class;
 
@@ -3144,9 +3144,9 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 	trace_sched_pi_setprio(p, prio);
 	oldprio = p->prio;
 	prev_class = p->sched_class;
-	queued = task_on_rq_queued(p);
+	on_rq = p->on_rq;
 	running = task_current(rq, p);
-	if (queued)
+	if (on_rq)
 		dequeue_task(rq, p, 0);
 	if (running)
 		p->sched_class->put_prev_task(rq, p);
@@ -3186,7 +3186,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 
 	if (running)
 		p->sched_class->set_curr_task(rq);
-	if (queued)
+	if (on_rq)
 		enqueue_task(rq, p, enqueue_flag);
 
 	check_class_changed(rq, p, prev_class, oldprio);
@@ -3197,7 +3197,7 @@ out_unlock:
 
 void set_user_nice(struct task_struct *p, long nice)
 {
-	int old_prio, delta, queued;
+	int old_prio, delta, on_rq;
 	unsigned long flags;
 	struct rq *rq;
 
@@ -3218,8 +3218,8 @@ void set_user_nice(struct task_struct *p, long nice)
 		p->static_prio = NICE_TO_PRIO(nice);
 		goto out_unlock;
 	}
-	queued = task_on_rq_queued(p);
-	if (queued)
+	on_rq = p->on_rq;
+	if (on_rq)
 		dequeue_task(rq, p, 0);
 
 	p->static_prio = NICE_TO_PRIO(nice);
@@ -3228,7 +3228,7 @@ void set_user_nice(struct task_struct *p, long nice)
 	p->prio = effective_prio(p);
 	delta = p->prio - old_prio;
 
-	if (queued) {
+	if (on_rq) {
 		enqueue_task(rq, p, 0);
 		/*
 		 * If the task increased its priority or is running and
@@ -3503,7 +3503,7 @@ static int __sched_setscheduler(struct task_struct *p,
 {
 	int newprio = dl_policy(attr->sched_policy) ? MAX_DL_PRIO - 1 :
 		      MAX_RT_PRIO - 1 - attr->sched_priority;
-	int retval, oldprio, oldpolicy = -1, queued, running;
+	int retval, oldprio, oldpolicy = -1, on_rq, running;
 	int policy = attr->sched_policy;
 	unsigned long flags;
 	const struct sched_class *prev_class;
@@ -3700,9 +3700,9 @@ change:
 		return 0;
 	}
 
-	queued = task_on_rq_queued(p);
+	on_rq = p->on_rq;
 	running = task_current(rq, p);
-	if (queued)
+	if (on_rq)
 		dequeue_task(rq, p, 0);
 	if (running)
 		p->sched_class->put_prev_task(rq, p);
@@ -3712,7 +3712,7 @@ change:
 
 	if (running)
 		p->sched_class->set_curr_task(rq);
-	if (queued) {
+	if (on_rq) {
 		/*
 		 * We enqueue to tail when the priority of a task is
 		 * increased (user space view).
@@ -4737,7 +4737,7 @@ void init_idle(struct task_struct *idle, int cpu)
 	rcu_read_unlock();
 
 	rq->curr = rq->idle = idle;
-	idle->on_rq = TASK_ON_RQ_QUEUED;
+	idle->on_rq = 1;
 #if defined(CONFIG_SMP)
 	idle->on_cpu = 1;
 #endif
@@ -4814,7 +4814,7 @@ int set_cpus_allowed_ptr(struct task_struct *p, const struct cpumask *new_mask)
 		goto out;
 
 	dest_cpu = cpumask_any_and(cpu_active_mask, new_mask);
-	if (task_on_rq_queued(p)) {
+	if (p->on_rq) {
 		struct migration_arg arg = { p, dest_cpu };
 		/* Need help from migration thread: drop lock and wait. */
 		task_rq_unlock(rq, p, &flags);
@@ -4865,7 +4865,7 @@ static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
 	 * If we're not on a rq, the next wake-up will ensure we're
 	 * placed properly.
 	 */
-	if (task_on_rq_queued(p)) {
+	if (p->on_rq) {
 		dequeue_task(rq_src, p, 0);
 		set_task_cpu(p, dest_cpu);
 		enqueue_task(rq_dest, p, 0);
@@ -7351,13 +7351,13 @@ static void normalize_task(struct rq *rq, struct task_struct *p)
 		.sched_policy = SCHED_NORMAL,
 	};
 	int old_prio = p->prio;
-	int queued;
+	int on_rq;
 
-	queued = task_on_rq_queued(p);
-	if (queued)
+	on_rq = p->on_rq;
+	if (on_rq)
 		dequeue_task(rq, p, 0);
 	__setscheduler(rq, p, &attr);
-	if (queued) {
+	if (on_rq) {
 		enqueue_task(rq, p, 0);
 		resched_curr(rq);
 	}
@@ -7544,16 +7544,16 @@ void sched_offline_group(struct task_group *tg)
 void sched_move_task(struct task_struct *tsk)
 {
 	struct task_group *tg;
-	int queued, running;
+	int on_rq, running;
 	unsigned long flags;
 	struct rq *rq;
 
 	rq = task_rq_lock(tsk, &flags);
 
 	running = task_current(rq, tsk);
-	queued = task_on_rq_queued(tsk);
+	on_rq = tsk->on_rq;
 
-	if (queued)
+	if (on_rq)
 		dequeue_task(rq, tsk, 0);
 	if (unlikely(running))
 		tsk->sched_class->put_prev_task(rq, tsk);
@@ -7566,14 +7566,14 @@ void sched_move_task(struct task_struct *tsk)
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	if (tsk->sched_class->task_move_group)
-		tsk->sched_class->task_move_group(tsk, queued);
+		tsk->sched_class->task_move_group(tsk, on_rq);
 	else
 #endif
 		set_task_rq(tsk, task_cpu(tsk));
 
 	if (unlikely(running))
 		tsk->sched_class->set_curr_task(rq);
-	if (queued)
+	if (on_rq)
 		enqueue_task(rq, tsk, 0);
 
 	task_rq_unlock(rq, tsk, &flags);
