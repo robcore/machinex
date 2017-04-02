@@ -295,3 +295,6 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/13patches/4563-kernel-smp.c-use-for-csd_lock.patch
 /media/root/robcore/android/linaro-8064-lt/3.18/patches/13patches/4566-kernel-smp.c-cleanups.patch
 
+/media/root/robcore/android/linaro-3.18-lsk/kernel/sched/core.c
+/media/root/robcore/android/linaro-3.18-lsk/patches/10patches/2268-sched-numa-Introduce-migrate_swap.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/3patches/6100-sched-Add-wrapper-for-checking-task_struct-on_rq.patch
