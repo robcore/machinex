@@ -6155,9 +6155,6 @@ static bool update_sd_pick_busiest(struct lb_env *env,
 	struct sg_lb_stats *busiest = &sds->busiest_stat;
 
 	if (sgs->group_type > busiest->group_type)
- 		return true;
-
-	if (sgs->group_imb)
 		return true;
 
 	if (sgs->group_type < busiest->group_type)
