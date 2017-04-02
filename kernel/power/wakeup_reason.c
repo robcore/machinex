@@ -588,6 +588,15 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		else
 			abort_count++;
 
+#if IS_ENABLED(CONFIG_SUSPEND_TIME)
+		temp = ktime_sub(ktime_sub(curr_stime, last_stime),
+				ktime_sub(curr_monotime, last_monotime));
+		suspend_time = ktime_to_timespec(temp);
+		time_in_suspend_bins[fls(suspend_time.tv_sec)]++;
+		pr_info("Suspended for %lu.%03lu seconds\n", suspend_time.tv_sec,
+			suspend_time.tv_nsec / NSEC_PER_MSEC);
+#endif
+
 #ifdef CONFIG_DEDUCE_WAKEUP_REASONS
 		/* log_wakeups should have been cleared by now. */
 		if (WARN_ON(logging_wakeup_reasons())) {
