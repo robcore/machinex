@@ -6,7 +6,7 @@
 #include <linux/time.h>
 
 #ifdef CONFIG_DEBUG_FS
-extern void tk_debug_account_sleep_time(struct timespec64 *t);
+extern void tk_debug_account_sleep_time(struct timespec *t);
 #else
 #define tk_debug_account_sleep_time(x)
 #endif
