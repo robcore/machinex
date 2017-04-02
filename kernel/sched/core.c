@@ -1053,12 +1053,11 @@ static struct rq *move_queued_task(struct task_struct *p, int new_cpu)
 
 	return rq;
 }
+
 struct migration_arg {
 	struct task_struct *task;
 	int dest_cpu;
 };
-
-static int migration_cpu_stop(void *data);
 
 /*
  * Move (not current) task off this cpu, onto dest cpu. We're doing
@@ -1073,21 +1072,20 @@ static int migration_cpu_stop(void *data);
  */
 static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
 {
-	struct rq *rq_dest, *rq_src;
-	bool moved = false;
+	struct rq *rq;
 	int ret = 0;
 
 	if (unlikely(!cpu_active(dest_cpu)))
 		return ret;
 
-	rq_src = cpu_rq(src_cpu);
-	rq_dest = cpu_rq(dest_cpu);
+	rq = cpu_rq(src_cpu);
 
 	raw_spin_lock(&p->pi_lock);
-	double_rq_lock(rq_src, rq_dest);
+	raw_spin_lock(&rq->lock);
 	/* Already moved. */
 	if (task_cpu(p) != src_cpu)
 		goto done;
+
 	/* Affinity changed (again). */
 	if (!cpumask_test_cpu(dest_cpu, tsk_cpus_allowed(p)))
 		goto fail;
@@ -1101,18 +1099,8 @@ static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
 done:
 	ret = 1;
 fail:
-	double_rq_unlock(rq_src, rq_dest);
+	raw_spin_unlock(&rq->lock);
 	raw_spin_unlock(&p->pi_lock);
-
-	if (moved && task_notify_on_migrate(p)) {
-		struct migration_notify_data mnd;
-
-		mnd.src_cpu = src_cpu;
-		mnd.dest_cpu = dest_cpu;
-		mnd.load = pct_task_load(p);
-		atomic_notifier_call_chain(&migration_notifier_head,
-					   0, (void *)&mnd);
-	}
 	return ret;
 }
 
