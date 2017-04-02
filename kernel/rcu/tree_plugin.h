@@ -1630,7 +1630,7 @@ static bool __maybe_unused rcu_try_advance_all_cbs(void)
 
 	/* Exit early if we advanced recently. */
 	if (jiffies == rdtp->last_advance_all)
-		return 0;
+		return false;
 	rdtp->last_advance_all = jiffies;
 
 	for_each_rcu_flavor(rsp) {
@@ -2120,12 +2120,16 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 			/* ... if queue was empty ... */
 			wake_nocb_leader(rdp, false);
 		} else {
-			rdp->nocb_defer_wakeup = true;
+			rdp->nocb_defer_wakeup = RCU_NOGP_WAKE;
 		}
 		rdp->qlen_last_fqs_check = 0;
 	} else if (len > rdp->qlen_last_fqs_check + qhimark) {
 		/* ... or if many callbacks queued. */
-		wake_nocb_leader(rdp, true);
+		if (!irqs_disabled_flags(flags)) {
+			wake_nocb_leader(rdp, true);
+		} else {
+			rdp->nocb_defer_wakeup = RCU_NOGP_WAKE_FORCE;
+		}
 		rdp->qlen_last_fqs_check = LONG_MAX / 2;
 	}
 	return;
@@ -2215,7 +2219,7 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 			(d = ULONG_CMP_GE(ACCESS_ONCE(rnp->completed), c)));
 		if (likely(d))
 			break;
-		flush_signals(current);
+		WARN_ON(signal_pending(current));
 		trace_rcu_future_gp(rnp, rdp, c, "ResumeWait");
 	}
 	trace_rcu_future_gp(rnp, rdp, c, "EndWait");
@@ -2274,7 +2278,7 @@ wait_again:
 		if (!rcu_nocb_poll)
 			trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu,
 					    "WokeEmpty");
-		flush_signals(current);
+		WARN_ON(signal_pending(current));
 		schedule_timeout_interruptible(1);
 
 		/* Rescan in case we were a victim of memory ordering. */
@@ -2353,7 +2357,7 @@ static void nocb_follower_wait(struct rcu_data *rdp)
 		if (!rcu_nocb_poll)
 			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
 					    "WokeEmpty");
-		flush_signals(current);
+		WARN_ON(signal_pending(current));
 		schedule_timeout_interruptible(1);
 	}
 }
@@ -2419,7 +2423,7 @@ static int rcu_nocb_kthread(void *arg)
 }
 
 /* Is a deferred wakeup of rcu_nocb_kthread() required? */
-static bool rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
+static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
 {
 	return ACCESS_ONCE(rdp->nocb_defer_wakeup);
 }
@@ -2427,10 +2431,12 @@ static bool rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
 /* Do a deferred wakeup of rcu_nocb_kthread(). */
 static void do_nocb_deferred_wakeup(struct rcu_data *rdp)
 {
+	int ndw;
 	if (!rcu_nocb_need_deferred_wakeup(rdp))
 		return;
-	ACCESS_ONCE(rdp->nocb_defer_wakeup) = false;
-	wake_nocb_leader(rdp, false);
+	ndw = ACCESS_ONCE(rdp->nocb_defer_wakeup);
+	ACCESS_ONCE(rdp->nocb_defer_wakeup) = RCU_NOGP_WAKE_NOT;
+	wake_nocb_leader(rdp, ndw == RCU_NOGP_WAKE_FORCE);
 }
 
 /* Initialize per-rcu_data variables for no-CBs CPUs. */
@@ -2537,7 +2543,7 @@ static void __init rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp)
 {
 }
 
-static bool rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
+static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
 {
 	return false;
 }
