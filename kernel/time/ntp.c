@@ -552,6 +552,7 @@ static inline void process_adj_status(struct timex *txc, struct timespec64 *ts)
 	time_status |= txc->status & ~STA_RONLY;
 }
 
+
 static inline void process_adjtimex_modes(struct timex *txc,
 						struct timespec64 *ts,
 						s32 *time_tai)
@@ -600,6 +601,8 @@ static inline void process_adjtimex_modes(struct timex *txc,
 		ntp_update_frequency();
 }
 
+
+
 /**
  * ntp_validate_timex - Ensures the timex is ok for use in do_adjtimex
  */
@@ -616,7 +619,6 @@ int ntp_validate_timex(struct timex *txc)
 		/* In order to modify anything, you gotta be super-user! */
 		 if (txc->modes && !capable(CAP_SYS_TIME))
 			return -EPERM;
-
 		/*
 		 * if the quartz is off by more than 10% then
 		 * something is VERY wrong!
@@ -629,6 +631,17 @@ int ntp_validate_timex(struct timex *txc)
 
 	if ((txc->modes & ADJ_SETOFFSET) && (!capable(CAP_SYS_TIME)))
 		return -EPERM;
+
+	/*
+	 * Check for potential multiplication overflows that can
+	 * only happen on 64-bit systems:
+	 */
+	if ((txc->modes & ADJ_FREQUENCY) && (BITS_PER_LONG == 64)) {
+		if (LLONG_MIN / PPM_SCALE > txc->freq)
+			return -EINVAL;
+		if (LLONG_MAX / PPM_SCALE < txc->freq)
+			return -EINVAL;
+	}
 
 	return 0;
 }

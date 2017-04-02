@@ -12,6 +12,7 @@
 #include <linux/export.h>
 #include <linux/clocksource.h>
 #include <linux/time.h>
+#include <linux/timekeeper_internal.h>
 
 extern void *vectors_page;
 extern struct timezone sys_tz;
