@@ -157,9 +157,9 @@ static int rcu_torture_writer_state;
 #else
 #define RCUTORTURE_RUNNABLE_INIT 0
 #endif
-int rcutorture_runnable = RCUTORTURE_RUNNABLE_INIT;
-module_param(rcutorture_runnable, int, 0444);
-MODULE_PARM_DESC(rcutorture_runnable, "Start rcutorture at boot");
+static int torture_runnable = RCUTORTURE_RUNNABLE_INIT;
+module_param(torture_runnable, int, 0444);
+MODULE_PARM_DESC(torture_runnable, "Start rcutorture at boot");
 
 #if defined(CONFIG_RCU_BOOST) && !defined(CONFIG_HOTPLUG_CPU)
 #define rcu_can_boost() 1
@@ -1450,7 +1450,7 @@ rcu_torture_cleanup(void)
 	int i;
 
 	rcutorture_record_test_transition();
-	if (torture_cleanup()) {
+	if (torture_cleanup_begin()) {
 		if (cur_ops->cb_barrier != NULL)
 			cur_ops->cb_barrier();
 		return;
@@ -1500,6 +1500,7 @@ rcu_torture_cleanup(void)
 					       "End of test: RCU_HOTPLUG");
 	else
 		rcu_torture_print_module_parms(cur_ops, "End of test: SUCCESS");
+	torture_cleanup_end();
 }
 
 #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD
@@ -1569,7 +1570,7 @@ rcu_torture_init(void)
 		RCUTORTURE_TASKS_OPS
 	};
 
-	if (!torture_init_begin(torture_type, verbose, &rcutorture_runnable))
+	if (!torture_init_begin(torture_type, verbose, &torture_runnable))
 		return -EBUSY;
 
 	/* Process args and tell the world that the torturer is on the job. */
