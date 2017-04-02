@@ -15,6 +15,7 @@
 #include "cpuacct.h"
 
 struct rq;
+struct cpuidle_state;
 
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_MIGRATING	2
@@ -666,6 +667,11 @@ struct rq {
 
 #ifdef CONFIG_SMP
 	struct llist_head wake_list;
+#endif
+
+#ifdef CONFIG_CPU_IDLE
+	/* Must be inspected within a rcu lock section */
+	struct cpuidle_state *idle_state;
 #endif
 
 #ifdef CONFIG_CPU_IDLE
