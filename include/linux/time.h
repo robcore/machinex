@@ -4,18 +4,9 @@
 # include <linux/cache.h>
 # include <linux/seqlock.h>
 # include <linux/math64.h>
-#include <uapi/linux/time.h>
+# include <linux/time64.h>
 
 extern struct timezone sys_tz;
-
-/* Parameters used to convert the timespec values: */
-#define MSEC_PER_SEC	1000L
-#define USEC_PER_MSEC	1000L
-#define NSEC_PER_USEC	1000L
-#define NSEC_PER_MSEC	1000000L
-#define USEC_PER_SEC	1000000L
-#define NSEC_PER_SEC	1000000000L
-#define FSEC_PER_SEC	1000000000000000LL
 
 #define TIME_T_MAX	(time_t)((1UL << ((sizeof(time_t) << 3) - 1)) - 1)
 
@@ -84,13 +75,6 @@ static inline struct timespec timespec_sub(struct timespec lhs,
 	return ts_delta;
 }
 
-#define KTIME_MAX			((s64)~((u64)1 << 63))
-#if (BITS_PER_LONG == 64)
-# define KTIME_SEC_MAX			(KTIME_MAX / NSEC_PER_SEC)
-#else
-# define KTIME_SEC_MAX			LONG_MAX
-#endif
-
 /*
  * Returns true if the timespec is norm, false if denorm:
  */
@@ -115,27 +99,7 @@ static inline bool timespec_valid_strict(const struct timespec *ts)
 	return true;
 }
 
-extern bool persistent_clock_exist;
-
-static inline bool has_persistent_clock(void)
-{
-	return persistent_clock_exist;
-}
-
-extern void read_persistent_clock(struct timespec *ts);
-extern void read_boot_clock(struct timespec *ts);
-extern int persistent_clock_is_local;
-extern int update_persistent_clock(struct timespec now);
-void timekeeping_init(void);
-extern int timekeeping_suspended;
-
-unsigned long get_seconds(void);
-struct timespec current_kernel_time(void);
-struct timespec __current_kernel_time(void); /* does not take xtime_lock */
-struct timespec get_monotonic_coarse(void);
-void get_xtime_and_monotonic_and_sleep_offset(struct timespec *xtim,
-				struct timespec *wtom, struct timespec *sleep);
-void timekeeping_inject_sleeptime(struct timespec *delta);
+extern struct timespec timespec_trunc(struct timespec t, unsigned gran);
 
 #define CURRENT_TIME		(current_kernel_time())
 #define CURRENT_TIME_SEC	((struct timespec) { get_seconds(), 0 })
@@ -279,5 +243,7 @@ static __always_inline void timespec_add_ns(struct timespec *a, u64 ns)
 	a->tv_sec += __iter_div_u64_rem(a->tv_nsec + ns, NSEC_PER_SEC, &ns);
 	a->tv_nsec = ns;
 }
+
+# include <linux/timekeeping.h>
 
 #endif
