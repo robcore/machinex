@@ -583,7 +583,7 @@ void resched_curr(struct rq *rq)
 
 	if (cpu == smp_processor_id()) {
 		set_tsk_need_resched(curr);
-		return;
+		set_preempt_need_resched();
 	}
 
 	if (set_nr_and_not_polling(curr))
