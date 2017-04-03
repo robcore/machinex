@@ -356,6 +356,9 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 		count++;
 	}
 
+	cpufreq_for_each_valid_entry(pos, table)
+		count++;
+
 	alloc_size = count * sizeof(int) + count * sizeof(u64);
 
 #ifdef CONFIG_CPU_FREQ_STAT_DETAILS
