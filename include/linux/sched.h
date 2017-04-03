@@ -528,7 +528,6 @@ struct task_cputime {
  * before the scheduler is active -- see should_resched().
  */
 #define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE + PREEMPT_NEED_RESCHED)
-#define PREEMPT_ENABLED		(PREEMPT_NEED_RESCHED)
 #define PREEMPT_DISABLED	(1 + PREEMPT_NEED_RESCHED)
 
 /**
