@@ -583,7 +583,6 @@ void resched_curr(struct rq *rq)
 
 	if (cpu == smp_processor_id()) {
 		set_tsk_need_resched(curr);
-		set_preempt_need_resched();
 		return;
 	}
 
@@ -1877,7 +1876,7 @@ void scheduler_ipi(void)
 	 * TIF_NEED_RESCHED remotely (for the first time) will also send
 	 * this IPI.
 	 */
-	preempt_fold_need_resched();
+//	preempt_fold_need_resched();
 
 	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick())
 		return;
@@ -2370,7 +2369,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 #endif
 #ifdef CONFIG_PREEMPT_COUNT
 	/* Want to start with kernel preemption disabled. */
-	task_thread_info(p)->preempt_count = PREEMPT_DISABLED;
+	task_thread_info(p)->preempt_count = 1;
 #endif
 #ifdef CONFIG_SMP
 	plist_node_init(&p->pushable_tasks, MAX_PRIO);
@@ -3241,7 +3240,6 @@ need_resched:
 
 	next = pick_next_task(rq, prev);
 	clear_tsk_need_resched(prev);
-	clear_preempt_need_resched();
 	rq->skip_clock_update = 0;
 
 	if (likely(prev != next)) {
@@ -3402,10 +3400,11 @@ EXPORT_SYMBOL_GPL(preempt_schedule_context);
  */
 asmlinkage __visible void __sched preempt_schedule_irq(void)
 {
+	struct thread_info *ti = current_thread_info();
 	enum ctx_state prev_state;
 
 	/* Catch callers which need to be fixed */
-	BUG_ON(preempt_count() || !irqs_disabled());
+	BUG_ON(ti->preempt_count || !irqs_disabled());
 
 	prev_state = exception_enter();
 
@@ -4485,14 +4484,8 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 		goto out_free_cpus_allowed;
 	}
 	retval = -EPERM;
-	if (!check_same_owner(p)) {
-		rcu_read_lock();
-		if (!ns_capable(task_user_ns(p), CAP_SYS_NICE)) {
-			rcu_read_unlock();
-			goto out_free_new_mask;
-		}
-		rcu_read_unlock();
-	}
+	if (!check_same_owner(p) && !ns_capable(task_user_ns(p), CAP_SYS_NICE))
+		goto out_free_new_mask;
 
 	retval = security_task_setscheduler(p);
 	if (retval)
@@ -5033,17 +5026,15 @@ void show_state_filter(unsigned long state_filter)
 		/*
 		 * reset the NMI-timeout, listing all files on a slow
 		 * console might take a lot of time:
-		 * Also, reset softlockup watchdogs on all CPUs, because
-		 * another CPU might be blocked waiting for us to process
-		 * an IPI.
 		 */
 		touch_nmi_watchdog();
-		touch_all_softlockup_watchdogs();
 		if (!state_filter || (p->state & state_filter))
 			sched_show_task(p);
 	}
 
-#ifdef CONFIG_SCHED_DEBUG
+	touch_all_softlockup_watchdogs();
+
+#ifdef CONFIG_SYSRQ_SCHED_DEBUG
 	sysrq_sched_debug_show();
 #endif
 	rcu_read_unlock();
@@ -5075,7 +5066,6 @@ void init_idle(struct task_struct *idle, int cpu)
 	raw_spin_lock_irqsave(&rq->lock, flags);
 
 	__sched_fork(0, idle);
-
 	idle->state = TASK_RUNNING;
 	idle->se.exec_start = sched_clock();
 
@@ -5102,7 +5092,7 @@ void init_idle(struct task_struct *idle, int cpu)
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
 	/* Set the preempt count _outside_ the spinlocks! */
-	task_thread_info(idle)->preempt_count = PREEMPT_ENABLED;
+	task_thread_info(idle)->preempt_count = 0;
 
 	/*
 	 * The idle tasks have their own, simple scheduling class:
@@ -6528,7 +6518,6 @@ sd_init(struct sched_domain_topology_level *tl, int cpu)
 	 */
 
 	if (sd->flags & SD_SHARE_CPUCAPACITY) {
-		sd->flags |= SD_PREFER_SIBLING;
 		sd->imbalance_pct = 110;
 		sd->smt_gain = 1178; /* ~15% */
 
