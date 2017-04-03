@@ -4435,8 +4435,6 @@ void update_cpu_load_active(struct rq *this_rq)
 	 */
 	this_rq->last_load_update_tick = jiffies;
 	__update_cpu_load(this_rq, load, 1);
-
-	calc_load_account_active(this_rq);
 }
 
 /* Used instead of source_load when we know the type == 0 */
