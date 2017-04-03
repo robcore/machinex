@@ -380,6 +380,18 @@ int __sched out_of_line_wait_on_bit(void *word, int bit,
 }
 EXPORT_SYMBOL(out_of_line_wait_on_bit);
 
+int __sched out_of_line_wait_on_bit_timeout(
+	void *word, int bit, wait_bit_action_f *action,
+	unsigned mode, unsigned long timeout)
+{
+	wait_queue_head_t *wq = bit_waitqueue(word, bit);
+	DEFINE_WAIT_BIT(wait, word, bit);
+
+	wait.key.timeout = jiffies + timeout;
+	return __wait_on_bit(wq, &wait, action, mode);
+}
+EXPORT_SYMBOL_GPL(out_of_line_wait_on_bit_timeout);
+
 int __sched
 __wait_on_bit_lock(wait_queue_head_t *wq, struct wait_bit_queue *q,
 			int (*action)(void *), unsigned mode)
