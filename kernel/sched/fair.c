@@ -2280,6 +2280,8 @@ static const u32 runnable_avg_yN_sum[] = {
 	17718,18340,18949,19545,20128,20698,21256,21802,22336,22859,23371,
 };
 
+unsigned long __weak arch_scale_freq_capacity(struct sched_domain *sd, int cpu);
+
 /*
  * Approximate:
  *   val * y^n,    where y^32 ~= 0.5 (~1 scheduling period)
@@ -2380,6 +2382,7 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 	u64 delta, periods;
 	u32 runnable_contrib;
 	int delta_w, decayed = 0;
+	unsigned long scale_freq = arch_scale_freq_capacity(NULL, cpu);
 
 	delta = now - sa->last_runnable_update;
 	/*
@@ -2417,7 +2420,8 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
 		if (running)
-			sa->running_avg_sum += delta_w;
+			sa->running_avg_sum += delta_w * scale_freq
+				>> SCHED_CAPACITY_SHIFT;
 		sa->avg_period += delta_w;
 
 		delta -= delta_w;
@@ -2442,7 +2446,8 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 			add_to_scaled_stat(cpu, sa, runnable_contrib);
 		}
 		if (running)
-			sa->running_avg_sum += runnable_contrib;
+			sa->running_avg_sum += runnable_contrib * scale_freq
+				>> SCHED_CAPACITY_SHIFT;
 		sa->avg_period += runnable_contrib;
 	}
 
@@ -2452,7 +2457,8 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 		add_to_scaled_stat(cpu, sa, delta);
 	}
 	if (running)
-		sa->running_avg_sum += delta;
+		sa->running_avg_sum += delta * scale_freq
+			>> SCHED_CAPACITY_SHIFT;
 	sa->avg_period += delta;
 
 	return decayed;
@@ -2642,6 +2648,7 @@ static inline void update_entity_load_avg(struct sched_entity *se,
 {
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
 	long contrib_delta, utilization_delta;
+	int cpu = cpu_of(rq_of(cfs_rq));
 	u64 now;
 	int cpu = cpu_of(rq_of(cfs_rq));
 	int decayed;
