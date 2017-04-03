@@ -5908,8 +5908,6 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 
 	if (Larch_power)
 		capacity *= arch_scale_freq_capacity(sd, cpu);
-	else
-		capacity *= default_scale_freq_capacity(sd, cpu);
 
 	capacity >>= SCHED_CAPACITY_SHIFT;
 
