@@ -584,6 +584,7 @@ void resched_curr(struct rq *rq)
 	if (cpu == smp_processor_id()) {
 		set_tsk_need_resched(curr);
 		set_preempt_need_resched();
+		return;
 	}
 
 	if (set_nr_and_not_polling(curr))
@@ -1876,14 +1877,7 @@ void scheduler_ipi(void)
 	 * TIF_NEED_RESCHED remotely (for the first time) will also send
 	 * this IPI.
 	 */
-//	preempt_fold_need_resched();
-	/*
-	 * Fold TIF_NEED_RESCHED into the preempt_count; anybody setting
-	 * TIF_NEED_RESCHED remotely (for the first time) will also send
-	 * this IPI.
-	 */
-	if (tif_need_resched())
-		set_preempt_need_resched();
+	set_preempt_need_resched();
 
 	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick())
 		return;
@@ -4491,8 +4485,14 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 		goto out_free_cpus_allowed;
 	}
 	retval = -EPERM;
-	if (!check_same_owner(p) && !ns_capable(task_user_ns(p), CAP_SYS_NICE))
-		goto out_free_new_mask;
+	if (!check_same_owner(p) {
+		rcu_read_lock();
+		if (!ns_capable(task_user_ns(p), CAP_SYS_NICE)) {
+			rcu_read_unlock();
+			goto out_free_new_mask;
+		}
+		rcu_read_unlock();
+	}
 
 	retval = security_task_setscheduler(p);
 	if (retval)
@@ -5033,15 +5033,17 @@ void show_state_filter(unsigned long state_filter)
 		/*
 		 * reset the NMI-timeout, listing all files on a slow
 		 * console might take a lot of time:
+		 * Also, reset softlockup watchdogs on all CPUs, because
+		 * another CPU might be blocked waiting for us to process
+		 * an IPI.
 		 */
 		touch_nmi_watchdog();
+		touch_all_softlockup_watchdogs();
 		if (!state_filter || (p->state & state_filter))
 			sched_show_task(p);
 	}
 
-	touch_all_softlockup_watchdogs();
-
-#ifdef CONFIG_SYSRQ_SCHED_DEBUG
+#ifdef CONFIG_SCHED_DEBUG
 	sysrq_sched_debug_show();
 #endif
 	rcu_read_unlock();
@@ -5073,6 +5075,7 @@ void init_idle(struct task_struct *idle, int cpu)
 	raw_spin_lock_irqsave(&rq->lock, flags);
 
 	__sched_fork(0, idle);
+
 	idle->state = TASK_RUNNING;
 	idle->se.exec_start = sched_clock();
 
@@ -6525,6 +6528,7 @@ sd_init(struct sched_domain_topology_level *tl, int cpu)
 	 */
 
 	if (sd->flags & SD_SHARE_CPUCAPACITY) {
+		sd->flags |= SD_PREFER_SIBLING;
 		sd->imbalance_pct = 110;
 		sd->smt_gain = 1178; /* ~15% */
 
