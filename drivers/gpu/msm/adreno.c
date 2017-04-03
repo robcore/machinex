@@ -3591,24 +3591,6 @@ static int adreno_check_interrupt_timestamp(struct kgsl_device *device,
 	return status;
 }
 
-/*
- wait_event_interruptible_timeout checks for the exit condition before
- placing a process in wait q. For conditional interrupts we expect the
- process to already be in its wait q when its exit condition checking
- function is called.
-*/
-#define kgsl_wait_event_interruptible_timeout(wq, condition, timeout, io)\
-({									\
-	long __ret = timeout;						\
-	if (io)						\
-		__wait_io_event_interruptible_timeout(wq, condition, __ret);\
-	else						\
-		__wait_event_interruptible_timeout(wq, condition, __ret);\
-	__ret;								\
-})
-
-
-
 unsigned int adreno_ft_detect(struct kgsl_device *device,
 						unsigned int *prev_reg_val)
 {
@@ -3906,10 +3888,10 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 		mutex_unlock(&device->mutex);
 
 		/* Wait for a timestamp event */
-		status = kgsl_wait_event_interruptible_timeout(
+		status = __wait_event_interruptible_timeout(
 			device->wait_queue,
 			adreno_check_interrupt_timestamp(device, context,
-				timestamp), msecs_to_jiffies(wait), io);
+				timestamp), msecs_to_jiffies(wait));
 
 		mutex_lock(&device->mutex);
 
