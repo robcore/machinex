@@ -2556,11 +2556,6 @@ static inline unsigned long wait_task_inactive(struct task_struct *p,
 
 extern bool current_is_single_threaded(void);
 
-static __always_inline bool need_resched(void)
-{
-	return unlikely(tif_need_resched());
-}
-
 /*
  * Careful: do_each_thread/while_each_thread is a double loop so
  *          'break' will not work as expected - use goto instead.
