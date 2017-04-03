@@ -301,3 +301,5 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 
 
 /root/machinex/patches/0363-irq_work-Force-raised-irq-work-to-run-on-irq-work-in.patch
+
+/media/root/robcore/android/linaro-3.18-lsk/patches/1patches/7088-sched-Calculate-CPU-s-usage-statistic-and-put-it-int.patch
