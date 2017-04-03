@@ -113,7 +113,7 @@ static void __local_bh_disable(unsigned long ip, unsigned int cnt)
 	/*
 	 * Were softirqs turned off above:
 	 */
-	if (softirq_count() == (cnt & SOFTIRQ_MASK))
+	if (softirq_count() == cnt)
 		trace_softirqs_off(ip);
 	raw_local_irq_restore(flags);
 
@@ -139,7 +139,7 @@ static void __local_bh_enable(unsigned int cnt)
 {
 	WARN_ON_ONCE(!irqs_disabled());
 
-	if (softirq_count() == (cnt & SOFTIRQ_MASK))
+	if (softirq_count() == cnt)
 		trace_softirqs_on(_RET_IP_);
 	sub_preempt_count(cnt);
 }
