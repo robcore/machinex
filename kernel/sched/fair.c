@@ -2414,10 +2414,11 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		 * period and accrue it.
 		 */
 		delta_w = 1024 - delta_w;
-		if (weight)
+		if (weight) {
 			sa->load_sum += weight * delta_w;
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
+
 		if (running)
 			sa->util_sum += delta_w * scale_freq >> SCHED_CAPACITY_SHIFT;
 
@@ -2442,7 +2443,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	}
 
 	/* Remainder of delta accrued against u_0` */
-	if (weight)
+	if (weight) {
 		sa->load_sum += weight * delta;
 		add_to_scaled_stat(cpu, sa, delta);
 	}
