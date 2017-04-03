@@ -3252,7 +3252,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 	if (queued)
 		dequeue_task(rq, p, 0);
 	if (running)
-		p->sched_class->put_prev_task(rq, p);
+		put_prev_task(rq, p);
 
 	/*
 	 * Boosting condition are:
@@ -3808,7 +3808,7 @@ change:
 	if (queued)
 		dequeue_task(rq, p, 0);
 	if (running)
-		p->sched_class->put_prev_task(rq, p);
+		put_prev_task(rq, p);
 
 	prev_class = p->sched_class;
 	__setscheduler(rq, p, attr);
@@ -7659,7 +7659,7 @@ void sched_move_task(struct task_struct *tsk)
 	if (queued)
 		dequeue_task(rq, tsk, 0);
 	if (unlikely(running))
-		tsk->sched_class->put_prev_task(rq, tsk);
+		put_prev_task(rq, tsk);
 
 	tg = container_of(task_css_check(tsk, cpu_cgroup_subsys_id,
 				lockdep_is_held(&tsk->sighand->siglock)),
