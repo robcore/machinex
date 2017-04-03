@@ -185,8 +185,7 @@ Please mark the initialization and cleanup functions where appropriate
 
 
 	__devinit	Device initialization code.
-			Identical to __init if the kernel is not compiled
-			with CONFIG_HOTPLUG, normal function otherwise.
+				Normal function.
 	__devexit	The same for __exit.
 
 Tips on when/where to use the above attributes:

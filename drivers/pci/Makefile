@@ -15,12 +15,10 @@ obj-$(CONFIG_PCIEPORTBUS) += pcie/
 
 obj-$(CONFIG_PCI_IOAPIC) += ioapic.o
 
-obj-$(CONFIG_HOTPLUG) += hotplug.o
-
 # Build the PCI Hotplug drivers if we were asked to
 obj-$(CONFIG_HOTPLUG_PCI) += hotplug/
 ifdef CONFIG_HOTPLUG_PCI
-obj-y += hotplug-pci.o
+obj-y += hotplug-pci.o hotplug.o setup-bus.o
 endif
 
 # Build the PCI MSI interrupt support
@@ -60,7 +58,6 @@ obj-$(CONFIG_ACPI)    += pci-acpi.o
 obj-$(CONFIG_PCI_LABEL) += pci-label.o
 
 # Cardbus & CompactPCI use setup-bus
-obj-$(CONFIG_HOTPLUG) += setup-bus.o
 
 obj-$(CONFIG_PCI_SYSCALL) += syscall.o
 
