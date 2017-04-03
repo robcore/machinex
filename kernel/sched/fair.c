@@ -4921,7 +4921,7 @@ static int get_cpu_usage(int cpu)
 	unsigned long usage = cpu_rq(cpu)->cfs.utilization_load_avg;
 	unsigned long capacity = 0;
 
-	capacity += capacity_of(cpu);
+	capacity = capacity_of(cpu);
 
 	if (usage >= SCHED_LOAD_SCALE)
 		return capacity;
