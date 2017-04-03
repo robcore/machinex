@@ -740,8 +740,8 @@ repeat:
 		if (buffer_shadow(bh)) {
 			JBUFFER_TRACE(jh, "on shadow: sleep");
 			jbd_unlock_bh_state(bh);
-			wait_on_bit_io(&bh->b_state, BH_Shadow,
-				       TASK_UNINTERRUPTIBLE);
+			wait_on_bit(&bh->b_state, BH_Shadow,
+				    sleep_on_shadow_bh, TASK_UNINTERRUPTIBLE);
 			goto repeat;
 		}
 
@@ -768,7 +768,8 @@ repeat:
 					jbd2_alloc(jh2bh(jh)->b_size,
 							 GFP_NOFS);
 				if (!frozen_buffer) {
-					pr_err("%s: OOM for frozen_buffer\n",
+					printk(KERN_EMERG
+					       "%s: OOM for frozen_buffer\n",
 					       __func__);
 					JBUFFER_TRACE(jh, "oom!");
 					error = -ENOMEM;
@@ -885,7 +886,7 @@ int jbd2_journal_get_write_access(handle_t *handle, struct buffer_head *bh)
 int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 {
 	transaction_t *transaction = handle->h_transaction;
-	journal_t *journal;
+	journal_t *journal = transaction->t_journal;
 	struct journal_head *jh = jbd2_journal_add_journal_head(bh);
 	int err;
 
@@ -893,7 +894,6 @@ int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 	err = -EROFS;
 	if (is_handle_aborted(handle))
 		goto out;
-	journal = transaction->t_journal;
 	err = 0;
 
 	JBUFFER_TRACE(jh, "entry");
@@ -905,6 +905,7 @@ int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 	 * reused here.
 	 */
 	jbd_lock_bh_state(bh);
+	spin_lock(&journal->j_list_lock);
 	J_ASSERT_JH(jh, (jh->b_transaction == transaction ||
 		jh->b_transaction == NULL ||
 		(jh->b_transaction == journal->j_committing_transaction &&
@@ -927,18 +928,15 @@ int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 		jh->b_modified = 0;
 
 		JBUFFER_TRACE(jh, "file as BJ_Reserved");
-		spin_lock(&journal->j_list_lock);
 		__jbd2_journal_file_buffer(jh, transaction, BJ_Reserved);
-		spin_unlock(&journal->j_list_lock);
 	} else if (jh->b_transaction == journal->j_committing_transaction) {
 		/* first access by this transaction */
 		jh->b_modified = 0;
 
 		JBUFFER_TRACE(jh, "set next transaction");
-		spin_lock(&journal->j_list_lock);
 		jh->b_next_transaction = transaction;
-		spin_unlock(&journal->j_list_lock);
 	}
+	spin_unlock(&journal->j_list_lock);
 	jbd_unlock_bh_state(bh);
 
 	/*
@@ -1242,6 +1240,7 @@ int jbd2_journal_forget (handle_t *handle, struct buffer_head *bh)
 	BUFFER_TRACE(bh, "entry");
 
 	jbd_lock_bh_state(bh);
+	spin_lock(&journal->j_list_lock);
 
 	if (!buffer_jbd(bh))
 		goto not_jbd;
@@ -1294,7 +1293,6 @@ int jbd2_journal_forget (handle_t *handle, struct buffer_head *bh)
 		 * we know to remove the checkpoint after we commit.
 		 */
 
-		spin_lock(&journal->j_list_lock);
 		if (jh->b_cp_transaction) {
 			__jbd2_journal_temp_unlink_buffer(jh);
 			__jbd2_journal_file_buffer(jh, transaction, BJ_Forget);
@@ -1307,7 +1305,6 @@ int jbd2_journal_forget (handle_t *handle, struct buffer_head *bh)
 				goto drop;
 			}
 		}
-		spin_unlock(&journal->j_list_lock);
 	} else if (jh->b_transaction) {
 		J_ASSERT_JH(jh, (jh->b_transaction ==
 				 journal->j_committing_transaction));
@@ -1319,9 +1316,7 @@ int jbd2_journal_forget (handle_t *handle, struct buffer_head *bh)
 
 		if (jh->b_next_transaction) {
 			J_ASSERT(jh->b_next_transaction == transaction);
-			spin_lock(&journal->j_list_lock);
 			jh->b_next_transaction = NULL;
-			spin_unlock(&journal->j_list_lock);
 
 			/*
 			 * only drop a reference if this transaction modified
@@ -1333,6 +1328,7 @@ int jbd2_journal_forget (handle_t *handle, struct buffer_head *bh)
 	}
 
 not_jbd:
+	spin_unlock(&journal->j_list_lock);
 	jbd_unlock_bh_state(bh);
 	__brelse(bh);
 drop:
@@ -1638,11 +1634,11 @@ __journal_try_to_free_buffer(journal_t *journal, struct buffer_head *bh)
 	if (buffer_locked(bh) || buffer_dirty(bh))
 		goto out;
 
-	if (jh->b_next_transaction != NULL || jh->b_transaction != NULL)
+	if (jh->b_next_transaction != NULL)
 		goto out;
 
 	spin_lock(&journal->j_list_lock);
-	if (jh->b_cp_transaction != NULL) {
+	if (jh->b_cp_transaction != NULL && jh->b_transaction == NULL) {
 		/* written-back checkpointed metadata buffer */
 		JBUFFER_TRACE(jh, "remove from checkpoint list");
 		__jbd2_journal_remove_checkpoint(jh);

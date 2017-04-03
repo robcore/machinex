@@ -77,7 +77,7 @@ void key_schedule_gc(time_t gc_at)
 void key_schedule_gc_links(void)
 {
 	set_bit(KEY_GC_KEY_EXPIRED, &key_gc_flags);
-	schedule_work(&key_gc_work);
+	queue_work(system_wq, &key_gc_work);
 }
 
 /*
@@ -89,6 +89,15 @@ static void key_gc_timer_func(unsigned long data)
 	kenter("");
 	key_gc_next_run = LONG_MAX;
 	key_schedule_gc_links();
+}
+
+/*
+ * wait_on_bit() sleep function for uninterruptible waiting
+ */
+static int key_gc_wait_bit(void *flags)
+{
+	schedule();
+	return 0;
 }
 
 /*
@@ -114,7 +123,7 @@ void key_gc_keytype(struct key_type *ktype)
 	schedule_work(&key_gc_work);
 
 	kdebug("sleep");
-	wait_on_bit(&key_gc_flags, KEY_GC_REAPING_KEYTYPE,
+	wait_on_bit(&key_gc_flags, KEY_GC_REAPING_KEYTYPE, key_gc_wait_bit,
 		    TASK_UNINTERRUPTIBLE);
 
 	key_gc_dead_keytype = NULL;

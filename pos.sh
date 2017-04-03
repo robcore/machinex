@@ -1,19 +1,19 @@
 #!/bin/bash
-/root/machinex/patches/0070-scsi-fix.patch
-/root/machinex/patches/0069-fix-2d-driver-as-well.patch
-/root/machinex/patches/0068-adreno.c-use-the-new-generic-__wait_event_interrupti.patch
+patch -p1 -R < "/root/machinex/patches/0070-scsi-fix.patch"
+patch -p1 -R < "/root/machinex/patches/0069-fix-2d-driver-as-well.patch"
+patch -p1 -R < "/root/machinex/patches/0068-adreno.c-use-the-new-generic-__wait_event_interrupti.patch"
 
-/root/machinex/patches/0065-yep-nope.patch
-/root/machinex/patches/0064-locking-Optimize-lock_bh-functions.i-remember-this-b.patch
-/root/machinex/patches/0063-shady.sched-take-PREMPT_NEED_RESCHED-away-from-gener.patch
-/root/machinex/patches/0062-last-one-in-security-and-the-tree-i-think.patch
-/root/machinex/patches/0061-security-wait_on_bit.patch
-/root/machinex/patches/0060-more-wait_on_bit.patch
-/root/machinex/patches/0059-reverted-sched.h.patch
-/root/machinex/patches/0058-some-fs-wait_on_bit-fixes-locking-fixes-and-a-screwe.patch
-/root/machinex/patches/0057-mm-wait-on-bit-fixes.patch
-/root/machinex/patches/0054-bring-in-asm-preempt-again.patch
-/root/machinex/patches/0053-ptrace-fixup-with-waiting-also-rcu-readlocks-around-.patch
-/root/machinex/patches/0052-some-preempt-wait-fixes.patch
-/root/machinex/patches/0049-updated-filemap-and-pagemap-to-the-updated-wait-inte.patch
-/root/machinex/patches/0048-cleaned-up-wait.c-.h.patch
+patch -p1 -R < "/root/machinex/patches/0065-yep-nope.patch"
+patch -p1 -R < "/root/machinex/patches/0064-locking-Optimize-lock_bh-functions.i-remember-this-b.patch"
+patch -p1 -R < "/root/machinex/patches/0063-shady.sched-take-PREMPT_NEED_RESCHED-away-from-gener.patch"
+patch -p1 -R < "/root/machinex/patches/0062-last-one-in-security-and-the-tree-i-think.patch"
+patch -p1 -R < "/root/machinex/patches/0061-security-wait_on_bit.patch"
+patch -p1 -R < "/root/machinex/patches/0060-more-wait_on_bit.patch"
+patch -p1 -R < "/root/machinex/patches/0059-reverted-sched.h.patch"
+patch -p1 -R < "/root/machinex/patches/0058-some-fs-wait_on_bit-fixes-locking-fixes-and-a-screwe.patch"
+patch -p1 -R < "/root/machinex/patches/0057-mm-wait-on-bit-fixes.patch"
+patch -p1 -R < "/root/machinex/patches/0054-bring-in-asm-preempt-again.patch"
+patch -p1 -R < "/root/machinex/patches/0053-ptrace-fixup-with-waiting-also-rcu-readlocks-around-.patch"
+patch -p1 -R < "/root/machinex/patches/0052-some-preempt-wait-fixes.patch"
+patch -p1 -R < "/root/machinex/patches/0049-updated-filemap-and-pagemap-to-the-updated-wait-inte.patch"
+patch -p1 -R < "/root/machinex/patches/0048-cleaned-up-wait.c-.h.patch"
