@@ -587,9 +587,9 @@ static void cputime_adjust(struct task_cputime *curr,
 	 * Let's enforce monotonicity.
 	 * Atomic exchange protects against concurrent cputime_adjust().
 	 */
-	while (stime > (rtime = ACCESS_ONCE(prev->stime)))
+	while (stime > (rtime = READ_ONCE(prev->stime)))
 		cmpxchg(&prev->stime, rtime, stime);
-	while (utime > (rtime = ACCESS_ONCE(prev->utime)))
+	while (utime > (rtime = READ_ONCE(prev->utime)))
 		cmpxchg(&prev->utime, rtime, utime);
 
 out:
