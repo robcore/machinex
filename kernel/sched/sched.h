@@ -15,14 +15,11 @@
 #include "cpuacct.h"
 
 struct rq;
-
-/* task_struct::on_rq states: */
-#define TASK_ON_RQ_MIGRATING	2
-
 struct cpuidle_state;
 
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_QUEUED	1
+#define TASK_ON_RQ_MIGRATING	2
 
 extern __read_mostly int scheduler_running;
 
@@ -351,27 +348,18 @@ struct cfs_rq {
 
 #ifdef CONFIG_SMP
 	/*
-	 * CFS Load tracking
-	 * Under CFS, load is tracked on a per-entity basis and aggregated up.
-	 * This allows for the description of both thread and group usage (in
-	 * the FAIR_GROUP_SCHED case).
-	 * runnable_load_avg is the sum of the load_avg_contrib of the
-	 * sched_entities on the rq.
-	 * blocked_load_avg is similar to runnable_load_avg except that its
-	 * the blocked sched_entities on the rq.
-	 * utilization_load_avg is the sum of the average running time of the
-	 * sched_entities on the rq.
+	 * CFS load tracking
 	 */
-	unsigned long runnable_load_avg, blocked_load_avg, utilization_load_avg;
-	atomic64_t decay_counter;
-	u64 last_decay;
-	atomic_long_t removed_load;
+	struct sched_avg avg;
+#ifdef CONFIG_FAIR_GROUP_SCHED
+	unsigned long tg_load_avg_contrib;
+#endif
+	atomic_long_t removed_load_avg, removed_util_avg;
+#ifndef CONFIG_64BIT
+	u64 load_last_update_time_copy;
+#endif
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
-/* Required to track per-cpu representation of a task_group */
-	u32 tg_runnable_contrib, tg_usage_contrib;
-	unsigned long tg_load_contrib;
-
 	/*
 	 *   h_load = weight * f(tg)
 	 *
@@ -1270,18 +1258,13 @@ extern void update_group_capacity(struct sched_domain *sd, int cpu);
 
 extern void trigger_load_balance(struct rq *rq);
 
-/*
- * Only depends on SMP, FAIR_GROUP_SCHED may be removed when runnable_avg
- * becomes useful in lb
- */
-#if defined(CONFIG_FAIR_GROUP_SCHED)
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
 
 #else
-static inline void idle_enter_fair(struct rq *this_rq) {}
-static inline void idle_exit_fair(struct rq *this_rq) {}
-#endif
+
+static inline void idle_enter_fair(struct rq *rq) { }
+static inline void idle_exit_fair(struct rq *rq) { }
 
 #endif
 
