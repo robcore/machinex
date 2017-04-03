@@ -215,7 +215,6 @@ struct task_group {
 	struct cgroup_css css;
 
 	bool notify_on_migrate;
-
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* schedulable entities of this group on each cpu */
 	struct sched_entity **se;
@@ -225,7 +224,7 @@ struct task_group {
 
 #ifdef	CONFIG_SMP
 	atomic_long_t load_avg;
-	atomic_t runnable_avg, usage_avg;
+	atomic_t usage_avg;
 #endif
 #endif
 
