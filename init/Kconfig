@@ -1362,6 +1362,10 @@ config KALLSYMS_ALL
 
 	   Say N unless you really need all symbols.
 
+config HOTPLUG
+	bool "just yes"
+	default y
+
 config PRINTK
 	default y
 	bool "Enable support for printk" if EXPERT
