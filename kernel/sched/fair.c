@@ -6241,26 +6241,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	sgs->group_capacity = group->sgc->capacity;
 	sgs->avg_load = (sgs->group_load*SCHED_CAPACITY_SCALE) / sgs->group_capacity;
 
-	/*
-	 * Consider the group unbalanced when the imbalance is larger
-	 * than the average weight of a task.
-	 *
-	 * APZ: with cgroup the avg task weight can vary wildly and
-	 *      might not be a suitable number - should we keep a
-	 *      normalized nr_running number somewhere that negates
-	 *      the hierarchy?
-	 */
-	if (sgs->sum_nr_running) {
-		avg_load_per_task = sgs->sum_weighted_load * SCHED_CAPACITY_SCALE
-					/ group->sgc->capacity;
-		avg_load_per_task /= sgs->sum_nr_running;
-	}
-
-	sgs->group_capacity =
-		DIV_ROUND_CLOSEST(group->sgc->capacity, SCHED_CAPACITY_SCALE);
-
-	if (!sgs->group_capacity)
-		sgs->group_capacity = fix_small_capacity(env->sd, group);
+	if (sgs->sum_nr_running)
+		sgs->load_per_task = sgs->sum_weighted_load / sgs->sum_nr_running;
 
 	sgs->group_weight = group->group_weight;
 
