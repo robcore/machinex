@@ -2282,7 +2282,7 @@ static const u32 runnable_avg_yN_sum[] = {
 	17718,18340,18949,19545,20128,20698,21256,21802,22336,22859,23371,
 };
 
-#define scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
+#define cap_scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
 
 /*
  * Approximate:
@@ -2418,7 +2418,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		 * period and accrue it.
 		 */
 		delta_w = 1024 - delta_w;
-		scaled_delta_w = scale(delta_w, scale_freq);
+		scaled_delta_w = cap_scale(delta_w, scale_freq);
 		if (weight) {
 			sa->load_sum += weight * scaled_delta_w;
 			if (cfs_rq) {
@@ -2430,7 +2430,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		}
 
 		if (running)
-			sa->util_sum += scale(scaled_delta_w, scale_cpu);
+			sa->util_sum += cap_scale(scaled_delta_w, scale_cpu);
 
 		delta -= delta_w;
 
@@ -2450,18 +2450,18 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		contrib = __compute_runnable_contrib(periods);
-		contrib = scale(contrib, scale_freq);
+		contrib = cap_scale(contrib, scale_freq);
 		if (weight) {
 			sa->load_sum += weight * contrib;
 			if (cfs_rq)
 				cfs_rq->runnable_load_sum += weight * contrib;
 		}
 		if (running)
-			sa->util_sum += scale(contrib, scale_cpu);
+			sa->util_sum += cap_scale(contrib, scale_cpu);
 	}
 
 	/* Remainder of delta accrued against u_0` */
-	scaled_delta = scale(delta, scale_freq);
+	scaled_delta = cap_scale(delta, scale_freq);
 	if (weight) {
 		sa->load_sum += weight * scaled_delta;
 		if (cfs_rq)
@@ -2470,7 +2470,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		add_to_scaled_stat(cpu, sa, delta);
 	}
 	if (running)
-		sa->util_sum += scale(scaled_delta, scale_cpu);
+		sa->util_sum += cap_scale(scaled_delta, scale_cpu);
 
 	sa->period_contrib += delta;
 
@@ -3505,8 +3505,7 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 	}
 
 	if (!se)
-		rq->nr_running -= task_delta;
-		dec_nr_running(rq);
+		sub_nr_running(rq, task_delta);
 
 	cfs_rq->throttled = 1;
 	cfs_rq->throttled_clock = rq_clock(rq);
@@ -3561,8 +3560,7 @@ void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
 	}
 
 	if (!se)
-		rq->nr_running += task_delta;
-		inc_nr_running(rq);
+		add_nr_running(rq, task_delta);
 
 	/* determine whether we need to wake up potentially idle cpu */
 	if (rq->curr == rq->idle && rq->cfs.nr_running)
