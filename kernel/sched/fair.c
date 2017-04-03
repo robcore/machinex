@@ -2653,7 +2653,6 @@ static inline void update_entity_load_avg(struct sched_entity *se,
 	long contrib_delta, utilization_delta;
 	int cpu = cpu_of(rq_of(cfs_rq));
 	u64 now;
-	int cpu = cpu_of(rq_of(cfs_rq));
 	int decayed;
 	/*
 	 * For a group entity we need to use their owned cfs_rq_clock_task() in
@@ -4920,7 +4919,9 @@ done:
 static int get_cpu_usage(int cpu)
 {
 	unsigned long usage = cpu_rq(cpu)->cfs.utilization_load_avg;
-	unsigned long capacity = capacity_orig_of(cpu);
+	unsigned long capacity = 0;
+
+	capacity += capacity_of(cpu);
 
 	if (usage >= SCHED_LOAD_SCALE)
 		return capacity;
