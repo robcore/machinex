@@ -4485,7 +4485,7 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 		goto out_free_cpus_allowed;
 	}
 	retval = -EPERM;
-	if (!check_same_owner(p) {
+	if (!check_same_owner(p)) {
 		rcu_read_lock();
 		if (!ns_capable(task_user_ns(p), CAP_SYS_NICE)) {
 			rcu_read_unlock();
