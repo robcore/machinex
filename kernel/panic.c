@@ -106,7 +106,7 @@ void panic(const char *fmt, ...)
 		panic_smp_self_stop();
 
 #ifdef CONFIG_SCHED_DEBUG
-	sysrq_sched_debug_show();
+	//sysrq_sched_debug_show();
 #endif
 	console_verbose();
 	bust_spinlocks(1);

@@ -581,13 +581,7 @@ struct rq {
 	u64 nr_last_stamp;
 	unsigned int ave_nr_running;
 	seqcount_t ave_seqcnt;
-
-#ifdef CONFIG_CPU_QUIET
-	/* time-based average load */
-	u64 nr_last_stamp;
 	u64 nr_running_integral;
-	seqcount_t ave_seqcnt;
-#endif
 
 	/* capture load from *all* tasks on this cpu: */
 	struct load_weight load;
@@ -1416,40 +1410,6 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 
 #endif
 
-static inline void inc_nr_running(struct rq *rq)
-{
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-#endif
-	sched_update_nr_prod(cpu_of(rq), 1, true);
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
-#endif
-	rq->nr_running++;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_end(&nr_stats->ave_seqcnt);
-#endif
-}
-
-static inline void dec_nr_running(struct rq *rq)
-{
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-#endif
-	sched_update_nr_prod(cpu_of(rq), 1, false);
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
-#endif
-	rq->nr_running--;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_end(&nr_stats->ave_seqcnt);
-#endif
-}
-
 static inline void __add_nr_running(struct rq *rq, unsigned count)
 {
 	unsigned prev_nr = rq->nr_running;
@@ -1483,7 +1443,6 @@ static inline void __sub_nr_running(struct rq *rq, unsigned count)
 	rq->nr_running -= count;
 }
 
-#ifdef CONFIG_CPU_QUIET
 #define NR_AVE_SCALE(x)		((x) << FSHIFT)
 static inline u64 do_nr_running_integral(struct rq *rq)
 {
@@ -1500,25 +1459,49 @@ static inline u64 do_nr_running_integral(struct rq *rq)
 
 static inline void add_nr_running(struct rq *rq, unsigned count)
 {
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
+#endif
+	sched_update_nr_prod(cpu_of(rq), 1, true);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_begin(&nr_stats->ave_seqcnt);
+	nr_stats->ave_nr_running = do_avg_nr_running(rq);
+	nr_stats->nr_last_stamp = rq->clock_task;
+#else
 	write_seqcount_begin(&rq->ave_seqcnt);
 	rq->nr_running_integral = do_nr_running_integral(rq);
 	rq->nr_last_stamp = rq->clock_task;
+#endif
 	__add_nr_running(rq, count);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_end(&nr_stats->ave_seqcnt);
+#else
 	write_seqcount_end(&rq->ave_seqcnt);
+#endif
 }
 
 static inline void sub_nr_running(struct rq *rq, unsigned count)
 {
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
+#endif
+	sched_update_nr_prod(cpu_of(rq), 1, false);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_begin(&nr_stats->ave_seqcnt);
+	nr_stats->ave_nr_running = do_avg_nr_running(rq);
+	nr_stats->nr_last_stamp = rq->clock_task;
+#else
 	write_seqcount_begin(&rq->ave_seqcnt);
 	rq->nr_running_integral = do_nr_running_integral(rq);
 	rq->nr_last_stamp = rq->clock_task;
-	__sub_nr_running(rq, count);
-	write_seqcount_end(&rq->ave_seqcnt);
-}
-#else
-#define add_nr_running __add_nr_running
-#define sub_nr_running __sub_nr_running
 #endif
+	__sub_nr_running(rq, count);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_end(&nr_stats->ave_seqcnt);
+#else
+	write_seqcount_end(&rq->ave_seqcnt);
+#endif
+}
 
 static inline void rq_last_tick_reset(struct rq *rq)
 {

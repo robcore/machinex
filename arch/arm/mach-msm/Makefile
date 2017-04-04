@@ -498,6 +498,7 @@ obj-$(CONFIG_BLU_PLUG) += blu_plug.o
 obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
 obj-$(CONFIG_AUTOSMP)			+= autosmp.o
 obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
+obj-$(CONFIG_STATE_HELPER)		+= state_helper.o
 
 ifdef CONFIG_SEC_THERMISTOR
 obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o
@@ -517,4 +518,3 @@ obj-$(CONFIG_MODEM_RESTART_MONITOR) += modem_restart_monitor.o
 #obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
 #obj-$(CONFIG_DYN_HOTPLUG) += dyn_hotplug.o
 #obj-$(CONFIG_FAST_HOTPLUG) += fast_hotplug.o
-#obj-$(CONFIG_STATE_HELPER)		+= state_helper.o
