@@ -6,6 +6,8 @@
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 
+#include <trace/events/sched.h>
+
 #include "sched.h"
 #include "tune.h"
 
@@ -49,36 +51,51 @@ __schedtune_accept_deltas(int nrg_delta, int cap_delta,
 			  int perf_boost_idx, int perf_constrain_idx)
 {
 	int payoff = -INT_MAX;
+	int gain_idx = -1;
 
 	/* Performance Boost (B) region */
-	if (nrg_delta > 0 && cap_delta > 0) {
-		/*
-		 * Evaluate "Performance Boost" vs "Energy Increase"
-		 * payoff criteria:
-		 *    cap_delta / nrg_delta < cap_gain / nrg_gain
-		 * which is:
-		 *    nrg_delta * cap_gain > cap_delta * nrg_gain
-		 */
-		payoff  = nrg_delta * threshold_gains[perf_boost_idx].cap_gain;
-		payoff -= cap_delta * threshold_gains[perf_boost_idx].nrg_gain;
-		return payoff;
-	}
-
+	if (nrg_delta >= 0 && cap_delta > 0)
+		gain_idx = perf_boost_idx;
 	/* Performance Constraint (C) region */
-	if (nrg_delta < 0 && cap_delta < 0) {
-		/*
-		 * Evaluate "Performance Boost" vs "Energy Increase"
-		 * payoff criteria:
-		 *    cap_delta / nrg_delta > cap_gain / nrg_gain
-		 * which is:
-		 *    cap_delta * nrg_gain > nrg_delta * cap_gain
-		 */
-		payoff  = cap_delta * threshold_gains[perf_constrain_idx].nrg_gain;
-		payoff -= nrg_delta * threshold_gains[perf_constrain_idx].cap_gain;
-		return payoff;
-	}
+	else if (nrg_delta < 0 && cap_delta <= 0)
+		gain_idx = perf_constrain_idx;
 
 	/* Default: reject schedule candidate */
+	if (gain_idx == -1)
+		return payoff;
+
+	/*
+	 * Evaluate "Performance Boost" vs "Energy Increase"
+	 *
+	 * - Performance Boost (B) region
+	 *
+	 *   Condition: nrg_delta > 0 && cap_delta > 0
+	 *   Payoff criteria:
+	 *     cap_gain / nrg_gain  < cap_delta / nrg_delta =
+	 *     cap_gain * nrg_delta < cap_delta * nrg_gain
+	 *   Note that since both nrg_gain and nrg_delta are positive, the
+	 *   inequality does not change. Thus:
+	 *
+	 *     payoff = (cap_delta * nrg_gain) - (cap_gain * nrg_delta)
+	 *
+	 * - Performance Constraint (C) region
+	 *
+	 *   Condition: nrg_delta < 0 && cap_delta < 0
+	 *   payoff criteria:
+	 *     cap_gain / nrg_gain  > cap_delta / nrg_delta =
+	 *     cap_gain * nrg_delta < cap_delta * nrg_gain
+	 *   Note that since nrg_gain > 0 while nrg_delta < 0, the
+	 *   inequality change. Thus:
+	 *
+	 *     payoff = (cap_delta * nrg_gain) - (cap_gain * nrg_delta)
+	 *
+	 * This means that, in case of same positive defined {cap,nrg}_gain
+	 * for both the B and C regions, we can use the same payoff formula
+	 * where a positive value represents the accept condition.
+	 */
+	payoff  = cap_delta * threshold_gains[gain_idx].nrg_gain;
+	payoff -= nrg_delta * threshold_gains[gain_idx].cap_gain;
+
 	return payoff;
 }
 
@@ -146,12 +163,16 @@ schedtune_accept_deltas(int nrg_delta, int cap_delta,
 	int perf_constrain_idx;
 
 	/* Optimal (O) region */
-	if (nrg_delta < 0 && cap_delta > 0)
+	if (nrg_delta < 0 && cap_delta > 0) {
+		trace_sched_tune_filter(nrg_delta, cap_delta, 0, 0, 1, 0);
 		return INT_MAX;
+	}
 
 	/* Suboptimal (S) region */
-	if (nrg_delta > 0 && cap_delta < 0)
+	if (nrg_delta > 0 && cap_delta < 0) {
+		trace_sched_tune_filter(nrg_delta, cap_delta, 0, 0, -1, 5);
 		return -INT_MAX;
+	}
 
 	/* Get task specific perf Boost/Constraints indexes */
 	rcu_read_lock();
@@ -260,12 +281,18 @@ schedtune_boostgroup_update(int idx, int boost)
 		/* Check if this update increase current max */
 		if (boost > cur_boost_max && bg->group[idx].tasks) {
 			bg->boost_max = boost;
+			trace_sched_tune_boostgroup_update(cpu, 1, bg->boost_max);
 			continue;
 		}
 
 		/* Check if this update has decreased current max */
-		if (cur_boost_max == old_boost && old_boost > boost)
+		if (cur_boost_max == old_boost && old_boost > boost) {
 			schedtune_cpu_update(cpu);
+			trace_sched_tune_boostgroup_update(cpu, -1, bg->boost_max);
+			continue;
+		}
+
+		trace_sched_tune_boostgroup_update(cpu, 0, bg->boost_max);
 	}
 
 	return 0;
@@ -289,6 +316,10 @@ schedtune_tasks_update(struct task_struct *p, int cpu, int idx, int task_count)
 	tasks = bg->group[idx].tasks;
 	if (tasks == 1 || tasks == 0)
 		schedtune_cpu_update(cpu);
+
+	trace_sched_tune_tasks_update(p, cpu, tasks, idx,
+			bg->group[idx].boost, bg->boost_max);
+
 }
 
 /*
@@ -391,6 +422,12 @@ boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 
 	/* Update CPU boost */
 	schedtune_boostgroup_update(st->idx, st->boost);
+
+	trace_sched_tune_config(st->boost,
+			threshold_gains[st->perf_boost_idx].nrg_gain,
+			threshold_gains[st->perf_boost_idx].cap_gain,
+			threshold_gains[st->perf_constrain_idx].nrg_gain,
+			threshold_gains[st->perf_constrain_idx].cap_gain);
 
 	return 0;
 }
@@ -529,12 +566,16 @@ schedtune_accept_deltas(int nrg_delta, int cap_delta,
 			struct task_struct *task)
 {
 	/* Optimal (O) region */
-	if (nrg_delta < 0 && cap_delta > 0)
+	if (nrg_delta < 0 && cap_delta > 0) {
+		trace_sched_tune_filter(nrg_delta, cap_delta, 0, 0, 1, 0);
 		return INT_MAX;
+	}
 
 	/* Suboptimal (S) region */
-	if (nrg_delta > 0 && cap_delta < 0)
+	if (nrg_delta > 0 && cap_delta < 0) {
+		trace_sched_tune_filter(nrg_delta, cap_delta, 0, 0, -1, 5);
 		return -INT_MAX;
+	}
 
 	return __schedtune_accept_deltas(nrg_delta, cap_delta,
 			perf_boost_idx, perf_constrain_idx);
