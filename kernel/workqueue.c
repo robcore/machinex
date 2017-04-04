@@ -1441,13 +1441,13 @@ static void __queue_delayed_work(int cpu, struct workqueue_struct *wq,
 	timer_stats_timer_set_start_info(&dwork->timer);
 
 	dwork->wq = wq;
+	/* timer isn't guaranteed to run in this cpu, record earlier */
+	if (cpu == WORK_CPU_UNBOUND)
+		cpu = raw_smp_processor_id();
 	dwork->cpu = cpu;
 	timer->expires = jiffies + delay;
 
-	if (unlikely(cpu != WORK_CPU_UNBOUND))
-		add_timer_on(timer, cpu);
-	else
-		add_timer(timer);
+	add_timer_on(timer, cpu);
 }
 
 /**
@@ -1708,7 +1708,9 @@ static struct worker *create_worker(struct worker_pool *pool)
 		goto fail;
 
 	set_user_nice(worker->task, pool->attrs->nice);
-	kthread_bind_mask(worker->task, pool->attrs->cpumask);
+
+	/* prevent userland from meddling with cpumask of workqueue workers */
+	worker->task->flags |= PF_NO_SETAFFINITY;
 
 	/*
 	 * set_cpus_allowed_ptr() will fail if the cpumask doesn't have any
@@ -3604,7 +3606,7 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 		}
 
 		wq->rescuer = rescuer;
-		kthread_bind_mask(rescuer->task, cpu_possible_mask);
+		rescuer->task->flags |= PF_NO_SETAFFINITY;
 		wake_up_process(rescuer->task);
 	}
 

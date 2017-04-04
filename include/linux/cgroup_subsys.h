@@ -59,10 +59,6 @@ SUBSYS(net_cls)
 SUBSYS(blkio)
 #endif
 
-#if IS_ENABLED(CONFIG_CGROUP_SCHEDTUNE)
-SUBSYS(schedtune)
-#endif
-
 /* */
 
 #if IS_SUBSYS_ENABLED(CONFIG_CGROUP_BFQIO)

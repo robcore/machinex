@@ -28,14 +28,14 @@
 #define INTELLI_PLUG_MAJOR_VERSION	5
 #define INTELLI_PLUG_MINOR_VERSION	4
 
-#define DEF_SAMPLING_MS			30
+#define DEF_SAMPLING_MS			40
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			10000
-#define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			60 * 1000L
+#define START_DELAY_MS			20000
+#define MIN_INPUT_INTERVAL		500 * 1000L
+#define BOOST_LOCK_DUR			1000 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
-#define DEFAULT_DOWN_LOCK_DUR		500
+#define DEFAULT_DOWN_LOCK_DUR		2000
 
 #define CAPACITY_RESERVE		50
 #define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
@@ -503,7 +503,7 @@ static int __ref intelli_plug_start(void)
 			continue;
 		cpu_down(cpu);
 	}
-
+#if 0
 	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
@@ -511,6 +511,7 @@ static int __ref intelli_plug_start(void)
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
+#endif
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));

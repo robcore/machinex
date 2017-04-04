@@ -532,13 +532,6 @@ config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE_X
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
-config CPU_FREQ_DEFAULT_GOV_SCHED
-	bool "sched"
-	select CPU_FREQ_GOV_INTERACTIVE
-	help
-	  Use the CPUfreq governor 'sched' as default. This scales
-	  cpu frequency using CPU utilization estimates from the
-	  scheduler.
 endchoice
 
 config CPU_FREQ_GOV_UBERDEMAND
@@ -1171,12 +1164,6 @@ config CPU_FREQ_GOV_ARTERACTIVE
 
 	  If in doubt, say N.
 
-config CPU_FREQ_GOV_XPERIENCE
-	 tristate "'xperience' cpufreq governor"
-	 depends on CPU_FREQ
-	 help
-	'XPerience' - a "powered and smart" governor
-
 config SEC_DVFS
 	bool "DVFS job"
 	default n
@@ -1197,20 +1184,6 @@ config CPUFREQ_HARDLIMIT_DEBUG
 	help
 	  Output debugging info in dmesg [HARDLIMIT] (Yank555.lu)
 
-config CPU_FREQ_GOV_SCHED
-	bool "'sched' cpufreq governor"
-	depends on CPU_FREQ
-	depends on SMP
-	help
-	  'sched' - this governor scales cpu frequency from the
-	  scheduler as a function of cpu capacity utilization. It does
-	  not evaluate utilization on a periodic basis (as ondemand
-	  does) but instead is event-driven by the scheduler.
-
-	  If in doubt, say N.
-
-comment "CPU frequency scaling drivers"
-
 config GENERIC_CPUFREQ_CPU0
 	bool "Generic CPU0 cpufreq driver"
 	depends on HAVE_CLK && REGULATOR && PM_OPP && OF
@@ -1221,6 +1194,12 @@ config GENERIC_CPUFREQ_CPU0
 	  systems which share clock and voltage across all CPUs.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_XPERIENCE
+	 tristate "'xperience' cpufreq governor"
+	 depends on CPU_FREQ
+	 help
+	'XPerience' - a "powered and smart" governor
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
