@@ -56,6 +56,15 @@ config CPU_FREQ_STAT_DETAILS
 
 	  If in doubt, say N.
 
+config SCHED_FREQ_INPUT
+	bool "Scheduler inputs to cpufreq governor"
+	help
+	  This option enables support for scheduler based CPU utilization
+	  calculations which may then be used by any cpufreq governor. The
+	  scheduler keeps track of "recent" cpu demand of tasks, which can
+	  help determine need for changing frequency well in advance of what
+	  a governor would have been able to detect on its own.
+
 choice
 	prompt "Default CPUFreq governor"
 	default CPU_FREQ_DEFAULT_GOV_USERSPACE if CPU_FREQ_SA1100 || CPU_FREQ_SA1110
