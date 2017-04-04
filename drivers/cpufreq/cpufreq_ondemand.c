@@ -35,14 +35,14 @@
  */
 
 /* User tunabble controls */
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(5)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
+#define DEF_FREQUENCY_UP_THRESHOLD		(85)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 
-#define DEF_MIDDLE_GRID_STEP			(14)
-#define DEF_HIGH_GRID_STEP			(20)
+#define DEF_MIDDLE_GRID_STEP			(5)
+#define DEF_HIGH_GRID_STEP			(10)
 #define DEF_MIDDLE_GRID_LOAD			(65)
 #define DEF_HIGH_GRID_LOAD			(89)
 
@@ -161,7 +161,7 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.sync_freq = 1026000,
-	.optimal_freq = 1350000,
+	.optimal_freq = 1890000,
 	.optimal_max_freq = 1782000,
 	.input_boost = 0,
 	.io_is_busy = 0,
