@@ -62,9 +62,6 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 	pr_debug("request for verification of policy (%u - %u kHz) for cpu %u\n",
 					policy->min, policy->max, policy->cpu);
 
-	if (!cpu_online(policy->cpu))
-		return -EINVAL;
-
 	cpufreq_verify_within_cpu_limits(policy);
 
 	for (; freq = table[i].frequency, freq != CPUFREQ_TABLE_END; i++) {
@@ -119,9 +116,6 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 		optimal.frequency = ~0;
 		break;
 	}
-
-	if (!cpu_online(policy->cpu))
-		return -EINVAL;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		unsigned int freq = table[i].frequency;
@@ -238,6 +232,18 @@ void cpufreq_frequency_table_put_attr(unsigned int cpu)
 	per_cpu(cpufreq_show_table, cpu) = NULL;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_put_attr);
+
+int cpufreq_table_validate_and_show(struct cpufreq_policy *policy,
+				      struct cpufreq_frequency_table *table)
+{
+	int ret = cpufreq_frequency_table_cpuinfo(policy, table);
+
+	if (!ret)
+		cpufreq_frequency_table_get_attr(table, policy->cpu);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(cpufreq_table_validate_and_show);
 
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
