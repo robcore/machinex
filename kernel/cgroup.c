@@ -4700,9 +4700,6 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 
 	mutex_unlock(&cgroup_mutex);
 
-	if (ss->post_create)
-		ss->post_create(&ss->root->top_cgroup);
-
 	/* this function shouldn't be used with modular subsystems, since they
 	 * need to register a subsys_id, among other things */
 	BUG_ON(ss->module);
@@ -4807,9 +4804,6 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	ret = online_css(ss, cgroup_dummy_top);
 	if (ret)
 		goto err_unload;
-
-	if (ss->post_create)
-		ss->post_create(&ss->root->top_cgroup);
 
 	/* success! */
 	mutex_unlock(&cgroup_mutex);
