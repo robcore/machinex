@@ -49,9 +49,6 @@
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define DEF_SAMPLING_RATE			(60000)
 
-#define DEF_SYNC_FREQUENCY			(1242000)
-#define DEF_OPTIMAL_FREQUENCY			(1134000)
-
 /* Kernel tunabble controls */
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define MAX_SAMPLING_DOWN_FACTOR		(3)
@@ -163,9 +160,9 @@ static struct dbs_tuners {
 	.high_grid_load = DEF_HIGH_GRID_LOAD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 918000,
-	.optimal_freq = 1566000,
-	.optimal_max_freq = DEF_OPTIMAL_FREQUENCY,
+	.sync_freq = 1026000,
+	.optimal_freq = 1350000,
+	.optimal_max_freq = 1782000,
 	.input_boost = 0,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
