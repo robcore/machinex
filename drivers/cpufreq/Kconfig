@@ -1200,6 +1200,7 @@ config CPUFREQ_HARDLIMIT_DEBUG
 config CPU_FREQ_GOV_SCHED
 	bool "'sched' cpufreq governor"
 	depends on CPU_FREQ
+	depends on SMP
 	help
 	  'sched' - this governor scales cpu frequency from the
 	  scheduler as a function of cpu capacity utilization. It does

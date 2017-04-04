@@ -476,6 +476,8 @@ TRACE_EVENT(sched_stat_runtime,
 			(unsigned long long)__entry->vruntime)
 );
 
+#ifdef CONFIG_SMP
+
 /*
  * Tracepoint for showing priority inheritance modifying a tasks
  * priority.
@@ -504,6 +506,8 @@ TRACE_EVENT(sched_pi_setprio,
 			__entry->comm, __entry->pid,
 			__entry->oldprio, __entry->newprio)
 );
+
+#endif /* CONFIG_SMP */
 
 #endif /* _TRACE_SCHED_H */
 
