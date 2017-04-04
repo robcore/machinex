@@ -6667,7 +6667,7 @@ struct sg_lb_stats {
 #ifdef CONFIG_NUMA_BALANCING
 	unsigned int nr_numa_running;
 	unsigned int nr_preferred_running;
-#endif /* CONFIG_NUMA_BALANCING
+#endif /* CONFIG_NUMA_BALANCING */
 };
 
 /*
