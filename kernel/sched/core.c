@@ -2967,17 +2967,16 @@ unsigned long nr_iowait_cpu(int cpu)
 	return atomic_read(&this->nr_iowait);
 }
 
-#ifdef CONFIG_CPU_QUIET
 u64 nr_running_integral(unsigned int cpu)
 {
 	unsigned int seqcnt;
 	u64 integral;
-	struct rq *q;
+	struct rq *rq;
 
 	if (cpu >= nr_cpu_ids)
 		return 0;
 
-	q = cpu_rq(cpu);
+	rq = cpu_rq(cpu);
 
 	/*
 	 * Update average to avoid reading stalled value if there were
@@ -2986,16 +2985,15 @@ u64 nr_running_integral(unsigned int cpu)
 	 * directly.
 	 */
 
-	seqcnt = read_seqcount_begin(&q->ave_seqcnt);
-	integral = do_nr_running_integral(q);
-	if (read_seqcount_retry(&q->ave_seqcnt, seqcnt)) {
-		read_seqcount_begin(&q->ave_seqcnt);
-		integral = q->nr_running_integral;
+	seqcnt = read_seqcount_begin(&rq->ave_seqcnt);
+	integral = do_nr_running_integral(rq);
+	if (read_seqcount_retry(&rq->ave_seqcnt, seqcnt)) {
+		read_seqcount_begin(&rq->ave_seqcnt);
+		integral = rq->nr_running_integral;
 	}
 
 	return integral;
 }
-#endif
 
 void get_iowait_load(unsigned long *nr_waiters, unsigned long *load)
 {
