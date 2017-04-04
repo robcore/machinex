@@ -34,7 +34,7 @@
 
 #define MAX_LONG_SIZE 24
 #define DEFAULT_RQ_POLL_JIFFIES 1
-#define DEFAULT_DEF_TIMER_JIFFIES 5
+#define DEFAULT_DEF_TIMER_JIFFIES 2
 
 struct notifier_block freq_transition;
 struct notifier_block cpu_hotplug;
@@ -113,7 +113,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	return 0;
 }
-static unsigned int conservative_rq;
+static unsigned int conservative_rq = 1;
 
 static ssize_t store_conservative_rq(struct kobject *kobj,
 				     struct kobj_attribute *attr,
@@ -537,7 +537,7 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_last_jiffy = 0;
 	rq_info.hotplug_disabled = 0;
 	rq_info.hotplug_enabled = 0;
-	conservative_rq = 0;
+	conservative_rq = 1;
 	ret = init_rq_attribs();
 
 	rq_info.init = 1;
