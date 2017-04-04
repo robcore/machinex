@@ -6012,6 +6012,9 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 	unsigned long capacity = SCHED_CAPACITY_SCALE;
 	struct sched_group *sdg = sd->groups;
 
+	power *= capacity_scale_cpu_efficiency(cpu);
+	power >>= SCHED_POWER_SHIFT;
+
 	if (Larch_power)
 		capacity *= arch_scale_cpu_capacity(sd, cpu);
 	else
