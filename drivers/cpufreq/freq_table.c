@@ -11,10 +11,8 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/init.h>
 #include <linux/cpufreq.h>
+#include <linux/module.h>
 
 /*********************************************************************
  *                     FREQUENCY TABLE HELPERS                       *
@@ -52,21 +50,6 @@ int cpufreq_frequency_table_cpuinfo(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_cpuinfo);
 
-/*
- * Generic routine to verify policy & frequency table, requires driver to call
- * cpufreq_frequency_table_get_attr() prior to it.
- */
-int cpufreq_generic_frequency_table_verify(struct cpufreq_policy *policy)
-{
-	struct cpufreq_frequency_table *table =
-		cpufreq_frequency_get_table(policy->cpu);
-	if (!table)
-		return -ENODEV;
-
-	return cpufreq_frequency_table_verify(policy, table);
-}
-EXPORT_SYMBOL_GPL(cpufreq_generic_frequency_table_verify);
-
 int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 				   struct cpufreq_frequency_table *table)
 {
@@ -101,6 +84,21 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_verify);
+
+/*
+ * Generic routine to verify policy & frequency table, requires driver to call
+ * cpufreq_frequency_table_get_attr() prior to it.
+ */
+int cpufreq_generic_frequency_table_verify(struct cpufreq_policy *policy)
+{
+	struct cpufreq_frequency_table *table =
+		cpufreq_frequency_get_table(policy->cpu);
+	if (!table)
+		return -ENODEV;
+
+	return cpufreq_frequency_table_verify(policy, table);
+}
+EXPORT_SYMBOL_GPL(cpufreq_generic_frequency_table_verify);
 
 int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 				   struct cpufreq_frequency_table *table,
