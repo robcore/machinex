@@ -2226,7 +2226,7 @@ int cpufreq_update_policy(unsigned int cpu)
 			pr_debug("Driver did not initialize current freq");
 			policy->cur = new_policy.cur;
 		} else {
-			if (policy->cur != new_policy.cur)
+			if (policy->cur != new_policy.cur && cpufreq_driver->target)
 				cpufreq_out_of_sync(cpu, policy->cur,
 								new_policy.cur);
 		}
