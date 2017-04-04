@@ -4919,6 +4919,44 @@ static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
 	return cpu != -1 && cpumask_test_cpu(cpu, sched_group_cpus(sg));
 }
 
+#ifdef CONFIG_SCHED_TUNE
+
+static unsigned long
+schedtune_margin(unsigned long signal, unsigned long boost)
+{
+	unsigned long long margin = 0;
+
+	/*
+	 * Signal proportional compensation (SPC)
+	 *
+	 * The Boost (B) value is used to compute a Margin (M) which is
+	 * proportional to the complement of the original Signal (S):
+	 *   M = B * (SCHED_LOAD_SCALE - S)
+	 * The obtained M could be used by the caller to "boost" S.
+	 */
+	margin  = SCHED_LOAD_SCALE - signal;
+	margin *= boost;
+
+	/*
+	 * Fast integer division by constant:
+	 *  Constant   :                 (C) = 100
+	 *  Precision  : 0.1%            (P) = 0.1
+	 *  Reference  : C * 100 / P     (R) = 100000
+	 *
+	 * Thus:
+	 *  Shift bits : ceil(log(R,2))  (S) = 17
+	 *  Mult const : round(2^S/C)    (M) = 1311
+	 *
+	 *
+	 */
+	margin  *= 1311;
+	margin >>= 17;
+
+	return margin;
+}
+
+#endif /* CONFIG_SCHED_TUNE */
+
 /*
  * energy_diff(): Estimate the energy impact of changing the utilization
  * distribution. eenv specifies the change: utilisation amount, source, and
