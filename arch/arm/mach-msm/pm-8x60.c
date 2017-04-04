@@ -168,6 +168,7 @@ module_param_named(use_sync_timer,
 
 static int msm_pm_retention_tz_call;
 static void *msm_pm_idle_rs_limits;
+int msm_pm_pc_hotplug(void);
 
 /*
  * Write out the attribute.
@@ -480,6 +481,7 @@ static bool __ref msm_pm_spm_power_collapse(
 	bool collapsed = 0;
 	int ret;
 	unsigned int saved_gic_cpu_ctrl;
+	bool save_cpu_regs = !cpu || from_idle;
 
 	saved_gic_cpu_ctrl = readl_relaxed(MSM_QGIC_CPU_BASE + GIC_CPU_CTRL);
 	mb();
@@ -495,8 +497,7 @@ static bool __ref msm_pm_spm_power_collapse(
 			MSM_SPM_MODE_POWER_COLLAPSE, notify_rpm);
 	WARN_ON(ret);
 
-	entry = (!cpu || from_idle) ?
-		msm_pm_collapse_exit : msm_secondary_startup;
+	entry = save_cpu_regs ?  msm_pm_collapse_exit : msm_secondary_startup;
 	msm_pm_boot_config_before_pc(cpu, virt_to_phys(entry));
 
 	if (MSM_PM_DEBUG_RESET_VECTOR & msm_pm_debug_mask)
@@ -506,7 +507,7 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_VFP
 	vfp_pm_suspend();
 #endif
-	collapsed = msm_pm_collapse();
+	collapsed = save_cpu_regs ? msm_pm_collapse() : msm_pm_pc_hotplug();
 
 	msm_pm_boot_config_after_pc(cpu);
 
@@ -1288,7 +1289,7 @@ static int __init msm_pm_setup_saved_state(void)
 
 	return 0;
 }
-core_initcall(msm_pm_setup_saved_state);
+arch_initcall(msm_pm_setup_saved_state);
 
 static int __init msm_pm_init(void)
 {
