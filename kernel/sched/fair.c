@@ -4131,6 +4131,8 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
+static inline unsigned long boosted_cpu_util(int cpu);
+
 static void update_capacity_of(int cpu)
 {
 	unsigned long req_cap;
@@ -4139,7 +4141,8 @@ static void update_capacity_of(int cpu)
 		return;
 
 	/* Convert scale-invariant capacity to cpu. */
-	req_cap = cpu_util(cpu) * SCHED_CAPACITY_SCALE / capacity_orig_of(cpu);
+	req_cap = boosted_cpu_util(cpu);
+	req_cap = req_cap * SCHED_CAPACITY_SCALE / capacity_orig_of(cpu);
 	set_cfs_cpu_capacity(cpu, true, req_cap);
 }
 
@@ -4955,7 +4958,35 @@ schedtune_margin(unsigned long signal, unsigned long boost)
 	return margin;
 }
 
+static inline unsigned int
+schedtune_cpu_margin(unsigned long util)
+{
+	unsigned int boost = get_sysctl_sched_cfs_boost();
+
+	if (boost == 0)
+		return 0;
+
+	return schedtune_margin(util, boost);
+}
+
+#else /* CONFIG_SCHED_TUNE */
+
+static inline unsigned int
+schedtune_cpu_margin(unsigned long util)
+{
+	return 0;
+}
+
 #endif /* CONFIG_SCHED_TUNE */
+
+static inline unsigned long
+boosted_cpu_util(int cpu)
+{
+	unsigned long util = cpu_util(cpu);
+	unsigned long margin = schedtune_cpu_margin(util);
+
+	return util + margin;
+}
 
 /*
  * energy_diff(): Estimate the energy impact of changing the utilization
