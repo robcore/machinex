@@ -116,7 +116,7 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 		.driver_data = ~0,
 		.frequency = 0,
 	};
-	unsigned int diff, i = 0;
+	unsigned int diff, i;
 
 	pr_debug("request for target %u kHz (relation: %u) for cpu %u\n",
 					target_freq, relation, policy->cpu);
@@ -137,10 +137,6 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 			continue;
 		if ((freq < policy->min) || (freq > policy->max))
 			continue;
-		if (freq == target_freq) {
-			optimal.driver_data = i;
-			break;
-		}
 		switch (relation) {
 		case CPUFREQ_RELATION_H:
 			if (freq <= target_freq) {
