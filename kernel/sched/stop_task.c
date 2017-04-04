@@ -1,5 +1,4 @@
 #include "sched.h"
-#include "walt.h"
 
 /*
  * stop-task scheduling class.
