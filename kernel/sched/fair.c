@@ -2417,7 +2417,6 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 
 	scale_freq = arch_scale_freq_capacity(NULL, cpu);
 	scale_cpu = arch_scale_cpu_capacity(NULL, cpu);
-	trace_sched_contrib_scale_f(cpu, scale_freq, scale_cpu);
 
 	/* delta_w is the amount already accumulated against our next period */
 	delta_w = sa->period_contrib;
@@ -2621,10 +2620,6 @@ static inline void update_load_avg(struct sched_entity *se, int update_tg)
 
 	if (update_cfs_rq_load_avg(now, cfs_rq) && update_tg)
 		update_tg_load_avg(cfs_rq, 0);
-
-	if (entity_is_task(se))
-		trace_sched_load_avg_task(task_of(se), &se->avg);
-	trace_sched_load_avg_cpu(cpu, cfs_rq);
 }
 
 static void attach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se)
@@ -4502,17 +4497,6 @@ static unsigned long source_load(int cpu, int type)
 		return total;
 
 	return min(rq->cpu_load[type-1], total);
-}
-
-/*
- * Returns the current capacity of cpu after applying both
- * cpu and freq scaling.
- */
-unsigned long capacity_curr_of(int cpu)
-{
-	return cpu_rq(cpu)->cpu_capacity_orig *
-	       arch_scale_freq_capacity(NULL, cpu)
-	       >> SCHED_CAPACITY_SHIFT;
 }
 
 static inline bool energy_aware(void)
