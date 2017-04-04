@@ -1,4 +1,7 @@
 #!/bin/bash
+patch -p1 -R < "/root/machinex/0005-possing.patch"
+patch -p1 -R < "/root/machinex/0004-gonna-pos.patch"
+patch -p1 -R < "/root/machinex/0003-Revert-workqueue-make-sure-delayed-work-run-in-local.patch"
 patch -p1 -R < "/root/machinex/patches/0400-my-guess-is-that-smt-will-probably-be-a-bad-idea-but.patch"
 patch -p1 -R < "/root/machinex/patches/0399-what-does-SCHED_MC-do-again.patch"
 patch -p1 -R < "/root/machinex/patches/0398-a-little-tweaking-to-intelli.patch"
