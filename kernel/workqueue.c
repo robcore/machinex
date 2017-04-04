@@ -2188,6 +2188,15 @@ __acquires(&pool->lock)
 	 */
 	cond_resched_rcu_qs();
 
+	/*
+	 * The following prevents a kworker from hogging CPU on !PREEMPT
+	 * kernels, where a requeueing work item waiting for something to
+	 * happen could deadlock with stop_machine as such work item could
+	 * indefinitely requeue itself while all other CPUs are trapped in
+	 * stop_machine.
+	 */
+	cond_resched();
+
 	spin_lock_irq(&pool->lock);
 
 	/* clear cpu intensive status */
