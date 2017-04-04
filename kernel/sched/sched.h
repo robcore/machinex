@@ -1443,6 +1443,7 @@ static inline void __sub_nr_running(struct rq *rq, unsigned count)
 	rq->nr_running -= count;
 }
 
+#if 0
 #define NR_AVE_SCALE(x)		((x) << FSHIFT)
 static inline u64 do_nr_running_integral(struct rq *rq)
 {
@@ -1456,6 +1457,7 @@ static inline u64 do_nr_running_integral(struct rq *rq)
 
 	return nr_running_integral;
 }
+#endif
 
 static inline void add_nr_running(struct rq *rq, unsigned count)
 {
@@ -1474,7 +1476,6 @@ static inline void add_nr_running(struct rq *rq, unsigned count)
 #endif
 	__add_nr_running(rq, count);
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	rq->nr_running++;
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #else
 	write_seqcount_end(&rq->ave_seqcnt);
@@ -1498,7 +1499,6 @@ static inline void sub_nr_running(struct rq *rq, unsigned count)
 #endif
 	__sub_nr_running(rq, count);
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	rq->nr_running--;
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #else
 	write_seqcount_end(&rq->ave_seqcnt);
