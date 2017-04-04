@@ -2937,13 +2937,29 @@ unsigned long long nr_context_switches(void)
 unsigned long nr_iowait(void)
 {
 	unsigned long i, sum = 0;
+	unsigned int seqcnt, ave_nr_running;
 
-	for_each_possible_cpu(i)
-		sum += atomic_read(&cpu_rq(i)->nr_iowait);
+	for_each_possible_cpu(i) {
+		struct rq *q = cpu_rq(i);
+
+		/*
+		 * Update average to avoid reading stalled value if there were
+		 * no run-queue changes for a long time. On the other hand if
+		 * the changes are happening right now, just read current value
+		 * directly.
+		 */
+		seqcnt = read_seqcount_begin(&q->ave_seqcnt);
+		ave_nr_running = do_avg_nr_running(q);
+		if (read_seqcount_retry(&q->ave_seqcnt, seqcnt)) {
+			read_seqcount_begin(&q->ave_seqcnt);
+			ave_nr_running = q->ave_nr_running;
+		}
+
+		sum += ave_nr_running;
+	}
 
 	return sum;
 }
-
 
 unsigned long nr_iowait_cpu(int cpu)
 {
@@ -2951,6 +2967,7 @@ unsigned long nr_iowait_cpu(int cpu)
 	return atomic_read(&this->nr_iowait);
 }
 
+#ifdef CONFIG_CPU_QUIET
 u64 nr_running_integral(unsigned int cpu)
 {
 	unsigned int seqcnt;
@@ -2978,6 +2995,7 @@ u64 nr_running_integral(unsigned int cpu)
 
 	return integral;
 }
+#endif
 
 void get_iowait_load(unsigned long *nr_waiters, unsigned long *load)
 {
@@ -3695,11 +3713,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 
 	check_class_changed(rq, p, prev_class, oldprio);
 out_unlock:
-	preempt_disable(); /* avoid rq from going away on us */
 	__task_rq_unlock(rq);
-
-	post_schedule(rq);
-	preempt_enable();
 }
 #endif
 
@@ -4247,16 +4261,9 @@ change:
 	}
 
 	check_class_changed(rq, p, prev_class, oldprio);
-	preempt_disable(); /* avoid rq from going away on us */
 	task_rq_unlock(rq, p, &flags);
 
 	rt_mutex_adjust_pi(p);
-
-	/*
-	 * Run balance callbacks after we've adjusted the PI chain.
-	 */
-	post_schedule(rq);
-	preempt_enable();
 
 	return 0;
 }
