@@ -2,153 +2,192 @@
 patch -p1 -R < "/root/machinex/0005-possing.patch"
 patch -p1 -R < "/root/machinex/0004-gonna-pos.patch"
 patch -p1 -R < "/root/machinex/0003-Revert-workqueue-make-sure-delayed-work-run-in-local.patch"
-/root/machinex/patches/0150-bigger-pos.patch
-/root/machinex/patches/0149-bring-back-arch_irq_work_ahs_interrupt.patch
-/root/machinex/patches/0148-possed.patch
-/root/machinex/patches/0147-small-possing.patch
-/root/machinex/patches/0146-right-now-that-we-are-using-the-pointer-directly-we-.patch
-/root/machinex/patches/0145-demand-govs-set_cpus_allowed-was-only-a-call-to-set_.patch
-/root/machinex/patches/0144-guess-we-dont-have-this.patch
-/root/machinex/patches/0143-there-we-go-i-was-looking-in-the-wrong-place-for-thr.patch
-/root/machinex/patches/0142-irq_work-Introduce-arch_irq_work_has_interrupt.patch
-/root/machinex/patches/0141-seqlock-Add-irqsave-variant-of-read_seqbegin_or_lock.patch
-/root/machinex/patches/0140-fixup-my-__migrate_tasks.patch
-/root/machinex/patches/0139-updated-config.patch
-/root/machinex/patches/0138-sched-Fix-a-race-between-__kthread_bind-and-sched-in.patch
-/root/machinex/patches/0137-some-sched-tinkering.patch
-/root/machinex/patches/0136-i-think-so.patch
-/root/machinex/patches/0135-did-i-have-this-sched-Let-the-scheduler-see-CPU-idle.patch
-/root/machinex/patches/0134-fix-some-typos-grammer.patch
-/root/machinex/patches/0133-sched-Test-the-CPU-s-capacity-in-wake_affine.patch
-/root/machinex/patches/0132-sched-Add-default-disabled-option-to-BUG-when-stack-.patch
-/root/machinex/patches/0131-sched-Add-helper-for-task-stack-page-overrun-check.patch
-/root/machinex/patches/0130-init-main.c-Give-init_task-a-canary.patch
-/root/machinex/patches/0129-sched-Do-not-stop-cpu-in-set_cpus_allowed_ptr.patch
-/root/machinex/patches/0128-sched-core-Use-put_prev_task-accessor-where-possible.patch
-/root/machinex/patches/0127-sched-fair-cleanup-Remove-useless-assignment.patch
-/root/machinex/patches/0126-rcu-Eliminate-deadlock-between-CPU-hotplug-and-expid.patch
-/root/machinex/patches/0125-torture-squash.patch
-/root/machinex/patches/0124-locktorture-Rename-locktorture_runnable-parameter.patch
-/root/machinex/patches/0123-rcu-Don-t-track-sysidle-state-if-no-nohz_full-CPUs.patch
-/root/machinex/patches/0122-replace-sysidle_state-with-our-new-one.patch
-/root/machinex/patches/0121-rcu-Check-for-have_rcu_nocb_mask-instead-of-rcu_nocb.patch
-/root/machinex/patches/0120-rcu-Create-rcuo-kthreads-only-for-onlined-CPUs.patch
-/root/machinex/patches/0119-rcu-Rationalize-kthread-spawning.patch
-/root/machinex/patches/0118-more.patch
-/root/machinex/patches/0117-rcu-Use-false-for-return-in-__call_rcu_nocb.patch
-/root/machinex/patches/0116-use-true-and-false-for-bools.patch
-/root/machinex/patches/0115-rcu-Fix-attempt-to-avoid-unsolicited-offloading-of-c.patch
-/root/machinex/patches/0114-locking-rwsem-Move-EXPORT_SYMBOL-lines-to-follow-fun.patch
-/root/machinex/patches/0113-nohz-nohz-full-depends-on-irq-work-self-IPI-support.patch
-/root/machinex/patches/0112-nohz-Consolidate-nohz-full-init-code.patch
-/root/machinex/patches/0111-irq_work-Force-raised-irq-work-to-run-on-irq-work-in.patch
-/root/machinex/patches/0110-nohz-Move-nohz-full-init-call-to-tick-init.patch
-/root/machinex/patches/0109-sched-Migrate-waking-tasks.patch
-/root/machinex/patches/0108-PM-sleep-Support-freeze-as-test_suspend-option.patch
-/root/machinex/patches/0107-sched-time-Atomically-increment-stime-utime.patch
-/root/machinex/patches/0106-time-signal-Protect-resource-use-statistics-with-seq.patch
-/root/machinex/patches/0105-exit-Always-reap-resource-stats-in-__exit_signal.patch
-/root/machinex/patches/0104-rcu-Per-CPU-operation-cleanups-to-rcu_-_qs-functions.patch
-/root/machinex/patches/0103-rcu-Remove-local_irq_disable-in-rcu_preempt_note_con.patch
-/root/machinex/patches/0102-dox.patch
-/root/machinex/patches/0101-rcu-Make-rcu_tasks_kthread-s-GP-wait-loop-allow-pree.patch
-/root/machinex/patches/0100-rcu-Make-TASKS_RCU-handle-nohz_full-CPUs.patch
-/root/machinex/patches/0099-rcu-Defer-rcu_tasks_kthread-creation-till-first-call.patch
-/root/machinex/patches/0098-rcu-Improve-RCU-tasks-energy-efficiency.patch
-/root/machinex/patches/0097-rcu-Add-stall-warning-checks-for-RCU-tasks.patch
-/root/machinex/patches/0096-rcutorture-Add-torture-tests-for-RCU-tasks.patch
-/root/machinex/patches/0095-rcu-Export-RCU-tasks-APIs-to-GPL-modules.patch
-/root/machinex/patches/0094-rcu-Make-TASKS_RCU-handle-tasks-that-are-almost-done.patch
-/root/machinex/patches/0093-rcu-Add-synchronous-grace-period-waiting-for-RCU.patch
-/root/machinex/patches/0092-rcu-Provide-cond_resched_rcu_qs-to-force-quiescent-s.patch
-/root/machinex/patches/0091-rcu-Add-call_rcu_tasks.patch
-/root/machinex/patches/0090-pr_foo-converts.patch
-/root/machinex/patches/0089-rcutorture-Fix-a-sparse-warning.patch
-/root/machinex/patches/0088-rcu-Replace-flush_signals-with-WARN_ON-signal_pendin.patch
-/root/machinex/patches/0087-rcu-Use-rcu_gp_kthread_wake-to-wake-up-grace-period.patch
-/root/machinex/patches/0086-rcu-Break-more-call_rcu-deadlock-involving-scheduler.patch
-/root/machinex/patches/0085-dox.patch
-/root/machinex/patches/0084-rcu-Update-tiny.c-references-to-tree.c.patch
-/root/machinex/patches/0083-rcu-Uninline-rcu_read_lock_held.patch
-/root/machinex/patches/0082-rcu-Use-true-false-instead-of-1-0-for-a-bool-type.patch
-/root/machinex/patches/0081-rcu-Return-bool-type-for-rcu_try_advance_all_cbs.patch
-/root/machinex/patches/0080-rcu-Use-bool-type-for-return-value-in-rcu_is_watchin.patch
-/root/machinex/patches/0079-rcu-Fix-sparse-warning-about-rcu_batches_completed.patch
-/root/machinex/patches/0078-rcu-Remove-remaining-read-modify-write-ACCESS_ONCE.patch
-/root/machinex/patches/0077-resources-Add-device-managed-request-release_res.patch
-/root/machinex/patches/0076-nohz-Restore-NMI-safe-local-irq-work-for-local-nohz.patch
-/root/machinex/patches/0075-locking-semaphore-Resolve-some-shadow-warnings.patch
-/root/machinex/patches/0074-genirq-Add-irq_domain-aware-core-IRQ-handler.patch
-/root/machinex/patches/0073-k-there-fixed-the-header-too.patch
-/root/machinex/patches/0072-alright-changed-irq-pm.patch
-/root/machinex/patches/0071-reverted.patch
-/root/machinex/patches/0070-hmmm.patch
-/root/machinex/patches/0069-revert-that.patch
-/root/machinex/patches/0068-hold-up-again.patch
-/root/machinex/patches/0067-genirq-Mark-wakeup-sources-as-armed-on-suspend.patch
-/root/machinex/patches/0066-genirq-Create-helper-for-flow-handler-entry-check.patch
-/root/machinex/patches/0065-genirq-Distangle-edge-handler-entry-.If-the-interrup.patch
-/root/machinex/patches/0064-dox.patch
-/root/machinex/patches/0063-rcu-Make-nocb-leader-kthreads-process-pending-cbs.patch
-/root/machinex/patches/0062-nope-time-is-a-dud.patch
-/root/machinex/patches/0061-ohhh-right-that-was-thrown-in-the-mix.patch
-/root/machinex/patches/0060-fix-doubled.patch
-/root/machinex/patches/0059-header-fixes.patch
-/root/machinex/patches/0058-brought-back-this_cpu_ptr.patch
-/root/machinex/patches/0057-the-other-time-related-necessities.patch
-/root/machinex/patches/0056-ktime-add-ms_to_ktime-and-ktime_add_ms-helpers.patch
-/root/machinex/patches/0055-part-2.patch
-/root/machinex/patches/0054-brought-back-my-time-changes-from-yesterday-gonna-le.patch
-/root/machinex/patches/0053-revert-the-get-cpu-var-replacements-for-a-moment-whi.patch
-/root/machinex/patches/0052-already-had-task-on-rq-migrating.patch
-/root/machinex/patches/0051-scheduler-a-bunch-of-replacements-of-get-cpu-var-wit.patch
-/root/machinex/patches/0050-sched-Add-function-single_task_running-to-let-a-task.patch
-/root/machinex/patches/0049-teach-scheduler-to-understand-task-on-rq-migrating.patch
-/root/machinex/patches/0048-fixup-my-deadline-select_task_rq-with-cpu-included-i.patch
-/root/machinex/patches/0047-fixup.patch
-/root/machinex/patches/0046-sched-add-wrapper-for-cehcking-task-struct-on-rq.patch
-/root/machinex/patches/0045-sched-numa-Introduce-migrate_swap.patch
-/root/machinex/patches/0044-ref.patch
-/root/machinex/patches/0043-reverted.patch
-/root/machinex/patches/0042-not-yet.patch
-/root/machinex/patches/0041-move-group-type-enum.patch
-/root/machinex/patches/0040-sched-fair-fix-doubled-function-in-task_numa_compare.patch
-/root/machinex/patches/0039-hold-up.patch
-/root/machinex/patches/0038-sched-fair-Fix-reschedule-which-is-generated-on-thro.patch
-/root/machinex/patches/0037-sched-Match-declaration-with-definition.patch
-/root/machinex/patches/0036-locking-lockdep-Restrict-the-use-of-recursive-read.patch
-/root/machinex/patches/0035-dox.patch
-/root/machinex/patches/0034-locking-mutexes-Use-MUTEX_SPIN_ON_OWNER-when-appr.patch
-/root/machinex/patches/0033-locking-mutexes-Refactor-optimistic-spinning-code.patch
-/root/machinex/patches/0032-locking-mcs-Remove-obsolete-comment.patch
-/root/machinex/patches/0031-locking-mutexes-Document-quick-lock-release.patch
-/root/machinex/patches/0030-locking-mutexes-Standardize-arguments-in-lock-unlock.patch
-/root/machinex/patches/0029-locking-Remove-deprecated-smp_mb__-barriers.patch
-/root/machinex/patches/0028-sched-Rename-a-misleading-variable-in-build_overlap.patch
-/root/machinex/patches/0027-sched-fair-Allow-calculate_imbalance-to-move-idle-cp.patch
-/root/machinex/patches/0026-sched-fair-Make-update_sd_pick_busiest-return-true.patch
-/root/machinex/patches/0025-sched-fair-Make-calculate_imbalance-independent.patch
-/root/machinex/patches/0024-kernel-exit.c-fix-coding-style.patch
-/root/machinex/patches/0023-kernel-kallsyms.c-fix-pB-when-there-s-no-symbol.patch
-/root/machinex/patches/0022-acct-encode_comp_t-0-is0.patch
-/root/machinex/patches/0021-possed.patch
-/root/machinex/patches/0020-possing.patch
-/root/machinex/patches/0019-mdp.c-fix-call-to-event_timer.patch
-/root/machinex/patches/0018-oops-fixup-cgroup-timespec_compare.patch
-/root/machinex/patches/0017-cheat-and-use-get_monotonic_boottime-with-kernel-for.patch
-/root/machinex/patches/0016-REVERT-sched-task-start_time-and-task-real_start_tim.patch
-/root/machinex/patches/0015-reverted-all-the-cgroupy-shit.patch
-/root/machinex/patches/0014-nope-gonna-do-some-work-here.patch
-/root/machinex/patches/0013-nope.patch
-/root/machinex/patches/0012-cgroup-rename-cgroup_subsys_state-dput_work.patch
-/root/machinex/patches/0011-kernel-extable-fix-address-checks.patch
-/root/machinex/patches/0010-actually-reverted-em-all.patch
-/root/machinex/patches/0009-actually-keeping-those.patch
-/root/machinex/patches/0008-fuck-em-both-too.patch
-/root/machinex/patches/0007-fucked.patch
-/root/machinex/patches/0006-fuck-this-one.patch
-/root/machinex/patches/0005-cgroup-reimplement-cgroup_transfer_tasks-without-usi.patch
-/root/machinex/patches/0004-cgroup-implement-cgroup_has_tasks.patch
-/root/machinex/patches/0003-cgroup-trivial-style-updates.patch
-/root/machinex/patches/0002-fixup-my-vsyscall-to-properly-call-the-read-clock-fu.patch
-/root/machinex/patches/0001-initializing-tkr-just-in-case.patch
+patch -p1 -R < "/root/machinex/patches/0400-my-guess-is-that-smt-will-probably-be-a-bad-idea-but.patch"
+patch -p1 -R < "/root/machinex/patches/0399-what-does-SCHED_MC-do-again.patch"
+patch -p1 -R < "/root/machinex/patches/0398-a-little-tweaking-to-intelli.patch"
+patch -p1 -R < "/root/machinex/patches/0397-trying-a-smaller-log-buffer.patch"
+patch -p1 -R < "/root/machinex/patches/0396-revert-those.patch"
+patch -p1 -R < "/root/machinex/patches/0395-updated-config.patch"
+patch -p1 -R < "/root/machinex/patches/0394-some-more-minor-cleanup-in-init.patch"
+patch -p1 -R < "/root/machinex/patches/0393-from-galaxy-s7-move-rcu_nohz_init-a-little-ways-back.patch"
+patch -p1 -R < "/root/machinex/patches/0392-disable-autogroup-again.patch"
+patch -p1 -R < "/root/machinex/patches/0391-disable-state-notifier-for-now-it-needs-a-little-tlc.patch"
+patch -p1 -R < "/root/machinex/patches/0390-back-to-interactive-for-default-gov.patch"
+patch -p1 -R < "/root/machinex/patches/0389-there-now-hotplug-will-work-again.patch"
+patch -p1 -R < "/root/machinex/patches/0388-revert-that-including-integral-BUT-i-found-how-to-ma.patch"
+patch -p1 -R < "/root/machinex/patches/0387-some-nr_running-hacks-and-reverted-preempt-which-is-.patch"
+patch -p1 -R < "/root/machinex/patches/0386-REVERT-core-stuff.still-keep-nr-running.patch"
+patch -p1 -R < "/root/machinex/patches/0385-see-what-if-anything-happens-when-i-turn-off-ATTACH_.patch"
+patch -p1 -R < "/root/machinex/patches/0384-a-little-fixup-in-core-as-well-as-some-preempt-work.patch"
+patch -p1 -R < "/root/machinex/patches/0383-BIG-brought-back-state-helper-including-all-of-its-r.patch"
+patch -p1 -R < "/root/machinex/patches/0382-a-couple-of-reverts-in-pm-too-just-placement-and-onc.patch"
+patch -p1 -R < "/root/machinex/patches/0381-alucard-return-to-previous-gov-iteration.patch"
+patch -p1 -R < "/root/machinex/patches/0380-sched-EAS-Avoid-causing-spikes-to-max-freq-unnecessa.patch"
+patch -p1 -R < "/root/machinex/patches/0379-reverted-for-now.patch"
+patch -p1 -R < "/root/machinex/patches/0378-hmmm-this-may-be-the-line-in-the-sand.patch"
+patch -p1 -R < "/root/machinex/patches/0377-sched-tune-fix-PB-and-PC-cuts-indexes-definition.patch"
+patch -p1 -R < "/root/machinex/patches/0376-sched-fair-optimize-idle-cpu-selection-for-boost.patch"
+patch -p1 -R < "/root/machinex/patches/0375-sched-tune-fix-accounting-for-runnable-tasks-also-mo.patch"
+patch -p1 -R < "/root/machinex/patches/0374-ched-tune-use-a-single-initialisation-function.patch"
+patch -p1 -R < "/root/machinex/patches/0373-sched-fair-tune-simplify-fair.c-code.patch"
+patch -p1 -R < "/root/machinex/patches/0372-FIXUP-sched-tune-fix-compilation-error.patch"
+patch -p1 -R < "/root/machinex/patches/0371-FIXUP-sched-tune-fix-payoff-calculation-for-boost.patch"
+patch -p1 -R < "/root/machinex/patches/0370-sched-tune-Add-support-for-negative-boost-values.patch"
+patch -p1 -R < "/root/machinex/patches/0369-FIX-sched-tune-move-schedtune_nornalize_energy-into-.patch"
+patch -p1 -R < "/root/machinex/patches/0368-sched-fix-build-for-non-SMP-target.patch"
+patch -p1 -R < "/root/machinex/patches/0367-sched-add-energy-procfs-interface.patch"
+patch -p1 -R < "/root/machinex/patches/0366-stop-task-fix-to-use-add-sub-nr_running.patch"
+patch -p1 -R < "/root/machinex/patches/0365-reverted.patch"
+patch -p1 -R < "/root/machinex/patches/0364-a-bunch-of-useless-trace-crap-i-am-going-to-revert.patch"
+patch -p1 -R < "/root/machinex/patches/0363-grammer-errors-config-update.patch"
+patch -p1 -R < "/root/machinex/patches/0362-FIX-sched-tune-update-usage-of-boosted-task-util.patch"
+patch -p1 -R < "/root/machinex/patches/0361-sched-fair-add-tunable-to-set-initial-task-load.patch"
+patch -p1 -R < "/root/machinex/patches/0360-sched-fair-add-tunable-to-force-selection-at-cpu-gra.patch"
+patch -p1 -R < "/root/machinex/patches/0359-sched-EAS-take-cstate-into-account-when-selecting-id.patch"
+patch -p1 -R < "/root/machinex/patches/0358-sched-cpufreq_sched-Consolidated-update.patch"
+patch -p1 -R < "/root/machinex/patches/0357-FIXUP-sched-tune-properly-account-of-exiting-tasks.patch"
+patch -p1 -R < "/root/machinex/patches/0356-sched-fair-filter-energy_diff-based-on-energy_payoff.patch"
+patch -p1 -R < "/root/machinex/patches/0355-sched-tune-add-support-to-compute-normalized-energy.patch"
+patch -p1 -R < "/root/machinex/patches/0354-sched-fair-keep-track-of-energy-capacity-variations.patch"
+patch -p1 -R < "/root/machinex/patches/0353-sched-fair-add-boosted-task-utilization.patch"
+patch -p1 -R < "/root/machinex/patches/0352-sched-fair-tune-track-RUNNABLE-tasks-impact.patch"
+patch -p1 -R < "/root/machinex/patches/0351-sched-tune-compute-and-keep-track-of-per-CPU-boost.patch"
+patch -p1 -R < "/root/machinex/patches/0350-sched-tune-add-initial-support-for-CGroups-based.patch"
+patch -p1 -R < "/root/machinex/patches/0349-sched-fair-add-boosted-CPU-usage.patch"
+patch -p1 -R < "/root/machinex/patches/0348-sched-fair-add-function-to-convert-boost-value-into-.patch"
+patch -p1 -R < "/root/machinex/patches/0347-sched-tune-add-sysctl-interface-to-define-a-boost-va.patch"
+patch -p1 -R < "/root/machinex/patches/0346-sched-cpufreq_sched-add-trace-events.patch"
+patch -p1 -R < "/root/machinex/patches/0345-FIXUP-sched-fair-jump-to-max-OPP-when-crossing-UP.patch"
+patch -p1 -R < "/root/machinex/patches/0344-FIXUP-sched-scheduler-driven-cpu-frequency-selection.patch"
+patch -p1 -R < "/root/machinex/patches/0343-FIXUP-sched-scheduler-driven-cpu-frequency-selection.patch"
+patch -p1 -R < "/root/machinex/patches/0342-sched-rt-scheduler-sets-capacity-requirement.patch"
+patch -p1 -R < "/root/machinex/patches/0341-sched-deadline-use-deadline-bandwidth-in-scale_rt_ca.patch"
+patch -p1 -R < "/root/machinex/patches/0340-sched-remove-call-of-sched_avg_update-from-sched_rt.patch"
+patch -p1 -R < "/root/machinex/patches/0339-sched-fair-jump-to-max-OPP-when-crossing-UP-threshol.patch"
+patch -p1 -R < "/root/machinex/patches/0338-sched-core-fair-trigger-OPP-change-request-on-fork.patch"
+patch -p1 -R < "/root/machinex/patches/0337-sched-fair-add-triggers-for-OPP-change-requests.patch"
+patch -p1 -R < "/root/machinex/patches/0336-sched-scheduler-driven-cpu-frequency-selection.patch"
+patch -p1 -R < "/root/machinex/patches/0335-sched-Support-for-extracting-EAS-energy-costs-from-D.patch"
+patch -p1 -R < "/root/machinex/patches/0334-sched-Consider-misfit-tasks-when-load-balancing.patch"
+patch -p1 -R < "/root/machinex/patches/0333-sched-Add-group_misfit_task-load-balance-type.patch"
+patch -p1 -R < "/root/machinex/patches/0332-some-ondemand-tweaking.patch"
+patch -p1 -R < "/root/machinex/patches/0331-sched-Add-per-cpu-max-capacity-to-sched_group_cap.patch"
+patch -p1 -R < "/root/machinex/patches/0330-sched-Do-eas-idle-balance-regardless-of-the-rq-avg.patch"
+patch -p1 -R < "/root/machinex/patches/0329-sched-Update-max-cpu-capacity-in-case-of-max-frequen.patch"
+patch -p1 -R < "/root/machinex/patches/0328-CHROMIUM-sched-update-the-average-of-nr_running.patch"
+patch -p1 -R < "/root/machinex/patches/0327-sched-Disable-energy-unfriendly-nohz-kicks.patch"
+patch -p1 -R < "/root/machinex/patches/0326-sched-Consider-a-not-over-utilized-energy-aware-sys.patch"
+patch -p1 -R < "/root/machinex/patches/0325-sched-Energy-aware-wake-up-task-placement.patch"
+patch -p1 -R < "/root/machinex/patches/0324-sched-Determine-the-current-sched_group-idle-state.patch"
+patch -p1 -R < "/root/machinex/patches/0323-sched-cpuidle-Track-cpuidle-state-index-in-the-sched.patch"
+patch -p1 -R < "/root/machinex/patches/0322-ARM-topology-Use-the-new-cpu_capacity-interface.patch"
+patch -p1 -R < "/root/machinex/patches/0321-fix-const-inconsistencies.patch"
+patch -p1 -R < "/root/machinex/patches/0320-sched-ARM-Create-a-dedicated-scheduler-topology-tabl.patch"
+patch -p1 -R < "/root/machinex/patches/0319-sched-Add-over-utilization-tipping-point-indicator.patch"
+patch -p1 -R < "/root/machinex/patches/0318-sched-Estimate-energy-impact-of-scheduling-decisions.patch"
+patch -p1 -R < "/root/machinex/patches/0317-sched-Extend-sched_group_energy-to-test-load-balanci.patch"
+patch -p1 -R < "/root/machinex/patches/0316-sched-Calculate-energy-consumption-of-sched_group.patch"
+patch -p1 -R < "/root/machinex/patches/0315-sched-Highest-energy-aware-balancing-sched_domain.patch"
+patch -p1 -R < "/root/machinex/patches/0314-sched-Relocated-cpu_util-and-change-return-type.patch"
+patch -p1 -R < "/root/machinex/patches/0313-sched-Compute-cpu-capacity-available-at-current-freq.patch"
+patch -p1 -R < "/root/machinex/patches/0312-sched-Introduce-SD_SHARE_CAP_STATES-sched_domain-fla.patch"
+patch -p1 -R < "/root/machinex/patches/0311-sched-Initialize-energy-data-structures.patch"
+patch -p1 -R < "/root/machinex/patches/0310-sched-Introduce-energy-data-structures.patch"
+patch -p1 -R < "/root/machinex/patches/0309-sched-Make-energy-awareness-a-sched-feature.patch"
+patch -p1 -R < "/root/machinex/patches/0308-sched-Prevent-unnecessary-active-balance-of-single-t.patch"
+patch -p1 -R < "/root/machinex/patches/0307-sched-Enable-idle-balance-to-pull-single-task.patch"
+patch -p1 -R < "/root/machinex/patches/0306-sched-Consider-spare-cpu-capacity-at-task-wake-up.patch"
+patch -p1 -R < "/root/machinex/patches/0305-sched-Add-cpu-capacity-awareness-to-wakeup-balancing.patch"
+patch -p1 -R < "/root/machinex/patches/0304-hackeroooo.patch"
+patch -p1 -R < "/root/machinex/patches/0303-fixup.patch"
+patch -p1 -R < "/root/machinex/patches/0302-reverted.patch"
+patch -p1 -R < "/root/machinex/patches/0301-not-this-one-yet.patch"
+patch -p1 -R < "/root/machinex/patches/0300-sched-Store-system-wide-maximum-cpu-capacity-in-root.patch"
+patch -p1 -R < "/root/machinex/patches/0299-sched-fair-Fix-new-task-s-load-avg-removed.patch"
+patch -p1 -R < "/root/machinex/patches/0298-sched-fair-Disable-the-task-group-load_avg-update.patch"
+patch -p1 -R < "/root/machinex/patches/0297-sched-fair-Move-the-cache-hot-load_avg-variable-into.patch"
+patch -p1 -R < "/root/machinex/patches/0296-sched-fair-Avoid-redundant-idle_cpu-call-in-update.patch"
+patch -p1 -R < "/root/machinex/patches/0295-sched-fair-Make-it-possible-to-account-fair-load-avg.patch"
+patch -p1 -R < "/root/machinex/patches/0294-dox.patch"
+patch -p1 -R < "/root/machinex/patches/0293-dox.patch"
+patch -p1 -R < "/root/machinex/patches/0292-sched-fair-Update-task-group-s-load_avg-after-task-m.patch"
+patch -p1 -R < "/root/machinex/patches/0291-sched-fair-Fix-overly-small-weight-for-interactive-g.patch"
+patch -p1 -R < "/root/machinex/patches/0290-sched-fair-Optimize-per-entity-utilization-tracking.patch"
+patch -p1 -R < "/root/machinex/patches/0289-sched-fair-Defer-calling-scaling-functions.patch"
+patch -p1 -R < "/root/machinex/patches/0288-sched-fair-Optimize-__update_load_avg.patch"
+patch -p1 -R < "/root/machinex/patches/0287-sched-fair-Rename-scale-to-cap_scale-and-try-out-add.patch"
+patch -p1 -R < "/root/machinex/patches/0286-sched-fair-Initialize-task-load-and-utilization.patch"
+patch -p1 -R < "/root/machinex/patches/0285-sched-fair-Get-rid-of-scaling-utilization-by-capacit.patch"
+patch -p1 -R < "/root/machinex/patches/0284-sched-fair-Name-utilization-related-data-and-functio.patch"
+patch -p1 -R < "/root/machinex/patches/0283-sched-Remove-unused-struct-sched_group_capacity.patch"
+patch -p1 -R < "/root/machinex/patches/0282-sched-Replace-capacity_factor-by-usage.patch"
+patch -p1 -R < "/root/machinex/patches/0281-sched-fair-Fix-stale-overloaded-status-in-the-busies.patch"
+patch -p1 -R < "/root/machinex/patches/0280-sched-fair-Make-utilization-tracking-CPU-scale-invar.patch"
+patch -p1 -R < "/root/machinex/patches/0279-sched-fair-Convert-arch_scale_cpu_capacity-from-weak.patch"
+patch -p1 -R < "/root/machinex/patches/0278-sched-fair-Make-load-tracking-frequency-scale-invari.patch"
+patch -p1 -R < "/root/machinex/patches/0277-thats-right-we-no-longer-have-default_scale_freq_cap.patch"
+patch -p1 -R < "/root/machinex/patches/0276-sched-Add-struct-rq-cpu_capacity_orig.patch"
+patch -p1 -R < "/root/machinex/patches/0275-sched-Optimize-freq-invariant-accounting.patch"
+patch -p1 -R < "/root/machinex/patches/0274-sched-Make-scale_rt-invariant-with-frequency.patch"
+patch -p1 -R < "/root/machinex/patches/0273-sched-fair-Fix-nohz.next_balance-update.patch"
+patch -p1 -R < "/root/machinex/patches/0272-sched-core-Delete-PF_EXITING-checks-from-cpu_cgroup.patch"
+patch -p1 -R < "/root/machinex/patches/0271-sched-core-Remove-unused-argument-from-sched_class.patch"
+patch -p1 -R < "/root/machinex/patches/0270-sched-fair-Unify-switched_-from-to-_fair-and-task.patch"
+patch -p1 -R < "/root/machinex/patches/0269-sched-fair-Make-the-entity-load-aging-on-attaching.patch"
+patch -p1 -R < "/root/machinex/patches/0268-sched-fair-Fix-switched_to_fair-s-per-entity-load.patch"
+patch -p1 -R < "/root/machinex/patches/0267-sched-fair-Have-task_move_group_fair-also-detach.patch"
+patch -p1 -R < "/root/machinex/patches/0266-sched-fair-Have-task_move_group_fair-unconditionally.patch"
+patch -p1 -R < "/root/machinex/patches/0265-sched-fair-Factor-out-the-at-de-taching-of-the-per-e.patch"
+patch -p1 -R < "/root/machinex/patches/0264-fixed-my-BUG-ON.patch"
+patch -p1 -R < "/root/machinex/patches/0263-two-updates-govs-no-more-using-set_cpus_allowed-and-.patch"
+patch -p1 -R < "/root/machinex/patches/0262-sched-Fix-a-race-between-__kthread_bind-and-sched_se.patch"
+patch -p1 -R < "/root/machinex/patches/0261-sched-Ensure-a-task-has-a-non-normalized-vruntime.patch"
+patch -p1 -R < "/root/machinex/patches/0260-sched-fair-Clean-up-load-average-references.patch"
+patch -p1 -R < "/root/machinex/patches/0259-sched-fair-Provide-runnable_load_avg-back-to-cfs_rq.patch"
+patch -p1 -R < "/root/machinex/patches/0258-sched-fair-Remove-task-and-group-entity-load.patch"
+patch -p1 -R < "/root/machinex/patches/0257-sched-fair-Init-cfs_rq-s-sched_entity-load-average.patch"
+patch -p1 -R < "/root/machinex/patches/0256-.patch"
+patch -p1 -R < "/root/machinex/patches/0255-remaining-header-fixup.patch"
+patch -p1 -R < "/root/machinex/patches/0254-mostly-rewrite-runnable-load-and-utilization-averagi.patch"
+patch -p1 -R < "/root/machinex/patches/0253-possed.patch"
+patch -p1 -R < "/root/machinex/patches/0252-nope-possing-again.patch"
+patch -p1 -R < "/root/machinex/patches/0251-brought-back-preempt-stuff-from-that-though.patch"
+patch -p1 -R < "/root/machinex/patches/0250-possed-wait-bit-stuff.patch"
+patch -p1 -R < "/root/machinex/patches/0249-possing-the-wait-bit-stuff.patch"
+patch -p1 -R < "/root/machinex/patches/0248-scsi-fix.patch"
+patch -p1 -R < "/root/machinex/patches/0247-fix-2d-driver-as-well.patch"
+patch -p1 -R < "/root/machinex/patches/0246-adreno.c-use-the-new-generic-__wait_event_interrupti.patch"
+patch -p1 -R < "/root/machinex/patches/0245-WHOOO-we-can-have-nice-things.patch"
+patch -p1 -R < "/root/machinex/patches/0244-hacked-in-preempt_set_need_resched-and-preempt_fold_.patch"
+patch -p1 -R < "/root/machinex/patches/0243-yep-nope.patch"
+patch -p1 -R < "/root/machinex/patches/0242-locking-Optimize-lock_bh-functions.i-remember-this-b.patch"
+patch -p1 -R < "/root/machinex/patches/0241-shady.sched-take-PREMPT_NEED_RESCHED-away-from-gener.patch"
+patch -p1 -R < "/root/machinex/patches/0240-last-one-in-security-and-the-tree-i-think.patch"
+patch -p1 -R < "/root/machinex/patches/0239-security-wait_on_bit.patch"
+patch -p1 -R < "/root/machinex/patches/0238-more-wait_on_bit.patch"
+patch -p1 -R < "/root/machinex/patches/0237-reverted-sched.h.patch"
+patch -p1 -R < "/root/machinex/patches/0236-some-fs-wait_on_bit-fixes-locking-fixes-and-a-screwe.patch"
+patch -p1 -R < "/root/machinex/patches/0235-mm-wait-on-bit-fixes.patch"
+patch -p1 -R < "/root/machinex/patches/0234-mind-your.patch"
+patch -p1 -R < "/root/machinex/patches/0233-some-core-cleanup.patch"
+patch -p1 -R < "/root/machinex/patches/0232-bring-in-asm-preempt-again.patch"
+patch -p1 -R < "/root/machinex/patches/0231-ptrace-fixup-with-waiting-also-rcu-readlocks-around-.patch"
+patch -p1 -R < "/root/machinex/patches/0230-some-preempt-wait-fixes.patch"
+patch -p1 -R < "/root/machinex/patches/0229-a-little-more.patch"
+patch -p1 -R < "/root/machinex/patches/0228-some-old-preempt-shit.patch"
+patch -p1 -R < "/root/machinex/patches/0227-updated-filemap-and-pagemap-to-the-updated-wait-inte.patch"
+patch -p1 -R < "/root/machinex/patches/0226-cleaned-up-wait.c-.h.patch"
+patch -p1 -R < "/root/machinex/patches/0225-more-detailed-ref-update.patch"
+patch -p1 -R < "/root/machinex/patches/0224-add-another-ref.patch"
+patch -p1 -R < "/root/machinex/patches/0222-cpu-send-KOBJ_ONLINE-event-when-enabling-cpus.patch"
+patch -p1 -R < "/root/machinex/patches/0221-actually-why-dont-i-just-make-it-equal-the-actual-ca.patch"
+patch -p1 -R < "/root/machinex/patches/0220-hacked-fair-a-teensy-bit.patch"
+patch -p1 -R < "/root/machinex/patches/0219-sched-Calculate-CPUs-usage-statistic-and-put-it-into.patch"
+patch -p1 -R < "/root/machinex/patches/0218-sched-Track-group-sched_entity-usage-contributions.patch"
+patch -p1 -R < "/root/machinex/patches/0217-sched-Make-sched-entity-usage-tracking-scale-invaria.patch"
+patch -p1 -R < "/root/machinex/patches/0216-sched-Add-sched_avg-utilization_avg_contrib.patch"
+patch -p1 -R < "/root/machinex/patches/0215-changing-sched-affinity-back-to-sched_getaffinity.patch"
+patch -p1 -R < "/root/machinex/patches/0214-core-use-hz-once-again.patch"
+patch -p1 -R < "/root/machinex/patches/0213-REVERT-sched-calculate-cpus-usage.patch"
+patch -p1 -R < "/root/machinex/patches/0212-sched-Calculate-CPUs-usage-statistic-and-put-it-into.patch"
+patch -p1 -R < "/root/machinex/patches/0211-sched-fair-Remove-rq-runnable-avg.patch"

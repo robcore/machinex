@@ -301,3 +301,24 @@ root@machina:/media/root/robcore/android/linaro-8064-lt/3.18/patches# find $(pwd
 
 
 /root/machinex/patches/0363-irq_work-Force-raised-irq-work-to-run-on-irq-work-in.patch
+
+RECENT SCHED:
+/media/root/robcore/android/linaro-3.18-lsk/patches/1patches/7088-sched-Calculate-CPU-s-usage-statistic-and-put-it-int.patch
+
+WAIT COMMITS:
+/media/root/robcore/android/linaro-3.18-lsk/patches/2patches/5394-SCHED-add-some-wait.on_bit.timeout-interfaces.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/4patches/7070-sched-Allow-wait_on_bit_action-functions-to-support-.patch
+
+PREEMPT REVISIT:
+/media/root/robcore/android/linaro-3.18-lsk/patches/11patches/7416-sched-Add-NEED_RESCHED-to-the-preempt_count.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/11patches/7417-sched-arch-Create-asm-preempt.h.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/11patches/7421-sched-x86-Provide-a-per-cpu-preempt_count-implementa.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/4patches/7048-sched-Transform-resched_task-into-resched_curr.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/5patches/0605-sched-idle-Avoid-spurious-wakeup-IPIs.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/6patches/3462-percpu-add-raw_cpu_ops.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/7patches/3323-sched-idle-Remove-stale-old-file.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/8patches/2976-sched-preempt-Fix-up-missed-PREEMPT_NEED_RESCHED-fol.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/8patches/4879-sched-preempt-x86-Fix-voluntary-preempt-for-x86.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/8patches/7653-sched-idle-Move-cpu-idle.c-to-sched-idle.c.patch
+/media/root/robcore/android/linaro-3.18-lsk/patches/9patches/5511-sched-Remove-PREEMPT_NEED_RESCHED-from-generic-code.patch
+
