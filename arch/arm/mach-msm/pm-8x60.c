@@ -1255,7 +1255,7 @@ static int __init msm_pm_setup_saved_state(void)
 	pmd = pmd_offset(pud_offset(pc_pgd + pgd_index(exit_phys),exit_phys),
 					exit_phys);
 	pmdval = (exit_phys & PGDIR_MASK) |
-		     PMD_TYPE_SECT | PMD_SECT_AP_WRITE;
+		     PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_SECT_AF;
 	pmd[0] = __pmd(pmdval);
 	pmd[1] = __pmd(pmdval + (1 << (PGDIR_SHIFT - 1)));
 
