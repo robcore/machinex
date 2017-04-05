@@ -847,7 +847,7 @@ static void cgroup_free_fn(struct work_struct *work)
 	 * created the cgroup. This will free cgrp->root, if we are
 	 * holding the last reference to @sb.
 	 */
-	deactivate_super(cgrp->root->sb);
+	dentry->d_fsdata = cgroup_diput;
 
 	/*
 	 * if we're getting rid of the cgroup, refcount should ensure
@@ -893,6 +893,13 @@ static void cgroup_diput(struct dentry *dentry, struct inode *inode)
 static int cgroup_delete(const struct dentry *d)
 {
 	return 1;
+}
+
+static void cgroup_d_release(struct dentry *dentry)
+{
+	/* did cgroup_diput() tell me to deactivate super? */
+	if (dentry->d_fsdata == cgroup_diput)
+		deactivate_super(dentry->d_sb);
 }
 
 static void remove_dir(struct dentry *d)
@@ -1493,6 +1500,7 @@ static int cgroup_get_rootdir(struct super_block *sb)
 	static const struct dentry_operations cgroup_dops = {
 		.d_iput = cgroup_diput,
 		.d_delete = cgroup_delete,
+		.d_release = cgroup_d_release,
 	};
 
 	struct inode *inode =
