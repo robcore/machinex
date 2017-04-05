@@ -38,13 +38,13 @@
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(5)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(85)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(95)
+#define DEF_FREQUENCY_UP_THRESHOLD		(70)
+#define MICRO_FREQUENCY_UP_THRESHOLD		(70)
 
 #define DEF_MIDDLE_GRID_STEP			(5)
 #define DEF_HIGH_GRID_STEP			(10)
-#define DEF_MIDDLE_GRID_LOAD			(65)
-#define DEF_HIGH_GRID_LOAD			(89)
+#define DEF_MIDDLE_GRID_LOAD			(55)
+#define DEF_HIGH_GRID_LOAD			(79)
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define DEF_SAMPLING_RATE			(60000)
@@ -160,9 +160,9 @@ static struct dbs_tuners {
 	.high_grid_load = DEF_HIGH_GRID_LOAD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 1026000,
-	.optimal_freq = 1890000,
-	.optimal_max_freq = 1782000,
+	.sync_freq = 1242000,
+	.optimal_freq = 1566000,
+	.optimal_max_freq = 1674000,
 	.input_boost = 0,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
