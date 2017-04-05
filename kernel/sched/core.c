@@ -1401,7 +1401,7 @@ unsigned long sched_get_busy(int cpu)
 			  NSEC_PER_USEC);
 }
 
-void sched_set_window(u64 window_start, unsigned int window_size)
+int sched_set_window(u64 window_start, unsigned int window_size)
 {
 	int cpu;
 	u64 ws;
@@ -1410,6 +1410,9 @@ void sched_set_window(u64 window_start, unsigned int window_size)
 	unsigned long flags;
 	u64 wallclock;
 	struct task_struct *g, *p;
+
+	if (sched_use_pelt)
+		return -EINVAL;
 
 	delta = window_start - now; /* how many jiffies ahead */
 
@@ -1461,6 +1464,8 @@ void sched_set_window(u64 window_start, unsigned int window_size)
 	}
 
 	local_irq_restore(flags);
+
+	return 0;
 }
 
 #else  /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
