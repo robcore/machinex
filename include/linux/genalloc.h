@@ -71,6 +71,9 @@ extern struct gen_pool *gen_pool_create(int, int);
 extern phys_addr_t gen_pool_virt_to_phys(struct gen_pool *pool, u64);
 extern int gen_pool_add_virt(struct gen_pool *, u64, phys_addr_t,
 			     size_t, int);
+
+bool addr_in_gen_pool(struct gen_pool *pool, unsigned long start,
+			size_t size);
 /**
  * gen_pool_add - add a new chunk of special memory to the pool
  * @pool: pool to add new memory chunk to
