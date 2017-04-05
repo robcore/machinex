@@ -27,21 +27,15 @@ enum cpuacct_stat_index {
 
 /* track cpu usage of a group of tasks and its child groups */
 struct cpuacct {
-	struct cgroup_css css;
+	struct cgroup_subsys_state css;
 	/* cpuusage holds pointer to a u64-type object on every cpu */
 	u64 __percpu *cpuusage;
 	struct kernel_cpustat __percpu *cpustat;
 };
 
-static inline struct cpuacct *css_ca(struct cgroup_css *css)
+static inline struct cpuacct *css_ca(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct cpuacct, css) : NULL;
-}
-
-/* return cpu accounting group corresponding to this container */
-static inline struct cpuacct *cgroup_ca(struct cgroup *cgrp)
-{
-	return css_ca(cgroup_css(cgrp, cpuacct_subsys_id));
 }
 
 /* return cpu accounting group to which this task belongs */
@@ -50,16 +44,9 @@ static inline struct cpuacct *task_ca(struct task_struct *tsk)
 	return css_ca(task_css(tsk, cpuacct_subsys_id));
 }
 
-static inline struct cpuacct *__parent_ca(struct cpuacct *ca)
-{
-	return cgroup_ca(ca->css.cgroup->parent);
-}
-
 static inline struct cpuacct *parent_ca(struct cpuacct *ca)
 {
-	if (!ca->css.cgroup->parent)
-		return NULL;
-	return cgroup_ca(ca->css.cgroup->parent);
+	return css_ca(css_parent(&ca->css));
 }
 
 static DEFINE_PER_CPU(u64, root_cpuacct_cpuusage);
@@ -69,11 +56,12 @@ static struct cpuacct root_cpuacct = {
 };
 
 /* create a new cpu accounting group */
-static struct cgroup_css *cpuacct_css_alloc(struct cgroup *cgrp)
+static struct cgroup_subsys_state *
+cpuacct_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct cpuacct *ca;
 
-	if (!cgrp->parent)
+	if (!parent_css)
 		return &root_cpuacct.css;
 
 	ca = kzalloc(sizeof(*ca), GFP_KERNEL);
@@ -99,9 +87,9 @@ out:
 }
 
 /* destroy an existing cpu accounting group */
-static void cpuacct_css_free(struct cgroup *cgrp)
+static void cpuacct_css_free(struct cgroup_subsys_state *css)
 {
-	struct cpuacct *ca = cgroup_ca(cgrp);
+	struct cpuacct *ca = css_ca(css);
 
 	free_percpu(ca->cpustat);
 	free_percpu(ca->cpuusage);
@@ -144,9 +132,9 @@ static void cpuacct_cpuusage_write(struct cpuacct *ca, int cpu, u64 val)
 }
 
 /* return total cpu usage (in nanoseconds) of a group */
-static u64 cpuusage_read(struct cgroup *cgrp, struct cftype *cft)
+static u64 cpuusage_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
-	struct cpuacct *ca = cgroup_ca(cgrp);
+	struct cpuacct *ca = css_ca(css);
 	u64 totalcpuusage = 0;
 	int i;
 
@@ -156,10 +144,10 @@ static u64 cpuusage_read(struct cgroup *cgrp, struct cftype *cft)
 	return totalcpuusage;
 }
 
-static int cpuusage_write(struct cgroup *cgrp, struct cftype *cftype,
-								u64 reset)
+static int cpuusage_write(struct cgroup_subsys_state *css, struct cftype *cft,
+			  u64 reset)
 {
-	struct cpuacct *ca = cgroup_ca(cgrp);
+	struct cpuacct *ca = css_ca(css);
 	int err = 0;
 	int i;
 
@@ -175,10 +163,10 @@ out:
 	return err;
 }
 
-static int cpuacct_percpu_seq_read(struct cgroup *cgroup, struct cftype *cft,
-				   struct seq_file *m)
+static int cpuacct_percpu_seq_read(struct cgroup_subsys_state *css,
+				   struct cftype *cft, struct seq_file *m)
 {
-	struct cpuacct *ca = cgroup_ca(cgroup);
+	struct cpuacct *ca = css_ca(css);
 	u64 percpu;
 	int i;
 
@@ -195,10 +183,10 @@ static const char * const cpuacct_stat_desc[] = {
 	[CPUACCT_STAT_SYSTEM] = "system",
 };
 
-static int cpuacct_stats_show(struct cgroup *cgrp, struct cftype *cft,
-			      struct cgroup_map_cb *cb)
+static int cpuacct_stats_show(struct cgroup_subsys_state *css,
+			      struct cftype *cft, struct cgroup_map_cb *cb)
 {
-	struct cpuacct *ca = cgroup_ca(cgrp);
+	struct cpuacct *ca = css_ca(css);
 	int cpu;
 	s64 val = 0;
 
@@ -284,15 +272,9 @@ void cpuacct_account_field(struct task_struct *p, int index, u64 val)
 	while (ca != &root_cpuacct) {
 		kcpustat = this_cpu_ptr(ca->cpustat);
 		kcpustat->cpustat[index] += val;
-		ca = __parent_ca(ca);
+		ca = parent_ca(ca);
 	}
 	rcu_read_unlock();
-}
-
-void __init cpuacct_init(void)
-{
-	root_cpuacct.cpustat = &kernel_cpustat;
-	root_cpuacct.cpuusage = &root_cpuacct_cpuusage;
 }
 
 struct cgroup_subsys cpuacct_subsys = {
