@@ -1031,8 +1031,6 @@ static int rebind_subsystems(struct cgroupfs_root *root,
 			cgrp->subsys[i]->cgroup = cgrp;
 			list_move(&ss->sibling, &root->subsys_list);
 			ss->root = root;
-			if (ss->bind)
-				ss->bind(cgrp);
 
 			/* refcount was already taken, and we're keeping it */
 			root->subsys_mask |= bit;
@@ -1041,8 +1039,6 @@ static int rebind_subsystems(struct cgroupfs_root *root,
 			BUG_ON(cgrp->subsys[i] != cgroup_dummy_top->subsys[i]);
 			BUG_ON(cgrp->subsys[i]->cgroup != cgrp);
 
-			if (ss->bind)
-				ss->bind(cgroup_dummy_top);
 			cgroup_dummy_top->subsys[i]->cgroup = cgroup_dummy_top;
 			cgrp->subsys[i] = NULL;
 			cgroup_subsys[i]->root = &cgroup_dummy_root;
