@@ -17,12 +17,11 @@
 struct rq;
 
 /* task_struct::on_rq states: */
-#define TASK_ON_RQ_MIGRATING	2
-
 struct cpuidle_state;
 
 /* task_struct::on_rq states: */
 #define TASK_ON_RQ_QUEUED	1
+#define TASK_ON_RQ_MIGRATING	2
 
 extern __read_mostly int scheduler_running;
 
