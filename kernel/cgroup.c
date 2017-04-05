@@ -5264,8 +5264,7 @@ void cgroup_exit(struct task_struct *tsk)
 	}
 	task_unlock(tsk);
 
-	if (cset)
-		put_css_set(cset);
+	put_css_set(cset);
 }
 
 static void check_for_release(struct cgroup *cgrp)
