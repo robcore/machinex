@@ -134,8 +134,6 @@ static void __wait(struct waiter *w)
 
 		schedule();
 	}
-
-	set_task_state(current, TASK_RUNNING);
 }
 
 static void __wake_waiter(struct waiter *w)

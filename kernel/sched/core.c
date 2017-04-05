@@ -154,6 +154,7 @@ const_debug unsigned int sysctl_sched_features =
 
 static const char * const sched_feat_names[] = {
 #include "features.h"
+	NULL
 };
 
 #undef SCHED_FEAT
@@ -1444,7 +1445,7 @@ unsigned long wait_task_inactive(struct task_struct *p, long match_state)
 		 * yield - it could be a while.
 		 */
 		if (unlikely(queued)) {
-			ktime_t to = ktime_set(0, NSEC_PER_SEC/HZ);
+			ktime_t to = ktime_set(0, NSEC_PER_MSEC);
 
 			set_current_state(TASK_UNINTERRUPTIBLE);
 			schedule_hrtimeout(&to, HRTIMER_MODE_REL);
@@ -2356,8 +2357,8 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 
 		p->prio = p->normal_prio = __normal_prio(p);
 		set_load_weight(p);
-		if (p->sched_class->task_dead)
-			p->sched_class->task_dead(p);
+/*		if (p->sched_class->task_dead)
+			p->sched_class->task_dead(p); */
 
 		/*
 		 * We don't need the reset flag anymore after the fork. It has
@@ -5063,7 +5064,7 @@ long sched_getaffinity(pid_t pid, struct cpumask *mask)
 		goto out_unlock;
 
 	raw_spin_lock_irqsave(&p->pi_lock, flags);
-	cpumask_and(mask, &p->cpus_allowed, cpu_online_mask);
+	cpumask_and(mask, &p->cpus_allowed, cpu_active_mask);
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
 out_unlock:
@@ -6334,13 +6335,13 @@ static int init_rootdomain(struct root_domain *rd)
 {
 	memset(rd, 0, sizeof(*rd));
 
-	if (!alloc_cpumask_var(&rd->span, GFP_KERNEL))
+	if (!zalloc_cpumask_var(&rd->span, GFP_KERNEL))
 		goto out;
-	if (!alloc_cpumask_var(&rd->online, GFP_KERNEL))
+	if (!zalloc_cpumask_var(&rd->online, GFP_KERNEL))
 		goto free_span;
-	if (!alloc_cpumask_var(&rd->dlo_mask, GFP_KERNEL))
+	if (!zalloc_cpumask_var(&rd->dlo_mask, GFP_KERNEL))
 		goto free_online;
-	if (!alloc_cpumask_var(&rd->rto_mask, GFP_KERNEL))
+	if (!zalloc_cpumask_var(&rd->rto_mask, GFP_KERNEL))
 		goto free_dlo_mask;
 
 	init_dl_bw(&rd->dl_bw);
@@ -8856,11 +8857,6 @@ static int tg_set_cfs_bandwidth(struct task_group *tg, u64 period, u64 quota)
 	if (period > max_cfs_quota_period)
 		return -EINVAL;
 
-	/*
-	 * Prevent race between setting of cfs_rq->runtime_enabled and
-	 * unthrottle_offline_cfs_rqs().
-	 */
-	get_online_cpus();
 	mutex_lock(&cfs_constraints_mutex);
 	ret = __cfs_schedulable(tg, period, quota);
 	if (ret)
@@ -8886,7 +8882,7 @@ static int tg_set_cfs_bandwidth(struct task_group *tg, u64 period, u64 quota)
 	}
 	raw_spin_unlock_irq(&cfs_b->lock);
 
-	for_each_online_cpu(i) {
+	for_each_possible_cpu(i) {
 		struct cfs_rq *cfs_rq = tg->cfs_rq[i];
 		struct rq *rq = cfs_rq->rq;
 
@@ -8902,7 +8898,6 @@ static int tg_set_cfs_bandwidth(struct task_group *tg, u64 period, u64 quota)
 		cfs_bandwidth_usage_dec();
 out_unlock:
 	mutex_unlock(&cfs_constraints_mutex);
-	put_online_cpus();
 
 	return ret;
 }
