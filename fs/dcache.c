@@ -2768,18 +2768,6 @@ Elong:
 	return ERR_PTR(-ENAMETOOLONG);
 }
 
-static void get_fs_root_and_pwd_rcu(struct fs_struct *fs, struct path *root,
-				    struct path *pwd)
-{
-	unsigned seq;
-
-	do {
-		seq = read_legacy_seqcount_begin(&fs->seq);
-		*root = fs->root;
-		*pwd = fs->pwd;
-	} while (read_legacy_seqcount_retry(&fs->seq, seq));
-}
-
 /*
  * NOTE! The user-level library version returns a
  * character pointer. The kernel system call just
@@ -2802,21 +2790,20 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 {
 	int error;
 	struct path pwd, root;
-	char *page = __getname();
+	char *page = (char *) __get_free_page(GFP_USER);
 
 	if (!page)
 		return -ENOMEM;
 
-	rcu_read_lock();
-	get_fs_root_and_pwd_rcu(current->fs, &root, &pwd);
+	get_fs_root_and_pwd(current->fs, &root, &pwd);
 
 	error = -ENOENT;
 	br_read_lock(&vfsmount_lock);
 	write_legacy_seqlock(&rename_lock);
 	if (!d_unlinked(pwd.dentry)) {
 		unsigned long len;
-		char *cwd = page + PATH_MAX;
-		int buflen = PATH_MAX;
+		char *cwd = page + PAGE_SIZE;
+		int buflen = PAGE_SIZE;
 
 		prepend(&cwd, &buflen, "\0", 1);
 		error = prepend_path(&pwd, &root, &cwd, &buflen);
@@ -2834,7 +2821,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 		}
 
 		error = -ERANGE;
-		len = PATH_MAX + page - cwd;
+		len = PAGE_SIZE + page - cwd;
 		if (len <= size) {
 			error = len;
 			if (copy_to_user(buf, cwd, len))
@@ -2846,8 +2833,9 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 	}
 
 out:
-	rcu_read_unlock();
-	__putname(page);
+	path_put(&pwd);
+	path_put(&root);
+	free_page((unsigned long) page);
 	return error;
 }
 
