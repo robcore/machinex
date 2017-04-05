@@ -1819,13 +1819,6 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	p->ravg.mark_start = wallclock;
 }
 
-#else	/* CONFIG_SCHED_FREQ_INPUT */
-
-static inline void
-update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
-{
-}
-
 unsigned long __weak arch_get_cpu_efficiency(int cpu)
 {
 	return SCHED_LOAD_SCALE;
@@ -1852,8 +1845,12 @@ static void init_cpu_efficiency(void)
 	min_possible_efficiency = min;
 }
 
-#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else  /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
+static inline void
+update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
+{
+}
 static inline void init_cpu_efficiency(void) {}
 
 #endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */

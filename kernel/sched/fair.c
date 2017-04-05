@@ -5271,8 +5271,8 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 	int load_idx = sd->forkexec_idx;
 	int imbalance = 100 + (sd->imbalance_pct-100)/2;
 
-	if (sysctl_sched_enable_hmp_task_placement)
-		return select_best_cpu(p, prev_cpu);
+	//if (sysctl_sched_enable_hmp_task_placement)
+		//return select_best_cpu(p, prev_cpu);
 
 	if (sd_flag & SD_BALANCE_WAKE)
 		load_idx = sd->wake_idx;
@@ -6283,7 +6283,7 @@ next:
 		list_move_tail(&p->se.group_node, tasks);
 	}
 
-	if (env->flags & LBF_IGNORE_SMALL_TASKS && !detached) {
+	if (env->flags & LBF_IGNORE_SMALL_TASKS && !pulled) {
 		tasks = &env->src_rq->cfs_tasks;
 		env->flags &= ~LBF_IGNORE_SMALL_TASKS;
 		env->loop = orig_loop;
