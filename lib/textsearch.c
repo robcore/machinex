@@ -246,9 +246,7 @@ unsigned int textsearch_find_continuous(struct ts_config *conf,
  * @flags: search flags
  *
  * Looks up the search algorithm module and creates a new textsearch
- * configuration for the specified pattern. Upon completion all
- * necessary refcnts are held and the configuration must be put back
- * using textsearch_put() after usage.
+ * configuration for the specified pattern.
  *
  * Note: The format of the pattern may not be compatible between
  *       the various search algorithms.
