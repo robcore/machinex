@@ -37,6 +37,8 @@
 
 #include <linux/compiler.h>
 
+#include <linux/err.h>
+
 struct device;
 struct notifier_block;
 
