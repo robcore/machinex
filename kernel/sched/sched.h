@@ -625,16 +625,10 @@ struct rq {
 	 * max_possible_freq = maximum supported by hardware
 	 */
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
-	struct cpumask freq_domain_cpumask;
-
 	u64 cumulative_runnable_avg;
 	int efficiency; /* Differentiate cpus with different IPC capability */
 	int load_scale_factor;
 	int capacity;
-	u64 window_start;
-
-	unsigned int curr_runnable_sum;
-	unsigned int prev_runnable_sum;
 #endif
 
 #ifdef CONFIG_SCHED_HMP
@@ -897,18 +891,6 @@ extern unsigned int sched_upmigrate;
 extern unsigned int sched_downmigrate;
 extern unsigned int sched_init_task_load_pelt;
 extern unsigned int sched_init_task_load_windows;
-#ifdef CONFIG_SCHED_HMP
-extern void fixup_nr_big_small_task(int cpu);
-extern u64 scale_task_load(u64 load, int cpu);
-#else
-static inline void fixup_nr_big_small_task(int cpu) {}
-
-static inline u64 scale_task_load(u64 load, int cpu)
-{
-	return load;
-}
-#endif
-unsigned int max_task_load(void);
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
@@ -959,14 +941,12 @@ static inline unsigned long capacity_scale_cpu_freq(int cpu)
 
 #ifdef CONFIG_SCHED_HMP
 
-int mostly_idle_cpu(int cpu);
 extern void check_for_migration(struct rq *rq, struct task_struct *p);
 extern void pre_big_small_task_count_change(void);
 extern void post_big_small_task_count_change(void);
 extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void set_hmp_defaults(void);
-extern unsigned int power_cost_at_freq(int cpu, unsigned int freq);
 
 #else /* CONFIG_SCHED_HMP */
 
@@ -1863,9 +1843,6 @@ enum rq_nohz_flag_bits {
 
 #define nohz_flags(cpu)	(&cpu_rq(cpu)->nohz_flags)
 #endif
-
-#define NOHZ_KICK_ANY 0
-#define NOHZ_KICK_RESTRICT 1
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
 
