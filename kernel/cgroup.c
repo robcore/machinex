@@ -4584,10 +4584,15 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	/*
 	 * Unregister events and notify userspace.
 	 * Notify userspace about cgroup removing only after rmdir of cgroup
-	 * directory to avoid race between userspace and kernelspace.
+	 * directory to avoid race between userspace and kernelspace. Use
+	 * a temporary list to avoid a deadlock with cgroup_event_wake(). Since
+	 * cgroup_event_wake() is called with the wait queue head locked,
+	 * remove_wait_queue() cannot be called while holding event_list_lock.
 	 */
 	spin_lock(&cgrp->event_list_lock);
-	list_for_each_entry_safe(event, tmp, &cgrp->event_list, list) {
+	list_splice_init(&cgrp->event_list, &tmp_list);
+	spin_unlock(&cgrp->event_list_lock);
+	list_for_each_entry_safe(event, tmp, &tmp_list, list) {
 		list_del_init(&event->list);
 		schedule_work(&event->remove);
 	}
@@ -4612,6 +4617,7 @@ static void cgroup_offline_fn(struct work_struct *work)
 	struct cgroup *parent = cgrp->parent;
 	struct dentry *d = cgrp->dentry;
 	struct cgroup_subsys *ss;
+	LIST_HEAD(tmp_list);
 
 	mutex_lock(&cgroup_mutex);
 
