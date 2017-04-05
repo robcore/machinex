@@ -362,7 +362,7 @@ struct cfs_rq {
 #ifdef CONFIG_FAIR_GROUP_SCHED
 /* Required to track per-cpu representation of a task_group */
 	u32 tg_runnable_contrib, tg_usage_contrib;
-	u tg_load_contrib;
+	u64 tg_load_contrib;
 
 	/*
 	 *   h_load = weight * f(tg)
