@@ -966,7 +966,7 @@ int ice_gpiox_get(int num)
 	if (g_pdata->fw_type == ICE_24M)
 		cmd = 0xFC | (num >> 3);
 	else
-	cmd = num >> 3;
+		cmd = num >> 3;
 
 	fpga_enable(1);
 	ret = i2c_smbus_read_byte_data(g_client, cmd);
@@ -1132,7 +1132,7 @@ static int barcode_emul_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&data->fw_dl, fw_work);
 	/* min 1ms is needed */
 	queue_delayed_work(data->firmware_dl,
-			&data->fw_dl, msecs_to_jiffies(20));
+			&data->fw_dl, msecs_to_jiffies(10));
 
 	g_client = client;
 
