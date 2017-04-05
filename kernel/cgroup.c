@@ -4039,6 +4039,8 @@ static int cgroup_write_event_control(struct cgroup *cgrp, struct cftype *cft,
 		goto out_put_cfile;
 	}
 
+	efile->f_op->poll(efile, &event->pt);
+
 	/*
 	 * The file to be monitored must be in the same cgroup as
 	 * cgroup.event_control is.
