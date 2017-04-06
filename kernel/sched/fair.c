@@ -688,6 +688,7 @@ void init_task_runnable_average(struct task_struct *p)
 {
 	u32 slice;
 
+	p->se.avg.decay_count = 0;
 	slice = sched_slice(task_cfs_rq(p), &p->se) >> 10;
 	p->se.avg.runnable_avg_sum = slice;
 	p->se.avg.runnable_avg_period = slice;
@@ -2367,7 +2368,7 @@ static inline unsigned int task_load(struct task_struct *p)
 	return p->ravg.demand;
 }
 
-unsigned int max_task_load(void)
+static inline unsigned int max_task_load(void)
 {
 	if (sched_use_pelt)
 		return LOAD_AVG_MAX;
@@ -3103,6 +3104,7 @@ static inline u64 __synchronize_entity_decay(struct sched_entity *se)
 	}
 
 	se->avg.load_avg_contrib = decay_load(se->avg.load_avg_contrib, decays);
+	se->avg.decay_count = 0;
 
 	return decays;
 }
@@ -3261,6 +3263,7 @@ static inline void update_entity_load_avg(struct sched_entity *se,
 	u64 now;
 	int cpu = cpu_of(rq_of(cfs_rq));
 	int decayed;
+
 	/*
 	 * For a group entity we need to use their owned cfs_rq_clock_task() in
 	 * case they are the parent of a throttled hierarchy.
@@ -4209,8 +4212,8 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 	}
 
 	if (!se) {
-		rq->nr_running -= task_delta;
 		dec_nr_running(rq);
+		rq->nr_running -= task_delta;
 	}
 
 	cfs_rq->throttled = 1;
@@ -4266,8 +4269,8 @@ void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
 	}
 
 	if (!se) {
-		rq->nr_running += task_delta;
 		inc_nr_running(rq);
+		rq->nr_running += task_delta;
 	}
 
 	/* determine whether we need to wake up potentially idle cpu */
@@ -4800,7 +4803,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_rq_runnable_avg(rq, rq->nr_running);
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
 	}
@@ -5816,21 +5818,18 @@ again:  __maybe_unused
 		 * entity, update_curr() will update its vruntime, otherwise
 		 * forget we've ever seen it.
 		 */
-		if (curr) {
-			if (curr->on_rq)
-				update_curr(cfs_rq);
-			else
-				curr = NULL;
+		if (curr && curr->on_rq)
+			update_curr(cfs_rq);
+		else
+			curr = NULL;
 
-			/*
-			 * This call to check_cfs_rq_runtime() will do the
-			 * throttle and dequeue its entity in the parent(s).
-			 * Therefore the 'simple' nr_running test will indeed
-			 * be correct.
-			 */
-			if (unlikely(check_cfs_rq_runtime(cfs_rq)))
-				goto simple;
-		}
+		/*
+		 * This call to check_cfs_rq_runtime() will do the throttle and
+		 * dequeue its entity in the parent(s). Therefore the 'simple'
+		 * nr_running test will indeed be correct.
+		 */
+		if (unlikely(check_cfs_rq_runtime(cfs_rq)))
+			goto simple;
 
 		se = pick_next_entity(cfs_rq, curr);
 		cfs_rq = group_cfs_rq(se);
@@ -6093,12 +6092,6 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
 
 static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
-enum group_type {
-	group_other = 0,
-	group_ea,
-	group_imbalanced,
-	group_overloaded,
-};
 
 #define LBF_ALL_PINNED	0x01
 #define LBF_NEED_BREAK	0x02
@@ -6519,6 +6512,13 @@ static unsigned long task_h_load(struct task_struct *p)
 #endif
 
 /********** Helpers for find_busiest_group ************************/
+
+enum group_type {
+	group_other = 0,
+	group_ea,
+	group_imbalanced,
+	group_overloaded,
+};
 
 /*
  * sg_lb_stats - stats of a sched_group required for load_balancing
@@ -7680,23 +7680,8 @@ more_balance:
 		 * ld_moved     - cumulative load moved across iterations
 		 */
 		cur_ld_moved = move_tasks(&env);
-
-		/*
-		 * We've detached some tasks from busiest_rq. Every
-		 * task is masked "TASK_ON_RQ_MIGRATING", so we can safely
-		 * unlock busiest->lock, and we are able to be sure
-		 * that nobody can manipulate the tasks in parallel.
-		 * See task_rq_lock() family for the details.
-		 */
-
 		ld_moved += cur_ld_moved;
 		double_rq_unlock(env.dst_rq, busiest);
-
-		if (cur_ld_moved) {
-			attach_tasks(&env);
-			ld_moved += cur_ld_moved;
-		}
-
 		local_irq_restore(flags);
 
 		if (env.flags & LBF_NEED_BREAK) {
@@ -8577,8 +8562,6 @@ static void run_rebalance_domains(struct softirq_action *h)
 	enum cpu_idle_type idle = this_rq->idle_balance ?
 						CPU_IDLE : CPU_NOT_IDLE;
 
-	rebalance_domains(this_rq, idle);
-
 	/*
 	 * If this cpu has a pending nohz_balance_kick, then do the
 	 * balancing on behalf of the other idle cpus whose ticks are
@@ -8588,6 +8571,7 @@ static void run_rebalance_domains(struct softirq_action *h)
 	 * and abort nohz_idle_balance altogether if we pull some load.
 	 */
 	nohz_idle_balance(this_rq, idle);
+	rebalance_domains(this_rq, idle);
 }
 
 /*
