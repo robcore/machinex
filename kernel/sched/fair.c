@@ -4974,8 +4974,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	hrtick_update(rq);
 }
 
-#ifdef CONFIG_SMP
-
 /*
  * per rq 'load' arrray crap; XXX kill this.
  */
