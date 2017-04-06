@@ -1149,7 +1149,7 @@ struct ravg {
 	 * windows. 'demand' could drive frequency demand for tasks.
 	 */
 	u64 mark_start;
-	u32 sum, demand, prev_window, partial_demand;
+	u32 sum, demand, prev_window;
 	u32 sum_history[RAVG_HIST_SIZE];
 };
 
@@ -1926,8 +1926,6 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, 
 
 extern int task_free_register(struct notifier_block *n);
 extern int task_free_unregister(struct notifier_block *n);
-extern void sched_set_window(u64 window_start, unsigned int window_size);
-extern unsigned long sched_get_busy(int cpu);
 
 /*
  * Per process flags
@@ -2186,7 +2184,7 @@ extern unsigned long long
 task_sched_runtime(struct task_struct *task);
 
 /* sched_exec is called by processes performing an exec */
-#if defined(CONFIG_SMP) && !defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SMP
 extern void sched_exec(void);
 #else
 #define sched_exec()   {}
@@ -3038,8 +3036,6 @@ struct migration_notify_data {
 };
 
 extern struct atomic_notifier_head migration_notifier_head;
-
-extern struct atomic_notifier_head load_alert_notifier_head;
 
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
