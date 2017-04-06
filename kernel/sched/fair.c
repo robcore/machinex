@@ -2367,7 +2367,7 @@ static inline unsigned int task_load(struct task_struct *p)
 	return p->ravg.demand;
 }
 
-static inline unsigned int max_task_load(void)
+unsigned int max_task_load(void)
 {
 	if (sched_use_pelt)
 		return LOAD_AVG_MAX;
@@ -4863,7 +4863,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_rq_runnable_avg(rq, 1);
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
 	}
@@ -4872,7 +4871,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		dec_nr_running(rq);
  		update_rq_runnable_avg(rq, 1);
 		dec_nr_big_small_task(rq, p);
-
 	}
 	hrtick_update(rq);
 }
@@ -7682,8 +7680,23 @@ more_balance:
 		 * ld_moved     - cumulative load moved across iterations
 		 */
 		cur_ld_moved = move_tasks(&env);
+
+		/*
+		 * We've detached some tasks from busiest_rq. Every
+		 * task is masked "TASK_ON_RQ_MIGRATING", so we can safely
+		 * unlock busiest->lock, and we are able to be sure
+		 * that nobody can manipulate the tasks in parallel.
+		 * See task_rq_lock() family for the details.
+		 */
+
 		ld_moved += cur_ld_moved;
 		double_rq_unlock(env.dst_rq, busiest);
+
+		if (cur_ld_moved) {
+			attach_tasks(&env);
+			ld_moved += cur_ld_moved;
+		}
+
 		local_irq_restore(flags);
 
 		if (env.flags & LBF_NEED_BREAK) {
@@ -8564,6 +8577,8 @@ static void run_rebalance_domains(struct softirq_action *h)
 	enum cpu_idle_type idle = this_rq->idle_balance ?
 						CPU_IDLE : CPU_NOT_IDLE;
 
+	rebalance_domains(this_rq, idle);
+
 	/*
 	 * If this cpu has a pending nohz_balance_kick, then do the
 	 * balancing on behalf of the other idle cpus whose ticks are
@@ -8573,7 +8588,6 @@ static void run_rebalance_domains(struct softirq_action *h)
 	 * and abort nohz_idle_balance altogether if we pull some load.
 	 */
 	nohz_idle_balance(this_rq, idle);
-	rebalance_domains(this_rq, idle);
 }
 
 /*
