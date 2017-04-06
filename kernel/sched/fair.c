@@ -4897,8 +4897,8 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
+		update_cfs_shares(cfs_rq);
 	}
 
 	if (!se) {
@@ -4959,9 +4959,12 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
+		update_cfs_shares(cfs_rq);
 	}
+
+
+#ifdef CONFIG_SMP
 
 	if (!se) {
 		dec_nr_running(rq);
@@ -5887,7 +5890,7 @@ pick_next_task_fair(struct rq *rq, struct task_struct *prev)
 	struct task_struct *p;
 	int new_tasks;
 
-again:  __maybe_unused
+again:
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	if (!cfs_rq->h_nr_running)
 		goto idle;
@@ -5912,18 +5915,21 @@ again:  __maybe_unused
 		 * entity, update_curr() will update its vruntime, otherwise
 		 * forget we've ever seen it.
 		 */
-		if (curr && curr->on_rq)
-			update_curr(cfs_rq);
-		else
-			curr = NULL;
+		if (curr) {
+			if (curr->on_rq)
+				update_curr(cfs_rq);
+			else
+				curr = NULL;
 
-		/*
-		 * This call to check_cfs_rq_runtime() will do the throttle and
-		 * dequeue its entity in the parent(s). Therefore the 'simple'
-		 * nr_running test will indeed be correct.
-		 */
-		if (unlikely(check_cfs_rq_runtime(cfs_rq)))
-			goto simple;
+			/*
+			 * This call to check_cfs_rq_runtime() will do the
+			 * throttle and dequeue its entity in the parent(s).
+			 * Therefore the 'simple' nr_running test will indeed
+			 * be correct.
+			 */
+			if (unlikely(check_cfs_rq_runtime(cfs_rq)))
+				goto simple;
+		}
 
 		se = pick_next_entity(cfs_rq, curr);
 		cfs_rq = group_cfs_rq(se);
@@ -8538,12 +8544,7 @@ static void nohz_idle_balance(struct rq *this_rq, enum cpu_idle_type idle)
 	    !test_bit(NOHZ_BALANCE_KICK, nohz_flags(this_cpu)))
 		goto end;
 
-	cpumask_copy(&cpus_to_balance, nohz.idle_cpus_mask);
-
-	while (!cpumask_empty(&cpus_to_balance)) {
-		balance_cpu = select_lowest_power_cpu(&cpus_to_balance);
-
-		cpumask_clear_cpu(balance_cpu, &cpus_to_balance);
+	for_each_cpu(balance_cpu, nohz.idle_cpus_mask) {
 		if (balance_cpu == this_cpu || !idle_cpu(balance_cpu))
 			continue;
 
