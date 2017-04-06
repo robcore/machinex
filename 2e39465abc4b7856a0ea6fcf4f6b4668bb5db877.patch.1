@@ -1,0 +1,129 @@
+From 2e39465abc4b7856a0ea6fcf4f6b4668bb5db877 Mon Sep 17 00:00:00 2001
+From: Peter Zijlstra <peterz@infradead.org>
+Date: Mon, 4 Aug 2014 12:07:15 +0200
+Subject: [PATCH] locking: Remove deprecated smp_mb__() barriers
+
+Its been a while and there are no in-tree users left, so remove the
+deprecated barriers.
+
+Signed-off-by: Peter Zijlstra <peterz@infradead.org>
+Cc: Chen, Gong <gong.chen@linux.intel.com>
+Cc: Jacob Pan <jacob.jun.pan@linux.intel.com>
+Cc: Joe Perches <joe@perches.com>
+Cc: John Sullivan <jsrhbz@kanargh.force9.co.uk>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Paul E. McKenney <paulmck@linux.vnet.ibm.com>
+Cc: Srinivas Pandruvada <srinivas.pandruvada@linux.intel.com>
+Cc: Theodore Ts'o <tytso@mit.edu>
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+---
+ include/linux/atomic.h | 36 ------------------------------------
+ include/linux/bitops.h | 20 --------------------
+ kernel/sched/core.c    | 16 ----------------
+ 3 files changed, 72 deletions(-)
+
+diff --git a/include/linux/atomic.h b/include/linux/atomic.h
+index fef3a80..5b08a85 100644
+--- a/include/linux/atomic.h
++++ b/include/linux/atomic.h
+@@ -3,42 +3,6 @@
+ #define _LINUX_ATOMIC_H
+ #include <asm/atomic.h>
+ 
+-/*
+- * Provide __deprecated wrappers for the new interface, avoid flag day changes.
+- * We need the ugly external functions to break header recursion hell.
+- */
+-#ifndef smp_mb__before_atomic_inc
+-static inline void __deprecated smp_mb__before_atomic_inc(void)
+-{
+-	extern void __smp_mb__before_atomic(void);
+-	__smp_mb__before_atomic();
+-}
+-#endif
+-
+-#ifndef smp_mb__after_atomic_inc
+-static inline void __deprecated smp_mb__after_atomic_inc(void)
+-{
+-	extern void __smp_mb__after_atomic(void);
+-	__smp_mb__after_atomic();
+-}
+-#endif
+-
+-#ifndef smp_mb__before_atomic_dec
+-static inline void __deprecated smp_mb__before_atomic_dec(void)
+-{
+-	extern void __smp_mb__before_atomic(void);
+-	__smp_mb__before_atomic();
+-}
+-#endif
+-
+-#ifndef smp_mb__after_atomic_dec
+-static inline void __deprecated smp_mb__after_atomic_dec(void)
+-{
+-	extern void __smp_mb__after_atomic(void);
+-	__smp_mb__after_atomic();
+-}
+-#endif
+-
+ /**
+  * atomic_add_unless - add unless the number is already a given value
+  * @v: pointer of type atomic_t
+diff --git a/include/linux/bitops.h b/include/linux/bitops.h
+index cbc5833..be5fd38 100644
+--- a/include/linux/bitops.h
++++ b/include/linux/bitops.h
+@@ -32,26 +32,6 @@ extern unsigned long __sw_hweight64(__u64 w);
+  */
+ #include <asm/bitops.h>
+ 
+-/*
+- * Provide __deprecated wrappers for the new interface, avoid flag day changes.
+- * We need the ugly external functions to break header recursion hell.
+- */
+-#ifndef smp_mb__before_clear_bit
+-static inline void __deprecated smp_mb__before_clear_bit(void)
+-{
+-	extern void __smp_mb__before_atomic(void);
+-	__smp_mb__before_atomic();
+-}
+-#endif
+-
+-#ifndef smp_mb__after_clear_bit
+-static inline void __deprecated smp_mb__after_clear_bit(void)
+-{
+-	extern void __smp_mb__after_atomic(void);
+-	__smp_mb__after_atomic();
+-}
+-#endif
+-
+ #define for_each_set_bit(bit, addr, size) \
+ 	for ((bit) = find_first_bit((addr), (size));		\
+ 	     (bit) < (size);					\
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 1211575..76c518c 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -90,22 +90,6 @@
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/sched.h>
+ 
+-#ifdef smp_mb__before_atomic
+-void __smp_mb__before_atomic(void)
+-{
+-	smp_mb__before_atomic();
+-}
+-EXPORT_SYMBOL(__smp_mb__before_atomic);
+-#endif
+-
+-#ifdef smp_mb__after_atomic
+-void __smp_mb__after_atomic(void)
+-{
+-	smp_mb__after_atomic();
+-}
+-EXPORT_SYMBOL(__smp_mb__after_atomic);
+-#endif
+-
+ void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
+ {
+ 	unsigned long delta;

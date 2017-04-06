@@ -671,7 +671,7 @@ static void do_init_timer(struct timer_list *timer, unsigned int flags,
 		base = tvec_base_deferral;
 	else
 #endif
-		base = __raw_get_cpu_var(tvec_bases);
+		base = raw_cpu_read(tvec_bases);
 
 	timer->entry.next = NULL;
 	timer->base = (void *)((unsigned long)base | flags);
