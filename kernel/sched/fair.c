@@ -4900,6 +4900,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		update_entity_load_avg(se, 1);
 		update_cfs_shares(cfs_rq);
 	}
+#ifdef CONFIG_SMP
 
 	if (!se) {
  		update_rq_runnable_avg(rq, rq->nr_running);
