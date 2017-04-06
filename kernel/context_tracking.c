@@ -47,6 +47,8 @@ void context_tracking_user_enter(void)
 {
 	unsigned long flags;
 
+	if (!context_tracking_is_enabled())
+		return;
 	/*
 	 * Some contexts may involve an exception occuring in an irq,
 	 * leading to that nesting:
@@ -85,6 +87,9 @@ void context_tracking_user_enter(void)
 void context_tracking_user_exit(void)
 {
 	unsigned long flags;
+
+	if (!context_tracking_is_enabled())
+		return;
 
 	if (in_interrupt())
 		return;
