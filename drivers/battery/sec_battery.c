@@ -330,8 +330,8 @@ static bool sec_bat_check_vf_adc(struct sec_battery_info *battery)
 	} else
 		battery->check_adc_value = adc;
 
-	if ((battery->check_adc_value <= battery->pdata->check_adc_max) &&
-		(battery->check_adc_value >= battery->pdata->check_adc_min))
+	if ((battery->check_adc_value < battery->pdata->check_adc_max) &&
+		(battery->check_adc_value > battery->pdata->check_adc_min))
 		return true;
 	else
 		return false;
