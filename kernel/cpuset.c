@@ -76,7 +76,7 @@ struct fmeter {
 };
 
 struct cpuset {
-	struct cgroup_css css;
+	struct cgroup_subsys_state css;
 
 	unsigned long flags;		/* "unsigned long" so bitops work */
 	cpumask_var_t cpus_allowed;	/* CPUs allowed to tasks in cpuset */
@@ -2718,7 +2718,7 @@ int proc_cpuset_show(struct seq_file *m, void *unused_v)
 	struct pid *pid;
 	struct task_struct *tsk;
 	char *buf;
-	struct cgroup_css *css;
+	struct cgroup_subsys_state *css;
 	int retval;
 
 	retval = -ENOMEM;

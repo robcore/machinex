@@ -40,12 +40,12 @@ enum freezer_state_flags {
 };
 
 struct freezer {
-	struct cgroup_css	css;
+	struct cgroup_subsys_state	css;
 	unsigned int			state;
 	spinlock_t			lock;
 };
 
-static inline struct freezer *css_freezer(struct cgroup_css *css)
+static inline struct freezer *css_freezer(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct freezer, css) : NULL;
 }
