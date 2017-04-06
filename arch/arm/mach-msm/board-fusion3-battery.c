@@ -41,45 +41,26 @@
 #define SHORT_BATTERY_STANDARD		100
 
 static unsigned int sec_bat_recovery_mode;
-#if defined(CONFIG_MACH_JF_DCM)
 static sec_charging_current_t charging_current_table[] = {
-	{1900,	1600,	200,	40*60},
+	{1900,	2100,	200,	40*60},
 	{460,	0,	0,	0},
 	{460,	460,	200,	40*60},
-	{1900,	1600,	200,	40*60},
+	{1900,	2100,	200,	40*60},
 	{460,	460,	200,	40*60},
 	{1000,	1000,	200,	40*60},
 	{1000,	1000,	200,	40*60},
 	{460,	460,	200,	40*60},
-	{1700,	1600,	200,	40*60},
-	{0,	0,	0,	0},
-	{650,	700,	200,	40*60},
-	{1900,	1600,	200,	40*60},
-	{0,	0,	0,	0},
-	{0,	0,	0,	0},
-	{460,	0,	0,	0},
-};
-#else
-static sec_charging_current_t charging_current_table[] = {
-	{1900,	1600,	200,	40*60},
-	{460,	0,	0,	0},
-	{460,	460,	200,	40*60},
-	{1900,	1600,	200,	40*60},
-	{460,	460,	200,	40*60},
-	{1000,	1000,	200,	40*60},
-	{1000,	1000,	200,	40*60},
-	{460,	460,	200,	40*60},
-	{1700,	1600,	200,	40*60},
+	{1700,	2100,	200,	40*60},
 	{0,	0,	0,	0},
 #ifdef CONFIG_WIRELESS_CHARGER
 	{650,	700,	200,	40*60},
 #endif
-	{1900,	1600,	200,	40*60},
+	{1900,	2100,	200,	40*60},
 	{0,	0,	0,	0},
 	{0,	0,	0,	0},
 	{460,	0,	0,	0},
 };
-#endif
+
 static bool sec_bat_adc_none_init(
 		struct platform_device *pdev) {return true; }
 static bool sec_bat_adc_none_exit(void) {return true; }
@@ -148,7 +129,6 @@ static struct i2c_gpio_platform_data gpio_i2c_data_fgchg = {
 
 static bool sec_fg_gpio_init(void)
 {
-#if !defined(CONFIG_MACH_JFVE_EUR)
 	struct pm_gpio param = {
 		.direction     = PM_GPIO_DIR_IN,
 		.pull          = PM_GPIO_PULL_NO,
@@ -179,7 +159,6 @@ static bool sec_fg_gpio_init(void)
 				&fuel_alert_mppcfg);
 	}
 	else
-#endif
 		gpio_tlmm_config(GPIO_CFG(GPIO_FUEL_INT,  0, GPIO_CFG_INPUT,
 			GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 #if defined(CONFIG_MACH_JFTDD_EUR) || defined(CONFIG_MACH_JACTIVE_EUR)
@@ -1026,10 +1005,10 @@ sec_battery_platform_data_t sec_battery_pdata = {
 		SEC_BATTERY_FULL_CONDITION_VCELL,
 // I am undecided between these possible vals, will try both to
 // see which is better
-//	.full_condition_soc = 97,
-// .full_condition_vcell = 4300,
-	.full_condition_soc = 93,
-	.full_condition_vcell = 4250,
+	.full_condition_soc = 97,
+	.full_condition_vcell = 4300,
+//	.full_condition_soc = 93,
+//	.full_condition_vcell = 4250,
 
 	.recharge_check_count = 2,
 	.recharge_condition_type =
