@@ -76,7 +76,7 @@ struct fmeter {
 };
 
 struct cpuset {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 
 	unsigned long flags;		/* "unsigned long" so bitops work */
 	cpumask_var_t cpus_allowed;	/* CPUs allowed to tasks in cpuset */
@@ -128,7 +128,11 @@ static inline struct cpuset *task_cs(struct task_struct *task)
 
 static inline struct cpuset *parent_cs(struct cpuset *cs)
 {
-	return css_cs(css_parent(&cs->css));
+	struct cgroup *pcgrp = cs->css.cgroup->parent;
+
+	if (pcgrp)
+		return cgroup_cs(pcgrp);
+	return NULL;
 }
 
 #ifdef CONFIG_NUMA
@@ -205,29 +209,29 @@ static struct cpuset top_cpuset = {
 /**
  * cpuset_for_each_child - traverse online children of a cpuset
  * @child_cs: loop cursor pointing to the current child
- * @pos_css: used for iteration
+ * @pos_cgrp: used for iteration
  * @parent_cs: target cpuset to walk children of
  *
  * Walk @child_cs through the online children of @parent_cs.  Must be used
  * with RCU read locked.
  */
-#define cpuset_for_each_child(child_cs, pos_css, parent_cs)		\
-	css_for_each_child((pos_css), &(parent_cs)->css)		\
-		if (is_cpuset_online(((child_cs) = css_cs((pos_css)))))
+#define cpuset_for_each_child(child_cs, pos_cgrp, parent_cs)		\
+	cgroup_for_each_child((pos_cgrp), (parent_cs)->css.cgroup)	\
+		if (is_cpuset_online(((child_cs) = cgroup_cs((pos_cgrp)))))
 
 /**
  * cpuset_for_each_descendant_pre - pre-order walk of a cpuset's descendants
  * @des_cs: loop cursor pointing to the current descendant
- * @pos_css: used for iteration
+ * @pos_cgrp: used for iteration
  * @root_cs: target cpuset to walk ancestor of
  *
  * Walk @des_cs through the online descendants of @root_cs.  Must be used
- * with RCU read locked.  The caller may modify @pos_css by calling
- * css_rightmost_descendant() to skip subtree.
+ * with RCU read locked.  The caller may modify @pos_cgrp by calling
+ * cgroup_rightmost_descendant() to skip subtree.
  */
-#define cpuset_for_each_descendant_pre(des_cs, pos_css, root_cs)	\
-	css_for_each_descendant_pre((pos_css), &(root_cs)->css)		\
-		if (is_cpuset_online(((des_cs) = css_cs((pos_css)))))
+#define cpuset_for_each_descendant_pre(des_cs, pos_cgrp, root_cs)	\
+	cgroup_for_each_descendant_pre((pos_cgrp), (root_cs)->css.cgroup) \
+		if (is_cpuset_online(((des_cs) = cgroup_cs((pos_cgrp)))))
 
 /*
  * There are two global mutexes guarding cpuset structures - cpuset_mutex
@@ -426,7 +430,7 @@ static void free_trial_cpuset(struct cpuset *trial)
 
 static int validate_change(struct cpuset *cur, struct cpuset *trial)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup *cgrp;
 	struct cpuset *c, *par;
 	int ret;
 
@@ -434,7 +438,7 @@ static int validate_change(struct cpuset *cur, struct cpuset *trial)
 
 	/* Each of our child cpusets must be a subset of us */
 	ret = -EBUSY;
-	cpuset_for_each_child(c, css, cur)
+	cpuset_for_each_child(c, cgrp, cur)
 		if (!is_cpuset_subset(c, trial))
 			goto out;
 
@@ -455,7 +459,7 @@ static int validate_change(struct cpuset *cur, struct cpuset *trial)
 	 * overlap
 	 */
 	ret = -EINVAL;
-	cpuset_for_each_child(c, css, par) {
+	cpuset_for_each_child(c, cgrp, par) {
 		if ((is_cpu_exclusive(trial) || is_cpu_exclusive(c)) &&
 		    c != cur &&
 		    cpumask_intersects(trial->cpus_allowed, c->cpus_allowed))
@@ -508,13 +512,13 @@ static void update_domain_attr_tree(struct sched_domain_attr *dattr,
 				    struct cpuset *root_cs)
 {
 	struct cpuset *cp;
-	struct cgroup_subsys_state *pos_css;
+	struct cgroup *pos_cgrp;
 
 	rcu_read_lock();
-	cpuset_for_each_descendant_pre(cp, pos_css, root_cs) {
+	cpuset_for_each_descendant_pre(cp, pos_cgrp, root_cs) {
 		/* skip the whole subtree if @cp doesn't have any CPU */
 		if (cpumask_empty(cp->cpus_allowed)) {
-			pos_css = css_rightmost_descendant(pos_css);
+			pos_cgrp = cgroup_rightmost_descendant(pos_cgrp);
 			continue;
 		}
 
@@ -589,7 +593,7 @@ static int generate_sched_domains(cpumask_var_t **domains,
 	struct sched_domain_attr *dattr;  /* attributes for custom domains */
 	int ndoms = 0;		/* number of sched domains in result */
 	int nslot;		/* next empty doms[] struct cpumask slot */
-	struct cgroup_subsys_state *pos_css;
+	struct cgroup *pos_cgrp;
 
 	doms = NULL;
 	dattr = NULL;
@@ -618,7 +622,7 @@ static int generate_sched_domains(cpumask_var_t **domains,
 	csn = 0;
 
 	rcu_read_lock();
-	cpuset_for_each_descendant_pre(cp, pos_css, &top_cpuset) {
+	cpuset_for_each_descendant_pre(cp, pos_cgrp, &top_cpuset) {
 		/*
 		 * Continue traversing beyond @cp iff @cp has some CPUs and
 		 * isn't load balancing.  The former is obvious.  The
@@ -635,7 +639,7 @@ static int generate_sched_domains(cpumask_var_t **domains,
 			csa[csn++] = cp;
 
 		/* skip @cp's subtree */
-		pos_css = css_rightmost_descendant(pos_css);
+		pos_cgrp = cgroup_rightmost_descendant(pos_cgrp);
 	}
 	rcu_read_unlock();
 
@@ -886,16 +890,16 @@ static void update_tasks_cpumask_hier(struct cpuset *root_cs,
 				      bool update_root, struct ptr_heap *heap)
 {
 	struct cpuset *cp;
-	struct cgroup_subsys_state *pos_css;
+	struct cgroup *pos_cgrp;
 
 	if (update_root)
 		update_tasks_cpumask(root_cs, heap);
 
 	rcu_read_lock();
-	cpuset_for_each_descendant_pre(cp, pos_css, root_cs) {
+	cpuset_for_each_descendant_pre(cp, pos_cgrp, root_cs) {
 		/* skip the whole subtree if @cp have some CPU */
 		if (!cpumask_empty(cp->cpus_allowed)) {
-			pos_css = css_rightmost_descendant(pos_css);
+			pos_cgrp = cgroup_rightmost_descendant(pos_cgrp);
 			continue;
 		}
 		if (!css_tryget(&cp->css))
@@ -1143,16 +1147,16 @@ static void update_tasks_nodemask_hier(struct cpuset *root_cs,
 				       bool update_root, struct ptr_heap *heap)
 {
 	struct cpuset *cp;
-	struct cgroup_subsys_state *pos_css;
+	struct cgroup *pos_cgrp;
 
 	if (update_root)
 		update_tasks_nodemask(root_cs, heap);
 
 	rcu_read_lock();
-	cpuset_for_each_descendant_pre(cp, pos_css, root_cs) {
+	cpuset_for_each_descendant_pre(cp, pos_cgrp, root_cs) {
 		/* skip the whole subtree if @cp have some CPU */
 		if (!nodes_empty(cp->mems_allowed)) {
-			pos_css = css_rightmost_descendant(pos_css);
+			pos_cgrp = cgroup_rightmost_descendant(pos_cgrp);
 			continue;
 		}
 		if (!css_tryget(&cp->css))
@@ -1461,10 +1465,9 @@ static int fmeter_getrate(struct fmeter *fmp)
 }
 
 /* Called by cgroups to determine if a cpuset is usable; cpuset_mutex held */
-static int cpuset_can_attach(struct cgroup_subsys_state *css,
-			     struct cgroup_taskset *tset)
+static int cpuset_can_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	struct task_struct *task;
 	int ret;
 
@@ -1475,11 +1478,11 @@ static int cpuset_can_attach(struct cgroup_subsys_state *css,
 	 * flag is set.
 	 */
 	ret = -ENOSPC;
-	if (!cgroup_sane_behavior(css->cgroup) &&
+	if (!cgroup_sane_behavior(cgrp) &&
 	    (cpumask_empty(cs->cpus_allowed) || nodes_empty(cs->mems_allowed)))
 		goto out_unlock;
 
-	cgroup_taskset_for_each(task, css->cgroup, tset) {
+	cgroup_taskset_for_each(task, cgrp, tset) {
 		/*
 		 * Kthreads which disallow setaffinity shouldn't be moved
 		 * to a new cpuset; we don't want to change their cpu
@@ -1508,11 +1511,11 @@ out_unlock:
 	return ret;
 }
 
-static void cpuset_cancel_attach(struct cgroup_subsys_state *css,
+static void cpuset_cancel_attach(struct cgroup *cgrp,
 				 struct cgroup_taskset *tset)
 {
 	mutex_lock(&cpuset_mutex);
-	css_cs(css)->attach_in_progress--;
+	cgroup_cs(cgrp)->attach_in_progress--;
 	mutex_unlock(&cpuset_mutex);
 }
 
@@ -1523,8 +1526,7 @@ static void cpuset_cancel_attach(struct cgroup_subsys_state *css,
  */
 static cpumask_var_t cpus_attach;
 
-static void cpuset_attach(struct cgroup_subsys_state *css,
-			  struct cgroup_taskset *tset)
+static void cpuset_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	/* static buf protected by cpuset_mutex */
 	static nodemask_t cpuset_attach_nodemask_to;
@@ -1532,7 +1534,7 @@ static void cpuset_attach(struct cgroup_subsys_state *css,
 	struct task_struct *task;
 	struct task_struct *leader = cgroup_taskset_first(tset);
 	struct cgroup *oldcgrp = cgroup_taskset_cur_cgroup(tset);
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	struct cpuset *oldcs = cgroup_cs(oldcgrp);
 	struct cpuset *cpus_cs = effective_cpumask_cpuset(cs);
 	struct cpuset *mems_cs = effective_nodemask_cpuset(cs);
@@ -1547,7 +1549,7 @@ static void cpuset_attach(struct cgroup_subsys_state *css,
 
 	guarantee_online_mems(mems_cs, &cpuset_attach_nodemask_to);
 
-	cgroup_taskset_for_each(task, css->cgroup, tset) {
+	cgroup_taskset_for_each(task, cgrp, tset) {
 		/*
 		 * can_attach beforehand should guarantee that this doesn't
 		 * fail.  TODO: have a better way to handle failure here
@@ -1609,10 +1611,9 @@ typedef enum {
 	FILE_SPREAD_SLAB,
 } cpuset_filetype_t;
 
-static int cpuset_write_u64(struct cgroup_subsys_state *css, struct cftype *cft,
-			    u64 val)
+static int cpuset_write_u64(struct cgroup *cgrp, struct cftype *cft, u64 val)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	cpuset_filetype_t type = cft->private;
 	int retval = 0;
 
@@ -1659,10 +1660,9 @@ out_unlock:
 	return retval;
 }
 
-static int cpuset_write_s64(struct cgroup_subsys_state *css, struct cftype *cft,
-			    s64 val)
+static int cpuset_write_s64(struct cgroup *cgrp, struct cftype *cft, s64 val)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	cpuset_filetype_t type = cft->private;
 	int retval = -ENODEV;
 
@@ -1686,10 +1686,10 @@ out_unlock:
 /*
  * Common handling for a write to a "cpus" or "mems" file.
  */
-static int cpuset_write_resmask(struct cgroup_subsys_state *css,
-				struct cftype *cft, const char *buf)
+static int cpuset_write_resmask(struct cgroup *cgrp, struct cftype *cft,
+				const char *buf)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	struct cpuset *trialcs;
 	int retval = -ENODEV;
 
@@ -1768,12 +1768,13 @@ static size_t cpuset_sprintf_memlist(char *page, struct cpuset *cs)
 	return count;
 }
 
-static ssize_t cpuset_common_file_read(struct cgroup_subsys_state *css,
-				       struct cftype *cft, struct file *file,
-				       char __user *buf, size_t nbytes,
-				       loff_t *ppos)
+static ssize_t cpuset_common_file_read(struct cgroup *cgrp,
+				       struct cftype *cft,
+				       struct file *file,
+				       char __user *buf,
+				       size_t nbytes, loff_t *ppos)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	cpuset_filetype_t type = cft->private;
 	char *page;
 	ssize_t retval = 0;
@@ -1803,9 +1804,9 @@ out:
 	return retval;
 }
 
-static u64 cpuset_read_u64(struct cgroup_subsys_state *css, struct cftype *cft)
+static u64 cpuset_read_u64(struct cgroup *cgrp, struct cftype *cft)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	cpuset_filetype_t type = cft->private;
 	switch (type) {
 	case FILE_CPU_EXCLUSIVE:
@@ -1834,9 +1835,9 @@ static u64 cpuset_read_u64(struct cgroup_subsys_state *css, struct cftype *cft)
 	return 0;
 }
 
-static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
+static s64 cpuset_read_s64(struct cgroup *cgrp, struct cftype *cft)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	cpuset_filetype_t type = cft->private;
 	switch (type) {
 	case FILE_SCHED_RELAX_DOMAIN_LEVEL:
@@ -1951,12 +1952,11 @@ static struct cftype files[] = {
  *	cgrp:	control group that the new cpuset will be part of
  */
 
-static struct cgroup_subsys_state *
-cpuset_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css *cpuset_css_alloc(struct cgroup *cgrp)
 {
 	struct cpuset *cs;
 
-	if (!parent_css)
+	if (!cgrp->parent)
 		return &top_cpuset.css;
 
 	cs = kzalloc(sizeof(*cs), GFP_KERNEL);
@@ -1976,12 +1976,12 @@ cpuset_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &cs->css;
 }
 
-static int cpuset_css_online(struct cgroup_subsys_state *css)
+static int cpuset_css_online(struct cgroup *cgrp)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 	struct cpuset *parent = parent_cs(cs);
 	struct cpuset *tmp_cs;
-	struct cgroup_subsys_state *pos_css;
+	struct cgroup *pos_cgrp;
 
 	if (!parent)
 		return 0;
@@ -1996,7 +1996,7 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
 
 	cpuset_inc();
 
-	if (!test_bit(CGRP_CPUSET_CLONE_CHILDREN, &css->cgroup->flags))
+	if (!test_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags))
 		goto out_unlock;
 
 	/*
@@ -2013,7 +2013,7 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
 	 * (and likewise for mems) to the new cgroup.
 	 */
 	rcu_read_lock();
-	cpuset_for_each_child(tmp_cs, pos_css, parent) {
+	cpuset_for_each_child(tmp_cs, pos_cgrp, parent) {
 		if (is_mem_exclusive(tmp_cs) || is_cpu_exclusive(tmp_cs)) {
 			rcu_read_unlock();
 			goto out_unlock;
@@ -2036,9 +2036,9 @@ out_unlock:
  * will call rebuild_sched_domains_locked().
  */
 
-static void cpuset_css_offline(struct cgroup_subsys_state *css)
+static void cpuset_css_offline(struct cgroup *cgrp)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 
 	mutex_lock(&cpuset_mutex);
 
@@ -2051,9 +2051,9 @@ static void cpuset_css_offline(struct cgroup_subsys_state *css)
 	mutex_unlock(&cpuset_mutex);
 }
 
-static void cpuset_css_free(struct cgroup_subsys_state *css)
+static void cpuset_css_free(struct cgroup *cgrp)
 {
-	struct cpuset *cs = css_cs(css);
+	struct cpuset *cs = cgroup_cs(cgrp);
 
 	free_cpumask_var(cs->cpus_allowed);
 	kfree(cs);
@@ -2259,10 +2259,10 @@ static void cpuset_hotplug_workfn(struct work_struct *work)
 	/* if cpus or mems changed, we need to propagate to descendants */
 	if (cpus_updated || mems_updated) {
 		struct cpuset *cs;
-		struct cgroup_subsys_state *pos_css;
+		struct cgroup *pos_cgrp;
 
 		rcu_read_lock();
-		cpuset_for_each_descendant_pre(cs, pos_css, &top_cpuset) {
+		cpuset_for_each_descendant_pre(cs, pos_cgrp, &top_cpuset) {
 			if (!css_tryget(&cs->css))
 				continue;
 			rcu_read_unlock();
@@ -2718,7 +2718,7 @@ int proc_cpuset_show(struct seq_file *m, void *unused_v)
 	struct pid *pid;
 	struct task_struct *tsk;
 	char *buf;
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 	int retval;
 
 	retval = -ENOMEM;

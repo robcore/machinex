@@ -56,6 +56,11 @@ static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_css *s)
 	return s ? container_of(s, struct dev_cgroup, css) : NULL;
 }
 
+static inline struct dev_cgroup *cgroup_to_devcgroup(struct cgroup *cgroup)
+{
+	return css_to_devcgroup(cgroup_css(cgroup, devices_subsys_id));
+}
+
 static inline struct dev_cgroup *task_devcgroup(struct task_struct *task)
 {
 	return css_to_devcgroup(task_css(task, devices_subsys_id));
@@ -63,7 +68,7 @@ static inline struct dev_cgroup *task_devcgroup(struct task_struct *task)
 
 struct cgroup_subsys devices_subsys;
 
-static int devcgroup_can_attach(struct cgroup_subsys_state *new_css,
+static int devcgroup_can_attach(struct cgroup *new_cgrp,
 				struct cgroup_taskset *set)
 {
 	struct task_struct *task = cgroup_taskset_first(set);
@@ -188,16 +193,18 @@ static inline bool is_devcg_online(const struct dev_cgroup *devcg)
 /**
  * devcgroup_online - initializes devcgroup's behavior and exceptions based on
  * 		      parent's
- * @css: css getting online
+ * @cgroup: cgroup getting online
  * returns 0 in case of success, error code otherwise
  */
-static int devcgroup_online(struct cgroup_subsys_state *css)
+static int devcgroup_online(struct cgroup *cgroup)
 {
-	struct dev_cgroup *dev_cgroup = css_to_devcgroup(css);
-	struct dev_cgroup *parent_dev_cgroup = css_to_devcgroup(css_parent(css));
+	struct dev_cgroup *dev_cgroup, *parent_dev_cgroup = NULL;
 	int ret = 0;
 
 	mutex_lock(&devcgroup_mutex);
+	dev_cgroup = cgroup_to_devcgroup(cgroup);
+	if (cgroup->parent)
+		parent_dev_cgroup = cgroup_to_devcgroup(cgroup->parent);
 
 	if (parent_dev_cgroup == NULL)
 		dev_cgroup->behavior = DEVCG_DEFAULT_ALLOW;
@@ -212,9 +219,9 @@ static int devcgroup_online(struct cgroup_subsys_state *css)
 	return ret;
 }
 
-static void devcgroup_offline(struct cgroup_subsys_state *css)
+static void devcgroup_offline(struct cgroup *cgroup)
 {
-	struct dev_cgroup *dev_cgroup = css_to_devcgroup(css);
+	struct dev_cgroup *dev_cgroup = cgroup_to_devcgroup(cgroup);
 
 	mutex_lock(&devcgroup_mutex);
 	dev_cgroup->behavior = DEVCG_DEFAULT_NONE;
@@ -237,10 +244,11 @@ static struct cgroup_css *devcgroup_css_alloc(struct cgroup *cgroup)
 	return &dev_cgroup->css;
 }
 
-static void devcgroup_css_free(struct cgroup_subsys_state *css)
+static void devcgroup_css_free(struct cgroup *cgroup)
 {
-	struct dev_cgroup *dev_cgroup = css_to_devcgroup(css);
+	struct dev_cgroup *dev_cgroup;
 
+	dev_cgroup = cgroup_to_devcgroup(cgroup);
 	__dev_exception_clean(dev_cgroup);
 	kfree(dev_cgroup);
 }
@@ -283,10 +291,10 @@ static void set_majmin(char *str, unsigned m)
 		sprintf(str, "%u", m);
 }
 
-static int devcgroup_seq_read(struct cgroup_subsys_state *css,
-			      struct cftype *cft, struct seq_file *m)
+static int devcgroup_seq_read(struct cgroup *cgroup, struct cftype *cft,
+				struct seq_file *m)
 {
-	struct dev_cgroup *devcgroup = css_to_devcgroup(css);
+	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
 	struct dev_exception_item *ex;
 	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
 
@@ -386,10 +394,12 @@ static bool may_access(struct dev_cgroup *dev_cgroup,
 static int parent_has_perm(struct dev_cgroup *childcg,
 				  struct dev_exception_item *ex)
 {
-	struct dev_cgroup *parent = css_to_devcgroup(css_parent(&childcg->css));
+	struct cgroup *pcg = childcg->css.cgroup->parent;
+	struct dev_cgroup *parent;
 
-	if (!parent)
+	if (!pcg)
 		return 1;
+	parent = cgroup_to_devcgroup(pcg);
 	return may_access(parent, ex, childcg->behavior);
 }
 
@@ -441,13 +451,13 @@ static void revalidate_active_exceptions(struct dev_cgroup *devcg)
 static int propagate_exception(struct dev_cgroup *devcg_root,
 			       struct dev_exception_item *ex)
 {
-	struct cgroup_subsys_state *pos;
+	struct cgroup *root = devcg_root->css.cgroup, *pos;
 	int rc = 0;
 
 	rcu_read_lock();
 
-	css_for_each_descendant_pre(pos, &devcg_root->css) {
-		struct dev_cgroup *devcg = css_to_devcgroup(pos);
+	cgroup_for_each_descendant_pre(pos, root) {
+		struct dev_cgroup *devcg = cgroup_to_devcgroup(pos);
 
 		/*
 		 * Because devcgroup_mutex is held, no devcg will become
@@ -514,10 +524,14 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 	char temp[12];		/* 11 + 1 characters needed for a u32 */
 	int count, rc = 0;
 	struct dev_exception_item ex;
-	struct dev_cgroup *parent = css_to_devcgroup(css_parent(&devcgroup->css));
+	struct cgroup *p = devcgroup->css.cgroup;
+	struct dev_cgroup *parent = NULL;
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
+
+	if (p->parent)
+		parent = cgroup_to_devcgroup(p->parent);
 
 	memset(&ex, 0, sizeof(ex));
 	b = buffer;
@@ -663,13 +677,13 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 	return rc;
 }
 
-static int devcgroup_access_write(struct cgroup_subsys_state *css,
-				  struct cftype *cft, const char *buffer)
+static int devcgroup_access_write(struct cgroup *cgrp, struct cftype *cft,
+				  const char *buffer)
 {
 	int retval;
 
 	mutex_lock(&devcgroup_mutex);
-	retval = devcgroup_update_access(css_to_devcgroup(css),
+	retval = devcgroup_update_access(cgroup_to_devcgroup(cgrp),
 					 cft->private, buffer);
 	mutex_unlock(&devcgroup_mutex);
 	return retval;

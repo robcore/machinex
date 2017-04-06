@@ -193,7 +193,7 @@ extern cpumask_var_t housekeeping_mask;
 
 static inline bool tick_nohz_full_enabled(void)
 {
-	if (!context_tracking_is_enabled())
+	if (!static_key_false(&context_tracking_enabled))
 		return false;
 
 	return tick_nohz_full_running;

@@ -8934,17 +8934,22 @@ static inline struct task_group *css_tg(struct cgroup_css *css)
 	return css ? container_of(css, struct task_group, css) : NULL;
 }
 
-static struct cgroup_subsys_state *
-cpu_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
+/* return corresponding task_group object of a cgroup */
+static inline struct task_group *cgroup_tg(struct cgroup *cgrp)
 {
-	struct task_group *parent = css_tg(parent_css);
-	struct task_group *tg;
+	return css_tg(cgroup_css(cgrp, cpu_cgroup_subsys_id));
+}
 
-	if (!parent) {
+static struct cgroup_css *cpu_cgroup_css_alloc(struct cgroup *cgrp)
+{
+	struct task_group *tg, *parent;
+
+	if (!cgrp->parent) {
 		/* This is early initialization for the top cgroup */
 		return &root_task_group.css;
 	}
 
+	parent = cgroup_tg(cgrp->parent);
 	tg = sched_create_group(parent);
 	if (IS_ERR(tg))
 		return ERR_PTR(-ENOMEM);
@@ -8952,26 +8957,29 @@ cpu_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &tg->css;
 }
 
-static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
+static int cpu_cgroup_css_online(struct cgroup *cgrp)
 {
-	struct task_group *tg = css_tg(css);
-	struct task_group *parent = css_tg(css_parent(css));
+	struct task_group *tg = cgroup_tg(cgrp);
+	struct task_group *parent;
 
-	if (parent)
-		sched_online_group(tg, parent);
+	if (!cgrp->parent)
+		return 0;
+
+	parent = cgroup_tg(cgrp->parent);
+	sched_online_group(tg, parent);
 	return 0;
 }
 
-static void cpu_cgroup_css_free(struct cgroup_subsys_state *css)
+static void cpu_cgroup_css_free(struct cgroup *cgrp)
 {
-	struct task_group *tg = css_tg(css);
+	struct task_group *tg = cgroup_tg(cgrp);
 
 	sched_destroy_group(tg);
 }
 
-static void cpu_cgroup_css_offline(struct cgroup_subsys_state *css)
+static void cpu_cgroup_css_offline(struct cgroup *cgrp)
 {
-	struct task_group *tg = css_tg(css);
+	struct task_group *tg = cgroup_tg(cgrp);
 
 	sched_offline_group(tg);
 }
@@ -8981,14 +8989,14 @@ static void cpu_cgroup_fork(struct task_struct *task)
 	sched_move_task(task);
 }
 
-static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
+static int cpu_cgroup_can_attach(struct cgroup *cgrp,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 
-	cgroup_taskset_for_each(task, css->cgroup, tset) {
+	cgroup_taskset_for_each(task, cgrp, tset) {
 #ifdef CONFIG_RT_GROUP_SCHED
-		if (!sched_rt_can_attach(css_tg(css), task))
+		if (!sched_rt_can_attach(cgroup_tg(cgrp), task))
 			return -EINVAL;
 #else
 		/* We don't support RT-tasks being in separate groups */
@@ -8999,18 +9007,18 @@ static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static void cpu_cgroup_attach(struct cgroup_subsys_state *css,
+static void cpu_cgroup_attach(struct cgroup *cgrp,
 			      struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 
-	cgroup_taskset_for_each(task, css->cgroup, tset)
+	cgroup_taskset_for_each(task, cgrp, tset)
 		sched_move_task(task);
 }
 
-static void cpu_cgroup_exit(struct cgroup_subsys_state *css,
-			    struct cgroup_subsys_state *old_css,
-			    struct task_struct *task)
+static void
+cpu_cgroup_exit(struct cgroup *cgrp, struct cgroup *old_cgrp,
+		struct task_struct *task)
 {
 	/*
 	 * cgroup_exit() is called in the copy_process() failure path.
@@ -9042,16 +9050,15 @@ static int cpu_notify_on_migrate_write_u64(struct cgroup *cgrp,
 }
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
-static int cpu_shares_write_u64(struct cgroup_subsys_state *css,
-				struct cftype *cftype, u64 shareval)
+static int cpu_shares_write_u64(struct cgroup *cgrp, struct cftype *cftype,
+				u64 shareval)
 {
-	return sched_group_set_shares(css_tg(css), scale_load(shareval));
+	return sched_group_set_shares(cgroup_tg(cgrp), scale_load(shareval));
 }
 
-static u64 cpu_shares_read_u64(struct cgroup_subsys_state *css,
-			       struct cftype *cft)
+static u64 cpu_shares_read_u64(struct cgroup *cgrp, struct cftype *cft)
 {
-	struct task_group *tg = css_tg(css);
+	struct task_group *tg = cgroup_tg(cgrp);
 
 	return (u64) scale_load_down(tg->shares);
 }
@@ -9179,28 +9186,26 @@ long tg_get_cfs_period(struct task_group *tg)
 	return cfs_period_us;
 }
 
-static s64 cpu_cfs_quota_read_s64(struct cgroup_subsys_state *css,
-				  struct cftype *cft)
+static s64 cpu_cfs_quota_read_s64(struct cgroup *cgrp, struct cftype *cft)
 {
-	return tg_get_cfs_quota(css_tg(css));
+	return tg_get_cfs_quota(cgroup_tg(cgrp));
 }
 
-static int cpu_cfs_quota_write_s64(struct cgroup_subsys_state *css,
-				   struct cftype *cftype, s64 cfs_quota_us)
+static int cpu_cfs_quota_write_s64(struct cgroup *cgrp, struct cftype *cftype,
+				s64 cfs_quota_us)
 {
-	return tg_set_cfs_quota(css_tg(css), cfs_quota_us);
+	return tg_set_cfs_quota(cgroup_tg(cgrp), cfs_quota_us);
 }
 
-static u64 cpu_cfs_period_read_u64(struct cgroup_subsys_state *css,
-				   struct cftype *cft)
+static u64 cpu_cfs_period_read_u64(struct cgroup *cgrp, struct cftype *cft)
 {
-	return tg_get_cfs_period(css_tg(css));
+	return tg_get_cfs_period(cgroup_tg(cgrp));
 }
 
-static int cpu_cfs_period_write_u64(struct cgroup_subsys_state *css,
-				    struct cftype *cftype, u64 cfs_period_us)
+static int cpu_cfs_period_write_u64(struct cgroup *cgrp, struct cftype *cftype,
+				u64 cfs_period_us)
 {
-	return tg_set_cfs_period(css_tg(css), cfs_period_us);
+	return tg_set_cfs_period(cgroup_tg(cgrp), cfs_period_us);
 }
 
 struct cfs_schedulable_data {
@@ -9282,14 +9287,14 @@ static int __cfs_schedulable(struct task_group *tg, u64 period, u64 quota)
 }
 
 static int cpu_stats_show(struct cgroup *cgrp, struct cftype *cft,
-			  struct seq_file *sf)
+		struct cgroup_map_cb *cb)
 {
 	struct task_group *tg = cgroup_tg(cgrp);
 	struct cfs_bandwidth *cfs_b = &tg->cfs_bandwidth;
 
-	seq_printf(sf, "nr_periods %d\n", cfs_b->nr_periods);
-	seq_printf(sf, "nr_throttled %d\n", cfs_b->nr_throttled);
-	seq_printf(sf, "throttled_time %llu\n", cfs_b->throttled_time);
+	cb->fill(cb, "nr_periods", cfs_b->nr_periods);
+	cb->fill(cb, "nr_throttled", cfs_b->nr_throttled);
+	cb->fill(cb, "throttled_time", cfs_b->throttled_time);
 
 	return 0;
 }
@@ -9297,28 +9302,26 @@ static int cpu_stats_show(struct cgroup *cgrp, struct cftype *cft,
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 
 #ifdef CONFIG_RT_GROUP_SCHED
-static int cpu_rt_runtime_write(struct cgroup_subsys_state *css,
-				struct cftype *cft, s64 val)
+static int cpu_rt_runtime_write(struct cgroup *cgrp, struct cftype *cft,
+				s64 val)
 {
-	return sched_group_set_rt_runtime(css_tg(css), val);
+	return sched_group_set_rt_runtime(cgroup_tg(cgrp), val);
 }
 
-static s64 cpu_rt_runtime_read(struct cgroup_subsys_state *css,
-			       struct cftype *cft)
+static s64 cpu_rt_runtime_read(struct cgroup *cgrp, struct cftype *cft)
 {
-	return sched_group_rt_runtime(css_tg(css));
+	return sched_group_rt_runtime(cgroup_tg(cgrp));
 }
 
-static int cpu_rt_period_write_uint(struct cgroup_subsys_state *css,
-				    struct cftype *cftype, u64 rt_period_us)
+static int cpu_rt_period_write_uint(struct cgroup *cgrp, struct cftype *cftype,
+		u64 rt_period_us)
 {
-	return sched_group_set_rt_period(css_tg(css), rt_period_us);
+	return sched_group_set_rt_period(cgroup_tg(cgrp), rt_period_us);
 }
 
-static u64 cpu_rt_period_read_uint(struct cgroup_subsys_state *css,
-				   struct cftype *cft)
+static u64 cpu_rt_period_read_uint(struct cgroup *cgrp, struct cftype *cft)
 {
-	return sched_group_rt_period(css_tg(css));
+	return sched_group_rt_period(cgroup_tg(cgrp));
 }
 #endif /* CONFIG_RT_GROUP_SCHED */
 
@@ -9348,7 +9351,7 @@ static struct cftype cpu_files[] = {
 	},
 	{
 		.name = "stat",
-		.read_seq_string = cpu_stats_show,
+		.read_map = cpu_stats_show,
 	},
 #endif
 #ifdef CONFIG_RT_GROUP_SCHED

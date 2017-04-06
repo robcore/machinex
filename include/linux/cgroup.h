@@ -35,7 +35,7 @@ extern int cgroup_init_early(void);
 extern int cgroup_init(void);
 extern void cgroup_fork(struct task_struct *p);
 extern void cgroup_post_fork(struct task_struct *p);
-extern void cgroup_exit(struct task_struct *p, int run_callbacks);
+extern void cgroup_exit(struct task_struct *p);
 extern int cgroupstats_build(struct cgroupstats *stats,
 				struct dentry *dentry);
 extern int cgroup_load_subsys(struct cgroup_subsys *ss);
@@ -65,12 +65,13 @@ enum cgroup_subsys_id {
 #undef SUBSYS
 
 /* Per-subsystem/per-cgroup state maintained by the system. */
-struct cgroup_subsys_state {
-	/* the cgroup that this css is attached to */
+struct cgroup_css {
+	/*
+	 * The cgroup that this subsystem is attached to. Useful
+	 * for subsystems that want to know about the cgroup
+	 * hierarchy structure
+	 */
 	struct cgroup *cgroup;
-
-	/* the cgroup subsystem that this css is attached to */
-	struct cgroup_subsys *ss;
 
 	/* reference count - access via css_[try]get() and css_put() */
 	struct percpu_ref refcnt;
@@ -83,14 +84,14 @@ struct cgroup_subsys_state {
 	struct work_struct dput_work;
 };
 
-/* bits in struct cgroup_subsys_state flags field */
+/* bits in struct cgroup_css flags field */
 enum {
 	CSS_ROOT	= (1 << 0), /* this CSS is the root of the subsystem */
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
 };
 
 /* Caller must verify that the css is not for root cgroup */
-static inline void __css_get(struct cgroup_subsys_state *css, int count)
+static inline void __css_get(struct cgroup_css *css, int count)
 {
 		percpu_ref_get(&css->refcnt);
 }
@@ -102,8 +103,8 @@ static inline void __css_get(struct cgroup_subsys_state *css, int count)
  * - task->cgroups for a locked task
  */
 
-extern void __css_get(struct cgroup_subsys_state *css, int count);
-static inline void css_get(struct cgroup_subsys_state *css)
+extern void __css_get(struct cgroup_css *css, int count);
+static inline void css_get(struct cgroup_css *css)
 {
 	/* We don't need to reference count the root state */
 	if (!(css->flags & CSS_ROOT))
@@ -116,8 +117,8 @@ static inline void css_get(struct cgroup_subsys_state *css)
  * the css has been destroyed.
  */
 
-extern bool __css_tryget(struct cgroup_subsys_state *css);
-static inline bool css_tryget(struct cgroup_subsys_state *css)
+extern bool __css_tryget(struct cgroup_css *css);
+static inline bool css_tryget(struct cgroup_css *css)
 {
 	if (css->flags & CSS_ROOT)
 		return true;
@@ -130,7 +131,7 @@ static inline bool css_tryget(struct cgroup_subsys_state *css)
  *
  * Put a reference obtained via css_get() and css_tryget().
  */
-static inline void css_put(struct cgroup_subsys_state *css)
+static inline void css_put(struct cgroup_css *css)
 {
 	if (!(css->flags & CSS_ROOT))
 		percpu_ref_put(&css->refcnt);
@@ -140,10 +141,7 @@ static inline void css_put(struct cgroup_subsys_state *css)
 enum {
 	/* Control Group is dead */
 	CGRP_DEAD,
-	/*
-	 * Control Group has previously had a child cgroup or a task,
-	 * but no longer (only if CGRP_NOTIFY_ON_RELEASE is set)
-	 */
+	/* Control Group has ever had a child cgroup or a task */
 	CGRP_RELEASABLE,
 	/* Control Group requires release notifications to userspace */
 	CGRP_NOTIFY_ON_RELEASE,
@@ -165,13 +163,7 @@ struct cgroup_name {
 struct cgroup {
 	unsigned long flags;		/* "unsigned long" so bitops work */
 
-	/*
-	 * ida allocated in-hierarchy ID.
-	 *
-	 * The ID of the root cgroup is always 0, and a new cgroup
-	 * will be assigned with a smallest available ID.
-	 */
-	int id;
+	int id;				/* ida allocated in-hierarchy ID */
 
 	/*
 	 * We link our 'sibling' struct into our parent's 'children'.
@@ -206,7 +198,7 @@ struct cgroup {
 	struct cgroup_name __rcu *name;
 
 	/* Private pointers for each registered subsystem */
-	struct cgroup_subsys_state *subsys[CGROUP_SUBSYS_COUNT];
+	struct cgroup_css *subsys[CGROUP_SUBSYS_COUNT];
 
 	struct cgroupfs_root *root;
 
@@ -229,9 +221,6 @@ struct cgroup {
 	 */
 	struct list_head pidlists;
 	struct mutex pidlist_mutex;
-
-	/* dummy css with NULL ->ss, points back to this cgroup */
-	struct cgroup_subsys_state dummy_css;
 
 	/* For css percpu_ref killing and RCU-protected deletion */
 	struct rcu_head rcu_head;
@@ -274,14 +263,6 @@ enum {
 	 *
 	 * - Remount is disallowed.
 	 *
-	 * - rename(2) is disallowed.
-	 *
-	 * - "tasks" is removed.  Everything should be at process
-	 *   granularity.  Use "cgroup.procs" instead.
-	 *
-	 * - "release_agent" and "notify_on_release" are removed.
-	 *   Replacement notification mechanism will be implemented.
-	 *
 	 * - cpuset: tasks will be kept in empty cpusets when hotplug happens
 	 *   and take masks of ancestors with non-empty cpus/mems, instead of
 	 *   being moved to an ancestor.
@@ -291,8 +272,10 @@ enum {
 	 *
 	 * - memcg: use_hierarchy is on by default and the cgroup file for
 	 *   the flag is not created.
+	 * The followings are planned changes.
 	 *
-	 * - blkcg: blk-throttle becomes properly hierarchical.
+	 * - release_agent will be disallowed once replacement notification
+	 *   mechanism is implemented.
 	 */
 	CGRP_ROOT_SANE_BEHAVIOR	= (1 << 0),
 
@@ -346,7 +329,7 @@ struct cgroupfs_root {
 
 /*
  * A css_set is a structure holding pointers to a set of
- * cgroup_subsys_state objects. This saves space in the task struct
+ * cgroup_css objects. This saves space in the task struct
  * object and speeds up fork()/exit(), since a single inc/dec and a
  * list_add()/del() can bump the reference count on the entire cgroup
  * set for a task.
@@ -381,7 +364,7 @@ struct css_set {
 	 * during subsystem registration (at boot time) and modular subsystem
 	 * loading/unloading.
 	 */
-	struct cgroup_subsys_state *subsys[CGROUP_SUBSYS_COUNT];
+	struct cgroup_css *subsys[CGROUP_SUBSYS_COUNT];
 
 	/* For RCU-protected deletion */
 	struct rcu_head rcu_head;
@@ -438,41 +421,35 @@ struct cftype {
 	/* CFTYPE_* flags */
 	unsigned int flags;
 
-	/*
-	 * The subsys this file belongs to.  Initialized automatically
-	 * during registration.  NULL for cgroup core files.
-	 */
-	struct cgroup_subsys *ss;
-
 	int (*open)(struct inode *inode, struct file *file);
-	ssize_t (*read)(struct cgroup_subsys_state *css, struct cftype *cft,
+	ssize_t (*read)(struct cgroup *cgrp, struct cftype *cft,
 			struct file *file,
 			char __user *buf, size_t nbytes, loff_t *ppos);
 	/*
 	 * read_u64() is a shortcut for the common case of returning a
 	 * single integer. Use it in place of read()
 	 */
-	u64 (*read_u64)(struct cgroup_subsys_state *css, struct cftype *cft);
+	u64 (*read_u64)(struct cgroup *cgrp, struct cftype *cft);
 	/*
 	 * read_s64() is a signed version of read_u64()
 	 */
-	s64 (*read_s64)(struct cgroup_subsys_state *css, struct cftype *cft);
+	s64 (*read_s64)(struct cgroup *cgrp, struct cftype *cft);
 	/*
 	 * read_map() is used for defining a map of key/value
 	 * pairs. It should call cb->fill(cb, key, value) for each
 	 * entry. The key/value pairs (and their ordering) should not
 	 * change between reboots.
 	 */
-	int (*read_map)(struct cgroup_subsys_state *css, struct cftype *cft,
+	int (*read_map)(struct cgroup *cgrp, struct cftype *cft,
 			struct cgroup_map_cb *cb);
 	/*
 	 * read_seq_string() is used for outputting a simple sequence
 	 * using seqfile.
 	 */
-	int (*read_seq_string)(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct seq_file *m);
+	int (*read_seq_string)(struct cgroup *cgrp, struct cftype *cft,
+			       struct seq_file *m);
 
-	ssize_t (*write)(struct cgroup_subsys_state *css, struct cftype *cft,
+	ssize_t (*write)(struct cgroup *cgrp, struct cftype *cft,
 			 struct file *file,
 			 const char __user *buf, size_t nbytes, loff_t *ppos);
 
@@ -481,20 +458,18 @@ struct cftype {
 	 * a single integer (as parsed by simple_strtoull) from
 	 * userspace. Use in place of write(); return 0 or error.
 	 */
-	int (*write_u64)(struct cgroup_subsys_state *css, struct cftype *cft,
-			 u64 val);
+	int (*write_u64)(struct cgroup *cgrp, struct cftype *cft, u64 val);
 	/*
 	 * write_s64() is a signed version of write_u64()
 	 */
-	int (*write_s64)(struct cgroup_subsys_state *css, struct cftype *cft,
-			 s64 val);
+	int (*write_s64)(struct cgroup *cgrp, struct cftype *cft, s64 val);
 
 	/*
 	 * write_string() is passed a nul-terminated kernelspace
 	 * buffer of maximum length determined by max_write_len.
 	 * Returns 0 or -ve error code.
 	 */
-	int (*write_string)(struct cgroup_subsys_state *css, struct cftype *cft,
+	int (*write_string)(struct cgroup *cgrp, struct cftype *cft,
 			    const char *buffer);
 	/*
 	 * trigger() callback can be used to get some kick from the
@@ -502,7 +477,7 @@ struct cftype {
 	 * at all. The private field can be used to determine the
 	 * kick type for multiplexing.
 	 */
-	int (*trigger)(struct cgroup_subsys_state *css, unsigned int event);
+	int (*trigger)(struct cgroup *cgrp, unsigned int event);
 
 	int (*release)(struct inode *inode, struct file *file);
 
@@ -559,7 +534,7 @@ static inline const char *cgroup_name(const struct cgroup *cgrp)
 }
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
-int cgroup_rm_cftypes(struct cftype *cfts);
+int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
 int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
@@ -594,23 +569,18 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
-	int (*css_online)(struct cgroup_subsys_state *css);
-	void (*css_offline)(struct cgroup_subsys_state *css);
-	void (*css_free)(struct cgroup_subsys_state *css);
-
-	int (*can_attach)(struct cgroup_subsys_state *css,
-			  struct cgroup_taskset *tset);
-	void (*cancel_attach)(struct cgroup_subsys_state *css,
-			      struct cgroup_taskset *tset);
-	void (*attach)(struct cgroup_subsys_state *css,
-		       struct cgroup_taskset *tset);
-	int (*allow_attach)(struct cgroup_subsys_state *css, struct cgroup_taskset *tset);
-
+	struct cgroup_css *(*css_alloc)(struct cgroup *cgrp);
+	int (*css_online)(struct cgroup *cgrp);
+	void (*css_offline)(struct cgroup *cgrp);
+	void (*css_free)(struct cgroup *cgrp);
+	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	int (*can_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	void (*cancel_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	void (*attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
-	void (*exit)(struct cgroup_subsys_state *css, struct cgroup_subsys_state *old_css,
+	void (*exit)(struct cgroup *cgrp, struct cgroup *old_cgrp,
 		     struct task_struct *task);
-	void (*bind)(struct cgroup_subsys_state *root_css);
+	void (*bind)(struct cgroup *root);
 
 	int subsys_id;
 	int active;
@@ -668,34 +638,13 @@ struct cgroup_subsys {
 #undef SUBSYS
 
 /**
- * css_parent - find the parent css
- * @css: the target cgroup_subsys_state
- *
- * Return the parent css of @css.  This function is guaranteed to return
- * non-NULL parent as long as @css isn't the root.
- */
-static inline
-struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
-{
-	struct cgroup *parent_cgrp = css->cgroup->parent;
-
-	if (!parent_cgrp)
-		return NULL;
-
-	if (css->ss)
-		return parent_cgrp->subsys[css->ss->subsys_id];
-	else
-		return &parent_cgrp->dummy_css;
-}
-
-/**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
  * @cgrp: the cgroup of interest
  * @subsys_id: the subsystem of interest
  *
- * Return @cgrp's css (cgroup_subsys_state) associated with @subsys_id.
+ * Return @cgrp's css (cgroup_css) associated with @subsys_id.
  */
-static inline struct cgroup_subsys_state *cgroup_css(struct cgroup *cgrp,
+static inline struct cgroup_css *cgroup_css(struct cgroup *cgrp,
 						     int subsys_id)
 {
 	return cgrp->subsys[subsys_id];
@@ -755,102 +704,81 @@ static inline struct css_set *task_css_set(struct task_struct *task)
  *
  * See task_css_check().
 */
-static inline struct cgroup_subsys_state *
+static inline struct cgroup_css *
 task_css(struct task_struct *task, int subsys_id)
 {
 	return task_css_check(task, subsys_id, false);
 }
 
-static inline struct cgroup *task_cgroup(struct task_struct *task,
-					 int subsys_id)
+static inline struct cgroup* task_cgroup(struct task_struct *task,
+					       int subsys_id)
 {
 	return task_css(task, subsys_id)->cgroup;
 }
 
-/**
- * cgroup_from_id - lookup cgroup by id
- * @ss: cgroup subsys to be looked into
- * @id: the cgroup id
- *
- * Returns the cgroup if there's valid one with @id, otherwise returns NULL.
- * Should be called under rcu_read_lock().
- */
-static inline struct cgroup *cgroup_from_id(struct cgroup_subsys *ss, int id)
-{
-#ifdef CONFIG_PROVE_RCU
-	rcu_lockdep_assert(rcu_read_lock_held() ||
-			   lockdep_is_held(&cgroup_mutex),
-			   "cgroup_from_id() needs proper protection");
-#endif
-	return ida_find(&ss->root->cgroup_ida, id);
-}
-
-struct cgroup_subsys_state *css_next_child(struct cgroup_subsys_state *pos,
-					   struct cgroup_subsys_state *parent);
+struct cgroup *cgroup_next_sibling(struct cgroup *pos);
 
 /**
- * css_for_each_child - iterate through children of a css
- * @pos: the css * to use as the loop cursor
- * @parent: css whose children to walk
+ * cgroup_for_each_child - iterate through children of a cgroup
+ * @pos: the cgroup * to use as the loop cursor
+ * @cgrp: cgroup whose children to walk
  *
- * Walk @parent's children.  Must be called under rcu_read_lock().  A child
- * css which hasn't finished ->css_online() or already has finished
+ * Walk @cgrp's children.  Must be called under rcu_read_lock().  A child
+ * cgroup which hasn't finished ->css_online() or already has finished
  * ->css_offline() may show up during traversal and it's each subsystem's
  * responsibility to verify that each @pos is alive.
  *
  * If a subsystem synchronizes against the parent in its ->css_online() and
- * before starting iterating, a css which finished ->css_online() is
+ * before starting iterating, a cgroup which finished ->css_online() is
  * guaranteed to be visible in the future iterations.
  *
  * It is allowed to temporarily drop RCU read lock during iteration.  The
  * caller is responsible for ensuring that @pos remains accessible until
  * the start of the next iteration by, for example, bumping the css refcnt.
  */
-#define css_for_each_child(pos, parent)					\
-	for ((pos) = css_next_child(NULL, (parent)); (pos);		\
-	     (pos) = css_next_child((pos), (parent)))
+#define cgroup_for_each_child(pos, cgrp)				\
+	for ((pos) = list_first_or_null_rcu(&(cgrp)->children,		\
+					    struct cgroup, sibling);	\
+	     (pos); (pos) = cgroup_next_sibling((pos)))
 
-struct cgroup_subsys_state *
-css_next_descendant_pre(struct cgroup_subsys_state *pos,
-			struct cgroup_subsys_state *css);
-
-struct cgroup_subsys_state *
-css_rightmost_descendant(struct cgroup_subsys_state *pos);
+struct cgroup *cgroup_next_descendant_pre(struct cgroup *pos,
+					  struct cgroup *cgroup);
+struct cgroup *cgroup_rightmost_descendant(struct cgroup *pos);
 
 /**
- * css_for_each_descendant_pre - pre-order walk of a css's descendants
- * @pos: the css * to use as the loop cursor
- * @root: css whose descendants to walk
+ * cgroup_for_each_descendant_pre - pre-order walk of a cgroup's descendants
+ * @pos: the cgroup * to use as the loop cursor
+ * @cgroup: cgroup whose descendants to walk
  *
- * Walk @root's descendants.  Must be called under rcu_read_lock().  A
- * descendant css which hasn't finished ->css_online() or already has
+ * Walk @cgroup's descendants.  Must be called under rcu_read_lock().  A
+ * descendant cgroup which hasn't finished ->css_online() or already has
  * finished ->css_offline() may show up during traversal and it's each
  * subsystem's responsibility to verify that each @pos is alive.
  *
  * If a subsystem synchronizes against the parent in its ->css_online() and
  * before starting iterating, and synchronizes against @pos on each
- * iteration, any descendant css which finished ->css_online() is
+ * iteration, any descendant cgroup which finished ->css_online() is
  * guaranteed to be visible in the future iterations.
  *
  * In other words, the following guarantees that a descendant can't escape
  * state updates of its ancestors.
  *
- * my_online(@css)
+ * my_online(@cgrp)
  * {
- *	Lock @css's parent and @css;
- *	Inherit state from the parent;
+ *	Lock @cgrp->parent and @cgrp;
+ *	Inherit state from @cgrp->parent;
  *	Unlock both.
  * }
  *
- * my_update_state(@css)
+ * my_update_state(@cgrp)
  * {
- *	Lock @css;
- *	Update @css's state;
- *	Unlock @css;
+ *	Lock @cgrp;
+ *	Update @cgrp's state;
+ *	Unlock @cgrp;
  *
- *	css_for_each_descendant_pre(@pos, @css) {
+ *	cgroup_for_each_descendant_pre(@pos, @cgrp) {
  *		Lock @pos;
- *		Verify @pos is alive and inherit state from @pos's parent;
+ *		Verify @pos is alive and inherit state from @pos->parent;
  *		Unlock @pos;
  *	}
  * }
@@ -861,7 +789,8 @@ css_rightmost_descendant(struct cgroup_subsys_state *pos);
  * visible by walking order and, as long as inheriting operations to the
  * same @pos are atomic to each other, multiple updates racing each other
  * still result in the correct state.  It's guaranateed that at least one
- * inheritance happens for any css after the latest update to its parent.
+ * inheritance happens for any cgroup after the latest update to its
+ * parent.
  *
  * If checking parent's state requires locking the parent, each inheriting
  * iteration should lock and unlock both @pos->parent and @pos.
@@ -874,26 +803,25 @@ css_rightmost_descendant(struct cgroup_subsys_state *pos);
  * caller is responsible for ensuring that @pos remains accessible until
  * the start of the next iteration by, for example, bumping the css refcnt.
  */
-#define css_for_each_descendant_pre(pos, css)				\
-	for ((pos) = css_next_descendant_pre(NULL, (css)); (pos);	\
-	     (pos) = css_next_descendant_pre((pos), (css)))
+#define cgroup_for_each_descendant_pre(pos, cgroup)			\
+	for (pos = cgroup_next_descendant_pre(NULL, (cgroup)); (pos);	\
+	     pos = cgroup_next_descendant_pre((pos), (cgroup)))
 
-struct cgroup_subsys_state *
-css_next_descendant_post(struct cgroup_subsys_state *pos,
-			 struct cgroup_subsys_state *css);
+struct cgroup *cgroup_next_descendant_post(struct cgroup *pos,
+					   struct cgroup *cgroup);
 
 /**
- * css_for_each_descendant_post - post-order walk of a css's descendants
- * @pos: the css * to use as the loop cursor
- * @css: css whose descendants to walk
+ * cgroup_for_each_descendant_post - post-order walk of a cgroup's descendants
+ * @pos: the cgroup * to use as the loop cursor
+ * @cgroup: cgroup whose descendants to walk
  *
- * Similar to css_for_each_descendant_pre() but performs post-order
+ * Similar to cgroup_for_each_descendant_pre() but performs post-order
  * traversal instead.  Note that the walk visibility guarantee described in
  * pre-order walk doesn't apply the same to post-order walks.
  */
-#define css_for_each_descendant_post(pos, css)				\
-	for ((pos) = css_next_descendant_post(NULL, (css)); (pos);	\
-	     (pos) = css_next_descendant_post((pos), (css)))
+#define cgroup_for_each_descendant_post(pos, cgroup)			\
+	for (pos = cgroup_next_descendant_post(NULL, (cgroup)); (pos);	\
+	     pos = cgroup_next_descendant_post((pos), (cgroup)))
 
 /* A cgroup_iter should be treated as an opaque object */
 struct cgroup_iter {
@@ -925,11 +853,11 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *);
 int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
 
 /*
- * CSS ID is ID for cgroup_subsys_state structs under subsys. This only works
+ * CSS ID is ID for cgroup_css structs under subsys. This only works
  * if cgroup_subsys.use_id == true. It can be used for looking up and scanning.
  * CSS ID is assigned at cgroup allocation (create) automatically
  * and removed when subsys calls free_css_id() function. This is because
- * the lifetime of cgroup_subsys_state is subsys's matter.
+ * the lifetime of cgroup_css is subsys's matter.
  *
  * Looking up and scanning function should be called under rcu_read_lock().
  * Taking cgroup_mutex is not necessary for following calls.
@@ -939,21 +867,21 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
 
 /*
  * Typically Called at ->destroy(), or somewhere the subsys frees
- * cgroup_subsys_state.
+ * cgroup_css.
  */
-void free_css_id(struct cgroup_subsys *ss, struct cgroup_subsys_state *css);
+void free_css_id(struct cgroup_subsys *ss, struct cgroup_css *css);
 
-/* Find a cgroup_subsys_state which has given ID */
+/* Find a cgroup_css which has given ID */
 
-struct cgroup_subsys_state *css_lookup(struct cgroup_subsys *ss, int id);
+struct cgroup_css *css_lookup(struct cgroup_subsys *ss, int id);
 
 /* Returns true if root is ancestor of cg */
-bool css_is_ancestor(struct cgroup_subsys_state *cg,
-		     const struct cgroup_subsys_state *root);
+bool css_is_ancestor(struct cgroup_css *cg,
+		     const struct cgroup_css *root);
 
 /* Get id and depth of css */
-unsigned short css_id(struct cgroup_subsys_state *css);
-struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
+unsigned short css_id(struct cgroup_css *css);
+struct cgroup_css *cgroup_css_from_dir(struct file *f, int id);
 
 /*
  * Default Android check for whether the current process is allowed to move a
@@ -962,7 +890,7 @@ struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
  * running as root.
  * Returns 0 if this is allowed, or -EACCES otherwise.
  */
-int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
+int subsys_cgroup_allow_attach(struct cgroup *cgrp,
 			       struct cgroup_taskset *tset);
 
 
@@ -972,7 +900,7 @@ static inline int cgroup_init_early(void) { return 0; }
 static inline int cgroup_init(void) { return 0; }
 static inline void cgroup_fork(struct task_struct *p) {}
 static inline void cgroup_post_fork(struct task_struct *p) {}
-static inline void cgroup_exit(struct task_struct *p, int callbacks) {}
+static inline void cgroup_exit(struct task_struct *p) {}
 
 static inline int cgroupstats_build(struct cgroupstats *stats,
 					struct dentry *dentry)
@@ -987,7 +915,7 @@ static inline int cgroup_attach_task_all(struct task_struct *from,
 	return 0;
 }
 
-static inline int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
+static inline int subsys_cgroup_allow_attach(struct cgroup *cgrp,
 					     struct cgroup_taskset *tset)
 {
 	return 0;
