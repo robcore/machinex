@@ -4,6 +4,7 @@
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
  *                      Jun Nakajima <jun.nakajima@intel.com>
+ *            (c)  2013 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -43,41 +44,11 @@
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
-
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-
-#define DEF_FREQ_STEP				(40)	/* msm8960 tuners */
-
-/* PATCH : SMART_UP */
-#if defined(CONFIG_SEC_PRODUCT_8960)
-#define SMART_UP_PLUS (0)
-#define SMART_UP_SLOW_UP_AT_HIGH_FREQ (0)
-#else
-#define SMART_UP_PLUS (1)
-#define SMART_UP_SLOW_UP_AT_HIGH_FREQ (1)
-#endif
-
-#define SUP_MAX_STEP (3)
-#define SUP_CORE_NUM (4)
-#define SUP_SLOW_UP_DUR (2)
-
-#if defined(SMART_UP_PLUS)
-static unsigned int SUP_THRESHOLD_STEPS[SUP_MAX_STEP] = {75, 85, 90};
-static unsigned int SUP_FREQ_STEPS[SUP_MAX_STEP] = {4, 3, 2};
-static unsigned int min_range = 108000;
-#endif
-
-#if defined(SMART_UP_SLOW_UP_AT_HIGH_FREQ)
-static unsigned int SUP_SLOW_UP_FREQUENCY = 1566000;
-static unsigned int SUP_SLOW_UP_LOAD = 90;
-
-typedef struct {
-	unsigned int hist_max_load[SUP_SLOW_UP_DUR];
-	unsigned int hist_load_cnt;
-} history_load;
-static void reset_hist(history_load *hist_load); /* unuseful parameter */
-history_load hist_load[SUP_CORE_NUM] = {};
-#endif
+#define DEF_MIDDLE_GRID_STEP           		(14)
+#define DEF_HIGH_GRID_STEP             		(20)
+#define DEF_MIDDLE_GRID_LOAD			(65)
+#define DEF_HIGH_GRID_LOAD			(89)
+#define DEF_OPTIMAL_FREQ			(1134000)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -122,13 +93,6 @@ struct cpu_dbs_info_s {
 	u64 prev_cpu_iowait;
 	u64 prev_cpu_wall;
 	u64 prev_cpu_nice;
-	/*
-	 * Used to keep track of load in the previous interval. However, when
-	 * explicitly set to zero, it is used as a flag to ensure that we copy
-	 * the previous load to the current interval only once, upon the first
-	 * wake-up from idle.
-	 */
-	unsigned int prev_load;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -136,6 +100,7 @@ struct cpu_dbs_info_s {
 	unsigned int freq_lo_jiffies;
 	unsigned int freq_hi_jiffies;
 	unsigned int rate_mult;
+	unsigned int prev_load;
 	unsigned int max_load;
 	int cpu;
 	unsigned int sample_type:1;
@@ -145,6 +110,11 @@ struct cpu_dbs_info_s {
 	 * when user is changing the governor or limits.
 	 */
 	struct mutex timer_mutex;
+
+	struct task_struct *sync_thread;
+	wait_queue_head_t sync_wq;
+	atomic_t src_sync_cpu;
+	atomic_t sync_enabled;
 };
 static DEFINE_PER_CPU(struct cpu_dbs_info_s, od_cpu_dbs_info);
 
@@ -158,9 +128,14 @@ static unsigned int dbs_enable;	/* number of CPUs using this policy */
  */
 static DEFINE_MUTEX(dbs_mutex);
 
-static struct workqueue_struct *input_wq;
+static struct workqueue_struct *dbs_wq;
 
-static DEFINE_PER_CPU(struct work_struct, dbs_refresh_work);
+struct dbs_work_struct {
+	struct work_struct work;
+	unsigned int cpu;
+};
+
+static DEFINE_PER_CPU(struct dbs_work_struct, dbs_refresh_work);
 
 static struct dbs_tuners {
 	unsigned int sampling_rate;
@@ -175,8 +150,13 @@ static struct dbs_tuners {
 	unsigned int sampling_down_factor;
 	int          powersave_bias;
 	unsigned int io_is_busy;
-	int          enable_turbo_mode;
-	unsigned int freq_step;	/* msm8960 tuners */
+	unsigned int input_boost;
+	unsigned int optimal_max_freq;
+	unsigned int middle_grid_step;
+	unsigned int high_grid_step;
+	unsigned int middle_grid_load;
+	unsigned int high_grid_load;
+	unsigned int debug_mask;
 } dbs_tuners_ins = {
 	.up_threshold_multi_core = DEF_FREQUENCY_UP_THRESHOLD,
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
@@ -184,12 +164,18 @@ static struct dbs_tuners {
 	.down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL,
 	.down_differential_multi_core = MICRO_FREQUENCY_DOWN_DIFFERENTIAL,
 	.up_threshold_any_cpu_load = DEF_FREQUENCY_UP_THRESHOLD,
+	.middle_grid_step = DEF_MIDDLE_GRID_STEP,
+	.high_grid_step = DEF_HIGH_GRID_STEP,
+	.middle_grid_load = DEF_MIDDLE_GRID_LOAD,
+	.high_grid_load = DEF_HIGH_GRID_LOAD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 0,
-	.optimal_freq = 0,
-	.enable_turbo_mode = 1,
-	.freq_step = DEF_FREQ_STEP,	/* msm8960 tuners */
+	.sync_freq = 918000,
+	.optimal_freq = 1566000,
+	.input_boost = 0,
+	.optimal_max_freq = DEF_OPTIMAL_FREQ,
+	.debug_mask = 0,
+	.sampling_rate = 60000,
 };
 
 #ifdef CONFIG_MACH_MSM8974_B1_KR
