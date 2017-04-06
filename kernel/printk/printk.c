@@ -200,6 +200,9 @@ struct printk_log {
 	u8 facility;		/* syslog facility */
 	u8 flags:5;		/* internal record flags */
 	u8 level:3;		/* syslog level */
+#if defined(CONFIG_LOG_BUF_MAGIC)
+	u32 magic;		/* handle for ramdump analysis tools */
+#endif
 };
 
 /*
@@ -259,6 +262,12 @@ static char *log_dict(const struct printk_log *msg)
 {
 	return (char *)msg + sizeof(struct printk_log) + msg->text_len;
 }
+#if defined(CONFIG_LOG_BUF_MAGIC)
+static u32 __log_align __used = LOG_ALIGN;
+#define LOG_MAGIC(msg) ((msg)->magic = 0x5d7aefca)
+#else
+#define LOG_MAGIC(msg)
+#endif
 
 /* get record by index; idx must point to valid msg */
 static struct printk_log *log_from_idx(u32 idx)
@@ -401,6 +410,7 @@ static int log_store(int facility, int level,
 		 * to signify a wrap around.
 		 */
 		memset(log_buf + log_next_idx, 0, sizeof(struct printk_log));
+		LOG_MAGIC((struct printk_log *)(log_buf + log_next_idx));
 		log_next_idx = 0;
 	}
 
@@ -417,6 +427,7 @@ static int log_store(int facility, int level,
 	msg->facility = facility;
 	msg->level = level & 7;
 	msg->flags = flags & 0x1f;
+	LOG_MAGIC(msg);
 	if (ts_nsec > 0)
 		msg->ts_nsec = ts_nsec;
 	else
