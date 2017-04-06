@@ -1669,7 +1669,7 @@ static void ttwu_activate(struct rq *rq, struct task_struct *p, int en_flags)
 		wq_worker_waking_up(p, cpu_of(rq));
 }
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Window size (in ns) */
 __read_mostly unsigned int sched_ravg_window = 10000000;
@@ -1829,7 +1829,7 @@ update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 {
 }
 
-#endif	/* CONFIG_SCHED_FREQ_INPUT */
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 /*
  * Mark the task runnable and perform wakeup-preemption.
@@ -7770,7 +7770,8 @@ void __init sched_init_smp(void)
 }
 #endif /* CONFIG_SMP */
 
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+
 /*
  * Maximum possible frequency across all cpus. Task demand and cpu
  * capacity (cpu_power) metrics are scaled in reference to it.
@@ -7856,7 +7857,7 @@ static int register_sched_callback(void)
  */
 core_initcall(register_sched_callback);
 
-#endif /* CONFIG_SCHED_FREQ_INPUT */
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 const_debug unsigned int sysctl_timer_migration = 1;
 
@@ -8004,7 +8005,7 @@ void __init sched_init(void)
 		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
 		rq->cstate = 0;
 		rq->wakeup_latency = 0;
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 		rq->cur_freq = 1;
 		rq->max_freq = 1;
 		rq->min_freq = 1;
