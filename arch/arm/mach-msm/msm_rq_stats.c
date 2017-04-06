@@ -314,7 +314,7 @@ static int freq_policy_handler(struct notifier_block *nb,
 			this_cpu->policy_max, policy->max, event);
 out:
 	return NOTIFY_DONE;
-
+}
 
 static ssize_t hotplug_disable_show(struct kobject *kobj,
 				    struct kobj_attribute *attr, char *buf)
