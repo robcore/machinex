@@ -2846,7 +2846,7 @@ void init_new_task_load(struct task_struct *p)
 
 	for (i = 0; i < RAVG_HIST_SIZE; ++i)
 		p->ravg.sum_history[i] = sched_init_task_load_windows;
-	p->se.avg.runnable_avg_period =
+	p->se.avg.avg_period =
 		sysctl_sched_init_task_load_pct ? LOAD_AVG_MAX : 0;
 	p->se.avg.runnable_avg_sum = sched_init_task_load_pelt;
 	p->se.avg.runnable_avg_sum_scaled = sched_init_task_load_pelt;
@@ -2860,7 +2860,7 @@ void init_new_task_load(struct task_struct *p)
 void init_new_task_load(struct task_struct *p)
 {
 	p->se.avg.decay_count = 0;
-	p->se.avg.runnable_avg_period = 0;
+	p->se.avg.avg_period = 0;
 	p->se.avg.runnable_avg_sum = 0;
 }
 
@@ -2965,6 +2965,7 @@ static __always_inline int __update_entity_runnable_avg(int cpu, u64 now,
 		sa->running_avg_sum = decay_load(sa->running_avg_sum,
 						  periods + 1);
 		sa->avg_period = decay_load(sa->avg_period,
+						  periods + 1);
 		sa->usage_avg_sum = decay_load(sa->usage_avg_sum, periods + 1);
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
@@ -3049,7 +3050,7 @@ static inline void __update_tg_runnable_avg(struct sched_avg *sa,
 	contrib -= cfs_rq->tg_runnable_contrib;
 
 	usage_contrib = div_u64(sa->usage_avg_sum << NICE_0_SHIFT,
-			        sa->runnable_avg_period + 1);
+			        sa->avg_period + 1);
 	usage_contrib -= cfs_rq->tg_usage_contrib;
 
 	/*
