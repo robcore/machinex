@@ -2368,7 +2368,7 @@ static inline unsigned int task_load(struct task_struct *p)
 	return p->ravg.demand;
 }
 
-static inline unsigned int max_task_load(void)
+unsigned int max_task_load(void)
 {
 	if (sched_use_pelt)
 		return LOAD_AVG_MAX;
@@ -6226,7 +6226,10 @@ static DEFINE_PER_CPU(int, dbs_boost_load_moved);
 static void move_task(struct task_struct *p, struct lb_env *env)
 {
 	deactivate_task(env->src_rq, p, 0);
+	double_lock_balance(env->src_rq, env->dst_rq);
+ 	p->on_rq = TASK_ON_RQ_MIGRATING;
 	set_task_cpu(p, env->dst_cpu);
+	double_unlock_balance(env->src_rq, env->dst_rq);
 	activate_task(env->dst_rq, p, 0);
 	check_preempt_curr(env->dst_rq, p, 0);
 	if (task_notify_on_migrate(p))
