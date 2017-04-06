@@ -1799,7 +1799,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 			    sysctl_sched_freq_dec_notify_slack_pct)
 				atomic_notifier_call_chain(
 					&load_alert_notifier_head, 0,
-+					(void *)(long)task_cpu(p));
+					(void *)(long)task_cpu(p));
 		}
 #endif
 	}

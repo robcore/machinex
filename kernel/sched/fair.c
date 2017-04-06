@@ -4906,6 +4906,8 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		inc_nr_running(rq);
 		inc_nr_big_small_task(rq, p);
 	}
+
+#endif /* CONFIG_SMP */
 	hrtick_update(rq);
 }
 
