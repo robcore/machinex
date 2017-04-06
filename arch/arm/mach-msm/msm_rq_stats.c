@@ -280,6 +280,22 @@ static int system_suspend_handler(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+static int freq_policy_handler(struct notifier_block *nb,
+			unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	struct cpu_load_data *this_cpu = &per_cpu(cpuload, policy->cpu);
+
+	if (event != CPUFREQ_NOTIFY)
+		goto out;
+
+	this_cpu->policy_max = policy->max;
+
+	pr_debug("Policy max changed from %u to %u, event %lu\n",
+			this_cpu->policy_max, policy->max, event);
+out:
+	return NOTIFY_DONE;
+
 
 static ssize_t hotplug_disable_show(struct kobject *kobj,
 				    struct kobj_attribute *attr, char *buf)
@@ -507,11 +523,6 @@ static int __init msm_rq_stats_init(void)
 	int i;
 	struct cpufreq_policy cpu_policy;
 
-#ifndef CONFIG_SMP
-	/* Bail out if this is not an SMP Target */
-	rq_info.init = 0;
-	return -ENOSYS;
-#endif
 	rq_wq = create_singlethread_workqueue("rq_stats");
 	BUG_ON(!rq_wq);
 	INIT_WORK(&rq_info.def_timer_work, def_work_fn);
@@ -539,9 +550,12 @@ static int __init msm_rq_stats_init(void)
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
 	cpu_hotplug.notifier_call = cpu_hotplug_handler;
+	freq_policy.notifier_call = freq_policy_handler;
 	cpufreq_register_notifier(&freq_transition,
 					CPUFREQ_TRANSITION_NOTIFIER);
 	register_hotcpu_notifier(&cpu_hotplug);
+	cpufreq_register_notifier(&freq_policy,
+					CPUFREQ_POLICY_NOTIFIER);
 
 	return ret;
 }
