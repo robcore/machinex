@@ -195,8 +195,8 @@ static const char * const cpuacct_stat_desc[] = {
 	[CPUACCT_STAT_SYSTEM] = "system",
 };
 
-static int cpuacct_stats_show(struct cgroup *cgrp, struct cftype *cft,
-			      struct cgroup_map_cb *cb)
+static int cpuacct_stats_show(struct cgroup *cgrp,
+			      struct cftype *cft, struct seq_file *sf)
 {
 	struct cpuacct *ca = cgroup_ca(cgrp);
 	int cpu;
@@ -208,7 +208,7 @@ static int cpuacct_stats_show(struct cgroup *cgrp, struct cftype *cft,
 		val += kcpustat->cpustat[CPUTIME_NICE];
 	}
 	val = cputime64_to_clock_t(val);
-	cb->fill(cb, cpuacct_stat_desc[CPUACCT_STAT_USER], val);
+	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_USER], val);
 
 	val = 0;
 	for_each_online_cpu(cpu) {
@@ -219,7 +219,7 @@ static int cpuacct_stats_show(struct cgroup *cgrp, struct cftype *cft,
 	}
 
 	val = cputime64_to_clock_t(val);
-	cb->fill(cb, cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
+	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
 
 	return 0;
 }
@@ -236,7 +236,7 @@ static struct cftype files[] = {
 	},
 	{
 		.name = "stat",
-		.read_map = cpuacct_stats_show,
+		.read_seq_string = cpuacct_stats_show,
 	},
 	{ }	/* terminate */
 };
