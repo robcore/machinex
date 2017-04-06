@@ -223,7 +223,7 @@ struct task_group {
 	unsigned long shares;
 
 #ifdef	CONFIG_SMP
-	atomic64_t load_avg;
+	atomic_long_t load_avg;
 	atomic_t runnable_avg, usage_avg;
 #endif
 #endif
@@ -356,13 +356,15 @@ struct cfs_rq {
 	 * This allows for the description of both thread and group usage (in
 	 * the FAIR_GROUP_SCHED case).
 	 */
-	u64 runnable_load_avg, blocked_load_avg;
-	atomic64_t decay_counter, removed_load;
+	unsigned long runnable_load_avg, blocked_load_avg;
+	atomic64_t decay_counter;
 	u64 last_decay;
+	atomic_long_t removed_load;
+
 #ifdef CONFIG_FAIR_GROUP_SCHED
 /* Required to track per-cpu representation of a task_group */
 	u32 tg_runnable_contrib, tg_usage_contrib;
-	u64 tg_load_contrib;
+	unsigned long tg_load_contrib;
 
 	/*
 	 *   h_load = weight * f(tg)
@@ -568,6 +570,8 @@ struct rq {
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
 	struct list_head leaf_cfs_rq_list;
+
+	struct sched_avg avg;
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 
 	/*
@@ -628,6 +632,10 @@ struct rq {
 	int capacity;
 #endif
 
+#ifdef CONFIG_SCHED_HMP
+	int nr_small_tasks, nr_big_tasks;
+#endif
+
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
 	u64 prev_irq_time;
 #endif
@@ -673,7 +681,6 @@ struct rq {
 	struct llist_head wake_list;
 #endif
 
-	struct sched_avg avg;
 #ifdef CONFIG_CPU_IDLE
 	/* Must be inspected within a rcu lock section */
 	struct cpuidle_state *idle_state;
@@ -869,6 +876,7 @@ extern void init_new_task_load(struct task_struct *p);
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 extern unsigned int sched_ravg_window;
+extern unsigned int sched_use_pelt;
 extern unsigned int max_possible_freq;
 extern unsigned int min_max_freq;
 extern unsigned int pct_task_load(struct task_struct *p);
@@ -888,13 +896,21 @@ extern unsigned int sched_init_task_load_windows;
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
-	rq->cumulative_runnable_avg += p->ravg.demand;
+	if (sched_use_pelt)
+		rq->cumulative_runnable_avg +=
+				p->se.avg.runnable_avg_sum_scaled;
+	else
+		rq->cumulative_runnable_avg += p->ravg.demand;
 }
 
 static inline void
 dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
-	rq->cumulative_runnable_avg -= p->ravg.demand;
+	if (sched_use_pelt)
+		rq->cumulative_runnable_avg -=
+				p->se.avg.runnable_avg_sum_scaled;
+	else
+		rq->cumulative_runnable_avg -= p->ravg.demand;
 	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
 }
 
@@ -927,12 +943,26 @@ static inline unsigned long capacity_scale_cpu_freq(int cpu)
 #ifdef CONFIG_SCHED_HMP
 
 extern void check_for_migration(struct rq *rq, struct task_struct *p);
+extern void pre_big_small_task_count_change(void);
+extern void post_big_small_task_count_change(void);
+extern void inc_nr_big_small_task(struct rq *rq, struct task_struct *p);
+extern void dec_nr_big_small_task(struct rq *rq, struct task_struct *p);
 extern void set_hmp_defaults(void);
 
 #else /* CONFIG_SCHED_HMP */
 
 static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
+static inline void pre_big_small_task_count_change(void) { }
+static inline void post_big_small_task_count_change(void) { }
 static inline void set_hmp_defaults(void) { }
+
+static inline void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
+{
+}
+
+static inline void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
+{
+}
 
 #endif /* CONFIG_SCHED_HMP */
 
@@ -1393,6 +1423,7 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 
 	return ave_nr_running;
 }
+
 #endif
 
 static inline void inc_nr_running(struct rq *rq)
@@ -1410,7 +1441,6 @@ static inline void inc_nr_running(struct rq *rq)
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #endif
-
 	if (rq->nr_running == 2) {
 #ifdef CONFIG_SMP
 		if (!rq->rd->overload)
@@ -1439,6 +1469,62 @@ static inline void dec_nr_running(struct rq *rq)
 	nr_stats->nr_last_stamp = rq->clock_task;
 #endif
 	rq->nr_running--;
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_end(&nr_stats->ave_seqcnt);
+#endif
+}
+
+static inline void add_nr_running(struct rq *rq, unsigned count)
+{
+	unsigned prev_nr = rq->nr_running;
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
+#endif
+	sched_update_nr_prod(cpu_of(rq), 1, true);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_begin(&nr_stats->ave_seqcnt);
+	nr_stats->ave_nr_running = do_avg_nr_running(rq);
+	nr_stats->nr_last_stamp = rq->clock_task;
+#endif
+
+	rq->nr_running = prev_nr + count;
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_end(&nr_stats->ave_seqcnt);
+#endif
+	if (prev_nr < 2 && rq->nr_running >= 2) {
+#ifdef CONFIG_SMP
+		if (!rq->rd->overload)
+			rq->rd->overload = true;
+#endif
+
+#ifdef CONFIG_NO_HZ_FULL
+		if (tick_nohz_full_cpu(rq->cpu)) {
+			/*
+			 * Tick is needed if more than one task runs on a CPU.
+			 * Send the target an IPI to kick it out of nohz mode.
+			 *
+			 * We assume that IPI implies full memory barrier and the
+			 * new value of rq->nr_running is visible on reception
+			 * from the target.
+			 */
+			tick_nohz_full_kick_cpu(rq->cpu);
+		}
+#endif
+	}
+}
+
+static inline void sub_nr_running(struct rq *rq, unsigned count)
+{
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
+#endif
+	sched_update_nr_prod(cpu_of(rq), 1, false);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	write_seqcount_begin(&nr_stats->ave_seqcnt);
+	nr_stats->ave_nr_running = do_avg_nr_running(rq);
+	nr_stats->nr_last_stamp = rq->clock_task;
+#endif
+	rq->nr_running -= count;
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #endif
