@@ -549,7 +549,7 @@ static void blkio_reset_stats_cpu(struct blkio_group *blkg)
 }
 
 static int
-blkiocg_reset_stats(struct cgroup *cgroup, struct cftype *cftype, u64 val)
+blkiocg_reset_stats(cgroup_subsys_state *css, struct cftype *cftype, u64 val)
 {
 	struct blkio_cgroup *blkcg;
 	struct blkio_group *blkg;
@@ -562,7 +562,7 @@ blkiocg_reset_stats(struct cgroup *cgroup, struct cftype *cftype, u64 val)
 	unsigned long long now = sched_clock();
 #endif
 
-	blkcg = cgroup_to_blkio_cgroup(cgroup);
+	blkcg = css_to_blkio_cgroup(css);
 	spin_lock_irq(&blkcg->lock);
 	hlist_for_each_entry(blkg, n, &blkcg->blkg_list, blkcg_node) {
 		spin_lock(&blkg->stats_lock);
@@ -1517,9 +1517,9 @@ struct cftype blkio_files[] = {
 	{ }	/* terminate */
 };
 
-static void blkiocg_destroy(struct cgroup *cgroup)
+static void blkiocg_destroy(struct cgroup_subsys_state *css)
 {
-	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgroup);
+	struct blkio_cgroup *blkcg = css_to_blkio_cgroup(css);
 	unsigned long flags;
 	struct blkio_group *blkg;
 	void *key;
@@ -1567,7 +1567,7 @@ static void blkiocg_destroy(struct cgroup *cgroup)
 		kfree(blkcg);
 }
 
-static struct cgroup_css *blkiocg_create(struct cgroup *cgroup)
+static struct cgroup_css *blkiocg_create(struct cgroup_subsys_state *css)
 {
 	struct blkio_cgroup *blkcg;
 	struct cgroup *parent = cgroup->parent;
@@ -1596,14 +1596,14 @@ done:
  * of the main cic data structures.  For now we allow a task to change
  * its cgroup only if it's the only owner of its ioc.
  */
-static int blkiocg_can_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+static int blkiocg_can_attach(struct cgroup_subsys_state *css, struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 	struct io_context *ioc;
 	int ret = 0;
 
 	/* task_lock() is needed to avoid races with exit_io_context() */
-	cgroup_taskset_for_each(task, cgrp, tset) {
+	css_taskset_for_each(task, css, tset) {
 		task_lock(task);
 		ioc = task->io_context;
 		if (ioc && atomic_read(&ioc->nr_tasks) > 1)
@@ -1615,12 +1615,12 @@ static int blkiocg_can_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	return ret;
 }
 
-static void blkiocg_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+static void blkiocg_attach(struct cgroup_subsys_state *css, struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
 	struct io_context *ioc;
 
-	cgroup_taskset_for_each(task, cgrp, tset) {
+	css_taskset_for_each(task, css, tset) {
 		/* we don't lose anything even if ioc allocation fails */
 		ioc = get_task_io_context(task, GFP_ATOMIC, NUMA_NO_NODE);
 		if (ioc) {

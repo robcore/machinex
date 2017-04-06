@@ -245,6 +245,23 @@ static inline char *blkg_path(struct blkio_group *blkg)
 	return blkg->path;
 }
 
+/**
+ * css_parent - find the parent css
+ * @css: the target cgroup_subsys_state
+ *
+ * Return the parent css of @css.  This function is guaranteed to return
+ * non-NULL parent as long as @css isn't the root.
+ */
+static inline
+struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
+{
+	struct cgroup *parent_cgrp = css->cgroup->parent;
+
+	return parent_cgrp ? parent_cgrp->subsys[css->ss->subsys_id] : NULL;
+}
+
+/**
+
 #else
 
 struct blkio_group {

@@ -221,6 +221,9 @@ struct cgroup {
 	struct list_head pidlists;
 	struct mutex pidlist_mutex;
 
+	/* dummy css with NULL ->ss, points back to this cgroup */
+	struct cgroup_subsys_state dummy_css;
+
 	/* For css percpu_ref killing and RCU-protected deletion */
 	struct rcu_head rcu_head;
 	struct work_struct destroy_work;
@@ -420,35 +423,41 @@ struct cftype {
 	/* CFTYPE_* flags */
 	unsigned int flags;
 
+	/*
+	 * The subsys this file belongs to.  Initialized automatically
+	 * during registration.  NULL for cgroup core files.
+	 */
+	struct cgroup_subsys *ss;
+
 	int (*open)(struct inode *inode, struct file *file);
-	ssize_t (*read)(struct cgroup *cgrp, struct cftype *cft,
+	ssize_t (*read)(struct cgroup_subsys_state *css, struct cftype *cft,
 			struct file *file,
 			char __user *buf, size_t nbytes, loff_t *ppos);
 	/*
 	 * read_u64() is a shortcut for the common case of returning a
 	 * single integer. Use it in place of read()
 	 */
-	u64 (*read_u64)(struct cgroup *cgrp, struct cftype *cft);
+	u64 (*read_u64)(struct cgroup_subsys_state *css, struct cftype *cft);
 	/*
 	 * read_s64() is a signed version of read_u64()
 	 */
-	s64 (*read_s64)(struct cgroup *cgrp, struct cftype *cft);
+	s64 (*read_s64)(struct cgroup_subsys_state *css, struct cftype *cft);
 	/*
 	 * read_map() is used for defining a map of key/value
 	 * pairs. It should call cb->fill(cb, key, value) for each
 	 * entry. The key/value pairs (and their ordering) should not
 	 * change between reboots.
 	 */
-	int (*read_map)(struct cgroup *cgrp, struct cftype *cft,
+	int (*read_map)(struct cgroup_subsys_state *css, struct cftype *cft,
 			struct cgroup_map_cb *cb);
 	/*
 	 * read_seq_string() is used for outputting a simple sequence
 	 * using seqfile.
 	 */
-	int (*read_seq_string)(struct cgroup *cgrp, struct cftype *cft,
-			       struct seq_file *m);
+	int (*read_seq_string)(struct cgroup_subsys_state *css,
+			       struct cftype *cft, struct seq_file *m);
 
-	ssize_t (*write)(struct cgroup *cgrp, struct cftype *cft,
+	ssize_t (*write)(struct cgroup_subsys_state *css, struct cftype *cft,
 			 struct file *file,
 			 const char __user *buf, size_t nbytes, loff_t *ppos);
 
@@ -457,18 +466,20 @@ struct cftype {
 	 * a single integer (as parsed by simple_strtoull) from
 	 * userspace. Use in place of write(); return 0 or error.
 	 */
-	int (*write_u64)(struct cgroup *cgrp, struct cftype *cft, u64 val);
+	int (*write_u64)(struct cgroup_subsys_state *css, struct cftype *cft,
+			 u64 val);
 	/*
 	 * write_s64() is a signed version of write_u64()
 	 */
-	int (*write_s64)(struct cgroup *cgrp, struct cftype *cft, s64 val);
+	int (*write_s64)(struct cgroup_subsys_state *css, struct cftype *cft,
+			 s64 val);
 
 	/*
 	 * write_string() is passed a nul-terminated kernelspace
 	 * buffer of maximum length determined by max_write_len.
 	 * Returns 0 or -ve error code.
 	 */
-	int (*write_string)(struct cgroup *cgrp, struct cftype *cft,
+	int (*write_string)(struct cgroup_subsys_state *css, struct cftype *cft,
 			    const char *buffer);
 	/*
 	 * trigger() callback can be used to get some kick from the
@@ -476,7 +487,7 @@ struct cftype {
 	 * at all. The private field can be used to determine the
 	 * kick type for multiplexing.
 	 */
-	int (*trigger)(struct cgroup *cgrp, unsigned int event);
+	int (*trigger)(struct cgroup_subsys_state *css, unsigned int event);
 
 	int (*release)(struct inode *inode, struct file *file);
 
@@ -533,7 +544,7 @@ static inline const char *cgroup_name(const struct cgroup *cgrp)
 }
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
-int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
+int cgroup_rm_cftypes(struct cftype *cfts);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
 int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
@@ -568,18 +579,23 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct cgroup_css *(*css_alloc)(struct cgroup *cgrp);
-	int (*css_online)(struct cgroup *cgrp);
-	void (*css_offline)(struct cgroup *cgrp);
-	void (*css_free)(struct cgroup *cgrp);
-	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
-	int (*can_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
-	void (*cancel_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
-	void (*attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
+	int (*css_online)(struct cgroup_subsys_state *css);
+	void (*css_offline)(struct cgroup_subsys_state *css);
+	void (*css_free)(struct cgroup_subsys_state *css);
+
+	int (*can_attach)(struct cgroup_subsys_state *css,
+			  struct cgroup_taskset *tset);
+	void (*cancel_attach)(struct cgroup_subsys_state *css,
+			      struct cgroup_taskset *tset);
+	void (*attach)(struct cgroup_subsys_state *css,
+		       struct cgroup_taskset *tset);
+	int (*allow_attach)(struct cgroup_subsys_state *css, struct cgroup_taskset *tset);
+
 	void (*fork)(struct task_struct *task);
-	void (*exit)(struct cgroup *cgrp, struct cgroup *old_cgrp,
+	void (*exit)(struct cgroup_subsys_state *css, struct cgroup *old_css,
 		     struct task_struct *task);
-	void (*bind)(struct cgroup *root);
+	void (*bind)(struct cgroup_subsys_state *root_css);
 
 	int subsys_id;
 	int active;
@@ -635,6 +651,27 @@ struct cgroup_subsys {
 #include <linux/cgroup_subsys.h>
 #undef IS_SUBSYS_ENABLED
 #undef SUBSYS
+
+/**
+ * css_parent - find the parent css
+ * @css: the target cgroup_subsys_state
+ *
+ * Return the parent css of @css.  This function is guaranteed to return
+ * non-NULL parent as long as @css isn't the root.
+ */
+static inline
+struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
+{
+	struct cgroup *parent_cgrp = css->cgroup->parent;
+
+	if (!parent_cgrp)
+		return NULL;
+
+	if (css->ss)
+		return parent_cgrp->subsys[css->ss->subsys_id];
+	else
+		return &parent_cgrp->dummy_css;
+}
 
 /**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
