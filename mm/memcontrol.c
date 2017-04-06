@@ -1202,7 +1202,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 		if (!last_visited) {
 			css = &root->css;
 		} else {
-			struct cgroup *prev_cgroup, *next_cgroup;
+			struct cgroup_subsys_state *prev_css, *next_css;
 
 			prev_cgroup = (last_visited == root) ? NULL
 				: last_visited->css.cgroup;
@@ -4876,10 +4876,10 @@ static void mem_cgroup_reparent_charges(struct mem_cgroup *memcg)
  */
 static inline bool __memcg_has_children(struct mem_cgroup *memcg)
 {
-	struct cgroup *pos;
+	struct cgroup_subsys_state *pos;
 
 	/* bounce at first found */
-	cgroup_for_each_child(pos, memcg->css.cgroup)
+	css_for_each_child(pos, &memcg->css)
 		return true;
 	return false;
 }
