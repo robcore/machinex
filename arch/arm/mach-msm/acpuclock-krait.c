@@ -48,7 +48,9 @@
 #define PRI_SRC_SEL_HFPLL	1
 #define PRI_SRC_SEL_HFPLL_DIV2	2
 
+#ifdef CONFIG_KRAIT_WORKAROUND
 #define SECCLKAGD		BIT(4)
+#endif
 #ifdef CONFIG_SEC_DEBUG_SUBSYS
 int boost_uv;
 int speed_bin;
@@ -91,6 +93,7 @@ static void set_pri_clk_src(struct scalable *sc, u32 pri_src_sel)
 	udelay(1);
 }
 
+#ifdef CONFIG_KRAIT_WORKAROUND
 /* Select a source on the secondary MUX. */
 static void set_sec_clk_src(struct scalable *sc, u32 sec_src_sel)
 {
@@ -114,6 +117,23 @@ static void set_sec_clk_src(struct scalable *sc, u32 sec_src_sel)
 	mb();
 	udelay(1);
 }
+#else
+/* Select a source on the secondary MUX. */
+static void set_sec_clk_src(struct scalable *sc, u32 sec_src_sel)
+{
+	u32 regval;
+
+	regval = get_l2_indirect_reg(sc->l2cpmr_iaddr);
+
+	regval &= ~(0x3 << 2);
+	regval |= ((sec_src_sel & 0x3) << 2);
+	set_l2_indirect_reg(sc->l2cpmr_iaddr, regval);
+
+	/* Wait for switch to complete. */
+	mb();
+	udelay(1);
+}
+#endif
 
 static int enable_rpm_vreg(struct vreg *vreg)
 {

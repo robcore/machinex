@@ -3438,5 +3438,18 @@ config FORCE_FAST_CHARGE
 	  A simple sysfs interface to force adapters that
 	  are detected as USB to charge as AC (1A/h) or to set
 	  custom charging currents for AC and USB.
+config KRAIT_WORKAROUND
+	bool "Use inapplicable 8064 errata workaround"
+	default n
+	help
+	  The secondary MUX switching errata is worked around in the secure
+	  warm-boot path, and does not require an in-kernel workaround.
+	  For devices with older warm-boot code (without the workaround),
+	  the removal of the kernel workaround is also safe. The errata
+	  symptoms can only manifest themselves after an L2 power-collapse,
+	  which can't occur until after all Krait CPUs have been brought
+	  online at least once. Since the secondary MUX is only touched by
+	  acpuclock when onlining CPUs for the first time, the MUX will
+	  never be switched after L2 power-collapse.
 
 endif
