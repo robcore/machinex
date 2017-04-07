@@ -1463,7 +1463,7 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 		else
 			atomic_set(&mehci->pm_usage_cnt, 1);
 	}
-	wake_unlock(&mehci->wlock);
+
 	return IRQ_HANDLED;
 }
 
