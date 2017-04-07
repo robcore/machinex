@@ -905,16 +905,6 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 
 #endif	/* CONFIG_SCHED_FREQ_INPUT */
 
-#ifdef CONFIG_SCHED_HMP
-
-extern void set_hmp_defaults(void);
-
-#else /* CONFIG_SCHED_HMP */
-
-static inline void set_hmp_defaults(void) { }
-
-#endif /* CONFIG_SCHED_HMP */
-
 #ifdef CONFIG_CGROUP_SCHED
 
 /*

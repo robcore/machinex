@@ -8080,8 +8080,6 @@ void __init sched_init(void)
 		atomic_set(&rq->nr_iowait, 0);
 	}
 
-	set_hmp_defaults();
-
 	set_load_weight(&init_task);
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
