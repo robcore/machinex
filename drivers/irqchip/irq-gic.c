@@ -801,8 +801,7 @@ static void gic_cpu_restore(unsigned int gic_nr)
 	writel_relaxed_no_log(saved_cpu_ctrl, cpu_base + GIC_CPU_CTRL);
 }
 
-static int gic_notifier(struct notifier_block *self, unsigned long cmd,
-			void *aff_level)
+static int gic_notifier(struct notifier_block *self, unsigned long cmd,	void *v)
 {
 	int i;
 
@@ -821,20 +820,11 @@ static int gic_notifier(struct notifier_block *self, unsigned long cmd,
 			gic_cpu_restore(i);
 			break;
 		case CPU_CLUSTER_PM_ENTER:
-			/*
-			 * Affinity level of the node
-			 * eg:
-			 *    cpu level = 0
-			 *    l2 level  = 1
-			 *    cci level = 2
-			 */
-			if (!(unsigned long)aff_level)
-				gic_dist_save(i);
+			gic_dist_save(i);
 			break;
 		case CPU_CLUSTER_PM_ENTER_FAILED:
 		case CPU_CLUSTER_PM_EXIT:
-			if (!(unsigned long)aff_level)
-				gic_dist_restore(i);
+			gic_dist_restore(i);
 			break;
 		}
 	}

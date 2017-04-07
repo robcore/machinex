@@ -641,9 +641,6 @@ struct rq {
 	 */
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
 	u64 cumulative_runnable_avg;
-	int efficiency; /* Differentiate cpus with different IPC capability */
-	int load_scale_factor;
-	int capacity;
 #endif
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
@@ -881,8 +878,6 @@ static inline void sched_ttwu_pending(void) { }
 #include "stats.h"
 #include "auto_group.h"
 
-extern void init_new_task_load(struct task_struct *p);
-
 #ifdef CONFIG_SCHED_FREQ_INPUT
 
 extern unsigned int sched_ravg_window;
@@ -896,12 +891,6 @@ extern unsigned int max_capacity;
 extern unsigned int min_capacity;
 extern unsigned long capacity_scale_cpu_efficiency(int cpu);
 extern unsigned long capacity_scale_cpu_freq(int cpu);
-extern unsigned int sched_mostly_idle_load;
-extern unsigned int sched_small_task;
-extern unsigned int sched_upmigrate;
-extern unsigned int sched_downmigrate;
-extern unsigned int sched_init_task_load_pelt;
-extern unsigned int sched_init_task_load_windows;
 
 static inline void
 inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
@@ -926,19 +915,6 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 
 #endif	/* CONFIG_SCHED_FREQ_INPUT */
 
-/*temp*/
-static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
-static inline void pre_big_small_task_count_change(void) { }
-static inline void post_big_small_task_count_change(void) { }
-static inline void set_hmp_defaults(void) { }
-
-static inline void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
-{
-}
-
-static inline void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
-{
-}
 #ifdef CONFIG_CGROUP_SCHED
 
 /*

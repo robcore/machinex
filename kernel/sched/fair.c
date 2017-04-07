@@ -244,9 +244,6 @@ static u64 __calc_delta(u64 delta_exec, unsigned long weight, struct load_weight
 	return mul_u64_u32_shr(delta_exec, fact, shift);
 }
 
-#ifdef CONFIG_SMP
-static int active_load_balance_cpu_stop(void *data);
-#endif
 
 const struct sched_class fair_sched_class;
 
@@ -6762,6 +6759,8 @@ static int need_active_balance(struct lb_env *env)
 
 	return unlikely(sd->nr_balance_failed > sd->cache_nice_tries+2);
 }
+
+static int active_load_balance_cpu_stop(void *data);
 
 static int active_load_balance_cpu_stop(void *data);
 

@@ -1115,7 +1115,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 		rq->skip_clock_update = 1;
 }
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 
 /* Window size (in ns) */
 __read_mostly unsigned int sched_ravg_window = 10000000;
@@ -1135,9 +1135,6 @@ __read_mostly unsigned int sysctl_sched_window_stats_policy =
 
 /* 1 -> use PELT based load stats, 0 -> use window-based load stats */
 unsigned int __read_mostly sched_use_pelt;
-
-unsigned int max_possible_efficiency = 1024;
-unsigned int min_possible_efficiency = 1024;
 
 /*
  * Called when new window is starting for a task, to record cpu usage over
@@ -1239,7 +1236,6 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 
 		if (update_sum) {
 			unsigned int cur_freq = rq->cur_freq;
-			int sf;
 
 			delta = now - p->ravg.mark_start;
 			BUG_ON(delta < 0);
@@ -1251,9 +1247,6 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 
 			delta = div64_u64(delta  * cur_freq,
 							max_possible_freq);
-			sf = (rq->efficiency * 1024) / max_possible_efficiency;
-			delta *= sf;
-			delta >>= 10;
 			p->ravg.sum += delta;
 			WARN_ON(p->ravg.sum > window_size);
 		}
@@ -1282,40 +1275,12 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	p->ravg.mark_start = wallclock;
 }
 
-unsigned long __weak arch_get_cpu_efficiency(int cpu)
-{
-	return SCHED_LOAD_SCALE;
-}
-
-static void init_cpu_efficiency(void)
-{
-	int i, efficiency;
-	unsigned int max = 0, min = UINT_MAX;
-
-	for_each_possible_cpu(i) {
-		efficiency = arch_get_cpu_efficiency(i);
-		cpu_rq(i)->efficiency = efficiency;
-
-		if (efficiency > max)
-			max = efficiency;
-		if (efficiency < min)
-			min = efficiency;
-	}
-
-	BUG_ON(!max || !min);
-
-	max_possible_efficiency = max;
-	min_possible_efficiency = min;
-}
-
-#else  /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else  /* CONFIG_SCHED_FREQ_INPUT */
 
 static inline void
 update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 {
 }
-static inline void init_cpu_efficiency(void) {}
-
 #endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
 
 #ifdef CONFIG_SMP
@@ -3570,7 +3535,6 @@ void scheduler_tick(void)
 	trigger_load_balance(rq);
 #endif
 	rq_last_tick_reset(rq);
-	check_for_migration(rq, curr);
 }
 
 #ifdef CONFIG_NO_HZ_FULL
@@ -7847,7 +7811,6 @@ void __init sched_init_smp(void)
 {
 	cpumask_var_t non_isolated_cpus;
 
-	init_cpu_efficiency();
 	alloc_cpumask_var(&non_isolated_cpus, GFP_KERNEL);
 	alloc_cpumask_var(&fallback_doms, GFP_KERNEL);
 
@@ -7898,72 +7861,12 @@ unsigned int max_possible_freq = 1;
  */
 unsigned int min_max_freq = 1;
 
-unsigned int max_capacity = 1024; /* max(rq->capacity) */
-unsigned int min_capacity = 1024; /* min(rq->capacity) */
-
-/* Keep track of max/min capacity possible across CPUs "currently" */
-static void update_min_max_capacity(void)
-{
-	int i;
-	int max = 0, min = INT_MAX;
-
-	for_each_possible_cpu(i) {
-		if (cpu_rq(i)->capacity > max)
-			max = cpu_rq(i)->capacity;
-		if (cpu_rq(i)->capacity < min)
-			min = cpu_rq(i)->capacity;
-	}
-
-	max_capacity = max;
-	min_capacity = min;
-}
-
-/*
- * Return 'capacity' of a cpu in reference to "least" efficient cpu, such that
- * least efficient cpu gets capacity of 1024
- */
-unsigned long capacity_scale_cpu_efficiency(int cpu)
-{
-	return (1024 * cpu_rq(cpu)->efficiency) / min_possible_efficiency;
-}
-
-/*
- * Return 'capacity' of a cpu in reference to cpu with lowest max_freq
- * (min_max_freq), such that one with lowest max_freq gets capacity of 1024.
- */
-unsigned long capacity_scale_cpu_freq(int cpu)
-{
-	return (1024 * cpu_rq(cpu)->max_freq) / min_max_freq;
-}
-
-/*
- * Return load_scale_factor of a cpu in reference to "most" efficient cpu, so
- * that "most" efficient cpu gets a load_scale_factor of 1
- */
-static inline unsigned long load_scale_cpu_efficiency(int cpu)
-{
-	return (1024 * max_possible_efficiency) / cpu_rq(cpu)->efficiency;
-}
-
-/*
- * Return load_scale_factor of a cpu in reference to cpu with best max_freq
- * (max_possible_freq), so that one with best max_freq gets a load_scale_factor
- * of 1.
- */
-static inline unsigned long load_scale_cpu_freq(int cpu)
-{
-	return (1024 * max_possible_freq) / cpu_rq(cpu)->max_freq;
-}
-
 static int cpufreq_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
 	struct cpufreq_policy *policy = (struct cpufreq_policy *)data;
 	int i;
 	unsigned int min_max = min_max_freq;
-	int cpu = policy->cpu;
-	int load_scale = 1024;
-	int capacity = 1024;
 
 	if (val != CPUFREQ_NOTIFY)
 		return 0;
@@ -7980,41 +7883,6 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
 	BUG_ON(!min_max_freq);
 	BUG_ON(!policy->max);
-
-	/* Assumes all cpus in cluster has same efficiency!! */
-	capacity *= capacity_scale_cpu_efficiency(cpu);
-	capacity >>= 10;
-
-	capacity *= capacity_scale_cpu_freq(cpu);
-	capacity >>= 10;
-
-	/*
-	 * load_scale_factor accounts for the fact that task load
-	 * (p->se.avg.runnable_avg_sum_scaled) is in reference to "best"
-	 * performing cpu. Task's load will need to be scaled (up) by a factor
-	 * to determine suitability to be placed on a particular cpu.
-	 */
-	load_scale *= load_scale_cpu_efficiency(cpu);
-	load_scale >>= 10;
-
-	load_scale *= load_scale_cpu_freq(cpu);
-	load_scale >>= 10;
-
-	/*
-	 * Changed load_scale_factor can trigger reclassification of tasks as
-	 * big or small. Make this change "atomic" so that tasks are accounted
-	 * properly due to changed load_scale_factor
-	 */
-	pre_big_small_task_count_change();
-	for_each_cpu(i, policy->related_cpus) {
-		struct rq *rq = cpu_rq(i);
-
-		rq->capacity = capacity;
-		rq->load_scale_factor = load_scale;
-	}
-
-	update_min_max_capacity();
-	post_big_small_task_count_change();
 
 	return 0;
 }
@@ -8064,7 +7932,7 @@ static int register_sched_callback(void)
  */
 core_initcall(register_sched_callback);
 
-#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#endif	/* CONFIG_SCHED_FREQ_INPUT */
 
 const_debug unsigned int sysctl_timer_migration = 1;
 
@@ -8219,15 +8087,12 @@ void __init sched_init(void)
 		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
 		rq->cstate = 0;
 		rq->wakeup_latency = 0;
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 		rq->cur_freq = 1;
 		rq->max_freq = 1;
 		rq->min_freq = 1;
 		rq->max_possible_freq = 1;
 		rq->cumulative_runnable_avg = 0;
-		rq->efficiency = 1024;
-		rq->capacity = 1024;
-		rq->load_scale_factor = 1024;
 #endif
 
 		INIT_LIST_HEAD(&rq->cfs_tasks);
@@ -8243,8 +8108,6 @@ void __init sched_init(void)
 		init_rq_hrtick(rq);
 		atomic_set(&rq->nr_iowait, 0);
 	}
-
-	set_hmp_defaults();
 
 	set_load_weight(&init_task);
 
