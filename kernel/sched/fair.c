@@ -2352,73 +2352,10 @@ static u32 __compute_runnable_contrib(u64 n)
 	return contrib + runnable_avg_yN_sum[n];
 }
 
+#define scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
+
 static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
 static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
-
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
-
-/* Initial task load. Newly created tasks are assigned this load. */
-unsigned int __read_mostly sched_init_task_load_pelt;
-unsigned int __read_mostly sched_init_task_load_windows;
-unsigned int __read_mostly sysctl_sched_init_task_load_pct = 100;
-
-static inline unsigned int task_load(struct task_struct *p)
-{
-	if (sched_use_pelt)
-		return p->se.avg.runnable_avg_sum_scaled;
-
-	return p->ravg.demand;
-}
-
-static inline unsigned int max_task_load(void)
-{
-	if (sched_use_pelt)
-		return LOAD_AVG_MAX;
-
-	return sched_ravg_window;
-}
-
-#endif /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
-
-static inline int select_best_cpu(struct task_struct *p, int target)
-{
-	return 0;
-}
-
-static inline int find_new_hmp_ilb(void)
-{
-	return 0;
-}
-
-static inline int power_cost(struct task_struct *p, int cpu)
-{
-	return SCHED_CAPACITY_SCALE;
-}
-
-static inline int mostly_idle_cpu(int cpu)
-{
-	return 0;
-}
-
-static inline int is_small_task(struct task_struct *p)
-{
-	return 0;
-}
-
-static inline int is_big_task(struct task_struct *p)
-{
-	return 0;
-}
-
-static inline int nr_big_tasks(struct rq *rq)
-{
-	return 0;
-}
-
-static inline int capacity(struct rq *rq)
-{
-	return SCHED_LOAD_SCALE;
-}
 
 /*
  * We can represent the historical contribution to runnable average as the
@@ -2452,9 +2389,9 @@ static __always_inline int
 __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		  unsigned long weight, int running, struct cfs_rq *cfs_rq)
 {
-	u64 delta, periods;
+	u64 delta, scaled_delta, periods;
 	u32 contrib;
-	int delta_w, decayed = 0;
+	int delta_w, scaled_delta_w, decayed = 0;
 
 	delta = now - sa->last_update_time;
 	/*
@@ -2488,15 +2425,17 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		 * out how much from delta we need to complete the current
 		 * period and accrue it.
 		 */
-		delta_w = 1024 - delta_w;
+		scaled_delta_w = scale(delta_w, scale_freq);
 		if (weight) {
-			sa->load_sum += weight * delta_w;
-			if (cfs_rq)
-				cfs_rq->runnable_load_sum += weight * delta_w;
+			sa->load_sum += weight * scaled_delta_w;
+			if (cfs_rq) {
+				cfs_rq->runnable_load_sum +=
+						weight * scaled_delta_w;
+			}
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
 		if (running) {
-			sa->util_sum += delta_w * scale_freq >> SCHED_CAPACITY_SHIFT;
+			sa->util_sum += scaled_delta_w;
 			sa->usage_avg_sum += delta_w;
 		}
 		sa->avg_period += delta_w;
@@ -2520,6 +2459,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		contrib = __compute_runnable_contrib(periods);
+		contrib = scale(contrib, scale_freq);
 		if (weight) {
 			sa->load_sum += weight * contrib;
 			if (cfs_rq)
@@ -2527,21 +2467,22 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			add_to_scaled_stat(cpu, sa, runnable_contrib);
 		}
 		if (running) {
-			sa->util_sum += contrib * scale_freq >> SCHED_CAPACITY_SHIFT;
+			sa->util_sum += contrib;
 			sa->usage_avg_sum += runnable_contrib;
 		}
 	}
 
 	/* Remainder of delta accrued against u_0` */
+	scaled_delta = scale(delta, scale_freq);
 	if (weight) {
-		sa->load_sum += weight * delta;
+		sa->load_sum += weight * scaled_delta;
 		if (cfs_rq)
-			cfs_rq->runnable_load_sum += weight * delta;
+			cfs_rq->runnable_load_sum += weight * scaled_delta;
 		add_to_scaled_stat(cpu, sa, delta);
 	}
 
 	if (running) {
-		sa->util_sum += delta * scale_freq >> SCHED_CAPACITY_SHIFT;
+		sa->util_sum += scaled_delta;
 		sa->usage_avg_sum += delta;
 	}
 	sa->period_contrib += delta;
