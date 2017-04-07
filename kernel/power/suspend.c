@@ -204,10 +204,10 @@ static void platform_suspend_finish(suspend_state_t state)
 static int platform_suspend_begin(suspend_state_t state)
 {
 	bool mx_freezing_in_progress;
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin)
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin) {
 		mx_freezing_in_progress = true;
 		return freeze_ops->begin();
-	else if (suspend_ops->begin)
+	} else if (suspend_ops->begin)
 		return suspend_ops->begin(state);
 	else
 		return 0;
@@ -216,10 +216,10 @@ static int platform_suspend_begin(suspend_state_t state)
 static void platform_suspend_end(suspend_state_t state)
 {
 	bool mx_freezing_in_progress;
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end) {
 		freeze_ops->end();
 		mx_freezing_in_progress = false;
-	else if (suspend_ops->end)
+	} else if (suspend_ops->end)
 		suspend_ops->end();
 }
 
@@ -229,13 +229,19 @@ static void platform_suspend_recover(suspend_state_t state)
 		suspend_ops->recover();
 }
 
-static bool platform_suspend_again(suspend_state_t state)
+static bool machinex_suspend_again(suspend_state_t state)
+{
+	return state != PM_SUSPEND_FREEZE && suspend_ops->suspend_again ?
+		suspend_ops->suspend_again() : false;
+}
+
+static bool platform_suspend_again(void)
 {
 	int count;
-	bool state != PM_SUSPEND_FREEZE && suspend_ops->suspend_again ?
-		suspend_ops->suspend_again() : false;
+	suspend_state_t state = state;
+	bool suspend = machinex_suspend_again(state);
 
-	if (state) {
+	if (suspend) {
 		/*
 		 * pm_get_wakeup_count() gets an updated count of wakeup events
 		 * that have occured and will return false (i.e. abort suspend)
@@ -244,18 +250,18 @@ static bool platform_suspend_again(suspend_state_t state)
 		 * and enables pm_wakeup_pending() to properly analyze wakeup
 		 * events before entering suspend in suspend_enter().
 		 */
-		state = pm_get_wakeup_count(&count, false) &&
+		suspend = pm_get_wakeup_count(&count, false) &&
 			  pm_save_wakeup_count(count);
 
-		if (!state)
+		if (!suspend)
 			pr_debug("%s: wakeup occurred during suspend_again\n",
 				__func__);
 	}
 
 	pr_debug("%s: votes for: %s\n", __func__,
-		state ? "suspend" : "resume");
+		suspend ? "suspend" : "resume");
 
-	return state;
+	return suspend;
 }
 
 static int suspend_test(int level)
