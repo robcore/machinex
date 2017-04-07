@@ -3612,10 +3612,8 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 			dequeue = 0;
 	}
 
-	if (!se) {
+	if (!se)
 		rq->nr_running -= task_delta;
-		dec_nr_running(rq);
-	}
 
 	cfs_rq->throttled = 1;
 	cfs_rq->throttled_clock = rq_clock(rq);
@@ -3669,10 +3667,8 @@ void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
 			break;
 	}
 
-	if (!se) {
+	if (!se)
 		rq->nr_running += task_delta;
-		inc_nr_running(rq);
-	}
 
 	/* determine whether we need to wake up potentially idle cpu */
 	if (rq->curr == rq->idle && rq->cfs.nr_running)
@@ -4204,12 +4200,12 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_rq_runnable_avg(rq, rq->nr_running);
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
 	}
 
 	if (!se) {
+		update_rq_runnable_avg(rq, rq->nr_running);
 		inc_nr_running(rq);
 	}
 	hrtick_update(rq);
@@ -4265,13 +4261,13 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_rq_runnable_avg(rq, 1);
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
 	}
 
 	if (!se) {
 		dec_nr_running(rq);
+		update_rq_runnable_avg(rq, 1);
 	}
 	hrtick_update(rq);
 }
@@ -4283,37 +4279,42 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
  */
 
 /*
- * The exact cpuload calculated at every tick would be:
+ * The exact cpuload at various idx values, calculated at every tick would be
+ * load = (2^idx - 1) / 2^idx * load + 1 / 2^idx * cur_load
  *
- *   load' = (1 - 1/2^i) * load + (1/2^i) * cur_load
- *
- * If a cpu misses updates for n ticks (as it was idle) and update gets
- * called on the n+1-th tick when cpu may be busy, then we have:
- *
- *   load_n   = (1 - 1/2^i)^n * load_0
- *   load_n+1 = (1 - 1/2^i)   * load_n + (1/2^i) * cur_load
+ * If a cpu misses updates for n-1 ticks (as it was idle) and update gets called
+ * on nth tick when cpu may be busy, then we have:
+ * load = ((2^idx - 1) / 2^idx)^(n-1) * load
+ * load = (2^idx - 1) / 2^idx) * load + 1 / 2^idx * cur_load
  *
  * decay_load_missed() below does efficient calculation of
- *
- *   load' = (1 - 1/2^i)^n * load
- *
- * Because x^(n+m) := x^n * x^m we can decompose any x^n in power-of-2 factors.
- * This allows us to precompute the above in said factors, thereby allowing the
- * reduction of an arbitrary n in O(log_2 n) steps. (See also
- * fixed_power_int())
+ * load = ((2^idx - 1) / 2^idx)^(n-1) * load
+ * avoiding 0..n-1 loop doing load = ((2^idx - 1) / 2^idx) * load
  *
  * The calculation is approximated on a 128 point scale.
+ * degrade_zero_ticks is the number of ticks after which load at any
+ * particular idx is approximated to be zero.
+ * degrade_factor is a precomputed table, a row for each load idx.
+ * Each column corresponds to degradation factor for a power of two ticks,
+ * based on 128 point scale.
+ * Example:
+ * row 2, col 3 (=12) says that the degradation at load idx 2 after
+ * 8 ticks is 12/128 (which is an approximation of exact factor 3^8/4^8).
+ *
+ * With this power of 2 load factors, we can degrade the load n times
+ * by looking at 1 bits in n and doing as many mult/shift instead of
+ * n mult/shifts needed by the exact degradation.
  */
 #define DEGRADE_SHIFT		7
-
-static const u8 degrade_zero_ticks[CPU_LOAD_IDX_MAX] = {0, 8, 32, 64, 128};
-static const u8 degrade_factor[CPU_LOAD_IDX_MAX][DEGRADE_SHIFT + 1] = {
-	{   0,   0,  0,  0,  0,  0, 0, 0 },
-	{  64,  32,  8,  0,  0,  0, 0, 0 },
-	{  96,  72, 40, 12,  1,  0, 0, 0 },
-	{ 112,  98, 75, 43, 15,  1, 0, 0 },
-	{ 120, 112, 98, 76, 45, 16, 2, 0 }
-};
+static const unsigned char
+		degrade_zero_ticks[CPU_LOAD_IDX_MAX] = {0, 8, 32, 64, 128};
+static const unsigned char
+		degrade_factor[CPU_LOAD_IDX_MAX][DEGRADE_SHIFT + 1] = {
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{64, 32, 8, 0, 0, 0, 0, 0},
+					{96, 72, 40, 12, 1, 0, 0},
+					{112, 98, 75, 43, 15, 1, 0},
+					{120, 112, 98, 76, 45, 16, 2} };
 
 /*
  * Update cpu_load for any missed ticks, due to tickless idle. The backlog
@@ -5395,14 +5396,14 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
  *
  *   W'_i,n = (2^n - 1) / 2^n * W_i,n + 1 / 2^n * W_i,0               (3)
  *
- * C_i is the compute capacity of cpu i, typically it is the
+ * P_i is the cpu capacity (or compute capacity) of cpu i, typically it is the
  * fraction of 'recent' time available for SCHED_OTHER task execution. But it
  * can also include other factors [XXX].
  *
  * To achieve this balance we define a measure of imbalance which follows
  * directly from (1):
  *
- *   imb_i,j = max{ avg(W/C), W_i/C_i } - min{ avg(W/C), W_j/C_j }    (4)
+ *   imb_i,j = max{ avg(W/P), W_i/P_i } - min{ avg(W/P), W_j/P_j }    (4)
  *
  * We them move tasks around to minimize the imbalance. In the continuous
  * function space it is obvious this converges, in the discrete case we get
@@ -5549,8 +5550,6 @@ static int task_hot(struct task_struct *p, struct lb_env *env)
 {
 	s64 delta;
 
-	lockdep_assert_held(&env->src_rq->lock);
-
 	if (p->sched_class != &fair_sched_class)
 		return 0;
 
@@ -5582,9 +5581,6 @@ static
 int can_migrate_task(struct task_struct *p, struct lb_env *env)
 {
 	int tsk_cache_hot = 0;
-
-	lockdep_assert_held(&env->src_rq->lock);
-
 	/*
 	 * We do not migrate tasks that are:
 	 * 1) throttled_lb_pair, or
@@ -5635,9 +5631,8 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 
 	/*
 	 * Aggressive migration if:
-	 * 1) destination numa is preferred
-	 * 2) task is cache cold, or
-	 * 3) too many balance attempts have failed.
+	 * 1) task is cache cold, or
+	 * 2) too many balance attempts have failed.
 	 */
 
 	tsk_cache_hot = task_hot(p, env);
@@ -5666,8 +5661,6 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 static int move_one_task(struct lb_env *env)
 {
 	struct task_struct *p, *n;
-
-	lockdep_assert_held(&env->src_rq->lock);
 
 	list_for_each_entry_safe(p, n, &env->src_rq->cfs_tasks, se.group_node) {
 		if (!can_migrate_task(p, env))
@@ -5702,8 +5695,6 @@ static int move_tasks(struct lb_env *env)
 	struct task_struct *p;
 	unsigned long load;
 	int pulled = 0;
-
-	lockdep_assert_held(&env->src_rq->lock);
 
 	if (env->imbalance <= 0)
 		return 0;
@@ -6265,14 +6256,25 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		/* Bias balancing toward cpus of our domain */
 		if (local_group)
 			load = target_load(i, load_idx);
-		else
+		else {
 			load = source_load(i, load_idx);
+			scaled_load = load * SCHED_CAPACITY_SCALE
+					/ cpu_rq(i)->cpu_capacity;
+			if (scaled_load > max_cpu_load)
+				max_cpu_load = scaled_load;
+			if (min_cpu_load > scaled_load)
+				min_cpu_load = scaled_load;
+
+			if (nr_running > max_nr_running)
+				max_nr_running = nr_running;
+			if (min_nr_running > nr_running)
+				min_nr_running = nr_running;
+		}
 
 		sgs->group_load += load;
 		sgs->sum_nr_running += rq->cfs.h_nr_running;
 
-		nr_running = rq->nr_running;
-		if (nr_running > 1)
+		if (rq->nr_running > 1)
 			*overload = true;
 
 #ifdef CONFIG_NUMA_BALANCING
@@ -6280,10 +6282,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		sgs->nr_preferred_running += rq->nr_preferred_running;
 #endif
 		sgs->sum_weighted_load += weighted_cpuload(i);
-		/*
-		 * No need to call idle_cpu() if nr_running is not 0
-		 */
-		if (!nr_running && idle_cpu(i))
+		if (idle_cpu(i))
 			sgs->idle_cpus++;
 	}
 
@@ -6701,7 +6700,6 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	local = &sds.local_stat;
 	busiest = &sds.busiest_stat;
 
-	/* ASYM feature bypasses nice load balance check */
 	if ((env->idle == CPU_IDLE || env->idle == CPU_NEWLY_IDLE) &&
 	    check_asym_packing(env, &sds))
 		return sds.busiest;
@@ -7558,11 +7556,11 @@ static void rebalance_domains(struct rq *rq, enum cpu_idle_type idle)
 	for_each_domain(cpu, sd) {
 		/*
 		 * Decay the newidle max times here because this is a regular
-		 * visit to all the domains. Decay ~1% per second.
+		 * visit to all the domains. Decay ~0.5% per second.
 		 */
 		if (time_after(jiffies, sd->next_decay_max_lb_cost)) {
 			sd->max_newidle_lb_cost =
-				(sd->max_newidle_lb_cost * 253) / 256;
+			(sd->max_newidle_lb_cost * 254) / 256;
 			sd->next_decay_max_lb_cost = jiffies + HZ;
 			need_decay = 1;
 		}
@@ -7782,16 +7780,14 @@ static void run_rebalance_domains(struct softirq_action *h)
 	enum cpu_idle_type idle = this_rq->idle_balance ?
 						CPU_IDLE : CPU_NOT_IDLE;
 
+	rebalance_domains(this_rq, idle);
+
 	/*
 	 * If this cpu has a pending nohz_balance_kick, then do the
 	 * balancing on behalf of the other idle cpus whose ticks are
-	 * stopped. Do nohz_idle_balance *before* rebalance_domains to
-	 * give the idle cpus a chance to load balance. Else we may
-	 * load balance only within the local sched_domain hierarchy
-	 * and abort nohz_idle_balance altogether if we pull some load.
+	 * stopped.
 	 */
 	nohz_idle_balance(this_rq, idle);
-	rebalance_domains(this_rq, idle);
 }
 
 /*
