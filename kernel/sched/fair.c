@@ -2348,6 +2348,9 @@ static u32 __compute_runnable_contrib(u64 n)
 	return contrib + runnable_avg_yN_sum[n];
 }
 
+static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
+static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
+
 #if (SCHED_LOAD_SHIFT - SCHED_LOAD_RESOLUTION) != 10 || SCHED_CAPACITY_SHIFT != 10
 #error "load tracking assumes 2^10 as unit"
 #endif
@@ -2434,6 +2437,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 				cfs_rq->runnable_load_sum +=
 						weight * scaled_delta_w;
 			}
+			add_to_scaled_stat(cpu, sa, delta_w);
 		}
 		if (running)
 			sa->util_sum += scaled_delta_w * scale_cpu;
@@ -2450,6 +2454,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 				decay_load(cfs_rq->runnable_load_sum, periods + 1);
 		}
 		sa->util_sum = decay_load((u64)(sa->util_sum), periods + 1);
+		decay_scaled_stat(sa, periods + 1);
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		contrib = __compute_runnable_contrib(periods);
@@ -2458,6 +2463,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			sa->load_sum += weight * contrib;
 			if (cfs_rq)
 				cfs_rq->runnable_load_sum += weight * contrib;
+			add_to_scaled_stat(cpu, sa, contrib);
 		}
 		if (running)
 			sa->util_sum += contrib * scale_cpu;
@@ -2469,6 +2475,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		sa->load_sum += weight * scaled_delta;
 		if (cfs_rq)
 			cfs_rq->runnable_load_sum += weight * scaled_delta;
+		add_to_scaled_stat(cpu, sa, delta);
 	}
 	if (running)
 		sa->util_sum += scaled_delta * scale_cpu;
@@ -2581,6 +2588,7 @@ static inline int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 
 	decayed = __update_load_avg(now, cpu_of(rq_of(cfs_rq)), sa,
 		scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL, cfs_rq);
+		inc_cumulative_runnable_avg(rq_of(cfs_rq), task_of(se));
 
 #ifndef CONFIG_64BIT
 	smp_wmb();
@@ -2729,6 +2737,8 @@ void remove_entity_load_avg(struct sched_entity *se)
 	__update_load_avg(last_update_time, cpu_of(rq_of(cfs_rq)), &se->avg, 0, 0, NULL);
 	atomic_long_add(se->avg.load_avg, &cfs_rq->removed_load_avg);
 	atomic_long_add(se->avg.util_avg, &cfs_rq->removed_util_avg);
+	dec_cumulative_runnable_avg(rq_of(cfs_rq), task_of(se));
+
 }
 
 /*
@@ -2781,6 +2791,82 @@ static inline int idle_balance(struct rq *rq)
 }
 
 #endif /* CONFIG_SMP */
+
+#ifdef CONFIG_SCHED_FREQ_INPUT
+
+static inline unsigned int task_load(struct task_struct *p)
+{
+	return p->ravg.demand;
+}
+
+static inline unsigned int max_task_load(void)
+{
+	return sched_ravg_window;
+}
+
+/* Return task demand in percentage scale */
+unsigned int pct_task_load(struct task_struct *p)
+{
+	unsigned int load;
+
+	load = div64_u64((u64)task_load(p) * 100, (u64)max_task_load());
+
+	return load;
+}
+
+void init_new_task_load(struct task_struct *p)
+{
+	int i;
+	u64 wallclock = sched_clock();
+
+	p->ravg.sum			= 0;
+	p->ravg.demand			= 0;
+	p->ravg.window_start		= wallclock;
+	p->ravg.mark_start		= wallclock;
+	for (i = 0; i < RAVG_HIST_SIZE; ++i)
+		p->ravg.sum_history[i] = 0;
+}
+
+/*
+ * Add scaled version of 'delta' to runnable_avg_sum_scaled
+ * 'delta' is scaled in reference to "best" cpu
+ */
+static inline void
+add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta)
+{
+	struct rq *rq = cpu_rq(cpu);
+	int cur_freq = rq->cur_freq, max_freq = rq->max_freq;
+	int cpu_max_possible_freq = rq->max_possible_freq;
+	u64 scaled_delta;
+
+	if (unlikely(cur_freq > max_possible_freq ||
+		     (cur_freq == max_freq &&
+		      max_freq < cpu_max_possible_freq)))
+		cur_freq = max_possible_freq;
+
+	scaled_delta = div64_u64(delta * cur_freq, max_possible_freq);
+	sa->runnable_avg_sum_scaled += scaled_delta;
+}
+
+static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
+{
+	sa->runnable_avg_sum_scaled =
+		decay_load(sa->runnable_avg_sum_scaled,
+			   periods);
+}
+
+#else  /* CONFIG_SCHED_FREQ_INPUT */
+
+static inline void
+add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta)
+{
+}
+
+static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
+{
+}
+
+#endif /* CONFIG_SCHED_FREQ_INPUT */
 
 static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
@@ -5496,6 +5582,23 @@ struct lb_env {
 	struct list_head	tasks;
 };
 
+static DEFINE_PER_CPU(bool, dbs_boost_needed);
+static DEFINE_PER_CPU(int, dbs_boost_load_moved);
+
+/*
+ * move_task - move a task from one runqueue to another runqueue.
+ * Both runqueues must be locked.
+ */
+static void move_task(struct task_struct *p, struct lb_env *env)
+{
+	deactivate_task(env->src_rq, p, 0);
+	set_task_cpu(p, env->dst_cpu);
+	activate_task(env->dst_rq, p, 0);
+	check_preempt_curr(env->dst_rq, p, 0);
+	if (task_notify_on_migrate(p))
+		per_cpu(dbs_boost_needed, env->dst_cpu) = true;
+}
+
 /*
  * Is this task likely cache-hot:
  */
@@ -5735,6 +5838,7 @@ static struct task_struct *detach_one_task(struct lb_env *env)
 		 * inside detach_tasks().
 		 */
 		schedstat_inc(env->sd, lb_gained[env->idle]);
+		per_cpu(dbs_boost_load_moved, env->dst_cpu) += pct_task_load(p);
 		return p;
 	}
 	return NULL;
@@ -5791,6 +5895,7 @@ static int detach_tasks(struct lb_env *env)
 
 		detached++;
 		env->imbalance -= load;
+		per_cpu(dbs_boost_load_moved, env->dst_cpu) += pct_task_load(p);
 
 #ifdef CONFIG_PREEMPT
 		/*
@@ -6279,6 +6384,16 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			int local_group, struct sg_lb_stats *sgs,
 			bool *overload)
 {
+	unsigned long nr_running, max_nr_running, min_nr_running;
+	unsigned long scaled_load, load, max_cpu_load, min_cpu_load;
+	unsigned long balance_load = ~0UL;
+	unsigned long avg_load_per_task = 0;
+	int i;
+
+	/* Tally up the load of all CPUs in the group */
+	max_cpu_load = 0;
+	min_cpu_load = ~0UL;
+	max_nr_running = 0;
 	unsigned long load;
 	int i, nr_running;
 
@@ -6952,6 +7067,7 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 
 	cpumask_copy(cpus, cpu_active_mask);
 
+	per_cpu(dbs_boost_load_moved, this_cpu) = 0;
 	schedstat_inc(sd, lb_count[idle]);
 
 redo:
@@ -7133,9 +7249,23 @@ more_balance:
 			 */
 			sd->nr_balance_failed = sd->cache_nice_tries+1;
 		}
-	} else
+	} else {
 		sd->nr_balance_failed = 0;
+		if (per_cpu(dbs_boost_needed, this_cpu)) {
+			struct migration_notify_data mnd;
 
+			mnd.src_cpu = cpu_of(busiest);
+			mnd.dest_cpu = this_cpu;
+			mnd.load = per_cpu(dbs_boost_load_moved, this_cpu);
+			if (mnd.load > 100)
+				mnd.load = 100;
+			atomic_notifier_call_chain(&migration_notifier_head,
+						   0, (void *)&mnd);
+			per_cpu(dbs_boost_needed, this_cpu) = false;
+			per_cpu(dbs_boost_load_moved, this_cpu) = 0;
+
+		}
+	}
 	if (likely(!active_balance)) {
 		/* We were unbalanced, so reset the balancing interval */
 		sd->balance_interval = sd->min_interval;
@@ -7335,6 +7465,8 @@ static int active_load_balance_cpu_stop(void *data)
 
 	raw_spin_lock_irq(&busiest_rq->lock);
 
+	per_cpu(dbs_boost_load_moved, target_cpu) = 0;
+
 	/* make sure the requested cpu hasn't gone down in the meantime */
 	if (unlikely(busiest_cpu != smp_processor_id() ||
 		     !busiest_rq->active_balance))
@@ -7381,6 +7513,21 @@ static int active_load_balance_cpu_stop(void *data)
 out_unlock:
 	busiest_rq->active_balance = 0;
 	raw_spin_unlock(&busiest_rq->lock);
+
+	if (per_cpu(dbs_boost_needed, target_cpu)) {
+		struct migration_notify_data mnd;
+
+		mnd.src_cpu = cpu_of(busiest_rq);
+		mnd.dest_cpu = target_cpu;
+		mnd.load = per_cpu(dbs_boost_load_moved, target_cpu);
+		if (mnd.load > 100)
+			mnd.load = 100;
+		atomic_notifier_call_chain(&migration_notifier_head,
+					   0, (void *)&mnd);
+
+		per_cpu(dbs_boost_needed, target_cpu) = false;
+		per_cpu(dbs_boost_load_moved, target_cpu) = 0;
+	}
 
 	if (p)
 		attach_one_task(target_rq, p);

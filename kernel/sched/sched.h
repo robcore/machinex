@@ -879,8 +879,12 @@ static inline void sched_ttwu_pending(void) { }
 #include "auto_group.h"
 
 #ifdef CONFIG_SCHED_FREQ_INPUT
+
+extern unsigned int sched_ravg_window;
 extern unsigned int max_possible_freq;
 extern unsigned int min_max_freq;
+extern unsigned int pct_task_load(struct task_struct *p);
+extern void init_new_task_load(struct task_struct *p);
 extern unsigned int max_capacity;
 extern unsigned int min_capacity;
 static inline void
@@ -895,6 +899,23 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 	rq->cumulative_runnable_avg -= p->ravg.demand;
 	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
 }
+
+#else	/* CONFIG_SCHED_FREQ_INPUT */
+
+static inline int pct_task_load(struct task_struct *p) { return 0; }
+
+static inline void
+inc_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
+{
+}
+
+static inline void
+dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
+{
+}
+
+static inline void init_new_task_load(struct task_struct *p) { }
+
 #endif	/* CONFIG_SCHED_FREQ_INPUT */
 
 #ifdef CONFIG_CGROUP_SCHED
@@ -915,6 +936,11 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 static inline struct task_group *task_group(struct task_struct *p)
 {
 	return p->sched_task_group;
+}
+
+static inline bool task_notify_on_migrate(struct task_struct *p)
+{
+	return task_group(p)->notify_on_migrate;
 }
 
 /* Change a task's cfs_rq and parent entity if it moves across CPUs/groups */
@@ -943,7 +969,10 @@ static inline struct task_group *task_group(struct task_struct *p)
 {
 	return NULL;
 }
-
+static inline bool task_notify_on_migrate(struct task_struct *p)
+{
+	return false;
+}
 #endif /* CONFIG_CGROUP_SCHED */
 
 static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
