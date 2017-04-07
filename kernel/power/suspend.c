@@ -46,11 +46,6 @@ const char *pm_states[PM_SUSPEND_MAX];
 static const struct platform_suspend_ops *suspend_ops;
 static const struct platform_freeze_ops *freeze_ops;
 
-static bool need_suspend_ops(suspend_state_t state)
-{
-	return state > PM_SUSPEND_FREEZE;
-}
-
 static DECLARE_WAIT_QUEUE_HEAD(suspend_freeze_wait_head);
 
 enum freeze_state __read_mostly suspend_freeze_state;
@@ -177,13 +172,70 @@ int suspend_valid_only_mem(suspend_state_t state)
 }
 EXPORT_SYMBOL_GPL(suspend_valid_only_mem);
 
-static bool platform_suspend_again(void)
+static bool sleep_state_supported(suspend_state_t state)
+{
+	return state == PM_SUSPEND_FREEZE || (suspend_ops && suspend_ops->enter);
+}
+
+static int platform_suspend_prepare(suspend_state_t state)
+{
+	return state != PM_SUSPEND_FREEZE && suspend_ops->prepare ?
+		suspend_ops->prepare() : 0;
+}
+
+static int platform_suspend_prepare_late(suspend_state_t state)
+{
+	return state != PM_SUSPEND_FREEZE && suspend_ops->prepare_late ?
+		suspend_ops->prepare_late() : 0;
+}
+
+static void platform_suspend_wake(suspend_state_t state)
+{
+	if (state != PM_SUSPEND_FREEZE && suspend_ops->wake)
+		suspend_ops->wake();
+}
+
+static void platform_suspend_finish(suspend_state_t state)
+{
+	if (state != PM_SUSPEND_FREEZE && suspend_ops->finish)
+		suspend_ops->finish();
+}
+
+static int platform_suspend_begin(suspend_state_t state)
+{
+	bool mx_freezing_in_progress;
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin)
+		mx_freezing_in_progress = true;
+		return freeze_ops->begin();
+	else if (suspend_ops->begin)
+		return suspend_ops->begin(state);
+	else
+		return 0;
+}
+
+static void platform_suspend_end(suspend_state_t state)
+{
+	bool mx_freezing_in_progress;
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
+		freeze_ops->end();
+		mx_freezing_in_progress = false;
+	else if (suspend_ops->end)
+		suspend_ops->end();
+}
+
+static void platform_suspend_recover(suspend_state_t state)
+{
+	if (state != PM_SUSPEND_FREEZE && suspend_ops->recover)
+		suspend_ops->recover();
+}
+
+static bool platform_suspend_again(suspend_state_t state)
 {
 	int count;
-	bool suspend = suspend_ops->suspend_again ?
+	bool state != PM_SUSPEND_FREEZE && suspend_ops->suspend_again ?
 		suspend_ops->suspend_again() : false;
 
-	if (suspend) {
+	if (state) {
 		/*
 		 * pm_get_wakeup_count() gets an updated count of wakeup events
 		 * that have occured and will return false (i.e. abort suspend)
@@ -192,18 +244,18 @@ static bool platform_suspend_again(void)
 		 * and enables pm_wakeup_pending() to properly analyze wakeup
 		 * events before entering suspend in suspend_enter().
 		 */
-		suspend = pm_get_wakeup_count(&count, false) &&
+		state = pm_get_wakeup_count(&count, false) &&
 			  pm_save_wakeup_count(count);
 
-		if (!suspend)
+		if (!state)
 			pr_debug("%s: wakeup occurred during suspend_again\n",
 				__func__);
 	}
 
 	pr_debug("%s: votes for: %s\n", __func__,
-		suspend ? "suspend" : "resume");
+		state ? "suspend" : "resume");
 
-	return suspend;
+	return state;
 }
 
 static int suspend_test(int level)
@@ -229,7 +281,7 @@ static int suspend_prepare(suspend_state_t state)
 {
 	int error;
 
-	if (need_suspend_ops(state) && (!suspend_ops || !suspend_ops->enter))
+	if (!sleep_state_supported(state))
 		return -EPERM;
 
 	pm_prepare_console();
@@ -274,11 +326,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int error, last_dev;
 
-	if (need_suspend_ops(state) && suspend_ops->prepare) {
-		error = suspend_ops->prepare();
-		if (error)
-			goto Platform_finish;
-	}
+	error = platform_suspend_prepare(state);
+	if (error)
+		goto Platform_finish;
 
 	error = dpm_suspend_late(PMSG_SUSPEND);
 	if (error) {
@@ -295,11 +345,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		goto Devices_early_resume;
 	}
 
-	if (need_suspend_ops(state) && suspend_ops->prepare_late) {
-		error = suspend_ops->prepare_late();
-		if (error)
-			goto Platform_wake;
-	}
+	error = platform_suspend_prepare_late(state);
+	if (error)
+		goto Platform_wake;
 
 	if (suspend_test(TEST_PLATFORM))
 		goto Platform_wake;
@@ -348,17 +396,14 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	enable_nonboot_cpus();
 
  Platform_wake:
-	if (need_suspend_ops(state) && suspend_ops->wake)
-		suspend_ops->wake();
-
+	platform_suspend_wake(state);
 	dpm_resume_noirq(PMSG_RESUME);
 
  Devices_early_resume:
 	dpm_resume_early(PMSG_RESUME);
 
  Platform_finish:
-	if (need_suspend_ops(state) && suspend_ops->finish)
-		suspend_ops->finish();
+	platform_suspend_finish(state);
 
 	return error;
 }
@@ -432,22 +477,14 @@ int suspend_devices_and_enter(suspend_state_t state)
 	int error;
 	bool wakeup = false;
 	bool resumed = false;
-	bool mx_freezing_in_progress;
 
-	if (need_suspend_ops(state) && !suspend_ops)
+	if (!sleep_state_supported(state))
 		return -ENOSYS;
 
-	trace_machine_suspend(state);
-	if (need_suspend_ops(state) && suspend_ops->begin) {
-		error = suspend_ops->begin(state);
-		if (error)
-			goto Close;
-	} else if (state == PM_SUSPEND_FREEZE && freeze_ops->begin) {
-		mx_freezing_in_progress = true;
-		error = freeze_ops->begin();
-		if (error)
-			goto Close;
-	}
+	error = platform_suspend_begin(state);
+	if (error)
+		goto Close;
+
 	suspend_console();
 	suspend_test_start();
 	error = dpm_suspend_start(PMSG_SUSPEND);
@@ -471,19 +508,11 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_finish("resume devices");
 	resume_console();
  Close:
-	if (need_suspend_ops(state) && suspend_ops->end)
-		suspend_ops->end();
-	else if (state == PM_SUSPEND_FREEZE && freeze_ops->end) {
-		freeze_ops->end();
-		mx_freezing_in_progress = false;
-	}
-
-	trace_machine_suspend(PWR_EVENT_EXIT);
+	platform_suspend_end(state);
 	return error;
 
  Recover_platform:
-	if (need_suspend_ops(state) && suspend_ops->recover)
-		suspend_ops->recover();
+	platform_suspend_recover(state);
 	goto Resume_devices;
 }
 
