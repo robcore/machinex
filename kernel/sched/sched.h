@@ -15,8 +15,6 @@
 #include "cpuacct.h"
 
 struct rq;
-
-/* task_struct::on_rq states: */
 struct cpuidle_state;
 
 /* task_struct::on_rq states: */
