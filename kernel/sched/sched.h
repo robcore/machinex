@@ -926,6 +926,19 @@ dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 
 #endif	/* CONFIG_SCHED_FREQ_INPUT */
 
+/*temp*/
+static inline void check_for_migration(struct rq *rq, struct task_struct *p) { }
+static inline void pre_big_small_task_count_change(void) { }
+static inline void post_big_small_task_count_change(void) { }
+static inline void set_hmp_defaults(void) { }
+
+static inline void inc_nr_big_small_task(struct rq *rq, struct task_struct *p)
+{
+}
+
+static inline void dec_nr_big_small_task(struct rq *rq, struct task_struct *p)
+{
+}
 #ifdef CONFIG_CGROUP_SCHED
 
 /*
