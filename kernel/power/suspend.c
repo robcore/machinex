@@ -238,8 +238,7 @@ static bool machinex_suspend_again(suspend_state_t state)
 static bool platform_suspend_again(void)
 {
 	int count;
-	suspend_state_t state = state;
-	bool suspend = machinex_suspend_again(state);
+	bool suspend = machinex_suspend_again(suspend_freeze_state);
 
 	if (suspend) {
 		/*
