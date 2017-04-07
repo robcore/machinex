@@ -711,4 +711,6 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 	cpufreq_frequency_table_put_attr(policy->cpu);
 	return 0;
 }
+struct sched_domain;
+unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu);
 #endif /* _LINUX_CPUFREQ_H */
