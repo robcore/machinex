@@ -3612,8 +3612,10 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 			dequeue = 0;
 	}
 
-	if (!se)
+	if (!se) {
 		rq->nr_running -= task_delta;
+		dec_nr_running(rq);
+	}
 
 	cfs_rq->throttled = 1;
 	cfs_rq->throttled_clock = rq_clock(rq);
@@ -3667,8 +3669,10 @@ void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
 			break;
 	}
 
-	if (!se)
+	if (!se) {
 		rq->nr_running += task_delta;
+		inc_nr_running(rq);
+	}
 
 	/* determine whether we need to wake up potentially idle cpu */
 	if (rq->curr == rq->idle && rq->cfs.nr_running)
@@ -4173,6 +4177,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
+	long task_delta;
 
 	for_each_sched_entity(se) {
 		if (se->on_rq)
@@ -4202,10 +4207,11 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
+		update_rq_runnable_avg(rq, rq->nr_running);
 	}
 
 	if (!se) {
-		update_rq_runnable_avg(rq, rq->nr_running);
+		rq->nr_running += task_delta;
 		inc_nr_running(rq);
 	}
 	hrtick_update(rq);
@@ -4223,6 +4229,7 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
 	int task_sleep = flags & DEQUEUE_SLEEP;
+	long task_delta;
 
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
@@ -4263,11 +4270,13 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
+		update_rq_runnable_avg(rq, 1);
 	}
 
+	task_delta = cfs_rq->h_nr_running;
 	if (!se) {
+ 		rq->nr_running -= task_delta;
 		dec_nr_running(rq);
-		update_rq_runnable_avg(rq, 1);
 	}
 	hrtick_update(rq);
 }
@@ -6282,7 +6291,10 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		sgs->nr_preferred_running += rq->nr_preferred_running;
 #endif
 		sgs->sum_weighted_load += weighted_cpuload(i);
-		if (idle_cpu(i))
+		/*
+		 * No need to call idle_cpu() if nr_running is not 0
+		 */
+		if (!nr_running && idle_cpu(i))
 			sgs->idle_cpus++;
 	}
 
@@ -7556,11 +7568,11 @@ static void rebalance_domains(struct rq *rq, enum cpu_idle_type idle)
 	for_each_domain(cpu, sd) {
 		/*
 		 * Decay the newidle max times here because this is a regular
-		 * visit to all the domains. Decay ~0.5% per second.
+		 * visit to all the domains. Decay ~1% per second.
 		 */
 		if (time_after(jiffies, sd->next_decay_max_lb_cost)) {
 			sd->max_newidle_lb_cost =
-			(sd->max_newidle_lb_cost * 254) / 256;
+				(sd->max_newidle_lb_cost * 253) / 256;
 			sd->next_decay_max_lb_cost = jiffies + HZ;
 			need_decay = 1;
 		}
@@ -7780,14 +7792,16 @@ static void run_rebalance_domains(struct softirq_action *h)
 	enum cpu_idle_type idle = this_rq->idle_balance ?
 						CPU_IDLE : CPU_NOT_IDLE;
 
-	rebalance_domains(this_rq, idle);
-
 	/*
 	 * If this cpu has a pending nohz_balance_kick, then do the
 	 * balancing on behalf of the other idle cpus whose ticks are
-	 * stopped.
+	 * stopped. Do nohz_idle_balance *before* rebalance_domains to
+	 * give the idle cpus a chance to load balance. Else we may
+	 * load balance only within the local sched_domain hierarchy
+	 * and abort nohz_idle_balance altogether if we pull some load.
 	 */
 	nohz_idle_balance(this_rq, idle);
+	rebalance_domains(this_rq, idle);
 }
 
 /*
