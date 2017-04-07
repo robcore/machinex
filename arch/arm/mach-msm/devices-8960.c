@@ -2081,7 +2081,7 @@ struct platform_device msm8960_device_qup_i2c_gsbi5 = {
 	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi5),
 	.resource	= resources_qup_i2c_gsbi5,
 };
-#if !defined(CONFIG_SENSOR_LT02_CTC)	
+#if !defined(CONFIG_SENSOR_LT02_CTC)
 static struct resource resources_qup_i2c_gsbi11[] = {
 	{
 		.name	= "gsbi_qup_i2c_addr",
@@ -4870,7 +4870,7 @@ struct platform_device msm8960_rtb_device = {
  * The actual L2 size is smaller but we need a larger buffer
  * size to store other dump information
  */
-#define MSM_8960_L2_SIZE  SZ_4M
+#define MSM_8960_L2_SIZE  SZ_8M
 
 struct msm_cache_dump_platform_data msm8960_cache_dump_pdata = {
 	.l2_size = MSM_8960_L2_SIZE,
