@@ -335,19 +335,9 @@ static void __ref machinex_suspend_prep(void)
 		 * freezer kicking in to hasten the sleep and balance the
 		 * SMP bringdown.
 		 */
-		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
-				continue;
-			cpu_up(cpu);
-		}
-
-		/*
-		 * Enable core 1,2 so we will have 0-2 online
-		 * when screen is OFF to reduce system lags and reboots.
-		 * Rob note: Nope,
-		 * cpu_up(1);
-		 * cpu_up(2);
-		 */
+		cpu_up(1);
+		cpu_up(2);
+		cpu_up(3);
 		dprintk("%s: suspended!\n", INTELLI_PLUG);
 	}
 }
