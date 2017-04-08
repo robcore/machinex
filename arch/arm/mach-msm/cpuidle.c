@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/cpuidle.h>
+#include <linux/cpu_pm.h>
 
 #include <mach/cpuidle.h>
 
@@ -76,6 +77,9 @@ static int msm_cpuidle_enter(
 	struct cpuidle_state_usage *st_usage = NULL;
 
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
+
+	cpu_pm_enter();
+
 	dev->last_residency = msm_pm_idle_enter(pm_mode);
 	for (i = 0; i < drv->state_count; i++) {
 		st_usage = &dev->states_usage[i];
@@ -144,6 +148,8 @@ static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 		state_count++;
 		BUG_ON(state_count > msm_cpuidle_driver.state_count);
 	}
+
+	msm_cpuidle_driver.state_count = state_count; /* Per cpu state count */
 }
 
 int __init msm_cpuidle_init(void)
