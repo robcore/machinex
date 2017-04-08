@@ -715,13 +715,14 @@ EXPORT_SYMBOL(idr_init);
  * https://lkml.org/lkml/2013/2/2/159
  */
 static DEFINE_SPINLOCK(mx_idr_lock);
-static inline void mx_idr_destroy(struct idr *idp)
+void mx_idr_destroy(struct idr *idp)
 {
 	idr_remove_all(idp);
 	idr_destroy(idp);
 }
+EXPORT_SYMBOL(mx_idr_destroy);
 
-static inline int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end,
+int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
 	int id, ret;
@@ -755,6 +756,7 @@ fail:
 	}
 	return NULL;
 }
+EXPORT_SYMBOL(mx_idr_destroy);
 
 /**
  * DOC: IDA description
