@@ -155,7 +155,7 @@ mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
 rm arch/arm/configs/tmpconfig
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
-make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
+fakeroot make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
