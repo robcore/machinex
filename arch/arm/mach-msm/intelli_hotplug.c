@@ -339,6 +339,7 @@ static void __ref machinex_suspend_prep(void)
 			if (cpu == 0)
 				continue;
 			cpu_up(cpu);
+		}
 
 		/*
 		 * Enable core 1,2 so we will have 0-2 online
