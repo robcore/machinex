@@ -585,11 +585,6 @@ struct cgroup_subsys {
 	int active;
 	int disabled;
 	int early_init;
-	/*
-	 * True if this subsys uses ID. ID is not available before cgroup_init()
-	 * (not available in early_init time.)
-	 */
-	bool use_id;
 
 	/*
 	 * If %false, this subsystem is properly hierarchical -
@@ -615,9 +610,6 @@ struct cgroup_subsys {
 	 */
 	struct cgroupfs_root *root;
 	struct list_head sibling;
-	/* used when use_id == true */
-	struct idr idr;
-	spinlock_t id_lock;
 
 	/* list of cftype_sets */
 	struct list_head cftsets;
@@ -864,22 +856,6 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * destroyed". The caller should check css and cgroup's status.
  */
 
-/*
- * Typically Called at ->destroy(), or somewhere the subsys frees
- * cgroup_css.
- */
-void free_css_id(struct cgroup_subsys *ss, struct cgroup_css *css);
-
-/* Find a cgroup_css which has given ID */
-
-struct cgroup_css *css_lookup(struct cgroup_subsys *ss, int id);
-
-/* Returns true if root is ancestor of cg */
-bool css_is_ancestor(struct cgroup_css *cg,
-		     const struct cgroup_css *root);
-
-/* Get id and depth of css */
-unsigned short css_id(struct cgroup_css *css);
 struct cgroup_css *cgroup_css_from_dir(struct file *f, int id);
 
 /*
