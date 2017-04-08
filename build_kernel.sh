@@ -155,7 +155,7 @@ mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
 rm arch/arm/configs/tmpconfig
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
-fakeroot make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
+make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
@@ -313,7 +313,7 @@ mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
 rm arch/arm/configs/tmpconfig
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
-fakeroot make C=1 SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
+make C=1 SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
@@ -413,7 +413,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 	cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
 	rm arch/arm/configs/tmpconfig
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
-	fakeroot make CONFIG_DEBUG_SECTION_MISMATCH=y SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
+	make CONFIG_DEBUG_SECTION_MISMATCH=y SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo "Success!"
 	else
@@ -448,7 +448,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 	cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
 	rm arch/arm/configs/tmpconfig
 	make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
-	fakeroot make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
+	make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 	if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo "Success!"
 	else
@@ -508,7 +508,7 @@ mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/tmpconfig $(pwd)/out/.config;
 rm arch/arm/configs/tmpconfig
 make SUBARCH=arm ARCH=arm -j6 O=$(pwd)/out oldconfig;
-fakeroot make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
+make SUBARCH=arm ARCH=arm -S -s -j6 O=$(pwd)/out;
 if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd /media/root/robcore/AIK;
 	cp -R -p machina-new $OUTFOLDER;
