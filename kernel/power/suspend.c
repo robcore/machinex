@@ -200,17 +200,11 @@ static void platform_suspend_recover(suspend_state_t state)
 		suspend_ops->recover();
 }
 
-static bool machinex_suspend_again(suspend_state_t state)
-{
-	return state != PM_SUSPEND_FREEZE && suspend_ops->suspend_again ?
-		suspend_ops->suspend_again() : false;
-}
-
 static bool platform_suspend_again(void)
 {
 	int count;
-	suspend_state_t state = 0;
-	bool suspend = machinex_suspend_again(state);
+	bool suspend = (!freezing_in_progress()) && suspend_ops->suspend_again ?
+		suspend_ops->suspend_again() : false;
 
 	if (suspend) {
 		/*
