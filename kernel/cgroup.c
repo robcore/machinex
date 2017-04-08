@@ -1450,7 +1450,7 @@ static void cgroup_free_root(struct cgroupfs_root *root)
 		/* hierarhcy ID shoulid already have been released */
 		WARN_ON_ONCE(root->hierarchy_id);
 
-		mx_idr_destroy(&root->cgroup_idr);
+		idr_destroy(&root->cgroup_idr);
 		kfree(root);
 	}
 }
@@ -1565,7 +1565,7 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		mutex_lock(&cgroup_mutex);
 		mutex_lock(&cgroup_root_mutex);
 
-		root_cgrp->id = mx_idr_alloc(&root->cgroup_idr, root_cgrp,
+		root_cgrp->id = idr_alloc(&root->cgroup_idr, root_cgrp,
 					   0, 1, GFP_KERNEL);
 		if (root_cgrp->id < 0)
 			goto unlock_drop;
@@ -4297,7 +4297,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	 * Temporarily set the pointer to NULL, so idr_find() won't return
 	 * a half-baked cgroup.
 	 */
-	cgrp->id = mx_idr_alloc(&root->cgroup_idr, NULL, 1, 0, GFP_KERNEL);
+	cgrp->id = idr_alloc(&root->cgroup_idr, NULL, 1, 0, GFP_KERNEL);
 	if (cgrp->id < 0)
 		goto err_free_name;
 
@@ -4978,7 +4978,7 @@ int __init cgroup_init(void)
 
 	BUG_ON(cgroup_init_root_id(&cgroup_dummy_root));
 
-	err = mx_idr_alloc(&cgroup_dummy_root.cgroup_idr, cgroup_dummy_top,
+	err = idr_alloc(&cgroup_dummy_root.cgroup_idr, cgroup_dummy_top,
 			0, 1, GFP_KERNEL);
 	BUG_ON(err < 0);
 
