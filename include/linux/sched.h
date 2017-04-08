@@ -1078,18 +1078,31 @@ struct load_weight {
 };
 
 struct sched_avg {
+	u64 last_runnable_update;
+	s64 decay_count;
+	/*
+	 * utilization_avg_contrib describes the amount of time that a
+	 * sched_entity is running on a CPU. It is based on running_avg_sum
+	 * and is scaled in the range [0..SCHED_LOAD_SCALE].
+	 * load_avg_contrib described the amount of time that a sched_entity
+	 * is runnable on a rq. It is based on both runnable_avg_sum and the
+	 * weight of the task.
+	 */
+	unsigned long load_avg_contrib, utilization_avg_contrib;
 	/*
 	 * These sums represent an infinite geometric series and so are bound
 	 * above by 1024/(1-y).  Thus we only need a u32 to store them for all
 	 * choices of y < 1-2^(-32)*1024.
+	 * running_avg_sum reflects the time that the sched_entity is
+	 * effectively running on the CPU.
+	 * runnable_avg_sum represents the amount of time a sched_entity is on
+	 * a runqueue which includes the running time that is monitored by
+	 * running_avg_sum.
 	 */
-	u32 runnable_avg_sum, runnable_avg_period;
-#ifdef CONFIG_SCHED_FREQ_INPUT
+	u32 runnable_avg_sum, avg_period, running_avg_sum;
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 	u32 runnable_avg_sum_scaled;
 #endif
-	u64 last_runnable_update;
-	s64 decay_count;
-	unsigned long load_avg_contrib;
 	u32 usage_avg_sum;
 };
 
@@ -1134,8 +1147,6 @@ struct sched_statistics {
 /* ravg represents frequency scaled cpu-demand of tasks */
 struct ravg {
 	/*
-	 * 'window_start' marks the beginning of new window
-	 *
 	 * 'mark_start' marks the beginning of an event (task waking up, task
 	 * starting to execute, task being preempted) within a window
 	 *
@@ -1150,7 +1161,7 @@ struct ravg {
 	 * 'demand' represents maximum sum seen over previous RAVG_HIST_SIZE
 	 * windows. 'demand' could drive frequency demand for tasks.
 	 */
-	u64 window_start, mark_start;
+	u64 mark_start;
 	u32 sum, demand, prev_window;
 	u32 sum_history[RAVG_HIST_SIZE];
 };
@@ -1293,7 +1304,7 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
-#ifdef CONFIG_SCHED_FREQ_INPUT
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 	struct ravg ravg;
 #endif
 #ifdef CONFIG_CGROUP_SCHED
