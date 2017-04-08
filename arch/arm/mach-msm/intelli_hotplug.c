@@ -313,35 +313,6 @@ static void __ref intelli_plug_suspend(void)
 	}
 }
 
-static void __ref machinex_suspend_prep(void)
-{
-	int cpu = 0;
-
-	if (!hotplug_suspended) {
-		mutex_lock(&intelli_plug_mutex);
-		hotplug_suspended = true;
-		min_cpus_online_res = min_cpus_online;
-		min_cpus_online = 1;
-		max_cpus_online_res = max_cpus_online;
-		max_cpus_online = NR_CPUS;
-		mutex_unlock(&intelli_plug_mutex);
-
-		/* Flush hotplug workqueue */
-		cancel_delayed_work_sync(&intelli_plug_work);
-		flush_workqueue(intelliplug_wq);
-
-		/* Test(robcore): Seeing as SMP sleep handles downing all non-boot
-		 * cores during suspend, online all the cores prior to the
-		 * freezer kicking in to hasten the sleep and balance the
-		 * SMP bringdown.
-		 */
-		cpu_up(1);
-		cpu_up(2);
-		cpu_up(3);
-		dprintk("%s: suspended!\n", INTELLI_PLUG);
-	}
-}
-
 static void __ref intelli_plug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
@@ -394,10 +365,7 @@ static int state_notifier_callback(struct notifier_block *this,
 			intelli_plug_resume();
 			break;
 		case STATE_NOTIFIER_SUSPEND:
-			if (!hotplug_suspend)
-				machinex_suspend_prep();
-			else
-				intelli_plug_suspend();
+			intelli_plug_suspend();
 			break;
 		default:
 			break;
