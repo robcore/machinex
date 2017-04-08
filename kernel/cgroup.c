@@ -795,14 +795,14 @@ static void cgroup_free_fn(struct work_struct *work)
 	cgrp->root->number_of_cgroups--;
 	mutex_unlock(&cgroup_mutex);
 
-	ida_simple_remove(&cgrp->root->cgroup_ida, cgrp->id);
-
 	/*
 	 * We get a ref to the parent's dentry, and put the ref when
 	 * this cgroup is being freed, so it's guaranteed that the
 	 * parent won't be destroyed before its children.
 	 */
 	dput(cgrp->parent->dentry);
+
+	ida_simple_remove(&cgrp->root->cgroup_ida, cgrp->id);
 
 	/*
 	 * Drop the active superblock reference that we took when we
