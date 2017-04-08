@@ -622,7 +622,6 @@ struct rq {
 	 */
 	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
 	u64 cumulative_runnable_avg;
-	u64 window_start;
 #endif
 
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
@@ -902,6 +901,8 @@ static inline void
 dec_cumulative_runnable_avg(struct rq *rq, struct task_struct *p)
 {
 }
+
+static inline void init_new_task_load(struct task_struct *p) { }
 
 #endif	/* CONFIG_SCHED_FREQ_INPUT */
 
