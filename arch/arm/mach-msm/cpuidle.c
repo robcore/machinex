@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/cpuidle.h>
+#include <linux/cpu_pm.h>
 
 #include <mach/cpuidle.h>
 
@@ -120,10 +121,13 @@ static void __init msm_cpuidle_set_states(void)
 
 static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 {
+	int state_count = 0;
 	if (dev->cpu == 0)
 		dev->state_count = ARRAY_SIZE(msm_cstates);
 	else
 		dev->state_count = ARRAY_SIZE(msm_cstates_others);
+	msm_cpuidle_driver.state_count = state_count;
+	msm_cpuidle_driver.safe_state_index = 0;
 }
 
 int __init msm_cpuidle_init(void)
