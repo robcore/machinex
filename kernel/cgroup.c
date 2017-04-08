@@ -4215,6 +4215,7 @@ static void init_cgroup_css(struct cgroup_css *css,
 			       struct cgroup *cgrp)
 {
 	css->cgroup = cgrp;
+	css->ss = ss;
 	css->flags = 0;
 	css->id = NULL;
 	if (cgrp == cgroup_dummy_top)
