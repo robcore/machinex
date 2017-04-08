@@ -14,7 +14,6 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/cpuidle.h>
-#include <linux/cpu_pm.h>
 
 #include <mach/cpuidle.h>
 
@@ -27,35 +26,45 @@ static struct cpuidle_driver msm_cpuidle_driver = {
 	.owner = THIS_MODULE,
 };
 
-/*
- * We have an asymmetric CPU C-State in MSMs. The primary CPU can do PC while
- * all secondary cpus can only do standalone PC as part of their idle LPM.
- * However, the secondary cpus can do PC when hotplugged. We do not care about
- * the hotplug here.
- */
 static struct msm_cpuidle_state msm_cstates[] = {
-		{ 0, "C0", "WFI",
-		  MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT},
+	{0, 0, "C0", "WFI",
+		MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT},
 
-		{ 1, "C1", "RETENTION",
-		  MSM_PM_SLEEP_MODE_RETENTION},
+	{0, 1, "C1", "RETENTION",
+		MSM_PM_SLEEP_MODE_RETENTION},
 
-		{ 2, "C2", "STANDALONE_POWER_COLLAPSE",
+	{0, 2, "C2", "STANDALONE_POWER_COLLAPSE",
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE},
 
-		{ 3, "C3", "POWER_COLLAPSE",
+	{0, 3, "C3", "POWER_COLLAPSE",
 		MSM_PM_SLEEP_MODE_POWER_COLLAPSE},
-};
 
-static struct msm_cpuidle_state msm_cstates_others[] = {
-	{ 0, "C0", "WFI",
-	MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT},
+	{1, 0, "C0", "WFI",
+		MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT},
 
-	{ 1, "C1", "RETENTION",
-	MSM_PM_SLEEP_MODE_RETENTION},
+	{1, 1, "C1", "RETENTION",
+		MSM_PM_SLEEP_MODE_RETENTION},
 
-	{ 2, "C2", "STANDALONE_POWER_COLLAPSE",
-	MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE},
+	{1, 2, "C2", "STANDALONE_POWER_COLLAPSE",
+		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE},
+
+	{2, 0, "C0", "WFI",
+		MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT},
+
+	{2, 1, "C1", "RETENTION",
+		MSM_PM_SLEEP_MODE_RETENTION},
+
+	{2, 2, "C2", "STANDALONE_POWER_COLLAPSE",
+		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE},
+
+	{3, 0, "C0", "WFI",
+		MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT},
+
+	{3, 1, "C1", "RETENTION",
+		MSM_PM_SLEEP_MODE_RETENTION},
+
+	{3, 2, "C2", "STANDALONE_POWER_COLLAPSE",
+		MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE},
 };
 
 static int msm_cpuidle_enter(
@@ -64,28 +73,19 @@ static int msm_cpuidle_enter(
 	int ret = 0;
 	int i = 0;
 	enum msm_pm_sleep_mode pm_mode;
-	struct msm_cpuidle_state *states;
+	struct cpuidle_state_usage *st_usage = NULL;
 
-	size_t count;
-
-	if (dev->cpu) {
-		states = msm_cstates_others;
-		count = ARRAY_SIZE(msm_cstates_others);
-	} else {
-		states = msm_cstates;
-		count = ARRAY_SIZE(msm_cstates);
-	}
-
-	cpu_pm_enter();
-
-	pm_mode = msm_pm_idle_enter(dev, drv, index, states);
-
-	for (i = 0; i < count; i++) {
-		if (states[i].mode_nr == pm_mode) {
-			ret = states[i].state_nr;
+	pm_mode = msm_pm_idle_prepare(dev, drv, index);
+	dev->last_residency = msm_pm_idle_enter(pm_mode);
+	for (i = 0; i < drv->state_count; i++) {
+		st_usage = &dev->states_usage[i];
+		if ((enum msm_pm_sleep_mode)cpuidle_get_statedata(st_usage)
+		    == pm_mode) {
+			ret = i;
 			break;
 		}
 	}
+
 
 	local_irq_enable();
 
@@ -99,9 +99,17 @@ static void __init msm_cpuidle_set_states(void)
 	struct msm_cpuidle_state *cstate = NULL;
 	struct cpuidle_state *state = NULL;
 
-	/* Register for CPU0 to cover all possible states */
 	for (i = 0; i < ARRAY_SIZE(msm_cstates); i++) {
 		cstate = &msm_cstates[i];
+		/* We have an asymmetric CPU C-State in MSMs.
+		 * The primary CPU can do PC while all secondary cpus
+		 * can only do standalone PC as part of their idle LPM.
+		 * However, the secondary cpus can do PC when hotplugged
+		 * We do not care about the hotplug here.
+		 * Register the C-States available for Core0.
+		 */
+		if (cstate->cpu)
+			continue;
 
 		state = &msm_cpuidle_driver.states[state_count];
 		snprintf(state->name, CPUIDLE_NAME_LEN, "%s", cstate->name);
@@ -121,13 +129,21 @@ static void __init msm_cpuidle_set_states(void)
 
 static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 {
+	int i = 0;
 	int state_count = 0;
-	if (dev->cpu == 0)
-		dev->state_count = ARRAY_SIZE(msm_cstates);
-	else
-		dev->state_count = ARRAY_SIZE(msm_cstates_others);
-	msm_cpuidle_driver.state_count = state_count;
-	msm_cpuidle_driver.safe_state_index = 0;
+	struct cpuidle_state_usage *st_usage = NULL;
+	struct msm_cpuidle_state *cstate = NULL;
+
+	for (i = 0; i < ARRAY_SIZE(msm_cstates); i++) {
+		cstate = &msm_cstates[i];
+		if (cstate->cpu != dev->cpu)
+			continue;
+
+		st_usage = &dev->states_usage[state_count];
+		cpuidle_set_statedata(st_usage, (void *)cstate->mode_nr);
+		state_count++;
+		BUG_ON(state_count > msm_cpuidle_driver.state_count);
+	}
 }
 
 int __init msm_cpuidle_init(void)
