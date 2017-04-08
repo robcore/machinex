@@ -26,16 +26,16 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	5
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
-#define DEF_SAMPLING_MS			40
+#define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			20000
-#define MIN_INPUT_INTERVAL		500 * 1000L
-#define BOOST_LOCK_DUR			1000 * 1000L
+#define START_DELAY_MS			10000
+#define MIN_INPUT_INTERVAL		150 * 1000L
+#define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
-#define DEFAULT_DOWN_LOCK_DUR		2000
+#define DEFAULT_DOWN_LOCK_DUR		1500
 
 #define CAPACITY_RESERVE		50
 #define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
@@ -147,6 +147,13 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
+static void remove_down_lock(struct work_struct *work)
+{
+	struct down_lock *dl = container_of(work, struct down_lock,
+					    lock_rem.work);
+	dl->locked = 0;
+}
+
 static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
@@ -154,13 +161,6 @@ static void apply_down_lock(unsigned int cpu)
 	dl->locked = 1;
 	queue_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
-}
-
-static void remove_down_lock(struct work_struct *work)
-{
-	struct down_lock *dl = container_of(work, struct down_lock,
-					    lock_rem.work);
-	dl->locked = 0;
 }
 
 static int check_down_lock(unsigned int cpu)
@@ -313,6 +313,44 @@ static void __ref intelli_plug_suspend(void)
 	}
 }
 
+static void __ref machinex_suspend_prep(void)
+{
+	int cpu = 0;
+
+	if (!hotplug_suspended) {
+		mutex_lock(&intelli_plug_mutex);
+		hotplug_suspended = true;
+		min_cpus_online_res = min_cpus_online;
+		min_cpus_online = 1;
+		max_cpus_online_res = max_cpus_online;
+		max_cpus_online = NR_CPUS;
+		mutex_unlock(&intelli_plug_mutex);
+
+		/* Flush hotplug workqueue */
+		cancel_delayed_work_sync(&intelli_plug_work);
+		flush_workqueue(intelliplug_wq);
+
+		/* Test(robcore): Seeing as SMP sleep handles downing all non-boot
+		 * cores during suspend, online all the cores prior to the
+		 * freezer kicking in to hasten the sleep and balance the
+		 * SMP bringdown.
+		 */
+		for_each_cpu_not(cpu, cpu_online_mask) {
+			if (cpu == 0)
+				continue;
+			cpu_up(cpu);
+
+		/*
+		 * Enable core 1,2 so we will have 0-2 online
+		 * when screen is OFF to reduce system lags and reboots.
+		 * Rob note: Nope,
+		 * cpu_up(1);
+		 * cpu_up(2);
+		 */
+		dprintk("%s: suspended!\n", INTELLI_PLUG);
+	}
+}
+
 static void __ref intelli_plug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
@@ -340,12 +378,17 @@ static void __ref intelli_plug_resume(void)
 			apply_down_lock(cpu);
 		}
 		dprintk("%s: wakeup boosted.\n", INTELLI_PLUG);
+		/* Reset required_wakeup flag back to 0 */
+		required_wakeup = 0;
 	}
 
 	/* Resume hotplug workqueue if required */
-	if (required_reschedule)
+	if (required_reschedule) {
 		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
+		/* Reset required_reschedule flag back to 0 */
+	required_reschedule = 0;
+	}
 }
 
 #ifdef CONFIG_STATE_NOTIFIER
@@ -358,6 +401,7 @@ static int state_notifier_callback(struct notifier_block *this,
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
 			intelli_plug_resume();
+			machinex_suspend prep();
 			break;
 		case STATE_NOTIFIER_SUSPEND:
 			intelli_plug_suspend();
