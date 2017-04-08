@@ -65,7 +65,7 @@ enum cgroup_subsys_id {
 #undef SUBSYS
 
 /* Per-subsystem/per-cgroup state maintained by the system. */
-struct cgroup_subsys_state {
+struct cgroup_css {
 	/* the cgroup that this css is attached to */
 	struct cgroup *cgroup;
 
@@ -76,6 +76,8 @@ struct cgroup_subsys_state {
 	struct percpu_ref refcnt;
 
 	unsigned long flags;
+	/* ID for this css, if possible */
+	struct css_id __rcu *id;
 
 	/* Used to put @cgroup->dentry on the last css_put() */
 	struct work_struct dput_work;
@@ -160,7 +162,7 @@ struct cgroup_name {
 struct cgroup {
 	unsigned long flags;		/* "unsigned long" so bitops work */
 
-	int id;				/* idr allocated in-hierarchy ID */
+	int id;				/* ida allocated in-hierarchy ID */
 
 	/*
 	 * We link our 'sibling' struct into our parent's 'children'.
@@ -315,7 +317,7 @@ struct cgroupfs_root {
 	unsigned long flags;
 
 	/* IDs for cgroups in this hierarchy */
-	struct idr cgroup_idr;
+	struct ida cgroup_ida;
 
 	/* The path to use for release notifications. */
 	char release_agent_path[PATH_MAX];
@@ -583,6 +585,11 @@ struct cgroup_subsys {
 	int active;
 	int disabled;
 	int early_init;
+	/*
+	 * True if this subsys uses ID. ID is not available before cgroup_init()
+	 * (not available in early_init time.)
+	 */
+	bool use_id;
 
 	/*
 	 * If %false, this subsystem is properly hierarchical -
@@ -608,6 +615,9 @@ struct cgroup_subsys {
 	 */
 	struct cgroupfs_root *root;
 	struct list_head sibling;
+	/* used when use_id == true */
+	struct idr idr;
+	spinlock_t id_lock;
 
 	/* list of cftype_sets */
 	struct list_head cftsets;
@@ -625,21 +635,6 @@ struct cgroup_subsys {
 #include <linux/cgroup_subsys.h>
 #undef IS_SUBSYS_ENABLED
 #undef SUBSYS
-
-/**
- * css_parent - find the parent css
- * @css: the target cgroup_subsys_state
- *
- * Return the parent css of @css.  This function is guaranteed to return
- * non-NULL parent as long as @css isn't the root.
- */
-static inline
-struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
-{
-	struct cgroup *parent_cgrp = css->cgroup->parent;
-
-	return parent_cgrp ? parent_cgrp->subsys[css->ss->subsys_id] : NULL;
-}
 
 /**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
@@ -869,7 +864,23 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * destroyed". The caller should check css and cgroup's status.
  */
 
-struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
+/*
+ * Typically Called at ->destroy(), or somewhere the subsys frees
+ * cgroup_css.
+ */
+void free_css_id(struct cgroup_subsys *ss, struct cgroup_css *css);
+
+/* Find a cgroup_css which has given ID */
+
+struct cgroup_css *css_lookup(struct cgroup_subsys *ss, int id);
+
+/* Returns true if root is ancestor of cg */
+bool css_is_ancestor(struct cgroup_css *cg,
+		     const struct cgroup_css *root);
+
+/* Get id and depth of css */
+unsigned short css_id(struct cgroup_css *css);
+struct cgroup_css *cgroup_css_from_dir(struct file *f, int id);
 
 /*
  * Default Android check for whether the current process is allowed to move a
