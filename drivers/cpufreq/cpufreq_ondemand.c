@@ -34,7 +34,7 @@
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(3)
 #define DEF_FREQUENCY_UP_THRESHOLD		(80)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
@@ -44,9 +44,9 @@
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
-#define DEF_MIDDLE_GRID_STEP           		(14)
-#define DEF_HIGH_GRID_STEP             		(20)
-#define DEF_MIDDLE_GRID_LOAD			(65)
+#define DEF_MIDDLE_GRID_STEP           		(7)
+#define DEF_HIGH_GRID_STEP             		(10)
+#define DEF_MIDDLE_GRID_LOAD			(69)
 #define DEF_HIGH_GRID_LOAD			(89)
 
 /*
@@ -165,16 +165,16 @@ static struct dbs_tuners {
 	.up_threshold_any_cpu_load = DEF_FREQUENCY_UP_THRESHOLD,
 	.middle_grid_step = DEF_MIDDLE_GRID_STEP,
 	.high_grid_step = DEF_HIGH_GRID_STEP,
-	.middle_grid_load = DEF_MIDDLE_GRID_LOAD,
-	.high_grid_load = DEF_HIGH_GRID_LOAD,
+	.middle_grid_load = 69,
+	.high_grid_load = 89,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 1026000,
+	.sync_freq = 0,
 	.optimal_freq = 1566000,
 	.input_boost = 0,
 	.optimal_max_freq = 1566000,
 	.debug_mask = 0,
-	.sampling_rate = 60000,
+	.sampling_rate = 65000,
 };
 
 #ifdef CONFIG_MACH_MSM8974_B1_KR
@@ -1053,7 +1053,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		}
 		if (!dbs_tuners_ins.powersave_bias) {
 			__cpufreq_driver_target(policy, freq_next,
-					CPUFREQ_RELATION_L);
+					CPUFREQ_RELATION_H);
 		} else {
 			int freq = powersave_bias_target(policy, freq_next,
 					CPUFREQ_RELATION_L);
