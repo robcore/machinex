@@ -402,10 +402,12 @@ static int state_notifier_callback(struct notifier_block *this,
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
 			intelli_plug_resume();
-			machinex_suspend prep();
 			break;
 		case STATE_NOTIFIER_SUSPEND:
-			intelli_plug_suspend();
+			if (!hotplug_suspend)
+				machinex_suspend_prep();
+			else
+				intelli_plug_suspend();
 			break;
 		default:
 			break;
