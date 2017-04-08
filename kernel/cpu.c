@@ -384,6 +384,23 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 
 	smpboot_park_threads(cpu);
 
+	/*
+	 * By now we've cleared cpu_active_mask, wait for all preempt-disabled
+	 * and RCU users of this state to go away such that all new such users
+	 * will observe it.
+	 *
+	 * For CONFIG_PREEMPT we have preemptible RCU and its sync_rcu() might
+	 * not imply sync_sched(), so explicitly call both.
+	 */
+#ifdef CONFIG_PREEMPT
+	synchronize_sched();
+#endif
+	synchronize_rcu();
+
+	/*
+	 * So now all preempt/rcu users must observe !cpu_active().
+	 */
+
 	err = __stop_machine(take_cpu_down, &tcd_param, cpumask_of(cpu));
 	if (err) {
 		/* CPU didn't die: tell everyone.  Can't complain. */
@@ -584,6 +601,7 @@ int disable_nonboot_cpus(void)
 			continue;
 		error = _cpu_down(cpu, 1);
 		if (!error)
+			pr_info("CPU%d is down\n", cpu);
 			cpumask_set_cpu(cpu, frozen_cpus);
 		else {
 			pr_err("Error taking CPU%d down: %d\n", cpu, error);
@@ -597,7 +615,7 @@ int disable_nonboot_cpus(void)
 		cpu_hotplug_disabled = 1;
 	} else {
 		pr_err("Non-boot CPUs are not disabled\n");
-	}
+	}			pr_info("CPU%d is up\n", cpu);
 	cpu_maps_update_done();
 	return error;
 }
