@@ -725,25 +725,26 @@ EXPORT_SYMBOL(mx_idr_destroy);
 int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
-	int id, ret;
+	int id = -1;
+	int ret = 0;
 
 	spin_lock_irq(&mx_idr_lock);
 
-	do {
+	while (ret == -EAGAIN) {
 		spin_unlock_irq(&mx_idr_lock);
-		if (!idr_pre_get(idr, gfp_mask))
+		if (!idr_pre_get(idp, gfp_mask))
 			goto fail;
 		spin_lock_irq(&mx_idr_lock);
-		ret = idr_get_new_above(idr, ptr, start, &id);
+		ret = idr_get_new_above(idp, ptr, start, &id);
 		if (ret == -ENOSPC)
-			ret = idr_get_new(idr, ptr, &id);
+			ret = idr_get_new(idp, ptr, &id);
 		if (!ret && id < end)
 			start = id + 1;
 		if (!ret && id > end)
-		spin_unlock_irq(&mx_idr_lock);
+			spin_unlock_irq(&mx_idr_lock);
 			goto fail;
 		spin_unlock_irq(&mx_idr_lock);
-	} while (ret == -EAGAIN)
+	}
 
 	spin_unlock_irq(&mx_idr_lock);
 
@@ -751,12 +752,12 @@ int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end,
 fail:
 	if (id >= 0) {
 		spin_lock_irq(&mx_idr_lock);
-		idr_remove(idr, id);
+		idr_remove(idp, id);
 		spin_unlock_irq(&mx_idr_lock);
 	}
-	return NULL;
+	return 0;
 }
-EXPORT_SYMBOL(mx_idr_destroy);
+EXPORT_SYMBOL(mx_idr_alloc);
 
 /**
  * DOC: IDA description
