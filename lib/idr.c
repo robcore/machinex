@@ -743,7 +743,6 @@ int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end,
 		if (!ret && id > end)
 			spin_unlock_irq(&mx_idr_lock);
 			goto fail;
-		spin_unlock_irq(&mx_idr_lock);
 	}
 
 	spin_unlock_irq(&mx_idr_lock);
