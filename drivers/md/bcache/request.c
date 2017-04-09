@@ -164,6 +164,7 @@ static struct cgroup_css *bcachecg_create(struct cgroup *cgroup)
 static void bcachecg_destroy(struct cgroup *cgroup)
 {
 	struct bch_cgroup *cg = cgroup_to_bcache(cgroup);
+	free_css_id(&bcache_subsys, &cg->css);
 	kfree(cg);
 }
 

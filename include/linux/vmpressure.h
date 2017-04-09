@@ -7,7 +7,6 @@
 #include <linux/gfp.h>
 #include <linux/types.h>
 #include <linux/cgroup.h>
-#include <linux/eventfd.h>
 
 struct vmpressure {
 	unsigned long scanned;
@@ -37,12 +36,10 @@ extern void vmpressure_init(struct vmpressure *vmpr);
 extern struct vmpressure *memcg_to_vmpressure(struct mem_cgroup *memcg);
 extern struct cgroup_css *vmpressure_to_css(struct vmpressure *vmpr);
 extern struct vmpressure *css_to_vmpressure(struct cgroup_css *css);
-extern int vmpressure_register_event(struct cgroup_subsys_state *css,
-					 struct cftype *cft,
+extern int vmpressure_register_event(struct cgroup *cg, struct cftype *cft,
 				     struct eventfd_ctx *eventfd,
 				     const char *args);
-extern void vmpressure_unregister_event(struct cgroup_subsys_state *css,
-					struct cftype *cft,
+extern void vmpressure_unregister_event(struct cgroup *cg, struct cftype *cft,
 					struct eventfd_ctx *eventfd);
 #else
 static inline struct vmpressure *memcg_to_vmpressure(struct mem_cgroup *memcg)

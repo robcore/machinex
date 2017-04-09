@@ -27,6 +27,11 @@ static inline struct cgroup_cls_state *css_cls_state(struct cgroup_subsys_state 
 	return css ? container_of(css, struct cgroup_cls_state, css) : NULL;
 }
 
+static inline struct cgroup_cls_state *cgrp_cls_state(struct cgroup *cgrp)
+{
+	return css_cls_state(cgroup_css(cgrp, net_cls_subsys_id));
+}
+
 static inline struct cgroup_cls_state *task_cls_state(struct task_struct *p)
 {
 	return css_cls_state(task_css(p, net_cls_subsys_id));
@@ -52,15 +57,14 @@ static void cgrp_css_free(struct cgroup *cgrp)
 	kfree(cgrp_cls_state(cgrp));
 }
 
-static u64 read_classid(struct cgroup_subsys_state *css, struct cftype *cft)
+static u64 read_classid(struct cgroup *cgrp, struct cftype *cft)
 {
-	return css_cls_state(css)->classid;
+	return cgrp_cls_state(cgrp)->classid;
 }
 
-static int write_classid(struct cgroup_subsys_state *css, struct cftype *cft,
-			 u64 value)
+static int write_classid(struct cgroup *cgrp, struct cftype *cft, u64 value)
 {
-	css_cls_state(css)->classid = (u32) value;
+	cgrp_cls_state(cgrp)->classid = (u32) value;
 	return 0;
 }
 

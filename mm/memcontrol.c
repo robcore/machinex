@@ -45,7 +45,6 @@
 #include <linux/swapops.h>
 #include <linux/spinlock.h>
 #include <linux/eventfd.h>
-#include <linux/poll.h>
 #include <linux/sort.h>
 #include <linux/fs.h>
 #include <linux/seq_file.h>
@@ -55,7 +54,6 @@
 #include <linux/page_cgroup.h>
 #include <linux/cpu.h>
 #include <linux/oom.h>
-#include <linux/file.h>
 #include "internal.h"
 #include <net/sock.h>
 #include <net/tcp_memcontrol.h>
@@ -242,52 +240,6 @@ struct mem_cgroup_eventfd_list {
 	struct eventfd_ctx *eventfd;
 };
 
-/*
- * cgroup_event represents events which userspace want to receive.
- */
-struct cgroup_event {
-	/*
-	 * css which the event belongs to.
-	 */
-	struct cgroup_subsys_state *css;
-	/*
-	 * Control file which the event associated.
-	 */
-	struct cftype *cft;
-	/*
-	 * eventfd to signal userspace about the event.
-	 */
-	struct eventfd_ctx *eventfd;
-	/*
-	 * Each of these stored in a list by the cgroup.
-	 */
-	struct list_head list;
-	/*
-	 * register_event() callback will be used to add new userspace
-	 * waiter for changes related to this event.  Use eventfd_signal()
-	 * on eventfd to send notification to userspace.
-	 */
-	int (*register_event)(struct cgroup_subsys_state *css,
-			      struct cftype *cft, struct eventfd_ctx *eventfd,
-			      const char *args);
-	/*
-	 * unregister_event() callback will be called when userspace closes
-	 * the eventfd or on cgroup removing.  This callback must be set,
-	 * if you want provide notification functionality.
-	 */
-	void (*unregister_event)(struct cgroup_subsys_state *css,
-				 struct cftype *cft,
-				 struct eventfd_ctx *eventfd);
-	/*
-	 * All fields below needed to unregister event when
-	 * userspace closes eventfd.
-	 */
-	poll_table pt;
-	wait_queue_head_t *wqh;
-	wait_queue_t wait;
-	struct work_struct remove;
-};
-
 static void mem_cgroup_threshold(struct mem_cgroup *memcg);
 static void mem_cgroup_oom_notify(struct mem_cgroup *memcg);
 
@@ -410,11 +362,6 @@ struct mem_cgroup {
 	atomic_t	numainfo_events;
 	atomic_t	numainfo_updating;
 #endif
-
-	/* List of events which userspace want to receive */
-	struct list_head event_list;
-	spinlock_t event_list_lock;
-
 	/*
 	 * Per cgroup active and inactive list, similar to the
 	 * per zone LRU lists.
@@ -579,6 +526,7 @@ struct vmpressure *css_to_vmpressure(struct cgroup_css *css)
 	return &memcg->vmpressure;
 }
 
+static inline
 struct mem_cgroup *mem_cgroup_from_css(struct cgroup_css *s)
 {
 	return s ? container_of(s, struct mem_cgroup, css) : NULL;
@@ -1113,6 +1061,11 @@ static void memcg_check_events(struct mem_cgroup *memcg, struct page *page)
 		preempt_enable();
 }
 
+struct mem_cgroup *mem_cgroup_from_cont(struct cgroup *cont)
+{
+	return mem_cgroup_from_css(cgroup_css(cont, mem_cgroup_subsys_id));
+}
+
 struct mem_cgroup *mem_cgroup_from_task(struct task_struct *p)
 {
 	/*
@@ -1242,22 +1195,23 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 			}
 		}
 
-		struct cgroup_subsys_state *prev_css, *next_css;
+		/*
+		 * Root is not visited by cgroup iterators so it needs an
+		 * explicit visit.
+		 */
+		if (!last_visited) {
+			css = &root->css;
+		} else {
+			struct cgroup *prev_cgroup, *next_cgroup;
 
-		prev_css = last_visited ? &last_visited->css : NULL;
-skip_node:
-		next_css = css_next_descendant_pre(prev_css, &root->css);
+			prev_cgroup = (last_visited == root) ? NULL
+				: last_visited->css.cgroup;
+			next_cgroup = cgroup_next_descendant_pre(prev_cgroup,
+					root->css.cgroup);
 			if (next_cgroup)
-	if (next_css) {
-		struct mem_cgroup *mem = mem_cgroup_from_css(next_css);
-
-		if (css_tryget(&mem->css))
-			return mem;
-		else {
-			prev_css = next_css;
-			goto skip_node;
+				css = cgroup_css(next_cgroup,
+						mem_cgroup_subsys_id);
 		}
-	}
 
 		/*
 		 * Even if we found a group we have to make sure it is alive.
@@ -1812,11 +1766,12 @@ static void mem_cgroup_out_of_memory(struct mem_cgroup *memcg, gfp_t gfp_mask,
 	check_panic_on_oom(CONSTRAINT_MEMCG, gfp_mask, order, NULL);
 	totalpages = mem_cgroup_get_limit(memcg) >> PAGE_SHIFT ? : 1;
 	for_each_mem_cgroup_tree(iter, memcg) {
-		struct css_task_iter it;
+		struct cgroup *cgroup = iter->css.cgroup;
+		struct cgroup_iter it;
 		struct task_struct *task;
 
-		css_task_iter_start(&iter->css, &it);
-		while ((task = css_task_iter_next(&it))) {
+		cgroup_iter_start(cgroup, &it);
+		while ((task = cgroup_iter_next(cgroup, &it))) {
 			switch (oom_scan_process_thread(task, totalpages, NULL,
 							false)) {
 			case OOM_SCAN_SELECT:
@@ -1829,7 +1784,7 @@ static void mem_cgroup_out_of_memory(struct mem_cgroup *memcg, gfp_t gfp_mask,
 			case OOM_SCAN_CONTINUE:
 				continue;
 			case OOM_SCAN_ABORT:
-				css_task_iter_end(&it);
+				cgroup_iter_end(cgroup, &it);
 				mem_cgroup_iter_break(memcg, iter);
 				if (chosen)
 					put_task_struct(chosen);
@@ -1851,7 +1806,7 @@ static void mem_cgroup_out_of_memory(struct mem_cgroup *memcg, gfp_t gfp_mask,
 			chosen_points = points;
 			get_task_struct(chosen);
 		}
-		css_task_iter_end(&it);
+		cgroup_iter_end(cgroup, &it);
 	}
 
 	if (!chosen)
@@ -2972,9 +2927,10 @@ static struct kmem_cache *memcg_params_to_cache(struct memcg_cache_params *p)
 }
 
 #ifdef CONFIG_SLABINFO
-static int mem_cgroup_slabinfo_read(struct seq_file *m, void *v)
+static int mem_cgroup_slabinfo_read(struct cgroup *cont, struct cftype *cft,
+					struct seq_file *m)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(seq_css(m));
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	struct memcg_cache_params *params;
 
 	if (!memcg_can_account_kmem(memcg))
@@ -4920,10 +4876,10 @@ static void mem_cgroup_reparent_charges(struct mem_cgroup *memcg)
  */
 static inline bool __memcg_has_children(struct mem_cgroup *memcg)
 {
-	struct cgroup_subsys_state *pos;
+	struct cgroup *pos;
 
 	/* bounce at first found */
-	css_for_each_child(pos, &memcg->css)
+	cgroup_for_each_child(pos, memcg->css.cgroup)
 		return true;
 	return false;
 }
@@ -4979,10 +4935,9 @@ static int mem_cgroup_force_empty(struct mem_cgroup *memcg)
 	return 0;
 }
 
-static int mem_cgroup_force_empty_write(struct cgroup_subsys_state *css,
-					unsigned int event)
+static int mem_cgroup_force_empty_write(struct cgroup *cont, unsigned int event)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	int ret;
 
 	if (mem_cgroup_is_root(memcg))
@@ -4995,17 +4950,16 @@ static int mem_cgroup_force_empty_write(struct cgroup_subsys_state *css,
 }
 
 
-static u64 mem_cgroup_hierarchy_read(struct cgroup_subsys_state *css,
-				     struct cftype *cft)
+static u64 mem_cgroup_hierarchy_read(struct cgroup *cont, struct cftype *cft)
 {
-	return mem_cgroup_from_css(css)->use_hierarchy;
+	return mem_cgroup_from_cont(cont)->use_hierarchy;
 }
 
-static int mem_cgroup_hierarchy_write(struct cgroup_subsys_state *css,
-				      struct cftype *cft, u64 val)
+static int mem_cgroup_hierarchy_write(struct cgroup *cont, struct cftype *cft,
+					u64 val)
 {
 	int retval = 0;
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	struct mem_cgroup *parent_memcg = mem_cgroup_from_css(css_parent(&memcg->css));
 
 	mutex_lock(&memcg_create_mutex);
@@ -5073,11 +5027,11 @@ static inline u64 mem_cgroup_usage(struct mem_cgroup *memcg, bool swap)
 	return val << PAGE_SHIFT;
 }
 
-static ssize_t mem_cgroup_read(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct file *file,
-			       char __user *buf, size_t nbytes, loff_t *ppos)
+static ssize_t mem_cgroup_read(struct cgroup *cont, struct cftype *cft,
+			       struct file *file, char __user *buf,
+			       size_t nbytes, loff_t *ppos)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	char str[64];
 	u64 val;
 	int name, len;
@@ -5110,11 +5064,11 @@ static ssize_t mem_cgroup_read(struct cgroup_subsys_state *css,
 	return simple_read_from_buffer(buf, nbytes, ppos, str, len);
 }
 
-static int memcg_update_kmem_limit(struct cgroup_subsys_state *css, u64 val)
+static int memcg_update_kmem_limit(struct cgroup *cont, u64 val)
 {
 	int ret = -EINVAL;
 #ifdef CONFIG_MEMCG_KMEM
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	/*
 	 * For simplicity, we won't allow this to be disabled.  It also can't
 	 * be changed if the cgroup has children already, or if tasks had
@@ -5130,7 +5084,7 @@ static int memcg_update_kmem_limit(struct cgroup_subsys_state *css, u64 val)
 	mutex_lock(&memcg_create_mutex);
 	mutex_lock(&set_limit_mutex);
 	if (!memcg->kmem_account_flags && val != RES_COUNTER_MAX) {
-		if (cgroup_task_count(css->cgroup) || memcg_has_children(memcg)) {
+		if (cgroup_task_count(cont) || memcg_has_children(memcg)) {
 			ret = -EBUSY;
 			goto out;
 		}
@@ -5208,10 +5162,10 @@ out:
  * The user of this function is...
  * RES_LIMIT.
  */
-static int mem_cgroup_write(struct cgroup_subsys_state *css, struct cftype *cft,
+static int mem_cgroup_write(struct cgroup *cont, struct cftype *cft,
 			    const char *buffer)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	enum res_type type;
 	int name;
 	unsigned long long val;
@@ -5236,7 +5190,7 @@ static int mem_cgroup_write(struct cgroup_subsys_state *css, struct cftype *cft,
 		else if (type == _MEMSWAP)
 			ret = mem_cgroup_resize_memsw_limit(memcg, val);
 		else if (type == _KMEM)
-			ret = memcg_update_kmem_limit(css, val);
+			ret = memcg_update_kmem_limit(cont, val);
 		else
 			return -EINVAL;
 		break;
@@ -5285,9 +5239,9 @@ out:
 	*memsw_limit = min_memsw_limit;
 }
 
-static int mem_cgroup_reset(struct cgroup_subsys_state *css, unsigned int event)
+static int mem_cgroup_reset(struct cgroup *cont, unsigned int event)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	int name;
 	enum res_type type;
 
@@ -5320,17 +5274,17 @@ static int mem_cgroup_reset(struct cgroup_subsys_state *css, unsigned int event)
 	return 0;
 }
 
-static u64 mem_cgroup_move_charge_read(struct cgroup_subsys_state *css,
+static u64 mem_cgroup_move_charge_read(struct cgroup *cgrp,
 					struct cftype *cft)
 {
-	return mem_cgroup_from_css(css)->move_charge_at_immigrate;
+	return mem_cgroup_from_cont(cgrp)->move_charge_at_immigrate;
 }
 
 #ifdef CONFIG_MMU
-static int mem_cgroup_move_charge_write(struct cgroup_subsys_state *css,
+static int mem_cgroup_move_charge_write(struct cgroup *cgrp,
 					struct cftype *cft, u64 val)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 
 	if (val >= (1 << NR_MOVE_TYPE))
 		return -EINVAL;
@@ -5345,7 +5299,7 @@ static int mem_cgroup_move_charge_write(struct cgroup_subsys_state *css,
 	return 0;
 }
 #else
-static int mem_cgroup_move_charge_write(struct cgroup_subsys_state *css,
+static int mem_cgroup_move_charge_write(struct cgroup *cgrp,
 					struct cftype *cft, u64 val)
 {
 	return -ENOSYS;
@@ -5353,12 +5307,13 @@ static int mem_cgroup_move_charge_write(struct cgroup_subsys_state *css,
 #endif
 
 #ifdef CONFIG_NUMA
-static int memcg_numa_stat_show(struct seq_file *m, void *v)
+static int memcg_numa_stat_show(struct cgroup *cont, struct cftype *cft,
+				      struct seq_file *m)
 {
 	int nid;
 	unsigned long total_nr, file_nr, anon_nr, unevictable_nr;
 	unsigned long node_nr;
-	struct mem_cgroup *memcg = mem_cgroup_from_css(seq_css(m));
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 
 	total_nr = mem_cgroup_nr_lru_pages(memcg, LRU_ALL);
 	seq_printf(m, "total=%lu", total_nr);
@@ -5403,9 +5358,10 @@ static inline void mem_cgroup_lru_names_not_uptodate(void)
 	BUILD_BUG_ON(ARRAY_SIZE(mem_cgroup_lru_names) != NR_LRU_LISTS);
 }
 
-static int memcg_stat_show(struct seq_file *m, void *v)
+static int memcg_stat_show(struct cgroup *cont, struct cftype *cft,
+				 struct seq_file *m)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(seq_css(m));
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cont);
 	struct mem_cgroup *mi;
 	unsigned int i;
 
@@ -5489,18 +5445,17 @@ static int memcg_stat_show(struct seq_file *m, void *v)
 	return 0;
 }
 
-static u64 mem_cgroup_swappiness_read(struct cgroup_subsys_state *css,
-				      struct cftype *cft)
+static u64 mem_cgroup_swappiness_read(struct cgroup *cgrp, struct cftype *cft)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 
 	return mem_cgroup_swappiness(memcg);
 }
 
-static int mem_cgroup_swappiness_write(struct cgroup_subsys_state *css,
-				       struct cftype *cft, u64 val)
+static int mem_cgroup_swappiness_write(struct cgroup *cgrp, struct cftype *cft,
+				       u64 val)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
 
 	if (val > 100 || !parent)
@@ -5614,10 +5569,10 @@ static void mem_cgroup_oom_notify(struct mem_cgroup *memcg)
 		mem_cgroup_oom_notify_cb(iter);
 }
 
-static int mem_cgroup_usage_register_event(struct cgroup_subsys_state *css,
+static int mem_cgroup_usage_register_event(struct cgroup *cgrp,
 	struct cftype *cft, struct eventfd_ctx *eventfd, const char *args)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup_thresholds *thresholds;
 	struct mem_cgroup_threshold_ary *new;
 	enum res_type type = MEMFILE_TYPE(cft->private);
@@ -5697,10 +5652,10 @@ unlock:
 	return ret;
 }
 
-static void mem_cgroup_usage_unregister_event(struct cgroup_subsys_state *css,
+static void mem_cgroup_usage_unregister_event(struct cgroup *cgrp,
 	struct cftype *cft, struct eventfd_ctx *eventfd)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup_thresholds *thresholds;
 	struct mem_cgroup_threshold_ary *new;
 	enum res_type type = MEMFILE_TYPE(cft->private);
@@ -5777,10 +5732,10 @@ unlock:
 	mutex_unlock(&memcg->thresholds_lock);
 }
 
-static int mem_cgroup_oom_register_event(struct cgroup_subsys_state *css,
+static int mem_cgroup_oom_register_event(struct cgroup *cgrp,
 	struct cftype *cft, struct eventfd_ctx *eventfd, const char *args)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup_eventfd_list *event;
 	enum res_type type = MEMFILE_TYPE(cft->private);
 
@@ -5802,9 +5757,10 @@ static int mem_cgroup_oom_register_event(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static int mem_cgroup_oom_control_read(struct seq_file *sf, void *v)
+static void mem_cgroup_oom_unregister_event(struct cgroup *cgrp,
+	struct cftype *cft, struct eventfd_ctx *eventfd)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(seq_css(sf));
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup_eventfd_list *ev, *tmp;
 	enum res_type type = MEMFILE_TYPE(cft->private);
 
@@ -5822,10 +5778,10 @@ static int mem_cgroup_oom_control_read(struct seq_file *sf, void *v)
 	spin_unlock(&memcg_oom_lock);
 }
 
-static int mem_cgroup_oom_control_read(struct cgroup_subsys_state *css,
+static int mem_cgroup_oom_control_read(struct cgroup *cgrp,
 	struct cftype *cft,  struct cgroup_map_cb *cb)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 
 	cb->fill(cb, "oom_kill_disable", memcg->oom_kill_disable);
 
@@ -5836,10 +5792,10 @@ static int mem_cgroup_oom_control_read(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static int mem_cgroup_oom_control_write(struct cgroup_subsys_state *css,
+static int mem_cgroup_oom_control_write(struct cgroup *cgrp,
 	struct cftype *cft, u64 val)
 {
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(&memcg->css));
 
 	/* cannot set to root cgroup and only 0 and 1 are allowed */
@@ -5901,225 +5857,13 @@ static void kmem_cgroup_destroy(struct mem_cgroup *memcg)
 }
 #endif
 
-/*
- * Unregister event and free resources.
- *
- * Gets called from workqueue.
- */
-static void cgroup_event_remove(struct work_struct *work)
-{
-	struct cgroup_event *event = container_of(work, struct cgroup_event,
-			remove);
-	struct cgroup_subsys_state *css = event->css;
-
-	remove_wait_queue(event->wqh, &event->wait);
-
-	event->unregister_event(css, event->cft, event->eventfd);
-
-	/* Notify userspace the event is going away. */
-	eventfd_signal(event->eventfd, 1);
-
-	eventfd_ctx_put(event->eventfd);
-	kfree(event);
-	css_put(css);
-}
-
-/*
- * Gets called on POLLHUP on eventfd when user closes it.
- *
- * Called with wqh->lock held and interrupts disabled.
- */
-static int cgroup_event_wake(wait_queue_t *wait, unsigned mode,
-		int sync, void *key)
-{
-	struct cgroup_event *event = container_of(wait,
-			struct cgroup_event, wait);
-	struct mem_cgroup *memcg = mem_cgroup_from_css(event->css);
-	unsigned long flags = (unsigned long)key;
-
-	if (flags & POLLHUP) {
-		/*
-		 * If the event has been detached at cgroup removal, we
-		 * can simply return knowing the other side will cleanup
-		 * for us.
-		 *
-		 * We can't race against event freeing since the other
-		 * side will require wqh->lock via remove_wait_queue(),
-		 * which we hold.
-		 */
-		spin_lock(&memcg->event_list_lock);
-		if (!list_empty(&event->list)) {
-			list_del_init(&event->list);
-			/*
-			 * We are in atomic context, but cgroup_event_remove()
-			 * may sleep, so we have to call it in workqueue.
-			 */
-			schedule_work(&event->remove);
-		}
-		spin_unlock(&memcg->event_list_lock);
-	}
-
-	return 0;
-}
-
-static void cgroup_event_ptable_queue_proc(struct file *file,
-		wait_queue_head_t *wqh, poll_table *pt)
-{
-	struct cgroup_event *event = container_of(pt,
-			struct cgroup_event, pt);
-
-	event->wqh = wqh;
-	add_wait_queue(wqh, &event->wait);
-}
-
-/*
- * Parse input and register new cgroup event handler.
- *
- * Input must be in format '<event_fd> <control_fd> <args>'.
- * Interpretation of args is defined by control file implementation.
- */
-static int cgroup_write_event_control(struct cgroup_subsys_state *dummy_css,
-				      struct cftype *cft, const char *buffer)
-{
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
-	struct cgroup_event *event;
-	struct cgroup_subsys_state *cfile_css;
-	unsigned int efd, cfd;
-	struct fd efile;
-	struct fd cfile;
-	const char *name;
-	char *endp;
-	int ret;
-
-	efd = simple_strtoul(buffer, &endp, 10);
-	if (*endp != ' ')
-		return -EINVAL;
-	buffer = endp + 1;
-
-	cfd = simple_strtoul(buffer, &endp, 10);
-	if ((*endp != ' ') && (*endp != '\0'))
-		return -EINVAL;
-	buffer = endp + 1;
-
-	event = kzalloc(sizeof(*event), GFP_KERNEL);
-	if (!event)
-		return -ENOMEM;
-
-	INIT_LIST_HEAD(&event->list);
-	init_poll_funcptr(&event->pt, cgroup_event_ptable_queue_proc);
-	init_waitqueue_func_entry(&event->wait, cgroup_event_wake);
-	INIT_WORK(&event->remove, cgroup_event_remove);
-
-	efile = fdget(efd);
-	if (!efile.file) {
-		ret = -EBADF;
-		goto out_kfree;
-	}
-
-	event->eventfd = eventfd_ctx_fileget(efile.file);
-	if (IS_ERR(event->eventfd)) {
-		ret = PTR_ERR(event->eventfd);
-		goto out_put_efile;
-	}
-
-	cfile = fdget(cfd);
-	if (!cfile.file) {
-		ret = -EBADF;
-		goto out_put_eventfd;
-	}
-
-	/* the process need read permission on control file */
-	/* AV: shouldn't we check that it's been opened for read instead? */
-	ret = inode_permission(file_inode(cfile.file), MAY_READ);
-	if (ret < 0)
-		goto out_put_cfile;
-
-	event->cft = __file_cft(cfile.file);
-	if (IS_ERR(event->cft)) {
-		ret = PTR_ERR(event->cft);
-		goto out_put_cfile;
-	}
-
-	if (!event->cft->ss) {
-		ret = -EBADF;
-		goto out_put_cfile;
-	}
-
- 	/*
-	 * Determine the event callbacks and set them in @event.  This used
-	 * to be done via struct cftype but cgroup core no longer knows
-	 * about these events.  The following is crude but the whole thing
-	 * is for compatibility anyway.
-	 */
-	name = cfile.file->f_dentry->d_name.name;
-
-	if (!strcmp(name, "memory.usage_in_bytes")) {
-		event->register_event = mem_cgroup_usage_register_event;
-		event->unregister_event = mem_cgroup_usage_unregister_event;
-	} else if (!strcmp(name, "memory.oom_control")) {
-		event->register_event = mem_cgroup_oom_register_event;
-		event->unregister_event = mem_cgroup_oom_unregister_event;
-	} else if (!strcmp(name, "memory.pressure_level")) {
-		event->register_event = vmpressure_register_event;
-		event->unregister_event = vmpressure_unregister_event;
-	} else if (!strcmp(name, "memory.memsw.usage_in_bytes")) {
-		event->register_event = mem_cgroup_usage_register_event;
-		event->unregister_event = mem_cgroup_usage_unregister_event;
-	} else {
-		ret = -EINVAL;
-		goto out_put_cfile;
-	}
-	/*
-	 * Verify @cfile should belong to @css.  Also, remaining events are
-	 * automatically removed on cgroup destruction but the removal is
-	 * asynchronous, so take an extra ref on @css.
-	 */
-	rcu_read_lock();
-
-	ret = -EINVAL;
-	event->css = cgroup_css(cgrp, event->cft->ss);
-	cfile_css = css_from_dir(cfile.file->f_dentry->d_parent, event->cft->ss);
-	if (event->css && event->css == cfile_css && css_tryget(event->css))
-		ret = 0;
-
-	rcu_read_unlock();
-	if (ret)
-		goto out_put_cfile;
-
-	ret = event->register_event(css, event->cft, event->eventfd, buffer);
-	if (ret)
-		goto out_put_css;
-
-	efile.file->f_op->poll(efile.file, &event->pt);
-
-	spin_lock(&memcg->event_list_lock);
-	list_add(&event->list, &memcg->event_list);
-	spin_unlock(&memcg->event_list_lock);
-
-	fdput(cfile);
-	fdput(efile);
-
-	return 0;
-
-out_put_css:
-	css_put(event->css);
-out_put_cfile:
-	fdput(cfile);
-out_put_eventfd:
-	eventfd_ctx_put(event->eventfd);
-out_put_efile:
-	fdput(efile);
-out_kfree:
-	kfree(event);
-
-	return ret;
-}
-
 static struct cftype mem_cgroup_files[] = {
 	{
 		.name = "usage_in_bytes",
 		.private = MEMFILE_PRIVATE(_MEM, RES_USAGE),
 		.read = mem_cgroup_read,
+		.register_event = mem_cgroup_usage_register_event,
+		.unregister_event = mem_cgroup_usage_unregister_event,
 	},
 	{
 		.name = "max_usage_in_bytes",
@@ -6147,7 +5891,7 @@ static struct cftype mem_cgroup_files[] = {
 	},
 	{
 		.name = "stat",
-		.seq_show = memcg_stat_show,
+		.read_seq_string = memcg_stat_show,
 	},
 	{
 		.name = "force_empty",
@@ -6158,12 +5902,6 @@ static struct cftype mem_cgroup_files[] = {
 		.flags = CFTYPE_INSANE,
 		.write_u64 = mem_cgroup_hierarchy_write,
 		.read_u64 = mem_cgroup_hierarchy_read,
-	},
-	{
-		.name = "cgroup.event_control",
-		.write_string = cgroup_write_event_control,
-		.flags = CFTYPE_NO_PREFIX,
-		.mode = S_IWUGO,
 	},
 	{
 		.name = "swappiness",
@@ -6177,17 +5915,21 @@ static struct cftype mem_cgroup_files[] = {
 	},
 	{
 		.name = "oom_control",
-		.seq_show = mem_cgroup_oom_control_read,
+		.read_map = mem_cgroup_oom_control_read,
 		.write_u64 = mem_cgroup_oom_control_write,
+		.register_event = mem_cgroup_oom_register_event,
+		.unregister_event = mem_cgroup_oom_unregister_event,
 		.private = MEMFILE_PRIVATE(_OOM_TYPE, OOM_CONTROL),
 	},
 	{
 		.name = "pressure_level",
+		.register_event = vmpressure_register_event,
+		.unregister_event = vmpressure_unregister_event,
 	},
 #ifdef CONFIG_NUMA
 	{
 		.name = "numa_stat",
-		.seq_show = memcg_numa_stat_show,
+		.read_seq_string = memcg_numa_stat_show,
 	},
 #endif
 #ifdef CONFIG_MEMCG_KMEM
@@ -6217,7 +5959,7 @@ static struct cftype mem_cgroup_files[] = {
 #ifdef CONFIG_SLABINFO
 	{
 		.name = "kmem.slabinfo",
-		.seq_show = mem_cgroup_slabinfo_read,
+		.read_seq_string = mem_cgroup_slabinfo_read,
 	},
 #endif
 #endif
@@ -6230,6 +5972,8 @@ static struct cftype memsw_cgroup_files[] = {
 		.name = "memsw.usage_in_bytes",
 		.private = MEMFILE_PRIVATE(_MEMSWAP, RES_USAGE),
 		.read = mem_cgroup_read,
+		.register_event = mem_cgroup_usage_register_event,
+		.unregister_event = mem_cgroup_usage_unregister_event,
 	},
 	{
 		.name = "memsw.max_usage_in_bytes",
@@ -6463,8 +6207,6 @@ mem_cgroup_css_alloc(struct cgroup_css *parent_css)
 	memcg->move_charge_at_immigrate = 0;
 	mutex_init(&memcg->thresholds_lock);
 	spin_lock_init(&memcg->move_lock);
-	INIT_LIST_HEAD(&memcg->event_list);
-	spin_lock_init(&memcg->event_list_lock);
 
 	return &memcg->css;
 
@@ -6533,19 +6275,6 @@ mem_cgroup_css_online(struct cgroup_css *css)
 static void mem_cgroup_css_offline(struct cgroup_css *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
-	struct cgroup_event *event, *tmp;
-
-	/*
-	 * Unregister events and notify userspace.
-	 * Notify userspace about cgroup removing only after rmdir of cgroup
-	 * directory to avoid race between userspace and kernelspace.
-	 */
-	spin_lock(&memcg->event_list_lock);
-	list_for_each_entry_safe(event, tmp, &memcg->event_list, list) {
-		list_del_init(&event->list);
-		schedule_work(&event->remove);
-	}
-	spin_unlock(&memcg->event_list_lock);
 
 	mem_cgroup_reparent_charges(memcg);
 	mem_cgroup_destroy_all_caches(memcg);

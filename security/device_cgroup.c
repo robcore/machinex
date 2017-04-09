@@ -56,6 +56,11 @@ static inline struct dev_cgroup *css_to_devcgroup(struct cgroup_css *s)
 	return s ? container_of(s, struct dev_cgroup, css) : NULL;
 }
 
+static inline struct dev_cgroup *cgroup_to_devcgroup(struct cgroup *cgroup)
+{
+	return css_to_devcgroup(cgroup_css(cgroup, devices_subsys_id));
+}
+
 static inline struct dev_cgroup *task_devcgroup(struct task_struct *task)
 {
 	return css_to_devcgroup(task_css(task, devices_subsys_id));
@@ -284,9 +289,10 @@ static void set_majmin(char *str, unsigned m)
 		sprintf(str, "%u", m);
 }
 
-static int devcgroup_seq_show(struct seq_file *m, void *v)
+static int devcgroup_seq_read(struct cgroup *cgroup, struct cftype *cft,
+				struct seq_file *m)
 {
-	struct dev_cgroup *devcgroup = css_to_devcgroup(seq_css(m));
+	struct dev_cgroup *devcgroup = cgroup_to_devcgroup(cgroup);
 	struct dev_exception_item *ex;
 	char maj[MAJMINLEN], min[MAJMINLEN], acc[ACCLEN];
 
@@ -441,13 +447,13 @@ static void revalidate_active_exceptions(struct dev_cgroup *devcg)
 static int propagate_exception(struct dev_cgroup *devcg_root,
 			       struct dev_exception_item *ex)
 {
-	struct cgroup_subsys_state *pos;
+	struct cgroup *root = devcg_root->css.cgroup, *pos;
 	int rc = 0;
 
 	rcu_read_lock();
 
-	css_for_each_descendant_pre(pos, &devcg_root->css) {
-		struct dev_cgroup *devcg = css_to_devcgroup(pos);
+	cgroup_for_each_descendant_pre(pos, root) {
+		struct dev_cgroup *devcg = cgroup_to_devcgroup(pos);
 
 		/*
 		 * Because devcgroup_mutex is held, no devcg will become
@@ -455,7 +461,7 @@ static int propagate_exception(struct dev_cgroup *devcg_root,
 		 * methods), and online ones are safe to access outside RCU
 		 * read lock without bumping refcnt.
 		 */
-		if (pos == &devcg_root->css || !is_devcg_online(devcg))
+		if (!is_devcg_online(devcg))
 			continue;
 
 		rcu_read_unlock();
@@ -663,13 +669,13 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 	return rc;
 }
 
-static int devcgroup_access_write(struct cgroup_subsys_state *css,
-				  struct cftype *cft, const char *buffer)
+static int devcgroup_access_write(struct cgroup *cgrp, struct cftype *cft,
+				  const char *buffer)
 {
 	int retval;
 
 	mutex_lock(&devcgroup_mutex);
-	retval = devcgroup_update_access(css_to_devcgroup(css),
+	retval = devcgroup_update_access(cgroup_to_devcgroup(cgrp),
 					 cft->private, buffer);
 	mutex_unlock(&devcgroup_mutex);
 	return retval;
@@ -688,7 +694,7 @@ static struct cftype dev_cgroup_files[] = {
 	},
 	{
 		.name = "list",
-		.seq_show = devcgroup_seq_show,
+		.read_seq_string = devcgroup_seq_read,
 		.private = DEVCG_LIST,
 	},
 	{ }	/* terminate */

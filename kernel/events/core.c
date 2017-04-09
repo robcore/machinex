@@ -593,9 +593,7 @@ static inline int perf_cgroup_connect(int fd, struct perf_event *event,
 	if (!f.file)
 		return -EBADF;
 
-	rcu_read_lock();
-
-	css = css_from_dir(f.file->f_dentry, &perf_subsys);
+	css = cgroup_css_from_dir(f.file, perf_subsys_id);
 	if (IS_ERR(css)) {
 		ret = PTR_ERR(css);
 		goto out;
@@ -621,7 +619,6 @@ static inline int perf_cgroup_connect(int fd, struct perf_event *event,
 		ret = -EINVAL;
 	}
 out:
-	rcu_read_unlock();
 	fdput(f);
 	return ret;
 }
@@ -8010,7 +8007,7 @@ static void perf_cgroup_attach(struct cgroup_css *css,
 {
 	struct task_struct *task;
 
-	cgroup_taskset_for_each(task, tset)
+	cgroup_taskset_for_each(task, css->cgroup, tset)
 		task_function_call(task, __perf_cgroup_move, task);
 }
 
