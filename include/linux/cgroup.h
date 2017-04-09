@@ -221,6 +221,9 @@ struct cgroup {
 	struct list_head pidlists;
 	struct mutex pidlist_mutex;
 
+	/* dummy css with NULL ->ss, points back to this cgroup */
+	struct cgroup_subsys_state dummy_css;
+
 	/* For css percpu_ref killing and RCU-protected deletion */
 	struct rcu_head rcu_head;
 	struct work_struct destroy_work;
@@ -645,7 +648,13 @@ struct cgroup_css *css_parent(struct cgroup_css *css)
 {
 	struct cgroup *parent_cgrp = css->cgroup->parent;
 
-	return parent_cgrp ? parent_cgrp->subsys[css->ss->subsys_id] : NULL;
+	if (!parent_cgrp)
+		return NULL;
+
+	if (css->ss)
+		return parent_cgrp->subsys[css->ss->subsys_id];
+	else
+		return &parent_cgrp->dummy_css;
 }
 
 /**
