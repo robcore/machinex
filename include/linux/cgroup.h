@@ -578,8 +578,6 @@ struct cgroup_subsys {
 			      struct cgroup_taskset *tset);
 	void (*attach)(struct cgroup_subsys_state *css,
 		       struct cgroup_taskset *tset);
-	int (*allow_attach)(struct cgroup *cgrp,
-				struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup_subsys_state *css,
 		     struct cgroup_subsys_state *old_css,
@@ -860,12 +858,6 @@ static inline int cgroupstats_build(struct cgroupstats *stats,
 /* No cgroups - nothing to do */
 static inline int cgroup_attach_task_all(struct task_struct *from,
 					 struct task_struct *t)
-{
-	return 0;
-}
-
-static inline int subsys_cgroup_allow_attach(struct cgroup *cgrp,
-					     struct cgroup_taskset *tset)
 {
 	return 0;
 }
