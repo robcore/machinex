@@ -1413,7 +1413,6 @@ static void cgroup_free_root(struct cgroupfs_root *root)
 		/* hierarhcy ID shoulid already have been released */
 		WARN_ON_ONCE(root->hierarchy_id);
 
-		idr_remove_all (&root->cgroup_idr);
 		idr_destroy(&root->cgroup_idr);
 		kfree(root);
 	}
