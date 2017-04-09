@@ -107,10 +107,6 @@ static struct vmpressure *work_to_vmpressure(struct work_struct *work)
 }
 
 #ifdef CONFIG_MEM_RES_CTLR
-static struct vmpressure *cg_to_vmpressure(struct cgroup *cg)
-{
-	return css_to_vmpressure(cgroup_css(cg, mem_cgroup_subsys_id));
-}
 
 static struct vmpressure *vmpressure_parent(struct vmpressure *vmpr)
 {
@@ -123,7 +119,7 @@ static struct vmpressure *vmpressure_parent(struct vmpressure *vmpr)
 	return memcg_to_vmpressure(memcg);
 }
 #else
-static struct vmpressure *cg_to_vmpressure(struct cgroup *cg)
+static struct vmpressure *css_to_vmpressure(struct cgroup_subsys_state *css)
 {
 	return NULL;
 }
@@ -408,10 +404,12 @@ void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio)
  * cftype).register_event, and then cgroup core will handle everything by
  * itself.
  */
-int vmpressure_register_event(struct cgroup *cg, struct cftype *cft,
-			      struct eventfd_ctx *eventfd, const char *args)
+int vmpressure_register_event(struct cgroup_subsys_state *css,
+				  struct cftype *cft,
+			      struct eventfd_ctx *eventfd,
+				  const char *args)
 {
-	struct vmpressure *vmpr = cg_to_vmpressure(cg);
+	struct vmpressure *vmpr = css_to_vmpressure(css);
 	struct vmpressure_event *ev;
 	int level;
 
@@ -441,7 +439,7 @@ int vmpressure_register_event(struct cgroup *cg, struct cftype *cft,
 
 /**
  * vmpressure_unregister_event() - Unbind eventfd from vmpressure
- * @cg:		cgroup handle
+ * @css:	css handle
  * @cft:	cgroup control files handle
  * @eventfd:	eventfd context that was used to link vmpressure with the @cg
  *
@@ -453,10 +451,11 @@ int vmpressure_register_event(struct cgroup *cg, struct cftype *cft,
  * cftype).unregister_event, and then cgroup core will handle everything
  * by itself.
  */
-void vmpressure_unregister_event(struct cgroup *cg, struct cftype *cft,
+void vmpressure_unregister_event(struct cgroup_subsys_state *css,
+				 struct cftype *cft,
 				 struct eventfd_ctx *eventfd)
 {
-	struct vmpressure *vmpr = cg_to_vmpressure(cg);
+	struct vmpressure *vmpr = css_to_vmpressure(css);
 	struct vmpressure_event *ev;
 
 	if (!vmpr)
