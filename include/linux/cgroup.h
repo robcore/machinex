@@ -65,7 +65,7 @@ enum cgroup_subsys_id {
 #undef SUBSYS
 
 /* Per-subsystem/per-cgroup state maintained by the system. */
-struct cgroup_css {
+struct cgroup_subsys_state {
 	/* the cgroup that this css is attached to */
 	struct cgroup *cgroup;
 
@@ -83,7 +83,7 @@ struct cgroup_css {
 	struct work_struct dput_work;
 };
 
-/* bits in struct cgroup_css flags field */
+/* bits in struct cgroup_subsys_state flags field */
 enum {
 	CSS_ROOT	= (1 << 0), /* this CSS is the root of the subsystem */
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
@@ -103,7 +103,7 @@ static inline void __css_get(struct cgroup_css *css, int count)
  */
 
 extern void __css_get(struct cgroup_css *css, int count);
-static inline void css_get(struct cgroup_css *css)
+static inline void css_get(struct cgroup_subsys_state *css)
 {
 	/* We don't need to reference count the root state */
 	if (!(css->flags & CSS_ROOT))
@@ -116,8 +116,8 @@ static inline void css_get(struct cgroup_css *css)
  * the css has been destroyed.
  */
 
-extern bool __css_tryget(struct cgroup_css *css);
-static inline bool css_tryget(struct cgroup_css *css)
+extern bool __css_tryget(struct cgroup_subsys_state *css);
+static inline bool css_tryget(struct cgroup_subsys_state *css)
 {
 	if (css->flags & CSS_ROOT)
 		return true;
@@ -130,7 +130,7 @@ static inline bool css_tryget(struct cgroup_css *css)
  *
  * Put a reference obtained via css_get() and css_tryget().
  */
-static inline void css_put(struct cgroup_css *css)
+static inline void css_put(struct cgroup_subsys_state *css)
 {
 	if (!(css->flags & CSS_ROOT))
 		percpu_ref_put(&css->refcnt);
@@ -197,7 +197,7 @@ struct cgroup {
 	struct cgroup_name __rcu *name;
 
 	/* Private pointers for each registered subsystem */
-	struct cgroup_css *subsys[CGROUP_SUBSYS_COUNT];
+	struct cgroup_subsys_state *subsys[CGROUP_SUBSYS_COUNT];
 
 	struct cgroupfs_root *root;
 
@@ -271,10 +271,8 @@ enum {
 	 *
 	 * - memcg: use_hierarchy is on by default and the cgroup file for
 	 *   the flag is not created.
-	 * The followings are planned changes.
 	 *
-	 * - release_agent will be disallowed once replacement notification
-	 *   mechanism is implemented.
+	 * - blkcg: blk-throttle becomes properly hierarchical.
 	 */
 	CGRP_ROOT_SANE_BEHAVIOR	= (1 << 0),
 
@@ -328,7 +326,7 @@ struct cgroupfs_root {
 
 /*
  * A css_set is a structure holding pointers to a set of
- * cgroup_css objects. This saves space in the task struct
+ * cgroup_subsys_state objects. This saves space in the task struct
  * object and speeds up fork()/exit(), since a single inc/dec and a
  * list_add()/del() can bump the reference count on the entire cgroup
  * set for a task.
@@ -363,7 +361,7 @@ struct css_set {
 	 * during subsystem registration (at boot time) and modular subsystem
 	 * loading/unloading.
 	 */
-	struct cgroup_css *subsys[CGROUP_SUBSYS_COUNT];
+	struct cgroup_subsys_state *subsys[CGROUP_SUBSYS_COUNT];
 
 	/* For RCU-protected deletion */
 	struct rcu_head rcu_head;
@@ -568,23 +566,23 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct cgroup_css *(*css_alloc)(struct cgroup_css *parent_css);
-	int (*css_online)(struct cgroup_css *css);
-	void (*css_offline)(struct cgroup_css *css);
-	void (*css_free)(struct cgroup_css *css);
+	struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
+	int (*css_online)(struct cgroup_subsys_state *css);
+	void (*css_offline)(struct cgroup_subsys_state *css);
+	void (*css_free)(struct cgroup_subsys_state *css);
 
-	int (*can_attach)(struct cgroup_css *css,
+	int (*can_attach)(struct cgroup_subsys_state *css,
 			  struct cgroup_taskset *tset);
-	void (*cancel_attach)(struct cgroup_css *css,
+	void (*cancel_attach)(struct cgroup_subsys_state *css,
 			      struct cgroup_taskset *tset);
-	void (*attach)(struct cgroup_css *css,
+	void (*attach)(struct cgroup_subsys_state *css,
 		       struct cgroup_taskset *tset);
 	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
-	void (*exit)(struct cgroup_css *css,
-		     struct cgroup_css *old_css,
+	void (*exit)(struct cgroup_subsys_state *css,
+		     struct cgroup_subsys_state *old_css,
 		     struct task_struct *task);
-	void (*bind)(struct cgroup_css *root_css);
+	void (*bind)(struct cgroup_subsys_state *root_css);
 
 	int subsys_id;
 	int active;
@@ -641,7 +639,7 @@ struct cgroup_subsys {
  * non-NULL parent as long as @css isn't the root.
  */
 static inline
-struct cgroup_css *css_parent(struct cgroup_css *css)
+struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
 {
 	struct cgroup *parent_cgrp = css->cgroup->parent;
 
@@ -653,9 +651,9 @@ struct cgroup_css *css_parent(struct cgroup_css *css)
  * @cgrp: the cgroup of interest
  * @subsys_id: the subsystem of interest
  *
- * Return @cgrp's css (cgroup_css) associated with @subsys_id.
+ * Return @cgrp's css (cgroup_subsys_state) associated with @subsys_id.
  */
-static inline struct cgroup_css *cgroup_css(struct cgroup *cgrp,
+static inline struct cgroup_subsys_state *cgroup_css(struct cgroup *cgrp,
 						     int subsys_id)
 {
 	return cgrp->subsys[subsys_id];
@@ -691,7 +689,7 @@ extern struct mutex cgroup_mutex;
  * @subsys_id: the target subsystem ID
  * @__c: extra condition expression to be passed to rcu_dereference_check()
  *
- * Return the cgroup_css for the (@task, @subsys_id) pair.  The
+ * Return the cgroup_subsys_state for the (@task, @subsys_id) pair.  The
  * synchronization rules are the same as task_css_set_check().
  */
 #define task_css_check(task, subsys_id, __c)				\
@@ -714,15 +712,15 @@ static inline struct css_set *task_css_set(struct task_struct *task)
  * @subsys_id: the target subsystem ID
  *
  * See task_css_check().
-*/
-static inline struct cgroup_css *
-task_css(struct task_struct *task, int subsys_id)
+ */
+static inline struct cgroup_subsys_state *task_css(struct task_struct *task,
+						   int subsys_id)
 {
 	return task_css_check(task, subsys_id, false);
 }
 
-static inline struct cgroup* task_cgroup(struct task_struct *task,
-					       int subsys_id)
+static inline struct cgroup *task_cgroup(struct task_struct *task,
+					 int subsys_id)
 {
 	return task_css(task, subsys_id)->cgroup;
 }
@@ -882,11 +880,11 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *);
 int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
 
 /*
- * CSS ID is ID for cgroup_css structs under subsys. This only works
+ * CSS ID is ID for cgroup_subsys_state structs under subsys. This only works
  * if cgroup_subsys.use_id == true. It can be used for looking up and scanning.
  * CSS ID is assigned at cgroup allocation (create) automatically
  * and removed when subsys calls free_css_id() function. This is because
- * the lifetime of cgroup_css is subsys's matter.
+ * the lifetime of cgroup_subsys_state is subsys's matter.
  *
  * Looking up and scanning function should be called under rcu_read_lock().
  * Taking cgroup_mutex is not necessary for following calls.

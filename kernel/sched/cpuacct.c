@@ -27,13 +27,13 @@ enum cpuacct_stat_index {
 
 /* track cpu usage of a group of tasks and its child groups */
 struct cpuacct {
-	struct cgroup_css css;
+	struct cgroup_subsys_state css;
 	/* cpuusage holds pointer to a u64-type object on every cpu */
 	u64 __percpu *cpuusage;
 	struct kernel_cpustat __percpu *cpustat;
 };
 
-static inline struct cpuacct *css_ca(struct cgroup_css *css)
+static inline struct cpuacct *css_ca(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct cpuacct, css) : NULL;
 }
@@ -62,8 +62,8 @@ static struct cpuacct root_cpuacct = {
 };
 
 /* create a new cpu accounting group */
-static struct cgroup_css *
-cpuacct_css_alloc(struct cgroup_css *parent_css)
+static struct cgroup_subsys_state *
+cpuacct_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct cpuacct *ca;
 
@@ -93,7 +93,7 @@ out:
 }
 
 /* destroy an existing cpu accounting group */
-static void cpuacct_css_free(struct cgroup_css *css)
+static void cpuacct_css_free(struct cgroup_subsys_state *css)
 {
 	struct cpuacct *ca = css_ca(css);
 

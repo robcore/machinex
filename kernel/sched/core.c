@@ -8929,7 +8929,7 @@ int sched_rr_handler(struct ctl_table *table, int write,
 
 #ifdef CONFIG_CGROUP_SCHED
 
-static inline struct task_group *css_tg(struct cgroup_css *css)
+static inline struct task_group *css_tg(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct task_group, css) : NULL;
 }
@@ -8940,8 +8940,8 @@ static inline struct task_group *cgroup_tg(struct cgroup *cgrp)
 	return css_tg(cgroup_css(cgrp, cpu_cgroup_subsys_id));
 }
 
-static struct cgroup_css *
-cpu_cgroup_css_alloc(struct cgroup_css *parent_css)
+static struct cgroup_subsys_state *
+cpu_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct task_group *parent = css_tg(parent_css);
 	struct task_group *tg;
@@ -8958,7 +8958,7 @@ cpu_cgroup_css_alloc(struct cgroup_css *parent_css)
 	return &tg->css;
 }
 
-static int cpu_cgroup_css_online(struct cgroup_css *css)
+static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
 {
 	struct task_group *tg = css_tg(css);
 	struct task_group *parent = css_tg(css_parent(css));
@@ -8968,14 +8968,14 @@ static int cpu_cgroup_css_online(struct cgroup_css *css)
 	return 0;
 }
 
-static void cpu_cgroup_css_free(struct cgroup_css *css)
+static void cpu_cgroup_css_free(struct cgroup_subsys_state *css)
 {
 	struct task_group *tg = css_tg(css);
 
 	sched_destroy_group(tg);
 }
 
-static void cpu_cgroup_css_offline(struct cgroup_css *css)
+static void cpu_cgroup_css_offline(struct cgroup_subsys_state *css)
 {
 	struct task_group *tg = css_tg(css);
 
@@ -8987,7 +8987,7 @@ static void cpu_cgroup_fork(struct task_struct *task)
 	sched_move_task(task);
 }
 
-static int cpu_cgroup_can_attach(struct cgroup_css *css,
+static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
@@ -9005,7 +9005,7 @@ static int cpu_cgroup_can_attach(struct cgroup_css *css,
 	return 0;
 }
 
-static void cpu_cgroup_attach(struct cgroup_css *css,
+static void cpu_cgroup_attach(struct cgroup_subsys_state *css,
 			      struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
@@ -9014,8 +9014,8 @@ static void cpu_cgroup_attach(struct cgroup_css *css,
 		sched_move_task(task);
 }
 
-static void cpu_cgroup_exit(struct cgroup_css *css,
-			    struct cgroup_css *old_css,
+static void cpu_cgroup_exit(struct cgroup_subsys_state *css,
+			    struct cgroup_subsys_state *old_css,
 			    struct task_struct *task)
 {
 	/*
