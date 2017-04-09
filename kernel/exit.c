@@ -774,7 +774,7 @@ void do_exit(long code)
 	 */
 	perf_event_exit_task(tsk);
 
-	cgroup_exit(tsk);
+	cgroup_exit(tsk, 1);
 
 	if (group_dead)
 		disassociate_ctty(1);

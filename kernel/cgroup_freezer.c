@@ -40,12 +40,12 @@ enum freezer_state_flags {
 };
 
 struct freezer {
-	struct cgroup_css	css;
+	struct cgroup_subsys_state	css;
 	unsigned int			state;
 	spinlock_t			lock;
 };
 
-static inline struct freezer *css_freezer(struct cgroup_css *css)
+static inline struct freezer *css_freezer(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct freezer, css) : NULL;
 }
@@ -86,8 +86,8 @@ static const char *freezer_state_strs(unsigned int state)
 
 struct cgroup_subsys freezer_subsys;
 
-static struct cgroup_css *
-freezer_css_alloc(struct cgroup_css *parent_css)
+static struct cgroup_subsys_state *
+freezer_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct freezer *freezer;
 
@@ -107,7 +107,7 @@ freezer_css_alloc(struct cgroup_css *parent_css)
  * parent's freezing state while holding both parent's and our
  * freezer->lock.
  */
-static int freezer_css_online(struct cgroup_css *css)
+static int freezer_css_online(struct cgroup_subsys_state *css)
 {
 	struct freezer *freezer = css_freezer(css);
 	struct freezer *parent = parent_freezer(freezer);
@@ -142,7 +142,7 @@ static int freezer_css_online(struct cgroup_css *css)
  * @css is going away.  Mark it dead and decrement system_freezing_count if
  * it was holding one.
  */
-static void freezer_css_offline(struct cgroup_css *css)
+static void freezer_css_offline(struct cgroup_subsys_state *css)
 {
 	struct freezer *freezer = css_freezer(css);
 
@@ -156,7 +156,7 @@ static void freezer_css_offline(struct cgroup_css *css)
 	spin_unlock_irq(&freezer->lock);
 }
 
-static void freezer_css_free(struct cgroup_css *css)
+static void freezer_css_free(struct cgroup_subsys_state *css)
 {
 	kfree(css_freezer(css));
 }
@@ -170,7 +170,7 @@ static void freezer_css_free(struct cgroup_css *css)
  * @freezer->lock.  freezer_attach() makes the new tasks conform to the
  * current state and all following state changes can see the new tasks.
  */
-static void freezer_attach(struct cgroup_css *new_css,
+static void freezer_attach(struct cgroup_subsys_state *new_css,
 			   struct cgroup_taskset *tset)
 {
 	struct freezer *freezer = css_freezer(new_css);

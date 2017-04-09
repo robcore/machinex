@@ -322,9 +322,6 @@ struct cgrp_cset_link {
 static struct css_set init_css_set;
 static struct cgrp_cset_link init_cgrp_cset_link;
 
-static int cgroup_init_idr(struct cgroup_subsys *ss,
-			   struct cgroup_subsys_state *css);
-
 /*
  * css_set_lock protects the list of css_set objects, and the chain of
  * tasks off each css_set.  Nests outside task->alloc_lock due to
@@ -779,9 +776,6 @@ static struct backing_dev_info cgroup_backing_dev_info = {
 	.name		= "cgroup",
 	.capabilities	= BDI_CAP_NO_ACCT_AND_WRITEBACK,
 };
-
-static int alloc_css_id(struct cgroup_subsys *ss,
-			struct cgroup *parent, struct cgroup *child);
 
 static struct inode *cgroup_new_inode(umode_t mode, struct super_block *sb)
 {
@@ -4412,11 +4406,6 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 		init_cgroup_css(css, ss, cgrp);
 
-		if (ss->use_id) {
-			err = alloc_css_id(ss, parent, cgrp);
-			if (err)
-				goto err_free_all;
-		}
 	}
 
 	/*
@@ -4849,12 +4838,6 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 
 	/* our new subsystem will be attached to the dummy hierarchy. */
 	init_cgroup_css(css, ss, cgroup_dummy_top);
-	/* init_idr must be after init_cgroup_css because it sets css->id. */
-	if (ss->use_id) {
-		ret = cgroup_init_idr(ss, css);
-		if (ret)
-			goto err_unload;
-	}
 
 	/*
 	 * Now we need to entangle the css into the existing css_sets. unlike
@@ -5024,8 +5007,6 @@ int __init cgroup_init(void)
 	for_each_builtin_subsys(ss, i) {
 		if (!ss->early_init)
 			cgroup_init_subsys(ss);
-		if (ss->use_id)
-			cgroup_init_idr(ss, init_css_set.subsys[ss->subsys_id]);
 	}
 
 	/* allocate id for the dummy hierarchy */
@@ -5301,7 +5282,7 @@ void cgroup_post_fork(struct task_struct *child)
  *    which wards off any cgroup_attach_task() attempts, or task is a failed
  *    fork, never visible to cgroup_attach_task.
  */
-void cgroup_exit(struct task_struct *tsk)
+void cgroup_exit(struct task_struct *tsk, int run_callbacks)
 {
 	struct cgroup_subsys *ss;
 	struct css_set *cset;
@@ -5324,7 +5305,7 @@ void cgroup_exit(struct task_struct *tsk)
 	cset = task_css_set(tsk);
 	RCU_INIT_POINTER(tsk->cgroups, &init_css_set);
 
-	if (need_forkexit_callback) {
+	if (run_callbacks && need_forkexit_callback) {
 		/*
 		 * fork/exit callbacks are supported only for builtin
 		 * subsystems, see cgroup_post_fork() for details.
