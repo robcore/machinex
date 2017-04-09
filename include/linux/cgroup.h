@@ -577,13 +577,14 @@ struct cgroup_subsys {
 	void (*css_offline)(struct cgroup_subsys_state *css);
 	void (*css_free)(struct cgroup_subsys_state *css);
 
+	int (*allow_attach)(struct cgroup_subsys_state *css,
+			    struct cgroup_taskset *tset);
 	int (*can_attach)(struct cgroup_subsys_state *css,
 			  struct cgroup_taskset *tset);
 	void (*cancel_attach)(struct cgroup_subsys_state *css,
 			      struct cgroup_taskset *tset);
 	void (*attach)(struct cgroup_subsys_state *css,
 		       struct cgroup_taskset *tset);
-	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup_subsys_state *css,
 		     struct cgroup_subsys_state *old_css,
@@ -907,7 +908,7 @@ struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
  * running as root.
  * Returns 0 if this is allowed, or -EACCES otherwise.
  */
-int subsys_cgroup_allow_attach(struct cgroup *cgrp,
+int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
 			       struct cgroup_taskset *tset);
 
 
@@ -932,8 +933,8 @@ static inline int cgroup_attach_task_all(struct task_struct *from,
 	return 0;
 }
 
-static inline int subsys_cgroup_allow_attach(struct cgroup *cgrp,
-					     struct cgroup_taskset *tset)
+static inline int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
+					     void *tset)
 {
 	return 0;
 }
