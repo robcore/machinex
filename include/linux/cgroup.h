@@ -903,7 +903,7 @@ struct cgroup_css *cgroup_css_from_dir(struct file *f, int id);
  * running as root.
  * Returns 0 if this is allowed, or -EACCES otherwise.
  */
-int subsys_cgroup_allow_attach(struct cgroup *cgrp,
+int subsys_cgroup_allow_attach(struct cgroup_css *css,
 			       struct cgroup_taskset *tset);
 
 
