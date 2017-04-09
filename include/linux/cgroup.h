@@ -579,7 +579,7 @@ struct cgroup_subsys {
 			      struct cgroup_taskset *tset);
 	void (*attach)(struct cgroup_css *css,
 		       struct cgroup_taskset *tset);
-	int (*allow_attach)(struct cgroup_css *css, struct cgroup_taskset *tset);
+	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup_css *css,
 		     struct cgroup_css *old_css,
@@ -903,7 +903,7 @@ struct cgroup_css *cgroup_css_from_dir(struct file *f, int id);
  * running as root.
  * Returns 0 if this is allowed, or -EACCES otherwise.
  */
-int subsys_cgroup_allow_attach(struct cgroup_css *css,
+int subsys_cgroup_allow_attach(struct cgroup *cgrp,
 			       struct cgroup_taskset *tset);
 
 
