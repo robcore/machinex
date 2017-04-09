@@ -550,7 +550,9 @@ static inline const char *cgroup_name(const struct cgroup *cgrp)
 }
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
-int cgroup_rm_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
+int cgroup_rm_cftypes(struct cftype *cfts);
+
+bool cgroup_is_descendant(struct cgroup *cgrp, struct cgroup *ancestor);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
 int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
@@ -598,7 +600,8 @@ struct cgroup_subsys {
 			      struct cgroup_taskset *tset);
 	void (*attach)(struct cgroup_subsys_state *css,
 		       struct cgroup_taskset *tset);
-	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	int (*allow_attach)(struct cgroup_subsys_state *css,
+				struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup_subsys_state *css,
 		     struct cgroup_subsys_state *old_css,
@@ -606,7 +609,6 @@ struct cgroup_subsys {
 	void (*bind)(struct cgroup_subsys_state *root_css);
 
 	int subsys_id;
-	int active;
 	int disabled;
 	int early_init;
 	/*
@@ -908,7 +910,7 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * running as root.
  * Returns 0 if this is allowed, or -EACCES otherwise.
  */
-int subsys_cgroup_allow_attach(struct cgroup *cgrp,
+int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
 			       struct cgroup_taskset *tset);
 /*
  * Typically Called at ->destroy(), or somewhere the subsys frees
@@ -949,7 +951,7 @@ static inline int cgroup_attach_task_all(struct task_struct *from,
 	return 0;
 }
 
-static inline int subsys_cgroup_allow_attach(struct cgroup *cgrp,
+static inline int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
 					     struct cgroup_taskset *tset)
 {
 	return 0;
