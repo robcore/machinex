@@ -35,7 +35,7 @@
  */
 
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(3)
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
+#define DEF_FREQUENCY_UP_THRESHOLD		(85)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
@@ -169,12 +169,12 @@ static struct dbs_tuners {
 	.high_grid_load = 89,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
-	.sync_freq = 0,
+	.sync_freq = 384000,
 	.optimal_freq = 1566000,
 	.input_boost = 0,
 	.optimal_max_freq = 1566000,
 	.debug_mask = 0,
-	.sampling_rate = 65000,
+	.sampling_rate = 60000,
 };
 
 #ifdef CONFIG_MACH_MSM8974_B1_KR
