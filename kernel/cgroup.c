@@ -584,12 +584,10 @@ static void free_cgrp_cset_links(struct list_head *links_to_free)
 {
 	struct cgrp_cset_link *link, *tmp_link;
 
-	write_lock(&css_set_lock);
 	list_for_each_entry_safe(link, tmp_link, links_to_free, cset_link) {
 		list_del(&link->cset_link);
 		kfree(link);
 	}
-	write_unlock(&css_set_lock);
 }
 
 /**
@@ -604,18 +602,17 @@ static int allocate_cgrp_cset_links(int count, struct list_head *tmp_links)
 {
 	struct cgrp_cset_link *link;
 	int i;
+
 	INIT_LIST_HEAD(tmp_links);
-	write_lock(&css_set_lock);
+
 	for (i = 0; i < count; i++) {
 		link = kzalloc(sizeof(*link), GFP_KERNEL);
 		if (!link) {
-			write_unlock(&css_set_lock);
 			free_cgrp_cset_links(tmp_links);
 			return -ENOMEM;
 		}
 		list_add(&link->cset_link, tmp_links);
 	}
-	write_unlock(&css_set_lock);
 	return 0;
 }
 
@@ -1595,7 +1592,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 					0, &root_cgrp->id)) {
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto unlock_drop;
-			ret = root_cgrp->id;
 		}
 
 		/* Check for name clashes with existing mounts */
@@ -2143,11 +2139,9 @@ out_free_group_list:
 static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	struct cgroup_subsys *ss;
-	struct cgroupfs_root *root = cgrp->root;
 	int ret;
 
-	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = cgroup_css(cgrp, ss);
+	for_each_root_subsys(cgrp->root, ss) {
 		if (ss->allow_attach) {
 			ret = ss->allow_attach(cgrp, tset);
 			if (ret)
