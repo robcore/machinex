@@ -2693,8 +2693,8 @@ int kmsg_dump_unregister(struct kmsg_dumper *dumper)
 }
 EXPORT_SYMBOL_GPL(kmsg_dump_unregister);
 
-static bool always_kmsg_dump;
-module_param_named(always_kmsg_dump, always_kmsg_dump, bool, S_IRUGO | S_IWUSR);
+static bool always_kmsg_dump = true;
+module_param_named(always_kmsg_dump, always_kmsg_dump, bool, 0644);
 
 /**
  * kmsg_dump - dump kernel log to kernel message dumpers.
