@@ -1580,11 +1580,11 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		mutex_lock(&cgroup_mutex);
 		mutex_lock(&cgroup_root_mutex);
 
-		while (idr_get_new_above(&root->cgroup_idr, root_cgrp,
-					0, &root_cgrp->id)) {
+		while ((ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
+					0, &root_cgrp->id))) {
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto unlock_drop;
-			&root_cgrp->id = ret;
+			(root_cgrp->id = ret);
 		}
 
 		/* Check for name clashes with existing mounts */
@@ -2126,9 +2126,9 @@ out_free_group_list:
 static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
 	struct cgroup_subsys *ss;
-	int ret;
+	int ssid, ret;
 
-	for_each_root_subsys(cgrp->root, ss) {
+	for_each_subsys(ss, ssid) {
 		if (ss->allow_attach) {
 			ret = ss->allow_attach(cgrp, tset);
 			if (ret)
@@ -2141,7 +2141,7 @@ static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	return 0;
 }
 
-int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css, struct cgroup_taskset *tset)
 {
 	const struct cred *cred = current_cred(), *tcred;
 	struct task_struct *task;
@@ -2149,7 +2149,7 @@ int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	if (capable(CAP_SYS_NICE))
 		return 0;
 
-	cgroup_taskset_for_each(task, cgrp, tset) {
+	cgroup_taskset_for_each(task, css, tset) {
 		tcred = __task_cred(task);
 
 		if (current != task && cred->euid != tcred->uid &&
@@ -4327,12 +4327,12 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 	return 0;
 
-err_unlock:
-	mutex_unlock(&cgroup_mutex);
-	/* Release the reference count that we took on the superblock */
-	deactivate_super(sb);
 err_free_id:
 	idr_remove(&root->cgroup_idr, cgrp->id);
+	/* Release the reference count that we took on the superblock */
+	deactivate_super(sb);
+err_unlock:
+	mutex_unlock(&cgroup_mutex);
 err_free_name:
 	kfree(rcu_dereference_raw(cgrp->name));
 err_free_cgrp:
