@@ -322,6 +322,9 @@ struct cgrp_cset_link {
 static struct css_set init_css_set;
 static struct cgrp_cset_link init_cgrp_cset_link;
 
+static int cgroup_init_idr(struct cgroup_subsys *ss,
+			   struct cgroup_subsys_state *css);
+
 /*
  * css_set_lock protects the list of css_set objects, and the chain of
  * tasks off each css_set.  Nests outside task->alloc_lock due to
@@ -359,15 +362,7 @@ static unsigned long css_set_hash(struct cgroup_subsys_state *css[])
  */
 static int use_task_css_set_links __read_mostly;
 
-/*
- * refcounted get/put for css_set objects
- */
-static inline void get_css_set(struct css_set *cset)
-{
-	atomic_inc(&cset->refcount);
-}
-
-static void put_css_set(struct css_set *cset)
+static void __put_css_set(struct css_set *cset, int taskexit)
 {
 	struct cgrp_cset_link *link, *tmp_link;
 
@@ -384,23 +379,46 @@ static void put_css_set(struct css_set *cset)
 		return;
 	}
 
+	/* This css_set is dead. unlink it and release cgroup refcounts */
 	hash_del(&cset->hlist);
 	css_set_count--;
 
 	list_for_each_entry_safe(link, tmp_link, &cset->cgrp_links, cgrp_link) {
 		struct cgroup *cgrp = link->cgrp;
+
 		list_del(&link->cset_link);
 		list_del(&link->cgrp_link);
 
 		/* @cgrp can't go away while we're holding css_set_lock */
-		if (list_empty(&cgrp->cset_links)) {
+		if (list_empty(&cgrp->cset_links) && notify_on_release(cgrp)) {
+			if (taskexit)
+				set_bit(CGRP_RELEASABLE, &cgrp->flags);
 			check_for_release(cgrp);
 		}
 
 		kfree(link);
 	}
+
 	write_unlock(&css_set_lock);
 	kfree_rcu(cset, rcu_head);
+}
+
+/*
+ * refcounted get/put for css_set objects
+ */
+static inline void get_css_set(struct css_set *cset)
+{
+	atomic_inc(&cset->refcount);
+}
+
+static inline void put_css_set(struct css_set *cset)
+{
+	__put_css_set(cset, 0);
+}
+
+static inline void put_css_set_taskexit(struct css_set *cset)
+{
+	__put_css_set(cset, 1);
 }
 
 /**
@@ -534,10 +552,13 @@ static void free_cgrp_cset_links(struct list_head *links_to_free)
 	write_unlock(&css_set_lock);
 }
 
-/*
- * allocate_cg_links() allocates "count" cg_cgroup_link structures
- * and chains them on tmp through their cgrp_link_list fields. Returns 0 on
- * success or a negative error
+/**
+ * allocate_cgrp_cset_links - allocate cgrp_cset_links
+ * @count: the number of links to allocate
+ * @tmp_links: list_head the allocated links are put on
+ *
+ * Allocate @count cgrp_cset_link structures and chain them on @tmp_links
+ * through ->cset_link.  Returns 0 on success or -errno.
  */
 static int allocate_cgrp_cset_links(int count, struct list_head *tmp_links)
 {
@@ -758,6 +779,9 @@ static struct backing_dev_info cgroup_backing_dev_info = {
 	.name		= "cgroup",
 	.capabilities	= BDI_CAP_NO_ACCT_AND_WRITEBACK,
 };
+
+static int alloc_css_id(struct cgroup_subsys *ss,
+			struct cgroup *parent, struct cgroup *child);
 
 static struct inode *cgroup_new_inode(umode_t mode, struct super_block *sb)
 {
@@ -2222,9 +2246,9 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
 
 	mutex_lock(&cgroup_mutex);
 	for_each_active_root(root) {
-		struct cgroup *from_cg = task_cgroup_from_root(from, root);
+		struct cgroup *from_cgrp = task_cgroup_from_root(from, root);
 
-		retval = cgroup_attach_task(from_cg, tsk, false);
+		retval = cgroup_attach_task(from_cgrp, tsk, false);
 		if (retval)
 			break;
 	}
@@ -2863,7 +2887,7 @@ static int cgroup_cfts_commit(struct cgroup_subsys *ss,
 
 	/* add/rm files for all cgroups created before */
 	rcu_read_lock();
-	css_for_each_descendant_pre(css, cgroup_subsys_state(root, ss->subsys_id)) {
+	css_for_each_descendant_pre(css, cgroup_css(root, ss->subsys_id)) {
 		struct cgroup *cgrp = css->cgroup;
 
 		if (cgroup_is_dead(cgrp))
@@ -2977,32 +3001,6 @@ int cgroup_task_count(const struct cgroup *cgrp)
 	return count;
 }
 
-/**
- * cgroup_advance_task_iter - advance a task itererator to the next css_set
- * @it: the iterator to advance
- *
- * Advance @it to the next css_set to walk.
- */
-static void cgroup_advance_task_iter(struct cgroup_task_iter *it)
-{
-	struct list_head *l = it->cset_link;
-	struct cgrp_cset_link *link;
-	struct css_set *cset;
-
-	/* Advance to the next non-empty css_set */
-	do {
-		l = l->next;
-		if (l == &it->origin_cgrp->cset_links) {
-			it->cset_link = NULL;
-			return;
-		}
-		link = list_entry(l, struct cgrp_cset_link, cset_link);
-		cset = link->cset;
-	} while (list_empty(&cset->tasks));
-	it->cset_link = l;
-	it->task = cset->tasks.next;
-}
-
 /*
  * To reduce the fork() overhead for systems that are not actually using
  * their cgroups capability, we don't maintain the lists running through
@@ -3090,7 +3088,7 @@ css_next_child(struct cgroup_subsys_state *pos_css,
 		return NULL;
 
 	if (parent_css->ss)
-		return cgroup_subsys_state(next, parent_css->ss->subsys_id);
+		return cgroup_css(next, parent_css->ss->subsys_id);
 	else
 		return &next->dummy_css;
 }
@@ -3220,6 +3218,32 @@ css_next_descendant_post(struct cgroup_subsys_state *pos,
 	return next != root ? next : NULL;
 }
 EXPORT_SYMBOL_GPL(css_next_descendant_post);
+
+/**
+ * cgroup_advance_task_iter - advance a task itererator to the next css_set
+ * @it: the iterator to advance
+ *
+ * Advance @it to the next css_set to walk.
+ */
+static void cgroup_advance_task_iter(struct cgroup_task_iter *it)
+{
+	struct list_head *l = it->cset_link;
+	struct cgrp_cset_link *link;
+	struct css_set *cset;
+
+	/* Advance to the next non-empty css_set */
+	do {
+		l = l->next;
+		if (l == &it->origin_cgrp->cset_links) {
+			it->cset_link = NULL;
+			return;
+		}
+		link = list_entry(l, struct cgrp_cset_link, cset_link);
+		cset = link->cset;
+	} while (list_empty(&cset->tasks));
+	it->cset_link = l;
+	it->task = cset->tasks.next;
+}
 
 /**
  * cgroup_task_iter_start - initiate task iteration
@@ -4251,6 +4275,7 @@ static void init_cgroup_css(struct cgroup_subsys_state *css,
 	css->cgroup = cgrp;
 	css->ss = ss;
 	css->flags = 0;
+	css->id = NULL;
 	if (cgrp == cgroup_dummy_top)
 		css->flags |= CSS_ROOT;
 	BUG_ON(cgrp->subsys[ss->subsys_id]);
@@ -4386,6 +4411,12 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 		}
 
 		init_cgroup_css(css, ss, cgrp);
+
+		if (ss->use_id) {
+			err = alloc_css_id(ss, parent, cgrp);
+			if (err)
+				goto err_free_all;
+		}
 	}
 
 	/*
@@ -4818,6 +4849,13 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 
 	/* our new subsystem will be attached to the dummy hierarchy. */
 	init_cgroup_css(css, ss, cgroup_dummy_top);
+	/* init_idr must be after init_cgroup_css because it sets css->id. */
+	if (ss->use_id) {
+		ret = cgroup_init_idr(ss, css);
+		if (ret)
+			goto err_unload;
+	}
+
 	/*
 	 * Now we need to entangle the css into the existing css_sets. unlike
 	 * in cgroup_init_subsys, there are now multiple css_sets, so each one
@@ -4882,7 +4920,11 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	mutex_lock(&cgroup_mutex);
 
 	offline_css(ss, cgroup_dummy_top);
+
 	ss->active = 0;
+
+	if (ss->use_id)
+		idr_destroy(&ss->idr);
 
 	/* deassign the subsys_id */
 	cgroup_subsys[ss->subsys_id] = NULL;
@@ -4910,7 +4952,8 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	/*
 	 * remove subsystem's css from the cgroup_dummy_top and free it -
 	 * need to free before marking as null because ss->css_free needs
-	 * the cgrp->subsys pointer to find their state.
+	 * the cgrp->subsys pointer to find their state. note that this
+	 * also takes care of freeing the css_id.
 	 */
 	ss->css_free(cgroup_dummy_top->subsys[ss->subsys_id]);
 	cgroup_dummy_top->subsys[ss->subsys_id] = NULL;
@@ -4981,6 +5024,8 @@ int __init cgroup_init(void)
 	for_each_builtin_subsys(ss, i) {
 		if (!ss->early_init)
 			cgroup_init_subsys(ss);
+		if (ss->use_id)
+			cgroup_init_idr(ss, init_css_set.subsys[ss->subsys_id]);
 	}
 
 	/* allocate id for the dummy hierarchy */

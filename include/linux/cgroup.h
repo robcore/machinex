@@ -24,7 +24,6 @@
 
 #ifdef CONFIG_CGROUPS
 
-struct cgroup_subsys_state;
 struct cgroupfs_root;
 struct cgroup_subsys;
 struct inode;
@@ -36,7 +35,7 @@ extern int cgroup_init_early(void);
 extern int cgroup_init(void);
 extern void cgroup_fork(struct task_struct *p);
 extern void cgroup_post_fork(struct task_struct *p);
-extern void cgroup_exit(struct task_struct *p);
+extern void cgroup_exit(struct task_struct *p, int run_callbacks);
 extern int cgroupstats_build(struct cgroupstats *stats,
 				struct dentry *dentry);
 extern int cgroup_load_subsys(struct cgroup_subsys *ss);
@@ -90,34 +89,29 @@ enum {
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
 };
 
-/* Caller must verify that the css is not for root cgroup */
-static inline void __css_get(struct cgroup_subsys_state *css, int count)
-{
-		percpu_ref_get(&css->refcnt);
-}
-
-/*
- * Call css_get() to hold a reference on the css; it can be used
- * for a reference obtained via:
- * - an existing ref-counted reference to the css
- * - task->cgroups for a locked task
+/**
+ * css_get - obtain a reference on the specified css
+ * @css: target css
+ *
+ * The caller must already have a reference.
  */
-
-extern void __css_get(struct cgroup_subsys_state *css, int count);
 static inline void css_get(struct cgroup_subsys_state *css)
 {
 	/* We don't need to reference count the root state */
 	if (!(css->flags & CSS_ROOT))
-		__css_get(css, 1);
+		percpu_ref_get(&css->refcnt);
 }
 
-/*
- * Call css_tryget() to take a reference on a css if your existing
- * (known-valid) reference isn't already ref-counted. Returns false if
- * the css has been destroyed.
+/**
+ * css_tryget - try to obtain a reference on the specified css
+ * @css: target css
+ *
+ * Obtain a reference on @css if it's alive.  The caller naturally needs to
+ * ensure that @css is accessible but doesn't have to be holding a
+ * reference on it - IOW, RCU protected access is good enough for this
+ * function.  Returns %true if a reference count was successfully obtained;
+ * %false otherwise.
  */
-
-extern bool __css_tryget(struct cgroup_subsys_state *css);
 static inline bool css_tryget(struct cgroup_subsys_state *css)
 {
 	if (css->flags & CSS_ROOT)
@@ -141,7 +135,10 @@ static inline void css_put(struct cgroup_subsys_state *css)
 enum {
 	/* Control Group is dead */
 	CGRP_DEAD,
-	/* Control Group has ever had a child cgroup or a task */
+	/*
+	 * Control Group has previously had a child cgroup or a task,
+	 * but no longer (only if CGRP_NOTIFY_ON_RELEASE is set)
+	 */
 	CGRP_RELEASABLE,
 	/* Control Group requires release notifications to userspace */
 	CGRP_NOTIFY_ON_RELEASE,
@@ -163,7 +160,13 @@ struct cgroup_name {
 struct cgroup {
 	unsigned long flags;		/* "unsigned long" so bitops work */
 
-	int id;				/* idr allocated in-hierarchy ID */
+	/*
+	 * idr allocated in-hierarchy ID.
+	 *
+	 * The ID of the root cgroup is always 0, and a new cgroup
+	 * will be assigned with a smallest available ID.
+	 */
+	int id;
 
 	/*
 	 * We link our 'sibling' struct into our parent's 'children'.
@@ -266,6 +269,14 @@ enum {
 	 *
 	 * - Remount is disallowed.
 	 *
+	 * - rename(2) is disallowed.
+	 *
+	 * - "tasks" is removed.  Everything should be at process
+	 *   granularity.  Use "cgroup.procs" instead.
+	 *
+	 * - "release_agent" and "notify_on_release" are removed.
+	 *   Replacement notification mechanism will be implemented.
+	 *
 	 * - cpuset: tasks will be kept in empty cpusets when hotplug happens
 	 *   and take masks of ancestors with non-empty cpus/mems, instead of
 	 *   being moved to an ancestor.
@@ -275,10 +286,8 @@ enum {
 	 *
 	 * - memcg: use_hierarchy is on by default and the cgroup file for
 	 *   the flag is not created.
-	 * The followings are planned changes.
 	 *
-	 * - release_agent will be disallowed once replacement notification
-	 *   mechanism is implemented.
+	 * - blkcg: blk-throttle becomes properly hierarchical.
 	 */
 	CGRP_ROOT_SANE_BEHAVIOR	= (1 << 0),
 
@@ -423,6 +432,12 @@ struct cftype {
 
 	/* CFTYPE_* flags */
 	unsigned int flags;
+
+	/*
+	 * The subsys this file belongs to.  Initialized automatically
+	 * during registration.  NULL for cgroup core files.
+	 */
+	struct cgroup_subsys *ss;
 
 	int (*open)(struct inode *inode, struct file *file);
 	ssize_t (*read)(struct cgroup_subsys_state *css, struct cftype *cft,
@@ -587,6 +602,11 @@ struct cgroup_subsys {
 	int active;
 	int disabled;
 	int early_init;
+	/*
+	 * True if this subsys uses ID. ID is not available before cgroup_init()
+	 * (not available in early_init time.)
+	 */
+	bool use_id;
 
 	/*
 	 * If %false, this subsystem is properly hierarchical -
@@ -612,6 +632,9 @@ struct cgroup_subsys {
 	 */
 	struct cgroupfs_root *root;
 	struct list_head sibling;
+	/* used when use_id == true */
+	struct idr idr;
+	spinlock_t id_lock;
 
 	/* list of cftype_sets */
 	struct list_head cftsets;
@@ -652,13 +675,13 @@ struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
 }
 
 /**
- * cgroup_subsys_state - obtain a cgroup's css for the specified subsystem
+ * cgroup_css - obtain a cgroup's css for the specified subsystem
  * @cgrp: the cgroup of interest
  * @subsys_id: the subsystem of interest
  *
  * Return @cgrp's css (cgroup_subsys_state) associated with @subsys_id.
  */
-static inline struct cgroup_subsys_state *cgroup_subsys_state(struct cgroup *cgrp,
+static inline struct cgroup_subsys_state *cgroup_css(struct cgroup *cgrp,
 						     int subsys_id)
 {
 	return cgrp->subsys[subsys_id];
@@ -717,15 +740,15 @@ static inline struct css_set *task_css_set(struct task_struct *task)
  * @subsys_id: the target subsystem ID
  *
  * See task_css_check().
-*/
-static inline struct cgroup_subsys_state *
-task_css(struct task_struct *task, int subsys_id)
+ */
+static inline struct cgroup_subsys_state *task_css(struct task_struct *task,
+						   int subsys_id)
 {
 	return task_css_check(task, subsys_id, false);
 }
 
-static inline struct cgroup* task_cgroup(struct task_struct *task,
-					       int subsys_id)
+static inline struct cgroup *task_cgroup(struct task_struct *task,
+					 int subsys_id)
 {
 	return task_css(task, subsys_id)->cgroup;
 }
@@ -890,8 +913,6 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * destroyed". The caller should check css and cgroup's status.
  */
 
-struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
-
 /*
  * Default Android check for whether the current process is allowed to move a
  * task across cgroups, either because CAP_SYS_NICE is set or because the uid
@@ -901,7 +922,23 @@ struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
  */
 int subsys_cgroup_allow_attach(struct cgroup *cgrp,
 			       struct cgroup_taskset *tset);
+/*
+ * Typically Called at ->destroy(), or somewhere the subsys frees
+ * cgroup_subsys_state.
+ */
+void free_css_id(struct cgroup_subsys *ss, struct cgroup_subsys_state *css);
 
+/* Find a cgroup_subsys_state which has given ID */
+
+struct cgroup_subsys_state *css_lookup(struct cgroup_subsys *ss, int id);
+
+/* Returns true if root is ancestor of cg */
+bool css_is_ancestor(struct cgroup_subsys_state *cg,
+		     const struct cgroup_subsys_state *root);
+
+/* Get id and depth of css */
+unsigned short css_id(struct cgroup_subsys_state *css);
+struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
 
 #else /* !CONFIG_CGROUPS */
 
@@ -909,7 +946,7 @@ static inline int cgroup_init_early(void) { return 0; }
 static inline int cgroup_init(void) { return 0; }
 static inline void cgroup_fork(struct task_struct *p) {}
 static inline void cgroup_post_fork(struct task_struct *p) {}
-static inline void cgroup_exit(struct task_struct *p) {}
+static inline void cgroup_exit(struct task_struct *p, int callbacks) {}
 
 static inline int cgroupstats_build(struct cgroupstats *stats,
 					struct dentry *dentry)
