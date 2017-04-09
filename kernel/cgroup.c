@@ -1584,6 +1584,7 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 					0, &root_cgrp->id)) {
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto unlock_drop;
+			&root_cgrp->id = ret;
 		}
 
 		/* Check for name clashes with existing mounts */
