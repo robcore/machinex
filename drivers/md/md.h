@@ -120,7 +120,7 @@ struct md_rdev {
 					 * disabled.*/
 		u64	*page;		/* badblock list */
 		int	changed;
-		legacy_seqlock_t lock;
+		seqlock_t lock;
 
 		sector_t sector;
 		sector_t size;		/* in sectors */

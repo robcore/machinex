@@ -321,7 +321,7 @@ struct hd_struct *add_partition(struct gendisk *disk, int partno,
 		goto out_free;
 	}
 
-	legacy_seqcount_init(&p->nr_sects_seq);
+	seqcount_init(&p->nr_sects_seq);
 	pdev = part_to_dev(p);
 
 	p->start_sect = start;

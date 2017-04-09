@@ -88,7 +88,7 @@ extern unsigned int full_name_hash(const unsigned char *, unsigned int);
 struct dentry {
 	/* RCU lookup touched fields */
 	unsigned int d_flags;		/* protected by d_lock */
-	legacy_seqcount_t d_seq;		/* per dentry seqlock */
+	seqcount_t d_seq;		/* per dentry seqlock */
 	struct hlist_bl_node d_hash;	/* lookup hash list */
 	struct dentry *d_parent;	/* parent directory */
 	struct qstr d_name;
@@ -195,7 +195,7 @@ struct dentry_operations {
 
 #define DCACHE_DENTRY_KILLED	0x100000
 
-extern legacy_seqlock_t rename_lock;
+extern seqlock_t rename_lock;
 
 static inline int dname_external(struct dentry *dentry)
 {
@@ -302,7 +302,7 @@ static inline int __d_rcu_to_refcount(struct dentry *dentry, unsigned seq)
 	int ret = 0;
 
 	assert_spin_locked(&dentry->d_lock);
-	if (!read_legacy_seqcount_retry(&dentry->d_seq, seq)) {
+	if (!read_seqcount_retry(&dentry->d_seq, seq)) {
 		ret = 1;
 		dentry->d_count++;
 	}

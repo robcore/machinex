@@ -1808,7 +1808,7 @@ static void super_1_sync(struct mddev *mddev, struct md_rdev *rdev)
 			unsigned seq;
 
 retry:
-			seq = read_legacy_seqbegin(&bb->lock);
+			seq = read_seqbegin(&bb->lock);
 
 			memset(bbp, 0xff, PAGE_SIZE);
 
@@ -1819,7 +1819,7 @@ retry:
 				bbp[i] = cpu_to_le64(store_bb);
 			}
 			bb->changed = 0;
-			if (read_legacy_seqretry(&bb->lock, seq))
+			if (read_seqretry(&bb->lock, seq))
 				goto retry;
 
 			bb->sector = (rdev->sb_start +
@@ -3211,7 +3211,7 @@ int md_rdev_init(struct md_rdev *rdev)
 	rdev->badblocks.count = 0;
 	rdev->badblocks.shift = -1; /* disabled until explicitly enabled */
 	rdev->badblocks.page = kmalloc(PAGE_SIZE, GFP_KERNEL);
-	legacy_seqlock_init(&rdev->badblocks.lock);
+	seqlock_init(&rdev->badblocks.lock);
 	if (rdev->badblocks.page == NULL)
 		return -ENOMEM;
 
@@ -7943,7 +7943,7 @@ int md_is_badblock(struct badblocks *bb, sector_t s, int sectors,
 	/* 'target' is now the first block after the bad range */
 
 retry:
-	seq = read_legacy_seqbegin(&bb->lock);
+	seq = read_seqbegin(&bb->lock);
 	lo = 0;
 	rv = 0;
 	hi = bb->count;
@@ -7989,7 +7989,7 @@ retry:
 		}
 	}
 
-	if (read_legacy_seqretry(&bb->lock, seq))
+	if (read_seqretry(&bb->lock, seq))
 		goto retry;
 
 	return rv;
@@ -8023,7 +8023,7 @@ static int md_set_badblocks(struct badblocks *bb, sector_t s, int sectors,
 		sectors = next - s;
 	}
 
-	write_legacy_seqlock_irq(&bb->lock);
+	write_seqlock_irq(&bb->lock);
 
 	p = bb->page;
 	lo = 0;
@@ -8139,7 +8139,7 @@ static int md_set_badblocks(struct badblocks *bb, sector_t s, int sectors,
 	bb->changed = 1;
 	if (!acknowledged)
 		bb->unacked_exist = 1;
-	write_legacy_sequnlock_irq(&bb->lock);
+	write_sequnlock_irq(&bb->lock);
 
 	return rv;
 }
@@ -8191,7 +8191,7 @@ static int md_clear_badblocks(struct badblocks *bb, sector_t s, int sectors)
 		sectors = target - s;
 	}
 
-	write_legacy_seqlock_irq(&bb->lock);
+	write_seqlock_irq(&bb->lock);
 
 	p = bb->page;
 	lo = 0;
@@ -8256,7 +8256,7 @@ static int md_clear_badblocks(struct badblocks *bb, sector_t s, int sectors)
 
 	bb->changed = 1;
 out:
-	write_legacy_sequnlock_irq(&bb->lock);
+	write_sequnlock_irq(&bb->lock);
 	return rv;
 }
 
@@ -8282,7 +8282,7 @@ void md_ack_all_badblocks(struct badblocks *bb)
 	if (bb->page == NULL || bb->changed)
 		/* no point even trying */
 		return;
-	write_legacy_seqlock_irq(&bb->lock);
+	write_seqlock_irq(&bb->lock);
 
 	if (bb->changed == 0 && bb->unacked_exist) {
 		u64 *p = bb->page;
@@ -8296,7 +8296,7 @@ void md_ack_all_badblocks(struct badblocks *bb)
 		}
 		bb->unacked_exist = 0;
 	}
-	write_legacy_sequnlock_irq(&bb->lock);
+	write_sequnlock_irq(&bb->lock);
 }
 EXPORT_SYMBOL_GPL(md_ack_all_badblocks);
 
@@ -8324,7 +8324,7 @@ badblocks_show(struct badblocks *bb, char *page, int unack)
 		return 0;
 
 retry:
-	seq = read_legacy_seqbegin(&bb->lock);
+	seq = read_seqbegin(&bb->lock);
 
 	len = 0;
 	i = 0;
@@ -8345,7 +8345,7 @@ retry:
 	if (unack && len == 0)
 		bb->unacked_exist = 0;
 
-	if (read_legacy_seqretry(&bb->lock, seq))
+	if (read_seqretry(&bb->lock, seq))
 		goto retry;
 
 	return len;

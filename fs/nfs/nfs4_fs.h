@@ -163,7 +163,7 @@ struct nfs4_state {
 	unsigned long flags;		/* Do we hold any locks? */
 	spinlock_t state_lock;		/* Protects the lock_states list */
 
-	legacy_seqlock_t seqlock;		/* Protects the stateid/open_stateid */
+	seqlock_t seqlock;		/* Protects the stateid/open_stateid */
 	nfs4_stateid stateid;		/* Current stateid: may be delegation */
 	nfs4_stateid open_stateid;	/* OPEN stateid */
 

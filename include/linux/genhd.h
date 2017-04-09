@@ -103,7 +103,7 @@ struct hd_struct {
 	 * can be non-atomic on 32bit machines with 64bit sector_t.
 	 */
 	sector_t nr_sects;
-	legacy_seqcount_t nr_sects_seq;
+	seqcount_t nr_sects_seq;
 	sector_t alignment_offset;
 	unsigned int discard_alignment;
 	struct device __dev;
@@ -679,9 +679,9 @@ static inline sector_t part_nr_sects_read(struct hd_struct *part)
 	sector_t nr_sects;
 	unsigned seq;
 	do {
-		seq = read_legacy_seqcount_begin(&part->nr_sects_seq);
+		seq = read_seqcount_begin(&part->nr_sects_seq);
 		nr_sects = part->nr_sects;
-	} while (read_legacy_seqcount_retry(&part->nr_sects_seq, seq));
+	} while (read_seqcount_retry(&part->nr_sects_seq, seq));
 	return nr_sects;
 #elif BITS_PER_LONG==32 && defined(CONFIG_LBDAF) && defined(CONFIG_PREEMPT)
 	sector_t nr_sects;
@@ -703,9 +703,9 @@ static inline sector_t part_nr_sects_read(struct hd_struct *part)
 static inline void part_nr_sects_write(struct hd_struct *part, sector_t size)
 {
 #if BITS_PER_LONG==32 && defined(CONFIG_LBDAF) && defined(CONFIG_SMP)
-	write_legacy_seqcount_begin(&part->nr_sects_seq);
+	write_seqcount_begin(&part->nr_sects_seq);
 	part->nr_sects = size;
-	write_legacy_seqcount_end(&part->nr_sects_seq);
+	write_seqcount_end(&part->nr_sects_seq);
 #elif BITS_PER_LONG==32 && defined(CONFIG_LBDAF) && defined(CONFIG_PREEMPT)
 	preempt_disable();
 	part->nr_sects = size;

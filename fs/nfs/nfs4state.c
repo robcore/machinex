@@ -570,7 +570,7 @@ nfs4_alloc_open_state(void)
 	atomic_set(&state->count, 1);
 	INIT_LIST_HEAD(&state->lock_states);
 	spin_lock_init(&state->state_lock);
-	legacy_seqlock_init(&state->seqlock);
+	seqlock_init(&state->seqlock);
 	return state;
 }
 
@@ -915,9 +915,9 @@ static void nfs4_copy_open_stateid(nfs4_stateid *dst, struct nfs4_state *state)
 	int seq;
 
 	do {
-		seq = read_legacy_seqbegin(&state->seqlock);
+		seq = read_seqbegin(&state->seqlock);
 		nfs4_stateid_copy(dst, &state->stateid);
-	} while (read_legacy_seqretry(&state->seqlock, seq));
+	} while (read_seqretry(&state->seqlock, seq));
 }
 
 /*

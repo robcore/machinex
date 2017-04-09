@@ -971,9 +971,9 @@ static void nfs_set_open_stateid_locked(struct nfs4_state *state, nfs4_stateid *
 
 static void nfs_set_open_stateid(struct nfs4_state *state, nfs4_stateid *stateid, fmode_t fmode)
 {
-	write_legacy_seqlock(&state->seqlock);
+	write_seqlock(&state->seqlock);
 	nfs_set_open_stateid_locked(state, stateid, fmode);
-	write_legacy_sequnlock(&state->seqlock);
+	write_sequnlock(&state->seqlock);
 }
 
 static void __update_open_stateid(struct nfs4_state *state, nfs4_stateid *open_stateid, const nfs4_stateid *deleg_stateid, fmode_t fmode)
@@ -982,14 +982,14 @@ static void __update_open_stateid(struct nfs4_state *state, nfs4_stateid *open_s
 	 * Protect the call to nfs4_state_set_mode_locked and
 	 * serialise the stateid update
 	 */
-	write_legacy_seqlock(&state->seqlock);
+	write_seqlock(&state->seqlock);
 	if (deleg_stateid != NULL) {
 		nfs4_stateid_copy(&state->stateid, deleg_stateid);
 		set_bit(NFS_DELEGATED_STATE, &state->flags);
 	}
 	if (open_stateid != NULL)
 		nfs_set_open_stateid_locked(state, open_stateid, fmode);
-	write_legacy_sequnlock(&state->seqlock);
+	write_sequnlock(&state->seqlock);
 	spin_lock(&state->owner->so_lock);
 	update_open_stateflags(state, fmode);
 	spin_unlock(&state->owner->so_lock);
@@ -1241,10 +1241,10 @@ static int nfs4_open_recover(struct nfs4_opendata *opendata, struct nfs4_state *
 	 */
 	if (test_bit(NFS_DELEGATED_STATE, &state->flags) == 0 &&
 	    !nfs4_stateid_match(&state->stateid, &state->open_stateid)) {
-		write_legacy_seqlock(&state->seqlock);
+		write_seqlock(&state->seqlock);
 		if (test_bit(NFS_DELEGATED_STATE, &state->flags) == 0)
 			nfs4_stateid_copy(&state->stateid, &state->open_stateid);
-		write_legacy_sequnlock(&state->seqlock);
+		write_sequnlock(&state->seqlock);
 	}
 	return 0;
 }
@@ -1746,9 +1746,9 @@ static int nfs4_open_expired(struct nfs4_state_owner *sp, struct nfs4_state *sta
 static void nfs_finish_clear_delegation_stateid(struct nfs4_state *state)
 {
 	nfs_remove_bad_delegation(state->inode);
-	write_legacy_seqlock(&state->seqlock);
+	write_seqlock(&state->seqlock);
 	nfs4_stateid_copy(&state->stateid, &state->open_stateid);
-	write_legacy_sequnlock(&state->seqlock);
+	write_sequnlock(&state->seqlock);
 	clear_bit(NFS_DELEGATED_STATE, &state->flags);
 }
 

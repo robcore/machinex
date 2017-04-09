@@ -64,7 +64,7 @@ build_path_from_dentry(struct dentry *direntry)
 		dfsplen = 0;
 cifs_bp_rename_retry:
 	namelen = dfsplen;
-	seq = read_legacy_seqbegin(&rename_lock);
+	seq = read_seqbegin(&rename_lock);
 	rcu_read_lock();
 	for (temp = direntry; !IS_ROOT(temp);) {
 		namelen += (1 + temp->d_name.len);
@@ -104,7 +104,7 @@ cifs_bp_rename_retry:
 		}
 	}
 	rcu_read_unlock();
-	if (namelen != dfsplen || read_legacy_seqretry(&rename_lock, seq)) {
+	if (namelen != dfsplen || read_seqretry(&rename_lock, seq)) {
 		cFYI(1, "did not end path lookup where expected. namelen=%d "
 			"dfsplen=%d", namelen, dfsplen);
 		/* presumably this is only possible if racing with a rename

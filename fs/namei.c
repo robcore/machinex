@@ -646,10 +646,10 @@ static __always_inline unsigned set_root_rcu(struct nameidata *nd)
 	unsigned seq, res;
 
 	do {
-		seq = read_legacy_seqcount_begin(&fs->seq);
+		seq = read_seqcount_begin(&fs->seq);
 		nd->root = fs->root;
-		res = __read_legacy_seqcount_begin(&nd->root.dentry->d_seq);
-	} while (read_legacy_seqcount_retry(&fs->seq, seq));
+		res = __read_seqcount_begin(&nd->root.dentry->d_seq);
+	} while (read_seqcount_retry(&fs->seq, seq));
 	return res;
 }
 
@@ -1121,7 +1121,7 @@ static bool __follow_mount_rcu(struct nameidata *nd, struct path *path,
 		path->mnt = &mounted->mnt;
 		path->dentry = mounted->mnt.mnt_root;
 		nd->flags |= LOOKUP_JUMPED;
-		nd->seq = read_legacy_seqcount_begin(&path->dentry->d_seq);
+		nd->seq = read_seqcount_begin(&path->dentry->d_seq);
 		/*
 		 * Update the inode too. We don't need to re-check the
 		 * dentry sequence number here after this d_inode read,
@@ -1141,7 +1141,7 @@ static void follow_mount_rcu(struct nameidata *nd)
 			break;
 		nd->path.mnt = &mounted->mnt;
 		nd->path.dentry = mounted->mnt.mnt_root;
-		nd->seq = read_legacy_seqcount_begin(&nd->path.dentry->d_seq);
+		nd->seq = read_seqcount_begin(&nd->path.dentry->d_seq);
 	}
 }
 
@@ -1160,8 +1160,8 @@ static int follow_dotdot_rcu(struct nameidata *nd)
 			struct dentry *parent = old->d_parent;
 			unsigned seq;
 
-			seq = read_legacy_seqcount_begin(&parent->d_seq);
-			if (read_legacy_seqcount_retry(&old->d_seq, nd->seq))
+			seq = read_seqcount_begin(&parent->d_seq);
+			if (read_seqcount_retry(&old->d_seq, nd->seq))
 				goto failed;
 			nd->path.dentry = parent;
 			nd->seq = seq;
@@ -1171,7 +1171,7 @@ static int follow_dotdot_rcu(struct nameidata *nd)
 		}
 		if (!follow_up_rcu(&nd->path))
 			break;
-		nd->seq = read_legacy_seqcount_begin(&nd->path.dentry->d_seq);
+		nd->seq = read_seqcount_begin(&nd->path.dentry->d_seq);
 	}
 	follow_mount_rcu(nd);
 	nd->inode = nd->path.dentry->d_inode;
@@ -1385,7 +1385,7 @@ static int lookup_fast(struct nameidata *nd,
 			goto unlazy;
 
 		/* Memory barrier in read_seqcount_begin of child is enough */
-		if (__read_legacy_seqcount_retry(&parent->d_seq, nd->seq))
+		if (__read_seqcount_retry(&parent->d_seq, nd->seq))
 			return -ECHILD;
 		nd->seq = seq;
 
@@ -1863,7 +1863,7 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 		nd->inode = inode;
 		if (flags & LOOKUP_RCU) {
 			lock_rcu_walk();
-			nd->seq = __read_legacy_seqcount_begin(&nd->path.dentry->d_seq);
+			nd->seq = __read_seqcount_begin(&nd->path.dentry->d_seq);
 		} else {
 			path_get(&nd->path);
 		}
@@ -1889,10 +1889,10 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 			lock_rcu_walk();
 
 			do {
-				seq = read_legacy_seqcount_begin(&fs->seq);
+				seq = read_seqcount_begin(&fs->seq);
 				nd->path = fs->pwd;
-				nd->seq = __read_legacy_seqcount_begin(&nd->path.dentry->d_seq);
-			} while (read_legacy_seqcount_retry(&fs->seq, seq));
+				nd->seq = __read_seqcount_begin(&nd->path.dentry->d_seq);
+			} while (read_seqcount_retry(&fs->seq, seq));
 		} else {
 			get_fs_pwd(current->fs, &nd->path);
 		}
@@ -1917,7 +1917,7 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 		if (flags & LOOKUP_RCU) {
 			if (f.flags & FDPUT_FPUT)
 				*fp = f.file;
-			nd->seq = __read_legacy_seqcount_begin(&nd->path.dentry->d_seq);
+			nd->seq = __read_seqcount_begin(&nd->path.dentry->d_seq);
 			lock_rcu_walk();
 		} else {
 			path_get(&nd->path);
