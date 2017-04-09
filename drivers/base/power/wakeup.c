@@ -596,7 +596,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 		//for (;;) {
 		while (pm_freezing == true) {
 			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
-					TASK_UNINTERUPTIBLE);
+					TASK_UNINTERRUPTIBLE);
 			if (pm_freezing == false)
 				break;
 
@@ -884,7 +884,7 @@ bool pm_wakeup_pending(void)
 			//for (;;)
 			while (pm_freezing == true) {
 				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
-						TASK_UNINTERUPTIBLE);
+						TASK_UNINTERRUPTIBLE);
 				if (pm_freezing == false)
 					break;
 			}
