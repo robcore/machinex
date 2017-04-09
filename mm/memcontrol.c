@@ -1198,19 +1198,25 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 		 * Root is not visited by cgroup iterators so it needs an
 		 * explicit visit.
 		 */
-		if (!last_visited) {
-			css = &root->css;
-		} else {
-			struct cgroup *prev_cgroup, *next_cgroup;
+		if (!last_visited)
+			return root;
 
-			prev_cgroup = (last_visited == root) ? NULL
-				: last_visited->css.cgroup;
-			next_cgroup = cgroup_next_descendant_pre(prev_cgroup,
-					root->css.cgroup);
+		struct cgroup_subsys_state *prev_css, *next_css;
+
+		prev_css = (last_visited == root) ? NULL : &last_visited->css;
+skip_node:
+		next_css = css_next_descendant_pre(prev_css, &root->css);
 			if (next_cgroup)
-				css = cgroup_css(next_cgroup,
-						mem_cgroup_subsys_id);
+	if (next_css) {
+		struct mem_cgroup *mem = mem_cgroup_from_css(next_css);
+
+		if (css_tryget(&mem->css))
+			return mem;
+		else {
+			prev_css = next_css;
+			goto skip_node;
 		}
+	}
 
 		/*
 		 * Even if we found a group we have to make sure it is alive.
@@ -4875,10 +4881,10 @@ static void mem_cgroup_reparent_charges(struct mem_cgroup *memcg)
  */
 static inline bool __memcg_has_children(struct mem_cgroup *memcg)
 {
-	struct cgroup *pos;
+	struct cgroup_subsys_state *pos;
 
 	/* bounce at first found */
-	cgroup_for_each_child(pos, memcg->css.cgroup)
+	css_for_each_child(pos, &memcg->css)
 		return true;
 	return false;
 }
