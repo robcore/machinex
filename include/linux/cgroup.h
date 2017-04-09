@@ -568,18 +568,22 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct cgroup_css *(*css_alloc)(struct cgroup *cgrp);
-	int (*css_online)(struct cgroup *cgrp);
-	void (*css_offline)(struct cgroup *cgrp);
-	void (*css_free)(struct cgroup *cgrp);
-	int (*allow_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
-	int (*can_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
-	void (*cancel_attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
-	void (*attach)(struct cgroup *cgrp, struct cgroup_taskset *tset);
+	struct cgroup_css *(*css_alloc)(struct cgroup_css *parent_css);
+	int (*css_online)(struct cgroup_css *css);
+	void (*css_offline)(struct cgroup_css *css);
+	void (*css_free)(struct cgroup_css *css);
+
+	int (*can_attach)(struct cgroup_css *css,
+			  struct cgroup_taskset *tset);
+	void (*cancel_attach)(struct cgroup_css *css,
+			      struct cgroup_taskset *tset);
+	void (*attach)(struct cgroup_css *css,
+		       struct cgroup_taskset *tset);
+	int (*allow_attach)(struct cgroup_css *css, struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
-	void (*exit)(struct cgroup *cgrp, struct cgroup *old_cgrp,
-		     struct task_struct *task);
-	void (*bind)(struct cgroup *root);
+	void (*exit)(struct cgroup_css *css,
+		     struct cgroup_css *old_css,
+	void (*bind)(struct cgroup_css *root_css);
 
 	int subsys_id;
 	int active;

@@ -37,7 +37,8 @@ static inline struct cgroup_cls_state *task_cls_state(struct task_struct *p)
 	return css_cls_state(task_css(p, net_cls_subsys_id));
 }
 
-static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
+static struct cgroup_css *
+cgrp_css_alloc(struct cgroup_css *parent_css)
 {
 	struct cgroup_cls_state *cs;
 

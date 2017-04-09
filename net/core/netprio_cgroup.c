@@ -110,7 +110,8 @@ static void update_netdev_tables(void)
 	rtnl_unlock();
 }
 
-static struct cgroup_css *cgrp_css_alloc(struct cgroup *cgrp)
+static struct cgroup_css *
+cgrp_css_alloc(struct cgroup_css *parent_css)
 {
 	struct cgroup_netprio_state *cs;
 	int ret;
