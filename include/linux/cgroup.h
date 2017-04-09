@@ -647,7 +647,7 @@ struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
 }
 
 /**
- * cgroup_css - obtain a cgroup's css for the specified subsystem
+ * cgroup_subsys_state - obtain a cgroup's css for the specified subsystem
  * @cgrp: the cgroup of interest
  * @subsys_id: the subsystem of interest
  *
@@ -892,7 +892,7 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * destroyed". The caller should check css and cgroup's status.
  */
 
-struct cgroup_css *cgroup_css_from_dir(struct file *f, int id);
+struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
 
 /*
  * Default Android check for whether the current process is allowed to move a
