@@ -2915,17 +2915,7 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	 */
 	finish_task_switch(this_rq(), prev);
 }
-+	struct cgroup_css *(*css_alloc)(struct cgroup_css *parent_css);
-+	int (*css_online)(struct cgroup_css *css);
-+	void (*css_offline)(struct cgroup_css *css);
-+	void (*css_free)(struct cgroup_css *css);
-+
-+	int (*can_attach)(struct cgroup_css *css,
-+			  struct cgroup_taskset *tset);
-+	void (*cancel_attach)(struct cgroup_css *css,
-+			      struct cgroup_taskset *tset);
-+	void (*attach)(struct cgroup_css *css,
-+		       struct cgroup_taskset *tset);
+
 /*
  * nr_running and nr_context_switches:
  *
