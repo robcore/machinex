@@ -43,7 +43,7 @@ int fprop_global_init(struct fprop_global *p)
 	err = percpu_counter_init(&p->events, 1);
 	if (err)
 		return err;
-	legacy_seqcount_init(&p->sequence);
+	seqcount_init(&p->sequence);
 	return 0;
 }
 
@@ -74,13 +74,13 @@ bool fprop_new_period(struct fprop_global *p, int periods)
 		local_irq_restore(flags);
 		return false;
 	}
-	write_legacy_seqcount_begin(&p->sequence);
+	write_seqcount_begin(&p->sequence);
 	if (periods < 64)
 		events -= events >> periods;
 	/* Use addition to avoid losing events happening between sum and set */
 	percpu_counter_add(&p->events, -events);
 	p->period += periods;
-	write_legacy_seqcount_end(&p->sequence);
+	write_seqcount_end(&p->sequence);
 	local_irq_restore(flags);
 
 	return true;
@@ -143,11 +143,11 @@ void fprop_fraction_single(struct fprop_global *p,
 	s64 num, den;
 
 	do {
-		seq = read_legacy_seqcount_begin(&p->sequence);
+		seq = read_seqcount_begin(&p->sequence);
 		fprop_reflect_period_single(p, pl);
 		num = pl->events;
 		den = percpu_counter_read_positive(&p->events);
-	} while (read_legacy_seqcount_retry(&p->sequence, seq));
+	} while (read_seqcount_retry(&p->sequence, seq));
 
 	/*
 	 * Make fraction <= 1 and denominator > 0 even in presence of percpu
@@ -231,11 +231,11 @@ void fprop_fraction_percpu(struct fprop_global *p,
 	s64 num, den;
 
 	do {
-		seq = read_legacy_seqcount_begin(&p->sequence);
+		seq = read_seqcount_begin(&p->sequence);
 		fprop_reflect_period_percpu(p, pl);
 		num = percpu_counter_read_positive(&pl->events);
 		den = percpu_counter_read_positive(&p->events);
-	} while (read_legacy_seqcount_retry(&p->sequence, seq));
+	} while (read_seqcount_retry(&p->sequence, seq));
 
 	/*
 	 * Make fraction <= 1 and denominator > 0 even in presence of percpu
