@@ -66,7 +66,7 @@ enum cgroup_subsys_id {
 #undef SUBSYS
 
 /* Per-subsystem/per-cgroup state maintained by the system. */
-struct struct cgroup_subsys_state {
+struct cgroup_subsys_state {
 	/* the cgroup that this css is attached to */
 	struct cgroup *cgroup;
 
@@ -565,7 +565,7 @@ int cgroup_taskset_size(struct cgroup_taskset *tset);
  */
 
 struct cgroup_subsys {
-	struct struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
+	struct cgroup_subsys_state *(*css_alloc)(struct cgroup_subsys_state *parent_css);
 	int (*css_online)(struct cgroup_subsys_state *css);
 	void (*css_offline)(struct cgroup_subsys_state *css);
 	void (*css_free)(struct cgroup_subsys_state *css);
