@@ -636,7 +636,7 @@ struct cgroup_subsys {
  * non-NULL parent as long as @css isn't the root.
  */
 static inline
-struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
+struct cgroup_css *css_parent(struct cgroup_css *css)
 {
 	struct cgroup *parent_cgrp = css->cgroup->parent;
 
