@@ -2186,7 +2186,7 @@ static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 
 	for_each_root_subsys(cgrp->root, ss) {
 		if (ss->allow_attach) {
-			ret = ss->allow_attach(cgrp->root, tset);
+			ret = ss->allow_attach(cgrp, tset);
 			if (ret)
 				return ret;
 		} else {
@@ -4388,7 +4388,6 @@ static void init_css(struct cgroup_subsys_state *css, struct cgroup_subsys *ss,
 		css->flags |= CSS_ROOT;
 
 	BUG_ON(cgroup_css(cgrp, ss->subsys_id));
-	rcu_assign_pointer(cgrp->subsys[ss->subsys_id], css);
 }
 
 /* invoke ->css_online() on a new CSS and mark it online if successful */
@@ -4401,8 +4400,10 @@ static int online_css(struct cgroup_subsys_state *css)
 
 	if (ss->css_online)
 		ret = ss->css_online(css);
-	if (!ret)
+	if (!ret) {
 		css->flags |= CSS_ONLINE;
+		rcu_assign_pointer(css->cgroup->subsys[ss->subsys_id], css);
+	}
 	return ret;
 }
 
@@ -4433,6 +4434,7 @@ static void offline_css(struct cgroup_subsys_state *css)
 static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 			     umode_t mode)
 {
+	struct cgroup_subsys_state *css_ar[CGROUP_SUBSYS_COUNT] = { };
 	struct cgroup *cgrp;
 	struct cgroup_name *name;
 	struct cgroupfs_root *root = parent->root;
@@ -4505,12 +4507,11 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 			err = PTR_ERR(css);
 			goto err_free_all;
 		}
+		css_ar[ss->subsys_id] = css;
 
 		err = percpu_ref_init(&css->refcnt, css_release);
-		if (err) {
-			ss->css_free(css);
+		if (err)
 			goto err_free_all;
-		}
 
 		init_css(css, ss, cgrp);
 
@@ -4539,7 +4540,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 	/* each css holds a ref to the cgroup's dentry and the parent css */
 	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
+		struct cgroup_subsys_state *css = css_ar[ss->subsys_id];
 
 		dget(dentry);
 		percpu_ref_get(&css->parent->refcnt);
@@ -4550,7 +4551,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 	/* creation succeeded, notify subsystems */
 	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
+		struct cgroup_subsys_state *css = css_ar[ss->subsys_id];
 
 		err = online_css(css);
 		if (err)
@@ -4583,7 +4584,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 err_free_all:
 	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
+		struct cgroup_subsys_state *css = css_ar[ss->subsys_id];
 
 		if (css) {
 			percpu_ref_cancel_init(&css->refcnt);
@@ -4870,7 +4871,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	 * need to invoke fork callbacks here. */
 	BUG_ON(!list_empty(&init_task.tasks));
 
-	BUG_ON(online_css(cgroup_css(cgroup_dummy_top, ss->subsys_id)));
+	BUG_ON(online_css(css));
 
 	mutex_unlock(&cgroup_mutex);
 
@@ -4974,7 +4975,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	}
 	write_unlock(&css_set_lock);
 
-	ret = online_css(cgroup_css(cgroup_dummy_top, ss->subsys_id));
+	ret = online_css(css);
 	if (ret)
 		goto err_unload;
 
@@ -5639,7 +5640,7 @@ EXPORT_SYMBOL_GPL(free_css_id);
 static struct css_id *get_new_cssid(struct cgroup_subsys *ss, int depth)
 {
 	struct css_id *newid;
-	int ret, size;
+	int ret, size, id;
 
 	BUG_ON(!ss->use_id);
 
@@ -5648,23 +5649,32 @@ static struct css_id *get_new_cssid(struct cgroup_subsys *ss, int depth)
 	if (!newid)
 		return ERR_PTR(-ENOMEM);
 
-	idr_preload(GFP_KERNEL);
 	spin_lock(&ss->id_lock);
+	while (idr_get_new_above(&ss->idr, newid,
+				1, &id)) {
+		spin_unlock(&ss->id_lock);
+		if (!idr_pre_get(&ss->idr, GFP_NOWAIT))
+				goto unlock_drop;
+		spin_lock(&ss->id_lock);
+	}
 	/* Don't use 0. allocates an ID of 1-65535 */
-	ret = idr_alloc(&ss->idr, newid, 1, CSS_ID_MAX + 1, GFP_NOWAIT);
 	spin_unlock(&ss->id_lock);
-	idr_preload_end();
 
 	/* Returns error when there are no free spaces for new ID.*/
-	if (ret < 0)
+	if (!id)
 		goto err_out;
 
-	newid->id = ret;
+	newid->id = id;
 	newid->depth = depth;
 	return newid;
 err_out:
+	if (id >= 0) {
+		spin_lock(&ss->id_lock);
+		idr_remove(&ss->idr, newid);
+		spin_unlock(&ss->id_lock);
+	}
 	kfree(newid);
-	return ERR_PTR(ret);
+	return NULL;
 
 }
 

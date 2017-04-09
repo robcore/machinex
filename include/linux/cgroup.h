@@ -600,7 +600,7 @@ struct cgroup_subsys {
 			      struct cgroup_taskset *tset);
 	void (*attach)(struct cgroup_subsys_state *css,
 		       struct cgroup_taskset *tset);
-	int (*allow_attach)(struct cgroup_subsys_state *css,
+	int (*allow_attach)(struct cgroup *cgrp,
 				struct cgroup_taskset *tset);
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup_subsys_state *css,
@@ -910,7 +910,7 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * running as root.
  * Returns 0 if this is allowed, or -EACCES otherwise.
  */
-int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
+int subsys_cgroup_allow_attach(struct cgroup *cgrp,
 			       struct cgroup_taskset *tset);
 /*
  * Typically Called at ->destroy(), or somewhere the subsys frees
@@ -951,7 +951,7 @@ static inline int cgroup_attach_task_all(struct task_struct *from,
 	return 0;
 }
 
-static inline int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css,
+static inline int subsys_cgroup_allow_attach(struct cgroup *cgrp,
 					     struct cgroup_taskset *tset)
 {
 	return 0;
