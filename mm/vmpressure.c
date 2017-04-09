@@ -105,12 +105,7 @@ static struct vmpressure *work_to_vmpressure(struct work_struct *work)
 {
 	return container_of(work, struct vmpressure, work);
 }
-#ifdef CONFIG_MEM_RES_CTLR
-static struct vmpressure *cg_to_vmpressure(struct cgroup *cg)
-{
-	return css_to_vmpressure(cgroup_css(cg, mem_cgroup_subsys_id));
-}
-
+#ifdef CONFIG_MEMCG
 static struct vmpressure *vmpressure_parent(struct vmpressure *vmpr)
 {
 	struct cgroup_subsys_state *css = vmpressure_to_css(vmpr);
@@ -122,7 +117,7 @@ static struct vmpressure *vmpressure_parent(struct vmpressure *vmpr)
 	return memcg_to_vmpressure(memcg);
 }
 #else
-static struct vmpressure *css_to_vmpressure(struct cgroup_subsys_state *css)
+static struct vmpressure *cg_to_vmpressure(struct cgroup *cg)
 {
 	return NULL;
 }
