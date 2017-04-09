@@ -18,7 +18,7 @@
 #include <trace/events/power.h>
 #include <linux/resume-trace.h>
 #include <linux/moduleparam.h>
-#include <linux/mx_freeze.h>
+#include <linux/freezer.h>
 
 static bool enable_gps_ws = true;
 module_param(enable_gps_ws, bool, 0644);
@@ -570,7 +570,6 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
-	bool mx_freezing_in_progress = freezing_in_progress();
 
 	if (WARN_ONCE(wakeup_source_not_registered(ws),
 			"unregistered wakeup source\n"))
@@ -591,14 +590,14 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
 	 * the freezer and be patient for the fucking 2-7ms or whatever it takes for it to complete?
 	 */
-	if (mx_freezing_in_progress == true) {
+	if (pm_freezing == true) {
 		DEFINE_WAIT(wait);
 
 		//for (;;) {
-		while (mx_freezing_in_progress == true) {
+		while (pm_freezing == true) {
 			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
-					TASK_INTERRUPTIBLE);
-			if (mx_freezing_in_progress == false)
+					TASK_UNINTERUPTIBLE);
+			if (pm_freezing == false)
 				break;
 
 			//pm_system_wakeup();
@@ -867,7 +866,6 @@ bool pm_wakeup_pending(void)
 {
 	unsigned long flags;
 	bool ret = false;
-	bool mx_freezing_in_progress = freezing_in_progress();
 
 	spin_lock_irqsave(&events_lock, flags);
 	if (events_check_enabled) {
@@ -880,14 +878,14 @@ bool pm_wakeup_pending(void)
 	spin_unlock_irqrestore(&events_lock, flags);
 
 	if (ret) {
-		if (mx_freezing_in_progress == true) {
+		if (pm_freezing == true) {
 			DEFINE_WAIT(wait);
 
 			//for (;;)
-			while (mx_freezing_in_progress == true) {
+			while (pm_freezing == true) {
 				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
-						TASK_INTERRUPTIBLE);
-				if (mx_freezing_in_progress == false)
+						TASK_UNINTERUPTIBLE);
+				if (pm_freezing == false)
 					break;
 			}
 

@@ -33,12 +33,6 @@
 #include <linux/compiler.h>
 
 #include "power.h"
-#include <linux/mx_freeze.h>
-bool mx_freezing_in_progress;
-bool freezing_in_progress()
-{
-	return mx_freezing_in_progress;
-}
 
 static const char *pm_labels[] = { "mem", "standby", "freeze", };
 const char *pm_states[PM_SUSPEND_MAX];
@@ -174,11 +168,9 @@ static void platform_suspend_finish(suspend_state_t state)
 
 static int platform_suspend_begin(suspend_state_t state)
 {
-	bool mx_freezing_in_progress;
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin) {
-		mx_freezing_in_progress = true;
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin)
 		return freeze_ops->begin();
-	} else if (suspend_ops->begin)
+	else if (suspend_ops && suspend_ops->begin)
 		return suspend_ops->begin(state);
 	else
 		return 0;
@@ -186,11 +178,9 @@ static int platform_suspend_begin(suspend_state_t state)
 
 static void platform_suspend_end(suspend_state_t state)
 {
-	bool mx_freezing_in_progress;
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end) {
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
 		freeze_ops->end();
-		mx_freezing_in_progress = false;
-	} else if (suspend_ops->end)
+	else if (suspend_ops && suspend_ops->end)
 		suspend_ops->end();
 }
 
@@ -203,7 +193,7 @@ static void platform_suspend_recover(suspend_state_t state)
 static bool platform_suspend_again(void)
 {
 	int count;
-	bool suspend = (!freezing_in_progress()) && suspend_ops->suspend_again ?
+	bool suspend = (suspend_ops->suspend_again ?
 		suspend_ops->suspend_again() : false;
 
 	if (suspend) {
@@ -229,12 +219,20 @@ static bool platform_suspend_again(void)
 	return suspend;
 }
 
+#ifdef CONFIG_PM_DEBUG
+static unsigned int pm_test_delay = 5;
+module_param(pm_test_delay, uint, 0644);
+MODULE_PARM_DESC(pm_test_delay,
+		 "Number of seconds to wait before resuming from suspend test");
+#endif
+
 static int suspend_test(int level)
 {
 #ifdef CONFIG_PM_DEBUG
 	if (pm_test_level == level) {
-		printk(KERN_INFO "suspend debug: Waiting for 5 seconds.\n");
-		mdelay(5000);
+		pr_info("suspend debug: Waiting for %d second(s).\n",
+				pm_test_delay);
+		mdelay(pm_test_delay * 1000);
 		return 1;
 	}
 #endif /* !CONFIG_PM_DEBUG */
@@ -473,8 +471,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 
  Resume_devices:
 	suspend_test_start();
-	if (!resumed)
-		dpm_resume_end(PMSG_RESUME);
+	dpm_resume_end(PMSG_RESUME);
 	suspend_test_finish("resume devices");
 	resume_console();
  Close:
@@ -514,8 +511,7 @@ static int enter_state(suspend_state_t state)
 	if (state == PM_SUSPEND_FREEZE) {
 #ifdef CONFIG_PM_DEBUG
 		if (pm_test_level != TEST_NONE && pm_test_level <= TEST_CPUS) {
-			pr_warning("PM: Unsupported test mode for freeze state,"
-				   "please choose none/freezer/devices/platform.\n");
+			pr_warn("PM: Unsupported test mode for suspend to idle, please choose none/freezer/devices/platform.\n");
 			return -EAGAIN;
 		}
 #endif
