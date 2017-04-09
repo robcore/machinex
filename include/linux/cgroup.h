@@ -583,6 +583,7 @@ struct cgroup_subsys {
 	void (*fork)(struct task_struct *task);
 	void (*exit)(struct cgroup_css *css,
 		     struct cgroup_css *old_css,
+		     struct task_struct *task);
 	void (*bind)(struct cgroup_css *root_css);
 
 	int subsys_id;
