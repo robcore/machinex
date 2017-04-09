@@ -1321,6 +1321,7 @@ static void init_cgroup_root(struct cgroupfs_root *root)
 static int cgroup_init_root_id(struct cgroupfs_root *root)
 {
 	int ret;
+	int next_hierarchy_id;
 
 	lockdep_assert_held(&cgroup_mutex);
 	lockdep_assert_held(&cgroup_root_mutex);
