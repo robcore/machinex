@@ -76,13 +76,13 @@ struct inet_peer_base {
 
 static struct inet_peer_base v4_peers = {
 	.root		= peer_avl_empty_rcu,
-	.lock		= __LEGACY_SEQLOCK_UNLOCKED(v4_peers.lock),
+	.lock		= __SEQLOCK_UNLOCKED(v4_peers.lock),
 	.total		= 0,
 };
 
 static struct inet_peer_base v6_peers = {
 	.root		= peer_avl_empty_rcu,
-	.lock		= __LEGACY_SEQLOCK_UNLOCKED(v6_peers.lock),
+	.lock		= __SEQLOCK_UNLOCKED(v6_peers.lock),
 	.total		= 0,
 };
 

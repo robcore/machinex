@@ -161,6 +161,6 @@ EXPORT_SYMBOL(current_umask);
 struct fs_struct init_fs = {
 	.users		= 1,
 	.lock		= __SPIN_LOCK_UNLOCKED(init_fs.lock),
-	.seq		= LEGACY_SEQCNT_ZERO,
+	.seq		= SEQCNT_ZERO,
 	.umask		= 0022,
 };

@@ -9023,18 +9023,18 @@ static void cpu_cgroup_exit(struct cgroup_subsys_state *css,
 	sched_move_task(task);
 }
 
-static u64 cpu_notify_on_migrate_read_u64(struct cgroup *cgrp,
+static u64 cpu_notify_on_migrate_read_u64(struct cgroup_subsys_state *css,
 					  struct cftype *cft)
 {
-	struct task_group *tg = cgroup_tg(cgrp);
+	struct task_group *tg = css_tg(css);
 
 	return tg->notify_on_migrate;
 }
 
-static int cpu_notify_on_migrate_write_u64(struct cgroup *cgrp,
+static int cpu_notify_on_migrate_write_u64(struct cgroup_subsys_state *css,
 					   struct cftype *cft, u64 notify)
 {
-	struct task_group *tg = cgroup_tg(cgrp);
+	struct task_group *tg = css_tg(css);
 
 	tg->notify_on_migrate = (notify > 0);
 
@@ -9113,7 +9113,7 @@ static int tg_set_cfs_bandwidth(struct task_group *tg, u64 period, u64 quota)
 	}
 	raw_spin_unlock_irq(&cfs_b->lock);
 
-	for_each_possible_cpu(i) {
+	for_each_online_cpu(i) {
 		struct cfs_rq *cfs_rq = tg->cfs_rq[i];
 		struct rq *rq = cfs_rq->rq;
 
