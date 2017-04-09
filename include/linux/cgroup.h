@@ -867,6 +867,9 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
 struct cgroup_subsys_state *css_from_dir(struct dentry *dentry,
 					 struct cgroup_subsys *ss);
 
+static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset);
+int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset);
+
 #else /* !CONFIG_CGROUPS */
 
 static inline int cgroup_init_early(void) { return 0; }
