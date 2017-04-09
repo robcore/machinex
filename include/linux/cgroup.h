@@ -89,8 +89,8 @@ enum {
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
 };
 
-/* Caller must verify that the css is not for root cgroup */
-static inline void __css_get(struct cgroup_css *css, int count)
+/* Caller must verify that the cgroup_subsys_state is not for root cgroup */
+static inline void __css_get(struct cgroup_subsys_state *css, int count)
 {
 		percpu_ref_get(&css->refcnt);
 }
@@ -102,7 +102,7 @@ static inline void __css_get(struct cgroup_css *css, int count)
  * - task->cgroups for a locked task
  */
 
-extern void __css_get(struct cgroup_css *css, int count);
+extern void __css_get(struct cgroup_subsys_state *css, int count);
 static inline void css_get(struct cgroup_subsys_state *css)
 {
 	/* We don't need to reference count the root state */
