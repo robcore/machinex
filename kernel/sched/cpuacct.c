@@ -163,9 +163,10 @@ out:
 	return err;
 }
 
-static int cpuacct_percpu_seq_show(struct seq_file *m, void *V)
+static int cpuacct_percpu_seq_read(struct cgroup_subsys_state *css,
+				   struct cftype *cft, struct seq_file *m)
 {
-	struct cpuacct *ca = css_ca(seq_css(m));
+	struct cpuacct *ca = css_ca(css);
 	u64 percpu;
 	int i;
 
@@ -182,9 +183,10 @@ static const char * const cpuacct_stat_desc[] = {
 	[CPUACCT_STAT_SYSTEM] = "system",
 };
 
-static int cpuacct_stats_show(struct seq_file *sf, void *v)
+static int cpuacct_stats_show(struct cgroup_subsys_state *css,
+			      struct cftype *cft, struct cgroup_map_cb *cb)
 {
-	struct cpuacct *ca = css_ca(seq_css(sf));
+	struct cpuacct *ca = css_ca(css);
 	int cpu;
 	s64 val = 0;
 
@@ -194,7 +196,7 @@ static int cpuacct_stats_show(struct seq_file *sf, void *v)
 		val += kcpustat->cpustat[CPUTIME_NICE];
 	}
 	val = cputime64_to_clock_t(val);
-	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_USER], val);
+	cb->fill(cb, cpuacct_stat_desc[CPUACCT_STAT_USER], val);
 
 	val = 0;
 	for_each_online_cpu(cpu) {
@@ -205,7 +207,7 @@ static int cpuacct_stats_show(struct seq_file *sf, void *v)
 	}
 
 	val = cputime64_to_clock_t(val);
-	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
+	cb->fill(cb, cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
 
 	return 0;
 }
@@ -218,11 +220,11 @@ static struct cftype files[] = {
 	},
 	{
 		.name = "usage_percpu",
-		.seq_show = cpuacct_percpu_seq_show,
+		.read_seq_string = cpuacct_percpu_seq_read,
 	},
 	{
 		.name = "stat",
-		.seq_show = cpuacct_stats_show,
+		.read_map = cpuacct_stats_show,
 	},
 	{ }	/* terminate */
 };

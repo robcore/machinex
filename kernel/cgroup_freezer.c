@@ -189,7 +189,7 @@ static void freezer_attach(struct cgroup_subsys_state *new_css,
 	 * current state before executing the following - !frozen tasks may
 	 * be visible in a FROZEN cgroup and frozen tasks in a THAWED one.
 	 */
-	cgroup_taskset_for_each(task, tset) {
+	cgroup_taskset_for_each(task, new_css, tset) {
 		if (!(freezer->state & CGROUP_FREEZING)) {
 			__thaw_task(task);
 		} else {
@@ -301,9 +301,10 @@ out_unlock:
 	spin_unlock_irq(&freezer->lock);
 }
 
-static int freezer_read(struct seq_file *m, void *v)
+static int freezer_read(struct cgroup_subsys_state *css, struct cftype *cft,
+			struct seq_file *m)
 {
-	struct cgroup_subsys_state *css = seq_css(m), *pos;
+	struct cgroup_subsys_state *pos;
 
 	rcu_read_lock();
 
@@ -457,7 +458,7 @@ static struct cftype files[] = {
 	{
 		.name = "state",
 		.flags = CFTYPE_NOT_ON_ROOT,
-		.seq_show = freezer_read,
+		.read_seq_string = freezer_read,
 		.write_string = freezer_write,
 	},
 	{
