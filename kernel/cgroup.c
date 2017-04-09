@@ -172,6 +172,7 @@ static int cgroup_root_count;
  */
 static DEFINE_IDR(cgroup_hierarchy_idr);
 static int next_hierarchy_id;
+static int next_cgroup_id;
 
 static struct cgroup_name root_cgroup_name = { .name = "/" };
 
@@ -1412,6 +1413,7 @@ static void cgroup_free_root(struct cgroupfs_root *root)
 		/* hierarhcy ID shoulid already have been released */
 		WARN_ON_ONCE(root->hierarchy_id);
 
+		idr_remove_all (&root->cgroup_idr);
 		idr_destroy(&root->cgroup_idr);
 		kfree(root);
 	}
@@ -1527,10 +1529,11 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		mutex_lock(&cgroup_mutex);
 		mutex_lock(&cgroup_root_mutex);
 
-		root_cgrp->id = idr_alloc(&root->cgroup_idr, root_cgrp,
-					   0, 1, GFP_KERNEL);
-		if (root_cgrp->id < 0)
-			goto unlock_drop;
+		while (idr_get_new_above(&root->cgroup_idr, root_cgrp,
+					0, &root_cgrp->id)) {
+			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
+					goto unlock_drop;
+		}
 
 		/* Check for name clashes with existing mounts */
 		ret = -EBUSY;
@@ -4244,7 +4247,12 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	 * Temporarily set the pointer to NULL, so idr_find() won't return
 	 * a half-baked cgroup.
 	 */
-	cgrp->id = idr_alloc(&root->cgroup_idr, NULL, 1, 0, GFP_KERNEL);
+	while (idr_get_new_above(&root->cgroup_idr, NULL,
+					1, &cgrp->id)) {
+	if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
+			return -ENOMEM;
+	}
+
 	if (cgrp->id < 0)
 		goto err_free_name;
 
@@ -4904,9 +4912,14 @@ int __init cgroup_init(void)
 
 	BUG_ON(cgroup_init_root_id(&cgroup_dummy_root));
 
-	err = idr_alloc(&cgroup_dummy_root.cgroup_idr, cgroup_dummy_top,
-			0, 1, GFP_KERNEL);
-	BUG_ON(err < 0);
+	while (idr_get_new_above(&cgroup_dummy_root.cgroup_idr, cgroup_dummy_top,
+				0, &cgroup_dummy_top->id)) {
+		if (!idr_pre_get(&cgroup_dummy_root.cgroup_idr, GFP_KERNEL))
+			return -ENOMEM;
+	}
+
+	err = cgroup_dummy_top->id;
+	WARN_ON(err < 0);
 
 	mutex_unlock(&cgroup_root_mutex);
 	mutex_unlock(&cgroup_mutex);
