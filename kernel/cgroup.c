@@ -4173,7 +4173,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	struct cgroup *cgrp;
 	struct cgroup_name *name;
 	struct cgroupfs_root *root = parent->root;
-	int ssid, err;
+	int ssid, err = 0;
 	struct cgroup_subsys *ss;
 	struct super_block *sb = root->sb;
 
@@ -4183,10 +4183,8 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 		return -ENOMEM;
 
 	name = cgroup_alloc_name(dentry);
-	if (!name) {
-		err = -ENOMEM;
+	if (!name)
 		goto err_free_cgrp;
-	}
 	rcu_assign_pointer(cgrp->name, name);
 
 	/*
@@ -4200,7 +4198,6 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	}
 
 	if (cgrp->id < 0)
-		err = -ENOMEM;
 		goto err_free_name;
 
 	/*

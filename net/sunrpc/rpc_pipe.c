@@ -655,7 +655,7 @@ static struct dentry *__rpc_lookup_create_exclusive(struct dentry *parent,
 			return ERR_PTR(-ENOMEM);
 	}
 	if (dentry->d_inode == NULL) {
-		d_set_d_op(dentry, &simple_dentry_operations);
+		d_set_d_op(dentry, &rpc_dentry_operations);
 		return dentry;
 	}
 	dput(dentry);
