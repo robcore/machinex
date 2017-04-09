@@ -193,7 +193,7 @@ static void platform_suspend_recover(suspend_state_t state)
 static bool platform_suspend_again(void)
 {
 	int count;
-	bool suspend = (suspend_ops->suspend_again ?
+	bool suspend = suspend_ops->suspend_again ?
 		suspend_ops->suspend_again() : false;
 
 	if (suspend) {
