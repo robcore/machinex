@@ -2272,6 +2272,17 @@ static int cgroup_sane_behavior_show(struct cgroup *cgrp, struct cftype *cft,
 	return 0;
 }
 
+/* return the css for the given cgroup file */
+static struct cgroup_css *cgroup_file_css(struct cfent *cfe)
+{
+	struct cftype *cft = cfe->type;
+	struct cgroup *cgrp = __d_cgrp(cfe->dentry->d_parent);
+
+	if (ss)
+		return cgrp->subsys[ss->subsys_id];
+	return NULL;
+}
+
 /* A buffer size big enough for numbers or short strings */
 #define CGROUP_LOCAL_BUFFER_SIZE 64
 
@@ -2349,8 +2360,6 @@ static ssize_t cgroup_file_write(struct file *file, const char __user *buf,
 	struct cftype *cft = __d_cft(file->f_dentry);
 	struct cgroup *cgrp = __d_cgrp(file->f_dentry->d_parent);
 
-	if (cgroup_is_dead(cgrp))
-		return -ENODEV;
 	if (cft->write)
 		return cft->write(cgrp, cft, file, buf, nbytes, ppos);
 	if (cft->write_u64 || cft->write_s64)
@@ -2393,9 +2402,6 @@ static ssize_t cgroup_file_read(struct file *file, char __user *buf,
 {
 	struct cftype *cft = __d_cft(file->f_dentry);
 	struct cgroup *cgrp = __d_cgrp(file->f_dentry->d_parent);
-
-	if (cgroup_is_dead(cgrp))
-		return -ENODEV;
 
 	if (cft->read)
 		return cft->read(cgrp, cft, file, buf, nbytes, ppos);
@@ -2442,15 +2448,22 @@ static const struct file_operations cgroup_seqfile_operations = {
 
 static int cgroup_file_open(struct inode *inode, struct file *file)
 {
+	struct cfent *cfe = __d_cfe(file->f_dentry);
+	struct cftype *cft = __d_cft(file->f_dentry);
+	struct cgroup_css *css = cgroup_file_css(cfe);
 	int err;
-	struct cfent *cfe;
-	struct cftype *cft;
 
 	err = generic_file_open(inode, file);
 	if (err)
 		return err;
-	cfe = __d_cfe(file->f_dentry);
-	cft = cfe->type;
+
+	/*
+	 * If the file belongs to a subsystem, pin the css.  Will be
+	 * unpinned either on open failure or release.  This ensures that
+	 * @css stays alive for all file operations.
+	 */
+	if (css && !css_tryget(css))
+		return -ENODEV;
 
 	if (cft->read_map || cft->read_seq_string) {
 		file->f_op = &cgroup_seqfile_operations;
@@ -2459,15 +2472,23 @@ static int cgroup_file_open(struct inode *inode, struct file *file)
 		err = cft->open(inode, file);
 	}
 
+	if (css && err)
+		css_put(css);
 	return err;
 }
 
 static int cgroup_file_release(struct inode *inode, struct file *file)
 {
+	struct cfent *cfe = __d_cfe(file->f_dentry);
 	struct cftype *cft = __d_cft(file->f_dentry);
+	struct cgroup_css *css = cgroup_file_css(cfe);
+	int ret = 0;
+
 	if (cft->release)
-		return cft->release(inode, file);
-	return 0;
+		ret = cft->release(inode, file);
+	if (css)
+		css_put(css);
+	return ret;
 }
 
 /*
