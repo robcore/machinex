@@ -60,6 +60,7 @@
 #include <linux/poll.h>
 #include <linux/flex_array.h> /* used in cgroup_attach_task */
 #include <linux/kthread.h>
+#include <linux/file.h>
 
 #include <linux/atomic.h>
 
@@ -2120,24 +2121,6 @@ int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css, struct cgroup_ta
 	return 0;
 }
 
-static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
-{
-	struct cgroup_subsys_state *css;
-	int ret;
-
-	for_each_root_subsys(css, cgrp) {
-		if (css->ss->allow_attach) {
-			ret = css->ss->allow_attach(css, tset);
-			if (ret)
-				return ret;
-		} else {
-			return -EACCES;
-		}
-	}
-
-	return 0;
-}
-
 /*
  * Find the task_struct of the task to attach by vpid and pass it along to the
  * function to attach either it or all tasks in its threadgroup. Will lock
@@ -2176,10 +2159,8 @@ retry_find_task:
 			struct cgroup_taskset tset = { };
 			tset.single.task = tsk;
 			tset.single.cgrp = cgrp;
-			ret = cgroup_allow_attach(cgrp, &tset);
-			if (ret) {
-				rcu_read_unlock();
-				goto out_unlock_cgroup;
+			rcu_read_unlock();
+			goto out_unlock_cgroup;
 			}
 		}
 	} else
@@ -4041,8 +4022,8 @@ static int cgroup_write_event_control(struct cgroup_subsys_state *dummy_css,
 	struct cgroup_event *event;
 	struct cgroup_subsys_state *cfile_css;
 	unsigned int efd, cfd;
-	struct file *efile;
-	struct file *cfile;
+	struct fd efile;
+	struct fd cfile;
 	char *endp;
 	int ret;
 
@@ -4065,31 +4046,31 @@ static int cgroup_write_event_control(struct cgroup_subsys_state *dummy_css,
 	init_waitqueue_func_entry(&event->wait, cgroup_event_wake);
 	INIT_WORK(&event->remove, cgroup_event_remove);
 
-	efile = eventfd_fget(efd);
-	if (IS_ERR(efile)) {
-		ret = PTR_ERR(efile);
+	efile = fdget(efd);
+	if (!efile.file) {
+		ret = -EBADF;
 		goto out_kfree;
 	}
 
-	event->eventfd = eventfd_ctx_fileget(efile);
+	event->eventfd = eventfd_ctx_fileget(efile.file);
 	if (IS_ERR(event->eventfd)) {
 		ret = PTR_ERR(event->eventfd);
 		goto out_put_efile;
 	}
 
-	cfile = fget(cfd);
-	if (!cfile) {
+	cfile = fdget(cfd);
+	if (!cfile.file) {
 		ret = -EBADF;
 		goto out_put_eventfd;
 	}
 
 	/* the process need read permission on control file */
 	/* AV: shouldn't we check that it's been opened for read instead? */
-	ret = inode_permission(file_inode(cfile), MAY_READ);
+	ret = inode_permission(file_inode(cfile.file), MAY_READ);
 	if (ret < 0)
 		goto out_put_cfile;
 
-	event->cft = __file_cft(cfile);
+	event->cft = __file_cft(cfile.file);
 	if (IS_ERR(event->cft)) {
 		ret = PTR_ERR(event->cft);
 		goto out_put_cfile;
@@ -4110,7 +4091,7 @@ static int cgroup_write_event_control(struct cgroup_subsys_state *dummy_css,
 
 	ret = -EINVAL;
 	event->css = cgroup_css(cgrp, event->cft->ss);
-	cfile_css = css_from_dir(cfile->f_dentry->d_parent, event->cft->ss);
+	cfile_css = css_from_dir(cfile.file->f_dentry->d_parent, event->cft->ss);
 	if (event->css && event->css == cfile_css && css_tryget(event->css))
 		ret = 0;
 
@@ -4128,25 +4109,25 @@ static int cgroup_write_event_control(struct cgroup_subsys_state *dummy_css,
 	if (ret)
 		goto out_put_css;
 
-	efile->f_op->poll(efile, &event->pt);
+	efile.file->f_op->poll(efile.file, &event->pt);
 
 	spin_lock(&cgrp->event_list_lock);
 	list_add(&event->list, &cgrp->event_list);
 	spin_unlock(&cgrp->event_list_lock);
 
-	fput(cfile);
-	fput(efile);
+	fdput(cfile);
+	fdput(efile);
 
 	return 0;
 
 out_put_css:
 	css_put(event->css);
 out_put_cfile:
-	fput(cfile);
+	fdput(cfile);
 out_put_eventfd:
 	eventfd_ctx_put(event->eventfd);
 out_put_efile:
-	fput(efile);
+	fdput(efile);
 out_kfree:
 	kfree(event);
 
