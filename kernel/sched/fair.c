@@ -2056,6 +2056,13 @@ void task_numa_work(struct callback_head *work)
 		if (!(vma->vm_flags & (VM_READ | VM_EXEC | VM_WRITE)))
 			continue;
 
+		/*
+		 * Skip inaccessible VMAs to avoid any confusion between
+		 * PROT_NONE and NUMA hinting ptes
+		 */
+		if (!(vma->vm_flags & (VM_READ | VM_EXEC | VM_WRITE)))
+			continue;
+
 		do {
 			start = max(start, vma->vm_start);
 			end = ALIGN(start + (pages << PAGE_SHIFT), HPAGE_SIZE);
@@ -3819,7 +3826,7 @@ static void put_prev_entity(struct cfs_rq *cfs_rq, struct sched_entity *prev)
 		/* Put 'current' back into the tree. */
 		__enqueue_entity(cfs_rq, prev);
 		/* in !on_rq case, update occurred at dequeue */
-		update_entity_load_avg(prev, 0);
+		update_entity_load_avg(prev, 1);
 	}
 	cfs_rq->curr = NULL;
 }
@@ -4701,7 +4708,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
-	long task_delta;
 
 	for_each_sched_entity(se) {
 		if (se->on_rq)
@@ -4729,8 +4735,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		task_delta = cfs_rq->h_nr_running;
-
 		update_rq_runnable_avg(rq, rq->nr_running);
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
@@ -4738,7 +4742,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 	if (!se) {
  		update_rq_runnable_avg(rq, rq->nr_running);
-		rq->nr_running += task_delta;
 		inc_nr_running(rq);
 		inc_nr_big_small_task(rq, p);
 	}
@@ -4757,7 +4760,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
 	int task_sleep = flags & DEQUEUE_SLEEP;
-	long task_delta;
 
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
@@ -4796,15 +4798,12 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		task_delta = cfs_rq->h_nr_running;
-
 		update_rq_runnable_avg(rq, 1);
 		update_cfs_shares(cfs_rq);
 		update_entity_load_avg(se, 1);
 	}
 
 	if (!se) {
-		rq->nr_running -= task_delta;
 		dec_nr_running(rq);
  		update_rq_runnable_avg(rq, 1);
 		dec_nr_big_small_task(rq, p);
@@ -8385,6 +8384,7 @@ static inline int nohz_kick_needed(struct rq *rq)
 	}
 
 	sd = rcu_dereference(per_cpu(sd_asym, cpu));
+
 	if (sd && (cpumask_first_and(nohz.idle_cpus_mask,
 				  sched_domain_span(sd)) < cpu))
 		goto need_kick_unlock;
