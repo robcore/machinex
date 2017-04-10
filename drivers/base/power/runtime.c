@@ -50,42 +50,6 @@ static int (*rpm_get_idle_cb(struct device *dev))(struct device *)
 	return RPM_GET_CALLBACK(dev, runtime_idle);
 }
 
-#define RPM_GET_CALLBACK(dev, cb)				\
-({								\
-	int (*__rpm_cb)(struct device *__d);			\
-								\
-	if (dev->pm_domain)					\
-		__rpm_cb = dev->pm_domain->ops.cb;		\
-	else if (dev->type && dev->type->pm)			\
-		__rpm_cb = dev->type->pm->cb;			\
-	else if (dev->class && dev->class->pm)			\
-		__rpm_cb = dev->class->pm->cb;			\
-	else if (dev->bus && dev->bus->pm)			\
-		__rpm_cb = dev->bus->pm->cb;			\
-	else							\
-		__rpm_cb = NULL;				\
-								\
-	if (!__rpm_cb && dev->driver && dev->driver->pm)	\
-		__rpm_cb = dev->driver->pm->cb;			\
-								\
-	__rpm_cb;						\
-})
-
-static int (*rpm_get_suspend_cb(struct device *dev))(struct device *)
-{
-	return RPM_GET_CALLBACK(dev, runtime_suspend);
-}
-
-static int (*rpm_get_resume_cb(struct device *dev))(struct device *)
-{
-	return RPM_GET_CALLBACK(dev, runtime_resume);
-}
-
-static int (*rpm_get_idle_cb(struct device *dev))(struct device *)
-{
-	return RPM_GET_CALLBACK(dev, runtime_idle);
-}
-
 static int rpm_resume(struct device *dev, int rpmflags);
 static int rpm_suspend(struct device *dev, int rpmflags);
 
