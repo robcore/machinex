@@ -209,7 +209,7 @@ struct cfs_bandwidth {
 
 /* task group related information */
 struct task_group {
-	struct cgroup_subsys_state css;
+	struct cgroup_subsys_state *css;
 
 	bool notify_on_migrate;
 

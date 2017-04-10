@@ -1193,14 +1193,11 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 		 * Root is not visited by cgroup iterators so it needs an
 		 * explicit visit.
 		 */
-		if (!last_visited) {
-			css = &root->css;
-		} else {
-			struct cgroup_subsys_state *prev_css, *next_css;
+		struct cgroup_subsys_state *prev_css, *next_css;
 
-			prev_css = (last_visited == root) ? NULL : &last_visited->css;
-			next_css = css_next_descendant_pre(prev_css, &root->css);
-			if (next_cgroup)
+		prev_css = last_visited ? &last_visited->css : NULL;
+		next_css = css_next_descendant_pre(prev_css, &root->css);
+
 		if (next_css) {
 			struct mem_cgroup *mem = mem_cgroup_from_css(next_css);
 		}
