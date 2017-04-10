@@ -6319,7 +6319,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	 */
 	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
-	//mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
+	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 
 	if (plat->nonremovable)
@@ -6421,7 +6421,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->status_irq) {
 		ret = request_threaded_irq(plat->status_irq, NULL,
 				  msmsdcc_platform_status_irq,
-				  plat->irq_flags | IRQF_ONESHOT,
+				  plat->irq_flags,
 				  DRIVER_NAME " (slot)",
 				  host);
 		if (ret) {
@@ -6855,7 +6855,7 @@ static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
 	unsigned long flags;
 
 	if (host->pdev->id == 3) {
-		pr_debug("%s: msmsdcc_gate_clock due to mmc_card_keep_power\n", __func__);
+		printk(KERN_INFO "%s: msmsdcc_gate_clock due to mmc_card_keep_power\n", __func__);
 	}
 
 	mmc_host_clk_hold(mmc);
@@ -6878,7 +6878,7 @@ static inline void msmsdcc_ungate_clock(struct msmsdcc_host *host)
 	mmc_host_clk_release(mmc);
 
 	if (host->pdev->id == 3)
-		pr_debug("%s: msmsdcc_ungate_clock due to mmc_card_keep_power complete\n", __func__);
+		printk(KERN_INFO "%s: msmsdcc_ungate_clock due to mmc_card_keep_power complete\n", __func__);
 }
 #else
 static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
@@ -6931,7 +6931,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 
 	if (host->pdev->id == 3) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
-		pr_info("%s: Enter WIFI suspend\n", __func__);
+		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
