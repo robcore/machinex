@@ -4729,7 +4729,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		task_delta = cfs_rq->h_nr_running; 	
+		task_delta = cfs_rq->h_nr_running;
 
 		update_rq_runnable_avg(rq, rq->nr_running);
 		update_cfs_shares(cfs_rq);
@@ -4796,7 +4796,7 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		task_delta = cfs_rq->h_nr_running; 	
+		task_delta = cfs_rq->h_nr_running;
 
 		update_rq_runnable_avg(rq, 1);
 		update_cfs_shares(cfs_rq);
@@ -8713,7 +8713,6 @@ int alloc_fair_sched_group(struct task_group *tg, struct task_group *parent)
 {
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se;
-	struct task_struct *p;
 	int i;
 
 	tg->cfs_rq = kzalloc(sizeof(cfs_rq) * nr_cpu_ids, GFP_KERNEL);
@@ -8740,7 +8739,6 @@ int alloc_fair_sched_group(struct task_group *tg, struct task_group *parent)
 
 		init_cfs_rq(cfs_rq);
 		init_tg_cfs_entry(tg, cfs_rq, se, i, parent->se[i]);
-		init_task_runnable_average(p);
 	}
 
 	return 1;
