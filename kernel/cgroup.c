@@ -4429,7 +4429,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 			goto err_free_all;
 		}
 
-		init_cgroup_css(css, ss, cgrp);
+		init_css(css, ss, cgrp);
 	}
 
 	/*
@@ -4797,7 +4797,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	BUG_ON(!list_empty(&init_task.tasks));
 
 	ss->active = 1;
-	BUG_ON(online_css(ss, cgroup_dummy_top));
+	BUG_ON(online_css(cgroup_css(cgroup_dummy_top, ss->subsys_id)));
 
 	mutex_unlock(&cgroup_mutex);
 
@@ -4870,7 +4870,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	ss->root = &cgroup_dummy_root;
 
 	/* our new subsystem will be attached to the dummy hierarchy. */
-	init_cgroup_css(css, ss, cgroup_dummy_top);
+	init_css(css, ss, cgroup_dummy_top);
 	/*
 	 * Now we need to entangle the css into the existing css_sets. unlike
 	 * in cgroup_init_subsys, there are now multiple css_sets, so each one
@@ -4895,7 +4895,7 @@ int __init_or_module cgroup_load_subsys(struct cgroup_subsys *ss)
 	write_unlock(&css_set_lock);
 
 	ss->active = 1;
-	ret = online_css(ss, cgroup_dummy_top);
+	ret = online_css(cgroup_css(cgroup_dummy_top, ss->subsys_id));
 	if (ret)
 		goto err_unload;
 
@@ -4934,7 +4934,7 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 
 	mutex_lock(&cgroup_mutex);
 
-	offline_css(ss, cgroup_dummy_top);
+	offline_css(cgroup_css(cgroup_dummy_top, ss->subsys_id));
 	ss->active = 0;
 
 	/* deassign the subsys_id */
