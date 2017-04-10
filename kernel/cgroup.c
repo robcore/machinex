@@ -2103,13 +2103,13 @@ int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css, struct cgroup_ta
 
 static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
-	struct cgroup_subsys *ss;
 	struct cgroup_subsys_state *css;
+	int i;
 	int ret;
 
-	for_each_root_subsys(cgrp->root, ss) {
-		if (ss->allow_attach) {
-			ret = ss->allow_attach(css, tset);
+	for_each_css(css, i, cgrp) {
+		if (css->ss->allow_attach) {
+			ret = css->ss->allow_attach(css, tset);
 			if (ret)
 				return ret;
 		} else {
