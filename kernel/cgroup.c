@@ -94,13 +94,10 @@ static DEFINE_MUTEX(cgroup_mutex);
 
 static DEFINE_MUTEX(cgroup_root_mutex);
 
-/*
- * cgroup destruction makes heavy use of work items and there can be a lot
- * of concurrent destructions.  Use a separate workqueue so that cgroup
- * destruction work items don't end up filling up max_active of system_wq
- * which may lead to deadlock.
- */
-static struct workqueue_struct *cgroup_destroy_wq;
+#define cgroup_assert_mutex_or_rcu_locked()				\
+	rcu_lockdep_assert(rcu_read_lock_held() ||			\
+			   lockdep_is_held(&cgroup_mutex),		\
+			   "cgroup_mutex or RCU read lock required");
 
 #ifdef CONFIG_LOCKDEP
 #define cgroup_assert_mutex_or_root_locked()				\
@@ -109,6 +106,14 @@ static struct workqueue_struct *cgroup_destroy_wq;
 #else
 #define cgroup_assert_mutex_or_root_locked()	do { } while (0)
 #endif
+
+/*
+ * cgroup destruction makes heavy use of work items and there can be a lot
+ * of concurrent destructions.  Use a separate workqueue so that cgroup
+ * destruction work items don't end up filling up max_active of system_wq
+ * which may lead to deadlock.
+ */
+static struct workqueue_struct *cgroup_destroy_wq;
 
 /*
  * pidlist destructions need to be flushed on cgroup destruction.  Use a
@@ -2117,12 +2122,13 @@ int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css, struct cgroup_ta
 
 static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 {
-	struct cgroup_subsys *ss;
+	struct cgroup_subsys_state *css;
+	int i;
 	int ret;
 
-	for_each_root_subsys(cgrp->root, ss) {
-		if (ss->allow_attach) {
-			ret = ss->allow_attach(cgrp, tset);
+	for_each_css(css, i, cgrp) {
+		if (css->ss->allow_attach) {
+			ret = css->ss->allow_attach(css, tset);
 			if (ret)
 				return ret;
 		} else {
