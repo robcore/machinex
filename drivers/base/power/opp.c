@@ -394,13 +394,6 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_find_freq_floor);
  * to keep the integrity of the internal data structures. Callers should ensure
  * that this function is *NOT* called under RCU protection or in contexts where
  * mutex cannot be locked.
- *
- * Return:
- * 0:		On success OR
- *		Duplicate OPPs (both freq and volt are same) and opp->available
- * -EEXIST:	Freq are same and volt are different OR
- *		Duplicate OPPs (both freq and volt are same) and !opp->available
- * -ENOMEM:	Memory allocation failure
  */
 int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
 {
@@ -450,29 +443,13 @@ int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
 	new_opp->u_volt = u_volt;
 	new_opp->available = true;
 
-	/*
-	 * Insert new OPP in order of increasing frequency
-	 * and discard if already present
-	 */
+	/* Insert new OPP in order of increasing frequency */
 	head = &dev_opp->opp_list;
 	list_for_each_entry_rcu(opp, &dev_opp->opp_list, node) {
-		if (new_opp->rate <= opp->rate)
+		if (new_opp->rate < opp->rate)
 			break;
 		else
 			head = &opp->node;
-	}
-
-	/* Duplicate OPPs ? */
-	if (new_opp->rate == opp->rate) {
-		int ret = opp->available && new_opp->u_volt == opp->u_volt ?
-			0 : -EEXIST;
-
-		dev_warn(dev, "%s: duplicate OPPs detected. Existing: freq: %lu, volt: %lu, enabled: %d. New: freq: %lu, volt: %lu, enabled: %d\n",
-			 __func__, opp->rate, opp->u_volt, opp->available,
-			 new_opp->rate, new_opp->u_volt, new_opp->available);
-		mutex_unlock(&dev_opp_list_lock);
-		kfree(new_opp);
-		return ret;
 	}
 
 	list_add_rcu(&new_opp->node, head);
@@ -575,7 +552,6 @@ unlock:
 	kfree(new_opp);
 	return r;
 }
-EXPORT_SYMBOL_GPL(opp_add);
 
 /**
  * dev_pm_opp_enable() - Enable a specific OPP
@@ -641,54 +617,53 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_disable);
  * the table if any of the mentioned functions have been invoked in the interim.
  *
  * Locking: The internal device_opp and opp structures are RCU protected.
- * Since we just use the regular accessor functions to access the internal data
- * structures, we use RCU read lock inside this function. As a result, users of
- * this function DONOT need to use explicit locks for invoking.
+ * To simplify the logic, we pretend we are updater and hold relevant mutex here
+ * Callers should ensure that this function is *NOT* called under RCU protection
+ * or in contexts where mutex locking cannot be used.
  */
 int dev_pm_opp_init_cpufreq_table(struct device *dev,
 			    struct cpufreq_frequency_table **table)
 {
+	struct device_opp *dev_opp;
 	struct dev_pm_opp *opp;
-	struct cpufreq_frequency_table *freq_table = NULL;
-	int i, max_opps, ret = 0;
-	unsigned long rate;
+	struct cpufreq_frequency_table *freq_table;
+	int i = 0;
 
-	rcu_read_lock();
+	/* Pretend as if I am an updater */
+	mutex_lock(&dev_opp_list_lock);
 
-	max_opps = dev_pm_opp_get_opp_count(dev);
-	if (max_opps <= 0) {
-		ret = max_opps ? max_opps : -ENODATA;
-		goto out;
+	dev_opp = find_device_opp(dev);
+	if (IS_ERR(dev_opp)) {
+		int r = PTR_ERR(dev_opp);
+		mutex_unlock(&dev_opp_list_lock);
+		dev_err(dev, "%s: Device OPP not found (%d)\n", __func__, r);
+		return r;
 	}
 
-	freq_table = kzalloc(sizeof(*freq_table) * (max_opps + 1), GFP_KERNEL);
+	freq_table = kzalloc(sizeof(struct cpufreq_frequency_table) *
+			     (dev_pm_opp_get_opp_count(dev) + 1), GFP_KERNEL);
 	if (!freq_table) {
-		ret = -ENOMEM;
-		goto out;
+		mutex_unlock(&dev_opp_list_lock);
+		dev_warn(dev, "%s: Unable to allocate frequency table\n",
+			__func__);
+		return -ENOMEM;
 	}
 
-	for (i = 0, rate = 0; i < max_opps; i++, rate++) {
-		/* find next rate */
-		opp = dev_pm_opp_find_freq_ceil(dev, &rate);
-		if (IS_ERR(opp)) {
-			ret = PTR_ERR(opp);
-			goto out;
+	list_for_each_entry(opp, &dev_opp->opp_list, node) {
+		if (opp->available) {
+			freq_table[i].driver_data = i;
+			freq_table[i].frequency = opp->rate / 1000;
+			i++;
 		}
-		freq_table[i].driver_data = i;
-		freq_table[i].frequency = rate / 1000;
 	}
+	mutex_unlock(&dev_opp_list_lock);
 
 	freq_table[i].driver_data = i;
 	freq_table[i].frequency = CPUFREQ_TABLE_END;
 
 	*table = &freq_table[0];
 
-out:
-	rcu_read_unlock();
-	if (ret)
-		kfree(freq_table);
-
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_init_cpufreq_table);
 
@@ -759,9 +734,11 @@ int of_init_opp_table(struct device *dev)
 		unsigned long freq = be32_to_cpup(val++) * 1000;
 		unsigned long volt = be32_to_cpup(val++);
 
-		if (dev_pm_opp_add(dev, freq, volt))
+		if (dev_pm_opp_add(dev, freq, volt)) {
 			dev_warn(dev, "%s: Failed to add OPP %ld\n",
 				 __func__, freq);
+			continue;
+		}
 		nr -= 2;
 	}
 
