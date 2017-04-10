@@ -2155,7 +2155,7 @@ retry_find_task:
 		tsk = find_task_by_vpid(pid);
 		if (!tsk) {
 			rcu_read_unlock();
-			ret= -ESRCH;
+			ret = -ESRCH;
 			goto out_unlock_cgroup;
 		}
 		/*
@@ -4247,6 +4247,9 @@ static void css_free_work_fn(struct work_struct *work)
 	struct cgroup_subsys_state *css =
 		container_of(work, struct cgroup_subsys_state, destroy_work);
 
+	if (css->parent)
+		css_put(css->parent);
+
 	cgroup_dput(css->cgroup);
 }
 
@@ -4272,8 +4275,12 @@ static void init_cgroup_css(struct cgroup_subsys_state *css,
 	css->cgroup = cgrp;
 	css->ss = ss;
 	css->flags = 0;
-	if (cgrp == cgroup_dummy_top)
+
+	if (cgrp->parent)
+		css->parent = cgroup_css(cgrp->parent, ss->subsys_id);
+	else
 		css->flags |= CSS_ROOT;
+
 	BUG_ON(cgroup_css(cgrp, ss->subsys_id));
 	cgrp->subsys[ss->subsys_id] = css;
 }
@@ -4375,6 +4382,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	cgrp->dentry = dentry;
 
 	cgrp->parent = parent;
+	cgrp->dummy_css.parent = &parent->dummy_css;
 	cgrp->root = parent->root;
 
 	if (notify_on_release(parent))
@@ -4417,9 +4425,13 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 	list_add_tail_rcu(&cgrp->sibling, &cgrp->parent->children);
 	root->number_of_cgroups++;
 
-	/* each css holds a ref to the cgroup's dentry */
-	for_each_root_subsys(root, ss)
+	/* each css holds a ref to the cgroup's dentry and the parent css */
+	for_each_root_subsys(root, ss) {
+		struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
+
 		dget(dentry);
+		percpu_ref_get(&css->parent->refcnt);
+	}
 
 	/* hold a ref to the parent's dentry */
 	dget(parent->dentry);
