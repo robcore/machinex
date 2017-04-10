@@ -2373,7 +2373,9 @@ extern int simple_write_end(struct file *file, struct address_space *mapping,
 			loff_t pos, unsigned len, unsigned copied,
 			struct page *page, void *fsdata);
 
+extern int always_delete_dentry(const struct dentry *);
 extern struct dentry *simple_lookup(struct inode *, struct dentry *, unsigned int flags);
+extern const struct dentry_operations simple_dentry_operations;
 extern ssize_t generic_read_dir(struct file *, char __user *, size_t, loff_t *);
 extern const struct file_operations simple_dir_operations;
 extern const struct inode_operations simple_dir_inode_operations;
