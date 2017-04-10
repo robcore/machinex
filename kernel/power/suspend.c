@@ -170,7 +170,7 @@ static int platform_suspend_begin(suspend_state_t state)
 {
 	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin)
 		return freeze_ops->begin();
-	else if (suspend_ops && suspend_ops->begin)
+	else if (suspend_ops->begin)
 		return suspend_ops->begin(state);
 	else
 		return 0;
@@ -180,7 +180,7 @@ static void platform_suspend_end(suspend_state_t state)
 {
 	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
 		freeze_ops->end();
-	else if (suspend_ops && suspend_ops->end)
+	else if (suspend_ops->end)
 		suspend_ops->end();
 }
 
@@ -471,7 +471,8 @@ int suspend_devices_and_enter(suspend_state_t state)
 
  Resume_devices:
 	suspend_test_start();
-	dpm_resume_end(PMSG_RESUME);
+	if (!resumed)
+		dpm_resume_end(PMSG_RESUME);
 	suspend_test_finish("resume devices");
 	resume_console();
  Close:
