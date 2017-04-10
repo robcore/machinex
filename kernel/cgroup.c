@@ -4261,11 +4261,13 @@ static void css_free_work_fn(struct work_struct *work)
 {
 	struct cgroup_subsys_state *css =
 		container_of(work, struct cgroup_subsys_state, destroy_work);
+	struct cgroup *cgrp = css->cgroup;
 
 	if (css->parent)
 		css_put(css->parent);
 
-	cgroup_dput(css->cgroup);
+	css->ss->css_free(css);
+	cgroup_dput(cgrp);
 }
 
 static void css_free_rcu_fn(struct rcu_head *rcu_head)
@@ -4278,7 +4280,7 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
 	 * css_put().  dput() requires process context which we don't have.
 	 */
 	INIT_WORK(&css->destroy_work, css_free_work_fn);
-	schedule_work(&css->destroy_work);
+	queue_work(cgroup_destroy_wq, &css->destroy_work);
 }
 
 static void css_release(struct percpu_ref *ref)
@@ -4289,7 +4291,7 @@ static void css_release(struct percpu_ref *ref)
 	call_rcu(&css->rcu_head, css_free_rcu_fn);
 }
 
-static void init_cgroup_css(struct cgroup_subsys_state *css,
+static void init_css(struct cgroup_subsys_state *css,
 			       struct cgroup_subsys *ss,
 			       struct cgroup *cgrp)
 {
@@ -4306,9 +4308,9 @@ static void init_cgroup_css(struct cgroup_subsys_state *css,
 }
 
 /* invoke ->css_online() on a new CSS and mark it online if successful */
-static int online_css(struct cgroup_subsys *ss, struct cgroup *cgrp)
+static int online_css(struct cgroup_subsys_state *css)
 {
-	struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
+	struct cgroup_subsys *ss = css->ss;
 	int ret = 0;
 
 	lockdep_assert_held(&cgroup_mutex);
@@ -4324,9 +4326,9 @@ static int online_css(struct cgroup_subsys *ss, struct cgroup *cgrp)
 }
 
 /* if the CSS is online, invoke ->css_offline() on it and mark it offline */
-static void offline_css(struct cgroup_subsys *ss, struct cgroup *cgrp)
+static void offline_css(struct cgroup_subsys_state *css)
 {
-	struct cgroup_subsys_state *css = cgroup_css(cgrp, ss->subsys_id);
+	struct cgroup_subsys *ss = css->ss;
 
 	lockdep_assert_held(&cgroup_mutex);
 
@@ -4418,7 +4420,7 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &cgrp->flags);
 
 	for_each_root_subsys(root, ss) {
-		struct cgroup_subsys_state *css = css_ar[ss->subsys_id];
+		struct cgroup_subsys_state *css;
 
 		css = ss->css_alloc(cgroup_css(parent, ss));
 		if (IS_ERR(css)) {
@@ -4463,7 +4465,9 @@ static long cgroup_create(struct cgroup *parent, struct dentry *dentry,
 
 	/* creation succeeded, notify subsystems */
 	for_each_root_subsys(root, ss) {
-		err = online_css(ss, cgrp);
+		struct cgroup_subsys_state *css = css_ar[ss->subsys_id];
+
+		err = online_css(css);
 		if (err)
 			goto err_destroy;
 
@@ -4577,7 +4581,7 @@ static void css_killed_ref_fn(struct percpu_ref *ref)
 		container_of(ref, struct cgroup_subsys_state, refcnt);
 
 	INIT_WORK(&css->destroy_work, css_killed_work_fn);
-	queue_work(&css->destroy_work);
+	queue_work(cgroup_destroy_wq, &css->destroy_work);
 }
 
 /**
@@ -4735,10 +4739,9 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
  * @work: cgroup->destroy_free_work
  *
  * This function is invoked from a work item for a cgroup which is being
- * destroyed after the percpu refcnts of all css's are guaranteed to be
- * seen as killed on all CPUs, and performs the rest of destruction.  This
- * is the second step of destruction described in the comment above
- * cgroup_destroy_locked().
+ * destroyed after all css's are offlined and performs the rest of
+ * destruction.  This is the second step of destruction described in the
+ * comment above cgroup_destroy_locked().
  */
 static void cgroup_destroy_css_killed(struct cgroup *cgrp)
 {
@@ -4811,7 +4814,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
 	css = ss->css_alloc(cgroup_css(cgroup_dummy_top, ss));
 	/* We don't handle early failures gracefully */
 	BUG_ON(IS_ERR(css));
-	init_cgroup_css(css, ss, cgroup_dummy_top);
+	init_css(css, ss, cgroup_dummy_top);
 
 	/* Update the init_css_set to contain a subsys
 	 * pointer to this state - since the subsystem is
@@ -4993,7 +4996,8 @@ void cgroup_unload_subsys(struct cgroup_subsys *ss)
 	/*
 	 * remove subsystem's css from the cgroup_dummy_top and free it -
 	 * need to free before marking as null because ss->css_free needs
-	 * the cgrp->subsys pointer to find their state.
+	 * the cgrp->subsys pointer to find their state. note that this
+	 * also takes care of freeing the css_id.
 	 */
 	ss->css_free(cgroup_css(cgroup_dummy_top, ss));
 	RCU_INIT_POINTER(cgroup_dummy_top->subsys[ss->subsys_id], NULL);
