@@ -18,8 +18,9 @@
 #include <trace/events/power.h>
 #include <linux/resume-trace.h>
 #include <linux/moduleparam.h>
+/*
 #include <linux/freezer.h>
-
+*/
 static bool enable_gps_ws = true;
 module_param(enable_gps_ws, bool, 0644);
 static bool enable_msm_hsic_ws = true;
