@@ -32,6 +32,7 @@
 #include <linux/errno.h>
 #include <linux/init_task.h>
 #include <linux/kernel.h>
+#include <linux/export.h>
 #include <linux/list.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
@@ -527,15 +528,19 @@ static void free_cgrp_cset_links(struct list_head *links_to_free)
 	write_unlock(&css_set_lock);
 }
 
-/*
- * allocate_cg_links() allocates "count" cg_cgroup_link structures
- * and chains them on tmp through their cgrp_link_list fields. Returns 0 on
- * success or a negative error
+/**
+ * allocate_cgrp_cset_links - allocate cgrp_cset_links
+ * @count: the number of links to allocate
+ * @tmp_links: list_head the allocated links are put on
+ *
+ * Allocate @count cgrp_cset_link structures and chain them on @tmp_links
+ * through ->cset_link.  Returns 0 on success or -errno.
  */
 static int allocate_cgrp_cset_links(int count, struct list_head *tmp_links)
 {
 	struct cgrp_cset_link *link;
 	int i;
+
 	INIT_LIST_HEAD(tmp_links);
 	write_lock(&css_set_lock);
 	for (i = 0; i < count; i++) {
@@ -3945,7 +3950,6 @@ static int cgroup_populate_dir(struct cgroup *cgrp, unsigned long subsys_mask)
 				goto err;
 		}
 	}
-
 	return 0;
 err:
 	cgroup_clear_dir(cgrp, subsys_mask);
@@ -4009,9 +4013,8 @@ static void css_release(struct percpu_ref *ref)
 	call_rcu(&css->rcu_head, css_free_rcu_fn);
 }
 
-static void init_css(struct cgroup_subsys_state *css,
-			       struct cgroup_subsys *ss,
-			       struct cgroup *cgrp)
+static void init_css(struct cgroup_subsys_state *css, struct cgroup_subsys *ss,
+		     struct cgroup *cgrp)
 {
 	css->cgroup = cgrp;
 	css->ss = ss;
@@ -4656,16 +4659,12 @@ static int __init cgroup_wq_init(void)
 	/*
 	 * There isn't much point in executing destruction path in
 	 * parallel.  Good chunk is serialized with cgroup_mutex anyway.
-	 *
-	 * XXX: Must be ordered to make sure parent is offlined after
-	 * children.  The ordering requirement is for memcg where a
-	 * parent's offline may wait for a child's leading to deadlock.  In
-	 * the long term, this should be fixed from memcg side.
+	 * Use 1 for @max_active.
 	 *
 	 * We would prefer to do this in cgroup_init() above, but that
 	 * is called before init_workqueues(): so leave this until after.
 	 */
-	cgroup_destroy_wq = alloc_ordered_workqueue("cgroup_destroy", 0);
+	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
 	BUG_ON(!cgroup_destroy_wq);
 
 	/*
@@ -4911,11 +4910,8 @@ void cgroup_exit(struct task_struct *tsk)
 	RCU_INIT_POINTER(tsk->cgroups, &init_css_set);
 
 	if (need_forkexit_callback) {
-		/*
-		 * fork/exit callbacks are supported only for builtin
-		 * subsystems, see cgroup_post_fork() for details.
-		 */
-		for_each_builtin_subsys(ss, i) {
+		/* see cgroup_post_fork() for details */
+		for_each_subsys(ss, i) {
 			if (ss->exit) {
 				struct cgroup_subsys_state *old_css = cset->subsys[i];
 				struct cgroup_subsys_state *css = task_css(tsk, i);
