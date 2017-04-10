@@ -65,8 +65,8 @@
 
 #include <trace/events/vmscan.h>
 
-struct cgroup_subsys mem_cgroup_subsys __read_mostly;
-EXPORT_SYMBOL(mem_cgroup_subsys);
+struct cgroup_subsys memory_cgrp_subsys __read_mostly;
+EXPORT_SYMBOL(memory_cgrp_subsys);
 
 #define MEM_CGROUP_RECLAIM_RETRIES	5
 static struct mem_cgroup *root_mem_cgroup __read_mostly;
@@ -1122,7 +1122,7 @@ struct mem_cgroup *mem_cgroup_from_task(struct task_struct *p)
 	if (unlikely(!p))
 		return NULL;
 
-	return mem_cgroup_from_css(task_css(p, mem_cgroup_subsys_id));
+	return mem_cgroup_from_css(task_css(p, memory_cgrp_id));
 }
 
 struct mem_cgroup *try_get_mem_cgroup_from_mm(struct mm_struct *mm)
@@ -1676,7 +1676,7 @@ void mem_cgroup_print_oom_info(struct mem_cgroup *memcg, struct task_struct *p)
 	rcu_read_lock();
 
 	mem_cgrp = memcg->css.cgroup;
-	task_cgrp = task_cgroup(p, mem_cgroup_subsys_id);
+	task_cgrp = task_cgroup(p, memory_cgrp_id);
 
 	ret = cgroup_path(task_cgrp, memcg_name, PATH_MAX);
 	if (ret < 0) {
@@ -2839,7 +2839,7 @@ static struct mem_cgroup *mem_cgroup_lookup(unsigned short id)
 	/* ID 0 is unused ID */
 	if (!id)
 		return NULL;
-	css = css_lookup(&mem_cgroup_subsys, id);
+	css = css_lookup(&memory_cgrp_subsys, id);
 	if (!css)
 		return NULL;
 	return mem_cgroup_from_css(css);
@@ -6325,7 +6325,7 @@ static void __mem_cgroup_free(struct mem_cgroup *memcg)
 	size_t size = memcg_size();
 
 	mem_cgroup_remove_from_trees(memcg);
-	free_css_id(&mem_cgroup_subsys, &memcg->css);
+	free_css_id(&memory_cgrp_subsys, &memcg->css);
 
 	for_each_node(node)
 		free_mem_cgroup_per_zone_info(memcg, node);
@@ -6504,10 +6504,10 @@ mem_cgroup_css_online(struct cgroup_css *css)
 		 * unfortunate state in our controller.
 		 */
 		if (parent != root_mem_cgroup)
-			mem_cgroup_subsys.broken_hierarchy = true;
+			memory_cgrp_subsys.broken_hierarchy = true;
 	}
 
-	error = memcg_init_kmem(memcg, &mem_cgroup_subsys);
+	error = memcg_init_kmem(memcg, &memory_cgrp_subsys);
 	mutex_unlock(&memcg_create_mutex);
 	if (error) {
 		/*
@@ -7151,9 +7151,7 @@ static void mem_cgroup_bind(struct cgroup_css *root_css)
 		mem_cgroup_from_css(root_css)->use_hierarchy = true;
 }
 
-struct cgroup_subsys mem_cgroup_subsys = {
-	.name = "memory",
-	.subsys_id = mem_cgroup_subsys_id,
+struct cgroup_subsys memory_cgrp_subsys = {
 	.css_alloc = mem_cgroup_css_alloc,
 	.css_online = mem_cgroup_css_online,
 	.css_offline = mem_cgroup_css_offline,
@@ -7181,7 +7179,7 @@ __setup("swapaccount=", enable_swap_account);
 
 static void __init memsw_file_init(void)
 {
-	WARN_ON(cgroup_add_cftypes(&mem_cgroup_subsys, memsw_cgroup_files));
+	WARN_ON(cgroup_add_cftypes(&memory_cgrp_subsys, memsw_cgroup_files));
 }
 
 static void __init enable_swap_cgroup(void)

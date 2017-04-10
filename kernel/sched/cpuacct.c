@@ -41,7 +41,7 @@ static inline struct cpuacct *css_ca(struct cgroup_subsys_state *css)
 /* return cpu accounting group to which this task belongs */
 static inline struct cpuacct *task_ca(struct task_struct *tsk)
 {
-	return css_ca(task_css(tsk, cpuacct_subsys_id));
+	return css_ca(task_css(tsk, cpuacct_cgrp_id));
 }
 
 static inline struct cpuacct *parent_ca(struct cpuacct *ca)
@@ -281,11 +281,9 @@ void __init cpuacct_init(void)
 	root_cpuacct.cpuusage = &root_cpuacct_cpuusage;
 }
 
-struct cgroup_subsys cpuacct_subsys = {
-	.name		= "cpuacct",
+struct cgroup_subsys cpuacct_cgrp_subsys = {
 	.css_alloc	= cpuacct_css_alloc,
 	.css_free	= cpuacct_css_free,
-	.subsys_id	= cpuacct_subsys_id,
 	.base_cftypes	= files,
 	.early_init	= 1,
 };
