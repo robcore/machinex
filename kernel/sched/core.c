@@ -589,8 +589,6 @@ void resched_curr(struct rq *rq)
 
 	if (set_nr_and_not_polling(curr))
 		smp_send_reschedule(cpu);
-	//else
-		//trace_sched_wake_idle_without_ipi(cpu);
 }
 
 void resched_cpu(int cpu)
