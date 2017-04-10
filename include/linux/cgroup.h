@@ -869,7 +869,8 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * destroyed". The caller should check css and cgroup's status.
  */
 
-struct cgroup_subsys_state *cgroup_css_from_dir(struct file *f, int id);
+struct cgroup_subsys_state *css_from_dir(struct dentry *dentry,
+					 struct cgroup_subsys *ss);
 
 /*
  * Default Android check for whether the current process is allowed to move a
