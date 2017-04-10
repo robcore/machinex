@@ -64,7 +64,6 @@ static async_cookie_t next_cookie = 1;
 #define MAX_WORK		32768
 #define ASYNC_COOKIE_MAX	ULLONG_MAX	/* infinity cookie */
 
-static LIST_HEAD(async_pending);
 static ASYNC_DOMAIN(async_dfl_domain);
 static LIST_HEAD(async_domains);
 static DEFINE_SPINLOCK(async_lock);
@@ -83,48 +82,17 @@ static DECLARE_WAIT_QUEUE_HEAD(async_done);
 
 static atomic_t entry_count;
 
-
-/*
- * MUST be called with the lock held!
- */
-static async_cookie_t __lowest_in_progress(struct async_domain *domain)
-{
-	async_cookie_t first_running = ASYNC_COOKIE_MAX;
-	async_cookie_t first_pending = ASYNC_COOKIE_MAX;
-	struct async_entry *entry;
-
-	if (!running) { /* just check the entry count */
-		if (atomic_read(&entry_count))
-			return 0; /* smaller than any cookie */
-		else
-			return next_cookie;
-	}
-	/*
-	 * Both running and pending lists are sorted but not disjoint.
-	 * Take the first cookies from both and return the min.
-	 */
-	if (!list_empty(&domain->running)) {
-		entry = list_first_entry(&domain->running, typeof(*entry), list);
-		first_running = entry->cookie;
-	}
-
-	list_for_each_entry(entry, &async_pending, list) {
-		if (entry->domain == domain) {
-			first_pending = entry->cookie;
-			break;
-		}
-	}
-
-	return min(first_running, first_pending);
-}
-
 static async_cookie_t lowest_in_progress(struct async_domain *domain)
 {
+	async_cookie_t ret = ASYNC_COOKIE_MAX;
 	unsigned long flags;
-	async_cookie_t ret;
 
 	spin_lock_irqsave(&async_lock, flags);
-	ret = __lowest_in_progress(domain);
+	if (!list_empty(&domain->pending)) {
+		struct async_entry *first = list_first_entry(&domain->pending,
+						struct async_entry, list);
+		ret = first->cookie;
+	}
 	spin_unlock_irqrestore(&async_lock, flags);
 	return ret;
 }
@@ -136,20 +104,11 @@ static void async_run_entry_fn(struct work_struct *work)
 {
 	struct async_entry *entry =
 		container_of(work, struct async_entry, work);
-	struct async_entry *pos;
 	unsigned long flags;
 	ktime_t uninitialized_var(calltime), delta, rettime;
 	struct async_domain *domain = entry->domain;
 
-	/* 1) move self to the running queue, make sure it stays sorted */
-	spin_lock_irqsave(&async_lock, flags);
-	list_for_each_entry_reverse(pos, &domain->running, list)
-		if (entry->cookie < pos->cookie)
-			break;
-	list_move_tail(&entry->list, &pos->list);
-	spin_unlock_irqrestore(&async_lock, flags);
-
-	/* 2) run (and print duration) */
+	/* 1) run (and print duration) */
 	if (initcall_debug && system_state == SYSTEM_BOOTING) {
 		pr_debug("calling  %lli_%pF @ %i\n",
 			(long long)entry->cookie,
@@ -166,19 +125,19 @@ static void async_run_entry_fn(struct work_struct *work)
 			(long long)ktime_to_ns(delta) >> 10);
 	}
 
-	/* 3) remove self from the running queue */
+	/* 2) remove self from the pending queues */
 	spin_lock_irqsave(&async_lock, flags);
 	list_del(&entry->list);
-	if (domain->registered && --domain->count == 0)
+	if (domain->registered && list_empty(&domain->pending))
 		list_del_init(&domain->node);
 
-	/* 4) free the entry */
+	/* 3) free the entry */
 	kfree(entry);
 	atomic_dec(&entry_count);
 
 	spin_unlock_irqrestore(&async_lock, flags);
 
-	/* 5) wake up any waiters */
+	/* 4) wake up any waiters */
 	wake_up(&async_done);
 }
 
@@ -212,9 +171,9 @@ static async_cookie_t __async_schedule(async_func_ptr *ptr, void *data, struct a
 
 	spin_lock_irqsave(&async_lock, flags);
 	newcookie = entry->cookie = next_cookie++;
-	list_add_tail(&entry->list, &async_pending);
-	if (domain->registered && domain->count++ == 0)
+	if (domain->registered && list_empty(&domain->pending))
 		list_add_tail(&domain->node, &async_domains);
+	list_add_tail(&entry->list, &domain->pending);
 	atomic_inc(&entry_count);
 	spin_unlock_irqrestore(&async_lock, flags);
 
@@ -283,6 +242,27 @@ void async_synchronize_full(void)
 EXPORT_SYMBOL_GPL(async_synchronize_full);
 
 /**
+ * async_unregister_domain - ensure no more anonymous waiters on this domain
+ * @domain: idle domain to flush out of any async_synchronize_full instances
+ *
+ * async_synchronize_{cookie|full}_domain() are not flushed since callers
+ * of these routines should know the lifetime of @domain
+ *
+ * Prefer ASYNC_DOMAIN_EXCLUSIVE() declarations over flushing
+ */
+void async_unregister_domain(struct async_domain *domain)
+{
+	mutex_lock(&async_register_mutex);
+	spin_lock_irq(&async_lock);
+	WARN_ON(!domain->registered || !list_empty(&domain->node) ||
+		!list_empty(&domain->pending));
+	domain->registered = 0;
+	spin_unlock_irq(&async_lock);
+	mutex_unlock(&async_register_mutex);
+}
+EXPORT_SYMBOL_GPL(async_unregister_domain);
+
+/**
  * async_synchronize_full_domain - synchronize all asynchronous function within a certain domain
  * @domain: the domain to synchronize
  *
@@ -298,17 +278,17 @@ EXPORT_SYMBOL_GPL(async_synchronize_full_domain);
 /**
  * async_synchronize_cookie_domain - synchronize asynchronous function calls within a certain domain with cookie checkpointing
  * @cookie: async_cookie_t to use as checkpoint
- * @running: running list to synchronize on, NULL indicates all lists
+ * @domain: the domain to synchronize
  *
  * This function waits until all asynchronous function calls for the
- * synchronization domain specified by running list @running submitted
- * prior to @cookie have been done.
+ * synchronization domain specified by @domain submitted prior to @cookie
+ * have been done.
  */
-void async_synchronize_cookie_domain(async_cookie_t cookie, struct async_domain *running)
+void async_synchronize_cookie_domain(async_cookie_t cookie, struct async_domain *domain)
 {
 	ktime_t uninitialized_var(starttime), delta, endtime;
 
-	if (!running)
+	if (!domain)
 		return;
 
 	if (initcall_debug && system_state == SYSTEM_BOOTING) {
