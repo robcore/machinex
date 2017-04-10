@@ -595,13 +595,13 @@ int disable_nonboot_cpus(void)
 	 */
 	cpumask_clear(frozen_cpus);
 
-	pr_info("Disabling non-boot CPUs ...\n");
+	pr_debug("Disabling non-boot CPUs ...\n");
 	for_each_online_cpu(cpu) {
 		if (cpu == first_cpu)
 			continue;
 		error = _cpu_down(cpu, 1);
 		if (!error) {
-			pr_info("CPU%d is down\n", cpu);
+			pr_debug("CPU%d is down\n", cpu);
 			cpumask_set_cpu(cpu, frozen_cpus);
 		} else {
 			pr_err("Error taking CPU%d down: %d\n", cpu, error);
@@ -615,7 +615,7 @@ int disable_nonboot_cpus(void)
 		cpu_hotplug_disabled = 1;
 	} else {
 		pr_err("Non-boot CPUs are not disabled\n");
-	}			pr_info("CPU%d is up\n", cpu);
+	}			pr_debug("CPU%d is up\n", cpu);
 	cpu_maps_update_done();
 	return error;
 }
