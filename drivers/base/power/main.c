@@ -534,7 +534,7 @@ static void dpm_watchdog_clear(struct dpm_watchdog *wd)
  * The driver of @dev will not receive interrupts while this function is being
  * executed.
  */
-static int device_resume_noirq(struct device *dev, pm_message_t state)
+static int device_resume_noirq(struct device *dev, pm_message_t state, bool async)
 {
 	pm_callback_t callback = NULL;
 	char *info = NULL;
@@ -548,6 +548,8 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 
 	if (!dev->power.is_noirq_suspended)
 		goto Out;
+
+	dpm_wait(dev->parent, async);
 
 	if (dev->pm_domain) {
 		info = "noirq power domain ";
@@ -609,24 +611,32 @@ void dpm_resume_noirq(pm_message_t state)
 	ktime_t starttime = ktime_get();
 	pm_transition = state;
 
+	mutex_lock(&dpm_list_mtx);
+	pm_transition = state;
+
+	/*
+	 * Advanced the async threads upfront,
+	 * in case the starting of async threads is
+	 * delayed by non-async resuming devices.
+	 */
 	list_for_each_entry(dev, &dpm_noirq_list, power.entry) {
+		reinit_completion(&dev->power.completion);
 		if (is_async(dev)) {
 			get_device(dev);
 			async_schedule(async_resume_noirq, dev);
 		}
 	}
 
-	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_noirq_list)) {
 		dev = to_device(dpm_noirq_list.next);
-
 		get_device(dev);
 		list_move_tail(&dev->power.entry, &dpm_late_early_list);
 		mutex_unlock(&dpm_list_mtx);
 
 		if (!is_async(dev)) {
 			int error;
-			error = device_resume_noirq(dev, state);
+
+			error = device_resume_noirq(dev, state, false);
 			if (error) {
 				suspend_stats.failed_resume_noirq++;
 				dpm_save_failed_step(SUSPEND_RESUME_NOIRQ);
@@ -695,8 +705,27 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 	dev->power.is_late_suspended = false;
 
  Out:
+	complete_all(&dev->power.completion);
 	TRACE_RESUME(error);
 	return error;
+}
+
+static bool is_async(struct device *dev)
+{
+	return dev->power.async_suspend && pm_async_enabled
+		&& !pm_trace_is_enabled();
+}
+
+static void async_resume_noirq(void *data, async_cookie_t cookie)
+{
+	struct device *dev = (struct device *)data;
+	int error;
+
+	error = device_resume_noirq(dev, pm_transition, true);
+	if (error)
+		pm_dev_err(dev, pm_transition, " async", error);
+
+	put_device(dev);
 }
 
 /**
@@ -842,12 +871,6 @@ static void async_resume(void *data, async_cookie_t cookie)
 	if (error)
 		pm_dev_err(dev, pm_transition, " async", error);
 	put_device(dev);
-}
-
-static bool is_async(struct device *dev)
-{
-	return dev->power.async_suspend && pm_async_enabled
-		&& !pm_trace_is_enabled();
 }
 
 /**
