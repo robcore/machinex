@@ -41,7 +41,6 @@
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
 #include <linux/backing-dev.h>
-#include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/magic.h>
 #include <linux/spinlock.h>
@@ -60,6 +59,14 @@
 #include <linux/kthread.h>
 
 #include <linux/atomic.h>
+
+/*
+ * pidlists linger the following amount before being destroyed.  The goal
+ * is avoiding frequent destruction in the middle of consecutive read calls
+ * Expiring in the middle is a performance problem not a correctness one.
+ * 1 sec should be enough.
+ */
+#define CGROUP_PIDLIST_DESTROY_DELAY	HZ
 
 /*
  * cgroup_mutex is the master lock.  Any modification to cgroup or its
@@ -95,6 +102,12 @@ static DEFINE_MUTEX(cgroup_root_mutex);
 static struct workqueue_struct *cgroup_destroy_wq;
 
 /*
+ * pidlist destructions need to be flushed on cgroup destruction.  Use a
+ * separate workqueue as flush domain.
+ */
+static struct workqueue_struct *cgroup_pidlist_destroy_wq;
+
+/*
  * Generate an array of cgroup subsystem pointers. At boot time, this is
  * populated with the built in subsystems, and modular subsystems are
  * registered after that. The mutable section of this array is protected by
@@ -115,19 +128,6 @@ static struct cgroupfs_root cgroup_dummy_root;
 
 /* dummy_top is a shorthand for the dummy hierarchy's top cgroup */
 static struct cgroup * const cgroup_dummy_top = &cgroup_dummy_root.top_cgroup;
-
-/*
- * cgroupfs file entry, pointed to from leaf dentry->d_fsdata.
- */
-struct cfent {
-	struct list_head		node;
-	struct dentry			*dentry;
-	struct cftype			*type;
-	struct cgroup_subsys_state	*css;
-
-	/* file xattrs */
-	struct simple_xattrs		xattrs;
-};
 
 /* The list of hierarchy roots */
 
@@ -169,6 +169,7 @@ static int cgroup_destroy_locked(struct cgroup *cgrp);
 static int cgroup_addrm_files(struct cgroup *cgrp, struct cftype cfts[],
 			      bool is_add);
 static int cgroup_file_release(struct inode *inode, struct file *file);
+static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
 
 /**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
@@ -798,11 +799,7 @@ static void cgroup_free_fn(struct work_struct *work)
 	 */
 	deactivate_super(cgrp->root->sb);
 
-	/*
-	 * if we're getting rid of the cgroup, refcount should ensure
-	 * that there are no pidlists left.
-	 */
-	BUG_ON(!list_empty(&cgrp->pidlists));
+	cgroup_pidlist_destroy_all(cgrp);
 
 	simple_xattrs_free(&cgrp->xattrs);
 
@@ -2242,10 +2239,9 @@ static int cgroup_release_agent_write(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static int cgroup_release_agent_show(struct cgroup_subsys_state *css,
-				     struct cftype *cft, struct seq_file *seq)
+static int cgroup_release_agent_show(struct seq_file *seq, void *v)
 {
-	struct cgroup *cgrp = css->cgroup;
+	struct cgroup *cgrp = seq_css(seq)->cgroup;
 
 	if (!cgroup_lock_live_group(cgrp))
 		return -ENODEV;
@@ -2255,140 +2251,61 @@ static int cgroup_release_agent_show(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static int cgroup_sane_behavior_show(struct cgroup_subsys_state *css,
-				     struct cftype *cft, struct seq_file *seq)
+static int cgroup_sane_behavior_show(struct seq_file *seq, void *v)
 {
-	seq_printf(seq, "%d\n", cgroup_sane_behavior(css->cgroup));
+	struct cgroup *cgrp = seq_css(seq)->cgroup;
+
+	seq_printf(seq, "%d\n", cgroup_sane_behavior(cgrp));
 	return 0;
 }
 
 /* A buffer size big enough for numbers or short strings */
 #define CGROUP_LOCAL_BUFFER_SIZE 64
 
-static ssize_t cgroup_write_X64(struct cgroup_subsys_state *css,
-				struct cftype *cft, struct file *file,
-				const char __user *userbuf, size_t nbytes,
-				loff_t *unused_ppos)
-{
-	char buffer[CGROUP_LOCAL_BUFFER_SIZE];
-	int retval = 0;
-	char *end;
-
-	if (!nbytes)
-		return -EINVAL;
-	if (nbytes >= sizeof(buffer))
-		return -E2BIG;
-	if (copy_from_user(buffer, userbuf, nbytes))
-		return -EFAULT;
-
-	buffer[nbytes] = 0;     /* nul-terminate */
-	if (cft->write_u64) {
-		u64 val = simple_strtoull(strstrip(buffer), &end, 0);
-		if (*end)
-			return -EINVAL;
-		retval = cft->write_u64(css, cft, val);
-	} else {
-		s64 val = simple_strtoll(strstrip(buffer), &end, 0);
-		if (*end)
-			return -EINVAL;
-		retval = cft->write_s64(css, cft, val);
-	}
-	if (!retval)
-		retval = nbytes;
-	return retval;
-}
-
-static ssize_t cgroup_write_string(struct cgroup_subsys_state *css,
-				   struct cftype *cft, struct file *file,
-				   const char __user *userbuf, size_t nbytes,
-				   loff_t *unused_ppos)
-{
-	char local_buffer[CGROUP_LOCAL_BUFFER_SIZE];
-	int retval = 0;
-	size_t max_bytes = cft->max_write_len;
-	char *buffer = local_buffer;
-
-	if (!max_bytes)
-		max_bytes = sizeof(local_buffer) - 1;
-	if (nbytes >= max_bytes)
-		return -E2BIG;
-	/* Allocate a dynamic buffer if we need one */
-	if (nbytes >= sizeof(local_buffer)) {
-		buffer = kmalloc(nbytes + 1, GFP_KERNEL);
-		if (buffer == NULL)
-			return -ENOMEM;
-	}
-	if (nbytes && copy_from_user(buffer, userbuf, nbytes)) {
-		retval = -EFAULT;
-		goto out;
-	}
-
-	buffer[nbytes] = 0;     /* nul-terminate */
-	retval = cft->write_string(css, cft, strstrip(buffer));
-	if (!retval)
-		retval = nbytes;
-out:
-	if (buffer != local_buffer)
-		kfree(buffer);
-	return retval;
-}
-
-static ssize_t cgroup_file_write(struct file *file, const char __user *buf,
+static ssize_t cgroup_file_write(struct file *file, const char __user *userbuf,
 				 size_t nbytes, loff_t *ppos)
 {
 	struct cfent *cfe = __d_cfe(file->f_dentry);
 	struct cftype *cft = __d_cft(file->f_dentry);
 	struct cgroup_subsys_state *css = cfe->css;
+	size_t max_bytes = cft->max_write_len ?: CGROUP_LOCAL_BUFFER_SIZE - 1;
+	char *buf;
+	int ret;
 
-	if (cft->write)
-		return cft->write(css, cft, file, buf, nbytes, ppos);
-	if (cft->write_u64 || cft->write_s64)
-		return cgroup_write_X64(css, cft, file, buf, nbytes, ppos);
-	if (cft->write_string)
-		return cgroup_write_string(css, cft, file, buf, nbytes, ppos);
-	if (cft->trigger) {
-		int ret = cft->trigger(css, (unsigned int)cft->private);
-		return ret ? ret : nbytes;
+	if (nbytes >= max_bytes)
+		return -E2BIG;
+
+	buf = kmalloc(nbytes + 1, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	if (copy_from_user(buf, userbuf, nbytes)) {
+		ret = -EFAULT;
+		goto out_free;
 	}
-	return -EINVAL;
-}
 
-static ssize_t cgroup_read_u64(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct file *file,
-			       char __user *buf, size_t nbytes, loff_t *ppos)
-{
-	char tmp[CGROUP_LOCAL_BUFFER_SIZE];
-	u64 val = cft->read_u64(css, cft);
-	int len = sprintf(tmp, "%llu\n", (unsigned long long) val);
+	buf[nbytes] = '\0';
 
-	return simple_read_from_buffer(buf, nbytes, ppos, tmp, len);
-}
-
-static ssize_t cgroup_read_s64(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct file *file,
-			       char __user *buf, size_t nbytes, loff_t *ppos)
-{
-	char tmp[CGROUP_LOCAL_BUFFER_SIZE];
-	s64 val = cft->read_s64(css, cft);
-	int len = sprintf(tmp, "%lld\n", (long long) val);
-
-	return simple_read_from_buffer(buf, nbytes, ppos, tmp, len);
-}
-
-static ssize_t cgroup_file_read(struct file *file, char __user *buf,
-				size_t nbytes, loff_t *ppos)
-{
-	struct cfent *cfe = __d_cfe(file->f_dentry);
-	struct cftype *cft = __d_cft(file->f_dentry);
-	struct cgroup_subsys_state *css = cfe->css;
-
-	if (cft->read)
-		return cft->read(css, cft, file, buf, nbytes, ppos);
-	if (cft->read_u64)
-		return cgroup_read_u64(css, cft, file, buf, nbytes, ppos);
-	if (cft->read_s64)
-		return cgroup_read_s64(css, cft, file, buf, nbytes, ppos);
-	return -EINVAL;
+	if (cft->write_string) {
+		ret = cft->write_string(css, cft, strstrip(buf));
+	} else if (cft->write_u64) {
+		unsigned long long v;
+		ret = kstrtoull(buf, 0, &v);
+		if (!ret)
+			ret = cft->write_u64(css, cft, v);
+	} else if (cft->write_s64) {
+		long long v;
+		ret = kstrtoll(buf, 0, &v);
+		if (!ret)
+			ret = cft->write_s64(css, cft, v);
+	} else if (cft->trigger) {
+		ret = cft->trigger(css, (unsigned int)cft->private);
+	} else {
+		ret = -EINVAL;
+	}
+out_free:
+	kfree(buf);
+	return ret ?: nbytes;
 }
 
 /*
@@ -2396,34 +2313,22 @@ static ssize_t cgroup_file_read(struct file *file, char __user *buf,
  * supports string->u64 maps, but can be extended in future.
  */
 
-static int cgroup_map_add(struct cgroup_map_cb *cb, const char *key, u64 value)
-{
-	struct seq_file *sf = cb->state;
-	return seq_printf(sf, "%s %llu\n", key, (unsigned long long)value);
-}
-
 static int cgroup_seqfile_show(struct seq_file *m, void *arg)
 {
-	struct cfent *cfe = m->private;
-	struct cftype *cft = cfe->type;
-	struct cgroup_subsys_state *css = cfe->css;
+	struct cftype *cft = seq_cft(m);
+	struct cgroup_subsys_state *css = seq_css(m);
 
-	if (cft->read_map) {
-		struct cgroup_map_cb cb = {
-			.fill = cgroup_map_add,
-			.state = m,
-		};
-		return cft->read_map(css, cft, &cb);
-	}
-	return cft->read_seq_string(css, cft, m);
+	if (cft->seq_show)
+		return cft->seq_show(m, arg);
+
+	if (cft->read_u64)
+		seq_printf(m, "%llu\n", cft->read_u64(css, cft));
+	else if (cft->read_s64)
+		seq_printf(m, "%lld\n", cft->read_s64(css, cft));
+	else
+		return -EINVAL;
+	return 0;
 }
-
-static const struct file_operations cgroup_seqfile_operations = {
-	.read = seq_read,
-	.write = cgroup_file_write,
-	.llseek = seq_lseek,
-	.release = cgroup_file_release,
-};
 
 static int cgroup_file_open(struct inode *inode, struct file *file)
 {
@@ -2460,11 +2365,19 @@ static int cgroup_file_open(struct inode *inode, struct file *file)
 	WARN_ON_ONCE(cfe->css && cfe->css != css);
 	cfe->css = css;
 
-	if (cft->read_map || cft->read_seq_string) {
-		file->f_op = &cgroup_seqfile_operations;
-		err = single_open(file, cgroup_seqfile_show, cfe);
-	} else if (cft->open) {
+	if (cft->open) {
 		err = cft->open(inode, file);
+	} else {
+		struct cgroup_open_file *of;
+
+		err = -ENOMEM;
+		of = kzalloc(sizeof(*of), GFP_KERNEL);
+		if (of) {
+			of->cfe = cfe;
+			err = single_open(file, cgroup_seqfile_show, of);
+			if (err)
+				kfree(of);
+		}
 	}
 
 	if (css->ss && err)
@@ -2476,13 +2389,11 @@ static int cgroup_file_release(struct inode *inode, struct file *file)
 {
 	struct cfent *cfe = __d_cfe(file->f_dentry);
 	struct cgroup_subsys_state *css = cfe->css;
-	int ret = 0;
 
 	if (css->ss)
 		css_put(css);
-	if (file->f_op == &cgroup_seqfile_operations)
-		single_release(inode, file);
-	return ret;
+	kfree(((struct seq_file *)file->private_data)->private);
+	return single_release(inode, file);
 }
 
 /*
@@ -2593,7 +2504,7 @@ static ssize_t cgroup_listxattr(struct dentry *dentry, char *buf, size_t size)
 }
 
 static const struct file_operations cgroup_file_operations = {
-	.read = cgroup_file_read,
+	.read = seq_read,
 	.write = cgroup_file_write,
 	.llseek = generic_file_llseek,
 	.open = cgroup_file_open,
@@ -2683,12 +2594,11 @@ static umode_t cgroup_file_mode(const struct cftype *cft)
 	if (cft->mode)
 		return cft->mode;
 
-	if (cft->read || cft->read_u64 || cft->read_s64 ||
-	    cft->read_map || cft->read_seq_string)
+	if (cft->read_u64 || cft->read_s64 || cft->seq_show)
 		mode |= S_IRUGO;
 
-	if (cft->write || cft->write_u64 || cft->write_s64 ||
-	    cft->write_string || cft->trigger)
+	if (cft->write_u64 || cft->write_s64 || cft->write_string ||
+	    cft->trigger)
 		mode |= S_IWUSR;
 
 	return mode;
@@ -3482,14 +3392,12 @@ struct cgroup_pidlist {
 	pid_t *list;
 	/* how many elements the above list has */
 	int length;
-	/* how many files are using the current array */
-	int use_count;
 	/* each of these stored in a list by its cgroup */
 	struct list_head links;
 	/* pointer to the cgroup we belong to, for list removal purposes */
 	struct cgroup *owner;
-	/* protects the other fields */
-	struct rw_semaphore rwsem;
+	/* for delayed destruction */
+	struct delayed_work destroy_dwork;
 };
 
 /*
@@ -3505,12 +3413,54 @@ static void *pidlist_allocate(int count)
 	else
 		return kmalloc(count * sizeof(pid_t), GFP_KERNEL);
 }
+
 static void pidlist_free(void *p)
 {
 	if (is_vmalloc_addr(p))
 		vfree(p);
 	else
 		kfree(p);
+}
+
+/*
+ * Used to destroy all pidlists lingering waiting for destroy timer.  None
+ * should be left afterwards.
+ */
+static void cgroup_pidlist_destroy_all(struct cgroup *cgrp)
+{
+	struct cgroup_pidlist *l, *tmp_l;
+
+	mutex_lock(&cgrp->pidlist_mutex);
+	list_for_each_entry_safe(l, tmp_l, &cgrp->pidlists, links)
+		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork, 0);
+	mutex_unlock(&cgrp->pidlist_mutex);
+
+	flush_workqueue(cgroup_pidlist_destroy_wq);
+	BUG_ON(!list_empty(&cgrp->pidlists));
+}
+
+static void cgroup_pidlist_destroy_work_fn(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct cgroup_pidlist *l = container_of(dwork, struct cgroup_pidlist,
+						destroy_dwork);
+	struct cgroup_pidlist *tofree = NULL;
+
+	mutex_lock(&l->owner->pidlist_mutex);
+
+	/*
+	 * Destroy iff we didn't get queued again.  The state won't change
+	 * as destroy_dwork can only be queued while locked.
+	 */
+	if (!delayed_work_pending(dwork)) {
+		list_del(&l->links);
+		pidlist_free(l->list);
+		put_pid_ns(l->key.ns);
+		tofree = l;
+	}
+
+	mutex_unlock(&l->owner->pidlist_mutex);
+	kfree(tofree);
 }
 
 /*
@@ -3543,9 +3493,62 @@ after:
 	return dest;
 }
 
+/*
+ * The two pid files - task and cgroup.procs - guaranteed that the result
+ * is sorted, which forced this whole pidlist fiasco.  As pid order is
+ * different per namespace, each namespace needs differently sorted list,
+ * making it impossible to use, for example, single rbtree of member tasks
+ * sorted by task pointer.  As pidlists can be fairly large, allocating one
+ * per open file is dangerous, so cgroup had to implement shared pool of
+ * pidlists keyed by cgroup and namespace.
+ *
+ * All this extra complexity was caused by the original implementation
+ * committing to an entirely unnecessary property.  In the long term, we
+ * want to do away with it.  Explicitly scramble sort order if
+ * sane_behavior so that no such expectation exists in the new interface.
+ *
+ * Scrambling is done by swapping every two consecutive bits, which is
+ * non-identity one-to-one mapping which disturbs sort order sufficiently.
+ */
+static pid_t pid_fry(pid_t pid)
+{
+	unsigned a = pid & 0x55555555;
+	unsigned b = pid & 0xAAAAAAAA;
+
+	return (a << 1) | (b >> 1);
+}
+
+static pid_t cgroup_pid_fry(struct cgroup *cgrp, pid_t pid)
+{
+	if (cgroup_sane_behavior(cgrp))
+		return pid_fry(pid);
+	else
+		return pid;
+}
+
 static int cmppid(const void *a, const void *b)
 {
 	return *(pid_t *)a - *(pid_t *)b;
+}
+
+static int fried_cmppid(const void *a, const void *b)
+{
+	return pid_fry(*(pid_t *)a) - pid_fry(*(pid_t *)b);
+}
+
+static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
+						  enum cgroup_filetype type)
+{
+	struct cgroup_pidlist *l;
+	/* don't need task_nsproxy() if we're looking at ourself */
+	struct pid_namespace *ns = task_active_pid_ns(current);
+
+	lockdep_assert_held(&cgrp->pidlist_mutex);
+
+	list_for_each_entry(l, &cgrp->pidlists, links)
+		if (l->key.type == type && l->key.ns == ns)
+			return l;
+	return NULL;
 }
 
 /*
@@ -3554,41 +3557,28 @@ static int cmppid(const void *a, const void *b)
  * of the use count, or returns NULL with no locks held if we're out of
  * memory.
  */
-static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
-						  enum cgroup_filetype type)
+static struct cgroup_pidlist *cgroup_pidlist_find_create(struct cgroup *cgrp,
+						enum cgroup_filetype type)
 {
 	struct cgroup_pidlist *l;
-	/* don't need task_nsproxy() if we're looking at ourself */
-	struct pid_namespace *ns = task_active_pid_ns(current);
 
-	/*
-	 * We can't drop the pidlist_mutex before taking the l->rwsem in case
-	 * the last ref-holder is trying to remove l from the list at the same
-	 * time. Holding the pidlist_mutex precludes somebody taking whichever
-	 * list we find out from under us - compare release_pid_array().
-	 */
-	mutex_lock(&cgrp->pidlist_mutex);
-	list_for_each_entry(l, &cgrp->pidlists, links) {
-		if (l->key.type == type && l->key.ns == ns) {
-			/* make sure l doesn't vanish out from under us */
-			down_write(&l->rwsem);
-			mutex_unlock(&cgrp->pidlist_mutex);
-			return l;
-		}
-	}
+	lockdep_assert_held(&cgrp->pidlist_mutex);
+
+	l = cgroup_pidlist_find(cgrp, type);
+	if (l)
+		return l;
+
 	/* entry not found; create a new one */
 	l = kzalloc(sizeof(struct cgroup_pidlist), GFP_KERNEL);
-	if (!l) {
-		mutex_unlock(&cgrp->pidlist_mutex);
+	if (!l)
 		return l;
-	}
-	init_rwsem(&l->rwsem);
-	down_write(&l->rwsem);
+
+	INIT_DELAYED_WORK(&l->destroy_dwork, cgroup_pidlist_destroy_work_fn);
 	l->key.type = type;
-	l->key.ns = get_pid_ns(ns);
+	/* don't need task_nsproxy() if we're looking at ourself */
+	l->key.ns = get_pid_ns(task_active_pid_ns(current));
 	l->owner = cgrp;
 	list_add(&l->links, &cgrp->pidlists);
-	mutex_unlock(&cgrp->pidlist_mutex);
 	return l;
 }
 
@@ -3604,6 +3594,8 @@ static int pidlist_array_load(struct cgroup *cgrp, enum cgroup_filetype type,
 	struct css_task_iter it;
 	struct task_struct *tsk;
 	struct cgroup_pidlist *l;
+
+	lockdep_assert_held(&cgrp->pidlist_mutex);
 
 	/*
 	 * If cgroup gets more users after we read count, we won't have
@@ -3631,20 +3623,24 @@ static int pidlist_array_load(struct cgroup *cgrp, enum cgroup_filetype type,
 	css_task_iter_end(&it);
 	length = n;
 	/* now sort & (if procs) strip out duplicates */
-	sort(array, length, sizeof(pid_t), cmppid, NULL);
+	if (cgroup_sane_behavior(cgrp))
+		sort(array, length, sizeof(pid_t), fried_cmppid, NULL);
+	else
+		sort(array, length, sizeof(pid_t), cmppid, NULL);
 	if (type == CGROUP_FILE_PROCS)
 		length = pidlist_uniq(array, length);
-	l = cgroup_pidlist_find(cgrp, type);
+
+	l = cgroup_pidlist_find_create(cgrp, type);
 	if (!l) {
+		mutex_unlock(&cgrp->pidlist_mutex);
 		pidlist_free(array);
 		return -ENOMEM;
 	}
-	/* store array, freeing old if necessary - lock already held */
+
+	/* store array, freeing old if necessary */
 	pidlist_free(l->list);
 	l->list = array;
 	l->length = length;
-	l->use_count++;
-	up_write(&l->rwsem);
 	*lp = l;
 	return 0;
 }
@@ -3719,20 +3715,45 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 	 * after a seek to the start). Use a binary-search to find the
 	 * next pid to display, if any
 	 */
-	struct cgroup_pidlist *l = s->private;
+	struct cgroup_open_file *of = s->private;
+	struct cgroup *cgrp = seq_css(s)->cgroup;
+	struct cgroup_pidlist *l;
+	enum cgroup_filetype type = seq_cft(s)->private;
 	int index = 0, pid = *pos;
-	int *iter;
+	int *iter, ret;
 
-	down_read(&l->rwsem);
+	mutex_lock(&cgrp->pidlist_mutex);
+
+	/*
+	 * !NULL @of->priv indicates that this isn't the first start()
+	 * after open.  If the matching pidlist is around, we can use that.
+	 * Look for it.  Note that @of->priv can't be used directly.  It
+	 * could already have been destroyed.
+	 */
+	if (of->priv)
+		of->priv = cgroup_pidlist_find(cgrp, type);
+
+	/*
+	 * Either this is the first start() after open or the matching
+	 * pidlist has been destroyed inbetween.  Create a new one.
+	 */
+	if (!of->priv) {
+		ret = pidlist_array_load(cgrp, type,
+					 (struct cgroup_pidlist **)&of->priv);
+		if (ret)
+			return ERR_PTR(ret);
+	}
+	l = of->priv;
+
 	if (pid) {
 		int end = l->length;
 
 		while (index < end) {
 			int mid = (index + end) / 2;
-			if (l->list[mid] == pid) {
+			if (cgroup_pid_fry(cgrp, l->list[mid]) == pid) {
 				index = mid;
 				break;
-			} else if (l->list[mid] <= pid)
+			} else if (cgroup_pid_fry(cgrp, l->list[mid]) <= pid)
 				index = mid + 1;
 			else
 				end = mid;
@@ -3743,19 +3764,25 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 		return NULL;
 	/* Update the abstract position to be the actual pid that we found */
 	iter = l->list + index;
-	*pos = *iter;
+	*pos = cgroup_pid_fry(cgrp, *iter);
 	return iter;
 }
 
 static void cgroup_pidlist_stop(struct seq_file *s, void *v)
 {
-	struct cgroup_pidlist *l = s->private;
-	up_read(&l->rwsem);
+	struct cgroup_open_file *of = s->private;
+	struct cgroup_pidlist *l = of->priv;
+
+	if (l)
+		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork,
+				 CGROUP_PIDLIST_DESTROY_DELAY);
+	mutex_unlock(&seq_css(s)->cgroup->pidlist_mutex);
 }
 
 static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
 {
-	struct cgroup_pidlist *l = s->private;
+	struct cgroup_open_file *of = s->private;
+	struct cgroup_pidlist *l = of->priv;
 	pid_t *p = v;
 	pid_t *end = l->list + l->length;
 	/*
@@ -3766,7 +3793,7 @@ static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
 	if (p >= end) {
 		return NULL;
 	} else {
-		*pos = *p;
+		*pos = cgroup_pid_fry(seq_css(s)->cgroup, *p);
 		return p;
 	}
 }
@@ -3787,45 +3814,11 @@ static const struct seq_operations cgroup_pidlist_seq_operations = {
 	.show = cgroup_pidlist_show,
 };
 
-static void cgroup_release_pid_array(struct cgroup_pidlist *l)
-{
-	/*
-	 * the case where we're the last user of this particular pidlist will
-	 * have us remove it from the cgroup's list, which entails taking the
-	 * mutex. since in pidlist_find the pidlist->lock depends on cgroup->
-	 * pidlist_mutex, we have to take pidlist_mutex first.
-	 */
-	mutex_lock(&l->owner->pidlist_mutex);
-	down_write(&l->rwsem);
-	BUG_ON(!l->use_count);
-	if (!--l->use_count) {
-		/* we're the last user if refcount is 0; remove and free */
-		list_del(&l->links);
-		mutex_unlock(&l->owner->pidlist_mutex);
-		pidlist_free(l->list);
-		put_pid_ns(l->key.ns);
-		up_write(&l->rwsem);
-		kfree(l);
-		return;
-	}
-	mutex_unlock(&l->owner->pidlist_mutex);
-	up_write(&l->rwsem);
-}
-
-static int cgroup_pidlist_release(struct inode *inode, struct file *file)
-{
-	struct cgroup_pidlist *l;
-
-	l = ((struct seq_file *)file->private_data)->private;
-	cgroup_release_pid_array(l);
-	return seq_release(inode, file);
-}
-
 static const struct file_operations cgroup_pidlist_operations = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = cgroup_file_write,
-	.release = cgroup_pidlist_release,
+	.release = seq_release_private,
 };
 
 /*
@@ -3834,34 +3827,21 @@ static const struct file_operations cgroup_pidlist_operations = {
  * in the cgroup.
  */
 /* helper function for the two below it */
-static int cgroup_pidlist_open(struct file *file, enum cgroup_filetype type)
+static int cgroup_pidlist_open(struct inode *unused, struct file *file)
 {
-	struct cgroup *cgrp = __d_cgrp(file->f_dentry->d_parent);
-	struct cgroup_pidlist *l;
-	int retval;
+	struct cfent *cfe = __d_cfe(file->f_dentry);
+	struct cgroup_open_file *of;
 
-	/* have the array populated */
-	retval = pidlist_array_load(cgrp, type, &l);
-	if (retval)
-		return retval;
 	/* configure file information */
 	file->f_op = &cgroup_pidlist_operations;
 
-	retval = seq_open(file, &cgroup_pidlist_seq_operations);
-	if (retval) {
-		cgroup_release_pid_array(l);
-		return retval;
-	}
-	((struct seq_file *)file->private_data)->private = l;
+	of = __seq_open_private(file, &cgroup_pidlist_seq_operations,
+				sizeof(*of));
+	if (!of)
+		return -ENOMEM;
+
+	of->cfe = cfe;
 	return 0;
-}
-static int cgroup_tasks_open(struct inode *unused, struct file *file)
-{
-	return cgroup_pidlist_open(file, CGROUP_FILE_TASKS);
-}
-static int cgroup_procs_open(struct inode *unused, struct file *file)
-{
-	return cgroup_pidlist_open(file, CGROUP_FILE_PROCS);
 }
 
 static u64 cgroup_read_notify_on_release(struct cgroup_subsys_state *css,
@@ -3917,7 +3897,8 @@ static int cgroup_clone_children_write(struct cgroup_subsys_state *css,
 static struct cftype cgroup_base_files[] = {
 	{
 		.name = "cgroup.procs",
-		.open = cgroup_procs_open,
+		.open = cgroup_pidlist_open,
+		.private = CGROUP_FILE_PROCS,
 		.write_u64 = cgroup_procs_write,
 		.mode = S_IRUGO | S_IWUSR,
 	},
@@ -3930,7 +3911,7 @@ static struct cftype cgroup_base_files[] = {
 	{
 		.name = "cgroup.sane_behavior",
 		.flags = CFTYPE_ONLY_ON_ROOT,
-		.read_seq_string = cgroup_sane_behavior_show,
+		.seq_show = cgroup_sane_behavior_show,
 	},
 
 	/*
@@ -3941,7 +3922,8 @@ static struct cftype cgroup_base_files[] = {
 	{
 		.name = "tasks",
 		.flags = CFTYPE_INSANE,		/* use "procs" instead */
-		.open = cgroup_tasks_open,
+		.open = cgroup_pidlist_open,
+		.private = CGROUP_FILE_TASKS,
 		.write_u64 = cgroup_tasks_write,
 		.mode = S_IRUGO | S_IWUSR,
 	},
@@ -3954,7 +3936,7 @@ static struct cftype cgroup_base_files[] = {
 	{
 		.name = "release_agent",
 		.flags = CFTYPE_INSANE | CFTYPE_ONLY_ON_ROOT,
-		.read_seq_string = cgroup_release_agent_show,
+		.seq_show = cgroup_release_agent_show,
 		.write_string = cgroup_release_agent_write,
 		.max_write_len = PATH_MAX,
 	},
@@ -4881,6 +4863,15 @@ static int __init cgroup_wq_init(void)
 	 */
 	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
 	BUG_ON(!cgroup_destroy_wq);
+
+	/*
+	 * Used to destroy pidlists and separate to serve as flush domain.
+	 * Cap @max_active to 1 too.
+	 */
+	cgroup_pidlist_destroy_wq = alloc_workqueue("cgroup_pidlist_destroy",
+						    0, 1);
+	BUG_ON(!cgroup_pidlist_destroy_wq);
+
 	return 0;
 }
 core_initcall(cgroup_wq_init);
@@ -5351,9 +5342,7 @@ static u64 current_css_set_refcount_read(struct cgroup_subsys_state *css,
 	return count;
 }
 
-static int current_css_set_cg_links_read(struct cgroup_subsys_state *css,
-					 struct cftype *cft,
-					 struct seq_file *seq)
+static int current_css_set_cg_links_read(struct seq_file *seq, void *v)
 {
 	struct cgrp_cset_link *link;
 	struct css_set *cset;
@@ -5378,9 +5367,9 @@ static int current_css_set_cg_links_read(struct cgroup_subsys_state *css,
 }
 
 #define MAX_TASKS_SHOWN_PER_CSS 25
-static int cgroup_css_links_read(struct cgroup_subsys_state *css,
-				 struct cftype *cft, struct seq_file *seq)
+static int cgroup_css_links_read(struct seq_file *seq, void *v)
 {
+	struct cgroup_subsys_state *css = seq_css(seq);
 	struct cgrp_cset_link *link;
 
 	read_lock(&css_set_lock);
@@ -5426,12 +5415,12 @@ static struct cftype debug_files[] =  {
 
 	{
 		.name = "current_css_set_cg_links",
-		.read_seq_string = current_css_set_cg_links_read,
+		.seq_show = current_css_set_cg_links_read,
 	},
 
 	{
 		.name = "cgroup_css_links",
-		.read_seq_string = cgroup_css_links_read,
+		.seq_show = cgroup_css_links_read,
 	},
 
 	{

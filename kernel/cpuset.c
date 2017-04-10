@@ -76,7 +76,7 @@ struct fmeter {
 };
 
 struct cpuset {
-	struct cgroup_css css;
+	struct cgroup_subsys_state css;
 
 	unsigned long flags;		/* "unsigned long" so bitops work */
 	cpumask_var_t cpus_allowed;	/* CPUs allowed to tasks in cpuset */
@@ -973,6 +973,12 @@ static int update_cpumask(struct cpuset *cs, struct cpuset *trialcs,
  *    Temporarilly set tasks mems_allowed to target nodes of migration,
  *    so that the migration code can allocate pages on these nodes.
  *
+ *    Call holding cpuset_mutex, so current's cpuset won't change
+ *    during this call, as manage_mutex holds off any cpuset_attach()
+ *    calls.  Therefore we don't need to take task_lock around the
+ *    call to guarantee_online_mems(), as we know no one is changing
+ *    our task's cpuset.
+ *
  *    While the mm_struct we are migrating is typically from some
  *    other task, the task_struct mems_allowed that we are hacking
  *    is for our current task, which must allocate new pages for that
@@ -989,10 +995,8 @@ static void cpuset_migrate_mm(struct mm_struct *mm, const nodemask_t *from,
 
 	do_migrate_pages(mm, from, to, MPOL_MF_MOVE_ALL);
 
-	rcu_read_lock();
 	mems_cs = effective_nodemask_cpuset(task_cs(tsk));
 	guarantee_online_mems(mems_cs, &tsk->mems_allowed);
-	rcu_read_unlock();
 }
 
 /*
@@ -1021,7 +1025,7 @@ static void cpuset_change_task_nodemask(struct task_struct *tsk,
 	task_lock(tsk);
 	/*
 	 * Determine if a loop is necessary if another thread is doing
-	 * read_mems_allowed_begin().  If at least one node remains unchanged and
+	 * get_mems_allowed().  If at least one node remains unchanged and
 	 * tsk does not have a mempolicy, then an empty nodemask will not be
 	 * possible when mems_allowed is larger than a word.
 	 */
@@ -1235,13 +1239,7 @@ done:
 
 int current_cpuset_is_being_rebound(void)
 {
-	int ret;
-
-	rcu_read_lock();
-	ret = task_cs(current) == cpuset_being_rebound;
-	rcu_read_unlock();
-
-	return ret;
+	return task_cs(current) == cpuset_being_rebound;
 }
 
 static int update_relax_domain_level(struct cpuset *cs, s64 val)
@@ -1451,7 +1449,7 @@ static int fmeter_getrate(struct fmeter *fmp)
 }
 
 /* Called by cgroups to determine if a cpuset is usable; cpuset_mutex held */
-static int cpuset_can_attach(struct cgroup_css *css,
+static int cpuset_can_attach(struct cgroup_subsys_state *css,
 			     struct cgroup_taskset *tset)
 {
 	struct cpuset *cs = css_cs(css);
@@ -1498,7 +1496,7 @@ out_unlock:
 	return ret;
 }
 
-static void cpuset_cancel_attach(struct cgroup_css *css,
+static void cpuset_cancel_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	mutex_lock(&cpuset_mutex);
@@ -1513,7 +1511,7 @@ static void cpuset_cancel_attach(struct cgroup_css *css,
  */
 static cpumask_var_t cpus_attach;
 
-static void cpuset_attach(struct cgroup_css *css,
+static void cpuset_attach(struct cgroup_subsys_state *css,
 			  struct cgroup_taskset *tset)
 {
 	/* static buf protected by cpuset_mutex */
@@ -1732,66 +1730,41 @@ out_unlock:
  * used, list of ranges of sequential numbers, is variable length,
  * and since these maps can change value dynamically, one could read
  * gibberish by doing partial reads while a list was changing.
- * A single large read to a buffer that crosses a page boundary is
- * ok, because the result being copied to user land is not recomputed
- * across a page fault.
  */
-
-static size_t cpuset_sprintf_cpulist(char *page, struct cpuset *cs)
+static int cpuset_common_seq_show(struct seq_file *sf, void *v)
 {
-	size_t count;
+	struct cpuset *cs = css_cs(seq_css(sf));
+	cpuset_filetype_t type = seq_cft(sf)->private;
+	ssize_t count;
+	char *buf, *s;
+	int ret = 0;
+
+	count = seq_get_buf(sf, &buf);
+	s = buf;
 
 	mutex_lock(&callback_mutex);
-	count = scnprintf(page, PAGE_SIZE, "%*pbl", cpumask_pr_args(cs->cpus_allowed));
-	mutex_unlock(&callback_mutex);
-
-	return count;
-}
-
-static size_t cpuset_sprintf_memlist(char *page, struct cpuset *cs)
-{
-	size_t count;
-
-	mutex_lock(&callback_mutex);
-	count = scnprintf(page, PAGE_SIZE, "%*pbl", nodemask_pr_args(&cs->mems_allowed));
-	mutex_unlock(&callback_mutex);
-
-	return count;
-}
-
-static ssize_t cpuset_common_file_read(struct cgroup_subsys_state *css,
-				       struct cftype *cft, struct file *file,
-				       char __user *buf, size_t nbytes,
-				       loff_t *ppos)
-{
-	struct cpuset *cs = css_cs(css);
-	cpuset_filetype_t type = cft->private;
-	char *page;
-	ssize_t retval = 0;
-	char *s;
-
-	if (!(page = (char *)__get_free_page(GFP_TEMPORARY)))
-		return -ENOMEM;
-
-	s = page;
 
 	switch (type) {
 	case FILE_CPULIST:
-		s += cpuset_sprintf_cpulist(s, cs);
+		s += cpulist_scnprintf(s, count, cs->cpus_allowed);
 		break;
 	case FILE_MEMLIST:
-		s += cpuset_sprintf_memlist(s, cs);
+		s += nodelist_scnprintf(s, count, cs->mems_allowed);
 		break;
 	default:
-		retval = -EINVAL;
-		goto out;
+		ret = -EINVAL;
+		goto out_unlock;
 	}
-	*s++ = '\n';
 
-	retval = simple_read_from_buffer(buf, nbytes, ppos, page, s - page);
-out:
-	free_page((unsigned long)page);
-	return retval;
+	if (s < buf + count - 1) {
+		*s++ = '\n';
+		seq_commit(sf, s - buf);
+	} else {
+		seq_commit(sf, -1);
+	}
+out_unlock:
+	mutex_unlock(&callback_mutex);
+	return ret;
 }
 
 static u64 cpuset_read_u64(struct cgroup_subsys_state *css, struct cftype *cft)
@@ -1848,7 +1821,7 @@ static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
 static struct cftype files[] = {
 	{
 		.name = "cpus",
-		.read = cpuset_common_file_read,
+		.seq_show = cpuset_common_seq_show,
 		.write_string = cpuset_write_resmask,
 		.max_write_len = (100U + 6 * NR_CPUS),
 		.private = FILE_CPULIST,
@@ -1856,7 +1829,7 @@ static struct cftype files[] = {
 
 	{
 		.name = "mems",
-		.read = cpuset_common_file_read,
+		.seq_show = cpuset_common_seq_show,
 		.write_string = cpuset_write_resmask,
 		.max_write_len = (100U + 6 * MAX_NUMNODES),
 		.private = FILE_MEMLIST,
@@ -1942,8 +1915,8 @@ static struct cftype files[] = {
  *	cgrp:	control group that the new cpuset will be part of
  */
 
-static struct cgroup_css *
-cpuset_css_alloc(struct cgroup_css *parent_css)
+static struct cgroup_subsys_state *
+cpuset_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct cpuset *cs;
 
@@ -1967,7 +1940,7 @@ cpuset_css_alloc(struct cgroup_css *parent_css)
 	return &cs->css;
 }
 
-static int cpuset_css_online(struct cgroup_css *css)
+static int cpuset_css_online(struct cgroup_subsys_state *css)
 {
 	struct cpuset *cs = css_cs(css);
 	struct cpuset *parent = parent_cs(cs);
@@ -2027,7 +2000,7 @@ out_unlock:
  * will call rebuild_sched_domains_locked().
  */
 
-static void cpuset_css_offline(struct cgroup_css *css)
+static void cpuset_css_offline(struct cgroup_subsys_state *css)
 {
 	struct cpuset *cs = css_cs(css);
 
@@ -2042,7 +2015,7 @@ static void cpuset_css_offline(struct cgroup_css *css)
 	mutex_unlock(&cpuset_mutex);
 }
 
-static void cpuset_css_free(struct cgroup_css *css)
+static void cpuset_css_free(struct cgroup_subsys_state *css)
 {
 	struct cpuset *cs = css_cs(css);
 
@@ -2511,9 +2484,9 @@ int __cpuset_node_allowed_softwall(int node, gfp_t gfp_mask)
 
 	task_lock(current);
 	cs = nearest_hardwall_ancestor(task_cs(current));
-	allowed = node_isset(node, cs->mems_allowed);
 	task_unlock(current);
 
+	allowed = node_isset(node, cs->mems_allowed);
 	mutex_unlock(&callback_mutex);
 	return allowed;
 }
@@ -2652,8 +2625,8 @@ void cpuset_print_task_mems_allowed(struct task_struct *tsk)
 	rcu_read_lock();
 	spin_lock(&cpuset_buffer_lock);
 
-	scnprintf(cpuset_nodelist, CPUSET_NODELIST_LEN, "%*pbl",
-			   nodemask_pr_args(&tsk->mems_allowed));
+	nodelist_scnprintf(cpuset_nodelist, CPUSET_NODELIST_LEN,
+			   tsk->mems_allowed);
 	printk(KERN_INFO "%s cpuset=%s mems_allowed=%s\n",
 	       tsk->comm, cgroup_name(cgrp), cpuset_nodelist);
 
@@ -2709,7 +2682,7 @@ int proc_cpuset_show(struct seq_file *m, void *unused_v)
 	struct pid *pid;
 	struct task_struct *tsk;
 	char *buf;
-	struct cgroup_css *css;
+	struct cgroup_subsys_state *css;
 	int retval;
 
 	retval = -ENOMEM;
@@ -2743,8 +2716,10 @@ out:
 /* Display task mems_allowed in /proc/<pid>/status file. */
 void cpuset_task_status_allowed(struct seq_file *m, struct task_struct *task)
 {
-	seq_printf(m, "Mems_allowed:\t%*pb\n",
-		   nodemask_pr_args(&task->mems_allowed));
-	seq_printf(m, "Mems_allowed_list:\t%*pbl\n",
-		   nodemask_pr_args(&task->mems_allowed));
+	seq_printf(m, "Mems_allowed:\t");
+	seq_nodemask(m, &task->mems_allowed);
+	seq_printf(m, "\n");
+	seq_printf(m, "Mems_allowed_list:\t");
+	seq_nodemask_list(m, &task->mems_allowed);
+	seq_printf(m, "\n");
 }
