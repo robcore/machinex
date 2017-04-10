@@ -580,9 +580,10 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 		 * clearly doesn't want it. The user is responsible for any
 		 * adverse effects and has been warned about it
 		 */
-	if (wakeup_source_blocker(ws))
+	if (wakeup_source_blocker(ws)) {
+		pm_wakeup_clear();
 		return;
-
+	}
 	/*
 	 * active wakeup source should bring the system
 	 * out of PM_SUSPEND_FREEZE state -> Rob: but should also go through the proper process
@@ -590,21 +591,20 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
 	 * the freezer and be patient for the fucking 2-7ms or whatever it takes for it to complete?
 	 */
+/*
 	if (pm_freezing == true) {
 		DEFINE_WAIT(wait);
 
-		//for (;;) {
 		while (pm_freezing == true) {
 			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
 					TASK_UNINTERRUPTIBLE);
 			if (pm_freezing == false)
 				break;
 
-			//pm_system_wakeup();
 		}
 		finish_wait(&wakeup_freezer_wait_queue, &wait);
 		freeze_wake();
-	} else
+	} else */
 		freeze_wake();
 
 	ws->active = true;
@@ -877,11 +877,10 @@ bool pm_wakeup_pending(void)
 	}
 	spin_unlock_irqrestore(&events_lock, flags);
 
-	if (ret) {
+/*	if (ret) {
 		if (pm_freezing == true) {
 			DEFINE_WAIT(wait);
 
-			//for (;;)
 			while (pm_freezing == true) {
 				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
 						TASK_UNINTERRUPTIBLE);
@@ -896,6 +895,11 @@ bool pm_wakeup_pending(void)
 		}
 		pm_print_active_wakeup_sources();
 	}
+*/
+	if (ret)
+		pr_info("PM: Wakeup pending, aborting suspend\n");
+
+		pm_print_active_wakeup_sources();
 
 	return ret || pm_abort_suspend;
 }
