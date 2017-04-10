@@ -2161,7 +2161,6 @@ retry_find_task:
 			tset.single.cgrp = cgrp;
 			rcu_read_unlock();
 			goto out_unlock_cgroup;
-			}
 		}
 	} else
 		tsk = current;
