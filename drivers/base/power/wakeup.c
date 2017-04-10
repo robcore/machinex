@@ -897,9 +897,10 @@ bool pm_wakeup_pending(void)
 		pm_print_active_wakeup_sources();
 	}
 */
-	if (ret)
-		pm_print_active_wakeup_sources();
+	if (ret) {
 		pr_info_once("PM: Wakeup pending, aborting suspend\n");
+		pm_print_active_wakeup_sources();
+	}
 
 	return ret || pm_abort_suspend;
 }
