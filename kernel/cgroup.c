@@ -2149,19 +2149,12 @@ retry_find_task:
 		 * only need to check permissions on one of them.
 		 */
 		tcred = __task_cred(tsk);
-		if (cred->euid &&
+		if (cred->euid != 0 &&
 		    cred->euid != tcred->uid &&
 		    cred->euid != tcred->suid) {
-			/*
-			 * if the default permission check fails, give each
-			 * cgroup a chance to extend the permission check
-			 */
-			struct cgroup_taskset tset = { };
-			tset.single.task = tsk;
-			tset.single.cgrp = cgrp;
 			rcu_read_unlock();
+			ret = -EACCES;
 			goto out_unlock_cgroup;
-			}
 		}
 	} else
 		tsk = current;

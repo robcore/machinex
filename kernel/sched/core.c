@@ -8541,7 +8541,7 @@ void sched_move_task(struct task_struct *tsk)
 	 * which is pointless here. Thus, we pass "true" to task_css_check()
 	 * to prevent lockdep warnings.
 	 */
-	tg = container_of(task_css_check(tsk, cpu_cgroup_subsys_id, true),
+	tg = container_of(task_css_check(tsk, cpu_cgroup_subsys_id, lockdep_is_held(&tsk->sighand->siglock)),
 			  struct task_group, css);
 	tg = autogroup_task_group(tsk, tg);
 	tsk->sched_task_group = tg;
