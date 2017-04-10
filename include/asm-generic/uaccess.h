@@ -3,7 +3,7 @@
 
 /*
  * User space memory access functions, these should work
- * on a ny machine that has kernel and user data in the same
+ * on any machine that has kernel and user data in the same
  * address space, e.g. all NOMMU machines.
  */
 #include <linux/sched.h>
@@ -228,18 +228,14 @@ extern int __put_user_bad(void) __attribute__((noreturn));
 	might_fault();						\
 	access_ok(VERIFY_READ, ptr, sizeof(*ptr)) ?		\
 		__get_user(x, ptr) :				\
-		((x) = (__typeof__(*(ptr)))0,-EFAULT);		\
+		-EFAULT;					\
 })
 
 #ifndef __get_user_fn
 static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 {
-	size_t n = __copy_from_user(x, ptr, size);
-	if (unlikely(n)) {
-		memset(x + (size - n), 0, n);
-		return -EFAULT;
-	}
-	return 0;
+	size = __copy_from_user(x, ptr, size);
+	return size ? -EFAULT : size;
 }
 
 #define __get_user_fn(sz, u, k)	__get_user_fn(sz, u, k)
