@@ -2121,6 +2121,24 @@ int subsys_cgroup_allow_attach(struct cgroup_subsys_state *css, struct cgroup_ta
 	return 0;
 }
 
+static int cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
+{
+	struct cgroup_subsys *ss;
+	int ret;
+
+	for_each_root_subsys(cgrp->root, ss) {
+		if (ss->allow_attach) {
+			ret = ss->allow_attach(cgrp, tset);
+			if (ret)
+				return ret;
+		} else {
+			return -EACCES;
+		}
+	}
+
+	return 0;
+}
+
 /*
  * Find the task_struct of the task to attach by vpid and pass it along to the
  * function to attach either it or all tasks in its threadgroup. Will lock
@@ -2141,7 +2159,7 @@ retry_find_task:
 		tsk = find_task_by_vpid(pid);
 		if (!tsk) {
 			rcu_read_unlock();
-			ret = -ESRCH;
+			ret= -ESRCH;
 			goto out_unlock_cgroup;
 		}
 		/*
@@ -2159,8 +2177,11 @@ retry_find_task:
 			struct cgroup_taskset tset = { };
 			tset.single.task = tsk;
 			tset.single.cgrp = cgrp;
-			rcu_read_unlock();
-			goto out_unlock_cgroup;
+			ret = cgroup_allow_attach(cgrp, &tset);
+			if (ret) {
+				rcu_read_unlock();
+				goto out_unlock_cgroup;
+			}
 		}
 	} else
 		tsk = current;

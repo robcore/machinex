@@ -33,6 +33,12 @@
 #include <linux/compiler.h>
 
 #include "power.h"
+#include <linux/mx_freeze.h>
+bool mx_freezing_in_progress;
+bool freezing_in_progress()
+{
+	return mx_freezing_in_progress;
+}
 
 static const char *pm_labels[] = { "mem", "standby", "freeze", };
 const char *pm_states[PM_SUSPEND_MAX];
