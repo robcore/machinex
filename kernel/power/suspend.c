@@ -154,19 +154,19 @@ static int platform_suspend_prepare(suspend_state_t state)
 		suspend_ops->prepare() : 0;
 }
 
-static int platform_suspend_prepare_late(suspend_state_t state)
+static int platform_suspend_prepare_noirq(suspend_state_t state)
 {
 	return state != PM_SUSPEND_FREEZE && suspend_ops->prepare_late ?
 		suspend_ops->prepare_late() : 0;
 }
 
-static void platform_suspend_wake(suspend_state_t state)
+static void platform_resume_noirq(suspend_state_t state)
 {
 	if (state != PM_SUSPEND_FREEZE && suspend_ops->wake)
 		suspend_ops->wake();
 }
 
-static void platform_suspend_finish(suspend_state_t state)
+static void platform_resume_finish(suspend_state_t state)
 {
 	if (state != PM_SUSPEND_FREEZE && suspend_ops->finish)
 		suspend_ops->finish();
@@ -182,7 +182,7 @@ static int platform_suspend_begin(suspend_state_t state)
 		return 0;
 }
 
-static void platform_suspend_end(suspend_state_t state)
+static void platform_resume_end(suspend_state_t state)
 {
 	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
 		freeze_ops->end();
@@ -190,7 +190,7 @@ static void platform_suspend_end(suspend_state_t state)
 		suspend_ops->end();
 }
 
-static void platform_suspend_recover(suspend_state_t state)
+static void platform_recover(suspend_state_t state)
 {
 	if (state != PM_SUSPEND_FREEZE && suspend_ops->recover)
 		suspend_ops->recover();
@@ -320,7 +320,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		goto Devices_early_resume;
 	}
 
-	error = platform_suspend_prepare_late(state);
+	error = platform_suspend_prepare_noirq(state);
 	if (error)
 		goto Platform_wake;
 
@@ -371,14 +371,14 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	enable_nonboot_cpus();
 
  Platform_wake:
-	platform_suspend_wake(state);
+	platform_resume_noirq(state);
 	dpm_resume_noirq(PMSG_RESUME);
 
  Devices_early_resume:
 	dpm_resume_early(PMSG_RESUME);
 
  Platform_finish:
-	platform_suspend_finish(state);
+	platform_resume_finish(state);
 
 	return error;
 }
@@ -482,11 +482,11 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_finish("resume devices");
 	resume_console();
  Close:
-	platform_suspend_end(state);
+	platform_resume_end(state);
 	return error;
 
  Recover_platform:
-	platform_suspend_recover(state);
+	platform_recover(state);
 	goto Resume_devices;
 }
 
