@@ -1,17 +1,17 @@
 #!/bin/bash
-/root/machinex/patches/0200-updated-ref-with-most-recent-reference-commit.patch
-/root/machinex/patches/0199-sysfs-im-giving-all-drivers-the-ability-to-create-an.patch
-/root/machinex/patches/0198-sched-Use-historical-load-for-freq-governor-input.patch
-/root/machinex/patches/0197-sched-window-stats-apply-scaling-to-full-elapsed-win.patch
-/root/machinex/patches/0196-sched-notify-cpufreq-on-over-underprovisioned-CPUs.patch
-/root/machinex/patches/0195-sched-Introduce-spill-threshold-tunables-to-manage-o.patch
-/root/machinex/patches/0194-sched-add-migration-load-change-notifier-for-freq-ch.patch
-/root/machinex/patches/0193-sched-fair-Limit-MAX_PINNED_INTERVAL-for-more-freqs.patch
-/root/machinex/patches/0192-sched-fair-Help-out-higher-capacity-CPUs-when-they-a.patch
-/root/machinex/patches/0191-sched-rt-Introduce-power-aware-scheduling-for-rt.patch
-/root/machinex/patches/0190-sched-balance-power-inefficient-CPUs-with-one-task.patch
-/root/machinex/patches/0189-sched-check-for-power-inefficient-task-placement.patch
-/root/machinex/patches/0188-ref-for-where-im-at-IT-BOOTS-FINALLY-GOT-THIS.patch
-/root/machinex/patches/0187-sched-run-idle_balance-on-most-power-efficient-CPU.patch
-/root/machinex/patches/0186-sched-add-hook-for-platform-specific-CPU-power.patch
-/root/machinex/patches/0185-sched-add-power-aware-scheduling-sysctl.patch
+patch -p1 -R < "/root/machinex/patches/0200-updated-ref-with-most-recent-reference-commit.patch"
+patch -p1 -R < "/root/machinex/patches/0199-sysfs-im-giving-all-drivers-the-ability-to-create-an.patch"
+patch -p1 -R < "/root/machinex/patches/0198-sched-Use-historical-load-for-freq-governor-input.patch"
+patch -p1 -R < "/root/machinex/patches/0197-sched-window-stats-apply-scaling-to-full-elapsed-win.patch"
+patch -p1 -R < "/root/machinex/patches/0196-sched-notify-cpufreq-on-over-underprovisioned-CPUs.patch"
+patch -p1 -R < "/root/machinex/patches/0195-sched-Introduce-spill-threshold-tunables-to-manage-o.patch"
+patch -p1 -R < "/root/machinex/patches/0194-sched-add-migration-load-change-notifier-for-freq-ch.patch"
+patch -p1 -R < "/root/machinex/patches/0193-sched-fair-Limit-MAX_PINNED_INTERVAL-for-more-freqs.patch"
+patch -p1 -R < "/root/machinex/patches/0192-sched-fair-Help-out-higher-capacity-CPUs-when-they-a.patch"
+patch -p1 -R < "/root/machinex/patches/0191-sched-rt-Introduce-power-aware-scheduling-for-rt.patch"
+patch -p1 -R < "/root/machinex/patches/0190-sched-balance-power-inefficient-CPUs-with-one-task.patch"
+patch -p1 -R < "/root/machinex/patches/0189-sched-check-for-power-inefficient-task-placement.patch"
+patch -p1 -R < "/root/machinex/patches/0188-ref-for-where-im-at-IT-BOOTS-FINALLY-GOT-THIS.patch"
+patch -p1 -R < "/root/machinex/patches/0187-sched-run-idle_balance-on-most-power-efficient-CPU.patch"
+patch -p1 -R < "/root/machinex/patches/0186-sched-add-hook-for-platform-specific-CPU-power.patch"
+patch -p1 -R < "/root/machinex/patches/0185-sched-add-power-aware-scheduling-sysctl.patch"
