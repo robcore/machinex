@@ -681,6 +681,13 @@ static u64 sched_vslice(struct cfs_rq *cfs_rq, struct sched_entity *se)
 static int select_idle_sibling(struct task_struct *p, int cpu);
 static unsigned long task_h_load(struct task_struct *p);
 
+enum group_type {
+	group_other = 0,
+	group_ea,
+	group_imbalanced,
+	group_overloaded,
+};
+
 static inline void __update_task_entity_contrib(struct sched_entity *se);
 static inline void __update_task_entity_utilization(struct sched_entity *se);
 
@@ -6121,17 +6128,12 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
 
 static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
-enum group_type {
-	group_other = 0,
-	group_imbalanced,
-	group_overloaded,
-};
-
 #define LBF_ALL_PINNED	0x01
 #define LBF_NEED_BREAK	0x02
 #define LBF_DST_PINNED  0x04
 #define LBF_SOME_PINNED	0x08
 #define LBF_IGNORE_SMALL_TASKS 0x10
+#define LBF_PWR_ACTIVE_BALANCE 0x20
 
 struct lb_env {
 	struct sched_domain	*sd;
@@ -6903,14 +6905,29 @@ static inline int sg_capacity_factor(struct lb_env *env, struct sched_group *gro
 	return capacity_factor;
 }
 
-static enum group_type
-group_classify(struct sched_group *group, struct sg_lb_stats *sgs)
+static enum group_type group_classify(
+struct sched_group *group, struct sg_lb_stats *sgs, struct lb_env *env)
 {
-	if (sgs->sum_nr_running > sgs->group_capacity_factor)
+	if (sgs->sum_nr_running > sgs->group_capacity_factor) {
+		env->flags &= ~LBF_PWR_ACTIVE_BALANCE;
 		return group_overloaded;
+	}
 
-	if (sg_imbalanced(group))
+	if (sg_imbalanced(group)) {
+		env->flags &= ~LBF_PWR_ACTIVE_BALANCE;
 		return group_imbalanced;
+	}
+
+
+	/* Mark a less power-efficient CPU as busy only if we haven't
+	 * seen a busy group yet. We want to prioritize spreading
+	 * work over power optimization. */
+	if (group->group_weight == 1 && sgs->sum_nr_running &&
+	    power_cost_at_freq(env->dst_cpu, 0) <
+	    power_cost_at_freq(cpumask_first(sched_group_cpus(group)), 0)) {
+		env->flags |= LBF_PWR_ACTIVE_BALANCE;
+		return group_ea;
+	}
 
 	return group_other;
 }
@@ -7008,7 +7025,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 
 	sgs->group_weight = group->group_weight;
 	sgs->group_capacity_factor = sg_capacity_factor(env, group);
-	sgs->group_type = group_classify(group, sgs);
+	sgs->group_type = group_classify(group, sgs, env);
 
 	if (sgs->group_capacity_factor > sgs->sum_nr_running)
 		sgs->group_has_free_capacity = 1;
@@ -7037,8 +7054,14 @@ static bool update_sd_pick_busiest(struct lb_env *env,
 	if (sgs->group_type > busiest->group_type)
 		return true;
 
-	if (sgs->group_type < busiest->group_type)
+	if (sgs->group_type < busiest->group_type) {
+		if (sgs->group_type == group_ea)
+			env->flags &= ~LBF_PWR_ACTIVE_BALANCE;
 		return false;
+	}
+
+	if (env->flags & LBF_PWR_ACTIVE_BALANCE)
+		return true;
 
 	if (sgs->avg_load <= busiest->avg_load)
 		return false;
@@ -7551,6 +7574,9 @@ static int need_active_balance(struct lb_env *env)
 {
 	struct sched_domain *sd = env->sd;
 
+	if (env->flags & LBF_PWR_ACTIVE_BALANCE)
+		return 1;
+
 	if (env->idle == CPU_NEWLY_IDLE) {
 
 		/*
@@ -7751,14 +7777,17 @@ more_balance:
 	}
 
 	if (!ld_moved) {
-		schedstat_inc(sd, lb_failed[idle]);
+		if (!(env.flags & LBF_PWR_ACTIVE_BALANCE))
+			schedstat_inc(sd, lb_failed[idle]);
+
 		/*
 		 * Increment the failure counter only on periodic balance.
 		 * We do not want newidle balance, which can be very
 		 * frequent, pollute the failure counter causing
 		 * excessive cache_hot migrations and active balances.
 		 */
-		if (idle != CPU_NEWLY_IDLE)
+		if (idle != CPU_NEWLY_IDLE &&
+		    !(env.flags & LBF_PWR_ACTIVE_BALANCE))
 			sd->nr_balance_failed++;
 
 		if (need_active_balance(&env)) {
