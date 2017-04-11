@@ -67,13 +67,13 @@ static inline struct timespec64 tk_xtime(struct timekeeper *tk)
 	return ts;
 }
 
-static void tk_xtime_add(struct timekeeper *tk, const struct timespec64 *ts)
+static void tk_set_xtime(struct timekeeper *tk, const struct timespec64 *ts)
 {
 	tk->xtime_sec = ts->tv_sec;
 	tk->xtime_nsec = (u64)ts->tv_nsec << tk->shift;
 }
 
-static void tk_xtime_add(struct timekeeper *tk, const struct timespec *ts)
+static void tk_xtime_add(struct timekeeper *tk, const struct timespec64 *ts)
 {
 	tk->xtime_sec += ts->tv_sec;
 	tk->xtime_nsec += (u64)ts->tv_nsec << tk->shift;
@@ -94,21 +94,22 @@ static void tk_set_wall_to_mono(struct timekeeper *tk, struct timespec64 wtm)
 	tk->wall_to_monotonic = wtm;
 	set_normalized_timespec64(&tmp, -wtm.tv_sec, -wtm.tv_nsec);
 	tk->offs_real = timespec64_to_ktime(tmp);
-	tk->offs_tai = ktime_sub(tk->offs_real, ktime_set(tk->tai_offset, 0));
+	tk->offs_tai = ktime_add(tk->offs_real, ktime_set(tk->tai_offset, 0));
 }
 
 static void tk_set_sleep_time(struct timekeeper *tk, struct timespec64 t)
 {
 	/* Verify consistency before modifying */
-	WARN_ON_ONCE(tk->offs_boot.tv64 != timespec_to_ktime(tk->total_sleep_time).tv64);
+	WARN_ON_ONCE(tk->offs_boot.tv64 != timespec64_to_ktime(tk->total_sleep_time).tv64);
 
 	tk->total_sleep_time	= t;
 	tk->offs_boot		= timespec64_to_ktime(t);
 }
 
 /**
- * timekeeper_setup_internals - Set up internals to use clocksource clock.
+ * tk_setup_internals - Set up internals to use clocksource clock.
  *
+ * @tk:		The target timekeeper to setup.
  * @clock:		Pointer to clocksource.
  *
  * Calculates a fixed cycle/nsec interval for a given clocksource/adjustment
@@ -229,7 +230,7 @@ static inline void tk_update_leap_state(struct timekeeper *tk)
 
 static inline void update_vsyscall(struct timekeeper *tk)
 {
-	struct timespec xt;
+	struct timespec64 xt;
 
 	xt = tk_xtime(tk);
 	update_vsyscall_old(&xt, &tk->wall_to_monotonic, tk->clock, tk->mult);
@@ -268,8 +269,6 @@ static void update_pvclock_gtod(struct timekeeper *tk, bool was_set)
 
 /**
  * pvclock_gtod_register_notifier - register a pvclock timedata update listener
- *
- * Must hold write on timekeeper.lock
  */
 int pvclock_gtod_register_notifier(struct notifier_block *nb)
 {

@@ -96,7 +96,7 @@ config NO_HZ_FULL
 	# RCU_USER_QS dependency
 	depends on HAVE_CONTEXT_TRACKING
 	# VIRT_CPU_ACCOUNTING_GEN dependency
-	depends on 64BIT
+	depends arch_64
 	depends on HAVE_VIRT_CPU_ACCOUNTING_GEN
 	select NO_HZ_COMMON
 	select RCU_USER_QS
@@ -179,29 +179,6 @@ config NO_HZ_FULL_SYSIDLE_SMALL
 	 battery-powered systems.
 
 	 Take the default if you are unsure.
-
-config NO_HZ_FULL_SYSIDLE
-	bool "Detect full-system idle state for full dynticks system"
-	depends on NO_HZ_FULL
-	default n
-	help
-	 At least one CPU must keep the scheduling-clock tick running for
-	 timekeeping purposes whenever there is a non-idle CPU, where
-	 "non-idle" also includes dynticks CPUs as long as they are
-	 running non-idle tasks.  Because the underlying adaptive-tick
-	 support cannot distinguish between all CPUs being idle and
-	 all CPUs each running a single task in dynticks mode, the
-	 underlying support simply ensures that there is always a CPU
-	 handling the scheduling-clock tick, whether or not all CPUs
-	 are idle.  This Kconfig option enables scalable detection of
-	 the all-CPUs-idle state, thus allowing the scheduling-clock
-	 tick to be disabled when all CPUs are idle.  Note that scalable
-	 detection of the all-CPUs-idle state means that larger systems
-	 will be slower to declare the all-CPUs-idle state.
-
-	 Say Y if you would like to help debug all-CPUs-idle detection.
-
-	 Say N if you are unsure.
 
 config NO_HZ
 	bool "Old Idle dynticks config"

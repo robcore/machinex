@@ -11,7 +11,6 @@
 #include <linux/time.h>
 
 extern ktime_t ntp_get_next_leap(void);
-extern int __do_adjtimex(struct timex *, struct timespec *, s32 *);
 
 /*
  * Structure holding internal timekeeping values.
@@ -85,35 +84,6 @@ struct timekeeper {
 
 	/* The current time */
 	struct timespec xtime;
-
-	/*
-	 * wall_to_monotonic is what we need to add to xtime (or xtime corrected
-	 * for sub jiffie times) to get to monotonic time.  Monotonic is pegged
-	 * at zero at system boot time, so wall_to_monotonic will be negative,
-	 * however, we will ALWAYS keep the tv_nsec part positive so we can use
-	 * the usual normalization.
-	 *
-	 * wall_to_monotonic is moved after resume from suspend for the
-	 * monotonic time not to jump. We need to add total_sleep_time to
-	 * wall_to_monotonic to get the real boot based time offset.
-	 *
-	 * - wall_to_monotonic is no longer the boot time, getboottime must be
-	 * used instead.
-	 */
-	struct timespec64	wall_to_monotonic;
-	/* Offset clock monotonic -> clock realtime */
-	ktime_t			offs_real;
-	/* time spent in suspend */
-	struct timespec64	total_sleep_time;
-	/* Offset clock monotonic -> clock boottime */
-	ktime_t			offs_boot;
-	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
-	struct timespec64	raw_time;
-	/* The current UTC to TAI offset in seconds */
-	s32			tai_offset;
-	/* Offset clock monotonic -> clock tai */
-	ktime_t			offs_tai;
-
 };
 
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
