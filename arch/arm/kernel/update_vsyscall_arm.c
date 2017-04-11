@@ -11,8 +11,7 @@
  */
 
 #include <linux/export.h>
-#include <linux/clocksource.h>
-#include <linux/time.h>
+#include <linux/timekeeper_internal.h>
 /*
  * See entry-armv.S for the offsets into the kernel user helper for
  * these fields.
@@ -39,8 +38,8 @@ struct kernel_gtod_t {
 	u64  mask;
 	u32  mult;
 	u32  shift;
-	u32  tv_sec;
-	u32  tv_nsec;
+	time64_t  tv_sec;
+	long  tv_nsec;
 };
 
 struct kernel_tz_t {
@@ -49,8 +48,8 @@ struct kernel_tz_t {
 };
 
 struct kernel_wtm_t {
-	u32  tv_sec;
-	u32  tv_nsec;
+	time64_t  tv_sec;
+	long  tv_nsec;
 };
 
 /*
@@ -59,13 +58,12 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall(struct timespec *ts, struct timespec *wtm,
+update_vsyscall_old(struct timespec64 *ts, struct timespec64 *wtm,
 	struct clocksource *c, u32 mult)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
 	unsigned long *seqnum = (unsigned long *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
-	unsigned long seq;
 	struct kernel_gtod_t *dgtod = (struct kernel_gtod_t *)(vectors +
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
@@ -85,14 +83,13 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	*seqnum = vsys_seq.sequence;
 	raw_spin_unlock_irqrestore(&mx_vsys_lock, flags);
 }
-EXPORT_SYMBOL(update_vsyscall);
+EXPORT_SYMBOL(update_vsyscall_old);
 
 void
 update_vsyscall_tz(void)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
-	unsigned long seq;
 	unsigned long *seqnum = (unsigned long *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
 	struct kernel_tz_t *dgtod = (struct kernel_tz_t *)(vectors +
 		ARM_VSYSCALL_TIMER_TZ);
