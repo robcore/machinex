@@ -34,7 +34,7 @@ extern void *vectors_page;
 extern struct timezone sys_tz;
 
 struct kernel_gtod_t {
-	u64  cycle_last;
+	cycles_t  cycle_last;
 	u64  mask;
 	u32  mult;
 	u32  shift;
@@ -59,7 +59,8 @@ struct kernel_wtm_t {
  */
 void
 update_vsyscall_old(struct timespec64 *ts, struct timespec64 *wtm,
-	struct clocksource *c, u32 mult)
+						struct clocksource *c, u32 mult,
+						cycles_t cycle_last)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
@@ -71,7 +72,7 @@ update_vsyscall_old(struct timespec64 *ts, struct timespec64 *wtm,
 
 	raw_spin_lock_irqsave(&mx_vsys_lock, flags);
 	write_seqcount_begin(&vsys_seq);
-	dgtod->cycle_last = c->cycle_last;
+	dgtod->cycle_last = cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
 	dgtod->shift = c->shift;

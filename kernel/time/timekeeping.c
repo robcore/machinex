@@ -233,7 +233,8 @@ static inline void update_vsyscall(struct timekeeper *tk)
 	struct timespec64 xt;
 
 	xt = tk_xtime(tk);
-	update_vsyscall_old(&xt, &tk->wall_to_monotonic, tk->clock, tk->mult);
+	update_vsyscall_old(&xt, &tk->wall_to_monotonic,
+				tk->clock, tk->mult, tk->cycle_last);
 }
 
 static inline void old_vsyscall_fixup(struct timekeeper *tk)
