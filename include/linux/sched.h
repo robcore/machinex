@@ -1162,7 +1162,7 @@ struct ravg {
 	 * windows. 'demand' could drive frequency demand for tasks.
 	 */
 	u64 mark_start;
-	u32 sum, demand, prev_window;
+	u32 sum, demand, prev_window, partial_demand;
 	u32 sum_history[RAVG_HIST_SIZE];
 };
 
