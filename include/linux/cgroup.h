@@ -491,6 +491,12 @@ static inline const char *cgroup_name(const struct cgroup *cgrp)
 	return rcu_dereference(cgrp->name)->name;
 }
 
+/* no synchronization, the result can only be used as a hint */
+static inline bool cgroup_has_tasks(struct cgroup *cgrp)
+{
+	return !list_empty(&cgrp->cset_links);
+}
+
 /* returns ino associated with a cgroup, 0 indicates unmounted root */
 static inline ino_t cgroup_ino(struct cgroup *cgrp)
 {
@@ -513,8 +519,6 @@ int cgroup_rm_cftypes(struct cftype *cfts);
 
 int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
 int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
-
-int cgroup_task_count(const struct cgroup *cgrp);
 
 /*
  * Control Group taskset, used to pass around set of tasks to cgroup_subsys
