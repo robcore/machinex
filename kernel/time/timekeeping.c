@@ -51,6 +51,15 @@ static inline void tk_normalize_xtime(struct timekeeper *tk)
 	}
 }
 
+static inline struct timespec64 tk_xtime(struct timekeeper *tk)
+{
+	struct timespec64 ts;
+
+	ts.tv_sec = tk->xtime_sec;
+	ts.tv_nsec = (long)(tk->xtime_nsec >> tk->shift);
+	return ts;
+}
+
 static void tk_xtime_add(struct timekeeper *tk, const struct timespec64 *ts)
 {
 	tk->xtime_sec = ts->tv_sec;
@@ -208,6 +217,40 @@ static inline void tk_update_leap_state(struct timekeeper *tk)
 		/* Convert to monotonic time */
 		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
 }
+
+#ifdef CONFIG_GENERIC_TIME_VSYSCALL_OLD
+
+static inline void update_vsyscall(struct timekeeper *tk)
+{
+	struct timespec xt;
+
+	xt = tk_xtime(tk);
+	update_vsyscall_old(&xt, &tk->wall_to_monotonic, tk->clock, tk->mult);
+}
+
+static inline void old_vsyscall_fixup(struct timekeeper *tk)
+{
+	s64 remainder;
+
+	/*
+	* Store only full nanoseconds into xtime_nsec after rounding
+	* it up and add the remainder to the error difference.
+	* XXX - This is necessary to avoid small 1ns inconsistnecies caused
+	* by truncating the remainder in vsyscalls. However, it causes
+	* additional work to be done in timekeeping_adjust(). Once
+	* the vsyscall implementations are converted to use xtime_nsec
+	* (shifted nanoseconds), and CONFIG_GENERIC_TIME_VSYSCALL_OLD
+	* users are removed, this can be killed.
+	*/
+	remainder = tk->xtime_nsec & ((1ULL << tk->shift) - 1);
+	tk->xtime_nsec -= remainder;
+	tk->xtime_nsec += 1ULL << tk->shift;
+	tk->ntp_error += remainder << tk->ntp_error_shift;
+	tk->ntp_error -= (1ULL << tk->shift) << tk->ntp_error_shift;
+}
+#else
+#define old_vsyscall_fixup(tk)
+#endif
 
 static RAW_NOTIFIER_HEAD(pvclock_gtod_chain);
 
@@ -1350,33 +1393,6 @@ static cycle_t logarithmic_accumulation(struct timekeeper *tk, cycle_t offset,
 
 	return offset;
 }
-
-#ifdef CONFIG_GENERIC_TIME_VSYSCALL_OLD
-static inline void old_vsyscall_fixup(struct timekeeper *tk)
-{
-	s64 remainder;
-
-	/*
-	* Store only full nanoseconds into xtime_nsec after rounding
-	* it up and add the remainder to the error difference.
-	* XXX - This is necessary to avoid small 1ns inconsistnecies caused
-	* by truncating the remainder in vsyscalls. However, it causes
-	* additional work to be done in timekeeping_adjust(). Once
-	* the vsyscall implementations are converted to use xtime_nsec
-	* (shifted nanoseconds), and CONFIG_GENERIC_TIME_VSYSCALL_OLD
-	* users are removed, this can be killed.
-	*/
-	remainder = tk->xtime_nsec & ((1ULL << tk->shift) - 1);
-	tk->xtime_nsec -= remainder;
-	tk->xtime_nsec += 1ULL << tk->shift;
-	tk->ntp_error += remainder << tk->ntp_error_shift;
-	tk->ntp_error -= (1ULL << tk->shift) << tk->ntp_error_shift;
-}
-#else
-#define old_vsyscall_fixup(tk)
-#endif
-
-
 
 /**
  * update_wall_time - Uses the current clocksource to increment the wall time
