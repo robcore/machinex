@@ -1424,7 +1424,7 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 	page_mapcount_reset(page);
 	if (current->reclaim_state)
 		current->reclaim_state->reclaimed_slab += pages;
-	__free_memcg_kmem_pages(page, order);
+	__free_kmem_pages(page, order);
 }
 
 #define need_reserve_slab_rcu						\
