@@ -488,5 +488,4 @@ root@machina:/media/root/robcore/android# nicer find $(pwd) -maxdepth 5 -name '*
 /media/root/robcore/android/marlin-nexus4ever/patches/5patches/1775-perf-session-Add-ability-to-skip-4GiB-or-more.patch
 /media/root/robcore/android/marlin-nexus4ever/patches/5patches/1776-perf-tools-Group-VDSO-global-variables-into-a-struct.patch
 /media/root/robcore/android/marlin-nexus4ever/patches/5patches/1777-perf-machine-Fix-the-lifetime-of-the-VDSO-temporary-.patch
-/media/root/robcore/android/marlin-nexus4ever/patches/5patches/1778-bus-ARM-CCN-PMU-driver.patch/media/root/robcore/android/marlin-nexus4ever/patches/3patches/7803-sched-do-nohz-load-balancing-in-order-of-power-effic.patch
-/media/root/robcore/android/marlin-nexus4ever/patches/3patches/7817-sched-do-not-balance-on-exec-if-SCHED_HMP.patch
+/media/root/robcore/android/marlin-nexus4ever/patches/5patches/1778-bus-ARM-CCN-PMU-driver.patch

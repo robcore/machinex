@@ -1162,7 +1162,7 @@ struct ravg {
 	 * windows. 'demand' could drive frequency demand for tasks.
 	 */
 	u64 mark_start;
-	u32 sum, demand, prev_window, partial_demand;
+	u32 sum, demand, prev_window;
 	u32 sum_history[RAVG_HIST_SIZE];
 };
 
@@ -3051,8 +3051,6 @@ struct migration_notify_data {
 };
 
 extern struct atomic_notifier_head migration_notifier_head;
-
-extern struct atomic_notifier_head load_alert_notifier_head;
 
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
