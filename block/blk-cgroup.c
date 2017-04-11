@@ -1365,7 +1365,6 @@ struct cftype blkio_files[] = {
 				BLKIO_PROP_weight_device),
 		.read_seq_string = blkiocg_file_read,
 		.write_string = blkiocg_file_write,
-		.max_write_len = 256,
 	},
 	{
 		.name = "weight",
@@ -1433,7 +1432,6 @@ struct cftype blkio_files[] = {
 				BLKIO_THROTL_read_bps_device),
 		.read_seq_string = blkiocg_file_read,
 		.write_string = blkiocg_file_write,
-		.max_write_len = 256,
 	},
 
 	{
@@ -1442,7 +1440,6 @@ struct cftype blkio_files[] = {
 				BLKIO_THROTL_write_bps_device),
 		.read_seq_string = blkiocg_file_read,
 		.write_string = blkiocg_file_write,
-		.max_write_len = 256,
 	},
 
 	{
@@ -1451,7 +1448,6 @@ struct cftype blkio_files[] = {
 				BLKIO_THROTL_read_iops_device),
 		.read_seq_string = blkiocg_file_read,
 		.write_string = blkiocg_file_write,
-		.max_write_len = 256,
 	},
 
 	{
@@ -1460,7 +1456,6 @@ struct cftype blkio_files[] = {
 				BLKIO_THROTL_write_iops_device),
 		.read_seq_string = blkiocg_file_read,
 		.write_string = blkiocg_file_write,
-		.max_write_len = 256,
 	},
 	{
 		.name = "throttle.io_service_bytes",
