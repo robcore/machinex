@@ -6064,17 +6064,16 @@ static int cgroup_write_event_control(struct cgroup_subsys_state *dummy_css,
 	 * Remaining events are automatically removed on cgroup destruction
 	 * but the removal is asynchronous, so take an extra ref.
 	 */
-	rcu_read_lock();
-
+	cfile_css = css_tryget_from_dir(cfile.file->f_dentry->d_parent,
+					&event->cft->ss);
 	ret = -EINVAL;
-	event->css = cgroup_css(cgrp, event->cft->ss);
-	cfile_css = css_from_dir(cfile.file->f_dentry->d_parent, event->cft->ss);
-	if (event->css && event->css == cfile_css && css_tryget(event->css))
-		ret = 0;
-
-	rcu_read_unlock();
+	if (IS_ERR(cfile_css))
 	if (ret)
 		goto out_put_cfile;
+	if (cfile_css != css) {
+		css_put(cfile_css);
+		goto out_put_cfile;
+	}
 
 	ret = event->register_event(css, event->cft, event->eventfd, buffer);
 	if (ret)
