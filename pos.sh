@@ -1,15 +1,17 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0027-userns-Better-restrictions-on-when-proc-and-sysfs.patch"
-patch -p1 -R < "/root/machinex/patches/0026-more-of-the-same.patch"
-patch -p1 -R < "/root/machinex/patches/0025-moar.patch"
-patch -p1 -R < "/root/machinex/patches/0024-space-dox-cleanup.patch"
-patch -p1 -R < "/root/machinex/patches/0023-sysfs-group.c-move-EXPORT_SYMBOL_GPL-to-the-proper-l.patch"
-patch -p1 -R < "/root/machinex/patches/0022-sysfs-add-sysfs_create-remove_groups.patch"
-patch -p1 -R < "/root/machinex/patches/0021-reverted.patch"
-patch -p1 -R < "/root/machinex/patches/0020-revert-me.patch"
-patch -p1 -R < "/root/machinex/patches/0019-readdir-convert-logfs.patch"
-patch -p1 -R < "/root/machinex/patches/0018-readdir-convert-sysfs.patch"
-patch -p1 -R < "/root/machinex/patches/0017-readdir-switch-dcache_readdir-users-to-iterate.patch"
-patch -p1 -R < "/root/machinex/patches/0016-readdir-simple-local-unixlike-switch-to-iterate.patch"
-patch -p1 -R < "/root/machinex/patches/0015-readdir-introduce-iterate-ctx-pos-dir_emit.patch"
-patch -p1 -R < "/root/machinex/patches/0014-readdir-introduce-iterate_dir-and-dir_context.patch"
+/root/machinex/patches/0200-updated-ref-with-most-recent-reference-commit.patch
+/root/machinex/patches/0199-sysfs-im-giving-all-drivers-the-ability-to-create-an.patch
+/root/machinex/patches/0198-sched-Use-historical-load-for-freq-governor-input.patch
+/root/machinex/patches/0197-sched-window-stats-apply-scaling-to-full-elapsed-win.patch
+/root/machinex/patches/0196-sched-notify-cpufreq-on-over-underprovisioned-CPUs.patch
+/root/machinex/patches/0195-sched-Introduce-spill-threshold-tunables-to-manage-o.patch
+/root/machinex/patches/0194-sched-add-migration-load-change-notifier-for-freq-ch.patch
+/root/machinex/patches/0193-sched-fair-Limit-MAX_PINNED_INTERVAL-for-more-freqs.patch
+/root/machinex/patches/0192-sched-fair-Help-out-higher-capacity-CPUs-when-they-a.patch
+/root/machinex/patches/0191-sched-rt-Introduce-power-aware-scheduling-for-rt.patch
+/root/machinex/patches/0190-sched-balance-power-inefficient-CPUs-with-one-task.patch
+/root/machinex/patches/0189-sched-check-for-power-inefficient-task-placement.patch
+/root/machinex/patches/0188-ref-for-where-im-at-IT-BOOTS-FINALLY-GOT-THIS.patch
+/root/machinex/patches/0187-sched-run-idle_balance-on-most-power-efficient-CPU.patch
+/root/machinex/patches/0186-sched-add-hook-for-platform-specific-CPU-power.patch
+/root/machinex/patches/0185-sched-add-power-aware-scheduling-sysctl.patch
