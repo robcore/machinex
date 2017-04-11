@@ -1521,13 +1521,13 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		mutex_lock(&cgroup_tree_mutex);
 		mutex_lock(&cgroup_mutex);
 
-		while (idr_get_new_above(&root->cgroup_idr, root_cgrp,
-					0, &root_cgrp->id)) {
-			ret = root_cgrp->id;
+		do {
+			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
+					0, &root_cgrp->id);
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto out_unlock;
 			root_cgrp->id = ret;
-		}
+		} while (ret);
 
 		/* Check for name clashes with existing mounts */
 		ret = -EBUSY;
