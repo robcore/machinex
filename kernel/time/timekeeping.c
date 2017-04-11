@@ -1039,7 +1039,7 @@ static void timekeeping_resume(void)
 	 * The less preferred source will only be tried if there is no better
 	 * usable source. The rtc part is handled separately in rtc core code.
 	 */
-	cycle_now = tk->read(clock);
+	cycle_now = clock->read(clock);
 	if ((clock->flags & CLOCK_SOURCE_SUSPEND_NONSTOP) &&
 		cycle_now > clock->cycle_last) {
 		u64 num, max = ULLONG_MAX;
@@ -1443,6 +1443,7 @@ static cycle_t logarithmic_accumulation(struct timekeeper *tk, cycle_t offset,
  */
 void update_wall_time(void)
 {
+	struct clocksource *clock;
 	struct timekeeper *real_tk = &tk_core.timekeeper;
 	struct timekeeper *tk = &shadow_timekeeper;
 	cycle_t offset;
