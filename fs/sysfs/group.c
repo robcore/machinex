@@ -3,8 +3,10 @@
  *
  * Copyright (c) 2003 Patrick Mochel
  * Copyright (c) 2003 Open Source Development Lab
+ * Copyright (c) 2013 Greg Kroah-Hartman
+ * Copyright (c) 2013 The Linux Foundation
  *
- * This file is released undert the GPL v2. 
+ * This file is released undert the GPL v2.
  *
  */
 
@@ -19,8 +21,8 @@
 static void remove_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 			 const struct attribute_group *grp)
 {
-	struct attribute *const* attr;
-	struct bin_attribute *const* bin_attr;
+	struct attribute *const *attr;
+	struct bin_attribute *const *bin_attr;
 
 	if (grp->attrs)
 		for (attr = grp->attrs; *attr; attr++)
@@ -33,8 +35,8 @@ static void remove_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 static int create_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 			const struct attribute_group *grp, int update)
 {
-	struct attribute *const* attr;
-	struct bin_attribute *const* bin_attr;
+	struct attribute *const *attr;
+	struct bin_attribute *const *bin_attr;
 	int error = 0, i;
 
 	if (grp->attrs) {
@@ -189,8 +191,16 @@ int sysfs_update_group(struct kobject *kobj,
 }
 EXPORT_SYMBOL_GPL(sysfs_update_group);
 
-void sysfs_remove_group(struct kobject * kobj, 
-			const struct attribute_group * grp)
+/**
+ * sysfs_remove_group: remove a group from a kobject
+ * @kobj:	kobject to remove the group from
+ * @grp:	group to remove
+ *
+ * This function removes a group of attributes from a kobject.  The attributes
+ * previously have to have been created for this group, otherwise it will fail.
+ */
+void sysfs_remove_group(struct kobject *kobj,
+			const struct attribute_group *grp)
 {
 	struct sysfs_dirent *dir_sd = kobj->sd;
 	struct sysfs_dirent *sd;
@@ -198,8 +208,9 @@ void sysfs_remove_group(struct kobject * kobj,
 	if (grp->name) {
 		sd = sysfs_get_dirent(dir_sd, NULL, grp->name);
 		if (!sd) {
-			WARN(!sd, KERN_WARNING "sysfs group %p not found for "
-				"kobject '%s'\n", grp, kobject_name(kobj));
+			WARN(!sd, KERN_WARNING
+			     "sysfs group %p not found for kobject '%s'\n",
+			     grp, kobject_name(kobj));
 			return;
 		}
 	} else
@@ -216,8 +227,8 @@ EXPORT_SYMBOL_GPL(sysfs_remove_group);
 /**
  * sysfs_remove_groups - remove a list of groups
  *
- * kobj:	The kobject for the groups to be removed from
- * groups:	NULL terminated list of groups to be removed
+ * @kobj:	The kobject for the groups to be removed from
+ * @groups:	NULL terminated list of groups to be removed
  *
  * If groups is not NULL, the all groups will be removed from the kobject
  */
