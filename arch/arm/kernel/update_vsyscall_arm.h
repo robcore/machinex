@@ -20,4 +20,4 @@ extern struct timezone sys_tz;
  * This read-write spinlock protects us from races in SMP while
  * updating the kernel user helper-embedded time.
  */
-__cacheline_aligned_in_smp DEFINE_LEGACY_SEQLOCK(kuh_time_lock);
+//__cacheline_aligned_in_smp DEFINE_SEQLOCK(kuh_time_lock);

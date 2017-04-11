@@ -37,11 +37,13 @@ struct kernel_gtod_t {
 	u32  shift;
 	u32  tv_sec;
 	u32  tv_nsec;
+	seqlock_t kuh_time_lock;
 };
 
 struct kernel_tz_t {
 	u32  tz_minuteswest;
 	u32  tz_dsttime;
+	seqlock_t kuh_time_lock;
 };
 
 struct kernel_wtm_t {
@@ -60,14 +62,14 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
-	unsigned *seqnum = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
+	unsigned long *seqnum = (unsigned long *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
+	unsigned long seq;
 	struct kernel_gtod_t *dgtod = (struct kernel_gtod_t *)(vectors +
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
 
-	write_legacy_seqlock_irqsave(&kuh_time_lock, flags);
-	*seqnum = kuh_time_lock.sequence;
+	write_seqlock_irqsave(&dgtod->kuh_time_lock, flags);
 	dgtod->cycle_last = c->cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
@@ -76,8 +78,8 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	dgtod->tv_nsec = ts->tv_nsec;
 	dgwtm->tv_sec = wtm->tv_sec;
 	dgwtm->tv_nsec = wtm->tv_nsec;
-	*seqnum = kuh_time_lock.sequence + 1;
-	write_legacy_sequnlock_irqrestore(&kuh_time_lock, flags);
+	write_sequnlock_irqrestore(&dgtod->kuh_time_lock, flags);
+	*seqnum = flags;
 }
 EXPORT_SYMBOL(update_vsyscall);
 
@@ -86,15 +88,15 @@ update_vsyscall_tz(void)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
-	unsigned *seqnum = (unsigned *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
+	unsigned long *seqnum = (unsigned long *)(vectors + ARM_VSYSCALL_TIMER_SEQ);
 	struct kernel_tz_t *dgtod = (struct kernel_tz_t *)(vectors +
 		ARM_VSYSCALL_TIMER_TZ);
 
-	write_legacy_seqlock_irqsave(&kuh_time_lock, flags);
-	*seqnum = kuh_time_lock.sequence;
-	dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
-	dgtod->tz_dsttime = sys_tz.tz_dsttime;
-	*seqnum = kuh_time_lock.sequence + 1;
-	write_legacy_sequnlock_irqrestore(&kuh_time_lock, flags);
+		write_seqlock_irqsave(&dgtod->kuh_time_lock, flags);
+		dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
+		dgtod->tz_dsttime = sys_tz.tz_dsttime;
+		write_sequnlock_irqrestore(&dgtod->kuh_time_lock, flags);
+		*seqnum = flags;
+
 }
 EXPORT_SYMBOL(update_vsyscall_tz);
