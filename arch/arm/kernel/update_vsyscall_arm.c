@@ -34,7 +34,7 @@ extern void *vectors_page;
 extern struct timezone sys_tz;
 
 struct kernel_gtod_t {
-	cycles_t  cycle_last;
+	cycle_t  cycle_last;
 	u64  mask;
 	u32  mult;
 	u32  shift;
@@ -58,9 +58,9 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall_old(struct timespec64 *ts, struct timespec64 *wtm,
+update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
 						struct clocksource *c, u32 mult,
-						cycles_t cycle_last)
+						cycle_t cycle_last)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;

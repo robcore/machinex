@@ -230,9 +230,9 @@ static inline void tk_update_leap_state(struct timekeeper *tk)
 
 static inline void update_vsyscall(struct timekeeper *tk)
 {
-	struct timespec64 xt;
+ 	struct timespec xt;
 
-	xt = tk_xtime(tk);
+	xt = timespec64_to_timespec(tk_xtime(tk));
 	update_vsyscall_old(&xt, &tk->wall_to_monotonic,
 				tk->clock, tk->mult, tk->cycle_last);
 }
