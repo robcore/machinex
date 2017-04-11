@@ -1529,7 +1529,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 		perf_sw_event(PERF_COUNT_SW_CPU_MIGRATIONS, 1, NULL, 0);
 
 		if (p->state == TASK_RUNNING)
-			update_task_ravg(p, task_rq(p), 1);
+			update_task_ravg(p, task_rq(p), 0);
 	}
 
 	__set_task_cpu(p, new_cpu);
@@ -3725,7 +3725,8 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 		/* assumes fair_sched_class->next == idle_sched_class */
 		if (unlikely(!p))
 			p = idle_sched_class.pick_next_task(rq, prev);
-			update_task_ravg(p, rq, 1);
+
+			update_task_ravg(p, rq, 0);
 			return p;
 	}
 
@@ -3735,7 +3736,7 @@ again:
 		if (p) {
 			if (unlikely(p == RETRY_TASK))
 				goto again;
-			update_task_ravg(p, rq, 1);
+			update_task_ravg(p, rq, 0);
 			return p;
 		}
 	}
