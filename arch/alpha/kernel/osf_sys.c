@@ -96,7 +96,6 @@ struct osf_dirent {
 };
 
 struct osf_dirent_callback {
-	struct dir_context ctx;
 	struct osf_dirent __user *dirent;
 	long __user *basep;
 	unsigned int count;

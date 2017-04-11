@@ -18,12 +18,12 @@
 #include <linux/swap.h>
 #include "sysv.h"
 
-static int sysv_readdir(struct file *, struct dir_context *);
+static int sysv_readdir(struct file *, void *, filldir_t);
 
 const struct file_operations sysv_dir_operations = {
 	.llseek		= generic_file_llseek,
 	.read		= generic_read_dir,
-	.iterate	= sysv_readdir,
+	.readdir	= sysv_readdir,
 	.fsync		= generic_file_fsync,
 };
 
@@ -65,21 +65,18 @@ static struct page * dir_get_page(struct inode *dir, unsigned long n)
 	return page;
 }
 
-static int sysv_readdir(struct file *file, struct dir_context *ctx)
+static int sysv_readdir(struct file * filp, void * dirent, filldir_t filldir)
 {
-	unsigned long pos = ctx->pos;
-	struct inode *inode = file_inode(file);
+	unsigned long pos = filp->f_pos;
+	struct inode *inode = file_inode(filp);
 	struct super_block *sb = inode->i_sb;
+	unsigned offset = pos & ~PAGE_CACHE_MASK;
+	unsigned long n = pos >> PAGE_CACHE_SHIFT;
 	unsigned long npages = dir_pages(inode);
-	unsigned offset;
-	unsigned long n;
 
-	ctx->pos = pos = (pos + SYSV_DIRSIZE-1) & ~(SYSV_DIRSIZE-1);
+	pos = (pos + SYSV_DIRSIZE-1) & ~(SYSV_DIRSIZE-1);
 	if (pos >= inode->i_size)
-		return 0;
-
-	offset = pos & ~PAGE_CACHE_MASK;
-	n = pos >> PAGE_CACHE_SHIFT;
+		goto done;
 
 	for ( ; n < npages; n++, offset = 0) {
 		char *kaddr, *limit;
@@ -91,21 +88,29 @@ static int sysv_readdir(struct file *file, struct dir_context *ctx)
 		kaddr = (char *)page_address(page);
 		de = (struct sysv_dir_entry *)(kaddr+offset);
 		limit = kaddr + PAGE_CACHE_SIZE - SYSV_DIRSIZE;
-		for ( ;(char*)de <= limit; de++, ctx->pos += sizeof(*de)) {
+		for ( ;(char*)de <= limit; de++) {
 			char *name = de->name;
+			int over;
 
 			if (!de->inode)
 				continue;
 
-			if (!dir_emit(ctx, name, strnlen(name,SYSV_NAMELEN),
+			offset = (char *)de - kaddr;
+
+			over = filldir(dirent, name, strnlen(name,SYSV_NAMELEN),
+					((loff_t)n<<PAGE_CACHE_SHIFT) | offset,
 					fs16_to_cpu(SYSV_SB(sb), de->inode),
-					DT_UNKNOWN)) {
+					DT_UNKNOWN);
+			if (over) {
 				dir_put_page(page);
-				return 0;
+				goto done;
 			}
 		}
 		dir_put_page(page);
 	}
+
+done:
+	filp->f_pos = ((loff_t)n << PAGE_CACHE_SHIFT) | offset;
 	return 0;
 }
 

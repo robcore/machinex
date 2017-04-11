@@ -20,7 +20,7 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/limits.h>
-#include <linux/uaccess.h>
+#include <asm/uaccess.h>
 
 #include "sysfs.h"
 
@@ -45,8 +45,8 @@ struct sysfs_open_dirent {
 struct sysfs_buffer {
 	size_t			count;
 	loff_t			pos;
-	char			*page;
-	const struct sysfs_ops	*ops;
+	char			* page;
+	const struct sysfs_ops	* ops;
 	struct mutex		mutex;
 	int			needs_read_fill;
 	int			event;
@@ -64,11 +64,11 @@ struct sysfs_buffer {
  *	This is called only once, on the file's first read unless an error
  *	is returned.
  */
-static int fill_read_buffer(struct dentry *dentry, struct sysfs_buffer *buffer)
+static int fill_read_buffer(struct dentry * dentry, struct sysfs_buffer * buffer)
 {
 	struct sysfs_dirent *attr_sd = dentry->d_fsdata;
 	struct kobject *kobj = attr_sd->s_parent->s_dir.kobj;
-	const struct sysfs_ops *ops = buffer->ops;
+	const struct sysfs_ops * ops = buffer->ops;
 	int ret = 0;
 	ssize_t count;
 
@@ -127,12 +127,12 @@ static int fill_read_buffer(struct dentry *dentry, struct sysfs_buffer *buffer)
 static ssize_t
 sysfs_read_file(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 {
-	struct sysfs_buffer *buffer = file->private_data;
+	struct sysfs_buffer * buffer = file->private_data;
 	ssize_t retval = 0;
 
 	mutex_lock(&buffer->mutex);
 	if (buffer->needs_read_fill || *ppos == 0) {
-		retval = fill_read_buffer(file->f_path.dentry, buffer);
+		retval = fill_read_buffer(file->f_path.dentry,buffer);
 		if (retval)
 			goto out;
 	}
@@ -155,8 +155,8 @@ out:
  *	copy the user-supplied buffer into it.
  */
 
-static int fill_write_buffer(struct sysfs_buffer *buffer,
-	const char __user *buf, size_t count)
+static int
+fill_write_buffer(struct sysfs_buffer * buffer, const char __user * buf, size_t count)
 {
 	int error;
 
@@ -167,7 +167,7 @@ static int fill_write_buffer(struct sysfs_buffer *buffer,
 
 	if (count >= PAGE_SIZE)
 		count = PAGE_SIZE - 1;
-	error = copy_from_user(buffer->page, buf, count);
+	error = copy_from_user(buffer->page,buf,count);
 	buffer->needs_read_fill = 1;
 	/* if buf is assumed to contain a string, terminate it by \0,
 	   so e.g. sscanf() can scan the string easily */
@@ -187,12 +187,12 @@ static int fill_write_buffer(struct sysfs_buffer *buffer,
  *	passing the buffer that we acquired in fill_write_buffer().
  */
 
-static int flush_write_buffer(struct dentry *dentry,
-				struct sysfs_buffer *buffer, size_t count)
+static int
+flush_write_buffer(struct dentry * dentry, struct sysfs_buffer * buffer, size_t count)
 {
 	struct sysfs_dirent *attr_sd = dentry->d_fsdata;
 	struct kobject *kobj = attr_sd->s_parent->s_dir.kobj;
-	const struct sysfs_ops *ops = buffer->ops;
+	const struct sysfs_ops * ops = buffer->ops;
 	int rc;
 
 	/* need attr_sd for attr and ops, its parent for kobj */
@@ -223,10 +223,11 @@ static int flush_write_buffer(struct dentry *dentry,
  *	Hint: if you're writing a value, first read the file, modify only the
  *	the value you're changing, then write entire buffer back.
  */
-static ssize_t sysfs_write_file(struct file *file, const char __user *buf,
-				size_t count, loff_t *ppos)
+
+static ssize_t
+sysfs_write_file(struct file *file, const char __user *buf, size_t count, loff_t *ppos)
 {
-	struct sysfs_buffer *buffer = file->private_data;
+	struct sysfs_buffer * buffer = file->private_data;
 	ssize_t len;
 
 	mutex_lock(&buffer->mutex);
@@ -338,9 +339,8 @@ static int sysfs_open_file(struct inode *inode, struct file *file)
 	if (kobj->ktype && kobj->ktype->sysfs_ops)
 		ops = kobj->ktype->sysfs_ops;
 	else {
-		WARN(1, KERN_ERR
-		     "missing sysfs attribute operations for kobject: %s\n",
-		     kobject_name(kobj));
+		WARN(1, KERN_ERR "missing sysfs attribute operations for "
+		       "kobject: %s\n", kobject_name(kobj));
 		goto err_out;
 	}
 
@@ -420,7 +420,7 @@ static int sysfs_release(struct inode *inode, struct file *filp)
  */
 static unsigned int sysfs_poll(struct file *filp, poll_table *wait)
 {
-	struct sysfs_buffer *buffer = filp->private_data;
+	struct sysfs_buffer * buffer = filp->private_data;
 	struct sysfs_dirent *attr_sd = filp->f_path.dentry->d_fsdata;
 	struct sysfs_open_dirent *od = attr_sd->s_attr.open;
 
@@ -518,9 +518,8 @@ static int sysfs_attr_ns(struct kobject *kobj, const struct attribute *attr,
 	ns = ops->namespace(kobj, attr);
 out:
 	if (err) {
-		WARN(1, KERN_ERR
-		     "missing sysfs namespace attribute operation for kobject: %s\n",
-		     kobject_name(kobj));
+		WARN(1, KERN_ERR "missing sysfs namespace attribute operation for "
+		     "kobject: %s\n", kobject_name(kobj));
 	}
 	*pns = ns;
 	return err;
@@ -570,14 +569,14 @@ int sysfs_add_file(struct sysfs_dirent *dir_sd, const struct attribute *attr,
  *	@kobj:	object we're creating for.
  *	@attr:	attribute descriptor.
  */
-int sysfs_create_file(struct kobject *kobj, const struct attribute *attr)
+
+int sysfs_create_file(struct kobject * kobj, const struct attribute * attr)
 {
 	BUG_ON(!kobj || !kobj->sd || !attr);
 
 	return sysfs_add_file(kobj->sd, attr, SYSFS_KOBJ_ATTR);
 
 }
-EXPORT_SYMBOL_GPL(sysfs_create_file);
 
 int sysfs_create_files(struct kobject *kobj, const struct attribute **ptr)
 {
@@ -591,7 +590,6 @@ int sysfs_create_files(struct kobject *kobj, const struct attribute **ptr)
 			sysfs_remove_file(kobj, ptr[i]);
 	return err;
 }
-EXPORT_SYMBOL_GPL(sysfs_create_files);
 
 /**
  * sysfs_add_file_to_group - add an attribute file to a pre-existing group.
@@ -695,6 +693,7 @@ int sysfs_chmod_file(struct kobject *kobj, const struct attribute *attr,
 }
 EXPORT_SYMBOL_GPL(sysfs_chmod_file);
 
+
 /**
  *	sysfs_remove_file - remove an object attribute.
  *	@kobj:	object we're acting for.
@@ -702,7 +701,8 @@ EXPORT_SYMBOL_GPL(sysfs_chmod_file);
  *
  *	Hash the attribute name and kill the victim.
  */
-void sysfs_remove_file(struct kobject *kobj, const struct attribute *attr)
+
+void sysfs_remove_file(struct kobject * kobj, const struct attribute * attr)
 {
 	const void *ns;
 
@@ -711,15 +711,13 @@ void sysfs_remove_file(struct kobject *kobj, const struct attribute *attr)
 
 	sysfs_hash_and_remove(kobj->sd, ns, attr->name);
 }
-EXPORT_SYMBOL_GPL(sysfs_remove_file);
 
-void sysfs_remove_files(struct kobject *kobj, const struct attribute **ptr)
+void sysfs_remove_files(struct kobject * kobj, const struct attribute **ptr)
 {
 	int i;
 	for (i = 0; ptr[i]; i++)
 		sysfs_remove_file(kobj, ptr[i]);
 }
-EXPORT_SYMBOL_GPL(sysfs_remove_files);
 
 /**
  * sysfs_remove_file_from_group - remove an attribute file from a group.
@@ -834,3 +832,9 @@ int sysfs_schedule_callback(struct kobject *kobj, void (*func)(void *),
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sysfs_schedule_callback);
+
+
+EXPORT_SYMBOL_GPL(sysfs_create_file);
+EXPORT_SYMBOL_GPL(sysfs_remove_file);
+EXPORT_SYMBOL_GPL(sysfs_remove_files);
+EXPORT_SYMBOL_GPL(sysfs_create_files);
