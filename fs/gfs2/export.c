@@ -88,10 +88,7 @@ static int gfs2_get_name(struct dentry *parent, char *name,
 	struct inode *dir = parent->d_inode;
 	struct inode *inode = child->d_inode;
 	struct gfs2_inode *dip, *ip;
-	struct get_name_filldir gnfd = {
-		.ctx.actor = get_name_filldir,
-		.name = name
-	};
+	struct get_name_filldir gnfd;
 	struct gfs2_holder gh;
 	u64 offset = 0;
 	int error;
