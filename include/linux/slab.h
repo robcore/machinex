@@ -454,6 +454,8 @@ static inline void *kmem_cache_alloc_node(struct kmem_cache *cachep,
 }
 #endif /* !CONFIG_NUMA && !CONFIG_SLOB */
 
+extern void *kmalloc_order(size_t size, gfp_t flags, unsigned int order);
+
 /*
  * kmalloc_track_caller is a special version of kmalloc that records the
  * calling function of the routine calling it for slab leak tracking instead
