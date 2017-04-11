@@ -4,7 +4,7 @@
  * Copyright (c) 2003 Patrick Mochel
  * Copyright (c) 2003 Open Source Development Lab
  *
- * This file is released undert the GPL v2. 
+ * This file is released undert the GPL v2.
  *
  */
 
@@ -155,7 +155,7 @@ int sysfs_update_group(struct kobject *kobj,
 
 
 
-void sysfs_remove_group(struct kobject * kobj, 
+void sysfs_remove_group(struct kobject * kobj,
 			const struct attribute_group * grp)
 {
 	struct sysfs_dirent *dir_sd = kobj->sd;
@@ -209,7 +209,7 @@ int sysfs_merge_group(struct kobject *kobj,
 
 	return error;
 }
-EXPORT_SYMBOL_GPL(sysfs_merge_group);
+EXPORT_SYMBOL(sysfs_merge_group);
 
 /**
  * sysfs_unmerge_group - remove files from a pre-existing attribute group.
@@ -229,7 +229,7 @@ void sysfs_unmerge_group(struct kobject *kobj,
 		sysfs_put(dir_sd);
 	}
 }
-EXPORT_SYMBOL_GPL(sysfs_unmerge_group);
+EXPORT_SYMBOL(sysfs_unmerge_group);
 
 /**
  * sysfs_add_link_to_group - add a symlink to an attribute group.
@@ -253,7 +253,7 @@ int sysfs_add_link_to_group(struct kobject *kobj, const char *group_name,
 
 	return error;
 }
-EXPORT_SYMBOL_GPL(sysfs_add_link_to_group);
+EXPORT_SYMBOL(sysfs_add_link_to_group);
 
 /**
  * sysfs_remove_link_from_group - remove a symlink from an attribute group.
@@ -272,8 +272,8 @@ void sysfs_remove_link_from_group(struct kobject *kobj, const char *group_name,
 		sysfs_put(dir_sd);
 	}
 }
-EXPORT_SYMBOL_GPL(sysfs_remove_link_from_group);
+EXPORT_SYMBOL(sysfs_remove_link_from_group);
 
-EXPORT_SYMBOL_GPL(sysfs_create_group);
-EXPORT_SYMBOL_GPL(sysfs_update_group);
-EXPORT_SYMBOL_GPL(sysfs_remove_group);
+EXPORT_SYMBOL(sysfs_create_group);
+EXPORT_SYMBOL(sysfs_update_group);
+EXPORT_SYMBOL(sysfs_remove_group);
