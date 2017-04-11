@@ -58,6 +58,9 @@ struct timekeeper {
 	/* The current UTC to TAI offset in seconds */
 	s32			tai_offset;
 
+	/* Monotonic raw base time */
+	ktime_t			base_raw;
+
 	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
 	struct timespec64	raw_time;
 	/* CLOCK_MONOTONIC time value of a pending leap-second*/
