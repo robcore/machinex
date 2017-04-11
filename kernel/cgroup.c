@@ -2342,7 +2342,7 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
 		down_read(&css_set_rwsem);
 		from_cgrp = task_cgroup_from_root(from, root);
 		up_read(&css_set_rwsem);
-		retval = cgroup_attach_task(from_cg, tsk, false);
+		retval = cgroup_attach_task(from_cgroup, tsk, false);
 		if (retval)
 			break;
 	}
