@@ -93,7 +93,7 @@ extern void update_vsyscall_tz(void);
 
 #elif defined(CONFIG_GENERIC_TIME_VSYSCALL_OLD)
 
-extern void update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
+extern void update_vsyscall_old(struct timespec64 *ts, struct timespec64 *wtm,
 				struct clocksource *c, u32 mult);
 extern void update_vsyscall_tz(void);
 
