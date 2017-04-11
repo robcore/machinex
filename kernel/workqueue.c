@@ -873,22 +873,35 @@ struct task_struct *wq_worker_sleeping(struct task_struct *task, int cpu)
  * worker_set_flags - set worker flags and adjust nr_running accordingly
  * @worker: self
  * @flags: flags to set
+ * @wakeup: wakeup an idle worker if necessary
  *
- * Set @flags in @worker->flags and adjust nr_running accordingly.
+ * Set @flags in @worker->flags and adjust nr_running accordingly.  If
+ * nr_running becomes zero and @wakeup is %true, an idle worker is
+ * woken up.
  *
  * CONTEXT:
  * spin_lock_irq(pool->lock)
  */
-static inline void worker_set_flags(struct worker *worker, unsigned int flags)
+static inline void worker_set_flags(struct worker *worker, unsigned int flags,
+				    bool wakeup)
 {
 	struct worker_pool *pool = worker->pool;
 
 	WARN_ON_ONCE(worker->task != current);
 
-	/* If transitioning into NOT_RUNNING, adjust nr_running. */
+	/*
+	 * If transitioning into NOT_RUNNING, adjust nr_running and
+	 * wake up an idle worker as necessary if requested by
+	 * @wakeup.
+	 */
 	if ((flags & WORKER_NOT_RUNNING) &&
 	    !(worker->flags & WORKER_NOT_RUNNING)) {
-		atomic_dec(&pool->nr_running);
+		if (wakeup) {
+			if (atomic_dec_and_test(&pool->nr_running) &&
+			    !list_empty(&pool->worklist))
+				wake_up_worker(pool);
+		} else
+			atomic_dec(&pool->nr_running);
 	}
 
 	worker->flags |= flags;
@@ -2119,22 +2132,17 @@ __acquires(&pool->lock)
 	list_del_init(&work->entry);
 
 	/*
-	 * CPU intensive works don't participate in concurrency management.
-	 * They're the scheduler's responsibility.  This takes @worker out
-	 * of concurrency management and the next code block will chain
-	 * execution of the pending work items.
+	 * CPU intensive works don't participate in concurrency
+	 * management.  They're the scheduler's responsibility.
 	 */
 	if (unlikely(cpu_intensive))
-		worker_set_flags(worker, WORKER_CPU_INTENSIVE);
+		worker_set_flags(worker, WORKER_CPU_INTENSIVE, true);
 
 	/*
-	 * Wake up another worker if necessary.  The condition is always
-	 * false for normal per-cpu workers since nr_running would always
-	 * be >= 1 at this point.  This is used to chain execution of the
-	 * pending work items for WORKER_NOT_RUNNING workers such as the
-	 * UNBOUND and CPU_INTENSIVE ones.
+	 * Unbound pool isn't concurrency managed and work items should be
+	 * executed ASAP.  Wake up another worker if necessary.
 	 */
-	if (need_more_worker(pool))
+	if ((worker->flags & WORKER_UNBOUND) && need_more_worker(pool))
 		wake_up_worker(pool);
 
 	/*
@@ -2292,7 +2300,7 @@ recheck:
 		}
 	} while (keep_working(pool));
 
-	worker_set_flags(worker, WORKER_PREP);
+	worker_set_flags(worker, WORKER_PREP, false);
 sleep:
 	if (unlikely(need_to_manage_workers(pool)) && manage_workers(worker))
 		goto recheck;

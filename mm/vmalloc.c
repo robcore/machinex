@@ -27,9 +27,7 @@
 #include <linux/pfn.h>
 #include <linux/kmemleak.h>
 #include <linux/atomic.h>
-#include <linux/compiler.h>
 #include <linux/llist.h>
-
 #include <asm/uaccess.h>
 #include <asm/tlbflush.h>
 #include <asm/shmparam.h>
@@ -294,7 +292,7 @@ static struct vmap_area *__find_vmap_area(unsigned long addr)
 		va = rb_entry(n, struct vmap_area, rb_node);
 		if (addr < va->va_start)
 			n = n->rb_left;
-		else if (addr >= va->va_end)
+		else if (addr > va->va_start)
 			n = n->rb_right;
 		else
 			return va;
@@ -1108,12 +1106,6 @@ static struct vm_struct *vmlist __initdata;
  * @node: prefer to allocate data structures on this node
  * @prot: memory protection to use. PAGE_KERNEL for regular RAM
  *
- * If you use this function for less than VMAP_MAX_ALLOC pages, it could be
- * faster than vmap so it's good.  But if you mix long-life and short-life
- * objects with vm_map_ram(), it could consume lots of address space through
- * fragmentation (especially on a 32bit machine).  You could see failures in
- * the end.  Please use this function for short-lived objects.
- *
  * Returns: a pointer to the address that has been mapped, or %NULL on failure
  */
 void *vm_map_ram(struct page **pages, unsigned int count, int node, pgprot_t prot)
@@ -1570,7 +1562,6 @@ static void __vunmap(const void *addr, int deallocate_pages)
  *	have CONFIG_ARCH_HAVE_NMI_SAFE_CMPXCHG, but making the calling
  *	conventions for vfree() arch-depenedent would be a really bad idea)
  *
- *	NOTE: assumes that the object at *addr has a size >= sizeof(llist_node)
  */
 void vfree(const void *addr)
 {
