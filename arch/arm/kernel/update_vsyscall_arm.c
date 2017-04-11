@@ -13,7 +13,6 @@
 #include <linux/export.h>
 #include <linux/clocksource.h>
 #include <linux/time.h>
-#include "update_vsyscall_arm.h"
 /*
  * See entry-armv.S for the offsets into the kernel user helper for
  * these fields.
