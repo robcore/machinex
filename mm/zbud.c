@@ -255,7 +255,7 @@ int zbud_alloc(struct zbud_pool *pool, unsigned int size, gfp_t gfp,
 	enum buddy bud;
 	struct page *page;
 
-	if (!size || (gfp & __GFP_HIGHMEM))
+	if (size <= 0 || gfp & __GFP_HIGHMEM)
 		return -EINVAL;
 	if (size > PAGE_SIZE - ZHDR_SIZE_ALIGNED - CHUNK_SIZE)
 		return -ENOSPC;
