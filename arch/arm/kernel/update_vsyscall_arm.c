@@ -72,6 +72,7 @@ update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
 
 	raw_spin_lock_irqsave(&mx_vsys_lock, flags);
 	write_seqcount_begin(&vsys_seq);
+	*seqnum = vsys_seq.sequence;
 	dgtod->cycle_last = cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
@@ -80,9 +81,10 @@ update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
 	dgtod->tv_nsec = ts->tv_nsec;
 	dgwtm->tv_sec = wtm->tv_sec;
 	dgwtm->tv_nsec = wtm->tv_nsec;
+	*seqnum = vsys_seq.sequence + 1;
 	write_seqcount_end(&vsys_seq);
-	*seqnum = vsys_seq.sequence;
 	raw_spin_unlock_irqrestore(&mx_vsys_lock, flags);
+
 }
 EXPORT_SYMBOL(update_vsyscall_old);
 
@@ -97,11 +99,11 @@ update_vsyscall_tz(void)
 
 	raw_spin_lock_irqsave(&mx_vsys_lock, flags);
 	write_seqcount_begin(&vsys_seq);
+	*seqnum = vsys_seq.sequence;
 	dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
 	dgtod->tz_dsttime = sys_tz.tz_dsttime;
+	*seqnum = vsys_seq.sequence + 1;
 	write_seqcount_end(&vsys_seq);
-	*seqnum = vsys_seq.sequence;
 	raw_spin_unlock_irqrestore(&mx_vsys_lock, flags);
-
 }
 EXPORT_SYMBOL(update_vsyscall_tz);
