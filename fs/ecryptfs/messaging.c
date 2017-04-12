@@ -293,7 +293,7 @@ int ecryptfs_process_response(struct ecryptfs_message *msg, uid_t euid,
 	mutex_lock(&msg_ctx->mux);
 	mutex_lock(&ecryptfs_daemon_hash_mux);
 	rcu_read_lock();
-	nsproxy = task_nsproxy(msg_ctx->task);
+	nsproxy = msg_ctx->task->nsproxy;
 	if (nsproxy == NULL) {
 		rc = -EBADMSG;
 		printk(KERN_ERR "%s: Receiving process is a zombie. Dropping "

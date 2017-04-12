@@ -233,7 +233,7 @@ static int mounts_open_common(struct inode *inode, struct file *file,
 		goto err;
 
 	task_lock(task);
-	nsp = task_nsproxy(task);
+	nsp = task->nsproxy;
 	if (!nsp) {
 		task_unlock(task);
 		put_task_struct(task);
