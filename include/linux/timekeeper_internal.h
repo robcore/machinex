@@ -127,6 +127,7 @@ struct timekeeper {
 	/* Shift conversion between clock shifted nano seconds and
 	 * ntp shifted nano seconds. */
 	u32			ntp_error_shift;
+	u32			ntp_err_mult;
 
 	/* The current time */
 	struct timespec xtime;
