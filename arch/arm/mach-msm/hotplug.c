@@ -27,7 +27,7 @@
 
 static cpumask_t cpu_dying_mask;
 
-static DEFINE_PER_CPU(unsigned int, warm_boot_flag);
+static DEFINE_PER_CPU_SHARED_ALIGNED(unsigned int, warm_boot_flag);
 
 static inline void cpu_enter_lowpower(void)
 {
