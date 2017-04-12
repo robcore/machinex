@@ -60,9 +60,9 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall(struct timespec *ts, struct timespec *wtm,
+update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 						struct clocksource *c, u32 mult,
-						struct timekeeper *tk)
+						cycle_t cycle_last)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
@@ -71,11 +71,13 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
+	struct timekeeper tk;
+	struct tk_read_base *tkr;
 
 	spin_lock_irqsave(&mx_vsys_lock, flags);
 	raw_write_seqcount_begin(&vsys_seq);
 	*seqnum = vsys_seq.sequence;
-	dgtod->cycle_last = tk->tkr.cycle_last;
+	dgtod->cycle_last = tk.tkr.cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
 	dgtod->shift = c->shift;
@@ -88,7 +90,7 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	spin_unlock_irqrestore(&mx_vsys_lock, flags);
 
 }
-EXPORT_SYMBOL(update_vsyscall);
+EXPORT_SYMBOL(update_vsyscall_old);
 
 void
 update_vsyscall_tz(void)
