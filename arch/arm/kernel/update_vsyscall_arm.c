@@ -12,6 +12,8 @@
 
 #include <linux/export.h>
 #include <linux/timekeeper_internal.h>
+#include <linux/seqlock.h>
+
 /*
  * See entry-armv.S for the offsets into the kernel user helper for
  * these fields.
@@ -28,7 +30,7 @@
 #define ARM_VSYSCALL_TIMER_TV_SEC		0xf58
 #define ARM_VSYSCALL_TIMER_TV_NSEC		0xf5c
 
-static DEFINE_RAW_SPINLOCK(mx_vsys_lock);
+static DEFINE_SPINLOCK(mx_vsys_lock);
 static seqcount_t vsys_seq;
 extern void *vectors_page;
 extern struct timezone sys_tz;
@@ -70,8 +72,8 @@ update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
 
-	raw_spin_lock_irqsave(&mx_vsys_lock, flags);
-	write_seqcount_begin(&vsys_seq);
+	spin_lock_irqsave(&mx_vsys_lock, flags);
+	raw_write_seqcount_begin(&vsys_seq);
 	*seqnum = vsys_seq.sequence;
 	dgtod->cycle_last = cycle_last;
 	dgtod->mask = c->mask;
@@ -82,8 +84,8 @@ update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
 	dgwtm->tv_sec = wtm->tv_sec;
 	dgwtm->tv_nsec = wtm->tv_nsec;
 	*seqnum = vsys_seq.sequence + 1;
-	write_seqcount_end(&vsys_seq);
-	raw_spin_unlock_irqrestore(&mx_vsys_lock, flags);
+	raw_write_seqcount_end(&vsys_seq);
+	spin_unlock_irqrestore(&mx_vsys_lock, flags);
 
 }
 EXPORT_SYMBOL(update_vsyscall_old);
@@ -97,13 +99,13 @@ update_vsyscall_tz(void)
 	struct kernel_tz_t *dgtod = (struct kernel_tz_t *)(vectors +
 		ARM_VSYSCALL_TIMER_TZ);
 
-	raw_spin_lock_irqsave(&mx_vsys_lock, flags);
-	write_seqcount_begin(&vsys_seq);
+	spin_lock_irqsave(&mx_vsys_lock, flags);
+	raw_write_seqcount_begin(&vsys_seq);
 	*seqnum = vsys_seq.sequence;
 	dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
 	dgtod->tz_dsttime = sys_tz.tz_dsttime;
 	*seqnum = vsys_seq.sequence + 1;
-	write_seqcount_end(&vsys_seq);
-	raw_spin_unlock_irqrestore(&mx_vsys_lock, flags);
+	raw_write_seqcount_end(&vsys_seq);
+	spin_unlock_irqrestore(&mx_vsys_lock, flags);
 }
 EXPORT_SYMBOL(update_vsyscall_tz);
