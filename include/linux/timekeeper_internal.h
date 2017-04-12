@@ -151,7 +151,7 @@ extern void update_vsyscall_tz(void);
 
 extern void update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 						struct clocksource *c, u32 mult,
-						cycle_t cycle_last);
+						struct tk_read_base *tkr);
 
 extern void update_vsyscall_tz(void);
 
