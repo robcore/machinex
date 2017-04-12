@@ -142,6 +142,11 @@ struct timekeeper {
 	 * shifted nano seconds. */
 };
 
+struct {
+	seqcount_t		seq;
+	struct timekeeper	timekeeper;
+} tk_core ____cacheline_aligned;
+
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
 
 extern void update_vsyscall(struct timekeeper *tk);

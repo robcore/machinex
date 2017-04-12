@@ -36,7 +36,7 @@
  * The most important data for readout fits into a single 64 byte
  * cache line.
  */
-static struct {
+struct {
 	seqcount_t		seq;
 	struct timekeeper	timekeeper;
 } tk_core ____cacheline_aligned;

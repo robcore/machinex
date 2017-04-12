@@ -72,14 +72,14 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 		ARM_VSYSCALL_TIMER_CYCLE_LAST);
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
-	struct timekeeper tk;
+	struct timekeeper *tk = &tk_core.timekeeper;
 	struct tk_read_base *tkr;
 
 	//spin_lock_irqsave(&mx_vsys_lock, flags);
 	//raw_write_seqcount_begin(&vsys_seq);
 	write_seqlock_irqsave(&vsys_seq, flags);
 	*seqnum = vsys_seq.seqcount.sequence;
-	dgtod->cycle_last = tk.tkr.cycle_last;
+	dgtod->cycle_last = tk->tkr.cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
 	dgtod->shift = c->shift;
