@@ -60,7 +60,7 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall(struct timespec *ts, struct timespec64 *wtm,
+update_vsyscall(struct timespec *ts, struct timespec *wtm,
 						struct clocksource *c, u32 mult,
 						struct tk_read_base *tkr)
 {
