@@ -87,11 +87,11 @@ int platform_get_irq(struct platform_device *dev, unsigned int num)
 	 * to be set up. It so happens that the trigger flags for
 	 * IORESOURCE_BITS correspond 1-to-1 to the IRQF_TRIGGER*
 	 * settings.
-	 */
+
 	if (r && r->flags & IORESOURCE_BITS)
 		irqd_set_trigger_type(irq_get_irq_data(r->start),
 				      r->flags & IORESOURCE_BITS);
-
+	 */
 	return r ? r->start : -ENXIO;
 }
 EXPORT_SYMBOL_GPL(platform_get_irq);
