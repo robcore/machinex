@@ -196,47 +196,6 @@ static int cpu_clock_sample(const clockid_t which_clock, struct task_struct *p,
 	return 0;
 }
 
-void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
-{
-	struct signal_struct *sig = tsk->signal;
-	struct task_struct *t;
-
-	times->utime = sig->utime;
-	times->stime = sig->stime;
-	times->sum_exec_runtime = sig->sum_sched_runtime;
-
-	unsigned int seq, nextseq;
-
-	rcu_read_lock();
-	/* make sure we can trust tsk->thread_group list */
-	if (!likely(pid_alive(tsk)))
-		goto out;
-
-	t = tsk;
-	/* Attempt a lockless read on the first round. */
-	nextseq = 0;
-	do {
-		seq = nextseq;
-		read_seqbegin_or_lock(&sig->stats_lock, &seq);
-		times->utime = sig->utime;
-		times->stime = sig->stime;
-		times->sum_exec_runtime = sig->sum_sched_runtime;
-
-		t = tsk;
-		for_each_thread(tsk, t) {
-			task_cputime(t, &utime, &stime);
-			times->utime += utime;
-			times->stime += stime;
-			times->sum_exec_runtime += task_sched_runtime(t);
-		}
-		/* If lockless access failed, take the lock. */
-		nextseq = 1;
-	} while (need_seqretry(&sig->stats_lock, seq));
-	done_seqretry(&sig->stats_lock, seq);
-out:
-	rcu_read_unlock();
-}
-
 static void update_gt_cputime(struct task_cputime *a, struct task_cputime *b)
 {
 	if (b->utime > a->utime)
