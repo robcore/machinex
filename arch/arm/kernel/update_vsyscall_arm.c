@@ -60,7 +60,7 @@ struct kernel_wtm_t {
  * gettimeofday, clock_gettime, etc.
  */
 void
-update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
+update_vsyscall(struct timespec *ts, struct timespec64 *wtm,
 						struct clocksource *c, u32 mult,
 						cycle_t cycle_last)
 {
@@ -88,7 +88,7 @@ update_vsyscall_old(struct timespec *ts, struct timespec64 *wtm,
 	spin_unlock_irqrestore(&mx_vsys_lock, flags);
 
 }
-EXPORT_SYMBOL(update_vsyscall_old);
+EXPORT_SYMBOL(update_vsyscall);
 
 void
 update_vsyscall_tz(void)
