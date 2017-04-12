@@ -62,7 +62,7 @@ struct kernel_wtm_t {
 void
 update_vsyscall(struct timespec *ts, struct timespec *wtm,
 						struct clocksource *c, u32 mult,
-						struct tk_read_base *tkr)
+						struct timekeeper *tk)
 {
 	unsigned long vectors = (unsigned long)vectors_page;
 	unsigned long flags;
@@ -75,7 +75,7 @@ update_vsyscall(struct timespec *ts, struct timespec *wtm,
 	spin_lock_irqsave(&mx_vsys_lock, flags);
 	raw_write_seqcount_begin(&vsys_seq);
 	*seqnum = vsys_seq.sequence;
-	dgtod->cycle_last = tkr->cycle_last;
+	dgtod->cycle_last = tk->tkr.cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
 	dgtod->shift = c->shift;
