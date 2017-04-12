@@ -30,8 +30,6 @@
 #define ARM_VSYSCALL_TIMER_TV_SEC		0xf58
 #define ARM_VSYSCALL_TIMER_TV_NSEC		0xf5c
 
-//static DEFINE_SPINLOCK(mx_vsys_lock);
-//static seqcount_t vsys_seq;
 static struct {
 	seqcount_t		seq;
 	struct timekeeper	timekeeper;
@@ -78,10 +76,8 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 	struct kernel_wtm_t *dgwtm = (struct kernel_wtm_t *)(vectors +
 		ARM_VSYSCALL_TIMER_WTM_TV_SEC);
 	struct timekeeper *tk = &tk_core.timekeeper;
-	struct tk_read_base *tkr;
+	struct tk_read_base *tkr = &tk.tk_read_base;
 
-	//spin_lock_irqsave(&mx_vsys_lock, flags);
-	//raw_write_seqcount_begin(&vsys_seq);
 	write_seqlock_irqsave(&vsys_seq, flags);
 	*seqnum = vsys_seq.seqcount.sequence;
 	dgtod->cycle_last = tk->tkr.cycle_last;
@@ -94,9 +90,6 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 	dgwtm->tv_nsec = wtm->tv_nsec;
 	*seqnum = vsys_seq.seqcount.sequence + 1;
 	write_sequnlock_irqrestore(&vsys_seq, flags);
-	//raw_write_seqcount_end(&vsys_seq);
-	//spin_unlock_irqrestore(&mx_vsys_lock, flags);
-
 }
 EXPORT_SYMBOL(update_vsyscall_old);
 
@@ -109,15 +102,11 @@ update_vsyscall_tz(void)
 	struct kernel_tz_t *dgtod = (struct kernel_tz_t *)(vectors +
 		ARM_VSYSCALL_TIMER_TZ);
 
-	//spin_lock_irqsave(&mx_vsys_lock, flags);
-	//raw_write_seqcount_begin(&vsys_seq);
 	write_seqlock_irqsave(&vsys_seq, flags);
 	*seqnum = vsys_seq.seqcount.sequence;
 	dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
 	dgtod->tz_dsttime = sys_tz.tz_dsttime;
 	*seqnum = vsys_seq.seqcount.sequence + 1;
 	write_sequnlock_irqrestore(&vsys_seq, flags);
-	//raw_write_seqcount_end(&vsys_seq);
-	//spin_unlock_irqrestore(&mx_vsys_lock, flags);
 }
 EXPORT_SYMBOL(update_vsyscall_tz);
