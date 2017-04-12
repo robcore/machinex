@@ -1324,6 +1324,16 @@ static void sg_rq_end_io(struct request *rq, int uptodate)
 	}
 	/* Rely on write phase to clean out srp status values, so no "else" */
 
+	/*
+	 * Free the request as soon as it is complete so that its resources
+	 * can be reused without waiting for userspace to read() the
+	 * result.  But keep the associated bio (if any) around until
+	 * blk_rq_unmap_user() can be called from user context.
+	 */
+	srp->rq = NULL;
+	if (rq->cmd != rq->__cmd)
+		kfree(rq->cmd);
+	__blk_put_request(rq->q, rq);
 	write_lock_irqsave(&sfp->rq_list_lock, iflags);
 	if (unlikely(srp->orphan)) {
 		if (sfp->keep_orphan)
@@ -1647,7 +1657,22 @@ static int sg_start_req(Sg_request *srp, unsigned char *cmd)
 	SCSI_LOG_TIMEOUT(4, printk(KERN_INFO "sg_start_req: dxfer_len=%d\n",
 				   dxfer_len));
 
-	rq = blk_get_request(q, rw, GFP_ATOMIC);
+	/*
+	 * NOTE
+	 *
+	 * With scsi-mq enabled, there are a fixed number of preallocated
+	 * requests equal in number to shost->can_queue.  If all of the
+	 * preallocated requests are already in use, then using GFP_ATOMIC with
+	 * blk_get_request() will return -EWOULDBLOCK, whereas using GFP_KERNEL
+	 * will cause blk_get_request() to sleep until an active command
+	 * completes, freeing up a request.  Neither option is ideal, but
+	 * GFP_KERNEL is the better choice to prevent userspace from getting an
+	 * unexpected EWOULDBLOCK.
+	 *
+	 * With scsi-mq disabled, blk_get_request() with GFP_KERNEL usually
+	 * does not sleep except under memory pressure.
+	 */
+	rq = blk_get_request(q, rw, GFP_KERNEL);
 	if (!rq)
 		return -ENOMEM;
 
@@ -1736,14 +1761,10 @@ static int sg_finish_rem_req(Sg_request * srp)
 	Sg_scatter_hold *req_schp = &srp->data;
 
 	SCSI_LOG_TIMEOUT(4, printk("sg_finish_rem_req: res_used=%d\n", (int) srp->res_used));
-	if (srp->rq) {
-		if (srp->bio)
-			ret = blk_rq_unmap_user(srp->bio);
+	if (srp->bio)
+		ret = blk_rq_unmap_user(srp->bio);
 
-		blk_put_request(srp->rq);
-	}
-
-	if (srp->res_used)
+	if (srp->rq)
 		sg_unlink_reserve(sfp, srp);
 	else
 		sg_remove_scat(req_schp);
