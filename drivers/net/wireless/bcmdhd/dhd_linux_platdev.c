@@ -142,7 +142,7 @@ int wifi_platform_get_irq_number(wifi_adapter_info_t *adapter, unsigned long *ir
 }
 
 #ifdef ENABLE_4335BT_WAR
-bool  check_bcm4335_rev(void)
+bool check_bcm4335_rev(void)
 {
         int ret = -1;
         struct file *fp = NULL;
@@ -201,18 +201,18 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 
 #ifdef ENABLE_4335BT_WAR
 		is4335_revb0 = check_bcm4335_rev();
-		err = plat_data->set_power(on,is4335_revb0);
+		err = plat_data->set_power(on, is4335_revb0);
 #else
 		err = plat_data->set_power(on);
 #endif
 	}
 
-	if (msec && !err)
-		OSL_SLEEP(msec);
+	//if (msec && !err)
+		//OSL_SLEEP(msec);
 
 	if (on && !err)
 		is_power_on = TRUE;
-	else
+	else if (!on && !err);
 		is_power_on = FALSE;
 
 	return err;
