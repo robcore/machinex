@@ -30,8 +30,9 @@
 #define ARM_VSYSCALL_TIMER_TV_SEC		0xf58
 #define ARM_VSYSCALL_TIMER_TV_NSEC		0xf5c
 
-static DEFINE_SPINLOCK(mx_vsys_lock);
-static seqcount_t vsys_seq;
+//static DEFINE_SPINLOCK(mx_vsys_lock);
+//static seqcount_t vsys_seq;
+static seqlock_t vsys_seq;
 extern void *vectors_page;
 extern struct timezone sys_tz;
 
@@ -74,9 +75,10 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 	struct timekeeper tk;
 	struct tk_read_base *tkr;
 
-	spin_lock_irqsave(&mx_vsys_lock, flags);
-	raw_write_seqcount_begin(&vsys_seq);
-	*seqnum = vsys_seq.sequence;
+	//spin_lock_irqsave(&mx_vsys_lock, flags);
+	//raw_write_seqcount_begin(&vsys_seq);
+	write_seqlock_irqsave(&vsys_seq, flags);
+	*seqnum = vsys_seq.seqcount.sequence;
 	dgtod->cycle_last = tk.tkr.cycle_last;
 	dgtod->mask = c->mask;
 	dgtod->mult = c->mult;
@@ -85,9 +87,10 @@ update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 	dgtod->tv_nsec = ts->tv_nsec;
 	dgwtm->tv_sec = wtm->tv_sec;
 	dgwtm->tv_nsec = wtm->tv_nsec;
-	*seqnum = vsys_seq.sequence + 1;
-	raw_write_seqcount_end(&vsys_seq);
-	spin_unlock_irqrestore(&mx_vsys_lock, flags);
+	*seqnum = vsys_seq.seqcount.sequence + 1;
+	write_sequnlock_irqrestore(&vsys_seq, flags);
+	//raw_write_seqcount_end(&vsys_seq);
+	//spin_unlock_irqrestore(&mx_vsys_lock, flags);
 
 }
 EXPORT_SYMBOL(update_vsyscall_old);
@@ -101,13 +104,15 @@ update_vsyscall_tz(void)
 	struct kernel_tz_t *dgtod = (struct kernel_tz_t *)(vectors +
 		ARM_VSYSCALL_TIMER_TZ);
 
-	spin_lock_irqsave(&mx_vsys_lock, flags);
-	raw_write_seqcount_begin(&vsys_seq);
-	*seqnum = vsys_seq.sequence;
+	//spin_lock_irqsave(&mx_vsys_lock, flags);
+	//raw_write_seqcount_begin(&vsys_seq);
+	write_seqlock_irqsave(&vsys_seq, flags);
+	*seqnum = vsys_seq.seqcount.sequence;
 	dgtod->tz_minuteswest = sys_tz.tz_minuteswest;
 	dgtod->tz_dsttime = sys_tz.tz_dsttime;
-	*seqnum = vsys_seq.sequence + 1;
-	raw_write_seqcount_end(&vsys_seq);
-	spin_unlock_irqrestore(&mx_vsys_lock, flags);
+	*seqnum = vsys_seq.seqcount.sequence + 1;
+	write_sequnlock_irqrestore(&vsys_seq, flags);
+	//raw_write_seqcount_end(&vsys_seq);
+	//spin_unlock_irqrestore(&mx_vsys_lock, flags);
 }
 EXPORT_SYMBOL(update_vsyscall_tz);
