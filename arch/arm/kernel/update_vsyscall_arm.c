@@ -45,8 +45,8 @@ struct kernel_gtod_t {
 	u64  mask;
 	u32  mult;
 	u32  shift;
-	time64_t  tv_sec;
-	long  tv_nsec;
+	long tv_sec;
+	long tv_nsec;
 };
 
 struct kernel_tz_t {
@@ -55,7 +55,7 @@ struct kernel_tz_t {
 };
 
 struct kernel_wtm_t {
-	time64_t  tv_sec;
+	long  tv_sec;
 	long  tv_nsec;
 };
 
