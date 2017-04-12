@@ -205,17 +205,34 @@ void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
 	times->stime = sig->stime;
 	times->sum_exec_runtime = sig->sum_sched_runtime;
 
+	unsigned int seq, nextseq;
+
 	rcu_read_lock();
 	/* make sure we can trust tsk->thread_group list */
 	if (!likely(pid_alive(tsk)))
 		goto out;
 
 	t = tsk;
-	for_each_thread(tsk, t) {
-		times->utime += t->utime;
-		times->stime += t->stime;
-		times->sum_exec_runtime += task_sched_runtime(t);
-	}
+	/* Attempt a lockless read on the first round. */
+	nextseq = 0;
+	do {
+		seq = nextseq;
+		read_seqbegin_or_lock(&sig->stats_lock, &seq);
+		times->utime = sig->utime;
+		times->stime = sig->stime;
+		times->sum_exec_runtime = sig->sum_sched_runtime;
+
+		t = tsk;
+		for_each_thread(tsk, t) {
+			task_cputime(t, &utime, &stime);
+			times->utime += utime;
+			times->stime += stime;
+			times->sum_exec_runtime += task_sched_runtime(t);
+		}
+		/* If lockless access failed, take the lock. */
+		nextseq = 1;
+	} while (need_seqretry(&sig->stats_lock, seq));
+	done_seqretry(&sig->stats_lock, seq);
 out:
 	rcu_read_unlock();
 }
@@ -296,22 +313,8 @@ static int posix_cpu_clock_get_task(struct task_struct *tsk,
 		if (same_thread_group(tsk, current))
 			err = cpu_clock_sample(which_clock, tsk, &rtn);
 	} else {
-		unsigned long flags;
-		struct sighand_struct *sighand;
-
-		/*
-		 * while_each_thread() is not yet entirely RCU safe,
-		 * keep locking the group while sampling process
-		 * clock for now.
-		 */
-		sighand = lock_task_sighand(tsk, &flags);
-		if (!sighand)
-			return err;
-
 		if (tsk == current || thread_group_leader(tsk))
 			err = cpu_clock_sample_group(which_clock, tsk, &rtn);
-
-		unlock_task_sighand(tsk, &flags);
 	}
 
 	if (!err)
