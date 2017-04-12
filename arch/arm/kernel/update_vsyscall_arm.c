@@ -32,6 +32,10 @@
 
 //static DEFINE_SPINLOCK(mx_vsys_lock);
 //static seqcount_t vsys_seq;
+static struct {
+	seqcount_t		seq;
+	struct timekeeper	timekeeper;
+} tk_core ____cacheline_aligned;
 static seqlock_t vsys_seq;
 extern void *vectors_page;
 extern struct timezone sys_tz;
