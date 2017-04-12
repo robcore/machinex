@@ -353,14 +353,12 @@ EXPORT_SYMBOL_GPL(ktime_get_mono_fast_ns);
 
 static inline void update_vsyscall(struct timekeeper *tk)
 {
- 	struct timespec xt, wm, cl;
-
+ 	struct timespec xt, wm;
 	xt = timespec64_to_timespec(tk_xtime(tk));
 	wm = timespec64_to_timespec(tk->wall_to_monotonic);
-	cl = timespec64_to_timespec(tk->tkr.cycle_last);
 
 	update_vsyscall_old(&xt, &wm, tk->tkr.clock, tk->tkr.mult,
-			   &cl);
+			   tk->tkr.cycle_last);
 }
 
 static inline void old_vsyscall_fixup(struct timekeeper *tk)
