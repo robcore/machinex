@@ -131,6 +131,15 @@ struct timekeeper {
 
 	/* The current time */
 	struct timespec xtime;
+	/* The ntp_tick_length() value currently being used.
+	 * This cached copy ensures we consistently apply the tick
+	 * length for an entire tick, as ntp_tick_length may change
+	 * mid-tick, and we don't want to apply that new value to
+	 * the tick in progress.
+	 */
+	u64			ntp_tick;
+	/* Difference between accumulated time and NTP time in ntp
+	 * shifted nano seconds. */
 };
 
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
