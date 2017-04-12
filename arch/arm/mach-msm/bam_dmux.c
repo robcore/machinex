@@ -460,8 +460,10 @@ static void __queue_rx(gfp_t alloc_flags)
 
 fail_skb:
 	dev_kfree_skb_any(info->skb);
+
 fail_info:
 	kfree(info);
+
 fail:
 	if (!in_global_reset) {
 		DMUX_LOG_KERR("%s: rescheduling\n", __func__);
