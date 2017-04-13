@@ -8557,6 +8557,7 @@ static int active_load_balance_cpu_stop(void *data)
 	double_lock_balance(busiest_rq, target_rq);
 
 	push_task = busiest_rq->push_task;
+	target_cpu = busiest_rq->push_cpu;
 	if (push_task) {
 		if (push_task->on_rq
 			&& push_task->state == TASK_RUNNING
@@ -8591,6 +8592,12 @@ out_unlock_balance:
 	double_unlock_balance(busiest_rq, target_rq);
 out_unlock:
 	busiest_rq->active_balance = 0;
+	push_task = busiest_rq->push_task;
+
+ 	if (push_task)
+ 		busiest_rq->push_task = NULL;
+
+	target_cpu = busiest_rq->push_cpu;
 	raw_spin_unlock_irq(&busiest_rq->lock);
 	if (per_cpu(dbs_boost_needed, target_cpu)) {
 		struct migration_notify_data mnd;
