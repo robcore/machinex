@@ -117,7 +117,9 @@ void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 DEFINE_MUTEX(sched_domains_mutex);
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 DEFINE_PER_CPU_SHARED_ALIGNED(struct nr_stats_s, runqueue_stats);
+#endif
 
 static void update_rq_clock_task(struct rq *rq, s64 delta);
 
@@ -501,18 +503,23 @@ static inline void init_hrtick(void)
 /*
  * cmpxchg based fetch_or, macro so it works for different integer types
  */
+#ifdef CONFIG_SMP
+
+/*
+ *  * cmpxchg based fetch_or, macro so it works for different integer types
+ *   */
 #define fetch_or(ptr, val)						\
 ({	typeof(*(ptr)) __old, __val = *(ptr);				\
- 	for (;;) {							\
- 		__old = cmpxchg((ptr), __val, __val | (val));		\
- 		if (__old == __val)					\
- 			break;						\
- 		__val = __old;						\
- 	}								\
- 	__old;								\
+	for (;;) {							\
+		__old = cmpxchg((ptr), __val, __val | (val));		\
+		if (__old == __val)					\
+			break;						\
+		__val = __old;						\
+	}								\
+	__old;								\
 })
 
-#if defined(CONFIG_SMP) && defined(TIF_POLLING_NRFLAG)
+#ifdef TIF_POLLING_NRFLAG
 /*
  * Atomically set TIF_NEED_RESCHED and test for TIF_POLLING_NRFLAG,
  * this avoids any races wrt polling state changes and thereby avoids
@@ -555,7 +562,6 @@ static bool set_nr_and_not_polling(struct task_struct *p)
 	return true;
 }
 
-#ifdef CONFIG_SMP
 static bool set_nr_if_polling(struct task_struct *p)
 {
 	return false;
@@ -655,8 +661,6 @@ static void wake_up_idle_cpu(int cpu)
 
 	if (set_nr_and_not_polling(rq->idle))
 		smp_send_reschedule(cpu);
-	//else
-		//trace_sched_wake_idle_without_ipi(cpu);
 }
 
 static bool wake_up_full_nohz_cpu(int cpu)
@@ -1042,7 +1046,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Window size (in ns) */
-__read_mostly unsigned int sched_ravg_window = 100000000; //100
+__read_mostly unsigned int sched_ravg_window = 10000000; //10
 
 /* Min window size (in ns) = 10ms */
 #define MIN_SCHED_RAVG_WINDOW 10000000
