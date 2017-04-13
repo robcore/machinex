@@ -137,12 +137,6 @@ do { \
 #define preempt_enable_no_resched_notrace()	barrier()
 #define preempt_enable_notrace()		barrier()
 
-#define preempt_fold_need_resched()
-do { \
-	if (unlikely(test_thread_flag(TIF_NEED_RESCHED))) \
-	preempt_enable_no_resched()
-} while (0)
-
 #endif /* CONFIG_PREEMPT_COUNT */
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS

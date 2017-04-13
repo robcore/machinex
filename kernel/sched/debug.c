@@ -328,10 +328,9 @@ do {									\
 #ifdef CONFIG_SMP
 	P(cpu_capacity);
 #endif
-#ifdef CONFIG_SCHED_HMP
+#if defined(CONFIG_SCHED_HMP) || defined(CONFIG_SCHED_FREQ_INPUT)
 	P(load_scale_factor);
 	P(capacity);
-	P(max_possible_capacity);
 	P(efficiency);
 	P(cur_freq);
 	P(max_freq);
@@ -597,7 +596,7 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 
 #if defined(CONFIG_SMP) && defined(CONFIG_FAIR_GROUP_SCHED)
 	__P(load_avg);
-#ifdef CONFIG_SCHED_HMP
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 	P(ravg.demand);
 	P(se.avg.runnable_avg_sum_scaled);
 #endif
