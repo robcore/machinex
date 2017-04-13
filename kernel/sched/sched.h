@@ -1328,8 +1328,19 @@ struct sched_class {
 #endif
 };
 
+#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+extern void
+update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum);
+#else	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+static inline void
+update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
+{
+}
+#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+
 static inline void put_prev_task(struct rq *rq, struct task_struct *prev)
 {
+	update_task_ravg(prev, rq, 1);
 	prev->sched_class->put_prev_task(rq, prev);
 }
 
