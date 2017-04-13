@@ -1440,7 +1440,7 @@ restart:
 		ave_nr_running +=
 			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
 
-	if (ave_nr_running => 0)
+	if (ave_nr_running >= 0)
 		return ave_nr_running;
 	else
 		goto restart;
