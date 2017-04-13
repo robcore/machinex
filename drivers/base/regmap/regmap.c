@@ -937,11 +937,10 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 			map->format.parse_val(val + i);
 	} else {
 		for (i = 0; i < val_count; i++) {
-			unsigned int ival;
-			ret = regmap_read(map, reg + (i * map->reg_stride), &ival);
+			ret = regmap_read(map, reg + (i * map->reg_stride),
+					  val + (i * val_bytes));
 			if (ret != 0)
 				return ret;
-			map->format.format_val(val + (i * val_bytes), ival);
 		}
 	}
 
