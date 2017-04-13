@@ -698,13 +698,13 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 				&ctx_drvdata->pdev->dev,
 				GET_FAR(drvdata->base, ctx_drvdata->num), 0);
 
-		if (ret == -ENOSYS) {
+		if (WARN_ON_ONCE(ret == -ENOSYS)) {
 			pr_err("Unexpected IOMMU page fault!\n");
-			pr_err("name = %s\n", drvdata->name);
-			pr_err("context = %s (%d)\n", ctx_drvdata->name,
+			pr_debug("name = %s\n", drvdata->name);
+			pr_debug("context = %s (%d)\n", ctx_drvdata->name,
 							ctx_drvdata->num);
-			pr_err("Interesting registers:\n");
-			print_ctx_regs(drvdata->base, ctx_drvdata->num, fsr);
+			pr_debug("Interesting registers:\n");
+			//print_ctx_regs(drvdata->base, ctx_drvdata->num, fsr);
 		}
 		SET_FSR(drvdata->base, ctx_drvdata->num, fsr);
 		ret = IRQ_HANDLED;
