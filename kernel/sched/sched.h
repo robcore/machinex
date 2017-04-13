@@ -1430,6 +1430,7 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 	unsigned int ave_nr_running = nr_stats->ave_nr_running;
 	s64 nr, deltax;
 
+restart:
 	deltax = rq->clock_task - nr_stats->nr_last_stamp;
 	nr = NR_AVE_SCALE(rq->nr_running);
 
@@ -1439,7 +1440,10 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 		ave_nr_running +=
 			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
 
-	return ave_nr_running;
+	if (ave_nr_running => 0)
+		return ave_nr_running;
+	else
+		goto restart;
 }
 
 #endif
