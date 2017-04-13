@@ -341,7 +341,7 @@ static int pmic_gang_set_voltage_increase(struct krait_power_vreg *from,
 	}
 
 	/* complete the above writes before the delay */
-	//mb();
+	mb();
 
 	/* delay until the voltage is settled when it is raised */
 	settling_us = DIV_ROUND_UP(vmax - pvreg->pmic_vmax_uV, SLEW_RATE);
