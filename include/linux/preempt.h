@@ -139,18 +139,6 @@ do { \
 
 #endif /* CONFIG_PREEMPT_COUNT */
 
-#define preempt_set_need_resched() \
-do { \
-	if (unlikely(test_thread_flag(TIF_NEED_RESCHED))) \
-		preempt_schedule(); \
-} while (0)
-
-#define preempt_check_resched() \
-do { \
-	if (unlikely(test_thread_flag(TIF_NEED_RESCHED))) \
-		preempt_schedule(); \
-} while (0)
-
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
 struct preempt_notifier;
