@@ -24,6 +24,7 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/resume-trace.h>
+#include <linux/pm_wakeirq.h>
 #include <linux/interrupt.h>
 #include <linux/sched.h>
 #include <linux/async.h>
@@ -31,6 +32,8 @@
 #include <linux/timer.h>
 #include <linux/slab.h>
 #include <linux/wakeup_reason.h>
+#include <linux/cpufreq.h>
+#include <linux/cpuidle.h>
 #include <linux/timer.h>
 
 #include "../base.h"
@@ -586,7 +589,8 @@ static void async_resume_noirq(void *data, async_cookie_t cookie)
 
 	error = device_resume_noirq(dev, pm_transition);
 	if (error)
-		pm_dev_err(dev, pm_transition, " noirq", error);
+		pm_dev_err(dev, pm_transition, " async", error);
+
 	put_device(dev);
 }
 
@@ -635,6 +639,8 @@ void dpm_resume_noirq(pm_message_t state)
 	async_synchronize_full();
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
+	device_wakeup_disarm_wake_irqs();
+	cpuidle_resume();
 }
 
 /**
@@ -1075,6 +1081,8 @@ int dpm_suspend_noirq(pm_message_t state)
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int error = 0;
 
+	cpuidle_pause();
+	device_wakeup_arm_wake_irqs();
 	suspend_device_irqs();
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_late_early_list)) {
@@ -1099,9 +1107,6 @@ int dpm_suspend_noirq(pm_message_t state)
 		put_device(dev);
 
 		if (pm_wakeup_pending()) {
-			pm_get_active_wakeup_sources(suspend_abort,
-				MAX_SUSPEND_ABORT_LEN);
-			log_suspend_abort_reason(suspend_abort);
 			error = -EBUSY;
 			break;
 		}
@@ -1109,6 +1114,9 @@ int dpm_suspend_noirq(pm_message_t state)
 	mutex_unlock(&dpm_list_mtx);
 	if (error)
 		dpm_resume_noirq(resume_event(state));
+		pm_get_active_wakeup_sources(suspend_abort,
+			MAX_SUSPEND_ABORT_LEN);
+		log_suspend_abort_reason(suspend_abort);
 	else
 		dpm_show_time(starttime, state, "noirq");
 	return error;
