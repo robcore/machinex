@@ -1989,9 +1989,6 @@ static void fixup_busy_time(struct task_struct *p, int new_cpu)
 	BUG_ON((int)src_rq->prev_runnable_sum < 0);
 	BUG_ON((int)src_rq->curr_runnable_sum < 0);
 
-	trace_sched_migration_update_sum(src_rq);
-	trace_sched_migration_update_sum(dest_rq);
-
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
 
