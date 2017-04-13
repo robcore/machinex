@@ -26,20 +26,6 @@ config WAKELOCK
 	bool
 	default y
 
-config POWERSUSPEND
-	bool "Power suspend"
-	default y
-	---help---
-	  Call early suspend handlers when the user requested sleep state
-	  changes.
-
-config POWERSUSPEND_BETA_VERSION
-	bool "Powersuspend Beta"
-	depends on POWERSUSPEND
-	default n
-	---help---
-	  Indicate if this is a WIP version of the driver or not.
-
 config HIBERNATE_CALLBACKS
 	bool
 
@@ -358,6 +344,24 @@ config PARTIALRESUME
 	  Partial resume will occur only if all wakeup sources have
 	  partial-resume handlers associated with them, and they all return
 	  true.
+
+config POWERSUSPEND
+	bool "Power suspend"
+	default y
+	---help---
+	  Call early suspend handlers when the user requested sleep state
+	  changes.
+
+config POWERSUSPEND_BETA_VERSION
+	bool "Powersuspend Beta"
+	depends on POWERSUSPEND
+	default n
+	---help---
+	  Indicate if this is a WIP version of the driver or not.
+
+config STATE_NOTIFIER
+    bool "State Notifier"
+	default y
 
 config SPEEDUP_KEYRESUME
 	bool "Speed up late resume"

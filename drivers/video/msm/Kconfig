@@ -1291,10 +1291,6 @@ config LCD_NOTIFY
 	help
 	  Call lcd notify handlers when the user requested sleep state
 
-config STATE_NOTIFIER
-    bool "State Notifier"
-	default y
-
 config EXPERIMENTAL_COLOR_MODS
 	bool "Rob shenanigans"
 	default n
