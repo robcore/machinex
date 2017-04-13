@@ -24,7 +24,6 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/resume-trace.h>
-#include <linux/pm_wakeirq.h>
 #include <linux/interrupt.h>
 #include <linux/sched.h>
 #include <linux/async.h>
@@ -639,7 +638,6 @@ void dpm_resume_noirq(pm_message_t state)
 	async_synchronize_full();
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
-	device_wakeup_disarm_wake_irqs();
 	cpuidle_resume();
 }
 
@@ -1082,7 +1080,6 @@ int dpm_suspend_noirq(pm_message_t state)
 	int error = 0;
 
 	cpuidle_pause();
-	device_wakeup_arm_wake_irqs();
 	suspend_device_irqs();
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_late_early_list)) {
