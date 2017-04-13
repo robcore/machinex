@@ -1167,6 +1167,9 @@ __read_mostly unsigned int sched_ravg_window = 10000000;
 /* 1 -> use PELT based load stats, 0 -> use window-based load stats */
 unsigned int __read_mostly sched_use_pelt;
 
+/* Temporarily disable window-stats activity on all cpus */
+unsigned int __read_mostly sched_disable_window_stats;
+
 unsigned int max_possible_efficiency = 1024;
 unsigned int min_possible_efficiency = 1024;
 
@@ -1402,7 +1405,7 @@ static void update_task_ravg(struct task_struct *p, struct rq *rq,
 	u64 window_start;
 	s64 delta = 0;
 
-	if (sched_use_pelt || !rq->window_start)
+	if (sched_use_pelt || !rq->window_start || sched_disable_window_stats)
 		return;
 
 	lockdep_assert_held(&rq->lock);
@@ -1601,6 +1604,9 @@ static inline void mark_task_starting(struct task_struct *p)
 	struct rq *rq = task_rq(p);
 	u64 wallclock = sched_clock();
 
+	if (sched_disable_window_stats)
+		return;
+
 	if (!rq->window_start) {
 		p->ravg.partial_demand = 0;
 		p->ravg.demand = 0;
@@ -1705,9 +1711,11 @@ void sched_exit(struct task_struct *p)
 	/* rq->curr == p */
 	update_task_ravg(rq->curr, rq, TASK_UPDATE, sched_clock(), 0);
 	dequeue_task(rq, p, 0);
-	if (p->ravg.flags & CURR_WINDOW_CONTRIB)
+	if (!sched_disable_window_stats &&
+			(p->ravg.flags & CURR_WINDOW_CONTRIB))
 		rq->curr_runnable_sum -= p->ravg.partial_demand;
-	if (p->ravg.flags & PREV_WINDOW_CONTRIB)
+	if (!sched_disable_window_stats &&
+			(p->ravg.flags & PREV_WINDOW_CONTRIB))
 		rq->prev_runnable_sum -= p->ravg.demand;
 	BUG_ON((s64)rq->curr_runnable_sum < 0);
 	BUG_ON((s64)rq->prev_runnable_sum < 0);
@@ -2007,10 +2015,15 @@ static void fixup_busy_time(struct task_struct *p, int new_cpu)
 	struct rq *src_rq = task_rq(p);
 	struct rq *dest_rq = cpu_rq(new_cpu);
 	u64 wallclock;
+	int freq_notify = 0;
 
 	if (p->state == TASK_WAKING)
 		double_rq_lock(src_rq, dest_rq);
 
+	if (sched_disable_window_stats)
+		goto done;
+
+	freq_notify = 1;
 	wallclock = sched_clock();
 
 	update_task_ravg(task_rq(p)->curr, task_rq(p),
@@ -2059,10 +2072,11 @@ static void fixup_busy_time(struct task_struct *p, int new_cpu)
 	BUG_ON((s64)src_rq->prev_runnable_sum < 0);
 	BUG_ON((s64)src_rq->curr_runnable_sum < 0);
 
+done:
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
 
-	if (cpumask_test_cpu(new_cpu,
+	if (!freq_notify && cpumask_test_cpu(new_cpu,
 			     &src_rq->freq_domain_cpumask))
 		return;
 
