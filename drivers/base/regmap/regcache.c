@@ -59,7 +59,7 @@ static int regcache_hw_init(struct regmap *map)
 	for (count = 0, i = 0; i < map->num_reg_defaults_raw; i++) {
 		val = regcache_get_val(map->reg_defaults_raw,
 				       i, map->cache_word_size);
-		if (regmap_volatile(map, i * map->reg_stride))
+		if (regmap_volatile(map, i))
 			continue;
 		count++;
 	}
@@ -76,9 +76,9 @@ static int regcache_hw_init(struct regmap *map)
 	for (i = 0, j = 0; i < map->num_reg_defaults_raw; i++) {
 		val = regcache_get_val(map->reg_defaults_raw,
 				       i, map->cache_word_size);
-		if (regmap_volatile(map, i * map->reg_stride))
+		if (regmap_volatile(map, i))
 			continue;
-		map->reg_defaults[j].reg = i * map->reg_stride;
+		map->reg_defaults[j].reg = i;
 		map->reg_defaults[j].def = val;
 		j++;
 	}
@@ -97,10 +97,6 @@ int regcache_init(struct regmap *map, const struct regmap_config *config)
 	int ret;
 	int i;
 	void *tmp_buf;
-
-	for (i = 0; i < config->num_reg_defaults; i++)
-		if (config->reg_defaults[i].reg % map->reg_stride)
-			return -EINVAL;
 
 	if (map->cache_type == REGCACHE_NONE) {
 		map->cache_bypass = true;
@@ -268,7 +264,7 @@ int regcache_sync(struct regmap *map)
 
 	BUG_ON(!map->cache_ops || !map->cache_ops->sync);
 
-	map->lock(map);
+	mutex_lock(&map->lock);
 	/* Remember the initial bypass state */
 	bypass = map->cache_bypass;
 	dev_dbg(map->dev, "Syncing %s cache\n",
@@ -282,10 +278,6 @@ int regcache_sync(struct regmap *map)
 	/* Apply any patch first */
 	map->cache_bypass = 1;
 	for (i = 0; i < map->patch_regs; i++) {
-		if (map->patch[i].reg % map->reg_stride) {
-			ret = -EINVAL;
-			goto out;
-		}
 		ret = _regmap_write(map, map->patch[i].reg, map->patch[i].def);
 		if (ret != 0) {
 			dev_err(map->dev, "Failed to write %x = %x: %d\n",
@@ -304,7 +296,7 @@ out:
 	trace_regcache_sync(map->dev, name, "stop");
 	/* Restore the bypass state */
 	map->cache_bypass = bypass;
-	map->unlock(map);
+	mutex_unlock(&map->lock);
 
 	return ret;
 }
@@ -331,7 +323,7 @@ int regcache_sync_region(struct regmap *map, unsigned int min,
 
 	BUG_ON(!map->cache_ops || !map->cache_ops->sync);
 
-	map->lock(map);
+	mutex_lock(&map->lock);
 
 	/* Remember the initial bypass state */
 	bypass = map->cache_bypass;
@@ -350,7 +342,7 @@ out:
 	trace_regcache_sync(map->dev, name, "stop region");
 	/* Restore the bypass state */
 	map->cache_bypass = bypass;
-	map->unlock(map);
+	mutex_unlock(&map->lock);
 
 	return ret;
 }
@@ -370,11 +362,11 @@ EXPORT_SYMBOL_GPL(regcache_sync_region);
  */
 void regcache_cache_only(struct regmap *map, bool enable)
 {
-	map->lock(map);
+	mutex_lock(&map->lock);
 	WARN_ON(map->cache_bypass && enable);
 	map->cache_only = enable;
 	trace_regmap_cache_only(map->dev, enable);
-	map->unlock(map);
+	mutex_unlock(&map->lock);
 }
 EXPORT_SYMBOL_GPL(regcache_cache_only);
 
@@ -389,9 +381,9 @@ EXPORT_SYMBOL_GPL(regcache_cache_only);
  */
 void regcache_mark_dirty(struct regmap *map)
 {
-	map->lock(map);
+	mutex_lock(&map->lock);
 	map->cache_dirty = true;
-	map->unlock(map);
+	mutex_unlock(&map->lock);
 }
 EXPORT_SYMBOL_GPL(regcache_mark_dirty);
 
@@ -408,11 +400,11 @@ EXPORT_SYMBOL_GPL(regcache_mark_dirty);
  */
 void regcache_cache_bypass(struct regmap *map, bool enable)
 {
-	map->lock(map);
+	mutex_lock(&map->lock);
 	WARN_ON(map->cache_only && enable);
 	map->cache_bypass = enable;
 	trace_regmap_cache_bypass(map->dev, enable);
-	map->unlock(map);
+	mutex_unlock(&map->lock);
 }
 EXPORT_SYMBOL_GPL(regcache_cache_bypass);
 

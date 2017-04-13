@@ -26,25 +26,18 @@ struct regmap_format {
 	size_t val_bytes;
 	void (*format_write)(struct regmap *map,
 			     unsigned int reg, unsigned int val);
-	void (*format_reg)(void *buf, unsigned int reg, unsigned int shift);
-	void (*format_val)(void *buf, unsigned int val, unsigned int shift);
+	void (*format_reg)(void *buf, unsigned int reg);
+	void (*format_val)(void *buf, unsigned int val);
 	unsigned int (*parse_val)(void *buf);
 };
 
-typedef void (*regmap_lock)(struct regmap *map);
-typedef void (*regmap_unlock)(struct regmap *map);
-
 struct regmap {
-	struct mutex mutex;
-	spinlock_t spinlock;
-	regmap_lock lock;
-	regmap_unlock unlock;
+	struct mutex lock;
 
 	struct device *dev; /* Device we do I/O on */
 	void *work_buf;     /* Scratch buffer used to format I/O */
 	struct regmap_format format;  /* Buffer format */
 	const struct regmap_bus *bus;
-	void *bus_context;
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs;
@@ -58,10 +51,6 @@ struct regmap {
 
 	u8 read_flag_mask;
 	u8 write_flag_mask;
-
-	/* number of bits to (left) shift the reg value when formatting*/
-	int reg_shift;
-	int reg_stride;
 
 	/* regcache specific members */
 	const struct regcache_ops *cache_ops;
@@ -90,9 +79,6 @@ struct regmap {
 
 	struct reg_default *patch;
 	int patch_regs;
-
-	/* if set, converts bulk rw to single rw */
-	bool use_single_rw;
 };
 
 struct regcache_ops {

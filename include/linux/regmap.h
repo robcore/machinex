@@ -48,9 +48,6 @@ struct reg_default {
  * Configuration for the register map of a device.
  *
  * @reg_bits: Number of bits in a register address, mandatory.
- * @reg_stride: The register address stride. Valid register addresses are a
- *              multiple of this value. If set to 0, a value of 1 will be
- *              used.
  * @pad_bits: Number of bits of padding between register and value.
  * @val_bits: Number of bits in a register value, mandatory.
  *
@@ -74,9 +71,6 @@ struct reg_default {
  * @write_flag_mask: Mask to be set in the top byte of the register when doing
  *                   a write. If both read_flag_mask and write_flag_mask are
  *                   empty the regmap_bus default masks are used.
- * @use_single_rw: If set, converts the bulk read and write operations into
- *		    a series of single read and write operations. This is useful
- *		    for device that does not support bulk read and write.
  *
  * @cache_type: The actual cache type.
  * @reg_defaults_raw: Power on reset values for registers (for use with
@@ -85,7 +79,6 @@ struct reg_default {
  */
 struct regmap_config {
 	int reg_bits;
-	int reg_stride;
 	int pad_bits;
 	int val_bits;
 
@@ -103,25 +96,20 @@ struct regmap_config {
 
 	u8 read_flag_mask;
 	u8 write_flag_mask;
-
-	bool use_single_rw;
 };
 
-typedef int (*regmap_hw_write)(void *context, const void *data,
+typedef int (*regmap_hw_write)(struct device *dev, const void *data,
 			       size_t count);
-typedef int (*regmap_hw_gather_write)(void *context,
+typedef int (*regmap_hw_gather_write)(struct device *dev,
 				      const void *reg, size_t reg_len,
 				      const void *val, size_t val_len);
-typedef int (*regmap_hw_read)(void *context,
+typedef int (*regmap_hw_read)(struct device *dev,
 			      const void *reg_buf, size_t reg_size,
 			      void *val_buf, size_t val_size);
-typedef void (*regmap_hw_free_context)(void *context);
 
 /**
  * Description of a hardware bus for the register map infrastructure.
  *
- * @fast_io: Register IO is fast. Use a spinlock instead of a mutex
- *           to perform locking.
  * @write: Write operation.
  * @gather_write: Write operation with split register/value, return -ENOTSUPP
  *                if not implemented  on a given device.
@@ -131,37 +119,27 @@ typedef void (*regmap_hw_free_context)(void *context);
  *                  a read.
  */
 struct regmap_bus {
-	bool fast_io;
 	regmap_hw_write write;
 	regmap_hw_gather_write gather_write;
 	regmap_hw_read read;
-	regmap_hw_free_context free_context;
 	u8 read_flag_mask;
 };
 
 struct regmap *regmap_init(struct device *dev,
 			   const struct regmap_bus *bus,
-			   void *bus_context,
 			   const struct regmap_config *config);
 struct regmap *regmap_init_i2c(struct i2c_client *i2c,
 			       const struct regmap_config *config);
 struct regmap *regmap_init_spi(struct spi_device *dev,
 			       const struct regmap_config *config);
-struct regmap *regmap_init_mmio(struct device *dev,
-				void __iomem *regs,
-				const struct regmap_config *config);
 
 struct regmap *devm_regmap_init(struct device *dev,
 				const struct regmap_bus *bus,
-				void *bus_context,
 				const struct regmap_config *config);
 struct regmap *devm_regmap_init_i2c(struct i2c_client *i2c,
 				    const struct regmap_config *config);
 struct regmap *devm_regmap_init_spi(struct spi_device *dev,
 				    const struct regmap_config *config);
-struct regmap *devm_regmap_init_mmio(struct device *dev,
-				     void __iomem *regs,
-				     const struct regmap_config *config);
 
 void regmap_exit(struct regmap *map);
 int regmap_reinit_cache(struct regmap *map,
