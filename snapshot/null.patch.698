@@ -1,0 +1,8 @@
+--- /dev/null
++++ b/arch/arm/mach-msm/qdsp6v2/ultrasound/Makefile
+@@ -0,0 +1,2 @@
++obj-y += q6usm.o usf.o usfcdev.o
++EXTRA_CFLAGS += -I$(src)/..
+diff --git a/arch/arm/mach-msm/qdsp6v2/ultrasound/q6usm.c b/arch/arm/mach-msm/qdsp6v2/ultrasound/q6usm.c
+new file mode 100644
+index 00000000000..7c64c723ba8

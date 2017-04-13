@@ -1,0 +1,21 @@
+--- /dev/null
++++ b/Documentation/devicetree/bindings/media/video/msm-vidc.txt
+@@ -0,0 +1,15 @@
++* Qualcomm MSM VIDC
++
++Required properties:
++- compatible : one of:
++	- "qcom,msm-vidc"
++- reg : offset and length of the register set for the device.
++- interrupts : should contain the vidc interrupt.
++
++Example:
++
++	qcom,vidc@fdc00000 {
++		compatible = "qcom,msm-vidc";
++		reg = <0xfdc00000 0xff000>;
++		interrupts = <0 44 0>;
++	};
+diff --git a/Documentation/devicetree/bindings/mmc/msm_sdcc.txt b/Documentation/devicetree/bindings/mmc/msm_sdcc.txt
+new file mode 100644
+index 00000000000..0c1762d81ce
