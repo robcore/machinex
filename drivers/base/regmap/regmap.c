@@ -183,6 +183,16 @@ static unsigned int regmap_parse_24(void *buf)
 	return ret;
 }
 
+static unsigned int regmap_parse_24(void *buf)
+{
+	u8 *b = buf;
+	unsigned int ret = b[2];
+	ret |= ((unsigned int)b[1]) << 8;
+	ret |= ((unsigned int)b[0]) << 16;
+
+	return ret;
+}
+
 static unsigned int regmap_parse_32(void *buf)
 {
 	__be32 *b = buf;
@@ -342,6 +352,10 @@ struct regmap *regmap_init(struct device *dev,
 	case 16:
 		map->format.format_val = regmap_format_16;
 		map->format.parse_val = regmap_parse_16;
+		break;
+	case 24:
+		map->format.format_val = regmap_format_24;
+		map->format.parse_val = regmap_parse_24;
 		break;
 	case 24:
 		map->format.format_val = regmap_format_24;
