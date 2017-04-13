@@ -1151,8 +1151,8 @@ __read_mostly unsigned int sysctl_sched_window_stats_policy =
 static __read_mostly unsigned int sched_account_wait_time = 1;
 __read_mostly unsigned int sysctl_sched_account_wait_time = 1;
 
-static __read_mostly unsigned int sched_freq_legacy_mode;
-__read_mostly unsigned int sysctl_sched_freq_legacy_mode;
+static __read_mostly unsigned int sched_freq_legacy_mode = 1;
+__read_mostly unsigned int sysctl_sched_freq_legacy_mode = 1;
 
 
 /* Window size (in ns) */
@@ -2081,7 +2081,11 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	 * big or small. Make this change "atomic" so that tasks are accounted
 	 * properly due to changed load_scale_factor
 	 */
+#ifdef CONFIG_SCHED_HMP
 	pre_big_small_task_count_change(cpu_possible_mask);
+#else
+	pre_big_small_task_count_change();
+#endif
 	for_each_cpu(i, cpus) {
 		struct rq *rq = cpu_rq(i);
 
@@ -2092,7 +2096,11 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	}
 
 	update_min_max_capacity();
+#ifdef CONFIG_SCHED_HMP
 	post_big_small_task_count_change(cpu_possible_mask);
+#else
+	post_big_small_task_count_change();
+#endif
 
 	return 0;
 }
@@ -2232,6 +2240,7 @@ done:
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
 }
+
 /* A long sleep is defined as sleeping at least one full window prior
  * to the current window start. */
 static inline int is_long_sleep(struct rq *rq, struct task_struct *p)
@@ -2261,6 +2270,12 @@ static inline int rq_freq_margin(struct rq *rq)
 }
 
 static inline void init_cpu_efficiency(void) {}
+
+static inline void mark_task_starting(struct task_struct *p) {}
+
+static inline void set_window_start(struct rq *rq) {}
+
+static inline void migrate_sync_cpu(int cpu) {}
 
 static inline void fixup_busy_time(struct task_struct *p, int new_cpu) {}
 
