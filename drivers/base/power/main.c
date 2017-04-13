@@ -1096,8 +1096,6 @@ int dpm_suspend_noirq(pm_message_t state)
 		mutex_lock(&dpm_list_mtx);
 		if (error) {
 			pm_dev_err(dev, state, " noirq", error);
-			suspend_stats.failed_suspend_noirq++;
-			dpm_save_failed_step(SUSPEND_SUSPEND_NOIRQ);
 			dpm_save_failed_dev(dev_name(dev));
 			put_device(dev);
 			break;
@@ -1112,12 +1110,14 @@ int dpm_suspend_noirq(pm_message_t state)
 		}
 	}
 	mutex_unlock(&dpm_list_mtx);
-	if (error)
-		dpm_resume_noirq(resume_event(state));
+	if (error) {
+		suspend_stats.failed_suspend_noirq++;
+		dpm_save_failed_step(SUSPEND_SUSPEND_NOIRQ);
 		pm_get_active_wakeup_sources(suspend_abort,
 			MAX_SUSPEND_ABORT_LEN);
 		log_suspend_abort_reason(suspend_abort);
-	else
+		dpm_resume_noirq(resume_event(state));
+	} else
 		dpm_show_time(starttime, state, "noirq");
 	return error;
 }
