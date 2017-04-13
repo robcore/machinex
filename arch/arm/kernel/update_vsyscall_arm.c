@@ -31,7 +31,6 @@
 #define ARM_VSYSCALL_TIMER_TV_NSEC		0xf5c
 
 static struct {
-	seqcount_t		seq;
 	struct timekeeper	timekeeper;
 } tk_core ____cacheline_aligned;
 
