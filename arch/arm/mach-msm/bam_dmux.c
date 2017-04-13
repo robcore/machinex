@@ -56,7 +56,7 @@
 #define MIN_POLLING_SLEEP (950)
 
 #ifdef BAM_DMUX_FD
-#define DEFAULT_WL_TIMEOUT 5
+#define DEFAULT_WL_TIMEOUT 1
 static unsigned int wakelock_timeout = DEFAULT_WL_TIMEOUT;
 #endif
 
