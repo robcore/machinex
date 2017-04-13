@@ -1328,7 +1328,6 @@ update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 
 static inline void put_prev_task(struct rq *rq, struct task_struct *prev)
 {
-	update_task_ravg(prev, rq, 1);
 	prev->sched_class->put_prev_task(rq, prev);
 }
 
