@@ -1042,7 +1042,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 
 /* Window size (in ns) */
-__read_mostly unsigned int sched_ravg_window = 10000000;
+__read_mostly unsigned int sched_ravg_window = 100000000; //100
 
 /* Min window size (in ns) = 10ms */
 #define MIN_SCHED_RAVG_WINDOW 10000000
