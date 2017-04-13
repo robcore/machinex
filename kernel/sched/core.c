@@ -3127,7 +3127,7 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 	tick_nohz_task_switch(current);
 }
 
-#ifdef CONFIG_SMP
+#if defined(CONFIG_SMP) && !defined(CONFIG_SCHED_HMP)
 
 /* rq->lock is NOT held, but preemption is disabled */
 static inline void post_schedule(struct rq *rq)
