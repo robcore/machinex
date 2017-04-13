@@ -31,6 +31,8 @@
 #include <linux/timer.h>
 #include <linux/slab.h>
 #include <linux/wakeup_reason.h>
+#include <linux/cpufreq.h>
+#include <linux/cpuidle.h>
 #include <linux/timer.h>
 
 #include "../base.h"
@@ -586,7 +588,8 @@ static void async_resume_noirq(void *data, async_cookie_t cookie)
 
 	error = device_resume_noirq(dev, pm_transition);
 	if (error)
-		pm_dev_err(dev, pm_transition, " noirq", error);
+		pm_dev_err(dev, pm_transition, " async", error);
+
 	put_device(dev);
 }
 
@@ -635,6 +638,7 @@ void dpm_resume_noirq(pm_message_t state)
 	async_synchronize_full();
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
+	cpuidle_resume();
 }
 
 /**
@@ -1075,6 +1079,7 @@ int dpm_suspend_noirq(pm_message_t state)
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int error = 0;
 
+	cpuidle_pause();
 	suspend_device_irqs();
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_late_early_list)) {
@@ -1088,8 +1093,6 @@ int dpm_suspend_noirq(pm_message_t state)
 		mutex_lock(&dpm_list_mtx);
 		if (error) {
 			pm_dev_err(dev, state, " noirq", error);
-			suspend_stats.failed_suspend_noirq++;
-			dpm_save_failed_step(SUSPEND_SUSPEND_NOIRQ);
 			dpm_save_failed_dev(dev_name(dev));
 			put_device(dev);
 			break;
@@ -1099,17 +1102,19 @@ int dpm_suspend_noirq(pm_message_t state)
 		put_device(dev);
 
 		if (pm_wakeup_pending()) {
-			pm_get_active_wakeup_sources(suspend_abort,
-				MAX_SUSPEND_ABORT_LEN);
-			log_suspend_abort_reason(suspend_abort);
 			error = -EBUSY;
 			break;
 		}
 	}
 	mutex_unlock(&dpm_list_mtx);
-	if (error)
+	if (error) {
+		suspend_stats.failed_suspend_noirq++;
+		dpm_save_failed_step(SUSPEND_SUSPEND_NOIRQ);
+		pm_get_active_wakeup_sources(suspend_abort,
+			MAX_SUSPEND_ABORT_LEN);
+		log_suspend_abort_reason(suspend_abort);
 		dpm_resume_noirq(resume_event(state));
-	else
+	} else
 		dpm_show_time(starttime, state, "noirq");
 	return error;
 }
