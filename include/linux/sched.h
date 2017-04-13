@@ -1100,7 +1100,7 @@ struct sched_avg {
 	 * running_avg_sum.
 	 */
 	u32 runnable_avg_sum, avg_period, running_avg_sum;
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 	u32 runnable_avg_sum_scaled;
 #endif
 	u32 usage_avg_sum;
@@ -1306,7 +1306,7 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 	struct ravg ravg;
 #endif
 #ifdef CONFIG_CGROUP_SCHED

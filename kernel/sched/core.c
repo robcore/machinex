@@ -1043,7 +1043,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 		rq->skip_clock_update = 1;
 }
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 
 /* Window size (in ns) */
 __read_mostly unsigned int sched_ravg_window = 10000000; //10
@@ -1190,7 +1190,7 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	p->ravg.mark_start = wallclock;
 }
 
-#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#endif	/* CONFIG_SCHED_FREQ_INPUT */
 
 #ifdef CONFIG_SMP
 /*
@@ -7762,8 +7762,7 @@ void __init sched_init_smp(void)
 }
 #endif /* CONFIG_SMP */
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
-
+#ifdef CONFIG_SCHED_FREQ_INPUT
 /*
  * Maximum possible frequency across all cpus. Task demand and cpu
  * capacity (cpu_power) metrics are scaled in reference to it.
@@ -7850,7 +7849,7 @@ static int register_sched_callback(void)
  */
 core_initcall(register_sched_callback);
 
-#endif	/* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#endif /* CONFIG_SCHED_FREQ_INPUT */
 
 const_debug unsigned int sysctl_timer_migration = 1;
 
@@ -7997,7 +7996,7 @@ void __init sched_init(void)
 		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
 		rq->cstate = 0;
 		rq->wakeup_latency = 0;
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 		rq->cur_freq = 1;
 		rq->max_freq = 1;
 		rq->min_freq = 1;

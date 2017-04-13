@@ -2841,7 +2841,7 @@ static inline int idle_balance(struct rq *rq)
 
 #endif /* CONFIG_SMP */
 
-#if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
+#ifdef CONFIG_SCHED_FREQ_INPUT
 
 /* Return task demand in percentage scale */
 unsigned int pct_task_load(struct task_struct *p)
@@ -2894,7 +2894,7 @@ static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
 			   periods);
 }
 
-#else  /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#else  /* CONFIG_SCHED_FREQ_INPUT */
 
 static inline void
 add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta)
@@ -2905,7 +2905,7 @@ static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
 {
 }
 
-#endif /* CONFIG_SCHED_FREQ_INPUT || CONFIG_SCHED_HMP */
+#endif /* CONFIG_SCHED_FREQ_INPUT */
 
 static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
