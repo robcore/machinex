@@ -2751,6 +2751,7 @@ void sched_ttwu_pending(void)
 
 void scheduler_ipi(void)
 {
+	int cpu;
 #ifdef CONFIG_SCHED_STACK_END_CHECK
 	BUG_ON(unlikely(task_stack_end_corrupted(prev)));
 #endif
