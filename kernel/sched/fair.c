@@ -2837,8 +2837,38 @@ static int best_small_task_cpu(struct task_struct *p)
 	return best_fallback_cpu;
 }
 
+#define MOVE_TO_BIG_CPU			1
+#define MOVE_TO_LITTLE_CPU		2
+#define MOVE_TO_POWER_EFFICIENT_CPU	3
+
+static int skip_cpu(struct task_struct *p, int cpu, int reason)
+{
+	struct rq *rq = cpu_rq(cpu);
+	struct rq *task_rq = task_rq(p);
+	int skip = 0;
+
+	if (!reason)
+		return 0;
+
+	switch (reason) {
+	case MOVE_TO_BIG_CPU:
+		skip = (rq->capacity <= task_rq->capacity);
+		break;
+
+	case MOVE_TO_LITTLE_CPU:
+		skip = (rq->capacity >= task_rq->capacity);
+		break;
+
+	default:
+		skip = (cpu == task_cpu(p));
+		break;
+	}
+
+	return skip;
+}
+
 /* return cheapest cpu that can fit this task */
-static int select_best_cpu(struct task_struct *p, int target)
+static int select_best_cpu(struct task_struct *p, int target, int reason)
 {
 	int i, best_cpu = -1, fallback_idle_cpu = -1;
 	int prev_cpu = task_cpu(p);
@@ -2853,6 +2883,10 @@ static int select_best_cpu(struct task_struct *p, int target)
 
 	/* Todo : Optimize this loop */
 	for_each_cpu_and(i, tsk_cpus_allowed(p), cpu_online_mask) {
+
+		if (skip_cpu(p, i, reason))
+			continue;
+
 		if (!task_will_fit(p, i)) {
 			if (mostly_idle_cpu(i)) {
 				load = cpu_load(i);
@@ -3128,10 +3162,11 @@ static int lower_power_cpu_available(struct task_struct *p, int cpu)
 	return (lowest_power_cpu != task_cpu(p));
 }
 
-
 /*
  * Check if a task is on the "wrong" cpu (i.e its current cpu is not the ideal
  * cpu as per its demand or priority)
+ *
+ * Returns reason why task needs to be migrated
  */
 static inline int migration_needed(struct rq *rq, struct task_struct *p)
 {
@@ -3140,8 +3175,12 @@ static inline int migration_needed(struct rq *rq, struct task_struct *p)
 	if (!sched_enable_hmp || p->state != TASK_RUNNING)
 		return 0;
 
-	if (sched_boost())
-		return (rq->capacity != max_capacity);
+	if (sched_boost()) {
+		if (rq->capacity != max_capacity)
+			return MOVE_TO_BIG_CPU;
+
+		return 0;
+	}
 
 	if (is_small_task(p))
 		return 0;
@@ -3149,21 +3188,20 @@ static inline int migration_needed(struct rq *rq, struct task_struct *p)
 	/* Todo: cgroup-based control? */
 	if (nice > sysctl_sched_upmigrate_min_nice &&
 		rq->capacity > min_capacity)
-			return 1;
+			return MOVE_TO_LITTLE_CPU;
 
 	if (!task_will_fit(p, cpu_of(rq)))
-		return 1;
+		return MOVE_TO_BIG_CPU;
 
 	if (sched_enable_power_aware &&
 	    lower_power_cpu_available(p, cpu_of(rq)))
-		return 1;
+		return MOVE_TO_POWER_EFFICIENT_CPU;
 
 	return 0;
 }
 
 /*
- * cpu-bound tasks will not go through select_best_cpu() and hence can be stuck
- * on the wrong cpu. Check if any such tasks need to be "force-migrated"
+ * Check if currently running task should be migrated to a better cpu.
  *
  * Todo: Effect this via changes to nohz_balancer_kick() and load balance?
  */
@@ -3171,10 +3209,11 @@ void check_for_migration(struct rq *rq, struct task_struct *p)
 {
 	int cpu = cpu_of(rq), new_cpu = cpu;
 	unsigned long flags;
-	int active_balance = 0;
+	int active_balance = 0, rc;
 
-	if (migration_needed(rq, p))
-		new_cpu = select_best_cpu(p, cpu);
+	rc = migration_needed(rq, p);
+	if (rc)
+		new_cpu = select_best_cpu(p, cpu, rc);
 
 	if (new_cpu == cpu)
 		return;
@@ -3209,7 +3248,7 @@ static inline int nr_big_tasks(struct rq *rq)
 
 #define sched_enable_power_aware 0
 
-static inline int select_best_cpu(struct task_struct *p, int target)
+static inline int select_best_cpu(struct task_struct *p, int target, int reason)
 {
 	return 0;
 }
@@ -5885,7 +5924,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	int sync = wake_flags & WF_SYNC;
 
 	if (sched_enable_hmp)
-		return select_best_cpu(p, prev_cpu);
+		return select_best_cpu(p, prev_cpu, 0);
 
 	if (p->nr_cpus_allowed == 1)
 		return prev_cpu;
