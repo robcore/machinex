@@ -273,7 +273,7 @@ static int power_suspend_init(void)
 		return -ENOMEM;
 	}
 
-	pwrsup_wq = alloc_workqueue("ps_pwrsup_wq", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	pwrsup_wq = alloc_workqueue("ps_pwrsup_wq", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
 	if (!pwrsup_wq)
 		pr_err("[POWERSUSPEND] Failed to allocate workqueue\n");
 
