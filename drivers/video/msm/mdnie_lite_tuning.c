@@ -35,7 +35,6 @@
 #include <linux/msm_mdp.h>
 #include <linux/ioctl.h>
 #include <linux/lcd.h>
-#include <linux/state_notifier.h>
 
 #include "msm_fb.h"
 #include "msm_fb_panel.h"
@@ -353,12 +352,6 @@ void sending_tuning_cmd(void)
 			mutex_unlock(&dsi_tx_mutex);
 		else
 			mutex_unlock(&mfd->dma->ov_mutex);
-	} else if (mdnie_lock == 1) {
-		free_tun_cmd ();
-		if (mfd->panel.type == MIPI_VIDEO_PANEL)
-			mutex_unlock(&dsi_tx_mutex);
-		else
-			mutex_unlock(&mfd->dma->ov_mutex);
 	} else {
 		cmdreq.cmds = mdni_tune_cmd;
 		cmdreq.cmds_cnt = ARRAY_SIZE(mdni_tune_cmd);
@@ -388,9 +381,9 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
 
-	if ((!mdnie_tun_state.mdnie_enable) ||
+	if ((!mdnie_tun_state.mdnie_enable) || (mdnie_lock) ||
 		(mdnie_tun_state.negative) ||
-		(mfd->resume_state == MIPI_SUSPEND_STATE) ||
+		(mfd->resume_state == MIPI_SUSPEND_STATE) || 
 		((mode < mDNIe_UI_MODE) || (mode >= MAX_mDNIe_MODE)))
 		return;
 
@@ -806,11 +799,8 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		return;
 	}
 
-	if (!mdnie_lock) {
-		sending_tuning_cmd();
-		free_tun_cmd();
-	} else
-		free_tun_cmd();
+	sending_tuning_cmd();
+	free_tun_cmd();
 }
 
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
@@ -831,10 +821,7 @@ void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 		INPUT_PAYLOAD1(NEGATIVE_1);
 		INPUT_PAYLOAD2(NEGATIVE_2);
 
-	if (!mdnie_lock) {
 		sending_tuning_cmd();
-		free_tun_cmd();
-	} else
 		free_tun_cmd();
 	}
 
@@ -1102,22 +1089,18 @@ void is_negative_on(void)
 {
 	DPRINT("is negative Mode On = %d\n", mdnie_tun_state.negative);
 
-	if (mdnie_lock == 1) {
-		DPRINT(" = MDNIE LOCKED =\n");
+	if (mdnie_tun_state.negative) {
+		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
+		DPRINT(" = NEGATIVE MODE =\n");
+
+		INPUT_PAYLOAD1(NEGATIVE_1);
+		INPUT_PAYLOAD2(NEGATIVE_2);
+
+		sending_tuning_cmd();
 		free_tun_cmd();
 	} else {
-		if (mdnie_tun_state.negative) {
-			DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
-			DPRINT(" = NEGATIVE MODE =\n");
-
-			INPUT_PAYLOAD1(NEGATIVE_1);
-			INPUT_PAYLOAD2(NEGATIVE_2);
-
-			sending_tuning_cmd();
-			free_tun_cmd();
-		} else
-			/* check the mode and tuning again when wake up*/
-			mDNIe_Set_Mode(mdnie_tun_state.scenario);
+		/* check the mode and tuning again when wake up*/
+		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
 }
 static DEVICE_ATTR(negative, 0664,
@@ -1165,8 +1148,6 @@ static ssize_t accessibility_store(struct device *dev,
 	int buffer2[MDNIE_COLOR_BLINDE_CMD/2] = {0,};
 	int loop;
 	char temp;
-
-
 
 	sscanf(buf, "%d %x %x %x %x %x %x %x %x %x", &cmd_value,
 		&buffer2[0], &buffer2[1], &buffer2[2], &buffer2[3], &buffer2[4],
@@ -1558,67 +1539,13 @@ static DEVICE_ATTR(black, 0664, black_show, black_store);
 static DEVICE_ATTR(version, 0444, version_show, NULL);
 #endif
 
-static struct notifier_block notif;
-static unsigned int screen_on_lock;
-
-#ifdef CONFIG_STATE_NOTIFIER
-static void mdnie_suspend(void)
-{
-	unsigned int cached_lock;
-
-	if (mdnie_lock) {
-		cached_lock = 1;
-		screen_on_lock = 1;
-	} else {
-		cached_lock = 0;
-		screen_on_lock = 0;
-	}
-
-	mdnie_lock = cached_lock;
-}
-
-static void mdnie_resume(void)
-{
-	unsigned int cached_lock;
-
-	if (screen_on_lock == 1) {
-		cached_lock = 1;
-	} else {
-		screen_on_lock = 0;
-		cached_lock = 0;
-	}
-
-	mdnie_lock = cached_lock;
-}
-
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	if (screen_on_lock == 0)
-		return NOTIFY_OK;
-
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			mdnie_resume();
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			mdnie_suspend();
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-#endif
-
-
 static struct class *mdnie_class;
 struct device *tune_mdnie_dev;
 
 void init_mdnie_class(void)
 {
-	mdnie_lock = 0;
+
+	DPRINT("start!\n");
 
 	mdnie_class = class_create(THIS_MODULE, "mdnie");
 	if (IS_ERR(mdnie_class))
@@ -1698,19 +1625,15 @@ void init_mdnie_class(void)
 	device_create_file(tune_mdnie_dev, &dev_attr_black);
 	device_create_file(tune_mdnie_dev, &dev_attr_version);
 #endif
+
 	mdnie_tun_state.mdnie_enable = true;
+	mdnie_lock = 0;
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 	update_mdnie_copy_mode();
 	update_mdnie_gamma_curve();
 #endif
 
-#ifdef CONFIG_STATE_NOTIFIER
-	notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&notif)) {
-		pr_err("MDNIE: Failed to register State Notifier callback\n");
-	}
-#endif
-
+	DPRINT("end!\n");
 }
 
 void mdnie_lite_tuning_init(void)
