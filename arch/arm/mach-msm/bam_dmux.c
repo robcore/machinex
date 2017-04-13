@@ -56,25 +56,26 @@
 #define MIN_POLLING_SLEEP (950)
 
 #ifdef BAM_DMUX_FD
-static unsigned int wakelock_timeout;
+#define DEFAULT_WL_TIMEOUT 1000
+static unsigned int wakelock_timeout = DEFAULT_WL_TIMEOUT;
 #endif
 
 static int msm_bam_dmux_debug_enable = 0;
 module_param_named(debug_enable, msm_bam_dmux_debug_enable,
-		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-static int POLLING_MIN_SLEEP = 950;
+		   uint, S_IRUGO | S_IWUSR | S_IWGRP);
+static unsigned int POLLING_MIN_SLEEP = 950;
 module_param_named(min_sleep, POLLING_MIN_SLEEP,
-		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-static int POLLING_MAX_SLEEP = 1050;
+		   uint, S_IRUGO | S_IWUSR | S_IWGRP);
+static unsigned int POLLING_MAX_SLEEP = 1050;
 module_param_named(max_sleep, POLLING_MAX_SLEEP,
-		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-static int POLLING_INACTIVITY = 40;
+		   uint, S_IRUGO | S_IWUSR | S_IWGRP);
+static unsigned int POLLING_INACTIVITY = 40;
 module_param_named(inactivity, POLLING_INACTIVITY,
-		   int, S_IRUGO | S_IWUSR | S_IWGRP);
-static int bam_adaptive_timer_enabled = 0;
+		   uint, S_IRUGO | S_IWUSR | S_IWGRP);
+static unsigned int bam_adaptive_timer_enabled = 0;
 module_param_named(adaptive_timer_enabled,
 			bam_adaptive_timer_enabled,
-		   int, S_IRUGO | S_IWUSR | S_IWGRP);
+		   uint, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #if defined(DEBUG)
 static uint32_t bam_dmux_read_cnt;
@@ -489,6 +490,49 @@ static void queue_rx_work_func(struct work_struct *work)
 	 * delay.
 	 */
 	__queue_rx(GFP_KERNEL);
+}
+
+/* reference counting wrapper around wakelock */
+static void grab_wakelock(void)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&wakelock_reference_lock, flags);
+	BAM_DMUX_LOG("%s: ref count = %d\n", __func__,
+						wakelock_reference_count);
+	if (wakelock_reference_count == 0) {
+		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
+		wake_lock(&bam_wakelock);
+		spin_lock_irqsave(&wakelock_reference_lock, flags);
+		++wakelock_reference_count;
+		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
+	} else
+		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
+}
+
+static void release_wakelock(void)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&wakelock_reference_lock, flags);
+	if (wakelock_reference_count == 0) {
+		DMUX_LOG_KERR("%s: bam_dmux wakelock not locked\n", __func__);
+		dump_stack();
+		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
+		return;
+	}
+	BAM_DMUX_LOG("%s: ref count = %d\n", __func__,
+						wakelock_reference_count);
+	--wakelock_reference_count;
+	if (wakelock_reference_count == 0) {
+		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
+		wake_unlock(&bam_wakelock);
+#ifdef BAM_DMUX_FD
+		wake_lock_timeout(&bam_wakelock, msecs_to_jiffies(wakelock_timeout*1000);
+#endif
+	} else
+	spin_unlock_irqrestore(&wakelock_reference_lock, flags);
+
 }
 
 static void bam_mux_process_data(struct sk_buff *rx_skb)
@@ -1860,43 +1904,6 @@ static void unvote_dfab(void)
 	mutex_unlock(&dfab_status_lock);
 }
 
-/* reference counting wrapper around wakelock */
-static void grab_wakelock(void)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&wakelock_reference_lock, flags);
-	BAM_DMUX_LOG("%s: ref count = %d\n", __func__,
-						wakelock_reference_count);
-	if (wakelock_reference_count == 0)
-		wake_lock(&bam_wakelock);
-	++wakelock_reference_count;
-	spin_unlock_irqrestore(&wakelock_reference_lock, flags);
-}
-
-static void release_wakelock(void)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&wakelock_reference_lock, flags);
-	if (wakelock_reference_count == 0) {
-		DMUX_LOG_KERR("%s: bam_dmux wakelock not locked\n", __func__);
-		dump_stack();
-		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
-		return;
-	}
-	BAM_DMUX_LOG("%s: ref count = %d\n", __func__,
-						wakelock_reference_count);
-	--wakelock_reference_count;
-	if (wakelock_reference_count == 0) {
-		wake_unlock(&bam_wakelock);
-#ifdef BAM_DMUX_FD
-		wake_lock_timeout(&bam_wakelock, wakelock_timeout * HZ);
-#endif
-		}
-	spin_unlock_irqrestore(&wakelock_reference_lock, flags);
-}
-
 static int restart_notifier_cb(struct notifier_block *this,
 				unsigned long code,
 				void *data)
@@ -2453,7 +2460,6 @@ static int __init bam_dmux_init(void)
 #endif
 
 #ifdef BAM_DMUX_FD
-	wakelock_timeout = 0;
 	bamDmux_pkt_dev = device_create(sec_class, NULL, 0, NULL, "bamdmux");
 	if (IS_ERR(bamDmux_pkt_dev))
 		pr_err("%s: Failed to create device(bamDmux_pkt_dev)!\n",
