@@ -19,6 +19,7 @@
 #include "internal.h"
 
 static struct dentry *regmap_debugfs_root;
+const char *debugfs_name;
 
 /* Calculate the length of a fixed format  */
 static size_t regmap_calc_reg_len(int max_val, char *buf, size_t buf_size)
@@ -288,6 +289,7 @@ void regmap_debugfs_init(struct regmap *map)
 void regmap_debugfs_exit(struct regmap *map)
 {
 	debugfs_remove_recursive(map->debugfs);
+	kfree(map->debugfs_name);
 }
 
 void regmap_debugfs_initcall(void)
