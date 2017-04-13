@@ -28,7 +28,7 @@
  * to increment the sequence variables because an interrupt routine could
  * change the state of the data.
  *
- * Based on x86_64 vsyscall gettimeofday 
+ * Based on x86_64 vsyscall gettimeofday
  * by Keith Owens and Andrea Arcangeli
  */
 
@@ -174,7 +174,7 @@ repeat:
  * @s: pointer to seqcount_t
  * Returns: count to be passed to read_seqcount_retry
  *
- * read_seqcount_begin opens a read critical section of the given seqcount.
+ * read_legacy_seqcount_begin opens a read critical section of the given seqcount.
  * Validity of the critical section is tested by checking read_seqcount_retry
  * function.
  */
@@ -207,9 +207,9 @@ static inline unsigned raw_legacy_seqcount_begin(const legacy_seqcount_t *s)
 }
 
 /**
- * __read_seqcount_retry - end a seq-read critical section (without barrier)
+ * __read_legacy_seqcount_retry - end a seq-read critical section (without barrier)
  * @s: pointer to seqcount_t
- * @start: count, from read_seqcount_begin
+ * @start: count, from read_legacy_seqcount_begin
  * Returns: 1 if retry is required, else 0
  *
  * __read_seqcount_retry is like read_seqcount_retry, but has no smp_rmb()
@@ -226,12 +226,12 @@ static inline int __read_legacy_seqcount_retry(const legacy_seqcount_t *s, unsig
 }
 
 /**
- * read_seqcount_retry - end a seq-read critical section
+ * read_legacy_seqcount_retry - end a seq-read critical section
  * @s: pointer to seqcount_t
- * @start: count, from read_seqcount_begin
+ * @start: count, from read_legacy_seqcount_begin
  * Returns: 1 if retry is required, else 0
  *
- * read_seqcount_retry closes a read critical section of the given seqcount.
+ * read_legacy_seqcount_retry closes a read critical section of the given seqcount.
  * If the critical section was invalid, it must be ignored (and typically
  * retried).
  */

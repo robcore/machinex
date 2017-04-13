@@ -31,10 +31,10 @@ unsigned long avg_nr_running(void)
 		 * the changes are happening right now, just read current value
 		 * directly.
 		 */
-		seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
+		seqcnt = raw_read_seqcount_begin(&stats->ave_seqcnt);
 		ave_nr_running = do_avg_nr_running(q);
 		if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
-			read_seqcount_begin(&stats->ave_seqcnt);
+			raw_read_seqcount_begin(&stats->ave_seqcnt);
 			ave_nr_running = stats->ave_nr_running;
 		}
 
@@ -58,10 +58,10 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 	 * the changes are happening right now, just read current value
 	 * directly.
 	 */
-	seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
+	seqcnt = raw_read_seqcount_begin(&stats->ave_seqcnt);
 	ave_nr_running = do_avg_nr_running(q);
 	if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
-		read_seqcount_begin(&stats->ave_seqcnt);
+		raw_read_seqcount_begin(&stats->ave_seqcnt);
 		ave_nr_running = stats->ave_nr_running;
 	}
 

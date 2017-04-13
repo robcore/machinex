@@ -1430,7 +1430,6 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 	unsigned int ave_nr_running = nr_stats->ave_nr_running;
 	s64 nr, deltax;
 
-restart:
 	deltax = rq->clock_task - nr_stats->nr_last_stamp;
 	nr = NR_AVE_SCALE(rq->nr_running);
 
@@ -1440,10 +1439,7 @@ restart:
 		ave_nr_running +=
 			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
 
-	if (ave_nr_running >= 0)
 		return ave_nr_running;
-	else
-		goto restart;
 }
 
 #endif
@@ -1900,7 +1896,7 @@ static inline u64 irq_time_read(int cpu)
 
 	return irq_time;
 }
-#else /* CONFIG_64BIT */
+#else /* !CONFIG_64BIT */
 static inline void irq_time_write_begin(void)
 {
 }
