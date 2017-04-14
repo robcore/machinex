@@ -36,6 +36,18 @@ static int _regmap_update_bits(struct regmap *map, unsigned int reg,
 			       bool *change);
 
 
+/*
+ * Sometimes for failures during very early init the trace
+ * infrastructure isn't available early enough to be used.  For this
+ * sort of problem defining LOG_DEVICE will add printks for basic
+ * register I/O on a specific device.
+ */
+#undef LOG_DEVICE
+
+static int _regmap_update_bits(struct regmap *map, unsigned int reg,
+			       unsigned int mask, unsigned int val,
+			       bool *change);
+
 bool regmap_writeable(struct regmap *map, unsigned int reg)
 {
 	if (map->max_register && reg > map->max_register)
@@ -897,6 +909,11 @@ int _regmap_write(struct regmap *map, unsigned int reg,
 			return 0;
 		}
 	}
+
+#ifdef LOG_DEVICE
+	if (strcmp(dev_name(map->dev), LOG_DEVICE) == 0)
+		dev_info(map->dev, "%x <= %x\n", reg, val);
+#endif
 
 #ifdef LOG_DEVICE
 	if (strcmp(dev_name(map->dev), LOG_DEVICE) == 0)
