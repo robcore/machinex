@@ -201,6 +201,8 @@ static int deferred_probe_initcall(void)
 
 	enable_trigger_defer_cycle();
 	driver_deferred_probe_enable = false;
+	/* Sort as many dependencies as possible before exiting initcalls */
+	flush_workqueue(deferred_wq);
 	return 0;
 }
 arch_initcall_sync(deferred_probe_initcall);
