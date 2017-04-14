@@ -715,7 +715,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 		enable_irq(mehci->wakeup_irq);
 	}
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_update_request(&mehci->pm_qos_req_dma,
 			PM_QOS_DEFAULT_VALUE);
 
@@ -742,9 +742,9 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			pdata->standalone_latency + 1);
+			pdata->swfi_latency + 1);
 
 	if (mehci->wakeup_irq) {
 		spin_lock_irqsave(&mehci->wakeup_lock, flags);
@@ -984,8 +984,8 @@ static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		if (pdata->standalone_latency)
-			next_latency = pdata->standalone_latency + 1;
+		if (pdata->swfi_latency)
+			next_latency = pdata->swfi_latency + 1;
 		else
 			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
@@ -1096,8 +1096,8 @@ static int msm_hsic_resume_thread(void *data)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		if (pdata->standalone_latency)
-			next_latency = pdata->standalone_latency + 1;
+		if (pdata->swfi_latency)
+			next_latency = pdata->swfi_latency + 1;
 		else
 			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
@@ -1865,9 +1865,9 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_add_request(&mehci->pm_qos_req_dma,
-			PM_QOS_CPU_DMA_LATENCY, pdata->standalone_latency + 1);
+			PM_QOS_CPU_DMA_LATENCY, pdata->swfi_latency + 1);
 
 	/*
 	 * This pdev->dev is assigned parent of root-hub by USB core,
@@ -1918,7 +1918,7 @@ static int ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	pm_runtime_set_suspended(&pdev->dev);
 
-	if (pdata && pdata->standalone_latency)
+	if (pdata && pdata->swfi_latency)
 		pm_qos_remove_request(&mehci->pm_qos_req_dma);
 
 	if (mehci->peripheral_status_irq)
