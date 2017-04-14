@@ -21,7 +21,7 @@ static bool volume_key_override = false;
 module_param_named(vol_key_wake, volume_key_override, bool, 0644);
 
 static bool home_key_override = true;
-(home_key_wake, home_key_override, bool, 0644);
+module_param_named(home_key_wake, home_key_override, bool, 0644);
 
 /* The below functions simply return the values set above */
 bool is_volume_wake()
@@ -37,9 +37,10 @@ bool is_home_wake()
 /* A dummy init method for now that will be updated as
  * as the driver is refined and matures.
 */
-static void dummy_init(void);
+static int dummy_init(void)
 {
 	pr_info("[MACHINEX] Key Override Module Init Success!\n");
+	return 0;
 }
 
 late_initcall(dummy_init);
