@@ -540,6 +540,7 @@ static void msm_hsic_clk_reset(struct msm_hsic_hcd *mehci)
 		usleep_range(10000, 12000);
 
 		clk_enable(mehci->core_clk);
+	}
 }
 
 #define HSIC_STROBE_GPIO_PAD_CTL	(MSM_TLMM_BASE+0x20C0)
@@ -978,7 +979,6 @@ static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		else
 			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
@@ -1088,8 +1088,7 @@ static int msm_hsic_resume_thread(void *data)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		else
-			next_latency = PM_QOS_DEFAULT_VALUE;
+		next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	/* keep delay between bus states */
