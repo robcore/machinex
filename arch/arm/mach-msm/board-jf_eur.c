@@ -148,6 +148,10 @@
 #include <asm/kexec.h>
 #endif
 
+#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
+#include <linux/machinex_wakeup_keys.h>
+#endif
+
 #include "core.h"
 
 #if defined(CONFIG_SENSORS_SSP)
@@ -4489,6 +4493,34 @@ static int ethernet_init(void)
 #define GPIO_KEY_VOLUME_UP	PM8921_GPIO_PM_TO_SYS(35)
 #define GPIO_KEY_VOLUME_DOWN	PM8921_GPIO_PM_TO_SYS(37)
 
+#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
+extern bool is_volume_wake(void);
+extern bool is_home_wake(void);
+
+static int machinex_volkey_platform_data(int active)
+{
+	bool wake = is_volume_wake();
+
+	if (wake)
+		active = 1;
+	else
+		active = 0;
+
+	return active;
+}
+
+static int machinex_homekey_platform_data(int active)
+{
+	bool wake = is_home_wake();
+
+	if (wake)
+		active = 1;
+	else
+		active = 0;
+
+	return active;
+}
+#endif
 
 static struct gpio_keys_button gpio_keys_button[] = {
 	{
@@ -4497,7 +4529,11 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "volume_up_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-		.wakeup		= 0,
+#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
+		.wakeup		= machinex_volkey_platform_data(int active),
+#else
+		.wakeup     = 0,
+#endif
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
@@ -4510,7 +4546,11 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "volume_down_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-		.wakeup		= 0,
+#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
+		.wakeup		= machinex_volkey_platform_data(int active),
+#else
+		.wakeup     = 0,
+#endif
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
@@ -4523,7 +4563,11 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "home_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-		.wakeup		= 1,
+#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
+		.wakeup		= machinex_homekey_platform_data(int active),
+#else
+		.wakeup     = 1,
+#endif
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else

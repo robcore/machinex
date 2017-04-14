@@ -57,7 +57,7 @@
 #include "mipi_samsung_oled-8930.h"
 #endif
 
-bool display_on = true;
+static bool display_on = true;
 bool is_display_on()
 {
 	return display_on;

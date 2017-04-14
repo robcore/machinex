@@ -52,9 +52,7 @@ extern int wakeup_gpio_num;
 static int force_wakeup_evt;
 #endif
 #endif
-
-static struct wake_lock machinex_keyhelper;
-
+static struct workqueue_struct *mx_keys;
 struct gpio_button_data {
 	struct gpio_keys_button *button;
 	struct input_dev *input;
@@ -590,7 +588,7 @@ static void gpio_keys_gpio_timer(unsigned long _data)
 {
 	struct gpio_button_data *bdata = (struct gpio_button_data *)_data;
 
-	schedule_work(&bdata->work);
+	queue_work(mx_keys, &bdata->work);
 }
 
 static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
@@ -605,7 +603,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
 	else
-		schedule_work(&bdata->work);
+		queue_work(mx_work, &bdata->work);
 
 	return IRQ_HANDLED;
 }
@@ -650,8 +648,6 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 		}
 
 		bdata->key_pressed = true;
-		wake_lock_timeout(&machinex_keyhelper,
-			msecs_to_jiffies(1));
 	}
 
 	if (bdata->timer_debounce)
@@ -704,6 +700,10 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 			goto fail;
 		}
 		bdata->irq = irq;
+
+		mx_keys = alloc_workqueue("machinex_keybooster", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+		if (!mx_keys)
+			pr_err("[MACHINEX KEYBOOSTER] failed to allocate workqueue\n");
 
 		INIT_WORK(&bdata->work, gpio_keys_gpio_work_func);
 		setup_timer(&bdata->timer,
@@ -999,6 +999,7 @@ static void gpio_remove_key(struct gpio_button_data *bdata)
 	if (bdata->timer_debounce)
 		del_timer_sync(&bdata->timer);
 	cancel_work_sync(&bdata->work);
+	destroy_workqueue(mx_keys);
 	if (gpio_is_valid(bdata->button->gpio))
 		gpio_free(bdata->button->gpio);
 }
@@ -1115,9 +1116,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
-	wake_lock_init(&machinex_keyhelper, WAKE_LOCK_SUSPEND,
-		       "machinex_keyhelper");
-
 	return 0;
 
  fail3:
@@ -1146,8 +1144,6 @@ static int gpio_keys_remove(struct platform_device *pdev)
 	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 
 	device_init_wakeup(&pdev->dev, 0);
-
-	wake_lock_destroy(&machinex_keyhelper);
 
 	for (i = 0; i < ddata->n_buttons; i++)
 		gpio_remove_key(&ddata->data[i]);
