@@ -35,7 +35,6 @@ static int _regmap_update_bits(struct regmap *map, unsigned int reg,
 			       unsigned int mask, unsigned int val,
 			       bool *change);
 
-
 bool regmap_writeable(struct regmap *map, unsigned int reg)
 {
 	if (map->max_register && reg > map->max_register)
@@ -1004,9 +1003,6 @@ int regmap_write(struct regmap *map, unsigned int reg, unsigned int val)
 	int ret;
 
 	if (reg % map->reg_stride)
-		return -EINVAL;
-
-	if (val_len % map->format.val_bytes)
 		return -EINVAL;
 
 	map->lock(map->lock_arg);
