@@ -4499,9 +4499,8 @@ extern bool is_home_wake(void);
 static int mx_v_wake;
 static int mx_h_wake;
 
-static void machinex_volkey_platform_data(void)
+static int machinex_volkey_platform_data(int mx_v_wake)
 {
-	int mx_v_wake = 0;
 	bool wake = is_volume_wake();
 
 
@@ -4510,13 +4509,12 @@ static void machinex_volkey_platform_data(void)
 	else
 		mx_v_wake = 0;
 
-	wakeup = mx_v_wake;
+	return mx_v_wake;
 }
 
 
-static int machinex_homekey_platform_data(void)
+static int machinex_homekey_platform_data(int mx_h_wake)
 {
-	int mx_h_wake = 0;
 	bool wake = is_home_wake();
 
 	if (wake)
@@ -4524,7 +4522,7 @@ static int machinex_homekey_platform_data(void)
 	else
 		mx_h_wake = 0;
 
-	wakeup = mx_h_wake;
+	return mx_h_wake;
 }
 #endif
 
@@ -4536,7 +4534,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.active_low     = 1,
 		.type		= EV_KEY,
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= (void *) machinex_volkey_platform_data,
+		.wakeup		= machinex_volkey_platform_data,
 #else
 		.wakeup     = 0,
 #endif
