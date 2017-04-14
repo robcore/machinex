@@ -4530,7 +4530,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.active_low     = 1,
 		.type		= EV_KEY,
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_volkey_platform_data(int active),
+		.wakeup		= machinex_volkey_platform_data,
 #else
 		.wakeup     = 0,
 #endif
@@ -4547,7 +4547,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.active_low     = 1,
 		.type		= EV_KEY,
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_volkey_platform_data(int active),
+		.wakeup		= machinex_volkey_platform_data,
 #else
 		.wakeup     = 0,
 #endif
@@ -4564,7 +4564,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.active_low     = 1,
 		.type		= EV_KEY,
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_homekey_platform_data(int active),
+		.wakeup		= machinex_homekey_platform_data,
 #else
 		.wakeup     = 1,
 #endif
