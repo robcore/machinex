@@ -691,8 +691,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	clk_disable_unprepare(mehci->phy_clk);
 	clk_disable_unprepare(mehci->cal_clk);
 	clk_disable_unprepare(mehci->ahb_clk);
-	if (!IS_ERR(mehci->inactivity_clk))
-		clk_disable_unprepare(mehci->inactivity_clk);
 
 	none_vol = vdd_val[mehci->vdd_type][VDD_NONE];
 	max_vol = vdd_val[mehci->vdd_type][VDD_MAX];
@@ -774,8 +772,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	clk_prepare_enable(mehci->phy_clk);
 	clk_prepare_enable(mehci->cal_clk);
 	clk_prepare_enable(mehci->ahb_clk);
-	if (!IS_ERR(mehci->inactivity_clk))
-		clk_prepare_enable(mehci->inactivity_clk);
 
 	temp = readl_relaxed(USB_USBCMD);
 	temp &= ~ASYNC_INTR_CTRL;
