@@ -496,10 +496,10 @@ struct class nfc_class = {
 };
 EXPORT_SYMBOL(nfc_class);
 
-static int match_idx(struct device *d, const void *data)
+static int match_idx(struct device *d, void *data)
 {
 	struct nfc_dev *dev = to_nfc_dev(d);
-	const unsigned int *idx = data;
+	unsigned int *idx = data;
 
 	return dev->idx == *idx;
 }
