@@ -1105,6 +1105,7 @@ request_firmware(const struct firmware **firmware_p, const char *name,
 {
 	return _request_firmware(firmware_p, name, device, true, false);
 }
+EXPORT_SYMBOL(request_firmware);
 
 /**
  * release_firmware: - release the resource associated with a firmware image
@@ -1118,6 +1119,7 @@ void release_firmware(const struct firmware *fw)
 		kfree(fw);
 	}
 }
+EXPORT_SYMBOL(release_firmware);
 
 /* Async support */
 struct firmware_work {
@@ -1198,6 +1200,7 @@ request_firmware_nowait(
 	schedule_work(&fw_work->work);
 	return 0;
 }
+EXPORT_SYMBOL(request_firmware_nowait);
 
 /**
  * cache_firmware - cache one firmware image in kernel memory space
@@ -1228,6 +1231,7 @@ int cache_firmware(const char *fw_name)
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(cache_firmware);
 
 /**
  * uncache_firmware - remove one cached firmware image
@@ -1258,6 +1262,7 @@ int uncache_firmware(const char *fw_name)
 
 	return -EINVAL;
 }
+EXPORT_SYMBOL_GPL(uncache_firmware);
 
 #ifdef CONFIG_PM_SLEEP
 static ASYNC_DOMAIN_EXCLUSIVE(fw_cache_domain);
@@ -1564,9 +1569,3 @@ static void __exit firmware_class_exit(void)
 
 fs_initcall(firmware_class_init);
 module_exit(firmware_class_exit);
-
-EXPORT_SYMBOL(release_firmware);
-EXPORT_SYMBOL(request_firmware);
-EXPORT_SYMBOL(request_firmware_nowait);
-EXPORT_SYMBOL_GPL(cache_firmware);
-EXPORT_SYMBOL_GPL(uncache_firmware);
