@@ -1338,13 +1338,6 @@ config TARGET_LOCALE_JPN
 
 endmenu
 
-config MACHINEX_WAKEUP_KEYS
-	bool "Wakeup Keys"
-	help
-	  This option allows runtime GPIO wakeup keys selection
-	  via module parameters.  It is a simple implementation
-	  with hooks in the board-jf_eur platform data file.
-
 config MSM_STACKED_MEMORY
 	bool "Stacked Memory"
 	default y

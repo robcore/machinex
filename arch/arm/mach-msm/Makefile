@@ -381,7 +381,6 @@ obj-$(CONFIG_MACH_JACTIVE_ATT) += board-8064-common-all.o
 obj-$(CONFIG_MACH_JF_CRI) += board-8064-common-all.o
 
 obj-$(CONFIG_MACH_JFDT) += board-jfdt.o
-obj-$(CONFIG_MACHINEX_WAKEUP_KEYS) += machinex_wakeup_keys.o
 
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
 CFLAGS_board-9615.o += -Idrivers/usb/gadget

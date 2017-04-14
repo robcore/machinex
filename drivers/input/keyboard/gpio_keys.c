@@ -845,10 +845,6 @@ static ssize_t wakeup_enable(struct device *dev,
 	if (error)
 		goto out;
 
-#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-	pr_info("[MACHINEX:] Changes are overridden\n");
-	goto out;
-#else
 	for (i = 0; i < ddata->n_buttons; i++) {
 		struct gpio_button_data *button = &ddata->data[i];
 		if (button->button->type == EV_KEY) {
@@ -860,7 +856,6 @@ static ssize_t wakeup_enable(struct device *dev,
 						button->button->wakeup);
 		}
 	}
-#endif
 
 out:
 	kfree(bits);

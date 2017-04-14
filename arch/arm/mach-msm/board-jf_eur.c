@@ -4493,41 +4493,6 @@ static int ethernet_init(void)
 #define GPIO_KEY_VOLUME_UP	PM8921_GPIO_PM_TO_SYS(35)
 #define GPIO_KEY_VOLUME_DOWN	PM8921_GPIO_PM_TO_SYS(37)
 
-#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-extern bool is_volume_wake(void);
-extern bool is_home_wake(void);
-static int mx_v_wake;
-static int mx_h_wake;
-
-static int machinex_volkey_platform_data(void)
-{
-	int mx_v_wake;
-	bool wake = is_volume_wake();
-
-
-	if (wake)
-		mx_v_wake = 1;
-	else
-		mx_v_wake = 0;
-
-	return mx_v_wake;
-}
-
-
-static int machinex_homekey_platform_data(void)
-{
-	int mx_h_wake;
-	bool wake = is_home_wake();
-
-	if (wake)
-		mx_h_wake = 1;
-	else
-		mx_h_wake = 0;
-
-	return mx_h_wake;
-}
-#endif
-
 static struct gpio_keys_button gpio_keys_button[] = {
 	{
 		.code           = KEY_VOLUMEUP,
@@ -4535,11 +4500,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "volume_up_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_volkey_platform_data,
-#else
 		.wakeup     = 0,
-#endif
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
@@ -4552,11 +4513,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "volume_down_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_volkey_platform_data,
-#else
 		.wakeup     = 0,
-#endif
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
@@ -4569,11 +4526,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "home_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_homekey_platform_data,
-#else
 		.wakeup     = 1,
-#endif
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
