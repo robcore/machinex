@@ -436,6 +436,9 @@ int regmap_reinit_cache(struct regmap *map, const struct regmap_config *config)
 {
 	int ret;
 
+	if (val_len % map->format.val_bytes)
+		return -EINVAL;
+
 	map->lock(map);
 
 	regcache_exit(map);
@@ -616,6 +619,9 @@ int regmap_write(struct regmap *map, unsigned int reg, unsigned int val)
 	int ret;
 
 	if (reg % map->reg_stride)
+		return -EINVAL;
+
+	if (val_len % map->format.val_bytes)
 		return -EINVAL;
 
 	map->lock(map);
