@@ -22,13 +22,19 @@
  * along with this program; if not, you can find it at http://www.fsf.org
  */
 
+#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/pm_runtime.h>
 
+#include <linux/usb.h>
+#include <linux/usb/hcd.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/msm_hsusb_hw.h>
+
+#include "ehci.h"
 
 #define MSM_USB_BASE (hcd->regs)
 
@@ -56,6 +62,10 @@ static int ehci_msm_reset(struct usb_hcd *hcd)
 	ehci_port_power(ehci, 1);
 	return 0;
 }
+
+static const struct ehci_driver_overrides ehci_msm_overrides __initdata = {
+	.reset = ehci_msm_reset,
+};
 
 static struct hc_driver msm_hc_driver = {
 	.description		= hcd_name,

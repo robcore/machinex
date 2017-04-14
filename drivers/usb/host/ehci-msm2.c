@@ -22,13 +22,16 @@
  * along with this program; if not, you can find it at http://www.fsf.org
  */
 
+#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/wakelock.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
-
+#include <linux/usb.h>
+#include <linux/usb/hcd.h>
 #include <linux/usb/ulpi.h>
 #include <linux/usb/msm_hsusb_hw.h>
 #include <linux/usb/msm_hsusb.h>
@@ -36,12 +39,15 @@
 #include <mach/msm_xo.h>
 #include <mach/msm_iomap.h>
 
+#include "ehci.h"
+
 #define MSM_USB_BASE (hcd->regs)
 
 #define PDEV_NAME_LEN 20
 
 struct msm_hcd {
 	struct ehci_hcd				ehci;
+	spinlock_t				wakeup_lock;
 	struct device				*dev;
 	struct clk				*iface_clk;
 	struct clk				*core_clk;
@@ -60,6 +66,9 @@ struct msm_hcd {
 	atomic_t				pm_usage_cnt;
 	struct wake_lock			wlock;
 	struct work_struct			phy_susp_fail_work;
+	int					async_irq;
+	bool					async_irq_enabled;
+	uint32_t				async_int_cnt;
 };
 
 static inline struct msm_hcd *hcd_to_mhcd(struct usb_hcd *hcd)
@@ -553,9 +562,6 @@ static void msm_ehci_phy_susp_fail_work(struct work_struct *w)
 	msm_ehci_vbus_power(mhcd, 1);
 }
 
-#define PHY_SUSPEND_TIMEOUT_USEC	(1000 * 1000)
-#define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
-
 #ifdef CONFIG_PM_SLEEP
 static int msm_ehci_suspend(struct msm_hcd *mhcd)
 {
@@ -581,7 +587,7 @@ static int msm_ehci_suspend(struct msm_hcd *mhcd)
 		writel_relaxed(portsc | PORTSC_PHCD,
 				USB_PORTSC);
 
-		timeout = jiffies + usecs_to_jiffies(PHY_SUSPEND_TIMEOUT_USEC);
+		timeout = jiffies + usecs_to_jiffies(1000 * 1000);
 		while (!(readl_relaxed(USB_PORTSC) & PORTSC_PHCD)) {
 			if (time_after(jiffies, timeout)) {
 				dev_err(mhcd->dev, "Unable to suspend PHY\n");
@@ -674,7 +680,7 @@ static int msm_ehci_resume(struct msm_hcd *mhcd)
 	temp = readl_relaxed(USB_PORTSC) & ~PORTSC_PHCD;
 	writel_relaxed(temp, USB_PORTSC);
 
-	timeout = jiffies + usecs_to_jiffies(PHY_RESUME_TIMEOUT_USEC);
+	timeout = jiffies + usecs_to_jiffies(100 * 1000);
 	while ((readl_relaxed(USB_PORTSC) & PORTSC_PHCD) ||
 			!(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_SYNC_STATE)) {
 		if (time_after(jiffies, timeout)) {

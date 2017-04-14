@@ -585,7 +585,7 @@ static struct msm_gpiomux_config apq8064_hsic_configs[] = {
 		},
 	},
 	{
-		.gpio = 47,              /* wake up */
+		.gpio = MSM_GPIO_TO_INT(47),              /* wake up */
 		.settings = {
 			[GPIOMUX_ACTIVE] = &hsic_wakeup_act_cfg,
 			[GPIOMUX_SUSPENDED] = &hsic_wakeup_sus_cfg,
@@ -992,7 +992,7 @@ static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	},
 	/* MDM2AP_STATUS */
 	{
-		.gpio = 49,
+		.gpio = MSM_GPIO_TO_INT(49),
 		.settings = {
 			[GPIOMUX_ACTIVE] = &mdm2ap_status_cfg,
 			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,
@@ -1060,7 +1060,7 @@ static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	},
 	/* MDM2AP_STATUS */
 	{
-		.gpio = 49,
+		.gpio = MSM_GPIO_TO_INT(49),
 		.settings = {
 			[GPIOMUX_ACTIVE] = &mdm2ap_status_cfg,
 			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,
@@ -1114,7 +1114,7 @@ static struct msm_gpiomux_config amdm_configs[] __initdata = {
 	},
 	/* MDM2AP_STATUS */
 	{
-		.gpio = 49,
+		.gpio = MSM_GPIO_TO_INT(49),
 		.settings = {
 			[GPIOMUX_ACTIVE] = &mdm2ap_status_cfg,
 			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,
@@ -1213,7 +1213,7 @@ static struct msm_gpiomux_config mdm_i2s_configs[] __initdata = {
 	},
 	/* MDM2AP_STATUS */
 	{
-		.gpio = 49,
+		.gpio = MSM_GPIO_TO_INT(49),
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &mdm2ap_status_cfg,
 		}
@@ -1703,25 +1703,25 @@ static struct msm_gpiomux_config apq8064_auxpcm_configs[] __initdata = {
 		.gpio = 43,	/* AUX_PCM_DOUT */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 	{
 		.gpio = 44,	/* AUX_PCM_DIN */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 	{
 		.gpio = 45,	/* AUX_PCM_SYNC */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 	{
 		.gpio = 46,	/* AUX_PCM_CLK */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 };
 
@@ -1902,7 +1902,7 @@ void __init apq8064_init_gpiomux(void)
 		" for these GPIO Pins\n", __func__);
 
 	msm_gpiomux_install(apq8064_auxpcm_configs,
-		ARRAY_SIZE(apq8064_auxpcm_configs));		
+		ARRAY_SIZE(apq8064_auxpcm_configs));
 
 	if (machine_is_mpq8064_cdp() || machine_is_mpq8064_hrd() ||
 		machine_is_mpq8064_dtv())
