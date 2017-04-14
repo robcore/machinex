@@ -1815,7 +1815,7 @@ int regmap_async_complete(struct regmap *map)
 	int ret;
 
 	/* Nothing to do with no async support */
-	if (!map->bus->async_write)
+	if (!map->bus || !map->bus->async_write)
 		return 0;
 
 	wait_event(map->async_waitq, regmap_async_is_done(map));
