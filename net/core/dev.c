@@ -3780,7 +3780,7 @@ static int process_backlog(struct napi_struct *napi, int quota)
 
 			break;
 		}
-		
+
 		skb_queue_splice_tail_init(&sd->input_pkt_queue,
 					   &sd->process_queue);
 		rps_unlock(sd);
@@ -6453,8 +6453,12 @@ int __netdev_printk(const char *level, const struct net_device *dev,
 	int r;
 
 	if (dev && dev->dev.parent)
-		r = dev_printk(level, dev->dev.parent, "%s: %pV",
-			       netdev_name(dev), vaf);
+		r = dev_printk_emit(level[1] - '0',
+				    dev->dev.parent,
+				    "%s %s %s: %pV",
+				    dev_driver_string(dev->dev.parent),
+				    dev_name(dev->dev.parent),
+				    netdev_name(dev), vaf);
 	else if (dev)
 		r = printk("%s%s: %pV", level, netdev_name(dev), vaf);
 	else
