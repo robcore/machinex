@@ -2223,21 +2223,3 @@ static struct platform_driver ehci_msm_hsic_driver = {
 #endif
 	},
 };
-
-static int __init ehci_msm_hsic_init(void)
-{
-	if (usb_disabled())
-		return -ENODEV;
-
-	pr_info("%s: " DRIVER_DESC "\n", hcd_name);
-
-	ehci_init_driver(&ehci_msm_hsic_hc_driver, &ehci_msm_hsic_overrides);
-	return platform_driver_register(&ehci_msm_hsic_driver);
-}
-module_init(ehci_msm_hsic_init);
-
-static void __exit ehci_msm_hsic_cleanup(void)
-{
-	platform_driver_unregister(&ehci_msm_hsic_driver);
-}
-module_exit(ehci_msm_hsic_cleanup);
