@@ -153,7 +153,7 @@ struct platform_device *acpi_create_platform_device(struct acpi_device *adev)
 {
 	struct platform_device *pdev = NULL;
 	struct acpi_device *acpi_parent;
-	struct device *parent = NULL;
+	struct platform_device_info pdevinfo;
 	struct resource_info ri;
 	acpi_status status;
 	int devid;
@@ -194,11 +194,13 @@ struct platform_device *acpi_create_platform_device(struct acpi_device *adev)
 	if (WARN_ON(ri.n != ri.cur))
 		goto out;
 
+	memset(&pdevinfo, 0, sizeof(pdevinfo));
 	/*
 	 * If the ACPI node has a parent and that parent has a physical device
 	 * attached to it, that physical device should be the parent of the
 	 * platform device we are about to create.
 	 */
+	pdevinfo.parent = NULL;
 	acpi_parent = adev->parent;
 	if (acpi_parent) {
 		struct acpi_device_physical_node *entry;
@@ -229,57 +231,3 @@ struct platform_device *acpi_create_platform_device(struct acpi_device *adev)
 	kfree(ri.res);
 	return pdev;
 }
-
-static acpi_status acpi_platform_match(acpi_handle handle, u32 depth,
-				       void *data, void **return_value)
-{
-	struct platform_device *pdev = data;
-	struct acpi_device *adev;
-	acpi_status status;
-
-	status = acpi_bus_get_device(handle, &adev);
-	if (ACPI_FAILURE(status))
-		return status;
-
-	/* Skip ACPI devices that have physical device attached */
-	if (adev->physical_node_count)
-		return AE_OK;
-
-	if (!strcmp(pdev->name, acpi_device_hid(adev))) {
-		int devid;
-
-		/* Check that both name and UID match if it exists */
-		status = acpi_platform_get_device_uid(adev, &devid);
-		if (ACPI_FAILURE(status))
-			devid = -1;
-
-		if (pdev->id != devid)
-			return AE_OK;
-
-		*(acpi_handle *)return_value = handle;
-		return AE_CTRL_TERMINATE;
-	}
-
-	return AE_OK;
-}
-
-static int acpi_platform_find_device(struct device *dev, acpi_handle *handle)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-
-	*handle = NULL;
-	acpi_get_devices(pdev->name, acpi_platform_match, pdev, handle);
-
-	return *handle ? 0 : -ENODEV;
-}
-
-static struct acpi_bus_type acpi_platform_bus = {
-	.bus = &platform_bus_type,
-	.find_device = acpi_platform_find_device,
-};
-
-static int __init acpi_platform_init(void)
-{
-	return register_acpi_bus_type(&acpi_platform_bus);
-}
-arch_initcall(acpi_platform_init);
