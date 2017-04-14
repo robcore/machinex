@@ -1851,6 +1851,10 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
+	if (pdata && pdata->swfi_latency)
+		pm_qos_add_request(&mehci->pm_qos_req_dma,
+			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
+
 	/*
 	 * This pdev->dev is assigned parent of root-hub by USB core,
 	 * hence, runtime framework automatically calls this driver's
@@ -1881,7 +1885,6 @@ put_hcd:
 put_parent:
 	if (pdev->dev.parent)
 		pm_runtime_put_sync(pdev->dev.parent);
-
 	return ret;
 }
 
