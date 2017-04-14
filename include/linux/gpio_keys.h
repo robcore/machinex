@@ -20,7 +20,7 @@ struct gpio_keys_button {
 	const char *desc;
 	unsigned int type;	/* input event type (EV_KEY, EV_SW, EV_ABS) */
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-	int (*wakeup) (int); /* override wakeup status for buttons at runtime */
+	int (*wakeup) (void); /* override wakeup status for buttons at runtime */
 #else
 	int wakeup;		/* configure the button as a wake-up source */
 #endif

@@ -4499,8 +4499,9 @@ extern bool is_home_wake(void);
 static int mx_v_wake;
 static int mx_h_wake;
 
-static int machinex_volkey_platform_data(int mx_v_wake)
+static int machinex_volkey_platform_data(void)
 {
+	int mx_v_wake;
 	bool wake = is_volume_wake();
 
 
@@ -4513,8 +4514,9 @@ static int machinex_volkey_platform_data(int mx_v_wake)
 }
 
 
-static int machinex_homekey_platform_data(int mx_h_wake)
+static int machinex_homekey_platform_data(void)
 {
+	int mx_h_wake;
 	bool wake = is_home_wake();
 
 	if (wake)

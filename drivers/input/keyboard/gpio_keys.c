@@ -603,7 +603,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
 	else
-		queue_work(mx_work, &bdata->work);
+		queue_work(mx_keys, &bdata->work);
 
 	return IRQ_HANDLED;
 }
@@ -845,6 +845,10 @@ static ssize_t wakeup_enable(struct device *dev,
 	if (error)
 		goto out;
 
+#ifdef CONFIG_MACHINEX_WAKEUP_KEYS
+	pr_info("[MACHINEX:] Changes are overridden\n");
+	goto out;
+#else
 	for (i = 0; i < ddata->n_buttons; i++) {
 		struct gpio_button_data *button = &ddata->data[i];
 		if (button->button->type == EV_KEY) {
@@ -856,6 +860,7 @@ static ssize_t wakeup_enable(struct device *dev,
 						button->button->wakeup);
 		}
 	}
+#endif
 
 out:
 	kfree(bits);
