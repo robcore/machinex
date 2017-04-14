@@ -735,9 +735,7 @@ static void __dev_pm_qos_hide_flags(struct device *dev)
 {
 	if (!IS_ERR_OR_NULL(dev->power.qos) && dev->power.qos->flags_req) {
 		pm_qos_sysfs_remove_flags(dev);
-		pm_runtime_get_sync(dev);
 		__dev_pm_qos_drop_user_request(dev, DEV_PM_QOS_FLAGS);
-		pm_runtime_put(dev);
 	}
 }
 
@@ -747,9 +745,11 @@ static void __dev_pm_qos_hide_flags(struct device *dev)
  */
 void dev_pm_qos_hide_flags(struct device *dev)
 {
+	pm_runtime_get_sync(dev);
 	mutex_lock(&dev_pm_qos_mtx);
 	__dev_pm_qos_hide_flags(dev);
 	mutex_unlock(&dev_pm_qos_mtx);
+	pm_runtime_put(dev);
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_hide_flags);
 
