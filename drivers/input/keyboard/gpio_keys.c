@@ -52,7 +52,7 @@ extern int wakeup_gpio_num;
 static int force_wakeup_evt;
 #endif
 #endif
-static struct workqueue_struct *mx_keys;
+//static struct workqueue_struct *mx_keys;
 struct gpio_button_data {
 	struct gpio_keys_button *button;
 	struct input_dev *input;
@@ -588,7 +588,7 @@ static void gpio_keys_gpio_timer(unsigned long _data)
 {
 	struct gpio_button_data *bdata = (struct gpio_button_data *)_data;
 
-	queue_work(mx_keys, &bdata->work);
+	schedule_work(&bdata->work);
 }
 
 static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
@@ -603,7 +603,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
 	else
-		queue_work(mx_keys, &bdata->work);
+		schedule_work(&bdata->work);
 
 	return IRQ_HANDLED;
 }
@@ -700,10 +700,11 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 			goto fail;
 		}
 		bdata->irq = irq;
-
+#if 0
 		mx_keys = alloc_workqueue("machinex_keybooster", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
 		if (!mx_keys)
 			pr_err("[MACHINEX KEYBOOSTER] failed to allocate workqueue\n");
+#endif
 
 		INIT_WORK(&bdata->work, gpio_keys_gpio_work_func);
 		setup_timer(&bdata->timer,
@@ -999,7 +1000,7 @@ static void gpio_remove_key(struct gpio_button_data *bdata)
 	if (bdata->timer_debounce)
 		del_timer_sync(&bdata->timer);
 	cancel_work_sync(&bdata->work);
-	destroy_workqueue(mx_keys);
+	//destroy_workqueue(mx_keys);
 	if (gpio_is_valid(bdata->button->gpio))
 		gpio_free(bdata->button->gpio);
 }
