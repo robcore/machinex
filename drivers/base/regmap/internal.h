@@ -92,6 +92,12 @@ struct regmap {
 
 	struct reg_default *patch;
 	int patch_regs;
+
+ 	/* if set, converts bulk rw to single rw */
+ 	bool use_single_rw;
+
+	struct rb_root range_tree;
+	void *selector_work_buf;	/* Scratch buffer used for selector */
 };
 
 struct regcache_ops {
@@ -111,6 +117,20 @@ bool regmap_precious(struct regmap *map, unsigned int reg);
 
 int _regmap_write(struct regmap *map, unsigned int reg,
 		  unsigned int val);
+
+struct regmap_range_node {
+	struct rb_node node;
+
+	unsigned int range_min;
+	unsigned int range_max;
+
+	unsigned int selector_reg;
+	unsigned int selector_mask;
+	int selector_shift;
+
+	unsigned int window_start;
+	unsigned int window_len;
+};
 
 #ifdef CONFIG_DEBUG_FS
 extern void regmap_debugfs_initcall(void);
