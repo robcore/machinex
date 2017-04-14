@@ -455,9 +455,19 @@ static struct firmware_priv *to_firmware_priv(struct device *dev)
 
 static void fw_load_abort(struct firmware_buf *buf)
 {
+	/*
+	 * There is a small window in which user can write to 'loading'
+	 * between loading done and disappearance of 'loading'
+	 */
+	if (test_bit(FW_STATUS_DONE, &buf->status))
+		return;
+
 	list_del_init(&buf->pending_list);
 	set_bit(FW_STATUS_ABORT, &buf->status);
 	complete_all(&buf->completion);
+
+	/* avoid user action after loading abort */
+	fw_priv->buf = NULL;
 }
 
 #define is_fw_load_aborted(buf)	\
@@ -551,7 +561,12 @@ static ssize_t firmware_loading_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	struct firmware_priv *fw_priv = to_firmware_priv(dev);
-	int loading = test_bit(FW_STATUS_LOADING, &fw_priv->buf->status);
+	int loading = 0;
+
+	mutex_lock(&fw_lock);
+	if (fw_priv->buf)
+		loading = test_bit(FW_STATUS_LOADING, &fw_priv->buf->status);
+	mutex_unlock(&fw_lock);
 
 	return sprintf(buf, "%d\n", loading);
 }
@@ -593,12 +608,12 @@ static ssize_t firmware_loading_store(struct device *dev,
 				      const char *buf, size_t count)
 {
 	struct firmware_priv *fw_priv = to_firmware_priv(dev);
-	struct firmware_buf *fw_buf = fw_priv->buf;
+	struct firmware_buf *fw_buf;
 	int loading = simple_strtol(buf, NULL, 10);
 	int i;
 
 	mutex_lock(&fw_lock);
-
+	fw_buf = fw_priv->buf;
 	if (!fw_buf)
 		goto out;
 
@@ -798,10 +813,6 @@ static void firmware_class_timeout_work(struct work_struct *work)
 			struct firmware_priv, timeout_work.work);
 
 	mutex_lock(&fw_lock);
-	if (test_bit(FW_STATUS_DONE, &(fw_priv->buf->status))) {
-		mutex_unlock(&fw_lock);
-		return;
-	}
 	fw_load_abort(fw_priv->buf);
 	mutex_unlock(&fw_lock);
 }
@@ -883,8 +894,6 @@ static int _request_firmware_load(struct firmware_priv *fw_priv, bool uevent,
 	wait_for_completion(&buf->completion);
 
 	cancel_delayed_work_sync(&fw_priv->timeout_work);
-
-	fw_priv->buf = NULL;
 
 	device_remove_file(f_dev, &dev_attr_loading);
 err_del_bin_attr:
