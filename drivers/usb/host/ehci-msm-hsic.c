@@ -616,8 +616,8 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 	return 0;
 }
 
-#define PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
-#define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
+#define MSM_PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
+#define MSM_PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
 static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
@@ -653,14 +653,14 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	val &= ~PORT_RWC_BITS;
 	val |= PORTSC_PHCD;
 	writel_relaxed(val, USB_PORTSC);
-	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
+	while (cnt < MSM_PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
 		udelay(1);
 		cnt++;
 	}
 
-	if (cnt >= PHY_SUSPEND_TIMEOUT_USEC) {
+	if (cnt >= MSM_PHY_SUSPEND_TIMEOUT_USEC) {
 		dev_err(mehci->dev, "Unable to suspend PHY\n");
 		msm_hsic_config_gpios(mehci, 0);
 		msm_hsic_reset(mehci);
@@ -788,7 +788,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	temp = readl_relaxed(USB_PORTSC);
 	temp &= ~(PORT_RWC_BITS | PORTSC_PHCD);
 	writel_relaxed(temp, USB_PORTSC);
-	while (cnt < PHY_RESUME_TIMEOUT_USEC) {
+	while (cnt < MSM_PHY_RESUME_TIMEOUT_USEC) {
 		if (!(readl_relaxed(USB_PORTSC) & PORTSC_PHCD) &&
 			(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_SYNC_STATE))
 			break;
@@ -796,7 +796,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 		cnt++;
 	}
 
-	if (cnt >= PHY_RESUME_TIMEOUT_USEC) {
+	if (cnt >= MSM_PHY_RESUME_TIMEOUT_USEC) {
 		/*
 		 * This is a fatal error. Reset the link and
 		 * PHY to make hsic working.
