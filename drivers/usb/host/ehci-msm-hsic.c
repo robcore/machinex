@@ -714,11 +714,12 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
 
-	if (mehci->wakeup_irq) {
-		mehci->wakeup_irq_enabled = 1;
-		enable_irq_wake(mehci->wakeup_irq);
-		enable_irq(mehci->wakeup_irq);
-	}
+	wake_lock(&mehci->wlock);
+	spin_lock_irqsave(&mehci->wakeup_lock, flags);
+	mehci->wakeup_irq_enabled = 1;
+	enable_irq_wake(mehci->wakeup_irq);
+	enable_irq(mehci->wakeup_irq);
+	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
 	wake_unlock(&mehci->wlock);
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
@@ -1288,7 +1289,7 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 #define ehci_hsic_bus_resume	NULL
 
 #endif	/* CONFIG_PM */
-
+#if 0
 static void ehci_msm_set_autosuspend_delay(struct usb_device *dev)
 {
 	if (!dev->parent) /*for root hub no delay*/
@@ -1296,6 +1297,7 @@ static void ehci_msm_set_autosuspend_delay(struct usb_device *dev)
 	else
 		pm_runtime_set_autosuspend_delay(&dev->dev, 200);
 }
+#endif
 
 static struct hc_driver msm_hsic_driver = {
 	.description		= hcd_name,
@@ -1345,7 +1347,7 @@ static struct hc_driver msm_hsic_driver = {
 	.log_urb		= dbg_log_event,
 	.dump_regs		= dump_hsic_regs,
 
-	.set_autosuspend_delay = ehci_msm_set_autosuspend_delay,
+	//.set_autosuspend_delay = ehci_msm_set_autosuspend_delay,
 	.reset_sof_bug_handler	= ehci_hsic_reset_sof_bug_handler,
 };
 
