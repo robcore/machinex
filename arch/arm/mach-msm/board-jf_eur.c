@@ -4496,29 +4496,35 @@ static int ethernet_init(void)
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
 extern bool is_volume_wake(void);
 extern bool is_home_wake(void);
+static int mx_v_wake;
+static int mx_h_wake;
 
-static int machinex_volkey_platform_data(int active)
+static void machinex_volkey_platform_data(void)
 {
+	int mx_v_wake = 0;
 	bool wake = is_volume_wake();
 
-	if (wake)
-		active = 1;
-	else
-		active = 0;
 
-	return active;
+	if (wake)
+		mx_v_wake = 1;
+	else
+		mx_v_wake = 0;
+
+	wakeup = mx_v_wake;
 }
 
-static int machinex_homekey_platform_data(int active)
+
+static int machinex_homekey_platform_data(void)
 {
+	int mx_h_wake = 0;
 	bool wake = is_home_wake();
 
 	if (wake)
-		active = 1;
+		mx_h_wake = 1;
 	else
-		active = 0;
+		mx_h_wake = 0;
 
-	return active;
+	wakeup = mx_h_wake;
 }
 #endif
 
@@ -4530,7 +4536,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.active_low     = 1,
 		.type		= EV_KEY,
 #ifdef CONFIG_MACHINEX_WAKEUP_KEYS
-		.wakeup		= machinex_volkey_platform_data,
+		.wakeup		= (void *) machinex_volkey_platform_data,
 #else
 		.wakeup     = 0,
 #endif

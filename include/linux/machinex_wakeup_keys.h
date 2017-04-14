@@ -20,7 +20,7 @@
 #include <linux/types.h>
 #include <linux/module.h>
 
-bool is_volume_wake(void);
-bool is_home_wake(void);
+extern bool is_volume_wake(void);
+extern bool is_home_wake(void);
 
 #endif
