@@ -46,6 +46,7 @@
 #include <mach/clk.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_xo.h>
+#include <linux/spinlock.h>
 #include <linux/cpu.h>
 #include <mach/rpm-regulator.h>
 
@@ -520,20 +521,25 @@ static void msm_hsic_clk_reset(struct msm_hsic_hcd *mehci)
 {
 	int ret;
 
-	ret = clk_reset(mehci->core_clk, CLK_RESET_ASSERT);
-	if (ret) {
-		dev_err(mehci->dev, "hsic clk assert failed:%d\n", ret);
-		return;
-	}
-	clk_disable(mehci->core_clk);
+	/* alt_core_clk exists in targets that do not use asynchronous reset */
+	if (!IS_ERR(mehci->alt_core_clk)) {
+		ret = clk_reset(mehci->core_clk, CLK_RESET_ASSERT);
+		if (ret) {
+			dev_err(mehci->dev, "hsic clk assert failed:%d\n", ret);
+			return;
+		}
 
-	ret = clk_reset(mehci->core_clk, CLK_RESET_DEASSERT);
-	if (ret)
-		dev_err(mehci->dev, "hsic clk deassert failed:%d\n", ret);
+		/* Since a hw bug, turn off the clock before complete reset */
+		clk_disable(mehci->core_clk);
 
-	usleep_range(10000, 12000);
+		ret = clk_reset(mehci->core_clk, CLK_RESET_DEASSERT);
+		if (ret)
+			dev_err(mehci->dev, "hsic clk deassert failed:%d\n",
+					ret);
 
-	clk_enable(mehci->core_clk);
+		usleep_range(10000, 12000);
+
+		clk_enable(mehci->core_clk);
 }
 
 #define HSIC_STROBE_GPIO_PAD_CTL	(MSM_TLMM_BASE+0x20C0)
@@ -713,10 +719,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 		enable_irq(mehci->wakeup_irq);
 	}
 
-	if (pdata && pdata->swfi_latency)
-		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			PM_QOS_DEFAULT_VALUE);
-
 	wake_unlock(&mehci->wlock);
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
 
@@ -739,10 +741,6 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
-
-	if (pdata && pdata->swfi_latency)
-		pm_qos_update_request(&mehci->pm_qos_req_dma,
-			pdata->swfi_latency + 1);
 
 	if (mehci->wakeup_irq) {
 		spin_lock_irqsave(&mehci->wakeup_lock, flags);
@@ -980,8 +978,6 @@ static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		if (pdata->swfi_latency)
-			next_latency = pdata->swfi_latency + 1;
 		else
 			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
@@ -1092,15 +1088,13 @@ static int msm_hsic_resume_thread(void *data)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-		if (pdata->swfi_latency)
-			next_latency = pdata->swfi_latency + 1;
 		else
 			next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	/* keep delay between bus states */
 	if (time_before_eq(jiffies, ehci->next_statechange))
-		mdelay(10);
+		mdelay(5);
 
 	spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
@@ -1177,7 +1171,7 @@ resume_again:
 			dbg_log_event(NULL, "GPT timer prog done", 0);
 
 			spin_unlock_irq(&ehci->lock);
-			wait_for_completion_interruptible(&mehci->gpt0_completion);
+			wait_for_completion(&mehci->gpt0_completion);
 			spin_lock_irq(&ehci->lock);
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
@@ -1466,12 +1460,9 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 	struct msm_hsic_hcd *mehci = data;
 	int ret;
 
-	wake_lock(&mehci->wlock);
-
 	mehci->wakeup_int_cnt++;
-	dbg_log_event(NULL, "Remote Wakeup IRQ", mehci->wakeup_int_cnt);
-	dev_dbg(mehci->dev, "%s: hsic remote wakeup interrupt cnt: %u\n",
-			__func__, mehci->wakeup_int_cnt);
+	wake_lock_timeout(&mehci->wlock, msecs_to_jiffies(5000));
+
 
 	if (mehci->wakeup_irq) {
 		spin_lock(&mehci->wakeup_lock);
@@ -1861,10 +1852,6 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 
 	__mehci = mehci;
 
-	if (pdata && pdata->swfi_latency)
-		pm_qos_add_request(&mehci->pm_qos_req_dma,
-			PM_QOS_CPU_DMA_LATENCY, pdata->swfi_latency + 1);
-
 	/*
 	 * This pdev->dev is assigned parent of root-hub by USB core,
 	 * hence, runtime framework automatically calls this driver's
@@ -2059,14 +2046,9 @@ static int msm_hsic_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
-	.suspend_noirq = msm_hsic_pm_suspend_noirq, \
-	.suspend = msm_hsic_pm_suspend, \
-	.resume = msm_hsic_pm_resume,
+	.suspend_noirq = msm_hsic_pm_suspend_noirq,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
-	.runtime_suspend = msm_hsic_runtime_suspend, \
-	.runtime_resume = msm_hsic_runtime_resume, \
-	.runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
