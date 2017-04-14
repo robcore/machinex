@@ -34,13 +34,9 @@ struct regmap_irq_chip_data {
 	int irq;
 	int wake_count;
 
-	int irq;
-	int wake_count;
-
 	unsigned int *status_buf;
 	unsigned int *mask_buf;
 	unsigned int *mask_buf_def;
-	unsigned int *wake_buf;
 
 	unsigned int irq_reg_stride;
 };
@@ -89,16 +85,6 @@ static void regmap_irq_sync_unlock(struct irq_data *data)
 
 	if (d->chip->runtime_pm)
 		pm_runtime_put(map->dev);
-
-	/* If we've changed our wakeup count propagate it to the parent */
-	if (d->wake_count < 0)
-		for (i = d->wake_count; i < 0; i++)
-			irq_set_irq_wake(d->irq, 0);
-	else if (d->wake_count > 0)
-		for (i = 0; i < d->wake_count; i++)
-			irq_set_irq_wake(d->irq, 1);
-
-	d->wake_count = 0;
 
 	/* If we've changed our wakeup count propagate it to the parent */
 	if (d->wake_count < 0)
