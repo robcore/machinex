@@ -391,14 +391,15 @@ void regmap_debugfs_init(struct regmap *map, const char *name)
 
 	INIT_LIST_HEAD(&map->debugfs_off_cache);
 
-	const char *devname = "dummy";
+	if (name) {
+		map->debugfs_name = kasprintf(GFP_KERNEL, "%s-%s",
+					      dev_name(map->dev), name);
+		name = map->debugfs_name;
+	} else {
+		name = dev_name(map->dev);
+	}
 
- 	if (name) {
- 		map->debugfs_name = kasprintf(GFP_KERNEL, "%s-%s",
- 					      dev_name(map->dev), name);
-
-	map->debugfs = debugfs_create_dir(devname,
-					  regmap_debugfs_root);
+	map->debugfs = debugfs_create_dir(name, regmap_debugfs_root);
 	if (!map->debugfs) {
 		dev_warn(map->dev, "Failed to create debugfs directory\n");
 		return;
@@ -408,14 +409,7 @@ void regmap_debugfs_init(struct regmap *map, const char *name)
 			    map, &regmap_name_fops);
 
 	if (map->max_register) {
-		umode_t registers_mode;
-
-		if (IS_ENABLED(REGMAP_ALLOW_WRITE_DEBUGFS))
-			registers_mode = 0600;
-		else
-			registers_mode = 0400;
-
-		debugfs_create_file("registers", registers_mode, map->debugfs,
+		debugfs_create_file("registers", 0400, map->debugfs,
 				    map, &regmap_map_fops);
 		debugfs_create_file("access", 0400, map->debugfs,
 				    map, &regmap_access_fops);
