@@ -1381,7 +1381,7 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 	if (IS_ERR(mehci->alt_core_clk)) {
 		dev_err(mehci->dev, "failed to alt_core_clk\n");
 		ret = PTR_ERR(mehci->alt_core_clk);
-		mehci->alt_core_clk
+		mehci->alt_core_clk = NULL;
 		if (ret != -EPROBE_DEFER)
 			dev_err(mehci->dev, "failed to get alt_core_clk\n");
 		goto put_alt_core_clk;
