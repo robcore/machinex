@@ -453,9 +453,6 @@ static void fw_load_abort(struct firmware_buf *buf)
 	list_del_init(&buf->pending_list);
 	set_bit(FW_STATUS_ABORT, &buf->status);
 	complete_all(&buf->completion);
-
-	/* avoid user action after loading abort */
-	fw_priv->buf = NULL;
 }
 
 #define is_fw_load_aborted(buf)	\
