@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/idr.h>
-#include <linux/acpi.h>
 
 #include "base.h"
 #include "power/power.h"
@@ -431,7 +430,6 @@ struct platform_device *platform_device_register_full(
 		goto err_alloc;
 
 	pdev->dev.parent = pdevinfo->parent;
-	ACPI_HANDLE_SET(&pdev->dev, pdevinfo->acpi_node.handle);
 
 	if (pdevinfo->dma_mask) {
 		/*
@@ -462,7 +460,6 @@ struct platform_device *platform_device_register_full(
 	ret = platform_device_add(pdev);
 	if (ret) {
 err:
-		ACPI_HANDLE_SET(&pdev->dev, NULL);
 		kfree(pdev->dev.dma_mask);
 
 err_alloc:
@@ -478,16 +475,8 @@ static int platform_drv_probe(struct device *_dev)
 {
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
-	int ret;
 
-	if (ACPI_HANDLE(_dev))
-		acpi_dev_pm_attach(_dev, true);
-
-	ret = drv->probe(dev);
-	if (ret && ACPI_HANDLE(_dev))
-		acpi_dev_pm_detach(_dev, true);
-
-	return ret;
+	return drv->probe(dev);
 }
 
 static int platform_drv_probe_fail(struct device *_dev)
@@ -499,13 +488,8 @@ static int platform_drv_remove(struct device *_dev)
 {
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
-	int ret;
 
-	ret = drv->remove(dev);
-	if (ACPI_HANDLE(_dev))
-		acpi_dev_pm_detach(_dev, true);
-
-	return ret;
+	return drv->remove(dev);
 }
 
 static void platform_drv_shutdown(struct device *_dev)
@@ -514,8 +498,6 @@ static void platform_drv_shutdown(struct device *_dev)
 	struct platform_device *dev = to_platform_device(_dev);
 
 	drv->shutdown(dev);
-	if (ACPI_HANDLE(_dev))
-		acpi_dev_pm_detach(_dev, true);
 }
 
 /**
@@ -723,10 +705,6 @@ static int platform_match(struct device *dev, struct device_driver *drv)
 
 	/* Attempt an OF style match first */
 	if (of_driver_match_device(dev, drv))
-		return 1;
-
-	/* Then try ACPI style match */
-	if (acpi_driver_match_device(dev, drv))
 		return 1;
 
 	/* Then try to match against the id table */
