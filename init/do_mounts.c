@@ -76,9 +76,9 @@ __setup("rw", readwrite);
  *
  * Returns 1 if the device matches, and 0 otherwise.
  */
-static int match_dev_by_uuid(struct device *dev, void *data)
+static int match_dev_by_uuid(struct device *dev, const void *data)
 {
-	u8 *uuid = data;
+	const u8 *uuid = data;
 	struct hd_struct *part = dev_to_part(dev);
 
 	if (!part->info)
@@ -415,7 +415,7 @@ retry:
 out:
 	put_page(page);
 }
- 
+
 #ifdef CONFIG_ROOT_NFS
 
 #define NFSROOT_TIMEOUT_MIN	5
