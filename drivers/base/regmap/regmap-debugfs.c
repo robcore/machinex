@@ -217,7 +217,7 @@ static ssize_t regmap_read_debugfs(struct regmap *map, unsigned int from,
 				snprintf(buf + buf_pos, count - buf_pos,
 					 "%.*x", map->debugfs_val_len, val);
 			else
-				+				memset(buf + buf_pos, 'X',
+				memset(buf + buf_pos, 'X',
 				       map->debugfs_val_len);
 			buf_pos += 2 * map->format.val_bytes;
 
