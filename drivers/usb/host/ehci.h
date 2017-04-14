@@ -65,41 +65,10 @@ struct ehci_stats {
 enum ehci_rh_state {
 	EHCI_RH_HALTED,
 	EHCI_RH_SUSPENDED,
-	EHCI_RH_RUNNING,
-	EHCI_RH_STOPPING
+	EHCI_RH_RUNNING
 };
-
-/*
- * Timer events, ordered by increasing delay length.
- * Always update event_delays_ns[] and event_handlers[] (defined in
- * ehci-timer.c) in parallel with this list.
- */
-enum ehci_hrtimer_event {
-	EHCI_HRTIMER_POLL_ASS,		/* Poll for async schedule off */
-	EHCI_HRTIMER_POLL_PSS,		/* Poll for periodic schedule off */
-	EHCI_HRTIMER_POLL_DEAD,		/* Wait for dead controller to stop */
-	EHCI_HRTIMER_UNLINK_INTR,	/* Wait for interrupt QH unlink */
-	EHCI_HRTIMER_FREE_ITDS,		/* Wait for unused iTDs and siTDs */
-	EHCI_HRTIMER_ASYNC_UNLINKS,	/* Unlink empty async QHs */
-	EHCI_HRTIMER_IAA_WATCHDOG,	/* Handle lost IAA interrupts */
-	EHCI_HRTIMER_DISABLE_PERIODIC,	/* Wait to disable periodic sched */
-	EHCI_HRTIMER_DISABLE_ASYNC,	/* Wait to disable async sched */
-	EHCI_HRTIMER_IO_WATCHDOG,	/* Check for missing IRQs */
-	EHCI_HRTIMER_NUM_EVENTS		/* Must come last */
-};
-#define EHCI_HRTIMER_NO_EVENT	99
 
 struct ehci_hcd {			/* one per controller */
-	/* timing support */
-	enum ehci_hrtimer_event	next_hrtimer_event;
-	unsigned		enabled_hrtimer_events;
-	ktime_t			hr_timeouts[EHCI_HRTIMER_NUM_EVENTS];
-	struct hrtimer		hrtimer;
-
-	int			PSS_poll_count;
-	int			ASS_poll_count;
-	int			died_poll_count;
-
 	/* glue to PCI and HCD framework */
 	struct ehci_caps __iomem *caps;
 	struct ehci_regs __iomem *regs;
@@ -109,52 +78,30 @@ struct ehci_hcd {			/* one per controller */
 	spinlock_t		lock;
 	enum ehci_rh_state	rh_state;
 
-	/* general schedule support */
-	bool			scanning:1;
-	bool			need_rescan:1;
-	bool			intr_unlinking:1;
-	bool			async_unlinking:1;
-	bool			shutdown:1;
-
 	/* async schedule support */
 	struct ehci_qh		*async;
 	struct ehci_qh		*dummy;		/* For AMD quirk use */
-	struct ehci_qh		*async_unlink;
-	struct ehci_qh		*async_unlink_last;
-	struct ehci_qh		*async_iaa;
-	unsigned		async_unlink_cycle;
-	unsigned		async_count;	/* async activity count */
 	struct ehci_qh		*reclaim;
 	struct ehci_qh		*qh_scan_next;
+	unsigned		scanning : 1;
 
 	/* periodic schedule support */
 #define	DEFAULT_I_TDPS		1024		/* some HCs can do less */
 	unsigned		periodic_size;
 	__hc32			*periodic;	/* hw periodic table */
 	dma_addr_t		periodic_dma;
-	struct list_head	intr_qh_list;
 	unsigned		i_thresh;	/* uframes HC might cache */
 
 	union ehci_shadow	*pshadow;	/* mirror hw periodic table */
-	struct ehci_qh		*intr_unlink;
-	struct ehci_qh		*intr_unlink_last;
-	unsigned		intr_unlink_cycle;
-	unsigned		now_frame;	/* frame from HC hardware */
-	unsigned		last_iso_frame;	/* last frame scanned for iso */
-	unsigned		intr_count;	/* intr activity count */
-	unsigned		isoc_count;	/* isoc activity count */
-	unsigned		periodic_count;	/* periodic activity count */
 	int			next_uframe;	/* scan periodic, start here */
 	unsigned		periodic_sched;	/* periodic activity count */
 	unsigned		uframe_periodic_max; /* max periodic time per uframe */
 
 
-	/* list of itds & sitds completed while now_frame was still active */
+	/* list of itds & sitds completed while clock_frame was still active */
 	struct list_head	cached_itd_list;
-	struct ehci_itd		*last_itd_to_free;
 	struct list_head	cached_sitd_list;
 	unsigned		clock_frame;
-	struct ehci_sitd	*last_sitd_to_free;
 
 	/* per root hub port */
 	unsigned long		reset_done [EHCI_MAX_ROOT_PORTS];
@@ -220,7 +167,6 @@ struct ehci_hcd {			/* one per controller */
 	unsigned		has_hostpc:1;
 	unsigned		has_lpm:1;  /* support link power management */
 	unsigned		has_ppcd:1; /* support per-port change bits */
-	unsigned		pool_64_bit_align:1; /* for 64 bit alignment */
 	u8			sbrn;		/* packed release number */
 
 	/* irq statistics */
@@ -239,9 +185,6 @@ struct ehci_hcd {			/* one per controller */
 	 * OTG controllers and transceivers need software interaction
 	 */
 	struct usb_phy	*transceiver;
-
-	/* platform-specific data -- must come last */
-	unsigned long		priv[0] __aligned(sizeof(s64));
 };
 
 /* convert between an HCD pointer and the corresponding EHCI_HCD */
@@ -415,17 +358,14 @@ struct ehci_qh_hw {
 } __attribute__ ((aligned(32)));
 
 struct ehci_qh {
-	struct ehci_qh_hw	*hw;		/* Must come first */
+	struct ehci_qh_hw	*hw;
 	/* the rest is HCD-private */
 	dma_addr_t		qh_dma;		/* address of qh */
 	union ehci_shadow	qh_next;	/* ptr to qh; or periodic */
 	struct list_head	qtd_list;	/* sw qtd list */
-	struct list_head	intr_node;	/* list of intr QHs */
 	struct ehci_qtd		*dummy;
 	struct ehci_qh		*reclaim;	/* next to reclaim */
-	struct ehci_qh		*unlink_next;	/* next on unlink list */
 
-	unsigned		unlink_cycle;
 	unsigned long		unlink_time;
 	unsigned		stamp;
 
@@ -434,7 +374,7 @@ struct ehci_qh {
 #define	QH_STATE_LINKED		1		/* HC sees this */
 #define	QH_STATE_UNLINK		2		/* HC may still see this */
 #define	QH_STATE_IDLE		3		/* HC doesn't see this */
-#define	QH_STATE_UNLINK_WAIT	4		/* LINKED and on reclaim/unlink q */
+#define	QH_STATE_UNLINK_WAIT	4		/* LINKED and on reclaim q */
 #define	QH_STATE_COMPLETING	5		/* don't touch token.HALT */
 
 	u8			xacterrs;	/* XactErr retry counter */
@@ -866,31 +806,5 @@ static inline unsigned ehci_read_frame_index(struct ehci_hcd *ehci)
 #endif	/* DEBUG */
 
 /*-------------------------------------------------------------------------*/
-
-/* Declarations of things exported for use by ehci platform drivers */
-
-struct ehci_driver_overrides {
-	int	flags;
-	size_t		extra_priv_size;
-	int		(*reset)(struct usb_hcd *hcd);
-	irqreturn_t	(*irq) (struct usb_hcd *hcd);
-	int	(*urb_enqueue)(struct usb_hcd *hcd,
-				struct urb *urb, gfp_t mem_flags);
-	int	(*bus_suspend)(struct usb_hcd *);
-	int	(*bus_resume)(struct usb_hcd *);
-	int	(*start) (struct usb_hcd *hcd);
-	void	(*log_urb)(struct urb *urb, char * event, unsigned extra);
-	void	(*enable_ulpi_control)(struct usb_hcd *hcd, u32 linestate);
-	void	(*disable_ulpi_control)(struct usb_hcd *hcd);
-	void	(*set_autosuspend_delay)(struct usb_device *);
-};
-
-extern void	ehci_init_driver(struct hc_driver *drv,
-				const struct ehci_driver_overrides *over);
-
-#ifdef CONFIG_PM
-extern int	ehci_suspend(struct usb_hcd *hcd, bool do_wakeup);
-extern int	ehci_resume(struct usb_hcd *hcd, bool hibernated);
-#endif	/* CONFIG_PM */
 
 #endif /* __LINUX_EHCI_HCD_H */

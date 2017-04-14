@@ -1,8 +1,8 @@
-/* include/linux/usb/msm_hsusb.h
+/* linux/include/asm-arm/arch-msm/hsusb.h
  *
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
- * Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,7 +25,6 @@
 #include <linux/wakelock.h>
 #include <linux/pm_qos.h>
 #include <linux/hrtimer.h>
-#include <linux/power_supply.h>
 #ifdef CONFIG_USB_HOST_NOTIFY
 #include <linux/host_notify.h>
 #endif
@@ -196,15 +195,11 @@ enum usb_vdd_value {
  * @mhl_enable: indicates MHL connector or not.
  * @disable_reset_on_disconnect: perform USB PHY and LINK reset
  *              on USB cable disconnection.
- * @pnoc_errata_fix: workaround needed for PNOC hardware bug that
- *              affects USB performance.
  * @enable_lpm_on_suspend: Enable the USB core to go into Low
  *              Power Mode, when USB bus is suspended but cable
  *              is connected.
  * @core_clk_always_on_workaround: Don't disable core_clk when
  *              USB enters LPM.
- * @delay_lpm_on_disconnect: Use a delay before entering LPM
- *              upon USB cable disconnection.
  * @bus_scale_table: parameters for bus bandwidth requirements
  * @mhl_dev_name: MHL device name used to register with MHL driver.
  */
@@ -240,6 +235,7 @@ struct msm_otg_platform_data {
 
 /* phy related flags */
 #define ENABLE_DP_MANUAL_PULLUP		BIT(0)
+
 
 /* Timeout (in msec) values (min - max) associated with OTG timers */
 
@@ -312,8 +308,6 @@ struct msm_otg_platform_data {
  * @xo_handle: TCXO buffer handle
  * @bus_perf_client: Bus performance client handle to request BUS bandwidth
  * @mhl_enabled: MHL driver registration successful and MHL enabled.
- * @chg_check_timer: The timer used to implement the workaround to detect
- *               very slow plug in of wall charger.
  */
 struct msm_otg {
 	struct usb_phy phy;
@@ -376,7 +370,7 @@ struct msm_otg {
 	/*
 	 * Allowing PHY power collpase turns off the HSUSB 3.3v and 1.8v
 	 * analog regulators while going to low power mode.
-	 * Currently only 28nm PHY has the support to allowing PHY
+	 * Currently only 8960(28nm PHY) has the support to allowing PHY
 	 * power collapse since it doesn't have leakage currents while
 	 * turning off the power rails.
 	 */
@@ -390,18 +384,12 @@ struct msm_otg {
 	   * Allow putting the core in Low Power mode, when
 	   * USB bus is suspended but cable is connected.
 	   */
-#define ALLOW_LPM_ON_DEV_SUSPEND	BIT(2)
-	/*
-	 * Allowing PHY regulators LPM puts the HSUSB 3.3v and 1.8v
-	 * analog regulators into LPM while going to USB low power mode.
-	 */
-#define ALLOW_PHY_REGULATORS_LPM	BIT(3)
+#define ALLOW_LPM_ON_DEV_SUSPEND	    BIT(2)
 	unsigned long lpm_flags;
 #define PHY_PWR_COLLAPSED		BIT(0)
 #define PHY_RETENTIONED			BIT(1)
 #define XO_SHUTDOWN			BIT(2)
 #define CLOCKS_DOWN			BIT(3)
-#define PHY_REGULATORS_LPM	BIT(4)
 	int reset_counter;
 	unsigned long b_last_se0_sess;
 	unsigned long tmouts;
@@ -414,21 +402,11 @@ struct msm_hsic_host_platform_data {
 	unsigned strobe;
 	unsigned data;
 	bool phy_sof_workaround;
-	bool ignore_cal_pad_config;
-	int strobe_pad_offset;
-	int data_pad_offset;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	unsigned log2_irq_thresh;
 
-	/* gpio used to resume peripheral */
-	unsigned resume_gpio;
-
 	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
-
-	/*standalone latency is required when HSCI is active*/
-	u32 standalone_latency;
-	bool pool_64_bit_align;
 };
 
 struct msm_usb_host_platform_data {
