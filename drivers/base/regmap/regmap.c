@@ -35,6 +35,13 @@ static int _regmap_update_bits(struct regmap *map, unsigned int reg,
 			       unsigned int mask, unsigned int val,
 			       bool *change);
 
+static int _regmap_bus_read(void *context, unsigned int reg,
+			    unsigned int *val);
+static int _regmap_bus_formatted_write(void *context, unsigned int reg,
+				       unsigned int val);
+static int _regmap_bus_raw_write(void *context, unsigned int reg,
+				 unsigned int val);
+
 bool regmap_reg_in_ranges(unsigned int reg,
 			  const struct regmap_range *ranges,
 			  unsigned int nranges)
@@ -430,6 +437,8 @@ struct regmap *regmap_init(struct device *dev,
 		map->read_flag_mask = bus->read_flag_mask;
 	}
 
+	map->reg_read = _regmap_bus_read;
+
 	reg_endian = config->reg_format_endian;
 	if (reg_endian == REGMAP_ENDIAN_DEFAULT)
 		reg_endian = bus->reg_format_endian_default;
@@ -574,6 +583,11 @@ struct regmap *regmap_init(struct device *dev,
 		ret = -ENOMEM;
 		goto err_map;
 	}
+
+	if (map->format.format_write)
+		map->reg_write = _regmap_bus_formatted_write;
+	else if (map->format.format_val)
+		map->reg_write = _regmap_bus_raw_write;
 
 	map->range_tree = RB_ROOT;
 	for (i = 0; i < config->num_ranges; i++) {
@@ -981,12 +995,54 @@ static int _regmap_raw_write(struct regmap *map, unsigned int reg,
 	return ret;
 }
 
+static int _regmap_bus_formatted_write(void *context, unsigned int reg,
+				       unsigned int val)
+{
+	int ret;
+	struct regmap_range_node *range;
+	struct regmap *map = context;
+
+	BUG_ON(!map->format.format_write);
+
+	range = _regmap_range_lookup(map, reg);
+	if (range) {
+		ret = _regmap_select_page(map, &reg, range, 1);
+		if (ret != 0)
+			return ret;
+	}
+
+	map->format.format_write(map, reg, val);
+
+	trace_regmap_hw_write_start(map->dev, reg, 1);
+
+	ret = map->bus->write(map->bus_context, map->work_buf,
+			      map->format.buf_size);
+
+	trace_regmap_hw_write_done(map->dev, reg, 1);
+
+	return ret;
+}
+
+static int _regmap_bus_raw_write(void *context, unsigned int reg,
+				 unsigned int val)
+{
+	struct regmap *map = context;
+
+	BUG_ON(!map->format.format_val);
+
+	map->format.format_val(map->work_buf + map->format.reg_bytes
+			       + map->format.pad_bytes, val, 0);
+	return _regmap_raw_write(map, reg,
+				 map->work_buf +
+				 map->format.reg_bytes +
+				 map->format.pad_bytes,
+				 map->format.val_bytes);
+}
+
 int _regmap_write(struct regmap *map, unsigned int reg,
 		  unsigned int val)
 {
-	struct regmap_range_node *range;
 	int ret;
-	BUG_ON(!map->format.format_write && !map->format.format_val);
 
 	if (!map->cache_bypass && map->format.format_write) {
 		ret = regcache_write(map, reg, val);
@@ -1005,33 +1061,7 @@ int _regmap_write(struct regmap *map, unsigned int reg,
 
 	trace_regmap_reg_write(map->dev, reg, val);
 
-	if (map->format.format_write) {
-		range = _regmap_range_lookup(map, reg);
-		if (range) {
-			ret = _regmap_select_page(map, &reg, range, 1);
-			if (ret != 0)
-				return ret;
-		}
-
-		map->format.format_write(map, reg, val);
-
-		trace_regmap_hw_write_start(map->dev, reg, 1);
-
-		ret = map->bus->write(map->bus_context, map->work_buf,
-				      map->format.buf_size);
-
-		trace_regmap_hw_write_done(map->dev, reg, 1);
-
-		return ret;
-	} else {
-		map->format.format_val(map->work_buf + map->format.reg_bytes
-				       + map->format.pad_bytes, val, 0);
-		return _regmap_raw_write(map, reg,
-					 map->work_buf +
-					 map->format.reg_bytes +
-					 map->format.pad_bytes,
-					 map->format.val_bytes);
-	}
+	return map->reg_write(map, reg, val);
 }
 
 /**
@@ -1192,10 +1222,27 @@ static int _regmap_raw_read(struct regmap *map, unsigned int reg, void *val,
 	return ret;
 }
 
+static int _regmap_bus_read(void *context, unsigned int reg,
+			    unsigned int *val)
+{
+	int ret;
+	struct regmap *map = context;
+
+	if (!map->format.parse_val)
+		return -EINVAL;
+
+	ret = _regmap_raw_read(map, reg, map->work_buf, map->format.val_bytes);
+	if (ret == 0)
+		*val = map->format.parse_val(map->work_buf);
+
+	return ret;
+}
+
 static int _regmap_read(struct regmap *map, unsigned int reg,
 			unsigned int *val)
 {
 	int ret;
+	BUG_ON(!map->reg_read);
 
 	if (!map->cache_bypass) {
 		ret = regcache_read(map, reg, val);
@@ -1203,26 +1250,21 @@ static int _regmap_read(struct regmap *map, unsigned int reg,
 			return 0;
 	}
 
-	if (!map->format.parse_val)
-		return -EINVAL;
-
 	if (map->cache_only)
 		return -EBUSY;
 
-	ret = _regmap_raw_read(map, reg, map->work_buf, map->format.val_bytes);
+	ret = map->reg_read(map, reg, val);
 	if (ret == 0) {
-		*val = map->format.parse_val(map->work_buf);
-
 #ifdef LOG_DEVICE
 		if (strcmp(dev_name(map->dev), LOG_DEVICE) == 0)
 			dev_info(map->dev, "%x => %x\n", reg, *val);
 #endif
 
 		trace_regmap_reg_read(map->dev, reg, *val);
-	}
 
-	if (ret == 0 && !map->cache_bypass)
-		regcache_write(map, reg, *val);
+		if (!map->cache_bypass)
+			regcache_write(map, reg, *val);
+	}
 
 	return ret;
 }
