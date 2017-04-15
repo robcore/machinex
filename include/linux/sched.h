@@ -534,7 +534,9 @@ struct task_cputime {
  * We include PREEMPT_ACTIVE to avoid cond_resched() from working
  * before the scheduler is active -- see should_resched().
  */
-#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE)
+#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE + PREEMPT_NEED_RESCHED)
+#define PREEMPT_ENABLED		(PREEMPT_NEED_RESCHED)
+#define PREEMPT_DISABLED	(1 + PREEMPT_NEED_RESCHED)
 
 /**
  * struct thread_group_cputimer - thread group interval timer counts
@@ -2991,7 +2993,7 @@ static inline void current_clr_polling(void)
 
 static __always_inline bool need_resched(void)
 {
-	return unlikely(tif_need_resched());
+	return unlikely(test_preempt_need_resched());
 }
 
 /*
