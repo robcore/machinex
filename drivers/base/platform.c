@@ -534,8 +534,7 @@ EXPORT_SYMBOL_GPL(platform_driver_unregister);
 /**
  * platform_driver_probe - register driver for non-hotpluggable device
  * @drv: platform driver structure
- * @probe: the driver probe routine, probably from an __init section,
- *         must not return -EPROBE_DEFER.
+ * @probe: the driver probe routine, probably from an __init section
  *
  * Use this instead of platform_driver_register() when you know the device
  * is not hotpluggable and has already been registered, and you want to
@@ -546,8 +545,7 @@ EXPORT_SYMBOL_GPL(platform_driver_unregister);
  * into system-on-chip processors, where the controller devices have been
  * configured as part of board setup.
  *
- * This is incompatible with deferred probing so probe() must not
- * return -EPROBE_DEFER.
+ * Note that this is incompatible with deferred probing.
  *
  * Returns zero if the driver registered and bound to a device, else returns
  * a negative error code and with the driver not registered.
@@ -556,6 +554,12 @@ int __init_or_module platform_driver_probe(struct platform_driver *drv,
 		int (*probe)(struct platform_device *))
 {
 	int retval, code;
+
+	/*
+	 * Prevent driver from requesting probe deferral to avoid further
+	 * futile probe attempts.
+	 */
+	drv->prevent_deferred_probe = true;
 
 	/* make sure driver won't have bind/unbind attributes */
 	drv->driver.suppress_bind_attrs = true;
@@ -731,6 +735,11 @@ static int platform_legacy_suspend(struct device *dev, pm_message_t mesg)
 	if (dev->driver && pdrv->suspend) {
 		ret = pdrv->suspend(pdev, mesg);
 		suspend_report_result(pdrv->suspend, ret);
+	}
+
+	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
+		dev_warn(_dev, "probe deferral not supported\n");
+		ret = -ENXIO;
 	}
 
 	return ret;
