@@ -47,6 +47,18 @@ static ssize_t class_attr_store(struct kobject *kobj, struct attribute *attr,
 	return ret;
 }
 
+static const void *class_attr_namespace(struct kobject *kobj,
+					const struct attribute *attr)
+{
+	struct class_attribute *class_attr = to_class_attr(attr);
+	struct subsys_private *cp = to_subsys_private(kobj);
+	const void *ns = NULL;
+
+	if (class_attr->namespace)
+		ns = class_attr->namespace(cp->class, class_attr);
+	return ns;
+}
+
 static void class_release(struct kobject *kobj)
 {
 	struct subsys_private *cp = to_subsys_private(kobj);
@@ -74,6 +86,7 @@ static const struct kobj_ns_type_operations *class_child_ns_type(struct kobject 
 static const struct sysfs_ops class_sysfs_ops = {
 	.show	   = class_attr_show,
 	.store	   = class_attr_store,
+	.namespace = class_attr_namespace,
 };
 
 static struct kobj_type class_ktype = {
@@ -86,23 +99,21 @@ static struct kobj_type class_ktype = {
 static struct kset *class_kset;
 
 
-int class_create_file_ns(struct class *cls, const struct class_attribute *attr,
-			 const void *ns)
+int class_create_file(struct class *cls, const struct class_attribute *attr)
 {
 	int error;
 	if (cls)
-		error = sysfs_create_file_ns(&cls->p->subsys.kobj,
-					     &attr->attr, ns);
+		error = sysfs_create_file(&cls->p->subsys.kobj,
+					  &attr->attr);
 	else
 		error = -EINVAL;
 	return error;
 }
 
-void class_remove_file_ns(struct class *cls, const struct class_attribute *attr,
-			  const void *ns)
+void class_remove_file(struct class *cls, const struct class_attribute *attr)
 {
 	if (cls)
-		sysfs_remove_file_ns(&cls->p->subsys.kobj, &attr->attr, ns);
+		sysfs_remove_file(&cls->p->subsys.kobj, &attr->attr);
 }
 
 static struct class *class_get(struct class *cls)
@@ -589,8 +600,8 @@ int __init classes_init(void)
 	return 0;
 }
 
-EXPORT_SYMBOL_GPL(class_create_file_ns);
-EXPORT_SYMBOL_GPL(class_remove_file_ns);
+EXPORT_SYMBOL_GPL(class_create_file);
+EXPORT_SYMBOL_GPL(class_remove_file);
 EXPORT_SYMBOL_GPL(class_unregister);
 EXPORT_SYMBOL_GPL(class_destroy);
 

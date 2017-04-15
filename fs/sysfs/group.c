@@ -54,10 +54,9 @@ static int create_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 				if (!mode)
 					continue;
 			}
-			error = sysfs_add_file_mode_ns(dir_sd, *attr,
-						       SYSFS_KOBJ_ATTR,
-						       (*attr)->mode | mode,
-						       NULL);
+			error = sysfs_add_file_mode(dir_sd, *attr,
+						    SYSFS_KOBJ_ATTR,
+						    (*attr)->mode | mode);
 			if (unlikely(error))
 				break;
 		}

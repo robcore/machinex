@@ -90,6 +90,7 @@ extern void bus_remove_file(struct bus_type *, struct bus_attribute *);
  *              bus-specific setup
  * @p:		The private data of the driver core, only the driver core can
  *		touch this.
+ * @lock_key:	Lock class key for use by the lock validator
  *
  * A bus is a channel between the processor and one or more devices. For the
  * purposes of the device model, all devices are connected via a bus, even if
@@ -271,6 +272,8 @@ struct driver_attribute {
 	struct driver_attribute driver_attr_##_name = __ATTR_RW(_name)
 #define DRIVER_ATTR_RO(_name) \
 	struct driver_attribute driver_attr_##_name = __ATTR_RO(_name)
+#define DRIVER_ATTR_WO(_name) \
+	struct driver_attribute driver_attr_##_name = __ATTR_WO(_name)
 
 extern int __must_check driver_create_file(struct device_driver *driver,
 					const struct driver_attribute *attr);
@@ -415,6 +418,8 @@ struct class_attribute {
 			char *buf);
 	ssize_t (*store)(struct class *class, struct class_attribute *attr,
 			const char *buf, size_t count);
+	const void *(*namespace)(struct class *class,
+				 const struct class_attribute *attr);
 };
 
 #define CLASS_ATTR(_name, _mode, _show, _store) \
@@ -424,24 +429,10 @@ struct class_attribute {
 #define CLASS_ATTR_RO(_name) \
 	struct class_attribute class_attr_##_name = __ATTR_RO(_name)
 
-extern int __must_check class_create_file_ns(struct class *class,
-					     const struct class_attribute *attr,
-					     const void *ns);
-extern void class_remove_file_ns(struct class *class,
-				 const struct class_attribute *attr,
-				 const void *ns);
-
-static inline int __must_check class_create_file(struct class *class,
-					const struct class_attribute *attr)
-{
-	return class_create_file_ns(class, attr, NULL);
-}
-
-static inline void class_remove_file(struct class *class,
-				     const struct class_attribute *attr)
-{
-	return class_remove_file_ns(class, attr, NULL);
-}
+extern int __must_check class_create_file(struct class *class,
+					  const struct class_attribute *attr);
+extern void class_remove_file(struct class *class,
+			      const struct class_attribute *attr);
 
 /* Simple class attribute that is just a static string */
 struct class_attribute_string {
@@ -536,18 +527,20 @@ ssize_t device_store_bool(struct device *dev, struct device_attribute *attr,
 	struct device_attribute dev_attr_##_name = __ATTR_RW(_name)
 #define DEVICE_ATTR_RO(_name) \
 	struct device_attribute dev_attr_##_name = __ATTR_RO(_name)
+#define DEVICE_ATTR_WO(_name) \
+	struct device_attribute dev_attr_##_name = __ATTR_WO(_name)
 #define DEVICE_ULONG_ATTR(_name, _mode, _var) \
 	struct dev_ext_attribute dev_attr_##_name = \
 		{ __ATTR(_name, _mode, device_show_ulong, device_store_ulong), &(_var) }
 #define DEVICE_INT_ATTR(_name, _mode, _var) \
 	struct dev_ext_attribute dev_attr_##_name = \
-		{ __ATTR(_name, _mode, device_show_ulong, device_store_ulong), &(_var) }
-#define DEVICE_ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store) \
-	struct device_attribute dev_attr_##_name =		\
-		__ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store)
+		{ __ATTR(_name, _mode, device_show_int, device_store_int), &(_var) }
 #define DEVICE_BOOL_ATTR(_name, _mode, _var) \
 	struct dev_ext_attribute dev_attr_##_name = \
 		{ __ATTR(_name, _mode, device_show_bool, device_store_bool), &(_var) }
+#define DEVICE_ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store) \
+	struct device_attribute dev_attr_##_name =		\
+		__ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store)
 
 extern int device_create_file(struct device *device,
 			      const struct device_attribute *entry);
@@ -681,6 +674,7 @@ struct device_dma_parameters {
  * 		segment limitations.
  * @dma_pools:	Dma pools (if dma'ble device).
  * @dma_mem:	Internal for coherent mem override.
+ * @cma_area:	Contiguous memory area for dma allocations
  * @archdata:	For arch-specific additions.
  * @of_node:	Associated device tree node.
  * @devt:	For creating the sysfs "dev".
@@ -693,6 +687,8 @@ struct device_dma_parameters {
  * @release:	Callback to free the device after all references have
  * 		gone away. This should be set by the allocator of the
  * 		device (i.e. the bus driver that discovered the device).
+ * @iommu_group: IOMMU group the device belongs to.
+ *
  * @offline_disabled: If set, the device is permanently online.
  * @offline:	Set after successful invocation of bus type's .offline().
  *
@@ -1146,16 +1142,15 @@ do {									\
 #endif
 
 /*
- * dev_WARN*() acts like dev_printk(), but with the key difference
- * of using a WARN/WARN_ON to get the message out, including the
- * file/line information and a backtrace.
+ * dev_WARN*() acts like dev_printk(), but with the key difference of
+ * using WARN/WARN_ONCE to include file/line information and a backtrace.
  */
 #define dev_WARN(dev, format, arg...) \
-	WARN(1, "Device: %s\n" format, dev_driver_string(dev), ## arg);
+	WARN(1, "%s %s: " format, dev_driver_string(dev), dev_name(dev), ## arg);
 
 #define dev_WARN_ONCE(dev, condition, format, arg...) \
-	WARN_ONCE(condition, "Device %s\n" format, \
-			dev_driver_string(dev), ## arg)
+	WARN_ONCE(condition, "%s %s: " format, \
+			dev_driver_string(dev), dev_name(dev), ## arg)
 
 /* Create alias, so I can be autoloaded. */
 #define MODULE_ALIAS_CHARDEV(major,minor) \

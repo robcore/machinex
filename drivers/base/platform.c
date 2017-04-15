@@ -475,8 +475,18 @@ static int platform_drv_probe(struct device *_dev)
 {
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
+	int ret;
 
-	return drv->probe(dev);
+	ret = drv->probe(dev);
+	if (ret && ACPI_HANDLE(_dev))
+		acpi_dev_pm_detach(_dev, true);
+
+	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
+		dev_warn(_dev, "probe deferral not supported\n");
+		ret = -ENXIO;
+	}
+
+	return ret;
 }
 
 static int platform_drv_probe_fail(struct device *_dev)
@@ -488,8 +498,11 @@ static int platform_drv_remove(struct device *_dev)
 {
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
+	int ret;
 
-	return drv->remove(dev);
+	ret = drv->remove(dev);
+
+	return ret;
 }
 
 static void platform_drv_shutdown(struct device *_dev)
@@ -732,15 +745,8 @@ static int platform_legacy_suspend(struct device *dev, pm_message_t mesg)
 	struct platform_device *pdev = to_platform_device(dev);
 	int ret = 0;
 
-	if (dev->driver && pdrv->suspend) {
+	if (dev->driver && pdrv->suspend)
 		ret = pdrv->suspend(pdev, mesg);
-		suspend_report_result(pdrv->suspend, ret);
-	}
-
-	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
-		dev_warn(_dev, "probe deferral not supported\n");
-		ret = -ENXIO;
-	}
 
 	return ret;
 }
