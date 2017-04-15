@@ -1599,11 +1599,7 @@ static int __remove_suid(struct dentry *dentry, int kill)
 	struct iattr newattrs;
 
 	newattrs.ia_valid = ATTR_FORCE | kill;
-	/*
-	 * Note we call this on write, so notify_change will not
-	 * encounter any conflicting delegations:
-	 */
-	return notify_change(dentry, &newattrs, NULL);
+	return notify_change(dentry, &newattrs);
 }
 
 int file_remove_suid(struct file *file)
