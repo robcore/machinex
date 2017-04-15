@@ -849,42 +849,6 @@ struct bus_type *find_bus(char *name)
 }
 #endif  /*  0  */
 
-
-/**
- * bus_add_attrs - Add default attributes for this bus.
- * @bus: Bus that has just been registered.
- */
-
-static int bus_add_attrs(struct bus_type *bus)
-{
-	int error = 0;
-	int i;
-
-	if (bus->bus_attrs) {
-		for (i = 0; bus->bus_attrs[i].attr.name; i++) {
-			error = bus_create_file(bus, &bus->bus_attrs[i]);
-			if (error)
-				goto err;
-		}
-	}
-done:
-	return error;
-err:
-	while (--i >= 0)
-		bus_remove_file(bus, &bus->bus_attrs[i]);
-	goto done;
-}
-
-static void bus_remove_attrs(struct bus_type *bus)
-{
-	int i;
-
-	if (bus->bus_attrs) {
-		for (i = 0; bus->bus_attrs[i].attr.name; i++)
-			bus_remove_file(bus, &bus->bus_attrs[i]);
-	}
-}
-
 static int bus_add_groups(struct bus_type *bus,
 			  const struct attribute_group **groups)
 {
@@ -986,9 +950,6 @@ int bus_register(struct bus_type *bus)
 	if (retval)
 		goto bus_probe_files_fail;
 
-	retval = bus_add_attrs(bus);
-	if (retval)
-		goto bus_attrs_fail;
 	retval = bus_add_groups(bus, bus->bus_groups);
 	if (retval)
 		goto bus_groups_fail;
@@ -997,8 +958,6 @@ int bus_register(struct bus_type *bus)
 	return 0;
 
 bus_groups_fail:
-	bus_remove_attrs(bus);
-bus_attrs_fail:
 	remove_probe_files(bus);
 bus_probe_files_fail:
 	kset_unregister(bus->p->drivers_kset);
@@ -1027,7 +986,6 @@ void bus_unregister(struct bus_type *bus)
 	pr_debug("bus: '%s': unregistering\n", bus->name);
 	if (bus->dev_root)
 		device_unregister(bus->dev_root);
-	bus_remove_attrs(bus);
 	bus_remove_groups(bus, bus->bus_groups);
 	remove_probe_files(bus);
 	kset_unregister(bus->p->drivers_kset);
