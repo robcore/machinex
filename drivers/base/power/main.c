@@ -551,10 +551,10 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 	TRACE_DEVICE(dev);
 	TRACE_RESUME(0);
 
-	if (dev->power.syscore)
+	if (dev->power.syscore || dev->power.direct_complete)
 		goto Out;
 
-	if (!dev->power.is_noirq_suspended || dev->power.direct_complete)
+	if (!dev->power.is_noirq_suspended)
 		goto Out;
 
 	dpm_wait(dev->parent, async);
@@ -586,8 +586,8 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 	error = dpm_run_callback(callback, dev, state, info);
 	dev->power.is_noirq_suspended = false;
  Out:
-	TRACE_RESUME(error);
 	complete_all(&dev->power.completion);
+	TRACE_RESUME(error);
 	return error;
 }
 
@@ -712,6 +712,7 @@ static int device_resume_early(struct device *dev, pm_message_t state, bool asyn
 
  Out:
 	TRACE_RESUME(error);
+
 	pm_runtime_enable(dev);
 	complete_all(&dev->power.completion);
 	return error;
@@ -961,7 +962,6 @@ static void device_complete(struct device *dev, pm_message_t state)
 {
 	void (*callback)(struct device *) = NULL;
 	char *info = NULL;
-	int error;
 
 	if (dev->power.syscore)
 		return;
@@ -1523,6 +1523,7 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (!error) {
 		struct device *parent = dev->parent;
 
+		dev->power.is_suspended = true;
 		if (parent) {
 			spin_lock_irq(&parent->power.lock);
 
@@ -1612,15 +1613,13 @@ int dpm_suspend(pm_message_t state)
 	}
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
-
+	if (!error)
+		error = async_error;
 	if (error) {
 		suspend_stats.failed_suspend++;
 		dpm_save_failed_step(SUSPEND_SUSPEND);
-	} else {
-		error = async_error;
+	} else
 		dpm_show_time(starttime, state, NULL);
-	}
-
 	return error;
 }
 
@@ -1687,8 +1686,6 @@ static int device_prepare(struct device *dev, pm_message_t state)
 	if (ret < 0) {
 		suspend_report_result(callback, ret);
 		pm_runtime_put(dev);
-
-
 		return ret;
 	}
 	/*
