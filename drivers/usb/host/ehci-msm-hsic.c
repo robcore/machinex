@@ -46,7 +46,6 @@
 #include <mach/clk.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_xo.h>
-#include <linux/spinlock.h>
 #include <linux/cpu.h>
 #include <mach/rpm-regulator.h>
 
@@ -160,7 +159,7 @@ static struct {
 	rwlock_t lck;   /* lock */
 } dbg_hsic_ctrl = {
 	.idx = 0,
-	.lck = __RW_LOCK_UNLOCKED(lck)
+	.lck = __RW_LOCK_UNLOCKED(dbg_hsic_ctrl.lck)
 };
 
 static struct {
@@ -169,7 +168,7 @@ static struct {
 	rwlock_t lck;   /* lock */
 } dbg_hsic_data = {
 	.idx = 0,
-	.lck = __RW_LOCK_UNLOCKED(lck)
+	.lck = __RW_LOCK_UNLOCKED(dbg_hsic_data.lck)
 };
 
 /**
@@ -521,26 +520,20 @@ static void msm_hsic_clk_reset(struct msm_hsic_hcd *mehci)
 {
 	int ret;
 
-	/* alt_core_clk exists in targets that do not use asynchronous reset */
-	if (!IS_ERR(mehci->alt_core_clk)) {
-		ret = clk_reset(mehci->core_clk, CLK_RESET_ASSERT);
-		if (ret) {
-			dev_err(mehci->dev, "hsic clk assert failed:%d\n", ret);
-			return;
-		}
-
-		/* Since a hw bug, turn off the clock before complete reset */
-		clk_disable(mehci->core_clk);
-
-		ret = clk_reset(mehci->core_clk, CLK_RESET_DEASSERT);
-		if (ret)
-			dev_err(mehci->dev, "hsic clk deassert failed:%d\n",
-					ret);
-
-		usleep_range(10000, 12000);
-
-		clk_enable(mehci->core_clk);
+	ret = clk_reset(mehci->core_clk, CLK_RESET_ASSERT);
+	if (ret) {
+		dev_err(mehci->dev, "hsic clk assert failed:%d\n", ret);
+		return;
 	}
+	clk_disable(mehci->core_clk);
+
+	ret = clk_reset(mehci->core_clk, CLK_RESET_DEASSERT);
+	if (ret)
+		dev_err(mehci->dev, "hsic clk deassert failed:%d\n", ret);
+
+	usleep_range(10000, 12000);
+
+	clk_enable(mehci->core_clk);
 }
 
 #define HSIC_STROBE_GPIO_PAD_CTL	(MSM_TLMM_BASE+0x20C0)
@@ -623,8 +616,8 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 	return 0;
 }
 
-#define MSM_PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
-#define MSM_PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
+#define PHY_SUSPEND_TIMEOUT_USEC	(1000 * 1000)
+#define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
 static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
@@ -660,14 +653,14 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	val &= ~PORT_RWC_BITS;
 	val |= PORTSC_PHCD;
 	writel_relaxed(val, USB_PORTSC);
-	while (cnt < MSM_PHY_SUSPEND_TIMEOUT_USEC) {
+	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		udelay(1);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
-	if (cnt >= MSM_PHY_SUSPEND_TIMEOUT_USEC) {
+	if (cnt >= PHY_SUSPEND_TIMEOUT_USEC) {
 		dev_err(mehci->dev, "Unable to suspend PHY\n");
 		msm_hsic_config_gpios(mehci, 0);
 		msm_hsic_reset(mehci);
@@ -693,7 +686,6 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	 * clocks are turned OFF and VDD is allowed to minimize.
 	 */
 	mb();
-
 	clk_disable_unprepare(mehci->core_clk);
 	clk_disable_unprepare(mehci->phy_clk);
 	clk_disable_unprepare(mehci->cal_clk);
@@ -744,15 +736,13 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	/* Handles race with Async interrupt */
 	disable_irq(hcd->irq);
 
-	if (mehci->wakeup_irq) {
-		spin_lock_irqsave(&mehci->wakeup_lock, flags);
-		if (mehci->wakeup_irq_enabled) {
-			disable_irq_wake(mehci->wakeup_irq);
-			disable_irq_nosync(mehci->wakeup_irq);
-			mehci->wakeup_irq_enabled = 0;
-		}
-		spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
+	spin_lock_irqsave(&mehci->wakeup_lock, flags);
+	if (mehci->wakeup_irq_enabled) {
+		disable_irq_wake(mehci->wakeup_irq);
+		disable_irq_nosync(mehci->wakeup_irq);
+		mehci->wakeup_irq_enabled = 0;
 	}
+	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
 	wake_lock(&mehci->wlock);
 
@@ -784,7 +774,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	temp = readl_relaxed(USB_PORTSC);
 	temp &= ~(PORT_RWC_BITS | PORTSC_PHCD);
 	writel_relaxed(temp, USB_PORTSC);
-	while (cnt < MSM_PHY_RESUME_TIMEOUT_USEC) {
+	while (cnt < PHY_RESUME_TIMEOUT_USEC) {
 		if (!(readl_relaxed(USB_PORTSC) & PORTSC_PHCD) &&
 			(readl_relaxed(USB_ULPI_VIEWPORT) & ULPI_SYNC_STATE))
 			break;
@@ -792,7 +782,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 		cnt++;
 	}
 
-	if (cnt >= MSM_PHY_RESUME_TIMEOUT_USEC) {
+	if (cnt >= PHY_RESUME_TIMEOUT_USEC) {
 		/*
 		 * This is a fatal error. Reset the link and
 		 * PHY to make hsic working.
@@ -980,7 +970,7 @@ static void ehci_hsic_reset_sof_bug_handler(struct usb_hcd *hcd, u32 val)
 	if (pdata && pdata->swfi_latency) {
 		next_latency = pdata->swfi_latency + 1;
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-			next_latency = PM_QOS_DEFAULT_VALUE;
+		next_latency = PM_QOS_DEFAULT_VALUE;
 	}
 
 	mehci->bus_reset = 1;
@@ -1094,7 +1084,7 @@ static int msm_hsic_resume_thread(void *data)
 
 	/* keep delay between bus states */
 	if (time_before_eq(jiffies, ehci->next_statechange))
-		mdelay(5);
+		mdelay(10);
 
 	spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
@@ -1171,7 +1161,7 @@ resume_again:
 			dbg_log_event(NULL, "GPT timer prog done", 0);
 
 			spin_unlock_irq(&ehci->lock);
-			wait_for_completion(&mehci->gpt0_completion);
+			wait_for_completion_interruptible(&mehci->gpt0_completion);
 			spin_lock_irq(&ehci->lock);
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", tight_count);
@@ -1364,33 +1354,25 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 	if (IS_ERR(mehci->core_clk)) {
 		dev_err(mehci->dev, "failed to get core_clk\n");
 		ret = PTR_ERR(mehci->core_clk);
-		mehci->core_clk = NULL;
-		if (ret != -EPROBE_DEFER)
-			dev_err(mehci->dev, "failed to get core_clk\n");
-		goto put_core_clk;
+		return ret;
 	}
 
 	/* alt_core_clk is for LINK to be used during PHY RESET
 	 * clock rate appropriately set by target specific clock driver */
 	mehci->alt_core_clk = clk_get(mehci->dev, "alt_core_clk");
 	if (IS_ERR(mehci->alt_core_clk)) {
-		dev_err(mehci->dev, "failed to alt_core_clk\n");
+		dev_err(mehci->dev, "failed to core_clk\n");
 		ret = PTR_ERR(mehci->alt_core_clk);
-		mehci->alt_core_clk = NULL;
-		if (ret != -EPROBE_DEFER)
-			dev_err(mehci->dev, "failed to get alt_core_clk\n");
-		goto put_alt_core_clk;
+		goto put_core_clk;
 	}
 
 	/* phy_clk is required for HSIC PHY operation
 	 * clock rate appropriately set by target specific clock driver */
 	mehci->phy_clk = clk_get(mehci->dev, "phy_clk");
 	if (IS_ERR(mehci->phy_clk)) {
+		dev_err(mehci->dev, "failed to get phy_clk\n");
 		ret = PTR_ERR(mehci->phy_clk);
-		mehci->phy_clk = NULL;
-		if (ret != -EPROBE_DEFER)
-			dev_err(mehci->dev, "failed to get phy_clk\n");
-		goto put_phy_clk;
+		goto put_alt_core_clk;
 	}
 
 	/* 10MHz cal_clk is required for calibration of I/O pads */
@@ -1398,10 +1380,7 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 	if (IS_ERR(mehci->cal_clk)) {
 		dev_err(mehci->dev, "failed to get cal_clk\n");
 		ret = PTR_ERR(mehci->cal_clk);
-		mehci->cal_clk = NULL;
-		if (ret != -EPROBE_DEFER)
-			dev_err(mehci->dev, "failed to get cal_clk\n");
-		goto put_cal_clk;
+		goto put_phy_clk;
 	}
 	clk_set_rate(mehci->cal_clk, 10000000);
 
@@ -1410,10 +1389,7 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 	if (IS_ERR(mehci->ahb_clk)) {
 		dev_err(mehci->dev, "failed to get iface_clk\n");
 		ret = PTR_ERR(mehci->ahb_clk);
-		mehci->ahb_clk = NULL;
-		if (ret != -EPROBE_DEFER)
-			dev_err(mehci->dev, "failed to get iface_clk\n");
-		goto put_ahb_clk;
+		goto put_cal_clk;
 	}
 
 	clk_prepare_enable(mehci->core_clk);
@@ -1430,7 +1406,6 @@ put_clocks:
 		clk_disable_unprepare(mehci->cal_clk);
 		clk_disable_unprepare(mehci->ahb_clk);
 	}
-put_ahb_clk:
 	clk_put(mehci->ahb_clk);
 put_cal_clk:
 	clk_put(mehci->cal_clk);
@@ -1443,7 +1418,6 @@ put_core_clk:
 
 	return ret;
 }
-
 static irqreturn_t hsic_peripheral_status_change(int irq, void *dev_id)
 {
 	struct msm_hsic_hcd *mehci = dev_id;
@@ -1462,18 +1436,19 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 	int ret;
 
 	mehci->wakeup_int_cnt++;
-	wake_lock_timeout(&mehci->wlock, msecs_to_jiffies(5000));
+	dbg_log_event(NULL, "Remote Wakeup IRQ", mehci->wakeup_int_cnt);
+	dev_dbg(mehci->dev, "%s: hsic remote wakeup interrupt cnt: %u\n",
+			__func__, mehci->wakeup_int_cnt);
 
+	wake_lock(&mehci->wlock);
 
-	if (mehci->wakeup_irq) {
-		spin_lock(&mehci->wakeup_lock);
-		if (mehci->wakeup_irq_enabled) {
-			mehci->wakeup_irq_enabled = 0;
-			disable_irq_wake(irq);
-			disable_irq_nosync(irq);
-		}
-		spin_unlock(&mehci->wakeup_lock);
+	spin_lock(&mehci->wakeup_lock);
+	if (mehci->wakeup_irq_enabled) {
+		mehci->wakeup_irq_enabled = 0;
+		disable_irq_wake(irq);
+		disable_irq_nosync(irq);
 	}
+	spin_unlock(&mehci->wakeup_lock);
 
 	if (!atomic_read(&mehci->pm_usage_cnt)) {
 		ret = pm_runtime_get(mehci->dev);
@@ -1899,12 +1874,6 @@ static int ehci_hsic_msm_remove(struct platform_device *pdev)
 	/* Remove the HCD prior to releasing our resources. */
 	usb_remove_hcd(hcd);
 
-	/* If the device was removed no need to call pm_runtime_disable */
-	if (pdev->dev.power.power_state.event != PM_EVENT_INVALID)
-		pm_runtime_disable(&pdev->dev);
-
-	pm_runtime_set_suspended(&pdev->dev);
-
 	if (pdata && pdata->swfi_latency)
 		pm_qos_remove_request(&mehci->pm_qos_req_dma);
 
@@ -1930,6 +1899,8 @@ static int ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
+	wake_lock_destroy(&mehci->wlock);
+	pm_runtime_set_suspended(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
@@ -1937,7 +1908,6 @@ static int ehci_hsic_msm_remove(struct platform_device *pdev)
 	msm_hsic_init_vddcx(mehci, 0);
 
 	msm_hsic_init_clocks(mehci, 0);
-	wake_lock_destroy(&mehci->wlock);
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
 
@@ -2050,9 +2020,14 @@ static int msm_hsic_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM
 static const struct dev_pm_ops msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_hsic_pm_suspend, msm_hsic_pm_resume)
-	.suspend_noirq = msm_hsic_pm_suspend_noirq,
+	.suspend_noirq = msm_hsic_pm_suspend_noirq, \
+	.suspend = msm_hsic_pm_suspend, \
+	.resume = msm_hsic_pm_resume,
 	SET_RUNTIME_PM_OPS(msm_hsic_runtime_suspend, msm_hsic_runtime_resume,
 				msm_hsic_runtime_idle)
+	.runtime_suspend = msm_hsic_runtime_suspend, \
+	.runtime_resume = msm_hsic_runtime_resume, \
+	.runtime_idle = msm_hsic_runtime_idle,
 };
 #endif
 
