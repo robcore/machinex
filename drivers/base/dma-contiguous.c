@@ -245,7 +245,7 @@ int __init cma_fdt_scan(unsigned long node, const char *uname,
 #endif
 
 /**
- * dma_contiguous_reserve() - reserve area for contiguous memory handling
+ * dma_contiguous_reserve() - reserve area(s) for contiguous memory handling
  * @limit: End address of the reserved memory (optional, 0 for any).
  *
  * This function reserves memory from early allocator. It should be
