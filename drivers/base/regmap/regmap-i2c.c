@@ -13,7 +13,7 @@
 #include <linux/regmap.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
-
+#include <linux/err.h>
 
 static int regmap_smbus_byte_reg_read(void *context, unsigned int reg,
 				      unsigned int *val)
