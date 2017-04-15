@@ -1890,14 +1890,14 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 	size_t val_bytes = map->format.val_bytes;
 	bool vol = regmap_volatile_range(map, reg, val_count);
 
-	if (!map->bus)
-		return -EINVAL;
-	if (!map->format.parse_inplace)
-		return -EINVAL;
 	if (reg % map->reg_stride)
 		return -EINVAL;
 
-	if (vol || map->cache_type == REGCACHE_NONE) {
+	if (map->bus && map->format.parse_inplace && (vol || map->cache_type == REGCACHE_NONE)) {
+ 		/*
+ 		 * Some devices does not support bulk read, for
+ 		 * them we have a series of single read operations.
+		 */
 		ret = regmap_raw_read(map, reg, val, val_bytes * val_count);
 		if (ret != 0)
 			return ret;
