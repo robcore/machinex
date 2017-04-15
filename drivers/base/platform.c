@@ -478,8 +478,6 @@ static int platform_drv_probe(struct device *_dev)
 	int ret;
 
 	ret = drv->probe(dev);
-	if (ret && ACPI_HANDLE(_dev))
-		acpi_dev_pm_detach(_dev, true);
 
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
 		dev_warn(_dev, "probe deferral not supported\n");
