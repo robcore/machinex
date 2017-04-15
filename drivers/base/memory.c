@@ -348,8 +348,10 @@ store_mem_state(struct device *dev,
 		online_type = ONLINE_KEEP;
 	else if (!strncmp(buf, "offline", min_t(int, count, 7)))
 		online_type = -1;
-	else
-		return -EINVAL;
+	else {
+		ret = -EINVAL;
+		goto err;
+	}
 
 	switch (online_type) {
 	case ONLINE_KERNEL:
@@ -372,6 +374,7 @@ store_mem_state(struct device *dev,
 		ret = -EINVAL; /* should never happen */
 	}
 
+err:
 	unlock_device_hotplug();
 
 	if (ret)
