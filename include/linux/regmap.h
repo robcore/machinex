@@ -490,8 +490,12 @@ struct regmap_irq {
  *
  * @status_base: Base status register address.
  * @mask_base:   Base mask register address.
- * @ack_base:    Base ack address.  If zero then the chip is clear on read.
+ * @ack_base:    Base ack address. If zero then the chip is clear on read.
+ *               Using zero value is possible with @use_ack bit.
  * @wake_base:   Base address for wake enables.  If zero unsupported.
+ * @mask_invert: Inverted mask register: cleared bits are masked out.
+ * @use_ack:     Use @ack register even if it is zero.
+ * @wake_invert: Inverted wake register: cleared bits are wake enabled.
  * @irq_reg_stride:  Stride to use for chips where registers are not contiguous.
  * @init_ack_masked: Ack all masked interrupts once during initalization.
  * @runtime_pm:  Hold a runtime PM lock on the device when accessing it.
@@ -511,6 +515,7 @@ struct regmap_irq_chip {
 	unsigned int irq_reg_stride;
 	bool init_ack_masked;
 	unsigned int mask_invert;
+	bool use_ack:1;
 	unsigned int wake_invert;
 	bool runtime_pm;
 
