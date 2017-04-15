@@ -689,7 +689,7 @@ err_out:
 }
 EXPORT_SYMBOL(devfreq_remove_governor);
 
-static ssize_t show_governor(struct device *dev,
+static ssize_t governor_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
 	if (!to_devfreq(dev)->governor)
@@ -698,7 +698,7 @@ static ssize_t show_governor(struct device *dev,
 	return sprintf(buf, "%s\n", to_devfreq(dev)->governor->name);
 }
 
-static ssize_t store_governor(struct device *dev, struct device_attribute *attr,
+static ssize_t governor_store(struct device *dev, struct device_attribute *attr,
 			      const char *buf, size_t count)
 {
 	struct devfreq *df = to_devfreq(dev);
@@ -740,9 +740,11 @@ out:
 		ret = count;
 	return ret;
 }
-static ssize_t show_available_governors(struct device *d,
-				    struct device_attribute *attr,
-				    char *buf)
+static DEVICE_ATTR_RW(governor);
+
+static ssize_t available_governors_show(struct device *d,
+					struct device_attribute *attr,
+					char *buf)
 {
 	struct devfreq_governor *tmp_governor;
 	ssize_t count = 0;
@@ -761,9 +763,10 @@ static ssize_t show_available_governors(struct device *d,
 
 	return count;
 }
+static DEVICE_ATTR_RO(available_governors);
 
-static ssize_t show_freq(struct device *dev,
-			 struct device_attribute *attr, char *buf)
+static ssize_t cur_freq_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
 {
 	unsigned long freq;
 	struct devfreq *devfreq = to_devfreq(dev);
@@ -774,20 +777,22 @@ static ssize_t show_freq(struct device *dev,
 
 	return sprintf(buf, "%lu\n", devfreq->previous_freq);
 }
+static DEVICE_ATTR_RO(cur_freq);
 
-static ssize_t show_target_freq(struct device *dev,
-			struct device_attribute *attr, char *buf)
+static ssize_t target_freq_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%lu\n", to_devfreq(dev)->previous_freq);
 }
+static DEVICE_ATTR_RO(target_freq);
 
-static ssize_t show_polling_interval(struct device *dev,
+static ssize_t polling_interval_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", to_devfreq(dev)->profile->polling_ms);
 }
 
-static ssize_t store_polling_interval(struct device *dev,
+static ssize_t polling_interval_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
@@ -807,8 +812,9 @@ static ssize_t store_polling_interval(struct device *dev,
 
 	return ret;
 }
+static DEVICE_ATTR_RW(polling_interval);
 
-static ssize_t store_min_freq(struct device *dev, struct device_attribute *attr,
+static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 			      const char *buf, size_t count)
 {
 	struct devfreq *df = to_devfreq(dev);
@@ -835,13 +841,13 @@ unlock:
 	return ret;
 }
 
-static ssize_t show_min_freq(struct device *dev, struct device_attribute *attr,
+static ssize_t min_freq_show(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
 	return sprintf(buf, "%lu\n", to_devfreq(dev)->min_freq);
 }
 
-static ssize_t store_max_freq(struct device *dev, struct device_attribute *attr,
+static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
 			      const char *buf, size_t count)
 {
 	struct devfreq *df = to_devfreq(dev);
@@ -867,16 +873,18 @@ unlock:
 	mutex_unlock(&df->lock);
 	return ret;
 }
+static DEVICE_ATTR_RW(min_freq);
 
-static ssize_t show_max_freq(struct device *dev, struct device_attribute *attr,
+static ssize_t max_freq_show(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
 	return sprintf(buf, "%lu\n", to_devfreq(dev)->max_freq);
 }
+static DEVICE_ATTR_RW(max_freq);
 
-static ssize_t show_available_freqs(struct device *d,
-				    struct device_attribute *attr,
-				    char *buf)
+static ssize_t available_frequencies_show(struct device *d,
+					  struct device_attribute *attr,
+					  char *buf)
 {
 	struct devfreq *df = to_devfreq(d);
 	struct device *dev = df->dev.parent;
@@ -904,9 +912,10 @@ static ssize_t show_available_freqs(struct device *d,
 
 	return count;
 }
+static DEVICE_ATTR_RO(available_frequencies);
 
-static ssize_t show_trans_table(struct device *dev, struct device_attribute *attr,
-				char *buf)
+static ssize_t trans_stat_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
 {
 	struct devfreq *devfreq = to_devfreq(dev);
 	ssize_t len;
@@ -945,20 +954,21 @@ static ssize_t show_trans_table(struct device *dev, struct device_attribute *att
 					devfreq->total_trans);
 	return len;
 }
+static DEVICE_ATTR_RO(trans_stat);
 
-static struct device_attribute devfreq_attrs[] = {
-	__ATTR(governor, S_IRUGO | S_IWUSR, show_governor, store_governor),
-	__ATTR(available_governors, S_IRUGO, show_available_governors, NULL),
-	__ATTR(cur_freq, S_IRUGO, show_freq, NULL),
-	__ATTR(available_frequencies, S_IRUGO, show_available_freqs, NULL),
-	__ATTR(target_freq, S_IRUGO, show_target_freq, NULL),
-	__ATTR(polling_interval, S_IRUGO | S_IWUSR, show_polling_interval,
-	       store_polling_interval),
-	__ATTR(min_freq, S_IRUGO | S_IWUSR, show_min_freq, store_min_freq),
-	__ATTR(max_freq, S_IRUGO | S_IWUSR, show_max_freq, store_max_freq),
-	__ATTR(trans_stat, S_IRUGO, show_trans_table, NULL),
-	{ },
+static struct attribute *devfreq_attrs[] = {
+	&dev_attr_governor.attr,
+	&dev_attr_available_governors.attr,
+	&dev_attr_cur_freq.attr,
+	&dev_attr_available_frequencies.attr,
+	&dev_attr_target_freq.attr,
+	&dev_attr_polling_interval.attr,
+	&dev_attr_min_freq.attr,
+	&dev_attr_max_freq.attr,
+	&dev_attr_trans_stat.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(devfreq);
 
 static int __init devfreq_init(void)
 {
@@ -977,7 +987,7 @@ static int __init devfreq_init(void)
 		pr_err("%s: couldn't create workqueue\n", __FILE__);
 		return PTR_ERR(devfreq_wq);
 	}
-	devfreq_class->dev_attrs = devfreq_attrs;
+	devfreq_class->dev_groups = devfreq_groups;
 
 	return 0;
 }
