@@ -1612,13 +1612,15 @@ int dpm_suspend(pm_message_t state)
 	}
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
-	if (!error)
-		error = async_error;
+
 	if (error) {
 		suspend_stats.failed_suspend++;
 		dpm_save_failed_step(SUSPEND_SUSPEND);
-	} else
+	} else {
+		error = async_error;
 		dpm_show_time(starttime, state, NULL);
+	}
+
 	return error;
 }
 
