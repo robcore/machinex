@@ -1515,11 +1515,6 @@ int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 	if (val_bytes == 1) {
 		wval = (void *)val;
 	} else {
-		if (!val_count) {
-			ret = -EINVAL;
-			goto out;
-		}
-
 		wval = kmemdup(val, val_count * val_bytes, GFP_KERNEL);
 		if (!wval) {
 			ret = -ENOMEM;
@@ -1529,7 +1524,24 @@ int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 		for (i = 0; i < val_count * val_bytes; i += val_bytes)
 			map->format.parse_inplace(wval + i);
 	}
-		ret = _regmap_raw_write(map, reg, wval, val_bytes * val_count);
+	/*
+	 * Some devices does not support bulk write, for
+	 * them we have a series of single write operations.
+	 */
+	if (map->use_single_rw) {
+		for (i = 0; i < val_count; i++) {
+			ret = _regmap_raw_write(map,
+						reg + (i * map->reg_stride),
+						val + (i * val_bytes),
+						val_bytes,
+						false);
+			if (ret != 0)
+				return ret;
+		}
+	} else {
+		ret = _regmap_raw_write(map, reg, wval, val_bytes * val_count,
+					false);
+	}
 
 	if (val_bytes != 1)
 		kfree(wval);
