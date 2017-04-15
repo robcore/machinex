@@ -158,6 +158,7 @@ long calc_load_fold_active(struct rq *this_rq)
 static unsigned long
 calc_load(unsigned long load, unsigned long exp, unsigned long active)
 {
+#if 0
 	unsigned long newload;
 
 	newload = load * exp + active * (FIXED_1 - exp);
@@ -165,6 +166,12 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 		newload += FIXED_1-1;
 
 	return newload / FIXED_1;
+#else
+	load *= exp;
+	load += active * (FIXED_1 - exp);
+	load += 1UL << (FSHIFT - 1);
+	return load >> FSHIFT;
+#endif
 }
 
 #ifdef CONFIG_NO_HZ_COMMON
@@ -250,7 +257,6 @@ void calc_load_enter_idle(void)
 	delta = calc_load_fold_active(this_rq);
 	if (delta) {
 		int idx = calc_load_write_idx();
-
 		atomic_long_add(delta, &calc_load_idle[idx]);
 	}
 }
@@ -352,6 +358,7 @@ static unsigned long
 calc_load_n(unsigned long load, unsigned long exp,
 	    unsigned long active, unsigned int n)
 {
+
 	return calc_load(load, fixed_power_int(exp, FSHIFT, n), active);
 }
 
