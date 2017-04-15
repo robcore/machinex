@@ -562,11 +562,7 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 	if (dev->pm_domain) {
 		info = "noirq power domain ";
 		callback = pm_noirq_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "noirq type ";
 		callback = pm_noirq_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -582,9 +578,9 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 		callback = pm_noirq_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 	dev->power.is_noirq_suspended = false;
+
  Out:
 	complete_all(&dev->power.completion);
 	TRACE_RESUME(error);
@@ -620,19 +616,24 @@ void dpm_resume_noirq(pm_message_t state)
 {
 	struct device *dev;
 	ktime_t starttime = ktime_get();
+	mutex_lock(&dpm_list_mtx);
 	pm_transition = state;
 
+	/*
+	 * Advanced the async threads upfront,
+	 * in case the starting of async threads is
+	 * delayed by non-async resuming devices.
+	 */
 	list_for_each_entry(dev, &dpm_noirq_list, power.entry) {
+		reinit_completion(&dev->power.completion);
 		if (is_async(dev)) {
 			get_device(dev);
 			async_schedule(async_resume_noirq, dev);
 		}
 	}
 
-	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_noirq_list)) {
 		dev = to_device(dpm_noirq_list.next);
-
 		get_device(dev);
 		list_move_tail(&dev->power.entry, &dpm_late_early_list);
 		mutex_unlock(&dpm_list_mtx);
@@ -647,6 +648,7 @@ void dpm_resume_noirq(pm_message_t state)
 				pm_dev_err(dev, state, " noirq", error);
 			}
 		}
+
 		mutex_lock(&dpm_list_mtx);
 		put_device(dev);
 	}
@@ -686,11 +688,7 @@ static int device_resume_early(struct device *dev, pm_message_t state, bool asyn
 	if (dev->pm_domain) {
 		info = "early power domain ";
 		callback = pm_late_early_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "early type ";
 		callback = pm_late_early_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -706,7 +704,6 @@ static int device_resume_early(struct device *dev, pm_message_t state, bool asyn
 		callback = pm_late_early_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 	dev->power.is_late_suspended = false;
 
@@ -772,7 +769,6 @@ void dpm_resume_early(pm_message_t state)
 				pm_dev_err(dev, state, " early", error);
 			}
 		}
-
 		mutex_lock(&dpm_list_mtx);
 		put_device(dev);
 	}
@@ -834,8 +830,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
+		goto Driver;
 	}
 
 	if (dev->type && dev->type->pm) {
@@ -971,11 +966,7 @@ static void device_complete(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "completing power domain ";
 		callback = dev->pm_domain->ops.complete;
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "completing type ";
 		callback = dev->type->pm->complete;
 	} else if (dev->class && dev->class->pm) {
@@ -991,7 +982,6 @@ static void device_complete(struct device *dev, pm_message_t state)
 		callback = dev->driver->pm->complete;
 	}
 
- End:
 	if (callback) {
 		pm_dev_dbg(dev, state, info);
 		callback(dev);
@@ -1088,6 +1078,8 @@ static int __device_suspend_noirq(struct device *dev, pm_message_t state, bool a
 	char *info = NULL;
 	int error = 0;
 
+	dpm_wait_for_children(dev, async);
+
 	if (async_error)
 		goto Complete;
 
@@ -1099,16 +1091,10 @@ static int __device_suspend_noirq(struct device *dev, pm_message_t state, bool a
 	if (dev->power.syscore || dev->power.direct_complete)
 		goto Complete;
 
-	dpm_wait_for_children(dev, async);
-
 	if (dev->pm_domain) {
 		info = "noirq power domain ";
 		callback = pm_noirq_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "noirq type ";
 		callback = pm_noirq_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -1124,14 +1110,12 @@ static int __device_suspend_noirq(struct device *dev, pm_message_t state, bool a
 		callback = pm_noirq_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 	if (!error)
 		dev->power.is_noirq_suspended = true;
-	else {
+	else
 		async_error = error;
-		pm_runtime_enable(dev);
-	}
+
 Complete:
 	complete_all(&dev->power.completion);
 	return error;
@@ -1155,7 +1139,7 @@ static int device_suspend_noirq(struct device *dev)
 {
 	reinit_completion(&dev->power.completion);
 
-	if (pm_async_enabled && dev->power.async_suspend) {
+	if (is_async(dev)) {
 		get_device(dev);
 		async_schedule(async_suspend_noirq, dev);
 		return 0;
@@ -1206,19 +1190,19 @@ int dpm_suspend_noirq(pm_message_t state)
 	}
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
-
-	if (!error) {
+	if (!error)
 		error = async_error;
-		dpm_show_time(starttime, state, "noirq");
-	} else {
+
+	if (error) {
 		suspend_stats.failed_suspend_noirq++;
 		dpm_save_failed_step(SUSPEND_SUSPEND_NOIRQ);
 		pm_get_active_wakeup_sources(suspend_abort,
 			MAX_SUSPEND_ABORT_LEN);
 		log_suspend_abort_reason(suspend_abort);
 		dpm_resume_noirq(resume_event(state));
+	} else {
+		dpm_show_time(starttime, state, "noirq");
 	}
-
 	return error;
 }
 
@@ -1238,6 +1222,8 @@ static int __device_suspend_late(struct device *dev, pm_message_t state, bool as
 
 	__pm_runtime_disable(dev, false);
 
+	dpm_wait_for_children(dev, async);
+
 	if (async_error)
 		goto Complete;
 
@@ -1249,16 +1235,10 @@ static int __device_suspend_late(struct device *dev, pm_message_t state, bool as
 	if (dev->power.syscore || dev->power.direct_complete)
 		goto Complete;
 
-	dpm_wait_for_children(dev, async);
-
 	if (dev->pm_domain) {
 		info = "late power domain ";
 		callback = pm_late_early_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "late type ";
 		callback = pm_late_early_op(dev->type->pm, state);
 	} else if (dev->class && dev->class->pm) {
@@ -1274,18 +1254,11 @@ static int __device_suspend_late(struct device *dev, pm_message_t state, bool as
 		callback = pm_late_early_op(dev->driver->pm, state);
 	}
 
- End:
 	error = dpm_run_callback(callback, dev, state, info);
 	if (!error)
 		dev->power.is_late_suspended = true;
-	else {
-		/*
-		 * dpm_resume_early wouldn't be run for this failed device,
-		 * hence enable runtime_pm now
-		 */
-		pm_runtime_enable(dev);
+	else
 		async_error = error;
-	}
 
 Complete:
 	complete_all(&dev->power.completion);
@@ -1309,7 +1282,7 @@ static int device_suspend_late(struct device *dev)
 {
 	reinit_completion(&dev->power.completion);
 
-	if (pm_async_enabled && dev->power.async_suspend) {
+	if (is_async(dev)) {
 		get_device(dev);
 		async_schedule(async_suspend_late, dev);
 		return 0;
@@ -1341,7 +1314,6 @@ int dpm_suspend_late(pm_message_t state)
 		error = device_suspend_late(dev);
 
 		mutex_lock(&dpm_list_mtx);
-
 		if (!list_empty(&dev->power.entry))
 			list_move(&dev->power.entry, &dpm_late_early_list);
 
@@ -1358,6 +1330,8 @@ int dpm_suspend_late(pm_message_t state)
 	}
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
+	if (!error)
+		error = async_error;
 	if (error) {
 		suspend_stats.failed_suspend_late++;
 		dpm_save_failed_step(SUSPEND_SUSPEND_LATE);
@@ -1365,9 +1339,9 @@ int dpm_suspend_late(pm_message_t state)
 			MAX_SUSPEND_ABORT_LEN);
 		log_suspend_abort_reason(suspend_abort);
 		dpm_resume_early(resume_event(state));
-	} else
+	} else {
 		dpm_show_time(starttime, state, "late");
-
+	}
 	return error;
 }
 
@@ -1475,21 +1449,20 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (dev->pm_domain) {
 		info = "power domain ";
 		callback = pm_op(&dev->pm_domain->ops, state);
-		if (callback)
-			goto Run;
+		goto Run;
 	}
 
 	if (dev->type && dev->type->pm) {
 		info = "type ";
 		callback = pm_op(dev->type->pm, state);
-		goto Driver;
+		goto Run;
 	}
 
 	if (dev->class) {
 		if (dev->class->pm) {
 			info = "class ";
 			callback = pm_op(dev->class->pm, state);
-			goto Driver;
+			goto Run;
 		} else if (dev->class->suspend) {
 			pm_dev_dbg(dev, state, "legacy class ");
 			error = legacy_suspend(dev, state, dev->class->suspend,
@@ -1510,13 +1483,12 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		}
 	}
 
- Driver:
+ Run:
 	if (!callback && dev->driver && dev->driver->pm) {
 		info = "driver ";
 		callback = pm_op(dev->driver->pm, state);
 	}
 
- Run:
 	error = dpm_run_callback(callback, dev, state, info);
 
  End:
@@ -1541,10 +1513,10 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	dpm_wd_clear(&wd);
 
  Complete:
-	complete_all(&dev->power.completion);
 	if (error)
 		async_error = error;
 
+	complete_all(&dev->power.completion);
 	return error;
 }
 
@@ -1566,7 +1538,7 @@ static int device_suspend(struct device *dev)
 {
 	reinit_completion(&dev->power.completion);
 
-	if (pm_async_enabled && dev->power.async_suspend) {
+	if (is_async(dev)) {
 		get_device(dev);
 		async_schedule(async_suspend, dev);
 		return 0;
