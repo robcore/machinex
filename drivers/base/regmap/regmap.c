@@ -460,6 +460,7 @@ struct regmap *regmap_init(struct device *dev,
 		map->reg_stride = config->reg_stride;
 	else
 		map->reg_stride = 1;
+	map->use_single_rw = config->use_single_rw;
 	map->dev = dev;
 	map->bus = bus;
 	map->bus_context = bus_context;
@@ -565,6 +566,12 @@ struct regmap *regmap_init(struct device *dev,
 		default:
 			goto err_map;
 		}
+		break;
+
+	case 24:
+		if (reg_endian != REGMAP_ENDIAN_BIG)
+			goto err_map;
+		map->format.format_reg = regmap_format_24;
 		break;
 
 	case 32:
@@ -1572,13 +1579,10 @@ int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 		for (i = 0; i < val_count * val_bytes; i += val_bytes)
 			map->format.parse_inplace(wval + i);
 
-		ret = _regmap_raw_write(map, reg, wval, val_bytes * val_count,
-					false);
+		ret = _regmap_raw_write(map, reg, wval, val_bytes * val_count);
 
 		kfree(wval);
-
-		}
-
+	}
 out:
 	map->unlock(map->lock_arg);
 	return ret;
