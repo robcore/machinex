@@ -237,7 +237,7 @@ ecryptfs_do_create2(struct inode *directory_inode,
 	inode = __ecryptfs_get_inode(lower_dentry->d_inode,
 				     directory_inode->i_sb);
 	if (IS_ERR(inode)) {
-		vfs_unlink(lower_dir_dentry->d_inode, lower_dentry, NULL);
+		vfs_unlink(lower_dir_dentry->d_inode, lower_dentry);
 		goto out_lock;
 	}
 	fsstack_copy_attr_times(directory_inode, lower_dir_dentry->d_inode);
@@ -365,7 +365,7 @@ ecryptfs_create(struct inode *directory_inode, struct dentry *ecryptfs_dentry,
 				mode);
 	else
 		ecryptfs_inode = ecryptfs_do_create(directory_inode, ecryptfs_dentry, mode);
-
+		
 	if (unlikely(IS_ERR(ecryptfs_inode))) {
 		ecryptfs_printk(KERN_WARNING, "Failed to create file in"
 				"lower filesystem\n");
@@ -585,7 +585,7 @@ static int ecryptfs_unlink(struct inode *dir, struct dentry *dentry)
 
 	dget(lower_dentry);
 	lower_dir_dentry = lock_parent(lower_dentry);
-	rc = vfs_unlink(lower_dir_inode, lower_dentry, NULL);
+	rc = vfs_unlink(lower_dir_inode, lower_dentry);
 	if (rc) {
 		printk(KERN_ERR "Error in vfs_unlink; rc = [%d]\n", rc);
 		goto out_unlock;
