@@ -552,6 +552,7 @@ unlock:
 	kfree(new_opp);
 	return r;
 }
+EXPORT_SYMBOL_GPL(opp_add);
 
 /**
  * dev_pm_opp_enable() - Enable a specific OPP
