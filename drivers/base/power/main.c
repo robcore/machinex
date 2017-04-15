@@ -587,9 +587,8 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 	dev->power.is_noirq_suspended = false;
 
  Out:
-	TRACE_RESUME(error);
 	complete_all(&dev->power.completion);
-	pm_runtime_enable(dev);
+	TRACE_RESUME(error);
 	return error;
 }
 

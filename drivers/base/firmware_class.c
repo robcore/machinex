@@ -1061,6 +1061,8 @@ static int assign_firmware_buf(struct firmware *fw, struct device *device,
 	mutex_unlock(&fw_lock);
 	return 0;
 }
+static bool legacy_mode = true;
+module_param(legacy_mode, bool, 0644);
 
 /* called from request_firmware() and request_firmware_work_func() */
 static int
@@ -1097,15 +1099,21 @@ _request_firmware(const struct firmware **firmware_p, const char *name,
 		}
 	}
 
-	ret = fw_get_filesystem_firmware(device, fw->priv);
-	if (ret) {
-		if (opt_flags & FW_OPT_FALLBACK) {
-			dev_warn(device,
-				 "Direct firmware load failed with error %d\n",
-				 ret);
-			dev_warn(device, "Falling back to user helper\n");
-			ret = fw_load_from_user_helper(fw, name, device,
-						       opt_flags, timeout);
+	if (legacy_mode == true) {
+		opt_flags = FW_OPT_FALLBACK;
+		ret = fw_load_from_user_helper(fw, name, device,
+								opt_flags, timeout);
+	} else {
+		ret = fw_get_filesystem_firmware(device, fw->priv);
+		if (ret) {
+			if (opt_flags & FW_OPT_FALLBACK) {
+				dev_warn(device,
+					 "Direct firmware load failed with error %d\n",
+					 ret);
+				dev_warn(device, "Falling back to user helper\n");
+				ret = fw_load_from_user_helper(fw, name, device,
+							       opt_flags, timeout);
+			}
 		}
 	}
 
