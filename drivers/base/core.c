@@ -1598,6 +1598,7 @@ device_create_groups_vargs(struct class *class, struct device *parent,
 		goto error;
 	}
 
+	device_initialize(dev);
 	dev->devt = devt;
 	dev->class = class;
 	dev->parent = parent;
@@ -1609,7 +1610,7 @@ device_create_groups_vargs(struct class *class, struct device *parent,
 	if (retval)
 		goto error;
 
-	retval = device_register(dev);
+	retval = device_add(dev);
 	if (retval)
 		goto error;
 
