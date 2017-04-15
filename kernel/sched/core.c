@@ -590,7 +590,6 @@ void resched_curr(struct rq *rq)
 
 	if (cpu == smp_processor_id()) {
 		set_tsk_need_resched(curr);
-		set_preempt_need_resched();
 		return;
 	}
 
@@ -1919,8 +1918,7 @@ void scheduler_ipi(void)
 	 * TIF_NEED_RESCHED remotely (for the first time) will also send
 	 * this IPI.
 	 */
-	if (tif_need_resched())
-		set_preempt_need_resched();
+//	preempt_fold_need_resched();
 
 	if (llist_empty(&this_rq()->wake_list) && !got_nohz_idle_kick())
 		return;
@@ -2069,9 +2067,8 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * Pairs with the UNLOCK+LOCK on rq->lock from the
 	 * last wakeup of our task and the schedule that got our task
 	 * current.
-
-	smp_rmb();
 	 */
+	smp_rmb();
 	if (task_on_rq_queued(p) && ttwu_remote(p, wake_flags))
 		goto stat;
 
@@ -2092,9 +2089,9 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * Pairs with the full barrier implied in the UNLOCK+LOCK on rq->lock
 	 * from the consecutive calls to schedule(); the first switching to our
 	 * task, the second putting it to sleep.
-	 *
-	smp_rmb();
 	 */
+	smp_rmb();
+
 	/*
 	 * If the owning (remote) cpu is still in the middle of schedule() with
 	 * this task as prev, wait until its done referencing the task.
@@ -2414,7 +2411,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 #endif
 #ifdef CONFIG_PREEMPT_COUNT
 	/* Want to start with kernel preemption disabled. */
-	task_thread_info(p)->preempt_count = PREEMPT_DISABLED;
+	task_thread_info(p)->preempt_count = 1;
 #endif
 #ifdef CONFIG_SMP
 	plist_node_init(&p->pushable_tasks, MAX_PRIO);
@@ -3286,7 +3283,6 @@ need_resched:
 
 	next = pick_next_task(rq, prev);
 	clear_tsk_need_resched(prev);
-	clear_preempt_need_resched();
 	rq->skip_clock_update = 0;
 
 	if (likely(prev != next)) {
@@ -3447,10 +3443,11 @@ EXPORT_SYMBOL_GPL(preempt_schedule_context);
  */
 asmlinkage __visible void __sched preempt_schedule_irq(void)
 {
+	struct thread_info *ti = current_thread_info();
 	enum ctx_state prev_state;
 
 	/* Catch callers which need to be fixed */
-	BUG_ON(preempt_count() || !irqs_disabled());
+	BUG_ON(ti->preempt_count || !irqs_disabled());
 
 	prev_state = exception_enter();
 
@@ -5140,7 +5137,7 @@ void init_idle(struct task_struct *idle, int cpu)
 	raw_spin_unlock_irqrestore(&idle->pi_lock, flags);
 
 	/* Set the preempt count _outside_ the spinlocks! */
-	task_thread_info(idle)->preempt_count = PREEMPT_ENABLED;
+	task_thread_info(idle)->preempt_count = 0;
 
 	/*
 	 * The idle tasks have their own, simple scheduling class:
