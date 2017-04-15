@@ -137,6 +137,7 @@ static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 	int state_count = 0;
 	struct cpuidle_state_usage *st_usage = NULL;
 	struct msm_cpuidle_state *cstate = NULL;
+	struct cpuidle_driver *idle_drv = 0;
 
 	for (i = 0; i < ARRAY_SIZE(msm_cstates); i++) {
 		cstate = &msm_cstates[i];
@@ -149,7 +150,7 @@ static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 		BUG_ON(state_count > msm_cpuidle_driver.state_count);
 	}
 
-	msm_cpuidle_driver.state_count = state_count; /* Per cpu state count */
+	idle_drv->state_count = state_count; /* Per cpu state count */
 }
 
 int __init msm_cpuidle_init(void)
