@@ -228,14 +228,16 @@ static ssize_t stable_pages_required_show(struct device *dev,
 	return snprintf(page, PAGE_SIZE-1, "%d\n",
 			bdi_cap_stable_pages_required(bdi) ? 1 : 0);
 }
+static DEVICE_ATTR_RO(stable_pages_required);
 
-static struct device_attribute bdi_dev_attrs[] = {
-	__ATTR_RW(read_ahead_kb),
-	__ATTR_RW(min_ratio),
-	__ATTR_RW(max_ratio),
-	__ATTR_RO(stable_pages_required),
-	__ATTR_NULL,
+static struct attribute *bdi_dev_attrs[] = {
+	&dev_attr_read_ahead_kb.attr,
+	&dev_attr_min_ratio.attr,
+	&dev_attr_max_ratio.attr,
+	&dev_attr_stable_pages_required.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(bdi_dev);
 
 static __init int bdi_class_init(void)
 {
@@ -243,7 +245,7 @@ static __init int bdi_class_init(void)
 	if (IS_ERR(bdi_class))
 		return PTR_ERR(bdi_class);
 
-	bdi_class->dev_attrs = bdi_dev_attrs;
+	bdi_class->dev_groups = bdi_dev_groups;
 	bdi_debug_init();
 	return 0;
 }
