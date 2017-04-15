@@ -138,12 +138,6 @@ static ssize_t broadcast_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(broadcast);
 
-static ssize_t carrier_store(struct device *dev, struct device_attribute *attr,
-			     const char *buf, size_t len)
-{
-	return netdev_store(dev, attr, buf, len, change_carrier);
-}
-
 static ssize_t carrier_show(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
@@ -153,7 +147,7 @@ static ssize_t carrier_show(struct device *dev,
 	}
 	return -EINVAL;
 }
-static DEVICE_ATTR_RW(carrier);
+static DEVICE_ATTR_RO(carrier);
 
 static ssize_t speed_show(struct device *dev,
 			  struct device_attribute *attr, char *buf)
