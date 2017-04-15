@@ -2067,9 +2067,8 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * Pairs with the UNLOCK+LOCK on rq->lock from the
 	 * last wakeup of our task and the schedule that got our task
 	 * current.
-
-	smp_rmb();
 	 */
+	smp_rmb();
 	if (task_on_rq_queued(p) && ttwu_remote(p, wake_flags))
 		goto stat;
 
@@ -2090,9 +2089,9 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * Pairs with the full barrier implied in the UNLOCK+LOCK on rq->lock
 	 * from the consecutive calls to schedule(); the first switching to our
 	 * task, the second putting it to sleep.
-	 *
-	smp_rmb();
 	 */
+	smp_rmb();
+
 	/*
 	 * If the owning (remote) cpu is still in the middle of schedule() with
 	 * this task as prev, wait until its done referencing the task.

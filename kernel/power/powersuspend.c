@@ -50,9 +50,6 @@
  *
  * v2.2   Remove the mutex unlock mistakingly added during system sync setup.
  *
- * v2.3	  Move workqueue calls outside of spinlocks during state check,
- *		  flush work might_sleep.
- *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -67,7 +64,7 @@
 #include <linux/powersuspend.h>
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	3
+#define MINOR_VERSION	2
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
@@ -175,18 +172,16 @@ void set_power_suspend_state(int new_state)
 		spin_lock_irqsave(&state_lock, irqflags);
 		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			pr_info("[POWERSUSPEND] Suspend State Activated.\n");
-			state = new_state;
-			spin_unlock_irqrestore(&state_lock, irqflags);
 			cancel_work_sync(&power_resume_work);
+			state = new_state;
 			queue_work(pwrsup_wq, &power_suspend_work);
 		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			pr_info("[POWERSUSPEND] Resume State Activated.\n");
-			state = new_state;
-			spin_unlock_irqrestore(&state_lock, irqflags);
 			cancel_work_sync(&power_suspend_work);
+			state = new_state;
 			queue_work(pwrsup_wq, &power_resume_work);
-		} else
-			spin_unlock_irqrestore(&state_lock, irqflags);
+		}
+		spin_unlock_irqrestore(&state_lock, irqflags);
 	} else {
 		pr_info("[POWERSUSPEND] Ignoring State Request.\n");
 	}
