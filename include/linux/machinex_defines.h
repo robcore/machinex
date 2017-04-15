@@ -41,7 +41,7 @@
 #include <linux/notifier.h>
 
 #define DEFAULT_MIN_CPUS_ONLINE 2
-#define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS - 1)
+#define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #if 0
 /* fake tracing */
 void trace_sched_wake_idle_without_ipi(int cpu)
