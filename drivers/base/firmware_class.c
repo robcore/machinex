@@ -1100,10 +1100,10 @@ _request_firmware(const struct firmware **firmware_p, const char *name,
 	ret = fw_get_filesystem_firmware(device, fw->priv);
 	if (ret) {
 		if (opt_flags & FW_OPT_FALLBACK) {
-			dev_warn(device,
+			dev_dbg(device,
 				 "Direct firmware load failed with error %d\n",
 				 ret);
-			dev_warn(device, "Falling back to user helper\n");
+			dev_dbg(device, "Falling back to user helper\n");
 			ret = fw_load_from_user_helper(fw, name, device,
 						       opt_flags, timeout);
 		}
