@@ -21,6 +21,7 @@ struct device;
 struct i2c_client;
 struct irq_domain;
 struct spi_device;
+struct spmi_device;
 struct regmap;
 struct regmap_range_cfg;
 struct regmap_field;
@@ -313,6 +314,8 @@ struct regmap *regmap_init_i2c(struct i2c_client *i2c,
 			       const struct regmap_config *config);
 struct regmap *regmap_init_spi(struct spi_device *dev,
 			       const struct regmap_config *config);
+struct regmap *regmap_init_spmi(struct spmi_device *dev,
+			       const struct regmap_config *config);
 struct regmap *regmap_init_mmio_clk(struct device *dev, const char *clk_id,
 				    void __iomem *regs,
 				    const struct regmap_config *config);
@@ -325,6 +328,8 @@ struct regmap *devm_regmap_init_i2c(struct i2c_client *i2c,
 				    const struct regmap_config *config);
 struct regmap *devm_regmap_init_spi(struct spi_device *dev,
 				    const struct regmap_config *config);
+struct regmap *devm_regmap_init_spmi(struct spmi_device *dev,
+				     const struct regmap_config *config);
 struct regmap *devm_regmap_init_mmio_clk(struct device *dev, const char *clk_id,
 					 void __iomem *regs,
 					 const struct regmap_config *config);
