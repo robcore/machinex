@@ -772,6 +772,7 @@ void dpm_resume_early(pm_message_t state)
 				dpm_save_failed_dev(dev_name(dev));
 				pm_dev_err(dev, state, " early", error);
 			}
+		}
 
 		mutex_lock(&dpm_list_mtx);
 		put_device(dev);
