@@ -137,7 +137,7 @@ static void __init msm_cpuidle_set_cpu_statedata(struct cpuidle_device *dev)
 	int state_count = 0;
 	struct cpuidle_state_usage *st_usage = NULL;
 	struct msm_cpuidle_state *cstate = NULL;
-	struct cpuidle_driver *idle_drv = 0;
+	struct cpuidle_driver *idle_drv = NULL;
 
 	for (i = 0; i < ARRAY_SIZE(msm_cstates); i++) {
 		cstate = &msm_cstates[i];
