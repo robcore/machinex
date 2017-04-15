@@ -48,6 +48,7 @@ EXPORT_SYMBOL(avg_nr_running);
 unsigned long avg_cpu_nr_running(unsigned int cpu)
 {
 	unsigned int seqcnt, ave_nr_running;
+
 	struct nr_stats_s *stats = &per_cpu(runqueue_stats, cpu);
 	struct rq *q = cpu_rq(cpu);
 
@@ -63,6 +64,7 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 		read_seqcount_begin(&stats->ave_seqcnt);
 		ave_nr_running = stats->ave_nr_running;
 	}
+
 	return ave_nr_running;
 }
 EXPORT_SYMBOL(avg_cpu_nr_running);
