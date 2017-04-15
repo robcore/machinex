@@ -245,7 +245,6 @@ static void cpu_idle_loop(void)
 			arch_cpu_idle_exit();
 		}
 
-		/*
 			/*
 			 * We need to test and propagate the TIF_NEED_RESCHED
 			 * bit here because we might not have send the

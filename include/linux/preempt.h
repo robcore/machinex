@@ -63,7 +63,7 @@ static __always_inline void clear_preempt_need_resched(void)
 static __always_inline bool test_preempt_need_resched(void)
 {
 	return !(*preempt_count_ptr() & PREEMPT_NEED_RESCHED);
-
+}
 #if defined(CONFIG_DEBUG_PREEMPT) || defined(CONFIG_PREEMPT_TRACER)
   extern void add_preempt_count(int val);
   extern void sub_preempt_count(int val);
