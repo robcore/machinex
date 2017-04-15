@@ -463,6 +463,12 @@ static ssize_t koneplus_sysfs_set_actual_profile(struct device *dev,
 
 	return size;
 }
+static DEVICE_ATTR(actual_profile, 0660,
+		   koneplus_sysfs_show_actual_profile,
+		   koneplus_sysfs_set_actual_profile);
+static DEVICE_ATTR(startup_profile, 0660,
+		   koneplus_sysfs_show_actual_profile,
+		   koneplus_sysfs_set_actual_profile);
 
 static ssize_t koneplus_sysfs_show_firmware_version(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -471,18 +477,16 @@ static ssize_t koneplus_sysfs_show_firmware_version(struct device *dev,
 			hid_get_drvdata(dev_get_drvdata(dev->parent->parent));
 	return snprintf(buf, PAGE_SIZE, "%d\n", koneplus->info.firmware_version);
 }
+static DEVICE_ATTR(firmware_version, 0440,
+		   koneplus_sysfs_show_firmware_version, NULL);
 
-static struct device_attribute koneplus_attributes[] = {
-	__ATTR(actual_profile, 0660,
-			koneplus_sysfs_show_actual_profile,
-			koneplus_sysfs_set_actual_profile),
-	__ATTR(startup_profile, 0660,
-			koneplus_sysfs_show_actual_profile,
-			koneplus_sysfs_set_actual_profile),
-	__ATTR(firmware_version, 0440,
-			koneplus_sysfs_show_firmware_version, NULL),
-	__ATTR_NULL
+static struct attribute *koneplus_attrs[] = {
+	&dev_attr_actual_profile.attr,
+	&dev_attr_startup_profile.attr,
+	&dev_attr_firmware_version.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(koneplus);
 
 static struct bin_attribute koneplus_bin_attributes[] = {
 	{
@@ -797,7 +801,7 @@ static int __init koneplus_init(void)
 	koneplus_class = class_create(THIS_MODULE, "koneplus");
 	if (IS_ERR(koneplus_class))
 		return PTR_ERR(koneplus_class);
-	koneplus_class->dev_attrs = koneplus_attributes;
+	koneplus_class->dev_groups = koneplus_groups;
 	koneplus_class->dev_bin_attrs = koneplus_bin_attributes;
 
 	retval = hid_register_driver(&koneplus_driver);

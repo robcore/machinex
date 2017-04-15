@@ -343,6 +343,7 @@ static ssize_t pyra_sysfs_show_actual_cpi(struct device *dev,
 			hid_get_drvdata(dev_get_drvdata(dev->parent->parent));
 	return snprintf(buf, PAGE_SIZE, "%d\n", pyra->actual_cpi);
 }
+static DEVICE_ATTR(actual_cpi, 0440, pyra_sysfs_show_actual_cpi, NULL);
 
 static ssize_t pyra_sysfs_show_actual_profile(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -359,6 +360,8 @@ static ssize_t pyra_sysfs_show_firmware_version(struct device *dev,
 			hid_get_drvdata(dev_get_drvdata(dev->parent->parent));
 	return snprintf(buf, PAGE_SIZE, "%d\n", pyra->firmware_version);
 }
+static DEVICE_ATTR(actual_profile, 0440, pyra_sysfs_show_actual_profile, NULL);
+static DEVICE_ATTR(startup_profile, 0440, pyra_sysfs_show_actual_profile, NULL);
 
 static ssize_t pyra_sysfs_show_startup_profile(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -688,7 +691,7 @@ static int __init pyra_init(void)
 	pyra_class = class_create(THIS_MODULE, "pyra");
 	if (IS_ERR(pyra_class))
 		return PTR_ERR(pyra_class);
-	pyra_class->dev_attrs = pyra_attributes;
+	pyra_class->dev_groups = pyra_groups;
 	pyra_class->dev_bin_attrs = pyra_bin_attributes;
 
 	retval = hid_register_driver(&pyra_driver);
