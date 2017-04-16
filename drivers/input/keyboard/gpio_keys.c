@@ -640,7 +640,7 @@ static int gpio_keys_open(struct input_dev *input)
 			pr_debug("flip cover is fucked\n");
 
 		ret = enable_irq_wake(irq);
-		if (error < 0)
+		if (ret < 0)
 			pr_debug("flip cover is fucked\n");
 
 		/* update the current status */
