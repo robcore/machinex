@@ -27,6 +27,7 @@ const struct file_operations generic_ro_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= do_sync_read,
 	.read_iter	= generic_file_read_iter,
+	.read_iter  = generic_file_read_iter_atomic,
 	.mmap		= generic_file_readonly_mmap,
 	.splice_read	= generic_file_splice_read,
 };
@@ -384,6 +385,28 @@ ssize_t do_aio_read(struct kiocb *kiocb, const struct iovec *iov,
 	}
 
 	return file->f_op->aio_read(kiocb, iov, nr_segs, pos);
+
+ssize_t do_aio_read_atomic(struct kiocb *kiocb, const struct iovec *iov,
+		    unsigned long nr_segs, loff_t pos)
+{
+	struct file *file = kiocb->ki_filp;
+
+	if (file->f_op->read_iter) {
+		size_t count;
+		struct iov_iter iter;
+		int ret;
+
+		count = 0;
+		ret = generic_segment_checks(iov, &nr_segs, &count,
+					     VERIFY_WRITE);
+		if (ret)
+			return ret;
+
+		iov_iter_init(&iter, iov, nr_segs, count, 0);
+		return file->f_op->read_iter_atomic(kiocb, &iter, pos);
+	}
+
+	return file->f_op->aio_read(kiocb, iov, nr_segs, pos);
 }
 
 ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
@@ -412,6 +435,31 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 
 EXPORT_SYMBOL(do_sync_read);
 
+ssize_t do_sync_read_atomic(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
+{
+	struct iovec iov = { .iov_base = buf, .iov_len = len };
+	struct kiocb kiocb;
+	ssize_t ret;
+
+	init_sync_kiocb(&kiocb, filp);
+	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
+	kiocb.ki_nbytes = len;
+
+	for (;;) {
+		ret = do_aio_read_atomic(&kiocb, &iov, 1, kiocb.ki_pos);
+		if (ret != -EIOCBRETRY)
+			break;
+		wait_on_retry_sync_kiocb(&kiocb);
+	}
+
+	if (-EIOCBQUEUED == ret)
+		ret = wait_on_sync_kiocb(&kiocb);
+	*ppos = kiocb.ki_pos;
+	return ret;
+}
+EXPORT_SYMBOL(do_sync_read_atomic);
+
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
 	ssize_t ret;
@@ -439,8 +487,37 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
 	return ret;
 }
-
 EXPORT_SYMBOL(vfs_read);
+
+ssize_t vfs_read_atomic(struct file *file, char __user *buf, size_t count, loff_t *pos)
+{
+	ssize_t ret;
+
+	if (!(file->f_mode & FMODE_READ))
+		return -EBADF;
+	if (!file_readable(file))
+		return -EINVAL;
+	if (unlikely(!access_ok(VERIFY_WRITE, buf, count)))
+		return -EFAULT;
+
+	ret = rw_verify_area(READ, file, pos, count);
+	if (ret >= 0) {
+		count = ret;
+		if (file->f_op->read)
+			ret = file->f_op->read(file, buf, count, pos);
+		else
+			ret = do_sync_read_atomic(file, buf, count, pos);
+		if (ret > 0) {
+			fsnotify_access(file);
+			add_rchar(current, ret);
+		}
+		inc_syscr(current);
+	}
+
+	return ret;
+}
+
+EXPORT_SYMBOL(vfs_read_atomic);
 
 ssize_t do_aio_write(struct kiocb *kiocb, const struct iovec *iov,
 		     unsigned long nr_segs, loff_t pos)
