@@ -82,7 +82,7 @@ struct gpio_keys_drvdata {
 	//struct wake_lock flip_wake_lock;
 	struct gpio_button_data data[0];
 };
-static bool use_syscore;
+static bool use_syscore = true;
 static struct device *global_dev;
 static struct syscore_ops gpio_keys_syscore_pm_ops;
 
