@@ -135,10 +135,6 @@
 #include <linux/leds-max77693.h>
 #endif
 
-#ifdef CONFIG_IRDA_MC96
-#include <linux/ir_remote_con.h>
-#include <linux/regulator/consumer.h>
-#endif
 #ifdef CONFIG_PROC_AVC
 #include <linux/proc_avc.h>
 #endif
@@ -183,7 +179,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x8200000    /* 56MB(0x3800000) -> 98MB -> 102MB -> 130MB */
+#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -218,24 +214,6 @@ static void sensor_power_on_vdd(int, int);
 #define PCIE_WAKE_N_PMIC_GPIO 12
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
-
-unsigned int gpio_table[][GPIO_REV_MAX] = {
-/* GPIO_INDEX   Rev	{#00,#01,#02,#03,#04 ... }, */
-/* GPIO_REV_MAX */	/* 0,  0,  0,  0,  0},*/
-/* GPIO_FPGA_EN */     { -1, 44, 69, -1, -1, -1},
-/* GPIO_BARCODE_SDA */ { 29, 36, -1, 45, 45, 45},
-/* GPIO_BARCODE_SCL */ { 26, 37, -1, 44, 44, 44},
-/* GPIO_IRDA_SDA */    { -1, -1, 45, -1, -1, -1},
-/* GPIO_IRDA_SCL */    { -1, -1, 44, -1, -1, -1},
-};
-
-int gpio_rev(unsigned int index)
-{
-	if (system_rev >= GPIO_REV_MAX)
-		return -EINVAL;
-
-	return gpio_table[index][system_rev];
-}
 
 static int sec_tsp_synaptics_mode;
 static int lcd_tsp_panel_version;
@@ -399,7 +377,7 @@ static struct i2c_board_info max77693_i2c_board_info[] = {
 
 };
 #endif
-#if defined(CONFIG_IRDA_MC96) || defined(CONFIG_IR_REMOCON_FPGA)
+#if defined(CONFIG_IR_REMOCON_FPGA)
 static void irda_wake_en(bool onoff)
 {
 	gpio_direction_output(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE),
@@ -419,12 +397,6 @@ static void irda_device_init(void)
 		.output_buffer		= PM_GPIO_OUT_BUF_CMOS,
 		.output_value		= 0,
 	};
-	if (system_rev < BOARD_REV03) {
-		gpio_tlmm_config(GPIO_CFG(gpio_rev(GPIO_IRDA_SDA), 0,
-			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-		gpio_tlmm_config(GPIO_CFG(gpio_rev(GPIO_IRDA_SCL), 0,
-			GPIO_CFG_INPUT,	GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-	}
 	gpio_request(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), "irda_wake");
 	gpio_direction_output(PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_IRDA_WAKE), 0);
 	pm8xxx_gpio_config(PM8921_GPIO_PM_TO_SYS(	\
@@ -465,32 +437,6 @@ static void irda_vdd_onoff(bool onoff)
 		pr_info("%s irda_vreg 1.8V off is finished.\n", __func__);
 	}
 }
-
-static struct i2c_gpio_platform_data mc96_i2c_gpio_data = {
-	.udelay			= 2,
-	.sda_is_open_drain	= 0,
-	.scl_is_open_drain	= 0,
-	.scl_is_output_only	= 0,
-};
-
-static struct platform_device mc96_i2c_gpio_device = {
-	.name			= "i2c-gpio",
-	.id			= MSM_MC96_I2C_BUS_ID,
-	.dev.platform_data	= &mc96_i2c_gpio_data,
-};
-
-static struct mc96_platform_data mc96_pdata = {
-	.ir_remote_init = irda_device_init,
-	.ir_wake_en = irda_wake_en,
-	.ir_vdd_onoff = irda_vdd_onoff,
-};
-
-static struct i2c_board_info irda_i2c_board_info[] = {
-	{
-		I2C_BOARD_INFO("mc96", (0xA0 >> 1)),
-		.platform_data = &mc96_pdata,
-	},
-};
 #endif
 
 #ifdef CONFIG_KERNEL_MSM_CONTIG_MEM_REGION
@@ -1266,6 +1212,7 @@ early_param("ext_resolution", hdmi_resulution_setup);
 
 static void __init apq8064_reserve(void)
 {
+	reserve_info = &apq8064_reserve_info;
 	apq8064_set_display_params(prim_panel_name, ext_panel_name,
 		ext_resolution);
 	msm_reserve();
@@ -1277,7 +1224,6 @@ static void __init apq8064_reserve(void)
 static void __init apq8064_early_reserve(void)
 {
 	reserve_info = &apq8064_reserve_info;
-
 }
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
 /* Bandwidth requests (zero) if no vote placed */
@@ -1427,12 +1373,12 @@ static void msm8960_mhl_gpio_init(void)
 		ice_gpiox_set(FPGA_GPIO_MHL_RST, 0);
 		ice_gpiox_set(FPGA_VSIL_A_1P2_EN, 0);
 	} else if (system_rev < 6) {
-	ret = gpio_request(GPIO_MHL_RST, "mhl_rst");
-	if (ret < 0) {
-		pr_err("mhl_rst gpio_request is failed\n");
-		return;
+		ret = gpio_request(GPIO_MHL_RST, "mhl_rst");
+		if (ret < 0) {
+			pr_err("mhl_rst gpio_request is failed\n");
+			return;
+		}
 	}
-}
 	if (system_rev >= 4 && system_rev < 6) {
 		ret = gpio_request(GPIO_MHL_VSIL, "mhl_vsil");
 		if (ret < 0) {
@@ -2280,7 +2226,7 @@ static int ice4_clock_en(int onoff)
 	if (system_rev < BOARD_REV04)
 		return 0;
 
-	if (system_rev >= BOARD_REV04 && system_rev <= BOARD_REV08) {
+	if (system_rev <= BOARD_REV08) {
 		if (onoff)
 			msm_xo_mode_vote(fpga_xo, MSM_XO_MODE_ON);
 		else
@@ -2351,10 +2297,6 @@ static void barcode_emul_poweron(int onoff)
 		ret = regulator_enable(barcode_vreg_1p8);
 		if (ret)
 			pr_err("%s: error enabling regulator\n", __func__);
-		if (system_rev == BOARD_REV01 || system_rev == BOARD_REV02) {
-			pr_info("%s gpio switch on\n", __func__);
-			gpio_set_value_cansleep(gpio_rev(GPIO_FPGA_EN), 1);
-		}
 		if (system_rev > BOARD_REV03) {
 			fpga_xo = msm_xo_get(MSM_XO_TCXO_A0, "ice4_fpga");
 			if (IS_ERR(fpga_xo)) {
@@ -2365,9 +2307,6 @@ static void barcode_emul_poweron(int onoff)
 	} else {
 		if (system_rev > BOARD_REV03) {
 			msm_xo_put(fpga_xo);
-		}
-		if (system_rev == BOARD_REV01 || system_rev == BOARD_REV02)  {
-			gpio_set_value_cansleep(gpio_rev(GPIO_FPGA_EN), 0);
 		}
 		if (regulator_is_enabled(barcode_vreg_2p85)) {
 			ret = regulator_disable(barcode_vreg_2p85);
@@ -2445,10 +2384,6 @@ static void barcode_gpio_config(void)
 	} else {
 		gpio_request_one(GPIO_FPGA_CRESET_B, GPIOF_OUT_INIT_LOW,
 							"FPGA_CRESET_B");
-	}
-	if (system_rev == BOARD_REV01 || system_rev == BOARD_REV02) {
-		gpio_request_one(gpio_rev(GPIO_FPGA_EN), GPIOF_OUT_INIT_LOW,
-							"FPGA_EN");
 	}
 	if (system_rev > BOARD_REV03 && system_rev < BOARD_REV06)
 		barcode_emul_info.fw_type = ICE_19M;
@@ -4137,9 +4072,6 @@ static struct platform_device *common_devices[] __initdata = {
 #ifdef CONFIG_SEC_FPGA
 	&barcode_i2c_gpio_device,
 #endif
-#ifdef CONFIG_IRDA_MC96
-	&mc96_i2c_gpio_device,
-#endif
 #ifdef CONFIG_BATTERY_BCL
 	&battery_bcl_device,
 #endif
@@ -4482,7 +4414,7 @@ static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi3_pdata = {
 };
 
 static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi4_pdata = {
-	.clk_freq = 400000,
+	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 	.keep_ahb_clk_on = 1,
 };
@@ -4967,14 +4899,6 @@ static struct i2c_registry apq8064_i2c_devices[] __initdata = {
 		ARRAY_SIZE(leds_i2c_devs),
 	},
 #endif
-#ifdef CONFIG_IRDA_MC96
-	{
-		I2C_FFA,
-		MSM_MC96_I2C_BUS_ID,
-		irda_i2c_board_info,
-		ARRAY_SIZE(irda_i2c_board_info),
-	},
-#endif
 #ifdef CONFIG_SEC_FPGA
 	{
 		I2C_FFA,
@@ -5161,28 +5085,13 @@ static void main_mic_bias_init(void)
 
 static void __init gpio_rev_init(void)
 {
-#if defined(CONFIG_IRDA_MC96)
-	mc96_i2c_gpio_data.sda_pin = gpio_rev(GPIO_IRDA_SDA);
-	mc96_i2c_gpio_data.scl_pin = gpio_rev(GPIO_IRDA_SCL);
-#endif
-#if 0
+#ifdef CONFIG_SEC_FPGA
 	barcode_i2c_gpio_data.sda_pin =
 		PM8921_MPP_PM_TO_SYS(PMIC_MPP_FPGA_SPI_SI);
 	barcode_i2c_gpio_data.scl_pin =
 		PM8921_MPP_PM_TO_SYS(PMIC_MPP_FPGA_SPI_CLK);
 	barcode_emul_info.spi_en  = -1;
-#endif
-#ifdef CONFIG_SEC_FPGA
-	if (system_rev < BOARD_REV06) {
-		barcode_i2c_gpio_data.sda_pin = gpio_rev(GPIO_BARCODE_SDA);
-		barcode_i2c_gpio_data.scl_pin = gpio_rev(GPIO_BARCODE_SCL);
-	} else {
-		barcode_i2c_gpio_data.sda_pin =
-			PM8921_MPP_PM_TO_SYS(PMIC_MPP_FPGA_SPI_SI);
-		barcode_i2c_gpio_data.scl_pin =
-			PM8921_MPP_PM_TO_SYS(PMIC_MPP_FPGA_SPI_CLK);
-		barcode_emul_info.spi_en  = -1;
-	}
+
 	if (system_rev > BOARD_REV05)
 		barcode_emul_info.cresetb =
 		PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_FPGA_CRESET_B);

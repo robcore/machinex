@@ -74,10 +74,8 @@
 #define PMIC_GPIO_SPK_EN                18
 #define PMIC_GPIO_VPS_EN                19
 #define PMIC_GPIO_FSA8048_EN		28
-#ifdef CONFIG_IRDA_MC96
 #define PMIC_GPIO_IRDA_WAKE             -1
 #define PMIC_GPIO_IRDA_IRQ		3
-#endif
 #define PMIC_GPIO_2MIC_WAKE             34
 #define PMIC_GPIO_CODEC_RESET_N         38
 #ifdef CONFIG_SEC_FPGA
@@ -121,15 +119,6 @@ enum {
 	BOARD_REV24,
 	BOARD_REV25,
 	GPIO_REV_MAX,
-};
-
-/* GPIO array Index */
-enum {
-	GPIO_FPGA_EN,
-	GPIO_BARCODE_SDA,
-	GPIO_BARCODE_SCL,
-	GPIO_IRDA_SDA,
-	GPIO_IRDA_SCL,
 };
 
 enum {
