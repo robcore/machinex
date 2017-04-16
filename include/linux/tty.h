@@ -632,9 +632,9 @@ do {									\
 			ret = -ERESTARTSYS;				\
 			break;						\
 		}							\
-		tty_unlock(tty);					\
+		tty_unlock();					\
 		schedule();						\
-		tty_lock(tty);						\						\
+		tty_lock();						\
 	}								\
 	finish_wait(&wq, &__wait);					\
 } while (0)
