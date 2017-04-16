@@ -28,12 +28,14 @@
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
+#include <linux/display_state.h>
 
 #define PON_CNTL_1 0x1C
 #define PON_CNTL_PULL_UP BIT(7)
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
 
 extern int poweroff_charging;
+extern bool is_display_on(void);
 
 /**
  * struct pmic8xxx_pwrkey - pmic8xxx pwrkey information
@@ -49,10 +51,12 @@ struct pmic8xxx_pwrkey {
 	const struct pm8xxx_pwrkey_platform_data *pdata;
 	struct wake_lock wake_lock;
 };
+struct wake_lock mx_pwrkey_boost;
 
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
+	bool screen_on = is_display_on();
 
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
@@ -64,6 +68,8 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 	pwrkey->powerkey_state = 1;
 	if (poweroff_charging)
 		wake_lock(&pwrkey->wake_lock);
+	if (screen_on == false && !poweroff_charging)
+		wake_lock_timeout(&mx_pwrkey_boost, msecs_to_jiffies(1000));
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
 #if defined(CONFIG_SEC_DEBUG)
@@ -224,6 +230,8 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 
 	if (poweroff_charging)
 		wake_lock_init(&pwrkey->wake_lock, WAKE_LOCK_SUSPEND, "pmic_pwrkey");
+	else
+		wake_lock_init(&mx_pwrkey_boost, WAKE_LOCK_SUSPEND, "machinex_pwrkey_boost");
 
 	/* check power key status during boot */
 	err = pm8xxx_read_irq_stat(pdev->dev.parent, key_press_irq);
@@ -290,6 +298,8 @@ static int pmic8xxx_pwrkey_remove(struct platform_device *pdev)
 	device_init_wakeup(&pdev->dev, 0);
 	if (poweroff_charging)
 		wake_lock_destroy(&pwrkey->wake_lock);
+	else
+		wake_lock_destroy(&mx_pwrkey_boost);
 	free_irq(key_press_irq, pwrkey);
 	free_irq(key_release_irq, pwrkey);
 	input_unregister_device(pwrkey->pwr);
