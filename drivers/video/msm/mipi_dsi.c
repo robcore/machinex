@@ -29,6 +29,16 @@
 #include <mach/hardware.h>
 #include <mach/gpio.h>
 #include <mach/clk.h>
+#ifdef CONFIG_LCD_NOTIFY
+#include <linux/lcd_notify.h>
+#endif
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#endif
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
+#include <linux/display_state.h>
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
@@ -46,6 +56,12 @@
 /* Check if LCD was connected. */
 #include "mipi_samsung_oled-8930.h"
 #endif
+
+static bool display_on = true;
+bool is_display_on()
+{
+	return display_on;
+}
 
 u32 dsi_irq;
 u32 esc_byte_ratio;
@@ -130,6 +146,10 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	ret = panel_next_off(pdev);
 
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_START, NULL);
+#endif
+
 	spin_lock_bh(&dsi_clk_lock);
 
 	mipi_dsi_clk_disable();
@@ -169,6 +189,22 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
+
+	printk("Rob's DSI OFF HOOK\n");
+
+#ifdef CONFIG_STATE_NOTIFIER
+	state_suspend();
+#endif
+
+#ifdef CONFIG_POWERSUSPEND
+	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
+#endif
+	display_on = false;
 
 	return ret;
 }
@@ -437,6 +473,22 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
+
+	printk("Rob's DSI ON HOOK\n");
+
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+#endif
+
+#ifdef CONFIG_POWERSUSPEND
+		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
+		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+
+#ifdef CONFIG_LCD_NOTIFY
+		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
+		display_on = true;
 
 	return ret;
 }

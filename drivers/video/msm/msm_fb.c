@@ -45,16 +45,6 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
-#ifdef CONFIG_LCD_NOTIFY
-#include <linux/lcd_notify.h>
-#endif
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
-#include <linux/display_state.h>
 
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
@@ -69,12 +59,6 @@
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
 #endif
-
-static bool display_on = true;
-bool is_display_on()
-{
-	return display_on;
-}
 
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
@@ -1220,41 +1204,20 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 		event.info = info;
 		event.data = &blank_mode;
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
-		printk("MX FB BLANK PD HOOK\n");
-		display_on = false;
-#ifdef CONFIG_STATE_NOTIFIER
-		state_suspend();
-#endif
-#ifdef CONFIG_POWERSUSPEND
-		 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
-#endif
 	}
 	msm_fb_pan_idle(mfd);
 	if (mfd->op_enable == 0) {
 		if (blank_mode == FB_BLANK_UNBLANK) {
 			mfd->suspend.panel_power_on = TRUE;
-			printk("MX FB UNBLANK HOOK\n");
-			display_on = true;
-#ifdef CONFIG_STATE_NOTIFIER
-			state_resume();
-#endif
-#ifdef CONFIG_POWERSUSPEND
-				/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-			set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
-#endif
-		} else {
-			mfd->suspend.panel_power_on = FALSE;
-			printk("MX FB BLANK SUSPEND HOOK\n");
-			display_on = false;
-#ifdef CONFIG_STATE_NOTIFIER
-			state_suspend();
-#endif
-#ifdef CONFIG_POWERSUSPEND
-			 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
-			set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+			/* if unblank is called when system is in suspend,
+			wait for the system to resume */
+			while (mfd->suspend.op_suspend) {
+				pr_debug("waiting for system to resume\n");
+				msleep(20);
+			}
 		}
-#endif
+		else
+			mfd->suspend.panel_power_on = FALSE;
 	}
 	return msm_fb_blank_sub(blank_mode, info, mfd->op_enable);
 }
