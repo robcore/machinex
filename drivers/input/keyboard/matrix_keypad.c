@@ -34,7 +34,7 @@ struct matrix_keypad {
 
 	uint32_t last_key_state[MATRIX_MAX_COLS];
 	struct delayed_work work;
-	struct mutex lock;
+	spinlock_t lock;
 	bool scan_pending;
 	bool stopped;
 	bool gpio_all_disabled;
@@ -164,17 +164,19 @@ static void matrix_keypad_scan(struct work_struct *work)
 
 	activate_all_cols(pdata, true);
 
-	mutex_lock(&keypad->lock);
+	/* Enable IRQs again */
+	spin_lock_irq(&keypad->lock);
 	keypad->scan_pending = false;
 	enable_row_irqs(keypad);
-	mutex_unlock(&keypad->lock);
+	spin_unlock_irq(&keypad->lock);
 }
 
 static irqreturn_t matrix_keypad_interrupt(int irq, void *id)
 {
 	struct matrix_keypad *keypad = id;
+	unsigned long flags;
 
-	mutex_lock(&keypad->lock);
+	spin_lock_irqsave(&keypad->lock, flags);
 
 	/*
 	 * See if another IRQ beaten us to it and scheduled the
@@ -190,7 +192,7 @@ static irqreturn_t matrix_keypad_interrupt(int irq, void *id)
 		msecs_to_jiffies(keypad->pdata->debounce_ms));
 
 out:
-	mutex_unlock(&keypad->lock);
+	spin_unlock_irqrestore(&keypad->lock, flags);
 	return IRQ_HANDLED;
 }
 
@@ -299,7 +301,7 @@ static SIMPLE_DEV_PM_OPS(matrix_keypad_pm_ops,
 			 matrix_keypad_suspend, matrix_keypad_resume);
 
 static int matrix_keypad_init_gpio(struct platform_device *pdev,
-					     struct matrix_keypad *keypad)
+				   struct matrix_keypad *keypad)
 {
 	const struct matrix_keypad_platform_data *pdata = keypad->pdata;
 	int i, err;
@@ -434,7 +436,7 @@ static int matrix_keypad_probe(struct platform_device *pdev)
 	keypad->row_shift = row_shift;
 	keypad->stopped = true;
 	INIT_DELAYED_WORK(&keypad->work, matrix_keypad_scan);
-	mutex_init(&keypad->lock);
+	spin_lock_init(&keypad->lock);
 
 	input_dev->name		= pdev->name;
 	input_dev->id.bustype	= BUS_HOST;
@@ -483,8 +485,6 @@ static int matrix_keypad_remove(struct platform_device *pdev)
 	device_init_wakeup(&pdev->dev, 0);
 
 	matrix_keypad_free_gpio(keypad);
-
-	mutex_destroy(&keypad->lock);
 	input_unregister_device(keypad->input_dev);
 	kfree(keypad);
 
