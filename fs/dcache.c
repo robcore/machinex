@@ -2790,7 +2790,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 {
 	int error;
 	struct path pwd, root;
-	char *page = __getname();
+	char *page = (char *) __get_free_page(GFP_USER);
 
 	if (!page)
 		return -ENOMEM;
@@ -2802,8 +2802,8 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 	write_seqlock(&rename_lock);
 	if (!d_unlinked(pwd.dentry)) {
 		unsigned long len;
-		char *cwd = page + PATH_MAX;
-		int buflen = PATH_MAX;
+		char *cwd = page + PAGE_SIZE;
+		int buflen = PAGE_SIZE;
 
 		prepend(&cwd, &buflen, "\0", 1);
 		error = prepend_path(&pwd, &root, &cwd, &buflen);
@@ -2821,7 +2821,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 		}
 
 		error = -ERANGE;
-		len = PATH_MAX + page - cwd;
+		len = PAGE_SIZE + page - cwd;
 		if (len <= size) {
 			error = len;
 			if (copy_to_user(buf, cwd, len))
@@ -2835,7 +2835,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 out:
 	path_put(&pwd);
 	path_put(&root);
-	__putname(page);
+	free_page((unsigned long) page);
 	return error;
 }
 

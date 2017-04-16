@@ -139,7 +139,6 @@ do_page_fault(unsigned long address, unsigned long mmcsr,
 	} else {
 		if (!(vma->vm_flags & VM_WRITE))
 			goto bad_area;
-		flags |= FAULT_FLAG_WRITE;
 	}
 
 	/* If for any reason at all we couldn't handle the fault,
