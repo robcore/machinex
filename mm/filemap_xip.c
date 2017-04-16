@@ -197,8 +197,6 @@ retry:
 			dec_mm_counter(mm, MM_FILEPAGES);
 			BUG_ON(pte_dirty(pteval));
 			pte_unmap_unlock(pte, ptl);
-			/* must invalidate_page _before_ freeing the page */
-			mmu_notifier_invalidate_page(mm, address);
 			page_cache_release(page);
 		}
 	}

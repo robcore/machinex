@@ -73,7 +73,6 @@ static size_t ii_iovec_copy_to_user(struct page *page,
 	char *kaddr;
 	size_t copied;
 
-	BUG_ON(in_atomic());
 	kaddr = kmap(page);
 	if (likely(i->nr_segs == 1)) {
 		int left;
