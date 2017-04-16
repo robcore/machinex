@@ -1014,9 +1014,9 @@ repeat:
 				goto restart;
 			}
 			/*
-			 * Otherwise, shmem/tmpfs must be storing a swap entry
-			 * here as an exceptional entry: so stop looking for
-			 * contiguous pages.
+			 * A shadow entry of a recently evicted page,
+			 * or a swap entry from shmem/tmpfs.  Stop
+			 * looking for contiguous pages.
 			 */
 			break;
 		}
@@ -1090,10 +1090,17 @@ repeat:
 				goto restart;
 			}
 			/*
-			 * This function is never used on a shmem/tmpfs
-			 * mapping, so a swap entry won't be found here.
+			 * A shadow entry of a recently evicted page.
+			 *
+			 * Those entries should never be tagged, but
+			 * this tree walk is lockless and the tags are
+			 * looked up in bulk, one radix tree node at a
+			 * time, so there is a sizable window for page
+			 * reclaim to evict a page we saw tagged.
+			 *
+			 * Skip over it.
 			 */
-			BUG();
+			continue;
 		}
 
 		if (!page_cache_get_speculative(page))
@@ -1197,7 +1204,7 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 	pgoff_t prev_index;
 	unsigned long offset;      /* offset into pagecache page */
 	unsigned int prev_offset;
-	int error;
+	int error = 0;
 
 #ifdef CONFIG_SCFS_LOWER_PAGECACHE_INVALIDATION
 	//struct scfs_sb_info *sbi;
@@ -1333,9 +1340,13 @@ page_ok:
 #endif
 
 		page_cache_release(page);
-		if (ret == nr && desc->count)
-			continue;
-		goto out;
+		if (!desc->count)
+			goto out;
+		if (ret < nr) {
+			desc->error = -EFAULT;
+			goto out;
+		}
+		continue;
 
 page_not_up_to_date:
 		/* Get exclusive access to the page ... */
@@ -1370,6 +1381,7 @@ readpage:
 		if (unlikely(error)) {
 			if (error == AOP_TRUNCATED_PAGE) {
 				page_cache_release(page);
+				desc->error = 0;
 				goto find_page;
 			}
 			goto readpage_error;
@@ -1418,8 +1430,10 @@ no_cached_page:
 						index, GFP_KERNEL);
 		if (error) {
 			page_cache_release(page);
-			if (error == -EEXIST)
+			if (error == -EEXIST) {
+				desc->error = 0;
 				goto find_page;
+			}
 			desc->error = error;
 			goto out;
 		}
@@ -1483,7 +1497,10 @@ int file_read_iter_actor(read_descriptor_t *desc, struct page *page,
 	if (size > desc->count)
 		size = desc->count;
 
-	copied = iov_iter_copy_to_user(page, iter, offset, size);
+	if (in_atomic())
+		copied = iov_iter_copy_to_user_atomic(page, iter, offset, size);
+	else
+		copied = iov_iter_copy_to_user(page, iter, offset, size);
 	if (copied < size)
 		desc->error = -EFAULT;
 
@@ -1864,6 +1881,7 @@ int generic_file_mmap(struct file * file, struct vm_area_struct * vma)
 		return -ENOEXEC;
 	file_accessed(file);
 	vma->vm_ops = &generic_file_vm_ops;
+	vma->vm_flags |= VM_NONLINEAR;
 	return 0;
 }
 
