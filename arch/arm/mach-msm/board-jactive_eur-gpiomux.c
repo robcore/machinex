@@ -444,7 +444,7 @@ static struct gpiomux_setting sdc4_suspend_cfg = {
 
 static struct gpiomux_setting sdc4_active_cfg = {
 	.func = GPIOMUX_FUNC_2,
-	.drv  = GPIOMUX_DRV_6MA,
+	.drv  = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 #endif
@@ -496,7 +496,6 @@ static struct gpiomux_setting mcu_chg_cfg = {
 	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
-
 static struct gpiomux_setting gsbi2 = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_8MA,
@@ -509,11 +508,13 @@ static struct gpiomux_setting hdmi_suspend_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
+#if 0
 static struct gpiomux_setting hdmi_active_1_cfg = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_UP,
 };
+#endif
 
 static struct gpiomux_setting hdmi_active_2_cfg = {
 	.func = GPIOMUX_FUNC_1,
@@ -691,14 +692,14 @@ static struct msm_gpiomux_config apq8064_hdmi_configs[] __initdata = {
 			[GPIOMUX_ACTIVE]    = &hdmi_active_1_cfg,
 			[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,
 		},
-	},*/
+	},
 	{
 		.gpio = 71,
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &hdmi_active_1_cfg,
 			[GPIOMUX_SUSPENDED] = &hdmi_suspend_cfg,
 		},
-	},
+	},*/
 	{
 		.gpio = 72,
 		.settings = {
@@ -1364,35 +1365,6 @@ static struct msm_gpiomux_config msm8064_sd_det_config[] = {
 	},
 };
 
-#ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
-static struct gpiomux_setting sd_ls_en = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_NONE,
-	.dir = GPIOMUX_OUT_LOW,
-};
-
-static struct msm_gpiomux_config sd_ls_en_60_config[] = {
-	{
-		.gpio = 60,	/* Level Shifter En */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &sd_ls_en,
-			[GPIOMUX_ACTIVE] = &sd_ls_en,
-		},
-	},
-};
-
-static struct msm_gpiomux_config sd_ls_en_64_config[] = {
-	{
-		.gpio = 64,	/* Level Shifter En */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &sd_ls_en,
-			[GPIOMUX_ACTIVE] = &sd_ls_en,
-		},
-	},
-};
-#endif
-
 #if defined(CONFIG_LEDS_AN30259A)
 static struct gpiomux_setting leds_active_cfg = {
 		.func = GPIOMUX_FUNC_GPIO,
@@ -1533,17 +1505,12 @@ void __init apq8064_init_gpiomux(void)
 	}
 
 #ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
-	if (system_rev < BOARD_REV08) {
+	if (system_rev < BOARD_REV08)
 		msm_gpiomux_install(sdc4_interface,
 				ARRAY_SIZE(sdc4_interface));
-		msm_gpiomux_install(sd_ls_en_60_config,
-				ARRAY_SIZE(sd_ls_en_60_config));
-	} else {
+	else
 		msm_gpiomux_install(sdc2_interface,
 				ARRAY_SIZE(sdc2_interface));
-		msm_gpiomux_install(sd_ls_en_64_config,
-				ARRAY_SIZE(sd_ls_en_64_config));
-	}
 #else
 	msm_gpiomux_install(wcnss_5wire_interface,
 			ARRAY_SIZE(wcnss_5wire_interface));
