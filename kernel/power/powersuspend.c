@@ -110,6 +110,7 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
+	cancel_work_sync(&power_resume_work);
 	pr_info("[POWERSUSPEND] Entering Suspend...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -143,6 +144,7 @@ static void power_resume(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
+	cancel_work_sync(&power_suspend_work);
 	pr_info("[POWERSUSPEND] Entering Resume...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -172,12 +174,10 @@ void set_power_suspend_state(int new_state)
 		spin_lock_irqsave(&state_lock, irqflags);
 		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			pr_info("[POWERSUSPEND] Suspend State Activated.\n");
-			cancel_work_sync(&power_resume_work);
 			state = new_state;
 			queue_work(pwrsup_wq, &power_suspend_work);
 		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			pr_info("[POWERSUSPEND] Resume State Activated.\n");
-			cancel_work_sync(&power_suspend_work);
 			state = new_state;
 			queue_work(pwrsup_wq, &power_resume_work);
 		}
