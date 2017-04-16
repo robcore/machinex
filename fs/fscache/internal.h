@@ -91,6 +91,8 @@ static inline bool fscache_object_congested(void)
 	return workqueue_congested(WORK_CPU_UNBOUND, fscache_object_wq);
 }
 
+extern int fscache_wait_bit(void *);
+extern int fscache_wait_bit_interruptible(void *);
 extern int fscache_wait_atomic_t(atomic_t *);
 
 /*

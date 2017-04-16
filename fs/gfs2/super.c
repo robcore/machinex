@@ -859,6 +859,12 @@ static int gfs2_make_fs_ro(struct gfs2_sbd *sdp)
 	return error;
 }
 
+static int gfs2_umount_recovery_wait(void *word)
+{
+	schedule();
+	return 0;
+}
+
 /**
  * gfs2_put_super - Unmount the filesystem
  * @sb: The VFS superblock
@@ -890,7 +896,7 @@ restart:
 			continue;
 		spin_unlock(&sdp->sd_jindex_spin);
 		wait_on_bit(&jd->jd_flags, JDF_RECOVERY,
-			    TASK_UNINTERRUPTIBLE);
+			    gfs2_umount_recovery_wait, TASK_UNINTERRUPTIBLE);
 		goto restart;
 	}
 	spin_unlock(&sdp->sd_jindex_spin);

@@ -269,8 +269,9 @@ sg_open(struct inode *inode, struct file *filp)
 			retval = -EBUSY;
 			goto error_out;
 		}
-		res = __wait_event_interruptible(sdp->o_excl_wait,
-					   ((!list_empty(&sdp->sfds) || sdp->exclude) ? 0 : (sdp->exclude = 1)));
+		res = 0;
+		__wait_event_interruptible(sdp->o_excl_wait,
+					   ((!list_empty(&sdp->sfds) || sdp->exclude) ? 0 : (sdp->exclude = 1)), res);
 		if (res) {
 			retval = res;	/* -ERESTARTSYS because signal hit process */
 			goto error_out;
@@ -280,8 +281,9 @@ sg_open(struct inode *inode, struct file *filp)
 			retval = -EBUSY;
 			goto error_out;
 		}
-		res = __wait_event_interruptible(sdp->o_excl_wait, (!sdp->exclude));
-
+		res = 0;
+		__wait_event_interruptible(sdp->o_excl_wait, (!sdp->exclude),
+					   res);
 		if (res) {
 			retval = res;	/* -ERESTARTSYS because signal hit process */
 			goto error_out;
@@ -397,14 +399,19 @@ sg_read(struct file *filp, char __user *buf, size_t count, loff_t * ppos)
 			retval = -EAGAIN;
 			goto free_old_hdr;
 		}
-		retval = wait_event_interruptible(sfp->read_wait,
-			(sdp->detached ||
-			(srp = sg_get_rq_mark(sfp, req_pack_id))));
-		if (sdp->detached) {
-			retval = -ENODEV;
-			goto free_old_hdr;
-		}
-		if (retval) {
+		while (1) {
+			retval = 0; /* following macro beats race condition */
+			__wait_event_interruptible(sfp->read_wait,
+				(sdp->detached ||
+				(srp = sg_get_rq_mark(sfp, req_pack_id))),
+				retval);
+			if (sdp->detached) {
+				retval = -ENODEV;
+				goto free_old_hdr;
+			}
+			if (0 == retval)
+				break;
+
 			/* -ERESTARTSYS as signal hit process */
 			goto free_old_hdr;
 		}
@@ -804,8 +811,10 @@ sg_ioctl(struct file *filp, unsigned int cmd_in, unsigned long arg)
 			if (result < 0)
 				return result;
 			while (1) {
-				result = wait_event_interruptible(sfp->read_wait,
-					(srp->done || sdp->detached));
+				result = 0;	/* following macro to beat race condition */
+				__wait_event_interruptible(sfp->read_wait,
+					(srp->done || sdp->detached),
+					result);
 				if (sdp->detached)
 					return -ENODEV;
 				write_lock_irq(&sfp->rq_list_lock);

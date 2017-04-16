@@ -1036,13 +1036,20 @@ void gfs2_lm_unmount(struct gfs2_sbd *sdp)
 		lm->lm_unmount(sdp);
 }
 
+static int gfs2_journalid_wait(void *word)
+{
+	if (signal_pending(current))
+		return -EINTR;
+	schedule();
+	return 0;
+}
+
 static int wait_on_journal(struct gfs2_sbd *sdp)
 {
 	if (sdp->sd_lockstruct.ls_ops->lm_mount == NULL)
 		return 0;
 
-	return wait_on_bit(&sdp->sd_flags, SDF_NOJOURNALID, TASK_INTERRUPTIBLE)
-		? -EINTR : 0;
+	return wait_on_bit(&sdp->sd_flags, SDF_NOJOURNALID, gfs2_journalid_wait, TASK_INTERRUPTIBLE);
 }
 
 void gfs2_online_uevent(struct gfs2_sbd *sdp)

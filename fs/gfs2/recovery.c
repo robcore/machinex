@@ -591,6 +591,12 @@ done:
 	wake_up_bit(&jd->jd_flags, JDF_RECOVERY);
 }
 
+static int gfs2_recovery_wait(void *word)
+{
+	schedule();
+	return 0;
+}
+
 int gfs2_recover_journal(struct gfs2_jdesc *jd, bool wait)
 {
 	int rv;
@@ -603,7 +609,7 @@ int gfs2_recover_journal(struct gfs2_jdesc *jd, bool wait)
 	BUG_ON(!rv);
 
 	if (wait)
-		wait_on_bit(&jd->jd_flags, JDF_RECOVERY,
+		wait_on_bit(&jd->jd_flags, JDF_RECOVERY, gfs2_recovery_wait,
 			    TASK_UNINTERRUPTIBLE);
 
 	return wait ? jd->jd_recover_error : 0;
