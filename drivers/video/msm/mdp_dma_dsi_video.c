@@ -46,7 +46,7 @@ ssize_t mdp_dma_video_show_event(struct device *dev,
 		atomic_read(&vsync_cntrl.vsync_resume) == 0)
 		return 0;
 
-	wait_for_completion_killable(&vsync_cntrl.vsync_wait);
+	wait_for_completion(&vsync_cntrl.vsync_wait);
 	ret = snprintf(buf, PAGE_SIZE, "VSYNC=%llu",
 			ktime_to_ns(vsync_cntrl.vsync_time));
 	buf[strlen(buf) + 1] = '\0';
