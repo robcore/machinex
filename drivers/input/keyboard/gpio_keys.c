@@ -26,7 +26,6 @@
 #include <linux/gpio_keys.h>
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
-#include <linux/syscore_ops.h>
 #include <linux/gpio.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
@@ -46,7 +45,7 @@
 #endif
 #endif
 
-static int use_syscore = 1;
+
 #if defined (CONFIG_SEC_PRODUCT_8930)
 #if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
 extern int wakeup_gpio_num;
@@ -86,11 +85,6 @@ struct gpio_keys_drvdata {
 #endif
 	struct gpio_button_data data[0];
 };
-
-static struct device *global_dev;
-static struct syscore_ops gpio_keys_syscore_pm_ops;
-
-static void gpio_keys_syscore_resume(void);
 
 /*
  * SYSFS interface for enabling/disabling keys and switches:
@@ -520,9 +514,7 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	const struct gpio_keys_button *button = bdata->button;
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
-	int state;
-
-	state = (__gpio_get_value(button->gpio) ? 1 : 0) ^ button->active_low;
+	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
 
 #ifdef CONFIG_SEC_DEBUG
 	sec_debug_check_crash_key(button->code, state);
@@ -1041,7 +1033,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
 		goto fail1;
 	}
 
-	global_dev = dev;
 	ddata->input = input;
 	ddata->n_buttons = pdata->nbuttons;
 	ddata->enable = pdata->enable;
@@ -1126,10 +1117,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
-	gpio_keys_syscore_pm_ops.resume = gpio_keys_syscore_resume;
-
-	register_syscore_ops(&gpio_keys_syscore_pm_ops);
-
 	return 0;
 
  fail3:
@@ -1157,8 +1144,6 @@ static int gpio_keys_remove(struct platform_device *pdev)
 
 	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 
-	unregister_syscore_ops(&gpio_keys_syscore_pm_ops);
-
 	device_init_wakeup(&pdev->dev, 0);
 
 	for (i = 0; i < ddata->n_buttons; i++)
@@ -1180,36 +1165,6 @@ static int gpio_keys_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static void gpio_keys_syscore_resume(void)
-{
-	struct gpio_keys_drvdata *ddata = dev_get_drvdata(global_dev);
-	struct input_dev *input = ddata->input;
-	struct gpio_button_data *bdata = NULL;
-	int error = 0;
-	int i;
-
-
-	if (device_may_wakeup(global_dev)) {
-		for (i = 0; i < ddata->pdata->nbuttons; i++) {
-			bdata = &ddata->data[i];
-			if (bdata->button->wakeup)
-				disable_irq_wake(bdata->irq);
-		}
-	} else {
-		mutex_lock(&input->mutex);
-		if (input->users)
-			error = gpio_keys_open(input);
-		mutex_unlock(&input->mutex);
-	}
-
-	if (error)
-		return;
-
-		if (gpio_is_valid(bdata->button->gpio))
-			gpio_keys_gpio_report_event(bdata);
-
-		input_sync(ddata->input);
-}
 static int gpio_keys_suspend(struct device *dev)
 {
 	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
@@ -1231,8 +1186,6 @@ static int gpio_keys_resume(struct device *dev)
 	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
 	int i;
 
-	if (use_syscore)
-		return 0;
 #if defined(CONFIG_SEC_PRODUCT_8930)
 #if defined(CONFIG_KEYBOARD_GPIO_EXTENDED_RESUME_EVENT)
     struct gpio_button_data *bdata_ext;
