@@ -306,7 +306,6 @@ int filemap_fdatawait_range(struct address_space *mapping, loff_t start_byte,
 		pagevec_release(&pvec);
 		cond_resched();
 	}
-
 out:
 	ret2 = filemap_check_errors(mapping);
 	if (!ret)
