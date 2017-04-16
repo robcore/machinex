@@ -54,6 +54,7 @@ struct max77693_haptic {
 	struct regulator *motor_reg;
 
 	bool enabled;
+	bool suspend_state;
 	unsigned int magnitude;
 	unsigned int pwm_duty;
 	enum max77693_haptic_motor_type type;
@@ -237,6 +238,7 @@ static int max77693_haptic_probe(struct platform_device *pdev)
 	haptic->type = MAX77693_HAPTIC_LRA;
 	haptic->mode = MAX77693_HAPTIC_EXTERNAL_MODE;
 	haptic->pwm_divisor = MAX77693_HAPTIC_PWM_DIVISOR_128;
+	haptic->suspend_state = false;
 
 	/* Get pwm and regulatot for haptic device */
 	haptic->pwm_dev = devm_pwm_get(&pdev->dev, NULL);
@@ -297,13 +299,30 @@ static int max77693_haptic_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct max77693_haptic *haptic = platform_get_drvdata(pdev);
 
-	max77693_haptic_disable(haptic);
+	if (haptic->enabled) {
+		max77693_haptic_disable(haptic);
+		haptic->suspend_state = true;
+	}
+
+	return 0;
+}
+
+static int max77693_haptic_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct max77693_haptic *haptic = platform_get_drvdata(pdev);
+
+	if (haptic->suspend_state) {
+		max77693_haptic_enable(haptic);
+		haptic->suspend_state = false;
+	}
 
 	return 0;
 }
 #endif
 
-static SIMPLE_DEV_PM_OPS(max77693_haptic_pm_ops, max77693_haptic_suspend, NULL);
+static SIMPLE_DEV_PM_OPS(max77693_haptic_pm_ops,
+			 max77693_haptic_suspend, max77693_haptic_resume);
 
 static struct platform_driver max77693_haptic_driver = {
 	.driver		= {
