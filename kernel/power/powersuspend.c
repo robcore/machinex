@@ -50,6 +50,8 @@
  *
  * v2.2   Remove the mutex unlock mistakingly added during system sync setup.
  *
+ * v2.3   Move cancelling previous state's work to the current state change work item.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -64,7 +66,7 @@
 #include <linux/powersuspend.h>
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	2
+#define MINOR_VERSION	3
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
