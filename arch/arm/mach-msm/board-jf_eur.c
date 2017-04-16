@@ -5165,7 +5165,7 @@ static void __init gpio_rev_init(void)
 	mc96_i2c_gpio_data.sda_pin = gpio_rev(GPIO_IRDA_SDA);
 	mc96_i2c_gpio_data.scl_pin = gpio_rev(GPIO_IRDA_SCL);
 #endif
-#ifdef 0
+#if 0
 	barcode_i2c_gpio_data.sda_pin =
 		PM8921_MPP_PM_TO_SYS(PMIC_MPP_FPGA_SPI_SI);
 	barcode_i2c_gpio_data.scl_pin =
