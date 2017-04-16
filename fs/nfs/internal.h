@@ -288,7 +288,7 @@ extern void nfs_evict_inode(struct inode *);
 extern void nfs4_evict_inode(struct inode *);
 #endif
 void nfs_zap_acl_cache(struct inode *inode);
-extern int nfs_wait_bit_killable(void *word);
+extern int nfs_wait_bit_killable(struct wait_bit_key *key);
 
 /* super.c */
 extern struct file_system_type nfs_xdev_fs_type;
