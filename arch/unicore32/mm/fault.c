@@ -227,6 +227,11 @@ static int do_pf(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 	if (in_atomic() || !mm)
 		goto no_context;
 
+	if (user_mode(regs))
+		flags |= FAULT_FLAG_USER;
+	if (!(fsr ^ 0x12))
+		flags |= FAULT_FLAG_WRITE;
+
 	/*
 	 * As per x86, we may deadlock here.  However, since the kernel only
 	 * validly references user space from well defined areas of the code,
