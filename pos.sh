@@ -1,11 +1,31 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0010-powersuspend-2.3-make-state-change-requests-lock-saf.patch"
-patch -p1 -R < "/root/machinex/patches/0009-remove-the-debugging-again.patch"
-patch -p1 -R < "/root/machinex/patches/0008-testing-less-mem-barriers-again.patch"
-patch -p1 -R < "/root/machinex/patches/0007-WHY-cant-we-have-preemption-tricks-must-investigate.patch"
-patch -p1 -R < "/root/machinex/patches/0006-i-like-speed.patch"
-patch -p1 -R < "/root/machinex/patches/0005-something-tells-me-cpudeadline-should-be-setting-all.patch"
-patch -p1 -R < "/root/machinex/patches/0004-fixed-up-some-of-the-preempt-merge-and-am-testing-tw.patch"
-patch -p1 -R < "/root/machinex/patches/0003-FINALLY-found-a-version-of-set_preempt_need_resched-.patch"
-patch -p1 -R < "/root/machinex/patches/0002-atomic-sleep-debugging-for-me.patch"
-patch -p1 -R < "/root/machinex/patches/0001-using-more-conservative-vals-for-load-calc.patch"
+/root/machinex/patches/0030-technically-this-should-work.patch
+/root/machinex/patches/0029-hmm.patch
+/root/machinex/patches/0028-fix-up-my-tty_port-wait-change.patch
+/root/machinex/patches/0027-mm-avoid-unnecessary-atomic-operations-during-end_pa.patch
+/root/machinex/patches/0026-vmscan-memcg-do-softlimit-reclaim-also-for-targeted.patch
+/root/machinex/patches/0025-memcg-get-rid-of-soft-limit-tree-infrastructure.patch
+/root/machinex/patches/0024-memcg-vmscan-integrate-soft-reclaim-tighter-with-zon.patch
+/root/machinex/patches/0023-memcg-remove-redundant-code-in-mem_cgroup_force_empt.patch
+/root/machinex/patches/0022-vfs-use-__getname-__putname-for-getcwd-system-call.patch
+/root/machinex/patches/0021-arch-mm-pass-userspace-fault-flag-to-generic-fault-h.patch
+/root/machinex/patches/0020-REVERT-mm-memcg-enable-memcg-OOM-killer-only-for-use.patch
+/root/machinex/patches/0019-sched-wait-Make-the-signal_pending-checks-consistent.patch
+/root/machinex/patches/0018-mm-cleanup-add_to_page_cache_locked.patch
+/root/machinex/patches/0017-mm-memcg-enable-memcg-OOM-killer-only-for-user-fault.patch
+/root/machinex/patches/0016-lib-radix-tree.c-make-radix_tree_node_alloc-work-cor.patch
+/root/machinex/patches/0015-revert-those-waits-dont-trust-em.patch
+/root/machinex/patches/0014-sched-core-Remove-false-positive-warning-from-wake_u.patch
+/root/machinex/patches/0013-a-couple-of-interrupble-waits.patch
+/root/machinex/patches/0012-revert-all-that-no-go.patch
+/root/machinex/patches/0011-fix-devexit_p.patch
+/root/machinex/patches/0010-oops-again.patch
+/root/machinex/patches/0009-there-it-is.patch
+/root/machinex/patches/0008-reverted-that.lol-was-jactive-who-cares.patch
+/root/machinex/patches/0007-hmmm.patch
+/root/machinex/patches/0006-turning-on-IRDA_MC96-for-testing.patch
+/root/machinex/patches/0005-nope.patch
+/root/machinex/patches/0004-turning-off-net-ns.patch
+/root/machinex/patches/0003-different-SCFS-test.patch
+/root/machinex/patches/0002-SCFS-tests.patch
+/root/machinex/patches/0001-reverted-all-that-makes-no-difference.patch
