@@ -155,6 +155,7 @@ void __init reset_all_zones_managed_pages(void)
 
 	for_each_online_pgdat(pgdat)
 		reset_node_managed_pages(pgdat);
+
 	reset_managed_pages_done = 1;
 }
 
