@@ -228,17 +228,8 @@ __out:	;								\
 } while (0)
 
 #define __wait_event(wq, condition) 					\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_UNINTERRUPTIBLE);	\
-		if (condition)						\
-			break;						\
-		schedule();						\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
+	___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0,		\
+		      ___wait_nop_ret, schedule())
 
 /**
  * wait_event - sleep until a condition gets true
@@ -260,17 +251,9 @@ do {									\
 } while (0)
 
 #define __wait_event_timeout(wq, condition, ret)			\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_UNINTERRUPTIBLE);	\
-		if (___wait_cond_timeout(condition, ret))		\
-			break;						\
-		ret = schedule_timeout(ret);				\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
+	___wait_event(wq, ___wait_cond_timeout(condition, ret), 	\
+		      TASK_UNINTERRUPTIBLE, 0, ret,			\
+		      ret = schedule_timeout(ret))
 
 /**
  * wait_event_timeout - sleep until a condition gets true or a timeout elapses
@@ -298,21 +281,8 @@ do {									\
 })
 
 #define __wait_event_interruptible(wq, condition, ret)			\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
-		if (condition)						\
-			break;						\
-		if (signal_pending(current)) {				\
-			ret = -ERESTARTSYS;				\
-			break;						\
-		}							\
-		schedule();						\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
+	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 0, ret,	\
+		      schedule())
 
 /**
  * wait_event_interruptible - sleep until a condition gets true
@@ -338,21 +308,9 @@ do {									\
 })
 
 #define __wait_event_interruptible_timeout(wq, condition, ret)		\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
-		if (___wait_cond_timeout(condition, ret))		\
-			break;						\
-		if (signal_pending(current)) {				\
-			ret = -ERESTARTSYS;				\
-			break;						\
-		}							\
-		ret = schedule_timeout(ret);				\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
+	___wait_event(wq, ___wait_cond_timeout(condition, ret),		\
+		      TASK_INTERRUPTIBLE, 0, ret,			\
+		      ret = schedule_timeout(ret))
 
 /**
  * wait_event_interruptible_timeout - sleep until a condition gets true or a timeout elapses
@@ -554,26 +512,8 @@ do {									\
 })
 
 #define __wait_event_interruptible_exclusive(wq, condition, ret)	\
-do {									\
-	__label__ __out;						\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait_exclusive(&wq, &__wait,			\
-					TASK_INTERRUPTIBLE);		\
-		if (condition)						\
-			break;						\
-		if (signal_pending(current)) {				\
-			ret = -ERESTARTSYS;				\
-			abort_exclusive_wait(&wq, &__wait, 		\
-				TASK_INTERRUPTIBLE, NULL);		\
-			goto __out;					\
-		}							\
-		schedule();						\
-	}								\
-	finish_wait(&wq, &__wait);					\
-__out:	;								\
-} while (0)
+	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 1, ret,	\
+		      schedule())
 
 #define wait_event_interruptible_exclusive(wq, condition)		\
 ({									\
@@ -836,20 +776,12 @@ do {									\
 
 
 #define __wait_event_lock_irq(wq, condition, lock, cmd)			\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_UNINTERRUPTIBLE);	\
-		if (condition)						\
-			break;						\
-		spin_unlock_irq(&lock);					\
-		cmd;							\
-		schedule();						\
-		spin_lock_irq(&lock);					\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
+	___wait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0,		\
+		      ___wait_nop_ret,					\
+		      spin_unlock_irq(&lock);				\
+		      cmd;						\
+		      schedule();					\
+		      spin_lock_irq(&lock))
 
 /**
  * wait_event_lock_irq_cmd - sleep until a condition gets true. The
