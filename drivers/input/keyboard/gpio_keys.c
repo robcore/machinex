@@ -1194,8 +1194,10 @@ static int gpio_keys_resume(struct device *dev)
 
 	for (i = 0; i < ddata->n_buttons; i++) {
 		struct gpio_button_data *bdata = &ddata->data[i];
-		if (bdata->button->wakeup && device_may_wakeup(dev))
+		if (bdata->button->wakeup && device_may_wakeup(dev)) {
+			pm_wakeup_event(bdata->input->dev.parent, 1);
 			disable_irq_wake(bdata->irq);
+		}
 
 		if (gpio_is_valid(bdata->button->gpio))
 			gpio_keys_gpio_report_event(bdata);
