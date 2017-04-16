@@ -1853,34 +1853,10 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	wmb();
 	spin_unlock_irqrestore(&dsi_mdp_lock, flags);
 
-#if defined(MIPI_DSI_ERROR_DUMP)
-	if (!wait_for_completion_timeout(&dsi_dma_comp,
-					msecs_to_jiffies(200))) {
-		pr_err("%s: dma timeout error\n", __func__);
-		dumpreg(0);
-		dumstate(0);
-#ifdef CONFIG_SEC_DEBUG_MDP
-		sec_debug_mdp.dsi_err.mipi_tx_time_out_err_cnt++;
-#endif
-		mdp4_dump_regs();
-		dsi_clk_dump();
-		console_verbose();
-		dump_stack();
-	} else {
-		if(normalcase==0){
-			dumpreg(1);
-			dumstate(1);
-			normalcase=1;
-			mdp4_dump_regs();
-			dsi_clk_dump();
-		}
-	}
-#else
 	if (!wait_for_completion_timeout(&dsi_dma_comp,
 					msecs_to_jiffies(200))) {
 		pr_err("%s: dma timeout error\n", __func__);
 	}
-#endif
 	if (tp->dmap != 0)
 		dma_unmap_single(&dsi_dev, tp->dmap, tp->len, DMA_TO_DEVICE);
 	tp->dmap = 0;
@@ -1918,7 +1894,7 @@ static void mipi_dsi_wait4video_eng_busy(void)
 {
 	mipi_dsi_wait4video_done();
 	/* delay 4 ms to skip BLLP */
-	usleep(4000);
+	mdelay(4);
 }
 
 void mipi_dsi_cmd_mdp_busy(void)
@@ -2236,7 +2212,7 @@ int mipi_runtime_csc_update(uint32_t reg[][2], int length)
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK,
 					DSI_INTR_VIDEO_DONE_MASK);
 
-	rc = wait_for_completion_timeout(&dsi_fps_comp,
+	rc = wait_for_completion_interruptible_timeout(&dsi_fps_comp,
 		msecs_to_jiffies(500));
 
 	if (!rc) {
