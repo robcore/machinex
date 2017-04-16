@@ -1505,7 +1505,7 @@ static int sync_thread_backup(void *data)
 		ipvs->backup_mcast_ifn, ipvs->backup_syncid);
 
 	while (!kthread_should_stop()) {
-		wait_event_interruptible(*sk_sleep(tinfo->sock->sk),
+		__wait_event_interruptible(*sk_sleep(tinfo->sock->sk),
 			 !skb_queue_empty(&tinfo->sock->sk->sk_receive_queue)
 			 || kthread_should_stop());
 
