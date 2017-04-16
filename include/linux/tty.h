@@ -185,7 +185,7 @@ struct tty_port_operations {
 	/* Called on the final put of a port */
 	void (*destruct)(struct tty_port *port);
 };
-	
+
 struct tty_port {
 	struct tty_struct	*tty;		/* Back pointer */
 	const struct tty_port_operations *ops;	/* Port operations */
@@ -628,14 +628,13 @@ do {									\
 		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
 		if (condition)						\
 			break;						\
-		if (!signal_pending(current)) {				\
-			tty_unlock();					\
-			schedule();					\
-			tty_lock();					\
-			continue;					\
+		if (signal_pending(current)) {				\
+			ret = -ERESTARTSYS;				\
+			break;						\
 		}							\
-		ret = -ERESTARTSYS;					\
-		break;							\
+		tty_unlock(tty);					\
+		schedule();						\
+		tty_lock(tty);						\						\
 	}								\
 	finish_wait(&wq, &__wait);					\
 } while (0)
