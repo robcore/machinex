@@ -804,10 +804,8 @@ sg_ioctl(struct file *filp, unsigned int cmd_in, unsigned long arg)
 			if (result < 0)
 				return result;
 			while (1) {
-				result = 0;	/* following macro to beat race condition */
-				__wait_event_interruptible(sfp->read_wait,
-					(srp->done || sdp->detached),
-					result);
+				result = wait_event_interruptible(sfp->read_wait,
+					(srp->done || sdp->detached));
 				if (sdp->detached)
 					return -ENODEV;
 				write_lock_irq(&sfp->rq_list_lock);
