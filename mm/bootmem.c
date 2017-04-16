@@ -291,6 +291,8 @@ unsigned long __init free_all_bootmem(void)
 	list_for_each_entry(bdata, &bdata_list, list)
 		total_pages += free_all_bootmem_core(bdata);
 
+	totalram_pages += total_pages;
+
 	return total_pages;
 }
 
