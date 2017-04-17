@@ -1,28 +1,36 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0061-fix-tty_port.patch"
-patch -p1 -R < "/root/machinex/patches/0060-one-last-fix.patch"
-patch -p1 -R < "/root/machinex/patches/0059-make-sg-smarter-and-coded-properly.patch"
-patch -p1 -R < "/root/machinex/patches/0058-gpio_keys-give-resume-events-a-little-more-juice.patch"
-patch -p1 -R < "/root/machinex/patches/0057-fix-up-swapfile-and-backing-dev.patch"
-patch -p1 -R < "/root/machinex/patches/0056-cypress-touchkeys-i-may-extend-this-to-all-input-dis.patch"
-patch -p1 -R < "/root/machinex/patches/0055-make-nfs4proc-wait_on_bit_io.patch"
-patch -p1 -R < "/root/machinex/patches/0054-fix-another-nfs-derp.patch"
-patch -p1 -R < "/root/machinex/patches/0053-fix-nfs.patch"
-patch -p1 -R < "/root/machinex/patches/0052-sched-Remove-proliferation-of-wait_on_bit-action-fun.patch"
-patch -p1 -R < "/root/machinex/patches/0051-sched-wait-Explain-the-shadowing-and-type-inconsiste.patch"
-patch -p1 -R < "/root/machinex/patches/0050-wait-add-wait_event_cmd.patch"
-patch -p1 -R < "/root/machinex/patches/0049-move-wait-back.patch"
-patch -p1 -R < "/root/machinex/patches/0048-sched-wait-Fix-__wait_event_interruptible_lock_irq_t.patch"
-patch -p1 -R < "/root/machinex/patches/0047-sched-wait-Introduce-prepare_to_wait_event.patch"
-patch -p1 -R < "/root/machinex/patches/0046-sched-wait-Add-___wait_cond_timeout-to-wait_event-_t.patch"
-patch -p1 -R < "/root/machinex/patches/0045-sched-wait-Clean-up-wait.h-details-a-bit.patch"
-patch -p1 -R < "/root/machinex/patches/0044-Subject-PATCH-04482-80000-sched-wait-Make-the-__.patch"
-patch -p1 -R < "/root/machinex/patches/0043-collapse-squash-for-wait.patch"
-patch -p1 -R < "/root/machinex/patches/0042-sched-wait-Introduce-___wait_event.patch"
-patch -p1 -R < "/root/machinex/patches/0041-sched-wait-Change-the-wait_exclusive-control-flow.patch"
-patch -p1 -R < "/root/machinex/patches/0040-sched-wait-Change-timeout-logic.patch"
-patch -p1 -R < "/root/machinex/patches/0039-reverted-that-shit.patch"
-patch -p1 -R < "/root/machinex/patches/0038-a-bunch-of-stupid-bullshit.patch"
-patch -p1 -R < "/root/machinex/patches/0037-sched-wait-Introduce-___wait_event.patch"
-patch -p1 -R < "/root/machinex/patches/0036-sched-wait-Change-the-wait_exclusive-control-flow.patch"
-patch -p1 -R < "/root/machinex/patches/0035-sched-wait-Change-timeout-logic.patch"
+/root/machinex/patches/0035-i-may-want-to-try-using-count-and-just-making-it-nr_.patch
+/root/machinex/patches/0034-TECHNICALLY-i-should-be-able-to-get-away-with-this.patch
+/root/machinex/patches/0033-fix-up-nr_running-count.patch
+/root/machinex/patches/0032-sched-avoid-running-idle_balance-on-behalf-of-wrong-.patch
+/root/machinex/patches/0031-sched-Fix-bug-in-average-nr_running-and-nr_iowait-ca.patch
+/root/machinex/patches/0030-fix-wait.c-smp_store_mb.patch
+/root/machinex/patches/0029-dunno-if-we-were-building-our-much-need-generic-hard.patch
+/root/machinex/patches/0028-endif.patch
+/root/machinex/patches/0027-a-doubled-commit-in-wait.c.patch
+/root/machinex/patches/0026-add-need_rebind.patch
+/root/machinex/patches/0025-cleaned-up-config.patch
+/root/machinex/patches/0024-synced-workqueue-with-3.18-sammy-changed-idr_get_new.patch
+/root/machinex/patches/0023-workqueue-apply-__WQ_ORDERED-to-create_singlethread.patch
+/root/machinex/patches/0022-workqueue-use-nr_node_ids-instead-of-wq_numa_tbl_len.patch
+/root/machinex/patches/0021-workqueue-remove-the-misnamed-out_unlock-label.patch
+/root/machinex/patches/0020-dox.patch
+/root/machinex/patches/0019-fixup-remove-rescuer-pool.patch
+/root/machinex/patches/0018-workqueue-unfold-start_worker-into-create_worker.patch
+/root/machinex/patches/0017-workqueue-remove-wakeup-from-worker_set_flags.patch
+/root/machinex/patches/0016-workqueue-remove-an-unneeded-UNBOUND-test-before-wak.patch
+/root/machinex/patches/0015-workqueue-alloc-struct-worker-on-its-local-node.patch
+/root/machinex/patches/0014-workqueue-reuse-the-already-calculated-pwq.patch
+/root/machinex/patches/0013-workqueue-zero-cpumask-of-wq_numa_possible_cpumask.patch
+/root/machinex/patches/0012-missing-POOL-DISASOSSIATED-flag-in-rebind.patch
+/root/machinex/patches/0011-workqueue-fix-dev_set_uevent_suppress-imbalance.patch
+/root/machinex/patches/0010-workqueue-clear-POOL_DISASSOCIATED-in-rebind_workers.patch
+/root/machinex/patches/0009-workqueue-sanity-check-pool-cpu-in-wq_worker_sleepin.patch
+/root/machinex/patches/0008-workqueue-clear-leftover-flags-when-detached.patch
+/root/machinex/patches/0007-workqueue-remove-useless-WARN_ON_ONCE.patch
+/root/machinex/patches/0006-turn-off-arm-mpu-and-msm-cache-erp.patch
+/root/machinex/patches/0005-workqueue-remove-the-empty-check-in-too_many_workers.patch
+/root/machinex/patches/0004-workqueue-use-pool-cpu-0-to-stand-for-an-unbound-poo.patch
+/root/machinex/patches/0003-sched-wait-Provide-infrastructure-to-deal-with-neste.patch
+/root/machinex/patches/0002-SCHED-add-some-wait.on_bit.timeout-interfaces.patch
+/root/machinex/patches/0001-there-it-is-just-use-init-work-in-place-of-PREPARE-D.patch
