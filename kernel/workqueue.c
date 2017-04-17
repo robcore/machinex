@@ -263,15 +263,6 @@ struct workqueue_struct {
 	struct pool_workqueue __rcu *numa_pwq_tbl[]; /* FR: unbound pwqs indexed by node */
 };
 
-/* see the comment above the definition of WQ_POWER_EFFICIENT */
-#ifdef CONFIG_WQ_POWER_EFFICIENT_DEFAULT
-static bool wq_power_efficient;
-#else
-static bool wq_power_efficient;
-#endif
-
-module_param_named(power_efficient, wq_power_efficient, bool, 0644);
-
 static struct kmem_cache *pwq_cache;
 
 static int wq_numa_tbl_len;		/* highest possible NUMA node id + 1 */
@@ -280,6 +271,11 @@ static cpumask_var_t *wq_numa_possible_cpumask;
 
 static bool wq_disable_numa = true;
 module_param_named(disable_numa, wq_disable_numa, bool, 0444);
+
+/* see the comment above the definition of WQ_POWER_EFFICIENT */
+static bool wq_power_efficient;
+
+module_param_named(power_efficient, wq_power_efficient, bool, 0644);
 
 static bool wq_numa_enabled;		/* unbound NUMA affinity enabled */
 
@@ -360,6 +356,7 @@ static void copy_workqueue_attrs(struct workqueue_attrs *to,
 	idr_for_each_entry(&worker_pool_idr, pool, pi)			\
 		if (({ assert_rcu_or_pool_mutex(); false; })) { }	\
 		else
+
 /**
  * for_each_pool_worker - iterate through all workers of a worker_pool
  * @worker: iteration cursor
@@ -1739,16 +1736,17 @@ static struct worker *create_worker(struct worker_pool *pool)
 	set_user_nice(worker->task, pool->attrs->nice);
 	kthread_bind_mask(worker->task, pool->attrs->cpumask);
 
- 	/* prevent userland from meddling with cpumask of workqueue workers */
- 	worker->task->flags |= PF_NO_SETAFFINITY;
+	/* prevent userland from meddling with cpumask of workqueue workers */
+	worker->task->flags |= PF_NO_SETAFFINITY;
 
+	/* successful, attach the worker to the pool */
 	worker_attach_to_pool(worker, pool);
 
 	return worker;
+
 fail:
-	if (id >= 0) {
+	if (id >= 0)
 		ida_simple_remove(&pool->worker_ida, id);
-	}
 	kfree(worker);
 	return NULL;
 }
@@ -1804,7 +1802,6 @@ static int create_and_start_worker(struct worker_pool *pool)
 static void destroy_worker(struct worker *worker)
 {
 	struct worker_pool *pool = worker->pool;
-	int id = worker->id;
 
 	lockdep_assert_held(&pool->lock);
 
@@ -1869,8 +1866,8 @@ static void pool_mayday_timeout(unsigned long __pool)
 	struct worker_pool *pool = (void *)__pool;
 	struct work_struct *work;
 
-	spin_lock_irq(&pool->lock);
-	spin_lock(&wq_mayday_lock);		/* for wq->maydays */
+	spin_lock_irq(&wq_mayday_lock);		/* for wq->maydays */
+	spin_lock(&pool->lock);
 
 	if (need_to_create_worker(pool)) {
 		/*
@@ -1883,8 +1880,8 @@ static void pool_mayday_timeout(unsigned long __pool)
 			send_mayday(work);
 	}
 
-	spin_unlock(&wq_mayday_lock);
-	spin_unlock_irq(&pool->lock);
+	spin_unlock(&pool->lock);
+	spin_unlock_irq(&wq_mayday_lock);
 
 	mod_timer(&pool->mayday_timer, jiffies + MAYDAY_INTERVAL);
 }
