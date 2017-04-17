@@ -7218,7 +7218,7 @@ static int idle_balance(struct rq *this_rq)
 	if (this_rq->avg_idle < sysctl_sched_migration_cost ||
 	    !this_rq->rd->overload) {
 		rcu_read_lock();
-		sd = rcu_dereference(per_cpu(sd_llc, this_cpu));
+		sd = rcu_dereference_check_sched_domain(this_rq->sd);
 		if (sd)
 			update_next_balance(sd, 0, &next_balance);
 		rcu_read_unlock();
