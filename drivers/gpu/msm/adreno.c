@@ -432,12 +432,6 @@ int adreno_perfcounter_read_group(struct adreno_device *adreno_dev,
 	if (reads == NULL || count == 0 || count > 100)
 		return -EINVAL;
 
-		/* Verify that the group ID is within range */
-		if (list[j].groupid >= counters->group_count) {
-			ret = -EINVAL;
-			goto done;
-		}
-
 	list = kmalloc(sizeof(struct kgsl_perfcounter_read_group) * count,
 			GFP_KERNEL);
 	if (!list)
@@ -451,7 +445,14 @@ int adreno_perfcounter_read_group(struct adreno_device *adreno_dev,
 
 	/* list iterator */
 	for (j = 0; j < count; j++) {
+
 		list[j].value = 0;
+
+		/* Verify that the group ID is within range */
+		if (list[j].groupid >= counters->group_count) {
+			ret = -EINVAL;
+			goto done;
+		}
 
 		group = &(counters->groups[list[j].groupid]);
 
@@ -1170,6 +1171,7 @@ adreno_identify_gpu(struct adreno_device *adreno_dev)
 	adreno_dev->instruction_size = adreno_gpulist[i].instruction_size;
 	adreno_dev->gmem_size = adreno_gpulist[i].gmem_size;
 	adreno_dev->gpulist_index = i;
+
 }
 
 static struct platform_device_id adreno_id_table[] = {
@@ -1765,7 +1767,8 @@ static int adreno_init(struct kgsl_device *device)
 	 */
 	ft_detect_regs[0] = adreno_dev->gpudev->reg_rbbm_status;
 
-	adreno_perfcounter_init(device);
+	if (!adreno_is_a2xx(adreno_dev))
+		adreno_perfcounter_init(device);
 
 	/* Power down the device */
 	kgsl_pwrctrl_disable(device);
@@ -3347,7 +3350,10 @@ struct kgsl_memdesc *adreno_find_ctxtmem(struct kgsl_device *device,
 	struct kgsl_context *context;
 	struct adreno_context *adreno_context = NULL;
 	int next = 0;
+	struct kgsl_memdesc *desc = NULL;
 
+
+	read_lock(&device->context_lock);
 	while (1) {
 		context = idr_get_next(&device->context_idr, &next);
 		if (context == NULL)
@@ -3357,20 +3363,19 @@ struct kgsl_memdesc *adreno_find_ctxtmem(struct kgsl_device *device,
 
 		if (kgsl_mmu_pt_equal(&device->mmu, adreno_context->pagetable,
 					pt_base)) {
-			struct kgsl_memdesc *desc;
-
 			desc = &adreno_context->gpustate;
 			if (kgsl_gpuaddr_in_memdesc(desc, gpuaddr, size))
-				return desc;
+				break;
 
 			desc = &adreno_context->context_gmem_shadow.gmemshadow;
 			if (kgsl_gpuaddr_in_memdesc(desc, gpuaddr, size))
-				return desc;
+				break;
 		}
 		next = next + 1;
+		desc = NULL;
 	}
-
-	return NULL;
+	read_unlock(&device->context_lock);
+	return desc;
 }
 
 struct kgsl_memdesc *adreno_find_region(struct kgsl_device *device,
@@ -3551,7 +3556,6 @@ static unsigned int adreno_check_hw_ts(struct kgsl_device *device,
 		kgsl_sharedmem_writel(&device->memstore,
 				KGSL_MEMSTORE_OFFSET(context_id,
 					ts_cmp_enable), enableflag);
-
 		/* Make sure the memstore write gets posted */
 		wmb();
 
@@ -3659,7 +3663,7 @@ unsigned int adreno_ft_detect(struct kgsl_device *device,
 			&curr_global_ts,
 			KGSL_MEMSTORE_OFFSET(KGSL_MEMSTORE_GLOBAL,
 			eoptimestamp));
-	/* Make sure the memstore read has posted */
+
 	mb();
 
 	if (curr_global_ts == prev_global_ts) {
@@ -3819,13 +3823,10 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 	struct adreno_context *adreno_ctx = context ? context->devctxt : NULL;
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	unsigned int context_id = _get_context_id(context);
-	unsigned int prev_reg_val[FT_DETECT_REGS_COUNT];
 	unsigned int time_elapsed = 0;
 	unsigned int wait;
 	int ts_compare = 1;
 	int io, ret = -ETIMEDOUT;
-
-	/* Get out early if the context has already been destroyed */
 
 	if (context_id == KGSL_CONTEXT_INVALID) {
 		KGSL_DRV_WARN(device, "context was detached");
@@ -3846,10 +3847,6 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 		/* Reset the invalid timestamp flag on a valid wait */
 		context->wait_on_invalid_ts = false;
 	}
-
-
-	/* Clear the registers used for hang detection */
-	memset(prev_reg_val, 0, sizeof(prev_reg_val));
 
 	/*
 	 * On the first time through the loop only wait 100ms.
