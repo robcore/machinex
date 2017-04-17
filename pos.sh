@@ -35,6 +35,4 @@ patch -p1 -R < "/root/machinex/patches/0028-workqueue-remove-useless-WARN_ON_ONC
 patch -p1 -R < "/root/machinex/patches/0027-turn-off-arm-mpu-and-msm-cache-erp.patch"
 patch -p1 -R < "/root/machinex/patches/0026-workqueue-remove-the-empty-check-in-too_many_workers.patch"
 patch -p1 -R < "/root/machinex/patches/0025-workqueue-use-pool-cpu-0-to-stand-for-an-unbound-poo.patch"
-patch -p1 -R < "/root/machinex/patches/0024-sched-wait-Provide-infrastructure-to-deal-with-neste.patch"
-patch -p1 -R < "/root/machinex/patches/0023-SCHED-add-some-wait.on_bit.timeout-interfaces.patch"
-patch -p1 -R < "/root/machinex/patches/0022-there-it-is-just-use-init-work-in-place-of-PREPARE-D.patch"
+
