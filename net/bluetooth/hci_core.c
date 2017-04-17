@@ -1525,7 +1525,8 @@ int hci_register_dev(struct hci_dev *hdev)
 
 	write_unlock_bh(&hci_dev_list_lock);
 
-	hdev->workqueue = create_singlethread_workqueue(hdev->name);
+	hdev->workqueue = alloc_workqueue("%s", WQ_HIGHPRI | WQ_UNBOUND |
+					  WQ_MEM_RECLAIM, 1, hdev->name);
 	if (!hdev->workqueue)
 		goto nomem;
 
