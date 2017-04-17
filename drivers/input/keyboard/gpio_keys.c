@@ -404,7 +404,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 	BUG_ON(irq != bdata->irq);
 
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
-		pm_stay_awake(bdata->input->dev.parent);
+		pm_wakeup_event(bdata->input->dev.parent, 0);
 	if (bdata->timer_debounce)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
