@@ -2214,7 +2214,7 @@ int dw_mci_probe(struct dw_mci *host)
 
 	tasklet_init(&host->tasklet, dw_mci_tasklet_func, (unsigned long)host);
 	dw_mci_card_workqueue = alloc_workqueue("dw-mci-card",
-			WQ_MEM_RECLAIM | WQ_NON_REENTRANT, 1);
+			WQ_MEM_RECLAIM, 1);
 	if (!dw_mci_card_workqueue)
 		goto err_dmaunmap;
 	INIT_WORK(&host->card_work, dw_mci_work_routine_card);

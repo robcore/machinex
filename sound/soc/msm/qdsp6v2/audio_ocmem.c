@@ -538,7 +538,7 @@ static int ocmem_audio_client_probe(struct platform_device *pdev)
 	pr_debug("%s\n", __func__);
 	audio_ocmem_lcl.audio_ocmem_workqueue =
 		alloc_workqueue("ocmem_audio_client_driver_audio",
-					WQ_NON_REENTRANT, 0);
+					WQ_MEM_RECLAIM, 0);
 	if (!audio_ocmem_lcl.audio_ocmem_workqueue) {
 		pr_err("%s: Failed to create ocmem audio work queue\n",
 			__func__);
@@ -547,7 +547,7 @@ static int ocmem_audio_client_probe(struct platform_device *pdev)
 
 	audio_ocmem_lcl.voice_ocmem_workqueue =
 		alloc_workqueue("ocmem_audio_client_driver_voice",
-					WQ_NON_REENTRANT, 0);
+					WQ_MEM_RECLAIM, 0);
 	if (!audio_ocmem_lcl.voice_ocmem_workqueue) {
 		pr_err("%s: Failed to create ocmem voice work queue\n",
 			__func__);

@@ -190,7 +190,7 @@ int ceph_msgr_init(void)
 	zero_page = ZERO_PAGE(0);
 	page_cache_get(zero_page);
 
-	ceph_msgr_wq = alloc_workqueue("ceph-msgr", WQ_NON_REENTRANT, 0);
+	ceph_msgr_wq = alloc_workqueue("ceph-msgr", WQ_MEM_RECLAIM | WQ_UNBOUND, 0);
 	if (ceph_msgr_wq)
 		return 0;
 
