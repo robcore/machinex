@@ -2721,7 +2721,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	spin_lock_init(&dev->lock);
 	wake_lock_init(&dev->wlock, WAKE_LOCK_SUSPEND, "msm_otg");
 
-	dev->wq = alloc_workqueue("k_otg", WQ_NON_REENTRANT, 0);
+	dev->wq = alloc_workqueue("k_otg", WQ_UNBOUND, 0);
 	if (!dev->wq) {
 		ret = -ENOMEM;
 		goto free_wlock;

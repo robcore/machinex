@@ -2375,7 +2375,7 @@ static int hdmi_probe(struct platform_device *pdev)
 
 	/* create workqueue and hotplug work */
 	hdata->wq = alloc_workqueue("exynos-drm-hdmi",
-			WQ_UNBOUND | WQ_NON_REENTRANT, 1);
+			WQ_UNBOUND, 1);
 	if (hdata->wq == NULL) {
 		DRM_ERROR("Failed to create workqueue.\n");
 		ret = -ENOMEM;

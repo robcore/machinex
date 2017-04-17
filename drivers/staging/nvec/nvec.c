@@ -797,7 +797,7 @@ static int tegra_nvec_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&nvec->tx_data);
 	INIT_WORK(&nvec->rx_work, nvec_dispatch);
 	INIT_WORK(&nvec->tx_work, nvec_request_master);
-	nvec->wq = alloc_workqueue("nvec", WQ_NON_REENTRANT, 2);
+	nvec->wq = alloc_workqueue("nvec", WQ_UNBOUND, 2);
 
 	err = gpio_request_one(nvec->gpio, GPIOF_OUT_INIT_HIGH, "nvec gpio");
 	if (err < 0) {
