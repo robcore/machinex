@@ -999,8 +999,10 @@ static int gpio_keys_resume(struct device *dev)
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->n_buttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
-			if (bdata->button->wakeup)
+			if (bdata->button->wakeup) {
+				pm_wakeup_event(bdata->input->dev.parent, 0);
 				disable_irq_wake(bdata->irq);
+			}
 		}
 	} else {
 		mutex_lock(&input->mutex);
