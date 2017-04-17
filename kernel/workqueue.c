@@ -278,10 +278,10 @@ static int wq_numa_tbl_len;		/* highest possible NUMA node id + 1 */
 static cpumask_var_t *wq_numa_possible_cpumask;
 					/* possible CPUs of each node */
 
-static bool wq_disable_numa;
+static bool wq_disable_numa = true;
 module_param_named(disable_numa, wq_disable_numa, bool, 0444);
 
-static bool wq_numa_enabled;		/* unbound NUMA affinity enabled */
+static bool wq_numa_enabled = false;		/* unbound NUMA affinity enabled */
 
 /* buf for wq_update_unbound_numa_attrs(), protected by CPU hotplug exclusion */
 static struct workqueue_attrs *wq_update_unbound_numa_attrs_buf;
