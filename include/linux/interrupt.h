@@ -228,10 +228,21 @@ extern void enable_percpu_irq(unsigned int irq, unsigned int type);
 extern void irq_wake_thread(unsigned int irq, void *dev_id);
 
 /* The following three functions are for the core kernel use only. */
+#ifdef CONFIG_GENERIC_HARDIRQS
 extern void suspend_device_irqs(void);
 extern void resume_device_irqs(void);
+#ifdef CONFIG_PM_SLEEP
+extern int check_wakeup_irqs(void);
+#else
+static inline int check_wakeup_irqs(void) { return 0; }
+#endif
+#else
+static inline void suspend_device_irqs(void) { };
+static inline void resume_device_irqs(void) { };
+static inline int check_wakeup_irqs(void) { return 0; }
+#endif
 
-#ifdef CONFIG_SMP
+#if defined(CONFIG_SMP) && defined(CONFIG_GENERIC_HARDIRQS)
 
 extern cpumask_var_t irq_default_affinity;
 
