@@ -2582,7 +2582,7 @@ static void mmc_clk_scale_work(struct work_struct *work)
 
 	if (!mmc_try_claim_host(host)) {
 		/* retry after a timer tick */
-		queue_delayed_work(system_nrt_wq, &host->clk_scaling.work, 1);
+		queue_delayed_work(system_wq, &host->clk_scaling.work, 1);
 		goto out;
 	}
 
@@ -2737,7 +2737,7 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq)
 			 * work, so delay atleast one timer tick to release
 			 * host and re-claim while scaling down the clocks.
 			 */
-			queue_delayed_work(system_nrt_wq,
+			queue_delayed_work(system_wq,
 					&host->clk_scaling.work, 1);
 			goto no_reset_stats;
 		}

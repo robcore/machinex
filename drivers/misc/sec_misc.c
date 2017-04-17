@@ -28,7 +28,6 @@
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/firmware.h>
-#include <linux/wakelock.h>
 #include <linux/blkdev.h>
 #include <mach/gpio.h>
 #include <linux/sec_param.h>
@@ -38,8 +37,6 @@
 #define MOVINAND_CHECKSUM
 #define RORY_CONTROL
 #include <linux/sec_class.h>
-
-static struct wake_lock sec_misc_wake_lock;
 
 #ifdef MOVINAND_CHECKSUM
 unsigned char emmc_checksum_done;
@@ -245,6 +242,22 @@ static ssize_t drop_caches_store
 	(struct device *dev, struct device_attribute *attr,\
 		const char *buf, size_t size)
 {
+	return size;
+}
+static DEVICE_ATTR(drop_caches, S_IRUGO | S_IWUSR | S_IWGRP,\
+			drop_caches_show, drop_caches_store);
+
+static ssize_t mx_drop_caches_show
+	(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret = 0;
+	return snprintf(buf, (int)sizeof(buf), "%d\n", ret);
+}
+
+static ssize_t mx_drop_caches_store
+	(struct device *dev, struct device_attribute *attr,\
+		const char *buf, size_t size)
+{
 	struct sysinfo i;
 
 	if (strlen(buf) > 2)
@@ -263,9 +276,8 @@ static ssize_t drop_caches_store
 out:
 	return size;
 }
-
-static DEVICE_ATTR(drop_caches, S_IRUGO | S_IWUSR | S_IWGRP,\
-			drop_caches_show, drop_caches_store);
+static DEVICE_ATTR(mx_drop_caches, 0644,\
+			mx_drop_caches_show, mx_drop_caches_store);
 /*
  * End Drop Caches
  */
@@ -283,6 +295,7 @@ static struct device_attribute *sec_misc_attrs[] = {
 	&dev_attr_slideCount,
 #endif
 	&dev_attr_drop_caches,
+	&dev_attr_mx_drop_caches,
 };
 
 static int __init sec_misc_init(void)
@@ -312,8 +325,6 @@ static int __init sec_misc_init(void)
 		}
 	}
 
-	wake_lock_init(&sec_misc_wake_lock, WAKE_LOCK_SUSPEND, "sec_misc");
-
 	return 0;
 
 failed_create_device_file:
@@ -329,7 +340,6 @@ failed_register_misc:
 
 static void __exit sec_misc_exit(void)
 {
-	wake_lock_destroy(&sec_misc_wake_lock);
 }
 
 module_init(sec_misc_init);
