@@ -1381,6 +1381,7 @@ static inline void inc_nr_running(struct rq *rq)
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 #endif
+	unsigned long count;
 	sched_update_nr_prod(cpu_of(rq), count, true);
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
@@ -1412,6 +1413,7 @@ static inline void dec_nr_running(struct rq *rq)
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 #endif
+	unsigned long count;
 	sched_update_nr_prod(cpu_of(rq), count, false);
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
@@ -1424,7 +1426,7 @@ static inline void dec_nr_running(struct rq *rq)
 #endif
 }
 
-static inline void add_nr_running(struct rq *rq, unsigned count)
+static inline void add_nr_running(struct rq *rq, unsigned long count)
 {
 	unsigned prev_nr = rq->nr_running;
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
@@ -1463,7 +1465,7 @@ static inline void add_nr_running(struct rq *rq, unsigned count)
 	}
 }
 
-static inline void sub_nr_running(struct rq *rq, unsigned count)
+static inline void sub_nr_running(struct rq *rq, unsigned long count)
 {
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
