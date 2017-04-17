@@ -557,7 +557,7 @@ static void bdi_wb_shutdown(struct backing_dev_info *bdi)
 	/*
 	 * If setup is pending, wait for that to complete first
 	 */
-	wait_on_bit_lock(&bdi->state, BDI_pending,
+	wait_on_bit(&bdi->state, BDI_pending,
 			TASK_UNINTERRUPTIBLE);
 
 	/*

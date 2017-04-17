@@ -777,6 +777,13 @@ static bool too_many_workers(struct worker_pool *pool)
 	int nr_idle = pool->nr_idle + managing; /* manager is considered idle */
 	int nr_busy = pool->nr_workers - nr_idle;
 
+	/*
+	 * nr_idle and idle_list may disagree if idle rebinding is in
+	 * progress.  Never return %true if idle_list is empty.
+	 */
+	if (list_empty(&pool->idle_list))
+		return false;
+
 	return nr_idle > 2 && (nr_idle - 2) * MAX_IDLE_WORKERS_RATIO >= nr_busy;
 }
 
@@ -862,7 +869,7 @@ struct task_struct *wq_worker_sleeping(struct task_struct *task, int cpu)
 	pool = worker->pool;
 
 	/* this can only happen on the local cpu */
-	if (WARN_ON_ONCE(cpu != raw_smp_processor_id() || pool->cpu != cpu))
+	if (WARN_ON_ONCE(cpu != raw_smp_processor_id()))
 		return NULL;
 
 	/*
@@ -1682,9 +1689,6 @@ static void worker_detach_from_pool(struct worker *worker,
 		detach_completion = pool->detach_completion;
 	mutex_unlock(&pool->attach_mutex);
 
-	/* clear leftover flags without pool->lock after it is detached */
-	worker->flags &= ~(WORKER_UNBOUND | WORKER_REBOUND);
-
 	if (detach_completion)
 		complete(detach_completion);
 }
@@ -2160,7 +2164,6 @@ static int worker_thread(void *__worker)
 	worker->task->flags |= PF_WQ_WORKER;
 woke_up:
 	spin_lock_irq(&pool->lock);
-	pool->flags &= ~POOL_DISASSOCIATED;
 
 	/* am I supposed to die? */
 	if (unlikely(worker->flags & WORKER_DIE)) {
@@ -3232,7 +3235,6 @@ int workqueue_sysfs_register(struct workqueue_struct *wq)
 		}
 	}
 
-	dev_set_uevent_suppress(&wq_dev->dev, false);
 	kobject_uevent(&wq_dev->dev.kobj, KOBJ_ADD);
 	return 0;
 }
@@ -3499,7 +3501,7 @@ static void put_unbound_pool(struct worker_pool *pool)
 		return;
 
 	/* sanity checks */
-	if (WARN_ON(!(pool->cpu < 0)) ||
+	if (WARN_ON(!(pool->flags & POOL_DISASSOCIATED)) ||
 	    WARN_ON(!list_empty(&pool->worklist)))
 		return;
 
@@ -4513,6 +4515,8 @@ static void wq_unbind_fn(struct work_struct *work)
 	struct hlist_node *pos;
 
 	for_each_cpu_worker_pool(pool, cpu) {
+		WARN_ON_ONCE(cpu != smp_processor_id());
+
 		mutex_lock(&pool->attach_mutex);
 		spin_lock_irq(&pool->lock);
 
@@ -4583,7 +4587,6 @@ static void rebind_workers(struct worker_pool *pool)
 						  pool->attrs->cpumask) < 0);
 
 	spin_lock_irq(&pool->lock);
-	pool->flags &= ~POOL_DISASSOCIATED;
 
 	/*
 	 * XXX: CPU hotplug notifiers are weird and can call DOWN_FAILED
@@ -4697,10 +4700,15 @@ static int workqueue_cpu_up_callback(struct notifier_block *nfb,
 		for_each_pool(pool, pi) {
 			mutex_lock(&pool->attach_mutex);
 
-			if (pool->cpu == cpu)
+			if (pool->cpu == cpu) {
+				spin_lock_irq(&pool->lock);
+				pool->flags &= ~POOL_DISASSOCIATED;
+				spin_unlock_irq(&pool->lock);
+
 				rebind_workers(pool);
-			else if (pool->cpu < 0)
+			} else if (pool->cpu < 0) {
 				restore_unbound_workers_cpumask(pool, cpu);
+			}
 
 			mutex_unlock(&pool->attach_mutex);
 		}
