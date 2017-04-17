@@ -1,7 +1,7 @@
 #ifndef LINUX_MMC_IOCTL_H
 #define LINUX_MMC_IOCTL_H
 
-#include <uapi/linux/mmc/ioctl.h>
+#include <linux/types.h>
 
 struct mmc_ioc_cmd {
 	/* Implies direction of data.  true = write, false = read */
