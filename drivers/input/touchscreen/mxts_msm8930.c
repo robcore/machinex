@@ -12,7 +12,7 @@
  *  GNU General Public License for more details.
  *  2013_0523_01
  */
-
+#undef CONFIG_POWERSUSPEND
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/input.h>

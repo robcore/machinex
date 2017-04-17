@@ -13,7 +13,7 @@
  * option) any later version.
  *
  */
-
+#undef CONFIG_POWERSUSPEND
 #define DEBUG
 /* #define VERBOSE_DEBUG */
 /* #define SEC_TSP_DEBUG */

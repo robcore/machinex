@@ -140,7 +140,7 @@ struct cypress_touchkey_info {
 
 };
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 static void cypress_touchkey_power_suspend(struct power_suspend *h);
 static void cypress_touchkey_power_resume(struct power_suspend *h);
 #endif
@@ -1630,7 +1630,7 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 		goto err_req_irq;
 	}
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 	info->power_suspend.suspend = cypress_touchkey_power_suspend;
 	info->power_suspend.resume = cypress_touchkey_power_resume;
 	register_power_suspend(&info->power_suspend);
@@ -1960,7 +1960,7 @@ static int cypress_touchkey_remove(struct i2c_client *client)
 	return 0;
 }
 
-#if defined(CONFIG_PM) || defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_PM)
 static int cypress_touchkey_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -2039,7 +2039,7 @@ static int cypress_touchkey_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 static void cypress_touchkey_power_suspend(struct power_suspend *h)
 {
 	struct cypress_touchkey_info *info;
@@ -2061,7 +2061,7 @@ static const struct i2c_device_id cypress_touchkey_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, cypress_touchkey_id);
 
-#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_PM)
 static const struct dev_pm_ops cypress_touchkey_pm_ops = {
 	.suspend	= cypress_touchkey_suspend,
 	.resume		= cypress_touchkey_resume,
@@ -2073,7 +2073,7 @@ struct i2c_driver cypress_touchkey_driver = {
 	.remove = cypress_touchkey_remove,
 	.driver = {
 		.name = "cypress_touchkey",
-#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_PM)
 		.pm	= &cypress_touchkey_pm_ops,
 #endif
 		   },

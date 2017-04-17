@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  */
-
+#undef CONFIG_POWERSUSPEND
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/slab.h>

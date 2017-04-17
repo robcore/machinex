@@ -26,6 +26,8 @@
 #include <linux/miscdevice.h>
 #include <linux/interrupt.h>
 
+#undef CONFIG_POWERSUSPEND
+
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
