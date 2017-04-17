@@ -42,8 +42,7 @@ static atomic_t domain_nums = ATOMIC_INIT(-1);
 
 int msm_use_iommu()
 {
-	/* Kill use of the iommu by these clients for now. */
-	return 0;
+	return iommu_present(&platform_bus_type);
 }
 
 int msm_iommu_map_extra(struct iommu_domain *domain,
