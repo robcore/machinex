@@ -642,6 +642,16 @@ void *idr_get_next(struct idr *idp, int *nextidp)
 }
 EXPORT_SYMBOL(idr_get_next);
 
+static int idr_has_entry(int id, void *p, void *data)
+{
+	return 1;
+}
+
+bool idr_is_empty(struct idr *idp)
+{
+	return !idr_for_each(idp, idr_has_entry, NULL);
+}
+EXPORT_SYMBOL(idr_is_empty);
 
 /**
  * idr_replace - replace pointer for given id
