@@ -4581,6 +4581,7 @@ static void rebind_workers(struct worker_pool *pool)
 						  pool->attrs->cpumask) < 0);
 
 	spin_lock_irq(&pool->lock);
+	pool->flags &= ~POOL_DISASSOCIATED;
 
 	/*
 	 * XXX: CPU hotplug notifiers are weird and can call DOWN_FAILED
@@ -4694,15 +4695,10 @@ static int workqueue_cpu_up_callback(struct notifier_block *nfb,
 		for_each_pool(pool, pi) {
 			mutex_lock(&pool->attach_mutex);
 
-			if (pool->cpu == cpu) {
-				spin_lock_irq(&pool->lock);
-				pool->flags &= ~POOL_DISASSOCIATED;
-				spin_unlock_irq(&pool->lock);
-
+			if (pool->cpu == cpu)
 				rebind_workers(pool);
-			} else if (pool->cpu < 0) {
+			else if (pool->cpu < 0)
 				restore_unbound_workers_cpumask(pool, cpu);
-			}
 
 			mutex_unlock(&pool->attach_mutex);
 		}
