@@ -63,6 +63,7 @@ config ARM
 	select GENERIC_KERNEL_THREAD
 	select GENERIC_KERNEL_EXECVE
 	select HAVE_CONTEXT_TRACKING
+	select ARM_MPU
 	help
 	  The ARM series is a line of low-power-consumption RISC chip designs
 	  licensed by ARM Ltd and targeted at embedded applications and
@@ -70,6 +71,9 @@ config ARM
 	  manufactured, but legacy ARM-based PC hardware remains popular in
 	  Europe.  There is an ARM Linux project with a web page at
 	  <http://www.arm.linux.org.uk/>.
+
+config ARM_MPU
+	bool
 
 config ARM_HAS_SG_CHAIN
 	bool
