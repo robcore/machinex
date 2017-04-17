@@ -354,6 +354,13 @@ static bool irq_check_poll(struct irq_desc *desc)
 	return irq_wait_for_poll(desc);
 }
 
+static bool irq_may_run(struct irq_desc *desc)
+{
+	if (!irqd_irq_inprogress(&desc->irq_data))
+		return true;
+	return irq_check_poll(desc);
+}
+
 /**
  *	handle_simple_irq - Simple and software-decoded IRQs.
  *	@irq:	the interrupt number
@@ -373,9 +380,8 @@ handle_simple_irq(unsigned int irq, struct irq_desc *desc)
 
 	raw_spin_lock(&desc->lock);
 
-	if (unlikely(irqd_irq_inprogress(&desc->irq_data)))
-		if (!irq_check_poll(desc))
-			goto out_unlock;
+	if (!irq_may_run(desc))
+		goto out_unlock;
 
 	desc->istate &= ~(IRQS_REPLAY | IRQS_WAITING);
 	kstat_incr_irqs_this_cpu(irq, desc);
@@ -431,9 +437,8 @@ handle_level_irq(unsigned int irq, struct irq_desc *desc)
 	raw_spin_lock(&desc->lock);
 	mask_ack_irq(desc);
 
-	if (unlikely(irqd_irq_inprogress(&desc->irq_data)))
-		if (!irq_check_poll(desc))
-			goto out_unlock;
+	if (!irq_may_run(desc))
+		goto out_unlock;
 
 	desc->istate &= ~(IRQS_REPLAY | IRQS_WAITING);
 	kstat_incr_irqs_this_cpu(irq, desc);
@@ -508,9 +513,8 @@ handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
 
 	raw_spin_lock(&desc->lock);
 
-	if (unlikely(irqd_irq_inprogress(&desc->irq_data)))
-		if (!irq_check_poll(desc))
-			goto out;
+	if (!irq_may_run(desc))
+		goto out;
 
 	desc->istate &= ~(IRQS_REPLAY | IRQS_WAITING);
 	kstat_incr_irqs_this_cpu(irq, desc);
@@ -570,16 +574,10 @@ handle_edge_irq(unsigned int irq, struct irq_desc *desc)
 
 	desc->istate &= ~(IRQS_REPLAY | IRQS_WAITING);
 
-	/*
-	 * If the handler is currently running, mark it pending,
-	 * handle the necessary masking and go out
-	 */
-	if (unlikely(irqd_irq_inprogress(&desc->irq_data))) {
-		if (!irq_check_poll(desc)) {
-			desc->istate |= IRQS_PENDING;
-			mask_ack_irq(desc);
-			goto out_unlock;
-		}
+	if (!irq_may_run(desc)) {
+		desc->istate |= IRQS_PENDING;
+		mask_ack_irq(desc);
+		goto out_unlock;
 	}
 
 	/*
@@ -644,15 +642,9 @@ bool handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc)
 
 	desc->istate &= ~(IRQS_REPLAY | IRQS_WAITING);
 
-	/*
-	 * If the handler is currently running, mark it pending,
-	 * handle the necessary masking and go out
-	 */
-	if (unlikely(irqd_irq_inprogress(&desc->irq_data))) {
-		if (!irq_check_poll(desc)) {
-			desc->istate |= IRQS_PENDING;
-			goto out_eoi;
-		}
+	if (!irq_may_run(desc)) {
+		desc->istate |= IRQS_PENDING;
+		goto out_eoi;
 	}
 
 	/*
