@@ -2160,6 +2160,7 @@ static int worker_thread(void *__worker)
 	worker->task->flags |= PF_WQ_WORKER;
 woke_up:
 	spin_lock_irq(&pool->lock);
+	pool->flags &= ~POOL_DISASSOCIATED;
 
 	/* am I supposed to die? */
 	if (unlikely(worker->flags & WORKER_DIE)) {
