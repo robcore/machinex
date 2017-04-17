@@ -48,7 +48,6 @@
 #include <asm/mpu.h>
 #include <asm/virt.h>
 #include <asm/mach/arch.h>
-#include <asm/mpu.h>
 
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
