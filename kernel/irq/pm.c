@@ -56,7 +56,7 @@ static void suspend_irq(struct irq_desc *desc, int irq)
 	unsigned int no_suspend, flags;
 
 	if (!action)
-		return false;
+		return;
 
 	no_suspend = IRQF_NO_SUSPEND;
 	flags = 0;
@@ -67,9 +67,6 @@ static void suspend_irq(struct irq_desc *desc, int irq)
 	} while (action);
 	if (no_suspend)
 		return;
-
-	if (irqd_is_wakeup_set(&desc->irq_data))
-		irqd_set(&desc->irq_data, IRQD_WAKEUP_ARMED);
 
 	desc->istate |= IRQS_SUSPENDED;
 
@@ -95,15 +92,6 @@ static void suspend_irq(struct irq_desc *desc, int irq)
 		return;
 	}
 	__disable_irq(desc, irq);
-
-	/*
-	 * Hardware which has no wakeup source configuration facility
-	 * requires that the non wakeup interrupts are masked at the
-	 * chip level. The chip implementation indicates that with
-	 * IRQCHIP_MASK_ON_SUSPEND.
-	 */
-	if (irq_desc_get_chip(desc)->flags & IRQCHIP_MASK_ON_SUSPEND)
-		mask_irq(desc);
 }
 
 /**
@@ -121,21 +109,20 @@ void suspend_device_irqs(void)
 
 	for_each_irq_desc(irq, desc) {
 		unsigned long flags;
-		bool sync;
 
 		raw_spin_lock_irqsave(&desc->lock, flags);
-		sync = suspend_irq(desc, irq);
+		suspend_irq(desc, irq);
 		raw_spin_unlock_irqrestore(&desc->lock, flags);
 	}
 
-	if (sync)
-		synchronize_irq(irq);
+	for_each_irq_desc(irq, desc)
+		if (desc->istate & IRQS_SUSPENDED)
+			synchronize_irq(irq);
 }
 EXPORT_SYMBOL_GPL(suspend_device_irqs);
 
 static void resume_irq(struct irq_desc *desc, int irq)
 {
-	irqd_clear(&desc->irq_data, IRQD_WAKEUP_ARMED);
 	if (desc->istate & IRQS_SUSPENDED) {
 		desc->istate &= ~IRQS_SUSPENDED;
 		if (desc->action_suspended) {
@@ -244,7 +231,19 @@ int check_wakeup_irqs(void)
 					desc->action->name : "");
 				return -EBUSY;
 			}
+			continue;
 		}
+		/*
+		 * Check the non wakeup interrupts whether they need
+		 * to be masked before finally going into suspend
+		 * state. That's for hardware which has no wakeup
+		 * source configuration facility. The chip
+		 * implementation indicates that with
+		 * IRQCHIP_MASK_ON_SUSPEND.
+		 */
+		if (desc->istate & IRQS_SUSPENDED &&
+		    irq_desc_get_chip(desc)->flags & IRQCHIP_MASK_ON_SUSPEND)
+			mask_irq(desc);
 	}
 
 	return 0;
