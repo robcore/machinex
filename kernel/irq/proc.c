@@ -47,9 +47,10 @@ static int show_irq_affinity(int type, struct seq_file *m, void *v)
 		mask = desc->pending_mask;
 #endif
 	if (type)
-		seq_printf(m, "%*pbl\n", cpumask_pr_args(mask));
+		seq_cpumask_list(m, mask);
 	else
-		seq_printf(m, "%*pb\n", cpumask_pr_args(mask));
+		seq_cpumask(m, mask);
+	seq_putc(m, '\n');
 	return 0;
 }
 
@@ -67,7 +68,8 @@ static int irq_affinity_hint_proc_show(struct seq_file *m, void *v)
 		cpumask_copy(mask, desc->affinity_hint);
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 
-	seq_printf(m, "%*pb\n", cpumask_pr_args(mask));
+	seq_cpumask(m, mask);
+	seq_putc(m, '\n');
 	free_cpumask_var(mask);
 
 	return 0;
@@ -185,7 +187,8 @@ static const struct file_operations irq_affinity_list_proc_fops = {
 
 static int default_affinity_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, "%*pb\n", cpumask_pr_args(irq_default_affinity));
+	seq_cpumask(m, irq_default_affinity);
+	seq_putc(m, '\n');
 	return 0;
 }
 
