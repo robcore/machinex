@@ -1,0 +1,35 @@
+From dfbcbf42dd07b649bb02b1558e2c7150c035b4dc Mon Sep 17 00:00:00 2001
+From: Tejun Heo <tj@kernel.org>
+Date: Fri, 13 Feb 2015 14:37:37 -0800
+Subject: [PATCH] workqueue: use %*pb[l] to format bitmaps including cpumasks
+ and nodemasks
+
+printk and friends can now format bitmaps using '%*pb[l]'.  cpumask
+and nodemask also provide cpumask_pr_args() and nodemask_pr_args()
+respectively which can be used to generate the two printf arguments
+necessary to format the specified cpu/nodemask.
+
+Signed-off-by: Tejun Heo <tj@kernel.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ kernel/workqueue.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/kernel/workqueue.c b/kernel/workqueue.c
+index beeeac9..f288493 100644
+--- a/kernel/workqueue.c
++++ b/kernel/workqueue.c
+@@ -3083,10 +3083,9 @@ static ssize_t wq_cpumask_show(struct device *dev,
+ 	int written;
+ 
+ 	mutex_lock(&wq->mutex);
+-	written = cpumask_scnprintf(buf, PAGE_SIZE, wq->unbound_attrs->cpumask);
++	written = scnprintf(buf, PAGE_SIZE, "%*pb\n",
++			    cpumask_pr_args(wq->unbound_attrs->cpumask));
+ 	mutex_unlock(&wq->mutex);
+-
+-	written += scnprintf(buf + written, PAGE_SIZE - written, "\n");
+ 	return written;
+ }
+ 
