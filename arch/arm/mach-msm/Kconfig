@@ -245,6 +245,7 @@ config ARCH_APQ8064
 	select USE_USER_ACCESSIBLE_TIMERS
 	select ARM_USE_USER_ACCESSIBLE_TIMERS
 	select MSM_USE_USER_ACCESSIBLE_TIMERS
+	select GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
 
 config ARCH_MSM8974
 	bool "MSM8974"
@@ -816,7 +817,7 @@ config MACH_MSM8X60_DRAGON
 	default n
 	bool "MSM8x60 DRAGON"
 	help
-	  Support for the Qualcomm MSM8x60 Dragon board.
+	  Support for the Qualcomm MSM8x60 Dragon board.CONFIG_GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
 
 config MACH_MSM8960_CDP
 	depends on ARCH_MSM8960
