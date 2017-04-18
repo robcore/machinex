@@ -192,7 +192,7 @@ static inline struct msm_rpmrs_limits *msm_rpmrs_lowest_limits(
 	return NULL;
 }
 
-static inline int msm_rpmrs_enter_sleep(uint64_t sclk_count,
+static inline int msm_rpmrs_enter_sleep(uint32_t sclk_count,
 	struct msm_rpmrs_limits *limits, bool from_idle, bool notify_rpm)
 {
 	return -ENODEV;

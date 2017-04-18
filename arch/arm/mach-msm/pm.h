@@ -88,7 +88,7 @@ struct msm_pm_sleep_ops {
 	void *(*lowest_limits)(bool from_idle,
 			enum msm_pm_sleep_mode sleep_mode,
 			struct msm_pm_time_params *time_param, uint32_t *power);
-	int (*enter_sleep)(uint64_t sclk_count, void *limits,
+	int (*enter_sleep)(uint32_t sclk_count, void *limits,
 			bool from_idle, bool notify_rpm);
 	void (*exit_sleep)(void *limits, bool from_idle,
 			bool notify_rpm, bool collapsed);

@@ -660,7 +660,7 @@ bool msm_lpm_level_beyond_limit(struct msm_rpmrs_limits *limits)
 	return beyond_limit;
 }
 
-int msm_lpmrs_enter_sleep(uint64_t sclk_count, struct msm_rpmrs_limits *limits,
+int msm_lpmrs_enter_sleep(uint32_t sclk_count, struct msm_rpmrs_limits *limits,
 				bool from_idle, bool notify_rpm)
 {
 	int ret = 0;
