@@ -23,7 +23,6 @@
 #include <linux/errno.h>
 #include <linux/topology.h>
 #include <linux/wait.h>
-#include <linux/io.h>
 
 #include <asm/irq.h>
 #include <asm/ptrace.h>
@@ -78,7 +77,6 @@ typedef	void (*irq_preflow_handler_t)(struct irq_data *data);
  * IRQ_IS_POLLED		- Always polled by another interrupt. Exclude
  *				  it from the spurious interrupt detection
  *				  mechanism and from core side polling.
- * IRQ_DISABLE_UNLAZY		- Disable lazy irq disable
  */
 enum {
 	IRQ_TYPE_NONE		= 0x00000000,
@@ -104,14 +102,13 @@ enum {
 	IRQ_NOTHREAD		= (1 << 16),
 	IRQ_PER_CPU_DEVID	= (1 << 17),
 	IRQ_IS_POLLED		= (1 << 18),
-	IRQ_DISABLE_UNLAZY	= (1 << 19),
 };
 
 #define IRQF_MODIFY_MASK	\
 	(IRQ_TYPE_SENSE_MASK | IRQ_NOPROBE | IRQ_NOREQUEST | \
 	 IRQ_NOAUTOEN | IRQ_MOVE_PCNTXT | IRQ_LEVEL | IRQ_NO_BALANCING | \
 	 IRQ_PER_CPU | IRQ_NESTED_THREAD | IRQ_NOTHREAD | IRQ_PER_CPU_DEVID | \
-	 IRQ_IS_POLLED | IRQ_DISABLE_UNLAZY)
+	 IRQ_IS_POLLED)
 
 #define IRQ_NO_BALANCING_MASK	(IRQ_PER_CPU | IRQ_NO_BALANCING)
 
@@ -473,11 +470,6 @@ extern int irq_chip_set_affinity_parent(struct irq_data *data,
 					bool force);
 #endif
 
-#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
-extern void irq_chip_ack_parent(struct irq_data *data);
-extern int irq_chip_retrigger_hierarchy(struct irq_data *data);
-#endif
-
 /* Handling of unhandled and spurious interrupts: */
 extern void note_interrupt(unsigned int irq, struct irq_desc *desc,
 			   irqreturn_t action_ret);
@@ -684,6 +676,13 @@ static inline void irq_free_hwirq(unsigned int irq)
 }
 int arch_setup_hwirq(unsigned int irq, int node);
 void arch_teardown_hwirq(unsigned int irq);
+#endif
+
+#ifndef irq_reg_writel
+# define irq_reg_writel(val, addr)	writel(val, addr)
+#endif
+#ifndef irq_reg_readl
+# define irq_reg_readl(addr)		readl(addr)
 #endif
 
 /**
