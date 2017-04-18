@@ -1513,10 +1513,11 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	dpm_wd_clear(&wd);
 
  Complete:
+	complete_all(&dev->power.completion);
 	if (error)
 		async_error = error;
 
-	complete_all(&dev->power.completion);
+	//complete_all(&dev->power.completion);
 	return error;
 }
 
@@ -1628,11 +1629,7 @@ static int device_prepare(struct device *dev, pm_message_t state)
 	if (dev->pm_domain) {
 		info = "preparing power domain ";
 		callback = dev->pm_domain->ops.prepare;
-		if (callback)
-			goto End;
-	}
-
-	if (dev->type && dev->type->pm) {
+	} else if (dev->type && dev->type->pm) {
 		info = "preparing type ";
 		callback = dev->type->pm->prepare;
 	} else if (dev->class && dev->class->pm) {
@@ -1648,7 +1645,6 @@ static int device_prepare(struct device *dev, pm_message_t state)
 		callback = dev->driver->pm->prepare;
 	}
 
- End:
 	if (callback)
 		ret = callback(dev);
 
