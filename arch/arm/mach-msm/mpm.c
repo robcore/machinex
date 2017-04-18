@@ -399,7 +399,7 @@ bool msm_mpm_irqs_detectable(bool from_idle)
 					MSM_MPM_DEBUG_NON_DETECTABLE_IRQ;
 	}
 
-	return (bool)bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
+	return (bool)__bitmap_empty(apps_irq_bitmap, MSM_MPM_NR_APPS_IRQS);
 }
 
 bool msm_mpm_gpio_irqs_detectable(bool from_idle)
@@ -438,8 +438,11 @@ void msm_mpm_exit_sleep(bool from_idle)
 
 			if (desc && !irqd_is_level_type(&desc->irq_data)) {
 				irq_set_pending(apps_irq);
-				if (from_idle)
+				if (from_idle) {
+					raw_spin_lock(&desc->lock);
 					check_irq_resend(desc, apps_irq);
+					raw_spin_unlock(&desc->lock);
+				}
 			}
 
 			k = find_next_bit(&pending, 32, k + 1);
