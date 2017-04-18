@@ -53,7 +53,7 @@ module_param(input_boost_ms, uint, 0644);
 static bool hotplug_boost = false;
 module_param(hotplug_boost, bool, 0644);
 
-static bool wakeup_boost = false;
+static bool wakeup_boost = true;
 module_param(wakeup_boost, bool, 0644);
 
 static u64 last_input_time;
