@@ -52,7 +52,7 @@ void irq_pm_remove_action(struct irq_desc *desc, struct irqaction *action)
 
 static void suspend_device_irq(struct irq_desc *desc, int irq)
 {
-	if (!desc->action || (desc->action->flags & IRQF_NO_SUSPEND))
+	if (!desc->action || desc->no_suspend_depth)
 		return;
 
 	desc->istate |= IRQS_SUSPENDED;
@@ -95,11 +95,8 @@ static void resume_irq(struct irq_desc *desc, int irq)
 	if (desc->istate & IRQS_SUSPENDED)
 		goto resume;
 
-	if (!desc->action)
-		return;
-
-	/* Interrupts marked with that flag are force reenabled */
-	if (!(desc->action->flags & IRQF_FORCE_RESUME))
+	/* Force resume the interrupt? */
+	if (!desc->force_resume_depth)
 		return;
 
 	/* Pretend that it got disabled ! */
