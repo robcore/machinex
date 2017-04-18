@@ -454,6 +454,11 @@ extern bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc);
 extern bool handle_bad_irq(unsigned int irq, struct irq_desc *desc);
 extern bool handle_nested_irq(unsigned int irq);
 
+#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
+extern void irq_chip_ack_parent(struct irq_data *data);
+extern int irq_chip_retrigger_hierarchy(struct irq_data *data);
+#endif
+
 /* Handling of unhandled and spurious interrupts: */
 extern void note_interrupt(unsigned int irq, struct irq_desc *desc,
 			   irqreturn_t action_ret);
