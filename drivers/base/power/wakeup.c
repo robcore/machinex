@@ -26,6 +26,9 @@
 
 #include "power.h"
 
+static bool wakeblock = false;
+module_param(wakeblock, bool, 0644);
+
 static bool enable_gps_ws = true;
 module_param(enable_gps_ws, bool, 0644);
 static bool enable_msm_hsic_ws = true;
@@ -560,6 +563,9 @@ void pm_wakeup_clear(void)
 static bool wakeup_source_blocker(struct wakeup_source *ws)
 {
 	unsigned int wslen = 0;
+
+	if (!wakeblock)
+		return false;
 
 	if (ws) {
 		wslen = strlen(ws->name);
