@@ -557,12 +557,11 @@ void pm_wakeup_clear(void)
  * "no suspend" period will be ended either by the pm_relax(), or by the timer
  * function executed when the timer expires, whichever comes first.
  */
-
 static bool wakeup_source_blocker(struct wakeup_source *ws)
 {
 	unsigned int wslen = 0;
 
-	if (ws && ws->active) {
+	if (ws) {
 		wslen = strlen(ws->name);
 
 	if (((!enable_gps_ws &&
@@ -581,8 +580,10 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 			!strcmp(ws->name, "bluesleep")) ||
 		(!enable_ssp_sensorhub_ws &&
 			!strcmp(ws->name, "ssp_wake_lock")))) {
+		if (ws->active) {
 			wakeup_source_deactivate(ws);
 			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+		}
 			return true;
 		}
 	}
@@ -605,15 +606,6 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			"unregistered wakeup source\n"))
 		return;
 
-		/*
-		 * let's try and deactivate this wakeup source since the user
-		 * clearly doesn't want it. The user is responsible for any
-		 * adverse effects and has been warned about it
-		 */
-	if (wakeup_source_blocker(ws)) {
-		pm_wakeup_clear();
-		return;
-	}
 	/*
 	 * active wakeup source should bring the system
 	 * out of PM_SUSPEND_FREEZE state -> Rob: but should also go through the proper process
