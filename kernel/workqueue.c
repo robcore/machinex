@@ -2613,7 +2613,7 @@ EXPORT_SYMBOL(flush_workqueue);
  * Wait until the workqueue becomes empty.  While draining is in progress,
  * only chain queueing is allowed.  IOW, only currently pending or running
  * work items on @wq can queue further work items on it.  @wq is flushed
- * repeatedly until it becomes empty.  The number of flushing is detemined
+ * repeatedly until it becomes empty.  The number of flushing is determined
  * by the depth of chaining and should be relatively short.  Whine if it
  * takes too long.
  */
@@ -3423,7 +3423,7 @@ static struct pool_workqueue *alloc_unbound_pwq(struct workqueue_struct *wq,
 }
 
 /**
- * wq_calc_node_mask - calculate a wq_attrs' cpumask for the specified node
+ * wq_calc_node_cpumask - calculate a wq_attrs' cpumask for the specified node
  * @attrs: the wq_attrs of the default pwq of the target workqueue
  * @node: the target NUMA node
  * @cpu_going_down: if >= 0, the CPU to consider as offline
