@@ -340,7 +340,7 @@ static int max77693_led_probe(struct platform_device *pdev)
 		return -EFAULT;
 	}
 
-	led_datas = kzalloc(sizeof(struct max77693_led_data *)
+	led_datas = devm_kzalloc(pdata, sizeof(struct max77693_led_data *)
 			    * MAX77693_LED_MAX, GFP_KERNEL);
 	if (unlikely(!led_datas)) {
 		pr_err("[LED] memory allocation error %s", __func__);
