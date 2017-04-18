@@ -238,7 +238,7 @@ static int nfs4_wait_clnt_recover(struct nfs_client *clp)
 	might_sleep();
 
 	res = wait_on_bit(&clp->cl_state, NFS4CLNT_MANAGER_RUNNING,
-			TASK_KILLABLE);
+			nfs_wait_bit_killable, TASK_KILLABLE);
 	return res;
 }
 

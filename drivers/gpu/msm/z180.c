@@ -866,7 +866,7 @@ static int z180_waittimestamp(struct kgsl_device *device,
 		msecs = 20 * MSEC_PER_SEC;
 
 	mutex_unlock(&device->mutex);
-	timeout = wait_event_interruptible_timeout(
+	timeout = wait_io_event_interruptible_timeout(
 			device->wait_queue,
 			kgsl_check_timestamp(device, context, timestamp),
 			msecs_to_jiffies(msecs));
@@ -895,7 +895,7 @@ static int z180_wait(struct kgsl_device *device,
 	int status = -EINVAL;
 	long timeout = 0;
 
-	timeout = wait_event_interruptible_timeout(
+	timeout = wait_io_event_interruptible_timeout(
 			device->wait_queue,
 			kgsl_check_timestamp(device, context, timestamp),
 			msecs_to_jiffies(msecs));

@@ -175,6 +175,12 @@ static void discard_swap_cluster(struct swap_info_struct *si,
 	}
 }
 
+static int wait_for_discard(void *word)
+{
+	schedule();
+	return 0;
+}
+
 #define SWAPFILE_CLUSTER	256
 #define LATENCY_LIMIT		256
 
@@ -353,7 +359,7 @@ checks:
 			 */
 			spin_unlock(&si->lock);
 			wait_on_bit(&si->flags, ilog2(SWP_DISCARDING),
-				TASK_UNINTERRUPTIBLE);
+				wait_for_discard, TASK_UNINTERRUPTIBLE);
 			spin_lock(&si->lock);
 		} else {
 			/*

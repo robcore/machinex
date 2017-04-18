@@ -3079,9 +3079,15 @@ done_unlocked:
 	return 0;
 }
 
+static int eb_wait(void *word)
+{
+	io_schedule();
+	return 0;
+}
+
 static void wait_on_extent_buffer_writeback(struct extent_buffer *eb)
 {
-	wait_on_bit_io(&eb->bflags, EXTENT_BUFFER_WRITEBACK,
+	wait_on_bit(&eb->bflags, EXTENT_BUFFER_WRITEBACK, eb_wait,
 		    TASK_UNINTERRUPTIBLE);
 }
 
