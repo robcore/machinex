@@ -17,10 +17,15 @@
 #include <linux/types.h>
 #include <trace/events/power.h>
 #include <linux/resume-trace.h>
+#include <linux/display_state.h>
 #include <linux/moduleparam.h>
 /*
 #include <linux/freezer.h>
 */
+
+
+#include "power.h"
+
 static bool enable_gps_ws = true;
 module_param(enable_gps_ws, bool, 0644);
 static bool enable_msm_hsic_ws = true;
@@ -35,9 +40,6 @@ static bool enable_bluesleep_ws = true;
 module_param(enable_bluesleep_ws, bool, 0644);
 static bool enable_ssp_sensorhub_ws = true;
 module_param(enable_ssp_sensorhub_ws, bool, 0644);
-
-#include "power.h"
-
 /*
  * If set, the suspend/hibernate code will abort transitions to a sleep state
  * if wakeup events are registered during or immediately before the transition.
@@ -624,13 +626,15 @@ static void wakeup_source_activate(struct wakeup_source *ws)
  */
 static void wakeup_source_report_event(struct wakeup_source *ws)
 {
-	ws->event_count++;
-	/* This is racy, but the counter is approximate anyway. */
-	if (events_check_enabled)
-		ws->wakeup_count++;
+	if (!wakeup_source_blocker(ws)) {
+		ws->event_count++;
+		/* This is racy, but the counter is approximate anyway. */
+		if (events_check_enabled)
+			ws->wakeup_count++;
 
-	if (!ws->active)
-		wakeup_source_activate(ws);
+		if (!ws->active)
+			wakeup_source_activate(ws);
+	}
 }
 
 /**
@@ -831,6 +835,10 @@ void pm_print_active_wakeup_sources(void)
 	struct wakeup_source *ws;
 	int active = 0;
 	struct wakeup_source *last_activity_ws = NULL;
+
+	// kinda pointless to force this routine during screen on
+	if (is_display_on())
+		return;
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
