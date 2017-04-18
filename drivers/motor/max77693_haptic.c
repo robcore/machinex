@@ -20,7 +20,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/mfd/max77693.h>
 #include <linux/mfd/max77693-private.h>
-#include <linux/suspend.h>
 
 struct max77693_haptic_data {
 	struct max77693_dev *max77693;
@@ -30,7 +29,6 @@ struct max77693_haptic_data {
 
 	spinlock_t lock;
 	bool running;
-	bool suspend_state;
 };
 
 struct max77693_haptic_data *g_hap_data;
@@ -96,25 +94,26 @@ static int max77693_haptic_probe(struct platform_device *pdev)
 		= max77693_pdata->haptic_data;
 	struct max77693_haptic_data *hap_data;
 
-	hap_data = kzalloc(sizeof(struct max77693_haptic_data), GFP_KERNEL);
-	if (!hap_data)
-		return -ENOMEM;
-
-	hap_data->max77693 = max77693;
-	hap_data->i2c = max77693->haptic;
-	hap_data->pmic_i2c = max77693->i2c;
-	hap_data->pdata = pdata;
-	g_hap_data->suspend_state = false;
-	g_hap_data = hap_data;
-
+	pr_debug("[VIB] ++ %s\n", __func__);
 	 if (pdata == NULL) {
 		pr_err("%s: no pdata\n", __func__);
 		return -ENODEV;
 	}
 
-	spin_lock_init(&(hap_data->lock));
+	hap_data = kzalloc(sizeof(struct max77693_haptic_data), GFP_KERNEL);
+	if (!hap_data)
+		return -ENOMEM;
 
 	platform_set_drvdata(pdev, hap_data);
+	g_hap_data = hap_data;
+	hap_data->max77693 = max77693;
+	hap_data->i2c = max77693->haptic;
+	hap_data->pmic_i2c = max77693->i2c;
+	hap_data->pdata = pdata;
+
+	spin_lock_init(&(hap_data->lock));
+
+	pr_debug("[VIB] -- %s\n", __func__);
 
 	return error;
 }
@@ -128,36 +127,6 @@ static int max77693_haptic_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_MOTOR_DRV_MAX77693_USE_PM
-static int max77693_haptic_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct max77693_haptic_data *data = platform_get_drvdata(pdev);
-
-	if (g_hap_data->running) {
-		max77693_vibtonz_en(false);
-		g_hap_data->suspend_state = true;
-	}
-
-	return 0;
-}
-
-static int max77693_haptic_resume(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct max77693_haptic_data *data = platform_get_drvdata(pdev);
-
-	if (g_hap_data->suspend_state) {
-		max77693_vibtonz_en(true);
-		g_hap_data->suspend_state = false;
-	}
-
-	return 0;
-}
-
-static SIMPLE_DEV_PM_OPS(max77693_haptic_pm_ops,
-			 max77693_haptic_suspend, max77693_haptic_resume);
-#else
 static int max77693_haptic_suspend(struct platform_device *pdev,
 			pm_message_t state)
 {
@@ -167,21 +136,15 @@ static int max77693_haptic_resume(struct platform_device *pdev)
 {
 	return 0;
 }
-#endif
 
 static struct platform_driver max77693_haptic_driver = {
 	.probe		= max77693_haptic_probe,
 	.remove		= max77693_haptic_remove,
-#ifndef CONFIG_MOTOR_DRV_MAX77693_USE_PM
 	.suspend	= max77693_haptic_suspend,
 	.resume		= max77693_haptic_resume,
-#endif
 	.driver = {
 		.name	= "max77693-haptic",
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_MOTOR_DRV_MAX77693_USE_PM
-		.pm	= &max77693_haptic_pm_ops,
-#endif
 	},
 };
 

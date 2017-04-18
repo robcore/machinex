@@ -12,7 +12,3 @@ config MOTOR_DRV_MAX77693
 	default n
 
 	depends on MFD_MAX77693
-
-config MOTOR_DRV_MAX77693_USE_PM
-	bool "Maxim MAX77693 motor suspend ops"
-	depends on MOTOR_DRV_MAX77693
