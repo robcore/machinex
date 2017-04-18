@@ -152,7 +152,7 @@ static int32_t ImmVibeSPI_ForceOut_AmpDisable(u_int8_t nActuatorIndex)
 		}
 		//printk(KERN_DEBUG "tspdrv: %s\n", __func__);
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
-		max77693_vibtonz_en(0);
+		max77693_vibtonz_en(false);
 #endif
 	}
 
@@ -175,7 +175,7 @@ static int32_t ImmVibeSPI_ForceOut_AmpEnable(u_int8_t nActuatorIndex)
 		}
 		//printk(KERN_DEBUG "tspdrv: %s\n", __func__);
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
-		max77693_vibtonz_en(1);
+		max77693_vibtonz_en(true);
 #endif
 	}
 
