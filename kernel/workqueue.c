@@ -528,7 +528,7 @@ static int worker_pool_assign_id(struct worker_pool *pool)
 	do {
 		if (!idr_pre_get(&worker_pool_idr, GFP_KERNEL))
 			return -ENOMEM;
-		ret = idr_get_new_above(&worker_pool_idr, pool, &pool->id);
+		ret = idr_get_new_above(&worker_pool_idr, pool, 0, &pool->id);
 	} while (ret == -EAGAIN);
 
 	return ret;
