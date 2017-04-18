@@ -340,13 +340,6 @@ void irq_init_desc(unsigned int irq)
 }
 #endif
 
-#ifdef CONFIG_GENERIC_IRQ_LEGACY
-void irq_init_desc(unsigned int irq)
-{
-	dynamic_irq_cleanup(irq);
-}
-#endif
-
 #endif /* !CONFIG_SPARSE_IRQ */
 
 /**
