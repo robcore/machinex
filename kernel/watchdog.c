@@ -24,6 +24,7 @@
 #include <linux/sysctl.h>
 #include <linux/smpboot.h>
 #include <linux/sched/rt.h>
+#include <linux/workqueue.h>
 
 #include <asm/irq_regs.h>
 #include <linux/kvm_para.h>
@@ -148,6 +149,7 @@ void touch_softlockup_watchdog(void)
 	 * gets zeroed here, so use the raw_ operation.
 	 */
 	raw_cpu_write(watchdog_touch_ts, 0);
+	wq_watchdog_touch(raw_smp_processor_id());
 }
 EXPORT_SYMBOL(touch_softlockup_watchdog);
 
@@ -162,6 +164,7 @@ void touch_all_softlockup_watchdogs(void)
 	 */
 	for_each_online_cpu(cpu)
 		per_cpu(watchdog_touch_ts, cpu) = 0;
+	wq_watchdog_touch(-1);
 }
 
 #ifdef CONFIG_HARDLOCKUP_DETECTOR
