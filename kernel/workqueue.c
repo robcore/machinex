@@ -528,7 +528,7 @@ static int worker_pool_assign_id(struct worker_pool *pool)
 	do {
 		if (!idr_pre_get(&worker_pool_idr, GFP_KERNEL))
 			return -ENOMEM;
-		ret = idr_get_new(&worker_pool_idr, pool, &pool->id);
+		ret = idr_get_new_above(&worker_pool_idr, pool, &pool->id);
 	} while (ret == -EAGAIN);
 
 	return ret;
@@ -1694,9 +1694,6 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	set_user_nice(worker->task, pool->attrs->nice);
 	kthread_bind_mask(worker->task, pool->attrs->cpumask);
-
-	/* prevent userland from meddling with cpumask of workqueue workers */
-	worker->task->flags |= PF_NO_SETAFFINITY;
 
 	/* successful, attach the worker to the pool */
 	worker_attach_to_pool(worker, pool);
