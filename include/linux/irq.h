@@ -10,18 +10,19 @@
  */
 
 #include <linux/smp.h>
+
+#ifndef CONFIG_S390
+
 #include <linux/linkage.h>
 #include <linux/cache.h>
 #include <linux/spinlock.h>
 #include <linux/cpumask.h>
 #include <linux/gfp.h>
-#include <linux/irqhandler.h>
 #include <linux/irqreturn.h>
 #include <linux/irqnr.h>
 #include <linux/errno.h>
 #include <linux/topology.h>
 #include <linux/wait.h>
-#include <linux/io.h>
 
 #include <asm/irq.h>
 #include <asm/ptrace.h>
@@ -31,7 +32,6 @@ struct seq_file;
 struct module;
 struct irq_desc;
 struct irq_data;
-struct msi_msg;
 typedef	bool (*irq_flow_handler_t)(unsigned int irq,
 					    struct irq_desc *desc);
 typedef	void (*irq_preflow_handler_t)(struct irq_data *data);
@@ -76,7 +76,6 @@ typedef	void (*irq_preflow_handler_t)(struct irq_data *data);
  * IRQ_IS_POLLED		- Always polled by another interrupt. Exclude
  *				  it from the spurious interrupt detection
  *				  mechanism and from core side polling.
- * IRQ_DISABLE_UNLAZY		- Disable lazy irq disable
  */
 enum {
 	IRQ_TYPE_NONE		= 0x00000000,
@@ -102,14 +101,13 @@ enum {
 	IRQ_NOTHREAD		= (1 << 16),
 	IRQ_PER_CPU_DEVID	= (1 << 17),
 	IRQ_IS_POLLED		= (1 << 18),
-	IRQ_DISABLE_UNLAZY	= (1 << 19),
 };
 
 #define IRQF_MODIFY_MASK	\
 	(IRQ_TYPE_SENSE_MASK | IRQ_NOPROBE | IRQ_NOREQUEST | \
 	 IRQ_NOAUTOEN | IRQ_MOVE_PCNTXT | IRQ_LEVEL | IRQ_NO_BALANCING | \
 	 IRQ_PER_CPU | IRQ_NESTED_THREAD | IRQ_NOTHREAD | IRQ_PER_CPU_DEVID | \
-	 IRQ_IS_POLLED | IRQ_DISABLE_UNLAZY)
+	 IRQ_IS_POLLED)
 
 #define IRQ_NO_BALANCING_MASK	(IRQ_PER_CPU | IRQ_NO_BALANCING)
 
@@ -133,7 +131,6 @@ struct irq_domain;
 
 /**
  * struct irq_data - per irq and irq chip data passed down to chip functions
- * @mask:		precomputed bitmask for accessing the chip registers
  * @irq:		interrupt number
  * @hwirq:		hardware interrupt number, local to the interrupt domain
  * @node:		node index useful for balancing
@@ -142,8 +139,6 @@ struct irq_domain;
  * @chip:		low level interrupt hardware access
  * @domain:		Interrupt translation domain; responsible for mapping
  *			between hwirq number and linux irq number.
- * @parent_data:	pointer to parent struct irq_data to support hierarchy
- *			irq_domain
  * @handler_data:	per-IRQ data for the irq_chip methods
  * @chip_data:		platform-specific per-chip private data for the chip
  *			methods, to allow shared chip implementations
@@ -155,20 +150,18 @@ struct irq_domain;
  * irq_data.
  */
 struct irq_data {
-	u32			mask;
 	unsigned int		irq;
 	unsigned long		hwirq;
 	unsigned int		node;
 	unsigned int		state_use_accessors;
 	struct irq_chip		*chip;
 	struct irq_domain	*domain;
-#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
-	struct irq_data		*parent_data;
-#endif
 	void			*handler_data;
 	void			*chip_data;
 	struct msi_desc		*msi_desc;
+#ifdef CONFIG_SMP
 	cpumask_var_t		affinity;
+#endif
 };
 
 /*
@@ -330,9 +323,9 @@ static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
  *				any other callback related to this irq
  * @irq_release_resources:	optional to release resources acquired with
  *				irq_request_resources
- * @irq_compose_msi_msg:	optional to compose message content for MSI
- * @irq_write_msi_msg:	optional to write message content for MSI
  * @flags:		chip specific flags
+ *
+ * @release:		release function solely used by UML
  */
 struct irq_chip {
 	const char	*name;
@@ -369,9 +362,6 @@ struct irq_chip {
 	int		(*irq_request_resources)(struct irq_data *data);
 	void		(*irq_release_resources)(struct irq_data *data);
 
-	void		(*irq_compose_msi_msg)(struct irq_data *data, struct msi_msg *msg);
-	void		(*irq_write_msi_msg)(struct irq_data *data, struct msi_msg *msg);
-
 	unsigned long	flags;
 };
 
@@ -384,8 +374,6 @@ struct irq_chip {
  * IRQCHIP_ONOFFLINE_ENABLED:	Only call irq_on/off_line callbacks
  *				when irq enabled
  * IRQCHIP_SKIP_SET_WAKE:	Skip chip.irq_set_wake(), for this irq chip
- * IRQCHIP_ONESHOT_SAFE:	One shot does not require mask/unmask
- * IRQCHIP_EOI_THREADED:	Chip requires eoi() on unmask in threaded mode
  */
 enum {
 	IRQCHIP_SET_TYPE_MASKED		= (1 <<  0),
@@ -426,6 +414,8 @@ extern void irq_cpu_offline(void);
 extern int irq_set_affinity_locked(struct irq_data *data,
 				   const struct cpumask *cpumask, bool force);
 
+#ifdef CONFIG_GENERIC_HARDIRQS
+
 #if defined(CONFIG_SMP) && defined(CONFIG_GENERIC_PENDING_IRQ)
 void irq_move_irq(struct irq_data *data);
 void irq_move_masked_irq(struct irq_data *data);
@@ -458,18 +448,6 @@ extern bool handle_percpu_irq(unsigned int irq, struct irq_desc *desc);
 extern bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc);
 extern bool handle_bad_irq(unsigned int irq, struct irq_desc *desc);
 extern bool handle_nested_irq(unsigned int irq);
-
-extern int irq_chip_compose_msi_msg(struct irq_data *data, struct msi_msg *msg);
-#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
-extern void irq_chip_ack_parent(struct irq_data *data);
-extern int irq_chip_retrigger_hierarchy(struct irq_data *data);
-extern void irq_chip_mask_parent(struct irq_data *data);
-extern void irq_chip_unmask_parent(struct irq_data *data);
-extern void irq_chip_eoi_parent(struct irq_data *data);
-extern int irq_chip_set_affinity_parent(struct irq_data *data,
-					const struct cpumask *dest,
-					bool force);
-#endif
 
 /* Handling of unhandled and spurious interrupts: */
 extern void note_interrupt(unsigned int irq, struct irq_desc *desc,
@@ -568,6 +546,11 @@ static inline void irq_set_percpu_devid_flags(unsigned int irq)
 			     IRQ_NOPROBE | IRQ_PER_CPU_DEVID);
 }
 
+/* Handle dynamic irq creation and destruction */
+extern unsigned int create_irq_nr(unsigned int irq_want, int node);
+extern int create_irq(void);
+extern void destroy_irq(unsigned int irq);
+
 /* Set/get chip/data for an IRQ: */
 extern int irq_set_chip(unsigned int irq, struct irq_chip *chip);
 extern int irq_set_handler_data(unsigned int irq, void *data);
@@ -617,7 +600,7 @@ static inline struct msi_desc *irq_get_msi_desc(unsigned int irq)
 	return d ? d->msi_desc : NULL;
 }
 
-static inline struct msi_desc *irq_data_get_msi_desc(struct irq_data *d)
+static inline struct msi_desc *irq_data_get_msi(struct irq_data *d)
 {
 	return d->msi_desc;
 }
@@ -674,6 +657,28 @@ void arch_teardown_hwirq(unsigned int irq);
 void irq_init_desc(unsigned int irq);
 #endif
 
+#ifdef CONFIG_GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
+unsigned int irq_alloc_hwirqs(int cnt, int node);
+static inline unsigned int irq_alloc_hwirq(int node)
+{
+	return irq_alloc_hwirqs(1, node);
+}
+void irq_free_hwirqs(unsigned int from, int cnt);
+static inline void irq_free_hwirq(unsigned int irq)
+{
+	return irq_free_hwirqs(irq, 1);
+}
+int arch_setup_hwirq(unsigned int irq, int node);
+void arch_teardown_hwirq(unsigned int irq);
+#endif
+
+#ifndef irq_reg_writel
+# define irq_reg_writel(val, addr)	writel(val, addr)
+#endif
+#ifndef irq_reg_readl
+# define irq_reg_readl(addr)		readl(addr)
+#endif
+
 /**
  * struct irq_chip_regs - register offsets for struct irq_gci
  * @enable:	Enable register offset to reg_base
@@ -720,8 +725,6 @@ struct irq_chip_type {
  * struct irq_chip_generic - Generic irq chip data structure
  * @lock:		Lock to protect register and cache data access
  * @reg_base:		Register base address (virtual)
- * @reg_readl:		Alternate I/O accessor (defaults to readl if NULL)
- * @reg_writel:		Alternate I/O accessor (defaults to writel if NULL)
  * @irq_base:		Interrupt base nr for this chip
  * @irq_cnt:		Number of interrupts handled by this chip
  * @mask_cache:		Cached mask register shared between all chip types
@@ -746,8 +749,6 @@ struct irq_chip_type {
 struct irq_chip_generic {
 	raw_spinlock_t		lock;
 	void __iomem		*reg_base;
-	u32			(*reg_readl)(void __iomem *addr);
-	void			(*reg_writel)(u32 val, void __iomem *addr);
 	unsigned int		irq_base;
 	unsigned int		irq_cnt;
 	u32			mask_cache;
@@ -771,13 +772,11 @@ struct irq_chip_generic {
  *				irq chips which need to call irq_set_wake() on
  *				the parent irq. Usually GPIO implementations
  * @IRQ_GC_MASK_CACHE_PER_TYPE:	Mask cache is chip type private
- * @IRQ_GC_NO_MASK:		Do not calculate irq_data->mask
  */
 enum irq_gc_flags {
 	IRQ_GC_INIT_MASK_CACHE		= 1 << 0,
 	IRQ_GC_INIT_NESTED_LOCK		= 1 << 1,
 	IRQ_GC_MASK_CACHE_PER_TYPE	= 1 << 2,
-	IRQ_GC_NO_MASK			= 1 << 3,
 };
 
 /*
@@ -853,16 +852,8 @@ static inline void irq_gc_lock(struct irq_chip_generic *gc) { }
 static inline void irq_gc_unlock(struct irq_chip_generic *gc) { }
 #endif
 
-static inline void irq_reg_writel(struct irq_chip_generic *gc,
-				  u32 val, int reg_offset)
-{
-	writel(val, gc->reg_base + reg_offset);
-}
+#endif /* CONFIG_GENERIC_HARDIRQS */
 
-static inline u32 irq_reg_readl(struct irq_chip_generic *gc,
-				int reg_offset)
-{
-	return readl(gc->reg_base + reg_offset);
-}
+#endif /* !CONFIG_S390 */
 
 #endif /* _LINUX_IRQ_H */
