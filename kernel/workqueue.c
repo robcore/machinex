@@ -439,7 +439,7 @@ static void *work_debug_hint(void *addr)
  * fixup_init is called when:
  * - an active object is initialized
  */
-static bool work_fixup_init(void *addr, enum debug_obj_state state)
+static int work_fixup_init(void *addr, enum debug_obj_state state)
 {
 	struct work_struct *work = addr;
 
@@ -447,9 +447,9 @@ static bool work_fixup_init(void *addr, enum debug_obj_state state)
 	case ODEBUG_STATE_ACTIVE:
 		cancel_work_sync(work);
 		debug_object_init(work, &work_debug_descr);
-		return true;
+		return 1;
 	default:
-		return false;
+		return 0;
 	}
 }
 
@@ -458,7 +458,7 @@ static bool work_fixup_init(void *addr, enum debug_obj_state state)
  * - an active object is activated
  * - an unknown object is activated (might be a statically initialized object)
  */
-static bool work_fixup_activate(void *addr, enum debug_obj_state state)
+static int work_fixup_activate(void *addr, enum debug_obj_state state)
 {
 	struct work_struct *work = addr;
 
@@ -473,16 +473,16 @@ static bool work_fixup_activate(void *addr, enum debug_obj_state state)
 		if (test_bit(WORK_STRUCT_STATIC_BIT, work_data_bits(work))) {
 			debug_object_init(work, &work_debug_descr);
 			debug_object_activate(work, &work_debug_descr);
-			return false;
+			return 0;
 		}
 		WARN_ON_ONCE(1);
-		return false;
+		return 0;
 
 	case ODEBUG_STATE_ACTIVE:
 		WARN_ON(1);
 
 	default:
-		return false;
+		return 0;
 	}
 }
 
@@ -490,7 +490,7 @@ static bool work_fixup_activate(void *addr, enum debug_obj_state state)
  * fixup_free is called when:
  * - an active object is freed
  */
-static bool work_fixup_free(void *addr, enum debug_obj_state state)
+static int work_fixup_free(void *addr, enum debug_obj_state state)
 {
 	struct work_struct *work = addr;
 
@@ -498,9 +498,9 @@ static bool work_fixup_free(void *addr, enum debug_obj_state state)
 	case ODEBUG_STATE_ACTIVE:
 		cancel_work_sync(work);
 		debug_object_free(work, &work_debug_descr);
-		return true;
+		return 1;
 	default:
-		return false;
+		return 0;
 	}
 }
 
