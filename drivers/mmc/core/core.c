@@ -72,7 +72,6 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq);
 /* Flushing a large amount of cached data may take a long time. */
 #define MMC_FLUSH_REQ_TIMEOUT_MS 60000 /* msec */
 
-static struct workqueue_struct *workqueue;
 static struct workqueue_struct *mx_mmc;
 
 /*
@@ -121,7 +120,7 @@ static int mmc_schedule_delayed_work(struct delayed_work *work,
  */
 static void mmc_flush_scheduled_work(void)
 {
-	flush_workqueue(workqueue);
+	flush_workqueue(mx_mmc);
 }
 
 #ifdef CONFIG_FAIL_MMC_REQUEST
@@ -3545,10 +3544,6 @@ static int __init mmc_init(void)
 {
 	int ret;
 
-	workqueue = alloc_ordered_workqueue("kmmcd", 0);
-	if (!workqueue)
-		return -ENOMEM;
-
 	mx_mmc = create_singlethread_workqueue("_mx_mmc");
 	if (!mx_mmc)
 		return -ENOMEM;
@@ -3572,7 +3567,6 @@ unregister_host_class:
 unregister_bus:
 	mmc_unregister_bus();
 destroy_workqueue:
-	destroy_workqueue(workqueue);
 	destroy_workqueue(mx_mmc);
 
 	return ret;
@@ -3583,7 +3577,6 @@ static void __exit mmc_exit(void)
 	sdio_unregister_bus();
 	mmc_unregister_host_class();
 	mmc_unregister_bus();
-	destroy_workqueue(workqueue);
 	destroy_workqueue(mx_mmc);
 }
 
