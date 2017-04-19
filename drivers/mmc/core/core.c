@@ -113,7 +113,7 @@ MODULE_PARM_DESC(
 static int mmc_schedule_delayed_work(struct delayed_work *work,
 				     unsigned long delay)
 {
-	return queue_delayed_work_on(0, system_wq, work, delay);
+	return queue_delayed_work_on(0, mx_mmc, work, delay);
 }
 
 /*

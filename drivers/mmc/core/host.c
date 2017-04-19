@@ -28,6 +28,7 @@
 #include "core.h"
 #include "host.h"
 
+static struct workqueue_struct *mx_clk_gate_wq;
 #define cls_dev_to_mmc_host(d)	container_of(d, struct mmc_host, class_dev)
 
 static void mmc_host_classdev_release(struct device *dev)
@@ -217,7 +218,7 @@ void mmc_host_clk_release(struct mmc_host *host)
 	host->clk_requests--;
 	if (mmc_host_may_gate_card(host->card) &&
 	    !host->clk_requests)
-		schedule_delayed_work(&host->clk_gate_work,
+		queue_delayed_work(mx_clk_gate_wq, &host->clk_gate_work,
 				      msecs_to_jiffies(host->clkgate_delay));
 	spin_unlock_irqrestore(&host->clk_lock, flags);
 }
@@ -257,6 +258,9 @@ static inline void mmc_host_clk_init(struct mmc_host *host)
 	 */
 	host->clkgate_delay = 0;
 	host->clk_gated = false;
+	mx_clk_gate_wq = create_singlethread_workqueue("mx_clk_gate");
+	if (!mx_clk_gate_wq)
+		return -ENOMEM;
 	INIT_DELAYED_WORK(&host->clk_gate_work, mmc_host_clk_gate_work);
 	spin_lock_init(&host->clk_lock);
 	mutex_init(&host->clk_gate_mutex);
