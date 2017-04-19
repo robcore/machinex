@@ -59,7 +59,7 @@ struct logger_log {
 
 static unsigned int log_enabled = 1;
 
-module_param(log_enabled, uint, S_IWUSR | S_IRUGO);
+module_param(log_enabled, uint, 0644);
 
 /*
  * struct logger_reader - a logging device open for reading
