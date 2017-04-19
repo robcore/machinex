@@ -1239,9 +1239,6 @@ config MDNIE_LITE_TUNING
 	bool "mdnie lite tuning"
 	default y
 
-config MDNIE_LITE_CONTROL
-	bool "hijack that shit, yo"
-
 config HBM_PSRE
 	bool "HBM PSRE funtion"
 	default y
