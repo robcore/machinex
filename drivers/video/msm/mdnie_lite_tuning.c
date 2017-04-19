@@ -94,7 +94,7 @@ unsigned int mdnie_lock;
 
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 char CONTROL_1[] = {0xEB, 0x01, 0x00, 0x33, 0x01,};
-char CONTROL_2[108];
+char CONTROL_2[107];
 int override = 0, copy_mode = 0, gamma_curve = 0;
 #endif
 
@@ -123,7 +123,6 @@ const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"VT_MODE",
 	"BROWSER",
 	"eBOOK",
-	"CONTROL",
 #if defined(CONFIG_TDMB)
 	"DMB_MODE",
 	"DMB_WARM_MODE",
@@ -131,13 +130,9 @@ const char scenario_name[MAX_mDNIe_MODE][16] = {
 #endif
 };
 
-const char background_name[MAX_BACKGROUND_MODE][16] = {
+const char background_name[MAX_BACKGROUND_MODE][10] = {
 	"DYNAMIC",
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-    "CONTROL",
-#else
 	"STANDARD",
-#endif
 	"NATURAL",
 	"MOVIE",
 	"AUTO",
@@ -247,7 +242,7 @@ void update_mdnie_gamma_curve(void)
 		DPRINT("(gamma: Dynamic)\n");
 	}
 
-	for (i = 42; i < 108; i++)
+	for (i = 42; i < 107; i++)
 	CONTROL_2[i] = source[i];
 }
 #endif
@@ -330,6 +325,14 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 
 	play_speed_1_5 = 0;
+/*suck it*/
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else {
+#endif
 	/*
 	*	Blind mode & Screen mode has separated menu.
 	*	To make a sync below code added.
@@ -339,15 +342,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		mode = mDNIE_BLINE_MODE;
 	else if (mdnie_tun_state.blind == DARK_SCREEN)
 		mode = mDNIE_DARK_SCREEN_MODE;
-
 	switch (mode) {
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-		if (override) {
-		    DPRINT(" = CONTROL MODE =\n");
-		    INPUT_PAYLOAD1(CONTROL_1);
-		    INPUT_PAYLOAD2(CONTROL_2);
-	    } else {
-#endif
 	case mDNIe_UI_MODE:
 		DPRINT(" = UI MODE =\n");
 		if (mdnie_tun_state.background == DYNAMIC_MODE) {
@@ -651,6 +646,7 @@ static ssize_t mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	int value;
+	int backup;
 
 	sscanf(buf, "%d", &value);
 
@@ -661,6 +657,7 @@ static ssize_t mode_store(struct device *dev,
 		return size;
 	}
 
+	backup = mdnie_tun_state.background;
 	mdnie_tun_state.background = value;
 	mDNIe_Set_Mode(mdnie_tun_state.scenario);
 
@@ -682,11 +679,18 @@ static ssize_t scenario_store(struct device *dev,
 					  const char *buf, size_t size)
 {
 	int value;
+	int backup;
 
 	sscanf(buf, "%d", &value);
 
 	if ((value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE) || (mdnie_lock))
 		return size;
+
+
+	if (override) {
+		backup = mdnie_tun_state.scenario;
+		mdnie_tun_state.scenario = value;
+	} else {
 
 	switch (value) {
 	case SIG_MDNIE_UI_MODE:
@@ -731,6 +735,7 @@ static ssize_t scenario_store(struct device *dev,
 
 	default:
 		break;
+	}
 	}
 
 	if (mdnie_tun_state.negative) {
@@ -815,6 +820,7 @@ static ssize_t outdoor_store(struct device *dev,
 					       const char *buf, size_t size)
 {
 	int value;
+	int backup;
 
 	sscanf(buf, "%d", &value);
 
@@ -822,6 +828,7 @@ static ssize_t outdoor_store(struct device *dev,
 		pr_debug("[ERROR] : wrong outdoor mode value");
 	}
 
+	backup = mdnie_tun_state.outdoor;
 	mdnie_tun_state.outdoor = value;
 
 	if (mdnie_tun_state.negative) {
@@ -923,6 +930,8 @@ static ssize_t accessibility_store(struct device *dev,
 	int buffer2[MDNIE_COLOR_BLINDE_CMD/2] = {0,};
 	int loop;
 	char temp;
+	int backup;
+	int backup2;
 
 	sscanf(buf, "%d %x %x %x %x %x %x %x %x %x", &cmd_value,
 		&buffer2[0], &buffer2[1], &buffer2[2], &buffer2[3], &buffer2[4],
@@ -940,6 +949,9 @@ static ssize_t accessibility_store(struct device *dev,
 		buffer[loop] = buffer[loop + 1];
 		buffer[loop + 1] = temp;
 	}
+
+	backup = mdnie_tun_state.negative;
+	backup2 = mdnie_tun_state.blind;
 
 	if (cmd_value == NEGATIVE) {
 		mdnie_tun_state.negative = mDNIe_NEGATIVE_ON;
@@ -1319,6 +1331,10 @@ struct device *tune_mdnie_dev;
 
 void init_mdnie_class(void)
 {
+	if (mdnie_tun_state.mdnie_enable) {
+		pr_err("%s : mdnie already enable.. \n",__func__);
+		return;
+	}
 
 	DPRINT("start!\n");
 
