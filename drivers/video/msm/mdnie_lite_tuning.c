@@ -93,7 +93,10 @@ unsigned int mdnie_lock;
 #endif
 
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
-int hijack = HIJACK_DISABLED; /* By default, do not enable hijacking */
+char CONTROL_1[] = {0xEB, 0x01, 0x00, 0x33, 0x01,};
+char CONTROL_2[107];
+int override = 0, copy_mode = 0, gamma_curve = 0;
+int hijack = 0; /* By default, do not enable hijacking */
 int curve = 0;
 int black = 0;
 int black_r = 0;
@@ -240,6 +243,48 @@ static struct dsi_cmd_desc mdni_tune_cmd[] = {
 };
 #endif
 
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+void update_mdnie_copy_mode(void)
+{
+	char *source;
+	int i;
+
+	if (copy_mode == 0) {
+		source = STANDARD_UI_2;
+		DPRINT("(mode: Standard)\n");
+	}
+	else if (copy_mode == 1) {
+		source = NATURAL_UI_2;
+		DPRINT("(mode: Natural)\n");
+	}
+	else if (copy_mode == 2) {
+		source = MOVIE_UI_2;
+		DPRINT("(mode: Movie)\n");
+	}
+
+	for (i = 0; i < 41; i++)
+	CONTROL_2[i] = source[i];
+}
+
+void update_mdnie_gamma_curve(void)
+{
+	char *source;
+	int i;
+
+	if (gamma_curve == 0) {
+		source = MOVIE_UI_2;
+		DPRINT("(gamma: Movie)\n");
+	}
+	else if (gamma_curve == 1) {
+		source = DYNAMIC_UI_2;
+		DPRINT("(gamma: Dynamic)\n");
+	}
+
+	for (i = 42; i < 107; i++)
+	CONTROL_2[i] = source[i];
+}
+#endif
+
 void print_tun_data(void)
 {
 	int i;
@@ -254,76 +299,6 @@ void print_tun_data(void)
 		DPRINT("0x%x ", PAYLOAD2.payload[i]);
 	DPRINT("\n");
 }
-
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-void update_mdnie_curve(void)
-{
-	char	*source;
-	int	i;
-
-	// Determine the source to copy the curves from
-	switch (curve) {
-		case DYNAMIC_MODE:	source = DYNAMIC_UI_2;
-					break;
-		case STANDARD_MODE:	source = STANDARD_UI_2;
-					break;
-#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
-		case NATURAL_MODE:	source = NATURAL_UI_2;
-					break;
-#endif
-		case MOVIE_MODE:	source = MOVIE_UI_2;
-					break;
-		case AUTO_MODE:		source = AUTO_UI_2;
-					break;
-		default: return;
-	}
-
-	for (i = 42; i < 107; i++)
-		LITE_CONTROL_2[i] = source[i];
-
-	pr_debug(" = update curve values =\n");
-}
-
-void update_mdnie_mode(void)
-{
-	char	*source_1, *source_2;
-	int	i;
-
-	// Determine the source to copy the mode from
-	switch (curve) {
-		case DYNAMIC_MODE:	source_1 = DYNAMIC_UI_1;
-					source_2 = DYNAMIC_UI_2;
-					break;
-		case STANDARD_MODE:	source_1 = STANDARD_UI_1;
-					source_2 = STANDARD_UI_2;
-					break;
-#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
-		case NATURAL_MODE:	source_1 = NATURAL_UI_1;
-					source_2 = NATURAL_UI_2;
-					break;
-#endif
-		case MOVIE_MODE:	source_1 = MOVIE_UI_1;
-					source_2 = MOVIE_UI_2;
-					break;
-		case AUTO_MODE:		source_1 = AUTO_UI_1;
-					source_2 = AUTO_UI_2;
-					break;
-		default: return;
-	}
-
-	LITE_CONTROL_1[4] = source_1[4]; // Copy sharpen
-
-	for (i = 18; i < 107; i++)
-		LITE_CONTROL_2[i] = source_2[i]; // Copy mode
-
-	// Apply black crush delta
-	LITE_CONTROL_2[37] = max(0,min(255, LITE_CONTROL_2[37] + black));
-	LITE_CONTROL_2[39] = max(0,min(255, LITE_CONTROL_2[39] + black));
-	LITE_CONTROL_2[41] = max(0,min(255, LITE_CONTROL_2[41] + black));
-
-	pr_debug(" = update mode values =\n");
-}
-#endif
 
 void free_tun_cmd(void)
 {
@@ -401,7 +376,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	switch (mode) {
 	case mDNIe_UI_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
-    if (override == 1) {
+    if (override) {
 	    DPRINT(" = CONTROL MODE =\n");
 	    INPUT_PAYLOAD1(CONTROL_1);
 	    INPUT_PAYLOAD2(CONTROL_2);
@@ -430,7 +405,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(AUTO_UI_2);
 		}
 		break;
-
+	}
 	case mDNIe_VIDEO_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -467,9 +442,8 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 				INPUT_PAYLOAD1(AUTO_VIDEO_1);
 				INPUT_PAYLOAD2(AUTO_VIDEO_2);
 			}
-		}
 		break;
-
+	}
 	case mDNIe_VIDEO_WARM_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -489,7 +463,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(WARM_2);
 		}
 		break;
-
+	}
 	case mDNIe_VIDEO_COLD_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -509,7 +483,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(COLD_2);
 		}
 		break;
-
+	}
 	case mDNIe_CAMERA_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -535,6 +509,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(CAMERA_OUTDOOR_2);
 		}
 		break;
+	}
 
 	case mDNIe_NAVI:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
@@ -586,6 +561,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(AUTO_GALLERY_2);
 		}
 		break;
+	}
 
 	case mDNIe_VT_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
@@ -618,7 +594,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(AUTO_VT_2);
 		}
 		break;
-
+	}
 #if defined(CONFIG_TDMB)
 	case mDNIe_DMB_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
@@ -660,7 +636,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			}
 		}
 		break;
-
+	}
 	case mDNIe_DMB_WARM_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -680,7 +656,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(WARM_DMB_2);
 		}
 		break;
-
+	}
 	case mDNIe_DMB_COLD_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -700,6 +676,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(COLD_DMB_2);
 		}
 		break;
+	}
 #endif
 
 	case mDNIe_BROWSER_MODE:
@@ -734,7 +711,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(AUTO_BROWSER_2);
 		}
 		break;
-
+	}
 	case mDNIe_eBOOK_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -766,7 +743,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD2(AUTO_EBOOK_2);
 		}
 		break;
-
+	}
 	case mDNIE_BLINE_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -779,7 +756,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		INPUT_PAYLOAD1(COLOR_BLIND_1);
 		INPUT_PAYLOAD2(COLOR_BLIND_2);
 		break;
-
+	}
 	case mDNIE_DARK_SCREEN_MODE:
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
     if (override == 1) {
@@ -792,7 +769,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		INPUT_PAYLOAD1(DARK_SCREEN_BLIND_1);
 		INPUT_PAYLOAD2(DARK_SCREEN_BLIND_2);
 		break;
-
+	}
 	default:
 		DPRINT("[%s] no option (%d)\n", __func__, mode);
 		return;
@@ -1255,7 +1232,7 @@ static ssize_t override_store(struct device *dev, struct device_attribute *attr,
 			return -EINVAL;
 		DPRINT("(override: %d)\n", val);
 		override = val;
-		mDNIe_Set_Mode();
+		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1276,8 +1253,8 @@ static ssize_t copy_mode_store(struct device *dev, struct device_attribute *attr
 			return -EINVAL;
 		copy_mode = val;
 		update_mdnie_copy_mode();
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1298,8 +1275,8 @@ static ssize_t gamma_curve_store(struct device *dev, struct device_attribute *at
 			return -EINVAL;
 		gamma_curve = val;
 		update_mdnie_gamma_curve();
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1320,8 +1297,8 @@ static ssize_t sharpen_store(struct device *dev, struct device_attribute *attr, 
 			return -EINVAL;
 		DPRINT("(sharpen: %d)\n", val);
 		CONTROL_1[4] = val;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1344,8 +1321,8 @@ static ssize_t red_store(struct device *dev, struct device_attribute *attr, cons
 		CONTROL_2[19] = red;
 		CONTROL_2[21] = green;
 		CONTROL_2[23] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1368,8 +1345,8 @@ static ssize_t green_store(struct device *dev, struct device_attribute *attr, co
 		CONTROL_2[25] = red;
 		CONTROL_2[27] = green;
 		CONTROL_2[29] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1392,8 +1369,8 @@ static ssize_t blue_store(struct device *dev, struct device_attribute *attr, con
 		CONTROL_2[31] = red;
 		CONTROL_2[33] = green;
 		CONTROL_2[35] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1416,8 +1393,8 @@ static ssize_t cyan_store(struct device *dev, struct device_attribute *attr, con
 		CONTROL_2[18] = red;
 		CONTROL_2[20] = green;
 		CONTROL_2[22] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1440,8 +1417,8 @@ static ssize_t magenta_store(struct device *dev, struct device_attribute *attr, 
 		CONTROL_2[24] = red;
 		CONTROL_2[26] = green;
 		CONTROL_2[28] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1464,8 +1441,8 @@ static ssize_t yellow_store(struct device *dev, struct device_attribute *attr, c
 		CONTROL_2[30] = red;
 		CONTROL_2[32] = green;
 		CONTROL_2[34] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1488,8 +1465,8 @@ static ssize_t white_store(struct device *dev, struct device_attribute *attr, co
 		CONTROL_2[36] = red;
 		CONTROL_2[38] = green;
 		CONTROL_2[40] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1512,8 +1489,8 @@ static ssize_t black_store(struct device *dev, struct device_attribute *attr, co
 		CONTROL_2[37] = red;
 		CONTROL_2[39] = green;
 		CONTROL_2[41] = blue;
-		if (override == 1)
-			mDNIe_Set_Mode();
+		if (override)
+			mDNIe_Set_Mode(mdnie_tun_state.scenario);
 	}
     return size;
 }
@@ -1543,6 +1520,10 @@ struct device *tune_mdnie_dev;
 
 void init_mdnie_class(void)
 {
+	if (mdnie_tun_state.mdnie_enable) {
+		pr_debug("%s : mdnie already enable.. \n",__func__);
+		return;
+	}
 
 	DPRINT("start!\n");
 
