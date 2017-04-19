@@ -131,6 +131,7 @@ unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default
 
 extern uint32_t limited_max_freq_thermal;
 extern bool freq_is_therm_limited(void);
+static uint32_t thermal_hardlimit;
 
 #ifdef SUPERFLUOUS
 struct delayed_work stop_wakeup_kick_work;
@@ -144,6 +145,7 @@ struct delayed_work stop_touchboost_work;
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
+	thermal_hardlimit = limited_max_freq_thermal;
 // Called way too often, even when debugging
 //	#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
 //	pr_info("[HARDLIMIT] check_cpufreq_hardlimit : min = %u / max = %u / freq = %u / result = %u \n",
@@ -154,7 +156,7 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 //		);
 //	#endif
 	if (freq_is_therm_limited())
-		current_limit_max = limited_max_freq_thermal;
+		current_limit_max = thermal_hardlimit;
 
 	return max(current_limit_min, min(current_limit_max, freq));
 }
@@ -162,6 +164,7 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 /* Update limits in cpufreq */
 void reapply_hard_limits(void)
 {
+	thermal_hardlimit = limited_max_freq_thermal;
 	#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
 	pr_info("[HARDLIMIT] reapply_hard_limits - before : min = %u / max = %u \n",
 			current_limit_min,
@@ -207,7 +210,7 @@ void reapply_hard_limits(void)
 		);
 	#endif
 	if (freq_is_therm_limited())
-		current_limit_max = limited_max_freq_thermal;
+		current_limit_max = thermal_hardlimit;
 	update_scaling_limits(current_limit_min, current_limit_max);
 }
 
