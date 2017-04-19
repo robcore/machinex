@@ -112,6 +112,7 @@ fi;
 
 function ADBRETRY()
 {
+adb connect 192.168.1.103
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -274,6 +275,7 @@ fi;
 
 function ADBRETRY()
 {
+adb connect 192.168.1.103
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -283,8 +285,12 @@ else
 	echo "disconnected, retrying"
 	adb connect 192.168.1.103
 	countdown
-	adb push $OUTFOLDER.zip /storage/extSdCard
-	echo "pushed"
+	if [[ $ONLINE == device ]]; then
+		adb push $OUTFOLDER.zip /storage/extSdCard
+		echo "pushed"
+	else
+		echo "push failed"
+	fi
 fi;
 }
 
@@ -471,6 +477,7 @@ OUTFOLDER=$PRVS
 
 function ADBRETRY()
 {
+adb connect 192.168.1.103
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -480,8 +487,12 @@ else
 	echo "disconnected, retrying"
 	adb connect 192.168.1.103
 	countdown
-	adb push $OUTFOLDER.zip /storage/extSdCard
-	echo "pushed"
+	if [[ $ONLINE == device ]]; then
+		adb push $OUTFOLDER.zip /storage/extSdCard
+		echo "pushed"
+	else
+		echo "push failed"
+	fi
 fi;
 }
 
