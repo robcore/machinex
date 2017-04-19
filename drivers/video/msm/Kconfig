@@ -1239,6 +1239,10 @@ config MDNIE_LITE_TUNING
 	bool "mdnie lite tuning"
 	default y
 
+config MDNIE_LITE_CONTROL
+	depends on MDNIE_LITE_TUNING
+	bool "mdnie lite control"
+
 config HBM_PSRE
 	bool "HBM PSRE funtion"
 	default y

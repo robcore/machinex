@@ -65,7 +65,7 @@
 #endif
 
 enum Lcd_mDNIe_UI {
-	mDNIe_UI_MODE,
+	mDNIe_UI_MODE = 0,
 	mDNIe_VIDEO_MODE,
 	mDNIe_VIDEO_WARM_MODE,
 	mDNIe_VIDEO_COLD_MODE,
@@ -106,7 +106,7 @@ enum Outdoor_Mode {
 };
 
 enum ACCESSIBILITY {
-        ACCESSIBILITY_OFF,
+        ACCESSIBILITY_OFF = 0,
         NEGATIVE,
         COLOR_BLIND,
         DARK_SCREEN,
