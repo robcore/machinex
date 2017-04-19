@@ -258,9 +258,6 @@ static inline void mmc_host_clk_init(struct mmc_host *host)
 	 */
 	host->clkgate_delay = 0;
 	host->clk_gated = false;
-	mx_clk_gate_wq = create_singlethread_workqueue("mx_clk_gate");
-	if (!mx_clk_gate_wq)
-		return -ENOMEM;
 	INIT_DELAYED_WORK(&host->clk_gate_work, mmc_host_clk_gate_work);
 	spin_lock_init(&host->clk_lock);
 	mutex_init(&host->clk_gate_mutex);
@@ -342,6 +339,9 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	host->class_dev.parent = dev;
 	host->class_dev.class = &mmc_host_class;
 	device_initialize(&host->class_dev);
+	mx_clk_gate_wq = create_singlethread_workqueue("mx_clk_gate");
+	if (!mx_clk_gate_wq)
+		return NULL;
 
 	mmc_host_clk_init(host);
 

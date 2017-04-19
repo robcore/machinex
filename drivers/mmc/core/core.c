@@ -3573,6 +3573,7 @@ unregister_bus:
 	mmc_unregister_bus();
 destroy_workqueue:
 	destroy_workqueue(workqueue);
+	destroy_workqueue(mx_mmc);
 
 	return ret;
 }
@@ -3583,6 +3584,7 @@ static void __exit mmc_exit(void)
 	mmc_unregister_host_class();
 	mmc_unregister_bus();
 	destroy_workqueue(workqueue);
+	destroy_workqueue(mx_mmc);
 }
 
 subsys_initcall(mmc_init);
