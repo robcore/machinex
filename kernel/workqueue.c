@@ -349,8 +349,6 @@ struct workqueue_struct *system_power_efficient_wq __read_mostly;
 EXPORT_SYMBOL(system_power_efficient_wq);
 struct workqueue_struct *system_freezable_power_efficient_wq __read_mostly;
 EXPORT_SYMBOL(system_freezable_power_efficient_wq);
-struct workqueue_struct *system_reclaim_wq __read_mostly;
-EXPORT_SYMBOL(system_reclaim_wq);
 
 static int worker_thread(void *__worker);
 static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
@@ -5586,14 +5584,10 @@ static int __init init_workqueues(void)
 	system_freezable_power_efficient_wq = alloc_workqueue("events_freezable_power_efficient",
 					      WQ_FREEZABLE | WQ_POWER_EFFICIENT,
 					      0);
-	system_reclaim_wq = alloc_workqueue("events_reclaim",
-						  WQ_UNBOUND | WQ_MEM_RECLAIM
-						  0);
 	BUG_ON(!system_wq || !system_highpri_wq || !system_long_wq ||
 	       !system_unbound_wq || !system_freezable_wq ||
 	       !system_power_efficient_wq ||
-	       !system_freezable_power_efficient_wq ||
-		   !system_reclaim_wq);
+	       !system_freezable_power_efficient_wq);
 
 	wq_watchdog_init();
 

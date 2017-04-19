@@ -112,7 +112,7 @@ MODULE_PARM_DESC(
 static int mmc_schedule_delayed_work(struct delayed_work *work,
 				     unsigned long delay)
 {
-	return queue_delayed_work_on(0, system_reclaim_wq, work, delay);
+	return queue_delayed_work_on(0, system_wq, work, delay);
 }
 
 /*
@@ -349,7 +349,7 @@ void mmc_start_delayed_bkops(struct mmc_card *card)
 	 * it was removed from the queue work but not started yet
 	 */
 	card->bkops_info.cancel_delayed_work = false;
-	queue_delayed_work(system_reclaim_wq, &card->bkops_info.dw,
+	queue_delayed_work(system_wq, &card->bkops_info.dw,
 			   msecs_to_jiffies(
 				   card->bkops_info.delay_ms));
 }
@@ -2582,7 +2582,7 @@ static void mmc_clk_scale_work(struct work_struct *work)
 
 	if (!mmc_try_claim_host(host)) {
 		/* retry after a timer tick */
-		queue_delayed_work(system_reclaim_wq, &host->clk_scaling.work, 1);
+		queue_delayed_work(system_wq, &host->clk_scaling.work, 1);
 		goto out;
 	}
 
@@ -2737,7 +2737,7 @@ static void mmc_clk_scaling(struct mmc_host *host, bool from_wq)
 			 * work, so delay atleast one timer tick to release
 			 * host and re-claim while scaling down the clocks.
 			 */
-			queue_delayed_work(system_reclaim_wq,
+			queue_delayed_work(system_wq,
 					&host->clk_scaling.work, 1);
 			goto no_reset_stats;
 		}
@@ -3544,7 +3544,7 @@ static int __init mmc_init(void)
 {
 	int ret;
 
-	workqueue = alloc_ordered_workqueue("kmmcd", WQ_MEM_RECLAIM);
+	workqueue = alloc_ordered_workqueue("kmmcd", 0);
 	if (!workqueue)
 		return -ENOMEM;
 
