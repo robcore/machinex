@@ -97,6 +97,7 @@
 #ifdef SUPERFLUOUS
 #include <linux/input.h>
 #endif
+#include <linux/thermal.h>
 
 unsigned int hardlimit_max_screen_on  = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;  /* default to stock behaviour */
 unsigned int hardlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK; /* default to stock behaviour */
@@ -128,6 +129,9 @@ unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
 
+extern uint32_t limited_max_freq_thermal;
+extern bool freq_is_therm_limited(void);
+
 #ifdef SUPERFLUOUS
 struct delayed_work stop_wakeup_kick_work;
 
@@ -149,6 +153,9 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 //			max(current_limit_min, min(current_limit_max, freq))
 //		);
 //	#endif
+	if (freq_is_therm_limited())
+		current_limit_max = limited_max_freq_thermal;
+
 	return max(current_limit_min, min(current_limit_max, freq));
 }
 
@@ -199,6 +206,8 @@ void reapply_hard_limits(void)
 			current_limit_max
 		);
 	#endif
+	if (freq_is_therm_limited)
+		current_limit_max = limited_max_freq_thermal
 	update_scaling_limits(current_limit_min, current_limit_max);
 }
 

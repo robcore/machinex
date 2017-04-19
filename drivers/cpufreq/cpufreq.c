@@ -431,6 +431,8 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 
 /* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
+extern uint32_t limited_max_freq_thermal;
+bool freq_is_therm_limited(void);
 extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 {
 	int cpu;
@@ -439,8 +441,13 @@ extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 	for_each_possible_cpu(cpu) {
 		policy = cpufreq_cpu_get(cpu);
 		if (policy != NULL) {
-			policy->user_policy.min = policy->min = freq_min;
-			policy->user_policy.max = policy->max = freq_max;
+			if (freq_is_therm_limited()) {
+				policy->user_policy.min = policy->min = freq_min;
+				policy->user_policy.max = policy->max = freq_max = limited_max_freq_thermal;
+			} else {
+				policy->user_policy.min = policy->min = freq_min;
+				policy->user_policy.max = policy->max = freq_max;
+			}
 		}
 	}
 }
