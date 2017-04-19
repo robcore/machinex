@@ -206,8 +206,8 @@ void reapply_hard_limits(void)
 			current_limit_max
 		);
 	#endif
-	if (freq_is_therm_limited)
-		current_limit_max = limited_max_freq_thermal
+	if (freq_is_therm_limited())
+		current_limit_max = limited_max_freq_thermal;
 	update_scaling_limits(current_limit_min, current_limit_max);
 }
 

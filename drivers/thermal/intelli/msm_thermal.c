@@ -123,7 +123,7 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 	} else {
 		pr_debug("%s: Max frequency reset for cpu%d\n",
 				KBUILD_MODNAME, cpu);
-		therm_freq_limited = true;
+		therm_freq_limited = false;
 	}
 
 	if (cpu_online(cpu)) {
@@ -199,7 +199,6 @@ static void __ref do_freq_control(long temp)
 	int ret = 0;
 	int cpu = 0;
 	uint32_t max_freq = limited_max_freq_thermal;
-	bool = therm_freq_limited;
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
