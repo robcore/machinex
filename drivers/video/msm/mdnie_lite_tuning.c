@@ -383,7 +383,6 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	if ((!mdnie_tun_state.mdnie_enable) || (mdnie_lock) ||
 		(mdnie_tun_state.negative) ||
-		(mfd->resume_state == MIPI_SUSPEND_STATE) || 
 		((mode < mDNIe_UI_MODE) || (mode >= MAX_mDNIe_MODE)))
 		return;
 
