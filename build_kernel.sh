@@ -113,6 +113,7 @@ fi;
 function ADBRETRY()
 {
 adb connect 192.168.1.103
+sleep 1
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -276,6 +277,7 @@ fi;
 function ADBRETRY()
 {
 adb connect 192.168.1.103
+sleep 1
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -478,6 +480,7 @@ OUTFOLDER=$PRVS
 function ADBRETRY()
 {
 adb connect 192.168.1.103
+sleep 1
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
