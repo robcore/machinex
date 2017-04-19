@@ -66,8 +66,6 @@
 static struct mipi_samsung_driver_data *mdnie_msd;
 #endif
 
-/*robs master switch hook*/
-unsigned int mdnie_lock;
 #define MDNIE_LITE_TUN_DEBUG
 
 #ifdef MDNIE_LITE_TUN_DEBUG
@@ -318,20 +316,20 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
 
-	if ((!mdnie_tun_state.mdnie_enable) || (mdnie_lock) ||
+	if ((!mdnie_tun_state.mdnie_enable) ||
 		(mdnie_tun_state.negative) ||
 		((mode < mDNIe_UI_MODE) || (mode >= MAX_mDNIe_MODE)))
 		return;
 
 
 	play_speed_1_5 = 0;
-/*suck it*/
+
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 		if (override) {
 		    DPRINT(" = CONTROL MODE =\n");
 		    INPUT_PAYLOAD1(CONTROL_1);
 		    INPUT_PAYLOAD2(CONTROL_2);
-	    } else {
+	    } else
 #endif
 	/*
 	*	Blind mode & Screen mode has separated menu.
@@ -342,9 +340,16 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		mode = mDNIE_BLINE_MODE;
 	else if (mdnie_tun_state.blind == DARK_SCREEN)
 		mode = mDNIE_DARK_SCREEN_MODE;
+
 	switch (mode) {
 	case mDNIe_UI_MODE:
-		DPRINT(" = UI MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.background == DYNAMIC_MODE) {
 			DPRINT(" = DYNAMIC MODE =\n");
 			INPUT_PAYLOAD1(DYNAMIC_UI_1);
@@ -369,7 +374,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_VIDEO_MODE:
-		DPRINT(" = VIDEO MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.outdoor == OUTDOOR_ON_MODE) {
 			DPRINT(" = OUTDOOR ON MODE =\n");
 			INPUT_PAYLOAD1(OUTDOOR_VIDEO_1);
@@ -401,7 +412,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_VIDEO_WARM_MODE:
-		DPRINT(" = VIDEO WARM MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.outdoor == OUTDOOR_ON_MODE) {
 			DPRINT(" = OUTDOOR ON MODE =\n");
 			INPUT_PAYLOAD1(WARM_OUTDOOR_1);
@@ -414,7 +431,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_VIDEO_COLD_MODE:
-		DPRINT(" = VIDEO COLD MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.outdoor == OUTDOOR_ON_MODE) {
 			DPRINT(" = OUTDOOR ON MODE =\n");
 			INPUT_PAYLOAD1(COLD_OUTDOOR_1);
@@ -427,7 +450,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_CAMERA_MODE:
-		DPRINT(" = CAMERA MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.outdoor == OUTDOOR_OFF_MODE) {
 			if (mdnie_tun_state.background == AUTO_MODE) {
 				DPRINT(" = AUTO MODE =\n");
@@ -446,12 +475,23 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_NAVI:
-		DPRINT(" = NAVI MODE =\n");
-		DPRINT("no data for NAVI MODE..\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    }
+#endif
 		break;
 
 	case mDNIe_GALLERY:
-		DPRINT(" = GALLERY MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.background == DYNAMIC_MODE) {
 			DPRINT(" = DYNAMIC MODE =\n");
 			INPUT_PAYLOAD1(DYNAMIC_GALLERY_1);
@@ -476,7 +516,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_VT_MODE:
-		DPRINT(" = VT MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.background == DYNAMIC_MODE) {
 			DPRINT(" = DYNAMIC MODE =\n");
 			INPUT_PAYLOAD1(DYNAMIC_VT_1);
@@ -501,7 +547,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_BROWSER_MODE:
-		DPRINT(" = BROWSER MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.background == DYNAMIC_MODE) {
 			DPRINT(" = DYNAMIC MODE =\n");
 			INPUT_PAYLOAD1(DYNAMIC_BROWSER_1);
@@ -527,7 +579,13 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIe_eBOOK_MODE:
-		DPRINT(" = eBOOK MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		if (mdnie_tun_state.background == DYNAMIC_MODE) {
 			DPRINT(" = DYNAMIC MODE =\n");
 			INPUT_PAYLOAD1(DYNAMIC_EBOOK_1);
@@ -552,21 +610,40 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	case mDNIE_BLINE_MODE:
-		DPRINT(" = BLIND MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else {
+#endif
 		INPUT_PAYLOAD1(COLOR_BLIND_1);
 		INPUT_PAYLOAD2(COLOR_BLIND_2);
+		}
 		break;
 
 	case mDNIE_DARK_SCREEN_MODE:
-		DPRINT(" = DARK SCREEN MODE =\n");
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else {
+#endif
 		INPUT_PAYLOAD1(DARK_SCREEN_BLIND_1);
 		INPUT_PAYLOAD2(DARK_SCREEN_BLIND_2);
+		}
 		break;
 
 	default:
-		DPRINT("[%s] no option (%d)\n", __func__, mode);
+#if defined(CONFIG_MDNIE_LITE_CONTROL)
+		if (override) {
+		    DPRINT(" = CONTROL MODE =\n");
+		    INPUT_PAYLOAD1(CONTROL_1);
+		    INPUT_PAYLOAD2(CONTROL_2);
+	    } else
+#endif
 		return;
-	}
 	}
 
 	sending_tuning_cmd();
@@ -575,27 +652,18 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 {
-	DPRINT("mDNIe_Set_Negative START\n");
-
 
 	if (negative == 0) {
-		DPRINT("Negative mode(%d) -> reset mode(%d)\n",
-			mdnie_tun_state.negative, mdnie_tun_state.scenario);
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
-
 	} else {
+		if (!override) {
+			INPUT_PAYLOAD1(NEGATIVE_1);
+			INPUT_PAYLOAD2(NEGATIVE_2);
 
-		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
-		DPRINT(" = NEGATIVE MODE =\n");
-
-		INPUT_PAYLOAD1(NEGATIVE_1);
-		INPUT_PAYLOAD2(NEGATIVE_2);
-
-		sending_tuning_cmd();
-		free_tun_cmd();
+			sending_tuning_cmd();
+			free_tun_cmd();
+		}
 	}
-
-	DPRINT("mDNIe_Set_Negative END\n");
 }
 
 void is_play_speed_1_5(int enable)
@@ -619,22 +687,6 @@ void is_play_speed_1_5(int enable)
  * #
  * ##########################################################*/
 
-static ssize_t mdnie_lock_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    return sprintf(buf, "%u\n", mdnie_lock);
-}
-
-static ssize_t mdnie_lock_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
-{
-	unsigned int val;
-
-		sscanf(buf, "%u", &val);
-		mdnie_lock = val;
-	    return size;
-}
-
-static DEVICE_ATTR(mdnie_lock, 0664, mdnie_lock_show, mdnie_lock_store);
-
 static ssize_t mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -649,9 +701,6 @@ static ssize_t mode_store(struct device *dev,
 	int backup;
 
 	sscanf(buf, "%d", &value);
-
-	if (mdnie_lock)
-		return size;
 
 	if (value < DYNAMIC_MODE || value >= MAX_BACKGROUND_MODE) {
 		return size;
@@ -683,14 +732,8 @@ static ssize_t scenario_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-	if ((value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE) || (mdnie_lock))
+	if ((value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE))
 		return size;
-
-
-	if (override) {
-		backup = mdnie_tun_state.scenario;
-		mdnie_tun_state.scenario = value;
-	} else {
 
 	switch (value) {
 	case SIG_MDNIE_UI_MODE:
@@ -736,14 +779,12 @@ static ssize_t scenario_store(struct device *dev,
 	default:
 		break;
 	}
-	}
 
-	if (mdnie_tun_state.negative) {
-		DPRINT("already negative mode(%d), do not set mode(%d)\n",
-			mdnie_tun_state.negative, mdnie_tun_state.scenario);
-	} else {
+	if (mdnie_tun_state.negative)
+		pr_debug("I am a fake message\n");
+	else
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
-	}
+	
 	return size;
 }
 static DEVICE_ATTR(scenario, 0664, scenario_show,
@@ -831,12 +872,10 @@ static ssize_t outdoor_store(struct device *dev,
 	backup = mdnie_tun_state.outdoor;
 	mdnie_tun_state.outdoor = value;
 
-	if (mdnie_tun_state.negative) {
-		DPRINT("already negative mode(%d), do not outdoor mode(%d)\n",
-			mdnie_tun_state.negative, mdnie_tun_state.outdoor);
-	} else {
+	if (mdnie_tun_state.negative)
+		pr_debug("dummy\n");
+	else
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
-	}
 
 	return size;
 }
@@ -869,8 +908,6 @@ static ssize_t negative_store(struct device *dev,
 
 void is_negative_on(void)
 {
-	DPRINT("is negative Mode On = %d\n", mdnie_tun_state.negative);
-
 	if (mdnie_tun_state.negative) {
 		DPRINT("mDNIe_Set_Negative = %d\n", mdnie_tun_state.negative);
 		DPRINT(" = NEGATIVE MODE =\n");
@@ -1349,11 +1386,6 @@ void init_mdnie_class(void)
 		pr_err("Failed to create device(mdnie)!\n");
 
 	if (device_create_file
-		(tune_mdnie_dev, &dev_attr_mdnie_lock) < 0)
-		pr_err("Failed to create device file(%s)!\n",
-			dev_attr_mode.attr.name);
-
-	if (device_create_file
 	    (tune_mdnie_dev, &dev_attr_scenario) < 0)
 		pr_err("Failed to create device file(%s)!\n",
 	       dev_attr_scenario.attr.name);
@@ -1418,13 +1450,10 @@ void init_mdnie_class(void)
 #endif
 
 	mdnie_tun_state.mdnie_enable = true;
-	mdnie_lock = 0;
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 	update_mdnie_copy_mode();
 	update_mdnie_gamma_curve();
 #endif
-
-	DPRINT("end!\n");
 }
 
 void mdnie_lite_tuning_init(void)
