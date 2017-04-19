@@ -1354,6 +1354,7 @@ static inline u64 steal_ticks(u64 steal)
 }
 #endif
 
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 static inline unsigned int do_avg_nr_running(struct rq *rq)
 {
 
@@ -1370,19 +1371,26 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 		ave_nr_running +=
 			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
 
-	return ave_nr_running;
+		return ave_nr_running;
 }
+
+#endif
 
 static inline void inc_nr_running(struct rq *rq)
 {
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-
-	sched_update_nr_prod(cpu_of(rq), rq->nr_running, true);
+#endif
+	sched_update_nr_prod(cpu_of(rq), 1, true);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
+#endif
 	rq->nr_running++;
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
+#endif
 	if (rq->nr_running == 2) {
 #ifdef CONFIG_SMP
 		if (!rq->rd->overload)
@@ -1401,14 +1409,19 @@ static inline void inc_nr_running(struct rq *rq)
 
 static inline void dec_nr_running(struct rq *rq)
 {
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-
-	sched_update_nr_prod(cpu_of(rq), rq->nr_running, false);
+#endif
+	sched_update_nr_prod(cpu_of(rq), 1, false);
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
+#endif
 	rq->nr_running--;
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
+#endif
 }
 
 static inline void add_nr_running(struct rq *rq, unsigned count)
