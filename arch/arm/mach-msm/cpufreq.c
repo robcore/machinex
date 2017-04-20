@@ -38,18 +38,6 @@
 
 #include "acpuclock.h"
 
-#ifdef CONFIG_INTELLI_THERMAL
-struct cpu_freq {
-	uint32_t max;
-	uint32_t min;
-	uint32_t allowed_max;
-	uint32_t allowed_min;
-	uint32_t limits_init;
-};
-
-static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
-#endif
-
 static DEFINE_MUTEX(l2bw_lock);
 
 static struct clk *cpu_clk[NR_CPUS];
@@ -85,6 +73,15 @@ struct cpufreq_suspend_t {
 
 static DEFINE_PER_CPU(struct cpufreq_suspend_t, cpufreq_suspend);
 
+struct cpu_freq {
+	uint32_t max;
+	uint32_t min;
+	uint32_t allowed_max;
+	uint32_t allowed_min;
+	uint32_t limits_init;
+};
+
+static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
 static void update_l2_bw(int *also_cpu)
 {
@@ -347,6 +344,10 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (is_sync)
 		cpumask_setall(policy->cpus);
 
+	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
+	INIT_WORK(&cpu_work->work, set_cpu_work);
+	init_completion(&cpu_work->complete);
+
 	/* synchronous cpus share the same policy */
 	if (is_clk && !cpu_clk[policy->cpu])
 		return 0;
@@ -400,9 +401,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
 
-	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
-	INIT_WORK(&cpu_work->work, set_cpu_work);
-	init_completion(&cpu_work->complete);
 	return 0;
 }
 
@@ -418,23 +416,27 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 	 * before the CPU is brought up.
 	 */
 	case CPU_DEAD:
-	case CPU_UP_CANCELED:
 		if (is_clk) {
 			clk_disable_unprepare(cpu_clk[cpu]);
 			clk_disable_unprepare(l2_clk);
 			update_l2_bw(NULL);
 		}
 		break;
+	case CPU_UP_CANCELED:
+		if (is_clk) {
+			clk_unprepare(cpu_clk[cpu]);
+			clk_unprepare(l2_clk);
+			update_l2_bw(NULL);
+		}
+		break;
 	case CPU_UP_PREPARE:
 		if (is_clk) {
-			rc = clk_prepare_enable(l2_clk);
+			rc = clk_prepare(l2_clk);
 			if (rc < 0)
 				return NOTIFY_BAD;
-			rc = clk_prepare_enable(cpu_clk[cpu]);
-			if (rc < 0) {
-				clk_unprepare(l2_clk);
+			rc = clk_prepare(cpu_clk[cpu]);
+			if (rc < 0)
 				return NOTIFY_BAD;
-			}
 			update_l2_bw(&cpu);
 		}
 		break;
@@ -444,10 +446,8 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 			if (rc < 0)
 				return NOTIFY_BAD;
 			rc = clk_enable(cpu_clk[cpu]);
-			if (rc) {
-				clk_disable(l2_clk);
+			if (rc < 0)
 				return NOTIFY_BAD;
-			}
 		}
 		break;
 	default:
@@ -745,4 +745,5 @@ static int __init msm_cpufreq_register(void)
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
-device_initcall(msm_cpufreq_register);
+late_initcall(msm_cpufreq_register);
+

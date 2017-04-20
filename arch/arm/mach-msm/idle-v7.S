@@ -27,7 +27,6 @@
 #define SCM_CMD_TERMINATE_PC 0x2
 #endif
 
-	.arm
 ENTRY(msm_arch_idle)
 #ifdef CONFIG_ARCH_MSM_KRAIT
 	mrc 	p15, 0, r0, c0, c0, 0
