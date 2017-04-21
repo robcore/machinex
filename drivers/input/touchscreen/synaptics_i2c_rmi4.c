@@ -121,11 +121,10 @@ static ssize_t synaptics_rmi4_full_pm_cycle_show(struct device *dev,
 static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
-#if 0
-static int fb_notifier_callback(struct notifier_block *self,
+#if CONFIG_STATE_NOTIFIER
+static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data);
-#endif
-#ifdef CONFIG_POWERSUSPEND
+#elif CONFIG_POWERSUSPEND
 static void synaptics_rmi4_power_suspend(struct power_suspend *h);
 
 static void synaptics_rmi4_power_resume(struct power_suspend *h);
@@ -295,20 +294,19 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 	return count;
 }
 
-#if 0
+#ifdef CONFIG_STATE_NOTIFIER
 static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval = 0;
 
-	rmi4_data->fb_notif.notifier_call = fb_notifier_callback;
+	rmi4_data->notif.notifier_call = state_notifier_callback;
 
-	retval = fb_register_client(&rmi4_data->fb_notif);
+	retval = state_register_client(&rmi4_data->notif);
 	if (retval)
 		pr_debug("fix your synaptics driver you asshole\n");
 	return;
 }
-#endif
-#ifdef CONFIG_POWERSUSPEND
+#elif CONFIG_POWERSUSPEND
 static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 {
 /*	rmi4_data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -2432,28 +2430,27 @@ static void synaptics_rmi4_sensor_wake(struct synaptics_rmi4_data *rmi4_data)
 	return;
 }
 
-#if 0
-static int fb_notifier_callback(struct notifier_block *self,
+#ifdef CONFIG_STATE_NOTIFIER
+static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	struct fb_event *evdata = data;
-	int *blank;
 	struct synaptics_rmi4_data *rmi4_data =
-		container_of(self, struct synaptics_rmi4_data, fb_notif);
+		container_of(self, struct synaptics_rmi4_data, notif);
 
-	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
-		rmi4_data && rmi4_data->i2c_client) {
-		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK)
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
 			synaptics_rmi4_resume(&(rmi4_data->input_dev->dev));
-		else if (*blank == FB_BLANK_POWERDOWN)
+			break;
+		case STATE_NOTIFIER_SUSPEND:
 			synaptics_rmi4_suspend(&(rmi4_data->input_dev->dev));
+			break;
+		default:
+			break;
 	}
 
-	return 0;
+	return NOTIFY_OK;
 }
-#endif
-#ifdef CONFIG_POWERSUSPEND
+#elif CONFIG_POWERSUSPEND
  /**
  * synaptics_rmi4_power_suspend()
  *
@@ -2628,7 +2625,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 	return 0;
 }
 
-#if (!defined(CONFIG_FB) && !defined(CONFIG_POWERSUSPEND))
+#if (!defined(CONFIG_STATE_NOTIFIER) && !defined(CONFIG_POWERSUSPEND))
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,
