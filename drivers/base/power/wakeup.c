@@ -17,12 +17,7 @@
 #include <linux/types.h>
 #include <trace/events/power.h>
 #include <linux/resume-trace.h>
-#include <linux/display_state.h>
 #include <linux/moduleparam.h>
-/*
-#include <linux/freezer.h>
-*/
-
 
 #include "power.h"
 
@@ -80,9 +75,6 @@ static void pm_wakeup_timer_fn(unsigned long data);
 static LIST_HEAD(wakeup_sources);
 
 static DECLARE_WAIT_QUEUE_HEAD(wakeup_count_wait_queue);
-static DECLARE_WAIT_QUEUE_HEAD(wakeup_freezer_wait_queue);
-
-static ktime_t last_read_time;
 
 static struct wakeup_source deleted_ws = {
 	.name = "deleted",
@@ -118,7 +110,7 @@ struct wakeup_source *wakeup_source_create(const char *name)
 	if (!ws)
 		return NULL;
 
-	wakeup_source_prepare(ws, name ? kstrdup(name, GFP_KERNEL) : NULL);
+	wakeup_source_prepare(ws, name ? kstrdup_const(name, GFP_KERNEL) : NULL);
 	return ws;
 }
 EXPORT_SYMBOL_GPL(wakeup_source_create);
@@ -181,7 +173,7 @@ void wakeup_source_destroy(struct wakeup_source *ws)
 
 	wakeup_source_drop(ws);
 	wakeup_source_record(ws);
-	kfree(ws->name);
+	kfree_const(ws->name);
 	kfree(ws);
 }
 EXPORT_SYMBOL_GPL(wakeup_source_destroy);
@@ -477,7 +469,6 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
 		wake_up(&wakeup_count_wait_queue);
 }
-
 /**
  * wakeup_source_not_registered - validate the given wakeup source.
  * @ws: Wakeup source to be validated.
@@ -585,26 +576,9 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 
 	/*
 	 * active wakeup source should bring the system
-	 * out of PM_SUSPEND_FREEZE state -> Rob: but should also go through the proper process
-	 * of calling pm_abort_suspend so as to minimize the potential damage caused by aborting
-	 * the freezing process. Rob again: why not just add extra insurance that we DON't interrupt
-	 * the freezer and be patient for the fucking 2-7ms or whatever it takes for it to complete?
+	 * out of PM_SUSPEND_FREEZE state
 	 */
-/*
-	if (pm_freezing == true) {
-		DEFINE_WAIT(wait);
-
-		while (pm_freezing == true) {
-			prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
-					TASK_UNINTERRUPTIBLE);
-			if (pm_freezing == false)
-				break;
-
-		}
-		finish_wait(&wakeup_freezer_wait_queue, &wait);
-		freeze_wake();
-	} else */
-		freeze_wake();
+	freeze_wake();
 
 	ws->active = true;
 	ws->active_count++;
@@ -812,22 +786,6 @@ void pm_wakeup_event(struct device *dev, unsigned int msec)
 }
 EXPORT_SYMBOL_GPL(pm_wakeup_event);
 
-void pm_get_active_wakeup_sources(char *pending_wakeup_source, size_t max)
-{
-	struct wakeup_source *ws;
-	int len = 0;
-	rcu_read_lock();
-	len += snprintf(pending_wakeup_source, max, "Pending Wakeup Sources: ");
-	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-		if (ws->active) {
-			len += snprintf(pending_wakeup_source + len, max,
-				"%s ", ws->name);
-		}
-	}
-	rcu_read_unlock();
-}
-EXPORT_SYMBOL_GPL(pm_get_active_wakeup_sources);
-
 void pm_print_active_wakeup_sources(void)
 {
 	struct wakeup_source *ws;
@@ -878,25 +836,6 @@ bool pm_wakeup_pending(void)
 	}
 	spin_unlock_irqrestore(&events_lock, flags);
 
-/*	if (ret) {
-		if (pm_freezing == true) {
-			DEFINE_WAIT(wait);
-
-			while (pm_freezing == true) {
-				prepare_to_wait(&wakeup_freezer_wait_queue, &wait,
-						TASK_UNINTERRUPTIBLE);
-				if (pm_freezing == false)
-					break;
-			}
-
-		finish_wait(&wakeup_freezer_wait_queue, &wait);
-		pr_info("Machinex: Wakeup pending, aborting suspend after freeze is complete\n");
-		} else {
-			pr_info("PM: Wakeup pending, aborting suspend\n");
-		}
-		pm_print_active_wakeup_sources();
-	}
-*/
 	if (ret) {
 		pr_info_once("PM: Wakeup pending, aborting suspend\n");
 		pm_print_active_wakeup_sources();
@@ -919,12 +858,7 @@ bool pm_wakeup_pending(void)
  */
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
- 	unsigned int cnt, inpr;
-	unsigned long flags;
-
-	spin_lock_irqsave(&events_lock, flags);
-		last_read_time = ktime_get();
-		spin_unlock_irqrestore(&events_lock, flags);
+	unsigned int cnt, inpr;
 
 	if (block) {
 		DEFINE_WAIT(wait);
@@ -960,7 +894,6 @@ bool pm_save_wakeup_count(unsigned int count)
 {
 	unsigned int cnt, inpr;
 	unsigned long flags;
-	struct wakeup_source *ws;
 
 	events_check_enabled = false;
 	spin_lock_irqsave(&events_lock, flags);
@@ -968,15 +901,6 @@ bool pm_save_wakeup_count(unsigned int count)
 	if (cnt == count && inpr == 0) {
 		saved_count = count;
 		events_check_enabled = true;
-	} else {
-		rcu_read_lock();
-		list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-			if (ws->active ||
-			    ktime_compare(ws->last_time, last_read_time) > 0) {
-				ws->wakeup_count++;
-			}
-		}
-		rcu_read_unlock();
 	}
 	spin_unlock_irqrestore(&events_lock, flags);
 	return events_check_enabled;
@@ -1038,14 +962,14 @@ static int print_wakeup_source_stats(struct seq_file *m,
 
 		active_time = ktime_sub(now, ws->last_time);
 		total_time = ktime_add(total_time, active_time);
-		if (active_time.tv64 > max_time.tv64)
+		if (active_time > max_time)
 			max_time = active_time;
 
 		if (ws->autosleep_enabled)
 			prevent_sleep_time = ktime_add(prevent_sleep_time,
 				ktime_sub(now, ws->start_prevent_time));
 	} else {
-		active_time = ktime_set(0, 0);
+		active_time = 0;
 	}
 
 	seq_printf(m, "%-12s\t%lu\t\t%lu\t\t%lu\t\t%lu\t\t%lld\t\t%lld\t\t%lld\t\t%lld\t\t%lld\n",

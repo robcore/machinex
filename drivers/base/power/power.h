@@ -9,7 +9,7 @@ static inline void device_pm_init_common(struct device *dev)
 	}
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 static inline void pm_runtime_early_init(struct device *dev)
 {
@@ -20,7 +20,7 @@ static inline void pm_runtime_early_init(struct device *dev)
 extern void pm_runtime_init(struct device *dev);
 extern void pm_runtime_remove(struct device *dev);
 
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 
 static inline void pm_runtime_early_init(struct device *dev)
 {
@@ -30,7 +30,7 @@ static inline void pm_runtime_early_init(struct device *dev)
 static inline void pm_runtime_init(struct device *dev) {}
 static inline void pm_runtime_remove(struct device *dev) {}
 
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 #ifdef CONFIG_PM_SLEEP
 
