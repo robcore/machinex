@@ -15,7 +15,7 @@
  * TODO:
  *      - Add a timer to simulate a pen_up in case there's a timeout.
  */
-#undef CONFIG_POWERSUSPEND
+
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/init.h>

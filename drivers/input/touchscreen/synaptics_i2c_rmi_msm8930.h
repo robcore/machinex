@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  *
  */
-#undef CONFIG_POWERSUSPEND
 #ifndef _SYNAPTICS_RMI4_H_
 #define _SYNAPTICS_RMI4_H_
 

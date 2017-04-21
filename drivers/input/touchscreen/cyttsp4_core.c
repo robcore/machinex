@@ -29,7 +29,7 @@
  * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
  *
  */
-#undef CONFIG_POWERSUSPEND
+
 #include <linux/cyttsp4_bus.h>
 
 #include <linux/delay.h>

@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  *
  */
-#undef CONFIG_POWERSUSPEND
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <asm/unaligned.h>
@@ -1713,7 +1712,7 @@ static void synaptics_rmi4_f51_report(struct synaptics_rmi4_data *rmi4_data,
 /*
 		dev_info (&rmi4_data->i2c_client->dev,
 				"%s: Hover finger: x = %d, y = %d, z = %d\n" ,__func__, x, y, z);
-*/
+*/	
 		rmi4_data->f51_finger = true;
 		rmi4_data->fingers_on_2d = false;
 		synaptics_rmi4_f51_finger_timer((unsigned long)rmi4_data);
@@ -2414,7 +2413,7 @@ static int synaptics_rmi4_f34_init(struct synaptics_rmi4_data *rmi4_data,
 	dev_info(&rmi4_data->i2c_client->dev,
 		"%s NEW config ID:%02X%02X%02X%02X, F/W version:0x%02X",
 		__func__, ctrl_3.fw_release_mf1, ctrl_3.fw_release_mf2, rmi4_data->fw_order_of_ic,rmi4_data->fw_version_of_ic , rmi4_data->fw_version_of_ic);
-
+		
 	fhandler->data = NULL;
 
 	return retval;
@@ -2440,7 +2439,7 @@ static void synaptics_work_rezero(struct work_struct *work)
 		custom_rezero |= 0x34;
 	else
 		custom_rezero |= 0x01;
-
+	
 	retval = synaptics_rmi4_i2c_write(rmi4_data,
 			f51->proximity_custom_rezero_addr,
 			&custom_rezero, sizeof(custom_rezero));
@@ -3406,13 +3405,13 @@ static void synaptics_hallsensor_conn(struct synaptics_rmi4_data *rmi4_data,
     bool update_reg = false;
     struct synaptics_rmi4_f12_ctrl_13 ctrl_13;
     struct synaptics_rmi4_f12_ctrl_15 ctrl_15;
-
+    
     /* read f12 ctrl register */
 	retval = synaptics_rmi4_i2c_read(rmi4_data,
 			0x13,
 			ctrl_13.data,
 			sizeof(ctrl_13.data));
-
+	
 	if (retval < 0) {
 		dev_err(&(rmi4_data->input_dev->dev),
 				"%s: Failed to read f12_ctrl_13 register \n",
@@ -3422,7 +3421,7 @@ static void synaptics_hallsensor_conn(struct synaptics_rmi4_data *rmi4_data,
         dev_info(&rmi4_data->i2c_client->dev,
                 "current finger threshold [0x%x]\n", ctrl_13.data[1]);
     }
-
+	
 	retval = synaptics_rmi4_i2c_read(rmi4_data,
 			0x15,
 			ctrl_15.data,
@@ -3452,7 +3451,7 @@ static void synaptics_hallsensor_conn(struct synaptics_rmi4_data *rmi4_data,
             update_reg = true;
             ctrl_15.data[1] = SM_FINGER_AMPLITUDE_TH_NORMAL;
         }
-
+		
     } else {
    	 	if (ctrl_13.data[1] != MINIMUM_PEAK_AMPLIYUDE_CLEAR_COVER) {
             update_reg = true;
@@ -3473,7 +3472,7 @@ static void synaptics_hallsensor_conn(struct synaptics_rmi4_data *rmi4_data,
                 "update finger threshold [0x%x]\n", ctrl_15.data[0]);
         dev_info(&rmi4_data->i2c_client->dev,
                 "update small finger threshold [0x%x]\n", ctrl_15.data[1]);
-
+		
 		retval = synaptics_rmi4_i2c_write(rmi4_data,
                 0x13,
                 ctrl_13.data,
@@ -3494,7 +3493,7 @@ static void synaptics_hallsensor_conn(struct synaptics_rmi4_data *rmi4_data,
             dev_err(&(rmi4_data->input_dev->dev),
 				"%s: Failed to write finger threshold\n",
 				__func__);
-        }
+        } 
     } else {
         dev_info(&rmi4_data->i2c_client->dev,
                 "%s: not update !\n", __func__);
@@ -4346,7 +4345,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 	return 0;
 }
 #endif
-
+		
 #ifdef CONFIG_PM
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,

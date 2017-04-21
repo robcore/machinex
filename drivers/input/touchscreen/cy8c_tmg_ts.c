@@ -12,7 +12,7 @@
  * GNU General Public License for more details.
  *
  */
-#undef CONFIG_POWERSUSPEND
+
 #include <linux/cy8c_tmg_ts.h>
 #include <linux/delay.h>
 #include <linux/powersuspend.h>

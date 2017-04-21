@@ -15,7 +15,7 @@
  *
  */
 
-#undef CONFIG_POWERSUSPEND
+
 #include <linux/delay.h>
 #include <linux/hrtimer.h>
 #include <linux/i2c.h>

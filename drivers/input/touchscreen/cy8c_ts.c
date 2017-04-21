@@ -31,7 +31,7 @@
  *			(C) 2009 Enea - Original prototype
  *
  */
-#undef CONFIG_POWERSUSPEND
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/i2c.h>

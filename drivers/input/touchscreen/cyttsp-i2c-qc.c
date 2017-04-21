@@ -25,7 +25,7 @@
  * Contact Cypress Semiconductor at www.cypress.com
  *
  */
-#undef CONFIG_POWERSUSPEND
+
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/module.h>

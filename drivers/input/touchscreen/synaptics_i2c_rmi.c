@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  *
  */
-#undef CONFIG_POWERSUSPEND
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <asm/unaligned.h>

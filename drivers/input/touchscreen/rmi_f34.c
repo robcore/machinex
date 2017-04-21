@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  *
  */
-#undef CONFIG_POWERSUSPEND
 #include <linux/fs.h>
 #include <linux/delay.h>
 #include <linux/uaccess.h>

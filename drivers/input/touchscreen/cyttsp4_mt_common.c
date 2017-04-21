@@ -26,7 +26,7 @@
  * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
  *
  */
-#undef CONFIG_POWERSUSPEND
+
 // KEVI added +
 #define PALM_ACTION			// KEVI added +
 #define HAND_BLADE_ACTION	// KEVI added +

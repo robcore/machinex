@@ -612,6 +612,7 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 		schedule_delayed_work(&ddata->flip_cover_dwork, 0);
 	}
 #endif
+	if (gpio_to_irq(ddata->gpio_flip_cover))
 	schedule_delayed_work(&ddata->flip_cover_dwork, msecs_to_jiffies(5));
 	return IRQ_HANDLED;
 }
@@ -971,10 +972,9 @@ static int gpio_keys_suspend(struct device *dev)
 			if (bdata->button->wakeup)
 				enable_irq_wake(bdata->irq);
 		}
-#if 0
+
 		if(ddata->gpio_flip_cover != 0)
-			enable_irq_wake(ddata->irq_flip_cover);
-#endif
+			enable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
 	} else {
 		mutex_lock(&input->mutex);
 		if (input->users)
@@ -1010,10 +1010,8 @@ static int gpio_keys_resume(struct device *dev)
 	}
 
 #if defined(CONFIG_SENSORS_HALL)
-#if 0
 	if (device_may_wakeup(dev) && ddata->gpio_flip_cover != 0)
-		disable_irq_wake(ddata->irq_flip_cover);
-#endif
+		disable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
 #endif
 	if (error)
 		return error;
