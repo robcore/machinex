@@ -89,6 +89,7 @@ struct msm_fb_data_type {
 	boolean sw_currently_refreshing;
 	boolean sw_refreshing_enable;
 	boolean hw_refresh;
+	boolean shutdown_pending;
 #ifdef CONFIG_FB_MSM_OVERLAY
 	int overlay_play_enable;
 #endif
