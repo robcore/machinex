@@ -144,10 +144,11 @@ static void check_temp(struct work_struct *work)
 	}
 
 reschedule:
-	schedule_delayed_work_on(0, &check_temp_work, msecs_to_jiffies(250));
+	if (enabled)
+		schedule_delayed_work_on(0, &check_temp_work, msecs_to_jiffies(250));
 }
 
-int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
+int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
 	int ret = 0;
 
@@ -164,7 +165,7 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	return ret;
 }
 
-static int __devinit msm_thermal_dev_probe(struct platform_device *pdev)
+static int __init msm_thermal_dev_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	char *key = NULL;
