@@ -197,21 +197,35 @@ static void freezer_attach(struct cgroup_subsys_state *new_css,
 	mutex_unlock(&freezer_mutex);
 }
 
+/**
+ * freezer_fork - cgroup post fork callback
+ * @task: a task which has just been forked
+ *
+ * @task has just been created and should conform to the current state of
+ * the cgroup_freezer it belongs to.  This function may race against
+ * freezer_attach().  Losing to freezer_attach() means that we don't have
+ * to do anything as freezer_attach() will put @task into the appropriate
+ * state.
+ */
 static void freezer_fork(struct task_struct *task)
 {
 	struct freezer *freezer;
-
-	/*
-	 * The root cgroup is non-freezable, so we can skip the
-	 * following check.
-	 */
-	if (!parent_freezer(freezer))
-		return;
 
 	mutex_lock(&freezer_mutex);
 	rcu_read_lock();
 
 	freezer = task_freezer(task);
+
+	/*
+	 * The root cgroup is non-freezable, so we can skip the
+	 * following check.
+	 */
+	if (!parent_freezer(freezer)) {
+		rcu_read_unlock();
+		mutex_unlock(&freezer_mutex);
+		return;
+	}
+
 	if (freezer->state & CGROUP_FREEZING)
 		freeze_task(task);
 
