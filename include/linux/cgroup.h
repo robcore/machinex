@@ -674,20 +674,6 @@ static inline struct cgroup_subsys_state *task_css(struct task_struct *task,
 	return task_css_check(task, subsys_id, false);
 }
 
-/**
- * task_css_is_root - test whether a task belongs to the root css
- * @task: the target task
- * @subsys_id: the target subsystem ID
- *
- * Test whether @task belongs to the root css on the specified subsystem.
- * May be invoked in any context.
- */
-static inline bool task_css_is_root(struct task_struct *task, int subsys_id)
-{
-	return task_css_check(task, subsys_id, true) ==
-		init_css_set.subsys[subsys_id];
-}
-
 static inline struct cgroup *task_cgroup(struct task_struct *task,
 					 int subsys_id)
 {
