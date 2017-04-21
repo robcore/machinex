@@ -1296,7 +1296,6 @@ static void __init hugetlb_hstate_alloc_pages(struct hstate *h)
 		} else if (!alloc_fresh_huge_page(h,
 					 &node_states[N_MEMORY]))
 			break;
-		cond_resched_lock(&hugetlb_lock);
 	}
 	h->max_huge_pages = i;
 }
