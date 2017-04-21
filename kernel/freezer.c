@@ -23,7 +23,7 @@ bool pm_nosig_freezing;
  * Temporary export for the deadlock workaround in ata_scsi_hotplug().
  * Remove once the hack becomes unnecessary.
  */
-EXPORT_SYMBOL_GPL(pm_freezing);
+EXPORT_SYMBOL(pm_freezing);
 
 /* protects freezing and frozen transitions */
 static DEFINE_SPINLOCK(freezer_lock);
@@ -42,7 +42,7 @@ bool freezing_slow_path(struct task_struct *p)
 	if (p->flags & (PF_NOFREEZE | PF_SUSPEND_TASK))
 		return false;
 
-	if (test_tsk_thread_flag(p, TIF_MEMDIE))
+	if (test_thread_flag(TIF_MEMDIE))
 		return false;
 
 	if (pm_nosig_freezing || cgroup_freezing(p))
@@ -150,6 +150,12 @@ void __thaw_task(struct task_struct *p)
 {
 	unsigned long flags;
 
+	/*
+	 * Clear freezing and kick @p if FROZEN.  Clearing is guaranteed to
+	 * be visible to @p as waking up implies wmb.  Waking up inside
+	 * freezer_lock also prevents wakeups from leaking outside
+	 * refrigerator.
+	 */
 	spin_lock_irqsave(&freezer_lock, flags);
 	if (frozen(p))
 		wake_up_process(p);
