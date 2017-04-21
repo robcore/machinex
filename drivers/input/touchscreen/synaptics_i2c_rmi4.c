@@ -124,11 +124,11 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 #if 0
 static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data);
-#elif defined(CONFIG_POWERSUSPEND)
+#endif
+#ifdef CONFIG_POWERSUSPEND
 static void synaptics_rmi4_power_suspend(struct power_suspend *h);
 
 static void synaptics_rmi4_power_resume(struct power_suspend *h);
-#endif
 #endif
 
 static ssize_t synaptics_rmi4_f01_reset_store(struct device *dev,
@@ -307,7 +307,8 @@ static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 		pr_debug("fix your synaptics driver you asshole\n");
 	return;
 }
-#elif defined CONFIG_POWERSUSPEND
+#endif
+#ifdef CONFIG_POWERSUSPEND
 static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 {
 /*	rmi4_data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -2451,7 +2452,8 @@ static int fb_notifier_callback(struct notifier_block *self,
 
 	return 0;
 }
-#elif defined(CONFIG_POWERSUSPEND)
+#endif
+#ifdef CONFIG_POWERSUSPEND
  /**
  * synaptics_rmi4_power_suspend()
  *

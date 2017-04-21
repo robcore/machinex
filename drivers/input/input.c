@@ -1743,13 +1743,11 @@ void input_reset_device(struct input_dev *dev)
 		 * it won't happen.  We are disabling the below sequence for those
 		 * who need to use screen off functions, sucka.
 		 */
-#if 0
 		if (!poweroff_charging) {
 			spin_lock_irq(&dev->event_lock);
 			input_dev_release_keys(dev);
 			spin_unlock_irq(&dev->event_lock);
 		}
-#endif
 }
 EXPORT_SYMBOL(input_reset_device);
 
