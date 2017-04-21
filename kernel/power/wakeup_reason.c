@@ -295,128 +295,60 @@ static struct attribute_group attr_group = {
 	.attrs = attrs,
 };
 
-static inline void stop_logging_wakeup_reasons(void)
-{
-	ACCESS_ONCE(log_wakeups) = false;
-}
-
 /*
- * stores the immediate wakeup irqs; these often aren't the ones seen by
- * the drivers that registered them, due to chained interrupt controllers,
- * and multiple-interrupt dispatch.
+ * logs all the wake up reasons to the kernel
+ * stores the irqs to expose them to the userspace via sysfs
  */
-void log_base_wakeup_reason(int irq)
+void log_wakeup_reason(int irq)
 {
-	/* No locking is needed, since this function is called within
-	 * syscore_resume, with both nonboot CPUs and interrupts disabled.
-	 */
-	base_irq_nodes = add_to_siblings(base_irq_nodes, irq);
-	BUG_ON(!base_irq_nodes);
-}
+	struct irq_desc *desc;
+	desc = irq_to_desc(irq);
+	if (desc && desc->action && desc->action->name)
+		printk(KERN_INFO "Resume caused by IRQ %d, %s\n", irq,
+				desc->action->name);
+	else
+		printk(KERN_INFO "Resume caused by IRQ %d\n", irq);
 
-/* This function is called by generic_handle_irq, which may call itself
- * recursively.  This happens with interrupts disabled.  Using
- * log_possible_wakeup_reason, we build a tree of interrupts, tracing the call
- * stack of generic_handle_irq, for each wakeup source containing the
- * interrupts actually handled.
- *
- * Most of these "trees" would either have a single node (in the event that the
- * wakeup source is the final interrupt), or consist of a list of two
- * interrupts, with the wakeup source at the root, and the final dispatched
- * interrupt at the leaf.
- *
- * When *all* wakeup sources have been thusly spoken for, this function will
- * clear the log_wakeups flag, and print the wakeup reasons.
-
-   TODO: percpu
-
- */
-
-struct wakeup_irq_node *
-log_possible_wakeup_reason_start(int irq, struct irq_desc *desc, unsigned depth)
-{
-	BUG_ON(!irqs_disabled() || !logging_wakeup_reasons());
-	BUG_ON((signed)depth < 0);
-
-	/* If suspend was aborted, the base IRQ nodes are missing, and we stop
-	 * logging interrupts immediately.
-	 */
-	if (!base_irq_nodes) {
-		stop_logging_wakeup_reasons();
-		return NULL;
-	}
-
-	/* We assume wakeup interrupts are handlerd only by the first core. */
-	/* TODO: relax this by having percpu versions of the irq tree */
-	if (smp_processor_id() != 0) {
-		return NULL;
-	}
-
-	if (depth == 0) {
-		cur_irq_tree_depth = 0;
-		cur_irq_tree = search_siblings(base_irq_nodes, irq);
-	}
-	else if (cur_irq_tree) {
-		if (depth > cur_irq_tree_depth) {
-			BUG_ON(depth - cur_irq_tree_depth > 1);
-			cur_irq_tree = add_child(cur_irq_tree, irq);
-			if (cur_irq_tree)
-				cur_irq_tree_depth++;
-		}
-		else {
-			cur_irq_tree = get_base_node(cur_irq_tree,
-					cur_irq_tree_depth - depth);
-			cur_irq_tree_depth = depth;
-			cur_irq_tree = add_to_siblings(cur_irq_tree, irq);
-		}
-	}
-
-	return cur_irq_tree;
-}
-
-void log_possible_wakeup_reason_complete(struct wakeup_irq_node *n,
-					unsigned depth,
-					bool handled)
-{
-	if (!n)
+	spin_lock(&resume_reason_lock);
+	if (irq_count == MAX_WAKEUP_REASON_IRQS) {
+		spin_unlock(&resume_reason_lock);
+		printk(KERN_WARNING "Resume caused by more than %d IRQs\n",
+				MAX_WAKEUP_REASON_IRQS);
 		return;
-	n->handled = handled;
-	if (depth == 0) {
-		if (base_irq_nodes_done()) {
-			stop_logging_wakeup_reasons();
-			complete(&wakeups_completion);
-			print_wakeup_sources();
-		}
 	}
+
+	irq_list[irq_count++] = irq;
+	spin_unlock(&resume_reason_lock);
 }
 
-bool log_possible_wakeup_reason(int irq,
-			struct irq_desc *desc,
-			bool (*handler)(unsigned int, struct irq_desc *))
+int check_wakeup_reason(int irq)
 {
-	static DEFINE_PER_CPU(unsigned int, depth);
+	int irq_no;
+	int ret = false;
 
-	struct wakeup_irq_node *n;
-	bool handled;
-	unsigned d;
+	spin_lock(&resume_reason_lock);
+	for (irq_no = 0; irq_no < irq_count; irq_no++)
+		if (irq_list[irq_no] == irq) {
+			ret = true;
+			break;
+	}
+	spin_unlock(&resume_reason_lock);
+	return ret;
+}
 
-	d = get_cpu_var(depth)++;
-	put_cpu_var(depth);
+int check_wakeup_reason(int irq)
+{
+	int irq_no;
+	int ret = false;
 
-	n = log_possible_wakeup_reason_start(irq, desc, d);
-
-	handled = handler(irq, desc);
-
-	d = --get_cpu_var(depth);
-	put_cpu_var(depth);
-
-	if (!handled && desc && desc->action)
-		pr_debug("%s: irq %d action %pF not handled\n", __func__,
-			irq, desc->action->handler);
-
-	log_possible_wakeup_reason_complete(n, d, handled);
-
-	return handled;
+	spin_lock(&resume_reason_lock);
+	for (irq_no = 0; irq_no < irq_count; irq_no++)
+		if (irq_list[irq_no] == irq) {
+			ret = true;
+			break;
+	}
+	spin_unlock(&resume_reason_lock);
+	return ret;
 }
 
 void log_suspend_abort_reason(const char *fmt, ...)
@@ -591,46 +523,31 @@ static struct notifier_block wakeup_reason_pm_notifier_block = {
 	.notifier_call = wakeup_reason_pm_event,
 };
 
+/* Initializes the sysfs parameter
+ * registers the pm_event notifier
+ */
 int __init wakeup_reason_init(void)
 {
-	spin_lock_init(&resume_reason_lock);
+	int retval;
 
-	if (register_pm_notifier(&wakeup_reason_pm_notifier_block)) {
-		pr_warning("[%s] failed to register PM notifier\n",
-			__func__);
-		goto fail;
-	}
+	retval = register_pm_notifier(&wakeup_reason_pm_notifier_block);
+	if (retval)
+		printk(KERN_WARNING "[%s] failed to register PM notifier %d\n",
+				__func__, retval);
 
 	wakeup_reason = kobject_create_and_add("wakeup_reasons", kernel_kobj);
 	if (!wakeup_reason) {
-		pr_warning("[%s] failed to create a sysfs kobject\n",
+		printk(KERN_WARNING "[%s] failed to create a sysfs kobject\n",
 				__func__);
-		goto fail_unregister_pm_notifier;
+		return 1;
 	}
-
-	if (sysfs_create_group(wakeup_reason, &attr_group)) {
-		pr_warning("[%s] failed to create a sysfs group\n",
-			__func__);
-		goto fail_kobject_put;
+	retval = sysfs_create_group(wakeup_reason, &attr_group);
+	if (retval) {
+		kobject_put(wakeup_reason);
+		printk(KERN_WARNING "[%s] failed to create a sysfs group %d\n",
+				__func__, retval);
 	}
-
-	wakeup_irq_nodes_cache =
-		kmem_cache_create("wakeup_irq_node_cache",
-					sizeof(struct wakeup_irq_node), 0,
-					0, NULL);
-	if (!wakeup_irq_nodes_cache)
-		goto fail_remove_group;
-
 	return 0;
-
-fail_remove_group:
-	sysfs_remove_group(wakeup_reason, &attr_group);
-fail_kobject_put:
-	kobject_put(wakeup_reason);
-fail_unregister_pm_notifier:
-	unregister_pm_notifier(&wakeup_reason_pm_notifier_block);
-fail:
-	return 1;
 }
 
 late_initcall(wakeup_reason_init);
