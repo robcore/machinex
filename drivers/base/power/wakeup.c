@@ -110,7 +110,7 @@ struct wakeup_source *wakeup_source_create(const char *name)
 	if (!ws)
 		return NULL;
 
-	wakeup_source_prepare(ws, name ? kstrdup_const(name, GFP_KERNEL) : NULL);
+	wakeup_source_prepare(ws, name ? kstrdup(name, GFP_KERNEL) : NULL);
 	return ws;
 }
 EXPORT_SYMBOL_GPL(wakeup_source_create);
@@ -173,7 +173,7 @@ void wakeup_source_destroy(struct wakeup_source *ws)
 
 	wakeup_source_drop(ws);
 	wakeup_source_record(ws);
-	kfree_const(ws->name);
+	kfree(ws->name);
 	kfree(ws);
 }
 EXPORT_SYMBOL_GPL(wakeup_source_destroy);
@@ -598,7 +598,17 @@ static void wakeup_source_activate(struct wakeup_source *ws)
  */
 static void wakeup_source_report_event(struct wakeup_source *ws)
 {
-	if (!wakeup_source_blocker(ws)) {
+	if (wakeblock) {
+		if (!wakeup_source_blocker(ws)) {
+			ws->event_count++;
+			/* This is racy, but the counter is approximate anyway. */
+			if (events_check_enabled)
+				ws->wakeup_count++;
+
+			if (!ws->active)
+				wakeup_source_activate(ws);
+		}
+	} else {
 		ws->event_count++;
 		/* This is racy, but the counter is approximate anyway. */
 		if (events_check_enabled)
@@ -796,8 +806,12 @@ void pm_print_active_wakeup_sources(void)
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
 			pr_info_once("active wakeup source: %s\n", ws->name);
-			if (!wakeup_source_blocker(ws))
-				active = 1;
+			if (wakeblock) {
+				if (!wakeup_source_blocker(ws))
+					active = 1;
+			} else {
+					active = 1;
+			}
 		} else if (!active &&
 			   (!last_activity_ws ||
 			    ktime_to_ns(ws->last_time) >
