@@ -234,7 +234,7 @@ static inline int calc_load_write_idx(void)
 	 * If the folding window started, make sure we start writing in the
 	 * next idle-delta.
 	 */
-	if (!time_before_eq(jiffies, calc_load_update))
+	if (!time_before(jiffies, calc_load_update))
 		idx++;
 
 	return idx & 1;
@@ -268,7 +268,7 @@ void calc_load_exit_idle(void)
 	/*
 	 * If we're still before the sample window, we're done.
 	 */
-	if (time_before_eq(jiffies, this_rq->calc_load_update))
+	if (time_before(jiffies, this_rq->calc_load_update))
 		return;
 
 	/*
@@ -277,7 +277,7 @@ void calc_load_exit_idle(void)
 	 * sync up for the next window.
 	 */
 	this_rq->calc_load_update = calc_load_update;
-	if (time_before_eq(jiffies, this_rq->calc_load_update + 10))
+	if (time_before(jiffies, this_rq->calc_load_update + 10))
 		this_rq->calc_load_update += LOAD_FREQ;
 }
 
@@ -375,7 +375,7 @@ static void calc_global_nohz(void)
 {
 	long delta, active, n;
 
-	if (!time_before_eq(jiffies, calc_load_update + 10)) {
+	if (!time_before(jiffies, calc_load_update + 10)) {
 		/*
 		 * Catch-up, fold however many we are behind still
 		 */
@@ -419,7 +419,7 @@ void calc_global_load(unsigned long ticks)
 {
 	long active, delta;
 
-	if (time_before_eq(jiffies, calc_load_update + 10))
+	if (time_before(jiffies, calc_load_update + 10))
 		return;
 
 	/*
@@ -452,7 +452,7 @@ void calc_global_load_tick(struct rq *this_rq)
 {
 	long delta;
 
-	if (time_before_eq(jiffies, this_rq->calc_load_update))
+	if (time_before(jiffies, this_rq->calc_load_update))
 		return;
 
 	delta  = calc_load_fold_active(this_rq);
