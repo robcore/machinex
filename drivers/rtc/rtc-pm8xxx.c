@@ -370,7 +370,7 @@ static irqreturn_t pm8xxx_alarm_trigger(int irq, void *dev_id)
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
 		dev_dbg(rtc_dd->rtc_dev, "Write to RTC control register "
 								"failed\n");
-		goto rtc_alarm_handled;
+		return IRQ_HANDLED;
 	}
 
 	rtc_dd->ctrl_reg = ctrl_reg;
@@ -382,7 +382,7 @@ static irqreturn_t pm8xxx_alarm_trigger(int irq, void *dev_id)
 	if (rc < 0) {
 		dev_dbg(rtc_dd->rtc_dev, "RTC Alarm control register read "
 								"failed\n");
-		goto rtc_alarm_handled;
+		return IRQ_HANDLED;
 	}
 
 	ctrl_reg &= ~PM8xxx_RTC_ALARM_CLEAR;
@@ -392,7 +392,6 @@ static irqreturn_t pm8xxx_alarm_trigger(int irq, void *dev_id)
 		dev_dbg(rtc_dd->rtc_dev, "Write to RTC Alarm control register"
 								" failed\n");
 
-rtc_alarm_handled:
 	return IRQ_HANDLED;
 }
 
