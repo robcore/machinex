@@ -431,17 +431,14 @@ static void msm_fb_remove_sysfs(struct platform_device *pdev)
 
 static void msm_fb_shutdown(struct platform_device *pdev)
 {
-	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
-	if (IS_ERR_OR_NULL(mfd)) {
-	       pr_err("MFD is Null");
-	       return;
-	}
-	mfd->shutdown_pending = true;
-	printk(KERN_INFO "%s: fb%d shut down\n", __func__, mfd->index);
-
-	lock_fb_info(mfd->fbi);
-	msm_fb_release_all(mfd->fbi, true);
-	unlock_fb_info(mfd->fbi);
+       struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+       if (IS_ERR_OR_NULL(mfd)) {
+               pr_err("MFD is Null");
+               return;
+       }
+       lock_fb_info(mfd->fbi);
+       msm_fb_release_all(mfd->fbi, true);
+       unlock_fb_info(mfd->fbi);
 }
 static int msm_fb_probe(struct platform_device *pdev)
 {
@@ -608,7 +605,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct msm_fb_data_type *mfd;
@@ -744,7 +741,7 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 }
 #endif
 
-#ifdef CONFIG_PM
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int msm_fb_resume(struct platform_device *pdev)
 {
 	/* This resume function is called when interrupt is enabled.
