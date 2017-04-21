@@ -27,6 +27,7 @@
 #include <linux/notifier.h>
 #include <linux/suspend.h>
 #include <linux/slab.h>
+#include <linux/module.h>
 
 static bool suspend_abort;
 static char abort_reason[MAX_SUSPEND_ABORT_LEN];
@@ -50,8 +51,6 @@ static ktime_t last_monotime; /* monotonic time before last suspend */
 static ktime_t curr_monotime; /* monotonic time after last suspend */
 static ktime_t last_stime; /* monotonic boottime offset before last suspend */
 static ktime_t curr_stime; /* monotonic boottime offset after last suspend */
-static unsigned long suspend_count; /* total amount of resumes */
-static unsigned long abort_count;   /* total amount of suspend abort */
 
 static void init_wakeup_irq_node(struct wakeup_irq_node *p, int irq)
 {
@@ -472,6 +471,7 @@ int check_wakeup_reason(int irq)
 	spin_unlock(&resume_reason_lock);
 	return found;
 }
+EXPORT_SYMBOL(check_wakeup_reason);
 
 static bool build_leaf_nodes(struct wakeup_irq_node *n, void *_p)
 {
@@ -510,7 +510,7 @@ const struct list_head* get_wakeup_reasons(unsigned long timeout,
 		unsigned long time_waited;
 
 		if (timeout)
-			signalled = wait_for_completion_timeout(&wakeups_completion, timeout);
+			signalled = wait_for_completion_interruptible_timeout(&wakeups_completion, timeout);
 		if (!signalled) {
 			pr_warn("%s: completion timeout\n", __func__);
 			wakeup_ready_timeout++;
@@ -562,17 +562,13 @@ void clear_wakeup_reasons(void)
 static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		unsigned long pm_event, void *unused)
 {
-#if IS_ENABLED(CONFIG_SUSPEND_TIME)
-	ktime_t temp;
-	struct timespec suspend_time;
-#endif
 	unsigned long flags;
 
 	spin_lock_irqsave(&resume_reason_lock, flags);
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
 		clear_wakeup_reasons_nolock();
-
+		/* monotonic time since boot */
 		last_monotime = ktime_get();
 		/* monotonic time since boot including the time spent in suspend */
 		last_stime = ktime_get_boottime();
@@ -583,19 +579,17 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		/* monotonic time since boot including the time spent in suspend */
 		curr_stime = ktime_get_boottime();
 
-		if (!suspend_abort)
+		if (!suspend_abort) {
 			suspend_count++;
-		else
+			total_xtime = timespec_add(total_xtime,
+					timespec_sub(curr_xtime, last_xtime));
+			total_stime = timespec_add(total_stime,
+					timespec_sub(curr_stime, last_stime));
+		} else {
 			abort_count++;
-
-#if IS_ENABLED(CONFIG_SUSPEND_TIME)
-		temp = ktime_sub(ktime_sub(curr_stime, last_stime),
-				ktime_sub(curr_monotime, last_monotime));
-		suspend_time = ktime_to_timespec(temp);
-		time_in_suspend_bins[fls(suspend_time.tv_sec)]++;
-		pr_info("Suspended for %lu.%03lu seconds\n", suspend_time.tv_sec,
-			suspend_time.tv_nsec / NSEC_PER_MSEC);
-#endif
+			total_atime = timespec_add(total_atime,
+					timespec_sub(curr_xtime, last_xtime));
+		}
 
 #ifdef CONFIG_DEDUCE_WAKEUP_REASONS
 		/* log_wakeups should have been cleared by now. */
