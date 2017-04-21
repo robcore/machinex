@@ -318,8 +318,8 @@ bool handle_nested_irq(unsigned int irq)
 
 	action = desc->action;
 	if (unlikely(!action || irqd_irq_disabled(&desc->irq_data))) {
-		mask_this_irq = 1;
 		desc->istate |= IRQS_PENDING;
+		mask_this_irq = 1;
 		goto out_unlock;
 	}
 
