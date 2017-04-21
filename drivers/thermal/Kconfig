@@ -96,6 +96,12 @@ config THERMAL_MONITOR
 
 endchoice
 
+config FRANCO_THERMAL
+	bool "Franco's simple thermal algorithm"
+	default n
+	help
+	  This is a simplified version of msm thermal created by Franco.
+
 config SPEAR_THERMAL
 	bool "SPEAr thermal sensor driver"
 	depends on THERMAL
