@@ -30,6 +30,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
 #include <asm/smp_plat.h>
+#include "acpuclock.h"
 #include <linux/suspend.h>
 
 #define MAX_LONG_SIZE 24
@@ -232,6 +233,7 @@ static void update_related_cpus(void)
 		cpumask_copy(this_cpu->related_cpus, cpu_policy.cpus);
 	}
 }
+
 static int cpu_hotplug_handler(struct notifier_block *nb,
 			unsigned long val, void *data)
 {
@@ -244,7 +246,7 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 	switch (val) {
 	case CPU_ONLINE:
 		if (!this_cpu->cur_freq)
-			this_cpu->cur_freq = cpufreq_quick_get(cpu);
+			this_cpu->cur_freq = acpuclk_get_rate(cpu);
 		update_related_cpus();
 	case CPU_ONLINE_FROZEN:
 		this_cpu->avg_load_maxfreq = 0;
@@ -544,9 +546,9 @@ static int __init msm_rq_stats_init(void)
 		struct cpu_load_data *pcpu = &per_cpu(cpuload, i);
 		mutex_init(&pcpu->cpu_load_mutex);
 		cpufreq_get_policy(&cpu_policy, i);
-		pcpu->policy_max = cpu_policy.max;
+		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
 		if (cpu_online(i))
-			pcpu->cur_freq = cpu_policy.cur;
+			pcpu->cur_freq = acpuclk_get_rate(i);
 		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
 				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
