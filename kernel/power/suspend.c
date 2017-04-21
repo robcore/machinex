@@ -25,27 +25,19 @@
 #include <linux/export.h>
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
-#include <linux/rtc.h>
-#include <linux/wakeup_reason.h>
-#include <linux/partialresume.h>
 #include <linux/ftrace.h>
+#include <linux/rtc.h>
 #include <trace/events/power.h>
 #include <linux/compiler.h>
+#include <linux/wakeup_reason.h>
 
 #include "power.h"
-#include <linux/mx_freeze.h>
-bool mx_freezing_in_progress;
-bool freezing_in_progress()
-{
-	return mx_freezing_in_progress;
-}
 
-static const char *pm_labels[] = { "mem", "standby", "freeze", };
+const char *pm_labels[] = { "mem", "standby", "freeze", NULL };
 const char *pm_states[PM_SUSPEND_MAX];
 
 static const struct platform_suspend_ops *suspend_ops;
 static const struct platform_freeze_ops *freeze_ops;
-
 static DECLARE_WAIT_QUEUE_HEAD(suspend_freeze_wait_head);
 static bool suspend_freeze_wake;
 
@@ -154,6 +146,12 @@ static int platform_suspend_prepare(suspend_state_t state)
 		suspend_ops->prepare() : 0;
 }
 
+static int platform_suspend_prepare_late(suspend_state_t state)
+{
+	return state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->prepare ?
+		freeze_ops->prepare() : 0;
+}
+
 static int platform_suspend_prepare_noirq(suspend_state_t state)
 {
 	return state != PM_SUSPEND_FREEZE && suspend_ops->prepare_late ?
@@ -164,6 +162,12 @@ static void platform_resume_noirq(suspend_state_t state)
 {
 	if (state != PM_SUSPEND_FREEZE && suspend_ops->wake)
 		suspend_ops->wake();
+}
+
+static void platform_resume_early(suspend_state_t state)
+{
+	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->restore)
+		freeze_ops->restore();
 }
 
 static void platform_resume_finish(suspend_state_t state)
@@ -196,49 +200,18 @@ static void platform_recover(suspend_state_t state)
 		suspend_ops->recover();
 }
 
-static bool platform_suspend_again(void)
+static bool platform_suspend_again(suspend_state_t state)
 {
-	int count;
-	bool suspend = suspend_ops->suspend_again ?
+	return state != PM_SUSPEND_FREEZE && suspend_ops->suspend_again ?
 		suspend_ops->suspend_again() : false;
-
-	if (suspend) {
-		/*
-		 * pm_get_wakeup_count() gets an updated count of wakeup events
-		 * that have occured and will return false (i.e. abort suspend)
-		 * if a wakeup event has been started during suspend_again() and
-		 * is still active. pm_save_wakeup_count() stores the count
-		 * and enables pm_wakeup_pending() to properly analyze wakeup
-		 * events before entering suspend in suspend_enter().
-		 */
-		suspend = pm_get_wakeup_count(&count, false) &&
-			  pm_save_wakeup_count(count);
-
-		if (!suspend)
-			pr_debug("%s: wakeup occurred during suspend_again\n",
-				__func__);
-	}
-
-	pr_debug("%s: votes for: %s\n", __func__,
-		suspend ? "suspend" : "resume");
-
-	return suspend;
 }
-
-#ifdef CONFIG_PM_DEBUG
-static unsigned int pm_test_delay = 5;
-module_param(pm_test_delay, uint, 0644);
-MODULE_PARM_DESC(pm_test_delay,
-		 "Number of seconds to wait before resuming from suspend test");
-#endif
 
 static int suspend_test(int level)
 {
 #ifdef CONFIG_PM_DEBUG
 	if (pm_test_level == level) {
-		pr_info("suspend debug: Waiting for %d second(s).\n",
-				pm_test_delay);
-		mdelay(pm_test_delay * 1000);
+		printk(KERN_INFO "suspend debug: Waiting for 5 seconds.\n");
+		mdelay(5000);
 		return 1;
 	}
 #endif /* !CONFIG_PM_DEBUG */
@@ -268,7 +241,7 @@ static int suspend_prepare(suspend_state_t state)
 	error = suspend_freeze_processes();
 	if (!error)
 		return 0;
-	log_suspend_abort_reason("One or more tasks refusing to freeze");
+
 	suspend_stats.failed_freeze++;
 	dpm_save_failed_step(SUSPEND_FREEZE);
  Finish:
@@ -314,12 +287,19 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			suspend_stats.failed_devs[last_dev]);
 		goto Platform_finish;
 	}
+	error = platform_suspend_prepare_late(state);
+	if (error)
+		goto Devices_early_resume;
+
 	error = dpm_suspend_noirq(PMSG_SUSPEND);
 	if (error) {
+		last_dev = suspend_stats.last_failed_dev + REC_FAILED_NUM - 1;
+		last_dev %= REC_FAILED_NUM;
 		printk(KERN_ERR "PM: noirq suspend of devices failed\n");
-		goto Devices_early_resume;
+		log_suspend_abort_reason("noirq suspend of %s device failed",
+			suspend_stats.failed_devs[last_dev]);
+		goto Platform_early_resume;
 	}
-
 	error = platform_suspend_prepare_noirq(state);
 	if (error)
 		goto Platform_wake;
@@ -359,8 +339,6 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			log_suspend_abort_reason(suspend_abort);
 			error = -EBUSY;
 		}
-
-		start_logging_wakeup_reasons();
 		syscore_resume();
 	}
 
@@ -374,73 +352,16 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	platform_resume_noirq(state);
 	dpm_resume_noirq(PMSG_RESUME);
 
+ Platform_early_resume:
+	platform_resume_early(state);
+
  Devices_early_resume:
 	dpm_resume_early(PMSG_RESUME);
 
  Platform_finish:
 	platform_resume_finish(state);
-
 	return error;
 }
-
-#ifdef CONFIG_PARTIALRESUME
-static bool suspend_again(bool *drivers_resumed)
-{
-	const struct list_head *irqs;
-	struct list_head unfinished;
-
-	*drivers_resumed = false;
-
-	/* If a platform suspend_again handler is defined, when it decides to
-	 * not suspend again, this takes precedence over drivers.  If a
-	 * platform's suspend_again callback returns true, then we proceed to
-	 * check the drivers as well.
-	 */
-	if (suspend_ops->suspend_again && !suspend_ops->suspend_again())
-		return false;
-
-	/* TODO: resume only the drivers associated with the wakeup interrupts!
-	 */
-	dpm_resume_end(PMSG_RESUME);
-	*drivers_resumed = true;
-
-	/* Thaw kernel threads opportunistically, to allow get_wakeup_reasons
-	 * to block while the wakeup interrupt list is being assembled.  Calls
-	 * schedule() internally.
-	 */
-	thaw_kernel_threads();
-
-	/* Look for a match between the wakeup reasons and the registered
-	 * callbacks.  Don't bother thawing the kernel threads if a match is
-	 * not found.
-         */
-	irqs = get_wakeup_reasons(msecs_to_jiffies(100), &unfinished);
-	if (!suspend_again_match(irqs, &unfinished))
-		return false;
-
-	if (suspend_again_consensus() &&
-		       !freeze_kernel_threads()) {
-		clear_wakeup_reasons();
-		*drivers_resumed = false;
-		if (dpm_suspend_start(PMSG_SUSPEND)) {
-			printk(KERN_ERR "PM: Some devices failed to suspend\n");
-			log_suspend_abort_reason("Some devices failed to suspend");
-			if (suspend_ops->recover)
-				suspend_ops->recover();
-			return false;
-		}
-		return true;
-	}
-
-	return false;
-}
-#else
-static __always_inline bool
-suspend_again(bool *drivers_resumed __attribute__((unused)))
-{
-	return suspend_ops->suspend_again && suspend_ops->suspend_again();
-}
-#endif /* CONFIG_PARTIALRESUME */
 
 /**
  * suspend_devices_and_enter - Suspend devices and enter system sleep state.
@@ -450,7 +371,6 @@ int suspend_devices_and_enter(suspend_state_t state)
 {
 	int error;
 	bool wakeup = false;
-	bool resumed = false;
 
 	if (!sleep_state_supported(state))
 		return -ENOSYS;
@@ -473,12 +393,11 @@ int suspend_devices_and_enter(suspend_state_t state)
 
 	do {
 		error = suspend_enter(state, &wakeup);
-	} while (!error && !wakeup && suspend_again(&resumed));
+	} while (!error && !wakeup && platform_suspend_again(state));
 
  Resume_devices:
 	suspend_test_start();
-	if (!resumed)
-		dpm_resume_end(PMSG_RESUME);
+	dpm_resume_end(PMSG_RESUME);
 	suspend_test_finish("resume devices");
 	resume_console();
  Close:
