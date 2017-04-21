@@ -799,6 +799,22 @@ void pm_wakeup_event(struct device *dev, unsigned int msec)
 }
 EXPORT_SYMBOL_GPL(pm_wakeup_event);
 
+void pm_get_active_wakeup_sources(char *pending_wakeup_source, size_t max)
+{
+	struct wakeup_source *ws;
+	int len = 0;
+	rcu_read_lock();
+	len += snprintf(pending_wakeup_source, max, "Pending Wakeup Sources: ");
+	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
+		if (ws->active) {
+			len += snprintf(pending_wakeup_source + len, max,
+				"%s ", ws->name);
+		}
+	}
+	rcu_read_unlock();
+}
+EXPORT_SYMBOL_GPL(pm_get_active_wakeup_sources);
+
 void pm_print_active_wakeup_sources(void)
 {
 	struct wakeup_source *ws;
@@ -916,6 +932,7 @@ bool pm_save_wakeup_count(unsigned int count)
 {
 	unsigned int cnt, inpr;
 	unsigned long flags;
+	struct wakeup_source *ws;
 
 	events_check_enabled = false;
 	spin_lock_irqsave(&events_lock, flags);
@@ -923,6 +940,15 @@ bool pm_save_wakeup_count(unsigned int count)
 	if (cnt == count && inpr == 0) {
 		saved_count = count;
 		events_check_enabled = true;
+	} else {
+		rcu_read_lock();
+		list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
+			if (ws->active ||
+			    ktime_compare(ws->last_time, last_read_time) > 0) {
+				ws->wakeup_count++;
+			}
+		}
+		rcu_read_unlock();
 	}
 	spin_unlock_irqrestore(&events_lock, flags);
 	return events_check_enabled;
