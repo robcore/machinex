@@ -1,0 +1,368 @@
+Truncating memory at 0xc0000000 to fit in 32-bit physical address space
+sec_tsp_mode: LCD_ID = 0x428047, val: 0X428047, ret1: 0x8msm_rpm_get_status(): Status id 433 not defined for target
+msm_rpm_get_status(): Status id 433 not defined for target
+sensor_power_on_vdd: done
+i2c i2c-4: Failed to register i2c client imx135 at 0x10 (-16)
+i2c i2c-4: Can't create device at 0x10
+i2c i2c-4: Failed to register i2c client s5k3l1yx at 0x34 (-16)
+i2c i2c-4: Can't create device at 0x34
+AXI: msm_bus_fabric_init_driver(): msm_bus_fabric_init_driver
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+Error-Bad Function Input
+Error-Bad Function Input
+smd_channel_probe_worker: allocation table not initialized
+mdm_modem_probe: registered mdm id 0
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:a
+[mdnie lite] start!
+hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddb3de08
+Inside writeback_driver_init
+Inside writeback_probe
+Unknown PM state 0
+Unknown PM state 3
+wcd9xxx_slim_probe: failed to get slimbus tabla-slim logical address: -6
+msm_otg msm_otg: failed to get phy_clk
+couldn't get usb power supply
+[jc_spi_init:336] Entered
+[jc_spi_probe:301] Entered
+[jc_spi_probe:311] jc_spi successfully probed
+msm_eeprom_probe probe_fail
+msm_sensor_i2c_probe s5k6b2yx probe succeeded
+msm_eeprom_probe probe_fail
+mmc0: No card detect facilities available
+power_supply sec-fuelgauge: driver failed to report `status' property: -22
+power_supply sec-fuelgauge: driver failed to report `status' property: -22
+max77693_get_health_state: Fail to get psy (battery)
+power_supply sec-charger: driver failed to report `power_now' property: -22
+max77693_get_health_state: Fail to get psy (battery)
+power_supply sec-charger: driver failed to report `power_now' property: -22
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x18 not connected
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x11100c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+Unable to register core for 0
+sec-battery sec-battery: sec_battery_probe: Failed to Enable Wakeup Source(-6)
+barcode_emul_ice4: probe complete barcode_emul_probe
+Warning: unable to open an initial console.
+init: /init.rc: 222: invalid command 'load_system_props'
+init: /init.qcom.rc: 716: invalid command '/system/bin/log'
+init: init.carrier.rc: 90: ignored duplicate definition of service 'privatemode'
+init: init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+init: init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+init: init.carrier.rc: 195: invalid option 'write'
+init: init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+init: /init.carrier.rc: 84: ignored duplicate definition of service 'vcsFPService'
+init: /init.carrier.rc: 90: ignored duplicate definition of service 'privatemode'
+init: /init.carrier.rc: 130: ignored duplicate definition of service 'scranton_RD'
+init: /init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+init: /init.carrier.rc: 156: ignored duplicate definition of service 'diag_uart_log'
+init: /init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+init: /init.carrier.rc: 177: ignored duplicate definition of service 'swapon'
+init: /init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'mfc'
+init: invalid uid 'fm_radio'
+power_supply sec-fuelgauge: driver failed to report `status' property: -22
+power_supply sec-charger: driver failed to report `power_now' property: -22
+init: Running /dev/block/platform/msm_sdcc.1/by-name/cache on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/efs on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+init: failed to open '/sys/devices/soc0/soc_id'
+init: failed to open '/sys/devices/soc0/platform_version'
+init: failed to open '/sys/devices/soc0/hw_platform'
+init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
+init: do_restorecon: Could not access /carrier
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+init: Warning!  Service lmkd needs a SELinux domain defined; please fix!
+init: Warning!  Service modem-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-c_core-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service config_bluetooth needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-usb-sh needs a SELinux domain defined; please fix!
+Unknown PM state 0
+Unknown PM state 3
+Unknown PM state 0
+Unknown PM state 3
+init: service 'console' requires console
+init: service 'console' requires console
+init: Warning!  Service scs needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/debuggerd64', disabling 'debuggerd64'
+init: Warning!  Service DR-daemon needs a SELinux domain defined; please fix!
+init: Warning!  Service qcom-c_main-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service sec-sh needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/rf4ce', disabling 'rf4ce'
+init: cannot find '/system/bin/imsqmidaemon', disabling 'imsqmidaemon'
+init: Warning!  Service zygote needs a SELinux domain defined; please fix!
+init: untracked pid 338 exited with status 0
+init: cannot find '/system/bin/dpmd', disabling 'dpmd'
+init: Warning!  Service macloader needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/loc_launcher', disabling 'loc_launcher'
+init: Warning!  Service qcom-sh needs a SELinux domain defined; please fix!
+init: Warning!  Service ppd needs a SELinux domain defined; please fix!
+init: cannot find '/system/bin/vcsFPService', disabling 'vcsFPService'
+init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+init: no such service 'quipc_igsn'
+init: no such service 'quipc_main'
+init: untracked pid 352 exited with status 1
+init: untracked pid 454 exited with status 1
+init: untracked pid 539 exited with status 0
+[mdnie lite]  = DYNAMIC MODE =
+init: untracked pid 284 exited with status 1
+init: untracked pid 878 exited with status 1
+init: untracked pid 343 exited with status 1
+init: untracked pid 956 exited with status 1
+init: untracked pid 754 exited with status 1
+init: untracked pid 1223 exited with status 1
+[SSP]: mag_store_hwoffset - get_hw_offset failed
+mdm_driver_queue_notification: Couldn't find notif for dev external_modem
+init: untracked pid 2161 exited with status 0
+init: untracked pid 2168 exited with status 1
+init: untracked pid 2275 exited with status 1
+init: Warning!  Service usf-post-boot needs a SELinux domain defined; please fix!
+q6asm_get_audio_client: invalid session: -1
+q6asm_get_audio_client: invalid session: -1
+[mdnie lite]  = DYNAMIC MODE =
+[mdnie lite]  = DYNAMIC MODE =
+Securing...
+Unsecuring....
+[mdnie lite]  = DYNAMIC MODE =
+[BT] Bluetooth Power Off.
+[BT] Bluetooth Power On.
+[BT] host_wake is low.
+Unknown PM state 0
+[mdnie lite]  = DYNAMIC MODE =
+[mdnie lite]  = DYNAMIC MODE =
+init: untracked pid 5638 killed by signal 9
+init: untracked pid 5646 killed by signal 9
+init: untracked pid 5623 killed by signal 9
+init: untracked pid 5236 killed by signal 9
+binder: 4752: binder_alloc_buf, no vma
+init: untracked pid 7835 exited with status 255
+irq	rdi2 regUpdateIrq
+vfe32_process_rdi2_reg_update_irq: RDI2
+irq	rdi2 regUpdateIrq
+vfe32_process_rdi2_reg_update_irq: RDI2
+msm_axi_subdev_release iommu_detach_device 
+msm_axi_subdev_release setting share_ctrl->vfebase to NULL msm_release_ion_client Calling ion_client_destroy client d3786880
+init: untracked pid 13595 killed by signal 9
+init: untracked pid 9526 killed by signal 9
+init: untracked pid 9519 killed by signal 9
+init: untracked pid 9481 killed by signal 9
+init: untracked pid 9607 killed by signal 9
+max77693_muic_charger_cb: cable type for charger: MUIC(3), CHARGER(3)
+init: untracked pid 17270 killed by signal 9
+init: untracked pid 17293 killed by signal 9
+init: untracked pid 17278 killed by signal 9
+init: untracked pid 17233 killed by signal 9
+init: untracked pid 16546 killed by signal 9
+init: untracked pid 15583 killed by signal 9
+init: Warning!  Service pre-recovery needs a SELinux domain defined; please fix!
+SysRq : Emergency Remount R/O
+qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+MFD is Nullmsmfb_overlay_set: ioctl failed, rc=-1
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+msm_iommu: Unexpected IOMMU page fault!
+[mdnie lite]  = DYNAMIC MODE =
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+max77693_muic_charger_cb: cable type for charger: MUIC(0), CHARGER(1)
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+EXT4-fs (mmcblk0p29): ext4_da_writepages: jbd2_start: 2048 pages, ino 1023; err -30
+PMIC Initiated shutdown cpu_power_off cpu=0
+PMIC Initiated shutdown cpu_power_off cpu=3
+PMIC Initiated shutdown cpu_power_off cpu=1
+Powering off the SoC
+Calling scm to disable arbiter
+SCM returned even when asked to busy loop rc=-4
+waiting on pmic to shut msm down
+
+No errors detected
