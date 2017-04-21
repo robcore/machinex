@@ -205,7 +205,7 @@ static void freezer_fork(struct task_struct *task)
 	 * The root cgroup is non-freezable, so we can skip the
 	 * following check.
 	 */
-	if (task_css_is_root(task, freezer_cgrp_id))
+	if (!parent_freezer(freezer))
 		return;
 
 	mutex_lock(&freezer_mutex);
