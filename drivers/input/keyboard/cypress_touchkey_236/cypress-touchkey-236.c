@@ -435,14 +435,14 @@ static void cypress_touchkey_interrupt_set_dual(struct i2c_client *client)
 			msleep(30);
 			continue;
 		}
-		msleep(30);
+		mdelay(30);
 
 		data[0] = CYPRESS_DETECTION_FLAG;
 
 		ret = i2c_smbus_read_i2c_block_data(client, data[0], 1, &data[1]);
 		if (ret < 0) {
 			dev_err(&client->dev, "%s: i2c read error. (%d)\n", __func__, ret);
-			msleep(30);
+			mdelay(30);
 			continue;
 		}
 
@@ -1742,7 +1742,7 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 #ifdef CYPRESS_MENU_BACK_MULTI_REPORT
 	/* CYPRESS Firmware setting interrupt type : dual or single interrupt */
 	if (info->ic_fw_ver >= CYPRESS_RECENT_BACK_REPORT_FW_VER)
-		msleep(60);
+		mdelay(60);
 
 	cypress_touchkey_interrupt_set_dual(info->client);
 #endif

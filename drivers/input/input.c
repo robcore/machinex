@@ -1735,8 +1735,6 @@ void input_reset_device(struct input_dev *dev)
 	if (dev->users)
 		input_dev_toggle(dev, true);
 
-	mutex_unlock(&dev->mutex);
-
 		/*
 		 * Keys that have been pressed at suspend time are unlikely
 		 * to be still pressed when we resume, but that doesn't mean
@@ -1748,6 +1746,7 @@ void input_reset_device(struct input_dev *dev)
 			input_dev_release_keys(dev);
 			spin_unlock_irq(&dev->event_lock);
 		}
+	mutex_unlock(&dev->mutex);
 }
 EXPORT_SYMBOL(input_reset_device);
 
