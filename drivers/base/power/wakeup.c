@@ -863,15 +863,10 @@ void pm_print_active_wakeup_sources(void)
 	int active = 0;
 	struct wakeup_source *last_activity_ws = NULL;
 
-	// kinda pointless to force this routine during screen on
-	if (is_display_on())
-		return;
-
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
 			pr_info_once("active wakeup source: %s\n", ws->name);
-			if (!wakeup_source_blocker(ws))
 				active = 1;
 		} else if (!active &&
 			   (!last_activity_ws ||
