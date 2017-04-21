@@ -128,16 +128,19 @@ static void wcd9xxx_cfg_clsh_param_common(
 			 __func__);
 }
 
-static void wcd9xxx_chargepump_request(struct snd_soc_codec *codec, bool on)
+static void wcd9xxx_chargepump_request(
+	struct snd_soc_codec *codec, bool on)
 {
 	static int cp_count;
 
 	if (on && (++cp_count == 1)) {
 		snd_soc_update_bits(codec, WCD9XXX_A_CDC_CLK_OTHR_CTL,
-				    0x01, 0x01);
-		dev_dbg(codec->dev, "%s: Charge Pump enabled, count = %d\n",
-			__func__, cp_count);
-	} else if (!on) {
+							0x01, 0x01);
+		dev_info(codec->dev, "%s: Charge Pump enabled, count = %d\n",
+				__func__, cp_count);
+	}
+
+	else if (!on) {
 		if (--cp_count < 0) {
 			dev_dbg(codec->dev,
 				"%s: Unbalanced disable for charge pump\n",
@@ -503,7 +506,7 @@ void wcd9xxx_clsh_fsm(struct snd_soc_codec *codec,
 		(*clsh_state_fp[req_state]) (codec, cdc_clsh_d, req_state,
 					     req_type);
 		cdc_clsh_d->state = new_state;
-		dev_dbg(codec->dev, "%s: ClassH state transition from %s to %s\n",
+		dev_info(codec->dev, "%s: ClassH state transition from %s to %s\n",
 				__func__, state_to_str(old_state, msg0, sizeof(msg0)),
 				state_to_str((cdc_clsh_d->state), msg1, sizeof(msg1)));
 
