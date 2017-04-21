@@ -54,8 +54,6 @@ struct wakeup_irq_node {
 	bool handled;
 };
 
-#ifdef CONFIG_DEDUCE_WAKEUP_REASONS
-
 /* Called in the resume path, with interrupts and nonboot cpus disabled; on
  * need for a spinlock.
  */
