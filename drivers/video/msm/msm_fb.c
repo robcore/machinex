@@ -431,17 +431,14 @@ static void msm_fb_remove_sysfs(struct platform_device *pdev)
 
 static void msm_fb_shutdown(struct platform_device *pdev)
 {
-	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
-	if (IS_ERR_OR_NULL(mfd)) {
-	       pr_err("MFD is Null");
-	       return;
-	}
-	mfd->shutdown_pending = true;
-	printk(KERN_INFO "%s: fb%d shut down\n", __func__, mfd->index);
-
-	lock_fb_info(mfd->fbi);
-	msm_fb_release_all(mfd->fbi, true);
-	unlock_fb_info(mfd->fbi);
+       struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+       if (IS_ERR_OR_NULL(mfd)) {
+               pr_err("MFD is Null");
+               return;
+       }
+       lock_fb_info(mfd->fbi);
+       msm_fb_release_all(mfd->fbi, true);
+       unlock_fb_info(mfd->fbi);
 }
 static int msm_fb_probe(struct platform_device *pdev)
 {
@@ -608,7 +605,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct msm_fb_data_type *mfd;
@@ -744,7 +741,7 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 }
 #endif
 
-#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
 static int msm_fb_resume(struct platform_device *pdev)
 {
 	/* This resume function is called when interrupt is enabled.
@@ -870,7 +867,7 @@ static struct dev_pm_ops msm_fb_dev_pm_ops = {
 static struct platform_driver msm_fb_driver = {
 	.probe = msm_fb_probe,
 	.remove = msm_fb_remove,
-#ifndef CONFIG_POWERSUSPEND
+#ifndef CONFIG_HAS_POWERSUSPEND
 	.suspend = msm_fb_suspend,
 	.resume = msm_fb_resume,
 #endif
@@ -882,7 +879,7 @@ static struct platform_driver msm_fb_driver = {
 		   },
 };
 
-#if defined(CONFIG_POWERSUSPEND) && defined(CONFIG_FB_MSM_MDP303)
+#if defined(CONFIG_HAS_POWERSUSPEND) && defined(CONFIG_FB_MSM_MDP303)
 static void memset32_io(u32 __iomem *_ptr, u32 val, size_t count)
 {
 	count >>= 2;
@@ -891,7 +888,7 @@ static void memset32_io(u32 __iomem *_ptr, u32 val, size_t count)
 }
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 static void msmfb_power_suspend(struct power_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
@@ -1718,7 +1715,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 #endif
 	ret = 0;
 
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 
 	if (hdmi_prim_display ||
 		(mfd->panel_info.type != DTV_PANEL)) {
@@ -1863,11 +1860,6 @@ static int msm_fb_open(struct fb_info *info, int user)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	bool unblank = true;
 	int result;
-
-	if (mfd->shutdown_pending) {
-		printk(KERN_ERR "%s: fb%d Shutdown pending.\n", __func__, mfd->index);
-		return -EPERM;
-	}
 
 	result = pm_runtime_get_sync(info->dev);
 
@@ -3984,9 +3976,6 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	if (!info || !info->par)
 		return -EINVAL;
 	mfd = (struct msm_fb_data_type *)info->par;
-	if (mfd->shutdown_pending)
-		return -EPERM;
-
 	msm_fb_pan_idle(mfd);
 
 	switch (cmd) {
