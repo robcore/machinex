@@ -30,6 +30,7 @@
 #include <trace/events/power.h>
 #include <linux/compiler.h>
 #include <linux/wakeup_reason.h>
+#include <linux/moduleparam.h>
 
 #include "power.h"
 
@@ -180,7 +181,7 @@ static int platform_suspend_begin(suspend_state_t state)
 {
 	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin)
 		return freeze_ops->begin();
-	else if (suspend_ops->begin)
+	else if (suspend_ops && suspend_ops->begin)
 		return suspend_ops->begin(state);
 	else
 		return 0;
@@ -190,7 +191,7 @@ static void platform_resume_end(suspend_state_t state)
 {
 	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
 		freeze_ops->end();
-	else if (suspend_ops->end)
+	else if (suspend_ops && suspend_ops->end)
 		suspend_ops->end();
 }
 
@@ -210,8 +211,9 @@ static int suspend_test(int level)
 {
 #ifdef CONFIG_PM_DEBUG
 	if (pm_test_level == level) {
-		printk(KERN_INFO "suspend debug: Waiting for 5 seconds.\n");
-		mdelay(5000);
+		pr_info("suspend debug: Waiting for %d second(s).\n",
+				pm_test_delay);
+		mdelay(pm_test_delay * 1000);
 		return 1;
 	}
 #endif /* !CONFIG_PM_DEBUG */
@@ -456,7 +458,8 @@ static int enter_state(suspend_state_t state)
 		printk("done.\n");
 	}
 
-	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state]);
+	pr_debug("PM: Preparing system for sleep (%s)\n", pm_states[state]);
+	pm_suspend_clear_flags();
 	error = suspend_prepare(state);
 	if (error)
 		goto Unlock;
@@ -477,18 +480,6 @@ static int enter_state(suspend_state_t state)
 	return error;
 }
 
-static void pm_suspend_marker(char *annotation)
-{
-	struct timespec ts;
-	struct rtc_time tm;
-
-	getnstimeofday(&ts);
-	rtc_time_to_tm(ts.tv_sec, &tm);
-	pr_info("PM: suspend %s %d-%02d-%02d %02d:%02d:%02d.%09lu UTC\n",
-		annotation, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
-}
-
 /**
  * pm_suspend - Externally visible function for suspending the system.
  * @state: System sleep state to enter.
@@ -503,7 +494,6 @@ int pm_suspend(suspend_state_t state)
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
 		return -EINVAL;
 
-	pm_suspend_marker("entry");
 	error = enter_state(state);
 	if (error) {
 		suspend_stats.fail++;
@@ -511,7 +501,6 @@ int pm_suspend(suspend_state_t state)
 	} else {
 		suspend_stats.success++;
 	}
-	pm_suspend_marker("exit");
 	return error;
 }
 EXPORT_SYMBOL(pm_suspend);
