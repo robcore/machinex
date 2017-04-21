@@ -653,6 +653,14 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		return;
 	}
 
+#ifdef CONFIG_MDNIE_LITE_CONTROL
+	if (hijack == HIJACK_ENABLED) {
+		DPRINT(" = CONTROL MODE =\n");
+		INPUT_PAYLOAD1(LITE_CONTROL_1);
+		INPUT_PAYLOAD2(LITE_CONTROL_2);
+	}
+#endif
+
 	sending_tuning_cmd();
 	free_tun_cmd();
 }
