@@ -459,7 +459,6 @@ static int enter_state(suspend_state_t state)
 	}
 
 	pr_debug("PM: Preparing system for sleep (%s)\n", pm_states[state]);
-	pm_suspend_clear_flags();
 	error = suspend_prepare(state);
 	if (error)
 		goto Unlock;
