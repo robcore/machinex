@@ -220,19 +220,20 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	int first_start = 1;
+	unsigned int i;
 
 	mutex_lock(&intelli_plug_mutex);
 
 	if (first_start) {
 			/* Put all sibling cores to sleep */
-		for (cpu = 0; cpu < num_possible_cpus(); cpu++) {
+		for (i = num_possible_cpus(); i > 0; i--) {
 			for_each_online_cpu(cpu) {
 				if (!cpu_online(cpu))
 					continue;
 				cpu_down(cpu);
-			first_start = 0;
 			}
 		}
+			first_start = 0;
 	}
 
 	if (target < min_cpus_online)
