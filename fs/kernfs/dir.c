@@ -21,9 +21,6 @@ DEFINE_MUTEX(sysfs_mutex);
 
 #define to_sysfs_dirent(X) rb_entry((X), struct sysfs_dirent, s_rb)
 
-static DEFINE_SPINLOCK(sysfs_ino_lock);
-static DEFINE_IDA(sysfs_ino_ida);
-
 /**
  *	sysfs_name_hash
  *	@name: Null terminated string to hash
@@ -205,32 +202,6 @@ static void sysfs_deactivate(struct sysfs_dirent *sd)
 	rwsem_release(&sd->dep_map, 1, _RET_IP_);
 }
 
-static int sysfs_alloc_ino(unsigned int *pino)
-{
-	int ino, rc;
-
- retry:
-	spin_lock(&sysfs_ino_lock);
-	rc = ida_get_new_above(&sysfs_ino_ida, 2, &ino);
-	spin_unlock(&sysfs_ino_lock);
-
-	if (rc == -EAGAIN) {
-		if (ida_pre_get(&sysfs_ino_ida, GFP_KERNEL))
-			goto retry;
-		rc = -ENOMEM;
-	}
-
-	*pino = ino;
-	return rc;
-}
-
-static void sysfs_free_ino(unsigned int ino)
-{
-	spin_lock(&sysfs_ino_lock);
-	ida_remove(&sysfs_ino_ida, ino);
-	spin_unlock(&sysfs_ino_lock);
-}
-
 /**
  * kernfs_get - get a reference count on a sysfs_dirent
  * @sd: the target sysfs_dirent
@@ -253,9 +224,11 @@ EXPORT_SYMBOL_GPL(kernfs_get);
 void kernfs_put(struct sysfs_dirent *sd)
 {
 	struct sysfs_dirent *parent_sd;
+	struct kernfs_root *root;
 
 	if (!sd || !atomic_dec_and_test(&sd->s_count))
 		return;
+	root = kernfs_root(sd);
  repeat:
 	/* Moving/renaming is always done while holding reference.
 	 * sd->s_parent won't change beneath us.
@@ -270,16 +243,25 @@ void kernfs_put(struct sysfs_dirent *sd)
 		kernfs_put(sd->s_symlink.target_sd);
 	if (sysfs_type(sd) & SYSFS_COPY_NAME)
 		kfree(sd->s_name);
-	if (sd->s_iattr && sd->s_iattr->ia_secdata)
-		security_release_secctx(sd->s_iattr->ia_secdata,
-					sd->s_iattr->ia_secdata_len);
+	if (sd->s_iattr) {
+		if (sd->s_iattr->ia_secdata)
+			security_release_secctx(sd->s_iattr->ia_secdata,
+						sd->s_iattr->ia_secdata_len);
+		simple_xattrs_free(&sd->s_iattr->xattrs);
+	}
 	kfree(sd->s_iattr);
-	sysfs_free_ino(sd->s_ino);
+	ida_simple_remove(&root->ino_ida, sd->s_ino);
 	kmem_cache_free(sysfs_dir_cachep, sd);
 
 	sd = parent_sd;
-	if (sd && atomic_dec_and_test(&sd->s_count))
-		goto repeat;
+	if (sd) {
+		if (atomic_dec_and_test(&sd->s_count))
+			goto repeat;
+	} else {
+		/* just released the root sd, free @root too */
+		ida_destroy(&root->ino_ida);
+		kfree(root);
+	}
 }
 EXPORT_SYMBOL_GPL(kernfs_put);
 
@@ -312,7 +294,7 @@ static int sysfs_dentry_revalidate(struct dentry *dentry, unsigned int flags)
 		goto out_bad;
 
 	/* The sysfs dirent has been moved to a different namespace */
-	if (sd->s_parent && (sd->s_parent->s_flags & SYSFS_FLAG_NS) &&
+	if (sd->s_parent && kernfs_ns_enabled(sd->s_parent) &&
 	    sysfs_info(dentry->d_sb)->ns != sd->s_ns)
 		goto out_bad;
 
@@ -353,10 +335,12 @@ const struct dentry_operations sysfs_dentry_ops = {
 	.d_release	= sysfs_dentry_release,
 };
 
-struct sysfs_dirent *sysfs_new_dirent(const char *name, umode_t mode, int type)
+struct sysfs_dirent *sysfs_new_dirent(struct kernfs_root *root,
+				      const char *name, umode_t mode, int type)
 {
 	char *dup_name = NULL;
 	struct sysfs_dirent *sd;
+	int ret;
 
 	if (type & SYSFS_COPY_NAME) {
 		name = dup_name = kstrdup(name, GFP_KERNEL);
@@ -368,8 +352,10 @@ struct sysfs_dirent *sysfs_new_dirent(const char *name, umode_t mode, int type)
 	if (!sd)
 		goto err_out1;
 
-	if (sysfs_alloc_ino(&sd->s_ino))
+	ret = ida_simple_get(&root->ino_ida, 1, 0, GFP_KERNEL);
+	if (ret < 0)
 		goto err_out2;
+	sd->s_ino = ret;
 
 	atomic_set(&sd->s_count, 1);
 	atomic_set(&sd->s_active, 0);
@@ -431,7 +417,7 @@ void sysfs_addrm_start(struct sysfs_addrm_cxt *acxt)
 int sysfs_add_one(struct sysfs_addrm_cxt *acxt, struct sysfs_dirent *sd,
 		  struct sysfs_dirent *parent_sd)
 {
-	bool has_ns = parent_sd->s_flags & SYSFS_FLAG_NS;
+	bool has_ns = kernfs_ns_enabled(parent_sd);
 	struct sysfs_inode_attrs *ps_iattr;
 	int ret;
 
@@ -496,13 +482,15 @@ static void sysfs_remove_one(struct sysfs_addrm_cxt *acxt,
 	if (sd->s_flags & SYSFS_FLAG_REMOVED)
 		return;
 
-	sysfs_unlink_sibling(sd);
+	if (sd->s_parent) {
+		sysfs_unlink_sibling(sd);
 
-	/* Update timestamps on the parent */
-	ps_iattr = sd->s_parent->s_iattr;
-	if (ps_iattr) {
-		struct iattr *ps_iattrs = &ps_iattr->ia_iattr;
-		ps_iattrs->ia_ctime = ps_iattrs->ia_mtime = CURRENT_TIME;
+		/* Update timestamps on the parent */
+		ps_iattr = sd->s_parent->s_iattr;
+		if (ps_iattr) {
+			ps_iattr->ia_iattr.ia_ctime = CURRENT_TIME;
+			ps_iattr->ia_iattr.ia_mtime = CURRENT_TIME;
+		}
 	}
 
 	sd->s_flags |= SYSFS_FLAG_REMOVED;
@@ -553,7 +541,7 @@ static struct sysfs_dirent *kernfs_find_ns(struct sysfs_dirent *parent,
 					   const void *ns)
 {
 	struct rb_node *node = parent->s_dir.children.rb_node;
-	bool has_ns = parent->s_flags & SYSFS_FLAG_NS;
+	bool has_ns = kernfs_ns_enabled(parent);
 	unsigned int hash;
 
 	lockdep_assert_held(&sysfs_mutex);
@@ -607,6 +595,52 @@ struct sysfs_dirent *kernfs_find_and_get_ns(struct sysfs_dirent *parent,
 EXPORT_SYMBOL_GPL(kernfs_find_and_get_ns);
 
 /**
+ * kernfs_create_root - create a new kernfs hierarchy
+ * @priv: opaque data associated with the new directory
+ *
+ * Returns the root of the new hierarchy on success, ERR_PTR() value on
+ * failure.
+ */
+struct kernfs_root *kernfs_create_root(void *priv)
+{
+	struct kernfs_root *root;
+	struct sysfs_dirent *sd;
+
+	root = kzalloc(sizeof(*root), GFP_KERNEL);
+	if (!root)
+		return ERR_PTR(-ENOMEM);
+
+	ida_init(&root->ino_ida);
+
+	sd = sysfs_new_dirent(root, "", S_IFDIR | S_IRUGO | S_IXUGO, SYSFS_DIR);
+	if (!sd) {
+		ida_destroy(&root->ino_ida);
+		kfree(root);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	sd->s_flags &= ~SYSFS_FLAG_REMOVED;
+	sd->priv = priv;
+	sd->s_dir.root = root;
+
+	root->sd = sd;
+
+	return root;
+}
+
+/**
+ * kernfs_destroy_root - destroy a kernfs hierarchy
+ * @root: root of the hierarchy to destroy
+ *
+ * Destroy the hierarchy anchored at @root by removing all existing
+ * directories and destroying @root.
+ */
+void kernfs_destroy_root(struct kernfs_root *root)
+{
+	kernfs_remove(root->sd);	/* will also free @root */
+}
+
+/**
  * kernfs_create_dir_ns - create a directory
  * @parent: parent in which to create a new directory
  * @name: name of the new directory
@@ -625,10 +659,11 @@ struct sysfs_dirent *kernfs_create_dir_ns(struct sysfs_dirent *parent,
 	int rc;
 
 	/* allocate */
-	sd = sysfs_new_dirent(name, mode, SYSFS_DIR);
+	sd = sysfs_new_dirent(kernfs_root(parent), name, mode, SYSFS_DIR);
 	if (!sd)
 		return ERR_PTR(-ENOMEM);
 
+	sd->s_dir.root = parent->s_dir.root;
 	sd->s_ns = ns;
 	sd->priv = priv;
 
@@ -656,7 +691,7 @@ static struct dentry *sysfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	mutex_lock(&sysfs_mutex);
 
-	if (parent_sd->s_flags & SYSFS_FLAG_NS)
+	if (kernfs_ns_enabled(parent_sd))
 		ns = sysfs_info(dir->i_sb)->ns;
 
 	sd = kernfs_find_ns(parent_sd, dentry->d_name.name, ns);
@@ -689,6 +724,9 @@ const struct inode_operations sysfs_dir_inode_operations = {
 	.setattr	= sysfs_setattr,
 	.getattr	= sysfs_getattr,
 	.setxattr	= sysfs_setxattr,
+	.removexattr	= sysfs_removexattr,
+	.getxattr	= sysfs_getxattr,
+	.listxattr	= sysfs_listxattr,
 };
 
 static struct sysfs_dirent *sysfs_leftmost_descendant(struct sysfs_dirent *pos)
@@ -866,21 +904,6 @@ int kernfs_rename_ns(struct sysfs_dirent *sd, struct sysfs_dirent *new_parent,
 	return error;
 }
 
-/**
- * kernfs_enable_ns - enable namespace under a directory
- * @sd: directory of interest, should be empty
- *
- * This is to be called right after @sd is created to enable namespace
- * under it.  All children of @sd must have non-NULL namespace tags and
- * only the ones which match the super_block's tag will be visible.
- */
-void kernfs_enable_ns(struct sysfs_dirent *sd)
-{
-	WARN_ON_ONCE(sysfs_type(sd) != SYSFS_DIR);
-	WARN_ON_ONCE(!RB_EMPTY_ROOT(&sd->s_dir.children));
-	sd->s_flags |= SYSFS_FLAG_NS;
-}
-
 /* Relationship between s_mode and the DT_xxx types */
 static inline unsigned char dt_type(struct sysfs_dirent *sd)
 {
@@ -971,7 +994,7 @@ static int sysfs_readdir(struct file * filp, void * dirent, filldir_t filldir)
 	}
 	mutex_lock(&sysfs_mutex);
 
-	if (parent_sd->s_flags & SYSFS_FLAG_NS)
+	if (kernfs_ns_enabled(parent_sd))
 		ns = sysfs_info(dentry->d_sb)->ns;
 
 	off = filp->f_pos;

@@ -30,11 +30,12 @@ struct sysfs_dirent *kernfs_create_link(struct sysfs_dirent *parent,
 	struct sysfs_addrm_cxt acxt;
 	int error;
 
-	sd = sysfs_new_dirent(name, S_IFLNK|S_IRWXUGO, SYSFS_KOBJ_LINK);
+	sd = sysfs_new_dirent(kernfs_root(parent), name, S_IFLNK|S_IRWXUGO,
+			      SYSFS_KOBJ_LINK);
 	if (!sd)
 		return ERR_PTR(-ENOMEM);
 
-	if (parent->s_flags & SYSFS_FLAG_NS)
+	if (kernfs_ns_enabled(parent))
 		sd->s_ns = target->s_ns;
 	sd->s_symlink.target_sd = target;
 	kernfs_get(target);	/* ref owned by symlink */
@@ -139,6 +140,9 @@ static void sysfs_put_link(struct dentry *dentry, struct nameidata *nd,
 
 const struct inode_operations sysfs_symlink_inode_operations = {
 	.setxattr	= sysfs_setxattr,
+	.removexattr	= sysfs_removexattr,
+	.getxattr	= sysfs_getxattr,
+	.listxattr	= sysfs_listxattr,
 	.readlink	= generic_readlink,
 	.follow_link	= sysfs_follow_link,
 	.put_link	= sysfs_put_link,

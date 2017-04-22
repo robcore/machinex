@@ -874,6 +874,7 @@ config ARCH_SUPPORTS_INT128
 
 menuconfig CGROUPS
 	boolean "Control Group support"
+	select KERNFS
 	help
 	  This option adds support for grouping sets of processes together, for
 	  use with process control subsystems such as Cpusets, CFS, memory

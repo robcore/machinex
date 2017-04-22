@@ -11,25 +11,12 @@
 #ifndef __SYSFS_INTERNAL_H
 #define __SYSFS_INTERNAL_H
 
-#include "../kernfs/kernfs-internal.h"
 #include <linux/sysfs.h>
 
 /*
  * mount.c
  */
-
-/*
- * Each sb is associated with one namespace tag, currently the network
- * namespace of the task which mounted this sysfs instance.  If multiple
- * tags become necessary, make the following an array and compare
- * sysfs_dirent tag against every entry.
- */
-struct sysfs_super_info {
-	void *ns;
-};
-#define sysfs_info(SB) ((struct sysfs_super_info *)(SB->s_fs_info))
-extern struct sysfs_dirent sysfs_root;
-extern struct kmem_cache *sysfs_dir_cachep;
+extern struct sysfs_dirent *sysfs_root_sd;
 
 /*
  * dir.c
