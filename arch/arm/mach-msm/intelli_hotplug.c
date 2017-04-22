@@ -26,11 +26,11 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	5
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
-#define DEF_SAMPLING_MS			35
+#define DEF_SAMPLING_MS			40
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			10000
+#define START_DELAY_MS			20000
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
@@ -159,7 +159,7 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-	queue_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
 }
 
@@ -271,7 +271,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	queue_work_on(0, intelliplug_wq, &up_down_work);
 
 	if (atomic_read(&intelli_plug_active) == 1)
-		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -295,20 +295,6 @@ static void __ref intelli_plug_suspend(void)
 		cancel_delayed_work_sync(&intelli_plug_work);
 		flush_workqueue(intelliplug_wq);
 
-		/* Put sibling cores to sleep */
-		for_each_online_cpu(cpu) {
-			if (cpu == 0)
-				continue;
-			cpu_down(cpu);
-		}
-
-		/*
-		 * Enable core 1,2 so we will have 0-2 online
-		 * when screen is OFF to reduce system lags and reboots.
-		 * Rob note: Nope,
-		 * cpu_up(1);
-		 * cpu_up(2);
-		 */
 		dprintk("%s: suspended!\n", INTELLI_PLUG);
 	}
 }
@@ -346,7 +332,7 @@ static void __ref intelli_plug_resume(void)
 
 	/* Resume hotplug workqueue if required */
 	if (required_reschedule) {
-		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
 		/* Reset required_reschedule flag back to 0 */
 	required_reschedule = 0;
@@ -357,7 +343,7 @@ static void __ref intelli_plug_resume(void)
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	if (atomic_read(&intelli_plug_active) == 0)
+	if ((atomic_read(&intelli_plug_active) == 0) || !hotplug_suspend)
 		return NOTIFY_OK;
 
 	switch (event) {
@@ -469,7 +455,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 	intelliplug_wq = alloc_workqueue("intelliplug",
-			WQ_HIGHPRI | WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
+			WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_FREEZABLE, 0);
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
 		       INTELLI_PLUG);
@@ -502,21 +488,12 @@ static int __ref intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	/* Put all sibling cores to sleep to release all locks */
+	/* Put all sibling cores to sleep */
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
 		cpu_down(cpu);
 	}
-#if 0
-	/* Fire up all CPUs to boost performance */
-	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == 0)
-			continue;
-		cpu_up(cpu);
-		apply_down_lock(cpu);
-	}
-#endif
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
@@ -550,13 +527,6 @@ static void intelli_plug_stop(void)
 
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
-
-	/* Put all sibling cores to sleep */
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_down(cpu);
-	}
 }
 
 static void intelli_plug_active_eval_fn(unsigned int status)
