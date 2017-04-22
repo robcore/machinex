@@ -220,7 +220,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	int first_start = 1;
-	unsigned int i;
 
 	if (first_start) {
 			/* Put all sibling cores to sleep */
