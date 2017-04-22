@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	5
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEF_SAMPLING_MS			40
 #define RESUME_SAMPLING_MS		100
@@ -219,8 +219,21 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	int online_cpus, cpu, l_nr_threshold;
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
+	int first_start = 1;
 
 	mutex_lock(&intelli_plug_mutex);
+
+	if (first_start) {
+			/* Put all sibling cores to sleep */
+		for (cpu = 0; cpu < num_possible_cpus(); cpu++) {
+			for_each_online_cpu(cpu) {
+				if (!cpu_online(cpu))
+					continue;
+				cpu_down(cpu);
+			first_start = 0;
+			}
+		}
+	}
 
 	if (target < min_cpus_online)
 		target = min_cpus_online;
@@ -238,7 +251,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		update_per_cpu_stat();
 		get_online_cpus();
 		for_each_online_cpu(cpu) {
-			if (cpu == 0)
+			if (!cpu_online(cpu))
 				continue;
 			if (check_down_lock(cpu))
 				break;
@@ -255,7 +268,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	} else if (target > online_cpus) {
 		get_online_cpus();
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
+			if (cpu_online(cpu))
 				continue;
 			cpu_up(cpu);
 			apply_down_lock(cpu);
@@ -327,7 +340,7 @@ static void __ref intelli_plug_resume(void)
 	if (required_wakeup) {
 		/* Fire up all CPUs */
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
+			if (cpu_online(cpu))
 				continue;
 			cpu_up(cpu);
 			apply_down_lock(cpu);
@@ -493,13 +506,6 @@ static int __ref intelli_plug_start(void)
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
-	}
-
-	/* Put all sibling cores to sleep */
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_down(cpu);
 	}
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
