@@ -274,7 +274,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 
 	if (atomic_read(&intelli_plug_active) == 1) {
 		target_cpus = calculate_thread_stats();
-		schedule_work_on(0, &up_down_work);
+		queue_work_on(0, system_freezable_wq, &up_down_work);
 	}
 }
 
@@ -379,6 +379,26 @@ static int state_notifier_callback(struct notifier_block *this,
 }
 #endif
 
+static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
+		unsigned long action, void *hcpu)
+{
+	unsigned int cpu = (unsigned long)hcpu;
+
+	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
+		if (atomic_read(&intelli_plug_active) == 1) &&
+			(check_down_lock(cpu))
+			return NOTIFY_BAD;
+		}
+	}
+
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block __refdata intelli_plug_cpu_notifier = {
+	.notifier_call = intelli_plug_cpu_callback,
+};
+
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
@@ -398,7 +418,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 		return;
 
 	target_cpus = cpus_boosted;
-	schedule_work_on(0, &up_down_work);
+	queue_work_on(0, system_freezable_wq, &up_down_work);
 	last_boost_time = ktime_to_us(ktime_get());
 }
 
@@ -497,6 +517,8 @@ static int __ref intelli_plug_start(void)
 		goto err_dev;
 	}
 
+	register_cpu_notifier(&intelli_plug_cpu_notifier);
+
 	mutex_init(&intelli_plug_mutex);
 
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
@@ -531,6 +553,7 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
+	unregister_cpu_notifier(&intelli_plug_cpu_notifier);
 	return ret;
 }
 
@@ -546,6 +569,7 @@ static void intelli_plug_stop(void)
 	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
+	unregister_cpu_notifier(&intelli_plug_cpu_notifier);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
 #endif
