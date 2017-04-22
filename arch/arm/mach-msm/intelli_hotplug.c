@@ -303,8 +303,8 @@ static void __ref intelli_plug_suspend(void)
 		mutex_unlock(&intelli_plug_mutex);
 
 		/* Flush hotplug workqueue */
-		cancel_delayed_work_sync(&intelli_plug_work);
 		flush_workqueue(intelliplug_wq);
+		cancel_delayed_work_sync(&intelli_plug_work);
 
 		/* Put sibling cores to sleep */
 		for_each_online_cpu(cpu) {
@@ -480,7 +480,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 	intelliplug_wq = alloc_workqueue("intelliplug",
-			WQ_MEM_RECLAIM | WQ_UNBOUND, 0);
+			WQ_MEM_RECLAIM | WQ_UNBOUND | WQ_FREEZABLE, 0);
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
 		       INTELLI_PLUG);
@@ -549,10 +549,9 @@ static void intelli_plug_stop(void)
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
-
+	flush_workqueue(intelliplug_wq);
 	cancel_work_sync(&up_down_work);
 	cancel_delayed_work_sync(&intelli_plug_work);
-	flush_workqueue(intelliplug_wq);
 	mutex_destroy(&intelli_plug_mutex);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
