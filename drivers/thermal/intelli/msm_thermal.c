@@ -603,6 +603,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	if (num_possible_cpus() > 1) {
 		core_control_enabled = true;
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
+		update_offline_cores(cpus_offlined);
 	}
 
 	intellithermal_wq = alloc_workqueue("intellithermal",
