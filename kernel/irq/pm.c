@@ -12,6 +12,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/suspend.h>
 #include <linux/wakeup_reason.h>
+#include <linux/irqdesc.h>
 
 #include "internals.h"
 
