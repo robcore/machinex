@@ -1,5 +1,5 @@
 /*
- * drivers/power/process.c - Functions for starting/stopping processes on
+ * drivers/power/process.c - Functions for starting/stopping processes on 
  *                           suspend transitions.
  *
  * Originally from swsusp.
@@ -12,6 +12,8 @@
 #include <linux/oom.h>
 #include <linux/suspend.h>
 #include <linux/module.h>
+#include <linux/sched/debug.h>
+#include <linux/sched/task.h>
 #include <linux/syscalls.h>
 #include <linux/freezer.h>
 #include <linux/delay.h>
@@ -19,9 +21,7 @@
 #include <linux/kmod.h>
 #include "power.h"
 
-#include <linux/wakeup_reason.h>
-
-/*
+/* 
  * Timeout for stopping processes
  */
 unsigned int __read_mostly freeze_timeout_msecs = 20 * MSEC_PER_SEC;
@@ -36,7 +36,6 @@ static int try_to_freeze_tasks(bool user_only)
 	unsigned int elapsed_msecs;
 	bool wakeup = false;
 	int sleep_usecs = USEC_PER_MSEC;
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 
 	start = ktime_get_boottime();
 
@@ -66,9 +65,6 @@ static int try_to_freeze_tasks(bool user_only)
 			break;
 
 		if (pm_wakeup_pending()) {
-			pm_get_active_wakeup_sources(suspend_abort,
-				MAX_SUSPEND_ABORT_LEN);
-			log_suspend_abort_reason(suspend_abort);
 			wakeup = true;
 			break;
 		}
@@ -87,14 +83,11 @@ static int try_to_freeze_tasks(bool user_only)
 	elapsed = ktime_sub(end, start);
 	elapsed_msecs = ktime_to_ms(elapsed);
 
-	if (wakeup) {
-		printk("\n");
-		printk(KERN_ERR "Freezing of tasks aborted after %d.%03d seconds",
-		       elapsed_msecs / 1000, elapsed_msecs % 1000);
-	} else if (todo) {
-		printk("\n");
-		printk(KERN_ERR "Freezing of tasks failed after %d.%03d seconds"
+	if (todo) {
+		pr_cont("\n");
+		pr_err("Freezing of tasks %s after %d.%03d seconds "
 		       "(%d tasks refusing to freeze, wq_busy=%d):\n",
+		       wakeup ? "aborted" : "failed",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000,
 		       todo - wq_busy, wq_busy);
 
@@ -110,9 +103,9 @@ static int try_to_freeze_tasks(bool user_only)
 			}
 			read_unlock(&tasklist_lock);
 		}
-		} else {
-			printk("(elapsed %d.%03d seconds) ", elapsed_msecs / 1000,
-				elapsed_msecs % 1000);
+	} else {
+		pr_cont("(elapsed %d.%03d seconds) ", elapsed_msecs / 1000,
+			elapsed_msecs % 1000);
 	}
 
 	return todo ? -EBUSY : 0;
@@ -144,6 +137,8 @@ static bool check_frozen_processes(void)
 
 /**
  * freeze_processes - Signal user space processes to enter the refrigerator.
+ * The current thread will not be frozen.  The same process that calls
+ * freeze_processes must later call thaw_processes.
  *
  * On success, returns 0.  On failure, -errno and system is fully thawed.
  */
@@ -163,7 +158,7 @@ int freeze_processes(void)
 		atomic_inc(&system_freezing_cnt);
 
 	pm_wakeup_clear();
-	printk("Freezing user space processes ... ");
+	pr_info("Freezing user space processes ... ");
 	pm_freezing = true;
 	oom_kills_saved = oom_kills_count();
 	error = try_to_freeze_tasks(true);
@@ -179,13 +174,13 @@ int freeze_processes(void)
 		if (oom_kills_count() != oom_kills_saved &&
 		    !check_frozen_processes()) {
 			__usermodehelper_set_disable_depth(UMH_ENABLED);
-			printk("OOM in progress.");
+			pr_info("OOM in progress.");
 			error = -EBUSY;
 		} else {
-			printk("done.");
+			pr_cont("done.");
 		}
 	}
-	printk("\n");
+	pr_cont("\n");
 	BUG_ON(in_atomic());
 
 	if (error)
@@ -205,13 +200,14 @@ int freeze_kernel_threads(void)
 {
 	int error;
 
-	printk("Freezing remaining freezable tasks ... ");
+	pr_info("Freezing remaining freezable tasks ... ");
+
 	pm_nosig_freezing = true;
 	error = try_to_freeze_tasks(false);
 	if (!error)
-		printk("done.");
+		pr_cont("done.");
 
-	printk("\n");
+	pr_cont("\n");
 	BUG_ON(in_atomic());
 
 	if (error)
@@ -231,7 +227,7 @@ void thaw_processes(void)
 
 	oom_killer_enable();
 
-	printk("Restarting tasks ... ");
+	pr_info("Restarting tasks ... ");
 
 	__usermodehelper_set_disable_depth(UMH_FREEZING);
 	thaw_workqueues();
@@ -250,7 +246,7 @@ void thaw_processes(void)
 	usermodehelper_enable();
 
 	schedule();
-	printk("done.\n");
+	pr_cont("done.\n");
 }
 
 void thaw_kernel_threads(void)
@@ -258,7 +254,7 @@ void thaw_kernel_threads(void)
 	struct task_struct *g, *p;
 
 	pm_nosig_freezing = false;
-	printk("Restarting kernel threads ... ");
+	pr_info("Restarting kernel threads ... ");
 
 	thaw_workqueues();
 
@@ -270,5 +266,5 @@ void thaw_kernel_threads(void)
 	read_unlock(&tasklist_lock);
 
 	schedule();
-	printk("done.\n");
+	pr_cont("done.\n");
 }

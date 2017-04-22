@@ -207,10 +207,11 @@ static bool platform_suspend_again(suspend_state_t state)
 		suspend_ops->suspend_again() : false;
 }
 
-unsigned int pm_test_delay = 1;
 static int suspend_test(int level)
 {
 #ifdef CONFIG_PM_DEBUG
+	unsigned int pm_test_delay = 1;
+
 	if (pm_test_level == level) {
 		pr_info("suspend debug: Waiting for %d second(s).\n",
 				pm_test_delay);
