@@ -254,9 +254,8 @@ int sysfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 
 static void sysfs_init_inode(struct sysfs_dirent *sd, struct inode *inode)
 {
-	struct bin_attribute *bin_attr;
-
-	inode->i_private = sysfs_get(sd);
+	kernfs_get(sd);
+	inode->i_private = sd;
 	inode->i_mapping->a_ops = &sysfs_aops;
 	inode->i_mapping->backing_dev_info = &sysfs_backing_dev_info;
 	inode->i_op = &sysfs_inode_operations;
@@ -271,12 +270,7 @@ static void sysfs_init_inode(struct sysfs_dirent *sd, struct inode *inode)
 		inode->i_fop = &sysfs_dir_operations;
 		break;
 	case SYSFS_KOBJ_ATTR:
-		inode->i_size = PAGE_SIZE;
-		inode->i_fop = &kernfs_file_operations;
-		break;
-	case SYSFS_KOBJ_BIN_ATTR:
-		bin_attr = sd->priv;
-		inode->i_size = bin_attr->size;
+		inode->i_size = sd->s_attr.size;
 		inode->i_fop = &kernfs_file_operations;
 		break;
 	case SYSFS_KOBJ_LINK:
@@ -328,7 +322,7 @@ void sysfs_evict_inode(struct inode *inode)
 
 	truncate_inode_pages(&inode->i_data, 0);
 	clear_inode(inode);
-	sysfs_put(sd);
+	kernfs_put(sd);
 }
 
 int sysfs_permission(struct inode *inode, int mask)

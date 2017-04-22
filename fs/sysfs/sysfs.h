@@ -27,7 +27,9 @@ struct sysfs_elem_symlink {
 };
 
 struct sysfs_elem_attr {
+	const struct kernfs_ops	*ops;
 	struct sysfs_open_dirent *open;
+	loff_t			size;
 };
 
 struct sysfs_inode_attrs {
@@ -78,55 +80,24 @@ struct sysfs_dirent {
 
 #define SD_DEACTIVATED_BIAS		INT_MIN
 
-#define SYSFS_TYPE_MASK			0x00ff
+#define SYSFS_TYPE_MASK			0x000f
 #define SYSFS_DIR			0x0001
 #define SYSFS_KOBJ_ATTR			0x0002
-#define SYSFS_KOBJ_BIN_ATTR		0x0004
-#define SYSFS_KOBJ_LINK			0x0008
+#define SYSFS_KOBJ_LINK			0x0004
 #define SYSFS_COPY_NAME			(SYSFS_DIR | SYSFS_KOBJ_LINK)
-#define SYSFS_ACTIVE_REF		(SYSFS_KOBJ_ATTR | SYSFS_KOBJ_BIN_ATTR)
+#define SYSFS_ACTIVE_REF		SYSFS_KOBJ_ATTR
 
 #define SYSFS_FLAG_MASK			~SYSFS_TYPE_MASK
-#define SYSFS_FLAG_NS			0x01000
-#define SYSFS_FLAG_REMOVED		0x02000
+#define SYSFS_FLAG_REMOVED		0x0010
+#define SYSFS_FLAG_NS			0x0020
+#define SYSFS_FLAG_HAS_SEQ_SHOW		0x0040
+#define SYSFS_FLAG_HAS_MMAP		0x0080
+#define SYSFS_FLAG_LOCKDEP		0x0100
 
 static inline unsigned int sysfs_type(struct sysfs_dirent *sd)
 {
 	return sd->s_flags & SYSFS_TYPE_MASK;
 }
-
-#ifdef CONFIG_DEBUG_LOCK_ALLOC
-
-#define sysfs_dirent_init_lockdep(sd)				\
-do {								\
-	struct attribute *attr = sd->priv;			\
-	struct lock_class_key *key = attr->key;			\
-	if (!key)						\
-		key = &attr->skey;				\
-								\
-	lockdep_init_map(&sd->dep_map, "s_active", key, 0);	\
-} while (0)
-
-/* Test for attributes that want to ignore lockdep for read-locking */
-static inline bool sysfs_ignore_lockdep(struct sysfs_dirent *sd)
-{
-	struct attribute *attr = sd->priv;
-	int type = sysfs_type(sd);
-
-	return (type == SYSFS_KOBJ_ATTR || type == SYSFS_KOBJ_BIN_ATTR) &&
-		attr->ignore_lockdep;
-}
-
-#else
-
-#define sysfs_dirent_init_lockdep(sd) do {} while (0)
-
-static inline bool sysfs_ignore_lockdep(struct sysfs_dirent *sd)
-{
-	return true;
-}
-
-#endif
 
 /*
  * Context structure to be used while adding/removing nodes.
@@ -166,35 +137,11 @@ struct sysfs_dirent *sysfs_get_active(struct sysfs_dirent *sd);
 void sysfs_put_active(struct sysfs_dirent *sd);
 void sysfs_addrm_start(struct sysfs_addrm_cxt *acxt);
 void sysfs_warn_dup(struct sysfs_dirent *parent, const char *name);
-int __sysfs_add_one(struct sysfs_addrm_cxt *acxt, struct sysfs_dirent *sd,
-		    struct sysfs_dirent *parent_sd);
 int sysfs_add_one(struct sysfs_addrm_cxt *acxt, struct sysfs_dirent *sd,
 		  struct sysfs_dirent *parent_sd);
 void sysfs_addrm_finish(struct sysfs_addrm_cxt *acxt);
 
-struct sysfs_dirent *sysfs_find_dirent(struct sysfs_dirent *parent_sd,
-				       const unsigned char *name,
-				       const void *ns);
 struct sysfs_dirent *sysfs_new_dirent(const char *name, umode_t mode, int type);
-
-void release_sysfs_dirent(struct sysfs_dirent *sd);
-
-static inline struct sysfs_dirent *__sysfs_get(struct sysfs_dirent *sd)
-{
-	if (sd) {
-		WARN_ON(!atomic_read(&sd->s_count));
-		atomic_inc(&sd->s_count);
-	}
-	return sd;
-}
-#define sysfs_get(sd) __sysfs_get(sd)
-
-static inline void __sysfs_put(struct sysfs_dirent *sd)
-{
-	if (sd && atomic_dec_and_test(&sd->s_count))
-		release_sysfs_dirent(sd);
-}
-#define sysfs_put(sd) __sysfs_put(sd)
 
 /*
  * inode.c
@@ -215,10 +162,10 @@ int sysfs_inode_init(void);
 extern const struct file_operations kernfs_file_operations;
 
 int sysfs_add_file(struct sysfs_dirent *dir_sd,
-		   const struct attribute *attr, int type);
+		   const struct attribute *attr, bool is_bin);
 
 int sysfs_add_file_mode_ns(struct sysfs_dirent *dir_sd,
-			   const struct attribute *attr, int type,
+			   const struct attribute *attr, bool is_bin,
 			   umode_t amode, const void *ns);
 void sysfs_unmap_bin_file(struct sysfs_dirent *sd);
 
