@@ -222,8 +222,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	int first_start = 1;
 	unsigned int i;
 
-	mutex_lock(&intelli_plug_mutex);
-
 	if (first_start) {
 			/* Put all sibling cores to sleep */
 		for (i = num_possible_cpus(); i > 0; i--) {
@@ -274,7 +272,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	}
-	mutex_unlock(&intelli_plug_mutex);
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
