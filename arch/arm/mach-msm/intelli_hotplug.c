@@ -722,6 +722,21 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 
 	return count;
 }
+static ssize_t store_def_sampling_ms(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+				     const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	def_sampling_ms = val;
+
+	return count;
+}
 
 #define KERNEL_ATTR_RW(_name) \
 static struct kobj_attribute _name##_attr = \
