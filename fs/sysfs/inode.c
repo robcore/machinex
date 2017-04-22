@@ -67,7 +67,7 @@ static struct sysfs_inode_attrs *sysfs_init_inode_attrs(struct sysfs_dirent *sd)
 	return attrs;
 }
 
-static int __kernfs_setattr(struct sysfs_dirent *sd, const struct iattr *iattr)
+int sysfs_sd_setattr(struct sysfs_dirent *sd, struct iattr *iattr)
 {
 	struct sysfs_inode_attrs *sd_attrs;
 	struct iattr *iattrs;
@@ -102,23 +102,6 @@ static int __kernfs_setattr(struct sysfs_dirent *sd, const struct iattr *iattr)
 	return 0;
 }
 
-/**
- * kernfs_setattr - set iattr on a node
- * @sd: target node
- * @iattr: iattr to set
- *
- * Returns 0 on success, -errno on failure.
- */
-int kernfs_setattr(struct sysfs_dirent *sd, const struct iattr *iattr)
-{
-	int ret;
-
-	mutex_lock(&sysfs_mutex);
-	ret = __kernfs_setattr(sd, iattr);
-	mutex_unlock(&sysfs_mutex);
-	return ret;
-}
-
 int sysfs_setattr(struct dentry *dentry, struct iattr *iattr)
 {
 	struct inode *inode = dentry->d_inode;
@@ -133,7 +116,7 @@ int sysfs_setattr(struct dentry *dentry, struct iattr *iattr)
 	if (error)
 		goto out;
 
-	error = __kernfs_setattr(sd, iattr);
+	error = sysfs_sd_setattr(sd, iattr);
 	if (error)
 		goto out;
 
@@ -254,8 +237,9 @@ int sysfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 
 static void sysfs_init_inode(struct sysfs_dirent *sd, struct inode *inode)
 {
-	kernfs_get(sd);
-	inode->i_private = sd;
+	struct bin_attribute *bin_attr;
+
+	inode->i_private = sysfs_get(sd);
 	inode->i_mapping->a_ops = &sysfs_aops;
 	inode->i_mapping->backing_dev_info = &sysfs_backing_dev_info;
 	inode->i_op = &sysfs_inode_operations;
@@ -270,8 +254,13 @@ static void sysfs_init_inode(struct sysfs_dirent *sd, struct inode *inode)
 		inode->i_fop = &sysfs_dir_operations;
 		break;
 	case SYSFS_KOBJ_ATTR:
-		inode->i_size = sd->s_attr.size;
-		inode->i_fop = &kernfs_file_operations;
+		inode->i_size = PAGE_SIZE;
+		inode->i_fop = &sysfs_file_operations;
+		break;
+	case SYSFS_KOBJ_BIN_ATTR:
+		bin_attr = sd->s_bin_attr.bin_attr;
+		inode->i_size = bin_attr->size;
+		inode->i_fop = &bin_fops;
 		break;
 	case SYSFS_KOBJ_LINK:
 		inode->i_op = &sysfs_symlink_inode_operations;
@@ -322,7 +311,33 @@ void sysfs_evict_inode(struct inode *inode)
 
 	truncate_inode_pages(&inode->i_data, 0);
 	clear_inode(inode);
-	kernfs_put(sd);
+	sysfs_put(sd);
+}
+
+int sysfs_hash_and_remove(struct sysfs_dirent *dir_sd, const void *ns,
+			  const char *name)
+{
+	struct sysfs_addrm_cxt acxt;
+	struct sysfs_dirent *sd;
+
+	if (!dir_sd) {
+		WARN(1, KERN_WARNING "sysfs: can not remove '%s', no directory\n",
+			name);
+		return -ENOENT;
+	}
+
+	sysfs_addrm_start(&acxt, dir_sd);
+
+	sd = sysfs_find_dirent(dir_sd, ns, name);
+	if (sd)
+		sysfs_remove_one(&acxt, sd);
+
+	sysfs_addrm_finish(&acxt);
+
+	if (sd)
+		return 0;
+	else
+		return -ENOENT;
 }
 
 int sysfs_permission(struct inode *inode, int mask)

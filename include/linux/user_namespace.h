@@ -25,6 +25,8 @@ struct user_namespace {
 	kuid_t			owner;
 	kgid_t			group;
 	unsigned int		proc_inum;
+	bool			may_mount_sysfs;
+	bool			may_mount_proc;
 };
 
 extern struct user_namespace init_user_ns;
@@ -81,5 +83,7 @@ static inline gid_t user_ns_map_gid(struct user_namespace *to,
 {
 	return from_kgid_munged(to, make_kgid(cred->user_ns, gid));
 }
+
+void update_mnt_policy(struct user_namespace *userns);
 
 #endif /* _LINUX_USER_H */
