@@ -28,7 +28,7 @@
 #define INTELLI_PLUG_MAJOR_VERSION	5
 #define INTELLI_PLUG_MINOR_VERSION	8
 
-#define DEF_SAMPLING_MS			37
+#define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			20000
 #define MIN_INPUT_INTERVAL		150 * 1000L
@@ -37,7 +37,7 @@
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
 #define DEFAULT_DOWN_LOCK_DUR		2000
 
-#define CAPACITY_RESERVE		39
+#define CAPACITY_RESERVE		50
 #define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
@@ -58,7 +58,7 @@ struct ip_cpu_info {
 static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 
 /* HotPlug Driver controls */
-static atomic_t intelli_plug_active = ATOMIC_INIT(1);
+static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -379,6 +379,7 @@ static int state_notifier_callback(struct notifier_block *this,
 }
 #endif
 
+#if 0
 static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
@@ -396,6 +397,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 static struct notifier_block __refdata intelli_plug_cpu_notifier = {
 	.notifier_call = intelli_plug_cpu_callback,
 };
+#endif
 
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -515,7 +517,7 @@ static int __ref intelli_plug_start(void)
 		goto err_dev;
 	}
 
-	register_cpu_notifier(&intelli_plug_cpu_notifier);
+	//register_cpu_notifier(&intelli_plug_cpu_notifier);
 
 	mutex_init(&intelli_plug_mutex);
 
@@ -551,7 +553,7 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
-	unregister_cpu_notifier(&intelli_plug_cpu_notifier);
+	//unregister_cpu_notifier(&intelli_plug_cpu_notifier);
 	return ret;
 }
 
@@ -567,7 +569,7 @@ static void intelli_plug_stop(void)
 	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
-	unregister_cpu_notifier(&intelli_plug_cpu_notifier);
+	//unregister_cpu_notifier(&intelli_plug_cpu_notifier);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
 #endif
