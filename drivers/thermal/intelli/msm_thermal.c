@@ -608,7 +608,7 @@ int __init msm_thermal_late_init(void)
 
 	return 0;
 }
-static void msm_thermal exit(void)
+static void msm_thermal_exit(void)
 {
 	if (core_control_enabled)
 		core_control_enabled == false;
@@ -618,7 +618,7 @@ static void msm_thermal exit(void)
 	destroy_mutex(&core_control_mutex);
 }
 late_initcall(msm_thermal_late_init);
-module_exit(msm_thermal);
+module_exit(msm_thermal_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
