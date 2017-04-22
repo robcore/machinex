@@ -147,6 +147,13 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
+static void remove_down_lock(struct work_struct *work)
+{
+	struct down_lock *dl = container_of(work, struct down_lock,
+					    lock_rem.work);
+	dl->locked = 0;
+}
+
 static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
@@ -154,13 +161,6 @@ static void apply_down_lock(unsigned int cpu)
 	dl->locked = 1;
 	queue_delayed_work(intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
-}
-
-static void remove_down_lock(struct work_struct *work)
-{
-	struct down_lock *dl = container_of(work, struct down_lock,
-					    lock_rem.work);
-	dl->locked = 0;
 }
 
 static int check_down_lock(unsigned int cpu)
@@ -259,6 +259,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	}
+		queue_delayed_work(intelliplug_wq, &intelli_plug_work,
+					msecs_to_jiffies(def_sampling_ms));
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
@@ -268,12 +270,10 @@ static void intelli_plug_work_fn(struct work_struct *work)
 		return;
 	}
 
-	target_cpus = calculate_thread_stats();
-	queue_work(intelliplug_wq, &up_down_work);
-
-	if (atomic_read(&intelli_plug_active) == 1)
-		queue_delayed_work(intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(def_sampling_ms));
+	if (atomic_read(&intelli_plug_active) == 1) {
+		target_cpus = calculate_thread_stats();
+		schedule_work(&up_down_work);
+	}
 }
 
 static void __ref intelli_plug_suspend(void)
@@ -293,9 +293,9 @@ static void __ref intelli_plug_suspend(void)
 		mutex_unlock(&intelli_plug_mutex);
 
 		/* Flush hotplug workqueue */
-		flush_workqueue(intelliplug_wq);
 		cancel_work_sync(&up_down_work);
 		cancel_delayed_work_sync(&intelli_plug_work);
+		drain_workqueue(intelliplug_wq);
 
 		/* Put sibling cores to sleep */
 		for_each_online_cpu(cpu) {
@@ -396,7 +396,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 		return;
 
 	target_cpus = cpus_boosted;
-	queue_work(intelliplug_wq, &up_down_work);
+	schedule_work(&up_down_work);
 	last_boost_time = ktime_to_us(ktime_get());
 }
 
@@ -512,13 +512,14 @@ static int __ref intelli_plug_start(void)
 		cpu_down(cpu);
 	}
 
-	/* Fire up all CPUs to boost performance */
+	/* Fire up all CPUs to boost performance
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
+*/
 
 	queue_delayed_work(intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
