@@ -389,8 +389,6 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 			(check_down_lock(cpu))
 			return NOTIFY_BAD;
 		}
-	}
-
 
 	return NOTIFY_OK;
 }
