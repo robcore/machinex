@@ -466,7 +466,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 	intelliplug_wq = alloc_workqueue("intelliplug",
-			WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_FREEZABLE, 0);
+			WQ_MEM_RECLAIM | WQ_UNBOUND | WQ_FREEZABLE, 0);
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
 		       INTELLI_PLUG);
