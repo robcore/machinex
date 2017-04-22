@@ -356,7 +356,7 @@ static void __ref intelli_plug_resume(void)
 	}
 
 	/* Resume hotplug workqueue if required */
-	if (required_reschedule)
+	if (required_reschedule) {
 		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
 		/* Reset required_reschedule flag back to 0 */
