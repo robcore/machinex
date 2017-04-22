@@ -30,7 +30,7 @@ module_param(temp_threshold, uint, 0644);
 unsigned int enabled;
 module_param(enabled, uint, 0644);
 
-static struct thermal_info {
+static struct franco_thermal_info {
 	uint32_t cpuinfo_max_freq;
 	uint32_t limited_max_freq;
 	unsigned int safe_diff;
@@ -57,7 +57,7 @@ enum threshold_levels {
 	LEVEL_HOT 	   = 5,
 };
 
-static struct msm_thermal_data msm_thermal_info;
+static struct msm_thermal_data franco_thermal_info;
 
 static struct delayed_work check_temp_work;
 
@@ -80,8 +80,8 @@ static int msm_thermal_cpufreq_callback(struct notifier_block *nfb,
 	return 0;
 }
 
-static struct notifier_block msm_thermal_cpufreq_notifier = {
-	.notifier_call = msm_thermal_cpufreq_callback,
+static struct notifier_block franco_thermal_cpufreq_notifier = {
+	.notifier_call = franco_thermal_cpufreq_callback,
 };
 
 static void limit_cpu_freqs(uint32_t max_freq)
@@ -113,7 +113,7 @@ static void check_temp(struct work_struct *work)
 	uint32_t freq = 0;
 	long temp = 0;
 
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id;
+	tsens_dev.sensor_num = franco_thermal_info.sensor_id;
 	tsens_get_temp(&tsens_dev, &temp);
 
 	if (info.throttling)
@@ -147,15 +147,15 @@ reschedule:
 	schedule_delayed_work_on(0, &check_temp_work, msecs_to_jiffies(250));
 }
 
-int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
+int __devinit franco_thermal_init(struct msm_thermal_data *pdata)
 {
 	int ret = 0;
 
 	BUG_ON(!pdata);
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
-	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
+	memcpy(&franco_thermal_info, pdata, sizeof(struct msm_thermal_data));
 
-	cpufreq_register_notifier(&msm_thermal_cpufreq_notifier,
+	cpufreq_register_notifier(&franco_thermal_cpufreq_notifier,
 			CPUFREQ_POLICY_NOTIFIER);
 
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
@@ -164,45 +164,21 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	return ret;
 }
 
-static int __devinit msm_thermal_dev_probe(struct platform_device *pdev)
+static int franco_thermal_dev_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	char *key = NULL;
-	struct device_node *node = pdev->dev.of_node;
 	struct msm_thermal_data data;
 
-	memset(&data, 0, sizeof(struct msm_thermal_data));
-	key = "qcom,sensor-id";
-	ret = of_property_read_u32(node, key, &data.sensor_id);
-	if (ret)
-		goto fail;
-	WARN_ON(data.sensor_id >= TSENS_MAX_SENSORS);
+	BUG_ON(!pdata);
+	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
 
-fail:
-	if (ret)
-		pr_err("%s: Failed reading node=%s, key=%s\n",
-		       __func__, node->full_name, key);
-	else
-		ret = msm_thermal_init(&data);
+	memcpy(&franco_thermal_info, pdata, sizeof(struct msm_thermal_data));
+	ret = msm_thermal_init(&data);
 
 	return ret;
 }
 
-static struct of_device_id msm_thermal_match_table[] = {
-	{.compatible = "qcom,msm-thermal"},
-	{},
-};
-
-static struct platform_driver msm_thermal_device_driver = {
-	.probe = msm_thermal_dev_probe,
-	.driver = {
-		.name = "msm-thermal",
-		.owner = THIS_MODULE,
-		.of_match_table = msm_thermal_match_table,
-	},
-};
-
 int __init msm_thermal_device_init(void)
 {
-	return platform_driver_register(&msm_thermal_device_driver);
+	return platform_driver_register(&franco_thermal_device_driver);
 }

@@ -518,7 +518,7 @@ static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
 		goto done_cc;
 	}
 
-	if (cpus_offlined == val
+	if (cpus_offlined == val)
 		goto done_cc;
 
 	update_offline_cores(val);
