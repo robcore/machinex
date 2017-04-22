@@ -221,16 +221,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	int first_start = 1;
 
-	if (first_start) {
-			/* Put all sibling cores to sleep */
-			for_each_online_cpu(cpu) {
-				if (cpu == 0)
-					continue;
-				cpu_down(cpu);
-			}
-			first_start = 0;
-	}
-
 	if (target < min_cpus_online)
 		target = min_cpus_online;
 	else if (target > max_cpus_online)
@@ -519,7 +509,7 @@ static int __ref intelli_plug_start(void)
 			continue;
 		cpu_down(cpu);
 	}
-#if 0
+
 	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
@@ -527,7 +517,6 @@ static int __ref intelli_plug_start(void)
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
-#endif
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
@@ -624,7 +613,6 @@ store_one(cpus_boosted, cpus_boosted);
 store_one(hotplug_suspend, hotplug_suspend);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
-store_one(def_sampling_ms, def_sampling_ms);
 store_one(debug_intelli_plug, debug_intelli_plug);
 store_one(nr_fshift, nr_fshift);
 store_one(nr_run_hysteresis, nr_run_hysteresis);
