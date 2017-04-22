@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_wakeirq.h>
+#include <linux/export.h>
 
 #include "power.h"
 
