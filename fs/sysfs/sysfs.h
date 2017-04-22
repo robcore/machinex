@@ -34,35 +34,9 @@ extern struct kmem_cache *sysfs_dir_cachep;
 /*
  * dir.c
  */
-extern struct mutex sysfs_mutex;
 extern spinlock_t sysfs_symlink_target_lock;
-extern const struct dentry_operations sysfs_dentry_ops;
 
-extern const struct file_operations sysfs_dir_operations;
-extern const struct inode_operations sysfs_dir_inode_operations;
-
-struct sysfs_dirent *sysfs_get_active(struct sysfs_dirent *sd);
-void sysfs_put_active(struct sysfs_dirent *sd);
-void sysfs_addrm_start(struct sysfs_addrm_cxt *acxt);
 void sysfs_warn_dup(struct sysfs_dirent *parent, const char *name);
-int sysfs_add_one(struct sysfs_addrm_cxt *acxt, struct sysfs_dirent *sd,
-		  struct sysfs_dirent *parent_sd);
-void sysfs_addrm_finish(struct sysfs_addrm_cxt *acxt);
-
-struct sysfs_dirent *sysfs_new_dirent(const char *name, umode_t mode, int type);
-
-/*
- * inode.c
- */
-struct inode *sysfs_get_inode(struct super_block *sb, struct sysfs_dirent *sd);
-void sysfs_evict_inode(struct inode *inode);
-int sysfs_permission(struct inode *inode, int mask);
-int sysfs_setattr(struct dentry *dentry, struct iattr *iattr);
-int sysfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
-		  struct kstat *stat);
-int sysfs_setxattr(struct dentry *dentry, const char *name, const void *value,
-		   size_t size, int flags);
-int sysfs_inode_init(void);
 
 /*
  * file.c
