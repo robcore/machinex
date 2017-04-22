@@ -601,12 +601,12 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 
 	enabled = 1;
 	if (num_possible_cpus() > 1) {
-		core_control_enabled = 1;
+		core_control_enabled = true;
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
 	intellithermal_wq = alloc_workqueue("intellithermal",
-				WQ_HIGHPRI | WQ_UNBOUND | WQ_MEMRECLAIM, 1);
+				WQ_HIGHPRI | WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 

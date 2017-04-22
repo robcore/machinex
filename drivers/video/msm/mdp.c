@@ -2268,7 +2268,7 @@ static void mdp_drv_init(void)
 	/*mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
 	Gives mdp pipe ctrl high priority */
 	mdp_pipe_ctrl_wq = alloc_workqueue("mdp_pipe_ctrl_wq",
-					WQ_UNBOUND | WQ_MEMRECLAIM | WQ_HIGHPRI, 0);
+					WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
 
 	INIT_DELAYED_WORK(&mdp_pipe_ctrl_worker,
 			  mdp_pipe_ctrl_workqueue_handler);
