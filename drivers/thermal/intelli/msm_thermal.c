@@ -279,7 +279,7 @@ static void __ref check_temp(struct work_struct *work)
 	do_freq_control(temp);
 reschedule:
 	if (enabled)
-		queue_delayed_work_on(0, intellithermal_wq, &check_temp_work,
+		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
@@ -605,10 +605,9 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
-	intellithermal_wq = alloc_workqueue("intellithermal",
-				WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	intellithermal_wq = create_workqueue("intellithermal");
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
-	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
+	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, msecs_to_jiffies(100));
 
 	return 0;
 }
