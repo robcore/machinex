@@ -746,7 +746,7 @@ static ssize_t wakeup_enable(struct device *dev,
 
 	for (i = 0; i < ddata->n_buttons; i++) {
 		struct gpio_button_data *button = &ddata->data[i];
-		if (button->button->type == EV_KEY || bdata->button->code == KEY_HOMEPAGE)) {
+		if (button->button->type == EV_KEY || button->button->code == KEY_HOMEPAGE) {
 			if (test_bit(button->button->code, bits))
 				button->button->wakeup = 1;
 			else
