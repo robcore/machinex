@@ -220,6 +220,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 
+	mutex_lock(&intelli_plug_mutex);
+
 	if (target < min_cpus_online)
 		target = min_cpus_online;
 	else if (target > max_cpus_online)
@@ -234,6 +236,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 			return;
 
 		update_per_cpu_stat();
+		get_online_cpus();
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
 				continue;
@@ -247,8 +250,10 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				cpu_down(cpu);
 			if (target >= num_online_cpus())
 				break;
+			put_online_cpus();
 		}
 	} else if (target > online_cpus) {
+		get_online_cpus();
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
@@ -256,8 +261,10 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
 				break;
+		put_online_cpus();
 		}
 	}
+	mutex_unlock(&intelli_plug_mutex);
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
