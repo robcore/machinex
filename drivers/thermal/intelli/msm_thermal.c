@@ -606,7 +606,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	}
 
 	intellithermal_wq = alloc_workqueue("intellithermal",
-				WQ_HIGHPRI | WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+				WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 
