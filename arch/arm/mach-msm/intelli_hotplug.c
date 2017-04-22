@@ -224,13 +224,11 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (first_start) {
 			/* Put all sibling cores to sleep */
-		for (i = num_possible_cpus(); i > 0; i--) {
 			for_each_online_cpu(cpu) {
-				if (!cpu_online(cpu))
+				if (cpu == 0)
 					continue;
 				cpu_down(cpu);
 			}
-		}
 			first_start = 0;
 	}
 
@@ -249,7 +247,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
-			if (!cpu_online(cpu))
+			if (cpu == 0)
 				continue;
 			if (check_down_lock(cpu))
 				break;
@@ -264,7 +262,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu_online(cpu))
+			if (cpu == 0)
 				continue;
 			cpu_up(cpu);
 			apply_down_lock(cpu);
@@ -334,7 +332,7 @@ static void __ref intelli_plug_resume(void)
 	if (required_wakeup) {
 		/* Fire up all CPUs */
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu_online(cpu))
+			if (cpu == 0)
 				continue;
 			cpu_up(cpu);
 			apply_down_lock(cpu);
