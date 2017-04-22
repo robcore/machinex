@@ -58,7 +58,7 @@ struct ip_cpu_info {
 static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 
 /* HotPlug Driver controls */
-static atomic_t intelli_plug_active = ATOMIC_INIT(0);
+static atomic_t intelli_plug_active = ATOMIC_INIT(1);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -471,7 +471,7 @@ static int __ref intelli_plug_start(void)
 
 	/*intelliplug_wq = alloc_workqueue("intelliplug",
 			WQ_MEM_RECLAIM | WQ_FREEZABLE, 0); */
-	intelliplug_wq = create_freezable_workqueue("intelliplug")
+	intelliplug_wq = create_freezable_workqueue("intelliplug");
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
 		       INTELLI_PLUG);
@@ -497,8 +497,9 @@ static int __ref intelli_plug_start(void)
 
 	mutex_init(&intelli_plug_mutex);
 
-	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
+	INIT_WORK(&up_down_work, cpu_up_down_work);
+
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
@@ -540,8 +541,8 @@ static void intelli_plug_stop(void)
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
 	flush_workqueue(intelliplug_wq);
-	cancel_work_sync(&up_down_work);
-	cancel_delayed_work_sync(&intelli_plug_work);
+	cancel_work(&up_down_work);
+	cancel_delayed_work(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
