@@ -138,7 +138,6 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 	return ret;
 }
 
-#ifdef CONFIG_SMP
 static void __ref do_core_control(long temp)
 {
 	int i = 0;
@@ -187,12 +186,6 @@ static void __ref do_core_control(long temp)
 	}
 	mutex_unlock(&core_control_mutex);
 }
-#else
-static void do_core_control(long temp)
-{
-	return;
-}
-#endif
 
 static void __ref do_freq_control(long temp)
 {
@@ -440,7 +433,6 @@ done_stat_nodes:
 	return ret;
 }
 
-#ifdef CONFIG_SMP
 /* Call with core_control_mutex locked */
 static int __ref update_offline_cores(int val)
 {
@@ -463,12 +455,6 @@ static int __ref update_offline_cores(int val)
 	}
 	return ret;
 }
-#else
-static int update_offline_cores(int val)
-{
-	return 0;
-}
-#endif
 
 static ssize_t show_cc_enabled(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -532,7 +518,7 @@ static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
 		goto done_cc;
 	}
 
-	if (cpus_offlined == val)
+	if (cpus_offlined == val
 		goto done_cc;
 
 	update_offline_cores(val);
@@ -605,6 +591,8 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
+	mutex_init(&core_control_mutex);
+
 	intellithermal_wq = create_singlethread_workqueue("intellithermal");
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
@@ -620,7 +608,17 @@ int __init msm_thermal_late_init(void)
 
 	return 0;
 }
+static void msm_thermal exit(void)
+{
+	if (core_control_enabled)
+		core_control_enabled == false;
+	enabled = 0;
+	disable_msm_thermal();
+	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
+	destroy_mutex(&core_control_mutex);
+}
 late_initcall(msm_thermal_late_init);
+module_exit(msm_thermal);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
