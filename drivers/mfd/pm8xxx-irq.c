@@ -447,6 +447,8 @@ struct pm_irq_chip *  pm8xxx_irq_init(struct device *dev,
 		}
 	}
 
+	irq_set_handler_data(devirq, chip);
+	set_irq_wake(devirq, 1);
 	return chip;
 }
 
