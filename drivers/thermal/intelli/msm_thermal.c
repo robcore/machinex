@@ -615,7 +615,7 @@ static void msm_thermal_exit(void)
 	enabled = 0;
 	disable_msm_thermal();
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
-	destroy_mutex(&core_control_mutex);
+	mutex_destroy(&core_control_mutex);
 }
 late_initcall(msm_thermal_late_init);
 module_exit(msm_thermal_exit);
