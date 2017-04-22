@@ -1,5 +1,5 @@
 /*
- * drivers/power/process.c - Functions for starting/stopping processes on 
+ * drivers/power/process.c - Functions for starting/stopping processes on
  *                           suspend transitions.
  *
  * Originally from swsusp.
@@ -12,8 +12,6 @@
 #include <linux/oom.h>
 #include <linux/suspend.h>
 #include <linux/module.h>
-#include <linux/sched/debug.h>
-#include <linux/sched/task.h>
 #include <linux/syscalls.h>
 #include <linux/freezer.h>
 #include <linux/delay.h>
@@ -21,7 +19,7 @@
 #include <linux/kmod.h>
 #include "power.h"
 
-/* 
+/*
  * Timeout for stopping processes
  */
 unsigned int __read_mostly freeze_timeout_msecs = 20 * MSEC_PER_SEC;
