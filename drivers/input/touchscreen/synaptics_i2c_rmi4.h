@@ -28,7 +28,7 @@
 
 #include <linux/version.h>
 
-#ifdef CONFIG_STATE_NOTIFIER
+#ifdef CONFIG_USE_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #elif defined CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
@@ -227,7 +227,7 @@ struct synaptics_rmi4_data {
 			unsigned char *data, unsigned short length);
 	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable);
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
-#ifdef CONFIG_STATE_NOTIFIER
+#ifdef CONFIG_USE_STATE_NOTIFIER
 	struct notifier_block notif;
 #elif CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;

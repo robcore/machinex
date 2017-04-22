@@ -121,7 +121,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_show(struct device *dev,
 static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
-#if CONFIG_STATE_NOTIFIER
+#if CONFIG_USE_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data);
 #elif CONFIG_POWERSUSPEND
@@ -294,7 +294,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 	return count;
 }
 
-#ifdef CONFIG_STATE_NOTIFIER
+#ifdef CONFIG_USE_STATE_NOTIFIER
 static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval = 0;
@@ -2430,7 +2430,7 @@ static void synaptics_rmi4_sensor_wake(struct synaptics_rmi4_data *rmi4_data)
 	return;
 }
 
-#ifdef CONFIG_STATE_NOTIFIER
+#ifdef CONFIG_USE_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -2625,7 +2625,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 	return 0;
 }
 
-#if (!defined(CONFIG_STATE_NOTIFIER) && !defined(CONFIG_POWERSUSPEND))
+#if (!defined(CONFIG_USE_STATE_NOTIFIER) && !defined(CONFIG_POWERSUSPEND))
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,
