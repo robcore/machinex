@@ -293,9 +293,8 @@ static void __ref intelli_plug_suspend(void)
 		mutex_unlock(&intelli_plug_mutex);
 
 		/* Flush hotplug workqueue */
-		cancel_delayed_work_sync(&dl->lock_rem);
+		flush_workqueue(intelliplug_wq);
 		cancel_work_sync(&up_down_work);
-		cancel_delayed_work_sync(intelli_plug_work_fn);
 		cancel_delayed_work_sync(&intelli_plug_work);
 
 		/* Put sibling cores to sleep */
@@ -331,8 +330,6 @@ static void __ref intelli_plug_resume(void)
 		required_reschedule = 1;
 		INIT_DELAYED_WORK(&intelli_plug_work,
 				intelli_plug_work_fn);
-		queue_delayed_work(&intelli_plug_work,
-				intelli_plug_work_fn, 0);
 		dprintk("%s: resumed.\n", INTELLI_PLUG);
 	}
 
