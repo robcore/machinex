@@ -18,11 +18,14 @@
 #include <linux/poll.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
+#include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/input/mt.h>
 #include <linux/major.h>
 #include <linux/device.h>
+#include <linux/cdev.h>
 #include <linux/wakelock.h>
 #include "input-compat.h"
 
@@ -36,6 +39,7 @@ struct evdev {
 	spinlock_t client_lock; /* protects client_list */
 	struct mutex mutex;
 	struct device dev;
+	struct cdev cdev;
 	bool exist;
 	int hw_ts_sec;
 	int hw_ts_nsec;
@@ -386,7 +390,8 @@ static ssize_t evdev_write(struct file *file, const char __user *buffer,
 		goto out;
 	}
 
-	do {
+	while (retval + input_event_size() <= count) {
+
 		if (input_event_from_user(buffer + retval, &event)) {
 			retval = -EFAULT;
 			goto out;
@@ -395,7 +400,7 @@ static ssize_t evdev_write(struct file *file, const char __user *buffer,
 
 		input_inject_event(&evdev->handle,
 				   event.type, event.code, event.value);
-	} while (retval + input_event_size() <= count);
+	}
 
  out:
 	mutex_unlock(&evdev->mutex);
