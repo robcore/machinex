@@ -231,9 +231,11 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
 		    (ktime_to_us(ktime_get()) - last_input <
-				boost_lock_duration))
+				boost_lock_duration)) {
+				queue_delayed_work(intelliplug_wq, &intelli_plug_work,
+					msecs_to_jiffies(def_sampling_ms));
 			return;
-
+		}
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
