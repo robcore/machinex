@@ -325,7 +325,7 @@ late_initcall(pm_debugfs_init);
 
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM_SLEEP_DEBUG
 /*
  * pm_print_times: print time taken by devices to suspend and resume.
  *
@@ -377,9 +377,9 @@ static ssize_t pm_wakeup_irq_store(struct kobject *kobj,
 	return -EINVAL;
 }
 power_attr(pm_wakeup_irq);
-#else /* !CONFIG_PM_SLEEP */
+#else /* !CONFIG_PP_SLEEP_DEBUG */
 static inline void pm_print_times_init(void) {}
-#endif /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM_SLEEP_DEBUG */
 
 struct kobject *power_kobj;
 
@@ -766,7 +766,7 @@ static struct attribute * g[] = {
 #ifdef CONFIG_PM_DEBUG
 	&pm_test_attr.attr,
 #endif
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM_SLEEP_DEBUG
 	&pm_print_times_attr.attr,
 	&pm_wakeup_irq_attr.attr,
 #endif
