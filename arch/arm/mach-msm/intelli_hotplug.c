@@ -272,7 +272,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 
 	if (atomic_read(&intelli_plug_active) == 1) {
 		target_cpus = calculate_thread_stats();
-		schedule_work(&up_down_work);
+		schedule_work_on(0, &up_down_work);
 	}
 }
 
@@ -396,7 +396,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 		return;
 
 	target_cpus = cpus_boosted;
-	schedule_work(&up_down_work);
+	schedule_work_on(0, &up_down_work);
 	last_boost_time = ktime_to_us(ktime_get());
 }
 
