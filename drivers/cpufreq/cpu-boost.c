@@ -56,7 +56,7 @@ module_param(input_boost_ms, uint, 0644);
 static bool hotplug_boost = false;
 module_param(hotplug_boost, bool, 0644);
 
-static bool wakeup_boost = true;
+static bool wakeup_boost = false;
 module_param(wakeup_boost, bool, 0644);
 
 static u64 last_input_time;
@@ -125,8 +125,8 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 		 cpu, policy->min);
 	pr_debug("CPU%u boost min: %u kHz\n", cpu, min);
 
-//	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
-	cpufreq_verify_within_limits(policy, min, UINT_MAX);
+	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
+	//cpufreq_verify_within_limits(policy, min, UINT_MAX);
 
 
 	pr_debug("CPU%u policy min after boost: %u kHz\n",
