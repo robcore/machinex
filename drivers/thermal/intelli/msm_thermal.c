@@ -587,7 +587,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 
 	enabled = 1;
 	if (num_possible_cpus() > 1) {
-		core_control_enabled = false;
+		core_control_enabled = true;
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 

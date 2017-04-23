@@ -66,7 +66,7 @@ static inline void disable_cpufreq(void) { }
 #define UTIL_THRESHOLD			(25)
 /* Minimum frequency cutoff to notify the userspace about cpu utilization
  * changes */
-#define MIN_CPU_UTIL_NOTIFY   45
+#define MIN_CPU_UTIL_NOTIFY   40
 
 /* Frequency values here are CPU kHz so that hardware which doesn't run
  * with some frequencies can complain without having to guess what per

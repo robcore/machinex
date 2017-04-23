@@ -162,7 +162,7 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-	queue_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+	queue_delayed_work(intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
 }
 
@@ -225,7 +225,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	s64 now;
 	s64 delta;
-	bool firstrun = true;
 
 	now = ktime_to_us(ktime_get());
 
@@ -240,7 +239,9 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		if (online_cpus <= cpus_boosted &&
 		now - last_input <
 				boost_lock_duration) {
-				goto reschedule;
+				queue_delayed_work(intelliplug_wq, &intelli_plug_work,
+					msecs_to_jiffies(def_sampling_ms));
+			return;
 		}
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -258,10 +259,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	} else if (target > online_cpus) {
-			if (firstrun) {
-				firstrun = false;
-				goto reschedule;
-			}
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
@@ -271,8 +268,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	}
-reschedule:
-		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		queue_delayed_work(intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -361,7 +357,7 @@ static void __ref intelli_plug_resume(void)
 
 	/* Resume hotplug workqueue if required */
 	if (required_reschedule) {
-		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		queue_delayed_work(intelliplug_wq, &intelli_plug_work,
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
 		/* Reset required_reschedule flag back to 0 */
 	required_reschedule = 0;
@@ -500,8 +496,7 @@ static struct input_handler intelli_plug_input_handler = {
 
 static int __ref intelli_plug_start(void)
 {
-	unsigned int cpu;
-	int ret = 0;
+	int cpu, ret = 0;
 	struct down_lock *dl;
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
@@ -558,7 +553,7 @@ static int __ref intelli_plug_start(void)
 	}
 */
 
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+	queue_delayed_work(intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
 
 	return ret;
@@ -572,7 +567,7 @@ err_out:
 
 static void intelli_plug_stop(void)
 {
-	unsigned int cpu;
+	int cpu;
 	struct down_lock *dl;
 
 	for_each_possible_cpu(cpu) {
