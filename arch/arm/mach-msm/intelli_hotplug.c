@@ -28,11 +28,11 @@
 #define INTELLI_PLUG_MAJOR_VERSION	6
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_MS			75
+#define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			10000
 #define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			250 * 1000L
+#define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
 #define DEFAULT_DOWN_LOCK_DUR		2000
@@ -44,7 +44,7 @@
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
 //#define DIV_FACTOR			100000
-#define DIV_FACTOR			95000
+#define DIV_FACTOR			100000
 
 static s64 last_boost_time;
 static s64 last_input;
@@ -262,6 +262,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
+			if (thermal_core_controlled)
+				break;
 			cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
@@ -386,15 +388,13 @@ static int state_notifier_callback(struct notifier_block *this,
 }
 #endif
 
-#if 0
 static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (atomic_read(&intelli_plug_active) == 1 &&
-			 check_down_lock(cpu) == 1)
+		if (atomic_read(&intelli_plug_active) == 0
 			return NOTIFY_BAD;
 		}
 
@@ -500,7 +500,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
-	intelliplug_wq = create_singlethread_workqueue("intelliplug");
+	intelliplug_wq = create_freezable_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
@@ -525,7 +525,7 @@ static int __ref intelli_plug_start(void)
 		goto err_dev;
 	}
 
-	//register_cpu_notifier(&intelli_plug_cpu_notifier);
+	register_cpu_notifier(&intelli_plug_cpu_notifier);
 
 	mutex_init(&intelli_plug_mutex);
 
@@ -560,7 +560,7 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
-	//unregister_cpu_notifier(&intelli_plug_cpu_notifier);
+	unregister_cpu_notifier(&intelli_plug_cpu_notifier);
 	return ret;
 }
 
@@ -876,7 +876,7 @@ static void __exit intelli_plug_exit(void)
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
 
-late_initcall_sync(intelli_plug_init);
+late_initcall(intelli_plug_init);
 module_exit(intelli_plug_exit);
 
 MODULE_LICENSE("GPLv2");
