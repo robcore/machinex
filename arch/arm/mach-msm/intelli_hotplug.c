@@ -35,7 +35,7 @@
 #define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
-#define DEFAULT_DOWN_LOCK_DUR		2000
+#define DEFAULT_DOWN_LOCK_DUR		1000
 
 #define CAPACITY_RESERVE		50
 //#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
@@ -230,6 +230,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		return;
 
 	now = ktime_to_us(ktime_get());
+	delta = now - last_input;
 
 	if (target < min_cpus_online)
 		target = min_cpus_online;
@@ -240,8 +241,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		now - last_input <
-				boost_lock_duration)
+		delta <= boost_lock_duration)
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -304,17 +304,6 @@ static void __ref intelli_plug_suspend(void)
 		max_cpus_online = NR_CPUS;
 		mutex_unlock(&intelli_plug_mutex);
 
-		/* Flush hotplug workqueue */
-		cancel_work_sync(&up_down_work);
-		cancel_delayed_work_sync(&intelli_plug_work);
-
-		/* Put sibling cores to sleep */
-		for_each_online_cpu(cpu) {
-			if (cpu == 0)
-				continue;
-			cpu_down(cpu);
-		}
-
 		/*
 		 * Enable core 1,2 so we will have 0-2 online
 		 * when screen is OFF to reduce system lags and reboots.
@@ -339,8 +328,6 @@ static void __ref intelli_plug_resume(void)
 		required_wakeup = 1;
 		/* Initiate hotplug work if it was cancelled */
 		required_reschedule = 1;
-		INIT_DELAYED_WORK(&intelli_plug_work,
-				intelli_plug_work_fn);
 		dprintk("%s: resumed.\n", INTELLI_PLUG);
 	}
 
@@ -349,7 +336,8 @@ static void __ref intelli_plug_resume(void)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
-			cpu_up(cpu);
+			if (!thermal_core_controlled)
+				cpu_up(cpu);
 			apply_down_lock(cpu);
 		}
 		dprintk("%s: wakeup boosted.\n", INTELLI_PLUG);
@@ -394,9 +382,11 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 	unsigned int cpu = (unsigned long)hcpu;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (atomic_read(&intelli_plug_active) == 0)
-			return NOTIFY_BAD;
+		if (atomic_read(&intelli_plug_active) == 1) {
+			if (thermal_core_controlled || hotplug_suspended);
+				return NOTIFY_BAD;
 		}
+	}
 
 	return NOTIFY_OK;
 }
@@ -499,7 +489,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
-	intelliplug_wq = create_freezable_workqueue("intelliplug");
+	intelliplug_wq = create_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
@@ -547,7 +537,8 @@ static int __ref intelli_plug_start(void)
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
-		cpu_up(cpu);
+		if (!thermal_core_controlled)
+			cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
 
