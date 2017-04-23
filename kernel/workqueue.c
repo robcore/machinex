@@ -48,7 +48,6 @@
 #include <linux/nodemask.h>
 #include <linux/moduleparam.h>
 #include <linux/uaccess.h>
-#include <linux/bug.h>
 
 #include "workqueue_internal.h"
 
@@ -437,11 +436,18 @@ static void *work_debug_hint(void *addr)
 	return ((struct work_struct *) addr)->func;
 }
 
+static bool work_is_static_object(void *addr)
+{
+	struct work_struct *work = addr;
+
+	return test_bit(WORK_STRUCT_STATIC_BIT, work_data_bits(work));
+}
+
 /*
  * fixup_init is called when:
  * - an active object is initialized
  */
-static int work_fixup_init(void *addr, enum debug_obj_state state)
+static bool work_fixup_init(void *addr, enum debug_obj_state state)
 {
 	struct work_struct *work = addr;
 
@@ -449,42 +455,9 @@ static int work_fixup_init(void *addr, enum debug_obj_state state)
 	case ODEBUG_STATE_ACTIVE:
 		cancel_work_sync(work);
 		debug_object_init(work, &work_debug_descr);
-		return 1;
+		return true;
 	default:
-		return 0;
-	}
-}
-
-/*
- * fixup_activate is called when:
- * - an active object is activated
- * - an unknown object is activated (might be a statically initialized object)
- */
-static int work_fixup_activate(void *addr, enum debug_obj_state state)
-{
-	struct work_struct *work = addr;
-
-	switch (state) {
-
-	case ODEBUG_STATE_NOTAVAILABLE:
-		/*
-		 * This is not really a fixup. The work struct was
-		 * statically initialized. We just make sure that it
-		 * is tracked in the object tracker.
-		 */
-		if (test_bit(WORK_STRUCT_STATIC_BIT, work_data_bits(work))) {
-			debug_object_init(work, &work_debug_descr);
-			debug_object_activate(work, &work_debug_descr);
-			return 0;
-		}
-		WARN_ON_ONCE(1);
-		return 0;
-
-	case ODEBUG_STATE_ACTIVE:
-		WARN_ON(1);
-
-	default:
-		return 0;
+		return false;
 	}
 }
 
@@ -492,7 +465,7 @@ static int work_fixup_activate(void *addr, enum debug_obj_state state)
  * fixup_free is called when:
  * - an active object is freed
  */
-static int work_fixup_free(void *addr, enum debug_obj_state state)
+static bool work_fixup_free(void *addr, enum debug_obj_state state)
 {
 	struct work_struct *work = addr;
 
@@ -500,17 +473,17 @@ static int work_fixup_free(void *addr, enum debug_obj_state state)
 	case ODEBUG_STATE_ACTIVE:
 		cancel_work_sync(work);
 		debug_object_free(work, &work_debug_descr);
-		return 1;
+		return true;
 	default:
-		return 0;
+		return false;
 	}
 }
 
 static struct debug_obj_descr work_debug_descr = {
 	.name		= "work_struct",
 	.debug_hint	= work_debug_hint,
+	.is_static_object = work_is_static_object,
 	.fixup_init	= work_fixup_init,
-	.fixup_activate	= work_fixup_activate,
 	.fixup_free	= work_fixup_free,
 };
 
@@ -544,7 +517,7 @@ void destroy_delayed_work_on_stack(struct delayed_work *work)
 	destroy_timer_on_stack(&work->timer);
 	debug_object_free(&work->work, &work_debug_descr);
 }
-EXPORT_SYMBOL_GPL(destroy_delayed_work_on_stack);
+EXPORT_SYMBOL(destroy_delayed_work_on_stack);
 
 #else
 static inline void debug_work_activate(struct work_struct *work) { }
@@ -1042,7 +1015,7 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
  * move_linked_works - move linked works to a list
  * @work: start of series of works to be scheduled
  * @head: target list to append @work to
- * @nextp: out paramter for nested worklist walking
+ * @nextp: out parameter for nested worklist walking
  *
  * Schedule linked works starting from @work to @head.  Work series to
  * be scheduled starts at @work and includes any consecutive work with
@@ -1535,6 +1508,7 @@ static void __queue_delayed_work(int cpu, struct workqueue_struct *wq,
 	struct timer_list *timer = &dwork->timer;
 	struct work_struct *work = &dwork->work;
 
+	WARN_ON_ONCE(!wq);
 	WARN_ON_ONCE(timer->function != delayed_work_timer_fn ||
 		     timer->data != (unsigned long)dwork);
 	WARN_ON_ONCE(timer_pending(timer));
@@ -3218,7 +3192,7 @@ static bool wqattrs_equal(const struct workqueue_attrs *a,
  * init_worker_pool - initialize a newly zalloc'd worker_pool
  * @pool: worker_pool to initialize
  *
- * Initiailize a newly zalloc'd @pool.  It also allocates @pool->attrs.
+ * Initialize a newly zalloc'd @pool.  It also allocates @pool->attrs.
  *
  * Return: 0 on success, -errno on failure.  Even on failure, all fields
  * inside @pool proper are initialized and put_unbound_pool() can be called
@@ -4563,13 +4537,10 @@ static void wq_unbind_fn(struct work_struct *work)
 /**
  * rebind_workers - rebind all workers of a pool to the associated CPU
  * @pool: pool of interest
- * @force: if it is true, replace WORKER_UNBOUND with WORKER_REBOUND
- * irrespective of flags of workers. Otherwise, replace the flags only
- * when workers have WORKER_UNBOUND flag.
  *
  * @pool->cpu is coming online.  Rebind all workers to the CPU.
  */
-static void rebind_workers(struct worker_pool *pool, bool force)
+static void rebind_workers(struct worker_pool *pool)
 {
 	struct worker *worker;
 
@@ -4578,7 +4549,7 @@ static void rebind_workers(struct worker_pool *pool, bool force)
 	/*
 	 * Restore CPU affinity of all workers.  As all idle workers should
 	 * be on the run-queue of the associated CPU before any local
-	 * wake-ups for concurrency management happen, restore CPU affinty
+	 * wake-ups for concurrency management happen, restore CPU affinity
 	 * of all workers first and then clear UNBOUND.  As we're called
 	 * from CPU_ONLINE, the following shouldn't fail.
 	 */
@@ -4629,12 +4600,10 @@ static void rebind_workers(struct worker_pool *pool, bool force)
 		 * fail incorrectly leading to premature concurrency
 		 * management operations.
 		 */
-		if (force || (worker_flags & WORKER_UNBOUND)) {
-			WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
-			worker_flags |= WORKER_REBOUND;
-			worker_flags &= ~WORKER_UNBOUND;
-			ACCESS_ONCE(worker->flags) = worker_flags;
-		}
+		WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
+		worker_flags |= WORKER_REBOUND;
+		worker_flags &= ~WORKER_UNBOUND;
+		ACCESS_ONCE(worker->flags) = worker_flags;
 	}
 
 	spin_unlock_irq(&pool->lock);
@@ -4668,86 +4637,65 @@ static void restore_unbound_workers_cpumask(struct worker_pool *pool, int cpu)
 		WARN_ON_ONCE(set_cpus_allowed_ptr(worker->task, &cpumask) < 0);
 }
 
-/*
- * Workqueues should be brought up before normal priority CPU notifiers.
- * This will be registered high priority CPU notifier.
- */
-static int workqueue_cpu_up_callback(struct notifier_block *nfb,
-					       unsigned long action,
-					       void *hcpu)
+int workqueue_prepare_cpu(unsigned int cpu)
 {
-	int cpu = (unsigned long)hcpu;
+	struct worker_pool *pool;
+
+	for_each_cpu_worker_pool(pool, cpu) {
+		if (pool->nr_workers)
+			continue;
+		if (!create_worker(pool))
+			return -ENOMEM;
+	}
+	return 0;
+}
+
+int workqueue_online_cpu(unsigned int cpu)
+{
 	struct worker_pool *pool;
 	struct workqueue_struct *wq;
 	int pi;
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_UP_PREPARE:
-		for_each_cpu_worker_pool(pool, cpu) {
-			if (pool->nr_workers)
-				continue;
-			if (!create_worker(pool))
-				return NOTIFY_BAD;
-		}
-		break;
+	mutex_lock(&wq_pool_mutex);
 
-	case CPU_DOWN_FAILED:
-	case CPU_ONLINE:
-		mutex_lock(&wq_pool_mutex);
+	for_each_pool(pool, pi) {
+		mutex_lock(&pool->attach_mutex);
 
-		for_each_pool(pool, pi) {
-			mutex_lock(&pool->attach_mutex);
+		if (pool->cpu == cpu)
+			rebind_workers(pool);
+		else if (pool->cpu < 0)
+			restore_unbound_workers_cpumask(pool, cpu);
 
-			if (pool->cpu == cpu)
-				rebind_workers(pool,
-					(action & ~CPU_TASKS_FROZEN)
-						!= CPU_DOWN_FAILED);
-			else if (pool->cpu < 0)
-				restore_unbound_workers_cpumask(pool, cpu);
-
-			mutex_unlock(&pool->attach_mutex);
-		}
-
-		/* update NUMA affinity of unbound workqueues */
-		list_for_each_entry(wq, &workqueues, list)
-			wq_update_unbound_numa(wq, cpu, true);
-
-		mutex_unlock(&wq_pool_mutex);
-		break;
+		mutex_unlock(&pool->attach_mutex);
 	}
-	return NOTIFY_OK;
+
+	/* update NUMA affinity of unbound workqueues */
+	list_for_each_entry(wq, &workqueues, list)
+		wq_update_unbound_numa(wq, cpu, true);
+
+	mutex_unlock(&wq_pool_mutex);
+	return 0;
 }
 
-/*
- * Workqueues should be brought down after normal priority CPU notifiers.
- * This will be registered as low priority CPU notifier.
- */
-static int workqueue_cpu_down_callback(struct notifier_block *nfb,
-						 unsigned long action,
-						 void *hcpu)
+int workqueue_offline_cpu(unsigned int cpu)
 {
-	int cpu = (unsigned long)hcpu;
 	struct work_struct unbind_work;
 	struct workqueue_struct *wq;
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DOWN_PREPARE:
-		/* unbinding per-cpu workers should happen on the local CPU */
-		INIT_WORK_ONSTACK(&unbind_work, wq_unbind_fn);
-		queue_work_on(cpu, system_highpri_wq, &unbind_work);
+	/* unbinding per-cpu workers should happen on the local CPU */
+	INIT_WORK_ONSTACK(&unbind_work, wq_unbind_fn);
+	queue_work_on(cpu, system_highpri_wq, &unbind_work);
 
-		/* update NUMA affinity of unbound workqueues */
-		mutex_lock(&wq_pool_mutex);
-		list_for_each_entry(wq, &workqueues, list)
-			wq_update_unbound_numa(wq, cpu, false);
-		mutex_unlock(&wq_pool_mutex);
+	/* update NUMA affinity of unbound workqueues */
+	mutex_lock(&wq_pool_mutex);
+	list_for_each_entry(wq, &workqueues, list)
+		wq_update_unbound_numa(wq, cpu, false);
+	mutex_unlock(&wq_pool_mutex);
 
-		/* wait for per-cpu unbinding to finish */
-		flush_work(&unbind_work);
-		destroy_work_on_stack(&unbind_work);
-		break;
-	}
-	return NOTIFY_OK;
+	/* wait for per-cpu unbinding to finish */
+	flush_work(&unbind_work);
+	destroy_work_on_stack(&unbind_work);
+	return 0;
 }
 
 #ifdef CONFIG_SMP
@@ -5280,7 +5228,7 @@ int workqueue_sysfs_register(struct workqueue_struct *wq)
 	int ret;
 
 	/*
-	 * Adjusting max_active or creating new pwqs by applyting
+	 * Adjusting max_active or creating new pwqs by applying
 	 * attributes breaks ordering guarantee.  Disallow exposing ordered
 	 * workqueues.
 	 */
@@ -5559,11 +5507,6 @@ int __init workqueue_init_early(void)
 
 	pwq_cache = KMEM_CACHE(pool_workqueue, SLAB_PANIC);
 
-	cpu_notifier(workqueue_cpu_up_callback, CPU_PRI_WORKQUEUE_UP);
-	hotcpu_notifier(workqueue_cpu_down_callback, CPU_PRI_WORKQUEUE_DOWN);
-
-	wq_numa_init();
-
 	/* initialize CPU pools */
 	for_each_possible_cpu(cpu) {
 		struct worker_pool *pool;
@@ -5633,8 +5576,31 @@ int __init workqueue_init_early(void)
  */
 int __init workqueue_init(void)
 {
+	struct workqueue_struct *wq;
 	struct worker_pool *pool;
 	int cpu, bkt;
+
+	/*
+	 * It'd be simpler to initialize NUMA in workqueue_init_early() but
+	 * CPU to node mapping may not be available that early on some
+	 * archs such as power and arm64.  As per-cpu pools created
+	 * previously could be missing node hint and unbound pools NUMA
+	 * affinity, fix them up.
+	 */
+	wq_numa_init();
+
+	mutex_lock(&wq_pool_mutex);
+
+	for_each_possible_cpu(cpu) {
+		for_each_cpu_worker_pool(pool, cpu) {
+			pool->node = cpu_to_node(cpu);
+		}
+	}
+
+	list_for_each_entry(wq, &workqueues, list)
+		wq_update_unbound_numa(wq, smp_processor_id(), true);
+
+	mutex_unlock(&wq_pool_mutex);
 
 	/* create the initial workers */
 	for_each_online_cpu(cpu) {
@@ -5652,5 +5618,4 @@ int __init workqueue_init(void)
 
 	return 0;
 }
-early_initcall(init_workqueues);
 
