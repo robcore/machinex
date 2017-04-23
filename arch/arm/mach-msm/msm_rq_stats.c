@@ -61,8 +61,8 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	int ret;
 	u64 cur_wall_time, cur_idle_time;
-	u64 idle_time, wall_time;
-	unsigned long cur_load, load_at_max_freq;
+	unsigned int idle_time, wall_time;
+	unsigned int cur_load, load_at_max_freq;
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	struct cpufreq_policy policy;
 
@@ -72,12 +72,11 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
-	wall_time = (u64) (cur_wall_time - pcpu->prev_cpu_wall);
+	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
 	pcpu->prev_cpu_wall = cur_wall_time;
 
-	idle_time = (u64) (cur_idle_time - pcpu->prev_cpu_idle);
+	idle_time = (unsigned int) (cur_idle_time - pcpu->prev_cpu_idle);
 	pcpu->prev_cpu_idle = cur_idle_time;
-
 
 	if (unlikely(wall_time <= 0 || wall_time < idle_time))
 		return 0;
@@ -595,7 +594,9 @@ static int __init msm_rq_stats_init(void)
 		cpufreq_get_policy(&cpu_policy, i);
 		pcpu->policy_max = cpu_policy.max;
 		if (cpu_online(i))
-			pcpu->cur_freq = cpufreq_quick_get(i);
+			pcpu->cur_freq = cpu_policy.cur;
+		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
+				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
