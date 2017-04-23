@@ -394,7 +394,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 	unsigned int cpu = (unsigned long)hcpu;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (atomic_read(&intelli_plug_active) == 0
+		if (atomic_read(&intelli_plug_active) == 0)
 			return NOTIFY_BAD;
 		}
 
