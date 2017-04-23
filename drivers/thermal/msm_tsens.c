@@ -636,7 +636,7 @@ static int tsens_tm_remove(struct platform_device *pdev)
 
 static struct platform_driver tsens_tm_driver = {
 	.probe	= tsens_tm_probe,
-	.remove	= __devexit_p(tsens_tm_remove),
+	.remove	= tsens_tm_remove,
 	.driver	= {
 		.name = "tsens-tm",
 		.owner = THIS_MODULE,
