@@ -404,7 +404,6 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 static struct notifier_block __refdata intelli_plug_cpu_notifier = {
 	.notifier_call = intelli_plug_cpu_callback,
 };
-#endif
 
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
