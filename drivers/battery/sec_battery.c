@@ -1733,8 +1733,8 @@ static unsigned int sec_bat_get_polling_time(
 	else if (battery->cable_type == POWER_SUPPLY_TYPE_WIRELESS &&
 			battery->status == POWER_SUPPLY_STATUS_CHARGING)
 		battery->polling_time = 46;
-	else
-		return battery->polling_time;
+
+	return battery->polling_time;
 }
 
 static bool sec_bat_is_short_polling(
