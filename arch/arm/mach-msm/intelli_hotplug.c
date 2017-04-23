@@ -28,23 +28,23 @@
 #define INTELLI_PLUG_MAJOR_VERSION	6
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_MS			35
+#define DEF_SAMPLING_MS			125
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			40000
+#define START_DELAY_MS			5000
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
-#define DEFAULT_DOWN_LOCK_DUR		1500
+#define DEFAULT_DOWN_LOCK_DUR		2000
 
 #define CAPACITY_RESERVE		50
 //#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
-#define THREAD_CAPACITY			(279 - CAPACITY_RESERVE)
+#define THREAD_CAPACITY			(350 - CAPACITY_RESERVE)
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
 //#define DIV_FACTOR			100000
-#define DIV_FACTOR			120000
+#define DIV_FACTOR			90000
 
 static s64 last_boost_time;
 static s64 last_input;
@@ -162,7 +162,7 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-	queue_delayed_work(intelliplug_wq, &dl->lock_rem,
+	queue_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
 }
 
@@ -226,6 +226,9 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	s64 now;
 	s64 delta;
 
+	if (hotplug_suspended)
+		return;
+
 	now = ktime_to_us(ktime_get());
 
 	if (target < min_cpus_online)
@@ -238,11 +241,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
 		now - last_input <
-				boost_lock_duration) {
-				queue_delayed_work(intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(def_sampling_ms));
-			return;
-		}
+				boost_lock_duration)
+				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
@@ -268,7 +268,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	}
-		queue_delayed_work(intelliplug_wq, &intelli_plug_work,
+reschedule:
+		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -304,7 +305,6 @@ static void __ref intelli_plug_suspend(void)
 		/* Flush hotplug workqueue */
 		cancel_work_sync(&up_down_work);
 		cancel_delayed_work_sync(&intelli_plug_work);
-		drain_workqueue(intelliplug_wq);
 
 		/* Put sibling cores to sleep */
 		for_each_online_cpu(cpu) {
@@ -357,7 +357,7 @@ static void __ref intelli_plug_resume(void)
 
 	/* Resume hotplug workqueue if required */
 	if (required_reschedule) {
-		queue_delayed_work(intelliplug_wq, &intelli_plug_work,
+		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
 		/* Reset required_reschedule flag back to 0 */
 	required_reschedule = 0;
@@ -500,7 +500,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
-	intelliplug_wq = create_workqueue("intelliplug");
+	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
@@ -529,9 +529,9 @@ static int __ref intelli_plug_start(void)
 
 	mutex_init(&intelli_plug_mutex);
 
-	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
-	INIT_WORK(&up_down_work, cpu_up_down_work);
 
+	INIT_WORK(&up_down_work, cpu_up_down_work);
+	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
@@ -544,16 +544,15 @@ static int __ref intelli_plug_start(void)
 		cpu_down(cpu);
 	}
 
-	/* Fire up all CPUs to boost performance
+	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
-*/
 
-	queue_delayed_work(intelliplug_wq, &intelli_plug_work,
+	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
 
 	return ret;
