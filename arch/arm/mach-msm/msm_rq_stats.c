@@ -313,7 +313,7 @@ static ssize_t store_hotplug_enable(struct kobject *kobj,
 
 	spin_lock_irqsave(&rq_lock, flags);
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val > 1) {
+	if (ret != 1 || val < 0 || val > 1) {
 		spin_unlock_irqrestore(&rq_lock, flags);
 		return -EINVAL;
 	}
@@ -536,7 +536,7 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_jiffies = DEFAULT_DEF_TIMER_JIFFIES;
 	rq_info.rq_poll_last_jiffy = 0;
 	rq_info.def_timer_last_jiffy = 0;
-	rq_info.hotplug_disabled = 0;
+	rq_info.hotplug_disabled = 1;
 	rq_info.hotplug_enabled = 0;
 	ret = init_rq_attribs();
 
@@ -546,7 +546,7 @@ static int __init msm_rq_stats_init(void)
 		struct cpu_load_data *pcpu = &per_cpu(cpuload, i);
 		mutex_init(&pcpu->cpu_load_mutex);
 		cpufreq_get_policy(&cpu_policy, i);
-		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
+		pcpu->policy_max = cpu_policy.max;
 		if (cpu_online(i))
 			pcpu->cur_freq = acpuclk_get_rate(i);
 		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
