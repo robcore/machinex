@@ -28,23 +28,23 @@
 #define INTELLI_PLUG_MAJOR_VERSION	6
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_MS			125
+#define DEF_SAMPLING_MS			75
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			5000
+#define START_DELAY_MS			10000
 #define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			60 * 1000L
+#define BOOST_LOCK_DUR			250 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
 #define DEFAULT_DOWN_LOCK_DUR		2000
 
 #define CAPACITY_RESERVE		50
 //#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
-#define THREAD_CAPACITY			(350 - CAPACITY_RESERVE)
+#define THREAD_CAPACITY			(329 - CAPACITY_RESERVE)
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
 //#define DIV_FACTOR			100000
-#define DIV_FACTOR			90000
+#define DIV_FACTOR			95000
 
 static s64 last_boost_time;
 static s64 last_input;
@@ -65,7 +65,7 @@ static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
-static unsigned int full_mode_profile = 0; /* balance profile */
+static unsigned int full_mode_profile = 6; /* strict profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended;
@@ -78,11 +78,11 @@ static unsigned int max_cpus_online_res = 4;
 static unsigned int hotplug_suspend = 0;
 
 /* HotPlug Driver Tuning */
-static unsigned int target_cpus;
+static unsigned int target_cpus = 4;
 static s64 boost_lock_duration = BOOST_LOCK_DUR;
 static s64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned long nr_fshift = DEFAULT_NR_FSHIFT;
-static unsigned int nr_run_hysteresis = DEFAULT_MAX_CPUS_ONLINE * 2;
+static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
 
 #define dprintk(msg...)		\
