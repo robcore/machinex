@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,9 +10,7 @@
  * GNU General Public License for more details.
  *
  */
-/*
- * Qualcomm MSM Runqueue Stats and cpu utilization Interface for Userspace
- */
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -30,7 +28,6 @@
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
 #include <asm/smp_plat.h>
-#include "acpuclock.h"
 #include <linux/suspend.h>
 
 #define MAX_LONG_SIZE 24
@@ -59,28 +56,28 @@ struct cpu_load_data {
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
-static bool io_is_busy;
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	int ret;
-	unsigned int idle_time, wall_time;
-	unsigned int cur_load, load_at_max_freq;
 	u64 cur_wall_time, cur_idle_time;
+	u64 idle_time, wall_time;
+	unsigned long cur_load, load_at_max_freq;
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	struct cpufreq_policy policy;
 
-        ret = cpufreq_get_policy(&policy, cpu);
-        if (ret)
-                return -EINVAL;
+	ret = cpufreq_get_policy(&policy, cpu);
+	if (ret)
+		return -EINVAL;
 
-	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, io_is_busy);
+	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
-	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
+	wall_time = (u64) (cur_wall_time - pcpu->prev_cpu_wall);
 	pcpu->prev_cpu_wall = cur_wall_time;
 
-	idle_time = (unsigned int) (cur_idle_time - pcpu->prev_cpu_idle);
+	idle_time = (u64) (cur_idle_time - pcpu->prev_cpu_idle);
 	pcpu->prev_cpu_idle = cur_idle_time;
+
 
 	if (unlikely(wall_time <= 0 || wall_time < idle_time))
 		return 0;
@@ -88,7 +85,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 	cur_load = 100 * (wall_time - idle_time) / wall_time;
 
 	/* Calculate the scaled load across CPU */
-	load_at_max_freq = (cur_load * policy.cur) / policy.max;
+	load_at_max_freq = (cur_load * freq) / pcpu->policy_max;
 
 #ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
 	pcpu->cpu_load = cur_load;
@@ -145,9 +142,9 @@ static struct kobj_attribute conservative_rq_attr =
 
 static unsigned int report_load_at_max_freq(void)
 {
-	int cpu;
+	unsigned int cpu;
 	struct cpu_load_data *pcpu;
-	unsigned int total_load = 0;
+	u64 total_load = 0;
 	uint64_t timed_load = 0;
 	unsigned int max_window_size = 0;
 
@@ -212,7 +209,7 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 		for_each_cpu(j, this_cpu->related_cpus) {
 			struct cpu_load_data *pcpu = &per_cpu(cpuload, j);
 			mutex_lock(&pcpu->cpu_load_mutex);
-			update_average_load(freqs->old, freqs->cpu);
+			update_average_load(freqs->old, j);
 			pcpu->cur_freq = freqs->new;
 			mutex_unlock(&pcpu->cpu_load_mutex);
 		}
@@ -223,7 +220,7 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 
 static void update_related_cpus(void)
 {
-	unsigned cpu;
+	unsigned int cpu;
 
 	for_each_cpu(cpu, cpu_online_mask) {
 		struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
@@ -246,7 +243,7 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 	switch (val) {
 	case CPU_ONLINE:
 		if (!this_cpu->cur_freq)
-			this_cpu->cur_freq = acpuclk_get_rate(cpu);
+			this_cpu->cur_freq = cpufreq_quick_get(cpu);
 		update_related_cpus();
 	case CPU_ONLINE_FROZEN:
 		this_cpu->avg_load_maxfreq = 0;
@@ -593,13 +590,12 @@ static int __init msm_rq_stats_init(void)
 
 	for_each_possible_cpu(i) {
 		struct cpu_load_data *pcpu = &per_cpu(cpuload, i);
+
 		mutex_init(&pcpu->cpu_load_mutex);
 		cpufreq_get_policy(&cpu_policy, i);
 		pcpu->policy_max = cpu_policy.max;
 		if (cpu_online(i))
-			pcpu->cur_freq = acpuclk_get_rate(i);
-		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
-				&pcpu->prev_cpu_wall, io_is_busy);
+			pcpu->cur_freq = cpufreq_quick_get(i);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
