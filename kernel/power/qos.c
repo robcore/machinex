@@ -93,6 +93,7 @@ static struct pm_qos_object network_lat_pm_qos = {
 	.name = "network_latency",
 };
 
+
 static BLOCKING_NOTIFIER_HEAD(network_throughput_notifier);
 static struct pm_qos_constraints network_tput_constraints = {
 	.list = PLIST_HEAD_INIT(network_tput_constraints.list),
@@ -106,6 +107,7 @@ static struct pm_qos_object network_throughput_pm_qos = {
 	.constraints = &network_tput_constraints,
 	.name = "network_throughput",
 };
+
 
 static BLOCKING_NOTIFIER_HEAD(memory_bandwidth_notifier);
 static struct pm_qos_constraints memory_bw_constraints = {
@@ -134,20 +136,6 @@ static struct pm_qos_object cpu_dma_throughput_pm_qos = {
 	.name = "cpu_dma_throughput",
 };
 
-
-static BLOCKING_NOTIFIER_HEAD(dvfs_lat_notifier);
-static struct pm_qos_constraints dvfs_lat_constraints = {
-	.list = PLIST_HEAD_INIT(dvfs_lat_constraints.list),
-	.target_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.default_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &dvfs_lat_notifier,
-};
-static struct pm_qos_object dvfs_lat_pm_qos = {
-	.constraints = &dvfs_lat_constraints,
-	.name = "dvfs_latency",
-};
-
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
 	&cpu_dma_pm_qos,
@@ -155,7 +143,6 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&network_throughput_pm_qos,
 	&memory_bandwidth_pm_qos,
 	&cpu_dma_throughput_pm_qos,
-	&dvfs_lat_pm_qos,
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
@@ -265,6 +252,8 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 		curr_value = c->default_value;
 	}
 
+	mutex_unlock(&pm_qos_lock);
+
 	trace_pm_qos_update_target(action, prev_value, curr_value);
 	if (prev_value != curr_value) {
 		ret = 1;
@@ -275,9 +264,6 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 	} else {
 		ret = 0;
 	}
-
-	mutex_unlock(&pm_qos_lock);
-
 	return ret;
 }
 
@@ -402,13 +388,14 @@ static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
 			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
 		}
 	}
-	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
+	mutex_unlock(&pm_qos_lock);
+	for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
 		if (prev[i] != curr[i])
 			blocking_notifier_call_chain(
 				pm_qos_array[i]->constraints->notifiers,
 				(unsigned long)curr[i],
 				NULL);
-	mutex_unlock(&pm_qos_lock);
+	}
 	return ret;
 }
 
