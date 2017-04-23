@@ -114,7 +114,7 @@ static int check_down_lock(unsigned int cpu)
 
 extern unsigned int get_rq_info(void);
 
-unsigned int state = MSM_MPDEC_DISABLED;
+static unsigned int state = MSM_MPDEC_DISABLED;
 
 static int get_slowest_cpu(void) {
 	unsigned int cpu, slow_cpu = 0, rate, slow_rate = 0;
@@ -249,10 +249,8 @@ static void bricked_hotplug_suspend(void)
 {
 	int cpu;
 
-	if (!hotplug.bricked_enabled || hotplug.suspended)
-		return;
-
-	if (!hotplug.hotplug_suspend)
+	if (!hotplug.bricked_enabled || hotplug.suspended ||
+		!hotplug.hotplug_suspend)
 		return;
 
 	mutex_lock(&hotplug.bricked_hotplug_mutex);
@@ -322,7 +320,7 @@ static void __ref bricked_hotplug_resume(void)
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	if (!hotplug.bricked_enabled)
+	if (!hotplug.bricked_enabled || !hotplug.hotplug_suspend)
 		return NOTIFY_OK;
 
 	switch (event) {
