@@ -309,5 +309,7 @@ void cpu_set_state_online(int cpu);
 bool cpu_wait_death(unsigned int cpu, int seconds);
 bool cpu_report_death(void);
 #endif /* #ifdef CONFIG_HOTPLUG_CPU */
+/* warning shut if msm thermal holding cores off on high temp. */
+extern bool core_control_enabled;
 
 #endif /* _LINUX_CPU_H_ */

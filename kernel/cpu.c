@@ -517,10 +517,12 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 		goto out;
 
 	ret = __cpu_notify(CPU_UP_PREPARE | mod, hcpu, -1, &nr_calls);
-	if (WARN_ON_ONCE(ret)) {
+	if (ret) {
 		nr_calls--;
-		pr_warn_ratelimited("%s: attempt to bring up CPU %u failed\n",
-			__func__, cpu);
+		if (!core_control_enabled)
+			printk_ratelimited(KERN_WARNING
+				"%s: attempt to bring up CPU %u failed\n",
+				__func__, cpu);
 		goto out_notify;
 	}
 
