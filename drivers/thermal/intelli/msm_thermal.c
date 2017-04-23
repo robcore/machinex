@@ -611,7 +611,7 @@ int __init msm_thermal_late_init(void)
 static void msm_thermal_exit(void)
 {
 	if (core_control_enabled)
-		core_control_enabled = false;
+		core_control_enabled = true;
 	enabled = 0;
 	disable_msm_thermal();
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
