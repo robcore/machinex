@@ -64,7 +64,7 @@ enum tsens_trip_type {
 #define TSENS_UPPER_STATUS_CLR		BIT((tsens_status_cntl_start + 2))
 #define TSENS_MAX_STATUS_MASK		BIT((tsens_status_cntl_start + 3))
 
-#define TSENS_MEASURE_PERIOD				4 /* 1 means 250ms, 1 sec. default. */
+#define TSENS_MEASURE_PERIOD				1 /* 1 means 250ms, 1 sec. default. */
 
 #define TSENS_8960_SLP_CLK_ENA				BIT(26)
 
@@ -246,12 +246,12 @@ EXPORT_SYMBOL(tsens_get_temp);
 
 int tsens_get_max_sensor_num(uint32_t *tsens_num_sensors)
 {
-        if (!tmdev)
-                return -ENODEV;
+	if (!tmdev)
+		return -ENODEV;
 
-        *tsens_num_sensors = tmdev->tsens_num_sensor;
+	*tsens_num_sensors = tmdev->tsens_num_sensor;
 
-        return 0;
+	return 0;
 }
 EXPORT_SYMBOL(tsens_get_max_sensor_num);
 
@@ -280,7 +280,7 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, 4, "%ld\n", temp*10);
 }
 
-static DEVICE_ATTR(curr_temp, S_IRUSR|S_IRGRP, show_temp, NULL);
+static DEVICE_ATTR(curr_temp, 0444, show_temp, NULL);
 
 /* Function to enable the mode.
  * If the main sensor is disabled all the sensors are disable and
