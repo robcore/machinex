@@ -402,7 +402,7 @@ static struct notifier_block __refdata intelli_plug_cpu_notifier = {
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-	u64 now;
+	s64 now;
 
 	if (hotplug_suspended)
 		return;
