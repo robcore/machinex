@@ -795,6 +795,7 @@ static int regulator_init(struct scalable *sc,
 				ret);
 			goto err_l2_regs;
 		}
+			l2_vreg_count++;
 	}
 
 	return 0;
