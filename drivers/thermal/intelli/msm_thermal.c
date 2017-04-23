@@ -47,7 +47,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.temp_hysteresis_degC = 10,
 	.freq_step = 3,
 	.freq_control_mask = 0xf,
-	.core_limit_temp_degC = 70,
+	.core_limit_temp_degC = 80,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
