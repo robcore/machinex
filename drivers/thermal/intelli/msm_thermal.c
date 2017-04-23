@@ -40,6 +40,7 @@ struct msm_thermal_stat_data {
 static struct msm_thermal_stat_data msm_thermal_stats;
 
 static int enabled;
+bool thermal_core_controlled;
 static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id = 0,
 	.poll_ms = DEFAULT_POLLING_MS,
@@ -143,8 +144,11 @@ static void __ref do_core_control(long temp)
 	int i = 0;
 	int ret = 0;
 
+
 	if (!core_control_enabled)
 		return;
+
+	thermal_core_controlled = false;
 
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask &&
@@ -157,9 +161,15 @@ static void __ref do_core_control(long temp)
 			pr_debug("%s: Set Offline: CPU%d Temp: %ld\n",
 					KBUILD_MODNAME, i, temp);
 			ret = cpu_down(i);
-			if (ret)
+			if (ret) {
+				thermal_core_controlled = false;
 				pr_err("%s: Error %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
+			} else {
+				thermal_core_controlled = true;
+				pr_debug("%s: Success %d offline core %d\n",
+					KBUILD_MODNAME, ret, i);
+			}
 			cpus_offlined |= BIT(i);
 			break;
 		}
@@ -178,9 +188,15 @@ static void __ref do_core_control(long temp)
 			if (cpu_online(i))
 				continue;
 			ret = cpu_up(i);
-			if (ret)
+			if (ret) {
+				thermal_core_controlled = true;
 				pr_err("%s: Error %d online core %d\n",
 						KBUILD_MODNAME, ret, i);
+			} else {
+				thermal_core_controlled = false;
+				pr_debug("%s: Success %d online core %d\n",
+						KBUILD_MODNAME, ret, i);
+			}
 			break;
 		}
 	}
@@ -285,6 +301,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		if (core_control_enabled &&
 			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
 			(cpus_offlined & BIT(cpu))) {
+			thermal_core_controlled = true;
 			pr_debug(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
@@ -292,6 +309,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		}
 	}
 
+	thermal_core_controlled = false;
 
 	return NOTIFY_OK;
 }
@@ -449,9 +467,15 @@ static int __ref update_offline_cores(int val)
 		if (!cpu_online(cpu))
 			continue;
 		ret = cpu_down(cpu);
-		if (ret)
+		if (ret) {
+			thermal_core_controlled = false;
 			pr_err("%s: Unable to offline cpu%d\n",
 				KBUILD_MODNAME, cpu);
+		} else {
+			thermal_core_controlled = true;
+			pr_debug("%s: Thermal Offlined CPU%d\n",
+				KBUILD_MODNAME, cpu);
+		}
 	}
 	return ret;
 }
@@ -611,7 +635,7 @@ int __init msm_thermal_late_init(void)
 static void msm_thermal_exit(void)
 {
 	if (core_control_enabled)
-		core_control_enabled = true;
+		core_control_enabled = false;
 	enabled = 0;
 	disable_msm_thermal();
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);

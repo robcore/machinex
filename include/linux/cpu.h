@@ -311,5 +311,6 @@ bool cpu_report_death(void);
 #endif /* #ifdef CONFIG_HOTPLUG_CPU */
 /* warning shut if msm thermal holding cores off on high temp. */
 extern bool core_control_enabled;
+extern bool thermal_core_controlled;
 
 #endif /* _LINUX_CPU_H_ */
