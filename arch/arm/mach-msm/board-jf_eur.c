@@ -3197,13 +3197,13 @@ static struct platform_device msm_tsens_device = {
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 0, /* Rob Note: see drivers/thermal/msm8960_tsens.c to put this to rest*/
 	.poll_ms = 250,
-	.limit_temp_degC = 70,
+	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 10,
-	.freq_step = 3,
+	.freq_step = 4,
 #ifdef CONFIG_INTELLI_THERMAL
 	.freq_control_mask = 0xf,
 #endif
-	.core_limit_temp_degC = 80,
+	.core_limit_temp_degC = 70,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };

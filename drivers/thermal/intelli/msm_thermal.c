@@ -43,11 +43,11 @@ static int enabled;
 static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id = 0,
 	.poll_ms = DEFAULT_POLLING_MS,
-	.limit_temp_degC = 70,
+	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 3,
 	.freq_control_mask = 0xf,
-	.core_limit_temp_degC = 80,
+	.core_limit_temp_degC = 70,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
