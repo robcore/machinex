@@ -155,7 +155,7 @@ static int update_average_load(unsigned int cpu)
 	if (ret)
 		return -EINVAL;
 
-	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, io_is_busy);
+	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
 	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
 	pcpu->prev_cpu_wall = cur_wall_time;
@@ -500,7 +500,6 @@ static void __ref msm_hotplug_suspend(void)
 
 		/* Flush hotplug workqueue */
 		cancel_delayed_work_sync(&hotplug_work);
-		flush_workqueue(hotplug_wq);
 
 		/* Put all sibling cores to sleep */
 		for_each_online_cpu(cpu) {
@@ -547,10 +546,9 @@ static void __ref msm_hotplug_resume(void)
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	if (!hotplug.msm_enabled)
+	if (!hotplug.msm_enabled || !hotplug_suspend)
 		return NOTIFY_OK;
 
-	if (hotplug_suspend) {
 		switch (event) {
 			case STATE_NOTIFIER_ACTIVE:
 				msm_hotplug_resume();
@@ -561,7 +559,7 @@ static int state_notifier_callback(struct notifier_block *this,
 			default:
 				break;
 		}
-	}
+
 		return NOTIFY_OK;
 }
 #endif
@@ -705,7 +703,14 @@ static int __ref msm_hotplug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	/* Fire up all CPUs */
+	/* Put all sibling cores to sleep to release all locks */
+	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		cpu_down(cpu);
+	}
+
+	/* Fire up all CPUs to boost performance */
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
@@ -729,15 +734,14 @@ static void msm_hotplug_stop(void)
 	int cpu;
 	struct down_lock *dl;
 
+	drain_workqueue(hotplug_wq);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
-
 	cancel_work_sync(&hotplug.down_work);
 	cancel_work_sync(&hotplug.up_work);
 	cancel_delayed_work_sync(&hotplug_work);
-	flush_workqueue(hotplug_wq);
 
 	mutex_destroy(&hotplug.msm_hotplug_mutex);
 	mutex_destroy(&stats.stats_mutex);
