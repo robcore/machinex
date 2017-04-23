@@ -25,6 +25,7 @@
 #include <linux/cpufreq.h>
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
+#include <linux/platform_device.h>
 #include <mach/cpufreq.h>
 
 #define DEFAULT_POLLING_MS	250
@@ -327,7 +328,7 @@ static void __ref disable_msm_thermal(void)
 {
 	int cpu = 0;
 
-
+	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
 	for_each_possible_cpu(cpu) {
