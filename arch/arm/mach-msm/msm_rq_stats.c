@@ -88,7 +88,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 	cur_load = 100 * (wall_time - idle_time) / wall_time;
 
 	/* Calculate the scaled load across CPU */
-	load_at_max_freq = (cur_load * policy.cur) / pcpu->policy_max;
+	load_at_max_freq = (cur_load * policy.cur) / policy.max;
 
 #ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
 	pcpu->cpu_load = cur_load;
@@ -212,7 +212,7 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 		for_each_cpu(j, this_cpu->related_cpus) {
 			struct cpu_load_data *pcpu = &per_cpu(cpuload, j);
 			mutex_lock(&pcpu->cpu_load_mutex);
-			update_average_load(freqs->old, j);
+			update_average_load(freqs->old, freqs->cpu);
 			pcpu->cur_freq = freqs->new;
 			mutex_unlock(&pcpu->cpu_load_mutex);
 		}
@@ -550,7 +550,7 @@ static int __init msm_rq_stats_init(void)
 		if (cpu_online(i))
 			pcpu->cur_freq = acpuclk_get_rate(i);
 		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
-				&pcpu->prev_cpu_wall, 0);
+				&pcpu->prev_cpu_wall, io_is_busy);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
