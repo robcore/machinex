@@ -862,3 +862,5 @@ MODULE_DESCRIPTION("'alucard_hotplug' - A cpu hotplug driver for "
 MODULE_LICENSE("GPL");
 
 late_initcall(alucard_hotplug_init);
+module_exit(alucard_hotplug_exit);
+

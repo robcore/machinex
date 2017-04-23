@@ -25,26 +25,29 @@
 #include <linux/machinex_defines.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	5
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MAJOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			20000
+#define START_DELAY_MS			40000
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
-#define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
-#define DEFAULT_DOWN_LOCK_DUR		2000
+#define DEFAULT_NR_FSHIFT		3
+#define DEFAULT_DOWN_LOCK_DUR		1500
 
 #define CAPACITY_RESERVE		50
-#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
+//#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
+#define THREAD_CAPACITY			(279 - CAPACITY_RESERVE)
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
-#define DIV_FACTOR			100000
+//#define DIV_FACTOR			100000
+#define DIV_FACTOR			120000
 
-static u64 last_boost_time, last_input;
+static s64 last_boost_time;
+static s64 last_input;
 
 static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
@@ -66,8 +69,8 @@ static unsigned int full_mode_profile = 0; /* balance profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended;
-static unsigned int min_cpus_online_res = DEFAULT_MIN_CPUS_ONLINE;
-static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
+static unsigned int min_cpus_online_res = 2;
+static unsigned int max_cpus_online_res = 4;
 /*
  * suspend mode, if set = 1 hotplug will sleep,
  * if set = 0, then hoplug will be active all the time.
@@ -75,10 +78,10 @@ static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int hotplug_suspend = 0;
 
 /* HotPlug Driver Tuning */
-static unsigned int target_cpus = 0;
-static u64 boost_lock_duration = BOOST_LOCK_DUR;
-static unsigned int def_sampling_ms = DEF_SAMPLING_MS;
-static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
+static unsigned int target_cpus;
+static s64 boost_lock_duration = BOOST_LOCK_DUR;
+static s64 def_sampling_ms = DEF_SAMPLING_MS;
+static unsigned long nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = DEFAULT_MAX_CPUS_ONLINE * 2;
 static unsigned int debug_intelli_plug = 0;
 
@@ -138,8 +141,8 @@ static unsigned int *nr_run_profiles[] = {
 	nr_run_thresholds_strict
 	};
 
-static unsigned int nr_run_last;
-static unsigned int down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
+static unsigned long nr_run_last;
+static s64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
 
 struct down_lock {
 	unsigned int locked;
@@ -171,8 +174,8 @@ static int check_down_lock(unsigned int cpu)
 
 static unsigned int calculate_thread_stats(void)
 {
-	unsigned int avg_nr_run = avg_nr_running();
-	unsigned int nr_run;
+	unsigned long avg_nr_run = avg_nr_running();
+	unsigned long nr_run;
 	unsigned int threshold_size;
 	unsigned int *current_profile;
 
@@ -216,10 +219,14 @@ static void update_per_cpu_stat(void)
 
 static void __ref cpu_up_down_work(struct work_struct *work)
 {
-	int online_cpus, cpu, l_nr_threshold;
+	unsigned int online_cpus, cpu;
+	long l_nr_threshold;
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
-	int first_start = 1;
+	s64 now;
+	s64 delta;
+
+	now = ktime_to_us(ktime_get());
 
 	if (target < min_cpus_online)
 		target = min_cpus_online;
@@ -230,8 +237,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		    (ktime_to_us(ktime_get()) - last_input <
-				boost_lock_duration)) {
+		now - last_input <
+				boost_lock_duration) {
 				queue_delayed_work(intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 			return;
@@ -492,7 +499,8 @@ static int __ref intelli_plug_start(void)
 	int cpu, ret = 0;
 	struct down_lock *dl;
 
-	intelliplug_wq = create_singlethread_workqueue("intelliplug");
+//	intelliplug_wq = create_singlethread_workqueue("intelliplug");
+	intelliplug_wq = create_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
@@ -613,11 +621,8 @@ show_one(max_cpus_online, max_cpus_online);
 show_one(hotplug_suspend, hotplug_suspend);
 show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
-show_one(def_sampling_ms, def_sampling_ms);
 show_one(debug_intelli_plug, debug_intelli_plug);
-show_one(nr_fshift, nr_fshift);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
-show_one(down_lock_duration, down_lock_dur);
 
 #define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
@@ -642,9 +647,7 @@ store_one(hotplug_suspend, hotplug_suspend);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
-store_one(nr_fshift, nr_fshift);
 store_one(nr_run_hysteresis, nr_run_hysteresis);
-store_one(down_lock_duration, down_lock_dur);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
@@ -665,9 +668,9 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 	if (ret < 0)
 		return ret;
 
-	if (input < 0)
+	if (input <= 0)
 		input = 0;
-	else if (input > 0)
+	else if (input >= 1)
 		input = 1;
 
 	if (input == atomic_read(&intelli_plug_active))
@@ -682,7 +685,7 @@ static ssize_t show_boost_lock_duration(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", div_u64(boost_lock_duration, 1000));
+	return sprintf(buf, "%lld\n", div_u64(boost_lock_duration, 1000));
 }
 
 static ssize_t store_boost_lock_duration(struct kobject *kobj,
@@ -697,6 +700,75 @@ static ssize_t store_boost_lock_duration(struct kobject *kobj,
 		return -EINVAL;
 
 	boost_lock_duration = val * 1000;
+
+	return count;
+}
+
+static ssize_t show_def_sampling_ms(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%lld\n", def_sampling_ms);
+}
+
+static ssize_t store_def_sampling_ms(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+					 const char *buf, size_t count)
+{
+	int ret;
+	u64 val;
+
+	ret = sscanf(buf, "%llu", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	def_sampling_ms = val;
+
+	return count;
+}
+
+static ssize_t show_nr_fshift(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%lu\n", nr_fshift);
+}
+
+static ssize_t store_nr_fshift(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+					 const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = sscanf(buf, "%lu", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	nr_fshift = val;
+
+	return count;
+}
+
+static ssize_t show_down_lock_dur(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%lld\n", down_lock_dur);
+}
+
+static ssize_t store_down_lock_dur(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+					 const char *buf, size_t count)
+{
+	int ret;
+	u64 val;
+
+	ret = sscanf(buf, "%llu", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	down_lock_dur = val;
 
 	return count;
 }
@@ -738,21 +810,6 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 
 	return count;
 }
-static ssize_t store_def_sampling_ms(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	def_sampling_ms = val;
-
-	return count;
-}
 
 #define KERNEL_ATTR_RW(_name) \
 static struct kobj_attribute _name##_attr = \
@@ -770,7 +827,7 @@ KERNEL_ATTR_RW(def_sampling_ms);
 KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RW(nr_fshift);
 KERNEL_ATTR_RW(nr_run_hysteresis);
-KERNEL_ATTR_RW(down_lock_duration);
+KERNEL_ATTR_RW(down_lock_dur);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
@@ -785,7 +842,7 @@ static struct attribute *intelli_plug_attrs[] = {
 	&debug_intelli_plug_attr.attr,
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
-	&down_lock_duration_attr.attr,
+	&down_lock_dur_attr.attr,
 	NULL,
 };
 
@@ -815,10 +872,12 @@ static void __exit intelli_plug_exit(void)
 	if (atomic_read(&intelli_plug_active) == 1)
 		intelli_plug_stop();
 
+	atomic_set(&intelli_plug_active, 0);
+
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
 
-late_initcall(intelli_plug_init);
+late_initcall_sync(intelli_plug_init);
 module_exit(intelli_plug_exit);
 
 MODULE_LICENSE("GPLv2");
