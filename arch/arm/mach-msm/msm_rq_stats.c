@@ -59,16 +59,11 @@ static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
-	int ret;
+
+	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	cputime64_t cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
-	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
-	struct cpufreq_policy policy;
-
-	ret = cpufreq_get_policy(&policy, cpu);
-	if (ret)
-		return -EINVAL;
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
@@ -77,6 +72,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	idle_time = (unsigned int) (cur_idle_time - pcpu->prev_cpu_idle);
 	pcpu->prev_cpu_idle = cur_idle_time;
+
 
 	if (unlikely(wall_time <= 0 || wall_time < idle_time))
 		return 0;
@@ -207,6 +203,7 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 	case CPUFREQ_POSTCHANGE:
 		for_each_cpu(j, this_cpu->related_cpus) {
 			struct cpu_load_data *pcpu = &per_cpu(cpuload, j);
+
 			mutex_lock(&pcpu->cpu_load_mutex);
 			update_average_load(freqs->old, j);
 			pcpu->cur_freq = freqs->new;
@@ -277,23 +274,6 @@ static int system_suspend_handler(struct notifier_block *nb,
 		return NOTIFY_DONE;
 	}
 	return NOTIFY_OK;
-}
-
-static int freq_policy_handler(struct notifier_block *nb,
-			unsigned long event, void *data)
-{
-	struct cpufreq_policy *policy = data;
-	struct cpu_load_data *this_cpu = &per_cpu(cpuload, policy->cpu);
-
-	if (event != CPUFREQ_NOTIFY)
-		goto out;
-
-	this_cpu->policy_max = policy->max;
-
-	pr_debug("Policy max changed from %u to %u, event %lu\n",
-			this_cpu->policy_max, policy->max, event);
-out:
-	return NOTIFY_DONE;
 }
 
 static ssize_t hotplug_disable_show(struct kobject *kobj,
@@ -595,18 +575,13 @@ static int __init msm_rq_stats_init(void)
 		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
 		if (cpu_online(i))
 			pcpu->cur_freq = cpufreq_quick_get(i);
-		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
-				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
 	cpu_hotplug.notifier_call = cpu_hotplug_handler;
-	freq_policy.notifier_call = freq_policy_handler;
 	cpufreq_register_notifier(&freq_transition,
 					CPUFREQ_TRANSITION_NOTIFIER);
 	register_hotcpu_notifier(&cpu_hotplug);
-	cpufreq_register_notifier(&freq_policy,
-					CPUFREQ_POLICY_NOTIFIER);
 
 	return ret;
 }
