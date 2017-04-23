@@ -800,7 +800,8 @@ static int sec_chg_set_property(struct power_supply *psy,
 			charger->aicl_on = false;
 			charger->soft_reg_recovery_cnt = 0;
 			set_charging_current = 0;
-			set_charging_current_max = DISCHARGE_CURRENT;
+		if (charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)
+			set_charging_current_max = 0;
 
 			if (charger->wc_w_state) {
 				cancel_delayed_work_sync(&charger->wpc_work);
@@ -1544,8 +1545,13 @@ static int max77693_charger_remove(struct platform_device *pdev)
 				platform_get_drvdata(pdev);
 
 	destroy_workqueue(charger->wqueue);
-	free_irq(charger->wc_w_irq, NULL);
-	free_irq(charger->pdata->chg_irq, NULL);
+#if defined(CONFIG_WIRELESS_CHARGING)
+	if (charger->wc_w_irq)
+		free_irq(charger->wc_w_irq, NULL);
+#endif
+	if (charger->pdata->chg_irq)
+		free_irq(charger->pdata->chg_irq, NULL);
+
 	power_supply_unregister(&charger->psy_chg);
 	kfree(charger);
 
