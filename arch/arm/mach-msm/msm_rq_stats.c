@@ -39,8 +39,8 @@ struct notifier_block cpu_hotplug;
 struct notifier_block freq_policy;
 
 struct cpu_load_data {
-	u64 prev_cpu_idle;
-	u64 prev_cpu_wall;
+	cputime64_t prev_cpu_idle;
+	cputime64_t prev_cpu_wall;
 #ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
 	unsigned int cpu_load;
 #endif
@@ -60,7 +60,7 @@ static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	int ret;
-	u64 cur_wall_time, cur_idle_time;
+	cputime64_t cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
@@ -580,8 +580,8 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_jiffies = DEFAULT_DEF_TIMER_JIFFIES;
 	rq_info.rq_poll_last_jiffy = 0;
 	rq_info.def_timer_last_jiffy = 0;
-	rq_info.hotplug_disabled = 1;
-	rq_info.hotplug_enabled = 0;
+	rq_info.hotplug_disabled = 0;
+	rq_info.hotplug_enabled = 1;
 	rq_info.bricked_hotplug_enabled = 0;
 	ret = init_rq_attribs();
 
@@ -592,9 +592,9 @@ static int __init msm_rq_stats_init(void)
 
 		mutex_init(&pcpu->cpu_load_mutex);
 		cpufreq_get_policy(&cpu_policy, i);
-		pcpu->policy_max = cpu_policy.max;
+		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
 		if (cpu_online(i))
-			pcpu->cur_freq = cpu_policy.cur;
+			pcpu->cur_freq = cpufreq_quick_get(i);
 		pcpu->prev_cpu_idle = get_cpu_idle_time(i,
 				&pcpu->prev_cpu_wall, 0);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
@@ -614,6 +614,12 @@ late_initcall(msm_rq_stats_init);
 
 static int __init msm_rq_stats_early_init(void)
 {
+#ifndef CONFIG_SMP
+	/* Bail out if this is not an SMP Target */
+	rq_info.init = 0;
+	return -ENOSYS;
+#endif
+
 	pm_notifier(system_suspend_handler, 0);
 	return 0;
 }
