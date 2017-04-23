@@ -65,7 +65,7 @@ static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
-static unsigned int full_mode_profile = 6; /* strict profile */
+static unsigned int full_mode_profile = 2; /* conservative profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended;
