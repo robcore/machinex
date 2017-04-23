@@ -162,7 +162,7 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-	queue_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
 }
 
@@ -271,7 +271,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		}
 	}
 reschedule:
-		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -347,7 +347,7 @@ static void __ref intelli_plug_resume(void)
 
 	/* Resume hotplug workqueue if required */
 	if (required_reschedule) {
-		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
 		/* Reset required_reschedule flag back to 0 */
 	required_reschedule = 0;
@@ -381,11 +381,13 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 
-	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (atomic_read(&intelli_plug_active) == 1) {
-			if (thermal_core_controlled || hotplug_suspended);
-				return NOTIFY_BAD;
-		}
+	if (atomic_read(&intelli_plug_active) == 0)
+		return NOTIFY_OK;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_ONLINE:
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+					msecs_to_jiffies(def_sampling_ms));
 	}
 
 	return NOTIFY_OK;
@@ -489,7 +491,7 @@ static int __ref intelli_plug_start(void)
 	struct down_lock *dl;
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
-	intelliplug_wq = create_workqueue("intelliplug");
+	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
