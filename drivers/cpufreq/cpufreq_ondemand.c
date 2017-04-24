@@ -33,10 +33,10 @@
  */
 
 /* User tunabble controls */
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(2)
-#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(0)
+#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(0)
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(90)
+#define DEF_FREQUENCY_UP_THRESHOLD		(85)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 
 #define DEF_MIDDLE_GRID_STEP			(14)
@@ -45,9 +45,9 @@
 #define DEF_HIGH_GRID_LOAD			(89)
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
-#define DEF_SAMPLING_RATE			(20000)
+#define DEF_SAMPLING_RATE			(30000)
 
-#define DEF_SYNC_FREQUENCY			(1026000)
+#define DEF_SYNC_FREQUENCY			(1134000)
 #define DEF_OPTIMAL_FREQUENCY			(1458000)
 #define DEF_OPTIMAL_MAX_FREQ			(1782000)
 
@@ -923,12 +923,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency decrease */
-	/* if we cannot reduce the frequency anymore, break out early
-		Rob note: I disagree with this, it skips the calculations
-		for the next freqs, you dumbass.
 	if (policy->cur == policy->min)
 		return;
-	 */
 
 	/*
 	 * The optimal frequency is the frequency that is the lowest that
@@ -1186,7 +1182,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	put_cpu();
 	if (idle_time != -1ULL) {
 		/* Idle micro accounting is supported. Use finer thresholds */
-		dbs_tuners_ins.up_threshold = 90;
+		dbs_tuners_ins.up_threshold = 85;
 		dbs_tuners_ins.down_differential = 0;
 		dbs_tuners_ins.powersave_bias = POWERSAVE_BIAS_DEFAULT;
 		/*
