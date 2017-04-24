@@ -48,8 +48,8 @@
 #define DEF_SAMPLING_RATE			(30000)
 
 #define DEF_SYNC_FREQUENCY			(1026000)
-#define DEF_OPTIMAL_FREQUENCY			(1566000)
-#define DEF_OPTIMAL_MAX_FREQ			(1566000)
+#define DEF_OPTIMAL_FREQUENCY			(1458000)
+#define DEF_OPTIMAL_MAX_FREQ			(1458000)
 
 /* Kernel tunabble controls */
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
@@ -77,7 +77,7 @@ static unsigned int min_sampling_rate;
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 #define POWERSAVE_BIAS_MAXLEVEL			(1000)
-#define POWERSAVE_BIAS_DEFAULT			(1)
+#define POWERSAVE_BIAS_DEFAULT			(0)
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
 
 static void do_dbs_timer(struct work_struct *work);
@@ -236,7 +236,8 @@ static int ondemand_powersave_bias_setspeed(struct cpufreq_policy *policy,
 			(altpolicy) ? altpolicy->min : policy->min,
 			CPUFREQ_RELATION_L);
 		return 1;
-	} else if (level == 0 || (level < 0 && level >= POWERSAVE_BIAS_MINLEVEL)) {
+	} else if (level < 0 && level >= POWERSAVE_BIAS_MINLEVEL) {
+	//} else if (level == 0 || (level < 0 && level >= POWERSAVE_BIAS_MINLEVEL)) {
 		/* minimum powersave; set to highest frequency */
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->max : policy->max,
@@ -719,12 +720,11 @@ static struct attribute_group dbs_attr_group = {
 static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 {
 	if (dbs_tuners_ins.powersave_bias)
-		freq = powersave_bias_target(p, freq, CPUFREQ_RELATION_H);
+		freq = powersave_bias_target(p, freq, CPUFREQ_RELATION_C);
 	else if (p->cur == p->max)
 		return;
 
-	__cpufreq_driver_target(p, freq, dbs_tuners_ins.powersave_bias ?
-			CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
+	__cpufreq_driver_target(p, freq, CPUFREQ_RELATION_C);
 }
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
@@ -1000,7 +1000,7 @@ static void do_dbs_timer(struct work_struct *work)
 		}
 	} else {
 		__cpufreq_driver_target(dbs_info->cur_policy,
-			dbs_info->freq_lo, CPUFREQ_RELATION_H);
+			dbs_info->freq_lo, CPUFREQ_RELATION_C);
 		delay = dbs_info->freq_lo_jiffies;
 	}
 	mod_delayed_work_on(cpu, dbs_wq, &dbs_info->work, delay);
