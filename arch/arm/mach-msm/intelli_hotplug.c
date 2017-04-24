@@ -859,6 +859,8 @@ static int __init intelli_plug_init(void)
 		 INTELLI_PLUG_MINOR_VERSION);
 
 	if (atomic_read(&intelli_plug_active) == 1)
+		min_cpus_online = 2;
+		max_cpus_online = 4;
 		intelli_plug_start();
 
 	return 0;
