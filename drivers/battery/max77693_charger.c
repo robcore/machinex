@@ -186,7 +186,7 @@ static int max77693_get_battery_present(struct max77693_charger_data *charger)
 }
 
 static void max77693_set_charger_state(struct max77693_charger_data *charger,
-		int enable)
+		bool enable)
 {
 	u8 reg_data;
 
@@ -273,12 +273,12 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 						(chg_state != POWER_SUPPLY_STATUS_FULL))
 					break;
 				/* under 400mA, slow rate */
-				if ((set_current_reg < (400 / 20) &&
-						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY)) ||
-						(!POWER_SUPPLY_TYPE_BATTERY && !POWER_SUPPLY_TYPE_WIRELESS))
-					charger->aicl_on = true;
-				else
-					charger->aicl_on = false;
+				if (set_current_reg < (400 / 20) &&
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
+							charger->aicl_on = true;
+				else if (charger->cable_type == POWER_SUPPLY_TYPE_BATTERY && 
+						charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)
+							charger->aicl_on = false;
 				mdelay(50);
 			} else
 				break;
@@ -330,12 +330,12 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 				goto exit;
 			if (curr_step < 2) {
 				/* under 400mA, slow rate */
-				if ((now_current_reg < (400 / 20) &&
-						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY)) ||
-						(!POWER_SUPPLY_TYPE_BATTERY && !POWER_SUPPLY_TYPE_WIRELESS))
-					charger->aicl_on = true;
-				else
-					charger->aicl_on = false;
+				if (now_current_reg < (400 / 20) &&
+						charger->cable_type != POWER_SUPPLY_TYPE_BATTERY)
+							charger->aicl_on = true;
+				else if (charger->cable_type == POWER_SUPPLY_TYPE_BATTERY && 
+						charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)
+							charger->aicl_on = false;
 				goto exit;
 			}
 			mdelay(50);
@@ -573,6 +573,8 @@ static int max77693_get_vbus_state(struct max77693_charger_data *charger)
 		pr_debug("%s: VBUS is invalid. CHGIN > CHGIN_OVLO",
 			__func__);
 		break;
+	case 0x03:
+		break;
 	default:
 		break;
 	}
@@ -797,14 +799,13 @@ static int sec_chg_set_property(struct power_supply *psy,
 		charger->cable_type = val->intval;
 		psy_do_property("battery", get,
 				POWER_SUPPLY_PROP_HEALTH, value);
-		if (val->intval == POWER_SUPPLY_TYPE_BATTERY) {
+		if (val->intval == POWER_SUPPLY_TYPE_BATTERY &&
+			charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
 			charger->is_charging = false;
 			charger->aicl_on = false;
 			charger->soft_reg_recovery_cnt = 0;
 			set_charging_current = 0;
-		if (charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
 			set_charging_current_max = DISCHARGE_CURRENT;
-			charger->cable_type = val->intval;
 		}
 
 			if (charger->wc_w_state) {
@@ -817,8 +818,10 @@ static int sec_chg_set_property(struct power_supply *psy,
 					wake_lock_timeout(&charger->wpc_wake_lock, 500);
 					queue_delayed_work(charger->wqueue, &charger->wpc_work,
 							msecs_to_jiffies(250));
-					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
+					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS &&
+						charger->cable_type == POWER_SUPPLY_TYPE_BATTERY) {
 						charger->wc_w_state = 0;
+						charger->is_charging = false;
 						wake_unlock(&charger->wpc_wake_lock);
 						pr_err("%s:cable removed,wireless connected\n", __func__);
 					}
@@ -897,11 +900,11 @@ static int sec_chg_set_property(struct power_supply *psy,
 			int current_now =
 				charger->charging_current * val->intval / 100;
 
+			/* do forced set charging current */
 			if (current_now > 0 &&
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
 
-			/* do forced set charging current */
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
 #ifdef CONFIG_FORCE_FAST_CHARGE
 				if (screen_on_current_limit && charger->siop_level < 100 )
@@ -942,8 +945,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				MAX77693_CHG_REG_CHG_CNFG_12, reg_data);
 			pr_err("%s: charge only WC CNFG_12: 0x%x\n",
 					__func__, reg_data);
-		}
-		else {
+		} else {
 			u8 reg_data;
 			max77693_read_reg(charger->max77693->i2c,
 				MAX77693_CHG_REG_CHG_CNFG_12, &reg_data);
@@ -1114,13 +1116,15 @@ static void wpc_detect_work(struct work_struct *work)
 						struct max77693_charger_data,
 						wpc_work.work);
 	int wc_w_state;
+	int retry_cnt;
 	union power_supply_propval value;
 	u8 reg_data;
 	pr_debug("%s\n", __func__);
 	wake_unlock(&chg_data->wpc_wake_lock);
 
 	reg_data = (0 << WCIN_SHIFT);
-	max77693_update_reg(chg_data->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+	max77693_update_reg(chg_data->max77693->i2c,
+	MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
 			WCIN_MASK);
 
 	/* get status of cable*/
@@ -1130,13 +1134,18 @@ static void wpc_detect_work(struct work_struct *work)
 			(value.intval != POWER_SUPPLY_TYPE_WIRELESS)) {
 		return;
 	}
+
 	/* check and unlock */
 	check_charger_unlock_state(chg_data);
+	retry_cnt = 0;
+	do {
+		max77693_read_reg(chg_data->max77693->i2c,
+				MAX77693_CHG_REG_CHG_INT_OK, &reg_data);
+		wc_w_state = (reg_data & MAX77693_WCIN_OK)
+					>> MAX77693_WCIN_OK_SHIFT;
+		mdelay(50);
+	} while((retry_cnt++ < 2) && (wc_w_state == 0));
 
-	max77693_read_reg(chg_data->max77693->i2c,
-			MAX77693_CHG_REG_CHG_INT_OK, &reg_data);
-	wc_w_state = (reg_data & MAX77693_WCIN_OK)
-				>> MAX77693_WCIN_OK_SHIFT;
 	if ((chg_data->wc_w_state == 0) && (wc_w_state == 1)) {
 		value.intval = POWER_SUPPLY_TYPE_WIRELESS
 					<<ONLINE_TYPE_MAIN_SHIFT;
@@ -1144,18 +1153,25 @@ static void wpc_detect_work(struct work_struct *work)
 				POWER_SUPPLY_PROP_ONLINE, value);
 		pr_info("%s: wpc activated, set V_INT as PN\n",
 				__func__);
-	} else if (wc_w_state == 0) {
+	} else if ((chg_data->wc_w_state == 1) && (wc_w_state == 0)) {
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, true);
-		max77693_read_reg(chg_data->max77693->i2c,
-				MAX77693_CHG_REG_CHG_DTLS_01, &reg_data);
-		reg_data = ((reg_data & MAX77693_CHG_DTLS) >> MAX77693_CHG_DTLS_SHIFT);
-		pr_info("%s: reg_data: 0x%x, charging: %d\n", __func__, reg_data, chg_data->is_charging);
+		retry_cnt = 0;
+		do {
+			max77693_read_reg(chg_data->max77693->i2c,
+					MAX77693_CHG_REG_CHG_DTLS_01, &reg_data);
+			reg_data = ((reg_data & MAX77693_CHG_DTLS) >> MAX77693_CHG_DTLS_SHIFT);
+			mdelay(50);
+		} while((retry_cnt++ < 2) && (reg_data == 0x8));
+		pr_info("%s: reg_data: 0x%x, charging: %d\n", __func__,
+					reg_data, chg_data->is_charging);
+
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, false);
-		if (reg_data != 0x08) {
+		if ((reg_data != 0x08)
+			&& (chg_data->cable_type == POWER_SUPPLY_TYPE_WIRELESS)) {
 			pr_info("%s: wpc uvlo, but charging\n",	__func__);
-			wake_lock(&chg_data->wpc_wake_lock);
+			wake_lock_timeout(&chg_data->wpc_wake_lock, 1000);
 			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 					msecs_to_jiffies(500));
 			return;
@@ -1164,6 +1180,7 @@ static void wpc_detect_work(struct work_struct *work)
 				POWER_SUPPLY_TYPE_BATTERY<<ONLINE_TYPE_MAIN_SHIFT;
 			psy_do_property("battery", set,
 					POWER_SUPPLY_PROP_ONLINE, value);
+			value.intval = 0;
 			pr_info("%s: wpc deactivated, set V_INT as PD\n",
 					__func__);
 		}
@@ -1178,6 +1195,14 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 {
 	struct max77693_charger_data *chg_data = data;
 	unsigned long delay;
+	u8 reg_data;
+
+	max77693_read_reg(chg_data->max77693->i2c,
+		MAX77693_CHG_REG_CHG_INT_OK, &reg_data);
+	reg_data = (1 << WCIN_SHIFT);
+	max77693_update_reg(chg_data->max77693->i2c,
+	MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			WCIN_MASK);
 
 	cancel_delayed_work_sync(&chg_data->wpc_work);
 	wake_lock(&chg_data->wpc_wake_lock);
