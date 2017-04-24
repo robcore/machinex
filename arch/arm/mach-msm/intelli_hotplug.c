@@ -163,22 +163,6 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
-static void cycle_cpus(void)
-{
-	unsigned int cpu;
-
-	disable_nonboot_cpus();
-	mdelay(4);
-	enable_nonboot_cpus();
-	for_each_online_cpu(cpu) {
-		apply_down_lock(cpu);
-	}
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      msecs_to_jiffies(START_DELAY_MS));
-
-	intellinit = false;
-}
-
 static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
@@ -494,6 +478,22 @@ static struct input_handler intelli_plug_input_handler = {
 	.name           = "intelliplug_handlstate_suspendeder",
 	.id_table       = intelli_plug_ids,
 };
+
+static void cycle_cpus(void)
+{
+	unsigned int cpu;
+
+	disable_nonboot_cpus();
+	mdelay(4);
+	enable_nonboot_cpus();
+	for_each_online_cpu(cpu) {
+		apply_down_lock(cpu);
+	}
+	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+			      msecs_to_jiffies(START_DELAY_MS));
+
+	intellinit = false;
+}
 
 static int __ref intelli_plug_start(void)
 {
