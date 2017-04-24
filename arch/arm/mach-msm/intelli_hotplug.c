@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -395,7 +395,8 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	s64 now;
 	u64 delta;
 
-	if (hotplug_suspended)
+	if (hotplug_suspended || state_suspended ||
+		(atomic_read(&intelli_plug_active) == 0))
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -475,7 +476,7 @@ static struct input_handler intelli_plug_input_handler = {
 	.event          = intelli_plug_input_event,
 	.connect        = intelli_plug_input_connect,
 	.disconnect     = intelli_plug_input_disconnect,
-	.name           = "intelliplug_handlstate_suspendeder",
+	.name           = "intelli_plug_input_handler",
 	.id_table       = intelli_plug_ids,
 };
 
@@ -483,11 +484,11 @@ static void cycle_cpus(void)
 {
 	unsigned int cpu;
 
-	disable_nonboot_cpus();
-	mdelay(4);
-	enable_nonboot_cpus();
+	/* Put all sibling cores to sleep to release all locks */
 	for_each_online_cpu(cpu) {
-		apply_down_lock(cpu);
+		if (cpu == 0)
+			continue;
+		cpu_down(cpu);
 	}
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
