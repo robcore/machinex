@@ -139,7 +139,7 @@ static void msm_gov_check_limits(struct cpufreq_policy *policy)
 				CPUFREQ_RELATION_L);
 	else
 		__cpufreq_driver_target(policy, gov->cur_freq,
-				CPUFREQ_RELATION_L);
+				CPUFREQ_RELATION_C);
 
 	gov->cur_freq = policy->cur;
 	gov->min_freq = policy->min;
