@@ -66,7 +66,7 @@ struct ip_cpu_info {
 static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 
 /* HotPlug Driver controls */
-static atomic_t intelli_plug_active = ATOMIC_INIT(0);
+static atomic_t intelli_plug_active = ATOMIC_INIT(1);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -155,7 +155,7 @@ static unsigned int *nr_run_profiles[] = {
 	};
 
 static unsigned long nr_run_last;
-static u64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
+static unsigned long down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
 
 struct down_lock {
 	unsigned int locked;
@@ -234,10 +234,10 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int online_cpus, cpu;
 	long l_nr_threshold;
-	int target = target_cpus;
+	unsigned int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
-	u64 now;
-	u64 delta;
+	unsigned long now;
+	unsigned long delta;
 
 	if (hotplug_suspended || state_suspended)
 		return;
@@ -311,11 +311,16 @@ static void cycle_cpus(void)
 			continue;
 		cpu_down(cpu);
 	}
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      msecs_to_jiffies(START_DELAY_MS));
 
-	if (intellinit == true)
+	if (intellinit) {
+		queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+			      msecs_to_jiffies(START_DELAY_MS));
 		intellinit = false;
+	} else
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+			      msecs_to_jiffies(100));
+
+	pr_info("Intelliplug Cycle Complete\n");
 }
 
 static void __ref intelli_plug_suspend(void)
@@ -384,6 +389,11 @@ static void __ref intelli_plug_resume(void)
 	}
 }
 
+static void __ref intelli_plug_mx_kick(void)
+{
+	cycle_cpus();
+}
+
 #ifdef CONFIG_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
@@ -393,9 +403,10 @@ static int state_notifier_callback(struct notifier_block *this,
 
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
-			cycle_cpus();
 			if (hotplug_suspend)
 				intelli_plug_resume();
+			else
+				intelli_plug_mx_kick();
 			break;
 		case STATE_NOTIFIER_SUSPEND:
 			if (hotplug_suspend)
@@ -504,6 +515,7 @@ static int __ref intelli_plug_start(void)
 	unsigned int cpu, ret = 0;
 	struct down_lock *dl;
 
+	pr_info("Intelliplug Powering On\n");
 	intellinit = true;
 
 	mutex_init(&intelli_plug_mutex);
