@@ -315,9 +315,7 @@ reset:
 		__raw_writel(0x12345678, restart_reason);
 	}
 
-	if (in_panic == 1)
-		flush_cache_louis();
-	else {
+	if (in_panic == 1) {
 		flush_cache_all();
 		outer_flush_all();
 	}
