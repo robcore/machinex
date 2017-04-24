@@ -139,14 +139,14 @@ static unsigned int nr_run_thresholds_machinex[] = {
 };
 
 static unsigned int *nr_run_profiles[] = {
-	nr_run_thresholds_balance = 0,
+	nr_run_thresholds_balance,
 	nr_run_thresholds_performance,
 	nr_run_thresholds_conservative,
 	nr_run_thresholds_disable,
 	nr_run_thresholds_tri,
 	nr_run_thresholds_eco,
 	nr_run_thresholds_strict,
-	nr_run_thesholds_machinex
+	nr_run_thresholds_machinex
 	};
 
 static unsigned long nr_run_last;
