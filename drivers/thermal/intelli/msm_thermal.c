@@ -146,10 +146,13 @@ static void __ref do_core_control(long temp)
 	int ret = 0;
 
 
-	if (!core_control_enabled)
+	if (!core_control_enabled) {
+		thermal_core_controlled = false;
 		return;
+	}
 
-	thermal_core_controlled = false;
+	if (intelli_init())
+		return;
 
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask &&
@@ -459,7 +462,7 @@ static int __ref update_offline_cores(int val)
 	int ret = 0;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
-	if (!core_control_enabled)
+	if (!core_control_enabled || intelli_init())
 		return 0;
 
 	for_each_possible_cpu(cpu) {

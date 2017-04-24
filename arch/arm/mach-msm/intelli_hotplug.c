@@ -48,6 +48,12 @@
 static s64 last_boost_time;
 static s64 last_input;
 
+static bool intellinit;
+bool intelli_init(void)
+{
+	return intellinit;
+}
+
 static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
@@ -162,6 +168,7 @@ static void cycle_cpus(void)
 	disable_nonboot_cpus();
 	mdelay(4);
 	enable_nonboot_cpus();
+	intellinit = false;
 }
 
 static void remove_down_lock(struct work_struct *work)
@@ -395,22 +402,6 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 
-	if (atomic_read(&intelli_plug_active) == 0 || state_suspended)
-		return NOTIFY_OK;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_UP_CANCELED:
-	case CPU_DOWN_FAILED:
-	case CPU_DOWN_PREPARE:
-	case CPU_DEAD:
-	case CPU_ONLINE:
-		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(35));
-		break;
-	default:
-		break;
-	}
-
 	return NOTIFY_OK;
 }
 
@@ -513,6 +504,8 @@ static int __ref intelli_plug_start(void)
 	unsigned int cpu, ret = 0;
 	struct down_lock *dl;
 
+	intellinit = true;
+
 	mutex_init(&intelli_plug_mutex);
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
@@ -550,8 +543,7 @@ static int __ref intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	if (!thermal_core_controlled)
-		cycle_cpus();
+	cycle_cpus();
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
@@ -585,14 +577,6 @@ static void intelli_plug_stop(void)
 
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
-
-	/* Put all sibling cores to sleep */
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		if (!thermal_core_controlled)
-			cpu_up(cpu);
-	}
 }
 
 static void intelli_plug_active_eval_fn(unsigned int status)
