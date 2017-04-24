@@ -840,6 +840,7 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 #define KERNEL_ATTR_RW(_name) \
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
+
 #define KERNEL_ATTR_RO(_name) \
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0444, show_##_name, store_##_name)
