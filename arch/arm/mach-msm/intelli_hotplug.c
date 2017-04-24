@@ -85,7 +85,7 @@ static unsigned int hotplug_suspend = 0;
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
-static u64 def_sampling_ms = DEF_SAMPLING_MS;
+static unsigned int def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned long nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
@@ -254,7 +254,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		delta <= boost_lock_duration)
+		delta < boost_lock_duration)
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -506,7 +506,7 @@ static struct input_handler intelli_plug_input_handler = {
 	.event          = intelli_plug_input_event,
 	.connect        = intelli_plug_input_connect,
 	.disconnect     = intelli_plug_input_disconnect,
-	.name           = "intelliplug_handle_state_suspendeder",
+	.name           = "intelliplug_handler",
 	.id_table       = intelli_plug_ids,
 };
 
@@ -701,9 +701,9 @@ static ssize_t store_boost_lock_duration(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	u64 val;
+	unsigned long val;
 
-	ret = sscanf(buf, "%llu", &val);
+	ret = sscanf(buf, "%lu", &val);
 	if (ret != 1)
 		return -EINVAL;
 
@@ -716,7 +716,7 @@ static ssize_t show_def_sampling_ms(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", def_sampling_ms);
+	return sprintf(buf, "%u\n", def_sampling_ms);
 }
 
 static ssize_t store_def_sampling_ms(struct kobject *kobj,
@@ -724,9 +724,9 @@ static ssize_t store_def_sampling_ms(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	u64 val;
+	unsigned int val;
 
-	ret = sscanf(buf, "%llu", &val);
+	ret = sscanf(buf, "%u", &val);
 	if (ret != 1)
 		return -EINVAL;
 
@@ -762,7 +762,7 @@ static ssize_t show_down_lock_dur(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", down_lock_dur);
+	return sprintf(buf, "%lu\n", down_lock_dur);
 }
 
 static ssize_t store_down_lock_dur(struct kobject *kobj,
@@ -770,9 +770,9 @@ static ssize_t store_down_lock_dur(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	u64 val;
+	unsigned long val;
 
-	ret = sscanf(buf, "%llu", &val);
+	ret = sscanf(buf, "%lu", &val);
 	if (ret != 1)
 		return -EINVAL;
 

@@ -135,7 +135,7 @@ static int set_hotplug_boost_freq(const char *buf, const struct kernel_param *kp
 	for_each_possible_cpu(i)
 		h_sync_info = &per_cpu(sync_info, i);
 
-		h_sync_info.hotplug_boost_freq = val;
+		h_sync_info->hotplug_boost_freq = val;
 
 	return 0;
 }
