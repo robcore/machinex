@@ -26,13 +26,13 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			15000
-#define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			60 * 1000L
+#define START_DELAY_MS			95000
+#define MIN_INPUT_INTERVAL		300 * 1000L
+#define BOOST_LOCK_DUR			100 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
 #define DEFAULT_DOWN_LOCK_DUR		1500
@@ -165,9 +165,17 @@ static DEFINE_PER_CPU(struct down_lock, lock_info);
 
 static void cycle_cpus(void)
 {
+	unsigned int cpu;
+
 	disable_nonboot_cpus();
 	mdelay(4);
 	enable_nonboot_cpus();
+	for_each_online_cpu(cpu) {
+		apply_down_lock(cpu);
+	}
+	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+			      msecs_to_jiffies(START_DELAY_MS));
+
 	intellinit = false;
 }
 
@@ -530,9 +538,6 @@ static int __ref intelli_plug_start(void)
 	}
 
 	cycle_cpus();
-
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      msecs_to_jiffies(START_DELAY_MS));
 
 	return ret;
 err_dev:
