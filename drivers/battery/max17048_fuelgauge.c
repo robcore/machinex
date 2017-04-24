@@ -505,6 +505,8 @@ bool sec_hal_fg_get_property(struct i2c_client *client,
 	case POWER_SUPPLY_PROP_MANUFACTURER:
 		fg_read_all_regs(client);
 		break;
+	case POWER_SUPPLY_PROP_ENERGY_NOW:
+		break;
 
 	default:
 		return false;
