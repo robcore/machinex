@@ -799,14 +799,15 @@ static int sec_chg_set_property(struct power_supply *psy,
 		charger->cable_type = val->intval;
 		psy_do_property("battery", get,
 				POWER_SUPPLY_PROP_HEALTH, value);
-		if (val->intval == POWER_SUPPLY_TYPE_BATTERY &&
-			charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
+		if (val->intval == POWER_SUPPLY_TYPE_BATTERY) {
 			charger->is_charging = false;
 			charger->aicl_on = false;
 			charger->soft_reg_recovery_cnt = 0;
 			set_charging_current = 0;
-			set_charging_current_max = DISCHARGE_CURRENT;
-		}
+			if (charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)
+				set_charging_current_max = DISCHARGE_CURRENT;
+			else
+				set_charging_current_max = 0;
 
 			if (charger->wc_w_state) {
 				cancel_delayed_work_sync(&charger->wpc_work);
