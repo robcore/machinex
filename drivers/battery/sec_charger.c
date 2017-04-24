@@ -346,6 +346,8 @@ err_req_irq:
 err_supply_unreg:
 	power_supply_unregister(&charger->psy_chg);
 err_free:
+	kfree(charger->pdata);
+err_free1:
 	kfree(charger);
 
 	return ret;
