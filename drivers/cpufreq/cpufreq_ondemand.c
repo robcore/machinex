@@ -77,6 +77,7 @@ static unsigned int min_sampling_rate;
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 #define POWERSAVE_BIAS_MAXLEVEL			(1000)
+#define POWERSAVE_BIAS_MIDLEVEL			(0)
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
 
 static void do_dbs_timer(struct work_struct *work);
@@ -201,11 +202,11 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	/* Find freq bounds for freq_avg in freq_table */
 	index = 0;
 	cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-			CPUFREQ_RELATION_H, &index);
+			CPUFREQ_RELATION_L, &index);
 	freq_lo = dbs_info->freq_table[index].frequency;
 	index = 0;
 	cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-			CPUFREQ_RELATION_L, &index);
+			CPUFREQ_RELATION_H, &index);
 	freq_hi = dbs_info->freq_table[index].frequency;
 
 	/* Find out how long we have to be in hi and lo freqs */
@@ -229,13 +230,13 @@ static int ondemand_powersave_bias_setspeed(struct cpufreq_policy *policy,
 					    struct cpufreq_policy *altpolicy,
 					    int level)
 {
-	if (level == POWERSAVE_BIAS_MAXLEVEL) {
+	if (level > 0 && level <= POWERSAVE_BIAS_MAXLEVEL) {
 		/* maximum powersave; set to lowest frequency */
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->min : policy->min,
 			CPUFREQ_RELATION_L);
 		return 1;
-	} else if (level == POWERSAVE_BIAS_MINLEVEL) {
+	} else if (level == 0 || (level < 0 && level >= POWERSAVE_BIAS_MINLEVEL)) {
 		/* minimum powersave; set to highest frequency */
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->max : policy->max,
@@ -439,8 +440,6 @@ static ssize_t store_optimal_max_freq(struct kobject *a, struct attribute *b,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-	if (input <= 1890000)
-		return count;
 	dbs_tuners_ins.optimal_max_freq = input;
 
 	return count;
@@ -923,9 +922,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency decrease */
-	/* if we cannot reduce the frequency anymore, break out early */
+	/* if we cannot reduce the frequency anymore, break out early
+		Rob note: I disagree with this, it skips the calculations
+		for the next freqs, you dumbass.
 	if (policy->cur == policy->min)
 		return;
+	 */
 
 	/*
 	 * The optimal frequency is the frequency that is the lowest that
@@ -943,7 +945,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		/* No longer fully busy, reset rate_mult */
 		this_dbs_info->rate_mult = 1;
 
-		if (freq_next < policy->min)
+		if (freq_next <= policy->min) //this way, policy min is accounted if if less than OR equal to. ...dumbass.
 			freq_next = policy->min;
 
 		if (num_online_cpus() > 1) {
@@ -963,12 +965,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		}
 		if (!dbs_tuners_ins.powersave_bias) {
 			__cpufreq_driver_target(policy, freq_next,
-					CPUFREQ_RELATION_C);
+					CPUFREQ_RELATION_H);
 		} else {
 			int freq = powersave_bias_target(policy, freq_next,
 					CPUFREQ_RELATION_L);
 			__cpufreq_driver_target(policy, freq,
-				CPUFREQ_RELATION_C);
+				CPUFREQ_RELATION_L);
 		}
 	}
 }

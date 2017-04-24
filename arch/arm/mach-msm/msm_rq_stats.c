@@ -39,8 +39,8 @@ struct notifier_block cpu_hotplug;
 struct notifier_block freq_policy;
 
 struct cpu_load_data {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_wall;
+	u64 prev_cpu_idle;
+	u64 prev_cpu_wall;
 #ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
 	unsigned int cpu_load;
 #endif
