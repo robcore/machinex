@@ -45,11 +45,11 @@
 #define DEF_HIGH_GRID_LOAD			(89)
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
-#define DEF_SAMPLING_RATE			(30000)
+#define DEF_SAMPLING_RATE			(20000)
 
 #define DEF_SYNC_FREQUENCY			(1026000)
 #define DEF_OPTIMAL_FREQUENCY			(1458000)
-#define DEF_OPTIMAL_MAX_FREQ			(1458000)
+#define DEF_OPTIMAL_MAX_FREQ			(1782000)
 
 /* Kernel tunabble controls */
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
@@ -105,7 +105,7 @@ struct cpu_dbs_info_s {
 	unsigned int freq_hi_jiffies;
 	unsigned int rate_mult;
 	unsigned int max_load;
-	int cpu;
+	unsigned int cpu;
 	unsigned int sample_type:1;
 	/*
 	 * percpu mutex that serializes governor limit change with
@@ -835,9 +835,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		 * - during long idle intervals
 		 * - explicitly set to zero
 		 */
-		if (unlikely(wall_time > 2 * sampling_rate) &&
-			     j_dbs_info->prev_load) {
+		if (unlikely(wall_time > (2 * sampling_rate) &&
+					j_dbs_info->prev_load)) {
 			cur_load = j_dbs_info->prev_load;
+			j_dbs_info->max_load = cur_load;
 			/*
 			 * Perform a destructive copy, to ensure that we copy
 			 * the previous load only once, upon the first wake-up
@@ -846,11 +847,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			j_dbs_info->prev_load = 0;
 		} else {
 			cur_load = 100 * (wall_time - idle_time) / wall_time;
+			j_dbs_info->max_load = max(cur_load, j_dbs_info->prev_load);
 			j_dbs_info->prev_load = cur_load;
 		}
 
-		j_dbs_info->max_load  = max(cur_load, j_dbs_info->prev_load);
-		j_dbs_info->prev_load = cur_load;
 		freq_avg = __cpufreq_driver_getavg(policy, j);
 		if (policy == NULL)
 			return;
@@ -879,7 +879,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	cpufreq_notify_utilization(policy, cur_load);
 
 	/* Check for frequency increase */
-	if (max_load_freq > dbs_tuners_ins.up_threshold * policy->cur) {
+	if (max_load_freq > (dbs_tuners_ins.up_threshold * policy->cur)) {
 		int freq_target, freq_div;
 		freq_target = 0; freq_div = 0;
 
@@ -900,6 +900,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		if (policy->cur < policy->max)
 			this_dbs_info->rate_mult =
 				dbs_tuners_ins.sampling_down_factor;
+
 		dbs_freq_increase(policy, freq_target);
 		return;
 	}
@@ -983,6 +984,9 @@ static void do_dbs_timer(struct work_struct *work)
 	int sample_type = dbs_info->sample_type;
 	int delay;
 
+	if (unlikely(!cpu_online(dbs_info->cpu) || !dbs_info->cur_policy))
+		return;
+
 	mutex_lock(&dbs_info->timer_mutex);
 
 	/* Common NORMAL_SAMPLE setup */
@@ -995,8 +999,14 @@ static void do_dbs_timer(struct work_struct *work)
 			dbs_info->sample_type = DBS_SUB_SAMPLE;
 			delay = dbs_info->freq_hi_jiffies;
 		} else {
+			/* We want all CPUs to do sampling nearly on
+			 * same jiffy
+			 */
 			delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate
 				* dbs_info->rate_mult);
+
+			if (num_online_cpus() > 1)
+				delay -= jiffies % delay;
 		}
 	} else {
 		__cpufreq_driver_target(dbs_info->cur_policy,
@@ -1041,7 +1051,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
-		if ((!cpu_online(cpu)) || (!policy->cur))
+		if ((!cpu_online(cpu)) || (!policy->cur) || (!policy))
 			return -EINVAL;
 
 		mutex_lock(&dbs_mutex);
@@ -1066,6 +1076,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				j_dbs_info->prev_cpu_nice =
 						kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 		}
+		cpu = policy->cpu;
 		this_dbs_info->cpu = cpu;
 		this_dbs_info->rate_mult = 1;
 		ondemand_powersave_bias_init_cpu(cpu);
@@ -1097,10 +1108,10 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 						latency * LATENCY_MULTIPLIER);
 
 			if (dbs_tuners_ins.optimal_freq == 0)
-				dbs_tuners_ins.optimal_freq = policy->min;
+				dbs_tuners_ins.optimal_freq = policy->cpuinfo.min_freq;
 
 			if (dbs_tuners_ins.sync_freq == 0)
-				dbs_tuners_ins.sync_freq = policy->min;
+				dbs_tuners_ins.sync_freq = policy->cpuinfo.min_freq;
 		}
 		mutex_unlock(&dbs_mutex);
 
@@ -1134,7 +1145,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	case CPUFREQ_GOV_LIMITS:
 		/* If device is being removed, skip set limits */
-		if (!this_dbs_info->cur_policy)
+		if (!this_dbs_info->cur_policy || !policy)
 			break;
 		mutex_lock(&this_dbs_info->timer_mutex);
 		if (policy->max < this_dbs_info->cur_policy->cur)
