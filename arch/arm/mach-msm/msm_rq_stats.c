@@ -58,7 +58,7 @@ static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
-	int ret
+	int ret;
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	u64 cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
