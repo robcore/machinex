@@ -395,7 +395,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 	case CPU_UP_CANCELED:
 	case CPU_DOWN_FAILED:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(1000)) //give the system time to deal with the failure
+					msecs_to_jiffies(1000)); //give the system time to deal with the failure
 		break;
 	case CPU_DEAD:
 	case CPU_ONLINE:
