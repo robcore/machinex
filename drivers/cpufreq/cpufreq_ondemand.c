@@ -1177,6 +1177,7 @@ static int __init cpufreq_gov_dbs_init(void)
 		/* Idle micro accounting is supported. Use finer thresholds */
 		dbs_tuners_ins.up_threshold = 90;
 		dbs_tuners_ins.down_differential = 2;
+		dbs_tuners_ins.powersave_bias = 125;
 		/*
 		 * In nohz/micro accounting case we set the minimum frequency
 		 * not depending on HZ, but fixed (very low). The deferred
