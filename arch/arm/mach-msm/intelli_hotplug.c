@@ -65,7 +65,7 @@ static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
-static unsigned int full_mode_profile = 2; /* conservative profile */
+static unsigned int full_mode_profile = 0; /* conservative profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended;
@@ -131,14 +131,22 @@ static unsigned int nr_run_thresholds_strict[] = {
 	UINT_MAX
 };
 
+static unsigned int nr_run_thresholds_machinex[] = {
+	(THREAD_CAPACITY * 545 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 715 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 1035 * MULT_FACTOR) / DIV_FACTOR,
+	UINT_MAX
+};
+
 static unsigned int *nr_run_profiles[] = {
-	nr_run_thresholds_balance,
+	nr_run_thresholds_balance = 0,
 	nr_run_thresholds_performance,
 	nr_run_thresholds_conservative,
 	nr_run_thresholds_disable,
 	nr_run_thresholds_tri,
 	nr_run_thresholds_eco,
-	nr_run_thresholds_strict
+	nr_run_thresholds_strict,
+	nr_run_thesholds_machinex
 	};
 
 static unsigned long nr_run_last;
@@ -185,15 +193,7 @@ static unsigned int calculate_thread_stats(void)
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
 		unsigned int nr_threshold;
-		if (max_cpus_online >= 4)
-			current_profile = nr_run_profiles[full_mode_profile];
-		else if (max_cpus_online == 3)
-			current_profile = nr_run_profiles[4];
-		else if (max_cpus_online == 2)
-			current_profile = nr_run_profiles[5];
-		else
-			current_profile = nr_run_profiles[6];
-
+		current_profile = nr_run_profiles[full_mode_profile];
 		nr_threshold = current_profile[nr_run - 1];
 
 		if (nr_run_last <= nr_run)
