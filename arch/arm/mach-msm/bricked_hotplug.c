@@ -23,8 +23,9 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
-#include <linux/machinex_defines.h>
+#endif
 
 #define DEBUG 0
 
@@ -32,6 +33,8 @@
 #define HOTPLUG_ENABLED			0
 #define MSM_MPDEC_STARTDELAY		20000
 #define MSM_MPDEC_DELAY			130
+#define DEFAULT_MIN_CPUS_ONLINE		2
+#define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_DOWN_LOCK_DUR		500
@@ -282,7 +285,8 @@ static void __ref bricked_hotplug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
-	if (!hotplug.hotplug_suspend || !hotplug.bricked_enabled)
+	if (!hotplug.hotplug_suspend || !hotplug.suspended ||
+		!hotplug.bricked_enabled)
 		return;
 
 	if (hotplug.suspended) {
@@ -317,6 +321,7 @@ static void __ref bricked_hotplug_resume(void)
 	}
 }
 
+#ifdef CONFIG_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -336,6 +341,7 @@ static int state_notifier_callback(struct notifier_block *this,
 
 	return NOTIFY_OK;
 }
+#endif
 
 static int bricked_hotplug_start(void)
 {
@@ -348,12 +354,14 @@ static int bricked_hotplug_start(void)
 		goto err_out;
 	}
 
+#ifdef CONFIG_STATE_NOTIFIER
 	notif.notifier_call = state_notifier_callback;
 	if (state_register_client(&notif)) {
 		pr_err("%s: Failed to register State notifier callback\n",
 			MPDEC_TAG);
 		goto err_dev;
 	}
+#endif
 
 	mutex_init(&hotplug.bricked_cpu_mutex);
 	mutex_init(&hotplug.bricked_hotplug_mutex);
@@ -390,8 +398,9 @@ static void bricked_hotplug_stop(void)
 	cancel_delayed_work_sync(&hotplug_work);
 	mutex_destroy(&hotplug.bricked_hotplug_mutex);
 	mutex_destroy(&hotplug.bricked_cpu_mutex);
-
+#ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
+#endif
 	notif.notifier_call = NULL;
 	destroy_workqueue(hotplug_wq);
 

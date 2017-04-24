@@ -39,7 +39,7 @@
 
 #define CAPACITY_RESERVE		50
 //#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
-#define THREAD_CAPACITY			(329 - CAPACITY_RESERVE)
+#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
@@ -99,7 +99,7 @@ static unsigned int nr_run_thresholds_balance[] = {
 };
 
 static unsigned int nr_run_thresholds_performance[] = {
-	(THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 375 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 625 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
@@ -109,6 +109,13 @@ static unsigned int nr_run_thresholds_conservative[] = {
 	(THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 1625 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 2125 * MULT_FACTOR) / DIV_FACTOR,
+	UINT_MAX
+};
+
+static unsigned int nr_run_thresholds_machinex[] = {
+	(THREAD_CAPACITY * 475 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 750 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 925 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
 };
 
@@ -131,22 +138,15 @@ static unsigned int nr_run_thresholds_strict[] = {
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_machinex[] = {
-	(THREAD_CAPACITY * 545 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 715 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 1035 * MULT_FACTOR) / DIV_FACTOR,
-	UINT_MAX
-};
-
 static unsigned int *nr_run_profiles[] = {
 	nr_run_thresholds_balance,
 	nr_run_thresholds_performance,
 	nr_run_thresholds_conservative,
+	nr_run_thresholds_machinex
 	nr_run_thresholds_disable,
 	nr_run_thresholds_tri,
 	nr_run_thresholds_eco,
-	nr_run_thresholds_strict,
-	nr_run_thresholds_machinex
+	nr_run_thresholds_strict
 	};
 
 static unsigned long nr_run_last;
@@ -193,7 +193,15 @@ static unsigned int calculate_thread_stats(void)
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
 		unsigned int nr_threshold;
-		current_profile = nr_run_profiles[full_mode_profile];
+		if (max_cpus_online >= 4)
+			current_profile = nr_run_profiles[full_mode_profile];
+		else if (max_cpus_online == 3)
+			current_profile = nr_run_profiles[4];
+		else if (max_cpus_online == 2)
+			current_profile = nr_run_profiles[5];
+		else
+			current_profile = nr_run_profiles[6];
+
 		nr_threshold = current_profile[nr_run - 1];
 
 		if (nr_run_last <= nr_run)
