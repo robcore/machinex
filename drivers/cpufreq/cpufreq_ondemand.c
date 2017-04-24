@@ -77,7 +77,7 @@ static unsigned int min_sampling_rate;
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 #define POWERSAVE_BIAS_MAXLEVEL			(1000)
-#define POWERSAVE_BIAS_DEFAULT			(0)
+#define POWERSAVE_BIAS_DEFAULT			(1)
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
 
 static void do_dbs_timer(struct work_struct *work);
@@ -194,7 +194,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	}
 
 	cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_next,
-			relation, &index);
+			CPUFREQ_RELATION_C, &index);
 	freq_req = dbs_info->freq_table[index].frequency;
 	freq_reduc = freq_req * dbs_tuners_ins.powersave_bias / 1000;
 	freq_avg = freq_req - freq_reduc;
@@ -206,7 +206,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	freq_lo = dbs_info->freq_table[index].frequency;
 	index = 0;
 	cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-			CPUFREQ_RELATION_C, &index);
+			CPUFREQ_RELATION_H, &index);
 	freq_hi = dbs_info->freq_table[index].frequency;
 
 	/* Find out how long we have to be in hi and lo freqs */
@@ -217,7 +217,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	}
 	jiffies_total = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 	jiffies_hi = (freq_avg - freq_lo) * jiffies_total;
-	jiffies_hi += ((freq_hi - freq_lo) / 2);
+	jiffies_hi += ((freq_hi - freq_lo) / 4);
 	jiffies_hi /= (freq_hi - freq_lo);
 	jiffies_lo = jiffies_total - jiffies_hi;
 	dbs_info->freq_lo = freq_lo;
@@ -1177,7 +1177,7 @@ static int __init cpufreq_gov_dbs_init(void)
 		/* Idle micro accounting is supported. Use finer thresholds */
 		dbs_tuners_ins.up_threshold = 90;
 		dbs_tuners_ins.down_differential = 2;
-		dbs_tuners_ins.powersave_bias = 125;
+		dbs_tuners_ins.powersave_bias = POWERSAVE_BIAS_DEFAULT;
 		/*
 		 * In nohz/micro accounting case we set the minimum frequency
 		 * not depending on HZ, but fixed (very low). The deferred
