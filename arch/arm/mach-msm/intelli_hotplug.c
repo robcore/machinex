@@ -504,7 +504,7 @@ static struct input_handler intelli_plug_input_handler = {
 	.event          = intelli_plug_input_event,
 	.connect        = intelli_plug_input_connect,
 	.disconnect     = intelli_plug_input_disconnect,
-	.name           = "intelliplug_handler",
+	.name           = "intelliplug_handlstate_suspendeder",
 	.id_table       = intelli_plug_ids,
 };
 
@@ -542,8 +542,6 @@ static int __ref intelli_plug_start(void)
 	}
 
 	register_hotcpu_notifier(&intelli_plug_cpu_notifier);
-	for_each_online_cpu(cpu)
-		cpufreq_update_policy(cpu);
 
 	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
