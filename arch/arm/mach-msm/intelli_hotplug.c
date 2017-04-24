@@ -405,7 +405,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 	case CPU_DEAD:
 	case CPU_ONLINE:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(350));
+					msecs_to_jiffies(35));
 		break;
 	default:
 		break;
@@ -416,7 +416,6 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 
 static struct notifier_block __refdata intelli_plug_cpu_notifier = {
 	.notifier_call = intelli_plug_cpu_callback,
-	.priority = INT_MAX,
 };
 
 static void intelli_plug_input_event(struct input_handle *handle,
