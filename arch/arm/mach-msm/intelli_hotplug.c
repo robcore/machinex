@@ -397,18 +397,6 @@ static int state_notifier_callback(struct notifier_block *this,
 }
 #endif
 
-static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
-		unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __refdata intelli_plug_cpu_notifier = {
-	.notifier_call = intelli_plug_cpu_callback,
-};
-
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
@@ -534,8 +522,6 @@ static int __ref intelli_plug_start(void)
 		goto err_dev;
 	}
 
-	register_hotcpu_notifier(&intelli_plug_cpu_notifier);
-
 	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 	for_each_possible_cpu(cpu) {
@@ -553,7 +539,6 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
-	unregister_hotcpu_notifier(&intelli_plug_cpu_notifier);
 	return ret;
 }
 
@@ -569,7 +554,6 @@ static void intelli_plug_stop(void)
 	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
-	unregister_hotcpu_notifier(&intelli_plug_cpu_notifier);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
 #endif
