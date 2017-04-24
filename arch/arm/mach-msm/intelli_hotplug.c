@@ -22,7 +22,6 @@
 #include <linux/state_notifier.h>
 #endif
 #include <linux/cpufreq.h>
-#include <linux/machinex_defines.h>
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
@@ -101,8 +100,8 @@ static unsigned int nr_run_thresholds_balance[] = {
 static unsigned int nr_run_thresholds_machinex[] = {
 	(THREAD_CAPACITY * 475 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 750 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 925 * MULT_FACTOR) / DIV_FACTOR,
-	UINT_MAX
+	(THREAD_CAPACITY * 1000 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 1125 * MULT_FACTOR) / DIV_FACTOR
 };
 
 static unsigned int nr_run_thresholds_performance[] = {
