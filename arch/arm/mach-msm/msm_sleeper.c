@@ -32,7 +32,7 @@
 #define DEF_DOWN_COUNT_MAX		10 /* 1 sec */
 #define DEF_UP_COUNT_MAX		5 /* 0.5 sec */
 #define DEF_MAX_CPUS_ONLINE_SUSP		1
-#define DEF_PLUG_ALL			1
+#define DEF_PLUG_ALL			0
 
 struct msm_sleeper_data {
 	unsigned int enabled;
