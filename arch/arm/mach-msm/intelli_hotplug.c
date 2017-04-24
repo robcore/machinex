@@ -29,12 +29,12 @@
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			10000
+#define START_DELAY_MS			15000
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define BOOST_LOCK_DUR			60 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
-#define DEFAULT_DOWN_LOCK_DUR		1000
+#define DEFAULT_DOWN_LOCK_DUR		1500
 
 #define CAPACITY_RESERVE		50
 //#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
@@ -42,7 +42,6 @@
 #define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
 					(THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
-//#define DIV_FACTOR			100000
 #define DIV_FACTOR			100000
 
 static s64 last_boost_time;
@@ -62,7 +61,7 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
-static unsigned int min_cpus_online = 2;
+static unsigned int min_cpus_online = 1;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int full_mode_profile = 0; /* conservative profile */
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
@@ -98,9 +97,9 @@ static unsigned int nr_run_thresholds_balance[] = {
 };
 
 static unsigned int nr_run_thresholds_machinex[] = {
-	(THREAD_CAPACITY * 550 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 725 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 1075 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 585 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 825 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 1100 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
 };
 
@@ -191,7 +190,7 @@ static unsigned int calculate_thread_stats(void)
 	nr_fshift = max_cpus_online - 1;
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
-		unsigned int nr_threshold;
+		unsigned long nr_threshold;
 		if (max_cpus_online >= 4)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
@@ -233,7 +232,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	s64 now;
 	s64 delta;
 
-	if (hotplug_suspended)
+	if (hotplug_suspended || state_suspended)
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -398,7 +397,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 	case CPU_DEAD:
 	case CPU_ONLINE:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(250));
+					msecs_to_jiffies(400));
 		break;
 	default:
 		break;
@@ -409,6 +408,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 
 static struct notifier_block __refdata intelli_plug_cpu_notifier = {
 	.notifier_call = intelli_plug_cpu_callback,
+	.priority = INT_MAX,
 };
 
 static void intelli_plug_input_event(struct input_handle *handle,
@@ -655,7 +655,25 @@ store_one(hotplug_suspend, hotplug_suspend);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
-store_one(nr_run_hysteresis, nr_run_hysteresis);
+
+static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+					 const char *buf, size_t count)
+{
+	int ret;
+	int val;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret < 0)
+		return ret;
+
+	if (val <= 0)
+		val = 0;
+
+	nr_run_hysteresis = val;
+
+	return count;
+}
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
@@ -670,7 +688,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	unsigned int input;
+	int input;
 
 	ret = sscanf(buf, "%d", &input);
 	if (ret < 0)
@@ -822,6 +840,9 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 #define KERNEL_ATTR_RW(_name) \
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
+#define KERNEL_ATTR_RO(_name) \
+static struct kobj_attribute _name##_attr = \
+	__ATTR(_name, 0444, show_##_name, store_##_name)
 
 KERNEL_ATTR_RW(intelli_plug_active);
 KERNEL_ATTR_RW(cpus_boosted);
@@ -829,11 +850,11 @@ KERNEL_ATTR_RW(min_cpus_online);
 KERNEL_ATTR_RW(max_cpus_online);
 KERNEL_ATTR_RW(hotplug_suspend);
 KERNEL_ATTR_RW(full_mode_profile);
-KERNEL_ATTR_RW(cpu_nr_run_threshold);
+KERNEL_ATTR_RO(cpu_nr_run_threshold);
 KERNEL_ATTR_RW(boost_lock_duration);
 KERNEL_ATTR_RW(def_sampling_ms);
 KERNEL_ATTR_RW(debug_intelli_plug);
-KERNEL_ATTR_RW(nr_fshift);
+KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RW(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
 
