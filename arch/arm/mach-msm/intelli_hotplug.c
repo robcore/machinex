@@ -663,7 +663,7 @@ static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
 	int ret;
 	int val;
 
-	ret = sscanf(buf, "%d", &input);
+	ret = sscanf(buf, "%d", &val);
 	if (ret < 0)
 		return ret;
 
