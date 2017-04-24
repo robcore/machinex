@@ -98,10 +98,10 @@ static unsigned int nr_run_thresholds_balance[] = {
 };
 
 static unsigned int nr_run_thresholds_machinex[] = {
-	(THREAD_CAPACITY * 475 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 500 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 750 * MULT_FACTOR) / DIV_FACTOR,
 	(THREAD_CAPACITY * 1000 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 1125 * MULT_FACTOR) / DIV_FACTOR
+	UINT_MAX
 };
 
 static unsigned int nr_run_thresholds_performance[] = {
