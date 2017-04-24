@@ -195,11 +195,11 @@ static unsigned int calculate_thread_stats(void)
 		if (max_cpus_online >= 4)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
-			current_profile = nr_run_profiles[4];
-		else if (max_cpus_online == 2)
 			current_profile = nr_run_profiles[5];
-		else
+		else if (max_cpus_online == 2)
 			current_profile = nr_run_profiles[6];
+		else
+			current_profile = nr_run_profiles[7];
 
 		nr_threshold = current_profile[nr_run - 1];
 
