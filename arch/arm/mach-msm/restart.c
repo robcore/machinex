@@ -315,11 +315,8 @@ reset:
 		__raw_writel(0x12345678, restart_reason);
 	}
 
-	if (in_panic == 1) {
-		flush_cache_all();
-		outer_flush_all();
-	} else
-		flush_cache_all();
+	flush_cache_all();
+	outer_flush_all();
 
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
