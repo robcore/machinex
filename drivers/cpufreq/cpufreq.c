@@ -653,9 +653,6 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	   will be wrongly overridden */
 	ret = __cpufreq_set_policy(policy, &new_policy);
 
-	if (policy->max > 1890000)
-		policy->max = 1890000;
-
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
 
@@ -1911,9 +1908,6 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 			policy->cpu, target_freq, relation, old_target_freq);
 
-	if (target_freq == policy->cur)
-		return 0;
-
 	if (cpu_online(policy->cpu) && cpufreq_driver->target)
 		retval = cpufreq_driver->target(policy, target_freq, relation);
 
@@ -2168,6 +2162,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	} else {
 		policy->min = new_policy->min;
 		policy->max = new_policy->max;
+		policy->util_thres = new_policy->util_thres;
 	}
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
