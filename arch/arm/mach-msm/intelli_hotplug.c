@@ -77,7 +77,7 @@ static unsigned int max_cpus_online_res = 4;
 static unsigned int hotplug_suspend = 0;
 
 /* HotPlug Driver Tuning */
-static unsigned int target_cpus = 4;
+static unsigned int target_cpus;
 static s64 boost_lock_duration = BOOST_LOCK_DUR;
 static s64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned long nr_fshift = DEFAULT_NR_FSHIFT;
@@ -98,9 +98,9 @@ static unsigned int nr_run_thresholds_balance[] = {
 };
 
 static unsigned int nr_run_thresholds_machinex[] = {
-	(THREAD_CAPACITY * 500 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 750 * MULT_FACTOR) / DIV_FACTOR,
-	(THREAD_CAPACITY * 1000 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 550 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 725 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 1075 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
 };
 
@@ -388,19 +388,17 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 
-	if (atomic_read(&intelli_plug_active) == 0)
+	if (atomic_read(&intelli_plug_active) == 0 || state_suspended)
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_UP_CANCELED:
 	case CPU_DOWN_FAILED:
-		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(1000)); //give the system time to deal with the failure
-		break;
+	case CPU_DOWN_PREPARE:
 	case CPU_DEAD:
 	case CPU_ONLINE:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(def_sampling_ms));
+					msecs_to_jiffies(250));
 		break;
 	default:
 		break;
@@ -417,14 +415,16 @@ static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	s64 now;
+	u64 delta;
 
 	if (hotplug_suspended)
 		return;
 
 	now = ktime_to_us(ktime_get());
 	last_input = now;
+	delta = now - last_boost_time;
 
-	if (now - last_boost_time < MIN_INPUT_INTERVAL)
+	if (delta < MIN_INPUT_INTERVAL)
 		return;
 
 	if (num_online_cpus() >= cpus_boosted ||
@@ -503,8 +503,10 @@ static struct input_handler intelli_plug_input_handler = {
 
 static int __ref intelli_plug_start(void)
 {
-	int cpu, ret = 0;
+	unsigned int cpu, ret = 0;
 	struct down_lock *dl;
+
+	mutex_init(&intelli_plug_mutex);
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 	intelliplug_wq = create_singlethread_workqueue("intelliplug");
@@ -533,9 +535,8 @@ static int __ref intelli_plug_start(void)
 	}
 
 	register_hotcpu_notifier(&intelli_plug_cpu_notifier);
-
-	mutex_init(&intelli_plug_mutex);
-
+	for_each_online_cpu(cpu)
+		cpufreq_update_policy(cpu);
 
 	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
