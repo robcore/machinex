@@ -45,8 +45,8 @@
 #define MULT_FACTOR			4
 #define DIV_FACTOR			100000
 
-static s64 last_boost_time;
-static s64 last_input;
+static u64 last_boost_time;
+static u64 last_input;
 
 static bool intellinit;
 bool intelli_init(void)
@@ -84,8 +84,8 @@ static unsigned int hotplug_suspend = 0;
 
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus;
-static s64 boost_lock_duration = BOOST_LOCK_DUR;
-static s64 def_sampling_ms = DEF_SAMPLING_MS;
+static u64 boost_lock_duration = BOOST_LOCK_DUR;
+static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned long nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
@@ -155,7 +155,7 @@ static unsigned int *nr_run_profiles[] = {
 	};
 
 static unsigned long nr_run_last;
-static s64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
+static u64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
 
 struct down_lock {
 	unsigned int locked;
@@ -236,8 +236,8 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	long l_nr_threshold;
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
-	s64 now;
-	s64 delta;
+	u64 now;
+	u64 delta;
 
 	if (hotplug_suspended || state_suspended)
 		return;
@@ -412,11 +412,10 @@ static int state_notifier_callback(struct notifier_block *this,
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-	s64 now;
+	u64 now;
 	u64 delta;
 
-	if (hotplug_suspended || state_suspended ||
-		(atomic_read(&intelli_plug_active) == 0))
+	if (hotplug_suspended)
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -496,7 +495,7 @@ static struct input_handler intelli_plug_input_handler = {
 	.event          = intelli_plug_input_event,
 	.connect        = intelli_plug_input_connect,
 	.disconnect     = intelli_plug_input_disconnect,
-	.name           = "intelli_plug_input_handler",
+	.name           = "intelliplug_handle_state_suspendeder",
 	.id_table       = intelli_plug_ids,
 };
 
@@ -682,7 +681,7 @@ static ssize_t show_boost_lock_duration(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%lld\n", div_u64(boost_lock_duration, 1000));
+	return sprintf(buf, "%llu\n", div_u64(boost_lock_duration, 1000));
 }
 
 static ssize_t store_boost_lock_duration(struct kobject *kobj,
@@ -705,7 +704,7 @@ static ssize_t show_def_sampling_ms(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%lld\n", def_sampling_ms);
+	return sprintf(buf, "%llu\n", def_sampling_ms);
 }
 
 static ssize_t store_def_sampling_ms(struct kobject *kobj,
@@ -751,7 +750,7 @@ static ssize_t show_down_lock_dur(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%lld\n", down_lock_dur);
+	return sprintf(buf, "%llu\n", down_lock_dur);
 }
 
 static ssize_t store_down_lock_dur(struct kobject *kobj,
