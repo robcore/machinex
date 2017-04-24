@@ -458,7 +458,7 @@ static void hotplug_boost_event(void)
 	if (now - last_hotplug_time < min_interval * USEC_PER_MSEC)
 		return;
 
-	mod_delayed_work(cpu_boost_wq, &input_boost_work, 0);
+	mod_delayed_work(cpu_boost_wq, &hotplug_boost_work, 0);
 	last_hotplug_time = ktime_to_us(ktime_get());
 }
 

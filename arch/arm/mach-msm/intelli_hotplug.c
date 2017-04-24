@@ -524,7 +524,7 @@ static int __ref intelli_plug_start(void)
 		goto err_dev;
 	}
 
-	register_cpu_notifier(&intelli_plug_cpu_notifier);
+	register_hotcpu_notifier(&intelli_plug_cpu_notifier);
 
 	mutex_init(&intelli_plug_mutex);
 
@@ -560,7 +560,7 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
-	unregister_cpu_notifier(&intelli_plug_cpu_notifier);
+	unregister_hotcpu_notifier(&intelli_plug_cpu_notifier);
 	return ret;
 }
 
