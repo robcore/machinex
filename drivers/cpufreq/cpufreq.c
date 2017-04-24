@@ -41,6 +41,7 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/sched/rt.h>
+#include <mach/cpufreq.h>
 
 #include <trace/events/power.h>
 
@@ -268,7 +269,7 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 
 	/*
 	 * The driver only supports the SMP configuartion where all processors
-	 * share the clock and voltage and clock.
+	 * share the clock and voltage.
 	 */
 	cpumask_setall(policy->cpus);
 
@@ -651,6 +652,9 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	/* Do not use cpufreq_set_policy here or the user_policy.max
 	   will be wrongly overridden */
 	ret = __cpufreq_set_policy(policy, &new_policy);
+
+	if (policy->max > 1890000)
+		policy->max = 1890000;
 
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
@@ -1590,12 +1594,13 @@ unsigned int cpufreq_quick_get(unsigned int cpu)
 	unsigned int ret_freq = 0;
 
 	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get)
-		return cpufreq_driver->get(cpu);
-
-	policy = cpufreq_cpu_get(cpu);
-	if (policy) {
-		ret_freq = policy->cur;
-		cpufreq_cpu_put(policy);
+		ret_freq = cpufreq_driver->get(cpu);
+	else {
+		policy = cpufreq_cpu_get(cpu);
+		if (policy) {
+			ret_freq = policy->cur;
+			cpufreq_cpu_put(policy);
+		}
 	}
 
 	return ret_freq;
@@ -1621,6 +1626,26 @@ unsigned int cpufreq_quick_get_max(unsigned int cpu)
 	return ret_freq;
 }
 EXPORT_SYMBOL(cpufreq_quick_get_max);
+
+/**
+ * cpufreq_quick_get_min - get the min reported CPU frequency for this CPU
+ * @cpu: CPU number
+ *
+ * Just return the min possible frequency for a given CPU.
+ */
+unsigned int cpufreq_quick_get_min(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	unsigned int ret_freq = 0;
+
+	if (policy) {
+		ret_freq = policy->min;
+		cpufreq_cpu_put(policy);
+	}
+
+	return ret_freq;
+}
+EXPORT_SYMBOL(cpufreq_quick_get_min);
 
 static unsigned int __cpufreq_get(unsigned int cpu)
 {
@@ -1886,6 +1911,9 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 			policy->cpu, target_freq, relation, old_target_freq);
 
+	if (target_freq == policy->cur)
+		return 0;
+
 	if (cpu_online(policy->cpu) && cpufreq_driver->target)
 		retval = cpufreq_driver->target(policy, target_freq, relation);
 
@@ -2136,6 +2164,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 		cpu0_policy = cpufreq_cpu_get(0);
 		policy->min = cpu0_policy->min;
 		policy->max = cpu0_policy->max;
+		policy->util_thres = cpu0_policy->util_thres;
 	} else {
 		policy->min = new_policy->min;
 		policy->max = new_policy->max;
@@ -2184,6 +2213,9 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	}
 
 error_out:
+	if (cpu0_policy) {
+		__cpufreq_cpu_put(cpu0_policy, false);
+	}
 	return ret;
 }
 
