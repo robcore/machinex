@@ -56,7 +56,7 @@
 #define MAX_SAMPLING_DOWN_FACTOR		(3)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
-#define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
+#define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(0)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -153,8 +153,8 @@ static struct dbs_tuners {
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
-	.down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL,
-	.down_differential_multi_core = MICRO_FREQUENCY_DOWN_DIFFERENTIAL,
+	.down_differential = 0,
+	.down_differential_multi_core = 0,
 	.micro_freq_up_threshold = MICRO_FREQUENCY_UP_THRESHOLD,
 	.middle_grid_step = DEF_MIDDLE_GRID_STEP,
 	.high_grid_step = DEF_HIGH_GRID_STEP,
@@ -1187,7 +1187,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	if (idle_time != -1ULL) {
 		/* Idle micro accounting is supported. Use finer thresholds */
 		dbs_tuners_ins.up_threshold = 90;
-		dbs_tuners_ins.down_differential = 2;
+		dbs_tuners_ins.down_differential = 0;
 		dbs_tuners_ins.powersave_bias = POWERSAVE_BIAS_DEFAULT;
 		/*
 		 * In nohz/micro accounting case we set the minimum frequency
