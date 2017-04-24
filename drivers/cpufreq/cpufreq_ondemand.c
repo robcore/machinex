@@ -33,10 +33,10 @@
  */
 
 /* User tunabble controls */
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(2)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(85)
+#define DEF_FREQUENCY_UP_THRESHOLD		(90)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 
 #define DEF_MIDDLE_GRID_STEP			(14)
@@ -45,10 +45,10 @@
 #define DEF_HIGH_GRID_LOAD			(89)
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
-#define DEF_SAMPLING_RATE			(50000)
+#define DEF_SAMPLING_RATE			(30000)
 
 #define DEF_SYNC_FREQUENCY			(1026000)
-#define DEF_OPTIMAL_FREQUENCY			(1566000)
+#define DEF_OPTIMAL_FREQUENCY			(1242000)
 #define DEF_OPTIMAL_MAX_FREQ			(1566000)
 
 /* Kernel tunabble controls */
@@ -77,7 +77,7 @@ static unsigned int min_sampling_rate;
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 #define POWERSAVE_BIAS_MAXLEVEL			(1000)
-#define POWERSAVE_BIAS_MIDLEVEL			(0)
+#define POWERSAVE_BIAS_DEFAULT			(1)
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
 
 static void do_dbs_timer(struct work_struct *work);
@@ -161,11 +161,11 @@ static struct dbs_tuners {
 	.middle_grid_load = DEF_MIDDLE_GRID_LOAD,
 	.high_grid_load = DEF_HIGH_GRID_LOAD,
 	.ignore_nice = 0,
-	.powersave_bias = 0,
+	.powersave_bias = POWERSAVE_BIAS_DEFAULT,
 	.sync_freq = DEF_SYNC_FREQUENCY,
 	.optimal_freq = DEF_OPTIMAL_FREQUENCY,
 	.optimal_max_freq = DEF_OPTIMAL_MAX_FREQ,
-	.input_boost = 0,
+	.input_boost = 1,
 	.io_is_busy = 0,
 	.sampling_rate = DEF_SAMPLING_RATE,
 };
@@ -932,7 +932,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	/*
 	 * The optimal frequency is the frequency that is the lowest that
 	 * can support the current CPU usage without triggering the up
-	 * policy. To be safe, we focus DOWN_DIFFERENTIALDOWN_DIFFERENTIAL points under the threshold.
+	 * policy. To be safe, we focus DOWN_DIFFERENTIAL points under the threshold.
 	 */
 	if (max_load_freq <
 	    (dbs_tuners_ins.up_threshold - dbs_tuners_ins.down_differential) *
