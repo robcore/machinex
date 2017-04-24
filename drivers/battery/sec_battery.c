@@ -287,7 +287,8 @@ static int sec_bat_get_charger_type_adc
 	/* Do NOT check cable type when cable_switch_check() returns false
 	 * and keep current cable type
 	 */
-	if (!battery->pdata->cable_switch_check())
+	if (battery->pdata->cable_switch_check &&
+	    !battery->pdata->cable_switch_check())
 		return battery->cable_type;
 
 	adc = sec_bat_get_adc_value(battery,
@@ -296,7 +297,8 @@ static int sec_bat_get_charger_type_adc
 	/* Do NOT check cable type when cable_switch_normal() returns false
 	 * and keep current cable type
 	 */
-	if (!battery->pdata->cable_switch_normal())
+	if (battery->pdata->cable_switch_normal &&
+	    !battery->pdata->cable_switch_normal())
 		return battery->cable_type;
 
 	for (i = 0; i < SEC_SIZEOF_POWER_SUPPLY_TYPE; i++)
@@ -397,8 +399,10 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 	case SEC_BATTERY_CHECK_INT:
 		if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
 			ret = battery->present;
-		else
-			ret = battery->pdata->check_battery_callback();
+		else {
+			if (battery->pdata->check_battery_callback)
+				ret = battery->pdata->check_battery_callback();
+		}
 		break;
 	case SEC_BATTERY_CHECK_PMIC:
 	case SEC_BATTERY_CHECK_FUELGAUGE:
@@ -424,9 +428,11 @@ static bool sec_bat_get_cable_type(
 	ret = false;
 	cable_type = battery->cable_type;
 
-	if (cable_source_type & SEC_BATTERY_CABLE_SOURCE_CALLBACK)
-		cable_type =
-			battery->pdata->check_cable_callback();
+	if (cable_source_type & SEC_BATTERY_CABLE_SOURCE_CALLBACK) {
+		if (battery->pdata->check_cable_callback)
+			cable_type =
+				battery->pdata->check_cable_callback();
+	}
 
 	if (cable_source_type & SEC_BATTERY_CABLE_SOURCE_ADC) {
 		if (gpio_get_value_cansleep(
@@ -448,8 +454,9 @@ static bool sec_bat_get_cable_type(
 				"%s: Invalid cable type\n", __func__);
 		} else {
 			battery->cable_type = cable_type;
-			battery->pdata->check_cable_result_callback(
-				battery->cable_type);
+			if (battery->pdata->check_cable_result_callback)
+				battery->pdata->check_cable_result_callback(
+						battery->cable_type);
 
 			ret = true;
 
@@ -479,7 +486,9 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 				sec_bat_set_charge(battery, false);
 			}
 
-			battery->pdata->check_battery_result_callback();
+			if (battery->pdata->check_battery_result_callback)
+				battery->pdata->
+					check_battery_result_callback();
 			return false;
 		}
 	} else
@@ -491,9 +500,11 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 		battery->health = POWER_SUPPLY_HEALTH_GOOD;
 
 		if (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			battery->status = POWER_SUPPLY_STATUS_CHARGING;
-
+			if (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY && 
+				battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
+					battery->status = POWER_SUPPLY_STATUS_CHARGING;
 			sec_bat_set_charge(battery, true);
+			}
 		}
 	}
 
@@ -3464,4 +3475,5 @@ module_exit(sec_battery_exit);
 MODULE_DESCRIPTION("Samsung Battery Driver");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_LICENSE("GPL");
+
 
