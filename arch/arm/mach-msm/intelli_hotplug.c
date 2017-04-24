@@ -166,6 +166,8 @@ static DEFINE_PER_CPU(struct down_lock, lock_info);
 static void cycle_cpus(void)
 {
 	disable_nonboot_cpus();
+	mdelay(4);
+	enable_nonboot_cpus();
 	intellinit = false;
 }
 
