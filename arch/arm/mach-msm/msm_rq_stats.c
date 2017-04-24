@@ -56,14 +56,18 @@ struct cpu_load_data {
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
-
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
-
+	int ret
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
-	cputime64_t cur_wall_time, cur_idle_time;
+	u64 cur_wall_time, cur_idle_time;
 	unsigned int idle_time, wall_time;
 	unsigned int cur_load, load_at_max_freq;
+	struct cpufreq_policy policy;
+
+	ret = cpufreq_get_policy(&policy, cpu);
+	if (ret)
+		return -EINVAL;
 
 	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
 
@@ -80,7 +84,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 	cur_load = 100 * (wall_time - idle_time) / wall_time;
 
 	/* Calculate the scaled load across CPU */
-	load_at_max_freq = (cur_load * freq) / pcpu->policy_max;
+	load_at_max_freq = (cur_load * policy.cur) / pcpu->policy_max;
 
 #ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
 	pcpu->cpu_load = cur_load;
@@ -234,7 +238,7 @@ static int cpu_hotplug_handler(struct notifier_block *nb,
 	struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
 
 	if (!rq_info.hotplug_enabled)
-		return 0;
+		return NOTIFY_OK;
 
 	switch (val) {
 	case CPU_ONLINE:
