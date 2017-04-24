@@ -22,6 +22,7 @@
 #include <linux/notifier.h>
 #include <linux/sort.h>
 #include <linux/err.h>
+#include <linux/sched.h>
 #include <asm/cputime.h>
 
 static spinlock_t cpufreq_stats_lock;
