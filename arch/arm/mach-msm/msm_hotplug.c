@@ -734,13 +734,10 @@ static void msm_hotplug_stop(void)
 	int cpu;
 	struct down_lock *dl;
 
-	drain_workqueue(hotplug_wq);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
-	cancel_work_sync(&hotplug.down_work);
-	cancel_work_sync(&hotplug.up_work);
 	cancel_delayed_work_sync(&hotplug_work);
 
 	mutex_destroy(&hotplug.msm_hotplug_mutex);
