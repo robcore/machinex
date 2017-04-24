@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -301,6 +301,23 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 }
 
+static void cycle_cpus(void)
+{
+	unsigned int cpu;
+
+	/* Put all sibling cores to sleep to release all locks */
+	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		cpu_down(cpu);
+	}
+	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+			      msecs_to_jiffies(START_DELAY_MS));
+
+	if (intellinit == true)
+		intellinit = false;
+}
+
 static void __ref intelli_plug_suspend(void)
 {
 	int cpu = 0;
@@ -371,15 +388,18 @@ static void __ref intelli_plug_resume(void)
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
-	if ((atomic_read(&intelli_plug_active) == 0) || !hotplug_suspend)
+	if (atomic_read(&intelli_plug_active) == 0)
 		return NOTIFY_OK;
 
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
-			intelli_plug_resume();
+			cycle_cpus();
+			if (hotplug_suspend)
+				intelli_plug_resume();
 			break;
 		case STATE_NOTIFIER_SUSPEND:
-			intelli_plug_suspend();
+			if (hotplug_suspend)
+				intelli_plug_suspend();
 			break;
 		default:
 			break;
@@ -479,22 +499,6 @@ static struct input_handler intelli_plug_input_handler = {
 	.name           = "intelli_plug_input_handler",
 	.id_table       = intelli_plug_ids,
 };
-
-static void cycle_cpus(void)
-{
-	unsigned int cpu;
-
-	/* Put all sibling cores to sleep to release all locks */
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_down(cpu);
-	}
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      msecs_to_jiffies(START_DELAY_MS));
-
-	intellinit = false;
-}
 
 static int __ref intelli_plug_start(void)
 {
