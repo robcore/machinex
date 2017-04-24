@@ -22,10 +22,11 @@
 #include <linux/state_notifier.h>
 #endif
 #include <linux/cpufreq.h>
+#include <linux/delay.h>
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
