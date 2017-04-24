@@ -392,9 +392,18 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_UP_CANCELED:
+	case CPU_DOWN_FAILED:
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+					msecs_to_jiffies(1000)) //give the system time to deal with the failure
+		break;
+	case CPU_DEAD:
 	case CPU_ONLINE:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
+		break;
+	default:
+		break;
 	}
 
 	return NOTIFY_OK;
@@ -575,7 +584,7 @@ static void intelli_plug_stop(void)
 	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
-	//unregister_cpu_notifier(&intelli_plug_cpu_notifier);
+	unregister_hotcpu_notifier(&intelli_plug_cpu_notifier);
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notif);
 #endif
