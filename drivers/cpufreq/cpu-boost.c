@@ -55,7 +55,7 @@ static struct delayed_work wakeup_boost_rem;
 static struct notifier_block notif;
 #endif
 
-static bool input_boost_enabled = false;
+static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 60;
@@ -86,15 +86,18 @@ module_param(min_wakeup_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	int i;
+	unsigned int i;
 	unsigned int val, cpu;
+	struct cpu_sync *i_sync_info;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
 	for_each_possible_cpu(i)
-		per_cpu(sync_info, i).input_boost_freq = val;
+		i_sync_info = &per_cpu(sync_info, i);
+
+	i_sync_info->input_boost_freq = val;
 
 	return 0;
 }
@@ -102,7 +105,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *i_sync_info;
-	int i;
+	unsigned int i;
 	ssize_t ret;
 
 	for_each_possible_cpu(i)
@@ -121,15 +124,18 @@ module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
 static int set_hotplug_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	int i;
+	unsigned int i;
 	unsigned int val, cpu;
+	struct cpu_sync *h_sync_info;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
 	for_each_possible_cpu(i)
-		per_cpu(sync_info, i).hotplug_boost_freq = val;
+		h_sync_info = &per_cpu(sync_info, i);
+
+		h_sync_info.hotplug_boost_freq = val;
 
 	return 0;
 }
@@ -137,7 +143,7 @@ static int set_hotplug_boost_freq(const char *buf, const struct kernel_param *kp
 static int get_hotplug_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *h_sync_info;
-	int i;
+	unsigned int i;
 	ssize_t ret;
 
 	for_each_possible_cpu(i)
@@ -156,15 +162,18 @@ module_param_cb(hotplug_boost_freq, &param_ops_hotplug_boost_freq, NULL, 0644);
 
 static int set_wakeup_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	int i;
+	unsigned int i;
 	unsigned int val, cpu;
+	struct cpu_sync *w_sync_info;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
 	for_each_possible_cpu(i)
-		per_cpu(sync_info, i).wakeup_boost_freq = val;
+		w_sync_info = &per_cpu(sync_info, i);
+
+		w_sync_info->wakeup_boost_freq = val;
 
 	return 0;
 }
@@ -172,7 +181,7 @@ static int set_wakeup_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_wakeup_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *w_sync_info;
-	int i;
+	unsigned int i;
 	ssize_t ret;
 
 	for_each_possible_cpu(i)
@@ -632,6 +641,7 @@ static int cpu_boost_init(void)
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
+		s->input_boost_freq = 1350000;
 	}
 	cpufreq_register_notifier(&input_boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 	cpufreq_register_notifier(&hotplug_boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
