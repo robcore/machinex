@@ -156,6 +156,13 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
+static void cycle_cpus(void)
+{
+	disable_nonboot_cpus();
+	mdelay(4);
+	enable_nonboot_cpus();
+}
+
 static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
@@ -397,7 +404,7 @@ static int __ref intelli_plug_cpu_callback(struct notifier_block *nfb,
 	case CPU_DEAD:
 	case CPU_ONLINE:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(400));
+					msecs_to_jiffies(350));
 		break;
 	default:
 		break;
@@ -545,21 +552,8 @@ static int __ref intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	/* Put all sibling cores to sleep to release all locks */
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_down(cpu);
-	}
-
-	/* Fire up all CPUs to boost performance */
-	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == 0)
-			continue;
-		if (!thermal_core_controlled)
-			cpu_up(cpu);
-		apply_down_lock(cpu);
-	}
+	if (!thermal_core_controlled)
+		cycle_cpus();
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
@@ -598,7 +592,8 @@ static void intelli_plug_stop(void)
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
-		cpu_down(cpu);
+		if (!thermal_core_controlled)
+			cpu_up(cpu);
 	}
 }
 
