@@ -206,7 +206,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	freq_lo = dbs_info->freq_table[index].frequency;
 	index = 0;
 	cpufreq_frequency_table_target(policy, dbs_info->freq_table, freq_avg,
-			CPUFREQ_RELATION_H, &index);
+			CPUFREQ_RELATION_C, &index);
 	freq_hi = dbs_info->freq_table[index].frequency;
 
 	/* Find out how long we have to be in hi and lo freqs */
@@ -241,7 +241,7 @@ static int ondemand_powersave_bias_setspeed(struct cpufreq_policy *policy,
 		/* minimum powersave; set to highest frequency */
 		__cpufreq_driver_target(policy,
 			(altpolicy) ? altpolicy->max : policy->max,
-			CPUFREQ_RELATION_H);
+			CPUFREQ_RELATION_C);
 		return 1;
 	}
 	return 0;
@@ -1139,7 +1139,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		mutex_lock(&this_dbs_info->timer_mutex);
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->max, CPUFREQ_RELATION_H);
+				policy->max, CPUFREQ_RELATION_C);
 		else if (policy->min > this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
 				policy->min, CPUFREQ_RELATION_L);
