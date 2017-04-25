@@ -490,10 +490,11 @@ static void cycle_cpus(void)
 		cpu_down(cpu);
 	}
 	mdelay(4);
-	for_each_online_cpu(cpu) {
+	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
 		cpu_up(cpu);
+		apply_down_lock(cpu);
 	}
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
