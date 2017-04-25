@@ -469,6 +469,11 @@ static bool sec_bat_get_cable_type(
 
 static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 {
+	int current_cable_type =
+				battery->pdata->
+				get_cable_from_extended_cable_type(
+				battery->extended_cable_type);
+
 	if (!sec_bat_check(battery)) {
 		if (battery->check_count < battery->pdata->check_count)
 			battery->check_count++;
@@ -499,7 +504,7 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 		battery->health = POWER_SUPPLY_HEALTH_GOOD;
 
 		if (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			if (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY &&
+			if (current_cable_type != POWER_SUPPLY_TYPE_BATTERY &&
 				battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
 					battery->status = POWER_SUPPLY_STATUS_CHARGING;
 			sec_bat_set_charge(battery, true);
@@ -1930,6 +1935,10 @@ static void sec_bat_cable_work(struct work_struct *work)
 	struct sec_battery_info *battery = container_of(work,
 				struct sec_battery_info, cable_work);
 	union power_supply_propval val;
+	int current_cable_type =
+				battery->pdata->
+				get_cable_from_extended_cable_type(
+				battery->extended_cable_type);
 
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 	/* platform can NOT get information of cable connection
@@ -1941,6 +1950,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	//wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(5000));
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
+		current_cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &
 		SEC_BATTERY_CABLE_CHECK_NOINCOMPATIBLECHARGE) &&
 		battery->cable_type == POWER_SUPPLY_TYPE_UNKNOWN)) {
