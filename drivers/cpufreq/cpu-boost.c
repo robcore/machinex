@@ -88,16 +88,13 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i;
 	unsigned int val, cpu;
-	struct cpu_sync *i_sync_info;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
 	for_each_possible_cpu(i)
-		i_sync_info = &per_cpu(sync_info, i);
-
-	i_sync_info->input_boost_freq = val;
+		per_cpu(sync_info, i).input_boost_freq = val;
 
 	return 0;
 }
@@ -126,16 +123,13 @@ static int set_hotplug_boost_freq(const char *buf, const struct kernel_param *kp
 {
 	int i;
 	unsigned int val, cpu;
-	struct cpu_sync *h_sync_info;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
 	for_each_possible_cpu(i)
-		h_sync_info = &per_cpu(sync_info, i);
-
-		h_sync_info->hotplug_boost_freq = val;
+		per_cpu(sync_info, i).hotplug_boost_freq = val;
 
 	return 0;
 }
@@ -164,16 +158,13 @@ static int set_wakeup_boost_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i;
 	unsigned int val, cpu;
-	struct cpu_sync *w_sync_info;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
 	for_each_possible_cpu(i)
-		w_sync_info = &per_cpu(sync_info, i);
-
-		w_sync_info->wakeup_boost_freq = val;
+		per_cpu(sync_info, i).wakeup_boost_freq = val;
 
 	return 0;
 }
