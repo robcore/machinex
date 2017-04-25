@@ -1,11 +1,14 @@
+obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 # CPUfreq core
-obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o
+obj-$(CONFIG_CPU_FREQ)			+= msm_cpufreq.o
+# CPUfreq hardlimit
+obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 # CPUfreq stats
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
-# CPUfreq hardlimit
-obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
+# CPU boost
+obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 # CPUfreq governors
 obj-$(CONFIG_CPU_FREQ_GOV_PERFORMANCE)	+= cpufreq_performance.o
 obj-$(CONFIG_CPU_FREQ_GOV_POWERSAVE)	+= cpufreq_powersave.o
@@ -74,7 +77,17 @@ obj-$(CONFIG_CPU_FREQ_GOV_HYPERX)	   += cpufreq_hyperx.o
 obj-$(CONFIG_CPU_FREQ_GOV_XPERIENCE)	+= cpufreq_xperience.o
 obj-$(CONFIG_CPU_FREQ_GOV_WHISKYACTIVE)	+= cpufreq_whiskyactive.o
 
-
+obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
+obj-$(CONFIG_MSM_HOTPLUG) += msm_hotplug.o
+obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
+obj-$(CONFIG_MSM_SLEEPER) += msm_sleeper.o
+obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
+obj-$(CONFIG_BLU_PLUG) += blu_plug.o
+obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
+obj-$(CONFIG_AUTOSMP)			+= autosmp.o
+obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
+obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
+CFLAGS_lazyplug.o			+= -finline-functions
 
 obj-$(CONFIG_GENERIC_CPUFREQ_CPU0)	+= cpufreq-cpu0.o
 
@@ -118,8 +131,3 @@ obj-$(CONFIG_ARM_OMAP2PLUS_CPUFREQ)     += omap-cpufreq.o
 # PowerPC platform drivers
 obj-$(CONFIG_CPU_FREQ_MAPLE)		+= maple-cpufreq.o
 obj-$(CONFIG_MSM_DCVS)			+= cpufreq_gov_msm.o
-
-obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
-CFLAGS_lazyplug.o			+= -finline-functions
-# CPU boost
-obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o

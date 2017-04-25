@@ -36,7 +36,7 @@
 #include <linux/sched/rt.h>
 #include <linux/cpufreq_hardlimit.h>
 
-#include "acpuclock.h"
+#include "../../arch/arm/mach-msm/acpuclock.h"
 
 static DEFINE_MUTEX(l2bw_lock);
 

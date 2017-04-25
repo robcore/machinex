@@ -13,7 +13,6 @@ obj-y += timer.o
 endif
 obj-y += clock.o clock-voter.o clock-dummy.o
 obj-y += modem_notifier.o subsystem_map.o
-obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
 obj-$(CONFIG_KEXEC) += msm_kexec.o
 
@@ -488,15 +487,6 @@ endif
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
 obj-$(CONFIG_ARCH_RANDOM) += early_random.o
 obj-$(CONFIG_MSM_ZEN_DECISION) += msm_zen_decision.o
-obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
-obj-$(CONFIG_MSM_HOTPLUG) += msm_hotplug.o
-obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
-obj-$(CONFIG_MSM_SLEEPER) += msm_sleeper.o
-obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
-obj-$(CONFIG_BLU_PLUG) += blu_plug.o
-obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
-obj-$(CONFIG_AUTOSMP)			+= autosmp.o
-obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
 
 ifdef CONFIG_SEC_THERMISTOR
 obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o
