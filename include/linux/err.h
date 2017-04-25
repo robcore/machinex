@@ -36,7 +36,7 @@ static inline long __must_check IS_ERR(const void *ptr)
 
 static inline long __must_check IS_ERR_OR_NULL(const void *ptr)
 {
-	return !ptr || IS_ERR_VALUE((unsigned long)ptr);
+	return unlikely(!ptr) || IS_ERR_VALUE((unsigned long)ptr);
 }
 
 /**

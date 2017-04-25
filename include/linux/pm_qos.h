@@ -11,6 +11,7 @@
 #include <linux/workqueue.h>
 #include <linux/cpumask.h>
 #include <linux/interrupt.h>
+#include <linux/err.h>
 
 enum {
 	PM_QOS_RESERVED = 0,
