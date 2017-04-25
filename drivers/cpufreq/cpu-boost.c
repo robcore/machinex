@@ -215,8 +215,8 @@ static int input_boost_adjust_notify(struct notifier_block *nb, unsigned long va
 		 cpu, policy->min);
 	pr_debug("CPU%u boost min: %u kHz\n", cpu, min);
 
-	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
-	//cpufreq_verify_within_limits(policy, min, UINT_MAX);
+	//cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
+	cpufreq_verify_within_limits(policy, min, UINT_MAX);
 
 
 	pr_debug("CPU%u policy min after boost: %u kHz\n",
@@ -250,8 +250,8 @@ static int hotplug_boost_adjust_notify(struct notifier_block *nb, unsigned long 
 		 cpu, policy->min);
 	pr_debug("CPU%u boost min: %u kHz\n", cpu, min);
 
-	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
-	//cpufreq_verify_within_limits(policy, min, UINT_MAX);
+	//cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
+	cpufreq_verify_within_limits(policy, min, UINT_MAX);
 
 
 	pr_debug("CPU%u policy min after boost: %u kHz\n",
@@ -281,8 +281,8 @@ static int wakeup_boost_adjust_notify(struct notifier_block *nb, unsigned long v
 
 	min = min(wb_min, policy->max);
 
-	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
-	//cpufreq_verify_within_limits(policy, min, UINT_MAX);
+	//cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max)); /* Yank555.lu - Enforce hardlimit */
+	cpufreq_verify_within_limits(policy, min, UINT_MAX);
 
 	return NOTIFY_OK;
 }

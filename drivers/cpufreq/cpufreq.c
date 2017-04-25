@@ -437,6 +437,7 @@ extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 	int cpu;
 	struct cpufreq_policy *policy;
 
+	if (hardlimit_enabled) {
 	for_each_possible_cpu(cpu) {
 		policy = cpufreq_cpu_get(cpu);
 		if (policy != NULL) {
@@ -444,6 +445,8 @@ extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 			policy->user_policy.max = policy->max = freq_max;
 		}
 	}
+	} else
+		return;
 }
 #endif
 
@@ -2239,14 +2242,15 @@ int cpufreq_update_policy(unsigned int cpu)
 
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
+	if (hardlimit_enabled) {
 	/* Yank555.lu - Enforce hardlimit */
-	new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
-	new_policy.max = check_cpufreq_hardlimit(policy->user_policy.max);
-#else
-	new_policy.min = policy->user_policy.min;
-	new_policy.max = policy->user_policy.max;
-#endif
+		new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
+		new_policy.max = check_cpufreq_hardlimit(policy->user_policy.max);
+	} else {
+		new_policy.min = policy->user_policy.min;
+		new_policy.max = policy->user_policy.max;
+	}
+
 	new_policy.util_thres = policy->user_policy.util_thres;
 	new_policy.policy = policy->user_policy.policy;
 	new_policy.governor = policy->user_policy.governor;
