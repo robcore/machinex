@@ -448,14 +448,13 @@ static bool sec_bat_get_cable_type(
 		dev_dbg(battery->dev,
 			"%s: No need to change cable status\n", __func__);
 	} else {
-		if (cable_type < POWER_SUPPLY_TYPE_BATTERY ||
+		if (cable_type <= POWER_SUPPLY_TYPE_BATTERY ||
 			cable_type >= SEC_SIZEOF_POWER_SUPPLY_TYPE) {
 			dev_err(battery->dev,
 				"%s: Invalid cable type\n", __func__);
 		} else {
 			battery->cable_type = cable_type;
-			if (battery->pdata->check_cable_result_callback)
-				battery->pdata->check_cable_result_callback(
+			battery->pdata->check_cable_result_callback(
 						battery->cable_type);
 
 			ret = true;
@@ -500,7 +499,7 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 		battery->health = POWER_SUPPLY_HEALTH_GOOD;
 
 		if (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			if (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY && 
+			if (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY &&
 				battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
 					battery->status = POWER_SUPPLY_STATUS_CHARGING;
 			sec_bat_set_charge(battery, true);
@@ -3273,11 +3272,11 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	pdata->initial_check();
 	battery->pdata->check_cable_result_callback(POWER_SUPPLY_TYPE_MAINS);
-#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
+//#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	/*enable vf ldo to check battery */
 	battery->pdata->check_cable_result_callback(battery->cable_type);
 
-#endif
+//#endif
 	battery->present = battery->pdata->check_battery_callback();
 	battery->pdata->check_cable_result_callback(battery->cable_type);
 

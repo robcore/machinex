@@ -212,7 +212,7 @@ static void sec_bat_initial_check(void)
 {
 	union power_supply_propval value;
 
-	if (POWER_SUPPLY_TYPE_BATTERY < current_cable_type) {
+	if (POWER_SUPPLY_TYPE_BATTERY <= current_cable_type) {
 		if (current_cable_type == POWER_SUPPLY_TYPE_POWER_SHARING) {
 			value.intval = current_cable_type;
 			psy_do_property("ps", set,
@@ -223,14 +223,14 @@ static void sec_bat_initial_check(void)
 					POWER_SUPPLY_PROP_ONLINE, value);
 		}
 	} else {
-		psy_do_property("sec-charger", get,
-				POWER_SUPPLY_PROP_ONLINE, value);
 		if (value.intval == POWER_SUPPLY_TYPE_WIRELESS) {
 			value.intval =
 			POWER_SUPPLY_TYPE_WIRELESS<<ONLINE_TYPE_MAIN_SHIFT;
 			psy_do_property("battery", set,
 					POWER_SUPPLY_PROP_ONLINE, value);
-		}
+		} else
+			psy_do_property("sec-charger", get,
+			POWER_SUPPLY_PROP_ONLINE, value);
 	}
 }
 

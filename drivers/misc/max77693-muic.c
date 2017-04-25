@@ -1921,6 +1921,9 @@ static int max77693_muic_handle_detach(struct max77693_muic_info *info, int irq)
 	}
 
 	switch (info->cable_type) {
+	case CABLE_TYPE_NONE_MUIC:
+		max77693_muic_set_charging_type(info, false);
+		break;
 	case CABLE_TYPE_OTG_MUIC:
 		dev_info(info->dev, "%s: OTG\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE_MUIC;
