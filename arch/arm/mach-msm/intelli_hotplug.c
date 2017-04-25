@@ -80,7 +80,7 @@ static unsigned int hotplug_suspend = 0;
 static unsigned int target_cpus;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
-static unsigned long nr_fshift = DEFAULT_NR_FSHIFT;
+static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
 
