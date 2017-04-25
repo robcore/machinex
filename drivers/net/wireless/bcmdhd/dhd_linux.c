@@ -297,7 +297,7 @@ static inline int dhd_write_macaddr(struct ether_addr *mac) { return 0; }
 #endif
 #endif /* CUSTOMER_HW4 */
 
-#rob hax
+//rob hax
 #undef ENABLE_CONTROL_SCHED
 #undef ENABLE_ADAPTIVE_SCHED
 
