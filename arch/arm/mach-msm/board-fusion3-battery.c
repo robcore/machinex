@@ -212,7 +212,7 @@ static void sec_bat_initial_check(void)
 {
 	union power_supply_propval value;
 
-	if (POWER_SUPPLY_TYPE_BATTERY <= current_cable_type) {
+	if (POWER_SUPPLY_TYPE_BATTERY < current_cable_type) {
 		if (current_cable_type == POWER_SUPPLY_TYPE_POWER_SHARING) {
 			value.intval = current_cable_type;
 			psy_do_property("ps", set,
