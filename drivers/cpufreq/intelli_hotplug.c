@@ -226,7 +226,7 @@ static void update_per_cpu_stat(void)
 	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
 
-	for_each_online_cpu(cpu) {
+	for_each_active_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
@@ -259,7 +259,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		delta <= boost_lock_duration)
 				goto reschedule;
 		update_per_cpu_stat();
-		for_each_online_cpu(cpu) {
+		for_each_active_cpu(cpu) {
 			if (cpu == 0)
 				continue;
 			if (check_down_lock(cpu))
