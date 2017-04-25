@@ -5704,8 +5704,8 @@ static void mem_cgroup_usage_unregister_event(struct cgroup_subsys_state *css,
 		thresholds = &memcg->thresholds;
 	else if (type == _MEMSWAP)
 		thresholds = &memcg->memsw_thresholds;
-	else
-		BUG();
+
+		BUG_ON(!thresholds);
 
 	if (!thresholds->primary)
 		goto unlock;

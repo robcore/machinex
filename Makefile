@@ -360,7 +360,8 @@ KERNEL_FLAGS	= -mtune=cortex-a15 -marm \
 		  -ffast-math -munaligned-access
 #-munaligned-access -fmodulo-sched
 
-MODFLAGS	= -DMODULE -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize -funroll-loops
+MODFLAGS	= -DMODULE -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize -funroll-loops -ffast-math \
+					   -fforce-addr -fsingle-precision-constant -marm -march=armv7-a -fsched-spec-load -mvectorize-with-neon-quad
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =

@@ -1015,7 +1015,7 @@ static int max77693_muic_attach_usb_type(struct max77693_muic_info *info,
 		path = AP_USB_MODE;
 		break;
 	default:
-		dev_info(info->dev, "%s: Unkown cable(0x%x)\n", __func__, adc);
+		dev_info(info->dev, "%s: Unknown cable(0x%x)\n", __func__, adc);
 		return 0;
 	}
 
@@ -1413,11 +1413,8 @@ static void max77693_muic_clear_cddelay(struct max77693_muic_info *info)
 	pr_info("%s:%s read CDETCTRL1=0x%x, ret=%d\n", DEV_NAME, __func__,
 			cdetctrl1, ret);
 
-	if ((cdetctrl1 & 0x10) == 0x0) {
-		pr_info("%s:%s CDDelay already cleared, return\n", DEV_NAME,
-				__func__);
+	if ((cdetctrl1 & 0x10) == 0x0)
 		return;
-	}
 
 	cdetctrl1 &= ~(0x10);
 
