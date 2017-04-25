@@ -313,6 +313,22 @@ static void cpufreq_cpu_put_sysfs(struct cpufreq_policy *policy)
 /*********************************************************************
  *            EXTERNALLY AFFECTING FREQUENCY CHANGES                 *
  *********************************************************************/
+/* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
+{
+	int cpu;
+	struct cpufreq_policy *policy;
+
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get(cpu);
+		if (policy != NULL) {
+			policy->user_policy.min = policy->min = freq_min;
+			policy->user_policy.max = policy->max = freq_max;
+		}
+	}
+}
+#endif
 
 /**
  * adjust_jiffies - adjust the system "loops_per_jiffy"
@@ -429,23 +445,6 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 	else if (policy->util > 0)
 		policy->util--;
 }
-
-/* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
-{
-	int cpu;
-	struct cpufreq_policy *policy;
-
-	for_each_possible_cpu(cpu) {
-		policy = cpufreq_cpu_get(cpu);
-		if (policy != NULL) {
-			policy->user_policy.min = policy->min = freq_min;
-			policy->user_policy.max = policy->max = freq_max;
-		}
-	}
-}
-#endif
 
 /*********************************************************************
  *                          SYSFS INTERFACE                          *
