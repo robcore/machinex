@@ -29,7 +29,7 @@
 #include <linux/kobject.h>
 #include <linux/rbtree.h>
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 #include <linux/wakelock.h>
 #endif
 
@@ -69,7 +69,7 @@ struct MvpkmVM {
 
 	struct vm_struct   *wspHkvaArea;  /**< VM area struct for wspHkvaArea */
 	HKVA                wspHKVADummyPage; /**< Dummy page for wspHkvaArea */
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 	struct wake_lock    wakeLock;        /**< guest running wake lock */
 #endif
 

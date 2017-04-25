@@ -51,7 +51,7 @@
 #include <linux/highmem.h>
 #include <linux/syscalls.h>
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 #include <linux/wakelock.h>
 #endif
 
@@ -938,7 +938,7 @@ ReleaseVM(struct MvpkmVM *vm)
 		MonitorTimer_Request(&vm->monTimer, 0);
 		Mksck_WspRelease(vm->wsp);
 		vm->wsp = NULL;
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 		/*
 		 * Destroy wakelock after WSP is released (and MksckPage
 		 * detached).
@@ -2180,7 +2180,7 @@ SetupMonitor(struct MvpkmVM *vm)
 
 	MonitorTimer_Setup(vm);
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 	wake_lock_init(&vm->wakeLock, WAKE_LOCK_SUSPEND, "mvpkm");
 #endif
 
@@ -2227,7 +2227,7 @@ RunMonitor(struct MvpkmVM *vm)
 
 	ASSERT(wsp);
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 	wake_lock(&vm->wakeLock);
 #endif
 
@@ -2487,7 +2487,7 @@ RunMonitor(struct MvpkmVM *vm)
 		 * signals can be processed.
 		 */
 		case WSCALL_WAIT:
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 			if (WSP_Params(wsp)->wait.suspendMode) {
 				/*
 				 * Guest has ok'ed suspend mode, so release
@@ -2686,7 +2686,7 @@ monitorExit:
 	if (retval == ExitStatusHostRequest && vm->watchdogTriggered)
 		retval = ExitStatusVMMFatalKnown;
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 	wake_unlock(&vm->wakeLock);
 #endif
 
@@ -2759,7 +2759,7 @@ Mvpkm_WakeGuest(struct MvpkmVM *vm,
 	/*
 	 * VCPU is certainly in 'wait for interrupt' wait. Wake it up!
 	 */
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CONFIG_WAKELOCK
 	/*
 	 * To prevent the system to go in suspend mode before the monitor had a
 	 * chance on being scheduled, we will hold the VM wakelock from now.
