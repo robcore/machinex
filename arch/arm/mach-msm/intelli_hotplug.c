@@ -256,7 +256,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		delta < boost_lock_duration)
+		delta <= boost_lock_duration)
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -264,23 +264,16 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (check_down_lock(cpu))
 				break;
-			if (target < num_online_cpus())
-				l_nr_threshold =
-					cpu_nr_run_threshold << 1 /
-						(num_online_cpus());
-			else
-				l_nr_threshold =
+			l_nr_threshold =
 				cpu_nr_run_threshold << 1 /
-				(max_cpus_online);
-
+					(num_online_cpus());
 			l_ip_info = &per_cpu(ip_info, cpu);
-			if (l_ip_info->cpu_nr_running <= (l_nr_threshold * target))
+			if (l_ip_info->cpu_nr_running < l_nr_threshold)
 				cpu_down(cpu);
 			if (target >= num_online_cpus())
 				break;
 		}
 	} else if (target > online_cpus) {
-		update_per_cpu_stat();
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
@@ -293,7 +286,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		}
 	}
 reschedule:
-			mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -308,28 +301,6 @@ static void intelli_plug_work_fn(struct work_struct *work)
 		target_cpus = calculate_thread_stats();
 		schedule_work_on(0, &up_down_work);
 	}
-}
-
-static void refresh_cpus(void)
-{
-	unsigned int cpu;
-
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_down(cpu);
-	}
-	mdelay(4);
-	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == 0)
-			continue;
-		cpu_up(cpu);
-		apply_down_lock(cpu);
-	}
-	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      msecs_to_jiffies(def_sampling_ms));
-
-	intellinit = false;
 }
 
 static void __ref intelli_plug_suspend(void)
@@ -542,7 +513,7 @@ static int __ref intelli_plug_start(void)
 	mutex_init(&intelli_plug_mutex);
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
-	intelliplug_wq = create_workqueue("intelliplug");
+	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
@@ -603,7 +574,6 @@ static void intelli_plug_stop(void)
 
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
-
 }
 
 static void intelli_plug_active_eval_fn(unsigned int status)
