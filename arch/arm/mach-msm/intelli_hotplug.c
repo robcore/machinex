@@ -256,7 +256,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		delta <= boost_lock_duration)
+		delta < boost_lock_duration)
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -272,8 +272,9 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				l_nr_threshold =
 				cpu_nr_run_threshold << 1 /
 				(max_cpus_online);
+
 			l_ip_info = &per_cpu(ip_info, cpu);
-			if (l_ip_info->cpu_nr_running < (l_nr_threshold * target))
+			if (l_ip_info->cpu_nr_running <= (l_nr_threshold * target))
 				cpu_down(cpu);
 			if (target >= num_online_cpus())
 				break;
@@ -294,7 +295,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 reschedule:
 			mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
-	}
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
