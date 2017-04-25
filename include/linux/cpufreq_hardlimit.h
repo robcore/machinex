@@ -15,7 +15,7 @@
 #ifndef _LINUX_CPUFREQ_HARDLIMIT_H
 #define _LINUX_CPUFREQ_HARDLIMIT_H
 
-#define CPUFREQ_HARDLIMIT_VERSION "v2.4 by Yank555.lu, with updates by Robcore."
+#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
 
 /* Default frequencies for MACH_JF */
 #define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
@@ -68,6 +68,5 @@ unsigned int userspace_dvfs_lock_status(void);
 
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
-extern unsigned int hardlimit_enabled;
 
 #endif

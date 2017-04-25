@@ -130,7 +130,6 @@ unsigned int userspace_dvfs_lock      = CPUFREQ_HARDLIMIT_USERSPACE_DVFS_ALLOW;	
 unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
-unsigned int hardlimit_enabled = 0;
 
 #if 0
 extern uint32_t limited_max_freq_thermal;
@@ -166,10 +165,8 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	if (freq_is_therm_limited())
 		current_limit_max = thermal_hardlimit;
 #endif
-	if (hardlimit_enabled)
-		return max(current_limit_min, min(current_limit_max, freq));
-	else
-		return 0;
+
+	return max(current_limit_min, min(current_limit_max, freq));
 }
 
 /* Update limits in cpufreq */
@@ -185,7 +182,6 @@ void reapply_hard_limits(void)
 		);
 	#endif
 
-	if (hardlimit_enabled) {
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
 #ifdef SUPERFLUOUS
@@ -228,7 +224,6 @@ void reapply_hard_limits(void)
 		current_limit_max = thermal_hardlimit;
 #endif
 	update_scaling_limits(current_limit_min, current_limit_max);
-	}
 }
 
 #ifdef CONFIG_SEC_DVFS
@@ -253,17 +248,13 @@ static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 			hardlimit_max_screen_off
 		);
 	#endif
-	if (hardlimit_enabled) {
-		current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
-		reapply_hard_limits();
-	}
+	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
+	reapply_hard_limits();
 	return;
-
 }
 
 static void cpufreq_hardlimit_resume(struct power_suspend * h)
 {
-	if (hardlimit_enabled) {
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 #ifdef SUPERFLUOUS
 	if(wakeup_kick_delay == CPUFREQ_HARDLIMIT_WAKEUP_KICK_DISABLED) {
@@ -291,8 +282,6 @@ static void cpufreq_hardlimit_resume(struct power_suspend * h)
 	}
 #endif
 	reapply_hard_limits();
-	}
-
 	return;
 }
 
@@ -516,23 +505,6 @@ static struct input_handler hardlimit_input_handler = {
 /* sysfs interface functions                                                      */
 /* ------------------------------------------------------------------------------ */
 
-static ssize_t hardlimit_enabled_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", hardlimit_enabled);
-}
-
-static ssize_t hardlimit_enabled_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
-{
-
-	unsigned int val;
-
-	if (!sscanf(buf, "%du", &val))
-		return -EINVAL;
-
-	hardlimit_enabled = val;
-	return count;
-}
-
 /* sysfs interface for "hardlimit_max_screen_on" */
 static ssize_t hardlimit_max_screen_on_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -705,6 +677,7 @@ static ssize_t wakeup_kick_freq_store(struct kobject *kobj, struct kobj_attribut
 		}
 
 	return -EINVAL;
+
 }
 
 /* sysfs interface for "wakeup_kick_delay" */
@@ -945,9 +918,6 @@ static struct kobject *hardlimit_kobj;
 
 /* Define sysfs entry attributes */
 
-static struct kobj_attribute hardlimit_enabled_attribute =
-__ATTR(scaling_max_freq_screen_on, 0666, hardlimit_enabled_show, hardlimit_enabled_store);
-
 static struct kobj_attribute hardlimit_max_screen_on_attribute =
 __ATTR(scaling_max_freq_screen_on, 0666, hardlimit_max_screen_on_show, hardlimit_max_screen_on_store);
 
@@ -1003,7 +973,6 @@ static struct kobj_attribute version_attribute =
 __ATTR(version, 0444, version_show, NULL);
 
 static struct attribute *hardlimit_attrs[] = {
-	&hardlimit_enabled_attribute.attr,
 	&hardlimit_max_screen_on_attribute.attr,
 	&hardlimit_max_screen_off_attribute.attr,
 	&hardlimit_min_screen_on_attribute.attr,
@@ -1074,7 +1043,7 @@ void hardlimit_exit(void)
 	kobject_put(hardlimit_kobj);
 }
 
-subsys_initcall(hardlimit_init);
+module_init(hardlimit_init);
 module_exit(hardlimit_exit);
 
 MODULE_AUTHOR("Jean-Pierre Rasquin <yank555.lu@gmail.com>");
