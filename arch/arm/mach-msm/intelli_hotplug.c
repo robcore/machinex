@@ -296,6 +296,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 reschedule:
 	for (icount = 0; icount < intellicount; icount++) {
 		if (icount == intellicount) {
+			intellinit = true;
 			icount = 0;
 			refresh_cpus();
 		} else
@@ -335,6 +336,8 @@ static void refresh_cpus(void)
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(def_sampling_ms));
+
+	intellinit = false;
 }
 
 static void __ref intelli_plug_suspend(void)
