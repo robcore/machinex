@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -84,6 +84,7 @@ static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
+static unsigned int intellicount = 4;
 
 #define dprintk(msg...)		\
 do {				\
@@ -240,7 +241,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
-	unsigned int count;
+	unsigned int icount = 0;
 
 	if (hotplug_suspended)
 		return;
@@ -293,15 +294,14 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		}
 	}
 reschedule:
-		if (count >= 0 && count < 4)
-			count++;
-
-		if (count == 4) {
-			count = 0;
+	for (icount = 0; icount < intellicount; icount++) {
+		if (icount == intellicount) {
+			icount = 0;
 			refresh_cpus();
 		} else
 			mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
+	}
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
@@ -333,7 +333,7 @@ static void refresh_cpus(void)
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -640,6 +640,7 @@ show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
 show_one(nr_fshift, nr_fshift);
+show_one(intellicount, intellicount);
 
 #define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
@@ -664,6 +665,7 @@ store_one(hotplug_suspend, hotplug_suspend);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
+store_one(intellicount, intellicount);
 
 static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
 					 struct kobj_attribute *attr,
@@ -844,6 +846,7 @@ KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
+KERNEL_ATTR_RW(intellicount);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
@@ -859,6 +862,7 @@ static struct attribute *intelli_plug_attrs[] = {
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
 	&down_lock_dur_attr.attr,
+	&intellicount_attr.attr,
 	NULL,
 };
 
