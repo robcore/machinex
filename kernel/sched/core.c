@@ -7358,8 +7358,8 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	if (min_max_freq == 1)
 		min_max = UINT_MAX;
 	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
-	BUG_ON(!min_max_freq);
-	BUG_ON(!policy->max);
+	WARN_ON_ONCE(!min_max_freq);
+	WARN_ON_ONCE(!policy->max);
 
 	return 0;
 }

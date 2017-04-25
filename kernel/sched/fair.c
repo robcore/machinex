@@ -30,6 +30,7 @@
 #include <linux/mempolicy.h>
 #include <linux/migrate.h>
 #include <linux/task_work.h>
+#include <linux/cpufreq.h>
 
 #include <trace/events/sched.h>
 
@@ -2877,14 +2878,13 @@ add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta)
 	int cur_freq = rq->cur_freq, max_freq = rq->max_freq;
 	int cpu_max_possible_freq = rq->max_possible_freq;
 	u64 scaled_delta;
-
-	if (unlikely(cur_freq > max_possible_freq ||
+	/*if (unlikely(cur_freq > max_possible_freq ||
 		     (cur_freq == max_freq &&
-		      max_freq < cpu_max_possible_freq)))
-		cur_freq = max_possible_freq;
+		      max_freq < cpu_max_possible_freq))) */
+		cur_freq = cpufreq_quick_get(cpu);
 
-	scaled_delta = div64_u64(delta * cur_freq, max_possible_freq);
-	sa->runnable_avg_sum_scaled += scaled_delta;
+		scaled_delta = div64_u64(delta * cur_freq, cpu_max_possible_freq);
+		sa->runnable_avg_sum_scaled += scaled_delta;
 }
 
 static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods)
