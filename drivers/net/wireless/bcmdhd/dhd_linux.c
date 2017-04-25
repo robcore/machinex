@@ -297,6 +297,10 @@ static inline int dhd_write_macaddr(struct ether_addr *mac) { return 0; }
 #endif
 #endif /* CUSTOMER_HW4 */
 
+#rob hax
+#undef ENABLE_CONTROL_SCHED
+#undef ENABLE_ADAPTIVE_SCHED
+
 #ifdef ENABLE_CONTROL_SCHED
 #ifndef ENABLE_ADAPTIVE_SCHED
 #error ENABLE_ADAPTIVE_SCHED not define.
@@ -460,16 +464,19 @@ typedef struct dhd_info {
 	spinlock_t	tcpack_lock;
 #endif /* DHDTCPACK_SUPPRESS */
 #ifdef CUSTOMER_HW4
+#undef FIX_CPU_MIN_CLOCK
 #ifdef FIX_CPU_MIN_CLOCK
 	bool cpufreq_fix_status;
 	struct mutex cpufreq_fix;
 	struct pm_qos_request dhd_cpu_qos;
+#undef FIX_BUS_MIN_CLOCK
 #ifdef FIX_BUS_MIN_CLOCK
 	struct pm_qos_request dhd_bus_qos;
 #endif /* FIX_BUS_MIN_CLOCK */
 #endif /* FIX_CPU_MIN_CLOCK */
 #endif /* CUSTOMER_HW4 */
 	void			*dhd_deferred_wq;
+#undef DEBUG_CPU_FREQ
 #ifdef DEBUG_CPU_FREQ
 	struct notifier_block freq_trans;
 	int __percpu *new_freq;
