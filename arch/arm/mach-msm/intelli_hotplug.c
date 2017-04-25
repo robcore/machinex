@@ -241,7 +241,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
-	unsigned int icount = 0;
+	unsigned int icount;
 
 	if (hotplug_suspended)
 		return;
