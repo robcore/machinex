@@ -66,7 +66,7 @@ static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int full_mode_profile = 0;
-static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
+static int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended;
 static unsigned int min_cpus_online_res = 2;
@@ -84,7 +84,6 @@ static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
-static unsigned int intellicount = 4;
 
 #define dprintk(msg...)		\
 do {				\
@@ -190,8 +189,8 @@ static int check_down_lock(unsigned int cpu)
 
 static unsigned int calculate_thread_stats(void)
 {
-	unsigned int avg_nr_run = avg_nr_running();
-	unsigned int nr_run;
+	int avg_nr_run = avg_nr_running();
+	int nr_run;
 	unsigned int threshold_size;
 	unsigned int *current_profile;
 
@@ -241,7 +240,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
-	unsigned int icount;
 
 	if (hotplug_suspended)
 		return;
@@ -266,11 +264,16 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (check_down_lock(cpu))
 				break;
-			l_nr_threshold =
+			if (target < num_online_cpus())
+				l_nr_threshold =
+					cpu_nr_run_threshold << 1 /
+						(num_online_cpus());
+			else
+				l_nr_threshold =
 				cpu_nr_run_threshold << 1 /
-					(num_online_cpus());
+				(max_cpus_online);
 			l_ip_info = &per_cpu(ip_info, cpu);
-			if (l_ip_info->cpu_nr_running < l_nr_threshold)
+			if (l_ip_info->cpu_nr_running < (l_nr_threshold * target))
 				cpu_down(cpu);
 			if (target >= num_online_cpus())
 				break;
@@ -282,11 +285,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (thermal_core_controlled)
 				goto reschedule;
-			l_nr_threshold =
-				cpu_nr_run_threshold << 1 /
-					(num_online_cpus());
-			l_ip_info = &per_cpu(ip_info, cpu);
-			if (l_ip_info->cpu_nr_running > l_nr_threshold)
 				cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
@@ -294,12 +292,6 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		}
 	}
 reschedule:
-	for (icount = 0; icount < intellicount; icount++) {
-		if (icount == intellicount) {
-			intellinit = true;
-			icount = 0;
-			refresh_cpus();
-		} else
 			mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 	}
@@ -550,7 +542,7 @@ static int __ref intelli_plug_start(void)
 	mutex_init(&intelli_plug_mutex);
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
-	intelliplug_wq = create_singlethread_workqueue("intelliplug");
+	intelliplug_wq = create_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
@@ -611,6 +603,7 @@ static void intelli_plug_stop(void)
 
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
+
 }
 
 static void intelli_plug_active_eval_fn(unsigned int status)
@@ -643,7 +636,6 @@ show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
 show_one(nr_fshift, nr_fshift);
-show_one(intellicount, intellicount);
 
 #define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
@@ -668,7 +660,6 @@ store_one(hotplug_suspend, hotplug_suspend);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
-store_one(intellicount, intellicount);
 
 static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
 					 struct kobj_attribute *attr,
@@ -849,7 +840,6 @@ KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
-KERNEL_ATTR_RW(intellicount);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
@@ -865,7 +855,6 @@ static struct attribute *intelli_plug_attrs[] = {
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
 	&down_lock_dur_attr.attr,
-	&intellicount_attr.attr,
 	NULL,
 };
 
