@@ -7,11 +7,11 @@
 
 #include <linux/fs.h>
 #include <linux/export.h>
-#include <linux/mm.h>
 #include <linux/seq_file.h>
+#include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/cred.h>
-#include <linux/vmalloc.h>
+#include <linux/mm.h>
 
 #include <asm/uaccess.h>
 #include <asm/page.h>
