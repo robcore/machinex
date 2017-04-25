@@ -55,7 +55,7 @@ static struct delayed_work wakeup_boost_rem;
 static struct notifier_block notif;
 #endif
 
-static bool input_boost_enabled = true;
+static bool input_boost_enabled = false;
 module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 60;
@@ -86,7 +86,7 @@ module_param(min_wakeup_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int i;
+	int i;
 	unsigned int val, cpu;
 	struct cpu_sync *i_sync_info;
 
@@ -105,7 +105,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *i_sync_info;
-	unsigned int i;
+	int i;
 	ssize_t ret;
 
 	for_each_possible_cpu(i)
@@ -124,7 +124,7 @@ module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
 static int set_hotplug_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int i;
+	int i;
 	unsigned int val, cpu;
 	struct cpu_sync *h_sync_info;
 
@@ -143,7 +143,7 @@ static int set_hotplug_boost_freq(const char *buf, const struct kernel_param *kp
 static int get_hotplug_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *h_sync_info;
-	unsigned int i;
+	int i;
 	ssize_t ret;
 
 	for_each_possible_cpu(i)
@@ -162,7 +162,7 @@ module_param_cb(hotplug_boost_freq, &param_ops_hotplug_boost_freq, NULL, 0644);
 
 static int set_wakeup_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int i;
+	int i;
 	unsigned int val, cpu;
 	struct cpu_sync *w_sync_info;
 
@@ -181,7 +181,7 @@ static int set_wakeup_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_wakeup_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *w_sync_info;
-	unsigned int i;
+	int i;
 	ssize_t ret;
 
 	for_each_possible_cpu(i)
@@ -641,7 +641,6 @@ static int cpu_boost_init(void)
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
-		s->input_boost_freq = 1350000;
 	}
 	cpufreq_register_notifier(&input_boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 	cpufreq_register_notifier(&hotplug_boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);

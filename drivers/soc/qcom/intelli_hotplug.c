@@ -596,7 +596,7 @@ store_one(nr_run_hysteresis, nr_run_hysteresis);
 store_one(down_lock_duration, down_lock_dur);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
-					struct kobj_attribute *attr, 
+					struct kobj_attribute *attr,
 					char *buf)
 {
 	return sprintf(buf, "%d\n",
@@ -628,7 +628,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 }
 
 static ssize_t show_boost_lock_duration(struct kobject *kobj,
-					struct kobj_attribute *attr, 
+					struct kobj_attribute *attr,
 					char *buf)
 {
 	return sprintf(buf, "%llu\n", div_u64(boost_lock_duration, 1000));
