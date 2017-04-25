@@ -448,13 +448,14 @@ static bool sec_bat_get_cable_type(
 		dev_dbg(battery->dev,
 			"%s: No need to change cable status\n", __func__);
 	} else {
-		if (cable_type <= POWER_SUPPLY_TYPE_BATTERY ||
+		if (cable_type < POWER_SUPPLY_TYPE_BATTERY ||
 			cable_type >= SEC_SIZEOF_POWER_SUPPLY_TYPE) {
 			dev_err(battery->dev,
 				"%s: Invalid cable type\n", __func__);
 		} else {
 			battery->cable_type = cable_type;
-			battery->pdata->check_cable_result_callback(
+			if (battery->pdata->check_cable_result_callback)
+				battery->pdata->check_cable_result_callback(
 						battery->cable_type);
 
 			ret = true;

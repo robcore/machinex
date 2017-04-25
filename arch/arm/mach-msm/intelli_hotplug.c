@@ -53,6 +53,7 @@ static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct mutex intelli_plug_mutex;
 static struct notifier_block notif;
+static void refresh_cpus(void);
 
 struct ip_cpu_info {
 	unsigned long cpu_nr_running;
@@ -239,6 +240,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
+	unsigned int count;
 
 	if (hotplug_suspended)
 		return;
@@ -255,7 +257,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		delta < boost_lock_duration)
+		delta <= boost_lock_duration)
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -273,19 +275,32 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	} else if (target > online_cpus) {
+		update_per_cpu_stat();
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
 			if (thermal_core_controlled)
-				break;
-			cpu_up(cpu);
+				goto reschedule;
+			l_nr_threshold =
+				cpu_nr_run_threshold << 1 /
+					(num_online_cpus());
+			l_ip_info = &per_cpu(ip_info, cpu);
+			if (l_ip_info->cpu_nr_running > l_nr_threshold)
+				cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
 				break;
 		}
 	}
 reschedule:
-		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+		if (count >= 0 && count < 4)
+			count++;
+
+		if (count == 4) {
+			count = 0;
+			refresh_cpus();
+		} else
+			mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
 }
 
@@ -300,6 +315,26 @@ static void intelli_plug_work_fn(struct work_struct *work)
 		target_cpus = calculate_thread_stats();
 		schedule_work_on(0, &up_down_work);
 	}
+}
+
+static void refresh_cpus(void)
+{
+	unsigned int cpu;
+
+	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		cpu_down(cpu);
+	}
+	mdelay(4);
+	for_each_cpu_not(cpu, cpu_online_mask) {
+		if (cpu == 0)
+			continue;
+		cpu_up(cpu);
+		apply_down_lock(cpu);
+	}
+	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+			      msecs_to_jiffies(def_sampling_ms));
 }
 
 static void __ref intelli_plug_suspend(void)

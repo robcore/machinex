@@ -274,7 +274,8 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 					break;
 				/* under 400mA, slow rate */
 				if (set_current_reg < (400 / 20) &&
-						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY &&
+						charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS))
 							charger->aicl_on = true;
 				else if (charger->cable_type == POWER_SUPPLY_TYPE_BATTERY && 
 						charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)
@@ -331,7 +332,8 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 			if (curr_step < 2) {
 				/* under 400mA, slow rate */
 				if (now_current_reg < (400 / 20) &&
-						charger->cable_type != POWER_SUPPLY_TYPE_BATTERY)
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY &&
+						charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS))
 							charger->aicl_on = true;
 				else if (charger->cable_type == POWER_SUPPLY_TYPE_BATTERY && 
 						charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)
@@ -572,8 +574,6 @@ static int max77693_get_vbus_state(struct max77693_charger_data *charger)
 	case 0x02:
 		pr_debug("%s: VBUS is invalid. CHGIN > CHGIN_OVLO",
 			__func__);
-		break;
-	case 0x03:
 		break;
 	default:
 		break;
