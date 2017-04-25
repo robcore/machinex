@@ -603,7 +603,7 @@ show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
-show_one(show_nr_fshift, show_nr_fshift);
+show_one(nr_fshift, nr_fshift);
 
 #define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
