@@ -25,10 +25,6 @@
  * pointer or exits the pm_qos_object will get an opportunity to clean up.
  *
  * Mark Gross <mgross@linux.intel.com>
- *
- * Conversion of pm_qos_lock from spinlock to mutex
- * Sai Gurrappadi <sgurrappadi@nvidia.com>
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  */
 
 /*#define DEBUG*/
@@ -45,7 +41,6 @@
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
-#include <linux/moduleparam.h>
 #include <linux/uaccess.h>
 #include <linux/export.h>
 #include <trace/events/power.h>
@@ -53,7 +48,7 @@
 /*
  * locking rule: all changes to constraints or notifiers lists
  * or pm_qos_object list and pm_qos_objects need to happen with pm_qos_lock
- * One lock to rule them all
+ * held, taken with _irqsave.  One lock to rule them all
  */
 struct pm_qos_object {
 	struct pm_qos_constraints *constraints;
@@ -61,7 +56,7 @@ struct pm_qos_object {
 	char *name;
 };
 
-static DEFINE_MUTEX(pm_qos_lock);
+static DEFINE_SPINLOCK(pm_qos_lock);
 
 static struct pm_qos_object null_pm_qos;
 
@@ -173,8 +168,6 @@ static const struct file_operations pm_qos_power_fops = {
 	.llseek = noop_llseek,
 };
 
-static bool pm_qos_enabled __read_mostly = true;
-
 /* unlocked internal variant */
 static inline int pm_qos_get_value(struct pm_qos_constraints *c)
 {
@@ -214,6 +207,81 @@ static inline void pm_qos_set_value(struct pm_qos_constraints *c, s32 value)
 	c->target_value = value;
 }
 
+static inline int pm_qos_get_value(struct pm_qos_constraints *c);
+static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
+{
+	struct pm_qos_object *qos = (struct pm_qos_object *)s->private;
+	struct pm_qos_constraints *c;
+	struct pm_qos_request *req;
+	char *type;
+	unsigned long flags;
+	int tot_reqs = 0;
+	int active_reqs = 0;
+
+	if (IS_ERR_OR_NULL(qos)) {
+		pr_err("%s: bad qos param!\n", __func__);
+		return -EINVAL;
+	}
+	c = qos->constraints;
+	if (IS_ERR_OR_NULL(c)) {
+		pr_err("%s: Bad constraints on qos?\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Lock to ensure we have a snapshot */
+	spin_lock_irqsave(&pm_qos_lock, flags);
+	if (plist_head_empty(&c->list)) {
+		seq_puts(s, "Empty!\n");
+		goto out;
+	}
+
+	switch (c->type) {
+	case PM_QOS_MIN:
+		type = "Minimum";
+		break;
+	case PM_QOS_MAX:
+		type = "Maximum";
+		break;
+	case PM_QOS_SUM:
+		type = "Sum";
+		break;
+	default:
+		type = "Unknown";
+	}
+
+	plist_for_each_entry(req, &c->list, node) {
+		char *state = "Default";
+
+		if ((req->node).prio != c->default_value) {
+			active_reqs++;
+			state = "Active";
+		}
+		tot_reqs++;
+		seq_printf(s, "%d: %d: %s\n", tot_reqs,
+			   (req->node).prio, state);
+	}
+
+	seq_printf(s, "Type=%s, Value=%d, Requests: active=%d / total=%d\n",
+		   type, pm_qos_get_value(c), active_reqs, tot_reqs);
+
+out:
+	spin_unlock_irqrestore(&pm_qos_lock, flags);
+	return 0;
+}
+
+static int pm_qos_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pm_qos_dbg_show_requests,
+			   inode->i_private);
+}
+
+static const struct file_operations pm_qos_debug_fops = {
+	.open           = pm_qos_dbg_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
 /**
  * pm_qos_update_target - manages the constraints list and calls the notifiers
  *  if needed
@@ -228,10 +296,11 @@ static inline void pm_qos_set_value(struct pm_qos_constraints *c, s32 value)
 int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 			 enum pm_qos_req_action action, int value)
 {
+	unsigned long flags;
 	int prev_value, curr_value, new_value;
 	int ret;
 
-	mutex_lock(&pm_qos_lock);
+	spin_lock_irqsave(&pm_qos_lock, flags);
 	prev_value = pm_qos_get_value(c);
 	if (value == PM_QOS_DEFAULT_VALUE)
 		new_value = c->default_value;
@@ -258,12 +327,10 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 		;
 	}
 
-	if (pm_qos_enabled) {
-		curr_value = pm_qos_get_value(c);
-		pm_qos_set_value(c, curr_value);
-	} else {
-		curr_value = c->default_value;
-	}
+	curr_value = pm_qos_get_value(c);
+	pm_qos_set_value(c, curr_value);
+
+	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	trace_pm_qos_update_target(action, prev_value, curr_value);
 	if (prev_value != curr_value) {
@@ -275,9 +342,6 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 	} else {
 		ret = 0;
 	}
-
-	mutex_unlock(&pm_qos_lock);
-
 	return ret;
 }
 
@@ -313,9 +377,10 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 			 struct pm_qos_flags_request *req,
 			 enum pm_qos_req_action action, s32 val)
 {
+	unsigned long irqflags;
 	s32 prev_value, curr_value;
 
-	mutex_lock(&pm_qos_lock);
+	spin_lock_irqsave(&pm_qos_lock, irqflags);
 
 	prev_value = list_empty(&pqf->list) ? 0 : pqf->effective_flags;
 
@@ -338,21 +403,10 @@ bool pm_qos_update_flags(struct pm_qos_flags *pqf,
 
 	curr_value = list_empty(&pqf->list) ? 0 : pqf->effective_flags;
 
-	mutex_unlock(&pm_qos_lock);
+	spin_unlock_irqrestore(&pm_qos_lock, irqflags);
 
 	trace_pm_qos_update_flags(action, prev_value, curr_value);
 	return prev_value != curr_value;
-}
-
-static void __pm_qos_update_request(struct pm_qos_request *req,
-			   s32 new_value)
-{
-	trace_pm_qos_update_request(req->pm_qos_class, new_value);
-
-	if (new_value != req->node.prio)
-		pm_qos_update_target(
-			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
 }
 
 /**
@@ -373,56 +427,16 @@ int pm_qos_request_active(struct pm_qos_request *req)
 }
 EXPORT_SYMBOL_GPL(pm_qos_request_active);
 
-static int pm_qos_enabled_set(const char *arg, const struct kernel_param *kp)
+static void __pm_qos_update_request(struct pm_qos_request *req,
+			   s32 new_value)
 {
-	bool old;
-	s32 prev[PM_QOS_NUM_CLASSES], curr[PM_QOS_NUM_CLASSES];
-	int ret, i;
+	trace_pm_qos_update_request(req->pm_qos_class, new_value);
 
-	old = pm_qos_enabled;
-	ret = param_set_bool(arg, kp);
-	if (ret != 0) {
-		pr_warn("%s: cannot set PM QoS enable to %s\n",
-			__FUNCTION__, arg);
-		return ret;
-	}
-	mutex_lock(&pm_qos_lock);
-	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
-		prev[i] = pm_qos_read_value(pm_qos_array[i]->constraints);
-	if (old && !pm_qos_enabled) {
-		/* got disabled */
-		for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
-			curr[i] = pm_qos_array[i]->constraints->default_value;
-			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
-		}
-	} else if (!old && pm_qos_enabled) {
-		/* got enabled */
-		for (i = 1; i < PM_QOS_NUM_CLASSES; i++) {
-			curr[i] = pm_qos_get_value(pm_qos_array[i]->constraints);
-			pm_qos_set_value(pm_qos_array[i]->constraints, curr[i]);
-		}
-	}
-	for (i = 1; i < PM_QOS_NUM_CLASSES; i++)
-		if (prev[i] != curr[i])
-			blocking_notifier_call_chain(
-				pm_qos_array[i]->constraints->notifiers,
-				(unsigned long)curr[i],
-				NULL);
-	mutex_unlock(&pm_qos_lock);
-	return ret;
+	if (new_value != req->node.prio)
+		pm_qos_update_target(
+			pm_qos_array[req->pm_qos_class]->constraints,
+			&req->node, PM_QOS_UPDATE_REQ, new_value);
 }
-
-static int pm_qos_enabled_get(char *buffer, const struct kernel_param *kp)
-{
-	return param_get_bool(buffer, kp);
-}
-
-static struct kernel_param_ops pm_qos_enabled_ops = {
-	.set = pm_qos_enabled_set,
-	.get = pm_qos_enabled_get,
-};
-
-module_param_cb(enable, &pm_qos_enabled_ops, &pm_qos_enabled, 0644);
 
 /**
  * pm_qos_work_fn - the timeout handler of pm_qos_update_request_timeout
@@ -432,18 +446,11 @@ module_param_cb(enable, &pm_qos_enabled_ops, &pm_qos_enabled, 0644);
  */
 static void pm_qos_work_fn(struct work_struct *work)
 {
-	s32 new_value = PM_QOS_DEFAULT_VALUE;
 	struct pm_qos_request *req = container_of(to_delayed_work(work),
 						  struct pm_qos_request,
 						  work);
 
-	if (!req || !pm_qos_request_active(req))
-		return;
-
-	if (new_value != req->node.prio)
-		pm_qos_update_target(
-			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
+	__pm_qos_update_request(req, PM_QOS_DEFAULT_VALUE);
 }
 
 /**
@@ -658,6 +665,7 @@ static ssize_t pm_qos_power_read(struct file *filp, char __user *buf,
 		size_t count, loff_t *f_pos)
 {
 	s32 value;
+	unsigned long flags;
 	struct pm_qos_request *req = filp->private_data;
 
 	if (!req)
@@ -665,9 +673,9 @@ static ssize_t pm_qos_power_read(struct file *filp, char __user *buf,
 	if (!pm_qos_request_active(req))
 		return -EINVAL;
 
-	mutex_lock(&pm_qos_lock);
+	spin_lock_irqsave(&pm_qos_lock, flags);
 	value = pm_qos_get_value(pm_qos_array[req->pm_qos_class]->constraints);
-	mutex_unlock(&pm_qos_lock);
+	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	return simple_read_from_buffer(buf, count, f_pos, &value, sizeof(s32));
 }
