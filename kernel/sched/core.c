@@ -1046,10 +1046,10 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 #ifdef CONFIG_SCHED_FREQ_INPUT
 
 /* Window size (in ns) */
-__read_mostly unsigned int sched_ravg_window = 20000000; //10
+__read_mostly unsigned int sched_ravg_window = 10000000; //10
 
-/* Min window size (in ns) = 20ms */
-__read_mostly unsigned int min_sched_ravg_window = 20000000;
+/* Min window size (in ns) = 10ms */
+__read_mostly unsigned int min_sched_ravg_window = 10000000;
 
 /* Max window size (in ns) = 1s */
 __read_mostly unsigned int max_sched_ravg_window = 1000000000;
@@ -1131,7 +1131,6 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 	u32 window_size = sched_ravg_window;
 	int new_window;
 	u64 wallclock = sched_clock();
-	int cpu = smp_processor_id();
 
 	if (is_idle_task(p) || (sched_ravg_window < min_sched_ravg_window))
 		return;
@@ -1156,10 +1155,10 @@ void update_task_ravg(struct task_struct *p, struct rq *rq, int update_sum)
 			delta = now - p->ravg.mark_start;
 			BUG_ON(delta < 0);
 
-/*			if (unlikely(cur_freq > max_possible_freq ||
+			if (unlikely(cur_freq > max_possible_freq ||
 				     (cur_freq == rq->max_freq &&
-				      rq->max_freq < rq->max_possible_freq))) */
-				cur_freq = cpufreq_quick_get(cpu);;
+				      rq->max_freq < rq->max_possible_freq)))
+				cur_freq = rq->max_possible_freq;
 
 			delta = div64_u64(delta  * cur_freq,
 							max_possible_freq);
@@ -7359,8 +7358,8 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	if (min_max_freq == 1)
 		min_max = UINT_MAX;
 	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
-	WARN_ON_ONCE(!min_max_freq);
-	WARN_ON_ONCE(!policy->max);
+	BUG_ON(!min_max_freq);
+	BUG_ON(!policy->max);
 
 	return 0;
 }
