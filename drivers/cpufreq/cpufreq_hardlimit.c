@@ -520,7 +520,7 @@ static int hardlimit_hotplug_callback(struct notifier_block *cpu_nb,
 {
 	switch (action) {
 		case CPU_ONLINE:
-		case CPU_ONLINE_FROZEN
+		case CPU_ONLINE_FROZEN:
 			reapply_hard_limits();
 				break;
 			default:
@@ -1059,7 +1059,7 @@ int hardlimit_init(void)
 		register_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_register_notifier(
 			&cpufreq_notifier_block, CPUFREQ_POLICY_NOTIFIER);
-		register_hotcpu_notifier(&hardlimit_hotplug_callback);
+		register_hotcpu_notifier(&cpu_hardlimit_hotplug_notifier);
 #ifdef SUPERFLUOUS
 		INIT_DEFERRABLE_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
 		INIT_DEFERRABLE_WORK(&stop_touchboost_work, stop_touchboost);
