@@ -603,6 +603,7 @@ show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
+show_one(show_nr_fshift, show_nr_fshift);
 
 #define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
@@ -792,7 +793,7 @@ static struct kobj_attribute _name##_attr = \
 
 #define KERNEL_ATTR_RO(_name) \
 static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0444, show_##_name, store_##_name)
+	__ATTR(_name, 0444, show_##_name, NULL)
 
 KERNEL_ATTR_RW(intelli_plug_active);
 KERNEL_ATTR_RW(cpus_boosted);
