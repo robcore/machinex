@@ -500,8 +500,11 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 		battery->health = POWER_SUPPLY_HEALTH_GOOD;
 
 		if (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			battery->status = POWER_SUPPLY_STATUS_CHARGING;
+			if (battery->cable_type != POWER_SUPPLY_TYPE_BATTERY && 
+				battery->cable_type != POWER_SUPPLY_TYPE_WIRELESS) {
+					battery->status = POWER_SUPPLY_STATUS_CHARGING;
 			sec_bat_set_charge(battery, true);
+			}
 		}
 	}
 
