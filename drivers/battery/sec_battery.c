@@ -3282,11 +3282,11 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	pdata->initial_check();
 	battery->pdata->check_cable_result_callback(POWER_SUPPLY_TYPE_MAINS);
-//#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
+#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	/*enable vf ldo to check battery */
 	battery->pdata->check_cable_result_callback(battery->cable_type);
 
-//#endif
+#endif
 	battery->present = battery->pdata->check_battery_callback();
 	battery->pdata->check_cable_result_callback(battery->cable_type);
 
