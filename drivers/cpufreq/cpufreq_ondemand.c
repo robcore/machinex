@@ -32,22 +32,22 @@
  */
 
 /* User tunabble controls */
-#define DEF_FREQUENCY_UP_THRESHOLD		(70)
-#define ANY_CPU_DEF_FREQUENCY_UP_THRESHOLD	(70)
-#define MULTI_CORE_DEF_FREQUENCY_UP_THRESHOLD	(70)
+#define DEF_FREQUENCY_UP_THRESHOLD		(95)
+#define ANY_CPU_DEF_FREQUENCY_UP_THRESHOLD	(95)
+#define MULTI_CORE_DEF_FREQUENCY_UP_THRESHOLD	(95)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 
 #define DEF_MIDDLE_GRID_STEP			(14)
 #define DEF_HIGH_GRID_STEP			(20)
-#define DEF_MIDDLE_GRID_LOAD			(55)
-#define DEF_HIGH_GRID_LOAD			(79)
+#define DEF_MIDDLE_GRID_LOAD			(89)
+#define DEF_HIGH_GRID_LOAD			(99)
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define DEF_SAMPLING_RATE			(20000)
 
 #define DEF_SYNC_FREQUENCY			(1134000)
 #define DEF_OPTIMAL_FREQUENCY			(1566000)
-#define DEF_OPTIMAL_MAX_FREQ			(1782000)
+#define DEF_OPTIMAL_MAX_FREQ			(1566000)
 
 /* Kernel tunabble controls */
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
@@ -380,8 +380,12 @@ static ssize_t store_sampling_down_factor(struct kobject *a,
 	int ret;
 
 	ret = sscanf(buf, "%u", &input);
-	if (ret != 1 || input > MAX_SAMPLING_DOWN_FACTOR || input < 1)
+	if (ret != 1)
 		return -EINVAL;
+	if (input > MAX_SAMPLING_DOWN_FACTOR)
+		input = MAX_SAMPLING_DOWN_FACTOR;
+	if (input < 1)
+		input = 1;
 	dbs_tuners_ins.sampling_down_factor = input;
 
 	/* Reset down sampling multiplier in case it was active */
@@ -437,7 +441,7 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 	if (p->cur == p->max)
 		return;
 
-	__cpufreq_driver_target(p, freq, CPUFREQ_RELATION_L);
+	__cpufreq_driver_target(p, freq, CPUFREQ_RELATION_C);
 }
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
