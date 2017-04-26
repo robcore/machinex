@@ -491,7 +491,7 @@ config CPU_FREQ_DEFAULT_GOV_MACHINACTIVE
 	  It is essentially a combo of interactive, intelliactive, and
 	  hellsactive.
 
-config CPU_FREQ_DEFAULT_GOV_WHISKEYACTIVE
+config CPU_FREQ_DEFAULT_GOV_WHISKYACTIVE
 	bool "whiskyactive"
 	select CPU_FREQ_GOV_WHISKEYACTIVE
 	help
