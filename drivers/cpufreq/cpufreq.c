@@ -2124,8 +2124,10 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	if (new_policy->min > policy->user_policy.max
 		|| new_policy->max < policy->user_policy.min) {
-		ret = -EINVAL;
-		goto error_out;
+		new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
+		new_policy.max = check_cpufreq_hardlimit(policy->user_policy.max);
+		//ret = -EINVAL;
+		//goto error_out;
 	}
 
 	/* verify the cpu speed can be set within this limit */
