@@ -1,12 +1,12 @@
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 # CPUfreq core
 obj-$(CONFIG_CPU_FREQ)			+= msm_cpufreq.o
-# CPUfreq hardlimit
-obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 # CPUfreq stats
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
+# CPUfreq hardlimit
+obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
 # CPU boost
 obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 # CPUfreq governors
