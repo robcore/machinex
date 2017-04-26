@@ -295,7 +295,7 @@ static unsigned int choose_freq(
 			cpufreq_frequency_table_target(
 					    pcpu->policy, pcpu->freq_table,
 					    freqmin + 1, CPUFREQ_RELATION_C,
-					    &index)
+					    &index);
 					break;
 		}
 
@@ -392,13 +392,13 @@ static void cpufreq_interactive_timer(unsigned long data)
 	    freq_to_above_hispeed_delay(pcpu->policy->cur)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
-	}
+	} else {
 
 	pcpu->loc_hispeed_val_time = now;
 
 	cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_C,
-					   &index)
+					   &index);
 
 	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 	goto rearm;
