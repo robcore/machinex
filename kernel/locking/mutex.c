@@ -195,6 +195,13 @@ ww_mutex_set_context_fastpath(struct ww_mutex *lock,
 
 #ifdef CONFIG_MUTEX_SPIN_ON_OWNER
 /*
+ * In order to avoid a stampede of mutex spinners from acquiring the mutex
+ * more or less simultaneously, the spinners need to acquire a MCS lock
+ * first before spinning on the owner field.
+ *
+ */
+
+/*
  * Mutex spinning code migrated from kernel/sched/core.c
  */
 
@@ -238,7 +245,10 @@ int mutex_spin_on_owner(struct mutex *lock, struct task_struct *owner)
 	return lock->owner == NULL;
 }
 
-static int mutex_can_spin_on_owner(struct mutex *lock)
+/*
+ * Initial check for entering the mutex spinning loop
+ */
+static inline int mutex_can_spin_on_owner(struct mutex *lock)
 {
 	struct task_struct *owner;
 	int retval = 1;
