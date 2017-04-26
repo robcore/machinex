@@ -1436,9 +1436,9 @@ static int cpufreq_governor_machinactive(struct cpufreq_policy *policy,
 			}
 
 			spin_lock_irqsave(&pcpu->target_freq_lock, flags);
-			if (policy->max < pcpu->target_freq) {
+			if (policy->max < pcpu->target_freq)
 				pcpu->target_freq = policy->max;
-			} else if (policy->min >= pcpu->target_freq) {
+			else if (policy->min >= pcpu->target_freq) {
 				pcpu->target_freq = policy->min;
 				anyboost = 1;
 			}
