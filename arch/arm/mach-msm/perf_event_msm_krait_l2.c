@@ -598,6 +598,8 @@ static int __init register_krait_l2_pmu_driver(void)
 	for (i = 0; i < total_l2_ctrs; i++)
 		disable_counter(i);
 
-	return platform_driver_register(&krait_l2_pmu_driver, THIS_MODULE);
+	platform_driver_register(&krait_l2_pmu_driver);
+	return 0;
 }
+
 device_initcall(register_krait_l2_pmu_driver);
