@@ -131,7 +131,7 @@ int mx_boost_freq = DEFAULT_MX_BOOST_FREQ;
 /*
  * Default thread migration boost cpufreq
  */
-#define CPU_SYNC_FREQ 1458000
+#define CPU_SYNC_FREQ 1026000
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
@@ -1131,7 +1131,7 @@ static ssize_t store_timer_rate(struct kobject *kobj,
 		pr_warn("timer_rate not aligned to jiffy. Rounded up to %lu\n",
 				val_round);
 
-timer_rate = val_round;
+	timer_rate = val_round;
 	return count;
 }
 
