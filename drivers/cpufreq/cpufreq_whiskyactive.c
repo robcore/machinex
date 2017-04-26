@@ -135,7 +135,7 @@ static bool io_is_busy = 0;
 
 static void cpufreq_interactive_timer_resched(unsigned long cpu)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
 	unsigned long expires;
 	unsigned long flags;
 
