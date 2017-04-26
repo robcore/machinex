@@ -605,12 +605,17 @@ static void gpio_keys_report_state(struct gpio_keys_drvdata *ddata)
 	input_sync(input);
 }
 
+static unsigned int flip_bypass;
+module_param_named(flip_cover_bypass, flip_bypass, uint, 0644);
+
 static void flip_cover_work(struct work_struct *work)
 {
 	struct gpio_keys_drvdata *ddata =
 		container_of(work, struct gpio_keys_drvdata,
 				flip_cover_dwork.work);
 
+	if (flip_bypass)
+		return;
 	ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
 	//flip_cover=ddata->flip_cover;
 	printk(KERN_DEBUG "[keys] %s : %d\n",
@@ -625,6 +630,9 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 {
 	//bool flip_status;
 	struct gpio_keys_drvdata *ddata = dev_id;
+
+	if (flip_bypass)
+		return IRQ_HANDLED;
 
 	//flip_status = gpio_get_value(ddata->gpio_flip_cover);
 
@@ -651,7 +659,7 @@ static int gpio_keys_open(struct input_dev *input)
 	int ret = 0;
 	int irq = gpio_to_irq(ddata->gpio_flip_cover);
 
-	if(ddata->gpio_flip_cover == 0) {
+	if(ddata->gpio_flip_cover == 0 || (flip_bypass)) {
 		printk(KERN_DEBUG"[HALL_IC] : %s skip flip\n", __func__);
 		goto skip_flip;
 	}
@@ -701,7 +709,11 @@ static ssize_t hall_detect_show(struct device *dev,
 {
 	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
 
-	if (ddata->flip_cover)
+
+	if (flip_bypass) {
+		sprintf(buf, "OPEN");
+		return strlen(buf);
+	} else if (ddata->flip_cover)
 		sprintf(buf, "OPEN");
 	else
 		sprintf(buf, "CLOSE");
@@ -885,9 +897,11 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	ddata->gpio_flip_cover = pdata->gpio_flip_cover;
 	//ddata->irq_flip_cover = gpio_to_irq(ddata->gpio_flip_cover);
 	//wake_lock_init(&ddata->flip_wake_lock, WAKE_LOCK_SUSPEND, "flip_wake_lock");
-	if(ddata->gpio_flip_cover != 0) {
-		input->evbit[0] |= BIT_MASK(EV_SW);
-		input_set_capability(input, EV_SW, SW_FLIP);
+	if (!flip_bypass) {
+		if(ddata->gpio_flip_cover != 0) {
+			input->evbit[0] |= BIT_MASK(EV_SW);
+			input_set_capability(input, EV_SW, SW_FLIP);
+		}
 	}
 	global_dev = dev;
 	ddata->pdata = pdata;
@@ -1049,8 +1063,10 @@ static int gpio_keys_suspend(struct device *dev)
 				enable_irq_wake(bdata->irq);
 		}
 
-		if(ddata->gpio_flip_cover != 0)
-			enable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
+		if (!flip_bypass) {
+			if (ddata->gpio_flip_cover != 0)
+				enable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
+		}
 	} else {
 		mutex_lock(&input->mutex);
 		if (input->users)
@@ -1086,8 +1102,10 @@ static int gpio_keys_resume(struct device *dev)
 	}
 
 #if defined(CONFIG_SENSORS_HALL)
-	if (device_may_wakeup(dev) && ddata->gpio_flip_cover != 0)
-		disable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
+	if (!flip_bypass) {
+		if (device_may_wakeup(dev) && ddata->gpio_flip_cover != 0)
+			disable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
+	}
 #endif
 	if (error)
 		return error;
