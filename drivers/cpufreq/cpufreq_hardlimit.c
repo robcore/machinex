@@ -507,7 +507,7 @@ static int cpufreq_hardlimit_transition_notifier(
 	if (val == CPUFREQ_POSTCHANGE)
 		reapply_hard_limits();
 
-	return NOTIFY_OK;
+	return 0;
 }
 
 
