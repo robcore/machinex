@@ -14,6 +14,7 @@
 #include <linux/spinlock.h>
 #include <linux/timer.h>
 #include <linux/freezer.h>
+#include <linux/stat.h>
 
 #include "rtmutex.h"
 
