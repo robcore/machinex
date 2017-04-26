@@ -490,12 +490,12 @@ static void cpufreq_interactive_timer(unsigned long data)
 	if (!closest_freq_selection)
 		cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_H,
-					   &index));
+					   &index);
 
 	else
-		(cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
+		cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_C,
-					   &index));
+					   &index);
 
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;

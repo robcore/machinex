@@ -292,11 +292,12 @@ static unsigned int choose_freq(
 				 * freqmin then we have already found that
 				 * this speed is fast enough.
 				 */
-			(cpufreq_frequency_table_target(
+			cpufreq_frequency_table_target(
 					    pcpu->policy, pcpu->freq_table,
 					    freqmin + 1, CPUFREQ_RELATION_C,
-					    &index))
+					    &index)
 					break;
+		}
 
 		/* If same frequency chosen as previous then done. */
 	} while (freq != prevfreq);
