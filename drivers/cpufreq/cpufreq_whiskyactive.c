@@ -480,9 +480,9 @@ static void cpufreq_interactive_idle_start(void)
 
 			now = ktime_to_us(ktime_get());
 			if ((pcpu->policy->cur == pcpu->policy->max) &&
-				(now - pcpu->hispeed_validate_time) >
-							MIN_BUSY_TIME) {
-				pcpu->floor_validate_time = now;
+				(now - pcpu->loc_hispeed_val_time) >
+							DEFAULT_TIMER_RATE) {
+				pcpu->pol_floor_val_time = now;
 			}
 
 		}

@@ -501,10 +501,10 @@ static struct input_handler hardlimit_input_handler = {
 };
 #endif
 
-static int cpufreq_hardlimit_transition_notifier(
+static int cpufreq_hardlimit_policy_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
-	if (val == CPUFREQ_POSTCHANGE)
+	if (val == CPUFREQ_ADJUST)
 		reapply_hard_limits();
 
 	return 0;
@@ -512,7 +512,7 @@ static int cpufreq_hardlimit_transition_notifier(
 
 
 static struct notifier_block cpufreq_notifier_block = {
-	.notifier_call = cpufreq_hardlimit_transition_notifier,
+	.notifier_call = cpufreq_hardlimit_policy_notifier,
 };
 /* ------------------------------------------------------------------------------ */
 /* sysfs interface functions                                                      */
@@ -1039,7 +1039,7 @@ int hardlimit_init(void)
 #endif
 		register_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_register_notifier(
-			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
+			&cpufreq_notifier_block, CPUFREQ_POLICY_NOTIFIER);
 #ifdef SUPERFLUOUS
 		INIT_DEFERRABLE_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
 		INIT_DEFERRABLE_WORK(&stop_touchboost_work, stop_touchboost);
