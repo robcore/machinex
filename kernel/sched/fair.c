@@ -4433,6 +4433,11 @@ static unsigned long source_load(int cpu, int type)
 	return min(rq->cpu_load[type-1], total);
 }
 
+static inline bool energy_aware(void)
+{
+	return sched_feat(ENERGY_AWARE);
+}
+
 /*
  * Return a high guess at the load of a migration-target cpu weighted
  * according to the scheduling class and "nice" value.
