@@ -7323,7 +7323,7 @@ void __init sched_init_smp(void)
  * Maximum possible frequency across all cpus. Task demand and cpu
  * capacity (cpu_power) metrics are scaled in reference to it.
  */
-unsigned int max_possible_freq = 1;
+unsigned int max_possible_freq = check_cpufreq_hardlimit(policy->max);
 
 /*
  * Minimum possible max_freq across all cpus. This will be same as
@@ -7331,7 +7331,7 @@ unsigned int max_possible_freq = 1;
  * max_possible_freq on heterogenous systems. min_max_freq is used to derive
  * capacity (cpu_power) of cpus.
  */
-unsigned int min_max_freq = 1;
+unsigned int min_max_freq = check_cpufreq_hardlimit(policy->max);
 
 
 static int cpufreq_notifier_policy(struct notifier_block *nb,
@@ -7348,15 +7348,15 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 		cpu_rq(i)->min_freq = policy->min;
 		cpu_rq(i)->max_freq = policy->max;
 		cpu_rq(i)->cur_freq = policy->cur;
-		cpu_rq(i)->max_possible_freq = policy->cpuinfo.max_freq;
+		cpu_rq(i)->max_possible_freq = check_cpufreq_hardlimit(policy->max);
 	}
 
-	max_possible_freq = max(max_possible_freq, policy->cpuinfo.max_freq);
+	max_possible_freq = max(max_possible_freq, check_cpufreq_hardlimit(policy->max));
 	if (min_max_freq == 1)
 		min_max = UINT_MAX;
-	min_max_freq = min(min_max, policy->cpuinfo.max_freq);
-	BUG_ON(!min_max_freq);
-	BUG_ON(!policy->max);
+	min_max_freq = min(min_max, check_cpufreq_hardlimit(policy->max));
+	WARN_ON_ONCE(!min_max_freq);
+	WARN_ON_ONCE(!policy->max);
 
 	return 0;
 }

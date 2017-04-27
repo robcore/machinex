@@ -126,7 +126,7 @@ static int input_boost_adjust_notify(struct notifier_block *nb, unsigned long va
 	pr_debug("CPU%u policy min after boost: %u kHz\n",
 		 cpu, policy->min);
 
-	return NOTIFY_OK;
+	return 0;
 }
 
 static struct notifier_block input_boost_adjust_nb = {

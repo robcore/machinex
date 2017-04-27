@@ -504,10 +504,15 @@ static struct input_handler hardlimit_input_handler = {
 static int cpufreq_hardlimit_policy_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
-	if (val == CPUFREQ_ADJUST)
-		reapply_hard_limits();
+	switch (val) {
+		case CPUFREQ_ADJUST:
+		case NOTIFY_FREQ:
+			reapply_hard_limits();
+			break;
+		default:
+			break;
 
-	return 0;
+		return 0;
 }
 
 
