@@ -2383,8 +2383,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	u32 contrib;
 	unsigned int delta_w, scaled_delta_w, decayed = 0;
 	unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu);
-	unsigned long scale_freq = arch_scale_freq_capacity(NULL, cpu);
-	unsigned long scale_cpu = arch_scale_cpu_capacity(NULL, cpu);
+	unsigned long scale_freq, scale_cpu;
 
 	delta = now - sa->last_update_time;
 	/*
@@ -2404,6 +2403,9 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	if (!delta)
 		return 0;
 	sa->last_update_time = now;
+
+	scale_freq = arch_scale_freq_capacity(NULL, cpu);
+	scale_cpu = arch_scale_cpu_capacity(NULL, cpu);
 
 	/* delta_w is the amount already accumulated against our next period */
 	delta_w = sa->period_contrib;
