@@ -49,22 +49,26 @@ struct gov_data {
 	unsigned int throttle_nsec;
 	struct task_struct *task;
 	struct irq_work irq_work;
+	struct cpufreq_frequency_table *freq_table;
+	struct cpufreq_policy *policy;
 	unsigned int requested_freq;
 };
+static DEFINE_PER_CPU(struct gov_data, cpuinfo);
 
 static void cpufreq_sched_try_driver_target(struct cpufreq_policy *policy,
 					    unsigned int freq)
 {
 	struct gov_data *gd = policy->governor_data;
+	unsigned int cpu = policy->cpu;
 
 	/* avoid race with cpufreq_sched_stop */
-	if (!down_write_trylock(&policy->rwsem))
+	if (lock_policy_rwsem_write(cpu) < 0)
 		return;
 
 	__cpufreq_driver_target(policy, freq, CPUFREQ_RELATION_L);
 
 	gd->throttle = ktime_add_ns(ktime_get(), gd->throttle_nsec);
-	up_write(&policy->rwsem);
+	unlock_policy_rwsem_write(cpu);
 }
 
 static bool finish_last_request(struct gov_data *gd)
@@ -180,11 +184,11 @@ static void update_fdomain_capacity_request(int cpu)
 
 	/* Convert the new maximum capacity request into a cpu frequency */
 	freq_new = capacity * policy->max >> SCHED_CAPACITY_SHIFT;
-	if (cpufreq_frequency_table_target(policy, policy->freq_table,
+	if (cpufreq_frequency_table_target(policy, gd->freq_table,
 					   freq_new, CPUFREQ_RELATION_L,
 					   &index_new))
 		goto out;
-	freq_new = policy->freq_table[index_new].frequency;
+	freq_new = gd->freq_table[index_new].frequency;
 
 	if (freq_new == gd->requested_freq)
 		goto out;

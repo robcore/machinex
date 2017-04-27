@@ -1165,7 +1165,7 @@ static int cpufreq_governor_whiskyactive(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_LIMITS:
 		if (policy->max < policy->cur)
 			__cpufreq_driver_target(policy,
-					policy->max, CPUFREQ_RELATION_H);
+					policy->max, CPUFREQ_RELATION_C);
 		else if (policy->min > policy->cur)
 			__cpufreq_driver_target(policy,
 					policy->min, CPUFREQ_RELATION_L);
