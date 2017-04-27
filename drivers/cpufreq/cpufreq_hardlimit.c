@@ -531,6 +531,7 @@ static int cpufreq_hardlimit_govinfo_notifier(
 
 static struct notifier_block cpufreq_policy_notifier_block = {
 	.notifier_call = cpufreq_hardlimit_policy_notifier,
+};
 
 static struct notifier_block cpufreq_govinfo_notifier_block = {
 	.notifier_call = cpufreq_hardlimit_govinfo_notifier,
