@@ -1910,8 +1910,6 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	if (cpu_online(policy->cpu) && cpufreq_driver->target)
 		retval = cpufreq_driver->target(policy, target_freq, relation);
 
-		__cpufreq_governor(policy, CPUFREQ_GOV_LIMITS);
-
 	return retval;
 }
 EXPORT_SYMBOL_GPL(__cpufreq_driver_target);
