@@ -505,7 +505,6 @@ static int cpufreq_hardlimit_policy_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
 	switch (val) {
-		case CPUFREQ_ADJUST:
 		case CPUFREQ_NOTIFY:
 			reapply_hard_limits();
 			break;
