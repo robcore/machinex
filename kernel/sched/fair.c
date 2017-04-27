@@ -5855,16 +5855,6 @@ static inline int get_sd_load_idx(struct sched_domain *sd,
 	return load_idx;
 }
 
-static unsigned long default_scale_freq_capacity(struct sched_domain *sd, int cpu)
-{
-	return SCHED_CAPACITY_SCALE;
-}
-
-unsigned long __weak arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
-{
-	return default_scale_freq_capacity(sd, cpu);
-}
-
 static unsigned long default_scale_cpu_capacity(struct sched_domain *sd, int cpu)
 {
 	return SCHED_CAPACITY_SCALE;
@@ -5993,6 +5983,18 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 
 	sdg->sgc->capacity_orig = capacity_orig;
 	sdg->sgc->capacity = capacity;
+}
+
+/*
+ * Check whether the capacity of the rq has been noticeably reduced by side
+ * activity. The imbalance_pct is used for the threshold.
+ * Return true is the capacity is reduced
+ */
+static inline int
+check_cpu_capacity(struct rq *rq, struct sched_domain *sd)
+{
+	return ((rq->cpu_capacity * sd->imbalance_pct) <
+				(group->sgc->capacity_orig * 100));
 }
 
 /*
