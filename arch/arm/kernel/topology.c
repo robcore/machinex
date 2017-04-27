@@ -42,7 +42,7 @@
  */
 static DEFINE_PER_CPU(unsigned long, cpu_scale);
 
-unsigned long scale_cpu_capacity(struct sched_domain *sd, int cpu)
+unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
 {
 	return per_cpu(cpu_scale, cpu);
 }
@@ -69,7 +69,6 @@ struct cpu_efficiency {
  * use the default SCHED_CAPACITY_SCALE value for cpu_scale.
  */
 static const struct cpu_efficiency table_efficiency[] = {
-	{"msm,krait", 3891},
 	{"qcom,krait", 3891},
 	{"arm,cortex-a15", 3891},
 	{"arm,cortex-a7",  2048},
@@ -168,7 +167,7 @@ static void update_cpu_capacity(unsigned int cpu)
 	set_capacity_scale(cpu, cpu_capacity(cpu) / middle_capacity);
 
 	printk(KERN_INFO "CPU%u: update cpu_capacity %lu\n",
-		cpu, arch_scale_cpu_capacity(NULL, cpu));
+		cpu, arch_scale_freq_capacity(NULL, cpu));
 }
 
 #else
@@ -279,8 +278,7 @@ void store_cpu_topology(unsigned int cpuid)
 
 static inline int cpu_corepower_flags(void)
 {
-	return SD_SHARE_PKG_RESOURCES  | SD_SHARE_POWERDOMAIN | \
-	       SD_SHARE_CAP_STATES;
+	return SD_SHARE_PKG_RESOURCES  | SD_SHARE_POWERDOMAIN;
 }
 
 static struct sched_domain_topology_level arm_topology[] = {

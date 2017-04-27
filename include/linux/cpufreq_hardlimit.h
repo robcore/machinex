@@ -68,7 +68,5 @@ unsigned int userspace_dvfs_lock_status(void);
 
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
-/* Essentially a policy updater for hardlimit */
-void reapply_hard_limits(void);
 
 #endif
