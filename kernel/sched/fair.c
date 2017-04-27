@@ -5977,18 +5977,15 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 	if (Larch_power)
 		capacity *= arch_scale_cpu_capacity(sd, cpu);
 	else
-		capacity *= default_scale_cpu_capacity(sd, cpu);
-
-	capacity >>= SCHED_CAPACITY_SHIFT;
+		capacity *=SCHED_CAPACITY_SCALE;
 
 	cpu_rq(cpu)->cpu_capacity_orig = capacity;
 
 	if (Larch_power)
 		capacity *= arch_scale_freq_capacity(sd, cpu);
 	else
-		capacity *= default_scale_freq_capacity(sd, cpu);
+		capacity *= SCHED_CAPACITY_SCALE;
 
-	capacity >>= SCHED_CAPACITY_SHIFT;
 
 	capacity *= scale_rt_capacity(cpu);
 	capacity >>= SCHED_CAPACITY_SHIFT;
@@ -6253,9 +6250,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	sgs->group_capacity =
 		DIV_ROUND_CLOSEST(group->sgc->capacity, SCHED_CAPACITY_SCALE);
 
-	if (!sgs->group_capacity)
-		sgs->group_capacity = fix_small_capacity(env->sd, group);
-
 	sgs->group_weight = group->group_weight;
 
 	sgs->group_no_capacity = group_is_overloaded(env, sgs);
@@ -6396,7 +6390,7 @@ static inline void update_sd_lb_stats(struct lb_env *env, struct sd_lb_stats *sd
 		    (sgs->sum_nr_running > 1)) {
 			sgs->group_no_capacity = 1;
 			sgs->group_type = group_overloaded;
-
+		}
 		if (update_sd_pick_busiest(env, sds, sg, sgs)) {
 			sds->busiest = sg;
 			sds->busiest_stat = *sgs;
@@ -6580,6 +6574,7 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 			load_above_capacity -= busiest->group_capacity;
 		else
 			load_above_capacity = ~0UL;
+	}
 
 	/*
 	 * We're trying to get all the cpus to the average_load, so we don't
