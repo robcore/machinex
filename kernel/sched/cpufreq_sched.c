@@ -45,7 +45,7 @@ DEFINE_PER_CPU(struct sched_capacity_reqs, cpu_sched_capacity_reqs);
  * member of struct cpufreq_policy.
  *
  * Readers of this data must call down_read(policy->rwsem). Writers must
- * call down_write(policy->rwsem).
+ * call lock_policy_rwsem_write(cpu).
  */
 struct gov_data {
 	ktime_t up_throttle;
@@ -352,12 +352,13 @@ static int cpufreq_sched_start(struct cpufreq_policy *policy)
 static void cpufreq_sched_limits(struct cpufreq_policy *policy)
 {
 	struct gov_data *gd;
+	unsigned int cpu = policy->cpu;
 
 	pr_debug("limit event for cpu %u: %u - %u kHz, currently %u kHz\n",
 		policy->cpu, policy->min, policy->max,
 		policy->cur);
 
-	if (!down_write_trylock(&policy->rwsem))
+	if (lock_policy_rwsem_write(cpu) < 0)
 		return;
 	/*
 	 * Need to keep track of highest max frequency for
@@ -372,7 +373,7 @@ static void cpufreq_sched_limits(struct cpufreq_policy *policy)
 	else if (policy->min > policy->cur)
 		__cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_L);
 
-	up_write(&policy->rwsem);
+	unlock_policy_rwsem_write(cpu);
 }
 
 static int cpufreq_sched_stop(struct cpufreq_policy *policy)
@@ -405,13 +406,16 @@ static int cpufreq_sched_setup(struct cpufreq_policy *policy,
 }
 
 /* Tunables */
-static ssize_t show_up_throttle_nsec(struct gov_data *gd, char *buf)
+static ssize_t show_up_throttle_nsec(struct kobject *kobj,
+			struct attribute *attr, char *buf)
 {
+	struct gov_data *gd;
 	return sprintf(buf, "%u\n", gd->up_throttle_nsec);
 }
 
-static ssize_t store_up_throttle_nsec(struct gov_data *gd,
-		const char *buf, size_t count)
+static ssize_t store_up_throttle_nsec(struct kobject *kobj,
+			struct attribute *attr,
+			const char *buf, size_t count)
 {
 	int ret;
 	long unsigned int val;
@@ -422,6 +426,11 @@ static ssize_t store_up_throttle_nsec(struct gov_data *gd,
 	gd->up_throttle_nsec = val;
 	return count;
 }
+
+static struct global_attr up_throttle_nsec_attr =
+		__ATTR(up_throttle_nsec, 0644,
+		show_up_throttle_nsec,
+		store_up_throttle_nsec);
 
 static ssize_t show_down_throttle_nsec(struct gov_data *gd, char *buf)
 {

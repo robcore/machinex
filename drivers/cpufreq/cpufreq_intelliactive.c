@@ -1184,7 +1184,7 @@ static ssize_t store_up_threshold_any_cpu_freq(struct kobject *kobj,
 static struct global_attr up_threshold_any_cpu_freq_attr =
 		__ATTR(up_threshold_any_cpu_freq, 0644,
 		show_up_threshold_any_cpu_freq,
-				store_up_threshold_any_cpu_freq);
+		store_up_threshold_any_cpu_freq);
 
 static struct attribute *interactive_attributes[] = {
 	&target_loads_attr.attr,
