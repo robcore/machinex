@@ -506,11 +506,12 @@ static int cpufreq_hardlimit_policy_notifier(
 {
 	switch (val) {
 		case CPUFREQ_ADJUST:
-		case NOTIFY_FREQ:
+		case CPUFREQ_NOTIFY:
 			reapply_hard_limits();
 			break;
 		default:
 			break;
+	}
 
 		return 0;
 }
