@@ -7664,8 +7664,9 @@ static int idle_balance(struct rq *this_rq)
 	 */
 	this_rq->idle_stamp = rq_clock(this_rq);
 
-	if (this_rq->avg_idle < sysctl_sched_migration_cost ||
-	    !this_rq->rd->overload) {
+	if (!energy_aware() &&
+	    (this_rq->avg_idle < sysctl_sched_migration_cost ||
+	     !this_rq->rd->overload)) {
 		rcu_read_lock();
 		sd = rcu_dereference(per_cpu(sd_llc, this_cpu));
 		if (sd)
