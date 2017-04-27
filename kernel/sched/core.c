@@ -7335,7 +7335,7 @@ unsigned int max_possible_freq = 1;
  * max_possible_freq on heterogenous systems. min_max_freq is used to derive
  * capacity (cpu_power) of cpus.
  */
-unsigned int min_max_freq = 1;
+unsigned int min_max_freq = 0;
 
 
 static int cpufreq_notifier_policy(struct notifier_block *nb,
