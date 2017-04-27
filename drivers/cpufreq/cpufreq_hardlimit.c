@@ -225,6 +225,7 @@ void reapply_hard_limits(void)
 #endif
 	update_scaling_limits(current_limit_min, current_limit_max);
 }
+EXPORT_SYMBOL(reapply_hard_limits);
 
 #ifdef CONFIG_SEC_DVFS
 /* Scaling min/max lock */

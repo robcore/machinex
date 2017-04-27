@@ -2270,7 +2270,10 @@ int cpufreq_update_policy(unsigned int cpu)
 
 	ret = __cpufreq_set_policy(policy, &new_policy);
 
+
 	unlock_policy_rwsem_write(cpu);
+
+	reapply_hard_limits();
 
 fail:
 	cpufreq_cpu_put(policy);
