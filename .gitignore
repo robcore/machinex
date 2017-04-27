@@ -143,3 +143,4 @@ x509.genkey
 kernel/time/timeconst.h
 kernel/time/hz.bc
 patch.1
+sound/soc/codecs/sound_control5.c
