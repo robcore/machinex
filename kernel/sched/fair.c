@@ -2380,6 +2380,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	u64 delta, periods;
 	u32 contrib;
 	int delta_w, decayed = 0;
+	unsigned long scale_freq = arch_scale_freq_capacity(NULL, cpu);
 
 	delta = now - sa->last_update_time;
 	/*
@@ -2420,7 +2421,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 				cfs_rq->runnable_load_sum += weight * delta_w;
 		}
 		if (running)
-			sa->util_sum += delta_w * SCHED_CAPACITY_SCALE >> SCHED_CAPACITY_SHIFT;
+			sa->util_sum += delta_w * scale_freq >> SCHED_CAPACITY_SHIFT;
 
 		delta -= delta_w;
 
@@ -2443,7 +2444,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 				cfs_rq->runnable_load_sum += weight * contrib;
 		}
 		if (running)
-			sa->util_sum += contrib * SCHED_CAPACITY_SCALE >> SCHED_CAPACITY_SHIFT;
+			sa->util_sum += contrib * scale_freq >> SCHED_CAPACITY_SHIFT;
 	}
 
 	/* Remainder of delta accrued against u_0` */
@@ -2453,7 +2454,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			cfs_rq->runnable_load_sum += weight * delta;
 	}
 	if (running)
-		sa->util_sum += delta * SCHED_CAPACITY_SCALE >> SCHED_CAPACITY_SHIFT;
+		sa->util_sum += delta * scale_freq >> SCHED_CAPACITY_SHIFT;
 
 	sa->period_contrib += delta;
 
