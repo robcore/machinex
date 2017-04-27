@@ -23,12 +23,12 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	8
+#define SOUND_CONTROL_MINOR_VERSION	9
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 1;
-unsigned int snd_ctrl_locked = 2;
+unsigned int snd_ctrl_locked = 1;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -89,14 +89,14 @@ int snd_reg_access(unsigned int reg)
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
-			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
+			if (snd_ctrl_enabled && snd_ctrl_locked)
 				ret = 0;
 			break;
 		/* Incall MIC Gain */
 		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 		/* Camera MIC Gain */
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
-			if ((snd_ctrl_enabled > 0) && (snd_ctrl_locked > 0))
+			if (snd_ctrl_enabled && snd_ctrl_locked)
 				ret = 0;
 			break;
 		default:
@@ -120,11 +120,11 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 
     sscanf(buf, "%u", &val);
 
-    if (val > 1) {
+    if (val >= 1) {
         val = 1;
 	}
 
-	if (val < 0) {
+	if (val <= 0) {
 		val = 0;
 	}
 
@@ -197,7 +197,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
-	snd_ctrl_locked = 2;
+	snd_ctrl_locked = 1;
 
 	return count;
 }
@@ -227,7 +227,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
-	snd_ctrl_locked = 2;
+	snd_ctrl_locked = 1;
 
 	return count;
 }
@@ -253,7 +253,7 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
-	snd_ctrl_locked = 2;
+	snd_ctrl_locked = 1;
 
 	return count;
 }
@@ -279,7 +279,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
-	snd_ctrl_locked = 2;
+	snd_ctrl_locked = 1;
 
 	return count;
 }
@@ -389,7 +389,7 @@ static int sound_control_init(void)
 	}
 
 	snd_ctrl_enabled = 1;
-	snd_ctrl_locked = 2;
+	snd_ctrl_locked = 1;
 
 	return 0;
 }
