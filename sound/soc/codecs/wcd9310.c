@@ -317,6 +317,7 @@ struct tabla_priv {
 	enum tabla_bandgap_type bandgap_type;
 	bool mclk_enabled;
 	bool clock_active;
+	bool config_mode_active;
 	bool mbhc_polling_active;
 	unsigned long mbhc_fake_ins_start;
 	int buttons_pressed;
@@ -400,9 +401,6 @@ struct tabla_priv {
 	struct dentry *debugfs_reg_poke;
 #endif
 };
-
-static bool config_mode_active;
-module_param(config_mode_active, bool, 0644);
 
 static const u32 comp_shift[] = {
 	0,
@@ -2145,7 +2143,7 @@ static int tabla_codec_enable_config_mode(struct snd_soc_codec *codec,
 		/* clk source to ext clk and clk buff ref to VBG */
 		snd_soc_update_bits(codec, TABLA_A_CLK_BUFF_EN1, 0x0C, 0x04);
 	}
-	config_mode_active = enable ? true : false;
+	tabla->config_mode_active = enable ? true : false;
 
 	return 0;
 }
@@ -8951,7 +8949,7 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	tabla->mclk_enabled = false;
 	tabla->bandgap_type = TABLA_BANDGAP_OFF;
 	tabla->clock_active = false;
-	config_mode_active = false;
+	tabla->config_mode_active = false;
 	tabla->mbhc_polling_active = false;
 	tabla->mbhc_fake_ins_start = 0;
 	tabla->no_mic_headset_override = false;
@@ -9337,3 +9335,4 @@ module_exit(tabla_codec_exit);
 MODULE_DESCRIPTION("Tabla codec driver");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL v2");
+
