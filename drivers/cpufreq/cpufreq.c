@@ -1928,6 +1928,7 @@ int cpufreq_driver_target(struct cpufreq_policy *policy,
 		goto fail;
 
 	ret = __cpufreq_driver_target(policy, target_freq, relation);
+		__cpufreq_governor(policy, CPUFREQ_GOV_LIMITS);
 
 	unlock_policy_rwsem_write(policy->cpu);
 
