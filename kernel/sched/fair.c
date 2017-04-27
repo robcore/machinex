@@ -2760,6 +2760,7 @@ static inline unsigned long cfs_rq_load_avg(struct cfs_rq *cfs_rq)
 
 static int idle_balance(struct rq *this_rq);
 
+#ifdef CONFIG_SCHED_FREQ_INPUT
 static inline unsigned int task_load(struct task_struct *p)
 {
 	return p->ravg.demand;
@@ -2769,6 +2770,7 @@ static inline unsigned int max_task_load(void)
 {
 	return sched_ravg_window;
 }
+#endif
 
 #else /* CONFIG_SMP */
 
