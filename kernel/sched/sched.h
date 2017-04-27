@@ -1516,13 +1516,12 @@ static inline void __add_nr_running(struct rq *rq, unsigned count)
 #endif
 	}
 }
-
+#ifdef CONFIG_CPU_QUIET
 static inline void __sub_nr_running(struct rq *rq, unsigned count)
 {
 	rq->nr_running -= count;
 }
 
-#ifdef CONFIG_CPU_QUIET
 #define NR_AVE_SCALE(x)		((x) << FSHIFT)
 static inline u64 do_nr_running_integral(struct rq *rq)
 {
@@ -1554,9 +1553,6 @@ static inline void sub_nr_running(struct rq *rq, unsigned count)
 	__sub_nr_running(rq, count);
 	write_seqcount_end(&rq->ave_seqcnt);
 }
-#else
-#define add_nr_running __add_nr_running
-#define sub_nr_running __sub_nr_running
 #endif
 
 static inline void sub_nr_running(struct rq *rq, unsigned count)
