@@ -1313,6 +1313,7 @@ extern const struct sched_class idle_sched_class;
 
 #ifdef CONFIG_SMP
 
+extern void init_max_cpu_capacity(struct max_cpu_capacity *mcc);
 extern void update_group_capacity(struct sched_domain *sd, int cpu);
 
 extern void trigger_load_balance(struct rq *rq);
@@ -1480,8 +1481,6 @@ static inline void dec_nr_running(struct rq *rq)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #endif
 }
-
-extern void init_max_cpu_capacity(struct max_cpu_capacity *mcc);
 
 static inline void __add_nr_running(struct rq *rq, unsigned count)
 {
