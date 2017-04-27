@@ -4,6 +4,7 @@
 #ifdef CONFIG_ARM_CPU_TOPOLOGY
 
 #include <linux/cpumask.h>
+#include <linux/sched.h>
 
 struct cputopo_arm {
 	int thread_id;
