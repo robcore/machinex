@@ -44,7 +44,13 @@ static DEFINE_PER_CPU(unsigned long, cpu_scale);
 
 unsigned long scale_cpu_capacity(struct sched_domain *sd, int cpu)
 {
+#ifdef CONFIG_CPU_FREQ
+	unsigned long max_freq_scale = cpufreq_scale_max_freq_capacity(cpu);
+
+	return per_cpu(cpu_scale, cpu) * max_freq_scale >> SCHED_CAPACITY_SHIFT;
+#else
 	return per_cpu(cpu_scale, cpu);
+#endif
 }
 
 static void set_capacity_scale(unsigned int cpu, unsigned long capacity)
@@ -69,6 +75,7 @@ struct cpu_efficiency {
  * use the default SCHED_CAPACITY_SCALE value for cpu_scale.
  */
 static const struct cpu_efficiency table_efficiency[] = {
+	{"msm,krait", 3891},	
 	{"qcom,krait", 3891},
 	{"arm,cortex-a15", 3891},
 	{"arm,cortex-a7",  2048},
