@@ -7895,8 +7895,8 @@ static void task_move_group_fair(struct task_struct *p, int queued)
 		se->vruntime -= cfs_rq_of(se)->min_vruntime;
 	set_task_rq(p, task_cpu(p));
 	se->depth = se->parent ? se->parent->depth + 1 : 0;
-	if (!queued) {
-		cfs_rq = cfs_rq_of(se);
+	cfs_rq = cfs_rq_of(se);
+	if (!queued)
 		se->vruntime += cfs_rq->min_vruntime;
 
 #ifdef CONFIG_SMP
@@ -7907,7 +7907,8 @@ static void task_move_group_fair(struct task_struct *p, int queued)
 		cfs_rq->avg.util_avg += p->se.avg.util_avg;
 		cfs_rq->avg.util_sum += p->se.avg.util_sum;
 #endif
-	}
+	/* Virtually synchronize task with its new cfs_rq */
+	attach_entity_load_avg(cfs_rq, se);
 }
 
 void free_fair_sched_group(struct task_group *tg)
