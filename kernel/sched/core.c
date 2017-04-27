@@ -7103,7 +7103,7 @@ static int build_sched_domains(const struct cpumask *cpu_map,
 	rcu_read_unlock();
 
 	if (rq)
-		pr_info("max cpu_capacity %lu\n", rq->rd->max_cpu_capacity);
+		pr_debug("max cpu_capacity %lu\n", rq->rd->max_cpu_capacity);
 
 	ret = 0;
 error:
