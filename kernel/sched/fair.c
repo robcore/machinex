@@ -4122,8 +4122,9 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
+static bool cpu_overutilized(int cpu);
 static unsigned long capacity_orig_of(int cpu);
-static int cpu_util(int cpu);
+static unsigned long cpu_util(int cpu);
 
 static void update_capacity_of(int cpu)
 {
@@ -4136,8 +4137,6 @@ static void update_capacity_of(int cpu)
 	req_cap = cpu_util(cpu) * SCHED_CAPACITY_SCALE / capacity_orig_of(cpu);
 	set_cfs_cpu_capacity(cpu, true, req_cap);
 }
-
-static bool cpu_overutilized(int cpu);
 
 /*
  * The enqueue_task method is called before nr_running is
