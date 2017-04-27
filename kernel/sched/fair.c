@@ -4122,7 +4122,9 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
+#ifdef CONFIG_SMP
 static bool cpu_overutilized(int cpu);
+#endif
 
 /*
  * The enqueue_task method is called before nr_running is
@@ -4166,8 +4168,10 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		update_cfs_shares(cfs_rq);
 	}
 
-	if (!se) {
+	if (!se)
 		inc_nr_running(rq);
+
+	if (!se) {
 		if (!task_new && !rq->rd->overutilized &&
 		    cpu_overutilized(rq->cpu))
 			rq->rd->overutilized = true;
@@ -4537,8 +4541,6 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	return __task_fits(p, cpu, 0);
 }
 
-static int cpu_util(int cpu);
-
 static inline bool task_fits_spare(struct task_struct *p, int cpu)
 {
 	return __task_fits(p, cpu, cpu_util(cpu));
@@ -4731,11 +4733,6 @@ static inline unsigned long effective_load(struct task_group *tg, int cpu,
 }
 
 #endif
-
-static bool cpu_overutilized(int cpu)
-{
-	return (capacity_of(cpu) * 1024) < (cpu_util(cpu) * capacity_margin);
-}
 
 struct energy_env {
 	struct sched_group	*sg_top;
@@ -7282,13 +7279,6 @@ static int need_active_balance(struct lb_env *env)
 	    (env->src_rq->cfs.h_nr_running == 1)) {
 		if ((check_cpu_capacity(env->src_rq, sd)) &&
 		    (capacity_of(env->src_cpu)*sd->imbalance_pct < capacity_of(env->dst_cpu)*100))
-			return 1;
-	}
-
-	if ((capacity_of(env->src_cpu) < capacity_of(env->dst_cpu)) &&
-				env->src_rq->cfs.h_nr_running == 1 &&
-				cpu_overutilized(env->src_cpu) &&
-				!cpu_overutilized(env->dst_cpu)) {
 			return 1;
 	}
 
