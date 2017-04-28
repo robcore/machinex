@@ -2364,8 +2364,11 @@ static u32 __compute_runnable_contrib(u64 n)
 	return contrib + runnable_avg_yN_sum[n];
 }
 
-static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
-static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
+#if (SCHED_LOAD_SHIFT - SCHED_LOAD_RESOLUTION) != 10 || SCHED_CAPACITY_SHIFT != 10
+#error "load tracking assumes 2^10 as unit"
+#endif
+
+#define cap_scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
 
 /*
  * We can represent the historical contribution to runnable average as the
@@ -2402,7 +2405,6 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	u64 delta, scaled_delta, periods;
 	u32 contrib;
 	unsigned int delta_w, scaled_delta_w, decayed = 0;
-	unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu);
 	unsigned long scale_freq, scale_cpu;
 
 	delta = now - sa->last_update_time;
@@ -2610,7 +2612,8 @@ static inline void update_load_avg(struct sched_entity *se, int update_tg)
 	 * track group sched_entity load average for task_h_load calc in migration
 	 */
 	__update_load_avg(now, cpu, &se->avg,
-		se->on_rq * scale_load_down(se->load.weight), cfs_rq->curr == se, NULL);
+			  se->on_rq * scale_load_down(se->load.weight),
+			  cfs_rq->curr == se, NULL);
 
 	if (update_cfs_rq_load_avg(now, cfs_rq) && update_tg)
 		update_tg_load_avg(cfs_rq, 0);
@@ -2866,18 +2869,11 @@ static void check_spread(struct cfs_rq *cfs_rq, struct sched_entity *se)
 }
 
 unsigned int Lgentle_fair_sleepers = 1;
-unsigned int Larch_power = 0;
 
 void relay_gfs(unsigned int gfs)
 {
 	Lgentle_fair_sleepers = gfs;
 }
-
-void relay_ap(unsigned int ap)
-{
-	Larch_power = ap;
-}
-
 static void
 place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 {
