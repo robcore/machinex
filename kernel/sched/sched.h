@@ -1433,7 +1433,7 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 }
 
 #endif
-
+#if 0
 static inline void inc_nr_running(struct rq *rq)
 {
 #if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
@@ -1481,24 +1481,14 @@ static inline void dec_nr_running(struct rq *rq)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #endif
 }
+#endif
 
 static inline void __add_nr_running(struct rq *rq, unsigned count)
 {
 	unsigned prev_nr = rq->nr_running;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-#endif
-	sched_update_nr_prod(cpu_of(rq), 1, true);
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
-#endif
 
 	rq->nr_running = prev_nr + count;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
-	write_seqcount_end(&nr_stats->ave_seqcnt);
-#endif
+
 	if (prev_nr < 2 && rq->nr_running >= 2) {
 #ifdef CONFIG_SMP
 		if (!rq->rd->overload)
@@ -1520,33 +1510,22 @@ static inline void __add_nr_running(struct rq *rq, unsigned count)
 #endif
 	}
 }
-#ifdef CONFIG_CPU_QUIET
+
 static inline void __sub_nr_running(struct rq *rq, unsigned count)
 {
 	rq->nr_running -= count;
 }
 
-#define NR_AVE_SCALE(x)		((x) << FSHIFT)
-static inline u64 do_nr_running_integral(struct rq *rq)
-{
-	s64 nr, deltax;
-	u64 nr_running_integral = rq->nr_running_integral;
-
-	deltax = rq->clock_task - rq->nr_last_stamp;
-	nr = NR_AVE_SCALE(rq->nr_running);
-
-	nr_running_integral += nr * deltax;
-
-	return nr_running_integral;
-}
-
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 static inline void add_nr_running(struct rq *rq, unsigned count)
 {
-	write_seqcount_begin(&rq->ave_seqcnt);
-	rq->nr_running_integral = do_nr_running_integral(rq);
-	rq->nr_last_stamp = rq->clock_task;
+	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
+	sched_update_nr_prod(cpu_of(rq), 1, true);
+	write_seqcount_begin(&nr_stats->ave_seqcnt);
+	nr_stats->ave_nr_running = do_avg_nr_running(rq);
+	nr_stats->nr_last_stamp = rq->clock_task;
 	__add_nr_running(rq, count);
-	write_seqcount_end(&rq->ave_seqcnt);
+	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
 
 static inline void sub_nr_running(struct rq *rq, unsigned count)
@@ -1557,25 +1536,20 @@ static inline void sub_nr_running(struct rq *rq, unsigned count)
 	__sub_nr_running(rq, count);
 	write_seqcount_end(&rq->ave_seqcnt);
 }
-#endif
 
 static inline void sub_nr_running(struct rq *rq, unsigned count)
 {
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-#endif
 	sched_update_nr_prod(cpu_of(rq), 1, false);
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
-#endif
-	rq->nr_running -= count;
-#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE)
+	__sub_nr_running(rq, count);
 	write_seqcount_end(&nr_stats->ave_seqcnt);
-#endif
-}
 
+}
+#endif
 static inline void rq_last_tick_reset(struct rq *rq)
 {
 #ifdef CONFIG_NO_HZ_FULL

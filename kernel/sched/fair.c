@@ -3578,10 +3578,8 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 			dequeue = 0;
 	}
 
-	if (!se) {
-		rq->nr_running -= task_delta;
-		dec_nr_running(rq);
-	}
+	if (!se)
+		sub_nr_running(rq, task_delta);
 
 	cfs_rq->throttled = 1;
 	cfs_rq->throttled_clock = rq_clock(rq);
@@ -3635,10 +3633,8 @@ void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
 			break;
 	}
 
-	if (!se) {
-		rq->nr_running += task_delta;
-		inc_nr_running(rq);
-	}
+	if (!se)
+		add_nr_running(rq, task_delta);
 
 	/* determine whether we need to wake up potentially idle cpu */
 	if (rq->curr == rq->idle && rq->cfs.nr_running)
@@ -4201,7 +4197,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	}
 
 	if (!se)
-		inc_nr_running(rq);
+		add_nr_running(rq, 1);
 
 #ifdef CONFIG_SMP
 
@@ -4284,7 +4280,7 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	}
 
 	if (!se)
-		dec_nr_running(rq);
+		sub_nr_running(rq, 1);
 
 #ifdef CONFIG_SMP
 
