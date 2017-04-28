@@ -56,7 +56,7 @@ unsigned int normalized_sysctl_sched_latency = 6000000ULL;
 unsigned int sysctl_sched_is_big_little = 0;
 unsigned int sysctl_sched_sync_hint_enable = 1;
 unsigned int sysctl_sched_initial_task_util = 0;
-unsigned int sysctl_sched_cstate_aware = 0;
+unsigned int sysctl_sched_cstate_aware = 1;
 
 #ifdef CONFIG_SCHED_WALT
 unsigned int sysctl_sched_use_walt_cpu_util = 1;
@@ -691,9 +691,9 @@ static unsigned long task_h_load(struct task_struct *p);
  * We choose a half-life close to 1 scheduling period.
  * Note: The tables below are dependent on this value.
  */
-#define LOAD_AVG_PERIOD 32
-#define LOAD_AVG_MAX 47742 /* maximum possible load avg */
-#define LOAD_AVG_MAX_N 345 /* number of full periods to produce LOAD_MAX_AVG */
+#define LOAD_AVG_PERIOD 16
+#define LOAD_AVG_MAX 24117 /* maximum possible load avg */
+#define LOAD_AVG_MAX_N 172 /* number of full periods to produce LOAD_AVG_MAX */
 
 /* Give new sched_entity start runnable values to heavy its load in infant time */
 void init_entity_runnable_average(struct sched_entity *se)
