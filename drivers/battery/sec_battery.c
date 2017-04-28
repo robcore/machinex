@@ -329,11 +329,13 @@ static bool sec_bat_check_vf_adc(struct sec_battery_info *battery)
 	} else
 		battery->check_adc_value = adc;
 
-	if ((battery->check_adc_value < battery->pdata->check_adc_max) &&
-		(battery->check_adc_value > battery->pdata->check_adc_min))
+	if ((battery->check_adc_value <= battery->pdata->check_adc_max) &&
+		(battery->check_adc_value >= battery->pdata->check_adc_min)) {
 		return true;
-	else
+	} else {
+		dev_info(battery->dev, "%s: adc (%d)\n", __func__, battery->check_adc_value);
 		return false;
+	}
 }
 
 static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
@@ -576,6 +578,12 @@ static bool sec_bat_ovp_uvlo_result(
 static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 {
 	int health;
+
+	if ((battery->status == POWER_SUPPLY_STATUS_FULL) &&
+		   (battery->charging_mode == SEC_BATTERY_CHARGING_NONE)) {
+		dev_dbg(battery->dev, "%s: No need to check in Full status", __func__);
+		return false;
+	}
 
 	if (battery->health != POWER_SUPPLY_HEALTH_GOOD &&
 		battery->health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
@@ -1291,13 +1299,16 @@ static bool sec_bat_check_fullcharged(
 		break;
 
 	case SEC_BATTERY_FULLCHARGED_FG_CURRENT:
-		if (battery->current_avg <
+		if ((battery->current_now > 0 && battery->current_now <
+			battery->pdata->charging_current[
+			battery->cable_type].full_check_current_1st) &&
+			(battery->current_avg > 0 && battery->current_avg <
 			(battery->charging_mode ==
 			SEC_BATTERY_CHARGING_1ST ?
-				battery->pdata->charging_current[
+			battery->pdata->charging_current[
 			battery->cable_type].full_check_current_1st :
 			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_2nd)) {
+			battery->cable_type].full_check_current_2nd))) {
 				battery->full_check_cnt++;
 				dev_dbg(battery->dev,
 				"%s: Full Check Current (%d)\n",
@@ -1366,6 +1377,7 @@ static bool sec_bat_check_fullcharged(
 		gpio_free(battery->pdata->chg_gpio_full_check);
 		break;
 
+	case SEC_BATTERY_FULLCHARGED_CHGINT:
 	case SEC_BATTERY_FULLCHARGED_CHGPSY:
 		psy_do_property("sec-charger", get,
 			POWER_SUPPLY_PROP_STATUS, value);
@@ -1696,6 +1708,11 @@ static unsigned int sec_bat_get_polling_time(
 			battery->polling_time =
 				battery->pdata->polling_time[
 				battery->status];
+		if (!battery->wc_enable) {
+			battery->polling_time = battery->pdata->polling_time[
+					SEC_BATTERY_POLLING_TIME_CHARGING];
+			pr_info("%s: wc_enable is false, polling time is 30sec\n", __func__);
+		}
 		battery->polling_short = false;
 		break;
 	case POWER_SUPPLY_STATUS_FULL:
@@ -1833,7 +1850,22 @@ static void sec_bat_monitor_work(
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 
 	c_ts = ktime_to_timespec(ktime_get_boottime());
-	//get_monotonic_boottime(&c_ts);
+
+	if (!battery->wc_enable) {
+		pr_info("%s: wc_enable(%d), cnt(%d)\n",
+			__func__, battery->wc_enable, battery->wc_enable_cnt);
+		if (battery->wc_enable_cnt > battery->wc_enable_cnt_value) {
+			battery->wc_enable = true;
+			battery->wc_enable_cnt = 0;
+			if (battery->pdata->wpc_en) {
+				gpio_direction_output(battery->pdata->wpc_en, 0);
+				pr_info("%s: WC CONTROL: Enable", __func__);
+			}
+			pr_info("%s: wpc_en(%d)\n",
+				__func__, gpio_get_value(battery->pdata->wpc_en));
+		}
+		battery->wc_enable_cnt++;
+	}
 
 	/* monitor once after wakeup */
 	if (battery->polling_in_sleep) {
