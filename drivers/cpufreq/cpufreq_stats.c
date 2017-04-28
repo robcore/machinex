@@ -25,6 +25,7 @@
 #include <linux/sched.h>
 #include <linux/of.h>
 #include <asm/cputime.h>
+#include <linux/platform_device.h>
 
 static spinlock_t cpufreq_stats_lock;
 
@@ -54,11 +55,13 @@ struct all_cpufreq_stats {
 	unsigned int *freq_table;
 };
 
+#ifdef CONFIG_OF
 struct cpufreq_power_stats {
 	unsigned int state_num;
 	unsigned int *curr;
 	unsigned int *freq_table;
 };
+#endif
 
 struct all_freq_table {
 	unsigned int *freq_table;
@@ -69,7 +72,9 @@ static struct all_freq_table *all_freq_table;
 
 static DEFINE_PER_CPU(struct all_cpufreq_stats *, all_cpufreq_stats);
 static DEFINE_PER_CPU(struct cpufreq_stats *, cpufreq_stats_table);
+#ifdef CONFIG_OF
 static DEFINE_PER_CPU(struct cpufreq_power_stats *, cpufreq_power_stats);
+#endif
 
 struct cpufreq_stats_attribute {
 	struct attribute attr;
@@ -140,6 +145,7 @@ static int get_index_all_cpufreq_stat(struct all_cpufreq_stats *all_stat,
 	return -1;
 }
 
+#ifdef CONFIG_OF
 static ssize_t show_current_in_state(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -162,6 +168,7 @@ static ssize_t show_current_in_state(struct kobject *kobj,
 	spin_unlock(&cpufreq_stats_lock);
 	return len;
 }
+#endif
 
 static ssize_t show_all_time_in_state(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -336,6 +343,7 @@ static void cpufreq_allstats_free(void)
 	}
 }
 
+#ifdef CONFIG_OF
 static void cpufreq_powerstats_free(void)
 {
 	int cpu;
@@ -352,6 +360,7 @@ static void cpufreq_powerstats_free(void)
 		per_cpu(cpufreq_power_stats, cpu) = NULL;
 	}
 }
+#endif
 
 static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table, int count)
@@ -422,6 +431,7 @@ error_get_fail:
 	return ret;
 }
 
+#ifdef CONFIG_OF
 static void cpufreq_powerstats_create(unsigned int cpu,
 		struct cpufreq_frequency_table *table, int count) {
 	unsigned int alloc_size, i = 0, j = 0, ret = 0;
@@ -469,6 +479,7 @@ static void cpufreq_powerstats_create(unsigned int cpu,
 	per_cpu(cpufreq_power_stats, cpu) = powerstats;
 	spin_unlock(&cpufreq_stats_lock);
 }
+#endif
 
 static int compare_for_sort(const void *lhs_ptr, const void *rhs_ptr)
 {
@@ -638,9 +649,10 @@ static int cpufreq_stats_create_table_cpu(unsigned int cpu)
 
 	if (!per_cpu(all_cpufreq_stats, policy->cpu))
 		cpufreq_allstats_create(cpu, table, count);
-
+#ifdef CONFIG_OF
 	if (!per_cpu(cpufreq_power_stats, cpu))
 		cpufreq_powerstats_create(cpu, table, count);
+#endif
 
 	ret = cpufreq_stats_create_table(policy, table);
 
@@ -742,7 +754,9 @@ static void __exit cpufreq_stats_exit(void)
 		cpufreq_stats_free_table(cpu);
 	}
 	cpufreq_allstats_free();
+#ifdef CONFIG_OF
 	cpufreq_powerstats_free();
+#endif
 }
 
 MODULE_AUTHOR("Zou Nan hai <nanhai.zou@intel.com>");

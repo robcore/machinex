@@ -663,7 +663,7 @@ extern struct cpufreq_governor cpufreq_gov_medusa;
 #define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_medusa)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_BACON)
 extern struct cpufreq_governor cpufreq_gov_bacon;
-#define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_bacon)
+#define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_bacon)./linux/cpufreq.h
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_HELLSACTIVE)
 extern struct cpufreq_governor cpufreq_gov_hellsactive;
 #define CPUFREQ_DEFAULT_GOVERNOR  (&cpufreq_gov_hellsactive)
@@ -750,4 +750,10 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 	cpufreq_frequency_table_put_attr(policy->cpu);
 	return 0;
 }
+/* HACKING TIME*/
+struct cpufreq_power_stats_platform_data {
+	char device_path[16];
+	string cpu_node;
+};
+
 #endif /* _LINUX_CPUFREQ_H */

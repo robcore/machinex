@@ -5225,6 +5225,8 @@ static void __init apq8064ab_update_retention_spm(void)
 	}
 }
 
+//struct cpufreq_power_stats_platform_data cpufreq_power_stats_pdata = {
+//to the future, from the age of big brother, greetings//
 static void __init apq8064_common_init(void)
 {
 	u32 platform_version = socinfo_get_platform_version();
