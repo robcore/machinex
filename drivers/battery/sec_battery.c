@@ -669,6 +669,7 @@ check_recharge_check_count:
 
 static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 {
+	union power_supply_propval value;
 	if (battery->status == POWER_SUPPLY_STATUS_DISCHARGING) {
 		dev_dbg(battery->dev,
 			"%s: Charging Disabled\n", __func__);
@@ -679,6 +680,22 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 	if (sec_bat_ovp_uvlo(battery)) {
 		battery->pdata->ovp_uvlo_result_callback(battery->health);
 		return false;
+	}
+	if ((battery->status == POWER_SUPPLY_STATUS_FULL) && \
+		battery->is_recharging) {
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+			POWER_SUPPLY_PROP_CAPACITY, value);
+		if (value.intval <
+			battery->pdata->full_condition_soc &&
+				battery->voltage_now <
+				(battery->pdata->recharge_condition_vcell - 50)) {
+			battery->status = POWER_SUPPLY_STATUS_CHARGING;
+			battery->voltage_now = 1080;
+			battery->voltage_avg = 1080;
+			power_supply_changed(&battery->psy_bat);
+			dev_info(battery->dev,
+				"%s: battery status full -> charging, RepSOC(%d)\n", __func__, value.intval);
+		}
 	}
 
 	/* Re-Charging check */
@@ -1719,12 +1736,8 @@ static unsigned int sec_bat_get_polling_time(
 	if (battery->polling_short)
 		return battery->pdata->polling_time[
 			SEC_BATTERY_POLLING_TIME_BASIC];
-	/* set polling time to 46s to reduce current noise on wc */
-	else if (battery->cable_type == POWER_SUPPLY_TYPE_WIRELESS &&
-			battery->status == POWER_SUPPLY_STATUS_CHARGING)
-		battery->polling_time = 46;
-
-	return battery->polling_time;
+	else
+		return battery->polling_time;
 }
 
 static bool sec_bat_is_short_polling(
@@ -1903,8 +1916,12 @@ continue_monitor:
 
 skip_monitor:
 	sec_bat_set_polling(battery);
+
 	/* check muic cable status */
+#if defined(CONFIG_MACH_JF)
 	max77693_muic_monitor_status();
+#endif
+
 	wake_unlock(&battery->monitor_wake_lock);
 
 	return;

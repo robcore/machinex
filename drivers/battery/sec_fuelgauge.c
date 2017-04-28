@@ -367,7 +367,6 @@ static int sec_fuelgauge_probe(struct i2c_client *client,
 	fuelgauge->client = client;
 	fuelgauge->pdata = client->dev.platform_data;
 
-
 	i2c_set_clientdata(client, fuelgauge);
 
 	fuelgauge->psy_fg.name		= "sec-fuelgauge";
@@ -405,7 +404,7 @@ static int sec_fuelgauge_probe(struct i2c_client *client,
 		goto err_free;
 	}
 
-	if (fuelgauge->pdata->fg_irq > 0) {
+	if (fuelgauge->pdata->fg_irq) {
 		INIT_DEFERRABLE_WORK(
 			&fuelgauge->isr_work, sec_fg_isr_work);
 
@@ -458,7 +457,7 @@ static int sec_fuelgauge_probe(struct i2c_client *client,
 	return 0;
 
 err_irq:
-	if (fuelgauge->pdata->fg_irq > 0)
+	if (fuelgauge->pdata->fg_irq)
 		free_irq(fuelgauge->pdata->fg_irq, fuelgauge);
 	wake_lock_destroy(&fuelgauge->fuel_alert_wake_lock);
 err_supply_unreg:
