@@ -362,7 +362,7 @@ exit:
 static int max77693_get_input_current(struct max77693_charger_data *charger)
 {
 	u8 reg_data;
-	int get_current = 0;
+	int get_current;
 
 	if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS) {
 		max77693_read_reg(charger->max77693->i2c,
@@ -373,7 +373,6 @@ static int max77693_get_input_current(struct max77693_charger_data *charger)
 				MAX77693_CHG_REG_CHG_CNFG_09, &reg_data);
 		pr_debug("%s: CHG_CNFG_09(0x%02x)\n", __func__, reg_data);
 	}
-
 	get_current = reg_data * 20;
 
 	pr_debug("%s: get input current: %dmA\n", __func__, get_current);
@@ -437,7 +436,7 @@ static void max77693_set_charge_current(struct max77693_charger_data *charger,
 static int max77693_get_charge_current(struct max77693_charger_data *charger)
 {
 	u8 reg_data;
-	int get_current = 0;
+	int get_current;
 
 	max77693_read_reg(charger->max77693->i2c,
 		MAX77693_CHG_REG_CHG_CNFG_02, &reg_data);
@@ -770,8 +769,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 	const int wpc_charging_current = charger->pdata->charging_current[
 		POWER_SUPPLY_TYPE_WIRELESS].input_current_limit;
 	u8 chg_cnfg_00;
-
-		check_charger_unlock_state(charger);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -1220,8 +1217,6 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 
 	/* check and unlock */
 	check_charger_unlock_state(chg_data);
-
-	wc_w_state = 0;
 
 	wc_w_state = !gpio_get_value(chg_data->wc_w_gpio);
 	if ((chg_data->wc_w_state == 0) && (wc_w_state == 1)) {
