@@ -279,8 +279,10 @@ static struct attribute_group stats_attr_group = {
 static struct kobj_attribute _attr_all_time_in_state = __ATTR(all_time_in_state,
 		0444, show_all_time_in_state, NULL);
 
+#ifdef CONFIG_OF
 static struct kobj_attribute _attr_current_in_state = __ATTR(current_in_state,
 		0444, show_current_in_state, NULL);
+#endif
 
 static int freq_table_get_index(struct cpufreq_stats *stat, unsigned int freq)
 {
@@ -511,6 +513,18 @@ static void create_all_freq_table(void)
 	return;
 }
 
+static void free_all_freq_table(void)
+{
+	if (all_freq_table) {
+		if (all_freq_table->freq_table) {
+			kfree(all_freq_table->freq_table);
+			all_freq_table->freq_table = NULL;
+		}
+		kfree(all_freq_table);
+		all_freq_table = NULL;
+	}
+}
+
 static void add_all_freq_table(unsigned int freq)
 {
 	unsigned int size;
@@ -584,10 +598,18 @@ static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 	if (!table)
 		return 0;
 
-	if (!per_cpu(all_cpufreq_stats, policy->cpu))
-		cpufreq_allstats_create(policy->cpu);
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+		unsigned int freq = table[i].frequency;
 
-	ret = cpufreq_stats_create_table(policy, table);
+		if (freq == CPUFREQ_ENTRY_INVALID)
+			continue;
+		count++;
+	}
+
+	if (!per_cpu(all_cpufreq_stats, cpu))
+		cpufreq_allstats_create(cpu, table, count);
+
+	ret = cpufreq_stats_create_table(policy, table, count);
 	if (ret)
 		return ret;
 	return 0;
@@ -651,14 +673,14 @@ static int cpufreq_stats_create_table_cpu(unsigned int cpu)
 		count++;
 	}
 
-	if (!per_cpu(all_cpufreq_stats, policy->cpu))
+	if (!per_cpu(all_cpufreq_stats, cpu))
 		cpufreq_allstats_create(cpu, table, count);
 #ifdef CONFIG_OF
 	if (!per_cpu(cpufreq_power_stats, cpu))
 		cpufreq_powerstats_create(cpu, table, count);
 #endif
 
-	ret = cpufreq_stats_create_table(policy, table);
+	ret = cpufreq_stats_create_table(policy, table, count);
 
 out:
 	cpufreq_cpu_put(policy);
@@ -717,6 +739,7 @@ static int __init cpufreq_stats_init(void)
 	if (ret)
 		return ret;
 
+	create_all_freq_table();
 	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 	for_each_online_cpu(cpu)
 		cpufreq_update_policy(cpu);
@@ -729,19 +752,20 @@ static int __init cpufreq_stats_init(void)
 		unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 		for_each_online_cpu(cpu)
 			cpufreq_stats_free_table(cpu);
+		free_all_freq_table();
 		return ret;
 	}
 
-	create_all_freq_table();
 	ret = sysfs_create_file(cpufreq_global_kobject,
 			&_attr_all_time_in_state.attr);
 	if (ret)
 		pr_warn("Cannot create sysfs file for cpufreq stats\n");
-
+#ifdef CONFIG_OF
 	ret = sysfs_create_file(cpufreq_global_kobject,
 			&_attr_current_in_state.attr);
 	if (ret)
 		pr_warn("Cannot create sysfs file for cpufreq current stats\n");
+#endif
 
 	return 0;
 }
@@ -756,6 +780,7 @@ static void __exit cpufreq_stats_exit(void)
 	unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 	for_each_online_cpu(cpu) {
 		cpufreq_stats_free_table(cpu);
+		cpufreq_stats_free_sysfs(cpu);
 	}
 	cpufreq_allstats_free();
 #ifdef CONFIG_OF
