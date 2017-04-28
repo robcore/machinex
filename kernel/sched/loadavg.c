@@ -158,7 +158,7 @@ long calc_load_fold_active(struct rq *this_rq)
 static unsigned long
 calc_load(unsigned long load, unsigned long exp, unsigned long active)
 {
-#if 0
+
 	unsigned long newload;
 
 	newload = load * exp + active * (FIXED_1 - exp);
@@ -166,7 +166,7 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 		newload += FIXED_1-1;
 
 	return newload / FIXED_1;
-#else
+#if 0
 	load *= exp;
 	load += active * (FIXED_1 - exp);
 	load += 1UL << (FSHIFT - 1);
