@@ -377,7 +377,8 @@ static ssize_t pm_wakeup_irq_store(struct kobject *kobj,
 	return -EINVAL;
 }
 power_attr(pm_wakeup_irq);
-#else /* !CONFIG_PP_SLEEP_DEBUG */
+
+#else /* !CONFIG_PM_SLEEP_DEBUG */
 static inline void pm_print_times_init(void) {}
 #endif /* CONFIG_PM_SLEEP_DEBUG */
 
