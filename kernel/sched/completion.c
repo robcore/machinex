@@ -312,6 +312,7 @@ bool completion_done(struct completion *x)
 	spin_lock_irqsave(&x->wait.lock, flags);
 	if (!x->done)
 		ret = 0;
+	smp_rmb();
 	spin_unlock_irqrestore(&x->wait.lock, flags);
 	return ret;
 }
