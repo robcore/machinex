@@ -1527,7 +1527,7 @@ static inline void add_nr_running(struct rq *rq, unsigned count)
 	__add_nr_running(rq, count);
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 }
-
+#if 0
 static inline void sub_nr_running(struct rq *rq, unsigned count)
 {
 	write_seqcount_begin(&rq->ave_seqcnt);
@@ -1536,6 +1536,7 @@ static inline void sub_nr_running(struct rq *rq, unsigned count)
 	__sub_nr_running(rq, count);
 	write_seqcount_end(&rq->ave_seqcnt);
 }
+#endif
 
 static inline void sub_nr_running(struct rq *rq, unsigned count)
 {
