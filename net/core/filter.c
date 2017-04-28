@@ -36,7 +36,6 @@
 #include <asm/uaccess.h>
 #include <asm/unaligned.h>
 #include <linux/filter.h>
-#include <linux/reciprocal_div.h>
 #include <linux/ratelimit.h>
 #include <linux/seccomp.h>
 #include <linux/if_vlan.h>
@@ -158,7 +157,7 @@ unsigned int sk_run_filter(const struct sk_buff *skb,
 			A /= X;
 			continue;
 		case BPF_S_ALU_DIV_K:
-			A = reciprocal_divide(A, K);
+			A /= K;
 			continue;
 		case BPF_S_ALU_AND_X:
 			A &= X;
@@ -526,11 +525,6 @@ int sk_chk_filter(struct sock_filter *filter, unsigned int flen)
 		/* Some instructions need special checks */
 		switch (code) {
 		case BPF_S_ALU_DIV_K:
-			/* check for division by zero */
-			if (ftest->k == 0)
-				return -EINVAL;
-			ftest->k = reciprocal_value(ftest->k);
-			break;
 		case BPF_S_LD_MEM:
 		case BPF_S_LDX_MEM:
 		case BPF_S_ST:
