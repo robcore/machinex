@@ -8073,23 +8073,9 @@ more_balance:
 			 */
 			sd->nr_balance_failed = sd->cache_nice_tries+1;
 		}
-	} else {
+	} else
 		sd->nr_balance_failed = 0;
-		if (per_cpu(dbs_boost_needed, this_cpu)) {
-			struct migration_notify_data mnd;
 
-			mnd.src_cpu = cpu_of(busiest);
-			mnd.dest_cpu = this_cpu;
-			mnd.load = per_cpu(dbs_boost_load_moved, this_cpu);
-			if (mnd.load > 100)
-				mnd.load = 100;
-			atomic_notifier_call_chain(&migration_notifier_head,
-						   0, (void *)&mnd);
-			per_cpu(dbs_boost_needed, this_cpu) = false;
-			per_cpu(dbs_boost_load_moved, this_cpu) = 0;
-
-		}
-	}
 	if (likely(!active_balance)) {
 		/* We were unbalanced, so reset the balancing interval */
 		sd->balance_interval = sd->min_interval;
@@ -8367,20 +8353,6 @@ out_unlock:
 
 	local_irq_enable();
 
-	if (per_cpu(dbs_boost_needed, target_cpu)) {
-		struct migration_notify_data mnd;
-
-		mnd.src_cpu = cpu_of(busiest_rq);
-		mnd.dest_cpu = target_cpu;
-		mnd.load = per_cpu(dbs_boost_load_moved, target_cpu);
-		if (mnd.load > 100)
-			mnd.load = 100;
-		atomic_notifier_call_chain(&migration_notifier_head,
-					   0, (void *)&mnd);
-
-		per_cpu(dbs_boost_needed, target_cpu) = false;
-		per_cpu(dbs_boost_load_moved, target_cpu) = 0;
-	}
 	return 0;
 }
 
