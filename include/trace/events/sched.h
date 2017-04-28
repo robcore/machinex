@@ -666,7 +666,7 @@ TRACE_EVENT(walt_migration_update_sum,
 		__entry->pid		= p->pid;
 	),
 
-	TP_printk("cpu %d: cs %llu ps %llu %lld pid %d",
+	TP_printk("cpu %d: cs %llu ps %llu pid %d",
 		  __entry->cpu, __entry->cs, __entry->ps,
 		  __entry->pid)
 );

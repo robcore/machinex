@@ -36,6 +36,7 @@
 
 #include "sched.h"
 #include "tune.h"
+#include "walt.h"
 
 /*
  * Targeted preemption latency for CPU-bound tasks:
@@ -6501,6 +6502,7 @@ static struct task_struct *detach_one_task(struct lb_env *env)
 			continue;
 
 		detach_task(p, env);
+
 		/*
 		 * Right now, this is only the second place where
 		 * lb_gained[env->idle] is updated (other is detach_tasks)
@@ -6508,8 +6510,6 @@ static struct task_struct *detach_one_task(struct lb_env *env)
 		 * inside detach_tasks().
 		 */
 		schedstat_inc(env->sd, lb_gained[env->idle]);
-		per_cpu(dbs_boost_load_moved, env->dst_cpu) += pct_task_load(p);
-
 		return p;
 	}
 	return NULL;
@@ -6573,7 +6573,6 @@ static int detach_tasks(struct lb_env *env)
 
 		detached++;
 		env->imbalance -= load;
-		per_cpu(dbs_boost_load_moved, env->dst_cpu) += pct_task_load(p);
 
 #ifdef CONFIG_PREEMPT
 		/*

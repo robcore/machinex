@@ -11,8 +11,8 @@ ifneq ($(CONFIG_SCHED_OMIT_FRAME_POINTER),y)
 CFLAGS_core.o := $(PROFILING) -fno-omit-frame-pointer
 endif
 
-obj-y += core.o loadavg.o clock.o idle_task.o cputime.o
-obj-y += fair.o rt.o deadline.o stop_task.o
+obj-y += core.o loadavg.o clock.o cputime.o
+obj-y += idle_task.o fair.o rt.o deadline.o stop_task.o
 obj-y += wait.o completion.o idle.o sched_avg.o
 obj-$(CONFIG_SMP) += cpupri.o cpudeadline.o energy.o
 obj-$(CONFIG_SCHED_WALT) += walt.o
