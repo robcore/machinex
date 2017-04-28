@@ -1671,23 +1671,6 @@ bail_acq_sema_failed:
 	return;
 }
 
-
-static int dbs_migration_notify(struct notifier_block *nb,
-				unsigned long target_cpu, void *arg)
-{
-	struct cpu_dbs_info_s *target_dbs_info =
-		&per_cpu(od_cpu_dbs_info, target_cpu);
-
-	atomic_set(&target_dbs_info->src_sync_cpu, (int)arg);
-	wake_up(&target_dbs_info->sync_wq);
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block dbs_migration_nb = {
-	.notifier_call = dbs_migration_notify,
-};
-
 static int sync_pending(struct cpu_dbs_info_s *this_dbs_info)
 {
 	return atomic_read(&this_dbs_info->src_sync_cpu) >= 0;
@@ -1933,8 +1916,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			if (dbs_tuners_ins.sync_freq == 0)
 				dbs_tuners_ins.sync_freq = policy->min;
 
-			atomic_notifier_chain_register(&migration_notifier_head,
-					&dbs_migration_nb);
 		}
 #if !defined(CONFIG_SEC_DVFS)
 		if (!cpu)
@@ -1972,9 +1953,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		if (!dbs_enable){
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &dbs_attr_group);
-			atomic_notifier_chain_unregister(
-				&migration_notifier_head,
-				&dbs_migration_nb);
 		}
 
 		mutex_unlock(&dbs_mutex);

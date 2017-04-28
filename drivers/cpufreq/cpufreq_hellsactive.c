@@ -806,43 +806,6 @@ err:
 	return ERR_PTR(err);
 }
 
-static int thread_migration_notify(struct notifier_block *nb,
-						unsigned long target_cpu, void *arg)
-{
-	unsigned long flags;
-	unsigned int boost_freq = CPU_SYNC_FREQ;
-	struct cpufreq_interactive_cpuinfo *target, *source;
-	target = &per_cpu(cpuinfo, target_cpu);
-	source = &per_cpu(cpuinfo, (int)arg);
-
-	/*
-	* If there's a thread migration in the same core we don't want to
-	* boost it
-	*/
-	if ((int)arg == target_cpu)
-		return NOTIFY_OK;
-
-	if (source->policy->cur > target->policy->cur)
-	{
-		if (source->policy->cur > boost_freq)
-		boost_freq = source->policy->cur;
-
-		target->target_freq = boost_freq;
-
-		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
-		cpumask_set_cpu(target_cpu, &speedchange_cpumask);
-		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-
-		wake_up_process(speedchange_task);
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block thread_migration_nb = {
-	.notifier_call = thread_migration_notify,
-};
-
 static ssize_t show_two_phase_freq
 (struct kobject *kobj, struct attribute *attr, char *buf)
 {
@@ -1373,9 +1336,6 @@ static int cpufreq_governor_hellsactive(struct cpufreq_policy *policy,
 			return rc;
 		}
 
-		atomic_notifier_chain_register(&migration_notifier_head,
-					&thread_migration_nb);
-
 		idle_notifier_register(&cpufreq_interactive_idle_nb);
 		cpufreq_register_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
@@ -1398,10 +1358,6 @@ static int cpufreq_governor_hellsactive(struct cpufreq_policy *policy,
 			mutex_unlock(&gov_lock);
 			return 0;
 		}
-
-		atomic_notifier_chain_unregister(
-				&migration_notifier_head,
-				&thread_migration_nb);
 
 		cpufreq_unregister_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
