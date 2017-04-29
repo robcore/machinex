@@ -61,19 +61,71 @@
 #include "mcs_spinlock.h"
 
 /*
+ * Para-virtualized queue spinlock support
+ */
+#ifdef CONFIG_PARAVIRT_SPINLOCKS
+#include <asm/pvqspinlock.h>
+#else
+
+struct qnode;
+struct pv_qvars {};
+static inline void pv_init_vars(struct pv_qvars *pv, int cpu_nr)	{}
+static inline void pv_head_spin_check(struct pv_qvars *pv, int *count,
+			u32 qcode, struct qspinlock *lock)		{}
+static inline void pv_queue_spin_check(struct pv_qvars *pv,
+			struct mcs_spinlock *mcs, int *count)		{}
+static inline void pv_halt_check(struct pv_qvars *pv, void *lock)	{}
+static inline void pv_kick_node(struct pv_qvars *pv)			{}
+static inline void pv_set_prev(struct pv_qvars *pv, struct qnode *prev)	{}
+static inline struct qnode *pv_get_prev(struct pv_qvars *pv)
+							{ return NULL; }
+#endif
+
+/*
  * To have additional features for better virtualization support, it is
  * necessary to store additional data in the queue node structure. So
  * a new queue node structure will have to be defined and used here.
+ *
+ * If CONFIG_PARAVIRT_SPINLOCKS is turned on, the previous node pointer in
+ * the pv structure will be used by the unfair lock code.
+ *
  */
 struct qnode {
 	struct mcs_spinlock mcs;
 #ifdef CONFIG_PARAVIRT_UNFAIR_LOCKS
 	int		lsteal_mask;	/* Lock stealing frequency mask	*/
 	u32		prev_tail;	/* Tail code of previous node	*/
+#ifndef CONFIG_PARAVIRT_SPINLOCKS
 	struct qnode   *qprev;		/* Previous queue node addr	*/
 #endif
+#endif
+	struct pv_qvars pv;		/* For para-virtualization	*/
 };
 #define qhead	mcs.locked	/* The queue head flag */
+
+/*
+ * Allow spinning loop count only if either PV spinlock or unfair lock is
+ * configured.
+ */
+#if defined(CONFIG_PARAVIRT_UNFAIR_LOCKS) || defined(CONFIG_PARAVIRT_SPINLOCKS)
+#define	DEF_LOOP_CNT(c)		int c = 0
+#define	INC_LOOP_CNT(c)		(c)++
+#define	LOOP_CNT(c)		c
+#else
+#define	DEF_LOOP_CNT(c)
+#define	INC_LOOP_CNT(c)
+#define	LOOP_CNT(c)		0
+#endif
+
+/*
+ * Check the pending bit spinning threshold only if PV qspinlock is enabled
+ */
+#define PSPIN_THRESHOLD		(1 << 10)
+#ifdef CONFIG_PARAVIRT_SPINLOCKS
+#define pv_qspinlock_enabled()	static_key_false(&paravirt_spinlocks_enabled)
+#else
+#define pv_qspinlock_enabled()	false
+#endif
 
 /*
  * Per-CPU queue node structures; we can never have more than 4 nested
@@ -306,9 +358,6 @@ cmpxchg_tail(struct qspinlock *lock, u32 old, u32 new)
  * starvation.
  */
 #ifdef CONFIG_PARAVIRT_UNFAIR_LOCKS
-#define DEF_LOOP_CNT(c)		int c = 0
-#define INC_LOOP_CNT(c)		(c)++
-#define LOOP_CNT(c)		c
 #define LSTEAL_MIN		(1 << 3)
 #define LSTEAL_MAX		(1 << 10)
 #define LSTEAL_MIN_MASK		(LSTEAL_MIN - 1)
@@ -334,7 +383,11 @@ static inline void unfair_init_vars(struct qnode *node)
 static inline void
 unfair_set_vars(struct qnode *node, struct qnode *prev, u32 prev_tail)
 {
-	if (!static_key_false(&paravirt_unfairlocks_enabled))
+	/*
+	 * Disable waiter lock stealing if PV spinlock is enabled
+	 */
+	if (pv_qspinlock_enabled() ||
+	   !static_key_false(&paravirt_unfairlocks_enabled))
 		return;
 
 	node->qprev	= prev;
@@ -360,7 +413,11 @@ unfair_set_vars(struct qnode *node, struct qnode *prev, u32 prev_tail)
  */
 static inline int unfair_check_and_clear_tail(struct qspinlock *lock, u32 tail)
 {
-	if (!static_key_false(&paravirt_unfairlocks_enabled))
+	/*
+	 * Disable waiter lock stealing if PV spinlock is enabled
+	 */
+	if (pv_qspinlock_enabled() ||
+	   !static_key_false(&paravirt_unfairlocks_enabled))
 		return false;
 
 	/*
@@ -389,7 +446,11 @@ unfair_get_lock(struct qspinlock *lock, struct qnode *node, u32 tail, int count)
 	int	     isqhead;
 	struct qnode *next;
 
-	if (!static_key_false(&paravirt_unfairlocks_enabled) ||
+	/*
+	 * Disable waiter lock stealing if PV spinlock is enabled
+	 */
+	if (pv_qspinlock_enabled() ||
+	   !static_key_false(&paravirt_unfairlocks_enabled) ||
 	   ((count & node->lsteal_mask) != node->lsteal_mask))
 		return false;
 
@@ -467,9 +528,6 @@ unfair_get_lock(struct qspinlock *lock, struct qnode *node, u32 tail, int count)
 }
 
 #else /* CONFIG_PARAVIRT_UNFAIR_LOCKS */
-#define	DEF_LOOP_CNT(c)
-#define	INC_LOOP_CNT(c)
-#define	LOOP_CNT(c)	0
 
 static void unfair_init_vars(struct qnode *node)	{}
 static void unfair_set_vars(struct qnode *node, struct qnode *prev,
@@ -587,9 +645,28 @@ static inline int trylock_pending(struct qspinlock *lock, u32 *pval)
 	 * store-release that clears the locked bit and create lock
 	 * sequentiality; this because not all try_clear_pending_set_locked()
 	 * implementations imply full barriers.
+	 *
+	 * When PV qspinlock is enabled, exit the pending bit code path and
+	 * go back to the regular queuing path if the lock isn't available
+	 * within a certain threshold.
 	 */
-	while ((val = smp_load_acquire(&lock->val.counter)) & _Q_LOCKED_MASK)
+	if (pv_qspinlock_enabled())
+		retry = PSPIN_THRESHOLD;
+	while ((val = smp_load_acquire(&lock->val.counter)) & _Q_LOCKED_MASK) {
+		if (pv_qspinlock_enabled() && (--retry == 0)) {
+			/*
+			 * Clear the pending bit and exit
+			 */
+			for (;;) {
+				new = val & ~_Q_PENDING_MASK;
+				old = atomic_cmpxchg(&lock->val, val, new);
+				if (old == val)
+					return 0;
+				val = old;
+			}
+		}
 		arch_mutex_cpu_relax();
+	}
 
 	/*
 	 * take ownership and clear the pending bit.
@@ -617,6 +694,7 @@ queue_spin_lock_slowerpath(struct qspinlock *lock, struct qnode *node, u32 tail)
 {
 	struct qnode *prev, *next;
 	u32 old, val;
+	DEF_LOOP_CNT(hcnt);
 
 	/*
 	 * we already touched the queueing cacheline; don't bother with pending
@@ -634,6 +712,7 @@ queue_spin_lock_slowerpath(struct qspinlock *lock, struct qnode *node, u32 tail)
 
 		prev = decode_tail(old);
 		unfair_set_vars(node, prev, old);
+		pv_set_prev(&node->pv, prev);
 		ACCESS_ONCE(prev->mcs.next) = (struct mcs_spinlock *)node;
 
 		while (!smp_load_acquire(&node->qhead)) {
@@ -648,8 +727,12 @@ queue_spin_lock_slowerpath(struct qspinlock *lock, struct qnode *node, u32 tail)
 					goto notify_next;
 				return;
 			}
+			pv_queue_spin_check(&node->pv, &node->mcs,
+					    LOOP_CNT(&cnt));
 			arch_mutex_cpu_relax();
 		}
+	} else {
+		ACCESS_ONCE(node->qhead) = true;
 	}
 
 	/*
@@ -662,8 +745,14 @@ queue_spin_lock_slowerpath(struct qspinlock *lock, struct qnode *node, u32 tail)
 	 */
 retry_queue_wait:
 	while ((val = smp_load_acquire(&lock->val.counter))
-				       & _Q_LOCKED_PENDING_MASK)
+				       & _Q_LOCKED_PENDING_MASK) {
+		INC_LOOP_CNT(hcnt);
+		/*
+		 * Perform queue head para-virtualization checks
+		 */
+		pv_head_spin_check(&node->pv, LOOP_CNT(&hcnt), old, lock);
 		arch_mutex_cpu_relax();
+	}
 
 	/*
 	 * claim the lock:
@@ -676,6 +765,7 @@ retry_queue_wait:
 	 * to grab the lock.
 	 */
 	for (;;) {
+		LOOP_CNT(hcnt = 0);	/* Reset loop count */
 		if (val != tail) {
 			/*
 			 * The get_qlock function will only failed if the
@@ -717,7 +807,11 @@ notify_next:
 	while (!(next = (struct qnode *)ACCESS_ONCE(node->mcs.next)))
 		arch_mutex_cpu_relax();
 
+	/*
+	 * The next one in queue is now at the head
+	 */
 	arch_mcs_spin_unlock_contended(&next->qhead);
+	pv_halt_check(&next->pv, lock);
 }
 
 /**
@@ -747,7 +841,7 @@ notify_next:
 void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
 	struct qnode *node;
-	u32 tail, idx;
+	u32 tail, idx, cpu_nr;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
@@ -756,12 +850,13 @@ void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 
 	node = this_cpu_ptr(&qnodes[0]);
 	idx = node->mcs.count++;
-	tail = encode_tail(smp_processor_id(), idx);
+	tail = encode_tail(cpu_nr = smp_processor_id(), idx);
 
 	node += idx;
 	node->qhead = 0;
 	node->mcs.next = NULL;
 	unfair_init_vars(node);
+	pv_init_vars(&node->pv, cpu_nr);
 
 	/*
 	 * We touched a (possibly) cold cacheline; attempt the trylock once
@@ -777,3 +872,47 @@ void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	this_cpu_dec(qnodes[0].mcs.count);
 }
 EXPORT_SYMBOL(queue_spin_lock_slowpath);
+
+#ifdef CONFIG_PARAVIRT_SPINLOCKS
+/**
+ * queue_spin_unlock_slowpath - kick up the CPU of the queue head
+ * @lock : Pointer to queue spinlock structure
+ *
+ * The lock is released after finding the queue head to avoid racing
+ * condition between the queue head and the lock holder.
+ */
+void queue_spin_unlock_slowpath(struct qspinlock *lock)
+{
+	struct qnode *node, *prev;
+
+	/*
+	 * Get the queue tail node
+	 */
+	node = decode_tail(atomic_read(&lock->val));
+
+	/*
+	 * Locate the queue head node by following the prev pointer from
+	 * tail to head.
+	 * It is assumed that the PV guests won't have that many CPUs so
+	 * that it won't take a long time to follow the pointers.
+	 */
+	while (!ACCESS_ONCE(node->qhead)) {
+		prev = pv_get_prev(&node->pv);
+		if (prev)
+			node = prev;
+		else
+			/*
+			 * Delay a bit to allow the prev pointer to be set up
+			 */
+			arch_mutex_cpu_relax();
+	}
+	/*
+	 * Found the queue head, now release the lock before waking it up
+	 * If unfair lock is enabled, this allows other ready tasks to get
+	 * lock before the halting CPU is waken up.
+	 */
+	__queue_spin_unlock(lock);
+	pv_kick_node(&node->pv);
+}
+EXPORT_SYMBOL(queue_spin_unlock_slowpath);
+#endif /* CONFIG_PARAVIRT_SPINLOCKS */
