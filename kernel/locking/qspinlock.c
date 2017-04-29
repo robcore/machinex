@@ -170,6 +170,23 @@ xchg_tail(struct qspinlock *lock, u32 tail, u32 *pval)
 	return (u32)xchg(&l->tail, tail >> _Q_TAIL_OFFSET) << _Q_TAIL_OFFSET;
 }
 
+/*
+ * cmpxchg_tail - Put in the new tail code if it matches the old one
+ * @lock : Pointer to queue spinlock structure
+ * @old  : The old tail code value
+ * @new  : The new tail code value
+ * Return: true if operation succeeds, fail otherwise
+ */
+static __always_inline int
+cmpxchg_tail(struct qspinlock *lock, u32 old, u32 new)
+{
+	struct __qspinlock *l = (void *)lock;
+
+	old >>= _Q_TAIL_OFFSET;
+	new >>= _Q_TAIL_OFFSET;
+	return cmpxchg(&l->tail, old, new) == old;
+}
+
 #else /* _Q_PENDING_BITS == 8 */
 
 /**
@@ -221,6 +238,35 @@ xchg_tail(struct qspinlock *lock, u32 tail, u32 *pval)
 	}
 	*pval = new;
 	return old;
+}
+
+/*
+ * cmpxchg_tail - Put in the new tail code if it matches the old one
+ * @lock : Pointer to queue spinlock structure
+ * @old  : The old tail code value
+ * @new  : The new tail code value
+ * Return: true if operation succeeds, fail otherwise
+ *
+ * It is assumed that the caller has grabbed the lock before calling it.
+ */
+static __always_inline int
+cmpxchg_tail(struct qspinlock *lock, u32 old, u32 new)
+{
+	u32 val;
+	u32 lp = _Q_LOCKED_VAL;	/* Lock & pending bits value */
+
+	for (;;) {
+		u32 val = atomic_cmpxchg(&lock->val, old | lp, new | lp);
+
+		/*
+		 * If the lock or pending bits somehow changes, redo it again
+		 */
+		if ((val & _Q_LOCKED_PENDING_MASK) != lp) {
+			lp = val & _Q_LOCKED_PENDING_MASK;
+			continue;
+		}
+		return val == (old | lp);
+	}
 }
 #endif /* _Q_PENDING_BITS == 8 */
 
@@ -306,6 +352,25 @@ unfair_set_vars(struct qnode *node, struct qnode *prev, u32 prev_tail)
 }
 
 /**
+ * unfair_check_and_clear_tail - check the tail value in lock & clear it if
+ *				 it matches the given tail
+ * @lock : Pointer to queue spinlock structure
+ * @tail : The tail code to be checked against
+ * Return: true if the tail code matches and is cleared, false otherwise
+ */
+static inline int unfair_check_and_clear_tail(struct qspinlock *lock, u32 tail)
+{
+	if (!static_key_false(&paravirt_unfairlocks_enabled))
+		return false;
+
+	/*
+	 * Try to clear the current tail code if it matches the given tail
+	 */
+	return ((atomic_read(&lock->val) & _Q_TAIL_MASK) == tail) &&
+		cmpxchg_tail(lock, tail, 0);
+}
+
+/**
  * unfair_get_lock - try to steal the lock periodically
  * @lock : Pointer to queue spinlock structure
  * @node : Current queue node address
@@ -317,7 +382,7 @@ unfair_set_vars(struct qnode *node, struct qnode *prev, u32 prev_tail)
  * node only if the qhead flag is set and the next pointer in the queue
  * node is not NULL.
  */
-static noinline int
+static inline int
 unfair_get_lock(struct qspinlock *lock, struct qnode *node, u32 tail, int count)
 {
 	u32	     prev_tail;
@@ -341,8 +406,64 @@ unfair_get_lock(struct qspinlock *lock, struct qnode *node, u32 tail, int count)
 			node->lsteal_mask = LSTEAL_MAX_MASK;
 		return false;
 	}
-	queue_spin_unlock(lock);
-	return false;
+
+	/*
+	 * Have stolen the lock, need to remove itself from the wait queue.
+	 * There are 3 steps that need to be done:
+	 * 1) If it is at the end of the queue, change the tail code in the
+	 *    lock to the one before it. If the current node happens to be
+	 *    the queue head, the previous tail code is 0.
+	 * 2) Change the next pointer in the previous queue node to point
+	 *    to the next one in queue or NULL if it is at the end of queue.
+	 * 3) If a next node is present, copy the prev_tail and qprev values
+	 *    to the next node.
+	 */
+	isqhead   = ACCESS_ONCE(node->qhead);
+	prev_tail = isqhead ? 0 : node->prev_tail;
+
+	/* Step 1 */
+	if (((atomic_read(&lock->val) & _Q_TAIL_MASK) == tail) &&
+	     cmpxchg_tail(lock, tail, prev_tail)) {
+		/*
+		 * Successfully change the tail code back to the previous one.
+		 * Now need to clear the next pointer in the previous node
+		 * only if it contains my queue node address and is not
+		 * the queue head. The cmpxchg() call below may fail if
+		 * a new task comes along and put its node address into the
+		 * next pointer. Whether the operation succeeds or fails
+		 * doesn't really matter.
+		 */
+		/* Step 2 */
+		if (!isqhead)
+			(void)cmpxchg(&node->qprev->mcs.next, &node->mcs, NULL);
+		node->mcs.next = NULL;
+		return true;
+	}
+
+	/*
+	 * A next node has to be present if the lock has a different tail
+	 * code. So wait until the next pointer is set.
+	 */
+	while (!(next = (struct qnode *)ACCESS_ONCE(node->mcs.next)))
+		arch_mutex_cpu_relax();
+
+	if (!isqhead) {
+		/*
+		 * Change the node data only if it is not the queue head
+		 * Steps 2 & 3
+		 */
+		ACCESS_ONCE(node->qprev->mcs.next) =
+				(struct mcs_spinlock *)next;
+		ACCESS_ONCE(next->qprev)     = node->qprev;
+		ACCESS_ONCE(next->prev_tail) = node->prev_tail;
+
+		/*
+		 * Make sure all the new node information are visible
+		 * before proceeding.
+		 */
+		smp_wmb();
+	}
+	return true;
 }
 
 #else /* CONFIG_PARAVIRT_UNFAIR_LOCKS */
@@ -355,6 +476,8 @@ static void unfair_set_vars(struct qnode *node, struct qnode *prev,
 		u32 prev_tail)				{}
 static int unfair_get_lock(struct qspinlock *lock, struct qnode *node,
 		u32 tail, int count)			{ return false; }
+static int unfair_check_and_clear_tail(struct qspinlock *lock, u32 tail)
+							{ return false; }
 #endif /* CONFIG_PARAVIRT_UNFAIR_LOCKS */
 
 /**
@@ -515,7 +638,16 @@ queue_spin_lock_slowerpath(struct qspinlock *lock, struct qnode *node, u32 tail)
 
 		while (!smp_load_acquire(&node->qhead)) {
 			INC_LOOP_CNT(cnt);
-			unfair_get_lock(lock, node, tail, LOOP_CNT(cnt));
+			if (unfair_get_lock(lock, node, tail, LOOP_CNT(cnt))) {
+				/*
+				 * Need to notify the next node only if both
+				 * the qhead flag and the next pointer in the
+				 * queue node are set.
+				 */
+				if (unlikely(node->qhead && node->mcs.next))
+					goto notify_next;
+				return;
+			}
 			arch_mutex_cpu_relax();
 		}
 	}
@@ -549,10 +681,25 @@ retry_queue_wait:
 			 * The get_qlock function will only failed if the
 			 * lock was stolen.
 			 */
-			if (get_qlock(lock))
+			if (get_qlock(lock)) {
+				/*
+				 * It is possible that in between the reading
+				 * of the lock value and the acquisition of
+				 * the lock, the next node may have stolen the
+				 * lock and be removed from the queue. So
+				 * the lock value may contain the tail code
+				 * of the current node. We need to recheck
+				 * the tail value here to be sure. And if
+				 * the tail code was cleared, we don't need
+				 * to notify the next node.
+				 */
+				if (unlikely(unfair_check_and_clear_tail(lock,
+						tail)))
+					return;
 				break;
-			else
+			} else {
 				goto retry_queue_wait;
+			}
 		}
 		old = atomic_cmpxchg(&lock->val, val, _Q_LOCKED_VAL);
 		if (old == val)
@@ -566,6 +713,7 @@ retry_queue_wait:
 	/*
 	 * contended path; wait for next, return.
 	 */
+notify_next:
 	while (!(next = (struct qnode *)ACCESS_ONCE(node->mcs.next)))
 		arch_mutex_cpu_relax();
 
