@@ -26,9 +26,14 @@ rm -f $(pwd)/arch/arm/crypto/aesbs-core.S >> /dev/null;
 rm -f $(pwd)/r*.cpio >> /dev/null;
 rm -rf $(pwd)/include/generated >> /dev/null;
 rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
+#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
+#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
+export PATH=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+export SUBARCH=arm
 export ARCH=arm
-export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 make distclean;
 make clean;
 make mrproper
