@@ -165,7 +165,7 @@ static inline void update_load_set(struct load_weight *lw, unsigned long w)
  */
 static unsigned int get_update_sysctl_factor(void)
 {
-	unsigned int cpus = min_t(int, num_online_cpus(), 4);
+	unsigned int cpus = min_t(unsigned int, num_online_cpus(), 4);
 	unsigned int factor;
 
 	switch (sysctl_sched_tunable_scaling) {
