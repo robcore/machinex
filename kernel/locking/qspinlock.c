@@ -216,6 +216,7 @@ xchg_tail(struct qspinlock *lock, u32 tail, u32 *pval)
 static inline int trylock_pending(struct qspinlock *lock, u32 *pval)
 {
 	u32 old, new, val = *pval;
+	int retry = 1;
 
 	/*
 	 * trylock || pending
@@ -225,10 +226,37 @@ static inline int trylock_pending(struct qspinlock *lock, u32 *pval)
 	 */
 	for (;;) {
 		/*
-		 * If we observe any contention; queue.
+		 * If we observe that the queue is not empty,
+		 * return and be queued.
 		 */
-		if (val & ~_Q_LOCKED_MASK)
+		if (val & _Q_TAIL_MASK)
 			return 0;
+
+		if ((val & _Q_LOCKED_PENDING_MASK) ==
+		    (_Q_LOCKED_VAL|_Q_PENDING_VAL)) {
+			/*
+			 * If both the lock and pending bits are set, we wait
+			 * a while to see if that either bit will be cleared.
+			 * If that is no change, we return and be queued.
+			 */
+			if (!retry)
+				return 0;
+			retry--;
+			cpu_relax();
+			cpu_relax();
+			*pval = val = atomic_read(&lock->val);
+			continue;
+		} else if ((val & _Q_LOCKED_PENDING_MASK) == _Q_PENDING_VAL) {
+			/*
+			 * Pending bit is set, but not the lock bit.
+			 * Assuming that the pending bit holder is going to
+			 * set the lock bit and clear the pending bit soon,
+			 * it is better to wait than to exit at this point.
+			 */
+			cpu_relax();
+			*pval = val = atomic_read(&lock->val);
+			continue;
+		}
 
 		new = _Q_LOCKED_VAL;
 		if (val == new)
