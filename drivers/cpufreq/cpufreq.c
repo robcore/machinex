@@ -374,31 +374,6 @@ static inline void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 }
 #endif
 
-/*********************************************************************
- *               FREQUENCY INVARIANT CPU CAPACITY                    *
- *********************************************************************/
-
-static DEFINE_PER_CPU(unsigned long, freq_scale) = SCHED_CAPACITY_SCALE;
-
-static void
-scale_freq_capacity(struct cpufreq_policy *policy, struct cpufreq_freqs *freqs)
-{
-	unsigned long cur = freqs ? freqs->new : policy->cur;
-	unsigned long scale = (cur << SCHED_CAPACITY_SHIFT) / policy->max;
-	int cpu;
-
-	pr_debug("cpus %*pbl cur/cur max freq %lu/%u kHz freq scale %lu\n",
-		 cpumask_pr_args(policy->cpus), cur, policy->max, scale);
-
-	for_each_cpu(cpu, policy->cpus)
-		per_cpu(freq_scale, cpu) = scale;
-}
-
-unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu)
-{
-	return per_cpu(freq_scale, cpu);
-}
-
 
 /**
  * cpufreq_notify_transition - call notifier chain and adjust_jiffies
@@ -422,13 +397,9 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 		state, freqs->new);
 
 	policy = per_cpu(cpufreq_cpu_data, freqs->cpu);
-
 	switch (state) {
 
 	case CPUFREQ_PRECHANGE:
-
-		scale_freq_capacity(policy, freqs);
-
 		/* detect if the driver reported a value as "old frequency"
 		 * which is not equal to what the cpufreq core thinks is
 		 * "old frequency".
@@ -1334,9 +1305,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		goto err_unlock_policy;
 	}
 
-	/* related cpus should atleast have policy->cpus */
-	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
-
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
 	 * managing offline cpus here.
@@ -2192,8 +2160,6 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	/* notification of the new policy */
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_NOTIFY, new_policy);
-
-	scale_freq_capacity(new_policy, NULL);
 
 	if (new_policy->cpu) {
 		cpu0_policy = cpufreq_cpu_get(0);
