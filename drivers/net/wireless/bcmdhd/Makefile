@@ -428,6 +428,7 @@ DHDCFLAGS += -include "dhd_sec_feature.h"
 EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG
 EXTRA_CFLAGS += -DSRCBASE=\"$(src)\"
 EXTRA_CFLAGS += -I$(src)/include/ -I$(src)/
+CFLAGS_siutils.o += -w
 KBUILD_CFLAGS += -I$(LINUXDIR)/include -I$(shell pwd)
 
 DHDOFILES := bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o \
