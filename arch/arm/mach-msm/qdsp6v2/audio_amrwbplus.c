@@ -103,6 +103,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			audio->stopped = 0;
 			break;
 		}
+	}
 	case AUDIO_GET_AMRWBPLUS_CONFIG_V2: {
 		if ((audio) && (arg) && (audio->codec_cfg)) {
 			if (copy_to_user((void *)arg, audio->codec_cfg,
@@ -110,13 +111,13 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				rc = -EFAULT;
 				pr_err("wb+ config get copy_to_user failed");
 				break;
-			}
 			} else {
 				pr_err("wb+ config v2 invalid parameters..");
 				rc = -EFAULT;
 				break;
 			}
 		break;
+		}
 	}
 	case AUDIO_SET_AMRWBPLUS_CONFIG_V2: {
 		if ((audio) && (arg) && (audio->codec_cfg)) {

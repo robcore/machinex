@@ -1397,7 +1397,7 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 		ave_nr_running +=
 			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
 
-		return ave_nr_running;
+	return ave_nr_running;
 }
 
 #endif
