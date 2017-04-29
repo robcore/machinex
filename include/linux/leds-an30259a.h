@@ -15,8 +15,7 @@
 #ifndef _LEDS_AN30259A_H
 #define _LEDS_AN30259A_H
 
-#include <linux/ioctl.h>
-#include <linux/types.h>
+#include <uapi/linux/leds-an30259a.h>
 
 #define LED_LIGHT_OFF	0
 #define LED_LIGHT_ON	1
@@ -76,10 +75,6 @@ struct an30259a_pr_control {
 	/* mid point brightness in 1/128 increments of color */
 	__u8			mid_brightness;
 } __packed;
-
-#define AN30259A_PR_SET_LED	_IOW('S', 42, struct an30259a_pr_control)
-#define AN30259A_PR_SET_LEDS	_IOW('S', 43, struct an30259a_pr_control[3])
-#define AN30259A_PR_SET_IMAX	_IOW('S', 44, __u8)
 
 extern struct class *sec_class;
 #endif						/* _LEDS_AN30259A_H */

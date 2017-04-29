@@ -232,6 +232,7 @@ header-y += kvm_para.h
 endif
 
 header-y += l2tp.h
+header-y += leds-an30259a.h
 header-y += limits.h
 header-y += llc.h
 header-y += loop.h
