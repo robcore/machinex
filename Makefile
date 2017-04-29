@@ -393,7 +393,7 @@ LINUXINCLUDE    := \
 #-freorder-blocks -freorder-blocks-and-partition?
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-variable -Wno-maybe-uninitialized \
-		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
+		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 -Wno-misleading-indentation\
 		   -std=gnu89 \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label  -Wno-logical-not-parentheses \
 		   -Wno-cpp -fno-var-tracking-assignments \
