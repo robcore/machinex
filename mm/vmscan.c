@@ -2858,7 +2858,7 @@ loop_again:
 				continue;
 			}
 
-			if (zone_balanced(zone, testorder, 0, end_zone))
+			if (zone_balanced(zone, testorder, 0, end_zone)) {
 				/*
 				 * If a zone reaches its high watermark,
 				 * consider it to be no longer congested. It's
@@ -2869,6 +2869,7 @@ loop_again:
 				zone_clear_flag(zone, ZONE_CONGESTED);
 				if (i <= *classzone_idx)
 					balanced += zone->managed_pages;
+			}
 		}
 
 		/*
