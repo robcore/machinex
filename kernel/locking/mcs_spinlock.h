@@ -17,7 +17,7 @@
 struct mcs_spinlock {
 	struct mcs_spinlock *next;
 	int locked; /* 1 if lock acquired */
-	int count;
+	int count;  /* nesting count, see qspinlock.c */
 };
 
 #ifndef arch_mcs_spin_lock_contended
@@ -104,7 +104,7 @@ void mcs_spin_unlock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
 		/*
 		 * Release the lock by setting it to NULL
 		 */
-		if (likely(cmpxchg(lock, node, NULL) == node))
+		if (likely(cmpxchg_release(lock, node, NULL) == node))
 			return;
 		/* Wait until the next pointer is set */
 		while (!(next = READ_ONCE(node->next)))
