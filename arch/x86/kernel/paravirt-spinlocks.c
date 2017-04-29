@@ -13,6 +13,7 @@ default_spin_lock_flags(arch_spinlock_t *lock, unsigned long flags)
 	arch_spin_lock(lock);
 }
 
+#ifdef CONFIG_PARAVIRT_SPINLOCKS
 struct pv_lock_ops pv_lock_ops = {
 #ifdef CONFIG_SMP
 	.spin_is_locked = __ticket_spin_is_locked,

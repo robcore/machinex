@@ -61,12 +61,22 @@
 #include "mcs_spinlock.h"
 
 /*
+ * To have additional features for better virtualization support, it is
+ * necessary to store additional data in the queue node structure. So
+ * a new queue node structure will have to be defined and used here.
+ */
+struct qnode {
+	struct mcs_spinlock mcs;
+};
+#define qhead	mcs.locked	/* The queue head flag */
+
+/*
  * Per-CPU queue node structures; we can never have more than 4 nested
  * contexts: task, softirq, hardirq, nmi.
  *
  * Exactly fits one cacheline.
  */
-static DEFINE_PER_CPU_ALIGNED(struct mcs_spinlock, mcs_nodes[4]);
+static DEFINE_PER_CPU_ALIGNED(struct qnode, qnodes[4]);
 
 /*
  * We must be able to distinguish between no-tail and the tail at 0:0,
@@ -83,12 +93,12 @@ static inline u32 encode_tail(int cpu, int idx)
 	return tail;
 }
 
-static inline struct mcs_spinlock *decode_tail(u32 tail)
+static inline struct qnode *decode_tail(u32 tail)
 {
 	int cpu = (tail >> _Q_TAIL_CPU_OFFSET) - 1;
 	int idx = (tail &  _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
 
-	return per_cpu_ptr(&mcs_nodes[idx], cpu);
+	return per_cpu_ptr(&qnodes[idx], cpu);
 }
 
 #define _Q_LOCKED_PENDING_MASK	(_Q_LOCKED_MASK | _Q_PENDING_MASK)
@@ -98,23 +108,29 @@ static inline struct mcs_spinlock *decode_tail(u32 tail)
  * can allow better optimization of the lock acquisition for the pending
  * bit holder.
  */
-#if _Q_PENDING_BITS == 8
-
 struct __qspinlock {
 	union {
 		atomic_t val;
-		struct {
 #ifdef __LITTLE_ENDIAN
+		u8	 locked;
+		struct {
 			u16	locked_pending;
 			u16	tail;
-#else
-			u16	tail;
-			u16	locked_pending;
-#endif
 		};
+#else
+		struct {
+			u16	tail;
+			u16	locked_pending;
+		};
+		struct {
+			u8	reserved[3];
+			u8	locked;
+		};
+#endif
 	};
 };
 
+#if _Q_PENDING_BITS == 8
 /**
  * clear_pending_set_locked - take ownership and clear the pending bit.
  * @lock: Pointer to queue spinlock structure
@@ -202,6 +218,32 @@ xchg_tail(struct qspinlock *lock, u32 tail, u32 *pval)
 	return old;
 }
 #endif /* _Q_PENDING_BITS == 8 */
+
+/**
+ * get_qlock - Set the lock bit and own the lock
+ * @lock : Pointer to queue spinlock structure
+ * Return: 1 if lock acquired, 0 otherwise
+ *
+ * This routine should only be called when the caller is the only one
+ * entitled to acquire the lock.
+ */
+static __always_inline int get_qlock(struct qspinlock *lock)
+{
+	struct __qspinlock *l = (void *)lock;
+
+#ifdef CONFIG_PARAVIRT_UNFAIR_LOCKS
+	if (static_key_false(&paravirt_unfairlocks_enabled))
+		/*
+		 * Need to use atomic operation to get the lock when
+		 * lock stealing can happen.
+		 */
+		return cmpxchg(&l->locked, 0, _Q_LOCKED_VAL) == 0;
+#endif
+	barrier();
+	ACCESS_ONCE(l->locked) = _Q_LOCKED_VAL;
+	barrier();
+	return 1;
+}
 
 /**
  * trylock_pending - try to acquire queue spinlock using the pending bit
@@ -321,8 +363,8 @@ static inline int trylock_pending(struct qspinlock *lock, u32 *pval)
  */
 void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
-	struct mcs_spinlock *prev, *next, *node;
-	u32 new, old, tail;
+	struct qnode *prev, *next, *node;
+	u32 old, tail;
 	int idx;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
@@ -330,13 +372,13 @@ void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	if (trylock_pending(lock, &val))
 		return;	/* Lock acquired */
 
-	node = this_cpu_ptr(&mcs_nodes[0]);
-	idx = node->count++;
+	node = this_cpu_ptr(&qnodes[0]);
+	idx = node->mcs.count++;
 	tail = encode_tail(smp_processor_id(), idx);
 
 	node += idx;
-	node->locked = 0;
-	node->next = NULL;
+	node->qhead = 0;
+	node->mcs.next = NULL;
 
 	/*
 	 * We touched a (possibly) cold cacheline; attempt the trylock once
@@ -359,18 +401,23 @@ void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	 */
 	if (old & _Q_TAIL_MASK) {
 		prev = decode_tail(old);
-		ACCESS_ONCE(prev->next) = node;
+		ACCESS_ONCE(prev->mcs.next) = (struct mcs_spinlock *)node;
 
-		arch_mcs_spin_lock_contended(&node->locked);
+		while (!smp_load_acquire(&node->qhead))
+			arch_mutex_cpu_relax();
 	}
 
 	/*
 	 * we're at the head of the waitqueue, wait for the owner & pending to
 	 * go away.
+	 * Load-acquired is used here because the get_qlock()
+	 * function below may not be a full memory barrier.
 	 *
 	 * *,x,y -> *,0,0
 	 */
-	while ((val = atomic_read(&lock->val)) & _Q_LOCKED_PENDING_MASK)
+retry_queue_wait:
+	while ((val = smp_load_acquire(&lock->val.counter))
+				       & _Q_LOCKED_PENDING_MASK)
 		arch_mutex_cpu_relax();
 
 	/*
@@ -378,15 +425,27 @@ void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	 *
 	 * n,0,0 -> 0,0,1 : lock, uncontended
 	 * *,0,0 -> *,0,1 : lock, contended
+	 *
+	 * If the queue head is the only one in the queue (lock value == tail),
+	 * clear the tail code and grab the lock. Otherwise, we only need
+	 * to grab the lock.
 	 */
 	for (;;) {
-		new = _Q_LOCKED_VAL;
-		if (val != tail)
-			new |= val;
-
-		old = atomic_cmpxchg(&lock->val, val, new);
+		if (val != tail) {
+			/*
+			 * The get_qlock function will only failed if the
+			 * lock was stolen.
+			 */
+			if (get_qlock(lock))
+				break;
+			else
+				goto retry_queue_wait;
+		}
+		old = atomic_cmpxchg(&lock->val, val, _Q_LOCKED_VAL);
 		if (old == val)
-			break;
+			goto release;	/* No contention */
+		else if (old & _Q_LOCKED_MASK)
+			goto retry_queue_wait;
 
 		val = old;
 	}
@@ -394,17 +453,15 @@ void queue_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	/*
 	 * contended path; wait for next, release.
 	 */
-	if (new != _Q_LOCKED_VAL) {
-		while (!(next = ACCESS_ONCE(node->next)))
-			arch_mutex_cpu_relax();
+	while (!(next = (struct qnode *)ACCESS_ONCE(node->mcs.next)))
+		arch_mutex_cpu_relax();
 
-		arch_mcs_spin_unlock_contended(&next->locked);
-	}
+	arch_mcs_spin_unlock_contended(&next->qhead);
 
 release:
 	/*
 	 * release the node
 	 */
-	this_cpu_dec(mcs_nodes[0].count);
+	this_cpu_dec(qnodes[0].mcs.count);
 }
 EXPORT_SYMBOL(queue_spin_lock_slowpath);
