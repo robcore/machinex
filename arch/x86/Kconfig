@@ -21,7 +21,6 @@ config X86
 	select HAVE_UNSTABLE_SCHED_CLOCK
 	select ARCH_SUPPORTS_NUMA_BALANCING
 	select ARCH_WANTS_PROT_NUMA_PROT_NONE
-	select ARCH_USE_QUEUE_SPINLOCK
 	select HAVE_IDE
 	select HAVE_OPROFILE
 	select HAVE_PCSPKR_PLATFORM
@@ -568,17 +567,6 @@ config PARAVIRT_TIME_ACCOUNTING
 	  that, there can be a small performance impact.
 
 	  If in doubt, say N here.
-
-config PARAVIRT_UNFAIR_LOCKS
-	bool "Enable unfair locks in a para-virtualized guest"
-	depends on PARAVIRT && SMP && QUEUE_SPINLOCK
-	depends on !CONFIG_X86_OOSTORE && !CONFIG_X86_PPRO_FENCE
-	---help---
-	  This changes the kernel to use unfair locks in a
-	  para-virtualized guest. This will help performance in most
-	  cases. However, there is a possibility of lock starvation
-	  on a heavily contended lock especially in a large guest
-	  with many virtual CPUs.
 
 source "arch/x86/xen/Kconfig"
 

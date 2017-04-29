@@ -180,7 +180,6 @@ static inline void arch_read_lock(arch_rwlock_t *rw)
 		     "1:\n"
 		     ::LOCK_PTR_REG (rw) : "memory");
 }
-#endif /* CONFIG_QUEUE_SPINLOCK */
 
 static inline void arch_write_lock(arch_rwlock_t *rw)
 {
