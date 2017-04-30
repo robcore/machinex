@@ -1286,15 +1286,6 @@ extern void update_group_capacity(struct sched_domain *sd, int cpu);
 
 extern void trigger_load_balance(struct rq *rq);
 
-/* Force usage of PELT signal, i.e. util_avg */
-#define UTIL_AVG true
-/* Use estimated utilization when possible, i.e. UTIL_EST feature enabled */
-#define UTIL_EST false
-static inline bool use_util_est(void)
-{
-	return sched_feat(UTIL_EST);
-}
-
 /*
  * Only depends on SMP, FAIR_GROUP_SCHED may be removed when runnable_avg
  * becomes useful in lb
@@ -1662,9 +1653,9 @@ static inline unsigned long __cpu_util(int cpu, int delta)
 	return (delta >= capacity) ? capacity : delta;
 }
 
-static inline unsigned long cpu_util(int cpu, bool use_pelt)
+static inline unsigned long cpu_util(int cpu)
 {
-	return __cpu_util(cpu, 0, use_pelt);
+	return __cpu_util(cpu, 0);
 }
 
 /*
