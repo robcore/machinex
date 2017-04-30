@@ -90,7 +90,7 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 
 		j_cdbs = dbs_data->get_cpu_cdbs(j);
 
-		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
+		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
 
 		wall_time = (unsigned int)
 			(cur_wall_time - j_cdbs->prev_cpu_wall);
@@ -214,7 +214,7 @@ int cpufreq_governor_dbs(struct dbs_data *dbs_data,
 
 			j_cdbs->cur_policy = policy;
 			j_cdbs->prev_cpu_idle = get_cpu_idle_time(j,
-					&j_cdbs->prev_cpu_wall);
+					&j_cdbs->prev_cpu_wall, 0);
 			if (ignore_nice)
 				j_cdbs->prev_cpu_nice =
 					kcpustat_cpu(j).cpustat[CPUTIME_NICE];

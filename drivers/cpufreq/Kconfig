@@ -21,7 +21,13 @@ config CPU_FREQ
 
 	  For details, take a look at <file:Documentation/cpu-freq>.
 
-	  If in doubt, say N.
+	  If in doubt, say Y.
+
+config CPU_GOV_COMMON
+	bool "Common Governor interface"
+	default y
+	help
+	  A welcome pain in the ass.
 
 if CPU_FREQ
 
