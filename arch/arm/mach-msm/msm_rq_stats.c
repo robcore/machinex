@@ -110,7 +110,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	return 0;
 }
-static unsigned int conservative_rq = 1;
+static unsigned int conservative_rq = 0;
 
 static ssize_t store_conservative_rq(struct kobject *kobj,
 				     struct kobj_attribute *attr,
