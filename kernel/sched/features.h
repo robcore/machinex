@@ -76,3 +76,8 @@ SCHED_FEAT(NUMA,	false)
  * decisions optimizing for energy efficiency.
  */
 SCHED_FEAT(ENERGY_AWARE, false)
+
+/*
+ * UtilEstimation. Use estimated CPU utilisation.
+ */
+SCHED_FEAT(UTIL_EST, false)
