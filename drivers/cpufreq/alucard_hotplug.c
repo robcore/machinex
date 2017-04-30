@@ -845,6 +845,8 @@ static int __init alucard_hotplug_init(void)
 		hotplug_start();
 	}
 
+	alucard_enabled = hotplug_tuners_ins.hotplug_enable;
+
 	return ret;
 }
 

@@ -147,7 +147,7 @@ static unsigned int report_load_at_max_freq(void)
 	uint64_t timed_load = 0;
 	unsigned int max_window_size = 0;
 
-	if (conservative_rq) {
+	if (conservative_rq || alucard_enabled) {
 		for_each_online_cpu(cpu) {
 			pcpu = &per_cpu(cpuload, cpu);
 
@@ -352,7 +352,7 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 	unsigned int val = 0;
 	unsigned long flags = 0;
 
-	if (conservative_rq) {
+	if (conservative_rq || alucard_enabled) {
 		int nr_running = (avg_nr_running() * 10) >> FSHIFT;
 		if (rq_info.hotplug_disabled)
 			return snprintf(buf, PAGE_SIZE, "%d.%d\n", 0, 5);

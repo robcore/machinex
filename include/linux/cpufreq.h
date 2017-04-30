@@ -750,6 +750,8 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 	cpufreq_frequency_table_put_attr(policy->cpu);
 	return 0;
 }
+
+bool alucard_enabled;
 /* HACKING TIME
 struct cpufreq_power_stats_platform_data {
 	char device_path[16];
