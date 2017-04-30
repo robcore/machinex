@@ -15,6 +15,7 @@
 #include <linux/seq_file.h>
 #include <linux/kallsyms.h>
 #include <linux/utsname.h>
+#include <linux/mempolicy.h>
 
 #include "sched.h"
 
@@ -150,12 +151,12 @@ static void print_rq(struct seq_file *m, struct rq *rq, int rq_cpu)
 	"----------------------------------------------------\n");
 
 	rcu_read_lock();
-	do_each_thread(g, p) {
+	for_each_process_thread(g, p) {
 		if (!p->on_rq || task_cpu(p) != rq_cpu)
 			continue;
 
 		print_task(m, rq, p);
-	} while_each_thread(g, p);
+	}
 	rcu_read_unlock();
 }
 
@@ -416,11 +417,11 @@ static int sched_debug_show(struct seq_file *m, void *v)
 	else
 		sched_debug_header(m);
 
- 	return 0;
- }
+	return 0;
+}
 
- void sysrq_sched_debug_show(void)
- {
+void sysrq_sched_debug_show(void)
+{
 	int cpu;
 
 	sched_debug_header(NULL);
