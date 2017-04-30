@@ -712,7 +712,6 @@ void init_entity_runnable_average(struct sched_entity *se)
 	sa->util_avg =  sched_freq() ?
 		sysctl_sched_initial_task_util :
 		scale_load_down(SCHED_LOAD_SCALE);
-	sa->util_est = sa->util_avg;
 	sa->util_sum = sa->util_avg * LOAD_AVG_MAX;
 	/* when this task enqueue'ed, it will contribute to its cfs_rq's load_avg */
 }
@@ -2492,12 +2491,6 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		sa->util_avg = sa->util_sum / LOAD_AVG_MAX;
 	}
 
-	/* Update task estimated utilization */
-	if (se->avg.util_est < se->avg.util_avg) {
-		cfs_rq->avg.util_est += (se->avg.util_avg - se->avg.util_est);
-		se->avg.util_est = se->avg.util_avg;
-	}
-
 	return decayed;
 }
 
@@ -2602,11 +2595,6 @@ static inline int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 #endif
 
 	return decayed || removed;
-}
-
-static inline unsigned long task_util_est(struct task_struct *p)
-{
-	return p->se.avg.util_est;
 }
 
 /* Update task and its cfs_rq load average */
@@ -4182,13 +4170,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	}
 
 #endif /* CONFIG_SMP */
-
-	/* Get the top level CFS RQ for the task CPU */
-	cfs_rq = &(task_rq(p)->cfs);
-
-	/* Update RQ estimated utilization */
-	cfs_rq->avg.util_est += task_util_est(p);
-
 	hrtick_update(rq);
 }
 
@@ -4282,20 +4263,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	}
 
 #endif /* CONFIG_SMP */
-
-	/* Get the top level CFS RQ for the task CPU */
-	cfs_rq = &(task_rq(p)->cfs);
-
-	/* Update RQ estimated utilization */
-	if (cfs_rq->avg.util_est >= task_util_est(p))
-		cfs_rq->avg.util_est -= task_util_est(p);
-	else
-		cfs_rq->avg.util_est = 0;
-
-
-	/* Update estimated utilization */
-	if (task_sleep)
-		p->se.avg.util_est = p->se.avg.util_avg;
 
 	hrtick_update(rq);
 }
