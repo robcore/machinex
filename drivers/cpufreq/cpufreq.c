@@ -178,42 +178,6 @@ bool cpufreq_driver_is_slow(void)
 }
 EXPORT_SYMBOL_GPL(cpufreq_driver_is_slow);
 
-static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
-{
-	u64 idle_time;
-	u64 cur_wall_time;
-	u64 busy_time;
-
-	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
-
-	busy_time = kcpustat_cpu(cpu).cpustat[CPUTIME_USER];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_IRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SOFTIRQ];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_STEAL];
-	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
-
-	idle_time = cur_wall_time - busy_time;
-	if (wall)
-		*wall = cputime_to_usecs(cur_wall_time);
-
-	return cputime_to_usecs(idle_time);
-}
-
-u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy)
-{
-	u64 idle_time = get_cpu_idle_time_us(cpu, io_busy ? wall : NULL);
-
-	if (idle_time == -1ULL)
-		return get_cpu_idle_time_jiffy(cpu, wall);
-
-	else if (!io_busy)
-		idle_time += get_cpu_iowait_time_us(cpu, wall);
-
-	return idle_time;
-}
-EXPORT_SYMBOL_GPL(get_cpu_idle_time);
-
 static struct cpufreq_policy *__cpufreq_cpu_get(unsigned int cpu, bool sysfs)
 {
 	struct cpufreq_policy *policy;
@@ -989,7 +953,7 @@ no_policy:
 
 static void cpufreq_sysfs_release(struct kobject *kobj)
 {
-	/* instead set for complete, decrease ref count */
+/* instead set for complete, decrease ref count */
 	kobject_put(kobj);
 }
 
@@ -1026,6 +990,55 @@ static int cpufreq_add_dev_sysfs(unsigned int cpu,
 
 	/* send uevent when cpu device is added */
 	kobject_uevent(&dev->kobj, KOBJ_ADD);
+
+	/* set up files for this cpu device */
+	drv_attr = cpufreq_driver->attr;
+	while ((drv_attr) && (*drv_attr)) {
+		ret = sysfs_create_file(kobj, &((*drv_attr)->attr));
+		if (ret)
+			goto err_out_kobj_put;
+		drv_attr++;
+	}
+	if (cpufreq_driver->get) {
+		ret = sysfs_create_file(kobj, &cpuinfo_cur_freq.attr);
+		if (ret)
+			goto err_out_kobj_put;
+	}
+	if (cpufreq_driver->target) {
+		ret = sysfs_create_file(kobj, &scaling_cur_freq.attr);
+		if (ret)
+			goto err_out_kobj_put;
+	}
+	if (cpufreq_driver->bios_limit) {
+		ret = sysfs_create_file(kobj, &bios_limit.attr);
+		if (ret)
+			goto err_out_kobj_put;
+	}
+	/* increment the kobj refcount so that no one can clean it up.
+	 * Cleaning is done at unregistration time
+	 */
+	if (!kobject_get(kobj))
+		goto err_out_kobj_put;
+
+	return ret;
+
+err_out_kobj_put:
+	kobject_put(kobj);
+	return ret;
+}
+
+static int cpufreq_add_dev_sysfs(unsigned int cpu,
+					struct kobject *kobj,
+					struct device *dev)
+{
+	struct freq_attr **drv_attr;
+	int ret = 0;
+
+	/* prepare interface data */
+	ret = kobject_init_and_add(kobj, &ktype_cpufreq,
+				   &dev->kobj, "cpufreq");
+	if (ret)
+		return ret;
 
 	/* set up files for this cpu device */
 	drv_attr = cpufreq_driver->attr;
@@ -1210,6 +1223,7 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 
 err_out_kobj_put:
 	kobject_put(policy->kobj);
+	wait_for_completion(policy->kobj_unregister);
 	return ret;
 }
 
@@ -1259,10 +1273,10 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	if (!policy)
 		goto nomem_out;
 
-	if (!alloc_cpumask_var(&policy->cpus, GFP_KERNEL))
+	if (!alloc_cpumask_var(policy->cpus, GFP_KERNEL))
 		goto err_free_policy;
 
-	if (!zalloc_cpumask_var(&policy->related_cpus, GFP_KERNEL))
+	if (!zalloc_cpumask_var(policy->related_cpus, GFP_KERNEL))
 		goto err_free_cpumask;
 
 	policy->cpu = cpu;
@@ -1273,8 +1287,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	ret = (lock_policy_rwsem_write(cpu) < 0);
 	WARN_ON(ret);
 
-	init_completion(&policy->kobj_unregister);
-	INIT_WORK(&policy->update, handle_update);
+	init_completion(policy->kobj_unregister);
+	INIT_WORK(policy->update, handle_update);
 
 	/* Set governor before ->init, so that driver could check it */
 #ifdef CONFIG_HOTPLUG_CPU
@@ -1668,7 +1682,7 @@ static unsigned int __cpufreq_get(unsigned int cpu)
 					saved value exists */
 		if (unlikely(ret_freq != policy->cur)) {
 			cpufreq_out_of_sync(cpu, policy->cur, ret_freq);
-			schedule_work(&policy->update);
+			schedule_work(policy->update);
 		}
 	}
 
@@ -2126,7 +2140,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n", new_policy->cpu,
 		new_policy->min, new_policy->max);
 
-	memcpy(&new_policy->cpuinfo, &policy->cpuinfo, sizeof(struct cpufreq_cpuinfo));
+	memcpy(&new_policy->cpuinfo, policy->cpuinfo, sizeof(struct cpufreq_cpuinfo));
 
 	if (new_policy->min > policy->user_policy.max
 		|| new_policy->max < policy->user_policy.min) {
