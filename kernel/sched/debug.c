@@ -15,7 +15,6 @@
 #include <linux/seq_file.h>
 #include <linux/kallsyms.h>
 #include <linux/utsname.h>
-#include <linux/mempolicy.h>
 
 #include "sched.h"
 
@@ -91,7 +90,6 @@ static void print_cfs_group_stats(struct seq_file *m, int cpu, struct task_group
 	P(se->avg.usage_avg_sum);
 	P(se->avg.load_avg);
 	P(se->avg.util_avg);
-	P(se->avg.util_est);
 #endif
 #undef PN
 #undef P
@@ -152,12 +150,12 @@ static void print_rq(struct seq_file *m, struct rq *rq, int rq_cpu)
 	"----------------------------------------------------\n");
 
 	rcu_read_lock();
-	for_each_process_thread(g, p) {
+	do_each_thread(g, p) {
 		if (!p->on_rq || task_cpu(p) != rq_cpu)
 			continue;
 
 		print_task(m, rq, p);
-	}
+	} while_each_thread(g, p);
 	rcu_read_unlock();
 }
 
@@ -209,8 +207,6 @@ void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
 			cfs_rq->runnable_load_avg);
 	SEQ_printf(m, "  .%-30s: %lu\n", "util_avg",
 			cfs_rq->avg.util_avg);
-	SEQ_printf(m, "  .%-30s: %lu\n", "util_est",
-			cfs_rq->avg.util_est);
 	SEQ_printf(m, "  .%-30s: %ld\n", "removed_load_avg",
 			atomic_long_read(&cfs_rq->removed_load_avg));
 	SEQ_printf(m, "  .%-30s: %ld\n", "removed_util_avg",
@@ -420,11 +416,11 @@ static int sched_debug_show(struct seq_file *m, void *v)
 	else
 		sched_debug_header(m);
 
-	return 0;
-}
+ 	return 0;
+ }
 
-void sysrq_sched_debug_show(void)
-{
+ void sysrq_sched_debug_show(void)
+ {
 	int cpu;
 
 	sched_debug_header(NULL);
@@ -604,7 +600,6 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 	P(se.avg.util_sum);
 	P(se.avg.load_avg);
 	P(se.avg.util_avg);
-	P(se.avg.util_est);
 	P(se.avg.last_update_time);
 #endif
 	P(policy);
