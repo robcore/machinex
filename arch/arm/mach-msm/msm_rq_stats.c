@@ -37,6 +37,7 @@
 struct notifier_block freq_transition;
 struct notifier_block cpu_hotplug;
 struct notifier_block freq_policy;
+extern bool alucard_enabled;
 
 struct cpu_load_data {
 	u64 prev_cpu_idle;

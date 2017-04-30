@@ -90,6 +90,8 @@ struct runqueue_data {
 	spinlock_t lock;
 };
 
+bool alucard_enabled;
+
 static struct runqueue_data *rq_data;
 
 static void init_rq_avg_stats(void)
