@@ -37,7 +37,6 @@
 struct notifier_block freq_transition;
 struct notifier_block cpu_hotplug;
 struct notifier_block freq_policy;
-extern unsigned int alucard_enabled;
 
 struct cpu_load_data {
 	u64 prev_cpu_idle;
@@ -111,7 +110,7 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	return 0;
 }
-static unsigned int conservative_rq = 0;
+static unsigned int conservative_rq = 1;
 
 static ssize_t store_conservative_rq(struct kobject *kobj,
 				     struct kobj_attribute *attr,
@@ -148,7 +147,7 @@ static unsigned int report_load_at_max_freq(void)
 	uint64_t timed_load = 0;
 	unsigned int max_window_size = 0;
 
-	if (conservative_rq || alucard_enabled) {
+	if (conservative_rq) {
 		for_each_online_cpu(cpu) {
 			pcpu = &per_cpu(cpuload, cpu);
 
@@ -353,7 +352,7 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 	unsigned int val = 0;
 	unsigned long flags = 0;
 
-	if (conservative_rq || alucard_enabled) {
+	if (conservative_rq) {
 		int nr_running = (avg_nr_running() * 10) >> FSHIFT;
 		if (rq_info.hotplug_disabled)
 			return snprintf(buf, PAGE_SIZE, "%d.%d\n", 0, 5);

@@ -90,8 +90,6 @@ struct runqueue_data {
 	spinlock_t lock;
 };
 
-unsigned int alucard_enabled;
-
 static struct runqueue_data *rq_data;
 
 static void init_rq_avg_stats(void)
@@ -846,8 +844,6 @@ static int __init alucard_hotplug_init(void)
 	if (hotplug_tuners_ins.hotplug_enable > 0) {
 		hotplug_start();
 	}
-
-	alucard_enabled = hotplug_tuners_ins.hotplug_enable;
 
 	return ret;
 }
