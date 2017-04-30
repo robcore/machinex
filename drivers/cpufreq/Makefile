@@ -1,6 +1,6 @@
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 # CPUfreq core
-obj-$(CONFIG_CPU_FREQ)			+= msm_cpufreq.o
+obj-$(CONFIG_CPU_FREQ)			+= qcom-cpufreq.o
 # CPUfreq cross-arch helpers
 obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 # CPUfreq stats

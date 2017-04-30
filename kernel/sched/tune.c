@@ -290,8 +290,10 @@ schedtune_boostgroup_update(int idx, int boost)
 		}
 
 		/* Check if this update has decreased current max */
-		if (cur_boost_max == old_boost && old_boost > boost)
+		if (cur_boost_max == old_boost && old_boost > boost) {
 			schedtune_cpu_update(cpu);
+			continue;
+		}
 	}
 
 	return 0;
