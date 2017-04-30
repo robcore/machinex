@@ -90,7 +90,7 @@ struct runqueue_data {
 	spinlock_t lock;
 };
 
-bool alucard_enabled;
+unsigned int alucard_enabled;
 
 static struct runqueue_data *rq_data;
 

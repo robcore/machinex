@@ -751,7 +751,7 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 	return 0;
 }
 
-extern bool alucard_enabled;
+extern unsigned int alucard_enabled;
 /* HACKING TIME
 struct cpufreq_power_stats_platform_data {
 	char device_path[16];
