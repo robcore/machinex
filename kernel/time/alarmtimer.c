@@ -162,7 +162,7 @@ static void alarmtimer_dequeue(struct alarm_base *base, struct alarm *alarm)
 	timerqueue_del(&base->timerqueue, &alarm->node);
 	alarm->state &= ~ALARMTIMER_STATE_ENQUEUED;
 }
-
+EXPORT_SYMBOL_GPL(alarmtimer_get_rtcdev);
 
 /**
  * alarmtimer_fired - Handles alarm hrtimer being fired.
