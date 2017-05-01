@@ -30,7 +30,7 @@
 #ifndef __LINUX_RCUTREE_H
 #define __LINUX_RCUTREE_H
 
-extern void rcu_note_context_switch(int cpu);
+extern void rcu_note_context_switch(void);
 #ifndef CONFIG_RCU_NOCB_CPU_ALL
 extern int rcu_needs_cpu(int cpu, unsigned long *delta_jiffies);
 #endif
@@ -43,7 +43,7 @@ extern void rcu_cpu_stall_reset(void);
  */
 static inline void rcu_virt_note_context_switch(int cpu)
 {
-	rcu_note_context_switch(cpu);
+	rcu_note_context_switch();
 }
 
 extern void synchronize_rcu_bh(void);
