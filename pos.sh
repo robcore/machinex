@@ -1,22 +1,51 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0023-REVERT-OPP-commits.patch"
-patch -p1 -R < "/root/machinex/patches/0022-little-workaround-our-non-existent-ACPI.patch"
-patch -p1 -R < "/root/machinex/patches/0021-fix-crash-in-NON-PM_RUNTIME-builds-not-for-us-but-fo.patch"
-patch -p1 -R < "/root/machinex/patches/0020-PM-Domains-Rename-cpu_data-to-cpuidle_data.patch"
-patch -p1 -R < "/root/machinex/patches/0019-remove-legacy-DT-method-of-pm-domain-of-add-device.patch"
-patch -p1 -R < "/root/machinex/patches/0018-PM-Domains-Add-genpd-attach-detach-callbacks.patch"
-patch -p1 -R < "/root/machinex/patches/0017-pm-domains-debugfs.patch"
-patch -p1 -R < "/root/machinex/patches/0016-PM-Domains-Add-APIs-to-attach-detach-a-PM-domain-for.patch"
-patch -p1 -R < "/root/machinex/patches/0015-PM-domains-Spelling-s-domian-domain.patch"
-patch -p1 -R < "/root/machinex/patches/0014-PM-domains-Remove-default_stop_ok-API.patch"
-patch -p1 -R < "/root/machinex/patches/0013-PM-domains-Remove-pm_genpd_syscore_switch-API.patch"
-patch -p1 -R < "/root/machinex/patches/0012-PM-domains-remove-redundant-check-for-CONFIG_PM.patch"
-patch -p1 -R < "/root/machinex/patches/0011-PM-domains-Remove-dev_irq_safe-from-genpd-config.patch"
-patch -p1 -R < "/root/machinex/patches/0010-PM-domains-Remove-system-PM-callbacks-from-gpd_dev_o.patch"
-patch -p1 -R < "/root/machinex/patches/0009-PM-domains-Ignore-callbacks-for-subsys-generic_pm_do.patch"
-patch -p1 -R < "/root/machinex/patches/0008-PM-domains-Remove-the-pm_genpd_add-remove_callbacks-.patch"
-patch -p1 -R < "/root/machinex/patches/0007-discard-duplicate-OPPs.patch"
-patch -p1 -R < "/root/machinex/patches/0006-PM-OPP-fix-incorrect-OPP-count-handling.patch"
-patch -p1 -R < "/root/machinex/patches/0005-PM-OPP-move-cpufreq-specifics-out-of-generic-OPP-lib.patch"
-patch -p1 -R < "/root/machinex/patches/0004-revert-that-for-now.patch"
-patch -p1 -R < "/root/machinex/patches/0003-PM-clock_ops-Add-pm_clk_add_clk.patch"
+/root/machinex/patches/0050-reapply-mmc-deadlock-commit.patch
+/root/machinex/patches/0049-REVERT-TEST-mmc-core-Fix-deadlock-in-suspend-rescan-.patch
+/root/machinex/patches/0048-REVERT-TEST-UPSTREAM-PM-sleep-make-PM-notifiers-call.patch
+/root/machinex/patches/0047-TEST-UPSTREAM-PM-sleep-make-PM-notifiers-called-symm.patch
+/root/machinex/patches/0046-irda-Fix-lockdep-annotations-in-hashbin_delete.patch
+/root/machinex/patches/0045-sched-deadline-Split-cpudl_set-into-cpudl_set-and-cp.patch
+/root/machinex/patches/0044-sched-deadline-Make-CPU-heap-faster.patch
+/root/machinex/patches/0043-sched-deadline-Refactor-CPU-heap-code.patch
+/root/machinex/patches/0042-sched-deadline-Fix-wrap-around-in-DL-heap.patch
+/root/machinex/patches/0041-TEST-mm-mempool-do-not-allow-atomic-resizing.patch
+/root/machinex/patches/0040-TEST-mmc-core-Fix-deadlock-in-suspend-rescan-path.patch
+/root/machinex/patches/0039-TEST-sdio-mmc-clear-pm-flags-during-resume.patch
+/root/machinex/patches/0038-TEST-msm-sps-add-the-checking-of-userspace-input-len.patch
+/root/machinex/patches/0037-sound-soc-cache-fix-uninitialized-variable.patch
+/root/machinex/patches/0036-wakeup-blocker-use-fb-notifier-to-determine-screen-o.patch
+/root/machinex/patches/0035-gonna-try-out-this-cpumask_or-out-of-curiousity-if-i.patch
+/root/machinex/patches/0034-naw-im-sure-this-will-be-the-same-result-as-last-tim.patch
+/root/machinex/patches/0033-cgroup-freezer-hacked-the-task-freezer-initializatio.patch
+/root/machinex/patches/0032-gonna-try-this-out-of-curiousity-again-cgroup_freeze.patch
+/root/machinex/patches/0031-possed.patch
+/root/machinex/patches/0030-fuckit-possing.patch
+/root/machinex/patches/0029-REVERT-OPP-commits.patch
+/root/machinex/patches/0028-little-workaround-our-non-existent-ACPI.patch
+/root/machinex/patches/0027-fix-crash-in-NON-PM_RUNTIME-builds-not-for-us-but-fo.patch
+/root/machinex/patches/0026-PM-Domains-Rename-cpu_data-to-cpuidle_data.patch
+/root/machinex/patches/0025-remove-legacy-DT-method-of-pm-domain-of-add-device.patch
+/root/machinex/patches/0024-PM-Domains-Add-genpd-attach-detach-callbacks.patch
+/root/machinex/patches/0023-pm-domains-debugfs.patch
+/root/machinex/patches/0022-PM-Domains-Add-APIs-to-attach-detach-a-PM-domain-for.patch
+/root/machinex/patches/0021-PM-domains-Spelling-s-domian-domain.patch
+/root/machinex/patches/0020-PM-domains-Remove-default_stop_ok-API.patch
+/root/machinex/patches/0019-PM-domains-Remove-pm_genpd_syscore_switch-API.patch
+/root/machinex/patches/0018-PM-domains-remove-redundant-check-for-CONFIG_PM.patch
+/root/machinex/patches/0017-PM-domains-Remove-dev_irq_safe-from-genpd-config.patch
+/root/machinex/patches/0016-PM-domains-Remove-system-PM-callbacks-from-gpd_dev_o.patch
+/root/machinex/patches/0015-PM-domains-Ignore-callbacks-for-subsys-generic_pm_do.patch
+/root/machinex/patches/0014-PM-domains-Remove-the-pm_genpd_add-remove_callbacks-.patch
+/root/machinex/patches/0013-discard-duplicate-OPPs.patch
+/root/machinex/patches/0012-PM-OPP-fix-incorrect-OPP-count-handling.patch
+/root/machinex/patches/0011-PM-OPP-move-cpufreq-specifics-out-of-generic-OPP-lib.patch
+/root/machinex/patches/0010-revert-that-for-now.patch
+/root/machinex/patches/0009-PM-clock_ops-Add-pm_clk_add_clk.patch
+/root/machinex/patches/0008-possing-just-in-case.patch
+/root/machinex/patches/0007-possed.patch
+/root/machinex/patches/0006-possing.patch
+/root/machinex/patches/0005-we-will-never-get-nice-things.patch
+/root/machinex/patches/0004-there.patch
+/root/machinex/patches/0003-fuck-this.patch
+/root/machinex/patches/0002-move-shit.patch
+/root/machinex/patches/0001-stop-updating-cpu-policy-from-stats-again.patch
