@@ -1021,8 +1021,6 @@ static int mmc_sdio_resume(struct mmc_host *host)
 	if (!err && host->sdio_irqs)
 		mmc_signal_sdio_irq(host);
 	mmc_release_host(host);
-	host->pm_flags &= ~MMC_PM_KEEP_POWER;
-	host->pm_flags &= ~MMC_PM_WAKE_SDIO_IRQ;
 
 	/*
 	 * If the card looked to be the same as before suspending, then
