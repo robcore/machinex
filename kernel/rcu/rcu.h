@@ -128,5 +128,7 @@ int rcu_jiffies_till_stall_check(void);
 
 #endif /* #ifdef CONFIG_RCU_STALL_COMMON */
 
+void rcu_early_boot_tests(void);
+
 #endif /* __LINUX_RCU_H */
 
