@@ -48,7 +48,7 @@ module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-#define MIN_INPUT_INTERVAL (1500 * MSEC_PER_SEC)
+#define MIN_INPUT_INTERVAL (1500)
 static unsigned int min_input_interval = MIN_INPUT_INTERVAL;
 module_param(min_input_interval, uint, 0644);
 
@@ -195,7 +195,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < MIN_INPUT_INTERVAL)
+	if (now - last_input_time < msecs_to_jiffies(MIN_INPUT_INTERVAL))
 		return;
 
 	if (work_pending(&input_boost_work))
