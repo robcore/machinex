@@ -125,7 +125,6 @@ struct cpufreq_policy {
 
 	struct kobject		*kobj;
 	struct completion	kobj_unregister;
-	int			transition_ongoing; /* Tracks transition status */
 };
 
 /* contains per cpu sysfs info ./sys/devices/ssytem/cpu/cpu#/cpufreq */
@@ -750,8 +749,6 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 				   unsigned int target_freq,
 				   unsigned int relation,
 				   unsigned int *index);
-int cpufreq_frequency_table_get_index(struct cpufreq_policy *policy,
-		unsigned int freq);
 
 /* the following 3 funtions are for cpufreq core use only */
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
