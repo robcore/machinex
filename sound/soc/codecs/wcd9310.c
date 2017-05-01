@@ -9155,6 +9155,7 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 					NULL, tabla, &codec_mbhc_debug_ops);
 	}
 #endif
+
 	codec->ignore_pmdown_time = 1;
 	return ret;
 

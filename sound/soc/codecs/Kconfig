@@ -285,7 +285,7 @@ config SND_SOC_UDA1380
 
 config SND_SOC_WCD9304
 	tristate
-	
+
 config SND_SOC_WCD9306
 	tristate
 
@@ -464,8 +464,14 @@ config SND_SOC_TPA2028D
 	help
 	  Texas Instruments 3W Mono Class-D Audio Amplifier
 
+config SOUND_CONTROL_LEGACY
+	bool "Original WCD93xx Sound Engine"
+	help
+	  This determines whether to use original or new,
+	  experimental version.
+
 config SOUND_CONTROL
-	tristate "Generic WCD93xx Sound Engine"
+	bool "Generic WCD93xx Sound Engine"
 	default y
 	help
 	  This is a sound engine with sysfs controls for wcd9xxx

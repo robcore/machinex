@@ -21,9 +21,10 @@
 #include <linux/export.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
+#include <sound/soc.h>
 
-#define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	9
+#define SOUND_CONTROL_MAJOR_VERSION	5
+#define SOUND_CONTROL_MINOR_VERSION	0
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -175,7 +176,7 @@ static ssize_t sound_reg_write_store(struct kobject *kobj,
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d %d\n",
+	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
 				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
 			tabla_read(snd_engine_codec_ptr,
@@ -185,18 +186,23 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 static ssize_t speaker_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int lval, rval;
 
-	sscanf(buf, "%d %d", &lval, &rval);
+	int input_l, input_r;
+
+	sscanf(buf, "%d %d", &input_l, &input_r);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
+	if (input_l < -84 || input_l > 84)
+		input_l = 0;
+
+	if (input_r < -84 || input_r > 84)
+		input_r = 0;
+
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
+	snd_soc_write(snd_engine_codec_ptr, TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, input_l);
+	snd_soc_write(snd_engine_codec_ptr, TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, input_r);
 	snd_ctrl_locked = 1;
 
 	return count;
@@ -205,7 +211,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 static ssize_t headphone_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d %d\n",
+	return sprintf(buf, "%u %u\n",
 			tabla_read(snd_engine_codec_ptr,
 				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
 			tabla_read(snd_engine_codec_ptr,
@@ -215,18 +221,23 @@ static ssize_t headphone_gain_show(struct kobject *kobj,
 static ssize_t headphone_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int lval, rval;
 
-	sscanf(buf, "%d %d", &lval, &rval);
+	int input_l, input_r;
+
+	sscanf(buf, "%d %d", &input_l, &input_r);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
+	if (input_l < -84 || input_l > 84)
+		input_l = 0;
+
+	if (input_r < -84 || input_r > 84)
+		input_r = 0;
+
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
+	snd_soc_write(snd_engine_codec_ptr, TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, input_l);
+	snd_soc_write(snd_engine_codec_ptr, TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, input_r);
 	snd_ctrl_locked = 1;
 
 	return count;
@@ -235,24 +246,34 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n",
+	int ret = 0;
+	if ret == (sprintf(buf, "%u\n",
 		tabla_read(snd_engine_codec_ptr,
-			TABLA_A_CDC_TX6_VOL_CTL_GAIN));
+			TABLA_A_CDC_TX6_VOL_CTL_GAIN)) > 50)
+		ret = (ret - 256);
+	else
+		ret = sprintf(buf, "%u\n",
+			tabla_read(snd_engine_codec_ptr,
+				TABLA_A_CDC_TX6_VOL_CTL_GAIN));
+
+	return ret;
 }
 
 static ssize_t cam_mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int lval;
+	int input;
 
-	sscanf(buf, "%d", &lval);
+	sscanf(buf, "%d", &input);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
+	if (input < -84 || input > 84)
+		input = 0;
+
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
+	snd_soc_write(snd_engine_codec_ptr, TABLA_A_CDC_TX6_VOL_CTL_GAIN, input);
 	snd_ctrl_locked = 1;
 
 	return count;
@@ -261,24 +282,34 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 static ssize_t mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n",
+	int ret = 0;
+	if ret == (sprintf(buf, "%u\n",
 		tabla_read(snd_engine_codec_ptr,
-			TABLA_A_CDC_TX7_VOL_CTL_GAIN));
+			TABLA_A_CDC_TX7_VOL_CTL_GAIN)) > 50)
+		ret = (ret - 256);
+	else
+		ret = sprintf(buf, "%u\n",
+			tabla_read(snd_engine_codec_ptr,
+				TABLA_A_CDC_TX7_VOL_CTL_GAIN));
+
+	return ret;
 }
 
 static ssize_t mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int lval;
+	int input;
 
-	sscanf(buf, "%d", &lval);
+	sscanf(buf, "%d", &input);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
+	if (input < -84 || input > 84)
+		input = 0;
+
 	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
+	snd_soc_write(snd_engine_codec_ptr, TABLA_A_CDC_TX7_VOL_CTL_GAIN, input);
 	snd_ctrl_locked = 1;
 
 	return count;
@@ -287,7 +318,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 static ssize_t sound_control_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "Sound Control Engine: %u.%u\n",
+	return sprintf(buf, "Sound Control Version:%u.%u\n",
 			SOUND_CONTROL_MAJOR_VERSION,
 			SOUND_CONTROL_MINOR_VERSION);
 }
@@ -316,17 +347,17 @@ static struct kobj_attribute sound_reg_write_attribute =
 		NULL,
 		sound_reg_write_store);
 
-static struct kobj_attribute headphone_gain_attribute =
-	__ATTR(gpl_headphone_gain,
-		0666,
-		headphone_gain_show,
-		headphone_gain_store);
-
 static struct kobj_attribute speaker_gain_attribute =
 	__ATTR(gpl_speaker_gain,
 		0666,
 		speaker_gain_show,
 		speaker_gain_store);
+
+static struct kobj_attribute headphone_gain_attribute =
+	__ATTR(gpl_headphone_gain,
+		0666,
+		headphone_gain_show,
+		headphone_gain_store);
 
 static struct kobj_attribute cam_mic_gain_attribute =
 	__ATTR(gpl_cam_mic_gain,
