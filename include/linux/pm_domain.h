@@ -151,10 +151,6 @@ extern int pm_genpd_add_subdomain_names(const char *master_name,
 					const char *subdomain_name);
 extern int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 				     struct generic_pm_domain *target);
-extern int pm_genpd_add_callbacks(struct device *dev,
-				  struct gpd_dev_ops *ops,
-				  struct gpd_timing_data *td);
-extern int __pm_genpd_remove_callbacks(struct device *dev, bool clear_td);
 extern int pm_genpd_attach_cpuidle(struct generic_pm_domain *genpd, int state);
 extern int pm_genpd_name_attach_cpuidle(const char *name, int state);
 extern int pm_genpd_detach_cpuidle(struct generic_pm_domain *genpd);
@@ -210,16 +206,6 @@ static inline int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 {
 	return -ENOSYS;
 }
-static inline int pm_genpd_add_callbacks(struct device *dev,
-					 struct gpd_dev_ops *ops,
-					 struct gpd_timing_data *td)
-{
-	return -ENOSYS;
-}
-static inline int __pm_genpd_remove_callbacks(struct device *dev, bool clear_td)
-{
-	return -ENOSYS;
-}
 static inline int pm_genpd_attach_cpuidle(struct generic_pm_domain *genpd, int st)
 {
 	return -ENOSYS;
@@ -255,11 +241,6 @@ static inline bool default_stop_ok(struct device *dev)
 #define simple_qos_governor NULL
 #define pm_domain_always_on_gov NULL
 #endif
-
-static inline int pm_genpd_remove_callbacks(struct device *dev)
-{
-	return __pm_genpd_remove_callbacks(dev, true);
-}
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS_RUNTIME
 extern void pm_genpd_poweroff_unused(void);
