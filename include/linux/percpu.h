@@ -182,4 +182,7 @@ do {									\
 # define percpu_xor(var, val)		__percpu_generic_to_op(var, (val), ^=)
 #endif
 
+/* To avoid include hell, as printk can not declare this, we declare it here */
+DECLARE_PER_CPU(printk_func_t, printk_func);
+
 #endif /* __LINUX_PERCPU_H */
