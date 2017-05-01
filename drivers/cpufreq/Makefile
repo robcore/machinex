@@ -1,7 +1,9 @@
 # CPUfreq core
-obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o
-obj-$(CONFIG_PM_OPP)			+= cpufreq_opp.o
+obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o
 
+
+# CPUfreq cross-arch helpers
+obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 # CPUfreq stats
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
 # CPUfreq hardlimit

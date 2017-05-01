@@ -368,13 +368,8 @@ int pm_clk_suspend(struct device *dev)
 
 	spin_lock_irqsave(&psd->lock, flags);
 
-	list_for_each_entry_reverse(ce, &psd->clock_list, node) {
-		if (ce->status < PCE_STATUS_ERROR) {
-			if (ce->status == PCE_STATUS_ENABLED)
-				clk_disable(ce->clk);
-			ce->status = PCE_STATUS_ACQUIRED;
-		}
-	}
+	list_for_each_entry_reverse(ce, &psd->clock_list, node)
+		clk_disable(ce->clk);
 
 	spin_unlock_irqrestore(&psd->lock, flags);
 
@@ -390,7 +385,6 @@ int pm_clk_resume(struct device *dev)
 	struct pm_subsys_data *psd = dev_to_psd(dev);
 	struct pm_clock_entry *ce;
 	unsigned long flags;
-	int ret;
 
 	dev_dbg(dev, "%s()\n", __func__);
 
@@ -400,13 +394,8 @@ int pm_clk_resume(struct device *dev)
 
 	spin_lock_irqsave(&psd->lock, flags);
 
-	list_for_each_entry(ce, &psd->clock_list, node) {
-		if (ce->status < PCE_STATUS_ERROR) {
-			ret = __pm_clk_enable(dev, ce->clk);
-			if (!ret)
-				ce->status = PCE_STATUS_ENABLED;
-		}
-	}
+	list_for_each_entry(ce, &psd->clock_list, node)
+		__pm_clk_enable(dev, ce->clk);
 
 	spin_unlock_irqrestore(&psd->lock, flags);
 
