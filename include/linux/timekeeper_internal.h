@@ -52,6 +52,7 @@ struct tk_read_base {
  * struct timekeeper - Structure holding internal timekeeping values.
  * @tkr:		The readout base structure
  * @xtime_sec:		Current CLOCK_REALTIME time in seconds
+ * @ktime_sec:		Current CLOCK_MONOTONIC time in seconds
  * @wall_to_monotonic:	CLOCK_REALTIME to CLOCK_MONOTONIC offset
  * @offs_real:		Offset clock monotonic -> clock realtime
  * @offs_boot:		Offset clock monotonic -> clock boottime
@@ -88,6 +89,7 @@ struct timekeeper {
 	struct tk_read_base	tkr;
 	/* Current CLOCK_REALTIME time in seconds */
 	u64			xtime_sec;
+	unsigned long		ktime_sec;
 	/* CLOCK_REALTIME to CLOCK_MONOTONIC offset */
 	struct timespec64	wall_to_monotonic;
 
