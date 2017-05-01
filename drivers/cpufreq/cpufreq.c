@@ -1335,7 +1335,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 * equal to target-freq.
 	 */
 	if ((cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK)
-	    && has_target()) {
+	    && (cpufreq_driver->target)) {
 		/* Are we running at unknown frequency ? */
 		ret = cpufreq_frequency_table_get_index(policy, policy->cur);
 		if (ret == -EINVAL) {

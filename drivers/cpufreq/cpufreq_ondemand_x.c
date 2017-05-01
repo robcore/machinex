@@ -546,11 +546,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			j_dbs_info->prev_load = cur_load;
 		}
 
-		freq_avg = __cpufreq_driver_getavg(policy, j);
-		if (policy == NULL)
-			return;
-		if (freq_avg <= 0)
+		if (policy != NULL)
 			freq_avg = policy->cur;
+		else
+			return;
 
 		load_freq = cur_load * freq_avg;
 		if (load_freq > max_load_freq)
@@ -570,8 +569,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	/* calculate the scaled load across CPU */
 	load_at_max_freq = (cur_load * policy->cur)/policy->max;
-
-	cpufreq_notify_utilization(policy, load_at_max_freq);
 
 	/* Check for frequency increase */
 	if (max_load_freq > (dbs_tuners_ins.up_threshold * policy->cur)) {

@@ -1173,15 +1173,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		j_dbs_info->max_load  = max(cur_load, j_dbs_info->prev_load);
 		j_dbs_info->prev_load = cur_load;
-		freq_avg = __cpufreq_driver_getavg(policy, j);
 		if (policy == NULL)
 			return;
-		if (freq_avg <= 0)
-			freq_avg = policy->cur;
-
-		load_freq = cur_load * freq_avg;
-		if (load_freq > max_load_freq)
-			max_load_freq = load_freq;
 
 #if defined(SMART_UP_PLUS)
 		max_load = cur_load;
@@ -1203,8 +1196,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	/* calculate the scaled load across CPU */
 	load_at_max_freq = (cur_load * policy->cur)/policy->max;
-
-	cpufreq_notify_utilization(policy, cur_load);
 
 /* PATCH : SMART_UP */
 	if (dbs_tuners_ins.smart_up && (core_j + 1) >
