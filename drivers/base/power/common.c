@@ -104,6 +104,7 @@ EXPORT_SYMBOL_GPL(dev_pm_put_subsys_data);
  *
  * Returns 0 on successfully attached PM domain or negative error code.
  */
+#ifdef CONFIG_ACPI
 int dev_pm_domain_attach(struct device *dev, bool power_on)
 {
 	int ret;
@@ -118,7 +119,7 @@ EXPORT_SYMBOL_GPL(dev_pm_domain_attach);
 
 /**
  * dev_pm_domain_detach - Detach a device from its PM domain.
- * @dev: Device to attach.
+ * @dev: Device to detach.
  * @power_off: Used to indicate whether we should power off the device.
  *
  * This functions will reverse the actions from dev_pm_domain_attach() and thus
@@ -134,3 +135,4 @@ void dev_pm_domain_detach(struct device *dev, bool power_off)
 		dev->pm_domain->detach(dev, power_off);
 }
 EXPORT_SYMBOL_GPL(dev_pm_domain_detach);
+#endif
