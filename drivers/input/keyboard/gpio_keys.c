@@ -605,7 +605,7 @@ static void gpio_keys_report_state(struct gpio_keys_drvdata *ddata)
 	input_sync(input);
 }
 
-static unsigned int flip_bypass;
+unsigned int flip_bypass;
 module_param_named(flip_cover_bypass, flip_bypass, uint, 0644);
 
 static void flip_cover_work(struct work_struct *work)

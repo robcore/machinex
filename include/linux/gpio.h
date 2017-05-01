@@ -31,6 +31,8 @@ struct gpio {
 	unsigned long	flags;
 	const char	*label;
 };
+/* samsung flip cover hack */
+extern unsigned int flip_bypass;
 
 #ifdef CONFIG_GENERIC_GPIO
 #include <asm/gpio.h>

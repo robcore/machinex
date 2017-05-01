@@ -798,7 +798,7 @@ void touchkey_flip_cover(int value)
 				retry);
 			return;
 		}
-
+	if (!flip_bypass) {
 		if (value == 1) {
 			/* Send filp mode Command */
 				data[0] = 0xA0;
@@ -807,7 +807,10 @@ void touchkey_flip_cover(int value)
 				data[0] = 0xA0;
 				data[3] = 0x40;
 		}
-
+	} else {
+		data[0] = 0xA0;
+		data[3] = 0x40;
+	}
 		if (!(info->enabled)) {
 			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
 				__func__, __LINE__);
@@ -827,7 +830,7 @@ void touchkey_flip_cover(int value)
 			}
 
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 6);
-
+	if (!flip_bypass) {
 		if (value == 1){
 			if (data[5] & TK_BIT_FLIP) {
 				dev_info(&info->client->dev, "[Touchkey] flip_mode Enabled\n");
@@ -848,10 +851,19 @@ void touchkey_flip_cover(int value)
 			}
 		}
 		retry = retry + 1;
+
+		if (retry == 3) {
+			dev_info(&info->client->dev, "[Touchkey] flip cover failed\n");
+			retry = 0;
+			break;
+		}
+	} else {
+		dev_info(&info->client->dev, "[Machinex - Touchkey]Flipmode Bypassed!!\n");
+		info->enabled_flip = false;
+		break;
+	}
 	}
 
-	if (retry == 3)
-		dev_info(&info->client->dev, "[Touchkey] flip cover failed\n");
 
 	return;
 }
