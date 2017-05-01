@@ -1283,8 +1283,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		goto err_unlock_policy;
 	}
 
- 	/* related cpus should atleast have policy->cpus */
- 	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
+	/* related cpus should atleast have policy->cpus */
+	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
 
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
@@ -1315,36 +1315,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 
 	/* store per cpu policy for further accessing */
 	cpu_sysnode[cpu].cpu_policy = policy;
-
-	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
-			CPUFREQ_CREATE_POLICY, policy);
-
-	unlock_policy_rwsem_write(cpu);
-	module_put(cpufreq_driver->owner);
-	pr_debug("initialization complete\n");
-
-	return 0;
-
-err_out_unregister:
-	write_lock_irqsave(&cpufreq_driver_lock, flags);
-	for_each_cpu(j, policy->cpus)
-		per_cpu(cpufreq_cpu_data, j) = NULL;
-	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-	kobject_put(policy->kobj);
-err_unlock_policy:
-	unlock_policy_rwsem_write(cpu);
-	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
-			CPUFREQ_REMOVE_POLICY, policy);
-	free_cpumask_var(policy->related_cpus);
-err_free_cpumask:
-	free_cpumask_var(policy->cpus);
-err_free_policy:
-	kfree(policy);
-nomem_out:
-	module_put(cpufreq_driver->owner);
-module_out:
-	return ret;
-}
 
 	/*
 	 * Sometimes boot loaders set CPU frequency to a value outside of
@@ -1385,6 +1355,36 @@ module_out:
 				__func__, policy->cpu, policy->cur);
 		}
 	}
+
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+			CPUFREQ_CREATE_POLICY, policy);
+
+	unlock_policy_rwsem_write(cpu);
+	module_put(cpufreq_driver->owner);
+	pr_debug("initialization complete\n");
+
+	return 0;
+
+err_out_unregister:
+	write_lock_irqsave(&cpufreq_driver_lock, flags);
+	for_each_cpu(j, policy->cpus)
+		per_cpu(cpufreq_cpu_data, j) = NULL;
+	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+	kobject_put(policy->kobj);
+err_unlock_policy:
+	unlock_policy_rwsem_write(cpu);
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+			CPUFREQ_REMOVE_POLICY, policy);
+	free_cpumask_var(policy->related_cpus);
+err_free_cpumask:
+	free_cpumask_var(policy->cpus);
+err_free_policy:
+	kfree(policy);
+nomem_out:
+	module_put(cpufreq_driver->owner);
+module_out:
+	return ret;
+}
 
 /**
  * __cpufreq_remove_dev - remove a CPU device
