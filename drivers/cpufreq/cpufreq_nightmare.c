@@ -530,6 +530,8 @@ static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare
 			max_load = cur_load;
 	}
 
+	cpufreq_notify_utilization(policy, max_load);
+
 	/* CPUs Online Scale Frequency*/
 	if (policy->cur < freq_for_responsiveness) {
 		inc_cpu_load = nightmare_tuners_ins.inc_cpu_load_at_min_freq;

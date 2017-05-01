@@ -456,6 +456,24 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	}
 }
 EXPORT_SYMBOL_GPL(cpufreq_notify_transition);
+/**
+ * cpufreq_notify_utilization - notify CPU userspace about CPU utilization
+ * change
+ *
+ * This function is called everytime the CPU load is evaluated by the
+ * ondemand governor. It notifies userspace of cpu load changes via sysfs.
+ */
+void cpufreq_notify_utilization(struct cpufreq_policy *policy,
+		unsigned int util)
+{
+	if (policy)
+		policy->util = util;
+
+	if (util > policy->util_thres && policy->util < 100)
+		policy->util++;
+	else if (policy->util > 0)
+		policy->util--;
+}
 
 /*********************************************************************
  *                          SYSFS INTERFACE                          *
@@ -541,6 +559,8 @@ show_one(cpuinfo_max_freq, cpuinfo.max_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
 show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
+show_one(cpu_utilization, util);
+show_one(util_threshold, util_thres);
 show_one(policy_min_freq, user_policy.min);
 show_one(policy_max_freq, user_policy.max);
 
@@ -760,6 +780,26 @@ static ssize_t store_scaling_setspeed(struct cpufreq_policy *policy,
 	return count;
 }
 
+static ssize_t store_util_threshold(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	struct cpufreq_policy new_policy;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.util_thres);
+	if (ret < 1 || ret > 100)
+		return -EINVAL;
+
+	policy->user_policy.util_thres = new_policy.util_thres;
+	ret = __cpufreq_set_policy(policy, &new_policy);
+
+	return ret ? ret : count;
+}
+
 static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 {
 	if (!policy->governor || !policy->governor->show_setspeed)
@@ -856,6 +896,8 @@ cpufreq_freq_attr_ro(scaling_cur_freq);
 cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
+cpufreq_freq_attr_ro(cpu_utilization);
+cpufreq_freq_attr_rw(util_threshold);
 cpufreq_freq_attr_ro(scaling_min_freq);
 cpufreq_freq_attr_ro(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
@@ -874,6 +916,8 @@ static struct attribute *default_attrs[] = {
 	&scaling_min_freq.attr,
 	&scaling_max_freq.attr,
 	&affected_cpus.attr,
+	&cpu_utilization.attr,
+	&util_threshold.attr,
 	&related_cpus.attr,
 	&scaling_governor.attr,
 	&scaling_driver.attr,
@@ -1263,6 +1307,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 			policy->governor = cp->governor;
 			policy->min = cp->min;
 			policy->max = cp->max;
+			policy->util_thres = cp->util_thres;
 			policy->user_policy.min = cp->user_policy.min;
 			policy->user_policy.max = cp->user_policy.max;
 
@@ -1294,6 +1339,9 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
+
+	policy->util = 0;
+	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
 
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
@@ -1335,7 +1383,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 * equal to target-freq.
 	 */
 	if ((cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK)
-	    && (cpufreq_driver->target)) {
+	    && has_target()) {
 		/* Are we running at unknown frequency ? */
 		ret = cpufreq_frequency_table_get_index(policy, policy->cur);
 		if (ret == -EINVAL) {
@@ -1578,6 +1626,27 @@ static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 }
+
+/**
+ * cpufreq_quick_get_util - get the CPU utilization from policy->util
+ * @cpu: CPU number
+ *
+ * This is the last known util, without actually getting it from the driver.
+ * Return value will be same as what is shown in util in sysfs.
+ */
+unsigned int cpufreq_quick_get_util(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	unsigned int ret_util = 0;
+
+	if (policy) {
+		ret_util = policy->util;
+		cpufreq_cpu_put(policy);
+	}
+
+	return ret_util;
+}
+EXPORT_SYMBOL(cpufreq_quick_get_util);
 
 /**
  * cpufreq_quick_get - get the CPU frequency (in kHz) from policy->cur
@@ -1942,6 +2011,27 @@ no_policy:
 }
 EXPORT_SYMBOL_GPL(cpufreq_driver_target);
 
+int __cpufreq_driver_getavg(struct cpufreq_policy *policy, unsigned int cpu)
+{
+	int ret = 0;
+
+	if (cpufreq_disabled())
+		return ret;
+
+	if (!(cpu_online(cpu) && cpufreq_driver->getavg))
+		return 0;
+
+	policy = cpufreq_cpu_get(policy->cpu);
+	if (!policy)
+		return -EINVAL;
+
+	ret = cpufreq_driver->getavg(policy, cpu);
+
+	cpufreq_cpu_put(policy);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(__cpufreq_driver_getavg);
+
 /*
  * when "event" is CPUFREQ_GOV_LIMITS
  */
@@ -2142,9 +2232,11 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 		cpu0_policy = cpufreq_cpu_get(0);
 		policy->min = cpu0_policy->min;
 		policy->max = cpu0_policy->max;
+		policy->util_thres = cpu0_policy->util_thres;
 	} else {
 		policy->min = new_policy->min;
 		policy->max = new_policy->max;
+		policy->util_thres = new_policy->util_thres;
 	}
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
@@ -2229,6 +2321,7 @@ int cpufreq_update_policy(unsigned int cpu)
 	new_policy.min = policy->user_policy.min;
 	new_policy.max = policy->user_policy.max;
 #endif
+	new_policy.util_thres = policy->user_policy.util_thres;
 	new_policy.policy = policy->user_policy.policy;
 	new_policy.governor = policy->user_policy.governor;
 

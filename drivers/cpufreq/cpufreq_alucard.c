@@ -501,6 +501,8 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	if (wall_time >= idle_time) { /*if wall_time < idle_time, evaluate cpu load next time*/
 		cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/
 
+		cpufreq_notify_utilization(cpu_policy, cur_load);
+
 		if (this_alucard_cpuinfo->up_rate > cpus_up_rate)
 				this_alucard_cpuinfo->up_rate = 1;
 
