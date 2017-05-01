@@ -139,13 +139,11 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
-#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
-export PATH=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export SUBARCH=arm
 export ARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-export CROSS_COMPILE=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 export KBUILD_LOCALVERSION=-$OUTFOLDER
 export KBUILD_BUILD_VERSION=04
 export USE_CCACHE=1
@@ -305,13 +303,11 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
-#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
-export PATH=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export SUBARCH=arm
 export ARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-export CROSS_COMPILE=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 export KBUILD_LOCALVERSION=-$OUTFOLDER
 export KBUILD_BUILD_VERSION=04
 export USE_CCACHE=1
@@ -407,13 +403,11 @@ sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
-	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
-	export PATH=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export SUBARCH=arm
 	export ARCH=arm
 	#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-	#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-	export CROSS_COMPILE=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+	export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 	export KBUILD_LOCALVERSION=-$OUTFOLDER
 	export KBUILD_BUILD_VERSION=007
 	export USE_CCACHE=1
@@ -446,15 +440,13 @@ fi;
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
-	echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
+echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
-	#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
-	export PATH=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+	export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 	export SUBARCH=arm
 	export ARCH=arm
 	#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-	#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-	export CROSS_COMPILE=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+	export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 	export KBUILD_LOCALVERSION=-$OUTFOLDER
 	export KBUILD_BUILD_VERSION=4
 	export USE_CCACHE=1
@@ -512,13 +504,11 @@ sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
-#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
-export PATH=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export SUBARCH=arm
 export ARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-export CROSS_COMPILE=/opt/toolchains/linaro_arm_linux_gnueabihf_6.3/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 export KBUILD_LOCALVERSION=-$OUTFOLDER
 export KBUILD_BUILD_VERSION=04
 export USE_CCACHE=1
