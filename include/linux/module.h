@@ -374,7 +374,7 @@ struct module {
 	/* Destruction function. */
 	void (*exit)(void);
 
-	struct module_ref __percpu *refptr;
+	atomic_t refcnt;
 #endif
 
 #ifdef CONFIG_CONSTRUCTORS
