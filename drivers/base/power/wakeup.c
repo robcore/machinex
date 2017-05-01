@@ -18,9 +18,38 @@
 #include <linux/types.h>
 #include <trace/events/power.h>
 #include <linux/resume-trace.h>
+#include <linux/fb.h>
 #include <linux/moduleparam.h>
 
 #include "power.h"
+
+static struct notifier_block fb_notif;
+static bool display_off = false;
+
+static int fb_notifier_callback(struct notifier_block *self,
+			unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		blank = evdata->data;
+		switch (*blank) {
+			case FB_BLANK_UNBLANK:
+				/* display on */
+				display_off = false;
+				break;
+			case FB_BLANK_POWERDOWN:
+			case FB_BLANK_HSYNC_SUSPEND:
+			case FB_BLANK_VSYNC_SUSPEND:
+			case FB_BLANK_NORMAL:
+				/* display off */
+				display_off = true;
+				break;
+		}
+	}
+	return NOTIFY_OK;
+}
 
 static bool wakeblock = false;
 module_param(wakeblock, bool, 0644);
@@ -620,6 +649,43 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 	}
 }
 
+static bool wakeup_source_blocker(struct wakeup_source *ws)
+{
+	unsigned int wslen = 0;
+
+	if (!wakeblock)
+		return false;
+
+	if (ws) {
+		wslen = strlen(ws->name);
+
+	if ((!enable_gps_ws &&
+			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
+		(!enable_bluesleep_ws &&
+			!strcmp(ws->name, "bluesleep")) ||
+		(!enable_msm_hsic_ws &&
+			!strcmp(ws->name, "msm_hsic_host")) ||
+		(!enable_wlan_rx_wake_ws &&
+			!strcmp(ws->name, "wlan_rx_wake")) ||
+		(!enable_wlan_ctrl_wake_ws &&
+			!strcmp(ws->name, "wlan_ctrl_wake")) ||
+		(!enable_wlan_wake_ws &&
+			!strcmp(ws->name, "wlan_wake")) ||
+		(!enable_bluesleep_ws &&
+			!strcmp(ws->name, "bluesleep")) ||
+		(!enable_ssp_sensorhub_ws &&
+			!strcmp(ws->name, "ssp_wake_lock"))) {
+		if (ws->active) {
+			wakeup_source_deactivate(ws);
+			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+		}
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /*
  * The functions below use the observation that each wakeup event starts a
  * period in which the system should not be suspended.  The moment this period
@@ -647,41 +713,6 @@ void pm_system_irq_wakeup(unsigned int irq_number)
  * "no suspend" period will be ended either by the pm_relax(), or by the timer
  * function executed when the timer expires, whichever comes first.
  */
-static bool wakeup_source_blocker(struct wakeup_source *ws)
-{
-	unsigned int wslen = 0;
-
-	if (!wakeblock)
-		return false;
-
-	if (ws) {
-		wslen = strlen(ws->name);
-
-	if (((!enable_gps_ws &&
-			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
-		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) ||
-		(!enable_msm_hsic_ws &&
-			!strcmp(ws->name, "msm_hsic_host")) ||
-		(!enable_wlan_rx_wake_ws &&
-			!strcmp(ws->name, "wlan_rx_wake")) ||
-		(!enable_wlan_ctrl_wake_ws &&
-			!strcmp(ws->name, "wlan_ctrl_wake")) ||
-		(!enable_wlan_wake_ws &&
-			!strcmp(ws->name, "wlan_wake")) ||
-		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) ||
-		(!enable_ssp_sensorhub_ws &&
-			!strcmp(ws->name, "ssp_wake_lock")))) {
-		if (ws->active) {
-			wakeup_source_deactivate(ws);
-			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
-		}
-			return true;
-		}
-	}
-	return false;
-}
 
 /**
  * wakup_source_activate - Mark given wakeup source as active.
@@ -943,6 +974,10 @@ void pm_print_active_wakeup_sources(void)
 	int active = 0;
 	struct wakeup_source *last_activity_ws = NULL;
 
+	/* kinda pointless to force this routine during screen on */
+	if (!display_off)
+		return;
+
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
@@ -1191,6 +1226,11 @@ static const struct file_operations wakeup_sources_stats_fops = {
 
 static int __init wakeup_sources_debugfs_init(void)
 {
+	/* register callback for screen on/off notifier */
+	fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&fb_notif) != 0)
+		pr_err("%s: Failed to register fb callback\n", __func__);
+
 	wakeup_sources_stats_dentry = debugfs_create_file("wakeup_sources",
 			S_IRUGO, NULL, NULL, &wakeup_sources_stats_fops);
 	return 0;
