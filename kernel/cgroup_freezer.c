@@ -199,7 +199,7 @@ static void freezer_attach(struct cgroup_subsys_state *new_css,
 
 static void freezer_fork(struct task_struct *task)
 {
-	struct freezer *freezer;
+	struct freezer *freezer = task_freezer(task);
 
 	/*
 	 * The root cgroup is non-freezable, so we can skip the
@@ -214,9 +214,9 @@ static void freezer_fork(struct task_struct *task)
 	freezer = task_freezer(task);
 	if (freezer->state & CGROUP_FREEZING)
 		freeze_task(task);
+
 	rcu_read_unlock();
 	mutex_unlock(&freezer_mutex);
-
 }
 
 /**
