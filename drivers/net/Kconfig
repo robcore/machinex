@@ -169,6 +169,7 @@ config NETCONSOLE_DYNAMIC
 
 config NETPOLL
 	def_bool NETCONSOLE
+	select SRCU
 
 config NETPOLL_TRAP
 	bool "Netpoll traffic trapping"

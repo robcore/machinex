@@ -9,6 +9,7 @@ config CPU_FREQ_MSM
 config CPU_FREQ
 	bool "CPU Frequency scaling"
 	select CPU_FREQ_TABLE
+	select SRCU
 	default y
 	help
 	  CPU Frequency scaling allows you to change the clock speed of
