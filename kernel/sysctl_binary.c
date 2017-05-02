@@ -137,6 +137,7 @@ static const struct bin_table bin_kern_table[] = {
 	{ CTL_INT,	KERN_COMPAT_LOG,		"compat-log" },
 	{ CTL_INT,	KERN_MAX_LOCK_DEPTH,		"max_lock_depth" },
 	{ CTL_INT,	KERN_PANIC_ON_NMI,		"panic_on_unrecovered_nmi" },
+	{ CTL_INT,	KERN_PANIC_ON_WARN,		"panic_on_warn" },
 	{ CTL_INT,	KERN_BOOT_REASON,		"boot_reason" },
 	{ CTL_INT,	KERN_COLD_BOOT,			"cold_boot" },
 	{}
@@ -1002,7 +1003,7 @@ static ssize_t bin_intvec(struct file *file,
 			value = simple_strtoul(str, &str, 10);
 			while (isspace(*str))
 				str++;
-			
+
 			result = -EFAULT;
 			if (put_user(value, vec + i))
 				goto out_kfree;
@@ -1073,7 +1074,7 @@ static ssize_t bin_ulongvec(struct file *file,
 			value = simple_strtoul(str, &str, 10);
 			while (isspace(*str))
 				str++;
-			
+
 			result = -EFAULT;
 			if (put_user(value, vec + i))
 				goto out_kfree;
