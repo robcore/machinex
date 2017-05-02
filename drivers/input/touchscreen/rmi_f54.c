@@ -23,6 +23,7 @@
 #include <linux/ctype.h>
 #include <linux/hrtimer.h>
 #include <linux/firmware.h>
+#include <linux/gpio.h>
 
 #include "synaptics_i2c_rmi.h"
 
@@ -2872,13 +2873,15 @@ static void glove_mode(void)
 
 	set_default_result(data);
 
-	if (rmi4_data->glove_mode_enables & CLEAR_COVER_EN) {
-		snprintf(data->cmd_buff, sizeof(data->cmd_buff), "OK");
-		data->cmd_state = CMD_STATUS_OK;
-		dev_info(&rmi4_data->i2c_client->dev,
-				"%s Skip glove mode set (cover bit enabled)\n",
-				__func__);
-		goto skip_glove_mode_set;
+	if (!flip_bypass) {
+		if (rmi4_data->glove_mode_enables & CLEAR_COVER_EN) {
+			snprintf(data->cmd_buff, sizeof(data->cmd_buff), "OK");
+			data->cmd_state = CMD_STATUS_OK;
+			dev_info(&rmi4_data->i2c_client->dev,
+					"%s Skip glove mode set (cover bit enabled)\n",
+					__func__);
+			goto skip_glove_mode_set;
+		}
 	}
 
 	if (data->cmd_param[0] < 0 || data->cmd_param[0] > 1) {
