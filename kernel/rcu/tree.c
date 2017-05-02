@@ -83,7 +83,6 @@ struct rcu_state sname##_state = { \
 	.orphan_nxttail = &sname##_state.orphan_nxtlist, \
 	.orphan_donetail = &sname##_state.orphan_donelist, \
 	.barrier_mutex = __MUTEX_INITIALIZER(sname##_state.barrier_mutex), \
-	.onoff_mutex = __MUTEX_INITIALIZER(sname##_state.onoff_mutex), \
 	.name = #sname, \
 	.abbr = sabbr, \
 }
@@ -1729,10 +1728,6 @@ static int rcu_gp_init(struct rcu_state *rsp)
 	trace_rcu_grace_period(rsp->name, rsp->gpnum, "start");
 	raw_spin_unlock_irq(&rnp->lock);
 
-	/* Exclude any concurrent CPU-hotplug operations. */
-	mutex_lock(&rsp->onoff_mutex);
-	smp_mb__after_unlock_lock(); /* ->gpnum increment before GP! */
-
 	/*
 	 * Apply per-leaf buffered online and offline operations to the
 	 * rcu_node tree.  Note that this new grace period need not wait
@@ -1819,7 +1814,6 @@ static int rcu_gp_init(struct rcu_state *rsp)
 			schedule_timeout_uninterruptible(gp_init_delay);
 	}
 
-	mutex_unlock(&rsp->onoff_mutex);
 	return 1;
 }
 
@@ -2452,9 +2446,6 @@ static void rcu_cleanup_dead_cpu(int cpu, struct rcu_state *rsp)
 
 	/* Remove the dead CPU from the bitmasks in the rcu_node hierarchy. */
 
-	/* Exclude any attempts to start a new grace period. */
-	mutex_lock(&rsp->onoff_mutex);
-
 	/* Orphan the dead CPU's callbacks, and adopt them if appropriate. */
 	raw_spin_lock_irqsave(&rsp->orphan_lock, flags);
 	rcu_send_cbs_to_orphanage(cpu, rsp, rnp, rdp);
@@ -2471,7 +2462,6 @@ static void rcu_cleanup_dead_cpu(int cpu, struct rcu_state *rsp)
 	WARN_ONCE(rdp->qlen != 0 || rdp->nxtlist != NULL,
 		  "rcu_cleanup_dead_cpu: Callbacks on offline CPU %d: qlen=%lu, nxtlist=%p\n",
 		  cpu, rdp->qlen, rdp->nxtlist);
-	mutex_unlock(&rsp->onoff_mutex);
 }
 
 #else /* #ifdef CONFIG_HOTPLUG_CPU */
@@ -3665,9 +3655,6 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	struct rcu_data *rdp = per_cpu_ptr(rsp->rda, cpu);
 	struct rcu_node *rnp = rcu_get_root(rsp);
 
-	/* Exclude new grace periods. */
-	mutex_lock(&rsp->onoff_mutex);
-
 	/* Set up local state, ensuring consistent view of global state. */
 	raw_spin_lock_irqsave(&rnp->lock, flags);
 	rdp->beenonline = 1;	 /* We have now been online. */
@@ -3698,8 +3685,6 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_qs_ctr);
 	rdp->qs_pending = false;
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
-
-	mutex_unlock(&rsp->onoff_mutex);
 }
 
 static void rcu_prepare_cpu(int cpu)
