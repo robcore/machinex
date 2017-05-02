@@ -29,28 +29,20 @@ extern ktime_t ntp_get_next_leap(void);
  * used instead.
  */
 struct tk_read_base {
-	/* Current clocksource used for timekeeping. */
 	struct clocksource	*clock;
-	/* Read function of @clock */
 	cycle_t			(*read)(struct clocksource *cs);
-	/* Bitmask for two's complement subtraction of non 64bit counters */
 	cycle_t			mask;
-	/* Last cycle value */
 	cycle_t			cycle_last;
-	/* NTP adjusted clock multiplier */
 	u32			mult;
-	/* The shift value of the current clocksource. */
 	u32			shift;
-	/* Clock shifted nano seconds */
 	u64			xtime_nsec;
-
-	/* Monotonic base time */
 	ktime_t			base;
 };
 
 /**
  * struct timekeeper - Structure holding internal timekeeping values.
- * @tkr:		The readout base structure
+ * @tkr_mono:		The readout base structure for CLOCK_MONOTONIC
+ * @tkr_raw:		The readout base structure for CLOCK_MONOTONIC_RAW
  * @xtime_sec:		Current CLOCK_REALTIME time in seconds
  * @ktime_sec:		Current CLOCK_MONOTONIC time in seconds
  * @wall_to_monotonic:	CLOCK_REALTIME to CLOCK_MONOTONIC offset
@@ -58,7 +50,6 @@ struct tk_read_base {
  * @offs_boot:		Offset clock monotonic -> clock boottime
  * @offs_tai:		Offset clock monotonic -> clock tai
  * @tai_offset:		The current UTC to TAI offset in seconds
- * @base_raw:		Monotonic raw base time in ktime_t format
  * @raw_time:		Monotonic raw base time in timespec64 format
  * @cycle_interval:	Number of clock cycles in one NTP interval
  * @xtime_interval:	Number of clock shifted nano seconds in one NTP
@@ -87,61 +78,26 @@ struct tk_read_base {
  */
 struct timekeeper {
 	struct tk_read_base	tkr_mono;
-	/* Current CLOCK_REALTIME time in seconds */
+	struct tk_read_base	tkr_raw;
 	u64			xtime_sec;
 	unsigned long		ktime_sec;
-	/* CLOCK_REALTIME to CLOCK_MONOTONIC offset */
 	struct timespec64	wall_to_monotonic;
-
-	/* Offset clock monotonic -> clock realtime */
 	ktime_t			offs_real;
-	/* Offset clock monotonic -> clock boottime */
 	ktime_t			offs_boot;
-	/* Offset clock monotonic -> clock tai */
 	ktime_t			offs_tai;
-
-	/* time spent in suspend */
 	struct timespec64	total_sleep_time;
-	/* The current UTC to TAI offset in seconds */
 	s32			tai_offset;
-
-	/* Monotonic raw base time */
-	ktime_t			base_raw;
-
-	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
 	struct timespec64	raw_time;
-	/* CLOCK_MONOTONIC time value of a pending leap-second*/
 	ktime_t	next_leap_ktime;
-	/* Number of clock cycles in one NTP interval. */
 	cycle_t			cycle_interval;
-	/* Number of clock shifted nano seconds in one NTP interval. */
 	u64			xtime_interval;
-	/* shifted nano seconds left over when rounding cycle_interval */
 	s64			xtime_remainder;
-	/* Raw nano seconds accumulated per NTP interval. */
 	u32			raw_interval;
-
-	/*
-	 * Difference between accumulated time and NTP time in ntp
-	 * shifted nano seconds.
-	 */
 	s64			ntp_error;
-	/* Shift conversion between clock shifted nano seconds and
-	 * ntp shifted nano seconds. */
 	u32			ntp_error_shift;
 	u32			ntp_err_mult;
-
-	/* The current time */
 	struct timespec xtime;
-	/* The ntp_tick_length() value currently being used.
-	 * This cached copy ensures we consistently apply the tick
-	 * length for an entire tick, as ntp_tick_length may change
-	 * mid-tick, and we don't want to apply that new value to
-	 * the tick in progress.
-	 */
 	u64			ntp_tick;
-	/* Difference between accumulated time and NTP time in ntp
-	 * shifted nano seconds. */
 };
 
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
