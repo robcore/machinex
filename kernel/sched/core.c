@@ -3318,6 +3318,21 @@ void __sched schedule_preempt_disabled(void)
 	preempt_disable();
 }
 
+static void preempt_schedule_common(void)
+{
+	do {
+		add_preempt_count(PREEMPT_ACTIVE);
+		__schedule();
+		sub_preempt_count(PREEMPT_ACTIVE);
+
+		/*
+		 * Check again in case we missed a preemption opportunity
+		 * between schedule and now.
+		 */
+		barrier();
+	} while (need_resched());
+}
+
 #ifdef CONFIG_PREEMPT
 /*
  * this is the entry point to schedule() from in-kernel preemption
@@ -3333,17 +3348,7 @@ asmlinkage __visible void __sched notrace preempt_schedule(void)
 	if (likely(!preemptible()))
 		return;
 
-	do {
-		add_preempt_count_notrace(PREEMPT_ACTIVE);
-		__schedule();
-		sub_preempt_count_notrace(PREEMPT_ACTIVE);
-
-		/*
-		 * Check again in case we missed a preemption opportunity
-		 * between schedule and now.
-		 */
-		barrier();
-	} while (need_resched());
+	preempt_schedule_common();
 }
 EXPORT_SYMBOL(preempt_schedule);
 
@@ -4671,17 +4676,10 @@ static inline int should_resched(void)
 	return need_resched() && !(preempt_count() & PREEMPT_ACTIVE);
 }
 
-static void __cond_resched(void)
-{
-	add_preempt_count(PREEMPT_ACTIVE);
-	__schedule();
-	sub_preempt_count(PREEMPT_ACTIVE);
-}
-
 int __sched _cond_resched(void)
 {
 	if (should_resched()) {
-		__cond_resched();
+		preempt_schedule_common();
 		return 1;
 	}
 	return 0;
@@ -4706,7 +4704,7 @@ int __cond_resched_lock(spinlock_t *lock)
 	if (spin_needbreak(lock) || resched) {
 		spin_unlock(lock);
 		if (resched)
-			__cond_resched();
+			preempt_schedule_common();
 		else
 			cpu_relax();
 		ret = 1;
@@ -4722,7 +4720,7 @@ int __sched __cond_resched_softirq(void)
 
 	if (should_resched()) {
 		local_bh_enable();
-		__cond_resched();
+		preempt_schedule_common();
 		local_bh_disable();
 		return 1;
 	}
