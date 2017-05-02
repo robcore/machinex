@@ -606,7 +606,19 @@ static void gpio_keys_report_state(struct gpio_keys_drvdata *ddata)
 }
 
 unsigned int flip_bypass;
-module_param_named(flip_cover_bypass, flip_bypass, uint, 0644);
+
+static void set_flip_cap(void)
+{
+	struct input_dev *input;
+
+	if (!flip_bypass) {
+		input->evbit[0] |= BIT_MASK(EV_SW);
+		input_set_capability(input, EV_SW, SW_FLIP);
+	} else {
+		input->evbit[0] |= BIT_MASK(EV_SW);
+		input_set_capability(input, EV_SW, false);
+	}
+}
 
 static void flip_cover_work(struct work_struct *work)
 {
@@ -842,11 +854,36 @@ static ssize_t keycode_pressed_show(struct device *dev,
 }
 static DEVICE_ATTR(keycode_pressed, 0444 , keycode_pressed_show, NULL);
 
+static ssize_t flip_bypass_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%d\n", flip_bypass);
+}
+
+static ssize_t flip_bypass_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	if (val >= 1)
+		val = 1;
+
+	flip_bypass = val;
+
+	set_flip_cap();
+
+	return count;
+}
+static DEVICE_ATTR(flip_bypass, 0644 , flip_bypass_show, flip_bypass_store);
+
 static struct attribute *sec_key_attrs[] = {
 	&dev_attr_sec_key_pressed.attr,
 	&dev_attr_wakeup_keys.attr,
 	&dev_attr_hall_detect.attr,
 	&dev_attr_keycode_pressed.attr,
+	&dev_attr_flip_bypass.attr,
 	NULL,
 };
 static struct attribute_group sec_key_attr_group = {
@@ -906,12 +943,11 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	ddata->gpio_flip_cover = pdata->gpio_flip_cover;
 	//ddata->irq_flip_cover = gpio_to_irq(ddata->gpio_flip_cover);
 	//wake_lock_init(&ddata->flip_wake_lock, WAKE_LOCK_SUSPEND, "flip_wake_lock");
-	if (!flip_bypass) {
-		if(ddata->gpio_flip_cover != 0) {
-			input->evbit[0] |= BIT_MASK(EV_SW);
-			input_set_capability(input, EV_SW, SW_FLIP);
-		}
+
+	if(ddata->gpio_flip_cover != 0) {
+		set_flip_cap();
 	}
+
 	global_dev = dev;
 	ddata->pdata = pdata;
 	ddata->input = input;
@@ -924,8 +960,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	input->phys = "gpio-keys/input0";
 	input->dev.parent = &pdev->dev;
 	input->evbit[0] |= BIT_MASK(EV_SW);
-	if (!flip_bypass)
-		input_set_capability(input, EV_SW, SW_FLIP);
+	set_flip_cap();
 	input->open = gpio_keys_open;
 	input->close = gpio_keys_close;
 

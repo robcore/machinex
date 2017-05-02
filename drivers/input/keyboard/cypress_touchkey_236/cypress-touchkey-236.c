@@ -652,7 +652,7 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 	unsigned short retry = 0;
 
 #ifdef TKEY_FLIP_MODE
-	if ((!flip_bypass) && (info->enabled_flip))
+	if ((flip_bypass) && (info->enabled_flip))
 		return;
 
 #endif
@@ -1437,6 +1437,17 @@ static ssize_t glove_mode_enable(struct device *dev,
 #endif
 
 #ifdef TKEY_FLIP_MODE
+
+static ssize_t flip_cover_mode_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct cypress_touchkey_info *info = dev_get_drvdata(dev);
+	int count = 0;
+	//dev_info(&info->client->dev, "[TouchKey] touchkey_update_status: %d\n",
+						//info->touchkey_update_status);
+	count = info->enabled_flip;
+    return sprintf(buf, "%d\n", count);
+}
 static ssize_t flip_cover_mode_enable(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t size)
@@ -1447,7 +1458,7 @@ static ssize_t flip_cover_mode_enable(struct device *dev,
 	sscanf(buf, "%d\n", &data);
 	//dev_info(&info->client->dev, "%s %d\n", __func__, data);
 	if (flip_bypass)
-		return size;
+		data = 0;
 
 	touchkey_flip_cover(data);
 
@@ -1494,7 +1505,7 @@ static DEVICE_ATTR(glove_mode, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
 #endif
 
 #ifdef TKEY_FLIP_MODE
-static DEVICE_ATTR(flip_mode, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
+static DEVICE_ATTR(flip_mode, 0644, flip_cover_mode_show,
 		   flip_cover_mode_enable);
 #endif
 
