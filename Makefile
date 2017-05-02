@@ -392,12 +392,12 @@ LINUXINCLUDE    := \
 #-freorder-blocks -freorder-blocks-and-partition?
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-variable -Wno-maybe-uninitialized \
-		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 -Wno-misleading-indentation\
+		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -std=gnu89 \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label  -Wno-logical-not-parentheses \
 		   -Wno-cpp -fno-var-tracking-assignments \
 		   -fno-aggressive-loop-optimizations -Wno-sequence-point
-#-Wno-array-bounds -Wno-declaration-after-statement -Wno-sizeof-pointer-memaccess
+#-Wno-array-bounds -Wno-declaration-after-statement -Wno-sizeof-pointer-memaccess #-Wno-misleading-indentation
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
