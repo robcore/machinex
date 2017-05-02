@@ -6,10 +6,6 @@
 
 #include "timekeeping.h"
 
-extern seqlock_t jiffies_lock;
-
-#define CS_NAME_LEN	32
-
 #ifdef CONFIG_GENERIC_CLOCKEVENTS
 
 #define TICK_DO_TIMER_NONE	-1
@@ -165,5 +161,3 @@ static inline int tick_device_is_functional(struct clock_event_device *dev)
 #endif /* GENERIC_CLOCKEVENTS */
 
 int __clockevents_update_freq(struct clock_event_device *dev, u32 freq);
-extern void do_timer(unsigned long ticks);
-extern void update_wall_time(void);

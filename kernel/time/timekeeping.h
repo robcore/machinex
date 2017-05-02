@@ -17,4 +17,11 @@ extern s32 timekeeping_get_tai_offset(void);
 extern void timekeeping_set_tai_offset(s32 tai_offset);
 extern void timekeeping_clocktai(struct timespec *ts);
 
+extern void do_timer(unsigned long ticks);
+extern void update_wall_time(void);
+
+extern seqlock_t jiffies_lock;
+
+#define CS_NAME_LEN	32
+
 #endif
