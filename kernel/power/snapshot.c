@@ -1208,9 +1208,9 @@ static inline unsigned long preallocate_highmem_fraction(unsigned long nr_pages,
 /**
  * free_unnecessary_pages - Release preallocated pages not needed for the image
  */
-static void free_unnecessary_pages(void)
+static unsigned long free_unnecessary_pages(void)
 {
-	unsigned long save, to_free_normal, to_free_highmem;
+	unsigned long save, to_free_normal, to_free_highmem, free;
 
 	save = count_data_pages();
 	if (alloc_normal >= save) {
@@ -1231,6 +1231,7 @@ static void free_unnecessary_pages(void)
 		else
 			to_free_normal = 0;
 	}
+	free = to_free_normal + to_free_highmem;
 
 	memory_bm_position_reset(&copy_bm);
 
@@ -1254,6 +1255,8 @@ static void free_unnecessary_pages(void)
 		swsusp_unset_page_free(page);
 		__free_page(page);
 	}
+
+	return free;
 }
 
 /**
@@ -1443,7 +1446,7 @@ int hibernate_preallocate_memory(void)
 	 * pages in memory, but we have allocated more.  Release the excessive
 	 * ones now.
 	 */
-	free_unnecessary_pages();
+	pages -= free_unnecessary_pages();
 
  out:
 	do_gettimeofday(&stop);
