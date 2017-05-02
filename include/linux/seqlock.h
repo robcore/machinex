@@ -106,7 +106,7 @@ static __always_inline unsigned read_legacy_seqbegin(const legacy_seqlock_t *sl)
 	unsigned ret;
 
 repeat:
-	ret = ACCESS_ONCE(sl->sequence);
+	ret = READ_ONCE(sl->sequence);
 	if (unlikely(ret & 1)) {
 		cpu_relax();
 		goto repeat;
@@ -161,7 +161,7 @@ static inline unsigned __read_legacy_seqcount_begin(const legacy_seqcount_t *s)
 	unsigned ret;
 
 repeat:
-	ret = ACCESS_ONCE(s->sequence);
+	ret = READ_ONCE(s->sequence);
 	if (unlikely(ret & 1)) {
 		cpu_relax();
 		goto repeat;
@@ -201,7 +201,7 @@ static inline unsigned read_legacy_seqcount_begin(const legacy_seqcount_t *s)
  */
 static inline unsigned raw_legacy_seqcount_begin(const legacy_seqcount_t *s)
 {
-	unsigned ret = ACCESS_ONCE(s->sequence);
+	unsigned ret = READ_ONCE(s->sequence);
 	smp_rmb();
 	return ret & ~1;
 }
@@ -337,7 +337,7 @@ static inline unsigned __read_seqcount_begin(const seqcount_t *s)
 	unsigned ret;
 
 repeat:
-	ret = ACCESS_ONCE(s->sequence);
+	ret = READ_ONCE(s->sequence);
 	if (unlikely(ret & 1)) {
 		cpu_relax();
 		goto repeat;
@@ -356,7 +356,7 @@ repeat:
  */
 static inline unsigned raw_read_seqcount(const seqcount_t *s)
 {
-	unsigned ret = ACCESS_ONCE(s->sequence);
+	unsigned ret = READ_ONCE(s->sequence);
 	smp_rmb();
 	return ret;
 }
@@ -408,7 +408,7 @@ static inline unsigned read_seqcount_begin(const seqcount_t *s)
  */
 static inline unsigned raw_seqcount_begin(const seqcount_t *s)
 {
-	unsigned ret = ACCESS_ONCE(s->sequence);
+	unsigned ret = READ_ONCE(s->sequence);
 
 	seqcount_lockdep_reader_access(s);
 	smp_rmb();
