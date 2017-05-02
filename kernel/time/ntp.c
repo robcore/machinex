@@ -488,13 +488,13 @@ static void sync_cmos_clock(struct work_struct *work)
 
 	getnstimeofday64(&now);
 	if (abs(now.tv_nsec - (NSEC_PER_SEC / 2)) <= tick_nsec / 2) {
-		struct timespec64 adjust = now;
+		struct timespec adjust = timespec64_to_timespec(now);
 
 		fail = -ENODEV;
 		if (persistent_clock_is_local)
 			adjust.tv_sec -= (sys_tz.tz_minuteswest * 60);
 #ifdef CONFIG_GENERIC_CMOS_UPDATE
-		fail = update_persistent_clock(timespec64_to_timespec(adjust));
+		fail = update_persistent_clock(adjust);
 #endif
 #ifdef CONFIG_RTC_SYSTOHC
 		if (fail == -ENODEV)
