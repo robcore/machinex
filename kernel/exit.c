@@ -559,11 +559,10 @@ static void forget_original_parent(struct task_struct *father)
 	LIST_HEAD(dead_children);
 
 	write_lock_irq(&tasklist_lock);
-	/*
-	 * Note that exit_ptrace() and find_new_reaper() might
-	 * drop tasklist_lock and reacquire it.
-	 */
-	exit_ptrace(father);
+	if (unlikely(!list_empty(&father->ptraced)))
+		exit_ptrace(father, &dead_children);
+
+	/* Can drop and reacquire tasklist_lock */
 	reaper = find_new_reaper(father);
 
 	list_for_each_entry_safe(p, n, &father->children, sibling) {
