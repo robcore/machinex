@@ -168,9 +168,6 @@ struct perf_event;
  */
 #define PERF_EVENT_TXN 0x1
 
-#define PERF_PMU_CAP_NO_INTERRUPT		0x01
-#define PERF_PMU_CAP_NO_NMI			0x02
-
 /**
  * struct pmu - generic performance monitoring unit
  */
@@ -412,7 +409,6 @@ struct perf_event {
 	struct pid_namespace		*ns;
 	u64				id;
 
-	u64				(*clock)(void);
 	perf_overflow_handler_t		overflow_handler;
 	void				*overflow_handler_context;
 

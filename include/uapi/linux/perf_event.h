@@ -255,8 +255,6 @@ struct perf_event_attr {
 				exclude_host   :  1, /* don't count in host   */
 				exclude_guest  :  1, /* don't count in guest  */
 				constraint_duplicate : 1,
-				use_clockid    :  1, /* use @clockid for time fields */
-				__reserved_1   : 38;
 
 				__reserved_1   : 42;
 
@@ -275,7 +273,6 @@ struct perf_event_attr {
 		__u64		config2; /* extension of config1 */
 	};
 	__u64	branch_sample_type; /* enum branch_sample_type */
-	__s32	clockid;
 };
 
 /*
