@@ -120,10 +120,13 @@ static void __exit_signal(struct task_struct *tsk)
 	}
 
 	/*
-	 * Accumulate here the counters for all threads as they die. We could
-	 * skip the group leader because it is the last user of signal_struct,
-	 * but we want to avoid the race with thread_group_cputime() which can
-	 * see the empty ->thread_head list.
+	 * Accumulate here the counters for all threads but the group leader
+	 * as they die, so they can be added into the process-wide totals
+	 * when those are taken.  The group leader stays around as a zombie as
+	 * long as there are other threads.  When it gets reaped, the exit.c
+	 * code will add its counts into these totals.  We won't ever get here
+	 * for the group leader, since it will have been the last reference on
+	 * the signal_struct.
 	 */
 	task_cputime(tsk, &utime, &stime);
 	write_seqlock(&sig->stats_lock);
@@ -1002,7 +1005,8 @@ static int wait_noreap_copyout(struct wait_opts *wo, struct task_struct *p,
  */
 static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 {
-	int state, retval, status;
+	unsigned long state;
+	int retval, status, traced;
 	pid_t pid = task_pid_vnr(p);
 	uid_t uid = __task_cred(p)->uid;
 	struct siginfo __user *infop;
@@ -1025,25 +1029,21 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 		}
 		return wait_noreap_copyout(wo, p, pid, uid, why, status);
 	}
+
+	traced = ptrace_reparented(p);
 	/*
 	 * Move the task's state to DEAD/TRACE, only one thread can do this.
 	 */
-	state = (ptrace_reparented(p) && thread_group_leader(p)) ?
-		EXIT_TRACE : EXIT_DEAD;
+	state = traced && thread_group_leader(p) ? EXIT_TRACE : EXIT_DEAD;
 	if (cmpxchg(&p->exit_state, EXIT_ZOMBIE, state) != EXIT_ZOMBIE)
 		return 0;
 	/*
-	 * We own this thread, nobody else can reap it.
+	 * It can be ptraced but not reparented, check
+	 * thread_group_leader() to filter out sub-threads.
 	 */
-	read_unlock(&tasklist_lock);
-	sched_annotate_sleep();
-
-	/*
-	 * Check thread_group_leader() to exclude the traced sub-threads.
-	 */
-	if (state == EXIT_DEAD && thread_group_leader(p)) {
-		struct signal_struct *sig = p->signal;
-		struct signal_struct *psig = current->signal;
+	if (likely(!traced) && thread_group_leader(p)) {
+		struct signal_struct *psig;
+		struct signal_struct *sig;
 		unsigned long maxrss;
 		cputime_t tgutime, tgstime;
 
@@ -1055,20 +1055,21 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 		 * accumulate in the parent's signal_struct c* fields.
 		 *
 		 * We don't bother to take a lock here to protect these
-		 * p->signal fields because the whole thread group is dead
-		 * and nobody can change them.
-		 *
-		 * psig->stats_lock also protects us from our sub-theads
-		 * which can reap other children at the same time. Until
-		 * we change k_getrusage()-like users to rely on this lock
-		 * we have to take ->siglock as well.
+		 * p->signal fields, because they are only touched by
+		 * __exit_signal, which runs with tasklist_lock
+		 * write-locked anyway, and so is excluded here.  We do
+		 * need to protect the access to parent->signal fields,
+		 * as other threads in the parent group can be right
+		 * here reaping other children at the same time.
 		 *
 		 * We use thread_group_cputime_adjusted() to get times for
 		 * the thread group, which consolidates times for all threads
 		 * in the group including the group leader.
 		 */
 		thread_group_cputime_adjusted(p, &tgutime, &tgstime);
-		spin_lock_irq(&current->sighand->siglock);
+		spin_lock_irq(&p->real_parent->sighand->siglock);
+		psig = p->real_parent->signal;
+		sig = p->signal;
 		write_seqlock(&psig->stats_lock);
 		psig->cutime += tgutime + sig->cutime;
 		psig->cstime += tgstime + sig->cstime;
@@ -1093,7 +1094,7 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 		task_io_accounting_add(&psig->ioac, &p->ioac);
 		task_io_accounting_add(&psig->ioac, &sig->ioac);
 		write_sequnlock(&psig->stats_lock);
-		spin_unlock_irq(&current->sighand->siglock);
+		spin_unlock_irq(&p->real_parent->sighand->siglock);
 	}
 
 	/*
