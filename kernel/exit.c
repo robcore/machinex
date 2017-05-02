@@ -532,7 +532,15 @@ static struct task_struct *find_new_reaper(struct task_struct *father)
 static void reparent_leader(struct task_struct *father, struct task_struct *p,
 				struct list_head *dead)
 {
-	if (unlikely(p->exit_state == EXIT_DEAD))
+	list_move_tail(&p->sibling, &p->real_parent->children);
+
+	if (p->exit_state == EXIT_DEAD)
+		return;
+	/*
+	 * If this is a threaded reparent there is no need to
+	 * notify anyone anything has happened.
+	 */
+	if (same_thread_group(p->real_parent, father))
 		return;
 
 	/* We don't want people slaying init. */
@@ -543,7 +551,7 @@ static void reparent_leader(struct task_struct *father, struct task_struct *p,
 	    p->exit_state == EXIT_ZOMBIE && thread_group_empty(p)) {
 		if (do_notify_parent(p, p->exit_signal)) {
 			p->exit_state = EXIT_DEAD;
-			list_add(&p->ptrace_entry, dead);
+			list_move_tail(&p->sibling, dead);
 		}
 	}
 
@@ -552,14 +560,15 @@ static void reparent_leader(struct task_struct *father, struct task_struct *p,
 
 static void forget_original_parent(struct task_struct *father)
 {
-	struct task_struct *p, *t, *n, *reaper;
+	struct task_struct *p, *n, *reaper;
 	LIST_HEAD(dead_children);
 
 	write_lock_irq(&tasklist_lock);
-	if (unlikely(!list_empty(&father->ptraced)))
-		exit_ptrace(father, &dead_children);
-
-	/* Can drop and reacquire tasklist_lock */
+	/*
+	 * Note that exit_ptrace() and find_new_reaper() might
+	 * drop tasklist_lock and reacquire it.
+	 */
+	exit_ptrace(father);
 	reaper = find_new_reaper(father);
 
 	list_for_each_entry_safe(p, n, &father->children, sibling) {
@@ -567,26 +576,22 @@ static void forget_original_parent(struct task_struct *father)
 
 		for_each_thread(p, t) {
 			t->real_parent = reaper;
-			BUG_ON((!t->ptrace) != (t->parent == father));
-			if (likely(!t->ptrace))
+			if (t->parent == father) {
+				BUG_ON(t->ptrace);
 				t->parent = t->real_parent;
 			}
 			if (t->pdeath_signal)
 				group_send_sig_info(t->pdeath_signal,
 						    SEND_SIG_NOINFO, t);
 		}
-		/*
-		 * If this is a threaded reparent there is no need to
-		 * notify anyone anything has happened.
-		 */
-		if (!same_thread_group(reaper, father))
-			reparent_leader(father, p, &dead_children);
+		reparent_leader(father, p, &dead_children);
 	}
-	list_splice_tail_init(&father->children, &reaper->children);
 	write_unlock_irq(&tasklist_lock);
 
-	list_for_each_entry_safe(p, n, &dead_children, ptrace_entry) {
-		list_del_init(&p->ptrace_entry);
+	BUG_ON(!list_empty(&father->children));
+
+	list_for_each_entry_safe(p, n, &dead_children, sibling) {
+		list_del_init(&p->sibling);
 		release_task(p);
 	}
 }
