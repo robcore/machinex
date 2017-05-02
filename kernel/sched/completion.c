@@ -275,7 +275,7 @@ bool try_wait_for_completion(struct completion *x)
 	 * first without taking the lock so we can
 	 * return early in the blocking case.
 	 */
-	if (!ACCESS_ONCE(x->done))
+	if (!READ_ONCE(x->done))
 		return 0;
 
 	spin_lock_irqsave(&x->wait.lock, flags);
@@ -299,7 +299,7 @@ EXPORT_SYMBOL(try_wait_for_completion);
 bool completion_done(struct completion *x)
 {
 	unsigned long flags;
-	int ret = 1;
+	int ret = true;
 
 	/*
 	 * Since x->done will need to be locked only
@@ -307,12 +307,12 @@ bool completion_done(struct completion *x)
 	 * first without taking the lock so we can
 	 * return early in the blocking case.
 	 */
-	if (!ACCESS_ONCE(x->done))
-		return 0;
+	if (!READ_ONCE(x->done))
+		return true;
 
 	spin_lock_irqsave(&x->wait.lock, flags);
 	if (!x->done)
-		ret = 0;
+		ret = false;
 	smp_rmb();
 	spin_unlock_irqrestore(&x->wait.lock, flags);
 	return ret;
