@@ -1847,7 +1847,7 @@ void get_monotonic_boottime(struct timespec *ts)
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
 		ret.tv_sec = tk->xtime_sec;
-		nsec = timekeeping_get_ns(&tk->tkr);
+		nsec = timekeeping_get_ns(&tk->tkr_mono);
 		tomono = tk->wall_to_monotonic;
 		sleep = tk->total_sleep_time;
 
