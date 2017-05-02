@@ -87,6 +87,7 @@ struct tk_read_base {
  */
 struct timekeeper {
 	struct tk_read_base	tkr_mono;
+	struct tk_read_base	tkr_raw;
 	/* Current CLOCK_REALTIME time in seconds */
 	u64			xtime_sec;
 	unsigned long		ktime_sec;
