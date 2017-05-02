@@ -387,6 +387,7 @@ void tick_suspend(void)
 	struct tick_device *td = this_cpu_ptr(&tick_cpu_device);
 
 	clockevents_shutdown(td->evtdev);
+	tick_suspend_broadcast();
 }
 
 /**
