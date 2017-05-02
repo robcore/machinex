@@ -86,7 +86,7 @@ static inline void rcu_note_context_switch(void)
 /*
  * Return the number of grace periods.
  */
-static inline long rcu_batches_completed(void)
+static inline unsigned long rcu_batches_completed(void)
 {
 	return 0;
 }
@@ -94,7 +94,7 @@ static inline long rcu_batches_completed(void)
 /*
  * Return the number of bottom-half grace periods.
  */
-static inline long rcu_batches_completed_bh(void)
+static inline unsigned long rcu_batches_completed_bh(void)
 {
 	return 0;
 }

@@ -81,9 +81,9 @@ void cond_synchronize_rcu(unsigned long oldstate);
 
 extern unsigned long rcutorture_testseq;
 extern unsigned long rcutorture_vernum;
-extern long rcu_batches_completed(void);
-extern long rcu_batches_completed_bh(void);
-extern long rcu_batches_completed_sched(void);
+extern unsigned long rcu_batches_completed(void);
+extern unsigned long rcu_batches_completed_bh(void);
+extern unsigned long rcu_batches_completed_sched(void);
 void show_rcu_gp_kthreads(void);
 
 extern void rcu_force_quiescent_state(void);
