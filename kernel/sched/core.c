@@ -3321,7 +3321,7 @@ void __sched schedule_preempt_disabled(void)
 	preempt_disable();
 }
 
-static void preempt_schedule_common(void)
+static void __sched notrace preempt_schedule_common(void)
 {
 	do {
 		add_preempt_count(PREEMPT_ACTIVE);
