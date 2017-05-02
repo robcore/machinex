@@ -10,7 +10,7 @@ extern seqlock_t jiffies_lock;
 
 #define CS_NAME_LEN	32
 
-#ifdef CONFIG_GENERIC_CLOCKEVENTS
+#ifdef CONFIG_GENERIC_CLOCKEVENTS_BUILD
 
 #define TICK_DO_TIMER_NONE	-1
 #define TICK_DO_TIMER_BOOT	-2
@@ -32,7 +32,6 @@ extern bool tick_check_replacement(struct clock_event_device *curdev,
 extern void tick_install_replacement(struct clock_event_device *dev);
 
 extern void clockevents_shutdown(struct clock_event_device *dev);
-extern int clockevents_tick_resume(struct clock_event_device *dev);
 
 extern ssize_t sysfs_get_uname(const char *buf, char *dst, size_t cnt);
 
@@ -162,7 +161,7 @@ static inline int tick_device_is_functional(struct clock_event_device *dev)
 	return !(dev->features & CLOCK_EVT_FEAT_DUMMY);
 }
 
-#endif /* GENERIC_CLOCKEVENTS */
+#endif
 
 int __clockevents_update_freq(struct clock_event_device *dev, u32 freq);
 extern void do_timer(unsigned long ticks);
