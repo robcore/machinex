@@ -1874,9 +1874,6 @@ static void free_module(struct module *mod)
 	kfree(mod->args);
 	percpu_modfree(mod);
 
-	/* Free lock-classes: */
-	lockdep_free_key_range(mod->module_core, mod->core_size);
-
 	/* Finally, free the core (containing the module structure) */
 	unset_module_core_ro_nx(mod);
 	module_memfree(mod->module_core);
@@ -3383,6 +3380,9 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	synchronize_rcu();
 	mutex_unlock(&module_mutex);
  free_module:
+	/* Free lock-classes; relies on the preceding sync_rcu() */
+	lockdep_free_key_range(mod->module_core, mod->core_size);
+
 	module_deallocate(mod, info);
  free_copy:
 	free_copy(info);
