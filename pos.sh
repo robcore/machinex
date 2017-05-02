@@ -1,4 +1,7 @@
 #!/bin/bash
+patch -p1 -R < "/root/machinex/patches/0020-remove-extra-local-irq-save-in-clockevents-again-tho.patch"
+patch -p1 -R < "/root/machinex/patches/0019-possed.patch"
+patch -p1 -R < "/root/machinex/patches/0018-possing-the-header-stuff-didnt-get-lucky-and-need-to.patch"
 patch -p1 -R < "/root/machinex/patches/0017-more-fixin.patch"
 patch -p1 -R < "/root/machinex/patches/0016-add-back-some-missing-stuff.patch"
 patch -p1 -R < "/root/machinex/patches/0015-Provide-and-use-tick_suspend-resume_local.patch"
@@ -9,3 +12,10 @@ patch -p1 -R < "/root/machinex/patches/0011-clockevents-Remove-extra-local_irq_s
 patch -p1 -R < "/root/machinex/patches/0010-tick-Move-core-only-declarations-and-functions-to-co.patch"
 patch -p1 -R < "/root/machinex/patches/0009-tick-Simplify-tick-internal.h.patch"
 patch -p1 -R < "/root/machinex/patches/0008-tick-Move-clocksource-related-stuff-to-timekeeping.h.patch"
+patch -p1 -R < "/root/machinex/patches/0007-get-rid-of-GENERIC_CLOCKEVENTS_BUILD.patch"
+patch -p1 -R < "/root/machinex/patches/0006-clockevents-Dont-validate-dev-mode-against-CLOCK_EVT.patch"
+patch -p1 -R < "/root/machinex/patches/0005-clockevents-Manage-device-s-state-separately.patch"
+patch -p1 -R < "/root/machinex/patches/0004-clockevents-Handle-tick-device-s-resume-separately.patch"
+patch -p1 -R < "/root/machinex/patches/0003-time-Introduce-tk_fast_raw.patch"
+patch -p1 -R < "/root/machinex/patches/0002-time-Parametrize-all-tk_fast_mono-users.patch"
+patch -p1 -R < "/root/machinex/patches/0001-time-Add-timerkeeper-tkr_raw.patch"
