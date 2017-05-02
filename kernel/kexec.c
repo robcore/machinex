@@ -554,8 +554,6 @@ static int kimage_set_destination(struct kimage *image,
 
 	destination &= PAGE_MASK;
 	result = kimage_add_entry(image, destination | IND_DESTINATION);
-	if (result == 0)
-		image->destination = destination;
 
 	return result;
 }
@@ -567,8 +565,6 @@ static int kimage_add_page(struct kimage *image, unsigned long page)
 
 	page &= PAGE_MASK;
 	result = kimage_add_entry(image, page | IND_SOURCE);
-	if (result == 0)
-		image->destination += PAGE_SIZE;
 
 	return result;
 }
