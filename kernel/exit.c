@@ -563,7 +563,7 @@ static void reparent_leader(struct task_struct *father, struct task_struct *p,
 
 static void forget_original_parent(struct task_struct *father)
 {
-	struct task_struct *p, *n, *reaper;
+	struct task_struct *p, *t, *n, *reaper;
 	LIST_HEAD(dead_children);
 
 	write_lock_irq(&tasklist_lock);
@@ -579,8 +579,8 @@ static void forget_original_parent(struct task_struct *father)
 
 		for_each_thread(p, t) {
 			t->real_parent = reaper;
-			if (t->parent == father) {
-				BUG_ON(t->ptrace);
+			BUG_ON((!t->ptrace) != (t->parent == father));
+			if (likely(!t->ptrace))
 				t->parent = t->real_parent;
 			}
 			if (t->pdeath_signal)
