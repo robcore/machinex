@@ -25,7 +25,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 
-#include "timekeeping.h"
+#include "tick-internal.h"
 
 /* The Jiffies based clocksource is the lowest common
  * denominator clock source which should function on

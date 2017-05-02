@@ -373,68 +373,26 @@ void tick_shutdown(unsigned int *cpup)
 	}
 }
 
-/**
- * tick_suspend_local - Suspend the local tick device
- *
- * Called from the local cpu for freeze with interrupts disabled.
- *
- * No locks required. Nothing can change the per cpu device.
- */
-static void tick_suspend_local(void)
+void tick_suspend(void)
 {
 	struct tick_device *td = this_cpu_ptr(&tick_cpu_device);
 
 	clockevents_shutdown(td->evtdev);
 }
 
-/**
- * tick_resume_local - Resume the local tick device
- *
- * Called from the local CPU for unfreeze or XEN resume magic.
- *
- * No locks required. Nothing can change the per cpu device.
- */
-void tick_resume_local(void)
+void tick_resume(void)
 {
 	struct tick_device *td = this_cpu_ptr(&tick_cpu_device);
-	bool broadcast = tick_resume_check_broadcast();
+	int broadcast = tick_resume_broadcast();
 
 	clockevents_tick_resume(td->evtdev);
+
 	if (!broadcast) {
 		if (td->mode == TICKDEV_MODE_PERIODIC)
 			tick_setup_periodic(td->evtdev, 0);
 		else
 			tick_resume_oneshot();
 	}
-}
-
-/**
- * tick_suspend - Suspend the tick and the broadcast device
- *
- * Called from syscore_suspend() via timekeeping_suspend with only one
- * CPU online and interrupts disabled or from tick_unfreeze() under
- * tick_freeze_lock.
- *
- * No locks required. Nothing can change the per cpu device.
- */
-void tick_suspend(void)
-{
-	tick_suspend_local();
-	tick_suspend_broadcast();
-}
-
-/**
- * tick_resume - Resume the tick and the broadcast device
- *
- * Called from syscore_resume() via timekeeping_resume with only one
- * CPU online and interrupts disabled.
- *
- * No locks required. Nothing can change the per cpu device.
- */
-void tick_resume(void)
-{
-	tick_resume_broadcast();
-	tick_resume_local();
 }
 
 /**

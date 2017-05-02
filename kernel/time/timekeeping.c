@@ -1409,7 +1409,9 @@ static void timekeeping_resume(void)
 
 	touch_softlockup_watchdog();
 
-	tick_resume();
+	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
+
+	/* Resume hrtimers */
 	hrtimers_resume();
 }
 
@@ -1460,7 +1462,7 @@ static int timekeeping_suspend(void)
 	write_seqcount_end(&tk_core.seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 
-	tick_suspend();
+	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
 	clocksource_suspend();
 	clockevents_suspend();
 
