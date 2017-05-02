@@ -606,19 +606,7 @@ static void gpio_keys_report_state(struct gpio_keys_drvdata *ddata)
 }
 
 unsigned int flip_bypass;
-
-static void set_flip_cap(void)
-{
-	struct input_dev *input;
-
-	if (!flip_bypass) {
-		input->evbit[0] |= BIT_MASK(EV_SW);
-		input_set_capability(input, EV_SW, SW_FLIP);
-	} else {
-		input->evbit[0] |= BIT_MASK(EV_SW);
-		input_set_capability(input, EV_SW, false);
-	}
-}
+module_param_named(flip_cover_bypass, flip_bypass, uint, 0644);
 
 static void flip_cover_work(struct work_struct *work)
 {
@@ -626,32 +614,25 @@ static void flip_cover_work(struct work_struct *work)
 		container_of(work, struct gpio_keys_drvdata,
 				flip_cover_dwork.work);
 
-	if (!flip_bypass) {
+	if (flip_bypass)
+		return;
+	ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
+	//flip_cover=ddata->flip_cover;
+	printk(KERN_DEBUG "[keys] %s : %d\n",
+		__func__, ddata->flip_cover);
 
-		ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
-		//flip_cover=ddata->flip_cover;
-		printk(KERN_DEBUG "[keys] %s : %d\n",
-			__func__, ddata->flip_cover);
-
-		input_report_switch(ddata->input,
-			SW_FLIP, ddata->flip_cover);
-		input_sync(ddata->input);
-	} else {
-		ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
-		//flip_cover=ddata->flip_cover;
-		printk(KERN_DEBUG "[keys] %s : %d\n",
-			__func__, ddata->flip_cover);
-
-		input_report_switch(ddata->input,
-			SW_FLIP, false);
-		input_sync(ddata->input);
-	}
+	input_report_switch(ddata->input,
+		SW_FLIP, ddata->flip_cover);
+	input_sync(ddata->input);
 }
 
 static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 {
 	//bool flip_status;
 	struct gpio_keys_drvdata *ddata = dev_id;
+
+	if (flip_bypass)
+		return IRQ_HANDLED;
 
 	//flip_status = gpio_get_value(ddata->gpio_flip_cover);
 
@@ -678,30 +659,28 @@ static int gpio_keys_open(struct input_dev *input)
 	int ret = 0;
 	int irq = gpio_to_irq(ddata->gpio_flip_cover);
 
-	if(ddata->gpio_flip_cover == 0) {
+	if(ddata->gpio_flip_cover == 0 || (flip_bypass)) {
 		printk(KERN_DEBUG"[HALL_IC] : %s skip flip\n", __func__);
 		goto skip_flip;
 	}
 
-	if (!flip_bypass) {
-		INIT_DELAYED_WORK(&ddata->flip_cover_dwork, flip_cover_work);
+	INIT_DELAYED_WORK(&ddata->flip_cover_dwork, flip_cover_work);
 
-		ret = request_threaded_irq(
-				irq, NULL,
-				flip_cover_detect,
-				IRQF_DISABLED | IRQF_TRIGGER_RISING |
-				IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-				"flip_cover", ddata);
-			if (ret < 0)
-				pr_debug("flip cover is fucked\n");
+	ret = request_threaded_irq(
+			irq, NULL,
+			flip_cover_detect,
+			IRQF_DISABLED | IRQF_TRIGGER_RISING |
+			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+			"flip_cover", ddata);
+		if (ret < 0)
+			pr_debug("flip cover is fucked\n");
 
-			ret = enable_irq_wake(irq);
-			if (ret < 0)
-				pr_debug("flip cover is fucked\n");
+		ret = enable_irq_wake(irq);
+		if (ret < 0)
+			pr_debug("flip cover is fucked\n");
 
-			/* update the current status */
-			schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
-	}
+		/* update the current status */
+		schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
 
 skip_flip:
 	if (pdata->enable) {
@@ -732,7 +711,7 @@ static ssize_t hall_detect_show(struct device *dev,
 
 
 	if (flip_bypass) {
-		sprintf(buf, "DISABLED");
+		sprintf(buf, "OPEN");
 		return strlen(buf);
 	} else if (ddata->flip_cover)
 		sprintf(buf, "OPEN");
@@ -791,7 +770,7 @@ static ssize_t wakeup_enable(struct device *dev,
 			else
 				button->button->wakeup = 0;
 			pr_info("%s wakeup status %d\n", button->button->desc,\
-					button->button->wakeup);
+						button->button->wakeup);
 		}
 	}
 
@@ -854,36 +833,11 @@ static ssize_t keycode_pressed_show(struct device *dev,
 }
 static DEVICE_ATTR(keycode_pressed, 0444 , keycode_pressed_show, NULL);
 
-static ssize_t flip_bypass_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%d\n", flip_bypass);
-}
-
-static ssize_t flip_bypass_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int val;
-
-	sscanf(buf, "%d\n", &val);
-
-	if (val >= 1)
-		val = 1;
-
-	flip_bypass = val;
-
-	set_flip_cap();
-
-	return count;
-}
-static DEVICE_ATTR(flip_bypass, 0644 , flip_bypass_show, flip_bypass_store);
-
 static struct attribute *sec_key_attrs[] = {
 	&dev_attr_sec_key_pressed.attr,
 	&dev_attr_wakeup_keys.attr,
 	&dev_attr_hall_detect.attr,
 	&dev_attr_keycode_pressed.attr,
-	&dev_attr_flip_bypass.attr,
 	NULL,
 };
 static struct attribute_group sec_key_attr_group = {
@@ -943,11 +897,12 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	ddata->gpio_flip_cover = pdata->gpio_flip_cover;
 	//ddata->irq_flip_cover = gpio_to_irq(ddata->gpio_flip_cover);
 	//wake_lock_init(&ddata->flip_wake_lock, WAKE_LOCK_SUSPEND, "flip_wake_lock");
-
-	if(ddata->gpio_flip_cover != 0) {
-		set_flip_cap();
+	if (!flip_bypass) {
+		if(ddata->gpio_flip_cover != 0) {
+			input->evbit[0] |= BIT_MASK(EV_SW);
+			input_set_capability(input, EV_SW, SW_FLIP);
+		}
 	}
-
 	global_dev = dev;
 	ddata->pdata = pdata;
 	ddata->input = input;
@@ -960,7 +915,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	input->phys = "gpio-keys/input0";
 	input->dev.parent = &pdev->dev;
 	input->evbit[0] |= BIT_MASK(EV_SW);
-	set_flip_cap();
+	input_set_capability(input, EV_SW, SW_FLIP);
 	input->open = gpio_keys_open;
 	input->close = gpio_keys_close;
 
