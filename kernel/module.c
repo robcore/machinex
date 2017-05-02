@@ -748,18 +748,32 @@ static int try_stop_module(struct module *mod, int flags, int *forced)
 	}
 }
 
-/**
- * module_refcount - return the refcount or -1 if unloading
- *
- * @mod:	the module we're checking
- *
- * Returns:
- *	-1 if the module is in the process of unloading
- *	otherwise the number of references in the kernel to the module
- */
-int module_refcount(struct module *mod)
+unsigned long module_refcount(struct module *mod)
 {
-	return atomic_read(&mod->refcnt) - MODULE_REF_BASE;
+	unsigned long incs = 0, decs = 0;
+	int cpu;
+
+	for_each_possible_cpu(cpu)
+		decs += per_cpu_ptr(mod->refptr, cpu)->decs;
+	/*
+	 * ensure the incs are added up after the decs.
+	 * module_put ensures incs are visible before decs with smp_wmb.
+	 *
+	 * This 2-count scheme avoids the situation where the refcount
+	 * for CPU0 is read, then CPU0 increments the module refcount,
+	 * then CPU1 drops that refcount, then the refcount for CPU1 is
+	 * read. We would record a decrement but not its corresponding
+	 * increment so we would see a low count (disaster).
+	 *
+	 * Rare situation? But module_refcount can be preempted, and we
+	 * might be tallying up 4096+ CPUs. So it is not impossible.
+	 */
+	smp_rmb();
+	for_each_possible_cpu(cpu)
+		incs += per_cpu_ptr(mod->refptr, cpu)->incs;
+	return incs - decs;
+}
+EXPORT_SYMBOL(module_refcount);
 
 /* This exists whether we can unload or not */
 static void free_module(struct module *mod);
@@ -861,7 +875,7 @@ static inline void print_unload_info(struct seq_file *m, struct module *mod)
 	struct module_use *use;
 	int printed_something = 0;
 
-	seq_printf(m, " %i ", module_refcount(mod));
+	seq_printf(m, " %lu ", module_refcount(mod));
 
 	/* Always include a trailing , so userspace can differentiate
            between this and the old multi-field proc format. */
@@ -915,7 +929,7 @@ EXPORT_SYMBOL_GPL(symbol_put_addr);
 static ssize_t show_refcnt(struct module_attribute *mattr,
 			   struct module_kobject *mk, char *buffer)
 {
-	return sprintf(buffer, "%i\n", module_refcount(mk->mod));
+	return sprintf(buffer, "%lu\n", module_refcount(mk->mod));
 }
 
 static struct module_attribute modinfo_refcnt =
