@@ -659,28 +659,30 @@ static int gpio_keys_open(struct input_dev *input)
 	int ret = 0;
 	int irq = gpio_to_irq(ddata->gpio_flip_cover);
 
-	if(ddata->gpio_flip_cover == 0 || (flip_bypass)) {
+	if(ddata->gpio_flip_cover == 0) {
 		printk(KERN_DEBUG"[HALL_IC] : %s skip flip\n", __func__);
 		goto skip_flip;
 	}
 
-	INIT_DELAYED_WORK(&ddata->flip_cover_dwork, flip_cover_work);
+	if (!flip_bypass) {
+		INIT_DELAYED_WORK(&ddata->flip_cover_dwork, flip_cover_work);
 
-	ret = request_threaded_irq(
-			irq, NULL,
-			flip_cover_detect,
-			IRQF_DISABLED | IRQF_TRIGGER_RISING |
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-			"flip_cover", ddata);
-		if (ret < 0)
-			pr_debug("flip cover is fucked\n");
+		ret = request_threaded_irq(
+				irq, NULL,
+				flip_cover_detect,
+				IRQF_DISABLED | IRQF_TRIGGER_RISING |
+				IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				"flip_cover", ddata);
+			if (ret < 0)
+				pr_debug("flip cover is fucked\n");
 
-		ret = enable_irq_wake(irq);
-		if (ret < 0)
-			pr_debug("flip cover is fucked\n");
+			ret = enable_irq_wake(irq);
+			if (ret < 0)
+				pr_debug("flip cover is fucked\n");
 
-		/* update the current status */
-		schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
+			/* update the current status */
+			schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
+	}
 
 skip_flip:
 	if (pdata->enable) {
@@ -711,7 +713,7 @@ static ssize_t hall_detect_show(struct device *dev,
 
 
 	if (flip_bypass) {
-		sprintf(buf, "OPEN");
+		sprintf(buf, "DISABLED");
 		return strlen(buf);
 	} else if (ddata->flip_cover)
 		sprintf(buf, "OPEN");
@@ -770,7 +772,7 @@ static ssize_t wakeup_enable(struct device *dev,
 			else
 				button->button->wakeup = 0;
 			pr_info("%s wakeup status %d\n", button->button->desc,\
-						button->button->wakeup);
+					button->button->wakeup);
 		}
 	}
 
@@ -915,7 +917,8 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	input->phys = "gpio-keys/input0";
 	input->dev.parent = &pdev->dev;
 	input->evbit[0] |= BIT_MASK(EV_SW);
-	input_set_capability(input, EV_SW, SW_FLIP);
+	if (!flip_bypass)
+		input_set_capability(input, EV_SW, SW_FLIP);
 	input->open = gpio_keys_open;
 	input->close = gpio_keys_close;
 
