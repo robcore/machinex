@@ -614,25 +614,32 @@ static void flip_cover_work(struct work_struct *work)
 		container_of(work, struct gpio_keys_drvdata,
 				flip_cover_dwork.work);
 
-	if (flip_bypass)
-		return;
-	ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
-	//flip_cover=ddata->flip_cover;
-	printk(KERN_DEBUG "[keys] %s : %d\n",
-		__func__, ddata->flip_cover);
+	if (!flip_bypass) {
 
-	input_report_switch(ddata->input,
-		SW_FLIP, ddata->flip_cover);
-	input_sync(ddata->input);
+		ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
+		//flip_cover=ddata->flip_cover;
+		printk(KERN_DEBUG "[keys] %s : %d\n",
+			__func__, ddata->flip_cover);
+
+		input_report_switch(ddata->input,
+			SW_FLIP, ddata->flip_cover);
+		input_sync(ddata->input);
+	} else {
+		ddata->flip_cover = gpio_get_value(ddata->gpio_flip_cover);
+		//flip_cover=ddata->flip_cover;
+		printk(KERN_DEBUG "[keys] %s : %d\n",
+			__func__, ddata->flip_cover);
+
+		input_report_switch(ddata->input,
+			SW_FLIP, false);
+		input_sync(ddata->input);
+	}
 }
 
 static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 {
 	//bool flip_status;
 	struct gpio_keys_drvdata *ddata = dev_id;
-
-	if (flip_bypass)
-		return IRQ_HANDLED;
 
 	//flip_status = gpio_get_value(ddata->gpio_flip_cover);
 
