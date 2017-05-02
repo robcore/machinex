@@ -1030,6 +1030,11 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 		EXIT_TRACE : EXIT_DEAD;
 	if (cmpxchg(&p->exit_state, EXIT_ZOMBIE, state) != EXIT_ZOMBIE)
 		return 0;
+	/*
+	 * We own this thread, nobody else can reap it.
+	 */
+	read_unlock(&tasklist_lock);
+	sched_annotate_sleep();
 
 	/*
 	 * Check thread_group_leader() to exclude the traced sub-threads.
