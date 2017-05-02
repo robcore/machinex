@@ -300,7 +300,7 @@ void arch_cpu_idle_enter(void);
 void arch_cpu_idle_exit(void);
 void arch_cpu_idle_dead(void);
 
-//DECLARE_PER_CPU(bool, cpu_dead_idle);
+DECLARE_PER_CPU(bool, cpu_dead_idle);
 
 int cpu_report_state(int cpu);
 int cpu_check_up_prepare(int cpu);
