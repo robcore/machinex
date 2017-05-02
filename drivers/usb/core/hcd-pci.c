@@ -385,7 +385,7 @@ static int check_root_hub_suspended(struct device *dev)
 	return 0;
 }
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
 static int suspend_common(struct device *dev, bool do_wakeup)
 {
 	struct pci_dev		*pci_dev = to_pci_dev(dev);
@@ -556,7 +556,7 @@ static int hcd_pci_restore(struct device *dev)
 
 #endif	/* CONFIG_PM_SLEEP */
 
-#ifdef	CONFIG_PM_RUNTIME
+#ifdef	CONFIG_PM
 
 static int hcd_pci_runtime_suspend(struct device *dev)
 {
@@ -584,7 +584,7 @@ static int hcd_pci_runtime_resume(struct device *dev)
 #define hcd_pci_runtime_suspend	NULL
 #define hcd_pci_runtime_resume	NULL
 
-#endif	/* CONFIG_PM_RUNTIME */
+#endif	/* CONFIG_PM */
 
 const struct dev_pm_ops usb_hcd_pci_pm_ops = {
 	.suspend	= hcd_pci_suspend,

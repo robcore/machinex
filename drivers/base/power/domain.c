@@ -288,7 +288,7 @@ int pm_genpd_name_poweron(const char *domain_name)
 
 #endif /* CONFIG_PM */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 static int genpd_start_dev_no_timing(struct generic_pm_domain *genpd,
 				     struct device *dev)
@@ -760,7 +760,7 @@ static inline void genpd_power_off_work_fn(struct work_struct *work) {}
 #define pm_genpd_runtime_suspend	NULL
 #define pm_genpd_runtime_resume		NULL
 
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 
 #ifdef CONFIG_PM_SLEEP
 

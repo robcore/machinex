@@ -134,7 +134,7 @@ static int scsi_bus_poweroff(struct device *dev)
 
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 static int scsi_runtime_suspend(struct device *dev)
 {
@@ -233,7 +233,7 @@ void scsi_autopm_put_host(struct Scsi_Host *shost)
 #define scsi_runtime_resume	NULL
 #define scsi_runtime_idle	NULL
 
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 
 const struct dev_pm_ops scsi_bus_pm_ops = {
 	.prepare =		scsi_bus_prepare,

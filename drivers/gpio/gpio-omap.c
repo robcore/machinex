@@ -1200,7 +1200,7 @@ static int omap_gpio_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 static void omap_gpio_restore_context(struct gpio_bank *bank);
 
 static int omap_gpio_runtime_suspend(struct device *dev)
@@ -1365,7 +1365,7 @@ static int omap_gpio_runtime_resume(struct device *dev)
 
 	return 0;
 }
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 
 void omap2_gpio_prepare_for_idle(int pwr_mode)
 {
@@ -1393,7 +1393,7 @@ void omap2_gpio_resume_after_idle(void)
 	}
 }
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 static void omap_gpio_restore_context(struct gpio_bank *bank)
 {
 	__raw_writel(bank->context.wake_en,
@@ -1427,7 +1427,7 @@ static void omap_gpio_restore_context(struct gpio_bank *bank)
 	__raw_writel(bank->context.irqenable2,
 				bank->base + bank->regs->irqenable2);
 }
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 #else
 #define omap_gpio_suspend NULL
 #define omap_gpio_resume NULL

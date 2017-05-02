@@ -168,7 +168,7 @@ is defined in file include/media/s5p_fimc.h.
 
 This driver depends on following config options:
 PLAT_S5P,
-PM_RUNTIME,
+PM,
 I2C,
 REGULATOR,
 VIDEO_V4L2_SUBDEV_API,

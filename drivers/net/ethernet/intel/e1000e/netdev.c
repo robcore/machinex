@@ -5690,7 +5690,7 @@ static int e1000_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int e1000_runtime_suspend(struct device *dev)
 {
 	struct pci_dev *pdev = to_pci_dev(dev);
@@ -5733,7 +5733,7 @@ static int e1000_runtime_resume(struct device *dev)
 	adapter->idle_check = !dev->power.runtime_auto;
 	return __e1000_resume(pdev);
 }
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 #endif /* CONFIG_PM */
 
 static void e1000_shutdown(struct pci_dev *pdev)

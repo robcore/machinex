@@ -1564,7 +1564,7 @@ static int qup_i2c_resume(struct device *device)
 }
 #endif /* CONFIG_PM */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int i2c_qup_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "pm_runtime: idle...\n");

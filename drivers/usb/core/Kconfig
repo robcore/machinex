@@ -92,7 +92,7 @@ config USB_DYNAMIC_MINORS
 
 config USB_SUSPEND
 	bool "USB runtime power management (autosuspend) and wakeup"
-	depends on USB && PM_RUNTIME
+	depends on USB && PM
 	help
 	  If you say Y here, you can use driver calls or the sysfs
 	  "power/control" file to enable or disable autosuspend for

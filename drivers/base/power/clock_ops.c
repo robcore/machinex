@@ -225,7 +225,7 @@ void pm_clk_destroy(struct device *dev)
 
 #endif /* CONFIG_PM */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 /**
  * pm_clk_suspend - Disable clocks in a device's PM clock list.
@@ -346,7 +346,7 @@ static int pm_clk_notify(struct notifier_block *nb,
 	return 0;
 }
 
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 
 #ifdef CONFIG_PM
 
@@ -482,7 +482,7 @@ static int pm_clk_notify(struct notifier_block *nb,
 	return 0;
 }
 
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 /**
  * pm_clk_add_notifier - Add bus type notifier for power management clocks.

@@ -986,7 +986,7 @@ static int fimd_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int fimd_runtime_suspend(struct device *dev)
 {
 	struct fimd_context *ctx = get_fimd_context(dev);

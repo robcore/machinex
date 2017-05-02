@@ -409,7 +409,7 @@ static void cyttsp4_btn_power_resume(struct power_suspend *h)
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int cyttsp4_btn_suspend(struct device *dev)
 {
 	struct cyttsp4_btn_data *bd = dev_get_drvdata(dev);

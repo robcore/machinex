@@ -86,7 +86,7 @@ int diag_bridge_open(int id, struct diag_bridge_ops *ops)
 	dev->err = 0;
 /* Do not update auto suspend delay for diag instance#1 (id == 1) i.e DCI */
 	if (!default_auto_susp_enabled && id != 1) {
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 		dev->default_autosusp_delay =
 			dev->udev->dev.power.autosuspend_delay;
 #endif

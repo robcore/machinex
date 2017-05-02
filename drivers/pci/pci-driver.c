@@ -995,7 +995,7 @@ static int pci_pm_restore(struct device *dev)
 
 #endif /* !CONFIG_HIBERNATE_CALLBACKS */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 static int pci_pm_runtime_suspend(struct device *dev)
 {
@@ -1064,13 +1064,13 @@ static int pci_pm_runtime_idle(struct device *dev)
 	return 0;
 }
 
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 
 #define pci_pm_runtime_suspend	NULL
 #define pci_pm_runtime_resume	NULL
 #define pci_pm_runtime_idle	NULL
 
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 #ifdef CONFIG_PM
 

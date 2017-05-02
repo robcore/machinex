@@ -2204,7 +2204,7 @@ static int pl022_resume(struct device *dev)
 }
 #endif	/* CONFIG_PM */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int pl022_runtime_suspend(struct device *dev)
 {
 	struct pl022 *pl022 = dev_get_drvdata(dev);

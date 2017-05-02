@@ -29,7 +29,7 @@
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 #include <linux/pm_runtime.h>
 #endif
 #include <linux/semaphore.h>
@@ -3647,7 +3647,7 @@ static int bt532_ts_probe(struct i2c_client *client,
 	register_power_suspend(&info->power_suspend);
 #endif
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 	pm_runtime_enable(&client->dev);
 #endif
 
@@ -3753,7 +3753,7 @@ static struct i2c_device_id bt532_idtable[] = {
 
 #if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 static const struct dev_pm_ops bt532_ts_pm_ops = {
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 	SET_RUNTIME_PM_OPS(bt532_ts_suspend, bt532_ts_resume, NULL)
 #else
 	SET_SYSTEM_SLEEP_PM_OPS(bt532_ts_suspend, bt532_ts_resume)

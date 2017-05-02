@@ -151,7 +151,7 @@ static int mmc_bus_resume(struct device *dev)
 #define mmc_bus_resume NULL
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 static int mmc_runtime_suspend(struct device *dev)
 {
@@ -180,11 +180,11 @@ static const struct dev_pm_ops mmc_bus_pm_ops = {
 
 #define MMC_PM_OPS_PTR	(&mmc_bus_pm_ops)
 
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 
 #define MMC_PM_OPS_PTR	NULL
 
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 static struct bus_type mmc_bus_type = {
 	.name		= "mmc",

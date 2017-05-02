@@ -2904,7 +2904,7 @@ pl330_probe(struct amba_device *adev, const struct amba_id *id)
 
 	amba_set_drvdata(adev, pdmac);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	/* enable dma clk */
 	clk_enable(pdmac->clk);
 #endif
@@ -3000,7 +3000,7 @@ probe_err5:
 probe_err4:
 	free_irq(irq, pi);
 probe_err3:
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	clk_disable(pdmac->clk);
 #endif
 	clk_put(pdmac->clk);
@@ -3050,7 +3050,7 @@ static int pl330_remove(struct amba_device *adev)
 	res = &adev->res;
 	release_mem_region(res->start, resource_size(res));
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	clk_disable(pdmac->clk);
 #endif
 
@@ -3069,7 +3069,7 @@ static struct amba_id pl330_ids[] = {
 
 MODULE_DEVICE_TABLE(amba, pl330_ids);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int pl330_runtime_suspend(struct device *dev)
 {
 	struct dma_pl330_dmac *pdmac = dev_get_drvdata(dev);
@@ -3100,7 +3100,7 @@ static int pl330_runtime_resume(struct device *dev)
 #else
 #define pl330_runtime_suspend	NULL
 #define pl330_runtime_resume	NULL
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 
 static const struct dev_pm_ops pl330_pm_ops = {
 	.runtime_suspend = pl330_runtime_suspend,

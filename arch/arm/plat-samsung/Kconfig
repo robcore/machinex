@@ -355,7 +355,7 @@ comment "Power Domain"
 
 config SAMSUNG_PD
 	bool "Samsung Power Domain"
-	depends on PM_RUNTIME
+	depends on PM
 	help
 	  Say Y here if you want to control Power Domain by Runtime PM.
 

@@ -1143,7 +1143,7 @@ config VIDEO_MX2
 
 config  VIDEO_SAMSUNG_S5P_FIMC
 	tristate "Samsung S5P and EXYNOS4 camera interface driver (EXPERIMENTAL)"
-	depends on VIDEO_V4L2 && I2C && PLAT_S5P && PM_RUNTIME && \
+	depends on VIDEO_V4L2 && I2C && PLAT_S5P && PM && \
 		VIDEO_V4L2_SUBDEV_API && EXPERIMENTAL
 	select VIDEOBUF2_DMA_CONTIG
 	select V4L2_MEM2MEM_DEV
@@ -1164,7 +1164,7 @@ config VIDEO_ATMEL_ISI
 
 config VIDEO_S5P_MIPI_CSIS
 	tristate "Samsung S5P and EXYNOS4 MIPI CSI receiver driver"
-	depends on VIDEO_V4L2 && PM_RUNTIME && PLAT_S5P
+	depends on VIDEO_V4L2 && PM && PLAT_S5P
 	depends on VIDEO_V4L2_SUBDEV_API && REGULATOR
 	---help---
 	  This is a v4l2 driver for Samsung S5P/EXYNOS4 MIPI-CSI receiver.
@@ -1198,7 +1198,7 @@ config MSM_CAMERA_DEBUG
 
 if MACH_JACTIVE || MACH_JACTIVE_EUR
 	source "drivers/media/video/msm-bayer/Kconfig"
-endif # MACH_JACTIVE || MACH_JACTIVE_EUR 
+endif # MACH_JACTIVE || MACH_JACTIVE_EUR
 
 if !MACH_JACTIVE && !MACH_JACTIVE_EUR
 	source "drivers/media/video/msm/Kconfig"

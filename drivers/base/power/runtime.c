@@ -45,7 +45,7 @@ static int (*rpm_get_resume_cb(struct device *dev))(struct device *)
 	return RPM_GET_CALLBACK(dev, runtime_resume);
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int (*rpm_get_idle_cb(struct device *dev))(struct device *)
 {
 	return RPM_GET_CALLBACK(dev, runtime_idle);

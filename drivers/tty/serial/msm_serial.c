@@ -562,7 +562,7 @@ static int msm_startup(struct uart_port *port)
 		return -ENXIO;
 	}
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	msm_init_clock(port);
 #endif
 	pm_runtime_get_sync(port->dev);
@@ -634,7 +634,7 @@ static void msm_shutdown(struct uart_port *port)
 		free_irq(msm_port->wakeup.irq, msm_port);
 	}
 #endif
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	msm_deinit_clock(port);
 #endif
 	pm_runtime_put_sync(port->dev);
@@ -945,7 +945,7 @@ static int __init msm_console_setup(struct console *co, char *options)
 
 	pm_runtime_get_noresume(port->dev);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	msm_init_clock(port);
 #endif
 	pm_runtime_resume(port->dev);

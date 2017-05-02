@@ -4293,7 +4293,7 @@ static void cyttsp4_ts_power_resume(struct power_suspend *h)
 }
 #endif
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
 static int cyttsp4_core_suspend(struct device *dev)
 {
 	struct cyttsp4_core_data *cd = dev_get_drvdata(dev);

@@ -304,7 +304,7 @@ static int smsc_hub_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int msm_smsc_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "SMSC HUB runtime idle\n");
@@ -340,7 +340,7 @@ static int smsc_hub_lpm_exit(struct device *dev)
 #ifdef CONFIG_PM
 static const struct dev_pm_ops smsc_hub_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(smsc_hub_lpm_enter, smsc_hub_lpm_exit)
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	SET_RUNTIME_PM_OPS(smsc_hub_lpm_enter, smsc_hub_lpm_exit,
 				msm_smsc_runtime_idle)
 #endif

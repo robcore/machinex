@@ -928,7 +928,7 @@ int sep_send_command_handler(struct sep_device *sep)
 		goto end_function;
 	}
 
-#if defined(CONFIG_PM_RUNTIME) && defined(SEP_ENABLE_RUNTIME_PM)
+#if defined(CONFIG_PM) && defined(SEP_ENABLE_RUNTIME_PM)
 	dev_dbg(&sep->pdev->dev, "[PID%d] before pm sync status 0x%X\n",
 					current->pid,
 					sep->pdev->dev.power.runtime_status);
@@ -3186,7 +3186,7 @@ static irqreturn_t sep_inthandler(int irq, void *dev_id)
 	irqreturn_t int_error = IRQ_HANDLED;
 
 	/* Are we in power save? */
-#if defined(CONFIG_PM_RUNTIME) && defined(SEP_ENABLE_RUNTIME_PM)
+#if defined(CONFIG_PM) && defined(SEP_ENABLE_RUNTIME_PM)
 	if (sep->pdev->dev.power.runtime_status != RPM_ACTIVE) {
 		dev_dbg(&sep->pdev->dev, "interrupt during pwr save\n");
 		return IRQ_NONE;

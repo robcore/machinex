@@ -11,7 +11,7 @@
 #include <linux/pm_qos.h>
 #include <linux/hrtimer.h>
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 
 static int dev_update_qos_constraint(struct device *dev, void *data)
 {
@@ -227,7 +227,7 @@ static bool always_on_power_down_ok(struct dev_pm_domain *domain)
 	return false;
 }
 
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 
 bool default_stop_ok(struct device *dev)
 {
@@ -237,7 +237,7 @@ bool default_stop_ok(struct device *dev)
 #define default_power_down_ok	NULL
 #define always_on_power_down_ok	NULL
 
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 struct dev_power_governor simple_qos_governor = {
 	.stop_ok = default_stop_ok,

@@ -497,7 +497,7 @@ static int msm_hsic_pm_suspend(struct device *dev)
 	return msm_hsic_suspend(mhsic);
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int msm_hsic_pm_resume(struct device *dev)
 {
 	dev_dbg(dev, "MSM HSIC Peripheral PM resume\n");
@@ -526,7 +526,7 @@ static void msm_hsic_pm_suspend_work(struct work_struct *w)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int msm_hsic_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "MSM HSIC Peripheral runtime idle\n");

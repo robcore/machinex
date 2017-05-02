@@ -191,7 +191,7 @@ static int ehci_msm_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int ehci_msm_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "ehci runtime idle\n");

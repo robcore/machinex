@@ -862,7 +862,7 @@ static int msm_otg_resume(struct msm_otg *dev)
 
 static void msm_otg_get_resume(struct msm_otg *dev)
 {
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	pm_runtime_get_noresume(dev->phy.dev);
 	pm_runtime_resume(dev->phy.dev);
 #else
@@ -872,7 +872,7 @@ static void msm_otg_get_resume(struct msm_otg *dev)
 
 static void msm_otg_put_suspend(struct msm_otg *dev)
 {
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	pm_runtime_put_sync(dev->phy.dev);
 	if (!atomic_read(&dev->in_lpm))
 		pm_runtime_get_sync(dev->phy.dev);

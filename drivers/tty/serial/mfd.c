@@ -1252,7 +1252,7 @@ static int serial_hsu_resume(struct pci_dev *pdev)
 #define serial_hsu_resume	NULL
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int serial_hsu_runtime_idle(struct device *dev)
 {
 	int err;
