@@ -182,4 +182,8 @@ static inline bool rcu_is_watching(void)
 
 #endif /* #ifdef CONFIG_RCU_TRACE */
 
+static inline void rcu_all_qs(void)
+{
+}
+
 #endif /* __LINUX_RCUTINY_H */

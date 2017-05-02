@@ -100,5 +100,7 @@ extern int rcu_scheduler_active __read_mostly;
 
 extern bool rcu_is_watching(void);
 
+void rcu_all_qs(void);
+
 #endif /* __LINUX_RCUTREE_H */
 
