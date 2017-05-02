@@ -45,7 +45,7 @@ struct tk_read_base {
 	u64			xtime_nsec;
 
 	/* Monotonic base time */
-	ktime_t			base_mono;
+	ktime_t			base;
 };
 
 /**
@@ -86,7 +86,7 @@ struct tk_read_base {
  * used instead.
  */
 struct timekeeper {
-	struct tk_read_base	tkr;
+	struct tk_read_base	tkr_mono;
 	/* Current CLOCK_REALTIME time in seconds */
 	u64			xtime_sec;
 	unsigned long		ktime_sec;
