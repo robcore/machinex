@@ -582,7 +582,6 @@ struct rq {
 #ifdef CONFIG_NO_HZ_FULL
 	unsigned long last_sched_tick;
 #endif
-	int skip_clock_update;
 
 	/* time-based average load */
 	u64 nr_last_stamp;
@@ -622,6 +621,7 @@ struct rq {
 	unsigned long next_balance;
 	struct mm_struct *prev_mm;
 
+	unsigned int clock_skip_update;
 	u64 clock;
 	u64 clock_task;
 
@@ -762,6 +762,18 @@ static inline u64 rq_clock_task(struct rq *rq)
 {
 	lockdep_assert_held(&rq->lock);
 	return rq->clock_task;
+}
+
+#define RQCF_REQ_SKIP	0x01
+#define RQCF_ACT_SKIP	0x02
+
+static inline void rq_clock_skip_update(struct rq *rq, bool skip)
+{
+	lockdep_assert_held(&rq->lock);
+	if (skip)
+		rq->clock_skip_update |= RQCF_REQ_SKIP;
+	else
+		rq->clock_skip_update &= ~RQCF_REQ_SKIP;
 }
 
 struct nr_stats_s {
