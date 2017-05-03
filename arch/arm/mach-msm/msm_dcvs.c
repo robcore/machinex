@@ -173,13 +173,9 @@ static void force_start_slack_timer(struct dcvs_core *core, int slack_us)
 	 * only start the timer if governor is not stopped
 	 */
 	if (slack_us != 0) {
-		ret = hrtimer_start(&core->slack_timer,
+		hrtimer_start(&core->slack_timer,
 				ktime_set(0, slack_us * 1000),
 				HRTIMER_MODE_REL_PINNED);
-		if (ret) {
-			pr_err("%s Failed to start timer ret = %d\n",
-					core->core_name, ret);
-		}
 	}
 
 	spin_unlock_irqrestore(&core->idle_state_change_lock, flags);
@@ -217,13 +213,9 @@ static void start_slack_timer(struct dcvs_core *core, int slack_us)
 	 */
 	if (slack_us != 0
 		&& !(core->pending_freq < NO_OUTSTANDING_FREQ_CHANGE)) {
-		ret = hrtimer_start(&core->slack_timer,
+		hrtimer_start(&core->slack_timer,
 				ktime_set(0, slack_us * 1000),
 				HRTIMER_MODE_REL_PINNED);
-		if (ret) {
-			pr_err("%s Failed to start timer ret = %d\n",
-					core->core_name, ret);
-		}
 	}
 	spin_unlock_irqrestore(&core->pending_freq_lock, flags1);
 
@@ -247,13 +239,9 @@ static void restart_slack_timer(struct dcvs_core *core, int slack_us)
 	 */
 	if (slack_us != 0 && (core->idle_entered != 1)
 		&& !(core->pending_freq < NO_OUTSTANDING_FREQ_CHANGE)) {
-		ret = hrtimer_start(&core->slack_timer,
+		hrtimer_start(&core->slack_timer,
 				ktime_set(0, slack_us * 1000),
 				HRTIMER_MODE_REL_PINNED);
-		if (ret) {
-			pr_err("%s Failed to start timer ret = %d\n",
-					core->core_name, ret);
-		}
 	}
 	spin_unlock_irqrestore(&core->pending_freq_lock, flags1);
 	spin_unlock_irqrestore(&core->idle_state_change_lock, flags2);
