@@ -255,7 +255,7 @@ static int alarmtimer_suspend(struct device *dev)
 	if (min.tv64 == 0)
 		return 0;
 
-	if (ktime_to_ns(min) < (NSEC_PER_SEC / 1000)) {
+	if (ktime_to_ns(min) < (NSEC_PER_SEC )) {
 		__pm_wakeup_event(ws, 5 * MSEC_PER_SEC);
 	}
 
@@ -337,13 +337,8 @@ EXPORT_SYMBOL(alarm_start);
  */
 void alarm_start_relative(struct alarm *alarm, ktime_t start)
 {
-	struct alarm_base *base;
+	struct alarm_base *base = &alarm_bases[alarm->type];
 
-	if (alarm->type >= ALARM_NUMTYPE) {
-		pr_err("Array out of index\n");
-		return -EINVAL;
-	}
-	base = &alarm_bases[alarm->type];
 	start = ktime_add(start, base->gettime());
 	alarm_start(alarm, start);
 }
@@ -371,15 +366,10 @@ EXPORT_SYMBOL(alarm_restart);
  */
 int alarm_try_to_cancel(struct alarm *alarm)
 {
-	struct alarm_base *base;
+	struct alarm_base *base = &alarm_bases[alarm->type];
 	unsigned long flags;
 	int ret;
 
-	if (alarm->type >= ALARM_NUMTYPE) {
-		pr_err("Array out of index\n");
-		return -EINVAL;
-	}
-	base = &alarm_bases[alarm->type];
 	spin_lock_irqsave(&base->lock, flags);
 	ret = hrtimer_try_to_cancel(&alarm->timer);
 	if (ret >= 0)
