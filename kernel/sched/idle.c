@@ -100,13 +100,12 @@ void __weak arch_cpu_idle(void)
 	local_irq_enable();
 }
 
-/**
- * default_idle_call - Default CPU idle routine.
- *
- * To use when the cpuidle framework cannot be used.
- */
-void default_idle_call(void)
+static void default_idle_call(void)
 {
+	/*
+	 * We can't use the cpuidle framework, let's use the default idle
+	 * routine.
+	 */
 	if (current_clr_polling_and_test())
 		local_irq_enable();
 	else
