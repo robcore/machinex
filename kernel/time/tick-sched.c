@@ -1117,7 +1117,7 @@ static void tick_nohz_kick_tick(struct tick_sched *ts, ktime_t now)
 #endif
 }
 
-static inline void tick_check_nohz_this_cpu(void)
+static inline void tick_nohz_irq_enter(void)
 {
 	struct tick_sched *ts = this_cpu_ptr(&tick_cpu_sched);
 	ktime_t now;
@@ -1136,17 +1136,17 @@ static inline void tick_check_nohz_this_cpu(void)
 #else
 
 static inline void tick_nohz_switch_to_nohz(void) { }
-static inline void tick_check_nohz_this_cpu(void) { }
+static inline void tick_nohz_irq_enter(void) { }
 
 #endif /* CONFIG_NO_HZ_COMMON */
 
 /*
  * Called from irq_enter to notify about the possible interruption of idle()
  */
-void tick_check_idle(void)
+void tick_irq_enter(void)
 {
 	tick_check_oneshot_broadcast_this_cpu();
-	tick_check_nohz_this_cpu();
+	tick_nohz_irq_enter();
 }
 
 /*
