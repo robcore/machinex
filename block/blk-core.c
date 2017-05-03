@@ -2879,7 +2879,6 @@ void blk_start_plug(struct blk_plug *plug)
 	 * preempt will imply a full memory barrier
 	 */
 	tsk->plug = plug;
-	}
 }
 EXPORT_SYMBOL(blk_start_plug);
 
