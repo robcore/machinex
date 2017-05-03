@@ -163,7 +163,7 @@ static int opt_show_vars(const struct option *opt __used,
 	}
 	params.show_vars = true;
 
-	return ret;
+	return ret < 0 ? ret : 0;
 }
 #endif
 
