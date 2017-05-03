@@ -215,12 +215,6 @@ extern void tick_broadcast(const struct cpumask *mask);
 extern int tick_receive_broadcast(void);
 #endif
 
-/* Should be core only, but is abused by arm bl_switcher */
-extern void clockevents_set_state(struct clock_event_device *dev,
-				 enum clock_event_state state);
-extern int clockevents_program_event(struct clock_event_device *dev,
-				     ktime_t expires, bool force);
-
 extern void clockevents_suspend(void);
 extern void clockevents_resume(void);
 
