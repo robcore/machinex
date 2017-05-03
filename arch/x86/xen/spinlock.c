@@ -196,6 +196,7 @@ static inline void unspinning_lock(struct xen_spinlock *xl, struct xen_spinlock 
 	wmb();			/* decrement count before restoring lock */
 	__this_cpu_write(lock_spinners, prev);
 }
+#endif /* CONFIG_QUEUED_SPINLOCK */
 
 static noinline int xen_spin_lock_slow(struct arch_spinlock *lock, bool irq_enable)
 {
@@ -397,7 +398,7 @@ void __init xen_init_spinlocks(void)
 	pv_lock_ops.spin_unlock = xen_spin_unlock;
 }
 
-#ifdef CONFIG_XEN_DEBUG_FS
+#if defined(CONFIG_XEN_DEBUG_FS) && !defined(CONFIG_QUEUED_SPINLOCK)
 
 static struct dentry *d_spin_debug;
 
