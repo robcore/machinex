@@ -131,31 +131,12 @@ static inline void tick_irq_enter(void) { }
 static inline int tick_oneshot_mode_active(void) { return 0; }
 #endif /* !CONFIG_GENERIC_CLOCKEVENTS */
 
-enum tick_broadcast_state {
-	TICK_BROADCAST_EXIT,
-	TICK_BROADCAST_ENTER,
-};
-
-#if defined(CONFIG_GENERIC_CLOCKEVENTS_BROADCAST) && defined(CONFIG_TICK_ONESHOT)
-extern int tick_broadcast_oneshot_control(enum tick_broadcast_state state);
-#else
-static inline int tick_broadcast_oneshot_control(enum tick_broadcast_state state) { return 0; }
-#endif
-
 #ifdef CONFIG_NO_HZ_COMMON
 DECLARE_PER_CPU(struct tick_sched, tick_cpu_sched);
 
 static inline int tick_nohz_tick_stopped(void)
 {
 	return __this_cpu_read(tick_cpu_sched.tick_stopped);
-}
-static inline int tick_broadcast_enter(void)
-{
-	return tick_broadcast_oneshot_control(TICK_BROADCAST_ENTER);
-}
-static inline void tick_broadcast_exit(void)
-{
-	tick_broadcast_oneshot_control(TICK_BROADCAST_EXIT);
 }
 
 #if defined(CONFIG_GENERIC_CLOCKEVENTS_BROADCAST) && defined(CONFIG_TICK_ONESHOT)

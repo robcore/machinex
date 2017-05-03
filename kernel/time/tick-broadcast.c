@@ -684,23 +684,18 @@ void hotplug_cpu__broadcast_tick_pull(int deadcpu)
 	raw_spin_unlock_irqrestore(&tick_broadcast_lock, flags);
 }
 
-/**
- * tick_broadcast_oneshot_control - Enter/exit broadcast oneshot mode
- * @state:	The target state (enter/exit)
- *
- * The system enters/leaves a state, where affected devices might stop
+/*
+ * Powerstate information: The system enters/leaves a state, where
+ * affected devices might stop
  * Returns 0 on success, -EBUSY if the cpu is used to broadcast wakeups.
- *
- * Called with interrupts disabled, so clockevents_lock is not
- * required here because the local clock event device cannot go away
- * under us.
  */
-int tick_broadcast_oneshot_control(enum tick_broadcast_state state)
+int tick_broadcast_oneshot_control(unsigned long reason)
 {
 	struct clock_event_device *bc, *dev;
 	struct tick_device *td;
-	int cpu, ret = 0;
+	unsigned long flags;
 	ktime_t now;
+	int cpu, ret = 0;
 
 	/*
 	 * Periodic mode does not care about the enter/exit of power
@@ -815,10 +810,9 @@ int tick_broadcast_oneshot_control(enum tick_broadcast_state state)
 		}
 	}
 out:
-	raw_spin_unlock(&tick_broadcast_lock);
+	raw_spin_unlock_irqrestore(&tick_broadcast_lock, flags);
 	return ret;
 }
-EXPORT_SYMBOL_GPL(tick_broadcast_oneshot_control);
 
 /*
  * Reset the one shot broadcast for a cpu
