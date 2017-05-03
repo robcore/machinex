@@ -182,6 +182,7 @@ iova_insert_rbtree(struct rb_root *root, struct iova *iova)
 	/* Figure out where to put new node */
 	while (*new) {
 		struct iova *this = container_of(*new, struct iova, node);
+
 		parent = *new;
 
 		if (iova->pfn_lo < this->pfn_lo)
@@ -305,6 +306,7 @@ void
 free_iova(struct iova_domain *iovad, unsigned long pfn)
 {
 	struct iova *iova = find_iova(iovad, pfn);
+
 	if (iova)
 		__free_iova(iovad, iova);
 
@@ -324,6 +326,7 @@ void put_iova_domain(struct iova_domain *iovad)
 	node = rb_first(&iovad->rbroot);
 	while (node) {
 		struct iova *iova = container_of(node, struct iova, node);
+
 		rb_erase(node, &iovad->rbroot);
 		free_iova_mem(iova);
 		node = rb_first(&iovad->rbroot);
@@ -426,6 +429,7 @@ copy_reserved_iova(struct iova_domain *from, struct iova_domain *to)
 	for (node = rb_first(&from->rbroot); node; node = rb_next(node)) {
 		struct iova *iova = container_of(node, struct iova, node);
 		struct iova *new_iova;
+
 		new_iova = reserve_iova(to, iova->pfn_lo, iova->pfn_hi);
 		if (!new_iova)
 			printk(KERN_ERR "Reserve iova range %lx@%lx failed\n",
