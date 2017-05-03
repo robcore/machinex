@@ -53,7 +53,7 @@ static int rtc_suspend(struct device *dev, pm_message_t mesg)
 	struct rtc_time		tm;
 	struct timespec		delta, delta_delta;
 
-	if (has_persistent_clock())
+	if (timekeeping_rtc_skipsuspend())
 		return 0;
 
 	if (strcmp(dev_name(&rtc->dev), CONFIG_RTC_HCTOSYS_DEVICE) != 0)
@@ -94,7 +94,7 @@ static int rtc_resume(struct device *dev)
 	struct timespec		new_system, new_rtc;
 	struct timespec		sleep_time;
 
-	if (has_persistent_clock())
+	if (timekeeping_rtc_skipresume())
 		return 0;
 
 	rtc_hctosys_ret = -ENODEV;

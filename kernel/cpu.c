@@ -346,6 +346,8 @@ static int __ref take_cpu_down(void *_param)
 		return err;
 
 	cpu_notify(CPU_DYING | param->mod, param->hcpu);
+	/* Give up timekeeping duties */
+	tick_handover_do_timer();
 	/* Park the stopper thread */
 	kthread_park(current);
 	return 0;
@@ -424,6 +426,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 	__cpu_die(cpu);
 
 	/* CPU is completely dead: tell everyone.  Too late to complain. */
+	tick_cleanup_dead_cpu(cpu);
 	cpu_notify_nofail(CPU_DEAD | mod, hcpu);
 
 	check_for_tasks(cpu);
