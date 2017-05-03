@@ -64,6 +64,8 @@ static DEFINE_PER_CPU(struct kvm_vcpu_pv_apf_data, apf_reason) __aligned(64);
 static DEFINE_PER_CPU(struct kvm_steal_time, steal_time) __aligned(64);
 static int has_steal_clock = 0;
 
+#endif /* !CONFIG_QUEUED_SPINLOCK */
+
 /*
  * No need for any "IO delay" on KVM
  */
