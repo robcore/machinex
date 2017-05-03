@@ -41,7 +41,7 @@ spinlock_t rq_lock;
 /*
  * Per cpu nohz control structure
  */
-static DEFINE_PER_CPU(struct tick_sched, tick_cpu_sched);
+DEFINE_PER_CPU(struct tick_sched, tick_cpu_sched);
 
 /*
  * The time, when the last jiffy update happened. Protected by jiffies_lock.
@@ -196,8 +196,8 @@ static bool can_stop_full_tick(void)
 		 * full NO_HZ with this machine.
 		 */
 		WARN_ONCE(tick_nohz_full_running,
-			  "NO_HZ FULL will not work with unstable sched clock");
-		return false;
+ 			  "NO_HZ FULL will not work with unstable sched clock");
+ 		return false;
 	}
 #endif
 
@@ -422,11 +422,6 @@ static int __init setup_tick_nohz(char *str)
 }
 
 __setup("nohz=", setup_tick_nohz);
-
-int tick_nohz_tick_stopped(void)
-{
-	return __this_cpu_read(tick_cpu_sched.tick_stopped);
-}
 
 /**
  * tick_nohz_update_jiffies - update jiffies when idle was interrupted
@@ -1221,10 +1216,6 @@ static enum hrtimer_restart tick_sched_timer(struct hrtimer *timer)
 	 */
 	if (regs)
 		tick_sched_handle(ts, regs);
-
-	/* No need to reprogram if we are in idle or full dynticks mode */
-	if (unlikely(ts->tick_stopped))
-		return HRTIMER_NORESTART;
 
 	hrtimer_forward(timer, now, tick_period);
 
