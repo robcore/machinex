@@ -110,7 +110,6 @@ static void enter_freeze_proper(struct cpuidle_driver *drv,
 	RCU_NONIDLE(tick_unfreeze());
 }
 
-#ifdef CONFIG_SUSPEND
 /**
  * cpuidle_enter_freeze - Enter an idle state suitable for suspend-to-idle.
  *
@@ -148,7 +147,6 @@ void cpuidle_enter_freeze(void)
 	/* Interrupts are enabled again here. */
 	local_irq_disable();
 }
-#endif /* CONFIG_SUSPEND */
 
 /**
  * cpuidle_enter_state - enter the state and update stats

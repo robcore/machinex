@@ -450,7 +450,6 @@ void tick_resume(void)
 	tick_resume_local();
 }
 
-#ifdef CONFIG_SUSPEND
 static DEFINE_RAW_SPINLOCK(tick_freeze_lock);
 static unsigned int tick_freeze_depth;
 
@@ -498,7 +497,6 @@ void tick_unfreeze(void)
 
 	raw_spin_unlock(&tick_freeze_lock);
 }
-#endif /* CONFIG_SUSPEND */
 
 /**
  * tick_init - initialize the tick control
