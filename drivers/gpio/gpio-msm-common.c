@@ -580,7 +580,7 @@ static int msm_gpio_irq_domain_map(struct irq_domain *d, unsigned int irq,
 	return 0;
 }
 
-static struct irq_domain_ops msm_gpio_irq_domain_ops = {
+static const struct irq_domain_ops msm_gpio_irq_domain_ops = {
 	.xlate = msm_gpio_irq_domain_xlate,
 	.map = msm_gpio_irq_domain_map,
 };
