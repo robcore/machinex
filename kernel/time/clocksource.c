@@ -31,7 +31,7 @@
 #include <linux/tick.h>
 #include <linux/kthread.h>
 
-#include "timekeeping.h"
+#include "tick-internal.h"
 #include "timekeeping_internal.h"
 
 void timecounter_init(struct timecounter *tc,
@@ -291,7 +291,7 @@ static void clocksource_watchdog(unsigned long data)
 			continue;
 
 		/* Check the deviation from the watchdog clocksource. */
-		if ((abs64(cs_nsec - wd_nsec) > WATCHDOG_THRESHOLD)) {
+		if ((abs(cs_nsec - wd_nsec) > WATCHDOG_THRESHOLD)) {
 			pr_warn("timekeeping watchdog: Marking clocksource '%s' as unstable, because the skew is too large:\n", cs->name);
 			pr_warn("	'%s' wd_now: %llx wd_last: %llx mask: %llx\n",
 				watchdog->name, wdnow, wdlast, watchdog->mask);
@@ -701,7 +701,7 @@ static int __init clocksource_done_booting(void)
 	mutex_unlock(&clocksource_mutex);
 	return 0;
 }
-arch_initcall(clocksource_done_booting);
+fs_initcall(clocksource_done_booting);
 
 /*
  * Enqueue the clocksource sorted by rating
