@@ -305,7 +305,7 @@ static void tick_handle_periodic_broadcast(struct clock_event_device *dev)
 	/*
 	 * The device is in periodic mode. No reprogramming necessary:
 	 */
-	if (dev->state == CLOCK_EVT_MODE_PERIODIC)
+	if (dev->state == CLOCK_EVT_STATE_PERIODIC)
 		return;
 
 	/*
