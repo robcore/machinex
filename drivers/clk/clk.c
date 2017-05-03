@@ -143,7 +143,7 @@ static int clk_dump(struct seq_file *s, void *data)
 
 	mutex_unlock(&prepare_lock);
 
-	seq_printf(s, "}");
+	seq_puts(s, "}\n");
 	return 0;
 }
 
