@@ -137,7 +137,9 @@ struct hrtimer_sleeper {
  *			timer to a base on another cpu.
  * @clockid:		clock id for per_cpu support
  * @active:		red black tree root node for the active timers
+ * @resolution:		the resolution of the clock, in nanoseconds
  * @get_time:		function to retrieve the current time of the clock
+ * @softirq_time:	the time when running the hrtimer queue in the softirq
  * @offset:		offset of this clock to the monotonic base
  */
 struct hrtimer_clock_base {
@@ -145,7 +147,9 @@ struct hrtimer_clock_base {
 	int			index;
 	clockid_t		clockid;
 	struct timerqueue_head	active;
+	ktime_t			resolution;
 	ktime_t			(*get_time)(void);
+	ktime_t			softirq_time;
 	ktime_t			offset;
 };
 
@@ -163,7 +167,7 @@ enum  hrtimer_base_type {
  *			and timers
  * @cpu:		cpu number
  * @active_bases:	Bitfield to mark bases with active timers
- * @clock_was_set_seq:	Sequence counter of clock was set events
+ * @clock_was_set:	Indicates that clock was set from irq context.
  * @expires_next:	absolute time of the next event which was scheduled
  *			via clock_set_next_event()
  * @in_hrtirq:		hrtimer_interrupt() is currently executing
@@ -179,16 +183,16 @@ struct hrtimer_cpu_base {
 	raw_spinlock_t			lock;
 	unsigned int			cpu;
 	unsigned int			active_bases;
-	unsigned int			clock_was_set_seq;
+	unsigned int			clock_was_set;
 #ifdef CONFIG_HIGH_RES_TIMERS
-	unsigned int			in_hrtirq	: 1,
-					hres_active	: 1,
-					hang_detected	: 1;
 	ktime_t				expires_next;
-	unsigned int			nr_events;
-	unsigned int			nr_retries;
-	unsigned int			nr_hangs;
-	unsigned int			max_hang_time;
+	int				in_hrtirq;
+	int				hres_active;
+	int				hang_detected;
+	unsigned long			nr_events;
+	unsigned long			nr_retries;
+	unsigned long			nr_hangs;
+	ktime_t				max_hang_time;
 #endif
 	struct hrtimer_clock_base	clock_base[HRTIMER_MAX_CLOCK_BASES];
 };
@@ -258,15 +262,18 @@ static inline ktime_t hrtimer_expires_remaining(const struct hrtimer *timer)
 	return ktime_sub(timer->node.expires, timer->base->get_time());
 }
 
-static inline ktime_t hrtimer_cb_get_time(struct hrtimer *timer)
-{
-	return timer->base->get_time();
-}
-
 #ifdef CONFIG_HIGH_RES_TIMERS
 struct clock_event_device;
 
 extern void hrtimer_interrupt(struct clock_event_device *dev);
+
+/*
+ * In high resolution mode the time reference must be read accurate
+ */
+static inline ktime_t hrtimer_cb_get_time(struct hrtimer *timer)
+{
+	return timer->base->get_time();
+}
 
 static inline int hrtimer_is_hres_active(struct hrtimer *timer)
 {
@@ -288,16 +295,21 @@ extern void hrtimer_peek_ahead_timers(void);
 
 extern void clock_was_set_delayed(void);
 
-extern unsigned int hrtimer_resolution;
-
 #else
 
 # define MONOTONIC_RES_NSEC	LOW_RES_NSEC
 # define KTIME_MONOTONIC_RES	KTIME_LOW_RES
 
-#define hrtimer_resolution	LOW_RES_NSEC
-
 static inline void hrtimer_peek_ahead_timers(void) { }
+
+/*
+ * In non high resolution mode the time reference is taken from
+ * the base softirq time variable.
+ */
+static inline ktime_t hrtimer_cb_get_time(struct hrtimer *timer)
+{
+	return timer->base->softirq_time;
+}
 
 static inline int hrtimer_is_hres_active(struct hrtimer *timer)
 {
@@ -371,6 +383,7 @@ static inline int hrtimer_restart(struct hrtimer *timer)
 
 /* Query timers: */
 extern ktime_t hrtimer_get_remaining(const struct hrtimer *timer);
+extern int hrtimer_get_res(const clockid_t which_clock, struct timespec *tp);
 
 extern ktime_t hrtimer_get_next_event(void);
 
@@ -405,22 +418,7 @@ static inline int hrtimer_callback_running(struct hrtimer *timer)
 extern u64
 hrtimer_forward(struct hrtimer *timer, ktime_t now, ktime_t interval);
 
-/**
- * hrtimer_forward_now - forward the timer expiry so it expires after now
- * @timer:	hrtimer to forward
- * @interval:	the interval to forward
- *
- * Forward the timer expiry so it will expire after the current time
- * of the hrtimer clock base. Returns the number of overruns.
- *
- * Can be safely called from the callback function of @timer. If
- * called from other contexts @timer must neither be enqueued nor
- * running the callback and the caller needs to take care of
- * serialization.
- *
- * Note: This only updates the timer expiry value and does not requeue
- * the timer.
- */
+/* Forward a hrtimer so it expires after the hrtimer's current now */
 static inline u64 hrtimer_forward_now(struct hrtimer *timer,
 				      ktime_t interval)
 {

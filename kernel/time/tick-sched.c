@@ -574,20 +574,6 @@ u64 get_cpu_iowait_time_us(int cpu, u64 *last_update_time)
 }
 EXPORT_SYMBOL_GPL(get_cpu_iowait_time_us);
 
-static void tick_nohz_restart(struct tick_sched *ts, ktime_t now)
-{
-	hrtimer_cancel(&ts->sched_timer);
-	hrtimer_set_expires(&ts->sched_timer, ts->last_tick);
-
-	/* Forward the time to expire in the future */
-	hrtimer_forward(&ts->sched_timer, now, tick_period);
-
-	if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
-		hrtimer_start_expires(&ts->sched_timer, HRTIMER_MODE_ABS_PINNED);
-	else
-		tick_program_event(hrtimer_get_expires(&ts->sched_timer), 1);
-}
-
 static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 					 ktime_t now, int cpu)
 {
@@ -620,104 +606,118 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 		}
 	}
 
-	if ((long)delta_jiffies <= 1) {
-		if (!ts->tick_stopped)
-			goto out;
-		if (delta_jiffies == 0) {
-			/* Tick is stopped, but required now. Enforce it */
-			tick_nohz_restart(ts, now);
-			goto out;
-		}
-	}
-
 	/*
-	 * If this cpu is the one which updates jiffies, then give up
-	 * the assignment and let it be taken by the cpu which runs
-	 * the tick timer next, which might be this cpu as well. If we
-	 * don't drop this here the jiffies might be stale and
-	 * do_timer() never invoked. Keep track of the fact that it
-	 * was the one which had the do_timer() duty last. If this cpu
-	 * is the one which had the do_timer() duty last, we limit the
-	 * sleep time to the timekeeping max_deferement value which we
-	 * retrieved above. Otherwise we can sleep as long as we want.
+	 * Do not stop the tick, if we are only one off (or less)
+	 * or if the cpu is required for RCU:
 	 */
-	if (cpu == tick_do_timer_cpu) {
-		tick_do_timer_cpu = TICK_DO_TIMER_NONE;
-		ts->do_timer_last = 1;
-	} else if (tick_do_timer_cpu != TICK_DO_TIMER_NONE) {
-		time_delta = KTIME_MAX;
-		ts->do_timer_last = 0;
-	} else if (!ts->do_timer_last) {
-		time_delta = KTIME_MAX;
-	}
+	if (!ts->tick_stopped && delta_jiffies <= 1)
+		goto out;
+
+	/* Schedule the tick, if we are at least one jiffy off */
+	if ((long)delta_jiffies >= 1) {
+
+		/*
+		 * If this cpu is the one which updates jiffies, then
+		 * give up the assignment and let it be taken by the
+		 * cpu which runs the tick timer next, which might be
+		 * this cpu as well. If we don't drop this here the
+		 * jiffies might be stale and do_timer() never
+		 * invoked. Keep track of the fact that it was the one
+		 * which had the do_timer() duty last. If this cpu is
+		 * the one which had the do_timer() duty last, we
+		 * limit the sleep time to the timekeeping
+		 * max_deferement value which we retrieved
+		 * above. Otherwise we can sleep as long as we want.
+		 */
+		if (cpu == tick_do_timer_cpu) {
+			tick_do_timer_cpu = TICK_DO_TIMER_NONE;
+			ts->do_timer_last = 1;
+		} else if (tick_do_timer_cpu != TICK_DO_TIMER_NONE) {
+			time_delta = KTIME_MAX;
+			ts->do_timer_last = 0;
+		} else if (!ts->do_timer_last) {
+			time_delta = KTIME_MAX;
+		}
 
 #ifdef CONFIG_NO_HZ_FULL
-	if (!ts->inidle)
-		time_delta = min(time_delta, scheduler_tick_max_deferment());
+		if (!ts->inidle) {
+			time_delta = min(time_delta,
+					 scheduler_tick_max_deferment());
+		}
 #endif
 
-	/*
-	 * calculate the expiry time for the next timer wheel
-	 * timer. delta_jiffies >= NEXT_TIMER_MAX_DELTA signals that
-	 * there is no timer pending or at least extremely far into
-	 * the future (12 days for HZ=1000). In this case we set the
-	 * expiry to the end of time.
-	 */
-	if (likely(delta_jiffies < NEXT_TIMER_MAX_DELTA)) {
 		/*
-		 * Calculate the time delta for the next timer event.
-		 * If the time delta exceeds the maximum time delta
-		 * permitted by the current clocksource then adjust
-		 * the time delta accordingly to ensure the
-		 * clocksource does not wrap.
+		 * calculate the expiry time for the next timer wheel
+		 * timer. delta_jiffies >= NEXT_TIMER_MAX_DELTA signals
+		 * that there is no timer pending or at least extremely
+		 * far into the future (12 days for HZ=1000). In this
+		 * case we set the expiry to the end of time.
 		 */
-		time_delta = min_t(u64, time_delta,
-				   tick_period.tv64 * delta_jiffies);
+		if (likely(delta_jiffies < NEXT_TIMER_MAX_DELTA)) {
+			/*
+			 * Calculate the time delta for the next timer event.
+			 * If the time delta exceeds the maximum time delta
+			 * permitted by the current clocksource then adjust
+			 * the time delta accordingly to ensure the
+			 * clocksource does not wrap.
+			 */
+			time_delta = min_t(u64, time_delta,
+					   tick_period.tv64 * delta_jiffies);
+		}
+
+		if (time_delta < KTIME_MAX)
+			expires = ktime_add_ns(last_update, time_delta);
+		else
+			expires.tv64 = KTIME_MAX;
+
+		/* Skip reprogram of event if its not changed */
+		if (ts->tick_stopped && ktime_equal(expires, dev->next_event))
+			goto out;
+
+		ret = expires;
+
+		/*
+		 * nohz_stop_sched_tick can be called several times before
+		 * the nohz_restart_sched_tick is called. This happens when
+		 * interrupts arrive which do not cause a reschedule. In the
+		 * first call we save the current tick time, so we can restart
+		 * the scheduler tick in nohz_restart_sched_tick.
+		 */
+		if (!ts->tick_stopped) {
+			nohz_balance_enter_idle(cpu);
+			calc_load_enter_idle();
+
+			ts->last_tick = hrtimer_get_expires(&ts->sched_timer);
+			ts->tick_stopped = 1;
+			trace_tick_stop(1, " ");
+		}
+
+		/*
+		 * If the expiration time == KTIME_MAX, then
+		 * in this case we simply stop the tick timer.
+		 */
+		 if (unlikely(expires.tv64 == KTIME_MAX)) {
+			if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
+				hrtimer_cancel(&ts->sched_timer);
+			goto out;
+		}
+
+		if (ts->nohz_mode == NOHZ_MODE_HIGHRES) {
+			hrtimer_start(&ts->sched_timer, expires,
+				      HRTIMER_MODE_ABS_PINNED);
+			/* Check, if the timer was already in the past */
+			if (hrtimer_active(&ts->sched_timer))
+				goto out;
+		} else if (!tick_program_event(expires, 0))
+				goto out;
+		/*
+		 * We are past the event already. So we crossed a
+		 * jiffie boundary. Update jiffies and raise the
+		 * softirq.
+		 */
+		tick_do_update_jiffies64(ktime_get());
 	}
-
-	if (time_delta < KTIME_MAX)
-		expires = ktime_add_ns(last_update, time_delta);
-	else
-		expires.tv64 = KTIME_MAX;
-
-	/* Skip reprogram of event if its not changed */
-	if (ts->tick_stopped && ktime_equal(expires, dev->next_event))
-		goto out;
-
-	ret = expires;
-
-	/*
-	 * nohz_stop_sched_tick can be called several times before
-	 * the nohz_restart_sched_tick is called. This happens when
-	 * interrupts arrive which do not cause a reschedule. In the
-	 * first call we save the current tick time, so we can restart
-	 * the scheduler tick in nohz_restart_sched_tick.
-	 */
-	if (!ts->tick_stopped) {
-		nohz_balance_enter_idle(cpu);
-		calc_load_enter_idle();
-
-		ts->last_tick = hrtimer_get_expires(&ts->sched_timer);
-		ts->tick_stopped = 1;
-		trace_tick_stop(1, " ");
-	}
-
-	/*
-	 * If the expiration time == KTIME_MAX, then
-	 * in this case we simply stop the tick timer.
-	 */
-	if (unlikely(expires.tv64 == KTIME_MAX)) {
-		if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
-			hrtimer_cancel(&ts->sched_timer);
-		goto out;
-	}
-
-	if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
-		hrtimer_start(&ts->sched_timer, expires,
-			      HRTIMER_MODE_ABS_PINNED);
-	else
-		tick_program_event(expires, 1);
-
+	raise_softirq_irqoff(TIMER_SOFTIRQ);
 out:
 	ts->next_jiffies = next_jiffies;
 	ts->last_jiffies = last_jiffies;
@@ -900,6 +900,32 @@ ktime_t tick_nohz_get_cpu_sleep_length(int cpu)
 	return ktime_sub(dev->next_event, ts->idle_entrytime);
 }
 
+static void tick_nohz_restart(struct tick_sched *ts, ktime_t now)
+{
+	hrtimer_cancel(&ts->sched_timer);
+	hrtimer_set_expires(&ts->sched_timer, ts->last_tick);
+
+	while (1) {
+		/* Forward the time to expire in the future */
+		hrtimer_forward(&ts->sched_timer, now, tick_period);
+
+		if (ts->nohz_mode == NOHZ_MODE_HIGHRES) {
+			hrtimer_start_expires(&ts->sched_timer,
+					      HRTIMER_MODE_ABS_PINNED);
+			/* Check, if the timer was already in the past */
+			if (hrtimer_active(&ts->sched_timer))
+				break;
+		} else {
+			if (!tick_program_event(
+				hrtimer_get_expires(&ts->sched_timer), 0))
+				break;
+		}
+		/* Reread time and update jiffies */
+		now = ktime_get();
+		tick_do_update_jiffies64(now);
+	}
+}
+
 static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now)
 {
 	/* Update jiffies first */
@@ -973,6 +999,12 @@ void tick_nohz_idle_exit(void)
 }
 EXPORT_SYMBOL_GPL(tick_nohz_idle_exit);
 
+static int tick_nohz_reprogram(struct tick_sched *ts, ktime_t now)
+{
+	hrtimer_forward(&ts->sched_timer, now, tick_period);
+	return tick_program_event(hrtimer_get_expires(&ts->sched_timer), 0);
+}
+
 /*
  * The nohz low res interrupt handler
  */
@@ -1019,8 +1051,10 @@ static void tick_nohz_handler(struct clock_event_device *dev)
 	if (unlikely(ts->tick_stopped))
 		return;
 
-	hrtimer_forward(&ts->sched_timer, now, tick_period);
-	tick_program_event(hrtimer_get_expires(&ts->sched_timer), 1);
+	while (tick_nohz_reprogram(ts, now)) {
+		now = ktime_get();
+		tick_do_update_jiffies64(now);
+	}
 }
 
 /**
@@ -1050,9 +1084,12 @@ static void tick_nohz_switch_to_nohz(void)
 	/* Get the next period */
 	next = tick_init_jiffy_update();
 
-	hrtimer_forward_now(&ts->sched_timer, tick_period);
-	hrtimer_set_expires(&ts->sched_timer, next);
-	tick_program_event(next, 1);
+	for (;;) {
+		hrtimer_set_expires(&ts->sched_timer, next);
+		if (!tick_program_event(next, 0))
+			break;
+		next = ktime_add(next, tick_period);
+	}
 	local_irq_enable();
 }
 
@@ -1225,8 +1262,15 @@ void tick_setup_sched_timer(void)
 		hrtimer_add_expires_ns(&ts->sched_timer, offset);
 	}
 
-	hrtimer_forward(&ts->sched_timer, now, tick_period);
-	hrtimer_start_expires(&ts->sched_timer, HRTIMER_MODE_ABS_PINNED);
+	for (;;) {
+		hrtimer_forward(&ts->sched_timer, now, tick_period);
+		hrtimer_start_expires(&ts->sched_timer,
+				      HRTIMER_MODE_ABS_PINNED);
+		/* Check, if the timer was already in the past */
+		if (hrtimer_active(&ts->sched_timer))
+			break;
+		now = ktime_get();
+	}
 
 #ifdef CONFIG_NO_HZ_COMMON
 	if (tick_nohz_enabled) {
