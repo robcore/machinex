@@ -574,6 +574,20 @@ u64 get_cpu_iowait_time_us(int cpu, u64 *last_update_time)
 }
 EXPORT_SYMBOL_GPL(get_cpu_iowait_time_us);
 
+static void tick_nohz_restart(struct tick_sched *ts, ktime_t now)
+{
+	hrtimer_cancel(&ts->sched_timer);
+	hrtimer_set_expires(&ts->sched_timer, ts->last_tick);
+
+	/* Forward the time to expire in the future */
+	hrtimer_forward(&ts->sched_timer, now, tick_period);
+
+	if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
+		hrtimer_start_expires(&ts->sched_timer, HRTIMER_MODE_ABS_PINNED);
+	else
+		tick_program_event(hrtimer_get_expires(&ts->sched_timer), 1);
+}
+
 static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 					 ktime_t now, int cpu)
 {
@@ -701,23 +715,16 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 				hrtimer_cancel(&ts->sched_timer);
 			goto out;
 		}
-
-		if (ts->nohz_mode == NOHZ_MODE_HIGHRES) {
-			hrtimer_start(&ts->sched_timer, expires,
-				      HRTIMER_MODE_ABS_PINNED);
-			/* Check, if the timer was already in the past */
-			if (hrtimer_active(&ts->sched_timer))
-				goto out;
-		} else if (!tick_program_event(expires, 0))
-				goto out;
-		/*
-		 * We are past the event already. So we crossed a
-		 * jiffie boundary. Update jiffies and raise the
-		 * softirq.
-		 */
-		tick_do_update_jiffies64(ktime_get());
+		 if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
+			 hrtimer_start(&ts->sched_timer, expires,
+				       HRTIMER_MODE_ABS_PINNED);
+		 else
+			 tick_program_event(expires, 1);
+	} else {
+		/* Tick is stopped, but required now. Enforce it */
+		tick_nohz_restart(ts, now);
 	}
-	raise_softirq_irqoff(TIMER_SOFTIRQ);
+
 out:
 	ts->next_jiffies = next_jiffies;
 	ts->last_jiffies = last_jiffies;
@@ -900,32 +907,6 @@ ktime_t tick_nohz_get_cpu_sleep_length(int cpu)
 	return ktime_sub(dev->next_event, ts->idle_entrytime);
 }
 
-static void tick_nohz_restart(struct tick_sched *ts, ktime_t now)
-{
-	hrtimer_cancel(&ts->sched_timer);
-	hrtimer_set_expires(&ts->sched_timer, ts->last_tick);
-
-	while (1) {
-		/* Forward the time to expire in the future */
-		hrtimer_forward(&ts->sched_timer, now, tick_period);
-
-		if (ts->nohz_mode == NOHZ_MODE_HIGHRES) {
-			hrtimer_start_expires(&ts->sched_timer,
-					      HRTIMER_MODE_ABS_PINNED);
-			/* Check, if the timer was already in the past */
-			if (hrtimer_active(&ts->sched_timer))
-				break;
-		} else {
-			if (!tick_program_event(
-				hrtimer_get_expires(&ts->sched_timer), 0))
-				break;
-		}
-		/* Reread time and update jiffies */
-		now = ktime_get();
-		tick_do_update_jiffies64(now);
-	}
-}
-
 static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now)
 {
 	/* Update jiffies first */
@@ -999,12 +980,6 @@ void tick_nohz_idle_exit(void)
 }
 EXPORT_SYMBOL_GPL(tick_nohz_idle_exit);
 
-static int tick_nohz_reprogram(struct tick_sched *ts, ktime_t now)
-{
-	hrtimer_forward(&ts->sched_timer, now, tick_period);
-	return tick_program_event(hrtimer_get_expires(&ts->sched_timer), 0);
-}
-
 /*
  * The nohz low res interrupt handler
  */
@@ -1051,10 +1026,8 @@ static void tick_nohz_handler(struct clock_event_device *dev)
 	if (unlikely(ts->tick_stopped))
 		return;
 
-	while (tick_nohz_reprogram(ts, now)) {
-		now = ktime_get();
-		tick_do_update_jiffies64(now);
-	}
+	hrtimer_forward(&ts->sched_timer, now, tick_period);
+	tick_program_event(hrtimer_get_expires(&ts->sched_timer), 1);
 }
 
 /**
@@ -1084,12 +1057,9 @@ static void tick_nohz_switch_to_nohz(void)
 	/* Get the next period */
 	next = tick_init_jiffy_update();
 
-	for (;;) {
-		hrtimer_set_expires(&ts->sched_timer, next);
-		if (!tick_program_event(next, 0))
-			break;
-		next = ktime_add(next, tick_period);
-	}
+	hrtimer_forward_now(&ts->sched_timer, tick_period);
+	hrtimer_set_expires(&ts->sched_timer, next);
+	tick_program_event(next, 1);
 	local_irq_enable();
 }
 
