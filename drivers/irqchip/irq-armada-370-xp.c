@@ -360,7 +360,7 @@ static struct notifier_block armada_370_xp_mpic_cpu_notifier = {
 
 #endif /* CONFIG_SMP */
 
-static struct irq_domain_ops armada_370_xp_mpic_irq_ops = {
+static const struct irq_domain_ops armada_370_xp_mpic_irq_ops = {
 	.map = armada_370_xp_mpic_irq_map,
 	.xlate = irq_domain_xlate_onecell,
 };
