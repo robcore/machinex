@@ -61,9 +61,9 @@
 #include <linux/nsproxy.h>
 #include <linux/ptrace.h>
 #include <linux/sched/rt.h>
+#include <linux/hugetlb.h>
 #include <linux/freezer.h>
 #include <linux/bootmem.h>
-#include <linux/hugetlb.h>
 
 #include <asm/futex.h>
 
@@ -92,63 +92,6 @@
  * optimization to work, ordering guarantees must exist so that the waiter
  * being added to the list is acknowledged when the list is concurrently being
  * checked by the waker, avoiding scenarios like the following:
- *
- * CPU 0                               CPU 1
- * val = *futex;
- * sys_futex(WAIT, futex, val);
- *   futex_wait(futex, val);
- *   uval = *futex;
- *                                     *futex = newval;
- *                                     sys_futex(WAKE, futex);
- *                                       futex_wake(futex);
- *                                       if (queue_empty())
- *                                         return;
- *   if (uval == val)
- *      lock(hash_bucket(futex));
- *      queue();
- *     unlock(hash_bucket(futex));
- *     schedule();
- *
- * This would cause the waiter on CPU 0 to wait forever because it
- * missed the transition of the user space value from val to newval
- * and the waker did not find the waiter in the hash bucket queue.
- * The spinlock serializes that:
- *
- * CPU 0                               CPU 1
- * val = *futex;
- * sys_futex(WAIT, futex, val);
- *   futex_wait(futex, val);
- *   lock(hash_bucket(futex));
- *   uval = *futex;
- *                                     *futex = newval;
- *                                     sys_futex(WAKE, futex);
- *                                       futex_wake(futex);
- *                                       lock(hash_bucket(futex));
- *   if (uval == val)
- *      queue();
- *     unlock(hash_bucket(futex));
- *     schedule();                       if (!queue_empty())
- *                                         wake_waiters(futex);
- *                                       unlock(hash_bucket(futex));
- */
-
-/*
- * Basic futex operation and ordering guarantees:
- *
- * The waiter reads the futex value in user space and calls
- * futex_wait(). This function computes the hash bucket and acquires
- * the hash bucket lock. After that it reads the futex user space value
- * again and verifies that the data has not changed. If it has not
- * changed it enqueues itself into the hash bucket, releases the hash
- * bucket lock and schedules.
- *
- * The waker side modifies the user space value of the futex and calls
- * futex_wake(). This functions computes the hash bucket and acquires
- * the hash bucket lock. Then it looks for waiters on that futex in the
- * hash bucket and wakes them.
- *
- * Note that the spin_lock serializes waiters and wakers, so that the
- * following scenario is avoided:
  *
  * CPU 0                               CPU 1
  * val = *futex;
@@ -225,63 +168,6 @@
  * the code that actually moves the futex(es) between hash buckets (requeue_futex)
  * will do the additional required waiter count housekeeping. This is done for
  * double_lock_hb() and double_unlock_hb(), respectively.
- */
-
-/*
- * Basic futex operation and ordering guarantees:
- *
- * The waiter reads the futex value in user space and calls
- * futex_wait(). This function computes the hash bucket and acquires
- * the hash bucket lock. After that it reads the futex user space value
- * again and verifies that the data has not changed. If it has not
- * changed it enqueues itself into the hash bucket, releases the hash
- * bucket lock and schedules.
- *
- * The waker side modifies the user space value of the futex and calls
- * futex_wake(). This functions computes the hash bucket and acquires
- * the hash bucket lock. Then it looks for waiters on that futex in the
- * hash bucket and wakes them.
- *
- * Note that the spin_lock serializes waiters and wakers, so that the
- * following scenario is avoided:
- *
- * CPU 0                               CPU 1
- * val = *futex;
- * sys_futex(WAIT, futex, val);
- *   futex_wait(futex, val);
- *   uval = *futex;
- *                                     *futex = newval;
- *                                     sys_futex(WAKE, futex);
- *                                       futex_wake(futex);
- *                                       if (queue_empty())
- *                                         return;
- *   if (uval == val)
- *      lock(hash_bucket(futex));
- *      queue();
- *     unlock(hash_bucket(futex));
- *     schedule();
- *
- * This would cause the waiter on CPU 0 to wait forever because it
- * missed the transition of the user space value from val to newval
- * and the waker did not find the waiter in the hash bucket queue.
- * The spinlock serializes that:
- *
- * CPU 0                               CPU 1
- * val = *futex;
- * sys_futex(WAIT, futex, val);
- *   futex_wait(futex, val);
- *   lock(hash_bucket(futex));
- *   uval = *futex;
- *                                     *futex = newval;
- *                                     sys_futex(WAKE, futex);
- *                                       futex_wake(futex);
- *                                       lock(hash_bucket(futex));
- *   if (uval == val)
- *      queue();
- *     unlock(hash_bucket(futex));
- *     schedule();                       if (!queue_empty())
- *                                         wake_waiters(futex);
- *                                       unlock(hash_bucket(futex));
  */
 
 int __read_mostly futex_cmpxchg_enabled;
@@ -1232,9 +1118,11 @@ static void __unqueue_futex(struct futex_q *q)
 
 /*
  * The hash bucket lock must be held when this is called.
- * Afterwards, the futex_q must not be accessed.
+ * Afterwards, the futex_q must not be accessed. Callers
+ * must ensure to later call wake_up_q() for the actual
+ * wakeups to occur.
  */
-static void wake_futex(struct futex_q *q)
+static void mark_wake_futex(struct wake_q_head *wake_q, struct futex_q *q)
 {
 	struct task_struct *p = q->task;
 
@@ -1242,14 +1130,10 @@ static void wake_futex(struct futex_q *q)
 		return;
 
 	/*
-	 * We set q->lock_ptr = NULL _before_ we wake up the task. If
-	 * a non-futex wake up happens on another CPU then the task
-	 * might exit and p would dereference a non-existing task
-	 * struct. Prevent this by holding a reference on p across the
-	 * wake up.
+	 * Queue the task for later wakeup for after we've released
+	 * the hb->lock. wake_q_add() grabs reference to p.
 	 */
-	get_task_struct(p);
-
+	wake_q_add(wake_q, p);
 	__unqueue_futex(q);
 	/*
 	 * The waiting task can free the futex_q as soon as
@@ -1259,9 +1143,6 @@ static void wake_futex(struct futex_q *q)
 	 */
 	smp_wmb();
 	q->lock_ptr = NULL;
-
-	wake_up_state(p, TASK_NORMAL);
-	put_task_struct(p);
 }
 
 static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *this)
@@ -1385,6 +1266,7 @@ futex_wake(u32 __user *uaddr, unsigned int flags, int nr_wake, u32 bitset)
 	struct futex_q *this, *next;
 	union futex_key key = FUTEX_KEY_INIT;
 	int ret;
+	WAKE_Q(wake_q);
 
 	if (!bitset)
 		return -EINVAL;
@@ -1412,13 +1294,14 @@ futex_wake(u32 __user *uaddr, unsigned int flags, int nr_wake, u32 bitset)
 			if (!(this->bitset & bitset))
 				continue;
 
-			wake_futex(this);
+			mark_wake_futex(&wake_q, this);
 			if (++ret >= nr_wake)
 				break;
 		}
 	}
 
 	spin_unlock(&hb->lock);
+	wake_up_q(&wake_q);
 out_put_key:
 	put_futex_key(&key);
 out:
@@ -1437,6 +1320,7 @@ futex_wake_op(u32 __user *uaddr1, unsigned int flags, u32 __user *uaddr2,
 	struct futex_hash_bucket *hb1, *hb2;
 	struct futex_q *this, *next;
 	int ret, op_ret;
+	WAKE_Q(wake_q);
 
 retry:
 	ret = get_futex_key(uaddr1, flags & FLAGS_SHARED, &key1, VERIFY_READ);
@@ -1488,7 +1372,7 @@ retry_private:
 				ret = -EINVAL;
 				goto out_unlock;
 			}
-			wake_futex(this);
+			mark_wake_futex(&wake_q, this);
 			if (++ret >= nr_wake)
 				break;
 		}
@@ -1502,7 +1386,7 @@ retry_private:
 					ret = -EINVAL;
 					goto out_unlock;
 				}
-				wake_futex(this);
+				mark_wake_futex(&wake_q, this);
 				if (++op_ret >= nr_wake2)
 					break;
 			}
@@ -1512,6 +1396,7 @@ retry_private:
 
 out_unlock:
 	double_unlock_hb(hb1, hb2);
+	wake_up_q(&wake_q);
 out_put_keys:
 	put_futex_key(&key2);
 out_put_key1:
@@ -1560,11 +1445,7 @@ void requeue_futex(struct futex_q *q, struct futex_hash_bucket *hb1,
  * atomic lock acquisition.  Set the q->lock_ptr to the requeue target hb->lock
  * to protect access to the pi_state to fixup the owner later.  Must be called
  * with both q->lock_ptr and hb->lock held.
- * Return:
- *  0 - failed to acquire the lock atomically;
- *  1 - acquired the lock;
-  * <0 - error
-  */
+ */
 static inline
 void requeue_pi_wake_futex(struct futex_q *q, union futex_key *key,
 			   struct futex_hash_bucket *hb)
@@ -1675,7 +1556,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
 	struct futex_pi_state *pi_state = NULL;
 	struct futex_hash_bucket *hb1, *hb2;
 	struct futex_q *this, *next;
-	u32 curval2;
+	WAKE_Q(wake_q);
 
 	if (requeue_pi) {
 		/*
@@ -1806,7 +1687,12 @@ retry_private:
 				goto retry;
 			goto out;
 		case -EAGAIN:
-			/* The owner was exiting, try again. */
+			/*
+			 * Two reasons for this:
+			 * - Owner is exiting and we just wait for the
+			 *   exit to complete.
+			 * - The user space value changed.
+			 */
 			free_pi_state(pi_state);
 			pi_state = NULL;
 			double_unlock_hb(hb1, hb2);
@@ -1847,7 +1733,7 @@ retry_private:
 		 * woken by futex_unlock_pi().
 		 */
 		if (++task_count <= nr_wake && !requeue_pi) {
-			wake_futex(this);
+			mark_wake_futex(&wake_q, this);
 			continue;
 		}
 
@@ -1887,6 +1773,7 @@ retry_private:
 out_unlock:
 	free_pi_state(pi_state);
 	double_unlock_hb(hb1, hb2);
+	wake_up_q(&wake_q);
 	hb_waiters_dec(hb2);
 
 	/*
@@ -2461,8 +2348,10 @@ retry_private:
 			goto uaddr_faulted;
 		case -EAGAIN:
 			/*
-			 * Task is exiting and we just wait for the
-			 * exit to complete.
+			 * Two reasons for this:
+			 * - Task is exiting and we just wait for the
+			 *   exit to complete.
+			 * - The user space value changed.
 			 */
 			queue_unlock(hb);
 			put_futex_key(&q.key);
