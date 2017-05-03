@@ -1448,8 +1448,6 @@ static void run_timer_softirq(struct softirq_action *h)
 {
 	struct tvec_base *base = __this_cpu_read(tvec_bases);
 
-	hrtimer_run_pending();
-
 #ifdef CONFIG_SMP
 	if (time_after_eq(jiffies, tvec_base_deferral->timer_jiffies)) {
 		if ((atomic_cmpxchg(&deferrable_pending, 1, 0) &&
