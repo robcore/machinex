@@ -193,6 +193,15 @@ extern void clockevents_config_and_register(struct clock_event_device *dev,
 
 extern int clockevents_update_freq(struct clock_event_device *ce, u32 freq);
 
+extern void clockevents_exchange_device(struct clock_event_device *old,
+					struct clock_event_device *new);
+extern void clockevents_set_state(struct clock_event_device *dev,
+				  enum clock_event_state state);
+extern int clockevents_program_event(struct clock_event_device *dev,
+				     ktime_t expires, bool force);
+
+extern void clockevents_handle_noop(struct clock_event_device *dev);
+
 static inline void
 clockevents_calc_mult_shift(struct clock_event_device *ce, u32 freq, u32 minsec)
 {
@@ -216,12 +225,6 @@ extern void tick_broadcast(const struct cpumask *mask);
 #endif
 extern int tick_receive_broadcast(void);
 #endif
-
-/* Should be core only, but is abused by arm bl_switcher */
-extern void clockevents_set_state(struct clock_event_device *dev,
-				 enum clock_event_state state);
-extern int clockevents_program_event(struct clock_event_device *dev,
-				     ktime_t expires, bool force);
 
 extern void clockevents_suspend(void);
 extern void clockevents_resume(void);
