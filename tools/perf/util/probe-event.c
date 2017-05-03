@@ -1726,7 +1726,8 @@ static int __add_probe_trace_events(struct perf_probe_event *pev,
 	namelist = get_probe_trace_event_names(fd, false);
 	if (!namelist) {
 		pr_debug("Failed to get current event list.\n");
-		return -EIO;
+		ret = -ENOMEM;
+		goto close_out;
 	}
 
 	ret = 0;
@@ -1791,6 +1792,7 @@ static int __add_probe_trace_events(struct perf_probe_event *pev,
 	}
 
 	strlist__delete(namelist);
+close_out:
 	close(fd);
 	return ret;
 }
