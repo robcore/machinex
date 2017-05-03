@@ -337,11 +337,11 @@ static void msm_timer_set_mode(enum clock_event_mode mode,
 
 	local_irq_save(irq_flags);
 
-	switch (state) {
-	case CLOCK_EVT_STATE_RESUME:
-	case CLOCK_EVT_STATE_PERIODIC:
+	switch (mode) {
+	case CLOCK_EVT_MODE_RESUME:
+	case CLOCK_EVT_MODE_PERIODIC:
 		break;
-	case CLOCK_EVT_STATE_ONESHOT:
+	case CLOCK_EVT_MODE_ONESHOT:
 		clock_state->stopped = 0;
 		clock_state->sleep_offset =
 			-msm_read_timer_count(clock, LOCAL_TIMER) +
@@ -357,8 +357,8 @@ static void msm_timer_set_mode(enum clock_event_mode mode,
 				msm_clocks[MSM_CLOCK_GPT].regbase +
 			       TIMER_ENABLE);
 		break;
-	case CLOCK_EVT_STATE_UNUSED:
-	case CLOCK_EVT_STATE_SHUTDOWN:
+	case CLOCK_EVT_MODE_UNUSED:
+	case CLOCK_EVT_MODE_SHUTDOWN:
 		cur_clock = &get_cpu_var(msm_active_clock);
 		if (*cur_clock == clock)
 			*cur_clock = NULL;
@@ -491,7 +491,7 @@ static uint32_t msm_timer_do_sync_to_sclk(
 		return 0;
 	}
 
-	state = smsm_get_state(SMSM_STATEM_STATE);
+	state = smsm_get_state(SMSM_MODEM_STATE);
 	if ((state & SMSM_INIT) == 0) {
 		printk(KERN_ERR "smsm not initialized\n");
 		return 0;
@@ -937,7 +937,7 @@ int local_timer_setup(struct clock_event_device *evt)
 
 void local_timer_stop(struct clock_event_device *evt)
 {
-	evt->set_mode(CLOCK_EVT_STATE_UNUSED, evt);
+	evt->set_mode(CLOCK_EVT_MODE_UNUSED, evt);
 	disable_percpu_irq(evt->irq);
 }
 
@@ -1140,3 +1140,4 @@ void __init msm_timer_init(void)
 	local_timer_register(&msm_lt_ops);
 #endif
 }
+
