@@ -34,6 +34,25 @@ void context_tracking_cpu_set(int cpu)
 	}
 }
 
+static bool context_tracking_recursion_enter(void)
+{
+	int recursion;
+
+	recursion = __this_cpu_inc_return(context_tracking.recursion);
+	if (recursion == 1)
+		return true;
+
+	WARN_ONCE((recursion < 1), "Invalid context tracking recursion value %d\n", recursion);
+	__this_cpu_dec(context_tracking.recursion);
+
+	return false;
+}
+
+static void context_tracking_recursion_exit(void)
+{
+	__this_cpu_dec(context_tracking.recursion);
+}
+
 /**
  * context_tracking_user_enter - Inform the context tracking that the CPU is going to
  *                               enter userspace mode.
@@ -71,12 +90,16 @@ void context_tracking_user_enter(void)
 	WARN_ON_ONCE(!current->mm);
 
 	local_irq_save(flags);
+	if (!context_tracking_recursion_enter())
+		goto out_irq_restore;
 	if (__this_cpu_read(context_tracking.active) &&
 	    __this_cpu_read(context_tracking.state) != CONTEXT_USER) {
 		vtime_user_enter(current);
 		rcu_user_enter();
 		__this_cpu_write(context_tracking.state, CONTEXT_USER);
 	}
+	context_tracking_recursion_exit();
+out_irq_restore:
 	local_irq_restore(flags);
 }
 
@@ -102,11 +125,15 @@ void context_tracking_user_exit(void)
 		return;
 
 	local_irq_save(flags);
+	if (!context_tracking_recursion_enter())
+		goto out_irq_restore;
 	if (__this_cpu_read(context_tracking.state) == CONTEXT_USER) {
 		rcu_user_exit();
 		vtime_user_exit(current);
 		__this_cpu_write(context_tracking.state, CONTEXT_KERNEL);
 	}
+	context_tracking_recursion_exit();
+out_irq_restore:
 	local_irq_restore(flags);
 }
 
