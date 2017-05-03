@@ -273,7 +273,7 @@ extern char ___assert_task_state[1 - 2*!!(
 #define set_task_state(tsk, state_value)			\
 	do {							\
 		(tsk)->task_state_change = _THIS_IP_;		\
-		set_mb((tsk)->state, (state_value));		\
+		smp_store_mb((tsk)->state, (state_value));		\
 	} while (0)
 
 /*
@@ -295,7 +295,7 @@ extern char ___assert_task_state[1 - 2*!!(
 #define set_current_state(state_value)				\
 	do {							\
 		current->task_state_change = _THIS_IP_;		\
-		set_mb(current->state, (state_value));		\
+		smp_store_mb(current->state, (state_value));		\
 	} while (0)
 
 #else
