@@ -786,7 +786,7 @@ static __always_inline void arch_spin_unlock(struct arch_spinlock *lock)
 	PVOP_VCALL1(pv_lock_ops.spin_unlock, lock);
 }
 
-#endif /* CONFIG_QUEUED_SPINLOCK */
+#endif /* CONFIG_QUEUED_SPINLOCKS */
 
 #endif /* SMP && PARAVIRT_SPINLOCKS */
 
