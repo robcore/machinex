@@ -200,6 +200,7 @@ static inline int arch_read_trylock(arch_rwlock_t *lock)
 	READ_LOCK_ATOMIC(inc)(count);
 	return 0;
 }
+#endif /* CONFIG_QUEUED_SPINLOCK */
 
 static inline int arch_write_trylock(arch_rwlock_t *lock)
 {
