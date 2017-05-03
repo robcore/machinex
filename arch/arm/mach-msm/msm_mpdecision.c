@@ -268,12 +268,9 @@ static int __ref msm_mpd_update_scm(enum msm_dcvs_scm_event event, int nr)
 	/* Start MP Decision slack timer */
 	if (slack_us) {
 		hrtimer_cancel(&msm_mpd.slack_timer);
-		ret = hrtimer_start(&msm_mpd.slack_timer,
+		hrtimer_start(&msm_mpd.slack_timer,
 				ktime_set(0, slack_us * NSEC_PER_USEC),
 				HRTIMER_MODE_REL_PINNED);
-		if (ret)
-			pr_err("Failed to register slack timer (%d) %d\n",
-					slack_us, ret);
 	}
 
 	return ret;
