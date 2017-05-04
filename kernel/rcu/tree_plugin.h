@@ -55,7 +55,7 @@ DEFINE_PER_CPU(char, rcu_cpu_has_work);
  */
 #define rt_mutex_owner(a) ({ WARN_ON_ONCE(1); NULL; })
 
-#endif /* #else #ifdef CONFIG_RCU_BOOST */
+#endif /* CONFIG_RCU_BOOST */
 
 #ifdef CONFIG_RCU_NOCB_CPU
 static cpumask_var_t rcu_nocb_mask; /* CPUs to have callbacks offloaded. */
@@ -1363,7 +1363,7 @@ static void rcu_prepare_kthreads(int cpu)
 
 #endif /* #else #ifdef CONFIG_RCU_BOOST */
 
-ifndef CONFIG_RCU_FAST_NO_HZ
+#ifndef CONFIG_RCU_FAST_NO_HZ
 
 /*
  * Check to see if any future RCU-related work will need to be done
@@ -1490,6 +1490,7 @@ static bool __maybe_unused rcu_try_advance_all_cbs(void)
  *
  * The caller must have disabled interrupts.
  */
+#ifndef CONFIG_RCU_NOCB_CPU_ALL
 int rcu_needs_cpu(unsigned long *dj)
 {
 	struct rcu_dynticks *rdtp = this_cpu_ptr(&rcu_dynticks);
@@ -1525,6 +1526,7 @@ int rcu_needs_cpu(unsigned long *dj)
 	}
 	return 0;
 }
+#endif /* #ifndef CONFIG_RCU_NOCB_CPU_ALL */
 
 /*
  * Prepare a CPU for idle from an RCU perspective.  The first major task
