@@ -316,17 +316,6 @@ static inline s64 timekeeping_get_ns(struct tk_read_base *tkr)
 	return nsec + arch_gettimeoffset();
 }
 
-/*
- *   tk_update_leap_state - helper to update the next_leap_ktime
- */
-static inline void tk_update_leap_state(struct timekeeper *tk)
-{
-	tk->next_leap_ktime = ntp_get_next_leap();
-	if (tk->next_leap_ktime.tv64 != KTIME_MAX)
-		/* Convert to monotonic time */
-		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
-}
-
 /**
  * update_fast_timekeeper - Update the fast and NMI safe monotonic timekeeper.
  * @tkr: Timekeeping readout base from which we take the update
@@ -334,7 +323,32 @@ static inline void tk_update_leap_state(struct timekeeper *tk)
  * We want to use this from any context including NMI and tracing /
  * instrumenting the timekeeping code itself.
  *
- * Employ the latch technique; see @raw_write_seqcount_latch.
+ * So we handle this differently than the other timekeeping accessor
+ * functions which retry when the sequence count has changed. The
+ * update side does:
+ *
+ * smp_wmb();	<- Ensure that the last base[1] update is visible
+ * tkf->seq++;
+ * smp_wmb();	<- Ensure that the seqcount update is visible
+ * update(tkf->base[0], tkr);
+ * smp_wmb();	<- Ensure that the base[0] update is visible
+ * tkf->seq++;
+ * smp_wmb();	<- Ensure that the seqcount update is visible
+ * update(tkf->base[1], tkr);
+ *
+ * The reader side does:
+ *
+ * do {
+ *	seq = tkf->seq;
+ *	smp_rmb();
+ *	idx = seq & 0x01;
+ *	now = now(tkf->base[idx]);
+ *	smp_rmb();
+ * } while (seq != tkf->seq)
+ *
+ * As long as we update base[0] readers are forced off to
+ * base[1]. Once base[0] is updated readers are redirected to base[0]
+ * and the base[1] update takes place.
  *
  * So if a NMI hits the update of base[0] then it will use base[1]
  * which is still consistent. In the worst case this can result is a
@@ -455,12 +469,12 @@ static void halt_fast_timekeeper(struct timekeeper *tk)
 
 static inline void update_vsyscall(struct timekeeper *tk)
 {
- 	struct timespec xt, wm;
+	struct timespec xt, wm;
+
 	xt = timespec64_to_timespec(tk_xtime(tk));
 	wm = timespec64_to_timespec(tk->wall_to_monotonic);
-
 	update_vsyscall_old(&xt, &wm, tk->tkr_mono.clock, tk->tkr_mono.mult,
-			   tk->tkr_mono.cycle_last);
+			    tk->tkr_mono.cycle_last);
 }
 
 static inline void old_vsyscall_fixup(struct timekeeper *tk)
