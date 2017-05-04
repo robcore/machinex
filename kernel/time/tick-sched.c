@@ -30,6 +30,8 @@
 #include <asm/irq_regs.h>
 
 #include "tick-internal.h"
+/*temporary hack*/
+#include "../../arch/arm/include/asm/irq_work.h"
 
 
 struct rq_data rq_info;
@@ -715,6 +717,7 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 				hrtimer_cancel(&ts->sched_timer);
 			goto out;
 		}
+
 		 if (ts->nohz_mode == NOHZ_MODE_HIGHRES)
 			 hrtimer_start(&ts->sched_timer, expires,
 				       HRTIMER_MODE_ABS_PINNED);
