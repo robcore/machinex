@@ -244,6 +244,47 @@ static inline int read_legacy_seqcount_retry(const legacy_seqcount_t *s, unsigne
 }
 
 
+/**
+ * raw_write_seqcount_barrier - do a seq write barrier
+ * @s: pointer to seqcount_t
+ *
+ * This can be used to provide an ordering guarantee instead of the
+ * usual consistency guarantee. It is one wmb cheaper, because we can
+ * collapse the two back-to-back wmb()s.
+ *
+ *      seqcount_t seq;
+ *      bool X = true, Y = false;
+ *
+ *      void read(void)
+ *      {
+ *              bool x, y;
+ *
+ *              do {
+ *                      int s = read_seqcount_begin(&seq);
+ *
+ *                      x = X; y = Y;
+ *
+ *              } while (read_seqcount_retry(&seq, s));
+ *
+ *              BUG_ON(!x && !y);
+ *      }
+ *
+ *      void write(void)
+ *      {
+ *              Y = true;
+ *
+ *              raw_write_seqcount_barrier(seq);
+ *
+ *              X = false;
+ *      }
+ */
+static inline void raw_write_seqcount_barrier(seqcount_t *s)
+{
+	s->sequence++;
+	smp_wmb();
+	s->sequence++;
+}
+
 /*
  * Sequence counter only version assumes that callers are using their
  * own mutexing.
