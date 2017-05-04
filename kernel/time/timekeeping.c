@@ -1845,8 +1845,9 @@ void update_wall_time(void)
 	 * memcpy under the tk_core.seq against one before we start
 	 * updating.
 	 */
-	memcpy(real_tk, tk, sizeof(*tk));
 	timekeeping_update(real_tk, action);
+	memcpy(real_tk, tk, sizeof(*tk));
+	/* The memcpy must come last. Do not put anything here! */
 	write_seqcount_end(&tk_core.seq);
 out:
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
