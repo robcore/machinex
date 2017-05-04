@@ -71,6 +71,9 @@ struct tk_read_base {
  *			shifted nano seconds.
  * @ntp_error_shift:	Shift conversion between clock shifted nano seconds and
  *			ntp shifted nano seconds.
+ * @last_warning:	Warning ratelimiter (DEBUG_TIMEKEEPING)
+ * @underflow_seen:	Underflow warning flag (DEBUG_TIMEKEEPING)
+ * @overflow_seen:	Overflow warning flag (DEBUG_TIMEKEEPING)
  *
  * Note: For timespec(64) based interfaces wall_to_monotonic is what
  * we need to add to xtime (or xtime corrected for sub jiffie times)
@@ -89,58 +92,38 @@ struct tk_read_base {
 struct timekeeper {
 	struct tk_read_base	tkr_mono;
 	struct tk_read_base	tkr_raw;
-	/* Current CLOCK_REALTIME time in seconds */
 	u64			xtime_sec;
 	unsigned long		ktime_sec;
-	/* CLOCK_REALTIME to CLOCK_MONOTONIC offset */
 	struct timespec64	wall_to_monotonic;
-
-	/* Offset clock monotonic -> clock realtime */
 	ktime_t			offs_real;
-	/* Offset clock monotonic -> clock boottime */
 	ktime_t			offs_boot;
-	/* Offset clock monotonic -> clock tai */
 	ktime_t			offs_tai;
-
-	/* time spent in suspend */
 	struct timespec64	total_sleep_time;
-	/* The current UTC to TAI offset in seconds */
 	s32			tai_offset;
 	unsigned int		clock_was_set_seq;
-	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
 	struct timespec64	raw_time;
-	/* CLOCK_MONOTONIC time value of a pending leap-second*/
 	ktime_t	next_leap_ktime;
-	/* Number of clock cycles in one NTP interval. */
 	cycle_t			cycle_interval;
-	/* Number of clock shifted nano seconds in one NTP interval. */
 	u64			xtime_interval;
-	/* shifted nano seconds left over when rounding cycle_interval */
 	s64			xtime_remainder;
-	/* Raw nano seconds accumulated per NTP interval. */
 	u32			raw_interval;
-
-	/*
-	 * Difference between accumulated time and NTP time in ntp
-	 * shifted nano seconds.
-	 */
 	s64			ntp_error;
-	/* Shift conversion between clock shifted nano seconds and
-	 * ntp shifted nano seconds. */
 	u32			ntp_error_shift;
 	u32			ntp_err_mult;
-
-	/* The current time */
-	struct timespec xtime;
-	/* The ntp_tick_length() value currently being used.
-	 * This cached copy ensures we consistently apply the tick
-	 * length for an entire tick, as ntp_tick_length may change
-	 * mid-tick, and we don't want to apply that new value to
-	 * the tick in progress.
+#ifdef CONFIG_DEBUG_TIMEKEEPING
+	long			last_warning;
+	/*
+	 * These simple flag variables are managed
+	 * without locks, which is racy, but they are
+	 * ok since we don't really care about being
+	 * super precise about how many events were
+	 * seen, just that a problem was observed.
 	 */
+	int			underflow_seen;
+	int			overflow_seen;
+#endif
+	struct timespec xtime;
 	u64			ntp_tick;
-	/* Difference between accumulated time and NTP time in ntp
-	 * shifted nano seconds. */
 };
 
 #ifdef CONFIG_GENERIC_TIME_VSYSCALL
