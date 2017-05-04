@@ -207,7 +207,6 @@ static int __init obsolete_checksetup(char *line)
  * still work even if initially too large, it will just take slightly longer
  */
 unsigned long loops_per_jiffy = (1<<12);
-
 EXPORT_SYMBOL(loops_per_jiffy);
 
 static int __init debug_kernel(char *str)
@@ -584,6 +583,7 @@ asmlinkage __visible void __init start_kernel(void)
 	smp_setup_processor_id();
 	debug_objects_early_init();
 
+	boot_init_stack_canary();
 	cgroup_init_early();
 
 	local_irq_disable();
@@ -600,7 +600,7 @@ asmlinkage __visible void __init start_kernel(void)
 	/*
 	 * Set up the the initial canary ASAP:
 	 */
-	boot_init_stack_canary();
+
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
 	replace_str((char*)&boot_command_line,"androidboot.bootchg=true","androidboot.mode=charger");
