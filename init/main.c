@@ -624,7 +624,7 @@ asmlinkage __visible void __init start_kernel(void)
 				  -1, -1, NULL, &unknown_bootoption);
 	if (after_dashes)
 		parse_args("Setting init args", after_dashes, NULL, 0, -1, -1,
-			   set_init_arg);
+			   NULL, set_init_arg);
 
 	jump_label_init();
 
