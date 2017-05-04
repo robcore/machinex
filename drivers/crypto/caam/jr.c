@@ -72,8 +72,6 @@ static void caam_jr_dequeue(unsigned long devarg)
 		for (i = 0; CIRC_CNT(head, tail + i, JOBR_DEPTH) >= 1; i++) {
 			sw_idx = (tail + i) & (JOBR_DEPTH - 1);
 
-			smp_read_barrier_depends();
-
 			if (jrp->outring[hw_idx].desc ==
 			    jrp->entinfo[sw_idx].desc_addr_dma)
 				break; /* found */
@@ -108,7 +106,6 @@ static void caam_jr_dequeue(unsigned long devarg)
 		if (sw_idx == tail) {
 			do {
 				tail = (tail + 1) & (JOBR_DEPTH - 1);
-				smp_read_barrier_depends();
 			} while (CIRC_CNT(head, tail, JOBR_DEPTH) >= 1 &&
 				 jrp->entinfo[tail].desc_addr_dma == 0);
 
