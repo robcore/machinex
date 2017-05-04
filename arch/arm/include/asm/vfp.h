@@ -5,6 +5,9 @@
  * First, the standard VFP set.
  */
 
+#ifndef __ASM_VFP_H
+#define __ASM_VFP_H
+
 #define FPSID			cr0
 #define FPSCR			cr1
 #define MVFR1			cr6
@@ -87,3 +90,4 @@
 int vfp_pm_suspend(void);
 void vfp_pm_resume(void);
 #endif
+#endif /* __ASM_VFP_H */
