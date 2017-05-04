@@ -144,7 +144,7 @@ static void check_cpu_stall(struct rcu_ctrlblk *rcp)
 		return;
 	rcp->ticks_this_gp++;
 	j = jiffies;
-	js = ACCESS_ONCE(rcp->jiffies_stall);
+	js = READ_ONCE(rcp->jiffies_stall);
 	if (*rcp->curtail && ULONG_CMP_GE(j, js)) {
 		pr_err("INFO: %s stall on CPU (%lu ticks this GP) idle=%llx (t=%lu jiffies q=%ld)\n",
 		       rcp->name, rcp->ticks_this_gp, DYNTICK_TASK_EXIT_IDLE,
@@ -152,17 +152,18 @@ static void check_cpu_stall(struct rcu_ctrlblk *rcp)
 		dump_stack();
 	}
 	if (*rcp->curtail && ULONG_CMP_GE(j, js))
-		ACCESS_ONCE(rcp->jiffies_stall) = jiffies +
+		WRITE_ONCE(rcp->jiffies_stall) = jiffies +
 			3 * rcu_jiffies_till_stall_check() + 3;
 	else if (ULONG_CMP_GE(j, js))
-		ACCESS_ONCE(rcp->jiffies_stall) = jiffies + rcu_jiffies_till_stall_check();
+		WRITE_ONCE(rcp->jiffies_stall) = jiffies + rcu_jiffies_till_stall_check();
 }
 
 static void reset_cpu_stall_ticks(struct rcu_ctrlblk *rcp)
 {
 	rcp->ticks_this_gp = 0;
 	rcp->gp_start = jiffies;
-	ACCESS_ONCE(rcp->jiffies_stall) = jiffies + rcu_jiffies_till_stall_check();
+	WRITE_ONCE(rcp->jiffies_stall,
+		   jiffies + rcu_jiffies_till_stall_check());
 }
 
 static void check_cpu_stalls(void)
