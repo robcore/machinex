@@ -49,7 +49,7 @@ CONTENTS
  guaranteed is respected if a proper "admission control" strategy (see Section
  "4. Bandwidth management") is used.
 
- Summing up, the CBS[2,3] algorithms assigns scheduling deadlines to tasks so
+ Summing up, the CBS[2,3] algorithm assigns scheduling deadlines to tasks so
  that each task runs for at most its runtime every period, avoiding any
  interference between different tasks (bandwidth isolation), while the EDF[1]
  algorithm selects the task with the smallest scheduling deadline as the one
@@ -143,7 +143,7 @@ CONTENTS
   - deadline = D
   - period <= P
 
- IOW, if runtime >= WCET and if period is >= P, then the scheduling deadlines
+ IOW, if runtime >= WCET and if period is <= P, then the scheduling deadlines
  and the absolute deadlines (d_j) coincide, so a proper admission control
  allows to respect the jobs' absolute deadlines for this task (this is what is
  called "hard schedulability property" and is an extension of Lemma 1 of [2]).
