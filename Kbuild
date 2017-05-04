@@ -2,9 +2,8 @@
 # Kbuild for top-level directory of the kernel
 # This file takes care of the following:
 # 1) Generate bounds.h
-# 2) Generate timeconst.h
-# 3) Generate asm-offsets.h (may need bounds.h and timeconst.h)
-# 4) Check for missing system calls
+# 2) Generate asm-offsets.h (may need bounds.h)
+# 3) Check for missing system calls
 
 #####
 # 1) Generate bounds.h
@@ -41,26 +40,7 @@ $(obj)/$(bounds-file): kernel/bounds.s Kbuild
 	$(call cmd,bounds)
 
 #####
-# 2) Generate timeconst.h
-
-timeconst-file := include/generated/timeconst.h
-
-#always  += $(timeconst-file)
-targets += $(timeconst-file)
-
-quiet_cmd_gentimeconst = GEN     $@
-define cmd_gentimeconst
-	(echo $(CONFIG_HZ) | bc -q $< ) > $@
-endef
-define filechk_gentimeconst
-	(echo $(CONFIG_HZ) | bc -q $< )
-endef
-
-$(obj)/$(timeconst-file): kernel/time/timeconst.bc FORCE
-	$(call filechk,gentimeconst)
-
-#####
-# 3) Generate asm-offsets.h
+# 2) Generate asm-offsets.h
 #
 
 offsets-file := include/generated/asm-offsets.h
@@ -97,7 +77,7 @@ endef
 
 # We use internal kbuild rules to avoid the "is up to date" message from make
 arch/$(SRCARCH)/kernel/asm-offsets.s: arch/$(SRCARCH)/kernel/asm-offsets.c \
-                                      $(obj)/$(timeconst-file) $(obj)/$(bounds-file) FORCE
+                                      $(obj)/$(bounds-file) FORCE
 	$(Q)mkdir -p $(dir $@)
 	$(call if_changed_dep,cc_s_c)
 
@@ -105,7 +85,7 @@ $(obj)/$(offsets-file): arch/$(SRCARCH)/kernel/asm-offsets.s Kbuild
 	$(call cmd,offsets)
 
 #####
-# 4) Check for missing system calls
+# 3) Check for missing system calls
 #
 
 always += missing-syscalls
@@ -117,5 +97,5 @@ quiet_cmd_syscalls = CALL    $<
 missing-syscalls: scripts/checksyscalls.sh $(offsets-file) FORCE
 	$(call cmd,syscalls)
 
-# Keep these three files during make clean
-no-clean-files := $(bounds-file) $(offsets-file) $(timeconst-file)
+# Keep these two files during make clean
+no-clean-files := $(bounds-file) $(offsets-file)

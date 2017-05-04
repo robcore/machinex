@@ -7,7 +7,6 @@
 #include <linux/time.h>
 #include <linux/timex.h>
 #include <asm/param.h>			/* for HZ */
-#include <generated/timeconst.h>
 
 /*
  * The following defines establish the engineering parameters of the PLL

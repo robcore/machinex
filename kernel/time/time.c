@@ -41,7 +41,7 @@
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
 
-#include <generated/timeconst.h>
+#include "timeconst.h"
 #include "timekeeping.h"
 
 /*
