@@ -1967,14 +1967,14 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
 	rcu_nocb_gp_set(rnp, nocb);
 
 	/* Declare grace period done. */
-	WRITE_ONCE(rsp->completed) = rsp->gpnum;
+	WRITE_ONCE(rsp->completed, rsp->gpnum);
 	trace_rcu_grace_period(rsp->name, rsp->completed, "end");
 	rsp->fqs_state = RCU_GP_IDLE;
 	rdp = this_cpu_ptr(rsp->rda);
 	/* Advance CBs to reduce false positives below. */
 	needgp = rcu_advance_cbs(rsp, rnp, rdp) || needgp;
 	if (needgp || cpu_needs_another_gp(rsp, rdp))
-		WRITE_ONCE(rsp->gp_flags) = RCU_GP_FLAG_INIT;
+		WRITE_ONCE(rsp->gp_flags, RCU_GP_FLAG_INIT);
 	raw_spin_unlock_irq(&rnp->lock);
 }
 
@@ -2003,7 +2003,7 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			if (rcu_gp_init(rsp))
 				break;
 			cond_resched_rcu_qs();
-			WRITE_ONCE(rsp->gp_activity) = jiffies;
+			WRITE_ONCE(rsp->gp_activity, jiffies);
 			WARN_ON(signal_pending(current));
 		}
 
@@ -2035,11 +2035,11 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			    (gf & RCU_GP_FLAG_FQS)) {
 				fqs_state = rcu_gp_fqs(rsp, fqs_state);
 				cond_resched_rcu_qs();
-				WRITE_ONCE(rsp->gp_activity) = jiffies;
+				WRITE_ONCE(rsp->gp_activity, jiffies);
 			} else {
 				/* Deal with stray signal. */
 				cond_resched_rcu_qs();
-				WRITE_ONCE(rsp->gp_activity) = jiffies;
+				WRITE_ONCE(rsp->gp_activity, jiffies);
 				WARN_ON(signal_pending(current));
 			}
 			j = jiffies_till_next_fqs;
@@ -2081,7 +2081,7 @@ rcu_start_gp_advanced(struct rcu_state *rsp, struct rcu_node *rnp,
 		 */
 		return false;
 	}
-	WRITE_ONCE(rsp->gp_flags) = RCU_GP_FLAG_INIT;
+	WRITE_ONCE(rsp->gp_flags, RCU_GP_FLAG_INIT);
 
 	/*
 	 * We can't do wakeups while holding the rnp->lock, as that
