@@ -225,17 +225,17 @@ static void d_free(struct dentry *dentry)
 }
 
 /**
- * dentry_rcuwalk_invalidate - invalidate in-progress rcu-walk lookups
+ * dentry_rcuwalk_barrier - invalidate in-progress rcu-walk lookups
  * @dentry: the target dentry
  * After this call, in-progress rcu-walk path lookup will fail. This
  * should be called after unhashing, and after changing d_inode (if
  * the dentry has not already been unhashed).
  */
-static inline void dentry_rcuwalk_invalidate(struct dentry *dentry)
+static inline void dentry_rcuwalk_barrier(struct dentry *dentry)
 {
 	assert_spin_locked(&dentry->d_lock);
 	/* Go through a barrier */
-	write_seqcount_invalidate(&dentry->d_seq);
+	write_seqcount_barrier(&dentry->d_seq);
 }
 
 /*
@@ -275,7 +275,7 @@ static void dentry_unlink_inode(struct dentry * dentry)
 	struct inode *inode = dentry->d_inode;
 	dentry->d_inode = NULL;
 	list_del_init(&dentry->d_u.d_alias);
-	dentry_rcuwalk_invalidate(dentry);
+	dentry_rcuwalk_barrier(dentry);
 	spin_unlock(&dentry->d_lock);
 	spin_unlock(&inode->i_lock);
 	if (!inode->i_nlink)
@@ -407,7 +407,7 @@ void __d_drop(struct dentry *dentry)
 {
 	if (!d_unhashed(dentry)) {
 		__d_shrink(dentry);
-		dentry_rcuwalk_invalidate(dentry);
+		dentry_rcuwalk_barrier(dentry);
 	}
 }
 EXPORT_SYMBOL(__d_drop);
@@ -1367,7 +1367,7 @@ static void __d_instantiate(struct dentry *dentry, struct inode *inode)
 		list_add(&dentry->d_u.d_alias, &inode->i_dentry);
 	}
 	dentry->d_inode = inode;
-	dentry_rcuwalk_invalidate(dentry);
+	dentry_rcuwalk_barrier(dentry);
 	spin_unlock(&dentry->d_lock);
 	fsnotify_d_instantiate(dentry, inode);
 }

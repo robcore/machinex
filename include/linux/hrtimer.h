@@ -53,25 +53,34 @@ enum hrtimer_restart {
  *
  * 0x00		inactive
  * 0x01		enqueued into rbtree
+ * 0x02		callback function running
+ * 0x04		timer is migrated to another cpu
  *
- * The callback state is not part of the timer->state because clearing it would
- * mean touching the timer after the callback, this makes it impossible to free
- * the timer from the callback function.
+ * Special cases:
+ * 0x03		callback function running and enqueued
+ *		(was requeued on another CPU)
+ * 0x05		timer was migrated on CPU hotunplug
  *
- * Therefore we track the callback state in:
- *
- *	timer->base->cpu_base->running == timer
- *
- * On SMP it is possible to have a "callback function running and enqueued"
- * status. It happens for example when a posix timer expired and the callback
+ * The "callback function running and enqueued" status is only possible on
+ * SMP. It happens for example when a posix timer expired and the callback
  * queued a signal. Between dropping the lock which protects the posix timer
  * and reacquiring the base lock of the hrtimer, another CPU can deliver the
- * signal and rearm the timer.
+ * signal and rearm the timer. We have to preserve the callback running state,
+ * as otherwise the timer could be removed before the softirq code finishes the
+ * the handling of the timer.
+ *
+ * The HRTIMER_STATE_ENQUEUED bit is always or'ed to the current state
+ * to preserve the HRTIMER_STATE_CALLBACK in the above scenario. This
+ * also affects HRTIMER_STATE_MIGRATE where the preservation is not
+ * necessary. HRTIMER_STATE_MIGRATE is cleared after the timer is
+ * enqueued on the new cpu.
  *
  * All state transitions are protected by cpu_base->lock.
  */
 #define HRTIMER_STATE_INACTIVE	0x00
 #define HRTIMER_STATE_ENQUEUED	0x01
+#define HRTIMER_STATE_CALLBACK	0x02
+#define HRTIMER_STATE_MIGRATE	0x04
 
 /**
  * struct hrtimer - the basic hrtimer structure
@@ -158,8 +167,6 @@ enum  hrtimer_base_type {
  * struct hrtimer_cpu_base - the per cpu clock bases
  * @lock:		lock protecting the base and associated clock bases
  *			and timers
- * @seq:		seqcount around __run_hrtimer
- * @running:		pointer to the currently running hrtimer
  * @cpu:		cpu number
  * @active_bases:	Bitfield to mark bases with active timers
  * @clock_was_set_seq:	Sequence counter of clock was set events
@@ -181,8 +188,6 @@ enum  hrtimer_base_type {
  */
 struct hrtimer_cpu_base {
 	raw_spinlock_t			lock;
-	seqcount_t			seq;
-	struct hrtimer			*running;
 	unsigned int			cpu;
 	unsigned int			active_bases;
 	unsigned int			clock_was_set_seq;
@@ -390,7 +395,15 @@ extern ktime_t hrtimer_get_remaining(const struct hrtimer *timer);
 
 extern ktime_t hrtimer_get_next_event(void);
 
-extern bool hrtimer_active(const struct hrtimer *timer);
+/*
+ * A timer is active, when it is enqueued into the rbtree or the
+ * callback function is running or it's in the state of being migrated
+ * to another cpu.
+ */
+static inline int hrtimer_active(const struct hrtimer *timer)
+{
+	return timer->state != HRTIMER_STATE_INACTIVE;
+}
 
 /*
  * Helper function to check, whether the timer is on one of the queues
@@ -406,7 +419,7 @@ static inline int hrtimer_is_queued(struct hrtimer *timer)
  */
 static inline int hrtimer_callback_running(struct hrtimer *timer)
 {
-	return timer->base->cpu_base->running == timer;
+	return timer->state & HRTIMER_STATE_CALLBACK;
 }
 
 /* Forward a hrtimer so it expires after now: */
