@@ -1363,7 +1363,7 @@ static void rcu_prepare_kthreads(int cpu)
 
 #endif /* #else #ifdef CONFIG_RCU_BOOST */
 
-#if !defined(CONFIG_RCU_FAST_NO_HZ)
+ifndef CONFIG_RCU_FAST_NO_HZ
 
 /*
  * Check to see if any future RCU-related work will need to be done
@@ -1374,12 +1374,13 @@ static void rcu_prepare_kthreads(int cpu)
  * Because we not have RCU_FAST_NO_HZ, just check whether this CPU needs
  * any flavor of RCU.
  */
+#ifndef CONFIG_RCU_NOCB_CPU_ALL
 int rcu_needs_cpu(unsigned long *delta_jiffies)
 {
 	*delta_jiffies = ULONG_MAX;
-	return IS_ENABLED(CONFIG_RCU_NOCB_CPU_ALL)
-	       ? 0 : rcu_cpu_has_callbacks(NULL);
+	return rcu_cpu_has_callbacks(NULL);
 }
+#endif /* #ifndef CONFIG_RCU_NOCB_CPU_ALL */
 
 /*
  * Because we do not have RCU_FAST_NO_HZ, don't bother initializing for it.
