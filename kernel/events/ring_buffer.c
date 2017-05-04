@@ -166,7 +166,7 @@ int perf_output_begin(struct perf_output_handle *handle,
 		 *
 		 * See perf_output_put_handle().
 		 */
-		tail = ACCESS_ONCE(rb->user_page->data_tail);
+		tail = READ_ONCE_CTRL(rb->user_page->data_tail);
 		smp_mb();
 		offset = head = local_read(&rb->head);
 		head += size;
