@@ -18,7 +18,7 @@ struct pt_regs;
 
 /**
  * struct irq_desc - interrupt descriptor
- * @irq_data:		per irq and chip data passed down to chip functions
+ * @irq_common_data:	per irq and chip data passed down to chip functions
  * @timer_rand_state:	pointer to timer rand state struct
  * @kstat_irqs:		irq stats per cpu
  * @wakeup_irqs:	irq wakeup count from suspend
@@ -51,6 +51,7 @@ struct pt_regs;
  * @name:		flow handler name for /proc/interrupts output
  */
 struct irq_desc {
+	struct irq_common_data	irq_common_data;
 	struct irq_data		irq_data;
 	unsigned int __percpu	*kstat_irqs;
 	unsigned int		wakeup_irqs;
