@@ -37,12 +37,15 @@ enum clock_event_mode {
  *		reached from DETACHED or SHUTDOWN.
  * ONESHOT:	Device is programmed to generate event only once. Can be reached
  *		from DETACHED or SHUTDOWN.
+ * ONESHOT_STOPPED: Device was programmed in ONESHOT mode and is temporarily
+ *		    stopped.
  */
 enum clock_event_state {
 	CLOCK_EVT_STATE_DETACHED = 0,
 	CLOCK_EVT_STATE_SHUTDOWN,
 	CLOCK_EVT_STATE_PERIODIC,
 	CLOCK_EVT_STATE_ONESHOT,
+	CLOCK_EVT_STATE_ONESHOT_STOPPED,
 };
 
 /* Clock event notification values */
@@ -70,7 +73,7 @@ enum clock_event_nofitiers {
  * Core shall set the interrupt affinity dynamically in broadcast mode
  */
 #define CLOCK_EVT_FEAT_DYNIRQ		0x000020
-#define CLOCK_EVT_FEAT_PERCPU		0x000040
+define CLOCK_EVT_FEAT_PERCPU		0x000040
 
 /*
  * Clockevent device is based on a hrtimer for broadcast
@@ -95,6 +98,7 @@ enum clock_event_nofitiers {
  * @set_mode:		legacy set mode function, only for modes <= CLOCK_EVT_MODE_RESUME.
  * @set_state_periodic:	switch state to periodic, if !set_mode
  * @set_state_oneshot:	switch state to oneshot, if !set_mode
+ * @set_state_oneshot_stopped: switch state to oneshot_stopped, if !set_mode
  * @set_state_shutdown:	switch state to shutdown, if !set_mode
  * @tick_resume:	resume clkevt device, if !set_mode
  * @broadcast:		function to broadcast events
@@ -128,12 +132,13 @@ struct clock_event_device {
 	 * State transition callback(s): Only one of the two groups should be
 	 * defined:
 	 * - set_mode(), only for modes <= CLOCK_EVT_MODE_RESUME.
-	 * - set_state_{shutdown|periodic|oneshot}(), tick_resume().
+	 * - set_state_{shutdown|periodic|oneshot|oneshot_stopped}(), tick_resume().
 	 */
 	void			(*set_mode)(enum clock_event_mode mode,
 					    struct clock_event_device *);
 	int			(*set_state_periodic)(struct clock_event_device *);
 	int			(*set_state_oneshot)(struct clock_event_device *);
+	int			(*set_state_oneshot_stopped)(struct clock_event_device *);
 	int			(*set_state_shutdown)(struct clock_event_device *);
 	int			(*tick_resume)(struct clock_event_device *);
 
