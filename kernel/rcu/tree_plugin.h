@@ -72,10 +72,10 @@ static void __init rcu_bootup_announce_oddness(void)
 {
 	if (IS_ENABLED(CONFIG_RCU_TRACE))
 		pr_info("\tRCU debugfs-based tracing is enabled.\n");
-	if ((IS_ENABLED(CONFIG_64BIT) && CONFIG_RCU_FANOUT != 64) ||
-	    (!IS_ENABLED(CONFIG_64BIT) && CONFIG_RCU_FANOUT != 32))
+	if ((IS_ENABLED(CONFIG_64BIT) && RCU_FANOUT != 64) ||
+	    (!IS_ENABLED(CONFIG_64BIT) && RCU_FANOUT != 32))
 		pr_info("\tCONFIG_RCU_FANOUT set to non-default value of %d\n",
-		       CONFIG_RCU_FANOUT);
+		       RCU_FANOUT);
 	if (rcu_fanout_exact)
 		pr_info("\tHierarchical RCU autobalancing is disabled.\n");
 	if (IS_ENABLED(CONFIG_RCU_FAST_NO_HZ))
@@ -88,10 +88,10 @@ static void __init rcu_bootup_announce_oddness(void)
 		pr_info("\tAdditional per-CPU info printed with stalls.\n");
 	if (NUM_RCU_LVL_4 != 0)
 		pr_info("\tFour-level hierarchy is enabled.\n");
-	if (CONFIG_RCU_FANOUT_LEAF != 16)
+	if (RCU_FANOUT_LEAF != 16)
 		pr_info("\tBuild-time adjustment of leaf fanout to %d.\n",
-			CONFIG_RCU_FANOUT_LEAF);
-	if (rcu_fanout_leaf != CONFIG_RCU_FANOUT_LEAF)
+			RCU_FANOUT_LEAF);
+	if (rcu_fanout_leaf != RCU_FANOUT_LEAF)
 		pr_info("\tBoot-time adjustment of leaf fanout to %d.\n", rcu_fanout_leaf);
 	if (nr_cpu_ids != NR_CPUS)
 		pr_info("\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%d.\n", NR_CPUS, nr_cpu_ids);

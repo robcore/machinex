@@ -590,7 +590,7 @@ config RCU_FANOUT
 	int "Tree-based hierarchical RCU fanout value"
 	range 2 64 if 64BIT
 	range 2 32 if !64BIT
-	depends on TREE_RCU || PREEMPT_RCU
+	depends on (TREE_RCU || PREEMPT_RCU) && RCU_EXPERT
 	default 64 if 64BIT
 	default 32 if !64BIT
 	help
@@ -610,7 +610,7 @@ config RCU_FANOUT_LEAF
 	int "Tree-based hierarchical RCU leaf-level fanout value"
 	range 2 RCU_FANOUT if 64BIT
 	range 2 RCU_FANOUT if !64BIT
-	depends on TREE_RCU || PREEMPT_RCU
+	depends on (TREE_RCU || PREEMPT_RCU) && RCU_EXPERT
 	default 16
 	help
 	  This option controls the leaf-level fanout of hierarchical
@@ -678,6 +678,7 @@ config RCU_KTHREAD_PRIO
 	range 0 99 if !RCU_BOOST
 	default 1 if RCU_BOOST
 	default 0 if !RCU_BOOST
+	depends on RCU_EXPERT
 	help
 	  This option specifies the SCHED_FIFO priority value that will be
 	  assigned to the rcuc/n and rcub/n threads and is also the value
