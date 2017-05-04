@@ -1987,7 +1987,7 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 	atomic_long_add(rhcount, &rdp->nocb_q_count);
 	/* rcu_barrier() relies on ->nocb_q_count add before xchg. */
 	old_rhpp = xchg(&rdp->nocb_tail, rhtp);
-	WRITE_ONCE(*old_rhpp) = rhp;
+	WRITE_ONCE(*old_rhpp, rhp);
 	atomic_long_add(rhcount_lazy, &rdp->nocb_q_count_lazy);
 	smp_mb__after_atomic(); /* Store *old_rhpp before _wake test. */
 
@@ -2122,13 +2122,11 @@ wait_again:
 
 	/* Wait for callbacks to appear. */
 	if (!rcu_nocb_poll) {
-		trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu, "Sleep");
 		wait_event_interruptible(my_rdp->nocb_wq,
 				!READ_ONCE(my_rdp->nocb_leader_sleep));
 		/* Memory barrier handled by smp_mb() calls below and repoll. */
 	} else if (firsttime) {
 		firsttime = false; /* Don't drown trace log with "Poll"! */
-		trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu, "Poll");
 	}
 
 	/*
@@ -2154,8 +2152,6 @@ wait_again:
 	 */
 	if (unlikely(!gotcbs)) {
 		if (!rcu_nocb_poll)
-			trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu,
-					    "WokeEmpty");
 		WARN_ON(signal_pending(current));
 		schedule_timeout_interruptible(1);
 
@@ -2217,22 +2213,17 @@ static void nocb_follower_wait(struct rcu_data *rdp)
 
 	for (;;) {
 		if (!rcu_nocb_poll) {
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    "FollowerSleep");
 			wait_event_interruptible(rdp->nocb_wq,
 						 READ_ONCE(rdp->nocb_follower_head));
 		} else if (firsttime) {
 			/* Don't drown trace log with "Poll"! */
 			firsttime = false;
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu, "Poll");
 		}
 		if (smp_load_acquire(&rdp->nocb_follower_head)) {
 			/* ^^^ Ensure CB invocation follows _head test. */
 			return;
 		}
 		if (!rcu_nocb_poll)
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    "WokeEmpty");
 		WARN_ON(signal_pending(current));
 		schedule_timeout_interruptible(1);
 	}
@@ -2263,7 +2254,6 @@ static int rcu_nocb_kthread(void *arg)
 		/* Pull the ready-to-invoke callbacks onto local list. */
 		list = READ_ONCE(rdp->nocb_follower_head);
 		BUG_ON(!list);
-		trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu, "WokeNonEmpty");
 		WRITE_ONCE(rdp->nocb_follower_head, NULL);
 		tail = xchg(&rdp->nocb_follower_tail, &rdp->nocb_follower_head);
 
