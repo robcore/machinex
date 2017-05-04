@@ -845,7 +845,7 @@ EXPORT_SYMBOL_GPL(ddebug_add_module);
 
 /* handle both dyndbg=".." and $module.dyndbg=".." params at boot */
 static int ddebug_dyndbg_boot_param_cb(char *param, char *val,
-				const char *unused)
+				const char *unused, void *arg)
 {
 	const char *modname = NULL;
 	char *sep;
@@ -995,7 +995,7 @@ static int __init dynamic_debug_init(void)
 	 */
 	cmdline = kstrdup(saved_command_line, GFP_KERNEL);
 	parse_args("dyndbg params", cmdline, NULL,
-		   0, 0, 0, &ddebug_dyndbg_boot_param_cb);
+		   0, 0, 0, NULL, &ddebug_dyndbg_boot_param_cb);
 	kfree(cmdline);
 
 out_free:
