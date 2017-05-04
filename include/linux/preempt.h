@@ -6,16 +6,24 @@
  * preempt_count (used for kernel preemption, interrupt count, etc.)
  */
 
+#include <linux/thread_info.h>
 #include <linux/linkage.h>
 #include <linux/list.h>
 
-/*
- * We use the MSB mostly because its available; see <linux/preempt_mask.h> for
- * the other bits -- can't include that header due to inclusion hell.
- */
-#define PREEMPT_NEED_RESCHED	0x80000000
+static __always_inline int preempt_count(void)
+{
+	return current_thread_info()->preempt_count;
+}
 
-#include <asm/preempt.h>
+static __always_inline int *preempt_count_ptr(void)
+{
+	return &current_thread_info()->preempt_count;
+}
+
+static __always_inline void preempt_count_set(int pc)
+{
+	*preempt_count_ptr() = pc;
+}
 
 #if defined(CONFIG_DEBUG_PREEMPT) || defined(CONFIG_PREEMPT_TRACER)
   extern void add_preempt_count(int val);
@@ -34,7 +42,7 @@ asmlinkage void preempt_schedule(void);
 
 #define preempt_check_resched() \
 do { \
-	if (unlikely(!*preempt_count_ptr())) \
+	if (unlikely(test_thread_flag(TIF_NEED_RESCHED))) \
 		preempt_schedule(); \
 } while (0)
 
@@ -44,7 +52,7 @@ void preempt_schedule_context(void);
 
 #define preempt_check_resched_context() \
 do { \
-	if (unlikely(!*preempt_count_ptr())) \
+	if (unlikely(test_thread_flag(TIF_NEED_RESCHED))) \
 		preempt_schedule_context(); \
 } while (0)
 #else
@@ -80,6 +88,7 @@ do { \
 #define preempt_enable() \
 do { \
 	preempt_enable_no_resched(); \
+	barrier(); \
 	preempt_check_resched(); \
 } while (0)
 
@@ -107,6 +116,7 @@ do { \
 #define preempt_enable_notrace() \
 do { \
 	preempt_enable_no_resched_notrace(); \
+	barrier(); \
 	preempt_check_resched_context(); \
 } while (0)
 

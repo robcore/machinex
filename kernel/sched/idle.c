@@ -286,10 +286,6 @@ static void cpu_idle_loop(void)
 		 * This is required because for polling idle loops we will
 		 * not have had an IPI to fold the state for us.
 		 */
-
-		if (tif_need_resched())
-			set_preempt_need_resched();
-
 		tick_nohz_idle_exit();
 		__current_clr_polling();
 
