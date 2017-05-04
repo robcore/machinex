@@ -292,6 +292,10 @@ void rcu_sched_qs(void);
 void rcu_bh_qs(void);
 extern void rcu_check_callbacks(int user);
 struct notifier_block;
+extern void rcu_idle_enter(void);
+extern void rcu_idle_exit(void);
+extern void rcu_irq_enter(void);
+extern void rcu_irq_exit(void);
 int rcu_cpu_notify(struct notifier_block *self,
 		   unsigned long action, void *hcpu);
 
