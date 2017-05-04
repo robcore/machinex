@@ -71,7 +71,7 @@ static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
 static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
 
 #define RCU_STATE_INITIALIZER(sname, sabbr, cr) \
-DEFINE_PER_CPU_SHARED_ALIGNED(struct rcu_data, sname##_data); \
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct rcu_data, sname##_data); \
 struct rcu_state sname##_state = { \
 	.level = { &sname##_state.node[0] }, \
 	.rda = &sname##_data, \
