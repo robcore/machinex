@@ -51,7 +51,6 @@ struct pt_regs;
  * @name:		flow handler name for /proc/interrupts output
  */
 struct irq_desc {
-	struct irq_common_data	irq_common_data;
 	struct irq_data		irq_data;
 	unsigned int __percpu	*kstat_irqs;
 	unsigned int		wakeup_irqs;
@@ -106,15 +105,6 @@ extern struct irq_desc irq_desc[NR_IRQS];
 static inline unsigned int irq_desc_get_irq(struct irq_desc *desc)
 {
 	return desc->irq_data.irq;
-}
-
-static inline struct irq_desc *irq_data_to_desc(struct irq_data *data)
-{
-#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
-	return irq_to_desc(data->irq);
-#else
-	return container_of(data, struct irq_desc, irq_data);
-#endif
 }
 
 static inline struct irq_data *irq_desc_get_irq_data(struct irq_desc *desc)

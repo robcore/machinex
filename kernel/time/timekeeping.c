@@ -316,6 +316,17 @@ static inline s64 timekeeping_get_ns(struct tk_read_base *tkr)
 	return nsec + arch_gettimeoffset();
 }
 
+/*
+ *   tk_update_leap_state - helper to update the next_leap_ktime
+ */
+static inline void tk_update_leap_state(struct timekeeper *tk)
+{
+	tk->next_leap_ktime = ntp_get_next_leap();
+	if (tk->next_leap_ktime.tv64 != KTIME_MAX)
+		/* Convert to monotonic time */
+		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
+}
+
 /**
  * update_fast_timekeeper - Update the fast and NMI safe monotonic timekeeper.
  * @tkr: Timekeeping readout base from which we take the update
@@ -521,17 +532,6 @@ int pvclock_gtod_unregister_notifier(struct notifier_block *nb)
 EXPORT_SYMBOL_GPL(pvclock_gtod_unregister_notifier);
 
 /*
- * tk_update_leap_state - helper to update the next_leap_ktime
- */
-static inline void tk_update_leap_state(struct timekeeper *tk)
-{
-	tk->next_leap_ktime = ntp_get_next_leap();
-	if (tk->next_leap_ktime.tv64 != KTIME_MAX)
-		/* Convert to monotonic time */
-		tk->next_leap_ktime = ktime_sub(tk->next_leap_ktime, tk->offs_real);
-}
-
-/*
  * Update the ktime_t based scalar nsec members of the timekeeper
  */
 static inline void tk_update_ktime_data(struct timekeeper *tk)
@@ -572,7 +572,6 @@ static void timekeeping_update(struct timekeeper *tk, unsigned int action)
 		ntp_clear();
 	}
 
-	tk_update_leap_state(tk);
 	tk_update_ktime_data(tk);
 
 	update_vsyscall(tk);
@@ -1834,8 +1833,8 @@ void update_wall_time(void)
 	 * memcpy under the tk_core.seq against one before we start
 	 * updating.
 	 */
-	timekeeping_update(real_tk, action);
 	memcpy(real_tk, tk, sizeof(*tk));
+	timekeeping_update(real_tk, action);
 	write_seqcount_end(&tk_core.seq);
 out:
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
@@ -1995,22 +1994,15 @@ ktime_t ktime_get_update_offsets_now(unsigned int *cwsseq, ktime_t *offs_real,
 
 		base = tk->tkr_mono.base;
 		nsecs = timekeeping_get_ns(&tk->tkr_mono);
-		base = ktime_add_ns(base, nsecs);
-
 		if (*cwsseq != tk->clock_was_set_seq) {
 			*cwsseq = tk->clock_was_set_seq;
 			*offs_real = tk->offs_real;
 			*offs_boot = tk->offs_boot;
 			*offs_tai = tk->offs_tai;
 		}
-
-		/* Handle leapsecond insertion adjustments */
-		if (unlikely(base.tv64 >= tk->next_leap_ktime.tv64))
-			*offs_real = ktime_sub(tk->offs_real, ktime_set(1, 0));
-
 	} while (read_seqcount_retry(&tk_core.seq, seq));
 
-	return base;
+	return ktime_add_ns(base, nsecs);
 }
 
 /**
@@ -2071,8 +2063,6 @@ int do_adjtimex(struct timex *txc)
 		timekeeping_update(tk, TK_MIRROR | TK_CLOCK_WAS_SET);
 		update_pvclock_gtod(tk, true);
 	}
-	tk_update_leap_state(tk);
-
 	write_seqcount_end(&tk_core.seq);
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 

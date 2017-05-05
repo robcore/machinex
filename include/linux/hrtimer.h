@@ -70,13 +70,17 @@ enum hrtimer_restart {
  * the handling of the timer.
  *
  * The HRTIMER_STATE_ENQUEUED bit is always or'ed to the current state
- * to preserve the HRTIMER_STATE_CALLBACK in the above scenario.
+ * to preserve the HRTIMER_STATE_CALLBACK in the above scenario. This
+ * also affects HRTIMER_STATE_MIGRATE where the preservation is not
+ * necessary. HRTIMER_STATE_MIGRATE is cleared after the timer is
+ * enqueued on the new cpu.
  *
  * All state transitions are protected by cpu_base->lock.
  */
 #define HRTIMER_STATE_INACTIVE	0x00
 #define HRTIMER_STATE_ENQUEUED	0x01
 #define HRTIMER_STATE_CALLBACK	0x02
+#define HRTIMER_STATE_MIGRATE	0x04
 
 /**
  * struct hrtimer - the basic hrtimer structure

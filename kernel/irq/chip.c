@@ -757,9 +757,15 @@ bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc)
 }
 
 void
-__irq_do_set_handler(struct irq_desc *desc, irq_flow_handler_t handle,
-		     int is_chained, const char *name)
+__irq_set_handler(unsigned int irq, irq_flow_handler_t handle, int is_chained,
+		  const char *name)
 {
+	unsigned long flags;
+	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags, 0);
+
+	if (!desc)
+		return;
+
 	if (!handle) {
 		handle = handle_bad_irq;
 	} else {
@@ -781,13 +787,13 @@ __irq_do_set_handler(struct irq_desc *desc, irq_flow_handler_t handle,
 			 * right away.
 			 */
 			if (WARN_ON(is_chained))
-				return;
+				goto out;
 			/* Try the parent */
 			irq_data = irq_data->parent_data;
 		}
 #endif
 		if (WARN_ON(!irq_data || irq_data->chip == &no_irq_chip))
-			return;
+			goto out;
 	}
 
 	/* Uninstall? */
@@ -806,39 +812,10 @@ __irq_do_set_handler(struct irq_desc *desc, irq_flow_handler_t handle,
 		irq_settings_set_nothread(desc);
 		irq_startup(desc, true);
 	}
-}
-
-void
-__irq_set_handler(unsigned int irq, irq_flow_handler_t handle, int is_chained,
-		  const char *name)
-{
-	unsigned long flags;
-	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags, 0);
-
-	if (!desc)
-		return;
-
-	__irq_do_set_handler(desc, handle, is_chained, name);
+out:
 	irq_put_desc_busunlock(desc, flags);
 }
 EXPORT_SYMBOL_GPL(__irq_set_handler);
-
-void
-irq_set_chained_handler_and_data(unsigned int irq, irq_flow_handler_t handle,
-				 void *data)
-{
-	unsigned long flags;
-	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags, 0);
-
-	if (!desc)
-		return;
-
-	__irq_do_set_handler(desc, handle, 1, NULL);
-	desc->irq_data.handler_data = data;
-
-	irq_put_desc_busunlock(desc, flags);
-}
-EXPORT_SYMBOL_GPL(irq_set_chained_handler_and_data);
 
 void
 irq_set_chip_and_handler_name(unsigned int irq, struct irq_chip *chip,
