@@ -770,6 +770,9 @@ static int sec_chg_set_property(struct power_supply *psy,
 		POWER_SUPPLY_TYPE_WIRELESS].input_current_limit;
 	u8 chg_cnfg_00;
 
+	/* check and unlock (from i9500) */
+	check_charger_unlock_state(charger);
+
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		charger->status = val->intval;
