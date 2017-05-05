@@ -107,6 +107,15 @@ static inline unsigned int irq_desc_get_irq(struct irq_desc *desc)
 	return desc->irq_data.irq;
 }
 
+static inline struct irq_desc *irq_data_to_desc(struct irq_data *data)
+{
+#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
+	return irq_to_desc(data->irq);
+#else
+	return container_of(data, struct irq_desc, irq_data);
+#endif
+}
+
 static inline struct irq_data *irq_desc_get_irq_data(struct irq_desc *desc)
 {
 	return &desc->irq_data;
