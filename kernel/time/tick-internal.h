@@ -149,3 +149,4 @@ extern void tick_nohz_init(void);
 static inline void tick_nohz_init(void) { }
 #endif
 
+extern u64 get_next_timer_interrupt(unsigned long basej, u64 basem);

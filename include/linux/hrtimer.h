@@ -388,7 +388,7 @@ static inline void hrtimer_restart(struct hrtimer *timer)
 /* Query timers: */
 extern ktime_t hrtimer_get_remaining(const struct hrtimer *timer);
 
-extern ktime_t hrtimer_get_next_event(void);
+extern u64 hrtimer_get_next_event(void);
 
 extern bool hrtimer_active(const struct hrtimer *timer);
 

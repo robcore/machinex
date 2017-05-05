@@ -1068,23 +1068,20 @@ EXPORT_SYMBOL_GPL(hrtimer_get_remaining);
  * Returns the delta to the next expiry event or KTIME_MAX if no timer
  * is pending.
  */
-ktime_t hrtimer_get_next_event(void)
+u64 hrtimer_get_next_event(void)
 {
 	struct hrtimer_cpu_base *cpu_base = &__get_cpu_var(hrtimer_bases);
-	ktime_t mindelta = { .tv64 = KTIME_MAX };
+	u64 expires = KTIME_MAX;
 	unsigned long flags;
 
 	raw_spin_lock_irqsave(&cpu_base->lock, flags);
 
 	if (!__hrtimer_hres_active(cpu_base))
-		mindelta = ktime_sub(__hrtimer_get_next_event(cpu_base),
-				ktime_get());
+		expires = __hrtimer_get_next_event(cpu_base).tv64;
 
 	raw_spin_unlock_irqrestore(&cpu_base->lock, flags);
 
-	if (mindelta.tv64 < 0)
-		mindelta.tv64 = 0;
-	return mindelta;
+	return expires;
 }
 #endif
 
