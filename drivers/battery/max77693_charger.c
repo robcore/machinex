@@ -816,16 +816,10 @@ static int sec_chg_set_property(struct power_supply *psy,
 				cancel_delayed_work_sync(&charger->wpc_work);
 				/* recheck after cancel_delayed_work_sync */
 				if (charger->wc_w_state) {
-					union power_supply_propval cable_type;
-					psy_do_property("battery", get,
-						POWER_SUPPLY_PROP_ONLINE, cable_type);
 					wake_lock_timeout(&charger->wpc_wake_lock, 500);
 					queue_delayed_work(charger->wqueue, &charger->wpc_work,
 							msecs_to_jiffies(250));
-					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
-						charger->wc_w_state = 0;
-						pr_err("%s:cable removed,wireless connected\n", __func__);
-					}
+					charger->wc_w_state = 0;
 				}
 			}
 		} else {
@@ -859,7 +853,8 @@ static int sec_chg_set_property(struct power_supply *psy,
 			if (charger->siop_level < 100 &&
 #endif
 					val->intval == POWER_SUPPLY_TYPE_MAINS) {
-				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
+				if (set_charging_current_max > SIOP_INPUT_LIMIT_CURRENT)
+					set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
 				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
 					set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
 			}
@@ -908,10 +903,11 @@ static int sec_chg_set_property(struct power_supply *psy,
 
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
 #ifdef CONFIG_FORCE_FAST_CHARGE
-				if (screen_on_current_limit && charger->siop_level < 100 )
+				if (screen_on_current_limit && charger->siop_level < 100 &&
 #else
 				if (charger->siop_level < 100 )
 #endif
+				    charger->charging_current_max > SIOP_INPUT_LIMIT_CURRENT)
 					set_charging_current_max =
 						SIOP_INPUT_LIMIT_CURRENT;
 				else
@@ -1169,8 +1165,7 @@ static void wpc_detect_work(struct work_struct *work)
 
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, false);
-		if ((reg_data != 0x08)
-			&& (chg_data->cable_type == POWER_SUPPLY_TYPE_WIRELESS)) {
+		if (reg_data != 0x08) {
 			pr_info("%s: wpc uvlo, but charging\n",	__func__);
 			wake_lock_timeout(&chg_data->wpc_wake_lock, 1000);
 			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
@@ -1284,6 +1279,7 @@ static irqreturn_t max77693_bypass_irq(int irq, void *data)
 					MAX77693_CHG_REG_CHG_CNFG_00,
 					chg_cnfg_00);
 	}
+
 	if ((byp_dtls & 0x8) && (vbus_state < 0x03))
 		reduce_input_current(chg_data, REDUCE_CURRENT_STEP);
 
@@ -1493,9 +1489,13 @@ static int max77693_charger_probe(struct platform_device *pdev)
 	charger->wc_w_irq = pdata->irq_base + MAX77693_CHG_IRQ_WCIN_I;
 	ret = request_threaded_irq(charger->wc_w_irq,
 			NULL, wpc_charger_irq,
+	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+				IRQF_ONESHOT, "wpc-int", charger);
+#if 0
 #if defined(CONFIG_MACH_JF)
 			IRQF_TRIGGER_FALLING,"wpc-int", charger);
 #else
+#endif
 			0, "wpc-int", charger);
 #endif
 	if (ret) {
