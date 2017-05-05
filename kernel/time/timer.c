@@ -91,8 +91,19 @@ struct tvec_base {
 	struct tvec tv5;
 } ____cacheline_aligned;
 
+/*
+ * __TIMER_INITIALIZER() needs to set ->base to a valid pointer (because we've
+ * made NULL special, hint: lock_timer_base()) and we cannot get a compile time
+ * pointer to per-cpu entries because we don't know where we'll map the section,
+ * even for the boot cpu.
+ *
+ * And so we use boot_tvec_bases for boot CPU and per-cpu __tvec_bases for the
+ * rest of them.
+ */
 struct tvec_base boot_tvec_bases;
 EXPORT_SYMBOL(boot_tvec_bases);
+static DEFINE_PER_CPU(struct tvec_base, __tvec_bases);
+
 static DEFINE_PER_CPU(struct tvec_base *, tvec_bases) = &boot_tvec_bases;
 #ifdef CONFIG_MACH_JF
 static DEFINE_PER_CPU(int, tvec_base_lock_init) = {-1};
@@ -1732,66 +1743,28 @@ SYSCALL_DEFINE1(sysinfo, struct sysinfo __user *, info)
 
 static int init_timers_cpu(int cpu)
 {
+	struct tvec_base *base = per_cpu(tvec_bases, cpu);
+	static char tvec_base_done[NR_CPUS];
 	int j;
-	struct tvec_base *base;
-	static char tvec_base_done[NR_CPUS + 1];
 	unsigned long flags;
 #ifdef CONFIG_MACH_JF
 	int *lock_init = &per_cpu(tvec_base_lock_init, cpu);
 #endif
 
-	if (!tvec_base_done[cpu]) {
-		static char boot_done;
+ 	if (!tvec_base_done[cpu]) {
+		static char boot_cpu_skipped;
 
-		if (boot_done) {
-			/*
-			 * The APs use this path later in boot
-			 */
-			if (cpu != NR_CPUS)
-				base = kmalloc_node(sizeof(*base),
-						    GFP_KERNEL | __GFP_ZERO,
-						    cpu_to_node(cpu));
-			else
-				base = kmalloc(sizeof(*base),
-					       GFP_KERNEL | __GFP_ZERO);
-
-			if (!base)
-				return -ENOMEM;
-
-			/* Make sure tvec_base has TIMER_FLAG_MASK bits free */
-			if (WARN_ON(base != tbase_get_base(base))) {
-				kfree(base);
-				return -ENOMEM;
-			}
-			if (cpu != NR_CPUS)
-				per_cpu(tvec_bases, cpu) = base;
-#ifdef CONFIG_SMP
-			else
-				tvec_base_deferral = base;
-#endif
+		if (!boot_cpu_skipped) {
+			boot_cpu_skipped = 1; /* skip the boot cpu */
 		} else {
-			/*
-			 * This is for the boot CPU - we use compile-time
-			 * static initialisation because per-cpu memory isn't
-			 * ready yet and because the memory allocators are not
-			 * initialised either.
-			 */
-			boot_done = 1;
-			base = &boot_tvec_bases;
-		}
+			base = per_cpu_ptr(&__tvec_bases, cpu);
+			per_cpu(tvec_bases, cpu) = base;
+ 		}
 #ifndef CONFIG_MACH_JF
 		spin_lock_init(&base->lock);
 #endif
 		tvec_base_done[cpu] = 1;
 		base->cpu = cpu;
-	} else {
-		if (cpu != NR_CPUS)
-			base = per_cpu(tvec_bases, cpu);
-#ifdef CONFIG_SMP
-		else
-			base = tvec_base_deferral;
-#endif
-	}
 
 #ifdef CONFIG_MACH_JF
 	if ((*lock_init) != cpu) {
