@@ -274,8 +274,8 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 	policy->cpuinfo.transition_latency = transition_latency;
 
 	/*
-	 * The driver only supports the SMP configuartion where all processors
-	 * share the clock and voltage.
+	 * The driver only supports the SMP configuration where all processors
+	 * share the clock and voltage and clock.
 	 */
 	cpumask_setall(policy->cpus);
 
