@@ -436,7 +436,7 @@ static void internal_add_timer(struct tvec_base *base, struct timer_list *timer)
 	 * require special care against races with idle_cpu(), lets deal
 	 * with that later.
 	 */
-	if (!tbase_get_deferrable(timer->base) || tick_nohz_full_cpu(base->cpu))
+	if (!(timer->flags & TIMER_DEFERRABLE) || tick_nohz_full_cpu(base->cpu))
 		wake_up_nohz_cpu(base->cpu);
 }
 
@@ -647,8 +647,7 @@ static inline void
 debug_activate(struct timer_list *timer, unsigned long expires)
 {
 	debug_timer_activate(timer);
-	trace_timer_start(timer, expires,
-			 tbase_get_deferrable(timer->base) > 0 ? 'y' : 'n');
+	trace_timer_start(timer, expires, timer->flags);
 }
 
 static inline void debug_deactivate(struct timer_list *timer)
@@ -667,7 +666,6 @@ static void do_init_timer(struct timer_list *timer, unsigned int flags,
 {
 	timer->entry.pprev = NULL;
 	timer->flags = flags | raw_smp_processor_id();
-	timer->base = (void *)((unsigned long)base | flags);
 	timer->slack = -1;
 #ifdef CONFIG_TIMER_STATS
 	timer->start_site = NULL;
@@ -1391,7 +1389,7 @@ void update_process_times(int user_tick)
 	rcu_check_callbacks(user_tick);
 #ifdef CONFIG_IRQ_WORK
 	if (in_irq())
-		irq_work_tick();
+		irq_work_run();
 #endif
 	scheduler_tick();
 	run_posix_cpu_timers(p);
