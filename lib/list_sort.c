@@ -289,5 +289,5 @@ exit:
 	}
 	return err;
 }
-module_init(list_sort_test);
+late_initcall(list_sort_test);
 #endif /* CONFIG_TEST_LIST_SORT */
