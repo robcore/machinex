@@ -102,7 +102,6 @@ struct tvec_base {
  */
 struct tvec_base boot_tvec_bases;
 EXPORT_SYMBOL(boot_tvec_bases);
-static DEFINE_PER_CPU(struct tvec_base, __tvec_bases);
 
 static DEFINE_PER_CPU(struct tvec_base *, tvec_bases) = &boot_tvec_bases;
 #ifdef CONFIG_MACH_JF
@@ -1051,6 +1050,8 @@ int try_to_del_timer_sync(struct timer_list *timer)
 EXPORT_SYMBOL(try_to_del_timer_sync);
 
 #ifdef CONFIG_SMP
+static DEFINE_PER_CPU(struct tvec_base, __tvec_bases);
+
 /**
  * del_timer_sync - deactivate a timer and wait for the handler to finish.
  * @timer: the timer to be deactivated
@@ -1789,12 +1790,10 @@ static void migrate_timers(int cpu)
 	spin_unlock_irq(&new_base->lock);
 	put_cpu_var(tvec_bases);
 }
-#endif /* CONFIG_HOTPLUG_CPU */
 
 static int timer_cpu_notify(struct notifier_block *self,
 				unsigned long action, void *hcpu)
 {
-#ifdef CONFIG_HOTPLUG_CPU
 	switch (action) {
 	case CPU_DEAD:
 	case CPU_DEAD_FROZEN:
@@ -1803,7 +1802,7 @@ static int timer_cpu_notify(struct notifier_block *self,
 	default:
 		break;
 	}
-#endif
+
 	return NOTIFY_OK;
 }
 
@@ -1840,8 +1839,10 @@ static void __init init_timer_cpus(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu == local_cpu)
 			base = &boot_tvec_bases;
+#ifdef CONFIG_SMP
 		else
 			base = per_cpu_ptr(&__tvec_bases, cpu);
+#endif
 
 		init_timer_cpu(base, cpu);
 	}
@@ -1854,7 +1855,7 @@ void __init init_timers(void)
 
 	init_timer_cpus();
 	init_timer_stats();
-	register_cpu_notifier(&timers_nb);
+	timer_register_cpu_notifier();
 	open_softirq(TIMER_SOFTIRQ, run_timer_softirq);
 }
 
