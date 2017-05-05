@@ -256,15 +256,17 @@ struct cpufreq_governor cpufreq_gov_arteractive = {
 #ifdef DYN_DEFER
 static inline void timer_set_nondeferrable(struct timer_list *timer)
 {
-       timer->base =
-	       ((struct tvec_base *)((unsigned long)timer->base &
+	struct tvec_base *base;
+       base =
+	       ((struct tvec_base *)((unsigned long)timer->flags &
 		       ~TIMER_DEFERRABLE));
 }
 
 static inline void timer_set_deferrable(struct timer_list *timer)
 {
-       timer->base =
-	       ((struct tvec_base *)((unsigned long)timer->base |
+	struct tvec_base *base;
+       base =
+	       ((struct tvec_base *)((unsigned long)timer->flags |
 		       TIMER_DEFERRABLE));
 }
 #endif
