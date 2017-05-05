@@ -103,7 +103,6 @@ struct timekeeper {
 	unsigned int		clock_was_set_seq;
 	ktime_t			next_leap_ktime;
 	struct timespec64	raw_time;
-	ktime_t	next_leap_ktime;
 	cycle_t			cycle_interval;
 	u64			xtime_interval;
 	s64			xtime_remainder;
