@@ -273,7 +273,6 @@ struct held_lock {
 	unsigned int check:2;       /* see lock_acquire() comment */
 	unsigned int hardirqs_off:1;
 	unsigned int references:11;					/* 32 bits */
-	unsigned int pin_count;
 };
 
 /*
@@ -374,9 +373,6 @@ extern void lockdep_set_current_reclaim_state(gfp_t gfp_mask);
 extern void lockdep_clear_current_reclaim_state(void);
 extern void lockdep_trace_alloc(gfp_t mask);
 
-extern void lock_pin_lock(struct lockdep_map *lock);
-extern void lock_unpin_lock(struct lockdep_map *lock);
-
 # define INIT_LOCKDEP				.lockdep_recursion = 0, .lockdep_reclaim_gfp = 0,
 
 #define lockdep_depth(tsk)	(debug_locks ? (tsk)->lockdep_depth : 0)
@@ -386,9 +382,6 @@ extern void lock_unpin_lock(struct lockdep_map *lock);
 	} while (0)
 
 #define lockdep_recursing(tsk)	((tsk)->lockdep_recursion)
-
-#define lockdep_pin_lock(l)		lock_pin_lock(&(l)->dep_map)
-#define lockdep_unpin_lock(l)	lock_unpin_lock(&(l)->dep_map)
 
 #else /* !CONFIG_LOCKDEP */
 
@@ -440,9 +433,6 @@ struct lock_class_key { };
 #define lockdep_assert_held(l)			do { (void)(l); } while (0)
 
 #define lockdep_recursing(tsk)			(0)
-
-#define lockdep_pin_lock(l)				do { (void)(l); } while (0)
-#define lockdep_unpin_lock(l)			do { (void)(l); } while (0)
 
 #endif /* !LOCKDEP */
 

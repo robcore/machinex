@@ -67,7 +67,6 @@
 DEFINE_PER_CPU(struct hrtimer_cpu_base, hrtimer_bases) =
 {
 	.lock = __RAW_SPIN_LOCK_UNLOCKED(hrtimer_bases.lock),
-	.seq = SEQCNT_ZERO(hrtimer_bases.seq),
 	.clock_base =
 	{
 		{
@@ -114,18 +113,6 @@ static inline int hrtimer_clockid_to_base(clockid_t clock_id)
 #ifdef CONFIG_SMP
 
 /*
- * We require the migration_base for lock_hrtimer_base()/switch_hrtimer_base()
- * such that hrtimer_callback_running() can unconditionally dereference
- * timer->base->cpu_base
- */
-static struct hrtimer_cpu_base migration_cpu_base = {
-	.seq = SEQCNT_ZERO(migration_cpu_base),
-	.clock_base = { { .cpu_base = &migration_cpu_base, }, },
-};
-
-#define migration_base	migration_cpu_base.clock_base[0]
-
-/*
  * We are using hashed locking: holding per_cpu(hrtimer_bases)[n].lock
  * means that all timers which are tied to this base via timer->base are
  * locked, and the base itself is locked too.
@@ -134,8 +121,8 @@ static struct hrtimer_cpu_base migration_cpu_base = {
  * be found on the lists/queues.
  *
  * When the timer's base is locked, and the timer removed from list, it is
- * possible to set timer->base = &migration_base and drop the lock: the timer
- * remains locked.
+ * possible to set timer->base = NULL and drop the lock: the timer remains
+ * locked.
  */
 static
 struct hrtimer_clock_base *lock_hrtimer_base(const struct hrtimer *timer,
@@ -145,7 +132,7 @@ struct hrtimer_clock_base *lock_hrtimer_base(const struct hrtimer *timer,
 
 	for (;;) {
 		base = timer->base;
-		if (likely(base != &migration_base)) {
+		if (likely(base != NULL)) {
 			raw_spin_lock_irqsave(&base->cpu_base->lock, *flags);
 			if (likely(base == timer->base))
 				return base;
@@ -209,8 +196,8 @@ again:
 		if (unlikely(hrtimer_callback_running(timer)))
 			return base;
 
-		/* See the comment in lock_hrtimer_base() */
-		timer->base = &migration_base;
+		/* See the comment in lock_timer_base() */
+		timer->base = NULL;
 		raw_spin_unlock(&base->cpu_base->lock);
 		raw_spin_lock(&new_base->cpu_base->lock);
 
@@ -854,7 +841,11 @@ static int enqueue_hrtimer(struct hrtimer *timer,
 
 	base->cpu_base->active_bases |= 1 << base->index;
 
-	timer->state = HRTIMER_STATE_ENQUEUED;
+	/*
+	 * HRTIMER_STATE_ENQUEUED is or'ed to the current state to preserve the
+	 * state of a possibly running callback.
+	 */
+	timer->state |= HRTIMER_STATE_ENQUEUED;
 
 	return timerqueue_add(&base->active, &timer->node);
 }
@@ -901,10 +892,10 @@ static void __remove_hrtimer(struct hrtimer *timer,
  * remove hrtimer, called with base lock held
  */
 static inline int
-remove_hrtimer(struct hrtimer *timer, struct hrtimer_clock_base *base, bool restart)
+remove_hrtimer(struct hrtimer *timer, struct hrtimer_clock_base *base)
 {
 	if (hrtimer_is_queued(timer)) {
-		unsigned long state = timer->state;
+		unsigned long state;
 		int reprogram;
 
 		/*
@@ -918,10 +909,12 @@ remove_hrtimer(struct hrtimer *timer, struct hrtimer_clock_base *base, bool rest
 		debug_deactivate(timer);
 		timer_stats_hrtimer_clear_start_info(timer);
 		reprogram = base->cpu_base == &__get_cpu_var(hrtimer_bases);
-
-		if (!restart)
-			state = HRTIMER_STATE_INACTIVE;
-
+		/*
+		 * We must preserve the CALLBACK state flag here,
+		 * otherwise we could move the timer base in
+		 * switch_hrtimer_base.
+		 */
+		state = timer->state & HRTIMER_STATE_CALLBACK;
 		__remove_hrtimer(timer, base, state, reprogram);
 		return 1;
 	}
@@ -946,7 +939,7 @@ void hrtimer_start_range_ns(struct hrtimer *timer, ktime_t tim,
 	base = lock_hrtimer_base(timer, &flags);
 
 	/* Remove an active timer from the queue: */
-	remove_hrtimer(timer, base, true);
+	remove_hrtimer(timer, base);
 
 	if (mode & HRTIMER_MODE_REL) {
 		tim = ktime_add_safe(tim, base->get_time());
@@ -1015,7 +1008,7 @@ int hrtimer_try_to_cancel(struct hrtimer *timer)
 	base = lock_hrtimer_base(timer, &flags);
 
 	if (!hrtimer_callback_running(timer))
-		ret = remove_hrtimer(timer, base, false);
+		ret = remove_hrtimer(timer, base);
 
 	unlock_hrtimer_base(timer, &flags);
 
@@ -1126,51 +1119,6 @@ void hrtimer_init(struct hrtimer *timer, clockid_t clock_id,
 }
 EXPORT_SYMBOL_GPL(hrtimer_init);
 
-/*
- * A timer is active, when it is enqueued into the rbtree or the
- * callback function is running or it's in the state of being migrated
- * to another cpu.
- *
- * It is important for this function to not return a false negative.
- */
-bool hrtimer_active(const struct hrtimer *timer)
-{
-	struct hrtimer_cpu_base *cpu_base;
-	unsigned int seq;
-
-	do {
-		cpu_base = READ_ONCE(timer->base->cpu_base);
-		seq = raw_read_seqcount_begin(&cpu_base->seq);
-
-		if (timer->state != HRTIMER_STATE_INACTIVE ||
-		    cpu_base->running == timer)
-			return true;
-
-	} while (read_seqcount_retry(&cpu_base->seq, seq) ||
-		 cpu_base != READ_ONCE(timer->base->cpu_base));
-
-	return false;
-}
-EXPORT_SYMBOL_GPL(hrtimer_active);
-
-/*
- * The write_seqcount_barrier()s in __run_hrtimer() split the thing into 3
- * distinct sections:
- *
- *  - queued:	the timer is queued
- *  - callback:	the timer is being ran
- *  - post:	the timer is inactive or (re)queued
- *
- * On the read side we ensure we observe timer->state and cpu_base->running
- * from the same section, if anything changed while we looked at it, we retry.
- * This includes timer->base changing because sequence numbers alone are
- * insufficient for that.
- *
- * The sequence numbers are required because otherwise we could still observe
- * a false negative if the read side got smeared over multiple consequtive
- * __run_hrtimer() invocations.
- */
-
 static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 			  struct hrtimer_clock_base *base,
 			  struct hrtimer *timer, ktime_t *now)
@@ -1178,21 +1126,10 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 	enum hrtimer_restart (*fn)(struct hrtimer *);
 	int restart;
 
-	lockdep_assert_held(&cpu_base->lock);
+	WARN_ON(!irqs_disabled());
 
 	debug_deactivate(timer);
-	cpu_base->running = timer;
-
-	/*
-	 * Separate the ->running assignment from the ->state assignment.
-	 *
-	 * As with a regular write barrier, this ensures the read side in
-	 * hrtimer_active() cannot observe cpu_base->running == NULL &&
-	 * timer->state == INACTIVE.
-	 */
-	raw_write_seqcount_barrier(&cpu_base->seq);
-
-	__remove_hrtimer(timer, base, HRTIMER_STATE_INACTIVE, 0);
+	__remove_hrtimer(timer, base, HRTIMER_STATE_CALLBACK, 0);
 	timer_stats_account_hrtimer(timer);
 	fn = timer->function;
 
@@ -1208,7 +1145,7 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 	raw_spin_lock(&cpu_base->lock);
 
 	/*
-	 * Note: We clear the running state after enqueue_hrtimer and
+	 * Note: We clear the CALLBACK bit after enqueue_hrtimer and
 	 * we do not reprogramm the event hardware. Happens either in
 	 * hrtimer_start_range_ns() or in hrtimer_interrupt()
 	 *
@@ -1220,17 +1157,9 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 	    !(timer->state & HRTIMER_STATE_ENQUEUED))
 		enqueue_hrtimer(timer, base);
 
-	/*
-	 * Separate the ->running assignment from the ->state assignment.
-	 *
-	 * As with a regular write barrier, this ensures the read side in
-	 * hrtimer_active() cannot observe cpu_base->running == NULL &&
-	 * timer->state == INACTIVE.
-	 */
-	raw_write_seqcount_barrier(&cpu_base->seq);
+	WARN_ON_ONCE(!(timer->state & HRTIMER_STATE_CALLBACK));
 
-	WARN_ON_ONCE(cpu_base->running != timer);
-	cpu_base->running = NULL;
+	timer->state &= ~HRTIMER_STATE_CALLBACK;
 }
 
 static void __hrtimer_run_queues(struct hrtimer_cpu_base *cpu_base, ktime_t now)
