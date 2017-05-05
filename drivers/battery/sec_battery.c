@@ -2712,9 +2712,9 @@ static int sec_bat_set_property(struct power_supply *psy,
 					"%s: ignore event(%d)\n",
 					__func__, current_cable_type);
 		} else {
-			battery->wire_status = current_cable_type;
-			if ((battery->wire_status == POWER_SUPPLY_TYPE_BATTERY)
-					&& battery->wc_status)
+			battery->cable_type = current_cable_type;
+			if ((battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
+					&& battery->wc_enable)
 				current_cable_type = POWER_SUPPLY_TYPE_WIRELESS;
 		}
 
