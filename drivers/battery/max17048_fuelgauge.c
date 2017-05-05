@@ -117,12 +117,12 @@ static int max17048_get_avg_vcell(struct i2c_client *client)
 		vcell_total += vcell_data;
 	}
 
-	return (vcell_total - vcell_max - vcell_min) / (AVER_SAMPLE_CNT-2);
+	return (vcell_total - vcell_max - vcell_min) / (AVER_SAMPLE_CNT - 2);
 }
 
 static int max17048_get_ocv(struct i2c_client *client)
 {
-/*
+#if 0
 	u32 ocv;
 	u16 w_data;
 	u32 temp;
@@ -145,7 +145,8 @@ static int max17048_get_ocv(struct i2c_client *client)
 			"%s : ocv (%d)\n", __func__, ocv);
 
 	return ocv;
-*/
+#endif
+
 	return 1;
 }
 
