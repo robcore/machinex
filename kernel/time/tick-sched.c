@@ -408,7 +408,7 @@ void __init tick_nohz_init(void)
  * NO HZ enabled ?
  */
 static int tick_nohz_enabled __read_mostly  = 1;
-int tick_nohz_active  __read_mostly;
+unsigned long tick_nohz_active  __read_mostly;
 /*
  * Enable / Disable tickless mode
  */
@@ -989,6 +989,16 @@ static void tick_nohz_handler(struct clock_event_device *dev)
 	tick_program_event(hrtimer_get_expires(&ts->sched_timer), 1);
 }
 
+static inline void tick_nohz_activate(struct tick_sched *ts, int mode)
+{
+	if (!tick_nohz_enabled)
+		return;
+	ts->nohz_mode = mode;
+	/* One update is enough */
+	if (!test_and_set_bit(0, &tick_nohz_active))
+		timers_update_migration();
+}
+
 /**
  * tick_nohz_switch_to_nohz - switch to nohz mode
  */
@@ -1003,9 +1013,6 @@ static void tick_nohz_switch_to_nohz(void)
 	if (tick_switch_to_oneshot(tick_nohz_handler))
 		return;
 
-	tick_nohz_active = 1;
-	ts->nohz_mode = NOHZ_MODE_LOWRES;
-
 	/*
 	 * Recycle the hrtimer in ts, so we can share the
 	 * hrtimer_forward with the highres code.
@@ -1017,6 +1024,7 @@ static void tick_nohz_switch_to_nohz(void)
 	hrtimer_forward_now(&ts->sched_timer, tick_period);
 	hrtimer_set_expires(&ts->sched_timer, next);
 	tick_program_event(next, 1);
+	tick_nohz_activate(ts, NOHZ_MODE_LOWRES);
 }
 
 /*
@@ -1068,6 +1076,7 @@ static inline void tick_nohz_irq_enter(void)
 
 static inline void tick_nohz_switch_to_nohz(void) { }
 static inline void tick_nohz_irq_enter(void) { }
+static inline void tick_nohz_activate(struct tick_sched *ts, int mode) { }
 
 #endif /* CONFIG_NO_HZ_COMMON */
 
@@ -1198,12 +1207,7 @@ void tick_setup_sched_timer(void)
 		now = ktime_get();
 	}
 
-#ifdef CONFIG_NO_HZ_COMMON
-	if (tick_nohz_enabled) {
-		ts->nohz_mode = NOHZ_MODE_HIGHRES;
-		tick_nohz_active = 1;
-	}
-#endif
+	tick_nohz_activate(ts, NOHZ_MODE_HIGHRES);
 }
 #endif /* HIGH_RES_TIMERS */
 
