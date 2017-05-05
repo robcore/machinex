@@ -2706,6 +2706,18 @@ static int sec_bat_set_property(struct power_supply *psy,
 				battery->extended_cable_type);
 		} else
 			current_cable_type = val->intval;
+
+		if (current_cable_type < 0) {
+			dev_info(battery->dev,
+					"%s: ignore event(%d)\n",
+					__func__, current_cable_type);
+		} else {
+			battery->wire_status = current_cable_type;
+			if ((battery->wire_status == POWER_SUPPLY_TYPE_BATTERY)
+					&& battery->wc_status)
+				current_cable_type = POWER_SUPPLY_TYPE_WIRELESS;
+		}
+
 		sec_bat_reset_discharge(battery);
 
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
@@ -2733,7 +2745,7 @@ static int sec_bat_set_property(struct power_supply *psy,
 		 * (0 is POWER_SUPPLY_TYPE_UNKNOWN)
 		 */
 		if ((current_cable_type >= 0) &&
-			(current_cable_type <= SEC_SIZEOF_POWER_SUPPLY_TYPE) &&
+			(current_cable_type < SEC_SIZEOF_POWER_SUPPLY_TYPE) &&
 			(battery->pdata->cable_source_type &
 			SEC_BATTERY_CABLE_SOURCE_EXTERNAL ||
 			battery->pdata->cable_source_type &
@@ -2902,6 +2914,8 @@ static int sec_usb_get_property(struct power_supply *psy,
 		break;
 	}
 
+	if (battery->slate_mode)
+		val->intval = 0;
 	return 0;
 }
 
