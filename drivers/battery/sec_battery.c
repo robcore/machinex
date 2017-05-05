@@ -2346,11 +2346,12 @@ ssize_t sec_bat_store_attrs(
 			value.intval = value.intval<<ONLINE_TYPE_MAIN_SHIFT;
 			psy_do_property("battery", set,
 					POWER_SUPPLY_PROP_ONLINE, value);
-			if(battery->slate_mode == true){
+			if (battery->slate_mode) {
 				value.intval = 0;
 				psy_do_property("sec-charger", set,
-					POWER_SUPPLY_PROP_POWER_NOW, value);
-			}
+						POWER_SUPPLY_PROP_POWER_NOW, value);
+				}
+
 			ret = count;
 		}
 		break;
@@ -3078,6 +3079,8 @@ static int sec_battery_probe(struct platform_device *pdev)
 	int ret = 0;
 	int i;
 
+	union power_supply_propval value;
+
 	dev_dbg(&pdev->dev,
 		"%s: SEC Battery Driver Loading\n", __func__);
 
@@ -3269,7 +3272,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 			"%s : Failed to create_attrs\n", __func__);
 		goto err_req_irq;
 	}
-
+#if 0
 	wake_lock(&battery->monitor_wake_lock);
 	queue_work(battery->monitor_wqueue, &battery->monitor_work);
 
@@ -3291,7 +3294,19 @@ static int sec_battery_probe(struct platform_device *pdev)
 		wake_lock(&battery->lpm_wake_lock);
 	}
 #endif
+#endif
 
+	psy_do_property("battery", get,
+				POWER_SUPPLY_PROP_ONLINE, value);
+
+	if (value.intval == POWER_SUPPLY_TYPE_BATTERY) {
+		dev_info(&pdev->dev,
+		"%s: SEC Battery Driver Monitorwork\n", __func__);
+		wake_lock(&battery->monitor_wake_lock);
+		queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+	}
+
+	battery->present = battery->pdata->check_battery_callback();
 
 	dev_dbg(battery->dev,
 		"%s: SEC Battery Driver Loaded\n", __func__);
