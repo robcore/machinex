@@ -3303,7 +3303,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev,
 		"%s: SEC Battery Driver Monitorwork\n", __func__);
 		wake_lock(&battery->monitor_wake_lock);
-		queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+		queue_work(battery->monitor_wqueue, &battery->monitor_work);
 	}
 
 	battery->present = battery->pdata->check_battery_callback();
