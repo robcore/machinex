@@ -227,16 +227,23 @@ static inline bool need_pull_dl_task(struct rq *rq, struct task_struct *prev)
 	return dl_task(prev);
 }
 
-static DEFINE_PER_CPU(struct callback_head, dl_balance_head);
+static DEFINE_PER_CPU(struct callback_head, dl_push_head);
+static DEFINE_PER_CPU(struct callback_head, dl_pull_head);
 
 static void push_dl_tasks(struct rq *);
+static void pull_dl_task(struct rq *);
 
 static inline void queue_push_tasks(struct rq *rq)
 {
 	if (!has_pushable_dl_tasks(rq))
 		return;
 
-	queue_balance_callback(rq, &per_cpu(dl_balance_head, rq->cpu), push_dl_tasks);
+	queue_balance_callback(rq, &per_cpu(dl_push_head, rq->cpu), push_dl_tasks);
+}
+
+static inline void queue_pull_task(struct rq *rq)
+{
+	queue_balance_callback(rq, &per_cpu(dl_pull_head, rq->cpu), pull_dl_task);
 }
 
 static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq);
@@ -317,12 +324,15 @@ static inline bool need_pull_dl_task(struct rq *rq, struct task_struct *prev)
 	return false;
 }
 
-static inline int pull_dl_task(struct rq *rq)
+static inline void pull_dl_task(struct rq *rq)
 {
-	return 0;
 }
 
 static inline void queue_push_tasks(struct rq *rq)
+{
+}
+
+static inline void queue_pull_task(struct rq *rq)
 {
 }
 #endif /* CONFIG_SMP */
@@ -706,7 +716,7 @@ void init_dl_task_timer(struct sched_dl_entity *dl_se)
 }
 
 static
-int dl_runtime_exceeded(struct rq *rq, struct sched_dl_entity *dl_se)
+int dl_runtime_exceeded(struct sched_dl_entity *dl_se)
 {
 	return (dl_se->runtime <= 0);
 }
@@ -748,7 +758,7 @@ static void update_curr_dl(struct rq *rq)
 	cpuacct_charge(curr, delta_exec);
 
 	dl_se->runtime -= dl_se->dl_yielded ? 0 : delta_exec;
-	if (dl_runtime_exceeded(rq, dl_se)) {
+	if (dl_runtime_exceeded(dl_se)) {
 		dl_se->dl_throttled = 1;
 		__dequeue_task_dl(rq, curr, 0);
 		if (unlikely(dl_se->dl_boosted || !start_dl_timer(curr)))
@@ -1076,7 +1086,9 @@ select_task_rq_dl(struct task_struct *p, int cpu, int sd_flag, int flags)
 	    (p->dl.nr_cpus_allowed > 1)) {
 		int target = find_later_rq(p);
 
-		if (target != -1)
+		if (target != -1 &&
+				dl_time_before(p->dl.deadline,
+					cpu_rq(target)->dl.earliest_dl.curr))
 			cpu = target;
 	}
 	rcu_read_unlock();
@@ -1105,8 +1117,6 @@ static void check_preempt_equal_dl(struct rq *rq, struct task_struct *p)
 
 	resched_curr(rq);
 }
-
-static int pull_dl_task(struct rq *this_rq);
 
 #endif /* CONFIG_SMP */
 
@@ -1164,7 +1174,15 @@ struct task_struct *pick_next_task_dl(struct rq *rq, struct task_struct *prev)
 	dl_rq = &rq->dl;
 
 	if (need_pull_dl_task(rq, prev)) {
+		/*
+		 * This is OK, because current is on_cpu, which avoids it being
+		 * picked for load-balance and preemption/IRQs are still
+		 * disabled avoiding further scheduler activity on it and we're
+		 * being very careful to re-start the picking loop.
+		 */
+		lockdep_unpin_lock(&rq->lock);
 		pull_dl_task(rq);
+		lockdep_pin_lock(&rq->lock);
 		/*
 		 * pull_rt_task() can drop (and re-acquire) rq->lock; this
 		 * means a stop task can slip in, in which case we need to
@@ -1304,6 +1322,32 @@ next_node:
 	return NULL;
 }
 
+/*
+ * Return the earliest pushable rq's task, which is suitable to be executed
+ * on the CPU, NULL otherwise:
+ */
+static struct task_struct *pick_earliest_pushable_dl_task(struct rq *rq, int cpu)
+{
+	struct rb_node *next_node = rq->dl.pushable_dl_tasks_leftmost;
+	struct task_struct *p = NULL;
+
+	if (!has_pushable_dl_tasks(rq))
+		return NULL;
+
+next_node:
+	if (next_node) {
+		p = rb_entry(next_node, struct task_struct, pushable_dl_tasks);
+
+		if (pick_dl_task(rq, p, cpu))
+			return p;
+
+		next_node = rb_next(next_node);
+		goto next_node;
+	}
+
+	return NULL;
+}
+
 static DEFINE_PER_CPU(cpumask_var_t, local_cpu_mask_dl);
 
 static int find_later_rq(struct task_struct *task)
@@ -1409,6 +1453,17 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 			break;
 
 		later_rq = cpu_rq(cpu);
+
+		if (!dl_time_before(task->dl.deadline,
+					later_rq->dl.earliest_dl.curr)) {
+			/*
+			 * Target rq has tasks of equal or earlier deadline,
+			 * retrying does not release any lock and is unlikely
+			 * to yield a different result.
+			 */
+			later_rq = NULL;
+			break;
+		}
 
 		/* Retry if something changed. */
 		if (double_lock_balance(rq, later_rq)) {
@@ -1552,15 +1607,16 @@ static void push_dl_tasks(struct rq *rq)
 		;
 }
 
-static int pull_dl_task(struct rq *this_rq)
+static void pull_dl_task(struct rq *this_rq)
 {
-	int this_cpu = this_rq->cpu, ret = 0, cpu;
+	int this_cpu = this_rq->cpu, cpu;
 	struct task_struct *p;
+	bool resched = false;
 	struct rq *src_rq;
 	u64 dmin = LONG_MAX;
 
 	if (likely(!dl_overloaded(this_rq)))
-		return 0;
+		return;
 
 	/*
 	 * Match the barrier from dl_set_overloaded; this guarantees that if we
@@ -1593,7 +1649,7 @@ static int pull_dl_task(struct rq *this_rq)
 		if (src_rq->dl.dl_nr_running <= 1)
 			goto skip;
 
-		p = pick_next_earliest_dl_task(src_rq, this_cpu);
+		p = pick_earliest_pushable_dl_task(src_rq, this_cpu);
 
 		/*
 		 * We found a task to be pulled if:
@@ -1615,7 +1671,7 @@ static int pull_dl_task(struct rq *this_rq)
 					   src_rq->curr->dl.deadline))
 				goto skip;
 
-			ret = 1;
+			resched = true;
 
 			deactivate_task(src_rq, p, 0);
 			clear_average_bw(&p->dl, &src_rq->dl);
@@ -1630,7 +1686,8 @@ skip:
 		double_unlock_balance(this_rq, src_rq);
 	}
 
-	return ret;
+	if (resched)
+		resched_curr(this_rq);
 }
 
 /*
@@ -1714,7 +1771,7 @@ static void rq_offline_dl(struct rq *rq)
 	cpudl_clear_freecpu(&rq->rd->cpudl, rq->cpu);
 }
 
-void init_sched_dl_class(void)
+void __init init_sched_dl_class(void)
 {
 	unsigned int i;
 
@@ -1746,8 +1803,7 @@ static void switched_from_dl(struct rq *rq, struct task_struct *p)
 	if (!task_on_rq_queued(p) || rq->dl.dl_nr_running)
 		return;
 
-	if (pull_dl_task(rq))
-		resched_curr(rq);
+	queue_pull_task(rq);
 }
 
 /*
@@ -1760,16 +1816,14 @@ static void switched_to_dl(struct rq *rq, struct task_struct *p)
 
 	if (task_on_rq_queued(p) && rq->curr != p) {
 #ifdef CONFIG_SMP
-		if (rq->dl.overloaded && push_dl_task(rq) && rq != task_rq(p))
-			/* Only reschedule if pushing failed */
-			check_resched = 0;
-#endif /* CONFIG_SMP */
-		if (check_resched) {
-			if (dl_task(rq->curr))
-				check_preempt_curr_dl(rq, p, 0);
-			else
-				resched_curr(rq);
-		}
+		if (p->nr_cpus_allowed > 1 && rq->dl.overloaded)
+			queue_push_tasks(rq);
+#else
+		if (dl_task(rq->curr))
+			check_preempt_curr_dl(rq, p, 0);
+		else
+			resched_curr(rq);
+#endif
 	}
 }
 
@@ -1789,15 +1843,14 @@ static void prio_changed_dl(struct rq *rq, struct task_struct *p,
 		 * or lowering its prio, so...
 		 */
 		if (!rq->dl.overloaded)
-			pull_dl_task(rq);
+			queue_pull_task(rq);
 
 		/*
 		 * If we now have a earlier deadline task than p,
 		 * then reschedule, provided p is still on this
 		 * runqueue.
 		 */
-		if (dl_time_before(rq->dl.earliest_dl.curr, p->dl.deadline) &&
-		    rq->curr == p)
+		if (dl_time_before(rq->dl.earliest_dl.curr, p->dl.deadline))
 			resched_curr(rq);
 #else
 		/*

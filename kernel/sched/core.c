@@ -1119,10 +1119,8 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
  *
  * Returns (locked) new rq. Old rq's lock is released.
  */
-static struct rq *move_queued_task(struct task_struct *p, int new_cpu)
+static struct rq *move_queued_task(struct rq *rq, struct task_struct *p, int new_cpu)
 {
-	struct rq *rq = task_rq(p);
-
 	lockdep_assert_held(&rq->lock);
 
 	dequeue_task(rq, p, 0);
@@ -1156,41 +1154,19 @@ struct migration_arg {
  *
  * So we race with normal scheduler movements, but that's OK, as long
  * as the task is no longer on this CPU.
- *
- * Returns non-zero if task was successfully migrated.
  */
-static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
+static struct rq *__migrate_task(struct rq *rq, struct task_struct *p, int dest_cpu)
 {
-	struct rq *rq;
-	int ret = 0;
-
 	if (unlikely(!cpu_active(dest_cpu)))
-		return ret;
-
-	rq = cpu_rq(src_cpu);
-
-	raw_spin_lock(&p->pi_lock);
-	raw_spin_lock(&rq->lock);
-	/* Already moved. */
-	if (task_cpu(p) != src_cpu)
-		goto done;
+		return rq;
 
 	/* Affinity changed (again). */
 	if (!cpumask_test_cpu(dest_cpu, tsk_cpus_allowed(p)))
-		goto fail;
+		return rq;
 
-	/*
-	 * If we're not on a rq, the next wake-up will ensure we're
-	 * placed properly.
-	 */
-	if (task_on_rq_queued(p))
-		rq = move_queued_task(p, dest_cpu);
-done:
-	ret = 1;
-fail:
-	raw_spin_unlock(&rq->lock);
-	raw_spin_unlock(&p->pi_lock);
-	return ret;
+	rq = move_queued_task(rq, p, dest_cpu);
+
+	return rq;
 }
 
 /*
@@ -1201,6 +1177,8 @@ fail:
 static int migration_cpu_stop(void *data)
 {
 	struct migration_arg *arg = data;
+	struct task_struct *p = arg->task;
+	struct rq *rq = this_rq();
 
 	/*
 	 * The original target cpu might have gone down and we might
@@ -1213,7 +1191,19 @@ static int migration_cpu_stop(void *data)
 	 * during wakeups, see set_cpus_allowed_ptr()'s TASK_WAKING test.
 	 */
 	sched_ttwu_pending();
-	__migrate_task(arg->task, raw_smp_processor_id(), arg->dest_cpu);
+
+	raw_spin_lock(&p->pi_lock);
+	raw_spin_lock(&rq->lock);
+	/*
+	 * If task_rq(p) != rq, it cannot be migrated here, because we're
+	 * holding rq->lock, if p->on_rq == 0 it cannot get enqueued because
+	 * we're holding p->pi_lock.
+	 */
+	if (task_rq(p) == rq && task_on_rq_queued(p))
+		rq = __migrate_task(rq, p, arg->dest_cpu);
+	raw_spin_unlock(&rq->lock);
+	raw_spin_unlock(&p->pi_lock);
+
 	local_irq_enable();
 	return 0;
 }
@@ -1279,8 +1269,15 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 		stop_one_cpu(cpu_of(rq), migration_cpu_stop, &arg);
 		tlb_migrate_finish(p->mm);
 		return 0;
-	} else if (task_on_rq_queued(p))
-		rq = move_queued_task(p, dest_cpu);
+	} else if (task_on_rq_queued(p)) {
+		/*
+		 * OK, since we're going to drop the lock immediately
+		 * afterwards anyway.
+		 */
+		lockdep_unpin_lock(&rq->lock);
+		rq = move_queued_task(rq, p, dest_cpu);
+		lockdep_pin_lock(&rq->lock);
+	}
 out:
 	task_rq_unlock(rq, p, &flags);
 
@@ -1638,6 +1635,8 @@ out:
 static inline
 int select_task_rq(struct task_struct *p, int cpu, int sd_flags, int wake_flags)
 {
+	lockdep_assert_held(&p->pi_lock);
+
 	if (p->nr_cpus_allowed > 1)
 		cpu = p->sched_class->select_task_rq(p, cpu, sd_flags, wake_flags);
 
@@ -1737,9 +1736,12 @@ ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags)
 #ifdef CONFIG_SMP
 	if (p->sched_class->task_woken) {
 		/*
-		 * XXX can drop rq->lock; most likely ok.
+		 * Our task @p is fully woken up and running; so its safe to
+		 * drop the rq->lock, hereafter rq is only used for statistics.
 		 */
+		lockdep_unpin_lock(&rq->lock);
 		p->sched_class->task_woken(rq, p);
+		lockdep_pin_lock(&rq->lock);
 	}
 
 	if (rq->idle_stamp) {
@@ -1759,6 +1761,8 @@ ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags)
 static void
 ttwu_do_activate(struct rq *rq, struct task_struct *p, int wake_flags)
 {
+	lockdep_assert_held(&rq->lock);
+
 #ifdef CONFIG_SMP
 	if (p->sched_contributes_to_load)
 		rq->nr_uninterruptible--;
@@ -1803,6 +1807,7 @@ void sched_ttwu_pending(void)
 		return;
 
 	raw_spin_lock_irqsave(&rq->lock, flags);
+	lockdep_pin_lock(&rq->lock);
 
 	while (llist) {
 		p = llist_entry(llist, struct task_struct, wake_entry);
@@ -1810,6 +1815,7 @@ void sched_ttwu_pending(void)
 		ttwu_do_activate(rq, p, 0);
 	}
 
+	lockdep_unpin_lock(&rq->lock);
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
 
@@ -1910,7 +1916,9 @@ static void ttwu_queue(struct task_struct *p, int cpu)
 #endif
 
 	raw_spin_lock(&rq->lock);
+	lockdep_pin_lock(&rq->lock);
 	ttwu_do_activate(rq, p, 0);
+	lockdep_unpin_lock(&rq->lock);
 	raw_spin_unlock(&rq->lock);
 }
 
@@ -2047,9 +2055,17 @@ static void try_to_wake_up_local(struct task_struct *p)
 	lockdep_assert_held(&rq->lock);
 
 	if (!raw_spin_trylock(&p->pi_lock)) {
+		/*
+		 * This is OK, because current is on_cpu, which avoids it being
+		 * picked for load-balance and preemption/IRQs are still
+		 * disabled avoiding further scheduler activity on it and we've
+		 * not yet picked a replacement task.
+		 */
+		lockdep_unpin_lock(&rq->lock);
 		raw_spin_unlock(&rq->lock);
 		raw_spin_lock(&p->pi_lock);
 		raw_spin_lock(&rq->lock);
+		lockdep_pin_lock(&rq->lock);
 	}
 
 	if (!(p->state & TASK_NORMAL))
@@ -2460,12 +2476,15 @@ void wake_up_new_task(struct task_struct *p)
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
+static struct static_key preempt_notifier_key = STATIC_KEY_INIT_FALSE;
+
 /**
  * preempt_notifier_register - tell me when current is being preempted & rescheduled
  * @notifier: notifier struct to register
  */
 void preempt_notifier_register(struct preempt_notifier *notifier)
 {
+	static_key_slow_inc(&preempt_notifier_key);
 	hlist_add_head(&notifier->link, &current->preempt_notifiers);
 }
 EXPORT_SYMBOL_GPL(preempt_notifier_register);
@@ -2474,15 +2493,16 @@ EXPORT_SYMBOL_GPL(preempt_notifier_register);
  * preempt_notifier_unregister - no longer interested in preemption notifications
  * @notifier: notifier struct to unregister
  *
- * This is safe to call from within a preemption notifier.
+ * This is *not* safe to call from within a preemption notifier.
  */
 void preempt_notifier_unregister(struct preempt_notifier *notifier)
 {
 	hlist_del(&notifier->link);
+	static_key_slow_dec(&preempt_notifier_key);
 }
 EXPORT_SYMBOL_GPL(preempt_notifier_unregister);
 
-static void fire_sched_in_preempt_notifiers(struct task_struct *curr)
+static void __fire_sched_in_preempt_notifiers(struct task_struct *curr)
 {
 	struct preempt_notifier *notifier;
 
@@ -2490,9 +2510,15 @@ static void fire_sched_in_preempt_notifiers(struct task_struct *curr)
 		notifier->ops->sched_in(notifier, raw_smp_processor_id());
 }
 
+static __always_inline void fire_sched_in_preempt_notifiers(struct task_struct *curr)
+{
+	if (static_key_false(&preempt_notifier_key))
+		__fire_sched_in_preempt_notifiers(curr);
+}
+
 static void
-fire_sched_out_preempt_notifiers(struct task_struct *curr,
-				 struct task_struct *next)
+__fire_sched_out_preempt_notifiers(struct task_struct *curr,
+				   struct task_struct *next)
 {
 	struct preempt_notifier *notifier;
 
@@ -2500,13 +2526,21 @@ fire_sched_out_preempt_notifiers(struct task_struct *curr,
 		notifier->ops->sched_out(notifier, next);
 }
 
+static __always_inline void
+fire_sched_out_preempt_notifiers(struct task_struct *curr,
+				 struct task_struct *next)
+{
+	if (static_key_false(&preempt_notifier_key))
+		__fire_sched_out_preempt_notifiers(curr, next);
+}
+
 #else /* !CONFIG_PREEMPT_NOTIFIERS */
 
-static void fire_sched_in_preempt_notifiers(struct task_struct *curr)
+static inline void fire_sched_in_preempt_notifiers(struct task_struct *curr)
 {
 }
 
-static void
+static inline void
 fire_sched_out_preempt_notifiers(struct task_struct *curr,
 				 struct task_struct *next)
 {
@@ -2694,6 +2728,7 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	 * of the scheduler it's an obvious special-case), so we
 	 * do an early lockdep release here:
 	 */
+	lockdep_unpin_lock(&rq->lock);
 	spin_release(&rq->lock.dep_map, 1, _THIS_IP_);
 
 	context_tracking_task_switch(prev, next);
@@ -3270,6 +3305,7 @@ static void __sched __schedule(void)
 	 */
 	smp_mb__before_spinlock();
 	raw_spin_lock_irq(&rq->lock);
+	lockdep_pin_lock(&rq->lock);
 
 	rq->clock_skip_update <<= 1; /* promote REQ to ACT */
 
@@ -3324,6 +3360,7 @@ static void __sched __schedule(void)
 		rq = cpu_rq(cpu);
 	} else {
 		prev->yield_count++;
+		lockdep_unpin_lock(&rq->lock);
 		raw_spin_unlock_irq(&rq->lock);
 	}
 
@@ -3567,7 +3604,6 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 		if (!dl_prio(p->normal_prio) ||
 		    (pi_task && dl_entity_preempt(&pi_task->dl, &p->dl))) {
 			p->dl.dl_boosted = 1;
-			p->dl.dl_throttled = 0;
 			enqueue_flag = ENQUEUE_REPLENISH;
 		} else
 			p->dl.dl_boosted = 0;
@@ -5293,9 +5329,9 @@ static struct task_struct fake_task = {
  * there's no concurrency possible, we hold the required locks anyway
  * because of lock validation efforts.
  */
-static void migrate_tasks(unsigned int dead_cpu)
+static void migrate_tasks(struct rq *dead_rq)
 {
-	struct rq *rq = cpu_rq(dead_cpu);
+	struct rq *rq = dead_rq;
 	struct task_struct *next, *stop = rq->stop;
 	int dest_cpu;
 
@@ -5330,7 +5366,7 @@ static void migrate_tasks(unsigned int dead_cpu)
 	 */
 	update_rq_clock(rq);
 
-	for ( ; ; ) {
+	for (;;) {
 		/*
 		 * There's this thread running, bail when that's the only
 		 * remaining thread.
@@ -5338,17 +5374,25 @@ static void migrate_tasks(unsigned int dead_cpu)
 		if (rq->nr_running == 1)
 			break;
 
+		/*
+		 * Ensure rq->lock covers the entire task selection
+		 * until the migration.
+		 */
+		lockdep_pin_lock(&rq->lock);
 		next = pick_next_task(rq, &fake_task);
 		BUG_ON(!next);
 		next->sched_class->put_prev_task(rq, next);
 
 		/* Find suitable destination for @next, with force if needed. */
-		dest_cpu = select_fallback_rq(dead_cpu, next);
-		raw_spin_unlock(&rq->lock);
+		dest_cpu = select_fallback_rq(dead_rq->cpu, next);
 
-		__migrate_task(next, dead_cpu, dest_cpu);
-
-		raw_spin_lock(&rq->lock);
+		lockdep_unpin_lock(&rq->lock);
+		rq = __migrate_task(rq, next, dest_cpu);
+		if (rq != dead_rq) {
+			raw_spin_unlock(&rq->lock);
+			rq = dead_rq;
+			raw_spin_lock(&rq->lock);
+		}
 	}
 
 	rq->stop = stop;
@@ -5602,7 +5646,7 @@ migration_call(struct notifier_block *nfb, unsigned long action, void *hcpu)
 			BUG_ON(!cpumask_test_cpu(cpu, rq->rd->span));
 			set_rq_offline(rq);
 		}
-		migrate_tasks(cpu);
+		migrate_tasks(rq);
 		BUG_ON(rq->nr_running != 1); /* the migration thread */
 		raw_spin_unlock_irqrestore(&rq->lock, flags);
 		calc_load_migrate(rq);

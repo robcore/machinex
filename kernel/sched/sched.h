@@ -1394,7 +1394,6 @@ extern void update_max_interval(void);
 extern void init_sched_dl_class(void);
 extern void init_sched_rt_class(void);
 extern void init_sched_fair_class(void);
-extern void init_sched_dl_class(void);
 
 extern void resched_curr(struct rq *rq);
 extern void resched_cpu(int cpu);
@@ -1804,8 +1803,10 @@ static inline struct rq *__task_rq_lock(struct task_struct *p)
 	for (;;) {
 		rq = task_rq(p);
 		raw_spin_lock(&rq->lock);
-		if (likely(rq == task_rq(p) && !task_on_rq_migrating(p)))
+		if (likely(rq == task_rq(p) && !task_on_rq_migrating(p))) {
+			lockdep_pin_lock(&rq->lock);
 			return rq;
+		}
 		raw_spin_unlock(&rq->lock);
 
 		while (unlikely(task_on_rq_migrating(p)))
@@ -1842,8 +1843,10 @@ static inline struct rq *task_rq_lock(struct task_struct *p, unsigned long *flag
 		 * If we observe the new cpu in task_rq_lock, the acquire will
 		 * pair with the WMB to ensure we must then also see migrating.
 		 */
-		if (likely(rq == task_rq(p) && !task_on_rq_migrating(p)))
+		if (likely(rq == task_rq(p) && !task_on_rq_migrating(p))) {
+			lockdep_pin_lock(&rq->lock);
 			return rq;
+		}
 		raw_spin_unlock(&rq->lock);
 		raw_spin_unlock_irqrestore(&p->pi_lock, *flags);
 
@@ -1855,6 +1858,7 @@ static inline struct rq *task_rq_lock(struct task_struct *p, unsigned long *flag
 static inline void __task_rq_unlock(struct rq *rq)
 	__releases(rq->lock)
 {
+	lockdep_unpin_lock(&rq->lock);
 	raw_spin_unlock(&rq->lock);
 }
 
@@ -1863,6 +1867,7 @@ task_rq_unlock(struct rq *rq, struct task_struct *p, unsigned long *flags)
 	__releases(rq->lock)
 	__releases(p->pi_lock)
 {
+	lockdep_unpin_lock(&rq->lock);
 	raw_spin_unlock(&rq->lock);
 	raw_spin_unlock_irqrestore(&p->pi_lock, *flags);
 }
