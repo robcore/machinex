@@ -172,7 +172,7 @@ static int max17048_get_soc(struct i2c_client *client)
 		data[0] = temp & 0xff;
 		data[1] = (temp & 0xff00) >> 8;
 
-		soc = (data[0] * 100) + (data[1] * 100 / 256);
+		soc = ((data[0] * 100) + (data[1] * 100 / 256));
 	}
 
 	dev_dbg(&client->dev,
