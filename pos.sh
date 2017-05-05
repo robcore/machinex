@@ -55,4 +55,3 @@
 /root/machinex/patches/0022-genirq-Prevent-crash-in-irq_move_irq.patch
 /root/machinex/patches/0021-genirq-Enhance-irq_data_to_desc-to-support-hierarchy.patch
 /root/machinex/patches/0020-time-Prevent-early-expiry-of-hrtimers-CLOCK_REALTIME.patch
-/root/machinex/patches/0019-ntp-Introduce-and-use-SECS_PER_DAY-macro.patch
