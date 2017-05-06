@@ -84,10 +84,13 @@ struct rcu_state sname##_state = { \
 	.orphan_nxttail = &sname##_state.orphan_nxtlist, \
 	.orphan_donetail = &sname##_state.orphan_donelist, \
 	.barrier_mutex = __MUTEX_INITIALIZER(sname##_state.barrier_mutex), \
-	//.expedited_mutex = __MUTEX_INITIALIZER(sname##_state.expedited_mutex), \
 	.name = #sname, \
 	.abbr = sabbr, \
 }
+
+#if 0
+	.expedited_mutex = __MUTEX_INITIALIZER(sname##_state.expedited_mutex),
+#endif
 
 RCU_STATE_INITIALIZER(rcu_sched, 's', call_rcu_sched);
 RCU_STATE_INITIALIZER(rcu_bh, 'b', call_rcu_bh);
