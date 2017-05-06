@@ -682,7 +682,7 @@ static inline void rcu_preempt_sleep_check(void)
 ({ \
 	/* Dependency order vs. p above. */ \
 	typeof(p) _________p1 = lockless_dereference(p); \
-	rcu_lockdep_assert(c, \
+	RCU_LOCKDEP_WARN(c, \
 			   "suspicious rcu_dereference_index_check() usage"); \
 	(_________p1); \
 })
