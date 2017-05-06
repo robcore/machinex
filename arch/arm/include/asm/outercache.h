@@ -105,15 +105,4 @@ static inline void outer_resume(void) { }
 
 #endif
 
-#ifdef CONFIG_OUTER_CACHE_SYNC
-static inline void outer_sync(void)
-{
-	if (outer_cache.sync)
-		outer_cache.sync();
-}
-#else
-static inline void outer_sync(void)
-{ }
-#endif
-
 #endif	/* __ASM_OUTERCACHE_H */

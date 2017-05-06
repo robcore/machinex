@@ -921,6 +921,7 @@ config OUTER_CACHE
 
 config OUTER_CACHE_SYNC
 	bool
+	select ARM_HEAVY_MB
 	help
 	  The outer cache has a outer_cache_fns.sync function pointer
 	  that can be used to drain the write buffer of the outer cache.
@@ -1024,6 +1025,9 @@ config ARCH_HAS_BARRIERS
 	help
 	  This option allows the use of custom mandatory barriers
 	  included via the mach/barriers.h file.
+
+config ARM_HEAVY_MB
+	bool
 
 config STRICT_MEMORY_RWX
 	bool "restrict kernel memory permissions as much as possible"
