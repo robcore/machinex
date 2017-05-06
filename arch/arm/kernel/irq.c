@@ -150,7 +150,7 @@ int __init arch_probe_nr_irqs(void)
 static bool migrate_one_irq(struct irq_desc *desc)
 {
 	struct irq_data *d = irq_desc_get_irq_data(desc);
-	const struct cpumask *affinity = d->affinity;
+	const struct cpumask *affinity = d->common->affinity;
 
 	/*
 	 * If this is a per-CPU interrupt, or the affinity does not
