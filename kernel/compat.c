@@ -257,8 +257,7 @@ COMPAT_SYSCALL_DEFINE2(nanosleep, struct compat_timespec __user *, rqtp,
 	set_fs(oldfs);
 
 	if (ret) {
-		struct restart_block *restart
-			= &current_thread_info()->restart_block;
+		struct restart_block *restart = &current->restart_block;
 
 		restart->fn = compat_nanosleep_restart;
 		restart->nanosleep.compat_rmtp = rmtp;
@@ -835,7 +834,7 @@ COMPAT_SYSCALL_DEFINE4(clock_nanosleep, clockid_t, which_clock, int, flags,
 		return -EFAULT;
 
 	if (err == -ERESTART_RESTARTBLOCK) {
-		restart = &current_thread_info()->restart_block;
+		restart = &current->restart_block;
 		restart->fn = compat_clock_nanosleep_restart;
 		restart->nanosleep.compat_rmtp = rmtp;
 	}

@@ -178,7 +178,7 @@ restore_sigcontext(struct sigcontext __user *sc, struct pt_regs *regs,
 	unsigned long usp;
 	long i, err = __get_user(regs->pc, &sc->sc_pc);
 
-	current_thread_info()->restart_block.fn = do_no_restart_syscall;
+	current->restart_block.fn = do_no_restart_syscall;
 
 	sw->r26 = (unsigned long) ret_from_sys_call;
 
