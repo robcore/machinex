@@ -2488,7 +2488,7 @@ __tracing_open(struct inode *inode, struct file *file)
 	if (!iter)
 		return ERR_PTR(-ENOMEM);
 
-	iter->buffer_iter = kzalloc(sizeof(*iter->buffer_iter) * num_possible_cpus(),
+	iter->buffer_iter = kcalloc(num_possible_cpus(), sizeof(*iter->buffer_iter),
 				    GFP_KERNEL);
 	if (!iter->buffer_iter)
 		goto release;
