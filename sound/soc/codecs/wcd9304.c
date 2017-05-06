@@ -6547,7 +6547,7 @@ static int sitar_resume(struct device *dev)
 			irq = sitar->mbhc_cfg.gpio_irq;
 			pr_debug("%s: Resending GPIO IRQ %d\n", __func__, irq);
 			irq_set_pending(irq);
-			check_irq_resend(irq_to_desc(irq), irq);
+			check_irq_resend(irq_to_desc(irq));
 
 			/* release suspend lock */
 			wake_unlock(&sitar->irq_resend_wlock);
