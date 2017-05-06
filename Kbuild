@@ -45,7 +45,6 @@ $(obj)/$(bounds-file): kernel/bounds.s Kbuild
 
 timeconst-file := include/generated/timeconst.h
 
-#always  += $(timeconst-file)
 targets += $(timeconst-file)
 
 quiet_cmd_gentimeconst = GEN     $@
