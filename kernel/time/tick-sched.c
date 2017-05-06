@@ -698,7 +698,22 @@ out:
 	return tick;
 }
 
-static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now);
+static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now)
+{
+	/* Update jiffies first */
+	tick_do_update_jiffies64(now);
+	update_cpu_load_nohz();
+
+	calc_load_exit_idle();
+	touch_softlockup_watchdog();
+	/*
+	 * Cancel the scheduled timer and restore the tick
+	 */
+	ts->tick_stopped  = 0;
+	ts->idle_exittime = now;
+
+	tick_nohz_restart(ts, now);
+}
 
 static void tick_nohz_full_update_tick(struct tick_sched *ts)
 {
@@ -865,23 +880,6 @@ ktime_t tick_nohz_get_cpu_sleep_length(int cpu)
 	struct tick_sched *ts = &per_cpu(tick_cpu_sched, cpu);
 	struct clock_event_device *dev = per_cpu(tick_cpu_device, cpu).evtdev;
 	return ktime_sub(dev->next_event, ts->idle_entrytime);
-}
-
-static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now)
-{
-	/* Update jiffies first */
-	tick_do_update_jiffies64(now);
-	update_cpu_load_nohz();
-
-	calc_load_exit_idle();
-	touch_softlockup_watchdog();
-	/*
-	 * Cancel the scheduled timer and restore the tick
-	 */
-	ts->tick_stopped  = 0;
-	ts->idle_exittime = now;
-
-	tick_nohz_restart(ts, now);
 }
 
 static void tick_nohz_account_idle_ticks(struct tick_sched *ts)
