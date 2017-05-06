@@ -3067,7 +3067,7 @@ static int __lock_is_held(struct lockdep_map *lock);
 static int __lock_acquire(struct lockdep_map *lock, unsigned int subclass,
 			  int trylock, int read, int check, int hardirqs_off,
 			  struct lockdep_map *nest_lock, unsigned long ip,
-			  int references, int pin_count)
+			  int references)
 {
 	struct task_struct *curr = current;
 	struct lock_class *class = NULL;
@@ -3159,7 +3159,7 @@ static int __lock_acquire(struct lockdep_map *lock, unsigned int subclass,
 	hlock->waittime_stamp = 0;
 	hlock->holdtime_stamp = lockstat_clock();
 #endif
-	hlock->pin_count = pin_count;
+	hlock->pin_count = 0;
 
 	if (check == 2 && !mark_irqflags(curr, hlock))
 		return 0;
@@ -3345,7 +3345,7 @@ found_it:
 			hlock_class(hlock)->subclass, hlock->trylock,
 				hlock->read, hlock->check, hlock->hardirqs_off,
 				hlock->nest_lock, hlock->acquire_ip,
-				hlock->references, hlock->pin_count))
+				hlock->references))
 			return 0;
 	}
 
@@ -3435,7 +3435,7 @@ found_it:
 			hlock_class(hlock)->subclass, hlock->trylock,
 				hlock->read, hlock->check, hlock->hardirqs_off,
 				hlock->nest_lock, hlock->acquire_ip,
-				hlock->references, hlock->pin_count))
+				hlock->references))
 			return 0;
 	}
 
@@ -3585,7 +3585,7 @@ void lock_acquire(struct lockdep_map *lock, unsigned int subclass,
 	current->lockdep_recursion = 1;
 	trace_lock_acquire(lock, subclass, trylock, read, check, nest_lock, ip);
 	__lock_acquire(lock, subclass, trylock, read, check,
-		       irqs_disabled_flags(flags), nest_lock, ip, 0, 0);
+		       irqs_disabled_flags(flags), nest_lock, ip, 0);
 	current->lockdep_recursion = 0;
 	raw_local_irq_restore(flags);
 }

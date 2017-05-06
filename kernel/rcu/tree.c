@@ -229,16 +229,14 @@ static int rcu_gp_in_progress(struct rcu_state *rsp)
  */
 void rcu_sched_qs(void)
 {
-	if (__this_cpu_read(rcu_sched_data.cpu_no_qs.s)) {
-		__this_cpu_write(rcu_sched_data.cpu_no_qs.b.norm, false);
-	}
+	if (!__this_cpu_read(rcu_sched_data.passed_quiesce))
+		__this_cpu_write(rcu_sched_data.passed_quiesce, 1);
 }
 
 void rcu_bh_qs(void)
 {
-	if (__this_cpu_read(rcu_bh_data.cpu_no_qs.s)) {
-		__this_cpu_write(rcu_bh_data.cpu_no_qs.b.norm, false);
- 	}
+	if (!__this_cpu_read(rcu_bh_data.passed_quiesce))
+		__this_cpu_write(rcu_bh_data.passed_quiesce, 1);
 }
 
 static DEFINE_PER_CPU(int, rcu_sched_qs_mask);
@@ -1715,9 +1713,9 @@ static bool __note_gp_changes(struct rcu_state *rsp, struct rcu_node *rnp,
 		 */
 		rdp->gpnum = rnp->gpnum;
 		trace_rcu_grace_period(rsp->name, rdp->gpnum, "cpustart");
-		rdp->cpu_no_qs.b.norm = true;
+		rdp->passed_quiesce = 0;
 		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_qs_ctr);
-		rdp->core_needs_qs = !!(rnp->qsmask & rdp->grpmask);
+		rdp->qs_pending = !!(rnp->qsmask & rdp->grpmask);
 		zero_cpu_stall_ticks(rdp);
 		WRITE_ONCE(rdp->gpwrap, false);
 	}
@@ -2284,7 +2282,7 @@ rcu_report_qs_rdp(int cpu, struct rcu_state *rsp, struct rcu_data *rdp)
 	rnp = rdp->mynode;
 	raw_spin_lock_irqsave(&rnp->lock, flags);
 	smp_mb__after_unlock_lock();
-	if ((rdp->cpu_no_qs.b.norm &&
+	if ((rdp->passed_quiesce == 0 &&
 	     rdp->rcu_qs_ctr_snap == __this_cpu_read(rcu_qs_ctr)) ||
 	    rdp->gpnum != rnp->gpnum || rnp->completed == rnp->gpnum ||
 	    rdp->gpwrap) {
@@ -2295,7 +2293,7 @@ rcu_report_qs_rdp(int cpu, struct rcu_state *rsp, struct rcu_data *rdp)
 		 * We will instead need a new quiescent state that lies
 		 * within the current grace period.
 		 */
-		rdp->cpu_no_qs.b.norm = true;	/* need qs for new gp. */
+		rdp->passed_quiesce = 0;	/* need qs for new gp. */
 		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_qs_ctr);
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 		return;
@@ -2304,7 +2302,7 @@ rcu_report_qs_rdp(int cpu, struct rcu_state *rsp, struct rcu_data *rdp)
 	if ((rnp->qsmask & mask) == 0) {
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	} else {
-		rdp->core_needs_qs = 0;
+		rdp->qs_pending = 0;
 
 		/*
 		 * This GP can't end until cpu checks in, so all of our
@@ -2335,14 +2333,14 @@ rcu_check_quiescent_state(struct rcu_state *rsp, struct rcu_data *rdp)
 	 * Does this CPU still need to do its part for current grace period?
 	 * If no, return and let the other CPUs do their part as well.
 	 */
-	if (!rdp->core_needs_qs)
+	if (!rdp->qs_pending)
 		return;
 
 	/*
 	 * Was there a quiescent state since the beginning of the grace
 	 * period? If no, then exit and wait for the next call.
 	 */
-	if (rdp->cpu_no_qs.b.norm &&
+	if (!rdp->passed_quiesce &&
 	    rdp->rcu_qs_ctr_snap == __this_cpu_read(rcu_qs_ctr))
 		return;
 
@@ -3328,188 +3326,6 @@ static bool rcu_exp_gp_seq_done(struct rcu_state *rsp, unsigned long s)
 	return rcu_seq_done(&rsp->expedited_sequence, s);
 }
 
-/*
- * Reset the ->expmaskinit values in the rcu_node tree to reflect any
- * recent CPU-online activity.  Note that these masks are not cleared
- * when CPUs go offline, so they reflect the union of all CPUs that have
- * ever been online.  This means that this function normally takes its
- * no-work-to-do fastpath.
- */
-static void sync_exp_reset_tree_hotplug(struct rcu_state *rsp)
-{
-	bool done;
-	unsigned long flags;
-	unsigned long mask;
-	unsigned long oldmask;
-	int ncpus = READ_ONCE(rsp->ncpus);
-	struct rcu_node *rnp;
-	struct rcu_node *rnp_up;
-
-	/* If no new CPUs onlined since last time, nothing to do. */
-	if (likely(ncpus == rsp->ncpus_snap))
-		return;
-	rsp->ncpus_snap = ncpus;
-
-	/*
-	 * Each pass through the following loop propagates newly onlined
-	 * CPUs for the current rcu_node structure up the rcu_node tree.
-	 */
-	rcu_for_each_leaf_node(rsp, rnp) {
-		raw_spin_lock_irqsave(&rnp->lock, flags);
-		smp_mb__after_unlock_lock();
-		if (rnp->expmaskinit == rnp->expmaskinitnext) {
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
-			continue;  /* No new CPUs, nothing to do. */
-		}
-
-		/* Update this node's mask, track old value for propagation. */
-		oldmask = rnp->expmaskinit;
-		rnp->expmaskinit = rnp->expmaskinitnext;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
-
-		/* If was already nonzero, nothing to propagate. */
-		if (oldmask)
-			continue;
-
-		/* Propagate the new CPU up the tree. */
-		mask = rnp->grpmask;
-		rnp_up = rnp->parent;
-		done = false;
-		while (rnp_up) {
-			raw_spin_lock_irqsave(&rnp_up->lock, flags);
-			smp_mb__after_unlock_lock();
-			if (rnp_up->expmaskinit)
-				done = true;
-			rnp_up->expmaskinit |= mask;
-			raw_spin_unlock_irqrestore(&rnp_up->lock, flags);
-			if (done)
-				break;
-			mask = rnp_up->grpmask;
-			rnp_up = rnp_up->parent;
-		}
-	}
-}
-
-/*
- * Reset the ->expmask values in the rcu_node tree in preparation for
- * a new expedited grace period.
- */
-static void __maybe_unused sync_exp_reset_tree(struct rcu_state *rsp)
-{
-	unsigned long flags;
-	struct rcu_node *rnp;
-
-	sync_exp_reset_tree_hotplug(rsp);
-	rcu_for_each_node_breadth_first(rsp, rnp) {
-		raw_spin_lock_irqsave(&rnp->lock, flags);
-		smp_mb__after_unlock_lock();
-		WARN_ON_ONCE(rnp->expmask);
-		rnp->expmask = rnp->expmaskinit;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
-	}
-}
-
-/*
- * Return non-zero if there is no RCU expedited grace period in progress
- * for the specified rcu_node structure, in other words, if all CPUs and
- * tasks covered by the specified rcu_node structure have done their bit
- * for the current expedited grace period.  Works only for preemptible
- * RCU -- other RCU implementation use other means.
- *
- * Caller must hold the root rcu_node's exp_funnel_mutex.
- */
-static int sync_rcu_preempt_exp_done(struct rcu_node *rnp)
-{
-	return rnp->exp_tasks == NULL &&
-	       READ_ONCE(rnp->expmask) == 0;
-}
-
-/*
- * Report the exit from RCU read-side critical section for the last task
- * that queued itself during or before the current expedited preemptible-RCU
- * grace period.  This event is reported either to the rcu_node structure on
- * which the task was queued or to one of that rcu_node structure's ancestors,
- * recursively up the tree.  (Calm down, calm down, we do the recursion
- * iteratively!)
- *
- * Caller must hold the root rcu_node's exp_funnel_mutex and the
- * specified rcu_node structure's ->lock.
- */
-static void __rcu_report_exp_rnp(struct rcu_state *rsp, struct rcu_node *rnp,
-				 bool wake, unsigned long flags)
-	__releases(rnp->lock)
-{
-	unsigned long mask;
-
-	for (;;) {
-		if (!sync_rcu_preempt_exp_done(rnp)) {
-			if (!rnp->expmask)
-				rcu_initiate_boost(rnp, flags);
-			else
-				raw_spin_unlock_irqrestore(&rnp->lock, flags);
-			break;
-		}
-		if (rnp->parent == NULL) {
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
-			if (wake) {
-				smp_mb(); /* EGP done before wake_up(). */
-				wake_up(&rsp->expedited_wq);
-			}
-			break;
-		}
-		mask = rnp->grpmask;
-		raw_spin_unlock(&rnp->lock); /* irqs remain disabled */
-		rnp = rnp->parent;
-		raw_spin_lock(&rnp->lock); /* irqs already disabled */
-		smp_mb__after_unlock_lock();
-		WARN_ON_ONCE(!(rnp->expmask & mask));
-		rnp->expmask &= ~mask;
-	}
-}
-
-/*
- * Report expedited quiescent state for specified node.  This is a
- * lock-acquisition wrapper function for __rcu_report_exp_rnp().
- *
- * Caller must hold the root rcu_node's exp_funnel_mutex.
- */
-static void __maybe_unused rcu_report_exp_rnp(struct rcu_state *rsp,
-					      struct rcu_node *rnp, bool wake)
-{
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&rnp->lock, flags);
-	smp_mb__after_unlock_lock();
-	__rcu_report_exp_rnp(rsp, rnp, wake, flags);
-}
-
-/*
- * Report expedited quiescent state for multiple CPUs, all covered by the
- * specified leaf rcu_node structure.  Caller must hold the root
- * rcu_node's exp_funnel_mutex.
- */
-static void rcu_report_exp_cpu_mult(struct rcu_state *rsp, struct rcu_node *rnp,
-				    unsigned long mask, bool wake)
-{
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&rnp->lock, flags);
-	smp_mb__after_unlock_lock();
-	WARN_ON_ONCE((rnp->expmask & mask) != mask);
-	rnp->expmask &= ~mask;
-	__rcu_report_exp_rnp(rsp, rnp, wake, flags); /* Releases rnp->lock. */
-}
-
-/*
- * Report expedited quiescent state for specified rcu_data (CPU).
- * Caller must hold the root rcu_node's exp_funnel_mutex.
- */
-static void __maybe_unused rcu_report_exp_rdp(struct rcu_state *rsp,
-					      struct rcu_data *rdp, bool wake)
-{
-	rcu_report_exp_cpu_mult(rsp, rdp->mynode, rdp->grpmask, wake);
-}
-
 /* Common code for synchronize_{rcu,sched}_expedited() work-done checking. */
 static bool sync_exp_work_done(struct rcu_state *rsp, struct rcu_node *rnp,
 			       struct rcu_data *rdp,
@@ -3590,67 +3406,11 @@ static int synchronize_sched_expedited_cpu_stop(void *data)
 	struct rcu_data *rdp = data;
 	struct rcu_state *rsp = rdp->rsp;
 
-	/* Report the quiescent state. */
-	rcu_report_exp_rdp(rsp, rdp, true);
+	/* We are here: If we are last, do the wakeup. */
+	rdp->exp_done = true;
+	if (atomic_dec_and_test(&rsp->expedited_need_qs))
+		wake_up(&rsp->expedited_wq);
 	return 0;
-}
-
-/*
- * Select the nodes that the upcoming expedited grace period needs
- * to wait for.
- */
-static void sync_sched_exp_select_cpus(struct rcu_state *rsp)
-{
-	int cpu;
-	unsigned long flags;
-	unsigned long mask;
-	unsigned long mask_ofl_test;
-	unsigned long mask_ofl_ipi;
-	struct rcu_data *rdp;
-	struct rcu_node *rnp;
-
-	sync_exp_reset_tree(rsp);
-	rcu_for_each_leaf_node(rsp, rnp) {
-		raw_spin_lock_irqsave(&rnp->lock, flags);
-		smp_mb__after_unlock_lock();
-
-		/* Each pass checks a CPU for identity, offline, and idle. */
-		mask_ofl_test = 0;
-		for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++) {
-			struct rcu_data *rdp = per_cpu_ptr(rsp->rda, cpu);
-			struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
-
-			if (raw_smp_processor_id() == cpu ||
-			    cpu_is_offline(cpu) ||
-			    !(atomic_add_return(0, &rdtp->dynticks) & 0x1))
-				mask_ofl_test |= rdp->grpmask;
-		}
-		mask_ofl_ipi = rnp->expmask & ~mask_ofl_test;
-
-		/*
-		 * Need to wait for any blocked tasks as well.  Note that
-		 * additional blocking tasks will also block the expedited
-		 * GP until such time as the ->expmask bits are cleared.
-		 */
-		if (rcu_preempt_has_tasks(rnp))
-			rnp->exp_tasks = rnp->blkd_tasks.next;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
-
-		/* IPI the remaining CPUs for expedited quiescent state. */
-		mask = 1;
-		for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++, mask <<= 1) {
-			if (!(mask_ofl_ipi & mask))
-				continue;
-			rdp = per_cpu_ptr(rsp->rda, cpu);
-			stop_one_cpu_nowait(cpu, synchronize_sched_expedited_cpu_stop,
-					    rdp, &rdp->exp_stop_work);
-			mask_ofl_ipi &= ~mask;
-		}
-		/* Report quiescent states for those that went offline. */
-		mask_ofl_test |= mask_ofl_ipi;
-		if (mask_ofl_test)
-			rcu_report_exp_cpu_mult(rsp, rnp, mask_ofl_test, false);
-	}
 }
 
 static void synchronize_sched_expedited_wait(struct rcu_state *rsp)
@@ -3658,9 +3418,7 @@ static void synchronize_sched_expedited_wait(struct rcu_state *rsp)
 	int cpu;
 	unsigned long jiffies_stall;
 	unsigned long jiffies_start;
-	unsigned long mask;
-	struct rcu_node *rnp;
-	struct rcu_node *rnp_root = rcu_get_root(rsp);
+	struct rcu_data *rdp;
 	int ret;
 
 	jiffies_stall = rcu_jiffies_till_stall_check();
@@ -3669,36 +3427,33 @@ static void synchronize_sched_expedited_wait(struct rcu_state *rsp)
 	for (;;) {
 		ret = wait_event_interruptible_timeout(
 				rsp->expedited_wq,
-				sync_rcu_preempt_exp_done(rnp_root),
+				!atomic_read(&rsp->expedited_need_qs),
 				jiffies_stall);
 		if (ret > 0)
 			return;
 		if (ret < 0) {
 			/* Hit a signal, disable CPU stall warnings. */
 			wait_event(rsp->expedited_wq,
-				   sync_rcu_preempt_exp_done(rnp_root));
+				   !atomic_read(&rsp->expedited_need_qs));
 			return;
 		}
 		pr_err("INFO: %s detected expedited stalls on CPUs: {",
 		       rsp->name);
-		rcu_for_each_leaf_node(rsp, rnp) {
-			mask = 1;
-			for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++, mask <<= 1) {
-				if (!(rnp->expmask & mask))
-					continue;
-				pr_cont(" %d", cpu);
-			}
-			mask <<= 1;
+		for_each_online_cpu(cpu) {
+			rdp = per_cpu_ptr(rsp->rda, cpu);
+
+			if (rdp->exp_done)
+				continue;
+			pr_cont(" %d", cpu);
 		}
 		pr_cont(" } %lu jiffies s: %lu\n",
 			jiffies - jiffies_start, rsp->expedited_sequence);
-		rcu_for_each_leaf_node(rsp, rnp) {
-			mask = 1;
-			for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++, mask <<= 1) {
-				if (!(rnp->expmask & mask))
-					continue;
-				dump_cpu_task(cpu);
-			}
+		for_each_online_cpu(cpu) {
+			rdp = per_cpu_ptr(rsp->rda, cpu);
+
+			if (rdp->exp_done)
+				continue;
+			dump_cpu_task(cpu);
 		}
 		jiffies_stall = 3 * rcu_jiffies_till_stall_check() + 3;
 	}
@@ -3722,6 +3477,7 @@ static void synchronize_sched_expedited_wait(struct rcu_state *rsp)
  */
 void synchronize_sched_expedited(void)
 {
+	int cpu;
 	unsigned long s;
 	struct rcu_node *rnp;
 	struct rcu_state *rsp = &rcu_sched_state;
@@ -3744,8 +3500,28 @@ void synchronize_sched_expedited(void)
 	}
 
 	rcu_exp_gp_seq_start(rsp);
-	sync_sched_exp_select_cpus(rsp);
-	synchronize_sched_expedited_wait(rsp);
+
+	/* Stop each CPU that is online, non-idle, and not us. */
+	init_waitqueue_head(&rsp->expedited_wq);
+	atomic_set(&rsp->expedited_need_qs, 1); /* Extra count avoids race. */
+	for_each_online_cpu(cpu) {
+		struct rcu_data *rdp = per_cpu_ptr(rsp->rda, cpu);
+		struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
+
+		rdp->exp_done = false;
+
+		/* Skip our CPU and any idle CPUs. */
+		if (raw_smp_processor_id() == cpu ||
+		    !(atomic_add_return(0, &rdtp->dynticks) & 0x1))
+			continue;
+		atomic_inc(&rsp->expedited_need_qs);
+		stop_one_cpu_nowait(cpu, synchronize_sched_expedited_cpu_stop,
+				    rdp, &rdp->exp_stop_work);
+	}
+
+	/* Remove extra count and, if necessary, wait for CPUs to stop. */
+	if (!atomic_dec_and_test(&rsp->expedited_need_qs))
+		synchronize_sched_expedited_wait(rsp);
 
 	rcu_exp_gp_seq_end(rsp);
 	mutex_unlock(&rnp->exp_funnel_mutex);
@@ -3776,11 +3552,11 @@ static int __rcu_pending(struct rcu_state *rsp, struct rcu_data *rdp)
 
 	/* Is the RCU core waiting for a quiescent state from this CPU? */
 	if (rcu_scheduler_fully_active &&
-	    rdp->core_needs_qs && rdp->cpu_no_qs.b.norm &&
+	    rdp->qs_pending && !rdp->passed_quiesce &&
 	    rdp->rcu_qs_ctr_snap == __this_cpu_read(rcu_qs_ctr)) {
-		rdp->n_rp_core_needs_qs++;
-	} else if (rdp->core_needs_qs &&
-		   (!rdp->cpu_no_qs.b.norm ||
+		rdp->n_rp_qs_pending++;
+	} else if (rdp->qs_pending &&
+		   (rdp->passed_quiesce ||
 		    rdp->rcu_qs_ctr_snap != __this_cpu_read(rcu_qs_ctr))) {
 		rdp->n_rp_report_qs++;
 		return 1;
@@ -4038,7 +3814,6 @@ static void rcu_init_new_rnp(struct rcu_node *rnp_leaf)
 static void __init
 rcu_boot_init_percpu_data(int cpu, struct rcu_state *rsp)
 {
-	static struct lock_class_key rcu_exp_sched_rdp_class;
 	unsigned long flags;
 	struct rcu_data *rdp = per_cpu_ptr(rsp->rda, cpu);
 	struct rcu_node *rnp = rcu_get_root(rsp);
@@ -4054,10 +3829,6 @@ rcu_boot_init_percpu_data(int cpu, struct rcu_state *rsp)
 	mutex_init(&rdp->exp_funnel_mutex);
 	rcu_boot_init_nocb_percpu_data(rdp);
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
-	if (rsp == &rcu_sched_state)
-		lockdep_set_class_and_name(&rdp->exp_funnel_mutex,
-					   &rcu_exp_sched_rdp_class,
-					   "rcu_data_exp_sched");
 }
 
 /*
@@ -4076,6 +3847,7 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 
 	/* Set up local state, ensuring consistent view of global state. */
 	raw_spin_lock_irqsave(&rnp->lock, flags);
+	rdp->beenonline = 1;	 /* We have now been online. */
 	rdp->qlen_last_fqs_check = 0;
 	rdp->n_force_qs_snap = rsp->n_force_qs;
 	rdp->blimit = blimit;
@@ -4097,15 +3869,11 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	raw_spin_lock(&rnp->lock);		/* irqs already disabled. */
 	smp_mb__after_unlock_lock();
 	rnp->qsmaskinitnext |= mask;
-	rnp->expmaskinitnext |= mask;
-	if (!rdp->beenonline)
-		WRITE_ONCE(rsp->ncpus, READ_ONCE(rsp->ncpus) + 1);
-	rdp->beenonline = true;	 /* We have now been online. */
 	rdp->gpnum = rnp->completed; /* Make CPU later note any new GP. */
 	rdp->completed = rnp->completed;
-	rdp->cpu_no_qs.b.norm = true;
+	rdp->passed_quiesce = false;
 	rdp->rcu_qs_ctr_snap = per_cpu(rcu_qs_ctr, cpu);
-	rdp->core_needs_qs = false;
+	rdp->qs_pending = false;
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 }
 
@@ -4353,7 +4121,6 @@ static void __init rcu_init_one(struct rcu_state *rsp,
 	}
 
 	init_waitqueue_head(&rsp->gp_wq);
-	init_waitqueue_head(&rsp->expedited_wq);
 	rnp = rsp->level[rcu_num_lvls - 1];
 	for_each_possible_cpu(i) {
 		while (i > rnp->grphi)

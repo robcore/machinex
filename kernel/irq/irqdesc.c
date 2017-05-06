@@ -38,13 +38,12 @@ static void __init init_irq_default_affinity(void)
 #ifdef CONFIG_SMP
 static int alloc_masks(struct irq_desc *desc, gfp_t gfp, int node)
 {
-	if (!zalloc_cpumask_var_node(&desc->irq_common_data.affinity,
-				     gfp, node))
+	if (!zalloc_cpumask_var_node(&desc->irq_data.affinity, gfp, node))
 		return -ENOMEM;
 
 #ifdef CONFIG_GENERIC_PENDING_IRQ
 	if (!zalloc_cpumask_var_node(&desc->pending_mask, gfp, node)) {
-		free_cpumask_var(desc->irq_common_data.affinity);
+		free_cpumask_var(desc->irq_data.affinity);
 		return -ENOMEM;
 	}
 #endif
@@ -53,12 +52,10 @@ static int alloc_masks(struct irq_desc *desc, gfp_t gfp, int node)
 
 static void desc_smp_init(struct irq_desc *desc, int node)
 {
-	cpumask_copy(desc->irq_common_data.affinity, irq_default_affinity);
+	desc->irq_data.node = node;
+	cpumask_copy(desc->irq_data.affinity, irq_default_affinity);
 #ifdef CONFIG_GENERIC_PENDING_IRQ
 	cpumask_clear(desc->pending_mask);
-#endif
-#ifdef CONFIG_NUMA
-	desc->irq_common_data.node = node;
 #endif
 }
 
@@ -73,13 +70,12 @@ static void desc_set_defaults(unsigned int irq, struct irq_desc *desc, int node,
 {
 	int cpu;
 
-	desc->irq_common_data.handler_data = NULL;
-	desc->irq_common_data.msi_desc = NULL;
-
 	desc->irq_data.common = &desc->irq_common_data;
 	desc->irq_data.irq = irq;
 	desc->irq_data.chip = &no_irq_chip;
 	desc->irq_data.chip_data = NULL;
+	desc->irq_data.handler_data = NULL;
+	desc->irq_data.msi_desc = NULL;
 	irq_settings_clr_and_set(desc, ~0, _IRQ_DEFAULT_INIT_FLAGS);
 	irqd_set(&desc->irq_data, IRQD_IRQ_DISABLED);
 	desc->handle_irq = handle_bad_irq;
@@ -128,7 +124,7 @@ static void free_masks(struct irq_desc *desc)
 #ifdef CONFIG_GENERIC_PENDING_IRQ
 	free_cpumask_var(desc->pending_mask);
 #endif
-	free_cpumask_var(desc->irq_common_data.affinity);
+	free_cpumask_var(desc->irq_data.affinity);
 }
 #else
 static inline void free_masks(struct irq_desc *desc) { }

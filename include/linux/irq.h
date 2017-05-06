@@ -115,8 +115,8 @@ enum {
 /*
  * Return value for chip->irq_set_affinity()
  *
- * IRQ_SET_MASK_OK	- OK, core updates irq_common_data.affinity
- * IRQ_SET_MASK_NOCPY	- OK, chip did update irq_common_data.affinity
+ * IRQ_SET_MASK_OK	- OK, core updates irq_data.affinity
+ * IRQ_SET_MASK_NOCPY	- OK, chip did update irq_data.affinity
  * IRQ_SET_MASK_OK_DONE	- Same as IRQ_SET_MASK_OK for core. Special code to
  *			  support stacked irqchips, which indicates skipping
  *			  all descendent irqchips.
@@ -134,19 +134,9 @@ struct irq_domain;
  * struct irq_common_data - per irq data shared by all irqchips
  * @state_use_accessors: status information for irq chip functions.
  *			Use accessor functions to deal with it
- * @node:		node index useful for balancing
- * @handler_data:	per-IRQ data for the irq_chip methods
- * @affinity:		IRQ affinity on SMP
- * @msi_desc:		MSI descriptor
  */
 struct irq_common_data {
 	unsigned int		state_use_accessors;
-#ifdef CONFIG_NUMA
-	unsigned int		node;
-#endif
-	void			*handler_data;
-	struct msi_desc		*msi_desc;
-	cpumask_var_t		affinity;
 };
 
 /**
@@ -154,14 +144,18 @@ struct irq_common_data {
  * @mask:		precomputed bitmask for accessing the chip registers
  * @irq:		interrupt number
  * @hwirq:		hardware interrupt number, local to the interrupt domain
+ * @node:		node index useful for balancing
  * @common:		point to data shared by all irqchips
  * @chip:		low level interrupt hardware access
  * @domain:		Interrupt translation domain; responsible for mapping
  *			between hwirq number and linux irq number.
  * @parent_data:	pointer to parent struct irq_data to support hierarchy
  *			irq_domain
+ * @handler_data:	per-IRQ data for the irq_chip methods
  * @chip_data:		platform-specific per-chip private data for the chip
  *			methods, to allow shared chip implementations
+ * @msi_desc:		MSI descriptor
+ * @affinity:		IRQ affinity on SMP
  *
  * The fields here need to overlay the ones in irq_desc until we
  * cleaned up the direct references and switched everything over to
@@ -170,13 +164,19 @@ struct irq_common_data {
 struct irq_data {
 	unsigned int		irq;
 	unsigned long		hwirq;
+	unsigned int		node;
 	struct irq_common_data	*common;
 	struct irq_chip		*chip;
 	struct irq_domain	*domain;
 #ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
 	struct irq_data		*parent_data;
 #endif
+	void			*handler_data;
 	void			*chip_data;
+	struct msi_desc		*msi_desc;
+#ifdef CONFIG_SMP
+	cpumask_var_t		affinity;
+#endif
 };
 
 /*
@@ -653,23 +653,23 @@ static inline void *irq_data_get_irq_chip_data(struct irq_data *d)
 static inline void *irq_get_handler_data(unsigned int irq)
 {
 	struct irq_data *d = irq_get_irq_data(irq);
-	return d ? d->common->handler_data : NULL;
+	return d ? d->handler_data : NULL;
 }
 
 static inline void *irq_data_get_irq_handler_data(struct irq_data *d)
 {
-	return d->common->handler_data;
+	return d->handler_data;
 }
 
 static inline struct msi_desc *irq_get_msi_desc(unsigned int irq)
 {
 	struct irq_data *d = irq_get_irq_data(irq);
-	return d ? d->common->msi_desc : NULL;
+	return d ? d->msi_desc : NULL;
 }
 
 static inline struct msi_desc *irq_data_get_msi(struct irq_data *d)
 {
-	return d->common->msi_desc;
+	return d->msi_desc;
 }
 
 static inline u32 irq_get_trigger_type(unsigned int irq)
@@ -678,30 +678,21 @@ static inline u32 irq_get_trigger_type(unsigned int irq)
 	return d ? irqd_get_trigger_type(d) : 0;
 }
 
-static inline int irq_common_data_get_node(struct irq_common_data *d)
-{
-#ifdef CONFIG_NUMA
-	return d->node;
-#else
-	return 0;
-#endif
-}
-
 static inline int irq_data_get_node(struct irq_data *d)
 {
-	return irq_common_data_get_node(d->common);
+	return d->node;
 }
 
 static inline struct cpumask *irq_get_affinity_mask(int irq)
 {
 	struct irq_data *d = irq_get_irq_data(irq);
 
-	return d ? d->common->affinity : NULL;
+	return d ? d->affinity : NULL;
 }
 
 static inline struct cpumask *irq_data_get_affinity_mask(struct irq_data *d)
 {
-	return d->common->affinity;
+	return d->affinity;
 }
 
 unsigned int arch_dynirq_lower_bound(unsigned int from);

@@ -171,21 +171,16 @@ struct rcu_node {
 				/*  an rcu_data structure, otherwise, each */
 				/*  bit corresponds to a child rcu_node */
 				/*  structure. */
+	unsigned long expmask;	/* Groups that have ->blkd_tasks */
+				/*  elements that need to drain to allow the */
+				/*  current expedited grace period to */
+				/*  complete (only for PREEMPT_RCU). */
 	unsigned long qsmaskinit;
-				/* Per-GP initial value for qsmask. */
+				/* Per-GP initial value for qsmask & expmask. */
 				/*  Initialized from ->qsmaskinitnext at the */
 				/*  beginning of each grace period. */
 	unsigned long qsmaskinitnext;
 				/* Online CPUs for next grace period. */
-	unsigned long expmask;	/* CPUs or groups that need to check in */
-				/*  to allow the current expedited GP */
-				/*  to complete. */
-	unsigned long expmaskinit;
-				/* Per-GP initial values for expmask. */
-				/*  Initialized from ->expmaskinitnext at the */
-				/*  beginning of each expedited GP. */
-	unsigned long expmaskinitnext;
-				/* Online CPUs for next expedited GP. */
 	unsigned long grpmask;	/* Mask to apply to parent qsmask. */
 				/*  Only one bit will be set in this mask. */
 	int	grplo;		/* lowest-numbered CPU or group here. */
@@ -286,18 +281,6 @@ struct rcu_node {
 	for ((rnp) = (rsp)->level[rcu_num_lvls - 1]; \
 	     (rnp) < &(rsp)->node[rcu_num_nodes]; (rnp)++)
 
-/*
- * Union to allow "aggregate OR" operation on the need for a quiescent
- * state by the normal and expedited grace periods.
- */
-union rcu_noqs {
-	struct {
-		u8 norm;
-		u8 exp;
-	} b; /* Bits. */
-	u16 s; /* Set of bits, aggregate OR here. */
-};
-
 /* Index values for nxttail array in struct rcu_data. */
 #define RCU_DONE_TAIL		0	/* Also RCU_WAIT head. */
 #define RCU_WAIT_TAIL		1	/* Also RCU_NEXT_READY head. */
@@ -314,8 +297,8 @@ struct rcu_data {
 					/*  is aware of having started. */
 	unsigned long	rcu_qs_ctr_snap;/* Snapshot of rcu_qs_ctr to check */
 					/*  for rcu_all_qs() invocations. */
-	union rcu_noqs	cpu_no_qs;	/* No QSes yet for this CPU. */
-	bool		core_needs_qs;	/* Core waits for quiesc state. */
+	bool		passed_quiesce;	/* User-mode/idle loop etc. */
+	bool		qs_pending;	/* Core waits for quiesc state. */
 	bool		beenonline;	/* CPU online at least once. */
 	bool		gpwrap;		/* Possible gpnum/completed wrap. */
 	struct rcu_node *mynode;	/* This CPU's leaf of hierarchy */
@@ -380,7 +363,7 @@ struct rcu_data {
 
 	/* 5) __rcu_pending() statistics. */
 	unsigned long n_rcu_pending;	/* rcu_pending() calls since boot. */
-	unsigned long n_rp_core_needs_qs;
+	unsigned long n_rp_qs_pending;
 	unsigned long n_rp_report_qs;
 	unsigned long n_rp_cb_ready;
 	unsigned long n_rp_cpu_needs_gp;
@@ -395,6 +378,7 @@ struct rcu_data {
 	struct rcu_head oom_head;
 #endif /* #ifdef CONFIG_RCU_FAST_NO_HZ */
 	struct mutex exp_funnel_mutex;
+	bool exp_done;			/* Expedited QS for this CPU? */
 
 	/* 7) Callback offloading. */
 #ifdef CONFIG_RCU_NOCB_CPU
@@ -482,7 +466,6 @@ struct rcu_state {
 	struct rcu_data __percpu *rda;		/* pointer of percu rcu_data. */
 	void (*call)(struct rcu_head *head,	/* call_rcu() flavor. */
 		     void (*func)(struct rcu_head *head));
-	int ncpus;				/* # CPUs seen so far. */
 
 	/* The following fields are guarded by the root rcu_node's lock. */
 
@@ -525,7 +508,6 @@ struct rcu_state {
 	atomic_long_t expedited_normal;		/* # fallbacks to normal. */
 	atomic_t expedited_need_qs;		/* # CPUs left to check in. */
 	wait_queue_head_t expedited_wq;		/* Wait for check-ins. */
-	int ncpus_snap;				/* # CPUs seen last time. */
 
 	unsigned long jiffies_force_qs;		/* Time at which to invoke */
 						/*  force_quiescent_state(). */
