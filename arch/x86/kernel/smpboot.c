@@ -874,6 +874,8 @@ int native_cpu_up(unsigned int cpu)
 		touch_nmi_watchdog();
 	}
 
+	irq_unlock_sparse();
+
 	return 0;
 }
 
