@@ -2346,12 +2346,11 @@ ssize_t sec_bat_store_attrs(
 			value.intval = value.intval<<ONLINE_TYPE_MAIN_SHIFT;
 			psy_do_property("battery", set,
 					POWER_SUPPLY_PROP_ONLINE, value);
-			if (battery->slate_mode) {
+			if(battery->slate_mode == true){
 				value.intval = 0;
 				psy_do_property("sec-charger", set,
-						POWER_SUPPLY_PROP_POWER_NOW, value);
-				}
-
+					POWER_SUPPLY_PROP_POWER_NOW, value);
+			}
 			ret = count;
 		}
 		break;
@@ -2706,18 +2705,6 @@ static int sec_bat_set_property(struct power_supply *psy,
 				battery->extended_cable_type);
 		} else
 			current_cable_type = val->intval;
-
-		if (current_cable_type < 0) {
-			dev_info(battery->dev,
-					"%s: ignore event(%d)\n",
-					__func__, current_cable_type);
-		} else {
-			battery->cable_type = current_cable_type;
-			if ((battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
-					&& battery->wc_enable)
-				current_cable_type = POWER_SUPPLY_TYPE_WIRELESS;
-		}
-
 		sec_bat_reset_discharge(battery);
 
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
@@ -2745,7 +2732,7 @@ static int sec_bat_set_property(struct power_supply *psy,
 		 * (0 is POWER_SUPPLY_TYPE_UNKNOWN)
 		 */
 		if ((current_cable_type >= 0) &&
-			(current_cable_type < SEC_SIZEOF_POWER_SUPPLY_TYPE) &&
+			(current_cable_type <= SEC_SIZEOF_POWER_SUPPLY_TYPE) &&
 			(battery->pdata->cable_source_type &
 			SEC_BATTERY_CABLE_SOURCE_EXTERNAL ||
 			battery->pdata->cable_source_type &
@@ -2914,8 +2901,6 @@ static int sec_usb_get_property(struct power_supply *psy,
 		break;
 	}
 
-	if (battery->slate_mode)
-		val->intval = 0;
 	return 0;
 }
 
@@ -3092,8 +3077,6 @@ static int sec_battery_probe(struct platform_device *pdev)
 	struct sec_battery_info *battery;
 	int ret = 0;
 	int i;
-
-	union power_supply_propval value;
 
 	dev_dbg(&pdev->dev,
 		"%s: SEC Battery Driver Loading\n", __func__);
@@ -3286,7 +3269,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 			"%s : Failed to create_attrs\n", __func__);
 		goto err_req_irq;
 	}
-#if 0
+
 	wake_lock(&battery->monitor_wake_lock);
 	queue_work(battery->monitor_wqueue, &battery->monitor_work);
 
@@ -3308,19 +3291,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 		wake_lock(&battery->lpm_wake_lock);
 	}
 #endif
-#endif
 
-	psy_do_property("battery", get,
-				POWER_SUPPLY_PROP_ONLINE, value);
-
-	if (value.intval == POWER_SUPPLY_TYPE_BATTERY) {
-		dev_info(&pdev->dev,
-		"%s: SEC Battery Driver Monitorwork\n", __func__);
-		wake_lock(&battery->monitor_wake_lock);
-		queue_work(battery->monitor_wqueue, &battery->monitor_work);
-	}
-
-	battery->present = battery->pdata->check_battery_callback();
 
 	dev_dbg(battery->dev,
 		"%s: SEC Battery Driver Loaded\n", __func__);
