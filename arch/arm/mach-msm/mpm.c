@@ -25,6 +25,7 @@
 #include <asm/hardware/gic.h>
 #include <mach/msm_iomap.h>
 #include <mach/gpio.h>
+#include "../../../kernel/irq/internals.h"
 
 #include <mach/mpm.h>
 

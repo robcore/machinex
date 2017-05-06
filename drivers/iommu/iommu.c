@@ -933,4 +933,4 @@ static int __init iommu_init(void)
 
 	return 0;
 }
-core_initcall(iommu_init);
+arch_initcall(iommu_init);
