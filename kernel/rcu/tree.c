@@ -85,7 +85,7 @@ struct rcu_state sname##_state = { \
 	.orphan_donetail = &sname##_state.orphan_donelist, \
 	.barrier_mutex = __MUTEX_INITIALIZER(sname##_state.barrier_mutex), \
 	.expedited_mutex = __MUTEX_INITIALIZER(sname##_state.expedited_mutex), \
-	.name = #sname, \
+	.name = RCU_STATE_NAME(sname), \
 	.abbr = sabbr, \
 }
 
