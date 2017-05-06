@@ -1965,6 +1965,7 @@ int irq_get_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
 	irq_put_desc_busunlock(desc, flags);
 	return err;
 }
+EXPORT_SYMBOL_GPL(irq_get_irqchip_state);
 
 /**
  *	irq_set_irqchip_state - set the state of a forwarded interrupt.
@@ -2010,3 +2011,4 @@ int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
 	irq_put_desc_busunlock(desc, flags);
 	return err;
 }
+EXPORT_SYMBOL_GPL(irq_set_irqchip_state);
