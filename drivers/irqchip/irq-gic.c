@@ -510,6 +510,9 @@ static struct irq_chip gic_chip = {
 #endif
 	.irq_disable		= gic_disable_irq,
 	.irq_set_wake		= gic_set_wake,
+	.flags			= IRQCHIP_SET_TYPE_MASKED |
+				  IRQCHIP_SKIP_SET_WAKE |
+				  IRQCHIP_MASK_ON_SUSPEND,
 };
 
 void __init gic_cascade_irq(unsigned int gic_nr, unsigned int irq)
