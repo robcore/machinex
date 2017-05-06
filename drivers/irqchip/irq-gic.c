@@ -169,25 +169,10 @@ static inline unsigned int gic_irq(struct irq_data *d)
 	return d->hwirq;
 }
 
-#if defined(CONFIG_CPU_V7) && defined(CONFIG_GIC_SECURE)
-static const inline bool is_cpu_secure(void)
-{
-	unsigned int dscr;
-
-	asm volatile ("mrc p14, 0, %0, c0, c1, 0" : "=r" (dscr));
-
-	/* BIT(18) - NS bit; 1 = NS; 0 = S */
-	if (BIT(18) & dscr)
-		return false;
-	else
-		return true;
-}
-#else
 static const inline bool is_cpu_secure(void)
 {
 	return false;
 }
-#endif
 
 /*
  * Routines to acknowledge, disable and enable interrupts
@@ -537,20 +522,9 @@ static void __init gic_dist_init(struct gic_chip_data *gic)
 	for (i = 32; i < gic_irqs; i += 4)
 		writel_relaxed(cpumask, base + GIC_DIST_TARGET + i * 4 / 4);
 
-	/*
-	 * Set NS/S.
-	 */
-	if (is_cpu_secure())
-		for (i = 32; i < gic_irqs; i += 32)
-			writel_relaxed(0xFFFFFFFF,
-					base + GIC_DIST_ISR + i * 4 / 32);
-
 	gic_dist_config(base, gic_irqs, NULL);
 
-	if (is_cpu_secure())
-		writel_relaxed(3, base + GIC_DIST_CTRL);
-	else
-		writel_relaxed(1, base + GIC_DIST_CTRL);
+	writel_relaxed(1, base + GIC_DIST_CTRL);
 
 	mb();
 }
@@ -1191,25 +1165,7 @@ void gic_set_irq_secure(unsigned int irq)
 	struct gic_chip_data *gic_data = &gic_data[0];
 	struct irq_data *d = irq_get_irq_data(irq);
 
-	if (is_cpu_secure()) {
-		raw_spin_lock(&irq_controller_lock);
-		gicd_isr_reg = readl_relaxed(gic_dist_base(d) +
-				GIC_DIST_ISR + gic_irq(d) / 32 * 4);
-		gicd_isr_reg &= ~BIT(gic_irq(d) % 32);
-		writel_relaxed(gicd_isr_reg, gic_dist_base(d) +
-				GIC_DIST_ISR + gic_irq(d) / 32 * 4);
-		/* Also increase the priority of that irq */
-		gicd_pri_reg = readl_relaxed(gic_dist_base(d) +
-					GIC_DIST_PRI + (gic_irq(d) * 4 / 4));
-		gicd_pri_reg &= mask;
-		gicd_pri_reg |= 0x80; /* Priority of 0x80 > 0xA0 */
-		writel_relaxed(gicd_pri_reg, gic_dist_base(d) + GIC_DIST_PRI +
-				gic_irq(d) * 4 / 4);
-		mb();
-		raw_spin_unlock(&irq_controller_lock);
-	} else {
-		WARN(1, "Trying to run secure operation from Non-secure mode");
-	}
+	pr_debug("I am a placeholder for something that will never come\n");
 }
 
 #ifdef CONFIG_OF
