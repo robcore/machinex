@@ -462,8 +462,8 @@ static bool gic_handle_cascade_irq(unsigned int irq, struct irq_desc *desc)
 	status = readl_relaxed(gic_data_cpu_base(chip_data) + GIC_CPU_INTACK);
 	raw_spin_unlock(&irq_controller_lock);
 
-	gic_irq = (status & GICC_IAR_INT_ID_MASK);
-	if (gic_irq == GICC_INT_SPURIOUS)
+	gic_irq = (status & 0x3ff);
+	if (gic_irq == 1023)
 		goto out;
 
 	cascade_irq = irq_find_mapping(chip_data->domain, gic_irq);
@@ -526,7 +526,7 @@ static void __init gic_dist_init(struct gic_chip_data *gic)
 	unsigned int gic_irqs = gic->gic_irqs;
 	void __iomem *base = gic_data_dist_base(gic);
 
-	writel_relaxed(GICD_DISABLE, base + GIC_DIST_CTRL);
+	writel_relaxed(0, base + GIC_DIST_CTRL);
 
 	/*
 	 * Set all global interrupts to this CPU only.
