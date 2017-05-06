@@ -136,7 +136,7 @@ int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
  */
 
 //(4 * DEFAULT_TIMER_RATE)
-#define DEFAULT_TIMER_SLACK 0 //disabled
+#define DEFAULT_TIMER_SLACK (20 * USEC_PER_MSEC)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 /*
@@ -484,17 +484,18 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	pcpu->local_hvtime = now;
 
-	if (!closest_freq_selection && cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
+	if (!closest_freq_selection)
+		cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_H,
-					   &index)) {
+					   &index);
 
-	} else if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
+	else
+		cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_C,
-					   &index)) {
+					   &index);
 
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
-	}
 
 	new_freq = pcpu->freq_table[index].frequency;
 
@@ -1087,7 +1088,7 @@ static ssize_t store_timer_rate(struct kobject *kobj,
 		pr_warn("timer_rate not aligned to jiffy. Rounded up to %lu\n",
 				val_round);
 
-timer_rate = val_round;
+	timer_rate = val_round;
 	return count;
 }
 
@@ -1385,9 +1386,9 @@ static int cpufreq_governor_hellsactive(struct cpufreq_policy *policy,
 			}
 
 			spin_lock_irqsave(&pcpu->target_freq_lock, flags);
-			if (policy->max < pcpu->target_freq) {
+			if (policy->max < pcpu->target_freq)
 				pcpu->target_freq = policy->max;
-			} else if (policy->min >= pcpu->target_freq) {
+			else if (policy->min >= pcpu->target_freq) {
 				pcpu->target_freq = policy->min;
 				anyboost = 1;
 			}
