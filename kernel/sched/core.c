@@ -2641,7 +2641,7 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 		put_task_struct(prev);
 	}
 
-	tick_nohz_task_switch(current);
+	tick_nohz_task_switch();
 }
 
 #ifdef CONFIG_SMP
