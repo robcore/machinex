@@ -26,12 +26,6 @@ CONFIG_RCU_CPU_STALL_TIMEOUT
 	Stall-warning messages may be enabled and disabled completely via
 	/sys/module/rcutree/parameters/rcu_cpu_stall_suppress.
 
-CONFIG_RCU_CPU_STALL_INFO
-
-	This kernel configuration parameter causes the stall warning to
-	print out additional per-CPU diagnostic information, including
-	information on scheduling-clock ticks and RCU's idle-CPU tracking.
-
 RCU_STALL_DELAY_DELTA
 
 	Although the lockdep facility is extremely useful, it does add
