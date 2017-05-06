@@ -73,8 +73,8 @@ struct static_key {
 #endif	/* CC_HAVE_ASM_GOTO && CONFIG_JUMP_LABEL */
 
 enum jump_label_type {
-	JUMP_LABEL_NOP = 0,
-	JUMP_LABEL_JMP,
+	JUMP_LABEL_DISABLE = 0,
+	JUMP_LABEL_ENABLE,
 };
 
 struct module;
