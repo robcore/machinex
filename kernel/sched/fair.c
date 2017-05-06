@@ -1938,7 +1938,7 @@ void task_numa_fault(int last_cpupid, int mem_node, int pages, int flags)
 	int local = !!(flags & TNF_FAULT_LOCAL);
 	int priv;
 
-	if (!numabalancing_enabled)
+	if (!sched_numa_balancing)
 		return;
 
 	/* for example, ksmd faulting in a user's mm */
