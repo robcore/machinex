@@ -1615,8 +1615,6 @@ struct task_struct {
 /* hung task detection */
 	unsigned long last_switch_count;
 #endif
-/* CPU-specific state of this task */
-	struct thread_struct thread;
 /* filesystem information */
 	struct fs_struct *fs;
 /* open file information */
