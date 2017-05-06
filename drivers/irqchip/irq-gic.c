@@ -120,7 +120,7 @@ static struct gic_chip_data gic_data[MAX_GIC_NR] __read_mostly;
 #ifdef CONFIG_GIC_NON_BANKED
 static void __iomem *gic_get_percpu_base(union gic_base *base)
 {
-	return raw_cpu_read(base->percpu_base);
+	return raw_cpu_read(*base->percpu_base);
 }
 
 static void __iomem *gic_get_common_base(union gic_base *base)
@@ -510,9 +510,6 @@ static struct irq_chip gic_chip = {
 #endif
 	.irq_disable		= gic_disable_irq,
 	.irq_set_wake		= gic_set_wake,
-	.flags			= IRQCHIP_SET_TYPE_MASKED |
-				  IRQCHIP_SKIP_SET_WAKE |
-				  IRQCHIP_MASK_ON_SUSPEND,
 };
 
 void __init gic_cascade_irq(unsigned int gic_nr, unsigned int irq)
