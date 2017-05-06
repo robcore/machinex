@@ -440,7 +440,7 @@ void msm_mpm_exit_sleep(bool from_idle)
 				irq_set_pending(apps_irq);
 				if (from_idle) {
 					raw_spin_lock(&desc->lock);
-					check_irq_resend(desc, apps_irq);
+					check_irq_resend(desc);
 					raw_spin_unlock(&desc->lock);
 				}
 			}
