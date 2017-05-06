@@ -17,6 +17,7 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
+#include <linux/irqchip/chained_irq.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/gpiomux.h>

@@ -26,6 +26,7 @@
 #include <linux/wakeup_reason.h>
 
 #include <asm/mach/irq.h>
+#include <linux/irqchip/chained_irq.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/gpiomux.h>

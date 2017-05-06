@@ -34,6 +34,7 @@
 #include <asm/exception.h>
 #include <asm/mach/irq.h>
 #include <asm/hardware/vic.h>
+#include <linux/irqchip/chained_irq.h>
 
 /**
  * struct vic_device - VIC PM device

@@ -26,6 +26,7 @@
 #include <mach/msm_iomap.h>
 #include <mach/msm_smsm.h>
 #include <mach/proc_comm.h>
+#include <linux/irqchip/chained_irq.h>
 
 
 /* see 80-VA736-2 Rev C pp 695-751

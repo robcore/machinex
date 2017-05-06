@@ -41,6 +41,7 @@
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
 #include <asm/outercache.h>
+#include <linux/irqchip/chained_irq.h>
 
 /*
  * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
