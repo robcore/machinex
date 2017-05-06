@@ -603,16 +603,15 @@ drop_precision:
  *
  * Assuming that rtime_i+1 >= rtime_i.
  */
-static raw_spinlock_t mxhacklock;
 static void cputime_adjust(struct task_cputime *curr,
-			   struct cputime *prev,
+			   struct prev_cputime *prev,
 			   cputime_t *ut, cputime_t *st)
 {
 	cputime_t rtime, stime, utime;
 	unsigned long flags;
 
 	/* Serialize concurrent callers such that we can honour our guarantees */
-	raw_spin_lock_irqsave(&mxhacklock, flags);
+	raw_spin_lock_irqsave(&prev->lock, flags);
 	rtime = nsecs_to_cputime(curr->sum_exec_runtime);
 
 	/*
@@ -670,7 +669,7 @@ update:
 out:
 	*ut = prev->utime;
 	*st = prev->stime;
-	raw_spin_unlock_irqrestore(&mxhacklock, flags);
+	raw_spin_unlock_irqrestore(&prev->lock, flags);
 }
 
 void task_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st)
