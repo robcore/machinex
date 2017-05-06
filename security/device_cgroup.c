@@ -334,7 +334,7 @@ static bool may_access(struct dev_cgroup *dev_cgroup,
 	struct dev_exception_item *ex;
 	bool match = false;
 
-	rcu_lockdep_assert(rcu_read_lock_held() ||
+	RCU_LOCKDEP_WARN(rcu_read_lock_held() ||
 			   lockdep_is_held(&devcgroup_mutex),
 			   "device_cgroup::may_access() called without proper synchronization");
 

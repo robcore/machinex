@@ -99,7 +99,7 @@ static DEFINE_MUTEX(cgroup_mutex);
 static DEFINE_SPINLOCK(release_agent_path_lock);
 
 #define cgroup_assert_mutexes_or_rcu_locked()				\
-	rcu_lockdep_assert(rcu_read_lock_held() ||			\
+	RCU_LOCKDEP_WARN(rcu_read_lock_held() ||			\
 			   lockdep_is_held(&cgroup_tree_mutex) ||	\
 			   lockdep_is_held(&cgroup_mutex),		\
 			   "cgroup_[tree_]mutex or RCU read lock required");
