@@ -119,13 +119,13 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != MSM_CPUFREQ_NO_LIMIT) {
+		therm_freq_limited = true;
 		pr_debug("%s: Limiting cpu%d max frequency to %lu\n",
 				KBUILD_MODNAME, cpu, max_freq);
-		therm_freq_limited = true;
 	} else {
+		therm_freq_limited = false;
 		pr_debug("%s: Max frequency reset for cpu%d\n",
 				KBUILD_MODNAME, cpu);
-		therm_freq_limited = false;
 	}
 
 	if (cpu_online(cpu)) {
@@ -140,19 +140,16 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 	return ret;
 }
 
-static void __ref do_core_control(long temp)
+static void do_core_control(long temp)
 {
 	int i = 0;
 	int ret = 0;
 
 
-	if (!core_control_enabled) {
+	if ((!core_control_enabled) || (intelli_init())) {
 		thermal_core_controlled = false;
 		return;
 	}
-
-	if (intelli_init())
-		return;
 
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask &&
@@ -207,7 +204,7 @@ static void __ref do_core_control(long temp)
 	mutex_unlock(&core_control_mutex);
 }
 
-static void __ref do_freq_control(long temp)
+static void do_freq_control(long temp)
 {
 	int ret = 0;
 	int cpu = 0;
@@ -257,7 +254,7 @@ static void __ref do_freq_control(long temp)
 
 }
 
-static void __ref check_temp(struct work_struct *work)
+static void check_temp(struct work_struct *work)
 {
 	static int limit_init;
 	struct tsens_device tsens_dev;
@@ -296,7 +293,7 @@ reschedule:
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
-static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
+static int msm_thermal_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
@@ -327,19 +324,22 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
  * status will be carried over to the process stopping the msm_thermal, as
  * we dont want to online a core and bring in the thermal issues.
  */
-static void __ref disable_msm_thermal(void)
+static void disable_msm_thermal(void)
 {
 	int cpu = 0;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
+	if (limited_max_freq_thermal == MSM_CPUFREQ_NO_LIMIT)
+		return;
+
 	for_each_possible_cpu(cpu) {
 		update_cpu_max_freq(cpu, MSM_CPUFREQ_NO_LIMIT);
 	}
 }
 
-static int __ref set_enabled(const char *val, const struct kernel_param *kp)
+static int set_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 
@@ -456,7 +456,7 @@ done_stat_nodes:
 }
 
 /* Call with core_control_mutex locked */
-static int __ref update_offline_cores(int val)
+static int update_offline_cores(int val)
 {
 	int cpu = 0;
 	int ret = 0;
@@ -490,7 +490,7 @@ static ssize_t show_cc_enabled(struct kobject *kobj,
 	return snprintf(buf, PAGE_SIZE, "%d\n", core_control_enabled);
 }
 
-static ssize_t __ref store_cc_enabled(struct kobject *kobj,
+static ssize_t store_cc_enabled(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
@@ -527,7 +527,7 @@ static ssize_t show_cpus_offlined(struct kobject *kobj,
 	return snprintf(buf, PAGE_SIZE, "%d\n", cpus_offlined);
 }
 
-static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
+static ssize_t store_cpus_offlined(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
@@ -555,19 +555,19 @@ done_cc:
 	return count;
 }
 
-static __refdata struct kobj_attribute cc_enabled_attr =
+static struct kobj_attribute cc_enabled_attr =
 __ATTR(enabled, 0644, show_cc_enabled, store_cc_enabled);
 
-static __refdata struct kobj_attribute cpus_offlined_attr =
+static struct kobj_attribute cpus_offlined_attr =
 __ATTR(cpus_offlined, 0644, show_cpus_offlined, store_cpus_offlined);
 
-static __refdata struct attribute *cc_attrs[] = {
+static struct attribute *cc_attrs[] = {
 	&cc_enabled_attr.attr,
 	&cpus_offlined_attr.attr,
 	NULL,
 };
 
-static __refdata struct attribute_group cc_attr_group = {
+static struct attribute_group cc_attr_group = {
 	.attrs = cc_attrs,
 };
 
@@ -645,7 +645,7 @@ static void msm_thermal_exit(void)
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	mutex_destroy(&core_control_mutex);
 }
-late_initcall(msm_thermal_late_init);
+module_init(msm_thermal_late_init);
 module_exit(msm_thermal_exit);
 
 MODULE_LICENSE("GPL");
