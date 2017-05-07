@@ -200,40 +200,43 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer)
 	struct event_timer_info *event;
 	struct timerqueue_node *next;
 	unsigned long flags;
+	int cpu;
 
 	spin_lock_irqsave(&event_timer_lock, flags);
-	next = timerqueue_getnext(&timer_head);
+	cpu = smp_processor_id();
+	next = timerqueue_getnext(&per_cpu(timer_head, cpu));
 
 	while (next && (ktime_to_ns(next->expires)
 		<= ktime_to_ns(hrtimer->node.expires))) {
-		if (!next) {
-			spin_unlock_irqrestore(&event_timer_lock, flags);
-			goto hrtimer_cb_exit;
-		}
-
 		event = container_of(next, struct event_timer_info, node);
-		if (!event) {
-			spin_unlock_irqrestore(&event_timer_lock, flags);
+		if (!event)
 			goto hrtimer_cb_exit;
-		}
 
-		timerqueue_del(&timer_head, &event->node);
+		WARN_ON_ONCE(event->cpu != cpu);
+
+		if (msm_event_debug_mask && MSM_EVENT_TIMER_DEBUG)
+			pr_debug("Deleting event %p @ %lu(on cpu%d)\n", event,
+				(unsigned long)ktime_to_ns(next->expires), cpu);
+
+		timerqueue_del(&per_cpu(timer_head, cpu), &event->node);
 
 		if (event->function)
 			event->function(event->data);
-		next = timerqueue_getnext(&timer_head);
+
+		next = timerqueue_getnext(&per_cpu(timer_head, cpu));
 	}
 
-	if (next)
-		create_hrtimer(next->expires);
-
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	if (next) {
+		event = container_of(next, struct event_timer_info, node);
+		create_hrtimer(event);
+	}
 hrtimer_cb_exit:
+	spin_unlock_irqrestore(&event_timer_lock, flags);
 	return HRTIMER_NORESTART;
 }
 
 /**
- * create_timer_smp(): Helper function used setting up timer on core 0.
+ * create_timer_smp(): Helper function used setting up timer on CPUs.
  */
 static void create_timer_smp(void *data)
 {
