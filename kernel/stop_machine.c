@@ -453,14 +453,14 @@ repeat:
 		int ret;
 
 		/* cpu stop callbacks must not sleep, make in_atomic() == T */
-		preempt_count_inc();
+		inc_preempt_count();
 		ret = fn(arg);
 		if (done) {
 			if (ret)
 				done->ret = ret;
 			cpu_stop_signal_done(done);
 		}
-		preempt_count_dec();
+		dec_preempt_count();
 		WARN_ONCE(preempt_count(),
 			  "cpu_stop: %pf(%p) leaked preempt count\n", fn, arg);
 		goto repeat;
