@@ -2218,7 +2218,6 @@ config HAVE_ATOMIC_IOMAP
 
 config HAVE_TEXT_POKE_SMP
 	bool
-	select STOP_MACHINE if SMP
 
 source "net/Kconfig"
 
