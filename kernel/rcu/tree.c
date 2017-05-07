@@ -65,12 +65,6 @@ MODULE_ALIAS("rcutree");
 #endif
 #define MODULE_PARAM_PREFIX "rcutree."
 
-/* Data structures. */
-
-static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
-static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
-static struct lock_class_key rcu_exp_class[RCU_NUM_LVLS];
-
 #define RCU_STATE_INITIALIZER(sname, sabbr, cr) \
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct rcu_data, sname##_data); \
 struct rcu_state sname##_state = { \
@@ -4339,6 +4333,9 @@ static void __init rcu_init_one(struct rcu_state *rsp,
 	static const char * const buf[] = RCU_NODE_NAME_INIT;
 	static const char * const fqs[] = RCU_FQS_NAME_INIT;
 	static const char * const exp[] = RCU_EXP_NAME_INIT;
+	static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
+	static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
+	static struct lock_class_key rcu_exp_class[RCU_NUM_LVLS];
 	static u8 fl_mask = 0x1;
 
 	int levelcnt[RCU_NUM_LVLS];		/* # nodes in each level. */
