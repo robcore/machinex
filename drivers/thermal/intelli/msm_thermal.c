@@ -53,7 +53,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
-uint32_t limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
+unsigned long limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 bool core_control_enabled;
@@ -109,7 +109,7 @@ fail:
 	return ret;
 }
 
-static int update_cpu_max_freq(int cpu, uint32_t max_freq)
+static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
 	int ret = 0;
 
@@ -119,7 +119,7 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != MSM_CPUFREQ_NO_LIMIT) {
-		pr_debug("%s: Limiting cpu%d max frequency to %d\n",
+		pr_debug("%s: Limiting cpu%d max frequency to %lu\n",
 				KBUILD_MODNAME, cpu, max_freq);
 		therm_freq_limited = true;
 	} else {
@@ -211,7 +211,7 @@ static void __ref do_freq_control(long temp)
 {
 	int ret = 0;
 	int cpu = 0;
-	uint32_t max_freq = limited_max_freq_thermal;
+	unsigned long max_freq = limited_max_freq_thermal;
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
@@ -248,7 +248,7 @@ static void __ref do_freq_control(long temp)
 		ret = update_cpu_max_freq(cpu, max_freq);
 		if (ret)
 			pr_debug(
-			"%s: Unable to limit cpu%d max freq to %d\n",
+			"%s: Unable to limit cpu%d max freq to %lu\n",
 					KBUILD_MODNAME, cpu, max_freq);
 		else
 			therm_freq_limited = true;
