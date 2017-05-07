@@ -70,7 +70,6 @@ MODULE_ALIAS("rcutree");
 static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
 static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
 static struct lock_class_key rcu_exp_class[RCU_NUM_LVLS];
-static struct lock_class_key rcu_exp_sched_class[RCU_NUM_LVLS];
 
 #define RCU_STATE_INITIALIZER(sname, sabbr, cr) \
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct rcu_data, sname##_data); \
@@ -4050,7 +4049,6 @@ static void rcu_init_new_rnp(struct rcu_node *rnp_leaf)
 static void __init
 rcu_boot_init_percpu_data(int cpu, struct rcu_state *rsp)
 {
-	static struct lock_class_key rcu_exp_sched_rdp_class;
 	unsigned long flags;
 	struct rcu_data *rdp = per_cpu_ptr(rsp->rda, cpu);
 	struct rcu_node *rnp = rcu_get_root(rsp);
@@ -4066,10 +4064,6 @@ rcu_boot_init_percpu_data(int cpu, struct rcu_state *rsp)
 	mutex_init(&rdp->exp_funnel_mutex);
 	rcu_boot_init_nocb_percpu_data(rdp);
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
-	if (rsp == &rcu_sched_state)
-		lockdep_set_class_and_name(&rdp->exp_funnel_mutex,
-					   &rcu_exp_sched_rdp_class,
-					   "rcu_data_exp_sched");
 }
 
 /*
@@ -4296,7 +4290,6 @@ static void __init rcu_init_one(struct rcu_state *rsp,
 	static const char * const buf[] = RCU_NODE_NAME_INIT;
 	static const char * const fqs[] = RCU_FQS_NAME_INIT;
 	static const char * const exp[] = RCU_EXP_NAME_INIT;
-	static const char * const exp_sched[] = RCU_EXP_SCHED_NAME_INIT;
 	static u8 fl_mask = 0x1;
 
 	int levelcnt[RCU_NUM_LVLS];		/* # nodes in each level. */
@@ -4356,14 +4349,8 @@ static void __init rcu_init_one(struct rcu_state *rsp,
 			INIT_LIST_HEAD(&rnp->blkd_tasks);
 			rcu_init_one_nocb(rnp);
 			mutex_init(&rnp->exp_funnel_mutex);
-			if (rsp == &rcu_sched_state)
-				lockdep_set_class_and_name(
-					&rnp->exp_funnel_mutex,
-					&rcu_exp_sched_class[i], exp_sched[i]);
-			else
-				lockdep_set_class_and_name(
-					&rnp->exp_funnel_mutex,
-					&rcu_exp_class[i], exp[i]);
+			lockdep_set_class_and_name(&rnp->exp_funnel_mutex,
+						   &rcu_exp_class[i], exp[i]);
 		}
 	}
 
