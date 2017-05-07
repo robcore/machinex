@@ -519,27 +519,6 @@ static inline void atomic_or(int i, atomic_t *v)
 }
 #endif /* #ifndef CONFIG_ARCH_HAS_ATOMIC_OR */
 
-/**
- * fetch_or - perform *ptr |= mask and return old value of *ptr
- * @ptr: pointer to value
- * @mask: mask to OR on the value
- *
- * cmpxchg based fetch_or, macro so it works for different integer types
- */
-#ifndef fetch_or
-#define fetch_or(ptr, mask)						\
-({	typeof(*(ptr)) __old, __val = *(ptr);				\
-	for (;;) {							\
-		__old = cmpxchg((ptr), __val, __val | (mask));		\
-		if (__old == __val)					\
-			break;						\
-		__val = __old;						\
-	}								\
-	__old;								\
-})
-#endif
-
-
 #ifdef CONFIG_GENERIC_ATOMIC64
 #include <asm-generic/atomic64.h>
 #endif
