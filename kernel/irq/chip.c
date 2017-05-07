@@ -708,7 +708,7 @@ handle_percpu_irq(struct irq_desc *desc)
 	if (chip->irq_ack)
 		chip->irq_ack(&desc->irq_data);
 
-	handle_irq_event_percpu(desc, desc->action);
+	handle_irq_event_percpu(desc);
 
 	if (chip->irq_eoi)
 		chip->irq_eoi(&desc->irq_data);
