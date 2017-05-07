@@ -175,8 +175,6 @@ extern int _cond_resched(void);
 /*
  * abs() handles unsigned and signed longs, ints, shorts and chars.  For all
  * input types abs() returns a signed long.
- * abs() should not be used for 64-bit types (s64, u64, long long) - use abs()
- * for those.
  */
 #define abs(x) ({						\
 		long ret;					\
@@ -188,11 +186,6 @@ extern int _cond_resched(void);
 			ret = (__x < 0) ? -__x : __x;		\
 		}						\
 		ret;						\
-	})
-
-#define abs(x) ({				\
-		s64 __x = (x);			\
-		(__x < 0) ? -__x : __x;		\
 	})
 
 /**
