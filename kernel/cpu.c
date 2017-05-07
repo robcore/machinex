@@ -338,7 +338,7 @@ static int take_cpu_down(void *_param)
 	/* Give up timekeeping duties */
 	tick_handover_do_timer();
 	/* Park the stopper thread */
-	kthread_park(current);
+	stop_machine_park((long)param->hcpu);
 	return 0;
 }
 
