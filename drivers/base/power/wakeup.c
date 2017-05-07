@@ -23,34 +23,6 @@
 
 #include "power.h"
 
-static struct notifier_block fb_notif;
-static bool display_off = false;
-
-static int fb_notifier_callback(struct notifier_block *self,
-			unsigned long event, void *data)
-{
-	struct fb_event *evdata = data;
-	int *blank;
-
-	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
-		blank = evdata->data;
-		switch (*blank) {
-			case FB_BLANK_UNBLANK:
-				/* display on */
-				display_off = false;
-				break;
-			case FB_BLANK_POWERDOWN:
-			case FB_BLANK_HSYNC_SUSPEND:
-			case FB_BLANK_VSYNC_SUSPEND:
-			case FB_BLANK_NORMAL:
-				/* display off */
-				display_off = true;
-				break;
-		}
-	}
-	return NOTIFY_OK;
-}
-
 static bool wakeblock = false;
 module_param(wakeblock, bool, 0644);
 
@@ -973,10 +945,6 @@ void pm_print_active_wakeup_sources(void)
 	struct wakeup_source *ws;
 	int active = 0;
 	struct wakeup_source *last_activity_ws = NULL;
-
-	/* kinda pointless to force this routine during screen on */
-	if (!display_off)
-		return;
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
