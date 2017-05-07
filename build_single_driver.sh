@@ -1,4 +1,23 @@
 #!/bin/bash
+
+################
+##LATEST_LINARO#
+TOOLCHAIN=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+export PATH=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin:$PATH
+###############
+
+###############
+#LATEST_CORTEX#
+#TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
+##############
+
+########
+#OLDEST#
+#TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
+#######
+
 washme()
 {
 if [ -d $(pwd)/out ]; then
@@ -31,10 +50,8 @@ rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
 }
 
 washme
-export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 export ARCH=arm
-#export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
-export CROSS_COMPILE=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=$TOOLCHAIN
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 #env KCONFIG_NOTIMESTAMP=true
