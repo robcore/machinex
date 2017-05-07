@@ -277,6 +277,7 @@ void irq_domain_disassociate(struct irq_domain *domain, unsigned int irq)
 		mutex_unlock(&revmap_trees_mutex);
 	}
 }
+EXPORT_SYMBOL_GPL(irq_domain_alloc_fwnode);
 
 int irq_domain_associate(struct irq_domain *domain, unsigned int virq,
 			 irq_hw_number_t hwirq)
@@ -640,6 +641,7 @@ static int virq_debug_show(struct seq_file *m, void *private)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(irq_domain_free_fwnode);
 
 static int virq_debug_open(struct inode *inode, struct file *file)
 {
@@ -910,6 +912,7 @@ struct irq_data *irq_domain_get_irq_data(struct irq_domain *domain,
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(irq_domain_get_irq_data);
 
 /**
  * irq_domain_set_hwirq_and_chip - Set hwirq and irqchip of @virq at @domain
@@ -1240,6 +1243,7 @@ struct irq_data *irq_domain_get_irq_data(struct irq_domain *domain,
 
 	return (irq_data && irq_data->domain == domain) ? irq_data : NULL;
 }
+EXPORT_SYMBOL_GPL(irq_domain_get_irq_data);
 
 /**
  * irq_domain_set_info - Set the complete data for a @virq in @domain

@@ -259,6 +259,7 @@ void __read_msi_msg(struct msi_desc *entry, struct msi_msg *msg)
 		msg->data = data;
 	}
 }
+EXPORT_SYMBOL_GPL(pci_msi_mask_irq);
 
 void read_msi_msg(unsigned int irq, struct msi_msg *msg)
 {
@@ -266,6 +267,7 @@ void read_msi_msg(unsigned int irq, struct msi_msg *msg)
 
 	__read_msi_msg(entry, msg);
 }
+EXPORT_SYMBOL_GPL(pci_msi_unmask_irq);
 
 void __get_cached_msi_msg(struct msi_desc *entry, struct msi_msg *msg)
 {
@@ -1001,6 +1003,7 @@ void pci_no_msi(void)
 {
 	pci_msi_enable = 0;
 }
+EXPORT_SYMBOL(msi_desc_to_pci_dev);
 
 /**
  * pci_msi_enabled - is MSI enabled?
