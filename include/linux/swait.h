@@ -5,6 +5,7 @@
 #include <linux/stddef.h>
 #include <linux/spinlock.h>
 #include <asm/current.h>
+#include <linux/wait.h>
 #include <linux/export.h>
 
 /*
@@ -109,7 +110,7 @@ extern void finish_swait(struct swait_queue_head *q, struct swait_queue *wait);
 		if (condition)						\
 			break;						\
 									\
-		if (___wait_is_interruptible(state) && __int) {		\
+		if (___wait_signal_pending(state) && __int) {		\
 			__ret = __int;					\
 			break;						\
 		}							\
