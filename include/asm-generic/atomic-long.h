@@ -108,24 +108,19 @@ static inline long atomic_long_sub_return(long i, atomic_long_t *l)
 	return (long)atomic64_sub_return(i, v);
 }
 
-#define ATOMIC_LONG_INC_DEC_OP(op, mo)					\
-static inline long							\
-atomic_long_##op##_return##mo(atomic_long_t *l)				\
-{									\
-	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;		\
-									\
-	return (long)ATOMIC_LONG_PFX(_##op##_return##mo)(v);		\
-}
-ATOMIC_LONG_INC_DEC_OP(inc,)
-ATOMIC_LONG_INC_DEC_OP(inc, _relaxed)
-ATOMIC_LONG_INC_DEC_OP(inc, _acquire)
-ATOMIC_LONG_INC_DEC_OP(inc, _release)
-ATOMIC_LONG_INC_DEC_OP(dec,)
-ATOMIC_LONG_INC_DEC_OP(dec, _relaxed)
-ATOMIC_LONG_INC_DEC_OP(dec, _acquire)
-ATOMIC_LONG_INC_DEC_OP(dec, _release)
+static inline long atomic_long_inc_return(atomic_long_t *l)
+{
+	atomic64_t *v = (atomic64_t *)l;
 
-#undef ATOMIC_LONG_INC_DEC_OP
+	return (long)atomic64_inc_return(v);
+}
+
+static inline long atomic_long_dec_return(atomic_long_t *l)
+{
+	atomic64_t *v = (atomic64_t *)l;
+
+	return (long)atomic64_dec_return(v);
+}
 
 static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
 {
