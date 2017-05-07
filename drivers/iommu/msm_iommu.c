@@ -19,7 +19,6 @@
 #include <linux/interrupt.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
-#include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/iommu.h>
 #include <linux/clk.h>
@@ -1165,10 +1164,8 @@ static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 	ctx = ctx_drvdata->num;
 
 	ret = __enable_clocks(iommu_drvdata);
-	if (ret) {
-		ret = 0;	/* 0 indicates translation failed */
+	if (ret)
 		goto fail;
-	}
 
 	msm_iommu_remote_spin_lock();
 
@@ -1245,10 +1242,8 @@ irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id)
 	num = ctx_drvdata->num;
 
 	ret = __enable_clocks(drvdata);
-	if (ret) {
-		ret = IRQ_NONE;
+	if (ret)
 		goto fail;
-	}
 
 	msm_iommu_remote_spin_lock();
 
@@ -1265,7 +1260,7 @@ irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id)
 
 		if (WARN_ON_ONCE(ret == -ENOSYS)) {
 			pr_err("Unexpected IOMMU page fault!\n");
-			pr_err("name    = %s\n", drvdata->name);
+			pr_debug("name    = %s\n", drvdata->name);
 			pr_debug("context = %s (%d)\n", ctx_drvdata->name, num);
 			pr_debug("Interesting registers:\n");
 			//print_ctx_regs(base, num);
@@ -1352,6 +1347,9 @@ static void __init setup_iommu_tex_classes(void)
 
 static int __init msm_iommu_init(void)
 {
+	if (!msm_soc_version_supports_iommu_v1())
+		return -ENODEV;
+
 	msm_iommu_lock_initialize();
 
 	setup_iommu_tex_classes();
@@ -1363,4 +1361,3 @@ subsys_initcall(msm_iommu_init);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Stepan Moskovchenko <stepanm@codeaurora.org>");
-MODULE_DESCRIPTION("MSM SMMU v2 Driver");

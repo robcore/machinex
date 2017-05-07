@@ -110,7 +110,7 @@ extern void finish_swait(struct swait_queue_head *q, struct swait_queue *wait);
 		if (condition)						\
 			break;						\
 									\
-		if (___wait_is_interruptible(state) && __int) {		\
+		if (___wait_signal_pending(state) && __int) {		\
 			__ret = __int;					\
 			break;						\
 		}							\
@@ -133,14 +133,14 @@ do {									\
 } while (0)
 
 #define __swait_event_timeout(wq, condition, timeout)			\
-	___swait_event(wq, condition,		\
+	___swait_event(wq, ___wait_cond_timeout(condition),		\
 		      TASK_UNINTERRUPTIBLE, timeout,			\
 		      __ret = schedule_timeout(__ret))
 
 #define swait_event_timeout(wq, condition, timeout)			\
 ({									\
 	long __ret = timeout;						\
-	if (!(condition))				\
+	if (!___wait_cond_timeout(condition))				\
 		__ret = __swait_event_timeout(wq, condition, timeout);	\
 	__ret;								\
 })
@@ -158,14 +158,14 @@ do {									\
 })
 
 #define __swait_event_interruptible_timeout(wq, condition, timeout)	\
-	___swait_event(wq, condition,		\
+	___swait_event(wq, ___wait_cond_timeout(condition),		\
 		      TASK_INTERRUPTIBLE, timeout,			\
 		      __ret = schedule_timeout(__ret))
 
 #define swait_event_interruptible_timeout(wq, condition, timeout)	\
 ({									\
 	long __ret = timeout;						\
-	if (!(condition))				\
+	if (!___wait_cond_timeout(condition))				\
 		__ret = __swait_event_interruptible_timeout(wq,		\
 						condition, timeout);	\
 	__ret;								\
