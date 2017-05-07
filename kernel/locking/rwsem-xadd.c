@@ -274,7 +274,7 @@ static inline bool rwsem_try_write_lock(long count, struct rw_semaphore *sem)
 	 * to reduce unnecessary expensive cmpxchg() operations.
 	 */
 	if (count == RWSEM_WAITING_BIAS &&
-	    cmpxchg(&sem->count, RWSEM_WAITING_BIAS,
+	    cmpxchg_acquire(&sem->count, RWSEM_WAITING_BIAS,
 		    RWSEM_ACTIVE_WRITE_BIAS) == RWSEM_WAITING_BIAS) {
 		if (!list_is_singular(&sem->wait_list))
 			rwsem_atomic_update(RWSEM_WAITING_BIAS, sem);
@@ -297,7 +297,8 @@ static inline bool rwsem_try_write_lock_unqueued(struct rw_semaphore *sem)
 		if (!(count == 0 || count == RWSEM_WAITING_BIAS))
 			return false;
 
-		old = cmpxchg(&sem->count, count, count + RWSEM_ACTIVE_WRITE_BIAS);
+		old = cmpxchg_acquire(&sem->count, count,
+				      count + RWSEM_ACTIVE_WRITE_BIAS);
 		if (old == count) {
 			rwsem_set_owner(sem);
 			return true;
