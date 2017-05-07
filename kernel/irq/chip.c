@@ -384,7 +384,6 @@ static bool irq_may_run(struct irq_desc *desc)
 
 /**
  *	handle_simple_irq - Simple and software-decoded IRQs.
- *	@irq:	the interrupt number
  *	@desc:	the interrupt description structure for this irq
  *
  *	Simple interrupts are either sent from a demultiplexing interrupt
@@ -395,7 +394,7 @@ static bool irq_may_run(struct irq_desc *desc)
  *	unmask issues if necessary.
  */
 bool
-handle_simple_irq(unsigned int irq, struct irq_desc *desc)
+handle_simple_irq(struct irq_desc *desc)
 {
 	bool handled = false;
 
@@ -442,7 +441,6 @@ static void cond_unmask_irq(struct irq_desc *desc)
 
 /**
  *	handle_level_irq - Level type irq handler
- *	@irq:	the interrupt number
  *	@desc:	the interrupt description structure for this irq
  *
  *	Level type interrupts are active as long as the hardware line has
@@ -451,7 +449,7 @@ static void cond_unmask_irq(struct irq_desc *desc)
  *	interrupt line is back to inactive.
  */
 bool
-handle_level_irq(unsigned int irq, struct irq_desc *desc)
+handle_level_irq(struct irq_desc *desc)
 {
 	bool handled = false;
 
@@ -518,7 +516,6 @@ static void cond_unmask_eoi_irq(struct irq_desc *desc, struct irq_chip *chip)
 
 /**
  *	handle_fasteoi_irq - irq handler for transparent controllers
- *	@irq:	the interrupt number
  *	@desc:	the interrupt description structure for this irq
  *
  *	Only a single callback will be issued to the chip: an ->eoi()
@@ -527,7 +524,7 @@ static void cond_unmask_eoi_irq(struct irq_desc *desc, struct irq_chip *chip)
  *	details in hardware, transparently.
  */
 bool
-handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc)
+handle_fasteoi_irq(struct irq_desc *desc)
 {
 	struct irq_chip *chip = desc->irq_data.chip;
 	bool handled = false;
@@ -573,7 +570,6 @@ EXPORT_SYMBOL_GPL(handle_fasteoi_irq);
 
 /**
  *	handle_edge_irq - edge type IRQ handler
- *	@irq:	the interrupt number
  *	@desc:	the interrupt description structure for this irq
  *
  *	Interrupt occures on the falling and/or rising edge of a hardware
@@ -588,7 +584,7 @@ EXPORT_SYMBOL_GPL(handle_fasteoi_irq);
  *	loop is left.
  */
 bool
-handle_edge_irq(unsigned int irq, struct irq_desc *desc)
+handle_edge_irq(struct irq_desc *desc)
 {
 	bool handled = false;
 
@@ -649,13 +645,12 @@ EXPORT_SYMBOL(handle_edge_irq);
 #ifdef CONFIG_IRQ_EDGE_EOI_HANDLER
 /**
  *	handle_edge_eoi_irq - edge eoi type IRQ handler
- *	@irq:	the interrupt number
  *	@desc:	the interrupt description structure for this irq
  *
  * Similar as the above handle_edge_irq, but using eoi and w/o the
  * mask/unmask logic.
  */
-bool handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc)
+bool handle_edge_eoi_irq(struct irq_desc *desc)
 {
 	bool handled = false;
 	struct irq_chip *chip = irq_desc_get_chip(desc);
@@ -699,13 +694,12 @@ out_eoi:
 
 /**
  *	handle_percpu_irq - Per CPU local irq handler
- *	@irq:	the interrupt number
  *	@desc:	the interrupt description structure for this irq
  *
  *	Per CPU interrupts on SMP machines without locking requirements
  */
 bool
-handle_percpu_irq(unsigned int irq, struct irq_desc *desc)
+handle_percpu_irq(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 
@@ -724,7 +718,6 @@ handle_percpu_irq(unsigned int irq, struct irq_desc *desc)
 
 /**
  * handle_percpu_devid_irq - Per CPU local irq handler with per cpu dev ids
- * @irq:	the interrupt number
  * @desc:	the interrupt description structure for this irq
  *
  * Per CPU interrupts on SMP machines without locking requirements. Same as
@@ -734,7 +727,7 @@ handle_percpu_irq(unsigned int irq, struct irq_desc *desc)
  * contain the real device id for the cpu on which this handler is
  * called
  */
-bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc)
+bool handle_percpu_devid_irq(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct irqaction *action = desc->action;

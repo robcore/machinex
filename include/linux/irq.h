@@ -488,14 +488,14 @@ static inline int irq_set_parent(int irq, int parent_irq)
  * Built-in IRQ handlers for various IRQ types,
  * callable via desc->handle_irq()
  */
-extern bool handle_level_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_edge_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_edge_eoi_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_simple_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_percpu_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc);
-extern bool handle_bad_irq(unsigned int irq, struct irq_desc *desc);
+extern bool handle_level_irq(struct irq_desc *desc);
+extern bool handle_fasteoi_irq(struct irq_desc *desc);
+extern bool handle_edge_irq(struct irq_desc *desc);
+extern bool handle_edge_eoi_irq(struct irq_desc *desc);
+extern bool handle_simple_irq(struct irq_desc *desc);
+extern bool handle_percpu_irq(struct irq_desc *desc);
+extern bool handle_percpu_devid_irq(struct irq_desc *desc);
+extern bool handle_bad_irq(struct irq_desc *desc);
 extern bool handle_nested_irq(unsigned int irq);
 
 extern int irq_chip_compose_msi_msg(struct irq_data *data, struct msi_msg *msg);

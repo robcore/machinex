@@ -109,8 +109,8 @@ execute_on_irq_stack(int overflow, struct irq_desc *desc, int irq)
 	asm volatile("xchgl	%%ebx,%%esp	\n"
 		     "call	*%%edi		\n"
 		     "movl	%%ebx,%%esp	\n"
-		     : "=a" (arg1), "=d" (arg2), "=b" (isp)
-		     :  "0" (irq),   "1" (desc),  "2" (isp),
+		     : "=a" (arg1), "=b" (isp)
+		     :  "0" (desc),   "1" (isp),
 			"D" (desc->handle_irq)
 		     : "memory", "cc", "ecx");
 	return 1;

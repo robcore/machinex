@@ -28,8 +28,10 @@
  *
  * Handles spurious and unhandled IRQ's. It also prints a debugmessage.
  */
-bool handle_bad_irq(unsigned int irq, struct irq_desc *desc)
+bool handle_bad_irq(struct irq_desc *desc)
 {
+	unsigned int irq = irq_desc_get_irq(desc);
+
 	print_irq_desc(irq, desc);
 	kstat_incr_irqs_this_cpu(desc);
 	ack_bad_irq(irq);

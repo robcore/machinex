@@ -89,8 +89,7 @@ static struct irq_chip bf537_generic_error_irqchip = {
 	.irq_unmask = bf537_generic_error_unmask_irq,
 };
 
-static void bf537_demux_error_irq(unsigned int int_err_irq,
-				  struct irq_desc *inta_desc)
+static void bf537_demux_error_irq(struct irq_desc *inta_desc)
 {
 	int irq = 0;
 

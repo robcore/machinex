@@ -125,6 +125,6 @@ handle_irq(int irq)
 	 */
 	local_irq_disable();
 	irq_enter();
-	generic_handle_irq_desc(irq, desc);
+	generic_handle_irq_desc(desc);
 	irq_exit();
 }

@@ -239,7 +239,7 @@ found:
 	generic_handle_irq(irq_no);
 }
 
-static void pdc_intc_syswake_isr(unsigned int irq, struct irq_desc *desc)
+static void pdc_intc_syswake_isr(struct irq_desc *desc)
 {
 	struct pdc_intc_priv *priv;
 	unsigned int syswake, irq_no;

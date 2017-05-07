@@ -64,7 +64,7 @@ void intc_set_prio_level(unsigned int irq, unsigned int level)
 	raw_spin_unlock_irqrestore(&intc_big_lock, flags);
 }
 
-static void intc_redirect_irq(unsigned int irq, struct irq_desc *desc)
+static void intc_redirect_irq(struct irq_desc *desc)
 {
 	generic_handle_irq((unsigned int)irq_get_handler_data(irq));
 }
