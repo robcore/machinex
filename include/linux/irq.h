@@ -142,6 +142,7 @@ struct irq_domain;
  *			related irq, then this is the mask of the
  *			CPUs to which an IPI can be sent.
  * @msi_desc:		MSI descriptor
+ * @ipi_offset:		Offset of first IPI target cpu in @affinity. Optional.
  */
 struct irq_common_data {
 	unsigned int		__private state_use_accessors;
@@ -151,6 +152,9 @@ struct irq_common_data {
 	void			*handler_data;
 	struct msi_desc		*msi_desc;
 	cpumask_var_t		affinity;
+#ifdef CONFIG_GENERIC_IRQ_IPI
+	unsigned int		ipi_offset;
+#endif
 };
 
 /**
