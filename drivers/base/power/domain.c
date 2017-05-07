@@ -1700,6 +1700,7 @@ int pm_genpd_add_subdomain(struct generic_pm_domain *genpd,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(pm_genpd_add_subdomain);
 
 /**
  * pm_genpd_add_subdomain_names - Add a subdomain to an I/O PM domain.
@@ -1776,6 +1777,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(pm_genpd_remove_subdomain);
 
 /**
  * pm_genpd_add_callbacks - Add PM domain callbacks to a given device.
