@@ -74,7 +74,6 @@
 #include <linux/binfmts.h>
 #include <linux/context_tracking.h>
 #include <linux/compiler.h>
-#include <linux/frame.h>
 #include <linux/cpufreq.h>
 #include <linux/sched/deadline.h>
 
@@ -3321,7 +3320,6 @@ static noinline void __schedule_bug(struct task_struct *prev)
 	dump_stack();
 	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 }
-STACK_FRAME_NON_STANDARD(__schedule); /* switch_to() */
 
 /*
  * Various schedule()-time debugging checks and statistics:
