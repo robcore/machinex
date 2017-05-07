@@ -5,7 +5,6 @@
 #include <linux/stddef.h>
 #include <linux/spinlock.h>
 #include <asm/current.h>
-#include <linux/wait.h>
 #include <linux/export.h>
 
 /*
