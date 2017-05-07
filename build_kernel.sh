@@ -67,6 +67,7 @@ function countdown()
 
 function NORMAL()
 {
+echo "Building NORMAL kernel"
 echo "your previous version was $PREV"
 echo -n "Use Previous Name?  y/n [ENTER]: "
 read USEPRV
@@ -243,6 +244,7 @@ fi;
 
 function FAKENG()
 {
+echo "Building Fakeroot-ng kernel"
 echo "your previous version was $PREV"
 echo -n "Use Previous Name?  y/n [ENTER]: "
 read USEPRV
@@ -420,6 +422,7 @@ fi;
 
 function FAKENORMAL()
 {
+echo "Building Fakeroot NORMAL kernel"
 echo "your previous version was $PREV"
 echo -n "Use Previous Name?  y/n [ENTER]: "
 read USEPRV
@@ -596,6 +599,7 @@ fi;
 
 function SPARSE()
 {
+echo "Building SPARSE kernel"
 echo "your previous version was $PREV"
 echo -n "Use Previous Name?  y/n [ENTER]: "
 read USEPRV
@@ -824,6 +828,7 @@ echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
 
 function REBUILD()
 {
+echo "REBUILDING Previous Kernel"
 echo "your previous version was $PREV"
 sleep 1
 
@@ -917,6 +922,7 @@ fi;
 
 function FAKEREBUILD()
 {
+echo "Rebuilding Fakeroot kernel"
 echo "your previous version was $PREV"
 sleep 1
 
