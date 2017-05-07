@@ -578,6 +578,11 @@ asmlinkage __visible void __init start_kernel(void)
 	char * command_line, *after_dashes;
 	extern const struct kernel_param __start___param[], __stop___param[];
 
+	/*
+	 * Need to run as early as possible, to initialize the
+	 * lockdep hash:
+	 */
+	lockdep_init();
 	set_task_stack_end_magic(&init_task);
 	smp_setup_processor_id();
 	debug_objects_early_init();
