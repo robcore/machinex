@@ -233,8 +233,11 @@ static inline int srcu_read_lock_held(struct srcu_struct *sp)
  */
 static inline int srcu_read_lock(struct srcu_struct *sp) __acquires(sp)
 {
-	int retval = __srcu_read_lock(sp);
+	int retval;
 
+	preempt_disable();
+	retval = __srcu_read_lock(sp);
+	preempt_enable();
 	rcu_lock_acquire(&(sp)->dep_map);
 	RCU_LOCKDEP_WARN(!rcu_is_cpu_idle(),
 			   "srcu_read_lock() used illegally while idle");
