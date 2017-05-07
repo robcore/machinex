@@ -226,19 +226,18 @@ void rcu_sched_qs(void)
 {
 	unsigned long flags;
 
-	if (__this_cpu_read(rcu_sched_data.cpu_no_qs.s)) {
-		__this_cpu_write(rcu_sched_data.cpu_no_qs.b.norm, false);
-		if (!__this_cpu_read(rcu_sched_data.cpu_no_qs.b.exp))
-			return;
-		local_irq_save(flags);
-		if (__this_cpu_read(rcu_sched_data.cpu_no_qs.b.exp)) {
-			__this_cpu_write(rcu_sched_data.cpu_no_qs.b.exp, false);
-			rcu_report_exp_rdp(&rcu_sched_state,
-					   this_cpu_ptr(&rcu_sched_data),
-					   true);
-		}
-		local_irq_restore(flags);
+	if (!__this_cpu_read(rcu_sched_data.cpu_no_qs.s))
+		return;
+	__this_cpu_write(rcu_sched_data.cpu_no_qs.b.norm, false);
+	if (!__this_cpu_read(rcu_sched_data.cpu_no_qs.b.exp))
+		return;
+	local_irq_save(flags);
+	if (__this_cpu_read(rcu_sched_data.cpu_no_qs.b.exp)) {
+		__this_cpu_write(rcu_sched_data.cpu_no_qs.b.exp, false);
+		rcu_report_exp_rdp(&rcu_sched_state,
+				   this_cpu_ptr(&rcu_sched_data), true);
 	}
+	local_irq_restore(flags);
 }
 
 void rcu_bh_qs(void)
