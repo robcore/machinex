@@ -18,13 +18,13 @@ extern void __context_tracking_task_switch(struct task_struct *prev,
 static inline void user_enter(void)
 {
 	if (context_tracking_is_enabled())
-		context_tracking_enter(CONTEXT_USER);
+		context_tracking_user_enter();
 
 }
 static inline void user_exit(void)
 {
 	if (context_tracking_is_enabled())
-		context_tracking_exit(CONTEXT_USER);
+		context_tracking_user_exit();
 }
 
 static inline enum ctx_state exception_enter(void)
