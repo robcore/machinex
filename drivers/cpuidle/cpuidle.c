@@ -131,7 +131,7 @@ void cpuidle_enter_freeze(void)
 	 * be frozen safely.
 	 */
 	index = cpuidle_find_deepest_state(drv, dev, true);
-	if (index >= 0) {
+	if (index > 0) {
 		enter_freeze_proper(drv, dev, index);
 		return;
 	}
@@ -141,7 +141,7 @@ void cpuidle_enter_freeze(void)
 	 * at all and try to enter it normally.
 	 */
 	index = cpuidle_find_deepest_state(drv, dev, false);
-	if (index >= 0)
+	if (index > 0)
 		cpuidle_enter(drv, dev, index);
 	else
 		arch_cpu_idle();
