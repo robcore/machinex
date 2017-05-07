@@ -2,14 +2,14 @@
 
 ################
 ##LATEST_LINARO#
-TOOLCHAIN=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
-export PATH=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin:$PATH
+#TOOLCHAIN=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+#export PATH=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin:$PATH
 ###############
 
 ###############
 #LATEST_CORTEX#
-#TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
+TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 ##############
 
 ########
@@ -55,14 +55,14 @@ export CROSS_COMPILE=$TOOLCHAIN
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 #env KCONFIG_NOTIMESTAMP=true
-fakeroot make clean;
-fakeroot make distclean;
-fakeroot make mrproper;
+make clean;
+make distclean;
+make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-fakeroot make ARCH=arm -j6 O=$(pwd)/out oldconfig;
+make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 #echo -n "What am I building? [ENTER] "
 #read DRV
-#fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$DRV;
-fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$@
+#make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$DRV;
+make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$@
 washme

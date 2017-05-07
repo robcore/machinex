@@ -4,14 +4,14 @@ export CONCURRENCY_LEVEL=$(cat /proc/cpuinfo | grep processor | wc -l)
 
 ################
 ##LATEST_LINARO#
-TOOLCHAIN=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
-export PATH=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin:$PATH
+#TOOLCHAIN=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+#export PATH=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin:$PATH
 ###############
 
 ###############
 #LATEST_CORTEX#
-#TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
-#export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
+TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 ##############
 
 ########

@@ -195,6 +195,8 @@ extern void update_cpu_load_nohz(int active);
 static inline void update_cpu_load_nohz(int active) { }
 #endif
 
+extern unsigned long get_parent_ip(unsigned long addr);
+
 extern void dump_cpu_task(int cpu);
 
 struct seq_file;
@@ -1356,8 +1358,6 @@ struct sched_rt_entity {
 	unsigned long timeout;
 	unsigned long watchdog_stamp;
 	unsigned int time_slice;
-	unsigned short on_rq;
-	unsigned short on_list;
 
 	struct sched_rt_entity *back;
 #ifdef CONFIG_RT_GROUP_SCHED

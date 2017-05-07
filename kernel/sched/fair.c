@@ -4453,17 +4453,9 @@ static void __update_cpu_load(struct rq *this_rq, unsigned long this_load,
 
 		/* scale is effectively 1 << i now, and >> i divides by scale */
 
-		old_load = this_rq->cpu_load[i];
+		old_load = this_rq->cpu_load[i] - tickless_load;
 		old_load = decay_load_missed(old_load, pending_updates - 1, i);
-		if (tickless_load) {
-			old_load -= decay_load_missed(tickless_load, pending_updates - 1, i);
-			/*
-			 * old_load can never be a negative value because a
-			 * decayed tickless_load cannot be greater than the
-			 * original tickless_load.
-			 */
-			old_load += tickless_load;
-		}
+		old_load += tickless_load;
 		new_load = this_load;
 		/*
 		 * Round up the averaging division if load is increasing. This
@@ -4486,25 +4478,6 @@ static unsigned long weighted_cpuload(const int cpu)
 }
 
 #ifdef CONFIG_NO_HZ_COMMON
-static void __update_cpu_load_nohz(struct rq *this_rq,
-				   unsigned long curr_jiffies,
-				   unsigned long load,
-				   int active)
-{
-	unsigned long pending_updates;
-
-	pending_updates = curr_jiffies - this_rq->last_load_update_tick;
-	if (pending_updates) {
-		this_rq->last_load_update_tick = curr_jiffies;
-		/*
-		 * In the regular NOHZ case, we were idle, this means load 0.
-		 * In the NOHZ_FULL case, we were non-idle, we should consider
-		 * its weighted load.
-		 */
-		__update_cpu_load(this_rq, load, pending_updates, active);
-	}
-}
-
 /*
  * There is no sane way to deal with nohz on smp when using jiffies because the
  * cpu doing the jiffies update might drift wrt the cpu doing the jiffy reading
@@ -4522,15 +4495,22 @@ static void __update_cpu_load_nohz(struct rq *this_rq,
  * Called from nohz_idle_balance() to update the load ratings before doing the
  * idle balance.
  */
-static void update_cpu_load_idle(struct rq *this_rq)
+void update_idle_cpu_load(struct rq *this_rq)
 {
+	unsigned long curr_jiffies = READ_ONCE(jiffies);
+	unsigned long load = weighted_cpuload(cpu_of(this_rq));
+	unsigned long pending_updates;
+
 	/*
 	 * bail if there's load or we're actually up-to-date.
 	 */
-	if (weighted_cpuload(cpu_of(this_rq)))
+	if (load || curr_jiffies == this_rq->last_load_update_tick)
 		return;
 
-	__update_cpu_load_nohz(this_rq, READ_ONCE(jiffies), 0, 0);
+	pending_updates = curr_jiffies - this_rq->last_load_update_tick;
+	this_rq->last_load_update_tick = curr_jiffies;
+
+	__update_cpu_load(this_rq, load, pending_updates, 0);
 }
 
 /*
@@ -4541,12 +4521,22 @@ void update_cpu_load_nohz(int active)
 	struct rq *this_rq = this_rq();
 	unsigned long curr_jiffies = READ_ONCE(jiffies);
 	unsigned long load = active ? weighted_cpuload(cpu_of(this_rq)) : 0;
+	unsigned long pending_updates;
 
 	if (curr_jiffies == this_rq->last_load_update_tick)
 		return;
 
 	raw_spin_lock(&this_rq->lock);
-	__update_cpu_load_nohz(this_rq, curr_jiffies, load, active);
+	pending_updates = curr_jiffies - this_rq->last_load_update_tick;
+	if (pending_updates) {
+		this_rq->last_load_update_tick = curr_jiffies;
+		/*
+		 * In the regular NOHZ case, we were idle, this means load 0.
+		 * In the NOHZ_FULL case, we were non-idle, we should consider
+		 * its weighted load.
+		 */
+		__update_cpu_load(this_rq, load, pending_updates, active);
+	}
 	raw_spin_unlock(&this_rq->lock);
 }
 #endif /* CONFIG_NO_HZ_COMMON */
@@ -4558,7 +4548,7 @@ void update_cpu_load_active(struct rq *this_rq)
 {
 	unsigned long load = weighted_cpuload(cpu_of(this_rq));
 	/*
-	 * See the mess around update_cpu_load_idle() / update_cpu_load_nohz().
+	 * See the mess around update_idle_cpu_load() / update_cpu_load_nohz().
 	 */
 	this_rq->last_load_update_tick = jiffies;
 	__update_cpu_load(this_rq, load, 1, 1);
@@ -8762,7 +8752,7 @@ static void nohz_idle_balance(struct rq *this_rq, enum cpu_idle_type idle)
 		if (time_after_eq(jiffies, rq->next_balance)) {
 			raw_spin_lock_irq(&rq->lock);
 			update_rq_clock(rq);
-			update_cpu_load_idle(rq);
+			update_idle_cpu_load(rq);
 			raw_spin_unlock_irq(&rq->lock);
 			rebalance_domains(rq, CPU_IDLE);
 		}
@@ -9157,8 +9147,11 @@ void free_fair_sched_group(struct task_group *tg)
 	for_each_possible_cpu(i) {
 		if (tg->cfs_rq)
 			kfree(tg->cfs_rq[i]);
-		if (tg->se)
+		if (tg->se) {
+			if (tg->se[i])
+				remove_entity_load_avg(tg->se[i]);
 			kfree(tg->se[i]);
+		}
 	}
 
 	kfree(tg->cfs_rq);
@@ -9206,29 +9199,21 @@ err:
 	return 0;
 }
 
-void unregister_fair_sched_group(struct task_group *tg)
+void unregister_fair_sched_group(struct task_group *tg, int cpu)
 {
+	struct rq *rq = cpu_rq(cpu);
 	unsigned long flags;
-	struct rq *rq;
-	int cpu;
 
-	for_each_possible_cpu(cpu) {
-		if (tg->se[cpu])
-			remove_entity_load_avg(tg->se[cpu]);
+	/*
+	* Only empty task groups can be destroyed; so we can speculatively
+	* check on_list without danger of it being re-added.
+	*/
+	if (!tg->cfs_rq[cpu]->on_list)
+		return;
 
-		/*
-		 * Only empty task groups can be destroyed; so we can speculatively
-		 * check on_list without danger of it being re-added.
-		 */
-		if (!tg->cfs_rq[cpu]->on_list)
-			continue;
-
-		rq = cpu_rq(cpu);
-
-		raw_spin_lock_irqsave(&rq->lock, flags);
-		list_del_leaf_cfs_rq(tg->cfs_rq[cpu]);
-		raw_spin_unlock_irqrestore(&rq->lock, flags);
-	}
+	raw_spin_lock_irqsave(&rq->lock, flags);
+	list_del_leaf_cfs_rq(tg->cfs_rq[cpu]);
+	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
 
 void init_tg_cfs_entry(struct task_group *tg, struct cfs_rq *cfs_rq,
@@ -9310,7 +9295,7 @@ int alloc_fair_sched_group(struct task_group *tg, struct task_group *parent)
 	return 1;
 }
 
-void unregister_fair_sched_group(struct task_group *tg) { }
+void unregister_fair_sched_group(struct task_group *tg, int cpu) { }
 
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 

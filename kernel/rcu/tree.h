@@ -149,9 +149,8 @@ struct rcu_dynticks {
  * Definition for node within the RCU grace-period-detection hierarchy.
  */
 struct rcu_node {
-	raw_spinlock_t __private lock;	/* Root rcu_node's lock protects */
-					/*  some rcu_state fields as well as */
-					/*  following. */
+	raw_spinlock_t lock;	/* Root rcu_node's lock protects some */
+				/*  rcu_state fields as well as following. */
 	unsigned long gpnum;	/* Current grace period for this node. */
 				/*  This will either be equal to or one */
 				/*  behind the root rcu_node's gpnum. */
@@ -622,8 +621,7 @@ static void zero_cpu_stall_ticks(struct rcu_data *rdp);
 static void increment_cpu_stall_ticks(void);
 static bool rcu_nocb_cpu_needs_barrier(struct rcu_state *rsp, int cpu);
 static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq);
-static wait_queue_head_t *rcu_nocb_gp_get(struct rcu_node *rnp);
-static void rcu_nocb_gp_cleanup(wait_queue_head_t *sq);
+static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp);
 static void rcu_init_one_nocb(struct rcu_node *rnp);
 static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 			    bool lazy, unsigned long flags);
@@ -682,7 +680,7 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 #endif /* #else #ifdef CONFIG_PPC */
 
 /*
- * Wrappers for the rcu_node::lock acquire and release.
+ * Wrappers for the rcu_node::lock acquire.
  *
  * Because the rcu_nodes form a tree, the tree traversal locking will observe
  * different lock values, this in turn means that an UNLOCK of one level
@@ -691,48 +689,29 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
  *
  * In order to restore full ordering between tree levels, augment the regular
  * lock acquire functions with smp_mb__after_unlock_lock().
- *
- * As ->lock of struct rcu_node is a __private field, therefore one should use
- * these wrappers rather than directly call raw_spin_{lock,unlock}* on ->lock.
  */
 static inline void raw_spin_lock_rcu_node(struct rcu_node *rnp)
 {
-	raw_spin_lock(&ACCESS_PRIVATE(rnp, lock));
+	raw_spin_lock(&rnp->lock);
 	smp_mb__after_unlock_lock();
-}
-
-static inline void raw_spin_unlock_rcu_node(struct rcu_node *rnp)
-{
-	raw_spin_unlock(&ACCESS_PRIVATE(rnp, lock));
 }
 
 static inline void raw_spin_lock_irq_rcu_node(struct rcu_node *rnp)
 {
-	raw_spin_lock_irq(&ACCESS_PRIVATE(rnp, lock));
+	raw_spin_lock_irq(&rnp->lock);
 	smp_mb__after_unlock_lock();
 }
 
-static inline void raw_spin_unlock_irq_rcu_node(struct rcu_node *rnp)
-{
-	raw_spin_unlock_irq(&ACCESS_PRIVATE(rnp, lock));
-}
-
-#define raw_spin_lock_irqsave_rcu_node(rnp, flags)			\
-do {									\
-	typecheck(unsigned long, flags);				\
-	raw_spin_lock_irqsave(&ACCESS_PRIVATE(rnp, lock), flags);	\
-	smp_mb__after_unlock_lock();					\
-} while (0)
-
-#define raw_spin_unlock_irqrestore_rcu_node(rnp, flags)			\
-do {									\
-	typecheck(unsigned long, flags);				\
-	raw_spin_unlock_irqrestore(&ACCESS_PRIVATE(rnp, lock), flags);	\
+#define raw_spin_lock_irqsave_rcu_node(rnp, flags)	\
+do {							\
+	typecheck(unsigned long, flags);		\
+	raw_spin_lock_irqsave(&(rnp)->lock, flags);	\
+	smp_mb__after_unlock_lock();			\
 } while (0)
 
 static inline bool raw_spin_trylock_rcu_node(struct rcu_node *rnp)
 {
-	bool locked = raw_spin_trylock(&ACCESS_PRIVATE(rnp, lock));
+	bool locked = raw_spin_trylock(&rnp->lock);
 
 	if (locked)
 		smp_mb__after_unlock_lock();
