@@ -37,6 +37,7 @@ bool handle_bad_irq(struct irq_desc *desc)
 	ack_bad_irq(irq);
 	return true;
 }
+EXPORT_SYMBOL_GPL(handle_bad_irq);
 
 /*
  * Special, empty irq handler:
