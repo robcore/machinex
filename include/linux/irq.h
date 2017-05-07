@@ -977,4 +977,7 @@ static inline u32 irq_reg_readl(struct irq_chip_generic *gc,
 
 #endif /* !CONFIG_S390 */
 
+/* Contrary to Linux irqs, for hardware irqs the irq number 0 is valid */
+#define INVALID_HWIRQ	(~0UL)
+
 #endif /* _LINUX_IRQ_H */
