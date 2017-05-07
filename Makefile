@@ -196,17 +196,17 @@ export KBUILD_BUILDHOST := $(SUBARCH)
 ARCH		?=arm
 ###############
 #LATEST_CORTEX#
-#TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+#CROSS_COMPILE	?=/opt/toolchains/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
 ##############
 
 ########
 #OLDEST#
-#TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
+#CROSS_COMPILE	?=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 #######
 
 ################
 ##LATEST_LINARO#
-TOOLCHAIN=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+CROSS_COMPILE	?=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 ###############
 
 
