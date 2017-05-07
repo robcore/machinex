@@ -97,7 +97,7 @@ struct event_timer_info *add_event_timer(uint32_t irq,
 
 	if (irq) {
 		struct irq_desc *desc = irq_to_desc(irq);
-		struct cpumask *mask = desc->irq_data.affinity;
+		struct cpumask *mask = desc->irq_common_data.affinity;
 
 		get_online_cpus();
 		event_info->cpu = cpumask_any_and(mask, cpu_online_mask);
