@@ -1534,6 +1534,7 @@ static inline void add_nr_running(struct rq *rq, unsigned count)
 {
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 	sched_update_nr_prod(cpu_of(rq), 1, true);
+
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
