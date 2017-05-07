@@ -277,7 +277,8 @@ void irq_domain_disassociate(struct irq_domain *domain, unsigned int irq)
 		mutex_unlock(&revmap_trees_mutex);
 	}
 }
-EXPORT_SYMBOL_GPL(irq_domain_alloc_fwnode);
+
+EXPORT_SYMBOL_GPL(irq_domain_disassociate);
 
 int irq_domain_associate(struct irq_domain *domain, unsigned int virq,
 			 irq_hw_number_t hwirq)
