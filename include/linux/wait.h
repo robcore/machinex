@@ -196,6 +196,7 @@ do {									\
 	finish_wait(&wq, &__wait);					\
 } while (0)
 
+
 /**
  * wait_event - sleep until a condition gets true
  * @wq: the waitqueue to wait on
@@ -208,6 +209,11 @@ do {									\
  * wake_up() has to be called after changing any variable that could
  * change the result of the wait condition.
  */
+
+#define ___wait_is_interruptible(state)					\
+	(!__builtin_constant_p(state) ||				\
+		state == TASK_INTERRUPTIBLE || state == TASK_KILLABLE)	\
+
 #define wait_event(wq, condition) 					\
 do {									\
 	if (condition)	 						\
