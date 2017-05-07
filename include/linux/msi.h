@@ -164,6 +164,8 @@ void msi_domain_free_irqs(struct irq_domain *domain, struct device *dev);
 /* When an MSI domain is used as an intermediate domain */
 int msi_domain_prepare_irqs(struct irq_domain *domain, struct device *dev,
 			    int nvec, msi_alloc_info_t *args);
+int msi_domain_populate_irqs(struct irq_domain *domain, struct device *dev,
+			     int virq, int nvec, msi_alloc_info_t *args);
 
 struct msi_domain_info *msi_get_domain_info(struct irq_domain *domain);
 
