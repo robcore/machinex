@@ -67,15 +67,6 @@ void context_tracking_user_enter(void)
 	unsigned long flags;
 
 	/*
-	 * Repeat the user_enter() check here because some archs may be calling
-	 * this from asm and if no CPU needs context tracking, they shouldn't
-	 * go further. Repeat the check here until they support the inline static
-	 * key check.
-	 */
-	if (!context_tracking_is_enabled())
-		return;
-
-	/*
 	 * Some contexts may involve an exception occuring in an irq,
 	 * leading to that nesting:
 	 * rcu_irq_enter() rcu_user_exit() rcu_user_exit() rcu_irq_exit()
@@ -117,9 +108,6 @@ out_irq_restore:
 void context_tracking_user_exit(void)
 {
 	unsigned long flags;
-
-	if (!context_tracking_is_enabled())
-		return;
 
 	if (in_interrupt())
 		return;
