@@ -78,7 +78,7 @@ struct rcu_state sname##_state = { \
 	.level = { &sname##_state.node[0] }, \
 	.rda = &sname##_data, \
 	.call = cr, \
-	.fqs_state = RCU_GP_IDLE, \
+	.gp_state = RCU_GP_IDLE, \
 	.gpnum = 0UL - 300UL, \
 	.completed = 0UL - 300UL, \
 	.orphan_lock = __RAW_SPIN_LOCK_UNLOCKED(&sname##_state.orphan_lock), \
@@ -1907,16 +1907,15 @@ static bool rcu_gp_fqs_check_wake(struct rcu_state *rsp, int *gfp)
 /*
  * Do one round of quiescent-state forcing.
  */
-static int rcu_gp_fqs(struct rcu_state *rsp, int fqs_state_in)
+static void rcu_gp_fqs(struct rcu_state *rsp, bool first_time)
 {
-	int fqs_state = fqs_state_in;
 	bool isidle = false;
 	unsigned long maxj;
 	struct rcu_node *rnp = rcu_get_root(rsp);
 
 	WRITE_ONCE(rsp->gp_activity, jiffies);
 	rsp->n_force_qs++;
-	if (fqs_state == RCU_SAVE_DYNTICK) {
+	if (first_time) {
 		/* Collect dyntick-idle snapshots. */
 		if (is_sysidle_rcu_state(rsp)) {
 			isidle = true;
@@ -1925,7 +1924,6 @@ static int rcu_gp_fqs(struct rcu_state *rsp, int fqs_state_in)
 		force_qs_rnp(rsp, dyntick_save_progress_counter,
 			     &isidle, &maxj);
 		rcu_sysidle_report_gp(rsp, isidle, maxj);
-		fqs_state = RCU_FORCE_QS;
 	} else {
 		/* Handle dyntick-idle and offline CPUs. */
 		isidle = true;
@@ -1939,7 +1937,6 @@ static int rcu_gp_fqs(struct rcu_state *rsp, int fqs_state_in)
 			   READ_ONCE(rsp->gp_flags) & ~RCU_GP_FLAG_FQS);
 		raw_spin_unlock_irq(&rnp->lock);
 	}
-	return fqs_state;
 }
 
 /*
@@ -2003,7 +2000,7 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
 	/* Declare grace period done. */
 	WRITE_ONCE(rsp->completed, rsp->gpnum);
 	trace_rcu_grace_period(rsp->name, rsp->completed, "end");
-	rsp->fqs_state = RCU_GP_IDLE;
+	rsp->gp_state = RCU_GP_IDLE;
 	rdp = this_cpu_ptr(rsp->rda);
 	/* Advance CBs to reduce false positives below. */
 	needgp = rcu_advance_cbs(rsp, rnp, rdp) || needgp;
@@ -2017,7 +2014,7 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
  */
 static int __noreturn rcu_gp_kthread(void *arg)
 {
-	int fqs_state;
+	bool first_gp_fqs;
 	int gf;
 	unsigned long j;
 	int ret;
@@ -2043,7 +2040,7 @@ static int __noreturn rcu_gp_kthread(void *arg)
 		}
 
 		/* Handle quiescent-state forcing. */
-		fqs_state = RCU_SAVE_DYNTICK;
+		first_gp_fqs = true;
 		j = jiffies_till_first_fqs;
 		if (j > HZ) {
 			j = HZ;
@@ -2065,7 +2062,8 @@ static int __noreturn rcu_gp_kthread(void *arg)
 			/* If time for quiescent-state forcing, do it. */
 			if (ULONG_CMP_GE(jiffies, rsp->jiffies_force_qs) ||
 			    (gf & RCU_GP_FLAG_FQS)) {
-				fqs_state = rcu_gp_fqs(rsp, fqs_state);
+				rcu_gp_fqs(rsp, first_gp_fqs);
+				first_gp_fqs = false;
 				cond_resched_rcu_qs();
 				WRITE_ONCE(rsp->gp_activity, jiffies);
 			} else {
