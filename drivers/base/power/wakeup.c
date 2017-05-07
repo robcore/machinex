@@ -1194,11 +1194,6 @@ static const struct file_operations wakeup_sources_stats_fops = {
 
 static int __init wakeup_sources_debugfs_init(void)
 {
-	/* register callback for screen on/off notifier */
-	fb_notif.notifier_call = fb_notifier_callback;
-	if (fb_register_client(&fb_notif) != 0)
-		pr_err("%s: Failed to register fb callback\n", __func__);
-
 	wakeup_sources_stats_dentry = debugfs_create_file("wakeup_sources",
 			S_IRUGO, NULL, NULL, &wakeup_sources_stats_fops);
 	return 0;
