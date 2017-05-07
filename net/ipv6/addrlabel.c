@@ -269,7 +269,7 @@ static int __ip6addrlbl_add(struct ip6addrlbl_entry *newp, int replace)
 				goto out;
 			}
 		}
-		hlist_add_after_rcu(&p->list, &newp->list);
+		hlist_add_behind_rcu(&newp->list, &p->list);
 	}
 out:
 	if (!ret)
