@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/idr.h>
+#include <linux/of_irq.h>
 
 #include "base.h"
 #include "power/power.h"
