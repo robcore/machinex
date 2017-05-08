@@ -89,7 +89,7 @@ static inline void *of_irq_find_parent(struct device_node *child)
 {
 	return NULL;
 }
-extern int of_irq_count(struct device_node *dev);
+extern int of_irq_count(struct device_node *dev)
 {
 	return 0;
 }
