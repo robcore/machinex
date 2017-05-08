@@ -49,9 +49,9 @@ lib-$(CONFIG_ARCH_SHARK)	+= io-shark.o
 
 $(obj)/csumpartialcopy.o:	$(obj)/csumpartialcopygeneric.S
 $(obj)/csumpartialcopyuser.o:	$(obj)/csumpartialcopygeneric.S
-
+#-mfloat-abi=hard (for non-neon)
 ifeq ($(CONFIG_KERNEL_MODE_NEON),y)
-  NEON_FLAGS			:= -mfloat-abi=hard -marm -mfpu=neon-vfpv4 -funsafe-math-optimizations
+  NEON_FLAGS			:= -mfloat-abi=softfp -marm -mfpu=neon-vfpv4 -funsafe-math-optimizations -ffreestanding
   CFLAGS_xor-neon.o		+= $(NEON_FLAGS)
   obj-$(CONFIG_XOR_BLOCKS)	+= xor-neon.o
 endif

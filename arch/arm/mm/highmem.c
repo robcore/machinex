@@ -30,10 +30,9 @@ EXPORT_SYMBOL(kmap);
 
 void kunmap(struct page *page)
 {
-	might_sleep();
+	WARN_ON(in_interrupt());
 	if (!PageHighMem(page))
 		return;
-	BUG_ON(in_interrupt());
 	kunmap_high(page);
 }
 EXPORT_SYMBOL(kunmap);
@@ -45,6 +44,7 @@ void *kmap_atomic(struct page *page)
 	void *kmap;
 	int type;
 
+	preempt_disable();
 	pagefault_disable();
 	if (!PageHighMem(page))
 		return page_address(page);
@@ -107,6 +107,7 @@ void __kunmap_atomic(void *kvaddr)
 		kunmap_high(pte_page(pkmap_page_table[PKMAP_NR(vaddr)]));
 	}
 	pagefault_enable();
+	preempt_enable();
 }
 EXPORT_SYMBOL(__kunmap_atomic);
 
@@ -116,6 +117,7 @@ void *kmap_atomic_pfn(unsigned long pfn)
 	int idx, type;
 	struct page *page = pfn_to_page(pfn);
 
+	preempt_disable();
 	pagefault_disable();
 	if (!PageHighMem(page))
 		return page_address(page);
