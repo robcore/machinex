@@ -73,8 +73,8 @@ static unsigned int min_sampling_rate;
 #define MIN_LATENCY_MULTIPLIER			(20)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
-/* have the timer rate booted for this much time 4s*/
-#define TIMER_RATE_BOOST_TIME 4000000
+/* have the timer rate boosted for this much time 4s*/
+#define TIMER_RATE_BOOST_TIME 1000000
 static int ondemand_sampling_rate_boosted;
 static u64 ondemand_sampling_rate_boosted_time;
 unsigned int ondemand_current_sampling_rate;
