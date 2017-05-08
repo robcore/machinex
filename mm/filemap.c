@@ -1484,7 +1484,10 @@ int file_read_iter_actor(read_descriptor_t *desc, struct page *page,
 	if (size > desc->count)
 		size = desc->count;
 
-	copied = iov_iter_copy_to_user(page, iter, offset, size);
+	if (in_atomic())
+		copied = iov_iter_copy_to_user_atomic(page, iter, offset, size);
+	else
+		copied = iov_iter_copy_to_user(page, iter, offset, size);
 	if (copied < size)
 		desc->error = -EFAULT;
 
