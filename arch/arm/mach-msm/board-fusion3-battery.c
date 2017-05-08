@@ -472,7 +472,6 @@ static bool sec_bat_check_callback(void)
 		pr_debug("%s: Fail to get psy (%s)\n",
 			__func__, "sec_charger");
 		value.intval = 1;
-		goto end;
 	} else {
 		int ret;
 		ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
@@ -480,7 +479,6 @@ static bool sec_bat_check_callback(void)
 			pr_debug("%s: Fail to sec-charger get_property (%d=>%d)\n",
 				__func__, POWER_SUPPLY_PROP_PRESENT, ret);
 			value.intval = 1;
-			goto end;
 		}
 #if defined(CONFIG_BOARD_JF_REFRESH)
 		{
@@ -493,15 +491,11 @@ static bool sec_bat_check_callback(void)
 			if(data < SHORT_BATTERY_STANDARD) {
 				pr_info("%s: Short Battery is connected.\n", __func__);
 				value.intval = 0;
-				goto end;
 			}
 		}
 #endif
 	}
 
-	value.intval = 0;
-
-end:
 	return value.intval;
 }
 static bool sec_bat_check_result_callback(void) {return true; }
