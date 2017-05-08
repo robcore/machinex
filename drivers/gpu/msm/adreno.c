@@ -3599,12 +3599,11 @@ static int adreno_check_interrupt_timestamp(struct kgsl_device *device,
 */
 #define kgsl_wait_event_interruptible_timeout(wq, condition, timeout, io)\
 ({									\
-	long __ret = timeout;						\
+	long timeout;						\
 	if (io)						\
-		__wait_io_event_interruptible_timeout(wq, condition, __ret);\
+		__wait_io_event_interruptible_timeout(wq, condition, timeout);\
 	else						\
-		__wait_event_interruptible_timeout(wq, condition, __ret);\
-	__ret;								\
+		__wait_event_interruptible_timeout(wq, condition, timeout);\
 })
 
 
