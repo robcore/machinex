@@ -1045,7 +1045,7 @@ static int _request_firmware_load(struct firmware_priv *fw_priv,
 		dev_set_uevent_suppress(f_dev, false);
 		dev_dbg(f_dev, "firmware: requesting %s\n", buf->fw_id);
 		if (timeout != MAX_SCHEDULE_TIMEOUT)
-			queue_delayed_work(system_wq,
+			queue_delayed_work(system_power_efficient_wq,
 					   &fw_priv->timeout_work, timeout);
 
 		kobject_uevent(&fw_priv->dev.kobj, KOBJ_ADD);
@@ -1270,15 +1270,14 @@ static int _request_firmware(struct fw_desc *desc)
 		}
 	}
 
-	ret = fw_get_filesystem_firmware(desc->device, fw->priv,
-					 desc->dest_addr, desc->dest_size);
+	ret = fw_get_filesystem_firmware(desc->device, fw->priv);
 	if (ret) {
 		if (!(desc->opt_flags & FW_OPT_NO_WARN))
 			dev_dbg(desc->device,
 				 "Direct firmware load for %s failed with error %d\n",
-				 +				 desc->name, ret);
+				 desc->name, ret);
 		if (desc->opt_flags & FW_OPT_USERHELPER) {
-			dev_warn(desc->device, "Falling back to user helper\n");
+			dev_dbg(desc->device, "Falling back to user helper\n");
 			ret = fw_load_from_user_helper(fw, desc, timeout);
 		}
 	}
@@ -1844,7 +1843,7 @@ static void device_uncache_fw_images_work(struct work_struct *work)
  */
 static void device_uncache_fw_images_delay(unsigned long delay)
 {
-	queue_delayed_work(system_wq, &fw_cache.work,
+	queue_delayed_work(system_power_efficient_wq, &fw_cache.work,
 			   msecs_to_jiffies(delay));
 }
 
