@@ -399,7 +399,7 @@ sg_read(struct file *filp, char __user *buf, size_t count, loff_t * ppos)
 		while (1) {
 			retval = __wait_event_interruptible(sfp->read_wait,
 				(sdp->detached ||
-				(srp = sg_get_rq_mark(sfp, req_pack_id))),);
+				(srp = sg_get_rq_mark(sfp, req_pack_id))));
 			if (sdp->detached) {
 				retval = -ENODEV;
 				goto free_old_hdr;
