@@ -28,7 +28,6 @@
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/reboot.h>
-#include <linux/security.h>
 #include <linux/io.h>
 
 #include <generated/utsrelease.h>
@@ -303,10 +302,7 @@ static const char * const fw_path[] = {
 	"/lib/firmware/updates/" UTS_RELEASE,
 	"/lib/firmware/updates",
 	"/lib/firmware/" UTS_RELEASE,
-	"/lib/firmware",
-	"/firmware/image",
-	"/firmware/radio",
-	"/firmware/adsp"	//HTC_AUD
+	"/lib/firmware"
 };
 
 /*
@@ -344,10 +340,6 @@ static int fw_read_file_contents(struct file *file, struct firmware_buf *fw_buf)
 			rc = -EIO;
 		goto fail;
 	}
-/*	rc = security_kernel_fw_from_file(file, buf, size);
-	if (rc)
-		goto fail;
-*/
 	fw_buf->data = buf;
 	fw_buf->size = size;
 	if (fw_buf->dest_addr)
@@ -362,8 +354,7 @@ fail:
 }
 
 static int fw_get_filesystem_firmware(struct device *device,
-				      struct firmware_buf *buf,
-				      phys_addr_t dest_addr, size_t dest_size)
+				       struct firmware_buf *buf)
 {
 	int i;
 	int rc = -ENOENT;
@@ -505,7 +496,7 @@ static struct firmware_priv *to_firmware_priv(struct device *dev)
 	return container_of(dev, struct firmware_priv, dev);
 }
 
-static void __fw_load_abort(struct firmware_buf *buf)
+static void fw_load_abort(struct firmware_buf *buf)
 {
 	/*
 	 * There is a small window in which user can write to 'loading'
@@ -519,16 +510,6 @@ static void __fw_load_abort(struct firmware_buf *buf)
 	complete_all(&buf->completion);
 }
 
-static void fw_load_abort(struct firmware_priv *fw_priv)
-{
-	struct firmware_buf *buf = fw_priv->buf;
-
-	__fw_load_abort(buf);
-
-	/* avoid user action after loading abort */
-	fw_priv->buf = NULL;
-}
-
 #define is_fw_load_aborted(buf)	\
 	test_bit(FW_STATUS_ABORT, &(buf)->status)
 
@@ -540,7 +521,7 @@ static int fw_shutdown_notify(struct notifier_block *unused1,
 {
 	mutex_lock(&fw_lock);
 	while (!list_empty(&pending_fw_head))
-		__fw_load_abort(list_first_entry(&pending_fw_head,
+		fw_load_abort(list_first_entry(&pending_fw_head,
 					       struct firmware_buf,
 					       pending_list));
 	mutex_unlock(&fw_lock);
@@ -675,7 +656,6 @@ static ssize_t firmware_loading_store(struct device *dev,
 {
 	struct firmware_priv *fw_priv = to_firmware_priv(dev);
 	struct firmware_buf *fw_buf;
-	ssize_t written = count;
 	int loading = simple_strtol(buf, NULL, 10);
 	int i;
 
@@ -703,8 +683,6 @@ static ssize_t firmware_loading_store(struct device *dev,
 		break;
 	case 0:
 		if (test_bit(FW_STATUS_LOADING, &fw_buf->status)) {
-			int rc;
-
 			set_bit(FW_STATUS_DONE, &fw_buf->status);
 			clear_bit(FW_STATUS_LOADING, &fw_buf->status);
 
@@ -714,23 +692,10 @@ static ssize_t firmware_loading_store(struct device *dev,
 			 * see the mapped 'buf->data' once the loading
 			 * is completed.
 			 * */
-			rc = fw_map_pages_buf(fw_buf);
-			if (rc)
+			if (fw_map_pages_buf(fw_buf))
 				dev_err(dev, "%s: map pages failed\n",
 					__func__);
-			else
-				rc = security_kernel_fw_from_file(NULL,
-						fw_buf->data, fw_buf->size);
-
-			/*
-			 * Same logic as fw_load_abort, only the DONE bit
-			 * is ignored and we set ABORT only on failure.
-			 */
 			list_del_init(&fw_buf->pending_list);
-			if (rc) {
-				set_bit(FW_STATUS_ABORT, &fw_buf->status);
-				written = rc;
-			}
 			complete_all(&fw_buf->completion);
 			break;
 		}
@@ -739,12 +704,12 @@ static ssize_t firmware_loading_store(struct device *dev,
 		dev_err(dev, "%s: unexpected value (%d)\n", __func__, loading);
 		/* fallthrough */
 	case -1:
-		fw_load_abort(fw_priv);
+		fw_load_abort(fw_buf);
 		break;
 	}
 out:
 	mutex_unlock(&fw_lock);
-	return written;
+	return count;
 }
 
 static DEVICE_ATTR(loading, 0644, firmware_loading_show, firmware_loading_store);
@@ -909,7 +874,7 @@ static int fw_realloc_buffer(struct firmware_priv *fw_priv, int min_size)
 		new_pages = kmalloc(new_array_size * sizeof(void *),
 				    GFP_KERNEL);
 		if (!new_pages) {
-			fw_load_abort(fw_priv);
+			fw_load_abort(buf);
 			return -ENOMEM;
 		}
 		memcpy(new_pages, buf->pages,
@@ -926,7 +891,7 @@ static int fw_realloc_buffer(struct firmware_priv *fw_priv, int min_size)
 			alloc_page(GFP_KERNEL | __GFP_HIGHMEM);
 
 		if (!buf->pages[buf->nr_pages]) {
-			fw_load_abort(fw_priv);
+			fw_load_abort(buf);
 			return -ENOMEM;
 		}
 		buf->nr_pages++;
@@ -1003,7 +968,7 @@ static void firmware_class_timeout_work(struct work_struct *work)
 			struct firmware_priv, timeout_work.work);
 
 	mutex_lock(&fw_lock);
-	fw_load_abort(fw_priv);
+	fw_load_abort(fw_priv->buf);
 	mutex_unlock(&fw_lock);
 }
 
@@ -1015,7 +980,6 @@ fw_create_instance(struct firmware *firmware, struct fw_desc *desc)
 
 	fw_priv = kzalloc(sizeof(*fw_priv), GFP_KERNEL);
 	if (!fw_priv) {
-		dev_err(desc->device, "%s: kmalloc failed\n", __func__);
 		fw_priv = ERR_PTR(-ENOMEM);
 		goto exit;
 	}
@@ -1081,7 +1045,7 @@ static int _request_firmware_load(struct firmware_priv *fw_priv,
 		dev_set_uevent_suppress(f_dev, false);
 		dev_dbg(f_dev, "firmware: requesting %s\n", buf->fw_id);
 		if (timeout != MAX_SCHEDULE_TIMEOUT)
-			queue_delayed_work(system_power_efficient_wq,
+			queue_delayed_work(system_wq,
 					   &fw_priv->timeout_work, timeout);
 
 		kobject_uevent(&fw_priv->dev.kobj, KOBJ_ADD);
@@ -1128,7 +1092,7 @@ static void kill_requests_without_uevent(void)
 	mutex_lock(&fw_lock);
 	list_for_each_entry_safe(buf, next, &pending_fw_head, pending_list) {
 		if (!buf->need_uevent)
-			 __fw_load_abort(buf);
+			 fw_load_abort(buf);
 	}
 	mutex_unlock(&fw_lock);
 }
@@ -1312,9 +1276,9 @@ static int _request_firmware(struct fw_desc *desc)
 		if (!(desc->opt_flags & FW_OPT_NO_WARN))
 			dev_dbg(desc->device,
 				 "Direct firmware load for %s failed with error %d\n",
-				 desc->name, ret);
+				 +				 desc->name, ret);
 		if (desc->opt_flags & FW_OPT_USERHELPER) {
-			dev_dbg(desc->device, "Falling back to user helper\n");
+			dev_warn(desc->device, "Falling back to user helper\n");
 			ret = fw_load_from_user_helper(fw, desc, timeout);
 		}
 	}
@@ -1880,7 +1844,7 @@ static void device_uncache_fw_images_work(struct work_struct *work)
  */
 static void device_uncache_fw_images_delay(unsigned long delay)
 {
-	queue_delayed_work(system_power_efficient_wq, &fw_cache.work,
+	queue_delayed_work(system_wq, &fw_cache.work,
 			   msecs_to_jiffies(delay));
 }
 
