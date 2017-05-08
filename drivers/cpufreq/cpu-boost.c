@@ -155,14 +155,12 @@ static void cpuboost_input_event(struct input_handle *handle,
 {
 	u64 now;
 
-	if (!input_boost_enabled)
+	if (!input_boost_enabled || !input_boost_freq)
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < msecs_to_jiffies(min_input_interval))
-		return;
-
-	if (work_pending(&input_boost_work))
+	if (now - last_input_time < msecs_to_jiffies(min_input_interval)
+					 || work_pending(&input_boost_work))
 		return;
 
 	queue_work(cpu_boost_wq, &input_boost_work);
@@ -181,7 +179,7 @@ static int cpuboost_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "cpufreq";
+	handle->name = "cpu-boost";
 
 	error = input_register_handle(handle);
 	if (error)
