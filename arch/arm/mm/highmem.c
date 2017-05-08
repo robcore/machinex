@@ -30,9 +30,10 @@ EXPORT_SYMBOL(kmap);
 
 void kunmap(struct page *page)
 {
-	BUG_ON(in_interrupt());
+	might_sleep();
 	if (!PageHighMem(page))
 		return;
+	BUG_ON(in_interrupt());
 	kunmap_high(page);
 }
 EXPORT_SYMBOL(kunmap);
