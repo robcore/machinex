@@ -660,48 +660,6 @@ do {									\
 	 ? 0 : __wait_event_interruptible_locked(wq, condition, 1, 1))
 
 
-#define __wait_event_interruptible_lock_irq(wq, condition, lock, ret, cmd) \
-	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 0, ret,	   \
-		      spin_unlock_irq(&lock);				   \
-		      cmd;						   \
-		      schedule();					   \
-		      spin_lock_irq(&lock))
-
-/**
- * wait_event_interruptible_lock_irq_timeout - sleep until a condition gets true or a timeout elapses.
- *		The condition is checked under the lock. This is expected
- *		to be called with the lock taken.
- * @wq: the waitqueue to wait on
- * @condition: a C expression for the event to wait for
- * @lock: a locked spinlock_t, which will be released before schedule()
- *	  and reacquired afterwards.
- * @timeout: timeout, in jiffies
- *
- * The process is put to sleep (TASK_INTERRUPTIBLE) until the
- * @condition evaluates to true or signal is received. The @condition is
- * checked each time the waitqueue @wq is woken up.
- *
- * wake_up() has to be called after changing any variable that could
- * change the result of the wait condition.
- *
- * This is supposed to be called while holding the lock. The lock is
- * dropped before going to sleep and is reacquired afterwards.
- *
- * The function returns 0 if the @timeout elapsed, -ERESTARTSYS if it
- * was interrupted by a signal, and the remaining jiffies otherwise
- * if the condition evaluated to true before the timeout elapsed.
- */
-#define wait_event_interruptible_lock_irq_timeout(wq, condition, lock,	\
-						  timeout)		\
-({									\
-	int __ret = timeout;						\
-									\
-	if (!(condition))						\
-		__wait_event_interruptible_lock_irq_timeout(		\
-					wq, condition, lock, __ret);	\
-	__ret;								\
-})
-
 
 #define __wait_event_killable(wq, condition, ret)			\
 	___wait_event(wq, condition, TASK_KILLABLE, 0, ret, schedule())
@@ -795,69 +753,13 @@ do {									\
 	__wait_event_lock_irq(wq, condition, lock, );			\
 } while (0)
 
-#define __wait_event_interruptible_lock_irq_timeout(wq, condition, lock, ret) \
-	___wait_event(wq, ___wait_cond_timeout(condition, ret),		      \
-		      TASK_INTERRUPTIBLE, 0, ret,	      		      \
-		      spin_unlock_irq(&lock);				      \
-		      ret = schedule_timeout(ret);			      \
-		      spin_lock_irq(&lock));
 
-/**
- * wait_event_interruptible_lock_irq_timeout - sleep until a condition gets true or a timeout elapses.
- *		The condition is checked under the lock. This is expected
- *		to be called with the lock taken.
- * @wq: the waitqueue to wait on
- * @condition: a C expression for the event to wait for
- * @lock: a locked spinlock_t, which will be released before schedule()
- *	  and reacquired afterwards.
- * @timeout: timeout, in jiffies
- *
- * The process is put to sleep (TASK_INTERRUPTIBLE) until the
- * @condition evaluates to true or signal is received. The @condition is
- * checked each time the waitqueue @wq is woken up.
- *
- * wake_up() has to be called after changing any variable that could
- * change the result of the wait condition.
- *
- * This is supposed to be called while holding the lock. The lock is
- * dropped before going to sleep and is reacquired afterwards.
- *
- * The function returns 0 if the @timeout elapsed, -ERESTARTSYS if it
- * was interrupted by a signal, and the remaining jiffies otherwise
- * if the condition evaluated to true before the timeout elapsed.
- */
-#define wait_event_interruptible_lock_irq_timeout(wq, condition, lock,	\
-						  timeout)		\
-({									\
-	int __ret = timeout;						\
-									\
-	if (!(condition))						\
-		__wait_event_interruptible_lock_irq_timeout(		\
-					wq, condition, lock, __ret);	\
-	__ret;								\
-})
-
-
-#define __wait_event_interruptible_lock_irq(wq, condition,		\
-					    lock, ret, cmd)		\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
-		if (___wait_cond_timeout(condition, ret))		\
-			break;						\
-		if (signal_pending(current)) {				\
-			ret = -ERESTARTSYS;				\
-			break;						\
-		}							\
-		spin_unlock_irq(&lock);					\
-		cmd;							\
-		schedule();						\
-		spin_lock_irq(&lock);					\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
+#define __wait_event_interruptible_lock_irq(wq, condition, lock, ret, cmd) \
+	___wait_event(wq, condition, TASK_INTERRUPTIBLE, 0, ret,	   \
+		      spin_unlock_irq(&lock);				   \
+		      cmd;						   \
+		      schedule();					   \
+		      spin_lock_irq(&lock))
 
 /**
  * wait_event_interruptible_lock_irq_cmd - sleep until a condition gets true.
@@ -925,6 +827,61 @@ do {									\
 						    lock, __ret, );	\
 	__ret;								\
 })
+
+#define __wait_event_interruptible_lock_irq_timeout(wq, condition, lock, ret) \
+	___wait_event(wq, ___wait_cond_timeout(condition, ret),		      \
+		      TASK_INTERRUPTIBLE, 0, ret,	      		      \
+		      spin_unlock_irq(&lock);				      \
+		      ret = schedule_timeout(ret);			      \
+		      spin_lock_irq(&lock));
+
+/**
+ * wait_event_interruptible_lock_irq_timeout - sleep until a condition gets true or a timeout elapses.
+ *		The condition is checked under the lock. This is expected
+ *		to be called with the lock taken.
+ * @wq: the waitqueue to wait on
+ * @condition: a C expression for the event to wait for
+ * @lock: a locked spinlock_t, which will be released before schedule()
+ *	  and reacquired afterwards.
+ * @timeout: timeout, in jiffies
+ *
+ * The process is put to sleep (TASK_INTERRUPTIBLE) until the
+ * @condition evaluates to true or signal is received. The @condition is
+ * checked each time the waitqueue @wq is woken up.
+ *
+ * wake_up() has to be called after changing any variable that could
+ * change the result of the wait condition.
+ *
+ * This is supposed to be called while holding the lock. The lock is
+ * dropped before going to sleep and is reacquired afterwards.
+ *
+ * The function returns 0 if the @timeout elapsed, -ERESTARTSYS if it
+ * was interrupted by a signal, and the remaining jiffies otherwise
+ * if the condition evaluated to true before the timeout elapsed.
+ */
+#define wait_event_interruptible_lock_irq_timeout(wq, condition, lock,	\
+						  timeout)		\
+({									\
+	int __ret = timeout;						\
+									\
+	if (!(condition))						\
+		__wait_event_interruptible_lock_irq_timeout(		\
+					wq, condition, lock, __ret);	\
+	__ret;								\
+})
+
+
+/*
+ * These are the old interfaces to sleep waiting for an event.
+ * They are racy.  DO NOT use them, use the wait_event* interfaces above.
+ * We plan to remove these interfaces.
+ */
+extern void sleep_on(wait_queue_head_t *q);
+extern long sleep_on_timeout(wait_queue_head_t *q,
+				      signed long timeout);
+extern void interruptible_sleep_on(wait_queue_head_t *q);
+extern long interruptible_sleep_on_timeout(wait_queue_head_t *q,
+					   signed long timeout);
 
 /*
  * Waitqueues which are removed from the waitqueue_head at wakeup time
@@ -1028,5 +985,6 @@ int wait_on_atomic_t(atomic_t *val, int (*action)(atomic_t *), unsigned mode)
 		return 0;
 	return out_of_line_wait_on_atomic_t(val, action, mode);
 }
-
+	
 #endif
+
