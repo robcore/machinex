@@ -11,7 +11,6 @@ obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
 # CPU boost
 obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 obj-$(CONFIG_CPU_FREQ_MSM) += qcom-cpufreq.o
-obj-$(CONFIG_PM_OPP)			+= cpufreq_opp.o
 # CPUfreq governors
 obj-$(CONFIG_CPU_FREQ_GOV_PERFORMANCE)	+= cpufreq_performance.o
 obj-$(CONFIG_CPU_FREQ_GOV_POWERSAVE)	+= cpufreq_powersave.o

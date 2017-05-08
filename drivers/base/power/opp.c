@@ -15,6 +15,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/slab.h>
+#include <linux/cpufreq.h>
 #include <linux/device.h>
 #include <linux/list.h>
 #include <linux/rculist.h>
@@ -393,13 +394,6 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_find_freq_floor);
  * to keep the integrity of the internal data structures. Callers should ensure
  * that this function is *NOT* called under RCU protection or in contexts where
  * mutex cannot be locked.
- *
- * Return:
- * 0:		On success OR
- *		Duplicate OPPs (both freq and volt are same) and opp->available
- * -EEXIST:	Freq are same and volt are different OR
- *		Duplicate OPPs (both freq and volt are same) and !opp->available
- * -ENOMEM:	Memory allocation failure
  */
 int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
 {
@@ -409,8 +403,10 @@ int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
 
 	/* allocate new OPP node */
 	new_opp = kzalloc(sizeof(*new_opp), GFP_KERNEL);
-	if (!new_opp)
+	if (!new_opp) {
+		dev_warn(dev, "%s: Unable to create new OPP node\n", __func__);
 		return -ENOMEM;
+	}
 
 	/* Hold our list modification lock here */
 	mutex_lock(&dev_opp_list_lock);
@@ -447,29 +443,13 @@ int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
 	new_opp->u_volt = u_volt;
 	new_opp->available = true;
 
-	/*
-	 * Insert new OPP in order of increasing frequency
-	 * and discard if already present
-	 */
+	/* Insert new OPP in order of increasing frequency */
 	head = &dev_opp->opp_list;
 	list_for_each_entry_rcu(opp, &dev_opp->opp_list, node) {
-		if (new_opp->rate <= opp->rate)
+		if (new_opp->rate < opp->rate)
 			break;
 		else
 			head = &opp->node;
-	}
-
-	/* Duplicate OPPs ? */
-	if (new_opp->rate == opp->rate) {
-		int ret = opp->available && new_opp->u_volt == opp->u_volt ?
-			0 : -EEXIST;
-
-		dev_warn(dev, "%s: duplicate OPPs detected. Existing: freq: %lu, volt: %lu, enabled: %d. New: freq: %lu, volt: %lu, enabled: %d\n",
-			 __func__, opp->rate, opp->u_volt, opp->available,
-			 new_opp->rate, new_opp->u_volt, new_opp->available);
-		mutex_unlock(&dev_opp_list_lock);
-		kfree(new_opp);
-		return ret;
 	}
 
 	list_add_rcu(&new_opp->node, head);
@@ -512,8 +492,10 @@ static int opp_set_availability(struct device *dev, unsigned long freq,
 
 	/* keep the node allocated */
 	new_opp = kmalloc(sizeof(*new_opp), GFP_KERNEL);
-	if (!new_opp)
+	if (!new_opp) {
+		dev_warn(dev, "%s: Unable to create OPP\n", __func__);
 		return -ENOMEM;
+	}
 
 	mutex_lock(&dev_opp_list_lock);
 
@@ -615,6 +597,97 @@ int dev_pm_opp_disable(struct device *dev, unsigned long freq)
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_disable);
 
+#ifdef CONFIG_CPU_FREQ
+/**
+ * dev_pm_opp_init_cpufreq_table() - create a cpufreq table for a device
+ * @dev:	device for which we do this operation
+ * @table:	Cpufreq table returned back to caller
+ *
+ * Generate a cpufreq table for a provided device- this assumes that the
+ * opp list is already initialized and ready for usage.
+ *
+ * This function allocates required memory for the cpufreq table. It is
+ * expected that the caller does the required maintenance such as freeing
+ * the table as required.
+ *
+ * Returns -EINVAL for bad pointers, -ENODEV if the device is not found, -ENOMEM
+ * if no memory available for the operation (table is not populated), returns 0
+ * if successful and table is populated.
+ *
+ * WARNING: It is  important for the callers to ensure refreshing their copy of
+ * the table if any of the mentioned functions have been invoked in the interim.
+ *
+ * Locking: The internal device_opp and opp structures are RCU protected.
+ * Since we just use the regular accessor functions to access the internal data
+ * structures, we use RCU read lock inside this function. As a result, users of
+ * this function DONOT need to use explicit locks for invoking.
+ */
+int dev_pm_opp_init_cpufreq_table(struct device *dev,
+			    struct cpufreq_frequency_table **table)
+{
+	struct dev_pm_opp *opp;
+	struct cpufreq_frequency_table *freq_table = NULL;
+	int i, max_opps, ret = 0;
+	unsigned long rate;
+
+	rcu_read_lock();
+
+	max_opps = dev_pm_opp_get_opp_count(dev);
+	if (max_opps <= 0) {
+		ret = max_opps ? max_opps : -ENODATA;
+		goto out;
+	}
+
+	freq_table = kzalloc(sizeof(*freq_table) * (max_opps + 1), GFP_KERNEL);
+	if (!freq_table) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0, rate = 0; i < max_opps; i++, rate++) {
+		/* find next rate */
+		opp = dev_pm_opp_find_freq_ceil(dev, &rate);
+		if (IS_ERR(opp)) {
+			ret = PTR_ERR(opp);
+			goto out;
+		}
+		freq_table[i].driver_data = i;
+		freq_table[i].frequency = rate / 1000;
+	}
+
+	freq_table[i].driver_data = i;
+	freq_table[i].frequency = CPUFREQ_TABLE_END;
+
+	*table = &freq_table[0];
+
+out:
+	rcu_read_unlock();
+	if (ret)
+		kfree(freq_table);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dev_pm_opp_init_cpufreq_table);
+
+/**
+ * dev_pm_opp_free_cpufreq_table() - free the cpufreq table
+ * @dev:	device for which we do this operation
+ * @table:	table to free
+ *
+ * Free up the table allocated by dev_pm_opp_init_cpufreq_table
+ */
+void dev_pm_opp_free_cpufreq_table(struct device *dev,
+				struct cpufreq_frequency_table **table)
+{
+	if (!table)
+		return;
+
+	kfree(*table);
+	*table = NULL;
+}
+EXPORT_SYMBOL_GPL(dev_pm_opp_free_cpufreq_table);
+#endif		/* CONFIG_CPU_FREQ */
+
 /**
  * dev_pm_opp_get_notifier() - find notifier_head of the device with opp
  * @dev:	device pointer used to lookup device OPPs.
@@ -663,9 +736,11 @@ int of_init_opp_table(struct device *dev)
 		unsigned long freq = be32_to_cpup(val++) * 1000;
 		unsigned long volt = be32_to_cpup(val++);
 
-		if (dev_pm_opp_add(dev, freq, volt))
+		if (dev_pm_opp_add(dev, freq, volt)) {
 			dev_warn(dev, "%s: Failed to add OPP %ld\n",
 				 __func__, freq);
+			continue;
+		}
 		nr -= 2;
 	}
 

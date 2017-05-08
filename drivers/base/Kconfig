@@ -149,47 +149,15 @@ config EXTRA_FIRMWARE_DIR
 	  some other directory containing the firmware files.
 
 config FW_LOADER_USER_HELPER
-	bool
-
-config FW_LOADER_USER_HELPER_FALLBACK
 	bool "Fallback user-helper invocation for firmware loading"
 	depends on FW_LOADER
-	select FW_LOADER_USER_HELPER
+	default y
 	help
 	  This option enables / disables the invocation of user-helper
 	  (e.g. udev) for loading firmware files as a fallback after the
 	  direct file loading in kernel fails.  The user-mode helper is
 	  no longer required unless you have a special firmware file that
-	  resides in a non-standard path. Moreover, the udev support has
-	  been deprecated upstream.
-
-	  If you are unsure about this, say N here.
-
-config FW_CACHE
-       bool "Enable firmware caching during suspend"
-       depends on PM_SLEEP
-       default n
-
-config WANT_DEV_COREDUMP
-	bool
-	help
-	  Drivers should "select" this option if they desire to use the
-	  device coredump mechanism.
-
-config DISABLE_DEV_COREDUMP
-	bool "Disable device coredump" if EXPERT
-	help
-	  Disable the device coredump mechanism despite drivers wanting to
-	  use it; this allows for more sensitive systems or systems that
-	  don't want to ever access the information to not have the code,
-	  nor keep any data.
-
-	  If unsure, say N.
-
-config DEV_COREDUMP
-	bool
-	default y if WANT_DEV_COREDUMP
-	depends on !DISABLE_DEV_COREDUMP
+	  resides in a non-standard path.
 
 config DEBUG_DRIVER
 	bool "Driver Core verbose debug messages"
@@ -328,7 +296,7 @@ endchoice
 
 config CMA_ALIGNMENT
 	int "Maximum PAGE_SIZE order of alignment for contiguous buffers"
-	range 4 12
+	range 4 9
 	default 8
 	help
 	  DMA mapping framework by default aligns all buffers to the smallest

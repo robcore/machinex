@@ -572,6 +572,39 @@ void device_remove_bin_file(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(device_remove_bin_file);
 
+/**
+ * device_schedule_callback_owner - helper to schedule a callback for a device
+ * @dev: device.
+ * @func: callback function to invoke later.
+ * @owner: module owning the callback routine
+ *
+ * Attribute methods must not unregister themselves or their parent device
+ * (which would amount to the same thing).  Attempts to do so will deadlock,
+ * since unregistration is mutually exclusive with driver callbacks.
+ *
+ * Instead methods can call this routine, which will attempt to allocate
+ * and schedule a workqueue request to call back @func with @dev as its
+ * argument in the workqueue's process context.  @dev will be pinned until
+ * @func returns.
+ *
+ * This routine is usually called via the inline device_schedule_callback(),
+ * which automatically sets @owner to THIS_MODULE.
+ *
+ * Returns 0 if the request was submitted, -ENOMEM if storage could not
+ * be allocated, -ENODEV if a reference to @owner isn't available.
+ *
+ * NOTE: This routine won't work if CONFIG_SYSFS isn't set!  It uses an
+ * underlying sysfs routine (since it is intended for use by attribute
+ * methods), and if sysfs isn't available you'll get nothing but -ENOSYS.
+ */
+int device_schedule_callback_owner(struct device *dev,
+		void (*func)(struct device *), struct module *owner)
+{
+	return sysfs_schedule_callback(&dev->kobj,
+			(void (*)(void *)) func, dev, owner);
+}
+EXPORT_SYMBOL_GPL(device_schedule_callback_owner);
+
 static void klist_children_get(struct klist_node *n)
 {
 	struct device_private *p = to_device_private_parent(n);
@@ -744,35 +777,22 @@ static struct kobject *get_device_parent(struct device *dev,
 		return &parent->kobj;
 	return NULL;
 }
-static inline bool live_in_glue_dir(struct kobject *kobj,
-					struct device *dev)
-{
-	if (!kobj || !dev->class ||
-	    kobj->kset != &dev->class->p->glue_dirs)
-		return false;
-	return true;
-}
 
-static inline struct kobject *get_glue_dir(struct device *dev)
-{
-	if (live_in_glue_dir(&dev->kobj, dev))
-		return dev->kobj.parent;
-	return NULL;
-}
-/*
-* make sure cleaning up dir as the last step, we need to make
-* sure .release handler of kobject is run with holding the
-* global lock
-*/
 static void cleanup_glue_dir(struct device *dev, struct kobject *glue_dir)
 {
 	/* see if we live in a "glue" directory */
-	if (!live_in_glue_dir(glue_dir, dev))
+	if (!glue_dir || !dev->class ||
+	    glue_dir->kset != &dev->class->p->glue_dirs)
 		return;
 
 	mutex_lock(&gdp_mutex);
 	kobject_put(glue_dir);
 	mutex_unlock(&gdp_mutex);
+}
+
+static void cleanup_device_parent(struct device *dev)
+{
+	cleanup_glue_dir(dev, dev->kobj.parent);
 }
 
 static int device_add_class_symlinks(struct device *dev)
@@ -937,7 +957,6 @@ int device_add(struct device *dev)
 	struct device *parent = NULL;
 	struct kobject *kobj;
 	struct class_interface *class_intf;
-	struct kobject *glue_dir = NULL;
 	int error = -EINVAL;
 
 	dev = get_device(dev);
@@ -983,10 +1002,8 @@ int device_add(struct device *dev)
 	/* first, register with generic layer. */
 	/* we require the name to be set before, and pass NULL */
 	error = kobject_add(&dev->kobj, dev->kobj.parent, NULL);
-	if (error) {
-		glue_dir = get_glue_dir(dev);
+	if (error)
 		goto Error;
-	}
 
 	/* notify platform of device entry */
 	if (platform_notify)
@@ -1075,10 +1092,9 @@ done:
 	device_remove_file(dev, &dev_attr_uevent);
  attrError:
 	kobject_uevent(&dev->kobj, KOBJ_REMOVE);
-	glue_dir = get_glue_dir(dev);
 	kobject_del(&dev->kobj);
  Error:
-	cleanup_glue_dir(dev, glue_dir);
+	cleanup_device_parent(dev);
 	if (parent)
 		put_device(parent);
 name_error:
@@ -1155,7 +1171,6 @@ EXPORT_SYMBOL_GPL(put_device);
 void device_del(struct device *dev)
 {
 	struct device *parent = dev->parent;
-	struct kobject *glue_dir = NULL;
 	struct class_interface *class_intf;
 
 	/* Notify clients of device removal.  This call must come
@@ -1196,13 +1211,9 @@ void device_del(struct device *dev)
 	 */
 	if (platform_notify_remove)
 		platform_notify_remove(dev);
-	if (dev->bus)
-		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
-					     BUS_NOTIFY_REMOVED_DEVICE, dev);
 	kobject_uevent(&dev->kobj, KOBJ_REMOVE);
-	glue_dir = get_glue_dir(dev);
+	cleanup_device_parent(dev);
 	kobject_del(&dev->kobj);
-	cleanup_glue_dir(dev, glue_dir);
 	put_device(parent);
 }
 EXPORT_SYMBOL_GPL(device_del);
@@ -2049,8 +2060,6 @@ create_syslog_header(const struct device *dev, char *hdr, size_t hdrlen)
 		return 0;
 
 	pos += snprintf(hdr + pos, hdrlen - pos, "SUBSYSTEM=%s", subsys);
-	if (pos >= hdrlen)
-		goto overflow;
 
 	/*
 	 * Add device identifier DEVICE=:
@@ -2082,14 +2091,7 @@ create_syslog_header(const struct device *dev, char *hdr, size_t hdrlen)
 				"DEVICE=+%s:%s", subsys, dev_name(dev));
 	}
 
-	if (pos >= hdrlen)
-		goto overflow;
-
 	return pos;
-
-overflow:
-	dev_WARN(dev, "device/subsystem name too long");
-	return 0;
 }
 
 int dev_vprintk_emit(int level, const struct device *dev,

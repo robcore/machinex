@@ -81,8 +81,10 @@ int pm_clk_add(struct device *dev, const char *con_id)
 		return -EINVAL;
 
 	ce = kzalloc(sizeof(*ce), GFP_KERNEL);
-	if (!ce)
+	if (!ce) {
+		dev_err(dev, "Not enough memory for clock entry.\n");
 		return -ENOMEM;
+	}
 
 	if (con_id) {
 		ce->con_id = kstrdup(con_id, GFP_KERNEL);

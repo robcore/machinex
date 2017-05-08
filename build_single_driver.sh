@@ -55,14 +55,14 @@ export CROSS_COMPILE=$TOOLCHAIN
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 #env KCONFIG_NOTIMESTAMP=true
-make clean;
-make distclean;
-make mrproper;
+fakeroot make clean;
+fakeroot make distclean;
+fakeroot make mrproper;
 mkdir $(pwd)/out;
 cp $(pwd)/arch/arm/configs/canadefconfig $(pwd)/out/.config;
-make ARCH=arm -j6 O=$(pwd)/out oldconfig;
+fakeroot make ARCH=arm -j6 O=$(pwd)/out oldconfig;
 #echo -n "What am I building? [ENTER] "
 #read DRV
-#make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$DRV;
-make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$@
+#fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$DRV;
+fakeroot make ARCH=arm -S -s -j6 O=$(pwd)/out $(pwd)/$@
 washme
