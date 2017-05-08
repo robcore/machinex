@@ -111,7 +111,7 @@ static void reschedule_timer (void)
 	queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(sleeper_data.delay));
 }
 
-static void __ref hotplug_func(struct work_struct *work)
+static void hotplug_func(struct work_struct *work)
 {
 	unsigned int cpu, loadavg = 0;
 
@@ -166,7 +166,7 @@ static void msm_sleeper_suspend(struct work_struct *work)
 	}
 }
 
-static void __ref msm_sleeper_resume(struct work_struct *work)
+static void msm_sleeper_resume(struct work_struct *work)
 {
 	int cpu;
 
@@ -212,7 +212,7 @@ static ssize_t show_enable_hotplug(struct device *dev,
 	return sprintf(buf, "%u\n", sleeper_data.enabled);
 }
 
-static ssize_t __ref store_enable_hotplug(struct device *dev,
+static ssize_t store_enable_hotplug(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    const char *buf, size_t count)
 {

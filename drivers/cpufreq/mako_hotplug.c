@@ -209,7 +209,7 @@ static void cpu_smash(unsigned int load)
 	hotplug_stats.counter = 0;
 }
 
-static void __ref decide_hotplug_func(struct work_struct *work)
+static void decide_hotplug_func(struct work_struct *work)
 {
 	struct hotplug_tunables *t = &tunables;
 	unsigned int cur_load = 0;

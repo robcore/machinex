@@ -57,7 +57,7 @@ static struct workqueue_struct *dyn_workq;
 static struct notifier_block notify;
 
 /* Bring online each possible CPU up to max_cpus_online cores */
-static void __ref up_all(void)
+static void up_all(void)
 {
 	unsigned int cpu;
 
@@ -69,7 +69,7 @@ static void __ref up_all(void)
 }
 
 /* Iterate through possible CPUs and bring online the first offline found */
-static void __ref up_one(void)
+static void up_one(void)
 {
 	unsigned int cpu;
 
@@ -396,7 +396,7 @@ static int dyn_hp_init(void)
 	return 0;
 }
 
-static void __ref dyn_hp_exit(void)
+static void dyn_hp_exit(void)
 {
 	int cpu;
 

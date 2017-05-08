@@ -232,7 +232,7 @@ static void update_per_cpu_stat(void)
 	}
 }
 
-static void __ref cpu_up_down_work(struct work_struct *work)
+static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int online_cpus, cpu;
 	long l_nr_threshold;
@@ -303,7 +303,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 }
 
-static void __ref intelli_plug_suspend(void)
+static void intelli_plug_suspend(void)
 {
 	int cpu = 0;
 
@@ -330,7 +330,7 @@ static void __ref intelli_plug_suspend(void)
 	}
 }
 
-static void __ref intelli_plug_resume(void)
+static void intelli_plug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
@@ -503,7 +503,7 @@ static void cycle_cpus(void)
 	intellinit = false;
 }
 
-static int __ref intelli_plug_start(void)
+static int intelli_plug_start(void)
 {
 	unsigned int cpu, ret = 0;
 	struct down_lock *dl;

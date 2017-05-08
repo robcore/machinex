@@ -156,7 +156,7 @@ static unsigned int get_nr_run_avg(void)
 
 typedef enum {IDLE, ON, OFF} HOTPLUG_STATUS;
 
-static void __ref hotplug_work_fn(struct work_struct *work)
+static void hotplug_work_fn(struct work_struct *work)
 {
 	unsigned int upmax_cpus_online = 0;
 	unsigned int min_cpus_online = hotplug_tuners_ins.min_cpus_online;
@@ -317,7 +317,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 }
 
 #ifdef CONFIG_POWERSUSPEND
-static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
+static void alucard_hotplug_suspend(struct power_suspend *handler)
 #endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
@@ -329,7 +329,7 @@ static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
 }
 
 #ifdef CONFIG_POWERSUSPEND
-static void __ref alucard_hotplug_resume(struct power_suspend *handler)
+static void alucard_hotplug_resume(struct power_suspend *handler)
 #endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0

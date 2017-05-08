@@ -205,7 +205,7 @@ static int mp_decision(void) {
 	return new_state;
 }
 
-static void __ref bricked_hotplug_work(struct work_struct *work) {
+static void bricked_hotplug_work(struct work_struct *work) {
 	unsigned int cpu;
 
 	if (hotplug.suspended && hotplug.max_cpus_online_susp <= 1)
@@ -281,7 +281,7 @@ static void bricked_hotplug_suspend(void)
 			cpu_online(0), cpu_online(1), cpu_online(2), cpu_online(3));
 }
 
-static void __ref bricked_hotplug_resume(void)
+static void bricked_hotplug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
@@ -558,7 +558,7 @@ static ssize_t store_idle_freq(struct device *dev,
 	return count;
 }
 
-static ssize_t __ref store_min_cpus_online(struct device *dev,
+static ssize_t store_min_cpus_online(struct device *dev,
 				struct device_attribute *bricked_hotplug_attrs,
 				const char *buf, size_t count)
 {

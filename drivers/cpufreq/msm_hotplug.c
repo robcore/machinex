@@ -312,7 +312,7 @@ static int get_lowest_load_cpu(void)
 	return lowest_cpu;
 }
 
-static void __ref cpu_up_work(struct work_struct *work)
+static void cpu_up_work(struct work_struct *work)
 {
 	int cpu;
 	unsigned int target;
@@ -477,7 +477,7 @@ reschedule:
 }
 
 #ifdef CONFIG_STATE_NOTIFIER
-static void __ref msm_hotplug_suspend(void)
+static void msm_hotplug_suspend(void)
 {
 	int cpu;
 
@@ -510,7 +510,7 @@ static void __ref msm_hotplug_suspend(void)
 	}
 }
 
-static void __ref msm_hotplug_resume(void)
+static void msm_hotplug_resume(void)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
 
@@ -655,7 +655,7 @@ static struct input_handler hotplug_input_handler = {
 	.id_table	= hotplug_ids,
 };
 
-static int __ref msm_hotplug_start(void)
+static int msm_hotplug_start(void)
 {
 	int cpu, ret = 0;
 	struct down_lock *dl;
