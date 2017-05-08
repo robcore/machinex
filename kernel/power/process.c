@@ -101,8 +101,8 @@ static int try_to_freeze_tasks(bool user_only)
 		       elapsed_msecs / 1000, elapsed_msecs % 1000,
 		       todo - wq_busy, wq_busy);
 
-		//if (wq_busy)
-			//show_workqueue_state();
+		if (wq_busy)
+			show_workqueue_state();
 
 		if (!wakeup) {
 			read_lock(&tasklist_lock);

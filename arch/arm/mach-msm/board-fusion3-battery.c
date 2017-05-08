@@ -469,14 +469,14 @@ static bool sec_bat_check_callback(void)
 
 	psy = get_power_supply_by_name(("sec-charger"));
 	if (!psy) {
-		pr_debug("%s: Fail to get psy (%s)\n",
+		pr_err("%s: Fail to get psy (%s)\n",
 			__func__, "sec_charger");
 		value.intval = 1;
 	} else {
 		int ret;
 		ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
 		if (ret < 0) {
-			pr_debug("%s: Fail to sec-charger get_property (%d=>%d)\n",
+			pr_err("%s: Fail to sec-charger get_property (%d=>%d)\n",
 				__func__, POWER_SUPPLY_PROP_PRESENT, ret);
 			value.intval = 1;
 		}
