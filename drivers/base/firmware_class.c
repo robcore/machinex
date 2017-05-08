@@ -110,6 +110,7 @@ static inline long firmware_loading_timeout(void)
 #else
 #define FW_OPT_FALLBACK		0
 #endif
+#define FW_OPT_NO_WARN	(1U << 3)
 
 struct firmware_cache {
 	/* firmware_buf instance will be added into the below list */
@@ -1093,10 +1094,11 @@ _request_firmware(const struct firmware **firmware_p, const char *name,
 
 	ret = fw_get_filesystem_firmware(device, fw->priv);
 	if (ret) {
-		if (opt_flags & FW_OPT_USERHELPER) {
+		if (!(opt_flags & FW_OPT_NO_WARN))
 			dev_dbg(device,
-				 "Direct firmware load failed with error %d\n",
-				 ret);
+				 "Direct firmware load for %s failed with error %d\n",
+				 name, ret);
+		if (opt_flags & FW_OPT_USERHELPER) {
 			dev_dbg(device, "Falling back to user helper\n");
 			ret = fw_load_from_user_helper(fw, name, device,
 						       opt_flags, timeout);
@@ -1153,7 +1155,6 @@ request_firmware(const struct firmware **firmware_p, const char *name,
 }
 EXPORT_SYMBOL(request_firmware);
 
-#ifdef CONFIG_FW_LOADER_USER_HELPER_FALLBACK
 /**
  * request_firmware: - load firmware directly without usermode helper
  * @firmware_p: pointer to firmware image
@@ -1170,12 +1171,12 @@ int request_firmware_direct(const struct firmware **firmware_p,
 {
 	int ret;
 	__module_get(THIS_MODULE);
-	ret = _request_firmware(firmware_p, name, device, FW_OPT_UEVENT);
+	ret = _request_firmware(firmware_p, name, device,
+				FW_OPT_UEVENT | FW_OPT_NO_WARN);
 	module_put(THIS_MODULE);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(request_firmware_direct);
-#endif
 
 /**
  * release_firmware: - release the resource associated with a firmware image
