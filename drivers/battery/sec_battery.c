@@ -10,7 +10,7 @@
  * published by the Free Software Foundation.
  */
 #include <linux/battery/sec_battery.h>
-#include <linux/display_state.h>
+#include <linux/freezer.h>
 
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
@@ -1644,6 +1644,12 @@ static void sec_bat_polling_work(struct work_struct *work)
 {
 	struct sec_battery_info *battery = container_of(
 		work, struct sec_battery_info, polling_work.work);
+
+	while (pm_freezing) {
+		mdelay(5);
+		if (!pm_freezing)
+			break;
+	}
 
 	wake_lock(&battery->monitor_wake_lock);
 	queue_work(battery->monitor_wqueue, &battery->monitor_work);
