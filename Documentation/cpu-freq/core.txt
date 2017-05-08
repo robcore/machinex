@@ -20,6 +20,7 @@ Contents:
 ---------
 1.  CPUFreq core and interfaces
 2.  CPUFreq notifiers
+3.  CPUFreq Table Generation with Operating Performance Point (OPP)
 
 1. General Information
 =======================
