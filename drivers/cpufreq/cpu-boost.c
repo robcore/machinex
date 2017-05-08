@@ -33,8 +33,6 @@ static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
-static bool input_boost_enabled;
-
 #ifdef CONFIG_STATE_NOTIFIER
 static struct notifier_block notif;
 #endif
@@ -42,7 +40,7 @@ static struct notifier_block notif;
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_freq;
+static unsigned int input_boost_freq = 1350000;
 module_param(input_boost_freq, uint, 0644);
 
 static unsigned int input_boost_ms = 40;
@@ -50,7 +48,7 @@ module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-#define MIN_INPUT_INTERVAL (1500)
+#define MIN_INPUT_INTERVAL (150)
 static unsigned int min_input_interval = MIN_INPUT_INTERVAL;
 module_param(min_input_interval, uint, 0644);
 

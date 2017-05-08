@@ -247,9 +247,9 @@ static void cpu_up_down_work(struct work_struct *work)
 	now = ktime_to_us(ktime_get());
 	delta = now - last_input;
 
-	if (target < min_cpus_online)
+	if (target <= min_cpus_online)
 		target = min_cpus_online;
-	else if (target > max_cpus_online)
+	else if (target >= max_cpus_online)
 		target = max_cpus_online;
 
 	online_cpus = num_online_cpus();
@@ -407,7 +407,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	if (delta < MIN_INPUT_INTERVAL)
 		return;
 
-	if (num_online_cpus() >= cpus_boosted ||
+	if (num_online_cpus() > cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
 
