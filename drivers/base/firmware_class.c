@@ -344,9 +344,10 @@ static int fw_read_file_contents(struct file *file, struct firmware_buf *fw_buf)
 			rc = -EIO;
 		goto fail;
 	}
-	rc = security_kernel_fw_from_file(file, buf, size);
+/*	rc = security_kernel_fw_from_file(file, buf, size);
 	if (rc)
 		goto fail;
+*/
 	fw_buf->data = buf;
 	fw_buf->size = size;
 	if (fw_buf->dest_addr)
