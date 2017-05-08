@@ -126,6 +126,18 @@ char *sec_bat_health_str[] = {
 	"UnderVoltage"
 };
 
+static void machinex_monitor_wakeup(struct sec_battery_info *battery)
+{
+	while (pm_freezing) {
+		pr_info("[Machinex] Battery polling extended due to freezer\n");
+		mdelay(5);
+		if (!pm_freezing)
+			break;
+	}
+	wake_lock(&battery->monitor_wake_lock);
+	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+}
+
 static int sec_bat_set_charge(
 				struct sec_battery_info *battery,
 				bool enable)
@@ -1645,14 +1657,7 @@ static void sec_bat_polling_work(struct work_struct *work)
 	struct sec_battery_info *battery = container_of(
 		work, struct sec_battery_info, polling_work.work);
 
-	while (pm_freezing) {
-		mdelay(5);
-		if (!pm_freezing)
-			break;
-	}
-
-	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	machinex_monitor_wakeup(battery);
 	dev_dbg(battery->dev, "%s: Activated\n", __func__);
 }
 
@@ -1682,8 +1687,7 @@ enum hrtimer_restart sec_bat_alarm(struct hrtimer *timer)
 	 * do NOT queue monitor work in wake up by polling alarm
 	 */
 	if (!battery->polling_in_sleep) {
-		wake_lock(&battery->monitor_wake_lock);
-		queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	machinex_monitor_wakeup(battery);
 		dev_dbg(battery->dev, "%s: Activated\n", __func__);
 	}
 	return HRTIMER_NORESTART;
@@ -2010,8 +2014,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 
 	battery->polling_count = 1;	/* initial value = 1 */
 
-	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	machinex_monitor_wakeup(battery);
 end_of_cable_work:
 #if defined(CONFIG_MACH_JACTIVE_ATT)
 	if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
@@ -2449,9 +2452,7 @@ ssize_t sec_bat_store_attrs(
 	case TEST_MODE:
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			battery->test_activated = x; // ? true : false;
-			wake_lock(&battery->monitor_wake_lock);
-			queue_work(battery->monitor_wqueue,
-					&battery->monitor_work);
+		machinex_monitor_wakeup(battery);
 			ret = count;
 		}
 		break;
@@ -2982,14 +2983,12 @@ static int sec_ps_set_property(struct power_supply *psy,
 			battery->ps_changed = true;
 			dev_info(battery->dev,
 					"%s: power sharing cable plugin (%d)\n", __func__, battery->ps_status);
-			wake_lock(&battery->monitor_wake_lock);
-			queue_work(battery->monitor_wqueue, &battery->monitor_work);
+		machinex_monitor_wakeup(battery);
 		} else {
 			battery->ps_status = false;
 			dev_info(battery->dev,
 					"%s: power sharing cable plugout (%d)\n", __func__, battery->ps_status);
-			wake_lock(&battery->monitor_wake_lock);
-			queue_work(battery->monitor_wqueue, &battery->monitor_work);
+			machinex_monitor_wakeup(battery);
 		}
 			break;
 	default:
@@ -3070,8 +3069,9 @@ no_cable_check:
 		SEC_BATTERY_CHECK_INT) {
 		battery->present = battery->pdata->check_battery_callback();
 
-		wake_lock(&battery->monitor_wake_lock);
-		queue_work(battery->monitor_wqueue, &battery->monitor_work);
+	wake_lock(&battery->monitor_wake_lock);
+	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+
 	}
 
 	return IRQ_HANDLED;
@@ -3276,8 +3276,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 		goto err_req_irq;
 	}
 
-	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue, &battery->monitor_work);
+		machinex_monitor_wakeup(battery);
 
 	pdata->initial_check();
 	battery->pdata->check_cable_result_callback(POWER_SUPPLY_TYPE_MAINS);
@@ -3423,9 +3422,8 @@ static void sec_battery_complete(struct device *dev)
 	if (battery->pdata->polling_type == SEC_BATTERY_MONITOR_ALARM)
 		hrtimer_cancel(&battery->polling_hrtimer);
 
-	wake_lock(&battery->monitor_wake_lock);
-	queue_work(battery->monitor_wqueue,
-		&battery->monitor_work);
+	machinex_monitor_wakeup(battery);
+
 
 	dev_dbg(battery->dev, "%s: End\n", __func__);
 
