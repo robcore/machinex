@@ -31,6 +31,8 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpuhp.h>
 
+#include "smpboot.h"
+
 /**
  * cpuhp_cpu_state - Per cpu hotplug state storage
  * @state:	The current cpu state
@@ -118,11 +120,6 @@ void cpu_maps_update_begin(void)
 	mutex_lock(&cpu_add_remove_lock);
 }
 EXPORT_SYMBOL(cpu_notifier_register_begin);
-
-int cpu_maps_is_updating(void)
-{
-	return mutex_is_locked(&cpu_add_remove_lock);
-}
 
 void cpu_maps_update_done(void)
 {
@@ -704,21 +701,22 @@ static int takedown_cpu(unsigned int cpu)
 	 *
 	 * For CONFIG_PREEMPT we have preemptible RCU and its sync_rcu() might
 	 * not imply sync_sched(), so wait for both.
+	 *
+	 * Do sync before park smpboot threads to take care the rcu boost case.
 	 */
 	if (IS_ENABLED(CONFIG_PREEMPT))
 		synchronize_rcu_mult(call_rcu, call_rcu_sched);
 	else
 		synchronize_rcu();
 
-	smpboot_park_threads(cpu);
+	/* Park the hotplug thread */
+	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
+
 	/*
 	 * Prevent irq alloc/free while the dying cpu reorganizes the
 	 * interrupt affinities.
 	 */
 	irq_lock_sparse();
-
-	/* Park the hotplug thread */
-	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
 
 	/*
 	 * So now all preempt/rcu users must observe !cpu_active().
@@ -840,7 +838,6 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
 	hasdied = prev_state != st->state && st->state == CPUHP_OFFLINE;
 out:
 	cpu_hotplug_done();
-
 	/* This post dead nonsense must die */
 	if (!ret && hasdied)
 		cpu_notify_nofail(CPU_POST_DEAD, cpu);
@@ -870,38 +867,6 @@ int cpu_down(unsigned int cpu)
 }
 EXPORT_SYMBOL(cpu_down);
 #endif /*CONFIG_HOTPLUG_CPU*/
-
-/*
- * Unpark per-CPU smpboot kthreads at CPU-online time.
- */
-static int smpboot_thread_call(struct notifier_block *nfb,
-			       unsigned long action, void *hcpu)
-{
-	int cpu = (long)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-
-	case CPU_DOWN_FAILED:
-	case CPU_ONLINE:
-		smpboot_unpark_threads(cpu);
-		break;
-
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block smpboot_thread_notifier = {
-	.notifier_call = smpboot_thread_call,
-	.priority = CPU_PRI_SMPBOOT,
-};
-
-void smpboot_thread_init(void)
-{
-	register_cpu_notifier(&smpboot_thread_notifier);
-}
 
 /**
  * notify_cpu_starting(cpu) - call the CPU_STARTING notifiers
@@ -1011,10 +976,6 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 	ret = cpuhp_up_callbacks(cpu, st, cpuhp_bp_states, target);
 out:
 	cpu_hotplug_done();
-#ifdef TRACE_CRAP
-	trace_sched_cpu_hotplug(cpu, ret, 1);
-#endif
-
 	return ret;
 }
 
@@ -1074,10 +1035,9 @@ int disable_nonboot_cpus(void)
 		if (cpu == first_cpu)
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-		if (!error) {
-			pr_debug("CPU%d is down\n", cpu);
+		if (!error)
 			cpumask_set_cpu(cpu, frozen_cpus);
-		} else {
+		else {
 			pr_err("Error taking CPU%d down: %d\n", cpu, error);
 			break;
 		}
@@ -1087,6 +1047,7 @@ int disable_nonboot_cpus(void)
 		BUG_ON(num_online_cpus() > 1);
 	else
 		pr_err("Non-boot CPUs are not disabled\n");
+
 	/*
 	 * Make sure the CPUs won't be enabled by someone else. We need to do
 	 * this even in case of failure as all disable_nonboot_cpus() users are
@@ -1110,7 +1071,6 @@ void __weak arch_enable_nonboot_cpus_end(void)
 void enable_nonboot_cpus(void)
 {
 	int cpu, error;
-	struct device *cpu_device;
 
 	/* Allow everyone to use the CPU hotplug again */
 	cpu_maps_update_begin();
@@ -1126,12 +1086,6 @@ void enable_nonboot_cpus(void)
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {
 			pr_info("CPU%d is up\n", cpu);
-			cpu_device = get_cpu_device(cpu);
-			if (!cpu_device)
-				pr_err("%s: failed to get cpu%d device\n",
-				       __func__, cpu);
-			else
-				kobject_uevent(&cpu_device->kobj, KOBJ_ONLINE);
 			continue;
 		}
 		pr_warn("Error taking CPU%d up: %d\n", cpu, error);
@@ -1696,23 +1650,3 @@ void __init boot_cpu_state_init(void)
 {
 	per_cpu_ptr(&cpuhp_state, smp_processor_id())->state = CPUHP_ONLINE;
 }
-
-static ATOMIC_NOTIFIER_HEAD(idle_notifier);
-
-void idle_notifier_register(struct notifier_block *n)
-{
-	atomic_notifier_chain_register(&idle_notifier, n);
-}
-EXPORT_SYMBOL_GPL(idle_notifier_register);
-
-void idle_notifier_unregister(struct notifier_block *n)
-{
-	atomic_notifier_chain_unregister(&idle_notifier, n);
-}
-EXPORT_SYMBOL_GPL(idle_notifier_unregister);
-
-void idle_notifier_call_chain(unsigned long val)
-{
-	atomic_notifier_call_chain(&idle_notifier, val, NULL);
-}
-EXPORT_SYMBOL_GPL(idle_notifier_call_chain);
