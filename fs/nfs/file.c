@@ -342,7 +342,7 @@ start:
 	 * sync-to-disk
 	 */
 	ret = wait_on_bit_action(&NFS_I(mapping->host)->flags, NFS_INO_FLUSHING,
-				 nfs_wait_bit_killable, TASK_KILLABLE);
+				 nfs_wait_bit_killable(key, mode), TASK_KILLABLE);
 	if (ret)
 		return ret;
 

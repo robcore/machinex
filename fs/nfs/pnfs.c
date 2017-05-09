@@ -1599,7 +1599,7 @@ pnfs_layoutcommit_inode(struct inode *inode, bool sync)
 			goto out_free;
 		}
 		status = wait_on_bit_lock(&nfsi->flags, NFS_INO_LAYOUTCOMMITTING,
-					nfs_wait_bit_killable, TASK_KILLABLE);
+					nfs_wait_bit_killable(key, mode), TASK_KILLABLE);
 		if (status)
 			goto out_free;
 	}
