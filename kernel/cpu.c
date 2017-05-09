@@ -28,58 +28,6 @@
 
 #include <trace/events/sched.h>
 
-/**
- * cpuhp_cpu_state - Per cpu hotplug state storage
- * @state:	The current cpu state
- * @target:	The target state
- */
-struct cpuhp_cpu_state {
-	enum cpuhp_state	state;
-	enum cpuhp_state	target;
-};
-
-static DEFINE_PER_CPU(struct cpuhp_cpu_state, cpuhp_state);
-
-/**
- * cpuhp_step - Hotplug state machine step
- * @name:	Name of the step
- * @startup:	Startup function of the step
- * @teardown:	Teardown function of the step
- * @skip_onerr:	Do not invoke the functions on error rollback
- *		Will go away once the notifiers	are gone
- */
-struct cpuhp_step {
-	const char	*name;
-	int		(*startup)(unsigned int cpu);
-	int		(*teardown)(unsigned int cpu);
-	bool		skip_onerr;
-};
-
-static struct cpuhp_step cpuhp_bp_states[];
-static struct cpuhp_step cpuhp_ap_states[];
-
-/**
- * cpuhp_invoke_callback _ Invoke the callbacks for a given state
- * @cpu:	The cpu for which the callback should be invoked
- * @step:	The step in the state machine
- * @cb:		The callback function to invoke
- *
- * Called from cpu hotplug and from the state register machinery
- */
-static int cpuhp_invoke_callback(unsigned int cpu, enum cpuhp_state step,
-				 int (*cb)(unsigned int))
-{
-	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
-	int ret = 0;
-
-	if (cb) {
-		trace_cpuhp_enter(cpu, st->target, step, cb);
-		ret = cb(cpu);
-		trace_cpuhp_exit(cpu, st->state, step, ret);
-	}
-	return ret;
-}
-
 #ifdef CONFIG_SMP
 /* Serializes the updates to cpu_online_mask, cpu_present_mask */
 static DEFINE_MUTEX(cpu_add_remove_lock);
@@ -309,12 +257,6 @@ static int notify_online(unsigned int cpu)
 	return 0;
 }
 
-static int notify_starting(unsigned int cpu)
-{
-	cpu_notify(CPU_STARTING, cpu);
-	return 0;
-}
-
 static int bringup_cpu(unsigned int cpu)
 {
 	struct task_struct *idle = idle_thread_get(cpu);
@@ -432,17 +374,9 @@ static int notify_down_prepare(unsigned int cpu)
 	return err;
 }
 
-static int notify_dying(unsigned int cpu)
-{
-	cpu_notify(CPU_DYING, cpu);
-	return 0;
-}
-
 /* Take this CPU down. */
 static int take_cpu_down(void *_param)
 {
-	struct cpuhp_cpu_state *st = this_cpu_ptr(&cpuhp_state);
-	enum cpuhp_state target = max((int)st->target, CPUHP_AP_OFFLINE);
 	int err, cpu = smp_processor_id();
 
 	/* Ensure this CPU doesn't handle any more interrupts. */
@@ -450,12 +384,7 @@ static int take_cpu_down(void *_param)
 	if (err < 0)
 		return err;
 
-	/* Invoke the former CPU_DYING callbacks */
-	for (; st->state > target; st->state--) {
-		struct cpuhp_step *step = cpuhp_ap_states + st->state;
-
-		cpuhp_invoke_callback(cpu, st->state, step->teardown);
-	}
+	cpu_notify(CPU_DYING, cpu);
 	/* Give up timekeeping duties */
 	tick_handover_do_timer();
 	/* Park the stopper thread */
@@ -529,31 +458,10 @@ static int notify_dead(unsigned int cpu)
 	return 0;
 }
 
-#else
-#define notify_down_prepare	NULL
-#define takedown_cpu		NULL
-#define notify_dead		NULL
-#define notify_dying		NULL
-#endif
-
-#ifdef CONFIG_HOTPLUG_CPU
-static void undo_cpu_down(unsigned int cpu, struct cpuhp_cpu_state *st)
-{
-	for (st->state++; st->state < st->target; st->state++) {
-		struct cpuhp_step *step = cpuhp_bp_states + st->state;
-
-		if (!step->skip_onerr)
-			cpuhp_invoke_callback(cpu, st->state, step->startup);
-	}
-}
-
 /* Requires cpu_add_remove_lock to be held */
-static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
-			   enum cpuhp_state target)
+static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 {
-	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
-	int prev_state, ret = 0;
-	bool hasdied = false;
+	int err;
 
 	if (num_online_cpus() == 1)
 		return -EBUSY;
@@ -584,7 +492,7 @@ out_release:
 	return err;
 }
 
-static int do_cpu_down(unsigned int cpu, enum cpuhp_state target)
+int cpu_down(unsigned int cpu)
 {
 	int err;
 
@@ -595,15 +503,11 @@ static int do_cpu_down(unsigned int cpu, enum cpuhp_state target)
 		goto out;
 	}
 
-	err = _cpu_down(cpu, 0, target);
+	err = _cpu_down(cpu, 0);
 
 out:
 	cpu_maps_update_done();
 	return err;
-}
-int cpu_down(unsigned int cpu)
-{
-	return do_cpu_down(cpu, CPUHP_OFFLINE);
 }
 EXPORT_SYMBOL(cpu_down);
 #endif /*CONFIG_HOTPLUG_CPU*/
@@ -640,44 +544,11 @@ void smpboot_thread_init(void)
 	register_cpu_notifier(&smpboot_thread_notifier);
 }
 
-/**
- * notify_cpu_starting(cpu) - call the CPU_STARTING notifiers
- * @cpu: cpu that just started
- *
- * This function calls the cpu_chain notifiers with CPU_STARTING.
- * It must be called by the arch code on the new cpu, before the new cpu
- * enables interrupts and before the "boot" cpu returns from __cpu_up().
- */
-void notify_cpu_starting(unsigned int cpu)
-{
-	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
-	enum cpuhp_state target = min((int)st->target, CPUHP_AP_ONLINE);
-
-	while (st->state < target) {
-		struct cpuhp_step *step;
-
-		st->state++;
-		step = cpuhp_ap_states + st->state;
-		cpuhp_invoke_callback(cpu, st->state, step->startup);
-	}
-}
-
-static void undo_cpu_up(unsigned int cpu, struct cpuhp_cpu_state *st)
-{
-	for (st->state--; st->state > st->target; st->state--) {
-		struct cpuhp_step *step = cpuhp_bp_states + st->state;
-
-		if (!step->skip_onerr)
-			cpuhp_invoke_callback(cpu, st->state, step->teardown);
-	}
-}
-
 /* Requires cpu_add_remove_lock to be held */
-static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
+static int _cpu_up(unsigned int cpu, int tasks_frozen)
 {
-	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
 	struct task_struct *idle;
-	int prev_state, ret = 0;
+	int ret;
 
 	cpu_hotplug_begin();
 
@@ -686,7 +557,6 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 		goto out;
 	}
 
-	/* Let it fail before we try to bring the cpu up */
 	idle = idle_thread_get(cpu);
 	if (IS_ERR(idle)) {
 		ret = PTR_ERR(idle);
@@ -720,7 +590,7 @@ out:
 	return ret;
 }
 
-static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
+int cpu_up(unsigned int cpu)
 {
 	int err = 0;
 
@@ -744,15 +614,11 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 		goto out;
 	}
 
-	err = _cpu_up(cpu, 0, target);
+	err = _cpu_up(cpu, 0);
+
 out:
 	cpu_maps_update_done();
 	return err;
-}
-
-int cpu_up(unsigned int cpu)
-{
-	return do_cpu_up(cpu, CPUHP_ONLINE);
 }
 EXPORT_SYMBOL_GPL(cpu_up);
 
@@ -904,66 +770,20 @@ core_initcall(cpu_hotplug_pm_sync_init);
 
 #endif /* CONFIG_PM_SLEEP_SMP */
 
+/**
+ * notify_cpu_starting(cpu) - call the CPU_STARTING notifiers
+ * @cpu: cpu that just started
+ *
+ * This function calls the cpu_chain notifiers with CPU_STARTING.
+ * It must be called by the arch code on the new cpu, before the new cpu
+ * enables interrupts and before the "boot" cpu returns from __cpu_up().
+ */
+void notify_cpu_starting(unsigned int cpu)
+{
+	cpu_notify(CPU_STARTING, cpu);
+}
+
 #endif /* CONFIG_SMP */
-
-/* Boot processor state steps */
-static struct cpuhp_step cpuhp_bp_states[] = {
-	[CPUHP_OFFLINE] = {
-		.name			= "offline",
-		.startup		= NULL,
-		.teardown		= NULL,
-	},
-#ifdef CONFIG_SMP
-	[CPUHP_CREATE_THREADS]= {
-		.name			= "threads:create",
-		.startup		= smpboot_create_threads,
-		.teardown		= NULL,
-	},
-	[CPUHP_NOTIFY_PREPARE] = {
-		.name			= "notify:prepare",
-		.startup		= notify_prepare,
-		.teardown		= notify_dead,
-		.skip_onerr		= true,
-	},
-	[CPUHP_BRINGUP_CPU] = {
-		.name			= "cpu:bringup",
-		.startup		= bringup_cpu,
-		.teardown		= NULL,
-	},
-	[CPUHP_TEARDOWN_CPU] = {
-		.name			= "cpu:teardown",
-		.startup		= NULL,
-		.teardown		= takedown_cpu,
-	},
-	[CPUHP_NOTIFY_ONLINE] = {
-		.name			= "notify:online",
-		.startup		= notify_online,
-		.teardown		= notify_down_prepare,
-	},
-#endif
-	[CPUHP_ONLINE] = {
-		.name			= "online",
-		.startup		= NULL,
-		.teardown		= NULL,
-	},
-};
-
-/* Application processor state steps */
-static struct cpuhp_step cpuhp_ap_states[] = {
-#ifdef CONFIG_SMP
-	[CPUHP_AP_NOTIFY_STARTING] = {
-		.name			= "notify:starting",
-		.startup		= notify_starting,
-		.teardown		= notify_dying,
-		.skip_onerr		= true,
-	},
-#endif
-	[CPUHP_ONLINE] = {
-		.name			= "online",
-		.startup		= NULL,
-		.teardown		= NULL,
-	},
-};
 
 /*
  * cpu_bit_bitmap[] is a special, "compressed" data structure that
