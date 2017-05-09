@@ -59,6 +59,7 @@
 #include <linux/static_key.h>
 #include <linux/aio.h>
 #include <linux/sched.h>
+#include <linux/wait.h>
 
 #include <linux/filter.h>
 #include <linux/rculist_nulls.h>
@@ -1831,12 +1832,12 @@ static inline int sk_has_allocations(const struct sock *sk)
 }
 
 /**
- * wq_has_sleeper - check if there are any waiting processes
+ * skwq_has_sleeper - check if there are any waiting processes
  * @wq: struct socket_wq
  *
  * Returns true if socket_wq has waiting processes
  *
- * The purpose of the wq_has_sleeper and sock_poll_wait is to wrap the memory
+ * The purpose of the skwq_has_sleeper and sock_poll_wait is to wrap the memory
  * barrier call. They were added due to the race found within the tcp code.
  *
  * Consider following tcp code paths:
