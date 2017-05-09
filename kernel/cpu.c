@@ -548,7 +548,8 @@ static void undo_cpu_down(unsigned int cpu, struct cpuhp_cpu_state *st)
 }
 
 /* Requires cpu_add_remove_lock to be held */
-static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
+static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+			   enum cpuhp_state target)
 {
 	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
 	int prev_state, ret = 0;
@@ -583,7 +584,7 @@ out_release:
 	return err;
 }
 
-int cpu_down(unsigned int cpu)
+static int do_cpu_down(unsigned int cpu, enum cpuhp_state target)
 {
 	int err;
 
@@ -594,11 +595,15 @@ int cpu_down(unsigned int cpu)
 		goto out;
 	}
 
-	err = _cpu_down(cpu, 0);
+	err = _cpu_down(cpu, 0, target);
 
 out:
 	cpu_maps_update_done();
 	return err;
+}
+int cpu_down(unsigned int cpu)
+{
+	return do_cpu_down(cpu, CPUHP_OFFLINE);
 }
 EXPORT_SYMBOL(cpu_down);
 #endif /*CONFIG_HOTPLUG_CPU*/
@@ -668,7 +673,7 @@ static void undo_cpu_up(unsigned int cpu, struct cpuhp_cpu_state *st)
 }
 
 /* Requires cpu_add_remove_lock to be held */
-static int _cpu_up(unsigned int cpu, int tasks_frozen)
+static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 {
 	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
 	struct task_struct *idle;
@@ -715,7 +720,7 @@ out:
 	return ret;
 }
 
-int cpu_up(unsigned int cpu)
+static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 {
 	int err = 0;
 
@@ -739,11 +744,15 @@ int cpu_up(unsigned int cpu)
 		goto out;
 	}
 
-	err = _cpu_up(cpu, 0);
-
+	err = _cpu_up(cpu, 0, target);
 out:
 	cpu_maps_update_done();
 	return err;
+}
+
+int cpu_up(unsigned int cpu)
+{
+	return do_cpu_up(cpu, CPUHP_ONLINE);
 }
 EXPORT_SYMBOL_GPL(cpu_up);
 
