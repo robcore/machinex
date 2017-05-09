@@ -207,7 +207,7 @@ ARCH		?=arm
 
 ################
 ##LATEST_LINARO#
-CROSS_COMPILE	?=$(pwd)/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+CROSS_COMPILE	?=/root/toolchains/gcc-linaro-5.4.1-2017.01-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 ###############
 
 # Architecture as present in compile.h
