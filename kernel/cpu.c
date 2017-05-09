@@ -31,8 +31,6 @@
 #ifdef CONFIG_SMP
 /* Serializes the updates to cpu_online_mask, cpu_present_mask */
 static DEFINE_MUTEX(cpu_add_remove_lock);
-bool cpuhp_tasks_frozen;
-EXPORT_SYMBOL_GPL(cpuhp_tasks_frozen);
 
 /*
  * The following two APIs (cpu_maps_update_begin/done) must be used when
@@ -216,63 +214,28 @@ int __register_cpu_notifier(struct notifier_block *nb)
 	return raw_notifier_chain_register(&cpu_chain, nb);
 }
 
-static int __cpu_notify(unsigned long val, unsigned int cpu, int nr_to_call,
+static int __cpu_notify(unsigned long val, void *v, int nr_to_call,
 			int *nr_calls)
 {
-	unsigned long mod = cpuhp_tasks_frozen ? CPU_TASKS_FROZEN : 0;
-	void *hcpu = (void *)(long)cpu;
-
 	int ret;
 
-	ret = __raw_notifier_call_chain(&cpu_chain, val | mod, hcpu, nr_to_call,
+	ret = __raw_notifier_call_chain(&cpu_chain, val, v, nr_to_call,
 					nr_calls);
 
 	return notifier_to_errno(ret);
 }
 
-static int cpu_notify(unsigned long val, unsigned int cpu)
+static int cpu_notify(unsigned long val, void *v)
 {
-	return __cpu_notify(val, cpu, -1, NULL);
-}
-
-/* Notifier wrappers for transitioning to state machine */
-static int notify_prepare(unsigned int cpu)
-{
-	int nr_calls = 0;
-	int ret;
-
-	ret = __cpu_notify(CPU_UP_PREPARE, cpu, -1, &nr_calls);
-	if (ret) {
-		nr_calls--;
-		printk(KERN_WARNING "%s: attempt to bring up CPU %u failed\n",
-				__func__, cpu);
-		__cpu_notify(CPU_UP_CANCELED, cpu, nr_calls, NULL);
-	}
-	return ret;
-}
-
-static int notify_online(unsigned int cpu)
-{
-	cpu_notify(CPU_ONLINE, cpu);
-	return 0;
-}
-
-static int bringup_cpu(unsigned int cpu)
-{
-	struct task_struct *idle = idle_thread_get(cpu);
-	int ret;
-
-	/* Arch-specific enabling code. */
-	ret = __cpu_up(cpu, idle);
-	if (ret) {
-		cpu_notify(CPU_UP_CANCELED, cpu);
-		return ret;
-	}
-	BUG_ON(!cpu_online(cpu));
-	return 0;
+	return __cpu_notify(val, v, -1, NULL);
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
+
+static void cpu_notify_nofail(unsigned long val, void *v)
+{
+	BUG_ON(cpu_notify(val, v));
+}
 EXPORT_SYMBOL(register_cpu_notifier);
 EXPORT_SYMBOL(__register_cpu_notifier);
 
@@ -355,46 +318,57 @@ static inline void check_for_tasks(int dead_cpu)
 	read_unlock(&tasklist_lock);
 }
 
-static void cpu_notify_nofail(unsigned long val, unsigned int cpu)
-{
-	BUG_ON(cpu_notify(val, cpu));
-}
-
-static int notify_down_prepare(unsigned int cpu)
-{
-	int err, nr_calls = 0;
-
-	err = __cpu_notify(CPU_DOWN_PREPARE, cpu, -1, &nr_calls);
-	if (err) {
-		nr_calls--;
-		__cpu_notify(CPU_DOWN_FAILED, cpu, nr_calls, NULL);
-		pr_warn("%s: attempt to take down CPU %u failed\n",
-				__func__, cpu);
-	}
-	return err;
-}
+struct take_cpu_down_param {
+	unsigned long mod;
+	void *hcpu;
+};
 
 /* Take this CPU down. */
 static int take_cpu_down(void *_param)
 {
-	int err, cpu = smp_processor_id();
+	struct take_cpu_down_param *param = _param;
+	int err;
 
 	/* Ensure this CPU doesn't handle any more interrupts. */
 	err = __cpu_disable();
 	if (err < 0)
 		return err;
 
-	cpu_notify(CPU_DYING, cpu);
+	cpu_notify(CPU_DYING | param->mod, param->hcpu);
 	/* Give up timekeeping duties */
 	tick_handover_do_timer();
 	/* Park the stopper thread */
-	stop_machine_park(cpu);
+	stop_machine_park((long)param->hcpu);
 	return 0;
 }
 
-static int takedown_cpu(unsigned int cpu)
+/* Requires cpu_add_remove_lock to be held */
+static int _cpu_down(unsigned int cpu, int tasks_frozen)
 {
-	int err;
+	int err, nr_calls = 0;
+	void *hcpu = (void *)(long)cpu;
+	unsigned long mod = tasks_frozen ? CPU_TASKS_FROZEN : 0;
+	struct take_cpu_down_param tcd_param = {
+		.mod = mod,
+		.hcpu = hcpu,
+	};
+
+	if (num_online_cpus() == 1)
+		return -EBUSY;
+
+	if (!cpu_online(cpu))
+		return -EINVAL;
+
+	cpu_hotplug_begin();
+
+	err = __cpu_notify(CPU_DOWN_PREPARE | mod, hcpu, -1, &nr_calls);
+	if (err) {
+		nr_calls--;
+		__cpu_notify(CPU_DOWN_FAILED | mod, hcpu, nr_calls, NULL);
+		pr_warn("%s: attempt to take down CPU %u failed\n",
+			__func__, cpu);
+		goto out_release;
+	}
 
 	/*
 	 * By now we've cleared cpu_active_mask, wait for all preempt-disabled
@@ -419,12 +393,12 @@ static int takedown_cpu(unsigned int cpu)
 	/*
 	 * So now all preempt/rcu users must observe !cpu_active().
 	 */
-	err = stop_machine(take_cpu_down, NULL, cpumask_of(cpu));
+	err = stop_machine(take_cpu_down, &tcd_param, cpumask_of(cpu));
 	if (err) {
 		/* CPU didn't die: tell everyone.  Can't complain. */
-		cpu_notify_nofail(CPU_DOWN_FAILED, cpu);
+		cpu_notify_nofail(CPU_DOWN_FAILED | mod, hcpu);
 		irq_unlock_sparse();
-		return err;
+		goto out_release;
 	}
 	BUG_ON(cpu_online(cpu));
 
@@ -447,40 +421,11 @@ static int takedown_cpu(unsigned int cpu)
 	/* This actually kills the CPU. */
 	__cpu_die(cpu);
 
+	/* CPU is completely dead: tell everyone.  Too late to complain. */
 	tick_cleanup_dead_cpu(cpu);
-	return 0;
-}
+	cpu_notify_nofail(CPU_DEAD | mod, hcpu);
 
-static int notify_dead(unsigned int cpu)
-{
-	cpu_notify_nofail(CPU_DEAD, cpu);
 	check_for_tasks(cpu);
-	return 0;
-}
-
-/* Requires cpu_add_remove_lock to be held */
-static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
-{
-	int err;
-
-	if (num_online_cpus() == 1)
-		return -EBUSY;
-
-	if (!cpu_online(cpu))
-		return -EINVAL;
-
-	cpu_hotplug_begin();
-
-	cpuhp_tasks_frozen = tasks_frozen;
-
-	err = notify_down_prepare(cpu);
-	if (err)
-		goto out_release;
-	err = takedown_cpu(cpu);
-	if (err)
-		goto out_release;
-
-	notify_dead(cpu);
 
 out_release:
 	cpu_hotplug_done();
@@ -488,7 +433,7 @@ out_release:
 	trace_sched_cpu_hotplug(cpu, err, 0);
 #endif
 	if (!err)
-		cpu_notify_nofail(CPU_POST_DEAD, cpu);
+		cpu_notify_nofail(CPU_POST_DEAD | mod, hcpu);
 	return err;
 }
 
@@ -547,8 +492,10 @@ void smpboot_thread_init(void)
 /* Requires cpu_add_remove_lock to be held */
 static int _cpu_up(unsigned int cpu, int tasks_frozen)
 {
+	int ret, nr_calls = 0;
+	void *hcpu = (void *)(long)cpu;
+	unsigned long mod = tasks_frozen ? CPU_TASKS_FROZEN : 0;
 	struct task_struct *idle;
-	int ret;
 
 	cpu_hotplug_begin();
 
@@ -563,24 +510,36 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 		goto out;
 	}
 
-	cpuhp_tasks_frozen = tasks_frozen;
-
 	ret = smpboot_create_threads(cpu);
 	if (ret)
 		goto out;
 
-	ret = notify_prepare(cpu);
-	if (ret)
-		goto out;
+	ret = __cpu_notify(CPU_UP_PREPARE | mod, hcpu, -1, &nr_calls);
+	if (ret) {
+		nr_calls--;
+		if (!thermal_core_controlled)
+			printk_ratelimited(KERN_WARNING
+				"%s: attempt to bring up CPU %u failed\n",
+				__func__, cpu);
+		goto out_notify;
+	}
+
+	/* Arch-specific enabling code. */
+	ret = __cpu_up(cpu, idle);
+
+	if (ret != 0)
+		goto out_notify;
+	BUG_ON(!cpu_online(cpu));
 
 	/* Wake the per cpu threads */
 	smpboot_unpark_threads(cpu);
 
-	ret = bringup_cpu(cpu);
-	if (ret)
-		goto out;
+	/* Now call notifier in preparation. */
+	cpu_notify(CPU_ONLINE | mod, hcpu);
 
-	notify_online(cpu);
+out_notify:
+	if (ret != 0)
+		__cpu_notify(CPU_UP_CANCELED | mod, hcpu, nr_calls, NULL);
 out:
 	cpu_hotplug_done();
 #ifdef TRACE_CRAP
@@ -780,7 +739,13 @@ core_initcall(cpu_hotplug_pm_sync_init);
  */
 void notify_cpu_starting(unsigned int cpu)
 {
-	cpu_notify(CPU_STARTING, cpu);
+	unsigned long val = CPU_STARTING;
+
+#ifdef CONFIG_PM_SLEEP_SMP
+	if (frozen_cpus != NULL && cpumask_test_cpu(cpu, frozen_cpus))
+		val = CPU_STARTING_FROZEN;
+#endif /* CONFIG_PM_SLEEP_SMP */
+	cpu_notify(val, (void *)(long)cpu);
 }
 
 #endif /* CONFIG_SMP */
