@@ -924,6 +924,12 @@ fail:
 	return error;
 }
 
+static int dlm_recovery_wait(void *word)
+{
+	schedule();
+	return 0;
+}
+
 static int control_first_done(struct gfs2_sbd *sdp)
 {
 	struct lm_lockstruct *ls = &sdp->sd_lockstruct;
@@ -959,7 +965,7 @@ restart:
 		fs_info(sdp, "control_first_done wait gen %u\n", start_gen);
 
 		wait_on_bit(&ls->ls_recover_flags, DFL_DLM_RECOVERY,
-			    TASK_UNINTERRUPTIBLE);
+			    dlm_recovery_wait, TASK_UNINTERRUPTIBLE);
 		goto restart;
 	}
 
