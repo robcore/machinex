@@ -48,7 +48,7 @@
 
 static long __estimate_accuracy(struct timespec *tv)
 {
-	long slack;
+	u64 slack;
 	int divfactor = 1000;
 
 	if (tv->tv_sec < 0)
@@ -228,7 +228,7 @@ static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
 }
 
 int poll_schedule_timeout(struct poll_wqueues *pwq, int state,
-			  ktime_t *expires, unsigned long slack)
+			  ktime_t *expires, u64 slack)
 {
 	int rc = -EINTR;
 
@@ -397,7 +397,7 @@ int do_select(int n, fd_set_bits *fds, struct timespec *end_time)
 	struct poll_wqueues table;
 	poll_table *wait;
 	int retval, i, timed_out = 0;
-	unsigned long slack = 0;
+	u64 slack = 0;
 
 	rcu_read_lock();
 	retval = max_select_fd(n, fds);
@@ -747,7 +747,7 @@ static int do_poll(unsigned int nfds,  struct poll_list *list,
 	poll_table* pt = &wait->pt;
 	ktime_t expire, *to = NULL;
 	int timed_out = 0, count = 0;
-	unsigned long slack = 0;
+	u64 slack = 0;
 
 	/* Optimise the no-wait case */
 	if (end_time && !end_time->tv_sec && !end_time->tv_nsec) {
