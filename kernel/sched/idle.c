@@ -4,6 +4,7 @@
 #include <linux/sched.h>
 #include <linux/cpu.h>
 #include <linux/cpuidle.h>
+#include <linux/cpuhotplug.h>
 #include <linux/tick.h>
 #include <linux/mm.h>
 #include <linux/stackprotector.h>
@@ -318,6 +319,7 @@ void cpu_startup_entry(enum cpuhp_state state)
 	boot_init_stack_canary();
 #endif
 	arch_cpu_idle_prepare();
+	cpuhp_online_idle(state);
 	per_cpu(idle_force_poll, smp_processor_id()) = 0;
 	cpu_idle_loop();
 }
