@@ -2199,12 +2199,8 @@ int mipi_runtime_clk_change(int fps)
 	rc = wait_for_completion_timeout(&dsi_fps_comp,
 		msecs_to_jiffies(500));
 
-	if (!rc) {
+	if (!rc)
 		pr_debug("%s: dma timeout error\n", __func__);
-#ifdef CONFIG_SEC_DEBUG_MDP
-		sec_debug_mdp.dsi_err.fps_chage_time_out_err_cnt++;
-#endif
-	}
 
 	mutex_unlock(&fps_done_mutex);
 

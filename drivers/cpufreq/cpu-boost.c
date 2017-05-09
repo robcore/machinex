@@ -159,8 +159,10 @@ static void cpuboost_input_event(struct input_handle *handle,
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < msecs_to_jiffies(min_input_interval)
-					 || work_pending(&input_boost_work))
+	if (now - last_input_time < msecs_to_jiffies(min_input_interval))
+		return;
+
+	if (work_pending(&input_boost_work))
 		return;
 
 	queue_work(cpu_boost_wq, &input_boost_work);
