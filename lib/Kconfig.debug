@@ -1283,6 +1283,19 @@ config LKDTM
 	Documentation on how to use the module can be found in
 	Documentation/fault-injection/provoke-crashes.txt
 
+config CPU_HOTPLUG_STATE_CONTROL
+	bool "Enable CPU hotplug state control"
+	depends on DEBUG_KERNEL
+	depends on HOTPLUG_CPU
+	default n
+	help
+	  Allows to write steps between "offline" and "online" to the CPUs
+	  sysfs target file so states can be stepped granular. This is a debug
+	  option for now as the hotplug machinery cannot be stopped and
+	  restarted at arbitrary points yet.
+
+	  Say N if your are unsure.
+
 config NOTIFIER_ERROR_INJECTION
 	tristate "Notifier error injection"
 	depends on DEBUG_KERNEL
