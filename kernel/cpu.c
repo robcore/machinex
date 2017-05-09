@@ -972,6 +972,11 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.startup		= cpuhp_set_cpu_active,
 		.teardown		= NULL,
 	},
+	[CPUHP_SMPBOOT_THREADS] = {
+		.name			= "smpboot:threads",
+		.startup		= smpboot_unpark_threads,
+		.teardown		= smpboot_park_threads,
+	},
 	[CPUHP_NOTIFY_ONLINE] = {
 		.name			= "notify:online",
 		.startup		= notify_online,
