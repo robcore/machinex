@@ -1061,7 +1061,7 @@ extern int bit_wait_io_timeout(struct wait_bit_key *);
  * on that signal.
  */
 static inline int
-wait_on_bit(void *word, int bit, unsigned mode)
+wait_on_bit(unsigned long *word, int bit, unsigned mode)
 {
 	might_sleep();
 	if (!test_bit(bit, word))
@@ -1086,7 +1086,7 @@ wait_on_bit(void *word, int bit, unsigned mode)
  * on that signal.
  */
 static inline int
-wait_on_bit_io(void *word, int bit, unsigned mode)
+wait_on_bit_io(unsigned long *word, int bit, unsigned mode)
 {
 	might_sleep();
 	if (!test_bit(bit, word))
@@ -1112,7 +1112,8 @@ wait_on_bit_io(void *word, int bit, unsigned mode)
  * received a signal and the mode permitted wakeup on that signal.
  */
 static inline int
-wait_on_bit_timeout(void *word, int bit, unsigned mode, unsigned long timeout)
+wait_on_bit_timeout(unsigned long *word, int bit, unsigned mode,
+		    unsigned long timeout)
 {
 	might_sleep();
 	if (!test_bit(bit, word))
@@ -1139,7 +1140,8 @@ wait_on_bit_timeout(void *word, int bit, unsigned mode, unsigned long timeout)
  * on that signal.
  */
 static inline int
-wait_on_bit_action(void *word, int bit, wait_bit_action_f *action, unsigned mode)
+wait_on_bit_action(unsigned long *word, int bit, wait_bit_action_f *action,
+		   unsigned mode)
 {
 	might_sleep();
 	if (!test_bit(bit, word))
@@ -1167,7 +1169,7 @@ wait_on_bit_action(void *word, int bit, wait_bit_action_f *action, unsigned mode
  * the @mode allows that signal to wake the process.
  */
 static inline int
-wait_on_bit_lock(void *word, int bit, unsigned mode)
+wait_on_bit_lock(unsigned long *word, int bit, unsigned mode)
 {
 	might_sleep();
 	if (!test_and_set_bit(bit, word))
@@ -1191,7 +1193,7 @@ wait_on_bit_lock(void *word, int bit, unsigned mode)
  * the @mode allows that signal to wake the process.
  */
 static inline int
-wait_on_bit_lock_io(void *word, int bit, unsigned mode)
+wait_on_bit_lock_io(unsigned long *word, int bit, unsigned mode)
 {
 	might_sleep();
 	if (!test_and_set_bit(bit, word))
@@ -1217,7 +1219,8 @@ wait_on_bit_lock_io(void *word, int bit, unsigned mode)
  * the @mode allows that signal to wake the process.
  */
 static inline int
-wait_on_bit_lock_action(void *word, int bit, wait_bit_action_f *action, unsigned mode)
+wait_on_bit_lock_action(unsigned long *word, int bit, wait_bit_action_f *action,
+			unsigned mode)
 {
 	might_sleep();
 	if (!test_and_set_bit(bit, word))
