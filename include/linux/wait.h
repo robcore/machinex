@@ -17,10 +17,6 @@ int default_wake_function(wait_queue_t *wait, unsigned mode, int flags, void *ke
 #define WQ_FLAG_EXCLUSIVE	0x01
 #define WQ_FLAG_WOKEN		0x02
 
-/* __wait_queue::flags */
-#define WQ_FLAG_EXCLUSIVE	0x01
-#define WQ_FLAG_WOKEN		0x02
-
 struct __wait_queue {
 	unsigned int		flags;
 	void			*private;
