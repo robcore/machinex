@@ -497,14 +497,20 @@ void __init tick_nohz_init(void)
 /*
  * NO HZ enabled ?
  */
-bool tick_nohz_enabled __read_mostly  = true;
+int tick_nohz_enabled __read_mostly = 1;
 unsigned long tick_nohz_active  __read_mostly;
 /*
  * Enable / Disable tickless mode
  */
 static int __init setup_tick_nohz(char *str)
 {
-	return (kstrtobool(str, &tick_nohz_enabled) == 0);
+	if (!strcmp(str, "off"))
+		tick_nohz_enabled = 0;
+	else if (!strcmp(str, "on"))
+		tick_nohz_enabled = 1;
+	else
+		return 0;
+	return 1;
 }
 
 __setup("nohz=", setup_tick_nohz);
