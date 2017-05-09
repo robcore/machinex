@@ -111,16 +111,26 @@ static inline void timespec_to_pps_ktime(struct pps_ktime *kt,
 	kt->nsec = ts.tv_nsec;
 }
 
+#ifdef CONFIG_NTP_PPS
+
 static inline void pps_get_ts(struct pps_event_time *ts)
 {
-	struct system_time_snapshot snap;
+	struct timespec64 raw, real;
 
-	ktime_get_snapshot(&snap);
-	ts->ts_real = ktime_to_timespec64(snap.real);
-#ifdef CONFIG_NTP_PPS
-	ts->ts_raw = ktime_to_timespec64(snap.raw);
-#endif
+	ktime_get_raw_and_real_ts64(&raw, &real);
+
+	ts->ts_raw = timespec64_to_timespec(raw);
+	ts->ts_real = timespec64_to_timespec(real);
 }
+
+#else /* CONFIG_NTP_PPS */
+
+static inline void pps_get_ts(struct pps_event_time *ts)
+{
+	getnstimeofday(&ts->ts_real);
+}
+
+#endif /* CONFIG_NTP_PPS */
 
 #endif /* LINUX_PPS_KERNEL_H */
 
