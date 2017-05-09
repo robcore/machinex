@@ -4,6 +4,7 @@
 #include <linux/list.h>
 #include <linux/stddef.h>
 #include <linux/spinlock.h>
+#include <linux/export.h>
 #include <asm/current.h>
 
 /*
