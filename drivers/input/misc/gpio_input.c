@@ -308,8 +308,8 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 				   (input_devs->count > 1) ? "..." : "");
 
 		ds->ws = wakeup_source_register(wlname);
-		kfree(wlname);
 		if (!ds->ws) {
+			kfree(wlname);
 			ret = -ENOMEM;
 			pr_err("gpio_event_input_func: "
 				"Failed to allocate wakeup source\n");
