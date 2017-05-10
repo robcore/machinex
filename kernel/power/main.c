@@ -377,13 +377,7 @@ static ssize_t pm_wakeup_irq_show(struct kobject *kobj,
 	return pm_wakeup_irq ? sprintf(buf, "%u\n", pm_wakeup_irq) : -ENODATA;
 }
 
-static ssize_t pm_wakeup_irq_store(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					const char *buf, size_t n)
-{
-	return -EINVAL;
-}
-power_attr(pm_wakeup_irq);
+power_attr_ro(pm_wakeup_irq);
 
 #else /* !CONFIG_PM_SLEEP_DEBUG */
 static inline void pm_print_times_init(void) {}
@@ -661,14 +655,7 @@ static ssize_t pm_trace_dev_match_show(struct kobject *kobj,
 	return show_trace_dev_match(buf, PAGE_SIZE);
 }
 
-static ssize_t
-pm_trace_dev_match_store(struct kobject *kobj, struct kobj_attribute *attr,
-			 const char *buf, size_t n)
-{
-	return -EINVAL;
-}
-
-power_attr(pm_trace_dev_match);
+power_attr_ro(pm_trace_dev_match);
 
 #endif /* CONFIG_PM_TRACE */
 
@@ -791,7 +778,6 @@ static struct attribute_group attr_group = {
 	.attrs = g,
 };
 
-#ifdef CONFIG_PM
 struct workqueue_struct *pm_wq;
 EXPORT_SYMBOL_GPL(pm_wq);
 
@@ -801,9 +787,6 @@ static int __init pm_start_workqueue(void)
 
 	return pm_wq ? 0 : -ENOMEM;
 }
-#else
-static inline int pm_start_workqueue(void) { return 0; }
-#endif
 
 static int __init pm_init(void)
 {
@@ -821,7 +804,6 @@ static int __init pm_init(void)
 	power_kobj = kobject_create_and_add("power", NULL);
 	if (!power_kobj)
 		return -ENOMEM;
-
 	error = sysfs_create_group(power_kobj, &attr_group);
 	if (error)
 		return error;
