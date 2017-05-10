@@ -79,9 +79,9 @@ struct power_suspend {
 	struct list_head link;
 	void (*suspend)(struct power_suspend *h);
 	void (*resume)(struct power_suspend *h);
-	struct wakeup_source *ws;
 };
 
+struct wakeup_source *ws;
 void register_power_suspend(struct power_suspend *handler);
 void unregister_power_suspend(struct power_suspend *handler);
 

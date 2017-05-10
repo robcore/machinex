@@ -113,7 +113,7 @@ static void power_suspend(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_resume_work);
-	__pm_relax(pos->ws);
+	__pm_relax(ws);
 	pr_info("[POWERSUSPEND] Entering Suspend...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -139,7 +139,7 @@ static void power_suspend(struct work_struct *work)
 
 abort_suspend:
 	mutex_unlock(&power_suspend_lock);
-	__pm_stay_awake(pos->ws);
+	__pm_stay_awake(ws);
 }
 
 static void power_resume(struct work_struct *work)
@@ -149,7 +149,7 @@ static void power_resume(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_suspend_work);
-	__pm_stay_awake(pos->ws);
+	__pm_stay_awake(ws);
 	pr_info("[POWERSUSPEND] Entering Resume...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -169,7 +169,7 @@ static void power_resume(struct work_struct *work)
 	pr_info("[POWERSUSPEND] Resume Completed.\n");
 abort_resume:
 	mutex_unlock(&power_suspend_lock);
-	__pm_relax(pos->ws);
+	__pm_relax(ws);
 }
 
 void set_power_suspend_state(int new_state)
@@ -283,14 +283,14 @@ static int power_suspend_init(void)
 	if (!pwrsup_wq)
 		pr_err("[POWERSUSPEND] Failed to allocate workqueue\n");
 
-	pos->ws = wakeup_source_register(mx_powersuspend);
+	ws = wakeup_source_register("mx_powersuspend");
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
-	__pm_stay_awake(pos->ws);
+	__pm_stay_awake(ws);
 
 	sync_on_powersuspend = 0; //Robcore: Preserve original functionality by default.
-	__pm_stay_awake(pos->ws);
+	__pm_stay_awake(ws);
 
 	return 0;
 }
@@ -298,11 +298,9 @@ static int power_suspend_init(void)
 /* This should never have to be used except on shutdown */
 static void power_suspend_exit(void)
 {
-	struct power_suspend *pos;
-
 	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
-	wakeup_source_trash(pos->ws);
+	wakeup_source_trash(ws);
 	destroy_workqueue(pwrsup_wq);
 
 	if (power_suspend_kobj != NULL)
