@@ -110,8 +110,6 @@ static inline void irq_unlock_sparse(void) { }
 extern struct irq_desc irq_desc[NR_IRQS];
 #endif
 
-#ifdef CONFIG_GENERIC_HARDIRQS
-
 static inline struct irq_desc *irq_data_to_desc(struct irq_data *data)
 {
 	return container_of(data->common, struct irq_desc, irq_common_data);
@@ -149,14 +147,11 @@ static inline struct msi_desc *irq_desc_get_msi_desc(struct irq_desc *desc)
 
 /*
  * Architectures call this to let the generic IRQ layer
- * handle an interrupt. If the descriptor is attached to an
- * irqchip-style controller then we call the ->handle_irq() handler,
- * and it calls __do_IRQ() if it's attached to an irqtype-style controller.
+ * handle an interrupt.
  */
-
-static inline bool generic_handle_irq_desc(struct irq_desc *desc)
+static inline void generic_handle_irq_desc(struct irq_desc *desc)
 {
-	return desc->handle_irq(desc);
+	desc->handle_irq(desc);
 }
 
 int generic_handle_irq(unsigned int irq);
@@ -260,7 +255,6 @@ __irq_set_preflow_handler(unsigned int irq, irq_preflow_handler_t handler)
 	desc = irq_to_desc(irq);
 	desc->preflow_handler = handler;
 }
-#endif
 #endif
 
 #endif
