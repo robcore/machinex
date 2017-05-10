@@ -77,6 +77,7 @@ static LIST_HEAD(power_suspend_handlers);
 static struct workqueue_struct *pwrsup_wq;
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
+struct wakeup_source *ws;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend state (screen on / off) */
