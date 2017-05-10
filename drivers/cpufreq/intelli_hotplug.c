@@ -59,7 +59,6 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
-extern atomic_t thermal_core_controlled;
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -266,7 +265,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
-			if (atomic_read(&thermal_core_controlled) == 1)
+			if (thermal_core_controlled)
 				goto reschedule;
 				cpu_up(cpu);
 			apply_down_lock(cpu);
