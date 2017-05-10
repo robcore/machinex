@@ -65,9 +65,6 @@ static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int full_mode_profile = 0;
 static int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
-static unsigned int min_cpus_online_res = 2;
-static unsigned int max_cpus_online_res = 4;
-
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
@@ -296,6 +293,15 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
+	int cpu = smp_processor_id();
+
+	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
+		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+		return;
+	}
+	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+
 	if (atomic_read(&intelli_plug_active) == 1) {
 		target_cpus = calculate_thread_stats();
 		schedule_work_on(0, &up_down_work);
