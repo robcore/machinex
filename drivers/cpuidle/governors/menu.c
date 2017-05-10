@@ -236,6 +236,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	int i;
 	unsigned int interactivity_req;
 	struct timespec t;
+	//int resume_latency = dev_pm_qos_raw_read_value(device);
 
 	if (data->needs_update) {
 		menu_update(drv, dev);
@@ -244,6 +245,10 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 
 	data->last_state_idx = 0;
 	data->exit_us = 0;
+
+	/* resume_latency is 0 means no restriction
+	if (resume_latency && resume_latency < latency_req)
+		latency_req = resume_latency; */
 
 	/* Special case when user has set very strict latency requirement */
 	if (unlikely(latency_req == 0))
