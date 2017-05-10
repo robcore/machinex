@@ -140,7 +140,7 @@ static void power_suspend(struct work_struct *work)
 		pr_info("[POWERSUSPEND] Syncing\n");
 		sys_sync();
 	}
-	mutex_unlock(&power_suspend_lock
+	mutex_unlock(&power_suspend_lock);
 }
 
 static void power_resume(struct work_struct *work)
