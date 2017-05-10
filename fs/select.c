@@ -69,7 +69,7 @@ static long __estimate_accuracy(struct timespec *tv)
 	return slack;
 }
 
-long select_estimate_accuracy(struct timespec *tv)
+u64 select_estimate_accuracy(struct timespec *tv)
 {
 	struct timespec now;
 
