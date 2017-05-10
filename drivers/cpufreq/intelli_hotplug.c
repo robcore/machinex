@@ -427,7 +427,7 @@ static void intelli_suspend(struct power_suspend * h)
 		if (check_down_lock(cpu))
 			queue_delayed_work(intelliplug_wq, &dl->lock_rem, 0);
 	}
-	for_each_possible_cpu(cpu)
+	for_each_possible_cpu(cpu) {
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
