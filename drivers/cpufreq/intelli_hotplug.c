@@ -23,8 +23,8 @@
 #include <linux/powersuspend.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	9
+#define INTELLI_PLUG_MAJOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -419,13 +419,20 @@ static void cycle_cpus(void)
 
 static void intelli_suspend(struct power_suspend * h)
 {
+	struct down_lock *dl;
 	int cpu;
 
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
+		dl = &per_cpu(lock_info, cpu);
+		if (check_down_lock(cpu))
+			queue_delayed_work(intelliplug_wq, &dl->lock_rem, 0);
+	}
+	for_each_possible_cpu(cpu)
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
+
 }
 
 static void intelli_resume(struct power_suspend * h)
@@ -437,8 +444,11 @@ static void intelli_resume(struct power_suspend * h)
 		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
+	for_each_online_cpu(cpu) {
+		apply_down_lock(cpu)
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
+	}
 }
 
 static struct power_suspend intelli_suspend_data =
