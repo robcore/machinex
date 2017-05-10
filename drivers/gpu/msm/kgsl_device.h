@@ -200,7 +200,6 @@ struct kgsl_device {
 	struct completion suspend_gate;
 
 	wait_queue_head_t wait_queue;
-	swait_queue_head_t swait_queue;
 	struct workqueue_struct *work_queue;
 	struct device *parentdev;
 	struct completion ft_gate;
@@ -263,7 +262,6 @@ void kgsl_check_fences(struct work_struct *work);
 	.events = LIST_HEAD_INIT((_dev).events),\
 	.events_pending_list = LIST_HEAD_INIT((_dev).events_pending_list), \
 	.wait_queue = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).wait_queue),\
-	.swait_queue = __SWAIT_QUEUE_HEAD_INITIALIZER((_dev).swait_queue),\
 	.mutex = __MUTEX_INITIALIZER((_dev).mutex),\
 	.state = KGSL_STATE_INIT,\
 	.ver_major = DRIVER_VERSION_MAJOR,\
