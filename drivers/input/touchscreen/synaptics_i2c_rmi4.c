@@ -121,10 +121,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_show(struct device *dev,
 static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
-#if CONFIG_USE_STATE_NOTIFIER
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data);
-#elif CONFIG_POWERSUSPEND
+#if CONFIG_POWERSUSPEND
 static void synaptics_rmi4_power_suspend(struct power_suspend *h);
 
 static void synaptics_rmi4_power_resume(struct power_suspend *h);
@@ -294,19 +291,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 	return count;
 }
 
-#ifdef CONFIG_USE_STATE_NOTIFIER
-static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
-{
-	int retval = 0;
-
-	rmi4_data->notif.notifier_call = state_notifier_callback;
-
-	retval = state_register_client(&rmi4_data->notif);
-	if (retval)
-		pr_debug("fix your synaptics driver you asshole\n");
-	return;
-}
-#elif CONFIG_POWERSUSPEND
+#if CONFIG_POWERSUSPEND
 static void configure_sleep(struct synaptics_rmi4_data *rmi4_data)
 {
 /*	rmi4_data->power_suspend.level = POWER_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -2430,27 +2415,7 @@ static void synaptics_rmi4_sensor_wake(struct synaptics_rmi4_data *rmi4_data)
 	return;
 }
 
-#ifdef CONFIG_USE_STATE_NOTIFIER
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	struct synaptics_rmi4_data *rmi4_data =
-		container_of(self, struct synaptics_rmi4_data, notif);
-
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			synaptics_rmi4_resume(&(rmi4_data->input_dev->dev));
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			synaptics_rmi4_suspend(&(rmi4_data->input_dev->dev));
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-#elif CONFIG_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
  /**
  * synaptics_rmi4_power_suspend()
  *
@@ -2625,7 +2590,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 	return 0;
 }
 
-#if (!defined(CONFIG_USE_STATE_NOTIFIER) && !defined(CONFIG_POWERSUSPEND))
+#ifndef CONFIG_POWERSUSPEND
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,

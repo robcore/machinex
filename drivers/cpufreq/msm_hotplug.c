@@ -19,9 +19,6 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/cpufreq.h>
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
 #include <linux/mutex.h>
 #include <linux/input.h>
 #include <linux/math64.h>
@@ -40,7 +37,6 @@
 #define DEFAULT_NR_CPUS_BOOSTED		NR_CPUS
 
 #define DEFAULT_FAST_LANE_LOAD		180
-#define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 #define DEFAULT_FAST_LANE_MIN_FREQ	1566000
 
 static unsigned int debug = 0;

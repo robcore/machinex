@@ -192,7 +192,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	printk("Rob's DSI OFF HOOK\n");
 
-#ifdef CONFIG_STATE_NOTIFIER
+#if 0
 	state_suspend();
 #endif
 
