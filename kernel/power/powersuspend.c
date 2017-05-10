@@ -66,7 +66,7 @@
 #include <linux/powersuspend.h>
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	4
+#define MINOR_VERSION	3
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
