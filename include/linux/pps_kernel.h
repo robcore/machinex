@@ -48,9 +48,9 @@ struct pps_source_info {
 
 struct pps_event_time {
 #ifdef CONFIG_NTP_PPS
-	struct timespec ts_raw;
+	struct timespec64 ts_raw;
 #endif /* CONFIG_NTP_PPS */
-	struct timespec ts_real;
+	struct timespec64 ts_real;
 };
 
 /* The main struct */
@@ -105,13 +105,11 @@ extern void pps_event(struct pps_device *pps,
 struct pps_device *pps_lookup_dev(void const *cookie);
 
 static inline void timespec_to_pps_ktime(struct pps_ktime *kt,
-		struct timespec ts)
+		struct timespec64 ts)
 {
 	kt->sec = ts.tv_sec;
 	kt->nsec = ts.tv_nsec;
 }
-
-#ifdef CONFIG_NTP_PPS
 
 static inline void pps_get_ts(struct pps_event_time *ts)
 {
@@ -124,7 +122,14 @@ static inline void pps_get_ts(struct pps_event_time *ts)
 #endif
 }
 
-#endif /* CONFIG_NTP_PPS */
+/* Subtract known time delay from PPS event time(s) */
+static inline void pps_sub_ts(struct pps_event_time *ts, struct timespec64 delta)
+{
+	ts->ts_real = timespec64_sub(ts->ts_real, delta);
+#ifdef CONFIG_NTP_PPS
+	ts->ts_raw = timespec64_sub(ts->ts_raw, delta);
+#endif
+}
 
 #endif /* LINUX_PPS_KERNEL_H */
 
