@@ -334,7 +334,7 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 		MSM_SLEEPER_MINOR_VERSION);
 
 	sleeper_wq = alloc_workqueue("msm_sleeper_wq",
-				WQ_HIGHPRI | WQ_FREEZABLE, 0);
+				WQ_HIGHPRI, 1);
 	if (!sleeper_wq) {
 		ret = -ENOMEM;
 		goto err_out;
