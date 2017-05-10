@@ -1424,7 +1424,6 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 		cpufreq_cpu_put(policy);
 		unlock_policy_rwsem_write(cpu);
 		sysfs_remove_link(kobj, "cpufreq");
-		sysfs_notify(kobj, "cpufreq");
 		return 0;
 	}
 #endif
@@ -1457,7 +1456,6 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 			blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 					CPUFREQ_REMOVE_POLICY, policy);
 			sysfs_remove_link(kobj, "cpufreq");
-			sysfs_notify(kobj, "cpufreq");
 			lock_policy_rwsem_write(cpu);
 			cpufreq_cpu_put(policy);
 		}
