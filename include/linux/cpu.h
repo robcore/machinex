@@ -304,7 +304,7 @@ static inline void cpuhp_report_idle_dead(void) { }
 #endif /* #ifdef CONFIG_HOTPLUG_CPU */
 /* warning shut if msm thermal holding cores off on high temp. */
 extern bool core_control_enabled;
-atomic_t thermal_core_controlled;
+extern atomic_t thermal_core_controlled;
 extern bool intelli_init(void);
 
 #endif /* _LINUX_CPU_H_ */
