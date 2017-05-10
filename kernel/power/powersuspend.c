@@ -77,7 +77,6 @@ static LIST_HEAD(power_suspend_handlers);
 static struct workqueue_struct *pwrsup_wq;
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
-struct wakeup_source *ws;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend state (screen on / off) */
@@ -114,7 +113,6 @@ static void power_suspend(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_resume_work);
-	__pm_relax(ws);
 	pr_info("[POWERSUSPEND] Entering Suspend...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -122,11 +120,8 @@ static void power_suspend(struct work_struct *work)
 		abort = 1;
 	spin_unlock_irqrestore(&state_lock, irqflags);
 
-	if (abort) {
-		mutex_unlock(&power_suspend_lock);
-		__pm_stay_awake(ws);
-		return;
-	}
+	if (abort)
+		goto abort;
 
 	pr_info("[POWERSUSPEND] Suspending...\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
@@ -140,6 +135,8 @@ static void power_suspend(struct work_struct *work)
 		pr_info("[POWERSUSPEND] Syncing\n");
 		sys_sync();
 	}
+
+abort:
 	mutex_unlock(&power_suspend_lock);
 }
 
@@ -150,7 +147,6 @@ static void power_resume(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_suspend_work);
-	__pm_stay_awake(ws);
 	pr_info("[POWERSUSPEND] Entering Resume...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -158,11 +154,8 @@ static void power_resume(struct work_struct *work)
 		abort = 1;
 	spin_unlock_irqrestore(&state_lock, irqflags);
 
-	if (abort) {
-		__pm_relax(ws);
-		mutex_unlock(&power_suspend_lock);
-		return;
-	}
+	if (abort)
+		goto abort;
 
 	pr_info("[POWERSUSPEND] Resuming...\n");
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
@@ -170,8 +163,11 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
-	mutex_unlock(&power_suspend_lock);
 	pr_info("[POWERSUSPEND] Resume Completed.\n");
+
+abort:
+	mutex_unlock(&power_suspend_lock);
+
 }
 
 void set_power_suspend_state(int new_state)
@@ -285,13 +281,10 @@ static int power_suspend_init(void)
 	if (!pwrsup_wq)
 		pr_err("[POWERSUSPEND] Failed to allocate workqueue\n");
 
-	ws = wakeup_source_register("mx_powersuspend");
-
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
 	sync_on_powersuspend = 0; //Robcore: Preserve original functionality by default.
-	__pm_stay_awake(ws);
 
 	return 0;
 }
@@ -299,10 +292,8 @@ static int power_suspend_init(void)
 /* This should never have to be used except on shutdown */
 static void power_suspend_exit(void)
 {
-	__pm_relax(ws);
 	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
-	wakeup_source_trash(ws);
 	destroy_workqueue(pwrsup_wq);
 
 	if (power_suspend_kobj != NULL)
