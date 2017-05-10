@@ -607,16 +607,10 @@ static enum hrtimer_restart dl_task_timer(struct hrtimer *timer)
 						     struct sched_dl_entity,
 						     dl_timer);
 	struct task_struct *p = dl_task_of(dl_se);
+	struct rq_flags rf;
 	struct rq *rq;
-again:
-	rq = task_rq(p);
-	raw_spin_lock(&rq->lock);
 
-	if (rq != task_rq(p)) {
-		/* Task was moved, retrying. */
-		raw_spin_unlock(&rq->lock);
-		goto again;
-	}
+	rq = task_rq_lock(p, &rf);
 
 	/*
 	 * The task might have changed its scheduling policy to something
@@ -699,7 +693,7 @@ again:
 #endif
 
 unlock:
-	raw_spin_unlock(&rq->lock);
+	task_rq_unlock(rq, p, &rf);
 
 	/*
 	 * This can free the task_struct, including this hrtimer, do not touch
