@@ -66,7 +66,7 @@ struct cpufreq_work_struct {
 static DEFINE_PER_CPU(struct cpufreq_work_struct, cpufreq_work);
 static struct workqueue_struct *msm_cpufreq_wq;
 
-struct cpufreq_suspend_t {
+static struct cpufreq_suspend_t {
 	struct mutex suspend_mutex;
 	int device_suspended;
 };
