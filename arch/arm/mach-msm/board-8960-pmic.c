@@ -479,7 +479,7 @@ static struct pm8921_bms_platform_data pm8921_bms_pdata = {
 
 #define PM8XXX_LED_PWM_DUTY_MS_PAT6_B		32
 
-#define PM8XXX_LED_PWM_DUTY_MS_PAT8		1
+#define PM8XXX_LED_PWM_DUTY_MS_PAT8		(1/10)
 
 /**
  * PM8XXX_PWM_CHANNEL_NONE shall be used when LED shall not be
