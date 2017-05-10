@@ -20,6 +20,7 @@
 #include <linux/msm_kgsl.h>
 #include <linux/delay.h>
 #include <linux/input.h>
+#include <linux/swait.h>
 
 #include <mach/socinfo.h>
 #include <mach/msm_bus_board.h>
@@ -3603,7 +3604,7 @@ static int adreno_check_interrupt_timestamp(struct kgsl_device *device,
 	if (io)						\
 		__wait_io_event_interruptible_timeout(wq, condition, __ret);\
 	else						\
-		__wait_event_interruptible_timeout(wq, condition, timeout);\
+		__swait_event_interruptible_timeout(wq, condition, __ret);\
 	__ret;								\
 })
 
