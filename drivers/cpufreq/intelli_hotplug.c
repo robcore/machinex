@@ -20,10 +20,11 @@
 #include <linux/kobject.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
+#include <linux/powersuspend.h>
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	9
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -49,7 +50,6 @@ static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct mutex intelli_plug_mutex;
-static struct notifier_block notif;
 static void refresh_cpus(void);
 
 struct ip_cpu_info {
@@ -75,6 +75,13 @@ static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
+
+struct ip_suspend {
+	struct mutex intellisleep_mutex;
+	int intelli_suspended;
+};
+
+static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
 
 #define dprintk(msg...)		\
 do {				\
@@ -225,12 +232,21 @@ static void update_per_cpu_stat(void)
 
 static void cpu_up_down_work(struct work_struct *work)
 {
-	unsigned int online_cpus, cpu;
+	unsigned int online_cpus;
+	int cpu = smp_processor_id();
 	long l_nr_threshold;
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
+
+	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
+		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+		return;
+	}
+
+	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
 	now = ktime_to_us(ktime_get());
 	delta = now - last_input;
@@ -395,6 +411,36 @@ static void cycle_cpus(void)
 	intellinit = false;
 }
 
+static void intelli_suspend(struct power_suspend * h)
+{
+	int cpu;
+
+	for_each_possible_cpu(cpu) {
+		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+		per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
+		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	}
+}
+
+static void intelli_resume(struct power_suspend * h)
+{
+	int cpu;
+
+	for_each_possible_cpu(cpu) {
+		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
+		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	}
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+					msecs_to_jiffies(def_sampling_ms));
+}
+
+static struct power_suspend intelli_suspend_data =
+{
+	.suspend = intelli_suspend,
+	.resume = intelli_resume,
+};
+
 static int intelli_plug_start(void)
 {
 	unsigned int cpu, ret = 0;
@@ -403,6 +449,10 @@ static int intelli_plug_start(void)
 	intellinit = true;
 
 	mutex_init(&intelli_plug_mutex);
+	for_each_possible_cpu(cpu) {
+		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
+		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
+	}
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 	intelliplug_wq = create_singlethread_workqueue("intelliplug");
@@ -420,6 +470,8 @@ static int intelli_plug_start(void)
 			INTELLI_PLUG, ret);
 		goto err_dev;
 	}
+
+	register_power_suspend(&intelli_suspend_data);
 
 	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
@@ -449,9 +501,11 @@ static void intelli_plug_stop(void)
 	}
 	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
+	for_each_possible_cpu(cpu) {
+		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
+	}
 	mutex_destroy(&intelli_plug_mutex);
-	notif.notifier_call = NULL;
-
+	unregister_power_suspend(&intelli_suspend_data);
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
 }
