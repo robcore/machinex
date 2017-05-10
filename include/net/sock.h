@@ -1832,6 +1832,51 @@ static inline int sk_has_allocations(const struct sock *sk)
 }
 
 /**
+ * skwq_has_sleeper - check if there are any waiting processes
+ * @wq: struct socket_wq
+ *
+ * Returns true if socket_wq has waiting processes
+ *
+ * The purpose of the skwq_has_sleeper and sock_poll_wait is to wrap the memory
+ * barrier call. They were added due to the race found within the tcp code.
+ *
+ * Consider following tcp code paths:
+ *
+ * CPU1                  CPU2
+ *
+ * sys_select            receive packet
+ *   ...                 ...
+ *   __add_wait_queue    update tp->rcv_nxt
+ *   ...                 ...
+ *   tp->rcv_nxt check   sock_def_readable
+ *   ...                 {
+ *   schedule               rcu_read_lock();
+ *                          wq = rcu_dereference(sk->sk_wq);
+ *                          if (wq && waitqueue_active(&wq->wait))
+ *                              wake_up_interruptible(&wq->wait)
+ *                          ...
+ *                       }
+ *
+ * The race for tcp fires when the __add_wait_queue changes done by CPU1 stay
+ * in its cache, and so does the tp->rcv_nxt update on CPU2 side.  The CPU1
+ * could then endup calling schedule and sleep forever if there are no more
+ * data on the socket.
+ *
+ */
+static inline bool skwq_has_sleeper(struct socket_wq *wq)
+{
+
+	/*
+	 * We need to be sure we are in sync with the
+	 * add_wait_queue modifications to the wait queue.
+	 *
+	 * This memory barrier is paired in the sock_poll_wait.
+	 */
+	smp_mb();
+	return wq && waitqueue_active(&wq->wait);
+}
+
+/**
  * sock_poll_wait - place memory barrier behind the poll_wait call.
  * @filp:           file
  * @wait_address:   socket wait queue

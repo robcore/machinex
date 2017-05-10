@@ -330,6 +330,7 @@ static int nfs_write_begin(struct file *file, struct address_space *mapping,
 	pgoff_t index = pos >> PAGE_CACHE_SHIFT;
 	struct page *page;
 	int once_thru = 0;
+	struct wait_bit_key *key;
 
 	dfprintk(PAGECACHE, "NFS: write_begin(%s/%s(%ld), %u@%lld)\n",
 		file->f_path.dentry->d_parent->d_name.name,
@@ -342,7 +343,7 @@ start:
 	 * sync-to-disk
 	 */
 	ret = wait_on_bit_action(&NFS_I(mapping->host)->flags, NFS_INO_FLUSHING,
-				 nfs_wait_bit_killable(key, mode), TASK_KILLABLE);
+				 nfs_wait_bit_killable, TASK_KILLABLE);
 	if (ret)
 		return ret;
 
