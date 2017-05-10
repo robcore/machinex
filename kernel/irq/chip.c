@@ -1055,6 +1055,7 @@ void irq_chip_mask_parent(struct irq_data *data)
 	data = data->parent_data;
 	data->chip->irq_mask(data);
 }
+EXPORT_SYMBOL_GPL(irq_chip_mask_parent);
 
 /**
  * irq_chip_unmask_parent - Unmask the parent interrupt
@@ -1065,6 +1066,7 @@ void irq_chip_unmask_parent(struct irq_data *data)
 	data = data->parent_data;
 	data->chip->irq_unmask(data);
 }
+EXPORT_SYMBOL_GPL(irq_chip_unmask_parent);
 
 /**
  * irq_chip_eoi_parent - Invoke EOI on the parent interrupt
@@ -1075,6 +1077,7 @@ void irq_chip_eoi_parent(struct irq_data *data)
 	data = data->parent_data;
 	data->chip->irq_eoi(data);
 }
+EXPORT_SYMBOL_GPL(irq_chip_eoi_parent);
 
 /**
  * irq_chip_set_affinity_parent - Set affinity on the parent interrupt
@@ -1093,6 +1096,7 @@ int irq_chip_set_affinity_parent(struct irq_data *data,
 
 	return -ENOSYS;
 }
+EXPORT_SYMBOL_GPL(irq_chip_set_type_parent);
 
 /**
  * irq_chip_set_type_parent - Set IRQ type on the parent interrupt
