@@ -141,6 +141,8 @@ do { \
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
+#define preemptible()	(preempt_count() == 0 && !irqs_disabled())
+
 struct preempt_notifier;
 
 /**
