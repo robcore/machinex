@@ -265,7 +265,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
-			if (thermal_core_controlled)
+			if (atomic_read(&thermal_core_controlled == 1))
 				goto reschedule;
 				cpu_up(cpu);
 			apply_down_lock(cpu);

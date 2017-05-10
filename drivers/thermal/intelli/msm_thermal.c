@@ -41,7 +41,7 @@ struct msm_thermal_stat_data {
 static struct msm_thermal_stat_data msm_thermal_stats;
 
 static int enabled;
-bool thermal_core_controlled;
+atomic_t thermal_core_controlled = ATOMIC_INIT(0);
 static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id = 0,
 	.poll_ms = DEFAULT_POLLING_MS,
@@ -147,7 +147,7 @@ static void do_core_control(long temp)
 
 
 	if ((!core_control_enabled) || (intelli_init())) {
-		thermal_core_controlled = false;
+		atomic_set(&thermal_core_controlled, 0);
 		return;
 	}
 
@@ -163,11 +163,11 @@ static void do_core_control(long temp)
 					KBUILD_MODNAME, i, temp);
 			ret = cpu_down(i);
 			if (ret) {
-				thermal_core_controlled = false;
+				atomic_set(&thermal_core_controlled, 0);
 				pr_err("%s: Error %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
 			} else {
-				thermal_core_controlled = true;
+				atomic_set(&thermal_core_controlled, 1);
 				pr_debug("%s: Success %d offline core %d\n",
 					KBUILD_MODNAME, ret, i);
 			}
@@ -190,11 +190,11 @@ static void do_core_control(long temp)
 				continue;
 			ret = cpu_up(i);
 			if (ret) {
-				thermal_core_controlled = true;
+				atomic_set(&thermal_core_controlled, 1);
 				pr_err("%s: Error %d online core %d\n",
 						KBUILD_MODNAME, ret, i);
 			} else {
-				thermal_core_controlled = false;
+				atomic_set(&thermal_core_controlled, 0);
 				pr_debug("%s: Success %d online core %d\n",
 						KBUILD_MODNAME, ret, i);
 			}
@@ -302,15 +302,14 @@ static int msm_thermal_cpu_callback(struct notifier_block *nfb,
 		if (core_control_enabled &&
 			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
 			(cpus_offlined & BIT(cpu))) {
-			thermal_core_controlled = true;
+			atomic_set(&thermal_core_controlled, 1);
 			pr_debug(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
 			return NOTIFY_BAD;
 		}
 	}
-
-	thermal_core_controlled = false;
+	atomic_set(&thermal_core_controlled, 0);
 
 	return NOTIFY_OK;
 }
@@ -472,11 +471,11 @@ static int update_offline_cores(int val)
 			continue;
 		ret = cpu_down(cpu);
 		if (ret) {
-			thermal_core_controlled = false;
+			atomic_set(&thermal_core_controlled, 0);
 			pr_err("%s: Unable to offline cpu%d\n",
 				KBUILD_MODNAME, cpu);
 		} else {
-			thermal_core_controlled = true;
+			atomic_set(&thermal_core_controlled, 1);
 			pr_debug("%s: Thermal Offlined CPU%d\n",
 				KBUILD_MODNAME, cpu);
 		}

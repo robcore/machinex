@@ -33,8 +33,6 @@
 
 #define ATOMIC_INIT(i)	{ (i) }
 
-#ifdef __KERNEL__
-
 /**
  * atomic_read - read atomic variable
  * @v: pointer of type atomic_t
@@ -42,7 +40,7 @@
  * Atomically reads the value of @v.
  */
 #ifndef atomic_read
-#define atomic_read(v)	ACCESS_ONCE((v)->counter)
+#define atomic_read(v)	READ_ONCE((v)->counter)
 #endif
 
 /**
@@ -52,7 +50,7 @@
  *
  * Atomically sets the value of @v to @i.
  */
-#define atomic_set(v, i) (((v)->counter) = (i))
+#define atomic_set(v, i) WRITE_ONCE((v)->counter, i)
 
 #include <linux/irqflags.h>
 
@@ -183,5 +181,4 @@ static inline void atomic_set_mask(unsigned int mask, atomic_t *v)
 }
 #endif
 
-#endif /* __KERNEL__ */
 #endif /* __ASM_GENERIC_ATOMIC_H */
