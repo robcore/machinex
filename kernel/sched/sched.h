@@ -1614,8 +1614,10 @@ static inline int hrtick_enabled(struct rq *rq)
 
 #endif /* CONFIG_SCHED_HRTICK */
 
+#ifdef CONFIG_SCHED_TUNE
 extern struct rq *lock_rq_of(struct task_struct *p, unsigned long *flags);
 extern void unlock_rq_of(struct rq *rq, struct task_struct *p, unsigned long *flags);
+#endif
 
 #ifdef CONFIG_SMP
 extern void sched_avg_update(struct rq *rq);
