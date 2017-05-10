@@ -368,6 +368,8 @@ static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se,
 
 	WARN_ON(dl_time_before(rq_clock(rq), dl_se->deadline));
 
+	add_average_bw(dl_se, dl_rq);
+
 	/*
 	 * We are racing with the deadline timer. So, do nothing because
 	 * the deadline timer handler will take care of properly recharging
