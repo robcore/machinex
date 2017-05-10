@@ -8201,10 +8201,7 @@ more_balance:
 					&busiest->active_balance_work);
 			}
 
-			/*
-			 * We've kicked active balancing, reset the failure
-			 * counter.
-			 */
+			/* We've kicked active balancing, force task migration. */
 			sd->nr_balance_failed = sd->cache_nice_tries+1;
 		}
 	} else
@@ -8467,9 +8464,11 @@ static int active_load_balance_cpu_stop(void *data)
 			 * We want to potentially lower env.src_cpu's OPP.
 			 */
 			update_capacity_of(env.src_cpu);
-		}
-		else
+			/* Active balancing done, reset the failure counter. */
+			sd->nr_balance_failed = 0;
+		} else {
 			schedstat_inc(sd, alb_failed);
+		}
 	}
 	rcu_read_unlock();
 out_unlock:
