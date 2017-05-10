@@ -33,9 +33,6 @@ static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
-#ifdef CONFIG_STATE_NOTIFIER
-static struct notifier_block notif;
-#endif
 
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);

@@ -17,7 +17,6 @@
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
-#include <linux/state_notifier.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
 
@@ -43,12 +42,8 @@ struct msm_sleeper_data {
 	unsigned int up_count;
 	unsigned int down_count_max;
 	unsigned int up_count_max;
-	bool suspended;
-	unsigned int max_cpus_online_susp;
 	bool plug_all;
 	struct notifier_block notif;
-	struct work_struct suspend_work;
-	struct work_struct resume_work;
 } sleeper_data = {
 	.enabled = MSM_SLEEPER_ENABLED,
 	.delay = DELAY,
@@ -56,8 +51,6 @@ struct msm_sleeper_data {
 	.max_cpus_online = DEF_MAX_CPUS_ONLINE,
 	.down_count_max = DEF_DOWN_COUNT_MAX,
 	.up_count_max = DEF_UP_COUNT_MAX,
-	.suspended = false,
-	.max_cpus_online_susp = DEF_MAX_CPUS_ONLINE_SUSP,
 	.plug_all = DEF_PLUG_ALL
 };
 
@@ -115,7 +108,7 @@ static void hotplug_func(struct work_struct *work)
 {
 	unsigned int cpu, loadavg = 0;
 
-	if (sleeper_data.suspended || sleeper_data.max_cpus_online == 2)
+	if (sleeper_data.max_cpus_online == 2)
 		goto reschedule;
 
 	if (sleeper_data.plug_all) {
@@ -149,61 +142,6 @@ static void hotplug_func(struct work_struct *work)
 
 reschedule:
 	reschedule_timer();
-}
-
-static void msm_sleeper_suspend(struct work_struct *work)
-{
-	int cpu;
-
-	sleeper_data.suspended = true;
-
-	for_each_possible_cpu(cpu) {
-		if (sleeper_data.max_cpus_online_susp == num_online_cpus())
-			break;
-
-		if (cpu && cpu_online(cpu))
-			cpu_down(cpu);
-	}
-}
-
-static void msm_sleeper_resume(struct work_struct *work)
-{
-	int cpu;
-
-	sleeper_data.suspended = false;
-
-
-	if (sleeper_data.max_cpus_online == 2) {
-		if (cpu_is_offline(1)) {
-			cpu_up(1);
-		}
-	} else if (sleeper_data.plug_all) {
-		for_each_possible_cpu(cpu) {
-			if (cpu && cpu_is_offline(cpu)) {
-				cpu_up(cpu);
-			}
-		}
-	}
-}
-
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	if (!sleeper_data.enabled)
-		return NOTIFY_OK;
-
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			queue_work_on(0, sleeper_wq, &sleeper_data.resume_work);
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			queue_work_on(0, sleeper_wq, &sleeper_data.suspend_work);
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
 }
 
 static ssize_t show_enable_hotplug(struct device *dev,
@@ -291,29 +229,6 @@ static ssize_t store_max_cpus_online(struct device *dev,
 	return count;
 }
 
-static ssize_t show_max_cpus_online_susp(struct device *dev,
-				    struct device_attribute *msm_sleeper_attrs,
-				    char *buf)
-{
-	return sprintf(buf, "%u\n", sleeper_data.max_cpus_online_susp);
-}
-
-static ssize_t store_max_cpus_online_susp(struct device *dev,
-				     struct device_attribute *msm_sleeper_attrs,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned long val;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0 || val < 1 || val > NR_CPUS)
-		return -EINVAL;
-
-	sleeper_data.max_cpus_online_susp = val;
-
-	return count;
-}
-
 static ssize_t show_up_threshold(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
@@ -388,7 +303,6 @@ static DEVICE_ATTR(enabled, 644, show_enable_hotplug, store_enable_hotplug);
 static DEVICE_ATTR(up_threshold, 644, show_up_threshold, store_up_threshold);
 static DEVICE_ATTR(plug_all, 644, show_plug_all, store_plug_all);
 static DEVICE_ATTR(max_cpus_online, 644, show_max_cpus_online, store_max_cpus_online);
-static DEVICE_ATTR(max_cpus_online_susp, 644, show_max_cpus_online_susp, store_max_cpus_online_susp);
 static DEVICE_ATTR(up_count_max, 644, show_up_count_max, store_up_count_max);
 static DEVICE_ATTR(down_count_max, 644, show_down_count_max, store_down_count_max);
 
@@ -396,7 +310,6 @@ static struct attribute *msm_sleeper_attrs[] = {
 	&dev_attr_up_threshold.attr,
 	&dev_attr_plug_all.attr,
 	&dev_attr_max_cpus_online.attr,
-	&dev_attr_max_cpus_online_susp.attr,
 	&dev_attr_up_count_max.attr,
 	&dev_attr_down_count_max.attr,
 	&dev_attr_enabled.attr,
@@ -433,14 +346,6 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 		goto err_dev;
 	}
 
-	sleeper_data.notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&sleeper_data.notif)) {
-		ret = -EINVAL;
-		goto err_dev;
-	}
-
-	INIT_WORK(&sleeper_data.resume_work, msm_sleeper_resume);
-	INIT_WORK(&sleeper_data.suspend_work, msm_sleeper_suspend);
 	INIT_DELAYED_WORK(&sleeper_work, hotplug_func);
 
 	if (sleeper_data.enabled)

@@ -18,15 +18,12 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/kobject.h>
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	6
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -68,14 +65,8 @@ static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int full_mode_profile = 0;
 static int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
-static bool hotplug_suspended;
 static unsigned int min_cpus_online_res = 2;
 static unsigned int max_cpus_online_res = 4;
-/*
- * suspend mode, if set = 1 hotplug will sleep,
- * if set = 0, then hoplug will be active all the time.
- */
-static unsigned int hotplug_suspend = 0;
 
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus;
@@ -241,9 +232,6 @@ static void cpu_up_down_work(struct work_struct *work)
 	u64 now;
 	u64 delta;
 
-	if (hotplug_suspended)
-		return;
-
 	now = ktime_to_us(ktime_get());
 	delta = now - last_input;
 
@@ -292,113 +280,17 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
-	if (hotplug_suspended) {
-		dprintk("intelli_plug is suspended!\n");
-		return;
-	}
-
 	if (atomic_read(&intelli_plug_active) == 1) {
 		target_cpus = calculate_thread_stats();
 		schedule_work_on(0, &up_down_work);
 	}
 }
 
-static void intelli_plug_suspend(void)
-{
-	int cpu = 0;
-
-	if (!hotplug_suspend)
-		return;
-
-	if (!hotplug_suspended) {
-		mutex_lock(&intelli_plug_mutex);
-		hotplug_suspended = true;
-		min_cpus_online_res = min_cpus_online;
-		min_cpus_online = 1;
-		max_cpus_online_res = max_cpus_online;
-		max_cpus_online = NR_CPUS;
-		mutex_unlock(&intelli_plug_mutex);
-
-		/*
-		 * Enable core 1,2 so we will have 0-2 online
-		 * when screen is OFF to reduce system lags and reboots.
-		 * Rob note: Nope,
-		 * cpu_up(1);
-		 * cpu_up(2);
-		 */
-		dprintk("%s: suspended!\n", INTELLI_PLUG);
-	}
-}
-
-static void intelli_plug_resume(void)
-{
-	int cpu, required_reschedule = 0, required_wakeup = 0;
-
-	if (hotplug_suspended) {
-		mutex_lock(&intelli_plug_mutex);
-		hotplug_suspended = false;
-		min_cpus_online = min_cpus_online_res;
-		max_cpus_online = max_cpus_online_res;
-		mutex_unlock(&intelli_plug_mutex);
-		required_wakeup = 1;
-		/* Initiate hotplug work if it was cancelled */
-		required_reschedule = 1;
-		dprintk("%s: resumed.\n", INTELLI_PLUG);
-	}
-
-	if (required_wakeup) {
-		/* Fire up all CPUs */
-		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
-				continue;
-			if (!thermal_core_controlled)
-				cpu_up(cpu);
-			apply_down_lock(cpu);
-		}
-		dprintk("%s: wakeup boosted.\n", INTELLI_PLUG);
-		/* Reset required_wakeup flag back to 0 */
-		required_wakeup = 0;
-	}
-
-	/* Resume hotplug workqueue if required */
-	if (required_reschedule) {
-		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-				      msecs_to_jiffies(RESUME_SAMPLING_MS));
-		/* Reset required_reschedule flag back to 0 */
-	required_reschedule = 0;
-	}
-}
-
-#ifdef CONFIG_STATE_NOTIFIER
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	if ((atomic_read(&intelli_plug_active) == 0) || !hotplug_suspend)
-		return NOTIFY_OK;
-
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			intelli_plug_resume();
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			intelli_plug_suspend();
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-#endif
-
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
 	u64 delta;
-
-	if (hotplug_suspended)
-		return;
 
 	now = ktime_to_us(ktime_get());
 	last_input = now;
@@ -522,15 +414,6 @@ static int intelli_plug_start(void)
 		goto err_out;
 	}
 
-#ifdef CONFIG_STATE_NOTIFIER
-	notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&notif)) {
-		pr_err("%s: Failed to register State notifier callback\n",
-			INTELLI_PLUG);
-		goto err_dev;
-	}
-#endif
-
 	ret = input_register_handler(&intelli_plug_input_handler);
 	if (ret) {
 		pr_err("%s: Failed to register input handler: %d\n",
@@ -567,9 +450,6 @@ static void intelli_plug_stop(void)
 	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
-#ifdef CONFIG_STATE_NOTIFIER
-	state_unregister_client(&notif);
-#endif
 	notif.notifier_call = NULL;
 
 	input_unregister_handler(&intelli_plug_input_handler);
@@ -600,7 +480,6 @@ static ssize_t show_##file_name					\
 show_one(cpus_boosted, cpus_boosted);
 show_one(min_cpus_online, min_cpus_online);
 show_one(max_cpus_online, max_cpus_online);
-show_one(hotplug_suspend, hotplug_suspend);
 show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 show_one(debug_intelli_plug, debug_intelli_plug);
@@ -626,7 +505,6 @@ static ssize_t store_##file_name		\
 }
 
 store_one(cpus_boosted, cpus_boosted);
-store_one(hotplug_suspend, hotplug_suspend);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
@@ -801,7 +679,6 @@ KERNEL_ATTR_RW(intelli_plug_active);
 KERNEL_ATTR_RW(cpus_boosted);
 KERNEL_ATTR_RW(min_cpus_online);
 KERNEL_ATTR_RW(max_cpus_online);
-KERNEL_ATTR_RW(hotplug_suspend);
 KERNEL_ATTR_RW(full_mode_profile);
 KERNEL_ATTR_RO(cpu_nr_run_threshold);
 KERNEL_ATTR_RW(boost_lock_duration);
@@ -816,7 +693,6 @@ static struct attribute *intelli_plug_attrs[] = {
 	&cpus_boosted_attr.attr,
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
-	&hotplug_suspend_attr.attr,
 	&full_mode_profile_attr.attr,
 	&cpu_nr_run_threshold_attr.attr,
 	&boost_lock_duration_attr.attr,

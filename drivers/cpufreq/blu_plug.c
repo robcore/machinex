@@ -24,9 +24,6 @@
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
 #include <linux/machinex_defines.h>
 
 #define INIT_DELAY		20000
@@ -49,7 +46,6 @@ static unsigned int down_timer;
 static unsigned int up_timer;
 static unsigned int down_timer_cnt = DEF_DOWN_TIMER_CNT;
 static unsigned int up_timer_cnt = DEF_UP_TIMER_CNT;
-static unsigned int max_cpus_online_susp = MAX_CPUS_ONLINE_SUSP;
 static unsigned int plug_threshold[MAX_CPUS_ONLINE] = {[0 ... MAX_CPUS_ONLINE-1] = DEF_PLUG_THRESHOLD};
 
 static struct delayed_work dyn_work;
@@ -168,47 +164,6 @@ static void load_timer(struct work_struct *work)
 	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
 }
 
-#ifdef CONFIG_STATE_NOTIFIER
-static void blu_plug_suspend(void)
-{
-	int cpu;
-
-	cancel_delayed_work_sync(&dyn_work);
-
-	for_each_possible_cpu(cpu) {
-		if (cpu != 0 && cpu_online(cpu)
-			&& num_online_cpus() > max_cpus_online_susp)
-			cpu_down(cpu);
-	}
-}
-
-static void blu_plug_resume(void)
-{
-	up_all();
-	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
-}
-
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	if (!blu_plug_enabled)
-		return NOTIFY_OK;
-
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			blu_plug_resume();
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			blu_plug_suspend();
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-#endif
-
 /******************** Module parameters *********************/
 
 /* up_threshold */
@@ -286,34 +241,6 @@ static struct kernel_param_ops max_cpus_online_ops = {
 
 module_param_cb(max_cpus_online, &max_cpus_online_ops, &max_cpus_online, 0644);
 
-/* max_cpus_online_susp */
-static int set_max_cpus_online_susp(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-	unsigned int i;
-
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 1 || i > max_cpus_online || i > num_possible_cpus())
-		return -EINVAL;
-
-	if (i > max_cpus_online)
-		i = max_cpus_online;
-
-	max_cpus_online_susp = i;
-
-	return ret;
-}
-
-static struct kernel_param_ops max_cpus_online_susp_ops = {
-	.set = set_max_cpus_online_susp,
-	.get = param_get_uint,
-};
-
-module_param_cb(max_cpus_online_susp, &max_cpus_online_susp_ops, &max_cpus_online_susp, 0644);
-
 /* down_timer_cnt */
 static int set_down_timer_cnt(const char *val, const struct kernel_param *kp)
 {
@@ -377,13 +304,6 @@ static int dyn_hp_init(void)
 	if (!blu_plug_enabled)
 		return 0;
 
-#ifdef CONFIG_STATE_NOTIFIER
-	notify.notifier_call = state_notifier_callback;
-	if (state_register_client(&notify))
-		pr_err("%s: Failed to register State notifier callback\n",
-			__func__);
-#endif
-
 	dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!dyn_workq)
 		return -ENOMEM;
@@ -401,10 +321,6 @@ static void dyn_hp_exit(void)
 	int cpu;
 
 	cancel_delayed_work_sync(&dyn_work);
-
-#ifdef CONFIG_STATE_NOTIFIER
-	state_unregister_client(&notify);
-#endif
 
 	destroy_workqueue(dyn_workq);
 
