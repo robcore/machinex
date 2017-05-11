@@ -7664,6 +7664,7 @@ int sched_cpu_starting(unsigned int cpu)
 	return 0;
 }
 
+#ifdef CONFIG_SMP
 void __init sched_init_smp(void)
 {
 	cpumask_var_t non_isolated_cpus;
