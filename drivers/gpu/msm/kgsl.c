@@ -2942,7 +2942,7 @@ kgsl_mmap_memstore(struct kgsl_device *device, struct vm_area_struct *vma)
 
 	/* The memstore can only be mapped as read only */
 
-	if (vma->vm_flags & VM_WRITE)
+	if ((vma->vm_flags & VM_WRITE) || (vma->vm_flags & VM_MAYWRITE))
 		return -EPERM;
 
 	if (memdesc->size  !=  vma_size) {
