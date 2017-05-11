@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -239,7 +239,6 @@ static void cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
-	u64 govnow;
 	u64 govdelta;
 
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
@@ -249,12 +248,12 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	govnow = ktime_to_us(ktime_get());
-	govdelta = (govnow - last_gov_switch);
-	if (delta < last_gov_switch)
-		goto reschedule;
+	now = ktime_to_us(ktime_get());
 
 	if (governor_changed) {
+		govdelta = (now - last_gov_switch);
+		if (govdelta < gov_lock_duration)
+			goto reschedule;
 		intellinit = true;
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
@@ -266,7 +265,6 @@ static void cpu_up_down_work(struct work_struct *work)
 		goto reschedule;
 	}
 
-	now = ktime_to_us(ktime_get());
 	delta = now - last_input;
 
 	if (target < min_cpus_online)
