@@ -58,9 +58,7 @@ extern ssize_t arch_print_cpu_modalias(struct device *dev,
  * CPU notifier priorities.
  */
 enum {
-	/* migration should happen before other stuff but after perf */
 	CPU_PRI_PERF		= 20,
-	CPU_PRI_MIGRATION	= 10,
 
 	/* bring up workqueues before normal notifiers and down after */
 	CPU_PRI_WORKQUEUE_UP	= 5,

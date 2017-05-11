@@ -5920,62 +5920,27 @@ static void set_rq_offline(struct rq *rq)
 	}
 }
 
-/*
- * migration_call - callback that gets triggered when a CPU is added.
- * Here we can start up the necessary migration thread for the new CPU.
- */
-static int
-migration_call(struct notifier_block *nfb, unsigned long action, void *hcpu)
+int sched_cpu_dying(unsigned int cpu)
 {
-	int cpu = (long)hcpu;
-	unsigned long flags;
 	struct rq *rq = cpu_rq(cpu);
+	unsigned long flags;
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-
-	case CPU_ONLINE:
-		/* Update our root-domain */
-		raw_spin_lock_irqsave(&rq->lock, flags);
-		if (rq->rd) {
-			BUG_ON(!cpumask_test_cpu(cpu, rq->rd->span));
-
-			set_rq_online(rq);
-		}
-		raw_spin_unlock_irqrestore(&rq->lock, flags);
-		break;
-
-#ifdef CONFIG_HOTPLUG_CPU
-	case CPU_DYING:
-		sched_ttwu_pending();
-		/* Update our root-domain */
-		raw_spin_lock_irqsave(&rq->lock, flags);
-		walt_migrate_sync_cpu(cpu);
-		if (rq->rd) {
-			BUG_ON(!cpumask_test_cpu(cpu, rq->rd->span));
-			set_rq_offline(rq);
-		}
-		migrate_tasks(rq);
-		BUG_ON(rq->nr_running != 1); /* the migration thread */
-		raw_spin_unlock_irqrestore(&rq->lock, flags);
-		calc_load_migrate(rq);
-		break;
-#endif
+	sched_ttwu_pending();
+	/* Update our root-domain */
+	raw_spin_lock_irqsave(&rq->lock, flags);
+	walt_migrate_sync_cpu(cpu);
+	if (rq->rd) {
+		BUG_ON(!cpumask_test_cpu(cpu, rq->rd->span));
+		set_rq_offline(rq);
 	}
-
+	migrate_tasks(rq);
+	BUG_ON(rq->nr_running != 1); /* the migration thread */
+	raw_spin_unlock_irqrestore(&rq->lock, flags);
+	calc_load_migrate(rq);
 	update_max_interval();
-
-	return NOTIFY_OK;
+	return 0;
 }
-
-/*
- * Register at high priority so that task migration (migrate_all_tasks)
- * happens before everything else.  This has to be lower priority than
- * the notifier in the perf_event subsystem, though.
- */
-static struct notifier_block migration_notifier = {
-	.notifier_call = migration_call,
-	.priority = CPU_PRI_MIGRATION,
-};
+#endif
 
 static void set_cpu_rq_start_time(unsigned int cpu)
 {
@@ -7644,12 +7609,34 @@ static int cpuset_cpu_inactive(unsigned int cpu)
 
 int sched_cpu_activate(unsigned int cpu)
 {
+	struct rq *rq = cpu_rq(cpu);
+	unsigned long flags;
+
 	set_cpu_active(cpu, true);
 
 	if (sched_smp_initialized) {
 		sched_domains_numa_masks_set(cpu);
 		cpuset_cpu_active();
 	}
+
+	/*
+	 * Put the rq online, if not already. This happens:
+	 *
+	 * 1) In the early boot process, because we build the real domains
+	 *    after all cpus have been brought up.
+	 *
+	 * 2) At runtime, if cpuset_cpu_active() fails to rebuild the
+	 *    domains.
+	 */
+	raw_spin_lock_irqsave(&rq->lock, flags);
+	if (rq->rd) {
+		BUG_ON(!cpumask_test_cpu(cpu, rq->rd->span));
+		set_rq_online(rq);
+	}
+	raw_spin_unlock_irqrestore(&rq->lock, flags);
+
+	update_max_interval();
+
 	return 0;
 }
 
@@ -7743,12 +7730,7 @@ void __init sched_init_smp(void)
 
 static int __init migration_init(void)
 {
-	void *cpu = (void *)(long)smp_processor_id();
-	int err;
-
 	sched_rq_cpu_starting(smp_processor_id());
-	migration_call(&migration_notifier, CPU_ONLINE, cpu);
-	register_cpu_notifier(&migration_notifier);
 
 	return 0;
 }
