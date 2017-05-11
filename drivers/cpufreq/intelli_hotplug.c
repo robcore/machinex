@@ -487,7 +487,7 @@ static int intelli_govinfo_notifier(
 	switch (val) {
 		case CPUFREQ_GOV_STOP:
 		case CPUFREQ_GOV_POLICY_EXIT:
-			last_gov_switch = ktime_to_us(ktime_get())
+			last_gov_switch = ktime_to_us(ktime_get());
 			governor_changed = true;
 			break;
 		default:
