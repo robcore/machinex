@@ -4064,7 +4064,7 @@ static struct i2c_driver synaptics_rmi4_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
-#ifdef CONFIG_PM
+#if 0
 		.pm = &synaptics_rmi4_dev_pm_ops,
 #endif
 	},
