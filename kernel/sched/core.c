@@ -3628,7 +3628,7 @@ static void __sched __schedule(void)
 		prev->yield_count = 0;
 		++*switch_count;
 
-		rq = context_switch(rq, prev, next, cookie); /* unlocks the rq */
+		context_switch(rq, prev, next, cookie); /* unlocks the rq */
 		/*
 		 * The context switch have flipped the stack from under us
 		 * and restored the local variables which were saved when
