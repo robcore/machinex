@@ -5197,7 +5197,7 @@ normalize_energy(int energy_diff)
 	normalized_nrg = (energy_diff < 0) ? -energy_diff : energy_diff;
 
 	/* Scale by energy magnitude */
-	normalized_nrg <<= SCHED_LOAD_SHIFT;
+	normalized_nrg <<= NICE_0_LOAD_SHIFT;
 
 	/* Normalize on max energy for target platform */
 	normalized_nrg = reciprocal_divide(
