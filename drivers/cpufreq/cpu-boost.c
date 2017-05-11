@@ -40,13 +40,12 @@ module_param(input_boost_enabled, bool, 0644);
 static unsigned int input_boost_freq = 1350000;
 module_param(input_boost_freq, uint, 0644);
 
-static unsigned int input_boost_ms = 40;
+static unsigned int input_boost_ms = 50;
 module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-#define MIN_INPUT_INTERVAL (150)
-static unsigned int min_input_interval = MIN_INPUT_INTERVAL;
+static unsigned int min_input_interval = 2000;
 module_param(min_input_interval, uint, 0644);
 
 /*

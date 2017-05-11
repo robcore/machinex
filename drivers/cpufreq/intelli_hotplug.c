@@ -24,13 +24,13 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			95000
-#define MIN_INPUT_INTERVAL		300 * 1000L
-#define BOOST_LOCK_DUR			100 * 1000L
+#define INPUT_INTERVAL			2000
+#define BOOST_LOCK_DUR			500
 #define DEFAULT_NR_CPUS_BOOSTED		4
 #define DEFAULT_NR_FSHIFT		3
 #define DEFAULT_DOWN_LOCK_DUR		1500
@@ -45,6 +45,7 @@
 
 static u64 last_boost_time;
 static u64 last_input;
+static u64 last_gov_switch;
 
 static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
@@ -72,6 +73,8 @@ static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
+static u64 gov_lock_duration = 5000;
+static bool governor_changed;
 
 struct ip_suspend {
 	struct mutex intellisleep_mutex;
@@ -236,14 +239,32 @@ static void cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
+	u64 govnow;
+	u64 govdelta;
 
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		return;
 	}
-
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+
+	govnow = ktime_to_us(ktime_get());
+	govdelta = (govnow - last_gov_switch);
+	if (delta < last_gov_switch)
+		goto reschedule;
+
+	if (governor_changed) {
+		intellinit = true;
+		for_each_cpu_not(cpu, cpu_online_mask) {
+			if (cpu == 0)
+				continue;
+				cpu_up(cpu);
+			apply_down_lock(cpu);
+		}
+		intellinit = false;
+		goto reschedule;
+	}
 
 	now = ktime_to_us(ktime_get());
 	delta = now - last_input;
@@ -257,7 +278,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if (online_cpus <= cpus_boosted &&
-		delta <= boost_lock_duration)
+		delta <= msecs_to_jiffies(boost_lock_duration))
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -316,9 +337,9 @@ static void intelli_plug_input_event(struct input_handle *handle,
 
 	now = ktime_to_us(ktime_get());
 	last_input = now;
-	delta = last_input - last_boost_time;
+	delta = (last_input - last_boost_time);
 
-	if (delta < MIN_INPUT_INTERVAL)
+	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
 		return;
 
 	if (num_online_cpus() >= cpus_boosted ||
@@ -457,6 +478,29 @@ static struct power_suspend intelli_suspend_data =
 	.resume = intelli_resume,
 };
 
+static int intelli_govinfo_notifier(
+	struct notifier_block *nb, unsigned long val, void *data)
+{
+
+	governor_changed = false;
+
+	switch (val) {
+		case CPUFREQ_GOV_STOP:
+		case CPUFREQ_GOV_POLICY_EXIT:
+			last_gov_switch = ktime_to_us(ktime_get())
+			governor_changed = true;
+			break;
+		default:
+			break;
+	}
+
+		return 0;
+}
+
+static struct notifier_block cpufreq_govinfo_notifier_block = {
+	.notifier_call = intelli_govinfo_notifier,
+};
+
 static int intelli_plug_start(void)
 {
 	unsigned int cpu, ret = 0;
@@ -488,6 +532,8 @@ static int intelli_plug_start(void)
 	}
 
 	register_power_suspend(&intelli_suspend_data);
+	cpufreq_register_notifier(
+		&cpufreq_govinfo_notifier_block, CPUFREQ_GOVINFO_NOTIFIER);
 
 	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
@@ -634,7 +680,7 @@ static ssize_t show_boost_lock_duration(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", div_u64(boost_lock_duration, 1000));
+	return sprintf(buf, "%llu\n", (boost_lock_duration));
 }
 
 static ssize_t store_boost_lock_duration(struct kobject *kobj,
@@ -648,7 +694,7 @@ static ssize_t store_boost_lock_duration(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	boost_lock_duration = val * 1000;
+	boost_lock_duration = msecs_to_jiffies(val);
 
 	return count;
 }
