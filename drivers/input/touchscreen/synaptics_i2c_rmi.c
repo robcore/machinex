@@ -4047,7 +4047,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_PM
+#if 0
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
 	.resume  = synaptics_rmi4_resume,
