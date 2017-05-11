@@ -7688,6 +7688,7 @@ int sched_cpu_deactivate(unsigned int cpu)
 static void sched_rq_cpu_starting(unsigned int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
+	unsigned long flags;
 
 	raw_spin_lock_irqsave(&rq->lock, flags);
 	walt_set_window_start(rq);
