@@ -533,7 +533,6 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	unsigned int val = 0;
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	const long div = 1000/HZ;
 	static unsigned int org_interval_timeout = 1;
 	int ret;
 
@@ -553,7 +552,7 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	/* Let the timeout be requested in ms, but convert to jiffies. */
 	val /= div;
 	if (val >= org_interval_timeout)
-		pwr->interval_timeout = val;
+		device->pwrctrl.interval_timeout = msecs_to_jiffies(val);
 
 	mutex_unlock(&device->mutex);
 
@@ -568,7 +567,7 @@ static int kgsl_pwrctrl_idle_timer_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-		device->pwrctrl.interval_timeout);
+		jiffies_to_msecs(device->pwrctrl.interval_timeout);
 }
 
 static int kgsl_pwrctrl_pmqos_latency_store(struct device *dev,
@@ -1143,7 +1142,7 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 
 	pwr->nap_allowed = pdata->nap_allowed;
 	pwr->idle_needed = pdata->idle_needed;
-	pwr->interval_timeout = pdata->idle_timeout;
+	pwr->interval_timeout = msecs_to_jiffies(pdata->idle_timeout);
 	pwr->strtstp_sleepwake = pdata->strtstp_sleepwake;
 	pwr->ebi1_clk = clk_get(&pdev->dev, "bus_clk");
 	if (IS_ERR(pwr->ebi1_clk))
