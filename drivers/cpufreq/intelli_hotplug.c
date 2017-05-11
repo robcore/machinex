@@ -479,8 +479,11 @@ static struct power_suspend intelli_suspend_data =
 static int intelli_govinfo_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
-
-	governor_changed = false;
+	if ((val != CPUFREQ_GOV_STOP) ||
+		(val != CPUFREQ_GOV_POLICY_EXIT)) {
+		governor_changed = false;
+			return 0;
+	}
 
 	switch (val) {
 		case CPUFREQ_GOV_STOP:
