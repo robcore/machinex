@@ -1513,6 +1513,9 @@ static void cpufreq_remove_dev_sysfs(void)
 			if (!kobj)
 				goto out;
 			kobject_put(kobj);
+			sysfs_remove_link(kobj, "cpufreq");
+			sysfs_notify(policy->kobj, NULL, "scaling_governor");
+			kobject_uevent(cpufreq_global_kobject, KOBJ_REMOVE);
 
 			if (!psysinfo->cpu_policy)
 				continue;
@@ -2202,10 +2205,6 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 			/* end old governor */
 			if (policy->governor)
 				__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
-
-			sysfs_notify(policy->kobj, NULL, "scaling_governor");
-
-			kobject_uevent(cpufreq_global_kobject, KOBJ_REMOVE);
 
 			/* start new governor */
 			if (new_policy->cpu && cpu0_policy)
