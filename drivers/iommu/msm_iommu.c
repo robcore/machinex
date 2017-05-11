@@ -1197,6 +1197,7 @@ static int msm_iommu_domain_has_cap(struct iommu_domain *domain,
 	return 0;
 }
 
+/*
 static void print_ctx_regs(void __iomem *base, int ctx)
 {
 	unsigned int fsr = GET_FSR(base, ctx);
@@ -1223,6 +1224,7 @@ static void print_ctx_regs(void __iomem *base, int ctx)
 	pr_err("PRRR   = %08x    NMRR   = %08x\n",
 	       GET_PRRR(base, ctx), GET_NMRR(base, ctx));
 }
+*/
 
 irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id)
 {
@@ -1257,7 +1259,7 @@ irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id)
 			ret = report_iommu_fault(ctx_drvdata->attached_domain,
 						&ctx_drvdata->pdev->dev,
 						GET_FAR(base, num), 0);
-
+/*
 		if (WARN_ON_ONCE(ret == -ENOSYS)) {
 			pr_err("Unexpected IOMMU page fault!\n");
 			pr_debug("name    = %s\n", drvdata->name);
@@ -1265,6 +1267,7 @@ irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id)
 			pr_debug("Interesting registers:\n");
 			//print_ctx_regs(base, num);
 		}
+*/
 
 		SET_FSR(base, num, fsr);
 		/*
