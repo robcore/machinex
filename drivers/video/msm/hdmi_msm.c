@@ -780,7 +780,7 @@ void mhl_hpd_handler(bool state)
 	if (state && hdmi_msm_state->boot_completion) {
 		/*To make sure that the previous
 		 disconnect event handling  is completed.*/
-		msleep(20);
+		mdelay(20);
 		hdmi_msm_hpd_on();
 	} else if (!hdmi_msm_state->boot_completion) {
 		pr_err("hdmi_msm_state->boot_completion = %d\n",
