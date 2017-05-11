@@ -550,7 +550,6 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 	mutex_lock(&device->mutex);
 
 	/* Let the timeout be requested in ms, but convert to jiffies. */
-	val /= div;
 	if (val >= org_interval_timeout)
 		device->pwrctrl.interval_timeout = msecs_to_jiffies(val);
 
@@ -567,7 +566,7 @@ static int kgsl_pwrctrl_idle_timer_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-		jiffies_to_msecs(device->pwrctrl.interval_timeout);
+		jiffies_to_msecs(device->pwrctrl.interval_timeout));
 }
 
 static int kgsl_pwrctrl_pmqos_latency_store(struct device *dev,
