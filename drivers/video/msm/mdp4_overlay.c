@@ -3360,7 +3360,7 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		}
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
-			if (pipe->bpp==2)
+			if (pipe->bpp == 2)
 				yuvcount++;
 		}
 
