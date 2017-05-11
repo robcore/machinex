@@ -1956,7 +1956,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 		 * pending
 		 */
 
-		//if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
+		if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
 			/*
 			 * try to cancel the current work if it fails to
 			 * stop (which means del_timer can't delete it
@@ -1965,14 +1965,8 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 			 * accept the next job which is same as
 			 * queue_delayed_work(mdp_timer_duration = 0)
 			 */
-
-			/* Rob note: delayed_work_pending is pretty deprecated
-			  due to its unreliability, just go ahead and cancel
-			  any potential work.
-			*/
-
 			cancel_delayed_work(&mdp_pipe_ctrl_worker);
-		//}
+		}
 
 		if ((mdp_all_blocks_off) && (mdp_current_clk_on)) {
 			mutex_lock(&mdp_suspend_mutex);
@@ -2262,14 +2256,9 @@ static void mdp_drv_init(void)
 	/* initialize spin lock and workqueue */
 	spin_lock_init(&mdp_spin_lock);
 	spin_lock_init(&mdp_lut_push_lock);
-	mdp_dma_wq = alloc_workqueue("mdp_dma_wq",
-		WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	mdp_dma_wq = create_singlethread_workqueue("mdp_dma_wq");
 	mdp_vsync_wq = create_singlethread_workqueue("mdp_vsync_wq");
-	/*mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
-	Gives mdp pipe ctrl high priority */
-	mdp_pipe_ctrl_wq = alloc_workqueue("mdp_pipe_ctrl_wq",
-					WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
-
+	mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
 	INIT_DELAYED_WORK(&mdp_pipe_ctrl_worker,
 			  mdp_pipe_ctrl_workqueue_handler);
 
@@ -3578,4 +3567,5 @@ static int __init mdp_driver_init(void)
 }
 
 module_init(mdp_driver_init);
+MODULE_DESCRIPTION("This makes screen do stuff and things");
 MODULE_LICENSE("GPL v2");
