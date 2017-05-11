@@ -523,7 +523,7 @@ void mdp_dma2_update(struct msm_fb_data_type *mfd)
 		/* wait until Vsync finishes the current job */
 		if (first_vsync) {
 			if (!wait_for_completion_killable_timeout
-					(&vsync_cntrl.vsync_comp, HZ/10))
+					(&vsync_cntrl.vsync_comp, msecs_to_jiffies(10)))
 				pr_err("Timedout DMA %s %d", __func__,
 								__LINE__);
 		} else {
