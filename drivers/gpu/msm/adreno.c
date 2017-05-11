@@ -83,6 +83,9 @@ unsigned int kgsl_cff_dump_enable;
 
 static const struct kgsl_functable adreno_functable;
 
+static unsigned int adreno_touchboost;
+module_param(adreno_touchboost, uint, 0644);
+
 static void adreno_input_work(struct work_struct *work);
 
 static struct adreno_device device_3d0 = {
@@ -250,6 +253,9 @@ static void adreno_input_work(struct work_struct *work)
 			struct adreno_device, input_work);
 	struct kgsl_device *device = &adreno_dev->dev;
 
+	if (!adreno_touchboost)
+		return;
+
 	mutex_lock(&device->mutex);
 
 	device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
@@ -281,6 +287,8 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 	struct kgsl_device *device = handle->handler->private;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 
+	if (!adreno_touchboost)
+		return;
 	/*
 	 * Only queue the work under certain circumstances: we have to be in
 	 * slumber, the event has to be EV_EBS and we had to have processed an
@@ -2982,15 +2990,6 @@ static int _ft_long_ib_detect_show(struct device *dev,
 				(adreno_dev->long_ib_detect ? 1 : 0));
 }
 
-/**
- * _wake_timeout_store() - Store the amount of time to extend idle check after
- * wake on touch
- * @dev: device ptr
- * @attr: Device attribute
- * @buf: value to write
- * @count: size of the value to write
- *
- */
 static ssize_t _wake_timeout_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
@@ -2998,14 +2997,6 @@ static ssize_t _wake_timeout_store(struct device *dev,
 	return _ft_sysfs_store(buf, count, &_wake_timeout);
 }
 
-/**
- * _wake_timeout_show() -  Show the amount of time idle check gets extended
- * after wake on touch
- * detect policy
- * @dev: device ptr
- * @attr: Device attribute
- * @buf: value read
- */
 static ssize_t _wake_timeout_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
