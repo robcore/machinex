@@ -160,6 +160,7 @@ static void cpuidle_idle_call(void)
 	 */
 	if (idle_should_freeze()) {
 		cpuidle_enter_freeze();
+		local_irq_enable();
 		goto exit_idle;
 	}
 

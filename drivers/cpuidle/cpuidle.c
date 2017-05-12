@@ -43,12 +43,6 @@ void disable_cpuidle(void)
 	off = 1;
 }
 
-static bool cpuidle_not_available(struct cpuidle_driver *drv,
-				  struct cpuidle_device *dev)
-{
-	return off || !initialized || !drv || !dev || !dev->enabled;
-}
-
 /**
  * cpuidle_play_dead - cpu off-lining
  *
@@ -71,7 +65,6 @@ int cpuidle_play_dead(void)
 	return -ENODEV;
 }
 
-#ifdef CONFIG_SUSPEND
 /**
  * cpuidle_find_deepest_state - Find deepest state meeting specific conditions.
  * @drv: cpuidle driver for the given CPU.
@@ -101,12 +94,7 @@ static int cpuidle_find_deepest_state(struct cpuidle_driver *drv,
 static void enter_freeze_proper(struct cpuidle_driver *drv,
 				struct cpuidle_device *dev, int index)
 {
-	/*
-	 * trace_suspend_resume() called by tick_freeze() for the last CPU
-	 * executing it contains RCU usage regarded as invalid in the idle
-	 * context, so tell RCU about that.
-	 */
-	RCU_NONIDLE(tick_freeze());
+	tick_freeze();
 	/*
 	 * The state used here cannot be a "coupled" one, because the "coupled"
 	 * cpuidle mechanism enables interrupts and doing that with timekeeping
@@ -117,13 +105,12 @@ static void enter_freeze_proper(struct cpuidle_driver *drv,
 	WARN_ON(!irqs_disabled());
 	/*
 	 * timekeeping_resume() that will be called by tick_unfreeze() for the
-	 * first CPU executing it calls functions containing RCU read-side
+	 * last CPU executing it calls functions containing RCU read-side
 	 * critical sections, so tell RCU about that.
 	 */
 	RCU_NONIDLE(tick_unfreeze());
 	start_critical_timings();
 }
-#endif /* CONFIG_SUSPEND */
 
 /**
  * cpuidle_enter_freeze - Enter an idle state suitable for suspend-to-idle.
@@ -131,8 +118,6 @@ static void enter_freeze_proper(struct cpuidle_driver *drv,
  * If there are states with the ->enter_freeze callback, find the deepest of
  * them and enter it with frozen tick.  Otherwise, find the deepest state
  * available and enter it normally.
- *
- * Returns with enabled interrupts.
  */
 void cpuidle_enter_freeze(void)
 {
@@ -140,18 +125,14 @@ void cpuidle_enter_freeze(void)
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
 	int index;
 
-	if (cpuidle_not_available(drv, dev))
-		goto fallback;
-
 	/*
 	 * Find the deepest state with ->enter_freeze present, which guarantees
 	 * that interrupts won't be enabled when it exits and allows the tick to
 	 * be frozen safely.
 	 */
 	index = cpuidle_find_deepest_state(drv, dev, true);
-	if (index >= 0) {
+	if (index > 0) {
 		enter_freeze_proper(drv, dev, index);
-		local_irq_enable();
 		return;
 	}
 
@@ -160,13 +141,13 @@ void cpuidle_enter_freeze(void)
 	 * at all and try to enter it normally.
 	 */
 	index = cpuidle_find_deepest_state(drv, dev, false);
-	if (index > 0) {
+	if (index > 0)
 		cpuidle_enter(drv, dev, index);
-		return;
-	}
+	else
+		arch_cpu_idle();
 
- fallback:
-	arch_cpu_idle();
+	/* Interrupts are enabled again here. */
+	local_irq_disable();
 }
 
 /**
@@ -247,8 +228,11 @@ int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
  */
 int cpuidle_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 {
-	if (cpuidle_not_available(drv, dev))
+	if (off || !initialized)
 		return -ENODEV;
+
+	if (!drv || !dev || !dev->enabled)
+		return -EBUSY;
 
 	return cpuidle_curr_governor->select(drv, dev);
 }
@@ -281,7 +265,7 @@ int cpuidle_enter(struct cpuidle_driver *drv, struct cpuidle_device *dev,
  */
 void cpuidle_reflect(struct cpuidle_device *dev, int index)
 {
-	if (cpuidle_curr_governor->reflect && index >= 0)
+	if (cpuidle_curr_governor->reflect)
 		cpuidle_curr_governor->reflect(dev, index);
 }
 
@@ -304,7 +288,7 @@ void cpuidle_uninstall_idle_handler(void)
 {
 	if (enabled_devices) {
 		initialized = 0;
-		wake_up_all_idle_cpus();
+		kick_all_cpus_sync();
 	}
 
 	/*
@@ -614,6 +598,11 @@ EXPORT_SYMBOL_GPL(cpuidle_register);
 
 #ifdef CONFIG_SMP
 
+static void smp_callback(void *v)
+{
+	/* we already woke the CPU up, nothing more to do */
+}
+
 /*
  * This function gets called when a part of the kernel has a new latency
  * requirement.  This means we need to get all processors out of their C-state,
@@ -623,7 +612,7 @@ EXPORT_SYMBOL_GPL(cpuidle_register);
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
-	wake_up_all_idle_cpus();
+	smp_call_function(smp_callback, NULL, 1);
 	return NOTIFY_OK;
 }
 

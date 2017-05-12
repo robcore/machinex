@@ -1757,7 +1757,7 @@ static int spu_mdesc_walk_arcs(struct mdesc_handle *mdesc,
 				dev->dev.of_node->full_name);
 			return -EINVAL;
 		}
-		cpumask_set_cpu(*id, &p->sharing);
+		cpu_set(*id, p->sharing);
 		table[*id] = p;
 	}
 	return 0;
@@ -1779,7 +1779,7 @@ static int handle_exec_unit(struct spu_mdesc_info *ip, struct list_head *list,
 		return -ENOMEM;
 	}
 
-	cpumask_clear(&p->sharing);
+	cpus_clear(p->sharing);
 	spin_lock_init(&p->lock);
 	p->q_type = q_type;
 	INIT_LIST_HEAD(&p->jobs);
