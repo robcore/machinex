@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -490,6 +490,8 @@ static int intelli_govinfo_notifier(
 		case CPUFREQ_GOV_POLICY_EXIT:
 			last_gov_switch = ktime_to_us(ktime_get());
 			governor_changed = true;
+			mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+						msecs_to_jiffies(0));
 			break;
 		default:
 			break;
