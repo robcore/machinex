@@ -1,10 +1,15 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0028-sysfs-name-comes-before-ns.patch"
-patch -p1 -R < "/root/machinex/patches/0027-sysfs-clean-up-sysfs_get_dirent.patch"
-patch -p1 -R < "/root/machinex/patches/0026-sysfs-drop-kobj_ns_type-handling.patch"
-patch -p1 -R < "/root/machinex/patches/0025-sysfs-remove-ktype-namespace-invocations-in-symlink.patch"
-patch -p1 -R < "/root/machinex/patches/0024-sysfs-remove-ktype-namespace-invocations-in-director.patch"
-patch -p1 -R < "/root/machinex/patches/0023-sysfs-make-attr-namespace-interface-less-convoluted.patch"
-patch -p1 -R < "/root/machinex/patches/0022-sysfs-use-check_submounts_and_drop.patch"
-patch -p1 -R < "/root/machinex/patches/0021-sysfs-Restrict-mounting-sysfs.patch"
-patch -p1 -R < "/root/machinex/patches/0020-userns-Better-restrictions-on-when-proc-and-sysfs-ca.patch"
+/root/machinex/patches/0014-suspend-to-idle-Prevent-RCU-from-complaining-about-t.patch
+/root/machinex/patches/0013-some-CONFIG-deps.patch
+/root/machinex/patches/0012-cpuidle-Check-the-sign-of-index-in-cpuidle_reflect.patch
+/root/machinex/patches/0011-coupled-fix-obsolete-for_each_cpu_mask.patch
+/root/machinex/patches/0010-cpuidle-sleep-Do-sanity-checks-in-cpuidle_enter_free.patch
+/root/machinex/patches/0009-idle-sleep-Avoid-excessive-disabling-and-enabling-in.patch
+/root/machinex/patches/0008-cpuidle-Use-wake_up_all_idle_cpus-to-wake-up-all-idl.patch
+/root/machinex/patches/0007-cpuidle-Remove-time-measurement-in-poll-state.patch
+/root/machinex/patches/0006-cpuidle-Remove-manual-selection-of-the-multiple-driv.patch
+/root/machinex/patches/0005-cpuidle-ladder-governor-use-macro-instead-of-hardcod.patch
+/root/machinex/patches/0004-cpuidle-menu-governor-remove-unused-macro-STDDEV_THR.patch
+/root/machinex/patches/0003-cpuidle-fix-permission-for-driver-name-sysfs-node.patch
+/root/machinex/patches/0002-cpuidle-Set-polling-in-poll_idle.patch
+/root/machinex/patches/0001-possed.patch

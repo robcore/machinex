@@ -35,6 +35,7 @@
 #define RESOLUTION 1024
 #define DECAY 8
 #define MAX_INTERESTING 50000
+#define STDDEV_THRESH 400
 
 
 /*
