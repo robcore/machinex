@@ -71,6 +71,7 @@ int cpuidle_play_dead(void)
 	return -ENODEV;
 }
 
+#ifdef CONFIG_SUSPEND
 /**
  * cpuidle_find_deepest_state - Find deepest state meeting specific conditions.
  * @drv: cpuidle driver for the given CPU.
@@ -117,6 +118,7 @@ static void enter_freeze_proper(struct cpuidle_driver *drv,
 	RCU_NONIDLE(tick_unfreeze());
 	start_critical_timings();
 }
+#endif /* CONFIG_SUSPEND */
 
 /**
  * cpuidle_enter_freeze - Enter an idle state suitable for suspend-to-idle.
