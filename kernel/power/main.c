@@ -20,7 +20,6 @@
 
 #include "power.h"
 
-#include <mach/sec_debug.h>
 #include <linux/mfd/pm8xxx/misc.h>
 #include <mach/restart.h>
 
