@@ -1,15 +1,26 @@
 #!/bin/bash
-/root/machinex/patches/0014-suspend-to-idle-Prevent-RCU-from-complaining-about-t.patch
-/root/machinex/patches/0013-some-CONFIG-deps.patch
-/root/machinex/patches/0012-cpuidle-Check-the-sign-of-index-in-cpuidle_reflect.patch
-/root/machinex/patches/0011-coupled-fix-obsolete-for_each_cpu_mask.patch
-/root/machinex/patches/0010-cpuidle-sleep-Do-sanity-checks-in-cpuidle_enter_free.patch
-/root/machinex/patches/0009-idle-sleep-Avoid-excessive-disabling-and-enabling-in.patch
-/root/machinex/patches/0008-cpuidle-Use-wake_up_all_idle_cpus-to-wake-up-all-idl.patch
-/root/machinex/patches/0007-cpuidle-Remove-time-measurement-in-poll-state.patch
-/root/machinex/patches/0006-cpuidle-Remove-manual-selection-of-the-multiple-driv.patch
-/root/machinex/patches/0005-cpuidle-ladder-governor-use-macro-instead-of-hardcod.patch
-/root/machinex/patches/0004-cpuidle-menu-governor-remove-unused-macro-STDDEV_THR.patch
-/root/machinex/patches/0003-cpuidle-fix-permission-for-driver-name-sysfs-node.patch
-/root/machinex/patches/0002-cpuidle-Set-polling-in-poll_idle.patch
-/root/machinex/patches/0001-possed.patch
+patch -p1 -R < "/root/machinex/patches/0025-revert-sched-commits.patch"
+patch -p1 -R < "/root/machinex/patches/0024-timekeeping-thing.patch"
+patch -p1 -R < "/root/machinex/patches/0023-sched-fair-Rework-throttle_count-sync.patch"
+patch -p1 -R < "/root/machinex/patches/0022-sched-core-Fix-sched_getaffinity-return-value-kernel.patch"
+patch -p1 -R < "/root/machinex/patches/0021-sched-fair-Reorder-cgroup-creation-code.patch"
+patch -p1 -R < "/root/machinex/patches/0020-sched-fair-Apply-more-PELT-fixes.patch"
+patch -p1 -R < "/root/machinex/patches/0019-Fix-PELT-integrity-for-new-tasks.patch"
+patch -p1 -R < "/root/machinex/patches/0018-sched-cgroup-Fix-cpu_cgroup_fork-handling.patch"
+patch -p1 -R < "/root/machinex/patches/0017-sched-fair-Fix-PELT-integrity-for-new-groups.patch"
+patch -p1 -R < "/root/machinex/patches/0016-sched-fair-Fix-and-optimize-the-fork-path.patch"
+patch -p1 -R < "/root/machinex/patches/0015-locking-qspinlock-Use-__this_cpu_dec-instead-of-full.patch"
+patch -p1 -R < "/root/machinex/patches/0014-REVERT-removal-of-STDDEV.patch"
+patch -p1 -R < "/root/machinex/patches/0013-suspend-to-idle-Prevent-RCU-from-complaining-about-t.patch"
+patch -p1 -R < "/root/machinex/patches/0012-some-CONFIG-deps.patch"
+patch -p1 -R < "/root/machinex/patches/0011-cpuidle-Check-the-sign-of-index-in-cpuidle_reflect.patch"
+patch -p1 -R < "/root/machinex/patches/0010-coupled-fix-obsolete-for_each_cpu_mask.patch"
+patch -p1 -R < "/root/machinex/patches/0009-cpuidle-sleep-Do-sanity-checks-in-cpuidle_enter_free.patch"
+patch -p1 -R < "/root/machinex/patches/0008-idle-sleep-Avoid-excessive-disabling-and-enabling-in.patch"
+patch -p1 -R < "/root/machinex/patches/0007-cpuidle-Use-wake_up_all_idle_cpus-to-wake-up-all-idl.patch"
+patch -p1 -R < "/root/machinex/patches/0006-cpuidle-Remove-time-measurement-in-poll-state.patch"
+patch -p1 -R < "/root/machinex/patches/0005-cpuidle-Remove-manual-selection-of-the-multiple-driv.patch"
+patch -p1 -R < "/root/machinex/patches/0004-cpuidle-ladder-governor-use-macro-instead-of-hardcod.patch"
+patch -p1 -R < "/root/machinex/patches/0003-cpuidle-menu-governor-remove-unused-macro-STDDEV_THR.patch"
+patch -p1 -R < "/root/machinex/patches/0002-cpuidle-fix-permission-for-driver-name-sysfs-node.patch"
+patch -p1 -R < "/root/machinex/patches/0001-cpuidle-Set-polling-in-poll_idle.patch"
