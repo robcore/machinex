@@ -52,6 +52,12 @@
  *
  * v2.3   Move cancelling previous state's work to the current state change work item.
  *
+ * v2.4   Back out of suspend if the device is in the process of rebooting, powering
+ *		  off, or poweroff_charging. Additionally, refactor abort handling so that
+ *		  sys_sync isnt called within a mutex-locked region.  Additionally, set sysfs
+ *		  up in a way that doesn't allow for failure. No functional change
+ *		  to actual suspend/resume handling other than the fixes mentioned.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -62,11 +68,11 @@
  * GNU General Public License for more details.
  *
  */
-
+#include <linux/device.h>
 #include <linux/powersuspend.h>
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	3
+#define MINOR_VERSION	4
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
@@ -83,6 +89,7 @@ static void power_resume(struct work_struct *work);
 static int state;
 /* Robcore: Provide an option to sync the system on powersuspend */
 static int sync_on_powersuspend;
+extern int poweroff_charging;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -113,6 +120,14 @@ static void power_suspend(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_resume_work);
+
+	if ((poweroff_charging) || (system_state == SYSTEM_RESTART)
+		|| (system_state == SYSTEM_POWER_OFF)) {
+		pr_info("[POWERSUSPEND] Ignoring Unsupported System \
+				State\n");
+		return;
+	}
+
 	pr_info("[POWERSUSPEND] Entering Suspend...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -120,8 +135,10 @@ static void power_suspend(struct work_struct *work)
 		abort = 1;
 	spin_unlock_irqrestore(&state_lock, irqflags);
 
-	if (abort)
-		goto abort;
+	if (abort) {
+		mutex_unlock(&power_suspend_lock);
+		return;
+	}
 
 	pr_info("[POWERSUSPEND] Suspending...\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
@@ -131,13 +148,12 @@ static void power_suspend(struct work_struct *work)
 	}
 	pr_info("[POWERSUSPEND] Suspend Completed.\n");
 
+	mutex_unlock(&power_suspend_lock);
+
 	if (sync_on_powersuspend) {
 		pr_info("[POWERSUSPEND] Syncing\n");
 		sys_sync();
 	}
-
-abort:
-	mutex_unlock(&power_suspend_lock);
 }
 
 static void power_resume(struct work_struct *work)
@@ -214,8 +230,10 @@ static ssize_t power_suspend_sync_store(struct kobject *kobj,
 
 	sscanf(buf, "%d\n", &val);
 
-	if (val < 0 || val > 1)
-		return -EINVAL;
+	if (val <= 0)
+		val = 0;
+	if (val >= 1)
+		val = 1;
 
 	sync_on_powersuspend = val;
 	return count;

@@ -914,8 +914,6 @@ static ssize_t synaptics_rmi4_show_device_status(struct device *dev,
 			&device_status,
 			sizeof(device_status));
 
-	pr_debug("rmi-couldn't do the thing");
-
 	return snprintf(buf, PAGE_SIZE, "device_status = %x\n",
 			device_status);
 }
