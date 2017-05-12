@@ -3221,6 +3221,37 @@ check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 		resched_curr(rq_of(cfs_rq));
 }
 
+
+/*
+ * MIGRATION
+ *
+ *	dequeue
+ *	  update_curr()
+ *	    update_min_vruntime()
+ *	  vruntime -= min_vruntime
+ *
+ *	enqueue
+ *	  update_curr()
+ *	    update_min_vruntime()
+ *	  vruntime += min_vruntime
+ *
+ * this way the vruntime transition between RQs is done when both
+ * min_vruntime are up-to-date.
+ *
+ * WAKEUP (remote)
+ *
+ *	->task_waking_fair()
+ *	  vruntime -= min_vruntime
+ *
+ *	enqueue
+ *	  update_curr()
+ *	    update_min_vruntime()
+ *	  vruntime += min_vruntime
+ *
+ * this way we don't have the most up-to-date min_vruntime on the originating
+ * CPU and an up-to-date min_vruntime on the destination CPU.
+ */
+
 static void
 set_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
@@ -4721,6 +4752,12 @@ static unsigned long cpu_avg_load_per_task(int cpu)
 	return 0;
 }
 
+/*
+ * Called to migrate a waking task; as blocked tasks retain absolute vruntime
+ * the migration needs to deal with this by subtracting the old and adding the
+ * new min_vruntime -- the latter is done by enqueue_entity() when placing
+ * the task on the new runqueue.
+ */
 static void task_waking_fair(struct task_struct *p)
 {
 	struct sched_entity *se = &p->se;
