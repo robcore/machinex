@@ -150,7 +150,9 @@ static void update_dl_migration(struct dl_rq *dl_rq)
 
 static void inc_dl_migration(struct sched_dl_entity *dl_se, struct dl_rq *dl_rq)
 {
-	if (dl_se->nr_cpus_allowed > 1)
+	struct task_struct *p = dl_task_of(dl_se);
+
+	if (tsk_nr_cpus_allowed(p) > 1)
 		dl_rq->dl_nr_migratory++;
 
 	update_dl_migration(dl_rq);
@@ -158,7 +160,9 @@ static void inc_dl_migration(struct sched_dl_entity *dl_se, struct dl_rq *dl_rq)
 
 static void dec_dl_migration(struct sched_dl_entity *dl_se, struct dl_rq *dl_rq)
 {
-	if (dl_se->nr_cpus_allowed > 1)
+	struct task_struct *p = dl_task_of(dl_se);
+
+	if (tsk_nr_cpus_allowed(p) > 1)
 		dl_rq->dl_nr_migratory--;
 
 	update_dl_migration(dl_rq);
@@ -446,7 +450,7 @@ static void replenish_dl_entity(struct sched_dl_entity *dl_se,
 	 * entity.
 	 */
 	if (dl_time_before(dl_se->deadline, rq_clock(rq))) {
-		printk_deferred_once("sched: DL replenish lagged to much\n");
+		printk_deferred_once("sched: DL replenish lagged too much\n");
 		dl_se->deadline = rq_clock(rq) + pi_se->dl_deadline;
 		dl_se->runtime = pi_se->dl_runtime;
 	}
@@ -757,6 +761,8 @@ static void update_curr_dl(struct rq *rq)
 	curr->se.exec_start = rq_clock_task(rq);
 	cpuacct_charge(curr, delta_exec);
 
+	sched_rt_avg_update(rq, delta_exec);
+
 	dl_se->runtime -= delta_exec;
 
 throttle:
@@ -975,7 +981,7 @@ static void enqueue_task_dl(struct rq *rq, struct task_struct *p, int flags)
 
 	enqueue_dl_entity(&p->dl, pi_se, flags);
 
-	if (!task_current(rq, p) && p->dl.nr_cpus_allowed > 1)
+	if (!task_current(rq, p) && tsk_nr_cpus_allowed(p) > 1)
 		enqueue_pushable_dl_task(rq, p);
 }
 
@@ -1049,9 +1055,9 @@ select_task_rq_dl(struct task_struct *p, int cpu, int sd_flag, int flags)
 	 * try to make it stay here, it might be important.
 	 */
 	if (unlikely(dl_task(curr)) &&
-	    (curr->dl.nr_cpus_allowed < 2 ||
+	    (tsk_nr_cpus_allowed(curr) < 2 ||
 	     !dl_entity_preempt(&p->dl, &curr->dl)) &&
-	    (p->dl.nr_cpus_allowed > 1)) {
+	    (tsk_nr_cpus_allowed(p) > 1)) {
 		int target = find_later_rq(p);
 
 		if (target != -1 &&
@@ -1072,7 +1078,7 @@ static void check_preempt_equal_dl(struct rq *rq, struct task_struct *p)
 	 * Current can't be migrated, useless to reschedule,
 	 * let's hope p can move out.
 	 */
-	if (rq->curr->dl.nr_cpus_allowed == 1 ||
+	if (tsk_nr_cpus_allowed(rq->curr) == 1 ||
 	    cpudl_find(&rq->rd->cpudl, rq->curr, NULL) == -1)
 		return;
 
@@ -1080,7 +1086,7 @@ static void check_preempt_equal_dl(struct rq *rq, struct task_struct *p)
 	 * p is migratable, so let's not schedule it and
 	 * see if it is pushed or pulled somewhere else.
 	 */
-	if (p->dl.nr_cpus_allowed != 1 &&
+	if (tsk_nr_cpus_allowed(p) != 1 &&
 	    cpudl_find(&rq->rd->cpudl, p, NULL) != -1)
 		return;
 
@@ -1200,7 +1206,7 @@ static void put_prev_task_dl(struct rq *rq, struct task_struct *p)
 {
 	update_curr_dl(rq);
 
-	if (on_dl_rq(&p->dl) && p->dl.nr_cpus_allowed > 1)
+	if (on_dl_rq(&p->dl) && tsk_nr_cpus_allowed(p) > 1)
 		enqueue_pushable_dl_task(rq, p);
 }
 
@@ -1309,7 +1315,7 @@ static int find_later_rq(struct task_struct *task)
 	if (unlikely(!later_mask))
 		return -1;
 
-	if (task->dl.nr_cpus_allowed == 1)
+	if (tsk_nr_cpus_allowed(task) == 1)
 		return -1;
 
 	/*
@@ -1318,7 +1324,7 @@ static int find_later_rq(struct task_struct *task)
 	 */
 	cpumask_copy(later_mask, task_rq(task)->rd->span);
 	cpumask_and(later_mask, later_mask, cpu_active_mask);
-	cpumask_and(later_mask, later_mask, &task->cpus_allowed);
+	cpumask_and(later_mask, later_mask, tsk_nr_cpus_allowed(task);
 	best_cpu = cpudl_find(&task_rq(task)->rd->cpudl,
 			task, later_mask);
 	if (best_cpu == -1)
@@ -1458,7 +1464,7 @@ static struct task_struct *pick_next_pushable_dl_task(struct rq *rq)
 
 	BUG_ON(rq->cpu != task_cpu(p));
 	BUG_ON(task_current(rq, p));
-	BUG_ON(p->dl.nr_cpus_allowed <= 1);
+	BUG_ON(tsk_nr_cpus_allowed(p) <= 1);
 
 	BUG_ON(!task_on_rq_queued(p));
 	BUG_ON(!dl_task(p));
@@ -1497,7 +1503,7 @@ retry:
 	 */
 	if (dl_task(rq->curr) &&
 	    dl_time_before(next_task->dl.deadline, rq->curr->dl.deadline) &&
-	    rq->curr->dl.nr_cpus_allowed > 1) {
+	    tsk_nr_cpus_allowed(rq->curr) > 1) {
 		resched_curr(rq);
 		return 0;
 	}
@@ -1648,10 +1654,10 @@ static void task_woken_dl(struct rq *rq, struct task_struct *p)
 {
 	if (!task_running(rq, p) &&
 	    !test_tsk_need_resched(rq->curr) &&
-	    p->dl.nr_cpus_allowed > 1 &&
+	    tsk_nr_cpus_allowed(p) > 1 &&
 	    dl_task(rq->curr) &&
-	    (rq->curr->dl.nr_cpus_allowed < 2 ||
-	     dl_entity_preempt(&rq->curr->dl, &p->dl))) {
+	    (tsk_nr_cpus_allowed(rq->curr) < 2 ||
+	     !dl_entity_preempt(&p->dl, &rq->curr->dl))) {
 		push_dl_tasks(rq);
 	}
 }
