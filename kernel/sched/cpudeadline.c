@@ -121,7 +121,7 @@ static inline int cpudl_maximum(struct cpudl *cp)
  *
  * Returns: int - best CPU (heap maximum if suitable)
  */
-cpudl *cp, struct task_struct *p,
+int cpudl_find(struct cpudl *cp, struct task_struct *p,
 	       struct cpumask *later_mask)
 {
 	int best_cpu = -1;
