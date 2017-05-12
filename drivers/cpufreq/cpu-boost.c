@@ -31,7 +31,7 @@ struct cpu_sync {
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
-static struct workqueue struct *input_boost_wq;
+static struct workqueue_struct *input_boost_wq;
 
 static struct delayed_work input_boost_work;
 
