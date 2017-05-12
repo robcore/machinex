@@ -2480,11 +2480,11 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 
 	__sched_fork(clone_flags, p);
 	/*
-	 * We mark the process as NEW here. This guarantees that
+	 * We mark the process as running here. This guarantees that
 	 * nobody will actually run it, and a signal or other external
 	 * event cannot wake it up and insert it on the runqueue either.
 	 */
-	p->state = TASK_NEW;
+	p->state = TASK_RUNNING;
 
 	/*
 	 * Make sure we do not leak PI boosting priority to the child.
@@ -2523,7 +2523,8 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 		p->sched_class = &fair_sched_class;
 	}
 
-	init_entity_runnable_average(&p->se);
+	if (p->sched_class->task_fork)
+		p->sched_class->task_fork(p);
 
 	/*
 	 * The child is not yet in the pid-hash so no cgroup attach races,
@@ -2533,13 +2534,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	 * Silence PROVE_RCU.
 	 */
 	raw_spin_lock_irqsave(&p->pi_lock, flags);
-	/*
-	 * We're setting the cpu for the first time, we don't migrate,
-	 * so use __set_task_cpu().
-	 */
-	__set_task_cpu(p, cpu);
-	if (p->sched_class->task_fork)
-		p->sched_class->task_fork(p);
+	set_task_cpu(p, cpu);
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
 #ifdef CONFIG_SCHED_INFO
@@ -2695,18 +2690,16 @@ void wake_up_new_task(struct task_struct *p)
 
 	walt_init_new_task_load(p);
 
+	/* Initialize new task's runnable average */
+	init_entity_runnable_average(&p->se);
 	raw_spin_lock_irqsave(&p->pi_lock, rf.flags);
-	p->state = TASK_RUNNING;
 #ifdef CONFIG_SMP
 	/*
 	 * Fork balancing, do it here and not earlier because:
 	 *  - cpus_allowed can change in the fork path
 	 *  - any previously selected cpu might disappear through hotplug
-	 *
-	 * Use __set_task_cpu() to avoid calling sched_class::migrate_task_rq,
-	 * as we're not fully set-up yet.
 	 */
-	__set_task_cpu(p, select_task_rq(p, task_cpu(p), SD_BALANCE_FORK, 0));
+	set_task_cpu(p, select_task_rq(p, task_cpu(p), SD_BALANCE_FORK, 0));
 #endif
 	rq = __task_rq_lock(p, &rf);
 	post_init_entity_util_avg(&p->se);
@@ -5011,8 +5004,7 @@ out_unlock:
  * @len: length in bytes of the bitmask pointed to by user_mask_ptr
  * @user_mask_ptr: user-space pointer to hold the current cpu mask
  *
- * Return: size of CPU mask copied to user_mask_ptr on success. An
- * error code otherwise.
+ * Return: 0 on success. An error code otherwise.
  */
 SYSCALL_DEFINE3(sched_getaffinity, pid_t, pid, unsigned int, len,
 		unsigned long __user *, user_mask_ptr)
@@ -8132,8 +8124,6 @@ void sched_online_group(struct task_group *tg, struct task_group *parent)
 	INIT_LIST_HEAD(&tg->children);
 	list_add_rcu(&tg->siblings, &parent->children);
 	spin_unlock_irqrestore(&task_group_lock, flags);
-
-	online_fair_sched_group(tg);
 }
 
 /* rcu callback to free various structures associated with a task group */
@@ -8163,37 +8153,14 @@ void sched_offline_group(struct task_group *tg)
 	spin_unlock_irqrestore(&task_group_lock, flags);
 }
 
-static void sched_change_group(struct task_struct *tsk, int type)
-{
-	struct task_group *tg;
-
-	/*
-	 * All callers are synchronized by task_rq_lock(); we do not use RCU
-	 * which is pointless here. Thus, we pass "true" to task_css_check()
-	 * to prevent lockdep warnings.
-	 */
-	tg = container_of(task_css_check(tsk, cpu_cgrp_id, true),
-			  struct task_group, css);
-	tg = autogroup_task_group(tsk, tg);
-	tsk->sched_task_group = tg;
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	if (tsk->sched_class->task_change_group)
-		tsk->sched_class->task_change_group(tsk, type);
-	else
-#endif
-		set_task_rq(tsk, task_cpu(tsk));
-}
-
-/*
- * Change task's runqueue when it moves between groups.
- *
- * The caller of this function should have put the task in its new group by
- * now. This function just updates tsk->se.cfs_rq and tsk->se.parent to reflect
- * its new group.
+/* change task's runqueue when it moves between groups.
+ *	The caller of this function should have put the task in its new group
+ *	by now. This function just updates tsk->se.cfs_rq and tsk->se.parent to
+ *	reflect its new group.
  */
 void sched_move_task(struct task_struct *tsk)
 {
+	struct task_group *tg;
 	int queued, running;
 	struct rq_flags rf;
 	struct rq *rq;
@@ -8208,7 +8175,22 @@ void sched_move_task(struct task_struct *tsk)
 	if (unlikely(running))
 		put_prev_task(rq, tsk);
 
-	sched_change_group(tsk, TASK_MOVE_GROUP);
+	/*
+	 * All callers are synchronized by task_rq_lock(); we do not use RCU
+	 * which is pointless here. Thus, we pass "true" to task_css_check()
+	 * to prevent lockdep warnings.
+	 */
+	tg = container_of(task_css_check(tsk, cpu_cgrp_id, true),
+			  struct task_group, css);
+	tg = autogroup_task_group(tsk, tg);
+	tsk->sched_task_group = tg;
+
+#ifdef CONFIG_FAIR_GROUP_SCHED
+	if (tsk->sched_class->task_move_group)
+		tsk->sched_class->task_move_group(tsk);
+	else
+#endif
+		set_task_rq(tsk, task_cpu(tsk));
 
 	if (unlikely(running))
 		tsk->sched_class->set_curr_task(rq);
@@ -8641,27 +8623,15 @@ static void cpu_cgroup_css_offline(struct cgroup_subsys_state *css)
 	sched_offline_group(tg);
 }
 
-/*
- * This is called before wake_up_new_task(), therefore we really only
- * have to set its group bits, all the other stuff does not apply.
- */
 static void cpu_cgroup_fork(struct task_struct *task)
 {
-	struct rq_flags rf;
-	struct rq *rq;
-
-	rq = task_rq_lock(task, &rf);
-
-	sched_change_group(task, TASK_SET_GROUP);
-
-	task_rq_unlock(rq, task, &rf);
+	sched_move_task(task);
 }
 
 static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
-	int ret = 0;
 
 	cgroup_taskset_for_each(task, tset) {
 #ifdef CONFIG_RT_GROUP_SCHED
@@ -8672,24 +8642,8 @@ static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
 		if (task->sched_class != &fair_sched_class)
 			return -EINVAL;
 #endif
-		/*
-		 * Serialize against wake_up_new_task() such that if its
-		 * running, we're sure to observe its full state.
-		 */
-		raw_spin_lock_irq(&task->pi_lock);
-		/*
-		 * Avoid calling sched_move_task() before wake_up_new_task()
-		 * has happened. This would lead to problems with PELT, due to
-		 * move wanting to detach+attach while we're not attached yet.
-		 */
-		if (task->state == TASK_NEW)
-			ret = -EINVAL;
-		raw_spin_unlock_irq(&task->pi_lock);
-
-		if (ret)
-			break;
 	}
-	return ret;
+	return 0;
 }
 
 static void cpu_cgroup_attach(struct cgroup_subsys_state *css,
