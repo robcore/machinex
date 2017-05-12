@@ -131,8 +131,6 @@ static void do_input_boost(struct work_struct *work)
 	unsigned int i;
 	struct cpu_sync *i_sync_info;
 
-	cancel_delayed_work_sync(&input_boost_rem);
-
 	if (!input_boost_enabled || !input_boost_freq)
 		return;
 
@@ -146,7 +144,7 @@ static void do_input_boost(struct work_struct *work)
 	/* Update policies for all online CPUs */
 	update_policy_online();
 
-	queue_delayed_work(cpu_boost_wq, &input_boost_rem,
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
 
@@ -165,7 +163,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	if (delta < msecs_to_jiffies(min_input_interval))
 		return;
 
-	mod_delayed_work(cpu_boost_wq, &input_boost_work, msecs_to_jiffies(touch_reponse_time));
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, msecs_to_jiffies(touch_reponse_time));
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -245,6 +243,11 @@ static int cpu_boost_init(void)
 	int cpu, ret;
 	struct cpu_sync *s;
 
+	for_each_possible_cpu(cpu) {
+		s = &per_cpu(sync_info, cpu);
+		s->cpu = cpu;
+	}
+
 	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI, 0);
 	if (!cpu_boost_wq)
 		return -EFAULT;
@@ -252,10 +255,6 @@ static int cpu_boost_init(void)
 	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
-	for_each_possible_cpu(cpu) {
-		s = &per_cpu(sync_info, cpu);
-		s->cpu = cpu;
-	}
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 	ret = input_register_handler(&cpuboost_input_handler);
 
