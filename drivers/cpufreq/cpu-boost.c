@@ -47,8 +47,9 @@ static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 static unsigned int min_input_interval = 2000;
 module_param(min_input_interval, uint, 0644);
-static unsigned int touch_reponse_time = 0;
-module_param(touch_reponse_time, uint, 0644);
+#define TOUCH_RESPONSE (0ULL)
+static u64 touch_reponse_time = TOUCH_RESPONSE;
+module_param(touch_reponse_time, u64, 0644);
 /*
  * The CPUFREQ_ADJUST notifier is used to override the current policy min to
  * make sure policy min >= boost_min. The cpufreq framework then does the job
@@ -153,7 +154,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	if (delta < msecs_to_jiffies(min_input_interval))
 		return;
 
-	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, msecs_to_jiffies(touch_reponse_time));
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, msecs_to_jiffies(touch_response_time));
 	last_input_time = ktime_to_us(ktime_get());
 }
 
