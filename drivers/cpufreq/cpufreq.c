@@ -652,9 +652,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 {
 	int ret;
 	char	str_governor[16];
-	struct cpufreq_policy *cpu0_policy = NULL;
 	struct cpufreq_policy new_policy;
-	unsigned int cpu = policy->cpu;
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
@@ -670,9 +668,8 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	   will be wrongly overridden */
 	ret = __cpufreq_set_policy(policy, &new_policy);
 
-	cpu0_policy = cpufreq_cpu_get(0);
 	policy->user_policy.policy = policy->policy;
-	policy->user_policy.governor = cpu0_policy->governor;
+	policy->user_policy.governor = policy->governor;
 
 	sysfs_notify(policy->kobj, NULL, "scaling_governor");
 
@@ -1513,9 +1510,6 @@ static void cpufreq_remove_dev_sysfs(void)
 			if (!kobj)
 				goto out;
 			kobject_put(kobj);
-			sysfs_remove_link(kobj, "cpufreq");
-			sysfs_notify(policy->kobj, NULL, "scaling_governor");
-			kobject_uevent(cpufreq_global_kobject, KOBJ_REMOVE);
 
 			if (!psysinfo->cpu_policy)
 				continue;
@@ -2556,4 +2550,5 @@ static int __init cpufreq_core_init(void)
 	return 0;
 }
 core_initcall(cpufreq_core_init);
+
 
