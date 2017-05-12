@@ -424,17 +424,17 @@ static void intelli_suspend(struct power_suspend * h)
 	if (atomic_read(&intelli_plug_active) == 0) {
 		return;
 	}
+	for_each_possible_cpu(cpu) {
+		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
+			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
+		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	}
 	for_each_online_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		if (check_down_lock(cpu))
 			queue_delayed_work(intelliplug_wq, &dl->lock_rem, 0);
 	}
-	for_each_possible_cpu(cpu) {
-		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
-		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-	}
-
 }
 
 static void intelli_resume(struct power_suspend * h)
@@ -445,7 +445,8 @@ static void intelli_resume(struct power_suspend * h)
 	}
 	for_each_possible_cpu(cpu) {
 		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
+		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
+			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	for_each_online_cpu(cpu) {
