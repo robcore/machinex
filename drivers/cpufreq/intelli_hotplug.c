@@ -246,7 +246,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
 	now = ktime_to_us(ktime_get());
-	delta = now - last_input;
+	delta = (now - last_input);
 
 	if (target < min_cpus_online)
 		target = min_cpus_online;
@@ -256,8 +256,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	online_cpus = num_online_cpus();
 
 	if (target < online_cpus) {
-		if (online_cpus <= cpus_boosted &&
-		delta <= msecs_to_jiffies(boost_lock_duration))
+		if ((online_cpus <= cpus_boosted) &&
+		(delta <= msecs_to_jiffies(boost_lock_duration)))
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
