@@ -32,7 +32,7 @@ struct cpu_sync {
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
-static struct work_struct input_boost_work;
+static struct delayed_work input_boost_work;
 
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
@@ -47,7 +47,8 @@ static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 static unsigned int min_input_interval = 2000;
 module_param(min_input_interval, uint, 0644);
-
+static unsigned int touch_reponse_time = 0;
+module_param(touch_reponse_time, uint, 0644);
 /*
  * The CPUFREQ_ADJUST notifier is used to override the current policy min to
  * make sure policy min >= boost_min. The cpufreq framework then does the job
@@ -66,6 +67,9 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	unsigned int cpu = policy->cpu;
 	struct cpu_sync *s = &per_cpu(sync_info, cpu);
 	unsigned int ib_min = s->input_boost_min;
+
+	if (!input_boost_enabled || !input_boost_freq)
+		return NOTIFY_OK;
 
 	switch (val) {
 	case CPUFREQ_ADJUST:
@@ -150,18 +154,18 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
+	u64 delta;
 
 	if (!input_boost_enabled || !input_boost_freq)
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < msecs_to_jiffies(min_input_interval))
+	delta = (now - last_input_time);
+
+	if (delta < msecs_to_jiffies(min_input_interval))
 		return;
 
-	if (work_pending(&input_boost_work))
-		return;
-
-	queue_work(cpu_boost_wq, &input_boost_work);
+	mod_delayed_work(cpu_boost_wq, &input_boost_work, msecs_to_jiffies(touch_reponse_time));
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -245,7 +249,7 @@ static int cpu_boost_init(void)
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
-	INIT_WORK(&input_boost_work, do_input_boost);
+	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	for_each_possible_cpu(cpu) {
