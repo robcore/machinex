@@ -2200,11 +2200,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 			if (policy->governor)
 				__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
 
-			/* start new governor */
-			if (new_policy->cpu && cpu0_policy)
-				policy->governor = cpu0_policy->governor;
-			else
-				policy->governor = new_policy->governor;
+			policy->governor = new_policy->governor;
 
 			if (__cpufreq_governor(policy, CPUFREQ_GOV_START)) {
 				/* new governor failed, so re-start old one */
