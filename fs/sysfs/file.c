@@ -338,8 +338,9 @@ static int sysfs_open_file(struct inode *inode, struct file *file)
 	if (kobj->ktype && kobj->ktype->sysfs_ops)
 		ops = kobj->ktype->sysfs_ops;
 	else {
-		WARN(1, KERN_ERR "missing sysfs attribute operations for "
-		       "kobject: %s\n", kobject_name(kobj));
+		WARN(1, KERN_ERR
+		     "missing sysfs attribute operations for kobject: %s\n",
+		     kobject_name(kobj));
 		goto err_out;
 	}
 
@@ -517,8 +518,9 @@ static int sysfs_attr_ns(struct kobject *kobj, const struct attribute *attr,
 	ns = ops->namespace(kobj, attr);
 out:
 	if (err) {
-		WARN(1, KERN_ERR "missing sysfs namespace attribute operation for "
-		     "kobject: %s\n", kobject_name(kobj));
+		WARN(1, KERN_ERR
+		     "missing sysfs namespace attribute operation for kobject: %s\n",
+		     kobject_name(kobj));
 	}
 	*pns = ns;
 	return err;
