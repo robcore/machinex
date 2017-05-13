@@ -220,6 +220,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	u32 dummy_xres, dummy_yres;
 	int target_type = 0;
 	u32 tmp;
+	static unsigned int mx_is_booting = 1;
 #if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	static int is_booting = 1;
 #endif
@@ -471,7 +472,16 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	wake_lock_timeout(&prometheus_rising, msecs_to_jiffies(100));
+	if (!mx_is_booting)
+
+
+	if (mx_is_booting) {
+		mx_is_booting = 0;
+		pr_info("Hello? I'm different.\n");
+	} else {
+		wake_lock_timeout(&prometheus_rising, msecs_to_jiffies(100));
+		pr_info("Take me with you\n");
+
 	display_on = true;
 	pr_info("Rob's DSI ON HOOK\n");
 #ifdef CONFIG_POWERSUSPEND
