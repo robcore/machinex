@@ -2737,7 +2737,7 @@ extern void mm_release(struct task_struct *, struct mm_struct *);
 extern int copy_thread(unsigned long, unsigned long, unsigned long,
 			struct task_struct *);
 extern void flush_thread(void);
-extern void exit_thread(void);
+extern void exit_thread(struct task_struct *tsk);
 
 extern void exit_files(struct task_struct *);
 extern void __cleanup_sighand(struct sighand_struct *);

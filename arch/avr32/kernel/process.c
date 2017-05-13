@@ -109,9 +109,9 @@ EXPORT_SYMBOL(kernel_thread);
 /*
  * Free current thread data structures etc
  */
-void exit_thread(void)
+void exit_thread(struct task_struct *tsk)
 {
-	ocd_disable(current);
+	ocd_disable(tsk);
 }
 
 void flush_thread(void)
