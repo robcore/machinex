@@ -236,7 +236,7 @@ static inline void raw_write_seqcount_end(seqcount_t *s)
 
 static inline int raw_read_seqcount_latch(seqcount_t *s)
 {
-	return lockless_dereference(s->sequence);
+	return lockless_dereference(s)->sequence;
 }
 
 /**
@@ -290,7 +290,7 @@ static inline int raw_read_seqcount_latch(seqcount_t *s)
  *	unsigned seq, idx;
  *
  *	do {
- *		seq = lockless_dereference(latch->seq);
+ *		seq = lockless_dereference(latch)->seq;
  *
  *		idx = seq & 0x01;
  *		entry = data_query(latch->data[idx], ...);
