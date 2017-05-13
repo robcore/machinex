@@ -58,6 +58,8 @@
  *		  up in a way that doesn't allow for failure. No functional change
  *		  to actual suspend/resume handling other than the fixes mentioned.
  *
+ * v2.5	  Added a big, scary hook to call pm_suspend.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
