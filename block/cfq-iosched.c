@@ -2210,11 +2210,12 @@ static enum wl_type_t cfq_choose_wl_type(struct cfq_data *cfqd,
 static void
 choose_wl_class_and_type(struct cfq_data *cfqd, struct cfq_group *cfqg)
 {
-	unsigned slice;
+	u64 slice;
 	unsigned count;
 	struct cfq_rb_root *st;
-	unsigned group_slice;
+	u64 group_slice;
 	enum wl_class_t original_class = cfqd->serving_wl_class;
+	u64 now = ktime_get_ns();
 
 	/* Choose next priority. RT > BE > IDLE */
 	if (cfq_group_busy_queues_wl(RT_WORKLOAD, cfqd, cfqg))
@@ -2223,7 +2224,7 @@ choose_wl_class_and_type(struct cfq_data *cfqd, struct cfq_group *cfqg)
 		cfqd->serving_wl_class = BE_WORKLOAD;
 	else {
 		cfqd->serving_wl_class = IDLE_WORKLOAD;
-		cfqd->workload_expires = jiffies + 1;
+		cfqd->workload_expires = now + jiffies_to_nsecs(1);
 		return;
 	}
 
@@ -2480,11 +2481,12 @@ static int cfq_forced_dispatch(struct cfq_data *cfqd)
 static inline bool cfq_slice_used_soon(struct cfq_data *cfqd,
 	struct cfq_queue *cfqq)
 {
+	u64 now = ktime_get_ns();
+
 	/* the queue hasn't finished any request, can't estimate */
 	if (cfq_cfqq_slice_new(cfqq))
 		return true;
-	if (time_after(jiffies + cfqd->cfq_slice_idle * cfqq->dispatched,
-		cfqq->slice_end))
+	if (now + cfqd->cfq_slice_idle * cfqq->dispatched > cfqq->slice_end))
 		return true;
 
 	return false;
