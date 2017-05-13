@@ -528,7 +528,6 @@ static inline void cfq_schedule_dispatch(struct cfq_data *cfqd)
 static inline u64 cfq_prio_slice(struct cfq_data *cfqd, bool sync,
 				 unsigned short prio)
 {
-	const int base_slice = cfqd->cfq_slice[sync];
 	u64 base_slice = cfqd->cfq_slice[sync];
 	u64 slice = div_u64(base_slice, CFQ_SLICE_SCALE);
 
