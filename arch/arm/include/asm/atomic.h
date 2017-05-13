@@ -101,6 +101,7 @@ static inline int atomic_cmpxchg(atomic_t *ptr, int old, int new)
 	} while (res);
 
 	smp_mb();
+	prefetchw(&v->counter);
 
 	return oldval;
 }
@@ -386,6 +387,7 @@ static inline long long atomic64_cmpxchg(atomic64_t *ptr, long long old, long lo
 	} while (res);
 
 	smp_mb();
+	prefetchw(&v->counter);
 
 	return oldval;
 }
@@ -408,6 +410,7 @@ static inline long long atomic64_xchg(atomic64_t *ptr, long long new)
 	: "cc");
 
 	smp_mb();
+	prefetchw(&ptr->counter);
 
 	return result;
 }
@@ -435,6 +438,7 @@ static inline long long atomic64_dec_if_positive(atomic64_t *v)
 	: "cc");
 
 	smp_mb();
+	prefetchw(&v->counter);
 
 	return result;
 }
