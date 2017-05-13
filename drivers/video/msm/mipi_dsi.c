@@ -472,15 +472,13 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	if (!mx_is_booting)
-
-
 	if (mx_is_booting) {
 		mx_is_booting = 0;
 		pr_info("Hello? I'm different.\n");
 	} else {
 		wake_lock_timeout(&prometheus_rising, msecs_to_jiffies(100));
 		pr_info("Take me with you\n");
+	}
 
 	display_on = true;
 	pr_info("Rob's DSI ON HOOK\n");
