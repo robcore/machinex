@@ -219,7 +219,6 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 #define lockless_dereference(p) \
 ({ \
 	typeof(p) _________p1 = READ_ONCE(p); \
-	__maybe_unused const void * const _________p2 = _________p1; \
 	smp_read_barrier_depends(); /* Dependency order vs. p above. */ \
 	(_________p1); \
 })
