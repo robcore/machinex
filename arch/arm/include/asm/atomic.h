@@ -28,7 +28,7 @@
  * atomic_set() is the clrex or dummy strex done on every exception return.
  */
 #define atomic_read(v)	READ_ONCE((v)->counter)
-#define atomic_set(v,i)	WRITE_ONCE((v)->counter, i)
+#define atomic_set(v,i)	WRITE_ONCE(((v)->counter), (i))
 
 #if __LINUX_ARM_ARCH__ >= 6
 
@@ -286,7 +286,6 @@ static inline long long atomic64_read(const atomic64_t *v)
 
 	return result;
 }
-#endif
 
 static inline void atomic64_set(atomic64_t *v, long long i)
 {
@@ -302,6 +301,7 @@ static inline void atomic64_set(atomic64_t *v, long long i)
 	: "r" (&v->counter), "r" (i)
 	: "cc");
 }
+#endif
 
 #define ATOMIC64_OP(op, op1, op2)					\
 static inline void atomic64_##op(long long i, atomic64_t *v)		\

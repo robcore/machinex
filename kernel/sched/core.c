@@ -84,6 +84,7 @@
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
 #endif
+#include <asm/barrier.h>
 
 #include "sched.h"
 #include "../workqueue_internal.h"
