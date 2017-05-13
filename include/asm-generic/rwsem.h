@@ -110,14 +110,6 @@ static inline void __up_write(struct rw_semaphore *sem)
 }
 
 /*
- * implement atomic add functionality
- */
-static inline void rwsem_atomic_add(long delta, struct rw_semaphore *sem)
-{
-	atomic_long_add(delta, (atomic_long_t *)&sem->count);
-}
-
-/*
  * downgrade write lock to read lock
  */
 static inline void __downgrade_write(struct rw_semaphore *sem)
@@ -135,14 +127,6 @@ static inline void __downgrade_write(struct rw_semaphore *sem)
 				     (atomic_long_t *)&sem->count);
 	if (tmp < 0)
 		rwsem_downgrade_wake(sem);
-}
-
-/*
- * implement exchange and add functionality
- */
-static inline long rwsem_atomic_update(long delta, struct rw_semaphore *sem)
-{
-	return atomic_long_add_return(delta, (atomic_long_t *)&sem->count);
 }
 
 #endif	/* __KERNEL__ */
