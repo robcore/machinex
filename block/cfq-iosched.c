@@ -942,8 +942,8 @@ cfq_group_notify_queue_del(struct cfq_data *cfqd, struct cfq_group *cfqg)
 	cfq_blkiocg_update_dequeue_stats(&cfqg->blkg, 1);
 }
 
-static inline unsigned int cfq_cfqq_slice_usage(struct cfq_queue *cfqq,
-						unsigned int *unaccounted_time)
+static inline u64 cfq_cfqq_slice_usage(struct cfq_queue *cfqq,
+						u64 *unaccounted_time)
 {
 	unsigned int slice_used;
 
@@ -2006,7 +2006,8 @@ static void cfq_arm_slice_timer(struct cfq_data *cfqd)
 {
 	struct cfq_queue *cfqq = cfqd->active_queue;
 	struct cfq_io_cq *cic;
-	unsigned long sl, group_idle = 0;
+	u64 sl, group_idle = 0;
+	u64 now = ktime_get_ns();
 
 	/*
 	 * SSD device without seek penalty, disable idling. But only do so
