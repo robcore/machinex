@@ -150,22 +150,25 @@ static void power_suspend(struct work_struct *work)
 		}
 	}
 
+	mutex_unlock(&power_suspend_lock);
+
 	if (sync_on_powersuspend) {
-		mutex_unlock(&power_suspend_lock);
 		pr_info("[POWERSUSPEND] Syncing\n");
 		sys_sync();
-		mutex_lock(&power_suspend_lock);
 	}
 
 	if (use_global_suspend) {
+		if (!mutex_trylock(&pm_mutex)) {
+			pr_info("[POWERSUSPEND] Global Suspend Busy!\n");
+			return;
+		}
+
 		pr_info("[POWERSUSPEND] Suspend Completed\n");
 		pr_info("[POWERSUSPEND] Calling System Suspend!\n");
-		pm_suspend(PM_SUSPEND_PREPARE);
-		mutex_unlock(&power_suspend_lock);
-	} else {
+		pm_suspend(PM_HIBERNATION_PREPARE);
+		mutex_unlock(&pm_mutex);
+	} else
 		pr_info("[POWERSUSPEND] Suspend Completed.\n");
-		mutex_unlock(&power_suspend_lock);
-	}
 }
 
 static void power_resume(struct work_struct *work)
