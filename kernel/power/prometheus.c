@@ -24,14 +24,11 @@
  * GNU General Public License for more details.
  *
  */
-#include <linux/powersuspend.h>
+#include <linux/prometheus.h>
 #include "power.h"
 
-#define MAJOR_VERSION	2
-#define MINOR_VERSION	5
-#ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
-#define SUB_MINOR_VERSION
-#endif
+#define VERSION 1
+#define VERSION_MIN 0
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -46,7 +43,8 @@ static int ps_state;
 /* Robcore: Provide an option to sync the system on powersuspend */
 static unsigned int sync_on_powersuspend;
 extern int poweroff_charging;
-static unsigned int use_global_suspend;
+#define GLOBAL_PM 1
+static unsigned int use_global_suspend = GLOBAL_PM;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -74,18 +72,19 @@ static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
 	unsigned long irqflags;
+	unsigned int counter;
 	int abort = 0;
 
 	cancel_work_sync(&power_resume_work);
 
 	if ((poweroff_charging) || (system_state == SYSTEM_RESTART)
 		|| (system_state == SYSTEM_POWER_OFF)) {
-		pr_info("[POWERSUSPEND] Ignoring Unsupported System \
+		pr_info("[PROMETHEUS] Ignoring Unsupported System \
 				State\n");
 		return;
 	}
 
-	pr_info("[POWERSUSPEND] Entering Suspend...\n");
+	pr_info("[PROMETHEUS] Entering Suspend...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_INACTIVE)
@@ -97,7 +96,7 @@ static void power_suspend(struct work_struct *work)
 		return;
 	}
 
-	pr_info("[POWERSUSPEND] Suspending...\n");
+	pr_info("[PROMETHEUS] Suspending...\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			pos->suspend(pos);
@@ -107,22 +106,28 @@ static void power_suspend(struct work_struct *work)
 	mutex_unlock(&power_suspend_lock);
 
 	if (sync_on_powersuspend) {
-		pr_info("[POWERSUSPEND] Syncing\n");
+		pr_info("[PROMETHEUS] Syncing\n");
 		sys_sync();
 	}
 
+	pr_info("[PROMETHEUS] Initial Suspend Completed\n");
+
 	if (use_global_suspend) {
+		if (!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) {
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
+				return;
+		}
+
 		if (!mutex_trylock(&pm_mutex)) {
-			pr_info("[POWERSUSPEND] Global Suspend Busy!\n");
+			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
 			return;
 		}
 
-		pr_info("[POWERSUSPEND] Suspend Completed\n");
-		pr_info("[POWERSUSPEND] Calling System Suspend!\n");
+		pr_info("[PROMETHEUS] Calling System Suspend!\n");
 		pm_suspend(PM_HIBERNATION_PREPARE);
 		mutex_unlock(&pm_mutex);
 	} else
-		pr_info("[POWERSUSPEND] Suspend Completed.\n");
+		pr_info("[PROMETHEUS] Suspend Completed.\n");
 }
 
 static void power_resume(struct work_struct *work)
@@ -132,7 +137,7 @@ static void power_resume(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_suspend_work);
-	pr_info("[POWERSUSPEND] Entering Resume...\n");
+	pr_info("[PROMETHEUS] Entering Resume...\n");
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_ACTIVE)
@@ -142,13 +147,13 @@ static void power_resume(struct work_struct *work)
 	if (abort)
 		goto abort;
 
-	pr_info("[POWERSUSPEND] Resuming...\n");
+	pr_info("[PROMETHEUS] Resuming...\n");
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
 		}
 	}
-	pr_info("[POWERSUSPEND] Resume Completed.\n");
+	pr_info("[PROMETHEUS] Resume Completed.\n");
 
 abort:
 	mutex_unlock(&power_suspend_lock);
@@ -162,37 +167,37 @@ void set_power_suspend_state(int new_state)
 	if (ps_state != new_state) {
 		spin_lock_irqsave(&ps_state_lock, irqflags);
 		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
-			pr_info("[POWERSUSPEND] Suspend State Activated.\n");
+			pr_info("[PROMETHEUS] Suspend State Activated.\n");
 			ps_state = new_state;
 			queue_work(pwrsup_wq, &power_suspend_work);
 		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
-			pr_info("[POWERSUSPEND] Resume State Activated.\n");
+			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			ps_state = new_state;
 			queue_work(pwrsup_wq, &power_resume_work);
 		}
 		spin_unlock_irqrestore(&ps_state_lock, irqflags);
 	} else {
-		pr_info("[POWERSUSPEND] Ignoring State Request.\n");
+		pr_info("[PROMETHEUS] Ignoring State Request.\n");
 	}
 }
 
-void set_power_suspend_state_panel_hook(int new_state)
+void prometheus_panel_beacon(int new_state)
 {
-	pr_info("[POWERSUSPEND] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
+	pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
 	set_power_suspend_state(new_state);
 }
 
-EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
+EXPORT_SYMBOL(prometheus_panel_beacon);
 
 // ------------------------------------------ sysfs interface ------------------------------------------
 
-static ssize_t power_suspend_sync_show(struct kobject *kobj,
+static ssize_t prometheus_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", sync_on_powersuspend);
 }
 
-static ssize_t power_suspend_sync_store(struct kobject *kobj,
+static ssize_t prometheus_sync_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int val;
@@ -208,18 +213,18 @@ static ssize_t power_suspend_sync_store(struct kobject *kobj,
 	return count;
 }
 
-static struct kobj_attribute power_suspend_sync_attribute =
+static struct kobj_attribute prometheus_sync_attribute =
 	__ATTR(power_suspend_sync, 0644,
-		power_suspend_sync_show,
-		power_suspend_sync_store);
+		prometheus_sync_show,
+		prometheus_sync_store);
 
-static ssize_t power_suspend_use_global_suspend_show(struct kobject *kobj,
+static ssize_t global_suspend_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n", use_global_suspend);
 }
 
-static ssize_t power_suspend_use_global_suspend_store(struct kobject *kobj,
+static ssize_t global_suspend_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int val;
@@ -235,66 +240,62 @@ static ssize_t power_suspend_use_global_suspend_store(struct kobject *kobj,
 	return count;
 }
 
-static struct kobj_attribute power_suspend_use_global_suspend_attribute =
-	__ATTR(power_suspend_use_global_suspend, 0644,
-		power_suspend_use_global_suspend_show,
-		power_suspend_use_global_suspend_store);
+static struct kobj_attribute global_suspend_attribute =
+	__ATTR(global_suspend, 0644,
+		global_suspend_show,
+		global_suspend_store);
 
-static ssize_t power_suspend_version_show(struct kobject *kobj,
+static ssize_t prometheus_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-#ifdef CONFIG_POWERSUSPEND_BETA_VERSION
-	return sprintf(buf, "Powersuspend Version: %d.%d.%d\n", MAJOR_VERSION, MINOR_VERSION, SUB_MINOR_VERSION);
-#else
-	return sprintf(buf, "Powersuspend Version: %d.%d\n", MAJOR_VERSION, MINOR_VERSION);
-#endif
+	return sprintf(buf, "Prometheus Version: %u.%u\n", VERSION, VERSION_MIN);
 }
 
-static struct kobj_attribute power_suspend_version_attribute =
-	__ATTR(power_suspend_version, 0444,
-		power_suspend_version_show,
+static struct kobj_attribute prometheus_version_attribute =
+	__ATTR(prometheus_version, 0444,
+		prometheus_version_show,
 		NULL);
 
-static struct attribute *power_suspend_attrs[] =
+static struct attribute *prometheus_attrs[] =
 {
-	&power_suspend_sync_attribute.attr,
-	&power_suspend_use_global_suspend_attribute.attr,
-	&power_suspend_version_attribute.attr,
+	&prometheus_sync_attribute.attr,
+	&global_suspend_attribute.attr,
+	&prometheus_version_attribute.attr,
 	NULL,
 };
 
-static struct attribute_group power_suspend_attr_group =
+static struct attribute_group prometheus_attr_group =
 {
-	.attrs = power_suspend_attrs,
+	.attrs = prometheus_attrs,
 };
 
-static struct kobject *power_suspend_kobj;
+static struct kobject *prometheus_kobj;
 
-static int power_suspend_init(void)
+static int prometheus_init(void)
 {
 	struct power_suspend *pos;
 	int sysfs_result;
 
-	power_suspend_kobj = kobject_create_and_add("power_suspend",
+	prometheus_kobj = kobject_create_and_add("prometheus",
 		kernel_kobj);
 
-	if (!power_suspend_kobj) {
+	if (!prometheus_kobj) {
 		pr_err("%s kobject create failed!\n", __FUNCTION__);
 		return -ENOMEM;
 	}
 
-	sysfs_result = sysfs_create_group(power_suspend_kobj,
-		&power_suspend_attr_group);
+	sysfs_result = sysfs_create_group(prometheus_kobj,
+		&prometheus_attr_group);
 
 	if (sysfs_result) {
 		pr_info("%s group create failed!\n", __FUNCTION__);
-		kobject_put(power_suspend_kobj);
+		kobject_put(prometheus_kobj);
 		return -ENOMEM;
 	}
 
-	pwrsup_wq = alloc_workqueue("ps_pwrsup_wq", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+	pwrsup_wq = alloc_workqueue("prometheus_work", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
 	if (!pwrsup_wq)
-		pr_err("[POWERSUSPEND] Failed to allocate workqueue\n");
+		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
@@ -303,18 +304,18 @@ static int power_suspend_init(void)
 }
 
 /* This should never have to be used except on shutdown */
-static void power_suspend_exit(void)
+static void prometheus_exit(void)
 {
 	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
 	destroy_workqueue(pwrsup_wq);
 
-	if (power_suspend_kobj != NULL)
-		kobject_put(power_suspend_kobj);
+	if (prometheus_kobj != NULL)
+		kobject_put(prometheus_kobj);
 }
 
-subsys_initcall(power_suspend_init);
-module_exit(power_suspend_exit);
+subsys_initcall(prometheus_init);
+module_exit(prometheus_exit);
 
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com> \
 				Rob Patershuk <robpatershuk@gmail.com>");

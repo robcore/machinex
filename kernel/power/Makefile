@@ -14,6 +14,6 @@ obj-$(CONFIG_PM_WAKELOCKS)	+= wakelock.o
 obj-$(CONFIG_MAGIC_SYSRQ)	+= poweroff.o
 obj-$(CONFIG_WAKEUP_REASON)	+= wakeup_reason.o
 obj-$(CONFIG_QUICK_WAKEUP)	+= quickwakeup.o
-obj-$(CONFIG_POWERSUSPEND)	+= powersuspend.o
+obj-$(CONFIG_PROMETHEUS)	+= prometheus.o
 obj-$(CONFIG_STATE_NOTIFIER)		+= state_notifier.o
 obj-$(CONFIG_ADAPTIVE_TUNING)	+= adaptive_tuning.o

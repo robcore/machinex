@@ -194,9 +194,9 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	state_suspend();
 #endif
 	display_on = false;
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROMETHEUS
 	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+	prometheus_panel_beacon(POWER_SUSPEND_ACTIVE);
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY
@@ -482,9 +482,9 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 	display_on = true;
 	pr_info("Rob's DSI ON HOOK\n");
-#ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_PROMETHEUS
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+	prometheus_panel_beacon(POWER_SUSPEND_INACTIVE);
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY

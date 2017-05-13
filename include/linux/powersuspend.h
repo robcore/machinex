@@ -76,26 +76,6 @@
 
 #ifndef _LINUX_POWERSUSPEND_H
 #define _LINUX_POWERSUSPEND_H
-
-#include <linux/list.h>
-#include <linux/types.h>
-#include <linux/module.h>
-#include <linux/mutex.h>
-#include <linux/workqueue.h>
-#include <linux/syscalls.h> /* sys_sync */
-
-struct power_suspend {
-	struct list_head link;
-	void (*suspend)(struct power_suspend *h);
-	void (*resume)(struct power_suspend *h);
-};
-
-void register_power_suspend(struct power_suspend *handler);
-void unregister_power_suspend(struct power_suspend *handler);
-
-#define POWER_SUSPEND_INACTIVE	0
-#define POWER_SUSPEND_ACTIVE	1
-
-void set_power_suspend_state_panel_hook(int new_state);
-
+/* Now just a wrapper */
+#include <linux/prometheus.h>
 #endif

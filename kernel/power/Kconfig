@@ -332,26 +332,18 @@ config SUSPEND_TIME_TIMEKEEPING
 
 config POWERSUSPEND
 	bool "Power suspend"
+	select PROMETHEUS
 	default y
 	---help---
-	  Call early suspend handlers when the user requested sleep state
-	  changes.
+	  Now a wrapper for PROMETHEUS
 
-config POWERSUSPEND_BETA_VERSION
-	bool "Powersuspend Beta"
-	depends on POWERSUSPEND
-	default n
-	---help---
-	  Indicate if this is a WIP version of the driver or not.
-
-config MACHINEX_POWER_SLEUTH
-	bool "Gratuitous Power Debugging"
+config PROMETHEUS
+	bool "Prometheus"
 	depends on SUSPEND
-	default n
+	default y
 	---help---
-	  Only select this option if you are further integrating screen-managed
-	  power options with the official suspend framework and are familiar with
-	  "Prometheus."
+	A simplified combination of autosleep and powersuspend that links
+	to the PM_SUSPEND subsystem if conditions allow.
 
 config STATE_NOTIFIER
     bool "State Notifier"
