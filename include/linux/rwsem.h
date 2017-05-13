@@ -24,7 +24,7 @@ struct rw_semaphore;
 #else
 /* All arch specific implementations share the same struct */
 struct rw_semaphore {
-	atomic_long_t count;
+	long count;
 	raw_spinlock_t wait_lock;
 	struct list_head wait_list;
 #ifdef CONFIG_RWSEM_SPIN_ON_OWNER
@@ -52,10 +52,9 @@ extern struct rw_semaphore *rwsem_downgrade_wake(struct rw_semaphore *sem);
 /* In all implementations count != 0 means locked */
 static inline int rwsem_is_locked(struct rw_semaphore *sem)
 {
-	return atomic_long_read(&sem->count) != 0;
+	return sem->count != 0;
 }
 
-#define __RWSEM_INIT_COUNT(name)	.count = ATOMIC_LONG_INIT(RWSEM_UNLOCKED_VALUE)
 #endif
 
 /* Common initializer macros and functions */
