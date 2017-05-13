@@ -28,7 +28,7 @@
 #include "power.h"
 
 #define VERSION 1
-#define VERSION_MIN 0
+#define VERSION_MIN 1
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -45,6 +45,7 @@ static unsigned int sync_on_panel_suspend;
 extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
+static unsigned int ignore_wakelocks;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -113,7 +114,8 @@ static void power_suspend(struct work_struct *work)
 	pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 
 	if (use_global_suspend) {
-		if (!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) {
+		if ((!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) &&
+				(!ignore_wakelocks)) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
@@ -245,6 +247,33 @@ static struct kobj_attribute global_suspend_attribute =
 		global_suspend_show,
 		global_suspend_store);
 
+static ssize_t ignore_wakelocks_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", ignore_wakelocks);
+}
+
+static ssize_t ignore_wakelocks_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%u\n", &val);
+
+	if (val <= 0)
+		val = 0;
+	if (val >= 1)
+		val = 1;
+
+	ignore_wakelocks = val;
+	return count;
+}
+
+static struct kobj_attribute ignore_wakelocks_attribute =
+	__ATTR(ignore_wakelocks, 0644,
+		ignore_wakelocks_show,
+		ignore_wakelocks_store);
+
 static ssize_t prometheus_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -260,6 +289,7 @@ static struct attribute *prometheus_attrs[] =
 {
 	&prometheus_sync_attribute.attr,
 	&global_suspend_attribute.attr,
+	&ignore_wakelocks_attribute.attr,
 	&prometheus_version_attribute.attr,
 	NULL,
 };
