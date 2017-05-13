@@ -1,4 +1,4 @@
-/* include/linux/powersuspend.h
+/* include/linux/prometheus.h
  *
  * Copyright (C) 2007-2008 Google, Inc.
  * Copyright (C) 2013 Paul Reioux
@@ -74,8 +74,8 @@
  *
  */
 
-#ifndef _LINUX_POWERSUSPEND_H
-#define _LINUX_POWERSUSPEND_H
+#ifndef _LINUX_PROMETHEUS_H
+#define _LINUX_PROMETHEUS_H
 
 #include <linux/list.h>
 #include <linux/types.h>
@@ -96,6 +96,6 @@ void unregister_power_suspend(struct power_suspend *handler);
 #define POWER_SUSPEND_INACTIVE	0
 #define POWER_SUSPEND_ACTIVE	1
 
-void set_power_suspend_state_panel_hook(int new_state);
+void prometheus_panel_beacon(int new_state);
 
 #endif

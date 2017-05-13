@@ -1,12 +1,18 @@
-/* kernel/power/powersuspend.c
+/* kernel/power/prometheus.c
  *
  * Copyright (C) 2005-2008 Google, Inc.
  * Copyright (C) 2013 Paul Reioux
+ * Copyright (C) 2017 Rob Patershuk
  *
  * Modified by Jean-Pierre Rasquin <yank555.lu@gmail.com>
  * Further modified by Rob Patershuk <robpatershuk@gmail.com>
  *
- * See include/linux/powersuspend.h for changelog
+ * See include/linux/prometheus.h for legacy (powersuspend) changelog.
+ *
+ * Prometheus was punished by the gods for giving the gift of knowledge to man.
+ * He was cast into the bowels of the earth and pecked by birds.
+ *
+ *
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,6 +29,9 @@
 
 #define MAJOR_VERSION	2
 #define MINOR_VERSION	5
+#ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
+#define SUB_MINOR_VERSION
+#endif
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -234,7 +243,11 @@ static struct kobj_attribute power_suspend_use_global_suspend_attribute =
 static ssize_t power_suspend_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+#ifdef CONFIG_POWERSUSPEND_BETA_VERSION
+	return sprintf(buf, "Powersuspend Version: %d.%d.%d\n", MAJOR_VERSION, MINOR_VERSION, SUB_MINOR_VERSION);
+#else
 	return sprintf(buf, "Powersuspend Version: %d.%d\n", MAJOR_VERSION, MINOR_VERSION);
+#endif
 }
 
 static struct kobj_attribute power_suspend_version_attribute =
@@ -305,6 +318,6 @@ module_exit(power_suspend_exit);
 
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com> \
 				Rob Patershuk <robpatershuk@gmail.com>");
-MODULE_DESCRIPTION("power_suspend - A replacement kernel PM driver for"
-        "Android's deprecated early_suspend/late_resume PM driver!");
+MODULE_DESCRIPTION("Prometheus was punished by the gods for giving the gift of knowledge to man." \
+			  "He was cast into the bowels of the earth and pecked by birds.");
 MODULE_LICENSE("GPL v2");
