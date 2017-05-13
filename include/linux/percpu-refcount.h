@@ -106,7 +106,7 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 
 	rcu_read_lock_sched();
 
-	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
+	pcpu_count = READ_ONCE(ref->pcpu_count);
 
 	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR))
 		__this_cpu_inc(*pcpu_count);
@@ -135,7 +135,7 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 
 	rcu_read_lock_sched();
 
-	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
+	pcpu_count = READ_ONCE(ref->pcpu_count);
 
 	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR)) {
 		__this_cpu_inc(*pcpu_count);
@@ -160,7 +160,7 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
 
 	rcu_read_lock_sched();
 
-	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
+	pcpu_count = READ_ONCE(ref->pcpu_count);
 
 	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR))
 		__this_cpu_dec(*pcpu_count);
