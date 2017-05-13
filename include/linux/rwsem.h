@@ -21,10 +21,11 @@ struct rw_semaphore;
 
 #ifdef CONFIG_RWSEM_GENERIC_SPINLOCK
 #include <linux/rwsem-spinlock.h> /* use a generic implementation */
+#define __RWSEM_INIT_COUNT(name)	.count = RWSEM_UNLOCKED_VALUE
 #else
 /* All arch specific implementations share the same struct */
 struct rw_semaphore {
-	long count;
+	atomic_long_t count;
 	raw_spinlock_t wait_lock;
 	struct list_head wait_list;
 #ifdef CONFIG_RWSEM_SPIN_ON_OWNER
@@ -52,9 +53,10 @@ extern struct rw_semaphore *rwsem_downgrade_wake(struct rw_semaphore *sem);
 /* In all implementations count != 0 means locked */
 static inline int rwsem_is_locked(struct rw_semaphore *sem)
 {
-	return sem->count != 0;
+	return atomic_long_read(&sem->count) != 0;
 }
 
+#define __RWSEM_INIT_COUNT(name)	.count = ATOMIC_LONG_INIT(RWSEM_UNLOCKED_VALUE)
 #endif
 
 /* Common initializer macros and functions */
@@ -67,7 +69,7 @@ static inline int rwsem_is_locked(struct rw_semaphore *sem)
 
 #ifdef CONFIG_RWSEM_SPIN_ON_OWNER
 #define __RWSEM_INITIALIZER(name)			\
-	{ RWSEM_UNLOCKED_VALUE,				\
+	{ __RWSEM_INIT_COUNT(name),				\
 	  __RAW_SPIN_LOCK_UNLOCKED(name.wait_lock),	\
 	  LIST_HEAD_INIT((name).wait_list),		\
 	  NULL, /* owner */				\
