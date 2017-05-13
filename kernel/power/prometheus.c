@@ -41,7 +41,7 @@ static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static int ps_state;
 /* Robcore: Provide an option to sync the system on powersuspend */
-static unsigned int sync_on_powersuspend;
+static unsigned int sync_on_panel_suspend;
 extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
@@ -105,7 +105,7 @@ static void power_suspend(struct work_struct *work)
 
 	mutex_unlock(&power_suspend_lock);
 
-	if (sync_on_powersuspend) {
+	if (sync_on_panel_suspend) {
 		pr_info("[PROMETHEUS] Syncing\n");
 		sys_sync();
 	}
@@ -194,7 +194,7 @@ EXPORT_SYMBOL(prometheus_panel_beacon);
 static ssize_t prometheus_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", sync_on_powersuspend);
+        return sprintf(buf, "%u\n", sync_on_panel_suspend);
 }
 
 static ssize_t prometheus_sync_store(struct kobject *kobj,
@@ -209,12 +209,12 @@ static ssize_t prometheus_sync_store(struct kobject *kobj,
 	if (val >= 1)
 		val = 1;
 
-	sync_on_powersuspend = val;
+	sync_on_panel_suspend = val;
 	return count;
 }
 
 static struct kobj_attribute prometheus_sync_attribute =
-	__ATTR(power_suspend_sync, 0644,
+	__ATTR(prometheus, 0644,
 		prometheus_sync_show,
 		prometheus_sync_store);
 
