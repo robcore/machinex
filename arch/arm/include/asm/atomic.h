@@ -57,12 +57,11 @@ static inline void atomic_##op(int i, atomic_t *v)			\
 }									\
 
 #define ATOMIC_OP_RETURN(op, c_op, asm_op)				\
-static inline int atomic_##op##_return(int i, atomic_t *v)		\
+static inline int atomic_##op##_return_relaxed(int i, atomic_t *v)	\
 {									\
 	unsigned long tmp;						\
 	int result;							\
 									\
-	smp_mb();							\
 	prefetchw(&v->counter);						\
 									\
 	__asm__ __volatile__("@ atomic_" #op "_return\n"		\
@@ -354,12 +353,12 @@ static inline void atomic64_##op(long long i, atomic64_t *v)		\
 }									\
 
 #define ATOMIC64_OP_RETURN(op, op1, op2)				\
-static inline long long atomic64_##op##_return(long long i, atomic64_t *v) \
+static inline long long							\
+atomic64_##op##_return_relaxed(long long i, atomic64_t *v)		\
 {									\
 	long long result;						\
 	unsigned long tmp;						\
 									\
-	smp_mb();							\
 	prefetchw(&v->counter);						\
 									\
 	__asm__ __volatile__("@ atomic64_" #op "_return\n"		\
@@ -373,8 +372,6 @@ static inline long long atomic64_##op##_return(long long i, atomic64_t *v) \
 	: "r" (&v->counter), "r" (i)					\
 	: "cc");							\
 									\
-	smp_mb();							\
-									\
 	return result;							\
 }
 
@@ -384,6 +381,9 @@ static inline long long atomic64_##op##_return(long long i, atomic64_t *v) \
 
 ATOMIC64_OPS(add, adds, adc)
 ATOMIC64_OPS(sub, subs, sbc)
+
+#define atomic64_add_return_relaxed	atomic64_add_return_relaxed
+#define atomic64_sub_return_relaxed	atomic64_sub_return_relaxed
 
 #define atomic64_andnot atomic64_andnot
 
