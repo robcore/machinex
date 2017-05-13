@@ -68,11 +68,11 @@
  * GNU General Public License for more details.
  *
  */
-#include <linux/device.h>
 #include <linux/powersuspend.h>
+#include "power.h"
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	4
+#define MINOR_VERSION	5
 #ifdef  CONFIG_POWERSUSPEND_BETA_VERSION
 #define SUB_MINOR_VERSION
 #endif
@@ -88,8 +88,9 @@ static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static int ps_state;
 /* Robcore: Provide an option to sync the system on powersuspend */
-static int sync_on_powersuspend;
+static unsigned int sync_on_powersuspend;
 extern int poweroff_charging;
+static unsigned int use_global_suspend;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -146,6 +147,9 @@ static void power_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 	}
+
+	if (use_global_suspend)
+		pm_suspend(PM_SUSPEND_MIN);
 
 	mutex_unlock(&power_suspend_lock);
 
@@ -221,15 +225,15 @@ EXPORT_SYMBOL(set_power_suspend_state_panel_hook);
 static ssize_t power_suspend_sync_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%d\n", sync_on_powersuspend);
+        return sprintf(buf, "%u\n", sync_on_powersuspend);
 }
 
 static ssize_t power_suspend_sync_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int val;
+	unsigned int val;
 
-	sscanf(buf, "%d\n", &val);
+	sscanf(buf, "%u\n", &val);
 
 	if (val <= 0)
 		val = 0;
@@ -241,9 +245,36 @@ static ssize_t power_suspend_sync_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute power_suspend_sync_attribute =
-	__ATTR(power_suspend_sync, 0666,
+	__ATTR(power_suspend_sync, 0644,
 		power_suspend_sync_show,
 		power_suspend_sync_store);
+
+static ssize_t power_suspend_use_global_suspend_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", use_global_suspend);
+}
+
+static ssize_t power_suspend_use_global_suspend_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%u\n", &val);
+
+	if (val <= 0)
+		val = 0;
+	if (val >= 1)
+		val = 1;
+
+	use_global_suspend = val;
+	return count;
+}
+
+static struct kobj_attribute power_suspend_use_global_suspend_attribute =
+	__ATTR(power_suspend_use_global_suspend, 0644,
+		power_suspend_use_global_suspend_show,
+		power_suspend_use_global_suspend_store);
 
 static ssize_t power_suspend_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -263,6 +294,7 @@ static struct kobj_attribute power_suspend_version_attribute =
 static struct attribute *power_suspend_attrs[] =
 {
 	&power_suspend_sync_attribute.attr,
+	&power_suspend_use_global_suspend_attribute.attr,
 	&power_suspend_version_attribute.attr,
 	NULL,
 };
@@ -302,8 +334,6 @@ static int power_suspend_init(void)
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
-
-	sync_on_powersuspend = 0; //Robcore: Preserve original functionality by default.
 
 	return 0;
 }
