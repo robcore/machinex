@@ -2152,7 +2152,7 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	 * This ensures that tasks getting woken will be fully ordered against
 	 * their previous state and preserve Program Order.
 	 */
-	smp_cond_load_acquire(&p->on_cpu, !VAL);
+	smp_cond_acquire(!p->on_cpu);
 
 	rq = cpu_rq(task_cpu(p));
 
@@ -2234,7 +2234,7 @@ out:
  * chain to provide order. Instead we do:
  *
  *   1) smp_store_release(X->on_cpu, 0)
- *   2) smp_cond_load_acquire(!X->on_cpu)
+ *   2) smp_cond_acquire(!X->on_cpu)
  *
  * Example:
  *
@@ -2245,7 +2245,7 @@ out:
  *   sched-out X
  *   smp_store_release(X->on_cpu, 0);
  *
- *                    smp_cond_load_acquire(&X->on_cpu, !VAL);
+ *                    smp_cond_acquire(!X->on_cpu);
  *                    X->state = WAKING
  *                    set_task_cpu(X,2)
  *
@@ -2271,7 +2271,7 @@ out:
  * This means that any means of doing remote wakeups must order the CPU doing
  * the wakeup against the CPU the task is going to end up running on. This,
  * however, is already required for the regular Program-Order guarantee above,
- * since the waking CPU is the one issueing the ACQUIRE (smp_cond_load_acquire).
+ * since the waking CPU is the one issueing the ACQUIRE (smp_cond_acquire).
  *
  */
 
