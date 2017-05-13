@@ -158,9 +158,9 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	if (use_global_suspend) {
-		pr_info("[POWERSUSPEND] Suspend Completed. \
-				Calling System Suspend!\n");
-		pm_suspend(PM_SUSPEND_MIN);
+		pr_info("[POWERSUSPEND] Suspend Completed\n");
+		pr_info("[POWERSUSPEND] Calling System Suspend!\n");
+		pm_suspend(PM_SUSPEND_PREPARE);
 		mutex_unlock(&power_suspend_lock);
 	} else {
 		pr_info("[POWERSUSPEND] Suspend Completed.\n");
