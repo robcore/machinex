@@ -156,10 +156,10 @@ __rwsem_mark_wake(struct rw_semaphore *sem,
 			long oldcount;
 
 			/* A writer stole the lock. */
-			if (unlikely(sem->count & RWSEM_ACTIVE_MASK))
+			if (unlikely(atomic_long_read(&sem->count) & RWSEM_ACTIVE_MASK))
 				return sem;
 
-			if (unlikely(sem->count < RWSEM_WAITING_BIAS)) {
+			if (unlikely(atomic_long_read(sem->count) < RWSEM_WAITING_BIAS)) {
 				cpu_relax();
 				continue;
 			}
