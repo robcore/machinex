@@ -2486,7 +2486,7 @@ static inline bool cfq_slice_used_soon(struct cfq_data *cfqd,
 	/* the queue hasn't finished any request, can't estimate */
 	if (cfq_cfqq_slice_new(cfqq))
 		return true;
-	if (now + cfqd->cfq_slice_idle * cfqq->dispatched > cfqq->slice_end))
+	if (now + cfqd->cfq_slice_idle * cfqq->dispatched > cfqq->slice_end)
 		return true;
 
 	return false;
