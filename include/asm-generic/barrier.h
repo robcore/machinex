@@ -127,7 +127,7 @@ do {									\
  */
 #ifndef smp_acquire__after_ctrl_dep
 #define smp_acquire__after_ctrl_dep()		smp_rmb()
-#endif
+#endif	/* CONFIG_SMP */
 
 /**
  * smp_cond_load_acquire() - (Spin) wait for cond with ACQUIRE ordering
