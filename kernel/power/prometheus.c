@@ -214,7 +214,7 @@ static ssize_t prometheus_sync_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute prometheus_sync_attribute =
-	__ATTR(prometheus, 0644,
+	__ATTR(prometheus_sync, 0644,
 		prometheus_sync_show,
 		prometheus_sync_store);
 
