@@ -24,6 +24,9 @@
 #include <linux/uaccess.h>
 #include <linux/clk.h>
 #include <linux/platform_device.h>
+#include <linux/wakelock.h>
+#include <linux/powersuspend.h>
+#include <linux/display_state.h>
 #include <asm/system.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
@@ -32,13 +35,6 @@
 #ifdef CONFIG_LCD_NOTIFY
 #include <linux/lcd_notify.h>
 #endif
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
-#include <linux/display_state.h>
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
@@ -56,6 +52,8 @@
 /* Check if LCD was connected. */
 #include "mipi_samsung_oled-8930.h"
 #endif
+
+struct wake_lock prometheus_rising;
 
 static bool display_on = true;
 bool is_display_on()
@@ -195,7 +193,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 #if 0
 	state_suspend();
 #endif
-
+	display_on = false;
 #ifdef CONFIG_POWERSUSPEND
 	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
@@ -204,7 +202,6 @@ static int mipi_dsi_off(struct platform_device *pdev)
 #ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_OFF_END, NULL);
 #endif
-	display_on = false;
 
 	return ret;
 }
@@ -373,7 +370,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		wmb();
 	}
 #else
-	msleep(10);
+	mdelay(10);
 #if defined (CONFIG_MIPI_DSI_RESET_LP11)
 
 	/* LP11 */
@@ -383,10 +380,10 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	wmb();
 	/* LP11 */
 
-	usleep(5000);
+	mdelay(5);
 	if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 			mipi_dsi_pdata->active_reset(1); /* high */
-	usleep(10000);
+	mdelay(10);
 #endif
 #if defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
 	if(system_rev)
@@ -474,21 +471,17 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("Rob's DSI ON HOOK\n");
-
-#ifdef CONFIG_STATE_NOTIFIER
-		state_resume();
-#endif
-
+	wake_lock_timeout(&prometheus_rising, msecs_to_jiffies(100));
+	display_on = true;
+	pr_info("Rob's DSI ON HOOK\n");
 #ifdef CONFIG_POWERSUSPEND
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
 
 #ifdef CONFIG_LCD_NOTIFY
-		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
 #endif
-		display_on = true;
 
 	return ret;
 }
@@ -826,7 +819,10 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	esc_byte_ratio = pinfo->mipi.esc_byte_ratio;
 
-return 0;
+	wake_lock_init(&prometheus_rising, WAKE_LOCK_SUSPEND, "prometheus");
+
+
+	return 0;
 
 mipi_dsi_probe_err:
 	platform_device_put(mdp_dev);

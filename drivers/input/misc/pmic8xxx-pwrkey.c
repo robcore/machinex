@@ -69,7 +69,7 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 	if (poweroff_charging)
 		wake_lock(&pwrkey->wake_lock);
 	if (screen_on == false && !poweroff_charging)
-		wake_lock_timeout(&mx_pwrkey_boost, msecs_to_jiffies(1000));
+		wake_lock_timeout(&mx_pwrkey_boost, msecs_to_jiffies(100));
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
 #if defined(CONFIG_SEC_DEBUG)
