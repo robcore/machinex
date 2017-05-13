@@ -1661,10 +1661,10 @@ cfq_merged_requests(struct request_queue *q, struct request *rq,
 	 * reposition in fifo if next is older than rq
 	 */
 	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist) &&
-	    (rq_fifo_time(next) < rq_fifo_time(rq)) &&
+	    (mxrq_fifo_time(next) < mxrq_fifo_time(rq)) &&
 	    cfqq == RQ_CFQQ(next)) {
 		list_move(&rq->queuelist, &next->queuelist);
-		rq_set_fifo_time(rq, rq_fifo_time(next));
+		rq_set_fifo_time(rq, mxrq_fifo_time(next));
 	}
 
 	if (cfqq->next_rq == next)
@@ -2112,7 +2112,7 @@ static struct request *cfq_check_fifo(struct cfq_queue *cfqq)
 		return NULL;
 
 	rq = rq_entry_fifo(cfqq->fifo.next);
-	if (ktime_get_ns() < rq_fifo_time(rq))
+	if (ktime_get_ns() < mxrq_fifo_time(rq))
 		rq = NULL;
 
 	cfq_log_cfqq(cfqq->cfqd, cfqq, "fifo=%p", rq);
@@ -3209,7 +3209,7 @@ static void cfq_insert_request(struct request_queue *q, struct request *rq)
 	cfq_log_cfqq(cfqd, cfqq, "insert_request");
 	cfq_init_prio_data(cfqq, RQ_CIC(rq)->icq.ioc);
 
-	rq_set_fifo_time(rq, ktime_get_ns() + cfqd->cfq_fifo_expire[rq_is_sync(rq)]);
+	mxrq_set_fifo_time(rq, (ktime_get_ns() + cfqd->cfq_fifo_expire[rq_is_sync(rq)]));
 	list_add_tail(&rq->queuelist, &cfqq->fifo);
 	cfq_add_rq_rb(rq);
 	cfq_blkiocg_update_io_add_stats(&(RQ_CFQG(rq))->blkg,
