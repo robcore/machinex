@@ -22,28 +22,28 @@
  */
 /* max queue in one round of service */
 static const int cfq_quantum = 8;
-static const int cfq_fifo_expire[2] = { HZ / 4, HZ / 8 };
++static const u64 cfq_fifo_expire[2] = { NSEC_PER_SEC / 4, NSEC_PER_SEC / 8 };
 /* maximum backwards seek, in KiB */
 static const int cfq_back_max = 16 * 1024;
 /* penalty of a backwards seek */
 static const int cfq_back_penalty = 2;
-static const int cfq_slice_sync = HZ / 10;
-static int cfq_slice_async = HZ / 25;
+static const u64 cfq_slice_sync = NSEC_PER_SEC / 10;
+static u64 cfq_slice_async = NSEC_PER_SEC / 25;
 static const int cfq_slice_async_rq = 2;
-static int cfq_slice_idle = 0;
-static int cfq_group_idle = HZ / 125;
-static const int cfq_target_latency = HZ * 3/10; /* 300 ms */
+static u64 cfq_slice_idle = NSEC_PER_SEC / 125;
+static u64 cfq_group_idle = NSEC_PER_SEC / 125;
+static const u64 cfq_target_latency = (u64)NSEC_PER_SEC * 3/10; /* 300 ms */
 static const int cfq_hist_divisor = 4;
 
 /*
  * offset from end of service tree
  */
-#define CFQ_IDLE_DELAY		(HZ / 5)
+#define CFQ_IDLE_DELAY		(NSEC_PER_SEC / 5)
 
 /*
  * below this threshold, we consider thinktime immediate
  */
-#define CFQ_MIN_TT		(2)
+#define CFQ_MIN_TT		(2 * NSEC_PER_SEC / HZ)
 
 #define CFQ_SLICE_SCALE		(5)
 #define CFQ_HW_QUEUE_MIN	(5)
@@ -287,22 +287,22 @@ struct cfq_data {
 	 * tunables, see top of file
 	 */
 	unsigned int cfq_quantum;
-	unsigned int cfq_fifo_expire[2];
 	unsigned int cfq_back_penalty;
 	unsigned int cfq_back_max;
-	unsigned int cfq_slice[2];
 	unsigned int cfq_slice_async_rq;
-	unsigned int cfq_slice_idle;
-	unsigned int cfq_group_idle;
 	unsigned int cfq_latency;
-	unsigned int cfq_target_latency;
+	u64 cfq_fifo_expire[2];
+	u64 cfq_slice[2];
+	u64 cfq_slice_idle;
+	u64 cfq_group_idle;
+	u64 cfq_target_latency;
 
 	/*
 	 * Fallback dummy cfqq for extreme OOM conditions
 	 */
 	struct cfq_queue oom_cfqq;
 
-	unsigned long last_delayed_sync;
+	u64 last_delayed_sync;
 
 	/* List of cfq groups being managed on this device*/
 	struct hlist_head cfqg_list;
@@ -402,7 +402,7 @@ CFQ_CFQQ_FNS(wait_busy);
 static inline bool cfq_io_thinktime_big(struct cfq_data *cfqd,
 	struct cfq_ttime *ttime, bool group_idle)
 {
-	unsigned long slice;
+	u64 slice;
 	if (!sample_valid(ttime->ttime_samples))
 		return false;
 	if (group_idle)
@@ -525,17 +525,19 @@ static inline void cfq_schedule_dispatch(struct cfq_data *cfqd)
  * if a queue is marked sync and has sync io queued. A sync queue with async
  * io only, should not get full sync slice length.
  */
-static inline int cfq_prio_slice(struct cfq_data *cfqd, bool sync,
+static inline u64 cfq_prio_slice(struct cfq_data *cfqd, bool sync,
 				 unsigned short prio)
 {
 	const int base_slice = cfqd->cfq_slice[sync];
+	u64 base_slice = cfqd->cfq_slice[sync];
+	u64 slice = div_u64(base_slice, CFQ_SLICE_SCALE);
 
 	WARN_ON(prio >= IOPRIO_BE_NR);
 
-	return base_slice + (base_slice/CFQ_SLICE_SCALE * (4 - prio));
+	return base_slice + (slice * (4 - prio));
 }
 
-static inline int
+static inline u64
 cfq_prio_to_slice(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 {
 	return cfq_prio_slice(cfqd, cfq_cfqq_sync(cfqq), cfqq->ioprio);
@@ -600,7 +602,7 @@ static inline unsigned cfq_group_get_avg_queues(struct cfq_data *cfqd,
 	return cfqg->busy_queues_avg[rt];
 }
 
-static inline unsigned
+static inline u64
 cfq_group_slice(struct cfq_data *cfqd, struct cfq_group *cfqg)
 {
 	struct cfq_rb_root *st = &cfqd->grp_service_tree;
@@ -608,10 +610,10 @@ cfq_group_slice(struct cfq_data *cfqd, struct cfq_group *cfqg)
 	return cfqd->cfq_target_latency * cfqg->weight / st->total_weight;
 }
 
-static inline unsigned
+static inline u64
 cfq_scaled_cfqq_slice(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 {
-	unsigned slice = cfq_prio_to_slice(cfqd, cfqq);
+	u64 slice = cfq_prio_to_slice(cfqd, cfqq);
 	if (cfqd->cfq_latency) {
 		/*
 		 * interested queues (we consider only the ones with the same
@@ -619,20 +621,22 @@ cfq_scaled_cfqq_slice(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 		 */
 		unsigned iq = cfq_group_get_avg_queues(cfqd, cfqq->cfqg,
 						cfq_class_rt(cfqq));
-		unsigned sync_slice = cfqd->cfq_slice[1];
-		unsigned expect_latency = sync_slice * iq;
-		unsigned group_slice = cfq_group_slice(cfqd, cfqq->cfqg);
+		u64 sync_slice = cfqd->cfq_slice[1];
+		u64 expect_latency = sync_slice * iq;
+		u64 group_slice = cfq_group_slice(cfqd, cfqq->cfqg);
 
 		if (expect_latency > group_slice) {
-			unsigned base_low_slice = 2 * cfqd->cfq_slice_idle;
+			u64 base_low_slice = 2 * cfqd->cfq_slice_idle;
+			u64 low_slice;
+
 			/* scale low_slice according to IO priority
 			 * and sync vs async */
-			unsigned low_slice =
-				min(slice, base_low_slice * slice / sync_slice);
+			low_slice = div64_u64(base_low_slice*slice, sync_slice);
+			low_slice = min(slice, low_slice);
 			/* the adapted slice value is scaled to fit all iqs
 			 * into the target latency */
-			slice = max(slice * group_slice / expect_latency,
-				    low_slice);
+			slice = div64_u64(slice*group_slice, expect_latency);
+			slice = max(slice, low_slice);
 		}
 	}
 	return slice;
@@ -975,9 +979,10 @@ static void cfq_group_served(struct cfq_data *cfqd, struct cfq_group *cfqg,
 				struct cfq_queue *cfqq)
 {
 	struct cfq_rb_root *st = &cfqd->grp_service_tree;
-	unsigned int used_sl, charge, unaccounted_sl = 0;
+	u64 used_sl, charge, unaccounted_sl = 0;
 	int nr_sync = cfqg->nr_cfqq - cfqg_busy_async_queues(cfqd, cfqg)
 			- cfqg->service_tree_idle.count;
+	u64 now = ktime_get_ns();
 
 	BUG_ON(nr_sync < 0);
 	used_sl = charge = cfq_cfqq_slice_usage(cfqq, &unaccounted_sl);
@@ -1657,7 +1662,7 @@ cfq_merged_requests(struct request_queue *q, struct request *rq,
 	 * reposition in fifo if next is older than rq
 	 */
 	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist) &&
-	    time_before(rq_fifo_time(next), rq_fifo_time(rq)) &&
+	    (rq_fifo_time(next) < rq_fifo_time(rq)) &&
 	    cfqq == RQ_CFQQ(next)) {
 		list_move(&rq->queuelist, &next->queuelist);
 		rq_set_fifo_time(rq, rq_fifo_time(next));
@@ -2062,9 +2067,9 @@ static void cfq_arm_slice_timer(struct cfq_data *cfqd)
 	else
 		sl = cfqd->cfq_slice_idle;
 
-	mod_timer(&cfqd->idle_slice_timer, jiffies + sl);
+	mod_timer(&cfqd->idle_slice_timer, now + sl);
 	cfq_blkiocg_update_set_idle_time_stats(&cfqq->cfqg->blkg);
-	cfq_log_cfqq(cfqd, cfqq, "arm_idle: %lu group_idle: %d", sl,
+	cfq_log_cfqq(cfqd, cfqq, "arm_idle: %llu group_idle: %d", sl,
 			group_idle ? 1 : 0);
 }
 
@@ -2107,7 +2112,7 @@ static struct request *cfq_check_fifo(struct cfq_queue *cfqq)
 		return NULL;
 
 	rq = rq_entry_fifo(cfqq->fifo.next);
-	if (time_before(jiffies, rq_fifo_time(rq)))
+	if (ktime_get_ns() < rq_fifo_time(rq))
 		rq = NULL;
 
 	cfq_log_cfqq(cfqq->cfqd, cfqq, "fifo=%p", rq);
@@ -2301,6 +2306,8 @@ static void cfq_choose_cfqg(struct cfq_data *cfqd)
 {
 	struct cfq_group *cfqg = cfq_get_next_cfqg(cfqd);
 
+	u64 now = ktime_get_ns();
+
 	if (!cfqg)
 		return;
 
@@ -2308,11 +2315,11 @@ static void cfq_choose_cfqg(struct cfq_data *cfqd)
 
 	/* Restore the workload type data */
 	if (cfqg->saved_wl_slice) {
-		cfqd->workload_expires = jiffies + cfqg->saved_wl_slice;
+		cfqd->workload_expires = now + cfqg->saved_wl_slice;
 		cfqd->serving_wl_type = cfqg->saved_wl_type;
 		cfqd->serving_wl_class = cfqg->saved_wl_class;
 	} else
-		cfqd->workload_expires = jiffies - 1;
+		cfqd->workload_expires = now - 1;
 
 	choose_wl_class_and_type(cfqd, cfqg);
 }
@@ -2716,7 +2723,7 @@ static void cfq_init_icq(struct io_cq *icq)
 {
 	struct cfq_io_cq *cic = icq_to_cic(icq);
 
-	cic->ttime.last_end_request = jiffies;
+	cic->ttime.last_end_request = ktime_get_ns();
 }
 
 static void cfq_exit_icq(struct io_cq *icq)
@@ -3200,7 +3207,7 @@ static void cfq_insert_request(struct request_queue *q, struct request *rq)
 	cfq_log_cfqq(cfqd, cfqq, "insert_request");
 	cfq_init_prio_data(cfqq, RQ_CIC(rq)->icq.ioc);
 
-	rq_set_fifo_time(rq, jiffies + cfqd->cfq_fifo_expire[rq_is_sync(rq)]);
+	rq_set_fifo_time(rq, ktime_get_ns() + cfqd->cfq_fifo_expire[rq_is_sync(rq)]);
 	list_add_tail(&rq->queuelist, &cfqq->fifo);
 	cfq_add_rq_rb(rq);
 	cfq_blkiocg_update_io_add_stats(&(RQ_CFQG(rq))->blkg,
@@ -3751,7 +3758,7 @@ static void *cfq_init_queue(struct request_queue *q)
 	 * we optimistically start assuming sync ops weren't delayed in last
 	 * second, in order to have larger depth for async operations.
 	 */
-	cfqd->last_delayed_sync = jiffies - HZ;
+	cfqd->last_delayed_sync = ktime_get_ns() - NSEC_PER_SEC;
 	return cfqd;
 }
 
@@ -3905,20 +3912,6 @@ static int __init cfq_init(void)
 {
 	int ret;
 
-	/*
-	 * could be 0 on HZ < 1000 setups
-	 */
-	if (!cfq_slice_async)
-		cfq_slice_async = 1;
-	if (!cfq_slice_idle)
-		cfq_slice_idle = 0;
-
-#ifdef CONFIG_CFQ_GROUP_IOSCHED
-	if (!cfq_group_idle)
-		cfq_group_idle = 1;
-#else
-		cfq_group_idle = 0;
-#endif
 	cfq_pool = KMEM_CACHE(cfq_queue, 0);
 	if (!cfq_pool)
 		return -ENOMEM;
