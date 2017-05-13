@@ -71,10 +71,10 @@ static void fixup_rt_mutex_waiters(struct rt_mutex *lock)
 }
 
 /*
- * We can speed up the acquire/release, if the architecture
- * supports cmpxchg and if there's no debugging state to be set up
+ * We can speed up the acquire/release, if there's no debugging state to be
+ * set up.
  */
-#if defined(__HAVE_ARCH_CMPXCHG) && !defined(CONFIG_DEBUG_RT_MUTEXES)
+#ifndef CONFIG_DEBUG_RT_MUTEXES
 # define rt_mutex_cmpxchg_relaxed(l,c,n) (cmpxchg_relaxed(&l->owner, c, n) == c)
 # define rt_mutex_cmpxchg_acquire(l,c,n) (cmpxchg_acquire(&l->owner, c, n) == c)
 # define rt_mutex_cmpxchg_release(l,c,n) (cmpxchg_release(&l->owner, c, n) == c)
@@ -976,9 +976,8 @@ static void mark_wakeup_next_waiter(struct wake_q_head *wake_q,
 				    struct rt_mutex *lock)
 {
 	struct rt_mutex_waiter *waiter;
-	unsigned long flags;
 
-	raw_spin_lock_irqsave(&current->pi_lock, flags);
+	raw_spin_lock(&current->pi_lock);
 
 	waiter = rt_mutex_top_waiter(lock);
 
