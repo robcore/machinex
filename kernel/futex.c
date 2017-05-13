@@ -469,7 +469,7 @@ get_futex_key(u32 __user *uaddr, int fshared, union futex_key *key, int rw)
 {
 	unsigned long address = (unsigned long)uaddr;
 	struct mm_struct *mm = current->mm;
-	struct page *page;
+	struct page *page, *tail;
 	struct address_space *mapping;
 	int err, ro = 0;
 
@@ -535,8 +535,17 @@ again:
 	 * The case we do have to guard against is when memory pressure made
 	 * shmem_writepage move it from filecache to swapcache beneath us:
 	 * an unlikely race, but we do need to retry for page->mapping.
+	 *
+	 * Mapping checks require the head page for any compound page so the
+	 * head page and mapping is looked up now. For anonymous pages, it
+	 * does not matter if the page splits in the future as the key is
+	 * based on the address. For filesystem-backed pages, the tail is
+	 * required as the index of the page determines the key. For
+	 * base pages, there is no tail page and tail == page.
 	 */
-	mapping = compound_head(page)->mapping;
+	tail = page;
+	page = compound_head(page);
+	mapping = READ_ONCE(page->mapping);
 	if (!mapping) {
 		int shmem_swizzled = PageSwapCache(page);
 		unlock_page(page);
@@ -569,7 +578,7 @@ again:
 	} else {
 		key->both.offset |= FUT_OFF_INODE; /* inode-based key */
 		key->shared.inode = mapping->host;
-		key->shared.pgoff = basepage_index(page);
+		key->shared.pgoff = basepage_index(tail);
 	}
 
 	get_futex_key_refs(key); /* implies MB (B) */
