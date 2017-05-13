@@ -41,17 +41,17 @@ static void try_to_suspend(struct work_struct *work)
 	if (autosleep_state == PM_SUSPEND_ON) {
 		mutex_unlock(&autosleep_lock);
 #ifdef CONFIG_MACHINEX_POWER_SLEUTH
-		pr_info("Prometheus Awakens\n");
+		pr_info("Prometheus Awakens, %d\n", autosleep_state);
 #endif
 		return;
 	}
 #ifdef CONFIG_MACHINEX_POWER_SLEUTH
 	if (autosleep_state >= PM_SUSPEND_MAX) {
 		hibernate();
-		pr_info("Prometheus Hibernate Called\n");
+		pr_info("Prometheus Hibernate Called, %d\n", autosleep_state);
 	} else {
 		pm_suspend(autosleep_state);
-		pr_info("Prometheus Has Fallen\n");
+		pr_info("Prometheus Has Fallen, %d\n", autosleep_state);
 	}
 #else
 	if (autosleep_state >= PM_SUSPEND_MAX) {
@@ -120,12 +120,12 @@ int pm_autosleep_set_state(suspend_state_t state)
 		pm_wakep_autosleep_enabled(true);
 		queue_up_suspend_work();
 #ifdef CONFIG_MACHINEX_POWER_SLEUTH
-		pr_info("Prometheus Suspend called\n");
+		pr_info("Prometheus Suspend called, %d\n", state);
 #endif
 	} else {
 		pm_wakep_autosleep_enabled(false);
 #ifdef CONFIG_MACHINEX_POWER_SLEUTH
-		pr_info("Prometheus Wakeup Called\n");
+		pr_info("Prometheus Wakeup Called, %d\n", state);
 #endif
 	}
 
