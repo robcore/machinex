@@ -128,7 +128,7 @@ __rwsem_mark_wake(struct rw_semaphore *sem,
 	struct rwsem_waiter *waiter;
 	struct task_struct *tsk;
 	struct list_head *next;
-	signed long woken, loop, adjustment;
+	long oldcount, woken, loop, adjustment;
 
 	waiter = list_entry(sem->wait_list.next, struct rwsem_waiter, list);
 	if (waiter->type == RWSEM_WAITING_FOR_WRITE) {
@@ -142,7 +142,7 @@ __rwsem_mark_wake(struct rw_semaphore *sem,
 			 */
 			wake_q_add(wake_q, waiter->task);
 		}
- 		goto out;
+		goto out;
 	}
 
 	/* Writers might steal the lock before we grant it to the next reader.
@@ -152,27 +152,21 @@ __rwsem_mark_wake(struct rw_semaphore *sem,
 	adjustment = 0;
 	if (wake_type != RWSEM_WAKE_READ_OWNED) {
 		adjustment = RWSEM_ACTIVE_READ_BIAS;
-		while (1) {
-			long oldcount;
+ try_reader_grant:
+		oldcount = atomic_long_add_return(adjustment, &sem->count) - adjustment;
 
-			/* A writer stole the lock. */
-			if (unlikely(atomic_long_read(&sem->count) & RWSEM_ACTIVE_MASK))
-				return sem;
-
-			if (unlikely(atomic_long_read(&sem->count) < RWSEM_WAITING_BIAS)) {
-				cpu_relax();
-				continue;
-			}
-
-			oldcount = atomic_long_add_return(adjustment, &sem->count) - adjustment;
-			if (likely(oldcount >= RWSEM_WAITING_BIAS))
-				break;
-
-			 /* A writer stole the lock.  Undo our reader grant. */
-			if (atomic_long_sub_return(adjustment, &sem->count) &
-						RWSEM_ACTIVE_MASK)
-				return sem;
+		if (unlikely(oldcount < RWSEM_WAITING_BIAS)) {
+			/*
+			 * If the count is still less than RWSEM_WAITING_BIAS
+			 * after removing the adjustment, it is assumed that
+			 * a writer has stolen the lock. We have to undo our
+			 * reader grant.
+			 */
+			if (atomic_long_add_return(-adjustment, &sem->count) <
+			    RWSEM_WAITING_BIAS)
+				goto out;
 			/* Last active locker left. Retry waking readers. */
+			goto try_reader_grant;
 		}
 		/*
 		 * It is not really necessary to set it to reader-owned here,
@@ -226,7 +220,7 @@ __rwsem_mark_wake(struct rw_semaphore *sem,
 	sem->wait_list.next = next;
 	next->prev = &sem->wait_list;
 
-out:
+ out:
 	return sem;
 }
 
