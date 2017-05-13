@@ -22,7 +22,7 @@
 #include "power.h"
 
 #define MAJOR_VERSION	2
-#define MINOR_VERSION	5
+#define MINOR_VERSION	6
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -37,7 +37,8 @@ static int ps_state;
 /* Robcore: Provide an option to sync the system on powersuspend */
 static unsigned int sync_on_powersuspend;
 extern int poweroff_charging;
-static unsigned int use_global_suspend;
+#define GLOBAL_PM 1
+static unsigned int use_global_suspend = GLOBAL_PM;
 
 void register_power_suspend(struct power_suspend *handler)
 {
