@@ -46,7 +46,6 @@ static pm_callback_t __rpm_get_callback(struct device *dev, size_t cb_offset)
 #define RPM_GET_CALLBACK(dev, callback) \
 		__rpm_get_callback(dev, offsetof(struct dev_pm_ops, callback))
 
-#ifdef CONFIG_PM
 static int rpm_resume(struct device *dev, int rpmflags);
 static int rpm_suspend(struct device *dev, int rpmflags);
 
