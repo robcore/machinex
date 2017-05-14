@@ -233,4 +233,6 @@ static inline int of_genpd_add_provider_onecell(struct device_node *np,
 	return __of_genpd_add_provider(np, __of_genpd_xlate_onecell, data);
 }
 
+extern void dev_pm_domain_set(struct device *dev, struct dev_pm_domain *pd);
+
 #endif /* _LINUX_PM_DOMAIN_H */
