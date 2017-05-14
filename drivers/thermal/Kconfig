@@ -105,3 +105,8 @@ config SPEAR_THERMAL
 	  Enable this to plug the SPEAr thermal sensor driver into the Linux
 	  thermal framework
 
+menu "Qualcomm thermal drivers"
+depends on (ARCH_QCOM && OF) || COMPILE_TEST
+source "drivers/thermal/qcom/Kconfig"
+endmenu
+
