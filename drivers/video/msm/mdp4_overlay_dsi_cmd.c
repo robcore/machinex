@@ -171,13 +171,13 @@ static void mdp4_dsi_cmd_do_blt(struct msm_fb_data_type *mfd, int enable)
 	if (enable && pipe->ov_blt_addr == 0) {
 		vctrl->blt_change++;
 		if (vctrl->dmap_koff != vctrl->dmap_done) {
-			INIT_COMPLETION(vctrl->dmap_comp);
+			reinit_completion(&vctrl->dmap_comp);
 			need_wait = 1;
 		}
 	} else if (enable == 0 && pipe->ov_blt_addr) {
 		vctrl->blt_change++;
 		if (vctrl->ov_koff != vctrl->dmap_done) {
-			INIT_COMPLETION(vctrl->dmap_comp);
+			reinit_completion(&vctrl->dmap_comp);
 			need_wait = 1;
 		}
 	}
@@ -320,17 +320,17 @@ int mdp4_dsi_cmd_pipe_commit(int cndx, int wait)
 	if (pipe->ov_blt_addr) {
 		/* Blt */
 		if (vctrl->blt_wait) {
-			INIT_COMPLETION(vctrl->dmap_comp);
+			reinit_completion(&vctrl->dmap_comp);
 			need_dmap_wait = 1;
 		}
 		if (vctrl->ov_koff != vctrl->ov_done) {
-			INIT_COMPLETION(vctrl->ov_comp);
+			reinit_completion(&vctrl->ov_comp);
 			need_ov_wait = 1;
 		}
 	} else {
 		/* direct out */
 		if (vctrl->dmap_koff != vctrl->dmap_done) {
-			INIT_COMPLETION(vctrl->dmap_comp);
+			reinit_completion(&vctrl->dmap_comp);
 			pr_debug("%s: wait, ok=%d od=%d dk=%d dd=%d cpu=%d\n",
 			 __func__, vctrl->ov_koff, vctrl->ov_done,
 			vctrl->dmap_koff, vctrl->dmap_done, smp_processor_id());
@@ -392,10 +392,10 @@ int mdp4_dsi_cmd_pipe_commit(int cndx, int wait)
 		mdp4_dsi_cmd_blt_ov_update(pipe);
 		pipe->ov_cnt++;
 		vctrl->ov_koff++;
-		INIT_COMPLETION(vctrl->ov_comp);
+		reinit_completion(&vctrl->ov_comp);
 		vsync_irq_enable(INTR_OVERLAY0_DONE, MDP_OVERLAY0_TERM);
 	} else {
-		INIT_COMPLETION(vctrl->dmap_comp);
+		reinit_completion(&vctrl->dmap_comp);
 		vsync_irq_enable(INTR_DMA_P_DONE, MDP_DMAP_TERM);
 		vctrl->dmap_koff++;
 	}
@@ -480,7 +480,7 @@ void mdp4_dsi_cmd_wait4vsync(int cndx)
 
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 	if (vctrl->wait_vsync_cnt == 0)
-		INIT_COMPLETION(vctrl->vsync_comp);
+		reinit_completion(&vctrl->vsync_comp);
 	vctrl->wait_vsync_cnt++;
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 
@@ -697,7 +697,7 @@ ssize_t mdp4_dsi_cmd_show_event(struct device *dev,
 
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 	if (vctrl->wait_vsync_cnt == 0)
-		INIT_COMPLETION(vctrl->vsync_comp);
+		reinit_completion(&vctrl->vsync_comp);
 	vctrl->wait_vsync_cnt++;
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 
