@@ -432,7 +432,8 @@ static int zbud_decompress(struct page *page, struct zbud_hdr *zh)
 	ret = lzo1x_decompress_safe(from_va, size, to_va, &out_len);
 	BUG_ON(ret != LZO_E_OK);
 	BUG_ON(out_len != PAGE_SIZE);
-	kunmap_atomic(to_va);
+	if (to_val)
+		kunmap_atomic(to_va);
 out:
 	spin_unlock(&zbpg->lock);
 	return ret;
@@ -915,7 +916,8 @@ static int zcache_compress(struct page *from, void **out_va, size_t *out_len)
 	ret = lzo1x_1_compress(from_va, PAGE_SIZE, dmem, out_len, wmem);
 	BUG_ON(ret != LZO_E_OK);
 	*out_va = dmem;
-	kunmap_atomic(from_va);
+	if (from_va)
+		kunmap_atomic(from_va);
 	ret = 1;
 out:
 	return ret;
