@@ -47,7 +47,8 @@ static unsigned int sync_on_panel_suspend;
 extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
-static unsigned int ignore_wakelocks;
+#define IGNORE_WL 1
+static unsigned int ignore_wakelocks = 1;
 /* For optional charging check due to charger
  * disliking the wakelock skip. TODO Use the power_supply framework.
  */
