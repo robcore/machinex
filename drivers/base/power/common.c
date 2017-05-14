@@ -106,13 +106,7 @@ EXPORT_SYMBOL_GPL(dev_pm_put_subsys_data);
  */
 int dev_pm_domain_attach(struct device *dev, bool power_on)
 {
-	int ret;
-
-	ret = acpi_dev_pm_attach(dev, power_on);
-	if (ret)
-		ret = genpd_dev_pm_attach(dev);
-
-	return ret;
+	return genpd_dev_pm_attach(dev);
 }
 EXPORT_SYMBOL_GPL(dev_pm_domain_attach);
 
