@@ -552,8 +552,7 @@ show_one(util_threshold, util_thres);
 show_one(policy_min_freq, user_policy.min);
 show_one(policy_max_freq, user_policy.max);
 
-static ssize_t show_scaling_cur_freq(
-	struct cpufreq_policy *policy, char *buf)
+static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t ret;
 
