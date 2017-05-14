@@ -57,12 +57,6 @@ extern void pm_runtime_update_max_time_suspended(struct device *dev,
 						 s64 delta_ns);
 extern void pm_runtime_set_memalloc_noio(struct device *dev, bool enable);
 
-static inline bool pm_children_suspended(struct device *dev)
-{
-	return dev->power.ignore_children
-		|| !atomic_read(&dev->power.child_count);
-}
-
 static inline void pm_runtime_get_noresume(struct device *dev)
 {
 	atomic_inc(&dev->power.usage_count);
@@ -146,7 +140,6 @@ static inline void __pm_runtime_disable(struct device *dev, bool c) {}
 static inline void pm_runtime_allow(struct device *dev) {}
 static inline void pm_runtime_forbid(struct device *dev) {}
 
-static inline bool pm_children_suspended(struct device *dev) { return false; }
 static inline void pm_runtime_get_noresume(struct device *dev) {}
 static inline bool pm_runtime_get_noidle(struct device *dev) { return true; }
 static inline void pm_runtime_put_noidle(struct device *dev) {}
