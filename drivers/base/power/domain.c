@@ -2240,7 +2240,6 @@ static struct dentry *pm_genpd_debugfs_dir;
  * from sysfs.c, but dependencies between PM_GENERIC_DOMAINS and PM_RUNTIME
  * are too loose to generalize it.
  */
-#ifdef CONFIG_PM_RUNTIME
 static void rtpm_status_str(struct seq_file *s, struct device *dev)
 {
 	static const char * const status_lookup[] = {
@@ -2262,12 +2261,6 @@ static void rtpm_status_str(struct seq_file *s, struct device *dev)
 
 	seq_puts(s, p);
 }
-#else
-static void rtpm_status_str(struct seq_file *s, struct device *dev)
-{
-	seq_puts(s, "active");
-}
-#endif
 
 static int pm_genpd_summary_one(struct seq_file *s,
 		struct generic_pm_domain *gpd)
