@@ -284,7 +284,7 @@ int mdp4_dtv_pipe_commit(int cndx, int wait)
 		outpdw(MDP_BASE + 0x0008, 0);
 	} else {
 		/* schedule second phase update  at dmap */
-		reinit_completion(&vctrl->dmae_comp);
+		INIT_COMPLETION(vctrl->dmae_comp);
 		vsync_irq_enable(INTR_DMA_E_DONE, MDP_DMA_E_TERM);
 	}
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
@@ -359,7 +359,7 @@ void mdp4_dtv_wait4vsync(int cndx)
 
 	if (atomic_read(&vctrl->suspend) > 0)
 		return;
-
+	
 	mdp4_dtv_vsync_irq_ctrl(cndx, 1);
 
 	ret = wait_event_interruptible_timeout(vctrl->wait_queue, 1,
