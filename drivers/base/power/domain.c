@@ -1518,6 +1518,13 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 
 	mutex_lock(&genpd->lock);
 
+	if (!list_empty(&subdomain->slave_links) || subdomain->device_count) {
+		pr_warn("%s: unable to remove subdomain %s\n", genpd->name,
+			subdomain->name);
+		ret = -EBUSY;
+		goto out;
+	}
+
 	list_for_each_entry(link, &genpd->master_links, master_node) {
 		if (link->slave != subdomain)
 			continue;
@@ -1536,6 +1543,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 		break;
 	}
 
+out:
 	mutex_unlock(&genpd->lock);
 
 	return ret;
