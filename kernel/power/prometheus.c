@@ -25,13 +25,13 @@
  *
  */
 #include <linux/prometheus.h>
-#include <linux/mfd/max77693.h>
+#include <linux/battery/sec_battery.h>
 #include "power.h"
 
 #define VERSION 1
-#define VERSION_MIN 4
+#define VERSION_MIN 5
 
-static DEFINE_MUTEX(power_suspend_lock);
+static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
 static LIST_HEAD(power_suspend_handlers);
 static struct workqueue_struct *pwrsup_wq;
@@ -41,33 +41,37 @@ static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static int ps_state;
-/* Robcore: Provide an option to sync the system on powersuspend */
+/* Robcore: Provide an option to sync the system on panel suspend */
 static unsigned int sync_on_panel_suspend;
+/* For Samsung devices that use it, disable completely when poweroff charging */
 extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
 static unsigned int ignore_wakelocks;
+/* For optional charging check due to charger
+ * disliking the wakelock skip. TODO Use the power_supply framework.
+ */
 extern unsigned int machinex_charging_check;
 
 void register_power_suspend(struct power_suspend *handler)
 {
 	struct list_head *pos;
 
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&prometheus_mtx);
 	list_for_each(pos, &power_suspend_handlers) {
 		struct power_suspend *p;
 		p = list_entry(pos, struct power_suspend, link);
 	}
 	list_add_tail(&handler->link, pos);
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&prometheus_mtx);
 }
 EXPORT_SYMBOL(register_power_suspend);
 
 void unregister_power_suspend(struct power_suspend *handler)
 {
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&prometheus_mtx);
 	list_del(&handler->link);
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&prometheus_mtx);
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
@@ -88,14 +92,14 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	pr_info("[PROMETHEUS] Entering Suspend...\n");
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_INACTIVE)
 		abort = 1;
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	if (abort) {
-		mutex_unlock(&power_suspend_lock);
+		mutex_unlock(&prometheus_mtx);
 		return;
 	}
 
@@ -106,7 +110,7 @@ static void power_suspend(struct work_struct *work)
 		}
 	}
 
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&prometheus_mtx);
 
 	if (sync_on_panel_suspend) {
 		pr_info("[PROMETHEUS] Syncing\n");
@@ -143,7 +147,7 @@ static void power_resume(struct work_struct *work)
 
 	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume...\n");
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_ACTIVE)
 		abort = 1;
@@ -161,7 +165,7 @@ static void power_resume(struct work_struct *work)
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 
 abort:
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&prometheus_mtx);
 
 }
 

@@ -30,6 +30,8 @@
 #define ADC_CH_COUNT		10
 #define ADC_SAMPLE_COUNT	10
 
+extern unsigned int machinex_charging_check;
+
 struct adc_sample_info {
 	unsigned int cnt;
 	int total_adc;

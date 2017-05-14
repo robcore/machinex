@@ -3039,6 +3039,8 @@ static int sec_ps_get_property(struct power_supply *psy,
 	return 0;
 }
 
+unsigned int machinex_charging_check;
+
 static irqreturn_t sec_bat_irq_thread(int irq, void *irq_data)
 {
 	struct sec_battery_info *battery = irq_data;
@@ -3047,14 +3049,16 @@ static irqreturn_t sec_bat_irq_thread(int irq, void *irq_data)
 		SEC_BATTERY_CABLE_CHECK_INT) {
 		if (battery->pdata->is_interrupt_cable_check_possible &&
 			!battery->pdata->is_interrupt_cable_check_possible(
-			battery->extended_cable_type))
+			battery->extended_cable_type)) {
+				machinex_charging_check = 0;
 				goto no_cable_check;
-		else {
+		} else {
 			if (sec_bat_get_cable_type(battery,
 				battery->pdata->cable_source_type)) {
 				wake_lock(&battery->cable_wake_lock);
 				queue_work(battery->monitor_wqueue,
 					&battery->cable_work);
+				machinex_charging_check = 1;
 			}
 		}
 	}

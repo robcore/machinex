@@ -32,7 +32,6 @@
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
 #define DISCHARGE_CURRENT 460
 
-unsigned int machinex_charging_check;
 static int aicl_bypass = 0;
 module_param(aicl_bypass, int, 0644);
 
@@ -1430,7 +1429,6 @@ static int max77693_charger_probe(struct platform_device *pdev)
 	charger->pdata = pdata->charger_data;
 	charger->aicl_on = false;
 	charger->siop_level = 100;
-	machinex_charging_check = charger->is_charging;
 
 	platform_set_drvdata(pdev, charger);
 
