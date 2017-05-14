@@ -168,6 +168,7 @@ static int __init midas_sec_switch_init(void)
 };
 
 bool mx_is_charging;
+module_param_named(chrgr_cbl_attached, mx_is_charging, bool, 0444);
 bool mx_is_cable_attached(void)
 {
 	return mx_is_charging;
