@@ -15,6 +15,7 @@
 #include <linux/clkdev.h>
 #include <linux/slab.h>
 #include <linux/err.h>
+#include <linux/export.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 
