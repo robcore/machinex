@@ -17,7 +17,7 @@
 #include <linux/err.h>
 #include <linux/pm_runtime.h>
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_CLK
 
 enum pce_status {
 	PCE_STATUS_NONE = 0,
@@ -410,7 +410,7 @@ int pm_clk_runtime_resume(struct device *dev)
 	return pm_generic_runtime_resume(dev);
 }
 
-#else /* !CONFIG_PM */
+#else /* !CONFIG_PM_CLK */
 
 #ifdef CONFIG_PM
 
@@ -546,7 +546,7 @@ static int pm_clk_notify(struct notifier_block *nb,
 	return 0;
 }
 
-#endif /* !CONFIG_PM */
+#endif /* !CONFIG_PM_CLK */
 
 /**
  * pm_clk_add_notifier - Add bus type notifier for power management clocks.
