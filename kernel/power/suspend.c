@@ -53,9 +53,6 @@ static suspend_state_t mem_sleep_default = PM_SUSPEND_MEM;
 unsigned int pm_suspend_global_flags;
 EXPORT_SYMBOL_GPL(pm_suspend_global_flags);
 
-unsigned int pm_suspend_global_flags;
-EXPORT_SYMBOL_GPL(pm_suspend_global_flags);
-
 static const struct platform_suspend_ops *suspend_ops;
 static const struct platform_freeze_ops *freeze_ops;
 static DECLARE_WAIT_QUEUE_HEAD(suspend_freeze_wait_head);
