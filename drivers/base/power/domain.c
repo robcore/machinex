@@ -2290,7 +2290,7 @@ static struct dentry *pm_genpd_debugfs_dir;
 
 /*
  * TODO: This function is a slightly modified version of rtpm_status_show
- * from sysfs.c, but dependencies between PM_GENERIC_DOMAINS and PM_RUNTIME
+ * from sysfs.c, but dependencies between PM_GENERIC_DOMAINS and PM
  * are too loose to generalize it.
  */
 static void rtpm_status_str(struct seq_file *s, struct device *dev)
