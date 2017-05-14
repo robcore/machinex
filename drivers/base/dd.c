@@ -399,6 +399,7 @@ probe_failed:
 	dev_set_drvdata(dev, NULL);
 	if (dev->pm_domain && dev->pm_domain->dismiss)
 		dev->pm_domain->dismiss(dev);
+	pm_runtime_reinit(dev);
 
 	if (ret == -EPROBE_DEFER) {
 		/* Driver requested deferred probing */
@@ -755,6 +756,7 @@ static void __device_release_driver(struct device *dev)
 		dev_set_drvdata(dev, NULL);
 		if (dev->pm_domain && dev->pm_domain->dismiss)
 			dev->pm_domain->dismiss(dev);
+		pm_runtime_reinit(dev);
 
 		klist_remove(&dev->p->knode_driver);
 		if (dev->bus)
