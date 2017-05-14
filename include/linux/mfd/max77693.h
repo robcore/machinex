@@ -151,7 +151,7 @@ struct max77693_muic_data {
 
 };
 
-unsigned int machinex_charging_check;
+extern unsigned int machinex_charging_check;
 
 #ifdef CONFIG_MFD_MAX77693
 extern struct max77693_muic_data max77693_muic;
