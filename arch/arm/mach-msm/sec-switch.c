@@ -167,6 +167,12 @@ static int __init midas_sec_switch_init(void)
 	return 0;
 };
 
+bool mx_is_charging;
+bool mx_is_cable_attached(void)
+{
+	return mx_is_charging;
+}
+
 int current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
 int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 {
@@ -186,7 +192,7 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 #endif
 
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
-#ifndef CONFIG_SEC_PRODUCT_8960 
+#ifndef CONFIG_SEC_PRODUCT_8960
 	touchkey_charger_infom(cable_type);
 #endif
 #endif
@@ -238,6 +244,7 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 	switch (cable_type) {
 	case CABLE_TYPE_NONE_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
+		mx_is_charging = false;
 		break;
 	case CABLE_TYPE_MHL_VB_MUIC:
 		if(poweroff_charging)
@@ -256,15 +263,18 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 	case CABLE_TYPE_JIG_USB_ON_MUIC:
 	case CABLE_TYPE_SMARTDOCK_USB_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_USB;
+		mx_is_charging = true;
 		break;
 	case CABLE_TYPE_JIG_UART_OFF_VB_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_UARTOFF;
 		break;
 	case CABLE_TYPE_TA_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_MAINS;
+		mx_is_charging = true;
 		break;
 	case CABLE_TYPE_CDP_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_USB_CDP;
+		mx_is_charging = true;
 		break;
 	case CABLE_TYPE_AUDIODOCK_MUIC:
 	case CABLE_TYPE_CARDOCK_MUIC:
@@ -272,17 +282,21 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 	case CABLE_TYPE_SMARTDOCK_MUIC:
 	case CABLE_TYPE_SMARTDOCK_TA_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_MISC;
+		mx_is_charging = true;
 		break;
 	case CABLE_TYPE_OTG_MUIC:
 		goto skip;
 	case CABLE_TYPE_JIG_UART_OFF_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
+		mx_is_charging = false;
 		break;
 	case CABLE_TYPE_INCOMPATIBLE_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_UNKNOWN;
+		mx_is_charging = false;
 		break;
 	case CABLE_TYPE_CHARGING_CABLE_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_POWER_SHARING;
+		mx_is_charging = true;
 		break;
 	default:
 		pr_err("%s: invalid type for charger:%d\n",

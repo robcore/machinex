@@ -25,7 +25,7 @@
  *
  */
 #include <linux/prometheus.h>
-#include <linux/battery/sec_battery.h>
+#include <linux/power_supply.h>
 #include "power.h"
 
 #define VERSION 1
@@ -52,7 +52,7 @@ static unsigned int ignore_wakelocks = 1;
 /* For optional charging check due to charger
  * disliking the wakelock skip. TODO Use the power_supply framework.
  */
-extern bool is_cable_attached;
+extern bool mx_is_cable_attached(void);
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -120,7 +120,7 @@ static void power_suspend(struct work_struct *work)
 
 	if (use_global_suspend) {
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
-		if ((ignore_wakelocks) && (!is_cable_attached)) {
+		if ((ignore_wakelocks) && (!mx_is_cable_attached())) {
 			pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 			goto skip_check;
 		} else if (!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) {

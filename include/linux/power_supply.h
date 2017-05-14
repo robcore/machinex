@@ -328,7 +328,8 @@ extern int power_supply_powers(struct power_supply *psy, struct device *dev);
 
 /* For APM emulation, think legacy userspace. */
 extern struct class *power_supply_class;
-extern bool is_cable_attached;
+
+extern bool mx_is_cable_attached(void);
 
 static inline bool power_supply_is_amp_property(enum power_supply_property psp)
 {
