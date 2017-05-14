@@ -894,31 +894,6 @@ char* get_b6_reg_magna(void)
 	return msd.mpd->smart_se6e8fa.hbm_reg.b6_reg_magna;
 }
 
-static unsigned int hbm_mode;
-
-static ssize_t hbm_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", hbm_mode);
-}
-
-static ssize_t hbm_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	struct msm_fb_data_type *mfd;
-	mfd = platform_get_drvdata(msd.msm_pdev);
-
-	if (sysfs_streq(buf, "0")) {
-		hbm_mode = 0;
-		msd.dstat.auto_brightness = 0;
-	} else if (sysfs_streq(buf, "1")) {
-		hbm_mode = 1;
-		msd.dstat.auto_brightness = 6;
-	}
-
-	return size;
-}
-
 static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -931,11 +906,6 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
-	msd.mpd->first_bl_hbm_psre = 0;
-
-	if (hbm_mode)
-		msd.dstat.auto_brightness = 6;
-		return size;
 
 	if (sysfs_streq(buf, "0"))
 		msd.dstat.auto_brightness = 0;
@@ -950,12 +920,27 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "5"))
 		msd.dstat.auto_brightness = 5;
 	else if (sysfs_streq(buf, "6")) // HBM mode (HBM + PSRE) will be changed to // leve 6 : no HBM , RE
-		pr_info("Suck it Samsung\n");
+		msd.dstat.auto_brightness = 6;
 	else if (sysfs_streq(buf, "7")) // HBM mode (HBM + PSRE)
 		msd.dstat.auto_brightness = 7;
+	else if (!first_auto_br) {
+		first_auto_br++;
+		return size;
+	}
+
+	if (mfd->resume_state == MIPI_RESUME_STATE) {
+		if (get_auto_brightness() >= 6)
+			msd.mpd->first_bl_hbm_psre = 0;
+		else
+			msd.mpd->first_bl_hbm_psre = 0;
+		mipi_samsung_disp_backlight(mfd);
+	} else {
+		msd.mpd->first_bl_hbm_psre = 0;
+	}
 
 	return size;
 }
+
 
 static struct lcd_ops mipi_samsung_disp_props = {
 	.get_power = NULL,
@@ -1252,9 +1237,7 @@ static DEVICE_ATTR(lcd_power, S_IRUGO | S_IWUSR,
 static DEVICE_ATTR(lcd_type, S_IRUGO, mipi_samsung_disp_lcdtype_show, NULL);
 static DEVICE_ATTR(window_type, S_IRUGO,
 			mipi_samsung_disp_windowtype_show, NULL);
-static DEVICE_ATTR(hbm, 0644,
-		hbm_show,
-		hbm_store);
+
 static DEVICE_ATTR(auto_brightness, 0644,
 		mipi_samsung_auto_brightness_show,
 		mipi_samsung_auto_brightness_store);
@@ -1641,12 +1624,6 @@ static int mipi_samsung_disp_probe(struct platform_device *pdev)
 		ret = PTR_ERR(bd);
 		pr_info("backlight : failed to register device\n");
 		return ret;
-	}
-	ret = sysfs_create_file(&bd->dev.kobj,
-			&dev_attr_hbm.attr);
-	if (ret) {
-		pr_info("sysfs create fail-%s\n",
-				dev_attr_hbm.attr.name);
 	}
 
 	ret = sysfs_create_file(&bd->dev.kobj,
