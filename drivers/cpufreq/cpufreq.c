@@ -27,7 +27,6 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
-#include <linux/syscore_ops.h>
 #include <linux/tick.h>
 #include <linux/device.h>
 #include <linux/slab.h>
@@ -2515,14 +2514,6 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 }
 EXPORT_SYMBOL_GPL(cpufreq_unregister_driver);
 
-/*
- * Stop cpufreq at shutdown to make sure it isn't holding any locks
- * or mutexes when secondary CPUs are halted.
- */
-static struct syscore_ops cpufreq_syscore_ops = {
-	.shutdown = cpufreq_suspend,
-};
-
 static int __init cpufreq_core_init(void)
 {
 	int cpu;
@@ -2550,8 +2541,6 @@ static int __init cpufreq_core_init(void)
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
 #endif	/* CONFIG_CPU_VOLTAGE_TABLE */
-
-	register_syscore_ops(&cpufreq_syscore_ops);
 
 	return 0;
 }
