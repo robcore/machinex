@@ -69,65 +69,15 @@ function NORMAL()
 {
 echo "Building NORMAL kernel"
 echo "your previous version was $PREV"
-echo -n "Use Previous Name?  y/n [ENTER]: "
-read USEPRV
-if [[ $USEPRV = "n" ]]; then
-	echo -n "Override Naming Process?  y/n [ENTER]: "
-	read overide
-	if [[ $overide = "n" ]]; then
-		echo -n "Enter Kernel major version and press [ENTER]: "
-		read MAJOR
-		KERNEL_NAME=machinex
-		KERNEL_VERSION=Mark$MAJOR
-		echo -n "Is this a BETA?  y/n [ENTER]: "
-		read rep
-		if [[ $rep = "y" ]]; then
-			echo -n "Is this Next or Proto Version? n/p [ENTER]: "
-			read reply
-			if [[ $reply = "n" ]]; then
-				echo -n "Enter Next Version and press [ENTER]: "
-				read NEXT
-				SUBVERSION=Next$NEXT
-			else
-				echo -n "Enter Proto Version and press [ENTER]: "
-				read PROTO
-				SUBVERSION=P$PROTO
-			fi
-			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
-			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
-				echo "removing previously compiled folder and zip of the same name"
-				sleep 1
-				rm -rf /media/root/robcore/AIK/$OUTFOLDER
-			fi;
-			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
-		else
-			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
-			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
-				echo "removing previously compiled folder and zip of the same name"
-				sleep 1
-				rm -rf /media/root/robcore/AIK/$OUTFOLDER
-			fi;
-			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
-		fi
-	else
-		echo -n "Name? (Number-P-N) [ENTER]: "
-		read OVNAME
-		OUTFOLDER=machinex-Mark$OVNAME
-		if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
-			echo "removing previously compiled folder and zip of the same name"
-			sleep 1
-			rm -rf /media/root/robcore/AIK/$OUTFOLDER
-		fi;
-		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
-	fi;
-else
-	PRVS=$PREV
-	if [ -d /media/root/robcore/AIK/$PRVS ]; then
-		echo "removing previously compiled folder and zip of the same name"
-		rm -rf /media/root/robcore/AIK/$PRVS
-	fi;
-	OUTFOLDER=$PRVS
+echo -n "Name? (Number-P-N) [ENTER]: "
+read OVNAME
+OUTFOLDER=machinex-Mark$OVNAME
+if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
+	echo "removing previously compiled folder and zip of the same name"
+	sleep 1
+	rm -rf /media/root/robcore/AIK/$OUTFOLDER
 fi;
+	echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
 
 function ADBRETRY()
 {
