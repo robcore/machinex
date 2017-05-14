@@ -339,8 +339,8 @@ void pm_complete_with_resume_check(struct device *dev)
 	 * the sleep state it is going out of and it has never been resumed till
 	 * now, resume it in case the firmware powered it up.
 	 */
-	if (dev->power.direct_complete && pm_resume_via_firmware())
-		pm_request_resume(dev);
+	/*if (dev->power.direct_complete && pm_resume_via_firmware())
+		pm_request_resume(dev); */
 }
 EXPORT_SYMBOL_GPL(pm_complete_with_resume_check);
 #endif /* CONFIG_PM_SLEEP */
