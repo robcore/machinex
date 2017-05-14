@@ -179,6 +179,14 @@ static inline int dev_pm_opp_set_rate(struct device *dev, unsigned long target_f
 	return -EINVAL;
 }
 
+static inline void dev_pm_opp_remove_table(struct device *dev)
+{
+}
+
+static inline void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask)
+{
+}
+
 #endif		/* CONFIG_PM_OPP */
 
 #if defined(CONFIG_PM_OPP) && defined(CONFIG_OF)
