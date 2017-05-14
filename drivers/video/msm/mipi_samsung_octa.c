@@ -894,6 +894,40 @@ char* get_b6_reg_magna(void)
 	return msd.mpd->smart_se6e8fa.hbm_reg.b6_reg_magna;
 }
 
+static bool hbm_enabled;
+static int mx_dummy;
+
+static ssize_t hbm_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct msm_fb_data_type *mfd;
+	mfd = platform_get_drvdata(msd.msm_pdev);
+
+	if (sysfs_streq(buf, "0")) {
+		hbm_enabled = false;
+		msd.dstat.auto_brightness = 0;
+	} else if (sysfs_streq(buf, "1")) {
+		hbm_enabled = true;
+		msd.dstat.auto_brightness = 6;
+	}
+
+	return size;
+}
+
+static ssize_t hbm_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct msm_fb_data_type *mfd;
+	mfd = platform_get_drvdata(msd.msm_pdev);
+
+	if (hbm_enabled)
+		mx_dummy = 1;
+	else
+		mx_dummy = 0;
+
+	return sprintf(buf, "%d\n", mx_dummy);
+}
+
 static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -906,6 +940,10 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
+	msd.mpd->first_bl_hbm_psre = 0;
+
+	if (hbm_enabled)
+		return size;
 
 	if (sysfs_streq(buf, "0"))
 		msd.dstat.auto_brightness = 0;
@@ -920,27 +958,12 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	else if (sysfs_streq(buf, "5"))
 		msd.dstat.auto_brightness = 5;
 	else if (sysfs_streq(buf, "6")) // HBM mode (HBM + PSRE) will be changed to // leve 6 : no HBM , RE
-		msd.dstat.auto_brightness = 6;
+		msd.dstat.auto_brightness = 7;
 	else if (sysfs_streq(buf, "7")) // HBM mode (HBM + PSRE)
 		msd.dstat.auto_brightness = 7;
-	else if (!first_auto_br) {
-		first_auto_br++;
-		return size;
-	}
-
-	if (mfd->resume_state == MIPI_RESUME_STATE) {
-		if (get_auto_brightness() >= 6)
-			msd.mpd->first_bl_hbm_psre = 0;
-		else
-			msd.mpd->first_bl_hbm_psre = 0;
-		mipi_samsung_disp_backlight(mfd);
-	} else {
-		msd.mpd->first_bl_hbm_psre = 0;
-	}
 
 	return size;
 }
-
 
 static struct lcd_ops mipi_samsung_disp_props = {
 	.get_power = NULL,
@@ -1237,7 +1260,9 @@ static DEVICE_ATTR(lcd_power, S_IRUGO | S_IWUSR,
 static DEVICE_ATTR(lcd_type, S_IRUGO, mipi_samsung_disp_lcdtype_show, NULL);
 static DEVICE_ATTR(window_type, S_IRUGO,
 			mipi_samsung_disp_windowtype_show, NULL);
-
+static DEVICE_ATTR(hbm, 0644,
+		hbm_show,
+		hbm_store);
 static DEVICE_ATTR(auto_brightness, 0644,
 		mipi_samsung_auto_brightness_show,
 		mipi_samsung_auto_brightness_store);
