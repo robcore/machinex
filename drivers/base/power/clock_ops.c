@@ -195,6 +195,7 @@ error:
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(of_pm_clk_add_clks);
 #endif
 
 /**
@@ -219,7 +220,6 @@ static void __pm_clk_remove(struct pm_clock_entry *ce)
 	kfree(ce->con_id);
 	kfree(ce);
 }
-EXPORT_SYMBOL_GPL(of_pm_clk_add_clks);
 
 /**
  * pm_clk_remove - Stop using a device clock for power management.
