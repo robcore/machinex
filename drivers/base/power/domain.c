@@ -1321,6 +1321,7 @@ int pm_genpd_remove_device(struct generic_pm_domain *genpd,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(pm_genpd_add_subdomain);
 
 /**
  * pm_genpd_add_subdomain - Add a subdomain to an I/O PM domain.
@@ -1445,6 +1446,7 @@ static int pm_genpd_default_save_state(struct device *dev)
 
 	return cb ? cb(dev) : 0;
 }
+EXPORT_SYMBOL_GPL(pm_genpd_remove_subdomain);
 
 /**
  * pm_genpd_default_restore_state - Default PM domains "restore device state".
