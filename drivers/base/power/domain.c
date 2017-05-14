@@ -1438,7 +1438,6 @@ int __pm_genpd_add_device(struct generic_pm_domain *genpd, struct device *dev,
 			  struct gpd_timing_data *td)
 {
 	struct generic_pm_domain_data *gpd_data_new, *gpd_data = NULL;
-	struct pm_domain_data *pdd;
 	int ret = 0;
 
 	dev_dbg(dev, "%s()\n", __func__);
@@ -1456,12 +1455,6 @@ int __pm_genpd_add_device(struct generic_pm_domain *genpd, struct device *dev,
 		ret = -EAGAIN;
 		goto out;
 	}
-
-	list_for_each_entry(pdd, &genpd->dev_list, list_node)
-		if (pdd->dev == dev) {
-			ret = -EINVAL;
-			goto out;
-		}
 
 	ret = dev_pm_get_subsys_data(dev);
 	if (ret)
