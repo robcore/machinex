@@ -1220,6 +1220,7 @@ static void request_firmware_work_func(struct work_struct *work)
 	put_device(fw_work->device); /* taken in request_firmware_nowait() */
 
 	module_put(fw_work->module);
+	kfree_const(fw_work->name);
 	kfree(fw_work);
 }
 
@@ -1259,7 +1260,9 @@ request_firmware_nowait(
 		return -ENOMEM;
 
 	fw_work->module = module;
-	fw_work->name = name;
+	fw_work->name = kstrdup_const(name, gfp);
+	if (!fw_work->name)
+		return -ENOMEM;
 	fw_work->device = device;
 	fw_work->context = context;
 	fw_work->cont = cont;
@@ -1267,6 +1270,7 @@ request_firmware_nowait(
 		(uevent ? FW_OPT_UEVENT : 0);
 
 	if (!try_module_get(module)) {
+		kfree_const(fw_work->name);
 		kfree(fw_work);
 		return -EFAULT;
 	}
