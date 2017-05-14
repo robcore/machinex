@@ -113,7 +113,6 @@ static inline struct generic_pm_domain_data *dev_gpd_data(struct device *dev)
 	return to_gpd_data(dev->power.subsys_data->domain_data);
 }
 
-extern struct generic_pm_domain *pm_genpd_lookup_dev(struct device *dev);
 extern int __pm_genpd_add_device(struct generic_pm_domain *genpd,
 				 struct device *dev,
 				 struct gpd_timing_data *td);
@@ -134,10 +133,6 @@ extern struct dev_power_governor pm_domain_always_on_gov;
 static inline struct generic_pm_domain_data *dev_gpd_data(struct device *dev)
 {
 	return ERR_PTR(-ENOSYS);
-}
-static inline struct generic_pm_domain *pm_genpd_lookup_dev(struct device *dev)
-{
-	return NULL;
 }
 static inline int __pm_genpd_add_device(struct generic_pm_domain *genpd,
 					struct device *dev,
@@ -197,9 +192,6 @@ typedef struct generic_pm_domain *(*genpd_xlate_t)(struct of_phandle_args *args,
 int __of_genpd_add_provider(struct device_node *np, genpd_xlate_t xlate,
 			void *data);
 void of_genpd_del_provider(struct device_node *np);
-struct generic_pm_domain *of_genpd_get_from_provider(
-			struct of_phandle_args *genpdspec);
-
 struct generic_pm_domain *__of_genpd_xlate_simple(
 					struct of_phandle_args *genpdspec,
 					void *data);
@@ -219,12 +211,6 @@ static inline int __of_genpd_add_provider(struct device_node *np,
 	return 0;
 }
 static inline void of_genpd_del_provider(struct device_node *np) {}
-
-static inline struct generic_pm_domain *of_genpd_get_from_provider(
-			struct of_phandle_args *genpdspec)
-{
-	return NULL;
-}
 
 #define __of_genpd_xlate_simple		NULL
 #define __of_genpd_xlate_onecell	NULL
