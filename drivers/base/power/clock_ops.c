@@ -137,7 +137,7 @@ int pm_clk_add_clk(struct device *dev, struct clk *clk)
 	return __pm_clk_add(dev, NULL, clk);
 }
 
-
+#ifdef CONFIG_OF
 /**
  * of_pm_clk_add_clks - Start using device clock(s) for power management.
  * @dev: Device whose clock(s) is going to be used for power management.
@@ -192,6 +192,7 @@ error:
 
 	return ret;
 }
+#endif
 
 /**
  * __pm_clk_remove - Destroy PM clock entry.
