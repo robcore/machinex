@@ -29,7 +29,7 @@
 #include "power.h"
 
 #define VERSION 1
-#define VERSION_MIN 6
+#define VERSION_MIN 7
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -120,9 +120,14 @@ static void power_suspend(struct work_struct *work)
 
 	if (use_global_suspend) {
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
-		if ((ignore_wakelocks) && (!mx_is_cable_attached())) {
-			pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
-			goto skip_check;
+		if (ignore_wakelocks) {
+			if (!mx_is_cable_attached()) {
+				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
+				goto skip_check;
+			} else {
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
+				return;
+			}
 		} else if (!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
