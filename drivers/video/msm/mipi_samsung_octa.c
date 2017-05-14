@@ -934,6 +934,7 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 	msd.mpd->first_bl_hbm_psre = 0;
 
 	if (hbm_mode)
+		msd.dstat.auto_brightness = 6;
 		return size;
 
 	if (sysfs_streq(buf, "0"))
