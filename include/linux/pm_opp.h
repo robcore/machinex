@@ -32,6 +32,7 @@ unsigned long dev_pm_opp_get_voltage(struct dev_pm_opp *opp);
 unsigned long dev_pm_opp_get_freq(struct dev_pm_opp *opp);
 
 int dev_pm_opp_get_opp_count(struct device *dev);
+unsigned long dev_pm_opp_get_max_clock_latency(struct device *dev);
 
 struct dev_pm_opp *dev_pm_opp_find_freq_exact(struct device *dev,
 					      unsigned long freq,
@@ -64,6 +65,11 @@ static inline unsigned long dev_pm_opp_get_freq(struct dev_pm_opp *opp)
 }
 
 static inline int dev_pm_opp_get_opp_count(struct device *dev)
+{
+	return 0;
+}
+
+static inline unsigned long dev_pm_opp_get_max_clock_latency(struct device *dev)
 {
 	return 0;
 }
