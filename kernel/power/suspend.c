@@ -74,8 +74,6 @@ static void freeze_begin(void)
 
 static void freeze_enter(void)
 {
-	trace_suspend_resume(TPS("machine_suspend"), PM_SUSPEND_FREEZE, true);
-
 	spin_lock_irq(&suspend_freeze_lock);
 	if (pm_wakeup_pending())
 		goto out;
@@ -102,8 +100,6 @@ static void freeze_enter(void)
  out:
 	suspend_freeze_state = FREEZE_STATE_NONE;
 	spin_unlock_irq(&suspend_freeze_lock);
-
-	trace_suspend_resume(TPS("machine_suspend"), PM_SUSPEND_FREEZE, false);
 }
 
 static void s2idle_loop(void)
