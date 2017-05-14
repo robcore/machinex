@@ -1430,7 +1430,6 @@ void pm_runtime_remove(struct device *dev)
 	if (dev->power.irq_safe && dev->parent)
 		pm_runtime_put(dev->parent);
 }
-#endif
 
 /**
  * pm_runtime_force_suspend - Force a device into suspend state if needed.
