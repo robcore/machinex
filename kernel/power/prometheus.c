@@ -123,7 +123,6 @@ static void power_suspend(struct work_struct *work)
 				return;
 		}
 
-
 		if (!mutex_trylock(&pm_mutex)) {
 			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
 			return;
