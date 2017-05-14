@@ -145,17 +145,6 @@ struct delayed_work stop_touchboost_work;
 /* ------------------------------------------------------------------------------ */
 /* Externally reachable function                                                  */
 /* ------------------------------------------------------------------------------ */
-static void update_policy_online(void)
-{
-	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
-
-	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
-	get_online_cpus();
-	for_each_online_cpu(policy->cpu)
-		cpufreq_update_policy(policy->cpu);
-	put_online_cpus();
-}
 
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
@@ -235,7 +224,6 @@ void reapply_hard_limits(void)
 		current_limit_max = thermal_hardlimit;
 #endif
 	update_scaling_limits(current_limit_min, current_limit_max);
-	update_policy_online();
 }
 
 #ifdef CONFIG_SEC_DVFS
@@ -517,14 +505,14 @@ static int cpufreq_hardlimit_policy_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
 	switch (val) {
-		case CPUFREQ_ADJUST:
+		case CPUFREQ_NOTIFY:
 			reapply_hard_limits();
 			break;
 		default:
 			break;
 	}
 
-		return NOTIFY_OK;
+		return 0;
 }
 
 static int cpufreq_hardlimit_govinfo_notifier(
