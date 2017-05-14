@@ -2133,7 +2133,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 				struct cpufreq_policy *new_policy)
 {
 	int ret = 0;
-	struct cpufreq_policy *cpu0_policy = NULL;
+	struct cpufreq_policy *cpu0_policy = cpufreq_cpu_get(0);
 
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n", new_policy->cpu,
 		new_policy->min, new_policy->max);
@@ -2174,7 +2174,8 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 			CPUFREQ_NOTIFY, new_policy);
 
 	if (new_policy->cpu) {
-		cpu0_policy = cpufreq_cpu_get(0);
+		cpu0_policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
+		cpu0_policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
 		policy->min = cpu0_policy->min;
 		policy->max = cpu0_policy->max;
 		policy->util_thres = cpu0_policy->util_thres;
@@ -2223,9 +2224,10 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 	}
 
 error_out:
-	if (cpu0_policy) {
+	if (cpu0_policy)
 		__cpufreq_cpu_put(cpu0_policy, false);
-	}
+	else if (policy)
+		__cpufreq_cpu_put(policy, false);
 	return ret;
 }
 
