@@ -501,6 +501,8 @@ static int acpi_suspend_enter(suspend_state_t pm_state)
 		pr_info(PREFIX "Low-level resume complete\n");
 		break;
 	}
+	if (acpi_state > ACPI_STATE_S1)
+		pm_set_suspend_via_firmware();
 
 	/* This violates the spec but is required for bug compatibility. */
 	acpi_write_bit_register(ACPI_BITREG_SCI_ENABLE, 1);
