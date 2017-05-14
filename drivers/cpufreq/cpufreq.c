@@ -1123,6 +1123,8 @@ static int cpufreq_add_dev_policy(unsigned int cpu,
 			per_cpu(cpufreq_cpu_data, cpu) = managed_policy;
 			write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
+			unlock_policy_rwsem_write(cpu);
+
 			__cpufreq_governor(managed_policy, CPUFREQ_GOV_START);
 			__cpufreq_governor(managed_policy, CPUFREQ_GOV_LIMITS);
 
