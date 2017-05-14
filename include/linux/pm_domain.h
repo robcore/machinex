@@ -38,7 +38,7 @@ struct gpd_dev_ops {
 	bool (*active_wakeup)(struct device *dev);
 };
 
-struct gpd_cpu_data {
+struct gpd_cpuidle_data {
 	unsigned int saved_exit_latency;
 	struct cpuidle_state *idle_state;
 };
@@ -71,8 +71,7 @@ struct generic_pm_domain {
 	s64 max_off_time_ns;	/* Maximum allowed "suspended" time. */
 	bool max_off_time_changed;
 	bool cached_power_down_ok;
-	struct device_node *of_node; /* Node in device tree */
-	struct gpd_cpu_data *cpu_data;
+	struct gpd_cpuidle_data *cpuidle_data;
 	void (*attach_dev)(struct device *dev);
 	void (*detach_dev)(struct device *dev);
 };
@@ -123,10 +122,6 @@ extern struct generic_pm_domain *dev_to_genpd(struct device *dev);
 extern int __pm_genpd_add_device(struct generic_pm_domain *genpd,
 				 struct device *dev,
 				 struct gpd_timing_data *td);
-
-extern int __pm_genpd_of_add_device(struct device_node *genpd_node,
-				    struct device *dev,
-				    struct gpd_timing_data *td);
 
 extern int __pm_genpd_name_add_device(const char *domain_name,
 				      struct device *dev,
