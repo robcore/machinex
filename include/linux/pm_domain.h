@@ -120,9 +120,7 @@ extern int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 				     struct generic_pm_domain *target);
 extern void pm_genpd_init(struct generic_pm_domain *genpd,
 			  struct dev_power_governor *gov, bool is_off);
-
 extern int pm_genpd_poweron(struct generic_pm_domain *genpd);
-extern void pm_genpd_poweroff_unused(void);
 
 extern struct dev_power_governor simple_qos_governor;
 extern struct dev_power_governor pm_domain_always_on_gov;
@@ -170,7 +168,6 @@ static inline int pm_genpd_poweron(struct generic_pm_domain *genpd)
 {
 	return -ENOSYS;
 }
-static inline void pm_genpd_poweroff_unused(void) {}
 #define simple_qos_governor NULL
 #define pm_domain_always_on_gov NULL
 #endif
