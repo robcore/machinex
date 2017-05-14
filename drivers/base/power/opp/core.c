@@ -370,9 +370,6 @@ unsigned long dev_pm_opp_get_max_volt_latency(struct device *dev)
 	reg = opp_table->regulator;
 	if (IS_ERR(reg)) {
 		/* Regulator may not be required for device */
-		if (reg)
-			dev_err(dev, "%s: Invalid regulator (%ld)\n", __func__,
-				PTR_ERR(reg));
 		rcu_read_unlock();
 		return 0;
 	}
@@ -895,20 +892,7 @@ static struct device_opp *_add_device_opp(struct device *dev)
 		return NULL;
 	}
 
-	/*
-	 * Only required for backward compatibility with v1 bindings, but isn't
-	 * harmful for other cases. And so we do it unconditionally.
-	 */
-	np = of_node_get(dev->of_node);
-	if (np) {
-		u32 val;
-
-		if (!of_property_read_u32(np, "clock-latency", &val))
-			opp_table->clock_latency_ns_max = val;
-		of_property_read_u32(np, "voltage-tolerance",
-				     &opp_table->voltage_tolerance_v1);
-		of_node_put(np);
-	}
+	_of_init_opp_table(opp_table, dev);
 
 	/* Set regulator to a non-NULL error value */
 	opp_table->regulator = ERR_PTR(-ENXIO);
@@ -1004,8 +988,8 @@ static void _kfree_opp_rcu(struct rcu_head *head)
  * It is assumed that the caller holds required mutex for an RCU updater
  * strategy.
  */
-static void _opp_remove(struct opp_table *opp_table,
-			struct dev_pm_opp *opp, bool notify)
+void _opp_remove(struct opp_table *opp_table, struct dev_pm_opp *opp,
+		 bool notify)
 {
 	/*
 	 * Notify the changes in the availability of the operable
@@ -1066,8 +1050,8 @@ unlock:
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_remove);
 
-static struct dev_pm_opp *_allocate_opp(struct device *dev,
-					struct opp_table **opp_table)
+struct dev_pm_opp *_allocate_opp(struct device *dev,
+				 struct opp_table **opp_table)
 {
 	struct dev_pm_opp *opp;
 
@@ -1119,8 +1103,8 @@ static bool _opp_supported_by_regulators(struct dev_pm_opp *opp,
 	return true;
 }
 
-static int _opp_add(struct device *dev, struct dev_pm_opp *new_opp,
-		    struct opp_table *opp_table)
+int _opp_add(struct device *dev, struct dev_pm_opp *new_opp,
+	     struct opp_table *opp_table)
 {
 	struct dev_pm_opp *opp;
 	struct list_head *head = &opp_table->opp_list;
@@ -1202,8 +1186,8 @@ static int _opp_add(struct device *dev, struct dev_pm_opp *new_opp,
  *		Duplicate OPPs (both freq and volt are same) and !opp->available
  * -ENOMEM	Memory allocation failure
  */
-static int _opp_add_v1(struct device *dev, unsigned long freq, long u_volt,
-		       bool dynamic)
+int _opp_add_v1(struct device *dev, unsigned long freq, long u_volt,
+		bool dynamic)
 {
 	struct opp_table *opp_table;
 	struct dev_pm_opp *new_opp;
@@ -1632,144 +1616,6 @@ unlock:
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_put_regulator);
 
-static bool _opp_is_supported(struct device *dev, struct opp_table *opp_table,
-			      struct device_node *np)
-{
-	unsigned int count = opp_table->supported_hw_count;
-	u32 version;
-	int ret;
-
-	if (!opp_table->supported_hw)
-		return true;
-
-	while (count--) {
-		ret = of_property_read_u32_index(np, "opp-supported-hw", count,
-						 &version);
-		if (ret) {
-			dev_warn(dev, "%s: failed to read opp-supported-hw property at index %d: %d\n",
-				 __func__, count, ret);
-			return false;
-		}
-
-		/* Both of these are bitwise masks of the versions */
-		if (!(version & opp_table->supported_hw[count]))
-			return false;
-	}
-
-	return true;
-}
-
-/**
- * _opp_add_static_v2() - Allocate static OPPs (As per 'v2' DT bindings)
- * @dev:	device for which we do this operation
- * @np:		device node
- *
- * This function adds an opp definition to the opp table and returns status. The
- * opp can be controlled using dev_pm_opp_enable/disable functions and may be
- * removed by dev_pm_opp_remove.
- *
- * Locking: The internal opp_table and opp structures are RCU protected.
- * Hence this function internally uses RCU updater strategy with mutex locks
- * to keep the integrity of the internal data structures. Callers should ensure
- * that this function is *NOT* called under RCU protection or in contexts where
- * mutex cannot be locked.
- *
- * Return:
- * 0		On success OR
- *		Duplicate OPPs (both freq and volt are same) and opp->available
- * -EEXIST	Freq are same and volt are different OR
- *		Duplicate OPPs (both freq and volt are same) and !opp->available
- * -ENOMEM	Memory allocation failure
- * -EINVAL	Failed parsing the OPP node
- */
-static int _opp_add_static_v2(struct device *dev, struct device_node *np)
-{
-	struct opp_table *opp_table;
-	struct dev_pm_opp *new_opp;
-	u64 rate;
-	u32 val;
-	int ret;
-
-	/* Hold our table modification lock here */
-	mutex_lock(&opp_table_lock);
-
-	new_opp = _allocate_opp(dev, &opp_table);
-	if (!new_opp) {
-		ret = -ENOMEM;
-		goto unlock;
-	}
-
-	ret = of_property_read_u64(np, "opp-hz", &rate);
-	if (ret < 0) {
-		dev_err(dev, "%s: opp-hz not found\n", __func__);
-		goto free_opp;
-	}
-
-	/* Check if the OPP supports hardware's hierarchy of versions or not */
-	if (!_opp_is_supported(dev, opp_table, np)) {
-		dev_dbg(dev, "OPP not supported by hardware: %llu\n", rate);
-		goto free_opp;
-	}
-
-	/*
-	 * Rate is defined as an unsigned long in clk API, and so casting
-	 * explicitly to its type. Must be fixed once rate is 64 bit
-	 * guaranteed in clk API.
-	 */
-	new_opp->rate = (unsigned long)rate;
-	new_opp->turbo = of_property_read_bool(np, "turbo-mode");
-
-	new_opp->np = np;
-	new_opp->dynamic = false;
-	new_opp->available = true;
-
-	if (!of_property_read_u32(np, "clock-latency-ns", &val))
-		new_opp->clock_latency_ns = val;
-
-	ret = opp_parse_supplies(new_opp, dev, opp_table);
-	if (ret)
-		goto free_opp;
-
-	ret = _opp_add(dev, new_opp, opp_table);
-	if (ret)
-		goto free_opp;
-
-	/* OPP to select on device suspend */
-	if (of_property_read_bool(np, "opp-suspend")) {
-		if (opp_table->suspend_opp) {
-			dev_warn(dev, "%s: Multiple suspend OPPs found (%lu %lu)\n",
-				 __func__, opp_table->suspend_opp->rate,
-				 new_opp->rate);
-		} else {
-			new_opp->suspend = true;
-			opp_table->suspend_opp = new_opp;
-		}
-	}
-
-	if (new_opp->clock_latency_ns > opp_table->clock_latency_ns_max)
-		opp_table->clock_latency_ns_max = new_opp->clock_latency_ns;
-
-	mutex_unlock(&opp_table_lock);
-
-	pr_debug("%s: turbo:%d rate:%lu uv:%lu uvmin:%lu uvmax:%lu latency:%lu\n",
-		 __func__, new_opp->turbo, new_opp->rate, new_opp->u_volt,
-		 new_opp->u_volt_min, new_opp->u_volt_max,
-		 new_opp->clock_latency_ns);
-
-	/*
-	 * Notify the changes in the availability of the operable
-	 * frequency/voltage list.
-	 */
-	srcu_notifier_call_chain(&opp_table->srcu_head, OPP_EVENT_ADD, new_opp);
-	return 0;
-
-free_opp:
-	_opp_remove(opp_table, new_opp, false);
-unlock:
-	mutex_unlock(&opp_table_lock);
-	return ret;
-}
-
 /**
  * dev_pm_opp_add()  - Add an OPP table from a table definitions
  * @dev:	device for which we do this operation
@@ -2053,7 +1899,7 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_get_notifier);
  * Free OPPs either created using static entries present in DT or even the
  * dynamically added entries based on remove_all param.
  */
-static void _dev_pm_opp_remove_table(struct device *dev, bool remove_all)
+void _dev_pm_opp_remove_table(struct device *dev, bool remove_all)
 {
 	struct opp_table *opp_table;
 	struct dev_pm_opp *opp, *tmp;
