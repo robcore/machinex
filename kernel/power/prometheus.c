@@ -25,10 +25,11 @@
  *
  */
 #include <linux/prometheus.h>
+#include <linux/mfd/max77693.h>
 #include "power.h"
 
 #define VERSION 1
-#define VERSION_MIN 1
+#define VERSION_MIN 2
 
 static DEFINE_MUTEX(power_suspend_lock);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -46,6 +47,7 @@ extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
 static unsigned int ignore_wakelocks;
+extern unsigned int machinex_charging_check;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -114,11 +116,12 @@ static void power_suspend(struct work_struct *work)
 	pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 
 	if (use_global_suspend) {
-		if ((!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) &&
-				(!ignore_wakelocks)) {
+		if ((!ignore_wakelocks) && (!machinex_charging_check)) {
+			if (!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending())
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
+
 
 		if (!mutex_trylock(&pm_mutex)) {
 			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
