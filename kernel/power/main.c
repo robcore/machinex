@@ -650,15 +650,9 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	if (state == PM_SUSPEND_ON
 	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
 		return -EINVAL;
-#ifdef CONFIG_MACHINEX_POWER_SLEUTH
-	if (state == PM_SUSPEND_MEM) {
-		state = mem_sleep_current;
-		pr_info("Prometheus Sysfs Accessed\n");
-	}
-#else
+
 	if (state == PM_SUSPEND_MEM)
 		state = mem_sleep_current;
-#endif
 
 	error = pm_autosleep_set_state(state);
 	return error ? error : n;
@@ -767,7 +761,7 @@ static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
 power_attr(pm_freeze_timeout);
 
 #endif	/* CONFIG_FREEZER*/
-/* If set, devices may be suspended and resumed asynchronously. */
+/* If set, sync filesystems on suspend. */
 int suspendsync = 0;
 
 static ssize_t suspend_sync_show(struct kobject *kobj,
