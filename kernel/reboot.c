@@ -118,7 +118,7 @@ void kernel_restart(char *cmd)
 	if (!cmd)
 		pr_emerg("Restarting system\n");
 	else
-		pr_emerg(Restarting system with command '%s'.\n", cmd);
+		pr_emerg("Restarting system with command '%s'\n", cmd);
 	pr_emerg("Current task:%s(%d) Parent task:%s(%d)\n",
 		current->comm, current->pid,
 		current->real_parent->comm,
@@ -167,7 +167,7 @@ void kernel_power_off(void)
 		pm_power_off_prepare();
 	migrate_to_reboot_cpu();
 	syscore_shutdown();
-	pr_emerg("Power down.\n");
+	pr_emerg("Power down\n");
 	pr_emerg("Current task:%s(%d) Parent task:%s(%d)\n",
 		current->comm, current->pid,
 		current->real_parent->comm,
