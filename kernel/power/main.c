@@ -34,8 +34,7 @@ DEFINE_MUTEX(pm_mutex);
 
 static BLOCKING_NOTIFIER_HEAD(pm_chain_head);
 
-static void touch_event_fn(struct work_struct *work);
-static DECLARE_WORK(touch_event_struct, touch_event_fn);
+static void touch_event_fn(void);
 
 static struct hrtimer tc_ev_timer;
 static int tc_ev_processed;
@@ -97,12 +96,16 @@ static ssize_t
 touch_event_show(struct kobject *kobj,
 		 struct kobj_attribute *attr, char *buf)
 {
-	if (tc_ev_processed == 0)
+	spin_lock_irqsave(touch_evt_lock, flags);
+	if (tc_ev_processed == 0) {
+		spin_lock_irqrestore(touch_evt_lock, flags);
 		return snprintf(buf, strnlen("touch_event", MAX_BUF) + 1,
 				"touch_event");
-	else
+	} else {
+		spin_lock_irqrestore(touch_evt_lock, flags);
 		return snprintf(buf, strnlen("null", MAX_BUF) + 1,
 				"null");
+	}
 }
 
 static ssize_t
@@ -112,12 +115,14 @@ touch_event_store(struct kobject *kobj,
 {
 
 	hrtimer_cancel(&tc_ev_timer);
+	spin_lock_irqsave(touch_evt_lock, flags);
 	tc_ev_processed = 0;
+	spin_lock_irqrestore(touch_evt_lock, flags);
 
 	/* set a timer to notify the userspace to stop processing
 	 * touch event
 	 */
-	hrtimer_start(&tc_ev_timer, touch_evt_timer_val, HRTIMER_MODE_REL);
+	hrtimer_start(&tc_ev_timer, ktime_set(touch_evt_timer_val, 0), HRTIMER_MODE_REL);
 
 	/* wakeup the userspace poll */
 	sysfs_notify(kobj, NULL, "touch_event");
@@ -139,30 +144,34 @@ touch_event_timer_store(struct kobject *kobj,
 			struct kobj_attribute *attr,
 			const char *buf, size_t n)
 {
-	unsigned long val;
+	unsigned long long val;
 
-	if (strict_strtoul(buf, 10, &val))
+	if (kstrtoul(buf, 10, &val))
 		return -EINVAL;
 
-	touch_evt_timer_val = ktime_set(0, (val * 1000));
+	touch_evt_timer_val = val;
+	ktime_set(0, (touch_evt_timer_val * 1000));
 
 	return n;
 }
 
 power_attr(touch_event_timer);
 
-static void touch_event_fn(struct work_struct *work)
+#define SPINLOCk(touch_evt_lock);
+static void touch_event_fn(void)
 {
-	/* wakeup the userspace poll */
-	tc_ev_processed = 1;
-	sysfs_notify(power_kobj, NULL, "touch_event");
+	unsigned long flags;
 
-	return;
+	/* wakeup the userspace poll */
+	spin_lock_irqsave(touch_evt_lock, flags);
+	tc_ev_processed = 1;
+	spin_lock_irqrestore(touch_evt_lock, flags);
+	sysfs_notify(power_kobj, NULL, "touch_event");
 }
 
 static enum hrtimer_restart tc_ev_stop(struct hrtimer *hrtimer)
 {
-	queue_work(system_wq, &touch_event_struct);
+	touch_event_fn();
 
 	return HRTIMER_NORESTART;
 }
@@ -891,9 +900,11 @@ core_initcall(pm_init);
 
 static int __init touch_timer_init(void)
 {
-	touch_evt_timer_val = ktime_set(2, 0);
+	spin_lock_init(touch_evt_lock);
 	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	touch_evt_timer_val = 2;
 	tc_ev_timer.function = &tc_ev_stop;
+
 	return 0;
 }
 

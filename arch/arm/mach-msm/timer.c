@@ -322,6 +322,7 @@ static int msm_timer_set_next_event(unsigned long cycles,
 	return 0;
 }
 
+static DEFINE_SPINLOCK(qcom_timer_lock);
 static void msm_timer_set_mode(enum clock_event_mode mode,
 			       struct clock_event_device *evt)
 {
@@ -335,7 +336,7 @@ static void msm_timer_set_mode(enum clock_event_mode mode,
 	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	gpt_state = this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 
-	local_irq_save(irq_flags);
+	spin_lock_irqsave(qcom_timer_lock, irq_flags);
 
 	switch (mode) {
 	case CLOCK_EVT_MODE_RESUME:
@@ -385,8 +386,8 @@ static void msm_timer_set_mode(enum clock_event_mode mode,
 		}
 		break;
 	}
+	spin_unlock_irq_restore(qcom_timer_lock, irq_flags);
 	wmb();
-	local_irq_restore(irq_flags);
 }
 
 void __iomem *msm_timer_get_timer0_base(void)
@@ -1021,11 +1022,11 @@ void __init msm_timer_init(void)
 		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
 		gpt->status_mask = BIT(10);
 		dgt->status_mask = BIT(2);
-		//if (!soc_class_is_apq8064()) {
+		if (!soc_class_is_apq8064()) {
 			gpt->freq = 32765;
 			gpt_hz = 32765;
 			sclk_hz = 32765;
-		//}
+		}
 		if (!soc_class_is_msm8930() && !cpu_is_msm8960ab()) {
 			gpt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
 			dgt->flags |= MSM_CLOCK_FLAGS_UNSTABLE_COUNT;
@@ -1036,6 +1037,7 @@ void __init msm_timer_init(void)
 		dgt->freq = 6750000;
 	}
 
+	spin_lock_init(qcom_timer_lock);
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
 		msm_global_timer = MSM_CLOCK_GPT;
 	else

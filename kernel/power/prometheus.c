@@ -339,6 +339,9 @@ static int prometheus_init(void)
 	if (!pwrsup_wq)
 		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
 
+	mutex_init(prometheus_mtx);
+	spin_lock_init(ps_state_lock);
+
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
