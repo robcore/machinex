@@ -170,11 +170,11 @@ static void cpufreq_barry_allen_timer_resched(
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
 	expires = jiffies + usecs_to_jiffies(timer_rate);
-	mod_timer_pinned(&pcpu->cpu_timer, expires);
+	mod_timer(&pcpu->cpu_timer, expires);
 
 	if (timer_slack_val >= 0 && pcpu->target_freq > pcpu->policy->min) {
 		expires += usecs_to_jiffies(timer_slack_val);
-		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
+		mod_timer(&pcpu->cpu_slack_timer, expires);
 	}
 
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
@@ -1459,10 +1459,10 @@ static int __init cpufreq_barry_allen_init(void)
 	/* Initalize per-cpu timers */
 	for_each_possible_cpu(i) {
 		pcpu = &per_cpu(cpuinfo, i);
-		init_timer_deferrable(&pcpu->cpu_timer);
+		init_timer_pinned_deferrable(&pcpu->cpu_timer);
 		pcpu->cpu_timer.function = cpufreq_barry_allen_timer;
 		pcpu->cpu_timer.data = i;
-		init_timer(&pcpu->cpu_slack_timer);
+		init_timer_pinned(&pcpu->cpu_slack_timer);
 		pcpu->cpu_slack_timer.function = cpufreq_barry_allen_nop_timer;
 		spin_lock_init(&pcpu->load_lock);
 		init_rwsem(&pcpu->enable_sem);
