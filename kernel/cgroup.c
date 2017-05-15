@@ -2926,41 +2926,6 @@ static void cgroup_init_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
 }
 
 /**
- * cgroup_add_cftypes - add an array of cftypes to a subsystem
- * @ss: target cgroup subsystem
- * @cfts: zero-length name terminated array of cftypes
- *
- * Register @cfts to @ss.  Files described by @cfts are created for all
- * existing cgroups to which @ss is attached and all future cgroups will
- * have them too.  This function can be called anytime whether @ss is
- * attached or not.
- *
- * Returns 0 on successful registration, -errno on failure.  Note that this
- * function currently returns 0 as long as @cfts registration is successful
- * even if some file creation attempts on existing cgroups fail.
- */
-int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
-{
-	struct cftype_set *set;
-	int ret;
-
-	set = kzalloc(sizeof(*set), GFP_KERNEL);
-	if (!set)
-		return -ENOMEM;
-
-	cgroup_init_cftypes(ss, cfts);
-
-	cgroup_cfts_prepare();
-	set->cfts = cfts;
-	list_add_tail(&set->node, &ss->cftsets);
-	ret = cgroup_cfts_commit(cfts, true);
-	if (ret)
-		cgroup_rm_cftypes(cfts);
-	return ret;
-}
-EXPORT_SYMBOL_GPL(cgroup_add_cftypes);
-
-/**
  * cgroup_rm_cftypes - remove an array of cftypes from a subsystem
  * @cfts: zero-length name terminated array of cftypes
  *
@@ -2994,6 +2959,41 @@ int cgroup_rm_cftypes(struct cftype *cfts)
 	cgroup_exit_cftypes(cfts);
 	return found ? 0 : -ENOENT;
 }
+
+/**
+ * cgroup_add_cftypes - add an array of cftypes to a subsystem
+ * @ss: target cgroup subsystem
+ * @cfts: zero-length name terminated array of cftypes
+ *
+ * Register @cfts to @ss.  Files described by @cfts are created for all
+ * existing cgroups to which @ss is attached and all future cgroups will
+ * have them too.  This function can be called anytime whether @ss is
+ * attached or not.
+ *
+ * Returns 0 on successful registration, -errno on failure.  Note that this
+ * function currently returns 0 as long as @cfts registration is successful
+ * even if some file creation attempts on existing cgroups fail.
+ */
+int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
+{
+	struct cftype_set *set;
+	int ret;
+
+	set = kzalloc(sizeof(*set), GFP_KERNEL);
+	if (!set)
+		return -ENOMEM;
+
+	cgroup_init_cftypes(ss, cfts);
+
+	cgroup_cfts_prepare();
+	set->cfts = cfts;
+	list_add_tail(&set->node, &ss->cftsets);
+	ret = cgroup_cfts_commit(cfts, true);
+	if (ret)
+		cgroup_rm_cftypes(cfts);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(cgroup_add_cftypes);
 
 /**
  * cgroup_task_count - count the number of tasks in a cgroup.
