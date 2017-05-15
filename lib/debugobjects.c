@@ -201,7 +201,7 @@ static void free_object(struct debug_obj *obj)
 	obj_pool_free++;
 	obj_pool_used--;
 	raw_spin_unlock_irqrestore(&pool_lock, flags);
-	if (sched && keventd_up())
+	if (sched)
 		schedule_work(&debug_obj_work);
 }
 
