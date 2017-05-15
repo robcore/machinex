@@ -6945,7 +6945,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
 		if (work_busy(&mmc->detect.work))
-			rc = -EAGAIN;
+			rc = -EBUSY;
 		else
 			rc = mmc_suspend_host(mmc);
 
