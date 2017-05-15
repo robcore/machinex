@@ -121,6 +121,7 @@ static const struct genpd_lock_ops genpd_spin_ops = {
 #define genpd_lock_interruptible(p)	p->lock_ops->lock_interruptible(p)
 #define genpd_unlock(p)			p->lock_ops->unlock(p)
 
+#define genpd_status_on(genpd)		(genpd->status == GPD_STATE_ACTIVE)
 #define genpd_is_irq_safe(genpd)	(genpd->flags & GENPD_FLAG_IRQ_SAFE)
 
 static inline bool irq_safe_dev_in_no_sleep_domain(struct device *dev,
@@ -286,7 +287,7 @@ static int genpd_poweron(struct generic_pm_domain *genpd, unsigned int depth)
 	struct gpd_link *link;
 	int ret = 0;
 
-	if (genpd->status == GPD_STATE_ACTIVE)
+	if (genpd_status_on(genpd))
 		return 0;
 
 	/*
@@ -399,8 +400,7 @@ static int genpd_poweroff(struct generic_pm_domain *genpd, bool is_async)
 	 * (1) The domain is already in the "power off" state.
 	 * (2) System suspend is in progress.
 	 */
-	if (genpd->status == GPD_STATE_POWER_OFF
-	    || genpd->prepared_count > 0)
+	if (!genpd_status_on(genpd) || genpd->prepared_count > 0)
 		return 0;
 
 	if (atomic_read(&genpd->sd_count) > 0)
@@ -728,7 +728,7 @@ static void genpd_sync_poweroff(struct generic_pm_domain *genpd)
 {
 	struct gpd_link *link;
 
-	if (genpd->status == GPD_STATE_POWER_OFF)
+	if (!genpd_status_on(genpd))
 		return;
 
 	if (genpd->suspended_count != genpd->device_count
@@ -760,7 +760,7 @@ static void genpd_sync_poweron(struct generic_pm_domain *genpd)
 {
 	struct gpd_link *link;
 
-	if (genpd->status == GPD_STATE_ACTIVE)
+	if (genpd_status_on(genpd))
 		return;
 
 	list_for_each_entry(link, &genpd->slave_links, slave_node) {
@@ -1283,8 +1283,7 @@ static int genpd_add_subdomain(struct generic_pm_domain *genpd,
 	genpd_lock(subdomain);
 	genpd_lock_nested(genpd, SINGLE_DEPTH_NESTING);
 
-	if (genpd->status == GPD_STATE_POWER_OFF
-	    &&  subdomain->status != GPD_STATE_POWER_OFF) {
+	if (!genpd_status_on(genpd) && genpd_status_on(subdomain)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1300,7 +1299,7 @@ static int genpd_add_subdomain(struct generic_pm_domain *genpd,
 	list_add_tail(&link->master_node, &genpd->master_links);
 	link->slave = subdomain;
 	list_add_tail(&link->slave_node, &subdomain->slave_links);
-	if (subdomain->status != GPD_STATE_POWER_OFF)
+	if (genpd_status_on(subdomain))
 		genpd_sd_counter_inc(genpd);
 
  out:
@@ -1360,7 +1359,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 		list_del(&link->master_node);
 		list_del(&link->slave_node);
 		kfree(link);
-		if (subdomain->status != GPD_STATE_POWER_OFF)
+		if (genpd_status_on(subdomain))
 			genpd_sd_counter_dec(genpd);
 
 		ret = 0;
@@ -2242,7 +2241,7 @@ static int pm_genpd_summary_one(struct seq_file *s,
 
 	if (WARN_ON(genpd->status >= ARRAY_SIZE(status_lookup)))
 		goto exit;
-	if (genpd->status == GPD_STATE_POWER_OFF)
+	if (!genpd_status_on(genpd))
 		snprintf(state, sizeof(state), "%s-%u",
 			 status_lookup[genpd->status], genpd->state_idx);
 	else
