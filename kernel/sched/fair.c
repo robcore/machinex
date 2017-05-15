@@ -786,7 +786,7 @@ void post_init_entity_util_avg(struct sched_entity *se)
 		}
 	}
 
-	tg_update = update_cfs_rq_load_avg(now, cfs_rq, false);
+	tg_update = update_cfs_rq_load_avg(now, cfs_rq);
 	attach_entity_load_avg(cfs_rq, se);
 	if (tg_update)
 		update_tg_load_avg(cfs_rq, false);
