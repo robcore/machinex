@@ -650,5 +650,11 @@ static inline void wq_watchdog_touch(int cpu) { }
 int __init workqueue_init_early(void);
 int __init workqueue_init(void);
 
+#ifdef CONFIG_SMP
+int workqueue_prepare_cpu(unsigned int cpu);
+int workqueue_online_cpu(unsigned int cpu);
+int workqueue_offline_cpu(unsigned int cpu);
+#endif
+
 #endif
 
