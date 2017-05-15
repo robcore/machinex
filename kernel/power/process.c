@@ -146,12 +146,11 @@ int freeze_processes(void)
 	 * the OOM killer to disallow any further interference with
 	 * killable tasks. There is no guarantee oom victims will
 	 * ever reach a point they go away we have to wait with a timeout.
-
-	if (!error && !oom_killer_disabled())
-		error = -EBUSY;
 	 */
 	oom_killer_disable();
 
+	if (!error && !oom_killer_disabled)
+		error = -EBUSY;
 
 	if (error)
 		thaw_processes();
