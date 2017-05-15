@@ -7042,7 +7042,7 @@ static int msmsdcc_runtime_idle(struct device *dev)
 	 *pm_schedule_suspend(dev, host->idle_tout);
 	 */
 
-	return -EAGAIN;
+	return -EBUSY;
 }
 
 static int msmsdcc_pm_suspend(struct device *dev)
@@ -7098,7 +7098,7 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 	if (atomic_read(&host->clks_on) && !host->plat->is_sdio_al_client) {
 		pr_warn("%s: clocks are on after suspend, aborting system "
 				"suspend\n", mmc_hostname(mmc));
-		rc = -EAGAIN;
+		rc = -EBUSY;
 	}
 
 	return rc;
