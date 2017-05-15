@@ -1145,6 +1145,8 @@ static int __device_suspend_noirq(struct device *dev, pm_message_t state, bool a
 
 	dpm_wait_for_subordinate(dev, async);
 
+	dpm_wait_for_children(dev, async);
+
 	if (async_error)
 		goto Complete;
 
@@ -1284,6 +1286,8 @@ static int __device_suspend_late(struct device *dev, pm_message_t state, bool as
 	__pm_runtime_disable(dev, false);
 
 	dpm_wait_for_subordinate(dev, async);
+
+	dpm_wait_for_children(dev, async);
 
 	if (async_error)
 		goto Complete;
