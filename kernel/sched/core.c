@@ -420,6 +420,21 @@ static enum hrtimer_restart hrtick(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
+#ifdef CONFIG_SCHED_TUNE
+struct rq *
+lock_rq_of(struct task_struct *p, unsigned long *flags)
+{
+
+	return task_rq_lock(p, flags);
+}
+
+void
+unlock_rq_of(struct rq *rq, struct task_struct *p, unsigned long *flags)
+{
+	task_rq_unlock(rq, p, flags);
+}
+#endif
+
 #ifdef CONFIG_SMP
 
 static void __hrtick_restart(struct rq *rq)
@@ -620,7 +635,7 @@ void wake_up_q(struct wake_q_head *head)
 
 		task = container_of(node, struct task_struct, wake_q);
 		BUG_ON(!task);
-		/* Task can safely be re-inserted now: */
+		/* task can safely be re-inserted now */
 		node = node->next;
 		task->wake_q.next = NULL;
 
@@ -711,7 +726,6 @@ unlock:
 	rcu_read_unlock();
 	return cpu;
 }
-
 /*
  * When add_timer_on() enqueues a timer into the timer wheel of an
  * idle CPU then this timer might expire before the next timer event
@@ -753,11 +767,6 @@ static bool wake_up_full_nohz_cpu(int cpu)
 	return false;
 }
 
-/*
- * Wake up the specified CPU.  If the CPU is going offline, it is the
- * caller's responsibility to deal with the lost wakeup, for example,
- * by hooking into the CPU_DEAD notifier like timers and hrtimers do.
- */
 void wake_up_nohz_cpu(int cpu)
 {
 	if (!wake_up_full_nohz_cpu(cpu))
@@ -934,7 +943,6 @@ static inline void enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 	update_rq_clock(rq);
 	if (!(flags & ENQUEUE_RESTORE))
 		sched_info_queued(rq, p);
-
 	p->sched_class->enqueue_task(rq, p, flags);
 }
 
@@ -943,7 +951,6 @@ static inline void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
 	update_rq_clock(rq);
 	if (!(flags & DEQUEUE_SAVE))
 		sched_info_dequeued(rq, p);
-
 	p->sched_class->dequeue_task(rq, p, flags);
 }
 
