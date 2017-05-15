@@ -902,8 +902,6 @@ static int jz4740_mmc_probe(struct platform_device* pdev)
 	jz4740_mmc_clock_disable(host);
 	setup_timer(&host->timeout_timer, jz4740_mmc_timeout,
 			(unsigned long)host);
-	/* It is not important when it times out, it just needs to timeout. */
-	set_timer_slack(&host->timeout_timer, HZ);
 
 	platform_set_drvdata(pdev, host);
 	ret = mmc_add_host(mmc);
