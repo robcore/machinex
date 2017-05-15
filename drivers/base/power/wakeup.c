@@ -411,7 +411,6 @@ int device_wakeup_disable(struct device *dev)
 		return -EINVAL;
 
 	ws = device_wakeup_detach(dev);
-
 	wakeup_source_unregister(ws);
 	return 0;
 }
@@ -994,12 +993,7 @@ bool pm_wakeup_pending(void)
  */
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
- 	unsigned int cnt, inpr;
-	unsigned long flags;
-
-	spin_lock_irqsave(&events_lock, flags);
-		last_read_time = ktime_get();
-		spin_unlock_irqrestore(&events_lock, flags);
+	unsigned int cnt, inpr;
 
 	if (block) {
 		DEFINE_WAIT(wait);
@@ -1035,7 +1029,6 @@ bool pm_save_wakeup_count(unsigned int count)
 {
 	unsigned int cnt, inpr;
 	unsigned long flags;
-	struct wakeup_source *ws;
 
 	events_check_enabled = false;
 	spin_lock_irqsave(&events_lock, flags);
@@ -1043,15 +1036,6 @@ bool pm_save_wakeup_count(unsigned int count)
 	if (cnt == count && inpr == 0) {
 		saved_count = count;
 		events_check_enabled = true;
-	} else {
-		rcu_read_lock();
-		list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-			if (ws->active ||
-			    ktime_compare(ws->last_time, last_read_time) > 0) {
-				ws->wakeup_count++;
-			}
-		}
-		rcu_read_unlock();
 	}
 	spin_unlock_irqrestore(&events_lock, flags);
 	return events_check_enabled;

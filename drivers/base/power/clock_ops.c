@@ -386,10 +386,7 @@ void pm_clk_destroy(struct device *dev)
 		__pm_clk_remove(ce);
 	}
 }
-
-#endif /* CONFIG_PM */
-
-#ifdef CONFIG_PM
+EXPORT_SYMBOL_GPL(pm_clk_destroy);
 
 /**
  * pm_clk_suspend - Disable clocks in a device's PM clock list.
@@ -420,6 +417,7 @@ int pm_clk_suspend(struct device *dev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(pm_clk_suspend);
 
 /**
  * pm_clk_resume - Enable clocks in a device's PM clock list.
@@ -445,6 +443,7 @@ int pm_clk_resume(struct device *dev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(pm_clk_resume);
 
 /**
  * pm_clk_notify - Notify routine for device addition and removal.
@@ -545,62 +544,6 @@ EXPORT_SYMBOL_GPL(pm_clk_runtime_resume);
 
 #else /* !CONFIG_PM_CLK */
 
-#ifdef CONFIG_PM
-
-/**
- * pm_clk_suspend - Disable clocks in a device's PM clock list.
- * @dev: Device to disable the clocks for.
- */
-int pm_clk_suspend(struct device *dev)
-{
-	struct pm_subsys_data *psd = dev_to_psd(dev);
-	struct pm_clock_entry *ce;
-	unsigned long flags;
-
-	dev_dbg(dev, "%s()\n", __func__);
-
-	/* If there is no driver, the clocks are already disabled. */
-	if (!psd || !dev->driver)
-		return 0;
-
-	spin_lock_irqsave(&psd->lock, flags);
-
-	list_for_each_entry_reverse(ce, &psd->clock_list, node)
-		clk_disable(ce->clk);
-
-	spin_unlock_irqrestore(&psd->lock, flags);
-
-	return 0;
-}
-
-/**
- * pm_clk_resume - Enable clocks in a device's PM clock list.
- * @dev: Device to enable the clocks for.
- */
-int pm_clk_resume(struct device *dev)
-{
-	struct pm_subsys_data *psd = dev_to_psd(dev);
-	struct pm_clock_entry *ce;
-	unsigned long flags;
-
-	dev_dbg(dev, "%s()\n", __func__);
-
-	/* If there is no driver, the clocks should remain disabled. */
-	if (!psd || !dev->driver)
-		return 0;
-
-	spin_lock_irqsave(&psd->lock, flags);
-
-	list_for_each_entry(ce, &psd->clock_list, node)
-		__pm_clk_enable(dev, ce->clk);
-
-	spin_unlock_irqrestore(&psd->lock, flags);
-
-	return 0;
-}
-
-#endif /* CONFIG_PM */
-
 /**
  * enable_clock - Enable a device clock.
  * @dev: Device whose clock is to be enabled.
@@ -617,7 +560,6 @@ static void enable_clock(struct device *dev, const char *con_id)
 		dev_info(dev, "Runtime PM disabled, clock forced on.\n");
 	}
 }
-EXPORT_SYMBOL_GPL(pm_clk_destroy);
 
 /**
  * disable_clock - Disable a device clock.
@@ -635,7 +577,6 @@ static void disable_clock(struct device *dev, const char *con_id)
 		dev_info(dev, "Runtime PM disabled, clock forced off.\n");
 	}
 }
-EXPORT_SYMBOL_GPL(pm_clk_suspend);
 
 /**
  * pm_clk_notify - Notify routine for device addition and removal.
@@ -681,7 +622,6 @@ static int pm_clk_notify(struct notifier_block *nb,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(pm_clk_resume);
 
 #endif /* !CONFIG_PM_CLK */
 
