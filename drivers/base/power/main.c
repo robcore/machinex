@@ -1216,7 +1216,6 @@ static int device_suspend_noirq(struct device *dev)
 int dpm_suspend_noirq(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int error = 0;
 
 	cpuidle_pause();
