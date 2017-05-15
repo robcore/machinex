@@ -24,6 +24,7 @@
 #include <linux/io.h>
 #include <linux/percpu.h>
 #include <linux/mm.h>
+#include <linux/notifier.h>
 
 #include <asm/localtimer.h>
 #include <asm/mach/time.h>
@@ -96,7 +97,7 @@ static struct msm_clock *clockevent_to_clock(struct clock_event_device *evt);
 static irqreturn_t msm_timer_interrupt(int irq, void *dev_id);
 static cycle_t msm_gpt_read(struct clocksource *cs);
 static cycle_t msm_dgt_read(struct clocksource *cs);
-static int msm_timer_set_mode(enum clock_event_mode mode,
+static inline void msm_timer_set_mode(enum clock_event_mode mode,
 			       struct clock_event_device *evt);
 static int msm_timer_set_next_event(unsigned long cycles,
 				    struct clock_event_device *evt);
