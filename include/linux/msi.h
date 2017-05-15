@@ -45,6 +45,7 @@ struct msi_desc {
 
 	/* Last set MSI message */
 	struct msi_msg msg;
+	const struct cpumask		*affinity;
 
 	struct kobject kobj;
 };
