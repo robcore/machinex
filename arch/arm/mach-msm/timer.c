@@ -357,7 +357,7 @@ static inline void msm_timer_set_mode(enum clock_event_mode mode,
 			__raw_writel(TIMER_ENABLE_EN,
 				msm_clocks[MSM_CLOCK_GPT].regbase +
 			       TIMER_ENABLE);
-		spin_unlock_irq_restore(&qcom_timer_lock, irq_flags);
+		spin_unlock_irqrestore(&qcom_timer_lock, irq_flags);
 		wmb();
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
@@ -387,7 +387,7 @@ static inline void msm_timer_set_mode(enum clock_event_mode mode,
 			__raw_writel(0, msm_clocks[MSM_CLOCK_GPT].regbase +
 			       TIMER_ENABLE);
 		}
-		spin_unlock_irq_restore(&qcom_timer_lock, irq_flags);
+		spin_unlock_irqrestore(&qcom_timer_lock, irq_flags);
 		wmb();
 		break;
 	default:
