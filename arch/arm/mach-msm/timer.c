@@ -24,6 +24,10 @@
 #include <linux/io.h>
 #include <linux/percpu.h>
 #include <linux/mm.h>
+#include <linux/cpu.h>
+#include <linux/cpumask.h>
+#include <linux/sched.h>
+#include <linux/suspend.h>
 #include <linux/notifier.h>
 
 #include <asm/localtimer.h>
@@ -955,16 +959,20 @@ static struct local_timer_ops msm_lt_ops = {
 static int msm_timer_cpu_notify(struct notifier_block *self,
 					   unsigned long action, void *hcpu)
 {
+	struct msm_clock *clock = &msm_clocks[msm_global_timer];
+	int cpu = smp_processor_id();
 	/*
 	 * Grab cpu pointer in each case to avoid spurious
 	 * preemptible warnings
 	 */
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_STARTING:
-		local_timer_setup(this_cpu_ptr(evt));
+	case CPU_UP_PREPARE:
+		local_timer_setup(this_cpu_ptr(clock->evt));
 		break;
+	case CPU_DOWN_PREPARE:
 	case CPU_DYING:
-		local_timer_stop(this_cpu_ptr(evt));
+		local_timer_stop(this_cpu_ptr(clock->evt));
 		break;
 	}
 

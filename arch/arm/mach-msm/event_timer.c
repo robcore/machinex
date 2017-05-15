@@ -45,7 +45,7 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer);
 
 static int msm_event_debug_mask;
 module_param_named(
-	debug_mask, msm_event_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
+	debug_mask, msm_event_debug_mask, int, 0644
 );
 
 enum {
@@ -177,6 +177,7 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer)
 		if (event->function)
 			event->function(event->data);
 		next = timerqueue_getnext(&timer_head);
+		break;
 	}
 
 	if (next)
@@ -238,6 +239,7 @@ static void setup_event_hrtimer(struct event_timer_info *event)
  */
 void activate_event_timer(struct event_timer_info *event, ktime_t event_time)
 {
+	unsigned long flags;
 	if (!event)
 		return;
 
@@ -245,11 +247,11 @@ void activate_event_timer(struct event_timer_info *event, ktime_t event_time)
 		pr_info("%s: Adding event timer @ %lu", __func__,
 				(unsigned long)ktime_to_us(event_time));
 
-	spin_lock(&event_setup_lock);
+	spin_lock_irqsave(&event_setup_lock);
 	event->node.expires = event_time;
 	/* Start hr timer and add event to rb tree */
 	setup_event_hrtimer(event);
-	spin_unlock(&event_setup_lock);
+	spin_unlock_irqrestore(&event_setup_lock);
 }
 
 
