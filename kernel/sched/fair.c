@@ -718,7 +718,7 @@ void init_entity_runnable_average(struct sched_entity *se)
 }
 
 static inline u64 cfs_rq_clock_task(struct cfs_rq *cfs_rq);
-static int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq);
+static int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq);
 static void update_tg_load_avg(struct cfs_rq *cfs_rq, int force);
 static void attach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se);
 
@@ -2961,7 +2961,7 @@ static int idle_balance(struct rq *this_rq);
 #else /* CONFIG_SMP */
 
 static inline int
-update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
+update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 {
 	return 0;
 }
@@ -9241,7 +9241,7 @@ static void detach_task_cfs_rq(struct task_struct *p)
 	}
 
 	/* Catch up with the cfs_rq and remove our load when we leave */
-	tg_update = update_cfs_rq_load_avg(now, cfs_rq, false);
+	tg_update = update_cfs_rq_load_avg(now, cfs_rq);
 	detach_entity_load_avg(cfs_rq, se);
 	if (tg_update)
 		update_tg_load_avg(cfs_rq, false);
@@ -9266,7 +9266,7 @@ static void attach_task_cfs_rq(struct task_struct *p)
 #endif
 
 	/* Synchronize task with its cfs_rq */
-	tg_update = update_cfs_rq_load_avg(now, cfs_rq, false);
+	tg_update = update_cfs_rq_load_avg(now, cfs_rq);
 	attach_entity_load_avg(cfs_rq, se);
 	if (tg_update)
 		update_tg_load_avg(cfs_rq, false);
