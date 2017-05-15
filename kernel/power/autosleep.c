@@ -42,7 +42,6 @@ static void try_to_suspend(struct work_struct *work)
 		mutex_unlock(&autosleep_lock);
 		return;
 	}
-
 	if (autosleep_state >= PM_SUSPEND_MAX)
 		hibernate();
 	else
@@ -69,7 +68,6 @@ static DECLARE_WORK(suspend_work, try_to_suspend);
 void queue_up_suspend_work(void)
 {
 	if (autosleep_state > PM_SUSPEND_ON)
-
 		queue_work(autosleep_wq, &suspend_work);
 }
 
@@ -107,8 +105,9 @@ int pm_autosleep_set_state(suspend_state_t state)
 	if (state > PM_SUSPEND_ON) {
 		pm_wakep_autosleep_enabled(true);
 		queue_up_suspend_work();
-	} else
+	} else {
 		pm_wakep_autosleep_enabled(false);
+	}
 
 	mutex_unlock(&autosleep_lock);
 	return 0;

@@ -12,12 +12,12 @@
 #include <linux/oom.h>
 #include <linux/suspend.h>
 #include <linux/module.h>
+#include <linux/sched/task.h>
 #include <linux/syscalls.h>
 #include <linux/freezer.h>
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/kmod.h>
-#include <linux/wakeup_reason.h>
 #include "power.h"
 
 /*
@@ -35,9 +35,6 @@ static int try_to_freeze_tasks(bool user_only)
 	unsigned int elapsed_msecs;
 	bool wakeup = false;
 	int sleep_usecs = USEC_PER_MSEC;
-#ifdef CONFIG_PM_SLEEP
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
-#endif
 
 	start = ktime_get_boottime();
 
@@ -67,11 +64,6 @@ static int try_to_freeze_tasks(bool user_only)
 			break;
 
 		if (pm_wakeup_pending()) {
-#ifdef CONFIG_PM_SLEEP
-			pm_get_active_wakeup_sources(suspend_abort,
-				MAX_SUSPEND_ABORT_LEN);
-			log_suspend_abort_reason(suspend_abort);
-#endif
 			wakeup = true;
 			break;
 		}
@@ -118,30 +110,6 @@ static int try_to_freeze_tasks(bool user_only)
 	return todo ? -EBUSY : 0;
 }
 
-static bool __check_frozen_processes(void)
-{
-	struct task_struct *g, *p;
-
-	for_each_process_thread(g, p)
-		if (p != current && !freezer_should_skip(p) && !frozen(p))
-			return false;
-
-	return true;
-}
-
-/*
- * Returns true if all freezable tasks (except for current) are frozen already
- */
-static bool check_frozen_processes(void)
-{
-	bool ret;
-
-	read_lock(&tasklist_lock);
-	ret = __check_frozen_processes();
-	read_unlock(&tasklist_lock);
-	return ret;
-}
-
 /**
  * freeze_processes - Signal user space processes to enter the refrigerator.
  * The current thread will not be frozen.  The same process that calls
@@ -152,7 +120,6 @@ static bool check_frozen_processes(void)
 int freeze_processes(void)
 {
 	int error;
-	int oom_kills_saved;
 
 	error = __usermodehelper_disable(UMH_FREEZING);
 	if (error)
@@ -167,28 +134,25 @@ int freeze_processes(void)
 	pm_wakeup_clear(true);
 	pr_info("Freezing user space processes ... ");
 	pm_freezing = true;
-	oom_kills_saved = oom_kills_count();
 	error = try_to_freeze_tasks(true);
 	if (!error) {
 		__usermodehelper_set_disable_depth(UMH_DISABLED);
-		oom_killer_disable();
-
-		/*
-		 * There might have been an OOM kill while we were
-		 * freezing tasks and the killed task might be still
-		 * on the way out so we have to double check for race.
-		 */
-		if (oom_kills_count() != oom_kills_saved &&
-		    !check_frozen_processes()) {
-			__usermodehelper_set_disable_depth(UMH_ENABLED);
-			pr_info("OOM in progress.");
-			error = -EBUSY;
-		} else {
-			pr_cont("done.");
-		}
+		pr_cont("done.");
 	}
 	pr_cont("\n");
 	BUG_ON(in_atomic());
+
+	/*
+	 * Now that the whole userspace is frozen we need to disbale
+	 * the OOM killer to disallow any further interference with
+	 * killable tasks. There is no guarantee oom victims will
+	 * ever reach a point they go away we have to wait with a timeout.
+
+	if (!error && !oom_killer_disabled())
+		error = -EBUSY;
+	 */
+	oom_killer_disable();
+
 
 	if (error)
 		thaw_processes();
