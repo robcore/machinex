@@ -3001,8 +3001,6 @@ int __init vty_init(const struct file_operations *console_fops)
 	else
 		WARN_ON(device_create_file(tty0dev, &dev_attr_active) < 0);
 
-	setup_timer(&console_timer, blank_screen_t, 0);
-
 	vcs_init();
 
 	console_driver = alloc_tty_driver(MAX_NR_CONSOLES);
