@@ -252,18 +252,6 @@ static inline int of_genpd_parse_idle_states(struct device_node *dn,
 	return -ENODEV;
 }
 
-static inline int of_genpd_add_device(struct of_phandle_args *args,
-				      struct device *dev)
-{
-	return -ENODEV;
-}
-
-static inline int of_genpd_add_subdomain(struct of_phandle_args *parent,
-					 struct of_phandle_args *new_subdomain)
-{
-	return -ENODEV;
-}
-
 static inline int genpd_dev_pm_attach(struct device *dev)
 {
 	return -ENODEV;
