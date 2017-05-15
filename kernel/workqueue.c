@@ -1049,7 +1049,7 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
  * move_linked_works - move linked works to a list
  * @work: start of series of works to be scheduled
  * @head: target list to append @work to
- * @nextp: out paramter for nested worklist walking
+ * @nextp: out parameter for nested worklist walking
  *
  * Schedule linked works starting from @work to @head.  Work series to
  * be scheduled starts at @work and includes any consecutive work with
@@ -1558,8 +1558,6 @@ static void __queue_delayed_work(int cpu, struct workqueue_struct *wq,
 		__queue_work(cpu, wq, &dwork->work);
 		return;
 	}
-
-	timer_stats_timer_set_start_info(&dwork->timer);
 
 	dwork->wq = wq;
 	dwork->cpu = cpu;
@@ -3046,7 +3044,7 @@ bool cancel_work(struct work_struct *work)
 {
 	return __cancel_work(work, false);
 }
-EXPORT_SYMBOL(cancel_work);
+
 /**
  * cancel_delayed_work - cancel a delayed work
  * @dwork: delayed_work to cancel
@@ -3226,7 +3224,7 @@ static bool wqattrs_equal(const struct workqueue_attrs *a,
  * init_worker_pool - initialize a newly zalloc'd worker_pool
  * @pool: worker_pool to initialize
  *
- * Initiailize a newly zalloc'd @pool.  It also allocates @pool->attrs.
+ * Initialize a newly zalloc'd @pool.  It also allocates @pool->attrs.
  *
  * Return: 0 on success, -errno on failure.  Even on failure, all fields
  * inside @pool proper are initialized and put_unbound_pool() can be called
@@ -4570,13 +4568,10 @@ static void wq_unbind_fn(struct work_struct *work)
 /**
  * rebind_workers - rebind all workers of a pool to the associated CPU
  * @pool: pool of interest
- * @force: if it is true, replace WORKER_UNBOUND with WORKER_REBOUND
- * irrespective of flags of workers. Otherwise, replace the flags only
- * when workers have WORKER_UNBOUND flag.
  *
  * @pool->cpu is coming online.  Rebind all workers to the CPU.
  */
-static void rebind_workers(struct worker_pool *pool, bool force)
+static void rebind_workers(struct worker_pool *pool)
 {
 	struct worker *worker;
 
@@ -4585,7 +4580,7 @@ static void rebind_workers(struct worker_pool *pool, bool force)
 	/*
 	 * Restore CPU affinity of all workers.  As all idle workers should
 	 * be on the run-queue of the associated CPU before any local
-	 * wake-ups for concurrency management happen, restore CPU affinty
+	 * wake-ups for concurrency management happen, restore CPU affinity
 	 * of all workers first and then clear UNBOUND.  As we're called
 	 * from CPU_ONLINE, the following shouldn't fail.
 	 */
@@ -4636,12 +4631,10 @@ static void rebind_workers(struct worker_pool *pool, bool force)
 		 * fail incorrectly leading to premature concurrency
 		 * management operations.
 		 */
-		if (force || (worker_flags & WORKER_UNBOUND)) {
-			WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
-			worker_flags |= WORKER_REBOUND;
-			worker_flags &= ~WORKER_UNBOUND;
-			ACCESS_ONCE(worker->flags) = worker_flags;
-		}
+		WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
+		worker_flags |= WORKER_REBOUND;
+		worker_flags &= ~WORKER_UNBOUND;
+		ACCESS_ONCE(worker->flags) = worker_flags;
 	}
 
 	spin_unlock_irq(&pool->lock);
@@ -5289,7 +5282,7 @@ int workqueue_sysfs_register(struct workqueue_struct *wq)
 	int ret;
 
 	/*
-	 * Adjusting max_active or creating new pwqs by applyting
+	 * Adjusting max_active or creating new pwqs by applying
 	 * attributes breaks ordering guarantee.  Disallow exposing ordered
 	 * workqueues.
 	 */
