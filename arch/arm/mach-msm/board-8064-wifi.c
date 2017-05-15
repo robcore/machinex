@@ -320,8 +320,8 @@ int brcm_wifi_status_register(
 	void *dev_id)
 #endif
 {
-	if (wifi_status_cb)
-		return -EAGAIN;
+	/*if (wifi_status_cb)
+		return -EAGAIN;*/
 	wifi_status_cb = callback;
 	wifi_status_cb_devid = dev_id;
 #ifdef CONFIG_BROKEN_SDIO_HACK
