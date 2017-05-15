@@ -85,8 +85,7 @@ static void power_suspend(struct work_struct *work)
 
 	cancel_work_sync(&power_resume_work);
 
-	if ((poweroff_charging) || (system_state == SYSTEM_RESTART)
-		|| (system_state == SYSTEM_POWER_OFF)) {
+	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
 		pr_info("[PROMETHEUS] Ignoring Unsupported System \
 				State\n");
 		return;
