@@ -1955,7 +1955,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 		 * find out whether a delayable work item is currently
 		 * pending
 		 */
-
+#if 0
 		if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
 			/*
 			 * try to cancel the current work if it fails to
@@ -1967,7 +1967,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 			 */
 			cancel_delayed_work(&mdp_pipe_ctrl_worker);
 		}
-
+#endif
 		if ((mdp_all_blocks_off) && (mdp_current_clk_on)) {
 			mutex_lock(&mdp_suspend_mutex);
 			if (block == MDP_MASTER_BLOCK || mdp_suspended) {
@@ -2000,7 +2000,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 					clk_disable_unprepare(mdp_lut_clk);
 			} else {
 				/* send workqueue to turn off mdp power */
-				queue_delayed_work(mdp_pipe_ctrl_wq,
+				mod_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
 						   mdp_timer_duration);
 			}
