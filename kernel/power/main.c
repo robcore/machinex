@@ -96,6 +96,8 @@ static ssize_t
 touch_event_show(struct kobject *kobj,
 		 struct kobj_attribute *attr, char *buf)
 {
+	unsigned long flags;
+
 	spin_lock_irqsave(touch_evt_lock, flags);
 	if (tc_ev_processed == 0) {
 		spin_lock_irqrestore(touch_evt_lock, flags);
@@ -113,6 +115,7 @@ touch_event_store(struct kobject *kobj,
 		  struct kobj_attribute *attr,
 		  const char *buf, size_t n)
 {
+	unsigned long flags;
 
 	hrtimer_cancel(&tc_ev_timer);
 	spin_lock_irqsave(touch_evt_lock, flags);
