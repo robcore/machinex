@@ -91,12 +91,14 @@ extern bool oom_killer_disabled;
 
 static inline void oom_killer_disable(void)
 {
-	oom_killer_disabled = true;
+	if (!oom_killer_disabled)
+		oom_killer_disabled = true;
 }
 
 static inline void oom_killer_enable(void)
 {
-	oom_killer_disabled = false;
+	if (oom_killer_disabled)
+		oom_killer_disabled = false;
 }
 
 extern struct task_struct *find_lock_task_mm(struct task_struct *p);
