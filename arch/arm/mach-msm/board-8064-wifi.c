@@ -320,8 +320,8 @@ int brcm_wifi_status_register(
 	void *dev_id)
 #endif
 {
-	/*if (wifi_status_cb)
-		return -EAGAIN;*/
+	if (wifi_status_cb)
+		return -EBUSY;
 	wifi_status_cb = callback;
 	wifi_status_cb_devid = dev_id;
 #ifdef CONFIG_BROKEN_SDIO_HACK
@@ -331,14 +331,6 @@ int brcm_wifi_status_register(
 		__func__, wifi_status_cb, dev_id);
 	return 0;
 }
-
-#if 1
-unsigned int brcm_wifi_status(struct device *dev)
-{
-	printk("%s:%d status %d\n",__func__,__LINE__,brcm_wifi_cd);
-	return brcm_wifi_cd;
-}
-#endif
 
 static int brcm_wlan_set_carddetect(int val)
 {
@@ -354,6 +346,13 @@ static int brcm_wlan_set_carddetect(int val)
 
 	return 0;
 }
+
+unsigned int brcm_wifi_status(struct device *dev)
+{
+	printk("%s:%d status %d\n",__func__,__LINE__,brcm_wifi_cd);
+	return brcm_wifi_cd;
+}
+#endif
 
 /* Customized Locale table : OPTIONAL feature */
 #define WLC_CNTRY_BUF_SZ        4
