@@ -24,15 +24,14 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/resume-trace.h>
-#include <linux/interrupt.h>
 #include <linux/pm_wakeirq.h>
+#include <linux/interrupt.h>
 #include <linux/sched.h>
 #include <linux/async.h>
 #include <linux/suspend.h>
 #include <trace/events/power.h>
 #include <linux/timer.h>
 #include <linux/slab.h>
-#include <linux/wakeup_reason.h>
 #include <linux/cpufreq.h>
 #include <linux/cpuidle.h>
 #include <linux/timer.h>
@@ -1257,9 +1256,6 @@ int dpm_suspend_noirq(pm_message_t state)
 	if (error) {
 		suspend_stats.failed_suspend_noirq++;
 		dpm_save_failed_step(SUSPEND_SUSPEND_NOIRQ);
-		pm_get_active_wakeup_sources(suspend_abort,
-			MAX_SUSPEND_ABORT_LEN);
-		log_suspend_abort_reason(suspend_abort);
 		dpm_resume_noirq(resume_event(state));
 	} else {
 		dpm_show_time(starttime, state, "noirq");
@@ -1359,7 +1355,6 @@ static int device_suspend_late(struct device *dev)
 int dpm_suspend_late(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	int error = 0;
 
 	mutex_lock(&dpm_list_mtx);
@@ -1396,9 +1391,6 @@ int dpm_suspend_late(pm_message_t state)
 	if (error) {
 		suspend_stats.failed_suspend_late++;
 		dpm_save_failed_step(SUSPEND_SUSPEND_LATE);
-		pm_get_active_wakeup_sources(suspend_abort,
-			MAX_SUSPEND_ABORT_LEN);
-		log_suspend_abort_reason(suspend_abort);
 		dpm_resume_early(resume_event(state));
 	} else {
 		dpm_show_time(starttime, state, "late");
@@ -1481,7 +1473,6 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	char *info = NULL;
 	int error = 0;
 	struct dpm_watchdog wd;
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 
 	dpm_wait_for_subordinate(dev, async);
 
@@ -1498,9 +1489,6 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 		pm_wakeup_event(dev, 0);
 
 	if (pm_wakeup_pending()) {
-		pm_get_active_wakeup_sources(suspend_abort,
-			MAX_SUSPEND_ABORT_LEN);
-		log_suspend_abort_reason(suspend_abort);
 		async_error = -EBUSY;
 		goto Complete;
 	}
