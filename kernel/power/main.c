@@ -111,13 +111,13 @@ touch_event_store(struct kobject *kobj,
 		  const char *buf, size_t n)
 {
 
-	hrtimer_cancel(&tc_ev_timer);
+	hrtimer_try_to_cancel(&tc_ev_timer);
 	tc_ev_processed = 0;
 
 	/* set a timer to notify the userspace to stop processing
 	 * touch event
 	 */
-	hrtimer_start(&tc_ev_timer, touch_evt_timer_val, HRTIMER_MODE_REL);
+	hrtimer_start(&tc_ev_timer, touch_evt_timer_val, HRTIMER_MODE_REL_PINNED);
 
 	/* wakeup the userspace poll */
 	sysfs_notify(kobj, NULL, "touch_event");
@@ -163,7 +163,7 @@ static void touch_event_fn(struct work_struct *work)
 static enum hrtimer_restart tc_ev_stop(struct hrtimer *hrtimer)
 {
 
-	schedule_work(&touch_event_struct);
+	schedule_work_on(0, &touch_event_struct);
 
 	return HRTIMER_NORESTART;
 }
@@ -878,8 +878,8 @@ static int __init pm_init(void)
 	hibernate_image_size_init();
 	hibernate_reserved_size_init();
 	pm_states_init();
-	touch_evt_timer_val = ktime_set(2, 0);
-	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	touch_evt_timer_val = ktime_set(1, 0);
+	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL_PINNED);
 	tc_ev_timer.function = &tc_ev_stop;
 	tc_ev_processed = 1;
 	power_kobj = kobject_create_and_add("power", NULL);
