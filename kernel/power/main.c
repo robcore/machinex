@@ -126,7 +126,7 @@ touch_event_store(struct kobject *kobj,
 	/* set a timer to notify the userspace to stop processing
 	 * touch event
 	 */
-	hrtimer_start(&tc_ev_timer, ktime_set(touch_evt_timer_val, 0), HRTIMER_MODE_REL);
+	hrtimer_start(&tc_ev_timer, touch_evt_timer_val, HRTIMER_MODE_REL);
 
 	/* wakeup the userspace poll */
 	sysfs_notify(kobj, NULL, "touch_event");
@@ -148,13 +148,12 @@ touch_event_timer_store(struct kobject *kobj,
 			struct kobj_attribute *attr,
 			const char *buf, size_t n)
 {
-	unsigned long long val;
+	const unsigned long val;
 
 	if (kstrtoul(buf, 10, &val))
 		return -EINVAL;
 
-	touch_evt_timer_val = val;
-	ktime_set(0, (touch_evt_timer_val * 1000));
+	touch_evt_timer_val = ktime_set(0, (val * 1000));
 
 	return n;
 }
@@ -842,8 +841,6 @@ static struct attribute * g[] = {
 #ifdef CONFIG_SUSPEND
 	&mem_sleep_attr.attr,
 #endif
-	&touch_event_attr.attr,
-	&touch_event_timer_attr.attr,
 #ifdef CONFIG_PM_AUTOSLEEP
 	&autosleep_attr.attr,
 #endif
@@ -851,6 +848,8 @@ static struct attribute * g[] = {
 	&wake_lock_attr.attr,
 	&wake_unlock_attr.attr,
 #endif
+	&touch_event_attr.attr,
+	&touch_event_timer_attr.attr,
 #ifdef CONFIG_PM_DEBUG
 	&pm_test_attr.attr,
 #endif
@@ -889,6 +888,10 @@ static int __init pm_init(void)
 	hibernate_image_size_init();
 	hibernate_reserved_size_init();
 	pm_states_init();
+	touch_evt_timer_val = ktime_set(2, 0);
+	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	tc_ev_timer.function = &tc_ev_stop;
+	tc_ev_processed = 1;
 	power_kobj = kobject_create_and_add("power", NULL);
 	if (!power_kobj)
 		return -ENOMEM;
@@ -900,15 +903,3 @@ static int __init pm_init(void)
 }
 
 core_initcall(pm_init);
-
-static int __init touch_timer_init(void)
-{
-	spin_lock_init(&touch_evt_lock);
-	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	touch_evt_timer_val = 2;
-	tc_ev_timer.function = &tc_ev_stop;
-
-	return 0;
-}
-
-arch_initcall(touch_timer_init);
