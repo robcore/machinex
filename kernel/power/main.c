@@ -101,11 +101,11 @@ touch_event_show(struct kobject *kobj,
 
 	spin_lock_irqsave(&touch_evt_lock, flags);
 	if (tc_ev_processed == 0) {
-		spin_lock_irqrestore(&touch_evt_lock, flags);
+		spin_unlock_irqrestore(&touch_evt_lock, flags);
 		return snprintf(buf, strnlen("touch_event", MAX_BUF) + 1,
 				"touch_event");
 	} else {
-		spin_lock_irqrestore(&touch_evt_lock, flags);
+		spin_unlock_irqrestore(&touch_evt_lock, flags);
 		return snprintf(buf, strnlen("null", MAX_BUF) + 1,
 				"null");
 	}
@@ -121,7 +121,7 @@ touch_event_store(struct kobject *kobj,
 	hrtimer_cancel(&tc_ev_timer);
 	spin_lock_irqsave(&touch_evt_lock, flags);
 	tc_ev_processed = 0;
-	spin_lock_irqrestore(&touch_evt_lock, flags);
+	spin_unlock_irqrestore(&touch_evt_lock, flags);
 
 	/* set a timer to notify the userspace to stop processing
 	 * touch event
@@ -168,7 +168,7 @@ static void touch_event_fn(void)
 	/* wakeup the userspace poll */
 	spin_lock_irqsave(&touch_evt_lock, flags);
 	tc_ev_processed = 1;
-	spin_lock_irqrestore(&touch_evt_lock, flags);
+	spin_unlock_irqrestore(&touch_evt_lock, flags);
 	sysfs_notify(power_kobj, NULL, "touch_event");
 }
 
