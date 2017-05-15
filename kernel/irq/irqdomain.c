@@ -517,31 +517,6 @@ unsigned int irq_create_of_mapping(struct of_phandle_args *irq_data)
 EXPORT_SYMBOL_GPL(irq_create_of_mapping);
 
 /**
- * irq_dispose_mapping() - Unmap an interrupt
- * @virq: linux irq number of the interrupt to unmap
- */
-void irq_dispose_mapping(unsigned int virq)
-{
-	struct irq_data *irq_data = irq_get_irq_data(virq);
-	struct irq_domain *domain;
-
-	if (!virq || !irq_data)
-		return;
-
-	domain = irq_data->domain;
-	if (WARN_ON(domain == NULL))
-		return;
-
-	if (irq_domain_is_hierarchy(domain)) {
-		irq_domain_free_irqs(virq, 1);
-	} else {
-		irq_domain_disassociate(domain, virq);
-		irq_free_desc(virq);
-	}
-}
-EXPORT_SYMBOL_GPL(irq_dispose_mapping);
-
-/**
  * irq_find_mapping() - Find a linux irq from an hw irq number.
  * @domain: domain owning this hardware interrupt
  * @hwirq: hardware irq number in that domain space
@@ -1193,6 +1168,31 @@ void irq_domain_free_irqs_parent(struct irq_domain *domain,
 					       nr_irqs);
 }
 EXPORT_SYMBOL_GPL(irq_domain_free_irqs_parent);
+
+/**
+ * irq_dispose_mapping() - Unmap an interrupt
+ * @virq: linux irq number of the interrupt to unmap
+ */
+void irq_dispose_mapping(unsigned int virq)
+{
+	struct irq_data *irq_data = irq_get_irq_data(virq);
+	struct irq_domain *domain;
+
+	if (!virq || !irq_data)
+		return;
+
+	domain = irq_data->domain;
+	if (WARN_ON(domain == NULL))
+		return;
+
+	if (irq_domain_is_hierarchy(domain)) {
+		irq_domain_free_irqs(virq, 1);
+	} else {
+		irq_domain_disassociate(domain, virq);
+		irq_free_desc(virq);
+	}
+}
+EXPORT_SYMBOL_GPL(irq_dispose_mapping);
 
 /**
  * irq_domain_activate_irq - Call domain_ops->activate recursively to activate
