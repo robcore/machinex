@@ -40,11 +40,6 @@ extern void device_pm_move_after(struct device *, struct device *);
 extern void device_pm_move_last(struct device *);
 extern void device_pm_check_callbacks(struct device *dev);
 
-static inline bool device_pm_initialized(struct device *dev)
-{
-	return dev->power.in_dpm_list;
-}
-
 static inline void device_pm_init(struct device *dev)
 {
 	device_pm_init_common(dev);
@@ -128,11 +123,6 @@ static inline int pm_qos_sysfs_add(struct device *dev) { return 0; }
 static inline void pm_qos_sysfs_remove(struct device *dev) {}
 static inline void device_pm_check_callbacks(struct device *dev) {}
 
-static inline bool device_pm_initialized(struct device *dev)
-{
-	return device_is_registered(dev);
-}
-
 static inline void dev_pm_arm_wake_irq(struct wake_irq *wirq)
 {
 }
@@ -141,4 +131,4 @@ static inline void dev_pm_disarm_wake_irq(struct wake_irq *wirq)
 {
 }
 
-#endif /* !CONFIG_PM */
+#endif
