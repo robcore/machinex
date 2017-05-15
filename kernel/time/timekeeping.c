@@ -2239,6 +2239,7 @@ struct timespec64 get_monotonic_coarse64(void)
 
 	return now;
 }
+EXPORT_SYMBOL(get_monotonic_coarse64);
 
 /*
  * Must hold jiffies_lock
