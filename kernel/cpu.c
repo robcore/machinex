@@ -1197,6 +1197,11 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.teardown		= NULL,
 		.cant_stop		= true,
 	},
+	[CPUHP_HRTIMERS_PREPARE] = {
+		.name = "hrtimers prepare",
+		.startup = hrtimers_prepare_cpu,
+		.teardown = hrtimers_dead_cpu,
+	},
 	/*
 	 * Handled on controll processor until the plugged processor manages
 	 * this itself.
