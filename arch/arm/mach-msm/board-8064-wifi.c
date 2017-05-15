@@ -299,11 +299,13 @@ static int brcm_wlan_power(int onoff)
 
 static int brcm_wlan_reset(int onoff)
 {
+	bool b0rev;
+
   /*
 	gpio_set_value(GPIO_WLAN_ENABLE,
 			onoff ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
   */
-	return 0;
+	return brcm_wlan_power(onoff, b0rev);
 }
 
 
