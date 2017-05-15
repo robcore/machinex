@@ -354,7 +354,6 @@ unsigned int brcm_wifi_status(struct device *dev)
 	printk("%s:%d status %d\n",__func__,__LINE__,brcm_wifi_cd);
 	return brcm_wifi_cd;
 }
-#endif
 
 /* Customized Locale table : OPTIONAL feature */
 #define WLC_CNTRY_BUF_SZ        4
