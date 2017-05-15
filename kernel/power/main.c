@@ -908,5 +908,4 @@ static int __init touch_timer_init(void)
 	return 0;
 }
 
-late_initcall(touch_timer_init);
-
+arch_initcall(touch_timer_init);
