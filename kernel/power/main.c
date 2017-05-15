@@ -27,6 +27,7 @@
 #define MAX_BUF 100
 
 DEFINE_MUTEX(pm_mutex);
+DEFINE_SPINLOCK(touch_evt_lock);
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -98,13 +99,13 @@ touch_event_show(struct kobject *kobj,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(touch_evt_lock, flags);
+	spin_lock_irqsave(&touch_evt_lock, flags);
 	if (tc_ev_processed == 0) {
-		spin_lock_irqrestore(touch_evt_lock, flags);
+		spin_lock_irqrestore(&touch_evt_lock, flags);
 		return snprintf(buf, strnlen("touch_event", MAX_BUF) + 1,
 				"touch_event");
 	} else {
-		spin_lock_irqrestore(touch_evt_lock, flags);
+		spin_lock_irqrestore(&touch_evt_lock, flags);
 		return snprintf(buf, strnlen("null", MAX_BUF) + 1,
 				"null");
 	}
@@ -118,9 +119,9 @@ touch_event_store(struct kobject *kobj,
 	unsigned long flags;
 
 	hrtimer_cancel(&tc_ev_timer);
-	spin_lock_irqsave(touch_evt_lock, flags);
+	spin_lock_irqsave(&touch_evt_lock, flags);
 	tc_ev_processed = 0;
-	spin_lock_irqrestore(touch_evt_lock, flags);
+	spin_lock_irqrestore(&touch_evt_lock, flags);
 
 	/* set a timer to notify the userspace to stop processing
 	 * touch event
@@ -160,15 +161,14 @@ touch_event_timer_store(struct kobject *kobj,
 
 power_attr(touch_event_timer);
 
-#define SPINLOCk(touch_evt_lock);
 static void touch_event_fn(void)
 {
 	unsigned long flags;
 
 	/* wakeup the userspace poll */
-	spin_lock_irqsave(touch_evt_lock, flags);
+	spin_lock_irqsave(&touch_evt_lock, flags);
 	tc_ev_processed = 1;
-	spin_lock_irqrestore(touch_evt_lock, flags);
+	spin_lock_irqrestore(&touch_evt_lock, flags);
 	sysfs_notify(power_kobj, NULL, "touch_event");
 }
 
@@ -903,7 +903,7 @@ core_initcall(pm_init);
 
 static int __init touch_timer_init(void)
 {
-	spin_lock_init(touch_evt_lock);
+	spin_lock_init(&touch_evt_lock);
 	hrtimer_init(&tc_ev_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	touch_evt_timer_val = 2;
 	tc_ev_timer.function = &tc_ev_stop;

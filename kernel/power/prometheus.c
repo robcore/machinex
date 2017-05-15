@@ -244,7 +244,7 @@ static ssize_t global_suspend_store(struct kobject *kobj,
 	unsigned int val;
 
 	sscanf(buf, "%u\n", &val);
-
+raw_spin_unlock_irqrestore_rcu_node
 	if (val <= 0)
 		val = 0;
 	if (val >= 1)
@@ -339,8 +339,8 @@ static int prometheus_init(void)
 	if (!pwrsup_wq)
 		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
 
-	mutex_init(prometheus_mtx);
-	spin_lock_init(ps_state_lock);
+	mutex_init(&prometheus_mtx);
+	spin_lock_init(&ps_state_lock);
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);

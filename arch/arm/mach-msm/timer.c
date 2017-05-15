@@ -336,7 +336,7 @@ static void msm_timer_set_mode(enum clock_event_mode mode,
 	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	gpt_state = this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 
-	spin_lock_irqsave(qcom_timer_lock, irq_flags);
+	spin_lock_irqsave(&qcom_timer_lock, irq_flags);
 
 	switch (mode) {
 	case CLOCK_EVT_MODE_RESUME:
@@ -386,7 +386,7 @@ static void msm_timer_set_mode(enum clock_event_mode mode,
 		}
 		break;
 	}
-	spin_unlock_irq_restore(qcom_timer_lock, irq_flags);
+	spin_unlock_irq_restore(&qcom_timer_lock, irq_flags);
 	wmb();
 }
 
@@ -1037,7 +1037,7 @@ void __init msm_timer_init(void)
 		dgt->freq = 6750000;
 	}
 
-	spin_lock_init(qcom_timer_lock);
+	spin_lock_init(&qcom_timer_lock);
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
 		msm_global_timer = MSM_CLOCK_GPT;
 	else
