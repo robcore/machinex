@@ -249,9 +249,10 @@ void activate_event_timer(struct event_timer_info *event, ktime_t event_time)
 
 	spin_lock_irqsave(&event_setup_lock, flags);
 	event->node.expires = event_time;
+	spin_unlock_irqrestore(&event_setup_lock, flags);
+
 	/* Start hr timer and add event to rb tree */
 	setup_event_hrtimer(event);
-	spin_unlock_irqrestore(&event_setup_lock, flags);
 }
 
 
