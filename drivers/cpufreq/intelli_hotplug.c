@@ -330,6 +330,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	    cpus_boosted <= min_cpus_online) {
 		put_online_cpus();
 		return;
+	}
 
 	target_cpus = cpus_boosted;
 	schedule_work_on(0, &up_down_work);
