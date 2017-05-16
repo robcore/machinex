@@ -598,6 +598,38 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 	}
 }
 
+/**
+ * wakup_source_activate - Mark given wakeup source as active.
+ * @ws: Wakeup source to handle.
+ * @hard: If set, abort suspends in progress and wake up from suspend-to-idle.
+ *
+ * Update the @ws' statistics and, if @ws has just been activated, notify the PM
+ * core of the event by incrementing the counter of of wakeup events being
+ * processed.
+ */
+static void wakeup_source_activate(struct wakeup_source *ws, bool hard)
+{
+	unsigned int cec;
+
+	if (WARN_ONCE(wakeup_source_not_registered(ws),
+			"unregistered wakeup source\n"))
+		return;
+
+	if (hard)
+		pm_system_wakeup();
+
+	ws->active = true;
+	ws->active_count++;
+	ws->last_time = ktime_get();
+	if (ws->autosleep_enabled)
+		ws->start_prevent_time = ws->last_time;
+
+	/* Increment the counter of events in progress. */
+	cec = atomic_inc_return(&combined_event_count);
+
+	trace_wakeup_source_activate(ws->name, cec);
+}
+
 static bool wakeup_source_blocker(struct wakeup_source *ws)
 {
 	unsigned int wslen = 0;
@@ -662,38 +694,6 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
  * "no suspend" period will be ended either by the pm_relax(), or by the timer
  * function executed when the timer expires, whichever comes first.
  */
-
-/**
- * wakup_source_activate - Mark given wakeup source as active.
- * @ws: Wakeup source to handle.
- * @hard: If set, abort suspends in progress and wake up from suspend-to-idle.
- *
- * Update the @ws' statistics and, if @ws has just been activated, notify the PM
- * core of the event by incrementing the counter of of wakeup events being
- * processed.
- */
-static void wakeup_source_activate(struct wakeup_source *ws, bool hard)
-{
-	unsigned int cec;
-
-	if (WARN_ONCE(wakeup_source_not_registered(ws),
-			"unregistered wakeup source\n"))
-		return;
-
-	if (hard)
-		pm_system_wakeup();
-
-	ws->active = true;
-	ws->active_count++;
-	ws->last_time = ktime_get();
-	if (ws->autosleep_enabled)
-		ws->start_prevent_time = ws->last_time;
-
-	/* Increment the counter of events in progress. */
-	cec = atomic_inc_return(&combined_event_count);
-
-	trace_wakeup_source_activate(ws->name, cec);
-}
 
 /**
  * wakeup_source_report_event - Report wakeup event using the given source.

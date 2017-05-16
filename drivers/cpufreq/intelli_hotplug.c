@@ -56,6 +56,12 @@ struct ip_cpu_info {
 	unsigned long cpu_nr_running;
 };
 static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
+struct ip_suspend {
+	struct mutex intellisleep_mutex;
+	bool intelli_suspended;
+};
+
+static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
 
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
@@ -73,13 +79,6 @@ static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
 static u64 gov_lock_duration = 5000;
-
-struct ip_suspend {
-	struct mutex intellisleep_mutex;
-	int intelli_suspended;
-};
-
-static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
 
 #define dprintk(msg...)		\
 do {				\
@@ -426,8 +425,8 @@ static void intelli_suspend(struct power_suspend * h)
 	}
 	for_each_possible_cpu(cpu) {
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
-			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
+		if (per_cpu(i_suspend_data, cpu).intelli_suspended == false)
+			per_cpu(i_suspend_data, cpu).intelli_suspended = true;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	for_each_online_cpu(cpu) {
@@ -445,8 +444,8 @@ static void intelli_resume(struct power_suspend * h)
 	}
 	for_each_possible_cpu(cpu) {
 		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
-			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
+		if (per_cpu(i_suspend_data, cpu).intelli_suspended == true);
+			per_cpu(i_suspend_data, cpu).intelli_suspended = false;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	for_each_online_cpu(cpu) {
@@ -472,7 +471,7 @@ static int intelli_plug_start(void)
 	mutex_init(&intelli_plug_mutex);
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
-		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
+		per_cpu(i_suspend_data, cpu).intelli_suspended = false;
 	}
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
