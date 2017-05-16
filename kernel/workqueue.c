@@ -4554,13 +4554,10 @@ static void wq_unbind_fn(struct work_struct *work)
 /**
  * rebind_workers - rebind all workers of a pool to the associated CPU
  * @pool: pool of interest
- * @force: if it is true, replace WORKER_UNBOUND with WORKER_REBOUND
- * irrespective of flags of workers. Otherwise, replace the flags only
- * when workers have WORKER_UNBOUND flag.
  *
  * @pool->cpu is coming online.  Rebind all workers to the CPU.
  */
-static void rebind_workers(struct worker_pool *pool, bool force)
+static void rebind_workers(struct worker_pool *pool)
 {
 	struct worker *worker;
 
@@ -4569,7 +4566,7 @@ static void rebind_workers(struct worker_pool *pool, bool force)
 	/*
 	 * Restore CPU affinity of all workers.  As all idle workers should
 	 * be on the run-queue of the associated CPU before any local
-	 * wake-ups for concurrency management happen, restore CPU affinty
+	 * wake-ups for concurrency management happen, restore CPU affinity
 	 * of all workers first and then clear UNBOUND.  As we're called
 	 * from CPU_ONLINE, the following shouldn't fail.
 	 */
@@ -4620,12 +4617,10 @@ static void rebind_workers(struct worker_pool *pool, bool force)
 		 * fail incorrectly leading to premature concurrency
 		 * management operations.
 		 */
-		if (force || (worker_flags & WORKER_UNBOUND)) {
-			WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
-			worker_flags |= WORKER_REBOUND;
-			worker_flags &= ~WORKER_UNBOUND;
-			ACCESS_ONCE(worker->flags) = worker_flags;
-		}
+		WARN_ON_ONCE(!(worker_flags & WORKER_UNBOUND));
+		worker_flags |= WORKER_REBOUND;
+		worker_flags &= ~WORKER_UNBOUND;
+		ACCESS_ONCE(worker->flags) = worker_flags;
 	}
 
 	spin_unlock_irq(&pool->lock);
