@@ -244,7 +244,6 @@ static ssize_t global_suspend_store(struct kobject *kobj,
 	unsigned int val;
 
 	sscanf(buf, "%u\n", &val);
-raw_spin_unlock_irqrestore_rcu_node
 	if (val <= 0)
 		val = 0;
 	if (val >= 1)
