@@ -3635,13 +3635,6 @@ int __init msm_smd_init(void)
 	if (registered)
 		return 0;
 
-	rc = platform_driver_register(&msm_smd_driver);
-	if (rc) {
-		pr_err("%s: msm_smd_driver register failed %d\n",
-			__func__, rc);
-		return rc;
-	}
-
 	registered = true;
 	rc = remote_spin_lock_init(&remote_spinlock, SMEM_SPINLOCK_SMEM_ALLOC);
 	if (rc) {
@@ -3649,6 +3642,13 @@ int __init msm_smd_init(void)
 		return rc;
 	}
 	spinlocks_initialized = 1;
+
+	rc = platform_driver_register(&msm_smd_driver);
+	if (rc) {
+		pr_err("%s: msm_smd_driver register failed %d\n",
+			__func__, rc);
+		return rc;
+	}
 
 	smd_module_init_notify(0, NULL);
 
