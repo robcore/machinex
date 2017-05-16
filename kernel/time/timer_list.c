@@ -17,7 +17,7 @@
 #include <linux/seq_file.h>
 #include <linux/kallsyms.h>
 
-#include <linux/uaccess.h>
+#include <asm/uaccess.h>
 
 #include "tick-internal.h"
 
