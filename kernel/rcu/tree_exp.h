@@ -227,6 +227,7 @@ static bool sync_exp_work_done(struct rcu_state *rsp, atomic_long_t *stat,
 			       unsigned long s)
 {
 	if (rcu_exp_gp_seq_done(rsp, s)) {
+		//trace_rcu_exp_grace_period(rsp->name, s, TPS("done"));
 		/* Ensure test happens before caller kfree(). */
 		smp_mb__before_atomic(); /* ^^^ */
 		atomic_long_inc(stat);
@@ -234,7 +235,6 @@ static bool sync_exp_work_done(struct rcu_state *rsp, atomic_long_t *stat,
 	}
 	return false;
 }
-
 /*
  * Funnel-lock acquisition for expedited grace periods.  Returns true
  * if some other task completed an expedited grace period that this task
@@ -246,6 +246,14 @@ static bool exp_funnel_lock(struct rcu_state *rsp, unsigned long s)
 {
 	struct rcu_data *rdp = per_cpu_ptr(rsp->rda, raw_smp_processor_id());
 	struct rcu_node *rnp = rdp->mynode;
+	struct rcu_node *rnp_root = rcu_get_root(rsp);
+
+	/* Low-contention fastpath. */
+	if (ULONG_CMP_LT(READ_ONCE(rnp->exp_seq_rq), s) &&
+	    (rnp == rnp_root ||
+	     ULONG_CMP_LT(READ_ONCE(rnp_root->exp_seq_rq), s)) &&
+	    mutex_trylock(&rsp->exp_mutex))
+		goto fastpath;
 
 	/*
 	 * Each pass through the following loop works its way up
@@ -279,7 +287,7 @@ static bool exp_funnel_lock(struct rcu_state *rsp, unsigned long s)
 					  rnp->grphi, TPS("nxtlvl"));*/
 	}
 	mutex_lock(&rsp->exp_mutex);
-
+fastpath:
 	if (sync_exp_work_done(rsp, &rdp->exp_workdone3, s)) {
 		mutex_unlock(&rsp->exp_mutex);
 		return true;

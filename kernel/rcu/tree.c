@@ -57,7 +57,6 @@
 
 #include "tree.h"
 #include "rcu.h"
-#include "tree_exp.h"
 
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
@@ -2289,7 +2288,7 @@ static void rcu_report_qs_rsp(struct rcu_state *rsp, unsigned long flags)
 	WARN_ON_ONCE(!rcu_gp_in_progress(rsp));
 	WRITE_ONCE(rsp->gp_flags, READ_ONCE(rsp->gp_flags) | RCU_GP_FLAG_FQS);
 	raw_spin_unlock_irqrestore(&rcu_get_root(rsp)->lock, flags);
-	rcu_gp_kthread_wake(rsp);
+	swake_up(&rsp->gp_wq);  /* Memory barrier implied by swake_up() path. */
 }
 
 /*
@@ -2921,7 +2920,7 @@ static void force_quiescent_state(struct rcu_state *rsp)
 	}
 	WRITE_ONCE(rsp->gp_flags, READ_ONCE(rsp->gp_flags) | RCU_GP_FLAG_FQS);
 	raw_spin_unlock_irqrestore(&rnp_old->lock, flags);
-	rcu_gp_kthread_wake(rsp);
+	swake_up(&rsp->gp_wq); /* Memory barrier implied by swake_up() path. */
 }
 
 /*
@@ -3373,6 +3372,41 @@ void cond_synchronize_sched(unsigned long oldstate)
 }
 EXPORT_SYMBOL_GPL(cond_synchronize_sched);
 
+/* Adjust sequence number for start of update-side operation. */
+static void rcu_seq_start(unsigned long *sp)
+{
+	WRITE_ONCE(*sp, *sp + 1);
+	smp_mb(); /* Ensure update-side operation after counter increment. */
+	WARN_ON_ONCE(!(*sp & 0x1));
+}
+
+/* Adjust sequence number for end of update-side operation. */
+static void rcu_seq_end(unsigned long *sp)
+{
+	smp_mb(); /* Ensure update-side operation before counter increment. */
+	WRITE_ONCE(*sp, *sp + 1);
+	WARN_ON_ONCE(*sp & 0x1);
+}
+
+/* Take a snapshot of the update side's sequence number. */
+static unsigned long rcu_seq_snap(unsigned long *sp)
+{
+	unsigned long s;
+
+	s = (READ_ONCE(*sp) + 3) & ~0x1;
+	smp_mb(); /* Above access must not bleed into critical section. */
+	return s;
+}
+
+/*
+ * Given a snapshot from rcu_seq_snap(), determine whether or not a
+ * full update-side operation has occurred.
+ */
+static bool rcu_seq_done(unsigned long *sp, unsigned long s)
+{
+	return ULONG_CMP_GE(READ_ONCE(*sp), s);
+}
+
 /*
  * Check to see if there is any immediate RCU-related work to be done
  * by the current CPU, for the specified type of RCU, returning 1 if so.
@@ -3795,7 +3829,7 @@ void rcu_cpu_starting(unsigned int cpu)
 		raw_spin_lock_irqsave_rcu_node(rnp, flags);
 		rnp->qsmaskinitnext |= mask;
 		rnp->expmaskinitnext |= mask;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
+		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 	}
 }
 
