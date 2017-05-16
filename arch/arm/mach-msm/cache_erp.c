@@ -502,7 +502,7 @@ static int msm_cache_erp_probe(struct platform_device *pdev)
 	}
 
 	get_online_cpus();
-		cpuhp_setup_state(CPUHP_AP_MSM_CACHE_ERP,
+		cpuhp_setup_state_nocalls(CPUHP_AP_MSM_CACHE_ERP,
 				  "AP_MSM_CACHE_ERP", cache_erp_starting_cpu,
 				  cache_erp_dying_cpu);
 	for_each_cpu(cpu, cpu_online_mask)
