@@ -7849,7 +7849,7 @@ static void __init perf_event_init_all_cpus(void)
 	}
 }
 
-static void perf_event_init_cpu(int cpu)
+int perf_event_init_cpu(unsigned int cpu)
 {
 	struct swevent_htable *swhash = &per_cpu(swevent_htable, cpu);
 
@@ -7863,6 +7863,7 @@ static void perf_event_init_cpu(int cpu)
 		rcu_assign_pointer(swhash->swevent_hlist, hlist);
 	}
 	mutex_unlock(&swhash->hlist_mutex);
+	return 0;
 }
 
 #if defined CONFIG_KEXEC
@@ -7913,14 +7914,17 @@ static void perf_event_exit_cpu_context(int cpu)
 	}
 	srcu_read_unlock(&pmus_srcu, idx);
 }
+#else
 
-static void perf_event_exit_cpu(int cpu)
+static void perf_event_exit_cpu_context(int cpu) { }
+
+#endif
+
+int perf_event_exit_cpu(unsigned int cpu)
 {
 	perf_event_exit_cpu_context(cpu);
+	return 0;
 }
-#else
-static inline void perf_event_exit_cpu(int cpu) { }
-#endif
 
 static int
 perf_reboot(struct notifier_block *notifier, unsigned long val, void *v)
@@ -7942,29 +7946,6 @@ static struct notifier_block perf_reboot_notifier = {
 	.priority = INT_MIN,
 };
 
-static int
-perf_cpu_notify(struct notifier_block *self, unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (long)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-
-	case CPU_UP_PREPARE:
-	case CPU_DOWN_FAILED:
-		perf_event_init_cpu(cpu);
-		break;
-
-	case CPU_UP_CANCELED:
-	case CPU_DOWN_PREPARE:
-		perf_event_exit_cpu(cpu);
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
 void __init perf_event_init(void)
 {
 	int ret;
@@ -7977,7 +7958,7 @@ void __init perf_event_init(void)
 	perf_pmu_register(&perf_cpu_clock, NULL, -1);
 	perf_pmu_register(&perf_task_clock, NULL, -1);
 	perf_tp_register();
-	perf_cpu_notifier(perf_cpu_notify);
+	perf_event_init_cpu(smp_processor_id());
 	register_reboot_notifier(&perf_reboot_notifier);
 
 	ret = init_hw_breakpoint();
