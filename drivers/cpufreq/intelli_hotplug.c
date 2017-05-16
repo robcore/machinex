@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -56,12 +56,6 @@ struct ip_cpu_info {
 	unsigned long cpu_nr_running;
 };
 static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
-struct ip_suspend {
-	struct mutex intellisleep_mutex;
-	bool intelli_suspended;
-};
-
-static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
 
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
@@ -79,6 +73,13 @@ static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
 static u64 gov_lock_duration = 5000;
+
+struct ip_suspend {
+	struct mutex intellisleep_mutex;
+	int intelli_suspended;
+};
+
+static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
 
 #define dprintk(msg...)		\
 do {				\
@@ -252,14 +253,12 @@ static void cpu_up_down_work(struct work_struct *work)
 	else if (target > max_cpus_online)
 		target = max_cpus_online;
 
-	get_online_cpus();
 	online_cpus = num_online_cpus();
+
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-		(delta <= msecs_to_jiffies(boost_lock_duration))) {
-			put_online_cpus();
-			goto reschedule;
-		}
+		(delta <= msecs_to_jiffies(boost_lock_duration)))
+				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
@@ -279,17 +278,14 @@ static void cpu_up_down_work(struct work_struct *work)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
-			if (thermal_core_controlled) {
-				put_online_cpus();
+			if (thermal_core_controlled)
 				goto reschedule;
-			}
 				cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
 				break;
 		}
 	}
-	put_online_cpus();
 reschedule:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
@@ -325,17 +321,13 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
 		return;
 
-	get_online_cpus();
 	if (num_online_cpus() >= cpus_boosted ||
-	    cpus_boosted <= min_cpus_online) {
-		put_online_cpus();
+	    cpus_boosted <= min_cpus_online)
 		return;
-	}
 
 	target_cpus = cpus_boosted;
 	schedule_work_on(0, &up_down_work);
 	last_boost_time = ktime_to_us(ktime_get());
-	put_online_cpus();
 }
 
 static int intelli_plug_input_connect(struct input_handler *handler,
@@ -407,7 +399,6 @@ static void cycle_cpus(void)
 {
 	unsigned int cpu;
 
-	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
@@ -424,7 +415,6 @@ static void cycle_cpus(void)
 			      msecs_to_jiffies(START_DELAY_MS));
 
 	intellinit = false;
-	put_online_cpus();
 }
 
 static void intelli_suspend(struct power_suspend * h)
@@ -436,8 +426,8 @@ static void intelli_suspend(struct power_suspend * h)
 	}
 	for_each_possible_cpu(cpu) {
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (per_cpu(i_suspend_data, cpu).intelli_suspended == false)
-			per_cpu(i_suspend_data, cpu).intelli_suspended = true;
+		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
+			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	for_each_online_cpu(cpu) {
@@ -455,8 +445,8 @@ static void intelli_resume(struct power_suspend * h)
 	}
 	for_each_possible_cpu(cpu) {
 		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (per_cpu(i_suspend_data, cpu).intelli_suspended == true);
-			per_cpu(i_suspend_data, cpu).intelli_suspended = false;
+		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
+			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	for_each_online_cpu(cpu) {
@@ -482,7 +472,7 @@ static int intelli_plug_start(void)
 	mutex_init(&intelli_plug_mutex);
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
-		per_cpu(i_suspend_data, cpu).intelli_suspended = false;
+		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 	}
 
 //	intelliplug_wq = create_singlethread_workqueue("intelliplug");
@@ -530,6 +520,7 @@ static void intelli_plug_stop(void)
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
+	cancel_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 	for_each_possible_cpu(cpu) {
 		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
