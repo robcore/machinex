@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEF_SAMPLING_MS			35
 #define RESUME_SAMPLING_MS		100
@@ -252,12 +252,14 @@ static void cpu_up_down_work(struct work_struct *work)
 	else if (target > max_cpus_online)
 		target = max_cpus_online;
 
+	get_online_cpus();
 	online_cpus = num_online_cpus();
-
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-		(delta <= msecs_to_jiffies(boost_lock_duration)))
-				goto reschedule;
+		(delta <= msecs_to_jiffies(boost_lock_duration))) {
+			put_online_cpus();
+			goto reschedule;
+		}
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
@@ -277,14 +279,17 @@ static void cpu_up_down_work(struct work_struct *work)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
-			if (thermal_core_controlled)
+			if (thermal_core_controlled) {
+				put_online_cpus();
 				goto reschedule;
+			}
 				cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
 				break;
 		}
 	}
+	put_online_cpus();
 reschedule:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
@@ -320,13 +325,16 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
 		return;
 
+	get_online_cpus();
 	if (num_online_cpus() >= cpus_boosted ||
-	    cpus_boosted <= min_cpus_online)
+	    cpus_boosted <= min_cpus_online) {
+		put_online_cpus();
 		return;
 
 	target_cpus = cpus_boosted;
 	schedule_work_on(0, &up_down_work);
 	last_boost_time = ktime_to_us(ktime_get());
+	put_online_cpus();
 }
 
 static int intelli_plug_input_connect(struct input_handler *handler,
@@ -398,6 +406,7 @@ static void cycle_cpus(void)
 {
 	unsigned int cpu;
 
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
@@ -414,6 +423,7 @@ static void cycle_cpus(void)
 			      msecs_to_jiffies(START_DELAY_MS));
 
 	intellinit = false;
+	put_online_cpus();
 }
 
 static void intelli_suspend(struct power_suspend * h)
