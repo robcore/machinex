@@ -25,11 +25,10 @@
  *
  */
 #include <linux/prometheus.h>
-#include <linux/power_supply.h>
 #include "power.h"
 
 #define VERSION 1
-#define VERSION_MIN 7
+#define VERSION_MIN 8
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -76,6 +75,21 @@ void unregister_power_suspend(struct power_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
+#if 0
+static bool wakeup_source_check(void)
+{
+	struct wakeup_source *ws = (struct wakeup_source);
+	ws->name = (struct wakeup_source *)name;
+	if (ws) {
+		if (!strcmp(ws->name, "msm_hsic_host")) {
+			if (ws->active)
+				return true;
+		}
+	}
+	return false;
+}
+#endif
+
 static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
@@ -85,14 +99,13 @@ static void power_suspend(struct work_struct *work)
 
 	cancel_work_sync(&power_resume_work);
 
-	if ((poweroff_charging) || (system_state == SYSTEM_RESTART)
-		|| (system_state == SYSTEM_POWER_OFF)) {
+	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
 		pr_info("[PROMETHEUS] Ignoring Unsupported System \
 				State\n");
 		return;
 	}
 
-	pr_info("[PROMETHEUS] Entering Suspend...\n");
+	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_INACTIVE)
@@ -104,7 +117,7 @@ static void power_suspend(struct work_struct *work)
 		return;
 	}
 
-	pr_info("[PROMETHEUS] Suspending...\n");
+	pr_info("[PROMETHEUS] Suspending\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			pos->suspend(pos);
@@ -152,7 +165,7 @@ static void power_resume(struct work_struct *work)
 	int abort = 0;
 
 	cancel_work_sync(&power_suspend_work);
-	pr_info("[PROMETHEUS] Entering Resume...\n");
+	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_ACTIVE)
@@ -162,7 +175,7 @@ static void power_resume(struct work_struct *work)
 	if (abort)
 		goto abort;
 
-	pr_info("[PROMETHEUS] Resuming...\n");
+	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
@@ -182,12 +195,12 @@ void set_power_suspend_state(int new_state)
 	if (ps_state != new_state) {
 		spin_lock_irqsave(&ps_state_lock, irqflags);
 		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
-			pr_info("[PROMETHEUS] Suspend State Activated.\n");
 			ps_state = new_state;
+			pr_info("[PROMETHEUS] Suspend State Activated.\n");
 			queue_work(pwrsup_wq, &power_suspend_work);
 		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
-			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			ps_state = new_state;
+			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			queue_work(pwrsup_wq, &power_resume_work);
 		}
 		spin_unlock_irqrestore(&ps_state_lock, irqflags);
@@ -340,6 +353,9 @@ static int prometheus_init(void)
 	if (!pwrsup_wq)
 		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
 
+	mutex_init(&prometheus_mtx);
+	spin_lock_init(&ps_state_lock);
+
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
@@ -352,6 +368,7 @@ static void prometheus_exit(void)
 	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
 	destroy_workqueue(pwrsup_wq);
+	mutex_destroy(&prometheus_mtx);
 
 	if (prometheus_kobj != NULL)
 		kobject_put(prometheus_kobj);

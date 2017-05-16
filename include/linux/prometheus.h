@@ -77,12 +77,14 @@
 #ifndef _LINUX_PROMETHEUS_H
 #define _LINUX_PROMETHEUS_H
 
+#include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/types.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/syscalls.h> /* sys_sync */
+#include <linux/power_supply.h>
 
 struct power_suspend {
 	struct list_head link;
