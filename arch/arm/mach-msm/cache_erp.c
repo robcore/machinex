@@ -451,7 +451,7 @@ static void cache_erp_starting_cpu(unsigned int cpu)
 }
 static void cache_erp_dying_cpu(unsigned int cpu)
 {
-	disable_erp_irq_callback(NULL)
+	disable_erp_irq_callback(NULL);
 }
 
 static int msm_cache_erp_probe(struct platform_device *pdev)
