@@ -126,7 +126,6 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 	}
 
 	memset(&secondary_data, 0, sizeof(secondary_data));
-
 	return ret;
 }
 
@@ -184,6 +183,7 @@ static int platform_cpu_disable(unsigned int cpu)
 	 */
 	return cpu == 0 ? -EPERM : 0;
 }
+
 /*
  * __cpu_disable runs on the processor to be shutdown.
  */
@@ -716,6 +716,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		irq_exit();
 		break;
 #endif
+
 	case IPI_RESCHEDULE:
 		scheduler_ipi();
 		break;
@@ -732,16 +733,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		irq_exit();
 		break;
 
-	case IPI_CPU_BACKTRACE:
-		ipi_cpu_backtrace(cpu, regs);
-		break;
-
-	case IPI_COMPLETION:
-		irq_enter();
-		ipi_complete(cpu);
-		irq_exit();
-		break;
-
 #ifdef CONFIG_IRQ_WORK
 	case IPI_IRQ_WORK:
 		irq_enter();
@@ -749,6 +740,16 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		irq_exit();
 		break;
 #endif
+
+	case IPI_COMPLETION:
+		irq_enter();
+		ipi_complete(cpu);
+		irq_exit();
+		break;
+
+	case IPI_CPU_BACKTRACE:
+		ipi_cpu_backtrace(cpu, regs);
+		break;
 
 	default:
 		pr_crit("CPU%u: Unknown IPI message 0x%x\n",
