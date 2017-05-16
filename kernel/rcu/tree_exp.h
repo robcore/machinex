@@ -227,7 +227,6 @@ static bool sync_exp_work_done(struct rcu_state *rsp, atomic_long_t *stat,
 			       unsigned long s)
 {
 	if (rcu_exp_gp_seq_done(rsp, s)) {
-		//trace_rcu_exp_grace_period(rsp->name, s, TPS("done"));
 		/* Ensure test happens before caller kfree(). */
 		smp_mb__before_atomic(); /* ^^^ */
 		atomic_long_inc(stat);
@@ -235,6 +234,7 @@ static bool sync_exp_work_done(struct rcu_state *rsp, atomic_long_t *stat,
 	}
 	return false;
 }
+
 /*
  * Funnel-lock acquisition for expedited grace periods.  Returns true
  * if some other task completed an expedited grace period that this task
