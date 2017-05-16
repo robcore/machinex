@@ -148,9 +148,9 @@ touch_event_timer_store(struct kobject *kobj,
 			struct kobj_attribute *attr,
 			const char *buf, size_t n)
 {
-	const unsigned long val;
+	unsigned long val;
 
-	if (kstrtoul(buf, 10, &val))
+	if (strict_strtoul(buf, 10, &val))
 		return -EINVAL;
 
 	touch_evt_timer_val = ktime_set(0, (val * 1000));
