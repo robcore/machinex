@@ -247,11 +247,11 @@ void activate_event_timer(struct event_timer_info *event, ktime_t event_time)
 		pr_info("%s: Adding event timer @ %lu", __func__,
 				(unsigned long)ktime_to_us(event_time));
 
-	spin_lock_irqsave(&event_setup_lock);
+	spin_lock_irqsave(&event_setup_lock, flags);
 	event->node.expires = event_time;
 	/* Start hr timer and add event to rb tree */
 	setup_event_hrtimer(event);
-	spin_unlock_irqrestore(&event_setup_lock);
+	spin_unlock_irqrestore(&event_setup_lock, flags);
 }
 
 
