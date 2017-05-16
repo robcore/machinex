@@ -388,7 +388,7 @@ retry_ipi:
 			if ((rnp->qsmaskinitnext & mask) &&
 			    (rnp->expmask & mask)) {
 				/* Online, so delay for a bit and try again. */
-				raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
+				raw_spin_unlock_irqrestore(&rnp->lock, flags);
 				schedule_timeout_uninterruptible(1);
 				goto retry_ipi;
 			}

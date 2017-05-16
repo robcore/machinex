@@ -3829,7 +3829,7 @@ void rcu_cpu_starting(unsigned int cpu)
 		raw_spin_lock_irqsave_rcu_node(rnp, flags);
 		rnp->qsmaskinitnext |= mask;
 		rnp->expmaskinitnext |= mask;
-		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
+		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	}
 }
 
