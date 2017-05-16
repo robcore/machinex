@@ -347,7 +347,7 @@ void msm_serial_debug_enable(int enable) {
 	debug_enable = enable;
 }
 
-void __init msm_serial_debug_init(unsigned int base, int irq,
+void msm_serial_debug_init(unsigned int base, int irq,
 			   struct device *clk_device, int signal_irq)
 {
 	int ret;
@@ -386,7 +386,7 @@ void __init msm_serial_debug_init(unsigned int base, int irq,
 #endif
 	debugger_enable = 1;
 }
-static int __exit msm_serial_debug_remove(const char *val, struct kernel_param *kp)
+static int msm_serial_debug_remove(const char *val, struct kernel_param *kp)
 {
 	int ret;
 	static int pre_stat = 1;
@@ -417,7 +417,5 @@ static int __exit msm_serial_debug_remove(const char *val, struct kernel_param *
 	printk(KERN_INFO "disable FIQ serial debugger\n");
 	return 0;
 }
-module_param(msm_serial_debug_remove, param_get_bool,
-		&debugger_enable, 0644);
-module_init(msm_serial_debug_init);
-module_exit(msm_serial_debug_remove);
+module_param_call(enable, msm_serial_debug_remove, param_get_bool,
+		&debugger_enable, S_IWUSR | S_IRUGO);

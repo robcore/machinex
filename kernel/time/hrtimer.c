@@ -311,7 +311,7 @@ EXPORT_SYMBOL_GPL(__ktime_divns);
  */
 ktime_t ktime_add_safe(const ktime_t lhs, const ktime_t rhs)
 {
-	ktime_t res = ktime_add_unsafe(lhs, rhs);
+	ktime_t res = ktime_add(lhs, rhs);
 
 	/*
 	 * We use KTIME_SEC_MAX here, the maximum timeout which we can
@@ -707,7 +707,7 @@ static void clock_was_set_work(struct work_struct *work)
 static DECLARE_WORK(hrtimer_work, clock_was_set_work);
 
 /*
- * Called from timekeeping and resume code to reprogram the hrtimer
+ * Called from timekeeping and resume code to reprogramm the hrtimer
  * interrupt device on all cpus.
  */
 void clock_was_set_delayed(void)
@@ -1248,7 +1248,7 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 
 	/*
 	 * Note: We clear the running state after enqueue_hrtimer and
-	 * we do not reprogram the event hardware. Happens either in
+	 * we do not reprogramm the event hardware. Happens either in
 	 * hrtimer_start_range_ns() or in hrtimer_interrupt()
 	 *
 	 * Note: Because we dropped the cpu_base->lock above,
@@ -1598,7 +1598,7 @@ SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
 /*
  * Functions related to boot-time initialization:
  */
-int hrtimers_prepare_cpu(unsigned int cpu)
+static void init_hrtimers_cpu(int cpu)
 {
 	struct hrtimer_cpu_base *cpu_base = &per_cpu(hrtimer_bases, cpu);
 	int *lock_init = &per_cpu(hrtimer_base_lock_init, cpu);
@@ -1617,7 +1617,6 @@ int hrtimers_prepare_cpu(unsigned int cpu)
 
 	cpu_base->cpu = cpu;
 	hrtimer_init_hres(cpu_base);
-	return 0;
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -1652,7 +1651,7 @@ static void migrate_hrtimer_list(struct hrtimer_clock_base *old_base,
 	}
 }
 
-int hrtimers_dead_cpu(unsigned int scpu)
+static void migrate_hrtimers(int scpu)
 {
 	struct hrtimer_cpu_base *old_base, *new_base;
 	int i;
@@ -1681,14 +1680,45 @@ int hrtimers_dead_cpu(unsigned int scpu)
 	/* Check, if we got expired work to do */
 	__hrtimer_peek_ahead_timers();
 	local_irq_enable();
-	return 0;
 }
 
 #endif /* CONFIG_HOTPLUG_CPU */
 
+static int hrtimer_cpu_notify(struct notifier_block *self,
+					unsigned long action, void *hcpu)
+{
+	int scpu = (long)hcpu;
+
+	switch (action) {
+
+	case CPU_UP_PREPARE:
+	case CPU_UP_PREPARE_FROZEN:
+		init_hrtimers_cpu(scpu);
+		break;
+
+#ifdef CONFIG_HOTPLUG_CPU
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
+		migrate_hrtimers(scpu);
+		break;
+#endif
+
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block hrtimers_nb = {
+	.notifier_call = hrtimer_cpu_notify,
+};
+
 void __init hrtimers_init(void)
 {
-	hrtimers_prepare_cpu(smp_processor_id());
+	hrtimer_cpu_notify(&hrtimers_nb, (unsigned long)CPU_UP_PREPARE,
+			  (void *)(long)smp_processor_id());
+	register_cpu_notifier(&hrtimers_nb);
 }
 
 /**

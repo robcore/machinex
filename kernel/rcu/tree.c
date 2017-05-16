@@ -41,6 +41,7 @@
 #include <linux/export.h>
 #include <linux/completion.h>
 #include <linux/moduleparam.h>
+#include <linux/module.h>
 #include <linux/percpu.h>
 #include <linux/notifier.h>
 #include <linux/cpu.h>
@@ -58,6 +59,7 @@
 #include "tree.h"
 #include "rcu.h"
 
+MODULE_ALIAS("rcutree");
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
@@ -1048,11 +1050,11 @@ EXPORT_SYMBOL_GPL(rcu_is_watching);
  * offline to continue to use RCU for one jiffy after marking itself
  * offline in the cpu_online_mask.  This leniency is necessary given the
  * non-atomic nature of the online and offline processing, for example,
- * the fact that a CPU enters the scheduler after completing the teardown
- * of the CPU.
+ * the fact that a CPU enters the scheduler after completing the CPU_DYING
+ * notifiers.
  *
- * This is also why RCU internally marks CPUs online during in the
- * preparation phase and offline after the CPU has been taken down.
+ * This is also why RCU internally marks CPUs online during the
+ * CPU_UP_PREPARE phase and offline during the CPU_DEAD phase.
  *
  * Disable checking if in an NMI handler because we cannot safely report
  * errors from NMI handlers anyway.
@@ -1816,7 +1818,6 @@ static bool __note_gp_changes(struct rcu_state *rsp, struct rcu_node *rnp,
 			      struct rcu_data *rdp)
 {
 	bool ret;
-	bool need_gp;
 
 	/* Handle the ends of any preceding grace periods first. */
 	if (rdp->completed == rnp->completed &&
@@ -1843,10 +1844,9 @@ static bool __note_gp_changes(struct rcu_state *rsp, struct rcu_node *rnp,
 		 */
 		rdp->gpnum = rnp->gpnum;
 		trace_rcu_grace_period(rsp->name, rdp->gpnum, "cpustart");
-		need_gp = !!(rnp->qsmask & rdp->grpmask);
-		rdp->cpu_no_qs.b.norm = need_gp;
+		rdp->cpu_no_qs.b.norm = true;
 		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_qs_ctr);
-		rdp->core_needs_qs = need_gp;
+		rdp->core_needs_qs = !!(rnp->qsmask & rdp->grpmask);
 		zero_cpu_stall_ticks(rdp);
 		WRITE_ONCE(rdp->gpwrap, false);
 	}
@@ -3742,6 +3742,8 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	rnp = rdp->mynode;
 	mask = rdp->grpmask;
 	raw_spin_lock_rcu_node(rnp);		/* irqs already disabled. */
+	rnp->qsmaskinitnext |= mask;
+	rnp->expmaskinitnext |= mask;
 	if (!rdp->beenonline)
 		WRITE_ONCE(rsp->ncpus, READ_ONCE(rsp->ncpus) + 1);
 	rdp->beenonline = true;	 /* We have now been online. */
@@ -3753,84 +3755,12 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 }
 
-int rcutree_prepare_cpu(unsigned int cpu)
+static void rcu_prepare_cpu(int cpu)
 {
 	struct rcu_state *rsp;
 
 	for_each_rcu_flavor(rsp)
 		rcu_init_percpu_data(cpu, rsp);
-
-	rcu_prepare_kthreads(cpu);
-	rcu_spawn_all_nocb_kthreads(cpu);
-
-	return 0;
-}
-
-static void rcutree_affinity_setting(unsigned int cpu, int outgoing)
-{
-	struct rcu_data *rdp = per_cpu_ptr(rcu_state_p->rda, cpu);
-
-	rcu_boost_kthread_setaffinity(rdp->mynode, outgoing);
-}
-
-int rcutree_online_cpu(unsigned int cpu)
-{
-	sync_sched_exp_online_cleanup(cpu);
-	rcutree_affinity_setting(cpu, -1);
-	return 0;
-}
-
-int rcutree_offline_cpu(unsigned int cpu)
-{
-	rcutree_affinity_setting(cpu, cpu);
-	return 0;
-}
-
-
-int rcutree_dying_cpu(unsigned int cpu)
-{
-	struct rcu_state *rsp;
-
-	for_each_rcu_flavor(rsp)
-		rcu_cleanup_dying_cpu(rsp);
-	return 0;
-}
-
-int rcutree_dead_cpu(unsigned int cpu)
-{
-	struct rcu_state *rsp;
-
-	for_each_rcu_flavor(rsp) {
-		rcu_cleanup_dead_cpu(cpu, rsp);
-		do_nocb_deferred_wakeup(per_cpu_ptr(rsp->rda, cpu));
-	}
-	return 0;
-}
-
-/*
- * Mark the specified CPU as being online so that subsequent grace periods
- * (both expedited and normal) will wait on it.  Note that this means that
- * incoming CPUs are not allowed to use RCU read-side critical sections
- * until this function is called.  Failing to observe this restriction
- * will result in lockdep splats.
- */
-void rcu_cpu_starting(unsigned int cpu)
-{
-	unsigned long flags;
-	unsigned long mask;
-	struct rcu_data *rdp;
-	struct rcu_node *rnp;
-	struct rcu_state *rsp;
-
-	for_each_rcu_flavor(rsp) {
-		rdp = this_cpu_ptr(rsp->rda);
-		rnp = rdp->mynode;
-		mask = rdp->grpmask;
-		raw_spin_lock_irqsave_rcu_node(rnp, flags);
-		rnp->qsmaskinitnext |= mask;
-		rnp->expmaskinitnext |= mask;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
-	}
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -3866,6 +3796,54 @@ void rcu_report_dead(unsigned int cpu)
 		rcu_cleanup_dying_idle_cpu(cpu, rsp);
 }
 #endif
+
+/*
+ * Handle CPU online/offline notification events.
+ */
+int rcu_cpu_notify(struct notifier_block *self,
+		   unsigned long action, void *hcpu)
+{
+	long cpu = (long)hcpu;
+	struct rcu_data *rdp = per_cpu_ptr(rcu_state_p->rda, cpu);
+	struct rcu_node *rnp = rdp->mynode;
+	struct rcu_state *rsp;
+
+	trace_rcu_utilization("Start CPU hotplug");
+	switch (action) {
+	case CPU_UP_PREPARE:
+	case CPU_UP_PREPARE_FROZEN:
+		rcu_prepare_cpu(cpu);
+		rcu_prepare_kthreads(cpu);
+		rcu_spawn_all_nocb_kthreads(cpu);
+		break;
+	case CPU_ONLINE:
+	case CPU_DOWN_FAILED:
+		sync_sched_exp_online_cleanup(cpu);
+		rcu_boost_kthread_setaffinity(rnp, -1);
+		break;
+	case CPU_DOWN_PREPARE:
+		rcu_boost_kthread_setaffinity(rnp, cpu);
+		break;
+	case CPU_DYING:
+	case CPU_DYING_FROZEN:
+		for_each_rcu_flavor(rsp)
+			rcu_cleanup_dying_cpu(rsp);
+		break;
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
+	case CPU_UP_CANCELED:
+	case CPU_UP_CANCELED_FROZEN:
+		for_each_rcu_flavor(rsp) {
+			rcu_cleanup_dead_cpu(cpu, rsp);
+			do_nocb_deferred_wakeup(per_cpu_ptr(rsp->rda, cpu));
+		}
+		break;
+	default:
+		break;
+	}
+	trace_rcu_utilization("End CPU hotplug");
+	return NOTIFY_OK;
+}
 
 static int rcu_pm_notify(struct notifier_block *self,
 			 unsigned long action, void *hcpu)
@@ -4178,11 +4156,10 @@ void __init rcu_init(void)
 	 * this is called early in boot, before either interrupts
 	 * or the scheduler are operational.
 	 */
+	cpu_notifier(rcu_cpu_notify, 0);
 	pm_notifier(rcu_pm_notify, 0);
-	for_each_online_cpu(cpu) {
-		rcutree_prepare_cpu(cpu);
-		rcu_cpu_starting(cpu);
-	}
+	for_each_online_cpu(cpu)
+		rcu_cpu_notify(NULL, CPU_UP_PREPARE, (void *)(long)cpu);
 }
 
 #include "tree_exp.h"

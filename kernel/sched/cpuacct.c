@@ -25,13 +25,15 @@ enum cpuacct_stat_index {
 	CPUACCT_STAT_NSTATS,
 };
 
-static const char * const cpuacct_stat_desc[] = {
-	[CPUACCT_STAT_USER] = "user",
-	[CPUACCT_STAT_SYSTEM] = "system",
+enum cpuacct_usage_index {
+	CPUACCT_USAGE_USER,	/* ... user mode */
+	CPUACCT_USAGE_SYSTEM,	/* ... kernel mode */
+
+	CPUACCT_USAGE_NRUSAGE,
 };
 
 struct cpuacct_usage {
-	u64	usages[CPUACCT_STAT_NSTATS];
+	u64	usages[CPUACCT_USAGE_NRUSAGE];
 };
 
 /* track cpu usage of a group of tasks and its child groups */
@@ -106,16 +108,16 @@ static void cpuacct_css_free(struct cgroup_subsys_state *css)
 }
 
 static u64 cpuacct_cpuusage_read(struct cpuacct *ca, int cpu,
-				 enum cpuacct_stat_index index)
+				 enum cpuacct_usage_index index)
 {
 	struct cpuacct_usage *cpuusage = per_cpu_ptr(ca->cpuusage, cpu);
 	u64 data;
 
 	/*
-	 * We allow index == CPUACCT_STAT_NSTATS here to read
+	 * We allow index == CPUACCT_USAGE_NRUSAGE here to read
 	 * the sum of suages.
 	 */
-	BUG_ON(index > CPUACCT_STAT_NSTATS);
+	BUG_ON(index > CPUACCT_USAGE_NRUSAGE);
 
 #ifndef CONFIG_64BIT
 	/*
@@ -124,11 +126,11 @@ static u64 cpuacct_cpuusage_read(struct cpuacct *ca, int cpu,
 	raw_spin_lock_irq(&cpu_rq(cpu)->lock);
 #endif
 
-	if (index == CPUACCT_STAT_NSTATS) {
+	if (index == CPUACCT_USAGE_NRUSAGE) {
 		int i = 0;
 
 		data = 0;
-		for (i = 0; i < CPUACCT_STAT_NSTATS; i++)
+		for (i = 0; i < CPUACCT_USAGE_NRUSAGE; i++)
 			data += cpuusage->usages[i];
 	} else {
 		data = cpuusage->usages[index];
@@ -153,7 +155,7 @@ static void cpuacct_cpuusage_write(struct cpuacct *ca, int cpu, u64 val)
 	raw_spin_lock_irq(&cpu_rq(cpu)->lock);
 #endif
 
-	for (i = 0; i < CPUACCT_STAT_NSTATS; i++)
+	for (i = 0; i < CPUACCT_USAGE_NRUSAGE; i++)
 		cpuusage->usages[i] = val;
 
 #ifndef CONFIG_64BIT
@@ -163,7 +165,7 @@ static void cpuacct_cpuusage_write(struct cpuacct *ca, int cpu, u64 val)
 
 /* return total cpu usage (in nanoseconds) of a group */
 static u64 __cpuusage_read(struct cgroup_subsys_state *css,
-			   enum cpuacct_stat_index index)
+			   enum cpuacct_usage_index index)
 {
 	struct cpuacct *ca = css_ca(css);
 	u64 totalcpuusage = 0;
@@ -178,18 +180,18 @@ static u64 __cpuusage_read(struct cgroup_subsys_state *css,
 static u64 cpuusage_user_read(struct cgroup_subsys_state *css,
 			      struct cftype *cft)
 {
-	return __cpuusage_read(css, CPUACCT_STAT_USER);
+	return __cpuusage_read(css, CPUACCT_USAGE_USER);
 }
 
 static u64 cpuusage_sys_read(struct cgroup_subsys_state *css,
 			     struct cftype *cft)
 {
-	return __cpuusage_read(css, CPUACCT_STAT_SYSTEM);
+	return __cpuusage_read(css, CPUACCT_USAGE_SYSTEM);
 }
 
 static u64 cpuusage_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
-	return __cpuusage_read(css, CPUACCT_STAT_NSTATS);
+	return __cpuusage_read(css, CPUACCT_USAGE_NRUSAGE);
 }
 
 static int cpuusage_write(struct cgroup_subsys_state *css, struct cftype *cft,
@@ -211,7 +213,7 @@ static int cpuusage_write(struct cgroup_subsys_state *css, struct cftype *cft,
 }
 
 static int __cpuacct_percpu_seq_show(struct seq_file *m,
-				     enum cpuacct_stat_index index)
+				     enum cpuacct_usage_index index)
 {
 	struct cpuacct *ca = css_ca(seq_css(m));
 	u64 percpu;
@@ -227,78 +229,48 @@ static int __cpuacct_percpu_seq_show(struct seq_file *m,
 
 static int cpuacct_percpu_user_seq_show(struct seq_file *m, void *V)
 {
-	return __cpuacct_percpu_seq_show(m, CPUACCT_STAT_USER);
+	return __cpuacct_percpu_seq_show(m, CPUACCT_USAGE_USER);
 }
 
 static int cpuacct_percpu_sys_seq_show(struct seq_file *m, void *V)
 {
-	return __cpuacct_percpu_seq_show(m, CPUACCT_STAT_SYSTEM);
+	return __cpuacct_percpu_seq_show(m, CPUACCT_USAGE_SYSTEM);
 }
 
 static int cpuacct_percpu_seq_show(struct seq_file *m, void *V)
 {
-	return __cpuacct_percpu_seq_show(m, CPUACCT_STAT_NSTATS);
+	return __cpuacct_percpu_seq_show(m, CPUACCT_USAGE_NRUSAGE);
 }
 
-static int cpuacct_all_seq_show(struct seq_file *m, void *V)
-{
-	struct cpuacct *ca = css_ca(seq_css(m));
-	int index;
-	int cpu;
-
-	seq_puts(m, "cpu");
-	for (index = 0; index < CPUACCT_STAT_NSTATS; index++)
-		seq_printf(m, " %s", cpuacct_stat_desc[index]);
-	seq_puts(m, "\n");
-
-	for_each_possible_cpu(cpu) {
-		struct cpuacct_usage *cpuusage = per_cpu_ptr(ca->cpuusage, cpu);
-
-		seq_printf(m, "%d", cpu);
-
-		for (index = 0; index < CPUACCT_STAT_NSTATS; index++) {
-#ifndef CONFIG_64BIT
-			/*
-			 * Take rq->lock to make 64-bit read safe on 32-bit
-			 * platforms.
-			 */
-			raw_spin_lock_irq(&cpu_rq(cpu)->lock);
-#endif
-
-			seq_printf(m, " %llu", cpuusage->usages[index]);
-
-#ifndef CONFIG_64BIT
-			raw_spin_unlock_irq(&cpu_rq(cpu)->lock);
-#endif
-		}
-		seq_puts(m, "\n");
-	}
-	return 0;
-}
+static const char * const cpuacct_stat_desc[] = {
+	[CPUACCT_STAT_USER] = "user",
+	[CPUACCT_STAT_SYSTEM] = "system",
+};
 
 static int cpuacct_stats_show(struct seq_file *sf, void *v)
 {
 	struct cpuacct *ca = css_ca(seq_css(sf));
-	s64 val[CPUACCT_STAT_NSTATS];
 	int cpu;
-	int stat;
+	s64 val = 0;
 
-	memset(val, 0, sizeof(val));
 	for_each_possible_cpu(cpu) {
-		u64 *cpustat = per_cpu_ptr(ca->cpustat, cpu)->cpustat;
+		struct kernel_cpustat *kcpustat = per_cpu_ptr(ca->cpustat, cpu);
+		val += kcpustat->cpustat[CPUTIME_USER];
+		val += kcpustat->cpustat[CPUTIME_NICE];
+	}
+	val = cputime64_to_clock_t(val);
+	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_USER], val);
 
-		val[CPUACCT_STAT_USER]   += cpustat[CPUTIME_USER];
-		val[CPUACCT_STAT_USER]   += cpustat[CPUTIME_NICE];
-		val[CPUACCT_STAT_SYSTEM] += cpustat[CPUTIME_SYSTEM];
-		val[CPUACCT_STAT_SYSTEM] += cpustat[CPUTIME_IRQ];
-		val[CPUACCT_STAT_SYSTEM] += cpustat[CPUTIME_SOFTIRQ];
+	val = 0;
+	for_each_possible_cpu(cpu) {
+		struct kernel_cpustat *kcpustat = per_cpu_ptr(ca->cpustat, cpu);
+		val += kcpustat->cpustat[CPUTIME_SYSTEM];
+		val += kcpustat->cpustat[CPUTIME_IRQ];
+		val += kcpustat->cpustat[CPUTIME_SOFTIRQ];
 	}
 
-	for (stat = 0; stat < CPUACCT_STAT_NSTATS; stat++) {
-		seq_printf(sf, "%s %lld\n",
-			   cpuacct_stat_desc[stat],
-			   cputime64_to_clock_t(val[stat]));
-	}
+	val = cputime64_to_clock_t(val);
+	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
 
 	return 0;
 }
@@ -330,10 +302,6 @@ static struct cftype files[] = {
 		.seq_show = cpuacct_percpu_sys_seq_show,
 	},
 	{
-		.name = "usage_all",
-		.seq_show = cpuacct_all_seq_show,
-	},
-	{
 		.name = "stat",
 		.seq_show = cpuacct_stats_show,
 	},
@@ -348,11 +316,11 @@ static struct cftype files[] = {
 void cpuacct_charge(struct task_struct *tsk, u64 cputime)
 {
 	struct cpuacct *ca;
-	int index = CPUACCT_STAT_SYSTEM;
+	int index = CPUACCT_USAGE_SYSTEM;
 	struct pt_regs *regs = task_pt_regs(tsk);
 
 	if (regs && user_mode(regs))
-		index = CPUACCT_STAT_USER;
+		index = CPUACCT_USAGE_USER;
 
 	rcu_read_lock();
 

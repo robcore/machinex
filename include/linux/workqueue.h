@@ -106,9 +106,9 @@ struct work_struct {
 #endif
 };
 
-#define WORK_DATA_INIT()	ATOMIC_LONG_INIT((unsigned long)WORK_STRUCT_NO_POOL)
+#define WORK_DATA_INIT()	ATOMIC_LONG_INIT(WORK_STRUCT_NO_POOL)
 #define WORK_DATA_STATIC_INIT()	\
-	ATOMIC_LONG_INIT((unsigned long)(WORK_STRUCT_NO_POOL | WORK_STRUCT_STATIC))
+	ATOMIC_LONG_INIT(WORK_STRUCT_NO_POOL | WORK_STRUCT_STATIC)
 
 struct delayed_work {
 	struct work_struct work;
@@ -119,30 +119,18 @@ struct delayed_work {
 	int cpu;
 };
 
-/**
- * struct workqueue_attrs - A struct for workqueue attributes.
+/*
+ * A struct for workqueue attributes.  This can be used to change
+ * attributes of an unbound workqueue.
  *
- * This can be used to change attributes of an unbound workqueue.
+ * Unlike other fields, ->no_numa isn't a property of a worker_pool.  It
+ * only modifies how apply_workqueue_attrs() select pools and thus doesn't
+ * participate in pool hash calculations or equality comparisons.
  */
 struct workqueue_attrs {
-	/**
-	 * @nice: nice level
-	 */
-	int nice;
-
-	/**
-	 * @cpumask: allowed CPUs
-	 */
-	cpumask_var_t cpumask;
-
-	/**
-	 * @no_numa: disable NUMA affinity
-	 *
-	 * Unlike other fields, ``no_numa`` isn't a property of a worker_pool. It
-	 * only modifies how :c:func:`apply_workqueue_attrs` select pools and thus
-	 * doesn't participate in pool hash calculations or equality comparisons.
-	 */
-	bool no_numa;
+	int			nice;		/* nice level */
+	cpumask_var_t		cpumask;	/* allowed CPUs */
+	bool			no_numa;	/* disable NUMA affinity */
 };
 
 static inline struct delayed_work *to_delayed_work(struct work_struct *work)
@@ -233,10 +221,14 @@ static inline unsigned int work_static(struct work_struct *work) { return 0; }
 #endif
 
 #define INIT_WORK(_work, _func)						\
-	__INIT_WORK((_work), (_func), 0)
+	do {								\
+		__INIT_WORK((_work), (_func), 0);			\
+	} while (0)
 
 #define INIT_WORK_ONSTACK(_work, _func)					\
-	__INIT_WORK((_work), (_func), 1)
+	do {								\
+		__INIT_WORK((_work), (_func), 1);			\
+	} while (0)
 
 #define __INIT_DELAYED_WORK(_work, _func, _tflags)			\
 	do {								\
@@ -277,14 +269,14 @@ static inline unsigned int work_static(struct work_struct *work) { return 0; }
 /**
  * delayed_work_pending - Find out whether a delayable work item is currently
  * pending
- * @w: The work item in question
+ * @work: The work item in question
  */
 #define delayed_work_pending(w) \
 	work_pending(&(w)->work)
 
 /*
  * Workqueue flags and constants.  For details, please refer to
- * Documentation/core-api/workqueue.rst.
+ * Documentation/workqueue.txt.
  */
 enum {
 	WQ_UNBOUND		= 1 << 1, /* not bound to any cpu */
@@ -321,6 +313,21 @@ enum {
 	 */
 	WQ_POWER_EFFICIENT	= 1 << 7,
 
+	/*
+	 * Per-cpu workqueues are generally preferred because they tend to
+	 * show better performance thanks to cache locality.  Per-cpu
+	 * workqueues exclude the scheduler from choosing the CPU to
+	 * execute the worker threads, which has an unfortunate side effect
+	 * of increasing power consumption.
+	 *
+	 * The scheduler considers a CPU idle if it doesn't have any task
+	 * to execute and tries to keep idle cores idle to conserve power;
+	 * however, for example, a per-cpu work item scheduled from an
+	 * interrupt handler on an idle CPU will force the scheduler to
+	 * excute the work item on that CPU breaking the idleness, which in
+	 * turn may lead to more scheduling choices which are sub-optimal
+	 * in terms of power consumption.
+	 */
 	__WQ_DRAINING		= 1 << 16, /* internal: workqueue is draining */
 	__WQ_ORDERED		= 1 << 17, /* internal: workqueue is ordered */
 	__WQ_LEGACY		= 1 << 18, /* internal: create*_workqueue() */
@@ -379,11 +386,10 @@ __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active,
  * @fmt: printf format for the name of the workqueue
  * @flags: WQ_* flags
  * @max_active: max in-flight work items, 0 for default
- * @args...: args for @fmt
+ * @args: args for @fmt
  *
  * Allocate a workqueue with the specified parameters.  For detailed
- * information on WQ_* flags, please refer to
- * Documentation/core-api/workqueue.rst.
+ * information on WQ_* flags, please refer to Documentation/workqueue.txt.
  *
  * The __lock_name macro dance is to guarantee that single lock_class_key
  * doesn't end up with different namesm, which isn't allowed by lockdep.
@@ -412,7 +418,7 @@ __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active,
  * alloc_ordered_workqueue - allocate an ordered workqueue
  * @fmt: printf format for the name of the workqueue
  * @flags: WQ_* flags (only WQ_FREEZABLE and WQ_MEM_RECLAIM are meaningful)
- * @args...: args for @fmt
+ * @args: args for @fmt
  *
  * Allocate an ordered workqueue.  An ordered workqueue executes at
  * most one work item at any given time in the queued order.  They are
@@ -603,18 +609,21 @@ static inline bool schedule_delayed_work(struct delayed_work *dwork,
 	return queue_delayed_work(system_wq, dwork, delay);
 }
 
+/**
+ * keventd_up - is workqueue initialized yet?
+ */
+static inline bool keventd_up(void)
+{
+	return system_wq != NULL;
+}
+
 #ifndef CONFIG_SMP
 static inline long work_on_cpu(int cpu, long (*fn)(void *), void *arg)
 {
 	return fn(arg);
 }
-static inline long work_on_cpu_safe(int cpu, long (*fn)(void *), void *arg)
-{
-	return fn(arg);
-}
 #else
 long work_on_cpu(int cpu, long (*fn)(void *), void *arg);
-long work_on_cpu_safe(int cpu, long (*fn)(void *), void *arg);
 #endif /* CONFIG_SMP */
 
 #ifdef CONFIG_FREEZER
@@ -636,13 +645,5 @@ void wq_watchdog_touch(int cpu);
 static inline void wq_watchdog_touch(int cpu) { }
 #endif	/* CONFIG_WQ_WATCHDOG */
 
-#ifdef CONFIG_SMP
-int workqueue_prepare_cpu(unsigned int cpu);
-int workqueue_online_cpu(unsigned int cpu);
-int workqueue_offline_cpu(unsigned int cpu);
 #endif
 
-int __init workqueue_init_early(void);
-int __init workqueue_init(void);
-
-#endif

@@ -45,7 +45,7 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer);
 
 static int msm_event_debug_mask;
 module_param_named(
-	debug_mask, msm_event_debug_mask, int, 0644
+	debug_mask, msm_event_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
 
 enum {

@@ -27,7 +27,7 @@ static void irq_domain_check_hierarchy(struct irq_domain *domain);
 
 /**
  * __irq_domain_add() - Allocate a new irq_domain data structure
- * @fwnode: firmware node for the interrupt controller
+ * @of_node: optional device-tree node of the interrupt controller
  * @size: Size of linear map; 0 for radix mapping only
  * @hwirq_max: Maximum number of interrupts supported by controller
  * @direct_max: Maximum value of direct maps; Use ~0 for no limit; 0 for no
@@ -694,10 +694,7 @@ int irq_domain_xlate_onetwocell(struct irq_domain *d,
 	if (WARN_ON(intsize < 1))
 		return -EINVAL;
 	*out_hwirq = intspec[0];
-	if (intsize > 1)
-		*out_type = intspec[1] & IRQ_TYPE_SENSE_MASK;
-	else
-		*out_type = IRQ_TYPE_NONE;
+	*out_type = (intsize > 1) ? intspec[1] : IRQ_TYPE_NONE;
 	return 0;
 }
 EXPORT_SYMBOL_GPL(irq_domain_xlate_onetwocell);
@@ -1021,10 +1018,8 @@ int irq_domain_alloc_irqs_recursive(struct irq_domain *domain,
 	if (recursive)
 		ret = irq_domain_alloc_irqs_recursive(parent, irq_base,
 						      nr_irqs, arg);
-	if (ret < 0)
-		return ret;
-
-	ret = domain->ops->alloc(domain, irq_base, nr_irqs, arg);
+	if (ret >= 0)
+		ret = domain->ops->alloc(domain, irq_base, nr_irqs, arg);
 	if (ret < 0 && recursive)
 		irq_domain_free_irqs_recursive(parent, irq_base, nr_irqs);
 

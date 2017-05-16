@@ -76,7 +76,6 @@
 #include <linux/compiler.h>
 #include <linux/cpufreq.h>
 #include <linux/sched/deadline.h>
-#include <linux/prefetch.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
@@ -1463,7 +1462,7 @@ static void __migrate_swap_task(struct task_struct *p, int cpu)
 		/*
 		 * Task isn't running anymore; make it appear like we migrated
 		 * it before it went to sleep. This means on wakeup we make the
-		 * previous cpu our target instead of where it really is.
+		 * previous cpu our targer instead of where it really is.
 		 */
 		p->wake_cpu = cpu;
 	}
@@ -2282,7 +2281,6 @@ out:
 /**
  * try_to_wake_up_local - try to wake up a local task with rq lock held
  * @p: the thread to be awakened
- * @cookie: context's cookie for pinning
  *
  * Put @p on the run-queue if it's not already there. The caller must
  * ensure that this_rq() is locked, @p is bound to this_rq() and not
@@ -3171,23 +3169,6 @@ EXPORT_PER_CPU_SYMBOL(kstat);
 EXPORT_PER_CPU_SYMBOL(kernel_cpustat);
 
 /*
- * The function fair_sched_class.update_curr accesses the struct curr
- * and its field curr->exec_start; when called from task_sched_runtime(),
- * we observe a high rate of cache misses in practice.
- * Prefetching this data results in improved performance.
- */
-static inline void prefetch_curr_exec_start(struct task_struct *p)
-{
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	struct sched_entity *curr = (&p->se)->cfs_rq->curr;
-#else
-	struct sched_entity *curr = (&task_rq(p)->cfs)->curr;
-#endif
-	prefetch(curr);
-	prefetch(&curr->exec_start);
-}
-
-/*
  * Return accounted runtime for the task.
  * In case the task is currently running, return the runtime plus current's
  * pending runtime that have not been accounted yet.
@@ -3221,7 +3202,6 @@ unsigned long long task_sched_runtime(struct task_struct *p)
 	 * thread, breaking clock_gettime().
 	 */
 	if (task_current(rq, p) && task_on_rq_queued(p)) {
-		prefetch_curr_exec_start(p);
 		update_rq_clock(rq);
 		p->sched_class->update_curr(rq);
 	}
@@ -3454,9 +3434,6 @@ static noinline void __schedule_bug(struct task_struct *prev)
 		pr_cont("\n");
 	}
 #endif
-	if (panic_on_warn)
-		panic("scheduling while atomic\n");
-
 	dump_stack();
 	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 }
@@ -5606,15 +5583,13 @@ void idle_task_exit(void)
 /*
  * Since this CPU is going 'away' for a while, fold any nr_active delta
  * we might have. Assumes we're called after migrate_tasks() so that the
- * nr_active count is stable. We need to take the teardown thread which
- * is calling this into account, so we hand in adjust = 1 to the load
- * calculation.
+ * nr_active count is stable.
  *
  * Also see the comment "Global load-average calculations".
  */
 static void calc_load_migrate(struct rq *rq)
 {
-	long delta = calc_load_fold_active(rq, 1);
+	long delta = calc_load_fold_active(rq);
 	if (delta)
 		atomic_long_add(delta, &calc_load_tasks);
 }
@@ -6097,7 +6072,6 @@ static int sd_degenerate(struct sched_domain *sd)
 			 SD_BALANCE_FORK |
 			 SD_BALANCE_EXEC |
 			 SD_SHARE_CPUCAPACITY |
-			 SD_ASYM_CPUCAPACITY |
 			 SD_SHARE_PKG_RESOURCES |
 			 SD_SHARE_POWERDOMAIN |
 			 SD_SHARE_CAP_STATES)) {
@@ -6129,7 +6103,6 @@ sd_parent_degenerate(struct sched_domain *sd, struct sched_domain *parent)
 				SD_BALANCE_NEWIDLE |
 				SD_BALANCE_FORK |
 				SD_BALANCE_EXEC |
-				SD_ASYM_CPUCAPACITY |
 				SD_SHARE_CPUCAPACITY |
 				SD_SHARE_PKG_RESOURCES |
 				SD_PREFER_SIBLING |
@@ -6861,7 +6834,6 @@ static int sched_domains_curr_level;
  * SD_SHARE_PKG_RESOURCES - describes shared caches
  * SD_NUMA                - describes NUMA topologies
  * SD_SHARE_POWERDOMAIN   - describes shared power domain
- * SD_ASYM_CPUCAPACITY    - describes mixed capacity topologies
  * SD_SHARE_CAP_STATES    - describes shared capacity states
  *
  * Odd one out:
@@ -6872,13 +6844,11 @@ static int sched_domains_curr_level;
 	 SD_SHARE_PKG_RESOURCES |	\
 	 SD_NUMA |			\
 	 SD_ASYM_PACKING |		\
-	 SD_ASYM_CPUCAPACITY |		\
 	 SD_SHARE_POWERDOMAIN |		\
 	 SD_SHARE_CAP_STATES)
 
 static struct sched_domain *
-sd_init(struct sched_domain_topology_level *tl,
-	struct sched_domain *child, int cpu)
+sd_init(struct sched_domain_topology_level *tl, int cpu)
 {
 	struct sched_domain *sd = *per_cpu_ptr(tl->data.sd, cpu);
 	int sd_weight, sd_flags = 0;
@@ -6930,7 +6900,6 @@ sd_init(struct sched_domain_topology_level *tl,
 		.smt_gain		= 0,
 		.max_newidle_lb_cost	= 0,
 		.next_decay_max_lb_cost	= jiffies,
-		.child			= child,
 #ifdef CONFIG_SCHED_DEBUG
 		.name			= tl->name,
 #endif
@@ -6939,13 +6908,6 @@ sd_init(struct sched_domain_topology_level *tl,
 	/*
 	 * Convert topological properties into behaviour.
 	 */
-
-	if (sd->flags & SD_ASYM_CPUCAPACITY) {
-		struct sched_domain *t = sd;
-
-		for_each_lower_domain(t)
-			t->flags |= SD_BALANCE_WAKE;
-	}
 
 	if (sd->flags & SD_SHARE_CPUCAPACITY) {
 		sd->flags |= SD_PREFER_SIBLING;
@@ -7289,13 +7251,16 @@ struct sched_domain *build_sched_domain(struct sched_domain_topology_level *tl,
 		const struct cpumask *cpu_map, struct sched_domain_attr *attr,
 		struct sched_domain *child, int cpu)
 {
-	struct sched_domain *sd = sd_init(tl, child, cpu);
+	struct sched_domain *sd = sd_init(tl, cpu);
+	if (!sd)
+		return child;
 
 	cpumask_and(sched_domain_span(sd), cpu_map, tl->mask(cpu));
 	if (child) {
 		sd->level = child->level + 1;
 		sched_domain_level_max = max(sched_domain_level_max, sd->level);
 		child->parent = sd;
+		sd->child = child;
 
 		if (!cpumask_subset(sched_domain_span(child),
 				    sched_domain_span(sd))) {
@@ -7940,6 +7905,10 @@ void __init sched_init(void)
 	}
 
 	set_load_weight(&init_task);
+
+#ifdef CONFIG_PREEMPT_NOTIFIERS
+	INIT_HLIST_HEAD(&init_task.preempt_notifiers);
+#endif
 
 	/*
 	 * The boot idle thread does lazy MMU switching as well:

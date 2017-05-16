@@ -19,6 +19,7 @@ struct timer_list {
 	void			(*function)(unsigned long);
 	unsigned long		data;
 	u32			flags;
+	int			slack;
 
 #ifdef CONFIG_TIMER_STATS
 	int			start_pid;
@@ -63,8 +64,6 @@ struct timer_list {
 #define TIMER_DEFERRABLE	0x00100000
 #define TIMER_PINNED		0x00200000
 #define TIMER_IRQSAFE		0x00400000
-#define TIMER_ARRAYSHIFT	22
-#define TIMER_ARRAYMASK		0xFFC00000
 
 #define __TIMER_INITIALIZER(_function, _expires, _data, _flags) { \
 		.entry = { .next = TIMER_ENTRY_STATIC },	\
@@ -72,6 +71,7 @@ struct timer_list {
 		.expires = (_expires),				\
 		.data = (_data),				\
 		.flags = (_flags),				\
+		.slack = -1,					\
 		__TIMER_LOCKDEP_MAP_INITIALIZER(		\
 			__FILE__ ":" __stringify(__LINE__))	\
 	}
@@ -191,6 +191,8 @@ extern int del_timer(struct timer_list * timer);
 extern int mod_timer(struct timer_list *timer, unsigned long expires);
 extern int mod_timer_pending(struct timer_list *timer, unsigned long expires);
 
+extern void set_timer_slack(struct timer_list *time, int slack_hz);
+
 /*
  * The jiffies value which is added to now, when there is no timer
  * in the timer wheel:
@@ -272,11 +274,5 @@ unsigned long __round_jiffies_up(unsigned long j, int cpu);
 unsigned long __round_jiffies_up_relative(unsigned long j, int cpu);
 unsigned long round_jiffies_up(unsigned long j);
 unsigned long round_jiffies_up_relative(unsigned long j);
-
-#ifdef CONFIG_HOTPLUG_CPU
-int timers_dead_cpu(unsigned int cpu);
-#else
-#define timers_dead_cpu NULL
-#endif
 
 #endif

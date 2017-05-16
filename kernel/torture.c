@@ -43,7 +43,6 @@
 #include <linux/stat.h>
 #include <linux/slab.h>
 #include <linux/trace_clock.h>
-#include <linux/ktime.h>
 #include <asm/byteorder.h>
 #include <linux/torture.h>
 
@@ -447,8 +446,9 @@ EXPORT_SYMBOL_GPL(torture_shuffle_cleanup);
  * Variables for auto-shutdown.  This allows "lights out" torture runs
  * to be fully scripted.
  */
+static int shutdown_secs;		/* desired test duration in seconds. */
 static struct task_struct *shutdown_task;
-static ktime_t shutdown_time;		/* time to system shutdown. */
+static unsigned long shutdown_time;	/* jiffies to system shutdown. */
 static void (*torture_shutdown_hook)(void);
 
 /*
@@ -471,20 +471,20 @@ EXPORT_SYMBOL_GPL(torture_shutdown_absorb);
  */
 static int torture_shutdown(void *arg)
 {
-	ktime_t ktime_snap;
+	long delta;
+	unsigned long jiffies_snap;
 
 	VERBOSE_TOROUT_STRING("torture_shutdown task started");
-	ktime_snap = ktime_get();
-	while (ktime_before(ktime_snap, shutdown_time) &&
+	jiffies_snap = jiffies;
+	while (ULONG_CMP_LT(jiffies_snap, shutdown_time) &&
 	       !torture_must_stop()) {
+		delta = shutdown_time - jiffies_snap;
 		if (verbose)
 			pr_alert("%s" TORTURE_FLAG
-				 "torture_shutdown task: %llu ms remaining\n",
-				 torture_type,
-				 ktime_ms_delta(shutdown_time, ktime_snap));
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_hrtimeout(&shutdown_time, HRTIMER_MODE_ABS);
-		ktime_snap = ktime_get();
+				 "torture_shutdown task: %lu jiffies remaining\n",
+				 torture_type, delta);
+		schedule_timeout_interruptible(delta);
+		jiffies_snap = jiffies;
 	}
 	if (torture_must_stop()) {
 		torture_kthread_stopping("torture_shutdown");
@@ -511,9 +511,10 @@ int torture_shutdown_init(int ssecs, void (*cleanup)(void))
 {
 	int ret = 0;
 
+	shutdown_secs = ssecs;
 	torture_shutdown_hook = cleanup;
-	if (ssecs > 0) {
-		shutdown_time = ktime_add(ktime_get(), ktime_set(ssecs, 0));
+	if (shutdown_secs > 0) {
+		shutdown_time = jiffies + shutdown_secs * HZ;
 		ret = torture_create_kthread(torture_shutdown, NULL,
 					     shutdown_task);
 	}

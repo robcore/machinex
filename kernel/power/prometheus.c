@@ -85,7 +85,8 @@ static void power_suspend(struct work_struct *work)
 
 	cancel_work_sync(&power_resume_work);
 
-	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
+	if ((poweroff_charging) || (system_state == SYSTEM_RESTART)
+		|| (system_state == SYSTEM_POWER_OFF)) {
 		pr_info("[PROMETHEUS] Ignoring Unsupported System \
 				State\n");
 		return;
@@ -244,6 +245,7 @@ static ssize_t global_suspend_store(struct kobject *kobj,
 	unsigned int val;
 
 	sscanf(buf, "%u\n", &val);
+
 	if (val <= 0)
 		val = 0;
 	if (val >= 1)
@@ -337,9 +339,6 @@ static int prometheus_init(void)
 	pwrsup_wq = alloc_workqueue("prometheus_work", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
 	if (!pwrsup_wq)
 		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
-
-	mutex_init(&prometheus_mtx);
-	spin_lock_init(&ps_state_lock);
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);

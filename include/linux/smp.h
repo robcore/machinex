@@ -195,9 +195,4 @@ extern void arch_disable_smp_support(void);
 
 void smp_setup_processor_id(void);
 
-/* SMP core functions */
-int smpcfd_prepare_cpu(unsigned int cpu);
-int smpcfd_dead_cpu(unsigned int cpu);
-int smpcfd_dying_cpu(unsigned int cpu);
-
 #endif /* __LINUX_SMP_H */

@@ -675,18 +675,9 @@ static void __clocksource_select(bool skipcur)
 		 */
 		if (!(cs->flags & CLOCK_SOURCE_VALID_FOR_HRES) && oneshot) {
 			/* Override clocksource cannot be used. */
-			if (cs->flags & CLOCK_SOURCE_UNSTABLE) {
-				pr_warn("Override clocksource %s is unstable and not HRT compatible - cannot switch while in HRT/NOHZ mode\n",
-					cs->name);
-				override_name[0] = 0;
-			} else {
-				/*
-				 * The override cannot be currently verified.
-				 * Deferring to let the watchdog check.
-				 */
-				pr_info("Override clocksource %s is not currently HRT compatible - deferring\n",
-					cs->name);
-			}
+			pr_warn("Override clocksource %s is not HRT compatible - cannot switch while in HRT/NOHZ mode\n",
+				cs->name);
+			override_name[0] = 0;
 		} else
 			/* Override clocksource can be used. */
 			best = cs;

@@ -1140,3 +1140,4 @@ void __init msm_timer_init(void)
 	local_timer_register(&msm_lt_ops);
 #endif
 }
+
