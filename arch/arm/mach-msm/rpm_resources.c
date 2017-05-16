@@ -25,7 +25,6 @@
 #ifdef CONFIG_QUICK_WAKEUP
 #include <linux/quickwakeup.h>
 #endif
-#include <linux/cpuhotplug.h>
 #include <mach/rpm.h>
 #include <mach/msm_iomap.h>
 #include <asm/mach-types.h>
@@ -1028,25 +1027,31 @@ static void msm_rpmrs_exit_sleep(void *limits, bool from_idle,
 		msm_mpm_exit_sleep(from_idle);
 }
 
-static int rpmrs_starting_cpu(unsigned int cpu)
+static int rpmrs_cpu_callback(struct notifier_block *nfb,
+		unsigned long action, void *hcpu)
 {
-	if (num_online_cpus() > 1)
-		msm_rpmrs_l2_cache.rs[0].value =
-			MSM_RPMRS_L2_CACHE_ACTIVE;
+	switch (action) {
+	case CPU_ONLINE_FROZEN:
+	case CPU_ONLINE:
+		if (num_online_cpus() > 1)
+			msm_rpmrs_l2_cache.rs[0].value =
+				MSM_RPMRS_L2_CACHE_ACTIVE;
+		break;
+	case CPU_DEAD_FROZEN:
+	case CPU_DEAD:
+		if (num_online_cpus() == 1)
+			msm_rpmrs_l2_cache.rs[0].value =
+				MSM_RPMRS_L2_CACHE_HSFS_OPEN;
+		break;
+	}
 
 	msm_rpmrs_update_levels();
-
-	return 0;
+	return NOTIFY_OK;
 }
-static int rpmrs_dead_cpu(unsigned int cpu)
-{
-	if (num_online_cpus() == 1)
-		msm_rpmrs_l2_cache.rs[0].value =
-			MSM_RPMRS_L2_CACHE_HSFS_OPEN;
 
-	msm_rpmrs_update_levels();
-	return 0;
-}
+static struct notifier_block __refdata rpmrs_cpu_notifier = {
+	.notifier_call = rpmrs_cpu_callback,
+};
 
 int __init msm_rpmrs_levels_init(struct msm_rpmrs_platform_data *data)
 {
@@ -1145,7 +1150,6 @@ static struct msm_pm_sleep_ops msm_rpmrs_ops = {
 
 static int __init msm_rpmrs_l2_init(void)
 {
-	int ret;
 	if (soc_class_is_msm8960() || soc_class_is_msm8930() ||
 	    soc_class_is_apq8064()) {
 
@@ -1156,6 +1160,8 @@ static int __init msm_rpmrs_l2_init(void)
 		msm_rpmrs_l2_cache.aggregate = NULL;
 		msm_rpmrs_l2_cache.restore = NULL;
 
+		register_hotcpu_notifier(&rpmrs_cpu_notifier);
+
 	} else if (cpu_is_msm9615()) {
 		msm_rpmrs_l2_cache.beyond_limits = NULL;
 		msm_rpmrs_l2_cache.aggregate = NULL;
@@ -1163,12 +1169,6 @@ static int __init msm_rpmrs_l2_init(void)
 	}
 
 	msm_pm_set_sleep_ops(&msm_rpmrs_ops);
-
-	ret = cpuhp_setup_state_nocalls(CPUHP_MSM_RPMRS_IDLE,
-					"MSM_RPMRS_IDLE", rpmrs_starting_cpu,
-					rpmrs_dead_cpu);
-	if (ret)
-		return ret;
 
 	return 0;
 }
