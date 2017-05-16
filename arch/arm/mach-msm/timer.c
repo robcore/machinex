@@ -24,11 +24,6 @@
 #include <linux/io.h>
 #include <linux/percpu.h>
 #include <linux/mm.h>
-#include <linux/cpu.h>
-#include <linux/cpumask.h>
-#include <linux/sched.h>
-#include <linux/suspend.h>
-#include <linux/notifier.h>
 
 #include <asm/localtimer.h>
 #include <asm/mach/time.h>
@@ -101,7 +96,7 @@ static struct msm_clock *clockevent_to_clock(struct clock_event_device *evt);
 static irqreturn_t msm_timer_interrupt(int irq, void *dev_id);
 static cycle_t msm_gpt_read(struct clocksource *cs);
 static cycle_t msm_dgt_read(struct clocksource *cs);
-static inline void msm_timer_set_mode(enum clock_event_mode mode,
+static void msm_timer_set_mode(enum clock_event_mode mode,
 			       struct clock_event_device *evt);
 static int msm_timer_set_next_event(unsigned long cycles,
 				    struct clock_event_device *evt);
@@ -327,8 +322,7 @@ static int msm_timer_set_next_event(unsigned long cycles,
 	return 0;
 }
 
-static DEFINE_SPINLOCK(qcom_timer_lock);
-static inline void msm_timer_set_mode(enum clock_event_mode mode,
+static void msm_timer_set_mode(enum clock_event_mode mode,
 			       struct clock_event_device *evt)
 {
 	struct msm_clock *clock;
@@ -341,12 +335,13 @@ static inline void msm_timer_set_mode(enum clock_event_mode mode,
 	clock_state = this_cpu_ptr(&msm_clocks_percpu)[clock->index];
 	gpt_state = this_cpu_ptr(&msm_clocks_percpu)[MSM_CLOCK_GPT];
 
+	local_irq_save(irq_flags);
+
 	switch (mode) {
 	case CLOCK_EVT_MODE_RESUME:
 	case CLOCK_EVT_MODE_PERIODIC:
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
-		spin_lock_irqsave(&qcom_timer_lock, irq_flags);
 		clock_state->stopped = 0;
 		clock_state->sleep_offset =
 			-msm_read_timer_count(clock, LOCAL_TIMER) +
@@ -361,12 +356,9 @@ static inline void msm_timer_set_mode(enum clock_event_mode mode,
 			__raw_writel(TIMER_ENABLE_EN,
 				msm_clocks[MSM_CLOCK_GPT].regbase +
 			       TIMER_ENABLE);
-		spin_unlock_irqrestore(&qcom_timer_lock, irq_flags);
-		wmb();
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
-		spin_lock_irqsave(&qcom_timer_lock, irq_flags);
 		cur_clock = &get_cpu_var(msm_active_clock);
 		if (*cur_clock == clock)
 			*cur_clock = NULL;
@@ -391,12 +383,10 @@ static inline void msm_timer_set_mode(enum clock_event_mode mode,
 			__raw_writel(0, msm_clocks[MSM_CLOCK_GPT].regbase +
 			       TIMER_ENABLE);
 		}
-		spin_unlock_irqrestore(&qcom_timer_lock, irq_flags);
-		wmb();
-		break;
-	default:
 		break;
 	}
+	wmb();
+	local_irq_restore(irq_flags);
 }
 
 void __iomem *msm_timer_get_timer0_base(void)
@@ -906,13 +896,14 @@ int local_timer_setup(struct clock_event_device *evt)
 {
 	static DEFINE_PER_CPU(bool, first_boot) = true;
 	struct msm_clock *clock = &msm_clocks[msm_global_timer];
-	int cpu = smp_processor_id();
 
 	/* Use existing clock_event for cpu 0 */
-	if (!cpu)
+	if (!smp_processor_id())
 		return 0;
 
-	__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
+	if (cpu_is_msm8x60() || soc_class_is_msm8960() ||
+	    soc_class_is_apq8064() || soc_class_is_msm8930())
+		__raw_writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
 
 	if (__get_cpu_var(first_boot)) {
 		__raw_writel(0, clock->regbase  + TIMER_ENABLE);
@@ -926,7 +917,7 @@ int local_timer_setup(struct clock_event_device *evt)
 	}
 	evt->irq = clock->irq;
 	evt->name = "local_timer";
-	evt->features = CLOCK_EVT_FEAT_ONESHOT | CLOCK_EVT_FEAT_C3STOP;
+	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = clock->clockevent.rating;
 	evt->set_mode = msm_timer_set_mode;
 	evt->set_next_event = msm_timer_set_next_event;
@@ -950,37 +941,9 @@ void local_timer_stop(struct clock_event_device *evt)
 	disable_percpu_irq(evt->irq);
 }
 
-
 static struct local_timer_ops msm_lt_ops = {
 	local_timer_setup,
 	local_timer_stop,
-};
-
-static int msm_timer_cpu_notify(struct notifier_block *self,
-					   unsigned long action, void *hcpu)
-{
-	struct msm_clock *clock = &msm_clocks[msm_global_timer];
-	int cpu = smp_processor_id();
-	/*
-	 * Grab cpu pointer in each case to avoid spurious
-	 * preemptible warnings
-	 */
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_STARTING:
-	case CPU_UP_PREPARE:
-		local_timer_setup(this_cpu_ptr(clock->evt));
-		break;
-	case CPU_DOWN_PREPARE:
-	case CPU_DYING:
-		local_timer_stop(this_cpu_ptr(clock->evt));
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block msm_timer_cpu_nb = {
-	.notifier_call = msm_timer_cpu_notify,
 };
 #endif /* CONFIG_LOCAL_TIMERS */
 
@@ -1075,7 +1038,6 @@ void __init msm_timer_init(void)
 		dgt->freq = 6750000;
 	}
 
-	spin_lock_init(&qcom_timer_lock);
 	if (msm_clocks[MSM_CLOCK_GPT].clocksource.rating > DG_TIMER_RATING)
 		msm_global_timer = MSM_CLOCK_GPT;
 	else
@@ -1142,12 +1104,6 @@ void __init msm_timer_init(void)
 		if (res)
 			pr_err("msm_timer_init: request_irq failed for %s\n",
 			       ce->name);
-		else
-			res = register_cpu_notifier(&msm_timer_cpu_nb);
-
-		if (!res)
-		/* Immediately configure the timer on the boot CPU */
-			local_timer_setup(raw_cpu_ptr(clock->evt));
 
 		chip = irq_get_chip(clock->irq);
 		if (chip && chip->irq_mask)
@@ -1183,13 +1139,4 @@ void __init msm_timer_init(void)
 #ifdef CONFIG_LOCAL_TIMERS
 	local_timer_register(&msm_lt_ops);
 #endif
-	/* Install and invoke hotplug callbacks */
-#if 0
-	if (cpuhp_setup_state(CPUHP_AP_QCOM_TIMER_STARTING,
-				"arch/arm/timer:setup",
-				local_timer_setup,
-				local_timer_stop))
-	pr_err("msm timer - hp callback failed\n");
-#endif
 }
-

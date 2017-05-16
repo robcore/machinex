@@ -27,7 +27,6 @@
 #define MAX_BUF 100
 
 DEFINE_MUTEX(pm_mutex);
-DEFINE_SPINLOCK(touch_evt_lock);
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -35,7 +34,8 @@ DEFINE_SPINLOCK(touch_evt_lock);
 
 static BLOCKING_NOTIFIER_HEAD(pm_chain_head);
 
-static void touch_event_fn(void);
+static void touch_event_fn(struct work_struct *work);
+static DECLARE_WORK(touch_event_struct, touch_event_fn);
 
 static struct hrtimer tc_ev_timer;
 static int tc_ev_processed;
@@ -97,18 +97,12 @@ static ssize_t
 touch_event_show(struct kobject *kobj,
 		 struct kobj_attribute *attr, char *buf)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&touch_evt_lock, flags);
-	if (tc_ev_processed == 0) {
-		spin_unlock_irqrestore(&touch_evt_lock, flags);
+	if (tc_ev_processed == 0)
 		return snprintf(buf, strnlen("touch_event", MAX_BUF) + 1,
 				"touch_event");
-	} else {
-		spin_unlock_irqrestore(&touch_evt_lock, flags);
+	else
 		return snprintf(buf, strnlen("null", MAX_BUF) + 1,
 				"null");
-	}
 }
 
 static ssize_t
@@ -116,12 +110,9 @@ touch_event_store(struct kobject *kobj,
 		  struct kobj_attribute *attr,
 		  const char *buf, size_t n)
 {
-	unsigned long flags;
 
 	hrtimer_cancel(&tc_ev_timer);
-	spin_lock_irqsave(&touch_evt_lock, flags);
 	tc_ev_processed = 0;
-	spin_unlock_irqrestore(&touch_evt_lock, flags);
 
 	/* set a timer to notify the userspace to stop processing
 	 * touch event
@@ -153,27 +144,29 @@ touch_event_timer_store(struct kobject *kobj,
 	if (strict_strtoul(buf, 10, &val))
 		return -EINVAL;
 
-	touch_evt_timer_val = ktime_set(0, (val * 1000));
+	touch_evt_timer_val = ktime_set(0, val*1000);
 
 	return n;
 }
 
 power_attr(touch_event_timer);
 
-static void touch_event_fn(void)
+static void touch_event_fn(struct work_struct *work)
 {
-	unsigned long flags;
-
 	/* wakeup the userspace poll */
-	spin_lock_irqsave(&touch_evt_lock, flags);
 	tc_ev_processed = 1;
-	spin_unlock_irqrestore(&touch_evt_lock, flags);
 	sysfs_notify(power_kobj, NULL, "touch_event");
+
+	return;
 }
 
 static enum hrtimer_restart tc_ev_stop(struct hrtimer *hrtimer)
 {
-	touch_event_fn();
+	unsigned long flags;
+
+	local_irq_save(flags);
+	schedule_work(&touch_event_struct);
+	local_irq_restore(flags);
 
 	return HRTIMER_NORESTART;
 }
