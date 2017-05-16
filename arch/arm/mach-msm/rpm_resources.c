@@ -1038,7 +1038,7 @@ static int rpmrs_starting_cpu(unsigned int cpu)
 
 	return 0;
 }
-static int rpmrs_dead_cpu(unsigned int cpu);
+static int rpmrs_dead_cpu(unsigned int cpu)
 {
 	if (num_online_cpus() == 1)
 		msm_rpmrs_l2_cache.rs[0].value =
@@ -1164,8 +1164,8 @@ static int __init msm_rpmrs_l2_init(void)
 
 	msm_pm_set_sleep_ops(&msm_rpmrs_ops);
 
-	ret = cpuhp_setup_state_nocalls(CPUHP_AP_MSM_RPMRS_IDLE,
-					"AP_MSM_RPMRS_IDLE", rpmrs_starting_cpu,
+	ret = cpuhp_setup_state_nocalls(CPUHP_MSM_RPMRS_IDLE,
+					"MSM_RPMRS_IDLE", rpmrs_starting_cpu,
 					rpmrs_dead_cpu);
 	if (ret)
 		return ret;
