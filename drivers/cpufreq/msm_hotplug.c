@@ -448,6 +448,9 @@ static void hotplug_input_event(struct input_handle *handle, unsigned int type,
 {
 	u64 now;
 
+	if (msmhp_suspended)
+		return;
+
 	now = ktime_to_us(ktime_get());
 	hotplug.last_input = now;
 	if (now - last_boost_time < MIN_INPUT_INTERVAL)
@@ -1135,4 +1138,3 @@ module_exit(msm_hotplug_exit);
 MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
 MODULE_DESCRIPTION("MSM Hotplug Driver");
-MODULE_LICENSE("GPLv2");
