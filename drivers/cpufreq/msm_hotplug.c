@@ -54,7 +54,6 @@ static struct cpu_hotplug {
 	unsigned int msm_enabled;
 	unsigned int min_cpus_online_res;
 	unsigned int max_cpus_online_res;
-	unsigned int target_cpus;
 	unsigned int min_cpus_online;
 	unsigned int max_cpus_online;
 	unsigned int cpus_boosted;
@@ -64,8 +63,6 @@ static struct cpu_hotplug {
 	u64 boost_lock_dur;
 	u64 last_input;
 	unsigned int fast_lane_load;
-	struct work_struct up_work;
-	struct work_struct down_work;
 	struct mutex msm_hotplug_mutex;
 } hotplug = {
 	.msm_enabled = HOTPLUG_ENABLED,
@@ -83,12 +80,9 @@ static struct cpu_hotplug {
 static struct workqueue_struct *hotplug_wq;
 static struct delayed_work hotplug_work;
 
-struct msmhp_suspend {
-	struct mutex msmhp_mutex;
-	int msmhp_suspended;
-};
+static DEFINE_RWLOCK(msmhp_lock);
+static unsigned int msmhp_suspended;
 
-static DEFINE_PER_CPU(struct msmhp_suspend, msmhp_suspend_data);
 
 static u64 last_boost_time;
 static unsigned int default_update_rates[] = { DEFAULT_UPDATE_RATE };
@@ -258,7 +252,7 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-	queue_delayed_work_on(0, hotplug_wq, &dl->lock_rem,
+	mod_delayed_work_on(0, hotplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(hotplug.down_lock_dur));
 }
 
@@ -305,59 +299,6 @@ static int get_lowest_load_cpu(void)
 	return lowest_cpu;
 }
 
-static void cpu_up_work(struct work_struct *work)
-{
-	unsigned int cpu = smp_processor_id();
-	unsigned int target;
-
-	mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended) {
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		return;
-	}
-	mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-
-	target = hotplug.target_cpus;
-
-	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (target <= num_online_cpus())
-			break;
-		if (cpu == 0)
-			continue;
-		cpu_up(cpu);
-		apply_down_lock(cpu);
-	}
-}
-
-static void cpu_down_work(struct work_struct *work)
-{
-	unsigned int cpu = smp_processor_id();
-	unsigned int lowest_cpu;
-	unsigned int target;
-
-	mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended) {
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		return;
-	}
-	mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-
-	target = hotplug.target_cpus;
-
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		lowest_cpu = get_lowest_load_cpu();
-		if (lowest_cpu > 0 && lowest_cpu <= stats.total_cpus) {
-			if (check_down_lock(lowest_cpu))
-				break;
-			cpu_down(lowest_cpu);
-		}
-		if (target >= num_online_cpus())
-			break;
-	}
-}
-
 static void online_cpu(unsigned int target)
 {
 	unsigned int cpu = smp_processor_id();
@@ -365,13 +306,6 @@ static void online_cpu(unsigned int target)
 
 	if (!hotplug.msm_enabled)
 		return;
-
-	mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended) {
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		return;
-	}
-	mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
 
 	online_cpus = num_online_cpus();
 
@@ -383,25 +317,26 @@ static void online_cpu(unsigned int target)
 		online_cpus >= hotplug.max_cpus_online)
 		return;
 
-	hotplug.target_cpus = target;
-	queue_work_on(0, hotplug_wq, &hotplug.up_work);
+	for_each_cpu_not(cpu, cpu_online_mask) {
+	if (target <= num_online_cpus())
+		return;
+	if (cpu == 0)
+		continue;
+	cpu_up(cpu);
+	apply_down_lock(cpu);
+	}
 }
 
 static void offline_cpu(unsigned int target)
 {
 	unsigned int cpu = smp_processor_id();
 	unsigned int online_cpus;
+	unsigned int lowest_cpu;
+
 	u64 now;
 
 	if (!hotplug.msm_enabled)
 		return;
-
-	mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended) {
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		return;
-	}
-	mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
 
 	online_cpus = num_online_cpus();
 
@@ -418,8 +353,17 @@ static void offline_cpu(unsigned int target)
 	    (now - hotplug.last_input < hotplug.boost_lock_dur))
 		return;
 
-	hotplug.target_cpus = target;
-	queue_work_on(0, hotplug_wq, &hotplug.down_work);
+	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		lowest_cpu = get_lowest_load_cpu();
+		if (lowest_cpu > 0 && lowest_cpu <= stats.total_cpus) {
+			if ((check_down_lock(lowest_cpu)) ||
+				(target >= num_online_cpus()))
+				return;
+			cpu_down(lowest_cpu);
+		}
+	}
 }
 
 static unsigned int load_to_update_rate(unsigned int load)
@@ -438,20 +382,21 @@ static unsigned int load_to_update_rate(unsigned int load)
 	return ret;
 }
 
-static void reschedule_hotplug_work(void)
+static void reschedule_hotplug_wq(void)
 {
 	unsigned int cpu = smp_processor_id();
 	unsigned int delay;
+	unsigned long flags;
 
-	mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended) {
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
+	read_lock_irqsave(&msmhp_lock, flags);
+	if (msmhp_suspended) {
+		read_unlock_irqrestore(&msmhp_lock, flags);
 		return;
-	}
-	mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
+		}
+	read_unlock_irqrestore(&msmhp_lock, flags);
 
 	delay = load_to_update_rate(stats.cur_avg_load);
-	queue_delayed_work_on(0, hotplug_wq, &hotplug_work,
+	mod_delayed_work_on(0, hotplug_wq, &hotplug_work,
 			      msecs_to_jiffies(delay));
 }
 
@@ -459,13 +404,6 @@ static void msm_hotplug_work(struct work_struct *work)
 {
 	unsigned int i, target = 0;
 	unsigned int cpu = smp_processor_id();
-
-	mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended) {
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		return;
-	}
-	mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
 
 	update_load_stats();
 
@@ -507,9 +445,7 @@ static void msm_hotplug_work(struct work_struct *work)
 	}
 
 reschedule:
-	dprintk("%s: cur_avg_load: %3u online_cpus: %u target: %u\n", MSM_HOTPLUG,
-		stats.cur_avg_load, stats.online_cpus, target);
-	reschedule_hotplug_work();
+	reschedule_hotplug_wq();
 }
 
 static void hotplug_input_event(struct input_handle *handle, unsigned int type,
@@ -601,21 +537,21 @@ static struct input_handler hotplug_input_handler = {
 static void msm_hotplug_suspend(struct power_suspend * h)
 {
 	struct down_lock *dl;
+	unsigned long flags;
 	int cpu;
 
 	if (!hotplug.msm_enabled)
 		return;
 
-	for_each_possible_cpu(cpu) {
-		mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended == 0)
-			per_cpu(msmhp_suspend_data, cpu).msmhp_suspended = 1;
-		mutex_unlock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-	}
+	write_lock_irqsave(&msmhp_lock, flags);
+	if (msmhp_suspended == 0)
+		msmhp_suspended = 1;
+	write_lock_irqsave(&msmhp_lock, flags);
+
 	for_each_online_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		if (check_down_lock(cpu))
-			queue_delayed_work(hotplug_wq, &dl->lock_rem, 0);
+			mod_delayed_work(hotplug_wq, &dl->lock_rem, 0);
 	}
 }
 
@@ -626,15 +562,14 @@ static void msm_hotplug_resume(struct power_suspend * h)
 	if (!hotplug.msm_enabled)
 		return;
 
-	for_each_possible_cpu(cpu) {
-		//mutex_lock(&per_cpu(msmhp_suspend_data, cpu).msmhp_mutex);
-		if (per_cpu(msmhp_suspend_data, cpu).msmhp_suspended == 1);
-			per_cpu(msmhp_suspend_data, cpu).msmhp_suspended = 0;
-		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-	}
+		//write_lock_irqsave(&msmhp_lock);
+		if (msmhp_suspended == 1);
+			msmhp_suspended = 0;
+		//write_unlock_irqrestore(&msmhp_lock);
+
 	for_each_online_cpu(cpu) {
 		apply_down_lock(cpu);
-		reschedule_hotplug_work();
+		reschedule_hotplug_wq();
 	}
 }
 
@@ -668,17 +603,17 @@ static int msm_hotplug_start(void)
 	if (!stats.load_hist) {
 		pr_err("%s: Failed to allocate memory\n", MSM_HOTPLUG);
 		ret = -ENOMEM;
-		goto err_dev;
+		goto err_stat;
 	}
-
-	register_power_suspend(&msmhp_psuspend_data);
 
 	mutex_init(&stats.stats_mutex);
 	mutex_init(&hotplug.msm_hotplug_mutex);
+	rwlock_init(&msmhp_lock);
+	msmhp_suspended = 0;
+
+	register_power_suspend(&msmhp_psuspend_data);
 
 	INIT_DELAYED_WORK(&hotplug_work, msm_hotplug_work);
-	INIT_WORK(&hotplug.up_work, cpu_up_work);
-	INIT_WORK(&hotplug.down_work, cpu_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
@@ -703,6 +638,8 @@ static int msm_hotplug_start(void)
 			      msecs_to_jiffies(START_DELAY));
 
 	return ret;
+err_stat:
+	input_unregister_handler(&hotplug_input_handler);
 err_dev:
 	destroy_workqueue(hotplug_wq);
 err_out:

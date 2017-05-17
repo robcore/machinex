@@ -3002,10 +3002,10 @@ void mmc_rescan(struct work_struct *work)
  out:
 	/* only extend the wakelock, if suspend has not started yet */
 	if (extend_wakelock && !host->rescan_disable)
-		wake_lock_timeout(&host->detect_wake_lock, HZ / 2);
+		wake_lock_timeout(&host->detect_wake_lock, msecs_to_jiffies(50));
 
 	if (host->caps & MMC_CAP_NEEDS_POLL)
-		mmc_schedule_delayed_work(&host->detect, HZ);
+		mmc_schedule_delayed_work(&host->detect, msecs_to_jiffies(100));
 }
 
 void mmc_start_host(struct mmc_host *host)
@@ -3251,7 +3251,7 @@ int mmc_suspend_host(struct mmc_host *host)
 
 	/* If there is pending detect work abort runtime suspend */
 	if (unlikely(work_busy(&host->detect.work)))
-		return -EAGAIN;
+		return -EBUSY;
 	else
 		mmc_flush_scheduled_work();
 
@@ -3556,6 +3556,7 @@ static int __init mmc_init(void)
 	int ret;
 
 	mx_mmc = create_singlethread_workqueue("_mx_mmc");
+
 	if (!mx_mmc)
 		return -ENOMEM;
 

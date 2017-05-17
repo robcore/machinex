@@ -6920,7 +6920,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 	}
 
 	if (host->pdev->id == 3) {
-		host->mmc->pm_flags |= MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
+		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
 		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
@@ -6944,19 +6944,21 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 */
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
-		if (work_busy(&mmc->detect.work))
+		if (work_busy(&mmc->detect.work)) {
+			host->pending_resume = true;
 			rc = -EBUSY;
-		else
+			goto busy;
+		} else
 			rc = mmc_suspend_host(mmc);
 
 		pm_runtime_put_noidle(dev);
 
-		if (!rc) {
+		if (rc == 0) {
 			spin_lock_irqsave(&host->lock, flags);
 			host->sdcc_suspended = true;
 			spin_unlock_irqrestore(&host->lock, flags);
 			if (mmc->card && mmc_card_sdio(mmc->card) &&
-				mmc->ios.clock) {
+				mmc->ios.clock && mmc_card_keep_power(mmc)) {
 				/*
 				 * If SDIO function driver doesn't want
 				 * to power off the card, atleast turn off
@@ -6965,9 +6967,10 @@ msmsdcc_runtime_suspend(struct device *dev)
 				msmsdcc_gate_clock(host);
 			}
 		}
+busy:
 		host->sdcc_suspending = 0;
 		mmc->suspend_task = NULL;
-		if (rc && wake_lock_active(&host->sdio_suspend_wlock))
+		if ((rc > 0) && wake_lock_active(&host->sdio_suspend_wlock))
 			wake_unlock(&host->sdio_suspend_wlock);
 	}
 	pr_debug("%s: %s: ends with err=%d\n", mmc_hostname(mmc), __func__, rc);
@@ -6993,7 +6996,6 @@ msmsdcc_runtime_resume(struct device *dev)
 	if (host->plat->is_sdio_al_client)
 		goto out;
 
-	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
 		if (mmc->card && mmc_card_sdio(mmc->card) &&
 				mmc_card_keep_power(mmc)) {
@@ -7024,8 +7026,8 @@ msmsdcc_runtime_resume(struct device *dev)
 
 		wake_unlock(&host->sdio_suspend_wlock);
 	}
-	host->pending_resume = false;
 out:
+	host->pending_resume = false;
 	return 0;
 }
 
@@ -7076,7 +7078,6 @@ static int msmsdcc_pm_suspend(struct device *dev)
  out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
-	msmsdcc_print_pm_stats(host, start, __func__, rc);
 	return rc;
 }
 
