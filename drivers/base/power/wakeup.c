@@ -608,31 +608,45 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 	if (ws) {
 		wslen = strlen(ws->name);
 
-	if ((!enable_gps_ws &&
-			!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
-		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) ||
-		(!enable_msm_hsic_ws &&
-			!strcmp(ws->name, "msm_hsic_host")) ||
-		(!enable_wlan_rx_wake_ws &&
-			!strcmp(ws->name, "wlan_rx_wake")) ||
-		(!enable_wlan_ctrl_wake_ws &&
-			!strcmp(ws->name, "wlan_ctrl_wake")) ||
-		(!enable_wlan_wake_ws &&
-			!strcmp(ws->name, "wlan_wake")) ||
-		(!enable_bluesleep_ws &&
-			!strcmp(ws->name, "bluesleep")) ||
-		(!enable_ssp_sensorhub_ws &&
-			!strcmp(ws->name, "ssp_wake_lock"))) {
-		if (ws->active) {
-			wakeup_source_deactivate(ws);
-			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
-		}
-			return true;
-		}
+		if (((!enable_gps_ws &&
+				!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
+			(!enable_bluesleep_ws &&
+				!strcmp(ws->name, "bluesleep")) ||
+			(!enable_msm_hsic_ws &&
+				!strcmp(ws->name, "msm_hsic_host")) ||
+			(!enable_wlan_rx_wake_ws &&
+				!strcmp(ws->name, "wlan_rx_wake")) ||
+			(!enable_wlan_ctrl_wake_ws &&
+				!strcmp(ws->name, "wlan_ctrl_wake")) ||
+			(!enable_wlan_wake_ws &&
+				!strcmp(ws->name, "wlan_wake")) ||
+			(!enable_bluesleep_ws &&
+				!strcmp(ws->name, "bluesleep")) ||
+			(!enable_ssp_sensorhub_ws &&
+				!strcmp(ws->name, "ssp_wake_lock")))) {
+				pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+				return true;
+		} else
+			return false;
 	}
-
 	return false;
+}
+
+bool hsic_active;
+static void prometheus_hsic_beacon(struct wakeup_source *ws)
+{
+	bool is_hsic_active;
+	unsigned int wslen = 0;
+
+	if (ws) {
+		wslen = strlen(ws->name);
+
+	if (!strcmp(ws->name, "msm_hsic_host") && ws->active)
+		is_hsic_active = true;
+	else
+		is_hsic_active = false;
+	}
+	hsic_active = is_hsic_active;
 }
 
 /*
@@ -699,23 +713,27 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 {
 	if (wakeblock) {
-		if (!wakeup_source_blocker(ws)) {
 			ws->event_count++;
 			/* This is racy, but the counter is approximate anyway. */
 			if (events_check_enabled)
 				ws->wakeup_count++;
 
-			if (!ws->active)
+			prometheus_hsic_beacon(ws);
+
+			if ((!ws->active) && !wakeup_source_blocker(ws))
 				wakeup_source_activate(ws);
+			else if ((ws->active) && wakeup_source_blocker(ws))
+				wakeup_source_deactivate(ws);
 
 			if (hard)
 				pm_system_wakeup();
-		}
 	} else {
 		ws->event_count++;
 		/* This is racy, but the counter is approximate anyway. */
 		if (events_check_enabled)
 			ws->wakeup_count++;
+
+		prometheus_hsic_beacon(ws);
 
 		if (!ws->active)
 			wakeup_source_activate(ws);

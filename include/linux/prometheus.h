@@ -85,6 +85,7 @@
 #include <linux/workqueue.h>
 #include <linux/syscalls.h> /* sys_sync */
 #include <linux/power_supply.h>
+#include <linux/suspend.h>
 
 struct power_suspend {
 	struct list_head link;

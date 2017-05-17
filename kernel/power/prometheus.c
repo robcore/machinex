@@ -28,7 +28,7 @@
 #include "power.h"
 
 #define VERSION 1
-#define VERSION_MIN 8
+#define VERSION_MIN 9
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -52,6 +52,7 @@ static unsigned int ignore_wakelocks = 1;
  * disliking the wakelock skip. TODO Use the power_supply framework.
  */
 extern bool mx_is_cable_attached(void);
+extern bool hsic_active;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -141,7 +142,7 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
 				return;
 			}
-		} else if (!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) {
+		} else if ((!pm_get_wakeup_count(&counter, false) || pm_wakeup_pending()) && (!hsic_active)) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
