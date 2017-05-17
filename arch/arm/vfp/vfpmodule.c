@@ -643,7 +643,7 @@ int vfp_restore_user_hwstate(struct user_vfp __user *ufp,
  */
 static int vfp_dying_cpu(unsigned int cpu)
 {
-	vfp_current_hw_state[(long)hcpu] = NULL;
+	vfp_force_reload(cpu, current_thread_info());
 	return 0;
 }
 
