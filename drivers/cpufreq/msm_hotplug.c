@@ -80,7 +80,6 @@ static struct cpu_hotplug {
 static struct workqueue_struct *hotplug_wq;
 static struct delayed_work hotplug_work;
 
-static DEFINE_RWLOCK(msmhp_lock);
 static unsigned int msmhp_suspended;
 
 
@@ -388,12 +387,8 @@ static void reschedule_hotplug_wq(void)
 	unsigned int delay;
 	unsigned long flags;
 
-	read_lock_irqsave(&msmhp_lock, flags);
-	if (msmhp_suspended) {
-		read_unlock_irqrestore(&msmhp_lock, flags);
+	if (msmhp_suspended)
 		return;
-		}
-	read_unlock_irqrestore(&msmhp_lock, flags);
 
 	delay = load_to_update_rate(stats.cur_avg_load);
 	mod_delayed_work_on(0, hotplug_wq, &hotplug_work,
@@ -474,7 +469,7 @@ static int hotplug_input_connect(struct input_handler *handler,
 				 const struct input_device_id *id)
 {
 	struct input_handle *handle;
-	int err;
+	int err = 0;
 
 	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
 	if (!handle)
@@ -543,10 +538,8 @@ static void msm_hotplug_suspend(struct power_suspend * h)
 	if (!hotplug.msm_enabled)
 		return;
 
-	write_lock_irqsave(&msmhp_lock, flags);
 	if (msmhp_suspended == 0)
 		msmhp_suspended = 1;
-	write_lock_irqsave(&msmhp_lock, flags);
 
 	for_each_online_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
@@ -562,10 +555,8 @@ static void msm_hotplug_resume(struct power_suspend * h)
 	if (!hotplug.msm_enabled)
 		return;
 
-		//write_lock_irqsave(&msmhp_lock);
 		if (msmhp_suspended == 1);
 			msmhp_suspended = 0;
-		//write_unlock_irqrestore(&msmhp_lock);
 
 	for_each_online_cpu(cpu) {
 		apply_down_lock(cpu);
@@ -608,7 +599,6 @@ static int msm_hotplug_start(void)
 
 	mutex_init(&stats.stats_mutex);
 	mutex_init(&hotplug.msm_hotplug_mutex);
-	rwlock_init(&msmhp_lock);
 	msmhp_suspended = 0;
 
 	register_power_suspend(&msmhp_psuspend_data);
