@@ -3569,6 +3569,8 @@ level_store(struct mddev *mddev, const char *buf, size_t len)
 		mddev->safemode = 0;
 	}
 
+	module_put(oldpers->owner);
+
 	rdev_for_each(rdev, mddev) {
 		if (rdev->raid_disk < 0)
 			continue;
