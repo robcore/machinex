@@ -245,11 +245,11 @@ static void vfp_panic(char *reason, u32 inst)
 {
 	int i;
 
-	printk(KERN_ERR "VFP: Error: %s\n", reason);
-	printk(KERN_ERR "VFP: EXC 0x%08x SCR 0x%08x INST 0x%08x\n",
+	pr_err("VFP: Error: %s\n", reason);
+	pr_err("VFP: EXC 0x%08x SCR 0x%08x INST 0x%08x\n",
 		fmrx(FPEXC), fmrx(FPSCR), inst);
 	for (i = 0; i < 32; i += 2)
-		printk(KERN_ERR "VFP: s%2u: 0x%08x s%2u: 0x%08x\n",
+		pr_err("VFP: s%2u: 0x%08x s%2u: 0x%08x\n",
 		       i, vfp_get_float(i), i+1, vfp_get_float(i+1));
 }
 
@@ -457,7 +457,7 @@ int vfp_pm_suspend(void)
 
 	/* if vfp is on, then save state for resumption */
 	if (fpexc & FPEXC_EN) {
-		printk(KERN_DEBUG "%s: saving vfp state\n", __func__);
+		pr_debug("%s: saving vfp state\n", __func__);
 		vfp_save_state(&ti->vfpstate, fpexc);
 
 		/* disable, just in case */
@@ -638,19 +638,19 @@ int vfp_restore_user_hwstate(struct user_vfp __user *ufp,
  * hardware state at every thread switch.  We clear our held state when
  * a CPU has been killed, indicating that the VFP hardware doesn't contain
  * a threads VFP state.  When a CPU starts up, we re-enable access to the
- * VFP hardware.
- *
- * Both CPU_DYING and CPU_STARTING are called on the CPU which
+ * VFP hardware. The callbacks below are called on the CPU which
  * is being offlined/onlined.
  */
-static int vfp_hotplug(struct notifier_block *b, unsigned long action,
-	void *hcpu)
+static int vfp_dying_cpu(unsigned int cpu)
 {
-	if (action == CPU_DYING || action == CPU_DYING_FROZEN)
-		vfp_current_hw_state[(long)hcpu] = NULL;
-	else if (action == CPU_STARTING || action == CPU_STARTING_FROZEN)
-		vfp_enable(NULL);
-	return NOTIFY_OK;
+	vfp_current_hw_state[(long)hcpu] = NULL;
+	return 0;
+}
+
+static int vfp_starting_cpu(unsigned int unused)
+{
+	vfp_enable(NULL);
+	return 0;
 }
 
 #ifdef CONFIG_PROC_FS
@@ -747,6 +747,10 @@ static int __init vfp_init(void)
 	unsigned int vfpsid;
 	unsigned int cpu_arch = cpu_architecture();
 
+	/*
+	 * Enable the access to the VFP on all online CPUs so the
+	 * following test on FPSID will succeed.
+	 */
 	if (cpu_arch >= CPU_ARCH_ARMv6)
 		on_each_cpu(vfp_enable, NULL, 1);
 
@@ -761,13 +765,11 @@ static int __init vfp_init(void)
 	barrier();
 	vfp_vector = vfp_null_entry;
 
-	printk(KERN_INFO "VFP support v0.3: ");
+	pr_info("VFP support v0.3: ");
 	if (VFP_arch)
-		printk("not present\n");
+		pr_cont("not present\n");
 	else if (vfpsid & FPSID_NODOUBLE) {
-		printk("no double precision support\n");
-	} else {
-		hotcpu_notifier(vfp_hotplug, 0);
+		pr_info("no double precision support\n");
 
 		VFP_arch = (vfpsid & FPSID_ARCH_MASK) >> FPSID_ARCH_BIT;  /* Extract the architecture version */
 		printk("implementor %02x architecture %d part %02x variant %x rev %x\n",
@@ -776,6 +778,10 @@ static int __init vfp_init(void)
 			(vfpsid & FPSID_PART_MASK) >> FPSID_PART_BIT,
 			(vfpsid & FPSID_VARIANT_MASK) >> FPSID_VARIANT_BIT,
 			(vfpsid & FPSID_REV_MASK) >> FPSID_REV_BIT);
+
+	cpuhp_setup_state_nocalls(CPUHP_AP_ARM_VFP_STARTING,
+				  "arm/vfp:starting", vfp_starting_cpu,
+				  vfp_dying_cpu);
 
 		vfp_vector = vfp_support_entry;
 

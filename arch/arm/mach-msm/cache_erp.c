@@ -504,7 +504,7 @@ static int msm_cache_erp_probe(struct platform_device *pdev)
 	}
 
 	get_online_cpus();
-		cpuhp_setup_state_nocalls(CPUHP_AP_MSM_CACHE_ERP,
+		cpuhp_setup_state(CPUHP_AP_MSM_CACHE_ERP,
 				  "AP_MSM_CACHE_ERP", cache_erp_starting_cpu,
 				  cache_erp_dying_cpu);
 	for_each_cpu(cpu, cpu_online_mask)
@@ -534,7 +534,7 @@ static int msm_cache_erp_remove(struct platform_device *pdev)
 		remove_proc_entry("cpu/msm_cache_erp", NULL);
 
 	get_online_cpus();
-	unregister_hotcpu_notifier(&cache_erp_cpu_notifier);
+	cpuhp_remove_state(CPUHP_AP_MSM_CACHE_ERP);
 	for_each_cpu(cpu, cpu_online_mask)
 		smp_call_function_single(cpu, disable_erp_irq_callback, NULL,
 					 1);
