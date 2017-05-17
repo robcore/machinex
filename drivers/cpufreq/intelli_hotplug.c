@@ -420,10 +420,11 @@ static void cycle_cpus(void)
 static void intelli_suspend(struct power_suspend * h)
 {
 	struct down_lock *dl;
-	int cpu;
-	if (atomic_read(&intelli_plug_active) == 0) {
+	unsigned int cpu;
+
+	if (atomic_read(&intelli_plug_active) == 0)
 		return;
-	}
+
 	for_each_possible_cpu(cpu) {
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
@@ -439,10 +440,11 @@ static void intelli_suspend(struct power_suspend * h)
 
 static void intelli_resume(struct power_suspend * h)
 {
-	int cpu;
-	if (atomic_read(&intelli_plug_active) == 0) {
+	unsigned int cpu;
+
+	if (atomic_read(&intelli_plug_active) == 0)
 		return;
-	}
+
 	for_each_possible_cpu(cpu) {
 		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
