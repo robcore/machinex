@@ -364,12 +364,12 @@ static void check_preempt_curr_dl(struct rq *rq, struct task_struct *p,
  * one, and to (try to!) reconcile itself with its own scheduling
  * parameters.
  */
-static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se,
-				       struct sched_dl_entity *pi_se)
+static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se)
 {
 	struct dl_rq *dl_rq = dl_rq_of_se(dl_se);
 	struct rq *rq = rq_of_dl_rq(dl_rq);
 
+	WARN_ON(dl_se->dl_boosted);
 	WARN_ON(dl_time_before(rq_clock(rq), dl_se->deadline));
 
 	add_average_bw(dl_se, dl_rq);
@@ -387,8 +387,8 @@ static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se,
 	 * future; in fact, we must consider execution overheads (time
 	 * spent on hardirq context, etc.).
 	 */
-	dl_se->deadline = rq_clock(rq) + pi_se->dl_deadline;
-	dl_se->runtime = pi_se->dl_runtime;
+	dl_se->deadline = rq_clock(rq) + dl_se->dl_deadline;
+	dl_se->runtime = dl_se->dl_runtime;
 }
 
 /*
@@ -1741,9 +1741,9 @@ static void switched_to_dl(struct rq *rq, struct task_struct *p)
 	int check_resched = 1;
 
 	if (dl_time_before(p->dl.deadline, rq_clock(rq)))
-		setup_new_dl_entity(&p->dl, &p->dl);
+		setup_new_dl_entity(&p->dl);
 
-	if (task_on_rq_queued(p) && rq->curr != p) {
+	if (rq->curr != p) {
 #ifdef CONFIG_SMP
 		if (tsk_nr_cpus_allowed(p) > 1 && rq->dl.overloaded)
 			queue_push_tasks(rq);
