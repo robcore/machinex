@@ -38,6 +38,7 @@ struct cpu_vfs_cap_data {
 struct file;
 struct inode;
 struct dentry;
+struct task_struct;
 struct user_namespace;
 
 struct user_namespace *current_user_ns(void);

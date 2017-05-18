@@ -30,6 +30,7 @@
 #include <linux/rbtree.h>
 
 /* For the /proc/sys support */
+struct completion;
 struct ctl_table;
 struct nsproxy;
 struct ctl_table_root;
