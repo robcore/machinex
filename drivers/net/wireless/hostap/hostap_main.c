@@ -244,7 +244,8 @@ u16 hostap_tx_callback_register(local_info_t *local,
 	unsigned long flags;
 	struct hostap_tx_callback_info *entry;
 
-	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
+	entry = kmalloc(sizeof(*entry),
+							   GFP_ATOMIC);
 	if (entry == NULL)
 		return 0;
 
