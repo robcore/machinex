@@ -51,7 +51,7 @@ struct pmic8xxx_pwrkey {
 	const struct pm8xxx_pwrkey_platform_data *pdata;
 	struct wake_lock wake_lock;
 };
-static struct wakeup_source *mx_pwrkey_ws;
+struct wake_lock mx_pwrkey_boost;
 
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
