@@ -56,7 +56,6 @@ struct wake_lock mx_pwrkey_boost;
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
-	bool screen_on = is_display_on();
 
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
@@ -68,7 +67,7 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 	pwrkey->powerkey_state = 1;
 	if (poweroff_charging)
 		wake_lock(&pwrkey->wake_lock);
-	else if (!screen_on)
+	else if (!is_display_on())
 		wake_lock(&mx_pwrkey_boost);
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
@@ -93,7 +92,7 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 	input_sync(pwrkey->pwr);
 	if (poweroff_charging)
 		wake_unlock(&pwrkey->wake_lock);
-	else
+	else if (is_display_on())
 		wake_unlock(&mx_pwrkey_boost);
 
 	return IRQ_HANDLED;
