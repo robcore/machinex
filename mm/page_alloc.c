@@ -4256,7 +4256,7 @@ void __init setup_per_cpu_pageset(void)
 		setup_zone_pageset(zone);
 }
 
-static noinline __init_refok
+static noinline __ref
 int zone_wait_table_init(struct zone *zone, unsigned long zone_size_pages)
 {
 	int i;
@@ -4913,7 +4913,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 	}
 }
 
-static void __init_refok alloc_node_mem_map(struct pglist_data *pgdat)
+static void __ref alloc_node_mem_map(struct pglist_data *pgdat)
 {
 	/* Skip empty nodes */
 	if (!pgdat->node_spanned_pages)

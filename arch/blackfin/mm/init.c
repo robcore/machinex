@@ -153,7 +153,7 @@ void __init free_initrd_mem(unsigned long start, unsigned long end)
 }
 #endif
 
-void __init_refok free_initmem(void)
+void __ref free_initmem(void)
 {
 #if defined CONFIG_RAMKERNEL && !defined CONFIG_MPU
 	free_init_pages("unused kernel memory",

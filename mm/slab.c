@@ -2127,7 +2127,7 @@ static size_t calculate_slab_order(struct kmem_cache *cachep,
 	return left_over;
 }
 
-static int __init_refok setup_cpu_cache(struct kmem_cache *cachep, gfp_t gfp)
+static int __ref setup_cpu_cache(struct kmem_cache *cachep, gfp_t gfp)
 {
 	if (slab_state >= FULL)
 		return enable_cpucache(cachep, gfp);

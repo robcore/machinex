@@ -131,7 +131,7 @@ static int __meminit save_mr(struct map_range *mr, int nr_range,
  * This runs before bootmem is initialized and gets pages directly from
  * the physical memory. To access them they are temporarily mapped.
  */
-unsigned long __init_refok init_memory_mapping(unsigned long start,
+unsigned long __ref init_memory_mapping(unsigned long start,
 					       unsigned long end)
 {
 	unsigned long page_size_mask = 0;

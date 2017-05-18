@@ -141,7 +141,7 @@ struct clk_lookup_alloc {
 	char	con_id[MAX_CON_ID];
 };
 
-struct clk_lookup * __init_refok
+struct clk_lookup * __ref
 clkdev_alloc(struct clk *clk, const char *con_id, const char *dev_fmt, ...)
 {
 	struct clk_lookup_alloc *cla;
