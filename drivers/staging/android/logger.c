@@ -296,7 +296,6 @@ start:
 
 		schedule();
 	}
-
 	finish_wait(&log->wq, &wait);
 	if (ret)
 		return ret;
