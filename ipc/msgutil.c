@@ -34,8 +34,6 @@ struct ipc_namespace init_ipc_ns = {
 	.proc_inum = PROC_IPC_INIT_INO,
 };
 
-atomic_t nr_ipc_ns = ATOMIC_INIT(1);
-
 struct msg_msgseg {
 	struct msg_msgseg *next;
 	/* the next part of the message follows immediately */

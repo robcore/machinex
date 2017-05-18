@@ -39,7 +39,6 @@ static struct ipc_namespace *create_ipc_ns(struct task_struct *tsk,
 		kfree(ns);
 		return ERR_PTR(err);
 	}
-	atomic_inc(&nr_ipc_ns);
 
 	sem_init_ns(ns);
 	msg_init_ns(ns);
@@ -112,7 +111,6 @@ static void free_ipc_ns(struct ipc_namespace *ns)
 	sem_exit_ns(ns);
 	msg_exit_ns(ns);
 	shm_exit_ns(ns);
-	atomic_dec(&nr_ipc_ns);
 
 	/*
 	 * Do the ipcns removal notification after decrementing nr_ipc_ns in
