@@ -3269,9 +3269,10 @@ int mmc_suspend_host(struct mmc_host *host)
 		 * save mode in the card and hence wait in mmc_claim_host
 		 * causing deadlock.
 		 */
-		if (!(host->card && mmc_card_sdio(host->card)))
+		if (!(host->card && mmc_card_sdio(host->card))) {
 			if (!mmc_try_claim_host(host))
 				err = -EBUSY;
+		}
 
 		if (!err) {
 			if (host->bus_ops->suspend) {

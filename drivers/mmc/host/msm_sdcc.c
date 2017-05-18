@@ -3696,6 +3696,7 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 			pm_runtime_get_noresume(dev);
 			goto out;
 		}
+	}
 	if (host->sdcc_suspended && host->pending_resume) {
 		host->pending_resume = false;
 		pm_runtime_get_noresume(dev);
