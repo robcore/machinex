@@ -24,7 +24,6 @@ static struct kmem_cache *user_ns_cachep __read_mostly;
 
 static bool new_idmap_permitted(struct user_namespace *ns, int cap_setid,
 				struct uid_gid_map *map);
-static void free_user_ns(struct work_struct *work);
 
 /*
  * Create a new user namespace, deriving the creator from the user in the
@@ -73,7 +72,6 @@ int create_user_ns(struct cred *new)
 	ns->parent = parent_ns;
 	ns->owner = owner;
 	ns->group = group;
-	INIT_WORK(&ns->work, free_user_ns);
 
 	/* Start with the same capabilities as init but useless for doing
 	 * anything as the capabilities are bound to the new user namespace.
@@ -114,20 +112,15 @@ static void free_user_ns_work(struct work_struct *work)
 	put_user_ns(parent);
 }
 
-void free_user_ns(struct work_struct *work)
+void free_user_ns(struct kref *kref)
 {
 	struct user_namespace *ns =
-		container_of(work, struct user_namespace, work);
+		container_of(kref, struct user_namespace, kref);
 
 	INIT_WORK(&ns->destroyer, free_user_ns_work);
 	schedule_work(&ns->destroyer);
 }
-
-void __put_user_ns(struct user_namespace *ns)
-{
-	schedule_work(&ns->work);
-}
-EXPORT_SYMBOL(__put_user_ns);
+EXPORT_SYMBOL(free_user_ns);
 
 static u32 map_id_range_down(struct uid_gid_map *map, u32 id, u32 count)
 {
