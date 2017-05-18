@@ -3271,16 +3271,19 @@ int mmc_suspend_host(struct mmc_host *host)
 		 */
 		if (!(host->card && mmc_card_sdio(host->card))) {
 			if (!mmc_try_claim_host(host))
-				err = -EBUSY;
+				return -EBUSY;
 		}
 
-		if (!err) {
 			if (host->bus_ops->suspend) {
 				err = mmc_stop_bkops(host->card);
-				if (err)
+				if (err) {
+					if (!(host->card && mmc_card_sdio(host->card)))
+						mmc_release_host(host);
 					goto stop_bkops_err;
-				err = host->bus_ops->suspend(host);
+				}
 			}
+			err = host->bus_ops->suspend(host);
+
 			if (!(host->card && mmc_card_sdio(host->card)))
 				mmc_release_host(host);
 
@@ -3301,9 +3304,7 @@ int mmc_suspend_host(struct mmc_host *host)
 				host->pm_flags = 0;
 				err = 0;
 			}
-		}
 	}
-	mmc_bus_put(host);
 
 	if (!err && !mmc_card_keep_power(host)) {
 		mmc_claim_host(host);
@@ -3314,10 +3315,9 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (!host->card || host->index == 2)
 		mdelay(50);
 
-	return err;
+	mmc_bus_put(host);
+
 stop_bkops_err:
-	if (!(host->card && mmc_card_sdio(host->card)))
-		mmc_release_host(host);
 	return err;
 }
 
