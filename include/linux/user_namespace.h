@@ -27,6 +27,7 @@ struct user_namespace {
 	unsigned int		proc_inum;
 	bool			may_mount_sysfs;
 	bool			may_mount_proc;
+	struct work_struct	work;
 };
 
 extern struct user_namespace init_user_ns;
