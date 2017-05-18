@@ -15,6 +15,7 @@
 #include <linux/freezer.h>
 #include <linux/kthread.h>
 #include <linux/scatterlist.h>
+#include <linux/bitops.h>
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
@@ -80,10 +81,8 @@ static int mmc_queue_thread(void *d)
 			cmd_flags = req ? req->cmd_flags : 0;
 			mq->issue_fn(mq, req);
 			cond_resched();
-			if (mq->flags & MMC_QUEUE_NEW_REQUEST) {
-				mq->flags &= ~MMC_QUEUE_NEW_REQUEST;
+			if (test_and_clear_bit(MMC_QUEUE_NEW_REQUEST, &mq->flags))
 				continue; /* fetch again */
-			}
 
 			/*
 			 * Current request becomes previous request
@@ -415,8 +414,7 @@ int mmc_queue_suspend(struct mmc_queue *mq, int wait)
 	unsigned long flags;
 	int rc = 0;
 
-	if (!(mq->flags & MMC_QUEUE_SUSPENDED)) {
-		mq->flags |= MMC_QUEUE_SUSPENDED;
+	if (!(test_and_set_bit(MMC_QUEUE_SUSPENDED, &mq->flags))) {
 
 		spin_lock_irqsave(q->queue_lock, flags);
 		blk_stop_queue(q);
@@ -424,13 +422,13 @@ int mmc_queue_suspend(struct mmc_queue *mq, int wait)
 
 		rc = down_trylock(&mq->thread_sem);
 		if (rc && !wait) {
-			mq->flags &= ~MMC_QUEUE_SUSPENDED;
+			clear_bit(MMC_QUEUE_SUSPENDED, &mq->flags);
 			spin_lock_irqsave(q->queue_lock, flags);
 			blk_start_queue(q);
 			spin_unlock_irqrestore(q->queue_lock, flags);
 			rc = -EBUSY;
 		} else if (wait) {
-			printk("%s: mq->flags: %x, q->queue_flags: 0x%lx, \
+			printk("%s: mq->flags: %lu, q->queue_flags: 0x%lx, \
 					q->in_flight (%d, %d) \n",
 					mmc_hostname(mq->card->host), mq->flags,
 					q->queue_flags, q->in_flight[0], q->in_flight[1]);
@@ -464,8 +462,7 @@ void mmc_queue_resume(struct mmc_queue *mq)
 	struct request_queue *q = mq->queue;
 	unsigned long flags;
 
-	if (mq->flags & MMC_QUEUE_SUSPENDED) {
-		mq->flags &= ~MMC_QUEUE_SUSPENDED;
+	if (test_and_clear_bit(MMC_QUEUE_SUSPENDED, &mq->flags)) {
 
 		up(&mq->thread_sem);
 

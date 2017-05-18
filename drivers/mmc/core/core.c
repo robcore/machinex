@@ -3530,7 +3530,6 @@ int mmc_bkops_enable(struct mmc_host *host, u8 value)
 
 bkops_out:
 	mmc_release_host(host);
-
 	return err;
 }
 EXPORT_SYMBOL(mmc_bkops_enable);
