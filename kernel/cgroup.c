@@ -4580,12 +4580,6 @@ int __init cgroup_init(void)
 			WARN_ON(cgroup_add_cftypes(ss, ss->base_cftypes));
 	}
 
-	/*
-	 * The latency of the synchronize_sched() is too high for cgroups,
-	 * avoid it at the cost of forcing all readers into the slow path.
-	 */
-	rcu_sync_enter_start(&cgroup_threadgroup_rwsem.rss);
-
 	/* allocate id for the dummy hierarchy */
 	mutex_lock(&cgroup_mutex);
 
