@@ -1,6 +1,7 @@
 #define pr_fmt(fmt) "%s: " fmt "\n", __func__
 
 #include <linux/kernel.h>
+#include <linux/export.h>
 #include <linux/percpu-refcount.h>
 
 /*
