@@ -2078,7 +2078,8 @@ static int mmc_blk_cmd_err(struct mmc_blk_data *md, struct mmc_card *card,
 	return ret;
 }
 
-static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq)
+static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq,
+					unsigned int cmd_flags)
 {
 	struct request *prq;
 	int idx = mq_rq->packed_fail_idx, i = 0;
@@ -2099,6 +2100,7 @@ static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq)
 			return ret;
 		}
 		list_del_init(&prq->queuelist);
+		prq->cmd_flags |= cmd_flags;
 		blk_end_request(prq, 0, blk_rq_bytes(prq));
 		i++;
 	}
@@ -2298,19 +2300,28 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			ret = blk_end_request(req, -EIO,
 					blk_rq_cur_bytes(req));
 	} else {
-		mmc_blk_abort_packed_req(mq_rq);
+		mmc_blk_abort_packed_req(mq_rq, 0);
 	}
 
  start_new_req:
 	if (rqc) {
-		/*
-		 * If current request is packed, it needs to put back.
-		 */
-		if (mq->mqrq_cur->packed_cmd != MMC_PACKED_NONE)
-			mmc_blk_revert_packed_req(mq, mq->mqrq_cur);
+		if (mmc_card_removed(card)) {
+			if (mq_rq->packed_cmd == MMC_PACKED_NONE) {
+				rqc->cmd_flags |= REQ_QUIET;
+				blk_end_request_all(rqc, -EIO);
+			} else {
+				mmc_blk_abort_packed_req(mq_rq, REQ_QUIET);
+			}
+		} else {
+			/* If current request is packed, it needs to put back */
+			if (mq_rq->packed_cmd != MMC_PACKED_NONE)
+				mmc_blk_revert_packed_req(mq, mq->mqrq_cur);
 
-		mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
-		mmc_start_req(card->host, &mq->mqrq_cur->mmc_active, NULL);
+			mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
+			mmc_start_req(card->host,
+					&mq->mqrq_cur->mmc_active,
+					NULL);
+		}
 	}
 
 	return 0;
