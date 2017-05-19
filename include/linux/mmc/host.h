@@ -162,6 +162,8 @@ struct device;
 struct mmc_async_req {
 	/* active mmc request */
 	struct mmc_request	*mrq;
+	unsigned int cmd_flags; /* copied from struct request */
+
 	/*
 	 * Check error status of completed mmc request.
 	 * Returns 0 if success otherwise non zero.
@@ -183,6 +185,7 @@ struct mmc_hotplug {
  * mmc_context_info - synchronization details for mmc context
  * @is_done_rcv		wake up reason was done request
  * @is_new_req		wake up reason was new request
+ * @is_urgent		wake up reason was urgent request
  * @is_waiting_last_req	mmc context waiting for single running request
  * @wait		wait queue
  * @lock		lock to protect data fields
@@ -192,7 +195,6 @@ struct mmc_context_info {
 	bool			is_new_req;
 	bool			is_waiting_last_req;
 	bool			is_urgent;
-	bool			is_waiting;
 	wait_queue_head_t	wait;
 	spinlock_t		lock;
 };
