@@ -11,6 +11,7 @@
 #define LINUX_MMC_HOST_H
 
 #include <linux/leds.h>
+#include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/device.h>
 #include <linux/fault-inject.h>
@@ -186,6 +187,12 @@ struct mmc_context_info {
 	bool			is_waiting_last_req;
 	wait_queue_head_t	wait;
 	spinlock_t		lock;
+};
+
+enum dev_state {
+	DEV_SUSPENDING = 1,
+	DEV_SUSPENDED,
+	DEV_RESUMED,
 };
 
 struct mmc_host {
@@ -429,6 +436,7 @@ struct mmc_host {
 		struct delayed_work work;
 		enum mmc_load	state;
 	} clk_scaling;
+	enum dev_state dev_status;
 	unsigned long		private[0] ____cacheline_aligned;
 };
 
@@ -559,6 +567,11 @@ static inline int mmc_host_uhs(struct mmc_host *host)
 		 MMC_CAP_UHS_DDR50);
 }
 
+static inline int mmc_host_packed_wr(struct mmc_host *host)
+{
+	return host->caps2 & MMC_CAP2_PACKED_WR;
+}
+
 #ifdef CONFIG_MMC_CLKGATE
 void mmc_host_clk_hold(struct mmc_host *host);
 void mmc_host_clk_release(struct mmc_host *host);
@@ -595,4 +608,9 @@ static inline void mmc_cmd_log_dump(struct mmc_host *host)
 {
 }
 #endif
+
+static inline int mmc_use_core_runtime_pm(struct mmc_host *host)
+{
+	return host->caps2 & MMC_CAP2_CORE_RUNTIME_PM;
+}
 #endif /* LINUX_MMC_HOST_H */

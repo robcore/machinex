@@ -4,7 +4,7 @@
  *  Copyright (C) 2003 Russell King, All Rights Reserved.
  *  Copyright (C) 2007-2008 Pierre Ossman
  *  Copyright (C) 2010 Linus Walleij
- *  Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ *  Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +21,7 @@
 #include <linux/leds.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
+#include <linux/pm_runtime.h>
 
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
@@ -38,9 +39,127 @@ static void mmc_host_classdev_release(struct device *dev)
 	kfree(host);
 }
 
+#ifdef CONFIG_PM
+static int mmc_host_runtime_suspend(struct device *dev)
+{
+	struct mmc_host *host = cls_dev_to_mmc_host(dev);
+	int ret = 0;
+
+	if (!mmc_use_core_runtime_pm(host))
+		return 0;
+
+	ret = mmc_suspend_host(host);
+	if (ret < 0 && ret != -ENOMEDIUM)
+		pr_err("%s: %s: suspend host failed: %d\n", mmc_hostname(host),
+		       __func__, ret);
+
+	/*
+	 * During card detection within mmc_rescan(), mmc_rpm_hold() will
+	 * be called on host->class_dev before initializing the card and
+	 * shall be released after card detection.
+	 *
+	 * During card detection, once the card device is added, MMC block
+	 * driver probe gets called and in case that probe fails due to some
+	 * block read/write cmd error, then the block driver marks that card
+	 * as removed. Later when mmc_rpm_release() is called within
+	 * mmc_rescan(), the runtime suspend of host->class_dev will be invoked
+	 * immediately. The commands that are sent during runtime would fail
+	 * with -ENOMEDIUM and if we propagate the same to rpm framework, the
+	 * runtime suspend/resume for this device will never be invoked even
+	 * if the card is detected fine later on when it is removed and
+	 * inserted again. Hence, do not report this error to upper layers.
+	 */
+	if (ret == -ENOMEDIUM)
+		ret = 0;
+
+	return ret;
+}
+
+static int mmc_host_runtime_resume(struct device *dev)
+{
+	struct mmc_host *host = cls_dev_to_mmc_host(dev);
+	int ret = 0;
+
+	if (!mmc_use_core_runtime_pm(host))
+		return 0;
+
+	ret = mmc_resume_host(host);
+	if (ret < 0) {
+		pr_err("%s: %s: resume host: failed: ret: %d\n",
+		       mmc_hostname(host), __func__, ret);
+		if (pm_runtime_suspended(dev))
+			BUG_ON(1);
+	}
+
+	return ret;
+}
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+static int mmc_host_suspend(struct device *dev)
+{
+	struct mmc_host *host = cls_dev_to_mmc_host(dev);
+	int ret = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&host->clk_lock, flags);
+	/*
+	 * let the driver know that suspend is in progress and must
+	 * be aborted on receiving a sdio card interrupt
+	 */
+	host->dev_status = DEV_SUSPENDING;
+	spin_unlock_irqrestore(&host->clk_lock, flags);
+	if (!pm_runtime_suspended(dev)) {
+		ret = mmc_suspend_host(host);
+		if (ret < 0)
+			pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
+			       __func__, ret);
+	}
+	/*
+	 * If SDIO function driver doesn't want to power off the card,
+	 * atleast turn off clocks to allow deep sleep.
+	 */
+	if (!ret && host->card && mmc_card_sdio(host->card) &&
+	    host->ios.clock) {
+		spin_lock_irqsave(&host->clk_lock, flags);
+		host->clk_old = host->ios.clock;
+		host->ios.clock = 0;
+		host->clk_gated = true;
+		spin_unlock_irqrestore(&host->clk_lock, flags);
+		mmc_set_ios(host);
+	}
+	spin_lock_irqsave(&host->clk_lock, flags);
+	host->dev_status = DEV_SUSPENDED;
+	spin_unlock_irqrestore(&host->clk_lock, flags);
+	return ret;
+}
+
+static int mmc_host_resume(struct device *dev)
+{
+	struct mmc_host *host = cls_dev_to_mmc_host(dev);
+	int ret = 0;
+
+	if (!pm_runtime_suspended(dev)) {
+		ret = mmc_resume_host(host);
+		if (ret < 0)
+			pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
+			       __func__, ret);
+	}
+	host->dev_status = DEV_RESUMED;
+	return ret;
+}
+#endif
+
+static const struct dev_pm_ops mmc_host_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(mmc_host_suspend, mmc_host_resume)
+	SET_RUNTIME_PM_OPS(mmc_host_runtime_suspend, mmc_host_runtime_resume,
+			   pm_generic_runtime_idle)
+};
+
 static struct class mmc_host_class = {
 	.name		= "mmc_host",
 	.dev_release	= mmc_host_classdev_release,
+	.pm		= &mmc_host_pm_ops,
 };
 
 int mmc_register_host_class(void)
@@ -61,8 +180,7 @@ static ssize_t clkgate_delay_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
-	return snprintf(buf, PAGE_SIZE, "%lu\n",
-			host->clkgate_delay);
+	return snprintf(buf, PAGE_SIZE, "%lu\n", host->clkgate_delay);
 }
 
 static ssize_t clkgate_delay_store(struct device *dev,
@@ -77,9 +195,6 @@ static ssize_t clkgate_delay_store(struct device *dev,
 	spin_lock_irqsave(&host->clk_lock, flags);
 	host->clkgate_delay = value;
 	spin_unlock_irqrestore(&host->clk_lock, flags);
-
-	pr_info("%s: clock gate delay set to %lu ms\n",
-			mmc_hostname(host), value);
 	return count;
 }
 
@@ -92,6 +207,7 @@ static ssize_t clkgate_delay_store(struct device *dev,
  */
 static void mmc_host_clk_gate_delayed(struct mmc_host *host)
 {
+	unsigned long tick_ns;
 	unsigned long freq = host->ios.clock;
 	unsigned long flags;
 
@@ -115,6 +231,8 @@ static void mmc_host_clk_gate_delayed(struct mmc_host *host)
 	 */
 	if (!host->clk_requests) {
 		spin_unlock_irqrestore(&host->clk_lock, flags);
+		tick_ns = DIV_ROUND_UP(1000000000, freq);
+		ndelay(host->clk_delay * tick_ns);
 	} else {
 		/* New users appeared while waiting for this work */
 		spin_unlock_irqrestore(&host->clk_lock, flags);
@@ -249,6 +367,9 @@ unsigned int mmc_host_clk_rate(struct mmc_host *host)
  */
 static inline void mmc_host_clk_init(struct mmc_host *host)
 {
+	mutex_init(&host->clk_gate_mutex);
+	spin_lock_init(&host->clk_lock);
+
 	host->clk_requests = 0;
 	/* Hold MCI clock for 8 cycles by default */
 	host->clk_delay = 8;
@@ -259,8 +380,6 @@ static inline void mmc_host_clk_init(struct mmc_host *host)
 	host->clkgate_delay = 0;
 	host->clk_gated = false;
 	INIT_DELAYED_WORK(&host->clk_gate_work, mmc_host_clk_gate_work);
-	spin_lock_init(&host->clk_lock);
-	mutex_init(&host->clk_gate_mutex);
 }
 
 /**
@@ -320,11 +439,11 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	int err;
 	struct mmc_host *host;
 
-	if (!idr_pre_get(&mmc_host_idr, GFP_KERNEL))
-		return NULL;
-
 	host = kzalloc(sizeof(struct mmc_host) + extra, GFP_KERNEL);
 	if (!host)
+		return NULL;
+
+	if (!idr_pre_get(&mmc_host_idr, GFP_KERNEL))
 		return NULL;
 
 	spin_lock(&mmc_host_lock);
@@ -397,6 +516,10 @@ static ssize_t store_enable(struct device *dev,
 	if (!host)
 		goto out;
 
+	/* Not safe against removal of the card */
+	if (host->card)
+		mmc_rpm_hold(host, &host->card->dev);
+
 	mmc_claim_host(host);
 	if (!host->card || kstrtoul(buf, 0, &value))
 		goto err;
@@ -428,6 +551,10 @@ static ssize_t store_enable(struct device *dev,
 	retval = count;
 err:
 	mmc_release_host(host);
+
+	/* Not safe against removal of the card */
+	if (host->card)
+		mmc_rpm_release(host, &host->card->dev);
 out:
 	return retval;
 }
