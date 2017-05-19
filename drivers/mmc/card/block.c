@@ -2561,6 +2561,7 @@ out:
 		 * the 'mmc_blk_issue_rq' with 'mqrq_prev->req'.
 		 */
 		mmc_release_host(card->host);
+	}
 	return ret;
 }
 
