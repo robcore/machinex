@@ -5407,7 +5407,6 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 		if (!mrq->cmd->ignore_timeout) {
 			pr_debug("%s: CMD%d: Request timeout\n",
 				mmc_hostname(host->mmc), mrq->cmd->opcode);
-			msmsdcc_dump_sdcc_state(host);
 		}
 
 		if (!mrq->cmd->error)
