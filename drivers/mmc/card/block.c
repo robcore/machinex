@@ -2323,7 +2323,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 		case MMC_BLK_URGENT:
 			if (mq_rq->packed_cmd != MMC_PACKED_NONE) {
 				/* complete successfully transmitted part */
-				if (mmc_blk_end_packed_req(mq_rq))
+				if (mmc_blk_end_packed_req(mq_rq, MMC_QUEUE_URGENT_REQUEST))
 					/* process for not transmitted part */
 					mmc_blk_reinsert_req(areq);
 			} else {
