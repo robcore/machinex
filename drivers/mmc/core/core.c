@@ -3068,9 +3068,8 @@ void mmc_rescan(struct work_struct *work)
 
 void mmc_start_host(struct mmc_host *host)
 {
-	mmc_claim_host(host);
+	host->rescan_disable = 0;
 	mmc_power_off(host);
-	mmc_release_host(host);
 	mmc_detect_change(host, 0);
 }
 

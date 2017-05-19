@@ -1514,16 +1514,13 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 
-	if (!oldcard)
-		host->card = card;
-
-	mmc_free_ext_csd(ext_csd);
 	return 0;
 
 free_card:
-	host->card = NULL;
-	if (!oldcard)
+	if (!oldcard) {
 		mmc_remove_card(card);
+		host->card = NULL;
+	}
 err:
 	mmc_free_ext_csd(ext_csd);
 

@@ -520,8 +520,6 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 
 	if (mrq->data)
 		mrq->data->bytes_xfered = host->curr.data_xfered;
-	if (mrq->cmd->error == -ETIMEDOUT)
-		mdelay(5);
 
 	msmsdcc_reset_dpsm(host);
 
@@ -2437,7 +2435,6 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 	if (!curr_slot) {
 		rc = -EINVAL;
 		goto out;
-	}
 
 	curr_vdd_reg = curr_slot->vdd_data;
 	curr_vdd_io_reg = curr_slot->vdd_io_data;
@@ -3303,13 +3300,11 @@ static void msmsdcc_msm_bus_queue_work(struct msmsdcc_host *host)
 		return;
 
 	spin_lock_irqsave(&host->lock, flags);
-	if (host->msm_bus_vote.min_bw_vote != host->msm_bus_vote.curr_vote) {
-		spin_unlock_irqrestore(&host->lock, flags);
+	if (host->msm_bus_vote.min_bw_vote != host->msm_bus_vote.curr_vote)
 		mod_delayed_work_on(0, system_wq,
 				   &host->msm_bus_vote.vote_work,
 				   msecs_to_jiffies(MSM_MMC_BUS_VOTING_DELAY));
-	} else
-		spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, flags);
 }
 
 static void
