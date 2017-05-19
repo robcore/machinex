@@ -105,7 +105,7 @@ struct sock *sctp_get_ctl_sock(void)
 /* Set up the proc fs entry for the SCTP protocol. */
 static __init int sctp_proc_init(void)
 {
-	if (percpu_counter_init(&sctp_sockets_allocated, 0))
+	if (percpu_counter_init(&sctp_sockets_allocated, 0, GFP_KERNEL))
 		goto out_nomem;
 #ifdef CONFIG_PROC_FS
 	if (!proc_net_sctp) {

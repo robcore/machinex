@@ -3878,17 +3878,17 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	sbi->s_err_report.data = (unsigned long) sb;
 
 	err = percpu_counter_init(&sbi->s_freeclusters_counter,
-			ext4_count_free_clusters(sb));
+			ext4_count_free_clusters(sb), GFP_KERNEL);
 	if (!err) {
 		err = percpu_counter_init(&sbi->s_freeinodes_counter,
-				ext4_count_free_inodes(sb));
+				ext4_count_free_inodes(sb), GFP_KERNEL);
 	}
 	if (!err) {
 		err = percpu_counter_init(&sbi->s_dirs_counter,
-				ext4_count_dirs(sb));
+				ext4_count_dirs(sb), GFP_KERNEL);
 	}
 	if (!err) {
-		err = percpu_counter_init(&sbi->s_dirtyclusters_counter, 0);
+		err = percpu_counter_init(&sbi->s_dirtyclusters_counter, 0, GFP_KERNEL);
 	}
 	if (err) {
 		ext4_msg(sb, KERN_ERR, "insufficient memory");
