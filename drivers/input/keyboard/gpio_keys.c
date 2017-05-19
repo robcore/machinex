@@ -440,7 +440,7 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 
 	if (!bdata->key_pressed) {
 		if (bdata->button->wakeup)
-			pm_wakeup_hard_event(bdata->input->dev.parent);
+			pm_wakeup_event(bdata->input->dev.parent, 100);
 
 		input_event(input, EV_KEY, button->code, 1);
 		input_sync(input);
