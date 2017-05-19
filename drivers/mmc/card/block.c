@@ -2211,8 +2211,7 @@ static int mmc_blk_cmd_err(struct mmc_blk_data *md, struct mmc_card *card,
 	return ret;
 }
 
-static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq,
-					unsigned int cmd_flags)
+static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq)
 {
 	struct request *prq;
 	int idx = mq_rq->packed_fail_idx, i = 0;
@@ -2233,7 +2232,6 @@ static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq,
 			return ret;
 		}
 		list_del_init(&prq->queuelist);
-		prq->cmd_flags |= cmd_flags;
 		blk_end_request(prq, 0, blk_rq_bytes(prq));
 		i++;
 	}
@@ -2241,14 +2239,15 @@ static int mmc_blk_end_packed_req(struct mmc_queue_req *mq_rq,
 	mmc_blk_clear_packed(mq_rq);
 	return ret;
 }
-
-static void mmc_blk_abort_packed_req(struct mmc_queue_req *mq_rq)
+static void mmc_blk_abort_packed_req(struct mmc_queue_req *mq_rq,
+					unsigned int cmd_flags)
 {
 	struct request *prq;
 
 	while (!list_empty(&mq_rq->packed_list)) {
 		prq = list_entry_rq(mq_rq->packed_list.next);
 		list_del_init(&prq->queuelist);
+		prq->cmd_flags |= cmd_flags;
 		blk_end_request(prq, -EIO, blk_rq_bytes(prq));
 	}
 
@@ -2325,14 +2324,14 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 		case MMC_BLK_URGENT:
 			if (mq_rq->packed_cmd != MMC_PACKED_NONE) {
 				/* complete successfully transmitted part */
-				if (mmc_blk_end_packed_req(mq_rq, MMC_QUEUE_URGENT_REQUEST))
+				if (mmc_blk_end_packed_req(mq_rq))
 					/* process for not transmitted part */
 					mmc_blk_reinsert_req(areq);
 			} else {
 				mmc_blk_reinsert_req(areq);
 			}
 
-			mq->flags |= MMC_QUEUE_URGENT_REQUEST;
+			set_bit(MMC_QUEUE_URGENT_REQUEST, &mq->flags);
 			ret = 0;
 			break;
 		case MMC_BLK_URGENT_DONE:
@@ -2366,11 +2365,21 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			break;
 		case MMC_BLK_CMD_ERR:
 			ret = mmc_blk_cmd_err(md, card, brq, req, ret);
-			if (mmc_blk_reset(md, card->host, type))
-				goto cmd_abort;
-			if (!ret)
-				goto start_new_req;
-			break;
+			if (!mmc_blk_reset(md, card->host, type)) {
+				if (!ret) {
+					/*
+					 * We have successfully completed block
+					 * request and notified to upper layers.
+					 * As the reset is successful, assume
+					 * h/w is in clean state and proceed
+					 * with new request.
+					 */
+					BUG_ON(card->host->areq);
+					goto start_new_req;
+				}
+				break;
+			}
+			goto cmd_abort;
 		case MMC_BLK_RETRY:
 			if (retry++ < MMC_BLK_MAX_RETRIES)
 				break;
@@ -2426,13 +2435,13 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				mmc_blk_rw_rq_prep(mq_rq, card,
 						disable_multi, mq);
 				mmc_start_req(card->host,
-					&mq_rq->mmc_active, NULL);
+						&mq_rq->mmc_active, NULL);
 			} else {
 				if (!mq_rq->packed_retries)
 					goto cmd_abort;
 				mmc_blk_packed_hdr_wrq_prep(mq_rq, card, mq);
 				mmc_start_req(card->host,
-					&mq_rq->mmc_active, NULL);
+						&mq_rq->mmc_active, NULL);
 			}
 		}
 	} while (ret);
@@ -2484,13 +2493,12 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	unsigned int cmd_flags = req ? req->cmd_flags : 0;
 
 	if (req && !mq->mqrq_prev->req) {
-		/* claim host only for the first request */
-		mmc_claim_host(card->host);
-
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 		if (mmc_bus_needs_resume(card->host))
 			mmc_resume_bus(card->host);
 #endif
+		/* claim host only for the first request */
+		mmc_claim_host(card->host);
 		if (card->ext_csd.bkops_en) {
 			ret = mmc_stop_bkops(card);
 			if (ret)
@@ -2537,8 +2545,14 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 out:
+	/*
+	 * packet burst is over, when one of the following occurs:
+	 * - no more requests and new request notification is not in progress
+	 * - urgent notification in progress and current request is not urgent
+	 *   (all existing requests completed or reinserted to the block layer)
+	 */
 	if ((!req && !(test_bit(MMC_QUEUE_NEW_REQUEST, &mq->flags))) ||
-			((mq->flags & MMC_QUEUE_URGENT_REQUEST) &&
+			((test_bit(MMC_QUEUE_URGENT_REQUEST, &mq->flags)) &&
 				!(mq->mqrq_cur->req->cmd_flags & REQ_URGENT))) {
 		/*
 		 * Release host when there are no more requests
