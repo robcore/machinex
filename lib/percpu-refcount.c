@@ -53,7 +53,6 @@ int percpu_ref_init(struct percpu_ref *ref, percpu_ref_func_t *release)
 	ref->release = release;
 	return 0;
 }
-EXPORT_SYMBOL_GPL(percpu_ref_init);
 
 /**
  * percpu_ref_cancel_init - cancel percpu_ref_init()
@@ -85,7 +84,6 @@ void percpu_ref_cancel_init(struct percpu_ref *ref)
 		free_percpu(ref->pcpu_count);
 	}
 }
-EXPORT_SYMBOL_GPL(percpu_ref_cancel_init);
 
 static void percpu_ref_kill_rcu(struct rcu_head *rcu)
 {
@@ -158,4 +156,3 @@ void percpu_ref_kill_and_confirm(struct percpu_ref *ref,
 
 	call_rcu_sched(&ref->rcu, percpu_ref_kill_rcu);
 }
-EXPORT_SYMBOL_GPL(percpu_ref_kill_and_confirm);
