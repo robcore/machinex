@@ -83,7 +83,8 @@ static int mmc_queue_thread(void *d)
 			cond_resched();
 			if (test_bit(MMC_QUEUE_NEW_REQUEST, &mq->flags)) {
 				continue; /* fetch again */
-			} else if ((mq->flags & MMC_QUEUE_URGENT_REQUEST) &&
+			} else if (test_bit(MMC_QUEUE_URGENT_REQUEST,
+					&mq->flags) &&
 				   (mq->mqrq_cur->req &&
 				!(mq->mqrq_cur->req->cmd_flags & REQ_URGENT))) {
 				/*
@@ -193,7 +194,7 @@ static void mmc_urgent_request(struct request_queue *q)
 	struct mmc_context_info *cntx;
 
 	if (!mq) {
-		mmc_request(q);
+		mmc_request_fn(q);
 		return;
 	}
 	cntx = &mq->card->host->context_info;
@@ -213,7 +214,7 @@ static void mmc_urgent_request(struct request_queue *q)
 		wake_up_interruptible(&cntx->wait);
 	} else {
 		spin_unlock_irqrestore(&cntx->lock, flags);
-		mmc_request(q);
+		mmc_request_fn(q);
 	}
 }
 
