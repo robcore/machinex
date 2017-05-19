@@ -427,6 +427,13 @@ struct mmc_fixup {
 	int data;
 };
 
+#define CID_MANFID_SANDISK	0x2
+#define CID_MANFID_TOSHIBA	0x11
+#define CID_MANFID_MICRON	0x13
+#define CID_MANFID_SAMSUNG	0x15
+#define CID_MANFID_KINGSTON	0x70
+#define CID_MANFID_HYNIX	0x90
+
 #define CID_MANFID_ANY (-1u)
 #define CID_OEMID_ANY ((unsigned short) -1)
 #define CID_NAME_ANY (NULL)
