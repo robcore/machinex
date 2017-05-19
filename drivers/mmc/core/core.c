@@ -419,6 +419,12 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 		if (!card->ext_csd.raw_bkops_status)
 			goto out;
 
+		/*
+		pr_info("%s: %s: raw_bkops_status=0x%x, from_exception=%d\n",
+			mmc_hostname(card->host), __func__,
+			card->ext_csd.raw_bkops_status,
+			from_exception);
+		*/
 	}
 
 	/*
@@ -433,11 +439,13 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 		goto out;
 	}
 
+	/* pr_info("%s: %s: Starting bkops\n", mmc_hostname(card->host), __func__); */
+
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			EXT_CSD_BKOPS_START, 1, 0, false, false);
 	if (err) {
-		pr_warn("%s: %s: Error %d when starting bkops\n",
-			mmc_hostname(card->host), __func__, err);
+		pr_warn("%s: Error %d starting bkops\n",
+			mmc_hostname(card->host), err);
 		goto out;
 	}
 	mmc_card_clr_need_bkops(card);
@@ -542,25 +550,22 @@ static int mmc_wait_for_data_req_done(struct mmc_host *host,
 {
 	struct mmc_command *cmd;
 	struct mmc_context_info *context_info = &host->context_info;
-	bool is_done_rcv = false;
-	int err, ret;
+	int err;
 	unsigned long flags;
 
 	while (1) {
-		ret = wait_io_event_interruptible(context_info->wait,
+		wait_event_interruptible(context_info->wait,
 				(context_info->is_done_rcv ||
 				 context_info->is_new_req));
 		spin_lock_irqsave(&context_info->lock, flags);
-		is_done_rcv = context_info->is_done_rcv;
 		context_info->is_waiting_last_req = false;
-		spin_unlock_irqrestore(&context_info->lock, flags);
-		if (is_done_rcv) {
+		if (context_info->is_done_rcv) {
 			context_info->is_done_rcv = false;
 			context_info->is_new_req = false;
+			spin_unlock_irqrestore(&context_info->lock, flags);
 			cmd = mrq->cmd;
-
 			if (!cmd->error || !cmd->retries ||
-			    mmc_card_removed(host->card)) {
+					mmc_card_removed(host->card)) {
 				err = host->areq->err_check(host->card,
 						host->areq);
 				break; /* return err */
@@ -576,10 +581,13 @@ static int mmc_wait_for_data_req_done(struct mmc_host *host,
 		} else if (context_info->is_new_req) {
 			context_info->is_new_req = false;
 			if (!next_req) {
+				spin_unlock_irqrestore(&context_info->lock,
+							flags);
 				err = MMC_BLK_NEW_REQUEST;
 				break; /* return err */
 			}
 		}
+		spin_unlock_irqrestore(&context_info->lock, flags);
 	} /* while */
 	return err;
 }
@@ -701,8 +709,18 @@ struct mmc_async_req *mmc_start_req(struct mmc_host *host,
 		if (host->card && mmc_card_mmc(host->card) &&
 		    ((mmc_resp_type(host->areq->mrq->cmd) == MMC_RSP_R1) ||
 		     (mmc_resp_type(host->areq->mrq->cmd) == MMC_RSP_R1B)) &&
-		    (host->areq->mrq->cmd->resp[0] & R1_EXCEPTION_EVENT))
+		    (host->areq->mrq->cmd->resp[0] & R1_EXCEPTION_EVENT)) {
+
+			/* Cancel the prepared request */
+			if (areq)
+				mmc_post_req(host, areq->mrq, -EINVAL);
+
 			mmc_start_bkops(host->card, true);
+
+			/* prepare the request again */
+			if (areq)
+				mmc_pre_req(host, areq->mrq, !host->areq);
+		}
 	}
 
 	if (!err && areq)
@@ -2239,8 +2257,7 @@ int mmc_can_sanitize(struct mmc_card *card)
 {
 	if (!mmc_can_trim(card) && !mmc_can_erase(card))
 		return 0;
-	if ((card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
-			&& (card->host->caps2 & MMC_CAP2_SANITIZE))
+	if (card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
 		return 1;
 	return 0;
 }
@@ -2836,6 +2853,10 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 	/* Order's important: probe SDIO, then SD, then MMC */
 	if (!mmc_attach_sdio(host))
 		return 0;
+
+	if (!host->ios.vdd)
+		mmc_power_up(host);
+
 	if (!mmc_attach_sd(host))
 		return 0;
 
@@ -2981,10 +3002,10 @@ void mmc_rescan(struct work_struct *work)
  out:
 	/* only extend the wakelock, if suspend has not started yet */
 	if (extend_wakelock && !host->rescan_disable)
-		wake_lock_timeout(&host->detect_wake_lock, msecs_to_jiffies(500));
+		wake_lock_timeout(&host->detect_wake_lock, msecs_to_jiffies(50));
 
 	if (host->caps & MMC_CAP_NEEDS_POLL)
-		mmc_schedule_delayed_work(&host->detect, msecs_to_jiffies(1000));
+		mmc_schedule_delayed_work(&host->detect, msecs_to_jiffies(100));
 }
 
 void mmc_start_host(struct mmc_host *host)
@@ -3250,22 +3271,17 @@ int mmc_suspend_host(struct mmc_host *host)
 		 */
 		if (!(host->card && mmc_card_sdio(host->card))) {
 			if (!mmc_try_claim_host(host))
-				mmc_bus_put(host);
 				return -EBUSY;
 		}
 
-		if (err == 0) {
 			if (host->bus_ops->suspend) {
-				if (host->card) {
 				err = mmc_stop_bkops(host->card);
 				if (err) {
 					if (!(host->card && mmc_card_sdio(host->card)))
 						mmc_release_host(host);
 					goto stop_bkops_err;
-					}
 				}
 			}
-
 			err = host->bus_ops->suspend(host);
 
 			if (!(host->card && mmc_card_sdio(host->card)))
@@ -3288,9 +3304,7 @@ int mmc_suspend_host(struct mmc_host *host)
 				host->pm_flags = 0;
 				err = 0;
 			}
-		}
 	}
-	mmc_bus_put(host);
 
 	if (!err && !mmc_card_keep_power(host)) {
 		mmc_claim_host(host);
@@ -3301,7 +3315,8 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (!host->card || host->index == 2)
 		mdelay(50);
 
-	return err;
+	mmc_bus_put(host);
+
 stop_bkops_err:
 	return err;
 }
@@ -3367,12 +3382,17 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 {
 	struct mmc_host *host = container_of(
 		notify_block, struct mmc_host, pm_notify);
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
+	struct msmsdcc_host *msmhost = mmc_priv(host);
+#endif
 	unsigned long flags;
+
 	int err = 0;
 
 	switch (mode) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
+	case PM_RESTORE_PREPARE:
 		if (host->card && mmc_card_mmc(host->card)) {
 			mmc_claim_host(host);
 			err = mmc_stop_bkops(host->card);
@@ -3437,6 +3457,13 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		}
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
+
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
+		if (host->card && msmhost && msmhost->pdev_id == 4)
+			printk(KERN_INFO"%s(): WLAN SKIP DETECT CHANGE\n",
+					__func__);
+		else
+#endif
 		mmc_detect_change(host, 0);
 		break;
 
@@ -3503,7 +3530,6 @@ int mmc_bkops_enable(struct mmc_host *host, u8 value)
 
 bkops_out:
 	mmc_release_host(host);
-
 	return err;
 }
 EXPORT_SYMBOL(mmc_bkops_enable);
@@ -3530,6 +3556,7 @@ static int __init mmc_init(void)
 	int ret;
 
 	mx_mmc = create_singlethread_workqueue("_mx_mmc");
+
 	if (!mx_mmc)
 		return -ENOMEM;
 

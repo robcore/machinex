@@ -56,6 +56,7 @@ struct wake_lock mx_pwrkey_boost;
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
+	bool screen_on = is_display_on();
 
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
@@ -67,11 +68,13 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 	pwrkey->powerkey_state = 1;
 	if (poweroff_charging)
 		wake_lock(&pwrkey->wake_lock);
-	else
-		wake_lock(&mx_pwrkey_boost);
+	if (screen_on == false && !poweroff_charging)
+		wake_lock_timeout(&mx_pwrkey_boost, msecs_to_jiffies(100));
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
-
+#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_check_crash_key(KEY_POWER, 1);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -92,9 +95,9 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 	input_sync(pwrkey->pwr);
 	if (poweroff_charging)
 		wake_unlock(&pwrkey->wake_lock);
-	else
-		wake_unlock(&mx_pwrkey_boost);
-
+#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_check_crash_key(KEY_POWER, 0);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -131,11 +134,15 @@ static ssize_t  sysfs_powerkey_onoff_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
-	if (pwrkey->powerkey_state == 1)
+	printk(KERN_INFO "inside sysfs_powerkey_onoff_show\n");
+	if (pwrkey->powerkey_state == 1) {
+		printk(KERN_INFO "powerkey is pressed\n");
 		return snprintf(buf, 5, "%d\n", pwrkey->powerkey_state);
-
-	if (pwrkey->powerkey_state == 0)
+	}
+	if (pwrkey->powerkey_state == 0) {
+		printk(KERN_INFO "powerkey is released\n");
 		return snprintf(buf, 5, "%d\n", pwrkey->powerkey_state);
+	}
 
 	return 0;
 }
@@ -312,7 +319,7 @@ static struct platform_driver pmic8xxx_pwrkey_driver = {
 	},
 };
 
-static int __init pmic8xxx_pwrkey_init(void)
+static int pmic8xxx_pwrkey_init(void)
 {
 	return platform_driver_register(&pmic8xxx_pwrkey_driver);
 }

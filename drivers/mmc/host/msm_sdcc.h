@@ -25,6 +25,7 @@
 #include <linux/scatterlist.h>
 #include <linux/dma-mapping.h>
 #include <linux/wakelock.h>
+#include <linux/powersuspend.h>
 #include <linux/pm_qos.h>
 #include <mach/sps.h>
 
@@ -197,8 +198,6 @@
 #define MAX_TESTBUS		8
 #define MCI_TESTBUS_ENA		(1 << 3)
 
-#define MCI_CORE_HC_MODE	0x78
-
 #define MCI_SDCC_DEBUG_REG	0x124
 
 #define MCI_IRQENABLE	\
@@ -206,7 +205,6 @@
 	MCI_DATATIMEOUTMASK|MCI_TXUNDERRUNMASK|MCI_RXOVERRUNMASK|	\
 	MCI_CMDRESPENDMASK|MCI_CMDSENTMASK|MCI_DATAENDMASK|		\
 	MCI_PROGDONEMASK|MCI_AUTOCMD19TIMEOUTMASK)
-
 #define MCI_IRQ_PIO 	\
 	(MCI_RXDATAAVLBLMASK | MCI_TXDATAAVLBLMASK | 	\
 	MCI_RXFIFOEMPTYMASK | MCI_TXFIFOEMPTYMASK | MCI_RXFIFOFULLMASK |\
@@ -390,6 +388,11 @@ struct msmsdcc_host {
 	struct msmsdcc_sps_data sps;
 	struct msmsdcc_pio_data	pio;
 
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend;
+	int polling_enabled;
+#endif
+
 	struct tasklet_struct 	dma_tlet;
 
 	unsigned int prog_enable;
@@ -507,9 +510,9 @@ static inline void set_default_hw_caps(struct msmsdcc_host *host)
 			| MSMSDCC_AUTO_CMD19;
 
 	if ((step == 0x18) && (minor >= 3)) {
-		host->hw_caps |= MSMSDCC_AUTO_CMD21;
 		/* Version 0x06000018 need hard reset on errors */
 		host->hw_caps &= ~MSMSDCC_SOFT_RESET;
+		host->hw_caps |= MSMSDCC_AUTO_CMD21;
 	}
 
 	if (step >= 0x2b) /* SDCC v4 2.1.0 and greater */

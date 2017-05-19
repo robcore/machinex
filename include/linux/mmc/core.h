@@ -175,8 +175,6 @@ extern int mmc_flush_cache(struct mmc_card *);
 extern int mmc_bkops_enable(struct mmc_host *host, u8 value);
 
 extern int mmc_detect_card_removed(struct mmc_host *host);
-extern void mmc_rpm_hold(struct mmc_host *host, struct device *dev);
-extern void mmc_rpm_release(struct mmc_host *host, struct device *dev);
 
 /**
  *	mmc_claim_host - exclusively claim a host
