@@ -652,7 +652,7 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 			goto cmd_rel_host;
 	}
 
-	mmc_wait_for_req_interruptible(card->host, &mrq);
+	mmc_wait_for_req(card->host, &mrq);
 
 	if (cmd.error) {
 		dev_err(mmc_dev(card->host), "%s: cmd error %d\n",
@@ -2376,9 +2376,6 @@ out:
 		 */
 		mmc_release_host(card->host);
 	return ret;
-fix_claim:
-	(req && !mq->mqrq_prev->req) {
-		mmc_release_host(c
 }
 
 static inline int mmc_blk_readonly(struct mmc_card *card)

@@ -623,37 +623,6 @@ static void mmc_wait_for_req_done(struct mmc_host *host,
 	}
 }
 
-static void mmc_wait_for_req_done_interruptible(struct mmc_host *host,
-				  struct mmc_request *mrq)
-{
-	struct mmc_command *cmd;
-
-	while (1) {
-		wait_for_completion_interruptible(&mrq->completion);
-
-		cmd = mrq->cmd;
-
-		/*
-		 * If host has timed out waiting for the commands which can be
-		 * HPIed then let the caller handle the timeout error as it may
-		 * want to send the HPI command to bring the card out of
-		 * programming state.
-		 */
-		if (cmd->ignore_timeout && cmd->error == -ETIMEDOUT)
-			break;
-
-		if (!cmd->error || !cmd->retries ||
-		    mmc_card_removed(host->card))
-			break;
-
-		pr_debug("%s: req failed (CMD%u): %d, retrying...\n",
-			 mmc_hostname(host), cmd->opcode, cmd->error);
-		cmd->retries--;
-		cmd->error = 0;
-		host->ops->request(host, mrq);
-	}
-}
-
 /**
  *	mmc_pre_req - Prepare for a new request
  *	@host: MMC host to prepare command
@@ -795,17 +764,6 @@ void mmc_wait_for_req(struct mmc_host *host, struct mmc_request *mrq)
 }
 EXPORT_SYMBOL(mmc_wait_for_req);
 
-void mmc_wait_for_req_interruptible(struct mmc_host *host, struct mmc_request *mrq)
-{
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	if (mmc_bus_needs_resume(host))
-		mmc_resume_bus(host);
-#endif
-	__mmc_start_req(host, mrq);
-	mmc_wait_for_req_done_interruptible(host, mrq);
-}
-EXPORT_SYMBOL(mmc_wait_for_req_interruptible);
-
 bool mmc_card_is_prog_state(struct mmc_card *card)
 {
 	bool rc;
@@ -931,25 +889,6 @@ int mmc_wait_for_cmd(struct mmc_host *host, struct mmc_command *cmd, int retries
 }
 
 EXPORT_SYMBOL(mmc_wait_for_cmd);
-
-int mmc_wait_for_cmd_interruptible(struct mmc_host *host, struct mmc_command *cmd, int retries)
-{
-	struct mmc_request mrq = {NULL};
-
-	WARN_ON(!host->claimed);
-
-	memset(cmd->resp, 0, sizeof(cmd->resp));
-	cmd->retries = retries;
-
-	mrq.cmd = cmd;
-	cmd->data = NULL;
-
-	mmc_wait_for_req_interruptible(host, &mrq);
-
-	return cmd->error;
-}
-
-EXPORT_SYMBOL(mmc_wait_for_cmd_interruptible);
 
 /**
  *	mmc_stop_bkops - stop ongoing BKOPS
@@ -3366,7 +3305,6 @@ int mmc_suspend_host(struct mmc_host *host)
 				err = 0;
 			}
 	}
-	mmc_bus_put(host);
 
 	if (!err && !mmc_card_keep_power(host)) {
 		mmc_claim_host(host);
@@ -3377,7 +3315,8 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (!host->card || host->index == 2)
 		mdelay(50);
 
-	return err;
+	mmc_bus_put(host);
+
 stop_bkops_err:
 	return err;
 }
@@ -3591,7 +3530,6 @@ int mmc_bkops_enable(struct mmc_host *host, u8 value)
 
 bkops_out:
 	mmc_release_host(host);
-
 	return err;
 }
 EXPORT_SYMBOL(mmc_bkops_enable);
@@ -3618,6 +3556,7 @@ static int __init mmc_init(void)
 	int ret;
 
 	mx_mmc = create_singlethread_workqueue("_mx_mmc");
+
 	if (!mx_mmc)
 		return -ENOMEM;
 
