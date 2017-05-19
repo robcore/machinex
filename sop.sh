@@ -1,6 +1,5 @@
 #!/bin/bash
 
-/root/machinex/patches/0233-genirq-Fix-potential-memleak-when-failing-to-get-irq.patch
 /root/machinex/patches/0243-cpu-hotplug-Prevent-alloc-free-of-irq-descriptors-du.patch
 /root/machinex/patches/0244-irqchip-UP-commit-again.patch
 /root/machinex/patches/0245-genirq-affinity-Use-get-put_online_cpus-around-cpuma.patch
