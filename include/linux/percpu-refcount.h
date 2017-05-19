@@ -61,7 +61,7 @@ struct percpu_ref {
 	 * hack because we need to keep the pointer around for
 	 * percpu_ref_kill_rcu())
 	 */
-	unsigned long		pcpu_count_ptr;
+	unsigned __percpu	*pcpu_count;
 	percpu_ref_func_t	*release;
 	percpu_ref_func_t	*confirm_kill;
 	struct rcu_head		rcu;
@@ -87,25 +87,10 @@ static inline void percpu_ref_kill(struct percpu_ref *ref)
 	return percpu_ref_kill_and_confirm(ref, NULL);
 }
 
+#define PCPU_REF_PTR		0
 #define PCPU_REF_DEAD		1
 
-/*
- * Internal helper.  Don't use outside percpu-refcount proper.  The
- * function doesn't return the pointer and let the caller test it for NULL
- * because doing so forces the compiler to generate two conditional
- * branches as it can't assume that @ref->pcpu_count is not NULL.
- */
-static inline bool __pcpu_ref_alive(struct percpu_ref *ref,
-				    unsigned __percpu **pcpu_countp)
-{
-	unsigned long pcpu_ptr = ACCESS_ONCE(ref->pcpu_count_ptr);
-
-	if (unlikely(pcpu_ptr & PCPU_REF_DEAD))
-		return false;
-
-	*pcpu_countp = (unsigned __percpu *)pcpu_ptr;
-	return true;
-}
+#define REF_STATUS(count)	(((unsigned long) count) & PCPU_REF_DEAD)
 
 /**
  * percpu_ref_get - increment a percpu refcount
@@ -119,7 +104,9 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
 
 	rcu_read_lock_sched();
 
-	if (__pcpu_ref_alive(ref, &pcpu_count))
+	pcpu_count = READ_ONCE(ref->pcpu_count);
+
+	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR))
 		this_cpu_inc(*pcpu_count);
 	else
 		atomic_inc(&ref->count);
@@ -131,10 +118,13 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
  * percpu_ref_tryget - try to increment a percpu refcount
  * @ref: percpu_ref to try-get
  *
- * Increment a percpu refcount unless its count already reached zero.
- * Returns %true on success; %false on failure.
+ * Increment a percpu refcount unless it has already been killed.  Returns
+ * %true on success; %false on failure.
  *
- * The caller is responsible for ensuring that @ref stays accessible.
+ * Completion of percpu_ref_kill() in itself doesn't guarantee that tryget
+ * will fail.  For such guarantee, percpu_ref_kill_and_confirm() should be
+ * used.  After the confirm_kill callback is invoked, it's guaranteed that
+ * no new reference will be given out by percpu_ref_tryget().
  */
 static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 {
@@ -143,42 +133,9 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 
 	rcu_read_lock_sched();
 
-	pcpu_count = ACCESS_ONCE(ref->pcpu_count);
+	pcpu_count = READ_ONCE(ref->pcpu_count);
 
 	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR)) {
-		__this_cpu_inc(*pcpu_count);
-		ret = true;
-	} else {
-		ret = atomic_inc_not_zero(&ref->count);
-	}
-
-	rcu_read_unlock_sched();
-
-	return ret;
-}
-
-/**
- * percpu_ref_tryget_live - try to increment a live percpu refcount
- * @ref: percpu_ref to try-get
- *
- * Increment a percpu refcount unless it has already been killed.  Returns
- * %true on success; %false on failure.
- *
- * Completion of percpu_ref_kill() in itself doesn't guarantee that tryget
- * will fail.  For such guarantee, percpu_ref_kill_and_confirm() should be
- * used.  After the confirm_kill callback is invoked, it's guaranteed that
- * no new reference will be given out by percpu_ref_tryget().
- *
- * The caller is responsible for ensuring that @ref stays accessible.
- */
-static inline bool percpu_ref_tryget_live(struct percpu_ref *ref)
-{
-	unsigned __percpu *pcpu_count;
-	int ret = false;
-
-	rcu_read_lock_sched();
-
-	if (__pcpu_ref_alive(ref, &pcpu_count)) {
 		this_cpu_inc(*pcpu_count);
 		ret = true;
 	}
@@ -201,7 +158,9 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
 
 	rcu_read_lock_sched();
 
-	if (__pcpu_ref_alive(ref, &pcpu_count))
+	pcpu_count = READ_ONCE(ref->pcpu_count);
+
+	if (likely(REF_STATUS(pcpu_count) == PCPU_REF_PTR))
 		this_cpu_dec(*pcpu_count);
 	else if (unlikely(atomic_dec_and_test(&ref->count)))
 		ref->release(ref);
