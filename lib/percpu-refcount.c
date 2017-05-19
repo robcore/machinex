@@ -1,7 +1,6 @@
 #define pr_fmt(fmt) "%s: " fmt "\n", __func__
 
 #include <linux/kernel.h>
-#include <linux/export.h>
 #include <linux/percpu-refcount.h>
 
 /*
@@ -97,7 +96,7 @@ static void percpu_ref_kill_rcu(struct rcu_head *rcu)
 
 	/* Mask out PCPU_REF_DEAD */
 	pcpu_count = (unsigned __percpu *)
-		(((unsigned long) pcpu_count) & ~PCPU_REF_DEAD);
+		(((unsigned long) pcpu_count) & ~PCPU_STATUS_MASK);
 
 	for_each_possible_cpu(cpu)
 		count += *per_cpu_ptr(pcpu_count, cpu);
@@ -120,9 +119,6 @@ static void percpu_ref_kill_rcu(struct rcu_head *rcu)
 	 */
 
 	atomic_add((int) count - PCPU_COUNT_BIAS, &ref->count);
-
-	WARN_ONCE(atomic_read(&ref->count) <= 0, "percpu ref <= 0 (%i)",
-		  atomic_read(&ref->count));
 
 	/* @ref is viewed as dead on all CPUs, send out kill confirmation */
 	if (ref->confirm_kill)
