@@ -2435,6 +2435,7 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 	if (!curr_slot) {
 		rc = -EINVAL;
 		goto out;
+	}
 
 	curr_vdd_reg = curr_slot->vdd_data;
 	curr_vdd_io_reg = curr_slot->vdd_io_data;
@@ -6731,29 +6732,30 @@ static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
 	unsigned long flags;
 
 	if (host->pdev->id == 3) {
-		mmc_host_clk_hold(mmc);
-		spin_lock_irqsave(&mmc->clk_lock, flags);
-		mmc->clk_old = mmc->ios.clock;
-		mmc->ios.clock = 0;
-		mmc->clk_gated = true;
-		spin_unlock_irqrestore(&mmc->clk_lock, flags);
-		mmc_set_ios(mmc);
-		mmc_host_clk_release(mmc);
-	} else
-		return;
+		printk(KERN_INFO "%s: msmsdcc_gate_clock due to mmc_card_keep_power\n", __func__);
+	}
+
+	mmc_host_clk_hold(mmc);
+	spin_lock_irqsave(&mmc->clk_lock, flags);
+	mmc->clk_old = mmc->ios.clock;
+	mmc->ios.clock = 0;
+	mmc->clk_gated = true;
+	spin_unlock_irqrestore(&mmc->clk_lock, flags);
+	mmc_set_ios(mmc);
+	mmc_host_clk_release(mmc);
 }
 
 static inline void msmsdcc_ungate_clock(struct msmsdcc_host *host)
 {
 	struct mmc_host *mmc = host->mmc;
 
-	if (host->pdev->id == 3) {
-		mmc_host_clk_hold(mmc);
-		mmc->ios.clock = host->clk_rate;
-		mmc_set_ios(mmc);
-		mmc_host_clk_release(mmc);
-	} else
-		return;
+	mmc_host_clk_hold(mmc);
+	mmc->ios.clock = host->clk_rate;
+	mmc_set_ios(mmc);
+	mmc_host_clk_release(mmc);
+
+	if (host->pdev->id == 3)
+		printk(KERN_INFO "%s: msmsdcc_ungate_clock due to mmc_card_keep_power complete\n", __func__);
 }
 #else
 static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
@@ -6843,7 +6845,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 			host->sdcc_suspended = true;
 			spin_unlock_irqrestore(&host->lock, flags);
 			if (mmc->card && mmc_card_sdio(mmc->card) &&
-				mmc->ios.clock && (host->pdev->id == 3)) {
+				mmc->ios.clock && mmc_card_keep_power(mmc)) {
 				/*
 				 * If SDIO function driver doesn't want
 				 * to power off the card, atleast turn off
@@ -6855,7 +6857,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 busy:
 		host->sdcc_suspending = 0;
 		mmc->suspend_task = NULL;
-		if ((rc > 0) && wake_lock_active(&host->sdio_suspend_wlock))
+		if (rc && wake_lock_active(&host->sdio_suspend_wlock))
 			wake_unlock(&host->sdio_suspend_wlock);
 	}
 	pr_debug("%s: %s: ends with err=%d\n", mmc_hostname(mmc), __func__, rc);
@@ -6883,7 +6885,7 @@ msmsdcc_runtime_resume(struct device *dev)
 
 	if (mmc) {
 		if (mmc->card && mmc_card_sdio(mmc->card) &&
-				(host->pdev->id == 3)) {
+				mmc_card_keep_power(mmc)) {
 			msmsdcc_ungate_clock(host);
 		}
 
