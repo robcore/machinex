@@ -233,7 +233,6 @@ static ssize_t power_ro_lock_store(struct device *dev,
 	md = mmc_blk_get(dev_to_disk(dev));
 	card = md->queue.card;
 
-	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
 
 	ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_BOOT_WP,
@@ -246,7 +245,6 @@ static ssize_t power_ro_lock_store(struct device *dev,
 		card->ext_csd.boot_ro_lock |= EXT_CSD_BOOT_WP_B_PWR_WP_EN;
 
 	mmc_release_host(card->host);
-	mmc_rpm_release(card->host, &card->dev);
 
 	if (!ret) {
 		pr_info("%s: Locking boot partition ro until next power on\n",
@@ -504,10 +502,8 @@ static struct mmc_blk_ioc_data *mmc_blk_ioctl_copy_from_user(
 		goto idata_err;
 	}
 
-	if (!idata->buf_bytes) {
-		idata->buf = NULL;
+	if (!idata->buf_bytes)
 		return idata;
-	}
 
 	idata->buf = kzalloc(idata->buf_bytes, GFP_KERNEL);
 	if (!idata->buf) {
@@ -647,7 +643,6 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 
 	mrq.cmd = &cmd;
 
-	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
 
 	if (idata->ic.is_acmd) {
@@ -693,7 +688,6 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 
 cmd_rel_host:
 	mmc_release_host(card->host);
-	mmc_rpm_release(card->host, &card->dev);
 
 cmd_done:
 	mmc_blk_put(md);
@@ -1214,7 +1208,6 @@ static int mmc_blk_issue_secdiscard_rq(struct mmc_queue *mq,
 		arg = MMC_SECURE_TRIM1_ARG;
 	else
 		arg = MMC_SECURE_ERASE_ARG;
-
 retry:
 	if (card->quirks & MMC_QUIRK_INAND_CMD38) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
@@ -2318,7 +2311,6 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	unsigned int cmd_flags = req ? req->cmd_flags : 0;
 
 	if (req && !mq->mqrq_prev->req) {
-		mmc_rpm_hold(host, &card->dev);
 		/* claim host only for the first request */
 		mmc_claim_host(card->host);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
@@ -2373,7 +2365,7 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 
 out:
 	if ((!req && !(test_bit(MMC_QUEUE_NEW_REQUEST, &mq->flags))) ||
-	     (cmd_flags & MMC_REQ_SPECIAL_MASK)) {
+	     (cmd_flags & MMC_REQ_SPECIAL_MASK))
 		/*
 		 * Release host when there are no more requests
 		 * and after special request(discard, flush) is done.
@@ -2381,8 +2373,6 @@ out:
 		 * the 'mmc_blk_issue_rq' with 'mqrq_prev->req'.
 		 */
 		mmc_release_host(card->host);
-		mmc_rpm_release(host, &card->dev);
-	}
 	return ret;
 }
 

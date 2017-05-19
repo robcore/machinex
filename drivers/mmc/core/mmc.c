@@ -17,8 +17,6 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
-#include <linux/pm_runtime.h>
-#include <linux/reboot.h>
 
 #include "core.h"
 #include "bus.h"
@@ -1067,7 +1065,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		card->type = MMC_TYPE_MMC;
 		card->rca = 1;
 		memcpy(card->raw_cid, cid, sizeof(card->raw_cid));
-		host->card = card;
 	}
 
 	/*
@@ -1514,13 +1511,15 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 
+	if (!oldcard)
+		host->card = card;
+
+	mmc_free_ext_csd(ext_csd);
 	return 0;
 
 free_card:
-	if (!oldcard) {
+	if (!oldcard)
 		mmc_remove_card(card);
-		host->card = NULL;
-	}
 err:
 	mmc_free_ext_csd(ext_csd);
 
@@ -1590,7 +1589,6 @@ static void mmc_detect(struct mmc_host *host)
 	BUG_ON(!host);
 	BUG_ON(!host->card);
 
-	mmc_rpm_hold(host, &host->card->dev);
 	mmc_claim_host(host);
 
 	/*
@@ -1599,13 +1597,6 @@ static void mmc_detect(struct mmc_host *host)
 	err = _mmc_detect_card_removed(host);
 
 	mmc_release_host(host);
-
-	/*
-	 * if detect fails, the device would be removed anyway;
-	 * the rpm framework would mark the device state suspended.
-	 */
-	if (!err)
-		mmc_rpm_release(host, &host->card->dev);
 
 	if (err) {
 		mmc_remove(host);
@@ -1627,9 +1618,7 @@ static int mmc_suspend(struct mmc_host *host)
 	BUG_ON(!host);
 	BUG_ON(!host->card);
 
-	if (!mmc_try_claim_host(host))
-		return -EBUSY;
-
+	mmc_claim_host(host);
 	/*
 	 * Disable clock scaling before suspend and enable it after resume so
 	 * as to avoid clock scaling decisions kicking in during this window.

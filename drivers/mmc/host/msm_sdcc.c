@@ -3302,7 +3302,7 @@ static void msmsdcc_msm_bus_queue_work(struct msmsdcc_host *host)
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (host->msm_bus_vote.min_bw_vote != host->msm_bus_vote.curr_vote)
-		mod_delayed_work_on(0, system_wq,
+		queue_delayed_work_on(0, system_wq,
 				   &host->msm_bus_vote.vote_work,
 				   msecs_to_jiffies(MSM_MMC_BUS_VOTING_DELAY));
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -3491,7 +3491,7 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
-	if (msmsdcc_is_pwrsave(host))
+	if (msmsdcc_is_pwrsave(host) && (host->pdev->id == 3))
 		clk |= MCI_CLK_PWRSAVE;
 
 	clk |= MCI_CLK_FLOWENA;
@@ -6128,7 +6128,6 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	set_default_hw_caps(host);
 	host->saved_tuning_phase = INVALID_TUNING_PHASE;
-
 	/*
 	 * Set the register write delay according to min. clock frequency
 	 * supported and update later when the host->clk_rate changes.
@@ -6231,6 +6230,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	 */
 	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
+	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 
 	if (plat->nonremovable)
@@ -6303,7 +6303,7 @@ msmsdcc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (plat->sdiowakeup_irq || host->plat->mpm_sdiowakeup_int) {
+	if (host->plat->mpm_sdiowakeup_int) {
 		wake_lock_init(&host->sdio_wlock, WAKE_LOCK_SUSPEND,
 				mmc_hostname(mmc));
 	}
@@ -6502,12 +6502,12 @@ msmsdcc_probe(struct platform_device *pdev)
 		free_irq(plat->status_irq, host);
 	msmsdcc_disable_status_gpio(host);
  sdiowakeup_irq_free:
-	if (plat->sdiowakeup_irq || host->plat->mpm_sdiowakeup_int)
-		wake_lock_destroy(&host->sdio_wlock);
 	wake_lock_destroy(&host->sdio_suspend_wlock);
 	if (plat->sdiowakeup_irq)
 		free_irq(plat->sdiowakeup_irq, host);
  pio_irq_free:
+	if (plat->sdiowakeup_irq)
+		wake_lock_destroy(&host->sdio_wlock);
 	free_irq(core_irqres->start, host);
  irq_free:
 	free_irq(core_irqres->start, host);
@@ -6606,9 +6606,6 @@ static int msmsdcc_remove(struct platform_device *pdev)
 		irq_set_irq_wake(plat->sdiowakeup_irq, 0);
 		free_irq(plat->sdiowakeup_irq, host);
 	}
-
-	if (plat->sdiowakeup_irq || host->plat->mpm_sdiowakeup_int)
-		wake_lock_destroy(&host->sdio_wlock);
 
 	free_irq(host->core_irqres->start, host);
 	free_irq(host->core_irqres->start, host);
@@ -6831,8 +6828,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 */
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
-		if (unlikely(work_busy(&mmc->detect.work))) {
-			host->pending_resume = true;
+		if (work_busy(&mmc->detect.work)) {
 			rc = -EBUSY;
 			goto busy;
 		} else
@@ -6845,7 +6841,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 			host->sdcc_suspended = true;
 			spin_unlock_irqrestore(&host->lock, flags);
 			if (mmc->card && mmc_card_sdio(mmc->card) &&
-				mmc->ios.clock && mmc_card_keep_power(mmc)) {
+				mmc->ios.clock) {
 				/*
 				 * If SDIO function driver doesn't want
 				 * to power off the card, atleast turn off
@@ -6918,6 +6914,22 @@ out:
 	return 0;
 }
 
+static int msmsdcc_runtime_idle(struct device *dev)
+{
+	struct mmc_host *mmc = dev_get_drvdata(dev);
+	struct msmsdcc_host *host = mmc_priv(mmc);
+
+	if (host->plat->is_sdio_al_client)
+		return 0;
+
+	/* Idle timeout is not configurable for now */
+	/* Disable Runtime PM becasue of potential issues
+	 *pm_schedule_suspend(dev, host->idle_tout);
+	 */
+
+	return -EBUSY;
+}
+
 static int msmsdcc_pm_suspend(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
@@ -6969,7 +6981,6 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 	if (atomic_read(&host->clks_on) && !host->plat->is_sdio_al_client) {
 		pr_warn("%s: clocks are on after suspend, aborting system "
 				"suspend\n", mmc_hostname(mmc));
-		host->pending_resume = true;
 		rc = -EBUSY;
 	}
 
@@ -7037,6 +7048,7 @@ static int msmsdcc_runtime_resume(struct device *dev)
 static const struct dev_pm_ops msmsdcc_dev_pm_ops = {
 	.runtime_suspend = msmsdcc_runtime_suspend,
 	.runtime_resume  = msmsdcc_runtime_resume,
+	.runtime_idle    = msmsdcc_runtime_idle,
 	.suspend 	 = msmsdcc_pm_suspend,
 	.resume		 = msmsdcc_pm_resume,
 	.suspend_noirq	 = msmsdcc_suspend_noirq,
