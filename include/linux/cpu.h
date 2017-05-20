@@ -88,7 +88,6 @@ extern ssize_t arch_print_cpu_modalias(struct device *dev,
 #define CPU_DYING_FROZEN	(CPU_DYING | CPU_TASKS_FROZEN)
 #define CPU_STARTING_FROZEN	(CPU_STARTING | CPU_TASKS_FROZEN)
 
-
 #ifdef CONFIG_SMP
 extern bool cpuhp_tasks_frozen;
 /* Need to know about CPUs going up/down? */

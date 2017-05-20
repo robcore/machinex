@@ -29,7 +29,7 @@ static int tracectr_cpu_hotplug_notifier(struct notifier_block *self,
 	int ret = NOTIFY_OK;
 	int cpu = (int)hcpu;
 
-	if ((action & (~CPU_TASKS_FROZEN)) == CPU_STARTING)
+	if ((action & (~CPU_TASKS_FROZEN)) == CPU_UP_PREPARE)
 		per_cpu(hotplug_flag, cpu) = 1;
 
 	return ret;
