@@ -3680,7 +3680,7 @@ void __noreturn do_task_dead(void)
 	/* causes final put_task_struct in finish_task_switch(). */
 	__set_current_state(TASK_DEAD);
 	current->flags |= PF_NOFREEZE;	/* tell freezer to ignore us */
-	__schedule(false);
+	__schedule();
 	BUG();
 	/* Avoid "noreturn function does return".  */
 	for (;;)
