@@ -6911,7 +6911,6 @@ msmsdcc_runtime_suspend(struct device *dev)
 
 	if (host->pdev->id == 3) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
-		test_and_set_bit(MMC_PM_KEEP_POWER, host->mmc->pm_flags);
 		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
