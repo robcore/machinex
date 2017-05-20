@@ -46,7 +46,6 @@ static DEFINE_PER_CPU(struct cpu_stopper, cpu_stopper);
 static bool stop_machine_initialized = false;
 
 /* static data for stop_cpus */
-static DEFINE_MUTEX(stop_cpus_mutex);
 static bool stop_cpus_in_progress;
 
 static void cpu_stop_init_done(struct cpu_stop_done *done, unsigned int nr_todo)
