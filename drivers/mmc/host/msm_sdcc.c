@@ -6843,9 +6843,11 @@ static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
 	unsigned long flags;
 
 	mmc_host_clk_hold(mmc);
+	spin_lock_irqsave(&mmc->clk_lock, flags);
 	mmc->clk_old = mmc->ios.clock;
 	mmc->ios.clock = 0;
 	mmc->clk_gated = true;
+	spin_unlock_irqrestore(&mmc->clk_lock, flags);
 	mmc_set_ios(mmc);
 	mmc_host_clk_release(mmc);
 }
@@ -7077,6 +7079,7 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
 	struct msmsdcc_host *host = mmc_priv(mmc);
+	int rc = 0;
 
 	/*
 	 * After platform suspend there may be active request
@@ -7091,9 +7094,10 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 		pr_warn("%s: clocks are on after suspend, aborting system "
 				"suspend\n", mmc_hostname(mmc));
 		pm_wakeup_hard_event(dev);
+		rc = -EBUSY;
 	}
 
-	return 0;
+	return -EBUSY;
 }
 
 static int msmsdcc_pm_resume(struct device *dev)
