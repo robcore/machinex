@@ -2354,7 +2354,7 @@ err_out:
 }
 EXPORT_SYMBOL(cpufreq_set_gov);
 
-static int machinex_cpu_online(unsigned int cpu);
+static int machinex_cpufreq_online(unsigned int cpu)
 {
 	struct device *dev;
 	dev = get_cpu_device(cpu);
@@ -2366,11 +2366,11 @@ static int machinex_cpu_online(unsigned int cpu);
 	return 0;
 }
 
-static int machinex_cpu_offline(unsigned int cpu);
+static int machinex_cpufreq_offline(unsigned int cpu)
 {
 	struct device *dev;
-
 	dev = get_cpu_device(cpu);
+
 	if (dev) {
 		if (unlikely(lock_policy_rwsem_write(cpu)))
 			BUG();
