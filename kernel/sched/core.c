@@ -2900,6 +2900,10 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 		 * task and put them back on the free list.
 		 */
 		kprobe_flush_task(prev);
+
+		/* Task is done with its stack. */
+		put_task_stack(prev);
+
 		put_task_struct(prev);
 	}
 

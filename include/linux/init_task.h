@@ -139,6 +139,13 @@ extern struct group_info init_groups;
 extern struct cred init_cred;
 
 extern struct task_group root_task_group;
+ #ifdef CONFIG_THREAD_INFO_IN_TASK
+# define INIT_TASK_TI(tsk)			\
+	.thread_info = INIT_THREAD_INFO(tsk),	\
+	.stack_refcount = ATOMIC_INIT(1),
+#else
+# define INIT_TASK_TI(tsk)
+#endif
 
 #ifdef CONFIG_CGROUP_SCHED
 # define INIT_CGROUP_SCHED(tsk)						\
