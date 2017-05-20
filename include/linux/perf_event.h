@@ -795,27 +795,6 @@ static inline bool perf_event_can_stop_tick(void)			{ return true; }
 
 #define perf_output_put(handle, x) perf_output_copy((handle), &(x), sizeof(x))
 
-/*
- * This has to have a higher priority than migration_notifier in sched/core.c.
- */
-#define perf_cpu_notifier(fn)						\
-do {									\
-	static struct notifier_block fn##_nb =		\
-		{ .notifier_call = fn, .priority = CPU_PRI_PERF };	\
-	unsigned long cpu = smp_processor_id();				\
-	unsigned long flags;						\
-	fn(&fn##_nb, (unsigned long)CPU_UP_PREPARE,			\
-		(void *)(unsigned long)cpu);				\
-	local_irq_save(flags);						\
-	fn(&fn##_nb, (unsigned long)CPU_STARTING,			\
-		(void *)(unsigned long)cpu);				\
-	local_irq_restore(flags);					\
-	fn(&fn##_nb, (unsigned long)CPU_ONLINE,				\
-		(void *)(unsigned long)cpu);				\
-	register_cpu_notifier(&fn##_nb);				\
-} while (0)
-
-
 #define PMU_FORMAT_ATTR(_name, _format)					\
 static ssize_t								\
 _name##_show(struct device *dev,					\
