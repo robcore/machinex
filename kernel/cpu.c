@@ -24,6 +24,7 @@
 #include <linux/tick.h>
 #include <linux/irq.h>
 #include <linux/smpboot.h>
+#include <linux/slab.h>
 
 #include "smpboot.h"
 
@@ -1294,6 +1295,11 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.name			= "smpcfd:prepare",
 		.startup.single		= smpcfd_prepare_cpu,
 		.teardown.single	= smpcfd_dead_cpu,
+	},
+	[CPUHP_SLAB_PREPARE] = {
+		.name			= "slab:prepare",
+		.startup.single		= slab_prepare_cpu,
+		.teardown.single	= slab_dead_cpu,
 	},
 	[CPUHP_RCUTREE_PREP] = {
 		.name			= "RCU/tree:prepare",
