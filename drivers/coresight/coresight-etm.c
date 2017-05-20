@@ -1842,7 +1842,7 @@ static int etm_cpu_callback(struct notifier_block *nfb, unsigned long action,
 		goto out;
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_STARTING:
+	case CPU_UP_PREPARE:
 		spin_lock(&etmdrvdata[cpu]->spinlock);
 		if (!etmdrvdata[cpu]->os_unlock) {
 			etm_os_unlock(etmdrvdata[cpu]);
@@ -1864,7 +1864,7 @@ static int etm_cpu_callback(struct notifier_block *nfb, unsigned long action,
 			__etm_store_pcsave(etmdrvdata[cpu], 1);
 		break;
 
-	case CPU_DYING:
+	case CPU_DOWN_PREPARE:
 		spin_lock(&etmdrvdata[cpu]->spinlock);
 		if (etmdrvdata[cpu]->enable && etmdrvdata[cpu]->round_robin)
 			__etm_disable(etmdrvdata[cpu]);

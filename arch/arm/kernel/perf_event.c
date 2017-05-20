@@ -871,7 +871,7 @@ static int pmu_cpu_notify(struct notifier_block *b,
 		}
 	}
 
-	if ((action & ~CPU_TASKS_FROZEN) != CPU_STARTING)
+	if ((action & ~CPU_TASKS_FROZEN) != CPU_UP_PREPARE)
 		return NOTIFY_DONE;
 
 	return NOTIFY_OK;
