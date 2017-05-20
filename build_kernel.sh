@@ -891,6 +891,7 @@ sleep 1
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
+	sleep 1
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
