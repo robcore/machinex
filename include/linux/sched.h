@@ -1080,6 +1080,7 @@ struct sched_group_energy {
 
 struct sched_domain_shared {
 	atomic_t	ref;
+	atomic_t	nr_busy_cpus;
 };
 
 struct sched_domain {
