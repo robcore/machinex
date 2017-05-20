@@ -556,7 +556,7 @@ static void etm_disable(struct coresight_device *csdev)
 	 * Taking hotplug lock here protects from clocks getting disabled
 	 * with tracing being left on (crash scenario) if user disable occurs
 	 * after cpu online mask indicates the cpu is offline but before the
-	 * DYING hotplug callback is serviced by the ETM driver.
+	 * DEAD hotplug callback is serviced by the ETM driver.
 	 */
 	get_online_cpus();
 	spin_lock(&drvdata->spinlock);
@@ -1842,7 +1842,7 @@ static int etm_cpu_callback(struct notifier_block *nfb, unsigned long action,
 		goto out;
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_UP_PREPARE:
+	case CPU_ONLINE:
 		spin_lock(&etmdrvdata[cpu]->spinlock);
 		if (!etmdrvdata[cpu]->os_unlock) {
 			etm_os_unlock(etmdrvdata[cpu]);
@@ -1864,7 +1864,7 @@ static int etm_cpu_callback(struct notifier_block *nfb, unsigned long action,
 			__etm_store_pcsave(etmdrvdata[cpu], 1);
 		break;
 
-	case CPU_DOWN_PREPARE:
+	case CPU_DEAD:
 		spin_lock(&etmdrvdata[cpu]->spinlock);
 		if (etmdrvdata[cpu]->enable && etmdrvdata[cpu]->round_robin)
 			__etm_disable(etmdrvdata[cpu]);

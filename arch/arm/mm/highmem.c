@@ -174,7 +174,7 @@ static int hotplug_kmap_atomic_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
 {
 	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_DOWN_PREPARE:
+	case CPU_DEAD:
 		kmap_remove_unused_cpu((int)hcpu);
 		break;
 	default:

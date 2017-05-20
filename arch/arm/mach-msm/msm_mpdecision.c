@@ -115,7 +115,7 @@ enum {
 };
 
 static int msm_mpd_enabled = 0;
-module_param_named(enabled, msm_mpd_enabled, int, 0444);
+module_param_named(enabled, msm_mpd_enabled, int, 0644);
 
 static struct dentry *debugfs_base;
 static struct mpdecision msm_mpd;
@@ -316,7 +316,6 @@ static int msm_mpd_idle_notifier(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 
-#if 0
 static int msm_mpd_hotplug_notifier(struct notifier_block *self,
 				    unsigned long action, void *hcpu)
 {
@@ -324,7 +323,7 @@ static int msm_mpd_hotplug_notifier(struct notifier_block *self,
 	unsigned long flags;
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_UP_PREPARE:
+	case CPU_ONLINE:
 		spin_lock_irqsave(&rq_avg_lock, flags);
 		hrtimer_start(&per_cpu(rq_avg_poll_timer, cpu),
 			      msm_mpd.next_update,
@@ -337,13 +336,13 @@ static int msm_mpd_hotplug_notifier(struct notifier_block *self,
 
 	return NOTIFY_OK;
 }
-static struct notifier_block msm_mpd_hotplug_nb = {
-	.notifier_call = msm_mpd_hotplug_notifier,
-};
-#endif
 
 static struct notifier_block msm_mpd_idle_nb = {
 	.notifier_call = msm_mpd_idle_notifier,
+};
+
+static struct notifier_block msm_mpd_hotplug_nb = {
+	.notifier_call = msm_mpd_hotplug_notifier,
 };
 
 static int msm_mpd_do_hotplug(void *data)
@@ -466,9 +465,7 @@ static int __ref msm_mpd_set_enabled(uint32_t enable)
 				      msm_mpd.next_update,
 				      HRTIMER_MODE_ABS_PINNED);
 		cpu_pm_register_notifier(&msm_mpd_idle_nb);
-#if 0
 		register_cpu_notifier(&msm_mpd_hotplug_nb);
-#endif
 		msm_mpd.enabled = 1;
 	} else {
 		for_each_online_cpu(cpu)
@@ -476,7 +473,7 @@ static int __ref msm_mpd_set_enabled(uint32_t enable)
 		kthread_stop(msm_mpd.hptask);
 		kthread_stop(msm_mpd.task);
 		cpu_pm_unregister_notifier(&msm_mpd_idle_nb);
-		//unregister_cpu_notifier(&msm_mpd_hotplug_nb);
+		unregister_cpu_notifier(&msm_mpd_hotplug_nb);
 		msm_mpd.enabled = 0;
 	}
 

@@ -823,7 +823,7 @@ static int pmu_cpu_notify(struct notifier_block *b,
 						 cpu_pmu->save_pm_registers,
 						 hcpu, 1);
 		break;
-	case CPU_UP_PREPARE:
+	case CPU_ONLINE:
 		if (cpu_pmu && cpu_pmu->reset)
 			cpu_pmu->reset(NULL);
 		if (cpu_pmu && cpu_pmu->restore_pm_registers)
@@ -849,7 +849,7 @@ static int pmu_cpu_notify(struct notifier_block *b,
 			}
 			return NOTIFY_DONE;
 
-		case CPU_UP_PREPARE:
+		case CPU_ONLINE:
 			/*
 			 * If this is on a multicore CPU, we need
 			 * to arm the PMU IRQ before appearing.
@@ -871,7 +871,7 @@ static int pmu_cpu_notify(struct notifier_block *b,
 		}
 	}
 
-	if ((action & ~CPU_TASKS_FROZEN) != CPU_UP_PREPARE)
+	if ((action & ~CPU_TASKS_FROZEN) != CPU_ONLINE)
 		return NOTIFY_DONE;
 
 	return NOTIFY_OK;

@@ -439,6 +439,7 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 				return NOTIFY_BAD;
 			update_l2_bw(&cpu);
 		}
+		break;
 	case CPU_ONLINE:
 		if (is_clk) {
 			rc = clk_enable(l2_clk);
