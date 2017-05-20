@@ -196,12 +196,13 @@ static void free_object(struct debug_obj *obj)
 	 * schedule work when the pool is filled and the cache is
 	 * initialized:
 	 */
-	sched = obj_pool_free > ODEBUG_POOL_SIZE && obj_cache;
+	if (obj_pool_free > ODEBUG_POOL_SIZE && obj_cache)
+		sched = 1;
 	hlist_add_head(&obj->node, &obj_pool);
 	obj_pool_free++;
 	obj_pool_used--;
 	raw_spin_unlock_irqrestore(&pool_lock, flags);
-	if (sched && keventd_up())
+	if (sched)
 		schedule_work(&debug_obj_work);
 }
 
