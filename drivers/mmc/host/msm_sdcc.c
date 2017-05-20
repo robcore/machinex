@@ -7068,6 +7068,8 @@ static int msmsdcc_pm_suspend(struct device *dev)
  out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
+	if (rc < 0)
+		pm_wakeup_hard_event(dev);
 	return rc;
 }
 
@@ -7075,7 +7077,6 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
 	struct msmsdcc_host *host = mmc_priv(mmc);
-	int rc = 0;
 
 	/*
 	 * After platform suspend there may be active request
@@ -7089,10 +7090,10 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 	if (atomic_read(&host->clks_on) && !host->plat->is_sdio_al_client) {
 		pr_warn("%s: clocks are on after suspend, aborting system "
 				"suspend\n", mmc_hostname(mmc));
-		rc = msmsdcc_runtime_resume(dev);
+		pm_wakeup_hard_event(dev);
 	}
 
-	return rc;
+	return 0;
 }
 
 static int msmsdcc_pm_resume(struct device *dev)
@@ -7123,6 +7124,8 @@ static int msmsdcc_pm_resume(struct device *dev)
 		enable_irq(host->plat->status_irq);
 	}
 out:
+	if (rc < 0)
+		pm_wakeup_hard_event(dev);
 	return rc;
 }
 
