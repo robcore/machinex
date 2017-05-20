@@ -50,6 +50,7 @@
 #ifdef CONFIG_SEC_FPGA
 #include <linux/barcode_emul.h>
 #endif
+#include <linux/bitops.h>
 
 #include <asm/cacheflush.h>
 #include <asm/div64.h>
@@ -496,7 +497,6 @@ static void msmsdcc_reset_dpsm(struct msmsdcc_host *host)
 					mmc_hostname(host->mmc),
 					readl_relaxed(host->base + MMCISTATUS)
 					& MCI_TXACTIVE ? "TX" : "RX");
-				msmsdcc_dump_sdcc_state(host);
 				msmsdcc_reset_and_restore(host);
 				goto out;
 			}
@@ -1433,7 +1433,6 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 					 mmc_hostname(host->mmc), opcode,
 					 (readl_relaxed(host->base
 					 + MCI_TEST_INPUT) & 0x2) ? 1 : 0);
-				msmsdcc_dump_sdcc_state(host);
 			}
 		}
 
@@ -1451,7 +1450,7 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 				data->error = -ETIMEDOUT;
 		}
 		/* In case of DATA CRC/timeout error, execute tuning again */
-		if (host->tuning_needed && !host->tuning_in_progress && (host->pdev->id != 3))
+		if ((host->tuning_needed) && (!host->tuning_in_progress) && (host->pdev->id != 3))
 			host->tuning_done = false;
 
 	} else if (status & MCI_RXOVERRUN) {
@@ -1809,7 +1808,6 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 			!host->tuning_in_progress) {
 		pr_debug("%s: CMD%d: Command CRC error\n",
 			mmc_hostname(host->mmc), cmd->opcode);
-		msmsdcc_dump_sdcc_state(host);
 		if( host->pdev->id == 3){
 			pr_debug("%s: Skipped tuning.\n",mmc_hostname(host->mmc));
 		}
@@ -2324,7 +2322,7 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	return;
 
 bad_state:
-	msmsdcc_dump_sdcc_state(host);
+/*fall through*/
 card_ejected:
 	mrq->cmd->error = -error;
 	if (mrq->data) {
@@ -3493,7 +3491,8 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
-	if (msmsdcc_is_pwrsave(host) && (host->pdev->id == 3))
+	if ((msmsdcc_is_pwrsave(host) && (host->pdev->id == 3)) ||
+		(msmsdcc_is_pwrsave(host) && mmc_host_may_gate_card(host->mmc->card)))
 		clk |= MCI_CLK_PWRSAVE;
 
 	clk |= MCI_CLK_FLOWENA;
@@ -3691,17 +3690,18 @@ static int msmsdcc_enable(struct mmc_host *mmc)
 	if (mmc->card && mmc_card_sdio(mmc->card))
 		goto out;
 
-	if (dev->power.runtime_status == RPM_SUSPENDING) {
-		if (mmc->suspend_task == current) {
-			pm_runtime_get_noresume(dev);
-			goto out;
-		}
-	}
 	if (host->sdcc_suspended && host->pending_resume) {
 		host->pending_resume = false;
 		pm_runtime_get_noresume(dev);
 		rc = msmsdcc_runtime_resume(dev);
 		goto out_recover;
+	}
+
+	if (dev->power.runtime_status == RPM_SUSPENDING) {
+		if (mmc->suspend_task == current) {
+			pm_runtime_get_noresume(dev);
+			goto out;
+		}
 	} else if (dev->power.runtime_status == RPM_RESUMING) {
 		pm_runtime_get_noresume(dev);
 		goto out;
@@ -3714,7 +3714,7 @@ out_recover:
 			WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 			     __func__, rc);
 
-		rc = __pm_runtime_set_status(dev, RPM_ACTIVE);
+		//rc = __pm_runtime_set_status(dev, RPM_ACTIVE);
 		return rc;
 		}
 out:
@@ -3738,14 +3738,13 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 
 	rc = pm_runtime_put_sync(mmc->parent);
 
-	if (rc < 0)
+	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
-	goto out_recover;
-
-out_recover:
-	rc = __pm_runtime_set_status(mmc->parent, RPM_SUSPENDED);
+		//rc = __pm_runtime_set_status(mmc->parent, RPM_SUSPENDED);
 	return rc;
+	}
+
 out:
 	return rc;
 }
@@ -4370,7 +4369,6 @@ retry:
 		/* tuning failed */
 		pr_err("%s: %s: no tuning point found\n",
 			mmc_hostname(mmc), __func__);
-		msmsdcc_dump_sdcc_state(host);
 		rc = -EAGAIN;
 	}
 
@@ -4955,7 +4953,6 @@ msmsdcc_sps_bam_global_irq_cb(enum sps_callback_case sps_cb_case, void *user)
 	mrq = host->curr.mrq;
 
 	if (mrq && mrq->cmd) {
-		msmsdcc_dump_sdcc_state(host);
 
 		if (!mrq->cmd->error)
 			mrq->cmd->error = -error;
@@ -5131,10 +5128,10 @@ store_polling(struct device *dev, struct device_attribute *attr,
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (value) {
-		mmc->caps |= MMC_CAP_NEEDS_POLL;
+		test_and_set_bit(MMC_CAP_NEEDS_POLL, mmc->caps);
 		mmc_detect_change(host->mmc, 0);
 	} else {
-		mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		test_and_clear_bit(MMC_CAP_NEEDS_POLL, mmc->caps);
 	}
 #ifdef CONFIG_POWERSUSPEND
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
@@ -5267,7 +5264,7 @@ static void msmsdcc_power_suspend(struct power_suspend *h)
 
 	spin_lock_irqsave(&host->lock, flags);
 	host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
-	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+	test_and_clear_bit(MMC_CAP_NEEDS_POLL, host->mmc->caps);
 	spin_unlock_irqrestore(&host->lock, flags);
 };
 static void msmsdcc_power_resume(struct power_suspend *h)
@@ -5278,7 +5275,7 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
-		host->mmc->caps |= MMC_CAP_NEEDS_POLL;
+		test_and_set_bit(MMC_CAP_NEEDS_POLL, host->mmc->caps);
 		mmc_detect_change(host->mmc, 0);
 		spin_unlock_irqrestore(&host->lock, flags);
 	}
@@ -5868,6 +5865,7 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		}
 		dev_dbg(dev, "OCR mask=0x%x\n", pdata->ocr_mask);
 	}
+
 	ret = msmsdcc_dt_get_array(dev, "qcom,clk-rates",
 			&clk_table, &clk_table_len, 0);
 	if (!ret) {
@@ -6913,6 +6911,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 
 	if (host->pdev->id == 3) {
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+		test_and_set_bit(MMC_PM_KEEP_POWER, host->mmc->pm_flags);
 		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
 	}
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
@@ -6936,7 +6935,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 */
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
-		if (work_busy(&mmc->detect.work)) {
+		if (unlikely(work_busy(&mmc->detect.work))) {
 			host->pending_resume = true;
 			rc = -EBUSY;
 			goto busy;
@@ -6950,7 +6949,7 @@ msmsdcc_runtime_suspend(struct device *dev)
 			host->sdcc_suspended = true;
 			spin_unlock_irqrestore(&host->lock, flags);
 			if (mmc->card && mmc_card_sdio(mmc->card) &&
-				mmc->ios.clock && mmc_card_keep_power(mmc)) {
+				mmc->ios.clock) {
 				/*
 				 * If SDIO function driver doesn't want
 				 * to power off the card, atleast turn off
@@ -7065,13 +7064,19 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 * pending_resume flag is cleared before calling the
 	 * msmsdcc_runtime_suspend().
 	 */
-	if (!pm_runtime_suspended(dev) && !host->pending_resume)
+	if (!pm_runtime_suspended(dev) && !host->pending_resume) {
 		rc = msmsdcc_runtime_suspend(dev);
+		/* This flag must not be set if system is entering into suspend */
+		host->pending_resume = false;
+		return rc;
+	} else {
+		rc = -EBUSY;
+		host->pending_resume = true;
+		return rc;
+	}
  out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
-	if (rc < 0)
-		pm_wakeup_hard_event(dev);
 	return rc;
 }
 
@@ -7093,11 +7098,10 @@ static int msmsdcc_suspend_noirq(struct device *dev)
 	if (atomic_read(&host->clks_on) && !host->plat->is_sdio_al_client) {
 		pr_warn("%s: clocks are on after suspend, aborting system "
 				"suspend\n", mmc_hostname(mmc));
-		pm_wakeup_hard_event(dev);
 		rc = -EBUSY;
 	}
 
-	return -EBUSY;
+	return rc;
 }
 
 static int msmsdcc_pm_resume(struct device *dev)
@@ -7128,8 +7132,6 @@ static int msmsdcc_pm_resume(struct device *dev)
 		enable_irq(host->plat->status_irq);
 	}
 out:
-	if (rc < 0)
-		pm_wakeup_hard_event(dev);
 	return rc;
 }
 

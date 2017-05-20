@@ -178,7 +178,7 @@ void mmc_host_clk_hold(struct mmc_host *host)
  *	mmc_host_may_gate_card - check if this card may be gated
  *	@card: card to check.
  */
-static bool mmc_host_may_gate_card(struct mmc_card *card)
+bool mmc_host_may_gate_card(struct mmc_card *card)
 {
 	/* If there is no card we may gate it */
 	if (!card)
@@ -219,7 +219,7 @@ void mmc_host_clk_release(struct mmc_host *host)
 	if (mmc_host_may_gate_card(host->card) &&
 	    !host->clk_requests)
 		queue_delayed_work(mx_clk_gate_wq, &host->clk_gate_work,
-				      msecs_to_jiffies(20));
+				      msecs_to_jiffies(100));
 	spin_unlock_irqrestore(&host->clk_lock, flags);
 }
 
