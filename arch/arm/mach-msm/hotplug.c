@@ -113,17 +113,7 @@ void __ref msm_cpu_die(unsigned int cpu)
 static int hotplug_rtb_callback(struct notifier_block *nfb,
 				unsigned long action, void *hcpu)
 {
-	/*
-	 * Bits [19:4] of the data are the online mask, lower 4 bits are the
-	 * cpu number that is being changed. Additionally, changes to the
-	 * online_mask that will be done by the current hotplug will be made
-	 * even though they aren't necessarily in the online mask yet.
-	 *
-	 * XXX: This design is limited to supporting at most 16 cpus
-	 */
-	int this_cpumask = CPUSET_OF(1 << (int)hcpu);
-	int cpumask = CPUSET_OF(cpumask_bits(cpu_online_mask)[0]);
-	int cpudata = CPU_OF((int)hcpu) | cpumask;
+
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
 	case CPU_STARTING:
@@ -147,18 +137,30 @@ static struct notifier_block hotplug_rtb_notifier = {
 static int hotplug_cpu_check_callback(struct notifier_block *nfb,
 				      unsigned long action, void *hcpu)
 {
+	/*
+	 * Bits [19:4] of the data are the online mask, lower 4 bits are the
+	 * cpu number that is being changed. Additionally, changes to the
+	 * online_mask that will be done by the current hotplug will be made
+	 * even though they aren't necessarily in the online mask yet.
+	 *
+	 * XXX: This design is limited to supporting at most 16 cpus
+	 */
+	int this_cpumask = CPUSET_OF(1 << (int)hcpu);
+	int cpumask = CPUSET_OF(cpumask_bits(cpu_online_mask)[0]);
+	int cpudata = CPU_OF((int)hcpu) | cpumask;
 	int cpu = (int)hcpu;
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_DOWN_PREPARE:
-		if (cpu == 0) {
-			pr_err_ratelimited("CPU0 hotplug is not supported\n");
-			return NOTIFY_BAD;
+		case CPU_DOWN_PREPARE:
+			cpumask_set_cpu((unsigned long)hcpu, &cpu_dying_mask);
+			if (cpu == 0) {
+				pr_err_ratelimited("CPU0 hotplug is not supported\n");
+				return NOTIFY_BAD;
+			}
+			break;
+		default:
+			break;
 		}
-		break;
-	default:
-		break;
-	}
 
 	return NOTIFY_OK;
 }
