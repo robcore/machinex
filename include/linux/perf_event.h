@@ -809,9 +809,9 @@ do {									\
 	local_irq_save(flags);						\
 	fn(&fn##_nb, (unsigned long)CPU_STARTING,			\
 		(void *)(unsigned long)cpu);				\
-	local_irq_restore(flags);					\
 	fn(&fn##_nb, (unsigned long)CPU_ONLINE,				\
 		(void *)(unsigned long)cpu);				\
+	local_irq_restore(flags);					\
 	register_cpu_notifier(&fn##_nb);				\
 } while (0)
 
