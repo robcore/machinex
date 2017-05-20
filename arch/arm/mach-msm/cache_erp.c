@@ -449,11 +449,11 @@ static int cache_erp_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
 	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_STARTING:
+	case CPU_UP_PREPARE:
 		enable_erp_irq_callback(NULL);
 		break;
 
-	case CPU_DYING:
+	case CPU_DOWN_PREPARE:
 		disable_erp_irq_callback(NULL);
 		break;
 	}

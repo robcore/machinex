@@ -19,7 +19,9 @@
 #include <asm/cacheflush.h>
 
 #include <mach/jtag.h>
+#ifdef CONFIG_MSM_RTB
 #include <mach/msm_rtb.h>
+#endif
 
 #include "pm.h"
 #include "spm.h"
@@ -107,6 +109,7 @@ void __ref msm_cpu_die(unsigned int cpu)
 #define CPUSET_MASK	0xFFFF
 #define CPUSET_OF(n)	(((n) & CPUSET_MASK) << CPUSET_SHIFT)
 
+#ifdef CONFIG_MSM_RTB
 static int hotplug_rtb_callback(struct notifier_block *nfb,
 				unsigned long action, void *hcpu)
 {
@@ -139,6 +142,7 @@ static int hotplug_rtb_callback(struct notifier_block *nfb,
 static struct notifier_block hotplug_rtb_notifier = {
 	.notifier_call = hotplug_rtb_callback,
 };
+#endif
 
 static int hotplug_cpu_check_callback(struct notifier_block *nfb,
 				      unsigned long action, void *hcpu)
@@ -184,11 +188,13 @@ int msm_platform_secondary_init(unsigned int cpu)
 
 static int __init init_hotplug(void)
 {
+#ifdef CONFIG_MSM_RTB
 	int rc;
 
 	rc = register_hotcpu_notifier(&hotplug_rtb_notifier);
 	if (rc)
 		return rc;
+#endif
 
 	return register_hotcpu_notifier(&hotplug_cpu_check_notifier);
 }
