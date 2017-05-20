@@ -3250,7 +3250,7 @@ int mmc_suspend_host(struct mmc_host *host)
 	cancel_delayed_work(&host->detect);
 
 	/* If there is pending detect work abort runtime suspend */
-	if (unlikely(work_busy(&host->detect.work)))
+	if (work_busy(&host->detect.work))
 		return -EBUSY;
 	else
 		mmc_flush_scheduled_work();
@@ -3271,19 +3271,16 @@ int mmc_suspend_host(struct mmc_host *host)
 		 */
 		if (!(host->card && mmc_card_sdio(host->card))) {
 			if (!mmc_try_claim_host(host))
-				return -EBUSY;
+				err = -EBUSY;
 		}
 
+		if (err == 0) {
 			if (host->bus_ops->suspend) {
 				err = mmc_stop_bkops(host->card);
-				if (err) {
-					if (!(host->card && mmc_card_sdio(host->card)))
-						mmc_release_host(host);
+				if (err)
 					goto stop_bkops_err;
-				}
+				err = host->bus_ops->suspend(host);
 			}
-			err = host->bus_ops->suspend(host);
-
 			if (!(host->card && mmc_card_sdio(host->card)))
 				mmc_release_host(host);
 
@@ -3304,7 +3301,9 @@ int mmc_suspend_host(struct mmc_host *host)
 				host->pm_flags = 0;
 				err = 0;
 			}
+		}
 	}
+	mmc_bus_put(host);
 
 	if (!err && !mmc_card_keep_power(host)) {
 		mmc_claim_host(host);
@@ -3315,9 +3314,10 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (!host->card || host->index == 2)
 		mdelay(50);
 
-	mmc_bus_put(host);
-
+	return err;
 stop_bkops_err:
+	if (!(host->card && mmc_card_sdio(host->card)))
+		mmc_release_host(host);
 	return err;
 }
 
@@ -3530,6 +3530,7 @@ int mmc_bkops_enable(struct mmc_host *host, u8 value)
 
 bkops_out:
 	mmc_release_host(host);
+
 	return err;
 }
 EXPORT_SYMBOL(mmc_bkops_enable);

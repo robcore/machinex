@@ -6842,16 +6842,10 @@ static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
 	struct mmc_host *mmc = host->mmc;
 	unsigned long flags;
 
-	if (host->pdev->id == 3) {
-		printk(KERN_INFO "%s: msmsdcc_gate_clock due to mmc_card_keep_power\n", __func__);
-	}
-
 	mmc_host_clk_hold(mmc);
-	spin_lock_irqsave(&mmc->clk_lock, flags);
 	mmc->clk_old = mmc->ios.clock;
 	mmc->ios.clock = 0;
 	mmc->clk_gated = true;
-	spin_unlock_irqrestore(&mmc->clk_lock, flags);
 	mmc_set_ios(mmc);
 	mmc_host_clk_release(mmc);
 }
@@ -6865,8 +6859,6 @@ static inline void msmsdcc_ungate_clock(struct msmsdcc_host *host)
 	mmc_set_ios(mmc);
 	mmc_host_clk_release(mmc);
 
-	if (host->pdev->id == 3)
-		printk(KERN_INFO "%s: msmsdcc_ungate_clock due to mmc_card_keep_power complete\n", __func__);
 }
 #else
 static inline void msmsdcc_gate_clock(struct msmsdcc_host *host)
