@@ -545,7 +545,7 @@ out_unroll:
  * an error, and a positive return value indicates the number of interrupts
  * which could have been allocated.
  */
-static int msi_capability_init(struct pci_dev *dev, int nvec)
+static int msi_capability_init(struct pci_dev *dev, int nvec, bool affinity)
 {
 	struct msi_desc *entry;
 	int pos, ret;
@@ -675,8 +675,8 @@ static void msix_program_entries(struct pci_dev *dev,
  * single MSI-X irq. A return of zero indicates the successful setup of
  * requested MSI-X entries with allocated irqs or non-zero for otherwise.
  **/
-static int msix_capability_init(struct pci_dev *dev,
-				struct msix_entry *entries, int nvec)
+static int msix_capability_init(struct pci_dev *dev, struct msix_entry *entries,
+				int nvec, bool affinity)
 {
 	int pos, ret;
 	u16 control;
