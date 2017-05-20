@@ -128,7 +128,6 @@ struct irqaction {
 
 extern irqreturn_t no_action(int cpl, void *dev_id);
 
-#ifdef CONFIG_GENERIC_HARDIRQS
 extern int __must_check
 request_threaded_irq(unsigned int irq, irq_handler_t handler,
 		     irq_handler_t thread_fn,
@@ -148,40 +147,6 @@ request_any_context_irq(unsigned int irq, irq_handler_t handler,
 extern int __must_check
 request_percpu_irq(unsigned int irq, irq_handler_t handler,
 		   const char *devname, void __percpu *percpu_dev_id);
-#else
-
-extern int __must_check
-request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
-	    const char *name, void *dev);
-
-/*
- * Special function to avoid ifdeffery in kernel/irq/devres.c which
- * gets magically built by GENERIC_HARDIRQS=n architectures (sparc,
- * m68k). I really love these $@%#!* obvious Makefile references:
- * ../../../kernel/irq/devres.o
- */
-static inline int __must_check
-request_threaded_irq(unsigned int irq, irq_handler_t handler,
-		     irq_handler_t thread_fn,
-		     unsigned long flags, const char *name, void *dev)
-{
-	return request_irq(irq, handler, flags, name, dev);
-}
-
-static inline int __must_check
-request_any_context_irq(unsigned int irq, irq_handler_t handler,
-			unsigned long flags, const char *name, void *dev_id)
-{
-	return request_irq(irq, handler, flags, name, dev_id);
-}
-
-static inline int __must_check
-request_percpu_irq(unsigned int irq, irq_handler_t handler,
-		   const char *devname, void __percpu *percpu_dev_id)
-{
-	return request_irq(irq, handler, 0, devname, percpu_dev_id);
-}
-#endif
 
 extern void free_irq(unsigned int, void *);
 extern void free_percpu_irq(unsigned int, void __percpu *);
@@ -240,7 +205,7 @@ extern void irq_wake_thread(unsigned int irq, void *dev_id);
 extern void suspend_device_irqs(void);
 extern void resume_device_irqs(void);
 
-#if defined(CONFIG_SMP) && defined(CONFIG_GENERIC_HARDIRQS)
+#ifdef CONFIG_SMP
 
 extern cpumask_var_t irq_default_affinity;
 
@@ -307,6 +272,8 @@ extern int
 irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify);
 
 struct cpumask *irq_create_affinity_mask(unsigned int *nr_vecs);
+struct cpumask *irq_create_affinity_masks(const struct cpumask *affinity, int nvec);
+int irq_calc_affinity_vectors(const struct cpumask *affinity, int maxvec);
 
 extern int
 irq_release_affinity_notifier(struct irq_affinity_notify *notify);
@@ -335,9 +302,21 @@ static inline struct cpumask *irq_create_affinity_mask(unsigned int *nr_vecs)
 	*nr_vecs = 1;
 	return NULL;
 }
-#endif /* CONFIG_SMP && CONFIG_GENERIC_HARDIRQS */
 
-#ifdef CONFIG_GENERIC_HARDIRQS
+static inline struct cpumask *
+irq_create_affinity_masks(const struct cpumask *affinity, int nvec)
+{
+	return NULL;
+}
+
+static inline int
+irq_calc_affinity_vectors(const struct cpumask *affinity, int maxvec)
+{
+	return maxvec;
+}
+
+#endif /* CONFIG_SMP */
+
 /*
  * Special lockdep variants of irq disabling/enabling.
  * These should be used for locking constructs that
@@ -402,33 +381,6 @@ static inline int disable_irq_wake(unsigned int irq)
 {
 	return irq_set_irq_wake(irq, 0);
 }
-
-#else /* !CONFIG_GENERIC_HARDIRQS */
-/*
- * NOTE: non-generic architectures, if they want to support the lock
- * validator need to define the methods below in their asm/irq.h
- * files, under an #ifdef CONFIG_LOCKDEP section.
- */
-#ifndef CONFIG_LOCKDEP
-#  define disable_irq_nosync_lockdep(irq)	disable_irq_nosync(irq)
-#  define disable_irq_nosync_lockdep_irqsave(irq, flags) \
-						disable_irq_nosync(irq)
-#  define disable_irq_lockdep(irq)		disable_irq(irq)
-#  define enable_irq_lockdep(irq)		enable_irq(irq)
-#  define enable_irq_lockdep_irqrestore(irq, flags) \
-						enable_irq(irq)
-# endif
-
-static inline int enable_irq_wake(unsigned int irq)
-{
-	return 0;
-}
-
-static inline int disable_irq_wake(unsigned int irq)
-{
-	return 0;
-}
-#endif /* CONFIG_GENERIC_HARDIRQS */
 
 /*
  * irq_get_irqchip_state/irq_set_irqchip_state specific flags
@@ -729,7 +681,7 @@ void tasklet_hrtimer_cancel(struct tasklet_hrtimer *ttimer)
  * if more than one irq occurred.
  */
 
-#if defined(CONFIG_GENERIC_HARDIRQS) && !defined(CONFIG_GENERIC_IRQ_PROBE)
+#if !defined(CONFIG_GENERIC_IRQ_PROBE)
 static inline unsigned long probe_irq_on(void)
 {
 	return 0;
