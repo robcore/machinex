@@ -5275,7 +5275,7 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
-		mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 		mmc_detect_change(host->mmc, 0);
 		spin_unlock_irqrestore(&host->lock, flags);
 	}
