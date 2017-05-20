@@ -503,7 +503,7 @@ static struct mmc_blk_ioc_data *mmc_blk_ioctl_copy_from_user(
 
 	if (!idata->buf_bytes) {
 		err = -ENOMEM;
-		goto idata_err:
+		goto idata_err;
 	}
 
 	idata->buf = kzalloc(idata->buf_bytes, GFP_KERNEL);
