@@ -1985,85 +1985,6 @@ int update_console_cmdline(char *name, int idx, char *name_new, int idx_new, cha
 	return -1;
 }
 
-bool console_suspend_enabled = 1;
-EXPORT_SYMBOL(console_suspend_enabled);
-
-static int __init console_suspend_disable(char *str)
-{
-	console_suspend_enabled = 0;
-	return 1;
-}
-__setup("no_console_suspend", console_suspend_disable);
-module_param_named(console_suspend, console_suspend_enabled,
-		bool, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(console_suspend, "suspend console during suspend"
-	" and hibernate operations");
-
-/**
- * suspend_console - suspend the console subsystem
- *
- * This disables printk() while we go into suspend states
- */
-void suspend_console(void)
-{
-	if (!console_suspend_enabled)
-		return;
-	console_lock();
-	console_suspended = 1;
-	up_console_sem();
-}
-
-void resume_console(void)
-{
-	if (!console_suspend_enabled)
-		return;
-	down_console_sem();
-	console_suspended = 0;
-	console_unlock();
-}
-
-static void console_flush(struct work_struct *work)
-{
-	console_lock();
-	console_unlock();
-}
-
-static DECLARE_WORK(console_cpu_notify_work, console_flush);
-
-/**
- * console_cpu_notify - print deferred console messages after CPU hotplug
- * @self: notifier struct
- * @action: CPU hotplug event
- * @hcpu: unused
- *
- * If printk() is called from a CPU that is not online yet, the messages
- * will be spooled but will not show up on the console.  This function is
- * called when a new CPU comes online (or fails to come up), and ensures
- * that any such output gets printed.
- *
- * Special handling must be done for cases invoked from an atomic context,
- * as we can't be taking the console semaphore here.
- */
-static int console_cpu_notify(struct notifier_block *self,
-	unsigned long action, void *hcpu)
-{
-	switch (action) {
-	case CPU_DEAD:
-	case CPU_DOWN_FAILED:
-	case CPU_UP_CANCELED:
-		console_lock();
-		console_unlock();
-		break;
-	case CPU_ONLINE:
-		/* invoked with preemption disabled, so defer */
-		if (!console_trylock())
-			schedule_work(&console_cpu_notify_work);
-		else
-			console_unlock();
-	}
-	return NOTIFY_OK;
-}
-
 /**
  * console_lock - lock the console system for exclusive use.
  *
@@ -2256,6 +2177,63 @@ skip:
 		wake_up_klogd();
 }
 EXPORT_SYMBOL(console_unlock);
+
+bool console_suspend_enabled = 1;
+EXPORT_SYMBOL(console_suspend_enabled);
+
+static int __init console_suspend_disable(char *str)
+{
+	console_suspend_enabled = 0;
+	return 1;
+}
+__setup("no_console_suspend", console_suspend_disable);
+module_param_named(console_suspend, console_suspend_enabled,
+		bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(console_suspend, "suspend console during suspend"
+	" and hibernate operations");
+
+/**
+ * suspend_console - suspend the console subsystem
+ *
+ * This disables printk() while we go into suspend states
+ */
+void suspend_console(void)
+{
+	if (!console_suspend_enabled)
+		return;
+	console_lock();
+	console_suspended = 1;
+	up_console_sem();
+}
+
+void resume_console(void)
+{
+	if (!console_suspend_enabled)
+		return;
+	down_console_sem();
+	console_suspended = 0;
+	console_unlock();
+}
+
+/**
+ * console_cpu_notify - print deferred console messages after CPU hotplug
+ * @cpu: unused
+ *
+ * If printk() is called from a CPU that is not online yet, the messages
+ * will be spooled but will not show up on the console.  This function is
+ * called when a new CPU comes online (or fails to come up), and ensures
+ * that any such output gets printed.
+ *
+ * Special handling must be done for cases invoked from an atomic context,
+ * as we can't be taking the console semaphore here.
+ */
+
+static int console_cpu_notify(unsigned int cpu)
+{
+	console_lock();
+	console_unlock();
+	return 0;
+}
 
 /**
  * console_conditional_schedule - yield the CPU if required
@@ -2568,13 +2546,19 @@ EXPORT_SYMBOL(unregister_console);
 static int __init printk_late_init(void)
 {
 	struct console *con;
+	int ret;
 
 	for_each_console(con) {
 		if (!keep_bootcon && con->flags & CON_BOOT) {
 			unregister_console(con);
 		}
 	}
-	hotcpu_notifier(console_cpu_notify, 0);
+	ret = cpuhp_setup_state_nocalls(CPUHP_PRINTK_DEAD, "printk:dead", NULL,
+					console_cpu_notify);
+	WARN_ON(ret < 0);
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "printk:online",
+					console_cpu_notify, NULL);
+	WARN_ON(ret < 0);
 	return 0;
 }
 late_initcall(printk_late_init);
