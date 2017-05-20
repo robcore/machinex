@@ -298,11 +298,11 @@ int snd_timer_open(struct snd_timer_instance **ti,
 			kfree(timeri->owner);
 			kfree(timeri);
 
-			if (timer->card)
-				put_device(&timer->card->card_dev);
-			module_put(timer->module);
-			mutex_unlock(&register_mutex);
-			return err;
+			if (timer->card) {
+				module_put(timer->module);
+				mutex_unlock(&register_mutex);
+				return err;
+			}
 		}
 	}
 
