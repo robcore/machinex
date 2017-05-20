@@ -50,7 +50,6 @@
 #ifdef CONFIG_SEC_FPGA
 #include <linux/barcode_emul.h>
 #endif
-#include <linux/bitops.h>
 
 #include <asm/cacheflush.h>
 #include <asm/div64.h>
@@ -5264,7 +5263,7 @@ static void msmsdcc_power_suspend(struct power_suspend *h)
 
 	spin_lock_irqsave(&host->lock, flags);
 	host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
-	host->mmc->caps |= MMC_CAP_NEEDS_POLL;
+	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 	spin_unlock_irqrestore(&host->lock, flags);
 };
 static void msmsdcc_power_resume(struct power_suspend *h)
@@ -5275,7 +5274,7 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
-		host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		host->mmc->caps |= MMC_CAP_NEEDS_POLL;
 		mmc_detect_change(host->mmc, 0);
 		spin_unlock_irqrestore(&host->lock, flags);
 	}
