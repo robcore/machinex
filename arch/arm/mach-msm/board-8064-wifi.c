@@ -137,7 +137,7 @@ static int brcm_init_wlan_mem(void)
 	if (!wlan_static_dhd_info_buf)
 		goto err_mem_alloc;
 
-	printk(KERN_INFO"%s: WIFI MEM Allocated\n", __func__);
+	pr_info("%s: WIFI MEM Allocated\n", __func__);
 	return 0;
 
  err_mem_alloc:
@@ -340,7 +340,7 @@ static int brcm_wlan_set_carddetect(int val)
 	if (wifi_status_cb)
 		wifi_status_cb(val, wifi_status_cb_devid);
 	else
-		pr_warning("%s: Nobody to notify\n", __func__);
+		pr_debug("%s: Nobody to notify\n", __func__);
 
 	/* msleep(200); wait for carddetect */
 
