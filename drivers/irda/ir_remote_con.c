@@ -468,7 +468,7 @@ static struct i2c_driver mc96_i2c_driver = {
 		.name = "mc96",
 	},
 	.probe = ir_remocon_probe,
-	.remove = __devexit_p(ir_remocon_remove),
+	.remove = ir_remocon_remove,
 #if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
 	.pm	= &ir_remocon_pm_ops,
 #endif
