@@ -715,10 +715,6 @@ struct signal_struct {
 #ifdef CONFIG_NO_HZ_FULL
 	atomic_t tick_dep_mask;
 #endif
-#ifdef CONFIG_CGROUPS
-	/* disallow userland-initiated cgroup migration */
-	unsigned			no_cgroup_migration:1;
-#endif
 
 	struct list_head cpu_timers[3];
 
@@ -1478,6 +1474,10 @@ struct task_struct {
 	unsigned int ptrace;
 	unsigned int yield_count;
 
+#ifdef CONFIG_CGROUPS
+	/* disallow userland-initiated cgroup migration */
+	unsigned int			no_cgroup_migration:1;
+#endif
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;
