@@ -3490,7 +3490,7 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
-	if ((msmsdcc_is_pwrsave(host) && (host->pdev->id == 3))
+	if ((msmsdcc_is_pwrsave(host)) && (host->pdev->id == 3))
 		clk |= MCI_CLK_PWRSAVE;
 
 	clk |= MCI_CLK_FLOWENA;
