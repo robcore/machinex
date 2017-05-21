@@ -508,6 +508,11 @@ static struct mmc_platform_data sdc3_data = {
 			MMC_CAP_UHS_SDR104 | MMC_CAP_MAX_CURRENT_800),
 	.register_status_notify	= brcm_wifi_status_register,
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
+	.disable_runtime_pm = true,
+	.packed_write = 0,
+	.wpswitch_gpio = 0,
+	.status_gpio = 0,
+	.status_irq = 0,
 #else
 	.ocr_mask       = MMC_VDD_27_28 | MMC_VDD_28_29,
 	.mmc_bus_width  = MMC_CAP_4_BIT_DATA,
@@ -575,19 +580,6 @@ void __init apq8064_init_mmc(void)
 		apq8064_add_sdcc(1, apq8064_sdc1_pdata);
 		apq8064_add_uio();
 	}
-#if defined(CONFIG_MACH_JFVE_EUR)
-	apq8064_sdc2_pdata = NULL;
-	apq8064_sdc4_pdata = NULL;
-
-	// SDC3 is used for External memory Card
-	if (apq8064_sdc3_pdata)
-   {
-		apq8064_sdc3_pdata->status_gpio = PM8921_GPIO_PM_TO_SYS(33);
-		apq8064_sdc3_pdata->status_irq	= PM8921_GPIO_IRQ(PM8921_IRQ_BASE, 33);
-
-		apq8064_add_sdcc(3, apq8064_sdc3_pdata);
-   }
-#else
 /*
 	if (apq8064_sdc2_pdata)
 		apq8064_add_sdcc(2, apq8064_sdc2_pdata);
@@ -605,48 +597,6 @@ void __init apq8064_init_mmc(void)
 		apq8064_sdc3_pdata->status_irq = 0;
 		apq8064_sdc3_pdata->status_gpio = 0;
 #endif
-#if !defined(CONFIG_BCM4335) && !defined(CONFIG_BCM4335_MODULE)
-		if (!machine_is_apq8064_cdp()) {
-			apq8064_sdc3_pdata->wpswitch_gpio = 0;
-			apq8064_sdc3_pdata->is_wpswitch_active_low = false;
-		}
-		if (machine_is_mpq8064_cdp() || machine_is_mpq8064_hrd() ||
-			machine_is_mpq8064_dtv()) {
-			int rc;
-			struct pm_gpio sd_card_det_init_cfg = {
-				.direction      = PM_GPIO_DIR_IN,
-				.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-				.pull           = PM_GPIO_PULL_UP_30,
-				.vin_sel        = PM_GPIO_VIN_S4,
-				.out_strength   = PM_GPIO_STRENGTH_NO,
-				.function       = PM_GPIO_FUNC_NORMAL,
-			};
-
-			apq8064_sdc3_pdata->status_gpio =
-				PM8921_GPIO_PM_TO_SYS(31);
-			apq8064_sdc3_pdata->status_irq =
-				PM8921_GPIO_IRQ(PM8921_IRQ_BASE, 31);
-			rc = pm8xxx_gpio_config(apq8064_sdc3_pdata->status_gpio,
-					&sd_card_det_init_cfg);
-			if (rc) {
-				pr_info("%s: SD_CARD_DET GPIO%d config "
-					"failed(%d)\n", __func__,
-					apq8064_sdc3_pdata->status_gpio, rc);
-				apq8064_sdc3_pdata->status_gpio = 0;
-				apq8064_sdc3_pdata->status_irq = 0;
-			}
-		}
-		if (machine_is_apq8064_cdp()) {
-			int i;
-
-			for (i = 0;
-			     i < apq8064_sdc3_pdata->pin_data->pad_data->\
-				 drv->size;
-			     i++)
-				apq8064_sdc3_pdata->pin_data->pad_data->\
-					drv->on[i].val = GPIO_CFG_10MA;
-		}
-#endif
 		apq8064_add_sdcc(3, apq8064_sdc3_pdata);
 	}
 
@@ -656,26 +606,13 @@ void __init apq8064_init_mmc(void)
 	/*gpio_direction_output(60, 0); */ /* TFLASH_LS_EN */
 #endif
 
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JF_DCM)
 	if (system_rev >= BOARD_REV09 && apq8064_sdc2_pdata) {
-#elif defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	if (system_rev < BOARD_REV05 && apq8064_sdc2_pdata) {
-#else /* VZW/SPT/USCC */
-	if (system_rev >= BOARD_REV10 && apq8064_sdc2_pdata) {
-#endif
 		apq8064_sdc2_pdata->status_gpio = PM8921_GPIO_PM_TO_SYS(33);
 		apq8064_sdc2_pdata->status_irq	= PM8921_GPIO_IRQ(PM8921_IRQ_BASE, 33);
 	}
 
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
-	defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
 	if (system_rev < BOARD_REV08 && apq8064_sdc4_pdata)
-#else /* VZW/SPT/USCC */
-	if (system_rev < BOARD_REV09 && apq8064_sdc4_pdata)
-#endif
 		apq8064_add_sdcc(4, apq8064_sdc4_pdata);
 	else if (apq8064_sdc2_pdata)
 		apq8064_add_sdcc(2, apq8064_sdc2_pdata);
-#endif
 }
