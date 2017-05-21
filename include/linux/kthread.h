@@ -123,7 +123,7 @@ extern void __kthread_init_worker(struct kthread_worker *worker,
 		__kthread_init_worker((worker), "("#worker")->lock", &__key); \
 	} while (0)
 
-#define init_kthread_work(work, fn)					\
+#define kthread_init_work(work, fn)					\
 	do {								\
 		memset((work), 0, sizeof(struct kthread_work));		\
 		INIT_LIST_HEAD(&(work)->node);				\
