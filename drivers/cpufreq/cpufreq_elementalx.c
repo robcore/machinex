@@ -1174,14 +1174,6 @@ static int cpufreq_gov_dbs_up_task(void *data)
 	unsigned int cpu = smp_processor_id();
 
 	while (1) {
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule();
-
-		if (kthread_should_stop())
-			break;
-
-		set_current_state(TASK_RUNNING);
-
 		get_online_cpus();
 
 		if (lock_policy_rwsem_write(cpu) < 0)
@@ -1206,9 +1198,6 @@ bail_incorrect_governor:
 
 bail_acq_sema_failed:
 		put_online_cpus();
-#if 0
-		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.ui_sampling_rate;
-#endif
 	}
 
 	return 0;
@@ -1221,8 +1210,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	struct cpu_dbs_info_s *this_dbs_info;
 	unsigned int j;
 	int rc;
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
-	struct task_struct *pthread;
 
 	this_dbs_info = &per_cpu(od_cpu_dbs_info, cpu);
 
@@ -1230,18 +1217,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_START:
 		if ((!cpu_online(cpu)) || (!policy->cur))
 			return -EINVAL;
-
-	for_each_possible_cpu(cpu) {
-		pthread = kthread_create_on_node(cpufreq_gov_dbs_up_task,
-								NULL, cpu_to_node(cpu),
-								"kdbs_up/%d", cpu);
-		if (likely(!IS_ERR(pthread))) {
-			kthread_bind(pthread, cpu);
-			sched_setscheduler_nocheck(pthread, SCHED_FIFO, &param);
-			get_task_struct(pthread);
-			per_cpu(up_task, cpu) = pthread;
-		}
-	}
 
 		mutex_lock(&dbs_mutex);
 
@@ -1366,7 +1341,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 			&per_cpu(od_cpu_dbs_info, i);
 		mutex_destroy(&this_dbs_info->timer_mutex);
 		if (per_cpu(up_task, i)) {
-			kthread_stop(per_cpu(up_task, i));
 			put_task_struct(per_cpu(up_task, i));
 		}
 	}
