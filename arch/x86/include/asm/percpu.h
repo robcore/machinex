@@ -510,7 +510,8 @@ do {									\
 static __always_inline int x86_this_cpu_constant_test_bit(unsigned int nr,
                         const unsigned long __percpu *addr)
 {
-	unsigned long __percpu *a = (unsigned long *)addr + nr / BITS_PER_LONG;
+	unsigned long __percpu *a =
+		(unsigned long __percpu *)addr + nr / BITS_PER_LONG;
 
 	return ((1UL << (nr % BITS_PER_LONG)) & percpu_read(*a)) != 0;
 }
