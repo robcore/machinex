@@ -621,9 +621,11 @@ ARCH_CFLAGS :=
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= -Os
 else
 KBUILD_CFLAGS	+= -O2
 endif
@@ -631,10 +633,6 @@ endif
 # conserve stack if available
 # do this early so that an architecture can override it.
 KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
-
-# Fix false positives for non-zero returns for __builtin_return_address in
-# newer versions of gcc
-KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
