@@ -4312,7 +4312,7 @@ void print_worker_info(const char *log_lvl, struct task_struct *task)
 	 * This function is called without any synchronization and @task
 	 * could be in any state.  Be careful with dereferences.
 	 */
-	worker = kthread_probe_data(task);
+	worker = probe_kthread_data(task);
 
 	/*
 	 * Carefully copy the associated workqueue's workfn and name.  Keep
