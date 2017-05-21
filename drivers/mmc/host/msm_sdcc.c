@@ -3712,7 +3712,7 @@ out_recover:
 			WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 			     __func__, rc);
 
-		//rc = __pm_runtime_set_status(dev, RPM_ACTIVE);
+		rc = __pm_runtime_set_status(dev, RPM_ACTIVE);
 		return rc;
 		}
 out:
@@ -3739,7 +3739,7 @@ static int msmsdcc_disable(struct mmc_host *mmc)
 	if (rc < 0) {
 		WARN(1, "%s: %s: failed with error %d\n", mmc_hostname(mmc),
 		     __func__, rc);
-		//rc = __pm_runtime_set_status(mmc->parent, RPM_SUSPENDED);
+		rc = __pm_runtime_set_status(mmc->parent, RPM_SUSPENDED);
 	return rc;
 	}
 
@@ -7061,7 +7061,7 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 * pending_resume flag is cleared before calling the
 	 * msmsdcc_runtime_suspend().
 	 */
-	if (!pm_runtime_suspended(dev) && !host->pending_resume) {
+	if (!pm_runtime_suspended(dev) && !host->pending_resume)
 		rc = msmsdcc_runtime_suspend(dev);
 
 out:
