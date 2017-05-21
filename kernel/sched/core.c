@@ -3993,7 +3993,7 @@ void set_user_nice(struct task_struct *p, long nice)
 			resched_curr(rq);
 	}
 	if (running)
-		set_curr_task(rq, p);
+		set_curr_task(rq);
 out_unlock:
 	task_rq_unlock(rq, p, &rf);
 }
