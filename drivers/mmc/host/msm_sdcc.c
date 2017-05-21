@@ -3490,8 +3490,7 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
-	if ((msmsdcc_is_pwrsave(host) && (host->pdev->id == 3)) ||
-		(msmsdcc_is_pwrsave(host) && mmc_host_may_gate_card(host->mmc->card)))
+	if ((msmsdcc_is_pwrsave(host) && (host->pdev->id == 3))
 		clk |= MCI_CLK_PWRSAVE;
 
 	clk |= MCI_CLK_FLOWENA;
@@ -7010,7 +7009,7 @@ msmsdcc_runtime_resume(struct device *dev)
 			if ((host->plat->mpm_sdiowakeup_int ||
 					host->plat->sdiowakeup_irq) &&
 					wake_lock_active(&host->sdio_wlock))
-				wake_lock_timeout(&host->sdio_wlock, 1);
+				wake_lock_timeout(&host->sdio_wlock, msecs_to_jiffies(2));
 		}
 
 		wake_unlock(&host->sdio_suspend_wlock);
@@ -7064,15 +7063,8 @@ static int msmsdcc_pm_suspend(struct device *dev)
 	 */
 	if (!pm_runtime_suspended(dev) && !host->pending_resume) {
 		rc = msmsdcc_runtime_suspend(dev);
-		/* This flag must not be set if system is entering into suspend */
-		host->pending_resume = false;
-		return rc;
-	} else {
-		rc = -EBUSY;
-		host->pending_resume = true;
-		return rc;
-	}
- out:
+
+out:
 	/* This flag must not be set if system is entering into suspend */
 	host->pending_resume = false;
 	return rc;
