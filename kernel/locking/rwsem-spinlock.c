@@ -128,6 +128,7 @@ __rwsem_wake_one_writer(struct rw_semaphore *sem)
 void __sched __down_read(struct rw_semaphore *sem)
 {
 	struct rwsem_waiter waiter;
+	struct task_struct *tsk;
 	unsigned long flags;
 
 	raw_spin_lock_irqsave(&sem->wait_lock, flags);
@@ -139,12 +140,13 @@ void __sched __down_read(struct rw_semaphore *sem)
 		goto out;
 	}
 
-	set_current_state(TASK_UNINTERRUPTIBLE);
+	tsk = current;
+	set_task_state(tsk, TASK_UNINTERRUPTIBLE);
 
 	/* set up my own style of waitqueue */
-	waiter.task = current;
+	waiter.task = tsk;
 	waiter.type = RWSEM_WAITING_FOR_READ;
-	get_task_struct(current);
+	get_task_struct(tsk);
 
 	list_add_tail(&waiter.list, &sem->wait_list);
 
@@ -156,10 +158,10 @@ void __sched __down_read(struct rw_semaphore *sem)
 		if (!waiter.task)
 			break;
 		schedule();
-		set_current_state(TASK_UNINTERRUPTIBLE);
+		set_task_state(tsk, TASK_UNINTERRUPTIBLE);
 	}
 
-	__set_current_state(TASK_RUNNING);
+	__set_task_state(tsk, TASK_RUNNING);
  out:
 	;
 }
@@ -192,13 +194,15 @@ int __down_read_trylock(struct rw_semaphore *sem)
 int __sched __down_write_common(struct rw_semaphore *sem, int state)
 {
 	struct rwsem_waiter waiter;
+	struct task_struct *tsk;
 	unsigned long flags;
 	int ret = 0;
 
 	raw_spin_lock_irqsave(&sem->wait_lock, flags);
 
 	/* set up my own style of waitqueue */
-	waiter.task = current;
+	tsk = current;
+	waiter.task = tsk;
 	waiter.type = RWSEM_WAITING_FOR_WRITE;
 	list_add_tail(&waiter.list, &sem->wait_list);
 
@@ -216,7 +220,7 @@ int __sched __down_write_common(struct rw_semaphore *sem, int state)
 			ret = -EINTR;
 			goto out;
 		}
-		set_current_state(state);
+		set_task_state(tsk, state);
 		raw_spin_unlock_irqrestore(&sem->wait_lock, flags);
 		schedule();
 		raw_spin_lock_irqsave(&sem->wait_lock, flags);

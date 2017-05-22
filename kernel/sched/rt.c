@@ -821,7 +821,7 @@ static void __enable_runtime(struct rq *rq)
 	}
 }
 
-unsigned int Lrt_runtime_sharing = 1;
+unsigned int Lrt_runtime_sharing = 0;
 
 void relay_rtrs(unsigned int rtrs)
 {
@@ -1586,8 +1586,8 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 	 * put_prev_task. A stale value can cause us to over-charge execution
 	 * time to real-time task, that could trigger throttling unnecessarily
 	 */
-	if (rq->clock_update_flags >= RQCF_UPDATED)
-		rq_clock_skip_update(rq, true);
+	if (rq->clock_skip_update > 0)
+		rq->clock_skip_update = 0;
 
 	update_rq_clock(rq);
 	p = rt_task_of(rt_se);
@@ -1597,7 +1597,7 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 }
 
 static struct task_struct *
-pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
+pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct pin_cookie cookie)
 {
 	struct task_struct *p;
 	struct rt_rq *rt_rq = &rq->rt;
@@ -1609,9 +1609,9 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 		 * disabled avoiding further scheduler activity on it and we're
 		 * being very careful to re-start the picking loop.
 		 */
-		rq_unpin_lock(rq, rf);
+		lockdep_unpin_lock(&rq->lock, cookie);
 		pull_rt_task(rq);
-		rq_repin_lock(rq, rf);
+		lockdep_repin_lock(&rq->lock, cookie);
 		/*
 		 * pull_rt_task() can drop (and re-acquire) rq->lock; this
 		 * means a dl or stop task can slip in, in which case we need

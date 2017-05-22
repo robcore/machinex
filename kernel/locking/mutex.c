@@ -725,6 +725,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 		    struct lockdep_map *nest_lock, unsigned long ip,
 		    struct ww_acquire_ctx *ww_ctx, const bool use_ww_ctx)
 {
+	struct task_struct *task = current;
 	struct mutex_waiter waiter;
 	unsigned long flags;
 	bool first = false;
@@ -789,7 +790,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 	if (__mutex_waiter_is_first(lock, &waiter))
 		__mutex_set_flag(lock, MUTEX_FLAG_WAITERS);
 
-	set_current_state(state);
+	set_task_state(current, state);
 	for (;;) {
 		/*
 		 * Once we hold wait_lock, we're serialized against
@@ -805,7 +806,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 		 * wait_lock. This ensures the lock cancellation is ordered
 		 * against mutex_unlock() and wake-ups do not go missing.
 		 */
-		if (unlikely(signal_pending_state(state, current))) {
+		if (unlikely(signal_pending_state(state, task))) {
 			ret = -EINTR;
 			goto err;
 		}
@@ -829,7 +830,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 				__mutex_set_flag(lock, MUTEX_FLAG_HANDOFF);
 		}
 
-		set_current_state(state);
+		set_task_state(task, state);
 		/*
 		 * Here we order against unlock; we must either see it change
 		 * state back to RUNNING and fall through the next schedule(),
@@ -843,9 +844,9 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 	}
 	spin_lock_mutex(&lock->wait_lock, flags);
 acquired:
-	__set_current_state(TASK_RUNNING);
+	__set_task_state(task, TASK_RUNNING);
 
-	mutex_remove_waiter(lock, &waiter, current);
+	mutex_remove_waiter(lock, &waiter, task);
 	if (likely(list_empty(&lock->wait_list)))
 		__mutex_clear_flag(lock, MUTEX_FLAGS);
 
@@ -863,8 +864,8 @@ skip_wait:
 	return 0;
 
 err:
-	__set_current_state(TASK_RUNNING);
-	mutex_remove_waiter(lock, &waiter, current);
+	__set_task_state(task, TASK_RUNNING);
+	mutex_remove_waiter(lock, &waiter, task);
 err_early_backoff:
 	spin_unlock_mutex(&lock->wait_lock, flags);
 	debug_mutex_free_waiter(&waiter);
@@ -917,20 +918,6 @@ mutex_lock_interruptible_nested(struct mutex *lock, unsigned int subclass)
 	return __mutex_lock(lock, TASK_INTERRUPTIBLE, subclass, NULL, _RET_IP_);
 }
 EXPORT_SYMBOL_GPL(mutex_lock_interruptible_nested);
-
-void __sched
-mutex_lock_io_nested(struct mutex *lock, unsigned int subclass)
-{
-	int token;
-
-	might_sleep();
-
-	token = io_schedule_prepare();
-	__mutex_lock_common(lock, TASK_UNINTERRUPTIBLE,
-			    subclass, NULL, _RET_IP_, NULL, 0);
-	io_schedule_finish(token);
-}
-EXPORT_SYMBOL_GPL(mutex_lock_io_nested);
 
 static inline int
 ww_mutex_deadlock_injection(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
@@ -1101,16 +1088,6 @@ int __sched mutex_lock_killable(struct mutex *lock)
 	return __mutex_lock_killable_slowpath(lock);
 }
 EXPORT_SYMBOL(mutex_lock_killable);
-
-void __sched mutex_lock_io(struct mutex *lock)
-{
-	int token;
-
-	token = io_schedule_prepare();
-	mutex_lock(lock);
-	io_schedule_finish(token);
-}
-EXPORT_SYMBOL_GPL(mutex_lock_io);
 
 static noinline void __sched
 __mutex_lock_slowpath(struct mutex *lock)

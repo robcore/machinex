@@ -319,7 +319,8 @@ out_freectx:
 static void kill_ctx(struct kioctx *ctx)
 {
 	int (*cancel)(struct kiocb *, struct io_event *);
-	DECLARE_WAITQUEUE(wait, current);
+	struct task_struct *tsk = current;
+	DECLARE_WAITQUEUE(wait, tsk);
 	struct io_event res;
 
 	spin_lock_irq(&ctx->ctx_lock);
@@ -342,14 +343,14 @@ static void kill_ctx(struct kioctx *ctx)
 		goto out;
 
 	add_wait_queue(&ctx->wait, &wait);
-	set_current_state(TASK_UNINTERRUPTIBLE);
+	set_task_state(tsk, TASK_UNINTERRUPTIBLE);
 	while (ctx->reqs_active) {
 		spin_unlock_irq(&ctx->ctx_lock);
 		io_schedule();
-		set_current_state(TASK_UNINTERRUPTIBLE);
+		set_task_state(tsk, TASK_UNINTERRUPTIBLE);
 		spin_lock_irq(&ctx->ctx_lock);
 	}
-	__set_current_state(TASK_RUNNING);
+	__set_task_state(tsk, TASK_RUNNING);
 	remove_wait_queue(&ctx->wait, &wait);
 
 out:
@@ -1096,7 +1097,8 @@ static int read_events(struct kioctx *ctx,
 			struct timespec __user *timeout)
 {
 	long			start_jiffies = jiffies;
-	DECLARE_WAITQUEUE(wait, current);
+	struct task_struct	*tsk = current;
+	DECLARE_WAITQUEUE(wait, tsk);
 	int			ret;
 	int			i = 0;
 	struct io_event		ent;
@@ -1157,7 +1159,7 @@ retry:
 	while (likely(i < nr)) {
 		add_wait_queue_exclusive(&ctx->wait, &wait);
 		do {
-			set_current_state(TASK_INTERRUPTIBLE);
+			set_task_state(tsk, TASK_INTERRUPTIBLE);
 			ret = aio_read_evt(ctx, &ent);
 			if (ret)
 				break;
@@ -1175,14 +1177,14 @@ retry:
 				io_schedule();
 			else
 				schedule();
-			if (signal_pending(current)) {
+			if (signal_pending(tsk)) {
 				ret = -EINTR;
 				break;
 			}
 			/*ret = aio_read_evt(ctx, &ent);*/
 		} while (1) ;
 
-		set_current_state(TASK_RUNNING);
+		set_task_state(tsk, TASK_RUNNING);
 		remove_wait_queue(&ctx->wait, &wait);
 
 		if (unlikely(ret <= 0))
