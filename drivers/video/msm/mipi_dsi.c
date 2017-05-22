@@ -188,7 +188,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	printk("Rob's DSI OFF HOOK\n");
+	printk("The answer is beneath us\n");
 
 #if 0
 	state_suspend();
