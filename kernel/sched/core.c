@@ -3004,6 +3004,9 @@ context_switch(struct rq *rq, struct task_struct *prev,
 		prev->active_mm = NULL;
 		rq->prev_mm = oldmm;
 	}
+
+	rq->clock_skip_update = 0;
+
 	/*
 	 * Since the runqueue lock will be released by the next
 	 * task (which is an invalid locking op but in the case
@@ -3643,7 +3646,6 @@ static void __sched __schedule(void)
 	walt_update_task_ravg(prev, rq, PUT_PREV_TASK, wallclock, 0);
 	walt_update_task_ravg(next, rq, PICK_NEXT_TASK, wallclock, 0);
 	clear_tsk_need_resched(prev);
-	rq->clock_skip_update = 0;
 
 	if (likely(prev != next)) {
 		rq->nr_switches++;
@@ -3661,6 +3663,7 @@ static void __sched __schedule(void)
 		cpu = smp_processor_id();
 		rq = cpu_rq(cpu);
 	} else {
+		rq->clock_skip_update = 0;
 		prev->yield_count++;
 		rq_unpin_lock(rq, &rf);
 		raw_spin_unlock_irq(&rq->lock);
