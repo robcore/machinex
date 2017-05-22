@@ -2050,7 +2050,7 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 	if ((event == CPUFREQ_GOV_STOP) && !ret)
 		module_put(policy->governor->owner);
 
-	schedule_work(&cpu_policy->update);
+	schedule_work(&policy->update);
 
 	return ret;
 }
