@@ -129,6 +129,7 @@ int rcu_jiffies_till_stall_check(void);
 #endif /* #ifdef CONFIG_RCU_STALL_COMMON */
 
 void rcu_early_boot_tests(void);
+void rcu_test_sync_prims(void);
 
 /*
  * This function really isn't for public consumption, but RCU is special in
