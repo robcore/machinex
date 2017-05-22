@@ -178,8 +178,9 @@ static void cpuboost_input_event(struct input_handle *handle,
 
 	now = ktime_to_us(ktime_get());
 	min_interval = max(min_input_interval, input_boost_ms);
+	delta = (now - last_input_time);
 
-	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+	if (delta < (min_interval * USEC_PER_MSEC))
 		return;
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
@@ -198,7 +199,7 @@ static int cpuboost_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "cpu-boost";
+	handle->name = "cpufreq";
 
 	error = input_register_handle(handle);
 	if (error)
@@ -262,7 +263,7 @@ static int cpu_boost_init(void)
 	int cpu, ret;
 	struct cpu_sync *s;
 
-	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI || WQ_FREEZABLE, 1);
+	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI || WQ_FREEZABLE, 0);
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
