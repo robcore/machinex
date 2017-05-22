@@ -972,7 +972,7 @@ static ssize_t poll_timeout_store(struct bus_type *bus, const char *buf,
 	    time > 120000000000ULL)
 		return -EINVAL;
 	poll_timeout = time;
-	hr_time = ktime_set(0, poll_timeout);
+	hr_time = poll_timeout;
 
 	if (!hrtimer_is_queued(&ap_poll_timer) ||
 	    !hrtimer_forward(&ap_poll_timer, hrtimer_get_expires(&ap_poll_timer), hr_time)) {

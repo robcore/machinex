@@ -2375,7 +2375,7 @@ static inline ktime_t net_timedelta(ktime_t t)
 
 static inline ktime_t net_invalid_timestamp(void)
 {
-	return ktime_set(0, 0);
+	return 0;
 }
 
 extern void skb_timestamping_init(void);
