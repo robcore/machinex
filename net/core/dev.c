@@ -1617,7 +1617,7 @@ int dev_forward_skb(struct net_device *dev, struct sk_buff *skb)
 	skb->skb_iif = 0;
 	skb->dev = dev;
 	skb_dst_drop(skb);
-	skb->tstamp.tv64 = 0;
+	skb->tstamp = 0;
 	skb->pkt_type = PACKET_HOST;
 	skb->protocol = eth_type_trans(skb, dev);
 	skb->mark = 0;
