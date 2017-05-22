@@ -180,8 +180,6 @@ static inline void do_raw_spin_unlock(raw_spinlock_t *lock) __releases(lock)
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 # define raw_spin_lock_nested(lock, subclass) \
 	_raw_spin_lock_nested(lock, subclass)
-# define raw_spin_lock_bh_nested(lock, subclass) \
-	_raw_spin_lock_bh_nested(lock, subclass)
 
 # define raw_spin_lock_nest_lock(lock, nest_lock)			\
 	 do {								\
@@ -191,7 +189,6 @@ static inline void do_raw_spin_unlock(raw_spinlock_t *lock) __releases(lock)
 #else
 # define raw_spin_lock_nested(lock, subclass)		_raw_spin_lock(lock)
 # define raw_spin_lock_nest_lock(lock, nest_lock)	_raw_spin_lock(lock)
-# define raw_spin_lock_bh_nested(lock, subclass)	_raw_spin_lock_bh(lock)
 #endif
 
 #if defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)
@@ -309,11 +306,6 @@ static __always_inline int spin_trylock(spinlock_t *lock)
 #define spin_lock_nested(lock, subclass)			\
 do {								\
 	raw_spin_lock_nested(spinlock_check(lock), subclass);	\
-} while (0)
-
-#define spin_lock_bh_nested(lock, subclass)			\
-do {								\
-	raw_spin_lock_bh_nested(spinlock_check(lock), subclass);\
 } while (0)
 
 #define spin_lock_nest_lock(lock, nest_lock)				\
