@@ -16,6 +16,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
@@ -30,7 +31,7 @@
 struct cpu_sync {
 	unsigned int cpu;
 	unsigned int input_boost_min;
-	unsigned int input_boost_freq;
+	unsigned int input_boost_freq = 1350000;
 };
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
@@ -43,7 +44,7 @@ static struct delayed_work input_boost_rem;
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_ms = 100;
+static unsigned int input_boost_ms = 60;
 module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
@@ -125,9 +126,9 @@ static void update_policy_online(void)
 
 	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
 	get_online_cpus();
-	for_each_online_cpu(i)
+	for_each_online_cpu(i) {
 		cpufreq_update_policy(i);
-
+	}
 	put_online_cpus();
 }
 
@@ -151,7 +152,7 @@ static void do_input_boost(struct work_struct *work)
 	unsigned int i;
 	struct cpu_sync *i_sync_info;
 
-	if ((!input_boost_enabled) || (!i_sync_info->input_boost_freq) || (!input_boost_ms))
+	if (!input_boost_enabled || !input_boost_ms)
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
@@ -171,15 +172,18 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
-	u64 delta;
+	unsigned int min_interval;
 
-	now = ktime_to_us(ktime_get());
-	delta = (now - last_input_time);
-
-	if (delta < msecs_to_jiffies(min_input_interval))
+	if (!input_boost_enabled)
 		return;
 
-	mod_delayed_work_on(0, input_boost_wq, &input_boost_work, 0);
+	now = ktime_to_us(ktime_get());
+	min_interval = max(min_input_interval, input_boost_ms);
+
+	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+		return;
+
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
 	last_input_time = ktime_to_us(ktime_get());
 }
 
@@ -254,30 +258,27 @@ static struct input_handler cpuboost_input_handler = {
 	.id_table       = cpuboost_ids,
 };
 
-static int __init cpu_boost_init(void)
+static int cpu_boost_init(void)
 {
 	int cpu, ret;
 	struct cpu_sync *s;
+
+	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI || WQ_FREEZABLE, 1);
+	if (!cpu_boost_wq)
+		return -EFAULT;
+
+	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
+	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
 	}
-
-	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI, 0);
-	if (!cpu_boost_wq)
-		return -EFAULT;
-	input_boost_wq = alloc_workqueue("iboost_wq", WQ_HIGHPRI, 0);
-	if (!input_boost_wq)
-		return -EFAULT;
-
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
+
 	ret = input_register_handler(&cpuboost_input_handler);
-
-	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
-	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
-
-
+	if (ret)
+		pr_err("Cannot register cpuboost input handler.\n");
 
 	return ret;
 }
