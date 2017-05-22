@@ -319,8 +319,7 @@ out_freectx:
 static void kill_ctx(struct kioctx *ctx)
 {
 	int (*cancel)(struct kiocb *, struct io_event *);
-	struct task_struct *tsk = current;
-	DECLARE_WAITQUEUE(wait, tsk);
+	DECLARE_WAITQUEUE(wait, current);
 	struct io_event res;
 
 	spin_lock_irq(&ctx->ctx_lock);
@@ -1097,8 +1096,7 @@ static int read_events(struct kioctx *ctx,
 			struct timespec __user *timeout)
 {
 	long			start_jiffies = jiffies;
-	struct task_struct	*tsk = current;
-	DECLARE_WAITQUEUE(wait, tsk);
+	DECLARE_WAITQUEUE(wait, current);
 	int			ret;
 	int			i = 0;
 	struct io_event		ent;
