@@ -23,10 +23,14 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#include <linux/cpufreq_hardlimit.h>
+#endif
 
 struct cpu_sync {
-	int cpu;
+	unsigned int cpu;
 	unsigned int input_boost_min;
+	unsigned int input_boost_freq;
 };
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
@@ -34,14 +38,12 @@ static struct workqueue_struct *cpu_boost_wq;
 static struct workqueue_struct *input_boost_wq;
 
 static struct delayed_work input_boost_work;
+static struct delayed_work input_boost_rem;
 
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_freq = 1350000;
-module_param(input_boost_freq, uint, 0644);
-
-static unsigned int input_boost_ms = 50;
+static unsigned int input_boost_ms = 100;
 module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
@@ -49,16 +51,45 @@ static u64 last_input_time;
 static unsigned int min_input_interval = 2000;
 module_param(min_input_interval, uint, 0644);
 
+static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
+{
+	int i;
+	unsigned int val;
+
+	/* single number: apply to all CPUs */
+	if (sscanf(buf, "%u\n", &val) != 1)
+		return -EINVAL;
+
+	for_each_possible_cpu(i)
+		per_cpu(sync_info, i).input_boost_freq = val;
+
+	return 0;
+}
+
+static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
+{
+	struct cpu_sync *i_sync_info;
+	int i;
+	ssize_t ret;
+
+	for_each_possible_cpu(i)
+		i_sync_info = &per_cpu(sync_info, i);
+
+		ret = sprintf(buf, "%u", i_sync_info->input_boost_freq);
+
+		return ret;
+}
+
+static const struct kernel_param_ops param_ops_input_boost_freq = {
+	.set = set_input_boost_freq,
+	.get = get_input_boost_freq,
+};
+module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
+
 /*
  * The CPUFREQ_ADJUST notifier is used to override the current policy min to
  * make sure policy min >= boost_min. The cpufreq framework then does the job
  * of enforcing the new policy.
- *
- * The sync kthread needs to run on the CPU in question to avoid deadlocks in
- * the wake up code. Achieve this by binding the thread to the respective
- * CPU. But a CPU going offline unbinds threads from that CPU. So, set it up
- * again each time the CPU comes back up. We can use CPUFREQ_START to figure
- * out a CPU is coming online instead of registering for hotplug notifiers.
  */
 static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 				void *data)
@@ -67,18 +98,19 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	unsigned int cpu = policy->cpu;
 	struct cpu_sync *s = &per_cpu(sync_info, cpu);
 	unsigned int ib_min = s->input_boost_min;
+	unsigned int min;
 
-	if (!input_boost_enabled || !input_boost_freq)
+	if (val != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
 
-	switch (val) {
-	case CPUFREQ_ADJUST:
-		if (!ib_min)
-			break;
+	if (!ib_min)
+		return NOTIFY_OK;
 
-		cpufreq_verify_within_limits(policy, ib_min, UINT_MAX);
-		break;
-	}
+	min = min(ib_min, policy->max);
+
+	//cpufreq_verify_within_limits(policy, ib_min, UINT_MAX);
+	/* Yank555.lu - Enforce hardlimit */
+	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max));
 
 	return NOTIFY_OK;
 }
@@ -104,9 +136,6 @@ static void do_input_boost_rem(struct work_struct *work)
 	unsigned int i;
 	struct cpu_sync *i_sync_info;
 
-	if (!input_boost_enabled || !input_boost_freq)
-		return;
-
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(i) {
 		i_sync_info = &per_cpu(sync_info, i);
@@ -122,13 +151,13 @@ static void do_input_boost(struct work_struct *work)
 	unsigned int i;
 	struct cpu_sync *i_sync_info;
 
-	if (!input_boost_enabled || !input_boost_freq)
+	if ((!input_boost_enabled) || (!i_sync_info->input_boost_freq) || (!input_boost_ms))
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(i) {
 		i_sync_info = &per_cpu(sync_info, i);
-		i_sync_info->input_boost_min = input_boost_freq;
+		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
 	/* Update policies for all online CPUs */
@@ -143,9 +172,6 @@ static void cpuboost_input_event(struct input_handle *handle,
 {
 	u64 now;
 	u64 delta;
-
-	if (!input_boost_enabled || !input_boost_freq)
-		return;
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input_time);
