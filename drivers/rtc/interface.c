@@ -797,7 +797,7 @@ static int rtc_timer_enqueue(struct rtc_device *rtc, struct rtc_timer *timer)
 
 	/* Skip over expired timers */
 	while (next) {
-		if (next->expires.tv64 >= now.tv64)
+		if (next->expires >= now)
 			break;
 		next = timerqueue_iterate_next(next);
 	}
@@ -889,7 +889,7 @@ again:
 	__rtc_read_time(rtc, &tm);
 	now = rtc_tm_to_ktime(tm);
 	while ((next = timerqueue_getnext(&rtc->timerqueue))) {
-		if (next->expires.tv64 > now.tv64)
+		if (next->expires > now)
 			break;
 
 		/* expire timer */

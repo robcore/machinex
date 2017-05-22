@@ -607,7 +607,7 @@ static int svc_udp_recvfrom(struct svc_rqst *rqstp)
 	if (len == 0)
 		return -EAFNOSUPPORT;
 	rqstp->rq_addrlen = len;
-	if (skb->tstamp.tv64 == 0) {
+	if (skb->tstamp == 0) {
 		skb->tstamp = ktime_get_real();
 		/* Don't enable netstamp, sunrpc doesn't
 		   need that much accuracy */

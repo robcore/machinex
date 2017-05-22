@@ -350,7 +350,7 @@ nfqnl_build_packet_message(struct nfqnl_instance *queue,
 		}
 	}
 
-	if (entskb->tstamp.tv64) {
+	if (entskb->tstamp) {
 		struct nfqnl_msg_packet_timestamp ts;
 		struct timeval tv = ktime_to_timeval(entskb->tstamp);
 		ts.sec = cpu_to_be64(tv.tv_sec);

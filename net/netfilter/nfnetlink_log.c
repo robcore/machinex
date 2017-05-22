@@ -471,7 +471,7 @@ __build_packet_message(struct nfulnl_instance *inst,
 			skb_mac_header(skb));
 	}
 
-	if (skb->tstamp.tv64) {
+	if (skb->tstamp) {
 		struct nfulnl_msg_packet_timestamp ts;
 		struct timeval tv = ktime_to_timeval(skb->tstamp);
 		ts.sec = cpu_to_be64(tv.tv_sec);

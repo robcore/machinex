@@ -2058,10 +2058,10 @@ sock_recv_timestamp(struct msghdr *msg, struct sock *sk, struct sk_buff *skb)
 	 */
 	if (sock_flag(sk, SOCK_RCVTSTAMP) ||
 	    sock_flag(sk, SOCK_TIMESTAMPING_RX_SOFTWARE) ||
-	    (kt.tv64 && sock_flag(sk, SOCK_TIMESTAMPING_SOFTWARE)) ||
-	    (hwtstamps->hwtstamp.tv64 &&
+	    (kt && sock_flag(sk, SOCK_TIMESTAMPING_SOFTWARE)) ||
+	    (hwtstamps->hwtstamp &&
 	     sock_flag(sk, SOCK_TIMESTAMPING_RAW_HARDWARE)) ||
-	    (hwtstamps->syststamp.tv64 &&
+	    (hwtstamps->syststamp &&
 	     sock_flag(sk, SOCK_TIMESTAMPING_SYS_HARDWARE)))
 		__sock_recv_timestamp(msg, sk, skb);
 	else

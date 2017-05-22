@@ -1828,7 +1828,7 @@ static int ipx_recvmsg(struct kiocb *iocb, struct socket *sock,
 				     copied);
 	if (rc)
 		goto out_free;
-	if (skb->tstamp.tv64)
+	if (skb->tstamp)
 		sk->sk_stamp = skb->tstamp;
 
 	if (sipx) {
