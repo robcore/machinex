@@ -223,6 +223,8 @@ static void account_kernel_stack(struct thread_info *ti, int account)
 
 static void release_task_stack(struct task_struct *tsk)
 {
+	if (WARN_ON(tsk->state != TASK_DEAD))
+		return;  /* Better to leak the stack than to free prematurely */
 	account_kernel_stack(tsk->stack, -1);
 	arch_release_thread_info(tsk->stack);
 	free_thread_info(tsk->stack);
@@ -1681,6 +1683,7 @@ bad_fork_cleanup_count:
 	atomic_dec(&p->cred->user->processes);
 	exit_creds(p);
 bad_fork_free:
+	p->state = TASK_DEAD;
 	put_task_stack(p);
 	free_task(p);
 fork_out:
