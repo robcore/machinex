@@ -5396,6 +5396,21 @@ long __sched io_schedule_timeout(long timeout)
 }
 EXPORT_SYMBOL(io_schedule_timeout);
 
+int io_schedule_prepare(void)
+{
+	int old_iowait = current->in_iowait;
+
+	current->in_iowait = 1;
+	blk_schedule_flush_plug(current);
+
+	return old_iowait;
+}
+
+void io_schedule_finish(int token)
+{
+	current->in_iowait = token;
+}
+
 void io_schedule(void)
 {
 	int token;
