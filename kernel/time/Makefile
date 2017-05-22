@@ -1,6 +1,6 @@
 obj-y += time.o timer.o hrtimer.o
 obj-y += timekeeping.o ntp.o clocksource.o jiffies.o timer_list.o
-obj-y += timeconv.o alarmtimer.o
+obj-y += timeconv.o timecounter.o alarmtimer.o
 
 ifeq ($(CONFIG_POSIX_TIMERS),y)
  obj-y += posix-timers.o posix-cpu-timers.o posix-clock.o itimer.o
