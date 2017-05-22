@@ -115,7 +115,7 @@ static void tk_set_wall_to_mono(struct timekeeper *tk, struct timespec64 wtm)
 static void tk_set_sleep_time(struct timekeeper *tk, struct timespec64 t)
 {
 	/* Verify consistency before modifying */
-	WARN_ON_ONCE(tk->offs_boot.tv64 != timespec64_to_ktime(tk->total_sleep_time).tv64);
+	WARN_ON_ONCE(tk->offs_boot != timespec64_to_ktime(tk->total_sleep_time));
 
 	tk->total_sleep_time	= t;
 	tk->offs_boot		= timespec64_to_ktime(t);
