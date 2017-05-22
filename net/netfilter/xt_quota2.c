@@ -85,7 +85,7 @@ static void quota2_log(unsigned int hooknum,
 	nlh = NLMSG_PUT(log_skb, /*pid*/0, /*seq*/0, qlog_nl_event,
 			sizeof(*pm));
 	pm = NLMSG_DATA(nlh);
-	if (skb->tstamp.tv64 == 0)
+	if (skb->tstamp == 0)
 		__net_timestamp((struct sk_buff *)skb);
 	pm->data_len = 0;
 	pm->hook = hooknum;
