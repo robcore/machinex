@@ -89,7 +89,7 @@ static void update_clk_statistics(struct kgsl_device *device,
 	struct kgsl_clk_stats *clkstats = &pwr->clk_stats;
 	ktime_t elapsed;
 	int elapsed_us;
-	if (clkstats->start.tv64 == 0)
+	if (clkstats->start == 0)
 		clkstats->start = ktime_get();
 	clkstats->stop = ktime_get();
 	elapsed = ktime_sub(clkstats->stop, clkstats->start);
