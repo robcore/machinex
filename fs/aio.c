@@ -1175,7 +1175,7 @@ retry:
 				io_schedule();
 			else
 				schedule();
-			if (signal_pending(tsk)) {
+			if (signal_pending(current)) {
 				ret = -EINTR;
 				break;
 			}
