@@ -506,6 +506,11 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 			 * for attempting rwsem_try_write_lock().
 			 */
 			wake_up_q(&wake_q);
+
+			/*
+			 * Reinitialize wake_q after use.
+			 */
+			wake_q_init(&wake_q);
 		}
 
 	} else
