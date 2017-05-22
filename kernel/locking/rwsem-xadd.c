@@ -337,11 +337,7 @@ static inline bool rwsem_can_spin_on_owner(struct rw_semaphore *sem)
 		goto done;
 	}
 
-	/*
-	 * As lock holder preemption issue, we both skip spinning if task is not
-	 * on cpu or its cpu is preempted
-	 */
-	ret = owner->on_cpu && !vcpu_is_preempted(task_cpu(owner));
+	ret = owner->on_cpu;
 done:
 	rcu_read_unlock();
 	return ret;
@@ -367,12 +363,8 @@ static noinline bool rwsem_spin_on_owner(struct rw_semaphore *sem)
 		 */
 		barrier();
 
-		/*
-		 * abort spinning when need_resched or owner is not running or
-		 * owner's cpu is preempted.
-		 */
-		if (!owner->on_cpu || need_resched() ||
-				vcpu_is_preempted(task_cpu(owner))) {
+		/* abort spinning when need_resched or owner is not running */
+		if (!owner->on_cpu || need_resched()) {
 			rcu_read_unlock();
 			return false;
 		}
