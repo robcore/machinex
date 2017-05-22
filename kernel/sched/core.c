@@ -5383,19 +5383,6 @@ out_irq:
 }
 EXPORT_SYMBOL_GPL(yield_to);
 
-long __sched io_schedule_timeout(long timeout)
-{
-	int token;
-	long ret;
-
-	token = io_schedule_prepare();
-	ret = schedule_timeout(timeout);
-	io_schedule_finish(token);
-
-	return ret;
-}
-EXPORT_SYMBOL(io_schedule_timeout);
-
 int io_schedule_prepare(void)
 {
 	int old_iowait = current->in_iowait;
@@ -5410,6 +5397,21 @@ void io_schedule_finish(int token)
 {
 	current->in_iowait = token;
 }
+
+long __sched io_schedule_timeout(long timeout)
+{
+	int token;
+	long ret;
+
+	token = io_schedule_prepare();
+	ret = schedule_timeout(timeout);
+	io_schedule_finish(token);
+
+	return ret;
+}
+EXPORT_SYMBOL(io_schedule_timeout);
+
+
 
 void io_schedule(void)
 {
