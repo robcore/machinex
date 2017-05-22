@@ -146,7 +146,7 @@ struct trace_array_cpu {
 	unsigned long		policy;
 	unsigned long		rt_priority;
 	unsigned long		skipped_entries;
-	cycle_t			preempt_timestamp;
+	u64			preempt_timestamp;
 	pid_t			pid;
 	uid_t			uid;
 	char			comm[TASK_COMM_LEN];
@@ -161,7 +161,7 @@ struct trace_array {
 	struct ring_buffer	*buffer;
 	int			cpu;
 	int			buffer_disabled;
-	cycle_t			time_start;
+	u64			time_start;
 	struct task_struct	*waiter;
 	struct trace_array_cpu	*data[NR_CPUS];
 };
@@ -464,7 +464,7 @@ static inline void __trace_stack(struct trace_array *tr, unsigned long flags,
 }
 #endif /* CONFIG_STACKTRACE */
 
-extern cycle_t ftrace_now(int cpu);
+extern u64 ftrace_now(int cpu);
 
 extern void trace_find_cmdline(int pid, char comm[]);
 
@@ -502,7 +502,7 @@ extern int trace_selftest_startup_branch(struct tracer *trace,
 #endif /* CONFIG_FTRACE_STARTUP_TEST */
 
 extern void *head_page(struct trace_array_cpu *data);
-extern unsigned long long ns2usecs(cycle_t nsec);
+extern unsigned long long ns2usecs(u64 nsec);
 extern int
 trace_vbprintk(unsigned long ip, const char *fmt, va_list args);
 extern int

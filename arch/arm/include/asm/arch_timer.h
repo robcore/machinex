@@ -12,7 +12,7 @@ struct arch_timer {
 #ifdef CONFIG_ARM_ARCH_TIMER
 int arch_timer_register(struct arch_timer *);
 int arch_timer_of_register(void);
-cycle_t arch_counter_get_cntpct(void);
+u64 arch_counter_get_cntpct(void);
 
 static inline void arch_counter_set_user_access(void)
 {
@@ -51,7 +51,7 @@ static inline int arch_timer_of_register(void)
 	return -ENXIO;
 }
 
-static inline cycle_t arch_counter_get_cntpct(void)
+static inline u64 arch_counter_get_cntpct(void)
 {
 	return 0;
 }

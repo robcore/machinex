@@ -38,9 +38,9 @@ static bool __init ms_hyperv_platform(void)
 		!memcmp("Microsoft Hv", hyp_signature, 12);
 }
 
-static cycle_t read_hv_clock(struct clocksource *arg)
+static u64 read_hv_clock(struct clocksource *arg)
 {
-	cycle_t current_tick;
+	u64 current_tick;
 	/*
 	 * Read the partition counter to get the current tick count. This count
 	 * is set to 0 when the partition is created and is incremented in

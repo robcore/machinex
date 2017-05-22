@@ -51,7 +51,7 @@ cycle_t clocksource_mmio_readw_down(struct clocksource *c)
  */
 int __init clocksource_mmio_init(void __iomem *base, const char *name,
 	unsigned long hz, int rating, unsigned bits,
-	cycle_t (*read)(struct clocksource *))
+	u64 (*read)(struct clocksource *))
 {
 	struct clocksource_mmio *cs;
 

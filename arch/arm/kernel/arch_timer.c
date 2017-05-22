@@ -295,7 +295,7 @@ static int arch_timer_available(void)
 	return 0;
 }
 
-static inline cycle_t notrace counter_get_cntpct_mem(void)
+static inline u64 notrace counter_get_cntpct_mem(void)
 {
 	u32 cvall, cvalh, thigh;
 
@@ -305,7 +305,7 @@ static inline cycle_t notrace counter_get_cntpct_mem(void)
 		thigh = __raw_readl(timer_base + QTIMER_CNTP_HIGH_REG);
 	} while (cvalh != thigh);
 
-	return ((cycle_t) cvalh << 32) | cvall;
+	return ((u64) cvalh << 32) | cvall;
 }
 
 static inline u64 notrace counter_get_cntpct_cp15(void)
@@ -317,7 +317,7 @@ static inline u64 notrace counter_get_cntpct_cp15(void)
 	return cval;
 }
 
-static inline cycle_t notrace counter_get_cntvct_mem(void)
+static inline u64 notrace counter_get_cntvct_mem(void)
 {
 	u32 cvall, cvalh, thigh;
 
@@ -327,27 +327,27 @@ static inline cycle_t notrace counter_get_cntvct_mem(void)
 		thigh = __raw_readl(timer_base + QTIMER_CNTV_HIGH_REG);
 	} while (cvalh != thigh);
 
-	return ((cycle_t) cvalh << 32) | cvall;
+	return ((u64) cvalh << 32) | cvall;
 }
 
-static inline cycle_t notrace counter_get_cntvct_cp15(void)
+static inline u64 notrace counter_get_cntvct_cp15(void)
 {
 	u32 cvall, cvalh;
 
 	asm volatile("mrrc p15, 1, %0, %1, c14" : "=r" (cvall), "=r" (cvalh));
-	return ((cycle_t) cvalh << 32) | cvall;
+	return ((u64) cvalh << 32) | cvall;
 }
 
-static cycle_t (*get_cntpct_func)(void) = counter_get_cntpct_cp15;
-static cycle_t (*get_cntvct_func)(void) = counter_get_cntvct_cp15;
+static u64 (*get_cntpct_func)(void) = counter_get_cntpct_cp15;
+static u64 (*get_cntvct_func)(void) = counter_get_cntvct_cp15;
 
-cycle_t arch_counter_get_cntpct(void)
+u64 arch_counter_get_cntpct(void)
 {
 	return get_cntpct_func();
 }
 EXPORT_SYMBOL(arch_counter_get_cntpct);
 
-static cycle_t arch_counter_read(struct clocksource *cs)
+static u64 arch_counter_read(struct clocksource *cs)
 {
 	return arch_counter_get_cntpct();
 }

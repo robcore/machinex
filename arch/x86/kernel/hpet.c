@@ -757,7 +757,7 @@ static struct clocksource clocksource_hpet = {
 static int hpet_clocksource_register(void)
 {
 	u64 start, now;
-	cycle_t t1;
+	u64 t1;
 
 	/* Start the counter */
 	hpet_restart_counter();

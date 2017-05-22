@@ -32,11 +32,11 @@ struct tk_read_base {
 	/* Current clocksource used for timekeeping. */
 	struct clocksource	*clock;
 	/* Read function of @clock */
-	cycle_t			(*read)(struct clocksource *cs);
+	u64			(*read)(struct clocksource *cs);
 	/* Bitmask for two's complement subtraction of non 64bit counters */
-	cycle_t			mask;
+	u64			mask;
 	/* Last cycle value */
-	cycle_t			cycle_last;
+	u64			cycle_last;
 	/* NTP adjusted clock multiplier */
 	u32			mult;
 	/* The shift value of the current clocksource. */
@@ -106,7 +106,7 @@ struct timekeeper {
 	u8			cs_was_changed_seq;
 	ktime_t			next_leap_ktime;
 	struct timespec64	raw_time;
-	cycle_t			cycle_interval;
+	u64			cycle_interval;
 	u64			xtime_interval;
 	s64			xtime_remainder;
 	u32			raw_interval;
@@ -138,7 +138,7 @@ extern void update_vsyscall_tz(void);
 
 extern void update_vsyscall_old(struct timespec *ts, struct timespec *wtm,
 						struct clocksource *c, u32 mult,
-						cycle_t cycle_last);
+						u64 cycle_last);
 
 extern void update_vsyscall_tz(void);
 

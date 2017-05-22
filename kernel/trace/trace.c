@@ -169,7 +169,7 @@ static int __init stop_trace_on_warning(char *str)
 }
 __setup("traceoff_on_warning", stop_trace_on_warning);
 
-unsigned long long ns2usecs(cycle_t nsec)
+unsigned long long ns2usecs(u64 nsec)
 {
 	nsec += 500;
 	do_div(nsec, 1000);
@@ -200,7 +200,7 @@ int filter_current_check_discard(struct ring_buffer *buffer,
 }
 EXPORT_SYMBOL_GPL(filter_current_check_discard);
 
-cycle_t ftrace_now(int cpu)
+u64 ftrace_now(int cpu)
 {
 	u64 ts;
 
