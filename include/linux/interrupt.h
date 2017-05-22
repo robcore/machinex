@@ -205,6 +205,18 @@ extern void irq_wake_thread(unsigned int irq, void *dev_id);
 extern void suspend_device_irqs(void);
 extern void resume_device_irqs(void);
 
+/**
+ * struct irq_affinity - Description for automatic irq affinity assignments
+ * @pre_vectors:	Don't apply affinity to @pre_vectors at beginning of
+ *			the MSI(-X) vector space
+ * @post_vectors:	Don't apply affinity to @post_vectors at end of
+ *			the MSI(-X) vector space
+ */
+struct irq_affinity {
+	int	pre_vectors;
+	int	post_vectors;
+};
+
 #ifdef CONFIG_SMP
 
 extern cpumask_var_t irq_default_affinity;
