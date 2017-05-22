@@ -110,13 +110,16 @@ int rcu_num_nodes __read_mostly = NUM_RCU_NODES; /* Total # rcu_nodes in use. */
 int sysctl_panic_on_rcu_stall __read_mostly;
 
 /*
- * The rcu_scheduler_active variable transitions from zero to one just
- * before the first task is spawned.  So when this variable is zero, RCU
- * can assume that there is but one task, allowing RCU to (for example)
+ * The rcu_scheduler_active variable is initialized to the value
+ * RCU_SCHEDULER_INACTIVE and transitions RCU_SCHEDULER_INIT just before the
+ * first task is spawned.  So when this variable is RCU_SCHEDULER_INACTIVE,
+ * RCU can assume that there is but one task, allowing RCU to (for example)
  * optimize synchronize_rcu() to a simple barrier().  When this variable
- * is one, RCU must actually do all the hard work required to detect real
- * grace periods.  This variable is also used to suppress boot-time false
- * positives from lockdep-RCU error checking.
+ * is RCU_SCHEDULER_INIT, RCU must actually do all the hard work required
+ * to detect real grace periods.  This variable is also used to suppress
+ * boot-time false positives from lockdep-RCU error checking.  Finally, it
+ * transitions from RCU_SCHEDULER_INIT to RCU_SCHEDULER_RUNNING after RCU
+ * is fully initialized, including all of its kthreads having been spawned.
  */
 int rcu_scheduler_active __read_mostly;
 EXPORT_SYMBOL_GPL(rcu_scheduler_active);
@@ -255,6 +258,30 @@ static DEFINE_PER_CPU(struct rcu_dynticks, rcu_dynticks) = {
 #endif /* #ifdef CONFIG_NO_HZ_FULL_SYSIDLE */
 };
 
+/*
+ * Snapshot the ->dynticks counter with full ordering so as to allow
+ * stable comparison of this counter with past and future snapshots.
+ */
+static int rcu_dynticks_snap(struct rcu_dynticks *rdtp)
+{
+	int snap = atomic_add_return(0, &rdtp->dynticks);
+
+	return snap;
+}
+
+/*
+ * Do a double-increment of the ->dynticks counter to emulate a
+ * momentary idle-CPU quiescent state.
+ */
+static void rcu_dynticks_momentary_idle(void)
+{
+	struct rcu_dynticks *rdtp = this_cpu_ptr(&rcu_dynticks);
+	int special = atomic_add_return(2, &rdtp->dynticks);
+
+	/* It is illegal to call this from idle state. */
+	WARN_ON_ONCE(!(special & 0x1));
+}
+
 DEFINE_PER_CPU_SHARED_ALIGNED(unsigned long, rcu_qs_ctr);
 EXPORT_PER_CPU_SYMBOL_GPL(rcu_qs_ctr);
 
@@ -274,7 +301,6 @@ EXPORT_PER_CPU_SYMBOL_GPL(rcu_qs_ctr);
 static void rcu_momentary_dyntick_idle(void)
 {
 	struct rcu_data *rdp;
-	struct rcu_dynticks *rdtp;
 	int resched_mask;
 	struct rcu_state *rsp;
 
@@ -301,10 +327,7 @@ static void rcu_momentary_dyntick_idle(void)
 		 * quiescent state, with no need for this CPU to do anything
 		 * further.
 		 */
-		rdtp = this_cpu_ptr(&rcu_dynticks);
-		smp_mb__before_atomic(); /* Earlier stuff before QS. */
-		atomic_add(2, &rdtp->dynticks);  /* QS. */
-		smp_mb__after_atomic(); /* Later stuff after QS. */
+		rcu_dynticks_momentary_idle();
 		break;
 	}
 }
@@ -1014,7 +1037,9 @@ void rcu_nmi_exit(void)
  */
 bool __rcu_is_watching(void)
 {
-	return atomic_read(this_cpu_ptr(&rcu_dynticks.dynticks)) & 0x1;
+	struct rcu_dynticks *rdtp = this_cpu_ptr(&rcu_dynticks);
+
+	return atomic_read(&rdtp->dynticks) & 0x1;
 }
 
 /**
@@ -1097,7 +1122,7 @@ static int rcu_is_cpu_rrupt_from_idle(void)
 static int dyntick_save_progress_counter(struct rcu_data *rdp,
 					 bool *isidle, unsigned long *maxj)
 {
-	rdp->dynticks_snap = atomic_add_return(0, &rdp->dynticks->dynticks);
+	rdp->dynticks_snap = rcu_dynticks_snap(rdp->dynticks);
 	rcu_sysidle_check_cpu(rdp, isidle, maxj);
 	if ((rdp->dynticks_snap & 0x1) == 0) {
 		trace_rcu_fqs(rdp->rsp->name, rdp->gpnum, rdp->cpu, TPS("dti"));
@@ -1123,7 +1148,7 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 	int *rcrmp;
 	unsigned int snap;
 
-	curr = (unsigned int)atomic_add_return(0, &rdp->dynticks->dynticks);
+	curr = (unsigned int)rcu_dynticks_snap(rdp->dynticks);
 	snap = (unsigned int)rdp->dynticks_snap;
 
 	/*
@@ -3927,18 +3952,22 @@ static int __init rcu_spawn_gp_kthread(void)
 early_initcall(rcu_spawn_gp_kthread);
 
 /*
- * This function is invoked towards the end of the scheduler's initialization
- * process.  Before this is called, the idle task might contain
- * RCU read-side critical sections (during which time, this idle
- * task is booting the system).  After this function is called, the
- * idle tasks are prohibited from containing RCU read-side critical
- * sections.  This function also enables RCU lockdep checking.
+ * This function is invoked towards the end of the scheduler's
+ * initialization process.  Before this is called, the idle task might
+ * contain synchronous grace-period primitives (during which time, this idle
+ * task is booting the system, and such primitives are no-ops).  After this
+ * function is called, any synchronous grace-period primitives are run as
+ * expedited, with the requesting task driving the grace period forward.
+ * A later core_initcall() rcu_exp_runtime_mode() will switch to full
+ * runtime RCU functionality.
  */
 void rcu_scheduler_starting(void)
 {
 	WARN_ON(num_online_cpus() != 1);
 	WARN_ON(nr_context_switches() > 0);
-	rcu_scheduler_active = 1;
+	rcu_test_sync_prims();
+	rcu_scheduler_active = RCU_SCHEDULER_INIT;
+	rcu_test_sync_prims();
 }
 
 /*
