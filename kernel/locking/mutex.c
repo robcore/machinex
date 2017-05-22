@@ -864,8 +864,8 @@ skip_wait:
 	return 0;
 
 err:
-	__set_task_state(current, TASK_RUNNING);
-	mutex_remove_waiter(lock, &waiter, current);
+	__set_task_state(task, TASK_RUNNING);
+	mutex_remove_waiter(lock, &waiter, task);
 err_early_backoff:
 	spin_unlock_mutex(&lock->wait_lock, flags);
 	debug_mutex_free_waiter(&waiter);
