@@ -2347,6 +2347,8 @@ int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 		cur_policy->user_policy.governor = cur_policy->governor;
 
 		unlock_policy_rwsem_write(cur_policy->cpu);
+
+		cpufreq_update_policy(cpu);
 	}
 err_out:
 	cpufreq_cpu_put(cur_policy);
@@ -2367,10 +2369,15 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 		case CPU_ONLINE_FROZEN:
 		case CPU_DOWN_FAILED:
 		case CPU_DOWN_FAILED_FROZEN:
+			cpufreq_add_dev(dev, NULL);
 			cpufreq_update_policy(cpu);
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
+			if (unlikely(lock_policy_rwsem_write(cpu)))
+				BUG();
+
+			__cpufreq_remove_dev(dev, NULL);
 			break;
 		}
 	}
