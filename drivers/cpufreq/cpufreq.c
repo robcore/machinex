@@ -2050,6 +2050,8 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 	if ((event == CPUFREQ_GOV_STOP) && !ret)
 		module_put(policy->governor->owner);
 
+	schedule_work(&cpu_policy->update);
+
 	return ret;
 }
 
@@ -2347,8 +2349,6 @@ int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 		cur_policy->user_policy.governor = cur_policy->governor;
 
 		unlock_policy_rwsem_write(cur_policy->cpu);
-
-		cpufreq_update_policy(cpu);
 	}
 err_out:
 	cpufreq_cpu_put(cur_policy);
