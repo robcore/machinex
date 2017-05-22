@@ -129,7 +129,7 @@ extern void account_idle_time(cputime_t);
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
 static inline void account_process_tick(struct task_struct *tsk, int user)
 {
-	vtime_flush(tsk);
+	vtime_account_user(tsk);
 }
 #else
 extern void account_process_tick(struct task_struct *, int user);
