@@ -200,7 +200,8 @@ our $Sparse	= qr{
 			__init_refok|
 			__kprobes|
 			__ref|
-			__rcu
+			__rcu|
+			__private
 		}x;
 
 # Notes to $Attribute:
