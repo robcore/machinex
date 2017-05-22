@@ -1319,13 +1319,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	//if (new_policy) {
-		//policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-		//policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
-	//} else {
-		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
-		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
-	//}
+	policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
+	policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
 
 	policy->util = 0;
 	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;

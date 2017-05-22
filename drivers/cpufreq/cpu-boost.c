@@ -171,6 +171,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
+	u64 delta;
 	unsigned int min_interval;
 
 	if (!input_boost_enabled)
