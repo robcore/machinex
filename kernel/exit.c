@@ -63,8 +63,6 @@
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 
-static void exit_mm(struct task_struct *tsk);
-
 static void __unhash_process(struct task_struct *p, bool group_dead)
 {
 	nr_threads--;
@@ -574,7 +572,7 @@ static void exit_mm(void)
 	mm_released = mmput(mm);
 	clear_thread_flag(TIF_MEMDIE);
 	if (mm_released)
-		set_tsk_thread_flag(tsk, TIF_MM_RELEASED);
+		set_tsk_thread_flag(current, TIF_MM_RELEASED);
 }
 
 /*
