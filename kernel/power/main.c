@@ -131,7 +131,7 @@ static ssize_t
 touch_event_timer_show(struct kobject *kobj,
 		 struct kobj_attribute *attr, char *buf)
 {
-	return snprintf(buf, MAX_BUF, "%lld", touch_evt_timer_val.tv64);
+	return snprintf(buf, MAX_BUF, "%lld", touch_evt_timer_val);
 }
 
 static ssize_t
