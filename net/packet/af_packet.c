@@ -1808,12 +1808,12 @@ static int tpacket_rcv(struct sk_buff *skb, struct net_device *dev,
 		h.h1->tp_mac = macoff;
 		h.h1->tp_net = netoff;
 		if ((po->tp_tstamp & SOF_TIMESTAMPING_SYS_HARDWARE)
-				&& shhwtstamps->syststamp.tv64)
+				&& shhwtstamps->syststamp)
 			tv = ktime_to_timeval(shhwtstamps->syststamp);
 		else if ((po->tp_tstamp & SOF_TIMESTAMPING_RAW_HARDWARE)
-				&& shhwtstamps->hwtstamp.tv64)
+				&& shhwtstamps->hwtstamp)
 			tv = ktime_to_timeval(shhwtstamps->hwtstamp);
-		else if (skb->tstamp.tv64)
+		else if (skb->tstamp)
 			tv = ktime_to_timeval(skb->tstamp);
 		else
 			do_gettimeofday(&tv);
@@ -1827,12 +1827,12 @@ static int tpacket_rcv(struct sk_buff *skb, struct net_device *dev,
 		h.h2->tp_mac = macoff;
 		h.h2->tp_net = netoff;
 		if ((po->tp_tstamp & SOF_TIMESTAMPING_SYS_HARDWARE)
-				&& shhwtstamps->syststamp.tv64)
+				&& shhwtstamps->syststamp)
 			ts = ktime_to_timespec(shhwtstamps->syststamp);
 		else if ((po->tp_tstamp & SOF_TIMESTAMPING_RAW_HARDWARE)
-				&& shhwtstamps->hwtstamp.tv64)
+				&& shhwtstamps->hwtstamp)
 			ts = ktime_to_timespec(shhwtstamps->hwtstamp);
-		else if (skb->tstamp.tv64)
+		else if (skb->tstamp)
 			ts = ktime_to_timespec(skb->tstamp);
 		else
 			getnstimeofday(&ts);
@@ -1857,12 +1857,12 @@ static int tpacket_rcv(struct sk_buff *skb, struct net_device *dev,
 		h.h3->tp_mac = macoff;
 		h.h3->tp_net = netoff;
 		if ((po->tp_tstamp & SOF_TIMESTAMPING_SYS_HARDWARE)
-				&& shhwtstamps->syststamp.tv64)
+				&& shhwtstamps->syststamp)
 			ts = ktime_to_timespec(shhwtstamps->syststamp);
 		else if ((po->tp_tstamp & SOF_TIMESTAMPING_RAW_HARDWARE)
-				&& shhwtstamps->hwtstamp.tv64)
+				&& shhwtstamps->hwtstamp)
 			ts = ktime_to_timespec(shhwtstamps->hwtstamp);
-		else if (skb->tstamp.tv64)
+		else if (skb->tstamp)
 			ts = ktime_to_timespec(skb->tstamp);
 		else
 			getnstimeofday(&ts);
