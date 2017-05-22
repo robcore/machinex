@@ -31,12 +31,11 @@
 struct cpu_sync {
 	unsigned int cpu;
 	unsigned int input_boost_min;
-	unsigned int input_boost_freq = 1350000;
+	unsigned int input_boost_freq;
 };
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
-static struct workqueue_struct *input_boost_wq;
 
 static struct delayed_work input_boost_work;
 static struct delayed_work input_boost_rem;
