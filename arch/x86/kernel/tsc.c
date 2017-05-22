@@ -818,16 +818,6 @@ static void __init check_system_tsc_reliable(void)
 		tsc_clocksource_reliable = 1;
 }
 
-static void tsc_cs_mark_unstable(struct clocksource *cs)
-{
-	if (tsc_unstable)
-		return;
-	tsc_unstable = 1;
-	clear_sched_clock_stable();
-	disable_sched_clock_irqtime();
-	pr_info("Marking TSC unstable due to clocksource watchdog\n");
-}
-
 /*
  * Make an educated guess if the TSC is trustworthy and synchronized
  * over all CPUs.
