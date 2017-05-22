@@ -617,7 +617,7 @@ ssize_t store_GPU_mV_table(struct cpufreq_policy *policy, const char *buf, size_
 static ssize_t show_cpuinfo_cur_freq(struct cpufreq_policy *policy,
 					char *buf)
 {
-	unsigned int cur_freq = __cpufreq_get(policy);
+	unsigned int cur_freq = __cpufreq_get(policy->cpu);
 
 	if (cur_freq)
 		return sprintf(buf, "%u\n", cur_freq);
@@ -1319,8 +1319,13 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-	policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+	//if (new_policy) {
+		//policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
+		//policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+	//} else {
+		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
+		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
+	//}
 
 	policy->util = 0;
 	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
