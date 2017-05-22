@@ -934,7 +934,7 @@ void jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block)
 	mutex_lock_io(&journal->j_checkpoint_mutex);
 	if (tid_gt(tid, journal->j_tail_sequence))
 		__jbd2_update_log_tail(journal, tid, block);
-	mutex_unlock_io(&journal->j_checkpoint_mutex);
+	mutex_unlock(&journal->j_checkpoint_mutex);
 }
 
 struct jbd2_stats_proc_session {
@@ -1330,7 +1330,7 @@ static int journal_reset(journal_t *journal)
 						journal->j_tail_sequence,
 						journal->j_tail,
 						WRITE_FUA);
-		mutex_unlock_io(&journal->j_checkpoint_mutex);
+		mutex_unlock(&journal->j_checkpoint_mutex);
 	}
 	return jbd2_journal_start_thread(journal);
 }
@@ -1697,7 +1697,7 @@ int jbd2_journal_destroy(journal_t *journal)
 		spin_unlock(&journal->j_list_lock);
 		mutex_lock_io(&journal->j_checkpoint_mutex);
 		err = jbd2_log_do_checkpoint(journal);
-		mutex_unlock_io(&journal->j_checkpoint_mutex);
+		mutex_unlock(&journal->j_checkpoint_mutex);
 		/*
 		 * If checkpointing failed, just free the buffers to avoid
 		 * looping forever
@@ -1719,7 +1719,7 @@ int jbd2_journal_destroy(journal_t *journal)
 		if (!is_journal_aborted(journal)) {
 			mutex_lock_io(&journal->j_checkpoint_mutex);
 			jbd2_mark_journal_empty(journal);
-			mutex_unlock_io(&journal->j_checkpoint_mutex);
+			mutex_unlock(&journal->j_checkpoint_mutex);
 		} else
 			err = -EIO;
 		brelse(journal->j_sb_buffer);
@@ -1950,7 +1950,7 @@ int jbd2_journal_flush(journal_t *journal)
 		spin_unlock(&journal->j_list_lock);
 		mutex_lock_io(&journal->j_checkpoint_mutex);
 		err = jbd2_log_do_checkpoint(journal);
-		mutex_unlock_io(&journal->j_checkpoint_mutex);
+		mutex_unlock(&journal->j_checkpoint_mutex);
 		spin_lock(&journal->j_list_lock);
 	}
 	spin_unlock(&journal->j_list_lock);
@@ -1962,7 +1962,7 @@ int jbd2_journal_flush(journal_t *journal)
 	if (!err) {
 		err = jbd2_cleanup_journal_tail(journal);
 		if (err < 0) {
-			mutex_unlock_io(&journal->j_checkpoint_mutex);
+			mutex_unlock(&journal->j_checkpoint_mutex);
 			goto out;
 		}
 		err = 0;
@@ -1974,7 +1974,7 @@ int jbd2_journal_flush(journal_t *journal)
 	 * commits of data to the journal will restore the current
 	 * s_start value. */
 	jbd2_mark_journal_empty(journal);
-	mutex_unlock_io(&journal->j_checkpoint_mutex);
+	mutex_unlock(&journal->j_checkpoint_mutex);
 	write_lock(&journal->j_state_lock);
 	J_ASSERT(!journal->j_running_transaction);
 	J_ASSERT(!journal->j_committing_transaction);
@@ -2020,7 +2020,7 @@ int jbd2_journal_wipe(journal_t *journal, int write)
 		/* Lock to make assertions happy... */
 		mutex_lock_io(&journal->j_checkpoint_mutex);
 		jbd2_mark_journal_empty(journal);
-		mutex_unlock_io(&journal->j_checkpoint_mutex);
+		mutex_unlock(&journal->j_checkpoint_mutex);
 	}
 
  no_recovery:
@@ -2255,14 +2255,14 @@ static int jbd2_journal_create_slab(size_t size)
 		i = 0;
 	mutex_lock_io(&jbd2_slab_create_mutex);
 	if (jbd2_slab[i]) {
-		mutex_unlock_io(&jbd2_slab_create_mutex);
+		mutex_unlock(&jbd2_slab_create_mutex);
 		return 0;	/* Already created */
 	}
 
 	slab_size = 1 << (i+10);
 	jbd2_slab[i] = kmem_cache_create(jbd2_slab_names[i], slab_size,
 					 slab_size, 0, NULL);
-	mutex_unlock_io(&jbd2_slab_create_mutex);
+	mutex_unlock(&jbd2_slab_create_mutex);
 	if (!jbd2_slab[i]) {
 		printk(KERN_EMERG "JBD2: no memory for jbd2_slab cache\n");
 		return -ENOMEM;
