@@ -332,7 +332,7 @@ void mdp_config_vsync(struct platform_device *pdev,
 		    100000000 / mfd->panel_info.lcd.refx100;
 		mfd->vsync_handler_pending = FALSE;
 
-		mfd->last_vsync_timetick.tv64 = 0;
+		mfd->last_vsync_timetick = 0;
 
 #ifdef MDP_HW_VSYNC
 		if (mdp_vsync_clk == NULL)
