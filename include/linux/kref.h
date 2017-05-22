@@ -112,6 +112,6 @@ static inline int kref_put(struct kref *kref, void (*release)(struct kref *kref)
  */
 static inline int __must_check kref_get_unless_zero(struct kref *kref)
 {
-	return atomic_add_unless(&kref->refcount, 1, 0);
+	return atomic_inc_not_zero(&kref->refcount);
 }
 #endif /* _KREF_H_ */
