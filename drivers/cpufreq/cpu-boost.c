@@ -117,11 +117,11 @@ static void update_policy_online(unsigned int cpu)
 {
 	/* Nope just online
 	 */
-	get_online_cpus(cpu);
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		cpufreq_update_policy(cpu);
 	}
-	put_online_cpus(cpu);
+	put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
