@@ -115,11 +115,10 @@ static struct notifier_block boost_adjust_nb = {
 
 static void update_policy_online(unsigned int cpu)
 {
-	/* Re-evaluate policy to trigger adjust notifier for ALL CPUs,
-	 * given that we set them ALL to the boost freq leading up to this. No?
+	/* Nope just online
 	 */
 	get_online_cpus(cpu);
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus(cpu);
@@ -147,7 +146,7 @@ static void do_input_boost(struct work_struct *work)
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
