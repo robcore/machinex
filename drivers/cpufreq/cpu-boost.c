@@ -43,25 +43,25 @@ static struct delayed_work input_boost_rem;
 static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
-static unsigned int input_boost_ms = 60;
+static unsigned int input_boost_ms = 100;
 module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-static unsigned int min_input_interval = 2000;
+static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	int i;
+	unsigned int cpu;
 	unsigned int val;
 
 	/* single number: apply to all CPUs */
 	if (sscanf(buf, "%u\n", &val) != 1)
 		return -EINVAL;
 
-	for_each_possible_cpu(i)
-		per_cpu(sync_info, i).input_boost_freq = val;
+	for_each_possible_cpu(cpu)
+		per_cpu(sync_info, cpu).input_boost_freq = val;
 
 	return 0;
 }
@@ -69,13 +69,14 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	struct cpu_sync *i_sync_info;
-	int i;
+	unsigned int cpu;
 	ssize_t ret;
 
-	for_each_possible_cpu(i)
-		i_sync_info = &per_cpu(sync_info, i);
+	for_each_possible_cpu(cpu) {
+		i_sync_info = &per_cpu(sync_info, cpu);
+	}
 
-		ret = sprintf(buf, "%u", i_sync_info->input_boost_freq);
+		ret = sprintf(buf, "%u\n", i_sync_info->input_boost_freq);
 
 		return ret;
 }
@@ -98,19 +99,14 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	unsigned int cpu = policy->cpu;
 	struct cpu_sync *s = &per_cpu(sync_info, cpu);
 	unsigned int ib_min = s->input_boost_min;
-	unsigned int min;
 
-	if (val != CPUFREQ_ADJUST)
-		return NOTIFY_OK;
-
-	if (!ib_min)
-		return NOTIFY_OK;
-
-	min = min(ib_min, policy->max);
-
-	//cpufreq_verify_within_limits(policy, ib_min, UINT_MAX);
-	/* Yank555.lu - Enforce hardlimit */
-	cpufreq_verify_within_limits(policy, min, check_cpufreq_hardlimit(policy->max));
+	switch (val) {
+	case CPUFREQ_ADJUST:
+		if (!ib_min)
+			break;
+		cpufreq_verify_within_limits(policy, ib_min, check_cpufreq_hardlimit(policy->max));
+		break;
+	}
 
 	return NOTIFY_OK;
 }
@@ -119,49 +115,47 @@ static struct notifier_block boost_adjust_nb = {
 	.notifier_call = boost_adjust_notify,
 };
 
-static void update_policy_online(void)
+static void update_policy_online(unsigned int cpu)
 {
-	unsigned int i;
-
 	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
 	get_online_cpus();
-	for_each_online_cpu(i) {
-		cpufreq_update_policy(i);
+	for_each_possible_cpu(cpu) {
+		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
 {
-	unsigned int i;
+	unsigned int cpu;
 	struct cpu_sync *i_sync_info;
 
 	/* Reset the input_boost_min for all CPUs in the system */
-	for_each_possible_cpu(i) {
-		i_sync_info = &per_cpu(sync_info, i);
+	for_each_possible_cpu(cpu) {
+		i_sync_info = &per_cpu(sync_info, cpu);
 		i_sync_info->input_boost_min = 0;
 	}
 
 	/* Update policies for all online CPUs */
-	update_policy_online();
+	update_policy_online(cpu);
 }
 
 static void do_input_boost(struct work_struct *work)
 {
-	unsigned int i;
+	unsigned int cpu;
 	struct cpu_sync *i_sync_info;
 
 	if (!input_boost_enabled || !input_boost_ms)
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
-	for_each_possible_cpu(i) {
-		i_sync_info = &per_cpu(sync_info, i);
+	for_each_possible_cpu(cpu) {
+		i_sync_info = &per_cpu(sync_info, cpu);
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
 	/* Update policies for all online CPUs */
-	update_policy_online();
+	update_policy_online(cpu);
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
@@ -264,7 +258,7 @@ static int cpu_boost_init(void)
 	int cpu, ret;
 	struct cpu_sync *s;
 
-	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI || WQ_FREEZABLE, 0);
+	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
@@ -276,7 +270,6 @@ static int cpu_boost_init(void)
 		s->cpu = cpu;
 	}
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
-
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
 		pr_err("Cannot register cpuboost input handler.\n");
@@ -284,6 +277,6 @@ static int cpu_boost_init(void)
 	return ret;
 }
 late_initcall(cpu_boost_init);
-MODULE_AUTHOR("Mostly Neobuddy89, and some others");
+MODULE_AUTHOR("Neobuddy89/upstream/robcore");
 MODULE_DESCRIPTION("'cpu_boost' - Does what it says");
 MODULE_LICENSE("GPL v2");
