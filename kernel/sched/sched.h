@@ -11,6 +11,7 @@
 #include <linux/tick.h>
 #include <linux/slab.h>
 #include <linux/printk.h>
+#include <linux/module.h>
 
 #include "cpupri.h"
 #include "cpudeadline.h"
