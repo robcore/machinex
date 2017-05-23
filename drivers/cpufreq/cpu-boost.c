@@ -97,10 +97,13 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 
 	switch (val) {
 	case CPUFREQ_ADJUST:
-		if (!s->input_boost_min)
+		for_each_online_cpu {
+			if (!s->input_boost_min)
+				break;
+
+			cpufreq_verify_within_limits(policy, s->input_boost_min, check_cpufreq_hardlimit(policy->max));
 			break;
-		cpufreq_verify_within_limits(policy, s->input_boost_min, check_cpufreq_hardlimit(policy->max));
-		break;
+		}
 	}
 
 	return NOTIFY_OK;
@@ -115,9 +118,11 @@ static void update_policy_online(unsigned int cpu)
 	/* Re-evaluate policy to trigger adjust notifier for ALL CPUs,
 	 * given that we set them ALL to the boost freq leading up to this. No?
 	 */
+	get_online_cpus(cpu);
 	for_each_possible_cpu(cpu) {
 		cpufreq_update_policy(cpu);
 	}
+	put_online_cpus(cpu);
 }
 
 static void do_input_boost_rem(struct work_struct *work)

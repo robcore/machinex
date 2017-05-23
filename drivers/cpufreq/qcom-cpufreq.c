@@ -177,14 +177,14 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 {
 	int ret = 0;
 	int index;
-	struct cpufreq_frequency_table *table;
+	struct cpufreq_frequency_table *table = policy->table;
 
 	struct cpufreq_work_struct *cpu_work = NULL;
 
-	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
-
 	if (target_freq == policy->cur)
-		goto done;
+		goto postscript;
+
+	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
 
 	if (per_cpu(suspend_data, policy->cpu).device_suspended) {
 		pr_debug("cpufreq: cpu%d scheduling frequency change "
@@ -193,7 +193,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
-	table = cpufreq_frequency_get_table(policy->cpu);
 	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
 			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
@@ -220,6 +219,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 
 done:
 	mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
+postscript:
 	return ret;
 }
 
@@ -245,7 +245,7 @@ static inline int msm_cpufreq_limits_init(void)
 {
 	int cpu = 0;
 	int i = 0;
-	struct cpufreq_frequency_table *table = NULL;
+	struct cpufreq_frequency_table *table;
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
 	struct cpu_freq *limit = NULL;
@@ -309,8 +309,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_frequency_table *table =
-			per_cpu(freq_table, policy->cpu);
+	struct cpufreq_policy *table;
+	struct cpufreq_frequency_table *table = policy->freq_table;
 	struct cpufreq_work_struct *cpu_work = NULL;
 
 	table = cpufreq_frequency_get_table(policy->cpu);
