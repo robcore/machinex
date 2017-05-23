@@ -43,7 +43,7 @@ static DEFINE_MUTEX(l2bw_lock);
 static struct clk *cpu_clk[NR_CPUS];
 static struct clk *l2_clk;
 static unsigned int freq_index[NR_CPUS];
-static struct cpufreq_frequency_table *freq_table;
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
 static unsigned int *l2_khz;
 static bool is_clk;
 static bool is_sync;
@@ -117,11 +117,8 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
 {
 	int ret = 0;
-	int saved_sched_policy = -EINVAL;
-	int saved_sched_rt_prio = -EINVAL;
 	struct cpufreq_freqs freqs;
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 	struct cpufreq_frequency_table *table;
 
 	if (limit->limits_init) {
@@ -146,18 +143,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	/*
-	 * Put the caller into SCHED_FIFO priority to avoid cpu starvation
-	 * in the acpuclk_set_rate path while increasing frequencies
-	 */
-
-	if (freqs.new > freqs.old && current->policy != SCHED_FIFO) {
-		saved_sched_policy = current->policy;
-		saved_sched_rt_prio = current->rt_priority;
-		sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
-	}
-
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+	cpufreq_freq_transition_begin(policy, &freqs);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -172,13 +158,8 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+		cpufreq_freq_transition_end(policy, &freqs, ret);
 
-	/* Restore priority after clock ramp-up */
-	if (freqs.new > freqs.old && saved_sched_policy >= 0) {
-		param.sched_priority = saved_sched_rt_prio;
-		sched_setscheduler_nocheck(current, saved_sched_policy, &param);
-	}
 	return ret;
 }
 
@@ -215,6 +196,12 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	}
 
 	table = cpufreq_frequency_get_table(policy->cpu);
+	if (!table) {
+		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
+		       policy->cpu);
+		ret = -ENODEV;
+		goto done;
+	}
 	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
 			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
