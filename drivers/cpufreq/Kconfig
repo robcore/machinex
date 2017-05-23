@@ -3,9 +3,10 @@ menu "CPU Frequency scaling"
 config CPU_FREQ
 	bool "CPU Frequency scaling"
 	select SRCU
+	select CPU_FREQ_GOV_COMMON
 	help
-	  CPU Frequency scaling allows you to change the clock speed of
-	  CPUs on the fly. This is a nice method to save power, because
+	  CPU Frequency scaling allows you to change the clock speed of 
+	  CPUs on the fly. This is a nice method to save power, because 
 	  the lower the CPU clock speed, the less power the CPU consumes.
 
 	  Note that this driver doesn't automatically change the CPU
@@ -31,9 +32,11 @@ config CPU_BOOST
 
 
 config CPU_FREQ_GOV_ATTR_SET
+	default y
 	bool
 
 config CPU_FREQ_GOV_COMMON
+	default y
 	select CPU_FREQ_GOV_ATTR_SET
 	bool
 
