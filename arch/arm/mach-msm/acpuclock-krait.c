@@ -1024,18 +1024,18 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
 	int freq_cnt;
 	int cpu;
 	struct cpufreq_policy *policy;
+	struct cpufreq_frequency_table table[NR_CPUS][35];
 	for_each_possible_cpu(cpu) {
 		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
 		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
+				&& freq_cnt < ARRAY_SIZE(*table)-1; i++) {
 			if (drv.acpu_freq_tbl[i].use_for_scaling) {
 #ifdef CONFIG_SEC_FACTORY
 				// if factory_condition, set the core freq limit.
@@ -1047,8 +1047,8 @@ static void __init cpufreq_table_init(void)
 				}
 				//QMCK
 #endif
-				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-				freq_table[cpu][freq_cnt].frequency
+				table[cpu][freq_cnt].driver_data = freq_cnt;
+				table[cpu][freq_cnt].frequency
 					= drv.acpu_freq_tbl[i].speed.khz;
 				freq_cnt++;
 			}
@@ -1056,13 +1056,10 @@ static void __init cpufreq_table_init(void)
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.acpu_freq_tbl[i].speed.khz != 0);
 
-		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
-		policy = cpufreq_cpu_get(cpu);
-		policy->freq_table = &freq_table[cpu][freq_cnt];
-
+		table[cpu][freq_cnt].driver_data = freq_cnt;
+		table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 		/* Register table with CPUFreq. */
-		cpufreq_table_validate_and_show(policy, &freq_table[cpu][freq_cnt]);
+		policy->freq_table = *table;
 		}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
