@@ -35,7 +35,6 @@ config CPU_FREQ_GOV_ATTR_SET
 
 config CPU_FREQ_GOV_COMMON
 	select CPU_FREQ_GOV_ATTR_SET
-	select IRQ_WORK
 	bool
 
 config CPU_FREQ_BOOST_SW
@@ -81,7 +80,7 @@ config SCHED_FREQ_INPUT
 
 choice
 	prompt "Default CPUFreq governor"
-	default CPU_FREQ_DEFAULT_GOV_USERSPACE if CPU_FREQ_SA1100 || CPU_FREQ_SA1110
+	default CPU_FREQ_DEFAULT_GOV_USERSPACE if ARM_SA1100_CPUFREQ || ARM_SA1110_CPUFREQ
 	default CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 	help
 	  This option sets which CPUFreq governor shall be loaded at
@@ -110,7 +109,6 @@ config CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 
 config CPU_FREQ_DEFAULT_GOV_POWERSAVE
 	bool "powersave"
-	depends on EXPERT
 	select CPU_FREQ_GOV_POWERSAVE
 	help
 	  Use the CPUFreq governor 'powersave' as default. This sets
