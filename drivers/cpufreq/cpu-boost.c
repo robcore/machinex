@@ -97,7 +97,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 
 	switch (val) {
 	case CPUFREQ_ADJUST:
-		for_each_online_cpu {
+		for_each_online_cpu(cpu) {
 			if (!s->input_boost_min)
 				break;
 
