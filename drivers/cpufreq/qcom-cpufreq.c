@@ -667,7 +667,6 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	char clk_name[] = "cpu??_clk";
 	struct clk *c;
-	struct cpufreq_frequency_table *ftbl;
 	int cpu, ret;
 
 	l2_clk = devm_clk_get(dev, "l2_clk");
@@ -685,14 +684,6 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 
 	if (!cpu_clk[0])
 		return -ENODEV;
-
-	/* Parse commong cpufreq table for all CPUs */
-	ftbl = cpufreq_parse_dt(dev, "qcom,cpufreq-table", 0);
-	if (!IS_ERR(ftbl)) {
-		for_each_possible_cpu(cpu)
-			per_cpu(freq_table, cpu) = ftbl;
-		return 0;
-	}
 
 	if (bus_bw.usecase) {
 		bus_client = msm_bus_scale_register_client(&bus_bw);

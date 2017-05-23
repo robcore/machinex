@@ -3441,4 +3441,13 @@ static inline unsigned long task_get_effective_timer_slack(
 	return tsk->timer_slack_ns;
 }
 
+#ifdef CONFIG_CPU_FREQ
+struct update_util_data {
+	void (*func)(struct update_util_data *data,
+		     u64 time, unsigned long util, unsigned long max);
+};
+
+void cpufreq_set_update_util_data(int cpu, struct update_util_data *data);
+#endif /* CONFIG_CPU_FREQ */
+
 #endif
