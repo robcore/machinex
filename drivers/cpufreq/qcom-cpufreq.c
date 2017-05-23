@@ -1,9 +1,9 @@
-/* arch/arm/mach-msm/cpufreq.c
+/* drivers/cpufreq/qcom-cpufreq.c
  *
  * MSM architecture cpufreq driver
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2007-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2007-2015, The Linux Foundation. All rights reserved.
  * Author: Mike A. Chan <mikechan@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -24,7 +24,6 @@
 #include <linux/completion.h>
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
-#include <linux/sched.h>
 #include <linux/suspend.h>
 #include <linux/clk.h>
 #include <linux/err.h>
@@ -33,7 +32,6 @@
 #include <trace/events/power.h>
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
-#include <linux/sched/rt.h>
 #include <linux/cpufreq_hardlimit.h>
 
 #include "../../arch/arm/mach-msm/acpuclock.h"
@@ -43,7 +41,7 @@ static DEFINE_MUTEX(l2bw_lock);
 static struct clk *cpu_clk[NR_CPUS];
 static struct clk *l2_clk;
 static unsigned int freq_index[NR_CPUS];
-static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
+static struct cpufreq_frequency_table *freq_table;
 static unsigned int *l2_khz;
 static bool is_clk;
 static bool is_sync;
@@ -143,7 +141,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	cpufreq_freq_transition_begin(policy, &freqs);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -158,7 +156,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-		cpufreq_freq_transition_end(policy, &freqs, ret);
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -196,12 +194,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	}
 
 	table = cpufreq_frequency_get_table(policy->cpu);
-	if (!table) {
-		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
-		       policy->cpu);
-		ret = -ENODEV;
-		goto done;
-	}
 	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
 			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
@@ -220,7 +212,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	cpu_work->status = -ENODEV;
 
 	cancel_work_sync(&cpu_work->work);
-	INIT_COMPLETION(cpu_work->complete);
+	reinit_completion(cpu_work->complete);
 	queue_work_on(policy->cpu, msm_cpufreq_wq, &cpu_work->work);
 	wait_for_completion(&cpu_work->complete);
 
