@@ -1,16 +1,8 @@
 menu "CPU Frequency scaling"
 
-config CPU_FREQ_MSM
-	bool "MSM CPU Frequency scaling"
-	default y
-	help
-	  Msm man
-
 config CPU_FREQ
 	bool "CPU Frequency scaling"
-	select CPU_FREQ_TABLE
 	select SRCU
-	default y
 	help
 	  CPU Frequency scaling allows you to change the clock speed of
 	  CPUs on the fly. This is a nice method to save power, because
@@ -38,12 +30,20 @@ config CPU_BOOST
 	  If in doubt, say N.
 
 
-config CPU_FREQ_TABLE
-	tristate
+config CPU_FREQ_GOV_ATTR_SET
+	bool
+
+config CPU_FREQ_GOV_COMMON
+	select CPU_FREQ_GOV_ATTR_SET
+	select IRQ_WORK
+	bool
+
+config CPU_FREQ_BOOST_SW
+	bool
+	depends on THERMAL
 
 config CPU_FREQ_STAT
 	tristate "CPU frequency translation statistics"
-	select CPU_FREQ_TABLE
 	default y
 	help
 	  This driver exports CPU frequency statistics information through sysfs
@@ -62,6 +62,13 @@ config CPU_FREQ_STAT_DETAILS
 	  system.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_MSM
+	bool "MSM CPU Frequency scaling"
+	default y
+	help
+	  Msm man
+
 
 config SCHED_FREQ_INPUT
 	bool "Scheduler inputs to cpufreq governor"
