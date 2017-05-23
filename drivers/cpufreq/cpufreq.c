@@ -2362,9 +2362,8 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 		switch (action) {
 		case CPU_ONLINE:
 		case CPU_ONLINE_FROZEN:
-		case CPU_DOWN_FAILED:
-		case CPU_DOWN_FAILED_FROZEN:
 			cpufreq_add_dev(dev, NULL);
+			cpufreq_update_policy(cpu);
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
@@ -2372,6 +2371,10 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 				BUG();
 
 			__cpufreq_remove_dev(dev, NULL);
+			break;
+		case CPU_DOWN_FAILED:
+		case CPU_DOWN_FAILED_FROZEN:
+			cpufreq_add_dev(dev, NULL);
 			break;
 		}
 	}
