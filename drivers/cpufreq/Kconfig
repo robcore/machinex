@@ -556,7 +556,6 @@ endchoice
 
 config CPU_FREQ_GOV_UBERDEMAND
 	tristate "'uberdemand' cpufreq policy governor"
-	select CPU_FREQ_TABLE
 	help
 	  'uberdemand' - This driver adds a dynamic cpufreq policy governor.
 	  The governor does a periodic polling and
@@ -609,7 +608,6 @@ config CPU_FREQ_GOV_USERSPACE
 
 config CPU_FREQ_GOV_ONDEMAND
 	tristate "'ondemand' cpufreq policy governor"
-	select CPU_FREQ_TABLE
 	help
 	  'ondemand' - This driver adds a dynamic cpufreq policy governor.
 	  The governor does a periodic polling and
@@ -627,13 +625,12 @@ config CPU_FREQ_GOV_ONDEMAND
 
 config CPU_FREQ_GOV_STOCKDEMAND
 	tristate "'stockdemand' cpufreq policy governor"
-	select CPU_FREQ_TABLE
 	help
 	  hopefully less aggressive than my ondemand, stolen from dorimanx.
 
 config CPU_FREQ_GOV_ELEMENTALX
 	tristate "'elementalx' cpufreq policy governor"
-	select CPU_FREQ_TABLE
+
 	help
 	  'elementalx' - This driver adds a dynamic cpufreq policy governor.
 
@@ -646,13 +643,12 @@ config CPU_FREQ_GOV_ELEMENTALX
 
 config CPU_FREQ_GOV_ELECTROACTIVE
 	tristate "'electroactive' cpufreq policy governor"
-	select CPU_FREQ_TABLE
 	help
 	  'electroactive' - This driver adds a dynamic cpufreq policy governor.
 
 config CPU_FREQ_GOV_ELECTRODEMAND
 	tristate "'electrodemand' cpufreq policy governor"
-	select CPU_FREQ_TABLE
+
 	help
 	  'electrodemand' - This driver adds a dynamic, demand-based cpufreq policy governor.
 
@@ -973,7 +969,7 @@ config CPU_FREQ_GOV_RAGINGMOLASSES
 
 config CPU_FREQ_GOV_SMARTMAX_EPS
 	tristate "'smartmax EPS' cpufreq policy governor"
-	select CPU_FREQ_TABLE
+
 	help
 	  'smartmax EPS' is the extreme powersaving version of smartmax
 
@@ -990,7 +986,7 @@ config CPU_FREQ_GOV_CAFACTIVE
 
 config CPU_FREQ_GOV_ONDEMAND_X
 	tristate "'ondemand_x' cpufreq policy governor"
-	select CPU_FREQ_TABLE
+
 	help
 	  'ondemand_x' - This driver adds a dynamic cpufreq policy governor.
 	  The governor does a periodic polling and
@@ -1030,7 +1026,7 @@ config CPU_FREQ_GOV_TRIPNDROID
 
 config CPU_FREQ_GOV_INTELLIDEMAND
         tristate "'intellidemand' cpufreq policy governor"
-        select CPU_FREQ_TABLE
+
         help
           'intellidemand' - This driver adds a dynamic cpufreq policy governor.
           The governor does a periodic polling and
@@ -1220,7 +1216,6 @@ config CPUFREQ_HARDLIMIT_DEBUG
 config GENERIC_CPUFREQ_CPU0
 	bool "Generic CPU0 cpufreq driver"
 	depends on HAVE_CLK && REGULATOR && PM_OPP && OF
-	select CPU_FREQ_TABLE
 	help
 	  This adds a generic cpufreq driver for CPU0 frequency management.
 	  It supports both uniprocessor (UP) and symmetric multiprocessor (SMP)
