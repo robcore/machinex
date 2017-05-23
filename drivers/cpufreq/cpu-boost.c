@@ -68,17 +68,13 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
-	struct cpu_sync *i_sync_info;
-	unsigned int cpu;
+	unsigned int cpu = smp_processor_id();
+	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
 	ssize_t ret;
 
-	for_each_possible_cpu(cpu) {
-		i_sync_info = &per_cpu(sync_info, cpu);
-	}
+	ret = sprintf(buf, "%u\n", i_sync_info->input_boost_freq);
 
-		ret = sprintf(buf, "%u\n", i_sync_info->input_boost_freq);
-
-		return ret;
+	return ret;
 }
 
 static const struct kernel_param_ops param_ops_input_boost_freq = {
@@ -98,13 +94,12 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	struct cpufreq_policy *policy = data;
 	unsigned int cpu = policy->cpu;
 	struct cpu_sync *s = &per_cpu(sync_info, cpu);
-	unsigned int ib_min = s->input_boost_min;
 
 	switch (val) {
 	case CPUFREQ_ADJUST:
-		if (!ib_min)
+		if (!s->input_boost_min)
 			break;
-		cpufreq_verify_within_limits(policy, ib_min, check_cpufreq_hardlimit(policy->max));
+		cpufreq_verify_within_limits(policy, s->input_boost_min, check_cpufreq_hardlimit(policy->max));
 		break;
 	}
 
@@ -117,40 +112,37 @@ static struct notifier_block boost_adjust_nb = {
 
 static void update_policy_online(unsigned int cpu)
 {
-	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
-	get_online_cpus();
+	/* Re-evaluate policy to trigger adjust notifier for ALL CPUs,
+	 * given that we set them ALL to the boost freq leading up to this. No?
+	 */
 	for_each_possible_cpu(cpu) {
 		cpufreq_update_policy(cpu);
 	}
-	put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
 {
-	unsigned int cpu;
-	struct cpu_sync *i_sync_info;
+	unsigned int cpu = smp_processor_id();
+	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
-		i_sync_info = &per_cpu(sync_info, cpu);
 		i_sync_info->input_boost_min = 0;
 	}
-
 	/* Update policies for all online CPUs */
 	update_policy_online(cpu);
 }
 
 static void do_input_boost(struct work_struct *work)
 {
-	unsigned int cpu;
-	struct cpu_sync *i_sync_info;
+	unsigned int cpu = smp_processor_id();
+	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);;
 
 	if (!input_boost_enabled || !input_boost_ms)
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
-		i_sync_info = &per_cpu(sync_info, cpu);
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
@@ -249,7 +241,7 @@ static struct input_handler cpuboost_input_handler = {
 	.event          = cpuboost_input_event,
 	.connect        = cpuboost_input_connect,
 	.disconnect     = cpuboost_input_disconnect,
-	.name           = "cpu-boost",
+	.name           = "cpufreq",
 	.id_table       = cpuboost_ids,
 };
 
