@@ -177,8 +177,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 {
 	int ret = 0;
 	int index;
-	struct cpufreq_frequency_table *table = policy->table;
-
+	struct cpufreq_frequency_table *table = cpufreq_frequency_get_table(policy->cpu);
 	struct cpufreq_work_struct *cpu_work = NULL;
 
 	if (target_freq == policy->cur)
@@ -309,14 +308,12 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_policy *table;
-	struct cpufreq_frequency_table *table = policy->freq_table;
+	struct cpufreq_frequency_table *table;
 	struct cpufreq_work_struct *cpu_work = NULL;
 
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (table == NULL)
 		return -ENODEV;
-	freq_table = table;
 
 	ret = cpufreq_table_validate_and_show(policy, table);
 	if (ret) {
