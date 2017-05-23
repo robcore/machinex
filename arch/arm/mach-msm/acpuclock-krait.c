@@ -1060,8 +1060,7 @@ static void __init cpufreq_table_init(void)
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
 		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
-	}
+			}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
 }
