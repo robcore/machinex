@@ -136,7 +136,7 @@ static struct clkctl_acpu_speed  acpu_freq_tbl[] = {
 #endif
 
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_CPU_FREQ_TABLE
 static struct cpufreq_frequency_table freq_table[] = {
 	{ 0, 122880 },
 	{ 1, 128000 },
@@ -520,4 +520,7 @@ void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *clkdata)
 	drv_state.wait_for_irq_khz = clkdata->wait_for_irq_khz;
 	acpuclk_init();
 	lpj_init();
+#ifdef CONFIG_CPU_FREQ_TABLE
+	cpufreq_frequency_table_get_attr(freq_table, smp_processor_id());
+#endif
 }
