@@ -515,10 +515,27 @@ static int cpufreq_hardlimit_policy_notifier(
 		return 0;
 }
 
+static int cpufreq_hardlimit_govinfo_notifier(
+	struct notifier_block *nb, unsigned long val, void *data)
+{
+	switch (val) {
+		case CPUFREQ_GOV_LIMITS:
+			reapply_hard_limits();
+			break;
+		default:
+			break;
+	}
+
+		return 0;
+}
+
 static struct notifier_block cpufreq_policy_notifier_block = {
 	.notifier_call = cpufreq_hardlimit_policy_notifier,
 };
 
+static struct notifier_block cpufreq_govinfo_notifier_block = {
+	.notifier_call = cpufreq_hardlimit_govinfo_notifier,
+};
 /* ------------------------------------------------------------------------------ */
 /* sysfs interface functions                                                      */
 /* ------------------------------------------------------------------------------ */
@@ -1045,6 +1062,8 @@ int hardlimit_init(void)
 		register_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_register_notifier(
 			&cpufreq_policy_notifier_block, CPUFREQ_POLICY_NOTIFIER);
+		cpufreq_register_notifier(
+			&cpufreq_govinfo_notifier_block, CPUFREQ_GOVINFO_NOTIFIER);
 
 #ifdef SUPERFLUOUS
 		INIT_DEFERRABLE_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
@@ -1063,6 +1082,8 @@ void hardlimit_exit(void)
 	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_unregister_notifier(
 			&cpufreq_policy_notifier_block, CPUFREQ_POLICY_NOTIFIER);
+		cpufreq_unregister_notifier(
+			&cpufreq_govinfo_notifier_block, CPUFREQ_GOVINFO_NOTIFIER);
 	kobject_put(hardlimit_kobj);
 }
 

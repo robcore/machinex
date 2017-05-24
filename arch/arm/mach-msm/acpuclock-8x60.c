@@ -944,7 +944,7 @@ static void __init cpufreq_table_init(void)
 			cpu, freq_cnt);
 
 		/* Register table with CPUFreq. */
-		policy->freq_table = (table[cpu]);
+		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
 	}
 }
 #else
