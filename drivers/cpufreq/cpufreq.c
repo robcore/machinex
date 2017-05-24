@@ -379,19 +379,9 @@ static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 #endif
 }
 
-
-/**
- * cpufreq_notify_transition - call notifier chain and adjust_jiffies
- * on frequency transition.
- *
- * This function calls the transition notifiers and the "adjust_jiffies"
- * function. It is called twice on all CPU frequency changes that have
- * external effects.
- */
-void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
+void __cpufreq_notify_transition(struct cpufreq_policy *policy,
+		struct cpufreq_freqs *freqs, unsigned int state)
 {
-	struct cpufreq_policy *policy;
-
 	BUG_ON(irqs_disabled());
 
 	if (cpufreq_disabled())
@@ -401,7 +391,6 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	pr_debug("notification %u of frequency transition to %u kHz\n",
 		state, freqs->new);
 
-	policy = per_cpu(cpufreq_cpu_data, freqs->cpu);
 	switch (state) {
 
 	case CPUFREQ_PRECHANGE:
@@ -437,7 +426,23 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 		break;
 	}
 }
+
+/**
+ * cpufreq_notify_transition - call notifier chain and adjust_jiffies
+ * on frequency transition.
+ *
+ * This function calls the transition notifiers and the "adjust_jiffies"
+ * function. It is called twice on all CPU frequency changes that have
+ * external effects.
+ */
+void cpufreq_notify_transition(struct cpufreq_policy *policy,
+		struct cpufreq_freqs *freqs, unsigned int state)
+{
+	for_each_cpu(freqs->cpu, policy->cpus)
+		__cpufreq_notify_transition(policy, freqs, state);
+}
 EXPORT_SYMBOL_GPL(cpufreq_notify_transition);
+
 /**
  * cpufreq_notify_utilization - notify CPU userspace about CPU utilization
  * change
@@ -1558,16 +1563,21 @@ static void handle_update(struct work_struct *work)
 static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 				unsigned int new_freq)
 {
+	struct cpufreq_policy *policy;
 	struct cpufreq_freqs freqs;
+	unsigned long flags;
 
 	pr_debug("Warning: CPU frequency out of sync: cpufreq and timing "
 	       "core thinks of %u, is %u kHz.\n", old_freq, new_freq);
 
-	freqs.cpu = cpu;
 	freqs.old = old_freq;
 	freqs.new = new_freq;
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
-	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+	read_lock_irqsave(&cpufreq_driver_lock, flags);
+	policy = per_cpu(cpufreq_cpu_data, cpu);
+	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
+
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 }
 
 /**
