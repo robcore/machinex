@@ -138,10 +138,11 @@ EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
 
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+	return per_cpu(cpufreq_show_table, cpu);
+	//struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
-	return policy && !policy_is_inactive(policy) ?
-		policy->freq_table : NULL;
+	//return policy && !policy_is_inactive(policy) ?
+		//policy->freq_table : NULL;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 
@@ -1251,6 +1252,7 @@ static struct cpufreq_policy *cpufreq_policy_alloc(unsigned int cpu)
 	init_completion(&policy->kobj_unregister);
 	INIT_WORK(&policy->update, handle_update);
 
+	policy->last_cpu = policy->cpu;
 	policy->cpu = cpu;
 	return policy;
 
@@ -1344,6 +1346,7 @@ static int cpufreq_online(unsigned int cpu)
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
+	cpufreq_frequency_table_update_policy_cpu(policy);
 	/* call driver. From then on the cpufreq must be able
 	 * to accept all calls to ->verify and ->setpolicy for this CPU
 	 */
@@ -1410,6 +1413,7 @@ static int cpufreq_online(unsigned int cpu)
 	if ((cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK)
 	    && has_target()) {
 		/* Are we running at unknown frequency ? */
+
 		ret = cpufreq_frequency_table_get_index(policy, policy->cur);
 		if (ret == -EINVAL) {
 			/* Warn user and fix it */

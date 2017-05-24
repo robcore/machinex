@@ -235,10 +235,13 @@ static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf,
 				    bool show_boost)
 {
 	ssize_t count = 0;
+	unsigned int cpu = policy->cpu;
 	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
 
-	if (!table)
+	if (!per_cpu(cpufreq_show_table, cpu))
 		return -ENODEV;
+
+	table = per_cpu(cpufreq_show_table, cpu);
 
 	cpufreq_for_each_valid_entry(pos, table) {
 		/*
@@ -300,17 +303,49 @@ struct freq_attr *cpufreq_generic_attr[] = {
 };
 EXPORT_SYMBOL_GPL(cpufreq_generic_attr);
 
+/*
+ * if you use these, you must assure that the frequency table is valid
+ * all the time between get_attr and put_attr!
+ */
+void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
+				      unsigned int cpu)
+{
+	pr_debug("setting show_table for cpu %u to %p\n", cpu, table);
+	per_cpu(cpufreq_show_table, cpu) = table;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_table_get_attr);
+
+void cpufreq_frequency_table_put_attr(unsigned int cpu)
+{
+	pr_debug("clearing show_table for cpu %u\n", cpu);
+	per_cpu(cpufreq_show_table, cpu) = NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_table_put_attr);
+
 int cpufreq_table_validate_and_show(struct cpufreq_policy *policy,
 				      struct cpufreq_frequency_table *table)
 {
-	int ret = cpufreq_frequency_table_cpuinfo(policy, table);
+	int ret = 0;
 
-	if (!ret)
+	ret = cpufreq_frequency_table_cpuinfo(policy, table);
+
+	if (!ret) {
+		cpufreq_frequency_table_get_attr(table, policy->cpu);
 		policy->freq_table = table;
+	}
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_table_validate_and_show);
+
+void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy)
+{
+	pr_debug("Updating show_table for new_cpu %u from last_cpu %u\n",
+			policy->cpu, policy->last_cpu);
+	per_cpu(cpufreq_show_table, policy->cpu) = per_cpu(cpufreq_show_table,
+			policy->last_cpu);
+	per_cpu(cpufreq_show_table, policy->last_cpu) = NULL;
+}
 
 MODULE_AUTHOR("Dominik Brodowski <linux@brodo.de>");
 MODULE_DESCRIPTION("CPUfreq frequency table helpers");

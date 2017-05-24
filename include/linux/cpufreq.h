@@ -139,6 +139,8 @@ struct cpufreq_policy {
 
 	/* For cpufreq driver's internal use */
 	void			*driver_data;
+	unsigned int		last_cpu; /* cpu nr of previous CPU that managed
+					   * this policy */
 };
 
 /* Only for ACPI */
@@ -345,7 +347,7 @@ struct cpufreq_driver {
 int cpufreq_register_driver(struct cpufreq_driver *driver_data);
 int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
 
-const char *cpufreq_get_current_driver(void);
+const char *cpufreq_get_current_driver(void);static
 void *cpufreq_get_driver_data(void);
 
 static inline void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
@@ -546,13 +548,13 @@ struct governor_attr {
 #define CPUFREQ_TABLE_END	~1u
 /* Special Values of .flags field */
 #define CPUFREQ_BOOST_FREQ	(1 << 0)
-
 struct cpufreq_frequency_table {
 	unsigned int	flags;
 	unsigned int	driver_data; /* driver specific data, not used by core */
 	unsigned int	frequency; /* kHz - doesn't need to be in ascending
 				    * order */
 };
+DEFINE_PER_CPU(struct cpufreq_frequency_table *, cpufreq_show_table);
 
 #if defined(CONFIG_CPU_FREQ) && defined(CONFIG_PM_OPP)
 int dev_pm_opp_init_cpufreq_table(struct device *dev,
@@ -611,6 +613,7 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 int cpufreq_frequency_table_get_index(struct cpufreq_policy *policy,
 		unsigned int freq);
 
+void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy);
 ssize_t cpufreq_show_cpus(const struct cpumask *mask, char *buf);
 
 #ifdef CONFIG_CPU_FREQ
@@ -645,6 +648,9 @@ struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 extern struct freq_attr cpufreq_freq_attr_scaling_available_freqs;
 extern struct freq_attr cpufreq_freq_attr_scaling_boost_freqs;
 extern struct freq_attr *cpufreq_generic_attr[];
+void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
+				      unsigned int cpu);
+void cpufreq_frequency_table_put_attr(unsigned int cpu);
 int cpufreq_table_validate_and_show(struct cpufreq_policy *policy,
 				      struct cpufreq_frequency_table *table);
 
@@ -652,4 +658,9 @@ unsigned int cpufreq_generic_get(unsigned int cpu);
 int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency);
+static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
+{
+	cpufreq_frequency_table_put_attr(policy->cpu);
+	return 0;
+}
 #endif /* _LINUX_CPUFREQ_H */

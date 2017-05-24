@@ -63,6 +63,7 @@ struct cpufreq_work_struct {
 
 static DEFINE_PER_CPU(struct cpufreq_work_struct, cpufreq_work);
 static struct workqueue_struct *msm_cpufreq_wq;
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
 
 struct cpufreq_suspend_t {
 	struct mutex suspend_mutex;
@@ -177,13 +178,13 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 {
 	int ret = 0;
 	int index;
-	struct cpufreq_frequency_table *table = cpufreq_frequency_get_table(policy->cpu);
+	struct cpufreq_frequency_table *table;
 	struct cpufreq_work_struct *cpu_work = NULL;
 
-	if (target_freq == policy->cur)
-		goto postscript;
-
 	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
+
+	if (target_freq == policy->cur)
+		goto done;
 
 	if (per_cpu(suspend_data, policy->cpu).device_suspended) {
 		pr_debug("cpufreq: cpu%d scheduling frequency change "
@@ -192,6 +193,13 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
+	table = cpufreq_frequency_get_table(policy->cpu);
+	if (!table) {
+		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
+		       policy->cpu);
+		ret = -ENODEV;
+		goto done;
+	}
 	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
 			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
@@ -218,7 +226,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 
 done:
 	mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
-postscript:
 	return ret;
 }
 
@@ -308,7 +315,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_frequency_table *table;
+	struct cpufreq_frequency_table *table =
+			per_cpu(freq_table, policy->cpu);
 	struct cpufreq_work_struct *cpu_work = NULL;
 
 	table = cpufreq_frequency_get_table(policy->cpu);
@@ -379,11 +387,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
 			policy->cpu, cur_freq, table[index].frequency);
-
 	policy->cur = table[index].frequency;
 
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
+	policy->freq_table = table;
 
 	return 0;
 }
@@ -434,6 +442,7 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 				return NOTIFY_BAD;
 		}
 		break;
+
 	default:
 		break;
 	}
