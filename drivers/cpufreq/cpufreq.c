@@ -1319,8 +1319,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-	policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+	policy->user_policy.min = policy->min;
+	policy->user_policy.max = policy->max;
 
 	policy->util = 0;
 	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
@@ -2132,12 +2132,10 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	memcpy(&new_policy->cpuinfo, &policy->cpuinfo, sizeof(struct cpufreq_cpuinfo));
 
-	if (new_policy->min > policy->user_policy.max
-		|| new_policy->max < policy->user_policy.min) {
-		new_policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
-		new_policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
-		//ret = -EINVAL;
-		//goto error_out;
+	if (new_policy->min > check_cpufreq_hardlimit(policy->user_policy.max)
+		new_policy->min = check_cpufreq_hardlimit(policy->min);
+	if (new_policy->max < check_cpufreq_hardlimit(policy->user_policy.min)
+		new_policy->max = check_cpufreq_hardlimit(policy->max);
 	}
 
 	/* verify the cpu speed can be set within this limit */
