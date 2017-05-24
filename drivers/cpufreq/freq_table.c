@@ -102,6 +102,18 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_verify);
 
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, cpufreq_show_table);
+
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
+{
+	return per_cpu(cpufreq_show_table, cpu);
+	//struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
+	//return policy && !policy_is_inactive(policy) ?
+		//policy->freq_table : NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
+
 /*
  * Generic routine to verify policy & frequency table, requires driver to set
  * policy->freq_table prior to it.
@@ -236,12 +248,12 @@ static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf,
 {
 	ssize_t count = 0;
 	unsigned int cpu = policy->cpu;
-	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
+	struct cpufreq_frequency_table *pos, *table;
 
 	if (!per_cpu(cpufreq_show_table, cpu))
-		return -ENODEV;
-
-	table = per_cpu(cpufreq_show_table, cpu);
+		table = per_cpu(cpufreq_show_table, cpu);
+	else
+		table = policy->freq_table;
 
 	cpufreq_for_each_valid_entry(pos, table) {
 		/*

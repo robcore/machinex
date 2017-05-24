@@ -554,7 +554,6 @@ struct cpufreq_frequency_table {
 	unsigned int	frequency; /* kHz - doesn't need to be in ascending
 				    * order */
 };
-DEFINE_PER_CPU(struct cpufreq_frequency_table *, cpufreq_show_table);
 
 #if defined(CONFIG_CPU_FREQ) && defined(CONFIG_PM_OPP)
 int dev_pm_opp_init_cpufreq_table(struct device *dev,
