@@ -2136,7 +2136,6 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 		new_policy->min = check_cpufreq_hardlimit(policy->min);
 	if (new_policy->max < check_cpufreq_hardlimit(policy->user_policy.min))
 		new_policy->max = check_cpufreq_hardlimit(policy->max);
-	}
 
 	/* verify the cpu speed can be set within this limit */
 	ret = cpufreq_driver->verify(new_policy);
