@@ -2132,9 +2132,9 @@ static int __cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	memcpy(&new_policy->cpuinfo, &policy->cpuinfo, sizeof(struct cpufreq_cpuinfo));
 
-	if (new_policy->min > check_cpufreq_hardlimit(policy->user_policy.max)
+	if (new_policy->min > check_cpufreq_hardlimit(policy->user_policy.max))
 		new_policy->min = check_cpufreq_hardlimit(policy->min);
-	if (new_policy->max < check_cpufreq_hardlimit(policy->user_policy.min)
+	if (new_policy->max < check_cpufreq_hardlimit(policy->user_policy.min))
 		new_policy->max = check_cpufreq_hardlimit(policy->max);
 	}
 
