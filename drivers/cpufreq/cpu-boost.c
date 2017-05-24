@@ -53,7 +53,7 @@ module_param(min_input_interval, uint, 0644);
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
 	unsigned int val;
 
 	/* single number: apply to all CPUs */
@@ -69,11 +69,8 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpu_sync *i_sync_info;
+	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
 	ssize_t ret;
-
-	for_each_possible_cpu(cpu)
-		i_sync_info = &per_cpu(sync_info, cpu);
 
 	ret = sprintf(buf, "%u\n", i_sync_info->input_boost_freq);
 

@@ -1024,33 +1024,43 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[35];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
-	unsigned int i;
+	int cpu;
 	int freq_cnt = 0;
+
+	for_each_possible_cpu(cpu) {
+		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
-		for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(freq_table) - 1; i++) {
-			if (drv.acpu_freq_tbl[i].use_for_scaling)
-				continue;
-				freq_table[freq_cnt].driver_data = freq_cnt;
-				freq_table[freq_cnt].frequency = drv.acpu_freq_tbl[i].speed.khz;
+		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
+			if (drv.acpu_freq_tbl[i].use_for_scaling) {
+#ifdef CONFIG_SEC_FACTORY
+				// if factory_condition, set the core freq limit.
+				//QMCK
+				if (console_set_on_cmdline && drv.acpu_freq_tbl[i].speed.khz > 1000000) {
+					if(console_batt_stat == 1) {
+						continue;
+					}
+				}
+				//QMCK
+#endif
+				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+				freq_table[cpu][freq_cnt].frequency
+					= drv.acpu_freq_tbl[i].speed.khz;
 				freq_cnt++;
+			}
 		}
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.acpu_freq_tbl[i].speed.khz != 0);
 
-		freq_table[freq_cnt].driver_data = freq_cnt;
-		freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
-
+		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
 		/* Register table with CPUFreq. */
-	for_each_possible_cpu(i) {
-		//table[index].driver_data = freq_table[freq_cnt].driver_data;
-		//table[index].freqency = freq_table[freq_cnt].frequency;
-		cpufreq_frequency_table_get_attr(freq_table, i);
+		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
 	}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
