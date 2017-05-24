@@ -1062,6 +1062,8 @@ int hardlimit_init(void)
 		register_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_register_notifier(
 			&cpufreq_policy_notifier_block, CPUFREQ_POLICY_NOTIFIER);
+		cpufreq_register_notifier(
+			&cpufreq_govinfo_notifier_block, CPUFREQ_GOVINFO_NOTIFIER);
 
 #ifdef SUPERFLUOUS
 		INIT_DEFERRABLE_WORK(&stop_wakeup_kick_work, stop_wakeup_kick);
@@ -1080,6 +1082,8 @@ void hardlimit_exit(void)
 	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_unregister_notifier(
 			&cpufreq_policy_notifier_block, CPUFREQ_POLICY_NOTIFIER);
+		cpufreq_unregister_notifier(
+			&cpufreq_govinfo_notifier_block, CPUFREQ_GOVINFO_NOTIFIER);
 	kobject_put(hardlimit_kobj);
 }
 
