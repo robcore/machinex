@@ -63,7 +63,6 @@ struct cpufreq_work_struct {
 
 static DEFINE_PER_CPU(struct cpufreq_work_struct, cpufreq_work);
 static struct workqueue_struct *msm_cpufreq_wq;
-static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
 
 struct cpufreq_suspend_t {
 	struct mutex suspend_mutex;
@@ -142,7 +141,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	cpufreq_freq_transition_begin(policy, &freqs);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -157,7 +156,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-	cpufreq_freq_transition_end(policy, &freqs, ret);
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -179,6 +178,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	int ret = 0;
 	int index;
 	struct cpufreq_frequency_table *table;
+
 	struct cpufreq_work_struct *cpu_work = NULL;
 
 	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
@@ -194,12 +194,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	}
 
 	table = cpufreq_frequency_get_table(policy->cpu);
-	if (!table) {
-		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
-		       policy->cpu);
-		ret = -ENODEV;
-		goto done;
-	}
 	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
 			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
@@ -251,7 +245,7 @@ static inline int msm_cpufreq_limits_init(void)
 {
 	int cpu = 0;
 	int i = 0;
-	struct cpufreq_frequency_table *table;
+	struct cpufreq_frequency_table *table = NULL;
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
 	struct cpu_freq *limit = NULL;
@@ -315,19 +309,12 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_frequency_table *table =
-			per_cpu(freq_table, policy->cpu);
+	struct cpufreq_frequency_table *table;
 	struct cpufreq_work_struct *cpu_work = NULL;
 
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (table == NULL)
 		return -ENODEV;
-
-	ret = cpufreq_table_validate_and_show(policy, table);
-	if (ret) {
-		pr_err("cpufreq: failed to get policy min/max\n");
-		return ret;
-	}
 	/*
 	 * In some SoC, cpu cores' frequencies can not
 	 * be changed independently. Each cpu is bound to
@@ -387,11 +374,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
 			policy->cpu, cur_freq, table[index].frequency);
+
 	policy->cur = table[index].frequency;
 
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
-	policy->freq_table = table;
 
 	return 0;
 }
@@ -442,7 +429,6 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 				return NOTIFY_BAD;
 		}
 		break;
-
 	default:
 		break;
 	}
@@ -690,6 +676,14 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 
 	if (!cpu_clk[0])
 		return -ENODEV;
+
+	ret = cpufreq_parse_dt(dev);
+	if (ret)
+		return ret;
+
+	for_each_possible_cpu(cpu) {
+		cpufreq_frequency_table_get_attr(freq_table, cpu);
+	}
 
 	if (bus_bw.usecase) {
 		bus_client = msm_bus_scale_register_client(&bus_bw);
