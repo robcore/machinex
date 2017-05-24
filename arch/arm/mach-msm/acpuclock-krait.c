@@ -1028,8 +1028,8 @@ extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
 	int freq_cnt;
-	int cpu;
 	struct cpufreq_policy *policy;
+	int cpu = smp_processor_id();
 	struct cpufreq_frequency_table table[NR_CPUS][35];
 	for_each_possible_cpu(cpu) {
 		int i;
@@ -1037,16 +1037,6 @@ static void __init cpufreq_table_init(void)
 		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
 				&& freq_cnt < ARRAY_SIZE(*table)-1; i++) {
 			if (drv.acpu_freq_tbl[i].use_for_scaling) {
-#ifdef CONFIG_SEC_FACTORY
-				// if factory_condition, set the core freq limit.
-				//QMCK
-				if (console_set_on_cmdline && drv.acpu_freq_tbl[i].speed.khz > 1000000) {
-					if(console_batt_stat == 1) {
-						continue;
-					}
-				}
-				//QMCK
-#endif
 				table[cpu][freq_cnt].driver_data = freq_cnt;
 				table[cpu][freq_cnt].frequency
 					= drv.acpu_freq_tbl[i].speed.khz;
@@ -1059,7 +1049,8 @@ static void __init cpufreq_table_init(void)
 		table[cpu][freq_cnt].driver_data = freq_cnt;
 		table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 		/* Register table with CPUFreq. */
-		policy->freq_table = *table;
+		policy->freq_table = table[cpu];
+		//cpufreq_frequency_table_cpuinfo(policy, table[cpu]);
 		}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
@@ -1239,6 +1230,7 @@ static void __init drv_data_init(struct device *dev,
 
 	drv.acpu_freq_tbl = kmemdup(pvs->table, pvs->size, GFP_KERNEL);
 	BUG_ON(!drv.acpu_freq_tbl);
+
 	drv.boost_uv = pvs->boost_uv;
 #ifdef CONFIG_SEC_DEBUG_SUBSYS
 	boost_uv = drv.boost_uv;
