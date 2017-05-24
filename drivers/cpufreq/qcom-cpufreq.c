@@ -141,7 +141,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -156,7 +156,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+		cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -520,6 +520,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= msm_freq_attr,
+	.have_governor_per_policy = true,
 };
 
 #define PROP_TBL "qcom,cpufreq-table"

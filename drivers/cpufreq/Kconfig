@@ -8,12 +8,9 @@ config CPU_FREQ_MSM
 
 config CPU_FREQ
 	bool "CPU Frequency scaling"
-	select CPU_FREQ_TABLE
-	select SRCU
-	default y
 	help
-	  CPU Frequency scaling allows you to change the clock speed of
-	  CPUs on the fly. This is a nice method to save power, because
+	  CPU Frequency scaling allows you to change the clock speed of 
+	  CPUs on the fly. This is a nice method to save power, because 
 	  the lower the CPU clock speed, the less power the CPU consumes.
 
 	  Note that this driver doesn't automatically change the CPU
@@ -603,6 +600,7 @@ config CPU_FREQ_GOV_USERSPACE
 config CPU_FREQ_GOV_ONDEMAND
 	tristate "'ondemand' cpufreq policy governor"
 	select CPU_FREQ_TABLE
+	select CPU_FREQ_GOV_COMMON
 	help
 	  'ondemand' - This driver adds a dynamic cpufreq policy governor.
 	  The governor does a periodic polling and
@@ -669,6 +667,7 @@ config CPU_FREQ_GOV_INTERACTIVE
 config CPU_FREQ_GOV_CONSERVATIVE
 	tristate "'conservative' cpufreq governor"
 	depends on CPU_FREQ
+	select CPU_FREQ_GOV_COMMON
 	help
 	  'conservative' - this driver is rather similar to the 'ondemand'
 	  governor both in its source code and its purpose, the difference is
