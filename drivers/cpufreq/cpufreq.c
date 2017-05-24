@@ -1977,6 +1977,7 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 					unsigned int event)
 {
 	int ret;
+	unsigned int cpu = policy->cpu;
 
 	/* Only must be defined when default governor is known to have latency
 	   restrictions, like e.g. conservative or ondemand.
@@ -2046,6 +2047,9 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 		module_put(policy->governor->owner);
 	if ((event == CPUFREQ_GOV_STOP) && !ret)
 		module_put(policy->governor->owner);
+
+	for_each_online_cpu(cpu)
+		cpufreq_update_policy(cpu);
 
 	return ret;
 }
