@@ -341,6 +341,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
 #endif
 		pr_debug("this is useless\n");
+		cpufreq_frequency_table_get_attr(table, policy->cpu);
 	}
 #if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
 	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
