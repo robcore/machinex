@@ -652,7 +652,7 @@ static struct acpuclk_krait_params acpuclk_8064_params __initdata = {
 	.stby_khz = 384000,
 };
 
-static int __init acpuclk_8064_probe(struct platform_device *pdev)
+static int __init acpuclk_8064_probe(struct cpufreq_policy *policy, struct platform_device *pdev)
 {
 	if (cpu_is_apq8064ab() ||
 		SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 2) {
@@ -660,7 +660,7 @@ static int __init acpuclk_8064_probe(struct platform_device *pdev)
 		acpuclk_8064_params.hfpll_data->nom_vdd_l_max = 74;
 	}
 
-	return acpuclk_krait_init(&pdev->dev, &acpuclk_8064_params);
+	return acpuclk_krait_init(policy, &pdev->dev, &acpuclk_8064_params);
 }
 
 static struct platform_driver acpuclk_8064_driver = {

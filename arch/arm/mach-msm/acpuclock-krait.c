@@ -1024,21 +1024,21 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
+static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
-static void __init cpufreq_table_init(void)
+static void __init cpufreq_table_init(struct cpufreq_policy *policy)
 {
 	int freq_cnt;
-	struct cpufreq_policy *policy;
-	int cpu = smp_processor_id();
-	struct cpufreq_frequency_table table[NR_CPUS][35];
+	int cpu = policy->cpu;
+	struct cpufreq_frequency_table *table;
 	for_each_possible_cpu(cpu) {
 		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
 		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*table)-1; i++) {
+				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
 			if (drv.acpu_freq_tbl[i].use_for_scaling) {
-				table[cpu][freq_cnt].driver_data = freq_cnt;
-				table[cpu][freq_cnt].frequency
+				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+				freq_table[cpu][freq_cnt].frequency
 					= drv.acpu_freq_tbl[i].speed.khz;
 				freq_cnt++;
 			}
@@ -1046,10 +1046,10 @@ static void __init cpufreq_table_init(void)
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.acpu_freq_tbl[i].speed.khz != 0);
 
-		table[cpu][freq_cnt].driver_data = freq_cnt;
-		table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
-		/* Register table with CPUFreq. */
-		policy->freq_table = table[cpu];
+		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+
+		cpufreq_table_validate_and_show(policy, freq_table[cpu]);
 		//cpufreq_frequency_table_cpuinfo(policy, table[cpu]);
 		}
 
@@ -1279,13 +1279,13 @@ static void __init hw_init(void)
 	bus_init(l2_level);
 }
 
-int __init acpuclk_krait_init(struct device *dev,
+int __init acpuclk_krait_init(struct cpufreq_policy *policy, struct device *dev,
 			      const struct acpuclk_krait_params *params)
 {
 	drv_data_init(dev, params);
 	hw_init();
 
-	cpufreq_table_init();
+	cpufreq_table_init(policy);
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
