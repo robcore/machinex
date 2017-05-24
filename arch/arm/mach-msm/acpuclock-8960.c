@@ -213,9 +213,9 @@ static struct acpuclk_krait_params acpuclk_8960_params __initdata = {
 	.stby_khz = 384000,
 };
 
-static int __init acpuclk_8960_probe(struct platform_device *pdev)
+static int __init acpuclk_8960_probe(struct cpufreq_policy *policy, struct platform_device *pdev)
 {
-	return acpuclk_krait_init(&pdev->dev, &acpuclk_8960_params);
+	return acpuclk_krait_init(policy, &pdev->dev, &acpuclk_8960_params);
 }
 
 static struct platform_driver acpuclk_8960_driver = {
