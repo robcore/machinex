@@ -1024,13 +1024,13 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
+	int freq_cnt;
 	int cpu;
-	int freq_cnt = 0;
-
+	struct cpufreq_policy *policy;
 	for_each_possible_cpu(cpu) {
 		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
@@ -1058,10 +1058,12 @@ static void __init cpufreq_table_init(void)
 
 		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+		policy = cpufreq_cpu_get(cpu);
+		policy->freq_table = &freq_table[cpu][freq_cnt];
 
 		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
-	}
+		cpufreq_table_validate_and_show(policy, &freq_table[cpu][freq_cnt]);
+		}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
 }
