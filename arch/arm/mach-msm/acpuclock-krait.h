@@ -13,6 +13,7 @@
 
 #ifndef __ARCH_ARM_MACH_MSM_ACPUCLOCK_KRAIT_H
 #define __ARCH_ARM_MACH_MSM_ACPUCLOCK_KRAIT_H
+#include <linux/cpufreq.h>
 
 #define L2(x) (x)
 #define BW_MBPS(_bw) \
