@@ -84,8 +84,6 @@ unsigned long acpuclk_power_collapse(void);
  */
 unsigned long acpuclk_wait_for_irq(void);
 
-unsigned int acpuclk_show_freq_table(struct cpufreq_frequency_table *);
-
 /**
  * acpuclk_register() - Register acpuclk_data function implementations
  * @data: acpuclock API implementations and data
