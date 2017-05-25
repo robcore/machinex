@@ -32,6 +32,7 @@
 #include <trace/events/power.h>
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
+#include <linux/qcom-cpufreq.h>
 #include <linux/cpufreq_hardlimit.h>
 
 static DEFINE_MUTEX(l2bw_lock);
