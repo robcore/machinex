@@ -78,7 +78,6 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-static int set_window_count;
 static int migration_register_count;
 static struct mutex sched_lock;
 static cpumask_t controlled_cpus;
@@ -185,13 +184,6 @@ static u64 round_to_nw_start(u64 jif,
 	}
 
 	return ret;
-}
-
-static inline int set_window_helper(
-			struct cpufreq_interactive_tunables *tunables)
-{
-	return sched_set_window(round_to_nw_start(get_jiffies_64(), tunables),
-			 usecs_to_jiffies(tunables->timer_rate));
 }
 
 static void cpufreq_interactive_timer_resched(unsigned long cpu,
@@ -1135,7 +1127,6 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 		if (t && t->use_sched_load)
 			t->timer_rate = val_round;
 	}
-	set_window_helper(tunables);
 
 	return count;
 }
@@ -1270,27 +1261,7 @@ static int cpufreq_interactive_enable_sched_input(
 
 	mutex_lock(&sched_lock);
 
-	set_window_count++;
-	if (set_window_count > 1) {
-		for_each_possible_cpu(j) {
-			if (!per_cpu(polinfo, j))
-				continue;
-			t = per_cpu(polinfo, j)->cached_tunables;
-			if (t && t->use_sched_load) {
-				tunables->timer_rate = t->timer_rate;
-				tunables->io_is_busy = t->io_is_busy;
-				break;
-			}
-		}
-	} else {
-		rc = set_window_helper(tunables);
-		if (rc) {
-			pr_err("%s: Failed to set sched window\n", __func__);
-			set_window_count--;
-			goto out;
-		}
-		sched_set_io_is_busy(tunables->io_is_busy);
-	}
+	sched_set_io_is_busy(tunables->io_is_busy);
 
 	if (!tunables->use_migration_notif)
 		goto out;
@@ -1318,7 +1289,6 @@ static int cpufreq_interactive_disable_sched_input(
 					&load_alert_notifier_head,
 					&load_notifier_block);
 	}
-	set_window_count--;
 
 	mutex_unlock(&sched_lock);
 	return 0;

@@ -931,7 +931,7 @@ static ssize_t store_util_threshold(struct cpufreq_policy *policy,
 		return -EINVAL;
 
 	policy->user_policy.util_thres = new_policy.util_thres;
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 
 	return ret ? ret : count;
 }
