@@ -48,6 +48,7 @@ static struct msm_bus_scale_pdata bus_bw = {
 	.active_only = 1,
 };
 static u32 bus_client;
+static bool hotplug_ready;
 
 struct cpufreq_suspend_t {
 	struct mutex suspend_mutex;
@@ -544,7 +545,6 @@ static int __init msm_cpufreq_register(void)
 	}
 
 	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
-	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }

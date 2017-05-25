@@ -14,6 +14,7 @@
 #include <linux/mutex.h>
 #include <linux/notifier.h>
 #include <linux/threads.h>
+#include <linux/clk.h>
 #include <linux/cpumask.h>
 #include <linux/completion.h>
 #include <linux/kobject.h>
@@ -21,6 +22,7 @@
 #include <linux/spinlock.h>
 #include <linux/sysfs.h>
 #include <asm/div64.h>
+#include <linux/cpu.h>
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 #include <linux/cpufreq_hardlimit.h>
 #endif
