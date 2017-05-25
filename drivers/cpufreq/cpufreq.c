@@ -71,7 +71,7 @@ static bool cpufreq_suspended;
 
 static inline bool has_target(void)
 {
-	return cpufreq_driver->target_index || cpufreq_driver->target;
+	return cpufreq_driver->target;
 }
 
 static struct kset *cpufreq_kset;
@@ -502,7 +502,7 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 			*policy = CPUFREQ_POLICY_POWERSAVE;
 			err = 0;
 		}
-	} else if (cpufreq_driver->target) {
+	} else {
 		struct cpufreq_governor *t;
 
 		mutex_lock(&cpufreq_governor_mutex);
@@ -704,7 +704,7 @@ static ssize_t show_scaling_available_governors(struct cpufreq_policy *policy,
 	ssize_t i = 0;
 	struct cpufreq_governor *t;
 
-	if (!cpufreq_driver->target) {
+	if (!has_target()) {
 		i += sprintf(buf, "performance powersave");
 		goto out;
 	}
@@ -1056,7 +1056,7 @@ static int cpufreq_add_dev_sysfs(unsigned int cpu,
 		if (ret)
 			goto err_out_kobj_put;
 	}
-	if (cpufreq_driver->target) {
+	if (has_target()) {
 		ret = sysfs_create_file(kobj, &scaling_cur_freq.attr);
 		if (ret)
 			goto err_out_kobj_put;
@@ -1472,7 +1472,7 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 #endif
 
-	if (cpufreq_driver->target)
+	if (has_target())
 		__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
 
 	if (cpufreq_driver->exit)
