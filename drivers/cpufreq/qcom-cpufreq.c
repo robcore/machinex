@@ -34,8 +34,6 @@
 #include <mach/msm_bus.h>
 #include <linux/cpufreq_hardlimit.h>
 
-#include "../../arch/arm/mach-msm/acpuclock.h"
-
 static DEFINE_MUTEX(l2bw_lock);
 
 static struct clk *cpu_clk[NR_CPUS];
