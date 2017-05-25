@@ -29,8 +29,6 @@
 #include <linux/major.h>
 #include <linux/regulator/consumer.h>
 #include <linux/msm_ion.h>
-#include <linux/sync.h>
-#include <linux/sw_sync.h>
 
 #ifdef CONFIG_MSM_BUS_SCALING
 #include <mach/msm_bus.h>
@@ -96,10 +94,6 @@
 #define MAX_COMMIT_QUEUE 4
 #define WAIT_ROT_TIMEOUT 1000
 
-#define MAX_TIMELINE_NAME_LEN 16
-#define WAIT_FENCE_FIRST_TIMEOUT MSEC_PER_SEC
-#define WAIT_FENCE_FINAL_TIMEOUT (5 * MSEC_PER_SEC)
-
 #define ROTATOR_REVISION_V0		0
 #define ROTATOR_REVISION_V1		1
 #define ROTATOR_REVISION_V2		2
@@ -138,17 +132,6 @@ struct msm_rotator_fd_info {
 	int pid;
 	int ref_cnt;
 	struct list_head list;
-};
-
-struct rot_sync_info {
-	u32 initialized;
-	struct sync_fence *acq_fen;
-	struct sync_fence *rel_fen;
-	int rel_fen_fd;
-	struct sw_sync_timeline *timeline;
-	int timeline_value;
-	struct mutex sync_mutex;
-	atomic_t queue_buf_cnt;
 };
 
 struct msm_rotator_session {
@@ -214,7 +197,6 @@ struct msm_rotator_dev {
 	#endif
 	u32 sec_mapped;
 	u32 mmu_clk_on;
-	struct rot_sync_info sync_info[MAX_SESSIONS];
 	/* non blocking */
 	struct mutex commit_mutex;
 	struct mutex commit_wq_mutex;
@@ -540,177 +522,6 @@ static irqreturn_t msm_rotator_isr(int irq, void *dev_id)
 		printk(KERN_WARNING "%s: unexpected interrupt\n", DRIVER_NAME);
 
 	return IRQ_HANDLED;
-}
-
-static void msm_rotator_signal_timeline(u32 session_index)
-{
-	struct rot_sync_info *sync_info;
-	sync_info = &msm_rotator_dev->sync_info[session_index];
-
-	if ((!sync_info->timeline) || (!sync_info->initialized))
-		return;
-
-	mutex_lock(&sync_info->sync_mutex);
-	sw_sync_timeline_inc(sync_info->timeline, 1);
-	sync_info->timeline_value++;
-	mutex_unlock(&sync_info->sync_mutex);
-}
-
-static void msm_rotator_signal_timeline_done(u32 session_index)
-{
-	struct rot_sync_info *sync_info;
-	sync_info = &msm_rotator_dev->sync_info[session_index];
-
-	if ((sync_info->timeline == NULL) ||
-		(sync_info->initialized == false))
-			return;
-	mutex_lock(&sync_info->sync_mutex);
-	sw_sync_timeline_inc(sync_info->timeline, 1);
-	sync_info->timeline_value++;
-	if (atomic_read(&sync_info->queue_buf_cnt) <= 0)
-		pr_err("%s queue_buf_cnt=%d", __func__,
-			atomic_read(&sync_info->queue_buf_cnt));
-	else
-		atomic_dec(&sync_info->queue_buf_cnt);
-	mutex_unlock(&sync_info->sync_mutex);
-}
-
-static void msm_rotator_release_acq_fence(u32 session_index)
-{
-	struct rot_sync_info *sync_info;
-	sync_info = &msm_rotator_dev->sync_info[session_index];
-
-	if ((!sync_info->timeline) || (!sync_info->initialized))
-		return;
-	mutex_lock(&sync_info->sync_mutex);
-	sync_info->acq_fen = NULL;
-	mutex_unlock(&sync_info->sync_mutex);
-}
-
-static void msm_rotator_release_all_timeline(void)
-{
-	int i;
-	struct rot_sync_info *sync_info;
-	for (i = 0; i < MAX_SESSIONS; i++) {
-		sync_info = &msm_rotator_dev->sync_info[i];
-		if (sync_info->initialized) {
-			msm_rotator_signal_timeline(i);
-			msm_rotator_release_acq_fence(i);
-		}
-	}
-}
-
-static void msm_rotator_wait_for_fence(struct sync_fence *acq_fen)
-{
-	int ret;
-	if (!acq_fen)
-		return;
-	if (acq_fen) {
-		ret = sync_fence_wait(acq_fen,
-				WAIT_FENCE_FIRST_TIMEOUT);
-		if (ret == -ETIME) {
-			pr_warn("%s: timeout, wait %ld more ms\n",
-				__func__, WAIT_FENCE_FINAL_TIMEOUT);
-			ret = sync_fence_wait(acq_fen,
-				WAIT_FENCE_FINAL_TIMEOUT);
-		}
-		if (ret < 0) {
-			pr_err("%s: sync_fence_wait failed! ret = %x\n",
-				__func__, ret);
-		}
-		sync_fence_put(acq_fen);
-	}
-}
-
-static int  msm_rotator_buf_sync(unsigned long arg)
-{
-	struct msm_rotator_buf_sync buf_sync;
-	int ret = 0;
-	struct sync_fence *fence = NULL;
-	struct rot_sync_info *sync_info;
-	struct sync_pt *rel_sync_pt;
-	struct sync_fence *rel_fence;
-	int rel_fen_fd;
-	u32 s;
-
-	if (copy_from_user(&buf_sync, (void __user *)arg, sizeof(buf_sync)))
-		return -EFAULT;
-
-	rot_wait_for_commit_queue(false);
-	for (s = 0; s < MAX_SESSIONS; s++)
-		if ((msm_rotator_dev->rot_session[s] != NULL) &&
-			(buf_sync.session_id ==
-			(unsigned int)msm_rotator_dev->rot_session[s]
-			))
-			break;
-
-	if (s == MAX_SESSIONS)  {
-		pr_err("%s invalid session id %d", __func__,
-			buf_sync.session_id);
-		return -EINVAL;
-	}
-
-	sync_info = &msm_rotator_dev->sync_info[s];
-
-	if (sync_info->acq_fen)
-		pr_err("%s previous acq_fen will be overwritten", __func__);
-
-	if ((sync_info->timeline == NULL) ||
-		(sync_info->initialized == false))
-		return -EINVAL;
-
-	mutex_lock(&sync_info->sync_mutex);
-	if (buf_sync.acq_fen_fd >= 0)
-		fence = sync_fence_fdget(buf_sync.acq_fen_fd);
-
-	sync_info->acq_fen = fence;
-
-	if (sync_info->acq_fen &&
-		(buf_sync.flags & MDP_BUF_SYNC_FLAG_WAIT)) {
-		msm_rotator_wait_for_fence(sync_info->acq_fen);
-		sync_info->acq_fen = NULL;
-	}
-
-	rel_sync_pt = sw_sync_pt_create(sync_info->timeline,
-			sync_info->timeline_value +
-			atomic_read(&sync_info->queue_buf_cnt) + 1);
-	if (rel_sync_pt == NULL) {
-		pr_err("%s: cannot create sync point", __func__);
-		ret = -ENOMEM;
-		goto buf_sync_err_1;
-	}
-	/* create fence */
-	rel_fence = sync_fence_create("msm_rotator-fence",
-			rel_sync_pt);
-	if (rel_fence == NULL) {
-		sync_pt_free(rel_sync_pt);
-		pr_err("%s: cannot create fence", __func__);
-		ret = -ENOMEM;
-		goto buf_sync_err_1;
-	}
-	/* create fd */
-	rel_fen_fd = get_unused_fd_flags(0);
-	if (rel_fen_fd < 0) {
-		pr_err("%s: get_unused_fd_flags failed", __func__);
-		ret  = -EIO;
-		goto buf_sync_err_2;
-	}
-	sync_fence_install(rel_fence, rel_fen_fd);
-	buf_sync.rel_fen_fd = rel_fen_fd;
-	sync_info->rel_fen = rel_fence;
-	sync_info->rel_fen_fd = rel_fen_fd;
-
-	ret = copy_to_user((void __user *)arg, &buf_sync, sizeof(buf_sync));
-	mutex_unlock(&sync_info->sync_mutex);
-	return ret;
-buf_sync_err_2:
-	sync_fence_put(rel_fence);
-buf_sync_err_1:
-	if (sync_info->acq_fen)
-		sync_fence_put(sync_info->acq_fen);
-	sync_info->acq_fen = NULL;
-	mutex_unlock(&sync_info->sync_mutex);
-	return ret;
 }
 
 static unsigned int tile_size(unsigned int src_width,
@@ -1986,7 +1797,6 @@ rotate_prepare_error:
 		fput_light(srcp0_file, ps0_need);
 	else
 		put_img(srcp0_file, srcp0_ihdl, ROTATOR_SRC_DOMAIN, 0);
-	msm_rotator_signal_timeline_done(s);
 	dev_dbg(msm_rotator_dev->device, "%s() returning rc = %d\n",
 		__func__, rc);
 	mutex_unlock(&msm_rotator_dev->rotator_lock);
@@ -2030,7 +1840,6 @@ static int msm_rotator_do_rotate_sub(
 	dstp1_ihdl = commit_info->dstp1_ihdl;
 	ps0_need = commit_info->ps0_need;
 	s = commit_info->session_index;
-	msm_rotator_wait_for_fence(commit_info->acq_fen);
 	commit_info->acq_fen = NULL;
 
 	cancel_delayed_work_sync(&msm_rotator_dev->rot_clk_work);
@@ -2173,7 +1982,6 @@ do_rotate_exit:
 		fput_light(srcp0_file, ps0_need);
 	else
 		put_img(srcp0_file, srcp0_ihdl, ROTATOR_SRC_DOMAIN, 0);
-	msm_rotator_signal_timeline_done(s);
 	mutex_unlock(&msm_rotator_dev->rotator_lock);
 	dev_dbg(msm_rotator_dev->device, "%s() returning rc = %d\n",
 		__func__, rc);
@@ -2223,7 +2031,6 @@ static void rot_wait_for_commit_queue(u32 is_all)
 static int msm_rotator_do_rotate(unsigned long arg)
 {
 	struct msm_rotator_data_info info;
-	struct rot_sync_info *sync_info;
 	int session_index, ret;
 	int commit_q_w;
 
@@ -2400,7 +2207,6 @@ static int msm_rotator_start(unsigned long arg,
 	unsigned int dst_w, dst_h;
 	unsigned int is_planar420 = 0;
 	int fast_yuv_en = 0, enable_2pass = 0;
-	struct rot_sync_info *sync_info;
 
 	if (copy_from_user(&info, (void __user *)arg, sizeof(info)))
 		return -EFAULT;
@@ -2611,7 +2417,6 @@ static int msm_rotator_start(unsigned long arg,
 			}
 		}
 
-		s = first_free_idx;
 	} else if (s == MAX_SESSIONS) {
 		dev_dbg(msm_rotator_dev->device, "%s: all sessions in use\n",
 			__func__);
@@ -2665,8 +2470,6 @@ static int msm_rotator_finish(unsigned long arg)
 			if (msm_rotator_dev->last_session_idx == s)
 				msm_rotator_dev->last_session_idx =
 					INVALID_SESSION;
-			msm_rotator_signal_timeline(s);
-			msm_rotator_release_acq_fence(s);
 			if (msm_rotator_dev->rot_session[s]->enable_2pass) {
 				rotator_free_2pass_buf(mrd->y_rot_buf, s);
 				rotator_free_2pass_buf(mrd->chroma_rot_buf, s);
@@ -2757,7 +2560,6 @@ msm_rotator_close(struct inode *inode, struct file *filp)
 				 __func__, msm_rotator_dev->rot_session[s],
 				 fd_info->pid);
 			rot_wait_for_commit_queue(true);
-			msm_rotator_signal_timeline(s);
 			kfree(msm_rotator_dev->rot_session[s]);
 			msm_rotator_dev->rot_session[s] = NULL;
 			if (msm_rotator_dev->last_session_idx == s)
@@ -2790,9 +2592,6 @@ static long msm_rotator_ioctl(struct file *file, unsigned cmd,
 		return ret;
 	case MSM_ROTATOR_IOCTL_FINISH:
 		return msm_rotator_finish(arg);
-	case MSM_ROTATOR_IOCTL_BUFFER_SYNC:
-		ret =  msm_rotator_buf_sync(arg);
-		return ret;
 	default:
 		dev_dbg(msm_rotator_dev->device,
 			"unexpected IOCTL %d\n", cmd);
@@ -3105,7 +2904,6 @@ static int msm_rotator_suspend(struct platform_device *dev, pm_message_t state)
 		disable_rot_clks();
 		msm_rotator_dev->rot_clk_state = CLK_SUSPEND;
 	}
-	msm_rotator_release_all_timeline();
 	mutex_unlock(&msm_rotator_dev->rotator_lock);
 	return 0;
 }
