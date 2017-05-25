@@ -79,6 +79,7 @@ struct cpufreq_policy {
 						should set cpufreq */
 	unsigned int		cpu;    /* cpu managing this policy, must be online */
 
+	struct clk		*clk;
 	struct cpufreq_cpuinfo	cpuinfo;/* see above */
 
 	unsigned int		min;    /* in kHz */
