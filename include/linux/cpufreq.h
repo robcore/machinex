@@ -361,7 +361,6 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
 const char *cpufreq_get_current_driver(void);
 void *cpufreq_get_driver_data(void);
 
-void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state);
 void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 		unsigned int load);
 
