@@ -1664,7 +1664,7 @@ static void cpufreq_offline_finish(unsigned int cpu)
  *
  * Removes the cpufreq interface for a CPU device.
  */
-static void cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
+static int cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
 {
 	unsigned int cpu = dev->id;
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
@@ -1682,6 +1682,7 @@ static void cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
 
 	if (cpumask_empty(policy->real_cpus))
 		cpufreq_policy_free(policy, true);
+	return 0;
 }
 
 static void handle_update(struct work_struct *work)
