@@ -1033,7 +1033,7 @@ static void __init cpufreq_table_init(void)
 {
 	struct cpufreq_policy *policy = per_cpu(acpu_cpu_data, policy->cpu);
 	struct cpufreq_frequency_table *freq_table =
-			per_cpu(freq_table, policy->cpu);
+			per_cpu(freq_table, cpu);
 	unsigned int cpu;
 	int freq_cnt = 0;
 
