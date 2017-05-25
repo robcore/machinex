@@ -496,8 +496,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	now = ktime_to_us(ktime_get());
 	ppol->last_evaluated_jiffy = get_jiffies_64();
 
-	if (tunables->use_sched_load)
-		sched_get_cpus_busy(sl, ppol->policy->cpus);
 	max_cpu = cpumask_first(ppol->policy->cpus);
 	i = 0;
 	for_each_cpu(cpu, ppol->policy->cpus) {
