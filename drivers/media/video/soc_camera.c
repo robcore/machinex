@@ -1510,7 +1510,7 @@ static int soc_camera_pdrv_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver soc_camera_pdrv = {
+static struct platform_driver __refdata soc_camera_pdrv = {
 	.remove  = __devexit_p(soc_camera_pdrv_remove),
 	.driver  = {
 		.name	= "soc-camera-pdrv",

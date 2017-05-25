@@ -1049,7 +1049,7 @@ static int rpmrs_cpu_callback(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block rpmrs_cpu_notifier = {
+static struct notifier_block __refdata rpmrs_cpu_notifier = {
 	.notifier_call = rpmrs_cpu_callback,
 };
 
