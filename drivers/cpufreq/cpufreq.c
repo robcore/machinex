@@ -1321,8 +1321,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-	policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+	policy->user_policy.min = policy->min;
+	policy->user_policy.max = policy->max;
 
 	policy->util = 0;
 	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
@@ -1567,7 +1567,6 @@ static void cpufreq_out_of_sync(struct cpufreq_policy *policy,
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
-	policy = per_cpu(cpufreq_cpu_data, cpu);
 
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
@@ -1678,7 +1677,7 @@ static unsigned int __cpufreq_get(unsigned int cpu)
 		/* verify no discrepancy between actual and
 					saved value exists */
 		if (unlikely(ret_freq != policy->cur)) {
-			cpufreq_out_of_sync(cpu, policy->cur, ret_freq);
+			cpufreq_out_of_sync(policy, ret_freq);
 			schedule_work(&policy->update);
 		}
 	}
@@ -2274,7 +2273,7 @@ int cpufreq_update_policy(unsigned int cpu)
 			policy->cur = new_policy.cur;
 		} else {
 			if (policy->cur != new_policy.cur)
-				cpufreq_out_of_sync(cpu, policy->cur,
+				cpufreq_out_of_sync(policy,
 								new_policy.cur);
 		}
 	}
