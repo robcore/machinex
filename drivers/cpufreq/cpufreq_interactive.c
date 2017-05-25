@@ -86,8 +86,6 @@ static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
 
-static DEFINE_PER_CPU(unsigned int, cpu_util);
-
 struct cpufreq_interactive_tunables {
 	int usage_count;
 	/* Hi speed to bump to from lo speed when load burst (default max) */
@@ -417,7 +415,6 @@ static u64 update_load(int cpu)
 	pcpu->time_in_idle_timestamp = now;
 
 	cur_load = (unsigned int)(active_time * 100) / delta_time;
-	per_cpu(cpu_util, cpu) = cur_load;
 
 	return now;
 }
@@ -1238,7 +1235,6 @@ show_store_gov_pol_sys(max_freq_hysteresis);
 show_store_gov_pol_sys(align_windows);
 show_store_gov_pol_sys(ignore_hispeed_on_notif);
 show_store_gov_pol_sys(fast_ramp_down);
-show_gov_pol_sys(cpu_util);
 show_store_gov_pol_sys(enable_prediction);
 
 #define gov_sys_attr_rw(_name)						\
@@ -1274,11 +1270,6 @@ static struct global_attr boostpulse_gov_sys =
 
 static struct freq_attr boostpulse_gov_pol =
 	__ATTR(boostpulse, 0200, NULL, store_boostpulse_gov_pol);
-static struct global_attr cpu_util_gov_sys =
-	__ATTR(cpu_util, 0440, show_cpu_util_gov_sys, NULL);
-
-static struct freq_attr cpu_util_gov_pol =
-	__ATTR(cpu_util, 0440, show_cpu_util_gov_pol, NULL);
 
 /* One Governor instance for entire system */
 static struct attribute *interactive_attributes_gov_sys[] = {
@@ -1297,7 +1288,6 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&align_windows_gov_sys.attr,
 	&ignore_hispeed_on_notif_gov_sys.attr,
 	&fast_ramp_down_gov_sys.attr,
-	&cpu_util_gov_sys.attr,
 	&enable_prediction_gov_sys.attr,
 	NULL,
 };
@@ -1324,7 +1314,6 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&align_windows_gov_pol.attr,
 	&ignore_hispeed_on_notif_gov_pol.attr,
 	&fast_ramp_down_gov_pol.attr,
-	&cpu_util_gov_pol.attr,
 	&enable_prediction_gov_pol.attr,
 	NULL,
 };
