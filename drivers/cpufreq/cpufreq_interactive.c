@@ -918,7 +918,6 @@ static ssize_t store_target_loads(
 	tunables->ntarget_loads = ntokens;
 	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 
-	sched_update_freq_max_load(&controlled_cpus);
 
 	return count;
 }
@@ -1574,7 +1573,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			tunables->usage_count++;
 			cpumask_or(&controlled_cpus, &controlled_cpus,
 				   policy->related_cpus);
-			sched_update_freq_max_load(policy->related_cpus);
 			policy->governor_data = tunables;
 			return 0;
 		}
@@ -1607,7 +1605,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 
 		cpumask_or(&controlled_cpus, &controlled_cpus,
 			   policy->related_cpus);
-		sched_update_freq_max_load(policy->related_cpus);
 
 		if (have_governor_per_policy())
 			ppol->cached_tunables = tunables;
@@ -1619,7 +1616,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_POLICY_EXIT:
 		cpumask_andnot(&controlled_cpus, &controlled_cpus,
 			       policy->related_cpus);
-		sched_update_freq_max_load(cpu_possible_mask);
 		if (!--tunables->usage_count) {
 			if (policy->governor->initialized == 1)
 				cpufreq_unregister_notifier(&cpufreq_notifier_block,
