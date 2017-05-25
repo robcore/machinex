@@ -1670,7 +1670,7 @@ static int cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
 	if (!policy)
-		return;
+		return -EINVAL;
 
 	if (cpu_online(cpu)) {
 		cpufreq_offline_prepare(cpu);
