@@ -315,7 +315,7 @@ static int msm_thermal_cpu_callback(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block __refdata msm_thermal_cpu_notifier = {
+static struct notifier_block msm_thermal_cpu_notifier = {
 	.notifier_call = msm_thermal_cpu_callback,
 };
 
@@ -407,15 +407,15 @@ static ssize_t show_thermal_stats(struct kobject *kobj,
 			msm_thermal_stats.warning,
 			msm_thermal_stats.normal);
 }
-static __refdata struct kobj_attribute msm_thermal_stat_attr =
+static struct kobj_attribute msm_thermal_stat_attr =
 __ATTR(statistics, 0444, show_thermal_stats, NULL);
 
-static __refdata struct attribute *msm_thermal_stat_attrs[] = {
+static struct attribute *msm_thermal_stat_attrs[] = {
         &msm_thermal_stat_attr.attr,
         NULL,
 };
 
-static __refdata struct attribute_group msm_thermal_stat_attr_group = {
+static struct attribute_group msm_thermal_stat_attr_group = {
         .attrs = msm_thermal_stat_attrs,
 };
 
