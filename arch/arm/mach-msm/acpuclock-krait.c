@@ -64,7 +64,7 @@ static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
 static struct drv_data {
-	struct acpu_level *acpu_freq_tbl;
+	struct acpu_level *priv;
 	const struct l2_level *l2_freq_tbl;
 	struct scalable *scalable;
 	struct hfpll_data *hfpll_data;
@@ -72,6 +72,7 @@ static struct drv_data {
 	struct msm_bus_scale_pdata *bus_scale;
 	int boost_uv;
 	struct device *dev;
+	struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 } drv;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
@@ -546,7 +547,7 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 		goto out;
 
 	/* Find target frequency. */
-	for (tgt = drv.acpu_freq_tbl; tgt->speed.khz != 0; tgt++) {
+	for (tgt = drv.priv; tgt->speed.khz != 0; tgt++) {
 		if (tgt->speed.khz == rate) {
 			tgt_acpu_s = &tgt->speed;
 			break;
@@ -881,7 +882,7 @@ static const struct acpu_level *find_cur_acpu_level(int cpu)
 	struct core_speed cur_speed;
 
 	fill_cur_core_speed(&cur_speed, sc);
-	for (l = drv.acpu_freq_tbl; l->speed.khz != 0; l++)
+	for (l = drv.priv; l->speed.khz != 0; l++)
 		if (speed_equal(&l->speed, &cur_speed))
 			return l;
 	return NULL;
@@ -904,7 +905,7 @@ static const struct acpu_level *find_min_acpu_level(void)
 {
 	struct acpu_level *l;
 
-	for (l = drv.acpu_freq_tbl; l->speed.khz != 0; l++)
+	for (l = drv.priv; l->speed.khz != 0; l++)
 		if (l->use_for_scaling)
 			return l;
 
@@ -988,10 +989,10 @@ ssize_t acpuclk_get_vdd_levels_str(char *buf) {
 	if (buf) {
 		mutex_lock(&driver_lock);
 
-		for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
+		for (i = 0; drv.priv[i].speed.khz; i++) {
 			/* updated to use uv required by 8x60 architecture - faux123 */
-			len += sprintf(buf + len, "%8lu: %8d\n", drv.acpu_freq_tbl[i].speed.khz,
-				drv.acpu_freq_tbl[i].vdd_core );
+			len += sprintf(buf + len, "%8lu: %8d\n", drv.priv[i].speed.khz,
+				drv.priv[i].vdd_core );
 		}
 
 		mutex_unlock(&driver_lock);
@@ -1007,60 +1008,49 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 
 	mutex_lock(&driver_lock);
 
-	for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
+	for (i = 0; drv.priv[i].speed.khz; i++) {
 		if (khz == 0)
-			new_vdd_uv = min(max((unsigned int)(drv.acpu_freq_tbl[i].vdd_core + vdd_uv),
+			new_vdd_uv = min(max((unsigned int)(drv.priv[i].vdd_core + vdd_uv),
 				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
-		else if ( drv.acpu_freq_tbl[i].speed.khz == khz)
+		else if ( drv.priv[i].speed.khz == khz)
 			new_vdd_uv = min(max((unsigned int)vdd_uv,
 				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
 		else
 			continue;
 
-		drv.acpu_freq_tbl[i].vdd_core = new_vdd_uv;
+		drv.priv[i].vdd_core = new_vdd_uv;
 	}
 	mutex_unlock(&driver_lock);
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
-	int cpu;
+	unsigned int cpu;
 	int freq_cnt = 0;
 
 	for_each_possible_cpu(cpu) {
 		int i;
-		/* Construct the freq_table tables from acpu_freq_tbl. */
-		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
-			if (drv.acpu_freq_tbl[i].use_for_scaling) {
-#ifdef CONFIG_SEC_FACTORY
-				// if factory_condition, set the core freq limit.
-				//QMCK
-				if (console_set_on_cmdline && drv.acpu_freq_tbl[i].speed.khz > 1000000) {
-					if(console_batt_stat == 1) {
-						continue;
-					}
-				}
-				//QMCK
-#endif
-				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-				freq_table[cpu][freq_cnt].frequency
-					= drv.acpu_freq_tbl[i].speed.khz;
+		/* Construct the freq_table tables from priv. */
+		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(*drv.freq_table) - 1; i++) {
+			if (drv.priv[i].use_for_scaling) {
+				drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+				drv.freq_table[cpu][freq_cnt].frequency
+					= drv.priv[i].speed.khz;
 				freq_cnt++;
 			}
 		}
 		/* freq_table not big enough to store all usable freqs. */
-		BUG_ON(drv.acpu_freq_tbl[i].speed.khz != 0);
+		BUG_ON(drv.priv[i].speed.khz != 0);
 
-		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+		drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+		drv.freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
 		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
+		cpufreq_frequency_table_get_attr(drv.freq_table[cpu], cpu);
 	}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
@@ -1073,11 +1063,11 @@ static void __init dcvs_freq_init(void)
 {
 	int i;
 
-	for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0; i++)
-		if (drv.acpu_freq_tbl[i].use_for_scaling)
+	for (i = 0; drv.priv[i].speed.khz != 0; i++)
+		if (drv.priv[i].use_for_scaling)
 			msm_dcvs_register_cpu_freq(
-				drv.acpu_freq_tbl[i].speed.khz,
-				drv.acpu_freq_tbl[i].vdd_core / 1000);
+				drv.priv[i].speed.khz,
+				drv.priv[i].vdd_core / 1000);
 }
 
 static int acpuclk_cpu_callback(struct notifier_block *nfb,
@@ -1238,8 +1228,8 @@ static void __init drv_data_init(struct device *dev,
 	pvs = select_freq_plan(params->pte_efuse_phys, params->pvs_tables);
 	BUG_ON(!pvs->table);
 
-	drv.acpu_freq_tbl = kmemdup(pvs->table, pvs->size, GFP_KERNEL);
-	BUG_ON(!drv.acpu_freq_tbl);
+	drv.priv = kmemdup(pvs->table, pvs->size, GFP_KERNEL);
+	BUG_ON(!drv.priv);
 	drv.boost_uv = pvs->boost_uv;
 #ifdef CONFIG_SEC_DEBUG_SUBSYS
 	boost_uv = drv.boost_uv;
@@ -1255,7 +1245,7 @@ static void __init hw_init(void)
 	int cpu, rc;
 
 	if (krait_needs_vmin())
-		krait_apply_vmin(drv.acpu_freq_tbl);
+		krait_apply_vmin(drv.priv);
 
 	l2->hfpll_base = ioremap(l2->hfpll_phys_base, SZ_32);
 	BUG_ON(!l2->hfpll_base);

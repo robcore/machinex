@@ -143,17 +143,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
-	if (is_clk) {
-		unsigned long rate = new_freq * 1000;
-		rate = clk_round_rate(cpu_clk[policy->cpu], rate);
-		ret = clk_set_rate(cpu_clk[policy->cpu], rate);
-		if (!ret) {
-			freq_index[policy->cpu] = index;
-			update_l2_bw(NULL);
-		}
-	} else {
-		ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
-	}
+	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
 
 	if (!ret)
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
@@ -385,6 +375,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
+#ifdef CONFIG_OF
 static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
@@ -441,6 +432,7 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 static struct notifier_block __refdata msm_cpufreq_cpu_notifier = {
 	.notifier_call = msm_cpufreq_cpu_callback,
 };
+#endif
 
 static int msm_cpufreq_suspend(void)
 {
@@ -524,6 +516,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.attr		= msm_freq_attr,
 };
 
+#ifdef CONFIG_OF
 #define PROP_TBL "qcom,cpufreq-table"
 #define PROP_PORTS "qcom,cpu-mem-ports"
 static int cpufreq_parse_dt(struct device *dev)
@@ -655,6 +648,7 @@ static int cpufreq_parse_dt(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static int __init msm_cpufreq_probe(struct platform_device *pdev)
 {
@@ -679,9 +673,11 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 	if (!cpu_clk[0])
 		return -ENODEV;
 
+#ifdef CONFIG_OF
 	ret = cpufreq_parse_dt(dev);
 	if (ret)
 		return ret;
+#endif
 
 	for_each_possible_cpu(cpu) {
 		cpufreq_frequency_table_get_attr(freq_table, cpu);
@@ -697,15 +693,19 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_OF
 static struct of_device_id match_table[] = {
 	{ .compatible = "qcom,msm-cpufreq" },
 	{}
 };
+#endif
 
 static struct platform_driver msm_cpufreq_plat_driver = {
 	.driver = {
 		.name = "msm-cpufreq",
+#ifdef CONFIG_OF
 		.of_match_table = match_table,
+#endif
 		.owner = THIS_MODULE,
 	},
 };
@@ -720,8 +720,10 @@ static int __init msm_cpufreq_register(void)
 	}
 
 	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
-	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI, 0);
+	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
+#ifdef CONFIG_OF
 	register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
+#endif
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
