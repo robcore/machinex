@@ -98,7 +98,7 @@
 
 #define MAX_TIMELINE_NAME_LEN 16
 #define WAIT_FENCE_FIRST_TIMEOUT MSEC_PER_SEC
-#define WAIT_FENCE_FINAL_TIMEOUT (10 * MSEC_PER_SEC)
+#define WAIT_FENCE_FINAL_TIMEOUT (5 * MSEC_PER_SEC)
 
 #define ROTATOR_REVISION_V0		0
 #define ROTATOR_REVISION_V1		1
@@ -236,7 +236,7 @@ struct msm_rotator_dev {
 
 static struct msm_rotator_dev *msm_rotator_dev;
 #define mrd msm_rotator_dev
-static void rot_wait_for_commit_queue(u32 is_all);
+static void rot_wait_for_commit_queue(bool is_all);
 
 enum {
 	CLK_EN,
@@ -603,6 +603,8 @@ static void msm_rotator_release_all_timeline(void)
 static void msm_rotator_wait_for_fence(struct sync_fence *acq_fen)
 {
 	int ret;
+	if (!acq_fen)
+		return;
 	if (acq_fen) {
 		ret = sync_fence_wait(acq_fen,
 				WAIT_FENCE_FIRST_TIMEOUT);
