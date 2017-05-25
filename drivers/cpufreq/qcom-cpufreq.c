@@ -319,9 +319,10 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * In some SoC, cpu cores' frequencies can not
 	 * be changed independently. Each cpu is bound to
 	 * same frequency. Hence set the cpumask to all cpu.
-	 */
+	 * (but ours isn't one of them)
 	if (is_sync)
 		cpumask_setall(policy->cpus);
+	 */
 
 	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
 	INIT_WORK(&cpu_work->work, set_cpu_work);
