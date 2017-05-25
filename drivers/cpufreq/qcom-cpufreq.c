@@ -120,12 +120,12 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpufreq_frequency_table *table;
 
 	if (limit->limits_init) {
-		if (new_freq >= limit->allowed_max) {
+		if (new_freq > limit->allowed_max) {
 			new_freq = limit->allowed_max;
 			pr_debug("max: limiting freq to %d\n", new_freq);
 		}
 
-		if (new_freq <= limit->allowed_min) {
+		if (new_freq < limit->allowed_min) {
 			new_freq = limit->allowed_min;
 			pr_debug("min: limiting freq to %d\n", new_freq);
 		}
@@ -141,7 +141,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	if (is_clk) {
 		unsigned long rate = new_freq * 1000;
@@ -156,7 +156,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	if (!ret)
-		cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -332,6 +332,26 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return 0;
 
 
+	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
+#if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
+		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
+		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
+#endif
+#if defined(CONFIG_MSM_USE_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
+		policy->cpuinfo.min_freq = check_cpufreq_hardlimit(policy->min);
+		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
+#endif
+		pr_debug("this is useless\n");
+	}
+#if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
+	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
+	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
+#endif
+#if defined(MSM_USE_CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
+	policy->min = check_cpufreq_hardlimit(policy->min);
+	policy->max = check_cpufreq_hardlimit(policy->max);
+#endif
+
 	if (is_clk)
 		cur_freq = clk_get_rate(cpu_clk[policy->cpu])/1000;
 	else
@@ -355,6 +375,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
 			policy->cpu, cur_freq, table[index].frequency);
+
 	policy->cur = table[index].frequency;
 
 	policy->cpuinfo.transition_latency =

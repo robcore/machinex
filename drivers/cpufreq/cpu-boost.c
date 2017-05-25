@@ -40,7 +40,7 @@ static struct workqueue_struct *cpu_boost_wq;
 static struct delayed_work input_boost_work;
 static struct delayed_work input_boost_rem;
 
-static bool input_boost_enabled = false;
+static bool input_boost_enabled = true;
 module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 100;

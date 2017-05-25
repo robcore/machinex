@@ -66,14 +66,6 @@ static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
 static DEFINE_MUTEX(cpufreq_governor_lock);
 
-/* Flag to suspend/resume CPUFreq governors */
-static bool cpufreq_suspended;
-
-static inline bool has_target(void)
-{
-	return cpufreq_driver->target;
-}
-
 static struct kset *cpufreq_kset;
 static struct kset *cpudev_kset;
 
@@ -387,9 +379,19 @@ static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 #endif
 }
 
-static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
-		struct cpufreq_freqs *freqs, unsigned int state)
+
+/**
+ * cpufreq_notify_transition - call notifier chain and adjust_jiffies
+ * on frequency transition.
+ *
+ * This function calls the transition notifiers and the "adjust_jiffies"
+ * function. It is called twice on all CPU frequency changes that have
+ * external effects.
+ */
+void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 {
+	struct cpufreq_policy *policy;
+
 	BUG_ON(irqs_disabled());
 
 	if (cpufreq_disabled())
@@ -397,8 +399,9 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 
 	freqs->flags = cpufreq_driver->flags;
 	pr_debug("notification %u of frequency transition to %u kHz\n",
-		 state, freqs->new);
+		state, freqs->new);
 
+	policy = per_cpu(cpufreq_cpu_data, freqs->cpu);
 	switch (state) {
 
 	case CPUFREQ_PRECHANGE:
@@ -409,8 +412,9 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 		if (!(cpufreq_driver->flags & CPUFREQ_CONST_LOOPS)) {
 			if ((policy) && (policy->cpu == freqs->cpu) &&
 			    (policy->cur) && (policy->cur != freqs->old)) {
-				pr_debug("Warning: CPU frequency is %u, cpufreq assumed %u kHz\n",
-					 freqs->old, policy->cur);
+				pr_debug("Warning: CPU frequency is"
+					" %u, cpufreq assumed %u kHz.\n",
+					freqs->old, policy->cur);
 				freqs->old = policy->cur;
 			}
 		}
@@ -421,33 +425,19 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 
 	case CPUFREQ_POSTCHANGE:
 		adjust_jiffies(CPUFREQ_POSTCHANGE, freqs);
-		pr_debug("FREQ: %lu - CPU: %lu\n",
-			 (unsigned long)freqs->new, (unsigned long)freqs->cpu);
+		pr_debug("FREQ: %lu - CPU: %lu", (unsigned long)freqs->new,
+			(unsigned long)freqs->cpu);
 		trace_cpu_frequency(freqs->new, freqs->cpu);
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
-		if (likely(policy) && likely(policy->cpu == freqs->cpu))
+		if (likely(policy) && likely(policy->cpu == freqs->cpu)) {
 			policy->cur = freqs->new;
+			sysfs_notify(policy->kobj, NULL, "scaling_cur_freq");
+		}
 		break;
 	}
 }
-
-/**
- * cpufreq_notify_transition - call notifier chain and adjust_jiffies
- * on frequency transition.
- *
- * This function calls the transition notifiers and the "adjust_jiffies"
- * function. It is called twice on all CPU frequency changes that have
- * external effects.
- */
-void cpufreq_notify_transition(struct cpufreq_policy *policy,
-		struct cpufreq_freqs *freqs, unsigned int state)
-{
-	for_each_cpu(freqs->cpu, policy->cpus)
-		__cpufreq_notify_transition(policy, freqs, state);
-}
 EXPORT_SYMBOL_GPL(cpufreq_notify_transition);
-
 /**
  * cpufreq_notify_utilization - notify CPU userspace about CPU utilization
  * change
@@ -502,7 +492,7 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 			*policy = CPUFREQ_POLICY_POWERSAVE;
 			err = 0;
 		}
-	} else {
+	} else if (cpufreq_driver->target) {
 		struct cpufreq_governor *t;
 
 		mutex_lock(&cpufreq_governor_mutex);
@@ -704,7 +694,7 @@ static ssize_t show_scaling_available_governors(struct cpufreq_policy *policy,
 	ssize_t i = 0;
 	struct cpufreq_governor *t;
 
-	if (!has_target()) {
+	if (!cpufreq_driver->target) {
 		i += sprintf(buf, "performance powersave");
 		goto out;
 	}
@@ -1056,7 +1046,7 @@ static int cpufreq_add_dev_sysfs(unsigned int cpu,
 		if (ret)
 			goto err_out_kobj_put;
 	}
-	if (has_target()) {
+	if (cpufreq_driver->target) {
 		ret = sysfs_create_file(kobj, &scaling_cur_freq.attr);
 		if (ret)
 			goto err_out_kobj_put;
@@ -1329,8 +1319,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
-	policy->user_policy.min = policy->min;
-	policy->user_policy.max = policy->max;
+	policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
+	policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
 
 	policy->util = 0;
 	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
@@ -1472,7 +1462,7 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 #endif
 
-	if (has_target())
+	if (cpufreq_driver->target)
 		__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
 
 	if (cpufreq_driver->exit)
@@ -1565,19 +1555,19 @@ static void handle_update(struct work_struct *work)
  *	We adjust to current frequency first, and need to clean up later.
  *	So either call to cpufreq_update_policy() or schedule handle_update()).
  */
-static void cpufreq_out_of_sync(struct cpufreq_policy *policy,
+static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 				unsigned int new_freq)
 {
 	struct cpufreq_freqs freqs;
 
-	pr_debug("Warning: CPU frequency out of sync: cpufreq and timing core thinks of %u, is %u kHz\n",
-		 policy->cur, new_freq);
+	pr_debug("Warning: CPU frequency out of sync: cpufreq and timing "
+	       "core thinks of %u, is %u kHz.\n", old_freq, new_freq);
 
-	freqs.old = policy->cur;
+	freqs.cpu = cpu;
+	freqs.old = old_freq;
 	freqs.new = new_freq;
-
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 }
 
 /**
@@ -1685,7 +1675,7 @@ static unsigned int __cpufreq_get(unsigned int cpu)
 		/* verify no discrepancy between actual and
 					saved value exists */
 		if (unlikely(ret_freq != policy->cur)) {
-			cpufreq_out_of_sync(policy, ret_freq);
+			cpufreq_out_of_sync(cpu, policy->cur, ret_freq);
 			schedule_work(&policy->update);
 		}
 	}
@@ -2281,7 +2271,7 @@ int cpufreq_update_policy(unsigned int cpu)
 			policy->cur = new_policy.cur;
 		} else {
 			if (policy->cur != new_policy.cur)
-				cpufreq_out_of_sync(policy,
+				cpufreq_out_of_sync(cpu, policy->cur,
 								new_policy.cur);
 		}
 	}
