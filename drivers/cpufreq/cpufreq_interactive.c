@@ -75,7 +75,6 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-static int migration_register_count;
 static struct mutex sched_lock;
 static cpumask_t controlled_cpus;
 
@@ -132,9 +131,6 @@ struct cpufreq_interactive_tunables {
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
-
-	/* scheduler input related flags */
-	bool use_migration_notif;
 
 	/*
 	 * Whether to align timer windows across all CPUs.
@@ -757,7 +753,6 @@ static int load_change_callback(struct notifier_block *nb, unsigned long val,
 		goto exit;
 
 	tunables = ppol->policy->governor_data;
-	if (!tunables->use_migration_notif)
 		goto exit;
 
 	spin_lock_irqsave(&ppol->target_freq_lock, flags);
@@ -1194,101 +1189,6 @@ static ssize_t store_io_is_busy(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static int cpufreq_interactive_enable_sched_input(
-			struct cpufreq_interactive_tunables *tunables)
-{
-	int rc = 0, j;
-	struct cpufreq_interactive_tunables *t;
-
-	mutex_lock(&sched_lock);
-
-	if (!tunables->use_migration_notif)
-		goto out;
-
-	migration_register_count++;
-	if (migration_register_count > 1)
-		goto out;
-	else
-		atomic_notifier_chain_register(&load_alert_notifier_head,
-						&load_notifier_block);
-out:
-	mutex_unlock(&sched_lock);
-	return rc;
-}
-
-static int cpufreq_interactive_disable_sched_input(
-			struct cpufreq_interactive_tunables *tunables)
-{
-	mutex_lock(&sched_lock);
-
-	if (tunables->use_migration_notif) {
-		migration_register_count--;
-		if (migration_register_count < 1)
-			atomic_notifier_chain_unregister(
-					&load_alert_notifier_head,
-					&load_notifier_block);
-	}
-
-	mutex_unlock(&sched_lock);
-	return 0;
-}
-
-static ssize_t show_use_migration_notif(
-		struct cpufreq_interactive_tunables *tunables, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-			tunables->use_migration_notif);
-}
-
-static ssize_t store_use_migration_notif(
-			struct cpufreq_interactive_tunables *tunables,
-			const char *buf, size_t count)
-{
-	int ret;
-	unsigned long val;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	if (tunables->use_migration_notif == (bool) val)
-		return count;
-	tunables->use_migration_notif = val;
-
-	return count;
-
-	mutex_lock(&sched_lock);
-	if (val) {
-		migration_register_count++;
-		if (migration_register_count == 1)
-			atomic_notifier_chain_register(
-					&load_alert_notifier_head,
-					&load_notifier_block);
-	} else {
-		migration_register_count--;
-		if (!migration_register_count)
-			atomic_notifier_chain_unregister(
-					&load_alert_notifier_head,
-					&load_notifier_block);
-	}
-	mutex_unlock(&sched_lock);
-
-	return count;
-}
-
-static ssize_t show_cpu_util(struct cpufreq_interactive_tunables
-		*tunables, char *buf)
-{
-	int i;
-	ssize_t ret = 0;
-
-	for_each_online_cpu(i) {
-		ret += sprintf(buf + ret, "%3u ", per_cpu(cpu_util, i));
-	}
-	sprintf(buf + ret -1, "\n");
-	return ret;
-}
-
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -1336,7 +1236,6 @@ show_store_gov_pol_sys(boost);
 store_gov_pol_sys(boostpulse);
 show_store_gov_pol_sys(boostpulse_duration);
 show_store_gov_pol_sys(io_is_busy);
-show_store_gov_pol_sys(use_migration_notif);
 show_store_gov_pol_sys(max_freq_hysteresis);
 show_store_gov_pol_sys(align_windows);
 show_store_gov_pol_sys(ignore_hispeed_on_notif);
@@ -1366,7 +1265,6 @@ gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(boost);
 gov_sys_pol_attr_rw(boostpulse_duration);
 gov_sys_pol_attr_rw(io_is_busy);
-gov_sys_pol_attr_rw(use_migration_notif);
 gov_sys_pol_attr_rw(max_freq_hysteresis);
 gov_sys_pol_attr_rw(align_windows);
 gov_sys_pol_attr_rw(ignore_hispeed_on_notif);
@@ -1397,7 +1295,6 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&boostpulse_gov_sys.attr,
 	&boostpulse_duration_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
-	&use_migration_notif_gov_sys.attr,
 	&max_freq_hysteresis_gov_sys.attr,
 	&align_windows_gov_sys.attr,
 	&ignore_hispeed_on_notif_gov_sys.attr,
@@ -1425,7 +1322,6 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&boostpulse_gov_pol.attr,
 	&boostpulse_duration_gov_pol.attr,
 	&io_is_busy_gov_pol.attr,
-	&use_migration_notif_gov_pol.attr,
 	&max_freq_hysteresis_gov_pol.attr,
 	&align_windows_gov_pol.attr,
 	&ignore_hispeed_on_notif_gov_pol.attr,
