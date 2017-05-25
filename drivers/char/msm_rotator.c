@@ -162,7 +162,6 @@ struct msm_rotator_commit_info {
 	struct ion_handle *dstp1_ihdl;
 	int ps0_need;
 	int session_index;
-	struct sync_fence *acq_fen;
 	int fast_yuv_en;
 	int enable_2pass;
 };
@@ -1779,7 +1778,6 @@ static int msm_rotator_rotate_prepare(
 	commit_info->dstp1_ihdl = dstp1_ihdl;
 	commit_info->ps0_need = ps0_need;
 	commit_info->session_index = s;
-	commit_info->acq_fen = msm_rotator_dev->sync_info[s].acq_fen;
 	commit_info->fast_yuv_en = mrd->rot_session[s]->fast_yuv_enable;
 	commit_info->enable_2pass = mrd->rot_session[s]->enable_2pass;
 	mutex_unlock(&msm_rotator_dev->rotator_lock);
@@ -1840,7 +1838,6 @@ static int msm_rotator_do_rotate_sub(
 	dstp1_ihdl = commit_info->dstp1_ihdl;
 	ps0_need = commit_info->ps0_need;
 	s = commit_info->session_index;
-	commit_info->acq_fen = NULL;
 
 	cancel_delayed_work_sync(&msm_rotator_dev->rot_clk_work);
 	if (msm_rotator_dev->rot_clk_state != CLK_EN) {
@@ -1989,7 +1986,7 @@ do_rotate_exit:
 	return rc;
 }
 
-static void rot_wait_for_commit_queue(u32 is_all)
+static void rot_wait_for_commit_queue(bool is_all)
 {
 	int ret = 0;
 	u32 loop_cnt = 0;
@@ -2048,11 +2045,6 @@ static int msm_rotator_do_rotate(unsigned long arg)
 	}
 
 	session_index = mrd->commit_info[commit_q_w].session_index;
-	sync_info = &msm_rotator_dev->sync_info[session_index];
-	mutex_lock(&sync_info->sync_mutex);
-	atomic_inc(&sync_info->queue_buf_cnt);
-	sync_info->acq_fen = NULL;
-	mutex_unlock(&sync_info->sync_mutex);
 
 	if (atomic_inc_return(&mrd->commit_q_w) >= MAX_COMMIT_QUEUE)
 		atomic_set(&mrd->commit_q_w, 0);
@@ -2428,24 +2420,6 @@ static int msm_rotator_start(unsigned long arg,
 	if ((rc == 0) && (info.secure))
 		map_sec_resource(msm_rotator_dev);
 
-	sync_info = &msm_rotator_dev->sync_info[s];
-	if ((rc == 0) && (sync_info->initialized == false)) {
-		char timeline_name[MAX_TIMELINE_NAME_LEN];
-		if (sync_info->timeline == NULL) {
-			snprintf(timeline_name, sizeof(timeline_name),
-				"msm_rot_%d", first_free_idx);
-			sync_info->timeline =
-				sw_sync_timeline_create(timeline_name);
-			if (sync_info->timeline == NULL)
-				pr_err("%s: cannot create %s time line",
-					__func__, timeline_name);
-			sync_info->timeline_value = 0;
-		}
-		mutex_init(&sync_info->sync_mutex);
-		sync_info->initialized = true;
-	}
-	sync_info->acq_fen = NULL;
-	atomic_set(&sync_info->queue_buf_cnt, 0);
 rotator_start_exit:
 	mutex_unlock(&msm_rotator_dev->rotator_lock);
 
