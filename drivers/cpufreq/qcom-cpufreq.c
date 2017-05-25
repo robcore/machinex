@@ -225,7 +225,8 @@ done:
 
 static int msm_cpufreq_verify(struct cpufreq_policy *policy)
 {
-	cpufreq_verify_within_cpu_limits(policy);
+	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
+			policy->cpuinfo.max_freq);
 	return 0;
 }
 
