@@ -66,6 +66,14 @@ static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
 static DEFINE_MUTEX(cpufreq_governor_lock);
 
+/* Flag to suspend/resume CPUFreq governors */
+static bool cpufreq_suspended;
+
+static inline bool has_target(void)
+{
+	return cpufreq_driver->target_index || cpufreq_driver->target;
+}
+
 static struct kset *cpufreq_kset;
 static struct kset *cpudev_kset;
 
