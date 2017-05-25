@@ -54,7 +54,6 @@ struct cpufreq_interactive_policyinfo {
 	unsigned long notif_cpu;
 	int governor_enabled;
 	struct cpufreq_interactive_tunables *cached_tunables;
-	struct sched_load *sl;
 };
 
 /* Protected by per-policy load_lock */
@@ -447,7 +446,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	struct cpufreq_interactive_policyinfo *ppol = per_cpu(polinfo, data);
 	struct cpufreq_interactive_tunables *tunables =
 		ppol->policy->governor_data;
-	struct sched_load *sl = ppol->sl;
 	struct cpufreq_interactive_cpuinfo *pcpu;
 	unsigned int new_freq;
 	unsigned int prev_laf = 0, t_prevlaf;
@@ -1380,7 +1378,6 @@ static struct cpufreq_interactive_policyinfo *get_policyinfo(
 	struct cpufreq_interactive_policyinfo *ppol =
 				per_cpu(polinfo, policy->cpu);
 	int i;
-	struct sched_load *sl;
 
 	/* polinfo already allocated for policy, return */
 	if (ppol)
@@ -1389,14 +1386,6 @@ static struct cpufreq_interactive_policyinfo *get_policyinfo(
 	ppol = kzalloc(sizeof(*ppol), GFP_KERNEL);
 	if (!ppol)
 		return ERR_PTR(-ENOMEM);
-
-	sl = kcalloc(cpumask_weight(policy->related_cpus), sizeof(*sl),
-		     GFP_KERNEL);
-	if (!sl) {
-		kfree(ppol);
-		return ERR_PTR(-ENOMEM);
-	}
-	ppol->sl = sl;
 
 	init_timer_deferrable(&ppol->policy_timer);
 	ppol->policy_timer.function = cpufreq_interactive_timer;
@@ -1426,7 +1415,6 @@ static void free_policyinfo(int cpu)
 		if (per_cpu(polinfo, j) == ppol)
 			per_cpu(polinfo, cpu) = NULL;
 	kfree(ppol->cached_tunables);
-	kfree(ppol->sl);
 	kfree(ppol);
 }
 
