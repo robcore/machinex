@@ -416,7 +416,7 @@ static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block __refdata msm_cpufreq_cpu_notifier = {
+static struct notifier_block msm_cpufreq_cpu_notifier = {
 	.notifier_call = msm_cpufreq_cpu_callback,
 };
 
