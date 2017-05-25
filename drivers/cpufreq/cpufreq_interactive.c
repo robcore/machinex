@@ -1190,7 +1190,6 @@ static ssize_t store_io_is_busy(struct cpufreq_interactive_tunables *tunables,
 			continue;
 		t = per_cpu(polinfo, cpu)->cached_tunables;
 	}
-	sched_set_io_is_busy(val);
 
 	return count;
 }
@@ -1202,8 +1201,6 @@ static int cpufreq_interactive_enable_sched_input(
 	struct cpufreq_interactive_tunables *t;
 
 	mutex_lock(&sched_lock);
-
-	sched_set_io_is_busy(tunables->io_is_busy);
 
 	if (!tunables->use_migration_notif)
 		goto out;
