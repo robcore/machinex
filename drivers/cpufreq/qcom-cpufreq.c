@@ -69,12 +69,25 @@ static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 struct qcom_cpufreq_krait {
 	struct acpu_level *priv;
 	struct scalable *scalable;
-};
+	const struct l2_level *l2_freq_tbl;
+	struct device *dev;
+	struct hfpll_data *hfpll_data;
+} qck;
 
-static DEFINE_PER_CPU(struct qcom_cpufreq_krait, qck);
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, cpufreq_show_table);
 
-#define MAX_KRAIT_FREQS 35
-static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table[MAX_KRAIT_FREQS]);
+static void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
+				      unsigned int cpu)
+{
+	pr_debug("setting show_table for cpu %u to %p\n", cpu, table);
+	per_cpu(cpufreq_show_table, cpu) = table;
+}
+
+static void cpufreq_frequency_table_put_attr(unsigned int cpu)
+{
+	pr_debug("clearing show_table for cpu %u\n", cpu);
+	per_cpu(cpufreq_show_table, cpu) = NULL;
+}
 
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
@@ -221,29 +234,47 @@ int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 }
 EXPORT_SYMBOL(msm_cpufreq_set_freq_limits);
 
-static int msm_cpufreq_init(struct cpufreq_policy *policy)
+
+
+static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+
+static void cpufreq_table_init(void)
 {
-	int cur_freq;
-	int index = MAX_KRAIT_FREQS;
-	int ret = 0;
-	struct cpufreq_frequency_table *table;
 	int cpu;
-	int freq_cnt;
+	int freq_cnt = 0;
+
 	for_each_possible_cpu(cpu) {
+		int i;
 		/* Construct the freq_table tables from priv. */
-		for (index = 0, freq_cnt = 0; qck.priv[index].speed.khz != 0
-				&& freq_cnt < (MAX_KRAIT_FREQS - 1); index++) {
-			if (qck.priv[index].use_for_scaling) {
-				table[freq_cnt].driver_data = freq_cnt;
-				table[freq_cnt].frequency = qck.priv[index].speed.khz;
+		for (i = 0, freq_cnt = 0; qck.priv[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
+			if (qck.priv[i].use_for_scaling) {
+				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+				freq_table[cpu][freq_cnt].frequency
+					= qck.priv[i].speed.khz;
 				freq_cnt++;
 			}
 		}
+		/* freq_table not big enough to store all usable freqs. */
+		BUG_ON(qck.priv[i].speed.khz != 0);
 
-		table[freq_cnt].driver_data = freq_cnt;
-		table[freq_cnt].frequency = CPUFREQ_TABLE_END;
-		policy->freq_table = table;
+		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+
+		/* Register table with CPUFreq. */
+		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
 	}
+}
+
+static int msm_cpufreq_init(struct cpufreq_policy *policy)
+{
+	int cur_freq;
+	int index;
+	int ret = 0;
+	struct cpufreq_frequency_table *table;
+	int cpu;
+
+	cpufreq_table_init();
 
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (table == NULL)
