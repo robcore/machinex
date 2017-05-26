@@ -270,7 +270,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_frequency_table *table;
+	struct cpufreq_frequency_table *table = NULL;
 	int cpu;
 
 	cpufreq_table_init();
