@@ -1012,6 +1012,42 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
+#ifdef CONFIG_CPU_FREQ_MSM
+static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+extern int console_batt_stat;
+static void __init cpufreq_table_init(void)
+{
+	int cpu;
+	int freq_cnt = 0;
+
+	for_each_possible_cpu(cpu) {
+		int i;
+		/* Construct the freq_table tables from priv. */
+		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
+			if (drv.priv[i].use_for_scaling) {
+				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+				freq_table[cpu][freq_cnt].frequency
+					= drv.priv[i].speed.khz;
+				freq_cnt++;
+			}
+		}
+		/* freq_table not big enough to store all usable freqs. */
+		BUG_ON(drv.priv[i].speed.khz != 0);
+
+		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+
+		/* Register table with CPUFreq. */
+		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
+	}
+
+	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
+}
+#else
+static void __init cpufreq_table_init(void) {}
+#endif
+
 static void __init dcvs_freq_init(void)
 {
 	int i;
