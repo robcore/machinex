@@ -317,6 +317,21 @@ struct acpuclk_data {
 };
 
 /**
+ * struct drv_data - Now shared driver data between qcom cpufreq and acpuclock.
+ */
+
+struct drv_data {
+	struct acpu_level *priv;
+	const struct l2_level *l2_freq_tbl;
+	struct scalable *scalable;
+	struct hfpll_data *hfpll_data;
+	u32 bus_perf_client;
+	struct msm_bus_scale_pdata *bus_scale;
+	int boost_uv;
+	struct device *dev;
+} drv;
+
+/**
  * acpulock_get_rate() - Get a CPU's clock rate in KHz
  * @cpu: CPU to query the rate of
  */

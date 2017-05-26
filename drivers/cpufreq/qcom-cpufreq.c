@@ -38,7 +38,6 @@ static DEFINE_MUTEX(l2bw_lock);
 static struct clk *cpu_clk[NR_CPUS];
 static struct clk *l2_clk;
 static unsigned int freq_index[NR_CPUS];
-static struct cpufreq_frequency_table *freq_table;
 static unsigned int *l2_khz;
 static bool is_clk;
 static bool is_sync;
@@ -66,6 +65,7 @@ struct cpu_freq {
 };
 
 static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
 
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
@@ -221,6 +221,26 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 			per_cpu(freq_table, policy->cpu);
 	int cpu;
 
+	for_each_possible_cpu(cpu) {
+		int i = 15;
+		/* Construct the freq_table tables from priv. */
+		for (i = 0, index = 0; drv.priv[i].speed.khz != 0
+				&& index < (index - 1); i++) {
+			if (drv.priv[i].use_for_scaling) {
+				table[index].driver_data = index;
+				table[index].frequency = drv.priv[i].speed.khz;
+				index++;
+			}
+		}
+		/* freq_table not big enough to store all usable freqs. */
+		BUG_ON(drv.priv[i].speed.khz != 0);
+
+		table[index].driver_data = index;
+		table[index].frequency = CPUFREQ_TABLE_END;
+	}
+
+	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", index);
+
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (table == NULL)
 		return -ENODEV;
@@ -233,22 +253,29 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (is_sync)
 		cpumask_setall(policy->cpus);
 
+	ret = cpufreq_table_validate_and_show(policy, table);
+	if (ret) {
+		pr_err("cpufreq: failed to get policy min/max\n");
+		return ret;
+	}
+
 	/* synchronous cpus share the same policy */
 	if (is_clk && !cpu_clk[policy->cpu])
 		return 0;
 
-
-	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
 #if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
+	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
+
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
 		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
 #if defined(CONFIG_MSM_USE_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
 		policy->cpuinfo.min_freq = check_cpufreq_hardlimit(policy->min);
 		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
-#endif
+
 		pr_debug("this is useless\n");
 	}
+#endif
 #if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
 	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
 	policy->max = CONFIG_MSM_CPU_FREQ_MAX;

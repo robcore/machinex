@@ -63,21 +63,6 @@ int g_pvs_bin;
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
-static struct drv_data {
-	struct acpu_level *priv;
-	const struct l2_level *l2_freq_tbl;
-	struct scalable *scalable;
-	struct hfpll_data *hfpll_data;
-	u32 bus_perf_client;
-	struct msm_bus_scale_pdata *bus_scale;
-	int boost_uv;
-	struct device *dev;
-	struct cpufreq_frequency_table freq_table[35];
-} drv;
-
-static DEFINE_PER_CPU(struct cpufreq_policy *, acpu_cpu_data);
-static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
-
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
 	return drv.scalable[cpu].cur_speed->khz;
@@ -1027,51 +1012,6 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-#ifdef CONFIG_CPU_FREQ_MSM
-extern int console_batt_stat;
-static void __init cpufreq_table_init(void)
-{
-	struct cpufreq_policy *policy = per_cpu(acpu_cpu_data, policy->cpu);
-	struct cpufreq_frequency_table *freq_table =
-			per_cpu(freq_table, cpu);
-	unsigned int cpu;
-	int freq_cnt = 0;
-
-	for_each_possible_cpu(cpu) {
-		int i;
-		/* Construct the freq_table tables from priv. */
-		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
-				&& freq_cnt < ARRAY_OF(*drv.freq_table) - 1; i++) {
-			if (drv.priv[i].use_for_scaling) {
-				drv.freq_table[freq_cnt].driver_data = freq_cnt;
-				drv.freq_table[freq_cnt].frequency
-					= drv.priv[i].speed.khz;
-				freq_cnt++;
-			}
-		}
-		/* freq_table not big enough to store all usable freqs. */
-		BUG_ON(drv.priv[i].speed.khz != 0);
-
-		drv.freq_table[freq_cnt].driver_data = freq_cnt;
-		drv.freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
-		policy->cpu = cpu;
-		freq_table[index].driver_data = drv.freq_table[freq_cnt].driver_data;
-		freq_table[index].frequency = drv.freq_table[freq_cnt].frequency;
-	}
-
-	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
-}
-#else
-static void __init cpufreq_table_init(void) {}
-#endif
-static void __init cpufreq_policy_init(struct cpufreq_policy *policy)
-{
-	int cpu;
-	struct cpufreq_frequency_table *table =
-			per_cpu(freq_table, policy->cpu);
-
-
-
 static void __init dcvs_freq_init(void)
 {
 	int i;
@@ -1296,23 +1236,15 @@ static struct freq_attr *acpuclock_freq_attr[] = {
 	NULL,
 };
 
-static struct cpufreq_driver msm_cpufreq_driver = {
-	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
-	.init		= cpufreq_table_init,
-	.attr		= acpuclock_freq_attr,
-};
-
 int __init acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params)
 {
 	drv_data_init(dev, params);
 	hw_init();
-
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
 
-	return cpufreq_register_driver(&msm_cpufreq_driver);
+	return 0;
 }
 
