@@ -47,7 +47,6 @@ static struct msm_bus_scale_pdata bus_bw = {
 	.active_only = 1,
 };
 static u32 bus_client;
-static bool hotplug_ready;
 
 struct cpufreq_suspend_t {
 	struct mutex suspend_mutex;
@@ -271,8 +270,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_frequency_table *table =
-			per_cpu(*freq_table, policy->cpu);
+	struct cpufreq_frequency_table *table;
 	int cpu;
 
 	cpufreq_table_init();
@@ -316,36 +314,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
 
-	hotplug_ready = true;
-
 	return 0;
 }
-
-static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
-		unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-	int rc;
-
-	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready)
-		return NOTIFY_BAD;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	/*
-	 * Scale down clock/power of CPU that is dead and scale it back up
-	 * before the CPU is brought up.
-	 */
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __refdata msm_cpufreq_cpu_notifier = {
-	.notifier_call = msm_cpufreq_cpu_callback,
-};
 
 static int msm_cpufreq_suspend(void)
 {
@@ -450,9 +420,3 @@ static int __init msm_cpufreq_register(void)
 }
 
 late_initcall(msm_cpufreq_register);
-
-static int __init msm_cpufreq_early_register(void)
-{
-	return register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
-}
-core_initcall(msm_cpufreq_early_register);
