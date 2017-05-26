@@ -37,6 +37,9 @@ config CPU_BOOST
 
 	  If in doubt, say N.
 
+config CPU_FREQ_GOV_COMMON
+	bool
+
 
 config CPU_FREQ_TABLE
 	tristate
