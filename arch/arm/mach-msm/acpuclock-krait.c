@@ -1039,8 +1039,9 @@ static void __init cpufreq_table_init(void)
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
 		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
-	}
+		//cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
+		cpufreq_frequency_get_table(cpu);
+		}
 
 	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
 }
@@ -1277,6 +1278,7 @@ int __init acpuclk_krait_init(struct device *dev,
 {
 	drv_data_init(dev, params);
 	hw_init();
+	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
