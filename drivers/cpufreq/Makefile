@@ -8,7 +8,6 @@ obj-$(CONFIG_CPU_FREQ_TABLE)		+= freq_table.o
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
 # CPUfreq hardlimit
 obj-$(CONFIG_CPUFREQ_HARDLIMIT)         += cpufreq_hardlimit.o
-obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
 # CPU boost
 obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
 obj-$(CONFIG_CPU_FREQ_MSM) += qcom-cpufreq.o
