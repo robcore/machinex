@@ -386,6 +386,9 @@ __inline_msecs_to_jiffies(const unsigned int m)
 		>> MSEC_TO_HZ_SHR32;
 #endif
 }
+
+extern u64 jiffies64_to_nsecs(u64 j);
+
 extern unsigned long __msecs_to_jiffies(const unsigned int m);
 
 #define msecs_to_jiffies(x)			\
