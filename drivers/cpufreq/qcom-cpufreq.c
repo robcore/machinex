@@ -291,28 +291,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	}
 
-#if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
-	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
-
-		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
-		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
-#endif
-#if defined(CONFIG_MSM_USE_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
-		policy->cpuinfo.min_freq = check_cpufreq_hardlimit(policy->min);
-		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
-
-		pr_debug("this is useless\n");
-	}
-#endif
-#if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
-	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
-	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
-#endif
-#if defined(MSM_USE_CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
-	policy->min = check_cpufreq_hardlimit(policy->min);
-	policy->max = check_cpufreq_hardlimit(policy->max);
-#endif
-
 	cur_freq = acpuclk_get_rate(policy->cpu);
 
 	if (cpufreq_frequency_table_target(policy, table, cur_freq,
@@ -337,6 +315,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
+
+	hotplug_ready = true;
 
 	return 0;
 }
@@ -448,136 +428,10 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.name		= "msm",
 	.attr		= msm_freq_attr,
 };
-#ifdef CONFIG_OF
-static struct cpufreq_frequency_table *cpufreq_parse_dt(struct device *dev,
-						char *tbl_name, int cpu)
-{
-	int ret, nf, i, j;
-	u32 *data;
-	struct cpufreq_frequency_table *ftbl;
-
-	/* Parse list of usable CPU frequencies. */
-	if (!of_find_property(dev->of_node, tbl_name, &nf))
-		return ERR_PTR(-EINVAL);
-	nf /= sizeof(*data);
-
-	if (nf == 0)
-		return ERR_PTR(-EINVAL);
-
-	data = devm_kzalloc(dev, nf * sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return ERR_PTR(-ENOMEM);
-
-	ret = of_property_read_u32_array(dev->of_node, tbl_name, data, nf);
-	if (ret)
-		return ERR_PTR(ret);
-
-	ftbl = devm_kzalloc(dev, (nf + 1) * sizeof(*ftbl), GFP_KERNEL);
-	if (!ftbl)
-		return ERR_PTR(-ENOMEM);
-
-	j = 0;
-	for (i = 0; i < nf; i++) {
-		unsigned long f;
-
-		f = clk_round_rate(cpu_clk[cpu], data[i] * 1000);
-		if (IS_ERR_VALUE(f))
-			break;
-		f /= 1000;
-
-		/*
-		 * Don't repeat frequencies if they round up to the same clock
-		 * frequency.
-		 *
-		 */
-		if (j > 0 && f <= ftbl[j - 1].frequency)
-			continue;
-
-		ftbl[j].driver_data = j;
-		ftbl[j].frequency = f;
-		j++;
-	}
-
-	ftbl[j].driver_data = j;
-	ftbl[j].frequency = CPUFREQ_TABLE_END;
-
-#ifdef CONFIG_CPU_FREQ_LIMIT
-	cpufreq_limit_set_table(cpu, ftbl);
-#endif
-
-	devm_kfree(dev, data);
-
-	return ftbl;
-}
-#endif
-
-static int __init msm_cpufreq_probe(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-	char clk_name[] = "cpu??_clk";
-	char tbl_name[] = "qcom,cpufreq-table-??";
-	struct clk *c;
-	int cpu;
-	struct cpufreq_frequency_table *ftbl;
-
-	l2_clk = devm_clk_get(dev, "l2_clk");
-	if (IS_ERR(l2_clk))
-		l2_clk = NULL;
-
-	for_each_possible_cpu(cpu) {
-		snprintf(clk_name, sizeof(clk_name), "cpu%d_clk", cpu);
-		c = devm_clk_get(dev, clk_name);
-		if (!IS_ERR(c))
-			cpu_clk[cpu] = c;
-		else
-			is_sync = true;
-	}
-	hotplug_ready = true;
-#ifdef CONFIG_OF
-	/* Use per-policy governor tunable for some targets */
-	if (of_property_read_bool(dev->of_node, "qcom,governor-per-policy"))
-		msm_cpufreq_driver.flags |= CPUFREQ_HAVE_GOVERNOR_PER_POLICY;
-
-	/* Parse commong cpufreq table for all CPUs */
-	ftbl = cpufreq_parse_dt(dev, "qcom,cpufreq-table", 0);
-	if (!IS_ERR(ftbl)) {
-		for_each_possible_cpu(cpu)
-			per_cpu(freq_table, cpu) = ftbl;
-		return 0;
-	}
-
-	/*
-	 * No common table. Parse individual tables for each unique
-	 * CPU clock.
-	 */
-	for_each_possible_cpu(cpu) {
-		cpufreq_frequency_table_get_attr(freq_table, cpu);
-	}
-
-	if (bus_bw.usecase) {
-		bus_client = msm_bus_scale_register_client(&bus_bw);
-		if (!bus_client)
-			dev_warn(dev, "Unable to register bus client\n");
-	}
-
-	is_clk = true;
-#endif
-	return 0;
-}
-
-#ifdef CONFIG_OF
-static struct of_device_id match_table[] = {
-	{ .compatible = "qcom,msm-cpufreq" },
-	{}
-};
-#endif
 
 static struct platform_driver msm_cpufreq_plat_driver = {
 	.driver = {
 		.name = "msm-cpufreq",
-#ifdef CONFIG_OF
-		.of_match_table = match_table,
-#endif
 		.owner = THIS_MODULE,
 	},
 };
@@ -591,12 +445,11 @@ static int __init msm_cpufreq_register(void)
 		per_cpu(suspend_data, cpu).device_suspended = 0;
 	}
 
-	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
-device_initcall(msm_cpufreq_register);
+late_initcall(msm_cpufreq_register);
 
 static int __init msm_cpufreq_early_register(void)
 {
