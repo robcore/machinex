@@ -66,7 +66,14 @@ struct cpu_freq {
 
 static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
-#define MAX_KRAIT_FREQS 15
+struct qcom_cpufreq_krait {
+	struct acpu_level *priv;
+	struct scalable *scalable;
+};
+
+static DEFINE_PER_CPU(struct qcom_cpufreq_krait, qck);
+
+#define MAX_KRAIT_FREQS 35
 static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table[MAX_KRAIT_FREQS]);
 
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
@@ -224,11 +231,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int freq_cnt;
 	for_each_possible_cpu(cpu) {
 		/* Construct the freq_table tables from priv. */
-		for (index = 0, freq_cnt = 0; drv.priv[index].speed.khz != 0
+		for (index = 0, freq_cnt = 0; qck.priv[index].speed.khz != 0
 				&& freq_cnt < (MAX_KRAIT_FREQS - 1); index++) {
-			if (drv.priv[index].use_for_scaling) {
+			if (qck.priv[index].use_for_scaling) {
 				table[freq_cnt].driver_data = freq_cnt;
-				table[freq_cnt].frequency = drv.priv[index].speed.khz;
+				table[freq_cnt].frequency = qck.priv[index].speed.khz;
 				freq_cnt++;
 			}
 		}

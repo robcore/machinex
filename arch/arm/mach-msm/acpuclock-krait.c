@@ -57,6 +57,21 @@ int speed_bin;
 int pvs_bin;
 #endif
 
+/**
+ * struct drv_data
+ */
+
+static struct drv_data {
+	struct acpu_level *priv;
+	const struct l2_level *l2_freq_tbl;
+	struct scalable *scalable;
+	struct hfpll_data *hfpll_data;
+	u32 bus_perf_client;
+	struct msm_bus_scale_pdata *bus_scale;
+	int boost_uv;
+	struct device *dev;
+} drv;
+
 int g_speed_bin;
 int g_pvs_bin;
 
@@ -1012,7 +1027,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-#ifdef CONFIG_CPU_FREQ_MSM
+#if 0
 static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)

@@ -279,19 +279,4 @@ struct acpuclk_platform_data {
  */
 extern int acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params);
-
-/**
- * struct drv_data - Now shared driver data between qcom cpufreq and acpuclock.
- */
-
-struct drv_data {
-	struct acpu_level *priv;
-	const struct l2_level *l2_freq_tbl;
-	struct scalable *scalable;
-	struct hfpll_data *hfpll_data;
-	u32 bus_perf_client;
-	struct msm_bus_scale_pdata *bus_scale;
-	int boost_uv;
-	struct device *dev;
-} drv;
 #endif
