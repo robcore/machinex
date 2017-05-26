@@ -920,7 +920,7 @@ static ssize_t oom_adjust_read(struct file *file, char __user *buf,
 
 	if (lock_task_sighand(task, &flags)) {
 		oom_adjust = task->signal->oom_adj;
-		unlock_task_sighand(task, &flags);0001-the-fuck.patch
+		unlock_task_sighand(task, &flags);
 	}
 
 	put_task_struct(task);
