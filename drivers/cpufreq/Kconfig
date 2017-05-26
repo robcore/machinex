@@ -39,7 +39,9 @@ config CPU_BOOST
 
 
 config CPU_FREQ_TABLE
-	tristate
+	bool
+config CPU_FREQ_GOV_COMMON
+	bool
 
 config CPU_FREQ_STAT
 	tristate "CPU frequency translation statistics"
