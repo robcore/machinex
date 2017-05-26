@@ -294,10 +294,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	}
 
-	/* synchronous cpus share the same policy */
-	if (is_clk && !cpu_clk[policy->cpu])
-		return 0;
-
 #if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
 
@@ -340,7 +336,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
 			policy->cpu, cur_freq, table[index].frequency);
-
 	policy->cur = table[index].frequency;
 
 	policy->cpuinfo.transition_latency =
@@ -527,13 +522,6 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 	struct clk *c;
 	int cpu;
 	struct cpufreq_frequency_table *ftbl;
-#ifdef CONFIG_SEC_BSP
-	int ret, len, i, index;
-	struct device_node *cpufreq_limit_node;
-	const char *status;
-	const u32 *vec_arr = NULL;
-	u32 num_period;
-#endif
 
 	l2_clk = devm_clk_get(dev, "l2_clk");
 	if (IS_ERR(l2_clk))
@@ -611,7 +599,7 @@ static int __init msm_cpufreq_register(void)
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
-subsys_initcall(msm_cpufreq_register);
+device_initcall(msm_cpufreq_register);
 
 static int __init msm_cpufreq_early_register(void)
 {
