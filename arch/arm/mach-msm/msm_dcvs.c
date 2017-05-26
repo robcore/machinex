@@ -136,7 +136,7 @@ struct dcvs_core {
 	int flags;
 };
 
-static int msm_dcvs_enabled = 1;
+static int msm_dcvs_enabled = 0;
 module_param_named(enable, msm_dcvs_enabled, int, 0644);
 
 static struct dentry		*debugfs_base;

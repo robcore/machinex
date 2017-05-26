@@ -18,7 +18,3 @@
 
 #ifndef __LINUX_QCOM_CPUFREQ_H
 #define __LINUX_QCOM_CPUFREQ_H
-#include <linux/cpufreq.h>
-#include "../../arch/arm/mach-msm/acpuclock.h"
-#include "../../arch/arm/mach-msm/acpuclock-krait.h"
-#endif
