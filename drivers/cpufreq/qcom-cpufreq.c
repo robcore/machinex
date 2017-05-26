@@ -276,10 +276,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cpu;
 
 	cpufreq_table_init();
-
-	table = cpufreq_frequency_get_table(policy->cpu);
-	if (table == NULL)
-		return -ENODEV;
 	/*
 	 * In some SoC, cpu cores' frequencies can not
 	 * be changed independently. Each cpu is bound to
