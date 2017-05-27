@@ -72,6 +72,7 @@ static struct drv_data {
 	struct msm_bus_scale_pdata *bus_scale;
 	int boost_uv;
 	struct device *dev;
+	struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 } drv;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
@@ -1024,41 +1025,35 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-struct cpufreq_frequency_table *freq_table;
-DEFINE_PER_CPU(freq_table, fq);
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
 	unsigned int cpu;
-	int index = 0;
-	int total_index = 35;
-	struct scalable *sc = &drv.scalable[NR_CPUS];
-
+	int freq_cnt = 0;
 
 	for_each_possible_cpu(cpu) {
 		int i;
 		/* Construct the freq_table tables from priv. */
-		for (i = 0, index = 0; drv.priv[i].speed.khz != 0
-				&& index < sc->acpu_freq_table[total_index - 1].frequency; i++) {
+		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(*drv.freq_table) - 1; i++) {
 			if (drv.priv[i].use_for_scaling) {
-				sc->acpu_freq_table[index].driver_data = index;
-				sc->acpu_freq_table[index].frequency = drv.priv[i].speed.khz;
-				index++;
+				drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+				drv.freq_table[cpu][freq_cnt].frequency
+					= drv.priv[i].speed.khz;
+				freq_cnt++;
 			}
 		}
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.priv[i].speed.khz != 0);
 
-		sc->acpu_freq_table[index].driver_data = index;
-		sc->acpu_freq_table[index].frequency = CPUFREQ_TABLE_END;
-		fq[index].driver_data = sc->acpu_freq_table[index].driver_data;
-		fq[index].frequency = sc->acpu_freq_table[index].frequency;
+		drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
+		drv.freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
 		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(fq, cpu);
+		cpufreq_frequency_table_get_attr(drv.freq_table[cpu], cpu);
 	}
 
-	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", index);
+	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
 }
 #else
 static void __init cpufreq_table_init(void) {}

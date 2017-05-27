@@ -70,6 +70,7 @@ enum scalables {
 	MAX_SCALABLES
 };
 
+
 /**
  * enum hfpll_vdd_level - IDs of HFPLL voltage levels.
  */
@@ -227,7 +228,6 @@ struct scalable {
 	struct vreg vreg[NUM_VREG];
 	bool initialized;
 	bool avs_enabled;
-	struct cpufreq_frequency_table *acpu_freq_table;
 };
 
 /**
