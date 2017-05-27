@@ -715,7 +715,7 @@ struct signal_struct {
 	struct thread_group_cputimer cputimer;
 
 	/* Earliest-expiration cache. */
-	struct task_cputime cputime_expires;
+	struct task_cputime_t cputime_expires;
 
 	struct list_head cpu_timers[3];
 
