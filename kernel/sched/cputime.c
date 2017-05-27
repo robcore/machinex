@@ -6,6 +6,7 @@
 #include <linux/static_key.h>
 #include <linux/context_tracking.h>
 #include <linux/vtime.h>
+#include <linux/cputime.h>
 #include "sched.h"
 #include "walt.h"
 
@@ -153,22 +154,22 @@ void account_user_time(struct task_struct *p, u64 cputime)
  * @p: the process that the cpu time gets accounted to
  * @cputime: the cpu time spent in virtual machine since the last update
  */
-void account_guest_time(struct task_struct *p, cputime_t cputime)
+void account_guest_time(struct task_struct *p, u64 cputime)
 {
 	u64 *cpustat = kcpustat_this_cpu->cpustat;
 
 	/* Add guest time to process. */
-	p->utime += cputime_to_nsecs(cputime);
-	account_group_user_time(p, cputime_to_nsecs(cputime));
-	p->gtime += cputime_to_nsecs(cputime);
+	p->utime += cputime;
+	account_group_user_time(p, cputime);
+	p->gtime += cputime;
 
 	/* Add guest time to cpustat. */
 	if (task_nice(p) > 0) {
-		cpustat[CPUTIME_NICE] += cputime_to_nsecs(cputime);
-		cpustat[CPUTIME_GUEST_NICE] += cputime_to_nsecs(cputime);
+		cpustat[CPUTIME_NICE] += cputime;
+		cpustat[CPUTIME_GUEST_NICE] += cputime;
 	} else {
-		cpustat[CPUTIME_USER] += cputime_to_nsecs(cputime);
-		cpustat[CPUTIME_GUEST] += cputime_to_nsecs(cputime);
+		cpustat[CPUTIME_USER] += cputime;
+		cpustat[CPUTIME_GUEST] += cputime;
 	}
 }
 
@@ -179,14 +180,14 @@ void account_guest_time(struct task_struct *p, cputime_t cputime)
  * @index: pointer to cpustat field that has to be updated
  */
 void account_system_index_time(struct task_struct *p,
-			       cputime_t cputime, enum cpu_usage_stat index)
+			       u64 cputime, enum cpu_usage_stat index)
 {
 	/* Add system time to process. */
-	p->stime += cputime_to_nsecs(cputime);
-	account_group_system_time(p, cputime_to_nsecs(cputime));
+	p->stime += cputime;
+	account_group_system_time(p, cputime);
 
 	/* Add system time to cpustat. */
-	task_group_account_field(p, index, cputime_to_nsecs(cputime));
+	task_group_account_field(p, index, cputime);
 
 	/* Account for system time used */
 	acct_account_cputime(p);
@@ -198,8 +199,7 @@ void account_system_index_time(struct task_struct *p,
  * @hardirq_offset: the offset to subtract from hardirq_count()
  * @cputime: the cpu time spent in kernel space since the last update
  */
-void account_system_time(struct task_struct *p, int hardirq_offset,
-			 cputime_t cputime)
+void account_system_time(struct task_struct *p, int hardirq_offset, u64 cputime)
 {
 	int index;
 
@@ -222,26 +222,26 @@ void account_system_time(struct task_struct *p, int hardirq_offset,
  * Account for involuntary wait time.
  * @cputime: the cpu time spent in involuntary wait
  */
-void account_steal_time(cputime_t cputime)
+void account_steal_time(u64 cputime)
 {
 	u64 *cpustat = kcpustat_this_cpu->cpustat;
 
-	cpustat[CPUTIME_STEAL] += cputime_to_nsecs(cputime);
+	cpustat[CPUTIME_STEAL] += cputime;
 }
 
 /*
  * Account for idle time.
  * @cputime: the cpu time spent in idle wait
  */
-void account_idle_time(cputime_t cputime)
+void account_idle_time(u64 cputime)
 {
 	u64 *cpustat = kcpustat_this_cpu->cpustat;
 	struct rq *rq = this_rq();
 
 	if (atomic_read(&rq->nr_iowait) > 0)
-		cpustat[CPUTIME_IOWAIT] += cputime_to_nsecs(cputime);
+		cpustat[CPUTIME_IOWAIT] += cputime;
 	else
-		cpustat[CPUTIME_IDLE] += cputime_to_nsecs(cputime);
+		cpustat[CPUTIME_IDLE] += cputime;
 }
 
 /*
@@ -254,14 +254,15 @@ static __always_inline cputime_t steal_account_process_time(cputime_t maxtime)
 #ifdef CONFIG_PARAVIRT
 	if (static_key_false(&paravirt_steal_enabled)) {
 		cputime_t steal_cputime;
-		u64 steal;
+		u64 steal, rounded;
 
 		steal = paravirt_steal_clock(smp_processor_id());
 		steal -= this_rq()->prev_steal_time;
 
 		steal_cputime = min(nsecs_to_cputime(steal), maxtime);
-		account_steal_time(steal_cputime);
-		this_rq()->prev_steal_time += cputime_to_nsecs(steal_cputime);
+		rounded = cputime_to_nsecs(steal_cputime);
+		account_steal_time(rounded);
+		this_rq()->prev_steal_time += rounded;
 
 		return steal_cputime;
 	}
@@ -402,16 +403,15 @@ static void irqtime_account_process_tick(struct task_struct *p, int user_tick,
 		 * So, we have to handle it separately here.
 		 * Also, p->stime needs to be updated for ksoftirqd.
 		 */
-		account_system_index_time(p, old_cputime, CPUTIME_SOFTIRQ);
+		account_system_index_time(p, cputime, CPUTIME_SOFTIRQ);
 	} else if (user_tick) {
 		account_user_time(p, cputime);
 	} else if (p == rq->idle) {
-		account_idle_time(old_cputime);
+		account_idle_time(cputime);
 	} else if (p->flags & PF_VCPU) { /* System time or guest time */
-
-		account_guest_time(p, old_cputime);
+		account_guest_time(p, cputime);
 	} else {
-		account_system_index_time(p, old_cputime, CPUTIME_SYSTEM);
+		account_system_index_time(p, cputime, CPUTIME_SYSTEM);
 	}
 }
 
@@ -526,9 +526,9 @@ void account_process_tick(struct task_struct *p, int user_tick)
 	if (user_tick)
 		account_user_time(p, cputime);
 	else if ((p != rq->idle) || (irq_count() != HARDIRQ_OFFSET))
-		account_system_time(p, HARDIRQ_OFFSET, old_cputime);
+		account_system_time(p, HARDIRQ_OFFSET, cputime);
 	else
-		account_idle_time(old_cputime);
+		account_idle_time(cputime);
 }
 
 /*
@@ -547,14 +547,14 @@ void account_steal_ticks(unsigned long ticks)
  */
 void account_idle_ticks(unsigned long ticks)
 {
-	cputime_t cputime, steal;
+	u64 cputime, steal;
 	if (sched_clock_irqtime) {
 		irqtime_account_idle_ticks(ticks);
 		return;
 	}
 
-	cputime = cputime_one_jiffy;
-	steal = steal_account_process_time(ULONG_MAX);
+	cputime = ticks * TICK_NSEC;
+	steal = cputime_to_nsecs(steal_account_process_time(ULONG_MAX));
 
 	if (steal >= cputime)
 		return;
@@ -755,7 +755,7 @@ static void __vtime_account_system(struct task_struct *tsk)
 {
 	cputime_t delta_cpu = get_vtime_delta(tsk);
 
-	account_system_time(tsk, irq_count(), delta_cpu);
+	account_system_time(tsk, irq_count(), cputime_to_nsecs(delta_cpu));
 }
 
 void vtime_account_system(struct task_struct *tsk)
@@ -820,7 +820,7 @@ void vtime_account_idle(struct task_struct *tsk)
 {
 	cputime_t delta_cpu = get_vtime_delta(tsk);
 
-	account_idle_time(delta_cpu);
+	account_idle_time(cputime_to_nsecs(delta_cpu));
 }
 
 void arch_vtime_task_switch(struct task_struct *prev)
