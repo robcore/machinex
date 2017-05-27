@@ -1048,18 +1048,18 @@ static void __init cpufreq_table_init(void)
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table); i++) {
+			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
 		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv->freq_tbl[i].speed.khz;
+		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
 	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv->freq_tbl[i].speed.khz != 0);
+	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	mx_freq_table[index].driver_data = driver_data;
+	mx_freq_table[index].driver_data = index;
 	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
 
-	pr_info("CPU: %d scaling frequencies supported.\n", freq_cnt);
+	pr_info("CPU: %d scaling frequencies supported.\n", index);
 
 	/* Register table with CPUFreq. */
 	for_each_possible_cpu(i)
