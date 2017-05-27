@@ -91,14 +91,13 @@ void irqtime_account_irq(struct task_struct *curr)
 }
 EXPORT_SYMBOL_GPL(irqtime_account_irq);
 
-static cputime_t irqtime_tick_accounted(cputime_t maxtime)
+static u64 irqtime_tick_accounted(u64 maxtime)
 {
 	struct irqtime *irqtime = this_cpu_ptr(&cpu_irqtime);
-	cputime_t delta;
+	u64 delta;
 
-	delta = nsecs_to_cputime(irqtime->tick_delta);
-	delta = min(delta, maxtime);
-	irqtime->tick_delta -= cputime_to_nsecs(delta);
+	delta = min(irqtime->tick_delta, maxtime);
+	irqtime->tick_delta -= delta;
 
 	return delta;
 }
@@ -106,7 +105,7 @@ static cputime_t irqtime_tick_accounted(cputime_t maxtime)
 
 #define sched_clock_irqtime	(0)
 
-static cputime_t irqtime_tick_accounted(cputime_t dummy)
+static u64 irqtime_tick_accounted(u64 dummy)
 {
 	return 0;
 }
@@ -249,22 +248,19 @@ void account_idle_time(u64 cputime)
  * ticks are not redelivered later. Due to that, this function may on
  * occasion account more time than the calling functions think elapsed.
  */
-static __always_inline cputime_t steal_account_process_time(cputime_t maxtime)
+static __always_inline u64 steal_account_process_time(u64 maxtime)
 {
 #ifdef CONFIG_PARAVIRT
 	if (static_key_false(&paravirt_steal_enabled)) {
-		cputime_t steal_cputime;
-		u64 steal, rounded;
+		u64 steal;
 
 		steal = paravirt_steal_clock(smp_processor_id());
 		steal -= this_rq()->prev_steal_time;
+		steal = min(steal, maxtime);
+		account_steal_time(steal);
+		this_rq()->prev_steal_time += steal;
 
-		steal_cputime = min(nsecs_to_cputime(steal), maxtime);
-		rounded = cputime_to_nsecs(steal_cputime);
-		account_steal_time(rounded);
-		this_rq()->prev_steal_time += rounded;
-
-		return steal_cputime;
+		return steal;
 	}
 #endif
 	return 0;
@@ -273,9 +269,9 @@ static __always_inline cputime_t steal_account_process_time(cputime_t maxtime)
 /*
  * Account how much elapsed time was spent in steal, irq, or softirq time.
  */
-static inline cputime_t account_other_time(cputime_t max)
+static inline u64 account_other_time(u64 max)
 {
-	cputime_t accounted;
+	u64 accounted;
 
 	/* Shall be converted to a lockdep-enabled lightweight check */
 	WARN_ON_ONCE(!irqs_disabled());
@@ -379,9 +375,7 @@ void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
 static void irqtime_account_process_tick(struct task_struct *p, int user_tick,
 					 struct rq *rq, int ticks)
 {
-	u64 old_cputime = (__force u64) cputime_one_jiffy * ticks;
-	cputime_t other;
-	u64 cputime;
+	u64 other, cputime = TICK_NSEC * ticks;
 
 	/*
 	 * When returning from idle, many ticks can get accounted at
@@ -391,11 +385,10 @@ static void irqtime_account_process_tick(struct task_struct *p, int user_tick,
 	 * other time can exceed ticks occasionally.
 	 */
 	other = account_other_time(ULONG_MAX);
-	if (other >= old_cputime)
+	if (other >= cputime)
 		return;
 
-	old_cputime -= other;
-	cputime = cputime_to_nsecs(old_cputime);
+	cputime -= other;
 
 	if (this_cpu_ksoftirqd() == p) {
 		/*
@@ -502,8 +495,7 @@ void thread_group_cputime_adjusted(struct task_struct *p, u64 *ut, u64 *st)
  */
 void account_process_tick(struct task_struct *p, int user_tick)
 {
-	cputime_t old_cputime, steal;
-	u64 cputime;
+	u64 cputime, steal;
 	struct rq *rq = this_rq();
 
 	if (vtime_accounting_cpu_enabled())
@@ -514,14 +506,13 @@ void account_process_tick(struct task_struct *p, int user_tick)
 		return;
 	}
 
-	old_cputime = cputime_one_jiffy;
+	cputime = TICK_NSEC;
 	steal = steal_account_process_time(ULONG_MAX);
 
-	if (steal >= old_cputime)
+	if (steal >= cputime)
 		return;
 
-	old_cputime -= steal;
-	cputime = cputime_to_nsecs(old_cputime);
+	cputime -= steal;
 
 	if (user_tick)
 		account_user_time(p, cputime);
@@ -554,7 +545,7 @@ void account_idle_ticks(unsigned long ticks)
 	}
 
 	cputime = ticks * TICK_NSEC;
-	steal = cputime_to_nsecs(steal_account_process_time(ULONG_MAX));
+	steal = steal_account_process_time(ULONG_MAX);
 
 	if (steal >= cputime)
 		return;
@@ -721,20 +712,20 @@ void thread_group_cputime_adjusted(struct task_struct *p, u64 *ut, u64 *st)
 #endif /* !CONFIG_VIRT_CPU_ACCOUNTING_NATIVE */
 
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
-static cputime_t vtime_delta(struct task_struct *tsk)
+static u64 vtime_delta(struct task_struct *tsk)
 {
 	unsigned long now = READ_ONCE(jiffies);
 
 	if (time_before(now, (unsigned long)tsk->vtime_snap))
 		return 0;
 
-	return jiffies_to_cputime(now - tsk->vtime_snap);
+	return jiffies_to_nsecs(now - tsk->vtime_snap);
 }
 
-static cputime_t get_vtime_delta(struct task_struct *tsk)
+static u64 get_vtime_delta(struct task_struct *tsk)
 {
 	unsigned long now = READ_ONCE(jiffies);
-	cputime_t delta, other;
+	u64 delta, other;
 
 	/*
 	 * Unlike tick based timing, vtime based timing never has lost
@@ -743,7 +734,7 @@ static cputime_t get_vtime_delta(struct task_struct *tsk)
 	 * elapsed time. Limit account_other_time to prevent rounding
 	 * errors from causing elapsed vtime to go negative.
 	 */
-	delta = jiffies_to_cputime(now - tsk->vtime_snap);
+	delta = jiffies_to_nsecs(now - tsk->vtime_snap);
 	other = account_other_time(delta);
 	WARN_ON_ONCE(tsk->vtime_snap_whence == VTIME_INACTIVE);
 	tsk->vtime_snap = now;
@@ -753,9 +744,7 @@ static cputime_t get_vtime_delta(struct task_struct *tsk)
 
 static void __vtime_account_system(struct task_struct *tsk)
 {
-	cputime_t delta_cpu = get_vtime_delta(tsk);
-
-	account_system_time(tsk, irq_count(), cputime_to_nsecs(delta_cpu));
+	account_system_time(tsk, irq_count(), get_vtime_delta(tsk));
 }
 
 void vtime_account_system(struct task_struct *tsk)
@@ -770,14 +759,10 @@ void vtime_account_system(struct task_struct *tsk)
 
 void vtime_account_user(struct task_struct *tsk)
 {
-	cputime_t delta_cpu;
-
 	write_seqcount_begin(&tsk->vtime_seqcount);
 	tsk->vtime_snap_whence = VTIME_SYS;
-	if (vtime_delta(tsk)) {
-		delta_cpu = get_vtime_delta(tsk);
-		account_user_time(tsk, cputime_to_nsecs(delta_cpu));
-	}
+	if (vtime_delta(tsk))
+		account_user_time(tsk, get_vtime_delta(tsk));
 	write_seqcount_end(&tsk->vtime_seqcount);
 }
 
@@ -818,9 +803,7 @@ EXPORT_SYMBOL_GPL(vtime_guest_exit);
 
 void vtime_account_idle(struct task_struct *tsk)
 {
-	cputime_t delta_cpu = get_vtime_delta(tsk);
-
-	account_idle_time(cputime_to_nsecs(delta_cpu));
+	account_idle_time(get_vtime_delta(tsk));
 }
 
 void arch_vtime_task_switch(struct task_struct *prev)
@@ -863,7 +846,7 @@ u64 task_gtime(struct task_struct *t)
 
 		gtime = t->gtime;
 		if (t->vtime_snap_whence == VTIME_SYS && t->flags & PF_VCPU)
-			gtime += cputime_to_nsecs(vtime_delta(t));
+			gtime += vtime_delta(t);
 
 	} while (read_seqcount_retry(&t->vtime_seqcount, seq));
 
@@ -896,7 +879,7 @@ void task_cputime(struct task_struct *t, u64 *utime, u64 *stime)
 		if (t->vtime_snap_whence == VTIME_INACTIVE || is_idle_task(t))
 			continue;
 
-		delta = cputime_to_nsecs(vtime_delta(t));
+		delta = vtime_delta(t);
 
 		if (t->vtime_snap_whence == VTIME_USER || t->flags & PF_VCPU)
 			*utime += delta;
