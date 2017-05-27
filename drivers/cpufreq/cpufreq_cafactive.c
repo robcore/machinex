@@ -35,7 +35,7 @@
 #include <linux/sched/rt.h>
 #include <linux/kernel_stat.h>
 #include <linux/powersuspend.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #if 0
 #include <trace/events/cpufreq_cafactive.h>

@@ -36,7 +36,7 @@
 #include <linux/td_framework.h>
 #endif
 
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #ifdef CONFIG_TRIPNDROID_FRAMEWORK
 extern unsigned int tdf_suspend_state;
@@ -60,7 +60,7 @@ struct cpufreq_tripndroid_cpuinfo {
 	unsigned int target_freq;
 	unsigned int freq_table_size;
 	int governor_enabled;
-}; 
+};
 
 static DEFINE_PER_CPU(struct cpufreq_tripndroid_cpuinfo, cpuinfo);
 
@@ -77,7 +77,7 @@ static spinlock_t down_cpumask_lock;
 static struct mutex set_speed_lock;
 
 /* hispeed to jump to from lowspeed at load burst */
-static u64 hispeed_freq; 
+static u64 hispeed_freq;
 
 /* governor settings */
 #define DEFAULT_GO_HISPEED_LOAD 95

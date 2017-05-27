@@ -29,7 +29,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_umbrella_core.h>

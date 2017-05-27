@@ -28,7 +28,7 @@
 #include <linux/kthread.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -471,7 +471,7 @@ static void cpufreq_dynamic_interactive_idle_end(void)
 
     if (!pcpu->governor_enabled)
         return;
-    
+
 	pcpu->idling = 0;
 	smp_wmb();
 
@@ -908,7 +908,7 @@ static int cpufreq_dynamic_interactive_idle_notifier(struct notifier_block *nb,
             cpufreq_dynamic_interactive_idle_end();
             break;
 	}
-    
+
 	return 0;
 }
 
@@ -971,7 +971,7 @@ static int cpufreq_governor_dynamic_interactive(struct cpufreq_policy *policy,
 				&dynamic_interactive_attr_group);
 		if (rc)
 			return rc;
-            
+
         idle_notifier_register(&cpufreq_dynamic_interactive_idle_nb);
 		break;
 
@@ -996,7 +996,7 @@ static int cpufreq_governor_dynamic_interactive(struct cpufreq_policy *policy,
 
 		if (atomic_dec_return(&active_count) > 0)
 			return 0;
-            
+
         idle_notifier_unregister(&cpufreq_dynamic_interactive_idle_nb);
 		sysfs_remove_group(cpufreq_global_kobject,
 				&dynamic_interactive_attr_group);
@@ -1047,7 +1047,7 @@ static int __init cpufreq_dynamic_interactive_init(void)
         kthread_create(cpufreq_dynamic_interactive_speedchange_task, NULL,
                 "cfdynamic_interactive");
     if (IS_ERR(speedchange_task))
-        return PTR_ERR(speedchange_task);        
+        return PTR_ERR(speedchange_task);
 
 	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
 	get_task_struct(speedchange_task);
@@ -1056,7 +1056,7 @@ static int __init cpufreq_dynamic_interactive_init(void)
 
 	INIT_WORK(&tune_work,
 		  cpufreq_dynamic_interactive_tune);
-    
+
     /* NB: wake up so the thread does not look hung to the freezer */
     wake_up_process(speedchange_task);
 

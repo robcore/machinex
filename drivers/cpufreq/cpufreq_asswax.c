@@ -48,7 +48,7 @@
 #include <linux/powersuspend.h>
 #include <linux/moduleparam.h>
 #include <linux/notifier.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 /******************** Tunable parameters: ********************/
 
@@ -438,7 +438,7 @@ static void cpufreq_asswax_freq_change_time_work(struct work_struct *work)
 			// Removing printk to prevent dmesg flooding while using CPU Master or other 3rd Party Cpu freq profilers
 			//printk(KERN_WARNING "Smartass: frequency changed by 3rd party: %d to %d\n",
 			//       old_freq,policy->cur);
-			new_freq = old_freq;			
+			new_freq = old_freq;
 		}
 		else if (ramp_dir > 0 && nr_running() > 1) {
 			// ramp up logic:

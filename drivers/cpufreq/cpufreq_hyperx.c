@@ -34,7 +34,7 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <linux/sched/rt.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 struct cpufreq_hyperx_cpuinfo {
 	struct timer_list cpu_timer;

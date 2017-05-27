@@ -14,7 +14,7 @@
  * published by the Free Software Foundation.
  */
 
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 #include <linux/kthread.h>
 #include <linux/time.h>
 #include <linux/timer.h>

@@ -32,7 +32,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_mythx_plug.h>
@@ -95,7 +95,7 @@ static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 *define a static timer for the boostpulse. This is done to prevent it from taking a dynamic value from the min. sampletime
 */
 #define DEFAULT_BOOSTPULSE_STATIC_TIMER (20 * USEC_PER_MSEC)
-static unsigned long boostpulse_static_timer = DEFAULT_BOOSTPULSE_STATIC_TIMER; 
+static unsigned long boostpulse_static_timer = DEFAULT_BOOSTPULSE_STATIC_TIMER;
 
 /*
  * The sample rate of the timer used to increase frequency
@@ -150,8 +150,8 @@ static bool align_windows = true;
 
 #define TOP_STOCK_FREQ	2035200
 #define SYNC_FREQ     	1190400
-#define HIGHFREQ	2649600			
-#define LOWFREQ		300000	
+#define HIGHFREQ	2649600
+#define LOWFREQ		300000
 
 
 /*
@@ -321,24 +321,24 @@ static bool simpl_syncfreq = false;
 
 		if (freq <= syncfreq) {
 		/* If that freq is less than or same as syncfreq, set syncfreq as freqmin, yes it cancels itself out.. WIP */
-		freqmin = syncfreq; 	
+		freqmin = syncfreq;
 		/* Also set the syncstate to false, since it isn't matching the syncfreq */
-		syncstate = false;		
+		syncstate = false;
 
 		if (freq >= syncfreq) {
 		/* Set syncfreq as maximal freq, if freq is more than syncfreq, which makes no real sense at the moment, WIP */
-		freqmax = syncfreq; 
+		freqmax = syncfreq;
 		/* Also set the syncstate to false, since it isn't matching the syncfreq */
-		syncstate = false;	
-		
-	 
+		syncstate = false;
+
+
 		if (freq == syncfreq) {
 			syncstate = true;
 		 		if (syncstate == true) {
 				simpl_timer;
 				}
 
-			
+
 
 		if (freq >= freqmax) {
 				/*
@@ -352,8 +352,8 @@ static bool simpl_syncfreq = false;
 					break;
 				freq = pcpu->freq_table[index].frequency;
 				/* Also set the syncstate to false, since it isn't matching the syncfreq */
-				syncstate = false;	
-	
+				syncstate = false;
+
 				if (freq == freqmin) {
 					/*
 					 * The first frequency below freqmax
@@ -363,7 +363,7 @@ static bool simpl_syncfreq = false;
 					 */
 					freq = freqmax;
 					/* Also set the syncstate to false, since it isn't matching the syncfreq */
-					syncstate = false;	
+					syncstate = false;
 					break;
 				}
 			}

@@ -17,7 +17,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 #include <linux/kernel.h>
 #include <linux/kernel_stat.h>
 #include <linux/module.h>
@@ -35,7 +35,6 @@
 #include <linux/mutex.h>
 #include <linux/syscore_ops.h>
 #include <linux/suspend.h>
-#include <asm/cputime.h>
 #include <linux/cpufreq.h>
 #include <linux/cpumask.h>
 #include <linux/export.h>

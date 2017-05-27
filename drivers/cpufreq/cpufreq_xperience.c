@@ -39,7 +39,7 @@
 #include <linux/workqueue.h>
 #include <linux/moduleparam.h>
 #include <linux/notifier.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 #include <linux/powersuspend.h>
 #include <linux/pm.h>
 

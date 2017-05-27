@@ -34,7 +34,7 @@
 #include <linux/timer.h>
 #include <linux/workqueue.h>
 #include <linux/moduleparam.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>

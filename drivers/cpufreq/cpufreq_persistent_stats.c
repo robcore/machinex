@@ -22,7 +22,7 @@
 #include <linux/notifier.h>
 #include <linux/bitops.h>
 #include <linux/stat.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 #include <linux/module.h>
 
 #define MAX_CPUATTR_NAME_LEN (16)

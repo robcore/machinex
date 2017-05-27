@@ -37,7 +37,7 @@
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 struct cpufreq_ironactive_policyinfo {
 	struct timer_list policy_timer;

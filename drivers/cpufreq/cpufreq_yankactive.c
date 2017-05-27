@@ -32,7 +32,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #ifdef TRACE_CRAP
 #define CREATE_TRACE_POINTS
