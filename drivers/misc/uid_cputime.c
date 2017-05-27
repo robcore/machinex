@@ -109,9 +109,6 @@ static int uid_stat_show(struct seq_file *m, void *v)
 							uid_entry->active_utime;
 		cputime_t total_stime = uid_entry->stime +
 							uid_entry->active_stime;
-		seq_printf(m, "%d: %u %u\n", uid_entry->uid,
-						cputime_to_usecs(total_utime),
-						cputime_to_usecs(total_stime));
 	}
 
 	mutex_unlock(&uid_lock);

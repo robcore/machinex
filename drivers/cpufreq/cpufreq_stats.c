@@ -24,7 +24,7 @@
 #include <linux/err.h>
 #include <linux/sched.h>
 #include <linux/of.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 #include <linux/platform_device.h>
 
 static spinlock_t cpufreq_stats_lock;

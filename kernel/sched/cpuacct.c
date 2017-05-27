@@ -258,7 +258,7 @@ static int cpuacct_stats_show(struct seq_file *sf, void *v)
 		val += kcpustat->cpustat[CPUTIME_USER];
 		val += kcpustat->cpustat[CPUTIME_NICE];
 	}
-	val = cputime64_to_clock_t(val);
+	val = nsec_to_clock_t(val);
 	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_USER], val);
 
 	val = 0;
@@ -269,7 +269,7 @@ static int cpuacct_stats_show(struct seq_file *sf, void *v)
 		val += kcpustat->cpustat[CPUTIME_SOFTIRQ];
 	}
 
-	val = cputime64_to_clock_t(val);
+	val = nsec_to_clock_t(val);
 	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
 
 	return 0;
