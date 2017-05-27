@@ -99,16 +99,29 @@ void process_srcu(struct work_struct *work);
 	}
 
 /*
- * define and init a srcu struct at build time.
- * dont't call init_srcu_struct() nor cleanup_srcu_struct() on it.
+ * Define and initialize a srcu struct at build time.
+ * Do -not- call init_srcu_struct() nor cleanup_srcu_struct() on it.
+ *
+ * Note that although DEFINE_STATIC_SRCU() hides the name from other
+ * files, the per-CPU variable rules nevertheless require that the
+ * chosen name be globally unique.  These rules also prohibit use of
+ * DEFINE_STATIC_SRCU() within a function.  If these rules are too
+ * restrictive, declare the srcu_struct manually.  For example, in
+ * each file:
+ *
+ *	static struct srcu_struct my_srcu;
+ *
+ * Then, before the first use of each my_srcu, manually initialize it:
+ *
+ *	init_srcu_struct(&my_srcu);
+ *
+ * See include/linux/percpu-defs.h for the rules on per-CPU variables.
  */
-#define DEFINE_SRCU(name)						\
+#define __DEFINE_SRCU(name, is_static)					\
 	static DEFINE_PER_CPU(struct srcu_array, name##_srcu_array);\
-	struct srcu_struct name = __SRCU_STRUCT_INIT(name);
-
-#define DEFINE_STATIC_SRCU(name)					\
-	static DEFINE_PER_CPU(struct srcu_struct_array, name##_srcu_array);\
-	static struct srcu_struct name = __SRCU_STRUCT_INIT(name);
+	is_static struct srcu_struct name = __SRCU_STRUCT_INIT(name)
+#define DEFINE_SRCU(name)		__DEFINE_SRCU(name, /* not static */)
+#define DEFINE_STATIC_SRCU(name)	__DEFINE_SRCU(name, static)
 
 /**
  * call_srcu() - Queue a callback for invocation after an SRCU grace period
@@ -151,30 +164,14 @@ void srcu_barrier(struct srcu_struct *sp);
  * Checks debug_lockdep_rcu_enabled() to prevent false positives during boot
  * and while lockdep is disabled.
  *
- * Note that if the CPU is in the idle loop from an RCU point of view
- * (ie: that we are in the section between rcu_idle_enter() and
- * rcu_idle_exit()) then srcu_read_lock_held() returns false even if
- * the CPU did an srcu_read_lock().  The reason for this is that RCU
- * ignores CPUs that are in such a section, considering these as in
- * extended quiescent state, so such a CPU is effectively never in an
- * RCU read-side critical section regardless of what RCU primitives it
- * invokes.  This state of affairs is required --- we need to keep an
- * RCU-free window in idle where the CPU may possibly enter into low
- * power mode. This way we can notice an extended quiescent state to
- * other CPUs that started a grace period. Otherwise we would delay any
- * grace period as long as we run in the idle task.
- *
- * Similarly, we avoid claiming an SRCU read lock held if the current
- * CPU is offline.
+ * Note that SRCU is based on its own statemachine and it doesn't
+ * relies on normal RCU, it can be called from the CPU which
+ * is in the idle loop from an RCU point of view or offline.
  */
 static inline int srcu_read_lock_held(struct srcu_struct *sp)
 {
 	if (!debug_lockdep_rcu_enabled())
 		return 1;
-	if (rcu_is_cpu_idle())
-		return 0;
-	if (!rcu_lockdep_current_cpu_online())
-		return 0;
 	return lock_is_held(&sp->dep_map);
 }
 
@@ -239,8 +236,6 @@ static inline int srcu_read_lock(struct srcu_struct *sp) __acquires(sp)
 	retval = __srcu_read_lock(sp);
 	preempt_enable();
 	rcu_lock_acquire(&(sp)->dep_map);
-	RCU_LOCKDEP_WARN(!rcu_is_cpu_idle(),
-			   "srcu_read_lock() used illegally while idle");
 	return retval;
 }
 
@@ -254,10 +249,22 @@ static inline int srcu_read_lock(struct srcu_struct *sp) __acquires(sp)
 static inline void srcu_read_unlock(struct srcu_struct *sp, int idx)
 	__releases(sp)
 {
-	RCU_LOCKDEP_WARN(!rcu_is_cpu_idle(),
-			   "srcu_read_unlock() used illegally while idle");
 	rcu_lock_release(&(sp)->dep_map);
 	__srcu_read_unlock(sp, idx);
+}
+
+/**
+ * smp_mb__after_srcu_read_unlock - ensure full ordering after srcu_read_unlock
+ *
+ * Converts the preceding srcu_read_unlock into a two-way memory barrier.
+ *
+ * Call this after srcu_read_unlock, to guarantee that all memory operations
+ * that occur after smp_mb__after_srcu_read_unlock will appear to happen after
+ * the preceding srcu_read_unlock.
+ */
+static inline void smp_mb__after_srcu_read_unlock(void)
+{
+	/* __srcu_read_unlock has smp_mb() internally so nothing to do here. */
 }
 
 #endif
