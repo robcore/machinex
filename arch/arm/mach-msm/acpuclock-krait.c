@@ -72,7 +72,7 @@ static struct drv_data {
 	struct msm_bus_scale_pdata *bus_scale;
 	int boost_uv;
 	struct device *dev;
-	struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+	struct cpufreq_frequency_table freq_table[15];
 } drv;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
@@ -1028,32 +1028,35 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
-	unsigned int cpu;
-	int freq_cnt = 0;
+	unsigned int cpu = smp_processor_id();
+	int index = 0;
 
-	for_each_possible_cpu(cpu) {
+	//struct cpumask acpu_mask = kzalloc(cpumask_size(), GFP_KERNEL);
+	//cpumask_copy(&acpu_mask, cpu_possible_mask);
+
+	for_each_cpu(cpu, cpu_possible_mask) {
 		int i;
 		/* Construct the freq_table tables from priv. */
-		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*drv.freq_table) - 1; i++) {
+		for (i = 0, index = 0; drv.priv[i].speed.khz != 0
+				&& index < sizeof(*drv.freq_table); i++) {
 			if (drv.priv[i].use_for_scaling) {
-				drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-				drv.freq_table[cpu][freq_cnt].frequency
+				drv.freq_table[index].driver_data = index;
+				drv.freq_table[index].frequency
 					= drv.priv[i].speed.khz;
-				freq_cnt++;
+				index++;
 			}
 		}
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.priv[i].speed.khz != 0);
 
-		drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-		drv.freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+		drv.freq_table[index].driver_data = index;
+		drv.freq_table[index].frequency = CPUFREQ_TABLE_END;
 
 		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(drv.freq_table[cpu], cpu);
+		cpufreq_frequency_table_get_attr(drv.freq_table, cpu);
 	}
 
-	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
+	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", index);
 }
 #else
 static void __init cpufreq_table_init(void) {}
@@ -1281,10 +1284,13 @@ static void __init hw_init(void)
 int __init acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params)
 {
+	int cpu = smp_processor_id();
 	drv_data_init(dev, params);
 	hw_init();
 
-	cpufreq_table_init();
+	for_each_possible_cpu(cpu) {
+		cpufreq_table_init();
+	}
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
