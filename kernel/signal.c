@@ -1681,7 +1681,7 @@ bool do_notify_parent(struct task_struct *tsk, int sig)
 			task_cred_xxx(tsk->parent, user_ns));
 	rcu_read_unlock();
 
-	task_cputime(tsk, &utime, &stime);
+	task_cputime_t(tsk, &utime, &stime);
 	info.si_utime = cputime_to_clock_t(utime + tsk->signal->utime);
 	info.si_stime = cputime_to_clock_t(stime + tsk->signal->stime);
 
@@ -1767,7 +1767,7 @@ static void do_notify_parent_cldstop(struct task_struct *tsk,
 			task_cred_xxx(parent, user_ns));
 	rcu_read_unlock();
 
-	task_cputime(tsk, &utime, &stime);
+	task_cputime_t(tsk, &utime, &stime);
 	info.si_utime = cputime_to_clock_t(utime);
 	info.si_stime = cputime_to_clock_t(stime);
 
