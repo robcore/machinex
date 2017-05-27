@@ -362,7 +362,7 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
 	unsigned long long start_time;
 	unsigned long cmin_flt = 0, cmaj_flt = 0;
 	unsigned long  min_flt = 0,  maj_flt = 0;
-	cputime_t cutime, cstime, utime, stime;
+	u64 cutime, cstime, utime, stime;
 	u64 cgtime, gtime;
 	unsigned long rsslim = 0;
 	char tcomm[sizeof(task->comm)];
