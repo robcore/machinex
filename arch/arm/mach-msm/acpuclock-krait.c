@@ -1031,6 +1031,7 @@ static void __init cpufreq_table_init(void)
 {
 	unsigned int cpu;
 	int index = 0;
+	int total_index = 35;
 	struct scalable *sc = &drv.scalable[NR_CPUS];
 
 
@@ -1038,7 +1039,7 @@ static void __init cpufreq_table_init(void)
 		int i;
 		/* Construct the freq_table tables from priv. */
 		for (i = 0, index = 0; drv.priv[i].speed.khz != 0
-				&& index < ARRAY_SIZE(sc->acpu_freq_table) - 1; i++) {
+				&& index < sc->acpu_freq_table[total_index - 1].frequency; i++) {
 			if (drv.priv[i].use_for_scaling) {
 				sc->acpu_freq_table[index].driver_data = index;
 				sc->acpu_freq_table[index].frequency = drv.priv[i].speed.khz;
