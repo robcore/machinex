@@ -481,18 +481,17 @@ static void inline cpufreq_smartmax_eps_calc_load(int j)
 
 #ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_EPS_30
 		cur_nice = kstat_cpu(j).cpustat.nice - j_this_smartmax_eps->prev_cpu_nice;
-		cur_nice_jiffies = (unsigned long) cputime64_to_jiffies64(cur_nice);
+		cur_nice_jiffies = (unsigned long) nsecs_to_jiffies64(cur_nice);
 
 		j_this_smartmax_eps->prev_cpu_nice = kstat_cpu(j).cpustat.nice;
 #else
 		cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] - j_this_smartmax_eps->prev_cpu_nice;
-		cur_nice_jiffies = (unsigned long) cputime64_to_jiffies64(cur_nice);
+		cur_nice_jiffies = (unsigned long) nsecs_to_jiffies64(cur_nice);
 
 		j_this_smartmax_eps->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 
 #endif
-
-		idle_time += jiffies_to_usecs(cur_nice_jiffies);
+		idle_time += div_u64(cur_nice - j_dbs_info->prev_cpu_nice, NSEC_PER_USEC);
 	}
 
 	/*

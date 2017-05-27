@@ -1175,10 +1175,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			 * be less than 2^32 jiffies for 32 bit sys
 			 */
 			cur_nice_jiffies = (unsigned long)
-					cputime64_to_jiffies64(cur_nice);
+					nsecs_to_jiffies64(cur_nice);
 
 			j_dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
-			idle_time += jiffies_to_usecs(cur_nice_jiffies);
+			idle_time += div_u64(cur_nice - j_dbs_info->prev_cpu_nice, NSEC_PER_USEC);
 		}
 
 		/*
