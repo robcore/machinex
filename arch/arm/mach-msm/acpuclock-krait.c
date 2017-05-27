@@ -72,7 +72,6 @@ static struct drv_data {
 	struct msm_bus_scale_pdata *bus_scale;
 	int boost_uv;
 	struct device *dev;
-	struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 } drv;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
@@ -1025,35 +1024,46 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-extern int console_batt_stat;
+static struct cpufreq_frequency_table mx_freq_table[] = {
+	{ 0, 384000 },
+	{ 1, 486000 },
+	{ 2, 594000 },
+	{ 3, 702000 },
+	{ 4, 810000 },
+	{ 5, 918000 },
+	{ 6, 1026000 },
+	{ 7, 1134000 },
+	{ 8, 1242000 },
+	{ 9, 1350000 },
+	{ 10, 1458000 },
+	{ 11, 1566000 },
+	{ 12, 1674000 },
+	{ 13, 1782000 },
+	{ 14, 1890000 },
+	{ 15, CPUFREQ_TABLE_END },
+};
 static void __init cpufreq_table_init(void)
 {
-	unsigned int cpu;
-	int freq_cnt = 0;
+	int i, index = 0;
 
-	for_each_possible_cpu(cpu) {
-		int i;
-		/* Construct the freq_table tables from priv. */
-		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*drv.freq_table) - 1; i++) {
-			if (drv.priv[i].use_for_scaling) {
-				drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-				drv.freq_table[cpu][freq_cnt].frequency
-					= drv.priv[i].speed.khz;
-				freq_cnt++;
-			}
-		}
-		/* freq_table not big enough to store all usable freqs. */
-		BUG_ON(drv.priv[i].speed.khz != 0);
-
-		drv.freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-		drv.freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
-
-		/* Register table with CPUFreq. */
-		cpufreq_frequency_table_get_attr(drv.freq_table[cpu], cpu);
+	/* Construct the freq_table tables from priv->freq_tbl. */
+	for (i = 0; drv.priv[i].speed.khz != 0
+			&& index < ARRAY_SIZE(mx_freq_table); i++) {
+		mx_freq_table[index].driver_data = index;
+		mx_freq_table[index].frequency = drv.priv->freq_tbl[i].speed.khz;
+		index++;
 	}
+	/* freq_table not big enough to store all usable freqs. */
+	BUG_ON(drv.priv->freq_tbl[i].speed.khz != 0);
 
-	dev_info(drv.dev, "CPU Frequencies Supported: %d\n", freq_cnt);
+	mx_freq_table[index].driver_data = driver_data;
+	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
+
+	pr_info("CPU: %d scaling frequencies supported.\n", freq_cnt);
+
+	/* Register table with CPUFreq. */
+	for_each_possible_cpu(i)
+		cpufreq_frequency_table_get_attr(mx_freq_table, i);
 }
 #else
 static void __init cpufreq_table_init(void) {}
