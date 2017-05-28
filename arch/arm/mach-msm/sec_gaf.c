@@ -17,7 +17,7 @@
 #define arch_irq_stat() 0
 #endif
 #ifndef arch_idle_time
-#define cputime_to_nsecs(arch_idle_time(cpu)) 0
+#define arch_idle_time(cpu) 0
 #endif
 
 #define cputime64_add(__a, __b)		((__a) + (__b))
@@ -316,7 +316,7 @@ void dump_cpu_stat(void)
 		nice = cputime64_add(nice, nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_NICE]));
 		system = cputime64_add(system, nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM]));
 		idle = cputime64_add(idle, nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IDLE]));
-		idle = cputime64_add(idle, arch_idle_time(i)));
+		idle = cputime64_add(idle, cputime_to_nsecs(arch_idle_time(i)));
 		iowait = cputime64_add(iowait, nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IOWAIT]));
 		irq = cputime64_add(irq, nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IRQ]));
 		softirq = cputime64_add(softirq, nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SOFTIRQ]));
@@ -354,7 +354,7 @@ void dump_cpu_stat(void)
 		nice = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_NICE];
 		system = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM];
 		idle = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IDLE];
-		idle = cputime64_add(idle, arch_idle_time(i));
+		idle = cputime64_add(idle, cputime_to_nsecs(arch_idle_time(i)));
 		iowait = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IOWAIT];
 		irq = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IRQ];
 		softirq = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SOFTIRQ];
