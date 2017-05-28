@@ -24,12 +24,14 @@
 #include <linux/completion.h>
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
+#include <linux/sched.h>
 #include <linux/suspend.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <trace/events/power.h>
+#include <mach/socinfo.h>
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
 #include <linux/cpufreq_hardlimit.h>
@@ -233,8 +235,8 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 
 static inline int msm_cpufreq_limits_init(void)
 {
-	int cpu = 0;
-	int i = 0;
+	int cpu;
+	int index = 0;
 	struct cpufreq_frequency_table *table = NULL;
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
@@ -248,11 +250,11 @@ static inline int msm_cpufreq_limits_init(void)
 					__func__, cpu);
 			continue;
 		}
-		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-			if (table[i].frequency > max)
-				max = table[i].frequency;
-			if (table[i].frequency < min)
-				min = table[i].frequency;
+		for (index = 0; (table[index].frequency != CPUFREQ_TABLE_END); index++) {
+			if (table[index].frequency > max)
+				max = table[index].frequency;
+			if (table[index].frequency < min)
+				min = table[index].frequency;
 		}
 		limit->allowed_min = min;
 		limit->allowed_max = max;
@@ -284,12 +286,6 @@ int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 	else
 		limit->allowed_max = limit->max;
 
-#if 0
-	pr_debug("%s: Limiting cpu %d min = %d, max = %d\n",
-			__func__, cpu,
-			limit->allowed_min, limit->allowed_max);
-#endif
-
 	return 0;
 }
 EXPORT_SYMBOL(msm_cpufreq_set_freq_limits);
@@ -301,6 +297,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	struct cpufreq_frequency_table *table;
 	struct cpufreq_work_struct *cpu_work = NULL;
+	int cpu = smp_processor_id();
+
+	for_each_possible_cpu(cpu) {
+		policy->cpu = cpu;
+	}
 
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (table == NULL)
@@ -370,7 +371,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->cur = table[index].frequency;
 
 	policy->cpuinfo.transition_latency =
-		acpuclk_get_switch_time() * NSEC_PER_USEC;
+		acpuclk_get_switch_time();
 
 	return 0;
 }

@@ -468,7 +468,7 @@ static int calculate_vdd_dig(const struct acpu_level *tgt)
 }
 
 static bool enable_boost = true;
-module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
+module_param_named(boost, enable_boost, bool, 0644);
 
 static int calculate_vdd_core(const struct acpu_level *tgt)
 {
@@ -647,7 +647,10 @@ out:
 static struct acpuclk_data acpuclk_krait_data = {
 	.set_rate = acpuclk_krait_set_rate,
 	.get_rate = acpuclk_krait_get_rate,
+	.switch_time_us = 10,
 };
+module_param_named(acpuclock_switch_time, acpuclk_krait_data.switch_time_us, uint, 0644);
+
 
 /* Initialize a HFPLL at a given rate and enable it. */
 static void hfpll_init(struct scalable *sc,
