@@ -369,11 +369,6 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 	.notifier_call = msm_cpufreq_pm_event,
 };
 
-static struct freq_attr *msm_freq_attr[] = {
-	&cpufreq_freq_attr_scaling_available_freqs,
-	NULL,
-};
-
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
@@ -382,13 +377,22 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
-	.attr		= msm_freq_attr,
+	.attr		= cpufreq_generic_attr,
 };
 
+static int __init msm_cpufreq_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+
+	//for_each_possible_cpu(cpu) {
+		//cpufreq_frequency_table_get_attr(freq_table, cpu);
+	//}
+	pr_info("msm-cpufreq driver probe!!\n");
+	return 0;
+}
 static struct platform_driver msm_cpufreq_plat_driver = {
 	.driver = {
 		.name = "msm-cpufreq",
-		.owner = THIS_MODULE,
 	},
 };
 
