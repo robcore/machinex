@@ -52,7 +52,6 @@
 struct task_struct;
 struct sched_param;
 int setScheduler(struct task_struct *p, int policy, struct sched_param *param);
-int get_scheduler_policy(struct task_struct *p);
 
 #define ALL_INTERFACES	0xff
 
