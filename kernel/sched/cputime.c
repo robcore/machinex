@@ -7,6 +7,7 @@
 #include <linux/context_tracking.h>
 #include <linux/vtime.h>
 #include <linux/cputime.h>
+#include <asm/cputime_nsecs.h>
 #include "sched.h"
 #include "walt.h"
 

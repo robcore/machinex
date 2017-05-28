@@ -2,6 +2,7 @@ generic-y += auxvec.h
 generic-y += bitsperlong.h
 generic-y += current.h
 generic-y += emergency-restart.h
+generic-y += cputime_nsecs.h
 generic-y += errno.h
 generic-y += exec.h
 generic-y += ioctl.h
