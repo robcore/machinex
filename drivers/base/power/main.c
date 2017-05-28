@@ -239,9 +239,6 @@ static void initcall_debug_report(struct device *dev, ktime_t calltime,
 		pr_info("call %s+ returned %d after %Ld usecs\n", dev_name(dev),
 			error, (unsigned long long)nsecs >> 10);
 	}
-
-	trace_device_pm_report_time(dev, info, nsecs, pm_verb(state.event),
-				    error);
 }
 
 /**
@@ -700,6 +697,7 @@ void dpm_resume_noirq(pm_message_t state)
 
 		if (!is_async(dev)) {
 			int error;
+
 			error = device_resume_noirq(dev, state, false);
 			if (error) {
 				suspend_stats.failed_resume_noirq++;
@@ -1007,6 +1005,8 @@ void dpm_resume(pm_message_t state)
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
 	dpm_show_time(starttime, state, NULL);
+
+	cpufreq_resume();
 }
 
 /**
@@ -1623,6 +1623,8 @@ int dpm_suspend(pm_message_t state)
 	DECLARE_DPM_WATCHDOG_ON_STACK(wd);
 
 	might_sleep();
+
+	cpufreq_suspend();
 
 	mutex_lock(&dpm_list_mtx);
 	pm_transition = state;
