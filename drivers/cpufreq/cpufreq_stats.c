@@ -199,7 +199,7 @@ static ssize_t show_all_time_in_state(struct kobject *kobj,
 			if (index != -1) {
 				len += scnprintf(buf + len, PAGE_SIZE - len,
 					"%llu\t\t", (unsigned long long)
-					cputime64_to_clock_t(all_stat->time_in_state[index]));
+					nsec_to_clock_t(all_stat->time_in_state[index]));
 			} else {
 				len += scnprintf(buf + len, PAGE_SIZE - len,
 						"N/A\t\t");
