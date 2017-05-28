@@ -79,7 +79,7 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 		pr_debug("%s: Max frequency reset for cpu%d\n",
 				KBUILD_MODNAME, cpu);
 
-	ret = cpufreq_update_policy(cpu);
+	cpufreq_update_policy(cpu);
 
 	return ret;
 }
