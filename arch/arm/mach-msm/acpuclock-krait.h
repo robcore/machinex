@@ -142,6 +142,7 @@ struct l2_level {
 
 /**
  * struct acpu_level - CPU clock rate and L2 rate and voltage requirements.
+ * @freq_step: Statically allocated step number for cpufreq integration.
  * @use_for_scaling: Flag indicating whether or not the level should be used.
  * @speed: CPU clock configuration.
  * @l2_level: L2 configuration to use.
@@ -150,6 +151,7 @@ struct l2_level {
  * @avsdscr_setting: AVS DSCR configuration.
  */
 struct acpu_level {
+	const unsigned int freq_step;
 	const int use_for_scaling;
 	const struct core_speed speed;
 	const unsigned int l2_level;
