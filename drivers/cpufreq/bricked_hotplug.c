@@ -17,7 +17,7 @@
 #include <linux/completion.h>
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
-#include <asm-generic/cputime.h>
+#include <linux/cputime.h>
 #include <linux/hrtimer.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
