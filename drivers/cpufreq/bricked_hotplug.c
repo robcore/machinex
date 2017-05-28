@@ -140,10 +140,10 @@ static int mp_decision(void) {
 	int nr_cpu_online;
 	int index;
 	unsigned int rq_depth;
-	static cputime64_t total_time = 0;
-	static cputime64_t last_time;
-	cputime64_t current_time;
-	cputime64_t this_time = 0;
+	static u64 total_time = 0;
+	static u64 last_time;
+	u64 current_time;
+	u64 this_time = 0;
 
 	if (!hotplug.bricked_enabled)
 		return MSM_MPDEC_DISABLED;
