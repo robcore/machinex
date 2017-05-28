@@ -491,7 +491,7 @@ static void inline cpufreq_smartmax_eps_calc_load(int j)
 		j_this_smartmax_eps->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 
 #endif
-		idle_time += div_u64(cur_nice - j_dbs_info->prev_cpu_nice, NSEC_PER_USEC);
+		idle_time += div_u64(cur_nice - j_this_smartmax_eps->prev_cpu_nice, NSEC_PER_USEC);
 	}
 
 	/*
