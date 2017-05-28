@@ -12,7 +12,6 @@
 
 #include <linux/cpu.h>
 #include <linux/smp.h>
-#include <linux/module.h>
 #include "acpuclock.h"
 #include <trace/events/power.h>
 
@@ -20,20 +19,17 @@ static struct acpuclk_data *acpuclk_data;
 
 unsigned long acpuclk_get_rate(int cpu)
 {
-#ifdef CONFIG_RIDICULOUS_OPTIONS
 	if (!acpuclk_data || !acpuclk_data->get_rate)
 		return 0;
-#endif
+
 	return acpuclk_data->get_rate(cpu);
 }
 
 int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason reason)
 {
-#ifdef CONFIG_RIDICULOUS_OPTIONS
-
 	if (!acpuclk_data || !acpuclk_data->set_rate)
 		return 0;
-#endif
+
 	return acpuclk_data->set_rate(cpu, rate, reason);
 }
 
@@ -41,7 +37,7 @@ uint32_t acpuclk_get_switch_time(void)
 {
 	if (!acpuclk_data)
 		return 0;
-	return acpuclk_data->switch_time_us * NSEC_PER_USEC;
+	return acpuclk_data->switch_time_us;
 }
 
 unsigned long acpuclk_power_collapse(void)

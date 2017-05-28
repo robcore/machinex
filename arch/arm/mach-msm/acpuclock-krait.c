@@ -468,7 +468,7 @@ static int calculate_vdd_dig(const struct acpu_level *tgt)
 }
 
 static bool enable_boost = true;
-module_param_named(boost, enable_boost, bool, 0644);
+module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
 
 static int calculate_vdd_core(const struct acpu_level *tgt)
 {
@@ -647,10 +647,7 @@ out:
 static struct acpuclk_data acpuclk_krait_data = {
 	.set_rate = acpuclk_krait_set_rate,
 	.get_rate = acpuclk_krait_get_rate,
-	.switch_time_us = 10,
 };
-module_param_named(acpuclock_switch_time, acpuclk_krait_data.switch_time_us, uint, 0644);
-
 
 /* Initialize a HFPLL at a given rate and enable it. */
 static void hfpll_init(struct scalable *sc,
@@ -1027,7 +1024,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[] = {
+static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ 0, 384000 },
 	{ 1, 486000 },
 	{ 2, 594000 },
@@ -1051,22 +1048,22 @@ static void __init cpufreq_table_init(void)
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(freq_table) - 1; i++) {
-		freq_table[index].driver_data = index;
-		freq_table[index].frequency = drv.priv[i].speed.khz;
+			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
+		mx_freq_table[index].driver_data = index;
+		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
 	/* freq_table not big enough to store all usable freqs. */
 	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	freq_table[index].driver_data = index;
-	freq_table[index].frequency = CPUFREQ_TABLE_END;
+	mx_freq_table[index].driver_data = index;
+	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
 
 	pr_info("CPU: %d scaling frequencies supported.\n", index);
 
 	/* Register table with CPUFreq. */
 	for_each_possible_cpu(i)
-		cpufreq_frequency_table_get_attr(freq_table, i);
+		cpufreq_frequency_table_get_attr(mx_freq_table, i);
 }
 #else
 static void __init cpufreq_table_init(void) {}
