@@ -1395,8 +1395,8 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
-	ret = set_cpu_freq(policy, frequency,
-					driver_data);
+	ret = set_cpu_freq(policy, target_freq,
+					index);
 
 done:
 	return ret;
@@ -1422,7 +1422,7 @@ static inline int msm_cpufreq_limits_init(void)
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
 	struct cpu_freq *limit = NULL;
-	struct cpufreq_policy *policy = &per_cpu(cpu_freq_info, cpu);
+	struct cpufreq_policy *policy;
 
 	for_each_possible_cpu(cpu) {
 		limit = &per_cpu(cpu_freq_info, cpu);
@@ -1485,11 +1485,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	unsigned int cpu;
 
-	policy = kzalloc(sizeof(*policy), GFP_KERNEL);
-	if (!policy)
-		return NULL;
-
-	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
+	struct cpufreq_frequency_table *pos;
+	struct cpufreq_frequency_table *table;
 
 	for_each_online_cpu(cpu)
 		cpumask_set_cpu(cpu, policy->cpus);
@@ -1498,9 +1495,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		if (pos->frequency > 1890000 || pos->frequency < 0)
 			pos->frequency = CPUFREQ_ENTRY_INVALID;
 
-	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
-	if (ret)
-		return ret;
+	if (cpufreq_table_validate_and_show(policy, mx_freq_table));
+		return -ENOMEM;
 
 	cur_freq = acpuclk_get_rate(policy->cpu);
 
@@ -1508,12 +1504,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(policy, table[index].frequency,
-			   table[index].driver_data);
-	if (ret)
-		return ret;
-	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
-			policy->cpu, cur_freq, table[index].frequency);
+	if (set_cpu_freq(policy, table[index].frequency,
+			   table[index].driver_data))
+		return -EINVAL;
 
 	policy->cur = table[index].frequency;
 
