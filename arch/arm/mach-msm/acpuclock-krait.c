@@ -1047,7 +1047,7 @@ static void __init cpufreq_table_init(void)
 {
 	unsigned int i;
 	int index = 0;
-	struct cpufreq_frequency_table *table = &mx_freq_table[16];
+	struct cpufreq_frequency_table *table = &mx_freq_table[15];
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
 			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
