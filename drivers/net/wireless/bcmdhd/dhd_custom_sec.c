@@ -23,7 +23,7 @@
  *
  * $Id: dhd_custom_sec.c 334946 2012-05-24 20:38:00Z $
  */
-#if defined(CUSTOMER_HW4) || defined(CUSTOMER_HW40)
+#ifdef CUSTOMER_HW4
 #include <typedefs.h>
 #include <linuxver.h>
 #include <osl.h>
@@ -345,12 +345,11 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define ANTINFO "/opt/etc/.ant.info"
 #define WRMAC_BUF_SIZE 19
 #else
-#define PLATFORM_PATH	"/data/"
 #define MACINFO "/data/.mac.info"
 #define MACINFO_EFS "/efs/wifi/.mac.info"
 #define NVMACINFO "/data/.nvmac.info"
 #define	REVINFO "/data/.rev"
-#define CIDINFO PLATFORM_PATH".cid.info"
+#define CIDINFO "/data/.cid.info"
 #define PSMINFO "/data/.psm.info"
 #define WIFIVERINFO "/data/.wifiver.info"
 #define ANTINFO "/data/.ant.info"
@@ -368,7 +367,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 #define CIS_TUPLE_TAG_START		0x80
 #define CIS_TUPLE_TAG_VENDOR		0x81
 #define CIS_TUPLE_TAG_MACADDR		0x19
-#define CIS_TUPLE_TAG_MACADDR_OFF	(TLV_BODY_OFF + 1)
+#define CIS_TUPLE_TAG_MACADDR_OFF	((TLV_BODY_OFF) + (1))
 
 #ifdef READ_MACADDR
 int dhd_read_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
@@ -394,7 +393,7 @@ start_readmac:
 		set_fs(get_ds());
 
 		/* Generating the Random Bytes for 3 last octects of the MAC address */
-		get_random_bytes(randommac, 3);
+		erandom_get_random_bytes(randommac, 3);
 
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x00, 0x12, 0x34, randommac[0], randommac[1], randommac[2]);
@@ -711,7 +710,7 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 
 	if ((g_imac_flag == MACADDR_COB_RANDOM) ||
 	    (g_imac_flag == MACADDR_MOD_RANDOM)) {
-		get_random_bytes(randommac, 3);
+		erandom_get_random_bytes(randommac, 3);
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x60, 0xd0, 0xa9, randommac[0], randommac[1],
 			randommac[2]);
@@ -845,7 +844,7 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 	int ret = 0;
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
+	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0664);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
 		return -1;
@@ -870,7 +869,7 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 }
 
 #ifdef DUMP_CIS
-static void dhd_dump_cis(const unsigned char *buf, ssize_t size)
+static void dhd_dump_cis(const unsigned char *buf, int size)
 {
 	int i;
 	for (i = 0; i < size; i++) {
@@ -978,10 +977,9 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 				vid_start = &cis_buf[idx + 3];
 				/* found CIS tuple */
 				break;
-			} else {
+			} else
 				/* Go to next tuple if tuple value is not vendor type */
 				idx += (cis_buf[idx + 1] + 1);
-			}
 		}
 	}
 
@@ -1008,8 +1006,8 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	return -1;
 
 write_cid:
-	DHD_ERROR(("CIS MATCH FOUND : %s\n", cur_info->vname));
-	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen((cur_info->vname)+1));
+	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
+	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen((cur_info->vname) + 1));
 #if defined(BCM4334_CHIP)
 	/* Try reading out from OTP to distinguish B2 or B3 */
 	memset(cis_buf, 0, sizeof(cis_buf));
@@ -1086,12 +1084,6 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 
 	return 0;
 }
-
-#if defined(BCM4335_CHIP)|| defined(BCM4339_CHIP)
-#define CIS_MAC_OFFSET 31
-#else
-#define CIS_MAC_OFFSET 33
-#endif /* BCM4335_CHIP || BCM4339_CHIP */
 
 int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 {
@@ -1202,7 +1194,7 @@ int dhd_write_macaddr(struct ether_addr *mac)
 	char *filepath_efs      = MACINFO_EFS;
 
 	struct file *fp_mac = NULL;
-	char buf[18]      = {0};
+	char buf[WRMAC_BUF_SIZE]      = {0};
 	mm_segment_t oldfs    = {0};
 	int ret = -1;
 	int retry_count = 0;
@@ -1538,13 +1530,14 @@ int sec_get_param(dhd_pub_t *dhd, int mode)
 #define FIRM_PREFIX "Firm_ver:"
 #define DHD_PREFIX "DHD_ver:"
 #define NV_PREFIX "Nv_info:"
-#define max_len(a,b) (sizeof(a)/2 - strlen(b) - 3)
-#define tstr_len(a,b) (strlen(a) + strlen(b) + 3)
+#define max_len(a, b) ((sizeof(a)/(2)) - (strlen(b)) - (3))
+#define tstr_len(a, b) ((strlen(a)) + (strlen(b)) + (3))
 
 char version_info[512];
 char version_old_info[512];
 
-int write_filesystem(struct file* file, unsigned long long offset, unsigned char* data, unsigned int size)
+int write_filesystem(struct file *file, unsigned long long offset,
+	unsigned char* data, unsigned int size)
 {
 	mm_segment_t oldfs;
 	int ret;
@@ -1558,7 +1551,7 @@ int write_filesystem(struct file* file, unsigned long long offset, unsigned char
 	return ret;
 }
 
-uint32 sec_save_wlinfo(char* firm_ver, char* dhd_ver, char* nvram_p)
+uint32 sec_save_wlinfo(char *firm_ver, char *dhd_ver, char *nvram_p)
 {
 	struct file *fp = NULL;
 	struct file *nvfp = NULL;
@@ -1635,22 +1628,20 @@ uint32 sec_save_wlinfo(char* firm_ver, char* dhd_ver, char* nvram_p)
 		version_info, strlen(version_info)));
 
 	fp = filp_open(filepath, O_RDONLY, 0);
-	if (fp != NULL) {
-		if (IS_ERR(fp) || (fp == NULL)) {
-			DHD_ERROR(("[WIFI_SEC] %s: .wifiver.info File open failed.\n", __FUNCTION__));
-		} else {
-			memset(version_old_info, 0, sizeof(version_old_info));
-			ret = kernel_read(fp, fp->f_pos, version_old_info, sizeof(version_info));
-			filp_close(fp, NULL);
-			DHD_INFO(("[WIFI_SEC] kernel_read ret : %d.\n", ret));
-			if (strcmp(version_info, version_old_info) == 0) {
-				DHD_ERROR(("[WIFI_SEC] .wifiver.info already saved.\n"));
-				return 0;
-			}
+	if (IS_ERR(fp) || (fp == NULL)) {
+		DHD_ERROR(("[WIFI_SEC] %s: .wifiver.info File open failed.\n", __FUNCTION__));
+	} else {
+		memset(version_old_info, 0, sizeof(version_old_info));
+		ret = kernel_read(fp, fp->f_pos, version_old_info, sizeof(version_info));
+		filp_close(fp, NULL);
+		DHD_INFO(("[WIFI_SEC] kernel_read ret : %d.\n", ret));
+		if (strcmp(version_info, version_old_info) == 0) {
+			DHD_ERROR(("[WIFI_SEC] .wifiver.info already saved.\n"));
+			return 0;
 		}
 	}
 
-	fp = filp_open(filepath, O_RDWR | O_CREAT, 0666);
+	fp = filp_open(filepath, O_RDWR | O_CREAT, 0664);
 	if (IS_ERR(fp) || (fp == NULL)) {
 		DHD_ERROR(("[WIFI_SEC] %s: .wifiver.info File open failed.\n",
 			__FUNCTION__));
@@ -1663,5 +1654,4 @@ uint32 sec_save_wlinfo(char* firm_ver, char* dhd_ver, char* nvram_p)
 	return ret;
 }
 #endif /* WRITE_WLANINFO */
-
 #endif /* CUSTOMER_HW4 */
