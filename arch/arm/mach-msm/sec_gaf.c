@@ -11,6 +11,7 @@
 #include <asm/pgtable.h>
 #include <linux/kernel_stat.h>
 #include <linux/cputime.h>
+#include <asm/cputime_nsecs.h>
 #ifndef arch_irq_stat_cpu
 #define arch_irq_stat_cpu(cpu) 0
 #endif
@@ -351,14 +352,14 @@ void dump_cpu_stat(void)
 	"--------------------------------\n");
 	for_each_online_cpu(i) {
 		/* Copy values here to work around gcc-2.95.3, gcc-2.96 */
-		user = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_USER];
-		nice = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_NICE];
-		system = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM];
-		idle = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IDLE];
+		user = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_USER]);
+		nice = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_NICE]);
+		system = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM]);
+		idle = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IDLE]);
 		idle = cputime64_add(idle, nsecs_to_jiffies(arch_idle_time(i)));
-		iowait = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IOWAIT];
-		irq = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IRQ];
-		softirq = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SOFTIRQ];
+		iowait = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IOWAIT]);
+		irq = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_IRQ]);
+		softirq = nsecs_to_jiffies(kcpustat_cpu(i).cpustat[CPUTIME_SOFTIRQ]);
 		printk(KERN_INFO " cpu%d user:%llu nice:%llu system:%llu"
 		"idle:%llu iowait:%llu  irq:%llu softirq:%llu %llu %llu "
 		"%llu\n",
