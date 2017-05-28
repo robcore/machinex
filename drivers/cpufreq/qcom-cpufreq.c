@@ -59,7 +59,7 @@ struct cpufreq_work_struct {
 	struct cpufreq_policy *policy;
 	struct completion complete;
 	int frequency;
-	unsigned int driver_data;
+	unsigned int index;
 	int status;
 };
 
@@ -159,7 +159,7 @@ static void set_cpu_work(struct work_struct *work)
 		container_of(work, struct cpufreq_work_struct, work);
 
 	cpu_work->status = set_cpu_freq(cpu_work->policy, cpu_work->frequency,
-					cpu_work->driver_data);
+					cpu_work->index);
 	complete(&cpu_work->complete);
 }
 
@@ -200,7 +200,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
 	cpu_work->policy = policy;
 	cpu_work->frequency = table[index].frequency;
-	cpu_work->driver_data = table[index].driver_data;
+	cpu_work->index = table[index].driver_data;
 	cpu_work->status = -ENODEV;
 
 	cancel_work_sync(&cpu_work->work);
