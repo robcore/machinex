@@ -293,36 +293,17 @@ int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 }
 EXPORT_SYMBOL(msm_cpufreq_set_freq_limits);
 
-struct acpu_level *mxp;
-#define QCOM_MAX_STEP 16
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
+	int index;
 	int ret = 0;
-	int cpu = smp_processor_id();
 	struct cpufreq_frequency_table *table;
 	struct cpufreq_work_struct *cpu_work = NULL;
-	unsigned int i, index = 0;
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; mxp[i].speed.khz != 0
-			&& index < (QCOM_MAX_STEP) - 1; i++) {
-		table[index].driver_data = mxp[index].freq_step;
-		table[index].frequency = mxp[i].speed.khz;
-		index++;
-	}
 
-	table[index].driver_data = mxp[index].freq_step;
-	table[index].frequency = CPUFREQ_TABLE_END;
-
-	for_each_possible_cpu(cpu)
-		cpumask_set_cpu(cpu, policy->cpus);
-
-	ret = cpufreq_table_validate_and_show(policy, table);
-	if (ret) {
-		pr_err("cpufreq: failed to get policy min/max\n");
-		return ret;
-	}
-
+	table = cpufreq_frequency_get_table(policy->cpu);
+	if (table == NULL)
+		return -ENODEV;
 	/*
 	 * In some SoC, cpu cores' frequencies can not
 	 * be changed independently. Each cpu is bound to
