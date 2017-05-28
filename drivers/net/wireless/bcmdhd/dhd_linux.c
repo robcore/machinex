@@ -2513,8 +2513,10 @@ dhd_sched_policy(int prio)
 		param.sched_priority = 0;
 		setScheduler(current, SCHED_NORMAL, &param);
 	} else {
-		param.sched_priority = (prio < MAX_RT_PRIO)? prio : (MAX_RT_PRIO-1);
-		setScheduler(current, SCHED_FIFO, &param);
+		if (get_scheduler_policy(current) != SCHED_FIFO) {
+			param.sched_priority = (prio < MAX_RT_PRIO)? prio : (MAX_RT_PRIO-1);
+			setScheduler(current, dhd_dpc_poli, &param);
+		}
 	}
 }
 #endif /* ENABLE_ADAPTIVE_SCHED */
