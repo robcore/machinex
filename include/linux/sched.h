@@ -1008,8 +1008,8 @@ struct sched_capacity_reqs {
  *
  * The WAKE_Q macro declares and initializes the list head.
  * wake_up_q() does NOT reinitialize the list; it's expected to be
- * called near the end of a function, where the fact that the queue is
- * not used again will be easy to see by inspection.
+ * called near the end of a function. Otherwise, the list can be
+ * re-initialized for later re-use by wake_q_init().
  *
  * Note that this can cause spurious wakeups. schedule() callers
  * must ensure the call is done inside a loop, confirming that the
