@@ -57,12 +57,12 @@
 #include <linux/jiffies.h>
 #endif
 
-#define htod32(i) i
-#define htod16(i) i
-#define dtoh32(i) i
-#define dtoh16(i) i
-#define htodchanspec(i) i
-#define dtohchanspec(i) i
+#define htod32(i) (i)
+#define htod16(i) (i)
+#define dtoh32(i) (i)
+#define dtoh16(i) (i)
+#define htodchanspec(i) (i)
+#define dtohchanspec(i) (i)
 
 #ifdef PROP_TXSTATUS
 #include <wlfc_proto.h>
@@ -1344,13 +1344,13 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata, size_t pktlen,
 	case WLC_E_PFN_NET_FOUND:
 	case WLC_E_PFN_NET_LOST:
 		break;
+#if defined(PNO_SUPPORT)
 	case WLC_E_PFN_BSSID_NET_FOUND:
 	case WLC_E_PFN_BSSID_NET_LOST:
 	case WLC_E_PFN_BEST_BATCHING:
-#ifdef PNO_SUPPORT
 		dhd_pno_event_handler(dhd_pub, event, (void *)event_data);
-#endif
 		break;
+#endif 
 		/* These are what external supplicant/authenticator wants */
 		/* fall through */
 	case WLC_E_LINK:
