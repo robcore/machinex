@@ -1089,7 +1089,7 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DOWN_PREPARE:
+	case CPU_DEAD:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 		/* Fall through. */
 	case CPU_UP_CANCELED:
