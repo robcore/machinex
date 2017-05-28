@@ -126,7 +126,7 @@ static int twd_cpufreq_transition(struct notifier_block *nb,
 	 * deadlock when cpu1 is spinning on while(!cpu_active(cpu1)) during
 	 * booting of that cpu.
 	 */
-	if (state == CPUFREQ_POSTCHANGE || state == CPUFREQ_RESUMECHANGE)
+	if (state == CPUFREQ_POSTCHANGE)
 		smp_call_function_single(freqs->cpu, twd_update_frequency,
 					 NULL, cpu_active(freqs->cpu));
 
