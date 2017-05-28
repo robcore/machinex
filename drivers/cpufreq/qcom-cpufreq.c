@@ -141,12 +141,11 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
-
+	cpufreq_freq_transition_begin(policy, &freqs);
 	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
-
+	cpufreq_freq_transition_end(policy, &freqs, ret);
 	if (!ret)
-		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+		pr_err("rob done screwed the pooch\n");
 
 	return ret;
 }
@@ -322,26 +321,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (is_clk && !cpu_clk[policy->cpu])
 		return 0;
 
-
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
-#if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
-		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
-		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
-#endif
-#if defined(CONFIG_MSM_USE_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
-		policy->cpuinfo.min_freq = check_cpufreq_hardlimit(policy->min);
-		policy->cpuinfo.max_freq = check_cpufreq_hardlimit(policy->max);
-#endif
-		pr_debug("this is useless\n");
+		pr_debug("I am a dummy\n");
 	}
-#if defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX) && !defined(CONFIG_CPUFREQ_HARDLIMIT)
-	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
-	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
-#endif
-#if defined(MSM_USE_CONFIG_CPUFREQ_HARDLIMIT) && !defined(CONFIG_MSM_CPU_FREQ_SET_MIN_MAX)
-	policy->min = check_cpufreq_hardlimit(policy->min);
-	policy->max = check_cpufreq_hardlimit(policy->max);
-#endif
 
 	if (is_clk)
 		cur_freq = clk_get_rate(cpu_clk[policy->cpu])/1000;
@@ -507,7 +489,7 @@ static struct freq_attr *msm_freq_attr[] = {
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
+	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
@@ -680,7 +662,7 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 #endif
 
 	for_each_possible_cpu(cpu) {
-		cpufreq_frequency_table_get_attr(freq_table, cpu);
+		cpufreq_frequency_get_table(cpu);
 	}
 
 	if (bus_bw.usecase) {

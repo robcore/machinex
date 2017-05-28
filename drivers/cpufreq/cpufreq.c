@@ -1371,14 +1371,16 @@ static int cpufreq_online(unsigned int cpu)
 	if (new_policy) {
 		policy->user_policy.min = policy->min;
 		policy->user_policy.max = policy->max;
-
-	policy->util = 0;
-	policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
+		policy->util = 0;
+		policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
 
 		write_lock_irqsave(&cpufreq_driver_lock, flags);
 		for_each_cpu(j, policy->related_cpus)
 			per_cpu(cpufreq_cpu_data, j) = policy;
 		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+	} else {
+		policy->min = policy->user_policy.min;
+		policy->max = policy->user_policy.max;
 	}
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
