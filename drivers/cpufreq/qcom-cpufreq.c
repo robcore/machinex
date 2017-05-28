@@ -375,65 +375,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
-#ifdef CONFIG_OF
-static int msm_cpufreq_cpu_callback(struct notifier_block *nfb,
-		unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-	int rc;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	/*
-	 * Scale down clock/power of CPU that is dead and scale it back up
-	 * before the CPU is brought up.
-	 */
-	case CPU_DEAD:
-		if (is_clk) {
-			clk_disable_unprepare(cpu_clk[cpu]);
-			clk_disable_unprepare(l2_clk);
-			update_l2_bw(NULL);
-		}
-		break;
-	case CPU_UP_CANCELED:
-		if (is_clk) {
-			clk_unprepare(cpu_clk[cpu]);
-			clk_unprepare(l2_clk);
-			update_l2_bw(NULL);
-		}
-		break;
-	case CPU_UP_PREPARE:
-		if (is_clk) {
-			rc = clk_prepare(l2_clk);
-			if (rc < 0)
-				return NOTIFY_BAD;
-			rc = clk_prepare(cpu_clk[cpu]);
-			if (rc < 0)
-				return NOTIFY_BAD;
-			update_l2_bw(&cpu);
-		}
-		break;
-	case CPU_ONLINE:
-		if (is_clk) {
-			rc = clk_enable(l2_clk);
-			if (rc < 0)
-				return NOTIFY_BAD;
-			rc = clk_enable(cpu_clk[cpu]);
-			if (rc < 0)
-				return NOTIFY_BAD;
-		}
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __refdata msm_cpufreq_cpu_notifier = {
-	.notifier_call = msm_cpufreq_cpu_callback,
-};
-#endif
-
 static int msm_cpufreq_suspend(void)
 {
 	int cpu;
@@ -516,140 +457,6 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.attr		= msm_freq_attr,
 };
 
-#ifdef CONFIG_OF
-#define PROP_TBL "qcom,cpufreq-table"
-#define PROP_PORTS "qcom,cpu-mem-ports"
-static int cpufreq_parse_dt(struct device *dev)
-{
-	int ret, len, nf, num_cols = 1, num_paths = 0, i, j, k;
-	u32 *data, *ports = NULL;
-	struct msm_bus_vectors *v = NULL;
-
-	if (l2_clk)
-		num_cols++;
-
-	/* Parse optional bus ports parameter */
-	if (of_find_property(dev->of_node, PROP_PORTS, &len)) {
-		len /= sizeof(*ports);
-		if (len % 2)
-			return -EINVAL;
-
-		ports = devm_kzalloc(dev, len * sizeof(*ports), GFP_KERNEL);
-		if (!ports)
-			return -ENOMEM;
-		ret = of_property_read_u32_array(dev->of_node, PROP_PORTS,
-						 ports, len);
-		if (ret)
-			return ret;
-		num_paths = len / 2;
-		num_cols++;
-	}
-
-	/* Parse CPU freq -> L2/Mem BW map table. */
-	if (!of_find_property(dev->of_node, PROP_TBL, &len))
-		return -EINVAL;
-	len /= sizeof(*data);
-
-	if (len % num_cols || len == 0)
-		return -EINVAL;
-	nf = len / num_cols;
-
-	data = devm_kzalloc(dev, len * sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-
-	ret = of_property_read_u32_array(dev->of_node, PROP_TBL, data, len);
-	if (ret)
-		return ret;
-
-	/* Allocate all data structures. */
-	freq_table = devm_kzalloc(dev, (nf + 1) * sizeof(*freq_table),
-				  GFP_KERNEL);
-	if (!freq_table)
-		return -ENOMEM;
-
-	if (l2_clk) {
-		l2_khz = devm_kzalloc(dev, nf * sizeof(*l2_khz), GFP_KERNEL);
-		if (!l2_khz)
-			return -ENOMEM;
-	}
-
-	if (num_paths) {
-		int sz_u = nf * sizeof(*bus_bw.usecase);
-		int sz_v = nf * num_paths * sizeof(*bus_vec_lst);
-		bus_bw.usecase = devm_kzalloc(dev, sz_u, GFP_KERNEL);
-		v = bus_vec_lst = devm_kzalloc(dev, sz_v, GFP_KERNEL);
-		if (!bus_bw.usecase || !bus_vec_lst)
-			return -ENOMEM;
-	}
-
-	j = 0;
-	for (i = 0; i < nf; i++) {
-		unsigned long f;
-
-		f = clk_round_rate(cpu_clk[0], data[j++] * 1000);
-		if (IS_ERR_VALUE(f))
-			break;
-		f /= 1000;
-
-		/*
-		 * Check if this is the last feasible frequency in the table.
-		 *
-		 * The table listing frequencies higher than what the HW can
-		 * support is not an error since the table might be shared
-		 * across CPUs in different speed bins. It's also not
-		 * sufficient to check if the rounded rate is lower than the
-		 * requested rate as it doesn't cover the following example:
-		 *
-		 * Table lists: 2.2 GHz and 2.5 GHz.
-		 * Rounded rate returns: 2.2 GHz and 2.3 GHz.
-		 *
-		 * In this case, we can CPUfreq to use 2.2 GHz and 2.3 GHz
-		 * instead of rejecting the 2.5 GHz table entry.
-		 */
-		if (i > 0 && f <= freq_table[i-1].frequency)
-			break;
-
-		freq_table[i].driver_data = i;
-		freq_table[i].frequency = f;
-
-		if (l2_clk) {
-			f = clk_round_rate(l2_clk, data[j++] * 1000);
-			if (IS_ERR_VALUE(f)) {
-				pr_err("Error finding L2 rate for CPU %d KHz\n",
-					freq_table[i].frequency);
-				freq_table[i].frequency = CPUFREQ_ENTRY_INVALID;
-			} else {
-				f /= 1000;
-				l2_khz[i] = f;
-			}
-		}
-
-		if (num_paths) {
-			unsigned int bw_mbps = data[j++];
-			bus_bw.usecase[i].num_paths = num_paths;
-			bus_bw.usecase[i].vectors = v;
-			for (k = 0; k < num_paths; k++) {
-				v->src = ports[k * 2];
-				v->dst = ports[k * 2 + 1];
-				v->ib = bw_mbps * 1000000ULL;
-				v++;
-			}
-		}
-	}
-
-	bus_bw.num_usecases = i;
-	freq_table[i].driver_data = i;
-	freq_table[i].frequency = CPUFREQ_TABLE_END;
-
-	if (ports)
-		devm_kfree(dev, ports);
-	devm_kfree(dev, data);
-
-	return 0;
-}
-#endif
-
 static int __init msm_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -673,12 +480,6 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 	if (!cpu_clk[0])
 		return -ENODEV;
 
-#ifdef CONFIG_OF
-	ret = cpufreq_parse_dt(dev);
-	if (ret)
-		return ret;
-#endif
-
 	for_each_possible_cpu(cpu) {
 		cpufreq_frequency_table_get_attr(freq_table, cpu);
 	}
@@ -693,19 +494,9 @@ static int __init msm_cpufreq_probe(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_OF
-static struct of_device_id match_table[] = {
-	{ .compatible = "qcom,msm-cpufreq" },
-	{}
-};
-#endif
-
 static struct platform_driver msm_cpufreq_plat_driver = {
 	.driver = {
 		.name = "msm-cpufreq",
-#ifdef CONFIG_OF
-		.of_match_table = match_table,
-#endif
 		.owner = THIS_MODULE,
 	},
 };
@@ -721,9 +512,6 @@ static int __init msm_cpufreq_register(void)
 
 	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
 	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
-#ifdef CONFIG_OF
-	register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
-#endif
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
