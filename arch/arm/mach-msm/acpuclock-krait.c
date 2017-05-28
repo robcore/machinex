@@ -1024,7 +1024,7 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table mx_freq_table[] = {
+static struct cpufreq_frequency_table freq_table[] = {
 	{ 0, 384000 },
 	{ 1, 486000 },
 	{ 2, 594000 },
@@ -1048,22 +1048,22 @@ static void __init cpufreq_table_init(void)
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+			&& index < ARRAY_SIZE(freq_table) - 1; i++) {
+		freq_table[index].driver_data = index;
+		freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
 	/* freq_table not big enough to store all usable freqs. */
 	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	mx_freq_table[index].driver_data = index;
-	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
+	freq_table[index].driver_data = index;
+	freq_table[index].frequency = CPUFREQ_TABLE_END;
 
 	pr_info("CPU: %d scaling frequencies supported.\n", index);
 
 	/* Register table with CPUFreq. */
 	for_each_possible_cpu(i)
-		cpufreq_frequency_table_get_attr(mx_freq_table, i);
+		cpufreq_frequency_table_get_attr(freq_table, i);
 }
 #else
 static void __init cpufreq_table_init(void) {}
