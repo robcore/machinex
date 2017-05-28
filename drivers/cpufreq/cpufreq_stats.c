@@ -44,9 +44,7 @@ struct cpufreq_stats {
 	unsigned int last_index;
 	u64 *time_in_state;
 	unsigned int *freq_table;
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	unsigned int *trans_table;
-#endif
 };
 
 struct all_cpufreq_stats {
@@ -54,14 +52,6 @@ struct all_cpufreq_stats {
 	u64 *time_in_state;
 	unsigned int *freq_table;
 };
-
-#ifdef CONFIG_OF
-struct cpufreq_power_stats {
-	unsigned int state_num;
-	unsigned int *curr;
-	unsigned int *freq_table;
-};
-#endif
 
 struct all_freq_table {
 	unsigned int *freq_table;
@@ -72,9 +62,6 @@ static struct all_freq_table *all_freq_table;
 
 static DEFINE_PER_CPU(struct all_cpufreq_stats *, all_cpufreq_stats);
 static DEFINE_PER_CPU(struct cpufreq_stats *, cpufreq_stats_table);
-#ifdef CONFIG_OF
-static DEFINE_PER_CPU(struct cpufreq_power_stats *, cpufreq_power_stats);
-#endif
 
 struct cpufreq_stats_attribute {
 	struct attribute attr;
@@ -145,31 +132,6 @@ static int get_index_all_cpufreq_stat(struct all_cpufreq_stats *all_stat,
 	return -1;
 }
 
-#ifdef CONFIG_OF
-static ssize_t show_current_in_state(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	ssize_t len = 0;
-	unsigned int i, cpu;
-	struct cpufreq_power_stats *powerstats;
-
-	spin_lock(&cpufreq_stats_lock);
-	for_each_possible_cpu(cpu) {
-		powerstats = per_cpu(cpufreq_power_stats, cpu);
-		if (!powerstats)
-			continue;
-		len += scnprintf(buf + len, PAGE_SIZE - len, "CPU%d:", cpu);
-		for (i = 0; i < powerstats->state_num; i++)
-			len += scnprintf(buf + len, PAGE_SIZE - len,
-					"%d=%d ", powerstats->freq_table[i],
-					powerstats->curr[i]);
-		len += scnprintf(buf + len, PAGE_SIZE - len, "\n");
-	}
-	spin_unlock(&cpufreq_stats_lock);
-	return len;
-}
-#endif
-
 static ssize_t show_all_time_in_state(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -213,7 +175,6 @@ out:
 	return len;
 }
 
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t len = 0;
@@ -258,17 +219,13 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 	return len;
 }
 CPUFREQ_STATDEVICE_ATTR(trans_table, 0444, show_trans_table);
-#endif
-
 CPUFREQ_STATDEVICE_ATTR(total_trans, 0444, show_total_trans);
 CPUFREQ_STATDEVICE_ATTR(time_in_state, 0444, show_time_in_state);
 
 static struct attribute *default_attrs[] = {
 	&_attr_total_trans.attr,
 	&_attr_time_in_state.attr,
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	&_attr_trans_table.attr,
-#endif
 	NULL
 };
 static struct attribute_group stats_attr_group = {
@@ -278,11 +235,6 @@ static struct attribute_group stats_attr_group = {
 
 static struct kobj_attribute _attr_all_time_in_state = __ATTR(all_time_in_state,
 		0444, show_all_time_in_state, NULL);
-
-#ifdef CONFIG_OF
-static struct kobj_attribute _attr_current_in_state = __ATTR(current_in_state,
-		0444, show_current_in_state, NULL);
-#endif
 
 static int freq_table_get_index(struct cpufreq_stats *stat, unsigned int freq)
 {
@@ -345,25 +297,6 @@ static void cpufreq_allstats_free(void)
 	}
 }
 
-#ifdef CONFIG_OF
-static void cpufreq_powerstats_free(void)
-{
-	int cpu;
-	struct cpufreq_power_stats *powerstats;
-
-	sysfs_remove_file(cpufreq_global_kobject, &_attr_current_in_state.attr);
-
-	for_each_possible_cpu(cpu) {
-		powerstats = per_cpu(cpufreq_power_stats, cpu);
-		if (!powerstats)
-			continue;
-		kfree(powerstats->curr);
-		kfree(powerstats);
-		per_cpu(cpufreq_power_stats, cpu) = NULL;
-	}
-}
-#endif
-
 static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table, int count)
 {
@@ -396,9 +329,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 
 	alloc_size = count * sizeof(int) + count * sizeof(u64);
 
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	alloc_size += count * count * sizeof(int);
-#endif
 	stat->max_state = count;
 	stat->time_in_state = kzalloc(alloc_size, GFP_KERNEL);
 	if (!stat->time_in_state) {
@@ -406,10 +337,8 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 		goto error_out;
 	}
 	stat->freq_table = (unsigned int *)(stat->time_in_state + count);
-
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	stat->trans_table = stat->freq_table + count;
-#endif
+
 	j = 0;
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
 		unsigned int freq = table[i].frequency;
@@ -432,56 +361,6 @@ error_get_fail:
 	per_cpu(cpufreq_stats_table, cpu) = NULL;
 	return ret;
 }
-
-#ifdef CONFIG_OF
-static void cpufreq_powerstats_create(unsigned int cpu,
-		struct cpufreq_frequency_table *table, int count) {
-	unsigned int alloc_size, i = 0, j = 0, ret = 0;
-	struct cpufreq_power_stats *powerstats;
-	struct device_node *cpu_node;
-	char device_path[16];
-
-	powerstats = kzalloc(sizeof(struct cpufreq_power_stats),
-			GFP_KERNEL);
-	if (!powerstats)
-		return;
-
-	/* Allocate memory for freq table per cpu as well as clockticks per
-	 * freq*/
-	alloc_size = count * sizeof(unsigned int) +
-		count * sizeof(unsigned int);
-	powerstats->curr = kzalloc(alloc_size, GFP_KERNEL);
-	if (!powerstats->curr) {
-		kfree(powerstats);
-		return;
-	}
-	powerstats->freq_table = powerstats->curr + count;
-
-	spin_lock(&cpufreq_stats_lock);
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END && j < count; i++) {
-		unsigned int freq = table[i].frequency;
-
-		if (freq == CPUFREQ_ENTRY_INVALID)
-			continue;
-		powerstats->freq_table[j++] = freq;
-	}
-	powerstats->state_num = j;
-
-	snprintf(device_path, sizeof(device_path), "/cpus/cpu@%d", cpu);
-	cpu_node = of_find_node_by_path(device_path);
-	if (cpu_node) {
-		ret = of_property_read_u32_array(cpu_node, "current",
-				powerstats->curr, count);
-		if (ret) {
-			kfree(powerstats->curr);
-			kfree(powerstats);
-			powerstats = NULL;
-		}
-	}
-	per_cpu(cpufreq_power_stats, cpu) = powerstats;
-	spin_unlock(&cpufreq_stats_lock);
-}
-#endif
 
 static int compare_for_sort(const void *lhs_ptr, const void *rhs_ptr)
 {
@@ -643,9 +522,7 @@ static int cpufreq_stat_notifier_trans(struct notifier_block *nb,
 
 	spin_lock(&cpufreq_stats_lock);
 	stat->last_index = new_index;
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	stat->trans_table[old_index * stat->max_state + new_index]++;
-#endif
 	stat->total_trans++;
 	spin_unlock(&cpufreq_stats_lock);
 	return 0;
@@ -675,10 +552,6 @@ static int cpufreq_stats_create_table_cpu(unsigned int cpu)
 
 	if (!per_cpu(all_cpufreq_stats, cpu))
 		cpufreq_allstats_create(cpu, table, count);
-#ifdef CONFIG_OF
-	if (!per_cpu(cpufreq_power_stats, cpu))
-		cpufreq_powerstats_create(cpu, table, count);
-#endif
 
 	ret = cpufreq_stats_create_table(policy, table, count);
 
@@ -686,39 +559,6 @@ out:
 	cpufreq_cpu_put(policy);
 	return ret;
 }
-
-static int cpufreq_stat_cpu_callback(struct notifier_block *nfb,
-					       unsigned long action,
-					       void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	switch (action) {
-	case CPU_ONLINE:
-	case CPU_ONLINE_FROZEN:
-		cpufreq_update_policy(cpu);
-		break;
-	case CPU_DOWN_PREPARE:
-	case CPU_DOWN_PREPARE_FROZEN:
-		cpufreq_stats_free_sysfs(cpu);
-		break;
-	case CPU_DEAD:
-	case CPU_DEAD_FROZEN:
-		cpufreq_stats_free_table(cpu);
-		break;
-	case CPU_DOWN_FAILED:
-	case CPU_DOWN_FAILED_FROZEN:
-		cpufreq_stats_create_table_cpu(cpu);
-		break;
-	}
-	return NOTIFY_OK;
-}
-
-/* priority=1 so this will get called before cpufreq_remove_dev */
-static struct notifier_block cpufreq_stat_cpu_notifier __refdata = {
-	.notifier_call = cpufreq_stat_cpu_callback,
-	.priority = 1,
-};
 
 static struct notifier_block notifier_policy_block = {
 	.notifier_call = cpufreq_stat_notifier_policy
@@ -740,7 +580,6 @@ static int __init cpufreq_stats_init(void)
 		return ret;
 
 	create_all_freq_table();
-	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 	for_each_online_cpu(cpu)
 		cpufreq_update_policy(cpu);
 
@@ -749,7 +588,6 @@ static int __init cpufreq_stats_init(void)
 	if (ret) {
 		cpufreq_unregister_notifier(&notifier_policy_block,
 				CPUFREQ_POLICY_NOTIFIER);
-		unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 		for_each_online_cpu(cpu)
 			cpufreq_stats_free_table(cpu);
 		free_all_freq_table();
@@ -777,7 +615,6 @@ static void __exit cpufreq_stats_exit(void)
 			CPUFREQ_POLICY_NOTIFIER);
 	cpufreq_unregister_notifier(&notifier_trans_block,
 			CPUFREQ_TRANSITION_NOTIFIER);
-	unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
 	for_each_online_cpu(cpu) {
 		cpufreq_stats_free_table(cpu);
 		cpufreq_stats_free_sysfs(cpu);
