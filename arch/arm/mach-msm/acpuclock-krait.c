@@ -1395,12 +1395,8 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
-	pr_debug("CPU[%d] target %d relation %d (%d-%d) selected %d\n",
-		policy->cpu, target_freq, relation,
-		policy->min, policy->max, table[index].frequency);
-
-	ret = set_cpu_freq(cpu_work->policy, cpu_work->frequency,
-					cpu_work->driver_data);
+	ret = set_cpu_freq(policy, frequency,
+					driver_data);
 
 done:
 	return ret;
@@ -1426,6 +1422,7 @@ static inline int msm_cpufreq_limits_init(void)
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
 	struct cpu_freq *limit = NULL;
+	struct cpufreq_policy *policy = &per_cpu(cpu_freq_info, cpu);
 
 	for_each_possible_cpu(cpu) {
 		limit = &per_cpu(cpu_freq_info, cpu);
