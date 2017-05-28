@@ -1364,7 +1364,7 @@ static void fill_prstatus(struct elf_prstatus *prstatus,
 	} else {
 		cputime_t utime, stime;
 
-		task_cputime_t(p, &utime, &stime);
+		task_cputime(p, &utime, &stime);
 		cputime_to_timeval(utime, &prstatus->pr_utime);
 		cputime_to_timeval(stime, &prstatus->pr_stime);
 	}
