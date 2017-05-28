@@ -1,14 +1,9 @@
 menu "CPU Frequency scaling"
 
-config CPU_FREQ_MSM
-	bool "MSM CPU Frequency scaling"
-	default y
-	help
-	  Msm man
-
 config CPU_FREQ
 	bool "CPU Frequency scaling"
 	select SRCU
+	select CPU_FREQ_GOV_COMMON
 	default y
 	help
 	  CPU Frequency scaling allows you to change the clock speed of
@@ -33,16 +28,17 @@ config CPU_FREQ_GOV_COMMON
 	select IRQ_WORK
 	bool
 
+config CPU_FREQ_BOOST_SW
+	bool
+	depends on THERMAL
+
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
 	depends on CPU_FREQ
 	help
 	  This driver boosts the frequency of one or more CPUs based on
-	  various events that might occur in the system. As of now, the
-	  events it reacts to are:
-	  - Migration of important threads from one CPU to another.
-
-	  If in doubt, say N.
+	  various events that might occur in the system. As of now, it
+	  is just touch.
 
 config CPU_FREQ_STAT
 	tristate "CPU frequency translation statistics"
@@ -65,9 +61,15 @@ config SCHED_FREQ_INPUT
 	  help determine need for changing frequency well in advance of what
 	  a governor would have been able to detect on its own.
 
+config CPU_FREQ_MSM
+	bool "MSM CPU Frequency scaling"
+	default y
+	help
+	  Msm man
+
 choice
 	prompt "Default CPUFreq governor"
-	default CPU_FREQ_DEFAULT_GOV_USERSPACE if CPU_FREQ_SA1100 || CPU_FREQ_SA1110
+	default CPU_FREQ_DEFAULT_GOV_USERSPACE if ARM_SA1100_CPUFREQ || ARM_SA1110_CPUFREQ
 	default CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 	help
 	  This option sets which CPUFreq governor shall be loaded at
