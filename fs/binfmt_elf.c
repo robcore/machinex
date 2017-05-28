@@ -38,6 +38,7 @@
 #include <asm/param.h>
 #include <asm/page.h>
 #include <asm/exec.h>
+#include <asm/cputime_nsecs.h>
 
 #ifndef user_long_t
 #define user_long_t long
@@ -1351,7 +1352,7 @@ static void fill_prstatus(struct elf_prstatus *prstatus,
 	prstatus->pr_pgrp = task_pgrp_vnr(p);
 	prstatus->pr_sid = task_session_vnr(p);
 	if (thread_group_leader(p)) {
-		struct task_cputime_t cputime;
+		struct task_cputime cputime;
 
 		/*
 		 * This is the record for the group leader.  It shows the
