@@ -1047,10 +1047,7 @@ static void __init cpufreq_table_init(void)
 {
 	unsigned int i;
 	int index = 0;
-	struct cpufreq_frequency_table *table;
-
-	table = kzalloc(sizeof(*table), GFP_KERNEL);
-
+	struct cpufreq_frequency_table *table = &mx_freq_table[16];
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
 			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
@@ -1065,6 +1062,7 @@ static void __init cpufreq_table_init(void)
 	table[index].frequency = CPUFREQ_TABLE_END;
 
 	pr_info("CPU: %d scaling frequencies supported.\n", index);
+
 	/* Register table with CPUFreq.*/
 	for_each_possible_cpu(i)
 		table = cpufreq_frequency_get_table(i);

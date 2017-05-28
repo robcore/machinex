@@ -274,7 +274,6 @@ struct acpuclk_platform_data {
 	bool uses_pm8917;
 };
 
-struct cpufreq_frequency_table *qcom_freq_table;
 /**
  * acpuclk_krait_init - Initialize the Krait CPU clock driver give SoC params.
  */
