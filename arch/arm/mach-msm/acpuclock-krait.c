@@ -1042,29 +1042,32 @@ struct cpufreq_frequency_table mx_freq_table[] = {
 	{ 14, 1890000 },
 	{ 15, CPUFREQ_TABLE_END },
 };
+
 static void __init cpufreq_table_init(void)
 {
 	unsigned int i;
 	int index = 0;
+	struct cpufreq_frequency_table *table;
+
+	table = kzalloc(sizeof(*table), GFP_KERNEL);
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
 			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+		table[index].driver_data = index;
+		table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
 	/* freq_table not big enough to store all usable freqs. */
 	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	mx_freq_table[index].driver_data = index;
-	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
+	table[index].driver_data = index;
+	table[index].frequency = CPUFREQ_TABLE_END;
 
 	pr_info("CPU: %d scaling frequencies supported.\n", index);
-
 	/* Register table with CPUFreq.*/
 	for_each_possible_cpu(i)
-		cpufreq_frequency_get_table(i);
+		table = cpufreq_frequency_get_table(i);
 }
 #else
 static void __init cpufreq_table_init(void) {}
