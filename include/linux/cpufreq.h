@@ -76,7 +76,8 @@ struct cpufreq_policy {
 	unsigned int		shared_type; /* ACPI: ANY or ALL affected CPUs
 						should set cpufreq */
 	unsigned int		cpu;    /* cpu managing this policy, must be online */
-
+	unsigned int util;
+	unsigned int		util_thres;
 	struct clk		*clk;
 	struct cpufreq_cpuinfo	cpuinfo;/* see above */
 
