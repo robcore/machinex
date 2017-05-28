@@ -54,15 +54,6 @@ config CPU_FREQ_STAT
 
 	  If in doubt, say N.
 
-config CPU_FREQ_STAT_DETAILS
-	bool "CPU frequency translation statistics details"
-	depends on CPU_FREQ_STAT
-	help
-	  This will show detail CPU frequency translation table in sysfs file
-	  system.
-
-	  If in doubt, say N.
-
 config SCHED_FREQ_INPUT
 	bool "Scheduler inputs to cpufreq governor"
 	help
