@@ -127,7 +127,7 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	for (i = 0; i < stat->state_num; i++) {
 		len += sprintf(buf + len, "%u %llu\n", stat->freq_table[i],
 			(unsigned long long)
-			nsec_to_clock_t(stat->time_in_state[i]));
+			jiffies_64_to_clock_t(stat->time_in_state[i]));
 	}
 	return len;
 }
@@ -199,7 +199,7 @@ static ssize_t show_all_time_in_state(struct kobject *kobj,
 			if (index != -1) {
 				len += scnprintf(buf + len, PAGE_SIZE - len,
 					"%llu\t\t", (unsigned long long)
-					nsec_to_clock_t(all_stat->time_in_state[index]));
+					jiffies_64_to_clock_t(all_stat->time_in_state[index]));
 			} else {
 				len += scnprintf(buf + len, PAGE_SIZE - len,
 						"N/A\t\t");
