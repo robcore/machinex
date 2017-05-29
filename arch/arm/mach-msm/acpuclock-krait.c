@@ -1051,7 +1051,7 @@ static void __init cpufreq_table_init(void)
 		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
 		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(mx_freq_table); i++) {
+				&& freq_cnt < ARRAY_SIZE(mx_freq_table) - 1; i++) {
 			if (drv.priv[i].use_for_scaling) {
 				freq_table[freq_cnt].driver_data = freq_cnt;
 				mx_freq_table[freq_cnt].frequency
@@ -1489,7 +1489,7 @@ static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
 	int i;
 	/* Construct the freq_table tables from acpu_freq_tbl. */
 	for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
-			&& freq_cnt < ARRAY_SIZE(mx_freq_table); i++) {
+			&& freq_cnt < ARRAY_SIZE(mx_freq_table) - 1; i++) {
 		if (drv.priv[i].use_for_scaling) {
 			ftbl[freq_cnt].driver_data = freq_cnt;
 			ftbl[freq_cnt].frequency
