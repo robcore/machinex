@@ -1379,10 +1379,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cpu;
 
 	for_each_possible_cpu(cpu)
-		cpumask_set_cpu(cpu, policy->cpus);
+		cpumask_copy(policy->cpus, cpumask_of(cpu));
 
-	if (cpufreq_frequency_table_cpuinfo(policy, table))
-		pr_err("cpufreq: failed to get policy min/max\n");
+	ret = cpufreq_table_validate_and_show(policy, table);
+	if (ret)
+		pr_err("policy freq_table could not be created!\n");
 
 	cur_freq = acpuclk_get_rate(policy->cpu);
 
@@ -1405,7 +1406,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
 			policy->cpu, cur_freq, table[index].frequency);
 	policy->cur = table[index].frequency;
-	policy->freq_table = table;
 	hotplug_ready = true;
 
 	return 0;
@@ -1515,9 +1515,9 @@ static int __init msm_cpufreq_register(void)
 
 	msm_cpufreq_driver.flags |= CPUFREQ_HAVE_GOVERNOR_PER_POLICY;
 
-	ftbl = cpufreq_parse_mx(cpu);
+	ftbl = cpufreq_parse_mx(0);
 	if (!IS_ERR(ftbl)) {
-		for_each_possible_cpu(cpu)
+		for_each_cpu(cpu)
 			per_cpu(freq_table, cpu) = ftbl;
 	}
 
