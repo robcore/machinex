@@ -1622,12 +1622,8 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 
 static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
 {
-	struct cpufreq_frequency_table *ftbl;
+	struct cpufreq_frequency_table *ftbl = NULL;
 	int i, index = 0;
-
-	ftbl = kzalloc((index + 1) * sizeof(*ftbl), GFP_KERNEL);
-	if (!ftbl)
-		return ERR_PTR(-ENOMEM);
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
