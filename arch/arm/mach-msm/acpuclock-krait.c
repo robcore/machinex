@@ -483,7 +483,7 @@ static int calculate_vdd_dig(const struct acpu_level *tgt)
 }
 
 static bool enable_boost = true;
-module_param_named(boost, enable_boost, bool, S_IRUGO | S_IWUSR);
+module_param_named(boost, enable_boost, bool, 0644);
 
 static int calculate_vdd_core(const struct acpu_level *tgt)
 {
