@@ -1517,7 +1517,7 @@ static int __init msm_cpufreq_register(void)
 
 	ftbl = cpufreq_parse_mx(0);
 	if (!IS_ERR(ftbl)) {
-		for_each_cpu(cpu)
+		for_each_possible_cpu(cpu)
 			per_cpu(freq_table, cpu) = ftbl;
 	}
 
