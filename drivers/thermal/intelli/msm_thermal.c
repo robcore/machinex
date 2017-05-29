@@ -113,19 +113,11 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
 	int ret = 0;
 
-	ret = msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, max_freq);
-	if (ret)
-		return ret;
-
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != MSM_CPUFREQ_NO_LIMIT) {
 		therm_freq_limited = true;
-		pr_debug("%s: Limiting cpu%d max frequency to %lu\n",
-				KBUILD_MODNAME, cpu, max_freq);
 	} else {
 		therm_freq_limited = false;
-		pr_debug("%s: Max frequency reset for cpu%d\n",
-				KBUILD_MODNAME, cpu);
 	}
 
 	if (cpu_online(cpu)) {
@@ -643,7 +635,7 @@ static void msm_thermal_exit(void)
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	mutex_destroy(&core_control_mutex);
 }
-module_init(msm_thermal_late_init);
+late_initcall(msm_thermal_late_init);
 module_exit(msm_thermal_exit);
 
 MODULE_LICENSE("GPL");

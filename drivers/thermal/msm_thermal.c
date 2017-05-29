@@ -67,19 +67,10 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 {
 	int ret = 0;
 
-	ret = msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, max_freq);
-	if (ret)
-		return ret;
-
 	limited_max_freq = max_freq;
-	if (max_freq != MSM_CPUFREQ_NO_LIMIT)
-		pr_debug("%s: Limiting cpu%d max frequency to %d (TEMP=%ld)\n",
-				KBUILD_MODNAME, cpu, max_freq, current_temp);
-	else
-		pr_debug("%s: Max frequency reset for cpu%d\n",
-				KBUILD_MODNAME, cpu);
-
-	ret = cpufreq_update_policy(cpu);
+	get_online_cpus();
+	cpufreq_update_policy(cpu);
+	put_online_cpus();
 
 	return ret;
 }
