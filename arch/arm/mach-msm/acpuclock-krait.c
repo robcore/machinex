@@ -1040,43 +1040,31 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-struct cpufreq_frequency_table mx_freq_table[] = {
-	{ 0, 384000 },
-	{ 1, 486000 },
-	{ 2, 594000 },
-	{ 3, 702000 },
-	{ 4, 810000 },
-	{ 5, 918000 },
-	{ 6, 1026000 },
-	{ 7, 1134000 },
-	{ 8, 1242000 },
-	{ 9, 1350000 },
-	{ 10, 1458000 },
-	{ 11, 1566000 },
-	{ 12, 1674000 },
-	{ 13, 1782000 },
-	{ 14, 1890000 },
-	{ 15, CPUFREQ_TABLE_END },
-};
-
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
+static DEFINE_PER_CPU(struct cpufreq_frequency_table, mx_freq_table[35]);
 static void __init cpufreq_table_init(void)
 {
-	int i, index = 0;
+	int cpu;
+	int freq_cnt = 0;
 
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
-		index++;
+	for_each_possible_cpu(cpu) {
+		int i;
+		/* Construct the freq_table tables from acpu_freq_tbl. */
+		for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(mx_freq_table); i++) {
+			if (drv.priv[i].use_for_scaling) {
+				freq_table[freq_cnt].driver_data = freq_cnt;
+				mx_freq_table[freq_cnt].frequency
+					= drv.priv[i].speed.khz;
+				freq_cnt++;
+			}
+		}
+		/* freq_table not big enough to store all usable freqs. */
+		BUG_ON(drv.priv[i].speed.khz != 0);
+
+		mx_freq_table[freq_cnt].driver_data = freq_cnt;
+		mx_freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
 	}
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv[i].speed.khz != 0);
-
-	mx_freq_table[index].driver_data = index;
-	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
-
-	pr_info("Machinex: %d scaling frequencies supported.\n", index);
 }
 
 static void __init dcvs_freq_init(void)
@@ -1316,8 +1304,6 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
-static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
-
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
 {
@@ -1391,6 +1377,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	struct cpufreq_frequency_table *table =
 			per_cpu(freq_table, policy->cpu);
 	int cpu;
+
+	for_each_possible_cpu(cpu)
+		cpumask_set_cpu(cpu, policy->cpus);
 
 	if (cpufreq_frequency_table_cpuinfo(policy, table))
 		pr_err("cpufreq: failed to get policy min/max\n");
@@ -1494,26 +1483,29 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 
 static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
 {
-	struct cpufreq_frequency_table *ftbl = *(&(mx_freq_table));
-	int i, index = 0;
+	struct cpufreq_frequency_table *ftbl;
+	int freq_cnt = 0;
 
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		ftbl[index].driver_data = index;
-		ftbl[index].frequency = drv.priv[i].speed.khz;
-		index++;
+	int i;
+	/* Construct the freq_table tables from acpu_freq_tbl. */
+	for (i = 0, freq_cnt = 0; drv.priv[i].speed.khz != 0
+			&& freq_cnt < ARRAY_SIZE(mx_freq_table); i++) {
+		if (drv.priv[i].use_for_scaling) {
+			ftbl[freq_cnt].driver_data = freq_cnt;
+			ftbl[freq_cnt].frequency
+				= drv.priv[i].speed.khz;
+			freq_cnt++;
+		}
 	}
 	/* freq_table not big enough to store all usable freqs. */
 	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	ftbl[index].driver_data = index;
-	ftbl[index].frequency = CPUFREQ_TABLE_END;
+	ftbl[freq_cnt].driver_data = freq_cnt;
+	ftbl[freq_cnt].frequency = CPUFREQ_TABLE_END;
 
-	pr_info("CPU: %d scaling frequencies supported.\n", index);
+	pr_info("CPU: %d scaling frequencies supported.\n", freq_cnt);
 
 	return ftbl;
-
 }
 
 static int __init msm_cpufreq_register(void)
