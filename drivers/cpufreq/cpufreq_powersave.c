@@ -16,15 +16,26 @@
 #include <linux/init.h>
 #include <linux/module.h>
 
-static void cpufreq_gov_powersave_limits(struct cpufreq_policy *policy)
+static int cpufreq_governor_powersave(struct cpufreq_policy *policy,
+					unsigned int event)
 {
-	pr_debug("setting to %u kHz\n", policy->min);
-	__cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_L);
+	switch (event) {
+	case CPUFREQ_GOV_START:
+	case CPUFREQ_GOV_LIMITS:
+		pr_debug("setting to %u kHz because of event %u\n",
+							policy->min, event);
+		__cpufreq_driver_target(policy, policy->min,
+						CPUFREQ_RELATION_L);
+		break;
+	default:
+		break;
+	}
+	return 0;
 }
 
 static struct cpufreq_governor cpufreq_gov_powersave = {
 	.name		= "powersave",
-	.limits		= cpufreq_gov_powersave_limits,
+	.governor	= cpufreq_governor_powersave,
 	.owner		= THIS_MODULE,
 };
 

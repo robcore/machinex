@@ -1310,6 +1310,18 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
+struct cpufreq_work_struct {
+	struct work_struct work;
+	struct cpufreq_policy *policy;
+	struct completion complete;
+	int frequency;
+	unsigned int driver_data;
+	int status;
+};
+
+static DEFINE_PER_CPU(struct cpufreq_work_struct, cpufreq_work);
+static struct workqueue_struct *msm_cpufreq_wq;
+
 struct cpufreq_suspend_t {
 	struct mutex suspend_mutex;
 	int device_suspended;
@@ -1348,9 +1360,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 	/* limits applied above must be in cpufreq table */
-	table = (policy->freq_table);
-	if (cpufreq_frequency_table_target(policy, new_freq,
-		CPUFREQ_RELATION_H))
+	table = cpufreq_frequency_get_table(policy->cpu);
+	if (cpufreq_frequency_table_target(policy, table, new_freq,
+		CPUFREQ_RELATION_H, &index))
 		return -EINVAL;
 
 	freqs.old = policy->cur;
@@ -1366,39 +1378,65 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	return ret;
 }
 
+static void set_cpu_work(struct work_struct *work)
+{
+	struct cpufreq_work_struct *cpu_work =
+		container_of(work, struct cpufreq_work_struct, work);
+
+	cpu_work->status = set_cpu_freq(cpu_work->policy, cpu_work->frequency,
+					cpu_work->driver_data);
+	complete(&cpu_work->complete);
+}
+
 static int msm_cpufreq_target(struct cpufreq_policy *policy,
 				unsigned int target_freq,
 				unsigned int relation)
 {
 	int ret = 0;
 	int index;
+	struct cpufreq_frequency_table *table;
+
+	struct cpufreq_work_struct *cpu_work = NULL;
 
 	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
 
-	if (target_freq == policy->cur) {
-		mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
+	if (target_freq == policy->cur)
 		goto done;
-	}
 
 	if (per_cpu(suspend_data, policy->cpu).device_suspended) {
 		pr_debug("cpufreq: cpu%d scheduling frequency change "
 				"in suspend.\n", policy->cpu);
 		ret = -EFAULT;
-		mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
 		goto done;
 	}
-	mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
 
-	if (cpufreq_frequency_table_target(policy, target_freq, relation)) {
+	table = cpufreq_frequency_get_table(policy->cpu);
+	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
+			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
 		ret = -EINVAL;
 		goto done;
 	}
 
-	ret = set_cpu_freq(policy, target_freq,
-					index);
+	pr_debug("CPU[%d] target %d relation %d (%d-%d) selected %d\n",
+		policy->cpu, target_freq, relation,
+		policy->min, policy->max, table[index].frequency);
+
+	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
+	cpu_work->policy = policy;
+	cpu_work->frequency = table[index].frequency;
+	cpu_work->driver_data = table[index].driver_data;
+	cpu_work->status = -ENODEV;
+
+	cancel_work_sync(&cpu_work->work);
+	reinit_completion(&cpu_work->complete);
+	queue_work_on(policy->cpu, msm_cpufreq_wq, &cpu_work->work);
+	wait_for_completion(&cpu_work->complete);
+
+	ret = cpu_work->status;
 
 done:
+	mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
 	return ret;
 }
 
@@ -1422,11 +1460,10 @@ static inline int msm_cpufreq_limits_init(void)
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
 	struct cpu_freq *limit = NULL;
-	struct cpufreq_policy *policy;
 
 	for_each_possible_cpu(cpu) {
 		limit = &per_cpu(cpu_freq_info, cpu);
-		table = policy->freq_table;
+		table = cpufreq_frequency_get_table(cpu);
 		if (table == NULL) {
 			pr_err("%s: error reading cpufreq table for cpu %d\n",
 					__func__, cpu);
@@ -1483,32 +1520,46 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	unsigned int cpu;
-
-	struct cpufreq_frequency_table *pos;
-	struct cpufreq_frequency_table *table;
-
-	for_each_online_cpu(cpu)
-		cpumask_set_cpu(cpu, policy->cpus);
+	struct cpufreq_work_struct *cpu_work = NULL;
+	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
 
 	cpufreq_for_each_entry(pos, mx_freq_table)
 		if (pos->frequency > 1890000 || pos->frequency < 0)
 			pos->frequency = CPUFREQ_ENTRY_INVALID;
 
-	if (cpufreq_table_validate_and_show(policy, mx_freq_table));
-		return -ENOMEM;
+	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
+	if (ret)
+		return ret;
+
+	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
+	INIT_WORK(&cpu_work->work, set_cpu_work);
+	init_completion(&cpu_work->complete);
+
 
 	cur_freq = acpuclk_get_rate(policy->cpu);
 
+	if (cpufreq_frequency_table_target(policy, table, cur_freq,
+	    CPUFREQ_RELATION_H, &index) &&
+	    cpufreq_frequency_table_target(policy, table, cur_freq,
+	    CPUFREQ_RELATION_L, &index)) {
+		pr_info("cpufreq: cpu%d at invalid freq: %d\n",
+				policy->cpu, cur_freq);
+		return -EINVAL;
+	}
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	if (set_cpu_freq(policy, table[index].frequency,
-			   table[index].driver_data))
-		return -EINVAL;
+	ret = set_cpu_freq(policy, table[index].frequency,
+			   table[index].driver_data);
+	if (ret)
+		return ret;
+	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
+			policy->cpu, cur_freq, table[index].frequency);
 
 	policy->cur = table[index].frequency;
+
+	policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
 
 	return 0;
 }
@@ -1547,7 +1598,13 @@ static int msm_cpufreq_resume(void)
 			continue;
 		if (policy.cur <= policy.max && policy.cur >= policy.min)
 			continue;
-		cpufreq_update_policy(cpu);
+		ret = cpufreq_update_policy(cpu);
+		if (ret)
+			pr_info("cpufreq: Current frequency violates policy min/max for CPU%d\n",
+			       cpu);
+		else
+			pr_info("cpufreq: Frequency violation fixed for CPU%d\n",
+				cpu);
 	}
 	put_online_cpus();
 
@@ -1580,15 +1637,20 @@ static struct freq_attr *msm_freq_attr[] = {
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
-								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK
-								 | CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
+	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= msm_freq_attr,
+};
+
+static struct platform_driver msm_cpufreq_plat_driver = {
+	.driver = {
+		.name = "msm-cpufreq",
+		.owner = THIS_MODULE,
+	},
 };
 
 static int __init msm_cpufreq_register(void)
@@ -1600,6 +1662,7 @@ static int __init msm_cpufreq_register(void)
 		per_cpu(suspend_data, cpu).device_suspended = 0;
 	}
 
+	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
