@@ -1496,11 +1496,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 
 static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
 {
-
-
 	int i, index = 0;
-	struct cpufreq_frequency_table *ftbl;
-
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
@@ -1514,9 +1510,8 @@ static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
 
 	mx_freq_table[index].driver_data = index;
 	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
-	ftbl = &mx_freq_table[index];
 
-	return ftbl;
+	return mx_freq_table;
 }
 
 static int __init msm_cpufreq_register(void)
