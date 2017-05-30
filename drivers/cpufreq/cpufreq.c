@@ -1431,8 +1431,6 @@ out_free_policy:
 	return ret;
 }
 
-static void cpufreq_offline(unsigned int cpu);
-
 /**
  * cpufreq_add_dev - the cpufreq interface for a CPU device.
  * @dev: CPU device.
