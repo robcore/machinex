@@ -129,8 +129,8 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 		 * - during long idle intervals
 		 * - explicitly set to zero
 		 */
-		if (unlikely(wall_time > (2 * sampling_rate) &&
-			     j_cdbs->prev_load || wall_time == 0)) {
+		if (unlikely((wall_time > (2 * sampling_rate) &&
+			     j_cdbs->prev_load) || (wall_time == 0))) {
 			load = j_cdbs->prev_load;
 
 			/*
