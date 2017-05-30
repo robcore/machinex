@@ -113,26 +113,32 @@ fail:
 static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
 	struct cpufreq_policy *policy;
+
 	int ret = 0;
 
+	if (!cpu_policy)
+		return -EINVAL;
+
+	cpufreq_verify_within_limits(cpu_policy,
+				cpu_policy->min, check_cpufreq_hardlimit(max_freq));
+
 	limited_max_freq_thermal = max_freq;
-	if (max_freq != current_limit_max) {
-		therm_freq_limited = true;
-		update_scaling_limits(policy->min, limited_max_freq_thermal);
-	} else {
-		therm_freq_limited = false;
-		reapply_hard_limits();
-	}
 
 	if (cpu_online(cpu)) {
-		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+		policy = cpufreq_cpu_get(cpu);
 		if (!policy)
 			return ret;
-		ret = cpufreq_driver_target(policy, policy->cur,
-				CPUFREQ_RELATION_H);
-		cpufreq_cpu_put(policy);
+		get_online_cpus();
+		ret = cpufreq_update_policy(cpu);
+		put_online_cpus();
 	}
+	if (ret) {
+		therm_freq_limited = true;
+		update_scaling_limits(policy->min, limited_max_freq_thermal);
+	} else
+		therm_freq_limited = false;
 
+	cpufreq_cpu_put(policy);
 	return ret;
 }
 
@@ -205,6 +211,7 @@ static void __ref do_freq_control(long temp)
 	int ret = 0;
 	int cpu = 0;
 	unsigned long max_freq = limited_max_freq_thermal;
+	struct cpu_policy *policy = cpufreq_cpu_get(cpu);
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
@@ -223,7 +230,7 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-			max_freq = current_limit_max;
+			max_freq = check_cpufreq_hardlimit(policy->max);
 			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
@@ -324,11 +331,12 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 static void __ref disable_msm_thermal(void)
 {
 	int cpu = 0;
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == current_limit_max)
+	if (limited_max_freq_thermal == check_cpufreq_hardlimit(policy->max);)
 		return;
 
 	for_each_possible_cpu(cpu) {

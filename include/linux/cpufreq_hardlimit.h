@@ -28,10 +28,6 @@
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
-/* Hook in cpufreq for scaling min./max. */
-unsigned int current_limit_max;
-unsigned int current_limit_max;
-
 void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
 void reapply_hard_limits(void);
 
