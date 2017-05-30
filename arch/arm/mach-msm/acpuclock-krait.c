@@ -1406,7 +1406,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
 	policy->cur = acpuclk_get_rate(policy->cpu);
-	policy->suspend_freq = freq_table[0].frequency;
+	policy->suspend_freq = acpuclk_krait_data.power_collapse_khz;
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
