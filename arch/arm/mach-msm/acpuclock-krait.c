@@ -1487,17 +1487,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
 
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < freq_table[index-1].frequency; i++) {
-		freq_table[index].driver_data = index;
-		freq_table[index].frequency = drv.priv[i].speed.khz;
-		index++;
-	}
-
-	freq_table[index].driver_data = index;
-	freq_table[index].frequency = CPUFREQ_TABLE_END;
-
 	cur_freq = acpuclk_get_rate(policy->cpu);
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
@@ -1511,10 +1500,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_debug("i am a debug message\n");
 
 	policy->cur = freq_table[index].frequency;
-	policy->freq_table = freq_table;
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
-	return 0;
-	//return cpufreq_table_validate_and_show(policy, freq_table);
+	return cpufreq_table_validate_and_show(policy, freq_table);
 }
 
 static int msm_cpufreq_suspend(void)

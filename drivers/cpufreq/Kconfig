@@ -552,6 +552,11 @@ config CPU_FREQ_GOV_UBERDEMAND
 	  do fast frequency switching (i.e, very low latency frequency
 	  transitions).
 
+config CPU_FREQ_GOV_SCHEDUTIL
+	tristate "'schedutil' cpufreq policy governor"
+	help
+	  'schedutil' - Backported, scheduler-assisted policy handling.
+
 config CPU_FREQ_GOV_UBERDEMAND_SECOND_PHASE_FREQ
         int "Second Phase Uberdemand Frequency"
         default 1674000
