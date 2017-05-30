@@ -1325,8 +1325,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.cpu = policy->cpu;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	rate = new_freq;
-	ret = acpuclk_krait_set_rate(policy->cpu, rate, SETRATE_CPUFREQ);
+	ret = acpuclk_krait_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 	return ret;
 }
@@ -1389,13 +1388,25 @@ static struct cpufreq_frequency_table freq_table[] = {
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
-	int index;
+	int i, index = 0;
 	int ret = 0;
 	int cpu;
 	struct cpufreq_frequency_table *freq_table;
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
+
+
+	/* Construct the freq_table tables from priv->freq_tbl. */
+	for (i = 0; drv.priv[i].speed.khz != 0
+			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
+		mx_freq_table[index].driver_data = index;
+		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+		index++;
+	}
+
+	mx_freq_table[index].driver_data = index;
+	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
 	freq_table[index].frequency = drv.priv[index].speed.khz;
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
