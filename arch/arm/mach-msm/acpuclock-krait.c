@@ -1305,12 +1305,41 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
+struct cpu_freq {
+	uint32_t max;
+	uint32_t min;
+	uint32_t allowed_max;
+	uint32_t allowed_min;
+	uint32_t limits_init;
+};
+
+static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
+
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
 {
 	int ret = 0;
 	struct cpufreq_freqs freqs;
-	unsigned long rate;
+	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
+	struct cpufreq_frequency_table *table;
+
+	if (limit->limits_init) {
+		if (new_freq > limit->allowed_max) {
+			new_freq = limit->allowed_max;
+			pr_debug("max: limiting freq to %d\n", new_freq);
+		}
+
+		if (new_freq < limit->allowed_min) {
+			new_freq = limit->allowed_min;
+			pr_debug("min: limiting freq to %d\n", new_freq);
+		}
+	}
+
+	/* limits applied above must be in cpufreq table */
+	table = cpufreq_frequency_get_table(policy->cpu);
+	if (cpufreq_frequency_table_target(policy, table, new_freq,
+		CPUFREQ_RELATION_H, &index))
+		return -EINVAL;
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
@@ -1353,10 +1382,80 @@ done:
 	return ret;
 }
 
+static int msm_cpufreq_verify(struct cpufreq_policy *policy)
+{
+	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
+			policy->cpuinfo.max_freq);
+	return 0;
+}
+
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
 	return acpuclk_get_rate(cpu);
 }
+
+static inline int msm_cpufreq_limits_init(void)
+{
+	int cpu = 0;
+	int i = 0;
+	struct cpufreq_frequency_table *table = NULL;
+	uint32_t min = (uint32_t) -1;
+	uint32_t max = 0;
+	struct cpu_freq *limit = NULL;
+
+	for_each_possible_cpu(cpu) {
+		limit = &per_cpu(cpu_freq_info, cpu);
+		table = cpufreq_frequency_get_table(cpu);
+		if (table == NULL) {
+			pr_err("%s: error reading cpufreq table for cpu %d\n",
+					__func__, cpu);
+			continue;
+		}
+		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+			if (table[i].frequency > max)
+				max = table[i].frequency;
+			if (table[i].frequency < min)
+				min = table[i].frequency;
+		}
+		limit->allowed_min = min;
+		limit->allowed_max = max;
+		limit->min = min;
+		limit->max = max;
+		limit->limits_init = 1;
+	}
+
+	return 0;
+}
+
+int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
+{
+	struct cpu_freq *limit = &per_cpu(cpu_freq_info, cpu);
+
+	if (!limit->limits_init)
+		msm_cpufreq_limits_init();
+
+	if ((min != MSM_CPUFREQ_NO_LIMIT) &&
+		min >= limit->min && min <= limit->max)
+		limit->allowed_min = min;
+	else
+		limit->allowed_min = limit->min;
+
+
+	if ((max != MSM_CPUFREQ_NO_LIMIT) &&
+		max <= limit->max && max >= limit->min)
+		limit->allowed_max = max;
+	else
+		limit->allowed_max = limit->max;
+
+#if 0
+	pr_debug("%s: Limiting cpu %d min = %d, max = %d\n",
+			__func__, cpu,
+			limit->allowed_min, limit->allowed_max);
+#endif
+
+	return 0;
+}
+EXPORT_SYMBOL(msm_cpufreq_set_freq_limits);
 
 static struct cpufreq_frequency_table freq_table[] = {
 	{ .frequency = 384000 },
@@ -1399,9 +1498,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	freq_table[index].driver_data = index;
 	freq_table[index].frequency = CPUFREQ_TABLE_END;
 
+	cur_freq = acpuclk_get_rate(policy->cpu);
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cur = acpuclk_get_rate(cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
@@ -1410,6 +1509,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 			   freq_table[index].driver_data);
 	if (ret)
 		pr_debug("i am a debug message\n");
+
+	policy->cur = freq_table[index].frequency;
 	policy->freq_table = freq_table;
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
 	return 0;
@@ -1472,10 +1573,9 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
-								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
 	.init		= msm_cpufreq_init,
-	.verify		= cpufreq_generic_frequency_table_verify,
+	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
