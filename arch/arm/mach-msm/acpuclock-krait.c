@@ -89,8 +89,6 @@ static struct drv_data {
 	struct device *dev;
 } drv;
 
-static bool hotplug_ready;
-
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
 	return drv.scalable[cpu].cur_speed->khz;
@@ -1096,10 +1094,6 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
-	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready)
-		return NOTIFY_BAD;
-
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DEAD:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
@@ -1308,8 +1302,6 @@ int __init acpuclk_krait_init(struct device *dev,
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
-	register_hotcpu_notifier(&acpuclk_cpu_notifier);
-
 	return 0;
 }
 
@@ -1325,7 +1317,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.cpu = policy->cpu;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	ret = acpuclk_krait_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
+	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 	return ret;
 }
@@ -1363,7 +1355,7 @@ done:
 
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
-	return acpuclk_krait_get_rate(cpu);
+	return acpuclk_get_rate(cpu);
 }
 
 static struct cpufreq_frequency_table freq_table[] = {
@@ -1396,31 +1388,32 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
 
-
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+			&& index < freq_table[index-1].frequency; i++) {
+		freq_table[index].driver_data = index;
+		freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
 
-	mx_freq_table[index].driver_data = index;
-	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
-	freq_table[index].frequency = drv.priv[index].speed.khz;
+	freq_table[index].driver_data = index;
+	freq_table[index].frequency = CPUFREQ_TABLE_END;
+
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cur = acpuclk_krait_get_rate(cpu);
+	policy->cur = acpuclk_get_rate(cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(policy, freq_table[index].frequency,
+	ret = set_cpu_freq(cpu, freq_table[index].frequency,
 			   freq_table[index].driver_data);
 	if (ret)
 		pr_debug("i am a debug message\n");
-	hotplug_ready = true;
-	return cpufreq_table_validate_and_show(policy, freq_table);
+	policy->freq_table;
+	register_hotcpu_notifier(&acpuclk_cpu_notifier);
+	return 0;
+	//return cpufreq_table_validate_and_show(policy, freq_table);
 }
 
 static int msm_cpufreq_suspend(void)
@@ -1496,4 +1489,3 @@ static int __init msm_cpufreq_register(void)
 }
 
 late_initcall(msm_cpufreq_register);
-
