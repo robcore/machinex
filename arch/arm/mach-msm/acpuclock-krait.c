@@ -1070,8 +1070,6 @@ static void __init cpufreq_table_init(void)
 		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv[i].speed.khz != 0);
 
 	mx_freq_table[index].driver_data = index;
 	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
@@ -1394,9 +1392,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int index;
 	int ret = 0;
 	int cpu;
+	struct cpufreq_frequency_table *freq_table;
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
+	freq_table[index].frequency = drv.priv[index].speed.khz;
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
 	policy->cur = acpuclk_krait_get_rate(cpu);
