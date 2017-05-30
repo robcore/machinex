@@ -1428,7 +1428,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (ret)
 		return ret;
 	hotplug_ready = true;
-	return cpufreq_table_validate_and_show(policy, freq_table);
+	return 0;
 }
 
 static int msm_cpufreq_suspend(void)
