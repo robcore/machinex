@@ -1,6 +1,21 @@
 #!/bin/bash
-/root/machinex/patches/0021-how-bout-that.patch
-/root/machinex/patches/0020-oh-oops.patch
-/root/machinex/patches/0019-some-fixer-uppers.patch
-/root/machinex/patches/0018-merged-cpufreq-4.8-and-made-a-couple-of-changes-to-a.patch
-/root/machinex/patches/0017-IT-BLOODY-WORKS-Turning-off-generic-suspend-though-a.patch
+patch -p1 -R < "/root/machinex/patches/0036-and-no-need-to-validate-and-show-twice-if-we-are-set.patch"
+patch -p1 -R < "/root/machinex/patches/0035-but-do-it-right.patch"
+patch -p1 -R < "/root/machinex/patches/0034-wanna-try-this.patch"
+patch -p1 -R < "/root/machinex/patches/0033-superfluous.patch"
+patch -p1 -R < "/root/machinex/patches/0032-import-better-kobj-handling-fix-hotplug-statemachine.patch"
+patch -p1 -R < "/root/machinex/patches/0031-sneaky.patch"
+patch -p1 -R < "/root/machinex/patches/0030-cpufreq-Split-cpufreq_governor-into-simpler-function.patch"
+patch -p1 -R < "/root/machinex/patches/0029-cpufreq-governor-Simplify-performance-and-powersave.patch"
+patch -p1 -R < "/root/machinex/patches/0028-cpufreq-governor-Check-transition-latecy-at-init-tim.patch"
+patch -p1 -R < "/root/machinex/patches/0027-cpufreq-governor-CPUFREQ_GOV_LIMITS-never-fails.patch"
+patch -p1 -R < "/root/machinex/patches/0026-convert-to-and-fix-hotplug-state-machine.patch"
+patch -p1 -R < "/root/machinex/patches/0025-some-minor-optimization-throughout-cpufreq.everythin.patch"
+patch -p1 -R < "/root/machinex/patches/0024-cpufreq-optimize-cur-freq-for-success-case-also-for-.patch"
+patch -p1 -R < "/root/machinex/patches/0023-add-back-cur_freq.patch"
+patch -p1 -R < "/root/machinex/patches/0022-reverted-to-last-working.patch"
+patch -p1 -R < "/root/machinex/patches/0021-how-bout-that.patch"
+patch -p1 -R < "/root/machinex/patches/0020-oh-oops.patch"
+patch -p1 -R < "/root/machinex/patches/0019-some-fixer-uppers.patch"
+patch -p1 -R < "/root/machinex/patches/0018-merged-cpufreq-4.8-and-made-a-couple-of-changes-to-a.patch"
+patch -p1 -R < "/root/machinex/patches/0017-IT-BLOODY-WORKS-Turning-off-generic-suspend-though-a.patch"
