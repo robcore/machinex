@@ -1384,22 +1384,22 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 }
 
 static struct cpufreq_frequency_table real_freq_table[] = {
-	{ [0] = 384000 },
-	{ [1] = 486000 },
-	{ [2] = 594000 },
-	{ [3] = 702000 },
-	{ [4] = 810000 },
-	{ [5] = 918000 },
-	{ [6] = 1026000 },
-	{ [7] = 1134000 },
-	{ [8] = 1242000 },
-	{ [9] = 1350000 },
-	{ [10] = 1458000 },
-	{ [11] = 1566000 },
-	{ [12] = 1674000 },
-	{ [13] = 1782000 },
-	{ [14] = 1890000 },
-	{ [15] = CPUFREQ_TABLE_END },
+	{ 0, 384000 },
+	{ 1, 486000 },
+	{ 2, 594000 },
+	{ 3, 702000 },
+	{ 4, 810000 },
+	{ 5, 918000 },
+	{ 6, 1026000 },
+	{ 7, 1134000 },
+	{ 8, 1242000 },
+	{ 9, 1350000 },
+	{ 10, 1458000 },
+	{ 11, 1566000 },
+	{ 12, 1674000 },
+	{ 13, 1782000 },
+	{ 14, 1890000 },
+	{ 15, CPUFREQ_TABLE_END },
 };
 
 static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
@@ -1419,7 +1419,7 @@ static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
 	real_freq_table[index].driver_data = index;
 	real_freq_table[index].frequency = CPUFREQ_TABLE_END;
 
-	return mx_freq_table;
+	return real_freq_table;
 }
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
@@ -1427,29 +1427,19 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cur_freq;
 	int index;
 	int ret = 0;
-	struct cpufreq_frequency_table *table;
-	int cpu;
+	int cpu = smp_processor_id();
 	struct cpufreq_frequency_table *ftbl;
+	struct cpufreq_frequency_table *table;
 
-	msm_cpufreq_driver.flags |= CPUFREQ_HAVE_GOVERNOR_PER_POLICY;
-
+	ret = cpufreq_table_validate_and_show(policy, real_freq_table);
+	if (ret) {
 	for_each_possible_cpu(cpu) {
-		ret = cpufreq_table_validate_and_show(policy, real_freq_table);
-		if (ret) {
-			pr_err("policy freq_table could not be created!\n");
-			ftbl = cpufreq_parse_mx(0);
-			if (!IS_ERR(ftbl)) {
-				per_cpu(freq_table, cpu) = ftbl;
-			}
-		} else {
-			per_cpu(freq_table, cpu) = real_freq_table;
+		ftbl = cpufreq_parse_mx(cpu);
+		per_cpu(freq_table, cpu) = ftbl;
 		}
 	}
 
-	table = per_cpu(freq_table, policy->cpu);
-	for_each_possible_cpu(cpu)
-		cpumask_copy(policy->cpus, cpumask_of(cpu));
-
+	table = per_cpu(policy->freq_table, policy->cpu);
 	cur_freq = acpuclk_get_rate(policy->cpu);
 
 	if (cpufreq_frequency_table_target(policy, table, cur_freq,
@@ -1537,7 +1527,8 @@ static struct freq_attr *msm_freq_attr[] = {
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
+	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
+								 | CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
 	.init		= msm_cpufreq_init,
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
