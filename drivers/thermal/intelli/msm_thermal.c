@@ -27,6 +27,7 @@
 #include <linux/msm_thermal.h>
 #include <linux/platform_device.h>
 #include <mach/cpufreq.h>
+#include <linux/cpufreq_hardlimit.h>
 
 #define DEFAULT_POLLING_MS	500
 /* last 3 minutes based on 250ms polling cycle */
@@ -53,7 +54,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
-unsigned long limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
+unsigned long limited_max_freq_thermal = current_limit_max;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 bool core_control_enabled;
@@ -111,17 +112,16 @@ fail:
 
 static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
+	struct cpufreq_policy *policy;
 	int ret = 0;
 
-	ret = msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, max_freq);
-	if (ret)
-		return ret;
-
 	limited_max_freq_thermal = max_freq;
-	if (max_freq != MSM_CPUFREQ_NO_LIMIT) {
+	if (max_freq != current_limit_max) {
 		therm_freq_limited = true;
+		update_scaling_limits(policy->min, limited_max_freq_thermal);
 	} else {
 		therm_freq_limited = false;
+		reapply_hard_limits();
 	}
 
 	if (cpu_online(cpu)) {
@@ -223,7 +223,7 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-			max_freq = MSM_CPUFREQ_NO_LIMIT;
+			max_freq = current_limit_max;
 			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
@@ -231,7 +231,8 @@ static void __ref do_freq_control(long temp)
 	}
 
 	if (max_freq == limited_max_freq_thermal) {
-		therm_freq_limited = true;
+		therm_freq_limited = false;
+		reapply_hard_limits();
 		return;
 	}
 
@@ -327,11 +328,11 @@ static void __ref disable_msm_thermal(void)
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == MSM_CPUFREQ_NO_LIMIT)
+	if (limited_max_freq_thermal == current_limit_max)
 		return;
 
 	for_each_possible_cpu(cpu) {
-		update_cpu_max_freq(cpu, MSM_CPUFREQ_NO_LIMIT);
+		reapply_hard_limits();
 	}
 }
 
