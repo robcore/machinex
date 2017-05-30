@@ -1402,7 +1402,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->transition_latency = 1000000; /*1 ms for now...*/
+	policy->cpuinfo.transition_latency = 1000000; /*1 ms for now...*/
 	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
