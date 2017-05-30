@@ -89,6 +89,8 @@ static struct drv_data {
 	struct device *dev;
 } drv;
 
+static bool hotplug_ready;
+
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
 	return drv.scalable[cpu].cur_speed->khz;
@@ -1094,6 +1096,10 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
+	/* Fail hotplug until this driver can get CPU clocks */
+	if (!hotplug_ready)
+		return NOTIFY_BAD;
+
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DEAD:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
@@ -1302,6 +1308,8 @@ int __init acpuclk_krait_init(struct device *dev,
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
+	register_hotcpu_notifier(&acpuclk_cpu_notifier);
+
 	return 0;
 }
 
@@ -1398,7 +1406,7 @@ static inline int msm_cpufreq_limits_init(void)
 {
 	int cpu = 0;
 	int i = 0;
-	struct cpufreq_frequency_table *table = NULL;
+	struct cpufreq_frequency_table *table = freq_table;
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
 	struct cpu_freq *limit = NULL;
@@ -1487,9 +1495,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
 
-	cur_freq = acpuclk_get_rate(policy->cpu);
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
+	policy->cur = acpuclk_get_rate(policy->cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
@@ -1499,8 +1507,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (ret)
 		pr_debug("i am a debug message\n");
 
-	policy->cur = freq_table[index].frequency;
-	register_hotcpu_notifier(&acpuclk_cpu_notifier);
+	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
 
@@ -1560,7 +1567,8 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
+	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
+								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
