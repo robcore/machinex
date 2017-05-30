@@ -1230,9 +1230,8 @@ static void cpufreq_policy_put_kobj(struct cpufreq_policy *policy)
 	struct kobject *kobj;
 	struct completion *cmp;
 
-	if (notify)
-		blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
-					     CPUFREQ_REMOVE_POLICY, policy);
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+				     CPUFREQ_REMOVE_POLICY, policy);
 
 	down_write(&policy->rwsem);
 	kobj = &policy->kobj;
