@@ -425,29 +425,19 @@ static u64 update_load(int cpu)
 	pcpu->time_in_idle = now_idle;
 	pcpu->time_in_idle_timestamp = now;
 
-	cur_load = (unsigned int)(active_time * 100) / delta_time;
-	per_cpu(cpu_util, cpu) = cur_load;
+	if (delta_time > 0) {
+		cur_load = (unsigned int)(active_time * 100) / delta_time;
+		per_cpu(cpu_util, cpu) = cur_load;
+	}
 
 	return now;
-}
-
-static unsigned int sl_busy_to_laf(struct cpufreq_interactive_policyinfo *ppol,
-				   unsigned long busy)
-{
-	int prev_load;
-	struct cpufreq_interactive_tunables *tunables =
-		ppol->policy->governor_data;
-
-	prev_load = mult_frac(ppol->policy->cpuinfo.max_freq * 100,
-				busy, tunables->timer_rate);
-	return prev_load;
 }
 
 #define NEW_TASK_RATIO 75
 #define PRED_TOLERANCE_PCT 10
 static void cpufreq_interactive_timer(unsigned long data)
 {
-	s64 now;
+	u64 now;
 	unsigned int delta_time;
 	u64 cputime_speedadj;
 	int cpu_load;
@@ -475,6 +465,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 		return;
 	if (!ppol->governor_enabled)
 		goto exit;
+	if (ppol->policy->min == ppol->policy->max)
+		goto rearm;
 
 	now = ktime_to_us(ktime_get());
 
