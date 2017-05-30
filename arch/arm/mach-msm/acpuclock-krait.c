@@ -1358,7 +1358,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
-	ret = set_cpu_freq(policy, table[index].frequency,
+	ret = set_cpu_freq(policy->cpu, table[index].frequency,
 			   table[index].driver_data);
 done:
 	return ret;
@@ -1399,15 +1399,15 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return -ERANGE;
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cur = acpuclk_krait_get_rate(policy->cpu);
+	policy->cur = acpuclk_krait_get_rate(cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(policy, freq_table[index].frequency,
+	ret = set_cpu_freq(policy->cpu, freq_table[index].frequency,
 			   freq_table[index].driver_data);
 	if (ret)
-		return ret;
+		pr_debug("i am a debug message\n");
 	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
