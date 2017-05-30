@@ -1395,7 +1395,7 @@ static struct cpufreq_frequency_table freq_table[] = {
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
-	int index;
+	int index, i;
 	int ret = 0;
 	int cpu;
 
@@ -1409,8 +1409,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv[i].speed.khz != 0);
 
 	freq_table[index].driver_data = index;
 	freq_table[index].frequency = CPUFREQ_TABLE_END;
@@ -1419,7 +1417,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	cur_freq = acpuclk_get_rate(policy->cpu);
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cur = acpuclk_get_rate(policy->cpu);
+	policy->cur = policy->freq_table[index].frequency;
 	policy->suspend_freq = acpuclk_krait_data.power_collapse_khz;
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
