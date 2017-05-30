@@ -28,7 +28,7 @@
 #include <linux/platform_device.h>
 #include <mach/cpufreq.h>
 
-#define DEFAULT_POLLING_MS	250
+#define DEFAULT_POLLING_MS	500
 /* last 3 minutes based on 250ms polling cycle */
 #define MAX_HISTORY_SZ		((3*60*1000) / DEFAULT_POLLING_MS)
 
@@ -113,6 +113,10 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
 	int ret = 0;
 
+	ret = msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, max_freq);
+	if (ret)
+		return ret;
+
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != MSM_CPUFREQ_NO_LIMIT) {
 		therm_freq_limited = true;
@@ -132,7 +136,8 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 	return ret;
 }
 
-static void do_core_control(long temp)
+#ifdef CONFIG_SMP
+static void __ref do_core_control(long temp)
 {
 	int i = 0;
 	int ret = 0;
@@ -196,7 +201,7 @@ static void do_core_control(long temp)
 	mutex_unlock(&core_control_mutex);
 }
 
-static void do_freq_control(long temp)
+static void __ref do_freq_control(long temp)
 {
 	int ret = 0;
 	int cpu = 0;
@@ -246,7 +251,7 @@ static void do_freq_control(long temp)
 
 }
 
-static void check_temp(struct work_struct *work)
+static void __ref check_temp(struct work_struct *work)
 {
 	static int limit_init;
 	struct tsens_device tsens_dev;
@@ -285,7 +290,7 @@ reschedule:
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
-static int msm_thermal_cpu_callback(struct notifier_block *nfb,
+static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
@@ -316,7 +321,7 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
  * status will be carried over to the process stopping the msm_thermal, as
  * we dont want to online a core and bring in the thermal issues.
  */
-static void disable_msm_thermal(void)
+static void __ref disable_msm_thermal(void)
 {
 	int cpu = 0;
 
@@ -331,7 +336,7 @@ static void disable_msm_thermal(void)
 	}
 }
 
-static int set_enabled(const char *val, const struct kernel_param *kp)
+static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 
@@ -448,7 +453,7 @@ done_stat_nodes:
 }
 
 /* Call with core_control_mutex locked */
-static int update_offline_cores(int val)
+static int __ref update_offline_cores(int val)
 {
 	int cpu = 0;
 	int ret = 0;
@@ -482,7 +487,7 @@ static ssize_t show_cc_enabled(struct kobject *kobj,
 	return snprintf(buf, PAGE_SIZE, "%d\n", core_control_enabled);
 }
 
-static ssize_t store_cc_enabled(struct kobject *kobj,
+static ssize_t __ref store_cc_enabled(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
@@ -519,7 +524,7 @@ static ssize_t show_cpus_offlined(struct kobject *kobj,
 	return snprintf(buf, PAGE_SIZE, "%d\n", cpus_offlined);
 }
 
-static ssize_t store_cpus_offlined(struct kobject *kobj,
+static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
@@ -547,19 +552,19 @@ done_cc:
 	return count;
 }
 
-static struct kobj_attribute cc_enabled_attr =
+static __refdata struct kobj_attribute cc_enabled_attr =
 __ATTR(enabled, 0644, show_cc_enabled, store_cc_enabled);
 
-static struct kobj_attribute cpus_offlined_attr =
+static __refdata struct kobj_attribute cpus_offlined_attr =
 __ATTR(cpus_offlined, 0644, show_cpus_offlined, store_cpus_offlined);
 
-static struct attribute *cc_attrs[] = {
+static __refdata struct attribute *cc_attrs[] = {
 	&cc_enabled_attr.attr,
 	&cpus_offlined_attr.attr,
 	NULL,
 };
 
-static struct attribute_group cc_attr_group = {
+static __refdata struct attribute_group cc_attr_group = {
 	.attrs = cc_attrs,
 };
 
