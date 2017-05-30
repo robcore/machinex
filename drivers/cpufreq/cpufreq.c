@@ -1060,58 +1060,18 @@ static struct kobj_type ktype_cpufreq = {
 	.release	= cpufreq_sysfs_release,
 };
 
-static int add_cpu_dev_symlink(struct cpufreq_policy *policy, int cpu)
+static int add_cpu_dev_symlink(struct cpufreq_policy *policy,
+			       struct device *dev)
 {
-	struct device *cpu_dev;
-
-	pr_debug("%s: Adding symlink for CPU: %u\n", __func__, cpu);
-
-	if (!policy)
-		return 0;
-
-	cpu_dev = get_cpu_device(cpu);
-	if (WARN_ON(!cpu_dev))
-		return 0;
-
-	return sysfs_create_link(&cpu_dev->kobj, &policy->kobj, "cpufreq");
+	dev_dbg(dev, "%s: Adding symlink\n", __func__);
+	return sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
 }
 
-static void remove_cpu_dev_symlink(struct cpufreq_policy *policy, int cpu)
+static void remove_cpu_dev_symlink(struct cpufreq_policy *policy,
+				   struct device *dev)
 {
-	struct device *cpu_dev;
-
-	pr_debug("%s: Removing symlink for CPU: %u\n", __func__, cpu);
-
-	cpu_dev = get_cpu_device(cpu);
-	if (WARN_ON(!cpu_dev))
-		return;
-
-	sysfs_remove_link(&cpu_dev->kobj, "cpufreq");
-}
-
-/* Add/remove symlinks for all related CPUs */
-static int cpufreq_add_dev_symlink(struct cpufreq_policy *policy)
-{
-	unsigned int j;
-	int ret = 0;
-
-	/* Some related CPUs might not be present (physically hotplugged) */
-	for_each_cpu(j, policy->real_cpus) {
-		ret = add_cpu_dev_symlink(policy, j);
-		if (ret)
-			break;
-	}
-
-	return ret;
-}
-
-static void cpufreq_remove_dev_symlink(struct cpufreq_policy *policy)
-{
-	unsigned int j;
-
-	/* Some related CPUs might not be present (physically hotplugged) */
-	for_each_cpu(j, policy->real_cpus)
-		remove_cpu_dev_symlink(policy, j);
+	dev_dbg(dev, "%s: Removing symlink\n", __func__);
+	sysfs_remove_link(&dev->kobj, "cpufreq");
 }
 
 static int cpufreq_add_dev_interface(struct cpufreq_policy *policy)
@@ -1143,7 +1103,7 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy)
 			return ret;
 	}
 
-	return cpufreq_add_dev_symlink(policy);
+	return 0;
 }
 
 __weak struct cpufreq_governor *cpufreq_default_governor(void)
@@ -1276,7 +1236,6 @@ static void cpufreq_policy_put_kobj(struct cpufreq_policy *policy, bool notify)
 					     CPUFREQ_REMOVE_POLICY, policy);
 
 	down_write(&policy->rwsem);
-	cpufreq_remove_dev_symlink(policy);
 	kobj = &policy->kobj;
 	cmp = &policy->kobj_unregister;
 	up_write(&policy->rwsem);
@@ -1358,8 +1317,8 @@ static int cpufreq_online(unsigned int cpu)
 	if (new_policy) {
 		/* related_cpus should at least include policy->cpus. */
 		cpumask_copy(policy->related_cpus, policy->cpus);
-		/* Remember CPUs present at the policy creation time. */
-		cpumask_and(policy->real_cpus, policy->cpus, cpu_present_mask);
+		/* Clear mask of registered CPUs */
+		cpumask_clear(policy->real_cpus);
 	}
 
 	/*
@@ -1477,6 +1436,8 @@ out_free_policy:
 	return ret;
 }
 
+static void cpufreq_offline(unsigned int cpu);
+
 /**
  * cpufreq_add_dev - the cpufreq interface for a CPU device.
  * @dev: CPU device.
@@ -1486,22 +1447,28 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 {
 	struct cpufreq_policy *policy;
 	unsigned cpu = dev->id;
+	int ret;
 
 	dev_dbg(dev, "%s: adding CPU%u\n", __func__, cpu);
 
-	if (cpu_online(cpu))
-		return cpufreq_online(cpu);
+	if (cpu_online(cpu)) {
+		ret = cpufreq_online(cpu);
+		if (ret)
+			return ret;
+	}
 
-	/*
-	 * A hotplug notifier will follow and we will handle it as CPU online
-	 * then.  For now, just create the sysfs link, unless there is no policy
-	 * or the link is already present.
-	 */
+	/* Create sysfs link on CPU registration */
 	policy = per_cpu(cpufreq_cpu_data, cpu);
 	if (!policy || cpumask_test_and_set_cpu(cpu, policy->real_cpus))
 		return 0;
 
-	return add_cpu_dev_symlink(policy, cpu);
+	ret = add_cpu_dev_symlink(policy, dev);
+	if (ret) {
+		cpumask_clear_cpu(cpu, policy->real_cpus);
+		cpufreq_offline(cpu);
+	}
+
+	return ret;
 }
 
 static void cpufreq_offline(unsigned int cpu)
@@ -1582,7 +1549,7 @@ static void cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
 		cpufreq_offline(cpu);
 
 	cpumask_clear_cpu(cpu, policy->real_cpus);
-	remove_cpu_dev_symlink(policy, cpu);
+	remove_cpu_dev_symlink(policy, dev);
 
 	if (cpumask_empty(policy->real_cpus))
 		cpufreq_policy_free(policy, true);
