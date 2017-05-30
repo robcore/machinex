@@ -91,8 +91,10 @@ static int msm_thermal_get_freq_table(void)
 {
 	int ret = 0;
 	int i = 0;
+	int cpu = 0;
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
-	table = cpufreq_frequency_get_table(0);
+	table = policy->freq_table;
 	if (table == NULL) {
 		pr_debug("%s: error reading cpufreq table\n", KBUILD_MODNAME);
 		ret = -EINVAL;

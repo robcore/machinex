@@ -1371,7 +1371,7 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 	return acpuclk_get_rate(cpu);
 }
 
-static struct cpufreq_frequency_table freq_table[] = {
+static struct cpufreq_frequency_table freq_table[index] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
 	{ .frequency = 594000 },
@@ -1402,7 +1402,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cur = acpuclk_get_rate(policy->cpu);
+	policy->transition_latency = 1000000; /*1 ms for now...*/
 	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
@@ -1464,7 +1464,8 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
-								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK
+								 | CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
