@@ -1404,15 +1404,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
 	policy->cur = acpuclk_get_rate(policy->cpu);
-	policy->suspend_freq = freq_table[0].frequency;
-	/*
-	 * Call set_cpu_freq unconditionally so that when cpu is set to
-	 * online, frequency limit will always be updated.
-	 */
-	ret = set_cpu_freq(policy, freq_table[index].frequency,
-			   freq_table[index].driver_data);
-	if (ret)
-		return ret;
 	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
@@ -1481,7 +1472,6 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
-	.suspend	= cpufreq_generic_suspend,
 };
 
 static int __init msm_cpufreq_register(void)
