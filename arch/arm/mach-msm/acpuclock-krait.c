@@ -1313,7 +1313,7 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
-struct cpu_freq {
+struct cpu_freq_info {
 	uint32_t max;
 	uint32_t min;
 	uint32_t allowed_max;
@@ -1321,14 +1321,12 @@ struct cpu_freq {
 	uint32_t limits_init;
 };
 
-static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
-
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
 {
 	int ret = 0;
 	struct cpufreq_freqs freqs;
-	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
+	struct cpu_freq *limit = cpu_freq_info;
 	struct cpufreq_frequency_table *table;
 
 	if (limit->limits_init) {
@@ -1406,19 +1404,19 @@ static inline int msm_cpufreq_limits_init(void)
 {
 	int cpu = 0;
 	int i = 0;
-	struct cpufreq_frequency_table *table = freq_table;
+	struct cpufreq_frequency_table *table;
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
-	struct cpu_freq *limit = NULL;
+	struct cpu_freq *limit;
 
 	for_each_possible_cpu(cpu) {
-		limit = &per_cpu(cpu_freq_info, cpu);
-		table = cpufreq_frequency_get_table(cpu);
 		if (table == NULL) {
 			pr_err("%s: error reading cpufreq table for cpu %d\n",
 					__func__, cpu);
 			continue;
 		}
+		limit = cpu_freq_info;
+		table = cpufreq_frequency_get_table(cpu);
 		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 			if (table[i].frequency > max)
 				max = table[i].frequency;
@@ -1437,7 +1435,7 @@ static inline int msm_cpufreq_limits_init(void)
 
 int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 {
-	struct cpu_freq *limit = &per_cpu(cpu_freq_info, cpu);
+	struct cpu_freq *limit = cpu_freq_info;
 
 	if (!limit->limits_init)
 		msm_cpufreq_limits_init();
