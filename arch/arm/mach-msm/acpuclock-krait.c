@@ -1358,7 +1358,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
-	ret = set_cpu_freq(policy->cpu, table[index].frequency,
+	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
 done:
 	return ret;
@@ -1404,7 +1404,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(policy->cpu, freq_table[index].frequency,
+	ret = set_cpu_freq(policy, freq_table[index].frequency,
 			   freq_table[index].driver_data);
 	if (ret)
 		pr_debug("i am a debug message\n");
