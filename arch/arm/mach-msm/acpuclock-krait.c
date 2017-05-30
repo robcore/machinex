@@ -1313,7 +1313,7 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
-struct cpu_freq_info {
+struct cpu_freq_info{
 	uint32_t max;
 	uint32_t min;
 	uint32_t allowed_max;
@@ -1326,8 +1326,8 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 {
 	int ret = 0;
 	struct cpufreq_freqs freqs;
-	struct cpu_freq *limit = cpu_freq_info;
 	struct cpufreq_frequency_table *table;
+
 
 	if (limit->limits_init) {
 		if (new_freq > limit->allowed_max) {
@@ -1407,7 +1407,6 @@ static inline int msm_cpufreq_limits_init(void)
 	struct cpufreq_frequency_table *table;
 	uint32_t min = (uint32_t) -1;
 	uint32_t max = 0;
-	struct cpu_freq *limit;
 
 	for_each_possible_cpu(cpu) {
 		if (table == NULL) {
@@ -1415,7 +1414,6 @@ static inline int msm_cpufreq_limits_init(void)
 					__func__, cpu);
 			continue;
 		}
-		limit = cpu_freq_info;
 		table = cpufreq_frequency_get_table(cpu);
 		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 			if (table[i].frequency > max)
@@ -1435,7 +1433,9 @@ static inline int msm_cpufreq_limits_init(void)
 
 int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 {
-	struct cpu_freq *limit = cpu_freq_info;
+	struct cpu_freq_info *mxlimit;
+	struct limiter *limit;
+	limit = mxlimit;
 
 	if (!limit->limits_init)
 		msm_cpufreq_limits_init();
