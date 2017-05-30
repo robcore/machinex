@@ -1326,9 +1326,8 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	cpufreq_freq_transition_begin(policy, &freqs);
-
 	rate = new_freq;
+	cpufreq_freq_transition_begin(policy, &freqs);
 	ret = acpuclk_set_rate(policy->cpu, rate, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 	if (!ret)
@@ -1348,15 +1347,14 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	if (target_freq == policy->cur)
 		goto done;
 
-	table = cpufreq_frequency_get_table(policy->cpu);
+	table = policy->freq_table;
 	if (!table) {
 		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
 		       policy->cpu);
 		ret = -ENODEV;
 		goto done;
 	}
-	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
-			&index)) {
+	if (cpufreq_frequency_table_target(policy, target_freq, relation)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
 		ret = -EINVAL;
 		goto done;
@@ -1401,6 +1399,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
+
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
 	policy->cur = acpuclk_get_rate(policy->cpu);
