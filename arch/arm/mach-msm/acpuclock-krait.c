@@ -1328,11 +1328,8 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 
 	cpufreq_freq_transition_begin(policy, &freqs);
 	rate = new_freq;
-	ret = acpuclk_set_rate(policy->cpu, rate, SETRATE_CPUFREQ);
+	ret = acpuclk_krait_set_rate(policy->cpu, rate, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
-	if (!ret)
-		pr_err("rob done screwed the pooch\n");
-
 	return ret;
 }
 
@@ -1369,7 +1366,7 @@ done:
 
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
-	return acpuclk_get_rate(cpu);
+	return acpuclk_krait_get_rate(cpu);
 }
 
 static struct cpufreq_frequency_table freq_table[] = {
@@ -1402,7 +1399,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return -ERANGE;
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cur = acpuclk_get_rate(policy->cpu);
+	policy->cur = acpuclk_krait_get_rate(policy->cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
