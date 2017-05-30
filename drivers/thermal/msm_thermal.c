@@ -22,15 +22,13 @@
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
 #include <linux/platform_device.h>
-#include <linux/of.h>
-#include <mach/cpufreq.h>
 
 unsigned int temp_threshold = 70;
 module_param(temp_threshold, uint, 0644);
-unsigned int enabled;
+unsigned int enabled = 1;
 module_param(enabled, uint, 0644);
 
-static struct franco_thermal_info {
+static struct thermal_info {
 	uint32_t cpuinfo_max_freq;
 	uint32_t limited_max_freq;
 	unsigned int safe_diff;
@@ -57,7 +55,9 @@ enum threshold_levels {
 	LEVEL_HOT 	   = 5,
 };
 
-static struct msm_thermal_data franco_thermal_info;
+static struct msm_thermal_data msm_thermal_info = {
+	.sensor_id = 0,
+};
 
 static struct delayed_work check_temp_work;
 
@@ -80,8 +80,8 @@ static int msm_thermal_cpufreq_callback(struct notifier_block *nfb,
 	return 0;
 }
 
-static struct notifier_block franco_thermal_cpufreq_notifier = {
-	.notifier_call = franco_thermal_cpufreq_callback,
+static struct notifier_block msm_thermal_cpufreq_notifier = {
+	.notifier_call = msm_thermal_cpufreq_callback,
 };
 
 static void limit_cpu_freqs(uint32_t max_freq)
@@ -113,7 +113,7 @@ static void check_temp(struct work_struct *work)
 	uint32_t freq = 0;
 	long temp = 0;
 
-	tsens_dev.sensor_num = franco_thermal_info.sensor_id;
+	tsens_dev.sensor_num = msm_thermal_info.sensor_id;
 	tsens_get_temp(&tsens_dev, &temp);
 
 	if (info.throttling)
@@ -147,15 +147,11 @@ reschedule:
 	schedule_delayed_work_on(0, &check_temp_work, msecs_to_jiffies(250));
 }
 
-int __devinit franco_thermal_init(struct msm_thermal_data *pdata)
+int __init msm_thermal_device_init(void)
 {
 	int ret = 0;
 
-	BUG_ON(!pdata);
-	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
-	memcpy(&franco_thermal_info, pdata, sizeof(struct msm_thermal_data));
-
-	cpufreq_register_notifier(&franco_thermal_cpufreq_notifier,
+	cpufreq_register_notifier(&msm_thermal_cpufreq_notifier,
 			CPUFREQ_POLICY_NOTIFIER);
 
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
@@ -163,22 +159,21 @@ int __devinit franco_thermal_init(struct msm_thermal_data *pdata)
 
 	return ret;
 }
-
-static int franco_thermal_dev_probe(struct platform_device *pdev)
+int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
-	int ret = 0;
-	struct msm_thermal_data data;
-
 	BUG_ON(!pdata);
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
+	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
 
-	memcpy(&franco_thermal_info, pdata, sizeof(struct msm_thermal_data));
-	ret = msm_thermal_init(&data);
+	enabled = 1;
 
-	return ret;
+	return msm_thermal_device_init();
 }
 
-int __init msm_thermal_device_init(void)
-{
-	return platform_driver_register(&franco_thermal_device_driver);
-}
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("robcore");
+MODULE_AUTHOR("Fransisco Franco");
+MODULE_DESCRIPTION("Franco's Simple Thermal");
+
+
+
