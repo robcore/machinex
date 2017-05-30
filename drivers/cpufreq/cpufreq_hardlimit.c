@@ -104,7 +104,7 @@ unsigned int hardlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; 
 unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
-
+extern bool freq_is_therm_limited(void);
 /* ------------------------------------------------------------------------------ */
 /* Externally reachable function                                                  */
 /* ------------------------------------------------------------------------------ */
@@ -131,7 +131,7 @@ void reapply_hard_limits(void)
 		current_limit_max  = hardlimit_max_screen_off;
 
 	}
-	if (!freq_is_therm_limited)
+	if (!freq_is_therm_limited())
 		update_scaling_limits(current_limit_min, current_limit_max);
 }
 
