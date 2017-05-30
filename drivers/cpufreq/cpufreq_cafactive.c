@@ -19,27 +19,18 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/cpufreq.h>
-#if 0
-#include <linux/ipa.h>
-#endif
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/rwsem.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
+#include <linux/hrtimer.h>
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/sched/rt.h>
-#include <linux/kernel_stat.h>
-#include <linux/powersuspend.h>
-#include <linux/cputime.h>
-
-#if 0
-#include <trace/events/cpufreq_cafactive.h>
-#endif
 
 struct cpufreq_cafactive_cpuinfo {
 	struct timer_list cpu_timer;
@@ -77,12 +68,8 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-static int set_window_count;
 static int migration_register_count;
 static struct mutex sched_lock;
-
-/* boolean for determining screen on/off state */
-static bool suspended = false;
 
 /* Target load.  Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 90
@@ -137,13 +124,10 @@ struct cpufreq_cafactive_tunables {
 	bool io_is_busy;
 
 	/* scheduler input related flags */
-	bool use_sched_load;
 	bool use_migration_notif;
 
 	/*
-	 * Whether to align timer windows across all CPUs. When
-	 * use_sched_load is true, this flag is ignored and windows
-	 * will always be aligned.
+	 * Whether to align timer windows across all CPUs.
 	 */
 	bool align_windows;
 
@@ -166,7 +150,7 @@ static u64 round_to_nw_start(u64 jif,
 	unsigned long step = usecs_to_jiffies(tunables->timer_rate);
 	u64 ret;
 
-	if (tunables->use_sched_load || tunables->align_windows) {
+	if (tunables->align_windows) {
 		do_div(jif, step);
 		ret = (jif + 1) * step;
 	} else {
@@ -439,7 +423,7 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	cpu_load = loadadjfreq / pcpu->policy->cur;
 	tunables->boosted = tunables->boost_val || now < tunables->boostpulse_endtime;
 
-	if ((cpu_load >= tunables->go_hispeed_load || tunables->boosted) && !suspended) {
+	if (cpu_load >= tunables->go_hispeed_load || tunables->boosted) {
 		if (pcpu->policy->cur < tunables->hispeed_freq &&
 		    cpu_load <= MAX_LOCAL_LOAD) {
 			new_freq = tunables->hispeed_freq;
@@ -458,11 +442,6 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
-#ifdef TRACE_CRAP
-		trace_cpufreq_cafactive_notyet(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
-#endif
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -481,10 +460,6 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	if (!is_notif && new_freq < pcpu->target_freq &&
 	    now - pcpu->max_freq_hyst_start_time <
 	    tunables->max_freq_hysteresis) {
-#ifdef TRACE_CRAP
-		trace_cpufreq_cafactive_notyet(data, cpu_load,
-			pcpu->target_freq, pcpu->policy->cur, new_freq);
-#endif
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -497,11 +472,6 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	if (!is_notif && new_freq < pcpu->floor_freq &&
 	    pcpu->target_freq >= pcpu->policy->cur) {
 		if (now - max_fvtime < tunables->min_sample_time) {
-#ifdef TRACE_CRAP
-			trace_cpufreq_cafactive_notyet(
-				data, cpu_load, pcpu->target_freq,
-				pcpu->policy->cur, new_freq);
-#endif
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 			goto rearm;
 		}
@@ -526,19 +496,9 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 		pcpu->max_freq_hyst_start_time = now;
 
 	if (pcpu->target_freq == new_freq) {
-#ifdef TRACE_CRAP
-		trace_cpufreq_cafactive_already(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
-#endif
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
-
-#ifdef TRACE_CRAP
-	trace_cpufreq_cafactive_target(data, cpu_load, pcpu->target_freq,
-					 pcpu->policy->cur, new_freq);
-#endif
 
 	pcpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
@@ -1044,12 +1004,10 @@ static ssize_t store_boost(struct cpufreq_cafactive_tunables *tunables,
 	tunables->boost_val = val;
 
 	if (tunables->boost_val) {
-		//trace_cpufreq_cafactive_boost("on");
 		if (!tunables->boosted)
 			cpufreq_cafactive_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-		//trace_cpufreq_cafactive_unboost("off");
 	}
 
 	return count;
@@ -1067,7 +1025,6 @@ static ssize_t store_boostpulse(struct cpufreq_cafactive_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
-	//trace_cpufreq_cafactive_boost("pulse");
 	if (!tunables->boosted)
 		cpufreq_cafactive_boost(tunables);
 	return count;
@@ -1530,23 +1487,6 @@ unsigned int cpufreq_cafactive_get_hispeed_freq(int cpu)
 	return tunables->hispeed_freq;
 }
 
-static void cafactive_power_suspend(struct power_suspend *handler)
-{
-	suspended = true;
-	return;
-}
-
-static void cafactive_power_resume(struct power_suspend *handler)
-{
-	suspended = false;
-	return;
-}
-
-static struct power_suspend cafactive_suspend = {
-	.suspend = cafactive_power_suspend,
-	.resume = cafactive_power_resume,
-};
-
 static int __init cpufreq_cafactive_init(void)
 {
 	unsigned int i;
@@ -1565,8 +1505,6 @@ static int __init cpufreq_cafactive_init(void)
 		spin_lock_init(&pcpu->target_freq_lock);
 		init_rwsem(&pcpu->enable_sem);
 	}
-
-	register_power_suspend(&cafactive_suspend);
 
 	spin_lock_init(&speedchange_cpumask_lock);
 	mutex_init(&gov_lock);
