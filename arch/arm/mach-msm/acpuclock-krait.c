@@ -1040,8 +1040,6 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
-
 static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ 0, 384000 },
 	{ 1, 486000 },
@@ -1078,7 +1076,7 @@ static void __init cpufreq_table_init(void)
 	mx_freq_table[index].driver_data = index;
 	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
 
-	pr_info("CPU: %d scaling frequencies supported.\n", index);
+	pr_info("MACHINEX: %d scaling frequencies supported.\n", index);
 }
 
 static void __init dcvs_freq_init(void)
@@ -1309,7 +1307,6 @@ int __init acpuclk_krait_init(struct device *dev,
 {
 	drv_data_init(dev, params);
 	hw_init();
-
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
@@ -1371,99 +1368,53 @@ done:
 	return ret;
 }
 
-static int msm_cpufreq_verify(struct cpufreq_policy *policy)
-{
-	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
-			policy->cpuinfo.max_freq);
-	return 0;
-}
-
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
 	return acpuclk_get_rate(cpu);
 }
 
-static struct cpufreq_frequency_table real_freq_table[] = {
-	{ 0, 384000 },
-	{ 1, 486000 },
-	{ 2, 594000 },
-	{ 3, 702000 },
-	{ 4, 810000 },
-	{ 5, 918000 },
-	{ 6, 1026000 },
-	{ 7, 1134000 },
-	{ 8, 1242000 },
-	{ 9, 1350000 },
-	{ 10, 1458000 },
-	{ 11, 1566000 },
-	{ 12, 1674000 },
-	{ 13, 1782000 },
-	{ 14, 1890000 },
-	{ 15, CPUFREQ_TABLE_END },
+static struct cpufreq_frequency_table freq_table[] = {
+	{ .frequency = 384000 },
+	{ .frequency = 486000 },
+	{ .frequency = 594000 },
+	{ .frequency = 702000 },
+	{ .frequency = 810000 },
+	{ .frequency = 918000 },
+	{ .frequency = 1026000 },
+	{ .frequency = 1134000 },
+	{ .frequency = 1242000 },
+	{ .frequency = 1350000 },
+	{ .frequency = 1458000 },
+	{ .frequency = 1566000 },
+	{ .frequency = 1674000 },
+	{ .frequency = 1782000 },
+	{ .frequency = 1890000 },
+	{ .frequency = CPUFREQ_TABLE_END },
 };
-
-static struct cpufreq_frequency_table *cpufreq_parse_mx(int cpu)
-{
-	int i, index = 0;
-
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		real_freq_table[index].driver_data = index;
-		real_freq_table[index].frequency = drv.priv[i].speed.khz;
-		index++;
-	}
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv[i].speed.khz != 0);
-
-	real_freq_table[index].driver_data = index;
-	real_freq_table[index].frequency = CPUFREQ_TABLE_END;
-
-	return real_freq_table;
-}
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
 	int index;
 	int ret = 0;
-	int cpu = smp_processor_id();
-	struct cpufreq_frequency_table *ftbl;
-	struct cpufreq_frequency_table *table;
+	int cpu;
 
-	ret = cpufreq_table_validate_and_show(policy, real_freq_table);
-	if (ret) {
-	for_each_possible_cpu(cpu) {
-		ftbl = cpufreq_parse_mx(cpu);
-		per_cpu(freq_table, cpu) = ftbl;
-		}
-	}
-
-	table = per_cpu(policy->freq_table, policy->cpu);
-	cur_freq = acpuclk_get_rate(policy->cpu);
-
-	if (cpufreq_frequency_table_target(policy, table, cur_freq,
-	    CPUFREQ_RELATION_H, &index) &&
-	    cpufreq_frequency_table_target(policy, table, cur_freq,
-	    CPUFREQ_RELATION_L, &index)) {
-		pr_info("cpufreq: cpu%d at invalid freq: %d\n",
-				policy->cpu, cur_freq);
-		return -EINVAL;
-	}
+	if (policy->cpu > NR_CPUS)
+		return -ERANGE;
+	policy->min = policy->cpuinfo.min_freq = 384000;
+	policy->max = policy->cpuinfo.max_freq = 1890000;
+	policy->cur = acpuclk_get_rate(policy->cpu);
+	policy->suspend_freq = freq_table[0].frequency;
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(policy, table[index].frequency,
-			   table[index].driver_data);
+	ret = set_cpu_freq(policy, freq_table[index].frequency,
+			   freq_table[index].driver_data);
 	if (ret)
 		return ret;
-	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
-			policy->cpu, cur_freq, table[index].frequency);
-	policy->cur = table[index].frequency;
 	hotplug_ready = true;
-
-	return 0;
+	return cpufreq_table_validate_and_show(policy, freq_table);
 }
 
 static int msm_cpufreq_suspend(void)
@@ -1520,21 +1471,17 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 	.notifier_call = msm_cpufreq_pm_event,
 };
 
-static struct freq_attr *msm_freq_attr[] = {
-	&cpufreq_freq_attr_scaling_available_freqs,
-	NULL,
-};
-
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
-								 | CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
+								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
-	.verify		= msm_cpufreq_verify,
+	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
-	.attr		= msm_freq_attr,
+	.attr		= cpufreq_generic_attr,
+	.suspend	= cpufreq_generic_suspend,
 };
 
 static int __init msm_cpufreq_register(void)
