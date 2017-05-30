@@ -112,20 +112,16 @@ fail:
 
 static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
 	int ret = 0;
 
-	if (!cpu_policy)
-		return -EINVAL;
-
-	cpufreq_verify_within_limits(cpu_policy,
-				cpu_policy->min, check_cpufreq_hardlimit(max_freq));
+	cpufreq_verify_within_limits(policy,
+				policy->min, check_cpufreq_hardlimit(max_freq));
 
 	limited_max_freq_thermal = max_freq;
 
 	if (cpu_online(cpu)) {
-		policy = cpufreq_cpu_get(cpu);
 		if (!policy)
 			return ret;
 		get_online_cpus();
@@ -211,7 +207,6 @@ static void __ref do_freq_control(long temp)
 	int ret = 0;
 	int cpu = 0;
 	unsigned long max_freq = limited_max_freq_thermal;
-	struct cpu_policy *policy = cpufreq_cpu_get(cpu);
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
@@ -230,7 +225,7 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-			max_freq = check_cpufreq_hardlimit(policy->max);
+			max_freq = check_cpufreq_hardlimit(max_freq);
 			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
@@ -336,7 +331,7 @@ static void __ref disable_msm_thermal(void)
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == check_cpufreq_hardlimit(policy->max);)
+	if (limited_max_freq_thermal == check_cpufreq_hardlimit(policy->max));
 		return;
 
 	for_each_possible_cpu(cpu) {
