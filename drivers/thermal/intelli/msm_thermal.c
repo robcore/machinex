@@ -136,7 +136,6 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 	return ret;
 }
 
-#ifdef CONFIG_SMP
 static void __ref do_core_control(long temp)
 {
 	int i = 0;
