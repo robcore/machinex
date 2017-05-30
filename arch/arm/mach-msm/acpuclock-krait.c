@@ -1326,8 +1326,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
-	rate = new_freq;
 	cpufreq_freq_transition_begin(policy, &freqs);
+
+	rate = new_freq;
 	ret = acpuclk_set_rate(policy->cpu, rate, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 	if (!ret)
@@ -1347,14 +1348,15 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	if (target_freq == policy->cur)
 		goto done;
 
-	table = policy->freq_table;
+	table = cpufreq_frequency_get_table(policy->cpu);
 	if (!table) {
 		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
 		       policy->cpu);
 		ret = -ENODEV;
 		goto done;
 	}
-	if (cpufreq_frequency_table_target(policy, target_freq, relation)) {
+	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
+			&index)) {
 		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
 		ret = -EINVAL;
 		goto done;
@@ -1399,10 +1401,18 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
-
 	policy->min = policy->cpuinfo.min_freq = 384000;
 	policy->max = policy->cpuinfo.max_freq = 1890000;
-	policy->cpuinfo.transition_latency = 1000000; /*1 ms for now...*/
+	policy->cur = acpuclk_get_rate(policy->cpu);
+	policy->suspend_freq = freq_table[0].frequency;
+	/*
+	 * Call set_cpu_freq unconditionally so that when cpu is set to
+	 * online, frequency limit will always be updated.
+	 */
+	ret = set_cpu_freq(policy, freq_table[index].frequency,
+			   freq_table[index].driver_data);
+	if (ret)
+		return ret;
 	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
@@ -1464,14 +1474,14 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
-								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK
-								 | CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
+								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
+	.suspend	= cpufreq_generic_suspend,
 };
 
 static int __init msm_cpufreq_register(void)

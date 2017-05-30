@@ -186,49 +186,45 @@ static unsigned int msm_dcvs_freq_get(int core_num)
 	return gov->policy->cur;
 }
 
-static void cpufreq_governor_msm_policy_stop(struct cpufreq_policy *policy)
-{
-	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
-
-	msm_dcvs_freq_sink_stop(gov->dcvs_core_id);
-}
-
-static int cpufreq_governor_msm_policy_start(struct cpufreq_policy *policy)
+static int cpufreq_governor_msm(struct cpufreq_policy *policy,
+		unsigned int event)
 {
 	unsigned int cpu = policy->cpu;
 	int ret = 0;
 	int handle = 0;
 	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
 
-	if (!cpu_online(cpu))
-		return -EINVAL;
+	switch (event) {
+	case CPUFREQ_GOV_START:
+		if (!cpu_online(cpu))
+			return -EINVAL;
+		BUG_ON(!policy->cur);
+		mutex_lock(&per_cpu(gov_mutex, cpu));
+		per_cpu(msm_gov_info, cpu).cpu = cpu;
+		gov->policy = policy;
+		handle = msm_dcvs_freq_sink_start(gov->dcvs_core_id);
+		BUG_ON(handle < 0);
+		msm_gov_check_limits(policy);
+		mutex_unlock(&per_cpu(gov_mutex, cpu));
+		break;
 
-	BUG_ON(!policy->cur);
-	mutex_lock(&per_cpu(gov_mutex, cpu));
-	per_cpu(msm_gov_info, cpu).cpu = cpu;
-	gov->policy = policy;
-	handle = msm_dcvs_freq_sink_start(gov->dcvs_core_id);
-	BUG_ON(handle < 0);
-	msm_gov_check_limits(policy);
-	mutex_unlock(&per_cpu(gov_mutex, cpu));
+	case CPUFREQ_GOV_STOP:
+		msm_dcvs_freq_sink_stop(gov->dcvs_core_id);
+		break;
+
+	case CPUFREQ_GOV_LIMITS:
+		mutex_lock(&per_cpu(gov_mutex, cpu));
+		msm_gov_check_limits(policy);
+		mutex_unlock(&per_cpu(gov_mutex, cpu));
+		break;
+	};
 
 	return ret;
 }
 
-static void cpufreq_governor_msm_policy_limits(struct cpufreq_policy *policy)
-{
-	unsigned int cpu = policy->cpu;
-
-	mutex_lock(&per_cpu(gov_mutex, cpu));
-	msm_gov_check_limits(policy);
-	mutex_unlock(&per_cpu(gov_mutex, cpu));
-}
-
 struct cpufreq_governor cpufreq_gov_msm = {
 	.name = "msm-dcvs",
-	.start = cpufreq_governor_msm_policy_start,
-	.stop = cpufreq_governor_msm_policy_stop,
-	.limits	= cpufreq_governor_msm_policy_limits,
+	.governor = cpufreq_governor_msm,
 	.owner = THIS_MODULE,
 };
 

@@ -1,28 +1,6 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0050-fuck.patch"
-patch -p1 -R < "/root/machinex/patches/0049-maor.patch"
-patch -p1 -R < "/root/machinex/patches/0048-fix-some-bs.patch"
-patch -p1 -R < "/root/machinex/patches/0047-cpufreq-Remove-cpufreq_frequency_get_table.patch"
-patch -p1 -R < "/root/machinex/patches/0046-cpufreq-Use-clamp_val-in-__cpufreq_driver_target.patch"
-patch -p1 -R < "/root/machinex/patches/0045-create-and-apply-cpufreq_policy_apply_limits.patch"
-patch -p1 -R < "/root/machinex/patches/0044-cpufreq-Bring-CPUs-up-even-if-cpufreq_online-failed.patch"
-patch -p1 -R < "/root/machinex/patches/0043-cpufreq-Fix-creation-of-symbolic-links-to-policy.patch"
-patch -p1 -R < "/root/machinex/patches/0042-cpufreq-Fix-and-clean-up-show_cpuinfo_cur_freq.patch"
-patch -p1 -R < "/root/machinex/patches/0041-cpufreq-Do-not-clear-real_cpus-mask-on-policy-init.patch"
-patch -p1 -R < "/root/machinex/patches/0040-remove-CPU-START.patch"
-patch -p1 -R < "/root/machinex/patches/0039-cpufreq-Remove-policy-create-remove-notifiers.patch"
-patch -p1 -R < "/root/machinex/patches/0038-cpufreq-ondemand-Set-MIN_FREQUENCY_UP_THRESHOLD-to-1.patch"
-patch -p1 -R < "/root/machinex/patches/0037-fix-my-support-staff-using-drivers-cpufreq-lazyplug..patch"
-patch -p1 -R < "/root/machinex/patches/0036-make-cpufreq_update_policy-void.patch"
-patch -p1 -R < "/root/machinex/patches/0035-cpufreq-Avoid-using-inactive-policies.patch"
-patch -p1 -R < "/root/machinex/patches/0034-fix-overflow.patch"
-patch -p1 -R < "/root/machinex/patches/0033-cpufreq-skip-invalid-entries-when-searching-the-freq.patch"
-patch -p1 -R < "/root/machinex/patches/0032-fix-up-conversion-to-hsm.patch"
-patch -p1 -R < "/root/machinex/patches/0031-cpufreq-Convert-to-hotplug-state-machine.patch"
-patch -p1 -R < "/root/machinex/patches/0030-cpufreq-create-link-to-policy-only-for-registered-CP.patch"
-patch -p1 -R < "/root/machinex/patches/0029-cpufreq-Drop-unnecessary-check-from-cpufreq_policy_a.patch"
-patch -p1 -R < "/root/machinex/patches/0028-export-it.patch"
-patch -p1 -R < "/root/machinex/patches/0027-cpufreq-Disallow-resolve_freq-for-drivers-providing-.patch"
-patch -p1 -R < "/root/machinex/patches/0026-cpufreq-add-cpufreq_driver_resolve_freq.patch"
-patch -p1 -R < "/root/machinex/patches/0025-cpufreq-Reuse-new-freq-table-helpers.patch"
-patch -p1 -R < "/root/machinex/patches/0024-cpufreq-Handle-sorted-frequency-tables-more-efficien.patch"
+/root/machinex/patches/0021-how-bout-that.patch
+/root/machinex/patches/0020-oh-oops.patch
+/root/machinex/patches/0019-some-fixer-uppers.patch
+/root/machinex/patches/0018-merged-cpufreq-4.8-and-made-a-couple-of-changes-to-a.patch
+/root/machinex/patches/0017-IT-BLOODY-WORKS-Turning-off-generic-suspend-though-a.patch

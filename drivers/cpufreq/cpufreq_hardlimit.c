@@ -532,8 +532,8 @@ static ssize_t hardlimit_max_screen_on_show(struct kobject *kobj, struct kobj_at
 static ssize_t hardlimit_max_screen_on_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 
-	unsigned int new_hardlimit, i = 0;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+	unsigned int new_hardlimit, i;
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_hardlimit))
@@ -542,7 +542,7 @@ static ssize_t hardlimit_max_screen_on_store(struct kobject *kobj, struct kobj_a
 	if (new_hardlimit == hardlimit_max_screen_on)
 		return count;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -569,8 +569,8 @@ static ssize_t hardlimit_max_screen_off_show(struct kobject *kobj, struct kobj_a
 static ssize_t hardlimit_max_screen_off_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 
-	unsigned int new_hardlimit, i = 0;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+	unsigned int new_hardlimit, i;
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_hardlimit))
@@ -579,7 +579,7 @@ static ssize_t hardlimit_max_screen_off_store(struct kobject *kobj, struct kobj_
 	if (new_hardlimit == hardlimit_max_screen_off)
 		return count;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -601,8 +601,8 @@ static ssize_t hardlimit_min_screen_on_show(struct kobject *kobj, struct kobj_at
 static ssize_t hardlimit_min_screen_on_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 
-	unsigned int new_hardlimit, i = 0;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+	unsigned int new_hardlimit, i;
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_hardlimit))
@@ -611,7 +611,7 @@ static ssize_t hardlimit_min_screen_on_store(struct kobject *kobj, struct kobj_a
 	if (new_hardlimit == hardlimit_min_screen_on)
 		return count;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -638,8 +638,8 @@ static ssize_t hardlimit_min_screen_off_show(struct kobject *kobj, struct kobj_a
 static ssize_t hardlimit_min_screen_off_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 
-	unsigned int new_hardlimit, i = 0;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+	unsigned int new_hardlimit, i;
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_hardlimit))
@@ -648,7 +648,7 @@ static ssize_t hardlimit_min_screen_off_store(struct kobject *kobj, struct kobj_
 	if (new_hardlimit == hardlimit_min_screen_off)
 		return count;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -672,7 +672,7 @@ static ssize_t wakeup_kick_freq_store(struct kobject *kobj, struct kobj_attribut
 {
 
 	unsigned int new_wakeup_kick_freq, i;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_wakeup_kick_freq))
@@ -685,7 +685,7 @@ static ssize_t wakeup_kick_freq_store(struct kobject *kobj, struct kobj_attribut
 	if (new_wakeup_kick_freq > hardlimit_max_screen_on || new_wakeup_kick_freq < hardlimit_min_screen_on)
 		return -EINVAL;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_wakeup_kick_freq) {
@@ -734,7 +734,7 @@ static ssize_t touchboost_lo_freq_store(struct kobject *kobj, struct kobj_attrib
 {
 
 	unsigned int new_touchboost_lo_freq, i;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_touchboost_lo_freq))
@@ -743,7 +743,7 @@ static ssize_t touchboost_lo_freq_store(struct kobject *kobj, struct kobj_attrib
 	if (new_touchboost_lo_freq == touchboost_lo_freq)
 		return count;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_touchboost_lo_freq) {
@@ -768,7 +768,7 @@ static ssize_t touchboost_hi_freq_store(struct kobject *kobj, struct kobj_attrib
 {
 
 	unsigned int new_touchboost_hi_freq, i;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+
 	struct cpufreq_frequency_table *table;
 
 	if (!sscanf(buf, "%du", &new_touchboost_hi_freq))
@@ -777,7 +777,7 @@ static ssize_t touchboost_hi_freq_store(struct kobject *kobj, struct kobj_attrib
 	if (new_touchboost_hi_freq == touchboost_hi_freq)
 		return count;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_touchboost_hi_freq) {
@@ -896,12 +896,12 @@ static ssize_t userspace_dvfs_lock_store(struct kobject *kobj, struct kobj_attri
 /* sysfs interface for "available_frequencies" */
 static ssize_t available_frequencies_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	unsigned int i = 0;
+	unsigned int i;
 	ssize_t j = 0;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
+
 	struct cpufreq_frequency_table *table;
 
-	table = policy->freq_table; /* Get frequency table */
+	table = cpufreq_frequency_get_table(0); /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		j += sprintf(&buf[j], "%d ", table[i].frequency);

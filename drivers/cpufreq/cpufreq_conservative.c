@@ -17,6 +17,7 @@
 struct cs_policy_dbs_info {
 	struct policy_dbs_info policy_dbs;
 	unsigned int down_skip;
+	unsigned int requested_freq;
 };
 
 static inline struct cs_policy_dbs_info *to_dbs_info(struct policy_dbs_info *policy_dbs)
@@ -74,17 +75,19 @@ static unsigned int cs_dbs_timer(struct cpufreq_policy *policy)
 
 	/* Check for frequency increase */
 	if (load > dbs_data->up_threshold) {
-		unsigned int requested_freq = policy->cur;
-
 		dbs_info->down_skip = 0;
 
 		/* if we are already at full speed then break out early */
-		if (requested_freq == policy->max)
+		if (dbs_info->requested_freq == policy->max)
 			goto out;
 
-		requested_freq += get_freq_target(cs_tuners, policy);
+		dbs_info->requested_freq += get_freq_target(cs_tuners, policy);
 
-		__cpufreq_driver_target(policy, requested_freq, CPUFREQ_RELATION_H);
+		if (dbs_info->requested_freq > policy->max)
+			dbs_info->requested_freq = policy->max;
+
+		__cpufreq_driver_target(policy, dbs_info->requested_freq,
+			CPUFREQ_RELATION_H);
 		goto out;
 	}
 
@@ -95,27 +98,36 @@ static unsigned int cs_dbs_timer(struct cpufreq_policy *policy)
 
 	/* Check for frequency decrease */
 	if (load < cs_tuners->down_threshold) {
-		unsigned int freq_target, requested_freq = policy->cur;
+		unsigned int freq_target;
 		/*
 		 * if we cannot reduce the frequency anymore, break out early
 		 */
-		if (requested_freq == policy->min)
+		if (policy->cur == policy->min)
 			goto out;
 
 		freq_target = get_freq_target(cs_tuners, policy);
-		if (requested_freq > freq_target)
-			requested_freq -= freq_target;
+		if (dbs_info->requested_freq > freq_target)
+			dbs_info->requested_freq -= freq_target;
 		else
-			requested_freq = policy->min;
+			dbs_info->requested_freq = policy->min;
 
-		__cpufreq_driver_target(policy, requested_freq, CPUFREQ_RELATION_L);
+		__cpufreq_driver_target(policy, dbs_info->requested_freq,
+				CPUFREQ_RELATION_L);
 	}
 
  out:
 	return dbs_data->sampling_rate;
 }
 
+static int dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
+				void *data);
+
+static struct notifier_block cs_cpufreq_notifier_block = {
+	.notifier_call = dbs_cpufreq_notifier,
+};
+
 /************************** sysfs interface ************************/
+static struct dbs_governor cs_dbs_gov;
 
 static ssize_t store_sampling_down_factor(struct gov_attr_set *attr_set,
 					  const char *buf, size_t count)
@@ -256,13 +268,15 @@ static void cs_free(struct policy_dbs_info *policy_dbs)
 	kfree(to_dbs_info(policy_dbs));
 }
 
-static int cs_init(struct dbs_data *dbs_data)
+static int cs_init(struct dbs_data *dbs_data, bool notify)
 {
 	struct cs_dbs_tuners *tuners;
 
 	tuners = kzalloc(sizeof(*tuners), GFP_KERNEL);
-	if (!tuners)
+	if (!tuners) {
+		pr_err("%s: kzalloc failed\n", __func__);
 		return -ENOMEM;
+	}
 
 	tuners->down_threshold = DEF_FREQUENCY_DOWN_THRESHOLD;
 	tuners->freq_step = DEF_FREQUENCY_STEP;
@@ -274,11 +288,19 @@ static int cs_init(struct dbs_data *dbs_data)
 	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE_RATIO *
 		jiffies_to_usecs(10);
 
+	if (notify)
+		cpufreq_register_notifier(&cs_cpufreq_notifier_block,
+					  CPUFREQ_TRANSITION_NOTIFIER);
+
 	return 0;
 }
 
-static void cs_exit(struct dbs_data *dbs_data)
+static void cs_exit(struct dbs_data *dbs_data, bool notify)
 {
+	if (notify)
+		cpufreq_unregister_notifier(&cs_cpufreq_notifier_block,
+					    CPUFREQ_TRANSITION_NOTIFIER);
+
 	kfree(dbs_data->tuners);
 }
 
@@ -287,10 +309,16 @@ static void cs_start(struct cpufreq_policy *policy)
 	struct cs_policy_dbs_info *dbs_info = to_dbs_info(policy->governor_data);
 
 	dbs_info->down_skip = 0;
+	dbs_info->requested_freq = policy->cur;
 }
 
-static struct dbs_governor cs_governor = {
-	.gov = CPUFREQ_DBS_GOVERNOR_INITIALIZER("conservative"),
+static struct dbs_governor cs_dbs_gov = {
+	.gov = {
+		.name = "conservative",
+		.governor = cpufreq_governor_dbs,
+		.max_transition_latency = TRANSITION_LATENCY_LIMIT,
+		.owner = THIS_MODULE,
+	},
 	.kobj_type = { .default_attrs = cs_attributes },
 	.gov_dbs_timer = cs_dbs_timer,
 	.alloc = cs_alloc,
@@ -300,7 +328,33 @@ static struct dbs_governor cs_governor = {
 	.start = cs_start,
 };
 
-#define CPU_FREQ_GOV_CONSERVATIVE	(&cs_governor.gov)
+#define CPU_FREQ_GOV_CONSERVATIVE	(&cs_dbs_gov.gov)
+
+static int dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
+				void *data)
+{
+	struct cpufreq_freqs *freq = data;
+	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(freq->cpu);
+	struct cs_policy_dbs_info *dbs_info;
+
+	if (!policy)
+		return 0;
+
+	/* policy isn't governed by conservative governor */
+	if (policy->governor != CPU_FREQ_GOV_CONSERVATIVE)
+		return 0;
+
+	dbs_info = to_dbs_info(policy->governor_data);
+	/*
+	 * we only care if our internally tracked freq moves outside the 'valid'
+	 * ranges of frequency available to us otherwise we do not change it
+	*/
+	if (dbs_info->requested_freq > policy->max
+			|| dbs_info->requested_freq < policy->min)
+		dbs_info->requested_freq = freq->new;
+
+	return 0;
+}
 
 static int __init cpufreq_gov_dbs_init(void)
 {

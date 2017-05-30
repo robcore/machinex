@@ -165,11 +165,9 @@ static void idlestats_wake(struct kgsl_device *device,
 static int idlestats_init(struct kgsl_device *device,
 		     struct kgsl_pwrscale *pwrscale)
 {
-	int i = 0;
 	struct idlestats_priv *priv;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(i);
-	struct cpufreq_frequency_table *table = policy->freq_table;
-	int ret;
+	struct cpufreq_policy cpu_policy;
+	int ret, i;
 
 	priv = pwrscale->priv = kzalloc(sizeof(struct idlestats_priv),
 		GFP_KERNEL);
@@ -192,9 +190,10 @@ static int idlestats_init(struct kgsl_device *device,
 	if (ret)
 		goto err;
 	for (i = 0; i < num_possible_cpus(); i++) {
-		cpufreq_frequency_table_cpuinfo(policy, table);
-		priv->cpu_info.max_freq[i] = policy->max / 1000;
-		priv->cpu_info.curr_freq[i] = policy->max / 1000;
+		cpufreq_frequency_table_cpuinfo(&cpu_policy,
+					cpufreq_frequency_get_table(i));
+		priv->cpu_info.max_freq[i] = cpu_policy.max / 1000;
+		priv->cpu_info.curr_freq[i] = cpu_policy.max / 1000;
 	}
 	ret = msm_idle_stats_register_device(&priv->idledev);
 err:
