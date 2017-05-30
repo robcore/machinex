@@ -54,7 +54,6 @@ struct cpufreq_interactive_policyinfo {
 	unsigned long notif_cpu;
 	int governor_enabled;
 	struct cpufreq_interactive_tunables *cached_tunables;
-	struct sched_load *sl;
 };
 
 /* Protected by per-policy load_lock */
@@ -456,7 +455,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	struct cpufreq_interactive_policyinfo *ppol = per_cpu(polinfo, data);
 	struct cpufreq_interactive_tunables *tunables =
 		ppol->policy->governor_data;
-	struct sched_load *sl = ppol->sl;
 	struct cpufreq_interactive_cpuinfo *pcpu;
 	unsigned int new_freq;
 	unsigned int prev_laf = 0, t_prevlaf;
@@ -629,7 +627,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	cpumask_set_cpu(max_cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-	wake_up_process_no_notif(speedchange_task);
+	wake_up_process(speedchange_task);
 
 rearm:
 	if (!timer_pending(&ppol->policy_timer))
@@ -742,7 +740,7 @@ static void cpufreq_interactive_boost(struct cpufreq_interactive_tunables *tunab
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
 	if (anyboost)
-		wake_up_process_no_notif(speedchange_task);
+		wake_up_process(speedchange_task);
 }
 
 static int load_change_callback(struct notifier_block *nb, unsigned long val,
@@ -922,8 +920,6 @@ static ssize_t store_target_loads(
 	tunables->target_loads = new_target_loads;
 	tunables->ntarget_loads = ntokens;
 	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
-
-	sched_update_freq_max_load(&controlled_cpus);
 
 	return count;
 }
@@ -1207,25 +1203,6 @@ static ssize_t store_use_migration_notif(
 		return count;
 	tunables->use_migration_notif = val;
 
-	if (!tunables->use_sched_load)
-		return count;
-
-	mutex_lock(&sched_lock);
-	if (val) {
-		migration_register_count++;
-		if (migration_register_count == 1)
-			atomic_notifier_chain_register(
-					&load_alert_notifier_head,
-					&load_notifier_block);
-	} else {
-		migration_register_count--;
-		if (!migration_register_count)
-			atomic_notifier_chain_unregister(
-					&load_alert_notifier_head,
-					&load_notifier_block);
-	}
-	mutex_unlock(&sched_lock);
-
 	return count;
 }
 
@@ -1289,7 +1266,6 @@ show_store_gov_pol_sys(boost);
 store_gov_pol_sys(boostpulse);
 show_store_gov_pol_sys(boostpulse_duration);
 show_store_gov_pol_sys(io_is_busy);
-show_store_gov_pol_sys(use_sched_load);
 show_store_gov_pol_sys(use_migration_notif);
 show_store_gov_pol_sys(max_freq_hysteresis);
 show_store_gov_pol_sys(align_windows);
@@ -1320,7 +1296,6 @@ gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(boost);
 gov_sys_pol_attr_rw(boostpulse_duration);
 gov_sys_pol_attr_rw(io_is_busy);
-gov_sys_pol_attr_rw(use_sched_load);
 gov_sys_pol_attr_rw(use_migration_notif);
 gov_sys_pol_attr_rw(max_freq_hysteresis);
 gov_sys_pol_attr_rw(align_windows);
@@ -1352,7 +1327,6 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&boostpulse_gov_sys.attr,
 	&boostpulse_duration_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
-	&use_sched_load_gov_sys.attr,
 	&use_migration_notif_gov_sys.attr,
 	&max_freq_hysteresis_gov_sys.attr,
 	&align_windows_gov_sys.attr,
@@ -1381,7 +1355,6 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&boostpulse_gov_pol.attr,
 	&boostpulse_duration_gov_pol.attr,
 	&io_is_busy_gov_pol.attr,
-	&use_sched_load_gov_pol.attr,
 	&use_migration_notif_gov_pol.attr,
 	&max_freq_hysteresis_gov_pol.attr,
 	&align_windows_gov_pol.attr,
@@ -1441,7 +1414,6 @@ static struct cpufreq_interactive_policyinfo *get_policyinfo(
 	struct cpufreq_interactive_policyinfo *ppol =
 				per_cpu(polinfo, policy->cpu);
 	int i;
-	struct sched_load *sl;
 
 	/* polinfo already allocated for policy, return */
 	if (ppol)
@@ -1450,14 +1422,6 @@ static struct cpufreq_interactive_policyinfo *get_policyinfo(
 	ppol = kzalloc(sizeof(*ppol), GFP_KERNEL);
 	if (!ppol)
 		return ERR_PTR(-ENOMEM);
-
-	sl = kcalloc(cpumask_weight(policy->related_cpus), sizeof(*sl),
-		     GFP_KERNEL);
-	if (!sl) {
-		kfree(ppol);
-		return ERR_PTR(-ENOMEM);
-	}
-	ppol->sl = sl;
 
 	init_timer_deferrable(&ppol->policy_timer);
 	ppol->policy_timer.function = cpufreq_interactive_timer;
@@ -1487,7 +1451,6 @@ static void free_policyinfo(int cpu)
 		if (per_cpu(polinfo, j) == ppol)
 			per_cpu(polinfo, cpu) = NULL;
 	kfree(ppol->cached_tunables);
-	kfree(ppol->sl);
 	kfree(ppol);
 }
 
@@ -1527,7 +1490,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			tunables->usage_count++;
 			cpumask_or(&controlled_cpus, &controlled_cpus,
 				   policy->related_cpus);
-			sched_update_freq_max_load(policy->related_cpus);
 			policy->governor_data = tunables;
 			return 0;
 		}
@@ -1560,7 +1522,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 
 		cpumask_or(&controlled_cpus, &controlled_cpus,
 			   policy->related_cpus);
-		sched_update_freq_max_load(policy->related_cpus);
 
 		if (have_governor_per_policy())
 			ppol->cached_tunables = tunables;
@@ -1572,7 +1533,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_POLICY_EXIT:
 		cpumask_andnot(&controlled_cpus, &controlled_cpus,
 			       policy->related_cpus);
-		sched_update_freq_max_load(cpu_possible_mask);
 		if (!--tunables->usage_count) {
 			if (policy->governor->initialized == 1)
 				cpufreq_unregister_notifier(&cpufreq_notifier_block,
@@ -1684,7 +1644,7 @@ static int __init cpufreq_interactive_init(void)
 	get_task_struct(speedchange_task);
 
 	/* NB: wake up so the thread does not look hung to the freezer */
-	wake_up_process_no_notif(speedchange_task);
+	wake_up_process(speedchange_task);
 
 	return cpufreq_register_governor(&cpufreq_gov_interactive);
 }
