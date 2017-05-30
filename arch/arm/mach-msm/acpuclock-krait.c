@@ -1406,11 +1406,11 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.
 	 */
-	ret = set_cpu_freq(cpu, freq_table[index].frequency,
+	ret = set_cpu_freq(policy, freq_table[index].frequency,
 			   freq_table[index].driver_data);
 	if (ret)
 		pr_debug("i am a debug message\n");
-	policy->freq_table;
+	policy->freq_table = freq_table;
 	register_hotcpu_notifier(&acpuclk_cpu_notifier);
 	return 0;
 	//return cpufreq_table_validate_and_show(policy, freq_table);
