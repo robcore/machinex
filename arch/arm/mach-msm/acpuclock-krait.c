@@ -1371,7 +1371,7 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 	return acpuclk_get_rate(cpu);
 }
 
-static struct cpufreq_frequency_table freq_table[index] = {
+static struct cpufreq_frequency_table freq_table[] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
 	{ .frequency = 594000 },
