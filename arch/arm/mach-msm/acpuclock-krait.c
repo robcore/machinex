@@ -1070,6 +1070,8 @@ static void __init cpufreq_table_init(void)
 		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
+	/* freq_table not big enough to store all usable freqs. */
+	BUG_ON(drv.priv[i].speed.khz != 0);
 
 	mx_freq_table[index].driver_data = index;
 	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
@@ -1318,21 +1320,19 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 {
 	int ret = 0;
 	struct cpufreq_freqs freqs;
-	struct cpufreq_frequency_table *table;
-
-	/* limits applied above must be in cpufreq table */
-	table = cpufreq_frequency_get_table(policy->cpu);
-	if (cpufreq_frequency_table_target(policy, table, new_freq,
-		CPUFREQ_RELATION_H, &index))
-		return -EINVAL;
+	unsigned long new_freq_copy;
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
+	new_freq_copy = new_freq;
+	ret = acpuclk_set_rate(policy->cpu, new_freq_copy, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
+	if (!ret)
+		pr_err("rob done screwed the pooch\n");
+
 	return ret;
 }
 
@@ -1367,12 +1367,6 @@ done:
 	return ret;
 }
 
-static int msm_cpufreq_verify(struct cpufreq_policy *policy)
-{
-	cpufreq_verify_within_cpu_limits(policy);
-	return 0;
-}
-
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
 	return acpuclk_get_rate(cpu);
@@ -1400,16 +1394,14 @@ static struct cpufreq_frequency_table freq_table[] = {
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
-	int i, index = 0;
+	int index;
 	int ret = 0;
 	int cpu;
-	struct cpufreq_frequency_table *freq_table;
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
-
 	policy->min = policy->cpuinfo.min_freq = 384000;
-	policy->max = policy->cpuinfo.max_freq = 1890000;
+	policy->max = policy->cpuinfo.max_freq = UINT_MAX;
 	policy->cur = acpuclk_get_rate(policy->cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
@@ -1483,7 +1475,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS
 								 | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
-	.verify		= msm_cpufreq_verify,
+	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
@@ -1497,3 +1489,5 @@ static int __init msm_cpufreq_register(void)
 }
 
 late_initcall(msm_cpufreq_register);
+
+

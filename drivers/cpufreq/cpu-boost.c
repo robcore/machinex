@@ -101,7 +101,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 			if (!s->input_boost_min)
 				break;
 
-			cpufreq_verify_within_limits(policy, s->input_boost_min, check_cpufreq_hardlimit(policy->max));
+			cpufreq_verify_within_limits(policy, s->input_boost_min, UINT_MAX);
 			break;
 		}
 	}
