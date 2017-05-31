@@ -1373,6 +1373,11 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 	return acpuclk_get_rate(cpu);
 }
 
+void msm_cpufreq_ready(struct cpufreq_policy *policy)
+{
+	hotplug_ready = true;
+}
+
 static struct cpufreq_frequency_table freq_table[] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
@@ -1414,7 +1419,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (ret)
 		pr_debug("i am a debug message\n");
 
-	hotplug_ready = true;
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
 
@@ -1482,6 +1486,8 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
+	.suspend	= cpufreq_generic_suspend,
+	.ready		= msm_cpufreq_ready,
 };
 
 static int __init msm_cpufreq_register(void)
