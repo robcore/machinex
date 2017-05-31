@@ -111,21 +111,23 @@ fail:
 
 static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
+	struct cpufreq_policy *policy;
 	int ret = 0;
 
-	ret = msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, max_freq);
+	policy = cpufreq_cpu_get(cpu);
+
+	ret = cpufreq_verify_within_limits(policy->cpu, policy->min, check_cpufreq_hardlimit(max_freq));
 	if (ret)
 		return ret;
 
 	limited_max_freq_thermal = max_freq;
-	if (max_freq != MSM_CPUFREQ_NO_LIMIT) {
+	if (max_freq != policy->max) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;
 	}
 
 	if (cpu_online(cpu)) {
-		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 		if (!policy)
 			return ret;
 		ret = cpufreq_driver_target(policy, policy->cur,
