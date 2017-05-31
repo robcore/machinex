@@ -117,9 +117,7 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 	struct cpufreq_policy *policy;
 	int ret = 0;
 
-	get_online_cpus();
-	policy = cpufreq_cpu_get_raw(cpu);
-	cpufreq_verify_within_limits(policy, policy->min, max_freq);
+	reapply_hard_limits();
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != current_limit_max) {
@@ -128,16 +126,13 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		therm_freq_limited = false;
 	}
 
-	if (cpu_online(cpu)) {
-		if (!policy)
-			return ret;
-		ret = cpufreq_update_policy(cpu);
-		if (policy)
-			cpufreq_cpu_put(policy);
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		cpufreq_update_policy(cpu);
 	}
+	put_online_cpus();
 
 	reapply_hard_limits();
-	put_online_cpus();
 	return ret;
 }
 extern bool hotplug_ready;
@@ -208,7 +203,7 @@ static void __ref do_core_control(long temp)
 static void __ref do_freq_control(long temp)
 {
 	int ret = 0;
-	int cpu = 0;
+	int cpu = smp_processor_id();
 	unsigned long max_freq = limited_max_freq_thermal;
 
 	if (!hotplug_ready)
@@ -241,6 +236,7 @@ static void __ref do_freq_control(long temp)
 	}
 
 	if (max_freq == limited_max_freq_thermal) {
+		reapply_hard_limits();
 		therm_freq_limited = true;
 		return;
 	}

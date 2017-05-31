@@ -2336,8 +2336,8 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	if (limited_max_freq_thermal > 0 && new_policy->max > limited_max_freq_thermal)
 		new_policy->max = limited_max_freq_thermal;
 
-	policy->min = new_policy->min;
-	policy->max = new_policy->max;
+	policy->min = check_cpu_hardlimits(new_policy->min);
+	policy->max = check_cpu_hardlimits(new_policy->max);
 	policy->util_thres = new_policy->util_thres;
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
