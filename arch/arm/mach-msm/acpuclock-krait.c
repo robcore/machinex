@@ -1093,8 +1093,9 @@ static void __init dcvs_freq_init(void)
 static int acpuclk_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
-	static int prev_khz[NR_CPUS];
-	int rc, cpu = (int)hcpu;
+	static unsigned long prev_khz;
+	int rc,
+	int cpu = (int)hcpu;
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
@@ -1103,10 +1104,10 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_BAD;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DEAD:
-		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
-		/* Fall through. */
+	case CPU_DOWN_PREPARE:
 	case CPU_UP_CANCELED:
+		prev_khz = acpuclk_krait_get_rate(cpu);
+		/* Fall through. */
 		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG);
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
 		break;
@@ -1117,13 +1118,13 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 				return NOTIFY_BAD;
 			break;
 		}
-		if (WARN_ON(!prev_khz[cpu]))
+		if (WARN_ON(!prev_khz))
 			return NOTIFY_BAD;
 		rc = regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg,
 						sc->vreg[VREG_CORE].cur_ua);
 		if (rc < 0)
 			return NOTIFY_BAD;
-		acpuclk_krait_set_rate(cpu, prev_khz[cpu], SETRATE_HOTPLUG);
+		acpuclk_krait_set_rate(cpu, prev_khz, SETRATE_HOTPLUG);
 		break;
 	default:
 		break;
