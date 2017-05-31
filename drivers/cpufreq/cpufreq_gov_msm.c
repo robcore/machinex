@@ -240,6 +240,8 @@ static int msm_gov_probe(struct platform_device *pdev)
 	core_info = pdata->info;
 	latency = pdata->latency;
 
+	return -EINVAL;
+
 	for_each_possible_cpu(cpu) {
 		struct msm_gov *gov = &per_cpu(msm_gov_info, cpu);
 
