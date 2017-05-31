@@ -27,6 +27,7 @@
 #include <linux/msm_thermal.h>
 #include <linux/platform_device.h>
 #include <mach/cpufreq.h>
+#include <linux/cpufreq_hardlimit.h>
 
 #define DEFAULT_POLLING_MS	500
 /* last 3 minutes based on 250ms polling cycle */
@@ -116,12 +117,10 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 
 	policy = cpufreq_cpu_get(cpu);
 
-	ret = cpufreq_verify_within_limits(policy->cpu, policy->min, max_freq);
-	if (ret)
-		return ret;
+	cpufreq_verify_within_limits(policy, policy->min, max_freq);
 
 	limited_max_freq_thermal = max_freq;
-	if (max_freq != policy->cpuinfo.max_freq) {
+	if (max_freq != check_cpufreq_hardlimit(policy->max)) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;
@@ -208,6 +207,7 @@ static void __ref do_freq_control(long temp)
 	int ret = 0;
 	int cpu = 0;
 	unsigned long max_freq = limited_max_freq_thermal;
+	struct cpufreq_policy *policy;
 
 	if (!hotplug_ready)
 		return;
@@ -229,7 +229,8 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-			max_freq = policy->cpuinfo.max_freq;
+			policy = cpufreq_cpu_get(cpu);
+			max_freq = check_cpufreq_hardlimit(policy->max);
 			reapply_hard_limits();
 			therm_freq_limited = false;
 		} else
@@ -331,6 +332,7 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 static void __ref disable_msm_thermal(void)
 {
 	int cpu = 0;
+	struct cpufreq_policy *policy;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
@@ -338,6 +340,7 @@ static void __ref disable_msm_thermal(void)
 	if (limited_max_freq_thermal == 0)
 		return;
 
+	policy = cpufreq_cpu_get(cpu);
 	for_each_possible_cpu(cpu) {
 		update_cpu_max_freq(cpu, policy->cpuinfo.max_freq);
 	}
