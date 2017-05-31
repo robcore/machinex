@@ -223,7 +223,11 @@ void reapply_hard_limits(void)
 	if (freq_is_therm_limited())
 		current_limit_max = thermal_hardlimit;
 #endif
-	update_scaling_limits(current_limit_min, current_limit_max);
+
+	if (limited_max_freq_thermal > current_limit_min && current_limit_max > limited_max_freq_thermal)
+		update_scaling_limits(current_limit_min, limited_max_freq_thermal);
+	else
+		update_scaling_limits(current_limit_min, current_limit_max);
 }
 
 #ifdef CONFIG_SEC_DVFS

@@ -666,4 +666,7 @@ unsigned int cpufreq_generic_get(unsigned int cpu);
 int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency);
+extern bool hotplug_ready;
+extern unsigned long limited_max_freq_thermal;
+extern void reapply_hard_limits(void);
 #endif /* _LINUX_CPUFREQ_H */

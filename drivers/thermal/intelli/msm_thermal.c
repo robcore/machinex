@@ -53,7 +53,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
-unsigned long limited_max_freq_thermal = MSM_CPUFREQ_NO_LIMIT;
+unsigned long limited_max_freq_thermal = 0;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 bool core_control_enabled;
@@ -116,12 +116,12 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 
 	policy = cpufreq_cpu_get(cpu);
 
-	ret = cpufreq_verify_within_limits(policy->cpu, policy->min, check_cpufreq_hardlimit(max_freq));
+	ret = cpufreq_verify_within_limits(policy->cpu, policy->min, max_freq);
 	if (ret)
 		return ret;
 
 	limited_max_freq_thermal = max_freq;
-	if (max_freq != policy->max) {
+	if (max_freq != policy->cpuinfo.max_freq) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;
@@ -135,9 +135,10 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		cpufreq_cpu_put(policy);
 	}
 
+	reapply_hard_limits();
 	return ret;
 }
-
+extern bool hotplug_ready;
 static void __ref do_core_control(long temp)
 {
 	int i = 0;
@@ -208,6 +209,9 @@ static void __ref do_freq_control(long temp)
 	int cpu = 0;
 	unsigned long max_freq = limited_max_freq_thermal;
 
+	if (!hotplug_ready)
+		return;
+
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
 			return;
@@ -225,10 +229,12 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-			max_freq = MSM_CPUFREQ_NO_LIMIT;
+			max_freq = policy->cpuinfo.max_freq;
+			reapply_hard_limits();
 			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
+			reapply_hard_limits();
 			therm_freq_limited = true;
 	}
 
@@ -329,12 +335,13 @@ static void __ref disable_msm_thermal(void)
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == MSM_CPUFREQ_NO_LIMIT)
+	if (limited_max_freq_thermal == 0)
 		return;
 
 	for_each_possible_cpu(cpu) {
-		update_cpu_max_freq(cpu, MSM_CPUFREQ_NO_LIMIT);
+		update_cpu_max_freq(cpu, policy->cpuinfo.max_freq);
 	}
+	reapply_hard_limits();
 }
 
 static int __ref set_enabled(const char *val, const struct kernel_param *kp)

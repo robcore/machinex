@@ -2064,10 +2064,13 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 		return -ENODEV;
 
 	/* Make sure that target_freq is within supported range */
-	if (target_freq > policy->max)
-		target_freq = policy->max;
-	if (target_freq < policy->min)
-		target_freq = policy->min;
+	if (target_freq > check_cpufreq_hardlimit(policy->max))
+		target_freq = check_cpufreq_hardlimit(policy->max);
+	if (target_freq < check_cpufreq_hardlimit(policy->min))
+		target_freq = check_cpufreq_hardlimit(policy->min);
+
+	if (limited_max_freq_thermal > 0 && target_freq > limited_max_freq_thermal)
+		target_freq = limited_max_freq_thermal;
 
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 		 policy->cpu, target_freq, relation, old_target_freq);

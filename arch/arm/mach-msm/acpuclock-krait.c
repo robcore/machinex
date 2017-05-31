@@ -89,7 +89,7 @@ static struct drv_data {
 	struct device *dev;
 } drv;
 
-static bool hotplug_ready;
+extern bool hotplug_ready;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
@@ -1322,6 +1322,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpufreq_freqs freqs;
 	unsigned long new_freq_copy;
 
+	if (limited_max_freq_thermal > 0 && new_freq > limited_max_freq_thermal)
+		new_freq = limited_max_freq_thermal;
+
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
@@ -1330,8 +1333,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	new_freq_copy = new_freq;
 	ret = acpuclk_set_rate(policy->cpu, new_freq_copy, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
-	if (!ret)
-		pr_err("rob done screwed the pooch\n");
 
 	return ret;
 }
