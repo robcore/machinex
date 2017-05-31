@@ -267,13 +267,13 @@ unsigned int cpufreq_generic_get(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
-	if (!policy || IS_ERR(policy->clk)) {
+	if (!policy) {
 		pr_err("%s: No %s associated to cpu: %d\n",
 		       __func__, policy ? "clk" : "policy", cpu);
 		return 0;
 	}
 
-	return clk_get_rate(policy->clk) / 1000;
+	return acpuclk_get_rate(cpu);
 }
 EXPORT_SYMBOL_GPL(cpufreq_generic_get);
 

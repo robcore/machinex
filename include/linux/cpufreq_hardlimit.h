@@ -60,6 +60,7 @@
 #endif
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq);
+extern unsigned int current_limit_max;
 
 #ifdef CONFIG_SEC_DVFS
 /* Scaling min/max lock */
