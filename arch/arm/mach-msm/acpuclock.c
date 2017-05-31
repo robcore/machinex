@@ -24,6 +24,7 @@ unsigned long acpuclk_get_rate(int cpu)
 
 	return acpuclk_data->get_rate(cpu);
 }
+EXPORT_SYMBOL(acpuclk_get_rate);
 
 int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason reason)
 {
@@ -32,6 +33,7 @@ int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason reason)
 
 	return acpuclk_data->set_rate(cpu, rate, reason);
 }
+EXPORT_SYMBOL(acpuclk_set_rate);
 
 uint32_t acpuclk_get_switch_time(void)
 {
