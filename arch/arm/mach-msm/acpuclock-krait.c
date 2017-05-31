@@ -1387,7 +1387,7 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 struct cpufreq_frequency_table *freq_table;
 
 #define QCOM_MAX_FREQS 15
-static int __init msm_cpufreq_init(struct cpufreq_policy *policy)
+static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
 	int ret = 0;
