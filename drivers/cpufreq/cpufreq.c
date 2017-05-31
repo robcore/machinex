@@ -30,6 +30,9 @@
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
 #include <trace/events/power.h>
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#include <linux/cpufreq_hardlimit.h>
+#endif
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
@@ -328,6 +331,22 @@ EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
 /*********************************************************************
  *            EXTERNALLY AFFECTING FREQUENCY CHANGES                 *
  *********************************************************************/
+/* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
+{
+	int cpu;
+	struct cpufreq_policy *policy;
+
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get(cpu);
+		if (policy != NULL) {
+			policy->user_policy.min = policy->min = freq_min;
+			policy->user_policy.max = policy->max = freq_max;
+		}
+	}
+}
+#endif
 
 /**
  * adjust_jiffies - adjust the system "loops_per_jiffy"
@@ -2401,8 +2420,14 @@ int cpufreq_update_policy(unsigned int cpu)
 
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&new_policy, policy, sizeof(*policy));
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+	/* Yank555.lu - Enforce hardlimit */
+	new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
+	new_policy.max = check_cpufreq_hardlimit(policy->user_policy.max);
+#else
 	new_policy.min = policy->user_policy.min;
 	new_policy.max = policy->user_policy.max;
+#endif
 	new_policy.util_thres = policy->user_policy.util_thres;
 
 	/*

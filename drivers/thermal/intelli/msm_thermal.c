@@ -641,7 +641,7 @@ static void msm_thermal_exit(void)
 }
 late_initcall(msm_thermal_late_init);
 module_exit(msm_thermal_exit);
-late_initcall(msm_thermal_late_init);
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
