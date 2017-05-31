@@ -1407,8 +1407,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
 
-	policy->min = policy->cpuinfo.min_freq = 384000;
-	policy->max = policy->cpuinfo.max_freq = 1890000;
+	cpufreq_frequency_table_cpuinfo(policy, freq_table);
 	policy->cur = acpuclk_get_rate(policy->cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
