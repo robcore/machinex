@@ -33,6 +33,7 @@
 /* last 3 minutes based on 250ms polling cycle */
 #define MAX_HISTORY_SZ		((3*60*1000) / DEFAULT_POLLING_MS)
 
+extern bool hotplug_ready;
 struct msm_thermal_stat_data {
 	int32_t temp_history[MAX_HISTORY_SZ];
 	uint32_t overtemp;
