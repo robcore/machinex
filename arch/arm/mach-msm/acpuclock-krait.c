@@ -89,7 +89,7 @@ static struct drv_data {
 	struct device *dev;
 } drv;
 
-extern bool hotplug_ready;
+bool hotplug_ready;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
