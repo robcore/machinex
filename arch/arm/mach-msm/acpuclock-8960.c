@@ -21,7 +21,7 @@
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
 
-static struct hfpll_data hfpll_data __initdata = {
+static struct hfpll_data hfpll_data = {
 	.mode_offset = 0x00,
 	.l_offset = 0x08,
 	.m_offset = 0x0C,
@@ -39,7 +39,7 @@ static struct hfpll_data hfpll_data __initdata = {
 	.vdd[HFPLL_VDD_HIGH] = 1150000,
 };
 
-static struct scalable scalable[] __initdata = {
+static struct scalable scalable[] = {
 	[CPU0] = {
 		.hfpll_phys_base = 0x00903200,
 		.aux_clk_sel_phys = 0x02088014,
@@ -75,7 +75,7 @@ static struct scalable scalable[] __initdata = {
 	},
 };
 
-static struct msm_bus_paths bw_level_tbl[] __initdata = {
+static struct msm_bus_paths bw_level_tbl[] = {
 	[0] =  BW_MBPS(640), /* At least  80 MHz on bus. */
 	[1] = BW_MBPS(1064), /* At least 133 MHz on bus. */
 	[2] = BW_MBPS(1600), /* At least 200 MHz on bus. */
@@ -85,14 +85,14 @@ static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[6] = BW_MBPS(3936), /* At least 492 MHz on bus. */
 };
 
-static struct msm_bus_scale_pdata bus_scale_data __initdata = {
+static struct msm_bus_scale_pdata bus_scale_data = {
 	.usecase = bw_level_tbl,
 	.num_usecases = ARRAY_SIZE(bw_level_tbl),
 	.active_only = 1,
 	.name = "acpuclk-8960",
 };
 
-static struct l2_level l2_freq_tbl[] __initdata = {
+static struct l2_level l2_freq_tbl[] = {
 	[0]  = { {  384000, PLL_8, 0, 0x00 }, 1050000, 1050000, 1 },
 	[1]  = { {  432000, HFPLL, 2, 0x20 }, 1050000, 1050000, 2 },
 	[2]  = { {  486000, HFPLL, 2, 0x24 }, 1050000, 1050000, 2 },
@@ -117,7 +117,7 @@ static struct l2_level l2_freq_tbl[] __initdata = {
 
 #define AVS(x) .avsdscr_setting = (x)
 
-static struct acpu_level acpu_freq_tbl_slow[] __initdata = {
+static struct acpu_level acpu_freq_tbl_slow[] = {
 	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   950000, AVS(0x40001F) },
 	{ 0, {   432000, HFPLL, 2, 0x20 }, L2(6),   975000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(6),   975000 },
@@ -143,7 +143,7 @@ static struct acpu_level acpu_freq_tbl_slow[] __initdata = {
 	{ 0, { 0 } }
 };
 
-static struct acpu_level acpu_freq_tbl_nom[] __initdata = {
+static struct acpu_level acpu_freq_tbl_nom[] = {
 	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   900000, AVS(0x40007F) },
 	{ 0, {   432000, HFPLL, 2, 0x20 }, L2(6),   925000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(6),   925000 },
@@ -169,7 +169,7 @@ static struct acpu_level acpu_freq_tbl_nom[] __initdata = {
 	{ 0, { 0 } }
 };
 
-static struct acpu_level acpu_freq_tbl_fast[] __initdata = {
+static struct acpu_level acpu_freq_tbl_fast[] = {
 	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   850000, AVS(0x4000FF) },
 	{ 0, {   432000, HFPLL, 2, 0x20 }, L2(6),   875000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(6),   875000 },
@@ -195,13 +195,13 @@ static struct acpu_level acpu_freq_tbl_fast[] __initdata = {
 	{ 0, { 0 } }
 };
 
-static struct pvs_table pvs_tables[NUM_SPEED_BINS][NUM_PVS] __initdata = {
+static struct pvs_table pvs_tables[NUM_SPEED_BINS][NUM_PVS] = {
 [0][PVS_SLOW]    = { acpu_freq_tbl_slow, sizeof(acpu_freq_tbl_slow),     0 },
 [0][PVS_NOMINAL] = { acpu_freq_tbl_nom,  sizeof(acpu_freq_tbl_nom),  25000 },
 [0][PVS_FAST]    = { acpu_freq_tbl_fast, sizeof(acpu_freq_tbl_fast), 25000 },
 };
 
-static struct acpuclk_krait_params acpuclk_8960_params __initdata = {
+static struct acpuclk_krait_params acpuclk_8960_params = {
 	.scalable = scalable,
 	.scalable_size = sizeof(scalable),
 	.hfpll_data = &hfpll_data,
