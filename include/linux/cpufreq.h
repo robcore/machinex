@@ -452,12 +452,18 @@ static inline unsigned long cpufreq_scale(unsigned long old, u_int div,
 {
 #if BITS_PER_LONG == 32
 	u64 result = ((u64) old) * ((u64) mult);
-	do_div(result, div);
+	if (div > 0)
+		do_div(result, div);
+	else
+		result = old;
 	return (unsigned long) result;
 
 #elif BITS_PER_LONG == 64
 	unsigned long result = old * ((u64) mult);
-	result /= div;
+	if (div > 0)
+		result /= div;
+	else
+		result = old;
 	return result;
 #endif
 }
