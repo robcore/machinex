@@ -2238,10 +2238,12 @@ static int cpufreq_init_governor(struct cpufreq_policy *policy)
 
 	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
 
-	ret = policy->governor->governor(policy, CPUFREQ_GOV_POLICY_INIT);
-	if (ret) {
-		module_put(policy->governor->owner);
-		return ret;
+	if (policy->governor->init) {
+		ret = policy->governor->init(policy);
+		if (ret) {
+			module_put(policy->governor->owner);
+			return ret;
+		}
 	}
 
 	policy->governor->initialized++;
@@ -2255,7 +2257,8 @@ static void cpufreq_exit_governor(struct cpufreq_policy *policy)
 
 	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
 
-	policy->governor->governor(policy, CPUFREQ_GOV_POLICY_EXIT);
+	if (policy->governor->exit)
+		policy->governor->exit(policy);
 
 	policy->governor->initialized--;
 	module_put(policy->governor->owner);
@@ -2276,11 +2279,15 @@ static int cpufreq_start_governor(struct cpufreq_policy *policy)
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy)
 		cpufreq_update_current_freq(policy);
 
-	ret = policy->governor->governor(policy, CPUFREQ_GOV_START);
-	if (ret)
-		return ret;
+	if (policy->governor->start) {
+		ret = policy->governor->start(policy);
+		if (ret)
+			return ret;
+	}
 
-	policy->governor->governor(policy, CPUFREQ_GOV_LIMITS);
+	if (policy->governor->limits)
+		policy->governor->limits(policy);
+
 	return 0;
 }
 
@@ -2291,7 +2298,8 @@ static void cpufreq_stop_governor(struct cpufreq_policy *policy)
 
 	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
 
-	policy->governor->governor(policy, CPUFREQ_GOV_STOP);
+	if (policy->governor->stop)
+		policy->governor->stop(policy);
 }
 
 static void cpufreq_governor_limits(struct cpufreq_policy *policy)
@@ -2301,7 +2309,8 @@ static void cpufreq_governor_limits(struct cpufreq_policy *policy)
 
 	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
 
-	policy->governor->governor(policy, CPUFREQ_GOV_LIMITS);
+	if (policy->governor->limits)
+		policy->governor->limits(policy);
 }
 
 int cpufreq_register_governor(struct cpufreq_governor *governor)
