@@ -239,7 +239,7 @@ have_max_multiplier:
 			busfreq = param_busfreq / 10;
 			goto have_busfreq;
 		}
-		printk(KERN_ERR "powernow-k6: invalid bus_frequency parameter, allowed range 50000 - 150000 kHz\n");
+		pr_err("powernow-k6: invalid bus_frequency parameter, allowed range 50000 - 150000 kHz\n");
 		return -EINVAL;
 	}
 
@@ -324,7 +324,7 @@ static int __init powernow_k6_init(void)
 		return -ENODEV;
 
 	if (!request_region(POWERNOW_IOPORT, 16, "PowerNow!")) {
-		printk(KERN_INFO PFX "PowerNow IOPORT region already used.\n");
+		pr_info(PFX "PowerNow IOPORT region already used\n");
 		return -EIO;
 	}
 

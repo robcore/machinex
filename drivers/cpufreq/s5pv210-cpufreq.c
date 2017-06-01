@@ -158,7 +158,7 @@ static void s5pv210_set_refresh(enum s5pv210_dmc_port ch, unsigned long freq)
 	} else if (ch == DMC1) {
 		reg = (S5P_VA_DMC1 + 0x30);
 	} else {
-		printk(KERN_ERR "Cannot find DMC port\n");
+		pr_err("Cannot find DMC port\n");
 		return;
 	}
 
@@ -540,7 +540,7 @@ static int __init s5pv210_cpu_init(struct cpufreq_policy *policy)
 	mem_type = check_mem_type(S5P_VA_DMC0);
 
 	if ((mem_type != LPDDR) && (mem_type != LPDDR2)) {
-		printk(KERN_ERR "CPUFreq doesn't support this memory type\n");
+		pr_err("CPUFreq doesn't support this memory type\n");
 		ret = -EINVAL;
 		goto out_dmc1;
 	}

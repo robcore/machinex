@@ -300,13 +300,13 @@ static int __init omap_cpufreq_init(void)
 
 	mpu_dev = omap_device_get_by_hwmod_name("mpu");
 	if (!mpu_dev) {
-		pr_warning("%s: unable to get the mpu device\n", __func__);
+		pr_warn("%s: unable to get the mpu device\n", __func__);
 		return -EINVAL;
 	}
 
 	mpu_reg = regulator_get(mpu_dev, "vcc");
 	if (IS_ERR(mpu_reg)) {
-		pr_warning("%s: unable to get MPU regulator\n", __func__);
+		pr_warn("%s: unable to get MPU regulator\n", __func__);
 		mpu_reg = NULL;
 	} else {
 		/* 
