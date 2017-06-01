@@ -998,12 +998,7 @@ static ssize_t show(struct kobject *kobj, struct attribute *attr, char *buf)
 	ssize_t ret;
 
 	down_read(&policy->rwsem);
-
-	if (fattr->show)
-		ret = fattr->show(policy, buf);
-	else
-		ret = -EIO;
-
+	ret = fattr->show(policy, buf);
 	up_read(&policy->rwsem);
 
 	return ret;
@@ -1018,18 +1013,12 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 
 	get_online_cpus();
 
-	if (!cpu_online(policy->cpu))
-		goto unlock;
-
-	down_write(&policy->rwsem);
-
-	if (fattr->store)
+	if (cpu_online(policy->cpu)) {
+		down_write(&policy->rwsem);
 		ret = fattr->store(policy, buf, count);
-	else
-		ret = -EIO;
+		up_write(&policy->rwsem);
+	}
 
-	up_write(&policy->rwsem);
-unlock:
 	put_online_cpus();
 
 	return ret;
@@ -1368,9 +1357,11 @@ static int cpufreq_online(unsigned int cpu)
 		for_each_cpu(j, policy->related_cpus)
 			per_cpu(cpufreq_cpu_data, j) = policy;
 		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+#if 0
 	} else {
 		policy->min = policy->user_policy.min;
 		policy->max = policy->user_policy.max;
+#endif
 	}
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
@@ -2339,11 +2330,11 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_NOTIFY, new_policy);
 
-	if (limited_max_freq_thermal > 0 && new_policy->max > limited_max_freq_thermal)
-		new_policy->max = limited_max_freq_thermal;
-
 	policy->min = check_cpufreq_hardlimit(new_policy->min);
-	policy->max = check_cpufreq_hardlimit(new_policy->max);
+	if (limited_max_freq_thermal > 0 && new_policy->max > limited_max_freq_thermal)
+		policy->max = limited_max_freq_thermal;
+	else
+		policy->max = check_cpufreq_hardlimit(new_policy->max);
 	policy->util_thres = new_policy->util_thres;
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
