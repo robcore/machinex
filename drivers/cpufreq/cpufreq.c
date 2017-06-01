@@ -385,7 +385,6 @@ static inline void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 	return;
 }
 #endif
-}
 
 static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 		struct cpufreq_freqs *freqs, unsigned int state)
@@ -650,7 +649,7 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
 		else
-			ret = sprintf(buf "%u\n", mx_offline_core);
+			ret = sprintf(buf, "%u\n", mx_offline_core);
 	}
 	return ret;
 }
