@@ -231,6 +231,7 @@ static int cpufreq_msm_dcvs_policy_start(struct cpufreq_policy *policy)
 	mutex_unlock(&per_cpu(gov_mutex, cpu));
 fail:
 	return ret;
+}
 
 static void cpufreq_msm_dcvs_policy_stop(struct cpufreq_policy *policy)
 {
@@ -254,6 +255,11 @@ static void cpufreq_msm_dcvs_policy_limits(struct cpufreq_policy *policy)
 
 struct cpufreq_governor cpufreq_gov_msm = {
 	.name = "msm-dcvs",
+	.init		= cpufreq_msm_dcvs_policy_init,
+	.exit		= cpufreq_msm_dcvs_policy_exit,
+	.start		= cpufreq_msm_dcvs_policy_start,
+	.stop		= cpufreq_msm_dcvs_policy_stop,
+	.limits		= cpufreq_msm_dcvs_policy_limits,
 	.owner = THIS_MODULE,
 };
 
@@ -311,11 +317,6 @@ static struct platform_driver msm_gov_driver = {
 	.remove = msm_gov_remove,
 	.driver = {
 		.name = "msm_dcvs_gov",
-		.init		= cpufreq_msm_dcvs_policy_init,
-		.exit		= cpufreq_msm_dcvs_policy_exit,
-		.start		= cpufreq_msm_dcvs_policy_start,
-		.stop		= cpufreq_msm_dcvs_policy_stop,
-		.limits		= cpufreq_msm_dcvs_policy_limits,
 		.owner = THIS_MODULE,
 	},
 };
