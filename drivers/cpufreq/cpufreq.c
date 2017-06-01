@@ -647,10 +647,10 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get) {
 		ret = sprintf(buf, "%u\n", cpufreq_driver->get(policy->cpu));
 	} else {
-		if (cpu_online(cpu))
+		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
 		else
-			ret = springf(buf "%u\n", mx_offline_core);
+			ret = sprintf(buf "%u\n", mx_offline_core);
 	}
 	return ret;
 }
