@@ -103,7 +103,7 @@ void gov_update_cpu_data(struct dbs_data *dbs_data)
 		for_each_cpu(j, policy_dbs->policy->cpus) {
 			struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);
 
-			j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_cpu_wall,
+			j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_update_time,
 								  dbs_data->io_is_busy);
 			if (dbs_data->ignore_nice_load)
 				j_cdbs->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -137,14 +137,14 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 	/* Get Absolute Load */
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);
-		u64 cur_wall_time, cur_idle_time;
-		unsigned int idle_time, wall_time;
+		u64 update_time, cur_idle_time;
+		unsigned int idle_time, time_elapsed;
 		unsigned int load;
 
-		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, io_busy);
+		cur_idle_time = get_cpu_idle_time(j, &update_time, io_busy);
 
-		wall_time = cur_wall_time - j_cdbs->prev_cpu_wall;
-		j_cdbs->prev_cpu_wall = cur_wall_time;
+		time_elapsed = update_time - j_cdbs->prev_update_time;
+		j_cdbs->prev_update_time = update_time;
 
 		idle_time = cur_idle_time - j_cdbs->prev_cpu_idle;
 		j_cdbs->prev_cpu_idle = cur_idle_time;
@@ -156,47 +156,62 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 			j_cdbs->prev_cpu_nice = cur_nice;
 		}
 
-		if (unlikely(!wall_time || wall_time < idle_time))
-			continue;
-
-		/*
-		 * If the CPU had gone completely idle, and a task just woke up
-		 * on this CPU now, it would be unfair to calculate 'load' the
-		 * usual way for this elapsed time-window, because it will show
-		 * near-zero load, irrespective of how CPU intensive that task
-		 * actually is. This is undesirable for latency-sensitive bursty
-		 * workloads.
-		 *
-		 * To avoid this, we reuse the 'load' from the previous
-		 * time-window and give this task a chance to start with a
-		 * reasonably high CPU frequency. (However, we shouldn't over-do
-		 * this copy, lest we get stuck at a high load (high frequency)
-		 * for too long, even when the current system load has actually
-		 * dropped down. So we perform the copy only once, upon the
-		 * first wake-up from idle.)
-		 *
-		 * Detecting this situation is easy: the governor's utilization
-		 * update handler would not have run during CPU-idle periods.
-		 * Hence, an unusually large 'wall_time' (as compared to the
-		 * sampling rate) indicates this scenario.
-		 *
-		 * prev_load can be zero in two cases and we must recalculate it
-		 * for both cases:
-		 * - during long idle intervals
-		 * - explicitly set to zero
-		 */
-		if (unlikely((wall_time > (2 * sampling_rate) &&
-			     j_cdbs->prev_load) || (wall_time == 0))) {
-			load = j_cdbs->prev_load;
-
+		if (unlikely(!time_elapsed)) {
 			/*
-			 * Perform a destructive copy, to ensure that we copy
-			 * the previous load only once, upon the first wake-up
-			 * from idle.
+			 * That can only happen when this function is called
+			 * twice in a row with a very short interval between the
+			 * calls, so the previous load value can be used then.
 			 */
+			load = j_cdbs->prev_load;
+		} else if (unlikely(time_elapsed > 2 * sampling_rate &&
+				    j_cdbs->prev_load)) {
+			/*
+			 * If the CPU had gone completely idle and a task has
+			 * just woken up on this CPU now, it would be unfair to
+			 * calculate 'load' the usual way for this elapsed
+			 * time-window, because it would show near-zero load,
+			 * irrespective of how CPU intensive that task actually
+			 * was. This is undesirable for latency-sensitive bursty
+			 * workloads.
+			 *
+			 * To avoid this, reuse the 'load' from the previous
+			 * time-window and give this task a chance to start with
+			 * a reasonably high CPU frequency. However, that
+			 * shouldn't be over-done, lest we get stuck at a high
+			 * load (high frequency) for too long, even when the
+			 * current system load has actually dropped down, so
+			 * clear prev_load to guarantee that the load will be
+			 * computed again next time.
+			 *
+			 * Detecting this situation is easy: the governor's
+			 * utilization update handler would not have run during
+			 * CPU-idle periods.  Hence, an unusually large
+			 * 'time_elapsed' (as compared to the sampling rate)
+			 * indicates this scenario.
+			 */
+			load = j_cdbs->prev_load;
 			j_cdbs->prev_load = 0;
 		} else {
-			load = 100 * (wall_time - idle_time) / wall_time;
+			if (time_elapsed >= idle_time) {
+				load = 100 * (time_elapsed - idle_time) / time_elapsed;
+			} else {
+				/*
+				 * That can happen if idle_time is returned by
+				 * get_cpu_idle_time_jiffy().  In that case
+				 * idle_time is roughly equal to the difference
+				 * between time_elapsed and "busy time" obtained
+				 * from CPU statistics.  Then, the "busy time"
+				 * can end up being greater than time_elapsed
+				 * (for example, if jiffies_64 and the CPU
+				 * statistics are updated by different CPUs),
+				 * so idle_time may in fact be negative.  That
+				 * means, though, that the CPU was busy all
+				 * the time (on the rough average) during the
+				 * last sampling interval and 100 can be
+				 * returned as the load.
+				 */
+				load = (int)idle_time < 0 ? 100 : 0;
+			}
 			j_cdbs->prev_load = load;
 		}
 
@@ -508,12 +523,12 @@ static int cpufreq_governor_start(struct cpufreq_policy *policy)
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);
-		unsigned int prev_load;
 
-		j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_cpu_wall, io_busy);
-
-		prev_load = j_cdbs->prev_cpu_wall - j_cdbs->prev_cpu_idle;
-		j_cdbs->prev_load = 100 * prev_load / (unsigned int)j_cdbs->prev_cpu_wall;
+		j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_update_time, io_busy);
+		/*
+		 * Make the first invocation of dbs_update() compute the load.
+		 */
+		j_cdbs->prev_load = 0;
 
 		if (ignore_nice)
 			j_cdbs->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
