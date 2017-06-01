@@ -1040,7 +1040,6 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-#if 0
 static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ 0, 384000 },
 	{ 1, 486000 },
@@ -1059,24 +1058,20 @@ static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ 14, 1890000 },
 	{ 15, CPUFREQ_TABLE_END },
 };
-#endif
 
-struct cpufreq_frequency_table mx_freq_table[35];
-
-#define MX_MAX_FREQS 15
 static void __init cpufreq_table_init(void)
 {
-	int i = 0;
-	int index = 0;
+	int i, index = 0;
 
-	mx_freq_table[index].frequency = drv.priv[index].speed.khz;
 	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (index = 0; mx_freq_table[index].frequency != 0
-			&& index < sizeof(*mx_freq_table) - 1;
-			 mx_freq_table[index].driver_data = index, index++) {
-		if (!drv.priv[i].use_for_scaling)
-			continue;
+	for (i = 0; drv.priv[i].speed.khz != 0
+			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
+		mx_freq_table[index].driver_data = index;
+		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+		index++;
 	}
+	/* freq_table not big enough to store all usable freqs. */
+	BUG_ON(drv.priv[i].speed.khz != 0);
 
 	mx_freq_table[index].driver_data = index;
 	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
@@ -1098,9 +1093,8 @@ static void __init dcvs_freq_init(void)
 static int acpuclk_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
-	int rc;
-	int cpu = (int)hcpu;
-	int prev_khz[cpu];
+	static int prev_khz[NR_CPUS];
+	int rc, cpu = (int)hcpu;
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
@@ -1109,10 +1103,10 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_BAD;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DOWN_PREPARE:
-	case CPU_UP_CANCELED:
+	case CPU_DEAD:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 		/* Fall through. */
+	case CPU_UP_CANCELED:
 		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG);
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
 		break;
@@ -1328,6 +1322,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpufreq_freqs freqs;
 	unsigned long new_freq_copy;
 
+	if (limited_max_freq_thermal > 0 && new_freq > limited_max_freq_thermal)
+		new_freq = limited_max_freq_thermal;
+
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
@@ -1348,10 +1345,8 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	int index;
 	struct cpufreq_frequency_table *table;
 
-	if (target_freq == policy->cur) {
-		ret = set_cpu_freq(policy, target_freq, table[index].driver_data);
+	if (target_freq == policy->cur)
 		goto done;
-	}
 
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (!table) {
@@ -1383,27 +1378,31 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 	hotplug_ready = true;
 }
 
-struct cpufreq_frequency_table freq_table[35];
+static struct cpufreq_frequency_table freq_table[] = {
+	{ .frequency = 384000 },
+	{ .frequency = 486000 },
+	{ .frequency = 594000 },
+	{ .frequency = 702000 },
+	{ .frequency = 810000 },
+	{ .frequency = 918000 },
+	{ .frequency = 1026000 },
+	{ .frequency = 1134000 },
+	{ .frequency = 1242000 },
+	{ .frequency = 1350000 },
+	{ .frequency = 1458000 },
+	{ .frequency = 1566000 },
+	{ .frequency = 1674000 },
+	{ .frequency = 1782000 },
+	{ .frequency = 1890000 },
+	{ .frequency = CPUFREQ_TABLE_END },
+};
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
+	int index;
 	int ret = 0;
 	int cpu;
-	int i = 0;
-	int index = 0;
-
-	freq_table[index].frequency = drv.priv[index].speed.khz;
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (index = 0; freq_table[index].frequency != 0
-			&& index < sizeof(*freq_table) - 1;
-			 freq_table[index].driver_data = index, index++) {
-		if (!drv.priv[index].use_for_scaling)
-			continue;
-	}
-
-	freq_table[index].driver_data = index;
-	freq_table[index].frequency = CPUFREQ_TABLE_END;
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
@@ -1479,13 +1478,14 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
-				  CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+				  CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
+	.suspend	= cpufreq_generic_suspend,
 	.ready		= msm_cpufreq_ready,
 };
 
