@@ -206,19 +206,11 @@ struct cs_cpu_dbs_info_s {
 
 /* Per policy Governors sysfs tunables */
 struct od_dbs_tuners {
-	unsigned int ignore_nice_load;
-	unsigned int sampling_rate;
-	unsigned int sampling_down_factor;
-	unsigned int up_threshold;
 	unsigned int powersave_bias;
 	unsigned int io_is_busy;
 };
 
 struct cs_dbs_tuners {
-	unsigned int ignore_nice_load;
-	unsigned int sampling_rate;
-	unsigned int sampling_down_factor;
-	unsigned int up_threshold;
 	unsigned int down_threshold;
 	unsigned int freq_step;
 };
@@ -258,9 +250,13 @@ static inline struct dbs_governor *dbs_governor_of(struct cpufreq_policy *policy
 
 /* Governor Per policy data */
 struct dbs_data {
-	unsigned int min_sampling_rate;
 	int usage_count;
 	void *tuners;
+	unsigned int min_sampling_rate;
+	unsigned int ignore_nice_load;
+	unsigned int sampling_rate;
+	unsigned int sampling_down_factor;
+	unsigned int up_threshold;
 };
 
 /* Governor specific ops, will be passed to dbs_data->gov_ops */
