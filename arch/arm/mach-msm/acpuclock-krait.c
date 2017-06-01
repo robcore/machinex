@@ -1322,9 +1322,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpufreq_freqs freqs;
 	unsigned long new_freq_copy;
 
-	if (limited_max_freq_thermal > 0 && new_freq > limited_max_freq_thermal)
-		new_freq = limited_max_freq_thermal;
-
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
@@ -1379,22 +1376,22 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 }
 
 static struct cpufreq_frequency_table freq_table[] = {
-	{ .frequency = 384000 },
-	{ .frequency = 486000 },
-	{ .frequency = 594000 },
-	{ .frequency = 702000 },
-	{ .frequency = 810000 },
-	{ .frequency = 918000 },
-	{ .frequency = 1026000 },
-	{ .frequency = 1134000 },
-	{ .frequency = 1242000 },
-	{ .frequency = 1350000 },
-	{ .frequency = 1458000 },
-	{ .frequency = 1566000 },
-	{ .frequency = 1674000 },
-	{ .frequency = 1782000 },
-	{ .frequency = 1890000 },
-	{ .frequency = CPUFREQ_TABLE_END },
+	[0]  = { 384000 },
+	[1]  = { 486000 },
+	[2]  = { 594000 },
+	[3]  = { 702000 },
+	[4]  = { 810000 },
+	[5]  = { 918000 },
+	[6]  = { 1026000 },
+	[7]  = { 1134000 },
+	[8]  = { 1242000 },
+	[9]  = { 1350000 },
+	[10]  = { 1458000 },
+	[11]  = { 1566000 },
+	[12]  = { 1674000 },
+	[13]  = { 1782000 },
+	[14]  = { 1890000 },
+	[15]  = { CPUFREQ_TABLE_END }
 };
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
@@ -1408,7 +1405,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return -ERANGE;
 
 	cpufreq_frequency_table_cpuinfo(policy, freq_table);
-	policy->cur = acpuclk_get_rate(policy->cpu);
+	policy->cur = freq_table[index].frequency;
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
 	 * online, frequency limit will always be updated.

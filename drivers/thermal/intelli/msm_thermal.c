@@ -114,7 +114,7 @@ fail:
 
 static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy policy;
 	int ret = 0;
 
 	reapply_hard_limits();
@@ -126,11 +126,12 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		therm_freq_limited = false;
 	}
 
-	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		cpufreq_update_policy(cpu);
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			continue;
+		ret = cpufreq_update_policy(cpu);
 	}
-	put_online_cpus();
 
 	reapply_hard_limits();
 	return ret;

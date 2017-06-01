@@ -106,6 +106,7 @@ static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[3] = BW_MBPS(2128), /* At least 266 MHz on bus. */
 	[4] = BW_MBPS(3200), /* At least 400 MHz on bus. */
 	[5] = BW_MBPS(4264), /* At least 533 MHz on bus. */
+	[6] = BW_MBPS(4800), /* At least 600 MHz on bus. */
 };
 
 static struct msm_bus_scale_pdata bus_scale_data __initdata = {
@@ -146,7 +147,7 @@ static struct acpu_level tbl_slow[] __initdata = {
 	{ 1, {   810000, HFPLL, 1, 0x1E }, L2(5),  1075000 },
 	{ 0, {   864000, HFPLL, 1, 0x20 }, L2(5),  1100000 },
 	{ 1, {   918000, HFPLL, 1, 0x22 }, L2(5),  1100000 },
-	{ 0, {   972000, HFPLL, 1, 0x24 }, L2(5),  1125000 },
+	{ 0, {   972000, HFPLL,14 1, 0x24 }, L2(5),  1125000 },
 	{ 1, {  1026000, HFPLL, 1, 0x26 }, L2(5),  1125000 },
 	{ 0, {  1080000, HFPLL, 1, 0x28 }, L2(14), 1175000 },
 	{ 1, {  1134000, HFPLL, 1, 0x2A }, L2(14), 1175000 },
