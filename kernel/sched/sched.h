@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <linux/printk.h>
 #include <linux/module.h>
+#include <linux/cpufreq.h>
 
 #include "cpupri.h"
 #include "cpudeadline.h"
