@@ -24,6 +24,8 @@
 				     * elements and start later
 				     */
 
+extern int msm_dcvs_enabled;
+
 enum msm_core_idle_state {
 	MSM_DCVS_IDLE_ENTER,
 	MSM_DCVS_IDLE_EXIT,

@@ -24,6 +24,8 @@
 #include <linux/tick.h>
 #include <mach/msm_dcvs.h>
 
+extern int msm_dcvs_enabled;
+
 struct cpu_idle_info {
 	int			enabled;
 	int			dcvs_core_id;
@@ -39,6 +41,8 @@ static int msm_dcvs_idle_notifier(int core_num,
 {
 	struct cpu_idle_info *info = &per_cpu(cpu_idle_info, core_num);
 
+	if (!msm_dcvs_enabled)
+		return 0;
 	switch (event) {
 	case MSM_DCVS_ENABLE_IDLE_PULSE:
 		info->enabled = true;
@@ -71,7 +75,7 @@ static int msm_cpuidle_notifier(struct notifier_block *self, unsigned long cmd,
 	u64 val = 0;
 	uint32_t iowaited = 0;
 
-	if (!info->enabled)
+	if (!info->enabled || !msm_dcvs_enabled)
 		return NOTIFY_OK;
 
 	switch (cmd) {
@@ -186,45 +190,70 @@ static unsigned int msm_dcvs_freq_get(int core_num)
 	return gov->policy->cur;
 }
 
-static int cpufreq_governor_msm(struct cpufreq_policy *policy,
-		unsigned int event)
+static int cpufreq_msm_dcvs_policy_init(struct cpufreq_policy *policy)
 {
-	unsigned int cpu = policy->cpu;
+	if (!msm_dcvs_enabled)
+		return -EINVAL;
+
+	return 0;
+}
+
+static void cpufreq_msm_dcvs_policy_exit(struct cpufreq_policy *policy)
+{
+	return;
+}
+
+static int cpufreq_msm_dcvs_policy_start(struct cpufreq_policy *policy)
+{
 	int ret = 0;
-	int handle = 0;
+	unsigned int cpu = policy->cpu;
 	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
 
-	switch (event) {
-	case CPUFREQ_GOV_START:
-		if (!cpu_online(cpu))
-			return -EINVAL;
-		BUG_ON(!policy->cur);
-		mutex_lock(&per_cpu(gov_mutex, cpu));
-		per_cpu(msm_gov_info, cpu).cpu = cpu;
-		gov->policy = policy;
-		handle = msm_dcvs_freq_sink_start(gov->dcvs_core_id);
-		BUG_ON(handle < 0);
-		msm_gov_check_limits(policy);
+	if (!cpu_online(cpu) || !msm_dcvs_enabled ||
+		!policy->cur) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	mutex_lock(&per_cpu(gov_mutex, cpu));
+
+	per_cpu(msm_gov_info, cpu).cpu = cpu;
+	gov->policy = policy;
+	ret = msm_dcvs_freq_sink_start(gov->dcvs_core_id);
+
+	if (ret < 0) {
+		ret = -EINVAL;
 		mutex_unlock(&per_cpu(gov_mutex, cpu));
-		break;
+		goto fail;
+	}
 
-	case CPUFREQ_GOV_STOP:
-		msm_dcvs_freq_sink_stop(gov->dcvs_core_id);
-		break;
-
-	case CPUFREQ_GOV_LIMITS:
-		mutex_lock(&per_cpu(gov_mutex, cpu));
-		msm_gov_check_limits(policy);
-		mutex_unlock(&per_cpu(gov_mutex, cpu));
-		break;
-	};
-
+	msm_gov_check_limits(policy);
+	mutex_unlock(&per_cpu(gov_mutex, cpu));
+fail:
 	return ret;
+
+static void cpufreq_msm_dcvs_policy_stop(struct cpufreq_policy *policy)
+{
+	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
+
+	msm_dcvs_freq_sink_stop(gov->dcvs_core_id);
+}
+
+static void cpufreq_msm_dcvs_policy_limits(struct cpufreq_policy *policy)
+{
+	struct msm_gov *gov = &per_cpu(msm_gov_info, policy->cpu);
+	unsigned int cpu = policy->cpu;
+
+	if (!msm_dcvs_enabled)
+		return;
+
+	mutex_lock(&per_cpu(gov_mutex, cpu));
+	msm_gov_check_limits(policy);
+	mutex_unlock(&per_cpu(gov_mutex, cpu));
 }
 
 struct cpufreq_governor cpufreq_gov_msm = {
 	.name = "msm-dcvs",
-	.governor = cpufreq_governor_msm,
 	.owner = THIS_MODULE,
 };
 
@@ -240,7 +269,8 @@ static int msm_gov_probe(struct platform_device *pdev)
 	core_info = pdata->info;
 	latency = pdata->latency;
 
-	return -EINVAL;
+	if (!msm_dcvs_enabled)
+		return -EINVAL;
 
 	for_each_possible_cpu(cpu) {
 		struct msm_gov *gov = &per_cpu(msm_gov_info, cpu);
@@ -281,6 +311,11 @@ static struct platform_driver msm_gov_driver = {
 	.remove = msm_gov_remove,
 	.driver = {
 		.name = "msm_dcvs_gov",
+		.init		= cpufreq_msm_dcvs_policy_init,
+		.exit		= cpufreq_msm_dcvs_policy_exit,
+		.start		= cpufreq_msm_dcvs_policy_start,
+		.stop		= cpufreq_msm_dcvs_policy_stop,
+		.limits		= cpufreq_msm_dcvs_policy_limits,
 		.owner = THIS_MODULE,
 	},
 };
