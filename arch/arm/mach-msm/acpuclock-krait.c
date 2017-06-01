@@ -93,7 +93,10 @@ bool hotplug_ready;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
-	return drv.scalable[cpu].cur_speed->khz;
+	if (cpu_online(cpu))
+		return drv.scalable[cpu].cur_speed->khz;
+	else
+		return 0;
 }
 
 /* Select a source on the primary MUX. */
@@ -1103,7 +1106,7 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_BAD;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_DEAD:
+	case CPU_DOWN_PREPARE:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 		/* Fall through. */
 	case CPU_UP_CANCELED:
