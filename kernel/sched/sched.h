@@ -2112,20 +2112,4 @@ static inline void cpufreq_trigger_update(u64 time)
 {
 	cpufreq_update_util(time, ULONG_MAX, 0);
 }
-
-#ifdef CONFIG_CPU_FREQ
-struct update_util_data {
-	void (*func)(struct update_util_data *data,
-		     u64 time, unsigned long util, unsigned long max);
-};
-
-void cpufreq_set_update_util_data(int cpu, struct update_util_data *data);
-void cpufreq_add_update_util_hook(int cpu, struct update_util_data *data,
-			void (*func)(struct update_util_data *data, u64 time,
-				     unsigned long util, unsigned long max));
-void cpufreq_remove_update_util_hook(int cpu);
-#else /* !CONFIG_CPU_FREQ */
-static inline void cpufreq_update_util(u64 time, unsigned long util, unsigned long max) {}
-static inline void cpufreq_trigger_update(u64 time) {}
-#endif /* CONFIG_CPU_FREQ */
-}
+#endif
