@@ -93,8 +93,7 @@ bool hotplug_ready;
 
 static unsigned long acpuclk_krait_get_rate(int cpu)
 {
-	if (cpu_online(cpu))
-		return drv.scalable[cpu].cur_speed->khz;
+	return drv.scalable[cpu].cur_speed->khz;
 }
 
 /* Select a source on the primary MUX. */
