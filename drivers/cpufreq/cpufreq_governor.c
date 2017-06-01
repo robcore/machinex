@@ -199,8 +199,9 @@ void dbs_check_cpu(struct cpufreq_policy *policy)
 		if (ignore_nice) {
 			u64 cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 
-			idle_time += cputime_to_usecs(cur_nice - j_cdbs->prev_cpu_nice);
+			idle_time += div_u64(cur_nice - j_cdbs->prev_cpu_nice, NSEC_PER_USEC);
 			j_cdbs->prev_cpu_nice = cur_nice;
+
 		}
 
 		if (unlikely(!wall_time || wall_time < idle_time))
