@@ -89,6 +89,11 @@ static inline void cpufreq_exit_governor(struct cpufreq_policy *policy)
 	(void)cpufreq_governor(policy, CPUFREQ_GOV_POLICY_EXIT);
 }
 
+static inline void cpufreq_stop_governor(struct cpufreq_policy *policy)
+{
+	(void)cpufreq_governor(policy, CPUFREQ_GOV_STOP);
+}
+
 /**
  * Two notifier lists: the "policy" list is involved in the
  * validation process for a new CPU frequency policy; the
@@ -1210,13 +1215,8 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy, unsigned int cp
 		return 0;
 
 	down_write(&policy->rwsem);
-	if (has_target()) {
-		ret = cpufreq_governor(policy, CPUFREQ_GOV_STOP);
-		if (ret) {
-			pr_err("%s: Failed to stop governor\n", __func__);
-			goto unlock;
-		}
-	}
+	if (has_target())
+		cpufreq_stop_governor(policy);
 
 	cpumask_set_cpu(cpu, policy->cpus);
 
@@ -1225,8 +1225,6 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy, unsigned int cp
 		if (ret)
 			pr_err("%s: Failed to start governor\n", __func__);
 	}
-
-unlock:
 	up_write(&policy->rwsem);
 	return ret;
 }
@@ -1545,11 +1543,8 @@ static void cpufreq_offline(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
-	if (has_target()) {
-		ret = cpufreq_governor(policy, CPUFREQ_GOV_STOP);
-		if (ret)
-			pr_err("%s: Failed to stop governor\n", __func__);
-	}
+	if (has_target())
+		cpufreq_stop_governor(policy);
 
 	cpumask_clear_cpu(cpu, policy->cpus);
 
@@ -1831,7 +1826,6 @@ EXPORT_SYMBOL(cpufreq_generic_suspend);
 void cpufreq_suspend(void)
 {
 	struct cpufreq_policy *policy;
-	int ret;
 
 	if (!cpufreq_driver)
 		return;
@@ -1843,16 +1837,8 @@ void cpufreq_suspend(void)
 
 	for_each_active_policy(policy) {
 		down_write(&policy->rwsem);
-		ret = cpufreq_governor(policy, CPUFREQ_GOV_STOP);
+		cpufreq_stop_governor(policy);
 		up_write(&policy->rwsem);
-
-		if (ret)
-			pr_err("%s: Failed to stop governor for policy: %p\n",
-				__func__, policy);
-		else if (cpufreq_driver->suspend
-		    && cpufreq_driver->suspend(policy))
-			pr_err("%s: Failed to suspend driver: %p\n", __func__,
-				policy);
 	}
 
 suspend:
@@ -2437,13 +2423,7 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	old_gov = policy->governor;
 	/* end old governor */
 	if (old_gov) {
-		ret = cpufreq_governor(policy, CPUFREQ_GOV_STOP);
-		if (ret) {
-			/* This can happen due to race with other operations */
-			pr_debug("%s: Failed to Stop Governor: %s (%d)\n",
-				 __func__, old_gov->name, ret);
-			return ret;
-		}
+		cpufreq_stop_governor(policy);
 		cpufreq_exit_governor(policy);
 	}
 
