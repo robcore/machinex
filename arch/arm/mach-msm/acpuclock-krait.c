@@ -1419,7 +1419,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	ret = set_cpu_freq(policy, freq_table[index].frequency,
 			   freq_table[index].driver_data);
 
-	return cpufreq_table_validate_and_show(policy, freq_table);
+	return ret;
 }
 
 static int msm_cpufreq_suspend(void)
