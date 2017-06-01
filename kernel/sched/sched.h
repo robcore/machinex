@@ -2054,6 +2054,14 @@ static inline u64 irq_time_read(int cpu)
 #define arch_scale_freq_invariant()	(false)
 #endif
 
+#ifdef arch_scale_freq_capacity
+#ifndef arch_scale_freq_invariant
+#define arch_scale_freq_invariant()	(true)
+#endif
+#else /* arch_scale_freq_capacity */
+#define arch_scale_freq_invariant()	(false)
+#endif
+
 static inline void account_reset_rq(struct rq *rq)
 {
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING

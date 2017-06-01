@@ -9,23 +9,16 @@
  * published by the Free Software Foundation.
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/cpufreq.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <trace/events/power.h>
-#include <trace/events/sched.h>
 
 #include "sched.h"
-#include "tune.h"
 
 struct sugov_tunables {
 	struct gov_attr_set attr_set;
 	unsigned int rate_limit_us;
-#ifdef CONFIG_FREQVAR_SCHEDTUNE
-	struct freqvar_boost_data freqvar_boost;
-#endif
 };
 
 struct sugov_policy {
@@ -38,8 +31,6 @@ struct sugov_policy {
 	u64 last_freq_update_time;
 	s64 freq_update_delay_ns;
 	unsigned int next_freq;
-	unsigned int max_util;
-	bool pending;
 
 	/* The next fields are only needed if fast switch cannot be used. */
 	struct irq_work irq_work;
@@ -63,25 +54,10 @@ struct sugov_cpu {
 static DEFINE_PER_CPU(struct sugov_cpu, sugov_cpu);
 
 /************************ Governor internals ***********************/
-static unsigned int sugov_next_freq_shared(struct sugov_policy *sg_policy,
-					   unsigned long util, unsigned long max);
 
 static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 {
 	s64 delta_ns;
-	struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, smp_processor_id());
-	bool up_scale = (sg_cpu->util > sg_policy->max_util);
-
-	if (up_scale) {
-		if (!sg_policy->work_in_progress)
-			return true;
-		else {
-			sg_policy->next_freq = sugov_next_freq_shared(sg_policy,
-							sg_cpu->util, sg_cpu->max);
-			sg_policy->pending = true;
-			return false;
-		}
-	}
 
 	if (sg_policy->work_in_progress)
 		return false;
@@ -100,32 +76,29 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 	return delta_ns >= sg_policy->freq_update_delay_ns;
 }
 
-static int sugov_select_scaling_cpu(void)
-{
-	int cpu;
-	cpumask_t mask;
-
-	cpumask_clear(&mask);
-	cpumask_and(&mask, cpu_coregroup_mask(0), cpu_online_mask);
-
-	/* Idle core of the boot cluster is selected to scaling cpu */
-	for_each_cpu(cpu, &mask)
-		if (idle_cpu(cpu))
-			return cpu;
-
-	return cpumask_weight(&mask) - 1;
-}
-
 static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 				unsigned int next_freq)
 {
+	struct cpufreq_policy *policy = sg_policy->policy;
+
 	sg_policy->last_freq_update_time = time;
 
-	if (sg_policy->next_freq != next_freq) {
+	if (policy->fast_switch_enabled) {
+		if (sg_policy->next_freq == next_freq) {
+			trace_cpu_frequency(policy->cur, smp_processor_id());
+			return;
+		}
+		sg_policy->next_freq = next_freq;
+		next_freq = cpufreq_driver_fast_switch(policy, next_freq);
+		if (next_freq == CPUFREQ_ENTRY_INVALID)
+			return;
+
+		policy->cur = next_freq;
+		trace_cpu_frequency(next_freq, smp_processor_id());
+	} else if (sg_policy->next_freq != next_freq) {
 		sg_policy->next_freq = next_freq;
 		sg_policy->work_in_progress = true;
-		irq_work_queue_on(&sg_policy->irq_work,
-			sugov_select_scaling_cpu());
+		irq_work_queue(&sg_policy->irq_work);
 	}
 }
 
@@ -169,9 +142,6 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 
 	next_f = util == ULONG_MAX ? policy->cpuinfo.max_freq :
 			get_next_freq(policy, util, max);
-
-	trace_sched_freq_commit(time, util, max, next_f);
-
 	sugov_update_commit(sg_policy, time, next_f);
 }
 
@@ -184,7 +154,7 @@ static unsigned int sugov_next_freq_shared(struct sugov_policy *sg_policy,
 	unsigned int j;
 
 	if (util == ULONG_MAX)
-		goto return_max;
+		return max_f;
 
 	for_each_cpu(j, policy->cpus) {
 		struct sugov_cpu *j_sg_cpu;
@@ -208,7 +178,7 @@ static unsigned int sugov_next_freq_shared(struct sugov_policy *sg_policy,
 
 		j_util = j_sg_cpu->util;
 		if (j_util == ULONG_MAX)
-			goto return_max;
+			return max_f;
 
 		j_max = j_sg_cpu->max;
 		if (j_util * max > j_max * util) {
@@ -217,13 +187,7 @@ static unsigned int sugov_next_freq_shared(struct sugov_policy *sg_policy,
 		}
 	}
 
-	sg_policy->max_util = util;
 	return get_next_freq(policy, util, max);
-
-return_max:
-	sg_policy->max_util = max;
-	return max_f;
-
 }
 
 static void sugov_update_shared(struct update_util_data *hook, u64 time,
@@ -241,9 +205,6 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 
 	if (sugov_should_update_freq(sg_policy, time)) {
 		next_f = sugov_next_freq_shared(sg_policy, util, max);
-
-		trace_sched_freq_commit(time, util, max, next_f);
-
 		sugov_update_commit(sg_policy, time, next_f);
 	}
 
@@ -255,16 +216,8 @@ static void sugov_work(struct work_struct *work)
 	struct sugov_policy *sg_policy = container_of(work, struct sugov_policy, work);
 
 	mutex_lock(&sg_policy->work_lock);
-
 	__cpufreq_driver_target(sg_policy->policy, sg_policy->next_freq,
-			CPUFREQ_RELATION_L);
-	/* if frequency up scaling is in pending, retry scaling */
-	if (sg_policy->pending) {
-		__cpufreq_driver_target(sg_policy->policy, sg_policy->next_freq,
 				CPUFREQ_RELATION_L);
-		sg_policy->pending = false;
-	}
-
 	mutex_unlock(&sg_policy->work_lock);
 
 	sg_policy->work_in_progress = false;
@@ -312,93 +265,11 @@ static ssize_t rate_limit_us_store(struct gov_attr_set *attr_set, const char *bu
 
 	return count;
 }
-#ifdef CONFIG_FREQVAR_SCHEDTUNE
-static unsigned int *get_tokenized_data(const char *buf, int *num_tokens)
-{
-	const char *cp;
-	int i;
-	int ntokens = 1;
-	unsigned int *tokenized_data;
-	int err = -EINVAL;
-
-	cp = buf;
-	while ((cp = strpbrk(cp + 1, " :")))
-		ntokens++;
-
-	if (!(ntokens & 0x1))
-		goto err;
-
-	tokenized_data = kmalloc(ntokens * sizeof(unsigned int), GFP_KERNEL);
-	if (!tokenized_data) {
-		err = -ENOMEM;
-		goto err;
-	}
-
-	cp = buf;
-	i = 0;
-	while (i < ntokens) {
-		if (sscanf(cp, "%u", &tokenized_data[i++]) != 1)
-			goto err_kfree;
-
-		cp = strpbrk(cp, " :");
-		if (!cp)
-			break;
-		cp++;
-	}
-
-	if (i != ntokens)
-		goto err_kfree;
-
-	*num_tokens = ntokens;
-	return tokenized_data;
-
-err_kfree:
-	kfree(tokenized_data);
-err:
-	return ERR_PTR(err);
-}
-
-static ssize_t freqvar_boost_show(struct gov_attr_set *attr_set, char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct freqvar_boost_data *data = &tunables->freqvar_boost;
-	struct freqvar_boost_table *pos = data->table;
-	int ret = 0;
-
-	for (; pos->frequency != CPUFREQ_TABLE_END; pos++)
-		ret += sprintf(buf + ret, "%8d ratio:%3d \n", pos->frequency,
-					pos->boost / SCHEDTUNE_LOAD_BOOST_UTIT);
-	return ret;
-}
-
-static ssize_t freqvar_boost_store(struct gov_attr_set *attr_set, const char *buf,
-				   size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct freqvar_boost_data *data = &tunables->freqvar_boost;
-	int *new_table = NULL;
-	int ntokens;
-
-	new_table = get_tokenized_data(buf, &ntokens);
-	if (IS_ERR(new_table))
-		return PTR_RET(new_table);
-
-	schedtune_freqvar_update_table(new_table, ntokens, data->table);
-
-	kfree(new_table);
-
-	return count;
-}
-static struct governor_attr freqvar_boost = __ATTR_RW(freqvar_boost);
-#endif /* CONFIG_FREQVAR_SCHEDTUNE */
 
 static struct governor_attr rate_limit_us = __ATTR_RW(rate_limit_us);
 
 static struct attribute *sugov_attributes[] = {
 	&rate_limit_us.attr,
-#ifdef CONFIG_FREQVAR_SCHEDTUNE
-	&freqvar_boost.attr,
-#endif
 	NULL
 };
 
@@ -409,7 +280,7 @@ static struct kobj_type sugov_tunables_ktype = {
 
 /********************** cpufreq governor interface *********************/
 
-struct cpufreq_governor schedutil_gov;
+static struct cpufreq_governor schedutil_gov;
 
 static struct sugov_policy *sugov_policy_alloc(struct cpufreq_policy *policy)
 {
@@ -489,13 +360,10 @@ static int sugov_init(struct cpufreq_policy *policy)
 		goto free_sg_policy;
 	}
 
-	tunables->rate_limit_us = DEFAULT_LATENCY_MULTIPLIER;
+	tunables->rate_limit_us = LATENCY_MULTIPLIER;
 	lat = policy->cpuinfo.transition_latency / NSEC_PER_USEC;
 	if (lat)
 		tunables->rate_limit_us *= lat;
-
-	/* init freqvar_boost */
-	schedtune_freqvar_boost_init(policy, &tunables->freqvar_boost);
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
@@ -509,18 +377,18 @@ static int sugov_init(struct cpufreq_policy *policy)
  out:
 	mutex_unlock(&global_tunables_lock);
 
+	cpufreq_enable_fast_switch(policy);
 	return 0;
 
  fail:
 	policy->governor_data = NULL;
-	schedtune_freqvar_boost_exit(policy, &tunables->freqvar_boost);
 	sugov_tunables_free(tunables);
 
  free_sg_policy:
 	mutex_unlock(&global_tunables_lock);
 
 	sugov_policy_free(sg_policy);
-	pr_err("initialization failed (error %d)\n", ret);
+	pr_err("cpufreq: schedutil governor initialization failed (error %d)\n", ret);
 	return ret;
 }
 
@@ -534,10 +402,8 @@ static int sugov_exit(struct cpufreq_policy *policy)
 
 	count = gov_attr_set_put(&tunables->attr_set, &sg_policy->tunables_hook);
 	policy->governor_data = NULL;
-	if (!count) {
-		schedtune_freqvar_boost_exit(policy, &tunables->freqvar_boost);
+	if (!count)
 		sugov_tunables_free(tunables);
-	}
 
 	mutex_unlock(&global_tunables_lock);
 
@@ -553,8 +419,6 @@ static int sugov_start(struct cpufreq_policy *policy)
 	sg_policy->freq_update_delay_ns = sg_policy->tunables->rate_limit_us * NSEC_PER_USEC;
 	sg_policy->last_freq_update_time = 0;
 	sg_policy->next_freq = UINT_MAX;
-	sg_policy->max_util = 0;
-	sg_policy->pending = false;
 	sg_policy->work_in_progress = false;
 	sg_policy->need_freq_update = false;
 
@@ -563,7 +427,7 @@ static int sugov_start(struct cpufreq_policy *policy)
 
 		sg_cpu->sg_policy = sg_policy;
 		if (policy_is_shared(policy)) {
-			sg_cpu->util = 0;
+			sg_cpu->util = ULONG_MAX;
 			sg_cpu->max = 0;
 			sg_cpu->last_update = 0;
 			cpufreq_add_update_util_hook(cpu, &sg_cpu->update_util,
@@ -595,16 +459,18 @@ static int sugov_limits(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy = policy->governor_data;
 
-	mutex_lock(&sg_policy->work_lock);
+	if (!policy->fast_switch_enabled) {
+		mutex_lock(&sg_policy->work_lock);
 
-	if (policy->max < policy->cur)
-		__cpufreq_driver_target(policy, policy->max,
-					CPUFREQ_RELATION_H);
-	else if (policy->min > policy->cur)
-		__cpufreq_driver_target(policy, policy->min,
-					CPUFREQ_RELATION_L);
+		if (policy->max < policy->cur)
+			__cpufreq_driver_target(policy, policy->max,
+						CPUFREQ_RELATION_H);
+		else if (policy->min > policy->cur)
+			__cpufreq_driver_target(policy, policy->min,
+						CPUFREQ_RELATION_L);
 
-	mutex_unlock(&sg_policy->work_lock);
+		mutex_unlock(&sg_policy->work_lock);
+	}
 
 	sg_policy->need_freq_update = true;
 	return 0;
@@ -629,7 +495,7 @@ int sugov_governor(struct cpufreq_policy *policy, unsigned int event)
 	return -EINVAL;
 }
 
-struct cpufreq_governor schedutil_gov = {
+static struct cpufreq_governor schedutil_gov = {
 	.name = "schedutil",
 	.governor = sugov_governor,
 	.owner = THIS_MODULE,
