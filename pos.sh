@@ -1,21 +1,7 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0036-and-no-need-to-validate-and-show-twice-if-we-are-set.patch"
-patch -p1 -R < "/root/machinex/patches/0035-but-do-it-right.patch"
-patch -p1 -R < "/root/machinex/patches/0034-wanna-try-this.patch"
-patch -p1 -R < "/root/machinex/patches/0033-superfluous.patch"
-patch -p1 -R < "/root/machinex/patches/0032-import-better-kobj-handling-fix-hotplug-statemachine.patch"
-patch -p1 -R < "/root/machinex/patches/0031-sneaky.patch"
-patch -p1 -R < "/root/machinex/patches/0030-cpufreq-Split-cpufreq_governor-into-simpler-function.patch"
-patch -p1 -R < "/root/machinex/patches/0029-cpufreq-governor-Simplify-performance-and-powersave.patch"
-patch -p1 -R < "/root/machinex/patches/0028-cpufreq-governor-Check-transition-latecy-at-init-tim.patch"
-patch -p1 -R < "/root/machinex/patches/0027-cpufreq-governor-CPUFREQ_GOV_LIMITS-never-fails.patch"
-patch -p1 -R < "/root/machinex/patches/0026-convert-to-and-fix-hotplug-state-machine.patch"
-patch -p1 -R < "/root/machinex/patches/0025-some-minor-optimization-throughout-cpufreq.everythin.patch"
-patch -p1 -R < "/root/machinex/patches/0024-cpufreq-optimize-cur-freq-for-success-case-also-for-.patch"
-patch -p1 -R < "/root/machinex/patches/0023-add-back-cur_freq.patch"
-patch -p1 -R < "/root/machinex/patches/0022-reverted-to-last-working.patch"
-patch -p1 -R < "/root/machinex/patches/0021-how-bout-that.patch"
-patch -p1 -R < "/root/machinex/patches/0020-oh-oops.patch"
-patch -p1 -R < "/root/machinex/patches/0019-some-fixer-uppers.patch"
-patch -p1 -R < "/root/machinex/patches/0018-merged-cpufreq-4.8-and-made-a-couple-of-changes-to-a.patch"
-patch -p1 -R < "/root/machinex/patches/0017-IT-BLOODY-WORKS-Turning-off-generic-suspend-though-a.patch"
+patching file arch/arm/mach-msm/acpuclock-krait.c Hunk #1 FAILED at 1093. Hunk #2 FAILED at 1104. Hunk #3 FAILED at 1118. 3 out of 3 hunks FAILED -- saving rejects to file arch/arm/mach-msm/acpuclock-krait.c.rej
+patching file arch/arm/mach-msm/acpuclock-krait.c Unreversed patch detected! Ignore -R? [n] Apply anyway? [n] Skipping patch. 8 out of 8 hunks ignored -- saving rejects to file arch/arm/mach-msm/acpuclock-krait.c.rej patching file drivers/cpufreq/cpufreq_gov_msm.c
+patching file arch/arm/mach-msm/acpuclock-krait.c Hunk #1 FAILED at 1387. 1 out of 1 hunk FAILED -- saving rejects to file arch/arm/mach-msm/acpuclock-krait.c.rej
+patching file arch/arm/mach-msm/acpuclock-krait.c
+patching file arch/arm/mach-msm/acpuclock-krait.c Hunk #1 succeeded at 1481 (offset 2 lines).
+patching file drivers/thermal/intelli/msm_thermal.c

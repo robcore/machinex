@@ -558,10 +558,11 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 
 	strt_acpu_s = drv.scalable[cpu].cur_speed;
 
-	/* Return early if rate didn't change. */
+	/* Return early if rate didn't change.
+*rob note, all of this return early stuff is returning 0's, friends. thought of that?
 	if (rate == strt_acpu_s->khz)
 		goto out;
-
+ */
 	/* Find target frequency. */
 	for (tgt = drv.priv; tgt->speed.khz != 0; tgt++) {
 		if (tgt->speed.khz == rate) {
@@ -1061,7 +1062,7 @@ static struct cpufreq_frequency_table mx_freq_table[] = {
 };
 #endif
 
-struct cpufreq_frequency_table mx_freq_table[35];
+struct cpufreq_frequency_table *mx_freq_table;
 
 #define MX_MAX_FREQS 15
 static void __init cpufreq_table_init(void)
@@ -1072,7 +1073,7 @@ static void __init cpufreq_table_init(void)
 	mx_freq_table[index].frequency = drv.priv[index].speed.khz;
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (index = 0; mx_freq_table[index].frequency != 0
-			&& index < sizeof(*mx_freq_table) - 1;
+			&& index < MX_MAX_FREQS-1;
 			 mx_freq_table[index].driver_data = index, index++) {
 		if (!drv.priv[i].use_for_scaling)
 			continue;
@@ -1098,9 +1099,9 @@ static void __init dcvs_freq_init(void)
 static int acpuclk_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
+	static unsigned long prev_khz;
 	int rc;
 	int cpu = (int)hcpu;
-	int prev_khz[cpu];
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
@@ -1111,7 +1112,7 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DOWN_PREPARE:
 	case CPU_UP_CANCELED:
-		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
+		prev_khz = acpuclk_krait_get_rate(cpu);
 		/* Fall through. */
 		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG);
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
@@ -1123,13 +1124,13 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 				return NOTIFY_BAD;
 			break;
 		}
-		if (WARN_ON(!prev_khz[cpu]))
+		if (WARN_ON(!prev_khz))
 			return NOTIFY_BAD;
 		rc = regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg,
 						sc->vreg[VREG_CORE].cur_ua);
 		if (rc < 0)
 			return NOTIFY_BAD;
-		acpuclk_krait_set_rate(cpu, prev_khz[cpu], SETRATE_HOTPLUG);
+		acpuclk_krait_set_rate(cpu, prev_khz, SETRATE_HOTPLUG);
 		break;
 	default:
 		break;
@@ -1383,8 +1384,9 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 	hotplug_ready = true;
 }
 
-struct cpufreq_frequency_table freq_table[35];
+struct cpufreq_frequency_table *freq_table;
 
+#define QCOM_MAX_FREQS 15
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
@@ -1396,7 +1398,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	freq_table[index].frequency = drv.priv[index].speed.khz;
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (index = 0; freq_table[index].frequency != 0
-			&& index < sizeof(*freq_table) - 1;
+			&& index < QCOM_MAX_FREQS-1;
 			 freq_table[index].driver_data = index, index++) {
 		if (!drv.priv[index].use_for_scaling)
 			continue;
@@ -1479,7 +1481,7 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
-				  CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+				  CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
