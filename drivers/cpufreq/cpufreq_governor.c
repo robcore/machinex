@@ -205,7 +205,6 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 
 			idle_time += div_u64(cur_nice - j_cdbs->prev_cpu_nice, NSEC_PER_USEC);
 			j_cdbs->prev_cpu_nice = cur_nice;
-
 		}
 
 		if (unlikely(!wall_time || wall_time < idle_time))
@@ -259,50 +258,6 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(dbs_update);
 
-static void gov_set_update_util(struct policy_dbs_info *policy_dbs,
-				unsigned int delay_us)
-{
-	struct cpufreq_policy *policy = policy_dbs->policy;
-	int cpu;
-
-	gov_update_sample_delay(policy_dbs, delay_us);
-	policy_dbs->last_sample_time = 0;
-
-	for_each_cpu(cpu, policy->cpus) {
-		struct cpu_dbs_info *cdbs = &per_cpu(cpu_dbs, cpu);
-
-		cpufreq_set_update_util_data(cpu, &cdbs->update_util);
-	}
-}
-
-static inline void gov_clear_update_util(struct cpufreq_policy *policy)
-{
-	int i;
-
-	for_each_cpu(i, policy->cpus)
-		cpufreq_set_update_util_data(i, NULL);
-
-	synchronize_sched();
-}
-
-static void gov_cancel_work(struct cpufreq_policy *policy)
-{
-	struct policy_dbs_info *policy_dbs = policy->governor_data;
-
-	/* Tell dbs_update_util_handler() to skip queuing up work items. */
-	atomic_inc(&policy_dbs->work_count);
-	/*
-	 * If dbs_update_util_handler() is already running, it may not notice
-	 * the incremented work_count, so wait for it to complete to prevent its
-	 * work item from being queued up after the cancel_work_sync() below.
-	 */
-	gov_clear_update_util(policy_dbs->policy);
-	irq_work_sync(&policy_dbs->irq_work);
-	cancel_work_sync(&policy_dbs->work);
-	atomic_set(&policy_dbs->work_count, 0);
-	policy_dbs->work_in_progress = false;
-}
-
 static void dbs_work_handler(struct work_struct *work)
 {
 	struct policy_dbs_info *policy_dbs;
@@ -351,7 +306,6 @@ static void dbs_update_util_handler(struct update_util_data *data, u64 time,
 	 * The work may not be allowed to be queued up right now.
 	 * Possible reasons:
 	 * - Work has already been queued up or is in progress.
-	 * - The governor is being stopped.
 	 * - It is too early (too little time from the previous sample).
 	 */
 	if (policy_dbs->work_in_progress)
@@ -389,6 +343,44 @@ static void dbs_update_util_handler(struct update_util_data *data, u64 time,
 	policy_dbs->last_sample_time = time;
 	policy_dbs->work_in_progress = true;
 	irq_work_queue(&policy_dbs->irq_work);
+}
+
+static void gov_set_update_util(struct policy_dbs_info *policy_dbs,
+				unsigned int delay_us)
+{
+	struct cpufreq_policy *policy = policy_dbs->policy;
+	int cpu;
+
+	gov_update_sample_delay(policy_dbs, delay_us);
+	policy_dbs->last_sample_time = 0;
+
+	for_each_cpu(cpu, policy->cpus) {
+		struct cpu_dbs_info *cdbs = &per_cpu(cpu_dbs, cpu);
+
+		cpufreq_add_update_util_hook(cpu, &cdbs->update_util,
+					     dbs_update_util_handler);
+	}
+}
+
+static inline void gov_clear_update_util(struct cpufreq_policy *policy)
+{
+	int i;
+
+	for_each_cpu(i, policy->cpus)
+		cpufreq_remove_update_util_hook(i);
+
+	synchronize_sched();
+}
+
+static void gov_cancel_work(struct cpufreq_policy *policy)
+{
+	struct policy_dbs_info *policy_dbs = policy->governor_data;
+
+	gov_clear_update_util(policy_dbs->policy);
+	irq_work_sync(&policy_dbs->irq_work);
+	cancel_work_sync(&policy_dbs->work);
+	atomic_set(&policy_dbs->work_count, 0);
+	policy_dbs->work_in_progress = false;
 }
 
 static struct policy_dbs_info *alloc_policy_dbs_info(struct cpufreq_policy *policy,
