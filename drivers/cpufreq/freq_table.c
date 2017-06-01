@@ -106,10 +106,12 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_table_verify);
  */
 int cpufreq_generic_frequency_table_verify(struct cpufreq_policy *policy)
 {
-	if (!policy->freq_table)
+	struct cpufreq_frequency_table *table =
+		cpufreq_frequency_get_table(policy->cpu);
+	if (!table)
 		return -ENODEV;
 
-	return cpufreq_frequency_table_verify(policy, policy->freq_table);
+	return cpufreq_frequency_table_verify(policy, table);
 }
 EXPORT_SYMBOL_GPL(cpufreq_generic_frequency_table_verify);
 
@@ -208,8 +210,9 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_table_target);
 int cpufreq_frequency_table_get_index(struct cpufreq_policy *policy,
 		unsigned int freq)
 {
-	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
+	struct cpufreq_frequency_table *pos, *table;
 
+	table = cpufreq_frequency_get_table(policy->cpu);
 	if (unlikely(!table)) {
 		pr_debug("%s: Unable to find frequency table\n", __func__);
 		return -ENOENT;

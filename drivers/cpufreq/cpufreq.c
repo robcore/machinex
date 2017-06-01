@@ -142,6 +142,15 @@ struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
 
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
+	return policy && !policy_is_inactive(policy) ?
+		policy->freq_table : NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
+
 static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 {
 	u64 idle_time;
@@ -2156,7 +2165,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	if (!cpufreq_driver->target_index)
 		return -EINVAL;
 
-	freq_table = policy->freq_table;
+	freq_table = cpufreq_frequency_get_table(policy->cpu);
 	if (unlikely(!freq_table)) {
 		pr_err("%s: Unable to find freq_table\n", __func__);
 		return -EINVAL;
@@ -2565,25 +2574,26 @@ static struct notifier_block __refdata cpufreq_cpu_notifier = {
  *********************************************************************/
 static int cpufreq_boost_set_sw(int state)
 {
+	struct cpufreq_frequency_table *freq_table;
 	struct cpufreq_policy *policy;
 	int ret = -EINVAL;
 
 	for_each_active_policy(policy) {
-		if (!policy->freq_table)
-			continue;
+		freq_table = cpufreq_frequency_get_table(policy->cpu);
+		if (freq_table) {
+			ret = cpufreq_frequency_table_cpuinfo(policy,
+							freq_table);
+			if (ret) {
+				pr_err("%s: Policy frequency update failed\n",
+				       __func__);
+				break;
+			}
 
-		ret = cpufreq_frequency_table_cpuinfo(policy,
-						      policy->freq_table);
-		if (ret) {
-			pr_err("%s: Policy frequency update failed\n",
-			       __func__);
-			break;
+			down_write(&policy->rwsem);
+			policy->user_policy.max = policy->max;
+			cpufreq_governor_limits(policy);
+			up_write(&policy->rwsem);
 		}
-
-		down_write(&policy->rwsem);
-		policy->user_policy.max = policy->max;
-		cpufreq_governor_limits(policy);
-		up_write(&policy->rwsem);
 	}
 
 	return ret;
