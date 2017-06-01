@@ -297,14 +297,19 @@ static int alloc_policy_dbs_info(struct cpufreq_policy *policy,
 	if (!policy_dbs)
 		return -ENOMEM;
 
-	/* Set policy_dbs for all CPUs, online+offline */
-	for_each_cpu(j, policy->related_cpus)
-		gov->get_cpu_cdbs(j)->policy_dbs = policy_dbs;
-
 	mutex_init(&policy_dbs->timer_mutex);
 	atomic_set(&policy_dbs->skip_work, 0);
 	init_irq_work(&policy_dbs->irq_work, dbs_irq_work);
 	INIT_WORK(&policy_dbs->work, dbs_work_handler);
+
+	/* Set policy_dbs for all CPUs, online+offline */
+	for_each_cpu(j, policy->related_cpus) {
+		struct cpu_dbs_info *j_cdbs = gov->get_cpu_cdbs(j);
+
+		j_cdbs->policy_dbs = policy_dbs;
+		j_cdbs->update_util.func = dbs_update_util_handler;
+	}
+
 	return 0;
 }
 
@@ -317,9 +322,12 @@ static void free_policy_dbs_info(struct cpufreq_policy *policy,
 
 	mutex_destroy(&policy_dbs->timer_mutex);
 
-	for_each_cpu(j, policy->cpus)
-		gov->get_cpu_cdbs(j)->policy_dbs = NULL;
+	for_each_cpu(j, policy->related_cpus) {
+		struct cpu_dbs_info *j_cdbs = gov->get_cpu_cdbs(j);
 
+		j_cdbs->policy_dbs = NULL;
+		j_cdbs->update_util.func = NULL;
+	}
 	kfree(policy_dbs);
 }
 
@@ -469,8 +477,6 @@ static int cpufreq_governor_start(struct cpufreq_policy *policy)
 
 		if (ignore_nice)
 			j_cdbs->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
-
-		j_cdbs->update_util.func = dbs_update_util_handler;
 	}
 	policy_dbs->policy = policy;
 
