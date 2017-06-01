@@ -1410,7 +1410,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	}
 
-	cpufreq_frequency_table_cpuinfo(policy, freq_table);
 	policy->cur = acpuclk_get_rate(policy->cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
