@@ -2246,7 +2246,6 @@ static int cpufreq_init_governor(struct cpufreq_policy *policy)
 		}
 	}
 
-	policy->governor->initialized++;
 	return 0;
 }
 
@@ -2260,7 +2259,6 @@ static void cpufreq_exit_governor(struct cpufreq_policy *policy)
 	if (policy->governor->exit)
 		policy->governor->exit(policy);
 
-	policy->governor->initialized--;
 	module_put(policy->governor->owner);
 }
 
@@ -2325,7 +2323,6 @@ int cpufreq_register_governor(struct cpufreq_governor *governor)
 
 	mutex_lock(&cpufreq_governor_mutex);
 
-	governor->initialized = 0;
 	err = -EBUSY;
 	if (!find_governor(governor->name)) {
 		err = 0;
