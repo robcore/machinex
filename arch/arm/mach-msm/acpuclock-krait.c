@@ -1404,8 +1404,16 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
 
+	int ret;
+
+	ret = cpufreq_table_validate_and_show(policy, freq_table);
+	if (ret) {
+		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
+		return ret;
+	}
+
 	cpufreq_frequency_table_cpuinfo(policy, freq_table);
-	policy->cpuinfo.transition_latency = 10000; /*10 us*/
+	policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL; /*unknown*/
 	policy->cur = acpuclk_get_rate(policy->cpu);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
@@ -1413,8 +1421,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 */
 	ret = set_cpu_freq(policy, freq_table[index].frequency,
 			   freq_table[index].driver_data);
-	if (ret)
-		pr_debug("i am a debug message\n");
 
 	return cpufreq_table_validate_and_show(policy, freq_table);
 }
