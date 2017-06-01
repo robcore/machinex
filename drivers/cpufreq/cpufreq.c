@@ -1455,8 +1455,6 @@ static int cpufreq_online(unsigned int cpu)
 out_exit_policy:
 	up_write(&policy->rwsem);
 
-	up_write(&policy->rwsem);
-
 	if (cpufreq_driver->exit)
 		cpufreq_driver->exit(policy);
 out_free_policy:
