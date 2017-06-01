@@ -315,7 +315,7 @@ static struct kobj_type sugov_tunables_ktype = {
 
 /********************** cpufreq governor interface *********************/
 
-struct cpufreq_governor schedutil_gov;
+static struct cpufreq_governor schedutil_gov;
 
 static struct sugov_policy *sugov_policy_alloc(struct cpufreq_policy *policy)
 {
@@ -515,12 +515,6 @@ static struct cpufreq_governor schedutil_gov = {
 	.limits = sugov_limits,
 };
 
-struct cpufreq_governor schedutil_gov = {
-	.name = "schedutil",
-	.governor = sugov_governor,
-	.owner = THIS_MODULE,
-};
-
 static int __init sugov_module_init(void)
 {
 	return cpufreq_register_governor(&schedutil_gov);
@@ -546,4 +540,3 @@ fs_initcall(sugov_module_init);
 module_init(sugov_module_init);
 #endif
 module_exit(sugov_module_exit);
-
