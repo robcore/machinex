@@ -95,8 +95,6 @@ static unsigned long acpuclk_krait_get_rate(int cpu)
 {
 	if (cpu_online(cpu))
 		return drv.scalable[cpu].cur_speed->khz;
-	else
-		return 0;
 }
 
 /* Select a source on the primary MUX. */
