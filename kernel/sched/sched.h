@@ -2067,7 +2067,28 @@ static inline void account_reset_rq(struct rq *rq)
 #endif
 }
 
-void cpufreq_update_util(u64 time, unsigned long util, unsigned long max);
+#ifdef CONFIG_CPU_FREQ
+DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
+
+/**
+ * cpufreq_update_util - Take a note about CPU utilization changes.
+ * @time: Current time.
+ * @util: Current utilization.
+ * @max: Utilization ceiling.
+ *
+ * This function is called by the scheduler on every invocation of
+ * update_load_avg() on the CPU whose utilization is being updated.
+ *
+ * It can only be called from RCU-sched read-side critical sections.
+ */
+static inline void cpufreq_update_util(u64 time, unsigned long util, unsigned long max)
+{
+       struct update_util_data *data;
+
+       data = rcu_dereference_sched(*this_cpu_ptr(&cpufreq_update_util_data));
+       if (data)
+               data->func(data, time, util, max);
+}
 
 /**
  * cpufreq_trigger_update - Trigger CPU performance state evaluation if needed.
