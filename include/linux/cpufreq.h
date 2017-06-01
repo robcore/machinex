@@ -42,8 +42,6 @@
  * changes */
 #define MIN_CPU_UTIL_NOTIFY   40
 
-#define CPUFREQ_ETERNAL			(-1)
-
 struct cpufreq_governor;
 
 struct cpufreq_freqs {
