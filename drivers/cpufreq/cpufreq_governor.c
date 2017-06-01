@@ -262,8 +262,8 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(dbs_update);
 
-void gov_set_update_util(struct policy_dbs_info *policy_dbs,
-			 unsigned int delay_us)
+static void gov_set_update_util(struct policy_dbs_info *policy_dbs,
+				unsigned int delay_us)
 {
 	struct cpufreq_policy *policy = policy_dbs->policy;
 	int cpu;
@@ -277,7 +277,6 @@ void gov_set_update_util(struct policy_dbs_info *policy_dbs,
 		cpufreq_set_update_util_data(cpu, &cdbs->update_util);
 	}
 }
-EXPORT_SYMBOL_GPL(gov_set_update_util);
 
 static inline void gov_clear_update_util(struct cpufreq_policy *policy)
 {
