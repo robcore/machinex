@@ -240,8 +240,6 @@ static int msm_gov_probe(struct platform_device *pdev)
 	core_info = pdata->info;
 	latency = pdata->latency;
 
-	return -EINVAL;
-
 	for_each_possible_cpu(cpu) {
 		struct msm_gov *gov = &per_cpu(msm_gov_info, cpu);
 
@@ -259,6 +257,7 @@ static int msm_gov_probe(struct platform_device *pdev)
 						sensor);
 		if (gov->dcvs_core_id < 0) {
 			pr_err("Unable to register core for %d\n", cpu);
+			platform_set_drvdata(pdev, NULL);
 			return -EINVAL;
 		}
 
