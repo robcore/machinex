@@ -126,14 +126,14 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		therm_freq_limited = false;
 	}
 
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			continue;
 		ret = cpufreq_update_policy(cpu);
 	}
-
-	reapply_hard_limits();
+	put_online_cpus();
 	return ret;
 }
 extern bool hotplug_ready;
