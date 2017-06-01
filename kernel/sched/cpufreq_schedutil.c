@@ -395,7 +395,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 		goto free_sg_policy;
 	}
 
-	tunables->rate_limit_us = LATENCY_MULTIPLIER;
+	tunables->rate_limit_us = 10000;
 	lat = policy->cpuinfo.transition_latency / NSEC_PER_USEC;
 	if (lat)
 		tunables->rate_limit_us *= lat;
