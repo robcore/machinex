@@ -41,7 +41,7 @@ config CPU_BOOST
 	  is just touch.
 
 config CPU_FREQ_STAT
-	tristate "CPU frequency translation statistics"
+	bool "CPU frequency translation statistics"
 	default y
 	help
 	  This driver exports CPU frequency statistics information through sysfs
