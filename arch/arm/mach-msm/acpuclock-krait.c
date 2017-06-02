@@ -1340,13 +1340,15 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 {
 	int ret = 0;
 	int index;
+	struct cpufreq_frequency_table *table;
 
 	if (target_freq == policy->cur)
 		goto done;
 
-	index = cpufreq_frequency_table_target(policy, table,
+	table = policy->freq_table;
+	index = cpufreq_frequency_table_target(policy,
+			target_freq,
 			relation);
-
 	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
 done:
