@@ -3010,15 +3010,19 @@ static inline unsigned long *end_of_stack(struct task_struct *p)
 	return (unsigned long *)(task_thread_info(p) + 1);
 }
 
+#define SCHED_CPUFREQ_RT	(1U << 0)
+#define SCHED_CPUFREQ_DL	(1U << 1)
+
+#define SCHED_CPUFREQ_RT_DL	(SCHED_CPUFREQ_RT | SCHED_CPUFREQ_DL)
+
 #ifdef CONFIG_CPU_FREQ
 struct update_util_data {
-	void (*func)(struct update_util_data *data,
-		     u64 time, unsigned long util, unsigned long max);
+       void (*func)(struct update_util_data *data, u64 time, unsigned int flags);
 };
 
 void cpufreq_add_update_util_hook(int cpu, struct update_util_data *data,
-			void (*func)(struct update_util_data *data, u64 time,
-				     unsigned long util, unsigned long max));
+                       void (*func)(struct update_util_data *data, u64 time,
+				    unsigned int flags));
 void cpufreq_remove_update_util_hook(int cpu);
 #endif /* CONFIG_CPU_FREQ */
 
