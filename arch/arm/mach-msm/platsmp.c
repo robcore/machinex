@@ -25,6 +25,21 @@
 #include <mach/socinfo.h>
 #include <mach/hardware.h>
 #include <mach/msm_iomap.h>
+#include <linux/errno.h>
+#include <linux/smp.h>
+#include <linux/cpu.h>
+#include <linux/ratelimit.h>
+
+#include <asm/smp_plat.h>
+#include <asm/vfp.h>
+#include <asm/cacheflush.h>
+
+#include <mach/jtag.h>
+
+#include "pm.h"
+#include "spm.h"
+
+#include "core.h"
 
 #include "pm.h"
 #include "scm-boot.h"
@@ -37,14 +52,6 @@
 #define SCSS_DBG_STATUS_CORE_PWRDUP 0xE64
 
 static DEFINE_PER_CPU(unsigned int, warm_boot_flag);
-
-static inline void cpu_enter_lowpower(void)
-{
-}
-
-static inline void cpu_leave_lowpower(void)
-{
-}
 
 static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 {
@@ -100,14 +107,7 @@ void __ref msm_cpu_die(unsigned int cpu)
 			__func__, smp_processor_id(), cpu);
 		BUG();
 	}
-	/*
-	 * we're ready for shutdown now, so do it
-	 */
-	cpu_enter_lowpower();
 	platform_do_lowpower(cpu, &spurious);
-
-	pr_debug("CPU%u: %s: normal wakeup\n", cpu, __func__);
-	cpu_leave_lowpower();
 
 	if (spurious)
 		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
@@ -152,13 +152,6 @@ static void write_pen_release(int val)
 }
 
 static DEFINE_SPINLOCK(boot_lock);
-
-#ifdef CONFIG_HOTPLUG_CPU
-static void __ref msm_cpu_die(unsigned int cpu)
-{
-	wfi();
-}
-#endif
 
 static void msm_secondary_init(unsigned int cpu)
 {
