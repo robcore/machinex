@@ -127,6 +127,7 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 		.frequency = 0,
 	};
 	struct cpufreq_frequency_table *pos;
+	struct cpufreq_frequency_table *table = policy->freq_table;
 	unsigned int freq, diff, i = 0;
 	int index;
 
