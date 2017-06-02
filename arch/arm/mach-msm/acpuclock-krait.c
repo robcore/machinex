@@ -1372,7 +1372,7 @@ msm_get_freq_table(struct cpufreq_policy *policy)
 	int cpu;
 
 	/* Construct the freq_table tables from acpu_freq_tbl. */
-	for (cpu = 0; cpu <= num_possible_cpus(); cpu++) {
+	for (cpu = 0; cpu < num_possible_cpus(); cpu++) {
 		for (i = 0; drv.priv[i].speed.khz != 0
 				&& freq_cnt < ARRAY_SIZE(*fucktable)-1; i++) {
 			if (drv.priv[i].use_for_scaling) {
@@ -1468,6 +1468,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	int cpu;
 	struct cpufreq_frequency_table *freq_table;
+
 
 	if (policy->cpu > num_possible_cpus())
 		return -EINVAL;
