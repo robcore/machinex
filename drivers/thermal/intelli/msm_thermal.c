@@ -131,10 +131,10 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			continue;
-		ret = cpufreq_update_policy(cpu);
+		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
-	return ret;
+	return 0;
 }
 extern bool hotplug_ready;
 static void __ref do_core_control(long temp)

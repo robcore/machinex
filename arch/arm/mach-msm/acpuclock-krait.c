@@ -1434,13 +1434,7 @@ static int msm_cpufreq_resume(void)
 			continue;
 		if (policy.cur <= policy.max && policy.cur >= policy.min)
 			continue;
-		ret = cpufreq_update_policy(cpu);
-		if (ret)
-			pr_debug("cpufreq: Current frequency violates policy min/max for CPU%d\n",
-			       cpu);
-		else
-			pr_debug("cpufreq: Frequency violation fixed for CPU%d\n",
-				cpu);
+		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
 
