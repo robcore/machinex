@@ -1396,10 +1396,12 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu > NR_CPUS) {
 		ret = -EINVAL;
 		goto out;
+	}
 
 	if (!cpu_online(policy->cpu)) {
 		ret = -EBUSY;
 		goto out;
+	}
 
 	ret = cpufreq_table_validate_and_show(policy, freq_table);
 	if (ret) {
