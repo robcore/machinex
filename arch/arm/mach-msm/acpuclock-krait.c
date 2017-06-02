@@ -1388,8 +1388,6 @@ static struct cpufreq_frequency_table freq_table[] = {
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
-	int cur_freq;
-	int index;
 	int ret = 0;
 	int cpu;
 
@@ -1408,7 +1406,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		goto out;
 	}
-	policy->cpuinfo.transition_latency = 148; /*timer loop?*/
 out:
 	return ret;
 }
@@ -1465,7 +1462,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
 				  CPUFREQ_NEED_INITIAL_FREQ_CHECK |
-				  CPUFREQ_PM_NO_WARN | CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
+				  CPUFREQ_PM_NO_WARN,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target		= msm_cpufreq_target,
