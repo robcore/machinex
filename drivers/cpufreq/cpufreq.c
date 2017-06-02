@@ -1821,20 +1821,14 @@ void cpufreq_suspend(void)
 	for_each_active_policy(policy) {
 		if (has_target()) {
 			down_write(&policy->rwsem);
-			ret = cpufreq_governor(policy, CPUFREQ_GOV_STOP);
+			cpufreq_stop_governor(policy);
 			up_write(&policy->rwsem);
-
-			if (ret) {
-				pr_err("%s: Failed to stop governor for policy: %p\n",
-					__func__, policy);
-				continue;
-			}
 		}
 
 		if (cpufreq_driver->suspend && cpufreq_driver->suspend(policy))
- 			pr_err("%s: Failed to suspend driver: %p\n", __func__,
- 				policy);
- 	}
+			pr_err("%s: Failed to suspend driver: %p\n", __func__,
+				policy);
+	}
 
 suspend:
 	cpufreq_suspended = true;
