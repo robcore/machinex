@@ -2866,8 +2866,7 @@ static inline void update_load_avg(struct sched_entity *se, int update_tg)
 		 *
 		 * See cpu_util().
 		 */
-		cpufreq_update_util(rq_clock(rq),
-				    min(cfs_rq->avg.util_avg, max), max);
+		cpufreq_update_util(rq_clock(rq), 0);
 	}
 }
 
