@@ -904,7 +904,7 @@ static const struct acpu_level *find_cur_acpu_level(int cpu)
 	return NULL;
 }
 
-static const struct l2_level *find_cur_l2_level(void)
+static const struct l2_level __init *find_cur_l2_level(void)
 {
 	struct scalable *sc = &drv.scalable[L2];
 	const struct l2_level *l;
@@ -977,7 +977,7 @@ err_ioremap:
 }
 
 /* Register with bus driver. */
-static void bus_init(const struct l2_level *l2_level)
+static void __init bus_init(const struct l2_level *l2_level)
 {
 	int ret;
 
@@ -1040,6 +1040,56 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
+static struct cpufreq_frequency_table mx_freq_table[] = {
+	{ 0, 384000 },
+	{ 1, 486000 },
+	{ 2, 594000 },
+	{ 3, 702000 },
+	{ 4, 810000 },
+	{ 5, 918000 },
+	{ 6, 1026000 },
+	{ 7, 1134000 },
+	{ 8, 1242000 },
+	{ 9, 1350000 },
+	{ 10, 1458000 },
+	{ 11, 1566000 },
+	{ 12, 1674000 },
+	{ 13, 1782000 },
+	{ 14, 1890000 },
+	{ 15, CPUFREQ_TABLE_END },
+};
+
+static void __init cpufreq_table_init(void)
+{
+	int i, index = 0;
+
+	/* Construct the freq_table tables from priv->freq_tbl. */
+	for (i = 0; drv.priv[i].speed.khz != 0
+			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
+		mx_freq_table[index].driver_data = index;
+		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+		index++;
+	}
+	/* freq_table not big enough to store all usable freqs. */
+	BUG_ON(drv.priv[i].speed.khz != 0);
+
+	mx_freq_table[index].driver_data = index;
+	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
+
+	pr_info("MACHINEX: %d scaling frequencies supported.\n", index);
+}
+
+static void __init dcvs_freq_init(void)
+{
+	int i;
+
+	for (i = 0; drv.priv[i].speed.khz != 0; i++)
+		if (drv.priv[i].use_for_scaling)
+			msm_dcvs_register_cpu_freq(
+				drv.priv[i].speed.khz,
+				drv.priv[i].vdd_core / 1000);
+}
+
 static int acpuclk_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
@@ -1088,7 +1138,7 @@ static struct notifier_block acpuclk_cpu_notifier = {
 	.notifier_call = acpuclk_cpu_callback,
 };
 
-static const int krait_needs_vmin(void)
+static const int __init krait_needs_vmin(void)
 {
 	switch (read_cpuid_id()) {
 	case 0x511F04D0: /* KR28M2A20 */
@@ -1100,7 +1150,7 @@ static const int krait_needs_vmin(void)
 	};
 }
 
-static void krait_apply_vmin(struct acpu_level *tbl)
+static void __init krait_apply_vmin(struct acpu_level *tbl)
 {
 	for (; tbl->speed.khz != 0; tbl++) {
 		if (tbl->vdd_core < 1150000)
@@ -1109,7 +1159,7 @@ static void krait_apply_vmin(struct acpu_level *tbl)
 	}
 }
 
-static int get_speed_bin(u32 pte_efuse)
+static int __init get_speed_bin(u32 pte_efuse)
 {
 	uint32_t speed_bin;
 
@@ -1129,7 +1179,7 @@ static int get_speed_bin(u32 pte_efuse)
 	return speed_bin;
 }
 
-static int get_pvs_bin(u32 pte_efuse)
+static int __init get_pvs_bin(u32 pte_efuse)
 {
 	uint32_t pvs_bin;
 
@@ -1149,7 +1199,7 @@ static int get_pvs_bin(u32 pte_efuse)
 	return pvs_bin;
 }
 
-static struct pvs_table * select_freq_plan(u32 pte_efuse_phys,
+static struct pvs_table * __init select_freq_plan(u32 pte_efuse_phys,
 			struct pvs_table (*pvs_tables)[NUM_PVS])
 {
 	void __iomem *pte_efuse;
@@ -1175,7 +1225,7 @@ static struct pvs_table * select_freq_plan(u32 pte_efuse_phys,
 	return &pvs_tables[bin_idx][tbl_idx];
 }
 
-static void drv_data_init(struct device *dev,
+static void __init drv_data_init(struct device *dev,
 				 const struct acpuclk_krait_params *params)
 {
 	struct pvs_table *pvs;
@@ -1214,7 +1264,7 @@ static void drv_data_init(struct device *dev,
 	acpuclk_krait_data.wait_for_irq_khz = params->stby_khz;
 }
 
-static void hw_init(void)
+static void __init hw_init(void)
 {
 	struct scalable *l2 = &drv.scalable[L2];
 	const struct l2_level *l2_level;
@@ -1252,56 +1302,6 @@ static void hw_init(void)
 	}
 
 	bus_init(l2_level);
-}
-
-static struct cpufreq_frequency_table mx_freq_table[] = {
-	{ 0, 384000 },
-	{ 1, 486000 },
-	{ 2, 594000 },
-	{ 3, 702000 },
-	{ 4, 810000 },
-	{ 5, 918000 },
-	{ 6, 1026000 },
-	{ 7, 1134000 },
-	{ 8, 1242000 },
-	{ 9, 1350000 },
-	{ 10, 1458000 },
-	{ 11, 1566000 },
-	{ 12, 1674000 },
-	{ 13, 1782000 },
-	{ 14, 1890000 },
-	{ 15, CPUFREQ_TABLE_END },
-};
-
-static void cpufreq_table_init(void)
-{
-	int i, index = 0;
-
-	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < sizeof(drv.priv) - 1; i++) {
-		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
-		index++;
-	}
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv[i].speed.khz != 0);
-
-	mx_freq_table[index].driver_data = index;
-	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
-
-	pr_info("MACHINEX: %d scaling frequencies supported.\n", index);
-}
-
-static void dcvs_freq_init(void)
-{
-	int i;
-
-	for (i = 0; drv.priv[i].speed.khz != 0; i++)
-		if (drv.priv[i].use_for_scaling)
-			msm_dcvs_register_cpu_freq(
-				drv.priv[i].speed.khz,
-				drv.priv[i].vdd_core / 1000);
 }
 
 int __init acpuclk_krait_init(struct device *dev,
