@@ -2761,7 +2761,7 @@ static inline void cfs_rq_util_change(struct cfs_rq *cfs_rq)
 		 *
 		 * See cpu_util().
 		 */
-		cpufreq_update_util(rq_of(cfs_rq), 0);
+		cpufreq_update_util(rq_clock(rq), 0);
 	}
 }
 
@@ -2846,6 +2846,28 @@ static inline void update_load_avg(struct sched_entity *se, int update_tg)
 
 	if (update_cfs_rq_load_avg(now, cfs_rq) && update_tg)
 		update_tg_load_avg(cfs_rq, 0);
+
+	if (cpu == smp_processor_id() && &rq->cfs == cfs_rq) {
+		unsigned long max = rq->cpu_capacity_orig;
+
+		/*
+		 * There are a few boundary cases this might miss but it should
+		 * get called often enough that that should (hopefully) not be
+		 * a real problem -- added to that it only calls on the local
+		 * CPU, so if we enqueue remotely we'll miss an update, but
+		 * the next tick/schedule should update.
+		 *
+		 * It will not get called when we go idle, because the idle
+		 * thread is a different class (!fair), nor will the utilization
+		 * number include things like RT tasks.
+		 *
+		 * As is, the util number is not freq-invariant (we'd have to
+		 * implement arch_scale_freq_capacity() for that).
+		 *
+		 * See cpu_util().
+		 */
+		cpufreq_update_util(rq_clock(rq), 0);
+	}
 }
 
 /**
@@ -3016,7 +3038,7 @@ static inline void update_load_avg(struct sched_entity *se, int not_used)
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
 	struct rq *rq = rq_of(cfs_rq);
 
-	cpufreq_update_util(rq_of(cfs_rq_of(se)), 0);
+	cpufreq_update_util(rq_clock(rq), 0);
 }
 
 static inline void
@@ -4394,15 +4416,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	int task_wakeup = flags & ENQUEUE_WAKEUP;
 #endif
 
-	/*
-	 * If in_iowait is set, the code below may not trigger any cpufreq
-	 * utilization updates, so do it here explicitly with the IOWAIT flag
-	 * passed.
-	 */
-	if (p->in_iowait)
-		cpufreq_update_this_cpu(rq, SCHED_CPUFREQ_IOWAIT);
-
-
 	for_each_sched_entity(se) {
 		if (se->on_rq)
 			break;
@@ -4675,12 +4688,12 @@ decay_load_missed(unsigned long load, unsigned long missed_updates, int idx)
  *   load[i]_n = (1 - 1/2^i)^n * load[i]_0
  *
  * see decay_load_misses(). For NOHZ_FULL we get to subtract and add the extra
- * term.
+ * term. See the @active paramter.
  */
 static void __update_cpu_load(struct rq *this_rq, unsigned long this_load,
 			      unsigned long pending_updates, int active)
 {
-	unsigned long __maybe_unused tickless_load = this_rq->cpu_load[0];
+	unsigned long tickless_load = active ? this_rq->cpu_load[0] : 0;
 	int i, scale;
 
 	this_rq->nr_load_updates++;
@@ -4693,7 +4706,6 @@ static void __update_cpu_load(struct rq *this_rq, unsigned long this_load,
 		/* scale is effectively 1 << i now, and >> i divides by scale */
 
 		old_load = this_rq->cpu_load[i];
-#ifdef CONFIG_NO_HZ_COMMON
 		old_load = decay_load_missed(old_load, pending_updates - 1, i);
 		if (tickless_load) {
 			old_load -= decay_load_missed(tickless_load, pending_updates - 1, i);
@@ -4704,7 +4716,6 @@ static void __update_cpu_load(struct rq *this_rq, unsigned long this_load,
 			 */
 			old_load += tickless_load;
 		}
-#endif
 		new_load = this_load;
 		/*
 		 * Round up the averaging division if load is increasing. This
@@ -4781,12 +4792,11 @@ void update_cpu_load_nohz(int active)
 {
 	struct rq *this_rq = this_rq();
 	unsigned long curr_jiffies = READ_ONCE(jiffies);
-	unsigned long load;
+	unsigned long load = active ? weighted_cpuload(cpu_of(this_rq)) : 0;
 
 	if (curr_jiffies == this_rq->last_load_update_tick)
 		return;
 
-	load =  weighted_cpuload(cpu_of(this_rq));
 	raw_spin_lock(&this_rq->lock);
 	__update_cpu_load_nohz(this_rq, curr_jiffies, load, active);
 	raw_spin_unlock(&this_rq->lock);

@@ -199,7 +199,7 @@ schedtune_accept_deltas(int nrg_delta, int cap_delta,
  *    implementation especially for the computation of the per-CPU boost
  *    value
  */
-#define BOOSTGROUPS_COUNT 5
+#define BOOSTGROUPS_COUNT 4
 
 /* Array of configured boostgroups */
 static struct schedtune *allocated_group[BOOSTGROUPS_COUNT] = {
@@ -794,7 +794,7 @@ schedtune_test_nrg(unsigned long delta_pwr)
 
 		/* Normalize on max energy for target platform */
 		test_norm_pwr = reciprocal_divide(
-					test_delta_pwr << SCHED_LOAD_SHIFT,
+					test_delta_pwr << NICE_0_LOAD_SHIFT,
 					schedtune_target_nrg.rdiv);
 
 		pr_info("schedtune: max_pwr/2^%d: %4lu => norm_pwr: %5lu\n",
@@ -897,8 +897,7 @@ schedtune_init(void)
 	 */
 	sd = rcu_dereference(per_cpu(sd_ea, cpumask_first(cpu_online_mask)));
 	if (!sd) {
-		if (energy_aware())
-			pr_warn("schedtune: no energy model data\n");
+		pr_info("schedtune: no energy model data\n");
 		goto nodata;
 	}
 
