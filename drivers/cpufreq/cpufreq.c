@@ -2126,7 +2126,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 			    unsigned int relation)
 {
 	unsigned int old_target_freq = target_freq;
-	int index, retval;
+	int index;
 
 	if (cpufreq_disabled())
 		return -ENODEV;
@@ -2158,12 +2158,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	if (!cpufreq_driver->target_index)
 		return -EINVAL;
 
-	retval = cpufreq_frequency_table_target(policy, freq_table, target_freq,
-						relation, &index);
-	if (unlikely(retval)) {
-		pr_err("%s: Unable to find matching freq\n", __func__);
-		return retval;
-	}
+	index = cpufreq_frequency_table_target(policy, target_freq, relation);
 
 	return __target_index(policy, index);
 }

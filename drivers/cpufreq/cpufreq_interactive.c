@@ -237,10 +237,9 @@ static unsigned int choose_freq(struct cpufreq_interactive_cpuinfo *pcpu,
 		 * than or equal to the target load.
 		 */
 
-		if (cpufreq_frequency_table_target(
-			    pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
-			    CPUFREQ_RELATION_L, &index))
-			break;
+		index = cpufreq_frequency_table_target(
+			    pcpu->policy, loadadjfreq / tl,
+			    CPUFREQ_RELATION_L);
 		freq = pcpu->freq_table[index].frequency;
 
 		if (freq > prevfreq) {
@@ -252,11 +251,9 @@ static unsigned int choose_freq(struct cpufreq_interactive_cpuinfo *pcpu,
 				 * Find the highest frequency that is less
 				 * than freqmax.
 				 */
-				if (cpufreq_frequency_table_target(
-					    pcpu->policy, pcpu->freq_table,
-					    freqmax - 1, CPUFREQ_RELATION_H,
-					    &index))
-					break;
+				index = cpufreq_frequency_table_target(
+					    pcpu->policy,
+					    freqmax - 1, CPUFREQ_RELATION_H);
 				freq = pcpu->freq_table[index].frequency;
 
 				if (freq == freqmin) {
@@ -279,11 +276,9 @@ static unsigned int choose_freq(struct cpufreq_interactive_cpuinfo *pcpu,
 				 * Find the lowest frequency that is higher
 				 * than freqmin.
 				 */
-				if (cpufreq_frequency_table_target(
-					    pcpu->policy, pcpu->freq_table,
-					    freqmin + 1, CPUFREQ_RELATION_L,
-					    &index))
-					break;
+				index = cpufreq_frequency_table_target(
+					    pcpu->policy,
+					    freqmin + 1, CPUFREQ_RELATION_L);
 				freq = pcpu->freq_table[index].frequency;
 
 				/*
@@ -391,13 +386,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	pcpu->loc_hispeed_val_time = now;
 
-	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-					   new_freq, CPUFREQ_RELATION_L,
-					   &index)) {
-		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
-		goto rearm;
-	}
-
+	index = cpufreq_frequency_table_target(pcpu->policy,
+					   new_freq, CPUFREQ_RELATION_L);
 	new_freq = pcpu->freq_table[index].frequency;
 
 	/*

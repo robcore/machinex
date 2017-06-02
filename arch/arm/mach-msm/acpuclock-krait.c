@@ -1345,19 +1345,15 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	if (target_freq == policy->cur)
 		goto done;
 
-	table = cpufreq_frequency_get_table(policy->cpu);
+	table = policy->freq_table;
 	if (!table) {
 		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
 		       policy->cpu);
 		ret = -ENODEV;
 		goto done;
 	}
-	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
-			&index)) {
-		pr_err("cpufreq: invalid target_freq: %d\n", target_freq);
-		ret = -EINVAL;
-		goto done;
-	}
+	index = cpufreq_frequency_table_target(policy, table, target_freq,
+			relation);
 
 	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
