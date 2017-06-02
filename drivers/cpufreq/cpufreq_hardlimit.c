@@ -137,11 +137,19 @@ extern bool freq_is_therm_limited(void);
 static uint32_t thermal_hardlimit;
 #endif
 
-#ifdef SUPERFLUOUS
-struct delayed_work stop_wakeup_kick_work;
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
 
-struct delayed_work stop_touchboost_work;
-#endif
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get(cpu);
+	}
+	if (policy != NULL)
+		return policy->freq_table;
+	else
+		return NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 /* ------------------------------------------------------------------------------ */
 /* Externally reachable function                                                  */
 /* ------------------------------------------------------------------------------ */

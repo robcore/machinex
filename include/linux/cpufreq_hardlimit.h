@@ -62,12 +62,7 @@
 unsigned int check_cpufreq_hardlimit(unsigned int freq);
 extern unsigned int current_limit_max;
 
-#ifdef CONFIG_SEC_DVFS
-/* Scaling min/max lock */
-unsigned int userspace_dvfs_lock_status(void);
-#endif
-
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
-
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 #endif
