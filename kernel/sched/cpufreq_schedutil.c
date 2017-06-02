@@ -198,7 +198,7 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, unsigned long *util,
 	sg_cpu->iowait_boost >>= 1;
 }
 
-#ifdef CONFIG_NO_HZ_COMMON
+#if 0
 static bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu)
 {
 	unsigned long idle_calls = tick_nohz_get_idle_calls();
