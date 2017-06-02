@@ -1408,6 +1408,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		goto out;
 	}
+	policy->cpuinfo.transition_latency = 148; /*timer loop?*/
 out:
 	return ret;
 }
