@@ -21,7 +21,6 @@
 
 #include <linux/syscore_ops.h>
 #include <linux/cpufreq.h>
-#include <trace/events/sched.h>
 #include <clocksource/arm_arch_timer.h>
 #include "sched.h"
 #include "walt.h"
@@ -603,7 +602,6 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	p->ravg.demand = demand;
 
 done:
-	trace_walt_update_history(rq, p, runtime, samples, event);
 	return;
 }
 
@@ -736,8 +734,6 @@ void walt_update_task_ravg(struct task_struct *p, struct rq *rq,
 	update_cpu_busy_time(p, rq, event, wallclock, irqtime);
 
 done:
-	trace_walt_update_task_ravg(p, rq, event, wallclock, irqtime);
-
 	p->ravg.mark_start = wallclock;
 }
 
@@ -865,9 +861,6 @@ void walt_fixup_busy_time(struct task_struct *p, int new_cpu)
 		WARN_ON(1);
 	}
 
-	trace_walt_migration_update_sum(src_rq, p);
-	trace_walt_migration_update_sum(dest_rq, p);
-
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
 }
@@ -994,10 +987,14 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	/* Initialized to policy->max in case policy->related_cpus is empty! */
 	unsigned int orig_max_freq = policy->max;
 
-	if (val != CPUFREQ_ADJUST)
+	if (val != CPUFREQ_NOTIFY && val != CPUFREQ_REMOVE_POLICY &&
+						val != CPUFREQ_CREATE_POLICY)
 		return 0;
-	else if (val == CPUFREQ_ADJUST)
-			update_min_max_capacity();
+
+	if (val == CPUFREQ_REMOVE_POLICY || val == CPUFREQ_CREATE_POLICY) {
+		update_min_max_capacity();
+		return 0;
+	}
 
 	for_each_cpu(i, policy->related_cpus) {
 		cpumask_copy(&cpu_rq(i)->freq_domain_cpumask,
