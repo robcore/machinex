@@ -1100,17 +1100,19 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 
 	/* Fail hotplug until this driver can get CPU clocks */
 	if (!hotplug_ready)
-		return NOTIFY_BAD;
+		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DOWN_PREPARE:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 		/* Fall through. */
+	case CPU_DEAD:
 	case CPU_UP_CANCELED:
 		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG);
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
 		break;
 	case CPU_UP_PREPARE:
+	case CPU_DOWN_FAILED:
 		if (!sc->initialized) {
 			rc = per_cpu_init(cpu);
 			if (rc)
@@ -1391,23 +1393,20 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	int cpu;
 
-	if (policy->cpu > NR_CPUS)
-		return -ERANGE;
+	if (policy->cpu > NR_CPUS) {
+		ret = -EINVAL;
+		goto out;
+
+	if (!cpu_online(policy->cpu)) {
+		ret = -EBUSY;
+		goto out;
 
 	ret = cpufreq_table_validate_and_show(policy, freq_table);
 	if (ret) {
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
-		return ret;
+		goto out;
 	}
-
-	policy->cur = acpuclk_get_rate(policy->cpu);
-	/*
-	 * Call set_cpu_freq unconditionally so that when cpu is set to
-	 * online, frequency limit will always be updated.
-	 */
-	ret = set_cpu_freq(policy, freq_table[index].frequency,
-			   freq_table[index].driver_data);
-
+out:
 	return ret;
 }
 
@@ -1468,7 +1467,7 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
-				  CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+				  CPUFREQ_NEED_INITIAL_FREQ_CHECK |
 				  CPUFREQ_PM_NO_WARN,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
