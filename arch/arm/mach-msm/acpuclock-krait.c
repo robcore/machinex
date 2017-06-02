@@ -1340,19 +1340,11 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 {
 	int ret = 0;
 	int index;
-	struct cpufreq_frequency_table *table;
 
 	if (target_freq == policy->cur)
 		goto done;
 
-	table = policy->freq_table;
-	if (!table) {
-		pr_err("cpufreq: Failed to get frequency table for CPU%u\n",
-		       policy->cpu);
-		ret = -ENODEV;
-		goto done;
-	}
-	index = cpufreq_frequency_table_target(policy, table, target_freq,
+	index = cpufreq_frequency_table_target(policy, table,
 			relation);
 
 	ret = set_cpu_freq(policy, table[index].frequency,
