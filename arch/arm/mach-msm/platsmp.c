@@ -25,21 +25,6 @@
 #include <mach/socinfo.h>
 #include <mach/hardware.h>
 #include <mach/msm_iomap.h>
-#include <linux/errno.h>
-#include <linux/smp.h>
-#include <linux/cpu.h>
-#include <linux/ratelimit.h>
-
-#include <asm/smp_plat.h>
-#include <asm/vfp.h>
-#include <asm/cacheflush.h>
-
-#include <mach/jtag.h>
-
-#include "pm.h"
-#include "spm.h"
-
-#include "core.h"
 
 #include "pm.h"
 #include "scm-boot.h"
@@ -51,92 +36,7 @@
 #define SCSS_CPU1CORE_RESET 0xD80
 #define SCSS_DBG_STATUS_CORE_PWRDUP 0xE64
 
-static DEFINE_PER_CPU(unsigned int, warm_boot_flag);
-
-static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
-{
-	/* Just enter wfi for now. TODO: Properly shut off the cpu. */
-	for (;;) {
-
-		msm_pm_cpu_enter_lowpower(cpu);
-		if (pen_release == cpu_logical_map(cpu)) {
-			/*
-			 * OK, proper wakeup, we're done
-			 */
-			break;
-		}
-
-		/*
-		 * getting here, means that we have come out of WFI without
-		 * having been woken up - this shouldn't happen
-		 *
-		 * The trouble is, letting people know about this is not really
-		 * possible, since we are currently running incoherently, and
-		 * therefore cannot safely call printk() or anything else
-		 */
-		(*spurious)++;
-	}
-}
-
 extern void msm_secondary_startup(void);
-static cpumask_t cpu_dying_mask;
-
-
-
-int msm_cpu_kill(unsigned int cpu)
-{
-	int ret = 0;
-
-	if (cpumask_test_and_clear_cpu(cpu, &cpu_dying_mask))
-		ret = msm_pm_wait_cpu_shutdown(cpu);
-
-	return ret ? 0 : 1;
-}
-
-/*
- * platform-specific code to shutdown a CPU
- *
- * Called with IRQs disabled
- */
-void __ref msm_cpu_die(unsigned int cpu)
-{
-	int spurious = 0;
-
-	if (unlikely(cpu != smp_processor_id())) {
-		pr_crit("%s: running on %u, should be %u\n",
-			__func__, smp_processor_id(), cpu);
-		BUG();
-	}
-	platform_do_lowpower(cpu, &spurious);
-
-	if (spurious)
-		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
-}
-
-#define CPU_SHIFT	0
-#define CPU_MASK	0xF
-#define CPU_OF(n)	(((n) & CPU_MASK) << CPU_SHIFT)
-#define CPUSET_SHIFT	4
-#define CPUSET_MASK	0xFFFF
-#define CPUSET_OF(n)	(((n) & CPUSET_MASK) << CPUSET_SHIFT)
-
-int msm_platform_secondary_init(unsigned int cpu)
-{
-	int ret;
-	unsigned int *warm_boot = &__get_cpu_var(warm_boot_flag);
-
-	if (!(*warm_boot)) {
-		*warm_boot = 1;
-		if (cpu)
-			return 0;
-	}
-#if defined(CONFIG_VFP) && defined (CONFIG_CPU_PM)
-	vfp_pm_resume();
-#endif
-	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
-
-	return ret;
-}
 
 /*
  * Write pen_release in a way that is guaranteed to be visible to all
