@@ -194,7 +194,7 @@ update_window_start(struct rq *rq, u64 wallclock)
 			BUG_ON(1);
 	}
 
-	if (delta < walt_ravg_window)
+	if ((delta < walt_ravg_window) || (walt_ravg_window < 0))
 		return;
 
 	nr_windows = div64_u64(delta, walt_ravg_window);
@@ -252,7 +252,7 @@ void walt_account_irqtime(int cpu, struct task_struct *curr,
 	nr_windows = cur_jiffies_ts - rq->irqload_ts;
 
 	if (nr_windows) {
-		if (nr_windows < 10) {
+		if ((nr_windows < 10) && (nr_windows > 0)) {
 			/* Decay CPU's irqload by 3/4 for each window. */
 			rq->avg_irqload *= (3 * nr_windows);
 			rq->avg_irqload = div64_u64(rq->avg_irqload,
@@ -911,7 +911,11 @@ static void update_min_max_capacity(void)
  */
 static unsigned long capacity_scale_cpu_efficiency(int cpu)
 {
-	return (1024 * cpu_rq(cpu)->efficiency) / min_possible_efficiency;
+	if (cpu_online(cpu) && min_possible_efficiency > 0)
+		return (1024 * cpu_rq(cpu)->efficiency) / min_possible_efficiency;
+	else
+		return (1024);
+
 }
 
 /*
@@ -920,7 +924,10 @@ static unsigned long capacity_scale_cpu_efficiency(int cpu)
  */
 static unsigned long capacity_scale_cpu_freq(int cpu)
 {
-	return (1024 * cpu_rq(cpu)->max_freq) / min_max_freq;
+	if ((cpu_online(cpu)) && (min_max_freq > 0))
+		return (1024 * cpu_rq(cpu)->max_freq / min_max_freq);
+	else
+		return (1024 * cpu_rq(cpu)->max_freq / 384000);
 }
 
 /*
@@ -987,14 +994,10 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	/* Initialized to policy->max in case policy->related_cpus is empty! */
 	unsigned int orig_max_freq = policy->max;
 
-	if (val != CPUFREQ_NOTIFY && val != CPUFREQ_REMOVE_POLICY &&
-						val != CPUFREQ_CREATE_POLICY)
+	if (val != CPUFREQ_ADJUST)
 		return 0;
-
-	if (val == CPUFREQ_REMOVE_POLICY || val == CPUFREQ_CREATE_POLICY) {
-		update_min_max_capacity();
-		return 0;
-	}
+	else if (val == CPUFREQ_ADJUST)
+			update_min_max_capacity();
 
 	for_each_cpu(i, policy->related_cpus) {
 		cpumask_copy(&cpu_rq(i)->freq_domain_cpumask,
@@ -1010,8 +1013,6 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	if (min_max_freq == 1)
 		min_max_freq = UINT_MAX;
 	min_max_freq = min(min_max_freq, policy->cpuinfo.max_freq);
-	BUG_ON(!min_max_freq);
-	BUG_ON(!policy->max);
 
 	/* Changes to policy other than max_freq don't require any updates */
 	if (orig_max_freq == policy->max)
