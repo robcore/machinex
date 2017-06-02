@@ -1040,6 +1040,51 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
+#if 0
+static struct cpufreq_frequency_table mx_freq_table[35];
+static struct cpufreq_policy *mx_policy {
+	.cpufreq_frequency_table *mx_freq_table;
+};
+
+static struct cpufreq_frequency_table mx_freq_table[4][35] = {
+	{ 0, 384000 },
+	{ 1, 486000 },
+	{ 2, 594000 },
+	{ 3, 702000 },
+	{ 4, 810000 },
+	{ 5, 918000 },
+	{ 6, 1026000 },
+	{ 7, 1134000 },
+	{ 8, 1242000 },
+	{ 9, 1350000 },
+	{ 10, 1458000 },
+	{ 11, 1566000 },
+	{ 12, 1674000 },
+	{ 13, 1782000 },
+	{ 14, 1890000 },
+	{ 15, CPUFREQ_TABLE_END },
+};
+
+static void __init cpufreq_table_init(void)
+{
+	int i, index = 0;
+
+	/* Construct the freq_table tables from priv->freq_tbl. */
+	for (i = 0; drv.priv[i].speed.khz != 0
+			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
+		mx_freq_table[index].driver_data = index;
+		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+		index++;
+	}
+	/* freq_table not big enough to store all usable freqs. */
+	BUG_ON(drv.priv[i].speed.khz != 0);
+
+	mx_freq_table[index].driver_data = index;
+	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
+
+	pr_info("MACHINEX: %d scaling frequencies supported.\n", index);
+}
+#else
 static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ 0, 384000 },
 	{ 1, 486000 },
@@ -1078,6 +1123,7 @@ static void __init cpufreq_table_init(void)
 
 	pr_info("MACHINEX: %d scaling frequencies supported.\n", index);
 }
+#endif
 
 static void __init dcvs_freq_init(void)
 {
@@ -1315,6 +1361,38 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
+struct cpufreq_frequency_table fucktable[NR_CPUS][35];
+
+struct cpufreq_frequency_table *
+msm_get_freq_table(struct cpufreq_policy *policy)
+{
+	int i, freq_cnt;
+	int cpu;
+	struct cpufreq_frequency_table *table;
+
+	for_each_possible_cpu(policy->cpu)
+		table = kzalloc(sizeof(*fucktable[35]), GFP_KERNEL);
+
+	/* Construct the freq_table tables from acpu_freq_tbl. */
+	for (i = 0; drv.priv[i].speed.khz != 0
+			&& freq_cnt < ARRAY_SIZE(*fucktable)-1; i++) {
+		if (drv.priv[i].use_for_scaling) {
+			table[freq_cnt].driver_data = freq_cnt;
+			table[freq_cnt].frequency
+				= drv.priv[i].speed.khz;
+			freq_cnt++;
+		}
+	}
+	/* freq_table not big enough to store all usable freqs. */
+	BUG_ON(drv.priv[i].speed.khz != 0);
+
+	table[freq_cnt].driver_data = freq_cnt;
+	table[freq_cnt].frequency = CPUFREQ_TABLE_END;
+
+	/* Register table with CPUFreq. */
+	return table;
+}
+
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
 {
@@ -1364,7 +1442,7 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 {
 	hotplug_ready = true;
 }
-
+/*
 static struct cpufreq_frequency_table freq_table[] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
@@ -1383,6 +1461,7 @@ static struct cpufreq_frequency_table freq_table[] = {
 	{ .frequency = 1890000 },
 	{ .frequency = CPUFREQ_TABLE_END }
 };
+*/
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
@@ -1390,9 +1469,12 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int index;
 	int ret = 0;
 	int cpu;
+	struct cpufreq_frequency_table *freq_table;
 
 	if (policy->cpu > NR_CPUS)
 		return -ERANGE;
+
+	freq_table = msm_get_freq_table(policy);
 
 	ret = cpufreq_table_validate_and_show(policy, freq_table);
 	if (ret) {
