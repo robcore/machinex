@@ -1361,36 +1361,34 @@ int __init acpuclk_krait_init(struct device *dev,
 	return 0;
 }
 
-struct cpufreq_frequency_table fucktable[NR_CPUS][35];
+
+
+static DEFINE_PER_CPU(struct cpufreq_frequency_table, fucktable[NR_CPUS][35]);
 
 struct cpufreq_frequency_table *
 msm_get_freq_table(struct cpufreq_policy *policy)
 {
 	int i, freq_cnt;
 	int cpu;
-	struct cpufreq_frequency_table *table;
-
-	for_each_possible_cpu(policy->cpu)
-		table = kzalloc(sizeof(*fucktable[35]), GFP_KERNEL);
 
 	/* Construct the freq_table tables from acpu_freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& freq_cnt < ARRAY_SIZE(*fucktable)-1; i++) {
-		if (drv.priv[i].use_for_scaling) {
-			table[freq_cnt].driver_data = freq_cnt;
-			table[freq_cnt].frequency
-				= drv.priv[i].speed.khz;
-			freq_cnt++;
+	for (cpu = 0; cpu <= num_possible_cpus(); cpu++) {
+		for (i = 0; drv.priv[i].speed.khz != 0
+				&& freq_cnt < ARRAY_SIZE(*fucktable)-1; i++) {
+			if (drv.priv[i].use_for_scaling) {
+				fucktable[cpu][freq_cnt].driver_data = freq_cnt;
+				fucktable[cpu][freq_cnt].frequency
+					= drv.priv[i].speed.khz;
+				freq_cnt++;
+			}
 		}
-	}
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	table[freq_cnt].driver_data = freq_cnt;
-	table[freq_cnt].frequency = CPUFREQ_TABLE_END;
+	fucktable[cpu][freq_cnt].driver_data = freq_cnt;
+	fucktable[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+	}
 
 	/* Register table with CPUFreq. */
-	return table;
+	return fucktable[cpu];
 }
 
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
@@ -1471,12 +1469,13 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int cpu;
 	struct cpufreq_frequency_table *freq_table;
 
-	if (policy->cpu > NR_CPUS)
-		return -ERANGE;
+	if (policy->cpu > num_possible_cpus())
+		return -EINVAL;
 
-	freq_table = msm_get_freq_table(policy);
+	freq_table = (msm_get_freq_table(policy));
 
-	ret = cpufreq_table_validate_and_show(policy, freq_table);
+	if (freq_table != NULL)
+		ret = cpufreq_table_validate_and_show(policy, freq_table);
 	if (ret) {
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		return ret;
