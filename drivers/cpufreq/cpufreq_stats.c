@@ -43,9 +43,7 @@ static void cpufreq_stats_clear_table(struct cpufreq_stats *stats)
 	unsigned int count = stats->max_state;
 
 	memset(stats->time_in_state, 0, count * sizeof(u64));
-#ifdef CONFIG_CPU_FREQ_STAT_DETAILS
 	memset(stats->trans_table, 0, count * count * sizeof(int));
-#endif
 	stats->last_time = get_jiffies_64();
 	stats->total_trans = 0;
 }
@@ -133,8 +131,8 @@ cpufreq_freq_attr_wo(reset);
 static struct attribute *default_attrs[] = {
 	&total_trans.attr,
 	&time_in_state.attr,
-	&trans_table.attr,
 	&reset.attr,
+	&trans_table.attr,
 	NULL
 };
 static struct attribute_group stats_attr_group = {
