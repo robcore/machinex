@@ -1,10 +1,4 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0009-cpufreq-governor-Simplify-cpufreq_governor_limits.patch"
-patch -p1 -R < "/root/machinex/patches/0008-cpufreq-governor-Drop-cpu-argument-from-dbs_checkppd.patch"
-patch -p1 -R < "/root/machinex/patches/0007-cpufreq-governor-Rename-cpu_common_dbs_info-to-polic.patch"
-patch -p1 -R < "/root/machinex/patches/0006-cpufreq-governor-Drop-the-gov-pointer-from-struct-db.patch"
-patch -p1 -R < "/root/machinex/patches/0005-cpufreq-governor-Rework-cpufreq_governor_dbs.patch"
-patch -p1 -R < "/root/machinex/patches/0004-cpufreq-governor-rename-some-data-types-and-vars.patch"
-patch -p1 -R < "/root/machinex/patches/0003-cpufreq-governor-Put-governor-structure-into-common.patch"
-patch -p1 -R < "/root/machinex/patches/0002-cpufreq-governor-Avoid-passing-dbs_data-pointers.patch"
-patch -p1 -R < "/root/machinex/patches/0001-cpufreq-governor-Use-common-mutex-for-dbs_data.patch"
+patch -p1 -R < "/root/machinex/patches/0129-trying-more.patch"
+patch -p1 -R < "/root/machinex/patches/0128-trying-something-out.patch"
+patch -p1 -R < "/root/machinex/patches/0127-wanna-try-another-way-of-allocating-our-table.patch"
