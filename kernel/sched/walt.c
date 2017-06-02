@@ -743,7 +743,7 @@ done:
 
 unsigned long __weak arch_get_cpu_efficiency(int cpu)
 {
-	return SCHED_CAPACITY_SCALE;
+	return SCHED_LOAD_SCALE;
 }
 
 void walt_init_cpu_efficiency(void)
@@ -994,10 +994,14 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 	/* Initialized to policy->max in case policy->related_cpus is empty! */
 	unsigned int orig_max_freq = policy->max;
 
-	if (val != CPUFREQ_ADJUST)
+	if (val != CPUFREQ_NOTIFY && val != CPUFREQ_REMOVE_POLICY &&
+						val != CPUFREQ_CREATE_POLICY)
 		return 0;
-	else if (val == CPUFREQ_ADJUST)
-			update_min_max_capacity();
+
+	if (val == CPUFREQ_REMOVE_POLICY || val == CPUFREQ_CREATE_POLICY) {
+		update_min_max_capacity();
+		return 0;
+	}
 
 	for_each_cpu(i, policy->related_cpus) {
 		cpumask_copy(&cpu_rq(i)->freq_domain_cpumask,
