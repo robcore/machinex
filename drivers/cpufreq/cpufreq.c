@@ -685,18 +685,14 @@ show_one(util_threshold, util_thres);
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t ret;
-	unsigned int mx_offline_core = 0;
 
 	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get) {
 		ret = sprintf(buf, "%u\n", cpufreq_driver->get(policy->cpu));
 	} else {
-/*		if (cpu_online(policy->cpu))
-*/
+		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
-/*
 		else
-			ret = sprintf(buf, "%u\n", mx_offline_core);
-*/
+			ret = sprintf(buf, "Offline\n");
 	}
 	return ret;
 }

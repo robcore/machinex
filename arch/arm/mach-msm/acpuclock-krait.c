@@ -1362,7 +1362,7 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 	if (cpu_online(cpu))
 		return acpuclk_get_rate(cpu);
 	else
-		return -EINVAL;
+		return 0;
 }
 
 void msm_cpufreq_ready(struct cpufreq_policy *policy)
