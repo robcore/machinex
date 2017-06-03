@@ -1051,25 +1051,24 @@ static void __init cpufreq_table_init(void)
 		int i, freq_cnt = 0;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
 		for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*freq_table); i++) {
-				freq_table[cpu][freq_cnt].index = freq_cnt;
-				freq_table[cpu][freq_cnt].frequency
+				&& freq_cnt < ARRAY_SIZE(mx_freq_table); i++) {
+				mx_freq_table[freq_cnt].driver_data = freq_cnt;
+				mx_freq_table[freq_cnt].frequency
 					= drv.acpu_freq_tbl[i].speed.khz;
 				freq_cnt++;
 			}
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.acpu_freq_tbl[i].speed.khz != 0);
 
-		freq_table[cpu][freq_cnt].index = freq_cnt;
-		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+		mx_freq_table[freq_cnt].driver_data = freq_cnt;
+		mx_freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
 
-		dev_info(drv.dev, "CPU%d: %d frequencies supported\n",
-			cpu, freq_cnt);
+		pr_info("%d frequencies supported\n", freq_cnt);
 	} else {
 		/* Construct the freq_table tables from acpu_freq_tbl->freq_tbl. */
 		for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0
 				&& drv.acpu_freq_tbl[i].use_for_scaling
-				&& index < sizeof(&table) - 1; i++) {
+				&& index < sizeof(&(*table) - 1); i++) {
 			table[index].driver_data = index;
 			table[index].frequency = drv.acpu_freq_tbl[i].speed.khz;
 			index++;
