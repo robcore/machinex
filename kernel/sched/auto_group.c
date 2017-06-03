@@ -111,13 +111,10 @@ bool task_wants_autogroup(struct task_struct *p, struct task_group *tg)
 {
 	if (tg != &root_task_group)
 		return false;
+
 	/*
-	 * If we race with autogroup_move_group() the caller can use the old
-	 * value of signal->autogroup but in this case sched_move_task() will
-	 * be called again before autogroup_kref_put().
-	 *
-	 * However, there is no way sched_autogroup_exit_task() could tell us
-	 * to avoid autogroup->tg, so we abuse PF_EXITING flag for this case.
+	 * We can only assume the task group can't go away on us if
+	 * autogroup_move_group() can see us on ->thread_group list.
 	 */
 	if (p->flags & PF_EXITING)
 		return false;

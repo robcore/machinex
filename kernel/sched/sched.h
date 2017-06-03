@@ -34,9 +34,9 @@ extern void calc_global_load_tick(struct rq *this_rq);
 extern long calc_load_fold_active(struct rq *this_rq, long adjust);
 
 #ifdef CONFIG_SMP
-extern void cpu_load_update_active(struct rq *this_rq);
+extern void update_cpu_load_active(struct rq *this_rq);
 #else
-static inline void cpu_load_update_active(struct rq *this_rq) { }
+static inline void update_cpu_load_active(struct rq *this_rq) { }
 #endif
 
 /*
