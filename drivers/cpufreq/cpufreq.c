@@ -682,6 +682,7 @@ show_one(scaling_max_freq, max);
 show_one(cpu_utilization, util);
 show_one(util_threshold, util_thres);
 
+/*WARNING! HACK!*/
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t ret;
@@ -691,9 +692,6 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 	} else {
 		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
-		else {
-			ret = sprintf(buf, "\n");
-		}
 	}
 	return ret;
 }
