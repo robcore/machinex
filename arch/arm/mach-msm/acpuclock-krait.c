@@ -1471,7 +1471,6 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
-	.suspend	= cpufreq_generic_suspend,
 	.ready		= msm_cpufreq_ready,
 };
 

@@ -692,7 +692,7 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
 		else
-			ret = sprintf(buf, "Offline\n");
+			ret = sprintf(buf, " \n");
 	}
 	return ret;
 }
@@ -2116,14 +2116,14 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	if (cpufreq_disabled())
 		return -ENODEV;
 
-	if (limited_max_freq_thermal > 0 && target_freq > limited_max_freq_thermal)
-		target_freq = limited_max_freq_thermal;
-
 	/* Make sure that target_freq is within supported range */
 	target_freq = clamp_val(target_freq, policy->min, policy->max);
 
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 		 policy->cpu, target_freq, relation, old_target_freq);
+
+	if (limited_max_freq_thermal > 0 && target_freq > limited_max_freq_thermal)
+		target_freq = limited_max_freq_thermal;
 
 	/*
 	 * This might look like a redundant call as we are checking it again
