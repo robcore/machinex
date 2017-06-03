@@ -228,16 +228,14 @@ static void __ref do_freq_control(long temp)
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
 			max_freq = current_limit_max;
-			reapply_hard_limits();
 			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
-			reapply_hard_limits();
 			therm_freq_limited = true;
 	}
 
 	if (max_freq == limited_max_freq_thermal) {
-		reapply_hard_limits();
+		update_cpu_max_freq(cpu, max_freq);
 		therm_freq_limited = true;
 		return;
 	}
@@ -340,7 +338,6 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		update_cpu_max_freq(cpu, current_limit_max);
 	}
-	reapply_hard_limits();
 }
 
 static int __ref set_enabled(const char *val, const struct kernel_param *kp)

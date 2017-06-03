@@ -501,8 +501,6 @@ TRACE_EVENT(sched_stat_runtime,
 			(unsigned long long)__entry->vruntime)
 );
 
-#ifdef CONFIG_SMP
-
 /*
  * Tracepoint for showing priority inheritance modifying a tasks
  * priority.
@@ -672,8 +670,6 @@ TRACE_EVENT(walt_migration_update_sum,
 		  __entry->pid)
 );
 #endif /* CONFIG_SCHED_WALT */
-
-#endif /* CONFIG_SMP */
 
 #endif /* _TRACE_SCHED_H */
 

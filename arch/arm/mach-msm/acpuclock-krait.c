@@ -1359,7 +1359,10 @@ done:
 
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
-	return acpuclk_get_rate(cpu);
+	if (cpu_online(cpu))
+		return acpuclk_get_rate(cpu);
+	else
+		return -EINVAL;
 }
 
 void msm_cpufreq_ready(struct cpufreq_policy *policy)
@@ -1388,8 +1391,6 @@ static struct cpufreq_frequency_table freq_table[] = {
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
-	int cur_freq;
-	int index;
 	int ret = 0;
 	int cpu;
 
@@ -1461,7 +1462,6 @@ static struct notifier_block msm_cpufreq_pm_notifier = {
 };
 
 static struct cpufreq_driver msm_cpufreq_driver = {
-	/* lps calculations are handled here. */
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
 				  CPUFREQ_NEED_INITIAL_FREQ_CHECK |
 				  CPUFREQ_PM_NO_WARN,

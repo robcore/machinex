@@ -261,8 +261,10 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq);
 static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p)
 {
 	struct rq *later_rq = NULL;
+	bool fallback = false;
 
 	later_rq = find_lock_later_rq(p, rq);
+
 	if (!later_rq) {
 		int cpu;
 
@@ -270,6 +272,7 @@ static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p
 		 * If we cannot preempt any rq, fall back to pick any
 		 * online cpu.
 		 */
+		fallback = true;
 		cpu = cpumask_any_and(cpu_active_mask, tsk_cpus_allowed(p));
 		if (cpu >= nr_cpu_ids) {
 			/*
@@ -289,7 +292,16 @@ static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p
 		double_lock_balance(rq, later_rq);
 	}
 
+	/*
+	 * By now the task is replenished and enqueued; migrate it.
+	 */
+	deactivate_task(rq, p, 0);
 	set_task_cpu(p, later_rq->cpu);
+	activate_task(later_rq, p, 0);
+
+	if (!fallback)
+		resched_curr(later_rq);
+
 	double_unlock_balance(later_rq, rq);
 
 	return later_rq;

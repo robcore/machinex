@@ -690,10 +690,13 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get) {
 		ret = sprintf(buf, "%u\n", cpufreq_driver->get(policy->cpu));
 	} else {
-		if (cpu_online(policy->cpu))
+/*		if (cpu_online(policy->cpu))
+*/
 			ret = sprintf(buf, "%u\n", policy->cur);
+/*
 		else
 			ret = sprintf(buf, "%u\n", mx_offline_core);
+*/
 	}
 	return ret;
 }
@@ -972,15 +975,14 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 	}
 
 	if (sign != 0) {
-		if (pair[0] > 0) {
+		if (pair[0] > 0)
 			acpuclk_set_vdd(0, sign * pair[0]);
-			pr_warn("faux123: user voltage table modified!\n");
-		}
-	} else if ((pair[0] > 0) && (pair[1] > 0)) {
+	} else if ((pair[0] > 0) && (pair[1] > 0))
 			acpuclk_set_vdd((unsigned)pair[0], pair[1]);
-			pr_warn("faux123: user voltage table modified!\n");
-	} else
+	else
 			return -EINVAL;
+
+	pr_warn("faux123: user voltage table modified!\n");
 
 	return count;
 }

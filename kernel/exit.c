@@ -56,8 +56,6 @@
 #include <linux/random.h>
 #include <linux/rcuwait.h>
 
-#include "sched/tune.h"
-
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
 #include <asm/pgtable.h>
@@ -838,9 +836,6 @@ void do_exit(long code)
 	}
 
 	exit_signals(tsk);  /* sets PF_EXITING */
-
-	schedtune_exit_task(tsk);
-
 	/*
 	 * Ensure that all new tsk->pi_lock acquisitions must observe
 	 * PF_EXITING. Serializes against futex.c:attach_to_pi_owner().
