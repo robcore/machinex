@@ -1039,42 +1039,28 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 	mutex_unlock(&driver_lock);
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
-
-static struct cpufreq_frequency_table mx_freq_table[] = {
-	{ 0, 384000 },
-	{ 1, 486000 },
-	{ 2, 594000 },
-	{ 3, 702000 },
-	{ 4, 810000 },
-	{ 5, 918000 },
-	{ 6, 1026000 },
-	{ 7, 1134000 },
-	{ 8, 1242000 },
-	{ 9, 1350000 },
-	{ 10, 1458000 },
-	{ 11, 1566000 },
-	{ 12, 1674000 },
-	{ 13, 1782000 },
-	{ 14, 1890000 },
-	{ 15, CPUFREQ_TABLE_END },
-};
+static DEFINE_PER_CPU(struct cpufreq_policy *, mx_policy);
+static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
 
 static void __init cpufreq_table_init(void)
 {
 	int i, index = 0;
-
+	int cpu;
+	struct cpufreq_policy *policy = per_cpu(mx_policy, cpu);
+	static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+	policy->freq_table = freq_table[policy->cpu];
 	/* Construct the freq_table tables from priv->freq_tbl. */
 	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
-		mx_freq_table[index].driver_data = index;
-		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
+			&& index < ARRAY_SIZE(freq_table) - 1; i++) {
+		policy->freq_table[cpu][index].driver_data = index;
+		policy->freq_table[cpu][index].frequency = drv.priv[i].speed.khz;
 		index++;
 	}
 	/* freq_table not big enough to store all usable freqs. */
 	BUG_ON(drv.priv[i].speed.khz != 0);
 
-	mx_freq_table[index].driver_data = index;
-	mx_freq_table[index].frequency = CPUFREQ_TABLE_END;
+	policy->freq_table[cpu][index].driver_data = index;
+	policy->freq_table[cpu][index].frequency = CPUFREQ_TABLE_END;
 
 	pr_info("MACHINEX: %d scaling frequencies supported.\n", index);
 }
@@ -1367,7 +1353,7 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 	hotplug_ready = true;
 }
 
-static struct cpufreq_frequency_table freq_table[] = {
+static struct cpufreq_frequency_table tableu[] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
 	{ .frequency = 594000 },
@@ -1403,7 +1389,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		goto out;
 	}
 
-	ret = cpufreq_table_validate_and_show(policy, freq_table);
+	ret = cpufreq_table_validate_and_show(policy, tableu);
 	if (ret) {
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		goto out;
