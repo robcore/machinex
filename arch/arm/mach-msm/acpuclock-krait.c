@@ -1063,7 +1063,7 @@ static void __init cpufreq_table_init(void)
 		mx_freq_table[freq_cnt].driver_data = freq_cnt;
 		mx_freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
 
-		pr_info("%d frequencies supported\n", freq_cnt);
+		pr_info("MXFALLBACK:%d frequencies supported\n", freq_cnt);
 	} else {
 		/* Construct the freq_table tables from acpu_freq_tbl->freq_tbl. */
 		for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0
