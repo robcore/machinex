@@ -102,13 +102,6 @@ static const int hrtimer_clock_to_base_table[MAX_CLOCKS] = {
 	[CLOCK_TAI]		= HRTIMER_BASE_TAI,
 };
 
-static inline int hrtimer_clockid_to_base(clockid_t clock_id)
-{
-	int base = hrtimer_clock_to_base_table[clock_id];
-	BUG_ON(base == HRTIMER_MAX_CLOCK_BASES);
-	return base;
-}
-
 /*
  * Functions and macros which are different for UP/SMP systems are kept in a
  * single place
@@ -1087,6 +1080,18 @@ u64 hrtimer_get_next_event(void)
 	return expires;
 }
 #endif
+
+static inline int hrtimer_clockid_to_base(clockid_t clock_id)
+{
+	if (likely(clock_id < MAX_CLOCKS)) {
+		int base = hrtimer_clock_to_base_table[clock_id];
+
+		if (likely(base != HRTIMER_MAX_CLOCK_BASES))
+			return base;
+	}
+	WARN(1, "Invalid clockid %d. Using MONOTONIC\n", clock_id);
+	return HRTIMER_BASE_MONOTONIC;
+}
 
 static void __hrtimer_init(struct hrtimer *timer, clockid_t clock_id,
 			   enum hrtimer_mode mode)
