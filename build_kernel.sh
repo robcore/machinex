@@ -2,7 +2,7 @@
 
 export CONCURRENCY_LEVEL=$(cat /proc/cpuinfo | grep processor | wc -l)
 export CCACHE_NLEVELS=8
-
+export CCACHE_PATH=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf
 
 ################
 ##LINARO-May#
