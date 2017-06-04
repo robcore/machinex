@@ -115,7 +115,7 @@ int kgsl_gem_obj_addr(int drm_fd, int handle, unsigned long *start,
 #define KGSL_CLK_AXI	0x00000020
 
 /* Server Side Sync Timeout in milliseconds */
-#define KGSL_SYNCOBJ_SERVER_TIMEOUT 2000
+#define KGSL_SYNCOBJ_SERVER_TIMEOUT 1000
 
 /*
  * Reset status values for context
