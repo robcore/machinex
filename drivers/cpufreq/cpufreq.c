@@ -683,21 +683,25 @@ show_one(cpu_utilization, util);
 show_one(util_threshold, util_thres);
 
 /*WARNING! HACK!*/
+#pragma GCC diagnostic ignored "-Wformat-zero-length"
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t ret;
-	int i = 0;
+	char mxstring[0];
 
 	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get) {
 		ret = sprintf(buf, "%u\n", cpufreq_driver->get(policy->cpu));
 	} else {
-		if (cpu_online(policy->cpu))
+		if (cpu_online(policy->cpu)) {
 			ret = sprintf(buf, "%u\n", policy->cur);
-		else
-			ret = sprintf(&buf[i], "\n");
+		} else {
+			sprintf(mxstring, "");
+			return 0;
+		}
 	}
 	return ret;
 }
+#pragma GCC diagnostic warning "-Wformat-zero-length"
 
 static int cpufreq_set_policy(struct cpufreq_policy *policy,
 				struct cpufreq_policy *new_policy);
