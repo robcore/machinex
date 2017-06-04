@@ -910,11 +910,16 @@ int kgsl_gem_kmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 
 	priv = obj->driver_private;
 
+	if (priv == NULL) {
+		mutex_unlock(&dev->struct_mutex);
+		return VM_FAULT_SIGBUS;
+	}
+
 	offset = (unsigned long) vmf->virtual_address - vma->vm_start;
 	i = offset >> PAGE_SHIFT;
 	page = sg_page(&(priv->memdesc.sg[i]));
 
-	if (!page) {
+	if (page == NULL) {
 		mutex_unlock(&dev->struct_mutex);
 		return VM_FAULT_SIGBUS;
 	}
