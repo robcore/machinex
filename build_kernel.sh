@@ -81,6 +81,7 @@ countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -258,6 +259,7 @@ countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -436,6 +438,7 @@ countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -598,6 +601,7 @@ countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -792,6 +796,7 @@ countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
