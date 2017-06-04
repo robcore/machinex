@@ -812,7 +812,6 @@ throttle:
 }
 
 #ifdef CONFIG_SMP
-
 static void inc_dl_deadline(struct dl_rq *dl_rq, u64 deadline)
 {
 	struct rq *rq = rq_of_dl_rq(dl_rq);
@@ -1747,15 +1746,6 @@ static void switched_to_dl(struct rq *rq, struct task_struct *p)
 {
 	int check_resched = 1;
 
-	/* If p is not queued we will update its parameters at next wakeup. */
-	if (!task_on_rq_queued(p))
-		return;
-
-	/*
-	 * If p is boosted we already updated its params in
-	 * rt_mutex_setprio()->enqueue_task(..., ENQUEUE_REPLENISH),
-	 * p's deadline being now already after rq_clock(rq).
-	 */
 	if (dl_time_before(p->dl.deadline, rq_clock(rq)))
 		setup_new_dl_entity(&p->dl);
 
