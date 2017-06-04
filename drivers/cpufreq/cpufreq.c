@@ -686,7 +686,7 @@ show_one(util_threshold, util_thres);
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t ret;
-	int *dummy = NULL;
+	int i = 0;
 
 	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get) {
 		ret = sprintf(buf, "%u\n", cpufreq_driver->get(policy->cpu));
@@ -694,7 +694,7 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
 		else
-			ret = sprintf(buf, "%n\n", dummy);
+			ret = sprintf(&buf[i], "\n");
 	}
 	return ret;
 }
