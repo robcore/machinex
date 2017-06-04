@@ -199,7 +199,7 @@ struct dl_bw {
 	u64 bw, total_bw;
 };
 
-extern struct mutex sched_domains_mutex;
+extern void init_dl_bw(struct dl_bw *dl_b);
 
 #ifdef CONFIG_CGROUP_SCHED
 
@@ -577,6 +577,13 @@ struct root_domain {
 };
 
 extern struct root_domain def_root_domain;
+extern struct mutex sched_domains_mutex;
+extern cpumask_var_t fallback_doms;
+extern cpumask_var_t sched_domains_tmpmask;
+
+extern void init_defrootdomain(void);
+extern int init_sched_domains(const struct cpumask *cpu_map);
+extern void rq_attach_root(struct rq *rq, struct root_domain *rd);
 
 #endif /* CONFIG_SMP */
 
@@ -816,6 +823,16 @@ struct nr_stats_s {
 #define NR_AVE_DIV_PERIOD(x)	((x) >> NR_AVE_PERIOD_EXP)
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
+
+#ifdef CONFIG_NUMA
+extern void sched_init_numa(void);
+extern void sched_domains_numa_masks_set(unsigned int cpu);
+extern void sched_domains_numa_masks_clear(unsigned int cpu);
+#else
+static inline void sched_init_numa(void) { }
+static inline void sched_domains_numa_masks_set(unsigned int cpu) { }
+static inline void sched_domains_numa_masks_clear(unsigned int cpu) { }
+#endif
 
 #ifdef CONFIG_NUMA_BALANCING
 extern void sched_setnuma(struct task_struct *p, int node);
@@ -1909,6 +1926,10 @@ static inline void double_rq_unlock(struct rq *rq1, struct rq *rq2)
 	else
 		__release(rq2->lock);
 }
+
+extern void set_rq_online (struct rq *rq);
+extern void set_rq_offline(struct rq *rq);
+extern bool sched_smp_initialized;
 
 #else /* CONFIG_SMP */
 
