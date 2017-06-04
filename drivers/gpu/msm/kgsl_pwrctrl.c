@@ -185,15 +185,6 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	}
 
 	trace_kgsl_pwrlevel(device, pwr->active_pwrlevel, pwrlevel->gpu_freq);
-
-#ifdef CONFIG_CPU_FREQ_GOV_ELECTROACTIVE
-        if (graphics_boost_electroactive)
-			max_pwrlevel = pwr->active_pwrlevel;
-#endif
-
-#ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
-        graphics_boost_elementalx = pwr->active_pwrlevel;
-#endif
 }
 
 EXPORT_SYMBOL(kgsl_pwrctrl_pwrlevel_change);
@@ -224,14 +215,9 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	pwr->thermal_pwrlevel = level;
 
-	/*
-	 * If there is no power policy set the clock to the requested thermal
-	 * level - if thermal now happens to be higher than max, then that will
-	 * be limited by the pwrlevel change function.  Otherwise if there is
-	 * a policy only change the active clock if it is higher then the new
-	 * thermal level
-	 */
-	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
+
+	if (device->pwrscale.policy == NULL ||
+		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
 
 	mutex_unlock(&device->mutex);
