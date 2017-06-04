@@ -727,16 +727,18 @@ static bool genpd_dev_active_wakeup(struct generic_pm_domain *genpd,
 /**
  * genpd_sync_power_off - Synchronously power off a PM domain and its masters.
  * @genpd: PM domain to power off, if possible.
+ * @use_lock: use the lock.
+ * @depth: nesting count for lockdep.
  *
  * Check if the given PM domain can be powered off (during system suspend or
  * hibernation) and do that if so.  Also, in that case propagate to its masters.
  *
  * This function is only called in "noirq" and "syscore" stages of system power
- * transitions, so it need not acquire locks (all of the "noirq" callbacks are
- * executed sequentially, so it is guaranteed that it will never run twice in
- * parallel).
+ * transitions. The "noirq" callbacks may be executed asynchronously, thus in
+ * these cases the lock must be held.
  */
-static void genpd_sync_power_off(struct generic_pm_domain *genpd)
+static void genpd_sync_power_off(struct generic_pm_domain *genpd, bool use_lock,
+				 unsigned int depth)
 {
 	struct gpd_link *link;
 
@@ -755,20 +757,29 @@ static void genpd_sync_power_off(struct generic_pm_domain *genpd)
 
 	list_for_each_entry(link, &genpd->slave_links, slave_node) {
 		genpd_sd_counter_dec(link->master);
-		genpd_sync_power_off(link->master);
+
+		if (use_lock)
+			genpd_lock_nested(link->master, depth + 1);
+
+		genpd_sync_power_off(link->master, use_lock, depth + 1);
+
+		if (use_lock)
+			genpd_unlock(link->master);
 	}
 }
 
 /**
  * genpd_sync_power_on - Synchronously power on a PM domain and its masters.
  * @genpd: PM domain to power on.
+ * @use_lock: use the lock.
+ * @depth: nesting count for lockdep.
  *
  * This function is only called in "noirq" and "syscore" stages of system power
- * transitions, so it need not acquire locks (all of the "noirq" callbacks are
- * executed sequentially, so it is guaranteed that it will never run twice in
- * parallel).
+ * transitions. The "noirq" callbacks may be executed asynchronously, thus in
+ * these cases the lock must be held.
  */
-static void genpd_sync_power_on(struct generic_pm_domain *genpd)
+static void genpd_sync_power_on(struct generic_pm_domain *genpd, bool use_lock,
+				unsigned int depth)
 {
 	struct gpd_link *link;
 
@@ -776,8 +787,15 @@ static void genpd_sync_power_on(struct generic_pm_domain *genpd)
 		return;
 
 	list_for_each_entry(link, &genpd->slave_links, slave_node) {
-		genpd_sync_power_on(link->master);
 		genpd_sd_counter_inc(link->master);
+
+		if (use_lock)
+			genpd_lock_nested(link->master, depth + 1);
+
+		genpd_sync_power_on(link->master, use_lock, depth + 1);
+
+		if (use_lock)
+			genpd_unlock(link->master);
 	}
 
 	_genpd_power_on(genpd, false);
@@ -886,13 +904,10 @@ static int pm_genpd_suspend_noirq(struct device *dev)
 			return ret;
 	}
 
-	/*
-	 * Since all of the "noirq" callbacks are executed sequentially, it is
-	 * guaranteed that this function will never run twice in parallel for
-	 * the same PM domain, so it is not necessary to use locking here.
-	 */
+	genpd_lock(genpd);
 	genpd->suspended_count++;
-	genpd_sync_power_off(genpd);
+	genpd_sync_power_off(genpd, true, 0);
+	genpd_unlock(genpd);
 
 	return 0;
 }
@@ -917,13 +932,10 @@ static int pm_genpd_resume_noirq(struct device *dev)
 	if (dev->power.wakeup_path && genpd_dev_active_wakeup(genpd, dev))
 		return 0;
 
-	/*
-	 * Since all of the "noirq" callbacks are executed sequentially, it is
-	 * guaranteed that this function will never run twice in parallel for
-	 * the same PM domain, so it is not necessary to use locking here.
-	 */
-	genpd_sync_power_on(genpd);
+	genpd_lock(genpd);
+	genpd_sync_power_on(genpd, true, 0);
 	genpd->suspended_count--;
+	genpd_unlock(genpd);
 
 	if (genpd->dev_ops.stop && genpd->dev_ops.start)
 		ret = pm_runtime_force_resume(dev);
@@ -1000,13 +1012,10 @@ static int pm_genpd_restore_noirq(struct device *dev)
 		return -EINVAL;
 
 	/*
-	 * Since all of the "noirq" callbacks are executed sequentially, it is
-	 * guaranteed that this function will never run twice in parallel for
-	 * the same PM domain, so it is not necessary to use locking here.
-	 *
 	 * At this point suspended_count == 0 means we are being run for the
 	 * first time for the given domain in the present cycle.
 	 */
+	genpd_lock(genpd);
 	if (genpd->suspended_count++ == 0)
 		/*
 		 * The boot kernel might put the domain into arbitrary state,
@@ -1015,7 +1024,8 @@ static int pm_genpd_restore_noirq(struct device *dev)
 		 */
 		genpd->status = GPD_STATE_POWER_OFF;
 
-	genpd_sync_power_on(genpd);
+	genpd_sync_power_on(genpd, true, 0);
+	genpd_unlock(genpd);
 
 	if (genpd->dev_ops.stop && genpd->dev_ops.start)
 		ret = pm_runtime_force_resume(dev);
@@ -1070,9 +1080,9 @@ static void genpd_syscore_switch(struct device *dev, bool suspend)
 
 	if (suspend) {
 		genpd->suspended_count++;
-		genpd_sync_power_off(genpd);
+		genpd_sync_power_off(genpd, false, 0);
 	} else {
-		genpd_sync_power_on(genpd);
+		genpd_sync_power_on(genpd, false, 0);
 		genpd->suspended_count--;
 	}
 }
