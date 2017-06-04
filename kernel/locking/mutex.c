@@ -983,7 +983,7 @@ EXPORT_SYMBOL_GPL(ww_mutex_lock_interruptible);
 static noinline void __sched __mutex_unlock_slowpath(struct mutex *lock, unsigned long ip)
 {
 	struct task_struct *next = NULL;
-	WAKE_Q(wake_q);
+	DEFINE_WAKE_Q(wake_q);
 	unsigned long owner;
 
 	mutex_release(&lock->dep_map, 1, ip);
