@@ -1062,10 +1062,11 @@ static struct cpufreq_frequency_table mx_freq_table[] = {
 static void __init cpufreq_table_init(void)
 {
 	int i, index = 0;
+	const struct acpu_level *l;
 
 	/* Construct the freq_table tables from priv->freq_tbl. */
-	for (i = 0; drv.priv[i].speed.khz != 0
-			&& index < ARRAY_SIZE(mx_freq_table) - 1; i++) {
+	for (l = drv.priv; i = 0; l[i].speed.khz != 0
+			&& index < 15; i++) {
 		mx_freq_table[index].driver_data = index;
 		mx_freq_table[index].frequency = drv.priv[i].speed.khz;
 		index++;
