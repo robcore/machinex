@@ -14,9 +14,7 @@
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/msi.h>
-
-/* Temparory solution for building, will be removed later */
-#include <linux/pci.h>
+#include <linux/slab.h>
 
 #ifdef CONFIG_GENERIC_MSI_IRQ_DOMAIN
 /**
