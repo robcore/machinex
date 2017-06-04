@@ -863,7 +863,7 @@ static int z180_waittimestamp(struct kgsl_device *device,
 
 	/* Don't wait forever, set a max (20 sec) value for now */
 	if (msecs == -1)
-		msecs = 20 * MSEC_PER_SEC;
+		msecs = 10 * MSEC_PER_SEC;
 
 	mutex_unlock(&device->mutex);
 	timeout = wait_io_event_interruptible_timeout(
