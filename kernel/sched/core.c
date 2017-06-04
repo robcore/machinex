@@ -325,7 +325,7 @@ struct rq *__task_rq_lock(struct task_struct *p, struct rq_flags *rf)
 		}
 		raw_spin_unlock(&rq->lock);
 
-		while (unlikely(task_on_rq_migrating(p)))
+		while (task_on_rq_migrating(p))
 			cpu_relax();
 	}
 }
@@ -366,7 +366,7 @@ struct rq *task_rq_lock(struct task_struct *p, struct rq_flags *rf)
 		raw_spin_unlock(&rq->lock);
 		raw_spin_unlock_irqrestore(&p->pi_lock, rf->flags);
 
-		while (unlikely(task_on_rq_migrating(p)))
+		while (task_on_rq_migrating(p))
 			cpu_relax();
 	}
 }
@@ -1180,7 +1180,7 @@ struct migration_arg {
  */
 static struct rq *__migrate_task(struct rq *rq, struct task_struct *p, int dest_cpu)
 {
-	if (unlikely(!cpu_active(dest_cpu)))
+	if (!cpu_active(dest_cpu))
 		return rq;
 
 	/* Affinity changed (again). */
@@ -1583,7 +1583,7 @@ unsigned long wait_task_inactive(struct task_struct *p, long match_state)
 		 *
 		 * Oops. Go back and try again..
 		 */
-		if (unlikely(running)) {
+		if (running) {
 			cpu_relax();
 			continue;
 		}
@@ -1756,8 +1756,8 @@ int select_task_rq(struct task_struct *p, int cpu, int sd_flags, int wake_flags)
 	 * [ this allows ->select_task() to simply return task_cpu(p) and
 	 *   not worry about this generic constraint ]
 	 */
-	if (unlikely(!cpumask_test_cpu(cpu, tsk_cpus_allowed(p)) ||
-		     !cpu_online(cpu)))
+	if (!cpumask_test_cpu(cpu, tsk_cpus_allowed(p)) ||
+		     !cpu_online(cpu))
 		cpu = select_fallback_rq(task_cpu(p), p);
 
 	return cpu;
@@ -3390,14 +3390,14 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	 * Optimization: we know that if all tasks are in
 	 * the fair class we can call that function directly:
 	 */
-	if (likely(prev->sched_class == class &&
-		   rq->nr_running == rq->cfs.h_nr_running)) {
+	if (prev->sched_class && prev->sched_class == class &&
+		   rq->nr_running == rq->cfs.nr_running) {
 		p = fair_sched_class.pick_next_task(rq, prev, rf);
-		if (unlikely(p == RETRY_TASK))
+		if (unlikely((p) && p == RETRY_TASK))
 			goto again;
 
 		/* Assumes fair_sched_class->next == idle_sched_class */
-		if (unlikely(!p))
+		if (!p)
 			p = idle_sched_class.pick_next_task(rq, prev, rf);
 
 		return p;
@@ -3465,6 +3465,7 @@ static void __sched notrace __schedule(void)
 	struct rq_flags rf;
 	struct rq *rq;
 	int cpu;
+	bool predisabled = false;
 
 	preempt_disable();
 	cpu = smp_processor_id();
@@ -3479,10 +3480,10 @@ static void __sched notrace __schedule(void)
 	 * It also avoids the below schedule_debug() test from complaining
 	 * about this.
 	 */
-	if (unlikely(prev->state == TASK_DEAD))
+	if (unlikely(prev->state == TASK_DEAD)) {
 		preempt_enable_no_resched_notrace();
-
-	schedule_debug(prev);
+		predisabled = true;
+	}
 
 	if (sched_feat(HRTICK))
 		hrtick_clear(rq);
@@ -3503,8 +3504,9 @@ static void __sched notrace __schedule(void)
 	rq->clock_skip_update <<= 1;
 
 	switch_count = &prev->nivcsw;
-	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
-		if (unlikely(signal_pending_state(prev->state, prev))) {
+
+	if (prev && prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
+		if (signal_pending_state(prev->state, prev)) {
 			prev->state = TASK_RUNNING;
 		} else {
 			deactivate_task(rq, prev, DEQUEUE_SLEEP);
@@ -3557,6 +3559,7 @@ static void __sched notrace __schedule(void)
 
 	balance_callback(rq);
 
+	if (!predisabled)
 	sched_preempt_enable_no_resched();
 }
 
@@ -5762,8 +5765,8 @@ static struct ctl_table *sd_alloc_ctl_cpu_table(int cpu)
 	return table;
 }
 
-static struct ctl_table_header *sd_sysctl_header;
-static void register_sched_domain_sysctl(void)
+struct ctl_table_header *sd_sysctl_header;
+void register_sched_domain_sysctl(void)
 {
 	int i, cpu_num = num_possible_cpus();
 	struct ctl_table *entry = sd_alloc_ctl_entry(cpu_num + 1);
@@ -5788,7 +5791,7 @@ static void register_sched_domain_sysctl(void)
 }
 
 /* may be called multiple times per register */
-static void unregister_sched_domain_sysctl(void)
+void unregister_sched_domain_sysctl(void)
 {
 	unregister_sysctl_table(sd_sysctl_header);
 	sd_sysctl_header = NULL;
@@ -5796,13 +5799,15 @@ static void unregister_sched_domain_sysctl(void)
 		sd_free_ctl_entry(&sd_ctl_dir[0].child);
 }
 #else
-static void register_sched_domain_sysctl(void)
+void register_sched_domain_sysctl(void)
 {
 }
-static void unregister_sched_domain_sysctl(void)
+void unregister_sched_domain_sysctl(void)
 {
 }
 #endif /* CONFIG_SCHED_DEBUG && CONFIG_SYSCTL */
+EXPORT_SYMBOL(register_sched_domain_sysctl);
+EXPORT_SYMBOL(unregister_sched_domain_sysctl);
 
 void set_rq_online(struct rq *rq)
 {
@@ -6519,14 +6524,14 @@ void sched_move_task(struct task_struct *tsk)
 
 	if (queued)
 		dequeue_task(rq, tsk, DEQUEUE_SAVE | DEQUEUE_MOVE);
-	if (unlikely(running))
+	if (running)
 		put_prev_task(rq, tsk);
 
 	sched_change_group(tsk, TASK_MOVE_GROUP);
 
 	if (queued)
 		enqueue_task(rq, tsk, ENQUEUE_RESTORE | ENQUEUE_MOVE);
-	if (unlikely(running))
+	if (running)
 		tsk->sched_class->set_curr_task(rq);
 
 	task_rq_unlock(rq, tsk, &rf);

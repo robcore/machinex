@@ -9,7 +9,7 @@
 DEFINE_MUTEX(sched_domains_mutex);
 
 /* Protected by sched_domains_mutex: */
-static cpumask_var_t sched_domains_tmpmask;
+cpumask_var_t sched_domains_tmpmask;
 
 #ifdef CONFIG_SCHED_DEBUG
 
@@ -194,7 +194,7 @@ static void free_rootdomain(struct rcu_head *rcu)
 	kfree(rd);
 }
 
-static void rq_attach_root(struct rq *rq, struct root_domain *rd)
+void rq_attach_root(struct rq *rq, struct root_domain *rd)
 {
 	struct root_domain *old_rd = NULL;
 	unsigned long flags;
@@ -272,7 +272,7 @@ out:
  */
 struct root_domain def_root_domain;
 
-static void init_defrootdomain(void)
+void init_defrootdomain(void)
 {
 	init_rootdomain(&def_root_domain);
 
@@ -1258,11 +1258,6 @@ static void sched_domains_numa_masks_clear(unsigned int cpu)
 			cpumask_clear_cpu(cpu, sched_domains_numa_masks[i][j]);
 	}
 }
-
-#else
-static inline void sched_init_numa(void) { }
-static void sched_domains_numa_masks_set(unsigned int cpu) { }
-static void sched_domains_numa_masks_clear(unsigned int cpu) { }
 #endif /* CONFIG_NUMA */
 
 static int __sdt_alloc(const struct cpumask *cpu_map)
@@ -1486,7 +1481,7 @@ static struct sched_domain_attr		*dattr_cur;
  * cpumask) fails, then fallback to a single sched domain,
  * as determined by the single cpumask fallback_doms.
  */
-static cpumask_var_t			fallback_doms;
+cpumask_var_t			fallback_doms;
 
 /*
  * arch_update_cpu_topology lets virtualized architectures update the
@@ -1528,7 +1523,7 @@ void free_sched_domains(cpumask_var_t doms[], unsigned int ndoms)
  * For now this just excludes isolated CPUs, but could be used to
  * exclude other special cases in the future.
  */
-static int init_sched_domains(const struct cpumask *cpu_map)
+int init_sched_domains(const struct cpumask *cpu_map)
 {
 	int err;
 
@@ -1548,7 +1543,7 @@ static int init_sched_domains(const struct cpumask *cpu_map)
  * Detach sched domains from a group of CPUs specified in cpu_map
  * These CPUs will now be attached to the NULL domain
  */
-static void detach_destroy_domains(const struct cpumask *cpu_map)
+void detach_destroy_domains(const struct cpumask *cpu_map)
 {
 	int i;
 

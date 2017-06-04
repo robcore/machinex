@@ -1066,6 +1066,9 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 #else
 # define const_debug const
 #endif
+extern struct ctl_table_header *sd_sysctl_header;
+extern void unregister_sched_domain_sysctl(void);
+extern void register_sched_domain_sysctl(void);
 
 extern const_debug unsigned int sysctl_sched_features;
 
