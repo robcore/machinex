@@ -172,32 +172,6 @@ static void rwlock_bug(rwlock_t *lock, const char *msg)
 
 #define RWLOCK_BUG_ON(cond, lock, msg) if (unlikely(cond)) rwlock_bug(lock, msg)
 
-#if 0		/* __write_lock_debug() can lock up - maybe this can too? */
-static void __read_lock_debug(rwlock_t *lock)
-{
-	u64 i;
-	u64 loops = loops_per_jiffy * HZ;
-	int print_once = 1;
-
-	for (;;) {
-		for (i = 0; i < loops; i++) {
-			if (arch_read_trylock(&lock->raw_lock))
-				return;
-			__delay(1);
-		}
-		/* lockup suspected: */
-		if (print_once) {
-			print_once = 0;
-			printk(KERN_EMERG "BUG: read-lock lockup on CPU#%d, "
-					"%s/%d, %p\n",
-				raw_smp_processor_id(), current->comm,
-				current->pid, lock);
-			dump_stack();
-		}
-	}
-}
-#endif
-
 void do_raw_read_lock(rwlock_t *lock)
 {
 	RWLOCK_BUG_ON(lock->magic != RWLOCK_MAGIC, lock, "bad magic");
@@ -246,32 +220,6 @@ static inline void debug_write_unlock(rwlock_t *lock)
 	lock->owner = SPINLOCK_OWNER_INIT;
 	lock->owner_cpu = -1;
 }
-
-#if 0		/* This can cause lockups */
-static void __write_lock_debug(rwlock_t *lock)
-{
-	u64 i;
-	u64 loops = loops_per_jiffy * HZ;
-	int print_once = 1;
-
-	for (;;) {
-		for (i = 0; i < loops; i++) {
-			if (arch_write_trylock(&lock->raw_lock))
-				return;
-			__delay(1);
-		}
-		/* lockup suspected: */
-		if (print_once) {
-			print_once = 0;
-			printk(KERN_EMERG "BUG: write-lock lockup on CPU#%d, "
-					"%s/%d, %p\n",
-				raw_smp_processor_id(), current->comm,
-				current->pid, lock);
-			dump_stack();
-		}
-	}
-}
-#endif
 
 void do_raw_write_lock(rwlock_t *lock)
 {
