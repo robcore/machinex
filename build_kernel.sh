@@ -57,11 +57,6 @@ fi;
 
 function countdown()
 {
-	echo "3"
-	sleep 1
-	echo "2"
-	sleep 1
-	echo "1"
 	sleep 1
 }
 
@@ -74,7 +69,7 @@ read OVNAME
 OUTFOLDER=machinex-Mark$OVNAME
 if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 	echo "removing previously compiled folder and zip of the same name"
-	sleep 1
+	countdown
 	rm -rf /media/root/robcore/AIK/$OUTFOLDER
 fi;
 	echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -82,7 +77,7 @@ fi;
 function ADBRETRY()
 {
 adb connect 192.168.1.103
-sleep 1
+countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -223,7 +218,7 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				sleep 1
+				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -231,7 +226,7 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				sleep 1
+				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -242,7 +237,7 @@ if [[ $USEPRV = "n" ]]; then
 		OUTFOLDER=machinex-Mark$OVNAME
 		if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 			echo "removing previously compiled folder and zip of the same name"
-			sleep 1
+			countdown
 			rm -rf /media/root/robcore/AIK/$OUTFOLDER
 		fi;
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -259,7 +254,7 @@ fi;
 function ADBRETRY()
 {
 adb connect 192.168.1.103
-sleep 1
+countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -401,7 +396,7 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				sleep 1
+				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -409,7 +404,7 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				sleep 1
+				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -420,7 +415,7 @@ if [[ $USEPRV = "n" ]]; then
 		OUTFOLDER=machinex-Mark$OVNAME
 		if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 			echo "removing previously compiled folder and zip of the same name"
-			sleep 1
+			countdown
 			rm -rf /media/root/robcore/AIK/$OUTFOLDER
 		fi;
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -437,7 +432,7 @@ fi;
 function ADBRETRY()
 {
 adb connect 192.168.1.103
-sleep 1
+countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -599,7 +594,7 @@ fi;
 function ADBRETRY()
 {
 adb connect 192.168.1.103
-sleep 1
+countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -712,7 +707,7 @@ fi;
 function MISMATCH()
 {
 echo "Building CONFIG_SECTION_MISMATCH kernel"
-sleep 1
+countdown
 	echo "your previous version was $PREV"
 	PRVS=$PREV-MISMATCH
 	OUTFOLDER=$PRVS
@@ -780,12 +775,12 @@ function REBUILD()
 {
 echo "REBUILDING Previous Kernel"
 echo "your previous version was $PREV"
-sleep 1
+countdown
 
 PRVS=$PREV
 if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	echo "removing previously compiled folder and zip of the same name"
-	sleep 1
+	countdown
 	rm -rf /media/root/robcore/AIK/$PRVS
 fi;
 OUTFOLDER=$PRVS
@@ -793,7 +788,7 @@ OUTFOLDER=$PRVS
 function ADBRETRY()
 {
 adb connect 192.168.1.103
-sleep 1
+countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
@@ -874,12 +869,12 @@ function FAKEREBUILD()
 {
 echo "Rebuilding Fakeroot kernel"
 echo "your previous version was $PREV"
-sleep 1
+countdown
 
 PRVS=$PREV
 if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	echo "removing previously compiled folder and zip of the same name"
-	sleep 1
+	countdown
 	rm -rf /media/root/robcore/AIK/$PRVS
 fi;
 OUTFOLDER=$PRVS
@@ -887,11 +882,11 @@ OUTFOLDER=$PRVS
 function ADBRETRY()
 {
 adb connect 192.168.1.103
-sleep 1
+countdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == device ]]; then
 	echo "connected"
-	sleep 1
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
