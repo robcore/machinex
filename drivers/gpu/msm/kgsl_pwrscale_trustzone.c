@@ -99,8 +99,10 @@ static ssize_t tz_governor_store(struct kgsl_device *device,
 	else if (!strncmp(buf, "performance", 11))
 		priv->governor = TZ_GOVERNOR_PERFORMANCE;
 
-	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
+	if (priv->governor == TZ_GOVERNOR_PERFORMANCE) {
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+		pwr->default_pwrlevel = pwr->max_pwrlevel;
+	}
 
 	mutex_unlock(&device->mutex);
 	return count;
@@ -171,7 +173,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * increase frequency.  Otherwise run the normal algorithm.
 	 */
 	if (priv->bin.busy_time > CEILING) {
-		val = -1;
+		val = 0;
 	} else {
 		idle = priv->bin.total_time - priv->bin.busy_time;
 		idle = (idle > 0) ? idle : 0;
