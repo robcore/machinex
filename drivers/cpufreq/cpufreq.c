@@ -694,7 +694,7 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 		if (cpu_online(policy->cpu))
 			ret = sprintf(buf, "%u\n", policy->cur);
 		else
-			ret = sprintf(buf, "%n", dummy);
+			ret = sprintf(buf, "%n\n", dummy);
 	}
 	return ret;
 }
