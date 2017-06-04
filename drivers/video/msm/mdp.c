@@ -90,7 +90,7 @@ struct completion mdp_ppp_comp;
 struct semaphore mdp_ppp_mutex;
 struct semaphore mdp_pipe_ctrl_mutex;
 
-unsigned long mdp_timer_duration = (HZ/20);   /* 50 msecond */
+unsigned long mdp_timer_duration = (50);   /* 50 msecond */
 
 boolean mdp_ppp_waiting = FALSE;
 uint32 mdp_tv_underflow_cnt;
@@ -1938,7 +1938,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 				/* send workqueue to turn off mdp power */
 				queue_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
-						   mdp_timer_duration);
+						   msecs_to_jiffies(mdp_timer_duration));
 			}
 		}
 	} else {
@@ -1956,7 +1956,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 		 * pending
 		 */
 
-		if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
+		//if (delayed_work_pending(&mdp_pipe_ctrl_worker)) {
 			/*
 			 * try to cancel the current work if it fails to
 			 * stop (which means del_timer can't delete it
@@ -1965,8 +1965,8 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 			 * accept the next job which is same as
 			 * queue_delayed_work(mdp_timer_duration = 0)
 			 */
-			cancel_delayed_work(&mdp_pipe_ctrl_worker);
-		}
+			//cancel_delayed_work(&mdp_pipe_ctrl_worker);
+		//}
 
 		if ((mdp_all_blocks_off) && (mdp_current_clk_on)) {
 			mutex_lock(&mdp_suspend_mutex);
@@ -2000,9 +2000,9 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 					clk_disable_unprepare(mdp_lut_clk);
 			} else {
 				/* send workqueue to turn off mdp power */
-				queue_delayed_work(mdp_pipe_ctrl_wq,
+				mod_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
-						   mdp_timer_duration);
+						   msecs_to_jiffies(mdp_timer_duration));
 			}
 			mutex_unlock(&mdp_suspend_mutex);
 		} else if ((!mdp_all_blocks_off) && (!mdp_current_clk_on)) {
