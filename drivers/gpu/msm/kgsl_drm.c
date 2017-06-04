@@ -996,15 +996,14 @@ int msm_drm_gem_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	map = drm_hash_entry(hash, struct drm_map_list, hash)->map;
-	if (!map ||
-	    ((map->flags & _DRM_RESTRICTED) && !capable(CAP_SYS_ADMIN))) {
-		ret =  -EPERM;
+	if (!map) {
+		ret =  -ENOMEM;
 		goto out_unlock;
 	}
 
 	/* Check for valid size. */
 	if (map->size < vma->vm_end - vma->vm_start) {
-		ret = -EINVAL;
+		ret = -ENOMEM;
 		goto out_unlock;
 	}
 
