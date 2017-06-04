@@ -294,6 +294,8 @@ static void _kgsl_pwrscale_detach_policy(struct kgsl_device *device)
 
 		kgsl_pwrctrl_pwrlevel_change(device,
 				device->pwrctrl.max_pwrlevel);
+		device->pwrctrl.default_pwrlevel =
+				device->pwrctrl.max_pwrlevel;
 	}
 	device->pwrscale.policy = NULL;
 }
