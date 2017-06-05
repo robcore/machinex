@@ -1069,7 +1069,8 @@ static int effective_prio(struct task_struct *p)
  * Return: 1 if the task is currently executing. 0 otherwise.
  */
 inline int task_curr(const struct task_struct *p)
-{
+{	if (WARN_ON_ONCE(p == NULL))
+		return 0; /*drop it*/
 	return cpu_curr(task_cpu(p)) == p;
 }
 
@@ -1097,7 +1098,7 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 {
 	const struct sched_class *class;
 
-	if (class == NULL || rq == NULL || p == NULL)
+	if (rq == NULL || p == NULL)
 		return;
 	if (p->sched_class == rq->curr->sched_class) {
 		rq->curr->sched_class->check_preempt_curr(rq, p, flags);
