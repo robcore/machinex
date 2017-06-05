@@ -433,6 +433,52 @@ static int kgsl_pwrctrl_max_gpuclk_show(struct device *dev,
 			pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq);
 }
 
+static int kgsl_pwrctrl_mix_gpuclk_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct kgsl_device *device = kgsl_device_from_dev(dev);
+	struct kgsl_pwrctrl *pwr;
+	unsigned int val = 0;
+	int ret, level;
+
+	if (device == NULL)
+		return 0;
+
+	pwr = &device->pwrctrl;
+
+	ret = kgsl_sysfs_store(buf, &val);
+	if (ret)
+		return ret;
+
+	mutex_lock(&device->mutex);
+	level = _get_nearest_pwrlevel(pwr, val);
+	if (level < 0)
+		goto done;
+
+	pwr->min_pwrlevel = level;
+
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
+
+done:
+	mutex_unlock(&device->mutex);
+	return count;
+}
+
+static int kgsl_pwrctrl_min_gpuclk_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+
+	struct kgsl_device *device = kgsl_device_from_dev(dev);
+	struct kgsl_pwrctrl *pwr;
+	if (device == NULL)
+		return 0;
+	pwr = &device->pwrctrl;
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+			pwr->pwrlevels[pwr->min_pwrlevel].gpu_freq);
+}
+
 static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
@@ -466,17 +512,11 @@ static int kgsl_pwrctrl_gpuclk_show(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	unsigned int level;
-
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
-	if (device->state == KGSL_STATE_SLUMBER)
-		level = pwr->num_pwrlevels - 1;
-	else
-		level = pwr->active_pwrlevel;
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-			pwr->pwrlevels[level].gpu_freq);
+			pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq);
 }
 
 static int kgsl_pwrctrl_pwrnap_store(struct device *dev,
@@ -811,6 +851,8 @@ DEVICE_ATTR(max_fps, 0664, kgsl_max_fps_show, kgsl_max_fps_store);
 DEVICE_ATTR(gpuclk, 0644, kgsl_pwrctrl_gpuclk_show, kgsl_pwrctrl_gpuclk_store);
 DEVICE_ATTR(max_gpuclk, 0644, kgsl_pwrctrl_max_gpuclk_show,
 	kgsl_pwrctrl_max_gpuclk_store);
+DEVICE_ATTR(min_gpuclk, 0644, kgsl_pwrctrl_min_gpuclk_show,
+	kgsl_pwrctrl_min_gpuclk_store);
 DEVICE_ATTR(pwrnap, 0664, kgsl_pwrctrl_pwrnap_show, kgsl_pwrctrl_pwrnap_store);
 DEVICE_ATTR(idle_timer, 0644, kgsl_pwrctrl_idle_timer_show,
 	kgsl_pwrctrl_idle_timer_store);
@@ -843,6 +885,7 @@ DEVICE_ATTR(pmqos_latency, 0644,
 static const struct device_attribute *pwrctrl_attr_list[] = {
 	&dev_attr_gpuclk,
 	&dev_attr_max_gpuclk,
+	&dev_attr_min_gpuclk,
 	&dev_attr_pwrnap,
 	&dev_attr_idle_timer,
 	&dev_attr_gpubusy,
