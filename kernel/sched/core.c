@@ -58,6 +58,7 @@
 #include <linux/prefetch.h>
 #include <linux/cpufreq.h>
 #include <linux/sched/deadline.h>
+#include <linux/rcupdate_wait.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
