@@ -281,8 +281,6 @@ static inline int hrtimer_is_hres_active(struct hrtimer *timer)
 	return timer->base->cpu_base->hres_active;
 }
 
-extern void hrtimer_peek_ahead_timers(void);
-
 /*
  * The resolution of the clocks. The resolution value is returned in
  * the clock_getres() system call to give application programmers an
@@ -304,8 +302,6 @@ extern unsigned int hrtimer_resolution;
 # define KTIME_MONOTONIC_RES	KTIME_LOW_RES
 
 #define hrtimer_resolution	LOW_RES_NSEC
-
-static inline void hrtimer_peek_ahead_timers(void) { }
 
 static inline int hrtimer_is_hres_active(struct hrtimer *timer)
 {
