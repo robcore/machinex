@@ -130,7 +130,7 @@ int cpudl_find(struct cpudl *cp, struct task_struct *p,
 	if (later_mask && cpumask_and(later_mask, later_mask, cp->free_cpus)) {
 		best_cpu = cpumask_any(later_mask);
 		goto out;
-	} else if (cpumask_test_cpu(cpudl_maximum(cp), tsk_cpus_allowed(p)) &&
+	} else if (cpumask_test_cpu(cpudl_maximum(cp), &p->cpus_allowed) &&
 			dl_time_before(dl_se->deadline, cp->elements[0].dl)) {
 		best_cpu = cpudl_maximum(cp);
 		if (later_mask)
