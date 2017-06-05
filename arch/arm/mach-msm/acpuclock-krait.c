@@ -1392,14 +1392,14 @@ static struct cpufreq_frequency_table freq_table[] = {
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int ret = 0;
-	int cpu = smp_processor_id();
+	int cpu;
 
-	if (cpu > NR_CPUS) {
+	if (policy->cpu > NR_CPUS) {
 		ret = -EINVAL;
 		goto out;
 	}
 
-	if (!cpu_online(cpu)) {
+	if (!cpu_online(policy->cpu)) {
 		ret = -EBUSY;
 		goto out;
 	}
@@ -1409,9 +1409,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		goto out;
 	}
-
-	for_each_possible_cpu(cpu)
-		policy->cur = acpuclk_get_rate(cpu);
 out:
 	return ret;
 }
