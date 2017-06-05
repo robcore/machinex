@@ -19,6 +19,7 @@
 #include <linux/list.h>
 #include <linux/ctype.h>
 #include <linux/jiffies.h>
+#include <linux/completion.h>
 
 #include <mach/msm_iomap.h>
 
