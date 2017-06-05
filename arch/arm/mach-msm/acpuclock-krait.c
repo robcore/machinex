@@ -1394,12 +1394,12 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	int cpu;
 
-	if (policy->cpu > NR_CPUS) {
+	if (cpu > NR_CPUS) {
 		ret = -EINVAL;
 		goto out;
 	}
 
-	if (!cpu_online(policy->cpu)) {
+	if (!cpu_online(cpu)) {
 		ret = -EBUSY;
 		goto out;
 	}
