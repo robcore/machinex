@@ -640,7 +640,7 @@ static int __init smd_tty_init(void)
 	}
 	INIT_WORK(&pm_qos_set_work, pm_qos_set_worker);
 	INIT_DELAYED_WORK(&loopback_work, loopback_probe_worker);
-	pm_qos_add_request(&smd_tty_qos_req, PM_QOS_NETWORK_THROUGHPUT,
+	pm_qos_add_request(&smd_tty_qos_req, PM_QOS_CPU_DMA_LATENCY,
 			PM_QOS_DEFAULT_VALUE);
 	return 0;
 

@@ -115,7 +115,7 @@ static void msm_gov_idle_source_init(int cpu, int dcvs_core_id)
 	info = &per_cpu(cpu_idle_info, cpu);
 	info->dcvs_core_id = dcvs_core_id;
 
-	pm_qos_add_request(&info->pm_qos_req, PM_QOS_NETWORK_THROUGHPUT,
+	pm_qos_add_request(&info->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
 				PM_QOS_DEFAULT_VALUE);
 }
 

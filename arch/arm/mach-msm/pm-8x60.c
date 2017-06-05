@@ -712,7 +712,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 	struct msm_pm_time_params time_param;
 
 	time_param.latency_us =
-		(uint32_t) pm_qos_request(PM_QOS_NETWORK_THROUGHPUT);
+		(uint32_t) pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
 	time_param.sleep_us =
 		(uint32_t) (ktime_to_us(tick_nohz_get_sleep_length())
 								& UINT_MAX);

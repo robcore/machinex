@@ -1149,7 +1149,7 @@ static int __init audio_mvs_init(void)
 	wake_lock_init(&audio_mvs_info.suspend_lock,
 		       WAKE_LOCK_SUSPEND,
 		       "audio_mvs_suspend");
-	pm_qos_add_request(&audio_mvs_info.pm_qos_req, PM_QOS_NETWORK_THROUGHPUT,
+	pm_qos_add_request(&audio_mvs_info.pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
 				PM_QOS_DEFAULT_VALUE);
 
 	rc = misc_register(&audio_mvs_misc);
