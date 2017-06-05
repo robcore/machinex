@@ -40,18 +40,15 @@ spinlock_t tz_lock;
 /* CEILING is 50msec, larger than any standard
  * frame length, but less than the idle timer.
  */
-#define CEILING			50000
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR			15000
-
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
 
-unsigned int ceiling = CEILING;
-unsigned int floor = FLOOR;
+static unsigned int ceiling = 50000;
+static unsigned int floor = 15000;
 unsigned int up_threshold = 50;
 unsigned int down_threshold = 25;
 unsigned int up_differential = 10;
@@ -144,7 +141,7 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct tz_priv *priv = pwrscale->priv;
 	if ((device->state != KGSL_STATE_NAP) &&
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
-		 priv->governor == TZ_GOVERNOR_INTERACTIVE)
+		 priv->governor == TZ_GOVERNOR_INTERACTIVE))
 			kgsl_pwrctrl_pwrlevel_change(device,
 				device->pwrctrl.default_pwrlevel);
 }
@@ -201,18 +198,16 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		gpu_stats.threshold = up_threshold - up_differential;
 	}
 
-	if (gpu_stats.load > gpu_stats.threshold)
-	{
-		if (gpu_pref_counter < up_threshold)
+	if (gpu_stats.load > gpu_stats.threshold) {
+		if (gpu_pref_counter > down_threshold)
 			++gpu_pref_counter;
 
 		if (pwr->active_pwrlevel > pwr->max_pwrlevel)
 			kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel - 1);
-	}
-	else if (gpu_stats.load < down_threshold)
-	{
-		if (gpu_pref_counter > up_differential)
+
+	} else if (gpu_stats.load < down_threshold) {
+		if (gpu_pref_counter < (up_threshold - up_differential)
 			--gpu_pref_counter;
 
 		if (pwr->active_pwrlevel < pwr->min_pwrlevel)
