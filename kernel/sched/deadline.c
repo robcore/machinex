@@ -273,7 +273,7 @@ static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p
 		 * online cpu.
 		 */
 		fallback = true;
-		cpu = cpumask_any_and(cpu_active_mask, &p->cpus_allwed);
+		cpu = cpumask_any_and(cpu_active_mask, &p->cpus_allowed);
 		if (cpu >= nr_cpu_ids) {
 			/*
 			 * Fail to find any suitable cpu.
