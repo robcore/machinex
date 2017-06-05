@@ -925,7 +925,9 @@ int local_timer_setup(struct clock_event_device *evt)
 	evt->mult = div_sc(clock->freq, NSEC_PER_SEC, evt->shift);
 	evt->max_delta_ns =
 		clockevent_delta2ns(0xf0000000 >> clock->shift, evt);
+	evt->max_delta_ticks = 0xf0000000 >> clock->shift;
 	evt->min_delta_ns = clockevent_delta2ns(4, evt);
+	evt->min_delta_ticks = 4;
 
 	*__this_cpu_ptr(clock->percpu_evt) = evt;
 
@@ -1067,9 +1069,11 @@ void __init msm_timer_init(void)
 		/* allow at least 10 seconds to notice that the timer wrapped */
 		ce->max_delta_ns =
 			clockevent_delta2ns(0xf0000000 >> clock->shift, ce);
+		ce->max_delta_ticks = 0xf0000000 >> clock->shift;
 		/* ticks gets rounded down by one */
 		ce->min_delta_ns =
 			clockevent_delta2ns(clock->write_delay + 4, ce);
+		ce->min_delta_ticks = clock->write_delay + 4;
 		ce->cpumask = cpumask_of(0);
 
 		res = clocksource_register_hz(cs, clock->freq);
