@@ -856,7 +856,6 @@ SYSCALL_DEFINE2(osf_gettimeofday, struct timeval32 __user *, tv,
 SYSCALL_DEFINE2(osf_settimeofday, struct timeval32 __user *, tv,
 		struct timezone __user *, tz)
 {
-	struct timespec64 kts64;
 	struct timespec kts;
 	struct timezone ktz;
 

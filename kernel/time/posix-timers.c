@@ -215,10 +215,7 @@ static int posix_clock_realtime_get(clockid_t which_clock, struct timespec *tp)
 static int posix_clock_realtime_set(const clockid_t which_clock,
 				    const struct timespec *tp)
 {
-	struct timespec64 tp64;
-
-	tp64 = timespec_to_timespec64(*tp);
-	return do_sys_settimeofday64(&tp64, NULL);
+	return do_sys_settimeofday(tp, NULL);
 }
 
 static int posix_clock_realtime_adj(const clockid_t which_clock,
