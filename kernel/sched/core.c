@@ -2247,6 +2247,7 @@ out:
 static void try_to_wake_up_local(struct task_struct *p, struct rq_flags *rf)
 {
 	struct rq *rq = task_rq(p);
+	unsigned int cpu = smp_processor_id();
 
 	if (rq != this_rq() || p == current) {
 		printk_deferred("%s: Failed to wakeup task %d (%s), rq = %p, this_rq = %p, p = %p, current = %p\n",
@@ -2273,10 +2274,10 @@ static void try_to_wake_up_local(struct task_struct *p, struct rq_flags *rf)
 		goto out;
 
 	if (!task_on_rq_queued(p))
-		ttwu_activate(rq, p, ENQUEUE_WAKEUP);
+		ttwu_activate(rq, p, ENQUEUE_WAKEUP | ENQUEUE_NOCLOCK);
 
 	ttwu_do_wakeup(rq, p, 0, rf);
-	ttwu_stat(p, smp_processor_id(), 0);
+	ttwu_stat(p, cpu, 0);
 out:
 	raw_spin_unlock(&p->pi_lock);
 	/* Todo : Send cpufreq notifier */
@@ -3513,6 +3514,7 @@ static void __sched notrace __schedule(void)
 
 	/* Promote REQ to ACT */
 	rq->clock_skip_update <<= 1;
+	update_rq_clock(rq);
 
 	switch_count = &prev->nivcsw;
 
@@ -3520,7 +3522,7 @@ static void __sched notrace __schedule(void)
 		if (signal_pending_state(prev->state, prev)) {
 			prev->state = TASK_RUNNING;
 		} else {
-			deactivate_task(rq, prev, DEQUEUE_SLEEP);
+			deactivate_task(rq, prev, DEQUEUE_SLEEP | DEQUEUE_NOCLOCK);
 			prev->on_rq = 0;
 
 			/*
@@ -3538,9 +3540,6 @@ static void __sched notrace __schedule(void)
 		}
 		switch_count = &prev->nvcsw;
 	}
-
-	if (task_on_rq_queued(prev))
-		update_rq_clock(rq);
 
 	next = pick_next_task(rq, prev, &rf);
 	clear_tsk_need_resched(prev);
