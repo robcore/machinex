@@ -126,7 +126,7 @@ static inline void cpus_offline_work(void)
 
 static inline bool cpus_cpufreq_work(void)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
+	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(0);
 	struct hotplug_tunables *t = &tunables;
 	unsigned int current_freq = 0;
 	unsigned int cpu;

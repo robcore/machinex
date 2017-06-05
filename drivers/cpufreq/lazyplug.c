@@ -376,10 +376,12 @@ static void wakeup_boost_lazy(void)
 	struct ip_cpu_info *l_ip_info;
 
 	for_each_online_cpu(cpu) {
-		policy = cpufreq_cpu_get(cpu);
-		l_ip_info = &per_cpu(ip_info, cpu);
-		policy->cur = l_ip_info->cur_max;
-		cpufreq_update_policy(cpu);
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (policy != NULL) {
+			l_ip_info = &per_cpu(ip_info, cpu);
+			policy->cur = l_ip_info->cur_max;
+			cpufreq_update_policy(cpu);
+		}
 	}
 }
 
