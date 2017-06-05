@@ -1409,6 +1409,9 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		goto out;
 	}
+
+	for_each_possible_cpu(cpu)
+		policy->cur = acpuclk_get_rate(cpu);
 out:
 	return ret;
 }
