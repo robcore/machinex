@@ -53,7 +53,6 @@ unsigned int up_threshold = 50;
 unsigned int down_threshold = 25;
 unsigned int up_differential = 10;
 bool debug = 0;
-unsigned long gpu_pref_counter;
 
 module_param(up_threshold, uint, 0664);
 module_param(down_threshold, uint, 0664);
@@ -199,16 +198,12 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	}
 
 	if (gpu_stats.load > gpu_stats.threshold) {
-		if (gpu_pref_counter > down_threshold)
-			++gpu_pref_counter;
 
 		if (pwr->active_pwrlevel > pwr->max_pwrlevel)
 			kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel - 1);
 
 	} else if (gpu_stats.load < down_threshold) {
-		if (gpu_pref_counter < (up_threshold - up_differential))
-			--gpu_pref_counter;
 
 		if (pwr->active_pwrlevel < pwr->min_pwrlevel)
 			kgsl_pwrctrl_pwrlevel_change(device,
@@ -234,7 +229,6 @@ static void tz_sleep(struct kgsl_device *device,
 
 	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 	__secure_tz_entry(TZ_RESET_ID, 0, device->id);
-	gpu_pref_counter = 0;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
