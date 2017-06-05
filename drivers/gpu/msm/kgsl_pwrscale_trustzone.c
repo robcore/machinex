@@ -164,7 +164,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	if (stats.total_time == 0 || priv->bin.busy_time < floor)
 		return;
 
-	if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24) 
+	if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24)
 	{
 		stats.busy_time >>= 7;
 		stats.total_time >>= 7;
@@ -174,7 +174,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * If there is an extended block of busy processing,
 	 * increase frequency. Otherwise run the normal algorithm.
 	 */
-	if (priv->bin.busy_time > ceiling) 
+	if (priv->bin.busy_time > ceiling)
 	{
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 		goto clear;
@@ -207,7 +207,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					     pwr->active_pwrlevel - 1);
 
 	} else if (gpu_stats.load < down_threshold) {
-		if (gpu_pref_counter < (up_threshold - up_differential)
+		if (gpu_pref_counter < (up_threshold - up_differential))
 			--gpu_pref_counter;
 
 		if (pwr->active_pwrlevel < pwr->min_pwrlevel)
