@@ -215,6 +215,13 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	pwr->thermal_pwrlevel = level;
 
+	/*
+	 * If there is no power policy set the clock to the requested thermal
+	 * level - if thermal now happens to be higher than max, then that will
+	 * be limited by the pwrlevel change function.  Otherwise if there is
+	 * a policy only change the active clock if it is higher then the new
+	 * thermal level
+	 */
 
 	if (device->pwrscale.policy == NULL ||
 		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
@@ -915,23 +922,23 @@ void kgsl_pwrctrl_clk(struct kgsl_device *device, int state,
 			/* High latency clock maintenance. */
 			if ((pwr->pwrlevels[0].gpu_freq > 0) &&
 				(requested_state != KGSL_STATE_NAP)) {
-				clk_set_rate(pwr->grp_clks[0],
-					pwr->pwrlevels[pwr->num_pwrlevels - 1].
-					gpu_freq);
 				for (i = KGSL_MAX_CLKS - 1; i > 0; i--)
 					if (pwr->grp_clks[i])
 						clk_unprepare(pwr->grp_clks[i]);
+				clk_set_rate(pwr->grp_clks[0],
+					pwr->pwrlevels[pwr->num_pwrlevels - 1].
+					gpu_freq);
 			}
 			kgsl_pwrctrl_busy_time(device, true);
 		} else if (requested_state == KGSL_STATE_SLEEP) {
 			/* High latency clock maintenance. */
+			for (i = KGSL_MAX_CLKS - 1; i > 0; i--)
+				if (pwr->grp_clks[i])
+					clk_unprepare(pwr->grp_clks[i]);
 			if ((pwr->pwrlevels[0].gpu_freq > 0))
 				clk_set_rate(pwr->grp_clks[0],
 					pwr->pwrlevels[pwr->num_pwrlevels - 1].
 					gpu_freq);
-			for (i = KGSL_MAX_CLKS - 1; i > 0; i--)
-				if (pwr->grp_clks[i])
-					clk_unprepare(pwr->grp_clks[i]);
 		}
 	} else if (state == KGSL_PWRFLAGS_ON) {
 		if (!test_and_set_bit(KGSL_PWRFLAGS_CLK_ON,
@@ -939,15 +946,14 @@ void kgsl_pwrctrl_clk(struct kgsl_device *device, int state,
 			trace_kgsl_clk(device, state);
 			/* High latency clock maintenance. */
 			if (device->state != KGSL_STATE_NAP) {
-				for (i = KGSL_MAX_CLKS - 1; i > 0; i--)
-					if (pwr->grp_clks[i])
-						clk_prepare(pwr->grp_clks[i]);
-
 				if (pwr->pwrlevels[0].gpu_freq > 0)
 					clk_set_rate(pwr->grp_clks[0],
 						pwr->pwrlevels
 						[pwr->active_pwrlevel].
 						gpu_freq);
+				for (i = KGSL_MAX_CLKS - 1; i > 0; i--)
+					if (pwr->grp_clks[i])
+						clk_prepare(pwr->grp_clks[i]);
 			}
 			/* as last step, enable grp_clk
 			   this is to let GPU interrupt to come */
@@ -1092,11 +1098,11 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 
 	pwr->max_pwrlevel = 0;
 	pwr->min_pwrlevel = pdata->num_levels - 2;
-	pwr->thermal_pwrlevel = 0;
+	pwr->thermal_pwrlevel = 1;
 
 	pwr->active_pwrlevel = pdata->init_level;
 	pwr->default_pwrlevel = pdata->init_level;
-	pwr->thermal_pwrlevel = pdata->init_level;
+	pwr->init_pwrlevel = pdata->init_level;
 	for (i = 0; i < pdata->num_levels; i++) {
 		pwr->pwrlevels[i].gpu_freq =
 		(pdata->pwrlevel[i].gpu_freq > 0) ?
@@ -1497,8 +1503,7 @@ void kgsl_pwrctrl_enable(struct kgsl_device *device)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	/* Order pwrrail/clk sequence based upon platform */
 	kgsl_pwrctrl_pwrrail(device, KGSL_PWRFLAGS_ON);
-
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->default_pwrlevel);
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->default_pwrlevel);
 
 	kgsl_pwrctrl_clk(device, KGSL_PWRFLAGS_ON, KGSL_STATE_ACTIVE);
 	kgsl_pwrctrl_axi(device, KGSL_PWRFLAGS_ON);

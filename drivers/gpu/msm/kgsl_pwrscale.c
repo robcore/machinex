@@ -318,16 +318,18 @@ int kgsl_pwrscale_attach_policy(struct kgsl_device *device,
 	if (device->pwrscale.policy == policy)
 		goto done;
 
-	/*if (device->pwrctrl.num_pwrlevels < 3) {
+	if (device->pwrctrl.num_pwrlevels < 3) {
 		ret = -EINVAL;
 		goto done;
-	}*/
+	}
 
 	if (device->pwrscale.policy != NULL)
 		_kgsl_pwrscale_detach_policy(device);
 
 	device->pwrscale.policy = policy;
 
+	device->pwrctrl.default_pwrlevel =
+			device->pwrctrl.init_pwrlevel;
 	/* Pwrscale is enabled by default at attach time */
 	kgsl_pwrscale_enable(device);
 
