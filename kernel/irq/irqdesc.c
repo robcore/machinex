@@ -597,8 +597,6 @@ int generic_handle_irq(unsigned int irq)
 
 	if (!desc)
 		return -EINVAL;
-
-
 	generic_handle_irq_desc(desc);
 	return 0;
 }
