@@ -259,6 +259,11 @@ static inline void timekeeping_inject_sleeptime(struct timespec *delta)
 	timekeeping_inject_sleeptime64(&delta64);
 }
 
+static inline void timekeeping_clocktai64(struct timespec64 *ts)
+{
+	*ts = ktime_to_timespec64(ktime_get_clocktai());
+}
+
 /*
  * PPS accessor
  */
