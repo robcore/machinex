@@ -37,27 +37,32 @@ struct tz_priv {
 };
 spinlock_t tz_lock;
 
-/* FLOOR is 5msec to capture up to 3 re-draws
- * per frame for 60fps content.
- */
-#define FLOOR			5000
 /* CEILING is 50msec, larger than any standard
  * frame length, but less than the idle timer.
  */
 #define CEILING			50000
+/* FLOOR is 5msec to capture up to 3 re-draws
+ * per frame for 60fps content.
+ */
+#define FLOOR			5000
+
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
 
+unsigned int ceiling = CEILING;
+unsigned int floor = FLOOR;
 unsigned int up_threshold = 50;
 unsigned int down_threshold = 25;
 unsigned int up_differential = 10;
 bool debug = 0;
 unsigned long gpu_pref_counter;
 
-module_param(up_threshold, int, 0664);
-module_param(down_threshold, int, 0664);
+module_param(up_threshold, uint, 0664);
+module_param(down_threshold, uint, 0664);
 module_param(debug, bool, 0664);
+module_param(ceiling, uint, 0644);
+module_param(floor, uint, 0644);
 
 static struct clk_scaling_stats {
 	unsigned long threshold;
@@ -66,6 +71,17 @@ static struct clk_scaling_stats {
 	.threshold = 0,
 	.load = 0,
 };
+
+/* Trap into the TrustZone, and call funcs there. */
+static int __secure_tz_entry(u32 cmd, u32 val, u32 id)
+{
+	int ret;
+	spin_lock(&tz_lock);
+	__iowmb();
+	ret = scm_call_atomic2(SCM_SVC_IO, cmd, val, id);
+	spin_unlock(&tz_lock);
+	return ret;
+}
 
 static ssize_t tz_governor_show(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale,
@@ -126,8 +142,9 @@ static struct attribute_group tz_attr_group = {
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
-	if (device->state != KGSL_STATE_NAP &&
-		priv->governor == TZ_GOVERNOR_ONDEMAND)
+	if ((device->state != KGSL_STATE_NAP) &&
+		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
+		 priv->governor == TZ_GOVERNOR_INTERACTIVE)
 			kgsl_pwrctrl_pwrlevel_change(device,
 				device->pwrctrl.default_pwrlevel);
 }
@@ -149,7 +166,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
 
-	if (stats.total_time == 0 || priv->bin.busy_time < FLOOR)
+	if (stats.total_time == 0 || priv->bin.busy_time < floor)
 		return;
 
 	if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24) 
@@ -162,7 +179,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * If there is an extended block of busy processing,
 	 * increase frequency. Otherwise run the normal algorithm.
 	 */
-	if (priv->bin.busy_time > CEILING) 
+	if (priv->bin.busy_time > ceiling) 
 	{
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 		goto clear;
@@ -223,13 +240,7 @@ static void tz_sleep(struct kgsl_device *device,
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
 	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
-
-	if (debug)
-	{
-		pr_info("GPU sleep frequency: %d\n", 
-								pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq);
-	}
-
+	__secure_tz_entry(TZ_RESET_ID, 0, device->id);
 	gpu_pref_counter = 0;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
@@ -246,7 +257,7 @@ static int tz_init(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	priv = pwrscale->priv = kzalloc(sizeof(struct tz_priv), GFP_KERNEL);
 	if (pwrscale->priv == NULL)
 		return -ENOMEM;
-	priv->governor = TZ_GOVERNOR_INTERACTIVE;
+	priv->governor = TZ_GOVERNOR_ONDEMAND;
 	spin_lock_init(&tz_lock);
 	kgsl_pwrscale_policy_add_files(device, pwrscale, &tz_attr_group);
 	for (i = 0; i < pwr->num_pwrlevels - 1; i++) {
@@ -271,7 +282,8 @@ static int tz_init(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 static void tz_close(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	kgsl_pwrscale_policy_remove_files(device, pwrscale, &tz_attr_group);
-	kfree(pwrscale->priv);
+	if (pwrscale->priv != NULL)
+		kfree(pwrscale->priv);
 	pwrscale->priv = NULL;
 }
 

@@ -147,16 +147,6 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	 */
 
 	pwr->active_pwrlevel = new_level;
-	pwrlevel = &pwr->pwrlevels[pwr->active_pwrlevel];
-
-	if (test_bit(KGSL_PWRFLAGS_AXI_ON, &pwr->power_flags)) {
-
-		if (pwr->pcl)
-			msm_bus_scale_client_update_request(pwr->pcl,
-				pwrlevel->bus_freq);
-		else if (pwr->ebi1_clk)
-			clk_set_rate(pwr->ebi1_clk, pwrlevel->bus_freq);
-	}
 
 	if (test_bit(KGSL_PWRFLAGS_CLK_ON, &pwr->power_flags) ||
 		(device->state == KGSL_STATE_NAP)) {
@@ -183,6 +173,16 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 		}
 	}
 
+	pwrlevel = &pwr->pwrlevels[pwr->active_pwrlevel];
+
+	if (test_bit(KGSL_PWRFLAGS_AXI_ON, &pwr->power_flags)) {
+
+		if (pwr->pcl)
+			msm_bus_scale_client_update_request(pwr->pcl,
+				pwrlevel->bus_freq);
+		else if (pwr->ebi1_clk)
+			clk_set_rate(pwr->ebi1_clk, pwrlevel->bus_freq);
+	}
 
 	trace_kgsl_pwrlevel(device, pwr->active_pwrlevel, pwrlevel->gpu_freq);
 }
@@ -367,13 +367,13 @@ static int kgsl_pwrctrl_num_pwrlevels_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", pwr->num_pwrlevels - 1);
 }
 
-/* Given a GPU clock value, return the lowest matching powerlevel */
+/* Given a GPU clock value, return the nearest powerlevel */
 
 static int _get_nearest_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
 {
 	int i;
 
-	for (i = pwr->num_pwrlevels - 1; i >= 0; i--) {
+	for (i = 0; i < pwr->num_pwrlevels - 1; i++) {
 		if (abs(pwr->pwrlevels[i].gpu_freq - clock) < 5000000)
 			return i;
 	}
@@ -1197,8 +1197,6 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 		}
 	}
 
-	/* Set the CPU latency to 501usec to allow low latency PC modes */
-	pwr->pm_qos_latency = 501;
 
 	pm_runtime_enable(device->parentdev);
 	register_power_suspend(&device->display_off);
@@ -1544,10 +1542,9 @@ void kgsl_pwrctrl_enable(struct kgsl_device *device)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	/* Order pwrrail/clk sequence based upon platform */
 	kgsl_pwrctrl_pwrrail(device, KGSL_PWRFLAGS_ON);
-	kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
-
 	kgsl_pwrctrl_clk(device, KGSL_PWRFLAGS_ON, KGSL_STATE_ACTIVE);
 	kgsl_pwrctrl_axi(device, KGSL_PWRFLAGS_ON);
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
 }
 EXPORT_SYMBOL(kgsl_pwrctrl_enable);
 
