@@ -44,7 +44,7 @@ spinlock_t tz_lock;
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR			5000
+#define FLOOR			15000
 
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
@@ -154,7 +154,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
-	int val, idle;
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
@@ -162,7 +161,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		return;
 
 	device->ftbl->power_stats(device, &stats);
-
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
 
@@ -186,26 +184,26 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	}
 
 	gpu_stats.load = (100 * priv->bin.busy_time);
-	do_div(gpu_stats.load, priv->bin.total_time);
-
-	if (debug)
-	{ 
-		pr_info("GPU load: %u\n", gpu_stats.load);
-		pr_info("GPU frequency: %d\n", 
-								pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq);
-	}
+	if (priv->bin.total_time > 0)
+		do_div(gpu_stats.load, priv->bin.total_time);
+	else
+		gpu_stats.load = priv->bin.total_time - priv->bin.busy_time;
 
 	gpu_stats.threshold = up_threshold;
 
-	if (pwr->active_pwrlevel == pwr->min_pwrlevel)
-		gpu_stats.threshold = up_threshold / pwr->active_pwrlevel;
-	else if (pwr->active_pwrlevel < pwr->min_pwrlevel &&
-				pwr->active_pwrlevel > pwr->max_pwrlevel)
+	if (pwr->active_pwrlevel == pwr->min_pwrlevel) {
+		if (pwr->active_pwrlevel > 0)
+			gpu_stats.threshold = up_threshold / pwr->active_pwrlevel;
+		else
+			gpu_stats.threshold = pwr->active_pwrlevel + down_threshold;
+	} else if (pwr->active_pwrlevel < pwr->min_pwrlevel &&
+				pwr->active_pwrlevel > pwr->max_pwrlevel) {
 		gpu_stats.threshold = up_threshold - up_differential;
+	}
 
 	if (gpu_stats.load > gpu_stats.threshold)
 	{
-		if (gpu_pref_counter < 100)
+		if (gpu_pref_counter < up_threshold)
 			++gpu_pref_counter;
 
 		if (pwr->active_pwrlevel > pwr->max_pwrlevel)
@@ -214,7 +212,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	}
 	else if (gpu_stats.load < down_threshold)
 	{
-		if (gpu_pref_counter > 0)
+		if (gpu_pref_counter > up_differential)
 			--gpu_pref_counter;
 
 		if (pwr->active_pwrlevel < pwr->min_pwrlevel)
