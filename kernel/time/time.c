@@ -89,10 +89,6 @@ SYSCALL_DEFINE1(stime, time_t __user *, tptr)
 
 	tv.tv_nsec = 0;
 
-	err = security_settime(&tv, NULL);
-	if (err)
-		return err;
-
 	do_settimeofday(&tv);
 	return 0;
 }
@@ -167,10 +163,6 @@ int do_sys_settimeofday64(const struct timespec64 *tv, const struct timezone *tz
 
 	if (tv && !timespec64_valid(tv))
 		return -EINVAL;
-
-	error = security_settime64(tv, tz);
-	if (error)
-		return error;
 
 	if (tz) {
 		/* Verify we're witin the +-15 hrs range */
