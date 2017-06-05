@@ -433,7 +433,7 @@ static int kgsl_pwrctrl_max_gpuclk_show(struct device *dev,
 			pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq);
 }
 
-static int kgsl_pwrctrl_mix_gpuclk_store(struct device *dev,
+static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
 {
