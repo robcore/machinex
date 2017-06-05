@@ -1844,6 +1844,8 @@ static inline void ttwu_activate(struct rq *rq, struct task_struct *p, int en_fl
 static void ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags,
 			   struct rq_flags *rf)
 {
+	if (p == NULL)
+		return;
 	check_preempt_curr(rq, p, wake_flags);
 	p->state = TASK_RUNNING;
 #ifdef CONFIG_SMP
