@@ -458,8 +458,6 @@ static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,
 
 	pwr->min_pwrlevel = level;
 
-	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
-
 done:
 	mutex_unlock(&device->mutex);
 	return count;
