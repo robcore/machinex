@@ -1396,6 +1396,7 @@ _sleep(struct kgsl_device *device)
 					PM_QOS_DEFAULT_VALUE);
 		break;
 	case KGSL_STATE_SLEEP:
+		kgsl_mmu_disable_clk_on_ts(&device->mmu, 0, false);
 	case KGSL_STATE_SLUMBER:
 		break;
 	default:
@@ -1403,8 +1404,6 @@ _sleep(struct kgsl_device *device)
 				kgsl_pwrstate_to_str(device->state));
 		break;
 	}
-
-	kgsl_mmu_disable_clk_on_ts(&device->mmu, 0, false);
 
 	return 0;
 }
@@ -1421,8 +1420,8 @@ _slumber(struct kgsl_device *device)
 		/* fall through */
 	case KGSL_STATE_NAP:
 	case KGSL_STATE_SLEEP:
-		del_timer_sync(&device->idle_timer);
 		del_timer_sync(&device->hang_timer);
+		del_timer_sync(&device->idle_timer);
 		/* make sure power is on to stop the device*/
 		kgsl_pwrctrl_enable(device);
 		kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
@@ -1517,6 +1516,7 @@ int kgsl_pwrctrl_wake(struct kgsl_device *device)
 		kgsl_pwrctrl_set_state(device, KGSL_STATE_ACTIVE);
 		kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
 		/* Re-enable HW access */
+
 		mod_timer(&device->idle_timer,
 				jiffies + device->pwrctrl.interval_timeout);
 		mod_timer(&device->hang_timer,
