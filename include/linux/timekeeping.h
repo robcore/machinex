@@ -227,6 +227,11 @@ static inline u64 ktime_get_boot_ns(void)
 	return ktime_to_ns(ktime_get_boottime());
 }
 
+static inline void get_monotonic_boottime64(struct timespec64 *ts)
+{
+	*ts = ktime_to_timespec64(ktime_get_boottime());
+}
+
 static inline void timekeeping_clocktai(struct timespec *ts)
 {
 	*ts = ktime_to_timespec(ktime_get_clocktai());
