@@ -92,7 +92,6 @@ static inline struct rcu_head *rcu_cblist_dequeue(struct rcu_cblist *rclp)
 	rhp = rclp->head;
 	if (!rhp)
 		return NULL;
-	prefetch(rhp);
 	rclp->len--;
 	rclp->head = rhp->next;
 	if (!rclp->head)
@@ -174,6 +173,15 @@ struct rcu_segcblist {
 	long len;
 	long len_lazy;
 };
+
+#define RCU_SEGCBLIST_INITIALIZER(n) \
+{ \
+	.head = NULL, \
+	.tails[RCU_DONE_TAIL] = &n.head, \
+	.tails[RCU_WAIT_TAIL] = &n.head, \
+	.tails[RCU_NEXT_READY_TAIL] = &n.head, \
+	.tails[RCU_NEXT_TAIL] = &n.head, \
+}
 
 /*
  * Initialize an rcu_segcblist structure.
@@ -287,6 +295,51 @@ static inline bool rcu_segcblist_pend_cbs(struct rcu_segcblist *rsclp)
 {
 	return rcu_segcblist_is_enabled(rsclp) &&
 	       !rcu_segcblist_restempty(rsclp, RCU_DONE_TAIL);
+}
+
+/*
+ * Dequeue and return the first ready-to-invoke callback.  If there
+ * are no ready-to-invoke callbacks, return NULL.  Disables interrupts
+ * to avoid interference.  Does not protect from interference from other
+ * CPUs or tasks.
+ */
+static inline struct rcu_head *
+rcu_segcblist_dequeue(struct rcu_segcblist *rsclp)
+{
+	unsigned long flags;
+	int i;
+	struct rcu_head *rhp;
+
+	local_irq_save(flags);
+	if (!rcu_segcblist_ready_cbs(rsclp)) {
+		local_irq_restore(flags);
+		return NULL;
+	}
+	rhp = rsclp->head;
+	BUG_ON(!rhp);
+	rsclp->head = rhp->next;
+	for (i = RCU_DONE_TAIL; i < RCU_CBLIST_NSEGS; i++) {
+		if (rsclp->tails[i] != &rhp->next)
+			break;
+		rsclp->tails[i] = &rsclp->head;
+	}
+	smp_mb(); /* Dequeue before decrement for rcu_barrier(). */
+	WRITE_ONCE(rsclp->len, rsclp->len - 1);
+	local_irq_restore(flags);
+	return rhp;
+}
+
+/*
+ * Account for the fact that a previously dequeued callback turned out
+ * to be marked as lazy.
+ */
+static inline void rcu_segcblist_dequeued_lazy(struct rcu_segcblist *rsclp)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+	rsclp->len_lazy--;
+	local_irq_restore(flags);
 }
 
 /*

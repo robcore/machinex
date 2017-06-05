@@ -104,7 +104,7 @@ static int rcu_fanout_leaf = RCU_FANOUT_LEAF;
 module_param(rcu_fanout_leaf, int, 0444);
 int rcu_num_lvls __read_mostly = RCU_NUM_LVLS;
 /* Number of rcu_nodes at specified level. */
-static int num_rcu_lvl[] = NUM_RCU_LVL_INIT;
+int num_rcu_lvl[] = NUM_RCU_LVL_INIT;
 int rcu_num_nodes __read_mostly = NUM_RCU_NODES; /* Total # rcu_nodes in use. */
 /* panic() on RCU Stall sysctl. */
 int sysctl_panic_on_rcu_stall __read_mostly;
@@ -3358,41 +3358,6 @@ void cond_synchronize_sched(unsigned long oldstate)
 }
 EXPORT_SYMBOL_GPL(cond_synchronize_sched);
 
-/* Adjust sequence number for start of update-side operation. */
-static void rcu_seq_start(unsigned long *sp)
-{
-	WRITE_ONCE(*sp, *sp + 1);
-	smp_mb(); /* Ensure update-side operation after counter increment. */
-	WARN_ON_ONCE(!(*sp & 0x1));
-}
-
-/* Adjust sequence number for end of update-side operation. */
-static void rcu_seq_end(unsigned long *sp)
-{
-	smp_mb(); /* Ensure update-side operation before counter increment. */
-	WRITE_ONCE(*sp, *sp + 1);
-	WARN_ON_ONCE(*sp & 0x1);
-}
-
-/* Take a snapshot of the update side's sequence number. */
-static unsigned long rcu_seq_snap(unsigned long *sp)
-{
-	unsigned long s;
-
-	s = (READ_ONCE(*sp) + 3) & ~0x1;
-	smp_mb(); /* Above access must not bleed into critical section. */
-	return s;
-}
-
-/*
- * Given a snapshot from rcu_seq_snap(), determine whether or not a
- * full update-side operation has occurred.
- */
-static bool rcu_seq_done(unsigned long *sp, unsigned long s)
-{
-	return ULONG_CMP_GE(READ_ONCE(*sp), s);
-}
-
 /*
  * Check to see if there is any immediate RCU-related work to be done
  * by the current CPU, for the specified type of RCU, returning 1 if so.
@@ -3932,31 +3897,6 @@ void rcu_scheduler_starting(void)
 }
 
 /*
- * Compute the per-level fanout, either using the exact fanout specified
- * or balancing the tree, depending on the rcu_fanout_exact boot parameter.
- */
-static void __init rcu_init_levelspread(int *levelspread, const int *levelcnt)
-{
-	int i;
-
-	if (rcu_fanout_exact) {
-		levelspread[rcu_num_lvls - 1] = rcu_fanout_leaf;
-		for (i = rcu_num_lvls - 2; i >= 0; i--)
-			levelspread[i] = RCU_FANOUT;
-	} else {
-		int ccur;
-		int cprv;
-
-		cprv = nr_cpu_ids;
-		for (i = rcu_num_lvls - 1; i >= 0; i--) {
-			ccur = levelcnt[i];
-			levelspread[i] = (cprv + ccur - 1) / ccur;
-			cprv = ccur;
-		}
-	}
-}
-
-/*
  * Helper function for rcu_init() that initializes one rcu_state structure.
  */
 static void __init rcu_init_one(struct rcu_state *rsp)
@@ -3966,7 +3906,6 @@ static void __init rcu_init_one(struct rcu_state *rsp)
 	static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
 	static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
 
-	int levelcnt[RCU_NUM_LVLS];		/* # nodes in each level. */
 	int levelspread[RCU_NUM_LVLS];		/* kids/node in each level. */
 	int cpustride = 1;
 	int i;
@@ -3981,18 +3920,16 @@ static void __init rcu_init_one(struct rcu_state *rsp)
 
 	/* Initialize the level-tracking arrays. */
 
-	for (i = 0; i < rcu_num_lvls; i++)
-		levelcnt[i] = num_rcu_lvl[i];
 	for (i = 1; i < rcu_num_lvls; i++)
-		rsp->level[i] = rsp->level[i - 1] + levelcnt[i - 1];
-	rcu_init_levelspread(levelspread, levelcnt);
+		rsp->level[i] = rsp->level[i - 1] + num_rcu_lvl[i - 1];
+	rcu_init_levelspread(levelspread, num_rcu_lvl);
 
 	/* Initialize the elements themselves, starting from the leaves. */
 
 	for (i = rcu_num_lvls - 1; i >= 0; i--) {
 		cpustride *= levelspread[i];
 		rnp = rsp->level[i];
-		for (j = 0; j < levelcnt[i]; j++, rnp++) {
+		for (j = 0; j < num_rcu_lvl[i]; j++, rnp++) {
 			raw_spin_lock_init(&ACCESS_PRIVATE(rnp, lock));
 			lockdep_set_class_and_name(&ACCESS_PRIVATE(rnp, lock),
 						   &rcu_node_class[i], buf[i]);

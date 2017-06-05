@@ -29,77 +29,8 @@
 #include <linux/seqlock.h>
 #include <linux/swait.h>
 #include <linux/stop_machine.h>
-#include "rcu_segcblist.h"
-
-/*
- * Define shape of hierarchy based on NR_CPUS, CONFIG_RCU_FANOUT, and
- * CONFIG_RCU_FANOUT_LEAF.
- * In theory, it should be possible to add more levels straightforwardly.
- * In practice, this did work well going from three levels to four.
- * Of course, your mileage may vary.
- */
-
-#ifdef CONFIG_RCU_FANOUT
-#define RCU_FANOUT CONFIG_RCU_FANOUT
-#else /* #ifdef CONFIG_RCU_FANOUT */
-# ifdef CONFIG_64BIT
-# define RCU_FANOUT 64
-# else
-# define RCU_FANOUT 32
-# endif
-#endif /* #else #ifdef CONFIG_RCU_FANOUT */
-
-#ifdef CONFIG_RCU_FANOUT_LEAF
-#define RCU_FANOUT_LEAF CONFIG_RCU_FANOUT_LEAF
-#else /* #ifdef CONFIG_RCU_FANOUT_LEAF */
-#define RCU_FANOUT_LEAF 16
-#endif /* #else #ifdef CONFIG_RCU_FANOUT_LEAF */
-
-#define RCU_FANOUT_1	      (RCU_FANOUT_LEAF)
-#define RCU_FANOUT_2	      (RCU_FANOUT_1 * RCU_FANOUT)
-#define RCU_FANOUT_3	      (RCU_FANOUT_2 * RCU_FANOUT)
-#define RCU_FANOUT_4	      (RCU_FANOUT_3 * RCU_FANOUT)
-
-#if NR_CPUS <= RCU_FANOUT_1
-#  define RCU_NUM_LVLS	      1
-#  define NUM_RCU_LVL_0	      1
-#  define NUM_RCU_NODES	      NUM_RCU_LVL_0
-#  define NUM_RCU_LVL_INIT    { NUM_RCU_LVL_0 }
-#  define RCU_NODE_NAME_INIT  { "rcu_node_0" }
-#  define RCU_FQS_NAME_INIT   { "rcu_node_fqs_0" }
-#elif NR_CPUS <= RCU_FANOUT_2
-#  define RCU_NUM_LVLS	      2
-#  define NUM_RCU_LVL_0	      1
-#  define NUM_RCU_LVL_1	      DIV_ROUND_UP(NR_CPUS, RCU_FANOUT_1)
-#  define NUM_RCU_NODES	      (NUM_RCU_LVL_0 + NUM_RCU_LVL_1)
-#  define NUM_RCU_LVL_INIT    { NUM_RCU_LVL_0, NUM_RCU_LVL_1 }
-#  define RCU_NODE_NAME_INIT  { "rcu_node_0", "rcu_node_1" }
-#  define RCU_FQS_NAME_INIT   { "rcu_node_fqs_0", "rcu_node_fqs_1" }
-#elif NR_CPUS <= RCU_FANOUT_3
-#  define RCU_NUM_LVLS	      3
-#  define NUM_RCU_LVL_0	      1
-#  define NUM_RCU_LVL_1	      DIV_ROUND_UP(NR_CPUS, RCU_FANOUT_2)
-#  define NUM_RCU_LVL_2	      DIV_ROUND_UP(NR_CPUS, RCU_FANOUT_1)
-#  define NUM_RCU_NODES	      (NUM_RCU_LVL_0 + NUM_RCU_LVL_1 + NUM_RCU_LVL_2)
-#  define NUM_RCU_LVL_INIT    { NUM_RCU_LVL_0, NUM_RCU_LVL_1, NUM_RCU_LVL_2 }
-#  define RCU_NODE_NAME_INIT  { "rcu_node_0", "rcu_node_1", "rcu_node_2" }
-#  define RCU_FQS_NAME_INIT   { "rcu_node_fqs_0", "rcu_node_fqs_1", "rcu_node_fqs_2" }
-#elif NR_CPUS <= RCU_FANOUT_4
-#  define RCU_NUM_LVLS	      4
-#  define NUM_RCU_LVL_0	      1
-#  define NUM_RCU_LVL_1	      DIV_ROUND_UP(NR_CPUS, RCU_FANOUT_3)
-#  define NUM_RCU_LVL_2	      DIV_ROUND_UP(NR_CPUS, RCU_FANOUT_2)
-#  define NUM_RCU_LVL_3	      DIV_ROUND_UP(NR_CPUS, RCU_FANOUT_1)
-#  define NUM_RCU_NODES	      (NUM_RCU_LVL_0 + NUM_RCU_LVL_1 + NUM_RCU_LVL_2 + NUM_RCU_LVL_3)
-#  define NUM_RCU_LVL_INIT    { NUM_RCU_LVL_0, NUM_RCU_LVL_1, NUM_RCU_LVL_2, NUM_RCU_LVL_3 }
-#  define RCU_NODE_NAME_INIT  { "rcu_node_0", "rcu_node_1", "rcu_node_2", "rcu_node_3" }
-#  define RCU_FQS_NAME_INIT   { "rcu_node_fqs_0", "rcu_node_fqs_1", "rcu_node_fqs_2", "rcu_node_fqs_3" }
-#else
-# error "CONFIG_RCU_FANOUT insufficient for NR_CPUS"
-#endif /* #if (NR_CPUS) <= RCU_FANOUT_1 */
-
-extern int rcu_num_lvls;
-extern int rcu_num_nodes;
+#include <linux/rcu_segcblist.h>
+#include <linux/rcu_node_tree.h>
 
 /*
  * Dynticks per-CPU state.
@@ -259,41 +190,6 @@ struct rcu_node {
  * This generates the bit for a CPU in node-local masks.
  */
 #define leaf_node_cpu_bit(rnp, cpu) (1UL << ((cpu) - (rnp)->grplo))
-
-/*
- * Do a full breadth-first scan of the rcu_node structures for the
- * specified rcu_state structure.
- */
-#define rcu_for_each_node_breadth_first(rsp, rnp) \
-	for ((rnp) = &(rsp)->node[0]; \
-	     (rnp) < &(rsp)->node[rcu_num_nodes]; (rnp)++)
-
-/*
- * Do a breadth-first scan of the non-leaf rcu_node structures for the
- * specified rcu_state structure.  Note that if there is a singleton
- * rcu_node tree with but one rcu_node structure, this loop is a no-op.
- */
-#define rcu_for_each_nonleaf_node_breadth_first(rsp, rnp) \
-	for ((rnp) = &(rsp)->node[0]; \
-	     (rnp) < (rsp)->level[rcu_num_lvls - 1]; (rnp)++)
-
-/*
- * Scan the leaves of the rcu_node hierarchy for the specified rcu_state
- * structure.  Note that if there is a singleton rcu_node tree with but
- * one rcu_node structure, this loop -will- visit the rcu_node structure.
- * It is still a leaf node, even if it is also the root node.
- */
-#define rcu_for_each_leaf_node(rsp, rnp) \
-	for ((rnp) = (rsp)->level[rcu_num_lvls - 1]; \
-	     (rnp) < &(rsp)->node[rcu_num_nodes]; (rnp)++)
-
-/*
- * Iterate over all possible CPUs in a leaf RCU node.
- */
-#define for_each_leaf_node_possible_cpu(rnp, cpu) \
-	for ((cpu) = cpumask_next(rnp->grplo - 1, cpu_possible_mask); \
-	     cpu <= rnp->grphi; \
-	     cpu = cpumask_next((cpu), cpu_possible_mask))
 
 /*
  * Union to allow "aggregate OR" operation on the need for a quiescent
