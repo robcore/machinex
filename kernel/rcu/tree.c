@@ -247,6 +247,8 @@ void rcu_bh_qs(void)
  	}
 }
 
+static DEFINE_PER_CPU(int, rcu_sched_qs_mask);
+
 /*
  * Steal a bit from the bottom of ->dynticks for idle entry/exit
  * control.  Initially this is for TLB flushing.
@@ -411,6 +413,9 @@ bool rcu_eqs_special_set(int cpu)
 	return true;
 }
 
+DEFINE_PER_CPU_SHARED_ALIGNED(unsigned long, rcu_qs_ctr);
+EXPORT_PER_CPU_SYMBOL_GPL(rcu_qs_ctr);
+
 /*
  * Let the RCU core know that this CPU has gone through the scheduler,
  * which is a quiescent state.  This is called when the need for a
@@ -418,14 +423,44 @@ bool rcu_eqs_special_set(int cpu)
  * memory barriers to let the RCU core know about it, regardless of what
  * this CPU might (or might not) do in the near future.
  *
- * We inform the RCU core by emulating a zero-duration dyntick-idle period.
+ * We inform the RCU core by emulating a zero-duration dyntick-idle
+ * period, which we in turn do by incrementing the ->dynticks counter
+ * by two.
  *
  * The caller must have disabled interrupts.
  */
 static void rcu_momentary_dyntick_idle(void)
 {
-	raw_cpu_write(rcu_dynticks.rcu_need_heavy_qs, false);
-	rcu_dynticks_momentary_idle();
+	struct rcu_data *rdp;
+	int resched_mask;
+	struct rcu_state *rsp;
+
+	/*
+	 * Yes, we can lose flag-setting operations.  This is OK, because
+	 * the flag will be set again after some delay.
+	 */
+	resched_mask = raw_cpu_read(rcu_sched_qs_mask);
+	raw_cpu_write(rcu_sched_qs_mask, 0);
+
+	/* Find the flavor that needs a quiescent state. */
+	for_each_rcu_flavor(rsp) {
+		rdp = raw_cpu_ptr(rsp->rda);
+		if (!(resched_mask & rsp->flavor_mask))
+			continue;
+		smp_mb(); /* rcu_sched_qs_mask before cond_resched_completed. */
+		if (READ_ONCE(rdp->mynode->completed) !=
+		    READ_ONCE(rdp->cond_resched_completed))
+			continue;
+
+		/*
+		 * Pretend to be momentarily idle for the quiescent state.
+		 * This allows the grace-period kthread to record the
+		 * quiescent state, with no need for this CPU to do anything
+		 * further.
+		 */
+		rcu_dynticks_momentary_idle();
+		break;
+	}
 }
 
 /*
@@ -439,7 +474,7 @@ void rcu_note_context_switch(void)
 	trace_rcu_utilization("Start context switch");
 	rcu_sched_qs();
 	rcu_preempt_note_context_switch();
-	if (unlikely(raw_cpu_read(rcu_dynticks.rcu_need_heavy_qs)))
+	if (unlikely(raw_cpu_read(rcu_sched_qs_mask)))
 		rcu_momentary_dyntick_idle();
 	trace_rcu_utilization("End context switch");
 	barrier(); /* Avoid RCU read-side critical sections leaking up. */
@@ -464,7 +499,7 @@ void rcu_all_qs(void)
 	unsigned long flags;
 
 	barrier(); /* Avoid RCU read-side critical sections leaking down. */
-	if (unlikely(raw_cpu_read(rcu_dynticks.rcu_need_heavy_qs))) {
+	if (unlikely(raw_cpu_read(rcu_sched_qs_mask))) {
 		local_irq_save(flags);
 		rcu_momentary_dyntick_idle();
 		local_irq_restore(flags);
@@ -484,7 +519,7 @@ void rcu_all_qs(void)
 		rcu_sched_qs();
 		preempt_enable();
 	}
-	this_cpu_inc(rcu_dynticks.rcu_qs_ctr);
+	this_cpu_inc(rcu_qs_ctr);
 	barrier(); /* Avoid RCU read-side critical sections leaking up. */
 }
 EXPORT_SYMBOL_GPL(rcu_all_qs);
@@ -1221,7 +1256,7 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 				    bool *isidle, unsigned long *maxj)
 {
 	unsigned long jtsq;
-	bool *rnhqp;
+	int *rcrmp;
 	unsigned long rjtsc;
 	struct rcu_node *rnp;
 
@@ -1258,7 +1293,7 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 	 */
 	rnp = rdp->mynode;
 	if (time_after(jiffies, rdp->rsp->gp_start + jtsq) &&
-	    READ_ONCE(rdp->rcu_qs_ctr_snap) != per_cpu(rcu_dynticks.rcu_qs_ctr, rdp->cpu) &&
+	    READ_ONCE(rdp->rcu_qs_ctr_snap) != per_cpu(rcu_qs_ctr, rdp->cpu) &&
 	    READ_ONCE(rdp->gpnum) == rnp->gpnum && !rdp->gpwrap) {
 		trace_rcu_fqs(rdp->rsp->name, rdp->gpnum, rdp->cpu, TPS("rqc"));
 		return 1;
@@ -1278,7 +1313,7 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 	 * in-kernel CPU-bound tasks cannot advance grace periods.
 	 * So if the grace period is old enough, make the CPU pay attention.
 	 * Note that the unsynchronized assignments to the per-CPU
-	 * rcu_need_heavy_qs variable are safe.  Yes, setting of
+	 * rcu_sched_qs_mask variable are safe.  Yes, setting of
 	 * bits can be lost, but they will be set again on the next
 	 * force-quiescent-state pass.  So lost bit sets do not result
 	 * in incorrect behavior, merely in a grace period lasting
@@ -1292,11 +1327,15 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 	 * is set too high, we override with half of the RCU CPU stall
 	 * warning delay.
 	 */
-	rnhqp = &per_cpu(rcu_dynticks.rcu_need_heavy_qs, rdp->cpu);
-	if (!READ_ONCE(*rnhqp) &&
-	    (time_after(jiffies, rdp->rsp->gp_start + jtsq) ||
-	     time_after(jiffies, rdp->rsp->jiffies_resched))) {
-		WRITE_ONCE(*rnhqp, true);
+	rcrmp = &per_cpu(rcu_sched_qs_mask, rdp->cpu);
+	if (time_after(jiffies, rdp->rsp->gp_start + jtsq) ||
+	    time_after(jiffies, rdp->rsp->jiffies_resched)) {
+		if (!(READ_ONCE(*rcrmp) & rdp->rsp->flavor_mask)) {
+			WRITE_ONCE(rdp->cond_resched_completed,
+				   READ_ONCE(rdp->mynode->completed));
+			smp_mb(); /* ->cond_resched_completed before *rcrmp. */
+			WRITE_ONCE(*rcrmp,
+				   READ_ONCE(*rcrmp) + rdp->rsp->flavor_mask);
 			resched_cpu(rdp->cpu);  /* Force CPU into scheduler. */
 			rdp->rsp->jiffies_resched += 5; /* Enable beating. */
 		} else if (ULONG_CMP_GE(jiffies, rdp->rsp->jiffies_resched)) {
@@ -1960,7 +1999,7 @@ static bool __note_gp_changes(struct rcu_state *rsp, struct rcu_node *rnp,
 		trace_rcu_grace_period(rsp->name, rdp->gpnum, "cpustart");
 		need_gp = !!(rnp->qsmask & rdp->grpmask);
 		rdp->cpu_no_qs.b.norm = need_gp;
-		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_dynticks.rcu_qs_ctr);
+		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_qs_ctr);
 		rdp->core_needs_qs = need_gp;
 		zero_cpu_stall_ticks(rdp);
 		WRITE_ONCE(rdp->gpwrap, false);
@@ -2537,7 +2576,7 @@ rcu_report_qs_rdp(int cpu, struct rcu_state *rsp, struct rcu_data *rdp)
 		 * within the current grace period.
 		 */
 		rdp->cpu_no_qs.b.norm = true;	/* need qs for new gp. */
-		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_dynticks.rcu_qs_ctr);
+		rdp->rcu_qs_ctr_snap = __this_cpu_read(rcu_qs_ctr);
 		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 		return;
 	}
@@ -3537,7 +3576,7 @@ static int __rcu_pending(struct rcu_state *rsp, struct rcu_data *rdp)
 	/* Is the RCU core waiting for a quiescent state from this CPU? */
 	if (rcu_scheduler_fully_active &&
 	    rdp->core_needs_qs && rdp->cpu_no_qs.b.norm &&
-	    rdp->rcu_qs_ctr_snap == __this_cpu_read(rcu_dynticks.rcu_qs_ctr)) {
+	    rdp->rcu_qs_ctr_snap == __this_cpu_read(rcu_qs_ctr)) {
 		rdp->n_rp_core_needs_qs++;
 	} else if (rdp->core_needs_qs && !rdp->cpu_no_qs.b.norm) {
 		rdp->n_rp_report_qs++;
@@ -3850,7 +3889,7 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	rdp->gpnum = rnp->completed; /* Make CPU later note any new GP. */
 	rdp->completed = rnp->completed;
 	rdp->cpu_no_qs.b.norm = true;
-	rdp->rcu_qs_ctr_snap = per_cpu(rcu_dynticks.rcu_qs_ctr, cpu);
+	rdp->rcu_qs_ctr_snap = per_cpu(rcu_qs_ctr, cpu);
 	rdp->core_needs_qs = false;
 	raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 }
@@ -4085,6 +4124,7 @@ static void __init rcu_init_one(struct rcu_state *rsp)
 	static const char * const fqs[] = RCU_FQS_NAME_INIT;
 	static struct lock_class_key rcu_node_class[RCU_NUM_LVLS];
 	static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
+	static u8 fl_mask = 0x1;
 
 	int levelcnt[RCU_NUM_LVLS];		/* # nodes in each level. */
 	int levelspread[RCU_NUM_LVLS];		/* kids/node in each level. */
@@ -4106,6 +4146,8 @@ static void __init rcu_init_one(struct rcu_state *rsp)
 	for (i = 1; i < rcu_num_lvls; i++)
 		rsp->level[i] = rsp->level[i - 1] + levelcnt[i - 1];
 	rcu_init_levelspread(levelspread, levelcnt);
+	rsp->flavor_mask = fl_mask;
+	fl_mask <<= 1;
 
 	/* Initialize the elements themselves, starting from the leaves. */
 
