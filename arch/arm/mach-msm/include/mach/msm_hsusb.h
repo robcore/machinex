@@ -189,8 +189,6 @@ struct msm_otg_platform_data {
 	int  (*chg_init)(int init);
 	int (*config_vddcx)(int high);
 	int (*init_vddcx)(int init);
-
-	struct pm_qos_request pm_qos_req_dma;
 };
 
 struct msm_usb_host_platform_data {

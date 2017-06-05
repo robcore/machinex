@@ -6,20 +6,14 @@
  */
 #include <linux/plist.h>
 #include <linux/notifier.h>
-#include <linux/miscdevice.h>
 #include <linux/device.h>
 #include <linux/workqueue.h>
-#include <linux/cpumask.h>
-#include <linux/interrupt.h>
-#include <linux/err.h>
 
 enum {
 	PM_QOS_RESERVED = 0,
 	PM_QOS_CPU_DMA_LATENCY,
 	PM_QOS_NETWORK_LATENCY,
 	PM_QOS_NETWORK_THROUGHPUT,
-	PM_QOS_CPU_DMA_THROUGHPUT,
-	PM_QOS_DVFS_RESPONSE_LATENCY,
 	PM_QOS_MEMORY_BANDWIDTH,
 
 	/* insert new class ID */
@@ -39,32 +33,15 @@ enum pm_qos_flags_status {
 #define PM_QOS_NETWORK_LAT_DEFAULT_VALUE	(2000 * USEC_PER_SEC)
 #define PM_QOS_NETWORK_THROUGHPUT_DEFAULT_VALUE	0
 #define PM_QOS_MEMORY_BANDWIDTH_DEFAULT_VALUE	0
-#define PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE	0
-#define PM_QOS_DVFS_LAT_DEFAULT_VALUE	(2000 * USEC_PER_SEC)
 #define PM_QOS_RESUME_LATENCY_DEFAULT_VALUE	0
 #define PM_QOS_LATENCY_TOLERANCE_DEFAULT_VALUE	0
 #define PM_QOS_LATENCY_TOLERANCE_NO_CONSTRAINT	(-1)
 #define PM_QOS_LATENCY_ANY			((s32)(~(__u32)0 >> 1))
 
-enum pm_qos_req_type {
-	PM_QOS_REQ_ALL_CORES = 0,
-	PM_QOS_REQ_AFFINE_CORES,
-#ifdef CONFIG_SMP
-	PM_QOS_REQ_AFFINE_IRQ,
-#endif
-};
-
 #define PM_QOS_FLAG_NO_POWER_OFF	(1 << 0)
 #define PM_QOS_FLAG_REMOTE_WAKEUP	(1 << 1)
 
 struct pm_qos_request {
-	enum pm_qos_req_type type;
-	struct cpumask cpus_affine;
-#ifdef CONFIG_SMP
-	uint32_t irq;
-	/* Internal structure members */
-	struct irq_affinity_notify irq_notify;
-#endif
 	struct plist_node node;
 	int pm_qos_class;
 	struct delayed_work work; /* for pm_qos_update_request_timeout */
@@ -105,7 +82,6 @@ enum pm_qos_type {
 struct pm_qos_constraints {
 	struct plist_head list;
 	s32 target_value;	/* Do not change to 64 bit */
-	s32 target_per_cpu[NR_CPUS];
 	s32 default_value;
 	s32 no_constraint_value;
 	enum pm_qos_type type;
@@ -152,8 +128,6 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req,
 void pm_qos_remove_request(struct pm_qos_request *req);
 
 int pm_qos_request(int pm_qos_class);
-int pm_qos_request_for_cpu(int pm_qos_class, int cpu);
-int pm_qos_request_for_cpumask(int pm_qos_class, struct cpumask *mask);
 int pm_qos_add_notifier(int pm_qos_class, struct notifier_block *notifier);
 int pm_qos_remove_notifier(int pm_qos_class, struct notifier_block *notifier);
 int pm_qos_request_active(struct pm_qos_request *req);
@@ -172,8 +146,6 @@ int dev_pm_qos_add_notifier(struct device *dev,
 			    struct notifier_block *notifier);
 int dev_pm_qos_remove_notifier(struct device *dev,
 			       struct notifier_block *notifier);
-int dev_pm_qos_add_global_notifier(struct notifier_block *notifier);
-int dev_pm_qos_remove_global_notifier(struct notifier_block *notifier);
 void dev_pm_qos_constraints_init(struct device *dev);
 void dev_pm_qos_constraints_destroy(struct device *dev);
 int dev_pm_qos_add_ancestor_request(struct device *dev,
@@ -230,12 +202,6 @@ static inline int dev_pm_qos_add_notifier(struct device *dev,
 			{ return 0; }
 static inline int dev_pm_qos_remove_notifier(struct device *dev,
 					     struct notifier_block *notifier)
-			{ return 0; }
-static inline int dev_pm_qos_add_global_notifier(
-					struct notifier_block *notifier)
-			{ return 0; }
-static inline int dev_pm_qos_remove_global_notifier(
-					struct notifier_block *notifier)
 			{ return 0; }
 static inline void dev_pm_qos_constraints_init(struct device *dev)
 {

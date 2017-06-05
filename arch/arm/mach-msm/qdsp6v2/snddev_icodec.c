@@ -1083,9 +1083,9 @@ static int __init snddev_icodec_init(void)
 	icodec_drv->tx_active = 0;
 	icodec_drv->snddev_vreg = vreg_init();
 
-	pm_qos_add_request(&icodec_drv->tx_pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+	pm_qos_add_request(&icodec_drv->tx_pm_qos_req, PM_QOS_NETWORK_THROUGHPUT,
 				PM_QOS_DEFAULT_VALUE);
-	pm_qos_add_request(&icodec_drv->rx_pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+	pm_qos_add_request(&icodec_drv->rx_pm_qos_req, PM_QOS_NETWORK_THROUGHPUT,
 				PM_QOS_DEFAULT_VALUE);
 	return 0;
 error_msm_icodec_gpio_driver:

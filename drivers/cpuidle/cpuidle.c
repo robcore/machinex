@@ -627,7 +627,7 @@ static struct notifier_block cpuidle_latency_notifier = {
 
 static inline void latency_notifier_init(struct notifier_block *n)
 {
-	pm_qos_add_notifier(PM_QOS_CPU_DMA_LATENCY, n);
+	pm_qos_add_notifier(PM_QOS_NETWORK_THROUGHPUT, n);
 }
 
 #else /* CONFIG_SMP */

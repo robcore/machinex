@@ -998,7 +998,7 @@ static int __init etm_init(void)
 		*per_cpu_ptr(alloc_b, cpu) = &buf[cpu];
 
 	wake_lock_init(&etm_wake_lock, WAKE_LOCK_SUSPEND, "msm_etm");
-	pm_qos_add_request(&etm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+	pm_qos_add_request(&etm_qos_req, PM_QOS_NETWORK_THROUGHPUT,
 						PM_QOS_DEFAULT_VALUE);
 
 	/* No need to explicity turn on ETM clock since CP14 access go

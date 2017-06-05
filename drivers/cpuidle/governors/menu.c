@@ -232,7 +232,7 @@ static void detect_repeating_patterns(struct menu_device *data)
 static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 {
 	struct menu_device *data = this_cpu_ptr(&menu_devices);
-	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
+	int latency_req = pm_qos_request(PM_QOS_NETWORK_THROUGHPUT);
 	int i;
 	unsigned int interactivity_req;
 	struct timespec t;
