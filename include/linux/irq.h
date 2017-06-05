@@ -10,9 +10,6 @@
  */
 
 #include <linux/smp.h>
-
-#ifndef CONFIG_S390
-
 #include <linux/linkage.h>
 #include <linux/cache.h>
 #include <linux/spinlock.h>
@@ -72,7 +69,7 @@ enum irqchip_irq_state;
  *				  request/setup_irq()
  * IRQ_NO_BALANCING		- Interrupt cannot be balanced (affinity set)
  * IRQ_MOVE_PCNTXT		- Interrupt can be migrated from process context
- * IRQ_NESTED_TRHEAD		- Interrupt nests into another thread
+ * IRQ_NESTED_THREAD		- Interrupt nests into another thread
  * IRQ_PER_CPU_DEVID		- Dev_id is a per-cpu variable
  * IRQ_IS_POLLED		- Always polled by another interrupt. Exclude
  *				  it from the spurious interrupt detection
@@ -473,8 +470,6 @@ extern void irq_cpu_offline(void);
 extern int irq_set_affinity_locked(struct irq_data *data,
 				   const struct cpumask *cpumask, bool force);
 extern int irq_set_vcpu_affinity(unsigned int irq, void *vcpu_info);
-
-#ifdef CONFIG_GENERIC_HARDIRQS
 
 extern void irq_migrate_all_off_this_cpu(void);
 
@@ -1017,10 +1012,6 @@ static inline u32 irq_reg_readl(struct irq_chip_generic *gc,
 {
 	return readl(gc->reg_base + reg_offset);
 }
-
-#endif /* CONFIG_GENERIC_HARDIRQS */
-
-#endif /* !CONFIG_S390 */
 
 /* Contrary to Linux irqs, for hardware irqs the irq number 0 is valid */
 #define INVALID_HWIRQ	(~0UL)
