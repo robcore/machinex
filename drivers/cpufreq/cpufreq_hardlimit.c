@@ -140,19 +140,14 @@ static uint32_t thermal_hardlimit;
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	int *ret;
 
 	for_each_possible_cpu(cpu) {
-		policy = cpufreq_cpu_get(cpu);
+		policy = cpufreq_cpu_get_raw(cpu);
 	}
-	if (policy != NULL) {
-		ret = policy->freq_table;
-		cpufreq_cpu_put(policy);
-	} else
-		ret = NULL;
-
-	return ret;
-
+	if (policy != NULL)
+		return policy->freq_table;
+	else
+		return NULL;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 /* ------------------------------------------------------------------------------ */
