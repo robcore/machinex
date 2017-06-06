@@ -3491,6 +3491,8 @@ static void __sched notrace __schedule(bool preempt)
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
 
+	schedule_debug(prev);
+
 	if (sched_feat(HRTICK))
 		hrtick_clear(rq);
 
@@ -3506,7 +3508,7 @@ static void __sched notrace __schedule(bool preempt)
 	rq_lock(rq, &rf);
 
 	/* Promote REQ to ACT */
-	rq->clock_update_flags <<= 1;
+	rq->clock_skip_update <<= 1;
 	update_rq_clock(rq);
 
 	switch_count = &prev->nivcsw;
@@ -3535,6 +3537,7 @@ static void __sched notrace __schedule(bool preempt)
 
 	next = pick_next_task(rq, prev, &rf);
 	clear_tsk_need_resched(prev);
+	rq->clock_skip_update = 0;
 	sched_preempt_enable_no_resched();
 
 	if (likely(prev != next)) {
@@ -3547,7 +3550,7 @@ static void __sched notrace __schedule(bool preempt)
 		rq = context_switch(rq, prev, next, &rf);
 	} else {
 		prev->yield_count++;
-		rq->clock_update_flags &= ~(RQCF_ACT_SKIP|RQCF_REQ_SKIP);
+		rq->clock_skip_update <<= 1;
 		rq_unlock_irq(rq, &rf);
 	}
 
