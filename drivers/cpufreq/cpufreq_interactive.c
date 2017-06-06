@@ -372,7 +372,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
 
-	if (WARN_ON_ONCE(!delta_time))
+	if (!delta_time)
 		return;
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
@@ -1150,7 +1150,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	mutex_lock(&global_tunables_lock);
 
 	if (global_tunables) {
-		if (WARN_ON(have_governor_per_policy())) {
+		if (have_governor_per_policy()) {
 			ret = -EINVAL;
 			goto free_int_policy;
 		}
