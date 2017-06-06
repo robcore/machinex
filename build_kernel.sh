@@ -508,6 +508,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
+	cp $(pwd)/out/vmlinux $(pwd)/robstuff/vmlinux;
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
@@ -671,6 +672,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
+	cp $(pwd)/out/vmlinux $(pwd)/robstuff/vmlinux;
 	if [[ $AUTO = "n" ]]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
@@ -863,6 +865,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
+	cp $(pwd)/out/vmlinux $(pwd)/robstuff/vmlinux;
 	echo "ENABLE ADB WIRELESS"
 	countdown
 	adb connect 192.168.1.103
@@ -958,6 +961,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
+	cp $(pwd)/out/vmlinux $(pwd)/robstuff/vmlinux;
 	echo "ENABLE ADB WIRELESS"
 	countdown
 	adb connect 192.168.1.103
