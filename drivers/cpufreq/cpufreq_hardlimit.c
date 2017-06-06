@@ -143,8 +143,10 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	if (freq_is_therm_limited())
 		current_limit_max = thermal_hardlimit;
 #endif
-
-	return max(current_limit_min, min(current_limit_max, freq));
+	if (limited_max_freq_thermal > current_limit_min && current_limit_max > limited_max_freq_thermal)
+		return max(current_limit_min, min(limited_max_freq_thermal, freq));
+	else
+		return max(current_limit_min, min(current_limit_max, freq));
 }
 
 /* Update limits in cpufreq */
