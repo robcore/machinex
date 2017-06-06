@@ -105,37 +105,10 @@ unsigned int hardlimit_max_screen_on  = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;  
 unsigned int hardlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK; /* default to stock behaviour */
 unsigned int hardlimit_min_screen_on  = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;  /* default to stock behaviour */
 unsigned int hardlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; /* default to stock behaviour */
-#ifdef SUPERFLUOUS
-unsigned int wakeup_kick_freq         = CPUFREQ_HARDLIMIT_WAKEUP_KICK_FREQ;     /* default to better behaviour */
-unsigned int wakeup_kick_delay        = CPUFREQ_HARDLIMIT_WAKEUP_KICK_DISABLED; /* default to stock behaviour */
-unsigned int wakeup_kick_active       = CPUFREQ_HARDLIMIT_WAKEUP_KICK_INACTIVE;
-unsigned int touchboost_lo_freq       = CPUFREQ_HARDLIMIT_TOUCHBOOST_LO_DEFAULT;
-unsigned int touchboost_hi_freq       = CPUFREQ_HARDLIMIT_TOUCHBOOST_HI_DEFAULT;
-unsigned int touchboost_active        = CPUFREQ_HARDLIMIT_TOUCHBOOST_INACTIVE;
-unsigned int touchboost_delay         = CPUFREQ_HARDLIMIT_TOUCHBOOST_DISABLED;	/* default to stock behaviour */
-unsigned int touchboost_eventcount    = CPUFREQ_HARDLIMIT_TOUCHBOOST_EVENTS;    /* default to 5 touches to jump to hi */
-unsigned int touchevent_count         = 0;
-unsigned int touchinput_fingers       = 0;
-unsigned int touchinput_prev_fingers  = 0;
-#endif
-
-#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
-char         touchinput_dev_name[30];
-#endif
-
-#ifdef CONFIG_SEC_DVFS
-unsigned int userspace_dvfs_lock      = CPUFREQ_HARDLIMIT_USERSPACE_DVFS_ALLOW;	/* default allows userspace dvfs interaction */
-#endif
 
 unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
-
-#if 0
-extern uint32_t limited_max_freq_thermal;
-extern bool freq_is_therm_limited(void);
-static uint32_t thermal_hardlimit;
-#endif
 
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
