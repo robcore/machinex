@@ -5000,7 +5000,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 }
 
 static DEFINE_PER_CPU(bool, dbs_boost_needed);
-
+unsigned int capacity_margin = 1280; /* ~20% margin */
 /*
  * find_idlest_group finds and returns the least busy CPU group within the
  * domain.
@@ -5049,7 +5049,7 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 			 * Look for most energy-efficient group that can fit
 			 * that can fit the task.
 			 */
-			if (capacity_of(i) < fit_capacity && task_fits_spare(p, i)) {
+			if (capacity_of(i) < fit_capacity) {
 				fit_capacity = capacity_of(i);
 				fit_group = group;
 			}
@@ -5106,7 +5106,7 @@ find_idlest_cpu(struct sched_group *group, struct task_struct *p, int this_cpu)
 
 	/* Traverse only the allowed CPUs */
 	for_each_cpu_and(i, sched_group_cpus(group), &p->cpus_allowed) {
-		if (task_fits_spare(p, i)) {
+		if (idle_cpu(i)) {
 			struct rq *rq = cpu_rq(i);
 			struct cpuidle_state *idle = idle_get_state(rq);
 			if (idle && idle->exit_latency < min_exit_latency) {
@@ -5118,8 +5118,7 @@ find_idlest_cpu(struct sched_group *group, struct task_struct *p, int this_cpu)
 				min_exit_latency = idle->exit_latency;
 				latest_idle_timestamp = rq->idle_stamp;
 				shallowest_idle_cpu = i;
-			} else if (idle_cpu(i) &&
-				   (!idle || idle->exit_latency == min_exit_latency) &&
+			} else if ((!idle || idle->exit_latency == min_exit_latency) &&
 				   rq->idle_stamp > latest_idle_timestamp) {
 				/*
 				 * If equal or no active idle state, then
