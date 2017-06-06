@@ -205,14 +205,14 @@ static void slack_timer_resched(struct interactive_cpu *icpu, int cpu,
 	icpu->cputime_speedadj = 0;
 	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
 
+	spin_unlock_irqrestore(&icpu->load_lock, flags);
+
 	if (timer_slack_required(icpu)) {
 		if (modify)
 			gov_slack_timer_modify(icpu);
 		else
 			gov_slack_timer_start(icpu, cpu);
 	}
-
-	spin_unlock_irqrestore(&icpu->load_lock, flags);
 }
 
 static unsigned int
@@ -367,7 +367,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	int cpu = smp_processor_id();
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
-	now = update_load(icpu, smp_processor_id());
+	now = update_load(icpu, cpu);
 	delta_time = (unsigned int)(now - icpu->cputime_speedadj_timestamp);
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
@@ -456,14 +456,16 @@ exit:
 
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
+	int cpu = smp_processor_id();
 	eval_target_freq(icpu);
-	slack_timer_resched(icpu, smp_processor_id(), true);
+	slack_timer_resched(icpu, cpu, true);
 }
 
 static void cpufreq_interactive_idle_end(void)
 {
+	int cpu = smp_processor_id();
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu,
-						smp_processor_id());
+						cpu);
 
 	if (!down_read_trylock(&icpu->enable_sem))
 		return;
@@ -473,11 +475,15 @@ static void cpufreq_interactive_idle_end(void)
 		 * We haven't sampled load for more than sampling_rate time, do
 		 * it right now.
 		 */
-		if (time_after_eq(jiffies, icpu->next_sample_jiffies))
+		if (time_after_eq(jiffies, icpu->next_sample_jiffies)) {
+			up_read(&icpu->enable_sem);
 			cpufreq_interactive_update(icpu);
+			return;
+		}
+			up_read(&icpu->enable_sem);
 	}
 
-	up_read(&icpu->enable_sem);
+
 }
 
 static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
