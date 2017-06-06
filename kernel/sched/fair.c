@@ -5046,15 +5046,6 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 			avg_load += load;
 
 			/*
-			 * Look for most energy-efficient group that can fit
-			 * that can fit the task.
-			 */
-			if (capacity_of(i) < fit_capacity) {
-				fit_capacity = capacity_of(i);
-				fit_group = group;
-			}
-
-			/*
 			 * Look for group which has most spare capacity on a
 			 * single cpu.
 			 */
@@ -5075,9 +5066,6 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 			idlest = group;
 		}
 	} while (group = group->next, group != sd->groups);
-
-	if (fit_group)
-		return fit_group;
 
 	if (spare_group)
 		return spare_group;
