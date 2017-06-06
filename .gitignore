@@ -146,3 +146,4 @@ patch.1
 sound/soc/codecs/sound_control5.c
 drivers/tty/vt/defkeymap.c
 drivers/tty/vt/consolemap_deftbl.c
+vmlinux
