@@ -1063,9 +1063,6 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 	}
-
-	pr_info("CPU: 15 frequencies supported\n");
-
 	cpu = cpumask_first(cpu_possible_mask);
 	/* Register table with CPUFreq. */
 	return freq_table[cpu];
@@ -1073,6 +1070,7 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 static void __init cpufreq_table_init(void)
 {
 	pr_info("CPU Driver Init\n");
+	pr_info("CPU: 15 frequencies supported\n");
 }
 
 static void __init dcvs_freq_init(void)
