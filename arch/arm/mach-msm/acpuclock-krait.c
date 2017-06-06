@@ -1063,31 +1063,14 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 	freq_table[0][freq_cnt].driver_data = freq_cnt;
 	freq_table[0][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
+	pr_info("MachinexCpuDriver:%d frequencies supported\n", freq_cnt);
+
 	/* Register table with CPUFreq. */
 	return freq_table[0];
 }
 static void __init cpufreq_table_init(void)
 {
-	int i, freq_cnt = 0;
-
-	/* Construct the freq_table tables from cpu0 freq_table. */
-	for (i = 0; drv.freq_table[i].speed.khz != 0
-			&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
-		if (drv.freq_table[i].use_for_scaling) {
-			freq_table[0][freq_cnt].driver_data = freq_cnt;
-			freq_table[0][freq_cnt].frequency
-				= drv.freq_table[i].speed.khz;
-			freq_cnt++;
-		}
-	}
-
-	/* freq_table not big enough to store all usable freqs. */
-	BUG_ON(drv.freq_table[i].speed.khz != 0);
-
-	freq_table[0][freq_cnt].driver_data = freq_cnt;
-	freq_table[0][freq_cnt].frequency = CPUFREQ_TABLE_END;
-
-	pr_info("MachinexCpuDriver:%d frequencies supported\n", freq_cnt);
+	pr_info("CPU Driver Init\n");
 }
 
 static void __init dcvs_freq_init(void)
