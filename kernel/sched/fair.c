@@ -5564,8 +5564,10 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	 * prevents us from potentially nominating it as a false LAST_BUDDY
 	 * below.
 	 */
+	if (curr == NULL)
+		return;
 
-	if (curr == NULL && test_tsk_need_resched(curr))
+	if (test_tsk_need_resched(curr))
 		return;
 
 	/* Idle tasks are by definition preempted by non-idle tasks. */
@@ -5600,8 +5602,8 @@ preempt:
 	/*
 	 * Only set the backward buddy when the current task is still
 	 * on the rq. This can happen when a wakeup gets interleaved
-	 * with schedule on the idle_balance() point, which can
-	 * drop the rq lock.
+	 * with schedule on the ->pre_schedule() or idle_balance()
+	 * point, either of which can * drop the rq lock.
 	 *
 	 * Also, during early boot the idle thread is in the fair class,
 	 * for obvious reasons its a bad idea to schedule back to it.
@@ -5697,8 +5699,6 @@ again:
 	if (hrtick_enabled(rq))
 		hrtick_start_fair(rq, p);
 
-	rq->misfit_task = !task_fits_max(p, rq->cpu);
-
 	return p;
 simple:
 	cfs_rq = &rq->cfs;
@@ -5719,8 +5719,6 @@ simple:
 
 	if (hrtick_enabled(rq))
 		hrtick_start_fair(rq, p);
-
-	rq->misfit_task = !task_fits_max(p, rq->cpu);
 
 	return p;
 
