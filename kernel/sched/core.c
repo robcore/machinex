@@ -3547,7 +3547,7 @@ static void __sched notrace __schedule(bool preempt)
 		++*switch_count;
 
 		/* Also unlocks the rq: */
-		rq = context_switch(rq, prev, next, &rf);
+		context_switch(rq, prev, next, &rf);
 	} else {
 		prev->yield_count++;
 		rq->clock_skip_update <<= 1;
