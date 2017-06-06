@@ -3402,14 +3402,12 @@ static inline void schedule_debug(struct task_struct *prev)
 static inline struct task_struct *
 pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 {
-	const struct sched_class *class;
+	const struct sched_class *class = &fair_sched_class;
 	struct task_struct *p;
 
 	/*
-	 * Optimization: we know that if all tasks are in the fair class we can
-	 * call that function directly, but only if the @prev task wasn't of a
-	 * higher scheduling class, because otherwise those loose the
-	 * opportunity to pull in more work from other CPUs.
+	 * Optimization: we know that if all tasks are in
+	 * the fair class we can call that function directly:
 	 */
 	if (likely((prev->sched_class == &idle_sched_class ||
 		    prev->sched_class == &fair_sched_class) &&
@@ -3420,7 +3418,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 				goto again;
 
 		/* Assumes fair_sched_class->next == idle_sched_class */
-		if (unlikely(!p))
+		if (!p)
 			p = idle_sched_class.pick_next_task(rq, prev, rf);
 
 		return p;
@@ -3477,21 +3475,36 @@ again:
  *          - return from syscall or exception to user-space
  *          - return from interrupt-handler to user-space
  *
- * WARNING: must be called with preemption disabled!
+ * WARNING: all callers must re-check need_resched() afterward and reschedule
+ * accordingly in case an event triggered the need for rescheduling (such as
+ * an interrupt waking up a task) while preemption was disabled in __schedule().
  */
-static void __sched notrace __schedule(bool preempt)
+static void __sched notrace __schedule(void)
 {
 	struct task_struct *prev, *next;
 	unsigned long *switch_count;
 	struct rq_flags rf;
 	struct rq *rq;
 	int cpu;
+	bool predisabled = false;
 
+	preempt_disable();
 	cpu = smp_processor_id();
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
 
-	schedule_debug(prev);
+	/*
+	 * do_exit() calls schedule() with preemption disabled as an exception;
+	 * however we must fix that up, otherwise the next task will see an
+	 * inconsistent (higher) preempt count.
+	 *
+	 * It also avoids the below schedule_debug() test from complaining
+	 * about this.
+	 */
+	if (unlikely(prev->state == TASK_DEAD)) {
+		preempt_enable_no_resched_notrace();
+		predisabled = true;
+	}
 
 	if (sched_feat(HRTICK))
 		hrtick_clear(rq);
@@ -3512,8 +3525,9 @@ static void __sched notrace __schedule(bool preempt)
 	update_rq_clock(rq);
 
 	switch_count = &prev->nivcsw;
-	if (!preempt && prev->state) {
-		if (unlikely(signal_pending_state(prev->state, prev))) {
+
+	if (prev && prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
+		if (signal_pending_state(prev->state, prev)) {
 			prev->state = TASK_RUNNING;
 		} else {
 			deactivate_task(rq, prev, DEQUEUE_SLEEP | DEQUEUE_NOCLOCK);
@@ -3547,13 +3561,23 @@ static void __sched notrace __schedule(bool preempt)
 
 		/* Also unlocks the rq: */
 		context_switch(rq, prev, next, &rf);
+		/*
+		 * The context switch have flipped the stack from under us
+		 * and restored the local variables which were saved when
+		 * this task called schedule() in the past. prev == current
+		 * is still correct, but it can be moved to another cpu/rq.
+		 */
+		cpu = smp_processor_id();
+		rq = cpu_rq(cpu);
 	} else {
 		prev->yield_count++;
-		rq->clock_skip_update <<= 1;
 		rq_unlock_irq(rq, &rf);
 	}
 
 	balance_callback(rq);
+
+	if (!predisabled)
+	sched_preempt_enable_no_resched();
 }
 
 static inline void sched_submit_work(struct task_struct *tsk)
@@ -3574,9 +3598,7 @@ asmlinkage __visible void __sched schedule(void)
 
 	sched_submit_work(tsk);
 	do {
-		preempt_disable();
-		__schedule(false);
-		sched_preempt_enable_no_resched();
+		__schedule();
 	} while (need_resched());
 }
 EXPORT_SYMBOL(schedule);
@@ -3616,7 +3638,7 @@ static void __sched notrace preempt_schedule_common(void)
 {
 	do {
 		add_preempt_count(PREEMPT_ACTIVE);
-		__schedule(true);
+		__schedule();
 		sub_preempt_count(PREEMPT_ACTIVE);
 
 		/*
@@ -3676,7 +3698,7 @@ asmlinkage __visible void __sched notrace preempt_schedule_context(void)
 		 * an infinite recursion.
 		 */
 		prev_ctx = exception_enter();
-		__schedule(true);
+		__schedule();
 		exception_exit(prev_ctx);
 
 		sub_preempt_count(PREEMPT_ACTIVE);
@@ -3707,7 +3729,7 @@ asmlinkage __visible void __sched preempt_schedule_irq(void)
 	do {
 		add_preempt_count(PREEMPT_ACTIVE);
 		local_irq_enable();
-		__schedule(true);
+		__schedule();
 		local_irq_disable();
 		sub_preempt_count(PREEMPT_ACTIVE);
 
