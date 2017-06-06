@@ -4366,8 +4366,6 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
-static bool cpu_overutilized(int cpu);
-
 /*
  * The enqueue_task method is called before nr_running is
  * increased. Here we update the fair scheduling stats and
@@ -5232,7 +5230,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 
 	if (sd_flag & SD_BALANCE_WAKE) {
 		record_wakee(p);
-		want_affine = (!wake_wide(p) && task_fits_max(p, cpu) &&
+		want_affine = (!wake_wide(p) &&
 			      cpumask_test_cpu(cpu, &p->cpus_allowed));
 	}
 
@@ -5251,7 +5249,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 			break;
 		}
 
-		if (tmp->flags & sd_flag)
+		if (tmp->flags & sd_flag)	
 			sd = tmp;
 		else if (!want_affine)
 			break;
@@ -5837,7 +5835,6 @@ static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 
 enum group_type {
 	group_other = 0,
-	group_misfit_task,
 	group_imbalanced,
 	group_overloaded,
 };
@@ -6280,7 +6277,6 @@ struct sg_lb_stats {
 	unsigned int group_weight;
 	enum group_type group_type;
 	int group_no_capacity;
-	int group_misfit_task; /* A cpu has a task too big for its capacity */
 };
 
 /*
@@ -6613,9 +6609,6 @@ group_type group_classify(struct sched_group *group,
 	if (sg_imbalanced(group))
 		return group_imbalanced;
 
-	if (sgs->group_misfit_task)
-		return group_misfit_task;
-
 	return group_other;
 }
 
@@ -6677,12 +6670,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		 */
 		if (!nr_running && idle_cpu(i))
 			sgs->idle_cpus++;
-
-		if (cpu_overutilized(i)) {
-			*overutilized = true;
-			if (!sgs->group_misfit_task && rq->misfit_task)
-				sgs->group_misfit_task = capacity_of(i);
-		}
 	}
 
 	if (local_group && (env->idle != CPU_NEWLY_IDLE ||
@@ -6874,14 +6861,6 @@ static inline void update_sd_lb_stats(struct lb_env *env, struct sd_lb_stats *sd
 			sgs->group_type = group_classify(sg, sgs);
 		}
 
-		/*
-		 * Ignore task groups with misfit tasks if local group has no
-		 * capacity or if per-cpu capacity isn't higher.
-		 */
-		if (sgs->group_type == group_misfit_task &&
-		    (!group_has_capacity(env, &sds->local_stat) ||
-		     !group_smaller_cpu_capacity(sg, sds->local)))
-			sgs->group_type = group_other;
 		if (update_sd_pick_busiest(env, sds, sg, sgs)) {
 			sds->busiest = sg;
 			sds->busiest_stat = *sgs;
@@ -7040,17 +7019,13 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 	struct sg_lb_stats *local, *busiest;
 
 	local = &sds->local_stat;
-	if (local->sum_nr_running) {
-		local->load_per_task =
-			local->sum_weighted_load / local->sum_nr_running;
-	}
-
 	busiest = &sds->busiest_stat;
-	/* busiest must have some tasks */
-	busiest->load_per_task =
-		busiest->sum_weighted_load / busiest->sum_nr_running;
 
 	if (busiest->group_type == group_imbalanced) {
+		/*
+		 * In the group_imb case we cannot rely on group-wide averages
+		 * to ensure cpu-load equilibrium, look at wider averages. XXX
+		 */
 		busiest->load_per_task =
 			min(busiest->load_per_task, sds->avg_load);
 	}
@@ -7063,25 +7038,10 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 	 */
 	if (busiest->avg_load <= sds->avg_load ||
 	    local->avg_load >= sds->avg_load) {
-		/* Misfitting tasks should be migrated in any case */
-		if (busiest->group_type == group_misfit_task) {
-			env->imbalance = busiest->group_misfit_task;
-			return;
-		}
-
-		/*
-		 * Busiest group is overloaded, local is not, use the spare
-		 * cycles to maximize throughput
-		 */
-		if (busiest->group_type == group_overloaded &&
-		    local->group_type <= group_misfit_task) {
-			env->imbalance = busiest->load_per_task;
-			return;
-		}
-
 		env->imbalance = 0;
 		return fix_small_imbalance(env, sds);
 	}
+
 	/*
 	 * If there aren't any idle cpus, avoid creating some.
 	 */
@@ -7110,11 +7070,6 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 		max_pull * sds->busiest->sgc->capacity,
 		(sds->avg_load - local->avg_load) * sds->local->sgc->capacity
 	) / SCHED_CAPACITY_SCALE;
-
-	/* Boost imbalance to allow misfit task to be balanced. */
-	if (busiest->group_type == group_misfit_task)
-		env->imbalance = max_t(long, env->imbalance,
-				     busiest->group_misfit_task);
 
 	/*
 	 * if *imbalance is less than the average load per runnable task
@@ -7151,7 +7106,6 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	 * this level.
 	 */
 	update_sd_lb_stats(env, &sds);
-
 	local = &sds.local_stat;
 	busiest = &sds.busiest_stat;
 
@@ -7168,7 +7122,7 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 
 	/*
 	 * If the busiest group is imbalanced the below checks don't
-	 * work because they assumes all things are equal, which typically
+	 * work because they assume all things are equal, which typically
 	 * isn't true due to cpus_allowed constraints and the like.
 	 */
 	if (busiest->group_type == group_imbalanced)
@@ -7178,11 +7132,6 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	if (env->idle == CPU_NEWLY_IDLE && group_has_capacity(env, local) &&
 	    busiest->group_no_capacity)
 		goto force_balance;
-
-	/* Misfitting tasks should be dealt with regardless of the avg load */
-	if (busiest->group_type == group_misfit_task) {
-		goto force_balance;
-	}
 
 	/*
 	 * If the local group is busier than the selected busiest group
@@ -7207,8 +7156,7 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 		 * might end up to just move the imbalance on another group
 		 */
 		if ((busiest->group_type != group_overloaded) &&
-		    (local->idle_cpus <= (busiest->idle_cpus + 1)) &&
-		    !group_smaller_cpu_capacity(sds.busiest, sds.local))
+				(local->idle_cpus <= (busiest->idle_cpus + 1)))
 			goto out_balanced;
 	} else {
 		/*
@@ -7221,7 +7169,6 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	}
 
 force_balance:
-	env->busiest_group_type = busiest->group_type;
 	/* Looks like there is an imbalance. Compute it */
 	calculate_imbalance(env, &sds);
 	return sds.busiest;
@@ -7254,9 +7201,9 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 		 * When comparing with imbalance, use weighted_cpuload()
 		 * which is not scaled with the cpu capacity.
 		 */
+
 		if (rq->nr_running == 1 && wl > env->imbalance &&
-		    !check_cpu_capacity(rq, env->sd) &&
-		    env->busiest_group_type != group_misfit_task)
+		    !check_cpu_capacity(rq, env->sd))
 			continue;
 
 		/*
@@ -7297,10 +7244,11 @@ static int need_active_balance(struct lb_env *env)
 
 		/*
 		 * ASYM_PACKING needs to force migrate tasks from busy but
-		 * higher numbered CPUs in order to pack all tasks in the
-		 * lowest numbered CPUs.
+		 * lower priority CPUs in order to pack all tasks in the
+		 * highest priority CPUs.
 		 */
-		if ((sd->flags & SD_ASYM_PACKING) && env->src_cpu > env->dst_cpu)
+		if ((sd->flags & SD_ASYM_PACKING) &&
+		    group_first_cpu(env->dst_cpu, env->src_cpu))
 			return 1;
 	}
 
@@ -7314,13 +7262,6 @@ static int need_active_balance(struct lb_env *env)
 	    (env->src_rq->cfs.h_nr_running == 1)) {
 		if ((check_cpu_capacity(env->src_rq, sd)) &&
 		    (capacity_of(env->src_cpu)*sd->imbalance_pct < capacity_of(env->dst_cpu)*100))
-			return 1;
-	}
-
-	if ((capacity_of(env->src_cpu) < capacity_of(env->dst_cpu)) &&
-				env->src_rq->cfs.h_nr_running == 1 &&
-				cpu_overutilized(env->src_cpu) &&
-				!cpu_overutilized(env->dst_cpu)) {
 			return 1;
 	}
 
@@ -7374,7 +7315,7 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 	int ld_moved, cur_ld_moved, active_balance = 0;
 	struct sched_domain *sd_parent = sd->parent;
 	struct sched_group *group;
-	struct rq *busiest = NULL;
+	struct rq *busiest;
 	struct rq_flags rf;
 	struct cpumask *cpus = this_cpu_cpumask_var_ptr(load_balance_mask);
 
@@ -7441,6 +7382,7 @@ redo:
 
 more_balance:
 		rq_lock_irqsave(busiest, &rf);
+		update_rq_clock(busiest);
 
 		/*
 		 * cur_ld_moved - load moved in current iteration
@@ -7538,8 +7480,7 @@ more_balance:
 		 * excessive cache_hot migrations and active balances.
 		 */
 		if (idle != CPU_NEWLY_IDLE)
-			if (env.src_grp_nr_running > 1)
-				sd->nr_balance_failed++;
+			sd->nr_balance_failed++;
 
 		if (need_active_balance(&env)) {
 			unsigned long flags;
@@ -7923,7 +7864,7 @@ static inline void set_cpu_sd_state_busy(void)
 	int cpu = smp_processor_id();
 
 	rcu_read_lock();
-	sd = rcu_dereference_check_sched_domain(this_rq()->sd);
+	sd = rcu_dereference(per_cpu(sd_llc, cpu));
 
 	if (!sd || !sd->nohz_idle)
 		goto unlock;
@@ -8202,8 +8143,7 @@ static inline bool nohz_kick_needed(struct rq *rq)
 	if (time_before(now, nohz.next_balance))
 		return false;
 
-	if (rq->nr_running >= 2 &&
-	    (!cpu_overutilized(cpu)))
+	if (rq->nr_running >= 2)
 		return true;
 
 	rcu_read_lock();
@@ -8214,7 +8154,6 @@ static inline bool nohz_kick_needed(struct rq *rq)
 		 * See also: http://lkml.kernel.org/r/20111202010832.602203411@sbsiddha-desk.sc.intel.com
 		 */
 		nr_busy = atomic_read(&sds->nr_busy_cpus);
-
 		if (nr_busy > 1) {
 			kick = true;
 			goto unlock;
@@ -8315,10 +8254,6 @@ static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
 		entity_tick(cfs_rq, se, queued);
 	}
 
-	if (!rq->rd->overutilized && cpu_overutilized(task_cpu(curr)))
-		rq->rd->overutilized = true;
-
-	rq->misfit_task = !task_fits_max(curr, rq->cpu);
 }
 
 /*
