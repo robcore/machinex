@@ -32,9 +32,6 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/cpufreq_interactive.h>
-
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
 __ATTR(_name, 0444, show_##_name, NULL)
@@ -404,8 +401,6 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	if (policy->cur >= tunables->hispeed_freq &&
 	    new_freq > policy->cur &&
 	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
-		trace_cpufreq_interactive_notyet(cpu, cpu_load,
-				icpu->target_freq, policy->cur, new_freq);
 		goto exit;
 	}
 
@@ -422,8 +417,6 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	max_fvtime = max(icpu->pol_floor_val_time, icpu->loc_floor_val_time);
 	if (new_freq < icpu->floor_freq && icpu->target_freq >= policy->cur) {
 		if (now - max_fvtime < tunables->min_sample_time) {
-			trace_cpufreq_interactive_notyet(cpu, cpu_load,
-				icpu->target_freq, policy->cur, new_freq);
 			goto exit;
 		}
 	}
@@ -444,13 +437,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	if (icpu->target_freq == new_freq &&
 	    icpu->target_freq <= policy->cur) {
-		trace_cpufreq_interactive_already(cpu, cpu_load,
-			icpu->target_freq, policy->cur, new_freq);
 		goto exit;
 	}
-
-	trace_cpufreq_interactive_target(cpu, cpu_load, icpu->target_freq,
-					 policy->cur, new_freq);
 
 	icpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
@@ -539,8 +527,6 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 			icpu->pol_hispeed_val_time = hvt;
 		}
 	}
-
-	trace_cpufreq_interactive_setspeed(cpu, max_freq, policy->cur);
 }
 
 static int cpufreq_interactive_speedchange_task(void *data)
@@ -907,12 +893,10 @@ static ssize_t store_boost(struct gov_attr_set *attr_set, const char *buf,
 	tunables->boost = val;
 
 	if (tunables->boost) {
-		trace_cpufreq_interactive_boost("on");
 		if (!tunables->boosted)
 			cpufreq_interactive_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-		trace_cpufreq_interactive_unboost("off");
 	}
 
 	return count;
@@ -931,7 +915,6 @@ static ssize_t store_boostpulse(struct gov_attr_set *attr_set, const char *buf,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 					tunables->boostpulse_duration;
-	trace_cpufreq_interactive_boost("pulse");
 	if (!tunables->boosted)
 		cpufreq_interactive_boost(tunables);
 
