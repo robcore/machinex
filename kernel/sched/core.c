@@ -3486,7 +3486,7 @@ static void __sched notrace __schedule(void)
 	struct rq_flags rf;
 	struct rq *rq;
 	int cpu;
-	bool predisabled = false;
+	bool prenabled = false;
 
 	preempt_disable();
 	cpu = smp_processor_id();
@@ -3503,14 +3503,14 @@ static void __sched notrace __schedule(void)
 	 */
 	if (unlikely(prev->state == TASK_DEAD)) {
 		preempt_enable_no_resched_notrace();
-		predisabled = true;
+		prenabled = true;
 	}
 
 	if (sched_feat(HRTICK))
 		hrtick_clear(rq);
 
 	local_irq_disable();
-	rcu_note_context_switch(preempt);
+	rcu_note_context_switch(prenabled);
 
 	/*
 	 * Make sure that signal_pending_state()->signal_pending() below
@@ -3576,7 +3576,7 @@ static void __sched notrace __schedule(void)
 
 	balance_callback(rq);
 
-	if (!predisabled)
+	if (!prenabled)
 	sched_preempt_enable_no_resched();
 }
 
