@@ -67,9 +67,6 @@
  *   1 = ignore (don't apply, but don't return an error)
  *   2 = refuse (don't apply, return EINVAL)
  * #endif
- * /sys/kernel/cpufreq_hardlimit/available_frequencies (ro)
- *
- *   display list of available CPU frequencies for convenience
  *
  * /sys/kernel/cpufreq_hardlimit/current_limit_max (ro)
  *
@@ -343,23 +340,6 @@ static ssize_t hardlimit_min_screen_off_store(struct kobject *kobj, struct kobj_
 
 }
 
-/* sysfs interface for "available_frequencies" */
-static ssize_t available_frequencies_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-{
-	unsigned int i;
-	ssize_t j = 0;
-
-	struct cpufreq_frequency_table *table;
-
-	table = cpufreq_frequency_get_table(0); /* Get frequency table */
-
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
-		j += sprintf(&buf[j], "%d ", table[i].frequency);
-
-	j += sprintf(&buf[j], "\n");
-	return j;
-}
-
 /* sysfs interface for "current_limit_min" */
 static ssize_t current_limit_min_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -398,9 +378,6 @@ __ATTR(scaling_min_freq_screen_on, 0666, hardlimit_min_screen_on_show, hardlimit
 static struct kobj_attribute hardlimit_min_screen_off_attribute =
 __ATTR(scaling_min_freq_screen_off, 0666, hardlimit_min_screen_off_show, hardlimit_min_screen_off_store);
 
-static struct kobj_attribute available_frequencies_attribute =
-__ATTR(available_frequencies, 0444, available_frequencies_show, NULL);
-
 static struct kobj_attribute current_limit_min_attribute =
 __ATTR(current_limit_min, 0444, current_limit_min_show, NULL);
 
@@ -415,7 +392,6 @@ static struct attribute *hardlimit_attrs[] = {
 	&hardlimit_max_screen_off_attribute.attr,
 	&hardlimit_min_screen_on_attribute.attr,
 	&hardlimit_min_screen_off_attribute.attr,
-	&available_frequencies_attribute.attr,
 	&current_limit_min_attribute.attr,
 	&current_limit_max_attribute.attr,
 	&version_attribute.attr,
