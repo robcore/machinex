@@ -7248,7 +7248,7 @@ static int need_active_balance(struct lb_env *env)
 		 * highest priority CPUs.
 		 */
 		if ((sd->flags & SD_ASYM_PACKING) &&
-		    group_first_cpu(env->dst_cpu, env->src_cpu))
+		    env->src_cpu > env->dst_cpu)
 			return 1;
 	}
 
