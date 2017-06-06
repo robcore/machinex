@@ -1169,7 +1169,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		goto free_int_policy;
 	}
 
-	tunables->hispeed_freq = policy->max;
+	tunables->hispeed_freq = 1890000;
 	tunables->above_hispeed_delay = default_above_hispeed_delay;
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
