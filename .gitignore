@@ -132,6 +132,7 @@ kernel/hz.bc
 datetracker.txt
 arch/arm/configs/tmpconfig
 arch/arm/kernel/vmlinux.lds
+robstuff/
 
 #
 # Leavings from module signing
