@@ -3538,7 +3538,6 @@ static void __sched notrace __schedule(bool preempt)
 	next = pick_next_task(rq, prev, &rf);
 	clear_tsk_need_resched(prev);
 	rq->clock_skip_update = 0;
-	sched_preempt_enable_no_resched();
 
 	if (likely(prev != next)) {
 		rq->nr_switches++;
