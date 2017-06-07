@@ -38,6 +38,7 @@ unsigned int hlimit_max_screen_on  = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;  /* 
 unsigned int hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK; /* default to stock behaviour */
 unsigned int hlimit_min_screen_on  = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;  /* default to stock behaviour */
 unsigned int hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; /* default to stock behaviour */
+static bool hardlimit_ready = false;
 
 unsigned int curr_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min       = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
@@ -288,7 +289,7 @@ extern void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsig
 {
 	struct cpufreq_policy *policy;
 
-	policy = cpufreq_cpu_get_raw(cpu);
+	policy = per_cpu(cpufreq_cpu_data, cpu);
 		if (policy != NULL) {
 			policy->user_policy.min = policy->min = freq_min;
 			policy->user_policy.max = policy->max = freq_max;
@@ -683,7 +684,7 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
-	return max(curr_limit_min, min(curr_limit_max, freq));
+	return max(policy->curr_limit_min, min(policy->curr_limit_max, freq));
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
 #endif
@@ -723,15 +724,17 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 void reapply_hard_limits(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);;
 
+	if !(hardlimit_ready)
+		return;
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-			curr_limit_min  = hlimit_min_screen_on;
-			curr_limit_max  = hlimit_max_screen_on;
+			curr_limit_min  = policy->hlimit_min_screen_on;
+			curr_limit_max  = policy->hlimit_max_screen_on;
 	} else {
-		curr_limit_min  = hlimit_min_screen_off;
-		curr_limit_max  = hlimit_max_screen_off;
+		curr_limit_min  = policy->hlimit_min_screen_off;
+		curr_limit_max  = policy->hlimit_max_screen_off;
 	}
 
 	if (limited_max_freq_thermal > curr_limit_min && curr_limit_max > limited_max_freq_thermal)
@@ -743,10 +746,8 @@ void reapply_hard_limits(void)
 		input_boost_limit <= curr_limit_max)
 		curr_limit_min = input_boost_limit;
 
-		policy = cpufreq_cpu_get(cpu);
 		policy->curr_limit_min = curr_limit_min;
 		policy->curr_limit_max = curr_limit_max;
-		cpufreq_cpu_put(policy);
 
 		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
 }
@@ -774,28 +775,6 @@ static struct power_suspend cpufreq_hardlimit_suspend_data =
 {
 	.suspend = cpufreq_hardlimit_suspend,
 	.resume = cpufreq_hardlimit_resume,
-};
-
-static int hardlimit_cpu_callback(struct notifier_block *nfb,
-					    unsigned long action, void *hcpu)
-{
-	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready)
-		return NOTIFY_OK;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_ONLINE:
-		reapply_hard_limits();
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block hardlimit_cpu_notifier = {
-	.notifier_call = hardlimit_cpu_callback,
 };
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 /**
@@ -894,6 +873,7 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 			hlimit_max_screen_on = new_hardlimit;
+			policy->hlimit_max_screen_on = hlimit_max_screen_on;
 			reapply_hard_limits();
 			return count;
 		}
@@ -920,6 +900,7 @@ static ssize_t store_hardlimit_max_screen_off(struct cpufreq_policy *policy, con
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 			hlimit_max_screen_off = new_hardlimit;
+			policy->hlimit_max_screen_off  = hlimit_max_screen_off;
 			reapply_hard_limits();
 			return count;
 		}
@@ -946,7 +927,7 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 			hlimit_min_screen_on = new_hardlimit;
-			/* Wakeup kick can never be higher than CPU max. hardlimit */
+			policy->hlimit_min_screen_on = hlimit_min_screen_on;
 			reapply_hard_limits();
 			return count;
 		}
@@ -973,6 +954,7 @@ static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, con
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 			hlimit_min_screen_off = new_hardlimit;
+			policy->hlimit_min_screen_off = hlimit_min_screen_off;
 			reapply_hard_limits();
 			return count;
 		}
@@ -1717,7 +1699,9 @@ static int cpufreq_online(unsigned int cpu)
 	if (cpufreq_driver->ready)
 		cpufreq_driver->ready(policy);
 
-	pr_debug("initialization complete\n");
+	pr_info("initialization complete\n");
+
+	hardlimit_ready = true;
 
 	return 0;
 
@@ -2668,6 +2652,8 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_ADJUST, new_policy);
 
+	reapply_hard_limits();
+
 	/*
 	 * verify the cpu speed can be set within this limit, which might be
 	 * different to the first one
@@ -2680,13 +2666,11 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_NOTIFY, new_policy);
 
-	policy->min = new_policy->min;
-	if (limited_max_freq_thermal > 0 && new_policy->max > limited_max_freq_thermal)
-		policy->max = limited_max_freq_thermal;
-	else
-		policy->max = new_policy->max;
-	policy->util_thres = new_policy->util_thres;
 	reapply_hard_limits();
+
+	policy->min = new_policy->min;
+	policy->max = new_policy->max;
+	policy->util_thres = new_policy->util_thres;
 
 	policy->cached_target_freq = UINT_MAX;
 
@@ -2900,6 +2884,7 @@ static enum cpuhp_state hp_online;
 static int cpuhp_cpufreq_online(unsigned int cpu)
 {
 	cpufreq_online(cpu);
+	reapply_hard_limits();
 
 	return 0;
 }
@@ -2983,7 +2968,6 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 	register_power_suspend(&cpufreq_hardlimit_suspend_data);
-	register_hotcpu_notifier(&hardlimit_cpu_notifier);
 #endif
 
 	pr_info("driver %s up and running\n", driver_data->name);
@@ -3027,7 +3011,6 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 	cpuhp_remove_state_nocalls(hp_online);
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
-	unregister_hotcpu_notifier(&hardlimit_cpu_notifier);
 #endif
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
