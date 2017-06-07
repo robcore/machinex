@@ -100,7 +100,7 @@ static void do_input_boost_rem(struct work_struct *work)
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
-		i_sync_info->input_boost_min = restore_policy_min;
+		i_sync_info->input_boost_min = hlimit_min_screen_on;
 		input_boost_limit = i_sync_info->input_boost_min;
 	}
 	/* Update policies for all online CPUs */
