@@ -684,6 +684,9 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
+	unsigned int cpu = smp_processor_id();
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
 	return max(policy->curr_limit_min, min(policy->curr_limit_max, freq));
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
@@ -724,9 +727,9 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 void reapply_hard_limits(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);;
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
-	if !(hardlimit_ready)
+	if (!hardlimit_ready)
 		return;
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
