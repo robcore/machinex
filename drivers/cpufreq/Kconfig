@@ -1216,12 +1216,6 @@ config CPUFREQ_HARDLIMIT
 	  for screen on/off settings for scaling min/max and introducing
 	  wakeup kick to reduce wakeup lag (Yank555.lu)
 
-config CPUFREQ_HARDLIMIT_DEBUG
-	bool "CPU Frequency hardlimit driver debugging code"
-	depends on CPUFREQ_HARDLIMIT
-	help
-	  Output debugging info in dmesg [HARDLIMIT] (Yank555.lu)
-
 config GENERIC_CPUFREQ_CPU0
 	bool "Generic CPU0 cpufreq driver"
 	depends on HAVE_CLK && REGULATOR && PM_OPP && OF

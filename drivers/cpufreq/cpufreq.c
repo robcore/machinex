@@ -659,6 +659,8 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 	return err;
 }
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+
 /**
  * cpufreq_per_cpu_attr_read() / show_##file_name() -
  * print out cpufreq information
