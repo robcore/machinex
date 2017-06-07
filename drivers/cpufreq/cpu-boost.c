@@ -24,9 +24,6 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-#include <linux/cpufreq_hardlimit.h>
-#endif
 
 struct cpu_sync {
 	unsigned int cpu;

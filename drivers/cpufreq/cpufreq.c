@@ -30,12 +30,20 @@
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
 #include <trace/events/power.h>
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-#include <linux/cpufreq_hardlimit.h>
-#endif
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+unsigned int hardlimit_max_screen_on  = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;  /* default to stock behaviour */
+unsigned int hardlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK; /* default to stock behaviour */
+unsigned int hardlimit_min_screen_on  = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;  /* default to stock behaviour */
+unsigned int hardlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; /* default to stock behaviour */
+
+unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
+extern unsigned int input_boost_limit;
+#endif
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -661,6 +669,117 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
+
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get_raw(cpu);
+	}
+	if (policy != NULL)
+		return policy->freq_table;
+	else
+		return NULL;
+}
+EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
+/* ------------------------------------------------------------------------------ */
+/* Externally reachable function                                                  */
+/* ------------------------------------------------------------------------------ */
+
+/* Sanitize cpufreq to hardlimits */
+unsigned int check_cpufreq_hardlimit(unsigned int freq)
+{
+	return max(current_limit_min, min(current_limit_max, freq));
+}
+EXPORT_SYMBOL(check_cpufreq_hardlimit);
+
+/* Update limits in cpufreq */
+void reapply_hard_limits(void)
+{
+	/* Recalculate the currently applicable min/max */
+	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
+			current_limit_min  = hardlimit_min_screen_on;
+			current_limit_max  = hardlimit_max_screen_on;
+	} else {
+		current_limit_min  = hardlimit_min_screen_off;
+		current_limit_max  = hardlimit_max_screen_off;
+	}
+
+	if (limited_max_freq_thermal > current_limit_min && current_limit_max > limited_max_freq_thermal)
+		current_limit_max = limited_max_freq_thermal;
+
+	if (input_boost_limit >= current_limit_min && input_boost_limit <= limited_max_freq_thermal &&
+		input_boost_limit <= current_limit_max)
+		current_limit_min = input_boost_limit;
+
+		update_scaling_limits(current_limit_min, current_limit_max);
+}
+EXPORT_SYMBOL(reapply_hard_limits);
+
+/* ------------------------------------------------------------------------------ */
+/* Powersuspend callback functions                                                */
+/* ------------------------------------------------------------------------------ */
+
+static void cpufreq_hardlimit_suspend(struct power_suspend * h)
+{
+	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
+	reapply_hard_limits();
+	return;
+}
+
+static void cpufreq_hardlimit_resume(struct power_suspend * h)
+{
+	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
+	reapply_hard_limits();
+	return;
+}
+
+static struct power_suspend cpufreq_hardlimit_suspend_data =
+{
+	.suspend = cpufreq_hardlimit_suspend,
+	.resume = cpufreq_hardlimit_resume,
+};
+
+static int cpufreq_hardlimit_policy_notifier(
+	struct notifier_block *nb, unsigned long val, void *data)
+{
+	switch (val) {
+		case CPUFREQ_ADJUST:
+			reapply_hard_limits();
+			break;
+		default:
+			break;
+	}
+
+		return NOTIFY_OK;
+}
+
+static struct notifier_block cpufreq_policy_notifier_block = {
+	.notifier_call = cpufreq_hardlimit_policy_notifier,
+};
+
+static int hardlimit_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
+{
+	/* Fail hotplug until this driver can get CPU clocks */
+	if (!hotplug_ready)
+		return NOTIFY_OK;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_ONLINE:
+		reapply_hard_limits();
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block hardlimit_cpu_notifier = {
+	.notifier_call = hardlimit_cpu_callback,
+};
+#endif
 /**
  * cpufreq_per_cpu_attr_read() / show_##file_name() -
  * print out cpufreq information
@@ -683,6 +802,12 @@ show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
 show_one(cpu_utilization, util);
 show_one(util_threshold, util_thres);
+show_one(hardlimit_max_screen_on, hardlimit_max_screen_on);
+show_one(hardlimit_max_screen_off, hardlimit_max_screen_on);
+show_one(hardlimit_min_screen_on, hardlimit_min_screen_on);
+show_one(hardlimit_min_screen_off, hardlimit_min_screen_off);
+show_one(current_limit_min, current_limit_min);
+show_one(current_limit_max, current_limit_max);
 
 /*WARNING! HACK!*/
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
@@ -729,6 +854,111 @@ static ssize_t store_##file_name					\
 
 store_one(scaling_min_freq, min);
 store_one(scaling_max_freq, max);
+
+static ssize_t hardlimit_max_screen_on_store(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+
+	unsigned int new_hardlimit, i;
+
+	struct cpufreq_frequency_table *table;
+
+	if (!sscanf(buf, "%du", &new_hardlimit))
+		return -EINVAL;
+
+	if (new_hardlimit == hardlimit_max_screen_on)
+		return count;
+
+	table = policy->freq_table; /* Get frequency table */
+
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		if (table[i].frequency == new_hardlimit) {
+			hardlimit_max_screen_on = new_hardlimit;
+			reapply_hard_limits();
+			return count;
+		}
+
+	return -EINVAL;
+
+}
+
+static ssize_t hardlimit_max_screen_off_store(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+
+	unsigned int new_hardlimit, i;
+
+	struct cpufreq_frequency_table *table;
+
+	if (!sscanf(buf, "%du", &new_hardlimit))
+		return -EINVAL;
+
+	if (new_hardlimit == hardlimit_max_screen_off)
+		return count;
+
+	table = policy->freq_table; /* Get frequency table */
+
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		if (table[i].frequency == new_hardlimit) {
+			hardlimit_max_screen_off = new_hardlimit;
+			reapply_hard_limits();
+			return count;
+		}
+
+	return -EINVAL;
+
+}
+
+static ssize_t hardlimit_min_screen_on_store(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+
+	unsigned int new_hardlimit, i;
+
+	struct cpufreq_frequency_table *table;
+
+	if (!sscanf(buf, "%du", &new_hardlimit))
+		return -EINVAL;
+
+	if (new_hardlimit == hardlimit_min_screen_on)
+		return count;
+
+	table = policy->freq_table; /* Get frequency table */
+
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		if (table[i].frequency == new_hardlimit) {
+			hardlimit_min_screen_on = new_hardlimit;
+			/* Wakeup kick can never be higher than CPU max. hardlimit */
+			reapply_hard_limits();
+			return count;
+		}
+
+	return -EINVAL;
+
+}
+
+static ssize_t hardlimit_min_screen_off_store(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+
+	unsigned int new_hardlimit, i;
+
+	struct cpufreq_frequency_table *table;
+
+	if (!sscanf(buf, "%du", &new_hardlimit))
+		return -EINVAL;
+
+	if (new_hardlimit == hardlimit_min_screen_off)
+		return count;
+
+	table = policy->freq_table; /* Get frequency table */
+
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		if (table[i].frequency == new_hardlimit) {
+			hardlimit_min_screen_off = new_hardlimit;
+			reapply_hard_limits();
+			return count;
+		}
+
+	return -EINVAL;
+
+}
 
 ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
 {
@@ -1008,6 +1238,18 @@ cpufreq_freq_attr_rw(scaling_setspeed);
 define_one_global_rw(vdd_levels);
 #endif
 cpufreq_freq_attr_rw(GPU_mV_table);
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+cpufreq_freq_attr_rw(hardlimit_max_screen_on);
+cpufreq_freq_attr_rw(hardlimit_max_screen_off);
+cpufreq_freq_attr_rw(hardlimit_min_screen_on);
+cpufreq_freq_attr_rw(hardlimit_min_screen_off);
+cpufreq_freq_attr_ro(current_limit_min);
+cpufreq_freq_attr_ro(current_limit_max);
+
+
+
+
+cpufreq_freq_attr_rw
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
@@ -1024,6 +1266,12 @@ static struct attribute *default_attrs[] = {
 	&scaling_available_governors.attr,
 	&scaling_setspeed.attr,
 	&GPU_mV_table.attr,
+	&hardlimit_max_screen_on.attr,
+	&hardlimit_max_screen_off.attr,
+	&hardlimit_min_screen_on.attr,
+	&hardlimit_min_screen_off.attr,
+	&current_limit_min.attr,
+	&current_limit_max.attr,
 	NULL
 };
 
@@ -2714,7 +2962,12 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	hp_online = ret;
 	ret = 0;
 
-	pr_debug("driver %s up and running\n", driver_data->name);
+	register_power_suspend(&cpufreq_hardlimit_suspend_data);
+	cpufreq_register_notifier(&cpufreq_policy_notifier_block,
+							  CPUFREQ_POLICY_NOTIFIER);
+	register_hotcpu_notifier(&hardlimit_cpu_notifier);
+
+	pr_info("driver %s up and running\n", driver_data->name);
 	goto out;
 
 err_if_unreg:
@@ -2753,6 +3006,11 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 	subsys_interface_unregister(&cpufreq_interface);
 	remove_boost_sysfs_file();
 	cpuhp_remove_state_nocalls(hp_online);
+	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
+	cpufreq_unregister_notifier(&cpufreq_policy_notifier_block,
+								CPUFREQ_POLICY_NOTIFIER);
+	unregister_hotcpu_notifier(&hardlimit_cpu_notifier);
+
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 

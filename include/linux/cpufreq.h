@@ -18,9 +18,6 @@
 #include <linux/notifier.h>
 #include <linux/spinlock.h>
 #include <linux/sysfs.h>
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-#include <linux/cpufreq_hardlimit.h>
-#endif
 #include <linux/cputime.h>
 
 /*********************************************************************
@@ -941,6 +938,26 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 		unsigned int transition_latency);
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
+
+/* Default frequencies for MACH_JF */
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
+
+#define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
+#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
+
+/* Sanitize cpufreq to hardlimits */
+unsigned int check_cpufreq_hardlimit(unsigned int freq);
+extern unsigned int current_limit_max;
+
+/* Hook in cpufreq for scaling min./max. */
+void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 extern void reapply_hard_limits(void);
 extern unsigned int input_boost_limit;
+#endif /* CONFIG_CPUFREQ_HARDLIMIT */
 #endif /* _LINUX_CPUFREQ_H */
