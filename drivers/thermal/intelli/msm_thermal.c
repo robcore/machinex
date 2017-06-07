@@ -240,7 +240,7 @@ static void __ref do_freq_control(long temp)
 		return;
 	}
 
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		ret = update_cpu_max_freq(cpu, max_freq);
@@ -335,7 +335,7 @@ static void __ref disable_msm_thermal(void)
 	if (limited_max_freq_thermal == 0)
 		return;
 
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		update_cpu_max_freq(cpu, current_limit_max);
 	}
 }
