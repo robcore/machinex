@@ -106,6 +106,7 @@ unsigned int hardlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; 
 unsigned int current_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int current_limit_min        = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
+extern unsigned int input_boost_limit;
 
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
@@ -144,6 +145,8 @@ void reapply_hard_limits(void)
 
 	if (limited_max_freq_thermal > current_limit_min && current_limit_max > limited_max_freq_thermal)
 		update_scaling_limits(current_limit_min, limited_max_freq_thermal);
+	else if (input_boost_limit > current_limit_min && input_boost_limit < limited_max_freq_thermal)
+		update_scaling_limits(input_boost_limit, current_limit_max);
 	else
 		update_scaling_limits(current_limit_min, current_limit_max);
 }

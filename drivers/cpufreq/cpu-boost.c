@@ -51,6 +51,7 @@ static u64 last_input_time;
 static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
 static unsigned int restore_policy_min;
+unsigned int input_boost_limit;
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -91,6 +92,7 @@ static void update_policy_online(unsigned int cpu)
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		cpufreq_update_policy(cpu);
+		reapply_hard_limits();
 	}
 	put_online_cpus();
 }
@@ -99,12 +101,11 @@ static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
 	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
-	unsigned int freq_max = cpufreq_quick_get_max(cpu);
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
 		i_sync_info->input_boost_min = restore_policy_min;
-		update_scaling_limits(i_sync_info->input_boost_min, freq_max);
+		input_boost_limit = i_sync_info->input_boost_min;
 	}
 	/* Update policies for all online CPUs */
 
@@ -118,7 +119,7 @@ static void do_input_boost(struct work_struct *work)
 	unsigned int freq_max = cpufreq_quick_get_max(cpu);
 
 	if (!input_boost_enabled || !input_boost_ms ||
-	   (limited_max_freq_thermal > 0 && 
+	   (limited_max_freq_thermal > 0 &&
 		i_sync_info->input_boost_freq > limited_max_freq_thermal))
 		return;
 
@@ -126,7 +127,7 @@ static void do_input_boost(struct work_struct *work)
 	for_each_online_cpu(cpu) {
 		restore_policy_min = cpufreq_quick_get_min(cpu);
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
-		update_scaling_limits(i_sync_info->input_boost_min, freq_max);
+		input_boost_limit = i_sync_info->input_boost_min;
 	}
 
 	/* Update policies for all online CPUs */

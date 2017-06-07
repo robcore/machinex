@@ -942,4 +942,5 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
 extern void reapply_hard_limits(void);
+extern unsigned int input_boost_limit;
 #endif /* _LINUX_CPUFREQ_H */

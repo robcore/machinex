@@ -2412,11 +2412,11 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_NOTIFY, new_policy);
 
-	policy->min = check_cpufreq_hardlimit(new_policy->min);
+	policy->min = new_policy->min;
 	if (limited_max_freq_thermal > 0 && new_policy->max > limited_max_freq_thermal)
 		policy->max = limited_max_freq_thermal;
 	else
-		policy->max = check_cpufreq_hardlimit(new_policy->max);
+		policy->max = new_policy->max;
 	policy->util_thres = new_policy->util_thres;
 
 	policy->cached_target_freq = UINT_MAX;
@@ -2522,7 +2522,6 @@ unlock:
 	up_write(&policy->rwsem);
 
 	cpufreq_cpu_put(policy);
-	reapply_hard_limits();
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
 
