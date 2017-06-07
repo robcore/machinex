@@ -10,7 +10,6 @@
 #include <asm/cputime_nsecs.h>
 #include "sched.h"
 
-
 #ifdef CONFIG_IRQ_TIME_ACCOUNTING
 
 /*
@@ -63,7 +62,6 @@ void irqtime_account_irq(struct task_struct *curr)
 	if (!sched_clock_irqtime)
 		return;
 
-
 	cpu = smp_processor_id();
 	delta = sched_clock_cpu(cpu) - irqtime->irq_start_time;
 	irqtime->irq_start_time += delta;
@@ -91,6 +89,7 @@ static u64 irqtime_tick_accounted(u64 maxtime)
 
 	return delta;
 }
+
 #else /* CONFIG_IRQ_TIME_ACCOUNTING */
 
 #define sched_clock_irqtime	(0)
@@ -529,6 +528,7 @@ void account_steal_ticks(unsigned long ticks)
 void account_idle_ticks(unsigned long ticks)
 {
 	u64 cputime, steal;
+
 	if (sched_clock_irqtime) {
 		irqtime_account_idle_ticks(ticks);
 		return;
@@ -871,6 +871,10 @@ void task_cputime(struct task_struct *t, u64 *utime, u64 *stime)
 
 		delta = vtime_delta(t);
 
+		/*
+		 * Task runs either in user or kernel space, add pending nohz time to
+		 * the right place.
+		 */
 		if (t->vtime_snap_whence == VTIME_USER || t->flags & PF_VCPU)
 			*utime += delta;
 		else if (t->vtime_snap_whence == VTIME_SYS)
