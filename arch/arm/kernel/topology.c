@@ -12,7 +12,6 @@
  */
 
 #include <linux/cpu.h>
-#include <linux/cpufreq.h>
 #include <linux/cpumask.h>
 #include <linux/export.h>
 #include <linux/init.h>
@@ -22,9 +21,7 @@
 #include <linux/of.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-#include <linux/string.h>
 
-#include <asm/cpu.h>
 #include <asm/cputype.h>
 #include <asm/topology.h>
 
@@ -43,10 +40,9 @@
  * to run the rebalance_domains for all idle cores and the cpu_capacity can be
  * updated during this sequence.
  */
-static DEFINE_PER_CPU(unsigned long, cpu_scale) = SCHED_CAPACITY_SCALE;
-static DEFINE_MUTEX(cpu_scale_mutex);
+static DEFINE_PER_CPU(unsigned long, cpu_scale);
 
-unsigned long arch_scale_cpu_capacity(struct sched_domain *sd, int cpu)
+unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
 {
 	return per_cpu(cpu_scale, cpu);
 }
@@ -56,6 +52,7 @@ static void set_capacity_scale(unsigned int cpu, unsigned long capacity)
 	per_cpu(cpu_scale, cpu) = capacity;
 }
 
+#ifdef CONFIG_OF
 struct cpu_efficiency {
 	const char *compatible;
 	unsigned long efficiency;
@@ -82,122 +79,6 @@ static unsigned long *__cpu_capacity;
 #define cpu_capacity(cpu)	__cpu_capacity[cpu]
 
 static unsigned long middle_capacity = 1;
-static u32 *raw_capacity;
-static u32 capacity_scale;
-
-static int __init parse_cpu_capacity(int cpu)
-{
-	int ret = 1;
-	u32 cpu_capacity = 1216;
-
-		if (!raw_capacity) {
-			raw_capacity = kcalloc(num_possible_cpus(),
-					       sizeof(*raw_capacity),
-					       GFP_KERNEL);
-			if (!raw_capacity) {
-				pr_err("cpu_capacity: failed to allocate memory for raw capacities\n");
-				return !ret;
-			}
-		}
-		capacity_scale = max(cpu_capacity, capacity_scale);
-		raw_capacity[cpu] = cpu_capacity;
-
-	return !ret;
-}
-
-static void normalize_cpu_capacity(void)
-{
-	u64 capacity;
-	int cpu;
-
-	if (!raw_capacity)
-		return;
-
-	pr_debug("cpu_capacity: capacity_scale=%u\n", capacity_scale);
-	mutex_lock(&cpu_scale_mutex);
-	for_each_possible_cpu(cpu) {
-		capacity = (raw_capacity[cpu] << SCHED_CAPACITY_SHIFT)
-			/ capacity_scale;
-		set_capacity_scale(cpu, capacity);
-		pr_debug("cpu_capacity: CPU%d cpu_capacity=%lu\n",
-			cpu, arch_scale_cpu_capacity(NULL, cpu));
-	}
-	mutex_unlock(&cpu_scale_mutex);
-}
-
-#ifdef CONFIG_CPU_FREQ
-static cpumask_var_t cpus_to_visit;
-static bool cap_parsing_done;
-static void parsing_done_workfn(struct work_struct *work);
-static DECLARE_WORK(parsing_done_work, parsing_done_workfn);
-
-static int
-init_cpu_capacity_callback(struct notifier_block *nb,
-			   unsigned long val,
-			   void *data)
-{
-	struct cpufreq_policy *policy = data;
-	int cpu;
-
-	if (cap_parsing_done)
-		return 0;
-
-	switch (val) {
-	case CPUFREQ_NOTIFY:
-		pr_debug("cpu_capacity: init cpu capacity for CPUs [%*pbl] (to_visit=%*pbl)\n",
-				cpumask_pr_args(policy->related_cpus),
-				cpumask_pr_args(cpus_to_visit));
-		cpumask_andnot(cpus_to_visit,
-			       cpus_to_visit,
-			       policy->related_cpus);
-		for_each_cpu(cpu, policy->related_cpus) {
-			raw_capacity[cpu] = arch_scale_cpu_capacity(NULL, cpu) *
-					    policy->cpuinfo.max_freq / 1000UL;
-			capacity_scale = max(raw_capacity[cpu], capacity_scale);
-		}
-		if (cpumask_empty(cpus_to_visit)) {
-			normalize_cpu_capacity();
-			kfree(raw_capacity);
-			pr_debug("cpu_capacity: parsing done\n");
-			cap_parsing_done = true;
-			schedule_work(&parsing_done_work);
-		}
-	}
-	return 0;
-}
-
-static struct notifier_block init_cpu_capacity_notifier = {
-	.notifier_call = init_cpu_capacity_callback,
-};
-
-static int __init register_cpufreq_notifier(void)
-{
-	if (!alloc_cpumask_var(&cpus_to_visit, GFP_KERNEL)) {
-		pr_err("cpu_capacity: failed to allocate memory for cpus_to_visit\n");
-		return -ENOMEM;
-	}
-	cpumask_copy(cpus_to_visit, cpu_possible_mask);
-
-	return cpufreq_register_notifier(&init_cpu_capacity_notifier,
-					 CPUFREQ_POLICY_NOTIFIER);
-}
-core_initcall(register_cpufreq_notifier);
-
-static void parsing_done_workfn(struct work_struct *work)
-{
-	cpufreq_unregister_notifier(&init_cpu_capacity_notifier,
-					 CPUFREQ_POLICY_NOTIFIER);
-}
-
-#else
-static int __init free_raw_capacity(void)
-{
-	kfree(raw_capacity);
-
-	return 0;
-}
-core_initcall(free_raw_capacity);
-#endif
 
 /*
  * Iterate all CPUs' descriptor in DT and compute the efficiency
@@ -210,6 +91,7 @@ core_initcall(free_raw_capacity);
 static void __init parse_dt_topology(void)
 {
 	const struct cpu_efficiency *cpu_eff;
+	struct device_node *cn = NULL;
 	unsigned long min_capacity = ULONG_MAX;
 	unsigned long max_capacity = 0;
 	unsigned long capacity = 0;
@@ -222,7 +104,28 @@ static void __init parse_dt_topology(void)
 		const u32 *rate;
 		int len;
 
-		capacity = ((be32_to_cpup(rate)) >> 20) * 3891;
+		/* too early to use cpu->of_node */
+		cn = of_get_cpu_node(cpu, NULL);
+		if (!cn) {
+			pr_err("missing device node for CPU %d\n", cpu);
+			continue;
+		}
+
+		for (cpu_eff = table_efficiency; cpu_eff->compatible; cpu_eff++)
+			if (of_device_is_compatible(cn, cpu_eff->compatible))
+				break;
+
+		if (cpu_eff->compatible == NULL)
+			continue;
+
+		rate = of_get_property(cn, "clock-frequency", &len);
+		if (!rate || len != 4) {
+			pr_debug("%s missing clock-frequency property\n",
+				cn->full_name);
+			continue;
+		}
+
+		capacity = ((be32_to_cpup(rate)) >> 20) * cpu_eff->efficiency;
 
 		/* Save min capacity of the system */
 		if (capacity < min_capacity)
@@ -249,7 +152,6 @@ static void __init parse_dt_topology(void)
 		middle_capacity = ((max_capacity / 3)
 				>> (SCHED_CAPACITY_SHIFT-1)) + 1;
 
-		normalize_cpu_capacity();
 }
 
 /*
@@ -264,9 +166,14 @@ static void update_cpu_capacity(unsigned int cpu)
 
 	set_capacity_scale(cpu, cpu_capacity(cpu) / middle_capacity);
 
-	pr_info("CPU%u: update cpu_capacity %lu\n",
-		cpu, arch_scale_cpu_capacity(NULL, cpu));
+	printk(KERN_INFO "CPU%u: update cpu_capacity %lu\n",
+		cpu, arch_scale_freq_capacity(NULL, cpu));
 }
+
+#else
+static inline void parse_dt_topology(void) {}
+static inline void update_cpu_capacity(unsigned int cpuid) {}
+#endif
 
  /*
  * cpu topology table
@@ -363,7 +270,7 @@ void store_cpu_topology(unsigned int cpuid)
 
 	update_cpu_capacity(cpuid);
 
-	pr_info("CPU%u: thread %d, cpu %d, socket %d, mpidr %x\n",
+	printk(KERN_INFO "CPU%u: thread %d, cpu %d, socket %d, mpidr %x\n",
 		cpuid, cpu_topology[cpuid].thread_id,
 		cpu_topology[cpuid].core_id,
 		cpu_topology[cpuid].socket_id, mpidr);
@@ -371,7 +278,8 @@ void store_cpu_topology(unsigned int cpuid)
 
 static inline int cpu_corepower_flags(void)
 {
-	return SD_SHARE_PKG_RESOURCES  | SD_SHARE_POWERDOMAIN;
+	return SD_SHARE_PKG_RESOURCES  | SD_SHARE_POWERDOMAIN | \
+	       SD_SHARE_CAP_STATES;
 }
 
 static struct sched_domain_topology_level arm_topology[] = {
@@ -400,6 +308,8 @@ void __init init_cpu_topology(void)
 		cpu_topo->socket_id = -1;
 		cpumask_clear(&cpu_topo->core_sibling);
 		cpumask_clear(&cpu_topo->thread_sibling);
+
+		set_capacity_scale(cpu, SCHED_CAPACITY_SCALE);
 	}
 	smp_wmb();
 
