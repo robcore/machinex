@@ -849,6 +849,7 @@ throttle:
 }
 
 #ifdef CONFIG_SMP
+
 static void inc_dl_deadline(struct dl_rq *dl_rq, u64 deadline)
 {
 	struct rq *rq = rq_of_dl_rq(dl_rq);
