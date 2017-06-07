@@ -103,7 +103,7 @@ static void do_input_boost_rem(struct work_struct *work)
 	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
 
 	/* Reset the input_boost_min for all CPUs in the system */
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		i_sync_info->input_boost_min = restore_policy_min;
 		input_boost_limit = i_sync_info->input_boost_min;
 	}
