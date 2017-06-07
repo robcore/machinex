@@ -88,7 +88,7 @@ static u32 capacity_scale;
 static int __init parse_cpu_capacity(int cpu)
 {
 	int ret = 1;
-	u32 cpu_capacity = 1647;
+	u32 cpu_capacity = 1216;
 
 		if (!raw_capacity) {
 			raw_capacity = kcalloc(num_possible_cpus(),
