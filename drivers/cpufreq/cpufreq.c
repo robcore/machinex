@@ -1633,6 +1633,8 @@ static int cpufreq_online(unsigned int cpu)
 	} else {
 		policy->min = policy->user_policy.min;
 		policy->max = policy->user_policy.max;
+		policy->curr_limit_max = curr_limit_max;
+		policy->curr_limit_min = curr_limit_min;
 	}
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
