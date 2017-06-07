@@ -190,6 +190,28 @@ static struct notifier_block cpufreq_policy_notifier_block = {
 	.notifier_call = cpufreq_hardlimit_policy_notifier,
 };
 
+static int hardlimit_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
+{
+	/* Fail hotplug until this driver can get CPU clocks */
+	if (!hotplug_ready)
+		return NOTIFY_OK;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_ONLINE:
+		reapply_hard_limits();
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block hardlimit_cpu_notifier = {
+	.notifier_call = hardlimit_cpu_callback,
+};
+
 /* ------------------------------------------------------------------------------ */
 /* sysfs interface functions                                                      */
 /* ------------------------------------------------------------------------------ */
@@ -407,6 +429,7 @@ int hardlimit_init(void)
 		register_power_suspend(&cpufreq_hardlimit_suspend_data);
 		cpufreq_register_notifier(
 			&cpufreq_policy_notifier_block, CPUFREQ_POLICY_NOTIFIER);
+			register_hotcpu_notifier(&hardlimit_cpu_notifier);
 	}
 
         return (hardlimit_retval);
@@ -426,3 +449,4 @@ MODULE_AUTHOR("Jean-Pierre Rasquin <yank555.lu@gmail.com>");
 MODULE_DESCRIPTION("'cpufreq_hardlimit' - A cpufreq controlling framework with "
 	"screen on/off min/max, wakeup kick and 2-step touchboost");
 MODULE_LICENSE("GPL v2");
+		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
