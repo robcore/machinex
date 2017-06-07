@@ -449,4 +449,3 @@ MODULE_AUTHOR("Jean-Pierre Rasquin <yank555.lu@gmail.com>");
 MODULE_DESCRIPTION("'cpufreq_hardlimit' - A cpufreq controlling framework with "
 	"screen on/off min/max, wakeup kick and 2-step touchboost");
 MODULE_LICENSE("GPL v2");
-		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
