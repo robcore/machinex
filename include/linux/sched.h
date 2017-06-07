@@ -1450,7 +1450,6 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
-	unsigned int yield_count;
 
 #ifdef CONFIG_CGROUPS
 	/* disallow userland-initiated cgroup migration */
