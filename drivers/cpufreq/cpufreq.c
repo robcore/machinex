@@ -2522,7 +2522,7 @@ unlock:
 	up_write(&policy->rwsem);
 
 	cpufreq_cpu_put(policy);
-	reapply_hard_limits(void)
+	reapply_hard_limits(void);
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
 
