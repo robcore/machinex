@@ -56,7 +56,7 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq);
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
-extern void reapply_hard_limits(void);
+extern void reapply_hard_limits(unsigned int cpu);
 extern unsigned int input_boost_limit;
 extern unsigned int hlimit_max_screen_on;
 extern unsigned int hlimit_max_screen_off;

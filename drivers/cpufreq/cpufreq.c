@@ -289,10 +289,11 @@ extern void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsig
 {
 	struct cpufreq_policy *policy;
 
-	policy = per_cpu(cpufreq_cpu_data, cpu);
+	policy = cpufreq_cpu_get(cpu);
 		if (policy != NULL) {
 			policy->user_policy.min = policy->min = freq_min;
 			policy->user_policy.max = policy->max = freq_max;
+			cpufreq_cpu_put(policy);
 		}
 }
 #endif
@@ -688,7 +689,7 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
 	if (policy == NULL)
 		return max(curr_limit_min, min(curr_limit_max, freq));
@@ -730,45 +731,35 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 /* Update limits in cpufreq */
-void reapply_hard_limits(void)
+void reapply_hard_limits(unsigned int cpu)
 {
-	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
-	struct cpufreq_policy new_policy;
+	struct cpufreq_policy *policy;
 
 	if (!hardlimit_ready)
 		return;
 
+	policy = cpufreq_cpu_get_raw(cpu);
+
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-			curr_limit_min  = policy->hlimit_min_screen_on;
-			curr_limit_max  = policy->hlimit_max_screen_on;
+			policy->curr_limit_min  = policy->hlimit_min_screen_on;
+			policy->curr_limit_max  = policy->hlimit_max_screen_on;
 	} else {
-		curr_limit_min  = policy->hlimit_min_screen_off;
-		curr_limit_max  = policy->hlimit_max_screen_off;
+		policy->curr_limit_min  = policy->hlimit_min_screen_off;
+		policy->curr_limit_max  = policy->hlimit_max_screen_off;
 	}
 
 	if (limited_max_freq_thermal > curr_limit_min && curr_limit_max > limited_max_freq_thermal)
-		curr_limit_max = limited_max_freq_thermal;
+		policy->curr_limit_max = limited_max_freq_thermal;
 
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON &&
-		input_boost_limit >= curr_limit_min &&
+		input_boost_limit >= policy->curr_limit_min &&
 		input_boost_limit <= limited_max_freq_thermal &&
-		input_boost_limit <= curr_limit_max)
-		curr_limit_min = input_boost_limit;
+		input_boost_limit <= policy->curr_limit_max)
+		policy->curr_limit_min = input_boost_limit;
 
 	if (policy != NULL) {
-		policy->curr_limit_min = curr_limit_min;
-		policy->curr_limit_max = curr_limit_max;
 		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
-	} else {
-		memcpy(&new_policy, policy, sizeof(*policy));
-		new_policy.curr_limit_min = curr_limit_min;
-		new_policy.curr_limit_max = curr_limit_max;
-		if (!cpufreq_set_policy(policy, &new_policy))
-			update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
-		else
-			update_scaling_limits(cpu, curr_limit_min, curr_limit_max);
 	}
 }
 EXPORT_SYMBOL(reapply_hard_limits);
@@ -779,16 +770,27 @@ EXPORT_SYMBOL(reapply_hard_limits);
 
 static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 {
+	unsigned int cpu = smp_processor_id();
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
-	reapply_hard_limits();
-	return;
+
+	for_each_possible_cpu(cpu) {
+		reapply_hard_limits(policy->cpu);
+		return;
+	}
 }
 
 static void cpufreq_hardlimit_resume(struct power_suspend * h)
 {
+	unsigned int cpu = smp_processor_id();
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-	reapply_hard_limits();
-	return;
+
+	for_each_possible_cpu(cpu) {
+		reapply_hard_limits(policy->cpu);
+		return;
+	}
 }
 
 static struct power_suspend cpufreq_hardlimit_suspend_data =
@@ -892,7 +894,7 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 		if (table[i].frequency == new_hardlimit) {
 			if (!cpufreq_set_policy(policy, &new_policy))
 				policy->hlimit_max_screen_on = new_hardlimit;
-			reapply_hard_limits();
+			reapply_hard_limits(policy->cpu);
 			return count;
 		}
 	return -EINVAL;
@@ -918,7 +920,7 @@ static ssize_t store_hardlimit_max_screen_off(struct cpufreq_policy *policy, con
 		if (table[i].frequency == new_hardlimit) {
 			if (!cpufreq_set_policy(policy, &new_policy))
 				policy->hlimit_max_screen_off = new_hardlimit;
-			reapply_hard_limits();
+			reapply_hard_limits(policy->cpu);
 			return count;
 		}
 	return -EINVAL;
@@ -944,7 +946,7 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 		if (table[i].frequency == new_hardlimit) {
 			if (!cpufreq_set_policy(policy, &new_policy))
 				policy->hlimit_min_screen_on = new_hardlimit;
-			reapply_hard_limits();
+			reapply_hard_limits(policy->cpu);
 			return count;
 		}
 	return -EINVAL;
@@ -970,7 +972,7 @@ static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, con
 		if (table[i].frequency == new_hardlimit) {
 			if (!cpufreq_set_policy(policy, &new_policy))
 				policy->hlimit_min_screen_off = new_hardlimit;
-			reapply_hard_limits();
+			reapply_hard_limits(policy->cpu);
 			return count;
 		}
 	return -EINVAL;
@@ -1625,7 +1627,12 @@ static int cpufreq_online(unsigned int cpu)
 		policy->user_policy.max = policy->max;
 		policy->util = 0;
 		policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
-
+		policy->hlimit_max_screen_on = hlimit_max_screen_on;
+		policy->hlimit_max_screen_off = hlimit_max_screen_off;
+		policy->hlimit_min_screen_on = hlimit_min_screen_on;
+		policy->hlimit_min_screen_off = hlimit_min_screen_off;
+		policy->curr_limit_max = curr_limit_max;
+		policy->curr_limit_min = curr_limit_min;
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
 			add_cpu_dev_symlink(policy, j);
@@ -1633,13 +1640,6 @@ static int cpufreq_online(unsigned int cpu)
 	} else {
 		policy->min = policy->user_policy.min;
 		policy->max = policy->user_policy.max;
-		policy->hlimit_max_screen_on = hlimit_max_screen_on;
-		policy->hlimit_max_screen_off = hlimit_max_screen_off;
-		policy->hlimit_min_screen_on = hlimit_min_screen_on;
-		policy->hlimit_min_screen_off = hlimit_min_screen_off;
-		policy->curr_limit_max = curr_limit_max;
-		policy->curr_limit_min = curr_limit_min;
-
 	}
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
@@ -2684,15 +2684,14 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_NOTIFY, new_policy);
 
-	policy->min = new_policy->min;
-	policy->max = new_policy->max;
-	policy->util_thres = new_policy->util_thres;
 	policy->hlimit_max_screen_on = new_policy->hlimit_max_screen_on;
 	policy->hlimit_max_screen_off = new_policy->hlimit_max_screen_off;
 	policy->hlimit_min_screen_on = new_policy->hlimit_min_screen_on;
 	policy->hlimit_min_screen_off = new_policy->hlimit_min_screen_off;
-	policy->curr_limit_max = new_policy->curr_limit_max;
-	policy->curr_limit_min = new_policy->curr_limit_min;
+	policy->min = new_policy->min;
+	policy->max = new_policy->max;
+	policy->util_thres = new_policy->util_thres;
+
 
 	policy->cached_target_freq = UINT_MAX;
 
@@ -2906,7 +2905,7 @@ static enum cpuhp_state hp_online;
 static int cpuhp_cpufreq_online(unsigned int cpu)
 {
 	cpufreq_online(cpu);
-	reapply_hard_limits();
+	reapply_hard_limits(cpu);
 
 	return 0;
 }
