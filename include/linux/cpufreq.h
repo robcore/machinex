@@ -38,6 +38,36 @@
 /* Minimum frequency cutoff to notify the userspace about cpu utilization
  * changes */
 #define MIN_CPU_UTIL_NOTIFY   40
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
+
+/* Default frequencies for MACH_JF */
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
+
+#define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
+#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
+
+/* Sanitize cpufreq to hardlimits */
+unsigned int check_cpufreq_hardlimit(unsigned int freq);
+
+/* Hook in cpufreq for scaling min./max. */
+void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
+extern void reapply_hard_limits(void);
+extern unsigned int input_boost_limit;
+extern unsigned int hlimit_max_screen_on;
+extern unsigned int hlimit_max_screen_off;
+extern unsigned int hlimit_min_screen_on;
+extern unsigned int hlimit_min_screen_off;
+
+extern unsigned int curr_limit_max;
+extern unsigned int curr_limit_min;
+extern unsigned int current_screen_state;
+#endif /* CONFIG_CPUFREQ_HARDLIMIT */
+
 
 struct cpufreq_governor;
 
@@ -152,6 +182,13 @@ struct cpufreq_policy {
 
 	/* For cpufreq driver's internal use */
 	void			*driver_data;
+	unsigned int hlimit_max_screen_on;
+	unsigned int hlimit_max_screen_off;
+	unsigned int hlimit_min_screen_on;
+	unsigned int hlimit_min_screen_off;
+
+	unsigned int curr_limit_max;
+	unsigned int curr_limit_min;
 };
 
 /* Only for ACPI */
@@ -389,42 +426,10 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
 
 const char *cpufreq_get_current_driver(void);
 void *cpufreq_get_driver_data(void);
-
-static inline void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
-		unsigned int min, unsigned int max)
-{
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-	#ifdef CONFIG_CPUFREQ_HARDLIMIT_DEBUG
-	pr_info("[HARDLIMIT] cpufreq.h verify_within_limits : min = %u / max = %u / new_min = %u / new_max = %u \n",
-			min,
-			max,
-			check_cpufreq_hardlimit(min),
-			check_cpufreq_hardlimit(max)
-		);
-	#endif
-	 /* Yank555.lu - Enforce hardlimit */
-	min = check_cpufreq_hardlimit(min);
-	max = check_cpufreq_hardlimit(max);
-#endif
-	if (policy->min < min)
-		policy->min = min;
-	if (policy->max < min)
-		policy->max = min;
-	if (policy->min > max)
-		policy->min = max;
-	if (policy->max > max)
-		policy->max = max;
-	if (policy->min > policy->max)
-		policy->min = policy->max;
-	return;
-}
-
-static inline void
-cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy)
-{
-	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
-			policy->cpuinfo.max_freq);
-}
+void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
+		unsigned int min, unsigned int max);
+void
+cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy);
 
 #ifdef CONFIG_CPU_FREQ
 void cpufreq_suspend(void);
@@ -938,26 +943,4 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 		unsigned int transition_latency);
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
-
-/* Default frequencies for MACH_JF */
-#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
-#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
-#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
-#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
-
-#define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
-#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
-
-/* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit(unsigned int freq);
-extern unsigned int current_limit_max;
-
-/* Hook in cpufreq for scaling min./max. */
-void update_scaling_limits(unsigned int freq_min, unsigned int freq_max);
-struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
-extern void reapply_hard_limits(void);
-extern unsigned int input_boost_limit;
-#endif /* CONFIG_CPUFREQ_HARDLIMIT */
 #endif /* _LINUX_CPUFREQ_H */
