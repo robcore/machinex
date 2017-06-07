@@ -283,7 +283,7 @@ extern void update_scaling_limits(unsigned int freq_min, unsigned int freq_max)
 	int cpu;
 	struct cpufreq_policy *policy;
 
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		policy = cpufreq_cpu_get_raw(cpu);
 		if (policy != NULL) {
 			policy->user_policy.min = policy->min = freq_min;
