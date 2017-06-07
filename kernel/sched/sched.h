@@ -925,7 +925,7 @@ struct sched_group_capacity {
 	 * for a single CPU.
 	 */
 	unsigned long capacity;
-	unsigned long max_capacity; /* Max per-cpu capacity in group */
+	unsigned long min_capacity; /* Min per-CPU capacity in group */
 	unsigned long next_update;
 	int imbalance; /* XXX unrelated to capacity but shared group state */
 
@@ -938,7 +938,7 @@ struct sched_group {
 
 	unsigned int group_weight;
 	struct sched_group_capacity *sgc;
-	const struct sched_group_energy const *sge;
+	int asym_prefer_cpu;		/* cpu of highest priority in group */
 
 	/*
 	 * The CPUs this group covers.
@@ -1051,7 +1051,11 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 	 * per-task data have been completed by this moment.
 	 */
 	smp_wmb();
+#ifdef CONFIG_THREAD_INFO_IN_TASK
+	p->cpu = cpu;
+#else
 	task_thread_info(p)->cpu = cpu;
+#endif
 	p->wake_cpu = cpu;
 #endif
 }
@@ -1065,9 +1069,6 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 #else
 # define const_debug const
 #endif
-extern struct ctl_table_header *sd_sysctl_header;
-extern void unregister_sched_domain_sysctl(void);
-extern void register_sched_domain_sysctl(void);
 
 extern const_debug unsigned int sysctl_sched_features;
 
@@ -1323,6 +1324,11 @@ static inline void put_prev_task(struct rq *rq, struct task_struct *prev)
 	prev->sched_class->put_prev_task(rq, prev);
 }
 
+static inline void set_curr_task(struct rq *rq, struct task_struct *curr)
+{
+	curr->sched_class->set_curr_task(rq);
+}
+
 #define sched_class_highest (&stop_sched_class)
 #define for_each_class(class) \
    for (class = sched_class_highest; class; class = class->next)
@@ -1340,13 +1346,7 @@ extern void update_group_capacity(struct sched_domain *sd, int cpu);
 
 extern void trigger_load_balance(struct rq *rq);
 
-/*
- * Only depends on SMP, FAIR_GROUP_SCHED may be removed when runnable_avg
- * becomes useful in lb
- */
-#if defined(CONFIG_FAIR_GROUP_SCHED)
 extern void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_mask);
-#endif
 
 #endif
 
@@ -1543,6 +1543,7 @@ static inline void __add_nr_running(struct rq *rq, unsigned count)
 			rq->rd->overload = true;
 #endif
 	}
+
 	sched_update_tick_dependency(rq);
 }
 
@@ -1783,6 +1784,7 @@ static inline void set_dl_cpu_capacity(int cpu, bool request,
 static inline void sched_rt_avg_update(struct rq *rq, u64 rt_delta)
 {
 	rq->rt_avg += rt_delta * arch_scale_freq_capacity(NULL, cpu_of(rq));
+	sched_avg_update(rq);
 }
 #else
 static inline void sched_rt_avg_update(struct rq *rq, u64 rt_delta) { }
@@ -1941,9 +1943,35 @@ static inline int double_lock_balance(struct rq *this_rq, struct rq *busiest)
 static inline void double_unlock_balance(struct rq *this_rq, struct rq *busiest)
 	__releases(busiest->lock)
 {
-	if (this_rq != busiest)
-		raw_spin_unlock(&busiest->lock);
+	raw_spin_unlock(&busiest->lock);
 	lock_set_subclass(&this_rq->lock.dep_map, 0, _RET_IP_);
+}
+
+static inline void double_lock(spinlock_t *l1, spinlock_t *l2)
+{
+	if (l1 > l2)
+		swap(l1, l2);
+
+	spin_lock(l1);
+	spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+}
+
+static inline void double_lock_irq(spinlock_t *l1, spinlock_t *l2)
+{
+	if (l1 > l2)
+		swap(l1, l2);
+
+	spin_lock_irq(l1);
+	spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+}
+
+static inline void double_raw_lock(raw_spinlock_t *l1, raw_spinlock_t *l2)
+{
+	if (l1 > l2)
+		swap(l1, l2);
+
+	raw_spin_lock(l1);
+	raw_spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
 }
 
 /*
@@ -2036,7 +2064,14 @@ extern void print_rt_stats(struct seq_file *m, int cpu);
 extern void print_dl_stats(struct seq_file *m, int cpu);
 extern void
 print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq);
-#endif
+#ifdef CONFIG_NUMA_BALANCING
+extern void
+show_numa_stats(struct task_struct *p, struct seq_file *m);
+extern void
+print_numa_stats(struct seq_file *m, int node, unsigned long tsf,
+	unsigned long tpf, unsigned long gsf, unsigned long gpf);
+#endif /* CONFIG_NUMA_BALANCING */
+#endif /* CONFIG_SCHED_DEBUG */
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq);
@@ -2080,29 +2115,21 @@ static inline u64 irq_time_read(int cpu)
 	unsigned int seq;
 	u64 total;
 
+	do {
 		seq = __u64_stats_fetch_begin(&irqtime->sync);
 		total = irqtime->total;
 	} while (__u64_stats_fetch_retry(&irqtime->sync, seq));
 
 	return total;
 }
-
 #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
-
-#ifdef arch_scale_freq_capacity
-#ifndef arch_scale_freq_invariant
-#define arch_scale_freq_invariant()	(true)
-#endif
-#else /* arch_scale_freq_capacity */
-#define arch_scale_freq_invariant()	(false)
-#endif
 
 #ifdef CONFIG_CPU_FREQ
 DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
 
 /**
  * cpufreq_update_util - Take a note about CPU utilization changes.
- * @time: Current time.
+ * @rq: Runqueue to carry out the update for.
  * @flags: Update reason flags.
  *
  * This function is called by the scheduler on the CPU whose utilization is
@@ -2122,17 +2149,32 @@ DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
  * but that really is a band-aid.  Going forward it should be replaced with
  * solutions targeted more specifically at RT and DL tasks.
  */
-static inline void cpufreq_update_util(u64 time, unsigned int flags)
+static inline void cpufreq_update_util(struct rq *rq, unsigned int flags)
 {
 	struct update_util_data *data;
 
 	data = rcu_dereference_sched(*this_cpu_ptr(&cpufreq_update_util_data));
 	if (data)
-		data->func(data, time, flags);
+		data->func(data, rq_clock(rq), flags);
+}
+
+static inline void cpufreq_update_this_cpu(struct rq *rq, unsigned int flags)
+{
+	if (cpu_of(rq) == smp_processor_id())
+		cpufreq_update_util(rq, flags);
 }
 #else
-static inline void cpufreq_update_util(u64 time, unsigned int flags) {}
+static inline void cpufreq_update_util(struct rq *rq, unsigned int flags) {}
+static inline void cpufreq_update_this_cpu(struct rq *rq, unsigned int flags) {}
 #endif /* CONFIG_CPU_FREQ */
+
+#ifdef arch_scale_freq_capacity
+#ifndef arch_scale_freq_invariant
+#define arch_scale_freq_invariant()	(true)
+#endif
+#else /* arch_scale_freq_capacity */
+#define arch_scale_freq_invariant()	(false)
+#endif
 
 static inline void account_reset_rq(struct rq *rq)
 {
