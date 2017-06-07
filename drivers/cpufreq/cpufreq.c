@@ -663,6 +663,9 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 	return err;
 }
 
+static int cpufreq_set_policy(struct cpufreq_policy *policy,
+				struct cpufreq_policy *new_policy);
+
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
@@ -754,16 +757,19 @@ void reapply_hard_limits(void)
 		input_boost_limit <= curr_limit_max)
 		curr_limit_min = input_boost_limit;
 
-	if (policy == NULL) {
+	if (policy != NULL) {
+		policy->curr_limit_min = curr_limit_min;
+		policy->curr_limit_max = curr_limit_max;
+		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
+	} else {
 		memcpy(&new_policy, policy, sizeof(*policy));
-		&new_policy.curr_limit_min = curr_limit_min;
-		&new_policy.curr_limit_max = curr_limit_max;
+		new_policy.curr_limit_min = curr_limit_min;
+		new_policy.curr_limit_max = curr_limit_max;
 		if (!cpufreq_set_policy(policy, &new_policy))
 			update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
 		else
 			update_scaling_limits(cpu, curr_limit_min, curr_limit_max);
-	} else
-		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
+	}
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
@@ -838,9 +844,6 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 	return ret;
 }
 
-static int cpufreq_set_policy(struct cpufreq_policy *policy,
-				struct cpufreq_policy *new_policy);
-
 /**
  * cpufreq_per_cpu_attr_write() / store_##file_name() - sysfs write access
  */
@@ -878,23 +881,20 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
-	if (!sscanf(buf, "%du", &new_hardlimit))
+	if (!sscanf(buf, "%du", &new_policy.hlimit_max_screen_on))
 		return -EINVAL;
 
-	if (new_hardlimit == &new_policy.hlimit_max_screen_on)
-		return count;
+	new_hardlimit = new_policy.hlimit_max_screen_on;
 
 	table = policy->freq_table; /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-			hlimit_max_screen_on = new_hardlimit;
-			&new_policy.hlimit_max_screen_on = hlimit_max_screen_on;
-			cpufreq_set_policy(policy, &new_policy);
+			if (!cpufreq_set_policy(policy, &new_policy))
+				policy->hlimit_max_screen_on = new_hardlimit;
 			reapply_hard_limits();
 			return count;
 		}
-
 	return -EINVAL;
 }
 
@@ -907,25 +907,21 @@ static ssize_t store_hardlimit_max_screen_off(struct cpufreq_policy *policy, con
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
-	if (!sscanf(buf, "%du", &new_hardlimit))
+	if (!sscanf(buf, "%du", &new_policy.hlimit_max_screen_off))
 		return -EINVAL;
 
-	if (new_hardlimit == &new_policy.hlimit_max_screen_off)
-		return count;
+	new_hardlimit = new_policy.hlimit_max_screen_off;
 
 	table = policy->freq_table; /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-			hlimit_max_screen_off = new_hardlimit;
-			&new_policy.hlimit_max_screen_off  = hlimit_max_screen_off;
-			cpufreq_set_policy(policy, &new_policy);
+			if (!cpufreq_set_policy(policy, &new_policy))
+				policy->hlimit_max_screen_off = new_hardlimit;
 			reapply_hard_limits();
 			return count;
 		}
-
 	return -EINVAL;
-
 }
 
 static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, const char *buf, size_t count)
@@ -937,25 +933,21 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
-	if (!sscanf(buf, "%du", &new_hardlimit))
+	if (!sscanf(buf, "%du", &new_policy.hlimit_min_screen_on))
 		return -EINVAL;
 
-	if (new_hardlimit == &new_policy.hlimit_min_screen_on)
-		return count;
+	new_hardlimit = new_policy.hlimit_min_screen_on;
 
 	table = policy->freq_table; /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-			hlimit_min_screen_on = new_hardlimit;
-			&new_policy.hlimit_min_screen_on = hlimit_min_screen_on;
-			cpufreq_set_policy(policy, &new_policy);
+			if (!cpufreq_set_policy(policy, &new_policy))
+				policy->hlimit_min_screen_on = new_hardlimit;
 			reapply_hard_limits();
 			return count;
 		}
-
 	return -EINVAL;
-
 }
 
 static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, const char *buf, size_t count)
@@ -967,25 +959,21 @@ static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, con
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
-	if (!sscanf(buf, "%du", &new_hardlimit))
+	if (!sscanf(buf, "%du", &new_policy.hlimit_min_screen_off))
 		return -EINVAL;
 
-	if (new_hardlimit == &new_policy.hlimit_min_screen_off)
-		return count;
+	new_hardlimit = new_policy.hlimit_min_screen_off;
 
 	table = policy->freq_table; /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-			hlimit_min_screen_off = new_hardlimit;
-			&new_policy.hlimit_min_screen_off = hlimit_min_screen_off;
-			cpufreq_set_policy(policy, &new_policy);
+			if (!cpufreq_set_policy(policy, &new_policy))
+				policy->hlimit_min_screen_off = new_hardlimit;
 			reapply_hard_limits();
 			return count;
 		}
-
 	return -EINVAL;
-
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 
