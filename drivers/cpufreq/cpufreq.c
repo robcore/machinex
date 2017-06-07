@@ -30,6 +30,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
 #include <trace/events/power.h>
+#include <linux/powersuspend.h>
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
@@ -668,7 +669,6 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 }
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
-
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -708,7 +708,9 @@ void reapply_hard_limits(void)
 	if (limited_max_freq_thermal > current_limit_min && current_limit_max > limited_max_freq_thermal)
 		current_limit_max = limited_max_freq_thermal;
 
-	if (input_boost_limit >= current_limit_min && input_boost_limit <= limited_max_freq_thermal &&
+	if (current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON &&
+		input_boost_limit >= current_limit_min &&
+		input_boost_limit <= limited_max_freq_thermal &&
 		input_boost_limit <= current_limit_max)
 		current_limit_min = input_boost_limit;
 
@@ -740,24 +742,6 @@ static struct power_suspend cpufreq_hardlimit_suspend_data =
 	.resume = cpufreq_hardlimit_resume,
 };
 
-static int cpufreq_hardlimit_policy_notifier(
-	struct notifier_block *nb, unsigned long val, void *data)
-{
-	switch (val) {
-		case CPUFREQ_ADJUST:
-			reapply_hard_limits();
-			break;
-		default:
-			break;
-	}
-
-		return NOTIFY_OK;
-}
-
-static struct notifier_block cpufreq_policy_notifier_block = {
-	.notifier_call = cpufreq_hardlimit_policy_notifier,
-};
-
 static int hardlimit_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
@@ -779,7 +763,7 @@ static int hardlimit_cpu_callback(struct notifier_block *nfb,
 static struct notifier_block hardlimit_cpu_notifier = {
 	.notifier_call = hardlimit_cpu_callback,
 };
-#endif
+#endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 /**
  * cpufreq_per_cpu_attr_read() / show_##file_name() -
  * print out cpufreq information
@@ -802,12 +786,14 @@ show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
 show_one(cpu_utilization, util);
 show_one(util_threshold, util_thres);
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
 show_one(hardlimit_max_screen_on, hardlimit_max_screen_on);
 show_one(hardlimit_max_screen_off, hardlimit_max_screen_on);
 show_one(hardlimit_min_screen_on, hardlimit_min_screen_on);
 show_one(hardlimit_min_screen_off, hardlimit_min_screen_off);
 show_one(current_limit_min, current_limit_min);
 show_one(current_limit_max, current_limit_max);
+#endif
 
 /*WARNING! HACK!*/
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
@@ -855,6 +841,7 @@ static ssize_t store_##file_name					\
 store_one(scaling_min_freq, min);
 store_one(scaling_max_freq, max);
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
 static ssize_t hardlimit_max_screen_on_store(struct cpufreq_policy *policy, const char *buf, size_t count)
 {
 
@@ -959,6 +946,7 @@ static ssize_t hardlimit_min_screen_off_store(struct cpufreq_policy *policy, con
 	return -EINVAL;
 
 }
+#endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 
 ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
 {
@@ -2668,6 +2656,7 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	else
 		policy->max = new_policy->max;
 	policy->util_thres = new_policy->util_thres;
+	reapply_hard_limits();
 
 	policy->cached_target_freq = UINT_MAX;
 
@@ -2962,10 +2951,10 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	hp_online = ret;
 	ret = 0;
 
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
 	register_power_suspend(&cpufreq_hardlimit_suspend_data);
-	cpufreq_register_notifier(&cpufreq_policy_notifier_block,
-							  CPUFREQ_POLICY_NOTIFIER);
 	register_hotcpu_notifier(&hardlimit_cpu_notifier);
+#endif
 
 	pr_info("driver %s up and running\n", driver_data->name);
 	goto out;
@@ -3006,11 +2995,10 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 	subsys_interface_unregister(&cpufreq_interface);
 	remove_boost_sysfs_file();
 	cpuhp_remove_state_nocalls(hp_online);
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
 	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
-	cpufreq_unregister_notifier(&cpufreq_policy_notifier_block,
-								CPUFREQ_POLICY_NOTIFIER);
 	unregister_hotcpu_notifier(&hardlimit_cpu_notifier);
-
+#endif
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 
