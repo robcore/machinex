@@ -96,7 +96,6 @@ static int __init parse_cpu_capacity(int cpu)
 					       GFP_KERNEL);
 			if (!raw_capacity) {
 				pr_err("cpu_capacity: failed to allocate memory for raw capacities\n");
-				cap_parsing_failed = true;
 				return !ret;
 			}
 		}
@@ -173,9 +172,6 @@ static struct notifier_block init_cpu_capacity_notifier = {
 
 static int __init register_cpufreq_notifier(void)
 {
-	if (cap_parsing_failed)
-		return -EINVAL;
-
 	if (!alloc_cpumask_var(&cpus_to_visit, GFP_KERNEL)) {
 		pr_err("cpu_capacity: failed to allocate memory for cpus_to_visit\n");
 		return -ENOMEM;

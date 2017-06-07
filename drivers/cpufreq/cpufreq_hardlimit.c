@@ -145,7 +145,8 @@ void reapply_hard_limits(void)
 
 	if (limited_max_freq_thermal > current_limit_min && current_limit_max > limited_max_freq_thermal)
 		update_scaling_limits(current_limit_min, limited_max_freq_thermal);
-	else if (input_boost_limit > current_limit_min && input_boost_limit < limited_max_freq_thermal)
+	else if (input_boost_limit >= current_limit_min && input_boost_limit <= limited_max_freq_thermal &&
+			input_boost_limit <= current_limit_max)
 		update_scaling_limits(input_boost_limit, current_limit_max);
 	else
 		update_scaling_limits(current_limit_min, current_limit_max);
