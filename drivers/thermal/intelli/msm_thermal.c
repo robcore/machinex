@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +13,9 @@
  * for many Qualcomm SOCs by Paul Reioux (Faux123)
  * Modifications copyright (c) 2013~2014
  *
+ * Further updated in a hacky way by Rob Patershuk (robcore) to integrate hardlimit
+ * and the Mainline CPUFREQ Api.
+ * Modifications copyright (c) 2013~2017
  */
 
 #include <linux/kernel.h>
@@ -129,9 +132,7 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			continue;
-		min = policy.hlimit_min_screen_on;
-		cpufreq_verify_within_limits(&policy, min, max_freq);
-		reapply_hard_limits(cpu);
+		reapply_hard_limits(policy.cpu);
 		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
@@ -144,7 +145,8 @@ static void __ref do_core_control(long temp)
 	int ret = 0;
 
 
-	if ((!core_control_enabled) || (intelli_init())) {
+	if ((!core_control_enabled) || (intelli_init() ||
+		 !hotplug_ready)) {
 		thermal_core_controlled = false;
 		return;
 	}
@@ -248,6 +250,8 @@ static void __ref do_freq_control(long temp)
 	for_each_online_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
+		if (max_freq == policy.hlimit_max_screen_on)
+			max_freq = policy.hlimit_max_screen_on;
 		ret = update_cpu_max_freq(cpu, max_freq);
 		if (ret)
 			pr_debug(
@@ -341,7 +345,7 @@ static void __ref disable_msm_thermal(void)
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == 0)
+	if (limited_max_freq_thermal == policy.hlimit_max_screen_on)
 		return;
 
 	for_each_online_cpu(cpu) {
@@ -472,7 +476,7 @@ static int __ref update_offline_cores(int val)
 	int ret = 0;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
-	if (!core_control_enabled || intelli_init())
+	if (!core_control_enabled || intelli_init() || !hotplug_ready)
 		return 0;
 
 	for_each_possible_cpu(cpu) {
@@ -622,6 +626,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	BUG_ON(!pdata);
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
+	limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 
 	enabled = 1;
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))

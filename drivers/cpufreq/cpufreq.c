@@ -749,7 +749,8 @@ void reapply_hard_limits(unsigned int cpu)
 		policy->curr_limit_max  = policy->hlimit_max_screen_off;
 	}
 
-	if (limited_max_freq_thermal > curr_limit_min && curr_limit_max > limited_max_freq_thermal)
+	if (limited_max_freq_thermal > policy->curr_limit_min &&
+		 policy->curr_limit_max > limited_max_freq_thermal)
 		policy->curr_limit_max = limited_max_freq_thermal;
 
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON &&
@@ -1633,13 +1634,20 @@ static int cpufreq_online(unsigned int cpu)
 		policy->hlimit_min_screen_off = hlimit_min_screen_off;
 		policy->curr_limit_max = curr_limit_max;
 		policy->curr_limit_min = curr_limit_min;
+
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
 			add_cpu_dev_symlink(policy, j);
 		}
 	} else {
-		policy->min = policy->user_policy.min;
-		policy->max = policy->user_policy.max;
+		if (hardlimit_ready) {
+			policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
+			policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
+			reapply_hard_limits(policy->cpu);
+		} else {
+			policy->min = policy->user_policy.min;
+			policy->max = policy->user_policy.max;
+		}
 	}
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
@@ -2688,8 +2696,14 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	policy->hlimit_max_screen_off = new_policy->hlimit_max_screen_off;
 	policy->hlimit_min_screen_on = new_policy->hlimit_min_screen_on;
 	policy->hlimit_min_screen_off = new_policy->hlimit_min_screen_off;
-	policy->min = new_policy->min;
-	policy->max = new_policy->max;
+	if (hardlimit_ready) {
+		policy->min = check_cpufreq_hardlimit(new_policy->min);
+		policy->max = check_cpufreq_hardlimit(new_policy->max);
+		reapply_hard_limits(policy->cpu);
+	} else {
+		policy->min = new_policy->min;
+		policy->max = new_policy->max;
+	}
 	policy->util_thres = new_policy->util_thres;
 
 
