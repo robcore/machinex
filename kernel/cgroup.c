@@ -2926,6 +2926,19 @@ static void cgroup_init_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
 		cft->ss = ss;
 }
 
+static int cgroup_rm_cftypes_locked(struct cftype *cfts)
+{
+	lockdep_assert_held(&cgroup_tree_mutex);
+
+	if (!cfts || !cfts[0].ss)
+		return -ENOENT;
+
+	list_del(&cfts->node);
+	cgroup_apply_cftypes(cfts, false);
+	cgroup_exit_cftypes(cfts);
+	return 0;
+}
+
 /**
  * cgroup_rm_cftypes - remove an array of cftypes from a subsystem
  * @cfts: zero-length name terminated array of cftypes
@@ -2939,15 +2952,12 @@ static void cgroup_init_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
  */
 int cgroup_rm_cftypes(struct cftype *cfts)
 {
-	if (!cfts || !cfts[0].ss)
-		return -ENOENT;
+	int ret;
 
-	cgroup_cfts_prepare();
-	list_del(&cfts->node);
-	cgroup_cfts_commit(cfts, false);
-
-	cgroup_exit_cftypes(cfts);
-	return 0;
+	mutex_lock(&cgroup_tree_mutex);
+	ret = cgroup_rm_cftypes_locked(cfts);
+	mutex_unlock(&cgroup_tree_mutex);
+	return ret;
 }
 
 /**
@@ -2970,11 +2980,14 @@ int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
 
 	cgroup_init_cftypes(ss, cfts);
 
-	cgroup_cfts_prepare();
+	mutex_lock(&cgroup_tree_mutex);
+
 	list_add_tail(&cfts->node, &ss->cfts);
-	ret = cgroup_cfts_commit(cfts, true);
+	ret = cgroup_apply_cftypes(cfts, true);
 	if (ret)
-		cgroup_rm_cftypes(cfts);
+		cgroup_rm_cftypes_locked(cfts);
+
+	mutex_unlock(&cgroup_tree_mutex);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cgroup_add_cftypes);
