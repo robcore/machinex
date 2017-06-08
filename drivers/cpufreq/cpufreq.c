@@ -1642,7 +1642,6 @@ static int cpufreq_online(unsigned int cpu)
 		if (hardlimit_ready) {
 			policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 			policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
-			reapply_hard_limits(policy->cpu);
 		} else {
 			policy->min = policy->user_policy.min;
 			policy->max = policy->user_policy.max;
@@ -1656,6 +1655,9 @@ static int cpufreq_online(unsigned int cpu)
 			goto out_exit_policy;
 		}
 	}
+
+	reapply_hard_limits(policy->cpu);
+
 
 	/*
 	 * Sometimes boot loaders set CPU frequency to a value outside of
