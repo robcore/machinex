@@ -254,7 +254,7 @@ static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf,
 
 		count += sprintf(&buf[count], "%d ", pos->frequency);
 	}
-	count += sprintf(&buf[count], "\n");
+	count += sprintf(&buf[count], "\b\n");
 
 	return count;
 
