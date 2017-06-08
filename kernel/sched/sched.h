@@ -535,11 +535,6 @@ struct max_cpu_capacity {
 	int cpu;
 };
 
-static inline bool sched_asym_prefer(int a, int b)
-{
-	return arch_asym_cpu_priority(a) > arch_asym_cpu_priority(b);
-}
-
 /*
  * We add the notion of a root-domain which will be used to define per-domain
  * variables. Each exclusive cpuset essentially defines an island domain by
