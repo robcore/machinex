@@ -661,7 +661,7 @@ static inline void hrtimer_init_hres(struct hrtimer_cpu_base *base)
  */
 static void retrigger_next_event(void *arg)
 {
-	struct hrtimer_cpu_base *base = &__get_cpu_var(hrtimer_bases);
+	struct hrtimer_cpu_base *base = this_cpu_ptr(&hrtimer_bases);
 
 	if (!base->hres_active)
 		return;
@@ -903,7 +903,7 @@ remove_hrtimer(struct hrtimer *timer, struct hrtimer_clock_base *base, bool rest
 		 * rare case and less expensive than a smp call.
 		 */
 		debug_deactivate(timer);
-		reprogram = base->cpu_base == &__get_cpu_var(hrtimer_bases);
+		reprogram = base->cpu_base == this_cpu_ptr(&hrtimer_bases);
 
 		if (!restart)
 			state = HRTIMER_STATE_INACTIVE;
@@ -986,7 +986,7 @@ EXPORT_SYMBOL_GPL(hrtimer_start_range_ns);
  * Returns:
  *  0 when the timer was not active
  *  1 when the timer was active
- * -1 when the timer is currently excuting the callback function and
+ * -1 when the timer is currently executing the callback function and
  *    cannot be stopped
  */
 int hrtimer_try_to_cancel(struct hrtimer *timer)
@@ -1061,12 +1061,11 @@ EXPORT_SYMBOL_GPL(__hrtimer_get_remaining);
 /**
  * hrtimer_get_next_event - get the time until next expiry event
  *
- * Returns the delta to the next expiry event or KTIME_MAX if no timer
- * is pending.
+ * Returns the next expiry time or KTIME_MAX if no timer is pending.
  */
 u64 hrtimer_get_next_event(void)
 {
-	struct hrtimer_cpu_base *cpu_base = &__get_cpu_var(hrtimer_bases);
+	struct hrtimer_cpu_base *cpu_base = this_cpu_ptr(&hrtimer_bases);
 	u64 expires = KTIME_MAX;
 	unsigned long flags;
 
@@ -1628,7 +1627,7 @@ int hrtimers_dead_cpu(unsigned int scpu)
 
 	local_irq_disable();
 	old_base = &per_cpu(hrtimer_bases, scpu);
-	new_base = &__get_cpu_var(hrtimer_bases);
+	new_base = this_cpu_ptr(&hrtimer_bases);
 	/*
 	 * The caller is globally serialized and nobody else
 	 * takes two locks at once, deadlock is not possible.
