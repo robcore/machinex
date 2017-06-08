@@ -88,7 +88,7 @@ static void update_policy_online(unsigned int cpu)
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		cpufreq_update_policy(cpu);
-		reapply_hard_limits();
+		reapply_hard_limits(cpu);
 	}
 	put_online_cpus();
 }
@@ -97,10 +97,14 @@ static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
 	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
+	struct cpufreq_policy policy;
+
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
-		i_sync_info->input_boost_min = hlimit_min_screen_on;
+		if (cpufreq_get_policy(&policy, cpu))
+			return;
+		i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
 		input_boost_limit = i_sync_info->input_boost_min;
 	}
 	/* Update policies for all online CPUs */
@@ -130,7 +134,7 @@ static void do_input_boost(struct work_struct *work)
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
-
+extern bool hotplug_ready;
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
@@ -138,7 +142,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	u64 delta;
 	unsigned int min_interval;
 
-	if (!input_boost_enabled)
+	if (!input_boost_enabled || (!hotplug_ready)
 		return;
 
 	now = ktime_to_us(ktime_get());
