@@ -248,7 +248,6 @@ static void __ref do_freq_control(long temp)
 	}
 
 	if (max_freq == limited_max_freq_thermal) {
-		update_cpu_max_freq(cpu, max_freq);
 		therm_freq_limited = true;
 		return;
 	}
@@ -256,10 +255,6 @@ static void __ref do_freq_control(long temp)
 	for_each_online_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
-		if (max_freq == policy.hlimit_max_screen_on) {
-			max_freq = policy.hlimit_max_screen_on;
-			limited_max_freq_thermal = max_freq;
-		}
 		ret = update_cpu_max_freq(cpu, max_freq);
 		if (ret)
 			pr_debug(
