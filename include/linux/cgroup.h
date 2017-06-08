@@ -392,11 +392,10 @@ struct cftype {
 	unsigned int flags;
 
 	/*
-	 * Fields used for internal bookkeeping.  Initialized automatically
-	 * during registration.
+	 * The subsys this file belongs to.  Initialized automatically
+	 * during registration.  NULL for cgroup core files.
 	 */
-	struct cgroup_subsys *ss;	/* NULL for cgroup core files */
-	struct list_head node;		/* anchored at ss->cfts */
+	struct cgroup_subsys *ss;
 
 	/*
 	 * read_u64() is a shortcut for the common case of returning a
@@ -443,6 +442,16 @@ struct cftype {
 	 * kick type for multiplexing.
 	 */
 	int (*trigger)(struct cgroup_subsys_state *css, unsigned int event);
+};
+
+/*
+ * cftype_sets describe cftypes belonging to a subsystem and are chained at
+ * cgroup_subsys->cftsets.  Each cftset points to an array of cftypes
+ * terminated by zero length name.
+ */
+struct cftype_set {
+	struct list_head		node;	/* chained at subsys->cftsets */
+	struct cftype			*cfts;
 };
 
 /*
@@ -581,11 +590,8 @@ struct cgroup_subsys {
 	/* link to parent, protected by cgroup_lock() */
 	struct cgroupfs_root *root;
 
-	/*
-	 * List of cftypes.  Each entry is the first entry of an array
-	 * terminated by zero length name.
-	 */
-	struct list_head cfts;
+	/* list of cftype_sets */
+	struct list_head cftsets;
 
 	/* base cftypes, automatically registered with subsys itself */
 	struct cftype *base_cftypes;
