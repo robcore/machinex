@@ -1959,7 +1959,7 @@ EXPORT_SYMBOL(cpufreq_quick_get_max);
  * cpufreq_quick_get_min - get the min reported CPU frequency for this CPU
  * @cpu: CPU number
  *
- * Just return the max possible frequency for a given CPU.
+ * Just return the min possible frequency for a given CPU.
  */
 unsigned int cpufreq_quick_get_min(unsigned int cpu)
 {
