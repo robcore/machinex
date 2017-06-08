@@ -228,36 +228,20 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_table_get_index);
 /**
  * show_available_freqs - show available frequencies for the specified CPU
  */
-static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf,
-				    bool show_boost)
+static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf)
 {
-	ssize_t count = 0;
-	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
+	unsigned int i;
+	ssize_t j = 0;
 
-	if (!table)
-		return -ENODEV;
+	struct cpufreq_frequency_table *table;
 
-	cpufreq_for_each_valid_entry(pos, table) {
-		/*
-		 * show_boost = true and driver_data = BOOST freq
-		 * display BOOST freqs
-		 *
-		 * show_boost = false and driver_data = BOOST freq
-		 * show_boost = true and driver_data != BOOST freq
-		 * continue - do not display anything
-		 *
-		 * show_boost = false and driver_data != BOOST freq
-		 * display NON BOOST freqs
-		 */
-		if (show_boost ^ (pos->flags & CPUFREQ_BOOST_FREQ))
-			continue;
+	table = policy->freq_table;
 
-		count += sprintf(&buf[count], "%d ", pos->frequency);
-	}
-	count += sprintf(&buf[count], "\b\n");
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		j += sprintf(&buf[j], "%d ", table[i].frequency);
 
-	return count;
-
+	j += sprintf(&buf[j], "\n");
+	return j;
 }
 
 #define cpufreq_attr_available_freq(_name)	  \
@@ -271,7 +255,7 @@ __ATTR_RO(_name##_frequencies)
 static ssize_t scaling_available_frequencies_show(struct cpufreq_policy *policy,
 						  char *buf)
 {
-	return show_available_freqs(policy, buf, false);
+	return show_available_freqs(policy, buf);
 }
 cpufreq_attr_available_freq(scaling_available);
 EXPORT_SYMBOL_GPL(cpufreq_freq_attr_scaling_available_freqs);
@@ -279,7 +263,8 @@ EXPORT_SYMBOL_GPL(cpufreq_freq_attr_scaling_available_freqs);
 /**
  * show_available_boost_freqs - show available boost frequencies for
  * the specified CPU
- */
+*/
+#ifdef CONFIG_CPU_FREQ_BOOST_SW
 static ssize_t scaling_boost_frequencies_show(struct cpufreq_policy *policy,
 					      char *buf)
 {
@@ -287,7 +272,7 @@ static ssize_t scaling_boost_frequencies_show(struct cpufreq_policy *policy,
 }
 cpufreq_attr_available_freq(scaling_boost);
 EXPORT_SYMBOL_GPL(cpufreq_freq_attr_scaling_boost_freqs);
-
+#endif
 struct freq_attr *cpufreq_generic_attr[] = {
 	&cpufreq_freq_attr_scaling_available_freqs,
 #ifdef CONFIG_CPU_FREQ_BOOST_SW
