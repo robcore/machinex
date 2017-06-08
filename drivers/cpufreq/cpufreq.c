@@ -754,7 +754,6 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		policy->max = max;
 	if (policy->min > policy->max)
 		policy->min = policy->max;
-		reapply_hard_limits(policy->cpu);
 	return;
 }
 EXPORT_SYMBOL(cpufreq_verify_within_limits);

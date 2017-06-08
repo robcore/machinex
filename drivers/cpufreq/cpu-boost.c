@@ -101,7 +101,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	unsigned int ib_min = s->input_boost_min;
 
 	if (policy == NULL)
-		return NOTIFY_OK
+		return NOTIFY_OK;
 
 	switch (val) {
 	case CPUFREQ_ADJUST:
