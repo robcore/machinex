@@ -142,7 +142,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	u64 delta;
 	unsigned int min_interval;
 
-	if (!input_boost_enabled || (!hotplug_ready)
+	if (!input_boost_enabled || !hotplug_ready)
 		return;
 
 	now = ktime_to_us(ktime_get());
