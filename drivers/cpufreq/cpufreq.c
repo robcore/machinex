@@ -681,9 +681,42 @@ struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 		return NULL;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
-/* ------------------------------------------------------------------------------ */
-/* Externally reachable function                                                  */
-/* ------------------------------------------------------------------------------ */
+/* Update limits in cpufreq */
+void reapply_hard_limits(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
+
+	if (!hardlimit_ready)
+		return;
+
+	policy = cpufreq_cpu_get_raw(cpu);
+	if (policy == NULL)
+		return;
+
+	/* Recalculate the currently applicable min/max */
+	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
+			policy->curr_limit_min  = policy->hlimit_min_screen_on;
+			policy->curr_limit_max  = policy->hlimit_max_screen_on;
+	} else {
+		policy->curr_limit_min  = policy->hlimit_min_screen_off;
+		policy->curr_limit_max  = policy->hlimit_max_screen_off;
+	}
+
+	if (limited_max_freq_thermal > policy->curr_limit_min &&
+		 policy->curr_limit_max > limited_max_freq_thermal)
+		policy->curr_limit_max = limited_max_freq_thermal;
+
+	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON &&
+		input_boost_limit >= policy->curr_limit_min &&
+		input_boost_limit <= limited_max_freq_thermal &&
+		input_boost_limit <= policy->curr_limit_max)
+		policy->curr_limit_min = input_boost_limit;
+
+	if (policy != NULL) {
+		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
+	}
+}
+EXPORT_SYMBOL(reapply_hard_limits);
 
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
@@ -691,8 +724,11 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
-	if (policy == NULL)
+	if (policy == NULL || !hardlimit_ready)
 		return max(curr_limit_min, min(curr_limit_max, freq));
+
+	if (!policy->curr_limit_min || !policy->curr_limit_max)
+		reapply_hard_limits(policy->cpu);
 
 	return max(policy->curr_limit_min, min(policy->curr_limit_max, freq));
 }
@@ -730,42 +766,6 @@ cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy)
 EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
-/* Update limits in cpufreq */
-void reapply_hard_limits(unsigned int cpu)
-{
-	struct cpufreq_policy *policy;
-
-	if (!hardlimit_ready)
-		return;
-
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
-		return;
-
-	/* Recalculate the currently applicable min/max */
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-			policy->curr_limit_min  = policy->hlimit_min_screen_on;
-			policy->curr_limit_max  = policy->hlimit_max_screen_on;
-	} else {
-		policy->curr_limit_min  = policy->hlimit_min_screen_off;
-		policy->curr_limit_max  = policy->hlimit_max_screen_off;
-	}
-
-	if (limited_max_freq_thermal > policy->curr_limit_min &&
-		 policy->curr_limit_max > limited_max_freq_thermal)
-		policy->curr_limit_max = limited_max_freq_thermal;
-
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON &&
-		input_boost_limit >= policy->curr_limit_min &&
-		input_boost_limit <= limited_max_freq_thermal &&
-		input_boost_limit <= policy->curr_limit_max)
-		policy->curr_limit_min = input_boost_limit;
-
-	if (policy != NULL) {
-		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
-	}
-}
-EXPORT_SYMBOL(reapply_hard_limits);
 
 /* ------------------------------------------------------------------------------ */
 /* Powersuspend callback functions                                                */
