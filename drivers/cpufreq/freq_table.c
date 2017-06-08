@@ -238,9 +238,8 @@ static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf)
 	table = policy->freq_table;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
-		j += sprintf(&buf[j], "%d ", table[i].frequency);
+		j += sprintf(&buf[j], "%d\n", table[i].frequency);
 
-	j += sprintf(&buf[j], "\n");
 	return j;
 }
 
