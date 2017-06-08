@@ -2802,7 +2802,6 @@ void cpufreq_update_policy(unsigned int cpu)
 
 unlock:
 	up_write(&policy->rwsem);
-
 	cpufreq_cpu_put(policy);
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
