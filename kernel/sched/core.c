@@ -1437,8 +1437,9 @@ static int migrate_swap_stop(void *data)
 	dst_rq = cpu_rq(arg->dst_cpu);
 
 	double_raw_lock(&arg->src_task->pi_lock,
-	&arg->dst_task->pi_lock);
+			&arg->dst_task->pi_lock);
 	double_rq_lock(src_rq, dst_rq);
+
 	if (task_cpu(arg->dst_task) != arg->dst_cpu)
 		goto unlock;
 
