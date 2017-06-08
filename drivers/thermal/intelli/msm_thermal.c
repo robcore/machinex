@@ -55,7 +55,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_control_mask = 0xe,
 };
 unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-extern unsigned int curr_limit_max;
+extern unsigned int hlimit_max_screen_on;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 bool core_control_enabled;
@@ -118,7 +118,7 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 	unsigned int min;
 
 	limited_max_freq_thermal = max_freq;
-	if (max_freq != policy.curr_limit_max) {
+	if (max_freq != policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;
@@ -232,7 +232,7 @@ static void __ref do_freq_control(long temp)
 		ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			return;
-			max_freq = policy.curr_limit_max;
+			max_freq = policy.hlimit_max_screen_on;
 			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
@@ -345,7 +345,7 @@ static void __ref disable_msm_thermal(void)
 		return;
 
 	for_each_online_cpu(cpu) {
-		update_cpu_max_freq(cpu, policy.curr_limit_max);
+		update_cpu_max_freq(cpu, policy.hlimit_max_screen_on);
 	}
 }
 

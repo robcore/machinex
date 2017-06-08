@@ -87,8 +87,8 @@ static void update_policy_online(unsigned int cpu)
 	 */
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		cpufreq_update_policy(cpu);
 		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
 }

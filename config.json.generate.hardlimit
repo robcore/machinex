@@ -1,0 +1,28 @@
+cat << CTAG
+{
+    name:"HARDLIMIT",
+    elements:[
+	{ SPane:{
+		title:"PER CPU Scaling Hard Limits",
+		description:" Limit the scaling frequencies of each Core."
+        }},
+				`if [ -d "/sys/devices/system/cpu/cpufreq/policy0" ]; then
+					$BB echo '{ SPane:{
+							title:"CPU0 Limits"
+						}},'
+					if [ -f "/sys/devices/system/cpu/cpufreq/policy0/hardlimit_max_screen_on" ]; then
+							$BB echo '{ SSeekBar:{
+								title:"MAX Screen ON Limit",
+								description:"Max Screen On Limit.",
+								unit:" Mhz",
+								action:"generic /sys/devices/system/cpu/cpufreq/policy0/hardlimit_max_screen_on",
+								values:{ 384000:"384 Mhz", 486000:"486 Mhz", 594000:"594 Mhz", 702000:"702 Mhz", 810000:"810 Mhz", 918000:"918 Mhz", 1026000:"1026 Mhz", 1134000:"1134 Mhz", 1242000:"1242 Mhz", 1350000:"1350 Mhz", 1458000:"1458 Mhz", 1566000:"1566 Mhz", 1674000:"1674 Mhz", 1782000:"1782 Mhz", 1890000:"1890 Mhz", }
+							}},'
+					fi
+				fi`
+	{ SDescription:{
+		description:" "
+	}},
+    ]
+}
+CTAG
