@@ -758,6 +758,25 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL(cpufreq_verify_within_limits);
 
+void cpufreq_verify_within_hardlimits(struct cpufreq_policy *policy, 
+	unsigned int min, unsigned int max)
+{
+	unsigned int cpu = policy->cpu;
+	if (policy->min < min)
+		policy->min = min;
+	if (policy->max < min)
+		policy->max = min;
+	if (policy->min > max)
+		policy->min = max;
+	if (policy->max > max)
+		policy->max = max;
+	if (policy->min > policy->max)
+		policy->min = policy->max;
+	update_scaling_limits(cpu, min, max);
+	return;
+}
+EXPORT_SYMBOL(cpufreq_verify_within_hardlimits);
+
 void
 cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy)
 {

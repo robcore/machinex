@@ -124,8 +124,8 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (ret)
 		return -EINVAL;
 
-	min = cpufreq_quick_get_min(cpu);
-	cpufreq_verify_within_limits(&policy, min, max_freq);
+	min = check_cpufreq_hardlimit(policy.min);
+	cpufreq_verify_within_hardlimits(&policy, min, max_freq);
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != policy.hlimit_max_screen_on) {
@@ -139,7 +139,7 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 		ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			continue;
-		cpufreq_update_policy(cpu);
+		cpufreq_update_policy(policy.cpu);
 	}
 	put_online_cpus();
 	return 0;
