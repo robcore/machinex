@@ -2786,8 +2786,6 @@ void cpufreq_update_policy(unsigned int cpu)
 #endif
 	new_policy.util_thres = policy->user_policy.util_thres;
 
-	reapply_hard_limits(policy->cpu);
-
 	/*
 	 * BIOS might change freq behind our back
 	 * -> ask driver for current freq and notify governors about a change
