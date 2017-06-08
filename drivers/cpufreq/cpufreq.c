@@ -695,26 +695,24 @@ void reapply_hard_limits(unsigned int cpu)
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
+		if (input_boost_limit >= policy->hlimit_min_screen_on &&
+			input_boost_limit <= limited_max_freq_thermal &&
+			input_boost_limit <= policy->hlimit_max_screen_on)
+			policy->curr_limit_min = input_boost_limit;
+		else
 			policy->curr_limit_min  = policy->hlimit_min_screen_on;
+
+		if (limited_max_freq_thermal > policy->hlimit_min_screen_on &&
+			 limited_max_freq_thermal < policy->hlimit_max_screen_on)
+			policy->curr_limit_max = limited_max_freq_thermal;
+		else
 			policy->curr_limit_max  = policy->hlimit_max_screen_on;
 	} else {
 		policy->curr_limit_min  = policy->hlimit_min_screen_off;
 		policy->curr_limit_max  = policy->hlimit_max_screen_off;
 	}
 
-	if (limited_max_freq_thermal > policy->curr_limit_min &&
-		 policy->curr_limit_max > limited_max_freq_thermal)
-		policy->curr_limit_max = limited_max_freq_thermal;
-
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON &&
-		input_boost_limit >= policy->curr_limit_min &&
-		input_boost_limit <= limited_max_freq_thermal &&
-		input_boost_limit <= policy->curr_limit_max)
-		policy->curr_limit_min = input_boost_limit;
-
-	if (policy != NULL) {
-		update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
-	}
+	update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
@@ -753,6 +751,7 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		policy->max = max;
 	if (policy->min > policy->max)
 		policy->min = policy->max;
+	reapply_hard_limits(policy->cpu);
 	return;
 }
 EXPORT_SYMBOL(cpufreq_verify_within_limits);
