@@ -2916,15 +2916,12 @@ static enum cpuhp_state hp_online;
 static int cpuhp_cpufreq_online(unsigned int cpu)
 {
 	cpufreq_online(cpu);
-	reapply_hard_limits(cpu);
-
 	return 0;
 }
 
 static int cpuhp_cpufreq_offline(unsigned int cpu)
 {
 	cpufreq_offline(cpu);
-
 	return 0;
 }
 
