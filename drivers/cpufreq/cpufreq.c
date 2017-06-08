@@ -739,6 +739,8 @@ void reapply_hard_limits(unsigned int cpu)
 		return;
 
 	policy = cpufreq_cpu_get_raw(cpu);
+	if (policy == NULL)
+		return;
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
@@ -1632,8 +1634,6 @@ static int cpufreq_online(unsigned int cpu)
 		policy->hlimit_max_screen_off = hlimit_max_screen_off;
 		policy->hlimit_min_screen_on = hlimit_min_screen_on;
 		policy->hlimit_min_screen_off = hlimit_min_screen_off;
-		policy->curr_limit_max = curr_limit_max;
-		policy->curr_limit_min = curr_limit_min;
 
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
@@ -1727,7 +1727,7 @@ static int cpufreq_online(unsigned int cpu)
 	if (cpufreq_driver->ready)
 		cpufreq_driver->ready(policy);
 
-	pr_info("initialization complete\n");
+	pr_debug("initialization complete\n");
 
 	hardlimit_ready = true;
 
