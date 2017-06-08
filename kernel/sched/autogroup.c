@@ -7,7 +7,7 @@
 #include <linux/security.h>
 #include <linux/export.h>
 
-unsigned int __read_mostly sysctl_sched_autogroup_enabled = 0;
+unsigned int __read_mostly sysctl_sched_autogroup_enabled = 1;
 static struct autogroup autogroup_default;
 static atomic_t autogroup_seq_nr;
 
@@ -111,11 +111,10 @@ bool task_wants_autogroup(struct task_struct *p, struct task_group *tg)
 {
 	if (tg != &root_task_group)
 		return false;
-
 	/*
- 	 * If we race with autogroup_move_group() the caller can use the old
- 	 * value of signal->autogroup but in this case sched_move_task() will
- 	 * be called again before autogroup_kref_put().
+	 * If we race with autogroup_move_group() the caller can use the old
+	 * value of signal->autogroup but in this case sched_move_task() will
+	 * be called again before autogroup_kref_put().
 	 *
 	 * However, there is no way sched_autogroup_exit_task() could tell us
 	 * to avoid autogroup->tg, so we abuse PF_EXITING flag for this case.
@@ -152,12 +151,10 @@ autogroup_move_group(struct task_struct *p, struct autogroup *ag)
 	}
 
 	p->signal->autogroup = autogroup_kref_get(ag);
-
-	if (!READ_ONCE(sysctl_sched_autogroup_enabled))
-		goto out;
-
-	t = p;
 	/*
+	 * We can't avoid sched_move_task() after we changed signal->autogroup,
+	 * this process can already run with task_group() == prev->tg or we can
+	 * race with cgroup code which can read autogroup = prev under rq->lock.
 	 * In the latter case for_each_thread() can not miss a migrating thread,
 	 * cpu_cgroup_attach() must not be possible after cgroup_exit() and it
 	 * can't be removed from thread list, we hold ->siglock.
@@ -165,11 +162,9 @@ autogroup_move_group(struct task_struct *p, struct autogroup *ag)
 	 * If an exiting thread was already removed from thread list we rely on
 	 * sched_autogroup_exit_task().
 	 */
-	for_each_thread(p, t) {
+	for_each_thread(p, t)
 		sched_move_task(t);
-	}
 
-out:
 	unlock_task_sighand(p, &flags);
 	autogroup_kref_put(prev);
 }
