@@ -2694,15 +2694,11 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	policy->hlimit_max_screen_off = new_policy->hlimit_max_screen_off;
 	policy->hlimit_min_screen_on = new_policy->hlimit_min_screen_on;
 	policy->hlimit_min_screen_off = new_policy->hlimit_min_screen_off;
-	if (hardlimit_ready) {
-		policy->min = check_cpufreq_hardlimit(new_policy->min);
-		policy->max = check_cpufreq_hardlimit(new_policy->max);
-	} else {
-		policy->min = new_policy->min;
-		policy->max = new_policy->max;
-	}
 
 	reapply_hard_limits(policy->cpu);
+
+	policy->min = check_cpufreq_hardlimit(new_policy->min);
+	policy->max = check_cpufreq_hardlimit(new_policy->max);
 
 	policy->util_thres = new_policy->util_thres;
 
