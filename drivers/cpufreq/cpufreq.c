@@ -722,7 +722,10 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
-	if (policy == NULL || !hardlimit_ready)
+	if (!hardlimit_ready)
+		return freq;
+
+	if (policy == NULL)
 		return max(curr_limit_min, min(curr_limit_max, freq));
 
 	if (!policy->curr_limit_min || !policy->curr_limit_max)
@@ -751,7 +754,7 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		policy->max = max;
 	if (policy->min > policy->max)
 		policy->min = policy->max;
-	reapply_hard_limits(policy->cpu);
+		reapply_hard_limits(policy->cpu);
 	return;
 }
 EXPORT_SYMBOL(cpufreq_verify_within_limits);
@@ -2700,13 +2703,14 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	if (hardlimit_ready) {
 		policy->min = check_cpufreq_hardlimit(new_policy->min);
 		policy->max = check_cpufreq_hardlimit(new_policy->max);
-		reapply_hard_limits(policy->cpu);
 	} else {
 		policy->min = new_policy->min;
 		policy->max = new_policy->max;
 	}
-	policy->util_thres = new_policy->util_thres;
 
+	reapply_hard_limits(policy->cpu);
+
+	policy->util_thres = new_policy->util_thres;
 
 	policy->cached_target_freq = UINT_MAX;
 
@@ -2791,6 +2795,8 @@ void cpufreq_update_policy(unsigned int cpu)
 	new_policy.max = policy->user_policy.max;
 #endif
 	new_policy.util_thres = policy->user_policy.util_thres;
+
+	reapply_hard_limits(policy->cpu);
 
 	/*
 	 * BIOS might change freq behind our back
