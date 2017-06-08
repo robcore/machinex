@@ -1380,8 +1380,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		goto out;
 	}
 
-	policy->cur = acpuclk_get_rate(policy->cpu);
-
 	mx_freq_table = machinex_freq_table(policy);
 
 	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
