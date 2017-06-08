@@ -1642,14 +1642,11 @@ static int cpufreq_online(unsigned int cpu)
 			add_cpu_dev_symlink(policy, j);
 		}
 	} else {
-		if (hardlimit_ready) {
-			policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
-			policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
-		} else {
-			policy->min = policy->user_policy.min;
-			policy->max = policy->user_policy.max;
-		}
+		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
+		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
 	}
+
+	reapply_hard_limits(policy->cpu);
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
 		policy->cur = cpufreq_driver->get(policy->cpu);
@@ -1658,9 +1655,6 @@ static int cpufreq_online(unsigned int cpu)
 			goto out_exit_policy;
 		}
 	}
-
-	reapply_hard_limits(policy->cpu);
-
 
 	/*
 	 * Sometimes boot loaders set CPU frequency to a value outside of
