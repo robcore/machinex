@@ -114,7 +114,7 @@ fail:
 	return ret;
 }
 
-static int update_cpu_max_freq(int cpu, unsigned long max_freq)
+static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
 	struct cpufreq_policy policy;
 	int ret = 0;
@@ -122,10 +122,13 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 
 	ret = cpufreq_get_policy(&policy, cpu);
 	if (ret)
-		return -EINVAL;
+		return;
 
-	min = check_cpufreq_hardlimit(policy.min);
-	cpufreq_verify_within_hardlimits(&policy, min, max_freq);
+	for_each_online_cpu(cpu) {
+		cpu = policy.cpu;
+		min = policy.min;
+		cpufreq_verify_within_hardlimits(cpu, min, max_freq);
+	}
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != policy.hlimit_max_screen_on) {
@@ -136,13 +139,9 @@ static int update_cpu_max_freq(int cpu, unsigned long max_freq)
 
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			continue;
-		cpufreq_update_policy(policy.cpu);
+		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
-	return 0;
 }
 extern bool hotplug_ready;
 static void __ref do_core_control(long temp)
@@ -215,10 +214,19 @@ static void __ref do_freq_control(long temp)
 	int ret = 0;
 	int cpu = smp_processor_id();
 	struct cpufreq_policy policy;
-	unsigned long max_freq = limited_max_freq_thermal;
+	unsigned long max_freq;
 
 	if (!hotplug_ready)
 		return;
+
+	ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
+
+	for_each_online_cpu(cpu) {
+		cpu = policy.cpu;
+		max_freq = limited_max_freq_thermal;
+	}
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
@@ -237,9 +245,6 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-		ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			return;
 			max_freq = policy.hlimit_max_screen_on;
 			therm_freq_limited = false;
 		} else
@@ -255,14 +260,8 @@ static void __ref do_freq_control(long temp)
 	for_each_online_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
-		ret = update_cpu_max_freq(cpu, max_freq);
-		if (ret)
-			pr_debug(
-			"%s: Unable to limit cpu%d max freq to %lu\n",
-					KBUILD_MODNAME, cpu, max_freq);
-		else
-			therm_freq_limited = true;
-
+		update_cpu_max_freq(cpu, max_freq);
+		therm_freq_limited = true;
 	}
 
 }
