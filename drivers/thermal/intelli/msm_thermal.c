@@ -130,7 +130,7 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (max_freq != policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
-		max_freq == policy.hlimit_max_screen_on
+		max_freq == policy.hlimit_max_screen_on;
 		therm_freq_limited = false;
 	}
 
