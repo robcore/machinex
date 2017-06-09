@@ -407,7 +407,7 @@ static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se)
  * the overrunning entity can't interfere with other entity in the system and
  * can't make them miss their deadlines. Reasons why this kind of overruns
  * could happen are, typically, a entity voluntarily trying to overcome its
- * runtime, or it just underestimated it during sched_setscheduler_ex().
+ * runtime, or it just underestimated it during sched_setattr().
  */
 static void replenish_dl_entity(struct sched_dl_entity *dl_se,
 				struct sched_dl_entity *pi_se)
@@ -779,10 +779,6 @@ static void update_curr_dl(struct rq *rq)
 	if (!dl_task(curr) || !on_dl_rq(dl_se))
 		return;
 
-	/* kick cpufreq (see the comment in kernel/sched/sched.h). */
-	if (cpu_of(rq) == smp_processor_id())
-		cpufreq_update_util(rq_clock(rq), SCHED_CPUFREQ_DL);
-
 	/*
 	 * Consumed budget is computed considering the time as
 	 * observed by schedulable tasks (excluding time spent
@@ -797,6 +793,10 @@ static void update_curr_dl(struct rq *rq)
 			goto throttle;
 		return;
 	}
+
+	/* kick cpufreq (see the comment in kernel/sched/sched.h). */
+	if (cpu_of(rq) == smp_processor_id())
+		cpufreq_update_util(rq_clock(rq), SCHED_CPUFREQ_DL);
 
 	schedstat_set(curr->se.statistics.exec_max,
 		      max(curr->se.statistics.exec_max, delta_exec));
@@ -1797,6 +1797,15 @@ static void switched_to_dl(struct rq *rq, struct task_struct *p)
 {
 	int check_resched = 1;
 
+	/* If p is not queued we will update its parameters at next wakeup. */
+	if (!task_on_rq_queued(p))
+		return;
+
+	/*
+	 * If p is boosted we already updated its params in
+	 * rt_mutex_setprio()->enqueue_task(..., ENQUEUE_REPLENISH),
+	 * p's deadline being now already after rq_clock(rq).
+	 */
 	if (dl_time_before(p->dl.deadline, rq_clock(rq)))
 		setup_new_dl_entity(&p->dl);
 
@@ -1804,12 +1813,11 @@ static void switched_to_dl(struct rq *rq, struct task_struct *p)
 #ifdef CONFIG_SMP
 		if (p->nr_cpus_allowed > 1 && rq->dl.overloaded)
 			queue_push_tasks(rq);
-#else
+#endif
 		if (dl_task(rq->curr))
 			check_preempt_curr_dl(rq, p, 0);
 		else
 			resched_curr(rq);
-#endif
 	}
 }
 
