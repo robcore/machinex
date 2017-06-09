@@ -31,18 +31,18 @@
 #include <linux/tick.h>
 #include <trace/events/power.h>
 #include <linux/powersuspend.h>
+
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
-unsigned int hlimit_max_screen_on  = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;  /* default to stock behaviour */
-unsigned int hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK; /* default to stock behaviour */
-unsigned int hlimit_min_screen_on  = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;  /* default to stock behaviour */
-unsigned int hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK; /* default to stock behaviour */
+unsigned int hlimit_max_screen_on;
+unsigned int hlimit_max_screen_off;
+unsigned int hlimit_min_screen_on;
+unsigned int hlimit_min_screen_off;
 static bool hardlimit_ready = false;
-
-unsigned int curr_limit_max        = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-unsigned int curr_limit_min       = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;		/* default to screen on */
+unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -1626,15 +1626,27 @@ static int cpufreq_online(unsigned int cpu)
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
 
+	/*
+	 * First boot, set defaults because they haven't been set yet.
+	 */
+	if (!policy->hlimit_max_screen_on)
+		policy->hlimit_max_screen_on = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+	if (!policy->hlimit_max_screen_off)
+		policy->hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
+	if (!policy->hlimit_min_screen_on)
+		policy->hlimit_min_screen_on = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+	if (!policy->hlimit_min_screen_off)
+		policy->hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK;
+	if (!policy->curr_limit_max)
+		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+	if (!policy->curr_limit_min)
+		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
 	if (new_policy) {
 		policy->user_policy.min = policy->min;
 		policy->user_policy.max = policy->max;
 		policy->util = 0;
 		policy->user_policy.util_thres = policy->util_thres = UTIL_THRESHOLD;
-		policy->hlimit_max_screen_on = hlimit_max_screen_on;
-		policy->hlimit_max_screen_off = hlimit_max_screen_off;
-		policy->hlimit_min_screen_on = hlimit_min_screen_on;
-		policy->hlimit_min_screen_off = hlimit_min_screen_off;
 
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
@@ -1644,8 +1656,6 @@ static int cpufreq_online(unsigned int cpu)
 		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
 	}
-
-	reapply_hard_limits(policy->cpu);
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
 		policy->cur = cpufreq_driver->get(policy->cpu);
@@ -1727,6 +1737,7 @@ static int cpufreq_online(unsigned int cpu)
 	pr_debug("initialization complete\n");
 
 	hardlimit_ready = true;
+	reapply_hard_limits(policy->cpu);
 
 	return 0;
 
@@ -2694,10 +2705,8 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	policy->hlimit_min_screen_on = new_policy->hlimit_min_screen_on;
 	policy->hlimit_min_screen_off = new_policy->hlimit_min_screen_off;
 
-	reapply_hard_limits(policy->cpu);
-
-	policy->min = check_cpufreq_hardlimit(new_policy->min);
-	policy->max = check_cpufreq_hardlimit(new_policy->max);
+	policy->min = new_policy->min;
+	policy->max = new_policy->max;
 
 	policy->util_thres = new_policy->util_thres;
 
@@ -2772,6 +2781,8 @@ void cpufreq_update_policy(unsigned int cpu)
 
 	if (policy_is_inactive(policy))
 		goto unlock;
+
+	reapply_hard_limits(cpu);
 
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&new_policy, policy, sizeof(*policy));
