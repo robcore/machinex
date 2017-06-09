@@ -696,15 +696,15 @@ void reapply_hard_limits(unsigned int cpu)
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
 		if (input_boost_limit >= policy->hlimit_min_screen_on &&
-			input_boost_limit <= limited_max_freq_thermal &&
+			input_boost_limit <= real_thermal_limit &&
 			input_boost_limit <= policy->hlimit_max_screen_on)
 			policy->curr_limit_min = input_boost_limit;
 		else
 			policy->curr_limit_min  = policy->hlimit_min_screen_on;
 
-		if (limited_max_freq_thermal > policy->hlimit_min_screen_on &&
-			 limited_max_freq_thermal < policy->hlimit_max_screen_on)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (real_thermal_limit > policy->hlimit_min_screen_on &&
+			 real_thermal_limit < policy->hlimit_max_screen_on)
+			policy->curr_limit_max = real_thermal_limit;
 		else
 			policy->curr_limit_max  = policy->hlimit_max_screen_on;
 	} else {
@@ -2399,9 +2399,6 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 		 policy->cpu, target_freq, relation, old_target_freq);
-
-	if (limited_max_freq_thermal > 0 && target_freq > limited_max_freq_thermal)
-		target_freq = limited_max_freq_thermal;
 
 	/*
 	 * This might look like a redundant call as we are checking it again
