@@ -1032,7 +1032,7 @@ dequeue_top_rt_rq(struct rt_rq *rt_rq)
 
 	BUG_ON(!rq->nr_running);
 
-	rq->nr_running -= rt_rq->rt_nr_running;
+	sub_nr_running(rq, rt_rq->rt_nr_running);
 	rt_rq->rt_queued = 0;
 }
 
@@ -1048,7 +1048,7 @@ enqueue_top_rt_rq(struct rt_rq *rt_rq)
 	if (rt_rq_throttled(rt_rq) || !rt_rq->rt_nr_running)
 		return;
 
-	rq->nr_running += rt_rq->rt_nr_running;
+	add_nr_running(rq, rt_rq->rt_nr_running);
 	rt_rq->rt_queued = 1;
 }
 
@@ -1517,6 +1517,7 @@ static void check_preempt_curr_rt(struct rq *rq, struct task_struct *p, int flag
 	 */
 	if (p->prio == rq->curr->prio && !test_tsk_need_resched(rq->curr))
 		check_preempt_equal_prio(rq, p);
+#endif
 }
 
 static void sched_rt_update_capacity_req(struct rq *rq)
@@ -1547,11 +1548,6 @@ static void sched_rt_update_capacity_req(struct rq *rq)
 
 	set_rt_cpu_capacity(rq->cpu, 1, (unsigned long)(used));
 }
-#else
-static inline void sched_rt_update_capacity_req(struct rq *rq)
-{ }
-
-#endif
 
 static struct sched_rt_entity *pick_next_rt_entity(struct rq *rq,
 						   struct rt_rq *rt_rq)
