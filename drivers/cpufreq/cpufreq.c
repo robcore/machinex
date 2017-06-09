@@ -779,6 +779,7 @@ void cpufreq_verify_within_hardlimits(unsigned int cpu,
 		policy->max = max;
 	if (policy->min > policy->max)
 		policy->min = policy->max;
+
 	reapply_hard_limits(cpu);
 	return;
 }
