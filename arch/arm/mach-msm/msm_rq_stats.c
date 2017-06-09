@@ -56,8 +56,15 @@ struct cpu_load_data {
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
-extern bool conservative_rq;
-extern bool is_conservative_enabled(void);
+bool conservative_rq;
+bool is_conservative_enabled(void)
+{
+	if (is_alucard_enabled() || is_bricked_enabled())
+		conservative_rq = true;
+	else
+		conservative_rq = false;
+	return conservative_rq;
+}
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
