@@ -56,6 +56,9 @@ struct cpu_load_data {
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
+extern bool conservative_rq;
+extern bool is_conservative_enabled(void);
+
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	int ret;
@@ -110,34 +113,6 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	return 0;
 }
-static unsigned int conservative_rq = 1;
-
-static ssize_t store_conservative_rq(struct kobject *kobj,
-				     struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val > 1) {
-		return -EINVAL;
-	}
-
-	conservative_rq = val;
-
-	return count;
-}
-
-static ssize_t show_conservative_rq(struct kobject *kobj,
-				    struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, MAX_LONG_SIZE, "%d\n", conservative_rq);
-}
-
-static struct kobj_attribute conservative_rq_attr =
-	__ATTR(conservative_rq, 0644, show_conservative_rq,
-	       store_conservative_rq);
 
 static unsigned int report_load_at_max_freq(void)
 {
@@ -147,7 +122,7 @@ static unsigned int report_load_at_max_freq(void)
 	uint64_t timed_load = 0;
 	unsigned int max_window_size = 0;
 
-	if (conservative_rq) {
+	if (is_conservative_enabled()) {
 		for_each_online_cpu(cpu) {
 			pcpu = &per_cpu(cpuload, cpu);
 
@@ -352,7 +327,7 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 	unsigned int val = 0;
 	unsigned long flags = 0;
 
-	if (conservative_rq) {
+	if (is_conservative_enabled()) {
 		int nr_running = (avg_nr_running() * 10) >> FSHIFT;
 		if (rq_info.hotplug_disabled)
 			return snprintf(buf, PAGE_SIZE, "%d.%d\n", 0, 5);
@@ -462,7 +437,6 @@ static struct kobj_attribute cpu_normalized_load_attr =
 			show_cpu_normalized_load, NULL);
 
 static struct attribute *rq_attrs[] = {
-	&conservative_rq_attr.attr,
 	&cpu_normalized_load_attr.attr,
 	&def_timer_ms_attr.attr,
 	&run_queue_avg_attr.attr,

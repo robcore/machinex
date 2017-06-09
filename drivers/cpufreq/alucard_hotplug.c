@@ -64,6 +64,17 @@ static struct hotplug_tuners {
 	.hp_io_is_busy = 0,
 };
 
+bool alucard_enabled;
+bool is_alucard_enabled(void)
+{
+	if (hotplug_tuners_ins.hotplug_enable > 0)
+		alucard_enabled = true;
+	else
+		alucard_enabled = false;
+
+	return alucard_enabled;
+}
+
 #define DOWN_INDEX		(0)
 #define UP_INDEX		(1)
 

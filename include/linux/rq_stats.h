@@ -30,3 +30,14 @@ struct rq_data {
 extern spinlock_t rq_lock;
 extern struct rq_data rq_info;
 extern struct workqueue_struct *rq_wq;
+extern bool is_alucard_enabled(void);
+extern bool is_bricked_enabled(void);
+bool conservative_rq;
+bool is_conservative_enabled(void)
+{
+	if (is_alucard_enabled() || is_bricked_enabled())
+		conservative_rq = true;
+	else
+		conservative_rq = false;
+	return conservative_rq;
+}
