@@ -94,10 +94,18 @@ bool freq_is_therm_limited(void)
 
 static int msm_thermal_get_freq_table(void)
 {
+	struct cpufreq_policy *policy;
 	int ret = 0;
 	int i = 0;
 
-	table = cpufreq_frequency_get_table(0);
+	policy = cpufreq_cpu_get_raw(0);
+
+	if (policy == NULL) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	table = policy->freq_table;
 	if (table == NULL) {
 		pr_debug("%s: error reading cpufreq table\n", KBUILD_MODNAME);
 		ret = -EINVAL;
@@ -124,7 +132,7 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (ret)
 		return;
 
-	cpufreq_verify_within_limits(&policy, check_cpufreq_hardlimit(policy.min), max_freq);
+	cpufreq_verify_within_limits(&policy, policy.min, max_freq);
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != policy.hlimit_max_screen_on) {
