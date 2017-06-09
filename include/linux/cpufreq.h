@@ -428,8 +428,6 @@ const char *cpufreq_get_current_driver(void);
 void *cpufreq_get_driver_data(void);
 void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		unsigned int min, unsigned int max);
-void cpufreq_verify_within_hardlimits(unsigned int cpu,
-		unsigned int min, unsigned int max);
 void
 cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy);
 
