@@ -311,14 +311,7 @@ static void __hrtick_restart(struct rq *rq)
 static void __hrtick_start(void *arg)
 {
 	struct rq *rq = arg;
-	struct hrtimer *timer = &rq->hrtick_timer;
-	ktime_t soft, hard;
-	unsigned long delta;
 	struct rq_flags rf;
-
-	soft = hrtimer_get_softexpires(timer);
-	hard = hrtimer_get_expires(timer);
-	delta = ktime_to_ns(ktime_sub(hard, soft));
 
 	rq_lock(rq, &rf);
 	__hrtick_restart(rq);
