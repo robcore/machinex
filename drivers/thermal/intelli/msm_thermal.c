@@ -124,13 +124,13 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (ret)
 		return;
 
-	reapply_hard_limits(cpu);
 	cpufreq_verify_within_limits(&policy, check_cpufreq_hardlimit(policy.min), max_freq);
 
 	limited_max_freq_thermal = max_freq;
 	if (max_freq != policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
+		max_freq == policy.hlimit_max_screen_on
 		therm_freq_limited = false;
 	}
 
@@ -216,7 +216,6 @@ static void __ref do_freq_control(long temp)
 	struct cpufreq_policy policy;
 	unsigned long max_freq = limited_max_freq_thermal;
 
-	max_freq = max_freq;
 	if (!hotplug_ready)
 		return;
 
