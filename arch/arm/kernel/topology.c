@@ -169,11 +169,77 @@ static void update_cpu_capacity(unsigned int cpu)
 	printk(KERN_INFO "CPU%u: update cpu_capacity %lu\n",
 		cpu, arch_scale_freq_capacity(NULL, cpu));
 }
-
-#else
-static inline void parse_dt_topology(void) {}
-static inline void update_cpu_capacity(unsigned int cpuid) {}
 #endif
+
+static unsigned long *__cpu_capacity;
+#define cpu_capacity(cpu)	__cpu_capacity[cpu]
+
+static unsigned long middle_capacity = 1;
+
+/*
+ * Iterate all CPUs' descriptor in DT and compute the efficiency
+ * (as per table_efficiency). Also calculate a middle efficiency
+ * as close as possible to  (max{eff_i} - min{eff_i}) / 2
+ * This is later used to scale the cpu_capacity field such that an
+ * 'average' CPU is of middle capacity. Also see the comments near
+ * table_efficiency[] and update_cpu_capacity().
+ */
+static void __init setup_capacaity(void)
+{
+	unsigned long krait_efficiency = 3891;
+	unsigned long min_capacity = ULONG_MAX;
+	unsigned long max_capacity = 0;
+	unsigned long capacity = 0;
+	int cpu = 0;
+
+	__cpu_capacity = kcalloc(nr_cpu_ids, sizeof(*__cpu_capacity),
+				 GFP_NOWAIT);
+
+	for_each_possible_cpu(cpu) {
+		const u32 *rate;
+		int len;
+
+		capacity = ((be32_to_cpup(rate)) >> 20) * krait_efficiency;
+
+		/* Save min capacity of the system */
+		if (capacity < min_capacity)
+			min_capacity = capacity;
+
+		/* Save max capacity of the system */
+		if (capacity > max_capacity)
+			max_capacity = capacity;
+
+		cpu_capacity(cpu) = capacity;
+	}
+
+	/* If min and max capacities are equals, we bypass the update of the
+	 * cpu_scale because all CPUs have the same capacity. Otherwise, we
+	 * compute a middle_capacity factor that will ensure that the capacity
+	 * of an 'average' CPU osetup_capacaityf the system will be as close as possible to
+	 * SCHED_CAPACITY_SCALE, which is the default value, but with the
+	 * constraint explained near krait_efficiency[].
+	 */
+	if (4*max_capacity < (3*(max_capacity + min_capacity)))
+		middle_capacity = (min_capacity + max_capacity)
+				>> (SCHED_CAPACITY_SHIFT+1);
+	else
+		middle_capacity = ((max_capacity / 3)
+				>> (SCHED_CAPACITY_SHIFT-1)) + 1;
+
+}
+
+/*
+ * Look for a customed capacity of a CPU in the cpu_capacity table during the
+ * boot. The update of all CPUs is in O(n^2) for heteregeneous system but the
+ * function returns directly for SMP system.
+ */
+static void update_cpu_capacity(unsigned int cpu)
+{
+	if (!cpu_capacity(cpu))
+		return;
+
+	set_capacity_scale(cpu, cpu_capacity(cpu) / middle_capacity);
+}
 
  /*
  * cpu topology table
@@ -309,6 +375,8 @@ void __init init_cpu_topology(void)
 		cpumask_clear(&cpu_topo->thread_sibling);
 	}
 	smp_wmb();
+
+	setup_capacaity();
 
 	/* Set scheduler topology descriptor */
 	set_sched_topology(arm_topology);
