@@ -43,7 +43,7 @@ static bool hardlimit_ready = false;
 unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;
-extern unsigned long real_thermal_limit;
+extern unsigned long limited_max_freq_thermal;
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -697,15 +697,15 @@ void reapply_hard_limits(unsigned int cpu)
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
 		if (input_boost_limit >= policy->hlimit_min_screen_on &&
-			input_boost_limit <= real_thermal_limit &&
+			input_boost_limit <= limited_max_freq_thermal &&
 			input_boost_limit <= policy->hlimit_max_screen_on)
 			policy->curr_limit_min = input_boost_limit;
 		else
 			policy->curr_limit_min  = policy->hlimit_min_screen_on;
 
-		if (real_thermal_limit > policy->hlimit_min_screen_on &&
-			 real_thermal_limit < policy->hlimit_max_screen_on)
-			policy->curr_limit_max = real_thermal_limit;
+		if (limited_max_freq_thermal > policy->hlimit_min_screen_on &&
+			 limited_max_freq_thermal < policy->hlimit_max_screen_on)
+			policy->curr_limit_max = limited_max_freq_thermal;
 		else
 			policy->curr_limit_max  = policy->hlimit_max_screen_on;
 	} else {
