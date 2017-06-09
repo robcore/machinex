@@ -710,6 +710,10 @@ void reapply_hard_limits(unsigned int cpu)
 			policy->curr_limit_max  = policy->hlimit_max_screen_on;
 	} else {
 		policy->curr_limit_min  = policy->hlimit_min_screen_off;
+		if (limited_max_freq_thermal > policy->hlimit_min_screen_off &&
+			 limited_max_freq_thermal < policy->hlimit_max_screen_off)
+			policy->curr_limit_max = limited_max_freq_thermal;
+		else
 		policy->curr_limit_max  = policy->hlimit_max_screen_off;
 	}
 
@@ -2755,8 +2759,6 @@ void cpufreq_update_policy(unsigned int cpu)
 
 	if (policy_is_inactive(policy))
 		goto unlock;
-
-	reapply_hard_limits(cpu);
 
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&new_policy, policy, sizeof(*policy));
