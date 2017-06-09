@@ -696,9 +696,9 @@ void reapply_hard_limits(unsigned int cpu)
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (input_boost_limit > policy->hlimit_min_screen_on &&
+		if (input_boost_limit >= policy->hlimit_min_screen_on &&
 			input_boost_limit <= limited_max_freq_thermal &&
-			input_boost_limit < policy->hlimit_max_screen_on)
+			input_boost_limit <= policy->hlimit_max_screen_on)
 			policy->curr_limit_min = input_boost_limit;
 		else
 			policy->curr_limit_min  = policy->hlimit_min_screen_on;
@@ -2755,6 +2755,8 @@ void cpufreq_update_policy(unsigned int cpu)
 
 	if (policy_is_inactive(policy))
 		goto unlock;
+
+	reapply_hard_limits(cpu);
 
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&new_policy, policy, sizeof(*policy));
