@@ -548,11 +548,10 @@ struct dl_rq {
 
 #ifdef CONFIG_SMP
 
-struct max_cpu_capacity {
-	raw_spinlock_t lock;
-	unsigned long val;
-	int cpu;
-};
+static inline bool sched_asym_prefer(int a, int b)
+{
+	return arch_asym_cpu_priority(a) > arch_asym_cpu_priority(b);
+}
 
 /*
  * We add the notion of a root-domain which will be used to define per-domain
@@ -572,9 +571,6 @@ struct root_domain {
 	/* Indicate more than one runnable task for any CPU */
 	bool overload;
 
-	/* Indicate one or more cpus over-utilized (tipping point) */
-	bool overutilized;
-
 	/*
 	 * The bit corresponding to a CPU gets set here if such CPU has more
 	 * than one runnable -deadline task (as it is below for RT tasks).
@@ -591,8 +587,7 @@ struct root_domain {
 	cpumask_var_t rto_mask;
 	struct cpupri cpupri;
 
-	/* Maximum cpu capacity in the system. */
-	struct max_cpu_capacity max_cpu_capacity;
+	unsigned long max_cpu_capacity;
 };
 
 extern struct root_domain def_root_domain;
@@ -944,7 +939,7 @@ struct sched_group_capacity {
 	 * for a single CPU.
 	 */
 	unsigned long capacity;
-	unsigned long max_capacity; /* Max per-cpu capacity in group */
+	unsigned long min_capacity; /* Min per-CPU capacity in group */
 	unsigned long next_update;
 	int imbalance; /* XXX unrelated to capacity but shared group state */
 
@@ -957,7 +952,7 @@ struct sched_group {
 
 	unsigned int group_weight;
 	struct sched_group_capacity *sgc;
-	const struct sched_group_energy const *sge;
+	int asym_prefer_cpu;		/* cpu of highest priority in group */
 
 	/*
 	 * The CPUs this group covers.
@@ -1547,8 +1542,6 @@ static inline void dec_nr_running(struct rq *rq)
 #endif
 }
 #endif
-
-extern void init_max_cpu_capacity(struct max_cpu_capacity *mcc);
 
 static inline void __add_nr_running(struct rq *rq, unsigned count)
 {
