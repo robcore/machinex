@@ -310,8 +310,6 @@ void __init init_cpu_topology(void)
 	}
 	smp_wmb();
 
-	parse_dt_topology();
-
 	/* Set scheduler topology descriptor */
 	set_sched_topology(arm_topology);
 }
