@@ -1,1 +1,0 @@
-nicer find /root/machinex -type f -exec grep -rl 'cpufreq_update_util\|cpufreq_update_this_cpu' '{}' \; | sort -d
