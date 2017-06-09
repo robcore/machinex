@@ -1633,9 +1633,6 @@ static int cpufreq_online(unsigned int cpu)
 			per_cpu(cpufreq_cpu_data, j) = policy;
 			add_cpu_dev_symlink(policy, j);
 		}
-		if (policy->user_policy.min != policy->curr_limit_min ||
-			policy->user_policy.max != policy->curr_limit_max)
-			reapply_hard_limits(policy->cpu);
 	} else {
 		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
@@ -3067,3 +3064,4 @@ static int __init cpufreq_core_init(void)
 }
 module_param(off, int, 0444);
 core_initcall(cpufreq_core_init);
+
