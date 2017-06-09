@@ -2678,6 +2678,10 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	policy->min = new_policy->min;
 	policy->max = new_policy->max;
 
+	if (policy->min != curr_limit_min ||
+		policy->max != curr_limit_max)
+		reapply_hard_limits(policy->cpu);		
+
 	policy->util_thres = new_policy->util_thres;
 
 	policy->cached_target_freq = UINT_MAX;

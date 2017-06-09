@@ -58,7 +58,6 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_control_mask = 0xe,
 };
 unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-unsigned long real_thermal_limit;
 extern unsigned int hlimit_max_screen_on;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
@@ -125,16 +124,12 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (ret)
 		return;
 
-	real_thermal_limit = max_freq;
+	cpufreq_verify_within_limits(&policy, check_cpufreq_hardlimit(policy.min), max_freq);
 
-	cpufreq_verify_within_limits(&policy, check_cpufreq_hardlimit(policy.min), real_thermal_limit);
-
-	limited_max_freq_thermal = real_thermal_limit;
-	if (real_thermal_limit != policy.hlimit_max_screen_on) {
+	limited_max_freq_thermal = max_freq;
+	if (max_freq != policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
-		for_each_online_cpu(cpu)
-			reapply_hard_limits(cpu);
 		therm_freq_limited = false;
 	}
 
@@ -220,7 +215,7 @@ static void __ref do_freq_control(long temp)
 	struct cpufreq_policy policy;
 	unsigned long max_freq = limited_max_freq_thermal;
 
-	real_thermal_limit = max_freq;
+	max_freq = max_freq;
 	if (!hotplug_ready)
 		return;
 
@@ -235,7 +230,7 @@ static void __ref do_freq_control(long temp)
 		limit_idx -= msm_thermal_info.freq_step;
 		if (limit_idx < limit_idx_low)
 			limit_idx = limit_idx_low;
-		real_thermal_limit = table[limit_idx].frequency;
+		max_freq = table[limit_idx].frequency;
 		therm_freq_limited = true;
 	} else if (temp < msm_thermal_info.limit_temp_degC -
 		 msm_thermal_info.temp_hysteresis_degC) {
@@ -245,14 +240,14 @@ static void __ref do_freq_control(long temp)
 		limit_idx += msm_thermal_info.freq_step;
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
-			real_thermal_limit = policy.hlimit_max_screen_on;
+			max_freq = policy.hlimit_max_screen_on;
 			therm_freq_limited = false;
 		} else
-			real_thermal_limit = table[limit_idx].frequency;
+			max_freq = table[limit_idx].frequency;
 			therm_freq_limited = true;
 	}
 
-	if (real_thermal_limit == limited_max_freq_thermal) {
+	if (max_freq == limited_max_freq_thermal) {
 		therm_freq_limited = true;
 		return;
 	}
@@ -260,7 +255,7 @@ static void __ref do_freq_control(long temp)
 	for_each_online_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
-		update_cpu_max_freq(cpu, real_thermal_limit);
+		update_cpu_max_freq(cpu, max_freq);
 		therm_freq_limited = true;
 	}
 
