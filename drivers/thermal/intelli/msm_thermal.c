@@ -124,6 +124,7 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (ret)
 		return;
 
+	reapply_hard_limits(cpu);
 	cpufreq_verify_within_limits(&policy, check_cpufreq_hardlimit(policy.min), max_freq);
 
 	limited_max_freq_thermal = max_freq;
