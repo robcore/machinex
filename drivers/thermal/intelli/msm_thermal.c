@@ -132,9 +132,12 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	if (ret)
 		return;
 
-	cpufreq_verify_within_limits(&policy, policy.min, max_freq);
-
 	limited_max_freq_thermal = max_freq;
+
+	reapply_hard_limits(cpu);
+
+	cpufreq_verify_within_limits(&policy, min, limited_max_freq_thermal);
+
 	if (max_freq != policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
@@ -142,14 +145,10 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	}
 
 	get_online_cpus();
-	for_each_online_cpu(cpu) {
-	ret = cpufreq_get_policy(&policy, cpu);
-	if (ret)
-		continue;
 	cpufreq_update_policy(cpu);
-	}
 	put_online_cpus();
 }
+
 extern bool hotplug_ready;
 static void __ref do_core_control(long temp)
 {
@@ -259,7 +258,7 @@ static void __ref do_freq_control(long temp)
 		return;
 	}
 
-	for_each_online_cpu(cpu) {
+	for_each_possible(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		update_cpu_max_freq(cpu, max_freq);
@@ -299,8 +298,8 @@ static void __ref check_temp(struct work_struct *work)
 			limit_init = 1;
 	}
 
-	do_core_control(temp);
 	do_freq_control(temp);
+	do_core_control(temp);
 reschedule:
 	if (enabled)
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
@@ -352,7 +351,7 @@ static void __ref disable_msm_thermal(void)
 	if (limited_max_freq_thermal == policy.hlimit_max_screen_on)
 		return;
 
-	for_each_online_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		update_cpu_max_freq(cpu, policy.hlimit_max_screen_on);
 	}
 }

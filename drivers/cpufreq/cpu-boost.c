@@ -31,7 +31,7 @@ struct cpu_sync {
 	unsigned int input_boost_freq;
 };
 
-static DEFINE_PER_CPU(struct cpu_sync, sync_info);
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct delayed_work input_boost_work;
@@ -81,57 +81,13 @@ static const struct kernel_param_ops param_ops_input_boost_freq = {
 };
 module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
-/*
- * The CPUFREQ_ADJUST notifier is used to override the current policy min to
- * make sure policy min >= boost_min. The cpufreq framework then does the job
- * of enforcing the new policy.
- *
- * The sync kthread needs to run on the CPU in question to avoid deadlocks in
- * the wake up code. Achieve this by binding the thread to the respective
- * CPU. But a CPU going offline unbinds threads from that CPU. So, set it up
- * again each time the CPU comes back up. We can use CPUFREQ_START to figure
- * out a CPU is coming online instead of registering for hotplug notifiers.
- */
-static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
-				void *data)
-{
-	struct cpufreq_policy *policy = data;
-	unsigned int cpu = policy->cpu;
-	struct cpu_sync *s = &per_cpu(sync_info, cpu);
-	unsigned int ib_min = s->input_boost_min;
-
-	if (policy == NULL)
-		return NOTIFY_OK;
-
-	switch (val) {
-	case CPUFREQ_ADJUST:
-		if (input_boost_limit == policy->hlimit_min_screen_on)
-			break;
-
-		pr_debug("CPU%u policy min before boost: %u kHz\n",
-			 cpu, policy->min);
-		pr_debug("CPU%u boost min: %u kHz\n", cpu, ib_min);
-
-		cpufreq_verify_within_limits(policy, input_boost_limit, policy->max);
-
-		pr_debug("CPU%u policy min after boost: %u kHz\n",
-			 cpu, policy->min);
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block boost_adjust_nb = {
-	.notifier_call = boost_adjust_notify,
-};
-
 static void update_policy_online(unsigned int cpu)
 {
 	/* Nope just online
 	 */
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
+		reapply_hard_limits(cpu);
 		cpufreq_update_policy(cpu);
 	}
 	put_online_cpus();
@@ -145,7 +101,7 @@ static void do_input_boost_rem(struct work_struct *work)
 
 
 	/* Reset the input_boost_min for all CPUs in the system */
-	for_each_online_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		if (cpufreq_get_policy(&policy, cpu))
 			return;
 		i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
@@ -288,7 +244,6 @@ static int cpu_boost_init(void)
 		s->cpu = cpu;
 	}
 
-	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
 		pr_err("Cannot register cpuboost input handler.\n");

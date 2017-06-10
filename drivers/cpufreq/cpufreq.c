@@ -42,7 +42,7 @@ unsigned int hlimit_min_screen_off;
 static bool hardlimit_ready = false;
 unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-unsigned int current_screen_state     = CPUFREQ_HARDLIMIT_SCREEN_ON;
+unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 extern unsigned long limited_max_freq_thermal;
 
 static LIST_HEAD(cpufreq_policy_list);
