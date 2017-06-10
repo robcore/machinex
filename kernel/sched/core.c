@@ -2145,8 +2145,6 @@ static void try_to_wake_up_local(struct task_struct *p, struct rq_flags *rf)
 	if (!(p->state & TASK_NORMAL))
 		goto out;
 
-	trace_sched_waking(p);
-
 	if (!task_on_rq_queued(p)) {
 		if (p->in_iowait) {
 			delayacct_blkio_end();
@@ -3608,7 +3606,7 @@ asmlinkage __visible void __sched preempt_schedule_irq(void)
 	struct thread_info *ti;
 	enum ctx_state prev_state;
 
-	if (ti != NULL)
+	if (current_thread_info() != NULL)
 		ti = current_thread_info();
 
 	/* Catch callers which need to be fixed */
