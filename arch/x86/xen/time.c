@@ -11,8 +11,6 @@
 #include <linux/interrupt.h>
 #include <linux/clocksource.h>
 #include <linux/clockchips.h>
-#include <linux/kernel_stat.h>
-#include <linux/math64.h>
 #include <linux/gfp.h>
 
 #include <asm/pvclock.h>
@@ -376,8 +374,6 @@ static irqreturn_t xen_timer_interrupt(int irq, void *dev_id)
 		evt->event_handler(evt);
 		ret = IRQ_HANDLED;
 	}
-
-	do_stolen_accounting();
 
 	return ret;
 }
