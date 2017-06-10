@@ -5447,19 +5447,6 @@ static void migrate_tasks(struct rq *dead_rq, struct rq_flags *rf)
 	 */
 	rq->stop = NULL;
 
-	/* if there is one or more rt threads on the rq and if throttled,
-	 * we will deadlock in below loop. rt sched hrtimer have to run to
-	 * unthrottle the rt rq but irq is disabled in this context. Thus,
-	 * pick_next_task will not pick the rt task even if it is on the
-	 * runqueue. rq->nr_running never gets down to 1 and we will
-	 * loop forever here.
-	 * So we forcefully unthrottle the rt rq.
-	 */
-	unthrottle_rt_rq(rq);
-
-	/* Ensure any throttled groups are reachable by pick_next_task */
-//	unthrottle_offline_cfs_rqs(rq);
-
 	/*
 	 * put_prev_task() and pick_next_task() sched
 	 * class method both need to have an up-to-date
