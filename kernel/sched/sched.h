@@ -2228,13 +2228,6 @@ static inline void cpufreq_update_util(u64 time, unsigned int flags)
 	if (data)
 		data->func(data, time, flags);
 }
-static inline void cpufreq_update_this_cpu(struct rq *rq, unsigned int flags)
-{
-	if (cpu_of(rq) == smp_processor_id())
-		//cpufreq_update_util(rq, flags);
-		cpufreq_update_util(time, flags);
-}
-}
 #else
 static inline void cpufreq_update_util(u64 time, unsigned int flags) {}
 #endif /* CONFIG_CPU_FREQ */
