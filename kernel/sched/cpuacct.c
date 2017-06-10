@@ -240,30 +240,65 @@ static int cpuacct_percpu_seq_show(struct seq_file *m, void *V)
 	return __cpuacct_percpu_seq_show(m, CPUACCT_STAT_NSTATS);
 }
 
+static int cpuacct_all_seq_show(struct seq_file *m, void *V)
+{
+	struct cpuacct *ca = css_ca(seq_css(m));
+	int index;
+	int cpu;
+
+	seq_puts(m, "cpu");
+	for (index = 0; index < CPUACCT_STAT_NSTATS; index++)
+		seq_printf(m, " %s", cpuacct_stat_desc[index]);
+	seq_puts(m, "\n");
+
+	for_each_possible_cpu(cpu) {
+		struct cpuacct_usage *cpuusage = per_cpu_ptr(ca->cpuusage, cpu);
+
+		seq_printf(m, "%d", cpu);
+
+		for (index = 0; index < CPUACCT_STAT_NSTATS; index++) {
+#ifndef CONFIG_64BIT
+			/*
+			 * Take rq->lock to make 64-bit read safe on 32-bit
+			 * platforms.
+			 */
+			raw_spin_lock_irq(&cpu_rq(cpu)->lock);
+#endif
+
+			seq_printf(m, " %llu", cpuusage->usages[index]);
+
+#ifndef CONFIG_64BIT
+			raw_spin_unlock_irq(&cpu_rq(cpu)->lock);
+#endif
+		}
+		seq_puts(m, "\n");
+	}
+	return 0;
+}
+
 static int cpuacct_stats_show(struct seq_file *sf, void *v)
 {
 	struct cpuacct *ca = css_ca(seq_css(sf));
+	s64 val[CPUACCT_STAT_NSTATS];
 	int cpu;
-	s64 val = 0;
+	int stat;
 
+	memset(val, 0, sizeof(val));
 	for_each_possible_cpu(cpu) {
-		struct kernel_cpustat *kcpustat = per_cpu_ptr(ca->cpustat, cpu);
-		val += kcpustat->cpustat[CPUTIME_USER];
-		val += kcpustat->cpustat[CPUTIME_NICE];
-	}
-	val = nsec_to_clock_t(val);
-	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_USER], val);
+		u64 *cpustat = per_cpu_ptr(ca->cpustat, cpu)->cpustat;
 
-	val = 0;
-	for_each_possible_cpu(cpu) {
-		struct kernel_cpustat *kcpustat = per_cpu_ptr(ca->cpustat, cpu);
-		val += kcpustat->cpustat[CPUTIME_SYSTEM];
-		val += kcpustat->cpustat[CPUTIME_IRQ];
-		val += kcpustat->cpustat[CPUTIME_SOFTIRQ];
+		val[CPUACCT_STAT_USER]   += cpustat[CPUTIME_USER];
+		val[CPUACCT_STAT_USER]   += cpustat[CPUTIME_NICE];
+		val[CPUACCT_STAT_SYSTEM] += cpustat[CPUTIME_SYSTEM];
+		val[CPUACCT_STAT_SYSTEM] += cpustat[CPUTIME_IRQ];
+		val[CPUACCT_STAT_SYSTEM] += cpustat[CPUTIME_SOFTIRQ];
 	}
 
-	val = nsec_to_clock_t(val);
-	seq_printf(sf, "%s %lld\n", cpuacct_stat_desc[CPUACCT_STAT_SYSTEM], val);
+	for (stat = 0; stat < CPUACCT_STAT_NSTATS; stat++) {
+		seq_printf(sf, "%s %lld\n",
+			   cpuacct_stat_desc[stat],
+			   (long long)nsec_to_clock_t(val[stat]));
+	}
 
 	return 0;
 }
@@ -293,6 +328,10 @@ static struct cftype files[] = {
 	{
 		.name = "usage_percpu_sys",
 		.seq_show = cpuacct_percpu_sys_seq_show,
+	},
+	{
+		.name = "usage_all",
+		.seq_show = cpuacct_all_seq_show,
 	},
 	{
 		.name = "stat",
