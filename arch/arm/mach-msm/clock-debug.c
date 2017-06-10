@@ -414,17 +414,17 @@ static int clock_debug_print_clock(struct clk_lookup *cl)
 	if (!c || !c->prepare_count)
 		return 0;
 
-	pr_info("\t");
+	pr_debug("\t");
 	do {
 		if (c->vdd_class)
-			pr_cont("%s%s%s%s:%u:%u [%ld, %lu]", start,
+			pr_debug("%s%s%s%s:%u:%u [%ld, %lu]", start,
 					c->dbg_name,
 					dev ? ":" : "",
 					dev ? cl->dev_id : "",
 					c->prepare_count, c->count, c->rate,
 					c->vdd_class->cur_level);
 		else
-			pr_cont("%s%s%s%s:%u:%u [%ld]", start, c->dbg_name,
+			pr_debug("%s%s%s%s:%u:%u [%ld]", start, c->dbg_name,
 					dev ? ":" : "",
 					dev ? cl->dev_id : "",
 					c->prepare_count, c->count, c->rate);
@@ -432,7 +432,7 @@ static int clock_debug_print_clock(struct clk_lookup *cl)
 		dev = 0;
 	} while ((c = clk_get_parent(c)));
 
-	pr_cont("\n");
+	pr_debug("\n");
 
 	return 1;
 }
@@ -451,7 +451,7 @@ void clock_debug_print_enabled(void)
 	if (likely(!debug_suspend))
 		return;
 
-	pr_info("Enabled clocks:\n");
+	pr_debug("Enabled clocks:\n");
 	spin_lock_irqsave(&clk_list_lock, flags);
 	list_for_each_entry(table, &clk_list, node) {
 		for (i = 0; i < table->num_clocks; i++)
@@ -460,8 +460,8 @@ void clock_debug_print_enabled(void)
 	spin_unlock_irqrestore(&clk_list_lock, flags);
 
 	if (cnt)
-		pr_info("Enabled clock count: %d\n", cnt);
+		pr_debug("Enabled clock count: %d\n", cnt);
 	else
-		pr_info("No clocks enabled.\n");
+		pr_debug("No clocks enabled.\n");
 
 }
