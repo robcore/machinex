@@ -4552,7 +4552,6 @@ decay_load_missed(unsigned long load, unsigned long missed_updates, int idx)
  * @this_rq: The rq to update statistics for
  * @this_load: The current load
  * @pending_updates: The number of missed updates
- * @active: !0 for NOHZ_FULL
  *
  * Update rq->cpu_load[] statistics. This function is usually called every
  * scheduler tick (TICK_NSEC).
@@ -4581,12 +4580,12 @@ decay_load_missed(unsigned long load, unsigned long missed_updates, int idx)
  *   load[i]_n = (1 - 1/2^i)^n * load[i]_0
  *
  * see decay_load_misses(). For NOHZ_FULL we get to subtract and add the extra
- * term. See the @active paramter.
+ * term.
  */
-static void __cpu_load_update(struct rq *this_rq, unsigned long this_load,
-			      unsigned long pending_updates, int active)
+static void cpu_load_update(struct rq *this_rq, unsigned long this_load,
+			    unsigned long pending_updates)
 {
-	unsigned long __maybe_unused tickless_load = active ? this_rq->cpu_load[0] : 0;
+	unsigned long __maybe_unused tickless_load = this_rq->cpu_load[0];
 	int i, scale;
 
 	this_rq->nr_load_updates++;
@@ -4633,10 +4632,23 @@ static unsigned long weighted_cpuload(const int cpu)
 }
 
 #ifdef CONFIG_NO_HZ_COMMON
-static void __cpu_load_update_nohz(struct rq *this_rq,
-				   unsigned long curr_jiffies,
-				   unsigned long load,
-				   int active)
+/*
+ * There is no sane way to deal with nohz on smp when using jiffies because the
+ * cpu doing the jiffies update might drift wrt the cpu doing the jiffy reading
+ * causing off-by-one errors in observed deltas; {0,2} instead of {1,1}.
+ *
+ * Therefore we need to avoid the delta approach from the regular tick when
+ * possible since that would seriously skew the load calculation. This is why we
+ * use cpu_load_update_periodic() for CPUs out of nohz. However we'll rely on
+ * jiffies deltas for updates happening while in nohz mode (idle ticks, idle
+ * loop exit, nohz_idle_balance, nohz full exit...)
+ *
+ * This means we might still be one tick off for nohz periods.
+ */
+
+static void cpu_load_update_nohz(struct rq *this_rq,
+				 unsigned long curr_jiffies,
+				 unsigned long load)
 {
 	unsigned long pending_updates;
 
@@ -4648,22 +4660,9 @@ static void __cpu_load_update_nohz(struct rq *this_rq,
 		 * In the NOHZ_FULL case, we were non-idle, we should consider
 		 * its weighted load.
 		 */
-		__cpu_load_update(this_rq, load, pending_updates, active);
+		cpu_load_update(this_rq, load, pending_updates);
 	}
 }
-
-/*
- * There is no sane way to deal with nohz on smp when using jiffies because the
- * cpu doing the jiffies update might drift wrt the cpu doing the jiffy reading
- * causing off-by-one errors in observed deltas; {0,2} instead of {1,1}.
- *
- * Therefore we cannot use the delta approach from the regular tick since that
- * would seriously skew the load calculation. However we'll make do for those
- * updates happening while idle (nohz_idle_balance) or coming out of idle
- * (tick_nohz_idle_exit).
- *
- * This means we might still be one tick off for nohz periods.
- */
 
 /*
  * Called from nohz_idle_balance() to update the load ratings before doing the
@@ -4677,27 +4676,60 @@ static void cpu_load_update_idle(struct rq *this_rq)
 	if (weighted_cpuload(cpu_of(this_rq)))
 		return;
 
-	__cpu_load_update_nohz(this_rq, READ_ONCE(jiffies), 0, 0);
+	cpu_load_update_nohz(this_rq, READ_ONCE(jiffies), 0);
 }
 
 /*
- * Called from tick_nohz_idle_exit() -- try and fix up the ticks we missed.
+ * Record CPU load on nohz entry so we know the tickless load to account
+ * on nohz exit. cpu_load[0] happens then to be updated more frequently
+ * than other cpu_load[idx] but it should be fine as cpu_load readers
+ * shouldn't rely into synchronized cpu_load[*] updates.
  */
-void cpu_load_update_nohz(int active)
+void cpu_load_update_nohz_start(void)
 {
 	struct rq *this_rq = this_rq();
+
+	/*
+	 * This is all lockless but should be fine. If weighted_cpuload changes
+	 * concurrently we'll exit nohz. And cpu_load write can race with
+	 * cpu_load_update_idle() but both updater would be writing the same.
+	 */
+	this_rq->cpu_load[0] = weighted_cpuload(cpu_of(this_rq));
+}
+
+/*
+ * Account the tickless load in the end of a nohz frame.
+ */
+void cpu_load_update_nohz_stop(void)
+{
 	unsigned long curr_jiffies = READ_ONCE(jiffies);
-	unsigned long load = active ? weighted_cpuload(cpu_of(this_rq)) : 0;
+	struct rq *this_rq = this_rq();
+	unsigned long load;
 	struct rq_flags rf;
 
 	if (curr_jiffies == this_rq->last_load_update_tick)
 		return;
 
+	load = weighted_cpuload(cpu_of(this_rq));
 	rq_lock(this_rq, &rf);
-	__cpu_load_update_nohz(this_rq, curr_jiffies, load, active);
+	update_rq_clock(this_rq);
+	cpu_load_update_nohz(this_rq, curr_jiffies, load);
 	rq_unlock(this_rq, &rf);
 }
+#else /* !CONFIG_NO_HZ_COMMON */
+static inline void cpu_load_update_nohz(struct rq *this_rq,
+					unsigned long curr_jiffies,
+					unsigned long load) { }
 #endif /* CONFIG_NO_HZ_COMMON */
+
+static void cpu_load_update_periodic(struct rq *this_rq, unsigned long load)
+{
+#ifdef CONFIG_NO_HZ_COMMON
+	/* See the mess around cpu_load_update_nohz(). */
+	this_rq->last_load_update_tick = READ_ONCE(jiffies);
+#endif
+	cpu_load_update(this_rq, load, 1);
+}
 
 /*
  * Called from scheduler_tick()
@@ -4705,11 +4737,11 @@ void cpu_load_update_nohz(int active)
 void cpu_load_update_active(struct rq *this_rq)
 {
 	unsigned long load = weighted_cpuload(cpu_of(this_rq));
-	/*
-	 * See the mess around update_cpu_load_idle() / update_cpu_load_nohz().
-	 */
-	this_rq->last_load_update_tick = jiffies;
-	__cpu_load_update(this_rq, load, 1, 1);
+
+	if (tick_nohz_tick_stopped())
+		cpu_load_update_nohz(this_rq, READ_ONCE(jiffies), load);
+	else
+		cpu_load_update_periodic(this_rq, load);
 }
 
 /*
@@ -4743,6 +4775,16 @@ static unsigned long target_load(int cpu, int type)
 		return total;
 
 	return max(rq->cpu_load[type-1], total);
+}
+
+static unsigned long capacity_of(int cpu)
+{
+	return cpu_rq(cpu)->cpu_capacity;
+}
+
+static unsigned long capacity_orig_of(int cpu)
+{
+	return cpu_rq(cpu)->cpu_capacity_orig;
 }
 
 static unsigned long cpu_avg_load_per_task(int cpu)
@@ -4870,8 +4912,7 @@ static long effective_load(struct task_group *tg, int cpu, long wl, long wg)
 }
 #else
 
-static inline unsigned long effective_load(struct task_group *tg, int cpu,
-		unsigned long wl, unsigned long wg)
+static long effective_load(struct task_group *tg, int cpu, long wl, long wg)
 {
 	return wl;
 }

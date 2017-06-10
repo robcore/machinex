@@ -796,6 +796,7 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 	if (!ts->tick_stopped) {
 		nohz_balance_enter_idle(cpu);
 		calc_load_enter_idle();
+		cpu_load_update_nohz_start();
 
 		ts->last_tick = hrtimer_get_expires(&ts->sched_timer);
 		ts->tick_stopped = 1;
@@ -822,11 +823,11 @@ out:
 	return tick;
 }
 
-static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now, int active)
+static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now)
 {
 	/* Update jiffies first */
 	tick_do_update_jiffies64(now);
-	cpu_load_update_nohz(active);
+	cpu_load_update_nohz_stop();
 
 	/*
 	 * Clear the timer idle flag, so we avoid IPIs on remote queueing and
@@ -859,7 +860,7 @@ static void tick_nohz_full_update_tick(struct tick_sched *ts)
 	if (can_stop_full_tick(ts))
 		tick_nohz_stop_sched_tick(ts, ktime_get(), cpu);
 	else if (ts->tick_stopped)
-		tick_nohz_restart_sched_tick(ts, ktime_get(), 1);
+		tick_nohz_restart_sched_tick(ts, ktime_get());
 #endif
 }
 
@@ -1058,7 +1059,7 @@ void tick_nohz_idle_exit(void)
 		tick_nohz_stop_idle(ts, now);
 
 	if (ts->tick_stopped) {
-		tick_nohz_restart_sched_tick(ts, now, 0);
+		tick_nohz_restart_sched_tick(ts, now);
 		tick_nohz_account_idle_ticks(ts);
 	}
 
