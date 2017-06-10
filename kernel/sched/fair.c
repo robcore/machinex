@@ -3076,8 +3076,6 @@ static inline u64 cfs_rq_clock_task(struct cfs_rq *cfs_rq);
 static inline void cfs_rq_util_change(struct cfs_rq *cfs_rq)
 {
 	if (&this_rq()->cfs == cfs_rq) {
-		struct rq *rq = rq_of(cfs_rq);
-
 		/*
 		 * There are a few boundary cases this might miss but it should
 		 * get called often enough that that should (hopefully) not be
@@ -3094,7 +3092,7 @@ static inline void cfs_rq_util_change(struct cfs_rq *cfs_rq)
 		 *
 		 * See cpu_util().
 		 */
-		cpufreq_update_util(rq_clock(rq), 0);
+		cpufreq_update_util(rq_of(cfs_rq), 0);
 	}
 }
 
@@ -3341,10 +3339,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 
 static inline void update_load_avg(struct sched_entity *se, int not_used1)
 {
-	struct cfs_rq *cfs_rq = cfs_rq_of(se);
-	struct rq *rq = rq_of(cfs_rq);
-
-	cpufreq_update_util(rq_clock(rq), 0);
+	cpufreq_update_util(rq_of(cfs_rq_of(se)), 0);
 }
 
 static inline void
