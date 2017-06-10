@@ -828,8 +828,7 @@ void post_init_entity_util_avg(struct sched_entity *se)
 		}
 	}
 
-	attach_entity_load_avg(cfs_rq, se);
-	update_tg_load_avg(cfs_rq, false);
+	attach_entity_cfs_rq(se);
 }
 
 #else /* !CONFIG_SMP */
