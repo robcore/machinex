@@ -122,27 +122,29 @@ fail:
 	return ret;
 }
 
-static void update_cpu_max_freq(int cpu, unsigned long max_freq)
+static bool is_freq_limited(int cpu)
 {
+	int ret;
 	struct cpufreq_policy policy;
-	int ret = 0;
-	unsigned int min;
 
 	ret = cpufreq_get_policy(&policy, cpu);
 	if (ret)
-		return;
+		return ret;
 
-	limited_max_freq_thermal = max_freq;
-
-	reapply_hard_limits(cpu);
-
-	cpufreq_verify_within_limits(&policy, min, limited_max_freq_thermal);
-
-	if (max_freq != policy.hlimit_max_screen_on) {
+	if (limited_max_freq_thermal != policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;
 	}
+
+	return therm_freq_limited;
+}
+
+static void update_cpu_max_freq(int cpu, unsigned long max_freq)
+{
+	limited_max_freq_thermal = max_freq;
+
+	reapply_hard_limits(cpu);
 
 	get_online_cpus();
 	cpufreq_update_policy(cpu);
@@ -237,7 +239,6 @@ static void __ref do_freq_control(long temp)
 		if (limit_idx < limit_idx_low)
 			limit_idx = limit_idx_low;
 		max_freq = table[limit_idx].frequency;
-		therm_freq_limited = true;
 	} else if (temp < msm_thermal_info.limit_temp_degC -
 		 msm_thermal_info.temp_hysteresis_degC) {
 		if (limit_idx == limit_idx_high)
@@ -247,22 +248,24 @@ static void __ref do_freq_control(long temp)
 		if (limit_idx >= limit_idx_high) {
 			limit_idx = limit_idx_high;
 			max_freq = policy.hlimit_max_screen_on;
-			therm_freq_limited = false;
 		} else
 			max_freq = table[limit_idx].frequency;
-			therm_freq_limited = true;
 	}
 
 	if (max_freq == limited_max_freq_thermal) {
-		therm_freq_limited = true;
-		return;
+		for_each_possible_cpu(cpu) {
+			reapply_hard_limits(cpu);
+			get_online_cpus();
+			cpufreq_update_policy(cpu);
+			put_online_cpus();
+		}
+			return;
 	}
 
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		update_cpu_max_freq(cpu, max_freq);
-		therm_freq_limited = true;
 	}
 
 }
