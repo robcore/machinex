@@ -559,7 +559,7 @@ EXPORT_SYMBOL_GPL(cpufreq_disable_fast_switch);
 unsigned int cpufreq_driver_resolve_freq(struct cpufreq_policy *policy,
 					 unsigned int target_freq)
 {
-	target_freq = clamp_val(target_freq, policy->min, policy->max);
+	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
 	policy->cached_target_freq = target_freq;
 
 	if (cpufreq_driver->target_index) {
