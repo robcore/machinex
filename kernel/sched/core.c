@@ -255,8 +255,14 @@ void update_rq_clock(struct rq *rq)
 
 	lockdep_assert_held(&rq->lock);
 
-	if (rq->clock_skip_update & RQCF_ACT_SKIP)
+	if (rq->clock_update_flags & RQCF_ACT_SKIP)
 		return;
+
+#ifdef CONFIG_SCHED_DEBUG
+	if (sched_feat(WARN_DOUBLE_CLOCK))
+		SCHED_WARN_ON(rq->clock_update_flags & RQCF_UPDATED);
+	rq->clock_update_flags |= RQCF_UPDATED;
+#endif
 
 	delta = sched_clock_cpu(cpu_of(rq)) - rq->clock;
 	if (delta < 0)
@@ -3350,7 +3356,7 @@ static void __sched notrace __schedule(void)
 	rq_lock(rq, &rf);
 
 	/* Promote REQ to ACT */
-	rq->clock_skip_update <<= 1;
+	rq->clock_update_flags <<= 1;
 	update_rq_clock(rq);
 
 	switch_count = &prev->nivcsw;
@@ -3380,7 +3386,6 @@ static void __sched notrace __schedule(void)
 
 	next = pick_next_task(rq, prev, &rf);
 	clear_tsk_need_resched(prev);
-	rq->clock_skip_update = 0;
 
 	if (likely(prev != next)) {
 		rq->nr_switches++;
