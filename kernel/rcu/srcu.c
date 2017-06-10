@@ -22,7 +22,7 @@
  *	   Lai Jiangshan <laijs@cn.fujitsu.com>
  *
  * For detailed explanation of Read-Copy Update mechanism see -
- * 		Documentation/RCU/ *.txt
+ *		Documentation/RCU/ *.txt
  *
  */
 
@@ -62,17 +62,6 @@ static inline void rcu_batch_queue(struct rcu_batch *b, struct rcu_head *head)
 static inline bool rcu_batch_empty(struct rcu_batch *b)
 {
 	return b->tail == &b->head;
-}
-
-/*
- * Are all batches empty for the specified srcu_struct?
- */
-static inline bool rcu_all_batches_empty(struct srcu_struct *sp)
-{
-	return rcu_batch_empty(&sp->batch_done) &&
-	       rcu_batch_empty(&sp->batch_check1) &&
-	       rcu_batch_empty(&sp->batch_check0) &&
-	       rcu_batch_empty(&sp->batch_queue);
 }
 
 /*
@@ -254,8 +243,14 @@ static bool srcu_readers_active(struct srcu_struct *sp)
  * cleanup_srcu_struct - deconstruct a sleep-RCU structure
  * @sp: structure to clean up.
  *
- * Must invoke this after you are finished using a given srcu_struct that
- * was initialized via init_srcu_struct(), else you leak memory.
+ * Must invoke this only after you are finished using a given srcu_struct
+ * that was initialized via init_srcu_struct().  This code does some
+ * probabalistic checking, spotting late uses of srcu_read_lock(),
+ * synchronize_srcu(), synchronize_srcu_expedited(), and call_srcu().
+ * If any such late uses are detected, the per-CPU memory associated with
+ * the srcu_struct is simply leaked and WARN_ON() is invoked.  If the
+ * caller frees the srcu_struct itself, a use-after-free crash will likely
+ * ensue, but at least there will be a warning printed.
  */
 void cleanup_srcu_struct(struct srcu_struct *sp)
 {
@@ -630,9 +625,15 @@ static void srcu_reschedule(struct srcu_struct *sp)
 {
 	bool pending = true;
 
-	if (rcu_all_batches_empty(sp)) {
+	if (rcu_batch_empty(&sp->batch_done) &&
+	    rcu_batch_empty(&sp->batch_check1) &&
+	    rcu_batch_empty(&sp->batch_check0) &&
+	    rcu_batch_empty(&sp->batch_queue)) {
 		spin_lock_irq(&sp->queue_lock);
-		if (rcu_all_batches_empty(sp)) {
+		if (rcu_batch_empty(&sp->batch_done) &&
+		    rcu_batch_empty(&sp->batch_check1) &&
+		    rcu_batch_empty(&sp->batch_check0) &&
+		    rcu_batch_empty(&sp->batch_queue)) {
 			sp->running = false;
 			pending = false;
 		}

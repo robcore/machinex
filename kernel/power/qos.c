@@ -88,6 +88,7 @@ static struct pm_qos_object network_lat_pm_qos = {
 	.name = "network_latency",
 };
 
+
 static BLOCKING_NOTIFIER_HEAD(network_throughput_notifier);
 static struct pm_qos_constraints network_tput_constraints = {
 	.list = PLIST_HEAD_INIT(network_tput_constraints.list),
@@ -101,6 +102,7 @@ static struct pm_qos_object network_throughput_pm_qos = {
 	.constraints = &network_tput_constraints,
 	.name = "network_throughput",
 };
+
 
 static BLOCKING_NOTIFIER_HEAD(memory_bandwidth_notifier);
 static struct pm_qos_constraints memory_bw_constraints = {
@@ -116,32 +118,6 @@ static struct pm_qos_object memory_bandwidth_pm_qos = {
 	.name = "memory_bandwidth",
 };
 
-static BLOCKING_NOTIFIER_HEAD(cpu_dma_throughput_notifier);
-static struct pm_qos_constraints cpu_dma_tput_constraints = {
-	.list = PLIST_HEAD_INIT(cpu_dma_tput_constraints.list),
-	.target_value = PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE,
-	.default_value = PM_QOS_CPU_DMA_THROUGHPUT_DEFAULT_VALUE,
-	.type = PM_QOS_MAX,
-	.notifiers = &cpu_dma_throughput_notifier,
-};
-static struct pm_qos_object cpu_dma_throughput_pm_qos = {
-	.constraints = &cpu_dma_tput_constraints,
-	.name = "cpu_dma_throughput",
-};
-
-
-static BLOCKING_NOTIFIER_HEAD(dvfs_lat_notifier);
-static struct pm_qos_constraints dvfs_lat_constraints = {
-	.list = PLIST_HEAD_INIT(dvfs_lat_constraints.list),
-	.target_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.default_value = PM_QOS_DVFS_LAT_DEFAULT_VALUE,
-	.type = PM_QOS_MIN,
-	.notifiers = &dvfs_lat_notifier,
-};
-static struct pm_qos_object dvfs_lat_pm_qos = {
-	.constraints = &dvfs_lat_constraints,
-	.name = "dvfs_latency",
-};
 
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
@@ -149,8 +125,6 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&network_lat_pm_qos,
 	&network_throughput_pm_qos,
 	&memory_bandwidth_pm_qos,
-	&cpu_dma_throughput_pm_qos,
-	&dvfs_lat_pm_qos,
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
