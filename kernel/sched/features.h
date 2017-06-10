@@ -52,6 +52,11 @@ SCHED_FEAT(NONTASK_CAPACITY, true)
 SCHED_FEAT(TTWU_QUEUE, true)
 
 /*
+ * When doing wakeups, attempt to limit superfluous scans of the LLC domain.
+ */
+SCHED_FEAT(SIS_AVG_CPU, false)
+
+/*
  * Issue a WARN when we do multiple update_rq_clock() calls
  * in a single rq->lock section. Default disabled because the
  * annotations are not complete.
