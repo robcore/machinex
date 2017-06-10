@@ -2543,6 +2543,7 @@ static inline bool is_idle_task(const struct task_struct *p)
 	return p->pid == 0;
 }
 extern struct task_struct *curr_task(int cpu);
+extern void set_curr_task(int cpu, struct task_struct *p);
 
 void yield(void);
 
@@ -2951,7 +2952,6 @@ static inline unsigned long *end_of_stack(struct task_struct *p)
 
 #define SCHED_CPUFREQ_RT	(1U << 0)
 #define SCHED_CPUFREQ_DL	(1U << 1)
-#define SCHED_CPUFREQ_IOWAIT	(1U << 2)
 
 #define SCHED_CPUFREQ_RT_DL	(SCHED_CPUFREQ_RT | SCHED_CPUFREQ_DL)
 

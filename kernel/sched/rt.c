@@ -528,6 +528,21 @@ static void sched_rt_rq_dequeue(struct rt_rq *rt_rq)
 		dequeue_rt_entity(rt_se, 0);
 }
 
+int unthrottle_rt_rq(struct rq *rq)
+{
+	/* if requested from the migration task we will
+	 * unthrottle the rt rq.
+	 */
+	if (rq->rt.rt_throttled
+		&& current->sched_class == &stop_sched_class) {
+		rq->rt.rt_throttled = 0;
+		printk_deferred("sched: RT unthrottled for migration\n");
+		return 1;
+	}
+
+	return 0;
+}
+
 static inline int rt_rq_throttled(struct rt_rq *rt_rq)
 {
 	return rt_rq->rt_throttled && !rt_rq->rt_nr_boosted;
@@ -799,6 +814,9 @@ static void __enable_runtime(struct rq *rq)
 		rt_rq->rt_throttled = 0;
 		raw_spin_unlock(&rt_rq->rt_runtime_lock);
 		raw_spin_unlock(&rt_b->rt_runtime_lock);
+
+		/* Make rt_rq available for pick_next_task() */
+		sched_rt_rq_enqueue(rt_rq);
 	}
 }
 
@@ -929,8 +947,13 @@ static int sched_rt_runtime_exceeded(struct rt_rq *rt_rq)
 		 * but accrue some time due to boosting.
 		 */
 		if (likely(rt_b->rt_runtime)) {
+			static bool once = false;
+
 			rt_rq->rt_throttled = 1;
-			printk_deferred_once("sched: RT throttling activated\n");
+
+			if (!once) {
+				once = true;
+			}
 		} else {
 			/*
 			 * In case we did anyway, make it go away,
@@ -969,6 +992,7 @@ static void update_curr_rt(struct rq *rq)
 	/* Kick cpufreq (see the comment in kernel/sched/sched.h). */
 	if (cpu_of(rq) == smp_processor_id())
 		cpufreq_update_util(rq_clock(rq), SCHED_CPUFREQ_RT);
+
 
 	schedstat_set(curr->se.statistics.exec_max,
 		      max(curr->se.statistics.exec_max, delta_exec));
@@ -1526,6 +1550,15 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 		rt_rq = group_rt_rq(rt_se);
 	} while (rt_rq);
 
+	/*
+	 * Force update of rq->clock_task in case we failed to do so in
+	 * put_prev_task. A stale value can cause us to over-charge execution
+	 * time to real-time task, that could trigger throttling unnecessarily
+	 */
+	if (rq->clock_skip_update > 0)
+		rq->clock_skip_update = 0;
+
+	update_rq_clock(rq);
 	p = rt_task_of(rt_se);
 	p->se.exec_start = rq_clock_task(rq);
 
