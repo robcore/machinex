@@ -43,24 +43,6 @@ static inline int on_dl_rq(struct sched_dl_entity *dl_se)
 	return !RB_EMPTY_NODE(&dl_se->rb_node);
 }
 
-static void add_average_bw(struct sched_dl_entity *dl_se, struct dl_rq *dl_rq)
-{
-	u64 se_bw = dl_se->dl_bw;
-
-	dl_rq->avg_bw += se_bw;
-}
-
-static void clear_average_bw(struct sched_dl_entity *dl_se, struct dl_rq *dl_rq)
-{
-	u64 se_bw = dl_se->dl_bw;
-
-	dl_rq->avg_bw -= se_bw;
-	if (dl_rq->avg_bw < 0) {
-		WARN_ON(1);
-		dl_rq->avg_bw = 0;
-	}
-}
-
 static inline int is_leftmost(struct task_struct *p, struct dl_rq *dl_rq)
 {
 	struct sched_dl_entity *dl_se = &p->dl;
@@ -261,10 +243,8 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq);
 static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p)
 {
 	struct rq *later_rq = NULL;
-	bool fallback = false;
 
 	later_rq = find_lock_later_rq(p, rq);
-
 	if (!later_rq) {
 		int cpu;
 
@@ -272,7 +252,6 @@ static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p
 		 * If we cannot preempt any rq, fall back to pick any
 		 * online cpu.
 		 */
-		fallback = true;
 		cpu = cpumask_any_and(cpu_active_mask, &p->cpus_allowed);
 		if (cpu >= nr_cpu_ids) {
 			/*
@@ -292,16 +271,7 @@ static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p
 		double_lock_balance(rq, later_rq);
 	}
 
-	/*
-	 * By now the task is replenished and enqueued; migrate it.
-	 */
-	deactivate_task(rq, p, 0);
 	set_task_cpu(p, later_rq->cpu);
-	activate_task(later_rq, p, 0);
-
-	if (!fallback)
-		resched_curr(later_rq);
-
 	double_unlock_balance(later_rq, rq);
 
 	return later_rq;
@@ -371,8 +341,6 @@ static inline void setup_new_dl_entity(struct sched_dl_entity *dl_se)
 
 	WARN_ON(dl_se->dl_boosted);
 	WARN_ON(dl_time_before(rq_clock(rq), dl_se->deadline));
-
-	add_average_bw(dl_se, dl_rq);
 
 	/*
 	 * We are racing with the deadline timer. So, do nothing because
@@ -1098,7 +1066,7 @@ select_task_rq_dl(struct task_struct *p, int cpu, int sd_flag, int flags)
 	struct task_struct *curr;
 	struct rq *rq;
 
-	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
+	if (sd_flag != SD_BALANCE_WAKE)
 		goto out;
 
 	rq = cpu_rq(cpu);
@@ -1236,11 +1204,6 @@ pick_next_task_dl(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	if (prev->sched_class == &dl_sched_class)
 		update_curr_dl(rq);
 
-#ifdef CONFIG_SMP
-	if (dl_task(prev))
-		pull_dl_task(rq);
-#endif
-
 	if (unlikely(!dl_rq->dl_nr_running))
 		return NULL;
 
@@ -1295,13 +1258,7 @@ static void task_fork_dl(struct task_struct *p)
 
 static void task_dead_dl(struct task_struct *p)
 {
-#ifdef CONFIG_SMP
-	struct dl_bw *dl_b = &task_rq(p)->rd->dl_bw;
-#else
-	struct dl_bw *dl_b = &task_rq(p)->dl.dl_bw;
-#endif
-	struct dl_rq *dl_rq = dl_rq_of_se(&p->dl);
-	struct rq *rq = rq_of_dl_rq(dl_rq);
+	struct dl_bw *dl_b = dl_bw_of(task_cpu(p));
 
 	/*
 	 * Since we are TASK_DEAD we won't slip out of the domain!
@@ -1310,8 +1267,6 @@ static void task_dead_dl(struct task_struct *p)
 	/* XXX we should retain the bw until 0-lag */
 	dl_b->total_bw -= p->dl.dl_bw;
 	raw_spin_unlock_irq(&dl_b->lock);
-
-	clear_average_bw(&p->dl, &rq->dl);
 }
 
 static void set_curr_task_dl(struct rq *rq)
@@ -1383,9 +1338,6 @@ static int find_later_rq(struct task_struct *task)
 	 * We have to consider system topology and task affinity
 	 * first, then we can look for a suitable cpu.
 	 */
-	cpumask_copy(later_mask, task_rq(task)->rd->span);
-	cpumask_and(later_mask, later_mask, cpu_active_mask);
-	cpumask_and(later_mask, later_mask, &task->cpus_allowed);
 	best_cpu = cpudl_find(&task_rq(task)->rd->cpudl,
 			task, later_mask);
 	if (best_cpu == -1)
@@ -1600,9 +1552,7 @@ retry:
 	}
 
 	deactivate_task(rq, next_task, 0);
-	clear_average_bw(&next_task->dl, &rq->dl);
 	set_task_cpu(next_task, later_rq->cpu);
-	add_average_bw(&next_task->dl, &later_rq->dl);
 	activate_task(later_rq, next_task, 0);
 	ret = 1;
 
@@ -1690,9 +1640,7 @@ static void pull_dl_task(struct rq *this_rq)
 			resched = true;
 
 			deactivate_task(src_rq, p, 0);
-			clear_average_bw(&p->dl, &src_rq->dl);
 			set_task_cpu(p, this_cpu);
-			add_average_bw(&p->dl, &this_rq->dl);
 			activate_task(this_rq, p, 0);
 			dmin = p->dl.deadline;
 
@@ -1729,6 +1677,28 @@ static void set_cpus_allowed_dl(struct task_struct *p,
 	struct rq *rq;
 
 	BUG_ON(!dl_task(p));
+
+	rq = task_rq(p);
+	src_rd = rq->rd;
+	/*
+	 * Migrating a SCHED_DEADLINE task between exclusive
+	 * cpusets (different root_domains) entails a bandwidth
+	 * update. We already made space for us in the destination
+	 * domain (see cpuset_can_attach()).
+	 */
+	if (!cpumask_intersects(src_rd->span, new_mask)) {
+		struct dl_bw *src_dl_b;
+
+		src_dl_b = dl_bw_of(cpu_of(rq));
+		/*
+		 * We now free resources of the root_domain we are migrating
+		 * off. In the worst case, sched_setattr() may temporary fail
+		 * until we complete the update.
+		 */
+		raw_spin_lock(&src_dl_b->lock);
+		__dl_clear(src_dl_b, p->dl.dl_bw);
+		raw_spin_unlock(&src_dl_b->lock);
+	}
 
 	set_cpus_allowed_common(p, new_mask);
 }
@@ -1776,8 +1746,6 @@ static void switched_from_dl(struct rq *rq, struct task_struct *p)
 	if (!start_dl_timer(p))
 		__dl_clear_params(p);
 
-	clear_average_bw(&p->dl, &rq->dl);
-
 	/*
 	 * Since this might be the only -deadline task on the rq,
 	 * this is the right place to try to pull some other one
@@ -1795,7 +1763,6 @@ static void switched_from_dl(struct rq *rq, struct task_struct *p)
  */
 static void switched_to_dl(struct rq *rq, struct task_struct *p)
 {
-	int check_resched = 1;
 
 	/* If p is not queued we will update its parameters at next wakeup. */
 	if (!task_on_rq_queued(p))
