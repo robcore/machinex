@@ -258,7 +258,7 @@ static void __ref do_freq_control(long temp)
 		return;
 	}
 
-	for_each_possible(cpu) {
+	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		update_cpu_max_freq(cpu, max_freq);
