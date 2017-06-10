@@ -2400,7 +2400,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 		return -ENODEV;
 
 	/* Make sure that target_freq is within supported range */
-	target_freq = clamp_val(target_freq, policy->min, policy->max);
+	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
 
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 		 policy->cpu, target_freq, relation, old_target_freq);
@@ -2752,7 +2752,7 @@ void cpufreq_update_policy(unsigned int cpu)
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	struct cpufreq_policy new_policy;
 
-	if (!policy)
+	if (policy == NULL)
 		return;
 
 	down_write(&policy->rwsem);
