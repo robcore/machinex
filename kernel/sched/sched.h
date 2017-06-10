@@ -412,6 +412,7 @@ struct cfs_rq {
 	u32 tg_usage_contrib;
 	unsigned long tg_load_contrib;
 	unsigned long tg_load_avg_contrib;
+	unsigned long propagate_avg;
 #endif
 	atomic_long_t removed_load_avg, removed_util_avg;
 #ifndef CONFIG_64BIT
