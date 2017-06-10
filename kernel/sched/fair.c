@@ -849,19 +849,6 @@ static void update_tg_load_avg(struct cfs_rq *cfs_rq, int force)
 /*
  * Update the current task's runtime statistics.
  */
-static inline void
-__update_curr(struct cfs_rq *cfs_rq, struct sched_entity *curr,
-	      unsigned long delta_exec)
-{
-	unsigned long delta_exec_weighted;
-
-	curr->sum_exec_runtime += delta_exec;
-	delta_exec_weighted = calc_delta_fair(delta_exec, curr);
-
-	curr->vruntime += delta_exec_weighted;
-	update_min_vruntime(cfs_rq);
-}
-
 static void update_curr(struct cfs_rq *cfs_rq)
 {
 	struct sched_entity *curr = cfs_rq->curr;
@@ -3141,6 +3128,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 		sub_positive(&sa->load_avg, r);
 		sub_positive(&sa->load_sum, r * LOAD_AVG_MAX);
 		removed_load = 1;
+		set_tg_cfs_propagate(cfs_rq);
 	}
 
 	if (atomic_long_read(&cfs_rq->removed_util_avg)) {
@@ -3148,6 +3136,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 		sub_positive(&sa->util_avg, r);
 		sub_positive(&sa->util_sum, r * LOAD_AVG_MAX);
 		removed_util = 1;
+		set_tg_cfs_propagate(cfs_rq);
 	}
 
 	decayed = __update_load_avg_cfs_rq(now, cpu_of(rq_of(cfs_rq)), cfs_rq);
@@ -4656,8 +4645,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
-	int task_new = flags & ENQUEUE_WAKEUP_NEW;
-	int task_wakeup = flags & ENQUEUE_WAKEUP;
 
 	/*
 	 * If in_iowait is set, the code below may not trigger any cpufreq
@@ -5207,11 +5194,6 @@ static long effective_load(struct task_group *tg, int cpu, long wl, long wg)
 }
 
 #endif
-
-static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
-{
-	return cpu != -1 && cpumask_test_cpu(cpu, sched_group_cpus(sg));
-}
 
 static void record_wakee(struct task_struct *p)
 {
