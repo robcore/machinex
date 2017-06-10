@@ -82,7 +82,7 @@ EXPORT_SYMBOL(avg_cpu_nr_running);
  *
  *   nr_active = 0;
  *   for_each_possible_cpu(cpu)
- *   	nr_active += cpu_of(cpu)->nr_running + cpu_of(cpu)->nr_uninterruptible;
+ *	nr_active += cpu_of(cpu)->nr_running + cpu_of(cpu)->nr_uninterruptible;
  *
  *   avenrun[n] = avenrun[0] * exp_n + nr_active * (1 - exp_n)
  *
@@ -158,7 +158,6 @@ long calc_load_fold_active(struct rq *this_rq, long adjust)
 static unsigned long
 calc_load(unsigned long load, unsigned long exp, unsigned long active)
 {
-
 	unsigned long newload;
 
 	newload = load * exp + active * (FIXED_1 - exp);
@@ -166,12 +165,6 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 		newload += FIXED_1-1;
 
 	return newload / FIXED_1;
-#if 0
-	load *= exp;
-	load += active * (FIXED_1 - exp);
-	load += 1UL << (FSHIFT - 1);
-	return load >> FSHIFT;
-#endif
 }
 
 #ifdef CONFIG_NO_HZ_COMMON
@@ -257,6 +250,7 @@ void calc_load_enter_idle(void)
 	delta = calc_load_fold_active(this_rq, 0);
 	if (delta) {
 		int idx = calc_load_write_idx();
+
 		atomic_long_add(delta, &calc_load_idle[idx]);
 	}
 }
