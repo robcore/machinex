@@ -5235,7 +5235,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 
 	return 1;
 }
-
+static inline int task_util(struct task_struct *p);
 /*
  * find_idlest_group finds and returns the least busy CPU group within the
  * domain.
@@ -5444,6 +5444,11 @@ done:
 	return target;
 }
 
+static inline int task_util(struct task_struct *p)
+{
+	return p->se.avg.util_avg;
+}
+
 /*
  * select_task_rq_fair: Select target runqueue for the waking task in domains
  * that have the 'sd_flag' flag set. In practice, this is SD_BALANCE_WAKE,
@@ -5467,8 +5472,8 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 
 	if (sd_flag & SD_BALANCE_WAKE) {
 		record_wakee(p);
-		want_affine = (!wake_wide(p) &&
-			      cpumask_test_cpu(cpu, &p->cpus_allowed));
+		want_affine = !wake_wide(p) && !wake_cap(p, cpu, prev_cpu)
+			      && cpumask_test_cpu(cpu, &p->cpus_allowed);
 	}
 
 	rcu_read_lock();
