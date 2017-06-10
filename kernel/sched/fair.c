@@ -2803,20 +2803,21 @@ static inline int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 {
 	struct sched_avg *sa = &cfs_rq->avg;
 	struct rq *rq = rq_of(cfs_rq);
-	int decayed, removed = 0;
+	int decayed, removed_load = 0, removed_util = 0;
 	int cpu = cpu_of(rq);
 
 	if (atomic_long_read(&cfs_rq->removed_load_avg)) {
 		s64 r = atomic_long_xchg(&cfs_rq->removed_load_avg, 0);
 		sub_positive(&sa->load_avg, r);
 		sub_positive(&sa->load_sum, r * LOAD_AVG_MAX);
-		removed = 1;
+		removed_load = 1;
 	}
 
 	if (atomic_long_read(&cfs_rq->removed_util_avg)) {
 		long r = atomic_long_xchg(&cfs_rq->removed_util_avg, 0);
 		sub_positive(&sa->util_avg, r);
 		sub_positive(&sa->util_sum, r * LOAD_AVG_MAX);
+		removed_util = 1;
 	}
 
 	decayed = __update_load_avg(now, cpu, sa,
@@ -2827,7 +2828,8 @@ static inline int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 	cfs_rq->load_last_update_time_copy = sa->last_update_time;
 #endif
 
-	if (cpu == smp_processor_id() && &rq->cfs == cfs_rq) {
+	if (cpu == smp_processor_id() && &rq->cfs == cfs_rq &&
+	    (decayed || removed_util)) {
 		unsigned long max = rq->cpu_capacity_orig;
 
 		/*
@@ -2849,7 +2851,7 @@ static inline int update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 		cpufreq_update_util(rq_clock(rq), 0);
 	}
 
-	return decayed || removed;
+	return decayed || removed_load;
 }
 
 /* Update task and its cfs_rq load average */
