@@ -826,7 +826,7 @@ static void tick_nohz_restart_sched_tick(struct tick_sched *ts, ktime_t now, int
 {
 	/* Update jiffies first */
 	tick_do_update_jiffies64(now);
-	update_cpu_load_nohz(active);
+	cpu_load_update_nohz(active);
 
 	/*
 	 * Clear the timer idle flag, so we avoid IPIs on remote queueing and
