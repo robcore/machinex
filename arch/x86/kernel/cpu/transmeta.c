@@ -1,4 +1,5 @@
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/init.h>
 #include <asm/processor.h>
@@ -15,6 +16,8 @@ static void early_init_transmeta(struct cpuinfo_x86 *c)
 		if (xlvl >= 0x80860001)
 			c->x86_capability[2] = cpuid_edx(0x80860001);
 	}
+
+	clear_sched_clock_stable();
 }
 
 static void init_transmeta(struct cpuinfo_x86 *c)
