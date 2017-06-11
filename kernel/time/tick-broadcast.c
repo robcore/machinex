@@ -736,7 +736,7 @@ int __tick_broadcast_oneshot_control(enum tick_broadcast_state state)
 			goto out;
 		}
 
-		if (!cpumask_test_cpu(cpu, tick_get_broadcast_oneshot_mask())) {
+		if (!cpumask_test_and_set_cpu(cpu, tick_broadcast_oneshot_mask)) {
 			WARN_ON_ONCE(cpumask_test_cpu(cpu, tick_broadcast_pending_mask));
 
 			/* Conditionally shut down the local timer. */
