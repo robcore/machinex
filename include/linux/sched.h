@@ -962,14 +962,14 @@ enum cpu_idle_type {
  * We define a basic fixed point arithmetic range, and then formalize
  * all these metrics based on that basic range.
  */
-# define SCHED_FIXEDPOINT_SHIFT	1
+# define SCHED_FIXEDPOINT_SHIFT	10
 # define SCHED_FIXEDPOINT_SCALE	(1L << SCHED_FIXEDPOINT_SHIFT)
 
 /*
  * Increase resolution of cpu_capacity calculations
  */
 #define SCHED_CAPACITY_SHIFT	SCHED_FIXEDPOINT_SHIFT
-#define SCHED_CAPACITY_SCALE	1056
+#define SCHED_CAPACITY_SCALE	(1L << SCHED_CAPACITY_SHIFT)
 
 struct sched_capacity_reqs {
 	unsigned long cfs;
