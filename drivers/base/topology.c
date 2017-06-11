@@ -82,6 +82,14 @@ define_one_ro_named(book_siblings, show_book_cpumask);
 define_one_ro_named(book_siblings_list, show_book_cpumask_list);
 #endif
 
+#ifdef CONFIG_SCHED_DRAWER
+define_id_show_func(drawer_id);
+static DEVICE_ATTR_RO(drawer_id);
+define_siblings_show_func(drawer_siblings, drawer_cpumask);
+static DEVICE_ATTR_RO(drawer_siblings);
+static DEVICE_ATTR_RO(drawer_siblings_list);
+#endif
+
 static struct attribute *default_attrs[] = {
 	&dev_attr_physical_package_id.attr,
 	&dev_attr_core_id.attr,
@@ -93,6 +101,11 @@ static struct attribute *default_attrs[] = {
 	&dev_attr_book_id.attr,
 	&dev_attr_book_siblings.attr,
 	&dev_attr_book_siblings_list.attr,
+#endif
+#ifdef CONFIG_SCHED_DRAWER
+	&dev_attr_drawer_id.attr,
+	&dev_attr_drawer_siblings.attr,
+	&dev_attr_drawer_siblings_list.attr,
 #endif
 	NULL
 };
