@@ -63,7 +63,7 @@ EXPORT_SYMBOL(rcu_barrier_sched);
 /*
  * Test whether RCU thinks that the current CPU is idle.
  */
-bool __rcu_is_watching(void)
+bool notrace __rcu_is_watching(void)
 {
 	return true;
 }

@@ -55,7 +55,7 @@ DEFINE_PER_CPU(char, rcu_cpu_has_work);
  */
 #define rt_mutex_owner(a) ({ WARN_ON_ONCE(1); NULL; })
 
-#endif /* CONFIG_RCU_BOOST */
+#endif /* #else #ifdef CONFIG_RCU_BOOST */
 
 #ifdef CONFIG_RCU_NOCB_CPU
 static cpumask_var_t rcu_nocb_mask; /* CPUs to have callbacks offloaded. */
@@ -1244,7 +1244,7 @@ static void rcu_prepare_kthreads(int cpu)
 
 #endif /* #else #ifdef CONFIG_RCU_BOOST */
 
-#ifndef CONFIG_RCU_FAST_NO_HZ
+#if !defined(CONFIG_RCU_FAST_NO_HZ)
 
 /*
  * Check to see if any future RCU-related work will need to be done
@@ -1255,19 +1255,11 @@ static void rcu_prepare_kthreads(int cpu)
  * Because we not have RCU_FAST_NO_HZ, just check whether this CPU needs
  * any flavor of RCU.
  */
-#ifndef CONFIG_RCU_NOCB_CPU_ALL
 int rcu_needs_cpu(u64 basemono, u64 *nextevt)
 {
 	*nextevt = KTIME_MAX;
-	return rcu_cpu_has_callbacks(NULL);
-}
-#endif /* #ifndef CONFIG_RCU_NOCB_CPU_ALL */
-
-/*
- * Because we do not have RCU_FAST_NO_HZ, don't bother initializing for it.
- */
-static void rcu_prepare_for_idle_init(int cpu)
-{
+	return IS_ENABLED(CONFIG_RCU_NOCB_CPU_ALL)
+	       ? 0 : rcu_cpu_has_callbacks(NULL);
 }
 
 /*
@@ -1283,6 +1275,14 @@ static void rcu_cleanup_after_idle(void)
  * is nothing.
  */
 static void rcu_prepare_for_idle(void)
+{
+}
+
+/*
+ * Don't bother keeping a running count of the number of RCU callbacks
+ * posted because CONFIG_RCU_FAST_NO_HZ=n.
+ */
+static void rcu_idle_count_callbacks_posted(void)
 {
 }
 
@@ -1369,11 +1369,10 @@ static bool __maybe_unused rcu_try_advance_all_cbs(void)
  *
  * The caller must have disabled interrupts.
  */
-#ifndef CONFIG_RCU_NOCB_CPU_ALL
 int rcu_needs_cpu(u64 basemono, u64 *nextevt)
 {
-	unsigned long dj;
 	struct rcu_dynticks *rdtp = this_cpu_ptr(&rcu_dynticks);
+	unsigned long dj;
 
 	if (IS_ENABLED(CONFIG_RCU_NOCB_CPU_ALL)) {
 		*nextevt = KTIME_MAX;
@@ -1407,7 +1406,6 @@ int rcu_needs_cpu(u64 basemono, u64 *nextevt)
 	*nextevt = basemono + dj * TICK_NSEC;
 	return 0;
 }
-#endif /* #ifndef CONFIG_RCU_NOCB_CPU_ALL */
 
 /*
  * Prepare a CPU for idle from an RCU perspective.  The first major task
@@ -1894,6 +1892,16 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 	if (!rcu_is_nocb_cpu(rdp->cpu))
 		return false;
 	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy, flags);
+
+	/*
+	 * If called from an extended quiescent state with interrupts
+	 * disabled, invoke the RCU core in order to allow the idle-entry
+	 * deferred-wakeup check to function.
+	 */
+	if (irqs_disabled_flags(flags) &&
+	    !rcu_is_watching() &&
+	    cpu_online(smp_processor_id()))
+		invoke_rcu_core();
 	return true;
 }
 
