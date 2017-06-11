@@ -71,6 +71,14 @@ check_stack(unsigned long ip, unsigned long *stack)
 	if (!object_is_on_stack(stack))
 		return;
 
+	/*
+	 * There's a slight chance that we are tracing inside the
+	 * RCU infrastructure, and rcu_irq_enter() will not work
+	 * as expected.
+	 */
+	if (unlikely(rcu_irq_enter_disabled()))
+		return;
+
 	local_irq_save(flags);
 	arch_spin_lock(&max_stack_lock);
 
