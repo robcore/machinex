@@ -47,18 +47,18 @@ int read_current_timer(unsigned long *timer_val)
 	*timer_val = delay_timer->read_current_timer();
 	return 0;
 }
+EXPORT_SYMBOL_GPL(read_current_timer);
 
 static inline u64 cyc_to_ns(u64 cyc, u32 mult, u32 shift)
 {
 	return (cyc * mult) >> shift;
 }
-EXPORT_SYMBOL_GPL(read_current_timer);
 
 static void __timer_delay(unsigned long cycles)
 {
 	cycles_t start = get_cycles();
 
-	while ((get_cycles() - start) <= cycles)
+	while ((get_cycles() - start) < cycles)
 		cpu_relax();
 }
 
