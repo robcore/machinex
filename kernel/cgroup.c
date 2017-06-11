@@ -4569,6 +4569,12 @@ int __init cgroup_init(void)
 
 	cgroup_init_cftypes(NULL, cgroup_base_files);
 
+	/*
+	 * The latency of the synchronize_sched() is too high for cgroups,
+	 * avoid it at the cost of forcing all readers into the slow path.
+	 */
+	//rcu_sync_enter_start(&cgroup_threadgroup_rwsem.rss);
+
 	for_each_subsys(ss, i) {
 		if (!ss->early_init)
 			cgroup_init_subsys(ss);
