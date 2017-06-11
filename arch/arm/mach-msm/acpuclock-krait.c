@@ -1395,6 +1395,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	else if (policy->cpu == 3)
 		cpu = 3;
 
+	mx_freq_table = machinex_freq_table(policy, cpu);
+
 	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
 	if (ret) {
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
