@@ -969,7 +969,7 @@ enum cpu_idle_type {
  * Increase resolution of cpu_capacity calculations
  */
 #define SCHED_CAPACITY_SHIFT	SCHED_FIXEDPOINT_SHIFT
-#define SCHED_CAPACITY_SCALE	1053
+#define SCHED_CAPACITY_SCALE	(1L << SCHED_CAPACITY_SHIFT)
 
 struct sched_capacity_reqs {
 	unsigned long cfs;
