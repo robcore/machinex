@@ -1374,6 +1374,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	int cpu;
 
+	policy->cpuinfo.transition_latency = 100000;
+
 	if (policy->cpu > NR_CPUS) {
 		ret = -EINVAL;
 		goto out;
