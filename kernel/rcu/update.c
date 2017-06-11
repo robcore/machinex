@@ -131,6 +131,7 @@ bool rcu_gp_is_normal(void)
 	return READ_ONCE(rcu_normal) &&
 	       rcu_scheduler_active != RCU_SCHEDULER_INIT;
 }
+EXPORT_SYMBOL_GPL(rcu_gp_is_normal);
 
 static atomic_t rcu_expedited_nesting = ATOMIC_INIT(1);
 
