@@ -1044,6 +1044,7 @@ static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 static struct cpufreq_frequency_table *
 machinex_freq_table(const struct cpufreq_policy *policy)
 {
+	int cpu;
 	for_each_possible_cpu(cpu) {
 		int i, freq_cnt = 0;
 		/* Construct the freq_table tables from freq_table. */
