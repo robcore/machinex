@@ -135,7 +135,7 @@ unsigned int sysctl_sched_cfs_bandwidth_slice = 5000UL;
  *
  * (default: ~20%)
  */
-unsigned int capacity_margin				= 1280;
+unsigned int capacity_margin				= 1053;//1280;
 
 static inline void update_load_add(struct load_weight *lw, unsigned long inc)
 {
@@ -1353,7 +1353,7 @@ static void update_numa_stats(struct numa_stats *ns, int nid)
 	if (!cpus)
 		return;
 
-	/* smt := ceil(cpus / capacity), assumes: 1 < smt_capacity < 2 */
+	/* smt := ceil(cpus / capacity), assumes: 1 < smt_power < 2 */
 	smt = DIV_ROUND_UP(SCHED_CAPACITY_SCALE * cpus, ns->compute_capacity);
 	capacity = cpus / smt; /* cores */
 

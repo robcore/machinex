@@ -42,7 +42,7 @@
  */
 static DEFINE_PER_CPU_SHARED_ALIGNED(unsigned long, cpu_scale) = SCHED_CAPACITY_SCALE;
 
-unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
+unsigned long arch_scale_cpu_capacity(struct sched_domain *sd, int cpu)
 {
 	return per_cpu(cpu_scale, cpu);
 }
@@ -100,6 +100,12 @@ static void __init parse_dt_topology(void)
 	__cpu_capacity = kcalloc(nr_cpu_ids, sizeof(*__cpu_capacity),
 				 GFP_NOWAIT);
 
+	cn = of_find_node_by_path("/cpus");
+	if (!cn) {
+		pr_err("No CPU information found in DT\n");
+		return;
+	}
+
 	for_each_possible_cpu(cpu) {
 		const u32 *rate;
 		int len;
@@ -110,6 +116,13 @@ static void __init parse_dt_topology(void)
 			pr_err("missing device node for CPU %d\n", cpu);
 			continue;
 		}
+
+		if (parse_cpu_capacity(cn, cpu)) {
+			of_node_put(cn);
+			continue;
+		}
+
+		cap_from_dt = false;
 
 		for (cpu_eff = table_efficiency; cpu_eff->compatible; cpu_eff++)
 			if (of_device_is_compatible(cn, cpu_eff->compatible))
@@ -152,6 +165,8 @@ static void __init parse_dt_topology(void)
 		middle_capacity = ((max_capacity / 3)
 				>> (SCHED_CAPACITY_SHIFT-1)) + 1;
 
+	if (cap_from_dt && !cap_parsing_failed)
+		normalize_cpu_capacity();
 }
 
 /*
@@ -161,7 +176,7 @@ static void __init parse_dt_topology(void)
  */
 static void update_cpu_capacity(unsigned int cpu)
 {
-	if (!cpu_capacity(cpu))
+	if (!cpu_capacity(cpu) || cap_from_dt)
 		return;
 
 	set_capacity_scale(cpu, cpu_capacity(cpu) / middle_capacity);
@@ -313,4 +328,3 @@ void __init init_cpu_topology(void)
 	/* Set scheduler topology descriptor */
 	set_sched_topology(arm_topology);
 }
-
