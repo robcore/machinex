@@ -345,10 +345,10 @@ static struct attribute *cpu_root_attrs[] = {
 	&cpu_attrs[2].attr.attr,
 	&dev_attr_kernel_max.attr,
 	&dev_attr_offline.attr,
+	&dev_attr_isolated.attr,
 #ifdef CONFIG_NO_HZ_FULL
 	&dev_attr_nohz_full.attr,
 #endif
-	&dev_attr_isolated.attr,
 #ifdef CONFIG_ARCH_HAS_CPU_AUTOPROBE
 	&dev_attr_modalias.attr,
 #endif
