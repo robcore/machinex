@@ -158,7 +158,6 @@ static void cpuidle_idle_call(void)
 	 * timekeeping to prevent timer interrupts from kicking us out of idle
 	 * until a proper wakeup interrupt happens.
 	 */
-
 	if (idle_should_freeze()) {
 		cpuidle_enter_freeze();
 		local_irq_enable();
