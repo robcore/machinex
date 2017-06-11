@@ -89,14 +89,14 @@ static void sync_exp_reset_tree_hotplug(struct rcu_state *rsp)
 	rcu_for_each_leaf_node(rsp, rnp) {
 		raw_spin_lock_irqsave_rcu_node(rnp, flags);
 		if (rnp->expmaskinit == rnp->expmaskinitnext) {
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
+			raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 			continue;  /* No new CPUs, nothing to do. */
 		}
 
 		/* Update this node's mask, track old value for propagation. */
 		oldmask = rnp->expmaskinit;
 		rnp->expmaskinit = rnp->expmaskinitnext;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
+		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 
 		/* If was already nonzero, nothing to propagate. */
 		if (oldmask)
@@ -111,7 +111,7 @@ static void sync_exp_reset_tree_hotplug(struct rcu_state *rsp)
 			if (rnp_up->expmaskinit)
 				done = true;
 			rnp_up->expmaskinit |= mask;
-			raw_spin_unlock_irqrestore(&rnp_up->lock, flags);
+			raw_spin_unlock_irqrestore_rcu_node(rnp_up, flags);
 			if (done)
 				break;
 			mask = rnp_up->grpmask;
@@ -134,7 +134,7 @@ static void __maybe_unused sync_exp_reset_tree(struct rcu_state *rsp)
 		raw_spin_lock_irqsave_rcu_node(rnp, flags);
 		WARN_ON_ONCE(rnp->expmask);
 		rnp->expmask = rnp->expmaskinit;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
+		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 	}
 }
 
@@ -175,11 +175,11 @@ static void __rcu_report_exp_rnp(struct rcu_state *rsp, struct rcu_node *rnp,
 			if (!rnp->expmask)
 				rcu_initiate_boost(rnp, flags);
 			else
-				raw_spin_unlock_irqrestore(&rnp->lock, flags);
+				raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 			break;
 		}
 		if (rnp->parent == NULL) {
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
+			raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 			if (wake) {
 				smp_mb(); /* EGP done before wake_up(). */
 				swake_up(&rsp->expedited_wq);
@@ -187,7 +187,7 @@ static void __rcu_report_exp_rnp(struct rcu_state *rsp, struct rcu_node *rnp,
 			break;
 		}
 		mask = rnp->grpmask;
-		raw_spin_unlock(&rnp->lock); /* irqs remain disabled */
+		raw_spin_unlock_rcu_node(rnp); /* irqs remain disabled */
 		rnp = rnp->parent;
 		raw_spin_lock_rcu_node(rnp); /* irqs already disabled */
 		WARN_ON_ONCE(!(rnp->expmask & mask));
@@ -222,7 +222,7 @@ static void rcu_report_exp_cpu_mult(struct rcu_state *rsp, struct rcu_node *rnp,
 
 	raw_spin_lock_irqsave_rcu_node(rnp, flags);
 	if (!(rnp->expmask & mask)) {
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
+		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 		return;
 	}
 	rnp->expmask &= ~mask;
@@ -251,6 +251,7 @@ static bool sync_exp_work_done(struct rcu_state *rsp, atomic_long_t *stat,
 	}
 	return false;
 }
+
 /*
  * Funnel-lock acquisition for expedited grace periods.  Returns true
  * if some other task completed an expedited grace period that this task
@@ -308,6 +309,7 @@ fastpath:
 		mutex_unlock(&rsp->exp_mutex);
 		return true;
 	}
+	rcu_exp_gp_seq_start(rsp);
 	return false;
 }
 
@@ -389,7 +391,7 @@ static void sync_rcu_exp_select_cpus(struct rcu_state *rsp,
 		 */
 		if (rcu_preempt_has_tasks(rnp))
 			rnp->exp_tasks = rnp->blkd_tasks.next;
-		raw_spin_unlock_irqrestore(&rnp->lock, flags);
+		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 
 		/* IPI the remaining CPUs for expedited quiescent state. */
 		for_each_leaf_node_possible_cpu(rnp, cpu) {
@@ -414,14 +416,14 @@ retry_ipi:
 			if ((rnp->qsmaskinitnext & mask) &&
 			    (rnp->expmask & mask)) {
 				/* Online, so delay for a bit and try again. */
-				raw_spin_unlock_irqrestore(&rnp->lock, flags);
+				raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 				schedule_timeout_uninterruptible(1);
 				goto retry_ipi;
 			}
 			/* CPU really is offline, so we can ignore it. */
 			if (!(rnp->expmask & mask))
 				mask_ofl_ipi &= ~mask;
-			raw_spin_unlock_irqrestore(&rnp->lock, flags);
+			raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 		}
 		/* Report quiescent states for those that went offline. */
 		mask_ofl_test |= mask_ofl_ipi;
@@ -594,8 +596,6 @@ static void _synchronize_rcu_expedited(struct rcu_state *rsp,
 	if (exp_funnel_lock(rsp, s))
 		return;  /* Someone else did our work for us. */
 
-	rcu_exp_gp_seq_start(rsp);
-
 	/* Ensure that load happens before action based on it. */
 	if (unlikely(rcu_scheduler_active == RCU_SCHEDULER_INIT)) {
 		/* Direct call during scheduler init and early_initcalls(). */
@@ -654,6 +654,7 @@ void synchronize_sched_expedited(void)
 EXPORT_SYMBOL_GPL(synchronize_sched_expedited);
 
 #ifdef CONFIG_PREEMPT_RCU
+
 /*
  * Remote handler for smp_call_function_single().  If there is an
  * RCU read-side critical section in effect, request that the
@@ -723,6 +724,7 @@ void synchronize_rcu_expedited(void)
 	_synchronize_rcu_expedited(rsp, sync_rcu_exp_handler);
 }
 EXPORT_SYMBOL_GPL(synchronize_rcu_expedited);
+
 #else /* #ifdef CONFIG_PREEMPT_RCU */
 
 /*

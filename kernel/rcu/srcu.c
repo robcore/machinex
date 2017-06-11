@@ -302,9 +302,10 @@ EXPORT_SYMBOL_GPL(__srcu_read_unlock);
 #define SYNCHRONIZE_SRCU_EXP_TRYCOUNT	12
 
 /*
- * Wait until all readers counted by array index idx complete, but loop
- * a maximum of trycount times.  The caller must ensure that ->completed
- * is not changed while checking.
+ * @@@ Wait until all pre-existing readers complete.  Such readers
+ * will have used the index specified by "idx".
+ * the caller should ensures the ->completed is not changed while checking
+ * and idx = (->completed & 1) ^ 1
  */
 static bool try_check_zero(struct srcu_struct *sp, int idx, int trycount)
 {
