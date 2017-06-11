@@ -93,9 +93,10 @@ DEFINE_PER_CPU(struct hrtimer_cpu_base, hrtimer_bases) =
 	}
 };
 
-static DEFINE_PER_CPU(int, hrtimer_base_lock_init) = {-1};
-
 static const int hrtimer_clock_to_base_table[MAX_CLOCKS] = {
+	/* Make sure we catch unsupported clockids */
+	[0 ... MAX_CLOCKS - 1]	= HRTIMER_MAX_CLOCK_BASES,
+
 	[CLOCK_REALTIME]	= HRTIMER_BASE_REALTIME,
 	[CLOCK_MONOTONIC]	= HRTIMER_BASE_MONOTONIC,
 	[CLOCK_BOOTTIME]	= HRTIMER_BASE_BOOTTIME,
@@ -508,7 +509,7 @@ static inline ktime_t hrtimer_update_base(struct hrtimer_cpu_base *base)
 /*
  * High resolution timer enabled ?
  */
-static int hrtimer_hres_enabled __read_mostly  = 1;
+static bool hrtimer_hres_enabled __read_mostly  = true;
 unsigned int hrtimer_resolution __read_mostly = LOW_RES_NSEC;
 EXPORT_SYMBOL_GPL(hrtimer_resolution);
 
@@ -517,13 +518,7 @@ EXPORT_SYMBOL_GPL(hrtimer_resolution);
  */
 static int __init setup_hrtimer_hres(char *str)
 {
-	if (!strcmp(str, "off"))
-		hrtimer_hres_enabled = 0;
-	else if (!strcmp(str, "on"))
-		hrtimer_hres_enabled = 1;
-	else
-		return 0;
-	return 1;
+	return (kstrtobool(str, &hrtimer_hres_enabled) == 0);
 }
 
 __setup("highres=", setup_hrtimer_hres);
@@ -589,6 +584,13 @@ hrtimer_force_reprogram(struct hrtimer_cpu_base *cpu_base, int skip_equal)
 	tick_program_event(cpu_base->expires_next, 1);
 }
 
+/*
+ * When a timer is enqueued and expires earlier than the already enqueued
+ * timers, we have to check, whether it expires earlier than the timer for
+ * which the clock event device was armed.
+ *
+ * Called with interrupts disabled and base->cpu_base.lock held
+ */
 static void hrtimer_reprogram(struct hrtimer *timer,
 			      struct hrtimer_clock_base *base)
 {
@@ -625,7 +627,6 @@ static void hrtimer_reprogram(struct hrtimer *timer,
 		return;
 
 	/* Update the pointer to the next expiring timer */
-
 	cpu_base->next_timer = timer;
 
 	/*
@@ -793,8 +794,6 @@ u64 hrtimer_forward(struct hrtimer *timer, ktime_t now, ktime_t interval)
 {
 	u64 orun = 1;
 	ktime_t delta;
-
-	WARN_ON(hrtimer_is_queued(timer));
 
 	delta = ktime_sub(now, hrtimer_get_expires(timer));
 
@@ -1510,7 +1509,7 @@ long hrtimer_nanosleep(struct timespec64 *rqtp, struct timespec __user *rmtp,
 	int ret = 0;
 	u64 slack;
 
-	slack = task_get_effective_timer_slack(current);
+	slack = current->timer_slack_ns;
 	if (dl_task(current) || rt_task(current))
 		slack = 0;
 
@@ -1542,7 +1541,6 @@ out:
 	destroy_hrtimer_on_stack(&t.timer);
 	return ret;
 }
-EXPORT_SYMBOL_GPL(hrtimer_nanosleep);
 
 SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
 		struct timespec __user *, rmtp)
@@ -1566,14 +1564,7 @@ SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
 int hrtimers_prepare_cpu(unsigned int cpu)
 {
 	struct hrtimer_cpu_base *cpu_base = &per_cpu(hrtimer_bases, cpu);
-	int *lock_init = &per_cpu(hrtimer_base_lock_init, cpu);
 	int i;
-
-	if ((*lock_init) != cpu) {
-		*lock_init = cpu;
-		raw_spin_lock_init(&cpu_base->lock);
-		pr_info("hrtimer base lock initialized for cpu%d\n", cpu);
-	}
 
 	for (i = 0; i < HRTIMER_MAX_CLOCK_BASES; i++) {
 		cpu_base->clock_base[i].cpu_base = cpu_base;

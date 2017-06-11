@@ -87,10 +87,6 @@ enum hrtimer_restart {
  * @function:	timer expiry callback function
  * @base:	pointer to the timer base (per cpu and per clock)
  * @state:	state information (See bit values above)
- * @start_site:	timer statistics field to store the site where the timer
- *		was started
- * @start_comm: timer statistics field to store the name of the process which
- *		started the timer
  * @is_rel:	Set if the timer was armed relative
  *
  * The hrtimer structure must be initialized by hrtimer_init()
@@ -301,7 +297,7 @@ extern unsigned int hrtimer_resolution;
 # define MONOTONIC_RES_NSEC	LOW_RES_NSEC
 # define KTIME_MONOTONIC_RES	KTIME_LOW_RES
 
-#define hrtimer_resolution	LOW_RES_NSEC
+#define hrtimer_resolution	(unsigned int)LOW_RES_NSEC
 
 static inline int hrtimer_is_hres_active(struct hrtimer *timer)
 {
