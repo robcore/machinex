@@ -1042,9 +1042,8 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 
 static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
 static struct cpufreq_frequency_table *
-machinex_freq_table(const struct cpufreq_policy *policy)
+machinex_freq_table(const struct cpufreq_policy *policy, int cpu)
 {
-	int cpu;
 	for_each_possible_cpu(cpu) {
 		int i, freq_cnt = 0;
 		/* Construct the freq_table tables from freq_table. */
@@ -1063,7 +1062,14 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 	}
-	cpu = cpumask_first(cpu_possible_mask);
+	if (cpu == 0)
+		cpu = cpumask_first(cpu_possible_mask);
+	else if (cpu == 1)
+		cpu = cpumask_next(0, cpu_possible_mask);
+	else if (cpu == 2)
+		cpu = cpumask_next(1, cpu_possible_mask);
+	else if (cpu == 3)
+		cpu = cpumask_next(2, cpu_possible_mask);
 	/* Register table with CPUFreq. */
 	return freq_table[cpu];
 }
@@ -1378,7 +1384,14 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		goto out;
 	}
 
-	mx_freq_table = machinex_freq_table(policy);
+	if (policy->cpu == 0)
+		cpu = 0;
+	else if (policy->cpu == 1)
+		cpu = 1;
+	else if (policy->cpu == 2)
+		cpu = 2;
+	else if (policy->cpu == 3)
+		cpu = 3;
 
 	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
 	if (ret) {
