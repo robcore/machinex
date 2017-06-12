@@ -146,8 +146,10 @@ __copy_to_user(void __user *to, const void *from, unsigned long n)
 	 * as well making this test almost invisible.
 	 */
 	if (n < 64)
-		return __copy_to_user_std(to, from, n);
-	return __copy_to_user_memcpy(to, from, n);
+		n = __copy_to_user_std(to, from, n);
+	else
+		n = __copy_to_user_memcpy(to, from, n);
+	return n;
 }
 	
 static unsigned long noinline
@@ -194,8 +196,10 @@ unsigned long __clear_user(void __user *addr, unsigned long n)
 {
 	/* See rational for this in __copy_to_user() above. */
 	if (n < 64)
-		return __clear_user_std(addr, n);
-	return __clear_user_memset(addr, n);
+		n = __clear_user_std(addr, n);
+	else
+		n = __clear_user_memset(addr, n);
+	return n;
 }
 
 #if 0
