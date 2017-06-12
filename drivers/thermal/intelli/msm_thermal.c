@@ -148,7 +148,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 	limited_max_freq_thermal = max_freq;
 	reapply_hard_limits(cpu);
-	if cpu_online(cpu)
+	if (cpu_online(cpu))
 		cpufreq_update_policy(cpu);
 }
 
@@ -306,8 +306,6 @@ static void __ref check_temp(struct work_struct *work)
 	}
 
 	do_freq_control(temp);
-	if (temp < msm_thermal_info.limit_temp_degC)
-		goto reschedule;
 	do_core_control(temp);
 reschedule:
 	if (enabled)
@@ -348,20 +346,21 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
  */
 static void __ref disable_msm_thermal(void)
 {
-	struct cpufreq_policy policy;
+	struct cpufreq_policy *policy;
 	unsigned int cpu = smp_processor_id();
 
-	if (cpufreq_get_policy(&policy, cpu))
-		return;
+	policy = cpufreq_cpu_get_raw(cpu);
+		if (!policy)
+			return;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == policy.hlimit_max_screen_on)
+	if (limited_max_freq_thermal == policy->hlimit_max_screen_on)
 		return;
 
 	for_each_possible_cpu(cpu) {
-		update_cpu_max_freq(cpu, policy.hlimit_max_screen_on);
+		update_cpu_max_freq(cpu, policy->hlimit_max_screen_on);
 	}
 }
 
