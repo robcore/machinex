@@ -703,7 +703,8 @@ void reapply_hard_limits(unsigned int cpu)
 		else
 			policy->curr_limit_min = policy->hlimit_min_screen_on;
 
-		if (is_freq_limited(policy->cpu))
+		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+			limited_max_freq_thermal < policy->hlimit_max_screen_on) {
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;

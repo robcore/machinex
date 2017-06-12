@@ -127,12 +127,12 @@ bool is_freq_limited(unsigned int cpu)
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (!policy || policy == NULL)
 		return false;
+
 	if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-		limited_max_freq_thermal < policy->hlimit_max_screen_on) {
+		limited_max_freq_thermal < policy->hlimit_max_screen_on)
 		therm_freq_limited = true;
-	} else {
+	else
 		therm_freq_limited = false;
-	}
 
 	return therm_freq_limited;
 }
@@ -142,15 +142,15 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 	struct cpufreq_policy *policy;
 	int ret;
 
-	reapply_hard_limits(cpu);
-
-	limited_max_freq_thermal = max_freq;
-
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (!policy || policy == NULL)
 		return;
 
-	if (is_freq_limited(cpu)) {
+	reapply_hard_limits(cpu);
+
+	limited_max_freq_thermal = max_freq;
+
+	if (is_freq_limited(policy->cpu)) {
 		ret = cpufreq_driver_target(policy, policy->cur,
 				CPUFREQ_RELATION_H);
 		if (ret < 0)
