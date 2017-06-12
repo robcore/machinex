@@ -701,16 +701,14 @@ void reapply_hard_limits(unsigned int cpu)
 			input_boost_limit <= policy->hlimit_max_screen_on)
 			policy->curr_limit_min = input_boost_limit;
 		else
-			policy->curr_limit_min  = policy->hlimit_min_screen_on;
+			policy->curr_limit_min = policy->hlimit_min_screen_on;
 
 		if (limited_max_freq_thermal > policy->hlimit_min_screen_on &&
 			 limited_max_freq_thermal < policy->hlimit_max_screen_on)
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
-			policy->curr_limit_max  = policy->hlimit_max_screen_on;
-	}
-	
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
+			policy->curr_limit_max = policy->hlimit_max_screen_on;
+	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
 		policy->curr_limit_min = policy->hlimit_min_screen_off;
 		if (limited_max_freq_thermal > policy->hlimit_min_screen_off &&
 			 limited_max_freq_thermal < policy->hlimit_max_screen_off)
@@ -846,7 +844,7 @@ show_one(cpu_utilization, util);
 show_one(util_threshold, util_thres);
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 show_one(hardlimit_max_screen_on, hlimit_max_screen_on);
-show_one(hardlimit_max_screen_off, hlimit_max_screen_on);
+show_one(hardlimit_max_screen_off, hlimit_max_screen_off);
 show_one(hardlimit_min_screen_on, hlimit_min_screen_on);
 show_one(hardlimit_min_screen_off, hlimit_min_screen_off);
 show_one(current_limit_min, curr_limit_min);
@@ -900,13 +898,11 @@ store_one(scaling_max_freq, max);
 static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, const char *buf, size_t count)
 {
 	unsigned int new_hardlimit, i;
-	int ret;
 
 	struct cpufreq_frequency_table *table;
 
-	ret = sscanf(buf, "%u", &new_hardlimit);
-		if (ret != 1)
-			return -EINVAL;
+	if (!sscanf(buf, "%u", &new_hardlimit))
+		return -EINVAL;
 
 
 	table = policy->freq_table; /* Get frequency table */
@@ -923,15 +919,13 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 static ssize_t store_hardlimit_max_screen_off(struct cpufreq_policy *policy, const char *buf, size_t count)
 {
 	unsigned int new_hardlimit, i;
-	int ret;
 
 	struct cpufreq_frequency_table *table;
 
-	ret = sscanf(buf, "%u", &new_hardlimit);
-		if (ret != 1)
-			return -EINVAL;
+	if (!sscanf(buf, "%u", &new_hardlimit))
+		return -EINVAL;
 
-	table = cpufreq_frequency_get_table(i); /* Get frequency table */
+	table = policy->freq_table; /* Get frequency table */
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
