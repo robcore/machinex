@@ -312,7 +312,7 @@ static void leds_set_slope_mode(struct i2c_client *client,
 							delay << 4 | dutymin;
 	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 4] = dt2 << 4 | dt1;
 	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 4] = dt4 << 4 | dt3;
-	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 2 | slptt1;
+	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 4 | slptt1;
 }
 
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
