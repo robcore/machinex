@@ -89,11 +89,6 @@ module_param_named(thermal_limit_high, limit_idx_high, int, 0644);
 module_param_named(thermal_limit_low, limit_idx_low, int, 0644);
 
 static bool therm_freq_limited;
-bool freq_is_therm_limited(void)
-{
-	return therm_freq_limited;
-}
-
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
@@ -127,13 +122,13 @@ fail:
 bool is_freq_limited(int cpu)
 {
 	int ret;
-	struct cpufreq_policy policy;
+	struct cpufreq_policy *policy;
 
-	ret = cpufreq_get_policy(&policy, cpu);
-	if (ret)
-		return ret;
-
-	if (limited_max_freq_thermal != policy.hlimit_max_screen_on) {
+	policy = cpufreq_cpu_get_raw(cpu);
+	if (!policy || policy == NULL)
+		return policy;
+	if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+		limited_max_freq_thermal < policy->hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;

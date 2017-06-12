@@ -703,16 +703,17 @@ void reapply_hard_limits(unsigned int cpu)
 		else
 			policy->curr_limit_min = policy->hlimit_min_screen_on;
 
-		if (limited_max_freq_thermal != policy->hlimit_max_screen_on)
+		if (is_freq_limited(policy->cpu))
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
 		policy->curr_limit_min = policy->hlimit_min_screen_off;
-		if (limited_max_freq_thermal != policy->hlimit_max_screen_off)
+		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+			limited_max_freq_thermal < policy->hlimit_max_screen_off)
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
-		policy->curr_limit_max = policy->hlimit_max_screen_off;
+			policy->curr_limit_max = policy->hlimit_max_screen_off;
 	}
 
 	update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
