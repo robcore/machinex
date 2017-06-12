@@ -30,10 +30,12 @@
 #include <linux/msm_thermal.h>
 #include <linux/platform_device.h>
 #include <mach/cpufreq.h>
+#include "../../../arch/arm/mach-msm/acpuclock.h"
 
-#define DEFAULT_POLLING_MS	250
+#define DEFAULT_POLLING_MS	500
 /* last 3 minutes based on 250ms polling cycle */
-#define MAX_HISTORY_SZ		((3*60*1000) / DEFAULT_POLLING_MS)
+#define TEMP_HISTORY_SZ		((3*60*1000) / 500)
+#define MAX_HISTORY_SZ		(TEMP_HISTORY_SZ >> 1)
 
 extern bool hotplug_ready;
 struct msm_thermal_stat_data {
@@ -115,14 +117,14 @@ static int msm_thermal_get_freq_table(void)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
-	limit_idx_low = 4;
+	limit_idx_low = 0;
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
 fail:
 	return ret;
 }
 
-static bool is_freq_limited(int cpu)
+bool is_freq_limited(int cpu)
 {
 	int ret;
 	struct cpufreq_policy policy;
@@ -142,12 +144,25 @@ static bool is_freq_limited(int cpu)
 
 static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
+	struct cpufreq_policy *policy;
+	int ret;
 
 	limited_max_freq_thermal = max_freq;
+
 	reapply_hard_limits(cpu);
-	get_online_cpus();
+
+	policy = cpufreq_cpu_get_raw(cpu);
+	if (policy == NULL)
+		acpuclk_set_rate(cpu, limited_max_freq_thermal,
+				SETRATE_CPUFREQ);
+
+	ret = cpufreq_driver_target(policy, policy->cur,
+			CPUFREQ_RELATION_H);
+	if (ret < 0)
+		pr_debug("Thermal failed to set freq target %lu\n", max_freq);
+
 	cpufreq_update_policy(cpu);
-	put_online_cpus();
+	cpufreq_cpu_put(policy);
 }
 
 extern bool hotplug_ready;
@@ -263,12 +278,14 @@ static void __ref do_freq_control(long temp)
 
 	if (max_freq == limited_max_freq_thermal)
 		return;
-	
+
+	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		update_cpu_max_freq(cpu, max_freq);
 	}
+	put_online_cpus();
 
 }
 
