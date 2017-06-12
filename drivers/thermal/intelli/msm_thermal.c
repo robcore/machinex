@@ -318,6 +318,8 @@ static void __ref check_temp(struct work_struct *work)
 	}
 
 	do_freq_control(temp);
+	if (temp < msm_thermal_info.limit_temp_degC)
+		goto reschedule;
 	do_core_control(temp);
 reschedule:
 	if (enabled)
