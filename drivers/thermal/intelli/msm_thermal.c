@@ -152,7 +152,7 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	reapply_hard_limits(cpu);
 
 	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL) {
+	if (policy == NULL)
 		return;
 	ret = cpufreq_driver_target(policy, policy->cur,
 			CPUFREQ_RELATION_H);
