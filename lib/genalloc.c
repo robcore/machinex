@@ -182,7 +182,7 @@ int gen_pool_add_virt(struct gen_pool *pool, u64 virt, phys_addr_t phys,
 				BITS_TO_LONGS(nbits) * sizeof(long);
 
 	if (nbytes <= PAGE_SIZE)
-		chunk = kmalloc_node(nbytes, __GFP_ZERO, nid);
+		chunk = kzalloc_node(nbytes, GFP_KERNEL, nid);
 	else
 		chunk = vmalloc(nbytes);
 	if (unlikely(chunk == NULL))
