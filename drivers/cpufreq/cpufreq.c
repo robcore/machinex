@@ -763,6 +763,18 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL(cpufreq_verify_within_limits);
 
+void cpufreq_verify_within_thermal_limits(unsigned int cpu,
+										  unsigned int max)
+{
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
+	if (policy == NULL)
+		return;
+
+	policy->user_policy.max = policy->max = policy->curr_limit_max = max;
+}
+EXPORT_SYMBOL(cpufreq_verify_within_thermal_limits);
+
 void
 cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy)
 {
