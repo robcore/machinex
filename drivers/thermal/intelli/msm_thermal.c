@@ -147,16 +147,9 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 			return;
 
 	limited_max_freq_thermal = max_freq;
-
 	reapply_hard_limits(cpu);
-
-	if (is_freq_limited(cpu)) {
-		ret = cpufreq_driver_target(&policy, policy.cur,
-				CPUFREQ_RELATION_H);
-		if (ret < 0)
-			pr_debug("Thermal failed to set freq target %lu\n", max_freq);
-	}
-	cpufreq_update_policy(cpu);
+	if cpu_online(cpu)
+		cpufreq_update_policy(cpu);
 }
 
 extern bool hotplug_ready;
@@ -273,13 +266,11 @@ static void __ref do_freq_control(long temp)
 	if (max_freq == limited_max_freq_thermal)
 		return;
 
-	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		update_cpu_max_freq(cpu, max_freq);
 	}
-	put_online_cpus();
 
 }
 
