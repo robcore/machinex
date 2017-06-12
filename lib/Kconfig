@@ -13,8 +13,16 @@ config RAID6_PQ
 config BITREVERSE
 	tristate
 
+config HAVE_ARCH_BITREVERSE
+	bool
+	default n
+	depends on BITREVERSE
+	help
+	  This option enables the use of hardware bit-reversal instructions on
+	  architectures which support such operations.
+
 config RATIONAL
-	boolean
+	bool
 
 config GENERIC_STRNCPY_FROM_USER
 	bool
@@ -36,7 +44,7 @@ config GENERIC_IOMAP
 	select GENERIC_PCI_IOMAP
 
 config GENERIC_IO
-	boolean
+	bool
 	default n
 
 config CRC_CCITT
@@ -183,6 +191,7 @@ config ZLIB_INFLATE
 
 config ZLIB_DEFLATE
 	tristate
+	select BITREVERSE
 
 config LZO_COMPRESS
 	tristate
