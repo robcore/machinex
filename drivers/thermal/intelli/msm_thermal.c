@@ -150,7 +150,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 	limited_max_freq_thermal = max_freq;
 
-	if (is_freq_limited(policy->cpu)) {
+	if (is_freq_limited(cpu)) {
 		ret = cpufreq_driver_target(policy, policy->cur,
 				CPUFREQ_RELATION_H);
 		if (ret < 0)
