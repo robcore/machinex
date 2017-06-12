@@ -1722,24 +1722,19 @@ dhd_bus_txdata(struct dhd_bus *bus, void *pkt)
 	dump_data = PKTDATA(osh, pkt);
 	dump_data += 4; /* skip 4 bytes header */
 	protocol = (dump_data[12] << 8) | dump_data[13];
-
-	if (protocol == ETHER_TYPE_802_1X) {
-		DHD_DEBUG(("ETHER_TYPE_802_1X [TX]: ver %d, type %d, replay %d\n",
-			dump_data[14], dump_data[15], dump_data[30]));
-	}
 #endif /* DHD_TX_DUMP || DHD_8021X_DUMP */
 
 #if defined(DHD_TX_DUMP) && defined(DHD_TX_FULL_DUMP)
 	{
 		int i;
-		DHD_DEBUG(("TX DUMP\n"));
+		DHD_ERROR(("TX DUMP\n"));
 
 		for (i = 0; i < (datalen - 4); i++) {
-			DHD_DEBUG(("%02X ", dump_data[i]));
+			DHD_ERROR(("%02X ", dump_data[i]));
 			if ((i & 15) == 15)
 				printk("\n");
 		}
-		DHD_DEBUG(("\n"));
+		DHD_ERROR(("\n"));
 	}
 #endif /* DHD_TX_DUMP && DHD_TX_FULL_DUMP */
 
