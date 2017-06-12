@@ -86,14 +86,6 @@ extern bool  bcmsdh_fatal_error(void *sdh);
 #define DHDSDIO_MEM_DUMP_FNAME         "mem_dump"
 #endif
 
-#ifdef DHD_TX_DUMP
-#undef DHD_TX_DUMP
-#endif
-
-#ifdef DHD_8021X_DUMP
-#undef DHD_8021X_DUMP
-#endif
-
 #define QLEN		(1024) /* bulk rx and tx queue lengths */
 #define FCHI		(QLEN - 10)
 #define FCLOW		(FCHI / 2)
@@ -1732,7 +1724,7 @@ dhd_bus_txdata(struct dhd_bus *bus, void *pkt)
 	protocol = (dump_data[12] << 8) | dump_data[13];
 
 	if (protocol == ETHER_TYPE_802_1X) {
-		DHD_ERROR(("ETHER_TYPE_802_1X [TX]: ver %d, type %d, replay %d\n",
+		DHD_DEBUG(("ETHER_TYPE_802_1X [TX]: ver %d, type %d, replay %d\n",
 			dump_data[14], dump_data[15], dump_data[30]));
 	}
 #endif /* DHD_TX_DUMP || DHD_8021X_DUMP */
@@ -1740,14 +1732,14 @@ dhd_bus_txdata(struct dhd_bus *bus, void *pkt)
 #if defined(DHD_TX_DUMP) && defined(DHD_TX_FULL_DUMP)
 	{
 		int i;
-		DHD_ERROR(("TX DUMP\n"));
+		DHD_DEBUG(("TX DUMP\n"));
 
 		for (i = 0; i < (datalen - 4); i++) {
-			DHD_ERROR(("%02X ", dump_data[i]));
+			DHD_DEBUG(("%02X ", dump_data[i]));
 			if ((i & 15) == 15)
 				printk("\n");
 		}
-		DHD_ERROR(("\n"));
+		DHD_DEBUG(("\n"));
 	}
 #endif /* DHD_TX_DUMP && DHD_TX_FULL_DUMP */
 
