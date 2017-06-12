@@ -1063,7 +1063,6 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 	}
-
 	cpu = cpumask_first(cpu_possible_mask);
 	/* Register table with CPUFreq. */
 	return freq_table[cpu];
@@ -1368,8 +1367,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	struct cpufreq_frequency_table *mx_freq_table;
 	int ret = 0;
 	int cpu;
-
-	policy->cpuinfo.transition_latency = 100000;
 
 	if (policy->cpu > NR_CPUS) {
 		ret = -EINVAL;
