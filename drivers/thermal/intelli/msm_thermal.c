@@ -122,13 +122,13 @@ fail:
 bool is_freq_limited(unsigned int cpu)
 {
 	int ret;
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy policy;
 
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (!policy || policy == NULL)
-		return policy;
-	if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-		limited_max_freq_thermal < policy->hlimit_max_screen_on) {
+		return false;
+	if (limited_max_freq_thermal >= policy.cpuinfo.min_freq &&
+		limited_max_freq_thermal < policy.hlimit_max_screen_on) {
 		therm_freq_limited = true;
 	} else {
 		therm_freq_limited = false;
