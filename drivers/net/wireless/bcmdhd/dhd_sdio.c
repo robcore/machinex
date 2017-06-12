@@ -86,6 +86,14 @@ extern bool  bcmsdh_fatal_error(void *sdh);
 #define DHDSDIO_MEM_DUMP_FNAME         "mem_dump"
 #endif
 
+#ifdef DHD_TX_DUMP
+#undef DHD_TX_DUMP
+#endif
+
+#ifdef DHD_8021X_DUMP
+#undef DHD_8021X_DUMP
+#endif
+
 #define QLEN		(1024) /* bulk rx and tx queue lengths */
 #define FCHI		(QLEN - 10)
 #define FCLOW		(FCHI / 2)
