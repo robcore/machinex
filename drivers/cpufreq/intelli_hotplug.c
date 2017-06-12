@@ -282,7 +282,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 				cpu_up(cpu);
 			apply_down_lock(cpu);
-			if (target <= online_cpus)
+			if (target < online_cpus)
 				break;
 		}
 	}
