@@ -196,14 +196,14 @@ static unsigned int calculate_thread_stats(void)
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
 		unsigned long nr_threshold;
-		if (max_cpus_online >= 4)
+		if (max_cpus_online == 4)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
-			current_profile = nr_run_profiles[5];
-		else if (max_cpus_online == 2)
 			current_profile = nr_run_profiles[6];
-		else
+		else if (max_cpus_online == 2)
 			current_profile = nr_run_profiles[7];
+		else
+			current_profile = nr_run_profiles[8];
 
 		nr_threshold = current_profile[nr_run - 1];
 
@@ -234,7 +234,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	int cpu = smp_processor_id();
 	long l_nr_threshold;
 	int target = target_cpus;
-	struct ip_cpu_info *l_ip_info = &per_cpu(ip_info, cpu);;
+	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
 
@@ -268,6 +268,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			l_nr_threshold =
 				cpu_nr_run_threshold << 1 /
 					(online_cpus);
+			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold)
 				cpu_down(cpu);
 			if (target >= online_cpus)
