@@ -90,7 +90,7 @@ __copy_to_user_memcpy(void __user *to, const void *from, unsigned long n)
 {
 	int atomic;
 
-	if (unlikely(segment_eq(get_fs(), KERNEL_DS))) {
+	if (uaccess_kernel()) {
 		memcpy((void *)to, from, n);
 		return 0;
 	}
@@ -153,7 +153,7 @@ __copy_to_user(void __user *to, const void *from, unsigned long n)
 static unsigned long noinline
 __clear_user_memset(void __user *addr, unsigned long n)
 {
-	if (unlikely(segment_eq(get_fs(), KERNEL_DS))) {
+	if (unlikely(uaccess_kernel())) {
 		memset((void *)addr, 0, n);
 		return 0;
 	}

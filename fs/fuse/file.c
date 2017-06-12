@@ -1078,7 +1078,7 @@ static int fuse_get_user_pages(struct fuse_req *req, const char __user *buf,
 	int npages;
 
 	/* Special case for kernel I/O: can copy directly into the buffer */
-	if (segment_eq(get_fs(), KERNEL_DS)) {
+	if (uaccess_kernel()) {
 		if (write)
 			req->in.args[1].value = (void *) user_addr;
 		else

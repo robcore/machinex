@@ -206,7 +206,8 @@ static inline void set_fs(mm_segment_t fs)
 #define access_ok(type,addr,size)	(__range_ok(addr,size) == 0)
 
 #define user_addr_max() \
-	(segment_eq(get_fs(), USER_DS) ? TASK_SIZE : ~0UL)
+	(uaccess_kernel() ? ~0UL : get_fs())
+	//(uaccess_kernel() ? ~0UL : TASK_SIZE)
 
 /*
  * The "__xxx" versions of the user access functions do not verify the

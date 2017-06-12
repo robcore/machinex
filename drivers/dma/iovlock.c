@@ -58,7 +58,7 @@ struct dma_pinned_list *dma_pin_iovec_pages(struct iovec *iov, size_t len)
 	int iovec_pages_used = 0;
 
 	/* don't pin down non-user-based iovecs */
-	if (segment_eq(get_fs(), KERNEL_DS))
+	if (uaccess_kernel())
 		return NULL;
 
 	/* determine how many iovecs/pages there are, up front */

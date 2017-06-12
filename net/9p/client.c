@@ -825,7 +825,7 @@ static struct p9_req_t *p9_client_zc_rpc(struct p9_client *c, int8_t type,
 		sigpending = 0;
 
 	/* If we are called with KERNEL_DS force kern_buf */
-	if (segment_eq(get_fs(), KERNEL_DS))
+	if (uaccess_kernel())
 		kern_buf = 1;
 
 	err = c->trans_mod->zc_request(c, req, uidata, uodata,
