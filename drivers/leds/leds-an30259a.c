@@ -102,7 +102,7 @@
 #define DUTYMIN_MIN_VALUE		0x00
 #define SLPTT_MAX_VALUE			7500
 
-#define AN30259A_TIME_UNIT		250
+#define AN30259A_TIME_UNIT		500
 
 #define LED_R_MASK			0x00ff0000
 #define LED_G_MASK			0x0000ff00
@@ -306,13 +306,13 @@ static void leds_set_slope_mode(struct i2c_client *client,
 
 	struct an30259a_data *data = i2c_get_clientdata(client);
 
-	data->shadow_reg[AN30259A_REG_LED1CNT1 + led * 3] =
-							dutymax << 3 | dutymid;
-	data->shadow_reg[AN30259A_REG_LED1CNT2 + led * 3] =
-							delay << 3 | dutymin;
-	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 3] = dt2 << 3 | dt1;
-	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 3] = dt4 << 3 | dt3;
-	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 3 | slptt1;
+	data->shadow_reg[AN30259A_REG_LED1CNT1 + led * 4] =
+							dutymax << 4 | dutymid;
+	data->shadow_reg[AN30259A_REG_LED1CNT2 + led * 4] =
+							delay << 4 | dutymin;
+	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 4] = dt2 << 4 | dt1;
+	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 4] = dt4 << 4 | dt3;
+	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 4 | slptt1;
 }
 
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
@@ -380,8 +380,12 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (mode > BOOTING || disabled_samsung_pattern)
+	if (mode > BOOTING)
 		return;
+
+	if(disabled_samsung_pattern) {
+		return;
+	}
 
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
