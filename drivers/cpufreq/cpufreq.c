@@ -723,8 +723,9 @@ EXPORT_SYMBOL(reapply_hard_limits);
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
-	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
+	struct cpufreq_policy *policy;
+	unsigned int cpu = policy->cpu;
+	policy = cpufreq_cpu_get_raw(cpu);
 
 	if (!hardlimit_ready)
 		return freq;
@@ -802,8 +803,10 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 
 static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 {
-	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
+	struct cpufreq_policy *policy;
+	unsigned int cpu = policy->cpu;
+	policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 
 	for_each_possible_cpu(policy->cpu) {
@@ -814,8 +817,9 @@ static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 
 static void cpufreq_hardlimit_resume(struct power_suspend * h)
 {
-	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+	struct cpufreq_policy *policy;
+	unsigned int cpu = policy->cpu;
+	policy = per_cpu(cpufreq_cpu_data, cpu);
 
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 

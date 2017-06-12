@@ -944,5 +944,5 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 		unsigned int transition_latency);
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
-extern bool is_freq_limited(int cpu);
+extern bool is_freq_limited(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */
