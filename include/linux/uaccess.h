@@ -2,6 +2,11 @@
 #define __LINUX_UACCESS_H__
 
 #include <linux/preempt.h>
+#include <linux/sched.h>
+
+#define VERIFY_READ 0
+#define VERIFY_WRITE 1
+
 #include <asm/uaccess.h>
 
 /*
