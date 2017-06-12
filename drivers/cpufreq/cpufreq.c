@@ -559,7 +559,7 @@ EXPORT_SYMBOL_GPL(cpufreq_disable_fast_switch);
 unsigned int cpufreq_driver_resolve_freq(struct cpufreq_policy *policy,
 					 unsigned int target_freq)
 {
-	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
+	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy, policy->min), check_cpufreq_hardlimit(policy, policy->max));
 	policy->cached_target_freq = target_freq;
 
 	if (cpufreq_driver->target_index) {
@@ -704,7 +704,7 @@ void reapply_hard_limits(unsigned int cpu)
 			policy->curr_limit_min = policy->hlimit_min_screen_on;
 
 		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_on) {
+			limited_max_freq_thermal < policy->hlimit_max_screen_on)
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
@@ -722,11 +722,9 @@ void reapply_hard_limits(unsigned int cpu)
 EXPORT_SYMBOL(reapply_hard_limits);
 
 /* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit(unsigned int freq)
+unsigned int check_cpufreq_hardlimit(struct cpufreq_policy *policy, unsigned int freq)
 {
-	struct cpufreq_policy *policy;
 	unsigned int cpu = policy->cpu;
-	policy = cpufreq_cpu_get_raw(cpu);
 
 	if (!hardlimit_ready)
 		return freq;
@@ -735,7 +733,7 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 		return max(curr_limit_min, min(curr_limit_max, freq));
 
 	if (!policy->curr_limit_min || !policy->curr_limit_max)
-		reapply_hard_limits(policy->cpu);
+		reapply_hard_limits(cpu);
 
 	return max(policy->curr_limit_min, min(policy->curr_limit_max, freq));
 }
@@ -747,8 +745,8 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 {
 	if (hardlimit_ready) {
 		 /* Yank555.lu - Enforce hardlimit */
-		min = check_cpufreq_hardlimit(min);
-		max = check_cpufreq_hardlimit(max);
+		min = check_cpufreq_hardlimit(policy, min);
+		max = check_cpufreq_hardlimit(policy, max);
 	}
 	if (policy->min < min)
 		policy->min = min;
@@ -804,28 +802,32 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 
 static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 {
-
-	struct cpufreq_policy *policy;
-	unsigned int cpu = policy->cpu;
-	policy = per_cpu(cpufreq_cpu_data, cpu);
+	unsigned int cpu = 0;
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 
+	if (!policy)
+		return;
+
 	for_each_possible_cpu(policy->cpu) {
-		reapply_hard_limits(policy->cpu);
+		cpu = policy->cpu;
+		reapply_hard_limits(cpu);
 		return;
 	}
 }
 
 static void cpufreq_hardlimit_resume(struct power_suspend * h)
 {
-	struct cpufreq_policy *policy;
-	unsigned int cpu = policy->cpu;
-	policy = per_cpu(cpufreq_cpu_data, cpu);
-
+	unsigned int cpu = 0;
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-	for_each_possible_cpu(policy->cpu) {
-		reapply_hard_limits(policy->cpu);
+	if (!policy)
+		return;
+
+	for_each_possible_cpu(cpu) {
+		cpu = policy->cpu;
+		reapply_hard_limits(cpu);
 		return;
 	}
 }
@@ -1664,8 +1666,8 @@ static int cpufreq_online(unsigned int cpu)
 			add_cpu_dev_symlink(policy, j);
 		}
 	} else {
-		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
-		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
+		policy->min = check_cpufreq_hardlimit(policy, policy->user_policy.min);
+		policy->max = check_cpufreq_hardlimit(policy, policy->user_policy.max);
 	}
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
@@ -2426,7 +2428,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 		return -ENODEV;
 
 	/* Make sure that target_freq is within supported range */
-	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
+	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy, policy->min), check_cpufreq_hardlimit(policy, policy->max));
 
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 		 policy->cpu, target_freq, relation, old_target_freq);
@@ -2790,8 +2792,8 @@ void cpufreq_update_policy(unsigned int cpu)
 	memcpy(&new_policy, policy, sizeof(*policy));
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 	/* Yank555.lu - Enforce hardlimit */
-	new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
-	new_policy.max = check_cpufreq_hardlimit(policy->user_policy.max);
+	new_policy.min = check_cpufreq_hardlimit(policy, policy->user_policy.min);
+	new_policy.max = check_cpufreq_hardlimit(policy, policy->user_policy.max);
 #else
 	new_policy.min = policy->user_policy.min;
 	new_policy.max = policy->user_policy.max;

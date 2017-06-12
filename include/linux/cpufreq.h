@@ -38,36 +38,6 @@
 /* Minimum frequency cutoff to notify the userspace about cpu utilization
  * changes */
 #define MIN_CPU_UTIL_NOTIFY   40
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
-
-/* Default frequencies for MACH_JF */
-#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
-#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
-#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
-#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
-
-#define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
-#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
-
-/* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit(unsigned int freq);
-
-/* Hook in cpufreq for scaling min./max. */
-void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
-struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
-extern void reapply_hard_limits(unsigned int cpu);
-extern unsigned int input_boost_limit;
-extern unsigned int hlimit_max_screen_on;
-extern unsigned int hlimit_max_screen_off;
-extern unsigned int hlimit_min_screen_on;
-extern unsigned int hlimit_min_screen_off;
-
-extern unsigned int curr_limit_max;
-extern unsigned int curr_limit_min;
-extern unsigned int current_screen_state;
-#endif /* CONFIG_CPUFREQ_HARDLIMIT */
-
 
 struct cpufreq_governor;
 
@@ -942,6 +912,36 @@ unsigned int cpufreq_generic_get(unsigned int cpu);
 int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency);
+
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+#define CPUFREQ_HARDLIMIT_VERSION "v2.3 by Yank555.lu, with updates by Robcore."
+
+/* Default frequencies for MACH_JF */
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
+#define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
+
+#define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
+#define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
+
+/* Sanitize cpufreq to hardlimits */
+unsigned int check_cpufreq_hardlimit(struct cpufreq_policy *policy, unsigned int freq);
+
+/* Hook in cpufreq for scaling min./max. */
+void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
+struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
+extern void reapply_hard_limits(unsigned int cpu);
+extern unsigned int input_boost_limit;
+extern unsigned int hlimit_max_screen_on;
+extern unsigned int hlimit_max_screen_off;
+extern unsigned int hlimit_min_screen_on;
+extern unsigned int hlimit_min_screen_off;
+
+extern unsigned int curr_limit_max;
+extern unsigned int curr_limit_min;
+extern unsigned int current_screen_state;
+#endif /* CONFIG_CPUFREQ_HARDLIMIT */
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
 extern bool is_freq_limited(unsigned int cpu);
