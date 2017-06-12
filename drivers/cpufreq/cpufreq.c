@@ -744,11 +744,11 @@ EXPORT_SYMBOL(check_cpufreq_hardlimit);
 void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		unsigned int min, unsigned int max)
 {
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-	 /* Yank555.lu - Enforce hardlimit */
-	min = check_cpufreq_hardlimit(min);
-	max = check_cpufreq_hardlimit(max);
-#endif
+	if (hardlimit_ready) {
+		 /* Yank555.lu - Enforce hardlimit */
+		min = check_cpufreq_hardlimit(min);
+		max = check_cpufreq_hardlimit(max);
+	}
 	if (policy->min < min)
 		policy->min = min;
 	if (policy->max < min)
@@ -768,10 +768,20 @@ void cpufreq_verify_within_thermal_limits(unsigned int cpu,
 {
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
-	if (policy == NULL)
+	if (policy == NULL || !hardlimit_ready)
 		return;
 
-	policy->user_policy.max = policy->max = policy->curr_limit_max = max;
+	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
+		if (max <= policy->hlimit_max_screen_on)
+			policy->user_policy.max = policy->max = policy->curr_limit_max = max;
+		else
+			return;
+	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
+		if (max <= policy->hlimit_max_screen_off)
+			policy->user_policy.max = policy->max = policy->curr_limit_max = max;
+		else
+			return;
+	}
 }
 EXPORT_SYMBOL(cpufreq_verify_within_thermal_limits);
 
