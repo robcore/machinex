@@ -152,17 +152,14 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	reapply_hard_limits(cpu);
 
 	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
-		acpuclk_set_rate(cpu, limited_max_freq_thermal,
-				SETRATE_CPUFREQ);
-
+	if (policy == NULL) {
+		return;
 	ret = cpufreq_driver_target(policy, policy->cur,
 			CPUFREQ_RELATION_H);
 	if (ret < 0)
 		pr_debug("Thermal failed to set freq target %lu\n", max_freq);
 
 	cpufreq_update_policy(cpu);
-	cpufreq_cpu_put(policy);
 }
 
 extern bool hotplug_ready;
