@@ -142,8 +142,8 @@ static bool is_freq_limited(int cpu)
 
 static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
-	limited_max_freq_thermal = max_freq;
 
+	limited_max_freq_thermal = max_freq;
 	reapply_hard_limits(cpu);
 	get_online_cpus();
 	cpufreq_update_policy(cpu);
@@ -229,6 +229,16 @@ static void __ref do_freq_control(long temp)
 	ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			return;
+#if 0
+	if (temp > msm_thermal_info.limit_temp_degC) {
+		get_online_cpus()
+		for_each_online_cpu(cpu)
+			acpuclk_set_rate(cpu, max_freq,
+					SETRATE_CPUFREQ);
+		put_online_cpus();
+		return;
+	}
+#endif
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
@@ -251,22 +261,12 @@ static void __ref do_freq_control(long temp)
 			max_freq = table[limit_idx].frequency;
 	}
 
-	if (max_freq == limited_max_freq_thermal) {
-		for_each_possible_cpu(cpu) {
-			if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
-				continue;
-			cpufreq_verify_within_thermal_limits(cpu, max_freq);
-			get_online_cpus();
-			cpufreq_update_policy(cpu);
-			put_online_cpus();
-		}
-			return;
-	}
-
+	if (max_freq == limited_max_freq_thermal)
+		return;
+	
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
-		cpufreq_verify_within_thermal_limits(cpu, max_freq);
 		update_cpu_max_freq(cpu, max_freq);
 	}
 
