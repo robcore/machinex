@@ -234,7 +234,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	int cpu = smp_processor_id();
 	long l_nr_threshold;
 	int target = target_cpus;
-	struct ip_cpu_info *l_ip_info;
+	struct ip_cpu_info *l_ip_info = &per_cpu(ip_info, cpu);;
 	u64 now;
 	u64 delta;
 
@@ -268,7 +268,6 @@ static void cpu_up_down_work(struct work_struct *work)
 			l_nr_threshold =
 				cpu_nr_run_threshold << 1 /
 					(online_cpus);
-			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold)
 				cpu_down(cpu);
 			if (target >= online_cpus)
