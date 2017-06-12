@@ -540,7 +540,7 @@ sg_write(struct file *filp, const char __user *buf, size_t count, loff_t * ppos)
 	sg_io_hdr_t *hp;
 	unsigned char cmnd[MAX_COMMAND_SIZE];
 
-	WARN_ONCE(uaccess_kernel()),
+	WARN_ONCE(segment_eq(get_fs(), KERNEL_DS),
 		  "%s: attempting get_fs from KERNEL_DS space\n", __func__);
 
 	if ((!(sfp = (Sg_fd *) filp->private_data)) || (!(sdp = sfp->parentdp)))

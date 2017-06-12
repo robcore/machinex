@@ -936,7 +936,7 @@ again:
 		return 0;
 	}
 
-	if (uaccess_kernel())
+	if (segment_eq(get_fs(), KERNEL_DS))
 		w_flags |= AOP_FLAG_UNINTERRUPTIBLE;
 
 	orig_blk_offset = orig_page_offset * blocks_per_page +

@@ -2302,7 +2302,7 @@ static ssize_t generic_perform_write(struct file *file,
 	/*
 	 * Copies from kernel address space cannot fail (NFSD is a big user).
 	 */
-	if (uaccess_kernel())
+	if (segment_eq(get_fs(), KERNEL_DS))
 		flags |= AOP_FLAG_UNINTERRUPTIBLE;
 
 	do {

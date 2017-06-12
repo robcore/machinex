@@ -1543,7 +1543,7 @@ static ssize_t shmem_file_read_iter(struct kiocb *iocb,
 	 * holes of a sparse file, we actually need to allocate those pages,
 	 * and even mark them dirty, so it cannot exceed the max_blocks limit.
 	 */
-	if (uaccess_kernel())
+	if (segment_eq(get_fs(), KERNEL_DS))
 		sgp = SGP_DIRTY;
 
 	index = *ppos >> PAGE_CACHE_SHIFT;

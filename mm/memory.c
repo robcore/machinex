@@ -4297,7 +4297,7 @@ void might_fault(void)
 	 * get paged out, therefore we'll never actually fault, and the
 	 * below annotations will generate false positives.
 	 */
-	if (uaccess_kernel())
+	if (segment_eq(get_fs(), KERNEL_DS))
 		return;
 
 	/*
