@@ -802,32 +802,25 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 
 static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 {
-	unsigned int cpu = 0;
+	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 
-	if (!policy)
-		return;
-
 	for_each_possible_cpu(policy->cpu) {
-		cpu = policy->cpu;
-		reapply_hard_limits(cpu);
+		reapply_hard_limits(policy->cpu);
 		return;
 	}
 }
 
 static void cpufreq_hardlimit_resume(struct power_suspend * h)
 {
-	unsigned int cpu = 0;
+	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-	if (!policy)
-		return;
-
-	for_each_possible_cpu(cpu) {
-		cpu = policy->cpu;
-		reapply_hard_limits(cpu);
+	for_each_possible_cpu(policy->cpu) {
+		reapply_hard_limits(policy->cpu);
 		return;
 	}
 }

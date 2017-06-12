@@ -122,14 +122,14 @@ fail:
 bool is_freq_limited(unsigned int cpu)
 {
 	int ret;
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy policy;
 
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (!policy || policy == NULL)
-		return false;
+	ret = cpufreq_get_policy(&policy, cpu);
+	if (ret)
+		return ret;
 
-	if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-		limited_max_freq_thermal < policy->hlimit_max_screen_on)
+	if (limited_max_freq_thermal >= policy.cpuinfo.min_freq &&
+		limited_max_freq_thermal < policy.hlimit_max_screen_on)
 		therm_freq_limited = true;
 	else
 		therm_freq_limited = false;
@@ -139,19 +139,19 @@ bool is_freq_limited(unsigned int cpu)
 
 static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 {
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy policy;
 	int ret;
 
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (!policy || policy == NULL)
-		return;
-
-	reapply_hard_limits(cpu);
+	ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
 
 	limited_max_freq_thermal = max_freq;
 
+	reapply_hard_limits(cpu);
+
 	if (is_freq_limited(cpu)) {
-		ret = cpufreq_driver_target(policy, policy->cur,
+		ret = cpufreq_driver_target(&policy, policy.cur,
 				CPUFREQ_RELATION_H);
 		if (ret < 0)
 			pr_debug("Thermal failed to set freq target %lu\n", max_freq);
@@ -228,8 +228,8 @@ static void __ref do_core_control(long temp)
 static void __ref do_freq_control(long temp)
 {
 	int ret = 0;
+	int cpu = smp_processor_id();
 	struct cpufreq_policy policy;
-	unsigned int cpu;
 	unsigned long max_freq = limited_max_freq_thermal;
 
 	if (!hotplug_ready)
@@ -357,24 +357,20 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
  */
 static void __ref disable_msm_thermal(void)
 {
-	struct cpufreq_policy *policy;
-	unsigned int cpu;
+	struct cpufreq_policy policy;
+	unsigned int cpu = smp_processor_id();
 
-	for_each_possible_cpu(cpu) {
-		policy = cpufreq_cpu_get_raw(cpu);
-
-	if (!policy || policy == NULL)
+	if (cpufreq_get_policy(&policy, cpu))
 		return;
-	}
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	for_each_possible_cpu(cpu) {
-	if (limited_max_freq_thermal == policy->hlimit_max_screen_on)
+	if (limited_max_freq_thermal == policy.hlimit_max_screen_on)
 		return;
 
-	update_cpu_max_freq(cpu, policy->hlimit_max_screen_on);
+	for_each_possible_cpu(cpu) {
+		update_cpu_max_freq(cpu, policy.hlimit_max_screen_on);
 	}
 }
 
