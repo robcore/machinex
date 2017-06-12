@@ -12,7 +12,9 @@
  * User space memory access functions
  */
 #include <linux/string.h>
+#include <linux/thread_info.h>
 #include <linux/kernel.h>
+#include <asm/errno.h>
 #include <asm/memory.h>
 #include <asm/domain.h>
 #include <asm/unified.h>
@@ -24,6 +26,9 @@
 #define __get_user_unaligned __get_user
 #define __put_user_unaligned __put_user
 #endif
+
+#define VERIFY_READ 0
+#define VERIFY_WRITE 1
 
 /*
  * The exception table consists of pairs of addresses: the first is the

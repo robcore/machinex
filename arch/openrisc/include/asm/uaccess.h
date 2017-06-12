@@ -22,9 +22,14 @@
 /*
  * User space memory access functions
  */
+#include <linux/errno.h>
+#include <linux/thread_info.h>
 #include <linux/prefetch.h>
 #include <linux/string.h>
 #include <asm/page.h>
+
+#define VERIFY_READ	0
+#define VERIFY_WRITE	1
 
 /*
  * The fs value determines whether argument validity checking should be

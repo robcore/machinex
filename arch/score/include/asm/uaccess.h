@@ -5,6 +5,9 @@
 #include <linux/errno.h>
 #include <linux/thread_info.h>
 
+#define VERIFY_READ		0
+#define VERIFY_WRITE		1
+
 #define get_ds()		(KERNEL_DS)
 #define get_fs()		(current_thread_info()->addr_limit)
 #define segment_eq(a, b)	((a).seg == (b).seg)
