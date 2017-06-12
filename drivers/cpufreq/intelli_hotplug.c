@@ -267,11 +267,11 @@ static void cpu_up_down_work(struct work_struct *work)
 				break;
 			l_nr_threshold =
 				cpu_nr_run_threshold << 1 /
-					(num_online_cpus());
+					(online_cpus);
 			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold)
 				cpu_down(cpu);
-			if (target >= num_online_cpus())
+			if (target >= online_cpus)
 				break;
 		}
 	} else if (target > online_cpus) {
@@ -282,7 +282,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 				cpu_up(cpu);
 			apply_down_lock(cpu);
-			if (target <= num_online_cpus())
+			if (target <= online_cpus)
 				break;
 		}
 	}
