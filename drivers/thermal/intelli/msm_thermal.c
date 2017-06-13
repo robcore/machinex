@@ -159,59 +159,61 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 extern bool hotplug_ready;
 static int populate_temps(void)
 {
-	struct tsens_device tsens_dev_one;
-	struct tsens_device tsens_dev_two;
-	struct tsens_device tsens_dev_three;
-	struct tsens_device tsens_dev_four;
+	struct tsens_device tsens_dev, tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
 	long tempavg = 0;
 	long temp_one = 0;
 	long temp_two = 0;
 	long temp_three = 0;
 	long temp_four = 0;
 	int ret = 0;
-	unsigned int numberofsensors = 4;
 
 	tsens_dev_one.sensor_num = msm_thermal_info.sensor_id_one;
 	ret = tsens_get_temp(&tsens_dev_one, &temp_one);
-	if (ret) {
+	if (!temp_one) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_one.sensor_num);
-		return ret;
+		goto board_temp;
 	}
 
 	cpu_thermal_one = temp_one;
 
 	tsens_dev_two.sensor_num = msm_thermal_info.sensor_id_two;
 	ret = tsens_get_temp(&tsens_dev_two, &temp_two);
-	if (ret) {
+	if (!temp_two) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_two.sensor_num);
-		return ret;
+		goto board_temp;
 	}
 
 	cpu_thermal_two = temp_two;
 
 	tsens_dev_three.sensor_num = msm_thermal_info.sensor_id_three;
 	ret = tsens_get_temp(&tsens_dev_three, &temp_three);
-	if (ret) {
+	if (!temp_three) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_three.sensor_num);
-		return ret;
+		goto board_temp;
 	}
 
 	cpu_thermal_three = temp_three;
 
 	tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_three;
 	ret = tsens_get_temp(&tsens_dev_four, &temp_four);
-	if (ret) {
+	if (!temp_four) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_four.sensor_num);
-		return ret;
+		goto board_temp;
 	}
-
 	cpu_thermal_four = temp_four;
 
-	tempavg = ((cpu_thermal_one + cpu_thermal_two + cpu_thermal_three + cpu_thermal_four) / (numberofsensors));
+board_temp:
+	tempavg = tsens_dev.sensor_num = 0;
+		ret = tsens_get_temp(&tsens_dev, &tempavg);
+		if (!tempavg)
+			pr_debug("%s: Unable to read TSENS sensor %d\n",
+					KBUILD_MODNAME, tsens_dev.sensor_num);
+		return ret;
+
 	cpu_average = tempavg;
 
 	return 0;
