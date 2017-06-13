@@ -34,7 +34,7 @@
 
 #define DEFAULT_POLLING_MS	500
 /* last 3 minutes based on 250ms polling cycle */
-#define TEMP_HISTORY_SZ		((3*60*1000) / 500)
+#define TEMP_HISTORY_SZ		((3*60*1000) / DEFAULT_POLLING_MS)
 #define MAX_HISTORY_SZ		(TEMP_HISTORY_SZ >> 1)
 
 extern bool hotplug_ready;
