@@ -136,7 +136,7 @@ out:
 static void load_timer(struct work_struct *work)
 {
 	unsigned int cpu;
-	unsigned int avg_load = 0;
+	unsigned int avg_load = avg_nr_running();
 	unsigned int online_cpus = num_online_cpus();
 
 	if (down_timer < down_timer_cnt)
@@ -146,7 +146,7 @@ static void load_timer(struct work_struct *work)
 		up_timer++;
 
 	for_each_online_cpu(cpu)
-		avg_load += cpufreq_quick_get_util(cpu);
+		avg_load += avg_cpu_nr_running(cpu);
 
 	avg_load /= online_cpus;
 

@@ -234,7 +234,7 @@ static void decide_hotplug_func(struct work_struct *work)
 	}
 
 	for (cpu = 0; cpu < 2; cpu++)
-		cur_load += cpufreq_quick_get_util(cpu);
+		cur_load += avg_nr_running();
 
 	cur_load >>= 1;
 
