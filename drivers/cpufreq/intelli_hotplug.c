@@ -231,9 +231,9 @@ static void update_per_cpu_stat(void)
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int online_cpus;
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 	long l_nr_threshold;
-	int target = target_cpus;
+	unsigned int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	u64 delta;
@@ -244,6 +244,9 @@ static void cpu_up_down_work(struct work_struct *work)
 		return;
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+
+	if (min_cpus_online == 1)
+		min_cpus_online = (min_cpus_online - 1);
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
@@ -266,7 +269,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			if (check_down_lock(cpu))
 				break;
 			l_nr_threshold =
-				cpu_nr_run_threshold << 1 /
+				(cpu_nr_run_threshold << 1) /
 					(num_online_cpus());
 			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold)
@@ -293,7 +296,7 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
@@ -515,7 +518,7 @@ err_out:
 
 static void intelli_plug_stop(void)
 {
-	int cpu;
+	unsigned int cpu;
 	struct down_lock *dl;
 
 	for_each_possible_cpu(cpu) {
