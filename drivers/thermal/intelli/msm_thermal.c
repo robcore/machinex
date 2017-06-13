@@ -637,7 +637,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
 	BUG_ON(!pdata);
 	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
-	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
+	memcpy(&msm_thermal_info, pdata, sizeof(*pdata));
 	limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 
 	enabled = 1;
