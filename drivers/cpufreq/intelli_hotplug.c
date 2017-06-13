@@ -26,20 +26,20 @@
 #define INTELLI_PLUG_MAJOR_VERSION	7
 #define INTELLI_PLUG_MINOR_VERSION	2
 
+#define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEF_SAMPLING_MS			60
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			95000
 #define INPUT_INTERVAL			2000
 #define BOOST_LOCK_DUR			500
 #define DEFAULT_NR_CPUS_BOOSTED		4
-#define DEFAULT_NR_FSHIFT		3
+#define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
 #define DEFAULT_DOWN_LOCK_DUR		2000
 
 #define CAPACITY_RESERVE		50
 //#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
-#define THREAD_CAPACITY			(339 - CAPACITY_RESERVE)
-#define CPU_NR_THRESHOLD		((THREAD_CAPACITY << 1) + \
-					(THREAD_CAPACITY / 2))
+#define THREAD_CAPACITY			(430 - CAPACITY_RESERVE)
+#define CPU_NR_THRESHOLD ((THREAD_CAPACITY << 1) + (THREAD_CAPACITY / 2))
 #define MULT_FACTOR			4
 #define DIV_FACTOR			100000
 
@@ -61,12 +61,12 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = 2;
-static unsigned int max_cpus_online = 4;
+static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
-static int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
+static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 /* HotPlug Driver Tuning */
-static unsigned int target_cpus;
+static unsigned int target_cpus = 0;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
@@ -185,8 +185,8 @@ static int check_down_lock(unsigned int cpu)
 
 static unsigned int calculate_thread_stats(void)
 {
-	int avg_nr_run = avg_nr_running();
-	int nr_run;
+	unsigned int avg_nr_run = avg_nr_running();
+	unsigned int nr_run;
 	unsigned int threshold_size;
 	unsigned int *current_profile;
 
@@ -196,7 +196,7 @@ static unsigned int calculate_thread_stats(void)
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
 		unsigned long nr_threshold;
-		if (max_cpus_online == 4)
+		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
 			current_profile = nr_run_profiles[5];
@@ -246,13 +246,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	if (min_cpus_online == 1)
-		min_cpus_online = (min_cpus_online - 1);
-
 	primary = cpumask_first(cpu_online_mask);
-
-	now = ktime_to_us(ktime_get());
-	delta = (now - last_input);
 
 	if (target < min_cpus_online)
 		target = min_cpus_online;
@@ -260,6 +254,9 @@ static void cpu_up_down_work(struct work_struct *work)
 		target = max_cpus_online;
 
 	online_cpus = num_online_cpus();
+
+	now = ktime_to_us(ktime_get());
+	delta = (now - last_input);
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
@@ -277,7 +274,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold)
 				cpu_down(cpu);
-			if (target > num_online_cpus())
+			if (target >= num_online_cpus())
 				break;
 		}
 	} else if (target > online_cpus) {
@@ -288,7 +285,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 				cpu_up(cpu);
 			apply_down_lock(cpu);
-			if (target < num_online_cpus())
+			if (target <= num_online_cpus())
 				break;
 		}
 	}
