@@ -267,7 +267,7 @@ static void decide_hotplug_func(struct work_struct *work)
 		if (hotplug_stats.counter)
 			--hotplug_stats.counter;
 
-		if (online_cpus > 0)
+		if (online_cpus > 1)
 			cpu_smash(cur_load);
 	}
 
