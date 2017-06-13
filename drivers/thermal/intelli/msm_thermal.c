@@ -219,12 +219,10 @@ board_temp:
 	return 0;
 }
 
-static void __ref do_core_control(long temps)
+static void __ref do_core_control(void)
 {
 	int i = 0;
 	int ret = 0;
-	temps = cpu_average;
-
 
 	if ((!core_control_enabled) || (intelli_init() ||
 		 !hotplug_ready)) {
@@ -234,7 +232,7 @@ static void __ref do_core_control(long temps)
 
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask &&
-		((temps >= msm_thermal_info.core_limit_temp_degC) ||
+		((cpu_average >= msm_thermal_info.core_limit_temp_degC) ||
 		(cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC) ||
 		(cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC) ||
 		(cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC) ||
@@ -245,7 +243,7 @@ static void __ref do_core_control(long temps)
 			if (cpus_offlined & BIT(i) && !cpu_online(i))
 				continue;
 			pr_debug("%s: Set Offline: CPU%d Temp: %ld\n",
-					KBUILD_MODNAME, i, temps);
+					KBUILD_MODNAME, i, cpu_average);
 			ret = cpu_down(i);
 			if (ret) {
 				thermal_core_controlled = false;
@@ -260,7 +258,7 @@ static void __ref do_core_control(long temps)
 			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
-		((temps <= (msm_thermal_info.core_limit_temp_degC -
+		((cpu_average <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) ||
 		(cpu_thermal_one <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) ||
@@ -275,7 +273,7 @@ static void __ref do_core_control(long temps)
 				continue;
 			cpus_offlined &= ~BIT(i);
 			pr_debug("%s: Allow Online CPU%d Temp: %ld\n",
-					KBUILD_MODNAME, i, temps);
+					KBUILD_MODNAME, i, cpu_average);
 			/* If this core is already online, then bring up the
 			 * next offlined core.
 			 */
@@ -297,13 +295,12 @@ static void __ref do_core_control(long temps)
 	mutex_unlock(&core_control_mutex);
 }
 
-static void __ref do_freq_control(long temps)
+static void __ref do_freq_control(void)
 {
 	int ret = 0;
 	int cpu = smp_processor_id();
 	struct cpufreq_policy policy;
 	unsigned long max_freq = limited_max_freq_thermal;
-	temps = cpu_average;
 
 	if (!hotplug_ready)
 		return;
@@ -322,7 +319,7 @@ static void __ref do_freq_control(long temps)
 	}
 #endif
 
-	if ((temps >= msm_thermal_info.limit_temp_degC ||
+	if ((cpu_average >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
@@ -334,7 +331,7 @@ static void __ref do_freq_control(long temps)
 		if (limit_idx < limit_idx_low)
 			limit_idx = limit_idx_low;
 		max_freq = table[limit_idx].frequency;
-	} else if (temps < msm_thermal_info.limit_temp_degC -
+	} else if (cpu_average < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC ||
 		cpu_thermal_one < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC ||
@@ -378,8 +375,8 @@ static void __ref check_temp(struct work_struct *work)
 			limit_init = 1;
 	}
 
-	do_freq_control(cpu_average);
-	do_core_control(cpu_average);
+	do_freq_control();
+	do_core_control();
 reschedule:
 	if (enabled)
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
