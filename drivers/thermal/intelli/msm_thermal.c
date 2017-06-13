@@ -49,7 +49,10 @@ static struct msm_thermal_stat_data msm_thermal_stats;
 static int enabled;
 bool thermal_core_controlled;
 static struct msm_thermal_data msm_thermal_info = {
-	.sensor_id = 7,
+	.sensor_id1 = 7,
+	.sensor_id2 = 8,
+	.sensor_id3 = 7,
+	.sensor_id4 = 8,
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 10,
@@ -278,23 +281,55 @@ static void __ref do_freq_control(long temp)
 static void __ref check_temp(struct work_struct *work)
 {
 	static int limit_init;
-	struct tsens_device tsens_dev;
-	long temp = 0;
+	struct tsens_device tsens_dev1;
+	struct tsens_device tsens_dev2;
+	struct tsens_device tsens_dev3;
+	struct tsens_device tsens_dev4;
+	long tempavg = 0;
+	long temp1 = 0;
+	long temp2 = 0;
+	long temp3 = 0;
+	long temp4 = 0;
 	int ret = 0;
+	unsigned int numberofsensors = 4;
 
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id;
-	ret = tsens_get_temp(&tsens_dev, &temp);
+	tsens_dev1.sensor_num = msm_thermal_info.sensor_id1;
+	ret = tsens_get_temp(&tsens_dev1, &temp1);
 	if (ret) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
+				KBUILD_MODNAME, tsens_dev1.sensor_num);
+		goto reschedule;
+	}
+	tsens_dev2.sensor_num = msm_thermal_info.sensor_id2;
+	ret = tsens_get_temp(&tsens_dev2, &temp2);
+	if (ret) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev2.sensor_num);
+		goto reschedule;
+	}
+	tsens_dev3.sensor_num = msm_thermal_info.sensor_id3;
+	ret = tsens_get_temp(&tsens_dev3, &temp3);
+	if (ret) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev3.sensor_num);
+		goto reschedule;
+	}
+	tsens_dev4.sensor_num = msm_thermal_info.sensor_id4;
+	ret = tsens_get_temp(&tsens_dev4, &temp4);
+	if (ret) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev4.sensor_num);
 		goto reschedule;
 	}
 
+	tempavg = ((temp1 + temp2 + temp3 + temp4) / (numberofsensors));
+
+
 	if (hist_index < MAX_HISTORY_SZ)
-		msm_thermal_stats.temp_history[hist_index] = temp;
+		msm_thermal_stats.temp_history[hist_index] = tempavg;
 	else {
 		hist_index = 0;
-		msm_thermal_stats.temp_history[hist_index] = temp;
+		msm_thermal_stats.temp_history[hist_index] = tempavg;
 	}
 	hist_index++;
 
@@ -306,8 +341,8 @@ static void __ref check_temp(struct work_struct *work)
 			limit_init = 1;
 	}
 
-	do_freq_control(temp);
-	do_core_control(temp);
+	do_freq_control(tempavg);
+	do_core_control(tempavg);
 reschedule:
 	if (enabled)
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
@@ -636,7 +671,10 @@ done_cc_nodes:
 int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
 	BUG_ON(!pdata);
-	BUG_ON(pdata->sensor_id >= TSENS_MAX_SENSORS);
+	BUG_ON(pdata->sensor_id1 >= TSENS_MAX_SENSORS ||
+	pdata->sensor_id2 >= TSENS_MAX_SENSORS ||
+	pdata->sensor_id3 >= TSENS_MAX_SENSORS ||
+	pdata->sensor_id4 >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(*pdata));
 	limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 

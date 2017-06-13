@@ -15,7 +15,10 @@
 #define __MSM_THERMAL_H
 
 struct msm_thermal_data {
-	uint32_t sensor_id;
+	uint32_t sensor_id1;
+	uint32_t sensor_id2;
+	uint32_t sensor_id3;
+	uint32_t sensor_id4;
 	uint32_t poll_ms;
 	int32_t limit_temp_degC;
 	int32_t temp_hysteresis_degC;
