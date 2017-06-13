@@ -133,10 +133,13 @@ out:
  * If the average load is below up_threshold offline one more CPU if the
  * down_timer has expired.
  */
+u64 prev_cpu_wall;
+u64 prev_cpu_idle;
 static void load_timer(struct work_struct *work)
 {
 	unsigned int cpu;
-	unsigned int avg_load = avg_nr_running();
+	unsigned int avg_load = 0;
+	unsigned cur_load;
 	unsigned int online_cpus = num_online_cpus();
 
 	if (down_timer < down_timer_cnt)
@@ -145,8 +148,32 @@ static void load_timer(struct work_struct *work)
 	if (up_timer < up_timer_cnt)
 		up_timer++;
 
-	for_each_online_cpu(cpu)
-		avg_load += avg_cpu_nr_running(cpu);
+	for_each_online_cpu(cpu) {
+		u64 cur_wall_time, cur_idle_time;
+		unsigned int wall_time, idle_time;
+
+
+		cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
+
+		wall_time = (unsigned int)
+				(cur_wall_time -
+					prev_cpu_wall);
+		prev_cpu_wall = cur_wall_time;
+
+		idle_time = (unsigned int)(cur_idle_time - prev_cpu_idle);
+		prev_cpu_idle = cur_idle_time;
+		/* if wall_time < idle_time, evaluate cpu load next time */
+
+		if (wall_time >= idle_time) {
+			/*
+			 * if wall_time is equal to idle_time,
+			 * cpu_load is equal to 0
+			 */
+			cur_load = wall_time > idle_time ? (100 *
+				(wall_time - idle_time)) / wall_time : 0;
+		}
+	}
+		avg_load += cur_load;
 
 	avg_load /= online_cpus;
 
@@ -161,7 +188,7 @@ static void load_timer(struct work_struct *work)
 	else if (down_timer >= down_timer_cnt || online_cpus > max_cpus_online)
 		down_one();
 
-	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
+	mod_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
 }
 
 /******************** Module parameters *********************/

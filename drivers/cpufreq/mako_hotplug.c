@@ -35,7 +35,7 @@
 #define DEFAULT_LOAD_THRESHOLD 80
 #define DEFAULT_HIGH_LOAD_COUNTER 10
 #define DEFAULT_MAX_LOAD_COUNTER 20
-#define DEFAULT_CPUFREQ_UNPLUG_LIMIT 1782000
+#define DEFAULT_CPUFREQ_UNPLUG_LIMIT 1674000
 #define DEFAULT_MIN_TIME_CPU_ONLINE 1
 #define DEFAULT_TIMER 1
 
@@ -104,7 +104,7 @@ static inline void cpus_online_work(void)
 {
 	unsigned int cpu;
 
-	for (cpu = 2; cpu < 4; cpu++) {
+	for (cpu = 0; cpu < 3; cpu++) {
 		if (cpu_is_offline(cpu))
 			cpu_up(cpu);
 	}
@@ -116,7 +116,7 @@ static inline void cpus_offline_work(void)
 {
 	unsigned int cpu;
 
-	for (cpu = 3; cpu > 1; cpu--) {
+	for (cpu = 3; cpu > 0; cpu--) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 	}
@@ -136,7 +136,7 @@ static inline bool cpus_cpufreq_work(void)
 			return false;
 	}
 
-	for (cpu = 2; cpu < 4; cpu++)
+	for (cpu = 0; cpu < 3; cpu++)
 		current_freq += cpufreq_quick_get(cpu);
 
 	current_freq >>= 1;
@@ -209,6 +209,8 @@ static void cpu_smash(unsigned int load)
 	hotplug_stats.counter = 0;
 }
 
+u64 former_cpu_wall;
+u64 former_cpu_idle;
 static void decide_hotplug_func(struct work_struct *work)
 {
 	struct hotplug_tunables *t = &tunables;
@@ -219,11 +221,33 @@ static void decide_hotplug_func(struct work_struct *work)
 	if (!t->enabled)
 		goto reschedule;
 
-	/*
-	 * reschedule early when the user doesn't want more than 2 cores online
-	 */
-	if (unlikely(t->load_threshold == 100 && online_cpus == 2))
-		goto reschedule;
+	for_each_online_cpu(cpu) {
+		u64 cur_wall_time, cur_idle_time;
+		unsigned int wall_time, idle_time;
+
+
+		cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
+
+		wall_time = (unsigned int)
+				(cur_wall_time -
+					former_cpu_wall);
+		former_cpu_wall = cur_wall_time;
+
+		idle_time = (unsigned int)(cur_idle_time - former_cpu_idle);
+		former_cpu_idle = cur_idle_time;
+		/* if wall_time < idle_time, evaluate cpu load next time */
+
+		if (wall_time >= idle_time) {
+			/*
+			 * if wall_time is equal to idle_time,
+			 * cpu_load is equal to 0
+			 */
+			cur_load = wall_time > idle_time ? (100 *
+				(wall_time - idle_time)) / wall_time : 0;
+			cur_load >>= 1;
+
+		}
+	}
 
 	/*
 	 * reschedule early when users desire to run with all cores online
@@ -233,27 +257,22 @@ static void decide_hotplug_func(struct work_struct *work)
 		goto reschedule;
 	}
 
-	for (cpu = 0; cpu < 2; cpu++)
-		cur_load += avg_nr_running();
-
-	cur_load >>= 1;
-
 	if (cur_load >= t->load_threshold) {
 		if (hotplug_stats.counter < t->max_load_counter)
 			++hotplug_stats.counter;
 
-		if (online_cpus <= 2)
+		if (online_cpus < 4)
 			cpu_revive(cur_load);
 	} else {
 		if (hotplug_stats.counter)
 			--hotplug_stats.counter;
 
-		if (online_cpus > 2)
+		if (online_cpus > 0)
 			cpu_smash(cur_load);
 	}
 
-	queue_delayed_work(wq, &decide_hotplug,
-		msecs_to_jiffies(t->timer * HZ));
+	mod_delayed_work(wq, &decide_hotplug,
+		msecs_to_jiffies(100));
 
 	return;
 
@@ -264,7 +283,7 @@ reschedule:
 	 * we don't need to run this work every 100ms, but rather just
 	 * once every 2 seconds
 	 */
-	queue_delayed_work(wq, &decide_hotplug, HZ * 2);
+	mod_delayed_work(wq, &decide_hotplug, msecs_to_jiffies(200));
 }
 
 /*
@@ -514,7 +533,7 @@ static int mako_hotplug_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&decide_hotplug, decide_hotplug_func);
 
-	queue_delayed_work(wq, &decide_hotplug, HZ * 30);
+	queue_delayed_work(wq, &decide_hotplug, msecs_to_jiffies(3000));
 err:
 	return ret;
 }
