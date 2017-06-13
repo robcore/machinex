@@ -232,6 +232,7 @@ static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int online_cpus;
 	unsigned int cpu = smp_processor_id();
+	int primary;
 	long l_nr_threshold;
 	unsigned int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
@@ -247,6 +248,8 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (min_cpus_online == 1)
 		min_cpus_online = (min_cpus_online - 1);
+
+	primary = cpumask_first(cpu_online_mask);
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
@@ -264,7 +267,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
-			if (cpu == 0)
+			if (cpu == primary)
 				continue;
 			if (check_down_lock(cpu))
 				break;
@@ -279,7 +282,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
+			if (cpu == primary)
 				continue;
 			if (thermal_core_controlled)
 				goto reschedule;
@@ -401,15 +404,17 @@ static struct input_handler intelli_plug_input_handler = {
 static void cycle_cpus(void)
 {
 	unsigned int cpu;
+	int optimus;
 
+	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
-		if (cpu == 0)
+		if (cpu == optimus)
 			continue;
 		cpu_down(cpu);
 	}
 	mdelay(4);
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == 0)
+		if (cpu == optimus)
 			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
