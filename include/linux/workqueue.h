@@ -429,7 +429,6 @@ __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active,
  */
 #define alloc_ordered_workqueue(fmt, flags, args...)			\
 	alloc_workqueue(fmt, WQ_UNBOUND | __WQ_ORDERED | (flags), 1, ##args)
-
 #define create_workqueue(name)						\
 	alloc_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM, 1, (name))
 #define create_freezable_workqueue(name)				\
@@ -437,6 +436,8 @@ __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active,
 			WQ_MEM_RECLAIM, 1, (name))
 #define create_singlethread_workqueue(name)				\
 	alloc_ordered_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM, name)
+#define create_hipri_workqueue(name)				\
+	alloc_ordered_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE | WQ_HIGHPRI, name)
 
 extern void destroy_workqueue(struct workqueue_struct *wq);
 
