@@ -148,8 +148,9 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 	limited_max_freq_thermal = max_freq;
 	reapply_hard_limits(cpu);
-	if (cpu_online(cpu))
-		cpufreq_update_policy(cpu);
+	get_online_cpus();
+	cpufreq_update_policy(cpu);
+	put_online_cpus();
 }
 
 extern bool hotplug_ready;

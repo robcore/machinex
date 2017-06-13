@@ -926,7 +926,7 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
 
 /* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit(struct cpufreq_policy *policy, unsigned int freq);
+unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
