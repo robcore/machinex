@@ -82,9 +82,12 @@ module_param_named(core_limit_temp_degC, msm_thermal_info.core_limit_temp_degC,
 module_param_named(core_control_mask, msm_thermal_info.core_control_mask,
 			uint, 0664);
 module_param_named(freq_step, msm_thermal_info.freq_step, uint, 0644);
-
 module_param_named(thermal_limit_high, limit_idx_high, int, 0644);
 module_param_named(thermal_limit_low, limit_idx_low, int, 0644);
+module_param_named(freq_limit_hysteresis, msm_thermal_info.temp_hysteresis_degC,
+			 int, 0644);
+module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_degC,
+			 int, 0644);
 
 static bool therm_freq_limited;
 static int msm_thermal_get_freq_table(void)
@@ -116,7 +119,7 @@ static int msm_thermal_get_freq_table(void)
 fail:
 	return ret;
 }
-
+/*
 bool is_freq_limited(unsigned int cpu)
 {
 	int ret;
@@ -134,6 +137,7 @@ bool is_freq_limited(unsigned int cpu)
 
 	return therm_freq_limited;
 }
+*/
 
 static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 {
@@ -148,8 +152,8 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
-		limited_max_freq_thermal = max_freq;
 		reapply_hard_limits(cpu);
+		limited_max_freq_thermal = max_freq;
 		cpufreq_update_policy(cpu);
 	}
 		put_online_cpus();
