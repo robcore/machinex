@@ -29,7 +29,7 @@ int es325_remote_close_slim_tx(int dai_id);
 int es325_remote_add_codec_controls(struct snd_soc_codec *codec);
 
 int es325_remote_route_enable(struct snd_soc_dai *dai);
-
+int es325_get_tx1_enabled(void);
 void es325_wrapper_sleep(int dai_id);
 void es325_wrapper_wakeup(struct snd_soc_dai *dai);
 

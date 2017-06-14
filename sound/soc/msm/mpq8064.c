@@ -1519,11 +1519,6 @@ static int __init msm_audio_init(void)
 {
 	int ret;
 
-	if (socinfo_get_id() != 130) {
-		pr_err("%s: mpq8064 - Not the right machine type\n", __func__);
-		return -ENODEV;
-	}
-
 	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
 		bottom_spk_pamp_gpio = PM8921_GPIO_PM_TO_SYS(16);
 
@@ -1561,10 +1556,6 @@ module_init(msm_audio_init);
 
 static void __exit msm_audio_exit(void)
 {
-	if (socinfo_get_id() != 130) {
-		pr_err("%s: mpq8064 - Not the right machine type\n", __func__);
-		return ;
-	}
 	msm_free_headset_mic_gpios();
 	platform_device_unregister(msm_snd_device);
 	kfree(mbhc_cfg.calibration);
