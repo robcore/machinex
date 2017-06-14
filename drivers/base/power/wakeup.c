@@ -626,21 +626,23 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 	return false;
 }
 
-bool hsic_active;
-static void prometheus_hsic_beacon(struct wakeup_source *ws)
+bool android_wake_active;
+static void prometheus_power_beacon(struct wakeup_source *ws)
 {
-	bool is_hsic_active;
+	bool is_android_wake_active;
 	unsigned int wslen = 0;
 
 	if (ws) {
 		wslen = strlen(ws->name);
 
-	if (!strcmp(ws->name, "msm_hsic_host") && ws->active)
-		is_hsic_active = true;
+	if ((!strcmp(ws->name, "PowerManagerService.Display") && ws->active) ||
+		(!strcmp(ws->name, "PowerManagerService.WakeLocks") && ws->active) ||
+		(!strcmp(ws->name, "PowerManagerService.Broadcasts") && ws->active))
+		is_android_wake_active = true;
 	else
-		is_hsic_active = false;
+		is_android_wake_active = false;
 	}
-	hsic_active = is_hsic_active;
+	android_wake_active = is_android_wake_active;
 }
 
 /*
@@ -712,11 +714,11 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 			if (events_check_enabled)
 				ws->wakeup_count++;
 
-			prometheus_hsic_beacon(ws);
+			prometheus_power_beacon(ws);
 
 			if ((!ws->active) && !wakeup_source_blocker(ws))
 				wakeup_source_activate(ws);
-			else if ((ws->active) && wakeup_source_blocker(ws))
+			else if (ws->active)
 				wakeup_source_deactivate(ws);
 
 			if (hard)
@@ -727,10 +729,10 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 		if (events_check_enabled)
 			ws->wakeup_count++;
 
-		prometheus_hsic_beacon(ws);
-
 		if (!ws->active)
 			wakeup_source_activate(ws);
+
+		prometheus_power_beacon(ws);
 
 		if (hard)
 			pm_system_wakeup();
