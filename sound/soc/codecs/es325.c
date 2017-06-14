@@ -2151,7 +2151,6 @@ static int es325_bootup(struct es325_priv *es325)
 		debug_for_dl_firmware = SYNC_MSG_NACK;
 		return -EIO;
 	}
-
 	es325_fw_downloaded = 1;
 	pr_info("%s(): exit\n", __func__);
 	return 0;
