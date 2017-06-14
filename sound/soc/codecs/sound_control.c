@@ -125,7 +125,7 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 		snd_ctrl_locked = 1;
 	}
 
-	if (val <= 0) {
+	if (val == 0) {
 		val = 0;
 		snd_ctrl_locked = 0;
 	}
