@@ -66,6 +66,7 @@ struct es325_cmd_access {
 
 #include "es325-access.h"
 
+#define PREVENT_SLIMBUS_SLEEP_IN_FW_DL
 #define ES325_SLIM_CH_RX_OFFSET		152
 #define ES325_SLIM_CH_TX_OFFSET		156
 /* #define ES325_SLIM_RX_PORTS		10 */

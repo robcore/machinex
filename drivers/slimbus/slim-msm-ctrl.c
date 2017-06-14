@@ -101,6 +101,7 @@
 #define PGD_THIS_EE_V2(r) (dev->base + (r ## _V2) + (dev->ee * 0x1000))
 #define PGD_PORT_V2(r, p) (dev->base + (r ## _V2) + ((p) * 0x1000))
 #define CFG_PORT_V2(r) ((r ## _V2))
+#define PREVENT_SLIMBUS_SLEEP_IN_FW_DL
 /* Component registers */
 enum comp_reg_v2 {
 	COMP_CFG_V2		= 4,
@@ -2436,14 +2437,14 @@ static int msm_slim_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_PM
 #if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
-static int ngd_slim_runtime_idle(struct device *device)
+static int msm_slim_runtime_idle(struct device *device)
 {
 	struct platform_device *pdev = to_platform_device(device);
 	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
 	if (dev->state == MSM_CTRL_AWAKE && es325_slim_write_flag == 0)
-		dev->state = MSM_CTRL_IDLE;
+		dev->state = MSM_CTRL_ASLEEP;
 	dev_dbg(device, "pm_runtime: idle...\n");
-	if ( dev->state == MSM_CTRL_IDLE && es325_slim_write_flag == 0){
+	if ( dev->state == MSM_CTRL_ASLEEP && es325_slim_write_flag == 0){
 		pm_request_autosuspend(device);
 	}
 	return -EAGAIN;
