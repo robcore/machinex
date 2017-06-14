@@ -101,7 +101,6 @@
 #define PGD_THIS_EE_V2(r) (dev->base + (r ## _V2) + (dev->ee * 0x1000))
 #define PGD_PORT_V2(r, p) (dev->base + (r ## _V2) + ((p) * 0x1000))
 #define CFG_PORT_V2(r) ((r ## _V2))
-#define PREVENT_SLIMBUS_SLEEP_IN_FW_DL
 /* Component registers */
 enum comp_reg_v2 {
 	COMP_CFG_V2		= 4,
