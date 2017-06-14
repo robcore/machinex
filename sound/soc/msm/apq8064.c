@@ -2347,13 +2347,6 @@ static int __init msm_audio_init(void)
 {
 	int ret;
 	u32	version = socinfo_get_platform_version();
-	if (!soc_class_is_apq8064() ||
-		(socinfo_get_id() == 130) ||
-		(machine_is_apq8064_mtp() &&
-		(SOCINFO_VERSION_MINOR(version) == 1))) {
-		pr_info("%s: Not APQ8064 in SLIMBUS mode\n", __func__);
-		return -ENODEV;
-	}
 
 	if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
 		bottom_spk_pamp_gpio = PM8921_GPIO_PM_TO_SYS(16);
@@ -2388,10 +2381,6 @@ module_init(msm_audio_init);
 
 static void __exit msm_audio_exit(void)
 {
-	if (!soc_class_is_apq8064() || socinfo_get_id() == 130) {
-		pr_err("%s: apq8064 - Not the right machine type\n", __func__);
-		return ;
-	}
 	platform_device_unregister(msm_snd_device);
 	if (mbhc_cfg.gpio)
 		gpio_free(mbhc_cfg.gpio);
