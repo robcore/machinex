@@ -2342,7 +2342,7 @@ static int es325_sleep(struct es325_priv *es325)
 	if (rc < 0)
 		pr_err("=[ES325]=%s(): Sleep Smooth Mute Set to 0 Fail, rc=%d\n", __func__, rc);
 
-	usleep_range(2000, 2000);
+	usleep_range(2000, 2100);
 
 	/* write pwr command, es325 to sleep mode */
 	do {
@@ -2355,7 +2355,7 @@ static int es325_sleep(struct es325_priv *es325)
 			break;
 		}
 		pr_err("=[ES325]=%s(): slim write fail, rc=%d\n", __func__,rc);
-		usleep_range(20000, 20000);
+		usleep_range(1000, 1000);
 		i++;
 	} while (i <= 20);
 
