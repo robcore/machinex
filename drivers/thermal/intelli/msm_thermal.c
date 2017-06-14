@@ -221,6 +221,10 @@ static void __ref do_core_control(void)
 		return;
 	}
 
+	ret = populate_temps();
+	if (ret)
+		return;
+
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask &&
 		((cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC) ||
@@ -288,6 +292,10 @@ static void __ref do_freq_control(void)
 	ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			return;
+
+	ret = populate_temps();
+	if (ret)
+		return;
 #if 0
 	if (temp > msm_thermal_info.limit_temp_degC) {
 		get_online_cpus()
@@ -347,10 +355,6 @@ static void __ref check_temp(struct work_struct *work)
 		else
 			limit_init = 1;
 	}
-
-	ret = populate_temps();
-	if (ret)
-		goto reschedule;
 
 	do_freq_control();
 	do_core_control();
