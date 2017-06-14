@@ -23,6 +23,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/pm_domain.h>
 #include <linux/idr.h>
+#include <linux/property.h>
 
 #include "base.h"
 #include "power/power.h"
@@ -298,6 +299,22 @@ int platform_device_add_data(struct platform_device *pdev, const void *data,
 EXPORT_SYMBOL_GPL(platform_device_add_data);
 
 /**
+ * platform_device_add_properties - add built-in properties to a platform device
+ * @pdev: platform device to add properties to
+ * @pset: properties to add
+ *
+ * The function will take deep copy of the properties in @pset and attach
+ * the copy to the platform device. The memory associated with properties
+ * will be freed when the platform device is released.
+ */
+int platform_device_add_properties(struct platform_device *pdev,
+				   const struct property_set *pset)
+{
+	return device_add_property_set(&pdev->dev, pset);
+}
+EXPORT_SYMBOL_GPL(platform_device_add_properties);
+
+/**
  * platform_device_add - add a platform device to device hierarchy
  * @pdev: platform device we're adding
  *
@@ -353,7 +370,7 @@ int platform_device_add(struct platform_device *pdev)
 		}
 
 		if (p && insert_resource(p, r)) {
-			dev_err(&pdev->dev, "failed to claim resource %d\n", i);
+			dev_err(&pdev->dev, "failed to claim resource %d: %pR\n", i, r);
 			ret = -EBUSY;
 			goto failed;
 		}
@@ -408,6 +425,8 @@ void platform_device_del(struct platform_device *pdev)
 			if (r->parent)
 				release_resource(r);
 		}
+
+		device_remove_property_set(&pdev->dev);
 	}
 }
 EXPORT_SYMBOL_GPL(platform_device_del);
@@ -484,6 +503,12 @@ struct platform_device *platform_device_register_full(
 			pdevinfo->data, pdevinfo->size_data);
 	if (ret)
 		goto err;
+
+	if (pdevinfo->pset) {
+		ret = platform_device_add_properties(pdev, pdevinfo->pset);
+		if (ret)
+			goto err;
+	}
 
 	ret = platform_device_add(pdev);
 	if (ret) {
