@@ -39,6 +39,7 @@
 #ifdef CONFIG_SEC_FPGA
 #include <linux/barcode_emul.h>
 #endif
+#include <sound/es325-export.h>
 
 /* 8064 machine driver */
 
@@ -109,7 +110,7 @@ static int msm_slim_1_rate = SAMPLE_RATE_8KHZ;
 static int msm_btsco_ch = 1;
 static int msm_slim_1_rx_ch = 1;
 static int msm_slim_1_tx_ch = 1;
-
+static int msm_slimbus_sample_rate = 48000;
 static int msm_hdmi_rx_ch = 2;
 static int hdmi_rate_variable;
 static int rec_mode = INCALL_REC_MONO;
@@ -760,6 +761,10 @@ static const char * const slim1_tx_ch_text[] = {"One", "Two"};
 static const struct soc_enum msm_slim_1_tx_ch_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, slim1_tx_ch_text),
 };
+static const char *slimbus_sample_rate_text[] = {"8000", "16000", "48000"};
+static const struct soc_enum msm_slimbus_sample_rate_enum[] = {
+		SOC_ENUM_SINGLE_EXT(3, slimbus_sample_rate_text),
+};
 static int msm_slim_0_rx_ch_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -869,6 +874,35 @@ static int msm_slim_1_rate_put(struct snd_kcontrol *kcontrol,
 	}
 	pr_debug("%s: msm_slim_1_rate = %d\n", __func__,
 		 msm_slim_1_rate);
+	return 0;
+}
+
+static int msm_slimbus_sample_rate_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	pr_debug("%s: msm_slimbus_sample_rate  = %d", __func__,
+					msm_slimbus_sample_rate);
+	ucontrol->value.integer.value[0] = msm_slimbus_sample_rate;
+	return 0;
+}
+
+static int msm_slimbus_sample_rate_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	switch (ucontrol->value.integer.value[0]) {
+	case 8000:
+		msm_slimbus_sample_rate = 8000;
+		break;
+	case 16000:
+		msm_slimbus_sample_rate = 16000;
+		break;
+	case 48000:
+	default:
+		msm_slimbus_sample_rate = 48000;
+		break;
+	}
+	pr_debug("%s: msm_slimbus_sample_rate = %d\n", __func__,
+					msm_slimbus_sample_rate);
 	return 0;
 }
 
@@ -1053,6 +1087,7 @@ static int msm_hw_params(struct snd_pcm_substream *substream,
 	unsigned int rx_ch[SLIM_MAX_RX_PORTS], tx_ch[SLIM_MAX_TX_PORTS];
 	unsigned int rx_ch_cnt = 0, tx_ch_cnt = 0;
 	unsigned int num_tx_ch = 0;
+	int es325_tx1_enabled = es325_get_tx1_enabled();
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 
@@ -1082,9 +1117,18 @@ static int msm_hw_params(struct snd_pcm_substream *substream,
 
 #ifdef CONFIG_SND_SOC_ES325
 		if (codec_dai->id  == 2 || codec_dai->id == 12)
+			num_tx_ch =  msm_slim_0_tx_ch;
+		else if (codec_dai->id == 5 && (es325_tx1_enabled == 0)) {
+			/* DAI 5 is used for external EC reference from codec.
+			 * Since Rx is fed as reference for EC, the config of
+			 * this DAI is based on that of the Rx path.
+			 */
+			pr_debug("%s:enable External EC reference for default EC\n",
+					__func__);
+			num_tx_ch =  msm_slim_0_rx_ch;
+		}
 #else
 		if (codec_dai->id  == 2)
-#endif
 			num_tx_ch =  msm_slim_0_tx_ch;
 		else if (codec_dai->id == 5) {
 			/* DAI 5 is used for external EC reference from codec.
@@ -1093,7 +1137,7 @@ static int msm_hw_params(struct snd_pcm_substream *substream,
 			 */
 			num_tx_ch =  msm_slim_0_rx_ch;
 		}
-
+#endif
 		pr_debug("%s: %s_tx_dai_id_%d_ch=%d\n", __func__,
 			codec_dai->name, codec_dai->id, num_tx_ch);
 
@@ -1436,7 +1480,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	err = tabla_hs_detect(codec, &mbhc_cfg);
 	*/
-	return err;
+	return 0;
 }
 
 static int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
@@ -1449,7 +1493,7 @@ static int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 			SNDRV_PCM_HW_PARAM_CHANNELS);
 
 	pr_debug("%s()\n", __func__);
-	rate->min = rate->max = 48000;
+	rate->min = rate->max = msm_slimbus_sample_rate;//48000;
 	channels->min = channels->max = msm_slim_0_rx_ch;
 
 	return 0;
@@ -1464,8 +1508,8 @@ static int msm_slim_0_tx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *channels = hw_param_interval(params,
 			SNDRV_PCM_HW_PARAM_CHANNELS);
 
-	pr_debug("%s()\n", __func__);
-	rate->min = rate->max = 48000;
+	pr_debug("%s() sample rate(%d)\n", __func__, msm_slimbus_sample_rate);
+	rate->min = rate->max = msm_slimbus_sample_rate;//48000;
 	channels->min = channels->max = msm_slim_0_tx_ch;
 
 	return 0;
@@ -1568,13 +1612,7 @@ static int msm_hdmi_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	pr_debug("%s channels->min %u channels->max %u ()\n", __func__,
 			channels->min, channels->max);
 
-	if (channels->max < 2)
-		channels->min = channels->max = 2;
-	if (!hdmi_rate_variable)
-		rate->min = rate->max = 48000;
-
-	if (channels->min != channels->max)
-		channels->min = channels->max;
+	rate->min = rate->max = 48000;
 
 	return 0;
 }

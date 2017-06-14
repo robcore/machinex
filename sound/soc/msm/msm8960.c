@@ -1776,11 +1776,6 @@ static int __init msm8960_audio_init(void)
 {
 	int ret;
 
-	if (!soc_class_is_msm8960()) {
-		pr_debug("%s: 8960 - Not the right machine type\n", __func__);
-		return -ENODEV ;
-	}
-
 	mbhc_cfg.calibration = def_tabla_mbhc_cal();
 	if (!mbhc_cfg.calibration) {
 		pr_err("Calibration data allocation failed\n");
@@ -1849,10 +1844,6 @@ module_init(msm8960_audio_init);
 
 static void __exit msm8960_audio_exit(void)
 {
-	if (!soc_class_is_msm8960()) {
-		pr_debug("%s: 8960 - Not the right machine type\n", __func__);
-		return ;
-	}
 	msm8960_free_headset_mic_gpios();
 	platform_device_unregister(msm8960_snd_device);
 	platform_device_unregister(msm8960_snd_tabla1x_device);
