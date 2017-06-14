@@ -353,7 +353,7 @@ int platform_device_add(struct platform_device *pdev)
 		}
 
 		if (p && insert_resource(p, r)) {
-			dev_err(&pdev->dev, "failed to claim resource %d\n", i);
+			dev_err(&pdev->dev, "failed to claim resource %d: %pR\n", i, r);
 			ret = -EBUSY;
 			goto failed;
 		}
@@ -506,10 +506,15 @@ static int platform_drv_probe(struct device *_dev)
 	int ret;
 
 	ret = dev_pm_domain_attach(_dev, true);
-	if (ret != -EPROBE_DEFER && drv->probe) {
-		ret = drv->probe(dev);
-		if (ret)
-			dev_pm_domain_detach(_dev, true);
+	if (ret != -EPROBE_DEFER) {
+		if (drv->probe) {
+			ret = drv->probe(dev);
+			if (ret)
+				dev_pm_domain_detach(_dev, true);
+		} else {
+			/* don't fail if just dev_pm_domain_attach failed */
+			ret = 0;
+		}
 	}
 
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
@@ -545,7 +550,6 @@ static void platform_drv_shutdown(struct device *_dev)
 
 	if (drv->shutdown)
 		drv->shutdown(dev);
-	dev_pm_domain_detach(_dev, true);
 }
 
 /**
@@ -577,9 +581,10 @@ void platform_driver_unregister(struct platform_driver *drv)
 EXPORT_SYMBOL_GPL(platform_driver_unregister);
 
 /**
- * platform_driver_probe - register driver for non-hotpluggable device
+ * __platform_driver_probe - register driver for non-hotpluggable device
  * @drv: platform driver structure
  * @probe: the driver probe routine, probably from an __init section
+ * @module: module which will be the owner of the driver
  *
  * Use this instead of platform_driver_register() when you know the device
  * is not hotpluggable and has already been registered, and you want to
@@ -882,13 +887,10 @@ int platform_pm_suspend(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->suspend) {
+		if (drv->pm->suspend)
 			ret = drv->pm->suspend(dev);
-			suspend_report_result(drv->pm->suspend, ret);
-		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_SUSPEND);
-		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -925,13 +927,10 @@ int platform_pm_freeze(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->freeze) {
+		if (drv->pm->freeze)
 			ret = drv->pm->freeze(dev);
-			suspend_report_result(drv->pm->freeze, ret);
-		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_FREEZE);
-		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -964,13 +963,10 @@ int platform_pm_poweroff(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->poweroff) {
+		if (drv->pm->poweroff)
 			ret = drv->pm->poweroff(dev);
-			suspend_report_result(drv->pm->poweroff, ret);
-		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_HIBERNATE);
-		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -999,7 +995,6 @@ int platform_pm_restore(struct device *dev)
 static const struct dev_pm_ops platform_dev_pm_ops = {
 	.runtime_suspend = pm_generic_runtime_suspend,
 	.runtime_resume = pm_generic_runtime_resume,
-	.runtime_idle = pm_generic_runtime_idle,
 	USE_PLATFORM_PM_SLEEP_OPS
 };
 
