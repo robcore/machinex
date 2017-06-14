@@ -142,7 +142,7 @@ int msm_ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
 }
 EXPORT_SYMBOL(msm_ion_do_cache_op);
 
-static ion_phys_addr_t msm_ion_get_base(unsigned long size, int memory_type,
+static unsigned long msm_ion_get_base(unsigned long size, int memory_type,
 				    unsigned int align)
 {
 	switch (memory_type) {
@@ -310,10 +310,10 @@ static void msm_ion_allocate(struct ion_platform_heap *heap)
 static int is_heap_overlapping(const struct ion_platform_heap *heap1,
 				const struct ion_platform_heap *heap2)
 {
-	ion_phys_addr_t heap1_base = heap1->base;
-	ion_phys_addr_t heap2_base = heap2->base;
-	ion_phys_addr_t heap1_end = heap1->base + heap1->size - 1;
-	ion_phys_addr_t heap2_end = heap2->base + heap2->size - 1;
+	unsigned long heap1_base = heap1->base;
+	unsigned long heap2_base = heap2->base;
+	unsigned long heap1_end = heap1->base + heap1->size - 1;
+	unsigned long heap2_end = heap2->base + heap2->size - 1;
 
 	if (heap1_base == heap2_base)
 		return 1;
@@ -509,7 +509,7 @@ static void msm_ion_get_heap_adjacent(struct device_node *node,
 		}
 	}
 }
-
+#ifdef CONFIG_OF
 static struct ion_platform_data *msm_ion_parse_dt(
 					const struct device_node *dt_node)
 {
@@ -527,7 +527,7 @@ static struct ion_platform_data *msm_ion_parse_dt(
 	if (!num_heaps)
 		return ERR_PTR(-EINVAL);
 
-	pdata = kzalloc(sizeof(struct ion_platform_data), GFP_KERNEL);
+	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
@@ -573,6 +573,7 @@ free_heaps:
 	free_pdata(pdata);
 	return ERR_PTR(ret);
 }
+#endif
 
 static int check_vaddr_bounds(unsigned long start, unsigned long end)
 {
@@ -696,17 +697,9 @@ static int msm_ion_probe(struct platform_device *pdev)
 	unsigned int pdata_needs_to_be_freed;
 	int err = -1;
 	int i;
-	if (pdev->dev.of_node) {
-		pdata = msm_ion_parse_dt(pdev->dev.of_node);
-		if (IS_ERR(pdata)) {
-			err = PTR_ERR(pdata);
-			goto out;
-		}
-		pdata_needs_to_be_freed = 1;
-	} else {
-		pdata = pdev->dev.platform_data;
-		pdata_needs_to_be_freed = 0;
-	}
+
+	pdata = pdev->dev.platform_data;
+	pdata_needs_to_be_freed = 0;
 
 	num_heaps = pdata->nr;
 
@@ -787,7 +780,6 @@ static struct platform_driver msm_ion_driver = {
 	.remove = msm_ion_remove,
 	.driver = {
 		.name = "ion-msm",
-		.of_match_table = msm_ion_match_table,
 	},
 };
 
