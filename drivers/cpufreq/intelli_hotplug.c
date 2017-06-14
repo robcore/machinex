@@ -76,7 +76,7 @@ static u64 gov_lock_duration = 5000;
 
 struct ip_suspend {
 	struct mutex intellisleep_mutex;
-	int intelli_suspended;
+	unsigned int intelli_suspended;
 };
 
 static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
