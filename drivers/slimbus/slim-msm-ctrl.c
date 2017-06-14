@@ -455,19 +455,6 @@ static struct msm_slim_sat *addr_to_sat(struct msm_slim_ctrl *dev, u8 laddr)
 	return sat;
 }
 
-#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
-static int es325_slim_write_flag = 0;
-void msm_slim_es325_write_flag_set(int flag)
-{
-	pr_info("%s():es325_slim_write_flag = %d\n", __func__, flag);
-	if(es325_slim_write_flag != flag) {
-		es325_slim_write_flag = flag;
-		pr_info("%s():es325_slim_write_flag = %d\n", __func__, es325_slim_write_flag);
-	}
-}
-EXPORT_SYMBOL(msm_slim_es325_write_flag_set);
-#endif
-
 static irqreturn_t msm_slim_interrupt(int irq, void *d)
 {
 	struct msm_slim_ctrl *dev = d;
@@ -2436,28 +2423,14 @@ static int msm_slim_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
 static int msm_slim_runtime_idle(struct device *device)
 {
-	struct platform_device *pdev = to_platform_device(device);
-	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
-	if (dev->state == MSM_CTRL_AWAKE && es325_slim_write_flag == 0)
-		dev->state = MSM_CTRL_ASLEEP;
-	dev_dbg(device, "pm_runtime: idle...\n");
-	if ( dev->state == MSM_CTRL_ASLEEP && es325_slim_write_flag == 0){
-		pm_request_autosuspend(device);
-	}
-	return -EAGAIN;
+	int ret;
+	ret = pm_request_autosuspend(device);
+	if (ret)
+		ret = -EAGAIN;
+	return ret;	
 }
-#else
-static int msm_slim_runtime_idle(struct device *device)
-{
-
-	dev_dbg(device, "pm_runtime: idle...\n");
-	pm_request_autosuspend(device);
-	return -EAGAIN;
-}
-#endif
 #endif
 
 /*
