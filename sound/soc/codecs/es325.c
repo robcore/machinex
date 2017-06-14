@@ -167,6 +167,9 @@ static unsigned int es325_BWE_enable = ES325_MAX_INVALID_BWE;
 static unsigned int es325_BWE_enable_new = ES325_MAX_INVALID_BWE;
 static unsigned int es325_Tx_NS = ES325_MAX_INVALID_TX_NS;
 static unsigned int es325_Tx_NS_new = ES325_MAX_INVALID_TX_NS;
+#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
+extern void msm_slim_es325_write_flag_set(int flag);
+#endif 
 
 /* codec private data */
 struct es325_priv {
@@ -2058,6 +2061,10 @@ static int es325_bootup(struct es325_priv *es325)
 	pr_info("%s(): msg[1] = 0x%02x\n", __func__, msg[1]);
 	pr_info("%s(): msg[2] = 0x%02x\n", __func__, msg[2]);
 	pr_info("%s(): msg[3] = 0x%02x\n", __func__, msg[3]);
+#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)
+	/* Enable es325_write_flag before starting FW downloading */	
+    msm_slim_es325_write_flag_set(1);
+#endif
 	rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
 			     ES325_WRITE_VE_WIDTH, msg, 4, 0);
 	if (rc < 0) {
@@ -2160,7 +2167,10 @@ static int es325_bootup(struct es325_priv *es325)
 		debug_for_dl_firmware = SYNC_MSG_NACK;
 		return -EIO;
 	}
-
+#if defined(PREVENT_SLIMBUS_SLEEP_IN_FW_DL)	
+	/* Disable es325_write_flag after FW downloading */	
+    msm_slim_es325_write_flag_set(0);
+#endif
 	pr_info("%s(): exit\n", __func__);
 	return 0;
 }
