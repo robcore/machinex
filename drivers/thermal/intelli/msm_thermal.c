@@ -29,10 +29,11 @@
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
 #include <linux/platform_device.h>
+#include <linux/suspend.h>
 #include <mach/cpufreq.h>
 #include "../../../arch/arm/mach-msm/acpuclock.h"
 
-#define DEFAULT_POLLING_MS	500
+#define DEFAULT_POLLING_MS	250
 
 extern bool hotplug_ready;
 
@@ -41,8 +42,8 @@ bool thermal_core_controlled;
 static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id_one = 7,
 	.sensor_id_two = 8,
-	.sensor_id_three = 7,
-	.sensor_id_four = 8,
+	.sensor_id_three = 9,
+	.sensor_id_four = 10,
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 10,
@@ -88,6 +89,7 @@ module_param_named(freq_limit_hysteresis, msm_thermal_info.temp_hysteresis_degC,
 module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_degC,
 			 int, 0644);
 
+static bool thermal_suspended;
 static bool therm_freq_limited;
 static int msm_thermal_get_freq_table(void)
 {
@@ -97,7 +99,7 @@ static int msm_thermal_get_freq_table(void)
 
 	policy = cpufreq_cpu_get_raw(0);
 
-	if (policy == NULL) {
+	if (policy == NULL || thermal_suspended) {
 		ret = -EINVAL;
 		goto fail;
 	}
@@ -143,6 +145,9 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 	struct cpufreq_policy policy;
 	int ret;
 
+	if (thermal_suspended)
+		return;
+
 	ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			return;
@@ -159,7 +164,6 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 }
 
-extern bool hotplug_ready;
 static int populate_temps(void)
 {
 	struct tsens_device tsens_dev, tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
@@ -169,6 +173,9 @@ static int populate_temps(void)
 	long temp_three = 0;
 	long temp_four = 0;
 	int ret = 0;
+
+	if (thermal_suspended)
+		return -EINVAL;
 
 	tsens_dev_one.sensor_num = msm_thermal_info.sensor_id_one;
 	ret = tsens_get_temp(&tsens_dev_one, &temp_one);
@@ -216,7 +223,7 @@ static void __ref do_core_control(void)
 	int ret = 0;
 
 	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready)) {
+		 !hotplug_ready || thermal_suspended)) {
 		thermal_core_controlled = false;
 		return;
 	}
@@ -286,7 +293,7 @@ static void __ref do_freq_control(void)
 	struct cpufreq_policy policy;
 	unsigned long max_freq = limited_max_freq_thermal;
 
-	if (!hotplug_ready)
+	if (!hotplug_ready || thermal_suspended)
 		return;
 
 	ret = cpufreq_get_policy(&policy, cpu);
@@ -348,6 +355,9 @@ static void __ref check_temp(struct work_struct *work)
 	static int limit_init;
 	int ret = 0;
 
+	if (thermal_suspended)
+		return;
+
 	if (!limit_init) {
 		ret = msm_thermal_get_freq_table();
 		if (ret)
@@ -388,6 +398,30 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 
 static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 	.notifier_call = msm_thermal_cpu_callback,
+};
+
+static int msm_thermal_pm_event(struct notifier_block *this,
+				unsigned long event, void *ptr)
+{
+	switch (event) {
+	case PM_POST_HIBERNATION:
+	case PM_POST_SUSPEND:
+		thermal_suspended = false;
+		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
+				msecs_to_jiffies(msm_thermal_info.poll_ms));
+		break;
+	case PM_HIBERNATION_PREPARE:
+	case PM_SUSPEND_PREPARE:
+		thermal_suspended = true;
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block msm_thermal_pm_notifier = {
+	.notifier_call = msm_thermal_pm_event,
 };
 
 /**
@@ -611,6 +645,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	enabled = 1;
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
+	register_pm_notifier(&msm_thermal_pm_notifier);
 
 	mutex_init(&core_control_mutex);
 
@@ -635,6 +670,7 @@ static void msm_thermal_exit(void)
 	enabled = 0;
 	disable_msm_thermal();
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
+	unregister_pm_notifier(&msm_thermal_pm_notifier);
 	mutex_destroy(&core_control_mutex);
 }
 late_initcall(msm_thermal_late_init);
