@@ -1422,16 +1422,15 @@ static int msm_cpufreq_pm_event(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
 	switch (event) {
-		case PM_POST_HIBERNATION:
-		case PM_POST_SUSPEND:
-			return msm_cpufreq_resume();
-		case PM_HIBERNATION_PREPARE:
-		case PM_SUSPEND_PREPARE:
-			return msm_cpufreq_suspend();
-		default:
-			break;
+	case PM_POST_HIBERNATION:
+	case PM_POST_SUSPEND:
+		return msm_cpufreq_resume();
+	case PM_HIBERNATION_PREPARE:
+	case PM_SUSPEND_PREPARE:
+		return msm_cpufreq_suspend();
+	default:
+		return NOTIFY_DONE;
 	}
-	return NOTIFY_DONE;
 }
 
 static struct notifier_block msm_cpufreq_pm_notifier = {

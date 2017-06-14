@@ -13,7 +13,6 @@
 #include <linux/string.h>
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
-#include <linux/irq.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/dma-mapping.h>
@@ -21,7 +20,6 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
-#include <linux/pm_domain.h>
 #include <linux/idr.h>
 
 #include "base.h"
@@ -82,47 +80,21 @@ EXPORT_SYMBOL_GPL(platform_get_resource);
  */
 int platform_get_irq(struct platform_device *dev, unsigned int num)
 {
-	struct resource *r;
+	struct resource *r = platform_get_resource(dev, IORESOURCE_IRQ, num);
 
-	r = platform_get_resource(dev, IORESOURCE_IRQ, num);
 	/*
 	 * The resources may pass trigger flags to the irqs that need
 	 * to be set up. It so happens that the trigger flags for
 	 * IORESOURCE_BITS correspond 1-to-1 to the IRQF_TRIGGER*
 	 * settings.
+
+	if (r && r->flags & IORESOURCE_BITS)
+		irqd_set_trigger_type(irq_get_irq_data(r->start),
+				      r->flags & IORESOURCE_BITS);
 	 */
-	if (r && r->flags & IORESOURCE_BITS) {
-		struct irq_data *irqd;
-
-		irqd = irq_get_irq_data(r->start);
-		if (!irqd)
-			return -ENXIO;
-		irqd_set_trigger_type(irqd, r->flags & IORESOURCE_BITS);
-	}
-
 	return r ? r->start : -ENXIO;
 }
 EXPORT_SYMBOL_GPL(platform_get_irq);
-
-/**
- * platform_irq_count - Count the number of IRQs a platform device uses
- * @dev: platform device
- *
- * Return: Number of IRQs a platform device uses or EPROBE_DEFER
- */
-int platform_irq_count(struct platform_device *dev)
-{
-	int ret, nr = 0;
-
-	while ((ret = platform_get_irq(dev, nr)) >= 0)
-		nr++;
-
-	if (ret == -EPROBE_DEFER)
-		return ret;
-
-	return nr;
-}
-EXPORT_SYMBOL_GPL(platform_irq_count);
 
 /**
  * platform_get_resource_byname - get a resource for a device by name
@@ -156,9 +128,9 @@ EXPORT_SYMBOL_GPL(platform_get_resource_byname);
  */
 int platform_get_irq_byname(struct platform_device *dev, const char *name)
 {
-	struct resource *r;
+	struct resource *r = platform_get_resource_byname(dev, IORESOURCE_IRQ,
+							  name);
 
-	r = platform_get_resource_byname(dev, IORESOURCE_IRQ, name);
 	return r ? r->start : -ENXIO;
 }
 EXPORT_SYMBOL_GPL(platform_get_irq_byname);
@@ -187,7 +159,7 @@ EXPORT_SYMBOL_GPL(platform_add_devices);
 
 struct platform_object {
 	struct platform_device pdev;
-	char name[];
+	char name[1];
 };
 
 /**
@@ -228,7 +200,7 @@ struct platform_device *platform_device_alloc(const char *name, int id)
 {
 	struct platform_object *pa;
 
-	pa = kzalloc(sizeof(*pa) + strlen(name) + 1, GFP_KERNEL);
+	pa = kzalloc(sizeof(struct platform_object) + strlen(name), GFP_KERNEL);
 	if (pa) {
 		strcpy(pa->name, name);
 		pa->pdev.name = pa->name;
@@ -353,7 +325,7 @@ int platform_device_add(struct platform_device *pdev)
 		}
 
 		if (p && insert_resource(p, r)) {
-			dev_err(&pdev->dev, "failed to claim resource %d: %pR\n", i, r);
+			dev_err(&pdev->dev, "failed to claim resource %d\n", i);
 			ret = -EBUSY;
 			goto failed;
 		}
@@ -507,14 +479,9 @@ static int platform_drv_probe(struct device *_dev)
 
 	ret = dev_pm_domain_attach(_dev, true);
 	if (ret != -EPROBE_DEFER) {
-		if (drv->probe) {
-			ret = drv->probe(dev);
-			if (ret)
-				dev_pm_domain_detach(_dev, true);
-		} else {
-			/* don't fail if just dev_pm_domain_attach failed */
-			ret = 0;
-		}
+		ret = drv->probe(dev);
+		if (ret)
+			dev_pm_domain_detach(_dev, true);
 	}
 
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
@@ -534,10 +501,9 @@ static int platform_drv_remove(struct device *_dev)
 {
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
-	int ret = 0;
+	int ret;
 
-	if (drv->remove)
-		ret = drv->remove(dev);
+	ret = drv->remove(dev);
 	dev_pm_domain_detach(_dev, true);
 
 	return ret;
@@ -548,8 +514,8 @@ static void platform_drv_shutdown(struct device *_dev)
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
 
-	if (drv->shutdown)
-		drv->shutdown(dev);
+	drv->shutdown(dev);
+	dev_pm_domain_detach(_dev, true);
 }
 
 /**
@@ -562,9 +528,12 @@ int __platform_driver_register(struct platform_driver *drv,
 {
 	drv->driver.owner = owner;
 	drv->driver.bus = &platform_bus_type;
-	drv->driver.probe = platform_drv_probe;
-	drv->driver.remove = platform_drv_remove;
-	drv->driver.shutdown = platform_drv_shutdown;
+	if (drv->probe)
+		drv->driver.probe = platform_drv_probe;
+	if (drv->remove)
+		drv->driver.remove = platform_drv_remove;
+	if (drv->shutdown)
+		drv->driver.shutdown = platform_drv_shutdown;
 
 	return driver_register(&drv->driver);
 }
@@ -581,10 +550,9 @@ void platform_driver_unregister(struct platform_driver *drv)
 EXPORT_SYMBOL_GPL(platform_driver_unregister);
 
 /**
- * __platform_driver_probe - register driver for non-hotpluggable device
+ * platform_driver_probe - register driver for non-hotpluggable device
  * @drv: platform driver structure
  * @probe: the driver probe routine, probably from an __init section
- * @module: module which will be the owner of the driver
  *
  * Use this instead of platform_driver_register() when you know the device
  * is not hotpluggable and has already been registered, and you want to
@@ -706,67 +674,6 @@ err_out:
 }
 EXPORT_SYMBOL_GPL(platform_create_bundle);
 
-/**
- * __platform_register_drivers - register an array of platform drivers
- * @drivers: an array of drivers to register
- * @count: the number of drivers to register
- * @owner: module owning the drivers
- *
- * Registers platform drivers specified by an array. On failure to register a
- * driver, all previously registered drivers will be unregistered. Callers of
- * this API should use platform_unregister_drivers() to unregister drivers in
- * the reverse order.
- *
- * Returns: 0 on success or a negative error code on failure.
- */
-int __platform_register_drivers(struct platform_driver * const *drivers,
-				unsigned int count, struct module *owner)
-{
-	unsigned int i;
-	int err;
-
-	for (i = 0; i < count; i++) {
-		pr_debug("registering platform driver %ps\n", drivers[i]);
-
-		err = __platform_driver_register(drivers[i], owner);
-		if (err < 0) {
-			pr_err("failed to register platform driver %ps: %d\n",
-			       drivers[i], err);
-			goto error;
-		}
-	}
-
-	return 0;
-
-error:
-	while (i--) {
-		pr_debug("unregistering platform driver %ps\n", drivers[i]);
-		platform_driver_unregister(drivers[i]);
-	}
-
-	return err;
-}
-EXPORT_SYMBOL_GPL(__platform_register_drivers);
-
-/**
- * platform_unregister_drivers - unregister an array of platform drivers
- * @drivers: an array of drivers to unregister
- * @count: the number of drivers to unregister
- *
- * Unegisters platform drivers specified by an array. This is typically used
- * to complement an earlier call to platform_register_drivers(). Drivers are
- * unregistered in the reverse order in which they were registered.
- */
-void platform_unregister_drivers(struct platform_driver * const *drivers,
-				 unsigned int count)
-{
-	while (count--) {
-		pr_debug("unregistering platform driver %ps\n", drivers[count]);
-		platform_driver_unregister(drivers[count]);
-	}
-}
-EXPORT_SYMBOL_GPL(platform_unregister_drivers);
-
 /* modalias support enables more hands-off userspace setup:
  * (a) environment variable lets new-style hotplug events work once system is
  *     fully running:  "modprobe $MODALIAS"
@@ -887,10 +794,13 @@ int platform_pm_suspend(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->suspend)
+		if (drv->pm->suspend) {
 			ret = drv->pm->suspend(dev);
+			suspend_report_result(drv->pm->suspend, ret);
+		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_SUSPEND);
+		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -927,10 +837,13 @@ int platform_pm_freeze(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->freeze)
+		if (drv->pm->freeze) {
 			ret = drv->pm->freeze(dev);
+			suspend_report_result(drv->pm->freeze, ret);
+		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_FREEZE);
+		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -963,10 +876,13 @@ int platform_pm_poweroff(struct device *dev)
 		return 0;
 
 	if (drv->pm) {
-		if (drv->pm->poweroff)
+		if (drv->pm->poweroff) {
 			ret = drv->pm->poweroff(dev);
+			suspend_report_result(drv->pm->poweroff, ret);
+		}
 	} else {
 		ret = platform_legacy_suspend(dev, PMSG_HIBERNATE);
+		suspend_report_result(platform_legacy_suspend, ret);
 	}
 
 	return ret;
@@ -995,6 +911,7 @@ int platform_pm_restore(struct device *dev)
 static const struct dev_pm_ops platform_dev_pm_ops = {
 	.runtime_suspend = pm_generic_runtime_suspend,
 	.runtime_resume = pm_generic_runtime_resume,
+	.runtime_idle = pm_generic_runtime_idle,
 	USE_PLATFORM_PM_SLEEP_OPS
 };
 

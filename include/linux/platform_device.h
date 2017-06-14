@@ -50,7 +50,6 @@ extern void arch_setup_pdev_archdata(struct platform_device *);
 extern struct resource *platform_get_resource(struct platform_device *,
 					      unsigned int, unsigned int);
 extern int platform_get_irq(struct platform_device *, unsigned int);
-extern int platform_irq_count(struct platform_device *);
 extern struct resource *platform_get_resource_byname(struct platform_device *,
 						     unsigned int,
 						     const char *);
@@ -241,14 +240,6 @@ extern struct platform_device *platform_create_bundle(
 	struct platform_driver *driver, int (*probe)(struct platform_device *),
 	struct resource *res, unsigned int n_res,
 	const void *data, size_t size);
-
-int __platform_register_drivers(struct platform_driver * const *drivers,
-				unsigned int count, struct module *owner);
-void platform_unregister_drivers(struct platform_driver * const *drivers,
-				 unsigned int count);
-
-#define platform_register_drivers(drivers, count) \
-	__platform_register_drivers(drivers, count, THIS_MODULE)
 
 /* early platform driver interface */
 struct early_platform_driver {
