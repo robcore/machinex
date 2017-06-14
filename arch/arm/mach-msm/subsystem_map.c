@@ -132,7 +132,7 @@ static int add_buffer(struct msm_buffer_node *node)
 				p = &(*p)->rb_right;
 			else {
 				WARN(1, "tried to add buffer twice! buf = %p"
-					" vaddr = %p  = %p", tmp->buf,
+					" vaddr = %p iova = %p", tmp->buf,
 					tmp->buf->vaddr,
 					tmp->buf->iova);
 				mutex_unlock(&msm_buffer_mutex);
@@ -412,8 +412,8 @@ struct msm_mapped_buffer *msm_subsystem_map_buffer(unsigned long phys,
 
 			if (flags & MSM_SUBSYSTEM_MAP_IOMMU_2X)
 				msm_iommu_map_extra
-				(d, temp_va, length, SZ_4K,
-				(IOMMU_READ | IOMMU_WRITE));
+					(d, temp_va, length, SZ_4K,
+					(IOMMU_READ | IOMMU_WRITE));
 		}
 
 	}
@@ -502,6 +502,9 @@ int msm_subsystem_unmap_buffer(struct msm_mapped_buffer *buf)
 	if (node->buf != buf) {
 		pr_err("%s: caller must pass in the same buffer structure"
 			" returned from map_buffer when freeding\n", __func__);
+		remove_buffer(node);
+		kfree(node);
+		kfree(buf);
 		goto out;
 	}
 
