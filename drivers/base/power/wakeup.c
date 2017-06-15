@@ -618,14 +618,25 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 			return false;
 }
 
-bool android_wake_active;
+static bool android_wake_active;
+
+bool android_os_ws(void)
+{
+	return android_wake_active;
+}
+
 static void prometheus_power_beacon(struct wakeup_source *ws)
 {
 	bool is_android_wake_active;
 
-	if (((!strcmp(ws->name, "PowerManagerService.Display")) && ws->active) ||
-		((!strcmp(ws->name, "PowerManagerService.WakeLocks")) && ws->active) ||
-		((!strcmp(ws->name, "PowerManagerService.Broadcasts")) && ws->active)) {
+	if (ws->active &&
+		(!strcmp(ws->name, "PowerManagerService.Display") ||
+		!strcmp(ws->name, "PowerManagerService.WakeLocks") ||
+		!strcmp(ws->name, "PowerManagerService.Broadcasts") ||
+		!strcmp(ws->name, "ApmAudio") ||
+		!strcmp(ws->name, "sec_jack_det") ||
+		!strcmp(ws->name, "rpm_regulator_tcxo") ||
+		!strcmp(ws->name, "radio-interface"))) {
 		is_android_wake_active = true;
 	} else {
 		is_android_wake_active = false;
