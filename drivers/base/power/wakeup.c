@@ -594,13 +594,8 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 
 static bool wakeup_source_blocker(struct wakeup_source *ws)
 {
-	unsigned int wslen = 0;
-
 	if (!wakeblock)
 		return false;
-
-	if (ws) {
-		wslen = strlen(ws->name);
 
 		if (((!enable_gps_ws &&
 				!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
@@ -618,28 +613,23 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 				!strcmp(ws->name, "bluesleep")) ||
 			(!enable_ssp_sensorhub_ws &&
 				!strcmp(ws->name, "ssp_wake_lock")))) {
-				pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
-				return true;
+			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+			return true;
 		} else
 			return false;
-	}
-	return false;
 }
 
 bool android_wake_active;
 static void prometheus_power_beacon(struct wakeup_source *ws)
 {
 	bool is_android_wake_active;
-	unsigned int wslen = 0;
 
-	if (ws) {
-		wslen = strlen(ws->name);
-
-	if ((!strcmp(ws->name, "PowerManagerService.Display") && ws->active) ||
-		(!strcmp(ws->name, "PowerManagerService.WakeLocks") && ws->active) ||
-		(!strcmp(ws->name, "PowerManagerService.Broadcasts") && ws->active))
+	if (((!strcmp(ws->name, "PowerManagerService.Display")) && ws->active) ||
+		((!strcmp(ws->name, "PowerManagerService.WakeLocks")) && ws->active) ||
+		((!strcmp(ws->name, "PowerManagerService.Broadcasts")) && ws->active)) {
 		is_android_wake_active = true;
-	else
+		pr_info("Android OS Wakelock held: %s\n", ws->name);
+	} else {
 		is_android_wake_active = false;
 	}
 	android_wake_active = is_android_wake_active;
@@ -697,8 +687,9 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
-
+	prometheus_power_beacon(ws);
 	trace_wakeup_source_activate(ws->name, cec);
+
 }
 
 /**
@@ -731,8 +722,6 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 
 		if (!ws->active)
 			wakeup_source_activate(ws);
-
-		prometheus_power_beacon(ws);
 
 		if (hard)
 			pm_system_wakeup();
