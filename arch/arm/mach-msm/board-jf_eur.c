@@ -4341,7 +4341,7 @@ int es325_enable_ext_clk(int enable)
 	int r = 0;
 	static struct clk *es325_codec_clk;
 
-	if (!es325_codec_clk) {
+	if (!es325_codec_clk || es325_codec_clk == NULL) {
 		es325_codec_clk = devm_clk_get(&msm_es325_mclk_dev.dev, "osr_clk");
 	}
 
