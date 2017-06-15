@@ -71,9 +71,9 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 	if (!mm)
 		mm = &init_mm;
 
-	printk(KERN_ALERT "pgd = %p\n", mm->pgd);
+	pr_alert("pgd = %p\n", mm->pgd);
 	pgd = pgd_offset(mm, addr);
-	printk(KERN_ALERT "[%08lx] *pgd=%08llx",
+	pr_alert("[%08lx] *pgd=%08llx",
 			addr, (long long)pgd_val(*pgd));
 
 	do {
@@ -85,31 +85,31 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 			break;
 
 		if (pgd_bad(*pgd)) {
-			printk("(bad)");
+			pr_cont("(bad)");
 			break;
 		}
 
 		pud = pud_offset(pgd, addr);
 		if (PTRS_PER_PUD != 1)
-			printk(", *pud=%08llx", (long long)pud_val(*pud));
+			pr_cont(", *pud=%08llx", (long long)pud_val(*pud));
 
 		if (pud_none(*pud))
 			break;
 
 		if (pud_bad(*pud)) {
-			printk("(bad)");
+			pr_cont("(bad)");
 			break;
 		}
 
 		pmd = pmd_offset(pud, addr);
 		if (PTRS_PER_PMD != 1)
-			printk(", *pmd=%08llx", (long long)pmd_val(*pmd));
+			pr_cont(", *pmd=%08llx", (long long)pmd_val(*pmd));
 
 		if (pmd_none(*pmd))
 			break;
 
 		if (pmd_bad(*pmd)) {
-			printk("(bad)");
+			pr_cont("(bad)");
 			break;
 		}
 
@@ -118,91 +118,20 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 			break;
 
 		pte = pte_offset_map(pmd, addr);
-		printk(", *pte=%08llx", (long long)pte_val(*pte));
+		pr_cont(", *pte=%08llx", (long long)pte_val(*pte));
 #ifndef CONFIG_ARM_LPAE
-		printk(", *ppte=%08llx",
+		pr_cont(", *ppte=%08llx",
 		       (long long)pte_val(pte[PTE_HWTABLE_PTRS]));
 #endif
 		pte_unmap(pte);
 	} while(0);
 
-	printk("\n");
+	pr_cont("\n");
 }
 #else					/* CONFIG_MMU */
 void show_pte(struct mm_struct *mm, unsigned long addr)
 { }
-#endif
-					/* CONFIG_MMU */
-#ifdef TIMA_ENABLED
-inline void tima_dump_log2()
-{
-        char *tima_log = (char *)0xde100000, *ptr, *ptr1;
-        int line_ctr=0;
-
-	return; /* WARNING: THIS FUNCTION HAS BEEN DISABLED */
-	/* After the move to the new memory address, there is no virtual address for the log
-	 * This function is disabled pending the availability of the same
-	 */
-        ptr = tima_log;
-        ptr1 = ptr;
-        while(line_ctr<100) {
-                line_ctr++;
-                while(*ptr1 != '\n')
-                        ptr1++;
-                *ptr1 = '\0';
-                printk(KERN_EMERG"%s\n", ptr);
-                *ptr1 = '\n';
-                ptr1++;
-                if(*ptr1 == '\0')
-                        break;
-                ptr = ptr1;
-        }
-}
-
-inline void tima_verify_state(unsigned long pmdp, unsigned long val, unsigned long rd_only, unsigned long caller)
-{
-        unsigned long pmdp_addr = (unsigned long)pmdp;
-        unsigned long init_pgd, pgd_val;
-        unsigned long init_pte;
-        unsigned long pte_val;
-	unsigned long npte_val;
-	static unsigned long call_count = 0;
-
-	return; /* WARNING: THIS FUNCTION HAS BEEN DISABLED BECAUSE SECT_TO_PGT CAN NO LONGER BE ACCESSED
-		   VIA VIRTUAL MEMORY MAPPING */
-
-	if ((pmdp>>24)==0xc0)	return;
-	call_count++;
-	init_pgd = (unsigned long)init_mm.pgd;
-        init_pgd += (pmdp_addr >> 20) << 2;
-
-	pgd_val = (unsigned long)*(unsigned long *)init_pgd;
-	if ((pgd_val & 0x3) != 0x1) {
-		printk(KERN_ERR"TIMA: Entry is not L2 page. VA:%lx, PGD=%lx\n", pmdp, pgd_val);
-		return;
-	}
-
-        init_pte = (unsigned long)__va(pgd_val & (~0x3ff));
-        init_pte += ((pmdp_addr >> 12) & 0xff) << 2;
-
-        pte_val = *(unsigned long *)init_pte;
-        invalidate_caches(init_pte, 4, __pa(init_pte));
-	npte_val = *(unsigned long *)init_pte;
-        if (rd_only) {
-                if ((pte_val & 0x230) != 0x210) { 	/* Page is RO */
-                        printk(KERN_ERR"Page is NOT RO, CALLER=%lx VA=%lx, PTE=%lx FLUSHED PTE=%lx PA=%lx\n", caller, pmdp_addr, pte_val, npte_val, __pa(pmdp_addr));
-			//tima_send_cmd(pmdp_addr, 0x3f80e221);
-			//tima_dump_log2();
-		}
-        } else {
-                if ((pte_val & 0x230) != 0x010) {	/* Page is RW */
-                        printk(KERN_ERR"Page is NOT RW, CALLER=%lx VA=%lx, PTE=%lx FLUSHED PTE=%lx PA=%lx\n", caller, pmdp_addr, pte_val, npte_val, __pa(pmdp_addr));
-			//tima_send_cmd(pmdp_addr, 0x3f80e221);
-			//tima_dump_log2();
-		}
-        }
-}
-#endif
+#endif					/* CONFIG_MMU */
 
 /*
  * Oops.  The kernel tried to access some page that wasn't present.
@@ -217,39 +146,15 @@ __do_kernel_fault(struct mm_struct *mm, unsigned long addr, unsigned int fsr,
 	if (fixup_exception(regs))
 		return;
 
-#ifdef	TIMA_ENABLED
-	printk(KERN_ERR"====> %lx\n", addr);
-	if (addr >= 0xc0000000 && (fsr & FSR_WRITE)) {
-		printk(KERN_ERR"==> Handling fault for %lx\n", addr);
-		__asm__("mcr     p15, 0, %0, c7, c14, 1\n"
-		    "isb"
-			::"r"(addr));
-		//tima_send_cmd(addr, 0x3f80e221);
-		tima_send_cmd(addr, 0x3f80f221);
-		__asm__ ("mcr     p15, 0, %0, c7, c6,  1\n"
-		     "isb"
-		     ::"r"(addr));
-		__asm__ ("mcr    p15, 0, %0, c8, c3, 0\n"
-			"isb"
-			::"r"(0));
-		//tima_dump_log2();
-		return; 
-	}
-#endif
-
 	/*
 	 * No handler, we'll have to terminate things with extreme prejudice.
 	 */
 	bust_spinlocks(1);
-	printk(KERN_ALERT
-		"Unable to handle kernel %s at virtual address %08lx\n",
-		(addr < PAGE_SIZE) ? "NULL pointer dereference" :
-		"paging request", addr);
+	pr_alert("Unable to handle kernel %s at virtual address %08lx\n",
+		 (addr < PAGE_SIZE) ? "NULL pointer dereference" :
+		 "paging request", addr);
 
 	show_pte(mm, addr);
-#ifdef TIMA_ENABLED
-	tima_send_cmd(addr, 0x3f80e221);
-#endif
 	die("Oops", regs, fsr);
 	bust_spinlocks(0);
 	do_exit(SIGKILL);
@@ -378,7 +283,7 @@ do_page_fault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 		local_irq_enable();
 
 	/*
-	 * If we're in an interrupt, or have no irqs, or have no user
+	 * If we're in an interrupt or have no user
 	 * context, we must not take the fault..
 	 */
 	if (in_atomic() || irqs_disabled() || !mm)
@@ -456,6 +361,13 @@ retry:
 	if (likely(!(fault & (VM_FAULT_ERROR | VM_FAULT_BADMAP | VM_FAULT_BADACCESS))))
 		return 0;
 
+	/*
+	 * If we are in kernel mode at this point, we
+	 * have no context to handle this fault with.
+	 */
+	if (!user_mode(regs))
+		goto no_context;
+
 	if (fault & VM_FAULT_OOM) {
 		/*
 		 * We ran out of memory, call the OOM killer, and return to
@@ -465,13 +377,6 @@ retry:
 		pagefault_out_of_memory();
 		return 0;
 	}
-
-	/*
-	 * If we are in kernel mode at this point, we
-	 * have no context to handle this fault with.
-	 */
-	if (!user_mode(regs))
-		goto no_context;
 
 	if (fault & VM_FAULT_SIGBUS) {
 		/*
@@ -540,9 +445,6 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
 
 	index = pgd_index(addr);
 
-	/*
-	 * FIXME: CP15 C1 is write only on ARMv3 architectures.
-	 */
 	pgd = cpu_get_pgd() + index;
 	pgd_k = init_mm.pgd + index;
 
@@ -610,12 +512,14 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
  * Some section permission faults need to be handled gracefully.
  * They can happen due to a __{get,put}_user during an oops.
  */
+#ifndef CONFIG_ARM_LPAE
 static int
 do_sect_fault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 {
 	do_bad_area(addr, fsr, regs);
 	return 0;
 }
+#endif /* CONFIG_ARM_LPAE */
 
 /*
  * This abort handler always returns "fault".
@@ -782,8 +686,9 @@ do_DataAbort(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 	if (!inf->fn(addr, fsr & ~FSR_LNX_PF, regs))
 		return;
 
-	printk(KERN_ALERT "Unhandled fault: %s (0x%03x) at 0x%08lx\n",
+	pr_alert("Unhandled fault: %s (0x%03x) at 0x%08lx\n",
 		inf->name, fsr, addr);
+	show_pte(current->mm, addr);
 
 	info.si_signo = inf->sig;
 	info.si_errno = 0;
@@ -814,7 +719,7 @@ do_PrefetchAbort(unsigned long addr, unsigned int ifsr, struct pt_regs *regs)
 	if (!inf->fn(addr, ifsr | FSR_LNX_PF, regs))
 		return;
 
-	printk(KERN_ALERT "Unhandled prefetch abort: %s (0x%03x) at 0x%08lx\n",
+	pr_alert("Unhandled prefetch abort: %s (0x%03x) at 0x%08lx\n",
 		inf->name, ifsr, addr);
 
 	info.si_signo = inf->sig;
