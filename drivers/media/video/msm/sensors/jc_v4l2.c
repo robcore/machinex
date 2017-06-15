@@ -44,7 +44,7 @@
 #define JC_ISP_TIMEOUT		3000
 
 #define JC_LOAD_FW_MAIN	1
-#define JC_DUMP_FW	1
+#define JC_DUMP_FW	0
 #define JC_CHECK_FW	1
 #define JC_MEM_READ	1
 #define ISP_DEBUG_LOG	0
@@ -148,6 +148,9 @@ struct jc_ctrl_t {
 	bool factory_bin;
 	int fw_retry_cnt;
 };
+
+static bool machinex_camera_override = false;
+module_param(machinex_camera_override, bool, 0644);
 
 static struct jc_ctrl_t *jc_ctrl;
 
@@ -280,22 +283,11 @@ static int jc_write(int _line, u8 len,
 		data[7] = (val & 0xFF);
 	}
 
-	if (log)
-		pr_debug("[ %4d ] Write %s %#x, byte %#x, value %#x\n",
-			_line, (len == 4 ? "L" : (len == 2 ? "W" : "B")),
-			category, byte, val);
-
 	for (i = JC_I2C_RETRY; i; i--) {
 		err = i2c_transfer(jc_client->adapter, &msg, 1);
 		if (err == 1)
 			break;
 		msleep(20);
-	}
-
-	if (err != 1) {
-		pr_debug("category %#x, byte %#x, err %d\n",
-			category, byte, err);
-		return err;
 	}
 
 	return err;
@@ -460,7 +452,6 @@ static int jc_mem_write(u8 cmd,
 	data[7] = (len & 0xFF);
 	memcpy(data + 2 + sizeof(addr) + sizeof(len), val, len);
 
-	pr_debug("address %#x, length %d\n", addr, len);
 	for (i = JC_I2C_RETRY; i; i--) {
 		err = i2c_transfer(jc_client->adapter, &msg, 1);
 		if (err == 1)
@@ -750,7 +741,7 @@ out:
       txSize = FW_WRITE_SIZE;
       count = fsize / txSize;
 
-	buf_m10mo = vmalloc(txSize);
+	buf_m10mo = vmalloc(sizeof(txSize));
 
 	if (!buf_m10mo) {
 		pr_debug("failed to allocate memory\n");
@@ -1765,12 +1756,10 @@ static u32 jc_wait_interrupt(unsigned int timeout)
 
 void jc_set_preview(void)
 {
-	pr_debug("Today I pooped\n");
 }
 
 void jc_set_capture(void)
 {
-	pr_debug("Today I pooped\n");
 }
 
 static int jc_set_capture_size(int width, int height)
@@ -3116,12 +3105,16 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 			jc_sensor_power_down(&jc_s_ctrl);
 			return -ENOSYS;
 		}
-#if 1
+
+		if (machinex_camera_override) {
+		    pr_info("[MACHINEX] Samsung FW Override\n");
+			    goto start;
+		}
+
 		if (isp_ret == 0 && jc_ctrl->samsung_app == false && jc_ctrl->factory_bin == false) {
 		    pr_debug("3rd party app. skip ISP FW update\n");
-		    goto start;
+			    goto start;
 		}
-#endif
 
 		jc_ctrl->fw_update = false;
 
@@ -3205,11 +3198,17 @@ start:
 	err = jc_writeb(JC_CATEGORY_CAPCTRL,
 			0x0, 0x0f);
 
-	if (jc_ctrl->samsung_app != 1) {
+	if (machinex_camera_override) {
+		pr_debug("Set different ratio capture mode\n");
+		jc_set_different_ratio_capture(1);
+		goto mx_bypasser;
+	}
+
+	if (jc_ctrl->samsung_app == false) {
 		pr_debug("Set different ratio capture mode\n");
 		jc_set_different_ratio_capture(1);
 	}
-
+mx_bypasser:
 	err = jc_readb(0x01, 0x3F, &isp_revision);
 
 	return rc;
@@ -3556,12 +3555,12 @@ static ssize_t jc_camera_check_app_show(struct device *dev,
 static ssize_t jc_camera_check_app_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
-	unsigned long value;
+	unsigned long value = simple_strtoul(buf, NULL, 0);
 
-	
-
-    jc_ctrl->samsung_app = true;
-
+	if (!machinex_camera_override)
+	    jc_ctrl->samsung_app = true;
+	else
+	    jc_ctrl->samsung_app = false;
 	return size;
 }
 
