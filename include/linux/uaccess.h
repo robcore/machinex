@@ -14,7 +14,7 @@
  * disable preemption but we don't necessarily care about that.
  */
 static bool mdisabled;
-bool pagefault_disabled(void)
+static bool pagefault_disabled(void)
 {
 	return mdisabled;
 }
@@ -45,7 +45,6 @@ static inline void pagefault_enable(void)
 	preempt_check_resched();
 	mdisabled = false;
 }
-
 /*
  * The pagefault handler is in general disabled by pagefault_disable() or
  * when in irq context (via in_atomic()).

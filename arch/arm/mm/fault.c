@@ -729,6 +729,8 @@ do_PrefetchAbort(unsigned long addr, unsigned int ifsr, struct pt_regs *regs)
 	arm_notify_die("", regs, &info, ifsr, 0);
 }
 
+#define local_abt_enable()	do { } while (0)
+#define local_abt_disable()	do { } while (0)
 /*
  * Abort handler to be used only during first unmasking of asynchronous aborts
  * on the boot CPU. This makes sure that the machine will not die if the
