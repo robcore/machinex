@@ -5186,7 +5186,7 @@ static int es325_schedule_sleep_workqueue(void)
 {
 	int rc = 0;
 	struct es325_priv *es325 = &es325_priv;
-	rc = queue_delayed_work(es325_workqueue, &es325_work, ES325_SLEEP_TIME);
+	rc = mod_delayed_work(es325_workqueue, &es325_work, ES325_SLEEP_TIME);
 	if (!rc) {
 		pr_err("=[ES325]=%s delayed work queue failed\n", __func__);
 		return -1;
@@ -5367,7 +5367,7 @@ static __init int es325_init(void)
 	pr_info("%s(): entry", __func__);
 	memset(&es325_priv, 0, sizeof(es325_priv));
 #ifdef ES325_SLEEP
-	es325_workqueue = create_workqueue("ES325");
+	es325_workqueue = create_singlethread_workqueue("ES325");
 	if (!es325_workqueue) {
 		pr_info("%s can't create workqueue\n", __func__);
 		return -1;
@@ -5399,7 +5399,6 @@ static __exit void es325_exit(void)
 #ifdef ES325_SLEEP
 	if (es325_workqueue)
 		destroy_workqueue(es325_workqueue);
-	es325_workqueue = NULL;
 #endif
 
 #if defined(CONFIG_SND_SOC_ES325_I2C)
