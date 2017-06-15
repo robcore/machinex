@@ -2235,7 +2235,7 @@ static int ice4_clock_en(int onoff)
 	} else if (system_rev >= BOARD_REV09) {
 		static struct clk *fpga_main_clk;
 		if (!fpga_main_clk)
-			fpga_main_clk = devm_clk_get(NULL, "gp0_clk");
+			fpga_main_clk = clk_get(NULL, "gp0_clk");
 
 		if (onoff) {
 			clk_set_rate(fpga_main_clk, 24000000);
@@ -4341,8 +4341,8 @@ int es325_enable_ext_clk(int enable)
 	int r = 0;
 	static struct clk *es325_codec_clk;
 
-	if (!es325_codec_clk || es325_codec_clk == NULL) {
-		es325_codec_clk = devm_clk_get(&msm_es325_mclk_dev.dev, "osr_clk");
+	if (!es325_codec_clk) {
+		es325_codec_clk = clk_get(&msm_es325_mclk_dev.dev, "osr_clk");
 	}
 
 	if (enable) {

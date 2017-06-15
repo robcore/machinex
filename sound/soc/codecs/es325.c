@@ -5363,7 +5363,7 @@ static __init int es325_init(void)
 	pr_info("%s(): entry", __func__);
 	memset(&es325_priv, 0, sizeof(es325_priv));
 #ifdef ES325_SLEEP
-	es325_workqueue = create_freezable_workqueue("ES325");
+	es325_workqueue = create_workqueue("ES325");
 	if (!es325_workqueue) {
 		pr_info("%s can't create workqueue\n", __func__);
 		return -1;
