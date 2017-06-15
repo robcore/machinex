@@ -357,6 +357,8 @@ static int fw_get_filesystem_firmware(struct device *device,
 		set_bit(FW_STATUS_DONE, &buf->status);
 		complete_all(&buf->completion);
 		mutex_unlock(&fw_lock);
+	} else if (retval > 0) {
+		retval = 0;
 	}
 
 	return rc;
