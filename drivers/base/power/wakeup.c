@@ -625,23 +625,18 @@ bool android_os_ws(void)
 	return android_wake_active;
 }
 
-static void prometheus_power_beacon(struct wakeup_source *ws)
+static void prometheus_power_beacon(struct wakeup_source *ws, const char *name)
 {
-	bool is_android_wake_active;
-
-	if (ws->active &&
-		(!strcmp(ws->name, "PowerManagerService.Display") ||
-		!strcmp(ws->name, "PowerManagerService.WakeLocks") ||
-		!strcmp(ws->name, "PowerManagerService.Broadcasts") ||
-		!strcmp(ws->name, "ApmAudio") ||
-		!strcmp(ws->name, "sec_jack_det") ||
-		!strcmp(ws->name, "rpm_regulator_tcxo") ||
-		!strcmp(ws->name, "radio-interface"))) {
-		is_android_wake_active = true;
-	} else {
-		is_android_wake_active = false;
-	}
-	android_wake_active = is_android_wake_active;
+	if (!strcmp(name, "PowerManagerService.Display") ||
+		!strcmp(name, "PowerManagerService.WakeLocks") ||
+		!strcmp(name, "PowerManagerService.Broadcasts") ||
+		!strcmp(name, "ApmAudio") ||
+		!strcmp(name, "sec_jack_det") ||
+		!strcmp(name, "rpm_regulator_tcxo") ||
+		!strcmp(name, "radio-interface"))
+		android_wake_active = true;
+	else
+		android_wake_active = false;
 }
 
 /*
@@ -697,6 +692,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
 	trace_wakeup_source_activate(ws->name, cec);
+	prometheus_power_beacon(ws, ws->name);
 
 }
 
@@ -732,7 +728,6 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 		if (hard)
 			pm_system_wakeup();
 	}
-		prometheus_power_beacon(ws);
 }
 
 /**
