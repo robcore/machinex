@@ -1606,7 +1606,7 @@ static struct msm_slim_sat *msm_slim_alloc_sat(struct msm_slim_ctrl *dev)
 	if (dev->nsats >= MSM_MAX_NSATS)
 		return NULL;
 
-	sat = kzalloc(sizeof(struct msm_slim_sat), GFP_KERNEL);
+	sat = kzalloc(sizeof(*sat), GFP_KERNEL);
 	if (!sat) {
 		dev_err(dev->dev, "no memory for satellite\n");
 		return NULL;
@@ -1619,8 +1619,8 @@ static struct msm_slim_sat *msm_slim_alloc_sat(struct msm_slim_ctrl *dev)
 	}
 	dev->satd[dev->nsats] = sat;
 	sat->dev = dev;
-	snprintf(name, SLIMBUS_NAME_SIZE, "msm_sat%d\n", dev->nsats);
 	sat->satcl.name = name;
+	snprintf(name, SLIMBUS_NAME_SIZE, "msm_sat%d\n", dev->nsats);
 	spin_lock_init(&sat->lock);
 	INIT_WORK(&sat->wd, slim_sat_rxprocess);
 	sat->wq = create_singlethread_workqueue(sat->satcl.name);
