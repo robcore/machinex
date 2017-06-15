@@ -888,9 +888,9 @@ int es325_remote_cfg_slim_rx(int dai_id)
 	struct es325_priv *es325 = &es325_priv;
 	int be_id;
 	int rc = 0;
-	if(es325_fw_downloaded == 0) {
-		pr_err("%s():eS325 FW not ready, cfg_slim_rx rejected\n", __func__);
-		return rc;
+	if(es325_fw_downloaded==0) {
+		pr_err("Machinex -> Dredging es325 back to life.\n");
+		fw_download(es325);
 	}
 
 	if (dai_id != ES325_SLIM_1_PB
@@ -938,10 +938,11 @@ int es325_remote_cfg_slim_tx(int dai_id)
 	int ch_cnt;
 	int rc = 0;
 
-	if(es325_fw_downloaded == 0) {
-		pr_err("%s():eS325 FW not ready, cfg_slim_tx rejected\n", __func__);
-		return rc;
+	if(es325_fw_downloaded==0) {
+		pr_err("Machinex -> Dredging es325 back to life.\n");
+		fw_download(es325);
 	}
+
 	if (dai_id != ES325_SLIM_1_CAP)
 		return 0;
 
@@ -2153,7 +2154,6 @@ static int es325_bootup(struct es325_priv *es325)
 	if (memcmp(msg, sync_ok, 4) == 0) {
 		pr_info("%s(): firmware sync ack good=0x%02x%02x%02x%02x\n",
 			__func__, msg[0], msg[1], msg[2], msg[3]);
-		es325_fw_downloaded = 1;
 	} else {
 		pr_err("%s(): firmware sync ack failed=0x%02x%02x%02x%02x\n",
 		       __func__, msg[0], msg[1], msg[2], msg[3]);
@@ -2162,6 +2162,7 @@ static int es325_bootup(struct es325_priv *es325)
 	}
 
 	pr_info("%s(): exit\n", __func__);
+	es325_fw_downloaded = 1;
 	return 0;
 }
 
@@ -4926,11 +4927,12 @@ static int es325_slim_get_laddr(struct slim_device *sb,
 }
 static int es325_fw_thread(void *priv)
 {
+	unsigned int mxsix = 6;
 	struct es325_priv *es325 = (struct es325_priv  *)priv;
 	es325_slim_get_laddr(es325->gen0_client, es325->gen0_client->e_addr,
-		6, &(es325->gen0_client->laddr));
+		mxsix, &(es325->gen0_client->laddr));
 	es325_slim_get_laddr(es325->intf_client, es325->intf_client->e_addr,
-		6, &(es325->intf_client->laddr));
+		mxsix, &(es325->intf_client->laddr));
 	es325_slim_device_up(es325->gen0_client);
 	return 0;
 }
@@ -4938,7 +4940,7 @@ static int es325_fw_thread(void *priv)
 static int es325_slim_probe(struct slim_device *sbdev)
 {
 	struct esxxx_platform_data *pdata = sbdev->dev.platform_data;
-	const char *filename = FIRMWARE_NAME;
+	const char *filename;
 	int rc;
 	static int clk_count;
 	struct task_struct *thread = NULL;
@@ -5083,6 +5085,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 	es325_priv.internal_route_config =  ES325_INTERNAL_ROUTE_MAX;
 	es325_priv.new_internal_route_config = ES325_INTERNAL_ROUTE_MAX;
 #endif
+	filename = FIRMWARE_NAME;
 	pr_info("%s: system_rev=%d, firmware=%s\n", __func__, system_rev, filename);
 	rc = request_firmware((const struct firmware **)&es325_priv.fw,
 			      filename, &sbdev->dev);
@@ -5091,7 +5094,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 		goto request_firmware_error;
 	}
 
-	thread = kthread_run(es325_fw_thread, &es325_priv, "audience thread");
+	thread = kthread_run(es325_fw_thread, &es325_priv, "audience-thread");
 	if (IS_ERR(thread)) {
 		dev_err(&sbdev->dev, "%s(): can't create es325 firmware thread = %p\n", __func__, thread);
 		return -1;
@@ -5150,7 +5153,7 @@ static int register_snd_soc(struct es325_priv *priv)
 			continue;
 		}
 		es325_priv.dai[i].ch_num =
-			kzalloc((ch_cnt * sizeof(unsigned int)), GFP_KERNEL);
+			kzalloc((ch_cnt * sizeof(int)), GFP_KERNEL);
 	}
 	dev_dbg(&sbdev->dev, "%s(): exit\n", __func__);
 	return rc;
@@ -5210,9 +5213,10 @@ void es325_wrapper_wakeup(struct snd_soc_dai *dai)
 #ifdef ES325_SLEEP
 	int rc;
 	struct es325_priv *es325 = &es325_priv;
+	struct slim_device *sbdev = priv->gen0_client;
 	if(es325_fw_downloaded==0) {
-		pr_err("%s():FW not ready, wakeup suspends, err_msg:%d\n", __func__,debug_for_dl_firmware);
-		return;
+		pr_err("Machinex -> Dredging es325 back to life.\n");
+		fw_download(es325);
 	}
 	pr_debug("=[ES325]=%s dai_id=%d ch_wakeup=%d,wakeup_cnt=%d\n", __func__,
 		dai->id, es325->dai[dai->id-1].ch_wakeup, es325->wakeup_cnt);
