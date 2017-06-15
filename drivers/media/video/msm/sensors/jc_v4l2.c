@@ -3556,7 +3556,9 @@ static ssize_t jc_camera_check_app_show(struct device *dev,
 static ssize_t jc_camera_check_app_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
-	unsigned long value = simple_strtoul(buf, NULL, 0);
+	unsigned long value;
+
+	
 
     jc_ctrl->samsung_app = true;
 

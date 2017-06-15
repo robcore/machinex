@@ -238,7 +238,7 @@ static ssize_t prometheus_sync_store(struct kobject *kobj,
 
 	sscanf(buf, "%u\n", &val);
 
-	if (val <= 0)
+	if (val == 0)
 		val = 0;
 	if (val >= 1)
 		val = 1;
@@ -265,7 +265,7 @@ static ssize_t global_suspend_store(struct kobject *kobj,
 
 	sscanf(buf, "%u\n", &val);
 
-	if (val <= 0)
+	if (val == 0)
 		val = 0;
 	if (val >= 1)
 		val = 1;
@@ -292,7 +292,7 @@ static ssize_t ignore_wakelocks_store(struct kobject *kobj,
 
 	sscanf(buf, "%u\n", &val);
 
-	if (val <= 0)
+	if (val == 0)
 		val = 0;
 	if (val >= 1)
 		val = 1;
