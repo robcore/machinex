@@ -1001,7 +1001,7 @@ bool pm_get_wakeup_count(unsigned int *count, bool block)
 		last_read_time = ktime_get();
 		spin_unlock_irqrestore(&events_lock, flags);
 
-	if (block) {			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+	if (block) {
 
 		DEFINE_WAIT(wait);
 
