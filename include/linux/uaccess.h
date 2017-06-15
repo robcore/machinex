@@ -13,6 +13,12 @@
  * no other way to make the pagefault handlers do this. So we do
  * disable preemption but we don't necessarily care about that.
  */
+static bool mdisabled;
+bool pagefault_disabled(void)
+{
+	return mdisabled;
+}
+
 static inline void pagefault_disable(void)
 {
 	inc_preempt_count();
@@ -21,6 +27,7 @@ static inline void pagefault_disable(void)
 	 * can hit.
 	 */
 	barrier();
+	mdisabled = true;
 }
 
 static inline void pagefault_enable(void)
@@ -36,7 +43,20 @@ static inline void pagefault_enable(void)
 	 */
 	barrier();
 	preempt_check_resched();
+	mdisabled = false;
 }
+
+/*
+ * The pagefault handler is in general disabled by pagefault_disable() or
+ * when in irq context (via in_atomic()).
+ *
+ * This function should only be used by the fault handlers. Other users should
+ * stick to pagefault_disabled().
+ * Please NEVER use preempt_disable() to disable the fault handler. With
+ * !CONFIG_PREEMPT_COUNT, this is like a NOP. So the handler won't be disabled.
+ * in_atomic() will report different values based on !CONFIG_PREEMPT_COUNT.
+ */
+#define faulthandler_disabled() (pagefault_disabled() || in_atomic())
 
 #ifndef ARCH_HAS_NOCACHE_UACCESS
 
