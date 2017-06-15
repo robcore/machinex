@@ -2807,6 +2807,10 @@ module_init(msm_audio_init);
 
 static void __exit msm_audio_exit(void)
 {
+	if (!soc_class_is_apq8064() || socinfo_get_id() == 130) {
+		pr_err("%s: apq8064 - Not the right machine type\n", __func__);
+		return ;
+	}
 	platform_device_unregister(msm_snd_device);
 	if (mbhc_cfg.gpio)
 		gpio_free(mbhc_cfg.gpio);

@@ -2424,11 +2424,8 @@ static int msm_slim_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int msm_slim_runtime_idle(struct device *device)
 {
-	int ret;
-	ret = pm_request_autosuspend(device);
-	if (ret)
-		ret = -EAGAIN;
-	return ret;	
+	pm_request_autosuspend(device);
+	return -EAGAIN;
 }
 #endif
 

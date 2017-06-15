@@ -35,10 +35,10 @@
 #define LZ4_CHUNK_SIZE (8<<20)
 #define ARCHIVE_MAGICNUMBER 0x184C2102
 
-STATIC inline int INIT unlz4(u8 *input, int in_len,
-				int (*fill) (void *, unsigned int),
-				int (*flush) (void *, unsigned int),
-				u8 *output, int *posp,
+STATIC inline int INIT unlz4(u8 *input, long in_len,
+				long (*fill)(void *, unsigned long),
+				long (*flush)(void *, unsigned long),
+				u8 *output, long *posp,
 				void (*error) (char *x))
 {
 	int ret = -1;
@@ -46,7 +46,7 @@ STATIC inline int INIT unlz4(u8 *input, int in_len,
 	u8 *inp;
 	u8 *inp_start;
 	u8 *outp;
-	int size = in_len;
+	long size = in_len;
 #ifdef PREBOOT
 	size_t out_len = get_unaligned_le32(input + in_len);
 #endif
@@ -178,11 +178,11 @@ exit_0:
 }
 
 #ifdef PREBOOT
-STATIC int INIT decompress(unsigned char *buf, int in_len,
-			      int(*fill)(void*, unsigned int),
-			      int(*flush)(void*, unsigned int),
+STATIC int INIT decompress(unsigned char *buf, long in_len,
+			      long (*fill)(void*, unsigned long),
+			      long (*flush)(void*, unsigned long),
 			      unsigned char *output,
-			      int *posp,
+			      long *posp,
 			      void(*error)(char *x)
 	)
 {

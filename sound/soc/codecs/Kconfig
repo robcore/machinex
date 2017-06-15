@@ -298,6 +298,9 @@ config SND_SOC_ES325
 config SND_SOC_ES325_SLIM
 	tristate
 
+config PREVENT_SLIMBUS_SLEEP_IN_FW_DL
+	bool
+
 config SND_SOC_CS8427
 	tristate
 
