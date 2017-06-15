@@ -27,8 +27,8 @@
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
-unsigned int snd_ctrl_enabled = 0;
-unsigned int snd_ctrl_locked;
+unsigned int snd_ctrl_enabled = 1;
+unsigned int snd_ctrl_locked = 1;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -43,19 +43,19 @@ static unsigned int *cache_select(unsigned int reg)
 
 	switch (reg) {
 		case TABLA_A_CDC_RX1_VOL_CTL_B2_CTL:
-			out = &cached_regs[0];
-			break;
-		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 			out = &cached_regs[1];
 			break;
-		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
+		case TABLA_A_CDC_RX2_VOL_CTL_B2_CTL:
 			out = &cached_regs[2];
 			break;
-		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
+		case TABLA_A_CDC_RX5_VOL_CTL_B2_CTL:
 			out = &cached_regs[3];
 			break;
-		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
+		case TABLA_A_CDC_TX6_VOL_CTL_GAIN:
 			out = &cached_regs[4];
+			break;
+		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
+			out = &cached_regs[5];
 			break;
 	}
 
@@ -122,12 +122,10 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 
     if (val >= 1) {
         val = 1;
-		snd_ctrl_locked = 1;
 	}
 
-	if (val == 0) {
+	if (val <= 0) {
 		val = 0;
-		snd_ctrl_locked = 0;
 	}
 
     snd_ctrl_enabled = val;
@@ -390,8 +388,8 @@ static int sound_control_init(void)
 		return -ENOMEM;
 	}
 
-	snd_ctrl_enabled = 0;
-	//snd_ctrl_locked = 1;
+	snd_ctrl_enabled = 1;
+	snd_ctrl_locked = 1;
 
 	return 0;
 }

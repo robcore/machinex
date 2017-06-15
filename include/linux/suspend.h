@@ -10,7 +10,7 @@
 #include <asm/errno.h>
 
 /* hsic check */
-extern bool android_wake_active;
+extern bool hsic_active;
 
 #ifdef CONFIG_VT
 extern void pm_set_vt_switch(int);
