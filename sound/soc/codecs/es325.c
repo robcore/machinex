@@ -196,6 +196,7 @@ static unsigned int es325_ap_tx1_ch_cnt = 1;
 unsigned int es325_tx1_route_enable;
 unsigned int es325_rx1_route_enable;
 unsigned int es325_rx2_route_enable;
+static int fw_download(void *arg);
 unsigned int es325_fw_downloaded = 0;
 
 static int es325_slim_rx_port_to_ch[ES325_SLIM_RX_PORTS] = {
@@ -885,6 +886,8 @@ slim_control_ch_error:
 
 int es325_remote_cfg_slim_rx(int dai_id)
 {
+	struct slim_device *sbdev;
+	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_priv *es325 = &es325_priv;
 	int be_id;
 	int rc = 0;
@@ -933,6 +936,8 @@ EXPORT_SYMBOL_GPL(es325_remote_cfg_slim_rx);
 
 int es325_remote_cfg_slim_tx(int dai_id)
 {
+	struct slim_device *sbdev;
+	struct es325_priv *es325_priv = slim_get_devicedata(sbdev);
 	struct es325_priv *es325 = &es325_priv;
 	int be_id;
 	int ch_cnt;
@@ -5212,8 +5217,8 @@ void es325_wrapper_wakeup(struct snd_soc_dai *dai)
 {
 #ifdef ES325_SLEEP
 	int rc;
+	struct slim_device *sbdev;
 	struct es325_priv *es325 = &es325_priv;
-	struct slim_device *sbdev = priv->gen0_client;
 	if(es325_fw_downloaded==0) {
 		pr_err("Machinex -> Dredging es325 back to life.\n");
 		fw_download(es325);
