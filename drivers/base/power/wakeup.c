@@ -613,7 +613,6 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 				!strcmp(ws->name, "bluesleep")) ||
 			(!enable_ssp_sensorhub_ws &&
 				!strcmp(ws->name, "ssp_wake_lock")))) {
-			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
 			return true;
 		} else
 			return false;
@@ -628,7 +627,6 @@ static void prometheus_power_beacon(struct wakeup_source *ws)
 		((!strcmp(ws->name, "PowerManagerService.WakeLocks")) && ws->active) ||
 		((!strcmp(ws->name, "PowerManagerService.Broadcasts")) && ws->active)) {
 		is_android_wake_active = true;
-		pr_info("Android OS Wakelock held: %s\n", ws->name);
 	} else {
 		is_android_wake_active = false;
 	}
