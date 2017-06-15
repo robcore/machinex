@@ -1021,7 +1021,7 @@ extern const char *device_get_devnode(struct device *dev,
 				      umode_t *mode, uid_t *uid, gid_t *gid,
 				      const char **tmp);
 extern void *dev_get_drvdata(const struct device *dev);
-extern int dev_set_drvdata(struct device *dev, void *data);
+extern void dev_set_drvdata(struct device *dev, void *data);
 
 static inline bool device_supports_offline(struct device *dev)
 {
