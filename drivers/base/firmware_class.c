@@ -110,6 +110,7 @@ static inline long firmware_loading_timeout(void)
 #else
 #define FW_OPT_FALLBACK		0
 #endif
+#define FW_OPT_NO_WARN	(1U << 3)
 
 struct firmware_cache {
 	/* firmware_buf instance will be added into the below list */
@@ -1152,7 +1153,6 @@ request_firmware(const struct firmware **firmware_p, const char *name,
 }
 EXPORT_SYMBOL(request_firmware);
 
-#ifdef CONFIG_FW_LOADER_USER_HELPER_FALLBACK
 /**
  * request_firmware: - load firmware directly without usermode helper
  * @firmware_p: pointer to firmware image
@@ -1169,12 +1169,12 @@ int request_firmware_direct(const struct firmware **firmware_p,
 {
 	int ret;
 	__module_get(THIS_MODULE);
-	ret = _request_firmware(firmware_p, name, device, FW_OPT_UEVENT);
+	ret = _request_firmware(firmware_p, name, device,
+				FW_OPT_UEVENT | FW_OPT_NO_WARN);
 	module_put(THIS_MODULE);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(request_firmware_direct);
-#endif
 
 /**
  * release_firmware: - release the resource associated with a firmware image
