@@ -1389,6 +1389,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	codec_clk = clk_get(cpu_dai->dev, "osr_clk");
 
+#ifndef CONFIG_SWITCH_FSA8008
 	/* APQ8064 Rev 1.1 CDP and Liquid have mechanical switch */
 	revision = socinfo_get_version();
 	if (apq8064_hs_detect_use_gpio != -1) {
@@ -1437,6 +1438,9 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	err = tabla_hs_detect(codec, &mbhc_cfg);
 	*/
 	return err;
+#else
+	return 0;
+#endif
 }
 
 static int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,

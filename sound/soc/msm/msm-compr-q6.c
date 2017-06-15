@@ -806,6 +806,7 @@ static int msm_compr_playback_close(struct snd_pcm_substream *substream)
 	atomic_set(&prtd->pending_buffer, 0);
 	prtd->pcm_irq_pos = 0;
 	q6asm_cmd(prtd->audio_client, CMD_CLOSE);
+	compressed_audio.prtd = NULL;
 	q6asm_audio_client_buf_free_contiguous(dir,
 				prtd->audio_client);
 	if (!(compr->info.codec_param.codec.id ==
