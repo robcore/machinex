@@ -2425,6 +2425,7 @@ static int msm_slim_remove(struct platform_device *pdev)
 static int msm_slim_runtime_idle(struct device *device)
 {
 	dev_dbg(device, "pm_runtime: idle...\n");
+	pm_runtime_mark_last_busy(device);
 	pm_request_autosuspend(device);
 	return -EAGAIN;
 }
