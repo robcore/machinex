@@ -36,6 +36,7 @@
 
 #include <asm/user_accessible_timer.h>
 
+#include "fault.h"
 #include "mm.h"
 #include "tcm.h"
 
@@ -1194,7 +1195,7 @@ void __init sanity_check_meminfo(void)
 			reason = "with VIPT aliasing cache";
 		}
 		if (reason) {
-			printk(KERN_CRIT "HIGHMEM is not supported %s, ignoring high memory\n",
+			pr_crit("HIGHMEM is not supported %s, ignoring high memory\n",
 				reason);
 			while (j > 0 && meminfo.bank[j - 1].highmem)
 				j--;
@@ -1393,6 +1394,9 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	 */
 	local_flush_tlb_all();
 	flush_cache_all();
+
+	/* Enable asynchronous aborts */
+	early_abt_enable();
 }
 
 static void __init kmap_init(void)
@@ -1586,17 +1590,6 @@ void __init paging_init(struct machine_desc *mdesc)
 
 	/* allocate the zero page. */
 	zero_page = early_alloc(PAGE_SIZE);
-
-#ifdef TIMA_ENABLED
-	{
-	        /**TIMA_MAGIC*/
-	        void *mem_alloc_ptr;
-		unsigned int phy_addr;
-		mem_alloc_ptr = early_alloc(0x200000);
-		phy_addr = __pa(mem_alloc_ptr);
-		printk(KERN_ERR"===TIMA===NEW=== -> mem_alloc_ptr= %p pa = %x\n", mem_alloc_ptr, phy_addr);
-	}
-#endif
 
 	bootmem_init();
 
