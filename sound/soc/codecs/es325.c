@@ -4832,7 +4832,7 @@ static int es325_i2c_probe(struct i2c_client *i2c,
 
 	es325->pdata = pdata;
 
-	rc = request_firmware(&es325->fw, filename, &i2c->dev);
+	rc = request_firmware_direct(&es325->fw, filename, &i2c->dev);
 	if (rc) {
 		dev_err(&i2c->dev, "%s(): request_firmware(%s) failed %d\n",
 			__func__, filename, rc);
@@ -5084,7 +5084,7 @@ static int es325_slim_probe(struct slim_device *sbdev)
 	es325_priv.new_internal_route_config = ES325_INTERNAL_ROUTE_MAX;
 #endif
 	pr_info("%s: system_rev=%d, firmware=%s\n", __func__, system_rev, filename);
-	rc = request_firmware((const struct firmware **)&es325_priv.fw,
+	rc = request_firmware_direct((const struct firmware **)&es325_priv.fw,
 			      filename, &sbdev->dev);
 	if (rc) {
 		dev_err(&sbdev->dev, "%s(): request_firmware(%s) failed %d\n", __func__, filename, rc);

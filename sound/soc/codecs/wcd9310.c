@@ -2965,7 +2965,7 @@ static int tabla_codec_enable_dec(struct snd_soc_dapm_widget *w,
 					msecs_to_jiffies(300));
 		}
 		/* apply the digital gain after the decimator is enabled*/
-		if ((w->shift + offset) < ARRAY_SIZE(tx_digital_gain_reg))
+		if ((w->shift) < ARRAY_SIZE(rx_digital_gain_reg))
 			snd_soc_write(codec,
 				  tx_digital_gain_reg[w->shift + offset],
 				  snd_soc_read(codec,
@@ -4249,6 +4249,7 @@ static void tabla_codec_calibrate_hs_polling(struct snd_soc_codec *codec)
 		      n_cic[tabla_codec_mclk_index(tabla)]);
 }
 
+#ifdef CONFIG_SND_SOC_ES325
 static int tabla_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
@@ -4263,6 +4264,22 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 
 	return 0;
 }
+#else
+static int tabla_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
+{
+	struct wcd9xxx *tabla_core = dev_get_drvdata(dai->codec->dev->parent);
+
+	pr_debug("%s(): substream = %s  stream = %d\n" , __func__,
+		 substream->name, substream->stream);
+	if ((tabla_core != NULL) &&
+	    (tabla_core->dev != NULL) &&
+	    (tabla_core->dev->parent != NULL))
+		pm_runtime_get_sync(tabla_core->dev->parent);
+
+	return 0;
+}
+#endif
 
 static void tabla_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -4286,7 +4303,9 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	    (tabla_core->dev != NULL) &&
 	    (tabla_core->dev->parent != NULL) &&
 	    (active == 0)) {
+#ifdef CONFIG_SND_SOC_ES325
 		es325_wrapper_sleep(dai->id);
+#endif
 		pm_runtime_mark_last_busy(tabla_core->dev->parent);
 		pm_runtime_put(tabla_core->dev->parent);
 	}
