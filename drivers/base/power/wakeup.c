@@ -685,7 +685,6 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
-	prometheus_power_beacon(ws);
 	trace_wakeup_source_activate(ws->name, cec);
 
 }
@@ -702,8 +701,6 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 			/* This is racy, but the counter is approximate anyway. */
 			if (events_check_enabled)
 				ws->wakeup_count++;
-
-			prometheus_power_beacon(ws);
 
 			if ((!ws->active) && !wakeup_source_blocker(ws))
 				wakeup_source_activate(ws);
@@ -724,6 +721,7 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 		if (hard)
 			pm_system_wakeup();
 	}
+		prometheus_power_beacon(ws);
 }
 
 /**
@@ -1003,7 +1001,8 @@ bool pm_get_wakeup_count(unsigned int *count, bool block)
 		last_read_time = ktime_get();
 		spin_unlock_irqrestore(&events_lock, flags);
 
-	if (block) {
+	if (block) {			pr_info("forcefully deactivate wakeup source: %s\n", ws->name);
+
 		DEFINE_WAIT(wait);
 
 		for (;;) {
