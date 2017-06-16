@@ -595,7 +595,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.reusable = FMEM_ENABLED,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
-	.iommu_map_all = 1,
+	//.iommu_map_all = 1,
 	.is_cma = 0,
 	.no_nonsecure_alloc = 1,
 };
