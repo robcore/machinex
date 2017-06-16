@@ -815,7 +815,7 @@ static void cyttspfw_upgrade(struct device *dev, bool force)
 		}
 	}
 
-	retval = request_firmware(&cyttsp_fw, ts->fw_fname, dev);
+	retval = request_firmware_direct(&cyttsp_fw, ts->fw_fname, dev);
 	if (retval < 0) {
 		pr_err("%s: %s request failed(%d)\n", __func__,
 						ts->fw_fname, retval);

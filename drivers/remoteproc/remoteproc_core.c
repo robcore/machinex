@@ -1166,7 +1166,7 @@ int rproc_boot(struct rproc *rproc)
 	dev_info(dev, "powering up %s\n", rproc->name);
 
 	/* load firmware */
-	ret = request_firmware(&firmware_p, rproc->firmware, dev);
+	ret = request_firmware_direct(&firmware_p, rproc->firmware, dev);
 	if (ret < 0) {
 		dev_err(dev, "request_firmware failed: %d\n", ret);
 		goto downref_rproc;

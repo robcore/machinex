@@ -1203,7 +1203,7 @@ static void wcnss_nvbin_dnld(void)
 	const struct firmware *nv = NULL;
 	struct device *dev = &penv->pdev->dev;
 
-	ret = request_firmware(&nv, NVBIN_FILE, dev);
+	ret = request_firmware_direct(&nv, NVBIN_FILE, dev);
 
 	if (ret || !nv || !nv->data || !nv->size) {
 		pr_err("wcnss: %s: request_firmware failed for %s\n",

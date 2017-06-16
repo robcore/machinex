@@ -305,14 +305,14 @@ int adreno_gpu_init(struct drm_device *drm, struct platform_device *pdev,
 	gpu->funcs = funcs;
 	gpu->rev = rev;
 
-	ret = request_firmware(&gpu->pm4, gpu->info->pm4fw, drm->dev);
+	ret = request_firmware_direct(&gpu->pm4, gpu->info->pm4fw, drm->dev);
 	if (ret) {
 		dev_err(drm->dev, "failed to load %s PM4 firmware: %d\n",
 				gpu->info->pm4fw, ret);
 		return ret;
 	}
 
-	ret = request_firmware(&gpu->pfp, gpu->info->pfpfw, drm->dev);
+	ret = request_firmware_direct(&gpu->pfp, gpu->info->pfpfw, drm->dev);
 	if (ret) {
 		dev_err(drm->dev, "failed to load %s PFP firmware: %d\n",
 				gpu->info->pfpfw, ret);

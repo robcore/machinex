@@ -196,10 +196,10 @@ static int _load_firmware(struct kgsl_device *device, const char *fwfile,
 	const struct firmware *fw = NULL;
 	int ret;
 
-	ret = request_firmware(&fw, fwfile, device->dev);
+	ret = request_firmware_direct(&fw, fwfile, device->dev);
 
 	if (ret) {
-		KGSL_DRV_ERR(device, "request_firmware(%s) failed: %d\n",
+		KGSL_DRV_ERR(device, "request_firmware_direct(%s) failed: %d\n",
 			     fwfile, ret);
 		return ret;
 	}

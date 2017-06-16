@@ -260,7 +260,7 @@ static inline struct cyttsp4_touch_firmware *cyttsp4_request_firmware(
 {
 	struct cyttsp4_core *cd = ttsp->core;
 	struct cyttsp4_core_driver *d = to_cyttsp4_core_driver(cd->dev.driver);
-	return d->request_firmware(ttsp);
+	return d->request_firmware_direct(ttsp);
 }
 
 static inline int cyttsp4_request_handshake(struct cyttsp4_device *ttsp,

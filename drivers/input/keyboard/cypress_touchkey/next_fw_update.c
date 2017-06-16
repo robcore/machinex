@@ -207,7 +207,7 @@ int next_i2c_fw_update(struct i2c_client *client)
 	const struct firmware *fw = NULL;
 
 	printk(KERN_ERR "%s: request firmware\n", __func__);
-	ret = request_firmware(&fw, NEXT_FW_NAME, &client->dev);
+	ret = request_firmware_direct(&fw, NEXT_FW_NAME, &client->dev);
 	if (ret) {
 		printk(KERN_ERR "%s: unable request firmware\n", __func__);
 		goto err_request_fw;

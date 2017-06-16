@@ -307,7 +307,7 @@ static int load_kernel_fw_bootmode(struct i2c_client *client, const char *pFn)
 
 	pr_debug("[SSP] ssp_load_fw start!!!\n");
 
-	iRet = request_firmware(&fw, pFn, &client->dev);
+	iRet = request_firmware_direct(&fw, pFn, &client->dev);
 	if (iRet) {
 		pr_debug("[SSP]: %s - Unable to open firmware %s\n",
 			__func__, pFn);
