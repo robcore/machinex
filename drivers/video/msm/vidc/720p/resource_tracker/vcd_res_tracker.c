@@ -118,7 +118,7 @@ static u32 res_trk_disable_videocore(void)
 		mutex_unlock(&resource_context.lock);
 		return false;
 	}
-	msleep(20);
+	mdelay(20);
 
 	clk_disable_unprepare(resource_context.pclk);
 	clk_disable_unprepare(resource_context.hclk);
@@ -581,7 +581,7 @@ u32 res_trk_download_firmware(void)
 	VCDRES_MSG_HIGH("%s(): Request firmware download\n",
 		__func__);
 	mutex_lock(&resource_context.lock);
-	rc = request_firmware(&fw_boot, VIDC_BOOT_FW,
+	rc = request_firmware_direct(&fw_boot, VIDC_BOOT_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
@@ -592,7 +592,7 @@ u32 res_trk_download_firmware(void)
 	vidc_command_control_fw = (unsigned char *)fw_boot->data;
 	vidc_command_control_fw_size = (u32) fw_boot->size;
 
-	rc = request_firmware(&fw_mpg4_dec, VIDC_MPG4_DEC_FW,
+	rc = request_firmware_direct(&fw_mpg4_dec, VIDC_MPG4_DEC_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
@@ -604,7 +604,7 @@ u32 res_trk_download_firmware(void)
 	vidc_mpg4_dec_fw_size = (u32) fw_mpg4_dec->size;
 
 
-	rc = request_firmware(&fw_h263_dec, VIDC_H263_DEC_FW,
+	rc = request_firmware_direct(&fw_h263_dec, VIDC_H263_DEC_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
@@ -615,7 +615,7 @@ u32 res_trk_download_firmware(void)
 	vidc_h263_dec_fw = (unsigned char *)fw_h263_dec->data;
 	vidc_h263_dec_fw_size = (u32) fw_h263_dec->size;
 
-	rc = request_firmware(&fw_h264_dec, VIDC_H264_DEC_FW,
+	rc = request_firmware_direct(&fw_h264_dec, VIDC_H264_DEC_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
@@ -626,7 +626,7 @@ u32 res_trk_download_firmware(void)
 	vidc_h264_dec_fw = (unsigned char *)fw_h264_dec->data;
 	vidc_h264_dec_fw_size = (u32) fw_h264_dec->size;
 
-	rc = request_firmware(&fw_mpg4_enc, VIDC_MPG4_ENC_FW,
+	rc = request_firmware_direct(&fw_mpg4_enc, VIDC_MPG4_ENC_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
@@ -637,7 +637,7 @@ u32 res_trk_download_firmware(void)
 	vidc_mpg4_enc_fw = (unsigned char *)fw_mpg4_enc->data;
 	vidc_mpg4_enc_fw_size = (u32) fw_mpg4_enc->size;
 
-	rc = request_firmware(&fw_h264_enc, VIDC_H264_ENC_FW,
+	rc = request_firmware_direct(&fw_h264_enc, VIDC_H264_ENC_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
@@ -648,7 +648,7 @@ u32 res_trk_download_firmware(void)
 	vidc_h264_enc_fw = (unsigned char *)fw_h264_enc->data;
 	vidc_h264_enc_fw_size = (u32) fw_h264_enc->size;
 
-	rc = request_firmware(&fw_vc1_dec, VIDC_VC1_DEC_FW,
+	rc = request_firmware_direct(&fw_vc1_dec, VIDC_VC1_DEC_FW,
 						  resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
