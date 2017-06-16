@@ -52,7 +52,6 @@ static unsigned int ignore_wakelocks = 1;
  * disliking the wakelock skip. TODO Use the power_supply framework.
  */
 extern bool mx_is_cable_attached(void);
-extern bool android_os_ws(void);
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -136,13 +135,8 @@ static void power_suspend(struct work_struct *work)
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
 			if (!mx_is_cable_attached()) {
-				if (android_os_ws()) {
-					pr_info("[PROMETHEUS] Android System Wakelocks held, skipping suspend.\n");
-					return;
-				} else {
-					pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
-					goto skip_check;
-				}
+				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
+				goto skip_check;
 			} else {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
 				return;

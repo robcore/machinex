@@ -9,9 +9,6 @@
 #include <linux/freezer.h>
 #include <asm/errno.h>
 
-/* hsic check */
-extern bool android_os_ws(void);
-
 #ifdef CONFIG_VT
 extern void pm_set_vt_switch(int);
 #else

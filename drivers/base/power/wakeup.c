@@ -618,27 +618,6 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 			return false;
 }
 
-static bool android_wake_active;
-
-bool android_os_ws(void)
-{
-	return android_wake_active;
-}
-
-static void prometheus_power_beacon(struct wakeup_source *ws, const char *name)
-{
-	if (!strcmp(name, "PowerManagerService.Display") ||
-		!strcmp(name, "PowerManagerService.WakeLocks") ||
-		!strcmp(name, "PowerManagerService.Broadcasts") ||
-		!strcmp(name, "ApmAudio") ||
-		!strcmp(name, "sec_jack_det") ||
-		!strcmp(name, "rpm_regulator_tcxo") ||
-		!strcmp(name, "radio-interface"))
-		android_wake_active = true;
-	else
-		android_wake_active = false;
-}
-
 /*
  * The functions below use the observation that each wakeup event starts a
  * period in which the system should not be suspended.  The moment this period
@@ -692,7 +671,6 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
 	trace_wakeup_source_activate(ws->name, cec);
-	prometheus_power_beacon(ws, ws->name);
 
 }
 
