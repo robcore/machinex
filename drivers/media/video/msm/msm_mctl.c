@@ -49,9 +49,11 @@
 #endif
 
 #define MSM_V4L2_SWFI_LATENCY 3
+
 static bool mx_mctl_use_qos = true;
 module_param(mx_mctl_use_qos, bool, 0644);
 static unsigned int mx_qos_cnt = 0;
+
 /* VFE required buffer number for streaming */
 static struct msm_isp_color_fmt msm_isp_formats[] = {
 	{
