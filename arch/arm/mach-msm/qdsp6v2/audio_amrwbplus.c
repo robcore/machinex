@@ -99,11 +99,10 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		pr_debug("%s:AUDIO_START sessionid[%d]enable[%d]\n", __func__,
 			audio->ac->session,
 			audio->enabled);
-		if (audio->stopped == 1) {
+		if (audio->stopped == 1)
 			audio->stopped = 0;
 			break;
 		}
-	}
 	case AUDIO_GET_AMRWBPLUS_CONFIG_V2: {
 		if ((audio) && (arg) && (audio->codec_cfg)) {
 			if (copy_to_user((void *)arg, audio->codec_cfg,
@@ -112,12 +111,12 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				pr_err("wb+ config get copy_to_user failed");
 				break;
 			}
-		} else {
-			pr_err("wb+ config v2 invalid parameters..");
-			rc = -EFAULT;
-			break;
-		}
-	break;
+			} else {
+				pr_err("wb+ config v2 invalid parameters..");
+				rc = -EFAULT;
+				break;
+			}
+		break;
 	}
 	case AUDIO_SET_AMRWBPLUS_CONFIG_V2: {
 		if ((audio) && (arg) && (audio->codec_cfg)) {
@@ -127,12 +126,12 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				pr_err("wb+ config set copy_to_user_failed");
 				break;
 			}
-		} else {
-			pr_err("wb+ config invalid parameters..");
-			rc = -EFAULT;
-			break;
-		}
-	break;
+			} else {
+				pr_err("wb+ config invalid parameters..");
+				rc = -EFAULT;
+				break;
+			}
+		break;
 	}
 	default:
 		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);

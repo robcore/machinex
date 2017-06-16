@@ -15,7 +15,7 @@
 #ifndef __Q6_AUDIO_COMMON_H__
 #define __Q6_AUDIO_COMMON_H__
 
-#if defined(CONFIG_ARCH_MSM8974) || defined(CONFIG_ARCH_MSM9625)
+#ifdef CONFIG_ARCH_MSM8974
 #include <sound/apr_audio-v2.h>
 #include <sound/q6asm-v2.h>
 #else

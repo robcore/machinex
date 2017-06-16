@@ -179,7 +179,7 @@ static void sensor_power_on_vdd(int, int);
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x6600000    /* 56MB(0x3800000) -> 98MB -> 102MB */
+#define MSM_ION_MM_SIZE		0x7200000    /* 56MB(0x3800000) -> 98MB -> 102MB */
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x1700000    /* 7.5MB(0x780000) -> 23MB */
 #define MSM_ION_HEAP_NUM	7
@@ -1243,7 +1243,7 @@ static struct msm_bus_vectors hsic_max_vectors[] = {
 		.src = MSM_BUS_MASTER_SPS,
 		.dst = MSM_BUS_SLAVE_SPS,
 		.ab = 0,
-		.ib = 256000000, /*vote for 32Mhz dfab clk rate*/
+		.ib = 512000000, /*vote for 64Mhz dfab clk rate*/
 	},
 };
 
@@ -5312,7 +5312,7 @@ static void __init apq8064_common_init(void)
 		}
 	}
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
-		if (system_rev < 9)
+		if (system_rev < 10)
 			platform_device_register(&touchkey_i2c_gpio_device);
 		else
 			platform_device_register(&touchkey_i2c_gpio_device_2);

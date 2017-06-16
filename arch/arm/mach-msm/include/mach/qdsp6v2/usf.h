@@ -97,10 +97,6 @@ enum us_detect_mode_enum {
 
 /* Max size of the client name */
 #define USF_MAX_CLIENT_NAME_SIZE	20
-
-/* Max number of the ports (mics/speakers) */
-#define USF_MAX_PORT_NUM                4
-
 /* Info structure common for TX and RX */
 struct us_xx_info_type {
 /* Input:  general info */
@@ -119,7 +115,7 @@ struct us_xx_info_type {
 /* Number of the microphones (TX) or speakers(RX) */
 	uint16_t port_cnt;
 /* Microphones(TX) or speakers(RX) indexes in their enumeration */
-	uint8_t  port_id[USF_MAX_PORT_NUM];
+	uint8_t  port_id[4];
 /* Bits per sample 16 or 32 */
 	uint16_t bits_per_sample;
 /* Input:  Transparent info for encoder in the LPASS */
