@@ -50,7 +50,8 @@
 
 #define MSM_V4L2_SWFI_LATENCY 3
 static bool mx_mctl_use_qos = true;
-static int mx_qos_cnt = 0;
+module_param(mx_mctl_use_qos, bool, 0644);
+static unsigned int mx_qos_cnt = 0;
 /* VFE required buffer number for streaming */
 static struct msm_isp_color_fmt msm_isp_formats[] = {
 	{
@@ -618,12 +619,12 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 			goto msm_csi_version;
 		}
 
-		if (mx_mctl_use_pos) {
+		if (mx_mctl_use_qos) {
 			pm_qos_add_request(&p_mctl->pm_qos_req_list,
 				PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 			pm_qos_update_request(&p_mctl->pm_qos_req_list,
 				MSM_V4L2_SWFI_LATENCY);
-		mx_qos_cnt = 1;
+			mx_qos_cnt = 1;
 		}
 
 		p_mctl->apps_id = apps_id;
@@ -695,7 +696,7 @@ static void msm_mctl_release(struct msm_cam_media_controller *p_mctl)
 
 	v4l2_subdev_call(p_mctl->sensor_sdev, core, s_power, 0);
 
-	if (mx_mctl_use_pos || mx_qos_cnt == 1) {
+	if (mx_mctl_use_qos || mx_qos_cnt == 1) {
 		pm_qos_update_request(&p_mctl->pm_qos_req_list,
 					PM_QOS_DEFAULT_VALUE);
 		pm_qos_remove_request(&p_mctl->pm_qos_req_list);
