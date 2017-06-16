@@ -319,7 +319,7 @@ static ssize_t barcode_emul_fw_update_store(struct device *dev,
 		const char *buf, size_t size)
 {
 	struct barcode_emul_data *data = dev_get_drvdata(dev);
-	if (request_firmware_direct(&data->fw, SEC_FPGA_FW_FILENAME,
+	if (request_firmware(&data->fw, SEC_FPGA_FW_FILENAME,
 							dev)) {
 		pr_err("%s: Can't open firmware file\n",
 						__func__);

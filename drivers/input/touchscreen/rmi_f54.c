@@ -2196,10 +2196,10 @@ static void get_fac_fw_ver_bin(void)
 
 	set_default_result(data);
 #if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	retval = request_firmware_direct(&fw_entry, FW_IMAGE_NAME_B0_HSYNC_FAC,
+	retval = request_firmware(&fw_entry, FW_IMAGE_NAME_B0_HSYNC_FAC,
 			&rmi4_data->i2c_client->dev);
 #else
-	retval = request_firmware_direct(&fw_entry, FW_IMAGE_NAME_B0_FAC,
+	retval = request_firmware(&fw_entry, FW_IMAGE_NAME_B0_FAC,
 			&rmi4_data->i2c_client->dev);
 #endif
 

@@ -1328,7 +1328,7 @@ static int fwu_start_reflash(void)
 			"%s: Requesting firmware image %s\n",
 			__func__, fwu->firmware_name);
 
-		retval = request_firmware_direct(&fw_entry,
+		retval = request_firmware(&fw_entry,
 				fwu->firmware_name,
 				&fwu->rmi4_data->i2c_client->dev);
 		if (retval != 0) {
