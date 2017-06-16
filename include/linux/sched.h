@@ -2590,6 +2590,11 @@ extern struct   mm_struct init_mm;
 
 extern struct pid_namespace init_pid_ns;
 
+static __always_inline bool need_resched(void)
+{
+	return unlikely(tif_need_resched());
+}
+
 /*
  * find a task by one of its numerical ids
  *
