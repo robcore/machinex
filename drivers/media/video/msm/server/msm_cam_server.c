@@ -2548,8 +2548,7 @@ int msm_cam_server_open_mctl_session(struct msm_cam_v4l2_device *pcam,
 			 __func__);
 		rc = -ENODEV;
 		return rc;
-	}
-	else if(!pmctl->mctl_open) {
+	} else if(!pmctl->mctl_open) {
 		D("%s: media contoller is not inited\n",
 		 __func__);
 		rc = -ENODEV;
@@ -2620,6 +2619,7 @@ int msm_server_open_client(int *p_qidx)
 	queue->ctrl_data = kzalloc(sizeof(uint8_t) *
 		MAX_SERVER_PAYLOAD_LENGTH, GFP_KERNEL);
 	if (!queue->ctrl_data) {
+		mutex_unlock(&g_server_dev.server_lock);
 		pr_debug("%s: Could not find memory\n", __func__);
 		return -ENOMEM;
 	}
@@ -2717,6 +2717,9 @@ int msm_server_send_ctrl(struct msm_ctrl_cmd *out,
 			if (++server_dev->server_evt_id == 0)
 				server_dev->server_evt_id++;
 			pr_debug("%s: wait_event error %d\n", __func__, rc);
+			kfree(isp_event);
+			kfree(event_qcmd);
+			kfree(ctrlcmd_data);
 			return rc;
 		}
 	}
@@ -2746,6 +2749,8 @@ int msm_server_send_ctrl(struct msm_ctrl_cmd *out,
 			rc = 0;
 		else
 			rc = -EINVAL;
+		kfree(isp_event);
+		kfree(event_qcmd);
 	}
 	return rc;
 
