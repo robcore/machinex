@@ -56,7 +56,6 @@ struct sched_param {
 #include <linux/uidgid.h>
 #include <linux/gfp.h>
 #include <linux/magic.h>
-#include <linux/preempt.h>
 
 #include <asm/processor.h>
 
@@ -612,12 +611,6 @@ struct task_cputime_atomic {
 		.sum_exec_runtime = ATOMIC64_INIT(0),		\
 	}
 
-#ifdef CONFIG_PREEMPT_COUNT
-#define PREEMPT_DISABLED	(1 + PREEMPT_ENABLED)
-#else
-#define PREEMPT_DISABLED	PREEMPT_ENABLED
-#endif
-
 /*
  * Disable preemption until the scheduler is running.
  * Reset by start_kernel()->sched_init()->init_idle().
@@ -625,7 +618,7 @@ struct task_cputime_atomic {
  * We include PREEMPT_ACTIVE to avoid cond_resched() from working
  * before the scheduler is active -- see should_resched().
  */
-#define INIT_PREEMPT_COUNT	(PREEMPT_DISABLED + PREEMPT_ACTIVE)
+#define INIT_PREEMPT_COUNT	(1 + PREEMPT_ACTIVE)
 
 /**
  * struct thread_group_cputimer - thread group interval timer counts
@@ -2588,26 +2581,6 @@ extern struct   mm_struct init_mm;
 
 extern struct pid_namespace init_pid_ns;
 
-static inline void current_clr_polling(void)
-{
-	__current_clr_polling();
-
-	/*
-	 * Ensure we check TIF_NEED_RESCHED after we clear the polling bit.
-	 * Once the bit is cleared, we'll get IPIs with every new
-	 * TIF_NEED_RESCHED and the IPI handler, scheduler_ipi(), will also
-	 * fold.
-	 */
-	smp_mb(); /* paired with resched_task() */
-
-	preempt_fold_need_resched();
-}
-
-static __always_inline bool need_resched(void)
-{
-	return unlikely(tif_need_resched());
-}
-
 /*
  * find a task by one of its numerical ids
  *
@@ -3287,6 +3260,11 @@ static inline void current_clr_polling(void)
 	 * fold.
 	 */
 	smp_mb(); /* paired with resched_curr() */
+}
+
+static __always_inline bool need_resched(void)
+{
+	return unlikely(tif_need_resched());
 }
 
 /*

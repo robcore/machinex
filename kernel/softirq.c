@@ -95,7 +95,7 @@ static void wakeup_softirqd(void)
  * where hardirqs are disabled legitimately:
  */
 #ifdef CONFIG_TRACE_IRQFLAGS
-void __local_bh_disable_ip(unsigned long ip, unsigned int cnt)
+static void __local_bh_disable(unsigned long ip, unsigned int cnt)
 {
 	unsigned long flags;
 
@@ -113,7 +113,7 @@ void __local_bh_disable_ip(unsigned long ip, unsigned int cnt)
 	/*
 	 * Were softirqs turned off above:
 	 */
-	if (softirq_count() == (cnt & SOFTIRQ_MASK))
+	if (softirq_count() == cnt)
 		trace_softirqs_off(ip);
 	raw_local_irq_restore(flags);
 
@@ -143,7 +143,7 @@ static void __local_bh_enable(unsigned int cnt)
 {
 	WARN_ON_ONCE(!irqs_disabled());
 
-	if (softirq_count() == (cnt & SOFTIRQ_MASK))
+	if (softirq_count() == cnt)
 		trace_softirqs_on(_RET_IP_);
 	sub_preempt_count(cnt);
 }
@@ -160,7 +160,7 @@ void _local_bh_enable(void)
 }
 EXPORT_SYMBOL(_local_bh_enable);
 
-void __local_bh_enable_ip(unsigned long ip, unsigned int cnt)
+static inline void _local_bh_enable_ip(unsigned long ip)
 {
 	WARN_ON_ONCE(in_irq());
 #ifdef CONFIG_TRACE_IRQFLAGS
@@ -191,7 +191,18 @@ void __local_bh_enable_ip(unsigned long ip, unsigned int cnt)
 #endif
 	preempt_check_resched();
 }
-EXPORT_SYMBOL(__local_bh_enable_ip);
+
+void local_bh_enable(void)
+{
+	_local_bh_enable_ip(_RET_IP_);
+}
+EXPORT_SYMBOL(local_bh_enable);
+
+void local_bh_enable_ip(unsigned long ip)
+{
+	_local_bh_enable_ip(ip);
+}
+EXPORT_SYMBOL(local_bh_enable_ip);
 
 /*
  * We restart softirq processing for at most MAX_SOFTIRQ_RESTART times,

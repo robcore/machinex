@@ -1381,15 +1381,6 @@ config CC_OPTIMIZE_FOR_SIZE
 
 	  If unsure, say N.
 
-config CC_OPTIMIZE_FOR_FUN
-	bool "Optimize for fun"
-	default n
-	help
-	  Enabling this option will pass "-O3" instead of "-O2" to gcc
-	  resulting in a phatter kernel.
-
-	  If unsure, say N.
-
 config SYSCTL
 	bool
 

@@ -29,7 +29,8 @@ struct thread_info {
 	__u32			flags;		/* low level flags */
 	__u32			status;		/* thread synchronous flags */
 	__u32			cpu;		/* current CPU */
-	int			saved_preempt_count;
+	int			preempt_count;	/* 0 => preemptable,
+						   <0 => BUG */
 	mm_segment_t		addr_limit;
 	void __user		*sysenter_return;
 #ifdef CONFIG_X86_32
@@ -48,7 +49,7 @@ struct thread_info {
 	.exec_domain	= &default_exec_domain,	\
 	.flags		= 0,			\
 	.cpu		= 0,			\
-	.saved_preempt_count = INIT_PREEMPT_COUNT,	\
+	.preempt_count	= INIT_PREEMPT_COUNT,	\
 	.addr_limit	= KERNEL_DS,		\
 }
 
