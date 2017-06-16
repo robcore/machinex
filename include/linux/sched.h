@@ -612,8 +612,6 @@ struct task_cputime_atomic {
 		.sum_exec_runtime = ATOMIC64_INIT(0),		\
 	}
 
-#define PREEMPT_ENABLED		(PREEMPT_NEED_RESCHED)
-
 #ifdef CONFIG_PREEMPT_COUNT
 #define PREEMPT_DISABLED	(1 + PREEMPT_ENABLED)
 #else
