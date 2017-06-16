@@ -4605,7 +4605,7 @@ static void vfe32_process_output_path_irq_rdi2(
 				axi_ctrl->share_ctrl->outpath.out4.inst_handle);
 		} else {
 			axi_ctrl->share_ctrl->outpath.out4.frame_drop_cnt++;
-			pr_err("path_irq irq - no free buffer for rdi2!\n");
+			return;
 		}
 	}
 }
@@ -4669,7 +4669,7 @@ static void vfe32_process_output_path_irq_rdi0_and_rdi1(
 
 		} else {
 			axi_ctrl->share_ctrl->outpath.out2.frame_drop_cnt++;
-			pr_err("path_irq_2 irq - no free buffer for rdi0!\n");
+			return;
 		}
 	}
 

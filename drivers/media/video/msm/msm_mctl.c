@@ -21,6 +21,7 @@
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/wakelock.h>
+#include <linux/module.h>
 
 #include <media/v4l2-dev.h>
 #include <media/v4l2-ioctl.h>
@@ -42,12 +43,14 @@
 #include "msm_csi_register.h"
 
 #ifdef CONFIG_MSM_CAMERA_DEBUG
-#define D(fmt, args...) pr_debug("msm_mctl: " fmt, ##args)
+#define D(fmt, args...) do {} while (0)
 #else
 #define D(fmt, args...) do {} while (0)
 #endif
 
 #define MSM_V4L2_SWFI_LATENCY 3
+static bool mx_mctl_use_qos = true;
+static int mx_qos_cnt = 0;
 /* VFE required buffer number for streaming */
 static struct msm_isp_color_fmt msm_isp_formats[] = {
 	{
@@ -182,7 +185,7 @@ static int msm_get_sensor_info(
 	struct msm_cam_v4l2_device *pcam = mctl->pcam_ptr;
 	if (copy_from_user(&info,
 			arg,
-			sizeof(struct msm_camsensor_info))) {
+			sizeof(info))) {
 		ERR_COPY_FROM_USER();
 		return -EFAULT;
 	}
@@ -206,7 +209,7 @@ static int msm_get_sensor_info(
 	/* copy back to user space */
 	if (copy_to_user((void *)arg,
 				&info,
-				sizeof(struct msm_camsensor_info))) {
+				sizeof(info))) {
 		ERR_COPY_TO_USER();
 		rc = -EFAULT;
 	}
@@ -279,7 +282,7 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 	void __user *argp = (void __user *)arg;
 	if (!p_mctl) {
 		pr_err("%s: param is NULL", __func__);
-		return -EINVAL;
+		return -ENOMEM;
 	}
 	D("%s:%d: cmd %d\n", __func__, __LINE__, cmd);
 
@@ -575,12 +578,11 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 		return -EINVAL;
 	}
 
+	wake_lock_timeout(&p_mctl->wake_lock, 5000);
 	mutex_lock(&p_mctl->lock);
 	/* open sub devices - once only*/
 	if (!p_mctl->opencnt) {
 		struct msm_sensor_csi_info csi_info;
-		wake_lock(&p_mctl->wake_lock);
-
 		csid_core = camdev->csid_core;
 		rc = msm_mctl_find_sensor_subdevs(p_mctl, csid_core);
 		if (rc < 0) {
@@ -616,17 +618,19 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 			goto msm_csi_version;
 		}
 
-		pm_qos_add_request(&p_mctl->pm_qos_req_list,
-			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
-		pm_qos_update_request(&p_mctl->pm_qos_req_list,
-			MSM_V4L2_SWFI_LATENCY);
+		if (mx_mctl_use_pos) {
+			pm_qos_add_request(&p_mctl->pm_qos_req_list,
+				PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
+			pm_qos_update_request(&p_mctl->pm_qos_req_list,
+				MSM_V4L2_SWFI_LATENCY);
+		mx_qos_cnt = 1;
+		}
 
 		p_mctl->apps_id = apps_id;
 		p_mctl->opencnt++;
-	} else {
-		D("%s: camera is already open", __func__);
 	}
 	mutex_unlock(&p_mctl->lock);
+	wake_unlock(&p_mctl->wake_lock);
 	return rc;
 
 msm_csi_version:
@@ -635,8 +639,8 @@ act_power_up_failed:
 		pr_err("%s: sensor powerdown failed: %d\n", __func__, rc);
 sensor_sdev_failed:
 register_sdev_failed:
-	wake_unlock(&p_mctl->wake_lock);
 	mutex_unlock(&p_mctl->lock);
+	wake_unlock(&p_mctl->wake_lock);
 	return rc;
 }
 
@@ -645,6 +649,9 @@ static void msm_mctl_release(struct msm_cam_media_controller *p_mctl)
 	struct msm_sensor_ctrl_t *s_ctrl = get_sctrl(p_mctl->sensor_sdev);
 	struct msm_camera_sensor_info *sinfo =
 		(struct msm_camera_sensor_info *) s_ctrl->sensordata;
+
+	wake_lock_timeout(&p_mctl->wake_lock, 5000);
+
 	v4l2_subdev_call(p_mctl->sensor_sdev, core, ioctl,
 		VIDIOC_MSM_SENSOR_RELEASE, NULL);
 
@@ -688,10 +695,12 @@ static void msm_mctl_release(struct msm_cam_media_controller *p_mctl)
 
 	v4l2_subdev_call(p_mctl->sensor_sdev, core, s_power, 0);
 
-	pm_qos_update_request(&p_mctl->pm_qos_req_list,
-				PM_QOS_DEFAULT_VALUE);
-	pm_qos_remove_request(&p_mctl->pm_qos_req_list);
-
+	if (mx_mctl_use_pos || mx_qos_cnt == 1) {
+		pm_qos_update_request(&p_mctl->pm_qos_req_list,
+					PM_QOS_DEFAULT_VALUE);
+		pm_qos_remove_request(&p_mctl->pm_qos_req_list);
+		mx_qos_cnt = 0;
+	}
 	wake_unlock(&p_mctl->wake_lock);
 }
 
@@ -713,7 +722,7 @@ int msm_mctl_init_user_formats(struct msm_cam_v4l2_device *pcam)
 	if (!numfmt_sensor)
 		return -ENXIO;
 
-	pcam->usr_fmts = vmalloc(numfmt_sensor * ARRAY_SIZE(msm_isp_formats) *
+	pcam->usr_fmts = vmalloc_user(numfmt_sensor * ARRAY_SIZE(msm_isp_formats) *
 				sizeof(struct msm_isp_color_fmt));
 	if (!pcam->usr_fmts)
 		return -ENOMEM;
@@ -831,7 +840,8 @@ int msm_mctl_free(struct msm_cam_v4l2_device *pcam)
 /* mctl node v4l2_file_operations */
 static int msm_mctl_dev_open(struct file *f)
 {
-	int rc = -EINVAL, i;
+	int rc = -EINVAL;
+	int i;
 	/* get the video device */
 	struct msm_cam_v4l2_device *pcam  = NULL;
 	struct msm_cam_v4l2_dev_inst *pcam_inst;
@@ -856,13 +866,11 @@ static int msm_mctl_dev_open(struct file *f)
 	}
 	/* if no instance is available, return error */
 	if (i == MSM_DEV_INST_MAX) {
-		mutex_unlock(&pcam->mctl_node.dev_lock);
-		return rc;
+		goto alloc_fail;
 	}
 	pcam_inst = kzalloc(sizeof(struct msm_cam_v4l2_dev_inst), GFP_KERNEL);
 	if (!pcam_inst) {
-		mutex_unlock(&pcam->mctl_node.dev_lock);
-		return rc;
+		goto alloc_fail;
 	}
 
 	pcam_inst->sensor_pxlcode = pcam->usr_fmts[0].pxlcode;
@@ -877,14 +885,13 @@ static int msm_mctl_dev_open(struct file *f)
 		&pcam->mctl_node.active);
 	if (rc < 0) {
 		pr_err("%s: mctl session open failed %d", __func__, rc);
-		mutex_unlock(&pcam->mctl_node.dev_lock);
-		return rc;
+		goto other_fail;
 	}
 
 	pmctl = msm_cam_server_get_mctl(pcam->mctl_handle);
 	if (!pmctl) {
 		pr_err("%s mctl NULL!\n", __func__);
-		return rc;
+		goto other_fail;
 	}
 
 	D("%s active %d\n", __func__, pcam->mctl_node.active);
@@ -899,8 +906,12 @@ static int msm_mctl_dev_open(struct file *f)
 		(u32)f->private_data, (u32)pcam_inst);
 
 	pcam->mctl_node.use_count++;
-	mutex_unlock(&pcam->mctl_node.dev_lock);
 	D("%s : X ", __func__);
+
+other_fail:
+	kfree(pcam_inst);
+alloc_fail:
+	mutex_unlock(&pcam->mctl_node.dev_lock);
 	return rc;
 }
 
@@ -963,6 +974,7 @@ static int msm_mctl_dev_close(struct file *f)
 		if (rc < 0) {
 			pr_err("%s: mctl session close failed %d",
 				__func__, rc);
+			mutex_unlock(&pcam_inst->inst_lock);
 			mutex_unlock(&pcam->mctl_node.dev_lock);
 			return rc;
 		}
@@ -1106,6 +1118,7 @@ static int msm_mctl_v4l2_reqbufs(struct file *f, void *pctx,
 	if (!pcam_inst->vbqueue_initialized && pb->count) {
 		pmctl = msm_cam_server_get_mctl(pcam->mctl_handle);
 		if (pmctl == NULL) {
+				mutex_unlock(&pcam_inst->inst_lock);
 			pr_err("%s Invalid mctl ptr", __func__);
 			return -EINVAL;
 		}
@@ -1394,7 +1407,7 @@ static int msm_mctl_v4l2_g_fmt_cap(struct file *f,
 	WARN_ON(pctx != f->private_data);
 
 	if (pfmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
+		rc = -EINVAL;
 
 	return rc;
 }
@@ -1408,7 +1421,7 @@ static int msm_mctl_v4l2_g_fmt_cap_mplane(struct file *f,
 	WARN_ON(pctx != f->private_data);
 
 	if (pfmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		return -EINVAL;
+		rc = -EINVAL;
 
 	return rc;
 }
