@@ -62,6 +62,7 @@
 #include <linux/leds-an30259a.h>
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
+#include <linux/sysfs_helpers.h>
 
 /* AN30259A register map */
 #define AN30259A_REG_SRESET		0x00
@@ -102,7 +103,9 @@
 #define DUTYMIN_MIN_VALUE		0x00
 #define SLPTT_MAX_VALUE			7500
 
-#define AN30259A_TIME_UNIT		500
+//#define AN30259A_TIME_UNIT		1 //1 ms
+//#define MACHINEX_DIVISOR		100
+#define MACHINEX_TIME_UNIT		1 //ms (this is to test) (AN30259A_TIME_UNIT/MACHINEX_DIVISOR) 1 usec
 
 #define LED_R_MASK			0x00ff0000
 #define LED_G_MASK			0x0000ff00
@@ -125,6 +128,7 @@
 u8 LED_DYNAMIC_CURRENT = 0x28;
 u8 LED_LOWPOWER_MODE = 0x0;
 
+static unsigned int machinex_led_timer = MACHINEX_TIME_UNIT;
 unsigned long disabled_samsung_pattern = 0;
 
 static struct an30259_led_conf led_conf[] = {
@@ -380,8 +384,8 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (mode > BOOTING)
-		return;
+	//if (mode > BOOTING)
+		//return;
 
 	if(disabled_samsung_pattern) {
 		return;
@@ -563,19 +567,41 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	/* Yank555.lu : Handle fading / blinking */
 	if (led_enable_fade == 1) {
 		leds_set_slope_mode(client, led, 0, (15 / led_speed), (7 / led_speed), 0,
-					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
-					AN30259A_TIME_UNIT,
-					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
-					AN30259A_TIME_UNIT,
+					((delay_on_time / led_speed) + machinex_led_timer - 1) /
+					machinex_led_timer,
+					((delay_off_time / led_speed) + machinex_led_timer - 1) /
+					machinex_led_timer,
 					led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
 	} else {
 		leds_set_slope_mode(client, led, 0, (15 / led_speed), (15 / led_speed), 0,
-					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
-					AN30259A_TIME_UNIT,
-					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
-					AN30259A_TIME_UNIT,
+					((delay_on_time / led_speed) + machinex_led_timer - 1) /
+					machinex_led_timer,
+					((delay_off_time / led_speed) + machinex_led_timer - 1) /
+					machinex_led_timer,
 					0, 0, 0, 0);
 	}
+}
+
+static ssize_t show_machinex_led_timer(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", machinex_led_timer);
+}
+
+static ssize_t store_machinex_led_timer(struct device *dev,
+					struct device_attribute *devattr,
+					const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d", &val);
+
+	sanitize_min_max(val, 0, 1000); //1 sec
+
+	val = (u8)machinex_led_timer;
+
+	return count;
+
 }
 
 /* Added for led common class */
@@ -586,7 +612,6 @@ static ssize_t show_an30259a_led_lowpower(struct device *dev,
 
 	return sprintf(buf, "%u\n", LED_LOWPOWER_MODE);
 }
-
 
 static ssize_t store_an30259a_led_lowpower(struct device *dev,
 					struct device_attribute *devattr,
@@ -976,6 +1001,7 @@ static ssize_t disable_samsung_pattern_on_store(struct device *dev,
 }
 
 /* permission for sysfs node */
+static DEVICE_ATTR(machinex_led_timer, 0644, show_machinex_led_timer, store_machinex_led_timer);
 static DEVICE_ATTR(delay_on, 0644, led_delay_on_show, led_delay_on_store);
 static DEVICE_ATTR(delay_off, 0644, led_delay_off_show, led_delay_off_store);
 static DEVICE_ATTR(blink, 0644, NULL, led_blink_store);
@@ -1020,6 +1046,7 @@ static struct attribute_group common_led_attr_group = {
 
 #ifdef SEC_LED_SPECIFIC
 static struct attribute *sec_led_attributes[] = {
+	&dev_attr_machinex_led_timer.attr,
 	&dev_attr_led_r.attr,
 	&dev_attr_led_g.attr,
 	&dev_attr_led_b.attr,
@@ -1143,6 +1170,7 @@ static int an30259a_probe(struct i2c_client *client,
 	}
 
 #ifdef SEC_LED_SPECIFIC
+	machinex_led_timer = 100; //default to 1/5th the regular rate?
 	led_enable_fade = 0;  /* default to stock behaviour = blink */
 //	led_intensity =  0;   /* default to CM behaviour = brighter blink intensity allowed */
 	led_intensity = 40;   /* default to Samsung behaviour = normal intensity */

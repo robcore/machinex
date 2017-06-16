@@ -47,7 +47,7 @@ static inline int read_into(int *container, int size, const char *buf, size_t co
 }
 
 #define sanitize_min_max(val, min, max)		\
-	if(val < min)				\
+	if(val <= min)				\
 		val = min;			\
-	if(val > max)				\
+	if(val >= max)				\
 		val = max;
