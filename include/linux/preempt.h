@@ -64,7 +64,11 @@ do { \
 } while (0)
 
 #else
-#define preempt_enable() preempt_enable_no_resched()
+#define preempt_enable() \
+do { \
+	barrier(); \
+	preempt_count_dec(); \
+} while (0)
 #define preempt_check_resched() do { } while (0)
 #endif
 
@@ -93,7 +97,11 @@ do { \
 		__preempt_schedule_context(); \
 } while (0)
 #else
-#define preempt_enable_notrace() preempt_enable_no_resched_notrace()
+#define preempt_enable_notrace() \
+do { \
+	barrier(); \
+	__preempt_count_dec(); \
+} while (0)
 #endif
 
 #else /* !CONFIG_PREEMPT_COUNT */
@@ -117,6 +125,16 @@ do { \
 #endif /* CONFIG_PREEMPT_COUNT */
 
 #define preemptible()	(preempt_count() == 0 && !irqs_disabled())
+
+#ifdef MODULE
+/*
+ * Modules have no business playing preemption tricks.
+ */
+#undef sched_preempt_enable_no_resched
+#undef preempt_enable_no_resched
+#undef preempt_enable_no_resched_notrace
+#undef preempt_check_resched
+#endif
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
