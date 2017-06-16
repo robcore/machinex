@@ -264,8 +264,13 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
+ifdef CONFIG_CC_OPTIMIZE_FOR_FUN
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -std=gnu89
+HOSTCXXFLAGS = -O3
+else
 HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
 HOSTCXXFLAGS = -O2
+endif
 #-fgcse-las
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -630,8 +635,8 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 
-ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS	+= -Os
+ifdef CONFIG_CC_OPTIMIZE_FOR_FUN
+KBUILD_CFLAGS	+= -O3
 else
 KBUILD_CFLAGS	+= -O2
 endif
