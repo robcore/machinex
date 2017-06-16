@@ -869,7 +869,7 @@ static int msm_mctl_dev_open(struct file *f)
 	}
 	/* if no instance is available, return error */
 	if (i == MSM_DEV_INST_MAX) {
-		goto alloc_fail;
+		goto fail;;
 	}
 	pcam_inst = kzalloc(sizeof(struct msm_cam_v4l2_dev_inst), GFP_KERNEL);
 	if (!pcam_inst) {
