@@ -458,7 +458,7 @@ static void an30259a_start_led_pattern(int mode)
 
  	case FULLY_CHARGED:
 		pr_info("LED full Charged battery Pattern on\n");
-		leds_on(LED_G, true, true, g_brightness);
+		leds_on(LED_G, true, false, g_brightness);
 		break;
 
 /* For later
