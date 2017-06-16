@@ -3265,11 +3265,6 @@ static inline void current_clr_polling(void)
 	smp_mb(); /* paired with resched_curr() */
 }
 
-static __always_inline bool need_resched(void)
-{
-	return unlikely(test_preempt_need_resched());
-}
-
 /*
  * Thread group CPU time accounting.
  */
