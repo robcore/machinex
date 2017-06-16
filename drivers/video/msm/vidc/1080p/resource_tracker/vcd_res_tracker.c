@@ -688,7 +688,7 @@ u32 res_trk_download_firmware(void)
 	VCDRES_MSG_HIGH("%s(): Request firmware download\n",
 		__func__);
 	mutex_lock(&resource_context.lock);
-	rc = request_firmware_direct(&fw_video, VIDC_FW,
+	rc = request_firmware(&fw_video, VIDC_FW,
 		resource_context.device);
 	if (rc) {
 		VCDRES_MSG_ERROR("request_firmware for %s error %d\n",
