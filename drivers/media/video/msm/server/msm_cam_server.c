@@ -552,7 +552,7 @@ int msm_server_private_general(struct msm_cam_v4l2_device *pcam,
 copy_from_user_failed:
 	kfree(temp_data);
 end:
-return rc;
+	return rc;
 }
 
 int msm_server_get_crop(struct msm_cam_v4l2_device *pcam,
@@ -2717,9 +2717,6 @@ int msm_server_send_ctrl(struct msm_ctrl_cmd *out,
 			if (++server_dev->server_evt_id == 0)
 				server_dev->server_evt_id++;
 			pr_debug("%s: wait_event error %d\n", __func__, rc);
-			kfree(isp_event);
-			kfree(event_qcmd);
-			kfree(ctrlcmd_data);
 			return rc;
 		}
 	}
@@ -2749,8 +2746,6 @@ int msm_server_send_ctrl(struct msm_ctrl_cmd *out,
 			rc = 0;
 		else
 			rc = -EINVAL;
-		kfree(isp_event);
-		kfree(event_qcmd);
 	}
 	return rc;
 

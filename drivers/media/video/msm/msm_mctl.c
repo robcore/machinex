@@ -188,7 +188,7 @@ static int msm_get_sensor_info(
 	struct msm_cam_v4l2_device *pcam = mctl->pcam_ptr;
 	if (copy_from_user(&info,
 			arg,
-			sizeof(info))) {
+			sizeof(struct msm_camsensor_info))) {
 		ERR_COPY_FROM_USER();
 		return -EFAULT;
 	}
@@ -212,7 +212,7 @@ static int msm_get_sensor_info(
 	/* copy back to user space */
 	if (copy_to_user((void *)arg,
 				&info,
-				sizeof(info))) {
+				sizeof(struct msm_camsensor_info))) {
 		ERR_COPY_TO_USER();
 		rc = -EFAULT;
 	}
@@ -285,7 +285,7 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 	void __user *argp = (void __user *)arg;
 	if (!p_mctl) {
 		pr_err("%s: param is NULL", __func__);
-		return -ENOMEM;
+		return -EINVAL;
 	}
 	D("%s:%d: cmd %d\n", __func__, __LINE__, cmd);
 
@@ -725,7 +725,7 @@ int msm_mctl_init_user_formats(struct msm_cam_v4l2_device *pcam)
 	if (!numfmt_sensor)
 		return -ENXIO;
 
-	pcam->usr_fmts = vmalloc_user(numfmt_sensor * ARRAY_SIZE(msm_isp_formats) *
+	pcam->usr_fmts = vmalloc(numfmt_sensor * ARRAY_SIZE(msm_isp_formats) *
 				sizeof(struct msm_isp_color_fmt));
 	if (!pcam->usr_fmts)
 		return -ENOMEM;
@@ -873,7 +873,7 @@ static int msm_mctl_dev_open(struct file *f)
 	}
 	pcam_inst = kzalloc(sizeof(struct msm_cam_v4l2_dev_inst), GFP_KERNEL);
 	if (!pcam_inst) {
-		goto alloc_fail;
+		goto fail;
 	}
 
 	pcam_inst->sensor_pxlcode = pcam->usr_fmts[0].pxlcode;
@@ -888,13 +888,13 @@ static int msm_mctl_dev_open(struct file *f)
 		&pcam->mctl_node.active);
 	if (rc < 0) {
 		pr_err("%s: mctl session open failed %d", __func__, rc);
-		goto other_fail;
+		goto fail;
 	}
 
 	pmctl = msm_cam_server_get_mctl(pcam->mctl_handle);
 	if (!pmctl) {
 		pr_err("%s mctl NULL!\n", __func__);
-		goto other_fail;
+		goto fail;
 	}
 
 	D("%s active %d\n", __func__, pcam->mctl_node.active);
@@ -911,9 +911,7 @@ static int msm_mctl_dev_open(struct file *f)
 	pcam->mctl_node.use_count++;
 	D("%s : X ", __func__);
 
-other_fail:
-	kfree(pcam_inst);
-alloc_fail:
+fail:
 	mutex_unlock(&pcam->mctl_node.dev_lock);
 	return rc;
 }
