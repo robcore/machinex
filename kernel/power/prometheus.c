@@ -141,7 +141,7 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
 				return;
 			}
-		} else if (!pm_get_wakeup_count(&counter, false) || android_os_ws()) {
+		} else if (!pm_get_wakeup_count(&counter, false)) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
