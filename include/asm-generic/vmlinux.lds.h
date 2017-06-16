@@ -40,6 +40,8 @@
  * }
  *
  * [__init_begin, __init_end] is the init section that may be freed after init
+ * 	// __init_begin and __init_end should be page aligned, so that we can
+ *	// free the whole .init memory
  * [_stext, _etext] is the text section
  * [_sdata, _edata] is the data section
  *
@@ -142,9 +144,9 @@
 #ifdef CONFIG_IRQCHIP
 #define IRQCHIP_OF_MATCH_TABLE()					\
 	. = ALIGN(8);							\
-	VMLINUX_SYMBOL(__irqchip_begin) = .;				\
+	VMLINUX_SYMBOL(__irqchip_of_table) = .;				\
 	*(__irqchip_of_table)		  				\
-	*(__irqchip_of_end)
+	*(__irqchip_of_table_end)
 #else
 #define IRQCHIP_OF_MATCH_TABLE()
 #endif
