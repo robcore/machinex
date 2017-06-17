@@ -224,7 +224,7 @@ static void blk_delay_work(struct work_struct *work)
  */
 void blk_delay_queue(struct request_queue *q, unsigned long msecs)
 {
-	if (likely(!blk_queue_dying(q)))
+	if (likely(!blk_queue_dead(q)))
 		queue_delayed_work(kblockd_workqueue, &q->delay_work,
 				   msecs_to_jiffies(msecs));
 }
@@ -335,7 +335,7 @@ EXPORT_SYMBOL(__blk_run_queue);
  */
 void blk_run_queue_async(struct request_queue *q)
 {
-	if (likely(!blk_queue_stopped(q) && !blk_queue_dying(q)))
+	if (likely(!blk_queue_stopped(q) && !blk_queue_dead(q)))
 		mod_delayed_work(kblockd_workqueue, &q->delay_work, 0);
 }
 EXPORT_SYMBOL(blk_run_queue_async);
@@ -699,7 +699,7 @@ EXPORT_SYMBOL(blk_init_allocated_queue);
 
 bool blk_get_queue(struct request_queue *q)
 {
-	if (likely(!blk_queue_dying(q))) {
+	if (likely(!blk_queue_dead(q))) {
 		__blk_get_queue(q);
 		return true;
 	}
@@ -862,7 +862,7 @@ retry:
 	et = q->elevator->type;
 	ioc = current->io_context;
 
-	if (unlikely(blk_queue_dying(q)))
+	if (unlikely(blk_queue_dead(q)))
 		return NULL;
 
 	may_queue = elv_may_queue(q, rw_flags);
@@ -1014,7 +1014,7 @@ static struct request *get_request_wait(struct request_queue *q, int rw_flags,
 		DEFINE_WAIT(wait);
 		struct request_list *rl = &q->rq;
 
-		if (unlikely(blk_queue_dying(q)))
+		if (unlikely(blk_queue_dead(q)))
 			return NULL;
 
 		prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
@@ -1928,7 +1928,7 @@ int blk_insert_cloned_request(struct request_queue *q, struct request *rq)
 		return -EIO;
 
 	spin_lock_irqsave(q->queue_lock, flags);
-	if (unlikely(blk_queue_dying(q))) {
+	if (unlikely(blk_queue_dead(q))) {
 		spin_unlock_irqrestore(q->queue_lock, flags);
 		return -ENODEV;
 	}
@@ -3042,7 +3042,7 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
 		/*
 		 * Short-circuit if @q is dying
 		 */
-		if (unlikely(blk_queue_dying(q))) {
+		if (unlikely(blk_queue_dead(q))) {
 			__blk_end_request_all(rq, -ENODEV);
 			continue;
 		}
