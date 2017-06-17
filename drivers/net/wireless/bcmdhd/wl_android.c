@@ -2872,13 +2872,14 @@ wl_netlink_send_msg(int pid, int type, int seq, void *data, size_t size)
 	struct sk_buff *skb = NULL;
 	struct nlmsghdr *nlh = NULL;
 	int ret = -1;
+	u16 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 
 	if (nl_sk == NULL) {
 		WL_ERR(("nl_sk was not initialized\n"));
 		goto nlmsg_failure;
 	}
 
-	skb = alloc_skb(NLMSG_SPACE(size), GFP_ATOMIC);
+	skb = alloc_skb(NLMSG_SPACE(size), kflags);
 	if (skb == NULL) {
 		WL_ERR(("failed to allocate memory\n"));
 		goto nlmsg_failure;
@@ -2952,6 +2953,7 @@ static int wl_android_get_ibss_peer_info(struct net_device *dev, char *command,
 	bool found = false;
 	struct ether_addr mac_ea;
 	char *str = command;
+	
 
 	WL_DBG(("get ibss peer info(%s)\n", bAll?"true":"false"));
 
@@ -3267,6 +3269,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	char *command = NULL;
 	int bytes_written = 0;
 	android_wifi_priv_cmd priv_cmd;
+	u16 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 
 	net_os_wake_lock(net);
 
