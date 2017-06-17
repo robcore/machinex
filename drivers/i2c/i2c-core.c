@@ -41,6 +41,7 @@
 #include <linux/irqflags.h>
 #include <linux/rwsem.h>
 #include <linux/pm_runtime.h>
+#include <linux/pm_domain.h>
 #include <asm/uaccess.h>
 
 #include "i2c-core.h"

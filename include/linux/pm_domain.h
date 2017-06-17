@@ -267,4 +267,15 @@ struct generic_pm_domain *of_genpd_remove_last(struct device_node *np)
 
 extern void dev_pm_domain_set(struct device *dev, struct dev_pm_domain *pd);
 
+#ifdef CONFIG_PM
+extern int dev_pm_domain_attach(struct device *dev, bool power_on);
+extern void dev_pm_domain_detach(struct device *dev, bool power_off);
+#else
+static inline int dev_pm_domain_attach(struct device *dev, bool power_on)
+{
+	return -ENODEV;
+}
+static inline void dev_pm_domain_detach(struct device *dev, bool power_off) {}
+#endif
+
 #endif /* _LINUX_PM_DOMAIN_H */
