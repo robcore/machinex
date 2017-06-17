@@ -524,6 +524,7 @@ static void an30259a_start_led_pattern(int mode)
 			leds_on(LED_B, false, false, 0);
 			retval = leds_i2c_write_all(client);
 		} while (mode == BOOTING && retval == 0);
+		break;
 	default:
 		return;
 		break;
