@@ -1840,6 +1840,11 @@ void security_release_secctx(char *secdata, u32 seclen);
 int security_inode_notifysecctx(struct inode *inode, void *ctx, u32 ctxlen);
 int security_inode_setsecctx(struct dentry *dentry, void *ctx, u32 ctxlen);
 int security_inode_getsecctx(struct inode *inode, void **ctx, u32 *ctxlen);
+static inline int security_kernel_fw_from_file(struct file *file,
+					       char *buf, size_t size)
+{
+	return 0;
+}
 #else /* CONFIG_SECURITY */
 struct security_mnt_opts {
 };
