@@ -1774,7 +1774,7 @@ static int _regmap_range_multi_paged_reg_write(struct regmap *map,
 			}
 			ret = _regmap_select_page(map, &base[n].reg, range, 1);
 			if (ret != 0)
-				goto out;
+				return ret;
 		}
 	}
 	if (n > 0)
