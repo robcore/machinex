@@ -560,7 +560,7 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 10, 15, 0, 1, 2, 1, 1, 0);
 */
 	case BOOTING:
-#if 0
+
 
 		pr_info("LED Booting Pattern on\n");
 		leds_on(LED_R, true, true, LED_R_CURRENT);
@@ -571,12 +571,12 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 
 		break;
-#endif
-
+#if 0
 		an30259a_set_led_blink(LED_R, 0, 2, r_brightness);
 		an30259a_set_led_blink(LED_G, 2, 0, g_brightness);
 		an30259a_set_led_blink(LED_B, 2, 0, b_brightness);
 		break;
+#endif
 #if 0
 		do {
 			leds_on(LED_R, true, false, LED_DYNAMIC_CURRENT);
