@@ -2427,12 +2427,6 @@ dhd_watchdog_thread(void *data)
 	/* This thread doesn't need any user-level access,
 	 * so get rid of all our resources
 	 */
-	if (dhd_watchdog_prio > 0) {
-		struct sched_param param;
-		param.sched_priority = (dhd_watchdog_prio < MAX_RT_PRIO)?
-			dhd_watchdog_prio:(MAX_RT_PRIO-1);
-		setScheduler(current, SCHED_FIFO, &param);
-	}
 
 	while (1)
 		if (down_interruptible (&tsk->sema) == 0) {
@@ -2666,16 +2660,6 @@ dhd_rxf_thread(void *data)
 #define RXF_WATCHDOG_TIME 250 /* BARK_TIME(1000) /  */
 	ulong watchdogTime = OSL_SYSUPTIME(); /* msec */
 #endif
-
-	/* This thread doesn't need any user-level access,
-	 * so get rid of all our resources
-	 */
-	if (dhd_rxf_prio > 0)
-	{
-		struct sched_param param;
-		param.sched_priority = (dhd_rxf_prio < MAX_RT_PRIO)?dhd_rxf_prio:(MAX_RT_PRIO-1);
-		setScheduler(current, SCHED_FIFO, &param);
-	}
 
 	DAEMONIZE("dhd_rxf");
 	/* DHD_OS_WAKE_LOCK is called in dhd_sched_dpc[dhd_linux.c] down below  */
