@@ -63,7 +63,7 @@ static atomic_t deferred_trigger_count = ATOMIC_INIT(0);
  */
 static bool defer_all_probes;
 
-/**
+/*
  * deferred_probe_work_func() - Retry probing devices in the active list.
  */
 static void deferred_probe_work_func(struct work_struct *work)
