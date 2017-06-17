@@ -4054,9 +4054,9 @@ wl_genl_send_msg(
 		/* NETLINK_CB(skb).dst_group = 1; */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
-		if ((err = genlmsg_multicast(skb, 0, wl_genl_mcast.id, GFP_ATOMIC)) < 0)
+		if ((err = genlmsg_multicast(skb, 0, wl_genl_mcast.id, kflags)) < 0)
 #else
-		if ((err = genlmsg_multicast(&wl_genl_family, skb, 0, 0, GFP_ATOMIC)) < 0)
+		if ((err = genlmsg_multicast(&wl_genl_family, skb, 0, 0, kflags)) < 0)
 #endif
 			WL_ERR(("genlmsg_multicast for attr(%d) failed. Error:%d \n",
 				attr_type, err));
