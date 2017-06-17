@@ -380,9 +380,10 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
+/*
 	if (mode > BOOTING)
 		return;
-
+*/
 	if(disabled_samsung_pattern) {
 		return;
 	}
