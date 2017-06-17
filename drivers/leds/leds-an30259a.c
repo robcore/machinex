@@ -499,6 +499,7 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 10, 15, 0, 1, 2, 1, 1, 0);
 */
 	case BOOTING:
+#if 0
 		pr_info("LED Booting Pattern on\n");
 		leds_on(LED_R, true, true, LED_R_CURRENT);
 		leds_on(LED_G, true, true, LED_G_CURRENT);
@@ -508,14 +509,28 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 
 		break;
-
+#endif
+		do {
+			leds_on(LED_R, true, false, LED_DYNAMIC_CURRENT);
+			retval = leds_i2c_write_all(client);
+			leds_on(LED_R, false, false, 0);
+			retval = leds_i2c_write_all(client);
+			leds_on(LED_G, true, false, LED_DYNAMIC_CURRENT);
+			retval = leds_i2c_write_all(client);
+			leds_on(LED_G, false, false, 0);
+			retval = leds_i2c_write_all(client);
+			leds_on(LED_B, true, false, LED_DYNAMIC_CURRENT);
+			retval = leds_i2c_write_all(client);
+			leds_on(LED_B, false, false, 0);
+			retval = leds_i2c_write_all(client);
+		} while (mode == BOOTING && retval == 0);
 	default:
 		return;
 		break;
 	}
 	retval = leds_i2c_write_all(client);
 	if (retval)
-		printk(KERN_WARNING "leds_i2c_write_all failed\n");
+		pr_warn("leds_i2c_write_all failed\n");
 }
 
 static void an30259a_set_led_blink(enum an30259a_led_enum led,
