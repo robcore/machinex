@@ -437,8 +437,8 @@ void blk_drain_queue(struct request_queue *q, bool drain_all)
  *
  * In bypass mode, only the dispatch FIFO queue of @q is used.  This
  * function makes @q enter bypass mode and drains all requests which were
- * issued before.  On return, it's guaranteed that no request has ELVPRIV
- * set.
+ * throttled or issued before.  On return, it's guaranteed that no request
+ * is being throttled or has ELVPRIV set.
  */
 void blk_queue_bypass_start(struct request_queue *q)
 {
@@ -482,6 +482,11 @@ void blk_cleanup_queue(struct request_queue *q)
 	mutex_lock(&q->sysfs_lock);
 	queue_flag_set_unlocked(QUEUE_FLAG_DYING, q);
 	spin_lock_irq(lock);
+
+	/* dead queue is permanently in bypass mode till released */
+	q->bypass_depth++;
+	queue_flag_set(QUEUE_FLAG_BYPASS, q);
+
 	queue_flag_set(QUEUE_FLAG_NOMERGES, q);
 	queue_flag_set(QUEUE_FLAG_NOXMERGES, q);
 	queue_flag_set(QUEUE_FLAG_DYING, q);
