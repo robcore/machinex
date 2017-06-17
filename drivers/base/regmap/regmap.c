@@ -1908,6 +1908,10 @@ int regmap_multi_reg_write_bypassed(struct regmap *map,
 	int ret;
 	bool bypass;
 
+	if (WARN_ONCE(num_regs <= 0, "invalid registers number (%d)\n",
+	    num_regs))
+		return 0;
+
 	map->lock(map->lock_arg);
 
 	bypass = map->cache_bypass;
