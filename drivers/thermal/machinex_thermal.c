@@ -196,7 +196,7 @@ static int get_cpu_temp(unsigned int cpu)
 		}
 		break;
 	case 3:
-		tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_three;
+		tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_four;
 		ret = tsens_get_temp(&tsens_dev_four, &temp_four);
 		cpu_thermal_four = temp_four;
 		if (!temp_four) {
