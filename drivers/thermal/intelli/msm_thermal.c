@@ -286,11 +286,53 @@ static void __ref do_core_control(void)
 	mutex_unlock(&core_control_mutex);
 }
 
+static int therm_freq_eq_or_gt(void)
+{
+	int ret;
+
+	ret = populate_temps();
+	if (ret)
+		return ret;
+
+	if ((cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
+		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
+		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
+		cpu_thermal_four >= msm_thermal_info.limit_temp_degC))
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int therm_freq_lt(void)
+{
+	int ret;
+
+	ret = populate_temps();
+	if (ret)
+		return ret;
+
+	if (cpu_thermal_one < msm_thermal_info.limit_temp_degC -
+		msm_thermal_info.temp_hysteresis_degC &&
+		cpu_thermal_two < msm_thermal_info.limit_temp_degC -
+		msm_thermal_info.temp_hysteresis_degC &&
+		cpu_thermal_three < msm_thermal_info.limit_temp_degC -
+		msm_thermal_info.temp_hysteresis_degC &&
+		cpu_thermal_four < msm_thermal_info.limit_temp_degC -
+		msm_thermal_info.temp_hysteresis_degC) 
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
 static void __ref do_freq_control(void)
 {
 	int ret = 0;
-	int cpu = smp_processor_id();
 	struct cpufreq_policy policy;
+	int cpu = smp_processor_id();
 	unsigned long max_freq = limited_max_freq_thermal;
 
 	if (!hotplug_ready || thermal_suspended) {
@@ -300,10 +342,6 @@ static void __ref do_freq_control(void)
 	ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
 			return;
-
-	ret = populate_temps();
-	if (ret)
-		return;
 #if 0
 	if (temp > msm_thermal_info.limit_temp_degC) {
 		get_online_cpus()
@@ -315,10 +353,7 @@ static void __ref do_freq_control(void)
 	}
 #endif
 
-	if ((cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_four >= msm_thermal_info.limit_temp_degC)) {
+	if (therm_freq_eq_or_gt()) {
 		if (limit_idx == limit_idx_low) {
 			hotplug_check_needed = false;
 			return;
@@ -329,14 +364,7 @@ static void __ref do_freq_control(void)
 			limit_idx = limit_idx_low;
 		max_freq = table[limit_idx].frequency;
 		hotplug_check_needed = true;
-	} else if (cpu_thermal_one < msm_thermal_info.limit_temp_degC -
-		msm_thermal_info.temp_hysteresis_degC &&
-		cpu_thermal_two < msm_thermal_info.limit_temp_degC -
-		msm_thermal_info.temp_hysteresis_degC &&
-		cpu_thermal_three < msm_thermal_info.limit_temp_degC -
-		msm_thermal_info.temp_hysteresis_degC &&
-		cpu_thermal_four < msm_thermal_info.limit_temp_degC -
-		msm_thermal_info.temp_hysteresis_degC) {
+	} else if (therm_freq_lt()) {
 		if (limit_idx == limit_idx_high) {
 			hotplug_check_needed = false;
 			return;
@@ -409,6 +437,28 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 
 static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 	.notifier_call = msm_thermal_cpu_callback,
+};
+
+static int cpufreq_thermal_notifier(struct notifier_block *nb,
+				    unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	unsigned int cpu = policy->cpu;
+
+	if (event != CPUFREQ_ADJUST)
+		return NOTIFY_DONE;
+
+
+	if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+		limited_max_freq_thermal < policy->hlimit_max_screen_on)
+		update_cpu_max_freq(cpu, limited_max_freq_thermal);
+
+	return NOTIFY_OK;
+}
+
+/* Notifier for cpufreq policy change */
+static struct notifier_block thermal_cpufreq_notifier_block = {
+	.notifier_call = cpufreq_thermal_notifier,
 };
 
 static int msm_thermal_pm_event(struct notifier_block *this,
@@ -655,7 +705,11 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	enabled = 1;
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
+
 	register_pm_notifier(&msm_thermal_pm_notifier);
+
+	cpufreq_register_notifier(&thermal_cpufreq_notifier_block,
+				  CPUFREQ_POLICY_NOTIFIER);
 
 	mutex_init(&core_control_mutex);
 
@@ -681,8 +735,11 @@ static void msm_thermal_exit(void)
 	disable_msm_thermal();
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	unregister_pm_notifier(&msm_thermal_pm_notifier);
+	cpufreq_unregister_notifier(&thermal_cpufreq_notifier_block,
+				    CPUFREQ_POLICY_NOTIFIER);
 	mutex_destroy(&core_control_mutex);
 }
+
 late_initcall(msm_thermal_late_init);
 module_exit(msm_thermal_exit);
 
