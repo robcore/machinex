@@ -171,9 +171,9 @@ static int get_cpu_temp(int cpu)
 		if (!temp_one) {
 			pr_debug("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_one.sensor_num);
-			return ret;
-		}
-		break;
+			return -EINVAL;
+		} else
+			return cpu_thermal_one;
 	case 1:
 		tsens_dev_two.sensor_num = msm_thermal_info.sensor_id_two;
 		ret = tsens_get_temp(&tsens_dev_two, &temp_two);
@@ -181,9 +181,9 @@ static int get_cpu_temp(int cpu)
 		if (!temp_two) {
 			pr_debug("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_two.sensor_num);
-			return ret;
-		}
-		break;
+			return -EINVAL;
+		} else
+			return cpu_thermal_two;
 	case 2:
 		tsens_dev_three.sensor_num = msm_thermal_info.sensor_id_three;
 		ret = tsens_get_temp(&tsens_dev_three, &temp_three);
@@ -191,9 +191,9 @@ static int get_cpu_temp(int cpu)
 		if (!temp_three) {
 			pr_debug("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_three.sensor_num);
-			return ret;
-		}
-		break;
+			return -EINVAL;
+		} else
+			return cpu_thermal_three;
 	case 3:
 		tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_four;
 		ret = tsens_get_temp(&tsens_dev_four, &temp_four);
@@ -201,18 +201,18 @@ static int get_cpu_temp(int cpu)
 		if (!temp_four) {
 			pr_debug("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_four.sensor_num);
-			return ret;
-		}
-		break;
+			return -EINVAL;
+		} else
+			return cpu_thermal_four;
 	default:
-		break;
-	}
 		return 0;
+	}
 }
 
 static void __ref do_core_control(int cpu)
 {
 	int ret = 0;
+	long current_temp;
 
 	switch (cpu) {
 	case 0:
@@ -224,7 +224,9 @@ static void __ref do_core_control(int cpu)
 		thermal_core_controlled = false;
 		return;
 	}
-	get_cpu_temp(cpu);
+	current_temp = get_cpu_temp(cpu);
+	if (current_temp <= 0)
+		return;
 	mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
 		   (cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC)) {
@@ -268,7 +270,9 @@ static void __ref do_core_control(int cpu)
 		thermal_core_controlled = false;
 		return;
 	}
-	get_cpu_temp(cpu);
+	current_temp = get_cpu_temp(cpu);
+	if (current_temp <= 0)
+		return;
 	mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
 		   (cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC)) {
@@ -312,7 +316,9 @@ static void __ref do_core_control(int cpu)
 		thermal_core_controlled = false;
 		return;
 	}
-	get_cpu_temp(cpu);
+	current_temp = get_cpu_temp(cpu);
+	if (current_temp <= 0)
+		return;
 	mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
 		   (cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
@@ -361,6 +367,7 @@ static void __ref do_freq_control(int cpu)
 	int ret = 0;
 	struct cpufreq_policy policy;
 	unsigned long max_freq;
+	long current_temp;
 
 	switch (cpu) {
 		case 0:
@@ -376,7 +383,9 @@ static void __ref do_freq_control(int cpu)
 		if (!policy.limited_max_freq_thermal)
 			return;
 		max_freq = policy.limited_max_freq_thermal;
-		get_cpu_temp(cpu);
+		current_temp = get_cpu_temp(cpu);
+		if (current_temp <= 0)
+			return;
 		if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC) {
 			if (limit_idx == limit_idx_low) {
 				return;
@@ -417,8 +426,9 @@ static void __ref do_freq_control(int cpu)
 		if (!policy.limited_max_freq_thermal)
 			return;
 		max_freq = policy.limited_max_freq_thermal;
-		get_cpu_temp(cpu);
-
+		current_temp = get_cpu_temp(cpu);
+		if (current_temp <= 0)
+			return;
 		if (cpu_thermal_two >= msm_thermal_info.limit_temp_degC) {
 			if (limit_idx == limit_idx_low) {
 				hotplug_check_needed_two = false;
@@ -466,8 +476,9 @@ static void __ref do_freq_control(int cpu)
 		if (!policy.limited_max_freq_thermal)
 			return;
 		max_freq = policy.limited_max_freq_thermal;
-		get_cpu_temp(cpu);
-
+		current_temp = get_cpu_temp(cpu);
+		if (current_temp <= 0)
+			return;
 		if (cpu_thermal_three >= msm_thermal_info.limit_temp_degC) {
 			if (limit_idx == limit_idx_low) {
 				hotplug_check_needed_three = false;
@@ -515,8 +526,9 @@ static void __ref do_freq_control(int cpu)
 		if (!policy.limited_max_freq_thermal)
 			return;
 		max_freq = policy.limited_max_freq_thermal;
-		get_cpu_temp(cpu);
-
+		current_temp = get_cpu_temp(cpu);
+		if (current_temp <= 0)
+			return;
 		if (cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
 			if (limit_idx == limit_idx_low) {
 				hotplug_check_needed_four = false;
