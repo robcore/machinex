@@ -141,10 +141,11 @@ bool is_freq_limited(unsigned int cpu)
 }
 */
 
-static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
+static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 {
 	struct cpufreq_policy policy;
 	int ret;
+	bool needsafe = false;
 
 	if (thermal_suspended)
 		return;
@@ -153,16 +154,41 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 		if (ret)
 			return;
 
-	get_online_cpus();
-	for_each_possible_cpu(cpu) {
-		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
+	mutex_lock(&core_control_mutex);
+	thermal_core_controlled = true;
+	for_each_cpu_not(cpu, cpu_online_mask) {
+		if (cpu == 0)
 			continue;
-		reapply_hard_limits(cpu);
-		limited_max_freq_thermal = max_freq;
-		cpufreq_update_policy(cpu);
+		if (cpu_online(cpu))
+			continue;
+		ret = cpu_up(cpu);
+		if (ret)
+			needsafe = true;
 	}
-	put_online_cpus();
 
+	if (!needsafe) {
+		for_each_possible_cpu(cpu) {
+			if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
+				continue;
+			reapply_hard_limits(cpu);
+			limited_max_freq_thermal = max_freq;
+			cpufreq_update_policy(cpu);
+		}
+		thermal_core_controlled = false;
+		mutex_unlock(&core_control_mutex);
+		return;
+	} else {
+		thermal_core_controlled = false;
+		mutex_unlock(&core_control_mutex);
+		for_each_online_cpu(cpu) {
+			if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
+				continue;
+			reapply_hard_limits(cpu);
+			limited_max_freq_thermal = max_freq;
+			cpufreq_update_policy(cpu);
+		}
+		return;
+	}
 }
 
 static int populate_temps(void)
@@ -332,7 +358,7 @@ static void __ref do_freq_control(void)
 {
 	int ret = 0;
 	struct cpufreq_policy policy;
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 	unsigned long max_freq = limited_max_freq_thermal;
 
 	if (!hotplug_ready || thermal_suspended) {
