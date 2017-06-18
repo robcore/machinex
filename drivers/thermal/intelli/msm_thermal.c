@@ -446,7 +446,7 @@ static void __ref disable_msm_thermal(void)
 	else
 		(limited_max_freq_thermal = policy->hlimit_max_screen_on);
 
-	update_cpu_max_freq(cpu, policy->hlimit_max_screen_on);
+	update_cpu_max_freq(cpu, limited_max_freq_thermal);
 }
 
 static int __ref set_enabled(const char *val, const struct kernel_param *kp)
