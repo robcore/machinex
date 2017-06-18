@@ -292,12 +292,12 @@ static int therm_freq_eq_or_gt(void)
 
 	ret = populate_temps();
 	if (ret)
-		return ret;
+		return -EINVAL;
 
-	if ((cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
+	if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_four >= msm_thermal_info.limit_temp_degC))
+		cpu_thermal_four >= msm_thermal_info.limit_temp_degC)
 		ret = 1;
 	else
 		ret = 0;
@@ -320,7 +320,7 @@ static int therm_freq_lt(void)
 		cpu_thermal_three < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC &&
 		cpu_thermal_four < msm_thermal_info.limit_temp_degC -
-		msm_thermal_info.temp_hysteresis_degC) 
+		msm_thermal_info.temp_hysteresis_degC)
 		ret = 1;
 	else
 		ret = 0;
