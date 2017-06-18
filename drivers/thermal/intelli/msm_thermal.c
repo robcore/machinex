@@ -117,7 +117,7 @@ static int msm_thermal_get_freq_table(void)
 		goto fail;
 	}
 
-	table = policy->freq_table;
+	table = cpufreq_frequency_get_table(0);
 	if (table == NULL) {
 		pr_debug("%s: error reading cpufreq table\n", KBUILD_MODNAME);
 		ret = -EINVAL;
