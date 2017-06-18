@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEF_SAMPLING_MS			60
@@ -464,8 +464,7 @@ static void intelli_resume(struct power_suspend * h)
 	}
 	for_each_online_cpu(cpu) {
 		apply_down_lock(cpu);
-		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(def_sampling_ms));
+		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 	}
 }
 
