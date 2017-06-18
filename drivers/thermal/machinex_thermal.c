@@ -192,13 +192,10 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 	}
 }
 
-static int populate_temps(void)
+static long get_temp_one(void)
 {
-	struct tsens_device tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
+	struct tsens_device tsens_dev_one;
 	long temp_one = 0;
-	long temp_two = 0;
-	long temp_three = 0;
-	long temp_four = 0;
 	int ret = 0;
 
 	if (thermal_suspended)
@@ -210,9 +207,20 @@ static int populate_temps(void)
 	if (!temp_one) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_one.sensor_num);
-		return ret;
+		return -EINVAL;
 	}
 
+	return cpu_thermal_one;
+}
+
+static long get_temp_two(void)
+{
+	struct tsens_device tsens_dev_two;
+	long temp_two = 0;
+	int ret = 0;
+
+	if (thermal_suspended)
+		return -EINVAL;
 
 	tsens_dev_two.sensor_num = msm_thermal_info.sensor_id_two;
 	ret = tsens_get_temp(&tsens_dev_two, &temp_two);
@@ -220,8 +228,20 @@ static int populate_temps(void)
 	if (!temp_two) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_two.sensor_num);
-		return ret;
+		return -EINVAL;
 	}
+
+	return cpu_thermal_two;
+}
+
+static long get_temp_three(void)
+{
+	struct tsens_device tsens_dev_three;
+	long temp_three = 0;
+	int ret = 0;
+
+	if (thermal_suspended)
+		return -EINVAL;
 
 	tsens_dev_three.sensor_num = msm_thermal_info.sensor_id_three;
 	ret = tsens_get_temp(&tsens_dev_three, &temp_three);
@@ -229,33 +249,124 @@ static int populate_temps(void)
 	if (!temp_three) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_three.sensor_num);
-		return ret;
+		return -EINVAL;
 	}
 
-	tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_three;
+	return cpu_thermal_three;
+}
+
+static long get_temp_four(void)
+{
+	struct tsens_device tsens_dev_four;
+	long temp_four = 0;
+	int ret = 0;
+
+	if (thermal_suspended)
+		return -EINVAL;
+
+	tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_four;
 	ret = tsens_get_temp(&tsens_dev_four, &temp_four);
 	cpu_thermal_four = temp_four;
 	if (!temp_four) {
 		pr_debug("%s: Unable to read TSENS sensor %d\n",
 				KBUILD_MODNAME, tsens_dev_four.sensor_num);
-		return ret;
+		return -EINVAL;
 	}
 
-	return 0;
+	return cpu_thermal_four;
 }
 
-static int core_freq_eq_or_gt(void)
+static int core_one_eq_or_gt(void)
 {
-	int ret;
+	long core_one_temp;
 
-	ret = populate_temps();
-	if (ret)
+	core_one_temp = get_temp_one();
+	if (core_one_temp <= 0)
 		return -EINVAL;
 
-	if ((cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC) ||
-		(cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC) ||
-		(cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC) ||
-		(cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC))
+	if ((core_one_temp >= msm_thermal_info.core_limit_temp_degC)
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int core_two_eq_or_gt(void)
+{
+	long core_two_temp;
+
+	core_two_temp = get_temp_two();
+	if (core_two_temp <= 0)
+		return -EINVAL;
+
+	if (core_two_temp >= msm_thermal_info.core_limit_temp_degC)
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int core_three_eq_or_gt(void)
+{
+	long core_three_temp;
+
+	core_three_temp = get_temp_three();
+	if (core_three_temp <= 0)
+		return -EINVAL;
+
+	if (core_three_temp >= msm_thermal_info.core_limit_temp_degC)
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int core_four_eq_or_gt(void)
+{
+	long core_four_temp;
+
+	core_four_temp = get_temp_four();
+	if (core_four_temp <= 0)
+		return -EINVAL;
+
+	if (core_four_temp >= msm_thermal_info.core_limit_temp_degC)
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int core_one_freq_lt(void)
+{
+	long core_one_temp;
+
+	core_one_temp = get_temp_one();
+	if (core_one_temp <= 0)
+		return -EINVAL;
+
+	if (core_one_temp <= (msm_thermal_info.core_limit_temp_degC -
+			msm_thermal_info.core_temp_hysteresis_degC))
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int core_freq_lt(void)
+{
+	long core_one_temp;
+
+	core_one_temp = get_temp_one();
+	if (core_one_temp <= 0)
+		return -EINVAL;
+
+	if (core_one_temp <= (msm_thermal_info.core_limit_temp_degC -
+			msm_thermal_info.core_temp_hysteresis_degC))
 		ret = 1;
 	else
 		ret = 0;
