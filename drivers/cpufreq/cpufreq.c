@@ -373,8 +373,9 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	if (!policy->curr_limit_min || !policy->curr_limit_max)
 		reapply_hard_limits(cpu);
 
+	/* Can't use this, it stifles cpuinfo.min/max.
 	if (limited_max_freq_thermal < policy->curr_limit_max)
-		(policy->curr_limit_max = limited_max_freq_thermal);
+		(policy->curr_limit_max = limited_max_freq_thermal);*/ 
 
 	return max(policy->curr_limit_min, min(policy->curr_limit_max, freq));
 }
