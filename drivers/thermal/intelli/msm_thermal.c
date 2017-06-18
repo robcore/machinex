@@ -244,7 +244,7 @@ static int populate_temps(void)
 	return 0;
 }
 
-static int core_freq_eq_or_gt(void)
+static int therm_core_eq_or_gt(void)
 {
 	int ret;
 
@@ -263,7 +263,7 @@ static int core_freq_eq_or_gt(void)
 	return ret;
 }
 
-static int core_freq_lt(void)
+static int therm_core_lt(void)
 {
 	int ret;
 
@@ -298,7 +298,7 @@ static void __ref do_core_control(void)
 	}
 
 	mutex_lock(&core_control_mutex);
-	if (msm_thermal_info.core_control_mask && core_freq_eq_or_gt()) {
+	if (msm_thermal_info.core_control_mask && therm_core_eq_or_gt()) {
 		for (i = num_possible_cpus(); i > 0; i--) {
 			if (!(msm_thermal_info.core_control_mask & BIT(i)))
 				continue;
@@ -314,7 +314,7 @@ static void __ref do_core_control(void)
 			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
-			   core_freq_lt()) {
+			   therm_core_lt()) {
 		for (i = 0; i < num_possible_cpus(); i++) {
 			if (!(cpus_offlined & BIT(i)))
 				continue;
