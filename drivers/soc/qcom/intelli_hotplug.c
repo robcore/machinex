@@ -248,8 +248,11 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 			l_nr_threshold =
 				cpu_nr_run_threshold << 1 / (num_online_cpus());
 			l_ip_info = &per_cpu(ip_info, cpu);
-			if (l_ip_info->cpu_nr_running < l_nr_threshold)
+			if (l_ip_info->cpu_nr_running < l_nr_threshold) {
+				if (thermal_core_controlled)
+					break;
 				cpu_down(cpu);
+			}
 			if (target >= num_online_cpus())
 				break;
 		}
@@ -257,7 +260,9 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
-			cpu_up(cpu);
+			if (thermal_core_controlled)
+				break;
+				cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (target <= num_online_cpus())
 				break;

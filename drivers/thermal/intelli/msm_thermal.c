@@ -165,6 +165,7 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 		if (ret)
 			needsafe = true;
 	}
+	mutex_unlock(&core_control_mutex);
 
 	if (!needsafe) {
 		for_each_possible_cpu(cpu) {
@@ -175,11 +176,10 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 			cpufreq_update_policy(cpu);
 		}
 		thermal_core_controlled = false;
-		mutex_unlock(&core_control_mutex);
 		return;
 	} else {
 		thermal_core_controlled = false;
-		mutex_unlock(&core_control_mutex);
+		get_online_cpus();
 		for_each_online_cpu(cpu) {
 			if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 				continue;
@@ -187,6 +187,7 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 			limited_max_freq_thermal = max_freq;
 			cpufreq_update_policy(cpu);
 		}
+		put_online_cpus();
 		return;
 	}
 }
@@ -243,6 +244,48 @@ static int populate_temps(void)
 	return 0;
 }
 
+static int core_freq_eq_or_gt(void)
+{
+	int ret;
+
+	ret = populate_temps();
+	if (ret)
+		return -EINVAL;
+
+	if ((cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC) ||
+		(cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC) ||
+		(cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC) ||
+		(cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC))
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
+static int core_freq_lt(void)
+{
+	int ret;
+
+	ret = populate_temps();
+	if (ret)
+		return -EINVAL;
+
+	if ((cpu_thermal_one <= msm_thermal_info.core_limit_temp_degC -
+			msm_thermal_info.core_temp_hysteresis_degC) &&
+		(cpu_thermal_two <= msm_thermal_info.core_limit_temp_degC -
+			msm_thermal_info.core_temp_hysteresis_degC) &&
+		(cpu_thermal_three <= msm_thermal_info.core_limit_temp_degC -
+			msm_thermal_info.core_temp_hysteresis_degC) &&
+		(cpu_thermal_four <= msm_thermal_info.core_limit_temp_degC -
+			msm_thermal_info.core_temp_hysteresis_degC))
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
+
 static void __ref do_core_control(void)
 {
 	int i = 0;
@@ -254,16 +297,8 @@ static void __ref do_core_control(void)
 		return;
 	}
 
-	ret = populate_temps();
-	if (ret)
-		return;
-
 	mutex_lock(&core_control_mutex);
-	if (msm_thermal_info.core_control_mask &&
-		((cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC) ||
-		(cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC) ||
-		(cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC) ||
-		(cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC))) {
+	if (msm_thermal_info.core_control_mask && core_freq_eq_or_gt()) {
 		for (i = num_possible_cpus(); i > 0; i--) {
 			if (!(msm_thermal_info.core_control_mask & BIT(i)))
 				continue;
@@ -279,14 +314,7 @@ static void __ref do_core_control(void)
 			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
-		((cpu_thermal_one <= (msm_thermal_info.core_limit_temp_degC -
-			msm_thermal_info.core_temp_hysteresis_degC)) &&
-		(cpu_thermal_two <= (msm_thermal_info.core_limit_temp_degC -
-			msm_thermal_info.core_temp_hysteresis_degC)) &&
-		(cpu_thermal_three <= (msm_thermal_info.core_limit_temp_degC -
-			msm_thermal_info.core_temp_hysteresis_degC)) &&
-		(cpu_thermal_four <= (msm_thermal_info.core_limit_temp_degC -
-			msm_thermal_info.core_temp_hysteresis_degC)))) {
+			   core_freq_lt()) {
 		for (i = 0; i < num_possible_cpus(); i++) {
 			if (!(cpus_offlined & BIT(i)))
 				continue;
@@ -337,7 +365,7 @@ static int therm_freq_lt(void)
 
 	ret = populate_temps();
 	if (ret)
-		return ret;
+		return -EINVAL;
 
 	if (cpu_thermal_one < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC &&

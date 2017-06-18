@@ -258,6 +258,9 @@ static void cpu_up_down_work(struct work_struct *work)
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
 
+	if (thermal_core_controlled)
+		goto reschedule;
+
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
 		(delta <= msecs_to_jiffies(boost_lock_duration)))
@@ -272,8 +275,11 @@ static void cpu_up_down_work(struct work_struct *work)
 				(cpu_nr_run_threshold << 1) /
 					(num_online_cpus());
 			l_ip_info = &per_cpu(ip_info, cpu);
-			if (l_ip_info->cpu_nr_running < l_nr_threshold)
+			if (l_ip_info->cpu_nr_running < l_nr_threshold) {
+				if (thermal_core_controlled)
+					goto reschedule;
 				cpu_down(cpu);
+			}
 			if (target >= num_online_cpus())
 				break;
 		}
