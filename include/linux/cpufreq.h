@@ -164,7 +164,6 @@ struct cpufreq_policy {
 	unsigned int hlimit_max_screen_off;
 	unsigned int hlimit_min_screen_on;
 	unsigned int hlimit_min_screen_off;
-	unsigned long limited_max_freq_thermal;
 
 	unsigned int curr_limit_max;
 	unsigned int curr_limit_min;
