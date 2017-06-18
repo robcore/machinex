@@ -294,7 +294,7 @@ static void __ref do_freq_control(void)
 	unsigned long max_freq = limited_max_freq_thermal;
 
 	if (!hotplug_ready || thermal_suspended) {
-		hotplug_check_needed == false;
+		hotplug_check_needed = false;
 		return;
 	}
 	ret = cpufreq_get_policy(&policy, cpu);
@@ -320,7 +320,7 @@ static void __ref do_freq_control(void)
 		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_four >= msm_thermal_info.limit_temp_degC)) {
 		if (limit_idx == limit_idx_low) {
-			hotplug_check_needed == false;
+			hotplug_check_needed = false;
 			return;
 		}
 
@@ -338,7 +338,7 @@ static void __ref do_freq_control(void)
 		cpu_thermal_four < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC) {
 		if (limit_idx == limit_idx_high) {
-			hotplug_check_needed == false;
+			hotplug_check_needed = false;
 			return;
 		}
 
@@ -353,7 +353,7 @@ static void __ref do_freq_control(void)
 	}
 
 	if (max_freq == limited_max_freq_thermal) {
-		hotplug_check_needed == false;
+		hotplug_check_needed = false;
 		return;
 	}
 
