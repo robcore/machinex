@@ -62,6 +62,21 @@ struct cpufreq_user_policy {
 	unsigned int		min;    /* in kHz */
 	unsigned int		max;    /* in kHz */
 };
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+extern void reapply_hard_limits(unsigned int cpu);
+extern unsigned int input_boost_limit;
+extern unsigned int hlimit_max_screen_on;
+extern unsigned int hlimit_max_screen_off;
+extern unsigned int hlimit_min_screen_on;
+extern unsigned int hlimit_min_screen_off;
+
+extern unsigned int curr_limit_max;
+extern unsigned int curr_limit_min;
+extern unsigned int current_screen_state;
+#endif /* CONFIG_CPUFREQ_HARDLIMIT */
+extern bool hotplug_ready;
+extern unsigned long limited_max_freq_thermal;
+extern bool is_freq_limited(unsigned int cpu);
 
 struct cpufreq_policy {
 	/* CPUs sharing clock, require sw coordination */
@@ -149,6 +164,7 @@ struct cpufreq_policy {
 	unsigned int hlimit_max_screen_off;
 	unsigned int hlimit_min_screen_on;
 	unsigned int hlimit_min_screen_off;
+	unsigned long limited_max_freq_thermal;
 
 	unsigned int curr_limit_max;
 	unsigned int curr_limit_min;
@@ -922,19 +938,6 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
+#endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
-extern void reapply_hard_limits(unsigned int cpu);
-extern unsigned int input_boost_limit;
-extern unsigned int hlimit_max_screen_on;
-extern unsigned int hlimit_max_screen_off;
-extern unsigned int hlimit_min_screen_on;
-extern unsigned int hlimit_min_screen_off;
-
-extern unsigned int curr_limit_max;
-extern unsigned int curr_limit_min;
-extern unsigned int current_screen_state;
-#endif /* CONFIG_CPUFREQ_HARDLIMIT */
-extern bool hotplug_ready;
-extern unsigned long limited_max_freq_thermal;
-extern bool is_freq_limited(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */

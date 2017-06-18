@@ -328,25 +328,27 @@ void reapply_hard_limits(unsigned int cpu)
 	if (policy == NULL)
 		return;
 
+	policy->limited_max_freq_thermal = limited_max_freq_thermal;
+
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
 		if (input_boost_limit >= policy->hlimit_min_screen_on &&
-			input_boost_limit <= limited_max_freq_thermal &&
+			input_boost_limit <= policy->limited_max_freq_thermal &&
 			input_boost_limit <= policy->hlimit_max_screen_on)
 			policy->curr_limit_min = input_boost_limit;
 		else
 			policy->curr_limit_min = policy->hlimit_min_screen_on;
 
-		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_on)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (policy->limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+			policy->limited_max_freq_thermal < policy->hlimit_max_screen_on)
+			policy->curr_limit_max = policy->limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
 		policy->curr_limit_min = policy->hlimit_min_screen_off;
-		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_off)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (policy->limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+			policy->limited_max_freq_thermal < policy->hlimit_max_screen_off)
+			policy->curr_limit_max = policy->limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_off;
 	}
@@ -1607,6 +1609,8 @@ static int cpufreq_online(unsigned int cpu)
 		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+	if (!policy->limited_max_freq_thermal)
+		policy->limited_max_freq_thermal = limited_max_freq_thermal;
 
 	hardlimit_ready = true;
 	reapply_hard_limits(policy->cpu);
