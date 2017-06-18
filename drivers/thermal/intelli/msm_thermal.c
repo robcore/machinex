@@ -161,7 +161,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 		limited_max_freq_thermal = max_freq;
 		cpufreq_update_policy(cpu);
 	}
-		put_online_cpus();
+	put_online_cpus();
 
 }
 
