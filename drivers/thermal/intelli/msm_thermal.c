@@ -439,28 +439,6 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 	.notifier_call = msm_thermal_cpu_callback,
 };
 
-static int cpufreq_thermal_notifier(struct notifier_block *nb,
-				    unsigned long event, void *data)
-{
-	struct cpufreq_policy *policy = data;
-	unsigned int cpu = policy->cpu;
-
-	if (event != CPUFREQ_ADJUST)
-		return NOTIFY_DONE;
-
-
-	if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-		limited_max_freq_thermal < policy->hlimit_max_screen_on)
-		update_cpu_max_freq(cpu, limited_max_freq_thermal);
-
-	return NOTIFY_OK;
-}
-
-/* Notifier for cpufreq policy change */
-static struct notifier_block thermal_cpufreq_notifier_block = {
-	.notifier_call = cpufreq_thermal_notifier,
-};
-
 static int msm_thermal_pm_event(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
@@ -708,9 +686,6 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 
 	register_pm_notifier(&msm_thermal_pm_notifier);
 
-	cpufreq_register_notifier(&thermal_cpufreq_notifier_block,
-				  CPUFREQ_POLICY_NOTIFIER);
-
 	mutex_init(&core_control_mutex);
 
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
@@ -735,8 +710,6 @@ static void msm_thermal_exit(void)
 	disable_msm_thermal();
 	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	unregister_pm_notifier(&msm_thermal_pm_notifier);
-	cpufreq_unregister_notifier(&thermal_cpufreq_notifier_block,
-				    CPUFREQ_POLICY_NOTIFIER);
 	mutex_destroy(&core_control_mutex);
 }
 
