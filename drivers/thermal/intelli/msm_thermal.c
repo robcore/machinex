@@ -166,8 +166,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 static int populate_temps(void)
 {
-	struct tsens_device tsens_dev, tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
-	long tempavg = 0;
+	struct tsens_device tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
 	long temp_one = 0;
 	long temp_two = 0;
 	long temp_three = 0;
