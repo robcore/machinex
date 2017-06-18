@@ -323,10 +323,11 @@ void reapply_hard_limits(unsigned int cpu)
 
 	if (!hardlimit_ready)
 		return;
-
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
-		return;
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (policy == NULL)
+			return;
+	}
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
@@ -361,14 +362,14 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	unsigned int cpu;
 	struct cpufreq_policy *policy;
 
-	for_each_possible_cpu(cpu)
-		policy = cpufreq_cpu_get_raw(cpu);
-
 	if (!hardlimit_ready)
 		return freq;
 
-	if (policy == NULL)
-		return freq;
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (policy == NULL)
+			return freq;
+	}
 
 	if (!policy->curr_limit_min || !policy->curr_limit_max)
 		reapply_hard_limits(cpu);
