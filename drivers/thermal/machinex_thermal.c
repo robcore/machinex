@@ -213,7 +213,6 @@ static int get_cpu_temp(unsigned int cpu)
 
 static void __ref do_core_control(unsigned int cpu)
 {
-	int cpu = 0;
 	int ret = 0;
 
 	if ((!core_control_enabled) || (intelli_init() ||
@@ -254,11 +253,11 @@ static void __ref do_core_control(unsigned int cpu)
 			if (ret) {
 				thermal_core_controlled = true;
 				pr_err("%s: Error %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			} else {
 				thermal_core_controlled = false;
 				pr_debug("%s: Success %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			}
 			goto complete;
 		}
@@ -293,11 +292,11 @@ static void __ref do_core_control(unsigned int cpu)
 			if (ret) {
 				thermal_core_controlled = true;
 				pr_err("%s: Error %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			} else {
 				thermal_core_controlled = false;
 				pr_debug("%s: Success %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			}
 			goto complete;
 		}
@@ -332,11 +331,11 @@ static void __ref do_core_control(unsigned int cpu)
 			if (ret) {
 				thermal_core_controlled = true;
 				pr_err("%s: Error %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			} else {
 				thermal_core_controlled = false;
 				pr_debug("%s: Success %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			}
 			goto complete;
 		}
@@ -371,11 +370,11 @@ static void __ref do_core_control(unsigned int cpu)
 			if (ret) {
 				thermal_core_controlled = true;
 				pr_err("%s: Error %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			} else {
 				thermal_core_controlled = false;
 				pr_debug("%s: Success %d online core %d\n",
-						KBUILD_MODNAME, ret, i);
+						KBUILD_MODNAME, ret, cpu);
 			}
 			goto complete;
 		}
