@@ -117,8 +117,7 @@ static void do_input_boost(struct work_struct *work)
 	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
 
 	if (!input_boost_enabled || !input_boost_ms ||
-	   (limited_max_freq_thermal > 0 &&
-		i_sync_info->input_boost_freq > limited_max_freq_thermal))
+		thermal_core_controlled)
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
