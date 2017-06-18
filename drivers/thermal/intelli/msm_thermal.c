@@ -615,7 +615,8 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 {
 	int cpu = (unsigned long)hcpu;
 
-	if (thermal_suspended)
+	if (thermal_suspended || !hotplug_ready ||
+		!hardlimit_ready)
 		return NOTIFY_OK;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
