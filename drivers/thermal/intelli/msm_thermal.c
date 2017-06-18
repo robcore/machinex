@@ -33,7 +33,7 @@
 #include <mach/cpufreq.h>
 #include "../../../arch/arm/mach-msm/acpuclock.h"
 
-#define DEFAULT_POLLING_MS	250
+#define DEFAULT_POLLING_MS	200
 
 extern bool hotplug_ready;
 
@@ -47,7 +47,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 10,
-	.freq_step = 2,
+	.freq_step = 3,
 	.freq_control_mask = 0xf,
 	.core_limit_temp_degC = 75,
 	.core_temp_hysteresis_degC = 10,

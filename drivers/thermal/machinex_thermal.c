@@ -33,10 +33,9 @@
 #include <mach/cpufreq.h>
 #include "../../../arch/arm/mach-msm/acpuclock.h"
 
-#define DEFAULT_POLLING_MS	250
+#define DEFAULT_POLLING_MS	200
 
 extern bool hotplug_ready;
-
 static int enabled;
 bool thermal_core_controlled;
 static struct msm_thermal_data msm_thermal_info = {
