@@ -121,7 +121,7 @@ static int msm_thermal_get_freq_table(void)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
-	limit_idx_low = 4;
+	limit_idx_low = 0;
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -455,9 +455,7 @@ static void __ref do_freq_control(int cpu)
 			hotplug_check_needed_one = false;
 			return;
 		}
-		update_cpu_max_freq(cpu, max_freq);
-		return;
-
+		break;
 		case 1:
 		max_freq = limited_max_freq_thermal;
 
@@ -505,8 +503,7 @@ static void __ref do_freq_control(int cpu)
 			hotplug_check_needed_two = false;
 			return;
 		}
-		update_cpu_max_freq(cpu, max_freq);
-		return;
+		break;
 
 		case 2:
 		max_freq = limited_max_freq_thermal;
@@ -555,8 +552,7 @@ static void __ref do_freq_control(int cpu)
 			hotplug_check_needed_three = false;
 			return;
 		}
-		update_cpu_max_freq(cpu, max_freq);
-		return;
+		break;
 
 		case 3:
 		max_freq = limited_max_freq_thermal;
@@ -605,12 +601,14 @@ static void __ref do_freq_control(int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		update_cpu_max_freq(cpu, max_freq);
-		return;
+		break;
 
 	default:
-		return;
+		break;
 	}
+
+	update_cpu_max_freq(cpu, max_freq);
+	return;
 }
 
 static void __ref check_temp(struct work_struct *work)
