@@ -443,10 +443,10 @@ static void __ref disable_msm_thermal(void)
 
 	if (limited_max_freq_thermal == policy->hlimit_max_screen_on)
 		return;
+	else
+		(limited_max_freq_thermal = policy->hlimit_max_screen_on);
 
-	for_each_possible_cpu(cpu) {
-		update_cpu_max_freq(cpu, policy->hlimit_max_screen_on);
-	}
+	update_cpu_max_freq(cpu, policy->hlimit_max_screen_on);
 }
 
 static int __ref set_enabled(const char *val, const struct kernel_param *kp)
