@@ -378,9 +378,9 @@ static void __ref do_freq_control(unsigned int cpu)
 		if (ret)
 			return;
 
-	max_freq = per_cpu(limited_max_freq_thermal, cpu);
-
+		max_freq = per_cpu(limited_max_freq_thermal, cpu);
 	}
+
 	switch (cpu) {
 		case 0:
 		if (!hotplug_ready || thermal_suspended) {
