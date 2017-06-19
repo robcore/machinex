@@ -1615,9 +1615,9 @@ static int cpufreq_online(unsigned int cpu)
 			add_cpu_dev_symlink(policy, j);
 		}
 	} else {
+		reapply_hard_limits(policy->cpu);
 		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
-		reapply_hard_limits(policy->cpu);
 	}
 
 
