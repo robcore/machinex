@@ -166,7 +166,6 @@ struct cpufreq_policy {
 	unsigned int hlimit_min_screen_off;
 	unsigned int curr_limit_max;
 	unsigned int curr_limit_min;
-	unsigned int limited_max_freq_thermal;
 };
 
 /* Only for ACPI */
@@ -928,6 +927,8 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 #define CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK	1890000
 #define CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK	384000
 #define CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK	384000
+#define CPUFREQ_HARDLIMIT_THERMAL_MIN 918000
+#define CPUFREQ_HARDLIMIT_THERMAL_MAX 1350000
 
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1

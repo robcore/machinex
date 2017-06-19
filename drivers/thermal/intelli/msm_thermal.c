@@ -59,14 +59,12 @@ bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
-static int cpu0;
-static int cpu1;
-static int cpu2;
-static int cpu3;
 static unsigned long cpu_thermal_one;
 static unsigned long cpu_thermal_two;
 static unsigned long cpu_thermal_three;
 static unsigned long cpu_thermal_four;
+unsigned int limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+
 
 /*static struct thermal_policy thermal_policy = {
 	.cpu0,
@@ -75,7 +73,7 @@ static unsigned long cpu_thermal_four;
 	.cpu3,
 };
 */
-static bool thermal_suspended;
+static bool thermal_suspended = false;
 /* module parameters */
 module_param_named(poll_ms, msm_thermal_info.poll_ms, uint, 0664);
 module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
@@ -91,11 +89,10 @@ module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_
 
 static bool therm_freq_limited;
 static bool hotplug_check_needed;
-static unsigned int thermal_max_hardlimit = 1350000; /*same as default touchboost*/
+static unsigned int thermal_max_hardlimit = CPUFREQ_HARDLIMIT_THERMAL_MAX; /*same as default touchboost*/
 module_param(thermal_max_hardlimit, uint, 0644);
-static unsigned int thermal_min_hardlimit = 810000; /*best mitigation limit*/
+static unsigned int thermal_min_hardlimit = CPUFREQ_HARDLIMIT_THERMAL_MIN; /*best mitigation limit*/
 module_param(thermal_min_hardlimit, uint, 0644);
-static bool looping = false;
 
 static void get_cpu_temps(void)
 {
@@ -147,10 +144,11 @@ static void get_cpu_temps(void)
 
 }
 
-static void __ref do_freq_control(unsigned int cpu)
+static void __ref do_freq_control(void)
 {
 	int ret = 0;
 	struct cpufreq_policy policy;
+	unsigned int cpu = smp_processor_id();
 	unsigned int delta;
 
 	ret = cpufreq_get_policy(&policy, cpu);
@@ -182,7 +180,7 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed = true;
 		} else {
 			limited_max_freq_thermal = policy.hlimit_max_screen_on;
-			hotplug_check_needed = false
+			hotplug_check_needed = false;
 		}
 	}
 
@@ -197,6 +195,7 @@ static void __ref do_core_control(void)
 {
 	unsigned int cpu = smp_processor_id();
 	int ret = 0;
+	unsigned int i = 0;
 	unsigned int delta;
 
 	if ((!core_control_enabled) || (intelli_init() ||
@@ -232,7 +231,7 @@ static void __ref do_core_control(void)
 	} else if ((cpu_thermal_one <= delta) &&
 			   (cpu_thermal_two <= delta) &&
 			   (cpu_thermal_three <= delta) &&
-			   (cpu_thermal_four <= delta) &&) {
+			   (cpu_thermal_four <= delta)) {
 		for (i = 0; i < num_possible_cpus(); i++) {
 			if (!(cpus_offlined & BIT(cpu)))
 				continue;
