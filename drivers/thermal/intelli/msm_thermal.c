@@ -68,7 +68,7 @@ static unsigned long cpu_thermal_one;
 static unsigned long cpu_thermal_two;
 static unsigned long cpu_thermal_three;
 static unsigned long cpu_thermal_four;
-unsigned int limited_max_freq_thermal;
+unsigned long limited_max_freq_thermal;
 
 static bool thermal_suspended = false;
 /* module parameters */
