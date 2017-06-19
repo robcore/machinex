@@ -59,7 +59,6 @@ static struct workqueue_struct *intellithermal_wq;
 bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
-static DEFINE_PER_CPU(struct cpufreq_policy*, policy);
 
 static int limit_idx;
 static int limit_idx_low;
@@ -170,7 +169,7 @@ static int get_cpu_temp(unsigned int cpu)
 
 static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 {
-	struct cpufreq_policy *policy = per_cpu(policy, cpu);
+	struct cpufreq_policy *policy;
 	int ret = 0;
 
 	if (thermal_suspended)
@@ -190,7 +189,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 static void __ref do_freq_control(unsigned int cpu)
 {
 	int ret = 0;
-	struct cpufreq_policy *policy = per_cpu(policy, cpu);
+	struct cpufreq_policy *policy;
 	unsigned long max_freq;
 
 	switch (cpu) {
@@ -558,7 +557,7 @@ static struct notifier_block msm_thermal_pm_notifier = {
 static void __ref disable_msm_thermal(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(policy, cpu);
+	struct cpufreq_policy *policy;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
