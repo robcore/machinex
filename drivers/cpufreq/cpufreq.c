@@ -78,6 +78,7 @@ static LIST_HEAD(cpufreq_governor_list);
 static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
+DECLARE_PER_CPU(unsigned long, limited_max_freq_thermal);
 
 /* Flag to suspend/resume CPUFreq governors */
 static bool cpufreq_suspended;
@@ -331,22 +332,22 @@ void reapply_hard_limits(unsigned int cpu)
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
 		if (input_boost_limit >= policy->hlimit_min_screen_on &&
-			input_boost_limit <= limited_max_freq_thermal &&
+			input_boost_limit <= per_cpu(limited_max_freq_thermal, cpu) &&
 			input_boost_limit <= policy->hlimit_max_screen_on)
 			policy->curr_limit_min = input_boost_limit;
 		else
 			policy->curr_limit_min = policy->hlimit_min_screen_on;
 
-		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_on)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (per_cpu(limited_max_freq_thermal, cpu) >= policy->cpuinfo.min_freq &&
+			per_cpu(limited_max_freq_thermal, cpu) < policy->hlimit_max_screen_on)
+			policy->curr_limit_max = per_cpu(limited_max_freq_thermal, cpu);
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
 		policy->curr_limit_min = policy->hlimit_min_screen_off;
-		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_off)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (per_cpu(limited_max_freq_thermal, cpu) >= policy->cpuinfo.min_freq &&
+			per_cpu(limited_max_freq_thermal, cpu) < policy->hlimit_max_screen_off)
+			policy->curr_limit_max = per_cpu(limited_max_freq_thermal, cpu);
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_off;
 	}
@@ -372,8 +373,8 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 		reapply_hard_limits(cpu);
 
 	/* Can't use this, it stifles cpuinfo.min/max.
-	if (limited_max_freq_thermal < policy->curr_limit_max)
-		(policy->curr_limit_max = limited_max_freq_thermal);*/ 
+	if (per_cpu(limited_max_freq_thermal, cpu) < policy->curr_limit_max)
+		(policy->curr_limit_max = per_cpu(limited_max_freq_thermal, cpu));*/ 
 
 	return max(policy->curr_limit_min, min(policy->curr_limit_max, freq));
 }
