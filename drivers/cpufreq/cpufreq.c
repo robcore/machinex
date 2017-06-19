@@ -1601,24 +1601,24 @@ static int cpufreq_online(unsigned int cpu)
 		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-	if (!policy->limited_max_freq_thermal)
-		policy->limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 
-	hardlimit_ready = true;
-	reapply_hard_limits(policy->cpu);
+	if (!hardlimit_ready)
+		hardlimit_ready = true;
 
 	if (new_policy) {
-		policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-		policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+		policy->user_policy.min = policy->min;
+		policy->user_policy.max = policy->max;
 
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
 			add_cpu_dev_symlink(policy, j);
 		}
+		reapply_hard_limits(policy->cpu);
 	} else {
 		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
 	}
+
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
 		policy->cur = cpufreq_driver->get(policy->cpu);
