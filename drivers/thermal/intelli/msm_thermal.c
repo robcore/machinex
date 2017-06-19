@@ -126,7 +126,7 @@ static int get_cpu_temp(unsigned int cpu)
 		ret = tsens_get_temp(&tsens_dev_one, &temp_one);
 		cpu_thermal_one = temp_one;
 		if (!temp_one) {
-			pr_debug("%s: Unable to read TSENS sensor %d\n",
+			pr_info("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_one.sensor_num);
 			return -EINVAL;
 		}
@@ -136,7 +136,7 @@ static int get_cpu_temp(unsigned int cpu)
 		ret = tsens_get_temp(&tsens_dev_two, &temp_two);
 		cpu_thermal_two = temp_two;
 		if (!temp_two) {
-			pr_debug("%s: Unable to read TSENS sensor %d\n",
+			pr_info("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_two.sensor_num);
 			return -EINVAL;
 		}
@@ -146,7 +146,7 @@ static int get_cpu_temp(unsigned int cpu)
 		ret = tsens_get_temp(&tsens_dev_three, &temp_three);
 		cpu_thermal_three = temp_three;
 		if (!temp_three) {
-			pr_debug("%s: Unable to read TSENS sensor %d\n",
+			pr_info("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_three.sensor_num);
 			return -EINVAL;
 		}
@@ -156,7 +156,7 @@ static int get_cpu_temp(unsigned int cpu)
 		ret = tsens_get_temp(&tsens_dev_four, &temp_four);
 		cpu_thermal_four = temp_four;
 		if (!temp_four) {
-			pr_debug("%s: Unable to read TSENS sensor %d\n",
+			pr_info("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev_four.sensor_num);
 			return -EINVAL;
 		}
@@ -167,30 +167,11 @@ static int get_cpu_temp(unsigned int cpu)
 	return 0;
 }
 
-static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
-{
-	struct cpufreq_policy *policy;
-	int ret = 0;
-
-	if (thermal_suspended)
-		return;
-
-	ret = cpufreq_get_policy(policy, cpu);
-		if (ret)
-			return;
-
-	cpufreq_verify_within_limits(policy, policy->min, max_freq);
-	limited_max_freq_thermal = max_freq;
-	reapply_hard_limits(cpu);
-	cpufreq_update_policy(cpu);
-	return;
-}
-
 static void __ref do_freq_control(unsigned int cpu)
 {
 	int ret = 0;
 	struct cpufreq_policy *policy;
-	unsigned long max_freq;
+	unsigned int max_freq;
 
 	switch (cpu) {
 		case 0:
@@ -211,13 +192,15 @@ static void __ref do_freq_control(unsigned int cpu)
 			max_freq = thermal_min_hardlimit;
 		} else if (cpu_thermal_one < msm_thermal_info.limit_temp_degC -
 			msm_thermal_info.temp_hysteresis_degC) {
-			if (max_freq == thermal_min_hardlimit)
+			if (max_freq == thermal_min_hardlimit) {
 				max_freq = thermal_max_hardlimit;
-			else {
+			} else {
 				max_freq = policy->hlimit_max_screen_on;
 			}
 		}
-		update_cpu_max_freq(0, max_freq);
+		limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(0);
+		cpufreq_update_policy(0);
 		break;
 
 		case 1:
@@ -240,16 +223,17 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_two = true;
 		} else if (cpu_thermal_two < msm_thermal_info.limit_temp_degC -
 			msm_thermal_info.temp_hysteresis_degC) {
-			if (max_freq == thermal_min_hardlimit)
+			if (max_freq == thermal_min_hardlimit) {
 				max_freq = thermal_max_hardlimit;
-			else {
+			} else {
 				max_freq = policy->hlimit_max_screen_on;
 				hotplug_check_needed_two = false;
 			}
 		}
 		
-		update_cpu_max_freq(1, max_freq);
-
+		limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(1);
+		cpufreq_update_policy(1);
 		break;
 
 		case 2:
@@ -272,15 +256,16 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_three = true;
 		} else if (cpu_thermal_three < msm_thermal_info.limit_temp_degC -
 			msm_thermal_info.temp_hysteresis_degC) {
-			if (max_freq == thermal_min_hardlimit)
+			if (max_freq == thermal_min_hardlimit) {
 				max_freq = thermal_max_hardlimit;
-			else {
+			} else {
 				max_freq = policy->hlimit_max_screen_on;
 				hotplug_check_needed_three = false;
 			}
 		}
-		update_cpu_max_freq(2, max_freq);
-
+		limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(2);
+		cpufreq_update_policy(2);
 		break;
 
 		case 3:
@@ -303,14 +288,16 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = true;
 		} else if (cpu_thermal_four < msm_thermal_info.limit_temp_degC -
 			msm_thermal_info.temp_hysteresis_degC) {
-			if (max_freq == thermal_min_hardlimit)
+			if (max_freq == thermal_min_hardlimit) {
 				max_freq = thermal_max_hardlimit;
-			else {
+			} else {
 				max_freq = policy->hlimit_max_screen_on;
 				hotplug_check_needed_four = false;
 			}
 		}
-		update_cpu_max_freq(3, max_freq);
+		limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(3);
+		cpufreq_update_policy(3);
 
 		break;
 
@@ -567,11 +554,9 @@ static void __ref disable_msm_thermal(void)
 				return;
 
 	for_each_possible_cpu(cpu) {
-		if (limited_max_freq_thermal == policy->hlimit_max_screen_on)
-			return;
-		else
-			(limited_max_freq_thermal = policy->hlimit_max_screen_on);
-	update_cpu_max_freq(cpu, limited_max_freq_thermal);
+		limited_max_freq_thermal = policy->hlimit_max_screen_on;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	}	
 }
 
