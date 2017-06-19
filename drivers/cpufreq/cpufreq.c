@@ -79,7 +79,6 @@ static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
 DECLARE_PER_CPU(unsigned long, limited_max_freq_thermal);
-
 /* Flag to suspend/resume CPUFreq governors */
 static bool cpufreq_suspended;
 

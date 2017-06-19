@@ -36,7 +36,7 @@
 #define DEFAULT_POLLING_MS	200
 
 extern bool hotplug_ready;
-
+static int limit_init;
 static int enabled;
 bool thermal_core_controlled;
 static struct msm_thermal_data msm_thermal_info = {
@@ -53,7 +53,6 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
-unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 extern unsigned int hlimit_max_screen_on;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
@@ -82,6 +81,7 @@ static long cpu_thermal_four;
 	.cpu3,
 };
 */
+unsigned long limited_max_freq_thermal;
 DEFINE_PER_CPU(unsigned long, limited_max_freq_thermal);
 
 /* module parameters */
@@ -106,20 +106,20 @@ static bool hotplug_check_needed_two;
 static bool hotplug_check_needed_three;
 static bool hotplug_check_needed_four;
 
-static int msm_thermal_get_freq_table(void)
+static int msm_thermal_get_freq_table(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	int ret = 0;
-	int i = 0;
+	unsigned int i = 0;
 
-	policy = cpufreq_cpu_get_raw(0);
+	policy = cpufreq_cpu_get_raw(cpu);
 
 	if (policy == NULL || thermal_suspended) {
 		ret = -EINVAL;
 		goto fail;
 	}
 
-	table = cpufreq_frequency_get_table(0);
+	table = cpufreq_frequency_get_table(cpu);
 	if (table == NULL) {
 		pr_debug("%s: error reading cpufreq table\n", KBUILD_MODNAME);
 		ret = -EINVAL;
@@ -131,7 +131,7 @@ static int msm_thermal_get_freq_table(void)
 
 	limit_idx_low = 4;
 	limit_idx_high = limit_idx = i - 1;
-	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
+	BUG_ON(limit_idx_high == 0 || limit_idx_high <= limit_idx_low);
 fail:
 	return ret;
 }
@@ -148,20 +148,11 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 		if (ret)
 			return;
 
-	if (!cpu_online(cpu)) {
-		mutex_lock(&core_control_mutex);
-		thermal_core_controlled = true;
-		ret = cpu_up(cpu);
-			if (ret)
-				pr_err("%s:Unable to bringufor_each_possible_cpu(cpu) {p Core!\n",
-					   KBUILD_MODNAME);
-		thermal_core_controlled = false;
-		mutex_unlock(&core_control_mutex);
-	}
-
+	get_online_cpus();
 	reapply_hard_limits(cpu);
 	per_cpu(limited_max_freq_thermal, cpu) = max_freq;
-	cpufreq_update_policy(cpu);
+	cpufreq_update_policy(policy.cpu);
+	put_online_cpus();
 	return;
 }
 
@@ -382,6 +373,14 @@ static void __ref do_freq_control(unsigned int cpu)
 	struct cpufreq_policy policy;
 	unsigned long max_freq;
 
+	for_each_possible_cpu(cpu) {
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
+
+	max_freq = per_cpu(limited_max_freq_thermal, cpu);
+
+	}
 	switch (cpu) {
 		case 0:
 		if (!hotplug_ready || thermal_suspended) {
@@ -390,10 +389,6 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		ret = cpufreq_get_policy(&policy, cpu);
-			if (ret)
-				return;
-		max_freq = per_cpu(limited_max_freq_thermal, cpu);
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
 			return;
@@ -431,10 +426,7 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		ret = cpufreq_get_policy(&policy, cpu);
-			if (ret)
-				return;
-		max_freq = per_cpu(limited_max_freq_thermal, cpu);
+
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
 			return;
@@ -479,10 +471,8 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		ret = cpufreq_get_policy(&policy, cpu);
-			if (ret)
-				return;
-		max_freq = per_cpu(limited_max_freq_thermal, cpu);
+		
+		
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
 			return;
@@ -527,11 +517,8 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		ret = cpufreq_get_policy(&policy, cpu);
-			if (ret)
-				return;
 
-		max_freq = per_cpu(limited_max_freq_thermal, cpu);
+		
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
 			return;
@@ -579,19 +566,18 @@ static void __ref do_freq_control(unsigned int cpu)
 
 static void __ref check_temp(struct work_struct *work)
 {
-	static int limit_init;
 	int ret = 0;
 
 	if (thermal_suspended)
 		return;
 
-	if (!limit_init) {
-		ret = msm_thermal_get_freq_table();
-		if (ret) {
-			goto reschedule;
-		} else
-			limit_init = 1;
-	}
+		if (!limit_init) {
+			ret = msm_thermal_get_freq_table(cpu0);
+			if (ret) {
+				goto reschedule;
+			} else
+				limit_init = 1;
+		}
 
 	if (!thermal_suspended)
 		do_freq_control(cpu0);
