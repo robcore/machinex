@@ -43,6 +43,7 @@ bool hardlimit_ready = false;
 unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
+extern unsigned long limited_max_freq_thermal;
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -77,6 +78,7 @@ static LIST_HEAD(cpufreq_governor_list);
 static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
+
 /* Flag to suspend/resume CPUFreq governors */
 static bool cpufreq_suspended;
 
@@ -323,8 +325,8 @@ void reapply_hard_limits(unsigned int cpu)
 		return;
 
 	policy = cpufreq_cpu_get_raw(cpu);
-		if (policy == NULL)
-			return;
+	if (policy == NULL)
+		return;
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
@@ -367,7 +369,7 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 		return freq;
 
 	if (!policy->curr_limit_min || !policy->curr_limit_max)
-		reapply_hard_limits(cpu);
+		reapply_hard_limits(policy->cpu);
 
 	/* Can't use this, it stifles cpuinfo.min/max.
 	if (limited_max_freq_thermal < policy->curr_limit_max)
@@ -1601,8 +1603,8 @@ static int cpufreq_online(unsigned int cpu)
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 
-	if (!hardlimit_ready)
-		hardlimit_ready = true;
+	hardlimit_ready = true;
+	reapply_hard_limits(policy->cpu);
 
 	if (new_policy) {
 		policy->user_policy.min = policy->min;
@@ -1614,11 +1616,9 @@ static int cpufreq_online(unsigned int cpu)
 			add_cpu_dev_symlink(policy, j);
 		}
 	} else {
-		reapply_hard_limits(policy->cpu);
 		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
 	}
-
 
 	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
 		policy->cur = cpufreq_driver->get(policy->cpu);
@@ -2742,7 +2742,6 @@ void cpufreq_update_policy(unsigned int cpu)
 
 unlock:
 	up_write(&policy->rwsem);
-
 	cpufreq_cpu_put(policy);
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
@@ -3022,4 +3021,5 @@ static int __init cpufreq_core_init(void)
 }
 module_param(off, int, 0444);
 core_initcall(cpufreq_core_init);
+
 
