@@ -46,7 +46,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id_four = 10,
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 65,
-	.temp_hysteresis_degC = 10,
+	.temp_hysteresis_degC = 8,
 	.freq_step = 3,
 	.freq_control_mask = 0xf,
 	.core_limit_temp_degC = 75,
@@ -61,8 +61,11 @@ static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
 static int limit_idx;
+static DEFINE_PER_CPU(int, limit_idx);
 static int limit_idx_low;
+static DEFINE_PER_CPU(int, limit_idx_low);
 static int limit_idx_high;
+static DEFINE_PER_CPU(int, limit_idx_high);
 static struct cpufreq_frequency_table *table;
 static uint32_t hist_index = 0;
 static unsigned int cpu0;
@@ -124,14 +127,14 @@ static int msm_thermal_get_freq_table(void)
 		ret = -EINVAL;
 		goto fail;
 	}
-
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-		limit_idx_high = limit_idx = i = cpufreq_frequency_table_get_index(policy, policy->hlimit_max_screen_on);
+	cpu = smp_processor_id();
+	for_each_possible_cpu(cpu) {
+		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+			per_cpu(limit_idx_high, cpu) = per_cpu(limit_idx, cpu) = i = cpufreq_frequency_table_get_index(policy, policy->hlimit_max_screen_on);
+			per_cpu(limit_idx_low, cpu) = 4;
+		}
+		BUG_ON((per_cpu(limit_idx_high, cpu) == 0) || (per_cpu(limit_idx_high, cpu) <= per_cpu(limit_idx_low, cpu)));
 	}
-	limit_idx_low = 4;
-
-
-	BUG_ON(limit_idx_high == 0 || limit_idx_high <= limit_idx_low);
 fail:
 	return ret;
 }
@@ -148,8 +151,8 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 		if (ret)
 			return;
 
-	reapply_hard_limits(cpu);
 	per_cpu(limited_max_freq_thermal, cpu) = max_freq;
+	reapply_hard_limits(cpu);
 	cpufreq_update_policy(cpu);
 	return;
 }
@@ -369,7 +372,7 @@ static void __ref do_freq_control(unsigned int cpu)
 {
 	int ret = 0;
 	struct cpufreq_policy policy;
-	unsigned long max_freq = per_cpu(limited_max_freq_thermal, cpu);
+	unsigned long max_freq;
 
 	switch (cpu) {
 		case 0:
@@ -379,31 +382,31 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		ret = cpufreq_get_policy(&policy, cpu);
+		ret = cpufreq_get_policy(&policy, 0);
 		if (ret)
 			return;
-
+		max_freq = per_cpu(limited_max_freq_thermal, 0);
 		ret = get_cpu_temp(0);
 		if (ret < 0)
 			return;
 		if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC) {
-			if (limit_idx == limit_idx_low) {
+			if (per_cpu(limit_idx, 0) == per_cpu(limit_idx_low, 0)) {
 				return;
 			}
 
-			limit_idx -= msm_thermal_info.freq_step;
-			if (limit_idx <= limit_idx_low)
-				limit_idx = limit_idx_low;
-			max_freq = table[limit_idx].frequency;
+			per_cpu(limit_idx, 0) -= msm_thermal_info.freq_step;
+			if (per_cpu(limit_idx, 0) <= per_cpu(limit_idx_low, 0))
+				per_cpu(limit_idx, 0) = per_cpu(limit_idx_low, 0);
+			max_freq = table[per_cpu(limit_idx, 0)].frequency;
 		} else if (cpu_thermal_one < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC) {
-			if (limit_idx == limit_idx_high)
+			if (per_cpu(limit_idx, 0) == per_cpu(limit_idx_high, 0))
 				return;
 			max_freq = policy.hlimit_max_screen_on;
-			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
+			per_cpu(limit_idx, 0) = per_cpu(limit_idx_high, 0) = cpufreq_frequency_table_get_index(&policy, max_freq);
 		}
 
-		if (max_freq == per_cpu(limited_max_freq_thermal, cpu))
+		if (max_freq == per_cpu(limited_max_freq_thermal, 0))
 			return;
 		update_cpu_max_freq(0, max_freq);
 		break;
@@ -416,37 +419,37 @@ static void __ref do_freq_control(unsigned int cpu)
 			return;
 		}
 
-		ret = cpufreq_get_policy(&policy, cpu);
+		ret = cpufreq_get_policy(&policy, 1);
 		if (ret)
 			return;
-
+		max_freq = per_cpu(limited_max_freq_thermal, 1);
 		ret = get_cpu_temp(1);
 		if (ret < 0)
 			return;
 		if (cpu_thermal_two >= msm_thermal_info.limit_temp_degC) {
-			if (limit_idx == limit_idx_low) {
+			if (per_cpu(limit_idx, 1) == per_cpu(limit_idx_low, 1)) {
 				hotplug_check_needed_two = false;
 				return;
 			}
 
-			limit_idx -= msm_thermal_info.freq_step;
-			if (limit_idx <= limit_idx_low)
-				limit_idx = limit_idx_low;
-			max_freq = table[limit_idx].frequency;
+			per_cpu(limit_idx, 1) -= msm_thermal_info.freq_step;
+			if (per_cpu(limit_idx, 1) <= per_cpu(limit_idx_low, 1))
+				per_cpu(limit_idx, 1) = per_cpu(limit_idx_low, 1);
+			max_freq = table[per_cpu(limit_idx, 1)].frequency;
 			hotplug_check_needed_two = true;
 		} else if (cpu_thermal_two < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC) {
-			if (limit_idx == limit_idx_high) {
+			if (per_cpu(limit_idx, 1) == per_cpu(limit_idx_high, 1)) {
 				hotplug_check_needed_two = false;
 				return;
 			}
 
 			max_freq = policy.hlimit_max_screen_on;
-			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
+			per_cpu(limit_idx, 1) = per_cpu(limit_idx_high, 1) = cpufreq_frequency_table_get_index(&policy, max_freq);
 			hotplug_check_needed_two = false;
 		}
 
-		if (max_freq == per_cpu(limited_max_freq_thermal, cpu)) {
+		if (max_freq == per_cpu(limited_max_freq_thermal, 1)) {
 			hotplug_check_needed_two = false;
 			return;
 		}
@@ -461,37 +464,37 @@ static void __ref do_freq_control(unsigned int cpu)
 			return;
 		}
 
-		ret = cpufreq_get_policy(&policy, cpu);
+		ret = cpufreq_get_policy(&policy, 2);
 		if (ret)
 			return;
-		
+		max_freq = per_cpu(limited_max_freq_thermal, 2);
 		ret = get_cpu_temp(2);
 		if (ret < 0)
 			return;
 		if (cpu_thermal_three >= msm_thermal_info.limit_temp_degC) {
-			if (limit_idx == limit_idx_low) {
+			if (per_cpu(limit_idx, 2) == per_cpu(limit_idx_low, 2)) {
 				hotplug_check_needed_three = false;
 				return;
 			}
 
-			limit_idx -= msm_thermal_info.freq_step;
-			if (limit_idx <= limit_idx_low)
-				limit_idx = limit_idx_low;
-			max_freq = table[limit_idx].frequency;
+			per_cpu(limit_idx, 2) -= msm_thermal_info.freq_step;
+			if (per_cpu(limit_idx, 2) <= per_cpu(limit_idx_low, 2))
+				per_cpu(limit_idx, 2) = per_cpu(limit_idx_low, 2);
+			max_freq = table[per_cpu(limit_idx, 2)].frequency;
 			hotplug_check_needed_three = true;
 		} else if (cpu_thermal_three < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC) {
-			if (limit_idx == limit_idx_high) {
+			if (per_cpu(limit_idx, 2) == per_cpu(limit_idx_high, 2)) {
 				hotplug_check_needed_three = false;
 				return;
 			}
 
 			max_freq = policy.hlimit_max_screen_on;
-			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
+			per_cpu(limit_idx, 2) = per_cpu(limit_idx_high, 2) = cpufreq_frequency_table_get_index(&policy, max_freq);
 			hotplug_check_needed_three = false;
 		}
 
-		if (max_freq == per_cpu(limited_max_freq_thermal, cpu)) {
+		if (max_freq == per_cpu(limited_max_freq_thermal, 2)) {
 			hotplug_check_needed_three = false;
 			return;
 		}
@@ -506,36 +509,36 @@ static void __ref do_freq_control(unsigned int cpu)
 			return;
 		}
 
-		ret = cpufreq_get_policy(&policy, cpu);
+		ret = cpufreq_get_policy(&policy, 3);
 		if (ret)
 			return;
-		
+		max_freq = per_cpu(limited_max_freq_thermal, 3);
 		ret = get_cpu_temp(3);
 		if (ret < 0)
 			return;
 		if (cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
-			if (limit_idx == limit_idx_low) {
+			if (per_cpu(limit_idx, 3) == per_cpu(limit_idx_low, 3)) {
 				hotplug_check_needed_four = false;
 				return;
 			}
 
-			limit_idx -= msm_thermal_info.freq_step;
-			if (limit_idx <= limit_idx_low)
-				limit_idx = limit_idx_low;
-			max_freq = table[limit_idx].frequency;
+			per_cpu(limit_idx, 3) -= msm_thermal_info.freq_step;
+			if (per_cpu(limit_idx, 3) <= per_cpu(limit_idx_low, 3))
+				per_cpu(limit_idx, 3) = per_cpu(limit_idx_low, 3);
+			max_freq = table[per_cpu(limit_idx, 3)].frequency;
 			hotplug_check_needed_four = true;
 		} else if (cpu_thermal_four < msm_thermal_info.limit_temp_degC -
 		msm_thermal_info.temp_hysteresis_degC) {
-			if (limit_idx == limit_idx_high) {
+			if (per_cpu(limit_idx, 3) == per_cpu(limit_idx_high, 3)) {
 				hotplug_check_needed_four = false;
 				return;
 			}
 			max_freq = policy.hlimit_max_screen_on;
-			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
+			per_cpu(limit_idx, 3) = per_cpu(limit_idx_high, 3) = cpufreq_frequency_table_get_index(&policy, max_freq);
 			hotplug_check_needed_four = false;
 		}
 
-		if (max_freq == per_cpu(limited_max_freq_thermal, cpu)) {
+		if (max_freq == per_cpu(limited_max_freq_thermal, 3)) {
 			hotplug_check_needed_four = false;
 			return;
 		}
@@ -549,6 +552,7 @@ static void __ref do_freq_control(unsigned int cpu)
 	return;
 }
 
+static bool do_reverse = false;
 static void __ref check_temp(struct work_struct *work)
 {
 	int ret = 0;
@@ -567,16 +571,32 @@ static void __ref check_temp(struct work_struct *work)
 			} else
 				limit_init = 1;
 		}
-		do_freq_control(cpu3);
-		do_freq_control(cpu2);
-		do_freq_control(cpu1);
-		do_freq_control(cpu0);
-		if (hotplug_check_needed_two)
-			do_core_control(cpu1);
-		if (hotplug_check_needed_three)
-			do_core_control(cpu2);
-		if (hotplug_check_needed_four)
-			do_core_control(cpu3);
+
+		if (!do_reverse) {
+			do_freq_control(cpu0);
+			do_freq_control(cpu1);
+			if (hotplug_check_needed_two)
+				do_core_control(cpu1);
+			do_freq_control(cpu2);
+			if (hotplug_check_needed_three)
+				do_core_control(cpu2);
+			do_freq_control(cpu3);
+			if (hotplug_check_needed_four)
+				do_core_control(cpu3);
+			do_reverse = true;
+		} else {
+			do_freq_control(cpu3);
+			if (hotplug_check_needed_four)
+				do_core_control(cpu3);
+			do_freq_control(cpu2);
+			if (hotplug_check_needed_three)
+				do_core_control(cpu2);
+			do_freq_control(cpu1);
+			if (hotplug_check_needed_two)
+				do_core_control(cpu1);
+			do_freq_control(cpu0);
+			do_reverse = false;
+		}
 reschedule:
 	if (enabled && !thermal_suspended)
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
