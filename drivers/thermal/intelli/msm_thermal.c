@@ -556,7 +556,6 @@ static bool do_reverse = false;
 static void __ref check_temp(struct work_struct *work)
 {
 	int ret = 0;
-	unsigned int cpu = smp_processor_id();
 
 	if (thermal_suspended)
 		return;
