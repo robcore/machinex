@@ -1601,6 +1601,8 @@ static int cpufreq_online(unsigned int cpu)
 		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+	if (!policy->limited_max_freq_thermal)
+		policy->limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 
 	hardlimit_ready = true;
 	reapply_hard_limits(policy->cpu);
