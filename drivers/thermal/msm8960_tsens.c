@@ -272,12 +272,12 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
 				   char *buf)
 {
 	struct tsens_device dev_temp;
-	unsigned long temp = 0;
+	long temp = 0;
 
 	dev_temp.sensor_num = 0;
 
 	tsens_get_temp(&dev_temp, &temp);
-	return snprintf(buf, 4, "%ld\n", temp*10);
+	return sprintf(buf, "%ld\n", temp);
 }
 
 static DEVICE_ATTR(curr_temp, 0444, show_temp, NULL);

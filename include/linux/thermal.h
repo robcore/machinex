@@ -171,7 +171,6 @@ static inline int thermal_generate_netlink_event(u32 orig, enum events event)
 	return 0;
 }
 #endif
-extern unsigned long limited_max_freq_thermal;
 bool freq_is_therm_limited(void);
 
 #endif /* __THERMAL_H__ */

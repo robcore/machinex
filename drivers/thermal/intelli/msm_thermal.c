@@ -106,43 +106,47 @@ static bool looping = false;
 
 static void get_cpu_temp(void)
 {
-	struct tsens_device *tsens_dev;
+	struct tsens_device tsens_dev;
+	long tempone;
+	long temptwo;
+	long tempthree;
+	long tempfour;
 	int ret = 0;
-	tsens_dev = kzalloc(sizeof(*tsens_dev), GFP_KERNEL);
-
-	if (tsens_dev == NULL) {
-		looping = false;
-		pr_err("NULL Tsens!!!\n");
-		return;
-	}
 
 	do {
-		tsens_dev->sensor_num = msm_thermal_info.sensor_id_one;
-		ret = tsens_get_temp(tsens_dev, &cpu_thermal_one);
+		tsens_dev.sensor_num = 7;
+		ret = tsens_get_temp(&tsens_dev, &tempone);
 		if (ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
-					KBUILD_MODNAME, tsens_dev->sensor_num);
+					KBUILD_MODNAME, tsens_dev.sensor_num);
+		} else {
+			cpu_thermal_one = tempone;
+		}
+		tsens_dev.sensor_num = 8;
+		ret = tsens_get_temp(&tsens_dev, &temptwo);
+		if (ret) {
+			pr_err("%s: Unable to read TSENS sensor %d\n",
+					KBUILD_MODNAME, tsens_dev.sensor_num);
+		} else {
+			cpu_thermal_two = temptwo;
 		}
 
-		tsens_dev->sensor_num = msm_thermal_info.sensor_id_two;
-		ret = tsens_get_temp(tsens_dev, &cpu_thermal_two);
+		tsens_dev.sensor_num = 9;
+		ret = tsens_get_temp(&tsens_dev, &tempthree);
 		if (ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
-					KBUILD_MODNAME, tsens_dev->sensor_num);
+					KBUILD_MODNAME, tsens_dev.sensor_num);
+		} else {
+			cpu_thermal_three = tempthree;
 		}
 
-		tsens_dev->sensor_num = msm_thermal_info.sensor_id_three;
-		ret = tsens_get_temp(tsens_dev, &cpu_thermal_three);
+		tsens_dev.sensor_num = 10;
+		ret = tsens_get_temp(&tsens_dev, &tempfour);
 		if (ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
-					KBUILD_MODNAME, tsens_dev->sensor_num);
-		}
-
-		tsens_dev->sensor_num = msm_thermal_info.sensor_id_four;
-		ret = tsens_get_temp(tsens_dev, &cpu_thermal_four);
-		if (ret) {
-			pr_err("%s: Unable to read TSENS sensor %d\n",
-					KBUILD_MODNAME, tsens_dev->sensor_num);
+					KBUILD_MODNAME, tsens_dev.sensor_num);
+		} else {
+			cpu_thermal_four = tempfour;
 		}
 		looping = true;
 	} while (!thermal_suspended && enabled);
@@ -150,18 +154,24 @@ static void get_cpu_temp(void)
 	looping = false;
 }
 
-static void __ref do_freq_control(int cpu)
+static void __ref do_freq_control(unsigned int cpu)
 {
 	int ret = 0;
 	struct cpufreq_policy *policy;
 
+	if (policy == NULL || !hotplug_ready ||
+		thermal_suspended) {
+		hotplug_check_needed_two = false;
+		hotplug_check_needed_three = false;
+		hotplug_check_needed_four = false;
+		pr_err("frequency control not ready!\n");		
+		return;
+	}
+
+	if (!looping)
+		get_cpu_temp();
+
 	if (cpu == 0) {
-		if (!hotplug_ready || thermal_suspended) {
-			hotplug_check_needed_two = false;
-			hotplug_check_needed_three = false;
-			hotplug_check_needed_four = false;
-			return;
-		}
 		ret = cpufreq_get_policy(policy, cpu);
 		if (ret)
 			return;
@@ -175,8 +185,8 @@ static void __ref do_freq_control(int cpu)
 				policy->limited_max_freq_thermal = policy->hlimit_max_screen_on;
 			}
 		}
-		reapply_hard_limits(policy->cpu);
-		cpufreq_update_policy(policy->cpu);
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	} else if (cpu == 1) {
 		if (!hotplug_ready || thermal_suspended) {
 			hotplug_check_needed_two = false;
@@ -202,8 +212,8 @@ static void __ref do_freq_control(int cpu)
 			}
 		}
 		
-		reapply_hard_limits(policy->cpu);
-		cpufreq_update_policy(policy->cpu);
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	} else if (cpu == 2) {
 		if (!hotplug_ready || thermal_suspended) {
 			hotplug_check_needed_two = false;
@@ -228,8 +238,8 @@ static void __ref do_freq_control(int cpu)
 				hotplug_check_needed_three = false;
 			}
 		}
-		reapply_hard_limits(policy->cpu);
-		cpufreq_update_policy(policy->cpu);
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	} else if (cpu == 3) {
 		if (!hotplug_ready || thermal_suspended) {
 			hotplug_check_needed_two = false;
@@ -254,32 +264,36 @@ static void __ref do_freq_control(int cpu)
 				hotplug_check_needed_four = false;
 			}
 		}
-		reapply_hard_limits(policy->cpu);
-		cpufreq_update_policy(policy->cpu);
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	}
 }
 
-static void __ref do_core_control(int cpu)
+static void __ref do_core_control(unsigned int cpu)
 {
 	int ret = 0;
 
-	switch (cpu) {
-	case 0:
-	return;
-
-	case 1:
 	if ((!core_control_enabled) || (intelli_init() ||
 		 !hotplug_ready || thermal_suspended)) {
 		thermal_core_controlled = false;
 		return;
 	}
-	mutex_lock(&core_control_mutex);
+
+	if (!looping)
+		get_cpu_temp();
+
+	switch (cpu) {
+		case 0:
+	return;
+
+		case 1:
+		mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
 		   (cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC)) {
 			if (!(msm_thermal_info.core_control_mask & BIT(cpu)))
-				goto complete;
+				break;
 			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
-				goto complete;
+				break;
 			ret = cpu_down(cpu);
 			if (ret) {
 				thermal_core_controlled = false;
@@ -287,17 +301,17 @@ static void __ref do_core_control(int cpu)
 				thermal_core_controlled = true;
 			}
 			cpus_offlined |= BIT(cpu);
-			goto complete;
+			break;
 		} else if (cpu_thermal_two <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) {
 			if (!(cpus_offlined & BIT(cpu)))
-				goto complete;
+				break;
 			cpus_offlined &= ~BIT(cpu);
 			/* If this core is already online, then bring up the
 			 * next offlined core.
 			 */
 			if (cpu_online(cpu))
-				goto complete;
+				break;
 			ret = cpu_up(cpu);
 			if (ret) {
 				thermal_core_controlled = true;
@@ -308,21 +322,16 @@ static void __ref do_core_control(int cpu)
 				pr_debug("%s: Success %d online core %d\n",
 						KBUILD_MODNAME, ret, cpu);
 			}
-			goto complete;
+			break;
 		}
-	case 2:
-	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready || thermal_suspended)) {
-		thermal_core_controlled = false;
-		return;
-	}
-	mutex_lock(&core_control_mutex);
+		case 2:
+		mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
 		   (cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC)) {
 			if (!(msm_thermal_info.core_control_mask & BIT(cpu)))
-				goto complete;
+				break;
 			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
-				goto complete;
+				break;
 			ret = cpu_down(cpu);
 			if (ret) {
 				thermal_core_controlled = false;
@@ -330,17 +339,17 @@ static void __ref do_core_control(int cpu)
 				thermal_core_controlled = true;
 			}
 			cpus_offlined |= BIT(cpu);
-			goto complete;
+			break;
 		} else if (cpu_thermal_three <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) {
 			if (!(cpus_offlined & BIT(cpu)))
-				goto complete;
+				break;
 			cpus_offlined &= ~BIT(cpu);
 			/* If this core is already online, then bring up the
 			 * next offlined core.
 			 */
 			if (cpu_online(cpu))
-				goto complete;
+				break;
 			ret = cpu_up(cpu);
 			if (ret) {
 				thermal_core_controlled = true;
@@ -351,21 +360,16 @@ static void __ref do_core_control(int cpu)
 				pr_debug("%s: Success %d online core %d\n",
 						KBUILD_MODNAME, ret, cpu);
 			}
-			goto complete;
+			break;
 		}
-	case 3:
-	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready || thermal_suspended)) {
-		thermal_core_controlled = false;
-		return;
-	}
-	mutex_lock(&core_control_mutex);
+		case 3:
+		mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
 		   (cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
 			if (!(msm_thermal_info.core_control_mask & BIT(cpu)))
-				goto complete;
+				break;
 			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
-				goto complete;
+				break;
 			ret = cpu_down(cpu);
 			if (ret) {
 				thermal_core_controlled = false;
@@ -373,17 +377,17 @@ static void __ref do_core_control(int cpu)
 				thermal_core_controlled = true;
 			}
 			cpus_offlined |= BIT(cpu);
-			goto complete;
+			break;
 		} else if (cpu_thermal_four <= (msm_thermal_info.core_limit_temp_degC -
 			msm_thermal_info.core_temp_hysteresis_degC)) {
 			if (!(cpus_offlined & BIT(cpu)))
-				goto complete;
+				break;
 			cpus_offlined &= ~BIT(cpu);
 			/* If this core is already online, then bring up the
 			 * next offlined core.
 			 */
 			if (cpu_online(cpu))
-				goto complete;
+				break;
 			ret = cpu_up(cpu);
 			if (ret) {
 				thermal_core_controlled = true;
@@ -394,12 +398,11 @@ static void __ref do_core_control(int cpu)
 				pr_debug("%s: Success %d online core %d\n",
 						KBUILD_MODNAME, ret, cpu);
 			}
-			goto complete;
+			break;
 		}
 	}
-complete:
+
 	mutex_unlock(&core_control_mutex);
-	return;
 }
 
 static void __ref check_temp(struct work_struct *work)
@@ -431,7 +434,7 @@ reschedule:
 static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
-	int cpu = (unsigned long)hcpu;
+	unsigned int cpu = (unsigned long)hcpu;
 
 	if (thermal_suspended || !hotplug_ready)
 		return NOTIFY_OK;
@@ -460,7 +463,7 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 static int msm_thermal_pm_event(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 	switch (event) {
 	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
@@ -489,7 +492,7 @@ static struct notifier_block msm_thermal_pm_notifier = {
  */
 static void __ref disable_msm_thermal(void)
 {
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy;
 
 	cancel_delayed_work_sync(&check_temp_work);
@@ -501,8 +504,8 @@ static void __ref disable_msm_thermal(void)
 
 	for_each_possible_cpu(cpu) {
 		policy->limited_max_freq_thermal = policy->hlimit_max_screen_on;
-		reapply_hard_limits(policy->cpu);
-		cpufreq_update_policy(policy->cpu);
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 	}	
 }
 
@@ -542,7 +545,7 @@ MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
 /* Call with core_control_mutex locked */
 static int __ref update_offline_cores(int val)
 {
-	int cpu = smp_processor_id();
+	unsigned int cpu = smp_processor_id();
 	int ret = 0;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
@@ -697,10 +700,6 @@ done_cc_nodes:
 int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
 	BUG_ON(!pdata);
-	BUG_ON(pdata->sensor_id_one >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_two >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_three >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_four >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(struct msm_thermal_data));
 
 	cpu0 = cpumask_first(cpu_possible_mask);
@@ -752,3 +751,7 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("intelligent thermal driver for Qualcomm based SOCs");
 MODULE_DESCRIPTION("originally from Qualcomm's open source repo");
 
+	BUG_ON(pdata->sensor_id_one >= TSENS_MAX_SENSORS ||
+	pdata->sensor_id_two >= TSENS_MAX_SENSORS ||
+	pdata->sensor_id_three >= TSENS_MAX_SENSORS ||
+	pdata->sensor_id_four >= TSENS_MAX_SENSORS);
