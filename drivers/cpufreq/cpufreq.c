@@ -35,10 +35,10 @@
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
-static unsigned int hlimit_max_screen_on;
-static unsigned int hlimit_max_screen_off;
-static unsigned int hlimit_min_screen_on;
-static unsigned int hlimit_min_screen_off;
+unsigned int hlimit_max_screen_on;
+unsigned int hlimit_max_screen_off;
+unsigned int hlimit_min_screen_on;
+unsigned int hlimit_min_screen_off;
 bool hardlimit_ready = false;
 unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
@@ -1608,8 +1608,8 @@ static int cpufreq_online(unsigned int cpu)
 	reapply_hard_limits(policy->cpu);
 
 	if (new_policy) {
-		policy->user_policy.min = policy->min;
-		policy->user_policy.max = policy->max;
+		policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
+		policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
 
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
