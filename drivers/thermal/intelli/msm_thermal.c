@@ -81,7 +81,6 @@ static long cpu_thermal_four;
 	.cpu3,
 };
 */
-unsigned int limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 static bool thermal_suspended;
 /* module parameters */
 module_param_named(poll_ms, msm_thermal_info.poll_ms, uint, 0664);
@@ -181,12 +180,12 @@ static void __ref do_freq_control(unsigned int cpu)
 			hotplug_check_needed_four = false;
 			return;
 		}
-		ret = cpufreq_get_policy(policy, 0);
+		ret = cpufreq_get_policy(policy, cpu);
 		if (ret)
 			return;
-		max_freq = limited_max_freq_thermal;
-		ret = get_cpu_temp(0);
-		if (ret < 0)
+		max_freq = policy->limited_max_freq_thermal;
+		ret = get_cpu_temp(cpu);
+		if (ret)
 			return;
 		if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC) {
 			max_freq = thermal_min_hardlimit;
@@ -198,9 +197,9 @@ static void __ref do_freq_control(unsigned int cpu)
 				max_freq = policy->hlimit_max_screen_on;
 			}
 		}
-		limited_max_freq_thermal = max_freq;
-		reapply_hard_limits(0);
-		cpufreq_update_policy(0);
+		policy->limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 		break;
 
 		case 1:
@@ -211,12 +210,12 @@ static void __ref do_freq_control(unsigned int cpu)
 			return;
 		}
 
-		ret = cpufreq_get_policy(policy, 1);
+		ret = cpufreq_get_policy(policy, cpu);
 		if (ret)
 			return;
-		max_freq = limited_max_freq_thermal;
-		ret = get_cpu_temp(1);
-		if (ret < 0)
+		max_freq = policy->limited_max_freq_thermal;
+		ret = get_cpu_temp(cpu);
+		if (ret)
 			return;
 		if (cpu_thermal_two >= msm_thermal_info.limit_temp_degC) {
 			max_freq = thermal_min_hardlimit;
@@ -231,9 +230,9 @@ static void __ref do_freq_control(unsigned int cpu)
 			}
 		}
 		
-		limited_max_freq_thermal = max_freq;
-		reapply_hard_limits(1);
-		cpufreq_update_policy(1);
+		policy->limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 		break;
 
 		case 2:
@@ -244,12 +243,12 @@ static void __ref do_freq_control(unsigned int cpu)
 			return;
 		}
 
-		ret = cpufreq_get_policy(policy, 2);
+		ret = cpufreq_get_policy(policy, cpu);
 		if (ret)
 			return;
-		max_freq = limited_max_freq_thermal;
-		ret = get_cpu_temp(2);
-		if (ret < 0)
+		max_freq = policy->limited_max_freq_thermal;
+		ret = get_cpu_temp(cpu);
+		if (ret)
 			return;
 		if (cpu_thermal_three >= msm_thermal_info.limit_temp_degC) {
 			max_freq = thermal_min_hardlimit;
@@ -263,9 +262,9 @@ static void __ref do_freq_control(unsigned int cpu)
 				hotplug_check_needed_three = false;
 			}
 		}
-		limited_max_freq_thermal = max_freq;
-		reapply_hard_limits(2);
-		cpufreq_update_policy(2);
+		policy->limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 		break;
 
 		case 3:
@@ -276,12 +275,12 @@ static void __ref do_freq_control(unsigned int cpu)
 			return;
 		}
 
-		ret = cpufreq_get_policy(policy, 3);
+		ret = cpufreq_get_policy(policy, cpu);
 		if (ret)
 			return;
-		max_freq = limited_max_freq_thermal;
-		ret = get_cpu_temp(3);
-		if (ret < 0)
+		max_freq = policy->limited_max_freq_thermal;
+		ret = get_cpu_temp(cpu);
+		if (ret)
 			return;
 		if (cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
 			max_freq = thermal_min_hardlimit;
@@ -295,9 +294,9 @@ static void __ref do_freq_control(unsigned int cpu)
 				hotplug_check_needed_four = false;
 			}
 		}
-		limited_max_freq_thermal = max_freq;
-		reapply_hard_limits(3);
-		cpufreq_update_policy(3);
+		policy->limited_max_freq_thermal = max_freq;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
 
 		break;
 
@@ -322,8 +321,8 @@ static void __ref do_core_control(unsigned int cpu)
 		thermal_core_controlled = false;
 		return;
 	}
-	ret = get_cpu_temp(1);
-	if (ret < 0)
+	ret = get_cpu_temp(cpu);
+	if (ret)
 		return;
 	mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
@@ -368,8 +367,8 @@ static void __ref do_core_control(unsigned int cpu)
 		thermal_core_controlled = false;
 		return;
 	}
-	ret = get_cpu_temp(2);
-	if (ret < 0)
+	ret = get_cpu_temp(cpu);
+	if (ret)
 		return;
 	mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
@@ -414,8 +413,8 @@ static void __ref do_core_control(unsigned int cpu)
 		thermal_core_controlled = false;
 		return;
 	}
-	ret = get_cpu_temp(3);
-	if (ret < 0)
+	ret = get_cpu_temp(cpu);
+	if (ret)
 		return;
 	mutex_lock(&core_control_mutex);
 		if (msm_thermal_info.core_control_mask && 
@@ -554,7 +553,7 @@ static void __ref disable_msm_thermal(void)
 				return;
 
 	for_each_possible_cpu(cpu) {
-		limited_max_freq_thermal = policy->hlimit_max_screen_on;
+		policy->limited_max_freq_thermal = policy->hlimit_max_screen_on;
 		reapply_hard_limits(cpu);
 		cpufreq_update_policy(cpu);
 	}	
