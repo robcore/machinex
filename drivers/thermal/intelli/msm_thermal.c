@@ -159,6 +159,8 @@ static void __ref do_freq_control(unsigned int cpu)
 	int ret = 0;
 	struct cpufreq_policy *policy;
 
+	policy = cpufreq_cpu_get_raw(cpu);
+
 	if (policy == NULL || !hotplug_ready ||
 		thermal_suspended) {
 		hotplug_check_needed_two = false;
@@ -411,6 +413,9 @@ static void __ref check_temp(struct work_struct *work)
 
 	if (thermal_suspended)
 		return;
+
+	if (!hotplug_ready)
+		goto reschedule;
 
 	if (!looping)
 		get_cpu_temp();
@@ -718,7 +723,6 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
-	get_cpu_temp(); /*start our temperature checking loop*/
 	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 
 	return 0;
@@ -750,8 +754,3 @@ MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("intelligent thermal driver for Qualcomm based SOCs");
 MODULE_DESCRIPTION("originally from Qualcomm's open source repo");
-
-	BUG_ON(pdata->sensor_id_one >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_two >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_three >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_four >= TSENS_MAX_SENSORS);
