@@ -109,6 +109,7 @@ static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
 	int ret = 0;
+	unsigned int i = 0;
 	unsigned int cpu = 0;
 
 	policy = cpufreq_cpu_get_raw(cpu);
@@ -124,8 +125,11 @@ static int msm_thermal_get_freq_table(void)
 		goto fail;
 	}
 
-	limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(policy, policy->hlimit_max_screen_on);
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+		limit_idx_high = limit_idx = i = cpufreq_frequency_table_get_index(policy, policy->hlimit_max_screen_on);
+	}
 	limit_idx_low = 4;
+
 
 	BUG_ON(limit_idx_high == 0 || limit_idx_high <= limit_idx_low);
 fail:
