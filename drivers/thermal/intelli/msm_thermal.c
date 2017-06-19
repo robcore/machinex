@@ -63,7 +63,7 @@ static unsigned long cpu_thermal_one;
 static unsigned long cpu_thermal_two;
 static unsigned long cpu_thermal_three;
 static unsigned long cpu_thermal_four;
-unsigned int limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+unsigned int limited_max_freq_thermal;
 
 
 /*static struct thermal_policy thermal_policy = {
