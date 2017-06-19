@@ -79,7 +79,7 @@ struct ip_suspend {
 	unsigned int intelli_suspended;
 };
 
-static DEFINE_PER_CPU(struct ip_suspend, i_suspend_data);
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_suspend, i_suspend_data);
 
 #define dprintk(msg...)		\
 do {				\

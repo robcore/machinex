@@ -83,7 +83,7 @@ static long cpu_thermal_four;
 */
 unsigned long limited_max_freq_thermal;
 DEFINE_PER_CPU(unsigned long, limited_max_freq_thermal);
-
+static DEFINE_PER_CPU(unsigned int, thermal_suspended);
 /* module parameters */
 module_param_named(poll_ms, msm_thermal_info.poll_ms, uint, 0664);
 module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
@@ -100,26 +100,25 @@ module_param_named(freq_limit_hysteresis, msm_thermal_info.temp_hysteresis_degC,
 module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_degC,
 			 int, 0644);
 
-static bool thermal_suspended;
 static bool therm_freq_limited;
 static bool hotplug_check_needed_two;
 static bool hotplug_check_needed_three;
 static bool hotplug_check_needed_four;
 
-static int msm_thermal_get_freq_table(unsigned int cpu)
+static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
 	int ret = 0;
 	unsigned int i = 0;
+	unsigned int cpu = 0;
 
 	policy = cpufreq_cpu_get_raw(cpu);
-
-	if (policy == NULL || thermal_suspended) {
+	if (policy == NULL || per_cpu(thermal_suspended, cpu)) {
 		ret = -EINVAL;
 		goto fail;
 	}
 
-	table = cpufreq_frequency_get_table(cpu);
+	table = policy->freq_table;
 	if (table == NULL) {
 		pr_debug("%s: error reading cpufreq table\n", KBUILD_MODNAME);
 		ret = -EINVAL;
@@ -129,7 +128,7 @@ static int msm_thermal_get_freq_table(unsigned int cpu)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
-	limit_idx_low = 4;
+	limit_idx_low = 0;
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high == 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -141,7 +140,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 	struct cpufreq_policy policy;
 	int ret;
 
-	if (thermal_suspended)
+	if (per_cpu(thermal_suspended, cpu))
 		return;
 
 	ret = cpufreq_get_policy(&policy, cpu);
@@ -165,7 +164,7 @@ static int get_cpu_temp(unsigned int cpu)
 	long temp_four = 0;
 	int ret = 0;
 
-	if (thermal_suspended)
+	if (per_cpu(thermal_suspended, cpu))
 		return -EINVAL;
 
 	switch (cpu) {
@@ -225,7 +224,7 @@ static void __ref do_core_control(unsigned int cpu)
 
 	case 1:
 	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready || thermal_suspended)) {
+		 !hotplug_ready || per_cpu(thermal_suspended, cpu))) {
 		thermal_core_controlled = false;
 		return;
 	}
@@ -271,7 +270,7 @@ static void __ref do_core_control(unsigned int cpu)
 		}
 	case 2:
 	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready || thermal_suspended)) {
+		 !hotplug_ready || per_cpu(thermal_suspended, cpu))) {
 		thermal_core_controlled = false;
 		return;
 	}
@@ -317,7 +316,7 @@ static void __ref do_core_control(unsigned int cpu)
 		}
 	case 3:
 	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready || thermal_suspended)) {
+		 !hotplug_ready || per_cpu(thermal_suspended, cpu))) {
 		thermal_core_controlled = false;
 		return;
 	}
@@ -371,24 +370,20 @@ static void __ref do_freq_control(unsigned int cpu)
 {
 	int ret = 0;
 	struct cpufreq_policy policy;
-	unsigned long max_freq;
-
-	for_each_possible_cpu(cpu) {
-		ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			return;
-
-		max_freq = per_cpu(limited_max_freq_thermal, cpu);
-	}
+	unsigned long max_freq = per_cpu(limited_max_freq_thermal, cpu);
 
 	switch (cpu) {
 		case 0:
-		if (!hotplug_ready || thermal_suspended) {
+		if (!hotplug_ready || per_cpu(thermal_suspended, cpu)) {
 			hotplug_check_needed_two = false;
 			hotplug_check_needed_three = false;
 			hotplug_check_needed_four = false;
 			return;
 		}
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
+
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
 			return;
@@ -420,12 +415,16 @@ static void __ref do_freq_control(unsigned int cpu)
 		}
 		break;
 		case 1:
-		if (!hotplug_ready || thermal_suspended) {
+		if (!hotplug_ready || per_cpu(thermal_suspended, cpu)) {
 			hotplug_check_needed_two = false;
 			hotplug_check_needed_three = false;
 			hotplug_check_needed_four = false;
 			return;
 		}
+
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
 
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
@@ -465,13 +464,16 @@ static void __ref do_freq_control(unsigned int cpu)
 		break;
 
 		case 2:
-		if (!hotplug_ready || thermal_suspended) {
+		if (!hotplug_ready || per_cpu(thermal_suspended, cpu)) {
 			hotplug_check_needed_two = false;
 			hotplug_check_needed_three = false;
 			hotplug_check_needed_four = false;
 			return;
 		}
-		
+
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
 		
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
@@ -511,13 +513,16 @@ static void __ref do_freq_control(unsigned int cpu)
 		break;
 
 		case 3:
-		if (!hotplug_ready || thermal_suspended) {
+		if (!hotplug_ready || per_cpu(thermal_suspended, cpu)) {
 			hotplug_check_needed_two = false;
 			hotplug_check_needed_three = false;
 			hotplug_check_needed_four = false;
 			return;
 		}
 
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			return;
 		
 		ret = get_cpu_temp(cpu);
 		if (ret < 0)
@@ -567,34 +572,31 @@ static void __ref do_freq_control(unsigned int cpu)
 static void __ref check_temp(struct work_struct *work)
 {
 	int ret = 0;
+	unsigned int cpu = smp_processor_id();
 
-	if (thermal_suspended)
+	if (per_cpu(thermal_suspended, cpu))
 		return;
 
+	if (!hotplug_ready)
+		goto reschedule;
+
 		if (!limit_init) {
-			ret = msm_thermal_get_freq_table(cpu0);
+			ret = msm_thermal_get_freq_table();
 			if (ret) {
 				goto reschedule;
 			} else
 				limit_init = 1;
 		}
 
-	if (!thermal_suspended)
 		do_freq_control(cpu0);
-	if (!thermal_suspended)
 		do_freq_control(cpu1);
-	if (!thermal_suspended)
 		do_freq_control(cpu2);
-	if (!thermal_suspended)
 		do_freq_control(cpu3);
-	if (hotplug_check_needed_two && !thermal_suspended)
 		do_core_control(cpu1);
-	if (hotplug_check_needed_three && !thermal_suspended)
 		do_core_control(cpu2);
-	if (hotplug_check_needed_four && !thermal_suspended)
 		do_core_control(cpu3);
 reschedule:
-	if (enabled && !thermal_suspended)
+	if (enabled && !per_cpu(thermal_suspended, cpu))
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
@@ -604,7 +606,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 
-	if (thermal_suspended || !hotplug_ready)
+	if (per_cpu(thermal_suspended, cpu) || !hotplug_ready)
 		return NOTIFY_OK;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
@@ -631,15 +633,16 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 static int msm_thermal_pm_event(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
+	unsigned int cpu = smp_processor_id();
 	switch (event) {
 	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
-		thermal_suspended = false;
+		per_cpu(thermal_suspended, cpu) = 0;
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 		break;
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
-		thermal_suspended = true;
+		per_cpu(thermal_suspended, cpu) = 1;
 		break;
 	default:
 		break;
@@ -664,16 +667,16 @@ static void __ref disable_msm_thermal(void)
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	for_each_possible_cpu(cpu) {
 		policy = cpufreq_cpu_get_raw(cpu);
 			if (!policy)
 				return;
+
+	for_each_possible_cpu(cpu) {
 		if (per_cpu(limited_max_freq_thermal, cpu) == policy->hlimit_max_screen_on)
 			return;
 		else
 			(per_cpu(limited_max_freq_thermal, cpu) = policy->hlimit_max_screen_on);
-
-		update_cpu_max_freq(cpu, per_cpu(limited_max_freq_thermal, cpu));
+	update_cpu_max_freq(cpu, per_cpu(limited_max_freq_thermal, cpu));
 	}	
 }
 
@@ -716,7 +719,7 @@ static int __ref update_offline_cores(int val)
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	if (!core_control_enabled || intelli_init() ||
-		thermal_suspended || !hotplug_ready)
+		per_cpu(thermal_suspended, cpu) || !hotplug_ready)
 		return ret;
 
 	for_each_possible_cpu(cpu) {
@@ -874,8 +877,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	cpu1 = cpumask_next(0, cpu_possible_mask);
 	cpu2 = cpumask_next(1, cpu_possible_mask);
 	cpu3 = cpumask_next(2, cpu_possible_mask);
-	pr_info("%s: Registered CPUs \
-			%u, %u, %u, %u\n", KBUILD_MODNAME, cpu0, cpu1, cpu2, cpu3);
+	pr_info("%s: Registered CPUs %u, %u, %u, %u\n", KBUILD_MODNAME, cpu0, cpu1, cpu2, cpu3);
 
 	enabled = 1;
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
