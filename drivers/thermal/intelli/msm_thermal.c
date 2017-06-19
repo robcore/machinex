@@ -155,12 +155,12 @@ static void update_cpu_max_freq(int cpu, unsigned long max_freq)
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
-	if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
-		continue;
-	reapply_hard_limits(cpu);
-	limited_max_freq_thermal = max_freq;
-	cpufreq_update_policy(cpu);
-	}
+		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
+			continue;
+		reapply_hard_limits(cpu);
+		limited_max_freq_thermal = max_freq;
+		cpufreq_update_policy(cpu);
+		}
 	put_online_cpus();
 	return;
 }
