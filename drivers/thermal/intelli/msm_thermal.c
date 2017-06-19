@@ -109,7 +109,6 @@ static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
 	int ret = 0;
-	unsigned int i = 0;
 	unsigned int cpu = 0;
 
 	policy = cpufreq_cpu_get_raw(cpu);
@@ -125,11 +124,8 @@ static int msm_thermal_get_freq_table(void)
 		goto fail;
 	}
 
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-		limit_idx_high = limit_idx = i;
-	}
-		limit_idx_low = 4;
-
+	limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(policy, policy->hlimit_max_screen_on);
+	limit_idx_low = 4;
 
 	BUG_ON(limit_idx_high == 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -399,8 +395,8 @@ static void __ref do_freq_control(unsigned int cpu)
 		msm_thermal_info.temp_hysteresis_degC) {
 			if (limit_idx == limit_idx_high)
 				return;
-			limit_idx = limit_idx_high;
 			max_freq = policy.hlimit_max_screen_on;
+			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
 		}
 
 		if (max_freq == per_cpu(limited_max_freq_thermal, cpu))
@@ -441,8 +437,8 @@ static void __ref do_freq_control(unsigned int cpu)
 				return;
 			}
 
-			limit_idx = limit_idx_high;
 			max_freq = policy.hlimit_max_screen_on;
+			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
 			hotplug_check_needed_two = false;
 		}
 
@@ -486,8 +482,8 @@ static void __ref do_freq_control(unsigned int cpu)
 				return;
 			}
 
-			limit_idx = limit_idx_high;
 			max_freq = policy.hlimit_max_screen_on;
+			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
 			hotplug_check_needed_three = false;
 		}
 
@@ -530,9 +526,9 @@ static void __ref do_freq_control(unsigned int cpu)
 				hotplug_check_needed_four = false;
 				return;
 			}
-				limit_idx = limit_idx_high;
-				max_freq = policy.hlimit_max_screen_on;
-				hotplug_check_needed_four = false;
+			max_freq = policy.hlimit_max_screen_on;
+			limit_idx = limit_idx_high = cpufreq_frequency_table_get_index(&policy, max_freq);
+			hotplug_check_needed_four = false;
 		}
 
 		if (max_freq == per_cpu(limited_max_freq_thermal, cpu)) {
