@@ -1608,15 +1608,16 @@ static int cpufreq_online(unsigned int cpu)
 	if (new_policy) {
 		policy->user_policy.min = policy->min;
 		policy->user_policy.max = policy->max;
+		reapply_hard_limits(policy->cpu);
 
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
 			add_cpu_dev_symlink(policy, j);
 		}
-		reapply_hard_limits(policy->cpu);
 	} else {
 		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
 		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
+		reapply_hard_limits(policy->cpu);
 	}
 
 
