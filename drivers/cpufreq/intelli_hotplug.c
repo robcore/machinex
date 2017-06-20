@@ -73,7 +73,6 @@ static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
 static unsigned int debug_intelli_plug = 0;
-static u64 gov_lock_duration = 5000;
 
 struct ip_suspend {
 	struct mutex intellisleep_mutex;
@@ -292,7 +291,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 				cpu_up(cpu);
 			apply_down_lock(cpu);
-			if (target <= num_online_cpus())
+			if (num_online_cpus() = target)
 				break;
 		}
 	}
