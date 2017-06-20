@@ -175,6 +175,7 @@ static int msm_thermal_get_freq_table(void)
 	}
 	BUG_ON(thermal_limit_high <= 0);
 	pr_info("MSM Thermal: %d frequency steps found for use\n", thermal_limit_high);
+	pr_info("MSM Thermal: Initial thermal_limit_low is %d\n", table[thermal_limit_low].frequency);
 
 fail:
 	return ret;
