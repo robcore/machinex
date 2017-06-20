@@ -27,8 +27,8 @@
 #define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
-#define DEFAULT_MIN_CPUS_ONLINE 1
-#define DEF_SAMPLING_MS			60
+#define DEFAULT_MIN_CPUS_ONLINE 2
+#define DEF_SAMPLING_MS			70
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			95000
 #define INPUT_INTERVAL			2000
@@ -61,7 +61,7 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
-static unsigned int min_cpus_online = 2;
+static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
@@ -422,7 +422,7 @@ static void cycle_cpus(void)
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
+	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
 
 	intellinit = false;
@@ -758,7 +758,7 @@ static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
 
 #define KERNEL_ATTR_RO(_name) \
-static struct kobj_attribute _name##_attr val= \
+static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0444, show_##_name, NULL)
 
 KERNEL_ATTR_RW(intelli_plug_active);
