@@ -154,7 +154,7 @@ static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
 	int ret = 0;
-	int i = 0;
+	int i;
 
 	policy = cpufreq_cpu_get_raw(0);
 
@@ -165,17 +165,16 @@ static int msm_thermal_get_freq_table(void)
 
 	table = policy->freq_table;
 	if (table == NULL) {
-		pr_debug("%s: error reading cpufreq table\n", KBUILD_MODNAME);
 		ret = -EINVAL;
 		goto fail;
 	}
 
-	while (table[i].frequency != CPUFREQ_TABLE_END)
-		i++;
-
-	thermal_limit_low = 4;
-	thermal_limit_high = limit_idx = i - 1;
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+		thermal_limit_low = 4;
+		thermal_limit_high = limit_idx = i - 1;
+	}
 	BUG_ON(thermal_limit_high <= 0);
+	pr_info("MSM Thermal: %d frequency steps found for use\n", thermal_limit_high);
 
 fail:
 	return ret;
@@ -290,7 +289,7 @@ static void __ref do_freq_control(void)
 		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == thermal_limit_low) {
-			hotplug_check_needed = false;
+			hotplug_check_needed = true;
 			return;
 		}
 		limit_idx -= msm_thermal_info.freq_step;
