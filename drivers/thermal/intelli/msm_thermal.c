@@ -120,37 +120,6 @@ static const struct kernel_param_ops param_ops_thermal_limit_low = {
 
 module_param_cb(thermal_limit_low, &param_ops_thermal_limit_low, NULL, 0644);
 
-static int set_thermal_limit_high(const char *buf, const struct kernel_param *kp)
-{
-	unsigned int val;
-
-	/* single number: apply to all CPUs */
-	if (sscanf(buf, "%u\n", &val) != 1)
-		return -EINVAL;
-
-	sanitize_min_max(val, 1, 15);
-
-	thermal_limit_high = val;
-
-	return 0;
-}
-
-static int get_thermal_limit_high(char *buf, const struct kernel_param *kp)
-{
-	ssize_t ret;
-
-	ret = sprintf(buf, "%d\n", thermal_limit_high);
-
-	return ret;
-}
-
-static const struct kernel_param_ops param_ops_thermal_limit_high = {
-	.set = set_thermal_limit_high,
-	.get = get_thermal_limit_high,
-};
-
-module_param_cb(thermal_limit_high, &param_ops_thermal_limit_high, NULL, 0644);
-
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
