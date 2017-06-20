@@ -269,6 +269,8 @@ static void cpu_up_down_work(struct work_struct *work)
 		for_each_online_cpu(cpu) {
 			if (cpu == primary)
 				continue;
+			if (!cpu_online(cpu))
+				continue;
 			if (check_down_lock(cpu))
 				break;
 			l_nr_threshold =
@@ -286,6 +288,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	} else if (target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == primary)
+				continue;
+			if (cpu_online(cpu))
 				continue;
 			if (thermal_core_controlled)
 				goto reschedule;
