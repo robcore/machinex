@@ -27,6 +27,7 @@
 #define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
+#define DEFAULT_MIN_CPUS_ONLINE 1
 #define DEF_SAMPLING_MS			60
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			95000
@@ -330,7 +331,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
 		return;
 
-	if (num_online_cpus() >= cpus_boosted ||
+	if (num_online_cpus() > cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
 
@@ -726,8 +727,8 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	if (ret != 1 || val < 1 || val > NR_CPUS)
 		return -EINVAL;
 
-	if (max_cpus_online < val)
-		max_cpus_online = val;
+	if (val > max_cpus_online)
+		val = max_cpus_online;
 
 	min_cpus_online = val;
 
@@ -745,8 +746,8 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	if (ret != 1 || val < 1 || val > NR_CPUS)
 		return -EINVAL;
 
-	if (min_cpus_online > val)
-		min_cpus_online = val;
+	if (val < min_cpus_online)
+		val = min_cpus_online;
 
 	max_cpus_online = val;
 
@@ -758,7 +759,7 @@ static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
 
 #define KERNEL_ATTR_RO(_name) \
-static struct kobj_attribute _name##_attr = \
+static struct kobj_attribute _name##_attr val= \
 	__ATTR(_name, 0444, show_##_name, NULL)
 
 KERNEL_ATTR_RW(intelli_plug_active);
