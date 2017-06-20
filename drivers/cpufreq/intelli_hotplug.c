@@ -239,6 +239,9 @@ static void cpu_up_down_work(struct work_struct *work)
 	u64 now;
 	u64 delta;
 
+	if (thermal_core_controlled)
+		goto reschedule;
+
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
@@ -248,18 +251,15 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	primary = cpumask_first(cpu_online_mask);
 
-	if (target < min_cpus_online)
+	if (target <= min_cpus_online)
 		target = min_cpus_online;
-	else if (target > max_cpus_online)
+	else if (target >= max_cpus_online)
 		target = max_cpus_online;
 
 	online_cpus = num_online_cpus();
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
-
-	if (thermal_core_controlled)
-		goto reschedule;
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
@@ -280,7 +280,7 @@ static void cpu_up_down_work(struct work_struct *work)
 					goto reschedule;
 				cpu_down(cpu);
 			}
-			if (target >= num_online_cpus())
+			if (num_online_cpus() == target)
 				break;
 		}
 	} else if (target > online_cpus) {
