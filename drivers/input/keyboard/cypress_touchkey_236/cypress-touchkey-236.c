@@ -1928,14 +1928,10 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 		}
 #endif
 
-
-	info->is_powering_on = false;
-
 #if defined(CONFIG_GLOVE_TOUCH)
-		tkey_info = info;
+	tkey_info = info;
 #endif
-
-	printk(KERN_INFO "[Touchkey] DONE(%s)!\n", __func__);
+	info->is_powering_on = false;
 	return 0;
 
 
