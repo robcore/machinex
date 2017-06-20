@@ -3169,7 +3169,7 @@ static int tabla_codec_enable_anc(struct snd_soc_dapm_widget *w,
 
 		filename = "wcd9310/wcd9310_anc.bin";
 
-		ret = request_firmware(&fw, filename, codec->dev);
+		ret = request_firmware_direct(&fw, filename, codec->dev);
 		if (ret != 0) {
 			dev_err(codec->dev, "Failed to acquire ANC data: %d\n",
 				ret);
@@ -8221,7 +8221,7 @@ static void mbhc_fw_read(struct work_struct *work)
 		retry++;
 		pr_info("%s:Attempt %d to request MBHC firmware\n",
 			__func__, retry);
-		ret = request_firmware(&fw, "wcd9310/wcd9310_mbhc.bin",
+		ret = request_firmware_direct(&fw, "wcd9310/wcd9310_mbhc.bin",
 					codec->dev);
 
 		if (ret != 0) {
