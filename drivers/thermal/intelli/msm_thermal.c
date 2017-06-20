@@ -34,7 +34,7 @@
 #include <linux/sysfs_helpers.h>
 #include "../../../arch/arm/mach-msm/acpuclock.h"
 
-#define DEFAULT_POLLING_MS	200
+#define DEFAULT_POLLING_MS	240
 
 extern bool hotplug_ready;
 static int limit_init;
@@ -47,7 +47,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id_four = 10,
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 65,
-	.temp_hysteresis_degC = 10,
+	.temp_hysteresis_degC = 5,
 	.freq_step = 2,
 	.freq_control_mask = 0xf,
 	.core_limit_temp_degC = 75,
@@ -73,7 +73,6 @@ unsigned long limited_max_freq_thermal;
 
 static bool thermal_suspended = false;
 /* module parameters */
-module_param_named(poll_ms, msm_thermal_info.poll_ms, uint, 0664);
 module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
 			int, 0664);
 module_param_named(core_limit_temp_degC, msm_thermal_info.core_limit_temp_degC,
@@ -119,6 +118,37 @@ static const struct kernel_param_ops param_ops_thermal_limit_low = {
 };
 
 module_param_cb(thermal_limit_low, &param_ops_thermal_limit_low, NULL, 0644);
+
+static int set_poll_ms(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	/* single number: apply to all CPUs */
+	if (sscanf(buf, "%u\n", &val) != 1)
+		return -EINVAL;
+
+	sanitize_min_max(val, 40, 1000); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
+
+	msm_thermal_info.poll_ms = val;
+
+	return 0;
+}
+
+static int get_poll_ms(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%d\n", msm_thermal_info.poll_ms);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_poll_ms = {
+	.set = set_poll_ms,
+	.get = get_poll_ms,
+};
+
+module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 
 static int msm_thermal_get_freq_table(void)
 {
