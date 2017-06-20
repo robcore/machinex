@@ -31,6 +31,7 @@
 #include <linux/platform_device.h>
 #include <linux/suspend.h>
 #include <mach/cpufreq.h>
+#include <linux/sysfs_helpers.h>
 #include "../../../arch/arm/mach-msm/acpuclock.h"
 
 #define DEFAULT_POLLING_MS	200
@@ -61,8 +62,8 @@ static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
 static int limit_idx;
-static int limit_idx_low;
-static int limit_idx_high;
+static int thermal_limit_low;
+static int thermal_limit_high;
 static struct cpufreq_frequency_table *table;
 static unsigned long cpu_thermal_one;
 static unsigned long cpu_thermal_two;
@@ -80,8 +81,6 @@ module_param_named(core_limit_temp_degC, msm_thermal_info.core_limit_temp_degC,
 module_param_named(core_control_mask, msm_thermal_info.core_control_mask,
 			uint, 0664);
 module_param_named(freq_step, msm_thermal_info.freq_step, uint, 0644);
-module_param_named(thermal_limit_high, limit_idx_high, int, 0644);
-module_param_named(thermal_limit_low, limit_idx_low, int, 0644);
 module_param_named(freq_limit_hysteresis, msm_thermal_info.temp_hysteresis_degC,
 			 int, 0644);
 module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_degC,
@@ -89,6 +88,68 @@ module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_
 
 static bool therm_freq_limited;
 static bool hotplug_check_needed;
+
+static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	/* single number: apply to all CPUs */
+	if (sscanf(buf, "%u\n", &val) != 1)
+		return -EINVAL;
+
+	sanitize_min_max(val, 0, 15);
+
+	thermal_limit_low = val;
+
+	return 0;
+}
+
+static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%d\n", thermal_limit_low);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_thermal_limit_low = {
+	.set = set_thermal_limit_low,
+	.get = get_thermal_limit_low,
+};
+
+module_param_cb(thermal_limit_low, &param_ops_thermal_limit_low, NULL, 0644);
+
+static int set_thermal_limit_high(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	/* single number: apply to all CPUs */
+	if (sscanf(buf, "%u\n", &val) != 1)
+		return -EINVAL;
+
+	sanitize_min_max(val, 1, 15);
+
+	thermal_limit_high = val;
+
+	return 0;
+}
+
+static int get_thermal_limit_high(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%d\n", thermal_limit_high);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_thermal_limit_high = {
+	.set = set_thermal_limit_high,
+	.get = get_thermal_limit_high,
+};
+
+module_param_cb(thermal_limit_high, &param_ops_thermal_limit_high, NULL, 0644);
 
 static int msm_thermal_get_freq_table(void)
 {
@@ -113,9 +174,10 @@ static int msm_thermal_get_freq_table(void)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
-	limit_idx_low = 4;
-	limit_idx_high = limit_idx = i - 1;
-	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
+	thermal_limit_low = 4;
+	thermal_limit_high = limit_idx = i - 1;
+	BUG_ON(thermal_limit_high <= 0);
+
 fail:
 	return ret;
 }
@@ -228,27 +290,27 @@ static void __ref do_freq_control(void)
 		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
-		if (limit_idx == limit_idx_low) {
+		if (limit_idx == thermal_limit_low) {
 			hotplug_check_needed = false;
 			return;
 		}
 		limit_idx -= msm_thermal_info.freq_step;
-		if (limit_idx < limit_idx_low)
-			limit_idx = limit_idx_low;
+		if (limit_idx < thermal_limit_low)
+			limit_idx = thermal_limit_low;
 		max_freq = table[limit_idx].frequency;
 		hotplug_check_needed = true;
 	} else if ((cpu_thermal_one < delta) &&
 		(cpu_thermal_two < delta) &&
 		(cpu_thermal_three < delta) &&
 		(cpu_thermal_four < delta)) {
-		if (limit_idx == limit_idx_high) {
+		if (limit_idx == thermal_limit_high) {
 			hotplug_check_needed = false;
 			return;
 		}
 
 		limit_idx += msm_thermal_info.freq_step;
-		if (limit_idx >= limit_idx_high) {
-			limit_idx = limit_idx_high;
+		if (limit_idx >= thermal_limit_high) {
+			limit_idx = thermal_limit_high;
 			max_freq = policy.hlimit_max_screen_on;
 			hotplug_check_needed = false;
 		} else
