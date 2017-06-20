@@ -1066,7 +1066,7 @@ static struct frontswap_ops zswap_frontswap_ops = {
 /*********************************
 * debugfs functions
 **********************************/
-#ifdef CONFIG_DEBUG_FS
+#if 0
 #include <linux/debugfs.h>
 
 static struct dentry *zswap_debugfs_root;
