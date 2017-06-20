@@ -2006,10 +2006,10 @@ static int cypress_touchkey_resume(struct device *dev)
 	info->power_onoff(1);
 	cypress_int_gpio_setting(true);
 	cypress_gpio_setting(true);
-	if (info->pdata->gpio_led_en)
+	if (info->pdata->gpio_led_en) {
 		cypress_touchkey_con_hw(info, true);
-	msleep(100);
-
+		mdelay(100);
+	}
 #ifdef CYPRESS_MENU_BACK_MULTI_REPORT
 	/* CYPRESS Firmware setting interrupt type : dual or single interrupt */
 	cypress_touchkey_interrupt_set_dual(info->client);
@@ -2019,18 +2019,18 @@ static int cypress_touchkey_resume(struct device *dev)
 			touchled_cmd_reversed = 0;
 			i2c_smbus_write_byte_data(info->client,
 					CYPRESS_GEN, touchkey_led_status);
-			printk(KERN_INFO "%s: LED returned on, %d\n", __func__, ret);
+			pr_info("%s: LED returned on, %d\n", __func__, ret);
 
-			msleep(30);
+			mdelay(30);
 			i2c_smbus_write_byte_data(info->client,
 					CYPRESS_GEN, touchkey_led_status);
-			printk(KERN_INFO "%s: LED returned on, %d\n", __func__, ret);
+			pr_info("%s: LED returned on, %d\n", __func__, ret);
 	}
 
 	info->enabled = true;
 
 	if(!(info->done_ta_setting)) {
-		printk(KERN_DEBUG "[Touchkey] Enter the TA setting\n");
+		pr_debug("[Touchkey] Enter the TA setting\n");
 		touchkey_ta_setting(info);
 		}
 
