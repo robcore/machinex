@@ -28,6 +28,9 @@
 #define LLONG_MIN	(-LLONG_MAX - 1)
 #define ULLONG_MAX	(~0ULL)
 #define SIZE_MAX	(~(size_t)0)
+#ifndef U8_MAX
+#define U8_MAX 255
+#endif
 
 #define STACK_MAGIC	0xdeadbeef
 
