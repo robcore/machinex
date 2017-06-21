@@ -707,6 +707,7 @@ static int sec_chg_get_property(struct power_supply *psy,
 		container_of(psy, struct max77693_charger_data, psy_chg);
 	u8 reg_data;
 	int chg_state;
+	union power_supply_propval value;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -741,12 +742,12 @@ static int sec_chg_get_property(struct power_supply *psy,
 	chg_state = max77693_get_charger_state(charger);
 	psy_do_property("battery", get,
 			POWER_SUPPLY_PROP_ONLINE, value);
-	if (value.intval == POWER_SUPPLY_TYPE_BATTERY &&
-		value.intval != POWER_SUPPLY_TYPE_WIRELESS || 
+	if ((value.intval == POWER_SUPPLY_TYPE_BATTERY &&
+		value.intval != POWER_SUPPLY_TYPE_WIRELESS) || 
 		value.intval == POWER_SUPPLY_TYPE_UNKNOWN ||
-		chg_state != POWER_SUPPLY_STATUS_CHARGING &&
+		(chg_state != POWER_SUPPLY_STATUS_CHARGING &&
 		chg_state != POWER_SUPPLY_STATUS_FULL &&
-		 !charger->wc_w_state)
+		 !charger->wc_w_state))
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
 		else if (charger->aicl_on && !aicl_bypass)
 		{
