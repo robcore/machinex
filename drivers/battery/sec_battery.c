@@ -338,7 +338,7 @@ static bool sec_bat_check_vf_adc(struct sec_battery_info *battery)
 
 static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
 {
-	char *psy_name;
+	char *psy;
 	union power_supply_propval value;
 	bool ret;
 	ret = true;
@@ -348,10 +348,10 @@ static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
 		psy_name = battery->pdata->pmic_name;
 		break;
 	case SEC_BATTERY_CHECK_FUELGAUGE:
-		psy_name = "sec-fuelgauge";
+		psy = "sec-fuelgauge";
 		break;
 	case SEC_BATTERY_CHECK_CHARGER:
-		psy_name = "sec-charger";
+		psy = "sec-charger";
 		break;
 	default:
 		dev_err(battery->dev,
@@ -361,7 +361,7 @@ static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
 		break;
 	}
 
-	psy_do_property(psy_name, get,
+	psy_do_property(psy, get,
 		POWER_SUPPLY_PROP_PRESENT, value);
 	ret = (bool)value.intval;
 
@@ -2813,10 +2813,6 @@ static int sec_bat_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = battery->present;
-#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
-		dev_info(battery->dev,
-			"%s: battery present: %d\n", __func__, val->intval);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = battery->cable_type;
