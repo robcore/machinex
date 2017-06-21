@@ -157,15 +157,7 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_USB_ACA,	/* Accessory Charger Adapters */
 	POWER_SUPPLY_TYPE_MISC,
 	POWER_SUPPLY_TYPE_CARDOCK,
-#ifdef CONFIG_SEC_PRODUCT_8960
-#ifdef CONFIG_WIRELESS_CHARGING
-	POWER_SUPPLY_TYPE_WPC,		/* Wireless Charging should be 10 */
-#else
-	POWER_SUPPLY_TYPE_DUMMY,	/* # 10 is assigned for wireless */
-#endif
-#else
 	POWER_SUPPLY_TYPE_WIRELESS,
-#endif
 #ifdef CONFIG_MACH_COMANCHE
 	POWER_SUPPLY_TYPE_WIRELESS,
 #endif
