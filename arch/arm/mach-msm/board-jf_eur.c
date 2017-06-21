@@ -3824,7 +3824,7 @@ static struct sec_jack_platform_data sec_jack_data = {
 	.num_buttons_zones	= ARRAY_SIZE(jack_buttons_zones),
 	.det_gpio		= GPIO_EAR_DET,
 	.send_end_gpio		= GPIO_SHORT_SENDEND,
-	.send_end_active_high	= true,
+	.send_end_active_high	= false,
 };
 
 static struct platform_device sec_device_jack = {
