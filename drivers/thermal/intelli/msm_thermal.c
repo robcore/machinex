@@ -90,7 +90,7 @@ static bool hotplug_check_needed;
 
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val, i;
+	unsigned int val, i, adjusted_freq;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
 
@@ -100,9 +100,13 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 	policy = cpufreq_cpu_get_raw(0);
 	table = policy->freq_table; /* Get frequency table */
 
+	sanitize_min_max(val, policy->cpuinfo.min_freq, (table[thermal_limit_high].frequency - 1));
+
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == val) {
 			thermal_limit_low = cpufreq_frequency_table_get_index(policy, val);
+			if (thermal_limit_low < 0)
+				thermal_limit_low = 0;
 			return 0;
 		}
 	return -EINVAL;
@@ -165,6 +169,7 @@ static int msm_thermal_get_freq_table(void)
 	struct cpufreq_policy *policy;
 	int ret = 0;
 	int i;
+	unsigned int temp_limit_low;
 
 	policy = cpufreq_cpu_get_raw(0);
 
