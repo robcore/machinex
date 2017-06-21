@@ -165,7 +165,7 @@ static bool sec_fg_gpio_init(void)
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO)
 	} else if (system_rev >= 8) {
 #else
-	} else if (system_rev >= 9) {
+	} else if (system_rev >= 8) {
 #endif
 		/* FUEL_ALERT Registration */
 		struct pm8xxx_mpp_config_data fuel_alert_mppcfg = {
@@ -469,33 +469,18 @@ static bool sec_bat_check_callback(void)
 
 	psy = get_power_supply_by_name(("sec-charger"));
 	if (!psy) {
-		pr_err("%s: Fail to get psy (%s)\n",
-			__func__, "sec_charger");
+		pr_err_once("%s: Fail to get psy (%s)\n",
+				__func__, "sec-charger");
 		value.intval = 1;
 	} else {
-		int ret;
-		ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
-		if (ret < 0) {
-			pr_err("%s: Fail to sec-charger get_property (%d=>%d)\n",
-				__func__, POWER_SUPPLY_PROP_PRESENT, ret);
-			value.intval = 1;
-		}
-#if defined(CONFIG_BOARD_JF_REFRESH)
-		{
-			int data;
-			struct pm8xxx_adc_chan_result result;
-
-			pm8xxx_adc_read(ADC_MPP_1_AMUX8, &result);
-			data = ((int)result.physical) / 1000;
-			pr_info("%s: result.physical(%d)\n", __func__, data);
-			if(data < SHORT_BATTERY_STANDARD) {
-				pr_info("%s: Short Battery is connected.\n", __func__);
-				value.intval = 0;
+			int ret;
+			ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
+			if (ret < 0) {
+				pr_err_once("%s: Fail to  get sec-charger property (%d=>%d)\n",
+						__func__, POWER_SUPPLY_PROP_PRESENT, ret);
+				value.intval = 1;
 			}
-		}
-#endif
 	}
-
 	return value.intval;
 }
 static bool sec_bat_check_result_callback(void) {return true; }
@@ -626,10 +611,10 @@ static sec_bat_adc_region_t cable_adc_value_table[] = {
 };
 
 static int polling_time_table[] = {
-	10,	/* BASIC */
-	30,	/* CHARGING */
-	30,	/* DISCHARGING */
-	30,	/* NOT_CHARGING */
+	45,	/* BASIC */
+	60,	/* CHARGING */
+	60,	/* DISCHARGING */
+	60,	/* NOT_CHARGING */
 #if defined(CONFIG_MACH_JACTIVE_EUR)
 	5 * 60,	/* SLEEP */
 #else
@@ -731,7 +716,7 @@ sec_battery_platform_data_t sec_battery_pdata = {
 
 	.pmic_name = SEC_BATTERY_PMIC_NAME,
 
-	.adc_check_count = 6,
+	.adc_check_count = 5,
 	.adc_type = {
 		SEC_BATTERY_ADC_TYPE_NONE,	/* CABLE_CHECK */
 		SEC_BATTERY_ADC_TYPE_AP,	/* BAT_CHECK */
@@ -1063,7 +1048,7 @@ sec_battery_platform_data_t sec_battery_pdata = {
 	.chg_gpio_status = 0,
 	.chg_polarity_status = 0,
 	.chg_irq = 0,
-	.chg_irq_attr = IRQF_TRIGGER_FALLING,
+	.chg_irq_attr = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 	.chg_float_voltage = 4350,
 };
 

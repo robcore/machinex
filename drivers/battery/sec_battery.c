@@ -393,8 +393,8 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 		else
 			ret = sec_bat_check_vf_adc(battery);
 		break;
-	case SEC_BATTERY_CHECK_CALLBACK:
 	case SEC_BATTERY_CHECK_INT:
+	case SEC_BATTERY_CHECK_CALLBACK:
 		if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
 			ret = battery->present;
 		else
@@ -479,7 +479,6 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 				sec_bat_set_charge(battery, false);
 			}
 
-			battery->pdata->check_battery_result_callback();
 			return false;
 		}
 	} else
@@ -3062,8 +3061,8 @@ static irqreturn_t sec_bat_irq_thread(int irq, void *irq_data)
 no_cable_check:
 	if (battery->pdata->battery_check_type ==
 		SEC_BATTERY_CHECK_INT) {
+		wake_lock(&battery->monitor_wake_lock);
 		battery->present = battery->pdata->check_battery_callback();
-
 		wake_lock(&battery->monitor_wake_lock);
 		queue_work(battery->monitor_wqueue, &battery->monitor_work);
 	}
