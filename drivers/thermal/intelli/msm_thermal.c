@@ -121,7 +121,7 @@ static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 	policy = cpufreq_cpu_get_raw(0);
 	table = policy->freq_table; /* Get frequency table */
 
-	ret = sprintf(buf, "%u\n", table[thermal_limit_low].frequency);
+	ret = sprintf(buf, "%u", table[thermal_limit_low].frequency);
 
 	return ret;
 }
