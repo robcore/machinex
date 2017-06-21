@@ -2002,10 +2002,9 @@ static int cypress_touchkey_resume(struct device *dev)
 	info->power_onoff(1);
 	cypress_int_gpio_setting(true);
 	cypress_gpio_setting(true);
-	if (info->pdata->gpio_led_en) {
+	if (info->pdata->gpio_led_en)
 		cypress_touchkey_con_hw(info, true);
-		mdelay(100);
-	}
+	mdelay(100);
 #ifdef CYPRESS_MENU_BACK_MULTI_REPORT
 	/* CYPRESS Firmware setting interrupt type : dual or single interrupt */
 	cypress_touchkey_interrupt_set_dual(info->client);
