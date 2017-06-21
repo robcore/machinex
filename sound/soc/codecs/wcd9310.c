@@ -4248,11 +4248,7 @@ static void tabla_codec_calibrate_hs_polling(struct snd_soc_codec *codec)
 	snd_soc_write(codec, TABLA_A_CDC_MBHC_TIMER_B6_CTL,
 		      n_cic[tabla_codec_mclk_index(tabla)]);
 }
-static bool tblactv;
-bool tabla_is_active(void)
-{
-	return tblactv;
-}
+
 #ifdef CONFIG_SND_SOC_ES325
 static int tabla_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -4325,7 +4321,6 @@ int tabla_mclk_enable(struct snd_soc_codec *codec, int mclk_enable, bool dapm)
 		TABLA_ACQUIRE_LOCK(tabla->codec_resource_lock);
 	if (mclk_enable) {
 		tabla->mclk_enabled = true;
-		tblactv = true;
 
 		if (tabla->mbhc_polling_active) {
 			tabla_codec_pause_hs_polling(codec);
@@ -4350,7 +4345,6 @@ int tabla_mclk_enable(struct snd_soc_codec *codec, int mclk_enable, bool dapm)
 			return -EINVAL;
 		}
 		tabla->mclk_enabled = false;
-		tblactv = false;
 
 		if (tabla->mbhc_polling_active) {
 			tabla_codec_pause_hs_polling(codec);
@@ -5267,7 +5261,7 @@ static int tabla_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 							tabla_p->dai[j].ch_num,
 							tabla_p->dai[j].ch_tot,
 							1);
-				pr_debug("%s: Disconnect RX port ret = %d\n",
+				pr_info("%s: Disconnect RX port ret = %d\n",
 					__func__, ret);
 			}
 			tabla_p->dai[j].rate = 0;
@@ -5375,7 +5369,7 @@ static int tabla_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 				ret = wcd9xxx_disconnect_port(tabla,
 						tabla_p->dai[j].ch_num,
 						tabla_p->dai[j].ch_tot, 0);
-				pr_debug("%s: Disconnect TX port, ret = %d\n",
+				pr_info("%s: Disconnect TX port, ret = %d\n",
 					__func__, ret);
 			}
 
@@ -7023,13 +7017,13 @@ static irqreturn_t tabla_hphl_ocp_irq(int irq, void *data)
 	struct tabla_priv *tabla = data;
 	struct snd_soc_codec *codec;
 
-	pr_debug("%s: received HPHL OCP irq\n", __func__);
+	pr_info("%s: received HPHL OCP irq\n", __func__);
 
 	if (tabla) {
 		codec = tabla->codec;
 		if ((tabla->hphlocp_cnt < TABLA_OCP_ATTEMPT) &&
 		    (!tabla->hphrocp_cnt)) {
-			pr_debug("%s: retry\n", __func__);
+			pr_info("%s: retry\n", __func__);
 			tabla->hphlocp_cnt++;
 			snd_soc_update_bits(codec, TABLA_A_RX_HPH_OCP_CTL, 0x10,
 					    0x00);
@@ -7057,13 +7051,13 @@ static irqreturn_t tabla_hphr_ocp_irq(int irq, void *data)
 	struct tabla_priv *tabla = data;
 	struct snd_soc_codec *codec;
 
-	pr_debug("%s: received HPHR OCP irq\n", __func__);
+	pr_info("%s: received HPHR OCP irq\n", __func__);
 
 	if (tabla) {
 		codec = tabla->codec;
 		if ((tabla->hphrocp_cnt < TABLA_OCP_ATTEMPT) &&
 		    (!tabla->hphlocp_cnt)) {
-			pr_debug("%s: retry\n", __func__);
+			pr_info("%s: retry\n", __func__);
 			tabla->hphrocp_cnt++;
 			snd_soc_update_bits(codec, TABLA_A_RX_HPH_OCP_CTL, 0x10,
 					    0x00);
@@ -8225,7 +8219,7 @@ static void mbhc_fw_read(struct work_struct *work)
 
 	while (retry < MBHC_FW_READ_ATTEMPTS) {
 		retry++;
-		pr_debug("%s:Attempt %d to request MBHC firmware\n",
+		pr_info("%s:Attempt %d to request MBHC firmware\n",
 			__func__, retry);
 		ret = request_firmware_direct(&fw, "wcd9310/wcd9310_mbhc.bin",
 					codec->dev);
@@ -8234,7 +8228,7 @@ static void mbhc_fw_read(struct work_struct *work)
 			usleep_range(MBHC_FW_READ_TIMEOUT,
 				     MBHC_FW_READ_TIMEOUT);
 		} else {
-			pr_debug("%s: MBHC Firmware read succesful\n", __func__);
+			pr_info("%s: MBHC Firmware read succesful\n", __func__);
 			break;
 		}
 	}
@@ -8937,7 +8931,7 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	int ch_cnt;
 
 #ifdef CONFIG_SOUND_CONTROL
-	pr_debug("tabla codec probe...\n");
+	pr_info("tabla codec probe...\n");
 	snd_engine_codec_ptr = codec;
 #endif
 
