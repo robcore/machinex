@@ -1204,7 +1204,6 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	struct max77693_charger_data *chg_data = data;
 	unsigned long delay;
 
-	cancel_delayed_work_sync(&chg_data->wpc_work);
 	wake_lock(&chg_data->wpc_wake_lock);
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
 	delay = msecs_to_jiffies(0);
@@ -1214,7 +1213,7 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	else
 		delay = msecs_to_jiffies(200);
 #endif
-	queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
+	mod_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 			delay);
 	return IRQ_HANDLED;
 }
