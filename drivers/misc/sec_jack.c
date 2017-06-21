@@ -36,7 +36,7 @@
 
 #define NUM_INPUT_DEVICE_ID	2
 #define MAX_ZONE_LIMIT		10
-#define SEND_KEY_CHECK_TIME_MS	10		/* 30ms */
+#define SEND_KEY_CHECK_TIME_MS	10		/* 10ms */
 #define DET_CHECK_TIME_MS	100		/* 100ms */
 #define WAKE_LOCK_TIME		(HZ * 5)	/* 5 sec */
 
@@ -44,7 +44,6 @@
 extern unsigned int system_rev;
 #endif
 
-static bool recheck_jack;
 struct sec_jack_info {
 	struct sec_jack_platform_data *pdata;
 	struct delayed_work jack_detect_work;
@@ -63,6 +62,7 @@ struct sec_jack_info {
 	int dev_id;
 	int pressed;
 	int pressed_code;
+	bool buttons_enable;
 	struct platform_device *send_key_dev;
 	unsigned int cur_jack_type;
 };
@@ -283,19 +283,8 @@ static void determine_jack_type(struct sec_jack_info *hi)
 		for (i = 0; i < size; i++) {
 			if (adc <= zones[i].adc_high) {
 				if (++count[i] > zones[i].check_count) {
-#ifndef CONFIG_MACH_JAGUAR
-					if (recheck_jack == true && i == 3) {
-#else
-					if (recheck_jack == true && i == 5) {
-#endif
-						pr_err("%s - something wrong connectoin!\n", __func__);
-						handle_jack_not_inserted(hi);
-						recheck_jack = false;
-						return;
-					}
 					sec_jack_set_type(hi,
 						zones[i].jack_type);
-					recheck_jack = false;
 					return;
 				}
 				if (zones[i].delay_us > 0)
@@ -304,8 +293,8 @@ static void determine_jack_type(struct sec_jack_info *hi)
 			}
 		}
 	}
+
 	/* jack removed before detection complete */
-	recheck_jack = false;
 	pr_debug("%s : jack removed before detection complete\n", __func__);
 	handle_jack_not_inserted(hi);
 }
@@ -339,6 +328,14 @@ static ssize_t earjack_state_onoff_show(struct device *dev,
 static DEVICE_ATTR(state, 0664 , earjack_state_onoff_show,
 	NULL);
 
+static void sec_jack_timer_handler(unsigned long data)
+{
+	struct sec_jack_info *hi = (struct sec_jack_info *)data;
+
+	hi->buttons_enable = true;
+
+}
+
 static ssize_t reselect_jack_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -357,7 +354,6 @@ static ssize_t reselect_jack_store(struct device *dev,
 	pr_err("%s: User  selection : 0X%x", __func__, value);
 
 	if (value == 1) {
-		recheck_jack = true;
 		determine_jack_type(hi);
 	}
 
@@ -384,8 +380,10 @@ void sec_jack_detect_work(struct work_struct *work)
 	struct sec_jack_info *hi =
 		container_of(work, struct sec_jack_info, detect_work);
 	struct sec_jack_platform_data *pdata = hi->pdata;
-	int time_left_ms = DET_CHECK_TIME_MS;
 	unsigned npolarity = !hi->pdata->det_active_high;
+	int time_left_ms;
+
+	time_left_ms = DET_CHECK_TIME_MS;
 
 	/* prevent suspend to allow user space to respond to switch */
 	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
@@ -420,12 +418,13 @@ void sec_jack_buttons_work(struct work_struct *work)
 	int adc;
 	int i;
 
-#if defined (CONFIG_MACH_SERRANO_ATT) || defined(CONFIG_MACH_SERRANO_LRA)
-	btn_zones= pdata->buttons_zones_rev03;
-#elif defined (CONFIG_MACH_MELIUS_EUR_OPEN)
-	if (system_rev == 10)
-		btn_zones = pdata->buttons_zones_rev06;
-#endif
+	if (!hi->buttons_enable) {
+		pr_info("%s: BTN %d is skipped\n", __func__,
+			hi->pressed_code);
+		return;
+	}
+	/* prevent suspend to allow user space to respond to switch */
+	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
 
 	/* when button is released */
 	if (hi->pressed == 0) {
@@ -544,23 +543,22 @@ static int sec_jack_probe(struct platform_device *pdev)
 		pr_err("Failed to create device file in sysfs entries(%s)!\n",
 				dev_attr_reselect_jack.attr.name);
 
+	setup_timer(&hi->timer, sec_jack_timer_handler, (unsigned long)hi);
+
 	INIT_WORK(&hi->buttons_work, sec_jack_buttons_work);
 	INIT_WORK(&hi->detect_work, sec_jack_detect_work);
-
 	hi->queue = create_singlethread_workqueue("sec_jack_wq");
 	if (hi->queue == NULL) {
 		ret = -ENOMEM;
 		pr_err("%s: Failed to create workqueue\n", __func__);
 		goto err_create_wq_failed;
 	}
-
 	hi->buttons_queue = create_singlethread_workqueue("sec_jack_buttons_wq");
 	if (hi->buttons_queue == NULL) {
 		ret = -ENOMEM;
-		pr_err("%s: Failed to create workqueue\n", __func__);
-		goto err_create_wq_failed;
+		pr_err("%s: Failed to create buttons workqueue\n", __func__);
+		goto err_create_buttons_wq_failed;
 	}
-
 	queue_work(hi->queue, &hi->detect_work);
 
 	hi->det_irq = gpio_to_irq(pdata->det_gpio);
@@ -608,12 +606,14 @@ err_enable_irq_wake:
 err_request_detect_irq:
 	input_unregister_handler(&hi->handler);
 err_register_input_handler:
-	destroy_workqueue(hi->queue);
 	destroy_workqueue(hi->buttons_queue);
+err_create_buttons_wq_failed:
+	destroy_workqueue(hi->queue);
 err_create_wq_failed:
-	if(hi->queue) {
-		destroy_workqueue(hi->queue);
-	}
+	device_remove_file(earjack, &dev_attr_state);
+	device_remove_file(earjack, &dev_attr_key_state);
+	device_destroy(audio, 0);
+	class_destroy(audio);	
 	wake_lock_destroy(&hi->det_wake_lock);
 	switch_dev_unregister(&switch_jack_detection);
 	switch_dev_unregister(&switch_sendend);
@@ -631,12 +631,11 @@ static int sec_jack_remove(struct platform_device *pdev)
 {
 
 	struct sec_jack_info *hi = dev_get_drvdata(&pdev->dev);
-
 	pr_info("%s :\n", __func__);
 	disable_irq_wake(hi->det_irq);
 	free_irq(hi->det_irq, hi);
-	destroy_workqueue(hi->buttons_queue);
 	destroy_workqueue(hi->queue);
+	destroy_workqueue(hi->buttons_queue);
 	if (hi->send_key_dev) {
 		platform_device_unregister(hi->send_key_dev);
 		hi->send_key_dev = NULL;

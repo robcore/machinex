@@ -3703,25 +3703,25 @@ static struct sec_jack_zone jack_zones[] = {
 	[0] = {
 		.adc_high	= 3,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_3POLE,
 	},
 	[1] = {
 		.adc_high	= 745,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_3POLE,
 	},
 	[2] = {
 		.adc_high	= 1679,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_4POLE,
 	},
 	[3] = {
 		.adc_high	= 9999,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_4POLE,
 	},
 };
@@ -3730,25 +3730,25 @@ static struct sec_jack_zone jack_zones_rev7[] = {
 	[0] = {
 		.adc_high	= 3,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_3POLE,
 	},
 	[1] = {
 		.adc_high	= 690,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_3POLE,
 	},
 	[2] = {
 		.adc_high	= 1443,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_4POLE,
 	},
 	[3] = {
 		.adc_high	= 9999,
 		.delay_us	= 10000,
-		.check_count	= 10,
+		.check_count	= 5,
 		.jack_type	= SEC_HEADSET_4POLE,
 	},
 };
@@ -3798,22 +3798,21 @@ static void set_sec_micbias_state(bool state)
 
 static int sec_jack_get_adc_value(void)
 {
-	int rc = 0;
-	int retVal = 0;
+	int ret = 0;
 	struct pm8xxx_adc_chan_result result;
 
-	rc = pm8xxx_adc_mpp_config_read(
+	ret = pm8xxx_adc_mpp_config_read(
 			PM8XXX_AMUX_MPP_3,
 			ADC_MPP_1_AMUX6_SCALE_DEFAULT,
 			&result);
-	if (rc) {
-		pr_err("%s : error reading mpp %d, rc = %d\n",
-			__func__, PM8XXX_AMUX_MPP_3, rc);
-		return rc;
+	if (ret) {
+		pr_err("%s : error reading mpp %d, ret = %d\n",
+			__func__, PM8XXX_AMUX_MPP_3, ret);
+		return ret;
 	}
-	retVal = ((int)result.physical)/1000;
+	ret = ((int)result.physical/1000);
 
-	return retVal;
+	return ret;
 }
 
 static struct sec_jack_platform_data sec_jack_data = {
@@ -3825,7 +3824,7 @@ static struct sec_jack_platform_data sec_jack_data = {
 	.num_buttons_zones	= ARRAY_SIZE(jack_buttons_zones),
 	.det_gpio		= GPIO_EAR_DET,
 	.send_end_gpio		= GPIO_SHORT_SENDEND,
-	.send_end_active_high	= false,
+	.send_end_active_high	= true,
 };
 
 static struct platform_device sec_device_jack = {

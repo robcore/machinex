@@ -34,11 +34,8 @@
  *
  * Otherwise, minimize overhead in what may be bitbanging codepaths.
  */
-#ifdef	DEBUG
-#define	extra_checks	1
-#else
+
 #define	extra_checks	0
-#endif
 
 /* gpio_lock prevents conflicts during gpio_desc[] table updates.
  * While any GPIO is requested, its gpio_chip is not removable;
