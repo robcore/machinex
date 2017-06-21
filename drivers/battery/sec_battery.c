@@ -345,7 +345,7 @@ static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
 
 	switch (battery->pdata->battery_check_type) {
 	case SEC_BATTERY_CHECK_PMIC:
-		psy_name = battery->pdata->pmic_name;
+		psy = battery->pdata->pmic_name;
 		break;
 	case SEC_BATTERY_CHECK_FUELGAUGE:
 		psy = "sec-fuelgauge";

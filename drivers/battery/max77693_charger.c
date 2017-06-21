@@ -278,7 +278,7 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 				/* under 400mA, slow rate */
 				if (set_current_reg < (400 / 20) &&
 						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY) &&
-						(!))
+						(!aicl_bypass))
 					charger->aicl_on = true;
 				else
 					charger->aicl_on = false;
@@ -706,6 +706,7 @@ static int sec_chg_get_property(struct power_supply *psy,
 	struct max77693_charger_data *charger =
 		container_of(psy, struct max77693_charger_data, psy_chg);
 	u8 reg_data;
+	int chg_state;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -737,7 +738,9 @@ static int sec_chg_get_property(struct power_supply *psy,
 		val->intval = max77693_get_input_current(charger);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
-		if (!charger->is_charging && !charger->wc_w_state)
+		chg_state = max77693_get_charger_state(charger);
+		if ((chg_state != POWER_SUPPLY_STATUS_CHARGING) &&
+						(chg_state != POWER_SUPPLY_STATUS_FULL) && !charger->wc_w_state)
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
 		else if (charger->aicl_on && !aicl_bypass)
 		{
@@ -1644,4 +1647,3 @@ module_exit(max77693_charger_exit);
 MODULE_DESCRIPTION("max77693 charger driver");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_LICENSE("GPL");
-aicl_bypass
