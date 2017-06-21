@@ -270,10 +270,9 @@ void __init S5000_tsp_input_init(int version)
 	if(system_rev >= BOARD_REV08)  {
 		rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
@@ -282,10 +281,9 @@ void __init S5000_tsp_input_init(int version)
 	else {
 		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
 		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, bus2_i2c_devices,
@@ -294,10 +292,9 @@ void __init S5000_tsp_input_init(int version)
 #elif defined(CONFIG_MACH_JF_DCM)
         rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
@@ -305,10 +302,9 @@ void __init S5000_tsp_input_init(int version)
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
         rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
@@ -316,10 +312,9 @@ void __init S5000_tsp_input_init(int version)
 #elif defined(CONFIG_MACH_JFVE_EUR)
 		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
 		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
@@ -328,10 +323,9 @@ void __init S5000_tsp_input_init(int version)
 	if(system_rev >= BOARD_REV09) {
 		rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
@@ -340,16 +334,14 @@ void __init S5000_tsp_input_init(int version)
 	else {
 		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
 		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0) {
-			pr_debug("tsp-couldn't do the thing\n");
+		if (ret != 0)
 			return ;
-		}
+
 		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, bus2_i2c_devices,
 			ARRAY_SIZE(bus2_i2c_devices));
 	}
 #endif
-	pr_debug("tsp-did the thing\n");
 	return ;
 }
