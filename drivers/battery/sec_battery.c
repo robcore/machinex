@@ -338,20 +338,20 @@ static bool sec_bat_check_vf_adc(struct sec_battery_info *battery)
 
 static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
 {
-	char *psy;
+	char *psy_name;
 	union power_supply_propval value;
 	bool ret;
 	ret = true;
 
 	switch (battery->pdata->battery_check_type) {
 	case SEC_BATTERY_CHECK_PMIC:
-		psy = battery->pdata->pmic_name;
+		psy_name = battery->pdata->pmic_name;
 		break;
 	case SEC_BATTERY_CHECK_FUELGAUGE:
-		psy = "sec-fuelgauge";
+		psy_name = battery->pdata->fuelgauge_name;
 		break;
 	case SEC_BATTERY_CHECK_CHARGER:
-		psy = "sec-charger";
+		psy_name = battery->pdata->charger_name;
 		break;
 	default:
 		dev_err(battery->dev,
@@ -361,7 +361,7 @@ static bool sec_bat_check_by_psy(struct sec_battery_info *battery)
 		break;
 	}
 
-	psy_do_property(psy, get,
+	psy_do_property(psy_name, get,
 		POWER_SUPPLY_PROP_PRESENT, value);
 	ret = (bool)value.intval;
 

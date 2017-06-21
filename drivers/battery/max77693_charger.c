@@ -713,10 +713,10 @@ static int sec_chg_get_property(struct power_supply *psy,
 		val->intval = POWER_SUPPLY_TYPE_BATTERY;
 		if (max77693_read_reg(charger->max77693->i2c,
 			MAX77693_CHG_REG_CHG_INT_OK, &reg_data) == 0) {
-			if (reg_data & MAX77693_CHGIN_OK)
+			if (reg_data & MAX77693_CHGIN_OK) {
 				val->intval = POWER_SUPPLY_TYPE_MAINS;
 				charger->wc_w_state = 0;
-			else if (reg_data & MAX77693_WCIN_OK) {
+			} else if (reg_data & MAX77693_WCIN_OK) {
 				val->intval = POWER_SUPPLY_TYPE_WIRELESS;
 				charger->wc_w_state = 1;
 			}
