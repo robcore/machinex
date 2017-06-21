@@ -167,7 +167,9 @@ int dock_det(void)
 EXPORT_SYMBOL(dock_det);
 #endif
 
+#if defined(CONFIG_MUIC_AUDIO_OUTPUT_CONTROL)
 extern int jack_is_detected;
+#endif
 
 /* func : get_if_pmic_inifo
  * switch_sel value get from bootloader comand line
