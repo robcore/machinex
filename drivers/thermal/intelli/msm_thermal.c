@@ -90,24 +90,34 @@ static bool hotplug_check_needed;
 
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val;
+	unsigned int val, i;
+	struct cpufreq_policy *policy;
+	struct cpufreq_frequency_table *table;
 
-	/* single number: apply to all CPUs */
-	if (sscanf(buf, "%u\n", &val) != 1)
+	if (!sscanf(buf, "%d", &val))
 		return -EINVAL;
 
-	sanitize_min_max(val, 0, 15);
+	policy = cpufreq_cpu_get_raw(0);
+	table = policy->freq_table; /* Get frequency table */
 
-	thermal_limit_low = val;
-
-	return 0;
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		if (table[i].frequency == val) {
+			thermal_limit_low = cpufreq_frequency_table_get_index(policy, val);
+			return 0;
+		}
+	return -EINVAL;
 }
 
 static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
+	struct cpufreq_policy *policy;
+	struct cpufreq_frequency_table *table;
 
-	ret = sprintf(buf, "%d\n", thermal_limit_low);
+	policy = cpufreq_cpu_get_raw(0);
+	table = policy->freq_table; /* Get frequency table */
+
+	ret = sprintf(buf, "%u\n", table[thermal_limit_low].frequency);
 
 	return ret;
 }
@@ -124,7 +134,7 @@ static int set_poll_ms(const char *buf, const struct kernel_param *kp)
 	unsigned int val;
 
 	/* single number: apply to all CPUs */
-	if (sscanf(buf, "%u\n", &val) != 1)
+	if (sscanf(buf, "%u", &val) != 1)
 		return -EINVAL;
 
 	sanitize_min_max(val, 40, 1000); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
@@ -169,12 +179,10 @@ static int msm_thermal_get_freq_table(void)
 		goto fail;
 	}
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
 		thermal_limit_low = 4;
 		thermal_limit_high = limit_idx = i - 1;
-	}
 	BUG_ON(thermal_limit_high <= 0);
-	pr_info("MSM Thermal: %d frequency steps found for use\n", thermal_limit_high);
 	pr_info("MSM Thermal: Initial thermal_limit_low is %d\n", table[thermal_limit_low].frequency);
 
 fail:
