@@ -162,11 +162,7 @@ static bool sec_fg_gpio_init(void)
 				GPIO_FUEL_INT_04A);
 		pm8xxx_gpio_config(PM8921_GPIO_PM_TO_SYS(GPIO_FUEL_INT_04A),
 						&param);
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO)
 	} else if (system_rev >= 8) {
-#else
-	} else if (system_rev >= 8) {
-#endif
 		/* FUEL_ALERT Registration */
 		struct pm8xxx_mpp_config_data fuel_alert_mppcfg = {
 			.type = PM8XXX_MPP_TYPE_D_INPUT,
