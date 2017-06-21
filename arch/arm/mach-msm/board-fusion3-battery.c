@@ -463,17 +463,13 @@ static bool sec_bat_check_callback(void)
 	struct power_supply *psy;
 	union power_supply_propval value;
 
-	psy = get_power_supply_by_name(("sec-charger"));
+	psy = get_power_supply_by_name("sec-charger");
 	if (!psy) {
-		pr_err_once("%s: Fail to get psy (%s)\n",
-				__func__, "sec-charger");
 		value.intval = 1;
 	} else {
 			int ret;
 			ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
 			if (ret < 0) {
-				pr_err_once("%s: Fail to  get sec-charger property (%d=>%d)\n",
-						__func__, POWER_SUPPLY_PROP_PRESENT, ret);
 				value.intval = 1;
 			}
 	}
@@ -607,10 +603,10 @@ static sec_bat_adc_region_t cable_adc_value_table[] = {
 };
 
 static int polling_time_table[] = {
-	45,	/* BASIC */
-	60,	/* CHARGING */
-	60,	/* DISCHARGING */
-	60,	/* NOT_CHARGING */
+	20,	/* BASIC */
+	40,	/* CHARGING */
+	40,	/* DISCHARGING */
+	40,	/* NOT_CHARGING */
 #if defined(CONFIG_MACH_JACTIVE_EUR)
 	5 * 60,	/* SLEEP */
 #else
