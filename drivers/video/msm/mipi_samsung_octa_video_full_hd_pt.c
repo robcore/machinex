@@ -1668,10 +1668,10 @@ static int brightness_control(int bl_level)
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 
 	if (mipi_pd.ldi_rev >= 'H') {
-		if (get_auto_brightness() == 6)
+		if (get_auto_brightness() == 7)
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 	} else {
-		if (get_auto_brightness() == 6)
+		if (get_auto_brightness() == 7)
 			/*if auto bl is 6, b6's 1st para has to be c8's 40th / 01h(revH) (elvss_400cd)*/
 			samsung_brightness_elvss_ref[16] = get_elvss_400cd();
 		else  /*recover original's ELVSS offset b6's 17th / 0x0A(revH) */
@@ -1681,7 +1681,7 @@ static int brightness_control(int bl_level)
 
 	// ELVSS lOW TEMPERATURE
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
-		if (get_auto_brightness() != 6)
+		if (get_auto_brightness() < 6)
 			if (mipi_pd.temperature <= -20)
 				samsung_brightness_elvss_ref[2] -= 0x04;
 	}
@@ -1780,10 +1780,10 @@ static int brightness_control(int bl_level)
 
 	/* samsung_brightness_gamma[1~21] have to be mtp400cd [0~5][73~87] */
 	if (get_auto_brightness() == 6) {
-		for (i=1; i<=6 ; i++)
+		for (i=1; i<6 ; i++)
 			samsung_brightness_gamma[i] = *(c8_reg_1+(i-1));
 		if (mipi_pd.ldi_rev == 'I')
-			for (i=7; i<=21 ; i++)
+			for (i=7; i<21 ; i++)
 				samsung_brightness_gamma[i] = *(c8_reg_2+(i-7));
 	}
 #ifdef CONFIG_HBM_PSRE_DEBUG
