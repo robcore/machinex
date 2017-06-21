@@ -1681,7 +1681,7 @@ static int brightness_control(int bl_level)
 
 	// ELVSS lOW TEMPERATURE
 	if ((mipi_pd.ldi_rev >= 'G') && mipi_pd.need_update) {
-		if (get_auto_brightness() < 6)
+		if (get_auto_brightness() < 7)
 			if (mipi_pd.temperature <= -20)
 				samsung_brightness_elvss_ref[2] -= 0x04;
 	}
