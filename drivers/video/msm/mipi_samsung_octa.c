@@ -23,6 +23,7 @@
 #include <linux/mfd/pm8xxx/pm8821.h>
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
+#include <linux/sysfs_helpers.h>
 /*
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
@@ -905,10 +906,10 @@ static ssize_t mipi_samsung_hbm_mode_show(struct device *dev,
 static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
+	unsigned int val;
 	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
-	unsigned int val;
 
 	if (sscanf(buf, "%u", &val) != 1)
 
@@ -916,7 +917,7 @@ static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
 
 	if (val == 1)
 		msd.dstat.auto_brightness = 7;
-	else
+	else if (val == 0)
 		msd.dstat.auto_brightness = tmpval;
 
 	return size;
@@ -936,10 +937,10 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
+	unsigned int val;
 	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
-	unsigned int val;
 
 	if (sscanf(buf, "%u", &val) != 1)
 
@@ -951,7 +952,7 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 
 	msd.dstat.auto_brightness = val;
 	tmpval = msd.dstat.auto_brightness;
-skip;
+skip:
 	if (!first_auto_br) {
 		first_auto_br++;
 		return size;
