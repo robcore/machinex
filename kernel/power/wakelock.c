@@ -222,8 +222,6 @@ int pm_wake_lock(const char *buf)
 		if (ret)
 			return -EINVAL;
 	}
-	if (!strcmp(str, android_os) && !android_lock_active)
-		android_lock_active = true;
 
 	mutex_lock(&wakelocks_lock);
 
@@ -245,6 +243,10 @@ int pm_wake_lock(const char *buf)
 
  out:
 	mutex_unlock(&wakelocks_lock);
+
+	if (!strcmp(wl->ws.name, android_os) && !android_lock_active)
+		android_lock_active = true;
+
 	return ret;
 }
 
@@ -253,7 +255,6 @@ int pm_wake_unlock(const char *buf)
 	struct wakelock *wl;
 	size_t len;
 	int ret = 0;
-	const char *str;
 #ifdef CONFIG_SEC_PM_DEBUG
 	ktime_t start_time, end_time;
 	u64 delta_time_ns;
@@ -275,11 +276,6 @@ int pm_wake_unlock(const char *buf)
 
 	if (!len)
 		return -EINVAL;
-
-	str = buf + len;
-
-	if (!isspace(*str) && !strcmp(str, android_os) && android_lock_active)
-		android_lock_active = false;
 
 	mutex_lock(&wakelocks_lock);
 
@@ -304,5 +300,8 @@ int pm_wake_unlock(const char *buf)
 		pr_info("%s: ret=%d elapsed time:%llu\n", __func__, ret,
 				delta_time_ns / NSEC_PER_MSEC);
 #endif
+	if (!strcmp(wl->ws.name, android_os) && android_lock_active)
+		android_lock_active = false;
+
 	return ret;
 }
