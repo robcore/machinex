@@ -440,6 +440,8 @@ static ssize_t pcm_in_read(struct file *file, char __user *buf,
 	rc = buf-start;
 fail:
 	mutex_unlock(&pcm->read_lock);
+	if (rc < 0)
+		pcm_in_allow_sleep(pcm);
 	return rc;
 }
 

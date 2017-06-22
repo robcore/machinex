@@ -78,7 +78,7 @@ void pcm_out_cb(uint32_t opcode, uint32_t token,
 static void audio_prevent_sleep(struct pcm *audio)
 {
 	pr_debug("%s:\n", __func__);
-	wake_lock_timeout(&audio->wakelock, 2000);
+	wake_lock(&audio->wakelock);
 }
 
 static void audio_allow_sleep(struct pcm *audio)
