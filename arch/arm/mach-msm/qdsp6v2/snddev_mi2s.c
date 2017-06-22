@@ -195,7 +195,7 @@ static int snddev_mi2s_open(struct msm_snddev_info *dev_info)
 		return -ENODEV;
 	}
 	clk_prepare_enable(drv->tx_osrclk);
-
+	pr_info("mi2s: tx_osrclk enabled\n");
 	/* set up bit clk */
 	drv->tx_bitclk = clk_get_sys(NULL, "mi2s_bit_clk");
 	if (IS_ERR(drv->tx_bitclk))
@@ -360,6 +360,8 @@ static int snddev_mi2s_close(struct msm_snddev_info *dev_info)
 	afe_close(snddev_mi2s_data->copp_id);
 	clk_disable_unprepare(mi2s_drv->tx_bitclk);
 	clk_disable_unprepare(mi2s_drv->tx_osrclk);
+	pr_info("mi2s: tx_osrclk disabled\n");
+
 
 	mi2s_gpios_free();
 
