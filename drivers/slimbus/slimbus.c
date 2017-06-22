@@ -2898,7 +2898,6 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		//MEDIA ON
 		if (chctrl == 0 && slc->def == 1 && slc->ref == 3)
 		{
-			if (!is_music_playing)
 			is_music_playing = true;
 		}
 		//MEDIA OFF
