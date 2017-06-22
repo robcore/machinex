@@ -457,7 +457,6 @@ static int msm_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
 				clk_set_rate(codec_clk, TABLA_EXT_CLK_RATE);
 				clk_prepare_enable(codec_clk);
 				tabla_mclk_enable(codec, 1, dapm);
-				pr_info("apq8064: osrclk enabled\n");
 			} else {
 				pr_err("%s: Error setting Tabla MCLK\n",
 				       __func__);
@@ -474,7 +473,6 @@ static int msm_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
 					 __func__, clk_users);
 				tabla_mclk_enable(codec, 0, dapm);
 				clk_disable_unprepare(codec_clk);
-				pr_info("apq8064: osrclk disabled\n");
 			}
 		} else {
 			pr_err("%s: Error releasing Tabla MCLK\n", __func__);

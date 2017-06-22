@@ -326,8 +326,6 @@ static int snddev_icodec_open_rx(struct snddev_icodec_state *icodec)
 	}
 
 	clk_prepare_enable(drv->rx_osrclk);
-	pr_info("icodec: rx_osrclk enabled\n");
-
 	drv->rx_bitclk = clk_get_sys(NULL, "i2s_spkr_bit_clk");
 	if (IS_ERR(drv->rx_bitclk))
 		pr_err("%s clock Error\n", __func__);
@@ -458,7 +456,6 @@ static int snddev_icodec_open_tx(struct snddev_icodec_state *icodec)
 	}
 
 	clk_prepare_enable(drv->tx_osrclk);
-	pr_info("icodec: tx_osrclk enabled\n");
 	drv->tx_bitclk = clk_get_sys(NULL, "i2s_mic_bit_clk");
 	if (IS_ERR(drv->tx_bitclk))
 		pr_err("%s clock Error\n", __func__);
@@ -585,7 +582,6 @@ static int snddev_icodec_close_rx(struct snddev_icodec_state *icodec)
 
 	clk_disable_unprepare(drv->rx_bitclk);
 	clk_disable_unprepare(drv->rx_osrclk);
-	pr_info("icodec: rx_osrclk disabled\n");
 
 	msm_snddev_rx_mclk_free();
 
@@ -617,7 +613,6 @@ static int snddev_icodec_close_tx(struct snddev_icodec_state *icodec)
 
 	clk_disable_unprepare(drv->tx_bitclk);
 	clk_disable_unprepare(drv->tx_osrclk);
-	pr_info("icodec: tx_osrclk disabled\n");
 
 	msm_snddev_tx_mclk_free();
 
