@@ -194,6 +194,8 @@ static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 	increment_wakelocks_number();
 	return wl;
 }
+bool android_lock_active;
+const char *android_os = "PowerManagerService.Wakelocks";
 
 int pm_wake_lock(const char *buf)
 {
@@ -220,6 +222,8 @@ int pm_wake_lock(const char *buf)
 		if (ret)
 			return -EINVAL;
 	}
+	if (!strcmp(str, android_os) && !android_lock_active)
+		android_lock_active = true;
 
 	mutex_lock(&wakelocks_lock);
 
@@ -249,6 +253,7 @@ int pm_wake_unlock(const char *buf)
 	struct wakelock *wl;
 	size_t len;
 	int ret = 0;
+	const char *str;
 #ifdef CONFIG_SEC_PM_DEBUG
 	ktime_t start_time, end_time;
 	u64 delta_time_ns;
@@ -270,6 +275,11 @@ int pm_wake_unlock(const char *buf)
 
 	if (!len)
 		return -EINVAL;
+
+	str = buf + len;
+
+	if (!isspace(*str) && !strcmp(str, android_os) && android_lock_active)
+		android_lock_active = false;
 
 	mutex_lock(&wakelocks_lock);
 
