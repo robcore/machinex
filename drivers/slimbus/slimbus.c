@@ -17,7 +17,6 @@
 #include <linux/completion.h>
 #include <linux/idr.h>
 #include <linux/pm_runtime.h>
-#include <linux/prometheus.h>
 #include <linux/slimbus/slimbus.h>
 
 #define SLIM_PORT_HDL(la, f, p) ((la)<<24 | (f) << 16 | (p))
@@ -2847,12 +2846,6 @@ static int add_pending_ch(struct list_head *listh, u8 chan)
 	return 0;
 }
 
-static bool is_music_playing;
-bool music_is_playing(void)
-{
-	return is_music_playing;
-}
-EXPORT_SYMBOL(music_is_playing);
 /*
  * slim_control_ch: Channel control API.
  * @sb: client handle
@@ -2881,7 +2874,6 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 	u8 nchan = 0;
 	struct slim_ich *slc = &ctrl->chans[chan];
 	if (!(slc->nextgrp & SLIM_START_GRP)) {
-		pr_debug("=[slim]=%s=slc->nextgrp=0x%08x==\n",__func__, slc->nextgrp);
 		return -EINVAL;
 	}
 
@@ -2892,19 +2884,6 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		u8 add_mark_removal  = true;
 
 		slc = &ctrl->chans[chan];
-		pr_debug("-slimdebug-chan:%d,ctrl:%d,def:%d, ref:%d", slc->chan,
-			chctrl, slc->def, slc->ref); /* slimbus debug patch */
-		/*thx Ktoonsez!*/
-		//MEDIA ON
-		if (chctrl == 0 && slc->def == 1 && slc->ref == 3)
-		{
-			is_music_playing = true;
-		}
-		//MEDIA OFF
-		if (chctrl == 2 && slc->def == 1 && slc->ref == 2)
-		{
-			is_music_playing = false;
-		}
 		if (slc->state < SLIM_CH_DEFINED) {
 			ret = -ENOTCONN;
 			break;
