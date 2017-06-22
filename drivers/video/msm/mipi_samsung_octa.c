@@ -971,6 +971,7 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 			temp2 = 7;
 
 		tmpval = temp2;
+		return size;
 	} else {
 		if (val == 0)
 			msd.dstat.auto_brightness = 0;
