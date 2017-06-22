@@ -245,7 +245,7 @@ int pm_wake_lock(const char *buf)
 	mutex_unlock(&wakelocks_lock);
 
 	if (!strcmp(wl->ws.name, android_os) && !android_lock_active) {
-		pr_info("AndroidOs Lock Detected: %s\n", wl->ws.name)
+		pr_info("AndroidOs Lock Detected: %s\n", wl->ws.name);
 		android_lock_active = true;
 	}
 
@@ -303,7 +303,7 @@ int pm_wake_unlock(const char *buf)
 				delta_time_ns / NSEC_PER_MSEC);
 #endif
 	if (!strcmp(wl->ws.name, android_os) && android_lock_active) {
-		pr_info("AndroidOs Unlock Detected: %s\n", wl->ws.name)
+		pr_info("AndroidOs Unlock Detected: %s\n", wl->ws.name);
 		android_lock_active = false;
 	}
 
