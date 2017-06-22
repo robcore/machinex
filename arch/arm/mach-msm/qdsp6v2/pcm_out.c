@@ -78,7 +78,7 @@ void pcm_out_cb(uint32_t opcode, uint32_t token,
 static void audio_prevent_sleep(struct pcm *audio)
 {
 	pr_debug("%s:\n", __func__);
-	wake_lock(&audio->wakelock);
+	wake_lock_timeout(&audio->wakelock, 2000);
 }
 
 static void audio_allow_sleep(struct pcm *audio)
@@ -288,6 +288,8 @@ static long pcm_out_ioctl(struct file *file, unsigned int cmd,
 		rc = -EINVAL;
 	}
 	mutex_unlock(&pcm->lock);
+	if (rc < 0)
+		audio_allow_sleep(pcm);
 	return rc;
 }
 
