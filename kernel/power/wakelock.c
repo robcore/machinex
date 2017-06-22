@@ -194,8 +194,6 @@ static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 	increment_wakelocks_number();
 	return wl;
 }
-bool android_lock_active;
-const char *android_os = "PowerManagerService.Wakelocks";
 
 int pm_wake_lock(const char *buf)
 {
@@ -232,9 +230,6 @@ int pm_wake_lock(const char *buf)
 		goto out;
 	}
 
-	if (wl != NULL && !strcmp(wl->ws.name, android_os) && !android_lock_active)
-		is_active = true;
-
 	if (timeout_ns) {
 		u64 timeout_ms = timeout_ns + NSEC_PER_MSEC - 1;
 
@@ -248,9 +243,6 @@ int pm_wake_lock(const char *buf)
 
  out:
 	mutex_unlock(&wakelocks_lock);
-
-
-	android_lock_active = is_active;
 
 	return ret;
 }
@@ -291,9 +283,6 @@ int pm_wake_unlock(const char *buf)
 		goto out;
 	}
 
-	if (wl != NULL && !strcmp(wl->ws.name, android_os) && android_lock_active)
-		is_active = false;
-
 	__pm_relax(&wl->ws);
 
 	wakelocks_lru_most_recent(wl);
@@ -303,8 +292,6 @@ int pm_wake_unlock(const char *buf)
 
  out:
 	mutex_unlock(&wakelocks_lock);
-
-	android_lock_active = is_active;
 
 	return ret;
 }
