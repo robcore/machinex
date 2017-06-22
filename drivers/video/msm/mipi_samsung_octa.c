@@ -896,7 +896,7 @@ char* get_b6_reg_magna(void)
 }
 
 static unsigned int hbm_mode = 0;
-static unsigned int tmpval;
+static unsigned char tmpval;
 static ssize_t mipi_samsung_hbm_mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -904,14 +904,14 @@ static ssize_t mipi_samsung_hbm_mode_show(struct device *dev,
 }
 
 static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+		struct device_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int val;
 	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	if (sscanf(buf, "%u", &val) != 1)
+	sscanf(buf, "%u", &val);
 
 	sanitize_min_max(val, 0, 1)
 
@@ -920,7 +920,7 @@ static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
 	else if (val == 0)
 		msd.dstat.auto_brightness = tmpval;
 
-	return size;
+	return count;
 }
 
 static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
@@ -935,14 +935,14 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 }
 
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+		struct device_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int val;
 	static int first_auto_br;
 	struct msm_fb_data_type *mfd;
 	mfd = platform_get_drvdata(msd.msm_pdev);
 
-	if (sscanf(buf, "%u", &val) != 1)
+	sscanf(buf, "%u", &val);
 
 	if (hbm_mode)
 		goto skip;
