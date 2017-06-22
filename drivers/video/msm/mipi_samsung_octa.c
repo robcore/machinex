@@ -904,7 +904,7 @@ static ssize_t mipi_samsung_hbm_mode_show(struct device *dev,
 }
 
 static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+		struct device_attribute *attr, const char *buf, size_t size)
 {
 	unsigned int val;
 	static int first_auto_br;
@@ -920,7 +920,19 @@ static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
 	else if (val == 0)
 		msd.dstat.auto_brightness = tmpval;
 
-	return count;
+	if (!first_auto_br) {
+		first_auto_br++;
+		return size;
+	}
+
+	if (mfd->resume_state == MIPI_RESUME_STATE) {
+		msd.mpd->first_bl_hbm_psre = 0;
+		mipi_samsung_disp_backlight(mfd);
+	} else {
+		msd.mpd->first_bl_hbm_psre = 0;
+	}
+
+	return size;
 }
 
 static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
@@ -935,7 +947,7 @@ static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 }
 
 static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+		struct device_attribute *attr, const char *buf, size_t size)
 {
 	unsigned int val;
 	static int first_auto_br;
