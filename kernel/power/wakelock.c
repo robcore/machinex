@@ -204,6 +204,7 @@ int pm_wake_lock(const char *buf)
 	u64 timeout_ns = 0;
 	size_t len;
 	int ret = 0;
+	bool is_active;
 #if 0
 	if (!capable(CAP_BLOCK_SUSPEND))
 		return -EPERM;
@@ -230,6 +231,10 @@ int pm_wake_lock(const char *buf)
 		ret = PTR_ERR(wl);
 		goto out;
 	}
+
+	if (wl != NULL && !strcmp(wl->ws.name, android_os) && !android_lock_active)
+		is_active = true;
+
 	if (timeout_ns) {
 		u64 timeout_ms = timeout_ns + NSEC_PER_MSEC - 1;
 
@@ -244,10 +249,8 @@ int pm_wake_lock(const char *buf)
  out:
 	mutex_unlock(&wakelocks_lock);
 
-	if (!strcmp(wl->ws.name, android_os) && !android_lock_active) {
-		pr_info("AndroidOs Lock Detected: %s\n", wl->ws.name);
-		android_lock_active = true;
-	}
+
+	android_lock_active = is_active;
 
 	return ret;
 }
@@ -257,6 +260,7 @@ int pm_wake_unlock(const char *buf)
 	struct wakelock *wl;
 	size_t len;
 	int ret = 0;
+	bool is_active;
 #ifdef CONFIG_SEC_PM_DEBUG
 	ktime_t start_time, end_time;
 	u64 delta_time_ns;
@@ -286,26 +290,21 @@ int pm_wake_unlock(const char *buf)
 		ret = PTR_ERR(wl);
 		goto out;
 	}
+
+	if (wl != NULL && !strcmp(wl->ws.name, android_os) && android_lock_active)
+		is_active = false;
+
 	__pm_relax(&wl->ws);
 
 	wakelocks_lru_most_recent(wl);
 	wakelocks_gc();
 
+
+
  out:
 	mutex_unlock(&wakelocks_lock);
 
-#ifdef CONFIG_SEC_PM_DEBUG
-	end_time = ktime_get();
-	delta_time_ns = ktime_to_ns(ktime_sub(end_time, start_time));
-
-	if (delta_time_ns > ((u64)40 * NSEC_PER_MSEC))
-		pr_info("%s: ret=%d elapsed time:%llu\n", __func__, ret,
-				delta_time_ns / NSEC_PER_MSEC);
-#endif
-	if (!strcmp(wl->ws.name, android_os) && android_lock_active) {
-		pr_info("AndroidOs Unlock Detected: %s\n", wl->ws.name);
-		android_lock_active = false;
-	}
+	android_lock_active = is_active;
 
 	return ret;
 }
