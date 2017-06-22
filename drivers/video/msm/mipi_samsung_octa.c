@@ -920,6 +920,8 @@ static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
 	else if (val == 0)
 		msd.dstat.auto_brightness = tmpval;
 
+	hbm_mode = val;
+
 	if (!first_auto_br) {
 		first_auto_br++;
 		return size;
@@ -938,10 +940,10 @@ static ssize_t mipi_samsung_hbm_mode_store(struct device *dev,
 static ssize_t mipi_samsung_auto_brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	unsigned int dummy = 5;
+	unsigned int dummy = 6;
 
-	if (msd.dstat.auto_brightness > dummy) /*hide hbm mode from system*/
-		return sprintf(buf, "%d\n", dummy);
+	if (msd.dstat.auto_brightness == dummy) /*hide hbm mode from system*/
+		return sprintf(buf, "%d\n", tmpval);
 
 	return sprintf(buf, "%d\n", msd.dstat.auto_brightness);
 }
@@ -956,19 +958,33 @@ static ssize_t mipi_samsung_auto_brightness_store(struct device *dev,
 
 	sscanf(buf, "%u", &val);
 
-	if (hbm_mode)
+	if ()
 		goto skip;
 
-	if (val > 5)
-		val = 5;
-
-	msd.dstat.auto_brightness = val;
+	if (val == 0)
+		msd.dstat.auto_brightness = 0;
+	else if (val == 1)
+		msd.dstat.auto_brightness = 1;
+	else if (val == 2)
+		msd.dstat.auto_brightness = 2;
+	else if (val == 3)
+		msd.dstat.auto_brightness = 3;
+	else if (val == 4)
+		msd.dstat.auto_brightness = 4;
+	else if (val == 5)
+		msd.dstat.auto_brightness = 5;
+	else if (hbm_mode == 1)
+		msd.dstat.auto_brightness = 6;
+	else if (val == 7)
+		msd.dstat.auto_brightness = 7;
+	
 	tmpval = msd.dstat.auto_brightness;
-skip:
+
 	if (!first_auto_br) {
 		first_auto_br++;
 		return size;
 	}
+
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		msd.mpd->first_bl_hbm_psre = 0;
