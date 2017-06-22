@@ -202,7 +202,6 @@ int pm_wake_lock(const char *buf)
 	u64 timeout_ns = 0;
 	size_t len;
 	int ret = 0;
-	bool is_active;
 #if 0
 	if (!capable(CAP_BLOCK_SUSPEND))
 		return -EPERM;
@@ -252,7 +251,6 @@ int pm_wake_unlock(const char *buf)
 	struct wakelock *wl;
 	size_t len;
 	int ret = 0;
-	bool is_active;
 #ifdef CONFIG_SEC_PM_DEBUG
 	ktime_t start_time, end_time;
 	u64 delta_time_ns;
