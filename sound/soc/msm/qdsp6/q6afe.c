@@ -437,10 +437,12 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 		ret = get_hw_delay(RX_CAL, &delay_entry);
 
 	if (ret != 0) {
+		ret = -EINVAL;
 		goto done;
 	}
 	index = port_id;
 	if (index < 0) {
+		ret = -EINVAL;
 		goto done;
 	}
 
@@ -473,7 +475,7 @@ static int afe_send_hw_delay(u16 port_id, u32 rate)
 		goto done;
 	}
 
-	ret = wait_event_timeout(this_afe.wait,
+	ret = wait_event_interruptible_timeout(this_afe.wait,
 				(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 
@@ -604,7 +606,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		goto fail_cmd;
 	}
 
-	ret = wait_event_timeout(this_afe.wait,
+	ret = wait_event_interruptible_timeout(this_afe.wait,
 			(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 
@@ -619,7 +621,11 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 
 	/* send AFE cal */
 	afe_send_cal(port_id);
-	afe_send_hw_delay(port_id, rate);
+	ret = afe_send_hw_delay(port_id, rate);
+	if (ret != 0) {
+		ret = -EINVAL;
+		goto fail_cmd;
+	}
 
 	start.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
@@ -640,7 +646,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		goto fail_cmd;
 	}
 
-	ret = wait_event_timeout(this_afe.wait,
+	ret = wait_event_interruptible_timeout(this_afe.wait,
 			(atomic_read(&this_afe.state) == 0),
 				msecs_to_jiffies(TIMEOUT_MS));
 	if (!ret) {
@@ -1529,7 +1535,7 @@ static int afe_get_parameters(char *buf, long int *param1, int num_of_par)
 			else
 				base = 10;
 
-			if (strict_strtoul(token, base, &param1[cnt]) != 0)
+			if (kstrtoul(token, base, &param1[cnt]) != 0)
 				return -EINVAL;
 
 			token = strsep(&buf, " ");
