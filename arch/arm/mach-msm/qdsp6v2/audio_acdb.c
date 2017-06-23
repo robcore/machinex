@@ -207,16 +207,12 @@ int get_hw_delay(int32_t path, struct hw_delay_entry *entry)
 	else
 		pr_err("ACDB=> %s Invalid path: %d\n",__func__,path);
 
-	if (delay == NULL) {
-		pr_err("ACDB=> %s Delay Entry is NULL\n", __func__);
-		result = -EINVAL;
-		goto done;
-	} else if (delay != NULL && (delay->num_entries <= 0 ||
-		 delay->num_entries > MAX_HW_DELAY_ENTRIES)) {
-		pr_err("ACDB=> %s Invalid delay/ delay entries!\n", __func__);
+	if ((delay == NULL) || ((delay != NULL) && delay->num_entries == 0)) {
+		pr_err("ACDB=> %s Invalid delay/ delay entries\n", __func__);
 		result = -EINVAL;
 		goto done;
 	}
+
 	info = (struct hw_delay_entry *)(delay->delay_info);
 	if (info == NULL) {
 		pr_err("ACDB=> %s Delay entries info is NULL\n", __func__);
@@ -771,10 +767,8 @@ static void allocate_hw_delay_entries(void)
 static int deregister_memory(void)
 {
 	mutex_lock(&acdb_data.acdb_mutex);
-	if (acdb_data.hw_delay_tx.delay_info != NULL)
-		kfree(acdb_data.hw_delay_tx.delay_info);
-	if (acdb_data.hw_delay_rx.delay_info != NULL)
-		kfree(acdb_data.hw_delay_rx.delay_info);
+	kfree(acdb_data.hw_delay_tx.delay_info);
+	kfree(acdb_data.hw_delay_rx.delay_info);
 	mutex_unlock(&acdb_data.acdb_mutex);
 
 	if (atomic64_read(&acdb_data.mem_len)) {
