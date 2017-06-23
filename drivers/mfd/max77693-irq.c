@@ -184,18 +184,12 @@ static irqreturn_t max77693_irq_thread(int irq, void *data)
 	u8 irq_src;
 	int ret;
 	int i;
-	pr_debug("%s: irq gpio pre-state(0x%02x)\n", __func__,
-		gpio_get_value(max77693->irq_gpio));
 
 clear_retry:
 	ret = max77693_read_reg(max77693->i2c,
 		MAX77693_PMIC_REG_INTSRC, &irq_src);
-	if (ret < 0) {
-		dev_err(max77693->dev, "Failed to read interrupt source: %d\n",
-				ret);
+	if (ret < 0)
 		return IRQ_NONE;
-	}
-	pr_info("%s: interrupt source(0x%02x)\n", __func__, irq_src);
 
 	if (irq_src & MAX77693_IRQSRC_CHG) {
 		/* CHG_INT */
@@ -287,13 +281,11 @@ int max77693_irq_init(struct max77693_dev *max77693)
 	u8 i2c_data;
 
 	if (!max77693->irq_gpio) {
-		dev_warn(max77693->dev, "No interrupt specified.\n");
 		max77693->irq_base = 0;
 		return 0;
 	}
 
 	if (!max77693->irq_base) {
-		dev_err(max77693->dev, "No interrupt base specified.\n");
 		return 0;
 	}
 
@@ -302,8 +294,6 @@ int max77693_irq_init(struct max77693_dev *max77693)
 	max77693->irq = gpio_to_irq(max77693->irq_gpio);
 	ret = gpio_request(max77693->irq_gpio, "if_pmic_irq");
 	if (ret) {
-		dev_err(max77693->dev, "%s: failed requesting gpio %d\n",
-			__func__, max77693->irq_gpio);
 		goto err_irq;
 	}
 	gpio_direction_input(max77693->irq_gpio);
@@ -363,10 +353,6 @@ int max77693_irq_init(struct max77693_dev *max77693)
 	ret = request_threaded_irq(max77693->irq, NULL, max77693_irq_thread,
 				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 				   "max77693-irq", max77693);
-
-	if (ret)
-		dev_err(max77693->dev, "Failed to request IRQ %d: %d\n",
-			max77693->irq, ret);
 
 err_irq:
 	return ret;

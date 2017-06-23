@@ -4449,7 +4449,6 @@ static int tabla_set_channel_map(struct snd_soc_dai *dai,
 		tabla->dai[dai->id - 1].ch_act = 0;
 		for (i = 0; i < tx_num; i++)
 			tabla->dai[dai->id - 1].ch_num[i]  = tx_slot[i];
-
 		pr_debug("=[WCD]=%s: APQ<-", __func__);
 		for(i = 0; i < tx_num ; i++)
 			printk("[%d]",tabla->dai[dai->id - 1].ch_num[i]);
