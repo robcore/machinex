@@ -16,8 +16,8 @@ obj-y			:= filemap.o mempool.o oom_kill.o fadvise.o \
 			   readahead.o swap.o truncate.o vmscan.o shmem.o \
 			   interval_tree.o util.o mmzone.o vmstat.o backing-dev.o \
 			   mm_init.o mmu_context.o percpu.o slab_common.o \
-			   compaction.o balloon_compaction.o vmacache.o $(mmu-y) \
-			   showmem.o vmpressure.o
+			   showmem.o vmpressure.o list_lru.o \
+			   compaction.o balloon_compaction.o vmacache.o $(mmu-y)
 
 obj-y += init-mm.o
 
