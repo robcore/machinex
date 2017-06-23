@@ -212,7 +212,7 @@ int get_hw_delay(int32_t path, struct hw_delay_entry *entry)
 		result = -EINVAL;
 		goto done;
 	} else if (delay != NULL && (delay->num_entries <= 0 ||
-		 delay.num_entries > MAX_HW_DELAY_ENTRIES)) {
+		 delay->num_entries > MAX_HW_DELAY_ENTRIES)) {
 		pr_err("ACDB=> %s Invalid delay/ delay entries!\n", __func__);
 		result = -EINVAL;
 		goto done;
