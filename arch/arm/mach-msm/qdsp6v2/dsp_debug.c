@@ -53,7 +53,7 @@ void q6audio_dsp_not_responding(void)
 		wake_up(&dsp_wait);
 
 		while (dsp_has_crashed != 2)
-			wait_event(dsp_wait, dsp_has_crashed == 2);
+			wait_event_interruptible(dsp_wait, dsp_has_crashed == 2);
 	} else {
 		pr_err("q6audio_dsp_not_responding() - no waiter?\n");
 	}
