@@ -137,7 +137,7 @@ static ssize_t audio_output_latency_dbgfs_write(struct file *file,
 			kfree(temp);
 			return -EFAULT;
 		}
-		if (!strict_strtol(temp, 10, &out_enable_flag)) {
+		if (!kstrtol(temp, 10, &out_enable_flag)) {
 			kfree(temp);
 			return count;
 		}
@@ -178,7 +178,7 @@ static ssize_t audio_input_latency_dbgfs_write(struct file *file,
 			kfree(temp);
 			return -EFAULT;
 		}
-		if (!strict_strtol(temp, 10, &in_enable_flag)) {
+		if (!kstrtol(temp, 10, &in_enable_flag)) {
 			kfree(temp);
 			return count;
 		}
