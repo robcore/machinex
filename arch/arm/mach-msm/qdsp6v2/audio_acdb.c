@@ -920,10 +920,10 @@ static long acdb_ioctl(struct file *f,
 		store_asm_topology(topology);
 		goto done;
 	case AUDIO_SET_HW_DELAY_RX:
-		result = store_hw_delay(RX_CAL, (void *)arg);
+		result = store_hw_delay(RX_CAL, (void *) arg);
 		goto done;
 	case AUDIO_SET_HW_DELAY_TX:
-		result = store_hw_delay(TX_CAL, (void *)arg);
+		result = store_hw_delay(TX_CAL, (void *) arg);
 		goto done;
 	}
 
@@ -956,60 +956,63 @@ static long acdb_ioctl(struct file *f,
 	switch (cmd) {
 	case AUDIO_SET_AUDPROC_TX_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More Audproc Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_audproc_cal(TX_CAL, data);
+			pr_err("%s: More Audproc Cal then expected, size received: %d\n",
+				__func__, size);
+		store_audproc_cal(TX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AUDPROC_RX_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More Audproc Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_audproc_cal(RX_CAL, data);
+			pr_err("%s: More Audproc Cal then expected, size received: %d\n",
+				__func__, size);
+		store_audproc_cal(RX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AUDPROC_TX_STREAM_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More Audproc Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_audstrm_cal(TX_CAL, data);
+			pr_err("%s: More Audproc Cal then expected, size received: %d\n",
+				__func__, size);
+		store_audstrm_cal(TX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AUDPROC_RX_STREAM_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More Audproc Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_audstrm_cal(RX_CAL, data);
+			pr_err("%s: More Audproc Cal then expected, size received: %d\n",
+				__func__, size);
+		store_audstrm_cal(RX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AUDPROC_TX_VOL_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More Audproc Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_audvol_cal(TX_CAL, data);
+			pr_err("%s: More Audproc Cal then expected, size received: %d\n",
+				__func__, size);
+		store_audvol_cal(TX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AUDPROC_RX_VOL_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More Audproc Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_audvol_cal(RX_CAL, data);
+			pr_err("%s: More Audproc Cal then expected, size received: %d\n",
+				__func__, size);
+		store_audvol_cal(RX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AFE_TX_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More AFE Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_afe_cal(TX_CAL, data);
+			pr_err("%s: More AFE Cal then expected, size received: %d\n",
+				__func__, size);
+		store_afe_cal(TX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_AFE_RX_CAL:
 		if (size > sizeof(struct cal_block))
-			pr_err("%s: More AFE Cal then expected, "
-				"size received: %d\n", __func__, size);
-		store_afe_cal(RX_CAL, data);
+			pr_err("%s: More AFE Cal then expected, size received: %d\n",
+				__func__, size);
+		store_afe_cal(RX_CAL, (struct cal_block *)data);
 		break;
 	case AUDIO_SET_VOCPROC_CAL:
-		store_vocproc_cal(size / sizeof(struct cal_block), data);
+		store_vocproc_cal(size / sizeof(struct cal_block),
+						(struct cal_block *)data);
 		break;
 	case AUDIO_SET_VOCPROC_STREAM_CAL:
-		store_vocstrm_cal(size / sizeof(struct cal_block), data);
+		store_vocstrm_cal(size / sizeof(struct cal_block),
+						(struct cal_block *)data);
 		break;
 	case AUDIO_SET_VOCPROC_VOL_CAL:
-		store_vocvol_cal(size / sizeof(struct cal_block), data);
+		store_vocvol_cal(size / sizeof(struct cal_block),
+						(struct cal_block *)data);
 		break;
 	case AUDIO_SET_SIDETONE_CAL:
 		if (size > sizeof(struct sidetone_cal))
@@ -1018,7 +1021,7 @@ static long acdb_ioctl(struct file *f,
 		store_sidetone_cal((struct sidetone_cal *)data);
 		break;
 	case AUDIO_SET_ANC_CAL:
-		store_anc_cal(data);
+		store_anc_cal((struct cal_block *)data);
 		break;
 	default:
 		pr_err("ACDB=> ACDB ioctl not found!\n");
