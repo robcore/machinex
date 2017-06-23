@@ -143,6 +143,22 @@ check_write_avail:
 	}
 }
 
+int apr_tal_close(struct apr_svc_ch_dev *apr_ch)
+{
+	int r;
+
+	if (!apr_ch->ch)
+		return -EINVAL;
+
+	mutex_lock(&apr_ch->m_lock);
+	r = smd_close(apr_ch->ch);
+	apr_ch->ch = NULL;
+	apr_ch->func = NULL;
+	apr_ch->priv = NULL;
+	mutex_unlock(&apr_ch->m_lock);
+	return r;
+}
+
 struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 				uint32_t dl, apr_svc_cb_fn func, void *priv)
 {
@@ -155,13 +171,13 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 	}
 
 	if (apr_svc_ch[dl][dest][svc].ch) {
-		pr_err("apr_tal: This channel alreday openend\n");
+		pr_err("apr_tal: This channel alreday opened\n");
 		return NULL;
 	}
 
 	mutex_lock(&apr_svc_ch[dl][dest][svc].m_lock);
 	if (!apr_svc_ch[dl][dest][svc].dest_state) {
-		rc = wait_event_timeout(apr_svc_ch[dl][dest][svc].dest,
+		rc = wait_event_interruptible_timeout(apr_svc_ch[dl][dest][svc].dest,
 			apr_svc_ch[dl][dest][svc].dest_state,
 				msecs_to_jiffies(APR_OPEN_TIMEOUT_MS));
 		if (rc == 0) {
@@ -182,8 +198,8 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 		mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
 		return NULL;
 	}
-	rc = wait_event_timeout(apr_svc_ch[dl][dest][svc].wait,
-		(apr_svc_ch[dl][dest][svc].smd_state == 1), 5 * HZ);
+	rc = wait_event_interruptible_timeout(apr_svc_ch[dl][dest][svc].wait,
+		(apr_svc_ch[dl][dest][svc].smd_state == 1), msecs_to_jiffies(APR_OPEN_TIMEOUT_MS));
 	if (rc == 0) {
 		pr_err("apr_tal:TIMEOUT for OPEN event\n");
 		mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
@@ -193,7 +209,7 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 	if (!apr_svc_ch[dl][dest][svc].dest_state) {
 		apr_svc_ch[dl][dest][svc].dest_state = 1;
 		pr_debug("apr_tal:Waiting for apr svc init\n");
-		msleep(200);
+		msleep_interruptible(200);
 		pr_debug("apr_tal:apr svc init done\n");
 	}
 	apr_svc_ch[dl][dest][svc].smd_state = 0;
@@ -203,22 +219,6 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 	mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
 
 	return &apr_svc_ch[dl][dest][svc];
-}
-
-int apr_tal_close(struct apr_svc_ch_dev *apr_ch)
-{
-	int r;
-
-	if (!apr_ch->ch)
-		return -EINVAL;
-
-	mutex_lock(&apr_ch->m_lock);
-	r = smd_close(apr_ch->ch);
-	apr_ch->ch = NULL;
-	apr_ch->func = NULL;
-	apr_ch->priv = NULL;
-	mutex_unlock(&apr_ch->m_lock);
-	return r;
 }
 
 static int apr_smd_probe(struct platform_device *pdev)
