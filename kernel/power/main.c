@@ -663,8 +663,9 @@ power_attr(autosleep);
 
 #ifdef CONFIG_PM_WAKELOCKS
 
-#if 0
+
 unsigned int android_os_wake = 0;
+#if 0
 bool machinex_android_ws_active(void)
 {
 	bool ret;
