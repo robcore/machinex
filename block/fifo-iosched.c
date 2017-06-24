@@ -31,15 +31,16 @@ static void fifo_add_request(struct request_queue *q, struct request *req)
 	list_add_tail(&req->queuelist, &fifo_d->queue);
 }
 
-static void *fifo_init_queue(struct request_queue *q)
+static int *fifo_init_queue(struct request_queue *q)
 {
 	struct fifo_data *fifo_d;
 
 	fifo_d = kmalloc_node(sizeof(*fifo_d), GFP_KERNEL, q->node);
 	if (!fifo_d)
-		return NULL;
+		return -ENOMEM;
 	INIT_LIST_HEAD(&fifo_d->queue);
-	return fifo_d;
+	q->elevator->elevator_data = fifo_d;
+	return 0;
 }
 
 static void fifo_exit_queue(struct elevator_queue *e)

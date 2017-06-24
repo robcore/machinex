@@ -3780,14 +3780,14 @@ static void bfq_exit_queue(struct elevator_queue *e)
 	kfree(bfqd);
 }
 
-static void *bfq_init_queue(struct request_queue *q)
+static int *bfq_init_queue(struct request_queue *q)
 {
 	struct bfq_group *bfqg;
 	struct bfq_data *bfqd;
 
 	bfqd = kzalloc_node(sizeof(*bfqd), GFP_KERNEL, q->node);
 	if (bfqd == NULL)
-		return NULL;
+		return -ENOMEM;
 
 	/*
 	 * Our fallback bfqq if bfq_find_alloc_queue() runs into OOM issues.
@@ -3808,11 +3808,12 @@ static void *bfq_init_queue(struct request_queue *q)
 	bfqd->oom_bfqq.entity.ioprio_changed = 1;
 
 	bfqd->queue = q;
+	q->elevator->elevator_data = bfqd;
 
 	bfqg = bfq_alloc_root_group(bfqd, q->node);
 	if (bfqg == NULL) {
 		kfree(bfqd);
-		return NULL;
+		return -ENOMEM;
 	}
 
 	bfqd->root_group = bfqg;
@@ -3882,7 +3883,7 @@ static void *bfq_init_queue(struct request_queue *q)
 	bfqd->peak_rate = R_fast[blk_queue_nonrot(bfqd->queue)];
 	bfqd->device_speed = BFQ_BFQD_FAST;
 
-	return bfqd;
+	return 0;
 }
 
 static void bfq_registered_queue(struct request_queue *q)
