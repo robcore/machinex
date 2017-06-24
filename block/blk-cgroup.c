@@ -420,6 +420,7 @@ struct blkio_group *blkg_lookup_create(struct blkio_cgroup *blkcg,
 	if (blkg)
 		return blkg;
 
+	/* blkg holds a reference to blkcg */
 	if (!css_tryget(&blkcg->css))
 		return ERR_PTR(-EINVAL);
 
@@ -441,15 +442,16 @@ struct blkio_group *blkg_lookup_create(struct blkio_cgroup *blkcg,
 
 		spin_lock_init(&new_blkg->stats_lock);
 		rcu_assign_pointer(new_blkg->q, q);
-		new_blkg->blkcg_id = css_id(&blkcg->css);
+		new_blkg->blkcg = blkcg;
 		new_blkg->plid = plid;
 		cgroup_path(blkcg->css.cgroup, new_blkg->path,
 			    sizeof(new_blkg->path));
+	} else {
+		css_put(&blkcg->css);
 	}
 
 	rcu_read_lock();
 	spin_lock_irq(q->queue_lock);
-	css_put(&blkcg->css);
 
 	/* did bypass get turned on inbetween? */
 	if (unlikely(blk_queue_bypass(q)) && !for_root) {
@@ -478,6 +480,7 @@ out:
 	if (new_blkg) {
 		free_percpu(new_blkg->stats_cpu);
 		kfree(new_blkg);
+		css_put(&blkcg->css);
 	}
 	return blkg;
 }
@@ -486,7 +489,6 @@ EXPORT_SYMBOL_GPL(blkg_lookup_create);
 static void __blkiocg_del_blkio_group(struct blkio_group *blkg)
 {
 	hlist_del_init_rcu(&blkg->blkcg_node);
-	blkg->blkcg_id = 0;
 }
 
 /*
@@ -1358,6 +1360,7 @@ struct cftype blkio_files[] = {
 #endif
 	{ }	/* terminate */
 };
++static int blkiocg_pre_destroy(struct cgroup_subsys *, struct cgroup *);
 
 static void blkiocg_destroy(struct cgroup *cgroup)
 {
@@ -1368,6 +1371,7 @@ static void blkiocg_destroy(struct cgroup *cgroup)
 	struct blkio_policy_type *blkiop;
 
 	rcu_read_lock();
+
 	do {
 		spin_lock_irqsave(&blkcg->lock, flags);
 
@@ -1397,8 +1401,15 @@ static void blkiocg_destroy(struct cgroup *cgroup)
 		spin_unlock(&blkio_list_lock);
 	} while (1);
 
-	free_css_id(&blkio_subsys, &blkcg->css);
 	rcu_read_unlock();
+
+	return 0;
+}
+
+static void blkiocg_destroy(struct cgroup_subsys *subsys, struct cgroup *cgroup)
+{
+	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgroup);
+
 	if (blkcg != &blkio_root_cgroup)
 		kfree(blkcg);
 }
