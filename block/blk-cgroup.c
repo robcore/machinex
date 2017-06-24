@@ -11,7 +11,6 @@
  * 	              Nauman Rafique <nauman@google.com>
  */
 #include <linux/ioprio.h>
-#include <linux/seq_file.h>
 #include <linux/kdev_t.h>
 #include <linux/module.h>
 #include <linux/err.h>
@@ -766,10 +765,9 @@ static const char *blkg_dev_name(struct blkio_group *blkg)
  * This is to be used to construct print functions for
  * cftype->read_seq_string method.
  */
-static void blkcg_print_blkgs(struct seq_file *sf, struct blkio_cgroup *blkcg,
-			      u64 (*prfill)(struct seq_file *,
-					    struct blkg_policy_data *, int),
-			      int pol, int data, bool show_total)
+void blkcg_print_blkgs(struct seq_file *sf, struct blkio_cgroup *blkcg,
+		       u64 (*prfill)(struct seq_file *, struct blkg_policy_data *, int),
+		       int pol, int data, bool show_total)
 {
 	struct blkio_group *blkg;
 	struct hlist_node *n;
@@ -784,6 +782,7 @@ static void blkcg_print_blkgs(struct seq_file *sf, struct blkio_cgroup *blkcg,
 	if (show_total)
 		seq_printf(sf, "Total %llu\n", (unsigned long long)total);
 }
+EXPORT_SYMBOL_GPL(blkcg_print_blkgs);
 
 /**
  * __blkg_prfill_u64 - prfill helper for a single u64 value
@@ -793,8 +792,7 @@ static void blkcg_print_blkgs(struct seq_file *sf, struct blkio_cgroup *blkcg,
  *
  * Print @v to @sf for the device assocaited with @pd.
  */
-static u64 __blkg_prfill_u64(struct seq_file *sf, struct blkg_policy_data *pd,
-			     u64 v)
+u64 __blkg_prfill_u64(struct seq_file *sf, struct blkg_policy_data *pd, u64 v)
 {
 	const char *dname = blkg_dev_name(pd->blkg);
 
@@ -804,6 +802,7 @@ static u64 __blkg_prfill_u64(struct seq_file *sf, struct blkg_policy_data *pd,
 	seq_printf(sf, "%s %llu\n", dname, (unsigned long long)v);
 	return v;
 }
+EXPORT_SYMBOL_GPL(__blkg_prfill_u64);
 
 /**
  * __blkg_prfill_rwstat - prfill helper for a blkg_rwstat
@@ -813,9 +812,8 @@ static u64 __blkg_prfill_u64(struct seq_file *sf, struct blkg_policy_data *pd,
  *
  * Print @rwstat to @sf for the device assocaited with @pd.
  */
-static u64 __blkg_prfill_rwstat(struct seq_file *sf,
-				struct blkg_policy_data *pd,
-				const struct blkg_rwstat *rwstat)
+u64 __blkg_prfill_rwstat(struct seq_file *sf, struct blkg_policy_data *pd,
+			 const struct blkg_rwstat *rwstat)
 {
 	static const char *rwstr[] = {
 		[BLKG_RWSTAT_READ]	= "Read",
@@ -855,8 +853,8 @@ static u64 blkg_prfill_rwstat(struct seq_file *sf, struct blkg_policy_data *pd,
 }
 
 /* print blkg_stat specified by BLKCG_STAT_PRIV() */
-static int blkcg_print_stat(struct cgroup *cgrp, struct cftype *cft,
-			    struct seq_file *sf)
+int blkcg_print_stat(struct cgroup *cgrp, struct cftype *cft,
+		     struct seq_file *sf)
 {
 	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgrp);
 
@@ -865,10 +863,11 @@ static int blkcg_print_stat(struct cgroup *cgrp, struct cftype *cft,
 			  BLKCG_STAT_OFF(cft->private), false);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(blkcg_print_stat);
 
 /* print blkg_rwstat specified by BLKCG_STAT_PRIV() */
-static int blkcg_print_rwstat(struct cgroup *cgrp, struct cftype *cft,
-			      struct seq_file *sf)
+int blkcg_print_rwstat(struct cgroup *cgrp, struct cftype *cft,
+		       struct seq_file *sf)
 {
 	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgrp);
 
@@ -877,6 +876,7 @@ static int blkcg_print_rwstat(struct cgroup *cgrp, struct cftype *cft,
 			  BLKCG_STAT_OFF(cft->private), true);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(blkcg_print_rwstat);
 
 static u64 blkg_prfill_cpu_stat(struct seq_file *sf,
 				struct blkg_policy_data *pd, int off)
@@ -913,8 +913,8 @@ static u64 blkg_prfill_cpu_rwstat(struct seq_file *sf,
 }
 
 /* print per-cpu blkg_stat specified by BLKCG_STAT_PRIV() */
-static int blkcg_print_cpu_stat(struct cgroup *cgrp, struct cftype *cft,
-				struct seq_file *sf)
+int blkcg_print_cpu_stat(struct cgroup *cgrp, struct cftype *cft,
+			 struct seq_file *sf)
 {
 	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgrp);
 
@@ -923,10 +923,11 @@ static int blkcg_print_cpu_stat(struct cgroup *cgrp, struct cftype *cft,
 			  BLKCG_STAT_OFF(cft->private), false);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(blkcg_print_cpu_stat);
 
 /* print per-cpu blkg_rwstat specified by BLKCG_STAT_PRIV() */
-static int blkcg_print_cpu_rwstat(struct cgroup *cgrp, struct cftype *cft,
-				  struct seq_file *sf)
+int blkcg_print_cpu_rwstat(struct cgroup *cgrp, struct cftype *cft,
+			   struct seq_file *sf)
 {
 	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgrp);
 
@@ -935,6 +936,7 @@ static int blkcg_print_cpu_rwstat(struct cgroup *cgrp, struct cftype *cft,
 			  BLKCG_STAT_OFF(cft->private), true);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(blkcg_print_cpu_rwstat);
 
 #ifdef CONFIG_DEBUG_BLK_CGROUP
 static u64 blkg_prfill_avg_queue_size(struct seq_file *sf,
@@ -963,12 +965,6 @@ static int blkcg_print_avg_queue_size(struct cgroup *cgrp, struct cftype *cft,
 }
 #endif	/* CONFIG_DEBUG_BLK_CGROUP */
 
-struct blkg_conf_ctx {
-	struct gendisk		*disk;
-	struct blkio_group	*blkg;
-	u64			v;
-};
-
 /**
  * blkg_conf_prep - parse and prepare for per-blkg config update
  * @blkcg: target block cgroup
@@ -980,8 +976,8 @@ struct blkg_conf_ctx {
  * value.  This function returns with RCU read locked and must be paired
  * with blkg_conf_finish().
  */
-static int blkg_conf_prep(struct blkio_cgroup *blkcg, const char *input,
-			  struct blkg_conf_ctx *ctx)
+int blkg_conf_prep(struct blkio_cgroup *blkcg, const char *input,
+		   struct blkg_conf_ctx *ctx)
 	__acquires(rcu)
 {
 	struct gendisk *disk;
@@ -1025,6 +1021,7 @@ static int blkg_conf_prep(struct blkio_cgroup *blkcg, const char *input,
 	ctx->v = v;
 	return 0;
 }
+EXPORT_SYMBOL_GPL(blkg_conf_prep);
 
 /**
  * blkg_conf_finish - finish up per-blkg config update
@@ -1033,12 +1030,13 @@ static int blkg_conf_prep(struct blkio_cgroup *blkcg, const char *input,
  * Finish up after per-blkg config update.  This function must be paired
  * with blkg_conf_prep().
  */
-static void blkg_conf_finish(struct blkg_conf_ctx *ctx)
+void blkg_conf_finish(struct blkg_conf_ctx *ctx)
 	__releases(rcu)
 {
 	rcu_read_unlock();
 	put_disk(ctx->disk);
 }
+EXPORT_SYMBOL_GPL(blkg_conf_finish);
 
 /* for propio conf */
 static u64 blkg_prfill_weight_device(struct seq_file *sf,
