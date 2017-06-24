@@ -558,7 +558,7 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	 */
 	cec = atomic_add_return(MAX_IN_PROGRESS, &combined_event_count);
 	trace_wakeup_source_deactivate(ws->name, cec);
-	if (strstr(ws->name, androidws) != NULL))
+	if (strstr(ws->name, androidws) != NULL)
 		is_android_wake_active = false;
 	android_ws_active(ws, ws->name);
 
@@ -681,7 +681,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
 	trace_wakeup_source_activate(ws->name, cec);
-	if (strstr(ws->name, androidws) != NULL))
+	if (strstr(ws->name, androidws) != NULL)
 		is_android_wake_active = true;
 }
 
