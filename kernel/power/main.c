@@ -696,10 +696,8 @@ static ssize_t wake_lock_store(struct kobject *kobj,
 			       const char *buf, size_t n)
 {
 	int error = pm_wake_lock(buf);
-	if (!error) {
+	if (!error)
 		++lazy_wakeup_count;
-		pr_info("Android Wakelock:%s\n", buf);
-	}
 	return error ? error : n;
 }
 
@@ -717,10 +715,8 @@ static ssize_t wake_unlock_store(struct kobject *kobj,
 				 const char *buf, size_t n)
 {
 	int error = pm_wake_unlock(buf);
-	if (!error) {
+	if (!error)
 		--lazy_wakeup_count;
-		pr_info("Android WakeUnlock:%s\n", buf);
-	}
 	return error ? error : n;
 }
 
