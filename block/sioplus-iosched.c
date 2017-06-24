@@ -242,7 +242,7 @@ sio_latter_request(struct request_queue *q, struct request *rq)
 	return list_entry(rq->queuelist.next, struct request, queuelist);
 }
 
-static void *
+static void
 sio_init_queue(struct request_queue *q)
 {
 	struct sio_data *sd;
@@ -266,8 +266,9 @@ sio_init_queue(struct request_queue *q)
 	sd->fifo_expire[ASYNC][WRITE] = async_write_expire;
 	sd->fifo_batch = fifo_batch;
 	sd->writes_starved = writes_starved;
+	q->elevator->elevator_data = sd;
 
-	return sd;
+	return 0;
 }
 
 static void

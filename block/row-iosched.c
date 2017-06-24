@@ -782,7 +782,7 @@ done:
  * this dispatch queue
  *
  */
-static int *row_init_queue(struct request_queue *q)
+static int row_init_queue(struct request_queue *q)
 {
 
 	struct row_data *rdata;

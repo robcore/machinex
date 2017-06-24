@@ -2995,7 +2995,7 @@ static void bfq_check_ioprio_change(struct io_context *ioc,
 	bfqd = bfq_get_bfqd_locked(&(bic->icq.q->elevator->elevator_data),
 				   &flags);
 	if (unlikely(bfqd == NULL))
-		return;
+		goto out:
 
 	bic->ioprio = ioprio;
 
@@ -3018,6 +3018,7 @@ static void bfq_check_ioprio_change(struct io_context *ioc,
 	if (bfqq != NULL)
 		bfq_set_next_ioprio_data(bfqq, bic);
 
+out:
 	bfq_put_bfqd_unlock(bfqd, &flags);
 }
 
@@ -3573,11 +3574,11 @@ static int bfq_set_request(struct request_queue *q, struct request *rq,
 	unsigned long flags;
 	bool split = false;
 
+	might_sleep_if(gfp_mask & __GFP_WAIT);
+
 	/* handle changed prio notifications; cgroup change is handled separately */
 	if (unlikely(icq_get_changed(&bic->icq) & ICQ_IOPRIO_CHANGED))
 		bfq_check_ioprio_change(bic->icq.ioc, bic);
-
-	might_sleep_if(gfp_mask & __GFP_WAIT);
 
 	spin_lock_irqsave(q->queue_lock, flags);
 
@@ -3780,7 +3781,7 @@ static void bfq_exit_queue(struct elevator_queue *e)
 	kfree(bfqd);
 }
 
-static int *bfq_init_queue(struct request_queue *q)
+static int bfq_init_queue(struct request_queue *q)
 {
 	struct bfq_group *bfqg;
 	struct bfq_data *bfqd;
