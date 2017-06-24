@@ -8172,7 +8172,7 @@ static int tabla_mbhc_init_and_calibrate(struct tabla_priv *tabla)
 					       NULL,
 					       tabla_mechanical_plug_detect_irq,
 					       (IRQF_TRIGGER_RISING |
-						IRQF_TRIGGER_FALLING | IRQF_ONESHOT),
+						IRQF_TRIGGER_FALLING),
 					       "tabla-gpio", codec);
 			if (!IS_ERR_VALUE(ret)) {
 				ret = enable_irq_wake(tabla->mbhc_cfg.gpio_irq);
