@@ -3563,7 +3563,7 @@ bfq_split_bfqq(struct bfq_io_cq *bic, struct bfq_queue *bfqq)
  * Allocate bfq data structures associated with this request.
  */
 static int bfq_set_request(struct request_queue *q, struct request *rq,
-			   gfp_t gfp_mask)
+			   struct bio *bio, gfp_t gfp_mask)
 {
 	struct bfq_data *bfqd = q->elevator->elevator_data;
 	struct bfq_io_cq *bic = icq_to_bic(rq->elv.icq);
