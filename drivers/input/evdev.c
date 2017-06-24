@@ -296,7 +296,7 @@ static int evdev_release(struct inode *inode, struct file *file)
 	evdev_detach_client(evdev, client);
 	if (client->use_wake_lock)
 		wake_lock_destroy(&client->wake_lock);
-	kfree(client);
+	kvfree(client);
 
 	evdev_close_device(evdev);
 	put_device(&evdev->dev);
@@ -364,7 +364,7 @@ static int evdev_open(struct inode *inode, struct file *file)
 
  err_free_client:
 	evdev_detach_client(evdev, client);
-	kfree(client);
+	kvfree(client);
  err_put_evdev:
 	put_device(&evdev->dev);
 	return error;
