@@ -510,7 +510,7 @@ static void android_ws_active(struct wakeup_source *ws, const char *name)
  	if (ws == NULL)
 		is_android_wake_active = false;
 
-	if (ws->active && (strcmp(name, "PowerManagerService.WakeLocks") == 0))
+	if (ws->active && (strstr(name, "PowerManagerService.WakeLocks") != NULL))
 		is_android_wake_active = true;
 	else
 		is_android_wake_active = false;
