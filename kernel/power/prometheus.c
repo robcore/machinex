@@ -136,7 +136,7 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 				goto skip_check;
 			} else {
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging or Jack is detected.\n");
 				return;
 			}
 		} else if (!pm_get_wakeup_count(&counter, false)) {
