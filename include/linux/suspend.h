@@ -436,6 +436,7 @@ extern bool pm_save_wakeup_count(unsigned int count);
 extern void pm_wakep_autosleep_enabled(bool set);
 extern void pm_print_active_wakeup_sources(void);
 extern void pm_get_active_wakeup_sources(char *pending_sources, size_t max);
+extern bool machinex_android_ws_active(void);
 
 static inline void lock_system_sleep(void)
 {

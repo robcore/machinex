@@ -4249,7 +4249,6 @@ static void tabla_codec_calibrate_hs_polling(struct snd_soc_codec *codec)
 		      n_cic[tabla_codec_mclk_index(tabla)]);
 }
 
-#ifdef CONFIG_SND_SOC_ES325
 static int tabla_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
@@ -4264,22 +4263,6 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-#else
-static int tabla_startup(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *dai)
-{
-	struct wcd9xxx *tabla_core = dev_get_drvdata(dai->codec->dev->parent);
-
-	pr_debug("%s(): substream = %s  stream = %d\n" , __func__,
-		 substream->name, substream->stream);
-	if ((tabla_core != NULL) &&
-	    (tabla_core->dev != NULL) &&
-	    (tabla_core->dev->parent != NULL))
-		pm_runtime_get_sync(tabla_core->dev->parent);
-
-	return 0;
-}
-#endif
 
 static void tabla_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -4303,9 +4286,7 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	    (tabla_core->dev != NULL) &&
 	    (tabla_core->dev->parent != NULL) &&
 	    (active == 0)) {
-#ifdef CONFIG_SND_SOC_ES325
 		es325_wrapper_sleep(dai->id);
-#endif
 		pm_runtime_mark_last_busy(tabla_core->dev->parent);
 		pm_runtime_put(tabla_core->dev->parent);
 	}
@@ -4860,7 +4841,7 @@ static int tabla_hw_params(struct snd_pcm_substream *substream,
 			snd_soc_update_bits(codec, TABLA_A_CDC_CLK_RX_I2S_CTL,
 					0x03, (rx_fs_rate_reg_val >> 0x05));
 		} else {
-			tabla->dai[dai->id - 1].rate   = params_rate(params);
+			tabla->dai[dai->id - 1].rate = params_rate(params);
 		}
 		break;
 

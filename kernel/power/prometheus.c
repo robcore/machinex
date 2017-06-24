@@ -28,7 +28,7 @@
 #include "power.h"
 
 #define VERSION 2
-#define VERSION_MIN 2
+#define VERSION_MIN 3
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -95,7 +95,6 @@ static void power_suspend(struct work_struct *work)
 	struct power_suspend *pos;
 	unsigned long irqflags;
 	unsigned int counter;
-	int abort = 0;
 
 	cancel_work_sync(&power_resume_work);
 
@@ -108,14 +107,12 @@ static void power_suspend(struct work_struct *work)
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
-	if (ps_state == POWER_SUSPEND_INACTIVE)
-		abort = 1;
-	spin_unlock_irqrestore(&ps_state_lock, irqflags);
-
-	if (abort) {
+	if (ps_state == POWER_SUSPEND_INACTIVE) {
+		spin_unlock_irqrestore(&ps_state_lock, irqflags);
 		mutex_unlock(&prometheus_mtx);
 		return;
 	}
+	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	pr_info("[PROMETHEUS] Suspending\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
@@ -134,7 +131,7 @@ static void power_suspend(struct work_struct *work)
 	if (use_global_suspend) {
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
-			if (!mx_is_cable_attached()) {
+			if (!mx_is_cable_attached() || !machinex_android_ws_active()) {
 				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 				goto skip_check;
 			} else {
@@ -162,18 +159,18 @@ static void power_resume(struct work_struct *work)
 {
 	struct power_suspend *pos;
 	unsigned long irqflags;
-	int abort = 0;
 
 	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
-	if (ps_state == POWER_SUSPEND_ACTIVE)
-		abort = 1;
-	spin_unlock_irqrestore(&ps_state_lock, irqflags);
+	if (ps_state == POWER_SUSPEND_ACTIVE) {
+		spin_unlock_irqrestore(&ps_state_lock, irqflags);
+		mutex_unlock(&prometheus_mtx);
+		return;
+	}
 
-	if (abort)
-		goto abort;
+	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
@@ -182,10 +179,7 @@ static void power_resume(struct work_struct *work)
 		}
 	}
 	pr_info("[PROMETHEUS] Resume Completed.\n");
-
-abort:
 	mutex_unlock(&prometheus_mtx);
-
 }
 
 void set_power_suspend_state(int new_state)

@@ -598,21 +598,21 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 		return false;
 
 		if (((!enable_gps_ws &&
-				!strcmp(ws->name, "ipc0000000a_Loc_hal_worker")) ||
+				strcmp(ws->name, "ipc0000000a_Loc_hal_worker") == 0) ||
 			(!enable_bluesleep_ws &&
-				!strcmp(ws->name, "bluesleep")) ||
+				strcmp(ws->name, "bluesleep") == 0) ||
 			(!enable_msm_hsic_ws &&
-				!strcmp(ws->name, "msm_hsic_host")) ||
+				strcmp(ws->name, "msm_hsic_host") == 0) ||
 			(!enable_wlan_rx_wake_ws &&
-				!strcmp(ws->name, "wlan_rx_wake")) ||
+				strcmp(ws->name, "wlan_rx_wake") == 0) ||
 			(!enable_wlan_ctrl_wake_ws &&
-				!strcmp(ws->name, "wlan_ctrl_wake")) ||
+				strcmp(ws->name, "wlan_ctrl_wake") == 0) ||
 			(!enable_wlan_wake_ws &&
-				!strcmp(ws->name, "wlan_wake")) ||
+				strcmp(ws->name, "wlan_wake") == 0) ||
 			(!enable_bluesleep_ws &&
-				!strcmp(ws->name, "bluesleep")) ||
+				strcmp(ws->name, "bluesleep") == 0) ||
 			(!enable_ssp_sensorhub_ws &&
-				!strcmp(ws->name, "ssp_wake_lock")))) {
+				strcmp(ws->name, "ssp_wake_lock") == 0))) {
 			return true;
 		} else
 			return false;
@@ -671,7 +671,6 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
 	trace_wakeup_source_activate(ws->name, cec);
-
 }
 
 /**
@@ -902,6 +901,23 @@ void pm_get_active_wakeup_sources(char *pending_wakeup_source, size_t max)
 }
 EXPORT_SYMBOL_GPL(pm_get_active_wakeup_sources);
 
+bool machinex_android_ws_active(void)
+{
+	struct wakeup_source *ws;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
+		if (ws->active && (strstr(ws->name, "PowerManagerService") != NULL)) {
+				pr_info("[Machinex] active AndroidOS ws found: %s\n", ws->name);
+				rcu_read_unlock();
+				return true;
+			}
+	}
+	rcu_read_unlock();
+	pr_info("[Machinex] - No active AndroidOs ws found\n");
+	return false;
+}
+
 void pm_print_active_wakeup_sources(void)
 {
 	struct wakeup_source *ws;
@@ -911,7 +927,7 @@ void pm_print_active_wakeup_sources(void)
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
-			pr_info_once("active wakeup source: %s\n", ws->name);
+			pr_info("active wakeup source: %s\n", ws->name);
 			if (wakeblock) {
 				if (!wakeup_source_blocker(ws))
 					active = 1;
