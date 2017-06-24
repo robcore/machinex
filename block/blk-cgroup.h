@@ -27,13 +27,13 @@ enum blkio_policy_id {
 /* Max limits for throttle policy */
 #define THROTL_IOPS_MAX		UINT_MAX
 
-#if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)
-
 #ifndef CONFIG_BLK_CGROUP
 /* When blk-cgroup is a module, its subsys_id isn't a compile-time constant */
 extern struct cgroup_subsys blkio_subsys;
 #define blkio_subsys_id blkio_subsys.subsys_id
 #endif
+
+#if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)
 
 /* CFQ specific, out here for blkcg->cfq_weight */
 #define CFQ_WEIGHT_MIN		10
