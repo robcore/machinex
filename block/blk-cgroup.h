@@ -40,11 +40,6 @@ extern struct cgroup_subsys blkio_subsys;
 #define CFQ_WEIGHT_MAX		1000
 #define CFQ_WEIGHT_DEFAULT	500
 
-/* cft->private [un]packing for stat printing */
-#define BLKCG_STAT_PRIV(pol, off)	(((unsigned)(pol) << 16) | (off))
-#define BLKCG_STAT_POL(prv)		((unsigned)(prv) >> 16)
-#define BLKCG_STAT_OFF(prv)		((unsigned)(prv) & 0xffff)
-
 enum blkg_rwstat_type {
 	BLKG_RWSTAT_READ,
 	BLKG_RWSTAT_WRITE,
@@ -137,10 +132,8 @@ void blkcg_print_blkgs(struct seq_file *sf, struct blkio_cgroup *blkcg,
 u64 __blkg_prfill_u64(struct seq_file *sf, void *pdata, u64 v);
 u64 __blkg_prfill_rwstat(struct seq_file *sf, void *pdata,
 			 const struct blkg_rwstat *rwstat);
-int blkcg_print_stat(struct cgroup *cgrp, struct cftype *cft,
-		     struct seq_file *sf);
-int blkcg_print_rwstat(struct cgroup *cgrp, struct cftype *cft,
-		       struct seq_file *sf);
+u64 blkg_prfill_stat(struct seq_file *sf, void *pdata, int off);
+u64 blkg_prfill_rwstat(struct seq_file *sf, void *pdata, int off);
 
 struct blkg_conf_ctx {
 	struct gendisk		*disk;
