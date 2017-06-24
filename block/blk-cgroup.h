@@ -17,13 +17,6 @@
 #include <linux/u64_stats_sync.h>
 #include <linux/seq_file.h>
 
-enum blkio_policy_id {
-	BLKIO_POLICY_PROP = 0,		/* Proportional Bandwidth division */
-	BLKIO_POLICY_THROTL,		/* Throttling */
-
-	BLKIO_NR_POLICIES,
-};
-
 /* Max limits for throttle policy */
 #define THROTL_IOPS_MAX		UINT_MAX
 
@@ -92,7 +85,7 @@ struct blkio_group {
 	/* reference count */
 	int refcnt;
 
-	struct blkg_policy_data *pd[BLKIO_NR_POLICIES];
+	struct blkg_policy_data *pd[BLKCG_MAX_POLS];
 
 	struct rcu_head rcu_head;
 };
@@ -109,7 +102,7 @@ struct blkio_policy_ops {
 
 struct blkio_policy_type {
 	struct blkio_policy_ops ops;
-	enum blkio_policy_id plid;
+	int plid;
 	size_t pdata_size;		/* policy specific private data size */
 	struct cftype *cftypes;		/* cgroup files for the policy */
 };
@@ -119,7 +112,7 @@ extern void blkcg_drain_queue(struct request_queue *q);
 extern void blkcg_exit_queue(struct request_queue *q);
 
 /* Blkio controller policy registration */
-extern void blkio_policy_register(struct blkio_policy_type *);
+extern int blkio_policy_register(struct blkio_policy_type *);
 extern void blkio_policy_unregister(struct blkio_policy_type *);
 extern void blkg_destroy_all(struct request_queue *q, bool destroy_root);
 extern void update_root_blkg_pd(struct request_queue *q,
@@ -335,7 +328,7 @@ struct blkio_policy_type {
 static inline int blkcg_init_queue(struct request_queue *q) { return 0; }
 static inline void blkcg_drain_queue(struct request_queue *q) { }
 static inline void blkcg_exit_queue(struct request_queue *q) { }
-static inline void blkio_policy_register(struct blkio_policy_type *blkiop) { }
+static inline int blkio_policy_register(struct blkio_policy_type *blkiop) { return 0; }
 static inline void blkio_policy_unregister(struct blkio_policy_type *blkiop) { }
 static inline void blkg_destroy_all(struct request_queue *q,
 				    bool destory_root) { }
