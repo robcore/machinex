@@ -25,6 +25,7 @@
  *
  */
 #include <linux/prometheus.h>
+#include <linux/sysfs_helpers.h>
 #include "power.h"
 
 #define VERSION 2
@@ -96,13 +97,13 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	unsigned int counter;
 
-	cancel_work_sync(&power_resume_work);
-
 	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
 		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System \
 				State!\n");
 		return;
 	}
+
+	cancel_work_sync(&power_resume_work);
 
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
@@ -159,6 +160,12 @@ static void power_resume(struct work_struct *work)
 {
 	struct power_suspend *pos;
 	unsigned long irqflags;
+
+	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
+		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System \
+				State!\n");
+		return;
+	}
 
 	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume\n");
@@ -222,14 +229,11 @@ static ssize_t prometheus_sync_show(struct kobject *kobj,
 static ssize_t prometheus_sync_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	int val;
 
 	sscanf(buf, "%u\n", &val);
 
-	if (val == 0)
-		val = 0;
-	if (val >= 1)
-		val = 1;
+	sanitize_min_max(val, 0, 1);
 
 	sync_on_panel_suspend = val;
 	return count;
@@ -253,10 +257,7 @@ static ssize_t global_suspend_store(struct kobject *kobj,
 
 	sscanf(buf, "%u\n", &val);
 
-	if (val == 0)
-		val = 0;
-	if (val >= 1)
-		val = 1;
+	sanitize_min_max(val, 0, 1);
 
 	use_global_suspend = val;
 	return count;
@@ -280,10 +281,7 @@ static ssize_t ignore_wakelocks_store(struct kobject *kobj,
 
 	sscanf(buf, "%u\n", &val);
 
-	if (val == 0)
-		val = 0;
-	if (val >= 1)
-		val = 1;
+	sanitize_min_max(val, 0, 1);
 
 	ignore_wakelocks = val;
 	return count;
