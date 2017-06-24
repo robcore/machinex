@@ -99,6 +99,8 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 
 	policy = cpufreq_cpu_get_raw(0);
 	table = policy->freq_table; /* Get frequency table */
+	if (table == NULL)
+		return -EINVAL;
 
 	sanitize_min_max(val, policy->cpuinfo.min_freq, (table[thermal_limit_high].frequency - 1));
 
@@ -120,6 +122,8 @@ static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 
 	policy = cpufreq_cpu_get_raw(0);
 	table = policy->freq_table; /* Get frequency table */
+	if (table == NULL)
+		return -ENOSYS;
 
 	ret = sprintf(buf, "%u", table[thermal_limit_low].frequency);
 
@@ -167,21 +171,18 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	int ret = 0;
 	int i;
 	unsigned int temp_limit_low;
 
 	policy = cpufreq_cpu_get_raw(0);
 
 	if (policy == NULL || thermal_suspended) {
-		ret = -EINVAL;
-		goto fail;
+		return -EINVAL;
 	}
 
 	table = policy->freq_table;
 	if (table == NULL) {
-		ret = -EINVAL;
-		goto fail;
+		return -EINVAL;
 	}
 
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
@@ -190,8 +191,7 @@ static int msm_thermal_get_freq_table(void)
 	BUG_ON(thermal_limit_high <= 0);
 	pr_info("MSM Thermal: Initial thermal_limit_low is %d\n", table[thermal_limit_low].frequency);
 
-fail:
-	return ret;
+	return 0;
 }
 static int populate_temps(void)
 {
