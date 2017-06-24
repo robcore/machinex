@@ -101,4 +101,5 @@ void unregister_power_suspend(struct power_suspend *handler);
 
 void prometheus_panel_beacon(int new_state);
 bool prometheus_sec_jack(void);
+bool android_os_ws(void);
 #endif

@@ -531,7 +531,6 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	}
 
 	ws->active = false;
-
 	now = ktime_get();
 	duration = ktime_sub(now, ws->last_time);
 	ws->total_time = ktime_add(ws->total_time, duration);
@@ -551,6 +550,7 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	 */
 	cec = atomic_add_return(MAX_IN_PROGRESS, &combined_event_count);
 	trace_wakeup_source_deactivate(ws->name, cec);
+	android_ws_active(ws, ws->name);
 
 	split_counters(&cnt, &inpr);
 	if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
@@ -671,6 +671,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
 	trace_wakeup_source_activate(ws->name, cec);
+	android_ws_active(ws, ws->name);
 }
 
 /**
@@ -686,9 +687,9 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 			if (events_check_enabled)
 				ws->wakeup_count++;
 
-			if ((!ws->active) && !wakeup_source_blocker(ws))
+			if (!ws->active && !wakeup_source_blocker(ws))
 				wakeup_source_activate(ws);
-			else if (ws->active)
+			else if (ws->active && wakeup_source_blocker(ws))
 				wakeup_source_deactivate(ws);
 
 			if (hard)
@@ -705,6 +706,26 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 		if (hard)
 			pm_system_wakeup();
 	}
+}
+
+static bool is_android_wake_active;
+static void android_ws_active(struct wakeup_source *ws, const char *name);
+{
+	/*
+	 * Report false if ws isn't allocated
+	 */
+ 	if (ws == NULL)
+		is_android_wake_active = false;
+
+	if (ws->active && (strcmp(name, "PowerManagerService.WakeLocks") == 0))
+		is_android_wake_active = true;
+	else
+		is_android_wake_active = false;
+}
+
+bool android_os_ws(void)
+{
+	return is_android_wake_active;
 }
 
 /**

@@ -132,14 +132,20 @@ static void power_suspend(struct work_struct *work)
 	if (use_global_suspend) {
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
-			if (!mx_is_cable_attached() && !prometheus_sec_jack()) {
+			if (mx_is_cable_attached()) {
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
+				return;
+			} else if (prometheus_sec_jack()) {
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Jack is detected.\n");
+				return;
+			} else if (android_os_ws()) {
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media WakeLocks held.\n");
+				return;
+			} else {
 				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 				goto skip_check;
-			} else {
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging or Jack is detected.\n");
-				return;
 			}
-		} else if (!pm_get_wakeup_count(&counter, false)) {
+		} else if (!pm_get_wakeup_count(&counter, false) || mx_pm_wakeup_pending()) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
@@ -153,7 +159,7 @@ skip_check:
 		pm_suspend(PM_HIBERNATION_PREPARE);
 		mutex_unlock(&pm_mutex);
 	} else
-		pr_info("[PROMETHEUS] Suspend Completed.\n");
+		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
 }
 
 static void power_resume(struct work_struct *work)
