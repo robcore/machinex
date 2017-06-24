@@ -699,7 +699,7 @@ static ssize_t wake_lock_store(struct kobject *kobj,
 			       const char *buf, size_t n)
 {
 	int error;
-	if (sysfs_streq(buf, "PowerManagerService.Wakelocks"))
+	if (sysfs_streq(buf, "PowerManagerService.WakeLocks"))
 		android_os_wake = 1;
 
 	error = pm_wake_lock(buf);
@@ -720,7 +720,7 @@ static ssize_t wake_unlock_store(struct kobject *kobj,
 				 const char *buf, size_t n)
 {
 	int error;
-	if (sysfs_streq(buf, "PowerManagerService.Wakelocks"))
+	if (sysfs_streq(buf, "PowerManagerService.WakeLocks"))
 		android_os_wake = 0;
 
 	error = pm_wake_unlock(buf);
