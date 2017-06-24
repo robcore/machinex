@@ -326,25 +326,23 @@ kfree(vd);
 /*
 * initialize elevator private data (vr_data).
 */
-static void *vr_init_queue(struct request_queue *q)
+static int vr_init_queue(struct request_queue *q)
 {
 	struct vr_data *vd;
 
 	vd = kmalloc_node(sizeof(*vd), GFP_KERNEL | __GFP_ZERO, q->node);
 	if (!vd)
-	return NULL;
+		return -ENOMEM;
 
 	INIT_LIST_HEAD(&vd->fifo_list[SYNC]);
 	INIT_LIST_HEAD(&vd->fifo_list[ASYNC]);
 	vd->sort_list = RB_ROOT;
-	
-	
 	vd->fifo_expire[SYNC] = sync_expire;
 	vd->fifo_expire[ASYNC] = async_expire;
 	vd->fifo_batch = fifo_batch;
 	vd->rev_penalty = rev_penalty;
-
-	return vd;
+	q->elevator->elevator_data = vd;
+	return 0;
 }
 
 /*
