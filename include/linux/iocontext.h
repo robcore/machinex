@@ -100,6 +100,7 @@ struct io_cq {
  */
 struct io_context {
 	atomic_long_t refcount;
+	atomic_t active_ref;
 	atomic_t nr_tasks;
 
 	/* all the fields below are protected by this lock */
@@ -120,23 +121,34 @@ struct io_context {
 	struct work_struct release_work;
 };
 
-static inline struct io_context *ioc_task_link(struct io_context *ioc)
+/**
+ * get_io_context_active - get active reference on ioc
+ * @ioc: ioc of interest
+ *
+ * Only iocs with active reference can issue new IOs.  This function
+ * acquires an active reference on @ioc.  The caller must already have an
+ * active reference on @ioc.
+ */
+static inline void get_io_context_active(struct io_context *ioc)
 {
-	/*
-	 * if ref count is zero, don't allow sharing (ioc is going away, it's
-	 * a race).
-	 */
-	if (ioc && atomic_long_inc_not_zero(&ioc->refcount)) {
-		atomic_inc(&ioc->nr_tasks);
-		return ioc;
-	}
+	WARN_ON_ONCE(atomic_long_read(&ioc->refcount) <= 0);
+	WARN_ON_ONCE(atomic_read(&ioc->active_ref) <= 0);
+	atomic_long_inc(&ioc->refcount);
+	atomic_inc(&ioc->active_ref);
+}
 
-	return NULL;
+static inline void ioc_task_link(struct io_context *ioc)
+{
+	get_io_context_active(ioc);
+
+	WARN_ON_ONCE(atomic_read(&ioc->nr_tasks) <= 0);
+	atomic_inc(&ioc->nr_tasks);
 }
 
 struct task_struct;
 #ifdef CONFIG_BLOCK
 void put_io_context(struct io_context *ioc);
+void put_io_context_active(struct io_context *ioc);
 void exit_io_context(struct task_struct *task);
 struct io_context *get_task_io_context(struct task_struct *task,
 				       gfp_t gfp_flags, int node);
