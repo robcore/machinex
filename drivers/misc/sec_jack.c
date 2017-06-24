@@ -30,6 +30,7 @@
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/sec_jack.h>
+#include <linux/prometheus.h>
 #if defined(CONFIG_MUIC_AUDIO_OUTPUT_CONTROL)
 #include <linux/mfd/max77693-private.h>
 #endif
@@ -38,7 +39,7 @@
 #define MAX_ZONE_LIMIT		10
 #define SEND_KEY_CHECK_TIME_MS	10		/* 10ms */
 #define DET_CHECK_TIME_MS	100		/* 100ms */
-#define WAKE_LOCK_TIME		(HZ * 5)	/* 5 sec */
+#define WAKE_LOCK_TIME		(5000)	/* 5 sec */
 
 #ifdef CONFIG_MACH_MELIUS_EUR_OPEN
 extern unsigned int system_rev;
@@ -193,6 +194,12 @@ static void sec_jack_buttons_disconnect(struct input_handle *handle)
 	input_unregister_handle(handle);
 }
 
+static bool jack_is_connected;
+bool prometheus_sec_jack(void)
+{
+	return jack_is_connected;
+}
+
 static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 {
 	struct sec_jack_platform_data *pdata = hi->pdata;
@@ -200,6 +207,11 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 	/* this can happen during slow inserts where we think we identified
 	 * the type but then we get another interrupt and do it again
 	 */
+	if (jack_type == SEC_JACK_NO_DEVICE)
+		jack_is_connected = false;
+	else
+		jack_is_connected = true;
+
 	if (jack_type == hi->cur_jack_type) {
 		if (jack_type != SEC_HEADSET_4POLE)
 			pdata->set_micbias_state(false);
@@ -400,8 +412,8 @@ void sec_jack_detect_work(struct work_struct *work)
 			handle_jack_not_inserted(hi);
 			return;
 		}
-		usleep_range(10000, 10000);
-		time_left_ms -= 10;
+		usleep_range(5000, 5000);
+		time_left_ms -= 5;
 	}
 
 	/* jack presence was detected the whole time, figure out which type */

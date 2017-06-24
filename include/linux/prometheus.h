@@ -100,5 +100,5 @@ void unregister_power_suspend(struct power_suspend *handler);
 #define POWER_SUSPEND_ACTIVE	1
 
 void prometheus_panel_beacon(int new_state);
-
+bool prometheus_sec_jack(void);
 #endif
