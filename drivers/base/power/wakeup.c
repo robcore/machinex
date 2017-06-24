@@ -501,6 +501,27 @@ static inline void update_prevent_sleep_time(struct wakeup_source *ws,
 					     ktime_t now) {}
 #endif
 
+static bool is_android_wake_active;
+static void android_ws_active(struct wakeup_source *ws, const char *name)
+{
+	/*
+	 * Report false if ws isn't allocated
+	 */
+ 	if (ws == NULL)
+		is_android_wake_active = false;
+
+	if (ws->active && (strcmp(name, "PowerManagerService.WakeLocks") == 0))
+		is_android_wake_active = true;
+	else
+		is_android_wake_active = false;
+}
+
+bool android_os_ws(void)
+{
+	return is_android_wake_active;
+}
+EXPORT_SYMBOL(android_os_ws);
+
 /**
  * wakup_source_deactivate - Mark given wakeup source as inactive.
  * @ws: Wakeup source to handle.
@@ -706,26 +727,6 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 		if (hard)
 			pm_system_wakeup();
 	}
-}
-
-static bool is_android_wake_active;
-static void android_ws_active(struct wakeup_source *ws, const char *name);
-{
-	/*
-	 * Report false if ws isn't allocated
-	 */
- 	if (ws == NULL)
-		is_android_wake_active = false;
-
-	if (ws->active && (strcmp(name, "PowerManagerService.WakeLocks") == 0))
-		is_android_wake_active = true;
-	else
-		is_android_wake_active = false;
-}
-
-bool android_os_ws(void)
-{
-	return is_android_wake_active;
 }
 
 /**
