@@ -185,8 +185,8 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
-	pr_info("[PROMETHEUS] Resume Completed.\n");
 	mutex_unlock(&prometheus_mtx);
+	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
 
 void set_power_suspend_state(int new_state)
