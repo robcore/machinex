@@ -161,7 +161,7 @@ static void power_resume(struct work_struct *work)
 	struct power_suspend *pos;
 	unsigned long irqflags;
 
-	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
+	if ((poweroff_charging)) {
 		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System \
 				State!\n");
 		return;
