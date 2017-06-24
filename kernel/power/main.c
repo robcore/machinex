@@ -663,6 +663,7 @@ power_attr(autosleep);
 
 #ifdef CONFIG_PM_WAKELOCKS
 
+#if 0
 unsigned int android_os_wake = 0;
 bool machinex_android_ws_active(void)
 {
@@ -675,6 +676,12 @@ bool machinex_android_ws_active(void)
 		ret = false;
 
 	return ret;
+}
+EXPORT_SYMBOL_GPL(machinex_android_ws_active);
+#endif
+bool machinex_android_ws_active(void)
+{
+	return false;
 }
 EXPORT_SYMBOL_GPL(machinex_android_ws_active);
 
@@ -699,8 +706,8 @@ static ssize_t wake_lock_store(struct kobject *kobj,
 			       const char *buf, size_t n)
 {
 	int error;
-	if (sysfs_streq(buf, "PowerManagerService.WakeLocks"))
-		android_os_wake = 1;
+	/*if (sysfs_streq(buf, "PowerManagerService.WakeLocks"))
+		android_os_wake = 1;*/
 
 	error = pm_wake_lock(buf);
 	return error ? error : n;
@@ -720,8 +727,8 @@ static ssize_t wake_unlock_store(struct kobject *kobj,
 				 const char *buf, size_t n)
 {
 	int error;
-	if (sysfs_streq(buf, "PowerManagerService.WakeLocks"))
-		android_os_wake = 0;
+	/*if (sysfs_streq(buf, "PowerManagerService.WakeLocks"))
+		android_os_wake = 0;*/
 
 	error = pm_wake_unlock(buf);
 	return error ? error : n;
