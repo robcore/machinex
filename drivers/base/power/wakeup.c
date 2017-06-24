@@ -964,6 +964,27 @@ bool pm_wakeup_pending(void)
 }
 
 /**
+ * mx_pm_wakeup_pending - Same as above but with less disasterous results.
+ */
+bool mx_pm_wakeup_pending(void)
+{
+	unsigned long flags;
+	bool ret = false;
+
+	spin_lock_irqsave(&events_lock, flags);
+	if (events_check_enabled) {
+		unsigned int cnt, inpr;
+
+		split_counters(&cnt, &inpr);
+		ret = (cnt != saved_count || inpr > 0);
+		events_check_enabled = !ret;
+	}
+	spin_unlock_irqrestore(&events_lock, flags);
+
+	return ret;
+}
+
+/**
  * pm_get_wakeup_count - Read the number of registered wakeup events.
  * @count: Address to store the value at.
  * @block: Whether or not to block.

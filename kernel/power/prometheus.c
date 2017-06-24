@@ -132,7 +132,7 @@ static void power_suspend(struct work_struct *work)
 	if (use_global_suspend) {
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
-			if (!mx_is_cable_attached() || !machinex_android_ws_active()) {
+			if (!mx_is_cable_attached() || !mx_pm_wakeup_pending()) {
 				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 				goto skip_check;
 			} else {
