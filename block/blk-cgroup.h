@@ -35,6 +35,11 @@ extern struct cgroup_subsys blkio_subsys;
 #define blkio_subsys_id blkio_subsys.subsys_id
 #endif
 
+/* CFQ specific, out here for blkcg->cfq_weight */
+#define CFQ_WEIGHT_MIN		10
+#define CFQ_WEIGHT_MAX		1000
+#define CFQ_WEIGHT_DEFAULT	500
+
 /* cft->private [un]packing for stat printing */
 #define BLKCG_STAT_PRIV(pol, off)	(((unsigned)(pol) << 16) | (off))
 #define BLKCG_STAT_POL(prv)		((unsigned)(prv) >> 16)
@@ -52,12 +57,14 @@ enum blkg_rwstat_type {
 
 struct blkio_cgroup {
 	struct cgroup_css css;
-	unsigned int weight;
 	spinlock_t lock;
 	struct hlist_head blkg_list;
 
 	/* for policies to test whether associated blkcg has changed */
 	uint64_t id;
+
+	/* TODO: per-policy storage in blkio_cgroup */
+	unsigned int cfq_weight;	/* belongs to cfq */
 };
 
 struct blkg_stat {
@@ -71,7 +78,6 @@ struct blkg_rwstat {
 };
 
 struct blkio_group_conf {
-	unsigned int weight;
 	u64 iops[2];
 	u64 bps[2];
 };
@@ -360,10 +366,6 @@ static inline void blkg_get(struct blkio_group *blkg) { }
 static inline void blkg_put(struct blkio_group *blkg) { }
 
 #endif
-
-#define BLKIO_WEIGHT_MIN	10
-#define BLKIO_WEIGHT_MAX	1000
-#define BLKIO_WEIGHT_DEFAULT	500
 
 #if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)
 extern struct blkio_cgroup blkio_root_cgroup;
