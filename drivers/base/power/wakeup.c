@@ -907,7 +907,7 @@ bool machinex_android_ws_active(void)
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-		if (ws->active && (strstr(ws->name, "PowerManagerService") != NULL)) {
+		if (ws && ws->active && (strstr(ws->name, "PowerManagerService") != NULL)) {
 				pr_info("[Machinex] active AndroidOS ws found: %s\n", ws->name);
 				rcu_read_unlock();
 				return true;
