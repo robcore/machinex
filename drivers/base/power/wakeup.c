@@ -560,7 +560,6 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	trace_wakeup_source_deactivate(ws->name, cec);
 	if (strstr(ws->name, androidws) != NULL)
 		is_android_wake_active = false;
-	android_ws_active(ws, ws->name);
 
 	split_counters(&cnt, &inpr);
 	if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
