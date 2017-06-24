@@ -496,6 +496,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 
 	sec_jack_key_map[0].gpio = pdata->send_end_gpio;
 
+	//hi = devm_kzalloc(pdev.dev, sizeof(struct sec_jack_info), GFP_KERNEL);
 	hi = kzalloc(sizeof(struct sec_jack_info), GFP_KERNEL);
 	if (hi == NULL) {
 		pr_err("%s : Failed to allocate memory.\n", __func__);
@@ -625,7 +626,7 @@ err_create_wq_failed:
 	device_remove_file(earjack, &dev_attr_state);
 	device_remove_file(earjack, &dev_attr_key_state);
 	device_destroy(audio, 0);
-	class_destroy(audio);	
+	class_destroy(audio);
 	wake_lock_destroy(&hi->det_wake_lock);
 	switch_dev_unregister(&switch_jack_detection);
 	switch_dev_unregister(&switch_sendend);
