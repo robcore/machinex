@@ -341,12 +341,17 @@ static inline void blkg_put(struct blkio_group *blkg) { }
 #define BLKIO_WEIGHT_DEFAULT	500
 
 #ifdef CONFIG_DEBUG_BLK_CGROUP
-void blkiocg_update_avg_queue_size_stats(struct blkio_group *blkg);
+void blkiocg_update_avg_queue_size_stats(struct blkio_group *blkg,
+					 struct blkio_policy_type *pol);
 void blkiocg_update_dequeue_stats(struct blkio_group *blkg,
-				unsigned long dequeue);
-void blkiocg_update_set_idle_time_stats(struct blkio_group *blkg);
-void blkiocg_update_idle_time_stats(struct blkio_group *blkg);
-void blkiocg_set_start_empty_time(struct blkio_group *blkg);
+				  struct blkio_policy_type *pol,
+				  unsigned long dequeue);
+void blkiocg_update_set_idle_time_stats(struct blkio_group *blkg,
+					struct blkio_policy_type *pol);
+void blkiocg_update_idle_time_stats(struct blkio_group *blkg,
+				    struct blkio_policy_type *pol);
+void blkiocg_set_start_empty_time(struct blkio_group *blkg,
+				  struct blkio_policy_type *pol);
 
 #define BLKG_FLAG_FNS(name)						\
 static inline void blkio_mark_blkg_##name(				\
@@ -369,14 +374,16 @@ BLKG_FLAG_FNS(idling)
 BLKG_FLAG_FNS(empty)
 #undef BLKG_FLAG_FNS
 #else
-static inline void blkiocg_update_avg_queue_size_stats(
-						struct blkio_group *blkg) {}
+static inline void blkiocg_update_avg_queue_size_stats(struct blkio_group *blkg,
+			struct blkio_policy_type *pol) { }
 static inline void blkiocg_update_dequeue_stats(struct blkio_group *blkg,
-						unsigned long dequeue) {}
-static inline void blkiocg_update_set_idle_time_stats(struct blkio_group *blkg)
-{}
-static inline void blkiocg_update_idle_time_stats(struct blkio_group *blkg) {}
-static inline void blkiocg_set_start_empty_time(struct blkio_group *blkg) {}
+			struct blkio_policy_type *pol, unsigned long dequeue) { }
+static inline void blkiocg_update_set_idle_time_stats(struct blkio_group *blkg,
+			struct blkio_policy_type *pol) { }
+static inline void blkiocg_update_idle_time_stats(struct blkio_group *blkg,
+			struct blkio_policy_type *pol) { }
+static inline void blkiocg_set_start_empty_time(struct blkio_group *blkg,
+			struct blkio_policy_type *pol) { }
 #endif
 
 #if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)
@@ -392,18 +399,27 @@ struct blkio_group *blkg_lookup_create(struct blkio_cgroup *blkcg,
 				       enum blkio_policy_id plid,
 				       bool for_root);
 void blkiocg_update_timeslice_used(struct blkio_group *blkg,
-					unsigned long time,
-					unsigned long unaccounted_time);
-void blkiocg_update_dispatch_stats(struct blkio_group *blkg, uint64_t bytes,
-						bool direction, bool sync);
+				   struct blkio_policy_type *pol,
+				   unsigned long time,
+				   unsigned long unaccounted_time);
+void blkiocg_update_dispatch_stats(struct blkio_group *blkg,
+				   struct blkio_policy_type *pol,
+				   uint64_t bytes, bool direction, bool sync);
 void blkiocg_update_completion_stats(struct blkio_group *blkg,
-	uint64_t start_time, uint64_t io_start_time, bool direction, bool sync);
-void blkiocg_update_io_merged_stats(struct blkio_group *blkg, bool direction,
-					bool sync);
+				     struct blkio_policy_type *pol,
+				     uint64_t start_time,
+				     uint64_t io_start_time, bool direction,
+				     bool sync);
+void blkiocg_update_io_merged_stats(struct blkio_group *blkg,
+				    struct blkio_policy_type *pol,
+				    bool direction, bool sync);
 void blkiocg_update_io_add_stats(struct blkio_group *blkg,
-		struct blkio_group *curr_blkg, bool direction, bool sync);
+				 struct blkio_policy_type *pol,
+				 struct blkio_group *curr_blkg, bool direction,
+				 bool sync);
 void blkiocg_update_io_remove_stats(struct blkio_group *blkg,
-					bool direction, bool sync);
+				    struct blkio_policy_type *pol,
+				    bool direction, bool sync);
 #else
 struct cgroup;
 static inline struct blkio_cgroup *
@@ -417,19 +433,23 @@ blkiocg_del_blkio_group(struct blkio_group *blkg) { return 0; }
 static inline struct blkio_group *blkg_lookup(struct blkio_cgroup *blkcg,
 					      void *key) { return NULL; }
 static inline void blkiocg_update_timeslice_used(struct blkio_group *blkg,
-						unsigned long time,
-						unsigned long unaccounted_time)
-{}
+			struct blkio_policy_type *pol, unsigned long time,
+			unsigned long unaccounted_time) { }
 static inline void blkiocg_update_dispatch_stats(struct blkio_group *blkg,
-				uint64_t bytes, bool direction, bool sync) {}
+			struct blkio_policy_type *pol, uint64_t bytes,
+			bool direction, bool sync) { }
 static inline void blkiocg_update_completion_stats(struct blkio_group *blkg,
-		uint64_t start_time, uint64_t io_start_time, bool direction,
-		bool sync) {}
+			struct blkio_policy_type *pol, uint64_t start_time,
+			uint64_t io_start_time, bool direction, bool sync) { }
 static inline void blkiocg_update_io_merged_stats(struct blkio_group *blkg,
-						bool direction, bool sync) {}
+			struct blkio_policy_type *pol, bool direction,
+			bool sync) { }
 static inline void blkiocg_update_io_add_stats(struct blkio_group *blkg,
-		struct blkio_group *curr_blkg, bool direction, bool sync) {}
+			struct blkio_policy_type *pol,
+			struct blkio_group *curr_blkg, bool direction,
+			bool sync) { }
 static inline void blkiocg_update_io_remove_stats(struct blkio_group *blkg,
-						bool direction, bool sync) {}
+			struct blkio_policy_type *pol, bool direction,
+			bool sync) { }
 #endif
 #endif /* _BLK_CGROUP_H */
