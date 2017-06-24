@@ -662,6 +662,28 @@ power_attr(autosleep);
 #endif /* CONFIG_PM_AUTOSLEEP */
 
 #ifdef CONFIG_PM_WAKELOCKS
+
+unsigned int lazy_wakeup_count = 0;
+bool machinex_android_ws_active(void)
+{
+	bool ret = false;
+
+	if (lazy_wakeup_count > 0)
+		ret = true;
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(machinex_android_ws_active);
+
+static ssize_t lazy_wakeup_count_show(struct kobject *kobj,
+			      struct kobj_attribute *attr,
+			      char *buf)
+{
+	return sprintf(buf, "%u\n", lazy_wakeup_count);
+}
+
+power_attr_ro(lazy_wakeup_count);
+
 static ssize_t wake_lock_show(struct kobject *kobj,
 			      struct kobj_attribute *attr,
 			      char *buf)
@@ -674,6 +696,10 @@ static ssize_t wake_lock_store(struct kobject *kobj,
 			       const char *buf, size_t n)
 {
 	int error = pm_wake_lock(buf);
+	if (!error) {
+		++lazy_wakeup_count;
+		pr_info("Android Wakelock:%s\n", buf);
+	}
 	return error ? error : n;
 }
 
@@ -691,6 +717,10 @@ static ssize_t wake_unlock_store(struct kobject *kobj,
 				 const char *buf, size_t n)
 {
 	int error = pm_wake_unlock(buf);
+	if (!error) {
+		--lazy_wakeup_count;
+		pr_info("Android WakeUnlock:%s\n", buf);
+	}
 	return error ? error : n;
 }
 
@@ -837,6 +867,7 @@ static struct attribute * g[] = {
 	&autosleep_attr.attr,
 #endif
 #ifdef CONFIG_PM_WAKELOCKS
+	&lazy_wakeup_count_attr.attr,
 	&wake_lock_attr.attr,
 	&wake_unlock_attr.attr,
 #endif

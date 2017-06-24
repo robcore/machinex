@@ -901,23 +901,6 @@ void pm_get_active_wakeup_sources(char *pending_wakeup_source, size_t max)
 }
 EXPORT_SYMBOL_GPL(pm_get_active_wakeup_sources);
 
-bool machinex_android_ws_active(void)
-{
-	struct wakeup_source *ws;
-
-	rcu_read_lock();
-	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-		if (ws && ws->active && (strstr(ws->name, "PowerManagerService") != NULL)) {
-				pr_info("[Machinex] active AndroidOS ws found: %s\n", ws->name);
-				rcu_read_unlock();
-				return true;
-			}
-	}
-	rcu_read_unlock();
-	pr_info("[Machinex] - No active AndroidOs ws found\n");
-	return false;
-}
-
 void pm_print_active_wakeup_sources(void)
 {
 	struct wakeup_source *ws;
