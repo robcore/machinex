@@ -597,32 +597,6 @@ out:
 }
 EXPORT_SYMBOL_GPL(blkg_lookup_create);
 
-static void __blkiocg_del_blkio_group(struct blkio_group *blkg)
-{
-	hlist_del_init_rcu(&blkg->blkcg_node);
-}
-
-/*
- * returns 0 if blkio_group was still on cgroup list. Otherwise returns 1
- * indicating that blk_group was unhashed by the time we got to it.
- */
-int blkiocg_del_blkio_group(struct blkio_group *blkg)
-{
-	struct blkio_cgroup *blkcg = blkg->blkcg;
-	unsigned long flags;
-	int ret = 1;
-
-	spin_lock_irqsave(&blkcg->lock, flags);
-	if (!hlist_unhashed(&blkg->blkcg_node)) {
-		__blkiocg_del_blkio_group(blkg);
-		ret = 0;
-	}
-	spin_unlock_irqrestore(&blkcg->lock, flags);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(blkiocg_del_blkio_group);
-
 /* called under rcu_read_lock(). */
 struct blkio_group *blkg_lookup(struct blkio_cgroup *blkcg,
 				struct request_queue *q)
@@ -640,12 +614,16 @@ EXPORT_SYMBOL_GPL(blkg_lookup);
 static void blkg_destroy(struct blkio_group *blkg)
 {
 	struct request_queue *q = blkg->q;
+	struct blkio_cgroup *blkcg = blkg->blkcg;
 
 	lockdep_assert_held(q->queue_lock);
+	lockdep_assert_held(&blkcg->lock);
 
 	/* Something wrong if we are trying to remove same group twice */
 	WARN_ON_ONCE(list_empty(&blkg->q_node));
+	WARN_ON_ONCE(hlist_unhashed(&blkg->blkcg_node));
 	list_del_init(&blkg->q_node);
+	hlist_del_init_rcu(&blkg->blkcg_node);
 
 	WARN_ON_ONCE(q->nr_blkgs <= 0);
 	q->nr_blkgs--;
@@ -690,45 +668,33 @@ void update_root_blkg_pd(struct request_queue *q, enum blkio_policy_id plid)
 }
 EXPORT_SYMBOL_GPL(update_root_blkg_pd);
 
+/**
+ * blkg_destroy_all - destroy all blkgs associated with a request_queue
+ * @q: request_queue of interest
+ * @destroy_root: whether to destroy root blkg or not
+ *
+ * Destroy blkgs associated with @q.  If @destroy_root is %true, all are
+ * destroyed; otherwise, root blkg is left alone.
+ */
 void blkg_destroy_all(struct request_queue *q, bool destroy_root)
 {
 	struct blkio_group *blkg, *n;
 
-	while (true) {
-		bool done = true;
+	spin_lock_irq(q->queue_lock);
 
-		spin_lock_irq(q->queue_lock);
+	list_for_each_entry_safe(blkg, n, &q->blkg_list, q_node) {
+		struct blkio_cgroup *blkcg = blkg->blkcg;
 
-		list_for_each_entry_safe(blkg, n, &q->blkg_list, q_node) {
-			/* skip root? */
-			if (!destroy_root && blkg->blkcg == &blkio_root_cgroup)
-				continue;
+		/* skip root? */
+		if (!destroy_root && blkg->blkcg == &blkio_root_cgroup)
+			continue;
 
-			/*
-			 * If cgroup removal path got to blk_group first
-			 * and removed it from cgroup list, then it will
-			 * take care of destroying cfqg also.
-			 */
-			if (!blkiocg_del_blkio_group(blkg))
-				blkg_destroy(blkg);
-			else
-				done = false;
-		}
-
-		spin_unlock_irq(q->queue_lock);
-
-		/*
-		 * Group list may not be empty if we raced cgroup removal
-		 * and lost.  cgroup removal is guaranteed to make forward
-		 * progress and retrying after a while is enough.  This
-		 * ugliness is scheduled to be removed after locking
-		 * update.
-		 */
-		if (done)
-			break;
-
-		msleep(10);	/* just some random duration I like */
+		spin_lock(&blkcg->lock);
+		blkg_destroy(blkg);
+		spin_unlock(&blkcg->lock);
 	}
+
+	spin_unlock_irq(q->queue_lock);
 }
 EXPORT_SYMBOL_GPL(blkg_destroy_all);
 
@@ -1612,12 +1578,46 @@ static void blkiocg_destroy(struct cgroup *cgroup)
 	return 0;
 }
 
-static void blkiocg_pre_destroy(struct cgroup_subsys *subsys, struct cgroup *cgroup)
+/**
+ * blkiocg_pre_destroy - cgroup pre_destroy callback
+ * @subsys: cgroup subsys
+ * @cgroup: cgroup of interest
+ *
+ * This function is called when @cgroup is about to go away and responsible
+ * for shooting down all blkgs associated with @cgroup.  blkgs should be
+ * removed while holding both q and blkcg locks.  As blkcg lock is nested
+ * inside q lock, this function performs reverse double lock dancing.
+ *
+ * This is the blkcg counterpart of ioc_release_fn().
+ */
+static int blkiocg_pre_destroy(struct cgroup_subsys *subsys,
+			       struct cgroup *cgroup)
 {
 	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgroup);
+ 
+	rcu_read_lock();
+	spin_lock_irq(&blkcg->lock);
 
-	if (blkcg != &blkio_root_cgroup)
-		kfree(blkcg);
+	while (!hlist_empty(&blkcg->blkg_list)) {
+		struct blkio_group *blkg = hlist_entry(blkcg->blkg_list.first,
+						struct blkio_group, blkcg_node);
+		struct request_queue *q = rcu_dereference(blkg->q);
+
+		if (spin_trylock(q->queue_lock)) {
+			blkg_destroy(blkg);
+			spin_unlock(q->queue_lock);
+		} else {
+			spin_unlock_irq(&blkcg->lock);
+			rcu_read_unlock();
+			cpu_relax();
+			rcu_read_lock();
+			spin_lock(&blkcg->lock);
+		}
+	}
+
+	spin_unlock_irq(&blkcg->lock);
+	rcu_read_unlock();
+	return 0;
 }
 
 static struct cgroup_css *blkiocg_create(struct cgroup *cgroup)
