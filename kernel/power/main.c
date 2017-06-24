@@ -666,10 +666,13 @@ power_attr(autosleep);
 unsigned int android_os_wake = 0;
 bool machinex_android_ws_active(void)
 {
-	bool ret = false;
+	bool ret;
 
-	if (android_os_wake > 0)
+	if (android_os_wake)
 		ret = true;
+
+	if (!android_os_wake)
+		ret = false;
 
 	return ret;
 }
