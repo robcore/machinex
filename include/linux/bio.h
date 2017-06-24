@@ -297,6 +297,14 @@ static inline ssize_t bvec_length(const struct bio_vec *bvec, unsigned long nr)
 	return bytes;
 }
 
+#ifdef CONFIG_BLK_CGROUP
+int bio_associate_current(struct bio *bio);
+void bio_disassociate_task(struct bio *bio);
+#else	/* CONFIG_BLK_CGROUP */
+static inline int bio_associate_current(struct bio *bio) { return -ENOENT; }
+static inline void bio_disassociate_task(struct bio *bio) { }
+#endif	/* CONFIG_BLK_CGROUP */
+
 /*
  * bio_set is used to allow other portions of the IO system to
  * allocate their own private memory pools for bio and iovec structures.
