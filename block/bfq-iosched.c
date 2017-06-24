@@ -2995,7 +2995,7 @@ static void bfq_check_ioprio_change(struct io_context *ioc,
 	bfqd = bfq_get_bfqd_locked(&(bic->icq.q->elevator->elevator_data),
 				   &flags);
 	if (unlikely(bfqd == NULL))
-		goto out:
+		goto out;
 
 	bic->ioprio = ioprio;
 
