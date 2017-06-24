@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/genhd.h>
 #include <linux/delay.h>
+#include <linux/atomic.h>
 #include "blk-cgroup.h"
 #include "blk.h"
 
@@ -1625,6 +1626,7 @@ static int blkiocg_pre_destroy(struct cgroup_subsys *subsys,
 
 static struct cgroup_css *blkiocg_create(struct cgroup *cgroup)
 {
+	static atomic64_t id_seq = ATOMIC64_INIT(0);
 	struct blkio_cgroup *blkcg;
 	struct cgroup *parent = cgroup->parent;
 
@@ -1638,6 +1640,7 @@ static struct cgroup_css *blkiocg_create(struct cgroup *cgroup)
 		return ERR_PTR(-ENOMEM);
 
 	blkcg->weight = BLKIO_WEIGHT_DEFAULT;
+	blkcg->id = atomic64_inc_return(&id_seq); /* root is 0, start from 1 */
 done:
 	spin_lock_init(&blkcg->lock);
 	INIT_HLIST_HEAD(&blkcg->blkg_list);
