@@ -344,7 +344,6 @@ static ssize_t synaptics_rmi4_f34_blocknum_store(struct device *dev,
 	unsigned char data[2];
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 
-	/*retval = strict_strtoul(buf, 10, &blocknum);*/
 	retval = kstrtoul(buf, 10, &blocknum);
 	if (retval)
 		return retval;

@@ -289,7 +289,7 @@ static ssize_t rmi_fn_34_bootloaderid_store(struct device *dev,
 	struct rmi_fn_34_data *fn34data = (struct rmi_fn_34_data *)fn->rfi->fndata;
 
 	/* need to convert the string data to an actual value */
-	error = strict_strtoul(buf, 10, &val);
+	error = kstrtoul(buf, 10, &val);
 
 	if (error)
 		return error;
@@ -367,7 +367,7 @@ static ssize_t rmi_fn_34_cmd_store(struct device *dev,
 	int error;
 
 	/* need to convert the string data to an actual value */
-	error = strict_strtoul(buf, 10, &val);
+	error = kstrtoul(buf, 10, &val);
 
 	if (error)
 		return error;
