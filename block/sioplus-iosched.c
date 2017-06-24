@@ -242,7 +242,7 @@ sio_latter_request(struct request_queue *q, struct request *rq)
 	return list_entry(rq->queuelist.next, struct request, queuelist);
 }
 
-static void
+static int
 sio_init_queue(struct request_queue *q)
 {
 	struct sio_data *sd;
@@ -250,7 +250,7 @@ sio_init_queue(struct request_queue *q)
 	/* Allocate structure */
 	sd = kmalloc_node(sizeof(*sd), GFP_KERNEL, q->node);
 	if (!sd)
-		return NULL;
+		return -ENOMEM;
 
 	/* Initialize fifo lists */
 	INIT_LIST_HEAD(&sd->fifo_list[SYNC][READ]);
