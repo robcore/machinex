@@ -1206,8 +1206,9 @@ static int blkiocg_file_read(struct cgroup *cgrp, struct cftype *cft,
 	return 0;
 }
 
-static int blkio_weight_write(struct blkio_cgroup *blkcg, int plid, u64 val)
+static int blkcg_set_weight(struct cgroup *cgrp, struct cftype *cft, u64 val)
 {
+	struct blkio_cgroup *blkcg = cgroup_to_blkio_cgroup(cgrp);
 	struct blkio_group *blkg;
 	struct hlist_node *n;
 
@@ -1219,10 +1220,11 @@ static int blkio_weight_write(struct blkio_cgroup *blkcg, int plid, u64 val)
 	blkcg->weight = (unsigned int)val;
 
 	hlist_for_each_entry(blkg, n, &blkcg->blkg_list, blkcg_node) {
-		struct blkg_policy_data *pd = blkg->pd[plid];
+		struct blkg_policy_data *pd = blkg->pd[BLKIO_POLICY_PROP];
 
-		if (!pd->conf.weight)
-			blkio_update_group_weight(blkg, plid, blkcg->weight);
+		if (pd && !pd->conf.weight)
+			blkio_update_group_weight(blkg, BLKIO_POLICY_PROP,
+						  blkcg->weight);
 	}
 
 	spin_unlock_irq(&blkcg->lock);
@@ -1250,29 +1252,6 @@ static u64 blkiocg_file_read_u64 (struct cgroup *cgrp, struct cftype *cft) {
 	return 0;
 }
 
-static int
-blkiocg_file_write_u64(struct cgroup *cgrp, struct cftype *cft, u64 val)
-{
-	struct blkio_cgroup *blkcg;
-	enum blkio_policy_id plid = BLKIOFILE_POLICY(cft->private);
-	int name = BLKIOFILE_ATTR(cft->private);
-
-	blkcg = cgroup_to_blkio_cgroup(cgrp);
-
-	switch(plid) {
-	case BLKIO_POLICY_PROP:
-		switch(name) {
-		case BLKIO_PROP_weight:
-			return blkio_weight_write(blkcg, plid, val);
-		}
-		break;
-	default:
-		BUG();
-	}
-
-	return 0;
-}
-
 struct cftype blkio_files[] = {
 	{
 		.name = "weight_device",
@@ -1287,7 +1266,7 @@ struct cftype blkio_files[] = {
 		.private = BLKIOFILE_PRIVATE(BLKIO_POLICY_PROP,
 				BLKIO_PROP_weight),
 		.read_u64 = blkiocg_file_read_u64,
-		.write_u64 = blkiocg_file_write_u64,
+		.write_u64 = blkcg_set_weight,
 	},
 	{
 		.name = "time",
