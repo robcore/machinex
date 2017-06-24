@@ -26,7 +26,6 @@ extern struct cgroup_subsys blkio_subsys;
 #define blkio_subsys_id blkio_subsys.subsys_id
 #endif
 
-#if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)
 
 /* CFQ specific, out here for blkcg->cfq_weight */
 #define CFQ_WEIGHT_MIN		10
@@ -42,6 +41,8 @@ enum blkg_rwstat_type {
 	BLKG_RWSTAT_NR,
 	BLKG_RWSTAT_TOTAL = BLKG_RWSTAT_NR,
 };
+
+#if defined(CONFIG_BLK_CGROUP) || defined(CONFIG_BLK_CGROUP_MODULE)
 
 struct blkcg {
 	struct cgroup_css css;
