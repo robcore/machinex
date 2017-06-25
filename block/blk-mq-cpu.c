@@ -13,7 +13,7 @@
 static LIST_HEAD(blk_mq_cpu_notify_list);
 static DEFINE_SPINLOCK(blk_mq_cpu_notify_lock);
 
-static int __cpuinit blk_mq_main_cpu_notify(struct notifier_block *self,
+static int blk_mq_main_cpu_notify(struct notifier_block *self,
 					    unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long) hcpu;
@@ -28,7 +28,7 @@ static int __cpuinit blk_mq_main_cpu_notify(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 
-static void __cpuinit blk_mq_cpu_notify(void *data, unsigned long action,
+static void blk_mq_cpu_notify(void *data, unsigned long action,
 					unsigned int cpu)
 {
 	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {
@@ -54,7 +54,7 @@ static void __cpuinit blk_mq_cpu_notify(void *data, unsigned long action,
 	}
 }
 
-static struct notifier_block __cpuinitdata blk_mq_main_cpu_notifier = {
+static struct notifier_block blk_mq_main_cpu_notifier = {
 	.notifier_call	= blk_mq_main_cpu_notify,
 };
 
@@ -82,7 +82,7 @@ void blk_mq_init_cpu_notifier(struct blk_mq_cpu_notifier *notifier,
 	notifier->data = data;
 }
 
-static struct blk_mq_cpu_notifier __cpuinitdata cpu_notifier = {
+static struct blk_mq_cpu_notifier cpu_notifier = {
 	.notify = blk_mq_cpu_notify,
 };
 
