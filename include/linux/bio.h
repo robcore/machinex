@@ -230,12 +230,20 @@ extern struct bio *bio_kmalloc(gfp_t, unsigned int);
 extern struct bio *bio_alloc_bioset(gfp_t, int, struct bio_set *);
 extern void bio_put(struct bio *);
 
+static inline struct bio *bio_clone(struct bio *bio, gfp_t gfp_mask)
+{
+	return bio_clone_bioset(bio, gfp_mask, fs_bio_set);
+}
+
+static inline struct bio *bio_clone_kmalloc(struct bio *bio, gfp_t gfp_mask)
+{
+	return bio_clone_bioset(bio, gfp_mask, NULL);
+
+}
+
 extern void bio_endio(struct bio *, int);
 struct request_queue;
 extern int bio_phys_segments(struct request_queue *, struct bio *);
-
-extern void __bio_clone(struct bio *, struct bio *);
-extern struct bio *bio_clone(struct bio *, gfp_t);
 
 extern int submit_bio_wait(int rw, struct bio *bio);
 
@@ -330,6 +338,9 @@ struct biovec_slab {
 	char *name;
 	struct kmem_cache *slab;
 };
+
+extern void __bio_clone(struct bio *, struct bio *);
+extern struct bio *bio_clone_bioset(struct bio *, gfp_t, struct bio_set *bs);
 
 extern struct bio_set *fs_bio_set;
 
