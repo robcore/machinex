@@ -140,7 +140,7 @@ static bool max77693_charger_unlock(struct max77693_charger_data *chg_data)
 		max77693_read_reg(i2c, MAX77693_CHG_REG_CHG_CNFG_06, &reg_data);
 		chgprot = ((reg_data & 0x0C) >> 2);
 		if (chgprot != 0x03) {
-			pr_err("%s: unlock err, chgprot(0x%x), retry(%d)\n",
+			pr_debug("%s: unlock err, chgprot(0x%x), retry(%d)\n",
 					__func__, chgprot, retry_cnt);
 			max77693_write_reg(i2c, MAX77693_CHG_REG_CHG_CNFG_06,
 				(0x03 << 2));
@@ -163,7 +163,7 @@ static void check_charger_unlock_state(struct max77693_charger_data *chg_data)
 
 	need_reg_init = max77693_charger_unlock(chg_data);
 	if (need_reg_init) {
-		pr_err("%s: charger locked state, reg init\n", __func__);
+		pr_debug("%s: charger locked state, reg init\n", __func__);
 		max77693_charger_initialize(chg_data);
 	}
 }
@@ -643,7 +643,7 @@ static int max77693_get_health_state(struct max77693_charger_data *charger)
 		state = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case 0x02:
-		pr_err("%s: battery dead\n", __func__);
+		pr_debug("%s: battery dead\n", __func__);
 		state = POWER_SUPPLY_HEALTH_DEAD;
 		break;
 	case 0x03:
@@ -655,7 +655,7 @@ static int max77693_get_health_state(struct max77693_charger_data *charger)
 		state = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case 0x05:
-		pr_err("%s: battery over voltage\n", __func__);
+		pr_debug("%s: battery over voltage\n", __func__);
 		state = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
 		break;
 	default:
@@ -832,7 +832,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 							msecs_to_jiffies(250));
 					if (cable_type.intval != POWER_SUPPLY_TYPE_WIRELESS) {
 						charger->wc_w_state = 0;
-						pr_err("%s:cable removed,wireless connected\n", __func__);
+						pr_debug("%s:cable removed,wireless connected\n", __func__);
 					}
 				}
 			}
@@ -952,7 +952,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 			reg_data &= ~(1 << 5);
 			max77693_write_reg(charger->max77693->i2c,
 				MAX77693_CHG_REG_CHG_CNFG_12, reg_data);
-			pr_err("%s: charge only WC CNFG_12: 0x%x\n",
+			pr_debug("%s: charge only WC CNFG_12: 0x%x\n",
 					__func__, reg_data);
 		} else {
 			u8 reg_data;
@@ -961,7 +961,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 			reg_data |= (1 << 5);
 			max77693_write_reg(charger->max77693->i2c,
 				MAX77693_CHG_REG_CHG_CNFG_12, reg_data);
-			pr_err("%s: set CNFG_12: 0x%x\n", __func__, reg_data);
+			pr_debug("%s: set CNFG_12: 0x%x\n", __func__, reg_data);
 
 		}
 		break;
@@ -1041,11 +1041,11 @@ static void sec_chg_isr_work(struct work_struct *work)
 
 		switch (val.intval) {
 		case POWER_SUPPLY_STATUS_DISCHARGING:
-			pr_err("%s: Interrupted but Discharging\n", __func__);
+			pr_debug("%s: Interrupted but Discharging\n", __func__);
 			break;
 
 		case POWER_SUPPLY_STATUS_NOT_CHARGING:
-			pr_err("%s: Interrupted but NOT Charging\n", __func__);
+			pr_debug("%s: Interrupted but NOT Charging\n", __func__);
 			break;
 
 		case POWER_SUPPLY_STATUS_FULL:
@@ -1055,12 +1055,12 @@ static void sec_chg_isr_work(struct work_struct *work)
 			break;
 
 		case POWER_SUPPLY_STATUS_CHARGING:
-			pr_err("%s: Interrupted but Charging\n", __func__);
+			pr_debug("%s: Interrupted but Charging\n", __func__);
 			break;
 
 		case POWER_SUPPLY_STATUS_UNKNOWN:
 		default:
-			pr_err("%s: Invalid Charger Status\n", __func__);
+			pr_debug("%s: Invalid Charger Status\n", __func__);
 			break;
 		}
 	}
@@ -1073,11 +1073,11 @@ static void sec_chg_isr_work(struct work_struct *work)
 		switch (val.intval) {
 		case POWER_SUPPLY_HEALTH_OVERHEAT:
 		case POWER_SUPPLY_HEALTH_COLD:
-			pr_err("%s: Interrupted but Hot/Cold\n", __func__);
+			pr_debug("%s: Interrupted but Hot/Cold\n", __func__);
 			break;
 
 		case POWER_SUPPLY_HEALTH_DEAD:
-			pr_err("%s: Interrupted but Dead\n", __func__);
+			pr_debug("%s: Interrupted but Dead\n", __func__);
 			break;
 
 		case POWER_SUPPLY_HEALTH_OVERVOLTAGE:
@@ -1088,16 +1088,16 @@ static void sec_chg_isr_work(struct work_struct *work)
 			break;
 
 		case POWER_SUPPLY_HEALTH_UNSPEC_FAILURE:
-			pr_err("%s: Interrupted but Unspec\n", __func__);
+			pr_debug("%s: Interrupted but Unspec\n", __func__);
 			break;
 
 		case POWER_SUPPLY_HEALTH_GOOD:
-			pr_err("%s: Interrupted but Good\n", __func__);
+			pr_debug("%s: Interrupted but Good\n", __func__);
 			break;
 
 		case POWER_SUPPLY_HEALTH_UNKNOWN:
 		default:
-			pr_err("%s: Invalid Charger Health\n", __func__);
+			pr_debug("%s: Invalid Charger Health\n", __func__);
 			break;
 		}
 	}
@@ -1160,8 +1160,6 @@ static void wpc_detect_work(struct work_struct *work)
 					<<ONLINE_TYPE_MAIN_SHIFT;
 		psy_do_property("battery", set,
 				POWER_SUPPLY_PROP_ONLINE, value);
-		pr_info("%s: wpc activated, set V_INT as PN\n",
-				__func__);
 	} else if ((chg_data->wc_w_state == 1) && (wc_w_state == 0)) {
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, true);
@@ -1172,14 +1170,12 @@ static void wpc_detect_work(struct work_struct *work)
 			reg_data = ((reg_data & MAX77693_CHG_DTLS) >> MAX77693_CHG_DTLS_SHIFT);
 			mdelay(50);
 		} while((retry_cnt++ < 2) && (reg_data == 0x8));
-		pr_info("%s: reg_data: 0x%x, charging: %d\n", __func__,
-					reg_data, chg_data->is_charging);
 
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, false);
 		if ((reg_data != 0x08)
 			&& (chg_data->cable_type == POWER_SUPPLY_TYPE_WIRELESS)) {
-			pr_info("%s: wpc uvlo, but charging\n",	__func__);
+			pr_debug("%s: wpc uvlo, but charging\n",	__func__);
 			wake_lock_timeout(&chg_data->wpc_wake_lock, 1000);
 			queue_delayed_work(chg_data->wqueue, &chg_data->wpc_work,
 					msecs_to_jiffies(500));
@@ -1189,11 +1185,11 @@ static void wpc_detect_work(struct work_struct *work)
 				POWER_SUPPLY_TYPE_BATTERY<<ONLINE_TYPE_MAIN_SHIFT;
 			psy_do_property("battery", set,
 					POWER_SUPPLY_PROP_ONLINE, value);
-			pr_info("%s: wpc deactivated, set V_INT as PD\n",
+			pr_debug("%s: wpc deactivated, set V_INT as PD\n",
 					__func__);
 		}
 	}
-	pr_info("%s: w(%d to %d)\n", __func__,
+	pr_debug("%s: w(%d to %d)\n", __func__,
 			chg_data->wc_w_state, wc_w_state);
 
 	chg_data->wc_w_state = wc_w_state;
@@ -1414,7 +1410,7 @@ static void max77693_chgin_init_work(struct work_struct *work)
 	ret = request_threaded_irq(charger->irq_chgin, NULL,
 			max77693_chgin_irq, 0, "chgin-irq", charger);
 	if (ret < 0) {
-		pr_err("%s: fail to request chgin IRQ: %d: %d\n",
+		pr_debug("%s: fail to request chgin IRQ: %d: %d\n",
 				__func__, charger->irq_chgin, ret);
 	}
 }
@@ -1453,7 +1449,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 
 	if (charger->pdata->chg_gpio_init) {
 		if (!charger->pdata->chg_gpio_init()) {
-			pr_err("%s: Failed to Initialize GPIO\n", __func__);
+			pr_debug("%s: Failed to Initialize GPIO\n", __func__);
 			goto err_free;
 		}
 	}
@@ -1463,7 +1459,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 	charger->wqueue =
 	    create_singlethread_workqueue(dev_name(&pdev->dev));
 	if (!charger->wqueue) {
-		pr_err("%s: Fail to Create Workqueue\n", __func__);
+		pr_debug("%s: Fail to Create Workqueue\n", __func__);
 		goto err_free;
 	}
 	INIT_WORK(&charger->chgin_work, max77693_chgin_isr_work);
@@ -1480,7 +1476,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 
 	ret = power_supply_register(&pdev->dev, &charger->psy_chg);
 	if (ret) {
-		pr_err("%s: Failed to Register psy_chg\n", __func__);
+		pr_debug("%s: Failed to Register psy_chg\n", __func__);
 		goto err_power_supply_register;
 	}
 
@@ -1492,7 +1488,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 				charger->pdata->chg_irq_attr,
 				"charger-irq", charger);
 		if (ret) {
-			pr_err("%s: Failed to Reqeust IRQ\n", __func__);
+			pr_debug("%s: Failed to Reqeust IRQ\n", __func__);
 			goto err_irq;
 		}
 	}
@@ -1506,7 +1502,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 			0, "wpc-int", charger);
 #endif
 	if (ret) {
-		pr_err("%s: Failed to Reqeust IRQ\n", __func__);
+		pr_debug("%s: Failed to Reqeust IRQ\n", __func__);
 		goto err_wc_irq;
 	}
 	max77693_read_reg(charger->max77693->i2c,
@@ -1519,7 +1515,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 		charger->wc_w_irq = gpio_to_irq(charger->wc_w_gpio);
 		ret = gpio_request(charger->wc_w_gpio, "wpc_charger-irq");
 		if (ret < 0) {
-			pr_err("%s: failed requesting gpio %d\n", __func__,
+			pr_debug("%s: failed requesting gpio %d\n", __func__,
 				charger->wc_w_gpio);
 			goto err_wc_irq;
 		}
@@ -1529,7 +1525,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 				IRQF_ONESHOT,
 				"wpc-int", charger);
 		if (ret) {
-			pr_err("%s: Failed to Reqeust IRQ\n", __func__);
+			pr_debug("%s: Failed to Reqeust IRQ\n", __func__);
 			goto err_wc_irq;
 		}
 		enable_irq_wake(charger->wc_w_irq);
@@ -1546,7 +1542,7 @@ static int max77693_charger_probe(struct platform_device *pdev)
 	ret = request_threaded_irq(charger->irq_bypass, NULL,
 			max77693_bypass_irq, 0, "bypass-irq", charger);
 	if (ret < 0)
-		pr_err("%s: fail to request bypass IRQ: %d: %d\n",
+		pr_debug("%s: fail to request bypass IRQ: %d: %d\n",
 				__func__, charger->irq_bypass, ret);
 	return 0;
 
@@ -1607,7 +1603,7 @@ static void max77693_charger_shutdown(struct device *dev)
 	u8 reg_data;
 
 	if (!charger->max77693->i2c) {
-		pr_err("%s: no max77693 i2c client\n", __func__);
+		pr_debug("%s: no max77693 i2c client\n", __func__);
 		return;
 	}
 	reg_data = 0x04;

@@ -48,8 +48,7 @@ static int max17048_write_word(struct i2c_client *client, int reg, u16 buf)
 
 	ret = i2c_smbus_write_word_data(client, reg, buf);
 	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
+		pr_debug("dummy\n");
 	return ret;
 }
 
@@ -59,8 +58,7 @@ static int max17048_read_word(struct i2c_client *client, int reg)
 
 	ret = i2c_smbus_read_word_data(client, reg);
 	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
+		pr_debug("dummy\n");
 	return ret;
 }
 
@@ -87,9 +85,6 @@ static int max17048_get_vcell(struct i2c_client *client)
 
 	temp = ((w_data & 0xFFF0) >> 4) * 1250;
 	vcell = temp / 1000;
-
-	dev_dbg(&client->dev,
-		"%s : vcell (%d)\n", __func__, vcell);
 
 	return vcell;
 }
@@ -175,10 +170,6 @@ static int max17048_get_soc(struct i2c_client *client)
 		soc = (data[0] * 100) + (data[1] * 100 / 256);
 	}
 
-	dev_dbg(&client->dev,
-		"%s : raw capacity (%d), data(0x%04x)\n",
-		__func__, soc, (data[0]<<8) | data[1]);
-
 	return soc;
 }
 
@@ -190,9 +181,6 @@ static void max17048_get_version(struct i2c_client *client)
 	temp = max17048_read_word(client, MAX17048_VER_MSB);
 
 	w_data = swab16(temp);
-
-	dev_info(&client->dev,
-		"MAX17048 Fuel-Gauge Ver 0x%04x\n", w_data);
 }
 
 static u16 max17048_get_rcomp(struct i2c_client *client)
@@ -203,10 +191,6 @@ static u16 max17048_get_rcomp(struct i2c_client *client)
 	temp = max17048_read_word(client, MAX17048_RCOMP_MSB);
 
 	w_data = swab16(temp);
-
-	dev_dbg(&client->dev,
-		"%s : current rcomp = 0x%04x\n",
-		__func__, w_data);
 
 	return w_data;
 }
@@ -257,10 +241,6 @@ static void max17048_rcomp_update(struct i2c_client *client, int temp)
 	new_rcomp |= (rcomp_current & 0xff);
 
 	if (rcomp_current != new_rcomp) {
-		dev_dbg(&client->dev,
-			"%s : RCOMP 0x%04x -> 0x%04x (0x%02x)\n",
-			__func__, rcomp_current, new_rcomp,
-			new_rcomp >> 8);
 		max17048_set_rcomp(client, new_rcomp);
 	}
 }
@@ -313,7 +293,6 @@ static void fg_read_all_regs(struct i2c_client *client)
 			sprintf(str+strlen(str), "\n");
 	}
 
-	dev_info(&client->dev, "%s\n", str);
 	str[0] = '\0';
 	count = 0;
 	for (addr = 0x40; addr <= 0x7F; addr += 2) {
@@ -329,7 +308,6 @@ static void fg_read_all_regs(struct i2c_client *client)
 		if((count % 7) == 0)
 			sprintf(str+strlen(str), "\n");
 	}
-	dev_info(&client->dev, "%s\n", str);
 	str[0] = '\0';
 	count = 0;
 	for (addr = 0x80; addr <= 0x9F; addr += 2) {
@@ -346,7 +324,6 @@ static void fg_read_all_regs(struct i2c_client *client)
 			sprintf(str+strlen(str), "\n");
 	}
 	str[strlen(str)] = '\0';
-	dev_info(&client->dev, "%s\n", str);
 
 	addr1 = 0x3E;
 	data1 = 0x0000;
@@ -378,7 +355,6 @@ static void fg_read_address(struct i2c_client *client)
 			sprintf(str+strlen(str), "\n");
 	}
 
-	dev_info(&client->dev, "%s\n", str);
 	str[0] = '\0';
 
 	count = 0;
@@ -396,7 +372,6 @@ static void fg_read_address(struct i2c_client *client)
 			sprintf(str+strlen(str), "\n");
 	}
 	str[strlen(str)] = '\0';
-	dev_info(&client->dev, "%s\n", str);
 }
 
 bool sec_hal_fg_init(struct i2c_client *client)
@@ -425,10 +400,6 @@ bool sec_hal_fg_fuelalert_init(struct i2c_client *client, int soc)
 	data = 32 - soc; /* set soc for fuel alert */
 	temp &= 0xff00;
 	temp += data;
-
-	dev_dbg(&client->dev,
-		"%s : new rcomp = 0x%04x\n",
-		__func__, temp);
 
 	max17048_set_rcomp(client, temp);
 
@@ -586,18 +557,11 @@ ssize_t sec_hal_fg_store_attrs(struct device *dev,
 			fg->reg_data[0] = (data & 0xff00) >> 8;
 			fg->reg_data[1] = (data & 0x00ff);
 
-			dev_dbg(&fg->client->dev,
-				"%s: (read) addr = 0x%x, data = 0x%02x%02x\n",
-				 __func__, fg->reg_addr,
-				 fg->reg_data[1], fg->reg_data[0]);
 			ret = count;
 		}
 		break;
 	case FG_DATA:
 		if (sscanf(buf, "%x\n", &x) == 1) {
-			dev_dbg(&fg->client->dev,
-				"%s: (write) addr = 0x%x, data = 0x%04x\n",
-				__func__, fg->reg_addr, x);
 			i2c_smbus_write_word_data(fg->client,
 				fg->reg_addr, swab16(x));
 			ret = count;
