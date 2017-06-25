@@ -159,6 +159,7 @@ int blkdev_issue_sanitize(struct block_device *bdev, gfp_t gfp_mask)
 	struct bio_batch bb;
 	struct bio *bio;
 	int ret = 0;
+	struct blk_plug plug;
 
 	if (!q)
 		return -ENXIO;
@@ -228,6 +229,7 @@ int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
 	bb.flags = 1 << BIO_UPTODATE;
 	bb.wait = &wait;
 
+	blk_start_plug(&plug);
 	while (nr_sects) {
 		bio = bio_alloc(gfp_mask, 1);
 		if (!bio) {
@@ -256,6 +258,7 @@ int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
 		atomic_inc(&bb.done);
 		submit_bio(REQ_WRITE | REQ_WRITE_SAME, bio);
 	}
+	blk_finish_plug(&plug);
 
 	/* Wait for bios in-flight */
 	if (!atomic_dec_and_test(&bb.done))
