@@ -4397,6 +4397,10 @@ sync_completed_show(struct mddev *mddev, char *page)
 	if (!test_bit(MD_RECOVERY_RUNNING, &mddev->recovery))
 		return sprintf(page, "none\n");
 
+	if (mddev->curr_resync == 1 ||
+	    mddev->curr_resync == 2)
+		return sprintf(page, "delayed\n");
+
 	if (test_bit(MD_RECOVERY_SYNC, &mddev->recovery) ||
 	    test_bit(MD_RECOVERY_RESHAPE, &mddev->recovery))
 		max_sectors = mddev->resync_max_sectors;
@@ -6823,7 +6827,11 @@ static void status_resync(struct seq_file *seq, struct mddev * mddev)
 	int scale;
 	unsigned int per_milli;
 
-	resync = mddev->curr_resync - atomic_read(&mddev->recovery_active);
+	if (mddev->curr_resync <= 3)
+		resync = 0;
+	else
+		resync = mddev->curr_resync
+			- atomic_read(&mddev->recovery_active);
 
 	if (test_bit(MD_RECOVERY_SYNC, &mddev->recovery) ||
 	    test_bit(MD_RECOVERY_RESHAPE, &mddev->recovery))
@@ -7049,7 +7057,7 @@ static int md_seq_show(struct seq_file *seq, void *v)
 				if (mddev->curr_resync > 2) {
 					status_resync(seq, mddev);
 					seq_printf(seq, "\n      ");
-				} else if (mddev->curr_resync == 1 || mddev->curr_resync == 2)
+				} else if (mddev->curr_resync >= 1)
 					seq_printf(seq, "\tresync=DELAYED\n      ");
 				else if (mddev->recovery_cp < MaxSector)
 					seq_printf(seq, "\tresync=PENDING\n      ");
@@ -7453,8 +7461,11 @@ void md_do_sync(struct md_thread *thread)
 		       "md: resuming %s of %s from checkpoint.\n",
 		       desc, mdname(mddev));
 		mddev->curr_resync = j;
-	}
+	} else
+		mddev->curr_resync = 3; /* no longer delayed */
 	mddev->curr_resync_completed = j;
+	sysfs_notify(&mddev->kobj, NULL, "sync_completed");
+	md_new_event(mddev);
 
 	while (j < max_sectors) {
 		sector_t sectors;
@@ -7506,7 +7517,8 @@ void md_do_sync(struct md_thread *thread)
 			break;
 
 		j += sectors;
-		if (j>1) mddev->curr_resync = j;
+		if (j > 2)
+			mddev->curr_resync = j;
 		mddev->curr_mark_cnt = io_sectors;
 		if (last_check == 0)
 			/* this is the earliest that rebuild will be
@@ -7626,8 +7638,6 @@ static int remove_and_add_spares(struct mddev *mddev)
 	struct md_rdev *rdev;
 	int spares = 0;
 	int removed = 0;
-
-	mddev->curr_resync_completed = 0;
 
 	rdev_for_each(rdev, mddev)
 		if (rdev->raid_disk >= 0 &&
@@ -7823,6 +7833,7 @@ void md_check_recovery(struct mddev *mddev)
 		/* Set RUNNING before clearing NEEDED to avoid
 		 * any transients in the value of "sync_action".
 		 */
+		mddev->curr_resync_completed = 0;
 		set_bit(MD_RECOVERY_RUNNING, &mddev->recovery);
 		/* Clear some bits that don't mean anything, but
 		 * might be left set
@@ -7836,7 +7847,7 @@ void md_check_recovery(struct mddev *mddev)
 		/* no recovery is running.
 		 * remove any failed drives, then
 		 * add spares if possible.
-		 * Spare are also removed and re-added, to allow
+		 * Spares are also removed and re-added, to allow
 		 * the personality to fail the re-add.
 		 */
 
