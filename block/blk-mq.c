@@ -1442,7 +1442,7 @@ void blk_mq_free_queue(struct request_queue *q)
 EXPORT_SYMBOL(blk_mq_free_queue);
 
 /* Basically redo blk_mq_init_queue with queue frozen */
-static void __cpuinit blk_mq_queue_reinit(struct request_queue *q)
+static void blk_mq_queue_reinit(struct request_queue *q)
 {
 	blk_mq_freeze_queue(q);
 
@@ -1459,7 +1459,7 @@ static void __cpuinit blk_mq_queue_reinit(struct request_queue *q)
 	blk_mq_unfreeze_queue(q);
 }
 
-static int __cpuinit blk_mq_queue_reinit_notify(struct notifier_block *nb,
+static int blk_mq_queue_reinit_notify(struct notifier_block *nb,
 		unsigned long action, void *hcpu)
 {
 	struct request_queue *q;
