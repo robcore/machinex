@@ -1452,7 +1452,7 @@ static void dm_rq_bio_destructor(struct bio *bio)
 	struct mapped_device *md = info->tio->md;
 
 	free_bio_info(info);
-	bio_free(bio, md->bs);
+	bio_put(bio);
 }
 
 static int dm_rq_bio_constructor(struct bio *bio, struct bio *bio_orig,
