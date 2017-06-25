@@ -292,8 +292,6 @@ void blk_mq_complete_request(struct request *rq, int error)
 	struct bio *bio = rq->bio;
 	unsigned int bytes = 0;
 
-	trace_block_rq_complete(rq->q, rq);
-
 	while (bio) {
 		struct bio *next = bio->bi_next;
 
