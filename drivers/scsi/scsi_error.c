@@ -1576,7 +1576,7 @@ int scsi_decide_disposition(struct scsi_cmnd *scmd)
 			 * Need to modify host byte to signal a
 			 * permanent target failure
 			 */
-			set_host_byte(scmd, DID_TARGET_FAILURE);
+			set_host_byte(scmd, DID_MEDIUM_ERROR);
 			rtn = SUCCESS;
 		}
 		/* if rtn == FAILED, we have no sense information;
