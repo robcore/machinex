@@ -310,7 +310,7 @@ static inline int overlaps(sector_t s1, int l1, sector_t s2, int l2)
 
 /* Short lived temporary struct on the stack.
  * We could squirrel the error to be returned into
- * bio->bi_iter.bi_size, or similar. But that would be too ugly. */
+ * bio->bi_size, or similar. But that would be too ugly. */
 struct bio_and_error {
 	struct bio *bio;
 	int error;

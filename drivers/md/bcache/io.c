@@ -19,18 +19,18 @@ static void bch_bi_idx_hack_endio(struct bio *bio, int error)
 
 static void bch_generic_make_request_hack(struct bio *bio)
 {
-	if (bio->bi_iter.bi_idx) {
+	if (bio->bi_idx) {
 		struct bio *clone = bio_alloc(GFP_NOIO, bio_segments(bio));
 
 		memcpy(clone->bi_io_vec,
 		       bio_iovec(bio),
 		       bio_segments(bio) * sizeof(struct bio_vec));
 
-		clone->bi_iter.bi_sector = bio->bi_iter.bi_sector;
+		clone->bi_sector	= bio->bi_sector;
 		clone->bi_bdev		= bio->bi_bdev;
 		clone->bi_rw		= bio->bi_rw;
 		clone->bi_vcnt		= bio_segments(bio);
-		clone->bi_iter.bi_size	= bio->bi_iter.bi_size;
+		clone->bi_size		= bio->bi_size;
 
 		clone->bi_private	= bio;
 		clone->bi_end_io	= bch_bi_idx_hack_endio;
@@ -68,7 +68,7 @@ static void bch_generic_make_request_hack(struct bio *bio)
 struct bio *bch_bio_split(struct bio *bio, int sectors,
 			  gfp_t gfp, struct bio_set *bs)
 {
-	unsigned idx = bio->bi_iter.bi_idx, vcnt = 0, nbytes = sectors << 9;
+	unsigned idx = bio->bi_idx, vcnt = 0, nbytes = sectors << 9;
 	struct bio_vec *bv;
 	struct bio *ret = NULL;
 
@@ -93,7 +93,7 @@ struct bio *bch_bio_split(struct bio *bio, int sectors,
 	}
 
 	bio_for_each_segment(bv, bio, idx) {
-		vcnt = idx - bio->bi_iter.bi_idx;
+		vcnt = idx - bio->bi_idx;
 
 		if (!nbytes) {
 			ret = bio_alloc_bioset(gfp, vcnt, bs);
@@ -122,15 +122,15 @@ struct bio *bch_bio_split(struct bio *bio, int sectors,
 	}
 out:
 	ret->bi_bdev	= bio->bi_bdev;
-	ret->bi_iter.bi_sector	= bio->bi_iter.bi_sector;
-	ret->bi_iter.bi_size	= sectors << 9;
+	ret->bi_sector	= bio->bi_sector;
+	ret->bi_size	= sectors << 9;
 	ret->bi_rw	= bio->bi_rw;
 	ret->bi_vcnt	= vcnt;
 	ret->bi_max_vecs = vcnt;
 
-	bio->bi_iter.bi_sector	+= sectors;
-	bio->bi_iter.bi_size	-= sectors << 9;
-	bio->bi_iter.bi_idx	 = idx;
+	bio->bi_sector	+= sectors;
+	bio->bi_size	-= sectors << 9;
+	bio->bi_idx	 = idx;
 
 	if (bio_integrity(bio)) {
 		if (bio_integrity_clone(ret, bio, gfp)) {
@@ -281,8 +281,8 @@ void __bch_submit_bbio(struct bio *bio, struct cache_set *c)
 {
 	struct bbio *b = container_of(bio, struct bbio, bio);
 
-	bio->bi_iter.bi_sector	= PTR_OFFSET(&b->key, 0);
-	bio->bi_bdev		= PTR_CACHE(c, &b->key, 0)->bdev;
+	bio->bi_sector	= PTR_OFFSET(&b->key, 0);
+	bio->bi_bdev	= PTR_CACHE(c, &b->key, 0)->bdev;
 
 	b->submit_time_us = local_clock_us();
 	closure_bio_submit(bio, bio->bi_private, PTR_CACHE(c, &b->key, 0));

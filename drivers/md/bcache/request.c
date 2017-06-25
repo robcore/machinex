@@ -219,7 +219,7 @@ static void bio_invalidate(struct closure *cl)
 	struct bio *bio = op->cache_bio;
 
 	pr_debug("invalidating %i sectors from %llu",
-		 bio_sectors(bio), (uint64_t) bio->bi_iter.bi_sector);
+		 bio_sectors(bio), (uint64_t) bio->bi_sector);
 
 	while (bio_sectors(bio)) {
 		unsigned len = min(bio_sectors(bio), 1U << 14);
@@ -503,7 +503,7 @@ static void bch_insert_data_loop(struct closure *cl)
 		k = op->keys.top;
 		bkey_init(k);
 		SET_KEY_INODE(k, op->inode);
-		SET_KEY_OFFSET(k, bio->bi_iter.bi_sector);
+		SET_KEY_OFFSET(k, bio->bi_sector);
 
 		if (!bch_alloc_sectors(k, bio_sectors(bio), s))
 			goto err;

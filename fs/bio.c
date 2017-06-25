@@ -402,13 +402,13 @@ void __bio_clone(struct bio *bio, struct bio *bio_src)
 	 * most users will be overriding ->bi_bdev with a new target,
 	 * so we don't set nor calculate new physical/hw segment counts here
 	 */
-	bio->bi_iter.bi_sector = bio_src->bi_iter.bi_sector;
+	bio->bi_sector = bio_src->bi_sector;
 	bio->bi_bdev = bio_src->bi_bdev;
 	bio->bi_flags |= 1 << BIO_CLONED;
 	bio->bi_rw = bio_src->bi_rw;
 	bio->bi_vcnt = bio_src->bi_vcnt;
-	bio->bi_iter.bi_size = bio_src->bi_iter.bi_size;
-	bio->bi_iter.bi_idx = bio_src->bi_iter.bi_idx;
+	bio->bi_size = bio_src->bi_size;
+	bio->bi_idx = bio_src->bi_idx;
 }
 EXPORT_SYMBOL(__bio_clone);
 
@@ -482,7 +482,7 @@ static int __bio_add_page(struct request_queue *q, struct bio *bio, struct page
 	if (unlikely(bio_flagged(bio, BIO_CLONED)))
 		return 0;
 
-	if (((bio->bi_iter.bi_size + len) >> 9) > max_sectors)
+	if (((bio->bi_size + len) >> 9) > max_sectors)
 		return 0;
 
 	/*
@@ -505,9 +505,8 @@ static int __bio_add_page(struct request_queue *q, struct bio *bio, struct page
 					   simulate merging updated prev_bvec
 					   as new bvec. */
 					.bi_bdev = bio->bi_bdev,
-					.bi_sector = bio->bi_iter.bi_sector,
-					.bi_size = bio->bi_iter.bi_size -
-						prev_bv_len,
+					.bi_sector = bio->bi_sector,
+					.bi_size = bio->bi_size - prev_bv_len,
 					.bi_rw = bio->bi_rw,
 				};
 
@@ -555,8 +554,8 @@ static int __bio_add_page(struct request_queue *q, struct bio *bio, struct page
 	if (q->merge_bvec_fn) {
 		struct bvec_merge_data bvm = {
 			.bi_bdev = bio->bi_bdev,
-			.bi_sector = bio->bi_iter.bi_sector,
-			.bi_size = bio->bi_iter.bi_size,
+			.bi_sector = bio->bi_sector,
+			.bi_size = bio->bi_size,
 			.bi_rw = bio->bi_rw,
 		};
 
@@ -579,7 +578,7 @@ static int __bio_add_page(struct request_queue *q, struct bio *bio, struct page
 	bio->bi_vcnt++;
 	bio->bi_phys_segments++;
  done:
-	bio->bi_iter.bi_size += len;
+	bio->bi_size += len;
 	return len;
 }
 
@@ -642,22 +641,22 @@ void bio_advance(struct bio *bio, unsigned bytes)
 	if (bio_integrity(bio))
 		bio_integrity_advance(bio, bytes);
 
-	bio->bi_iter.bi_sector += bytes >> 9;
-	bio->bi_iter.bi_size -= bytes;
+	bio->bi_sector += bytes >> 9;
+	bio->bi_size -= bytes;
 
 	if (bio->bi_rw & BIO_NO_ADVANCE_ITER_MASK)
 		return;
 
 	while (bytes) {
-		if (unlikely(bio->bi_iter.bi_idx >= bio->bi_vcnt)) {
+		if (unlikely(bio->bi_idx >= bio->bi_vcnt)) {
 			WARN_ONCE(1, "bio idx %d >= vcnt %d\n",
-				  bio->bi_iter.bi_idx, bio->bi_vcnt);
+				  bio->bi_idx, bio->bi_vcnt);
 			break;
 		}
 
 		if (bytes >= bio_iovec(bio)->bv_len) {
 			bytes -= bio_iovec(bio)->bv_len;
-			bio->bi_iter.bi_idx++;
+			bio->bi_idx++;
 		} else {
 			bio_iovec(bio)->bv_len -= bytes;
 			bio_iovec(bio)->bv_offset += bytes;
@@ -1258,7 +1257,7 @@ struct bio *bio_map_kern(struct request_queue *q, void *data, unsigned int len,
 	if (IS_ERR(bio))
 		return bio;
 
-	if (bio->bi_iter.bi_size == len)
+	if (bio->bi_size == len)
 		return bio;
 
 	/*
@@ -1625,7 +1624,7 @@ sector_t bio_sector_offset(struct bio *bio, unsigned short index,
 	sector_sz = queue_logical_block_size(bio->bi_bdev->bd_disk->queue);
 	sectors = 0;
 
-	if (index >= bio->bi_iter.bi_idx)
+	if (index >= bio->bi_idx)
 		index = bio->bi_vcnt - 1;
 
 	bio_for_each_segment_all(bv, bio, i) {

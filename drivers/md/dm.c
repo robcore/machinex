@@ -636,7 +636,7 @@ static void dec_pending(struct dm_io *io, int error)
 		if (io_error == DM_ENDIO_REQUEUE)
 			return;
 
-		if ((bio->bi_rw & REQ_FLUSH) && bio->bi_iter.bi_size) {
+		if ((bio->bi_rw & REQ_FLUSH) && bio->bi_size) {
 			/*
 			 * Preflush done for flush with data, reissue
 			 * without REQ_FLUSH.
@@ -692,7 +692,7 @@ static void end_clone_bio(struct bio *clone, int error)
 	struct dm_rq_clone_bio_info *info = clone->bi_private;
 	struct dm_rq_target_io *tio = info->tio;
 	struct bio *bio = info->orig;
-	unsigned int nr_bytes = info->orig->bi_iter.bi_size;
+	unsigned int nr_bytes = info->orig->bi_size;
 
 	bio_put(clone);
 
@@ -1053,7 +1053,7 @@ static struct bio *split_bvec(struct bio *bio, sector_t sector,
 	clone->bi_vcnt = 1;
 	clone->bi_size = to_bytes(len);
 	clone->bi_io_vec->bv_offset = offset;
-	clone->bi_io_vec->bv_len = clone->bi_iter.bi_size;
+	clone->bi_io_vec->bv_len = clone->bi_size;
 	clone->bi_flags |= 1 << BIO_CLONED;
 
 	if (bio_integrity(bio)) {
@@ -1303,8 +1303,8 @@ static void __split_and_process_bio(struct mapped_device *md, struct bio *bio)
 	ci.io->bio = bio;
 	ci.io->md = md;
 	spin_lock_init(&ci.io->endio_lock);
-	ci.sector = bio->bi_iter.bi_sector;
-	ci.idx = bio->bi_iter.bi_idx;
+	ci.sector = bio->bi_sector;
+	ci.idx = bio->bi_idx;
 
 	start_io_acct(ci.io);
 	if (bio->bi_rw & REQ_FLUSH) {

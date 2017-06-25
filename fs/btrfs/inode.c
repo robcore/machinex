@@ -6156,7 +6156,7 @@ static int btrfs_submit_direct_hook(int rw, struct btrfs_dio_private *dip,
 	struct bio *bio;
 	struct bio *orig_bio = dip->orig_bio;
 	struct bio_vec *bvec = orig_bio->bi_io_vec;
-	u64 start_sector = orig_bio->bi_iter.bi_sector;
+	u64 start_sector = orig_bio->bi_sector;
 	u64 file_offset = dip->logical_offset;
 	u64 submit_len = 0;
 	u64 map_length;
@@ -6174,7 +6174,7 @@ static int btrfs_submit_direct_hook(int rw, struct btrfs_dio_private *dip,
 		return -EIO;
 	}
 
-	if (map_length >= orig_bio->bi_iter.bi_size) {
+	if (map_length >= orig_bio->bi_size) {
 		bio = orig_bio;
 		goto submit;
 	}

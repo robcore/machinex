@@ -1060,8 +1060,8 @@ static void make_request(struct mddev *mddev, struct bio * bio)
 		/* This is a one page bio that upper layers
 		 * refuse to split for us, so we need to split it.
 		 */
-		bp = bio_split(bio, chunk_sects -
-			       (bio->bi_iter.bi_sector & (chunk_sects - 1)));
+		bp = bio_split(bio,
+			       chunk_sects - (bio->bi_sector & (chunk_sects - 1)) );
 
 		/* Each of these 'make_request' calls will call 'wait_barrier'.
 		 * If the first succeeds but the second blocks due to the resync
@@ -1109,7 +1109,7 @@ static void make_request(struct mddev *mddev, struct bio * bio)
 	r10_bio->sectors = bio->bi_size >> 9;
 
 	r10_bio->mddev = mddev;
-	r10_bio->sector = bio->bi_iter.bi_sector;
+	r10_bio->sector = bio->bi_sector;
 	r10_bio->state = 0;
 
 	/* We might need to issue multiple reads to different
@@ -1178,8 +1178,7 @@ read_again:
 					    - sectors_handled);
 			r10_bio->state = 0;
 			r10_bio->mddev = mddev;
-			r10_bio->sector = bio->bi_iter.bi_sector +
-				sectors_handled;
+			r10_bio->sector = bio->bi_sector + sectors_handled;
 			goto read_again;
 		} else
 			generic_make_request(read_bio);
@@ -1338,8 +1337,7 @@ retry_write:
 			bio->bi_phys_segments++;
 		spin_unlock_irq(&conf->device_lock);
 	}
-	sectors_handled = r10_bio->sector + max_sectors -
-		bio->bi_iter.bi_sector;
+	sectors_handled = r10_bio->sector + max_sectors - bio->bi_sector;
 
 	atomic_set(&r10_bio->remaining, 1);
 	bitmap_startwrite(mddev->bitmap, r10_bio->sector, r10_bio->sectors, 0);
@@ -1410,7 +1408,7 @@ retry_write:
 		r10_bio->sectors = (bio->bi_size >> 9) - sectors_handled;
 
 		r10_bio->mddev = mddev;
-		r10_bio->sector = bio->bi_iter.bi_sector + sectors_handled;
+		r10_bio->sector = bio->bi_sector + sectors_handled;
 		r10_bio->state = 0;
 		goto retry_write;
 	}
@@ -1932,7 +1930,7 @@ static void sync_request_write(struct mddev *mddev, struct r10bio *r10_bio)
 		atomic_inc(&r10_bio->remaining);
 		md_sync_acct(conf->mirrors[d].rdev->bdev, tbio->bi_size >> 9);
 
-		tbio->bi_iter.bi_sector += conf->mirrors[d].rdev->data_offset;
+		tbio->bi_sector += conf->mirrors[d].rdev->data_offset;
 		tbio->bi_bdev = conf->mirrors[d].rdev->bdev;
 		generic_make_request(tbio);
 	}
@@ -2491,7 +2489,7 @@ read_more:
 		struct bio *mbio = r10_bio->master_bio;
 		int sectors_handled =
 			r10_bio->sector + max_sectors
-			- mbio->bi_iter.bi_sector;
+			- mbio->bi_sector;
 		r10_bio->sectors = max_sectors;
 		spin_lock_irq(&conf->device_lock);
 		if (mbio->bi_phys_segments == 0)
@@ -2510,7 +2508,7 @@ read_more:
 		set_bit(R10BIO_ReadError,
 			&r10_bio->state);
 		r10_bio->mddev = mddev;
-		r10_bio->sector = mbio->bi_iter.bi_sector
+		r10_bio->sector = mbio->bi_sector
 			+ sectors_handled;
 
 		goto read_more;
@@ -2951,8 +2949,7 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 				bio->bi_end_io = end_sync_read;
 				bio->bi_rw = READ;
 				from_addr = r10_bio->devs[j].addr;
-				bio->bi_iter.bi_sector = from_addr +
-					rdev->data_offset;
+				bio->bi_sector = from_addr + rdev->data_offset;
 				bio->bi_bdev = rdev->bdev;
 				atomic_inc(&rdev->nr_pending);
 				/* and we write to 'i' (if not in_sync) */
@@ -2975,7 +2972,7 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 					bio->bi_private = r10_bio;
 					bio->bi_end_io = end_sync_write;
 					bio->bi_rw = WRITE;
-					bio->bi_iter.bi_sector = to_addr
+					bio->bi_sector = to_addr
 						+ rdev->data_offset;
 					bio->bi_bdev = rdev->bdev;
 					atomic_inc(&r10_bio->remaining);
@@ -3003,8 +3000,7 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 				bio->bi_private = r10_bio;
 				bio->bi_end_io = end_sync_write;
 				bio->bi_rw = WRITE;
-				bio->bi_iter.bi_sector = to_addr +
-					rdev->data_offset;
+				bio->bi_sector = to_addr + rdev->data_offset;
 				bio->bi_bdev = rdev->bdev;
 				atomic_inc(&r10_bio->remaining);
 				break;
@@ -3122,7 +3118,7 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 			bio->bi_private = r10_bio;
 			bio->bi_end_io = end_sync_read;
 			bio->bi_rw = READ;
-			bio->bi_iter.bi_sector = sector +
+			bio->bi_sector = sector +
 				conf->mirrors[d].rdev->data_offset;
 			bio->bi_bdev = conf->mirrors[d].rdev->bdev;
 			count++;
@@ -3143,7 +3139,7 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 			bio->bi_private = r10_bio;
 			bio->bi_end_io = end_sync_write;
 			bio->bi_rw = WRITE;
-			bio->bi_iter.bi_sector = sector +
+			bio->bi_sector = sector +
 				conf->mirrors[d].replacement->data_offset;
 			bio->bi_bdev = conf->mirrors[d].replacement->bdev;
 			count++;
@@ -3201,7 +3197,7 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 			     bio2 = bio2->bi_next) {
 				/* remove last page from this bio */
 				bio2->bi_vcnt--;
-				bio2->bi_iter.bi_size -= len;
+				bio2->bi_size -= len;
 				bio2->bi_flags &= ~(1<< BIO_SEG_VALID);
 			}
 			goto bio_full;
