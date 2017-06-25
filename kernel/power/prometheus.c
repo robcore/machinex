@@ -29,7 +29,7 @@
 #include "power.h"
 
 #define VERSION 2
-#define VERSION_MIN 5
+#define VERSION_MIN 6
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -139,7 +139,7 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Jack is detected.\n");
 				return;
 			} else if (android_os_ws()) {
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media WakeLocks held.\n");
+				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
 				return;
 			} else {
 				pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
