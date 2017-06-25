@@ -885,7 +885,12 @@ static void flush_pending_writes(struct r10conf *conf)
 		while (bio) { /* submit pending writes */
 			struct bio *next = bio->bi_next;
 			bio->bi_next = NULL;
-			generic_make_request(bio);
+			if (unlikely((bio->bi_rw & REQ_DISCARD) &&
+			    !blk_queue_discard(bdev_get_queue(bio->bi_bdev))))
+				/* Just ignore it */
+				bio_endio(bio, 0);
+			else
+				generic_make_request(bio);
 			bio = next;
 		}
 	} else
@@ -1023,6 +1028,44 @@ static sector_t choose_data_offset(struct r10bio *r10_bio,
 		return rdev->new_data_offset;
 }
 
+struct raid10_plug_cb {
+	struct blk_plug_cb	cb;
+	struct bio_list		pending;
+	int			pending_cnt;
+};
+
+static void raid10_unplug(struct blk_plug_cb *cb, bool from_schedule)
+{
+	struct raid10_plug_cb *plug = container_of(cb, struct raid10_plug_cb,
+						   cb);
+	struct mddev *mddev = plug->cb.data;
+	struct r10conf *conf = mddev->private;
+	struct bio *bio;
+
+	if (from_schedule) {
+		spin_lock_irq(&conf->device_lock);
+		bio_list_merge(&conf->pending_bio_list, &plug->pending);
+		conf->pending_count += plug->pending_cnt;
+		spin_unlock_irq(&conf->device_lock);
+		md_wakeup_thread(mddev->thread);
+		kfree(plug);
+		return;
+	}
+
+	/* we aren't scheduling, so we can do the write-out directly. */
+	bio = bio_list_get(&plug->pending);
+	bitmap_unplug(mddev->bitmap);
+	wake_up(&conf->wait_barrier);
+
+	while (bio) { /* submit pending writes */
+		struct bio *next = bio->bi_next;
+		bio->bi_next = NULL;
+		generic_make_request(bio);
+		bio = next;
+	}
+	kfree(plug);
+}
+
 static void make_request(struct mddev *mddev, struct bio * bio)
 {
 	struct r10conf *conf = mddev->private;
@@ -1034,6 +1077,8 @@ static void make_request(struct mddev *mddev, struct bio * bio)
 	const int rw = bio_data_dir(bio);
 	const unsigned long do_sync = (bio->bi_rw & REQ_SYNC);
 	const unsigned long do_fua = (bio->bi_rw & REQ_FUA);
+	const unsigned long do_discard = (bio->bi_rw
+					  & (REQ_DISCARD | REQ_SECURE));
 	unsigned long flags;
 	struct md_rdev *blocked_rdev;
 	int plugged;
@@ -1054,7 +1099,7 @@ static void make_request(struct mddev *mddev, struct bio * bio)
 			 || conf->prev.near_copies < conf->prev.raid_disks))) {
 		struct bio_pair *bp;
 		/* Sanity check -- queue functions should prevent this happening */
-		if (bio->bi_vcnt != 1 ||
+		if ((bio->bi_vcnt != 1 && bio->bi_vcnt != 0) ||
 		    bio->bi_idx != 0)
 			goto bad_map;
 		/* This is a one page bio that upper layers
@@ -1672,6 +1717,9 @@ static int raid10_add_disk(struct mddev *mddev, struct md_rdev *rdev)
 		clear_bit(Unmerged, &rdev->flags);
 	}
 	md_integrity_add_rdev(rdev, mddev);
+	if (blk_queue_discard(bdev_get_queue(rdev->bdev)))
+		queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, mddev->queue);
+
 	print_conf(conf);
 	return err;
 }

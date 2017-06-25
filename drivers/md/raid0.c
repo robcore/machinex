@@ -208,6 +208,9 @@ static int create_strip_zones(struct mddev *mddev, struct r0conf **private_conf)
 		if (!smallest || (rdev1->sectors < smallest->sectors))
 			smallest = rdev1;
 		cnt++;
+
+		if (blk_queue_discard(bdev_get_queue(rdev1->bdev)))
+			discard_supported = true;
 	}
 	if (cnt != mddev->raid_disks) {
 		printk(KERN_ERR "md/raid0:%s: too few disks (%d of %d) - "
@@ -269,6 +272,11 @@ static int create_strip_zones(struct mddev *mddev, struct r0conf **private_conf)
 	}
 	mddev->queue->backing_dev_info.congested_fn = raid0_congested;
 	mddev->queue->backing_dev_info.congested_data = mddev;
+
+	if (!discard_supported)
+		queue_flag_clear_unlocked(QUEUE_FLAG_DISCARD, mddev->queue);
+	else
+		queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, mddev->queue);
 
 	pr_debug("md/raid0:%s: done.\n", mdname(mddev));
 	*private_conf = conf;
@@ -422,6 +430,7 @@ static int raid0_run(struct mddev *mddev)
 		return -EINVAL;
 	blk_queue_max_hw_sectors(mddev->queue, mddev->chunk_sectors);
 	blk_queue_max_write_same_sectors(mddev->queue, mddev->chunk_sectors);
+	blk_queue_max_discard_sectors(mddev->queue, mddev->chunk_sectors);
 
 	/* if private is not null, we are here after takeover */
 	if (mddev->private == NULL) {
@@ -530,7 +539,7 @@ static void raid0_make_request(struct mddev *mddev, struct bio *bio)
 		sector_t sector = bio->bi_sector;
 		struct bio_pair *bp;
 		/* Sanity check -- queue functions should prevent this happening */
-		if (bio->bi_vcnt != 1 ||
+		if ((bio->bi_vcnt != 1 && bio->bi_vcnt != 0) ||
 		    bio->bi_idx != 0)
 			goto bad_map;
 		/* This is a one page bio that upper layers
@@ -555,6 +564,13 @@ static void raid0_make_request(struct mddev *mddev, struct bio *bio)
 	bio->bi_bdev = tmp_dev->bdev;
 	bio->bi_sector = sector_offset + zone->dev_start +
 		tmp_dev->data_offset;
+
+	if (unlikely((bio->bi_rw & REQ_DISCARD) &&
+		     !blk_queue_discard(bdev_get_queue(bio->bi_bdev)))) {
+		/* Just ignore it */
+		bio_endio(bio, 0);
+		return;
+	}
 
 	generic_make_request(bio);
 	return;
