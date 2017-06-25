@@ -801,10 +801,24 @@ static void blk_add_trace_bio_bounce(void *ignore,
 	blk_add_trace_bio(q, bio, BLK_TA_BOUNCE, 0);
 }
 
-static void blk_add_trace_bio_complete(void *ignore,
-				       struct request_queue *q, struct bio *bio,
-				       int error)
+static void blk_add_trace_bio_complete(void *ignore, struct bio *bio, int error)
 {
+	struct request_queue *q;
+	struct blk_trace *bt;
+
+	if (!bio->bi_bdev)
+		return;
+
+	q = bdev_get_queue(bio->bi_bdev);
+	bt = q->blk_trace;
+
+	/*
+	 * Request based drivers will generate both rq and bio completions.
+	 * Ignore bio ones.
+	 */
+	if (likely(!bt) || bt->rq_based)
+		return;
+
 	blk_add_trace_bio(q, bio, BLK_TA_COMPLETE, error);
 }
 
