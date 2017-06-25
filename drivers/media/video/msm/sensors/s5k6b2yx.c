@@ -520,17 +520,10 @@ static int s5k6b2yx_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	u32 int_factor;
 	int temp = 0; */
 	struct msm_camera_sensor_info *data = s_ctrl->sensordata;
-	CAM_DEBUG("E");
-	CAM_DEBUG("s5k6b2yx_sensor_power_up(1) : i2c_scl: %d, i2c_sda: %d\n",
-		 gpio_get_value(85), gpio_get_value(84));
-
 
 	rc = msm_camera_request_gpio_table(data, 1);
 	if (rc < 0)
-		pr_err("%s: request gpio failed\n", __func__);
-
-	CAM_DEBUG("s5k6b2yx_sensor_power_up(2) : i2c_scl: %d, i2c_sda: %d\n",
-		 gpio_get_value(85), gpio_get_value(84));
+		pr_debug("%s: request gpio failed\n", __func__);
 
 	/* Power on */
 	data->sensor_platform_info->sensor_power_on();
@@ -540,9 +533,6 @@ static int s5k6b2yx_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 		msm_sensor_enable_i2c_mux(data->sensor_platform_info->i2c_conf);
 
 	usleep(1200);
-
-	CAM_DEBUG("s5k6b2yx_sensor_power_up(3) : i2c_scl: %d, i2c_sda: %d\n",
-		 gpio_get_value(85), gpio_get_value(84));
 
 	/* VT_CAM_RESET */
 	data->sensor_platform_info->
@@ -557,13 +547,9 @@ static int s5k6b2yx_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	rc = msm_cam_clk_enable(&s_ctrl->sensor_i2c_client->client->dev,
 		cam_clk_info, s_ctrl->cam_clk, ARRAY_SIZE(cam_clk_info), 1);
 	if (rc < 0)
-		pr_err("%s: clk enable failed\n", __func__);
-
-	CAM_DEBUG("s5k6b2yx_sensor_power_up(4) : i2c_scl: %d, i2c_sda: %d\n",
-		 gpio_get_value(85), gpio_get_value(84));
+		pr_debug("%s: clk enable failed\n", __func__);
 
 	usleep(5000);
-	CAM_DEBUG("X");
 
 	return rc;
 }
@@ -572,7 +558,6 @@ static int s5k6b2yx_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	int rc = 0;
 	struct msm_camera_sensor_info *data = s_ctrl->sensordata;
-	CAM_DEBUG("E");
 
 	if (data->sensor_platform_info->i2c_conf &&
 		data->sensor_platform_info->i2c_conf->use_i2c_mux)
@@ -597,8 +582,6 @@ static int s5k6b2yx_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 	msm_camera_request_gpio_table(data, 0);
 	s_ctrl->vision_mode_flag=0;
 
-	CAM_DEBUG("X");
-
 	return rc;
 }
 
@@ -608,20 +591,15 @@ static int s5k6b2yx_sensor_set_streaming_mode(
 	int rc = 0;
 	struct msm_camera_sensor_info *data = s_ctrl->sensordata;
 
-		CAM_DEBUG("stop streaming");
 		s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
 
-	CAM_DEBUG("vision_mode_enable=%d: E", vision_mode_enable);
 	if(vision_mode_enable) { /*switch from normal/dual to vision mode */
-		CAM_DEBUG("set X_SHUTDOWN pin to low");
 		data->sensor_platform_info->
 			sensor_pmic_gpio_ctrl(data->sensor_platform_info->reset, 0);
 		usleep(1050);
-		CAM_DEBUG("set VIS_STBY pin to high");
 		data->sensor_platform_info->
 			sensor_pmic_gpio_ctrl(data->sensor_platform_info->stby, 1);
 
-		CAM_DEBUG("change stream config arrays");
 		s_ctrl->msm_sensor_reg->start_stream_conf = s5k6b2yx_start_settings_vision;
 		s_ctrl->msm_sensor_reg->start_stream_conf_size = ARRAY_SIZE(s5k6b2yx_start_settings_vision);
 		s_ctrl->msm_sensor_reg->stop_stream_conf = s5k6b2yx_stop_settings_vision;
@@ -641,22 +619,18 @@ static int s5k6b2yx_sensor_set_streaming_mode(
 
 
 	} else { /*switch from vision to normal/dual mode */
-		CAM_DEBUG("set VIS_STBY pin to low");
 		data->sensor_platform_info->
 			sensor_pmic_gpio_ctrl(data->sensor_platform_info->stby, 0);
 		usleep(1050);
-		CAM_DEBUG("set X_SHUTDOWN pin to high");
 		data->sensor_platform_info->
 			sensor_pmic_gpio_ctrl(data->sensor_platform_info->reset, 1);
 
-		CAM_DEBUG("change stream config arrays");
 		s_ctrl->msm_sensor_reg->start_stream_conf = s5k6b2yx_start_settings;
 		s_ctrl->msm_sensor_reg->start_stream_conf_size = ARRAY_SIZE(s5k6b2yx_start_settings);
 		s_ctrl->msm_sensor_reg->stop_stream_conf = s5k6b2yx_stop_settings;
 		s_ctrl->msm_sensor_reg->stop_stream_conf_size = ARRAY_SIZE(s5k6b2yx_stop_settings);
 		s_ctrl->vision_mode_flag = 0;
 	}
-	CAM_DEBUG("rc=%d : X", rc);
 	return rc;
 }
 
@@ -670,7 +644,6 @@ int s5k6b2yx_sensor_set_vision_ae_control(
 				struct msm_sensor_ctrl_t *s_ctrl, int ae_mode) {
 
 	if(s_ctrl->vision_mode_flag == 0) {
-		cam_err("Error: sensor not in vision mode, cannot set AE.");
 		return -1;
 	}
 	if(ae_mode == 0) {
@@ -678,13 +651,11 @@ int s5k6b2yx_sensor_set_vision_ae_control(
 							VISION_MODE_AE_REG_ADDR,
 							VISION_MODE_AE_NORMAL,
 							MSM_CAMERA_I2C_BYTE_DATA);
-		CAM_DEBUG("normal mode AEC set");
 	} else {
 		msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 							VISION_MODE_AE_REG_ADDR,
 							VISION_MODE_AE_BACKLIGHT,
 							MSM_CAMERA_I2C_BYTE_DATA);
-		CAM_DEBUG("backlight mode AEC set");
 	}
 	return 0;
 }
@@ -717,20 +688,18 @@ static int __init s5k6b2yx_sensor_init_module(void)
 	cam_dev_front =
 	device_create(camera_class, NULL, 0, NULL, "front");
 	if (IS_ERR(cam_dev_front)) {
-		cam_err("failed to create device cam_dev_front!\n");
 		return 0;
 	}
 
 	if (device_create_file
 	(cam_dev_front, &dev_attr_front_camtype) < 0) {
-		cam_err("failed to create device file, %s\n",
-		dev_attr_front_camtype.attr.name);
+		pr_debug("blah\n");
+
 	}
 
 	if (device_create_file
 	(cam_dev_front, &dev_attr_front_camfw) < 0) {
-		cam_err("failed to create device file, %s\n",
-		dev_attr_front_camfw.attr.name);
+		pr_debug("blah\n");
 	}
 #endif
 	return i2c_add_driver(&s5k6b2yx_i2c_driver);
