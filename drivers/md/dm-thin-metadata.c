@@ -443,7 +443,7 @@ static int init_pmd(struct dm_pool_metadata *pmd,
 
 	pmd->tl_info.tm = tm;
 	pmd->tl_info.levels = 1;
-	pmd->tl_info.value_type.context = &pmd->info;
+	pmd->tl_info.value_type.context = &pmd->bl_info;
 	pmd->tl_info.value_type.size = sizeof(__le64);
 	pmd->tl_info.value_type.inc = subtree_inc;
 	pmd->tl_info.value_type.dec = subtree_dec;
