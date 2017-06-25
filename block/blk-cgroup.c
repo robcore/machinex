@@ -632,7 +632,7 @@ struct cftype blkcg_files[] = {
  *
  * This is the blkcg counterpart of ioc_release_fn().
  */
-static int blkcg_pre_destroy(struct cgroup *cgroup)
+static void blkcg_pre_destroy(struct cgroup *cgroup)
 {
 	struct blkcg *blkcg = cgroup_to_blkcg(cgroup);
  
@@ -654,7 +654,6 @@ static int blkcg_pre_destroy(struct cgroup *cgroup)
 	}
 
 	spin_unlock_irq(&blkcg->lock);
-	return 0;
 }
 
 static void blkcg_destroy(struct cgroup *cgroup)
