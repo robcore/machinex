@@ -4118,7 +4118,7 @@ int btrfs_map_bio(struct btrfs_root *root, int rw, struct bio *bio,
 	struct btrfs_mapping_tree *map_tree;
 	struct btrfs_device *dev;
 	struct bio *first_bio = bio;
-	u64 logical = (u64)bio->bi_sector << 9;
+	u64 logical = (u64)bio->bi_iter.bi_sector << 9;
 	u64 length = 0;
 	u64 map_length;
 	int ret;

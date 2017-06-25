@@ -203,10 +203,10 @@ unsigned bch_next_delay(struct ratelimit *d, uint64_t done)
 
 void bch_bio_map(struct bio *bio, void *base)
 {
-	size_t size = bio->bi_size;
+	size_t size = bio->bi_iter.bi_size;
 	struct bio_vec *bv = bio->bi_io_vec;
 
-	BUG_ON(!bio->bi_size);
+	BUG_ON(!bio->bi_iter.bi_size);
 	BUG_ON(bio->bi_vcnt);
 
 	bv->bv_offset = base ? ((unsigned long) base) % PAGE_SIZE : 0;

@@ -689,7 +689,7 @@ static struct pkt_rb_node *pkt_rbtree_find(struct pktcdvd_device *pd, sector_t s
 
 	for (;;) {
 		tmp = rb_entry(n, struct pkt_rb_node, rb_node);
-		if (s <= tmp->bio->bi_sector)
+		if (s <= tmp->bio->bi_iter.bi_sector)
 			next = n->rb_left;
 		else
 			next = n->rb_right;
@@ -698,12 +698,12 @@ static struct pkt_rb_node *pkt_rbtree_find(struct pktcdvd_device *pd, sector_t s
 		n = next;
 	}
 
-	if (s > tmp->bio->bi_sector) {
+	if (s > tmp->bio->bi_iter.bi_sector) {
 		tmp = pkt_rbtree_next(tmp);
 		if (!tmp)
 			return NULL;
 	}
-	BUG_ON(s > tmp->bio->bi_sector);
+	BUG_ON(s > tmp->bio->bi_iter.bi_sector);
 	return tmp;
 }
 
@@ -714,13 +714,13 @@ static void pkt_rbtree_insert(struct pktcdvd_device *pd, struct pkt_rb_node *nod
 {
 	struct rb_node **p = &pd->bio_queue.rb_node;
 	struct rb_node *parent = NULL;
-	sector_t s = node->bio->bi_sector;
+	sector_t s = node->bio->bi_iter.bi_sector;
 	struct pkt_rb_node *tmp;
 
 	while (*p) {
 		parent = *p;
 		tmp = rb_entry(parent, struct pkt_rb_node, rb_node);
-		if (s < tmp->bio->bi_sector)
+		if (s < tmp->bio->bi_iter.bi_sector)
 			p = &(*p)->rb_left;
 		else
 			p = &(*p)->rb_right;
@@ -898,7 +898,8 @@ static void pkt_iosched_process_queue(struct pktcdvd_device *pd)
 			spin_lock(&pd->iosched.lock);
 			bio = bio_list_peek(&pd->iosched.write_queue);
 			spin_unlock(&pd->iosched.lock);
-			if (bio && (bio->bi_sector == pd->iosched.last_write))
+			if (bio && (bio->bi_iter.bi_sector ==
+				    pd->iosched.last_write))
 				need_write_seek = 0;
 			if (need_write_seek && reads_queued) {
 				if (atomic_read(&pd->cdrw.pending_bios) > 0) {
@@ -929,7 +930,8 @@ static void pkt_iosched_process_queue(struct pktcdvd_device *pd)
 			continue;
 
 		if (bio_data_dir(bio) == READ)
-			pd->iosched.successive_reads += bio->bi_size >> 10;
+			pd->iosched.successive_reads +=
+				bio->bi_iter.bi_size >> 10;
 		else {
 			pd->iosched.successive_reads = 0;
 			pd->iosched.last_write = bio_end_sector(bio);
@@ -1091,8 +1093,9 @@ static void pkt_gather_data(struct pktcdvd_device *pd, struct packet_data *pkt)
 	memset(written, 0, sizeof(written));
 	spin_lock(&pkt->lock);
 	bio_list_for_each(bio, &pkt->orig_bios) {
-		int first_frame = (bio->bi_sector - pkt->sector) / (CD_FRAMESIZE >> 9);
-		int num_frames = bio->bi_size / CD_FRAMESIZE;
+		int first_frame = (bio->bi_iter.bi_sector - pkt->sector) /
+			(CD_FRAMESIZE >> 9);
+		int num_frames = bio->bi_iter.bi_size / CD_FRAMESIZE;
 		pd->stats.secs_w += num_frames * (CD_FRAMESIZE >> 9);
 		BUG_ON(first_frame < 0);
 		BUG_ON(first_frame + num_frames > pkt->frames);
@@ -2501,7 +2504,7 @@ static void pkt_make_request(struct request_queue *q, struct bio *bio)
 		last_zone = ZONE(bio_end_sector(bio) - 1, pd);
 		if (last_zone != zone) {
 			BUG_ON(last_zone != zone + pd->settings.size);
-			first_sectors = last_zone - bio->bi_sector;
+			first_sectors = last_zone - bio->bi_iter.bi_sector;
 			bp = bio_split(bio, first_sectors);
 			BUG_ON(!bp);
 			pkt_make_request(q, &bp->bio1);
@@ -2523,7 +2526,8 @@ static void pkt_make_request(struct request_queue *q, struct bio *bio)
 			if ((pkt->state == PACKET_WAITING_STATE) ||
 			    (pkt->state == PACKET_READ_WAIT_STATE)) {
 				bio_list_add(&pkt->orig_bios, bio);
-				pkt->write_size += bio->bi_size / CD_FRAMESIZE;
+				pkt->write_size +=
+					bio->bi_iter.bi_size / CD_FRAMESIZE;
 				if ((pkt->write_size >= pkt->frames) &&
 				    (pkt->state == PACKET_WAITING_STATE)) {
 					atomic_inc(&pkt->run_sm);
