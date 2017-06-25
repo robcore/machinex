@@ -3032,8 +3032,9 @@ static void flush_plug_callbacks(struct blk_plug *plug, bool from_schedule)
 			struct blk_plug_cb *cb = list_first_entry(&callbacks,
 							  struct blk_plug_cb,
 							  list);
+
 			list_del(&cb->list);
-			cb->callback(cb, from_schedule);
+			cb->callback(cb);
 		}
 	}
 }
