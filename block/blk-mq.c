@@ -357,7 +357,7 @@ static int ipi_remote_cpu(struct blk_mq_ctx *ctx, const int cpu,
 	if (llist_add(&rq->ll_list, &per_cpu(ipi_lists, ctx->cpu))) {
 		data->func = ipi_end_io;
 		data->flags = 0;
-		__smp_call_function_single(ctx->cpu, data, 0);
+		smp_call_function_single_async(ctx->cpu, data);
 	}
 
 	return true;
@@ -718,6 +718,8 @@ static void __blk_mq_insert_request(struct blk_mq_hw_ctx *hctx,
 				    struct request *rq)
 {
 	struct blk_mq_ctx *ctx = rq->mq_ctx;
+
+	trace_block_rq_insert(hctx->queue, rq);
 
 	list_add_tail(&rq->queuelist, &ctx->rq_list);
 	blk_mq_hctx_mark_pending(hctx, ctx);
