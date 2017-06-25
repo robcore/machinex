@@ -231,6 +231,9 @@ extern struct bio *bio_kmalloc(gfp_t, unsigned int);
 extern struct bio *bio_alloc_bioset(gfp_t, int, struct bio_set *);
 extern void bio_put(struct bio *);
 
+extern void __bio_clone(struct bio *, struct bio *);
+extern struct bio *bio_clone_bioset(struct bio *, gfp_t, struct bio_set *bs);
+
 static inline struct bio *bio_clone(struct bio *bio, gfp_t gfp_mask)
 {
 	return bio_clone_bioset(bio, gfp_mask, fs_bio_set);
