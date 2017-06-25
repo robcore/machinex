@@ -44,7 +44,7 @@ int blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 	struct request_queue *q = bdev_get_queue(bdev);
 	int type = REQ_WRITE | REQ_DISCARD;
 	sector_t max_discard_sectors;
-	unsigned int granularity, alignment, mask;
+	sector_t granularity, alignment;
 	struct bio_batch bb;
 	struct bio *bio;
 	int ret = 0;
@@ -58,8 +58,8 @@ int blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 
 	/* Zero-sector (unknown) and one-sector granularities are the same.  */
 	granularity = max(q->limits.discard_granularity >> 9, 1U);
-	mask = granularity - 1;
-	alignment = (bdev_discard_alignment(bdev) >> 9) & mask;
+	alignment = bdev_discard_alignment(bdev) >> 9;
+	alignment = sector_div(alignment, granularity);
 
 	/*
 	 * Ensure that max_discard_sectors is of the proper
@@ -229,7 +229,6 @@ int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
 	bb.flags = 1 << BIO_UPTODATE;
 	bb.wait = &wait;
 
-	blk_start_plug(&plug);
 	while (nr_sects) {
 		bio = bio_alloc(gfp_mask, 1);
 		if (!bio) {
@@ -258,11 +257,10 @@ int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
 		atomic_inc(&bb.done);
 		submit_bio(REQ_WRITE | REQ_WRITE_SAME, bio);
 	}
-	blk_finish_plug(&plug);
 
 	/* Wait for bios in-flight */
 	if (!atomic_dec_and_test(&bb.done))
-		wait_for_completion(&wait);
+		wait_for_completion_io(&wait);
 
 	if (!test_bit(BIO_UPTODATE, &bb.flags))
 		ret = -ENOTSUPP;
@@ -361,3 +359,4 @@ int blkdev_issue_zeroout(struct block_device *bdev, sector_t sector,
 	return __blkdev_issue_zeroout(bdev, sector, nr_sects, gfp_mask);
 }
 EXPORT_SYMBOL(blkdev_issue_zeroout);
+
