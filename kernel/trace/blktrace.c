@@ -756,6 +756,12 @@ static void blk_add_trace_rq_complete(void *ignore,
 				      struct request *rq,
 				      unsigned int nr_bytes)
 {
+	struct blk_trace *bt = q->blk_trace;
+
+	/* if control ever passes through here, it's a request based driver */
+	if (unlikely(bt && !bt->rq_based))
+		bt->rq_based = true;
+
 	blk_add_trace_rq(q, rq, nr_bytes, BLK_TA_COMPLETE);
 }
 
