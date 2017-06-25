@@ -38,6 +38,7 @@
 #include <linux/suspend.h>
 #include "wcd9310.h"
 #include <linux/export.h>
+#include <linux/prometheus.h>
 #ifdef CONFIG_SND_SOC_ES325
 #include "es325-export.h"
 #endif
@@ -4291,7 +4292,12 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 		pm_runtime_put(tabla_core->dev->parent);
 	}
 }
-
+static bool is_android_wake_active;
+bool android_os_ws(void)
+{
+	return is_android_wake_active;
+}
+EXPORT_SYMBOL(android_os_ws);
 int tabla_mclk_enable(struct snd_soc_codec *codec, int mclk_enable, bool dapm)
 {
 	struct tabla_priv *tabla = snd_soc_codec_get_drvdata(codec);
@@ -4302,6 +4308,7 @@ int tabla_mclk_enable(struct snd_soc_codec *codec, int mclk_enable, bool dapm)
 		TABLA_ACQUIRE_LOCK(tabla->codec_resource_lock);
 	if (mclk_enable) {
 		tabla->mclk_enabled = true;
+		is_android_wake_active = true;
 
 		if (tabla->mbhc_polling_active) {
 			tabla_codec_pause_hs_polling(codec);
@@ -4322,10 +4329,11 @@ int tabla_mclk_enable(struct snd_soc_codec *codec, int mclk_enable, bool dapm)
 		if (!tabla->mclk_enabled) {
 			if (dapm)
 				TABLA_RELEASE_LOCK(tabla->codec_resource_lock);
-			pr_err("Error, MCLK already diabled\n");
+			pr_err("Error, MCLK already disabled\n");
 			return -EINVAL;
 		}
 		tabla->mclk_enabled = false;
+		is_android_wake_active = false;
 
 		if (tabla->mbhc_polling_active) {
 			tabla_codec_pause_hs_polling(codec);
