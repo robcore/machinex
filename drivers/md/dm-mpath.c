@@ -1548,6 +1548,7 @@ static int multipath_ioctl(struct dm_target *ti, unsigned int cmd,
 {
 	struct multipath *m = (struct multipath *) ti->private;
 	struct block_device *bdev = NULL;
+	struct pgpath *pgpath;
 	fmode_t mode = 0;
 	unsigned long flags;
 	int r = 0;
@@ -1557,12 +1558,14 @@ static int multipath_ioctl(struct dm_target *ti, unsigned int cmd,
 	if (!m->current_pgpath)
 		__choose_pgpath(m, 0);
 
-	if (m->current_pgpath) {
-		bdev = m->current_pgpath->path.dev->bdev;
-		mode = m->current_pgpath->path.dev->mode;
+	pgpath = m->current_pgpath;
+
+	if (pgpath) {
+		bdev = pgpath->path.dev->bdev;
+		mode = pgpath->path.dev->mode;
 	}
 
-	if (m->queue_io)
+	if ((pgpath && m->queue_io) || (!pgpath && m->queue_if_no_path))
 		r = -EAGAIN;
 	else if (!bdev)
 		r = -EIO;
