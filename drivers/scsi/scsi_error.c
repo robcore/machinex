@@ -351,13 +351,17 @@ static int scsi_check_sense(struct scsi_cmnd *scmd)
 		 * functions.
 		 */
 		return SUCCESS;
-
+	case DATA_PROTECT:
+		if (sshdr.asc == 0x27 && sshdr.ascq == 0x07) {
+			/* Thin provisioning hard threshold reached */
+			set_host_byte(scmd, DID_ALLOC_FAILURE);
+			return SUCCESS;
+		}
 		/* these are not supported */
 	case COPY_ABORTED:
 	case VOLUME_OVERFLOW:
 	case MISCOMPARE:
 	case BLANK_CHECK:
-	case DATA_PROTECT:
 		return TARGET_ERROR;
 
 	case MEDIUM_ERROR:
