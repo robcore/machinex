@@ -31,15 +31,27 @@ static void fifo_add_request(struct request_queue *q, struct request *req)
 	list_add_tail(&req->queuelist, &fifo_d->queue);
 }
 
-static int fifo_init_queue(struct request_queue *q)
+static int fifo_init_queue(struct request_queue *q, struct elevator_type *e)
 {
 	struct fifo_data *fifo_d;
+	struct elevator_queue *eq;
+
+	eq = elevator_alloc(q, e);
+	if (!eq)
+		return -ENOMEM;
 
 	fifo_d = kmalloc_node(sizeof(*fifo_d), GFP_KERNEL, q->node);
-	if (fifo_d == NULL)
+	if (!fifo_d) {
+		kobject_put(&eq->kobj);
 		return -ENOMEM;
+	}
+	eq->elevator_data = fifo_d;
+
 	INIT_LIST_HEAD(&fifo_d->queue);
-	q->elevator->elevator_data = fifo_d;
+
+	spin_lock_irq(q->queue_lock);
+	q->elevator = eq;
+	spin_unlock_irq(q->queue_lock);
 	return 0;
 }
 
@@ -71,8 +83,7 @@ static struct elevator_type elevator_fifo = {
 
 static int __init fifo_init(void)
 {
-	elv_register(&elevator_fifo);
-	return 0;
+	return elv_register(&elevator_fifo);
 }
 
 static void __exit fifo_exit(void)
@@ -86,4 +97,3 @@ module_exit(fifo_exit);
 MODULE_AUTHOR("Aaron Carroll");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("No-op IO scheduler that actually does nothing");
-

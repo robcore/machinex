@@ -1052,11 +1052,8 @@ static struct request *bfq_find_rq_fmerge(struct bfq_data *bfqd,
 		return NULL;
 
 	bfqq = bic_to_bfqq(bic, bfq_bio_sync(bio));
-	if (bfqq != NULL) {
-		sector_t sector = bio->bi_sector + bio_sectors(bio);
-
-		return elv_rb_find(&bfqq->sort_list, sector);
-	}
+	if (bfqq != NULL)
+		return elv_rb_find(&bfqq->sort_list, bio_end_sector(bio));
 
 	return NULL;
 }
@@ -3782,14 +3779,22 @@ static void bfq_exit_queue(struct elevator_queue *e)
 	kfree(bfqd);
 }
 
-static int bfq_init_queue(struct request_queue *q)
+static int bfq_init_queue(struct request_queue *q, struct elevator_type *e)
 {
 	struct bfq_group *bfqg;
 	struct bfq_data *bfqd;
+	struct elevator_queue *eq;
+
+	eq = elevator_alloc(q, e);
+	if (eq == NULL)
+		return -ENOMEM;
 
 	bfqd = kzalloc_node(sizeof(*bfqd), GFP_KERNEL, q->node);
-	if (bfqd == NULL)
+	if (bfqd == NULL) {
+		kobject_put(&eq->kobj);
 		return -ENOMEM;
+	}
+	eq->elevator_data = bfqd;
 
 	/*
 	 * Our fallback bfqq if bfq_find_alloc_queue() runs into OOM issues.
@@ -3810,11 +3815,15 @@ static int bfq_init_queue(struct request_queue *q)
 	bfqd->oom_bfqq.entity.ioprio_changed = 1;
 
 	bfqd->queue = q;
-	q->elevator->elevator_data = bfqd;
+
+	spin_lock_irq(q->queue_lock);
+	q->elevator = eq;
+	spin_unlock_irq(q->queue_lock);
 
 	bfqg = bfq_alloc_root_group(bfqd, q->node);
 	if (bfqg == NULL) {
 		kfree(bfqd);
+		kobject_put(&eq->kobj);
 		return -ENOMEM;
 	}
 

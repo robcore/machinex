@@ -331,6 +331,10 @@ static void row_add_request(struct request_queue *q,
 	struct row_queue *rqueue = RQ_ROWQ(rq);
 	s64 diff_ms;
 	bool queue_was_empty = list_empty(&rqueue->fifo);
+	unsigned long bv_page_flags = 0;
+
+	if (rq->bio && rq->bio->bi_io_vec && rq->bio->bi_io_vec->bv_page)
+		bv_page_flags = rq->bio->bi_io_vec->bv_page->flags;
 
 	list_add_tail(&rq->queuelist, &rqueue->fifo);
 	rd->nr_reqs[rq_data_dir(rq)]++;
@@ -363,7 +367,9 @@ static void row_add_request(struct request_queue *q,
 			rqueue->idle_data.begin_idling = false;
 			return;
 		}
-		if (diff_ms < rd->rd_idle_data.freq_ms) {
+
+		if ((bv_page_flags & (1L << PG_readahead)) ||
+		    (diff_ms < rd->rd_idle_data.freq_ms)) {
 			rqueue->idle_data.begin_idling = true;
 			row_log_rowq(rd, rqueue->prio, "Enable idling");
 		} else {
@@ -782,17 +788,24 @@ done:
  * this dispatch queue
  *
  */
-static int row_init_queue(struct request_queue *q)
+static int row_init_queue(struct request_queue *q, struct elevator_type *e)
 {
 
 	struct row_data *rdata;
+	struct elevator_queue *eq;
 	int i;
+
+	eq = elevator_alloc(q, e);
+	if (!eq)
+		return -ENOMEM;
 
 	rdata = kmalloc_node(sizeof(*rdata),
 			     GFP_KERNEL | __GFP_ZERO, q->node);
-	if (!rdata)
+	if (!rdata) {
+		kobject_put(&eq->kobj);
 		return -ENOMEM;
-
+	}
+	eq->elevator_data = rdata;
 	memset(rdata, 0, sizeof(*rdata));
 	for (i = 0; i < ROWQ_MAX_PRIO; i++) {
 		INIT_LIST_HEAD(&rdata->row_queues[i].fifo);
@@ -824,7 +837,9 @@ static int row_init_queue(struct request_queue *q)
 	rdata->rd_idle_data.idling_queue_idx = ROWQ_MAX_PRIO;
 	rdata->dispatch_queue = q;
 
-	q->elevator->elevator_data = rdata;
+	spin_lock_irq(q->queue_lock);
+	q->elevator = eq;
+	spin_unlock_irq(q->queue_lock);
 
 	return 0;
 }
