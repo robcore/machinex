@@ -652,7 +652,7 @@ static void clone_endio(struct bio *bio, int error)
 		error = -EIO;
 
 	if (endio) {
-		r = endio(tio->ti, bio, error, &tio->info);
+		r = endio(tio->ti, bio, error);
 		if (r < 0 || r == DM_ENDIO_REQUEUE)
 			/*
 			 * error and requeue request are handled
@@ -993,7 +993,7 @@ static void __map_bio(struct dm_target *ti, struct bio *clone,
 	 */
 	atomic_inc(&tio->io->io_count);
 	sector = clone->bi_sector;
-	r = ti->type->map(ti, clone, &tio->info);
+	r = ti->type->map(ti, clone);
 	if (r == DM_MAPIO_REMAPPED) {
 		/* the bio has been remapped so dispatch it */
 

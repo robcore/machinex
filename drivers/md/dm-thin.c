@@ -1548,8 +1548,7 @@ static struct endio_hook *thin_hook_bio(struct thin_c *tc, struct bio *bio)
 /*
  * Non-blocking function called from the thin target's map function.
  */
-static int thin_bio_map(struct dm_target *ti, struct bio *bio,
-			union map_info *map_context)
+static int thin_bio_map(struct dm_target *ti, struct bio *bio)
 {
 	int r;
 	struct thin_c *tc = ti->private;
@@ -2058,8 +2057,7 @@ out_unlock:
 	return r;
 }
 
-static int pool_map(struct dm_target *ti, struct bio *bio,
-		    union map_info *map_context)
+static int pool_map(struct dm_target *ti, struct bio *bio)
 {
 	int r;
 	struct pool_c *pt = ti->private;
@@ -2622,17 +2620,14 @@ out_unlock:
 	return r;
 }
 
-static int thin_map(struct dm_target *ti, struct bio *bio,
-		    union map_info *map_context)
+static int thin_map(struct dm_target *ti, struct bio *bio)
 {
 	bio->bi_sector = dm_target_offset(ti, bio->bi_sector);
 
-	return thin_bio_map(ti, bio, map_context);
+	return thin_bio_map(ti, bio);
 }
 
-static int thin_endio(struct dm_target *ti,
-		      struct bio *bio, int err,
-		      union map_info *map_context)
+static int thin_endio(struct dm_target *ti, struct bio *bio, int err)
 {
 	unsigned long flags;
 	struct endio_hook *h = map_context->ptr;
