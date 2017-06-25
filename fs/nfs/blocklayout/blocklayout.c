@@ -199,19 +199,15 @@ static struct bio *bl_add_page_to_bio(struct bio *bio, int npg, int rw,
 static void bl_end_io_read(struct bio *bio, int err)
 {
 	struct parallel_io *par = bio->bi_private;
-	const int uptodate = test_bit(BIO_UPTODATE, &bio->bi_flags);
-	struct bio_vec *bvec = bio->bi_io_vec + bio->bi_vcnt - 1;
+	struct bio_vec *bvec;
+	int i;
 	struct nfs_read_data *rdata = (struct nfs_read_data *)par->data;
 
-	do {
-		struct page *page = bvec->bv_page;
+	if (!err)
+		bio_for_each_segment_all(bvec, bio, i)
+			SetPageUptodate(bvec->bv_page);
 
-		if (--bvec >= bio->bi_io_vec)
-			prefetchw(&bvec->bv_page->flags);
-		if (uptodate)
-			SetPageUptodate(page);
-	} while (bvec >= bio->bi_io_vec);
-	if (!uptodate) {
+	if (err) {
 		if (!rdata->pnfs_error)
 			rdata->pnfs_error = -EIO;
 		pnfs_set_lo_fail(rdata->lseg);
