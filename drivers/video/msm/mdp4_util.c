@@ -209,8 +209,6 @@ void mdp4_sw_reset(ulong bits)
 		;
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-
-	pr_debug("mdp4_sw_reset: 0x%x\n", (int)bits);
 }
 
 void mdp4_overlay_cfg(int overlayer, int blt_mode, int refresh, int direct_out)
@@ -232,8 +230,6 @@ void mdp4_overlay_cfg(int overlayer, int blt_mode, int refresh, int direct_out)
 	else if (overlayer == MDP4_MIXER1)
 		outpdw(MDP_BASE + 0x18004, bits); /* MDP_OVERLAY1_CFG */
 
-	MSM_FB_DEBUG("mdp4_overlay_cfg: 0x%x\n",
-		(int)inpdw(MDP_BASE + 0x10004));
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 }
@@ -250,15 +246,13 @@ void mdp4_display_intf_sel(int output, ulong intf)
 		data = 0x40;	/* bit 6 */
 		intf = MDDI_LCDC_INTF;
 		if (output == SECONDARY_INTF_SEL) {
-			MSM_FB_INFO("%s: Illegal INTF selected, output=%d \
-				intf=%d\n", __func__, output, (int)intf);
+			pr_debug("dummy\n");
 		}
 	} else if (intf == DSI_CMD_INTF) {
 		data = 0x80;	/* bit 7 */
 		intf = MDDI_INTF;
 		if (output == EXTERNAL_INTF_SEL) {
-			MSM_FB_INFO("%s: Illegal INTF selected, output=%d \
-				intf=%d\n", __func__, output, (int)intf);
+			pr_debug("dummy\n");
 		}
 	} else
 		data = 0;
@@ -289,8 +283,6 @@ void mdp4_display_intf_sel(int output, ulong intf)
 	outpdw(MDP_BASE + 0x0038, bits);	/* MDP_DISP_INTF_SEL */
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-
-  MSM_FB_DEBUG("mdp4_display_intf_sel: 0x%x\n", (int)inpdw(MDP_BASE + 0x0038));
 }
 
 unsigned long mdp4_display_status(void)
@@ -369,9 +361,6 @@ void mdp4_fetch_cfg(uint32 core_clk)
 		dmap_data = 0x27; /* 8 bytes-burst x 8 req */
 		vg_data = 0x43; /* 16 bytes-burst x 4 req */
 	}
-
-	MSM_FB_DEBUG("mdp4_fetch_cfg: dmap=%x vg=%x\n",
-			dmap_data, vg_data);
 
 	/* dma_p fetch config */
 	outpdw(MDP_BASE + 0x91004, dmap_data);
@@ -464,7 +453,6 @@ static ssize_t csc_write_cfg(struct device *dev,
 	struct msm_fb_data_type *mfd = registered_fb[0]->par;
 
 	if(!mfd->panel_power_on) {
-		pr_err("Failed CSC Update Since display is off");
 		return ret;
 	}
 
@@ -474,8 +462,6 @@ static ssize_t csc_write_cfg(struct device *dev,
 
 	cscctrl.mode = mode;
 	update_csc_registers(cscctrl.mode);
-
-	pr_info("%s: csc ctrl set to %d \n", __func__, mode);
 
 	return ret;
 }
@@ -489,13 +475,10 @@ int mdp4_reg_csc_fs(struct device *dev)
 	if (!cscctrl.sysfs_created) {
 		cscctrl.dev = dev;
 		if (device_create_file(dev, &dev_attr_csc_cfg) < 0) {
-			pr_err("%s: sysfs group creation failed, ret=%d\n",
-			       __func__, ret);
 			return ret;
 		}
 
 		kobject_uevent(&dev->kobj, KOBJ_ADD);
-		pr_info("%s: kobject_uevent(KOBJ_ADD)\n", __func__);
 		cscctrl.sysfs_created = 1;
 	}
 	return ret;
@@ -642,7 +625,6 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 	outpdw(MDP_INTR_CLEAR, isr);
 
 	if (isr & INTR_PRIMARY_INTF_UDERRUN) {
-		pr_debug("%s: UNDERRUN -- primary\n", __func__);
 		mdp4_stat.intr_underrun_p++;
 //		dump_underrun_pipe_info();
 		/* When underun occurs mdp clear the histogram registers
@@ -657,7 +639,6 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 	}
 
 	if (isr & INTR_EXTERNAL_INTF_UDERRUN) {
-		pr_debug("%s: UNDERRUN -- external\n", __func__);
 		mdp4_stat.intr_underrun_e++;
 	}
 
@@ -2681,7 +2662,6 @@ void mdp4_vg_csc_update(struct mdp_csc *p)
 
 	pipe = mdp4_overlay_ndx2pipe(p->id);
 	if (pipe == NULL) {
-		pr_err("%s: p->id = %d Error\n", __func__, p->id);
 		return;
 	}
 	if (pipe->pipe_num == OVERLAY_PIPE_VG1)
@@ -3482,8 +3462,6 @@ int mdp4_csc_enable(struct mdp_csc_cfg_data *config)
 		mask = 0x07;
 		break;
 	default:
-		pr_err("%s - CSC block does not exist on MDP_BLOCK = %d\n",
-						__func__, config->block);
 		return -EINVAL;
 	}
 
@@ -3537,8 +3515,6 @@ int mdp4_csc_config(struct mdp_csc_cfg_data *config)
 
 	base = mdp4_csc_block2base(config->block);
 	if (!base) {
-		pr_warn("%s: Block type %d isn't supported by CSC.\n",
-				__func__, config->block);
 		return -EINVAL;
 	}
 
@@ -3579,7 +3555,6 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 		return 0;
 
 	if (!buf->size) {
-		pr_err("%s:%d In valid size\n", __func__, __LINE__);
 		return -EINVAL;
 	}
 
@@ -3587,8 +3562,6 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 		mfd->panel_info.yres * 3 * 2, SZ_4K);
 
 	if (!IS_ERR_OR_NULL(mfd->iclient)) {
-		pr_info("%s:%d ion based allocation mfd->mem_hid 0x%x\n",
-			__func__, __LINE__, mfd->mem_hid);
 		buf->ihdl = ion_alloc(mfd->iclient, buffer_size, SZ_4K,
 			mfd->mem_hid, 0);
 		if (!IS_ERR_OR_NULL(buf->ihdl)) {
@@ -3596,14 +3569,11 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 				if (ion_map_iommu(mfd->iclient, buf->ihdl,
 					DISPLAY_READ_DOMAIN, GEN_POOL, SZ_4K,
 					0, &read_addr, &len, 0, 0)) {
-					pr_err("ion_map_iommu() read failed\n");
 					return -ENOMEM;
 				}
 				if (mfd->mem_hid & ION_SECURE) {
 					if (ion_phys(mfd->iclient, buf->ihdl,
 						&addr, (size_t *)&len)) {
-						pr_err("%s:%d: ion_phys map failed\n",
-							 __func__, __LINE__);
 						return -ENOMEM;
 					}
 				} else {
@@ -3611,7 +3581,6 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 						buf->ihdl, DISPLAY_WRITE_DOMAIN,
 						GEN_POOL, SZ_4K, 0, &addr, &len,
 						0, 0)) {
-						pr_err("ion_map_iommu() failed\n");
 						return -ENOMEM;
 					}
 				}
@@ -3619,13 +3588,10 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 				if (ion_map_iommu(mfd->iclient, buf->ihdl,
 					DISPLAY_READ_DOMAIN, GEN_POOL, SZ_4K,
 					0, &addr, &len, 0, 0)) {
-					pr_err("ion_map_iommu() write failed\n");
 					return -ENOMEM;
 				}
 			}
 		} else {
-			pr_err("%s:%d: ion_alloc failed\n", __func__,
-				__LINE__);
 			return -ENOMEM;
 		}
 	} else {
@@ -3633,8 +3599,6 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 			mfd->mem_hid, 4);
 	}
 	if (addr) {
-		pr_info("allocating %d bytes at %x for mdp writeback\n",
-			buffer_size, (u32) addr);
 		buf->write_addr = addr;
 
 		if (read_addr)
@@ -3644,8 +3608,6 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 
 		return 0;
 	} else {
-		pr_err("%s cannot allocate memory for mdp writeback!\n",
-			 __func__);
 		return -ENOMEM;
 	}
 }
@@ -3673,14 +3635,10 @@ void mdp4_free_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 			}
 			ion_free(mfd->iclient, buf->ihdl);
 			buf->ihdl = NULL;
-			pr_info("%s:%d free ION writeback imem",
-					__func__, __LINE__);
 		}
 	} else {
 		if (buf->write_addr) {
 			free_contiguous_memory_by_paddr(buf->write_addr);
-			pr_debug("%s:%d free writeback pmem\n", __func__,
-				__LINE__);
 		}
 	}
 	buf->write_addr = 0;
@@ -4241,7 +4199,6 @@ int mdp4_igc_lut_config(struct mdp_igc_lut_data *cfg)
 
 	switch ((cfg->ops & 0x6) >> 1) {
 	case 0x1:
-		pr_info("%s: IGC LUT read not supported\n", __func__);
 		break;
 	case 0x2:
 		ret = mdp4_igc_lut_write_cfg(cfg);
@@ -4305,8 +4262,6 @@ int mdp4_qseed_access_cfg(struct mdp_qseed_cfg *config, uint32_t base)
 		ret = copy_from_user(values, config->data,
 						sizeof(uint32_t) * config->len);
 		if (ret) {
-			pr_warn("%s: Error copying from user, %d", __func__,
-									ret);
 			ret = -EINVAL;
 			goto err_mem;
 		}
@@ -4330,7 +4285,6 @@ int mdp4_qseed_access_cfg(struct mdp_qseed_cfg *config, uint32_t base)
 		ret = copy_to_user(config->data, values,
 						sizeof(uint32_t) * config->len);
 		if (ret) {
-			pr_warn("%s: Error copying to user, %d", __func__, ret);
 			ret = -EINVAL;
 			goto err_mem;
 		}
@@ -4355,8 +4309,6 @@ int mdp4_qseed_cfg(struct mdp_qseed_cfg_data *config)
 
 	if ((cfg->ops & MDP_PP_OPS_READ) && (cfg->ops & MDP_PP_OPS_WRITE)) {
 		ret = -EPERM;
-		pr_warn("%s: Cannot read and write on the same request\n",
-								__func__);
 		goto error;
 	}
 	base = (uint32_t) (MDP_BASE + mdp_block2base(config->block));
