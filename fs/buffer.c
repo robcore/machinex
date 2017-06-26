@@ -3024,10 +3024,10 @@ static void guard_bh_eod(int rw, struct bio *bio, struct buffer_head *bh)
 	 * let it through, and the IO layer will turn it into
 	 * an EIO.
 	 */
-	if (unlikely(bio->bio->bio_iter.bi_sector >= maxsector))
+	if (unlikely(bio->bio_iter.bi_sector >= maxsector))
 		return;
 
-	maxsector -= bio->bio->bio_iter.bi_sector;
+	maxsector -= bio->bio_iter.bi_sector;
 	bytes = bio->bio_iter.bi_size;
 	if (likely((bytes >> 9) <= maxsector))
 		return;
@@ -3071,7 +3071,7 @@ int submit_bh(int rw, struct buffer_head * bh)
 	 */
 	bio = bio_alloc(GFP_NOIO, 1);
 
-	bio->bio->bio_iter.bio->bio_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
+	bio->bio_iter.bio->bio_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
 	bio->bi_bdev = bh->b_bdev;
 	bio->bi_io_vec[0].bv_page = bh->b_page;
 	bio->bi_io_vec[0].bv_len = bh->b_size;
