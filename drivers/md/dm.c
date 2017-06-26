@@ -1956,6 +1956,7 @@ static void __bind_mempools(struct mapped_device *md, struct dm_table *t)
 			md->bs = p->bs;
 			p->bs = NULL;
 		} else if (dm_table_get_type(t) == DM_TYPE_REQUEST_BASED) {
+			BUG_ON(!md->tio_pool);
 			/*
 			 * There's no need to reload with request-based dm
 			 * because the size of front_pad doesn't change.
