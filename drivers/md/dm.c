@@ -206,12 +206,6 @@ struct dm_md_mempools {
 static struct kmem_cache *_io_cache;
 static struct kmem_cache *_rq_tio_cache;
 
-/*
- * Unused now, and needs to be deleted. But since io_pool is overloaded and it's
- * still used for _io_cache, I'm leaving this for a later cleanup
- */
-static struct kmem_cache *_rq_bio_info_cache;
-
 static int __init local_init(void)
 {
 	int r = -ENOMEM;
@@ -225,13 +219,9 @@ static int __init local_init(void)
 	if (!_rq_tio_cache)
 		goto out_free_io_cache;
 
-	_rq_bio_info_cache = KMEM_CACHE(dm_rq_clone_bio_info, 0);
-	if (!_rq_bio_info_cache)
-		goto out_free_rq_tio_cache;
-
 	r = dm_uevent_init();
 	if (r)
-		goto out_free_rq_bio_info_cache;
+		goto out_free_rq_tio_cache;
 
 	_major = major;
 	r = register_blkdev(_major, _name);
@@ -245,8 +235,6 @@ static int __init local_init(void)
 
 out_uevent_exit:
 	dm_uevent_exit();
-out_free_rq_bio_info_cache:
-	kmem_cache_destroy(_rq_bio_info_cache);
 out_free_rq_tio_cache:
 	kmem_cache_destroy(_rq_tio_cache);
 out_free_io_cache:
@@ -257,7 +245,6 @@ out_free_io_cache:
 
 static void local_exit(void)
 {
-	kmem_cache_destroy(_rq_bio_info_cache);
 	kmem_cache_destroy(_rq_tio_cache);
 	kmem_cache_destroy(_io_cache);
 	unregister_blkdev(_major, _name);
@@ -1951,7 +1938,7 @@ static void __bind_mempools(struct mapped_device *md, struct dm_table *t)
 {
 	struct dm_md_mempools *p = dm_table_get_md_mempools(t);
 
-	if (md->io_pool && (md->tio_pool || dm_table_get_type(t) == DM_TYPE_BIO_BASED) && md->bs)
+	if (md->bs) {
 		/* The md already has necessary mempools. */
 		if (dm_table_get_type(t) == DM_TYPE_BIO_BASED) {
 			/*
@@ -2738,11 +2725,12 @@ struct dm_md_mempools *dm_alloc_md_mempools(unsigned type, unsigned integrity, u
 
 	per_bio_data_size = roundup(per_bio_data_size, __alignof__(struct dm_target_io));
 
-	pools->io_pool = (type == DM_TYPE_BIO_BASED) ?
-			 mempool_create_slab_pool(MIN_IOS, _io_cache) :
-			 mempool_create_slab_pool(MIN_IOS, _rq_bio_info_cache);
-	if (!pools->io_pool)
-		goto free_pools_and_out;
+	pools->io_pool = NULL;
+	if (type == DM_TYPE_BIO_BASED) {
+		pools->io_pool = mempool_create_slab_pool(MIN_IOS, _io_cache);
+		if (!pools->io_pool)
+			goto free_pools_and_out;
+	}
 
 	pools->tio_pool = NULL;
 	if (type == DM_TYPE_REQUEST_BASED) {
@@ -2772,7 +2760,8 @@ free_tio_pool_and_out:
 		mempool_destroy(pools->tio_pool);
 
 free_io_pool_and_out:
-	mempool_destroy(pools->io_pool);
+	if (pools->io_pool)
+		mempool_destroy(pools->io_pool);
 
 free_pools_and_out:
 	kfree(pools);
