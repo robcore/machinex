@@ -182,16 +182,14 @@ static inline int bio_has_allocated_vec(struct bio *bio)
 struct bio_integrity_payload {
 	struct bio		*bip_bio;	/* parent bio */
 
-	sector_t		bip_sector;	/* virtual start sector */
+	struct bvec_iter	bip_iter;
 
 	void			*bip_buf;	/* generated integrity data */
-	bio_end_io_t		*bip_end_io;	/* saved I/O completion fn */
 
-	unsigned int		bip_size;
+	bio_end_io_t		*bip_end_io;	/* saved I/O completion fn */
 
 	unsigned short		bip_slab;	/* slab the bip came from */
 	unsigned short		bip_vcnt;	/* # of integrity bio_vecs */
-	unsigned short		bip_idx;	/* current bip_vec index */
 
 	struct work_struct	bip_work;	/* I/O completion */
 
@@ -564,16 +562,12 @@ static inline struct bio *bio_list_get(struct bio_list *bl)
 
 #if defined(CONFIG_BLK_DEV_INTEGRITY)
 
+
+
 #define bip_vec_idx(bip, idx)	(&(bip->bip_vec[(idx)]))
-#define bip_vec(bip)		bip_vec_idx(bip, 0)
 
-#define __bip_for_each_vec(bvl, bip, i, start_idx)			\
-	for (bvl = bip_vec_idx((bip), (start_idx)), i = (start_idx);	\
-	     i < (bip)->bip_vcnt;					\
-	     bvl++, i++)
-
-#define bip_for_each_vec(bvl, bip, i)					\
-	__bip_for_each_vec(bvl, bip, i, (bip)->bip_idx)
+#define bip_for_each_vec(bvl, bip, iter)				\
+	for_each_bvec(bvl, (bip)->bip_vec, iter, (bip)->bip_iter)
 
 #define bio_for_each_integrity_vec(_bvl, _bio, _iter)			\
 	for_each_bio(_bio)						\
