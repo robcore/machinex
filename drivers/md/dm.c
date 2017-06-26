@@ -999,7 +999,7 @@ struct clone_info {
 /*
  * Creates a little bio that just does part of a bvec.
  */
-static void clone_split_bio(struct dm_target_io *tio, struct bio *bio,
+static clone_split_bio(struct dm_target_io *tio, struct bio *bio,
 		       sector_t sector, unsigned short idx, unsigned int offset,
 		       unsigned int len, struct bio_set *bs)
 {
@@ -1051,8 +1051,7 @@ static void clone_bio(struct dm_target_io *tio, struct bio *bio,
 }
 
 static struct dm_target_io *alloc_tio(struct clone_info *ci,
-				      struct dm_target *ti, int nr_iovecs,
-				      unsigned target_bio_nr)
+				      struct dm_target *ti, int nr_iovecs)
 {
 	struct dm_target_io *tio;
 	struct bio *clone;
@@ -1062,17 +1061,19 @@ static struct dm_target_io *alloc_tio(struct clone_info *ci,
 
 	tio->io = ci->io;
 	tio->ti = ti;
-	tio->target_bio_nr = target_bio_nr;
+	memset(&tio->info, 0, sizeof(tio->info));
+	tio->target_bio_nr = 0;
 
 	return tio;
 }
 
-static void __clone_and_map_simple_bio(struct clone_info *ci,
-				       struct dm_target *ti,
-				       unsigned target_bio_nr, sector_t len)
+static void __clone_and_map_simple_bio(struct clone_info *ci, struct dm_target *ti,
+				   unsigned request_nr, sector_t len)
 {
-	struct dm_target_io *tio = alloc_tio(ci, ti, ci->bio->bi_max_vecs, target_bio_nr);
+	struct dm_target_io *tio = alloc_tio(ci, ti, ci->bio->bi_max_vecs);
 	struct bio *clone = &tio->clone;
+
+	tio->target_bio_nr = request_nr;
 
 	/*
 	 * Discard requests require the bio's inline iovecs be initialized.
@@ -1125,8 +1126,11 @@ static void __clone_and_map_data_bio(struct clone_info *ci,
 		num_target_bios = ti->num_write_bios(ti, bio);
 
 	for (target_bio_nr = 0; target_bio_nr < num_target_bios; target_bio_nr++) {
-		tio = alloc_tio(ci, ti, 0, target_bio_nr);
-		clone_bio(tio, bio, sector, idx, bv_count, len);
+		tio = alloc_tio(ci, ti, nr_iovecs, target_bio_nr);
+		if (split_bvec)
+			clone_split_bio(tio, bio, sector, idx, offset, len);
+		else
+			clone_bio(tio, bio, sector, idx, bv_count, len);
 		__map_bio(tio);
 	}
 }
