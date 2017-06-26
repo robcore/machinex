@@ -1126,10 +1126,7 @@ static void __clone_and_map_data_bio(struct clone_info *ci,
 
 	for (target_bio_nr = 0; target_bio_nr < num_target_bios; target_bio_nr++) {
 		tio = alloc_tio(ci, ti, 0, target_bio_nr);
-		if (split_bvec)
-			clone_split_bio(tio, bio, sector, idx, offset, len);
-		else
-			clone_bio(tio, bio, sector, idx, bv_count, len);
+		clone_bio(tio, bio, sector, idx, bv_count, len);
 		__map_bio(tio);
 	}
 }
