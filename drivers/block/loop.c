@@ -240,7 +240,7 @@ static int lo_rw_aio(struct loop_device *lo, struct bio *bio)
 	struct iov_iter iter;
 	struct bio_vec *bvec;
 	size_t nr_segs;
-	loff_t pos = ((loff_t) bio->bi_sector << 9) + lo->lo_offset;
+	loff_t pos = ((loff_t) bio->bi_iter.bi_sector << 9) + lo->lo_offset;
 
 	iocb = aio_kernel_alloc(GFP_NOIO);
 	if (!iocb)
@@ -456,7 +456,7 @@ static int do_bio_filebacked(struct loop_device *lo, struct bio *bio)
 	loff_t pos;
 	int ret;
 
-	pos = ((loff_t) bio->bi_sector << 9) + lo->lo_offset;
+	pos = ((loff_t) bio->bi_iter.bi_sector << 9) + lo->lo_offset;
 
 	if (bio_rw(bio) == WRITE) {
 		ret = lo_send(lo, bio, pos);
@@ -470,7 +470,7 @@ static int lo_discard(struct loop_device *lo, struct bio *bio)
 {
 	struct file *file = lo->lo_backing_file;
 	int mode = FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE;
-	loff_t pos = ((loff_t) bio->bi_sector << 9) + lo->lo_offset;
+	loff_t pos = ((loff_t) bio->bi_iter.bi_sector << 9) + lo->lo_offset;
 	int ret;
 
 	/*
@@ -483,7 +483,7 @@ static int lo_discard(struct loop_device *lo, struct bio *bio)
 	if ((!file->f_op->fallocate) || lo->lo_encrypt_key_size)
 		return -EOPNOTSUPP;
 
-	ret = file->f_op->fallocate(file, mode, pos, bio->bi_size);
+	ret = file->f_op->fallocate(file, mode, pos, bio->bi_iter.bi_size);
 	if (unlikely(ret && ret != -EINVAL && ret != -EOPNOTSUPP))
 		ret = -EIO;
 	return ret;
