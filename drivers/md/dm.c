@@ -1015,7 +1015,7 @@ struct clone_info {
 /*
  * Creates a little bio that just does part of a bvec.
  */
-static void split_bvec(struct dm_target_io *tio, struct bio *bio,
+static clone_split_bio(struct dm_target_io *tio, struct bio *bio,
 		       sector_t sector, unsigned short idx, unsigned int offset,
 		       unsigned int len, struct bio_set *bs)
 {
@@ -1083,7 +1083,7 @@ static struct dm_target_io *alloc_tio(struct clone_info *ci,
 	return tio;
 }
 
-static void __issue_target_request(struct clone_info *ci, struct dm_target *ti,
+static void __clone_and_map_simple_bio(struct clone_info *ci, struct dm_target *ti,
 				   unsigned request_nr, sector_t len)
 {
 	struct dm_target_io *tio = alloc_tio(ci, ti, ci->bio->bi_max_vecs);
@@ -1279,7 +1279,7 @@ static int __split_and_process_non_flush(struct clone_info *ci)
 			len = min(remaining, max);
 
 			tio = alloc_tio(ci, ti, 1);
-			split_bvec(tio, bio, ci->sector, ci->idx,
+			clone_split_bio(tio, bio, ci->sector, ci->idx,
 				   bv->bv_offset + offset, len, ci->md->bs);
 
 			__map_bio(ti, tio);
