@@ -98,27 +98,24 @@ int init_emergency_isa_pool(void)
 static void copy_to_high_bio_irq(struct bio *to, struct bio *from)
 {
 	unsigned char *vfrom;
-	struct bio_vec *tovec, *fromvec;
-	int i;
+	struct bio_vec tovec, *fromvec = from->bi_io_vec;
+	struct bvec_iter iter;
 
-	__bio_for_each_segment(tovec, to, i, 0) {
-		fromvec = from->bi_io_vec + i;
+	bio_for_each_segment(tovec, to, iter) {
+		if (tovec.bv_page != fromvec->bv_page) {
+			/*
+			 * fromvec->bv_offset and fromvec->bv_len might have
+			 * been modified by the block layer, so use the original
+			 * copy, bounce_copy_vec already uses tovec->bv_len
+			 */
+			vfrom = page_address(fromvec->bv_page) +
+				tovec.bv_offset;
 
-		/*
-		 * not bounced
-		 */
-		if (tovec->bv_page == fromvec->bv_page)
-			continue;
+			bounce_copy_vec(&tovec, vfrom);
+			flush_dcache_page(tovec.bv_page);
+		}
 
-		/*
-		 * fromvec->bv_offset and fromvec->bv_len might have been
-		 * modified by the block layer, so use the original copy,
-		 * bounce_copy_vec already uses tovec->bv_len
-		 */
-		vfrom = page_address(fromvec->bv_page) + tovec->bv_offset;
-
-		bounce_copy_vec(tovec, vfrom);
-		flush_dcache_page(tovec->bv_page);
+		fromvec++;
 	}
 }
 
@@ -221,9 +218,10 @@ static void __blk_queue_bounce(struct request_queue *q, struct bio **bio_orig,
 	struct page *page;
 	struct bio *bio = NULL;
 	int i, rw = bio_data_dir(*bio_orig);
-	struct bio_vec *to, *from;
+	struct bio_vec *to, from;
+	struct bvec_iter iter;
 
-	bio_for_each_segment(from, *bio_orig, i) {
+	bio_for_each_segment(from, *bio_orig, iter)
 		page = from->bv_page;
 
 		/*

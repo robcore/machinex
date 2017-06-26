@@ -20,12 +20,12 @@ static void bch_bi_idx_hack_endio(struct bio *bio, int error)
 static void bch_generic_make_request_hack(struct bio *bio)
 {
 	if (bio->bi_iter.bi_idx) {
-		int i;
-		struct bio_vec *bv;
+		struct bio_vec bv;
+		struct bvec_iter iter;
 		struct bio *clone = bio_alloc(GFP_NOIO, bio_segments(bio));
 
-		bio_for_each_segment(bv, bio, i)
-			clone->bi_io_vec[clone->bi_vcnt++] = *bv;
+		bio_for_each_segment(bv, bio, iter)
+			clone->bi_io_vec[clone->bi_vcnt++] = bv;
 
 		clone->bi_sector	= bio->bi_iter.bi_sector;
 		clone->bi_bdev		= bio->bi_bdev;
@@ -69,8 +69,9 @@ static void bch_generic_make_request_hack(struct bio *bio)
 struct bio *bch_bio_split(struct bio *bio, int sectors,
 			  gfp_t gfp, struct bio_set *bs)
 {
-	unsigned idx = bio->bi_iter.bi_idx, vcnt = 0, nbytes = sectors << 9;
-	struct bio_vec *bv;
+	unsigned vcnt = 0, nbytes = sectors << 9;
+	struct bio_vec bv;
+	struct bvec_iter iter;
 	struct bio *ret = NULL;
 
 	BUG_ON(sectors <= 0);
@@ -140,8 +141,9 @@ out:
 		}
 
 		bio_integrity_trim(ret, 0, bio_sectors(ret));
-		bio_integrity_trim(bio, bio_sectors(ret), bio_sectors(bio));
 	}
+
+	bio_advance(bio, ret->bi_iter.bi_size);
 
 	return ret;
 }
