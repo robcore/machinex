@@ -62,9 +62,14 @@
  * on highmem page vectors
  */
 #define bio_iovec_idx(bio, idx)	(&((bio)->bi_io_vec[(idx)]))
-#define bio_iovec(bio)		bio_iovec_idx((bio), (bio)->bi_iter.bi_idx)
-#define bio_page(bio)		bio_iovec((bio))->bv_page
-#define bio_offset(bio)		bio_iovec((bio))->bv_offset
+#define __bio_iovec(bio)	bio_iovec_idx((bio), (bio)->bi_iter.bi_idx)
+
+#define bio_iter_iovec(bio, iter) ((bio)->bi_io_vec[(iter).bi_idx])
+
+#define bio_page(bio)		(bio_iovec((bio)).bv_page)
+#define bio_offset(bio)		(bio_iovec((bio)).bv_offset)
+#define bio_iovec(bio)		(*__bio_iovec(bio))
+
 #define bio_segments(bio)	((bio)->bi_vcnt - (bio)->bi_iter.bi_idx)
 #define bio_sectors(bio)	((bio)->bi_iter.bi_size >> 9)
 #define bio_end_sector(bio)	((bio)->bi_iter.bi_sector + bio_sectors((bio)))
@@ -72,7 +77,7 @@
 static inline unsigned int bio_cur_bytes(struct bio *bio)
 {
 	if (bio->bi_vcnt)
-		return bio_iovec(bio)->bv_len;
+		return bio_iovec(bio).bv_len;
 	else /* dataless requests such as discard */
 		return bio->bi_iter.bi_size;
 }
@@ -131,33 +136,26 @@ static inline int bio_has_allocated_vec(struct bio *bio)
 	(((addr1) | (mask)) == (((addr2) - 1) | (mask)))
 #define BIOVEC_SEG_BOUNDARY(q, b1, b2) \
 	__BIO_SEG_BOUNDARY(bvec_to_phys((b1)), bvec_to_phys((b2)) + (b2)->bv_len, queue_segment_boundary((q)))
-#define BIO_SEG_BOUNDARY(q, b1, b2) \
-	BIOVEC_SEG_BOUNDARY((q), __BVEC_END((b1)), __BVEC_START((b2)))
 
 #define bio_io_error(bio) bio_endio((bio), -EIO)
-
-/*
- * drivers should not use the __ version unless they _really_ know what
- * they're doing
- */
-#define __bio_for_each_segment(bvl, bio, i, start_idx)			\
-	for (bvl = bio_iovec_idx((bio), (start_idx)), i = (start_idx);	\
-	     i < (bio)->bi_vcnt;					\
-	     bvl++, i++)
 
 /*
  * drivers should _never_ use the all version - the bio may have been split
  * before it got to the driver and the driver won't own all of it
  */
 #define bio_for_each_segment_all(bvl, bio, i)				\
-	for (i = 0;							\
-	     bvl = bio_iovec_idx((bio), (i)), i < (bio)->bi_vcnt;	\
-	     i++)
+	for (i = 0, bvl = (bio)->bi_io_vec; i < (bio)->bi_vcnt; i++, bvl++)
 
-#define bio_for_each_segment(bvl, bio, i)				\
-	for (i = (bio)->bi_iter.bi_idx;					\
-	     bvl = bio_iovec_idx((bio), (i)), i < (bio)->bi_vcnt;	\
-	     i++)
+#define __bio_for_each_segment(bvl, bio, iter, start)			\
+	for (iter = (start);						\
+	     bvl = bio_iter_iovec((bio), (iter)),			\
+	     (iter).bi_idx < (bio)->bi_vcnt;				\
+	     (iter).bi_idx++)
+
+#define bio_for_each_segment(bvl, bio, iter)				\
+	__bio_for_each_segment(bvl, bio, iter, (bio)->bi_iter)
+
+#define bio_iter_last(bio, iter) ((iter).bi_idx == (bio)->bi_vcnt - 1)
 
 /*
  * get a reference to a bio, so it won't disappear. the intended use is
@@ -405,15 +403,15 @@ static inline void bvec_kunmap_irq(char *buffer, unsigned long *flags)
 }
 #endif
 
-static inline char *__bio_kmap_irq(struct bio *bio, unsigned short idx,
+static inline char *__bio_kmap_irq(struct bio *bio, struct bvec_iter iter,
 				   unsigned long *flags)
 {
-	return bvec_kmap_irq(bio_iovec_idx(bio, idx), flags);
+	return bvec_kmap_irq(&bio_iter_iovec(bio, iter), flags);
 }
 #define __bio_kunmap_irq(buf, flags)	bvec_kunmap_irq(buf, flags)
 
 #define bio_kmap_irq(bio, flags) \
-	__bio_kmap_irq((bio), (bio)->bi_iter.bi_idx, (flags))
+	__bio_kmap_irq((bio), (bio)->bi_iter, (flags))
 #define bio_kunmap_irq(buf,flags)	__bio_kunmap_irq(buf, flags)
 
 /*
@@ -564,16 +562,12 @@ static inline struct bio *bio_list_get(struct bio_list *bl)
 
 #if defined(CONFIG_BLK_DEV_INTEGRITY)
 
+
+
 #define bip_vec_idx(bip, idx)	(&(bip->bip_vec[(idx)]))
-#define bip_vec(bip)		bip_vec_idx(bip, 0)
 
-#define __bip_for_each_vec(bvl, bip, i, start_idx)			\
-	for (bvl = bip_vec_idx((bip), (start_idx)), i = (start_idx);	\
-	     i < (bip)->bip_vcnt;					\
-	     bvl++, i++)
-
-#define bip_for_each_vec(bvl, bip, i)					\
-	__bip_for_each_vec(bvl, bip, i, (bip)->bip_idx)
+#define bip_for_each_vec(bvl, bip, iter)				\
+	for_each_bvec(bvl, (bip)->bip_vec, iter, (bip)->bip_iter)
 
 #define bio_for_each_integrity_vec(_bvl, _bio, _iter)			\
 	for_each_bio(_bio)						\

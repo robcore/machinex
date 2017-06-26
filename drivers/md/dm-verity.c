@@ -495,7 +495,7 @@ static int verity_map(struct dm_target *ti, struct bio *bio)
 		io->io_vec = io->io_vec_inline;
 	else
 		io->io_vec = mempool_alloc(v->vec_mempool, GFP_NOIO);
-	memcpy(io->io_vec, bio_iovec(bio),
+	memcpy(io->io_vec, __bio_iovec(bio),
 	       io->io_vec_size * sizeof(struct bio_vec));
 
 	verity_prefetch_io(v, io);

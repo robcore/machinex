@@ -34,6 +34,9 @@ struct bvec_iter {
 	unsigned int		bi_size;	/* residual I/O count */
 
 	unsigned int		bi_idx;		/* current index into bvl_vec */
+
+	unsigned int            bi_bvec_done;	/* number of bytes completed in
+						   current bvec */
 };
 
 /*
@@ -62,11 +65,7 @@ struct bio {
 	unsigned int		bi_seg_front_size;
 	unsigned int		bi_seg_back_size;
 
-	unsigned int		bi_max_vecs;	/* max bvl_vecs we can hold */
-
-	atomic_t		bi_cnt;		/* pin count */
-
-	struct bio_vec		*bi_io_vec;	/* the actual vec list */
+	atomic_t		bi_remaining;
 
 	bio_end_io_t		*bi_end_io;
 
@@ -83,6 +82,18 @@ struct bio {
 	struct bio_integrity_payload *bi_integrity;  /* data integrity */
 #endif
 
+	unsigned short		bi_vcnt;	/* how many bio_vec's */
+
+	/*
+	 * Everything starting with bi_max_vecs will be preserved by bio_reset()
+	 */
+
+	unsigned short		bi_max_vecs;	/* max bvl_vecs we can hold */
+
+	atomic_t		bi_cnt;		/* pin count */
+
+	struct bio_vec		*bi_io_vec;	/* the actual vec list */
+
 	struct bio_set		*bi_pool;
 
 	/*
@@ -92,6 +103,8 @@ struct bio {
 	 */
 	struct bio_vec		bi_inline_vecs[0];
 };
+
+#define BIO_RESET_BYTES		offsetof(struct bio, bi_max_vecs)
 
 /*
  * bio flags
@@ -108,6 +121,15 @@ struct bio {
 #define BIO_FS_INTEGRITY 9	/* fs owns integrity data, not block layer */
 #define BIO_QUIET	10	/* Make BIO Quiet */
 #define BIO_MAPPED_INTEGRITY 11/* integrity metadata has been remapped */
+#define BIO_SNAP_STABLE	12	/* bio data must be snapshotted during write */
+
+/*
+ * Flags starting here get preserved by bio_reset() - this includes
+ * BIO_POOL_IDX()
+ */
+#define BIO_RESET_BITS	13
+#define BIO_OWNS_VEC	13	/* bio_free() should free bvec */
+
 #define bio_flagged(bio, flag)	((bio)->bi_flags & (1 << (flag)))
 
 /*
@@ -164,6 +186,7 @@ enum rq_flag_bits {
 	__REQ_FLUSH_SEQ,	/* request for flush sequence */
 	__REQ_IO_STAT,		/* account I/O stat */
 	__REQ_MIXED_MERGE,	/* merge of different types, fail separately */
+	__REQ_KERNEL, 		/* direct IO to kernel pages */
 	__REQ_SANITIZE,		/* sanitize */
 	__REQ_URGENT,		/* urgent request */
 	__REQ_PM,		/* runtime pm request */
@@ -219,7 +242,8 @@ enum rq_flag_bits {
 #define REQ_IO_STAT		(1ULL << __REQ_IO_STAT)
 #define REQ_MIXED_MERGE		(1ULL << __REQ_MIXED_MERGE)
 #define REQ_SECURE		(1ULL << __REQ_SECURE)
-#define REQ_PM                 (1ULL << __REQ_PM)
+#define REQ_KERNEL		(1ULL << __REQ_KERNEL)
+#define REQ_PM			(1ULL << __REQ_PM)
 #define REQ_END			(1ULL << __REQ_END)
 
 #endif /* __LINUX_BLK_TYPES_H */

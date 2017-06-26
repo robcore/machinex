@@ -38,6 +38,7 @@
 
 #include "blk.h"
 #include "blk-cgroup.h"
+#include "blk-mq.h"
 
 EXPORT_TRACEPOINT_SYMBOL_GPL(block_bio_remap);
 EXPORT_TRACEPOINT_SYMBOL_GPL(block_rq_remap);
@@ -245,7 +246,16 @@ EXPORT_SYMBOL(blk_stop_queue);
 void blk_sync_queue(struct request_queue *q)
 {
 	del_timer_sync(&q->timeout);
-	cancel_delayed_work_sync(&q->delay_work);
+
+	if (q->mq_ops) {
+		struct blk_mq_hw_ctx *hctx;
+		int i;
+
+		queue_for_each_hw_ctx(q, hctx, i)
+			cancel_delayed_work_sync(&hctx->delayed_work);
+	} else {
+		cancel_delayed_work_sync(&q->delay_work);
+	}
 }
 EXPORT_SYMBOL(blk_sync_queue);
 
@@ -2823,10 +2833,10 @@ void blk_rq_bio_prep(struct request_queue *q, struct request *rq,
 void rq_flush_dcache_pages(struct request *rq)
 {
 	struct req_iterator iter;
-	struct bio_vec *bvec;
+	struct bio_vec bvec;
 
 	rq_for_each_segment(bvec, rq, iter)
-		flush_dcache_page(bvec->bv_page);
+		flush_dcache_page(bvec.bv_page);
 }
 EXPORT_SYMBOL_GPL(rq_flush_dcache_pages);
 #endif
