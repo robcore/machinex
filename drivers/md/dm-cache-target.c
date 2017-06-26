@@ -1353,6 +1353,7 @@ static void do_worker(struct work_struct *ws)
 static void do_waker(struct work_struct *ws)
 {
 	struct cache *cache = container_of(to_delayed_work(ws), struct cache, waker);
+	policy_tick(cache->policy);
 	wake_worker(cache);
 	queue_delayed_work(cache->wq, &cache->waker, COMMIT_PERIOD);
 }
@@ -1791,7 +1792,7 @@ static sector_t calculate_discard_block_size(sector_t cache_block_size,
 	return discard_block_size;
 }
 
-#define DEFAULT_MIGRATION_THRESHOLD (2048 * 100)
+#define DEFAULT_MIGRATION_THRESHOLD 2048
 
 static unsigned cache_num_write_bios(struct dm_target *ti, struct bio *bio);
 
