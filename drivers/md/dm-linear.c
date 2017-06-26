@@ -53,9 +53,9 @@ static int linear_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		goto bad;
 	}
 
-	ti->num_flush_bios = 1;
-	ti->num_discard_bios = 1;
-	ti->num_write_same_bios = 1;
+	ti->num_flush_requests = 1;
+	ti->num_discard_requests = 1;
+	ti->num_write_same_requests = 1;
 	ti->private = lc;
 	return 0;
 
@@ -85,8 +85,7 @@ static void linear_map_bio(struct dm_target *ti, struct bio *bio)
 
 	bio->bi_bdev = lc->dev->bdev;
 	if (bio_sectors(bio))
-		bio->bi_iter.bi_sector =
-			linear_map_sector(ti, bio->bi_iter.bi_sector);
+		bio->bi_sector = linear_map_sector(ti, bio->bi_sector);
 }
 
 static int linear_map(struct dm_target *ti, struct bio *bio)

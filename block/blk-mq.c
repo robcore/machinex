@@ -106,13 +106,10 @@ static int blk_mq_queue_enter(struct request_queue *q)
 
 	spin_lock_irq(q->queue_lock);
 	ret = wait_event_interruptible_lock_irq(q->mq_freeze_wq,
-		!blk_queue_bypass(q) || blk_queue_dying(q),
-		*q->queue_lock);
+		!blk_queue_bypass(q), *q->queue_lock);
 	/* inc usage with lock hold to avoid freeze_queue runs here */
-	if (!ret && !blk_queue_dying(q))
+	if (!ret)
 		__percpu_counter_add(&q->mq_usage_counter, 1, 1000000);
-	else if (blk_queue_dying(q))
-		ret = -ENODEV;
 	spin_unlock_irq(q->queue_lock);
 
 	return ret;
@@ -121,22 +118,6 @@ static int blk_mq_queue_enter(struct request_queue *q)
 static void blk_mq_queue_exit(struct request_queue *q)
 {
 	__percpu_counter_add(&q->mq_usage_counter, -1, 1000000);
-}
-
-static void __blk_mq_drain_queue(struct request_queue *q)
-{
-	while (true) {
-		s64 count;
-
-		spin_lock_irq(q->queue_lock);
-		count = percpu_counter_sum(&q->mq_usage_counter);
-		spin_unlock_irq(q->queue_lock);
-
-		if (count == 0)
-			break;
-		blk_mq_run_queues(q, false);
-		msleep(10);
-	}
 }
 
 /*
@@ -152,13 +133,21 @@ static void blk_mq_freeze_queue(struct request_queue *q)
 	queue_flag_set(QUEUE_FLAG_BYPASS, q);
 	spin_unlock_irq(q->queue_lock);
 
-	if (drain)
-		__blk_mq_drain_queue(q);
-}
+	if (!drain)
+		return;
 
-void blk_mq_drain_queue(struct request_queue *q)
-{
-	__blk_mq_drain_queue(q);
+	while (true) {
+		s64 count;
+
+		spin_lock_irq(q->queue_lock);
+		count = percpu_counter_sum(&q->mq_usage_counter);
+		spin_unlock_irq(q->queue_lock);
+
+		if (count == 0)
+			break;
+		blk_mq_run_queues(q, false);
+		msleep(10);
+	}
 }
 
 static void blk_mq_unfreeze_queue(struct request_queue *q)
@@ -190,8 +179,6 @@ static void blk_mq_rq_ctx_init(struct request_queue *q, struct blk_mq_ctx *ctx,
 
 	rq->mq_ctx = ctx;
 	rq->cmd_flags = rw_flags;
-	rq->start_time = jiffies;
-	set_start_time_ns(rq);
 	ctx->rq_dispatched[rw_is_sync(rw_flags)]++;
 }
 
@@ -215,12 +202,10 @@ static struct request *blk_mq_alloc_request_pinned(struct request_queue *q,
 		if (rq) {
 			blk_mq_rq_ctx_init(q, ctx, rq, rw);
 			break;
-		}
-
-		blk_mq_put_ctx(ctx);
-		if (!(gfp & __GFP_WAIT))
+		} else if (!(gfp & __GFP_WAIT))
 			break;
 
+		blk_mq_put_ctx(ctx);
 		__blk_mq_run_hw_queue(hctx);
 		blk_mq_wait_for_tags(hctx->tags);
 	} while (1);
@@ -237,8 +222,7 @@ struct request *blk_mq_alloc_request(struct request_queue *q, int rw,
 		return NULL;
 
 	rq = blk_mq_alloc_request_pinned(q, rw, gfp, reserved);
-	if (rq)
-		blk_mq_put_ctx(rq->mq_ctx);
+	blk_mq_put_ctx(rq->mq_ctx);
 	return rq;
 }
 
@@ -251,8 +235,7 @@ struct request *blk_mq_alloc_reserved_request(struct request_queue *q, int rw,
 		return NULL;
 
 	rq = blk_mq_alloc_request_pinned(q, rw, gfp, true);
-	if (rq)
-		blk_mq_put_ctx(rq->mq_ctx);
+	blk_mq_put_ctx(rq->mq_ctx);
 	return rq;
 }
 EXPORT_SYMBOL(blk_mq_alloc_reserved_request);
@@ -316,19 +299,19 @@ void blk_mq_complete_request(struct request *rq, int error)
 		struct bio *next = bio->bi_next;
 
 		bio->bi_next = NULL;
-		bytes += bio->bi_iter.bi_size;
+		bytes += bio->bi_size;
 		blk_mq_bio_endio(rq, bio, error);
 		bio = next;
 	}
 
 	blk_account_io_completion(rq, bytes);
 
-	blk_account_io_done(rq);
-
 	if (rq->end_io)
 		rq->end_io(rq, error);
 	else
 		blk_mq_free_request(rq);
+
+	blk_account_io_done(rq);
 }
 
 void __blk_mq_end_io(struct request *rq, int error)
@@ -1440,6 +1423,7 @@ void blk_mq_free_queue(struct request_queue *q)
 	int i;
 
 	queue_for_each_hw_ctx(q, hctx, i) {
+		cancel_delayed_work_sync(&hctx->delayed_work);
 		kfree(hctx->ctx_map);
 		kfree(hctx->ctxs);
 		blk_mq_free_rq_map(hctx);
@@ -1461,6 +1445,7 @@ void blk_mq_free_queue(struct request_queue *q)
 	list_del_init(&q->all_q_node);
 	mutex_unlock(&all_q_mutex);
 }
+EXPORT_SYMBOL(blk_mq_free_queue);
 
 /* Basically redo blk_mq_init_queue with queue frozen */
 static void blk_mq_queue_reinit(struct request_queue *q)

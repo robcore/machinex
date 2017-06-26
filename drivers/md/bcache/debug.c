@@ -189,8 +189,7 @@ void bch_data_verify(struct search *s)
 	struct cached_dev *dc = container_of(s->d, struct cached_dev, disk);
 	struct closure *cl = &s->cl;
 	struct bio *check;
-	struct bio_vec bv, *bv2;
-	struct bvec_iter iter;
+	struct bio_vec *bv;
 	int i;
 
 	if (!s->unaligned_bvec)

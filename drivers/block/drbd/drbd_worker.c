@@ -281,8 +281,8 @@ void drbd_csum_bio(struct drbd_conf *mdev, struct crypto_hash *tfm, struct bio *
 {
 	struct hash_desc desc;
 	struct scatterlist sg;
-	struct bio_vec bvec;
-	struct bvec_iter iter;
+	struct bio_vec *bvec;
+	int i;
 
 	desc.tfm = tfm;
 	desc.flags = 0;

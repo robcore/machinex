@@ -110,7 +110,15 @@ static const char *read_super(struct cache_sb *sb, struct block_device *bdev,
 
 	sb->flags		= le64_to_cpu(s->flags);
 	sb->seq			= le64_to_cpu(s->seq);
+
+	sb->nbuckets		= le64_to_cpu(s->nbuckets);
+	sb->block_size		= le16_to_cpu(s->block_size);
+	sb->bucket_size		= le16_to_cpu(s->bucket_size);
+
+	sb->nr_in_set		= le16_to_cpu(s->nr_in_set);
+	sb->nr_this_dev		= le16_to_cpu(s->nr_this_dev);
 	sb->last_mount		= le32_to_cpu(s->last_mount);
+
 	sb->first_bucket	= le16_to_cpu(s->first_bucket);
 	sb->keys		= le16_to_cpu(s->keys);
 
@@ -139,81 +147,53 @@ static const char *read_super(struct cache_sb *sb, struct block_device *bdev,
 	if (bch_is_zero(sb->uuid, 16))
 		goto err;
 
-	sb->block_size	= le16_to_cpu(s->block_size);
-
-	err = "Superblock block size smaller than device block size";
-	if (sb->block_size << 9 < bdev_logical_block_size(bdev))
+	err = "Unsupported superblock version";
+	if (sb->version > BCACHE_SB_VERSION)
 		goto err;
 
-	switch (sb->version) {
-	case BCACHE_SB_VERSION_BDEV:
-		sb->data_offset	= BDEV_DATA_START_DEFAULT;
-		break;
-	case BCACHE_SB_VERSION_BDEV_WITH_OFFSET:
-		sb->data_offset	= le64_to_cpu(s->data_offset);
-
-		err = "Bad data offset";
-		if (sb->data_offset < BDEV_DATA_START_DEFAULT)
-			goto err;
-
-		break;
-	case BCACHE_SB_VERSION_CDEV:
-	case BCACHE_SB_VERSION_CDEV_WITH_UUID:
-		sb->nbuckets	= le64_to_cpu(s->nbuckets);
-		sb->block_size	= le16_to_cpu(s->block_size);
-		sb->bucket_size	= le16_to_cpu(s->bucket_size);
-
-		sb->nr_in_set	= le16_to_cpu(s->nr_in_set);
-		sb->nr_this_dev	= le16_to_cpu(s->nr_this_dev);
-
-		err = "Too many buckets";
-		if (sb->nbuckets > LONG_MAX)
-			goto err;
-
-		err = "Not enough buckets";
-		if (sb->nbuckets < 1 << 7)
-			goto err;
-
-		err = "Bad block/bucket size";
-		if (!is_power_of_2(sb->block_size) ||
-		    sb->block_size > PAGE_SECTORS ||
-		    !is_power_of_2(sb->bucket_size) ||
-		    sb->bucket_size < PAGE_SECTORS)
-			goto err;
-
-		err = "Invalid superblock: device too small";
-		if (get_capacity(bdev->bd_disk) < sb->bucket_size * sb->nbuckets)
-			goto err;
-
-		err = "Bad UUID";
-		if (bch_is_zero(sb->set_uuid, 16))
-			goto err;
-
-		err = "Bad cache device number in set";
-		if (!sb->nr_in_set ||
-		    sb->nr_in_set <= sb->nr_this_dev ||
-		    sb->nr_in_set > MAX_CACHES_PER_SET)
-			goto err;
-
-		err = "Journal buckets not sequential";
-		for (i = 0; i < sb->keys; i++)
-			if (sb->d[i] != sb->first_bucket + i)
-				goto err;
-
-		err = "Too many journal buckets";
-		if (sb->first_bucket + sb->keys > sb->nbuckets)
-			goto err;
-
-		err = "Invalid superblock: first bucket comes before end of super";
-		if (sb->first_bucket * sb->bucket_size < 16)
-			goto err;
-
-		break;
-	default:
-		err = "Unsupported superblock version";
+	err = "Bad block/bucket size";
+	if (!is_power_of_2(sb->block_size) || sb->block_size > PAGE_SECTORS ||
+	    !is_power_of_2(sb->bucket_size) || sb->bucket_size < PAGE_SECTORS)
 		goto err;
-	}
 
+	err = "Too many buckets";
+	if (sb->nbuckets > LONG_MAX)
+		goto err;
+
+	err = "Not enough buckets";
+	if (sb->nbuckets < 1 << 7)
+		goto err;
+
+	err = "Invalid superblock: device too small";
+	if (get_capacity(bdev->bd_disk) < sb->bucket_size * sb->nbuckets)
+		goto err;
+
+	if (sb->version == CACHE_BACKING_DEV)
+		goto out;
+
+	err = "Bad UUID";
+	if (bch_is_zero(sb->set_uuid, 16))
+		goto err;
+
+	err = "Bad cache device number in set";
+	if (!sb->nr_in_set ||
+	    sb->nr_in_set <= sb->nr_this_dev ||
+	    sb->nr_in_set > MAX_CACHES_PER_SET)
+		goto err;
+
+	err = "Journal buckets not sequential";
+	for (i = 0; i < sb->keys; i++)
+		if (sb->d[i] != sb->first_bucket + i)
+			goto err;
+
+	err = "Too many journal buckets";
+	if (sb->first_bucket + sb->keys > sb->nbuckets)
+		goto err;
+
+	err = "Invalid superblock: first bucket comes before end of super";
+	if (sb->first_bucket * sb->bucket_size < 16)
+		goto err;
+out:
 	sb->last_mount = get_seconds();
 	err = NULL;
 
@@ -237,9 +217,9 @@ static void __write_super(struct cache_sb *sb, struct bio *bio)
 	struct cache_sb *out = page_address(bio->bi_io_vec[0].bv_page);
 	unsigned i;
 
-	bio->bi_iter.bi_sector	= SB_SECTOR;
-	bio->bi_rw		= REQ_SYNC|REQ_META;
-	bio->bi_iter.bi_size	= SB_SIZE;
+	bio->bi_sector	= SB_SECTOR;
+	bio->bi_rw	= REQ_SYNC|REQ_META;
+	bio->bi_size	= SB_SIZE;
 	bch_bio_map(bio, NULL);
 
 	out->offset		= cpu_to_le64(sb->offset);
@@ -306,7 +286,7 @@ void bcache_write_super(struct cache_set *c)
 	for_each_cache(ca, c, i) {
 		struct bio *bio = &ca->sb_bio;
 
-		ca->sb.version		= BCACHE_SB_VERSION_CDEV_WITH_UUID;
+		ca->sb.version		= BCACHE_SB_VERSION;
 		ca->sb.seq		= c->sb.seq;
 		ca->sb.last_mount	= c->sb.last_mount;
 
@@ -350,7 +330,7 @@ static void uuid_io(struct cache_set *c, unsigned long rw,
 		struct bio *bio = bch_bbio_alloc(c);
 
 		bio->bi_rw	= REQ_SYNC|REQ_META|rw;
-		bio->bi_iter.bi_size = KEY_SIZE(k) << 9;
+		bio->bi_size	= KEY_SIZE(k) << 9;
 
 		bio->bi_end_io	= uuid_endio;
 		bio->bi_private = cl;
@@ -506,10 +486,10 @@ static void prio_io(struct cache *ca, uint64_t bucket, unsigned long rw)
 
 	closure_init_stack(cl);
 
-	bio->bi_iter.bi_sector	= bucket * ca->sb.bucket_size;
-	bio->bi_bdev		= ca->bdev;
-	bio->bi_rw		= REQ_SYNC|REQ_META|rw;
-	bio->bi_iter.bi_size	= bucket_bytes(ca);
+	bio->bi_sector	= bucket * ca->sb.bucket_size;
+	bio->bi_bdev	= ca->bdev;
+	bio->bi_rw	= REQ_SYNC|REQ_META|rw;
+	bio->bi_size	= bucket_bytes(ca);
 
 	bio->bi_end_io	= prio_endio;
 	bio->bi_private = ca;
@@ -1088,11 +1068,7 @@ static const char *register_bdev(struct cache_sb *sb, struct page *sb_page,
 
 	g = dc->disk.disk;
 
-	set_capacity(g, dc->bdev->bd_part->nr_sects - dc->sb.data_offset);
-
-	g->queue->backing_dev_info.ra_pages =
-		max(g->queue->backing_dev_info.ra_pages,
-		    bdev->bd_queue->backing_dev_info.ra_pages);
+	set_capacity(g, dc->bdev->bd_part->nr_sects - 16);
 
 	bch_cached_dev_request_init(dc);
 
@@ -1844,7 +1820,7 @@ static ssize_t register_bcache(struct kobject *k, struct kobj_attribute *attr,
 	if (err)
 		goto err_close;
 
-	if (SB_IS_BDEV(sb)) {
+	if (sb->version == CACHE_BACKING_DEV) {
 		struct cached_dev *dc = kzalloc(sizeof(*dc), GFP_KERNEL);
 
 		err = register_bdev(sb, sb_page, bdev, dc);

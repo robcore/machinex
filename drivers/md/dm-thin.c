@@ -26,9 +26,6 @@
 #define PRISON_CELLS 1024
 #define COMMIT_PERIOD HZ
 
-DECLARE_DM_KCOPYD_THROTTLE_WITH_MODULE_PARM(snapshot_copy_throttle,
-		"A percentage of time allocated for copy on write");
-
 /*
  * The block size of the device holding pool data must be
  * between 64KB and 1GB.
@@ -1734,7 +1731,7 @@ static struct pool *pool_create(struct mapped_device *pool_md,
 		goto bad_prison;
 	}
 
-	pool->copier = dm_kcopyd_client_create(&dm_kcopyd_throttle);
+	pool->copier = dm_kcopyd_client_create();
 	if (IS_ERR(pool->copier)) {
 		r = PTR_ERR(pool->copier);
 		*error = "Error creating pool's kcopyd client";
@@ -2021,14 +2018,14 @@ static int pool_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	pt->data_dev = data_dev;
 	pt->low_water_blocks = low_water_blocks;
 	pt->pf = pf;
-	ti->num_flush_bios = 1;
+	ti->num_flush_requests = 1;
 	/*
 	 * Only need to enable discards if the pool should pass
 	 * them down to the data device.  The thin device's discard
 	 * processing will cause mappings to be removed from the btree.
 	 */
 	if (pf.discard_enabled && pf.discard_passdown) {
-		ti->num_discard_bios = 1;
+		ti->num_discard_requests = 1;
 		/*
 		 * Setting 'discards_supported' circumvents the normal
 		 * stacking of discard limits (this keeps the pool and
@@ -2590,16 +2587,13 @@ static int thin_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		goto bad_thin_open;
 	}
 
-	r = dm_set_target_max_io_len(ti, tc->pool->sectors_per_block);
-	if (r)
-		goto bad_thin_open;
-
-	ti->num_flush_bios = 1;
+	ti->split_io = tc->pool->sectors_per_block;
+	ti->num_flush_requests = 1;
 
 	/* In case the pool supports discards, pass them on. */
 	if (tc->pool->pf.discard_enabled) {
 		ti->discards_supported = 1;
-		ti->num_discard_bios = 1;
+		ti->num_discard_requests = 1;
 		ti->discard_zeroes_data_unsupported = 1;
 	}
 
@@ -2628,7 +2622,7 @@ out_unlock:
 
 static int thin_map(struct dm_target *ti, struct bio *bio)
 {
-	bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector);
+	bio->bi_sector = dm_target_offset(ti, bio->bi_sector);
 
 	return thin_bio_map(ti, bio);
 }

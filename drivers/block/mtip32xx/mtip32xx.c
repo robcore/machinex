@@ -3530,7 +3530,7 @@ static void mtip_make_request(struct request_queue *queue, struct bio *bio)
 
 		/* Issue the read/write. */
 		mtip_hw_submit_io(dd,
-				bio->bi_iter.bi_sector,
+				bio->bi_sector,
 				bio_sectors(bio),
 				nents,
 				tag,

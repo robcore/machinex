@@ -740,7 +740,7 @@ struct rq_map_data {
 };
 
 struct req_iterator {
-	struct bvec_iter iter;
+	int i;
 	struct bio *bio;
 };
 
@@ -753,11 +753,10 @@ struct req_iterator {
 
 #define rq_for_each_segment(bvl, _rq, _iter)			\
 	__rq_for_each_bio(_iter.bio, _rq)			\
-		bio_for_each_segment(bvl, _iter.bio, _iter.iter)
+		bio_for_each_segment(bvl, _iter.bio, _iter.i)
 
 #define rq_iter_last(rq, _iter)					\
-		(_iter.bio->bi_next == NULL &&			\
-		 bio_iter_last(_iter.bio, _iter.iter))
+		(_iter.bio->bi_next == NULL && _iter.i == _iter.bio->bi_vcnt-1)
 
 #ifndef ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE
 # error	"You should define ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE for your platform"

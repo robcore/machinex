@@ -177,14 +177,6 @@ struct target_type {
 #define DM_TARGET_IMMUTABLE		0x00000004
 #define dm_target_is_immutable(type)	((type)->features & DM_TARGET_IMMUTABLE)
 
-/*
- * Some targets need to be sent the same WRITE bio severals times so
- * that they can send copies of it to different devices.  This function
- * examines any supplied bio and returns the number of copies of it the
- * target requires.
- */
-typedef unsigned (*dm_num_write_bios_fn) (struct dm_target *ti, struct bio *bio);
-
 struct dm_target {
 	struct dm_table *table;
 	struct target_type *type;
@@ -197,39 +189,32 @@ struct dm_target {
 	sector_t split_io;
 
 	/*
-	 * A number of zero-length barrier bios that will be submitted
+	 * A number of zero-length barrier requests that will be submitted
 	 * to the target for the purpose of flushing cache.
 	 *
-	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
-	 * It is a responsibility of the target driver to remap these bios
+	 * The request number can be accessed with dm_bio_get_target_request_nr.
+	 * It is a responsibility of the target driver to remap these requests
 	 * to the real underlying devices.
 	 */
-	unsigned num_flush_bios;
+	unsigned num_flush_requests;
 
 	/*
-	 * The number of discard bios that will be submitted to the target.
-	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
+	 * The number of discard requests that will be submitted to the target.
+	 * The request number can be accessed with dm_bio_get_target_request_nr.
 	 */
-	unsigned num_discard_bios;
+	unsigned num_discard_requests;
 
 	/*
-	 * The number of WRITE SAME bios that will be submitted to the target.
-	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
+	 * The number of WRITE SAME requests that will be submitted to the target.
+	 * The request number can be accessed with dm_bio_get_target_request_nr.
 	 */
-	unsigned num_write_same_bios;
+	unsigned num_write_same_requests;
 
 	/*
 	 * The minimum number of extra bytes allocated in each bio for the
 	 * target to use.  dm_per_bio_data returns the data location.
 	 */
 	unsigned per_bio_data_size;
-
-	/*
-	 * If defined, this function is called to find out how many
-	 * duplicate bios should be sent to the target when writing
-	 * data.
-	 */
-	dm_num_write_bios_fn num_write_bios;
 
 	/* target specific data */
 	void *private;
@@ -244,10 +229,10 @@ struct dm_target {
 	unsigned discards_supported:1;
 
 	/*
-	 * Set if the target required discard bios to be split
+	 * Set if the target required discard request to be split
 	 * on max_io_len boundary.
 	 */
-	bool split_discard_bios:1;
+	bool split_discard_requests:1;
 
 	/*
 	 * Set if this target does not return zeroes on discarded blocks.
@@ -272,7 +257,7 @@ struct dm_target_io {
 	struct dm_io *io;
 	struct dm_target *ti;
 	union map_info info;
-	unsigned target_bio_nr;
+	unsigned target_request_nr;
 	struct bio clone;
 };
 
@@ -286,9 +271,9 @@ static inline struct bio *dm_bio_from_per_bio_data(void *data, size_t data_size)
 	return (struct bio *)((char *)data + data_size + offsetof(struct dm_target_io, clone));
 }
 
-static inline unsigned dm_bio_get_target_bio_nr(const struct bio *bio)
+static inline unsigned dm_bio_get_target_request_nr(const struct bio *bio)
 {
-	return container_of(bio, struct dm_target_io, clone)->target_bio_nr;
+	return container_of(bio, struct dm_target_io, clone)->target_request_nr;
 }
 
 int dm_register_target(struct target_type *t);
@@ -428,9 +413,9 @@ int dm_table_complete(struct dm_table *t);
 /*
  * Table reference counting.
  */
-struct dm_table *dm_get_live_table(struct mapped_device *md, int *srcu_idx);
-void dm_put_live_table(struct mapped_device *md, int srcu_idx);
-void dm_sync_table(struct mapped_device *md);
+struct dm_table *dm_get_live_table(struct mapped_device *md);
+void dm_table_get(struct dm_table *t);
+void dm_table_put(struct dm_table *t);
 
 /*
  * Queries

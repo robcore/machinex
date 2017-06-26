@@ -83,9 +83,6 @@ struct mirror_set {
 	struct mirror mirror[0];
 };
 
-DECLARE_DM_KCOPYD_THROTTLE_WITH_MODULE_PARM(raid1_resync_throttle,
-		"A percentage of time allocated for raid resynchronization");
-
 static void wakeup_mirrord(void *context)
 {
 	struct mirror_set *ms = context;
@@ -434,7 +431,7 @@ static int mirror_available(struct mirror_set *ms, struct bio *bio)
 	region_t region = dm_rh_bio_to_region(ms->rh, bio);
 
 	if (log->type->in_sync(log, region, 0))
-		return choose_mirror(ms,  bio->bi_iter.bi_sector) ? 1 : 0;
+		return choose_mirror(ms,  bio->bi_sector) ? 1 : 0;
 
 	return 0;
 }
@@ -444,15 +441,15 @@ static int mirror_available(struct mirror_set *ms, struct bio *bio)
  */
 static sector_t map_sector(struct mirror *m, struct bio *bio)
 {
-	if (unlikely(!bio->bi_iter.bi_size))
+	if (unlikely(!bio->bi_size))
 		return 0;
-	return m->offset + dm_target_offset(m->ms->ti, bio->bi_iter.bi_sector);
+	return m->offset + dm_target_offset(m->ms->ti, bio->bi_sector);
 }
 
 static void map_bio(struct mirror *m, struct bio *bio)
 {
 	bio->bi_bdev = m->dev->bdev;
-	bio->bi_iter.bi_sector = map_sector(m, bio);
+	bio->bi_sector = map_sector(m, bio);
 }
 
 static void map_region(struct dm_io_region *io, struct mirror *m,
@@ -529,7 +526,7 @@ static void read_async_bio(struct mirror *m, struct bio *bio)
 	struct dm_io_request io_req = {
 		.bi_rw = READ,
 		.mem.type = DM_IO_BVEC,
-		.mem.ptr.bvec = bio->bi_io_vec + bio->bi_iter.bi_idx,
+		.mem.ptr.bvec = bio->bi_io_vec + bio->bi_idx,
 		.notify.fn = read_callback,
 		.notify.context = bio,
 		.client = m->ms->io_client,
@@ -561,7 +558,7 @@ static void do_reads(struct mirror_set *ms, struct bio_list *reads)
 		 * We can only read balance if the region is in sync.
 		 */
 		if (likely(region_in_sync(ms, region, 1)))
-			m = choose_mirror(ms, bio->bi_iter.bi_sector);
+			m = choose_mirror(ms, bio->bi_sector);
 		else if (m && atomic_read(&m->error_count))
 			m = NULL;
 
@@ -641,7 +638,7 @@ static void do_write(struct mirror_set *ms, struct bio *bio)
 	struct dm_io_request io_req = {
 		.bi_rw = WRITE | (bio->bi_rw & WRITE_FLUSH_FUA),
 		.mem.type = DM_IO_BVEC,
-		.mem.ptr.bvec = bio->bi_io_vec + bio->bi_iter.bi_idx,
+		.mem.ptr.bvec = bio->bi_io_vec + bio->bi_idx,
 		.notify.fn = write_callback,
 		.notify.context = bio,
 		.client = ms->io_client,
@@ -1132,7 +1129,7 @@ static int mirror_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		goto err_destroy_wq;
 	}
 
-	ms->kcopyd_client = dm_kcopyd_client_create(&dm_kcopyd_throttle);
+	ms->kcopyd_client = dm_kcopyd_client_create();
 	if (IS_ERR(ms->kcopyd_client)) {
 		r = PTR_ERR(ms->kcopyd_client);
 		goto err_destroy_wq;
@@ -1197,7 +1194,7 @@ static int mirror_map(struct dm_target *ti, struct bio *bio)
 	 * The region is in-sync and we can perform reads directly.
 	 * Store enough information so we can retry if it fails.
 	 */
-	m = choose_mirror(ms, bio->bi_iter.bi_sector);
+	m = choose_mirror(ms, bio->bi_sector);
 	if (unlikely(!m))
 		return -EIO;
 
