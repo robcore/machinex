@@ -1117,13 +1117,13 @@ static void __issue_target_request(struct clone_info *ci, struct dm_target *ti,
 	__map_bio(ti, clone, tio);
 }
 
-static void __issue_target_requests(struct clone_info *ci, struct dm_target *ti,
-				    unsigned num_requests, sector_t len)
+static void __issue_target_bios(struct clone_info *ci, struct dm_target *ti,
+				unsigned num_bios, sector_t len)
 {
-	unsigned request_nr;
+	unsigned target_bio_nr;
 
-	for (request_nr = 0; request_nr < num_requests; request_nr++)
-		__issue_target_request(ci, ti, request_nr, len);
+	for (target_bio_nr = 0; target_bio_nr < num_bios; target_bio_nr++)
+		__issue_target_request(ci, ti, target_bio_nr, len);
 }
 
 static int __clone_and_map_empty_flush(struct clone_info *ci)
@@ -1133,7 +1133,7 @@ static int __clone_and_map_empty_flush(struct clone_info *ci)
 
 	BUG_ON(bio_has_data(ci->bio));
 	while ((ti = dm_table_get_target(ci->map, target_nr++)))
-		__issue_target_requests(ci, ti, ti->num_flush_requests, 0);
+		__issue_target_bios(ci, ti, ti->num_flush_bios, 0);
 
 	return 0;
 }
@@ -1154,32 +1154,32 @@ static void __clone_and_map_simple(struct clone_info *ci, struct dm_target *ti)
 	ci->sector_count = 0;
 }
 
-typedef unsigned (*get_num_requests_fn)(struct dm_target *ti);
+typedef unsigned (*get_num_bios_fn)(struct dm_target *ti);
 
-static unsigned get_num_discard_requests(struct dm_target *ti)
+static unsigned get_num_discard_bios(struct dm_target *ti)
 {
-	return ti->num_discard_requests;
+	return ti->num_discard_bios;
 }
 
-static unsigned get_num_write_same_requests(struct dm_target *ti)
+static unsigned get_num_write_same_bios(struct dm_target *ti)
 {
-	return ti->num_write_same_requests;
+	return ti->num_write_same_bios;
 }
 
 typedef bool (*is_split_required_fn)(struct dm_target *ti);
 
 static bool is_split_required_for_discard(struct dm_target *ti)
 {
-	return ti->split_discard_requests;
+	return ti->split_discard_bios;
 }
 
 static int __clone_and_map_changing_extent_only(struct clone_info *ci,
-						get_num_requests_fn get_num_requests,
+						get_num_bios_fn get_num_bios,
 						is_split_required_fn is_split_required)
 {
 	struct dm_target *ti;
 	sector_t len;
-	unsigned num_requests;
+	unsigned num_bios;
 
 	do {
 		ti = dm_table_find_target(ci->map, ci->sector);
@@ -1192,8 +1192,8 @@ static int __clone_and_map_changing_extent_only(struct clone_info *ci,
 		 * reconfiguration might also have changed that since the
 		 * check was performed.
 		 */
-		num_requests = get_num_requests ? get_num_requests(ti) : 0;
-		if (!num_requests)
+		num_bios = get_num_bios ? get_num_bios(ti) : 0;
+		if (!num_bios)
 			return -EOPNOTSUPP;
 
 		if (is_split_required && !is_split_required(ti))
@@ -1201,7 +1201,7 @@ static int __clone_and_map_changing_extent_only(struct clone_info *ci,
 		else
 			len = min(ci->sector_count, max_io_len(ci->sector, ti));
 
-		__issue_target_requests(ci, ti, num_requests, len);
+		__issue_target_bios(ci, ti, num_bios, len);
 
 		ci->sector += len;
 	} while (ci->sector_count -= len);
@@ -1211,13 +1211,13 @@ static int __clone_and_map_changing_extent_only(struct clone_info *ci,
 
 static int __clone_and_map_discard(struct clone_info *ci)
 {
-	return __clone_and_map_changing_extent_only(ci, get_num_discard_requests,
+	return __clone_and_map_changing_extent_only(ci, get_num_discard_bios,
 						    is_split_required_for_discard);
 }
 
 static int __clone_and_map_write_same(struct clone_info *ci)
 {
-	return __clone_and_map_changing_extent_only(ci, get_num_write_same_requests, NULL);
+	return __clone_and_map_changing_extent_only(ci, get_num_write_same_bios, NULL);
 }
 
 static int __clone_and_map(struct clone_info *ci)
