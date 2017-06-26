@@ -335,7 +335,7 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 	}
 		    
 	bio->bi_bdev = tmp_dev->rdev->bdev;
-	bio->bi_iter.bi_sector = bio->bi_sector - start_sector
+	bio->bi_iter.bi_sector = bio->bi_iter.bi_sector - start_sector
 		+ tmp_dev->rdev->data_offset;
 	rcu_read_unlock();
 
