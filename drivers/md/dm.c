@@ -1117,31 +1117,29 @@ static void __issue_target_request(struct clone_info *ci, struct dm_target *ti,
 	__map_bio(ti, clone, tio);
 }
 
-static void __issue_target_bios(struct clone_info *ci, struct dm_target *ti,
-				unsigned num_bios, sector_t len)
+static void __send_duplicate_bios(struct clone_info *ci, struct dm_target *ti,
+				  unsigned num_bios, sector_t len)
 {
 	unsigned target_bio_nr;
 
 	for (target_bio_nr = 0; target_bio_nr < num_bios; target_bio_nr++)
-		__issue_target_request(ci, ti, target_bio_nr, len);
+		__clone_and_map_simple_bio(ci, ti, target_bio_nr, len);
 }
 
-static int __clone_and_map_empty_flush(struct clone_info *ci)
+static int __send_empty_flush(struct clone_info *ci)
 {
 	unsigned target_nr = 0;
 	struct dm_target *ti;
 
 	BUG_ON(bio_has_data(ci->bio));
 	while ((ti = dm_table_get_target(ci->map, target_nr++)))
-		__issue_target_bios(ci, ti, ti->num_flush_bios, 0);
+		__send_duplicate_bios(ci, ti, ti->num_flush_bios, 0);
 
 	return 0;
 }
 
-/*
- * Perform all io with a single clone.
- */
-static void __clone_and_map_simple(struct clone_info *ci, struct dm_target *ti)
+static void __clone_and_map_data_bio(struct clone_info *ci,
+				     struct dm_target *ti)
 {
 	struct bio *clone, *bio = ci->bio;
 	struct dm_target_io *tio;
@@ -1173,9 +1171,9 @@ static bool is_split_required_for_discard(struct dm_target *ti)
 	return ti->split_discard_bios;
 }
 
-static int __clone_and_map_changing_extent_only(struct clone_info *ci,
-						get_num_bios_fn get_num_bios,
-						is_split_required_fn is_split_required)
+static int __send_changing_extent_only(struct clone_info *ci,
+				       get_num_bios_fn get_num_bios,
+				       is_split_required_fn is_split_required)
 {
 	struct dm_target *ti;
 	sector_t len;
@@ -1201,7 +1199,7 @@ static int __clone_and_map_changing_extent_only(struct clone_info *ci,
 		else
 			len = min(ci->sector_count, max_io_len(ci->sector, ti));
 
-		__issue_target_bios(ci, ti, num_bios, len);
+		__send_duplicate_bios(ci, ti, num_bios, len);
 
 		ci->sector += len;
 	} while (ci->sector_count -= len);
@@ -1209,18 +1207,18 @@ static int __clone_and_map_changing_extent_only(struct clone_info *ci,
 	return 0;
 }
 
-static int __clone_and_map_discard(struct clone_info *ci)
+static int __send_discard(struct clone_info *ci)
 {
-	return __clone_and_map_changing_extent_only(ci, get_num_discard_bios,
-						    is_split_required_for_discard);
+	return __send_changing_extent_only(ci, get_num_discard_bios,
+					   is_split_required_for_discard);
 }
 
-static int __clone_and_map_write_same(struct clone_info *ci)
+static int __send_write_same(struct clone_info *ci)
 {
-	return __clone_and_map_changing_extent_only(ci, get_num_write_same_bios, NULL);
+	return __send_changing_extent_only(ci, get_num_write_same_bios, NULL);
 }
 
-static int __clone_and_map(struct clone_info *ci)
+static int __split_and_process_non_flush(struct clone_info *ci)
 {
 	struct bio *clone, *bio = ci->bio;
 	struct dm_target *ti;
@@ -1228,9 +1226,9 @@ static int __clone_and_map(struct clone_info *ci)
 	struct dm_target_io *tio;
 
 	if (unlikely(bio->bi_rw & REQ_DISCARD))
-		return __clone_and_map_discard(ci);
+		return __send_discard(ci);
 	else if (unlikely(bio->bi_rw & REQ_WRITE_SAME))
-		return __clone_and_map_write_same(ci);
+		return __send_write_same(ci);
 
 	ti = dm_table_find_target(ci->map, ci->sector);
 	if (!dm_target_is_valid(ti))
@@ -1243,7 +1241,7 @@ static int __clone_and_map(struct clone_info *ci)
 		 * Optimise for the simple case where we can do all of
 		 * the remaining io with a single clone.
 		 */
-		__clone_and_map_simple(ci, ti);
+		__clone_and_map_data_bio(ci, ti);
 
 	} else if (to_sector(bio->bi_io_vec[ci->idx].bv_len) <= max) {
 		/*
@@ -1311,7 +1309,7 @@ static int __clone_and_map(struct clone_info *ci)
 }
 
 /*
- * Split the bio into several clones and submit it to targets.
+ * Entry point to split a bio into clones and submit them to the targets.
  */
 static void __split_and_process_bio(struct mapped_device *md, struct bio *bio)
 {
@@ -1338,13 +1336,13 @@ static void __split_and_process_bio(struct mapped_device *md, struct bio *bio)
 	if (bio->bi_rw & REQ_FLUSH) {
 		ci.bio = &ci.md->flush_bio;
 		ci.sector_count = 0;
-		error = __clone_and_map_empty_flush(&ci);
+		error = __send_empty_flush(&ci);
 		/* dec_pending submits any data associated with flush */
 	} else {
 		ci.bio = bio;
 		ci.sector_count = bio_sectors(bio);
 		while (ci.sector_count && !error)
-			error = __clone_and_map(&ci);
+			error = __split_and_process_non_flush(&ci);
 	}
 
 	/* drop the extra reference count */
