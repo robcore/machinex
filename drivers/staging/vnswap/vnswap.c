@@ -759,7 +759,8 @@ void __vnswap_make_request(struct vnswap *vnswap,
 {
 	int i, offset, ret;
 	u32 index, is_swap_header_page;
-	struct bio_vec *bvec;
+	struct bio_vec bvec;
+	struct bvec_iter iter;
 
 	index = bio->bi_iter.bi_sector >> SECTORS_PER_PAGE_SHIFT;
 	offset = (bio->bi_iter.bi_sector & (SECTORS_PER_PAGE - 1)) <<
@@ -800,25 +801,21 @@ void __vnswap_make_request(struct vnswap *vnswap,
 		goto out_error;
 	}
 
-	bio_for_each_segment(bvec, bio, i) {
-		if (bvec->bv_len != PAGE_SIZE || bvec->bv_offset != 0) {
+	bio_for_each_segment(bvec, bio, iter) {
+		if (bvec.bv_len != PAGE_SIZE || bvec.bv_offset != 0) {
 			atomic_inc(&vnswap_device->stats.
 				vnswap_bio_invalid_num);
-			pr_err("%s %d: bvec is misaligned. " \
+			pr_err("bvec is misaligned. " \
 					"(bv_len, bv_offset," \
-					"vnswap_bio_invalid_num) = (%d, %d, %d)\n",
-					__func__, __LINE__,
-					bvec->bv_len, bvec->bv_offset,
-					vnswap_device->stats.
-						vnswap_bio_invalid_num.counter);
+					"vnswap_bio_invalid_num)\n");
 			goto out_error;
 		}
 
 		dprintk("%s %d: (rw, index, bvec->bv_len) = " \
 				"(%d, %d, %d)\n",
-				__func__, __LINE__, rw, index, bvec->bv_len);
+				__func__, __LINE__, rw, index, bvec.bv_len);
 
-		ret = vnswap_bvec_rw(vnswap, bvec, index, bio, rw);
+		ret = vnswap_bvec_rw(vnswap, &bvec, index, bio, rw);
 		if (ret < 0) {
 			if (ret != -ENOSPC)
 				pr_err("%s %d: vnswap_bvec_rw failed." \
