@@ -362,7 +362,7 @@ void vnswap_bio_end_read(struct bio *bio, int err)
 
 	if (!uptodate || err) {
 		atomic_inc(&vnswap_device->stats.vnswap_bio_end_fail_r1_num);
-		pr_err("%s %d: (error, bio->bi_iter.bi_size, original_bio->bi_size," \
+		pr_err("%s %d: (error, bio->bi_iter.bi_size, original_bio->bi_iter.bi_size," \
 				"bio->bi_vcnt, original_bio->bi_vcnt, " \
 				"bio->bi_iter.bi_idx," \
 				"original_bio->bi_iter.bi_idx, " \
@@ -391,7 +391,7 @@ void vnswap_bio_end_read(struct bio *bio, int err)
 		* bio->bi_iter.bi_size -= nbytes;
 		*/
 		spin_lock_irqsave(&vnswap_original_bio_lock, flags);
-		original_bio->bi_iter.bi_size -= (PAGE_SIZE-bio->bi_size);
+		original_bio->bi_iter.bi_size -= (PAGE_SIZE-bio->bi_iter.bi_size);
 
 		if (bio->bi_iter.bi_size == PAGE_SIZE) {
 			atomic_inc(&vnswap_device->stats.
@@ -423,7 +423,7 @@ void vnswap_bio_end_read(struct bio *bio, int err)
 			goto out_bio_put;
 		}
 
-		if (bio->bi_iter.bi_size || original_bio->bi_size) {
+		if (bio->bi_iter.bi_size || original_bio->bi_iter.bi_size) {
 			atomic_inc(&vnswap_device->stats.
 				vnswap_bio_end_fail_r3_num);
 			pr_err("%s %d: (error, bio->bi_iter.bi_size, " \
@@ -437,7 +437,7 @@ void vnswap_bio_end_read(struct bio *bio, int err)
 					__func__, __LINE__, err, bio->bi_iter.bi_size,
 					original_bio->bi_iter.bi_size,
 					bio->bi_vcnt, original_bio->bi_vcnt,
-					bio->bi_iter.bi_idx, original_bio->bi_idx,
+					bio->bi_iter.bi_idx, original_bio->bi_iter.bi_idx,
 					vnswap_device->stats.
 						vnswap_bio_end_fail_r1_num.
 						counter,
@@ -472,7 +472,7 @@ void vnswap_bio_end_write(struct bio *bio, int err)
 
 	if (err) {
 		atomic_inc(&vnswap_device->stats.vnswap_bio_end_fail_w1_num);
-		pr_err("%s %d: (error, bio->bi_iter.bi_size, original_bio->bi_size, " \
+		pr_err("%s %d: (error, bio->bi_iter.bi_size, original_bio->bi_iter.bi_size, " \
 				"bio->bi_vcnt," \
 				"original_bio->bi_vcnt, bio->bi_iter.bi_idx, " \
 				"original_bio->bi_iter.bi_idx," \
@@ -501,7 +501,7 @@ void vnswap_bio_end_write(struct bio *bio, int err)
 		* bio->bi_iter.bi_size -= nbytes;
 		*/
 		spin_lock_irqsave(&vnswap_original_bio_lock, flags);
-		original_bio->bi_iter.bi_size -= (PAGE_SIZE-bio->bi_size);
+		original_bio->bi_iter.bi_size -= (PAGE_SIZE-bio->bi_iter.bi_size);
 
 		if (bio->bi_iter.bi_size == PAGE_SIZE) {
 			atomic_inc(&vnswap_device->stats.
@@ -533,7 +533,7 @@ void vnswap_bio_end_write(struct bio *bio, int err)
 			goto out_bio_put;
 		}
 
-		if (bio->bi_iter.bi_size || original_bio->bi_size) {
+		if (bio->bi_iter.bi_size || original_bio->bi_iter.bi_size) {
 			atomic_inc(&vnswap_device->stats.
 				vnswap_bio_end_fail_w3_num);
 			pr_err("%s %d: (error, bio->bi_iter.bi_size, " \
