@@ -72,7 +72,6 @@ struct dm_rq_target_io {
 	struct request *orig, clone;
 	int error;
 	union map_info info;
-	struct bio clone;
 };
 
 /*
@@ -1000,7 +999,7 @@ struct clone_info {
 /*
  * Creates a little bio that just does part of a bvec.
  */
-static clone_split_bio(struct dm_target_io *tio, struct bio *bio,
+static void clone_split_bio(struct dm_target_io *tio, struct bio *bio,
 		       sector_t sector, unsigned short idx, unsigned int offset,
 		       unsigned int len, struct bio_set *bs)
 {
