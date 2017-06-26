@@ -826,7 +826,7 @@ static struct bio *crypt_alloc_buffer(struct dm_crypt_io *io, unsigned size,
 		size -= len;
 	}
 
-	if (!clone->bi_size) {
+	if (!clone->bi_iter.bi_size) {
 		bio_put(clone);
 		return NULL;
 	}
@@ -971,7 +971,7 @@ static int kcryptd_io_read(struct dm_crypt_io *io, gfp_t gfp)
 	crypt_inc_pending(io);
 
 	clone_init(io, clone);
-	clone->bi_sector = cc->start + io->sector;
+	clone->bi_iter.bi_sector = cc->start + io->sector;
 
 	generic_make_request(clone);
 	return 0;
@@ -1019,7 +1019,7 @@ static void kcryptd_crypt_write_io_submit(struct dm_crypt_io *io, int async)
 	/* crypt_convert should have filled the clone bio */
 	BUG_ON(io->ctx.idx_out < clone->bi_vcnt);
 
-	clone->bi_sector = cc->start + io->sector;
+	clone->bi_iter.bi_sector = cc->start + io->sector;
 
 	if (async)
 		kcryptd_queue_io(io);
@@ -1034,7 +1034,7 @@ static void kcryptd_crypt_write_convert(struct dm_crypt_io *io)
 	struct dm_crypt_io *new_io;
 	int crypt_finished;
 	unsigned out_of_pages = 0;
-	unsigned remaining = io->base_bio->bi_size;
+	unsigned remaining = io->base_bio->bi_iter.bi_size;
 	sector_t sector = io->sector;
 	int r;
 
@@ -1058,7 +1058,7 @@ static void kcryptd_crypt_write_convert(struct dm_crypt_io *io)
 		io->ctx.bio_out = clone;
 		io->ctx.idx_out = 0;
 
-		remaining -= clone->bi_size;
+		remaining -= clone->bi_iter.bi_size;
 		sector += bio_sectors(clone);
 
 		crypt_inc_pending(io);

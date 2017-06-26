@@ -339,4 +339,15 @@ enum {
  */
 #define DM_DATA_OUT_FLAG		(1 << 16) /* Out */
 
+/*
+ * If set with DM_DEV_REMOVE or DM_REMOVE_ALL this indicates that if
+ * the device cannot be removed immediately because it is still in use
+ * it should instead be scheduled for removal when it gets closed.
+ *
+ * On return from DM_DEV_REMOVE, DM_DEV_STATUS or other ioctls, this
+ * flag indicates that the device is scheduled to be removed when it
+ * gets closed.
+ */
+#define DM_DEFERRED_REMOVE		(1 << 17) /* In/Out */
+
 #endif				/* _LINUX_DM_IOCTL_H */
