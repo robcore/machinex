@@ -251,7 +251,7 @@ static int lo_rw_aio(struct loop_device *lo, struct bio *bio)
 	else
 		op = IOCB_CMD_READ_ITER;
 
-	bvec = bio_iovec_idx(bio, bio->bi_idx);
+	bvec = bio_iovec_idx(bio, bio->bi_iter.bi_idx);
 	nr_segs = bio_segments(bio);
 	iov_iter_init_bvec(&iter, bvec, nr_segs, bvec_length(bvec, nr_segs), 0);
 	aio_kernel_init_iter(iocb, file, op, &iter, pos);

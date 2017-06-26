@@ -379,7 +379,7 @@ static void bio_completion(struct nvme_dev *dev, void *ctx,
 	nvme_free_iod(dev, iod);
 	if (status) {
 		bio_endio(bio, -EIO);
-	} else if (bio->bi_vcnt > bio->bi_idx) {
+	} else if (bio->bi_vcnt > bio->bi_iter.bi_idx) {
 		requeue_bio(dev, bio);
 	} else {
 		bio_endio(bio, 0);
@@ -480,7 +480,7 @@ static int nvme_map_bio(struct device *dev, struct nvme_iod *iod,
 	int i, old_idx, length = 0, nsegs = 0;
 
 	sg_init_table(iod->sg, psegs);
-	old_idx = bio->bi_idx;
+	old_idx = bio->bi_iter.bi_idx;
 	bio_for_each_segment(bvec, bio, i) {
 		if (bvprv && BIOVEC_PHYS_MERGEABLE(bvprv, bvec)) {
 			sg->length += bvec->bv_len;
@@ -495,11 +495,11 @@ static int nvme_map_bio(struct device *dev, struct nvme_iod *iod,
 		length += bvec->bv_len;
 		bvprv = bvec;
 	}
-	bio->bi_idx = i;
+	bio->bi_iter.bi_idx = i;
 	iod->nents = nsegs;
 	sg_mark_end(sg);
 	if (dma_map_sg(dev, iod->sg, iod->nents, dma_dir) == 0) {
-		bio->bi_idx = old_idx;
+		bio->bi_iter.bi_idx = old_idx;
 		return -ENOMEM;
 	}
 	return length;
@@ -552,7 +552,7 @@ static int nvme_submit_bio_queue(struct nvme_queue *nvmeq, struct nvme_ns *ns,
 			return result;
 	}
 
-	iod = nvme_alloc_iod(psegs, bio->bi_size, GFP_ATOMIC);
+	iod = nvme_alloc_iod(psegs, bio->bi_iter.bi_size, GFP_ATOMIC);
 	if (!iod)
 		goto nomem;
 	iod->private = bio;
@@ -595,12 +595,12 @@ static int nvme_submit_bio_queue(struct nvme_queue *nvmeq, struct nvme_ns *ns,
 	cmnd->rw.nsid = cpu_to_le32(ns->ns_id);
 	length = nvme_setup_prps(nvmeq->dev, &cmnd->common, iod, length,
 								GFP_ATOMIC);
-	cmnd->rw.slba = cpu_to_le64(bio->bi_sector >> (ns->lba_shift - 9));
+	cmnd->rw.slba = cpu_to_le64(bio->bi_iter.bi_sector >> (ns->lba_shift - 9));
 	cmnd->rw.length = cpu_to_le16((length >> ns->lba_shift) - 1);
 	cmnd->rw.control = cpu_to_le16(control);
 	cmnd->rw.dsmgmt = cpu_to_le32(dsmgmt);
 
-	bio->bi_sector += length >> 9;
+	bio->bi_iter.bi_sector += length >> 9;
 
 	if (++nvmeq->sq_tail == nvmeq->q_depth)
 		nvmeq->sq_tail = 0;

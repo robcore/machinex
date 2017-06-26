@@ -1054,7 +1054,7 @@ static int scrub_recheck_block(struct btrfs_fs_info *fs_info,
 		if (!bio)
 			return -EIO;
 		bio->bi_bdev = page->bdev;
-		bio->bi_sector = page->physical >> 9;
+		bio->bi_iter.bi_sector = page->physical >> 9;
 		bio->bi_end_io = scrub_complete_bio_end_io;
 		bio->bi_private = &complete;
 
@@ -1177,7 +1177,7 @@ static int scrub_repair_page_from_good_copy(struct scrub_block *sblock_bad,
 		if (!bio)
 			return -EIO;
 		bio->bi_bdev = page_bad->bdev;
-		bio->bi_sector = page_bad->physical >> 9;
+		bio->bi_iter.bi_sector = page_bad->physical >> 9;
 		bio->bi_end_io = scrub_complete_bio_end_io;
 		bio->bi_private = &complete;
 
@@ -1476,7 +1476,7 @@ again:
 		bio->bi_private = sbio;
 		bio->bi_end_io = scrub_bio_end_io;
 		bio->bi_bdev = sdev->dev->bdev;
-		bio->bi_sector = spage->physical >> 9;
+		bio->bi_iter.bi_sector = spage->physical >> 9;
 		sbio->err = 0;
 	} else if (sbio->physical + sbio->page_count * PAGE_SIZE !=
 		   spage->physical ||
@@ -1626,7 +1626,7 @@ static void scrub_bio_end_io_worker(struct btrfs_work *work)
 		sbio->bio->bi_flags &= ~(BIO_POOL_MASK - 1);
 		sbio->bio->bi_flags |= 1 << BIO_UPTODATE;
 		sbio->bio->bi_phys_segments = 0;
-		sbio->bio->bi_idx = 0;
+		sbio->bio->bi_iter.bi_idx = 0;
 
 		for (i = 0; i < sbio->page_count; i++) {
 			struct bio_vec *bi;

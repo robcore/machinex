@@ -138,7 +138,7 @@ vr_remove_request(struct request_queue *q, struct request *rq)
 static int
 vr_merge(struct request_queue *q, struct request **rqp, struct bio *bio)
 {
-	sector_t sector = bio->bi_sector + bio_sectors(bio);
+	sector_t sector = bio->bi_iter.bi_sector + bio_sectors(bio);
 	struct vr_data *vd = vr_get_data(q);
 	struct request *rq = elv_rb_find(&vd->sort_list, sector);
 

@@ -170,8 +170,8 @@ int test_iosched_add_unique_test_req(int is_err_expcted,
 		break;
 	case REQ_UNIQUE_DISCARD:
 		bio->bi_rw = REQ_WRITE | REQ_DISCARD;
-		bio->bi_size = nr_sects << 9;
-		bio->bi_sector = start_sec;
+		bio->bi_iter.bi_size = nr_sects << 9;
+		bio->bi_iter.bi_sector = start_sec;
 		break;
 	case REQ_UNIQUE_SANITIZE:
 		bio->bi_rw = REQ_WRITE | REQ_SANITIZE;
@@ -340,7 +340,7 @@ int test_iosched_add_wr_rd_test_req(int is_err_expcted,
 	rq->cmd_type |= REQ_TYPE_FS;
 
 	if (rq->bio) {
-		rq->bio->bi_sector = start_sec;
+		rq->bio->bi_iter.bi_sector = start_sec;
 		rq->bio->bi_end_io = end_test_bio;
 		bio = rq->bio;
 		while ((bio = bio->bi_next) != NULL)
@@ -866,12 +866,12 @@ static void print_req(struct request *req)
 		       __func__, req->nr_phys_segments, blk_rq_sectors(req));
 		bio = req->bio;
 		test_pr_debug("%s: bio: bi_size=%d, bi_sector=0x%lx",
-			      __func__, bio->bi_size,
-			      (unsigned long)bio->bi_sector);
+			      __func__, bio->bi_iter.bi_size,
+			      (unsigned long)bio->bi_iter.bi_sector);
 		while ((bio = bio->bi_next) != NULL) {
 			test_pr_debug("%s: bio: bi_size=%d, bi_sector=0x%lx",
-				      __func__, bio->bi_size,
-				      (unsigned long)bio->bi_sector);
+				      __func__, bio->bi_iter.bi_size,
+				      (unsigned long)bio->bi_iter.bi_sector);
 		}
 	}
 }

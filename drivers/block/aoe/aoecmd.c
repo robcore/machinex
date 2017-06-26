@@ -723,8 +723,8 @@ bufinit(struct buf *buf, struct request *rq, struct bio *bio)
 	memset(buf, 0, sizeof(*buf));
 	buf->rq = rq;
 	buf->bio = bio;
-	buf->resid = bio->bi_size;
-	buf->sector = bio->bi_sector;
+	buf->resid = bio->bi_iter.bi_size;
+	buf->sector = bio->bi_iter.bi_sector;
 	bio_pageinc(bio);
 	buf->bv = bio_iovec(bio);
 	buf->bv_resid = buf->bv->bv_len;
@@ -911,7 +911,7 @@ gettgt(struct aoedev *d, char *addr)
 static inline void
 diskstats(struct gendisk *disk, struct bio *bio, ulong duration, sector_t sector)
 {
-	unsigned long n_sect = bio->bi_size >> 9;
+	unsigned long n_sect = bio->bi_iter.bi_size >> 9;
 	const int rw = bio_data_dir(bio);
 	struct hd_struct *part;
 	int cpu;

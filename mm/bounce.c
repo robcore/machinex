@@ -284,12 +284,12 @@ static void __blk_queue_bounce(struct request_queue *q, struct bio **bio_orig,
 
 	bio->bi_bdev = (*bio_orig)->bi_bdev;
 	bio->bi_flags |= (1 << BIO_BOUNCED);
-	bio->bi_sector = (*bio_orig)->bi_sector;
+	bio->bi_iter.bi_sector = (*bio_orig)->bi_sector;
 	bio->bi_rw = (*bio_orig)->bi_rw;
 
 	bio->bi_vcnt = (*bio_orig)->bi_vcnt;
-	bio->bi_idx = (*bio_orig)->bi_idx;
-	bio->bi_size = (*bio_orig)->bi_size;
+	bio->bi_iter.bi_idx = (*bio_orig)->bi_idx;
+	bio->bi_iter.bi_size = (*bio_orig)->bi_size;
 
 	if (pool == page_pool) {
 		bio->bi_end_io = bounce_end_io_write;

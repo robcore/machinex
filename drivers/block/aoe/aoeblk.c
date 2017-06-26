@@ -195,9 +195,9 @@ aoeblk_make_request(struct request_queue *q, struct bio *bio)
 	INIT_LIST_HEAD(&buf->bufs);
 	buf->stime = jiffies;
 	buf->bio = bio;
-	buf->resid = bio->bi_size;
-	buf->sector = bio->bi_sector;
-	buf->bv = &bio->bi_io_vec[bio->bi_idx];
+	buf->resid = bio->bi_iter.bi_size;
+	buf->sector = bio->bi_iter.bi_sector;
+	buf->bv = &bio->bi_io_vec[bio->bi_iter.bi_idx];
 	buf->bv_resid = buf->bv->bv_len;
 	WARN_ON(buf->bv_resid == 0);
 	buf->bv_off = buf->bv->bv_offset;

@@ -4118,7 +4118,7 @@ int btrfs_map_bio(struct btrfs_root *root, int rw, struct bio *bio,
 	struct btrfs_mapping_tree *map_tree;
 	struct btrfs_device *dev;
 	struct bio *first_bio = bio;
-	u64 logical = (u64)bio->bi_sector << 9;
+	u64 logical = (u64)bio->bi_iter.bi_sector << 9;
 	u64 length = 0;
 	u64 map_length;
 	int ret;
@@ -4126,7 +4126,7 @@ int btrfs_map_bio(struct btrfs_root *root, int rw, struct bio *bio,
 	int total_devs = 1;
 	struct btrfs_bio *bbio = NULL;
 
-	length = bio->bi_size;
+	length = bio->bi_iter.bi_size;
 	map_tree = &root->fs_info->mapping_tree;
 	map_length = length;
 
@@ -4158,13 +4158,13 @@ int btrfs_map_bio(struct btrfs_root *root, int rw, struct bio *bio,
 		}
 		bio->bi_private = bbio;
 		bio->bi_end_io = btrfs_end_bio;
-		bio->bi_sector = bbio->stripes[dev_nr].physical >> 9;
+		bio->bi_iter.bi_sector = bbio->stripes[dev_nr].physical >> 9;
 		dev = bbio->stripes[dev_nr].dev;
 		if (dev && dev->bdev && (rw != WRITE || dev->writeable)) {
 			pr_debug("btrfs_map_bio: rw %d, secor=%llu, dev=%lu "
 				 "(%s id %llu), size=%u\n", rw,
-				 (u64)bio->bi_sector, (u_long)dev->bdev->bd_dev,
-				 dev->name, dev->devid, bio->bi_size);
+				 (u64)bio->bi_iter.bi_sector, (u_long)dev->bdev->bd_dev,
+				 dev->name, dev->devid, bio->bi_iter.bi_size);
 			bio->bi_bdev = dev->bdev;
 			if (async_submit)
 				schedule_bio(root, dev, rw, bio);
@@ -4172,7 +4172,7 @@ int btrfs_map_bio(struct btrfs_root *root, int rw, struct bio *bio,
 				btrfsic_submit_bio(rw, bio);
 		} else {
 			bio->bi_bdev = root->fs_info->fs_devices->latest_bdev;
-			bio->bi_sector = logical >> 9;
+			bio->bi_iter.bi_sector = logical >> 9;
 			bio_endio(bio, -EIO);
 		}
 		dev_nr++;

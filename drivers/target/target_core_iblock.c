@@ -481,10 +481,10 @@ iblock_get_bio(struct se_task *task, sector_t lba, u32 sg_num)
 	bio->bi_private = task;
 	bio->bi_destructor = iblock_bio_destructor;
 	bio->bi_end_io = &iblock_bio_done;
-	bio->bi_sector = lba;
+	bio->bi_iter.bi_sector = lba;
 	atomic_inc(&ib_req->pending);
 
-	pr_debug("Set bio->bi_sector: %llu\n", (unsigned long long)bio->bi_sector);
+	pr_debug("Set bio->bi_iter.bi_sector: %llu\n", (unsigned long long)bio->bi_sector);
 	pr_debug("Set ib_req->pending: %d\n", atomic_read(&ib_req->pending));
 	return bio;
 }
@@ -644,7 +644,7 @@ static void iblock_bio_done(struct bio *bio, int err)
 
 	pr_debug("done[%p] bio: %p task_lba: %llu bio_lba: %llu err=%d\n",
 		 task, bio, task->task_lba,
-		 (unsigned long long)bio->bi_sector, err);
+		 (unsigned long long)bio->bi_iter.bi_sector, err);
 
 	transport_complete_task(task, !atomic_read(&ibr->ib_bio_err_cnt));
 }

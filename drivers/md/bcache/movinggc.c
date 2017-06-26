@@ -80,7 +80,7 @@ static void moving_init(struct moving_io *io)
 	bio_get(bio);
 	bio_set_prio(bio, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_IDLE, 0));
 
-	bio->bi_size		= KEY_SIZE(&io->w->key) << 9;
+	bio->bi_iter.bi_size		= KEY_SIZE(&io->w->key) << 9;
 	bio->bi_max_vecs	= DIV_ROUND_UP(KEY_SIZE(&io->w->key),
 					       PAGE_SECTORS);
 	bio->bi_private		= &io->s.cl;

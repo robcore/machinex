@@ -2837,14 +2837,14 @@ void btrfsic_submit_bio(int rw, struct bio *bio)
 		u64 dev_bytenr;
 		int bio_is_patched;
 
-		dev_bytenr = 512 * bio->bi_sector;
+		dev_bytenr = 512 * bio->bi_iter.bi_sector;
 		bio_is_patched = 0;
 		if (dev_state->state->print_mask &
 		    BTRFSIC_PRINT_MASK_SUBMIT_BIO_BH)
 			printk(KERN_INFO
 			       "submit_bio(rw=0x%x, bi_vcnt=%u,"
 			       " bi_sector=%lu (bytenr %llu), bi_bdev=%p)\n",
-			       rw, bio->bi_vcnt, (unsigned long)bio->bi_sector,
+			       rw, bio->bi_vcnt, (unsigned long)bio->bi_iter.bi_sector,
 			       (unsigned long long)dev_bytenr,
 			       bio->bi_bdev);
 

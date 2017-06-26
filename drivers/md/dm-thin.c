@@ -681,7 +681,7 @@ static void requeue_io(struct thin_c *tc)
 
 static dm_block_t get_bio_block(struct thin_c *tc, struct bio *bio)
 {
-	return bio->bi_sector >> tc->pool->block_shift;
+	return bio->bi_iter.bi_sector >> tc->pool->block_shift;
 }
 
 static void remap(struct thin_c *tc, struct bio *bio, dm_block_t block)
@@ -689,8 +689,8 @@ static void remap(struct thin_c *tc, struct bio *bio, dm_block_t block)
 	struct pool *pool = tc->pool;
 
 	bio->bi_bdev = tc->pool_dev->bdev;
-	bio->bi_sector = (block << pool->block_shift) +
-		(bio->bi_sector & pool->offset_mask);
+	bio->bi_iter.bi_sector = (block << pool->block_shift) +
+		(bio->bi_iter.bi_sector & pool->offset_mask);
 }
 
 static void remap_to_origin(struct thin_c *tc, struct bio *bio)
@@ -936,8 +936,8 @@ static void process_prepared(struct pool *pool, struct list_head *head,
  */
 static int io_overlaps_block(struct pool *pool, struct bio *bio)
 {
-	return !(bio->bi_sector & pool->offset_mask) &&
-		(bio->bi_size == (pool->sectors_per_block << SECTOR_SHIFT));
+	return !(bio->bi_iter.bi_sector & pool->offset_mask) &&
+		(bio->bi_iter.bi_size == (pool->sectors_per_block << SECTOR_SHIFT));
 
 }
 
@@ -1241,9 +1241,9 @@ static void process_discard(struct thin_c *tc, struct bio *bio)
 			 * part of the discard that is in a subsequent
 			 * block.
 			 */
-			sector_t offset = bio->bi_sector - (block << pool->block_shift);
+			sector_t offset = bio->bi_iter.bi_sector - (block << pool->block_shift);
 			unsigned remaining = (pool->sectors_per_block - offset) << 9;
-			bio->bi_size = min(bio->bi_size, remaining);
+			bio->bi_iter.bi_size = min(bio->bi_size, remaining);
 
 			cell_release_singleton(cell, bio);
 			cell_release_singleton(cell2, bio);
@@ -1333,7 +1333,7 @@ static void provision_block(struct thin_c *tc, struct bio *bio, dm_block_t block
 	/*
 	 * Remap empty bios (flushes) immediately, without provisioning.
 	 */
-	if (!bio->bi_size) {
+	if (!bio->bi_iter.bi_size) {
 		cell_release_singleton(cell, bio);
 		remap_and_issue(tc, bio, 0);
 		return;
@@ -2622,7 +2622,7 @@ out_unlock:
 
 static int thin_map(struct dm_target *ti, struct bio *bio)
 {
-	bio->bi_sector = dm_target_offset(ti, bio->bi_sector);
+	bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_sector);
 
 	return thin_bio_map(ti, bio);
 }
