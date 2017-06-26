@@ -1181,3 +1181,4 @@ static void bfq_add_bfqq_busy(struct bfq_data *bfqd, struct bfq_queue *bfqq)
 	if (bfqq->wr_coeff > 1)
 		bfqd->wr_busy_queues++;
 }
+

@@ -77,7 +77,7 @@ static const int bfq_fifo_expire[2] = { HZ / 4, HZ / 8 };
 static const int bfq_back_max = 16 * 1024;
 
 /* Penalty of a backwards seek, in number of sectors. */
-static const int bfq_back_penalty = 1;
+static const int bfq_back_penalty = 2;
 
 /* Idling period duration, in jiffies. */
 static int bfq_slice_idle = 0;
@@ -1234,7 +1234,7 @@ static inline sector_t bfq_io_struct_pos(void *io_struct, bool request)
 	if (request)
 		return blk_rq_pos(io_struct);
 	else
-		return ((struct bio *)io_struct)->bi_sector;
+		return ((struct bio *)io_struct)->bi_iter.bi_sector;
 }
 
 static inline sector_t bfq_dist_from(sector_t pos1,
