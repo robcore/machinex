@@ -654,7 +654,7 @@ static void init_bio_iter(struct bio *bio, struct bio **iter, int *seg)
 		return;
 	}
 	*iter = bio;
-	*seg = bio->bi_idx;
+	*seg = bio->bi_iter.bi_idx;
 }
 
 static void iter_bio_next(struct bio **bio_iter, int *seg)
