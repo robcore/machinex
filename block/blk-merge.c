@@ -168,6 +168,8 @@ int blk_rq_map_sg(struct request_queue *q, struct request *rq,
 	struct scatterlist *sg;
 	int nsegs, cluster;
 
+	uninitialized_var(bvprv);
+
 	nsegs = 0;
 	cluster = blk_queue_cluster(q);
 
@@ -229,6 +231,8 @@ int blk_bio_map_sg(struct request_queue *q, struct bio *bio,
 	struct scatterlist *sg;
 	int nsegs, cluster;
 	unsigned long i;
+
+	uninitialized_var(bvprv);
 
 	nsegs = 0;
 	cluster = blk_queue_cluster(q);
