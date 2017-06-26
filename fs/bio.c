@@ -655,12 +655,12 @@ void bio_advance(struct bio *bio, unsigned bytes)
 			break;
 		}
 
-		if (bytes >= bio_iovec(bio)->bv_len) {
-			bytes -= bio_iovec(bio)->bv_len;
+		if (bytes >= bio_iovec(bio).bv_len) {
+			bytes -= bio_iovec(bio).bv_len;
 			bio->bi_iter.bi_idx++;
 		} else {
-			bio_iovec(bio)->bv_len -= bytes;
-			bio_iovec(bio)->bv_offset += bytes;
+			bio_iovec(bio).bv_len -= bytes;
+			bio_iovec(bio).bv_offset += bytes;
 			bytes = 0;
 		}
 	}
