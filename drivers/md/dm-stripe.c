@@ -282,7 +282,7 @@ static int stripe_map(struct dm_target *ti, struct bio *bio)
 		return stripe_map_range(sc, bio, target_request_nr);
 	}
 
-	stripe_map_sector(sc, bio->bi_iter.bi_sector, &stripe, &bio->bi_sector);
+	stripe_map_sector(sc, bio->bi_iter.bi_sector, &stripe, &bio->bi_iter.bi_sector);
 
 	bio->bi_iter.bi_sector += sc->stripe[stripe].physical_start;
 	bio->bi_bdev = sc->stripe[stripe].dev->bdev;
