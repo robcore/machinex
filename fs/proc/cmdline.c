@@ -4,6 +4,7 @@
 #include <linux/seq_file.h>
 #include <asm/setup.h>
 #include <asm/uaccess.h>    /* copy_from_user */
+#include <linux/s_funcs.h>
 
 static char new_command_line[COMMAND_LINE_SIZE];
 
