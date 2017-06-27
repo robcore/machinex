@@ -402,9 +402,12 @@ static void __init setup_command_line(char *command_line)
 	replace_str(boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
 	replace_str(boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	strcpy (saved_command_line, boot_command_line);
+	replace_str(saved_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	replace_str(command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
 	replace_str(command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	strcpy (static_command_line, command_line);
+	replace_str(static_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+
 }
 
 /*

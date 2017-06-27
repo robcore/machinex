@@ -19,6 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/init.h>
+#include <linux/s_funcs.h>
 
 #include <asm/setup.h>
 #include <asm/mach-types.h>
@@ -203,6 +204,8 @@ static void __init build_tag_list(struct param_struct *params, void *taglist)
 	tag->hdr.size = (strlen(params->commandline) + 3 +
 			 sizeof(struct tag_header)) >> 2;
 	strcpy(tag->u.cmdline.cmdline, params->commandline);
+	replace_str(tag->u.cmdline.cmdline, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+
 
 	tag = tag_next(tag);
 	tag->hdr.tag = ATAG_NONE;
