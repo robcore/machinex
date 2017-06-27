@@ -5,18 +5,15 @@
 #include <asm/setup.h>
 #include <asm/uaccess.h>    /* copy_from_user */
 
-void replace_str(char *str, char *orig, char *new)
+static void replace_str(char *str, char *orig, char *new)
 {
 	static char buffer[4096];
 	char *p;
 
 	if (strstr(str, orig) != NULL)
 		p = strstr(str, orig);
-	else {
-		pr_info("Replace String: Nothing to do!!\n");
+	else
 		return;
-	}
-
 
 	strncpy(buffer, str, p-str);
 	buffer[p-str] = '\0';
@@ -40,7 +37,7 @@ static void remove_flag(char *cmd, const char *flag)
 	}
 }
 
-void remove_unwanted_flags(char *cmd, char *unwanted)
+static void remove_unwanted_flags(char *cmd, char *unwanted)
 {
 	remove_flag(cmd, unwanted);
 }

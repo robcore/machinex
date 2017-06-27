@@ -59,6 +59,7 @@
 #include <asm/memblock.h>
 #include <asm/virt.h>
 #include <linux/irqchip/chained_irq.h>
+#include <linux/s_funcs.h>
 
 #if defined(CONFIG_DEPRECATED_PARAM_STRUCT)
 #include "compat.h"
