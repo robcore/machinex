@@ -161,7 +161,7 @@ static int __scsi_queue_insert(struct scsi_cmnd *cmd, int reason, int unbusy)
 	blk_requeue_request(q, cmd->request);
 	spin_unlock_irqrestore(q->queue_lock, flags);
 
-	kblockd_schedule_work(q, &device->requeue_work);
+	kblockd_schedule_work(&device->requeue_work);
 
 	return 0;
 }

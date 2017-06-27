@@ -2986,7 +2986,7 @@ free_and_out:
 }
 EXPORT_SYMBOL_GPL(blk_rq_prep_clone);
 
-int kblockd_schedule_work(struct request_queue *q, struct work_struct *work)
+int kblockd_schedule_work(struct work_struct *work)
 {
 	return queue_work(kblockd_workqueue, work);
 }
