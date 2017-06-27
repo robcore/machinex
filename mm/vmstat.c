@@ -200,14 +200,16 @@ void set_pgdat_percpu_threshold(pg_data_t *pgdat,
 			continue;
 
 		threshold = (*calculate_pressure)(zone);
-		for_each_possible_cpu(cpu)
+		for_each_online_cpu(cpu)
 			per_cpu_ptr(zone->pageset, cpu)->stat_threshold
 							= threshold;
 	}
 }
 
 /*
- * For use when we know that interrupts are disabled.
+ * For use when we know that interrupts are disabled,
+ * or when we know that preemption is disabled and that
+ * particular counter cannot be updated from interrupt context.
  */
 void __mod_zone_page_state(struct zone *zone, enum zone_stat_item item,
 				int delta)
@@ -1198,10 +1200,8 @@ static void __init init_cpu_node_state(void)
 {
 	int cpu;
 
-	get_online_cpus();
 	for_each_online_cpu(cpu)
 		node_set_state(cpu_to_node(cpu), N_CPU);
-	put_online_cpus();
 }
 
 /*
@@ -1257,7 +1257,7 @@ static int __init setup_vmstat(void)
 		start_cpu_timer(cpu);
 	cpu_notifier_register_done();
 
-	vmstat_wq = alloc_workqueue("vmstat", WQ_FREEZABLE | WQ_MEM_RECLAIM, 0);
+	vmstat_wq = alloc_workqueue("vmstat", WQ_MEM_RECLAIM, 0);
 
 #endif
 #ifdef CONFIG_PROC_FS
