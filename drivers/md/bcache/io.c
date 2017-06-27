@@ -22,7 +22,8 @@ static void bch_generic_make_request_hack(struct bio *bio)
 	if (bio->bi_iter.bi_idx) {
 		struct bio_vec bv;
 		struct bvec_iter iter;
-		struct bio *clone = bio_alloc(GFP_NOIO, bio_segments(bio));
+		unsigned segs = bio_segments(bio);
+		struct bio *clone = bio_alloc(GFP_NOIO, segs);
 
 		bio_for_each_segment(bv, bio, iter)
 			clone->bi_io_vec[clone->bi_vcnt++] = bv;
