@@ -300,29 +300,6 @@ struct bio_integrity_payload {
 };
 #endif /* CONFIG_BLK_DEV_INTEGRITY */
 
-/*
- * A bio_pair is used when we need to split a bio.
- * This can only happen for a bio that refers to just one
- * page of data, and in the unusual situation when the
- * page crosses a chunk/device boundary
- *
- * The address of the master bio is stored in bio1.bi_private
- * The address of the pool the pair was allocated from is stored
- *   in bio2.bi_private
- */
-struct bio_pair {
-	struct bio			bio1, bio2;
-	struct bio_vec			bv1, bv2;
-#if defined(CONFIG_BLK_DEV_INTEGRITY)
-	struct bio_integrity_payload	bip1, bip2;
-	struct bio_vec			iv1, iv2;
-#endif
-	atomic_t			cnt;
-	int				error;
-};
-extern struct bio_pair *bio_pair_split(struct bio *bi, int first_sectors);
-extern void bio_pair_release(struct bio_pair *dbio);
-
 extern struct bio *bio_split(struct bio *bio, int sectors,
 			     gfp_t gfp, struct bio_set *bs);
 
