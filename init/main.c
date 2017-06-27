@@ -406,7 +406,9 @@ static void __init setup_command_line(char *command_line)
 	static_command_line = alloc_bootmem(strlen(command_line)+1);
 
 	strcpy (saved_command_line, boot_command_line);
+	remove_unwanted_flags(saved_command_line, "androidboot.warranty_bit=1");
 	strcpy (static_command_line, command_line);
+	remove_unwanted_flags(static_command_line, "androidboot.warranty_bit=1");
 }
 
 /*
@@ -824,7 +826,6 @@ static void __init do_initcall_level(int level)
 	initcall_t *fn;
 
 	strcpy(static_command_line, saved_command_line);
-	remove_unwanted_flags(static_command_line, "androidboot.warranty_bit=1")
 	parse_args(initcall_level_names[level],
 		   static_command_line, __start___param,
 		   __stop___param - __start___param,
