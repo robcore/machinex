@@ -465,7 +465,7 @@ static void __relink_lru(struct dm_buffer *b, int dirty)
 	c->n_buffers[b->list_mode]--;
 	c->n_buffers[dirty]++;
 	b->list_mode = dirty;
-		list_move(&b->lru_list, &c->lru[dirty]);
+	list_move(&b->lru_list, &c->lru[dirty]);
 	b->last_accessed = jiffies;
 }
 
