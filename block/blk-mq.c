@@ -27,8 +27,6 @@ static LIST_HEAD(all_q_list);
 
 static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx);
 
-DEFINE_PER_CPU(struct llist_head, ipi_lists);
-
 static struct blk_mq_ctx *__blk_mq_get_ctx(struct request_queue *q,
 					   unsigned int cpu)
 {
@@ -353,56 +351,6 @@ void blk_mq_end_io(struct request *rq, int error)
 }
 EXPORT_SYMBOL(blk_mq_end_io);
 
-#if defined(CONFIG_SMP)
-
-/*
- * Called with interrupts disabled.
- */
-static void ipi_end_io(void *data)
-{
-	struct llist_head *list = &per_cpu(ipi_lists, smp_processor_id());
-	struct llist_node *entry, *next;
-	struct request *rq;
-
-	entry = llist_del_all(list);
-
-	while (entry) {
-		next = entry->next;
-		rq = llist_entry(entry, struct request, ll_list);
-		__blk_mq_end_io(rq, rq->errors);
-		entry = next;
-	}
-}
-
-static int ipi_remote_cpu(struct blk_mq_ctx *ctx, const int cpu,
-			  struct request *rq, const int error)
-{
-	struct call_single_data *data = &rq->csd;
-
-	rq->errors = error;
-	rq->ll_list.next = NULL;
-
-	/*
-	 * If the list is non-empty, an existing IPI must already
-	 * be "in flight". If that is the case, we need not schedule
-	 * a new one.
-	 */
-	if (llist_add(&rq->ll_list, &per_cpu(ipi_lists, ctx->cpu))) {
-		data->func = ipi_end_io;
-		data->flags = 0;
-		smp_call_function_single_async(ctx->cpu, data);
-	}
-
-	return true;
-}
-#else /* CONFIG_SMP */
-static int ipi_remote_cpu(struct blk_mq_ctx *ctx, const int cpu,
-			  struct request *rq, const int error)
-{
-	return false;
-}
-#endif
-
 static void __blk_mq_complete_request_remote(void *data)
 {
 	struct request *rq = data;
@@ -425,7 +373,7 @@ void __blk_mq_complete_request(struct request *rq)
 		rq->csd.func = __blk_mq_complete_request_remote;
 		rq->csd.info = rq;
 		rq->csd.flags = 0;
-		__smp_call_function_single(ctx->cpu, &rq->csd, 0);
+		smp_call_function_single_async(ctx->cpu, &rq->csd);
 	} else {
 		rq->q->softirq_done_fn(rq);
 	}
@@ -1559,11 +1507,6 @@ static int blk_mq_queue_reinit_notify(struct notifier_block *nb,
 
 static int __init blk_mq_init(void)
 {
-	unsigned int i;
-
-	for_each_possible_cpu(i)
-		init_llist_head(&per_cpu(ipi_lists, i));
-
 	blk_mq_cpu_init();
 
 	/* Must be called after percpu_counter_hotcpu_callback() */
