@@ -87,7 +87,7 @@ static inline void blk_clear_rq_urgent(struct request *rq)
 /*
  * Internal elevator interface
  */
-#define ELV_ON_HASH(rq) hash_hashed(&(rq)->hash)
+#define ELV_ON_HASH(rq) ((rq)->cmd_flags & REQ_HASHED)
 
 void blk_insert_flush(struct request *rq);
 void blk_abort_flushes(struct request_queue *q);

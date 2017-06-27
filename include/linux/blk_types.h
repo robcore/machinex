@@ -191,6 +191,7 @@ enum rq_flag_bits {
 	__REQ_URGENT,		/* urgent request */
 	__REQ_PM,		/* runtime pm request */
 	__REQ_END,		/* last of chain of requests */
+	__REQ_HASHED,		/* on IO scheduler merge hash */
 	__REQ_NR_BITS,		/* stops here */
 };
 
@@ -245,5 +246,6 @@ enum rq_flag_bits {
 #define REQ_KERNEL		(1ULL << __REQ_KERNEL)
 #define REQ_PM			(1ULL << __REQ_PM)
 #define REQ_END			(1ULL << __REQ_END)
+#define REQ_HASHED		(1ULL << __REQ_HASHED)
 
 #endif /* __LINUX_BLK_TYPES_H */
