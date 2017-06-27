@@ -75,28 +75,21 @@ static void blk_mq_hctx_mark_pending(struct blk_mq_hw_ctx *hctx,
 		set_bit(ctx->index_hw, hctx->ctx_map);
 }
 
-static struct request *__blk_mq_alloc_request(struct blk_mq_hw_ctx *hctx,
-					      gfp_t gfp, bool reserved,
-					      int rw)
+static struct request *blk_mq_alloc_rq(struct blk_mq_hw_ctx *hctx, gfp_t gfp,
+				       bool reserved)
 {
-	struct request *req;
-	bool is_flush = false;
-	/*
-	 * flush need allocate a request, leave at least one request for
-	 * non-flush IO to avoid deadlock
-	 */
-	if ((rw & REQ_FLUSH) && !(rw & REQ_FLUSH_SEQ)) {
-		if (atomic_inc_return(&hctx->pending_flush) >=
-		    hctx->queue_depth - hctx->reserved_tags - 1) {
-			atomic_dec(&hctx->pending_flush);
-			return NULL;
-		}
-		is_flush = true;
+	struct request *rq;
+	unsigned int tag;
+
+	tag = blk_mq_get_tag(hctx->tags, gfp, reserved);
+	if (tag != BLK_MQ_TAG_FAIL) {
+		rq = hctx->rqs[tag];
+		rq->tag = tag;
+
+		return rq;
 	}
-	req = blk_mq_alloc_rq(hctx, gfp, reserved);
-	if (!req && is_flush)
-		atomic_dec(&hctx->pending_flush);
-	return req;
+
+	return NULL;
 }
 
 static int blk_mq_queue_enter(struct request_queue *q)
@@ -200,6 +193,30 @@ static void blk_mq_rq_ctx_init(struct request_queue *q, struct blk_mq_ctx *ctx,
 	rq->start_time = jiffies;
 	set_start_time_ns(rq);
 	ctx->rq_dispatched[rw_is_sync(rw_flags)]++;
+}
+
+static struct request *__blk_mq_alloc_request(struct blk_mq_hw_ctx *hctx,
+					      gfp_t gfp, bool reserved,
+					      int rw)
+{
+	struct request *req;
+	bool is_flush = false;
+	/*
+	 * flush need allocate a request, leave at least one request for
+	 * non-flush IO to avoid deadlock
+	 */
+	if ((rw & REQ_FLUSH) && !(rw & REQ_FLUSH_SEQ)) {
+		if (atomic_inc_return(&hctx->pending_flush) >=
+		    hctx->queue_depth - hctx->reserved_tags - 1) {
+			atomic_dec(&hctx->pending_flush);
+			return NULL;
+		}
+		is_flush = true;
+	}
+	req = blk_mq_alloc_rq(hctx, gfp, reserved);
+	if (!req && is_flush)
+		atomic_dec(&hctx->pending_flush);
+	return req;
 }
 
 static struct request *blk_mq_alloc_request_pinned(struct request_queue *q,
@@ -311,7 +328,7 @@ static void blk_mq_bio_endio(struct request *rq, struct bio *bio, int error)
 		bio_endio(bio, error);
 }
 
-void blk_mq_complete_request(struct request *rq, int error)
+void blk_mq_end_io(struct request *rq, int error)
 {
 	struct bio *bio = rq->bio;
 	unsigned int bytes = 0;
@@ -334,12 +351,7 @@ void blk_mq_complete_request(struct request *rq, int error)
 	else
 		blk_mq_free_request(rq);
 }
-
-void __blk_mq_end_io(struct request *rq, int error)
-{
-	if (!blk_mark_rq_complete(rq))
-		blk_mq_complete_request(rq, error);
-}
+EXPORT_SYMBOL(blk_mq_end_io);
 
 #if defined(CONFIG_SMP)
 
@@ -391,28 +403,51 @@ static int ipi_remote_cpu(struct blk_mq_ctx *ctx, const int cpu,
 }
 #endif
 
-/*
- * End IO on this request on a multiqueue enabled driver. We'll either do
- * it directly inline, or punt to a local IPI handler on the matching
- * remote CPU.
- */
-void blk_mq_end_io(struct request *rq, int error)
+static void __blk_mq_complete_request_remote(void *data)
+{
+	struct request *rq = data;
+
+	rq->q->softirq_done_fn(rq);
+}
+
+void __blk_mq_complete_request(struct request *rq)
 {
 	struct blk_mq_ctx *ctx = rq->mq_ctx;
 	int cpu;
 
-	if (!ctx->ipi_redirect)
-		return __blk_mq_end_io(rq, error);
+	if (!ctx->ipi_redirect) {
+		rq->q->softirq_done_fn(rq);
+		return;
+	}
 
 	cpu = get_cpu();
-
-	if (cpu == ctx->cpu || !cpu_online(ctx->cpu) ||
-	    !ipi_remote_cpu(ctx, cpu, rq, error))
-		__blk_mq_end_io(rq, error);
-
+	if (cpu != ctx->cpu && cpu_online(ctx->cpu)) {
+		rq->csd.func = __blk_mq_complete_request_remote;
+		rq->csd.info = rq;
+		rq->csd.flags = 0;
+		__smp_call_function_single(ctx->cpu, &rq->csd, 0);
+	} else {
+		rq->q->softirq_done_fn(rq);
+	}
 	put_cpu();
 }
-EXPORT_SYMBOL(blk_mq_end_io);
+
+/**
+ * blk_mq_complete_request - end I/O on a request
+ * @rq:		the request being processed
+ *
+ * Description:
+ *	Ends all I/O on a request. It does not handle partial completions.
+ *	The actual completion happens out-of-order, through a IPI handler.
+ **/
+void blk_mq_complete_request(struct request *rq)
+{
+	if (unlikely(blk_should_fake_timeout(rq->q)))
+		return;
+	if (!blk_mark_rq_complete(rq))
+		__blk_mq_complete_request(rq);
+}
+EXPORT_SYMBOL(blk_mq_complete_request);
 
 static void blk_mq_start_request(struct request *rq)
 {
@@ -1420,6 +1455,9 @@ struct request_queue *blk_mq_init_queue(struct blk_mq_reg *reg,
 	blk_queue_rq_timed_out(q, reg->ops->timeout);
 	if (reg->timeout)
 		blk_queue_rq_timeout(q, reg->timeout);
+
+	if (reg->ops->complete)
+		blk_queue_softirq_done(q, reg->ops->complete);
 
 	blk_mq_init_flush(q);
 	blk_mq_init_cpu_queues(q, reg->nr_hw_queues);
