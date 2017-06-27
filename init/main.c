@@ -456,7 +456,7 @@ static int __init do_early_param(char *param, char *val,
 		     strcmp(p->str, "earlycon") == 0)
 		) {
 			if (p->setup_func(val) != 0)
-				pr_warn("Malformed early option '%s'\n", param);
+				pr_debug("Malformed early option '%s'\n", param);
 		}
 	}
 	/* We accept everything at this stage. */
@@ -516,48 +516,6 @@ static void __init mm_init(void)
 	vmalloc_init();
 }
 
-#ifdef CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
-/* change@ksingh.sra-dallas - in kernel 3.4 and +
- * the mmu clears the unused/unreserved memory with default RAM initial sticky
- * bit data.
- * Hence to preseve the copy of zImage in the unmarked area, the Copied zImage
- * memory range has to be marked reserved.
-*/
-#define SHA256_DIGEST_SIZE 32
-
-// this is the size of memory area that is marked as reserved
-long integrity_mem_reservoir = 0;
-
-// internal API to mark zImage copy memory area as reserved
-static void __init integrity_mem_reserve(void) {
-	int result = 0;
-	long len = 0;
-	u8* zBuffer = 0;
-
-	zBuffer = (u8*)phys_to_virt((unsigned long)CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS);
-	if (*((u32 *) &zBuffer[36]) != 0x016F2818) {
-		printk(KERN_ERR "FIPS main.c: invalid zImage magic number.");
-		return;
-	}
-
-	if (*(u32 *) &zBuffer[44] <= *(u32 *) &zBuffer[40]) {
-		printk(KERN_ERR "FIPS main.c: invalid zImage calculated len");
-		return;
-	}
-
-	len = *(u32 *) &zBuffer[44] - *(u32 *) &zBuffer[40];
-	printk(KERN_NOTICE "FIPS Actual zImage len = %ld\n", len);
-
-	integrity_mem_reservoir = len + SHA256_DIGEST_SIZE;
-	result = reserve_bootmem((unsigned long)CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS, integrity_mem_reservoir, 1);
-	if(result != 0) {
-		integrity_mem_reservoir = 0;
-	}
-	printk(KERN_NOTICE "FIPS integrity_mem_reservoir = %ld\n", integrity_mem_reservoir);
-}
-// change@ksingh.sra-dallas - end
-#endif // CONFIG_CRYPTO_FIPS_OLD_INTEGRITY_CHECK
-
 asmlinkage __visible void __init start_kernel(void)
 {
 	char * command_line, *after_dashes;
@@ -592,7 +550,8 @@ asmlinkage __visible void __init start_kernel(void)
 
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
-	replace_str((char*)&boot_command_line,"androidboot.bootchg=true","androidboot.mode=charger");
+	strreplace((char*)&boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+	strreplace((char*)&boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	setup_command_line(command_line);
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
