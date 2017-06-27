@@ -1398,9 +1398,8 @@ static int arm_smmu_map(struct iommu_domain *domain, unsigned long iova,
 			phys_addr_t paddr, size_t size, int flags)
 {
 	struct arm_smmu_domain *smmu_domain = domain->priv;
-	struct arm_smmu_device *smmu = smmu_domain->leaf_smmu;
 
-	if (!smmu_domain || !smmu)
+	if (!smmu_domain)
 		return -ENODEV;
 
 	/* Check for silent address truncation up the SMMU chain. */
@@ -1825,6 +1824,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		dev_err(dev,
 			"found only %d context interrupt(s) but %d required\n",
 			smmu->num_context_irqs, smmu->num_context_banks);
+		err = -ENODEV;
 		goto out_put_parent;
 	}
 
