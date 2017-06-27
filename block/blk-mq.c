@@ -75,28 +75,21 @@ static void blk_mq_hctx_mark_pending(struct blk_mq_hw_ctx *hctx,
 		set_bit(ctx->index_hw, hctx->ctx_map);
 }
 
-static struct request *__blk_mq_alloc_request(struct blk_mq_hw_ctx *hctx,
-					      gfp_t gfp, bool reserved,
-					      int rw)
+static struct request *blk_mq_alloc_rq(struct blk_mq_hw_ctx *hctx, gfp_t gfp,
+				       bool reserved)
 {
-	struct request *req;
-	bool is_flush = false;
-	/*
-	 * flush need allocate a request, leave at least one request for
-	 * non-flush IO to avoid deadlock
-	 */
-	if ((rw & REQ_FLUSH) && !(rw & REQ_FLUSH_SEQ)) {
-		if (atomic_inc_return(&hctx->pending_flush) >=
-		    hctx->queue_depth - hctx->reserved_tags - 1) {
-			atomic_dec(&hctx->pending_flush);
-			return NULL;
-		}
-		is_flush = true;
+	struct request *rq;
+	unsigned int tag;
+
+	tag = blk_mq_get_tag(hctx->tags, gfp, reserved);
+	if (tag != BLK_MQ_TAG_FAIL) {
+		rq = hctx->rqs[tag];
+		rq->tag = tag;
+
+		return rq;
 	}
-	req = blk_mq_alloc_rq(hctx, gfp, reserved);
-	if (!req && is_flush)
-		atomic_dec(&hctx->pending_flush);
-	return req;
+
+	return NULL;
 }
 
 static int blk_mq_queue_enter(struct request_queue *q)
@@ -200,6 +193,30 @@ static void blk_mq_rq_ctx_init(struct request_queue *q, struct blk_mq_ctx *ctx,
 	rq->start_time = jiffies;
 	set_start_time_ns(rq);
 	ctx->rq_dispatched[rw_is_sync(rw_flags)]++;
+}
+
+static struct request *__blk_mq_alloc_request(struct blk_mq_hw_ctx *hctx,
+					      gfp_t gfp, bool reserved,
+					      int rw)
+{
+	struct request *req;
+	bool is_flush = false;
+	/*
+	 * flush need allocate a request, leave at least one request for
+	 * non-flush IO to avoid deadlock
+	 */
+	if ((rw & REQ_FLUSH) && !(rw & REQ_FLUSH_SEQ)) {
+		if (atomic_inc_return(&hctx->pending_flush) >=
+		    hctx->queue_depth - hctx->reserved_tags - 1) {
+			atomic_dec(&hctx->pending_flush);
+			return NULL;
+		}
+		is_flush = true;
+	}
+	req = blk_mq_alloc_rq(hctx, gfp, reserved);
+	if (!req && is_flush)
+		atomic_dec(&hctx->pending_flush);
+	return req;
 }
 
 static struct request *blk_mq_alloc_request_pinned(struct request_queue *q,
