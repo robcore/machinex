@@ -1066,14 +1066,12 @@ static void raid10_unplug(struct blk_plug_cb *cb, bool from_schedule)
 	kfree(plug);
 }
 
-static void make_request(struct mddev *mddev, struct bio * bio)
+static void __make_request(struct mddev *mddev, struct bio *bio)
 {
 	struct r10conf *conf = mddev->private;
 	struct r10bio *r10_bio;
 	struct bio *read_bio;
 	int i;
-	sector_t chunk_mask = (conf->geo.chunk_mask & conf->prev.chunk_mask);
-	int chunk_sects = chunk_mask + 1;
 	const int rw = bio_data_dir(bio);
 	const unsigned long do_sync = (bio->bi_rw & REQ_SYNC);
 	const unsigned long do_fua = (bio->bi_rw & REQ_FUA);
@@ -1458,6 +1456,52 @@ retry_write:
 		goto retry_write;
 	}
 	one_write_done(r10_bio);
+}
+
+static void make_request(struct mddev *mddev, struct bio *bio)
+{
+	struct r10conf *conf = mddev->private;
+	sector_t chunk_mask = (conf->geo.chunk_mask & conf->prev.chunk_mask);
+	int chunk_sects = chunk_mask + 1;
+
+	struct bio *split;
+
+	if (unlikely(bio->bi_rw & REQ_FLUSH)) {
+		md_flush_request(mddev, bio);
+		return;
+	}
+
+	md_write_start(mddev, bio);
+
+	/*
+	 * Register the new request and wait if the reconstruction
+	 * thread has put up a bar for new requests.
+	 * Continue immediately if no resync is active currently.
+	 */
+	wait_barrier(conf);
+
+	do {
+
+		/*
+		 * If this request crosses a chunk boundary, we need to split
+		 * it.
+		 */
+		if (unlikely((bio->bi_iter.bi_sector & chunk_mask) +
+			     bio_sectors(bio) > chunk_sects
+			     && (conf->geo.near_copies < conf->geo.raid_disks
+				 || conf->prev.near_copies <
+				 conf->prev.raid_disks))) {
+			split = bio_split(bio, chunk_sects -
+					  (bio->bi_iter.bi_sector &
+					   (chunk_sects - 1)),
+					  GFP_NOIO, fs_bio_set);
+			bio_chain(split, bio);
+		} else {
+			split = bio;
+		}
+
+		__make_request(mddev, split);
+	} while (split != bio);
 
 	/* In case raid10d snuck in to freeze_array */
 	wake_up(&conf->wait_barrier);

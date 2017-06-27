@@ -2582,6 +2582,64 @@ static void pkt_make_request(struct request_queue *q, struct bio *bio)
 		 */
 		wake_up(&pd->wqueue);
 	}
+}
+
+static void pkt_make_request(struct request_queue *q, struct bio *bio)
+{
+	struct pktcdvd_device *pd;
+	char b[BDEVNAME_SIZE];
+	struct bio *split;
+
+	pd = q->queuedata;
+	if (!pd) {
+		pr_err("%s incorrect request queue\n",
+		       bdevname(bio->bi_bdev, b));
+		goto end_io;
+	}
+
+	pkt_dbg(2, pd, "start = %6llx stop = %6llx\n",
+		(unsigned long long)bio->bi_iter.bi_sector,
+		(unsigned long long)bio_end_sector(bio));
+
+	/*
+	 * Clone READ bios so we can have our own bi_end_io callback.
+	 */
+	if (bio_data_dir(bio) == READ) {
+		pkt_make_request_read(pd, bio);
+		return;
+	}
+
+	if (!test_bit(PACKET_WRITABLE, &pd->flags)) {
+		pkt_notice(pd, "WRITE for ro device (%llu)\n",
+			   (unsigned long long)bio->bi_iter.bi_sector);
+		goto end_io;
+	}
+
+	if (!bio->bi_iter.bi_size || (bio->bi_iter.bi_size % CD_FRAMESIZE)) {
+		pkt_err(pd, "wrong bio size\n");
+		goto end_io;
+	}
+
+	blk_queue_bounce(q, &bio);
+
+	do {
+		sector_t zone = get_zone(bio->bi_iter.bi_sector, pd);
+		sector_t last_zone = get_zone(bio_end_sector(bio) - 1, pd);
+
+		if (last_zone != zone) {
+			BUG_ON(last_zone != zone + pd->settings.size);
+
+			split = bio_split(bio, last_zone -
+					  bio->bi_iter.bi_sector,
+					  GFP_NOIO, fs_bio_set);
+			bio_chain(split, bio);
+		} else {
+			split = bio;
+		}
+
+		pkt_make_request_write(q, split);
+	} while (split != bio);
+
 	return;
 end_io:
 	bio_io_error(bio);
