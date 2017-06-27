@@ -153,11 +153,14 @@ void blk_mq_free_single_hw_queue(struct blk_mq_hw_ctx *, unsigned int);
 void blk_mq_end_io(struct request *rq, int error);
 void __blk_mq_end_io(struct request *rq, int error);
 
+void blk_mq_requeue_request(struct request *rq);
+
 void blk_mq_complete_request(struct request *rq);
 
 void blk_mq_stop_hw_queue(struct blk_mq_hw_ctx *hctx);
 void blk_mq_start_hw_queue(struct blk_mq_hw_ctx *hctx);
 void blk_mq_stop_hw_queues(struct request_queue *q);
+void blk_mq_start_hw_queues(struct request_queue *q);
 void blk_mq_start_stopped_hw_queues(struct request_queue *q, bool async);
 void blk_mq_delay_queue(struct blk_mq_hw_ctx *hctx, unsigned long msecs);
 

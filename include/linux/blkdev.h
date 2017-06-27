@@ -101,7 +101,7 @@ struct request {
 	};
 	union {
 		struct call_single_data csd;
-		struct work_struct mq_flush_work;
+		struct work_struct requeue_work;
 		unsigned long fifo_time;
 	};
 
@@ -619,6 +619,15 @@ static inline void queue_flag_clear(unsigned int flag, struct request_queue *q)
 
 #define rq_data_dir(rq)		(((rq)->cmd_flags & 1) != 0)
 
+/*
+ * Driver can handle struct request, if it either has an old style
+ * request_fn defined, or is blk-mq based.
+ */
+static inline bool queue_is_rq_based(struct request_queue *q)
+{
+	return q->request_fn || q->mq_ops;
+}
+
 static inline unsigned int blk_queue_cluster(struct request_queue *q)
 {
 	return q->limits.cluster;
@@ -934,6 +943,7 @@ extern struct request *blk_fetch_request(struct request_queue *q);
  */
 extern bool blk_update_request(struct request *rq, int error,
 			       unsigned int nr_bytes);
+extern void blk_finish_request(struct request *rq, int error);
 extern bool blk_end_request(struct request *rq, int error,
 			    unsigned int nr_bytes);
 extern void blk_end_request_all(struct request *rq, int error);

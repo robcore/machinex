@@ -229,7 +229,7 @@ static void jsfd_request(void)
 			goto end;
 		}
 
-		jsfd_read(req->buffer, jdp->dbase + offset, len);
+		jsfd_read(bio_data(req->bio), jdp->dbase + offset, len);
 		err = 0;
 	end:
 		if (!__blk_end_request_cur(req, err))
