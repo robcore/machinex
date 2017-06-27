@@ -76,6 +76,7 @@
 #include <linux/elevator.h>
 #include <linux/sched_clock.h>
 #include <linux/context_tracking.h>
+#include <linux/s_funcs.h>
 
 #include <asm/io.h>
 #include <asm/bugs.h>
@@ -399,10 +400,10 @@ static void __init setup_command_line(char *command_line)
 	saved_command_line = alloc_bootmem(strlen(boot_command_line)+1);
 	static_command_line = alloc_bootmem(strlen(command_line)+1);
 	replace_str(boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
-	replace_str((char*)&boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+	replace_str(boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	strcpy (saved_command_line, boot_command_line);
-	replace_str((char*)&command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
-	replace_str((char*)&command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+	replace_str(command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+	replace_str(command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	strcpy (static_command_line, command_line);
 }
 
