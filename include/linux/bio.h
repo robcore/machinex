@@ -341,6 +341,8 @@ static inline struct bio *bio_kmalloc(gfp_t gfp_mask, unsigned int nr_iovecs)
 	return bio_alloc_bioset(gfp_mask, nr_iovecs, NULL);
 }
 
+extern void __bio_clone_fast(struct bio *, struct bio *);
+extern struct bio *bio_clone_fast(struct bio *, gfp_t, struct bio_set *);
 extern void __bio_clone(struct bio *, struct bio *);
 extern struct bio *bio_clone_bioset(struct bio *, gfp_t, struct bio_set *bs);
 
