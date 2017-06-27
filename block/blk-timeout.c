@@ -96,11 +96,8 @@ static void blk_rq_timed_out(struct request *req)
 			__blk_complete_request(req);
 		break;
 	case BLK_EH_RESET_TIMER:
+		blk_add_timer(req);
 		blk_clear_rq_complete(req);
-		if (q->mq_ops)
-			blk_mq_add_timer(req);
-		else
-			blk_add_timer(req);
 		break;
 	case BLK_EH_NOT_HANDLED:
 		/*
@@ -169,7 +166,8 @@ void blk_abort_request(struct request *req)
 }
 EXPORT_SYMBOL_GPL(blk_abort_request);
 
-void __blk_add_timer(struct request *req, struct list_head *timeout_list)
+static void __blk_add_timer(struct request *req,
+			    struct list_head *timeout_list)
 {
 	struct request_queue *q = req->q;
 	unsigned long expiry;
@@ -213,6 +211,11 @@ void __blk_add_timer(struct request *req, struct list_head *timeout_list)
  */
 void blk_add_timer(struct request *req)
 {
-	__blk_add_timer(req, &req->q->timeout_list);
+	struct request_queue *q = req->q;
+
+	if (q->mq_ops)
+		__blk_add_timer(req, NULL);
+	else
+		__blk_add_timer(req, &req->q->timeout_list);
 }
 
