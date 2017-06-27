@@ -29,6 +29,9 @@ struct virtio_blk
 
 	mempool_t *pool;
 
+	/* Block layer tags. */
+	struct blk_mq_tag_set tag_set;
+
 	/* Process context for config space updates */
 	struct work_struct config_work;
 
@@ -641,6 +644,8 @@ static int virtblk_probe(struct virtio_device *vdev)
 out_del_disk:
 	del_gendisk(vblk->disk);
 	blk_cleanup_queue(vblk->disk->queue);
+out_free_tags:
+	blk_mq_free_tag_set(&vblk->tag_set);
 out_put_disk:
 	put_disk(vblk->disk);
 out_mempool:
@@ -679,6 +684,8 @@ static void virtblk_remove(struct virtio_device *vdev)
 	spin_unlock_irqrestore(&vblk->lock, flags);
 
 	blk_cleanup_queue(vblk->disk->queue);
+
+	blk_mq_free_tag_set(&vblk->tag_set);
 
 	/* Stop all the virtqueues. */
 	vdev->config->reset(vdev);

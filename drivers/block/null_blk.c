@@ -31,6 +31,7 @@ struct nullb {
 	unsigned int index;
 	struct request_queue *q;
 	struct gendisk *disk;
+	struct blk_mq_tag_set tag_set;
 	struct hrtimer timer;
 	unsigned int queue_depth;
 	spinlock_t lock;
@@ -493,7 +494,7 @@ static int null_add_dev(void)
 
 	nullb = kzalloc_node(sizeof(*nullb), GFP_KERNEL, home_node);
 	if (!nullb)
-		return -ENOMEM;
+		goto out;
 
 	spin_lock_init(&nullb->lock);
 
@@ -567,6 +568,18 @@ err:
 	sprintf(disk->disk_name, "nullb%d", nullb->index);
 	add_disk(disk);
 	return 0;
+
+out_cleanup_blk_queue:
+	blk_cleanup_queue(nullb->q);
+out_cleanup_tags:
+	if (queue_mode == NULL_Q_MQ)
+		blk_mq_free_tag_set(&nullb->tag_set);
+out_cleanup_queues:
+	cleanup_queues(nullb);
+out_free_nullb:
+	kfree(nullb);
+out:
+	return -ENOMEM;
 }
 
 static int __init null_init(void)
