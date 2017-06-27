@@ -65,7 +65,7 @@ static int raise_blk_irq(int cpu, struct request *rq)
 		data->info = rq;
 		data->flags = 0;
 
-		smp_call_function_single_async(cpu, data);
+		__smp_call_function_single(cpu, data, 0);
 		return 0;
 	}
 
@@ -78,8 +78,8 @@ static int raise_blk_irq(int cpu, struct request *rq)
 }
 #endif
 
-static int blk_cpu_notify(struct notifier_block *self,
-				    unsigned long action, void *hcpu)
+static int blk_cpu_notify(struct notifier_block *self, unsigned long action,
+			  void *hcpu)
 {
 	/*
 	 * If a CPU goes away, splice its entries to the current CPU

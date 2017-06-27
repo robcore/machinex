@@ -827,8 +827,7 @@ static void crypt_free_buffer_pages(struct crypt_config *cc, struct bio *clone)
 	unsigned int i;
 	struct bio_vec *bv;
 
-	for (i = 0; i < clone->bi_vcnt; i++) {
-		bv = bio_iovec_idx(clone, i);
+	bio_for_each_segment_all(bv, clone, i) {
 		BUG_ON(!bv->bv_page);
 		mempool_free(bv->bv_page, cc->page_pool);
 		bv->bv_page = NULL;
@@ -1614,7 +1613,7 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 		if (opt_params == 1 && opt_string &&
 		    !strcasecmp(opt_string, "allow_discards"))
-			ti->num_discard_requests = 1;
+			ti->num_discard_bios = 1;
 		else if (opt_params) {
 			ret = -EINVAL;
 			ti->error = "Invalid feature arguments";
@@ -1639,7 +1638,7 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		goto bad;
 	}
 
-	ti->num_flush_requests = 1;
+	ti->num_flush_bios = 1;
 	ti->discard_zeroes_data_unsupported = 1;
 
 	return 0;
@@ -1701,7 +1700,7 @@ static void crypt_status(struct dm_target *ti, status_type_t type,
 		DMEMIT(" %llu %s %llu", (unsigned long long)cc->iv_offset,
 				cc->dev->name, (unsigned long long)cc->start);
 
-		if (ti->num_discard_requests)
+		if (ti->num_discard_bios)
 			DMEMIT(" 1 allow_discards");
 
 		break;

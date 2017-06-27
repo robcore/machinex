@@ -2018,14 +2018,14 @@ static int pool_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	pt->data_dev = data_dev;
 	pt->low_water_blocks = low_water_blocks;
 	pt->pf = pf;
-	ti->num_flush_requests = 1;
+	ti->num_flush_bios = 1;
 	/*
 	 * Only need to enable discards if the pool should pass
 	 * them down to the data device.  The thin device's discard
 	 * processing will cause mappings to be removed from the btree.
 	 */
 	if (pf.discard_enabled && pf.discard_passdown) {
-		ti->num_discard_requests = 1;
+		ti->num_discard_bios = 1;
 		/*
 		 * Setting 'discards_supported' circumvents the normal
 		 * stacking of discard limits (this keeps the pool and
@@ -2588,12 +2588,12 @@ static int thin_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	}
 
 	ti->split_io = tc->pool->sectors_per_block;
-	ti->num_flush_requests = 1;
+	ti->num_flush_bios = 1;
 
 	/* In case the pool supports discards, pass them on. */
 	if (tc->pool->pf.discard_enabled) {
 		ti->discards_supported = 1;
-		ti->num_discard_requests = 1;
+		ti->num_discard_bios = 1;
 		ti->discard_zeroes_data_unsupported = 1;
 	}
 
