@@ -67,7 +67,7 @@ struct tk_read_base {
  *			interval.
  * @xtime_remainder:	Shifted nano seconds left over when rounding
  *			@cycle_interval
- * @raw_interval:	Raw nano seconds accumulated per NTP interval.
+ * @raw_interval:	Shifted raw nano seconds accumulated per NTP interval.
  * @ntp_error:		Difference between accumulated time and NTP time in ntp
  *			shifted nano seconds.
  * @ntp_error_shift:	Shift conversion between clock shifted nano seconds and
@@ -108,7 +108,7 @@ struct timekeeper {
 	u64			cycle_interval;
 	u64			xtime_interval;
 	s64			xtime_remainder;
-	u32			raw_interval;
+	u64			raw_interval;
 	s64			ntp_error;
 	u32			ntp_error_shift;
 	u32			ntp_err_mult;
