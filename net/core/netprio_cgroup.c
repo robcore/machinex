@@ -177,7 +177,7 @@ static int read_priomap(struct cgroup *cont, struct cftype *cft,
 }
 
 static int write_priomap(struct cgroup *cgrp, struct cftype *cft,
-			 const char *buffer)
+			 char *buffer)
 {
 	char *devname = kstrdup(buffer, GFP_KERNEL);
 	int ret = -EINVAL;

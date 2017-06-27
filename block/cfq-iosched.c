@@ -1676,7 +1676,7 @@ static int cfq_print_leaf_weight(struct cgroup *cgrp, struct cftype *cft,
 }
 
 static int __cfqg_set_weight_device(struct cgroup *cgrp, struct cftype *cft,
-				    const char *buf, bool is_leaf_weight)
+				    char *buf, bool is_leaf_weight)
 {
 	struct blkcg *blkcg = cgroup_to_blkcg(cgrp);
 	struct blkg_conf_ctx ctx;
@@ -1705,13 +1705,13 @@ static int __cfqg_set_weight_device(struct cgroup *cgrp, struct cftype *cft,
 }
 
 static int cfqg_set_weight_device(struct cgroup *cgrp, struct cftype *cft,
-				  const char *buf)
+				  char *buf)
 {
 	return __cfqg_set_weight_device(cgrp, cft, buf, false);
 }
 
 static int cfqg_set_leaf_weight_device(struct cgroup *cgrp, struct cftype *cft,
-				       const char *buf)
+				       char *buf)
 {
 	return __cfqg_set_weight_device(cgrp, cft, buf, true);
 }

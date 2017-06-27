@@ -2366,7 +2366,7 @@ static int cgroup_procs_write(struct cgroup_subsys_state *css,
 }
 
 static int cgroup_release_agent_write(struct cgroup_subsys_state *css,
-				      struct cftype *cft, const char *buffer)
+				      struct cftype *cft, char *buffer)
 {
 	BUILD_BUG_ON(sizeof(css->cgroup->root->release_agent_path) < PATH_MAX);
 	if (strlen(buffer) >= PATH_MAX)

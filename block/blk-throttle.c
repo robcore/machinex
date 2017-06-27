@@ -1351,7 +1351,7 @@ static int tg_print_conf_uint(struct cgroup *cgrp, struct cftype *cft,
 	return 0;
 }
 
-static int tg_set_conf(struct cgroup *cgrp, struct cftype *cft, const char *buf,
+static int tg_set_conf(struct cgroup *cgrp, struct cftype *cft, char *buf,
 		       bool is_u64)
 {
 	struct blkcg *blkcg = cgroup_to_blkcg(cgrp);
@@ -1414,13 +1414,13 @@ static int tg_set_conf(struct cgroup *cgrp, struct cftype *cft, const char *buf,
 }
 
 static int tg_set_conf_u64(struct cgroup *cgrp, struct cftype *cft,
-			   const char *buf)
+			   char *buf)
 {
 	return tg_set_conf(cgrp, cft, buf, true);
 }
 
 static int tg_set_conf_uint(struct cgroup *cgrp, struct cftype *cft,
-			    const char *buf)
+			    char *buf)
 {
 	return tg_set_conf(cgrp, cft, buf, false);
 }
