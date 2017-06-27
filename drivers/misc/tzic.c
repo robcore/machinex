@@ -50,7 +50,7 @@ static struct cdev tzic_cdev;
 #define STATE_IC_BAD    1
 #define STATE_IC_GOOD   0
 
-#define LOG printk
+#define LOG pr_info
 
 static int ic = STATE_IC_GOOD;
 static int set_tamper_fuse_cmd(void);
@@ -89,24 +89,24 @@ static long tzic_ioctl(struct file *file, unsigned cmd,
 	int ret = 0;
 
 	ret = get_tamper_fuse_cmd();
-	LOG(KERN_INFO "tamper_fuse before = %x\n", ret);
+	LOG("tamper_fuse before = %x\n", ret);
 
 	switch (cmd) {
 	case TZIC_IOCTL_GET_FUSE_REQ: {
 		ret = get_tamper_fuse_cmd();
-		LOG(KERN_INFO "tamper_fuse value = %x\n", ret);
+		LOG("tamper_fuse value = %x\n", ret);
 
 		break;
 	}
 	case TZIC_IOCTL_SET_FUSE_REQ: {
-		LOG(KERN_INFO "ioctl set_fuse\n");
+		LOG("ioctl set_fuse\n");
 		mutex_lock(&tzic_mutex);
 		ret = set_tamper_fuse_cmd();
 		mutex_unlock(&tzic_mutex);
 		if (ret)
-			LOG(KERN_INFO "failed tzic_set_fuse_cmd: %d\n", ret);
+			LOG("failed tzic_set_fuse_cmd: %d\n", ret);
 		ret = get_tamper_fuse_cmd();
-		LOG(KERN_INFO "tamper_fuse after = %x\n", ret);
+		LOG("tamper_fuse after = %x\n", ret);
 		break;
 	}
 	default:
@@ -126,25 +126,25 @@ static int __init tzic_init(void)
 	int rc;
 	struct device *class_dev;
 
-	LOG(KERN_INFO "init tzic");
+	LOG("init tzic");
 
 	rc = alloc_chrdev_region(&tzic_device_no, 0, 1, TZIC_DEV);
 	if (rc < 0) {
-		LOG(KERN_INFO "alloc_chrdev_region failed %d", rc);
+		LOG("alloc_chrdev_region failed %d", rc);
 		return rc;
 	}
 
 	driver_class = class_create(THIS_MODULE, TZIC_DEV);
 	if (IS_ERR(driver_class)) {
 		rc = -ENOMEM;
-		LOG(KERN_INFO "class_create failed %d", rc);
+		LOG("class_create failed %d", rc);
 		goto unregister_chrdev_region;
 	}
 
 	class_dev = device_create(driver_class, NULL, tzic_device_no, NULL,
 			TZIC_DEV);
 	if (!class_dev) {
-		LOG(KERN_INFO "class_device_create failed %d", rc);
+		LOG("class_device_create failed %d", rc);
 		rc = -ENOMEM;
 		goto class_destroy;
 	}
@@ -154,7 +154,7 @@ static int __init tzic_init(void)
 
 	rc = cdev_add(&tzic_cdev, MKDEV(MAJOR(tzic_device_no), 0), 1);
 	if (rc < 0) {
-		LOG(KERN_INFO "cdev_add failed %d", rc);
+		LOG("cdev_add failed %d", rc);
 		goto class_device_destroy;
 	}
 
@@ -171,7 +171,7 @@ unregister_chrdev_region:
 
 static void __exit tzic_exit(void)
 {
-	LOG(KERN_INFO "exit tzic");
+	LOG("exit tzic");
 	device_destroy(driver_class, tzic_device_no);
 	class_destroy(driver_class);
 	unregister_chrdev_region(tzic_device_no, 1);

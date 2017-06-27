@@ -43,6 +43,7 @@ static const struct file_operations cmdline_proc_fops = {
 static int __init proc_cmdline_init(void)
 {
 	strcpy(new_command_line, saved_command_line);
+	remove_unwanted_flags(saved_command_line, "androidboot.warranty_bit=1");
 	proc_create("cmdline", 0, NULL, &cmdline_proc_fops);
 	return 0;
 }
