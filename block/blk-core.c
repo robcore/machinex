@@ -2998,8 +2998,7 @@ int kblockd_schedule_work_on(int cpu, struct work_struct *work)
 }
 EXPORT_SYMBOL(kblockd_schedule_work_on);
 
-int kblockd_schedule_delayed_work(struct request_queue *q,
-			struct delayed_work *dwork, unsigned long delay)
+int kblockd_schedule_delayed_work(struct delayed_work *dwork, unsigned long delay)
 {
 	return queue_delayed_work(kblockd_workqueue, dwork, delay);
 }

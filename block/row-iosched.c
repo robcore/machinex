@@ -275,8 +275,7 @@ static enum hrtimer_restart row_idle_hrtimer_fn(struct hrtimer *hr_timer)
 	if (!rd->nr_reqs[READ] && !rd->nr_reqs[WRITE])
 		row_log(rd->dispatch_queue, "No requests in scheduler");
 	else
-		kblockd_schedule_work(rd->dispatch_queue,
-			&read_data->idle_work);
+		kblockd_schedule_work(&read_data->idle_work);
 	return HRTIMER_NORESTART;
 }
 
