@@ -273,9 +273,57 @@ void bio_init(struct bio *bio)
 {
 	memset(bio, 0, sizeof(*bio));
 	bio->bi_flags = 1 << BIO_UPTODATE;
+	atomic_set(&bio->bi_remaining, 1);
 	atomic_set(&bio->bi_cnt, 1);
 }
 EXPORT_SYMBOL(bio_init);
+
+/**
+ * bio_reset - reinitialize a bio
+ * @bio:	bio to reset
+ *
+ * Description:
+ *   After calling bio_reset(), @bio will be in the same state as a freshly
+ *   allocated bio returned bio bio_alloc_bioset() - the only fields that are
+ *   preserved are the ones that are initialized by bio_alloc_bioset(). See
+ *   comment in struct bio.
+ */
+void bio_reset(struct bio *bio)
+{
+	unsigned long flags = bio->bi_flags & (~0UL << BIO_RESET_BITS);
+
+	__bio_free(bio);
+
+	memset(bio, 0, BIO_RESET_BYTES);
+	bio->bi_flags = flags|(1 << BIO_UPTODATE);
+	atomic_set(&bio->bi_remaining, 1);
+}
+EXPORT_SYMBOL(bio_reset);
+
+static void bio_chain_endio(struct bio *bio, int error)
+{
+	bio_endio(bio->bi_private, error);
+	bio_put(bio);
+}
+
+/**
+ * bio_chain - chain bio completions
+ *
+ * The caller won't have a bi_end_io called when @bio completes - instead,
+ * @parent's bi_end_io won't be called until both @parent and @bio have
+ * completed; the chained bio will also be freed when it completes.
+ *
+ * The caller must not set bi_private or bi_end_io in @bio.
+ */
+void bio_chain(struct bio *bio, struct bio *parent)
+{
+	BUG_ON(bio->bi_private || bio->bi_end_io);
+
+	bio->bi_private = parent;
+	bio->bi_end_io	= bio_chain_endio;
+	atomic_inc(&parent->bi_remaining);
+}
+EXPORT_SYMBOL(bio_chain);
 
 /**
  * bio_alloc_bioset - allocate a bio for I/O
@@ -284,15 +332,39 @@ EXPORT_SYMBOL(bio_init);
  * @bs:		the bio_set to allocate from.
  *
  * Description:
- *   bio_alloc_bioset will try its own mempool to satisfy the allocation.
- *   If %__GFP_WAIT is set then we will block on the internal pool waiting
- *   for a &struct bio to become free.
- **/
+ *   If @bs is NULL, uses kmalloc() to allocate the bio; else the allocation is
+ *   backed by the @bs's mempool.
+ *
+ *   When @bs is not NULL, if %__GFP_WAIT is set then bio_alloc will always be
+ *   able to allocate a bio. This is due to the mempool guarantees. To make this
+ *   work, callers must never allocate more than 1 bio at a time from this pool.
+ *   Callers that need to allocate more than 1 bio must always submit the
+ *   previously allocated bio for IO before attempting to allocate a new one.
+ *   Failure to do so can cause deadlocks under memory pressure.
+ *
+ *   Note that when running under generic_make_request() (i.e. any block
+ *   driver), bios are not submitted until after you return - see the code in
+ *   generic_make_request() that converts recursion into iteration, to prevent
+ *   stack overflows.
+ *
+ *   This would normally mean allocating multiple bios under
+ *   generic_make_request() would be susceptible to deadlocks, but we have
+ *   deadlock avoidance code that resubmits any blocked bios from a rescuer
+ *   thread.
+ *
+ *   However, we do not guarantee forward progress for allocations from other
+ *   mempools. Doing multiple allocations from the same mempool under
+ *   generic_make_request() should be avoided - instead, use bio_set's front_pad
+ *   for per bio allocations.
+ *
+ *   RETURNS:
+ *   Pointer to new bio on success, NULL on failure.
+ */
 struct bio *bio_alloc_bioset(gfp_t gfp_mask, int nr_iovecs, struct bio_set *bs)
 {
+	gfp_t saved_gfp = gfp_mask;
 	unsigned front_pad;
 	unsigned inline_vecs;
-	gfp_t saved_gfp = gfp_mask;
 	unsigned long idx = BIO_POOL_NONE;
 	struct bio_vec *bvl = NULL;
 	struct bio *bio;
@@ -312,6 +384,7 @@ struct bio *bio_alloc_bioset(gfp_t gfp_mask, int nr_iovecs, struct bio_set *bs)
 		front_pad = bs->front_pad;
 		inline_vecs = BIO_INLINE_VECS;
 	}
+
 	if (unlikely(!p))
 		return NULL;
 
@@ -692,6 +765,42 @@ int bio_add_page(struct bio *bio, struct page *page, unsigned int len,
 }
 EXPORT_SYMBOL(bio_add_page);
 
+struct submit_bio_ret {
+	struct completion event;
+	int error;
+};
+
+static void submit_bio_wait_endio(struct bio *bio, int error)
+{
+	struct submit_bio_ret *ret = bio->bi_private;
+
+	ret->error = error;
+	complete(&ret->event);
+}
+
+/**
+ * submit_bio_wait - submit a bio, and wait until it completes
+ * @rw: whether to %READ or %WRITE, or maybe to %READA (read ahead)
+ * @bio: The &struct bio which describes the I/O
+ *
+ * Simple wrapper around submit_bio(). Returns 0 on success, or the error from
+ * bio_endio() on failure.
+ */
+int submit_bio_wait(int rw, struct bio *bio)
+{
+	struct submit_bio_ret ret;
+
+	rw |= REQ_SYNC;
+	init_completion(&ret.event);
+	bio->bi_private = &ret;
+	bio->bi_end_io = submit_bio_wait_endio;
+	submit_bio(rw, bio);
+	wait_for_completion(&ret.event);
+
+	return ret.error;
+}
+EXPORT_SYMBOL(submit_bio_wait);
+
 /**
  * bio_advance - increment/complete a bio by some number of bytes
  * @bio:	bio to advance
@@ -849,42 +958,6 @@ static int __bio_copy_iov(struct bio *bio, struct sg_iovec *iov, int iov_count,
 
 	return ret;
 }
-
-struct submit_bio_ret {
-	struct completion event;
-	int error;
-};
-
-static void submit_bio_wait_endio(struct bio *bio, int error)
-{
-	struct submit_bio_ret *ret = bio->bi_private;
-
-	ret->error = error;
-	complete(&ret->event);
-}
-
-/**
- * submit_bio_wait - submit a bio, and wait until it completes
- * @rw: whether to %READ or %WRITE, or maybe to %READA (read ahead)
- * @bio: The &struct bio which describes the I/O
- *
- * Simple wrapper around submit_bio(). Returns 0 on success, or the error from
- * bio_endio() on failure.
- */
-int submit_bio_wait(int rw, struct bio *bio)
-{
-	struct submit_bio_ret ret;
-
-	rw |= REQ_SYNC;
-	init_completion(&ret.event);
-	bio->bi_private = &ret;
-	bio->bi_end_io = submit_bio_wait_endio;
-	submit_bio(rw, bio);
-	wait_for_completion(&ret.event);
-
-	return ret.error;
-}
-EXPORT_SYMBOL(submit_bio_wait);
 
 /**
  *	bio_uncopy_user	-	finish previously mapped bio
@@ -1589,15 +1662,52 @@ EXPORT_SYMBOL(bio_flush_dcache_pages);
  **/
 void bio_endio(struct bio *bio, int error)
 {
-	if (error)
-		clear_bit(BIO_UPTODATE, &bio->bi_flags);
-	else if (!test_bit(BIO_UPTODATE, &bio->bi_flags))
-		error = -EIO;
+	while (bio) {
+		BUG_ON(atomic_read(&bio->bi_remaining) <= 0);
 
-	if (bio->bi_end_io)
-		bio->bi_end_io(bio, error);
+		if (error)
+			clear_bit(BIO_UPTODATE, &bio->bi_flags);
+		else if (!test_bit(BIO_UPTODATE, &bio->bi_flags))
+			error = -EIO;
+
+		if (!atomic_dec_and_test(&bio->bi_remaining))
+			return;
+
+		/*
+		 * Need to have a real endio function for chained bios,
+		 * otherwise various corner cases will break (like stacking
+		 * block devices that save/restore bi_end_io) - however, we want
+		 * to avoid unbounded recursion and blowing the stack. Tail call
+		 * optimization would handle this, but compiling with frame
+		 * pointers also disables gcc's sibling call optimization.
+		 */
+		if (bio->bi_end_io == bio_chain_endio) {
+			struct bio *parent = bio->bi_private;
+			bio_put(bio);
+			bio = parent;
+		} else {
+			if (bio->bi_end_io)
+				bio->bi_end_io(bio, error);
+			bio = NULL;
+		}
+	}
 }
 EXPORT_SYMBOL(bio_endio);
+
+/**
+ * bio_endio_nodec - end I/O on a bio, without decrementing bi_remaining
+ * @bio:	bio
+ * @error:	error, if any
+ *
+ * For code that has saved and restored bi_end_io; thing hard before using this
+ * function, probably you should've cloned the entire bio.
+ **/
+void bio_endio_nodec(struct bio *bio, int error)
+{
+	atomic_inc(&bio->bi_remaining);
+	bio_endio(bio, error);
+}
+EXPORT_SYMBOL(bio_endio_nodec);
 
 void bio_pair_release(struct bio_pair *bp)
 {
