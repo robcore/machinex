@@ -914,7 +914,6 @@ static int __init parse_tag_cmdline(const struct tag *tag)
 #else
 	strlcpy(default_command_line, tag->u.cmdline.cmdline,
 		COMMAND_LINE_SIZE);
-	replace_str(default_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 #endif
 	return 0;
 }
@@ -1080,8 +1079,16 @@ static struct machine_desc * __init setup_machine_tags(unsigned int nr)
 		convert_to_tag_list(tags);
 #endif
 
-	if (tags->hdr.tag != ATAG_CORE)
+	if (tags->hdr.tag != ATAG_CORE) {
+#if defined(CONFIG_OF)
+		/*
+		 * If CONFIG_OF is set, then assume this is a reasonably
+		 * modern system that should pass boot parameters
+		 */
+		early_print("Warning: Neither atags nor dtb found\n");
+#endif
 		tags = (struct tag *)&init_tags;
+	}
 
 	if (mdesc->fixup)
 		mdesc->fixup(tags, &from, &meminfo);
@@ -1095,7 +1102,6 @@ static struct machine_desc * __init setup_machine_tags(unsigned int nr)
 
 	/* parse_early_param needs a boot_command_line */
 	strlcpy(boot_command_line, from, COMMAND_LINE_SIZE);
-	replace_str(boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 
 	return mdesc;
 }

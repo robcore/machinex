@@ -397,17 +397,16 @@ static inline void smp_prepare_cpus(unsigned int maxcpus) { }
  */
 static void __init setup_command_line(char *command_line)
 {
-	saved_command_line = alloc_bootmem(strlen(boot_command_line)+1);
-	static_command_line = alloc_bootmem(strlen(command_line)+1);
 	replace_str(boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
 	replace_str(boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
-	strcpy (saved_command_line, boot_command_line);
-	replace_str(saved_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	replace_str(command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
 	replace_str(command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
-	strcpy (static_command_line, command_line);
-	replace_str(static_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 
+	saved_command_line = alloc_bootmem(strlen(boot_command_line)+1);
+	static_command_line = alloc_bootmem(strlen(command_line)+1);
+
+	strcpy (saved_command_line, boot_command_line);
+	strcpy (static_command_line, command_line);
 }
 
 /*
@@ -494,7 +493,6 @@ void __init parse_early_param(void)
 
 	/* All fall through to do_early_param. */
 	strlcpy(tmp_cmdline, boot_command_line, COMMAND_LINE_SIZE);
-	replace_str(tmp_cmdline, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	parse_early_options(tmp_cmdline);
 	done = 1;
 }
@@ -552,7 +550,6 @@ asmlinkage __visible void __init start_kernel(void)
 	boot_cpu_init();
 	page_address_init();
 	pr_notice("%s", linux_banner);
-	replace_str(command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	setup_arch(&command_line);
 	/*
 	 * Set up the the initial canary ASAP:
@@ -560,6 +557,7 @@ asmlinkage __visible void __init start_kernel(void)
 
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
+
 	setup_command_line(command_line);
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
@@ -826,7 +824,7 @@ static void __init do_initcall_level(int level)
 	initcall_t *fn;
 
 	strcpy(static_command_line, saved_command_line);
-	replace_str(static_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+	remove_unwanted_flags(static_command_line, "androidboot.warranty_bit=1")
 	parse_args(initcall_level_names[level],
 		   static_command_line, __start___param,
 		   __stop___param - __start___param,
