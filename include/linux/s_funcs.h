@@ -30,15 +30,10 @@ static void remove_flag(char *cmd, const char *flag)
 	while ((start_addr = strstr(cmd, flag))) {
 		end_addr = strchr(start_addr, ' ');
 		if (end_addr)
-			memmove(start_addr, end_addr, strlen(end_addr));
+			memmove(start_addr, end_addr + 1, strlen(end_addr));
 		else
 			*(start_addr - 1) = '\0';
 	}
-}
-
-static void remove_unwanted_flags(char *cmd, char *unwanted)
-{
-	remove_flag(cmd, unwanted);
 }
 
 #endif
