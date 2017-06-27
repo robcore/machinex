@@ -518,7 +518,8 @@ static void __init mm_init(void)
 
 asmlinkage __visible void __init start_kernel(void)
 {
-	char * command_line, *after_dashes;
+	char *command_line, *after_dashes;
+	char *bootchg_old, *bootchg_new, *warranty_old, *warranty_new;
 	extern const struct kernel_param __start___param[], __stop___param[];
 
 	/*
@@ -550,8 +551,9 @@ asmlinkage __visible void __init start_kernel(void)
 
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
-	strreplace((char*)&boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
-	strreplace((char*)&boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+	
+	replace_str((char*)&boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+	replace_str((char*)&boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	setup_command_line(command_line);
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
