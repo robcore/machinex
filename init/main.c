@@ -397,9 +397,13 @@ static inline void smp_prepare_cpus(unsigned int maxcpus) { }
  */
 static void __init setup_command_line(char *command_line)
 {
-	saved_command_line = alloc_bootmem(strlen (boot_command_line)+1);
-	static_command_line = alloc_bootmem(strlen (command_line)+1);
+	saved_command_line = alloc_bootmem(strlen(boot_command_line)+1);
+	static_command_line = alloc_bootmem(strlen(command_line)+1);
+	replace_str((char*)&boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+	replace_str((char*)&boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	strcpy (saved_command_line, boot_command_line);
+	replace_str((char*)&command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+	replace_str((char*)&command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
 	strcpy (static_command_line, command_line);
 }
 
@@ -551,9 +555,7 @@ asmlinkage __visible void __init start_kernel(void)
 
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
-	
-	replace_str((char*)&boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
-	replace_str((char*)&boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+
 	setup_command_line(command_line);
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
