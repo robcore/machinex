@@ -32,7 +32,6 @@ struct tk_read_base {
 	/* Current clocksource used for timekeeping. */
 	struct clocksource	*clock;
 	/* Read function of @clock */
-	u64			(*read)(struct clocksource *cs);
 	/* Bitmask for two's complement subtraction of non 64bit counters */
 	u64			mask;
 	/* Last cycle value */
