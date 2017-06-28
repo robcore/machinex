@@ -544,7 +544,6 @@ static void reduce_input_current(struct max77693_charger_data *charger, int cur)
 	if(charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
 		/* schedule softreg recovery wq */
 		wake_lock(&charger->recovery_wake_lock);
-		wake_lock(&charger->recovery_wake_lock);
 		mod_delayed_work(charger->wqueue, &charger->recovery_work,
 				msecs_to_jiffies(RECOVERY_DELAY));
 	}
