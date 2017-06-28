@@ -184,3 +184,4 @@ void percpu_ref_kill_and_confirm(struct percpu_ref *ref,
 
 	call_rcu_sched(&ref->rcu, percpu_ref_kill_rcu);
 }
+EXPORT_SYMBOL_GPL(percpu_ref_kill_and_confirm);

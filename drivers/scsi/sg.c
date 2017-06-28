@@ -1667,7 +1667,7 @@ static int sg_start_req(Sg_request *srp, unsigned char *cmd)
 	 */
 	rq = blk_get_request(q, rw, GFP_KERNEL);
 	if (IS_ERR(rq)) {
- 		kfree(long_cmdp);
+ 		kfree(cmd);
 		return PTR_ERR(rq);
 	}
 
