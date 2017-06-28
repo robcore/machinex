@@ -190,7 +190,6 @@ enum rq_flag_bits {
 	__REQ_SANITIZE,		/* sanitize */
 	__REQ_URGENT,		/* urgent request */
 	__REQ_PM,		/* runtime pm request */
-	__REQ_END,		/* last of chain of requests */
 	__REQ_HASHED,		/* on IO scheduler merge hash */
 	__REQ_MQ_INFLIGHT,	/* track inflight for MQ */
 	__REQ_NR_BITS,		/* stops here */
@@ -246,7 +245,6 @@ enum rq_flag_bits {
 #define REQ_SECURE		(1ULL << __REQ_SECURE)
 #define REQ_KERNEL		(1ULL << __REQ_KERNEL)
 #define REQ_PM			(1ULL << __REQ_PM)
-#define REQ_END			(1ULL << __REQ_END)
 #define REQ_HASHED		(1ULL << __REQ_HASHED)
 #define REQ_MQ_INFLIGHT		(1ULL << __REQ_MQ_INFLIGHT)
 
