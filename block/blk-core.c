@@ -2201,7 +2201,8 @@ void blk_account_io_done(struct request *req)
 static struct request *blk_pm_peek_request(struct request_queue *q,
 					   struct request *rq)
 {
-	if (q->dev && q->rpm_status != RPM_ACTIVE && !(rq->cmd_flags & REQ_PM))
+	if (q->dev && (q->rpm_status == RPM_SUSPENDED ||
+	    (q->rpm_status != RPM_ACTIVE && !(rq->cmd_flags & REQ_PM))))
 		return NULL;
 	else
 		return rq;
@@ -3386,7 +3387,8 @@ int __init blk_dev_init(void)
 
 	/* used for unplugging and affects IO latency/throughput - HIGHPRI */
 	kblockd_workqueue = alloc_workqueue("kblockd",
-					    WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
+					    WQ_MEM_RECLAIM | WQ_HIGHPRI |
+					    WQ_POWER_EFFICIENT, 0);
 	if (!kblockd_workqueue)
 		panic("Failed to create kblockd\n");
 
@@ -3398,4 +3400,3 @@ int __init blk_dev_init(void)
 
 	return 0;
 }
-
