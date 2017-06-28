@@ -102,7 +102,6 @@ struct request {
 	};
 	union {
 		struct call_single_data csd;
-		struct work_struct requeue_work;
 		unsigned long fifo_time;
 	};
 
@@ -467,6 +466,10 @@ struct request_queue {
 	struct list_head	flush_data_in_flight;
 	struct request		*flush_rq;
 	spinlock_t		mq_flush_lock;
+
+	struct list_head	requeue_list;
+	spinlock_t		requeue_lock;
+	struct work_struct	requeue_work;
 
 	struct mutex		sysfs_lock;
 
