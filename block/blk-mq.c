@@ -78,32 +78,34 @@ static void blk_mq_hctx_clear_pending(struct blk_mq_hw_ctx *hctx,
 
 static int blk_mq_queue_enter(struct request_queue *q)
 {
-	while (true) {
-		int ret;
+	int ret;
 
-		if (percpu_ref_tryget_live(&q->mq_usage_counter))
-			return 0;
+	__percpu_counter_add(&q->mq_usage_counter, 1, 1000000);
+	smp_mb();
 
-		ret = wait_event_interruptible(q->mq_freeze_wq,
-				!q->mq_freeze_depth || blk_queue_dying(q));
-		if (blk_queue_dying(q))
-			return -ENODEV;
-		if (ret)
-			return ret;
-	}
+	/* we have problems freezing the queue if it's initializing */
+	if (!q->mq_freeze_depth)
+		return 0;
+
+	__percpu_counter_add(&q->mq_usage_counter, -1, 1000000);
+
+	spin_lock_irq(q->queue_lock);
+	ret = wait_event_interruptible_lock_irq(q->mq_freeze_wq,
+		!q->mq_freeze_depth || blk_queue_dying(q),
+		*q->queue_lock);
+	/* inc usage with lock hold to avoid freeze_queue runs here */
+	if (!ret && !blk_queue_dying(q))
+		__percpu_counter_add(&q->mq_usage_counter, 1, 1000000);
+	else if (blk_queue_dying(q))
+		ret = -ENODEV;
+	spin_unlock_irq(q->queue_lock);
+
+	return ret;
 }
 
 static void blk_mq_queue_exit(struct request_queue *q)
 {
-	percpu_ref_put(&q->mq_usage_counter);
-}
-
-static void blk_mq_usage_counter_release(struct percpu_ref *ref)
-{
-	struct request_queue *q =
-		container_of(ref, struct request_queue, mq_usage_counter);
-
-	wake_up_all(&q->mq_freeze_wq);
+	__percpu_counter_add(&q->mq_usage_counter, -1, 1000000);
 }
 
 /*
@@ -116,9 +118,18 @@ void blk_mq_freeze_queue(struct request_queue *q)
 	q->mq_freeze_depth++;
 	spin_unlock_irq(q->queue_lock);
 
-	percpu_ref_kill(&q->mq_usage_counter);
-	blk_mq_run_queues(q, false);
-	wait_event(q->mq_freeze_wq, percpu_ref_is_zero(&q->mq_usage_counter));
+	while (true) {
+		s64 count;
+
+		spin_lock_irq(q->queue_lock);
+		count = percpu_counter_sum(&q->mq_usage_counter);
+		spin_unlock_irq(q->queue_lock);
+
+		if (count == 0)
+			break;
+		blk_mq_start_hw_queues(q);
+		msleep(10);
+	}
 }
 
 static void blk_mq_unfreeze_queue(struct request_queue *q)
@@ -129,10 +140,8 @@ static void blk_mq_unfreeze_queue(struct request_queue *q)
 	wake = !--q->mq_freeze_depth;
 	WARN_ON_ONCE(q->mq_freeze_depth < 0);
 	spin_unlock_irq(q->queue_lock);
-	if (wake) {
-		percpu_ref_reinit(&q->mq_usage_counter);
+	if (wake)
 		wake_up_all(&q->mq_freeze_wq);
-	}
 }
 
 bool blk_mq_can_queue(struct blk_mq_hw_ctx *hctx)
@@ -1776,7 +1785,7 @@ struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *set)
 	if (!q)
 		goto err_hctxs;
 
-	if (percpu_ref_init(&q->mq_usage_counter, blk_mq_usage_counter_release))
+	if (percpu_counter_init(&q->mq_usage_counter, 0))
 		goto err_map;
 
 	setup_timer(&q->timeout, blk_mq_rq_timer, (unsigned long) q);
@@ -1869,7 +1878,7 @@ void blk_mq_free_queue(struct request_queue *q)
 	blk_mq_exit_hw_queues(q, set, set->nr_hw_queues);
 	blk_mq_free_hw_queues(q, set);
 
-	percpu_ref_exit(&q->mq_usage_counter);
+	percpu_counter_destroy(&q->mq_usage_counter);
 
 	free_percpu(q->queue_ctx);
 	kfree(q->queue_hw_ctx);
@@ -2028,7 +2037,8 @@ static int __init blk_mq_init(void)
 {
 	blk_mq_cpu_init();
 
-	hotcpu_notifier(blk_mq_queue_reinit_notify, 0);
+	/* Must be called after percpu_counter_hotcpu_callback() */
+	hotcpu_notifier(blk_mq_queue_reinit_notify, -10);
 
 	return 0;
 }
