@@ -603,10 +603,10 @@ static sec_bat_adc_region_t cable_adc_value_table[] = {
 };
 
 static int polling_time_table[] = {
-	20,	/* BASIC */
-	40,	/* CHARGING */
-	40,	/* DISCHARGING */
-	40,	/* NOT_CHARGING */
+	15,	/* BASIC */
+	30,	/* CHARGING */
+	30,	/* DISCHARGING */
+	30,	/* NOT_CHARGING */
 #if defined(CONFIG_MACH_JACTIVE_EUR)
 	5 * 60,	/* SLEEP */
 #else
