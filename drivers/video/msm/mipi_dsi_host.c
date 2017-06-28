@@ -2255,8 +2255,6 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 	isr = MIPI_INP(MIPI_DSI_BASE + 0x010c);/* DSI_INTR_CTRL */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x010c, isr);
 
-	pr_debug("%s: isr=%x\n", __func__, (int)isr);
-
 #ifdef CONFIG_FB_MSM_MDP40
 	mdp4_stat.intr_dsi++;
 #endif
