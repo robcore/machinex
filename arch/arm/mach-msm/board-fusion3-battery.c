@@ -708,7 +708,7 @@ sec_battery_platform_data_t sec_battery_pdata = {
 
 	.pmic_name = SEC_BATTERY_PMIC_NAME,
 
-	.adc_check_count = 5,
+	.adc_check_count = 6,
 	.adc_type = {
 		SEC_BATTERY_ADC_TYPE_NONE,	/* CABLE_CHECK */
 		SEC_BATTERY_ADC_TYPE_AP,	/* BAT_CHECK */
