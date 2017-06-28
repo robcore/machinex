@@ -337,6 +337,9 @@ static inline struct bio *bio_next_split(struct bio *bio, int sectors,
 	return bio_split(bio, sectors, gfp, bs);
 }
 
++extern void bio_trim(struct bio *bio, int offset, int size);
+
+
 extern struct bio_set *bioset_create(unsigned int, unsigned int);
 extern void bioset_free(struct bio_set *);
 extern mempool_t *biovec_create_pool(struct bio_set *bs, int pool_entries);
