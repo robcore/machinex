@@ -302,14 +302,15 @@ inline void __blk_run_queue_uncond(struct request_queue *q)
  */
 void __blk_run_queue(struct request_queue *q)
 {
+	struct blk_flush_queue *fq = blk_get_flush_queue(q, NULL);
 	if (unlikely(blk_queue_stopped(q)))
 		return;
 
-	if (!q->notified_urgent &&
+	if (fq && !q->notified_urgent &&
 		q->elevator->type->ops.elevator_is_urgent_fn &&
 		q->urgent_request_fn &&
 		q->elevator->type->ops.elevator_is_urgent_fn(q) &&
-		list_empty(&q->flush_data_in_flight)) {
+		list_empty(&fq->flush_data_in_flight)) {
 		q->notified_urgent = true;
 		q->urgent_request_fn(q);
 	} else
