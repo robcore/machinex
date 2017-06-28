@@ -139,7 +139,7 @@ extern bool ap_fw_loaded;
 #endif /* CUSTOMER_HW4 */
 
 #ifdef ENABLE_ADAPTIVE_SCHED
-#define DEFAULT_CPUFREQ_THRESH		1026000	/* threshold frequency : 1000000 = 1GHz */
+#define DEFAULT_CPUFREQ_THRESH		1000000	/* threshold frequency : 1000000 = 1GHz */
 #ifndef CUSTOM_CPUFREQ_THRESH
 #define CUSTOM_CPUFREQ_THRESH	DEFAULT_CPUFREQ_THRESH
 #endif /* CUSTOM_CPUFREQ_THRESH */
@@ -6693,7 +6693,7 @@ void dhd_wait_for_event(dhd_pub_t *dhd, bool *lockvar)
 	struct dhd_info *dhdinfo =  dhd->info;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
-	int timeout = msecs_to_jiffies(IOCTL_RESP_TIMEOUT);
+	int timeout = msecs_to_jiffies(2000);
 #else
 	int timeout = (IOCTL_RESP_TIMEOUT / 1000) * HZ;
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */

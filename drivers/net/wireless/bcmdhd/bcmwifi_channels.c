@@ -341,7 +341,7 @@ wf_chspec_aton(const char *a)
 	/* if we are looking at a 'g', then the first number was a band */
 	c = tolower((int)a[0]);
 	if (c == 'g') {
-		a ++; /* consume the char */
+		a++; /* consume the char */
 
 		/* band must be "2" or "5" */
 		if (num == 2)
