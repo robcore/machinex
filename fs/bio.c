@@ -304,6 +304,27 @@ static void bio_chain_endio(struct bio *bio, int error)
 	bio_put(bio);
 }
 
+/**
+ * bio_chain - chain bio completions
+ * @bio: the target bio
+ * @parent: the @bio's parent bio
+ *
+ * The caller won't have a bi_end_io called when @bio completes - instead,
+ * @parent's bi_end_io won't be called until both @parent and @bio have
+ * completed; the chained bio will also be freed when it completes.
+ *
+ * The caller must not set bi_private or bi_end_io in @bio.
+ */
+void bio_chain(struct bio *bio, struct bio *parent)
+{
+	BUG_ON(bio->bi_private || bio->bi_end_io);
+
+	bio->bi_private = parent;
+	bio->bi_end_io	= bio_chain_endio;
+	atomic_inc(&parent->bi_remaining);
+}
+EXPORT_SYMBOL(bio_chain);
+
 static void bio_alloc_rescue(struct work_struct *work)
 {
 	struct bio_set *bs = container_of(work, struct bio_set, rescue_work);
@@ -351,27 +372,6 @@ static void punt_bios_to_rescuer(struct bio_set *bs)
 
 	queue_work(bs->rescue_workqueue, &bs->rescue_work);
 }
-
-/**
- * bio_chain - chain bio completions
- * @bio: the target bio
- * @parent: the @bio's parent bio
- *
- * The caller won't have a bi_end_io called when @bio completes - instead,
- * @parent's bi_end_io won't be called until both @parent and @bio have
- * completed; the chained bio will also be freed when it completes.
- *
- * The caller must not set bi_private or bi_end_io in @bio.
- */
-void bio_chain(struct bio *bio, struct bio *parent)
-{
-	BUG_ON(bio->bi_private || bio->bi_end_io);
-
-	bio->bi_private = parent;
-	bio->bi_end_io	= bio_chain_endio;
-	atomic_inc(&parent->bi_remaining);
-}
-EXPORT_SYMBOL(bio_chain);
 
 /**
  * bio_alloc_bioset - allocate a bio for I/O
