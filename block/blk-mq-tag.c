@@ -221,10 +221,8 @@ static struct bt_wait_state *bt_wait_ptr(struct blk_mq_bitmap_tags *bt,
 	return bs;
 }
 
-static int bt_get(struct blk_mq_alloc_data *data,
-		struct blk_mq_bitmap_tags *bt,
-		struct blk_mq_hw_ctx *hctx,
-		unsigned int *last_tag)
+static int bt_get(struct blk_mq_bitmap_tags *bt, struct blk_mq_hw_ctx *hctx,
+		  unsigned int *last_tag, gfp_t gfp)
 {
 	struct bt_wait_state *bs;
 	DEFINE_WAIT(wait);
@@ -234,7 +232,7 @@ static int bt_get(struct blk_mq_alloc_data *data,
 	if (tag != -1)
 		return tag;
 
-	if (!(data->gfp & __GFP_WAIT))
+	if (!(gfp & __GFP_WAIT))
 		return -1;
 
 	bs = bt_wait_ptr(bt, hctx);
@@ -251,62 +249,50 @@ static int bt_get(struct blk_mq_alloc_data *data,
 		if (was_empty)
 			atomic_set(&bs->wait_cnt, bt->wake_cnt);
 
-		blk_mq_put_ctx(data->ctx);
-
 		io_schedule();
-
-		data->ctx = blk_mq_get_ctx(data->q);
-		data->hctx = data->q->mq_ops->map_queue(data->q,
-				data->ctx->cpu);
-		if (data->reserved) {
-			bt = &data->hctx->tags->breserved_tags;
-		} else {
-			last_tag = &data->ctx->last_tag;
-			hctx = data->hctx;
-			bt = &hctx->tags->bitmap_tags;
-		}
-		finish_wait(&bs->wait, &wait);
-		bs = bt_wait_ptr(bt, hctx);
 	} while (1);
 
 	finish_wait(&bs->wait, &wait);
 	return tag;
 }
 
-static unsigned int __blk_mq_get_tag(struct blk_mq_alloc_data *data)
+static unsigned int __blk_mq_get_tag(struct blk_mq_tags *tags,
+				     struct blk_mq_hw_ctx *hctx,
+				     unsigned int *last_tag, gfp_t gfp)
 {
 	int tag;
 
-	tag = bt_get(data, &data->hctx->tags->bitmap_tags, data->hctx,
-			&data->ctx->last_tag);
+	tag = bt_get(&tags->bitmap_tags, hctx, last_tag, gfp);
 	if (tag >= 0)
-		return tag + data->hctx->tags->nr_reserved_tags;
+		return tag + tags->nr_reserved_tags;
 
 	return BLK_MQ_TAG_FAIL;
 }
 
-static unsigned int __blk_mq_get_reserved_tag(struct blk_mq_alloc_data *data)
+static unsigned int __blk_mq_get_reserved_tag(struct blk_mq_tags *tags,
+					      gfp_t gfp)
 {
 	int tag, zero = 0;
 
-	if (unlikely(!data->hctx->tags->nr_reserved_tags)) {
+	if (unlikely(!tags->nr_reserved_tags)) {
 		WARN_ON_ONCE(1);
 		return BLK_MQ_TAG_FAIL;
 	}
 
-	tag = bt_get(data, &data->hctx->tags->breserved_tags, NULL, &zero);
+	tag = bt_get(&tags->breserved_tags, NULL, &zero, gfp);
 	if (tag < 0)
 		return BLK_MQ_TAG_FAIL;
 
 	return tag;
 }
 
-unsigned int blk_mq_get_tag(struct blk_mq_alloc_data *data)
+unsigned int blk_mq_get_tag(struct blk_mq_hw_ctx *hctx, unsigned int *last_tag,
+			    gfp_t gfp, bool reserved)
 {
-	if (!data->reserved)
-		return __blk_mq_get_tag(data);
+	if (!reserved)
+		return __blk_mq_get_tag(hctx->tags, hctx, last_tag, gfp);
 
-	return __blk_mq_get_reserved_tag(data);
+	return __blk_mq_get_reserved_tag(hctx->tags, gfp);
 }
 
 static struct bt_wait_state *bt_wake_ptr(struct blk_mq_bitmap_tags *bt)

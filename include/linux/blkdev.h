@@ -283,7 +283,6 @@ struct queue_limits {
 	unsigned long		seg_boundary_mask;
 
 	unsigned int		max_hw_sectors;
-	unsigned int		chunk_sectors;
 	unsigned int		max_sectors;
 	unsigned int		max_segment_size;
 	unsigned int		physical_block_size;
@@ -339,7 +338,7 @@ struct request_queue {
 	unsigned int		*mq_map;
 
 	/* sw queues */
-	struct blk_mq_ctx __percpu	*queue_ctx;
+	struct blk_mq_ctx	*queue_ctx;
 	unsigned int		nr_queues;
 
 	/* hw dispatch queues */
@@ -803,7 +802,6 @@ extern void __blk_put_request(struct request_queue *, struct request *);
 extern struct request *blk_get_request(struct request_queue *, int, gfp_t);
 extern struct request *blk_make_request(struct request_queue *, struct bio *,
 					gfp_t);
-extern void blk_rq_set_block_pc(struct request *);
 extern void blk_requeue_request(struct request_queue *, struct request *);
 extern int blk_reinsert_request(struct request_queue *q, struct request *rq);
 extern bool blk_reinsert_req_sup(struct request_queue *q);
@@ -921,20 +919,6 @@ static inline unsigned int blk_queue_get_max_sectors(struct request_queue *q,
 	return q->limits.max_sectors;
 }
 
-/*
- * Return maximum size of a request at given offset. Only valid for
- * file system requests.
- */
-static inline unsigned int blk_max_size_offset(struct request_queue *q,
-					       sector_t offset)
-{
-	if (!q->limits.chunk_sectors)
-		return q->limits.max_hw_sectors;
-
-	return q->limits.chunk_sectors -
-			(offset & (q->limits.chunk_sectors - 1));
-}
-
 static inline unsigned int blk_rq_get_max_sectors(struct request *rq)
 {
 	struct request_queue *q = rq->q;
@@ -942,11 +926,7 @@ static inline unsigned int blk_rq_get_max_sectors(struct request *rq)
 	if (unlikely(rq->cmd_type == REQ_TYPE_BLOCK_PC))
 		return q->limits.max_hw_sectors;
 
-	if (!q->limits.chunk_sectors)
-		return blk_queue_get_max_sectors(q, rq->cmd_flags);
-
-	return min(blk_max_size_offset(q, blk_rq_pos(rq)),
-			blk_queue_get_max_sectors(q, rq->cmd_flags));
+	return blk_queue_get_max_sectors(q, rq->cmd_flags);
 }
 
 /*
@@ -1002,7 +982,6 @@ extern void blk_queue_make_request(struct request_queue *, make_request_fn *);
 extern void blk_queue_bounce_limit(struct request_queue *, u64);
 extern void blk_limits_max_hw_sectors(struct queue_limits *, unsigned int);
 extern void blk_queue_max_hw_sectors(struct request_queue *, unsigned int);
-extern void blk_queue_chunk_sectors(struct request_queue *, unsigned int);
 extern void blk_queue_max_segments(struct request_queue *, unsigned short);
 extern void blk_queue_max_segment_size(struct request_queue *, unsigned int);
 extern void blk_queue_max_discard_sectors(struct request_queue *q,

@@ -11,8 +11,6 @@
  *  Multiqueue VM started 5.8.00, Rik van Riel.
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/gfp.h>
@@ -46,7 +44,6 @@
 #include <linux/oom.h>
 #include <linux/prefetch.h>
 #include <linux/sched/rt.h>
-#include <linux/printk.h>
 
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -439,7 +436,7 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
 		if (page_has_private(page)) {
 			if (try_to_free_buffers(page)) {
 				ClearPageDirty(page);
-				pr_info("%s: orphaned page\n", __func__);
+				printk("%s: orphaned page\n", __func__);
 				return PAGE_CLEAN;
 			}
 		}

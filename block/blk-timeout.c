@@ -216,4 +216,5 @@ void blk_add_timer(struct request *req)
 	if (!timer_pending(&q->timeout) ||
 	    time_before(expiry, q->timeout.expires))
 		mod_timer(&q->timeout, expiry);
+
 }

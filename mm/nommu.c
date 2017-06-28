@@ -13,8 +13,6 @@
  *  Copyright (c) 2007-2010 Paul Mundt <lethal@linux-sh.org>
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/export.h>
 #include <linux/mm.h>
 #include <linux/vmacache.h>
@@ -33,7 +31,6 @@
 #include <linux/syscalls.h>
 #include <linux/audit.h>
 #include <linux/sched/sysctl.h>
-#include <linux/printk.h>
 
 #include <asm/uaccess.h>
 #include <asm/tlb.h>
@@ -1249,7 +1246,7 @@ error_free:
 	return ret;
 
 enomem:
-	pr_err("Allocation of length %lu from process %d (%s) failed\n",
+	printk("Allocation of length %lu from process %d (%s) failed\n",
 	       len, current->pid, current->comm);
 	show_free_areas(0);
 	return -ENOMEM;

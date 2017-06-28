@@ -223,10 +223,8 @@ static void flush_end_io(struct request *flush_rq, int error)
 	struct request *rq, *n;
 	unsigned long flags = 0;
 
-	if (q->mq_ops) {
+	if (q->mq_ops)
 		spin_lock_irqsave(&q->mq_flush_lock, flags);
-		q->flush_rq->tag = -1;
-	}
 
 	running = &q->flush_queue[q->flush_running_idx];
 	BUG_ON(q->flush_pending_idx == q->flush_running_idx);
