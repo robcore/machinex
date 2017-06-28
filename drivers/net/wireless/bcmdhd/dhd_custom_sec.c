@@ -977,10 +977,9 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 				vid_start = &cis_buf[idx + 3];
 				/* found CIS tuple */
 				break;
-			} else {
+			} else
 				/* Go to next tuple if tuple value is not vendor type */
 				idx += (cis_buf[idx + 1] + 1);
-			}
 		}
 	}
 

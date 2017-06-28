@@ -1596,7 +1596,7 @@ wl_cfgp2p_listen_complete(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 	s32 ret = BCME_OK;
 	struct net_device *ndev = NULL;
 
-	if (!cfg || !cfg->p2p || !cfgdev)
+	if (!cfg || !cfg->p2p)
 		return BCME_ERROR;
 
 	CFGP2P_DBG((" Enter\n"));
@@ -1671,11 +1671,6 @@ wl_cfgp2p_listen_expired(unsigned long data)
 	wl_event_msg_t msg;
 	struct bcm_cfg80211 *cfg = (struct bcm_cfg80211 *) data;
 	CFGP2P_DBG((" Enter\n"));
-
-	if (!cfg) {
-		CFGP2P_ERR((" No cfg\n"));
-		return;
-	}
 	bzero(&msg, sizeof(wl_event_msg_t));
 	msg.event_type =  hton32(WLC_E_P2P_DISC_LISTEN_COMPLETE);
 #if defined(WL_ENABLE_P2P_IF)
@@ -2475,8 +2470,6 @@ wl_cfgp2p_register_ndev(struct bcm_cfg80211 *cfg)
 	wdev->iftype = wl_mode_to_nl80211_iftype(WL_MODE_BSS);
 
 	net->ieee80211_ptr = wdev;
-#else
-	net->ieee80211_ptr = NULL;
 #endif /* WL_NEWCFG_PRIVCMD_SUPPORT */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24)
@@ -2505,8 +2498,6 @@ wl_cfgp2p_register_ndev(struct bcm_cfg80211 *cfg)
 	 */
 #ifndef	WL_NEWCFG_PRIVCMD_SUPPORT
 	cfg->p2p_wdev = wdev;
-#else
-	cfg->p2p_wdev = NULL;
 #endif /* WL_NEWCFG_PRIVCMD_SUPPORT */
 	cfg->p2p_net = net;
 
@@ -2738,6 +2729,9 @@ wl_cfgp2p_del_p2p_disc_if(struct wireless_dev *wdev, struct bcm_cfg80211 *cfg)
 
 	if (rollback_lock)
 		rtnl_unlock();
+
+	/* Wait until all pending rcu_read_lock released */
+	synchronize_rcu();
 
 	kfree(wdev);
 

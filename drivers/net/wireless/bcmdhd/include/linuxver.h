@@ -740,8 +740,4 @@ not match our unaligned address for < 2.6.24
 #define kfifo_esize(a)				1
 #endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)) */
 
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-#pragma GCC diagnostic pop
-#endif
-
 #endif /* _linuxver_h_ */
