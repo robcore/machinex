@@ -2011,8 +2011,6 @@ void mipi_dsi_cmdlist_commit(int from_mdp)
 	if (req == NULL)
 		goto need_lock;
 
-	pr_debug("%s:  from_mdp=%d pid=%d\n", __func__, from_mdp, current->pid);
-
 	dsi_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0000);
 	if (dsi_ctrl & 0x02) {
 		/* video mode, make sure video engine is busy
@@ -2133,7 +2131,6 @@ void mipi_dsi_dln0_phy_err(void)
 #ifdef CONFIG_SEC_DEBUG_MDP
 		sec_debug_mdp.dsi_err.mipi_dsi_dln0_phy_err = status;
 #endif
-		pr_debug("%s: status=%x\n", __func__, status);
 	}
 }
 
