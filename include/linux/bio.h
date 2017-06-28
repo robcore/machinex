@@ -311,7 +311,7 @@ struct bio_integrity_payload {
 	unsigned		bip_owns_buf:1;	/* should free bip_buf */
 
 	struct work_struct	bip_work;	/* I/O completion */
-
+	unsigned short		bip_max_vcnt;	/* integrity bio_vec slots */
 	struct bio_vec		*bip_vec;
 	struct bio_vec		bip_inline_vecs[0];/* embedded bvec array */
 };
