@@ -4048,7 +4048,7 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	if (IS_ERR(css))
 		return PTR_ERR(css);
 
-	err = percpu_ref_init(&css->refcnt, css_release, GFP_KERNEL);
+	err = percpu_ref_init(&css->refcnt, css_release, 0, GFP_KERNEL);
 	if (err)
 		goto err_free;
 
