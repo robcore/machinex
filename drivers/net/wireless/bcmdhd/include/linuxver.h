@@ -744,11 +744,4 @@ not match our unaligned address for < 2.6.24
 #pragma GCC diagnostic pop
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0))
-static inline struct inode *file_inode(const struct file *f)
-{
-	return f->f_dentry->d_inode;
-}
-#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0)) */
-
 #endif /* _linuxver_h_ */
