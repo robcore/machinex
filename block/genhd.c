@@ -34,10 +34,10 @@ struct kobject *block_depr;
 /* for extended dynamic devt allocation, currently only one major is used */
 #define NR_EXT_DEVT		(1 << MINORBITS)
 
-/* For extended devt allocation.  ext_devt_lock prevents look up
+/* For extended devt allocation.  ext_devt_mutex prevents look up
  * results from going away underneath its user.
  */
-static DEFINE_SPINLOCK(ext_devt_lock);
+static DEFINE_MUTEX(ext_devt_mutex);
 static DEFINE_IDR(ext_devt_idr);
 
 static struct device_type disk_type;
@@ -429,13 +429,13 @@ int blk_alloc_devt(struct hd_struct *part, dev_t *devt)
 	do {
 		if (!idr_pre_get(&ext_devt_idr, GFP_KERNEL))
 			return -ENOMEM;
-		spin_lock_bh(&ext_devt_lock);
+		mutex_lock(&ext_devt_mutex);
 		rc = idr_get_new(&ext_devt_idr, part, &idx);
 		if (!rc && idx >= NR_EXT_DEVT) {
 			idr_remove(&ext_devt_idr, idx);
 			rc = -EBUSY;
 		}
-		spin_unlock_bh(&ext_devt_lock);
+		mutex_unlock(&ext_devt_mutex);
 	} while (rc == -EAGAIN);
 
 	if (rc)
@@ -462,9 +462,9 @@ void blk_free_devt(dev_t devt)
 		return;
 
 	if (MAJOR(devt) == BLOCK_EXT_MAJOR) {
-		spin_lock_bh(&ext_devt_lock);
+		mutex_lock(&ext_devt_mutex);
 		idr_remove(&ext_devt_idr, blk_mangle_minor(MINOR(devt)));
-		spin_unlock_bh(&ext_devt_lock);
+		mutex_unlock(&ext_devt_mutex);
 	}
 }
 
@@ -669,26 +669,6 @@ void add_disk(struct gendisk *disk)
 		bdi->ra_pages = min(bdi->ra_pages, size);
 	}
 
-	/*
-	 * Limit default readahead size for small devices.
-	 *        disk size    readahead size
-	 *               1M                8k
-	 *               4M               16k
-	 *              16M               32k
-	 *              64M               64k
-	 *             256M              128k
-	 *               1G              256k
-	 *               4G              512k
-	 *              16G             1024k
-	 *              64G             2048k
-	 *             256G             4096k
-	 */
-	if (get_capacity(disk)) {
-		unsigned long size = get_capacity(disk) >> 9;
-		size = 1UL << (ilog2(size) / 2);
-		bdi->ra_pages = min(bdi->ra_pages, size);
-	}
-
 	disk_add_events(disk);
 }
 EXPORT_SYMBOL(add_disk);
@@ -737,6 +717,7 @@ void del_gendisk(struct gendisk *disk)
 	__func__,MAJOR(dev->devt),MINOR(dev->devt),dev->kobj.name);
 #endif
 	device_del(disk_to_dev(disk));
+	blk_free_devt(disk_to_dev(disk)->devt);
 }
 EXPORT_SYMBOL(del_gendisk);
 
@@ -761,13 +742,13 @@ struct gendisk *get_gendisk(dev_t devt, int *partno)
 	} else {
 		struct hd_struct *part;
 
-		spin_lock_bh(&ext_devt_lock);
+		mutex_lock(&ext_devt_mutex);
 		part = idr_find(&ext_devt_idr, blk_mangle_minor(MINOR(devt)));
 		if (part && get_disk(part_to_disk(part))) {
 			*partno = part->partno;
 			disk = part_to_disk(part);
 		}
-		spin_unlock_bh(&ext_devt_lock);
+		mutex_unlock(&ext_devt_mutex);
 	}
 
 	return disk;
@@ -1179,7 +1160,6 @@ static void disk_release(struct device *dev)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 
-	blk_free_devt(dev->devt);
 	disk_release_events(disk);
 	kfree(disk->random);
 	disk_replace_part_tbl(disk, NULL);
@@ -1587,11 +1567,18 @@ static void __disk_unblock_events(struct gendisk *disk, bool check_now)
 	if (--ev->block)
 		goto out_unlock;
 
+	/*
+	 * Not exactly a latency critical operation, set poll timer
+	 * slack to 25% and kick event check.
+	 */
 	intv = disk_events_poll_jiffies(disk);
+	set_timer_slack(&ev->dwork.timer, intv / 4);
 	if (check_now)
-		queue_delayed_work(system_freezable_wq, &ev->dwork, 0);
+		queue_delayed_work(system_freezable_power_efficient_wq,
+				&ev->dwork, 0);
 	else if (intv)
-		queue_delayed_work(system_freezable_wq, &ev->dwork, intv);
+		queue_delayed_work(system_freezable_power_efficient_wq,
+				&ev->dwork, intv);
 out_unlock:
 	spin_unlock_irqrestore(&ev->lock, flags);
 }
@@ -1634,14 +1621,15 @@ void disk_flush_events(struct gendisk *disk, unsigned int mask)
 	spin_lock_irq(&ev->lock);
 	ev->clearing |= mask;
 	if (!ev->block)
-		mod_delayed_work(system_freezable_wq, &ev->dwork, 0);
+		mod_delayed_work(system_freezable_power_efficient_wq,
+				&ev->dwork, 0);
 	spin_unlock_irq(&ev->lock);
 }
 
 /**
  * disk_clear_events - synchronously check, clear and return pending events
  * @disk: disk to fetch and clear events from
- * @mask: mask of events to be fetched and cleared
+ * @mask: mask of events to be fetched and clearted
  *
  * Disk events are synchronously checked and pending events in @mask
  * are cleared and returned.  This ignores the block count.
@@ -1671,7 +1659,6 @@ unsigned int disk_clear_events(struct gendisk *disk, unsigned int mask)
 	 * race with disk_flush_events does not cause ambiguity (ev->clearing
 	 * can still be modified even if events are blocked).
 	 */
-
 	spin_lock_irq(&ev->lock);
 	clearing |= ev->clearing;
 	ev->clearing = 0;
@@ -1682,7 +1669,6 @@ unsigned int disk_clear_events(struct gendisk *disk, unsigned int mask)
 	 * if ev->clearing is not 0, the disk_flush_events got called in the
 	 * middle of this function, so we want to run the workfn without delay.
 	 */
-
 	__disk_unblock_events(disk, ev->clearing ? true : false);
 
 	/* then, fetch and clear pending events */
@@ -1717,11 +1703,9 @@ static void disk_check_events(struct disk_events *ev,
 	unsigned long intv;
 	int nr_events = 0, i;
 
-#ifdef CONFIG_USB_STORAGE_DETECT
 	if (disk->interfaces != GENHD_IF_USB)
 		/* check events */
 		events = disk->fops->check_events(disk, clearing);
-#endif
 
 	/* accumulate pending events and schedule next poll if necessary */
 	spin_lock_irq(&ev->lock);
@@ -1732,7 +1716,8 @@ static void disk_check_events(struct disk_events *ev,
 
 	intv = disk_events_poll_jiffies(disk);
 	if (!ev->block && intv)
-		queue_delayed_work(system_freezable_wq, &ev->dwork, intv);
+		queue_delayed_work(system_freezable_power_efficient_wq,
+				&ev->dwork, intv);
 
 	spin_unlock_irq(&ev->lock);
 
@@ -1744,13 +1729,12 @@ static void disk_check_events(struct disk_events *ev,
 	for (i = 0; i < ARRAY_SIZE(disk_uevents); i++)
 		if (events & disk->events & (1 << i))
 			envp[nr_events++] = disk_uevents[i];
-#ifdef CONFIG_USB_STORAGE_DETECT
+
 		if (disk->interfaces != GENHD_IF_USB) {
 			if (nr_events)
 				kobject_uevent_env(&disk_to_dev(disk)->kobj,
 							KOBJ_CHANGE, envp);
 		}
-#endif
 }
 
 /*
