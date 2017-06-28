@@ -704,13 +704,11 @@ static struct pcpu_chunk *pcpu_chunk_addr_search(void *addr)
  * RETURNS:
  * Percpu pointer to the allocated area on success, NULL on failure.
  */
-static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved,
-+				 gfp_t gfp)
+static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved)
 {
 	static int warn_limit = 10;
 	struct pcpu_chunk *chunk;
 	const char *err;
-	bool is_atomic = !(gfp & GFP_KERNEL);
 	int slot, off, new_alloc;
 	unsigned long flags;
 	void __percpu *ptr;
@@ -735,15 +733,14 @@ static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved,
 
 		while ((new_alloc = pcpu_need_to_extend(chunk))) {
 			spin_unlock_irqrestore(&pcpu_lock, flags);
-			if (is_atomic ||
-			pcpu_extend_area_map(chunk, new_alloc) < 0) {
+			if (pcpu_extend_area_map(chunk, new_alloc) < 0) {
 				err = "failed to extend area map of reserved chunk";
 				goto fail_unlock_mutex;
 			}
 			spin_lock_irqsave(&pcpu_lock, flags);
 		}
 
-		off = pcpu_alloc_area(chunk, size, align, is_atomic);
+		off = pcpu_alloc_area(chunk, size, align);
 		if (off >= 0)
 			goto area_found;
 
@@ -760,8 +757,6 @@ restart:
 
 			new_alloc = pcpu_need_to_extend(chunk);
 			if (new_alloc) {
-				if (is_atomic)
-					continue;
 				spin_unlock_irqrestore(&pcpu_lock, flags);
 				if (pcpu_extend_area_map(chunk,
 							 new_alloc) < 0) {
@@ -828,34 +823,22 @@ fail_unlock_mutex:
 }
 
 /**
- * __alloc_percpu_gfp - allocate dynamic percpu area
- * @size: size of area to allocate in bytes
- * @align: alignment of area (max PAGE_SIZE)
- * @gfp: allocation flags
- *
- * Allocate zero-filled percpu area of @size bytes aligned at @align.  If
- * @gfp doesn't contain %GFP_KERNEL, the allocation doesn't block and can
- * be called from any context but is a lot more likely to fail.
- *
- * RETURNS:
- * Percpu pointer to the allocated area on success, NULL on failure.
- */
-void __percpu *__alloc_percpu_gfp(size_t size, size_t align, gfp_t gfp)
-{
-	return pcpu_alloc(size, align, false, gfp);
-}
-EXPORT_SYMBOL_GPL(__alloc_percpu_gfp);
-
-/**
  * __alloc_percpu - allocate dynamic percpu area
  * @size: size of area to allocate in bytes
  * @align: alignment of area (max PAGE_SIZE)
  *
- * Equivalent to __alloc_percpu_gfp(size, align, %GFP_KERNEL).
+ * Allocate zero-filled percpu area of @size bytes aligned at @align.
+ * Might sleep.  Might trigger writeouts.
+ *
+ * CONTEXT:
+ * Does GFP_KERNEL allocation.
+ *
+ * RETURNS:
+ * Percpu pointer to the allocated area on success, NULL on failure.
  */
 void __percpu *__alloc_percpu(size_t size, size_t align)
 {
-	return pcpu_alloc(size, align, false, GFP_KERNEL);
+	return pcpu_alloc(size, align, false);
 }
 EXPORT_SYMBOL_GPL(__alloc_percpu);
 
@@ -877,7 +860,7 @@ EXPORT_SYMBOL_GPL(__alloc_percpu);
  */
 void __percpu *__alloc_reserved_percpu(size_t size, size_t align)
 {
-	return pcpu_alloc(size, align, true, GFP_KERNEL);
+	return pcpu_alloc(size, align, true);
 }
 
 /**
