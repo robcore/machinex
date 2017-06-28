@@ -1795,8 +1795,7 @@ struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *set)
 	if (!q)
 		goto err_hctxs;
 
-	if (percpu_ref_init(&q->mq_usage_counter, blk_mq_usage_counter_release,
-			    GFP_KERNEL))
+	if (percpu_ref_init(&q->mq_usage_counter, blk_mq_usage_counter_release))
 		goto err_map;
 
 	setup_timer(&q->timeout, blk_mq_rq_timer, (unsigned long) q);

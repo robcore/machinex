@@ -41,7 +41,6 @@ static unsigned __percpu *pcpu_count_ptr(struct percpu_ref *ref)
  * percpu_ref_init - initialize a percpu refcount
  * @ref: percpu_ref to initialize
  * @release: function which will be called when refcount hits 0
- * @gfp: allocation mask to use
  *
  * Initializes the refcount in single atomic counter mode with a refcount of 1;
  * analagous to atomic_set(ref, 1).
@@ -49,12 +48,11 @@ static unsigned __percpu *pcpu_count_ptr(struct percpu_ref *ref)
  * Note that @release must not sleep - it may potentially be called from RCU
  * callback context by percpu_ref_kill().
  */
-int percpu_ref_init(struct percpu_ref *ref, percpu_ref_func_t *release,
-		    gfp_t gfp)
+int percpu_ref_init(struct percpu_ref *ref, percpu_ref_func_t *release)
 {
 	atomic_set(&ref->count, 1 + PCPU_COUNT_BIAS);
 
-	ref->pcpu_count_ptr = (unsigned long)alloc_percpu_gfp(unsigned, gfp);
+	ref->pcpu_count_ptr = (unsigned long)alloc_percpu(unsigned);
 	if (!ref->pcpu_count_ptr)
 		return -ENOMEM;
 
