@@ -4077,7 +4077,7 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	return 0;
 
 err_free:
-	percpu_ref_cancel_init(&css->refcnt);
+	percpu_ref_exit(&css->refcnt);
 	ss->css_free(css);
 	return err;
 }

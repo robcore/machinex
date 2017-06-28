@@ -856,5 +856,7 @@ int core_tpg_post_dellun(
 	lun->lun_status = TRANSPORT_LUN_STATUS_FREE;
 	spin_unlock(&tpg->tpg_lun_lock);
 
+	percpu_ref_exit(&lun->lun_ref);
+
 	return 0;
 }
