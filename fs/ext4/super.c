@@ -3885,7 +3885,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	}
 	if (!err) {
 		err = percpu_counter_init(&sbi->s_dirs_counter,
-				ext4_count_dirs(sb));
+				ext4_count_dirs(sb), GFP_KERNEL);
 	}
 	if (!err) {
 		err = percpu_counter_init(&sbi->s_dirtyclusters_counter, 0, GFP_KERNEL);
