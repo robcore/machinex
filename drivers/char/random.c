@@ -1199,6 +1199,7 @@ static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
 
 	return ret;
 }
+EXPORT_SYMBOL(get_random_int);
 
 /*
  * This function is the exported kernel interface.  It returns some
