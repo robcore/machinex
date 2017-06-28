@@ -335,6 +335,7 @@ static inline struct bio *bio_next_split(struct bio *bio, int sectors,
 
 extern struct bio_set *bioset_create(unsigned int, unsigned int);
 extern void bioset_free(struct bio_set *);
+extern mempool_t *biovec_create_pool(struct bio_set *bs, int pool_entries);
 
 extern struct bio *bio_alloc_bioset(gfp_t, int, struct bio_set *);
 extern void bio_put(struct bio *);
@@ -424,8 +425,8 @@ extern struct bio *bio_copy_user_iov(struct request_queue *,
 				     int, int, gfp_t);
 extern int bio_uncopy_user(struct bio *);
 void zero_fill_bio(struct bio *bio);
-extern struct bio_vec *bvec_alloc_bs(gfp_t, int, unsigned long *, struct bio_set *);
-extern void bvec_free_bs(struct bio_set *, struct bio_vec *, unsigned int);
+extern struct bio_vec *bvec_alloc(gfp_t, int, unsigned long *, mempool_t *);
+extern void bvec_free(mempool_t *, struct bio_vec *, unsigned int);
 extern unsigned int bvec_nr_vecs(unsigned short idx);
 
 static inline ssize_t bvec_length(const struct bio_vec *bvec, unsigned long nr)
@@ -459,10 +460,10 @@ struct bio_set {
 	unsigned int front_pad;
 
 	mempool_t *bio_pool;
+	mempool_t *bvec_pool;
 #if defined(CONFIG_BLK_DEV_INTEGRITY)
 	mempool_t *bio_integrity_pool;
 #endif
-	mempool_t *bvec_pool;
 };
 
 struct biovec_slab {

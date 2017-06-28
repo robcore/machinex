@@ -159,12 +159,12 @@ unsigned int bvec_nr_vecs(unsigned short idx)
 	return bvec_slabs[idx].nr_vecs;
 }
 
-void bvec_free_bs(struct bio_set *bs, struct bio_vec *bv, unsigned int idx)
+void bvec_free(mempool_t *pool, struct bio_vec *bv, unsigned int idx)
 {
 	BIO_BUG_ON(idx >= BIOVEC_NR_POOLS);
 
 	if (idx == BIOVEC_MAX_IDX)
-		mempool_free(bv, bs->bvec_pool);
+		mempool_free(bv, pool);
 	else {
 		struct biovec_slab *bvs = bvec_slabs + idx;
 
@@ -172,8 +172,8 @@ void bvec_free_bs(struct bio_set *bs, struct bio_vec *bv, unsigned int idx)
 	}
 }
 
-struct bio_vec *bvec_alloc_bs(gfp_t gfp_mask, int nr, unsigned long *idx,
-			      struct bio_set *bs)
+struct bio_vec *bvec_alloc(gfp_t gfp_mask, int nr, unsigned long *idx,
+			   mempool_t *pool)
 {
 	struct bio_vec *bvl;
 
@@ -209,7 +209,7 @@ struct bio_vec *bvec_alloc_bs(gfp_t gfp_mask, int nr, unsigned long *idx,
 	 */
 	if (*idx == BIOVEC_MAX_IDX) {
 fallback:
-		bvl = mempool_alloc(bs->bvec_pool, gfp_mask);
+		bvl = mempool_alloc(pool, gfp_mask);
 	} else {
 		struct biovec_slab *bvs = bvec_slabs + *idx;
 		gfp_t __gfp_mask = gfp_mask & ~(__GFP_WAIT | __GFP_IO);
@@ -252,7 +252,7 @@ static void bio_free(struct bio *bio)
 
 	if (bs) {
 		if (bio_has_allocated_vec(bio))
-			bvec_free_bs(bs, bio->bi_io_vec, BIO_POOL_IDX(bio));
+			bvec_free(bs->bvec_pool, bio->bi_io_vec, BIO_POOL_IDX(bio));
 
 		/*
 		 * If we have front padding, adjust the bio pointer before freeing
@@ -393,7 +393,7 @@ struct bio *bio_alloc_bioset(gfp_t gfp_mask, int nr_iovecs, struct bio_set *bs)
 	bio->bi_pool = bs;
 
 	if (nr_iovecs > inline_vecs) {
-		bvl = bvec_alloc_bs(gfp_mask, nr_iovecs, &idx, bs);
+		bvl = bvec_alloc(gfp_mask, nr_iovecs, &idx, bs->bvec_pool);
 		if (unlikely(!bvl))
 			goto err_free;
 
@@ -1754,20 +1754,11 @@ EXPORT_SYMBOL(bio_split);
  * create memory pools for biovec's in a bio_set.
  * use the global biovec slabs created for general use.
  */
-static int biovec_create_pools(struct bio_set *bs, int pool_entries)
+mempool_t *biovec_create_pool(struct bio_set *bs, int pool_entries)
 {
 	struct biovec_slab *bp = bvec_slabs + BIOVEC_MAX_IDX;
 
-	bs->bvec_pool = mempool_create_slab_pool(pool_entries, bp->slab);
-	if (!bs->bvec_pool)
-		return -ENOMEM;
-
-	return 0;
-}
-
-static void biovec_free_pools(struct bio_set *bs)
-{
-	mempool_destroy(bs->bvec_pool);
+	return mempool_create_slab_pool(pool_entries, bp->slab);
 }
 
 void bioset_free(struct bio_set *bs)
@@ -1775,8 +1766,10 @@ void bioset_free(struct bio_set *bs)
 	if (bs->bio_pool)
 		mempool_destroy(bs->bio_pool);
 
+	if (bs->bvec_pool)
+		mempool_destroy(bs->bvec_pool);
+
 	bioset_integrity_free(bs);
-	biovec_free_pools(bs);
 	bio_put_slab(bs);
 
 	kfree(bs);
@@ -1817,8 +1810,9 @@ struct bio_set *bioset_create(unsigned int pool_size, unsigned int front_pad)
 	if (!bs->bio_pool)
 		goto bad;
 
-	if (!biovec_create_pools(bs, pool_size))
-		return bs;
+	bs->bvec_pool = biovec_create_pool(bs, pool_size);
+	if (!bs->bvec_pool)
+		goto bad;
 
 bad:
 	bioset_free(bs);
