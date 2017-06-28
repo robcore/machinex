@@ -423,8 +423,15 @@ static void __ref check_temp(struct work_struct *work)
 	}
 
 	do_freq_control();
-	if (hotplug_check_needed)
+
+	if (msm_thermal_info.limit_temp_degC <
+		msm_thermal_info.core_limit_temp_degC) {
+		if (hotplug_check_needed)
+			do_core_control();
+	} else {
 		do_core_control();
+	}
+
 reschedule:
 	if (enabled)
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
