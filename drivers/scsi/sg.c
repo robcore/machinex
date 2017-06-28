@@ -1666,8 +1666,10 @@ static int sg_start_req(Sg_request *srp, unsigned char *cmd)
 	 * does not sleep except under memory pressure.
 	 */
 	rq = blk_get_request(q, rw, GFP_KERNEL);
-	if (!rq)
-		return -ENOMEM;
+	if (IS_ERR(rq)) {
+ 		kfree(long_cmdp);
+		return PTR_ERR(rq);
+	}
 
 	blk_rq_set_block_pc(rq);
 	memcpy(rq->cmd, cmd, hp->cmd_len);
