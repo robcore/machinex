@@ -2,6 +2,7 @@
 
 #include <linux/kernel.h>
 #include <linux/percpu-refcount.h>
+#include <linux/export.h>
 
 /*
  * Initially, a percpu refcount is just a set of percpu counters. Initially, we
