@@ -395,7 +395,6 @@ static struct fiops_ioc *fiops_select_ioc(struct fiops_data *fiopsd)
 	if (!rq_is_sync(rq) && fiopsd->in_flight[1] != 0 &&
 			service_tree->count == 1)
 		return NULL;
-	}
 
 	/* Let sync request preempt async queue */
 	if (!rq_is_sync(rq) && service_tree->count > 1) {
