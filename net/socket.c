@@ -893,8 +893,7 @@ static ssize_t sock_splice_read(struct file *file, loff_t *ppos,
 static struct sock_iocb *alloc_sock_iocb(struct kiocb *iocb,
 					 struct sock_iocb *siocb)
 {
-	if (!is_sync_kiocb(iocb))
-		BUG();
+	BUG_ON(!is_sync_kiocb(iocb));
 
 	siocb->kiocb = iocb;
 	iocb->private = siocb;
