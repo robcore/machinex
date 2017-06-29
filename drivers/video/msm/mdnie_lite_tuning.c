@@ -306,6 +306,8 @@ void sending_tuning_cmd(void)
 		mutex_unlock(&dsi_tx_mutex);
 	else
 		mutex_unlock(&mfd->dma->ov_mutex);
+
+	free_tun_cmd();
 }
 
 void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
@@ -761,7 +763,6 @@ jacked:
 	}
 
 	sending_tuning_cmd();
-	free_tun_cmd();
 }
 
 void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
@@ -777,7 +778,6 @@ void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
 			INPUT_PAYLOAD2(NEGATIVE_2);
 
 			sending_tuning_cmd();
-			free_tun_cmd();
 	}
 }
 
@@ -1163,7 +1163,6 @@ void is_negative_on(void)
 		INPUT_PAYLOAD2(NEGATIVE_2);
 
 		sending_tuning_cmd();
-		free_tun_cmd();
 	} else {
 		/* check the mode and tuning again when wake up*/
 		if (mdnie_locked) {
