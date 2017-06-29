@@ -65,8 +65,6 @@
 #define MDNIE_HIJACK "By: Wootever, Whathub, Yank555, robcore"
 #endif
 
-#define MDNIE_LITE_TUN_DEBUG
-
 #ifdef MDNIE_LITE_TUN_DEBUG
 #define DPRINT(x...)	printk(KERN_ERR "[mdnie lite] " x)
 #else
@@ -129,20 +127,11 @@ const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"VT_MODE",
 	"BROWSER",
 	"eBOOK",
-#if defined(CONFIG_TDMB)
-	"DMB_MODE",
-	"DMB_WARM_MODE",
-	"DMB_COLD_MODE",
-#endif
 };
 
 const char background_name[MAX_BACKGROUND_MODE][10] = {
 	"DYNAMIC",
-#if defined(CONFIG_MDNIE_LITE_CONTROL)
-	"CONTROL",
-#else
 	"STANDARD",
-#endif
 	"NATURAL",
 	"MOVIE",
 	"AUTO",
@@ -152,8 +141,8 @@ struct mdnie_lite_tun_type mdnie_tun_state = {
 	.mdnie_enable = false,
 	.scenario = mDNIe_UI_MODE,
 	.background = DYNAMIC_MODE,
-	//.real_scenario = mDNIe_UI_MODE,
-	//.real_background = DYNAMIC_MODE;
+	.real_scenario = mDNIe_UI_MODE,
+	.real_background = DYNAMIC_MODE,
 	.outdoor = OUTDOOR_OFF_MODE,
 	.negative = mDNIe_NEGATIVE_OFF,
 	.blind = ACCESSIBILITY_OFF,
@@ -163,9 +152,6 @@ const char accessibility_name[ACCESSIBILITY_MAX][20] = {
 	"ACCESSIBILITY_OFF",
 	"NEGATIVE_MODE",
 	"COLOR_BLIND_MODE",
-#if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
-	"SCREEN_CURTAIN_MODE",
-#endif
 };
 
 static char tune_data1[MDNIE_TUNE_FIRST_SIZE] = {0,};
@@ -229,10 +215,8 @@ void update_mdnie_curve(void)
 					break;
 		case STANDARD_MODE:	source = STANDARD_UI_2;
 					break;
-#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
 		case NATURAL_MODE:	source = NATURAL_UI_2;
 					break;
-#endif
 		case MOVIE_MODE:	source = MOVIE_UI_2;
 					break;
 		case AUTO_MODE:		source = AUTO_UI_2;
@@ -240,7 +224,7 @@ void update_mdnie_curve(void)
 		default: return;
 	}
 
-	for (i = 42; i < 107; i++)
+	for (i = 42; i < 108; i++)
 		LITE_CONTROL_2[i] = source[i];
 
 	pr_debug(" = update curve values =\n");
@@ -273,7 +257,7 @@ void update_mdnie_mode(void)
 
 	LITE_CONTROL_1[4] = source_1[4]; // Copy sharpen
 
-	for (i = 18; i < 107; i++)
+	for (i = 18; i < 108; i++)
 		LITE_CONTROL_2[i] = source_2[i]; // Copy mode
 
 	// Apply black crush delta
@@ -737,6 +721,34 @@ static ssize_t mode_store(struct device *dev,
 
 static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
 
+static ssize_t real_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 256, "Current Background Mode : %s\n",
+		background_name[mdnie_tun_state.real_background]);
+}
+
+static ssize_t real_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	int value;
+	int backup;
+
+	sscanf(buf, "%d", &value);
+
+	if (value < DYNAMIC_MODE || value >= MAX_BACKGROUND_MODE) {
+		return size;
+	}
+
+	backup = mdnie_tun_state.real_background;
+	mdnie_tun_state.real_background = value;
+	mDNIe_Set_Mode(mdnie_tun_state.real_scenario);
+
+	return size;
+}
+
+static DEVICE_ATTR(real_mode, 0664, real_mode_show, real_mode_store);
+
 static ssize_t scenario_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
@@ -809,6 +821,79 @@ static ssize_t scenario_store(struct device *dev,
 }
 static DEVICE_ATTR(scenario, 0664, scenario_show,
 		   scenario_store);
+
+static ssize_t real_scenario_show(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
+{
+	return snprintf(buf, 256, "Current Scenario Mode : %s\n",
+		scenario_name[mdnie_tun_state.real_scenario]);
+}
+
+static ssize_t real_scenario_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t size)
+{
+	int value;
+	int backup;
+
+	sscanf(buf, "%d", &value);
+
+	if ((value < mDNIe_UI_MODE || value >= MAX_mDNIe_MODE))
+		return size;
+
+	switch (value) {
+	case SIG_MDNIE_UI_MODE:
+		mdnie_tun_state.real_scenario = mDNIe_UI_MODE;
+		break;
+
+	case SIG_MDNIE_VIDEO_MODE:
+		mdnie_tun_state.real_scenario = mDNIe_VIDEO_MODE;
+		break;
+
+	case SIG_MDNIE_VIDEO_WARM_MODE:
+		mdnie_tun_state.real_scenario = mDNIe_VIDEO_WARM_MODE;
+		break;
+
+	case SIG_MDNIE_VIDEO_COLD_MODE:
+		mdnie_tun_state.real_scenario = mDNIe_VIDEO_COLD_MODE;
+		break;
+
+	case SIG_MDNIE_CAMERA_MODE:
+		mdnie_tun_state.real_scenario = mDNIe_CAMERA_MODE;
+		break;
+
+	case SIG_MDNIE_NAVI:
+		mdnie_tun_state.real_scenario = mDNIe_NAVI;
+		break;
+
+	case SIG_MDNIE_GALLERY:
+		mdnie_tun_state.real_scenario = mDNIe_GALLERY;
+		break;
+
+	case SIG_MDNIE_VT:
+		mdnie_tun_state.real_scenario = mDNIe_VT_MODE;
+		break;
+
+	case SIG_MDNIE_BROWSER:
+		mdnie_tun_state.real_scenario = mDNIe_BROWSER_MODE;
+		break;
+
+	case SIG_MDNIE_eBOOK:
+		mdnie_tun_state.real_scenario = mDNIe_eBOOK_MODE;
+		break;
+
+	default:
+		break;
+	}
+
+	if (!mdnie_tun_state.negative)
+		mDNIe_Set_Mode(mdnie_tun_state.real_scenario);
+
+	return size;
+}
+static DEVICE_ATTR(real_scenario, 0664, real_scenario_show,
+		   real_scenario_store);
 
 static ssize_t mdnieset_user_select_file_cmd_show(struct device *dev,
 						  struct device_attribute *attr,

@@ -20,11 +20,8 @@
 #define _MDNIE_LITE_TUNING_H_
 
 #define LDI_COORDINATE_REG 0xA1
-#if defined(CONFIG_FB_MSM_MIPI_HX8389B_TFT_VIDEO_QHD_PT_PANEL)
-#define MDNIE_TUNE_FIRST_SIZE 113
-#else
+
 #define MDNIE_TUNE_FIRST_SIZE 108
-#endif
 #define MDNIE_TUNE_SECOND_SIZE 5
 
 #define MDNIE_COLOR_BLIND_FIRST_SIZE 118
@@ -46,13 +43,9 @@
 
 #define SIG_MDNIE_DYNAMIC				0
 #define SIG_MDNIE_STANDARD				1
-#define SIG_MDNIE_MOVIE				2
-
-#if defined(CONFIG_TDMB)
-#define SIG_MDNIE_DMB_MODE			20
-#define SIG_MDNIE_DMB_WARM_MODE	21
-#define SIG_MDNIE_DMB_COLD_MODE	22
-#endif
+#define SIG_MDNIE_NATURAL				2
+#define SIG_MDNIE_MOVIE				3
+#define SIG_MDNIE_AUTO				4
 
 #define SIG_MDNIE_ISDBT_MODE		30
 #define SIG_MDNIE_ISDBT_WARM_MODE	31
@@ -84,11 +77,6 @@ enum Lcd_mDNIe_UI {
 	mDNIE_BLINE_MODE,
 	mDNIE_DARK_SCREEN_MODE,
 	MAX_mDNIe_MODE,
-#ifdef BROWSER_COLOR_TONE_SET
-	mDNIe_BROWSER_TONE1 = 40,
-	mDNIe_BROWSER_TONE2,
-	mDNIe_BROWSER_TONE3,
-#endif
 };
 
 enum Lcd_mDNIe_Negative {
@@ -122,8 +110,10 @@ enum ACCESSIBILITY {
 struct mdnie_lite_tun_type {
 	bool mdnie_enable;
 	enum Background_Mode background;
+	enum Background_Mode real_background;
 	enum Outdoor_Mode outdoor;
 	enum Lcd_mDNIe_UI scenario;
+	enum Lcd_mDNIe_UI real_scenario;
 	enum Lcd_mDNIe_Negative negative;
 	enum ACCESSIBILITY blind;
 };
