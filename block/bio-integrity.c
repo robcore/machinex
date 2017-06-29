@@ -185,20 +185,20 @@ bool bio_integrity_enabled(struct bio *bio)
 EXPORT_SYMBOL(bio_integrity_enabled);
 
 /**
- * bio_integrity_hw_sectors - Convert 512b sectors to hardware ditto
+ * bio_integrity_intervals - Return number of integrity intervals for a bio
  * @bi:		blk_integrity profile for device
- * @sectors:	Number of 512 sectors to convert
+ * @sectors:	Size of the bio in 512-byte sectors
  *
  * Description: The block layer calculates everything in 512 byte
- * sectors but integrity metadata is done in terms of the hardware
- * sector size of the storage device.  Convert the block layer sectors
- * to physical sectors.
+ * sectors but integrity metadata is done in terms of the data integrity
+ * interval size of the storage device.  Convert the block layer sectors
+ * to the appropriate number of integrity intervals.
  */
-static inline unsigned int bio_integrity_hw_sectors(struct blk_integrity *bi,
-						    unsigned int sectors)
+static inline unsigned int bio_integrity_intervals(struct blk_integrity *bi,
+						   unsigned int sectors)
 {
 	/* At this point there are only 512b or 4096b DIF/EPP devices */
-	if (bi->sector_size == 4096)
+	if (bi->interval == 4096)
 		return sectors >>= 3;
 
 	return sectors;
@@ -207,7 +207,7 @@ static inline unsigned int bio_integrity_hw_sectors(struct blk_integrity *bi,
 static inline unsigned int bio_integrity_bytes(struct blk_integrity *bi,
 					       unsigned int sectors)
 {
-	return bio_integrity_hw_sectors(bi, sectors) * bi->tuple_size;
+	return bio_integrity_intervals(bi, sectors) * bi->tuple_size;
 }
 
 int bio_integrity_tag(struct bio *bio, void *tag_buf, unsigned int len, int set)
@@ -300,17 +300,17 @@ int bio_integrity_prep(struct bio *bio)
 	unsigned long start, end;
 	unsigned int len, nr_pages;
 	unsigned int bytes, offset, i;
-	unsigned int sectors;
+	unsigned int intervals;
 
 	bi = bdev_get_integrity(bio->bi_bdev);
 	q = bdev_get_queue(bio->bi_bdev);
 	BUG_ON(bi == NULL);
 	BUG_ON(bio_integrity(bio));
 
-	sectors = bio_integrity_hw_sectors(bi, bio_sectors(bio));
+	intervals = bio_integrity_intervals(bi, bio_sectors(bio));
 
 	/* Allocate kernel buffer for protection data */
-	len = sectors * bi->tuple_size;
+	len = intervals * bi->tuple_size;
 	buf = kmalloc(len, GFP_NOIO | q->bounce_gfp);
 	if (unlikely(buf == NULL)) {
 		printk(KERN_ERR "could not allocate integrity buffer\n");
