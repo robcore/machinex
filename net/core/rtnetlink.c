@@ -362,12 +362,9 @@ EXPORT_SYMBOL_GPL(__rtnl_link_unregister);
  */
 void rtnl_link_unregister(struct rtnl_link_ops *ops)
 {
-	/* Close the race with cleanup_net() */
-	mutex_lock(&net_mutex);
 	rtnl_lock();
 	__rtnl_link_unregister(ops);
 	rtnl_unlock();
-	mutex_unlock(&net_mutex);
 }
 EXPORT_SYMBOL_GPL(rtnl_link_unregister);
 
