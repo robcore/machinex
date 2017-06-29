@@ -1593,16 +1593,22 @@ static int cpufreq_online(unsigned int cpu)
 	 */
 	if (!policy->hlimit_max_screen_on)
 		policy->hlimit_max_screen_on = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+
 	if (!policy->hlimit_max_screen_off)
 		policy->hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
+
 	if (!policy->hlimit_min_screen_on)
 		policy->hlimit_min_screen_on = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
 	if (!policy->hlimit_min_screen_off)
 		policy->hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK;
+
 	if (!policy->curr_limit_max)
 		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
 	if (hotplug_ready) {
 		hardlimit_ready = true;
 		reapply_hard_limits(policy->cpu);
