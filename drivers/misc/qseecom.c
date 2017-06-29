@@ -1426,7 +1426,7 @@ static int __qseecom_get_fw_size(char *appname, uint32_t *fw_size)
 	int num_images = 0;
 
 	snprintf(fw_name, sizeof(fw_name), "%s.mdt", appname);
-	rc = request_firmware(&fw_entry, fw_name,  qseecom.pdev);
+	rc = request_firmware_direct(&fw_entry, fw_name,  qseecom.pdev);
 	if (rc) {
 		pr_debug("error with request_firmware\n");
 		ret = -EIO;
@@ -1444,7 +1444,7 @@ static int __qseecom_get_fw_size(char *appname, uint32_t *fw_size)
 	for (i = 0; i < num_images; i++, phdr++) {
 		memset(fw_name, 0, sizeof(fw_name));
 		snprintf(fw_name, ARRAY_SIZE(fw_name), "%s.b%02d", appname, i);
-		ret = request_firmware(&fw_entry, fw_name, qseecom.pdev);
+		ret = request_firmware_direct(&fw_entry, fw_name, qseecom.pdev);
 		if (ret)
 			goto err;
 		*fw_size += fw_entry->size;
@@ -1470,7 +1470,7 @@ static int __qseecom_get_fw_data(char *appname, u8 *img_data,
 	int num_images = 0;
 
 	snprintf(fw_name, sizeof(fw_name), "%s.mdt", appname);
-	rc = request_firmware(&fw_entry, fw_name,  qseecom.pdev);
+	rc = request_firmware_direct(&fw_entry, fw_name,  qseecom.pdev);
 	if (rc) {
 		ret = -EIO;
 		goto err;
@@ -1484,7 +1484,7 @@ static int __qseecom_get_fw_data(char *appname, u8 *img_data,
 	release_firmware(fw_entry);
 	for (i = 0; i < num_images; i++) {
 		snprintf(fw_name, ARRAY_SIZE(fw_name), "%s.b%02d", appname, i);
-		ret = request_firmware(&fw_entry, fw_name,  qseecom.pdev);
+		ret = request_firmware_direct(&fw_entry, fw_name,  qseecom.pdev);
 		if (ret) {
 			pr_debug("Failed to locate blob %s\n", fw_name);
 			goto err;
