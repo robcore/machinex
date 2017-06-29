@@ -1431,6 +1431,7 @@ static ssize_t copy_mode_store(struct device * dev, struct device_attribute * at
 				 } else {
 					mDNIe_Set_Mode(mdnie_tun_state.scenario);
 				}
+			}
 			return size;
 		default:
 			return -EINVAL;
