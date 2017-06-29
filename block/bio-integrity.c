@@ -327,7 +327,7 @@ int bio_integrity_prep(struct bio *bio)
 
 	bip->bip_owns_buf = 1;
 	bip->bip_iter.bi_size = len;
-	bip->bip_iter.bi_sector = bio->bi_iter.bi_sector;
+	bip_set_seed(bip, bio->bi_iter.bi_sector);
 
 	/* Map it */
 	offset = offset_in_page(buf);
@@ -430,9 +430,10 @@ static void bio_integrity_verify_fn(struct work_struct *work)
 	struct bio_integrity_payload *bip =
 		container_of(work, struct bio_integrity_payload, bip_work);
 	struct bio *bio = bip->bip_bio;
+	struct blk_integrity *bi = bdev_get_integrity(bio->bi_bdev);
 	int error;
 
-	error = bio_integrity_verify(bio);
+	error = bio_integrity_process(bio, bi->verify_fn);
 
 	/* Restore original bio completion handler */
 	bio->bi_end_io = bip->bip_end_io;
