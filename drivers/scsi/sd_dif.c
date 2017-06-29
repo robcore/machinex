@@ -333,7 +333,7 @@ int sd_dif_prepare(struct request *rq, sector_t hw_sector, unsigned int sector_s
 		unsigned int j;
 
 		/* Already remapped? */
-		if (bio_flagged(bio, BIO_MAPPED_INTEGRITY))
+		if (bip->bip_flags & BIP_MAPPED_INTEGRITY)
 			break;
 
 		virt = bip_get_seed(bip) & 0xffffffff;
@@ -355,7 +355,7 @@ int sd_dif_prepare(struct request *rq, sector_t hw_sector, unsigned int sector_s
 			kunmap_atomic(sdt);
 		}
 
-		bio->bi_flags |= (1 << BIO_MAPPED_INTEGRITY);
+		bip->bip_flags |= BIP_MAPPED_INTEGRITY;
 	}
 
 	return 0;
