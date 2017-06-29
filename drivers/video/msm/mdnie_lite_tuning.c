@@ -116,6 +116,7 @@ extern int mipi_samsung_cabc_onoff ( int enable );
 
 struct dsi_buf mdnie_tun_tx_buf;
 struct dsi_buf mdnie_tun_rx_buf;
+static bool mdnie_locked;
 
 const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"UI_MODE",
@@ -151,6 +152,8 @@ struct mdnie_lite_tun_type mdnie_tun_state = {
 	.mdnie_enable = false,
 	.scenario = mDNIe_UI_MODE,
 	.background = DYNAMIC_MODE,
+	.real_scenario = mDNIe_UI_MODE,
+	.real_background = DYNAMIC_MODE;
 	.outdoor = OUTDOOR_OFF_MODE,
 	.negative = mDNIe_NEGATIVE_OFF,
 	.blind = ACCESSIBILITY_OFF,
@@ -370,6 +373,12 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		mode = mDNIE_BLINE_MODE;
 	else if (mdnie_tun_state.blind == DARK_SCREEN)
 		mode = mDNIE_DARK_SCREEN_MODE;
+/*
+	if (mdnie_locked) {
+		mdnie_tun_state.background = mdnie_tun_state.real_background;
+		mdnie_tun_state.scenario = mdnie_tun_state.real_scenario;
+	}
+*/
 
 	switch (mode) {
 	case mDNIe_UI_MODE:
@@ -650,7 +659,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 		break;
 
 	default:
-		return;
+		break;
 	}
 
 #ifdef CONFIG_MDNIE_LITE_CONTROL
@@ -793,9 +802,7 @@ static ssize_t scenario_store(struct device *dev,
 		break;
 	}
 
-	if (mdnie_tun_state.negative)
-		pr_debug("I am a fake message\n");
-	else
+	if (!mdnie_tun_state.negative)
 		mDNIe_Set_Mode(mdnie_tun_state.scenario);
 
 	return size;
