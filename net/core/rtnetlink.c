@@ -297,7 +297,12 @@ int __rtnl_link_register(struct rtnl_link_ops *ops)
 	if (rtnl_link_ops_get(ops->kind))
 		return -EEXIST;
 
-	if (!ops->dellink)
+	/* The check for setup is here because if ops
+	 * does not have that filled up, it is not possible
+	 * to use the ops for creating device. So do not
+	 * fill up dellink as well. That disables rtnl_dellink.
+	 */
+	if (ops->setup && !ops->dellink)
 		ops->dellink = unregister_netdevice_queue;
 
 	list_add_tail(&ops->list, &link_ops);
@@ -357,9 +362,12 @@ EXPORT_SYMBOL_GPL(__rtnl_link_unregister);
  */
 void rtnl_link_unregister(struct rtnl_link_ops *ops)
 {
+	/* Close the race with cleanup_net() */
+	mutex_lock(&net_mutex);
 	rtnl_lock();
 	__rtnl_link_unregister(ops);
 	rtnl_unlock();
+	mutex_unlock(&net_mutex);
 }
 EXPORT_SYMBOL_GPL(rtnl_link_unregister);
 
