@@ -101,7 +101,8 @@ void bio_integrity_free(struct bio *bio)
 	struct bio_set *bs = bio->bi_pool;
 
 	if (bip->bip_owns_buf)
-		kfree(bip->bip_buf);
+		kfree(page_address(bip->bip_vec->bv_page) +
+		      bip->bip_vec->bv_offset);
 
 	if (bs) {
 		if (bip->bip_slab != BIO_POOL_NONE)
@@ -329,7 +330,6 @@ int bio_integrity_prep(struct bio *bio)
 	}
 
 	bip->bip_owns_buf = 1;
-	bip->bip_buf = buf;
 	bip->bip_iter.bi_size = len;
 	bip->bip_iter.bi_sector = bio->bi_iter.bi_sector;
 
