@@ -587,7 +587,7 @@ static void blk_mq_rq_timer(unsigned long priv)
 		 * If not software queues are currently mapped to this
 		 * hardware queue, there's nothing to check
 		 */
-		if (!hctx->nr_ctx || !hctx->tags)
+		if (!blk_mq_hw_queue_mapped(hctx))
 			continue;
 
 		blk_mq_tag_busy_iter(hctx, blk_mq_check_expired, &data);
@@ -784,7 +784,8 @@ static int blk_mq_hctx_next_cpu(struct blk_mq_hw_ctx *hctx)
 
 void blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx, bool async)
 {
-	if (unlikely(test_bit(BLK_MQ_S_STOPPED, &hctx->state)))
+	if (unlikely(test_bit(BLK_MQ_S_STOPPED, &hctx->state) ||
+	    !blk_mq_hw_queue_mapped(hctx)))
 		return;
 
 	if (!async && cpumask_test_cpu(smp_processor_id(), hctx->cpumask))
@@ -895,6 +896,9 @@ static void blk_mq_delay_work_fn(struct work_struct *work)
 void blk_mq_delay_queue(struct blk_mq_hw_ctx *hctx, unsigned long msecs)
 {
 	unsigned long tmo = msecs_to_jiffies(msecs);
+
+	if (unlikely(!blk_mq_hw_queue_mapped(hctx)))
+		return;
 
 	if (hctx->queue->nr_hw_queues == 1)
 		kblockd_schedule_delayed_work(&hctx->delay_work, tmo);
