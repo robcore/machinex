@@ -1,1 +1,1 @@
-13patchesIs3.18-around2500
+/media/root/robcore/android/msm_kernel_4.7_8064DT/patches/12patches/0748-cfq-iosched-fix-incorrect-filing-of-rt-async-cfqq.patch
