@@ -29,7 +29,7 @@
 #include "power.h"
 
 #define VERSION 2
-#define VERSION_MIN 6
+#define VERSION_MIN 7
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -150,7 +150,7 @@ static void power_suspend(struct work_struct *work)
 				return;
 		}
 skip_check:
-		if (!mutex_trylock(&pm_mutex)) {
+		if (unlikely(!mutex_trylock(&pm_mutex))) {
 			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
 			return;
 		}
