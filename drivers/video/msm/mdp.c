@@ -2500,7 +2500,6 @@ static int mdp_on(struct platform_device *pdev)
 	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
 	mdp_histogram_ctrl_all(TRUE);
-	mdp_restore_rgb();
 
 	if (ret == 0)
 		ret = panel_next_late_init(pdev);
@@ -2509,7 +2508,7 @@ static int mdp_on(struct platform_device *pdev)
 	is_negative_on();
 #endif
 
-	pr_debug("%s:-\n", __func__);
+	mdp_restore_rgb();
 
 	return ret;
 }
@@ -3479,21 +3478,6 @@ static void mdp_suspend_sub(void)
 }
 #endif
 
-/*#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
-static int mdp_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	if (pdev->id == 0) {
-		mdp_suspend_sub();
-		if (mdp_current_clk_on) {
-			printk(KERN_WARNING"MDP suspend failed\n");
-			return -EBUSY;
-		}
-	}
-
-	return 0;
-}
-#endif
-
 #ifdef CONFIG_POWERSUSPEND
 static void mdp_power_suspend(struct power_suspend *h)
 {
@@ -3511,7 +3495,7 @@ static void mdp_power_resume(struct power_suspend *h)
 	mdp_suspended = FALSE;
 	mutex_unlock(&mdp_suspend_mutex);
 }
-#endif */
+#endif
 
 static int mdp_remove(struct platform_device *pdev)
 {
@@ -3536,12 +3520,11 @@ static int mdp_remove(struct platform_device *pdev)
 
 static int mdp_register_driver(void)
 {
-/*#ifdef CONFIG_POWERSUSPEND
-//	power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB - 1;
+#ifdef CONFIG_POWERSUSPEND
 	power_suspend.suspend = mdp_power_suspend;
 	power_suspend.resume = mdp_power_resume;
 	register_power_suspend(&power_suspend);
-#endif */
+#endif
 
 	return platform_driver_register(&mdp_driver);
 }
