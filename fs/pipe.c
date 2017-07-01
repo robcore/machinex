@@ -812,7 +812,7 @@ static bool too_many_pipe_buffers_hard(struct user_struct *user)
 	       atomic_long_read(&user->pipe_bufs) >= pipe_user_pages_hard;
 }
 
-struct pipe_inode_info * alloc_pipe_info(struct inode *inode)
+struct pipe_inode_info *alloc_pipe_info(void)
 {
 	struct pipe_inode_info *pipe;
 
@@ -891,7 +891,7 @@ static struct inode * get_pipe_inode(void)
 
 	inode->i_ino = get_next_ino();
 
-	pipe = alloc_pipe_info(inode);
+	pipe = alloc_pipe_info();
 	if (!pipe)
 		goto fail_iput;
 
@@ -1081,7 +1081,7 @@ static int fifo_open(struct inode *inode, struct file *filp)
 		spin_unlock(&inode->i_lock);
 	} else {
 		spin_unlock(&inode->i_lock);
-		pipe = alloc_pipe_info(inode);
+		pipe = alloc_pipe_info();
 		if (!pipe)
 			return -ENOMEM;
 		pipe->files = 1;
