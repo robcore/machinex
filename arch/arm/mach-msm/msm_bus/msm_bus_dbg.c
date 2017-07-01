@@ -298,7 +298,7 @@ static const struct file_operations client_data_fops = {
 	.read		= client_data_read,
 };
 
-struct dentry *msm_bus_dbg_create(const char *name, mode_t mode,
+struct dentry *msm_bus_dbg_create(const char *name, umode_t mode,
 	struct dentry *dent, uint32_t clid)
 {
 	if (dent == NULL) {
