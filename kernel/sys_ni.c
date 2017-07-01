@@ -158,7 +158,7 @@ cond_syscall(sys_uselib);
 cond_syscall(sys_pciconfig_read);
 cond_syscall(sys_pciconfig_write);
 cond_syscall(sys_pciconfig_iobase);
-cond_syscall(sys32_ipc);
+cond_syscall(compat_sys_s390_ipc);
 cond_syscall(ppc_rtas);
 cond_syscall(sys_spu_run);
 cond_syscall(sys_spu_create);
