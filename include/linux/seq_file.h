@@ -113,6 +113,7 @@ int seq_path_root(struct seq_file *m, const struct path *path,
 		  const struct path *root, const char *esc);
 
 int single_open(struct file *, int (*)(struct seq_file *, void *), void *);
+int single_open_size(struct file *, int (*)(struct seq_file *, void *), void *, size_t);
 int single_release(struct inode *, struct file *);
 void *__seq_open_private(struct file *, const struct seq_operations *, int);
 int seq_open_private(struct file *, const struct seq_operations *, int);
