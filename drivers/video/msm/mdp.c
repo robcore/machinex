@@ -172,9 +172,9 @@ struct dentry *mdp_dir;
 struct timeval mdp_dma2_timeval;
 struct timeval mdp_ppp_timeval;
 
-//#ifdef CONFIG_POWERSUSPEND
-//static struct power_suspend power_suspend;
-//#endif
+#ifdef CONFIG_POWERSUSPEND
+static struct power_suspend power_suspend;
+#endif
 
 static u32 mdp_irq;
 
@@ -1938,7 +1938,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 				/* send workqueue to turn off mdp power */
 				queue_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
-						   msecs_to_jiffies(mdp_timer_duration));
+						   mdp_timer_duration);
 			}
 		}
 	} else {
@@ -2002,7 +2002,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 				/* send workqueue to turn off mdp power */
 				mod_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
-						   msecs_to_jiffies(mdp_timer_duration));
+						   mdp_timer_duration);
 			}
 			mutex_unlock(&mdp_suspend_mutex);
 		} else if ((!mdp_all_blocks_off) && (!mdp_current_clk_on)) {
