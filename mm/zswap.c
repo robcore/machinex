@@ -618,7 +618,7 @@ static int zswap_writeback_entry(struct zswap_tree *tree,
 		SetPageUptodate(page);
 	}
 
-	/* move it to the tail of the inactive list after end_writeback */
+	/* move it to the tail of the inactive list after clear inode */
 	SetPageReclaim(page);
 
 	if (!__swap_writepage(page, &wbc, zswap_end_swap_write))
