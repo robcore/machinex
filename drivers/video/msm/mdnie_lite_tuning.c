@@ -2475,13 +2475,6 @@ struct device *tune_mdnie_dev;
 
 void init_mdnie_class(void)
 {
-	if (mdnie_tun_state.mdnie_enable) {
-		pr_err("%s : mdnie already enable.. \n",__func__);
-		return;
-	}
-
-	DPRINT("start!\n");
-
 	mdnie_class = class_create(THIS_MODULE, "mdnie");
 	if (IS_ERR(mdnie_class))
 		pr_err("Failed to create class(mdnie)!\n");
@@ -2606,7 +2599,8 @@ void init_mdnie_class(void)
 
 void mdnie_lite_tuning_init(void)
 {
-	init_mdnie_class();
+	if (!mdnie_tun_state.mdnie_enable)
+		init_mdnie_class();
 
 	mipi_dsi_buf_alloc(&mdnie_tun_tx_buf, DSI_BUF_SIZE);
 	mipi_dsi_buf_alloc(&mdnie_tun_rx_buf, DSI_BUF_SIZE);
