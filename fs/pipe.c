@@ -765,6 +765,7 @@ pipe_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int
 pipe_fasync(int fd, struct file *filp, int on)
 {
 	struct inode *inode = file_inode(filp);
