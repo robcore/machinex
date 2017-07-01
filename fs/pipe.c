@@ -26,6 +26,8 @@
 #include <asm/uaccess.h>
 #include <asm/ioctls.h>
 
+#include "internal.h"
+
 /*
  * The max size that a non-root user is allowed to grow the pipe. Can
  * be set by root in /proc/sys/fs/pipe-max-size
@@ -681,19 +683,6 @@ out:
 	return ret;
 }
 
-static ssize_t
-bad_pipe_r(struct file *filp, char __user *buf, size_t count, loff_t *ppos)
-{
-	return -EBADF;
-}
-
-static ssize_t
-bad_pipe_w(struct file *filp, const char __user *buf, size_t count,
-	   loff_t *ppos)
-{
-	return -EBADF;
-}
-
 static long pipe_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct inode *inode = file_inode(filp);
@@ -753,14 +742,16 @@ pipe_poll(struct file *filp, poll_table *wait)
 }
 
 static int
-pipe_release(struct inode *inode, int decr, int decw)
+pipe_release(struct inode *inode, struct file *file)
 {
 	struct pipe_inode_info *pipe;
 
 	mutex_lock(&inode->i_mutex);
 	pipe = inode->i_pipe;
-	pipe->readers -= decr;
-	pipe->writers -= decw;
+	if (file->f_mode & FMODE_READ)
+		pipe->readers--;
+	if (file->f_mode & FMODE_WRITE)
+		pipe->writers--;
 
 	if (!pipe->readers && !pipe->writers) {
 		free_pipe_info(inode);
@@ -1052,7 +1043,7 @@ static struct inode * get_pipe_inode(void)
 	inode->i_pipe = pipe;
 
 	pipe->readers = pipe->writers = 1;
-	inode->i_fop = &rdwr_pipefifo_fops;
+	inode->i_fop = &pipefifo_fops;
 
 	/*
 	 * Mark the inode dirty from the very beginning,
@@ -1095,13 +1086,13 @@ int create_pipe_files(struct file **res, int flags)
 	d_instantiate(path.dentry, inode);
 
 	err = -ENFILE;
-	f = alloc_file(&path, FMODE_WRITE, &write_pipefifo_fops);
+	f = alloc_file(&path, FMODE_WRITE, &pipefifo_fops);
 	if (IS_ERR(f))
 		goto err_dentry;
 
 	f->f_flags = O_WRONLY | (flags & (O_NONBLOCK | O_DIRECT));
 
-	res[0] = alloc_file(&path, FMODE_READ, &read_pipefifo_fops);
+	res[0] = alloc_file(&path, FMODE_READ, &pipefifo_fops);
 	if (IS_ERR(res[0]))
 		goto err_file;
 
@@ -1220,6 +1211,7 @@ static void wake_up_partner(struct inode* inode)
 static int fifo_open(struct inode *inode, struct file *filp)
 {
 	struct pipe_inode_info *pipe;
+	bool is_pipe = inode->i_sb->s_magic == PIPEFS_MAGIC;
 	int ret;
 
 	mutex_lock(&inode->i_mutex);
@@ -1243,12 +1235,11 @@ static int fifo_open(struct inode *inode, struct file *filp)
 	 *  POSIX.1 says that O_NONBLOCK means return with the FIFO
 	 *  opened, even when there is no process writing the FIFO.
 	 */
-		filp->f_op = &read_pipefifo_fops;
 		pipe->r_counter++;
 		if (pipe->readers++ == 0)
 			wake_up_partner(inode);
 
-		if (!pipe->writers) {
+		if (!is_pipe && !pipe->writers) {
 			if ((filp->f_flags & O_NONBLOCK)) {
 				/* suppress POLLHUP until we have
 				 * seen a writer */
@@ -1267,15 +1258,14 @@ static int fifo_open(struct inode *inode, struct file *filp)
 	 *  errno=ENXIO when there is no process reading the FIFO.
 	 */
 		ret = -ENXIO;
-		if ((filp->f_flags & O_NONBLOCK) && !pipe->readers)
+		if (!is_pipe && (filp->f_flags & O_NONBLOCK) && !pipe->readers)
 			goto err;
 
-		filp->f_op = &write_pipefifo_fops;
 		pipe->w_counter++;
 		if (!pipe->writers++)
 			wake_up_partner(inode);
 
-		if (!pipe->readers) {
+		if (!is_pipe && !pipe->readers) {
 			if (wait_for_partner(inode, &pipe->r_counter))
 				goto err_wr;
 		}
@@ -1288,7 +1278,6 @@ static int fifo_open(struct inode *inode, struct file *filp)
 	 *  This implementation will NEVER block on a O_RDWR open, since
 	 *  the process can at least talk to itself.
 	 */
-		filp->f_op = &rdwr_pipefifo_fops;
 
 		pipe->readers++;
 		pipe->writers++;
@@ -1328,14 +1317,17 @@ err_nocleanup:
 	return ret;
 }
 
-/*
- * Dummy default file-operations: the only thing this does
- * is contain the open that then fills in the correct operations
- * depending on the access mode of the file...
- */
-const struct file_operations def_fifo_fops = {
-	.open		= fifo_open,	/* will set read_ or write_pipefifo_fops */
-	.llseek		= noop_llseek,
+const struct file_operations pipefifo_fops = {
+	.open		= fifo_open,
+	.llseek		= no_llseek,
+	.read		= do_sync_read,
+	.aio_read	= pipe_read,
+	.write		= do_sync_write,
+	.aio_write	= pipe_write,
+	.poll		= pipe_poll,
+	.unlocked_ioctl	= pipe_ioctl,
+	.release	= pipe_release,
+	.fasync		= pipe_fasync,
 };
 
 /*
