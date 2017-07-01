@@ -72,7 +72,7 @@ struct wl_ibss;
 #define	WL_ERR(args)									\
 do {										\
 	if (wl_dbg_level & WL_DBG_ERR) {				\
-			pr_debug(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
+			pr_debug(CFG80211_ERROR_TEXT "%s : ", __func__);	\
 			pr_debug args;						\
 		}								\
 } while (0)
@@ -80,7 +80,7 @@ do {										\
 #define	WL_ERR(args)									\
 do {										\
 	if ((wl_dbg_level & WL_DBG_ERR) && net_ratelimit()) {				\
-			pr_err(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
+			pr_err(CFG80211_ERROR_TEXT "%s : ", __func__);	\
 			pr_err args;						\
 		}								\
 } while (0)
@@ -92,7 +92,7 @@ do {										\
 #define	WL_INFO(args)									\
 do {										\
 	if (wl_dbg_level & WL_DBG_INFO) {				\
-			pr_debug(KERN_INFO "CFG80211-INFO) %s : ", __func__);	\
+			pr_debug("CFG80211-INFO) %s : ", __func__);	\
 			pr_debug args;						\
 		}								\
 } while (0)
@@ -102,7 +102,7 @@ do {										\
 #define	WL_SCAN(args)								\
 do {									\
 	if (wl_dbg_level & WL_DBG_SCAN) {			\
-		pr_debug(KERN_INFO "CFG80211-SCAN) %s :", __func__);	\
+		pr_debug("CFG80211-SCAN) %s :", __func__);	\
 		pr_debug args;							\
 	}									\
 } while (0)
@@ -112,7 +112,7 @@ do {									\
 #define	WL_TRACE(args)								\
 do {									\
 	if (wl_dbg_level & WL_DBG_TRACE) {			\
-		pr_debug(KERN_INFO "CFG80211-TRACE) %s :", __func__);	\
+		pr_debug("CFG80211-TRACE) %s :", __func__);	\
 		pr_debug args;							\
 	}									\
 } while (0)
@@ -123,7 +123,7 @@ do {									\
 #define	WL_TRACE_HW4(args)					\
 do {										\
 	if (wl_dbg_level & WL_DBG_ERR) {				\
-			pr_debug(KERN_INFO "CFG80211-TRACE) %s : ", __func__);	\
+			pr_debug("CFG80211-TRACE) %s : ", __func__);	\
 			pr_debug args;						\
 		} 								\
 } while (0)
@@ -134,7 +134,7 @@ do {										\
 #define	WL_DBG(args)								\
 do {									\
 	if (wl_dbg_level & WL_DBG_DBG) {			\
-		pr_debug(KERN_DEBUG "CFG80211-DEBUG) %s :", __func__);	\
+		pr_debug("CFG80211-DEBUG) %s :", __func__);	\
 		pr_debug args;							\
 	}									\
 } while (0)
@@ -181,7 +181,7 @@ do {									\
 #endif
 
 /* SCAN_SUPPRESS timer values in ms */
-#define WL_SCAN_SUPPRESS_TIMEOUT 31000 /* default Framwork DHCP timeout is 30 sec */
+#define WL_SCAN_SUPPRESS_TIMEOUT 30000 /* default Framwork DHCP timeout is 30 sec */
 #define WL_SCAN_SUPPRESS_RETRY 3000
 
 #define WL_PM_ENABLE_TIMEOUT 10000

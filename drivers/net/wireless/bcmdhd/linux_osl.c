@@ -1185,7 +1185,10 @@ osl_delay(uint usec)
 void
 osl_sleep(uint ms)
 {
-	mdelay(ms);
+	if (ms < 20)
+		usleep_range(ms*1000, ms*1000 + 1000);
+	else
+	msleep(ms);
 }
 
 
