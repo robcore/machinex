@@ -2553,7 +2553,6 @@ void init_mdnie_class(void)
 #if defined(CONFIG_MDNIE_LITE_CONTROL)
 	device_create_file(tune_mdnie_dev, &dev_attr_locked);
 	device_create_file(tune_mdnie_dev, &dev_attr_hijack);
-	device_create_file(tune_mdnie_dev, &dev_attr_hijack);
 	device_create_file(tune_mdnie_dev, &dev_attr_curve);
 	device_create_file(tune_mdnie_dev, &dev_attr_copy_mode);
 	device_create_file(tune_mdnie_dev, &dev_attr_sharpen);
