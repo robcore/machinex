@@ -2789,7 +2789,6 @@ static struct i2c_board_info isa1200_board_info[] __initdata = {
 };
 #endif
 
-#ifdef CONFIG_WCNSS_CORE
 #define MSM_WCNSS_PHYS	0x03000000
 #define MSM_WCNSS_SIZE	0x280000
 
@@ -2831,7 +2830,6 @@ static struct platform_device msm_device_wcnss_wlan = {
 	.resource	= resources_wcnss_wlan,
 	.dev		= {.platform_data = &qcom_wcnss_pdata},
 };
-#endif
 
 static struct platform_device msm_device_iris_fm = {
 	.name = "iris_fm",
