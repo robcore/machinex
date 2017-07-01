@@ -609,7 +609,7 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	{
 		unsigned int oldflags;
 
-		ret = mnt_want_write_file(filp);
+		ret = mnt_want_write(filp->f_path.mnt);
 		if (ret)
 			return ret;
 
@@ -646,7 +646,7 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		inode->i_ctime = CURRENT_TIME;
 		mark_inode_dirty(inode);
 out:
-		mnt_drop_write_file(filp);
+		mnt_drop_write(filp->f_path.mnt);
 		return ret;
 	}
 	default:
