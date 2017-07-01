@@ -202,6 +202,9 @@ void update_mdnie_curve(void)
 	char	*source;
 	int	i;
 
+	if (!mdnie_tun_state.mdnie_enable)
+		return;
+
 	// Determine the source to copy the curves from
 	switch (curve) {
 		case DYNAMIC_MODE:	source = DYNAMIC_UI_2;
@@ -228,6 +231,8 @@ void update_mdnie_mode(void)
 	char	*source_1, *source_2;
 	int	i;
 
+	if (!mdnie_tun_state.mdnie_enable)
+		return;
 	// Determine the source to copy the mode from
 	switch (curve) {
 		case DYNAMIC_MODE:	source_1 = DYNAMIC_UI_1;
@@ -268,6 +273,8 @@ void print_tun_data(void)
 
 void free_tun_cmd(void)
 {
+	if (!mdnie_tun_state.mdnie_enable)
+		return;
 	memset(tune_data1, 0, MDNIE_TUNE_FIRST_SIZE);
 	memset(tune_data2, 0, MDNIE_TUNE_SECOND_SIZE);
 }
@@ -280,6 +287,8 @@ void sending_tuning_cmd(void)
 		if(get_lcd_attached() == 0)
 			return;
 #endif
+	if (!mdnie_tun_state.mdnie_enable)
+		return;
 
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
@@ -314,6 +323,9 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 {
 	struct msm_fb_data_type *mfd;
 
+	if (!mdnie_tun_state.mdnie_enable)
+		return;
+
 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
 
 	if (mfd == NULL || !mfd)
@@ -322,8 +334,7 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 	if (mfd->resume_state == MIPI_SUSPEND_STATE)
 		return;
 
-	if (!mdnie_tun_state.mdnie_enable ||
-		mdnie_tun_state.negative ||
+	if (mdnie_tun_state.negative ||
 		mode < mDNIe_UI_MODE ||
 		mode >= MAX_mDNIe_MODE)
 		return;
