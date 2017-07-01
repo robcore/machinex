@@ -2757,10 +2757,7 @@ static int cache_grow(struct kmem_cache *cachep,
 	 * Be lazy and only check for valid flags here,  keeping it out of the
 	 * critical path in kmem_cache_alloc().
 	 */
-	if (unlikely(flags & GFP_SLAB_BUG_MASK)) {
-		pr_emerg("gfp: %u\n", flags & GFP_SLAB_BUG_MASK);
-		BUG();
-	}
+	BUG_ON(flags & GFP_SLAB_BUG_MASK);
 	local_flags = flags & (GFP_CONSTRAINT_MASK|GFP_RECLAIM_MASK);
 
 	/* Take the node list lock to change the colour_next on this node */
@@ -3815,11 +3812,11 @@ static int alloc_kmemlist(struct kmem_cache *cachep, gfp_t gfp)
 
 	for_each_online_node(node) {
 
-		if (use_alien_caches) {
-			new_alien = alloc_alien_cache(node, cachep->limit, gfp);
-			if (!new_alien)
-				goto fail;
-		}
+                if (use_alien_caches) {
+                        new_alien = alloc_alien_cache(node, cachep->limit, gfp);
+                        if (!new_alien)
+                                goto fail;
+                }
 
 		new_shared = NULL;
 		if (cachep->shared) {

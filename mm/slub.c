@@ -1369,10 +1369,7 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	void *p;
 	int order;
 
-	if (unlikely(flags & GFP_SLAB_BUG_MASK)) {
-		pr_emerg("gfp: %u\n", flags & GFP_SLAB_BUG_MASK);
-		BUG();
-	}
+	BUG_ON(flags & GFP_SLAB_BUG_MASK);
 
 	page = allocate_slab(s,
 		flags & (GFP_RECLAIM_MASK | GFP_CONSTRAINT_MASK), node);
@@ -2550,7 +2547,7 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 
 			} else { /* Needs to be taken off a list */
 
-				n = get_node(s, page_to_nid(page));
+	                        n = get_node(s, page_to_nid(page));
 				/*
 				 * Speculatively acquire the list_lock.
 				 * If the cmpxchg does not succeed then we may
@@ -2583,10 +2580,10 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 		 * The list lock was not taken therefore no list
 		 * activity can be necessary.
 		 */
-		if (was_frozen)
-			stat(s, FREE_FROZEN);
-		return;
-	}
+                if (was_frozen)
+                        stat(s, FREE_FROZEN);
+                return;
+        }
 
 	if (unlikely(!new.inuse && n->nr_partial > s->min_partial))
 		goto slab_empty;

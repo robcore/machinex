@@ -68,9 +68,9 @@ bool __blk_mq_tag_busy(struct blk_mq_hw_ctx *hctx)
 }
 
 /*
- * Wakeup all potentially sleeping on tags
+ * Wakeup all potentially sleeping on normal (non-reserved) tags
  */
-void blk_mq_tag_wakeup_all(struct blk_mq_tags *tags, bool include_reserve)
+static void blk_mq_tag_wakeup_all(struct blk_mq_tags *tags)
 {
 	struct blk_mq_bitmap_tags *bt;
 	int i, wake_index;
@@ -84,12 +84,6 @@ void blk_mq_tag_wakeup_all(struct blk_mq_tags *tags, bool include_reserve)
 			wake_up(&bs->wait);
 
 		wake_index = bt_index_inc(wake_index);
-	}
-
-	if (include_reserve) {
-		bt = &tags->breserved_tags;
-		if (waitqueue_active(&bt->bs[0].wait))
-			wake_up(&bt->bs[0].wait);
 	}
 }
 
@@ -106,7 +100,7 @@ void __blk_mq_tag_idle(struct blk_mq_hw_ctx *hctx)
 
 	atomic_dec(&tags->active_queues);
 
-	blk_mq_tag_wakeup_all(tags, false);
+	blk_mq_tag_wakeup_all(tags);
 }
 
 /*
@@ -142,30 +136,27 @@ static inline bool hctx_may_queue(struct blk_mq_hw_ctx *hctx,
 
 static int __bt_get_word(struct blk_align_bitmap *bm, unsigned int last_tag)
 {
-	int tag, org_last_tag = last_tag;
+	int tag, org_last_tag, end;
 
-	while (1) {
-		tag = find_next_zero_bit(&bm->word, bm->depth, last_tag);
-		if (unlikely(tag >= bm->depth)) {
+	org_last_tag = last_tag;
+	end = bm->depth;
+	do {
+restart:
+		tag = find_next_zero_bit(&bm->word, end, last_tag);
+		if (unlikely(tag >= end)) {
 			/*
-			 * We started with an offset, and we didn't reset the
-			 * offset to 0 in a failure case, so start from 0 to
+			 * We started with an offset, start from 0 to
 			 * exhaust the map.
 			 */
 			if (org_last_tag && last_tag) {
-				last_tag = org_last_tag = 0;
-				continue;
+				end = last_tag;
+				last_tag = 0;
+				goto restart;
 			}
 			return -1;
 		}
-
-		if (!test_and_set_bit(tag, &bm->word))
-			break;
-
 		last_tag = tag + 1;
-		if (last_tag >= bm->depth - 1)
-			last_tag = 0;
-	}
+	} while (test_and_set_bit_lock(tag, &bm->word));
 
 	return tag;
 }
@@ -200,17 +191,9 @@ static int __bt_get(struct blk_mq_hw_ctx *hctx, struct blk_mq_bitmap_tags *bt,
 			goto done;
 		}
 
-		/*
-		 * Jump to next index, and reset the last tag to be the
-		 * first tag of that index
-		 */
-		index++;
-		last_tag = (index << bt->bits_per_word);
-
-		if (index >= bt->map_nr) {
+		last_tag = 0;
+		if (++index >= bt->map_nr)
 			index = 0;
-			last_tag = 0;
-		}
 	}
 
 	*tag_cache = 0;
@@ -267,21 +250,6 @@ static int bt_get(struct blk_mq_alloc_data *data,
 	do {
 		prepare_to_wait(&bs->wait, &wait, TASK_UNINTERRUPTIBLE);
 
-		tag = __bt_get(hctx, bt, last_tag);
-		if (tag != -1)
-			break;
-
-		/*
-		 * We're out of tags on this hardware queue, kick any
-		 * pending IO submits before going to sleep waiting for
-		 * some to complete.
-		 */
-		blk_mq_run_hw_queue(hctx, false);
-
-		/*
-		 * Retry tag allocation after running the hardware queue,
-		 * as running the queue may also have found completions.
-		 */
 		tag = __bt_get(hctx, bt, last_tag);
 		if (tag != -1)
 			break;
@@ -372,10 +340,11 @@ static void bt_clear_tag(struct blk_mq_bitmap_tags *bt, unsigned int tag)
 	struct bt_wait_state *bs;
 	int wait_cnt;
 
-	clear_bit(TAG_TO_BIT(bt, tag), &bt->map[index].word);
-
-	/* Ensure that the wait list checks occur after clear_bit(). */
-	smp_mb();
+	/*
+	 * The unlock memory barrier need to order access to req in free
+	 * path and clearing tag bit
+	 */
+	clear_bit_unlock(TAG_TO_BIT(bt, tag), &bt->map[index].word);
 
 	bs = bt_wake_ptr(bt);
 	if (!bs)
@@ -611,7 +580,7 @@ int blk_mq_tag_update_depth(struct blk_mq_tags *tags, unsigned int tdepth)
 	 * static and should never need resizing.
 	 */
 	bt_update_count(&tags->bitmap_tags, tdepth);
-	blk_mq_tag_wakeup_all(tags, false);
+	blk_mq_tag_wakeup_all(tags);
 	return 0;
 }
 
