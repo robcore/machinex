@@ -3710,7 +3710,8 @@ _iscan_sysioc_thread(void *data)
 	DAEMONIZE("iscan_sysioc");
 
 	status = WL_SCAN_RESULTS_PARTIAL;
-	while (down_interruptible(&iscan->sysioc_sem) == 0) {
+	while (down_interruptible(&iscan->sysioc_sem) == 0 &&
+		!kthread_should_stop()) {
 		if (iscan->timer_on) {
 			del_timer(&iscan->timer);
 			iscan->timer_on = 0;
@@ -3737,7 +3738,8 @@ _iscan_sysioc_thread(void *data)
 #endif
 				/* Reschedule the timer */
 				iscan->timer.expires = jiffies + msecs_to_jiffies(iscan->timer_ms);
-				add_timer(&iscan->timer);
+				if (!kthread_should_stop())
+					add_timer(&iscan->timer);
 				iscan->timer_on = 1;
 				break;
 			case WL_SCAN_RESULTS_SUCCESS:
@@ -3749,7 +3751,8 @@ _iscan_sysioc_thread(void *data)
 				WL_TRACE(("iscanresults pending\n"));
 				/* Reschedule the timer */
 				iscan->timer.expires = jiffies + msecs_to_jiffies(iscan->timer_ms);
-				add_timer(&iscan->timer);
+				if (!kthread_should_stop())
+					add_timer(&iscan->timer);
 				iscan->timer_on = 1;
 				break;
 			case WL_SCAN_RESULTS_ABORTED:
@@ -3808,7 +3811,8 @@ void wl_iw_detach(void)
 		return;
 	if (iscan->sysioc_pid >= 0) {
 		KILL_PROC(iscan->sysioc_pid, SIGTERM);
-		wait_for_completion(&iscan->sysioc_exited);
+		if (!try_wait_for_completion(&iscan->sysioc_exited))
+			wait_for_completion(&iscan->sysioc_exited);
 	}
 
 	while (iscan->list_hdr) {
