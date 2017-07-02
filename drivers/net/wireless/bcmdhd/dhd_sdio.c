@@ -444,14 +444,10 @@ static bool retrydata;
 /* At a watermark around 8 the spid hits underflow error. */
 static uint watermark = 32;
 static uint mesbusyctrl = 0;
-#elif defined(SDIO_CRC_ERROR_FIX)
-static uint watermark = 48;
-static uint mesbusyctrl = 80;
 #else
 static uint watermark = 8;
 static uint mesbusyctrl = 0;
 #endif /* BCMSPI */
-
 static const uint firstread = DHD_FIRSTREAD;
 
 /* Retry count for register access failures */
@@ -2595,10 +2591,7 @@ enum {
 #if defined(USE_SDIOFIFO_IOVAR)
 	IOV_WATERMARK,
 	IOV_MESBUSYCTRL,
-#elif defined(SDIO_CRC_ERROR_FIX)
-	IOV_WATERMARK,
-	IOV_MESBUSYCTRL,
-#endif /* SDIO_CRC_ERROR_FIX | USE_SDIOFIFO_IOVAR */
+#endif /* USE_SDIOFIFO_IOVAR */
 #ifdef SDTEST
 	IOV_PKTGEN,
 	IOV_EXTLOOP,
@@ -2662,13 +2655,10 @@ const bcm_iovar_t dhdsdio_iovars[] = {
 	{"extloop",	IOV_EXTLOOP,	0,	IOVT_BOOL,	0 },
 	{"pktgen",	IOV_PKTGEN,	0,	IOVT_BUFFER,	sizeof(dhd_pktgen_t) },
 #endif /* SDTEST */
-#if defined(SDIO_CRC_ERROR_FIX)
+#if defined(USE_SDIOFIFO_IOVAR)
 	{"watermark",	IOV_WATERMARK,	0,	IOVT_UINT32,	0 },
 	{"mesbusyctrl",	IOV_MESBUSYCTRL,	0,	IOVT_UINT32,	0 },
-#elif defined(USE_SDIOFIFO_IOVAR)
-	{"watermark",	IOV_WATERMARK,	0,	IOVT_UINT32,	0 },
-	{"mesbusyctrl",	IOV_MESBUSYCTRL,	0,	IOVT_UINT32,	0 },
-#endif /* USE_SDIOFIFO_IOVAR | SDIO_CRC_ERROR_FIX */
+#endif /* USE_SDIOFIFO_IOVAR */
 	{"devcap", IOV_DEVCAP,	0,	IOVT_UINT32,	0 },
 	{"dngl_isolation", IOV_DONGLEISOLATION,	0,	IOVT_UINT32,	0 },
 	{"kso",	IOV_KSO,	0,	IOVT_UINT32,	0 },
@@ -3838,33 +3828,8 @@ dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const ch
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_MESBUSYCTRL,
 			((uint8)mesbusyctrl | 0x80), NULL);
 		break;
-#elif defined(SDIO_CRC_ERROR_FIX)
-	case IOV_GVAL(IOV_WATERMARK):
-		int_val = (int32)watermark;
-		bcopy(&int_val, arg, val_size);
-		break;
+#endif 
 
-	case IOV_SVAL(IOV_WATERMARK):
-		watermark = (uint)int_val;
-		watermark = (watermark > SBSDIO_WATERMARK_MASK) ? SBSDIO_WATERMARK_MASK : watermark;
-		DHD_ERROR(("Setting watermark as 0x%x.\n", watermark));
-		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_WATERMARK, (uint8)watermark, NULL);
-		break;
-
-	case IOV_GVAL(IOV_MESBUSYCTRL):
-		int_val = (int32)mesbusyctrl;
-		bcopy(&int_val, arg, val_size);
-		break;
-
-	case IOV_SVAL(IOV_MESBUSYCTRL):
-		mesbusyctrl = (uint)int_val;
-		mesbusyctrl = (mesbusyctrl > SBSDIO_MESBUSYCTRL_MASK)
-						? SBSDIO_MESBUSYCTRL_MASK : mesbusyctrl;
-		DHD_ERROR(("Setting mesbusyctrl as 0x%x.\n", mesbusyctrl));
-		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_MESBUSYCTRL,
-			((uint8)mesbusyctrl | 0x80), NULL);
-		break;
-#endif /* SDIO_CRC_ERROR_FIX */
 
 	case IOV_GVAL(IOV_DONGLEISOLATION):
 		int_val = bus->dhd->dongle_isolation;
@@ -4587,22 +4552,11 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 		}
 #endif /* BCMSPI */
 		W_SDREG(bus->hostintmask, &bus->regs->hostintmask, retries);
-#ifdef SDIO_CRC_ERROR_FIX
-		if (bus->blocksize < 512) {
-			mesbusyctrl = watermark = bus->blocksize / 4;
-		}
-#endif /* SDIO_CRC_ERROR_FIX */
 
 		if (bus->sih->buscorerev < 15) {
 			bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_WATERMARK,
 				(uint8)watermark, &err);
 		}
-#ifdef SDIO_CRC_ERROR_FIX
-		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_MESBUSYCTRL,
-			(uint8)mesbusyctrl|0x80, &err);
-		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_DEVICE_CTL,
-			SBSDIO_DEVCTL_EN_F2_BLK_WATERMARK, NULL);
-#endif /* SDIO_CRC_ERROR_FIX */
 
 		/* Set bus state according to enable result */
 		dhdp->busstate = DHD_BUS_DATA;
