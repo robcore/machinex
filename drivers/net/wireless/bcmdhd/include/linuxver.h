@@ -546,7 +546,6 @@ typedef struct {
 #else
 #define DBG_THR(x)
 #endif
-static 
 
 static inline bool binary_sema_down(tsk_ctl_t *tsk)
 {
