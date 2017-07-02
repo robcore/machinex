@@ -265,8 +265,9 @@ static int alarmtimer_suspend(struct device *dev)
 	if (min == 0)
 		return 0;
 
-	if (ktime_to_ns(min) < (NSEC_PER_SEC )) {
-		__pm_wakeup_event(ws, 5 * MSEC_PER_SEC);
+	if (ktime_to_ns(min) < 2 * NSEC_PER_SEC) {
+		__pm_wakeup_event(ws, 2 * MSEC_PER_SEC);
+		return -EBUSY;
 	}
 
 	//trace_alarmtimer_suspend(expires, type);
@@ -280,7 +281,7 @@ static int alarmtimer_suspend(struct device *dev)
 	/* Set alarm, if in the past reject suspend briefly to handle */
 	ret = rtc_timer_start(rtc, &rtctimer, now, 0);
 	if (ret < 0)
-		__pm_wakeup_event(ws, 5 * MSEC_PER_SEC);
+		__pm_wakeup_event(ws, MSEC_PER_SEC);
 	return ret;
 }
 
@@ -474,7 +475,7 @@ u64 alarm_forward(struct alarm *alarm, ktime_t now, ktime_t interval)
 		overrun++;
 	}
 
-	alarm->node.expires = ktime_add(alarm->node.expires, interval);
+	alarm->node.expires = ktime_add_safe(alarm->node.expires, interval);
 	return overrun;
 }
 EXPORT_SYMBOL(alarm_forward);
@@ -659,13 +660,21 @@ static int alarm_timer_set(struct k_itimer *timr, int flags,
 
 	/* start the timer */
 	timr->it.alarm.interval = timespec64_to_ktime(new_setting->it_interval);
+
+	/*
+	 * Rate limit to the tick as a hot fix to prevent DOS. Will be
+	 * mopped up later.
+	 */
+	if (timr->it.alarm.interval < TICK_NSEC)
+		timr->it.alarm.interval = TICK_NSEC;
+
 	exp = timespec64_to_ktime(new_setting->it_value);
 	/* Convert (if necessary) to absolute time */
 	if (flags != TIMER_ABSTIME) {
 		ktime_t now;
 
 		now = alarm_bases[timr->it.alarm.alarmtimer.type].gettime();
-		exp = ktime_add(now, exp);
+		exp = ktime_add_safe(now, exp);
 	}
 
 	alarm_start(&timr->it.alarm.alarmtimer, exp);
