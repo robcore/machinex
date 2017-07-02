@@ -8,6 +8,7 @@
 #include <linux/writeback.h>
 #include <linux/sysctl.h>
 #include <linux/gfp.h>
+#include <linux/display_state.h>
 #include "internal.h"
 
 /* A global variable is a bit ugly, but it keeps the code simple */
@@ -53,6 +54,9 @@ int drop_caches_sysctl_handler(struct ctl_table *table, int write,
 	void __user *buffer, size_t *length, loff_t *ppos)
 {
 	int ret;
+
+	if (!is_display_on())
+		return 0;
 
 	ret = proc_dointvec_minmax(table, write, buffer, length, ppos);
 	if (ret)

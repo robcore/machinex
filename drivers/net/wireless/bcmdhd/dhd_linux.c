@@ -6270,8 +6270,6 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		return;
 	}
 
-	DHD_OS_WD_WAKE_LOCK(pub);
-
 	flags = dhd_os_spin_lock(pub);
 
 	/* don't start the wd until fw is loaded */
@@ -6299,7 +6297,6 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		dhd->wd_timer_valid = TRUE;
 	}
 	dhd_os_spin_unlock(pub, flags);
-	DHD_OS_WD_WAKE_UNLOCK(pub);
 }
 
 void *

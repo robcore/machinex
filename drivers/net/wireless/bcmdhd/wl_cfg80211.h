@@ -181,7 +181,7 @@ do {									\
 #endif
 
 /* SCAN_SUPPRESS timer values in ms */
-#define WL_SCAN_SUPPRESS_TIMEOUT 30000 /* default Framwork DHCP timeout is 30 sec */
+#define WL_SCAN_SUPPRESS_TIMEOUT 31000 /* default Framwork DHCP timeout is 30 sec */
 #define WL_SCAN_SUPPRESS_RETRY 3000
 
 #define WL_PM_ENABLE_TIMEOUT 10000
