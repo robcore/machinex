@@ -230,7 +230,7 @@ int __init brcm_wifi_init_gpio(void)
 }
 
 #ifdef ENABLE_4335BT_WAR
-static int brcm_wlan_power(int onoff,bool b0rev)
+static int brcm_wlan_power(int onoff, bool b0rev)
 #else
 static int brcm_wlan_power(int onoff)
 #endif
@@ -246,22 +246,15 @@ static int brcm_wlan_power(int onoff)
 		{
 			bt_off = 1;
 			ice_gpiox_set(FPGA_GPIO_BT_EN, 1);
-			printk("[brcm_wlan_power] Bluetooth Power On.\n");
+			pr_info("[brcm_wlan_power] Bluetooth Power On.\n");
 			mdelay(50);
 		}
 		else {
 			bt_off = 0;
 		}
 #endif /* ENABLE_4335BT_WAR */
-
-		/*
-		if (gpio_request(GPIO_WL_REG_ON, "WL_REG_ON"))
-		{
-			printk("Failed to request for WL_REG_ON\n");
-		}*/
-		/* if (gpio_direction_output(GPIO_WL_REG_ON, 1)) { */
 		if (ice_gpiox_set(FPGA_GPIO_WLAN_EN, 1)) {		// yhcha-patch
-			printk(KERN_ERR "%s: WL_REG_ON  failed to pull up\n",
+			pr_err("%s: WL_REG_ON  failed to pull up\n",
 				__func__);
 			ret =  -EIO;
 		}
@@ -291,7 +284,7 @@ static int brcm_wlan_power(int onoff)
 	if(onoff && (bt_off == 1) && (bt_is_running == 0)) {
 		mdelay(100);
 		ice_gpiox_set(FPGA_GPIO_BT_EN, 0);
-		printk("[brcm_wlan_power] BT_REG_OFF.\n");
+		pr_info("[brcm_wlan_power] Bluetooth Power Off.\n");
 	}
 #endif
 	return ret;
@@ -420,15 +413,16 @@ static struct cntry_locales_custom brcm_wlan_translate_custom_table[] = {
 static void *brcm_wlan_get_country_code(char *ccode)
 {
 	int size = ARRAY_SIZE(brcm_wlan_translate_custom_table);
-	int i;
+	unsigned int i;
 
 	if (!ccode)
 		return NULL;
 
 	for (i = 0; i < size; i++)
 		if (strcmp(ccode,
-		brcm_wlan_translate_custom_table[i].iso_abbrev) == 0)
+			brcm_wlan_translate_custom_table[i].iso_abbrev) == 0)
 			return &brcm_wlan_translate_custom_table[i];
+
 	return &brcm_wlan_translate_custom_table[0];
 }
 

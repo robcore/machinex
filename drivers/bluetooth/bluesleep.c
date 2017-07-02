@@ -659,6 +659,7 @@ static ssize_t bluepower_write_proc_btwake(struct file *file, const char __user 
 				 size_t count, loff_t *pos)
 {
 	char *buf;
+	int ret;
 
 	if (count < 1)
 		return -EINVAL;
@@ -681,7 +682,6 @@ static ssize_t bluepower_write_proc_btwake(struct file *file, const char __user 
 		clear_bit(BT_EXT_WAKE, &flags);
 	} else if (buf[0] == '1') {
 		if (bsi->has_ext_wake == 1) {
-			int ret;
 			ret = ice_gpiox_set(bsi->ext_wake, 1);
 			if (ret)
 				pr_debug("(bluepower_write_proc_btwake) failed to set ext_wake 1.");
@@ -943,7 +943,7 @@ static int bluesleep_resume(struct platform_device *pdev)
 
 		if ((bsi->uport != NULL) &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
-				pr_debug("bluesleep resume form BT event...");
+				pr_debug("bluesleep resume from BT event...");
 				hsuart_power(1);
 		}
 		clear_bit(BT_SUSPEND, &flags);

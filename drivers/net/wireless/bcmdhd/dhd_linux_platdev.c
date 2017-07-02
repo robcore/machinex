@@ -201,7 +201,7 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 
 #ifdef ENABLE_4335BT_WAR
 		is4335_revb0 = check_bcm4335_rev();
-		err = plat_data->set_power(on,is4335_revb0);
+		err = plat_data->set_power(on, is4335_revb0);
 #else
 		err = plat_data->set_power(on);
 #endif
