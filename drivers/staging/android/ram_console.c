@@ -161,7 +161,8 @@ static int __init ram_console_late_init(void)
 		return 0;
 
 	persistent_ram_ext_oldbuf_merge(prz);
-	entry = create_proc_entry("last_kmsg", S_IFREG | S_IRUGO, NULL);
+	entry = proc_create_data("last_kmsg", 0400, NULL,
+			 &ram_console_file_ops, entry);
 	if (!entry) {
 		pr_err("failed to create proc entry\n");
 		persistent_ram_free_old(prz);

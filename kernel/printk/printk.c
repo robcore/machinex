@@ -465,11 +465,7 @@ static int log_store(int facility, int level,
 	return msg->text_len;
 }
 
-#ifdef CONFIG_SECURITY_DMESG_RESTRICT
-int dmesg_restrict = 1;
-#else
-int dmesg_restrict;
-#endif
+int dmesg_restrict = 0;
 
 static int syslog_action_restricted(int type)
 {
