@@ -40,7 +40,6 @@
 
 
 #include <linux/fs.h>
-#include <linux/delay.h>
 
 #define PCI_CFG_RETRY		10
 
@@ -1189,7 +1188,7 @@ osl_sleep(uint ms)
 	if (ms < 20)
 		usleep_range(ms*1000, ms*1000 + 1000);
 	else
-	mdelay(ms);
+	msleep(ms);
 }
 
 

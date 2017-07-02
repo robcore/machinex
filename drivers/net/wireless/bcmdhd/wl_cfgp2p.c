@@ -2718,6 +2718,8 @@ wl_cfgp2p_del_p2p_disc_if(struct wireless_dev *wdev, struct bcm_cfg80211 *cfg)
 	if (!wdev)
 		return -EINVAL;
 
+	might_sleep();
+
 	WL_TRACE(("Enter\n"));
 
 	if (!rtnl_is_locked()) {
@@ -2725,10 +2727,13 @@ wl_cfgp2p_del_p2p_disc_if(struct wireless_dev *wdev, struct bcm_cfg80211 *cfg)
 		rollback_lock = true;
 	}
 
-	cfg80211_unregister_wdev(wdev);
+	cfg80211_unregister_ndev(wdev);
 
 	if (rollback_lock)
 		rtnl_unlock();
+
+	/* Wait until all pending rcu_read_lock released */
+	synchronize_rcu();
 
 	kfree(wdev);
 

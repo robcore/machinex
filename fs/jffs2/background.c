@@ -91,7 +91,7 @@ static int jffs2_garbage_collect_thread(void *_c)
 	again:
 		spin_lock(&c->erase_completion_lock);
 		if (!jffs2_thread_should_wake(c)) {
-			set_current_state(TASK_INTERRUPTIBLE);
+			set_current_state (TASK_INTERRUPTIBLE);
 			spin_unlock(&c->erase_completion_lock);
 			jffs2_dbg(1, "%s(): sleeping...\n", __func__);
 			schedule();

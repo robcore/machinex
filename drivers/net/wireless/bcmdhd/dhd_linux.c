@@ -433,7 +433,7 @@ typedef struct dhd_info {
 	uint32 wakelock_counter;
 	bool waive_wakelock;
 	uint32 wakelock_before_waive;
-	unsigned int wakelock_wd_counter;
+	int wakelock_wd_counter;
 	int wakelock_rx_timeout_enable;
 	int wakelock_ctrl_timeout_enable;
 
@@ -710,7 +710,7 @@ static int dhd_toe_set(dhd_info_t *dhd, int idx, uint32 toe_ol);
 #endif /* TOE */
 
 static int dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
-                             wl_event_msg_t *event_ptr, void **data_ptr);
+                             size_t pktlen, wl_event_msg_t *event_ptr, void **data_ptr);
 #if defined(SUPPORT_P2P_GO_PS)
 #ifdef PROP_TXSTATUS
 static int dhd_wakelock_waive(dhd_info_t *dhdinfo);
@@ -2253,6 +2253,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 #else
 			skb->mac.raw,
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22) */
+			len > ETHER_TYPE_LEN ? len - ETHER_TYPE_LEN : 0,
 			&event,
 			&data);
 
@@ -4378,7 +4379,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 
 	ASSERT(dhd);
 
-		DHD_OS_WD_WAKE_LOCK(&dhd->pub);
+	DHD_TRACE(("Enter %s:\n", __FUNCTION__));
 
 	/* try to download image and nvram to the dongle */
 	if  (dhd->pub.busstate == DHD_BUS_DOWN && dhd_update_fw_nv_path(dhd)) {
@@ -4388,12 +4389,10 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		if (ret < 0) {
 			DHD_ERROR(("%s: failed to download firmware %s\n",
 			          __FUNCTION__, dhd->fw_path));
-			DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
 			return ret;
 		}
 	}
 	if (dhd->pub.busstate != DHD_BUS_LOAD) {
-		DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
 		return -ENETDOWN;
 	}
 
@@ -4408,7 +4407,6 @@ dhd_bus_start(dhd_pub_t *dhdp)
 
 		DHD_ERROR(("%s, dhd_bus_init failed %d\n", __FUNCTION__, ret));
 		dhd_os_sdunlock(dhdp);
-		DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
 		return ret;
 	}
 #if defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID)
@@ -4449,7 +4447,6 @@ dhd_bus_start(dhd_pub_t *dhdp)
 
 	/* Bus is ready, do any protocol initialization */
 	if ((ret = dhd_prot_init(&dhd->pub)) < 0)
-		DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
 		return ret;
 
 	dhd_process_cid_mac(dhdp, FALSE);
@@ -4462,7 +4459,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		dhd->pend_ipaddr = 0;
 	}
 #endif /* ARP_OFFLOAD_SUPPORT */
-	DHD_OS_WD_WAKE_UNLOCK(&dhd->pub);
+
 	return 0;
 }
 #ifdef WLTDLS
@@ -6273,12 +6270,15 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		return;
 	}
 
+	DHD_OS_WD_WAKE_LOCK(pub);
+
 	flags = dhd_os_spin_lock(pub);
 
 	/* don't start the wd until fw is loaded */
 	if (pub->busstate == DHD_BUS_DOWN) {
 		dhd_os_spin_unlock(pub, flags);
 		if (!wdtick)
+			DHD_OS_WD_WAKE_UNLOCK(pub);
 		return;
 	}
 
@@ -6297,9 +6297,9 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		/* Re arm the timer, at last watchdog period */
 		mod_timer(&dhd->timer, jiffies + msecs_to_jiffies(dhd_watchdog_ms));
 		dhd->wd_timer_valid = TRUE;
-		DHD_OS_WD_WAKE_UNLOCK(pub);
 	}
 	dhd_os_spin_unlock(pub, flags);
+	DHD_OS_WD_WAKE_UNLOCK(pub);
 }
 
 void *
@@ -6486,13 +6486,13 @@ dhd_get_wireless_stats(struct net_device *dev)
 #endif /* defined(WL_WIRELESS_EXT) */
 
 static int
-dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
+dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata, size_t pktlen,
 	wl_event_msg_t *event, void **data)
 {
 	int bcmerror = 0;
 	ASSERT(dhd != NULL);
 
-	bcmerror = wl_host_event(&dhd->pub, ifidx, pktdata, event, data);
+	bcmerror = wl_host_event(&dhd->pub, ifidx, pktdata, pktlen, event, data);
 	if (bcmerror != BCME_OK)
 		return (bcmerror);
 
