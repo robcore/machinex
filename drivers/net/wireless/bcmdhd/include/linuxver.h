@@ -535,7 +535,7 @@ typedef struct {
 	int	terminated;
 	struct	completion completed;
 	spinlock_t	spinlock;
-	int		up_cnt;
+	unsigned int		up_cnt;
 } tsk_ctl_t;
 
 
@@ -546,21 +546,20 @@ typedef struct {
 #else
 #define DBG_THR(x)
 #endif
+static 
 
 static inline bool binary_sema_down(tsk_ctl_t *tsk)
 {
+	bool sem_down = true;
+	unsigned long flags = 0;
 	if (down_interruptible(&tsk->sema) == 0) {
-		unsigned long flags = 0;
 		spin_lock_irqsave(&tsk->spinlock, flags);
 		if (tsk->up_cnt == 1)
 			tsk->up_cnt--;
-		else {
-			DBG_THR(("dhd_dpc_thread: Unexpected up_cnt %d\n", tsk->up_cnt));
-		}
+			sem_down = false;
 		spin_unlock_irqrestore(&tsk->spinlock, flags);
-		return false;
-	} else
-		return true;
+	}
+		return sem_down;
 }
 
 static inline bool binary_sema_up(tsk_ctl_t *tsk)
