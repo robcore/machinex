@@ -84,6 +84,11 @@ static void quota2_log(unsigned int hooknum,
 	/* NLMSG_PUT() uses "goto nlmsg_failure" */
 	nlh = NLMSG_PUT(log_skb, /*pid*/0, /*seq*/0, qlog_nl_event,
 			sizeof(*pm));
+	if (!nlh) {
+		pr_err("xt_quota2: nlmsg_put failed\n");
+		kfree_skb(log_skb);
+		return;
+	}
 	pm = NLMSG_DATA(nlh);
 	if (skb->tstamp == 0)
 		__net_timestamp((struct sk_buff *)skb);
@@ -120,22 +125,23 @@ static void quota2_log(unsigned int hooknum,
 }
 #endif  /* if+else CONFIG_NETFILTER_XT_MATCH_QUOTA2_LOG */
 
-static int quota_proc_read(char *page, char **start, off_t offset,
-                           int count, int *eof, void *data)
+static int quota_proc_read(struct file *file, char __user *buf,
+			   size_t size, loff_t *ppos)
 {
-	struct xt_quota_counter *e = data;
-	int ret;
+	struct xt_quota_counter *e = PDE_DATA(file_inode(file));
+	char tmp[24];
+	size_t tmp_size;
 
 	spin_lock_bh(&e->lock);
-	ret = snprintf(page, PAGE_SIZE, "%llu\n", e->quota);
+	tmp_size = scnprintf(tmp, sizeof(tmp), "%llu\n", e->quota);
 	spin_unlock_bh(&e->lock);
-	return ret;
+	return simple_read_from_buffer(buf, size, ppos, tmp, tmp_size);
 }
 
 static int quota_proc_write(struct file *file, const char __user *input,
-                            unsigned long size, void *data)
+                            size_t size, loff_t *ppos)
 {
-	struct xt_quota_counter *e = data;
+	struct xt_quota_counter *e = PDE_DATA(file_inode(file));
 	char buf[sizeof("18446744073709551616")];
 
 	if (size > sizeof(buf))
@@ -149,6 +155,12 @@ static int quota_proc_write(struct file *file, const char __user *input,
 	spin_unlock_bh(&e->lock);
 	return size;
 }
+
+static const struct file_operations q2_counter_fops = {
+	.read		= quota_proc_read,
+	.write		= quota_proc_write,
+	.llseek		= default_llseek,
+};
 
 static struct xt_quota_counter *
 q2_new_counter(const struct xt_quota_mtinfo2 *q, bool anon)
@@ -213,8 +225,8 @@ q2_get_counter(const struct xt_quota_mtinfo2 *q)
 	spin_unlock_bh(&counter_list_lock);
 
 	/* create_proc_entry() is not spin_lock happy */
-	p = e->procfs_entry = create_proc_entry(e->name, quota_list_perms,
-	                      proc_xt_quota);
+	p = e->procfs_entry = proc_create_data(e->name, quota_list_perms,
+	                      proc_xt_quota, &q2_counter_fops, e);
 
 	if (IS_ERR_OR_NULL(p)) {
 		spin_lock_bh(&counter_list_lock);
@@ -222,11 +234,7 @@ q2_get_counter(const struct xt_quota_mtinfo2 *q)
 		spin_unlock_bh(&counter_list_lock);
 		goto out;
 	}
-	p->data         = e;
-	p->read_proc    = quota_proc_read;
-	p->write_proc   = quota_proc_write;
-	p->uid          = quota_list_uid;
-	p->gid          = quota_list_gid;
+	proc_set_user(p, quota_list_uid, quota_list_gid);
 	return e;
 
  out:
