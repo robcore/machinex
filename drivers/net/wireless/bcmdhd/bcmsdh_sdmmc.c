@@ -1248,7 +1248,10 @@ sdioh_sdmmc_card_regread(sdioh_info_t *sd, int func, uint32 regaddr, int regsize
 		sd_data(("%s: byte read data=0x%02x\n",
 		         __FUNCTION__, *data));
 	} else {
-		sdioh_request_word(sd, 0, SDIOH_READ, func, regaddr, data, regsize);
+		if (sdioh_request_word(sd, 0, SDIOH_READ, func, regaddr, data, regsize)) {
+			return BCME_SDIO_ERROR;
+		}
+
 		if (regsize == 2)
 			*data &= 0xffff;
 
