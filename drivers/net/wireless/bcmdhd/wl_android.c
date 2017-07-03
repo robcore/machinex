@@ -1701,10 +1701,9 @@ int wl_android_wifi_on(struct net_device *dev)
 			ret = dhd_net_bus_resume(dev, 0);
 			if (ret == 0)
 				break;
-			DHD_ERROR(("\nfailed to power up wifi chip, retry again (%d left) **\n\n",
-				retry+1));
+
 			dhd_net_wifi_platform_set_power(dev, FALSE, WIFI_TURNOFF_DELAY);
-		} while (retry-- >= 0);
+		} while (retry-- > 0);
 		if (ret != 0) {
 			DHD_ERROR(("\nfailed to power up wifi chip, max retry reached **\n\n"));
 			goto exit;
@@ -1717,7 +1716,6 @@ int wl_android_wifi_on(struct net_device *dev)
 		}
 #if defined(ENABLE_4335BT_WAR) && defined(CUSTOMER_HW4)
 		bcm_bt_unlock(lock_cookie_wifi);
-		DHD_ERROR(("%s() bcm_bt_unlock\n", __FUNCTION__));
 #endif
 		g_wifi_on = TRUE;
 	}
@@ -1832,13 +1830,14 @@ wl_android_get_connection_stats(struct net_device *dev, char *command, int total
 
 	bufsize = total_len;
 	if (bufsize < sizeof(struct connection_stats)) {
-		WL_ERR(("%s: not enough buffer size, provided=%u, requires=%u\n",
+		WL_ERR(("%s: not enough buffer size, provided=%u, requires=%zu\n",
 			__FUNCTION__, bufsize,
 			sizeof(struct connection_stats)));
 		goto error;
 	}
 
-	if ((cnt = kmalloc(sizeof(*cnt), GFP_KERNEL)) == NULL) {
+	cnt = kmalloc(sizeof(*cnt), GFP_KERNEL);
+	if (cnt == NULL) {
 		WL_ERR(("kmalloc failed\n"));
 		return -1;
 	}
@@ -1883,8 +1882,8 @@ wl_android_get_connection_stats(struct net_device *dev, char *command, int total
 	if (wl_chanim_stats(dev, &(output->chan_idle)) < 0) {
 		output->chan_idle = 0;
 	};
-
-	kfree(cnt);
+	if (cnt)
+		kfree(cnt);
 
 	bytes_written = sizeof(struct connection_stats);
 	return bytes_written;
@@ -2069,7 +2068,7 @@ wl_android_set_ssid(struct net_device *dev, const char* hapd_ssid)
 	ssid.SSID_len = strlen(hapd_ssid);
 	if (ssid.SSID_len > DOT11_MAX_SSID_LEN) {
 		ssid.SSID_len = DOT11_MAX_SSID_LEN;
-		DHD_ERROR(("%s : Too long SSID Length %d\n", __FUNCTION__, strlen(hapd_ssid)));
+		DHD_ERROR(("%s : Too long SSID Length %zu\n", __FUNCTION__, strlen(hapd_ssid)));
 	}
 	bcm_strncpy_s(ssid.SSID, sizeof(ssid.SSID), hapd_ssid, ssid.SSID_len);
 	DHD_INFO(("%s: HAPD_SSID = %s\n", __FUNCTION__, ssid.SSID));
@@ -2449,7 +2448,7 @@ int wl_android_set_ibss_beacon_ouidata(struct net_device *dev, char *command, in
 		ie_buf[idx++] =  (uint8)simple_strtoul(hex, NULL, 16);
 		datalen++;
 	}
-	tot_len = sizeof(vndr_ie_setbuf_t) + (datalen - 1);
+	tot_len = (int)(sizeof(vndr_ie_setbuf_t) + (datalen - 1));
 	vndr_ie = (vndr_ie_setbuf_t *) kzalloc(tot_len, kflags);
 	if (!vndr_ie) {
 		WL_ERR(("IE memory alloc failed\n"));
@@ -2754,8 +2753,7 @@ wl_android_set_miracast(struct net_device *dev, char *command, int total_len)
 			DHD_ERROR(("%s: Connected station's beacon interval: "
 				"%d and set mchan_algo to %d \n",
 				__FUNCTION__, val, config.param));
-		}
-		else {
+		} else {
 			config.param = MIRACAST_MCHAN_ALGO;
 		}
 		ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
@@ -2995,7 +2993,7 @@ static int wl_android_get_ibss_peer_info(struct net_device *dev, char *command,
 			bytes_written += sprintf(&command[bytes_written], "%u ",
 				peer_list_info.count);
 
-		peer_info = (bss_peer_info_t *) ((void *)buf + BSS_PEER_LIST_INFO_FIXED_LEN);
+		peer_info = (bss_peer_info_t *) ((char *)buf + BSS_PEER_LIST_INFO_FIXED_LEN);
 
 
 		for (i = 0; i < peer_list_info.count; i++) {
@@ -3018,7 +3016,7 @@ static int wl_android_get_ibss_peer_info(struct net_device *dev, char *command,
 			if (found)
 				break;
 
-			peer_info = (bss_peer_info_t *)((void *)peer_info+sizeof(bss_peer_info_t));
+			peer_info = (bss_peer_info_t *)((char *)peer_info+sizeof(bss_peer_info_t));
 		}
 	}
 	else {
