@@ -175,6 +175,10 @@ bcmsdh_intr_reg(void *sdh, bcmsdh_cb_fn_t fn, void *argh)
 {
 	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
 	SDIOH_API_RC status;
+
+	if (!bcmsdh)
+		bcmsdh = l_bcmsdh;
+
 	ASSERT(bcmsdh);
 
 	status = sdioh_interrupt_register(bcmsdh->sdioh, fn, argh);
@@ -186,6 +190,10 @@ bcmsdh_intr_dereg(void *sdh)
 {
 	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
 	SDIOH_API_RC status;
+
+	if (!bcmsdh)
+		bcmsdh = l_bcmsdh;
+
 	ASSERT(bcmsdh);
 
 	status = sdioh_interrupt_deregister(bcmsdh->sdioh);

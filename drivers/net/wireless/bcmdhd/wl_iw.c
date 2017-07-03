@@ -225,7 +225,8 @@ dev_wlc_ioctl(
 	ioc.buf = arg;
 	ioc.len = len;
 
-	strcpy(ifr.ifr_name, dev->name);
+	strncpy(ifr.ifr_name, dev->name, sizeof(ifr.ifr_name));
+	ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
 	ifr.ifr_data = (caddr_t) &ioc;
 
 	fs = get_fs();
@@ -459,7 +460,8 @@ wl_iw_send_priv_event(
 	if (strlen(flag) > sizeof(extra))
 		return -1;
 
-	strcpy(extra, flag);
+	strncpy(extra, flag, sizeof(extra));
+	extra[sizeof(extra) - 1] = '\0';
 	wrqu.data.length = strlen(extra);
 	wireless_send_event(dev, cmd, &wrqu, extra);
 	WL_TRACE(("Send IWEVCUSTOM Event as %s\n", extra));
@@ -521,27 +523,28 @@ wl_iw_get_name(
 	band[0] = dtoh32(band[0]);
 	switch (phytype) {
 		case WLC_PHY_TYPE_A:
-			strcpy(cap, "a");
+			strncpy(cap, "a", sizeof(cap));
 			break;
 		case WLC_PHY_TYPE_B:
-			strcpy(cap, "b");
+			strncpy(cap, "b", sizeof(cap));
 			break;
 		case WLC_PHY_TYPE_LP:
 		case WLC_PHY_TYPE_G:
 			if (band[0] >= 2)
-				strcpy(cap, "abg");
+				strncpy(cap, "abg", sizeof(cap));
 			else
-				strcpy(cap, "bg");
+				strncpy(cap, "bg", sizeof(cap));
 			break;
 		case WLC_PHY_TYPE_N:
 			if (band[0] >= 2)
-				strcpy(cap, "abgn");
+				strncpy(cap, "abgn", sizeof(cap));
 			else
-				strcpy(cap, "bgn");
+				strncpy(cap, "bgn", sizeof(cap));
 			break;
 	}
 done:
-	snprintf(cwrq->name, IFNAMSIZ, "IEEE 802.11%s", cap);
+	(void)snprintf(cwrq->name, IFNAMSIZ, "IEEE 802.11%s", cap);
+
 	return 0;
 }
 
@@ -3513,15 +3516,11 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 #endif /* WIRELESS_EXT > 18 */
 
 #if WIRELESS_EXT > 11
-	WL_TRACE(("wl_iw_get_wireless_stats counters=%d\n *****", (int)sizeof(wl_cnt_t)));
 
 	memset(&cnt, 0, sizeof(wl_cnt_t));
 	res = dev_wlc_bufvar_get(dev, "counters", (char *)&cnt, sizeof(wl_cnt_t));
 	if (res)
-	{
-		WL_ERROR(("wl_iw_get_wireless_stats counters failed error=%d ****** \n", res));
 		goto done;
-	}
 
 	cnt.version = dtoh16(cnt.version);
 	if (cnt.version != WL_CNT_T_VERSION) {
@@ -3536,16 +3535,6 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 	wstats->discard.retries = dtoh32(cnt.txfail);
 	wstats->discard.misc = dtoh32(cnt.rxrunt) + dtoh32(cnt.rxgiant);
 	wstats->miss.beacon = 0;
-
-	WL_TRACE(("wl_iw_get_wireless_stats counters txframe=%d txbyte=%d\n",
-		dtoh32(cnt.txframe), dtoh32(cnt.txbyte)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxfrmtoolong=%d\n", dtoh32(cnt.rxfrmtoolong)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxbadplcp=%d\n", dtoh32(cnt.rxbadplcp)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxundec=%d\n", dtoh32(cnt.rxundec)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxfragerr=%d\n", dtoh32(cnt.rxfragerr)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters txfail=%d\n", dtoh32(cnt.txfail)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxrunt=%d\n", dtoh32(cnt.rxrunt)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxgiant=%d\n", dtoh32(cnt.rxgiant)));
 
 #endif /* WIRELESS_EXT > 11 */
 
