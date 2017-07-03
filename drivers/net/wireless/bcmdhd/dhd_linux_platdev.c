@@ -446,11 +446,17 @@ void wifi_ctrlfunc_unregister_drv(void)
 			wifi_platform_bus_enumerate(adapter, FALSE);
 		}
 	}
-	kfree(dhd_wifi_platdata->adapters);
-	dhd_wifi_platdata->adapters = NULL;
+	if (dhd_wifi_platdata->adapters)
+		kfree(dhd_wifi_platdata->adapters);
+	if (dhd_wifi_platdata->adapters != NULL)
+		dhd_wifi_platdata->adapters = NULL;
+
 	dhd_wifi_platdata->num_adapters = 0;
-	kfree(dhd_wifi_platdata);
-	dhd_wifi_platdata = NULL;
+	
+	if (dhd_wifi_platdata)
+		kfree(dhd_wifi_platdata);
+	if (dhd_wifi_platdata != NULL)
+		dhd_wifi_platdata = NULL;
 }
 
 static int bcmdhd_wifi_plat_dev_drv_probe(struct platform_device *pdev)
