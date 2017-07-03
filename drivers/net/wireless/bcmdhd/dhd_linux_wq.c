@@ -189,8 +189,8 @@ dhd_deferred_work_deinit(void *work)
 
 	if (deferred_work->work_fifo)
 		dhd_kfifo_free(deferred_work->work_fifo);
-
-	kfree(deferred_work);
+	if (deferred_work)
+		kfree(deferred_work);
 
 	/* deinit internal reference pointer */
 	deferred_wq = NULL;

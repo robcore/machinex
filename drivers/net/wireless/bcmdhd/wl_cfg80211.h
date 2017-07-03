@@ -80,8 +80,8 @@ do {										\
 #define	WL_ERR(args)									\
 do {										\
 	if ((wl_dbg_level & WL_DBG_ERR) && net_ratelimit()) {				\
-			pr_err(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
-			pr_err args;						\
+			printk(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
+			printk args;						\
 		}								\
 } while (0)
 #endif /* defined(DHD_DEBUG) */
