@@ -658,7 +658,7 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.name	= ION_MM_HEAP_NAME,
 			.size	= MSM_ION_MM_SIZE,
 			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &cp_mm_apq8064_ion_pdata,
+			.extra_data = (void *)&cp_mm_apq8064_ion_pdata,
 			.priv	= &ion_mm_heap_device.dev
 		},
 		{
@@ -667,7 +667,7 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.name	= ION_MM_FIRMWARE_HEAP_NAME,
 			.size	= MSM_ION_MM_FW_SIZE,
 			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &fw_co_apq8064_ion_pdata,
+			.extra_data = (void *)&fw_co_apq8064_ion_pdata,
 		},
 		{
 			.id	= ION_CP_MFC_HEAP_ID,
@@ -675,7 +675,7 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.name	= ION_MFC_HEAP_NAME,
 			.size	= MSM_ION_MFC_SIZE,
 			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &cp_mfc_apq8064_ion_pdata,
+			.extra_data = (void *)&cp_mfc_apq8064_ion_pdata,
 		},
 #ifndef CONFIG_MSM_IOMMU
 		{
@@ -684,7 +684,7 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.name	= ION_SF_HEAP_NAME,
 			.size	= MSM_ION_SF_SIZE,
 			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &co_apq8064_ion_pdata,
+			.extra_data = (void *)&co_apq8064_ion_pdata,
 		},
 #endif
 		{
@@ -698,7 +698,7 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.name	= ION_QSECOM_HEAP_NAME,
 			.size	= MSM_ION_QSECOM_SIZE,
 			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &co_apq8064_ion_pdata,
+			.extra_data = (void *)&co_apq8064_ion_pdata,
 		},
 		{
 			.id	= ION_AUDIO_HEAP_ID,
@@ -706,7 +706,7 @@ struct ion_platform_heap apq8064_heaps[] = {
 			.name	= ION_AUDIO_HEAP_NAME,
 			.size	= MSM_ION_AUDIO_SIZE,
 			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &co_apq8064_ion_pdata,
+			.extra_data = (void *)&co_apq8064_ion_pdata,
 		},
 #endif
 };

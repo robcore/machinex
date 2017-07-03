@@ -2715,7 +2715,7 @@ void cpufreq_update_policy(unsigned int cpu)
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	struct cpufreq_policy new_policy;
 
-	if (policy == NULL)
+	if (policy == NULL || !policy)
 		return;
 
 	down_write(&policy->rwsem);
