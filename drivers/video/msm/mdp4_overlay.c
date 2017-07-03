@@ -3797,6 +3797,13 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		return -ENODEV;
 	}
 
+	if (!mfd->panel_power_on) {
+		/* suspended */
+		pr_err("%s,%d fb_%d panel type %d is suspended\n", __func__,
+				__LINE__, mfd->index, mfd->panel.type);
+		return -EINVAL;
+	}
+
 	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
 		if (!mfd->panel_power_on)		/* suspended */
 			return -EPERM;
