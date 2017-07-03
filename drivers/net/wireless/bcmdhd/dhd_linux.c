@@ -726,6 +726,7 @@ static int dhd_pm_callback(struct notifier_block *nfb, unsigned long action, voi
 	dhd_info_t *dhdinfo = (dhd_info_t*)container_of(nfb, struct dhd_info, pm_notifier);
 
 	BCM_REFERENCE(dhdinfo);
+
 	switch (action) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:

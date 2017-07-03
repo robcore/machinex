@@ -72,15 +72,15 @@ struct wl_ibss;
 #define	WL_ERR(args)									\
 do {										\
 	if (wl_dbg_level & WL_DBG_ERR) {				\
-			pr_debug(CFG80211_ERROR_TEXT "%s : ", __func__);	\
-			pr_debug args;						\
+			printk(KERN_DEBUG CFG80211_ERROR_TEXT "%s : ", __func__);	\
+			printk args;						\
 		}								\
 } while (0)
 #else /* defined(DHD_DEBUG) */
 #define	WL_ERR(args)									\
 do {										\
 	if ((wl_dbg_level & WL_DBG_ERR) && net_ratelimit()) {				\
-			pr_err(CFG80211_ERROR_TEXT "%s : ", __func__);	\
+			pr_err(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
 			pr_err args;						\
 		}								\
 } while (0)
@@ -92,8 +92,8 @@ do {										\
 #define	WL_INFO(args)									\
 do {										\
 	if (wl_dbg_level & WL_DBG_INFO) {				\
-			pr_debug("CFG80211-INFO) %s : ", __func__);	\
-			pr_debug args;						\
+			printk(KERN_DEBUG "CFG80211-INFO) %s : ", __func__);	\
+			printk args;						\
 		}								\
 } while (0)
 #ifdef WL_SCAN
@@ -102,8 +102,8 @@ do {										\
 #define	WL_SCAN(args)								\
 do {									\
 	if (wl_dbg_level & WL_DBG_SCAN) {			\
-		pr_debug("CFG80211-SCAN) %s :", __func__);	\
-		pr_debug args;							\
+		printk(KERN_DEBUG "CFG80211-SCAN) %s :", __func__);	\
+		printk args;							\
 	}									\
 } while (0)
 #ifdef WL_TRACE
@@ -112,8 +112,8 @@ do {									\
 #define	WL_TRACE(args)								\
 do {									\
 	if (wl_dbg_level & WL_DBG_TRACE) {			\
-		pr_debug("CFG80211-TRACE) %s :", __func__);	\
-		pr_debug args;							\
+		printk(KERN_DEBUG "CFG80211-TRACE) %s :", __func__);	\
+		printk args;							\
 	}									\
 } while (0)
 #ifdef WL_TRACE_HW4
@@ -123,8 +123,8 @@ do {									\
 #define	WL_TRACE_HW4(args)					\
 do {										\
 	if (wl_dbg_level & WL_DBG_ERR) {				\
-			pr_debug("CFG80211-TRACE) %s : ", __func__);	\
-			pr_debug args;						\
+			printk(KERN_DEBUG "CFG80211-TRACE) %s : ", __func__);	\
+			printk args;						\
 		} 								\
 } while (0)
 #else
@@ -134,8 +134,8 @@ do {										\
 #define	WL_DBG(args)								\
 do {									\
 	if (wl_dbg_level & WL_DBG_DBG) {			\
-		pr_debug("CFG80211-DEBUG) %s :", __func__);	\
-		pr_debug args;							\
+		pr_debug(KERN_DEBUG "CFG80211-DEBUG) %s :", __func__);	\
+		printk args;							\
 	}									\
 } while (0)
 #else				/* !(WL_DBG_LEVEL > 0) */

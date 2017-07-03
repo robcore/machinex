@@ -317,6 +317,7 @@ struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 /* Update limits in cpufreq */
+
 void reapply_hard_limits(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
