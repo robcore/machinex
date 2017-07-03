@@ -1615,7 +1615,7 @@ wl_android_set_ap_mac_list(struct net_device *dev, int macmode, struct maclist *
  *
  */
 static int
-wl_android_set_mac_address_filter(struct net_device *dev, char* str)
+wl_android_set_mac_address_filter(struct net_device *dev, const char* str)
 {
 	int i;
 	int ret = 0;
