@@ -51,7 +51,7 @@ struct dhd_deferred_event_t {
 #define DEFRD_EVT_SIZE	sizeof(struct dhd_deferred_event_t)
 
 struct dhd_deferred_wq {
-	struct work_struct	deferred_work; /* should be the first member */
+	struct work_struct deferred_work; /* should be the first member */
 
 	/*
 	 * work events may occur simultaneously.
@@ -72,7 +72,7 @@ static inline struct kfifo*
 dhd_kfifo_init(u8 *buf, int size, spinlock_t *lock)
 {
 	struct kfifo *fifo;
-	gfp_t flags = CAN_SLEEP()? GFP_KERNEL : GFP_ATOMIC;
+	gfp_t flags = CAN_SLEEP() ? GFP_KERNEL : GFP_ATOMIC;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33))
 	fifo = kfifo_init(buf, size, flags, lock);
@@ -90,6 +90,10 @@ static inline void
 dhd_kfifo_free(struct kfifo *fifo)
 {
 	kfifo_free(fifo);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 31))
+	/* FC11 releases the fifo memory */
+	kfree(fifo);
+#endif
 }
 
 /* deferred work functions */
@@ -98,10 +102,10 @@ static void dhd_deferred_work_handler(struct work_struct *data);
 void*
 dhd_deferred_work_init(void *dhd_info)
 {
-	struct dhd_deferred_wq	*work = NULL;
-	u8*	buf;
-	unsigned long	fifo_size = 0;
-	gfp_t	flags = CAN_SLEEP()? GFP_KERNEL : GFP_ATOMIC;
+	struct dhd_deferred_wq *work = NULL;
+	u8* buf;
+	unsigned long fifo_size = 0;
+	gfp_t flags = CAN_SLEEP() ? GFP_KERNEL : GFP_ATOMIC;
 
 	if (!dhd_info) {
 		DHD_ERROR(("%s: dhd info not initialized\n", __FUNCTION__));
