@@ -564,20 +564,22 @@ static inline bool binary_sema_down(tsk_ctl_t *tsk)
 static inline bool binary_sema_up(tsk_ctl_t *tsk)
 {
 	bool sem_up = false;
+	bool tempsem = false;
 	unsigned long flags = 0;
 
 	spin_lock_irqsave(&tsk->spinlock, flags);
 	if (tsk->up_cnt == 0) {
 		tsk->up_cnt++;
 		sem_up = true;
+		tempsem = true;
 	} else if (tsk->up_cnt == 1) {
 		/* dhd_sched_dpc: dpc is alread up! */
+		tempsem = false;
 	} else
 		DBG_THR(("dhd_sched_dpc: unexpected up cnt %d!\n", tsk->up_cnt));
-
 	spin_unlock_irqrestore(&tsk->spinlock, flags);
 
-	if (sem_up)
+	if (tempsem)
 		up(&tsk->sema);
 
 	return sem_up;
