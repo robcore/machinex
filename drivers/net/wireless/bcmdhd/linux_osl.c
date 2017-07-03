@@ -295,7 +295,8 @@ int osl_static_mem_init(osl_t *osh, void *adapter)
 				printk("can not alloc static buf!\n");
 				bcm_static_skb = NULL;
 				ASSERT(osh->magic == OS_HANDLE_MAGIC);
-				kfree(osh);
+				if (osh)
+					kfree(osh);
 				return -ENOMEM;
 			}
 			else
@@ -317,7 +318,8 @@ int osl_static_mem_init(osl_t *osh, void *adapter)
 				bcm_static_buf = NULL;
 				bcm_static_skb = NULL;
 				ASSERT(osh->magic == OS_HANDLE_MAGIC);
-				kfree(osh);
+				if (osh)
+					kfree(osh);
 				return -ENOMEM;
 			}
 
@@ -473,6 +475,8 @@ osl_ctfpool_init(osl_t *osh, uint numobj, uint size)
 	flags = CAN_SLEEP() ? GFP_KERNEL: GFP_ATOMIC;
 	osh->ctfpool = kzalloc(sizeof(ctfpool_t), flags);
 	ASSERT(osh->ctfpool);
+
+	osh->ctfpool->osh = osh;
 
 	osh->ctfpool->max_obj = numobj;
 	osh->ctfpool->obj_size = size;
