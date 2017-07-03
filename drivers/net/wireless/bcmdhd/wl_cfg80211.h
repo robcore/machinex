@@ -964,7 +964,7 @@ extern void wl_cfg80211_update_power_mode(struct net_device *dev);
 #define SCAN_BUF_NEXT	1
 #define WL_SCANTYPE_LEGACY	0x1
 #define WL_SCANTYPE_P2P		0x2
-#if defined(DUAL_ESCAN_RESULT_BUFFER)
+#ifdef DUAL_ESCAN_RESULT_BUFFER
 #define wl_escan_set_sync_id(a, b) ((a) = (b)->escan_info.cur_sync_id)
 #define wl_escan_set_type(a, b) ((a)->escan_info.escan_type\
 [((a)->escan_info.cur_sync_id)%SCAN_BUF_CNT] = (b))
