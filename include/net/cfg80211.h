@@ -3592,6 +3592,17 @@ void cfg80211_ap_stopped(struct net_device *netdev, gfp_t gfp);
 })
 #endif
 
+/**
+ * ieee80211_operating_class_to_band - convert operating class to band
+ *
+ * @operating_class: the operating class to convert
+ * @band: band pointer to fill
+ *
+ * Returns %true if the conversion was successful, %false otherwise.
+ */
+bool ieee80211_operating_class_to_band(u8 operating_class,
+				       enum ieee80211_band *band);
+
 /*
  * wiphy_WARN() acts like wiphy_printk(), but with the key difference
  * of using a WARN/WARN_ON to get the message out, including the
