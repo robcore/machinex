@@ -771,6 +771,7 @@ static struct fake_frequency_table fake_cpu_table[] = {
 	{ .frequency = FAKEFREQ_TABLE_END }
 };
 
+DEFINE_MUTEX(dvfs_mutex);
 static unsigned int upper_limit_freq;
 static unsigned int lower_limit_freq;
 static unsigned long dvfs_id;
