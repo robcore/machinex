@@ -1310,11 +1310,9 @@ struct sctp_ep_common {
 	/* Some fields to help us manage this object.
 	 *   refcnt   - Reference count access to this object.
 	 *   dead     - Do not attempt to use this object.
-	 *   malloced - Do we need to kfree this object?
 	 */
 	atomic_t    refcnt;
 	char	    dead;
-	char	    malloced;
 
 	/* What socket does this endpoint belong to?  */
 	struct sock *sk;
