@@ -50,7 +50,7 @@ int __init sec_avc_log_init(void)
 	return 1;
 }
 
-#define BUF_SIZE 256
+#define BUF_SIZE 512
 void sec_avc_log(char *fmt, ...)
 {
 	va_list args;
@@ -71,11 +71,10 @@ void sec_avc_log(char *fmt, ...)
 	size = strlen(buf);
 
 	if (idx + size > sec_avc_log_size - 1) {
-		len = scnprintf(&sec_avc_log_buf[0],
-				size + 1, "%s", buf);
+		len = scnprintf(&sec_avc_log_buf[0], size + 1, "%s\n", buf);
 		*sec_avc_log_ptr = len;
 	} else {
-		len = scnprintf(&sec_avc_log_buf[idx], size + 1, "%s", buf);
+		len = scnprintf(&sec_avc_log_buf[idx], size + 1, "%s\n", buf);
 		*sec_avc_log_ptr += len;
 	}
 }
@@ -108,7 +107,7 @@ static ssize_t sec_avc_log_write(struct file *file,
 	if (sscanf(page, "%u", &new_value) != 1) {
 		pr_info("%s\n", page);
 		/* print avc_log to sec_avc_log_buf */
-		sec_avc_log(page);
+		sec_avc_log("%s", page);
 	} 
 	ret = count;
 out:
@@ -149,14 +148,13 @@ static int __init sec_avc_log_late_init(void)
 		return 0;
 	}
 
-	entry = create_proc_entry("avc_msg", S_IFREG | S_IRUGO, NULL);
+	entry = proc_create_data("avc_msg", S_IFREG | S_IRUGO, NULL, &avc_msg_file_ops, NULL);
 	if (!entry) {
 		pr_err("%s: failed to create proc entry\n", __func__);
 		return 0;
 	}
 
-	entry->proc_fops = &avc_msg_file_ops;
-	entry->size = sec_avc_log_size;
+	proc_set_size(entry, sec_avc_log_size);
 	return 0;
 }
 
