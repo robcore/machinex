@@ -1435,7 +1435,7 @@ err_irq:
 	return ret;
 }
 
-static int __exit sdma_remove(struct platform_device *pdev)
+static int sdma_remove(struct platform_device *pdev)
 {
 	return -EBUSY;
 }
@@ -1446,7 +1446,7 @@ static struct platform_driver sdma_driver = {
 		.of_match_table = sdma_dt_ids,
 	},
 	.id_table	= sdma_devtypes,
-	.remove		= __exit_p(sdma_remove),
+	.remove		= sdma_remove,
 };
 
 static int __init sdma_module_init(void)

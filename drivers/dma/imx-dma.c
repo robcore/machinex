@@ -1112,7 +1112,7 @@ err_clk:
 	return ret;
 }
 
-static int __exit imxdma_remove(struct platform_device *pdev)
+static int imxdma_remove(struct platform_device *pdev)
 {
 	struct imxdma_engine *imxdma = platform_get_drvdata(pdev);
 	int i;
