@@ -1402,7 +1402,7 @@ static int srpt_abort_cmd(struct srpt_send_ioctx *ioctx)
 		kref_put(&ioctx->kref, srpt_put_send_ioctx_kref);
 		break;
 	default:
-		WARN_ON("ERROR: unexpected command state");
+		WARN(1, "Unexpected command state (%d)", state);
 		break;
 	}
 
