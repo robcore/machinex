@@ -5464,11 +5464,12 @@ static void __init samsung_jf_init(void)
 #ifdef CONFIG_SEC_DEBUG
 	sec_debug_init();
 #endif
+	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
+		pr_err("meminfo_init() failed!\n");
+
 #ifdef CONFIG_PROC_AVC
 	sec_avc_log_init();
 #endif
-	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
-		pr_err("meminfo_init() failed!\n");
 	/*
 	if (machine_is_apq8064_mtp() &&
 		SOCINFO_VERSION_MINOR(socinfo_get_platform_version()) == 1)

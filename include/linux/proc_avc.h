@@ -1,5 +1,5 @@
 /*
- *  linux/include/linux/proc_avc.h
+ *  /include/linux/proc_avc.h
  *
  */
 
