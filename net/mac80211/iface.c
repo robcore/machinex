@@ -479,6 +479,7 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 		RCU_INIT_POINTER(sdata->u.ap.beacon, NULL);
 		RCU_INIT_POINTER(sdata->u.ap.probe_resp, NULL);
 		synchronize_rcu();
+		rcu_barrier();
 		kfree(old_beacon);
 		kfree_skb(old_probe_resp);
 
