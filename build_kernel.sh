@@ -133,9 +133,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
 		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
 	fi
-	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
-	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
@@ -311,9 +308,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cp -R -p machina-new $OUTFOLDER;
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
 		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-	fi
-	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
 	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
@@ -492,9 +486,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
 		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
 	fi
-	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
-	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
@@ -655,9 +646,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cp -R -p machina-new $OUTFOLDER;
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
 		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-	fi
-	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
 	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
@@ -849,9 +837,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
 		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
 	fi
-	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
-	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
 	rm image-new.img;
@@ -944,9 +929,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cp -R -p machina-new $OUTFOLDER;
 	if [ -e ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko ]; then
 		cp -p ~/machinex/out/drivers/net/wireless/bcmdhd/dhd.ko $(pwd)/$OUTFOLDER/system/lib/modules/dhd.ko;
-	fi
-	if [ -e ~/machinex/out/drivers/scsi/scsi_wait_scan.ko ]; then
-		cp -p ~/machinex/out/drivers/scsi/scsi_wait_scan.ko $(pwd)/$OUTFOLDER/system/lib/modules/scsi_wait_scan.ko;
 	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
