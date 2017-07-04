@@ -364,3 +364,9 @@ config WAKEUP_REASON
 config ADAPTIVE_TUNING
         bool "Detect CPU idle"
         depends on ARCH_MSM && CPU_IDLE
+
+config FAKE_DVFS
+	bool "Fake a DVFS interface for Samsung TW"
+	default n
+	---help---
+	  Let Samsung and its crummy user interface think it is relevant.
