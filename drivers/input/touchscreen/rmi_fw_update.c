@@ -731,7 +731,7 @@ static int fwu_do_reflash(void)
 {
 	int retval;
 
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_FAKE_DVFS
 	retval = set_freq_limit(DVFS_TOUCH_ID,
 				MIN_TOUCH_LIMIT);
 	if (retval < 0)
@@ -1065,7 +1065,7 @@ static int fwu_start_reflash(bool mode, bool factory_fw)
 				"%s: Requesting firmware image %s\n",
 				__func__, fw_path);
 
-		retval = request_firmware(&fw_entry, fw_path,
+		retval = request_firmware_direct(&fw_entry, fw_path,
 				&fwu->rmi4_data->i2c_client->dev);
 		if (retval != 0) {
 			dev_err(&fwu->rmi4_data->i2c_client->dev,
@@ -1119,7 +1119,7 @@ done:
 	if (fw_entry)
 		release_firmware(fw_entry);
 out:
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_FAKE_DVFS
 	retval = set_freq_limit(DVFS_TOUCH_ID, -1);
 	if (retval < 0)
 		dev_err(&fwu->rmi4_data->i2c_client->dev,

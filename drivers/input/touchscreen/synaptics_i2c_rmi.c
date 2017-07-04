@@ -608,32 +608,20 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 }
 #endif
 
-#ifdef TSP_BOOSTER
-#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
-extern int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level);
-extern int kgsl_pwrctrl_num_pwrlevels_show_kernel(void);
-#endif
-static void synaptics_change_dvfs_lock(struct work_struct *work)
+#ifdef CONFIG_FAKE_DVFS
+static void synaptics_change_dvfs_lock(struct synaptics_rmi4_data *rmi4_data)
 {
-	struct synaptics_rmi4_data *rmi4_data =
-		container_of(work,
-			struct synaptics_rmi4_data, work_dvfs_chg.work);
 	int retval = 0;
 
 	mutex_lock(&rmi4_data->dvfs_lock);
-
 	if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_DUAL) {
-		if (rmi4_data->stay_awake) {
-			pr_debug("rmi-couldn't do the thing, or did, i don't care");
-		} else {
+		if (!rmi4_data->stay_awake) {
 		retval = set_freq_limit(DVFS_TOUCH_ID,
 				MIN_TOUCH_LIMIT_SECOND);
 		rmi4_data->dvfs_freq = MIN_TOUCH_LIMIT_SECOND;
 		}
 	} else if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_NINTH) {
-		if (rmi4_data->stay_awake) {
-			pr_debug("rmi-couldn't do the thing");
-		} else {
+		if (!rmi4_data->stay_awake) {
 			retval = set_freq_limit(DVFS_TOUCH_ID,
 				MIN_TOUCH_HIGH_LIMIT_SECOND);
 			rmi4_data->dvfs_freq = MIN_TOUCH_HIGH_LIMIT_SECOND;
@@ -641,9 +629,6 @@ static void synaptics_change_dvfs_lock(struct work_struct *work)
 	} else if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_SINGLE) {
 		retval = set_freq_limit(DVFS_TOUCH_ID, -1);
 		rmi4_data->dvfs_freq = -1;
-#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
-		kgsl_pwrctrl_min_pwrlevel_store_kernel(3);
-#endif
 	}
 
 	if (retval < 0)
@@ -652,23 +637,15 @@ static void synaptics_change_dvfs_lock(struct work_struct *work)
 
 }
 
-static void synaptics_set_dvfs_off(struct work_struct *work)
+static void synaptics_set_dvfs_off(struct synaptics_rmi4_data *rmi4_data)
 {
-	struct synaptics_rmi4_data *rmi4_data =
-		container_of(work,
-			struct synaptics_rmi4_data, work_dvfs_off.work);
 	int retval;
 
-	if (rmi4_data->stay_awake) {
-		pr_debug("rmi-couldn't do the thing");
-	} else {
+	if (!rmi4_data->stay_awake) {
 	mutex_lock(&rmi4_data->dvfs_lock);
 
 	retval = set_freq_limit(DVFS_TOUCH_ID, -1);
 	rmi4_data->dvfs_freq = -1;
-#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
-	kgsl_pwrctrl_min_pwrlevel_store_kernel(3);
-#endif
 
 	if (retval < 0)
 		pr_debug("rmi-couldn't do the thing");
@@ -691,27 +668,17 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&rmi4_data->dvfs_lock);
 	if (on == 0) {
 		if (rmi4_data->dvfs_lock_status) {
-			if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_NINTH)
-				schedule_delayed_work(&rmi4_data->work_dvfs_off,
-					msecs_to_jiffies(TOUCH_BOOSTER_HIGH_OFF_TIME));
-			else
-				schedule_delayed_work(&rmi4_data->work_dvfs_off,
-					msecs_to_jiffies(TOUCH_BOOSTER_OFF_TIME));
+				synaptics_set_dvfs_off(rmi4_data);
 		}
 	} else if (on > 0) {
-		cancel_delayed_work(&rmi4_data->work_dvfs_off);
 
 		if (rmi4_data->dvfs_old_stauts != on) {
-			cancel_delayed_work(&rmi4_data->work_dvfs_chg);
 			if (1/*!rmi4_data->dvfs_lock_status*/) {
 				if ((rmi4_data->dvfs_freq != MIN_TOUCH_LIMIT)  &&
 					(rmi4_data->dvfs_boost_mode != DVFS_STAGE_NINTH)) {
 					ret = set_freq_limit(DVFS_TOUCH_ID,
 							MIN_TOUCH_LIMIT);
 					rmi4_data->dvfs_freq = MIN_TOUCH_LIMIT;
-#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
-					kgsl_pwrctrl_min_pwrlevel_store_kernel(2);
-#endif
 					if (ret < 0)
 						pr_debug("rmi-couldn't do the thing");
 				} else if ((rmi4_data->dvfs_freq != MIN_TOUCH_HIGH_LIMIT) &&
@@ -719,27 +686,17 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 					ret = set_freq_limit(DVFS_TOUCH_ID,
 								MIN_TOUCH_HIGH_LIMIT);
 					rmi4_data->dvfs_freq = MIN_TOUCH_HIGH_LIMIT;
-#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
-					kgsl_pwrctrl_min_pwrlevel_store_kernel(2);
-#endif
 					if (ret < 0)
 						pr_debug("rmi-couldn't do the thing");
 				}
 
-				if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_NINTH)
-					schedule_delayed_work(&rmi4_data->work_dvfs_chg,
-						msecs_to_jiffies(TOUCH_BOOSTER_HIGH_CHG_TIME));
-				else
-					schedule_delayed_work(&rmi4_data->work_dvfs_chg,
-						msecs_to_jiffies(TOUCH_BOOSTER_CHG_TIME));
+				synaptics_change_dvfs_lock(rmi4_data);
 				rmi4_data->dvfs_lock_status = true;
 			}
 		}
 	} else if (on < 0) {
 		if (rmi4_data->dvfs_lock_status) {
-			cancel_delayed_work(&rmi4_data->work_dvfs_off);
-			cancel_delayed_work(&rmi4_data->work_dvfs_chg);
-			schedule_work(&rmi4_data->work_dvfs_off.work);
+			synaptics_set_dvfs_off(rmi4_data);
 		}
 	}
 	rmi4_data->dvfs_old_stauts = on;
@@ -751,9 +708,6 @@ static void synaptics_init_dvfs(struct synaptics_rmi4_data *rmi4_data)
 	mutex_init(&rmi4_data->dvfs_lock);
 
 	rmi4_data->dvfs_boost_mode = DVFS_STAGE_DUAL;
-
-	INIT_DELAYED_WORK(&rmi4_data->work_dvfs_off, synaptics_set_dvfs_off);
-	INIT_DELAYED_WORK(&rmi4_data->work_dvfs_chg, synaptics_change_dvfs_lock);
 
 	rmi4_data->dvfs_lock_status = false;
 }
@@ -1489,7 +1443,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 	input_sync(rmi4_data->input_dev);
 
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_FAKE_DVFS
 	if (touch_count)
 		synaptics_set_dvfs_lock(rmi4_data, touch_count);
 	else
@@ -3213,7 +3167,7 @@ static void synaptics_rmi4_release_all_finger(
 	rmi4_data->f51_finger = false;
 #endif
 
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_FAKE_DVFS
 	synaptics_set_dvfs_lock(rmi4_data, -1);
 #endif
 }
@@ -3573,7 +3527,7 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&rmi4_data->work_rezero, synaptics_work_rezero);
 #endif
 
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_FAKE_DVFS
 	synaptics_init_dvfs(rmi4_data);
 #endif
 

@@ -25,15 +25,12 @@
 /*#define dev_dbg(dev, fmt, arg...) dev_info(dev, fmt, ##arg)*/
 
 /* DVFS feature : TOUCH BOOSTER */
-#ifdef CONFIG_SEC_DVFS
-#define TSP_BOOSTER
-#endif
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_FAKE_DVFS
 #define DVFS_STAGE_NINTH		9
 #define DVFS_STAGE_DUAL		2
 #define DVFS_STAGE_SINGLE	1
 #define DVFS_STAGE_NONE		0
-#include <linux/cpufreq.h>
+#include <linux/fake_dvfs.h>
 
 #define TOUCH_BOOSTER_OFF_TIME	300
 #define TOUCH_BOOSTER_CHG_TIME	200
@@ -325,9 +322,7 @@ struct synaptics_rmi4_data {
 	unsigned short glove_mode_enables_addr;
 #endif
 
-#ifdef TSP_BOOSTER
-	struct delayed_work	work_dvfs_off;
-	struct delayed_work	work_dvfs_chg;
+#ifdef CONFIG_FAKE_DVFS
 	struct mutex		dvfs_lock;
 	bool dvfs_lock_status;
 	int dvfs_old_stauts;

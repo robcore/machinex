@@ -29,6 +29,7 @@
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/leds.h>
+#include <linux/fake_dvfs.h>
 #include <asm/mach-types.h>
 #include "issp_extern.h"
 #include <linux/mfd/pm8xxx/pm8921.h>
@@ -118,6 +119,10 @@ struct cypress_touchkey_info {
 #ifdef TKEY_FLIP_MODE
 	bool enabled_flip;
 #endif
+#ifdef CONFIG_FAKE_DVFS
+	bool dvfs_lock_status;
+	struct mutex		dvfs_lock;
+#endif
 #ifdef TK_INFORM_CHARGER
 	struct touchkey_callbacks callbacks;
 	bool charging_mode;
@@ -127,11 +132,6 @@ struct cypress_touchkey_info {
 #ifdef CONFIG_POWERSUSPEND
 static void cypress_touchkey_power_suspend(struct power_suspend *h);
 static void cypress_touchkey_power_resume(struct power_suspend *h);
-#endif
-
-#ifdef CONFIG_FAKE_DVFS
-static bool dvfs_lock_status;
-static struct mutex dvfs_lock;
 #endif
 
 static int touchkey_led_status;
@@ -271,29 +271,29 @@ static void cypress_gpio_setting(bool value)
 }
 
 #ifdef CONFIG_FAKE_DVFS
-static void cypress_change_dvfs_lock(void)
+static void cypress_change_dvfs_lock(struct cypress_touchkey_info *info)
 {
 	int retval;
 
-	mutex_lock(&dvfs_lock);
+	mutex_lock(&info->dvfs_lock);
 	retval = set_freq_limit(DVFS_TOUCH_ID,
 			MIN_TOUCH_LIMIT_SECOND);
 	if (retval < 0)
 		pr_debug("glarb\n");
-	mutex_unlock(&dvfs_lock);
+	mutex_unlock(&info->dvfs_lock);
 }
 
-static void cypress_set_dvfs_off(void)
+static void cypress_set_dvfs_off(struct cypress_touchkey_info *info)
 {
 	int retval;
 
-	mutex_lock(&dvfs_lock);
+	mutex_lock(&info->dvfs_lock);
 	retval = set_freq_limit(DVFS_TOUCH_ID, -1);
 	if (retval < 0)
 		pr_debug("glarb\n");
 
-	dvfs_lock_status = false;
-	mutex_unlock(&dvfs_lock);
+	info->dvfs_lock_status = false;
+	mutex_unlock(&info->dvfs_lock);
 }
 
 static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
@@ -301,35 +301,35 @@ static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
 {
 	int ret = 0;
 
-	mutex_lock(&dvfs_lock);
+	mutex_lock(&info->dvfs_lock);
 	if (on == 0) {
-		if (dvfs_lock_status) {
-			cypress_set_dvfs_off();
+		if (info->dvfs_lock_status) {
+			cypress_set_dvfs_off(info);
 		}
 	} else if (on == 1) {
-		if (!dvfs_lock_status) {
+		if (!info->dvfs_lock_status) {
 			ret = set_freq_limit(DVFS_TOUCH_ID,
 					MIN_TOUCH_LIMIT);
 			if (ret < 0)
 				pr_debug("blarg\n");
 
-			cypress_change_dvfs_lock();
+			cypress_change_dvfs_lock(info);
 			info->dvfs_lock_status = true;
 		}
 	} else if (on == 2) {
 		if (info->dvfs_lock_status) {
-			cypress_set_dvfs_off();
+			cypress_set_dvfs_off(info);
 		}
 	}
-	mutex_unlock(&dvfs_lock);
+	mutex_unlock(&info->dvfs_lock);
 }
 
 
 static void cypress_init_dvfs(struct cypress_touchkey_info *info)
 {
-	mutex_init(&dvfs_lock);
+	mutex_init(&info->dvfs_lock);
 
-	dvfs_lock_status = false;
+	info->dvfs_lock_status = false;
 }
 #endif
 
@@ -1629,7 +1629,7 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 		INIT_WORK(&info->led_work, cypress_touchkey_led_work);
 
 	info->leds.name = TOUCHKEY_BACKLIGHT;
-	info->leds.brightness = LED_FULL;
+	info->leds.brightness = LED_OFF;
 	info->leds.max_brightness = LED_FULL;
 	info->leds.brightness_set = cypress_touchkey_brightness_set;
 
@@ -1953,8 +1953,6 @@ static int cypress_touchkey_suspend(struct device *dev)
 
 #ifdef CONFIG_FAKE_DVFS
 	cypress_set_dvfs_lock(info, 2);
-	dev_info(&info->client->dev,
-			"%s: dvfs_lock free.\n", __func__);
 #endif
 	return ret;
 }
