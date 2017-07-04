@@ -288,8 +288,7 @@ static void * sctp_assocs_seq_start(struct seq_file *seq, loff_t *pos)
 		seq_printf(seq, " ASSOC     SOCK   STY SST ST HBKT "
 				"ASSOC-ID TX_QUEUE RX_QUEUE UID INODE LPORT "
 				"RPORT LADDRS <-> RADDRS "
-				"HBINT INS OUTS MAXRT T1X T2X RTXC "
-				"wmema wmemq sndbuf rcvbuf\n");
+				"HBINT INS OUTS MAXRT T1X T2X RTXC\n");
 
 	return (void *)pos;
 }
@@ -340,16 +339,11 @@ static int sctp_assocs_seq_show(struct seq_file *seq, void *v)
 		sctp_seq_dump_local_addrs(seq, epb);
 		seq_printf(seq, "<-> ");
 		sctp_seq_dump_remote_addrs(seq, assoc);
-		seq_printf(seq, "\t%8lu %5d %5d %4d %4d %4d %8d "
-			   "%8d %8d %8d %8d",
+		seq_printf(seq, "\t%8lu %5d %5d %4d %4d %4d %8d ",
 			assoc->hbinterval, assoc->c.sinit_max_instreams,
 			assoc->c.sinit_num_ostreams, assoc->max_retrans,
 			assoc->init_retries, assoc->shutdown_retries,
-			assoc->rtx_data_chunks,
-			atomic_read(&sk->sk_wmem_alloc),
-			sk->sk_wmem_queued,
-			sk->sk_sndbuf,
-			sk->sk_rcvbuf);
+			assoc->rtx_data_chunks);
 		seq_printf(seq, "\n");
 	}
 	read_unlock(&head->lock);

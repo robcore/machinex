@@ -48,7 +48,6 @@ struct genl_family {
 	unsigned int		version;
 	unsigned int		maxattr;
 	bool			netnsok;
-	bool			parallel_ops;
 	int			(*pre_doit)(struct genl_ops *ops,
 					    struct sk_buff *skb,
 					    struct genl_info *info);

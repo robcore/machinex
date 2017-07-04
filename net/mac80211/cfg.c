@@ -685,8 +685,7 @@ static int ieee80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
 		return -ENOENT;
 
 	RCU_INIT_POINTER(sdata->u.ap.beacon, NULL);
-	synchronize_net();
-	rcu_barrier()
+
 	kfree_rcu(old, rcu_head);
 
 	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_BEACON_ENABLED);
