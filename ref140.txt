@@ -1,1 +1,0 @@
-/media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/2825-block-remove-struct-request-buffer-member.patch

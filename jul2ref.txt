@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/8patches/7044-Thermal-rename-thermal_sys.c-to-thermal_core.c.patch
