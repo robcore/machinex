@@ -1312,7 +1312,7 @@ struct sctp_ep_common {
 	 *   dead     - Do not attempt to use this object.
 	 */
 	atomic_t    refcnt;
-	char	    dead;
+	bool	    dead;
 
 	/* What socket does this endpoint belong to?  */
 	struct sock *sk;
