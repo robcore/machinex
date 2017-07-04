@@ -172,7 +172,7 @@ static int load_segment(const struct elf32_phdr *phdr, unsigned num,
 	if (phdr->p_filesz) {
 		snprintf(fw_name, ARRAY_SIZE(fw_name), "%s.b%02d",
 				pil->desc->name, num);
-		ret = request_firmware(&fw, fw_name, &pil->dev);
+		ret = request_firmware_direct(&fw, fw_name, &pil->dev);
 		if (ret) {
 			dev_err(&pil->dev, "%s: Failed to locate blob %s\n",
 					pil->desc->name, fw_name);
@@ -253,7 +253,7 @@ static int segment_is_loadable(const struct elf32_phdr *p)
 	return (p->p_type == PT_LOAD) && !segment_is_hash(p->p_flags);
 }
 
-/* Sychronize request_firmware() with suspend */
+/* Sychronize request_firmware_direct() with suspend */
 static DECLARE_RWSEM(pil_pm_rwsem);
 
 static int load_image(struct pil_device *pil)
@@ -272,7 +272,7 @@ static int load_image(struct pil_device *pil)
 
 	down_read(&pil_pm_rwsem);
 	snprintf(fw_name, sizeof(fw_name), "%s.mdt", pil->desc->name);
-	ret = request_firmware(&fw, fw_name, &pil->dev);
+	ret = request_firmware_direct(&fw, fw_name, &pil->dev);
 	if (ret) {
 		dev_err(&pil->dev, "%s: Failed to locate %s\n",
 				pil->desc->name, fw_name);
