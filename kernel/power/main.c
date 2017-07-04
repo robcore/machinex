@@ -853,6 +853,8 @@ int set_freq_limit(unsigned long id, unsigned int freq)
 	if (freq != 0 && freq != -1 && verify_cpufreq_target(freq))
 		return -EINVAL;
 
+	mutex_lock(&dvfs_mutex);
+
 	if (freq == -1)
 		dvfs_id &= ~id;
 	else
@@ -890,9 +892,7 @@ int set_freq_limit(unsigned long id, unsigned int freq)
 	set_min_lock(min);
 	set_max_lock(max);
 
-	pr_info("%s: 0x%lu %d, min %d, max %d\n",
-				__func__, id, freq, min, max);
-
+	mutex_unlock(&dvfs_mutex);
 	return 0;
 }
 
