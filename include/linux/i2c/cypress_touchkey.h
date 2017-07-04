@@ -19,8 +19,8 @@ extern int get_lcd_attached(void);
 #ifdef CONFIG_FAKE_DVFS
 #include <linux/fake_dvfs.h>
 
-#define TOUCH_BOOSTER_OFF_TIME	300
-#define TOUCH_BOOSTER_CHG_TIME	200
+#define TOUCH_BOOSTER_OFF_TIME	30
+#define TOUCH_BOOSTER_CHG_TIME	20
 #endif
 
 #if defined(CONFIG_GLOVE_TOUCH)
