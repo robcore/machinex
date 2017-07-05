@@ -588,10 +588,6 @@ static void __aio_put_req(struct kioctx *ctx, struct kiocb *req)
 	really_put_req(ctx, req);
 }
 
-/* aio_put_req
- *	Returns true if this put was the last user of the kiocb,
- *	false if the request is still in use.
- */
 void aio_put_req(struct kiocb *req)
 {
 	struct kioctx *ctx = req->ki_ctx;
@@ -1374,7 +1370,6 @@ int aio_kernel_submit(struct kiocb *iocb)
 	}
 
 	ret = iocb->ki_retry(iocb);
-	BUG_ON(ret == -EIOCBRETRY);
 	if (ret != -EIOCBQUEUED)
 		aio_complete(iocb, ret, 0);
 
@@ -1491,7 +1486,6 @@ static int io_submit_one(struct kioctx *ctx, struct iocb __user *user_iocb,
 
 out_put_req:
 	aio_put_req(req);	/* drop extra ref to req */
-	aio_put_req(req);	/* drop i/o ref to req */
 	return ret;
 }
 
