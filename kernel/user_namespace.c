@@ -19,6 +19,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/ctype.h>
+#include <linux/proc_ns.h>
 
 static struct kmem_cache *user_ns_cachep __read_mostly;
 
