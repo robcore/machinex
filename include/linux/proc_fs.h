@@ -76,31 +76,6 @@ struct proc_dir_entry *proc_create_data(const char *name, umode_t mode,
 extern void remove_proc_entry(const char *name, struct proc_dir_entry *parent);
 extern int remove_proc_subtree(const char *name, struct proc_dir_entry *parent);
 
-
-/*
- * proc_tty.c
- */
-struct tty_driver;
-extern void proc_tty_init(void);
-extern void proc_tty_register_driver(struct tty_driver *driver);
-extern void proc_tty_unregister_driver(struct tty_driver *driver);
-
-/*
- * proc_devtree.c
- */
-#ifdef CONFIG_PROC_DEVICETREE
-struct device_node;
-struct property;
-extern void proc_device_tree_init(void);
-extern void proc_device_tree_add_node(struct device_node *, struct proc_dir_entry *);
-extern void proc_device_tree_add_prop(struct proc_dir_entry *pde, struct property *prop);
-extern void proc_device_tree_remove_prop(struct proc_dir_entry *pde,
-					 struct property *prop);
-extern void proc_device_tree_update_prop(struct proc_dir_entry *pde,
-					 struct property *newprop,
-					 struct property *oldprop);
-#endif /* CONFIG_PROC_DEVICETREE */
-
 extern struct proc_dir_entry *proc_symlink(const char *,
 		struct proc_dir_entry *, const char *);
 extern struct proc_dir_entry *proc_mkdir(const char *,struct proc_dir_entry *);
@@ -162,9 +137,6 @@ static inline struct proc_dir_entry *create_proc_read_entry(const char *name,
 	umode_t mode, struct proc_dir_entry *base, 
 	read_proc_t *read_proc, void * data) { return NULL; }
 
-struct tty_driver;
-static inline void proc_tty_register_driver(struct tty_driver *driver) {};
-static inline void proc_tty_unregister_driver(struct tty_driver *driver) {};
 #endif /* CONFIG_PROC_FS */
 
 union proc_op {
@@ -203,8 +175,4 @@ static inline void *PDE_DATA(const struct inode *inode)
 {
 	return PROC_I(inode)->pde->data;
 }
-
-#include <linux/signal.h>
-
-void render_sigset_t(struct seq_file *m, const char *header, sigset_t *set);
 #endif /* _LINUX_PROC_FS_H */
