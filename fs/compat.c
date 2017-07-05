@@ -68,6 +68,8 @@ int compat_printk(const char *fmt, ...)
 	return ret;
 }
 
+#include "read_write.h"
+
 /*
  * Not all architectures have sys_utime, so implement this in terms
  * of sys_utimes.
