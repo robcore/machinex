@@ -158,21 +158,10 @@ static unsigned long hung_task_timeout_max = (LONG_MAX/HZ);
 #ifdef CONFIG_INOTIFY_USER
 #include <linux/inotify.h>
 #endif
-#ifdef CONFIG_SPARC
-#endif
-
-#ifdef CONFIG_SPARC64
-extern int sysctl_tsb_ratio;
-#endif
 
 #ifdef __hppa__
 extern int pwrsw_enabled;
 extern int unaligned_enabled;
-#endif
-
-#ifdef CONFIG_IA64
-extern int no_unaligned_warning;
-extern int unaligned_dump_stack;
 #endif
 
 #ifdef CONFIG_PROC_SYSCTL
