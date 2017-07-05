@@ -1896,7 +1896,7 @@ static void pktgen_change_name(struct net_device *dev)
 			if (pkt_dev->odev != dev)
 				continue;
 
-			remove_proc_entry(pkt_dev->entry->name, pg_proc_dir);
+			proc_remove(pkt_dev->entry);
 
 			pkt_dev->entry = proc_create_data(dev->name, 0600,
 							  pg_proc_dir,
@@ -3675,7 +3675,7 @@ static int pktgen_remove_device(struct pktgen_thread *t,
 	_rem_dev_from_if_list(t, pkt_dev);
 
 	if (pkt_dev->entry)
-		remove_proc_entry(pkt_dev->entry->name, pg_proc_dir);
+		proc_remove(pkt_dev->entry);
 
 #ifdef CONFIG_XFRM
 	free_SAs(pkt_dev);
