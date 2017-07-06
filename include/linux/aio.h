@@ -12,15 +12,7 @@
 struct kioctx;
 struct kiocb;
 
-/* Notes on cancelling a kiocb:
- *	If a kiocb is cancelled, aio_complete may return 0 to indicate
- *	that cancel has not yet disposed of the kiocb.  All cancel
- *	operations *must* call aio_put_req to dispose of the kiocb
- *	to guard against races with the completion code.
- */
-
 #define KIOCB_KEY		0
-#define KIOCB_KERNEL_KEY		(~1U)
 
 /*
  * We use ki_cancel == KIOCB_CANCELLED to indicate that a kiocb has been either
@@ -37,38 +29,13 @@ struct kiocb;
 
 typedef int (kiocb_cancel_fn)(struct kiocb *, struct io_event *);
 
-/* is there a better place to document function pointer methods? */
-/**
- * ki_retry	-	iocb forward progress callback
- * @kiocb:	The kiocb struct to advance by performing an operation.
- *
- * This callback is called when the AIO core wants a given AIO operation
- * to make forward progress.  The kiocb argument describes the operation
- * that is to be performed.  As the operation proceeds, perhaps partially,
- * ki_retry is expected to update the kiocb with progress made.  Typically
- * ki_retry is set in the AIO core and it itself calls file_operations
- * helpers.
- *
- * ki_retry's return value determines when the AIO operation is completed
- * and an event is generated in the AIO event ring.  Except the special
- * return values described below, the value that is returned from ki_retry
- * is transferred directly into the completion ring as the operation's
- * resulting status.  Once this has happened ki_retry *MUST NOT* reference
- * the kiocb pointer again.
- *
- * If ki_retry returns -EIOCBQUEUED it has made a promise that aio_complete()
- * will be called on the kiocb pointer in the future.  The AIO core will
- * not ask the method again -- ki_retry must ensure forward progress.
- * aio_complete() must be called once and only once in the future, multiple
- * calls may result in undefined behaviour.
- */
 struct kiocb {
 	atomic_t		ki_users;
 
 	struct file		*ki_filp;
 	struct kioctx		*ki_ctx;	/* NULL for sync ops */
 	kiocb_cancel_fn		*ki_cancel;
-	ssize_t			(*ki_retry)(struct kiocb *);
+	void			(*ki_dtor)(struct kiocb *);
 
 	union {
 		void __user		*user;
@@ -119,7 +86,7 @@ static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
 /* prototypes */
 #ifdef CONFIG_AIO
 extern ssize_t wait_on_sync_kiocb(struct kiocb *iocb);
-extern void aio_put_req(struct kiocb *req);
+extern void aio_put_req(struct kiocb *iocb);
 extern void aio_complete(struct kiocb *iocb, long res, long res2);
 struct mm_struct;
 extern void exit_aio(struct mm_struct *mm);
@@ -138,8 +105,8 @@ void aio_kernel_init_callback(struct kiocb *iocb,
 int aio_kernel_submit(struct kiocb *iocb);
 #else
 static inline ssize_t wait_on_sync_kiocb(struct kiocb *iocb) { return 0; }
-static inline int aio_put_req(struct kiocb *iocb) { return 0; }
-static inline int aio_complete(struct kiocb *iocb, long res, long res2) { return 0; }
+static inline void aio_put_req(struct kiocb *iocb) { }
+static inline void aio_complete(struct kiocb *iocb, long res, long res2) { }
 struct mm_struct;
 static inline void exit_aio(struct mm_struct *mm) { }
 static inline long do_io_submit(aio_context_t ctx_id, long nr,
@@ -152,11 +119,6 @@ static inline void kiocb_set_cancel_fn(struct kiocb *req,
 static inline struct kiocb *list_kiocb(struct list_head *h)
 {
 	return list_entry(h, struct kiocb, ki_list);
-}
-
-static inline bool is_kernel_kiocb(struct kiocb *kiocb)
-{
-	return kiocb->ki_key == KIOCB_KERNEL_KEY;
 }
 
 /* for sysctl: */

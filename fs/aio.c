@@ -543,6 +543,8 @@ static void kiocb_free(struct kiocb *req)
 		fput(req->ki_filp);
 	if (req->ki_eventfd != NULL)
 		eventfd_ctx_put(req->ki_eventfd);
+	if (req->ki_dtor)
+		req->ki_dtor(req);
 	if (req->ki_iovec != &req->ki_inline_vec)
 		kfree(req->ki_iovec);
 	kmem_cache_free(kiocb_cachep, req);
@@ -597,10 +599,6 @@ void aio_complete(struct kiocb *iocb, long res, long res2)
 		iocb->ki_user_data = res;
 		atomic_set(&iocb->ki_users, 0);
 		wake_up_process(iocb->ki_obj.tsk);
-		return;
-	} else if (is_kernel_kiocb(iocb)) {
-		iocb->ki_obj.complete(iocb->ki_user_data, res);
-		aio_kernel_free(iocb);
 		return;
 	}
 
@@ -829,10 +827,10 @@ static long read_events(struct kioctx *ctx, long min_nr, long nr,
  *	Create an aio_context capable of receiving at least nr_events.
  *	ctxp must not point to an aio_context that already exists, and
  *	must be initialized to 0 prior to the call.  On successful
- *	creation of the aio_context, *ctxp is filled in with the resulting
+ *	creation of the aio_context, *ctxp is filled in with the resulting 
  *	handle.  May fail with -EINVAL if *ctxp is not initialized,
- *	if the specified nr_events exceeds internal limits.  May fail
- *	with -EAGAIN if the specified nr_events exceeds the user's limit
+ *	if the specified nr_events exceeds internal limits.  May fail 
+ *	with -EAGAIN if the specified nr_events exceeds the user's limit 
  *	of available events.  May fail with -ENOMEM if insufficient kernel
  *	resources are available.  May fail with -EFAULT if an invalid
  *	pointer is passed for ctxp.  Will fail with -ENOSYS if not
@@ -869,7 +867,7 @@ out:
 }
 
 /* sys_io_destroy:
- *	Destroy the aio_context specified.  May cancel any outstanding
+ *	Destroy the aio_context specified.  May cancel any outstanding 
  *	AIOs and block on completion.  Will fail with -ENOSYS if not
  *	implemented.  May fail with -EINVAL if the context pointed to
  *	is invalid.
