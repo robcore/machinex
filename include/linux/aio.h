@@ -56,7 +56,7 @@ struct kioctx;
  */
 struct kiocb {
 	unsigned long		ki_flags;
-	atomic_t		ki_users;
+	int			ki_users;
 	unsigned		ki_key;		/* id of this request */
 
 	struct file		*ki_filp;
@@ -104,7 +104,7 @@ static inline bool is_sync_kiocb(struct kiocb *kiocb)
 static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
 {
 	*kiocb = (struct kiocb) {
-			.ki_users = ATOMIC_INIT(1),
+			.ki_users = 1,
 			.ki_key = KIOCB_SYNC_KEY,
 			.ki_filp = filp,
 			.ki_obj.tsk = current,
@@ -151,7 +151,7 @@ static inline unsigned aio_ring_avail(struct aio_ring_info *info,
 
 struct kioctx {
 	atomic_t		users;
-	atomic_t			dead;
+	int			dead;
 
 	/* This needs improving */
 	unsigned long		user_id;
@@ -160,7 +160,7 @@ struct kioctx {
 
 	spinlock_t		ctx_lock;
 
-	atomic_t			reqs_active;
+	int			reqs_active;
 	struct list_head	active_reqs;	/* used for cancellation */
 
 	/* sys_io_setup currently limits this to an unsigned int */
@@ -169,7 +169,6 @@ struct kioctx {
 	struct aio_ring_info	ring_info;
 
 	struct rcu_head		rcu_head;
-	struct work_struct	rcu_work;
 };
 
 /* prototypes */
