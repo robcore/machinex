@@ -34,9 +34,9 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #include "smart_mtp_se6e8fa.h"
 #include "smart_mtp_2p2_gamma.h"
 
-/*
+#if 0
 #define SMART_DIMMING_DEBUG
-*/
+#endif
 
 static char max_lux_table[GAMMA_SET_MAX];
 static char min_lux_table[GAMMA_SET_MAX];
@@ -3684,11 +3684,44 @@ void get_min_lux_table(char *str, int size)
 	memcpy(str, min_lux_table, size);
 }
 
+unsigned int r_tuning = 2;
+module_param(r_tuning, uint, 0644);
+unsigned int g_tuning = 3;
+module_param(g_tuning, uint, 0644);
+unsigned int b_tuning = 2;
+module_param(b_tuning, uint, 0644);
+
+static void mtp_sorting(struct SMART_DIM *psmart)
+{
+	int sorting[GAMMA_SET_MAX] = {
+		0, 1, 6, 9, 12, 15, 18, 21, 24, 27, 30, /* R*/
+		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31, /* G */
+		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, /* B */
+	};
+	int loop;
+	char *pfrom, *pdest;
+
+	pfrom = (char *)&(psmart->MTP_ORIGN);
+	pdest = (char *)&(psmart->MTP);
+
+	for (loop = 0; loop < GAMMA_SET_MAX; loop++)
+		pdest[loop] = pfrom[sorting[loop]];
+
+	if (get_ldi_chip() == LDI_MAGNA) {
+		pdest[10] = g_tuning;
+		pdest[21] = r_tuning;
+		pdest[32] = b_tuning;
+	}
+}
+
 void generate_gamma(struct SMART_DIM *psmart, char *str, int size)
 {
 	int lux_loop;
 	struct illuminance_table *ptable = (struct illuminance_table *)
 						(&(psmart->gen_table));
+
+	if (get_ldi_chip() == LDI_MAGNA)
+		mtp_sorting(psmart);
 
 	/* searching already generated gamma table */
 	for (lux_loop = 0; lux_loop < psmart->lux_table_max; lux_loop++) {
@@ -3759,29 +3792,6 @@ static void gamma_cell_determine(int ldi_revision)
 	VT_300CD_R = VT_300CD_R_20;
 	VT_300CD_G = VT_300CD_G_20;
 	VT_300CD_B = VT_300CD_B_20;
-}
-
-static void mtp_sorting(struct SMART_DIM *psmart)
-{
-	int sorting[GAMMA_SET_MAX] = {
-		0, 1, 6, 9, 12, 15, 18, 21, 24, 27, 30, /* R*/
-		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31, /* G */
-		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, /* B */
-	};
-	int loop;
-	char *pfrom, *pdest;
-
-	pfrom = (char *)&(psmart->MTP_ORIGN);
-	pdest = (char *)&(psmart->MTP);
-
-	for (loop = 0; loop < GAMMA_SET_MAX; loop++)
-		pdest[loop] = pfrom[sorting[loop]];
-
-	if (get_ldi_chip() == LDI_MAGNA) {
-		pdest[10] = 2;
-		pdest[21] = 3;
-		pdest[32] = 2;
-	}
 }
 
 #ifdef SMART_DIMMING_DEBUG
