@@ -13,6 +13,7 @@ struct kioctx;
 struct kiocb;
 
 #define KIOCB_KEY		0
+#define KIOCB_KERNEL_KEY		(~1U)
 
 /*
  * We use ki_cancel == KIOCB_CANCELLED to indicate that a kiocb has been either
@@ -31,6 +32,7 @@ typedef int (kiocb_cancel_fn)(struct kiocb *, struct io_event *);
 
 struct kiocb {
 	atomic_t		ki_users;
+	unsigned		ki_key;		/* id of this request */
 
 	struct file		*ki_filp;
 	struct kioctx		*ki_ctx;	/* NULL for sync ops */
@@ -119,6 +121,11 @@ static inline void kiocb_set_cancel_fn(struct kiocb *req,
 static inline struct kiocb *list_kiocb(struct list_head *h)
 {
 	return list_entry(h, struct kiocb, ki_list);
+}
+
+static inline bool is_kernel_kiocb(struct kiocb *kiocb)
+{
+	return kiocb->ki_key == KIOCB_KERNEL_KEY;
 }
 
 /* for sysctl: */
