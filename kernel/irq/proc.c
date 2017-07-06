@@ -13,6 +13,7 @@
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
+#include "../../fs/proc/internal.h"
 
 #include "internals.h"
 
