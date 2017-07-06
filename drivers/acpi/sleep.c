@@ -600,6 +600,8 @@ static const struct platform_suspend_ops acpi_suspend_ops_old = {
 };
 #endif /* CONFIG_SUSPEND */
 
+static bool s2idle_wakeup;
+
 static int acpi_freeze_begin(void)
 {
 	acpi_scan_lock_acquire();

@@ -258,7 +258,7 @@ static int acpi_lid_send_state(struct acpi_device *device)
 	input_sync(button->input);
 
 	if (state)
-		pm_wakeup_event(&device->dev, 0);
+		acpi_pm_wakeup_event(&device->dev);
 
 	ret = blocking_notifier_call_chain(&acpi_lid_notifier, state, device);
 	if (ret == NOTIFY_DONE)
@@ -414,6 +414,7 @@ static int acpi_button_add(struct acpi_device *device)
 		}
 	}
 
+	device_init_wakeup(&device->dev, true);
 	printk(KERN_INFO PREFIX "%s [%s]\n", name, acpi_device_bid(device));
 	return 0;
 
