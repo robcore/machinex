@@ -449,20 +449,19 @@ DECLARE_EVENT_CLASS(ext4_invalidatepage_op,
 	TP_ARGS(page, offset, length),
 
 	TP_STRUCT__entry(
+		__field(	dev_t,	dev			)
+		__field(	ino_t,	ino			)
 		__field(	pgoff_t, index			)
 		__field(	unsigned int, offset		)
 		__field(	unsigned int, length		)
-		__field(	ino_t,	ino			)
-		__field(	dev_t,	dev			)
-
 	),
 
 	TP_fast_assign(
+		__entry->dev	= page->mapping->host->i_sb->s_dev;
+		__entry->ino	= page->mapping->host->i_ino;
 		__entry->index	= page->index;
 		__entry->offset	= offset;
 		__entry->length	= length;
-		__entry->ino	= page->mapping->host->i_ino;
-		__entry->dev	= page->mapping->host->i_sb->s_dev;
 	),
 
 	TP_printk("dev %d,%d ino %lu page_index %lu offset %u length %u",
@@ -481,7 +480,7 @@ DEFINE_EVENT(ext4_invalidatepage_op, ext4_invalidatepage,
 DEFINE_EVENT(ext4_invalidatepage_op, ext4_journalled_invalidatepage,
 	TP_PROTO(struct page *page, unsigned int offset, unsigned int length),
 
-	TP_PROTO(struct page *page, unsigned int offset, unsigned int length),
+	TP_ARGS(page, offset, length)
 );
 
 TRACE_EVENT(ext4_discard_blocks,
