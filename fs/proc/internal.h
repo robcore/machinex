@@ -138,6 +138,8 @@ extern int pid_delete_dentry(const struct dentry *);
 
 struct dentry *proc_lookup_de(struct proc_dir_entry *de, struct inode *ino,
 		struct dentry *dentry);
+int proc_readdir_de(struct proc_dir_entry *de, struct file *filp, void *dirent,
+		filldir_t filldir);
 
 struct pde_opener {
 	struct file *file;
@@ -153,7 +155,7 @@ void proc_entry_rundown(struct proc_dir_entry *);
 extern spinlock_t proc_subdir_lock;
 
 struct dentry *proc_pid_lookup(struct inode *dir, struct dentry * dentry, unsigned int);
-extern int proc_pid_readdir(struct file *, struct dir_context *);
+int proc_pid_readdir(struct file * filp, void * dirent, filldir_t filldir);
 unsigned long task_vsize(struct mm_struct *);
 unsigned long task_statm(struct mm_struct *,
 	unsigned long *, unsigned long *, unsigned long *, unsigned long *);
@@ -177,8 +179,7 @@ int proc_remount(struct super_block *sb, int *flags, char *data);
  * The /proc root directory has extended versions to take care
  * of the /proc/<pid> subdirectories.
  */
-extern int proc_readdir(struct file *, struct dir_context *);
-extern int proc_readdir_de(struct proc_dir_entry *, struct file *, struct dir_context *);
+int proc_readdir(struct file *, void *, filldir_t);
 struct dentry *proc_lookup(struct inode *, struct dentry *, unsigned int);
 
 
@@ -186,8 +187,9 @@ struct dentry *proc_lookup(struct inode *, struct dentry *, unsigned int);
 /* Lookups */
 typedef struct dentry *instantiate_t(struct inode *, struct dentry *,
 				struct task_struct *, const void *);
-extern bool proc_fill_cache(struct file *, struct dir_context *, const char *, int,
-			   instantiate_t, struct task_struct *, const void *);
+int proc_fill_cache(struct file *filp, void *dirent, filldir_t filldir,
+	const char *name, int len,
+	instantiate_t instantiate, struct task_struct *task, const void *ptr);
 int pid_revalidate(struct dentry *dentry, unsigned int flags);
 struct inode *proc_pid_make_inode(struct super_block * sb, struct task_struct *task);
 extern const struct dentry_operations pid_dentry_operations;

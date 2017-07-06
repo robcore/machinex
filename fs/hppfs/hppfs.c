@@ -532,8 +532,8 @@ static const struct file_operations hppfs_file_fops = {
 };
 
 struct hppfs_dirent {
-	struct dir_context ctx;
-	struct dir_context *caller;
+	void *vfs_dirent;
+	filldir_t filldir;
 	struct dentry *dentry;
 };
 

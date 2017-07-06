@@ -1784,11 +1784,11 @@ const struct dentry_operations pid_dentry_operations =
  * reported by readdir in sync with the inode numbers reported
  * by stat.
  */
-bool proc_fill_cache(struct file *file, struct dir_context *ctx,
+int proc_fill_cache(struct file *filp, void *dirent, filldir_t filldir,
 	const char *name, int len,
 	instantiate_t instantiate, struct task_struct *task, const void *ptr)
 {
-	struct dentry *child, *dir = file->f_path.dentry;
+	struct dentry *child, *dir = filp->f_path.dentry;
 	struct inode *inode;
 	struct qstr qname;
 	ino_t ino = 0;
@@ -1823,7 +1823,7 @@ end_instantiate:
 		ino = find_inode_number(dir, &qname);
 	if (!ino)
 		ino = 1;
-	return dir_emit(ctx, name, len, ino, type);
+	return filldir(dirent, name, len, filp->f_pos, ino, type);
 }
 
 /*
@@ -2033,15 +2033,14 @@ static const struct inode_operations proc_map_files_inode_operations = {
 };
 
 static int
-proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+proc_map_files_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
+	struct dentry *dentry = filp->f_path.dentry;
+	struct inode *inode = dentry->d_inode;
 	struct vm_area_struct *vma;
 	struct task_struct *task;
 	struct mm_struct *mm;
-	unsigned long nr_files, pos, i;
-	struct flex_array *fa = NULL;
-	struct map_files_info info;
-	struct map_files_info *p;
+	ino_t ino;
 	int ret;
 
 	ret = -EPERM;
@@ -2049,7 +2048,7 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
 		goto out;
 
 	ret = -ENOENT;
-	task = get_proc_task(file_inode(file));
+	task = get_proc_task(inode);
 	if (!task)
 		goto out;
 
@@ -2058,73 +2057,91 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
 		goto out_put_task;
 
 	ret = 0;
-	if (!dir_emit_dots(file, ctx))
-		goto out_put_task;
-
-	mm = get_task_mm(task);
-	if (!mm)
-		goto out_put_task;
-	down_read(&mm->mmap_sem);
-
-	nr_files = 0;
-
-	/*
-	 * We need two passes here:
-	 *
-	 *  1) Collect vmas of mapped files with mmap_sem taken
-	 *  2) Release mmap_sem and instantiate entries
-	 *
-	 * otherwise we get lockdep complained, since filldir()
-	 * routine might require mmap_sem taken in might_fault().
-	 */
-
-	for (vma = mm->mmap, pos = 2; vma; vma = vma->vm_next) {
-		if (vma->vm_file && ++pos > ctx->pos)
-			nr_files++;
-	}
-
-	if (nr_files) {
-		fa = flex_array_alloc(sizeof(info), nr_files,
-					GFP_KERNEL);
-		if (!fa || flex_array_prealloc(fa, 0, nr_files,
-						GFP_KERNEL)) {
-			ret = -ENOMEM;
-			if (fa)
-				flex_array_free(fa);
-			up_read(&mm->mmap_sem);
-			mmput(mm);
+	switch (filp->f_pos) {
+	case 0:
+		ino = inode->i_ino;
+		if (filldir(dirent, ".", 1, 0, ino, DT_DIR) < 0)
 			goto out_put_task;
-		}
-		for (i = 0, vma = mm->mmap, pos = 2; vma;
-				vma = vma->vm_next) {
-			if (!vma->vm_file)
-				continue;
-			if (++pos <= ctx->pos)
-				continue;
+		filp->f_pos++;
+	case 1:
+		ino = parent_ino(dentry);
+		if (filldir(dirent, "..", 2, 1, ino, DT_DIR) < 0)
+			goto out_put_task;
+		filp->f_pos++;
+	default:
+	{
+		unsigned long nr_files, pos, i;
+		struct flex_array *fa = NULL;
+		struct map_files_info info;
+		struct map_files_info *p;
 
-			info.mode = vma->vm_file->f_mode;
-			info.len = snprintf(info.name,
-					sizeof(info.name), "%lx-%lx",
-					vma->vm_start, vma->vm_end);
-			if (flex_array_put(fa, i++, &info, GFP_KERNEL))
-				BUG();
-		}
-	}
-	up_read(&mm->mmap_sem);
+		mm = get_task_mm(task);
+		if (!mm)
+			goto out_put_task;
+		down_read(&mm->mmap_sem);
 
-	for (i = 0; i < nr_files; i++) {
-		p = flex_array_get(fa, i);
-		if (!proc_fill_cache(file, ctx,
-				      p->name, p->len,
-				      proc_map_files_instantiate,
-				      task,
-				      (void *)(unsigned long)p->mode))
-			break;
-		ctx->pos++;
+		nr_files = 0;
+
+		/*
+		 * We need two passes here:
+		 *
+		 *  1) Collect vmas of mapped files with mmap_sem taken
+		 *  2) Release mmap_sem and instantiate entries
+		 *
+		 * otherwise we get lockdep complained, since filldir()
+		 * routine might require mmap_sem taken in might_fault().
+		 */
+
+		for (vma = mm->mmap, pos = 2; vma; vma = vma->vm_next) {
+			if (vma->vm_file && ++pos > filp->f_pos)
+				nr_files++;
+		}
+
+		if (nr_files) {
+			fa = flex_array_alloc(sizeof(info), nr_files,
+						GFP_KERNEL);
+			if (!fa || flex_array_prealloc(fa, 0, nr_files,
+							GFP_KERNEL)) {
+				ret = -ENOMEM;
+				if (fa)
+					flex_array_free(fa);
+				up_read(&mm->mmap_sem);
+				mmput(mm);
+				goto out_put_task;
+			}
+			for (i = 0, vma = mm->mmap, pos = 2; vma;
+					vma = vma->vm_next) {
+				if (!vma->vm_file)
+					continue;
+				if (++pos <= filp->f_pos)
+					continue;
+
+				info.mode = vma->vm_file->f_mode;
+				info.len = snprintf(info.name,
+						sizeof(info.name), "%lx-%lx",
+						vma->vm_start, vma->vm_end);
+				if (flex_array_put(fa, i++, &info, GFP_KERNEL))
+					BUG();
+			}
+		}
+		up_read(&mm->mmap_sem);
+
+		for (i = 0; i < nr_files; i++) {
+			p = flex_array_get(fa, i);
+			ret = proc_fill_cache(filp, dirent, filldir,
+					      p->name, p->len,
+					      proc_map_files_instantiate,
+					      task,
+					      (void *)(unsigned long)p->mode);
+			if (ret)
+				break;
+			filp->f_pos++;
+		}
+		if (fa)
+			flex_array_free(fa);
+		mmput(mm);
 	}
-	if (fa)
-		flex_array_free(fa);
-	mmput(mm);
+	}
 
 out_put_task:
 	put_task_struct(task);
@@ -2134,7 +2151,7 @@ out:
 
 static const struct file_operations proc_map_files_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_map_files_readdir,
+	.readdir	= proc_map_files_readdir,
 	.llseek		= default_llseek,
 };
 
@@ -2302,30 +2319,67 @@ out_no_task:
 	return error;
 }
 
-static int proc_pident_readdir(struct file *file, struct dir_context *ctx,
+static int proc_pident_fill_cache(struct file *filp, void *dirent,
+	filldir_t filldir, struct task_struct *task, const struct pid_entry *p)
+{
+	return proc_fill_cache(filp, dirent, filldir, p->name, p->len,
+				proc_pident_instantiate, task, p);
+}
+
+static int proc_pident_readdir(struct file *filp,
+		void *dirent, filldir_t filldir,
 		const struct pid_entry *ents, unsigned int nents)
 {
-	struct task_struct *task = get_proc_task(file_inode(file));
-	const struct pid_entry *p;
+	int i;
+	struct dentry *dentry = filp->f_path.dentry;
+	struct inode *inode = dentry->d_inode;
+	struct task_struct *task = get_proc_task(inode);
+	const struct pid_entry *p, *last;
+	ino_t ino;
+	int ret;
 
+	ret = -ENOENT;
 	if (!task)
-		return -ENOENT;
+		goto out_no_task;
 
-	if (!dir_emit_dots(file, ctx))
-		goto out;
-
-	if (ctx->pos >= nents + 2)
-		goto out;
-
-	for (p = ents + (ctx->pos - 2); p <= ents + nents - 1; p++) {
-		if (!proc_fill_cache(file, ctx, p->name, p->len,
-				proc_pident_instantiate, task, p))
-			break;
-		ctx->pos++;
+	ret = 0;
+	i = filp->f_pos;
+	switch (i) {
+	case 0:
+		ino = inode->i_ino;
+		if (filldir(dirent, ".", 1, i, ino, DT_DIR) < 0)
+			goto out;
+		i++;
+		filp->f_pos++;
+		/* fall through */
+	case 1:
+		ino = parent_ino(dentry);
+		if (filldir(dirent, "..", 2, i, ino, DT_DIR) < 0)
+			goto out;
+		i++;
+		filp->f_pos++;
+		/* fall through */
+	default:
+		i -= 2;
+		if (i >= nents) {
+			ret = 1;
+			goto out;
+		}
+		p = ents + i;
+		last = &ents[nents - 1];
+		while (p <= last) {
+			if (proc_pident_fill_cache(filp, dirent, filldir, task, p) < 0)
+				goto out;
+			filp->f_pos++;
+			p++;
+		}
 	}
+
+	ret = 1;
 out:
 	put_task_struct(task);
-	return 0;
+out_no_task:
+	return ret;
 }
 
 #ifdef CONFIG_SECURITY
@@ -2410,15 +2464,16 @@ static const struct pid_entry attr_dir_stuff[] = {
 	REG("sockcreate", S_IRUGO|S_IWUGO, proc_pid_attr_operations),
 };
 
-static int proc_attr_dir_readdir(struct file *file, struct dir_context *ctx)
+static int proc_attr_dir_readdir(struct file * filp,
+			     void * dirent, filldir_t filldir)
 {
-	return proc_pident_readdir(file, ctx, 
-				   attr_dir_stuff, ARRAY_SIZE(attr_dir_stuff));
+	return proc_pident_readdir(filp,dirent,filldir,
+				   attr_dir_stuff,ARRAY_SIZE(attr_dir_stuff));
 }
 
 static const struct file_operations proc_attr_dir_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_attr_dir_readdir,
+	.readdir	= proc_attr_dir_readdir,
 	.llseek		= default_llseek,
 };
 
@@ -2761,15 +2816,16 @@ static const struct pid_entry tgid_base_stuff[] = {
 #endif
 };
 
-static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
+static int proc_tgid_base_readdir(struct file * filp,
+			     void * dirent, filldir_t filldir)
 {
-	return proc_pident_readdir(file, ctx,
-				   tgid_base_stuff, ARRAY_SIZE(tgid_base_stuff));
+	return proc_pident_readdir(filp,dirent,filldir,
+				   tgid_base_stuff,ARRAY_SIZE(tgid_base_stuff));
 }
 
 static const struct file_operations proc_tgid_base_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_tgid_base_readdir,
+	.readdir	= proc_tgid_base_readdir,
 	.llseek		= default_llseek,
 };
 
@@ -2971,42 +3027,58 @@ retry:
 
 #define TGID_OFFSET (FIRST_PROCESS_ENTRY + 1)
 
+static int proc_pid_fill_cache(struct file *filp, void *dirent, filldir_t filldir,
+	struct tgid_iter iter)
+{
+	char name[PROC_NUMBUF];
+	int len = snprintf(name, sizeof(name), "%d", iter.tgid);
+	return proc_fill_cache(filp, dirent, filldir, name, len,
+				proc_pid_instantiate, iter.task, NULL);
+}
+
+static int fake_filldir(void *buf, const char *name, int namelen,
+			loff_t offset, u64 ino, unsigned d_type)
+{
+	return 0;
+}
+
 /* for the /proc/ directory itself, after non-process stuff has been done */
-int proc_pid_readdir(struct file *file, struct dir_context *ctx)
+int proc_pid_readdir(struct file * filp, void * dirent, filldir_t filldir)
 {
 	struct tgid_iter iter;
 	struct pid_namespace *ns;
-	loff_t pos = ctx->pos;
+	filldir_t __filldir;
+	loff_t pos = filp->f_pos;
 
 	if (pos >= PID_MAX_LIMIT + TGID_OFFSET)
-		return 0;
+		goto out;
 
 	if (pos == TGID_OFFSET - 1) {
-		if (!proc_fill_cache(file, ctx, "self", 4, NULL, NULL, NULL))
-			return 0;
+		if (proc_fill_cache(filp, dirent, filldir, "self", 4,
+					NULL, NULL, NULL) < 0)
+			goto out;
 		iter.tgid = 0;
 	} else {
 		iter.tgid = pos - TGID_OFFSET;
 	}
 	iter.task = NULL;
-	ns = file->f_dentry->d_sb->s_fs_info;
+	ns = filp->f_dentry->d_sb->s_fs_info;
 	for (iter = next_tgid(ns, iter);
 	     iter.task;
 	     iter.tgid += 1, iter = next_tgid(ns, iter)) {
-		char name[PROC_NUMBUF];
-		int len;
-		if (!has_pid_permissions(ns, iter.task, 2))
-			continue;
+		if (has_pid_permissions(ns, iter.task, 2))
+			__filldir = filldir;
+		else
+			__filldir = fake_filldir;
 
-		len = snprintf(name, sizeof(name), "%d", iter.tgid);
-		ctx->pos = iter.tgid + TGID_OFFSET;
-		if (!proc_fill_cache(file, ctx, name, len,
-				     proc_pid_instantiate, iter.task, NULL)) {
+		filp->f_pos = iter.tgid + TGID_OFFSET;
+		if (proc_pid_fill_cache(filp, dirent, __filldir, iter) < 0) {
 			put_task_struct(iter.task);
-			return 0;
+			goto out;
 		}
 	}
-	ctx->pos = PID_MAX_LIMIT + TGID_OFFSET;
+	filp->f_pos = PID_MAX_LIMIT + TGID_OFFSET;
+out:
 	return 0;
 }
 
@@ -3093,10 +3165,11 @@ static const struct pid_entry tid_base_stuff[] = {
 #endif
 };
 
-static int proc_tid_base_readdir(struct file *file, struct dir_context *ctx)
+static int proc_tid_base_readdir(struct file * filp,
+			     void * dirent, filldir_t filldir)
 {
-	return proc_pident_readdir(file, ctx,
-				   tid_base_stuff, ARRAY_SIZE(tid_base_stuff));
+	return proc_pident_readdir(filp,dirent,filldir,
+				   tid_base_stuff,ARRAY_SIZE(tid_base_stuff));
 }
 
 static struct dentry *proc_tid_base_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
@@ -3107,7 +3180,7 @@ static struct dentry *proc_tid_base_lookup(struct inode *dir, struct dentry *den
 
 static const struct file_operations proc_tid_base_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_tid_base_readdir,
+	.readdir	= proc_tid_base_readdir,
 	.llseek		= default_llseek,
 };
 
@@ -3248,16 +3321,30 @@ static struct task_struct *next_tid(struct task_struct *start)
 	return pos;
 }
 
-/* for the /proc/TGID/task/ directories */
-static int proc_task_readdir(struct file *file, struct dir_context *ctx)
+static int proc_task_fill_cache(struct file *filp, void *dirent, filldir_t filldir,
+	struct task_struct *task, int tid)
 {
-	struct task_struct *leader = NULL;
-	struct task_struct *task = get_proc_task(file_inode(file));
-	struct pid_namespace *ns;
-	int tid;
+	char name[PROC_NUMBUF];
+	int len = snprintf(name, sizeof(name), "%d", tid);
+	return proc_fill_cache(filp, dirent, filldir, name, len,
+				proc_task_instantiate, task, NULL);
+}
 
+/* for the /proc/TGID/task/ directories */
+static int proc_task_readdir(struct file * filp, void * dirent, filldir_t filldir)
+{
+	struct dentry *dentry = filp->f_path.dentry;
+	struct inode *inode = dentry->d_inode;
+	struct task_struct *leader = NULL;
+	struct task_struct *task;
+	int retval = -ENOENT;
+	ino_t ino;
+	int tid;
+	struct pid_namespace *ns;
+
+	task = get_proc_task(inode);
 	if (!task)
-		return -ENOENT;
+		goto out_no_task;
 	rcu_read_lock();
 	if (pid_alive(task)) {
 		leader = task->group_leader;
@@ -3266,36 +3353,46 @@ static int proc_task_readdir(struct file *file, struct dir_context *ctx)
 	rcu_read_unlock();
 	put_task_struct(task);
 	if (!leader)
-		return -ENOENT;
+		goto out_no_task;
+	retval = 0;
 
-	if (!dir_emit_dots(file, ctx))
-		goto out;
+	switch ((unsigned long)filp->f_pos) {
+	case 0:
+		ino = inode->i_ino;
+		if (filldir(dirent, ".", 1, filp->f_pos, ino, DT_DIR) < 0)
+			goto out;
+		filp->f_pos++;
+		/* fall through */
+	case 1:
+		ino = parent_ino(dentry);
+		if (filldir(dirent, "..", 2, filp->f_pos, ino, DT_DIR) < 0)
+			goto out;
+		filp->f_pos++;
+		/* fall through */
+	}
 
 	/* f_version caches the tgid value that the last readdir call couldn't
 	 * return. lseek aka telldir automagically resets f_version to 0.
 	 */
-	ns = file->f_dentry->d_sb->s_fs_info;
-	tid = (int)file->f_version;
-	file->f_version = 0;
-	for (task = first_tid(leader, tid, ctx->pos - 2, ns);
+	ns = filp->f_dentry->d_sb->s_fs_info;
+	tid = (int)filp->f_version;
+	filp->f_version = 0;
+	for (task = first_tid(leader, tid, filp->f_pos - 2, ns);
 	     task;
-	     task = next_tid(task), ctx->pos++) {
-		char name[PROC_NUMBUF];
-		int len;
+	     task = next_tid(task), filp->f_pos++) {
 		tid = task_pid_nr_ns(task, ns);
-		len = snprintf(name, sizeof(name), "%d", tid);
-		if (!proc_fill_cache(file, ctx, name, len,
-				proc_task_instantiate, task, NULL)) {
+		if (proc_task_fill_cache(filp, dirent, filldir, task, tid) < 0) {
 			/* returning this tgid failed, save it as the first
 			 * pid for the next readir call */
-			file->f_version = (u64)tid;
+			filp->f_version = (u64)tid;
 			put_task_struct(task);
 			break;
 		}
 	}
 out:
 	put_task_struct(leader);
-	return 0;
+out_no_task:
+	return retval;
 }
 
 static int proc_task_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
@@ -3321,6 +3418,6 @@ static const struct inode_operations proc_task_inode_operations = {
 
 static const struct file_operations proc_task_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_task_readdir,
+	.readdir	= proc_task_readdir,
 	.llseek		= default_llseek,
 };
