@@ -786,7 +786,7 @@ static long read_events(struct kioctx *ctx, long min_nr, long nr,
 			struct io_event __user *event,
 			struct timespec __user *timeout)
 {
-	ktime_t until = { .tv64 = KTIME_MAX };
+	ktime_t until = KTIME_MAX;
 	long ret = 0;
 
 	if (timeout) {
@@ -798,21 +798,10 @@ static long read_events(struct kioctx *ctx, long min_nr, long nr,
 		until = timespec_to_ktime(ts);
 	}
 
-	/*
-	 * Note that aio_read_events() is being called as the conditional - i.e.
-	 * we're calling it after prepare_to_wait() has set task state to
-	 * TASK_INTERRUPTIBLE.
-	 *
-	 * But aio_read_events() can block, and if it blocks it's going to flip
-	 * the task state back to TASK_RUNNING.
-	 *
-	 * This should be ok, provided it doesn't flip the state back to
-	 * TASK_RUNNING and return 0 too much - that causes us to spin. That
-	 * will only happen if the mutex_lock() call blocks, and we then find
-	 * the ringbuffer empty. So in practice we should be ok, but it's
-	 * something to be aware of when touching this code.
-	 */
-	wait_event_interruptible_hrtimeout(ctx->wait,
+	if (until == 0)
+		aio_read_events(ctx, min_nr, nr, event, &ret);
+	else
+		wait_event_interruptible_hrtimeout(ctx->wait,
 			aio_read_events(ctx, min_nr, nr, event, &ret), until);
 
 	if (!ret && signal_pending(current))
@@ -919,8 +908,6 @@ static ssize_t aio_rw_vect_retry(struct kiocb *iocb, int rw, aio_rw_op *rw_op)
 	if (iocb->ki_pos < 0)
 		return -EINVAL;
 
-	if (rw == WRITE)
-		file_start_write(file);
 	do {
 		ret = rw_op(iocb, &iocb->ki_iovec[iocb->ki_cur_seg],
 			    iocb->ki_nr_segs - iocb->ki_cur_seg,
@@ -933,8 +920,6 @@ static ssize_t aio_rw_vect_retry(struct kiocb *iocb, int rw, aio_rw_op *rw_op)
 	} while (ret > 0 && iocb->ki_left > 0 &&
 		 (rw == WRITE ||
 		  (!S_ISFIFO(inode->i_mode) && !S_ISSOCK(inode->i_mode))));
-	if (rw == WRITE)
-		file_end_write(file);
 
 	/* This means we must have transferred all that we could */
 	/* No need to retry anymore */
