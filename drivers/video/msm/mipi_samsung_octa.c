@@ -509,31 +509,6 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 	}
 
 	i = 0;
-#ifdef CONFIG_HBM_PSRE_DEBUG
-	pr_info("%s c8[34~40](%x)(%x)(%x)(%x)(%x)(%x)(%x)", __func__,
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[0],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[1],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[2],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[3],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[4],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[5],
-		msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[6]);
-	pr_info("\n");
-
-	printk("c8_reg_1 : ");
-	for(i=0; i<7; i++)
-		printk("%x ",msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_1[i]);
-	pr_info("\n");
-
-	if (msd.mpd->ldi_rev == 'I') {
-		printk("c8_reg_2 : ");
-		for(i=0; i<15; i++)
-			printk("%x ",msd.mpd->smart_se6e8fa.hbm_reg.c8_reg_2[i]);
-		pr_info("\n");
-	} else
-		printk("b6_reg : %x \n",msd.mpd->smart_se6e8fa.hbm_reg.b6_reg[0]);
-
-#endif
 
 #if defined(CONFIG_MDNIE_LITE_TUNING)
 	read_mtp(LDI_COORDINATE_REG, 0,  ARRAY_SIZE(temp), temp, mfd);
