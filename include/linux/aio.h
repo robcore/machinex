@@ -151,7 +151,7 @@ static inline unsigned aio_ring_avail(struct aio_ring_info *info,
 
 struct kioctx {
 	atomic_t		users;
-	int			dead;
+	atomic_t			dead;
 
 	/* This needs improving */
 	unsigned long		user_id;
@@ -169,6 +169,7 @@ struct kioctx {
 	struct aio_ring_info	ring_info;
 
 	struct rcu_head		rcu_head;
+	struct work_struct	rcu_work;
 };
 
 /* prototypes */
