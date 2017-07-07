@@ -18,6 +18,7 @@
 #include <linux/khugepaged.h>
 #include <linux/freezer.h>
 #include <linux/mman.h>
+#include <linux/pagemap.h>
 #include <linux/hashtable.h>
 #include <linux/migrate.h>
 #include <asm/tlb.h>
