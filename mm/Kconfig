@@ -230,6 +230,7 @@ config BALLOON_COMPACTION
 # support for memory compaction
 config COMPACTION
 	bool "Allow for memory compaction"
+	def_bool y
 	select MIGRATION
 	depends on MMU
 	help
