@@ -103,7 +103,6 @@ void __ref put_page_bootmem(struct page *page)
 {
 	unsigned long type;
 	static DEFINE_MUTEX(ppb_lock);
-	struct zone *zone;
 
 	type = (unsigned long) page->lru.next;
 	BUG_ON(type < MEMORY_HOTPLUG_MIN_BOOTMEM_TYPE ||
@@ -121,11 +120,6 @@ void __ref put_page_bootmem(struct page *page)
 		mutex_lock(&ppb_lock);
 		__free_pages_bootmem(page, 0);
 		mutex_unlock(&ppb_lock);
-		zone = page_zone(page);
-		zone_span_writelock(zone);
-		zone->present_pages++;
-		zone_span_writeunlock(zone);
-
 		totalram_pages++;
 	}
 
