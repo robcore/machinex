@@ -57,7 +57,10 @@
 
 #ifdef BAM_DMUX_FD
 #define DEFAULT_WL_TIMEOUT 1
+#define DEFAULT_RWL_TIMEOUT 1000
 static unsigned int wakelock_timeout = DEFAULT_WL_TIMEOUT;
+static unsigned int real_wakelock_timeout = DEFAULT_RWL_TIMEOUT; //ms
+module_param(real_wakelock_timeout, uint, 0644);
 #endif
 
 static int msm_bam_dmux_debug_enable = 0;
@@ -528,7 +531,7 @@ static void release_wakelock(void)
 		spin_unlock_irqrestore(&wakelock_reference_lock, flags);
 		wake_unlock(&bam_wakelock);
 #ifdef BAM_DMUX_FD
-		wake_lock_timeout(&bam_wakelock, msecs_to_jiffies(wakelock_timeout * 1000));
+		wake_lock_timeout(&bam_wakelock, msecs_to_jiffies(real_wakelock_timeout));
 #endif
 	} else
 	spin_unlock_irqrestore(&wakelock_reference_lock, flags);
