@@ -2608,14 +2608,6 @@ static void khugepaged_wait_work(void)
 		wait_event_freezable(khugepaged_wait, khugepaged_wait_event());
 }
 
-static void khugepaged_loop(void)
-{
-	while (likely(khugepaged_enabled())) {
-		khugepaged_do_scan();
-		khugepaged_wait_work();
-	}
-}
-
 static int khugepaged(void *none)
 {
 	struct mm_slot *mm_slot;
@@ -2623,8 +2615,10 @@ static int khugepaged(void *none)
 	set_freezable();
 	set_user_nice(current, MAX_NICE);
 
-	while (!kthread_should_stop())
-		khugepaged_loop();
+	while (!kthread_should_stop()) {
+		khugepaged_do_scan();
+		khugepaged_wait_work();
+	}
 
 	spin_lock(&khugepaged_mm_lock);
 	mm_slot = khugepaged_scan.mm_slot;
