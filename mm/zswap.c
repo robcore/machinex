@@ -75,7 +75,7 @@ static u64 zswap_duplicate_entry;
 * tunables
 **********************************/
 /* Enable/disable zswap (enabled by default, fixed at boot for now) */
-static unsigned int zswap_enabled = true;
+static unsigned int zswap_enabled = 1;
 module_param_named(enabled, zswap_enabled, uint, 0644);
 
 /* Compressor to be used by zswap (fixed at boot for now) */
@@ -618,9 +618,8 @@ static int zswap_writeback_entry(struct zswap_tree *tree,
 		SetPageUptodate(page);
 	}
 
-	/* move it to the tail of the inactive list after clear inode */
+	/* start writeback */
 	SetPageReclaim(page);
-
 	if (!__swap_writepage(page, &wbc, zswap_end_swap_write))
 		atomic_inc(&zswap_outstanding_writebacks);
 	page_cache_release(page);
