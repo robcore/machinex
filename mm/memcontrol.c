@@ -59,6 +59,7 @@
 #include <linux/file.h>
 #include "internal.h"
 #include <net/sock.h>
+#include <net/ip.h>
 #include <net/tcp_memcontrol.h>
 
 #include <asm/uaccess.h>
@@ -393,7 +394,7 @@ struct mem_cgroup {
 	spinlock_t pcp_counter_lock;
 
 	atomic_t	dead_count;
-#ifdef CONFIG_INET
+#if defined(CONFIG_MEMCG_KMEM) && defined(CONFIG_INET)
 	struct tcp_memcontrol tcp_mem;
 #endif
 #if defined(CONFIG_MEMCG_KMEM)
@@ -584,9 +585,7 @@ struct mem_cgroup *mem_cgroup_from_css(struct cgroup_subsys_state *s)
 }
 
 /* Writing them here to avoid exposing memcg's inner layout */
-#ifdef CONFIG_MEMCG_KMEM
-#include <net/sock.h>
-#include <net/ip.h>
+#if defined(CONFIG_INET) && defined(CONFIG_MEMCG_KMEM)
 
 static bool mem_cgroup_is_root(struct mem_cgroup *memcg)
 {
@@ -637,7 +636,6 @@ void sock_release_memcg(struct sock *sk)
 	}
 }
 
-#ifdef CONFIG_INET
 struct cg_proto *tcp_proto_cgroup(struct mem_cgroup *memcg)
 {
 	if (!memcg || mem_cgroup_is_root(memcg))
@@ -646,10 +644,7 @@ struct cg_proto *tcp_proto_cgroup(struct mem_cgroup *memcg)
 	return &memcg->tcp_mem.cg_proto;
 }
 EXPORT_SYMBOL(tcp_proto_cgroup);
-#endif /* CONFIG_INET */
-#endif /* CONFIG_MEMCG_KMEM */
 
-#if defined(CONFIG_INET) && defined(CONFIG_CGROUP_MEM_RES_CTLR_KMEM)
 static void disarm_sock_keys(struct mem_cgroup *memcg)
 {
 	if (!memcg_proto_activated(&memcg->tcp_mem.cg_proto))
