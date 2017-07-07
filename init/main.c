@@ -77,6 +77,7 @@
 #include <linux/sched_clock.h>
 #include <linux/context_tracking.h>
 #include <linux/s_funcs.h>
+#include <linux/file.h>
 
 #include <asm/io.h>
 #include <asm/bugs.h>
@@ -907,8 +908,8 @@ static int __ref kernel_init(void *unused)
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
 
-
 	current->signal->flags |= SIGNAL_UNKILLABLE;
+	flush_delayed_fput();
 
 	if (ramdisk_execute_command) {
 		if (!run_init_process(ramdisk_execute_command))
