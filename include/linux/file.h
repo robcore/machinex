@@ -66,7 +66,4 @@ static inline struct fd fdget_raw(unsigned int fd)
 	return (struct fd){f,b};
 }
 
-extern void flush_delayed_fput(void);
-extern void __fput_sync(struct file *);
-
 #endif /* __LINUX_FILE_H */
