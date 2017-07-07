@@ -421,7 +421,7 @@ struct block_device {
 	/* Mutex for freeze */
 	struct mutex		bd_fsfreeze_mutex;
 	/* A semaphore that prevents I/O while block size is being changed */
-	struct rw_semaphore	bd_block_size_semaphore;
+	struct percpu_rw_semaphore	bd_block_size_semaphore;
 };
 
 /*
