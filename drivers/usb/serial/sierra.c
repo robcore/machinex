@@ -1126,7 +1126,6 @@ static int sierra_reset_resume(struct usb_interface *intf)
 
 static struct usb_driver sierra_driver = {
 	.name       = "sierra",
-	.disconnect = usb_serial_disconnect,
 	.reset_resume = sierra_reset_resume,
 	.id_table   = id_table,
 };
