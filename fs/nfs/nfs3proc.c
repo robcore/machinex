@@ -398,7 +398,8 @@ nfs3_proc_remove(struct inode *dir, struct qstr *name)
 {
 	struct nfs_removeargs arg = {
 		.fh = NFS_FH(dir),
-		.name = *name,
+		.name.len = name->len,
+		.name.name = name->name,
 	};
 	struct nfs_removeres res;
 	struct rpc_message msg = {

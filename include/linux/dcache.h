@@ -26,13 +26,6 @@ struct vfsmount;
 
 #define IS_ROOT(x) ((x) == (x)->d_parent)
 
-/* The hash is always the low bits of hash_len */
-#ifdef __LITTLE_ENDIAN
- #define HASH_LEN_DECLARE u32 hash; u32 len;
-#else
- #define HASH_LEN_DECLARE u32 len; u32 hash;
-#endif
-
 /*
  * "quick string" -- eases parameter passing, but more importantly
  * saves "metadata" about the string (ie length and the hash).
@@ -41,18 +34,10 @@ struct vfsmount;
  * dentry.
  */
 struct qstr {
-	union {
-		struct {
-			HASH_LEN_DECLARE;
-		};
-		u64 hash_len;
-	};
+	unsigned int hash;
+	unsigned int len;
 	const unsigned char *name;
 };
-
-#define QSTR_INIT(n,l) { { { .len = l } }, .name = n }
-#define hashlen_hash(hashlen) ((u32) (hashlen))
-#define hashlen_len(hashlen)  ((u32)((hashlen) >> 32))
 
 struct dentry_stat_t {
 	int nr_dentry;
@@ -246,8 +231,6 @@ extern struct dentry * d_make_root(struct inode *);
 
 /* <clickety>-<click> the ramfs-type tree */
 extern void d_genocide(struct dentry *);
-
-extern void d_tmpfile(struct dentry *, struct inode *);
 
 extern struct dentry *d_find_alias(struct inode *);
 extern void d_prune_aliases(struct inode *);
