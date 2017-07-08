@@ -1,4 +1,7 @@
 #!/bin/bash
+patch -p1 -R < "/root/machinex/patches/0126-possed.patch"
+patch -p1 -R < "/root/machinex/patches/0125-nope-fuck-all-of-this.patch"
+patch -p1 -R < "/root/machinex/patches/0124-squashy.patch"
 patch -p1 -R < "/root/machinex/patches/0123-fuck.patch"
 patch -p1 -R < "/root/machinex/patches/0122-those-too.patch"
 patch -p1 -R < "/root/machinex/patches/0121-forget-those.patch"
