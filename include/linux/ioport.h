@@ -250,5 +250,12 @@ extern int
 walk_iomem_res(char *name, unsigned long flags, u64 start, u64 end, void *arg,
 	       int (*func)(u64, u64, void *));
 
+/* True if any part of r1 overlaps r2 */
+static inline bool resource_overlaps(struct resource *r1, struct resource *r2)
+{
+       return (r1->start <= r2->end && r1->end >= r2->start);
+}
+
+
 #endif /* __ASSEMBLY__ */
 #endif	/* _LINUX_IOPORT_H */
