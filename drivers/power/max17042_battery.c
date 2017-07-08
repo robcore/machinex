@@ -28,6 +28,7 @@
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
+#include <linux/pm.h>
 #include <linux/mod_devicetable.h>
 #include <linux/power_supply.h>
 #include <linux/power/max17042_battery.h>
@@ -325,11 +326,10 @@ static inline int max17042_model_data_compare(struct max17042_chip *chip,
 static int max17042_init_model(struct max17042_chip *chip)
 {
 	int ret;
-	int table_size =
-		sizeof(chip->pdata->config_data->cell_char_tbl)/sizeof(u16);
+	int table_size = ARRAY_SIZE(chip->pdata->config_data->cell_char_tbl);
 	u16 *temp_data;
 
-	temp_data = kzalloc(table_size, GFP_KERNEL);
+	temp_data = kcalloc(table_size, sizeof(*temp_data), GFP_KERNEL);
 	if (!temp_data)
 		return -ENOMEM;
 
@@ -354,12 +354,11 @@ static int max17042_init_model(struct max17042_chip *chip)
 static int max17042_verify_model_lock(struct max17042_chip *chip)
 {
 	int i;
-	int table_size =
-		sizeof(chip->pdata->config_data->cell_char_tbl);
+	int table_size = ARRAY_SIZE(chip->pdata->config_data->cell_char_tbl);
 	u16 *temp_data;
 	int ret = 0;
 
-	temp_data = kzalloc(table_size, GFP_KERNEL);
+	temp_data = kcalloc(table_size, sizeof(*temp_data), GFP_KERNEL);
 	if (!temp_data)
 		return -ENOMEM;
 
@@ -718,9 +717,52 @@ static int max17042_remove(struct i2c_client *client)
 {
 	struct max17042_chip *chip = i2c_get_clientdata(client);
 
+	if (client->irq)
+		free_irq(client->irq, chip);
 	power_supply_unregister(&chip->battery);
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int max17042_suspend(struct device *dev)
+{
+	struct max17042_chip *chip = dev_get_drvdata(dev);
+
+	/*
+	 * disable the irq and enable irq_wake
+	 * capability to the interrupt line.
+	 */
+	if (chip->client->irq) {
+		disable_irq(chip->client->irq);
+		enable_irq_wake(chip->client->irq);
+	}
+
+	return 0;
+}
+
+static int max17042_resume(struct device *dev)
+{
+	struct max17042_chip *chip = dev_get_drvdata(dev);
+
+	if (chip->client->irq) {
+		disable_irq_wake(chip->client->irq);
+		enable_irq(chip->client->irq);
+		/* re-program the SOC thresholds to 1% change */
+		max17042_set_soc_threshold(chip, 1);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops max17042_pm_ops = {
+	.suspend	= max17042_suspend,
+	.resume		= max17042_resume,
+};
+
+#define MAX17042_PM_OPS (&max17042_pm_ops)
+#else
+#define MAX17042_PM_OPS NULL
+#endif
 
 #ifdef CONFIG_OF
 static const struct of_device_id max17042_dt_match[] = {
@@ -740,6 +782,7 @@ static struct i2c_driver max17042_i2c_driver = {
 	.driver	= {
 		.name	= "max17042",
 		.of_match_table = of_match_ptr(max17042_dt_match),
+		.pm	= MAX17042_PM_OPS,
 	},
 	.probe		= max17042_probe,
 	.remove		= __devexit_p(max17042_remove),
