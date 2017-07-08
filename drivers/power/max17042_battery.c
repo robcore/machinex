@@ -691,6 +691,12 @@ static int max17042_probe(struct i2c_client *client,
 		max17042_write_reg(client, MAX17042_LearnCFG, 0x0007);
 	}
 
+	ret = power_supply_register(&client->dev, &chip->battery);
+	if (ret) {
+		dev_err(&client->dev, "failed: power supply register\n");
+		return ret;
+	}
+
 	if (client->irq) {
 		ret = request_threaded_irq(client->irq, NULL,
 						max17042_thread_handler,
@@ -707,7 +713,6 @@ static int max17042_probe(struct i2c_client *client,
 	}
 
 	reg = max17042_read_reg(chip->client, MAX17042_STATUS);
-
 	if (reg & STATUS_POR_BIT) {
 		INIT_WORK(&chip->work, max17042_init_worker);
 		schedule_work(&chip->work);
@@ -715,10 +720,7 @@ static int max17042_probe(struct i2c_client *client,
 		chip->init_complete = 1;
 	}
 
-	ret = power_supply_register(&client->dev, &chip->battery);
-	if (ret)
-		dev_err(&client->dev, "failed: power supply register\n");
-	return ret;
+	return 0;
 }
 
 static int max17042_remove(struct i2c_client *client)
