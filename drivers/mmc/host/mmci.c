@@ -1385,7 +1385,7 @@ static int mmci_probe(struct amba_device *dev,
 	if (ret)
 		goto unmap;
 
-	if (dev->irq[1] == NO_IRQ || !dev->irq[1])
+	if (!dev->irq[1])
 		host->singleirq = true;
 	else {
 		ret = request_irq(dev->irq[1], mmci_pio_irq, IRQF_SHARED,
