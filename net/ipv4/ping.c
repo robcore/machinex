@@ -254,9 +254,15 @@ int ping_init_sock(struct sock *sk)
 	gid_t range[2];
 	struct group_info *group_info;
 	int i, j, count;
+	kgid_t low, high;
 	int ret = 0;
 
 	inet_get_ping_group_range_net(net, range, range+1);
+	low = make_kgid(&init_user_ns, range[0]);
+	high = make_kgid(&init_user_ns, range[1]);
+	if (!gid_valid(low) || !gid_valid(high) || gid_lt(high, low))
+		return -EACCES;
+
 	if (range[0] <= group && group <= range[1])
 		return 0;
 
@@ -266,8 +272,10 @@ int ping_init_sock(struct sock *sk)
 		int cp_count = min_t(int, NGROUPS_PER_BLOCK, count);
 
 		for (j = 0; j < cp_count; j++) {
-			group = group_info->blocks[i][j];
-			if (range[0] <= group && group <= range[1])
+			kgid_t gid = group_info->blocks[i][j];
+			if (gid_lte(low, gid) && gid_lte(gid, high))
+				return 0;
+			else
 				goto out_release_group;
 		}
 
