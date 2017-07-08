@@ -1842,7 +1842,7 @@ seqretry:
 		} else {
 			if (dentry->d_name.hash_len != hashlen)
 				continue;
-			if (!dentry_cmp(dentry, str, hashlen_len(hashlen)))
+			if (dentry_cmp(tname, tlen, str, hashlen_len(hashlen)))
 				return dentry;
 		}
 		/*
