@@ -420,8 +420,11 @@ void validate_mm(struct mm_struct *mm)
 	struct vm_area_struct *vma = mm->mmap;
 	while (vma) {
 		struct anon_vma_chain *avc;
+
+		vma_lock_anon_vma(vma);
 		list_for_each_entry(avc, &vma->anon_vma_chain, same_vma)
 			anon_vma_interval_tree_verify(avc);
+		vma_unlock_anon_vma(vma);
 		highest_address = vma->vm_end;
 		vma = vma->vm_next;
 		i++;

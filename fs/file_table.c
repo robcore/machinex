@@ -207,7 +207,7 @@ static void drop_file_write_access(struct file *file)
 		return;
 	if (file_check_writeable(file) != 0)
 		return;
-	mnt_drop_write(mnt);
+	__mnt_drop_write(mnt);
 	file_release_write(file);
 }
 
@@ -259,6 +259,23 @@ void fput(struct file *file)
 {
 	if (atomic_long_dec_and_test(&file->f_count))
 		__fput(file);
+}
+
+/*
+ * synchronous analog of fput(); for kernel threads that might be needed
+ * in some umount() (and thus can't use flush_delayed_fput() without
+ * risking deadlocks), need to wait for completion of __fput() and know
+ * for this specific struct file it won't involve anything that would
+ * need them.  Use only if you really need it - at the very least,
+ * don't blindly convert fput() by kernel thread to that.
+ */
+void __fput_sync(struct file *file)
+{
+	if (atomic_long_dec_and_test(&file->f_count)) {
+		struct task_struct *task = current;
+		BUG_ON(!(task->flags & PF_KTHREAD));
+		__fput(file);
+	}
 }
 
 EXPORT_SYMBOL(fput);
