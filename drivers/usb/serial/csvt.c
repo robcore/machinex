@@ -60,8 +60,6 @@ MODULE_DEVICE_TABLE(usb, id_table);
 
 static struct usb_driver csvt_driver = {
 	.name			= "qc_csvt",
-	.probe			= usb_serial_probe,
-	.disconnect		= usb_serial_disconnect,
 	.id_table		= id_table,
 	.suspend		= usb_serial_suspend,
 	.resume			= usb_serial_resume,
