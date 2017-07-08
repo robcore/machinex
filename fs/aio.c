@@ -539,6 +539,9 @@ static struct kioctx *ioctx_alloc(unsigned nr_events)
 
 	atomic_set(&ctx->reqs_available, ctx->nr_events - 1);
 
+	if (ctx->req_batch < 1)
+		ctx->req_batch = 1;
+
 	err = ioctx_add_table(ctx, mm);
 	if (err)
 		goto out_cleanup_noerr;
