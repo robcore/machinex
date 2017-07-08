@@ -20,7 +20,6 @@
 #include <linux/ctype.h>
 #include <linux/jiffies.h>
 #include <linux/completion.h>
-#include <mach/board.h>
 
 #include <mach/msm_iomap.h>
 
@@ -764,7 +763,7 @@ static void debug_create(const char *name, umode_t mode,
 	debugfs_create_file(name, mode, dent, fill, &debug_ops);
 }
 
-int __init smd_debugfs_init(void)
+static int __init smd_debugfs_init(void)
 {
 	struct dentry *dent;
 
@@ -809,6 +808,7 @@ static int __init smsm_debugfs_init(void)
 	return 0;
 }
 
+late_initcall(smd_debugfs_init);
 late_initcall(smsm_debugfs_init);
 #endif
 
