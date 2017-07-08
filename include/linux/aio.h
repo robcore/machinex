@@ -31,7 +31,6 @@ struct kiocb;
 typedef int (kiocb_cancel_fn)(struct kiocb *);
 
 struct kiocb {
-	atomic_t		ki_users;
 	unsigned		ki_key;		/* id of this request */
 
 	struct file		*ki_filp;
@@ -69,7 +68,6 @@ static inline bool is_sync_kiocb(struct kiocb *kiocb)
 static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
 {
 	*kiocb = (struct kiocb) {
-			.ki_users = ATOMIC_INIT(1),
 			.ki_ctx = NULL,
 			.ki_filp = filp,
 			.ki_obj.tsk = current,
@@ -79,7 +77,6 @@ static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
 /* prototypes */
 #ifdef CONFIG_AIO
 extern ssize_t wait_on_sync_kiocb(struct kiocb *iocb);
-extern void aio_put_req(struct kiocb *iocb);
 extern void aio_complete(struct kiocb *iocb, long res, long res2);
 struct mm_struct;
 extern void exit_aio(struct mm_struct *mm);
@@ -98,7 +95,6 @@ void aio_kernel_init_callback(struct kiocb *iocb,
 int aio_kernel_submit(struct kiocb *iocb);
 #else
 static inline ssize_t wait_on_sync_kiocb(struct kiocb *iocb) { return 0; }
-static inline void aio_put_req(struct kiocb *iocb) { }
 static inline void aio_complete(struct kiocb *iocb, long res, long res2) { }
 struct mm_struct;
 static inline void exit_aio(struct mm_struct *mm) { }
