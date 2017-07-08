@@ -2741,6 +2741,7 @@ static char *__dentry_path(struct dentry *dentry, char *buf, int buflen)
 
 	while (!IS_ROOT(dentry)) {
 		struct dentry *parent = dentry->d_parent;
+		int error;
 
 		prefetch(parent);
 		spin_lock(&dentry->d_lock);
