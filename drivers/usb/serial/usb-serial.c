@@ -1140,7 +1140,6 @@ probe_error:
 	module_put(type->driver.owner);
 	return -EIO;
 }
-EXPORT_SYMBOL_GPL(usb_serial_probe);
 
 void usb_serial_disconnect(struct usb_interface *interface)
 {
@@ -1451,6 +1450,7 @@ int usb_serial_register_drivers(struct usb_driver *udriver,
 	udriver->supports_autosuspend = 1;
 	udriver->suspend = usb_serial_suspend;
 	udriver->resume = usb_serial_resume;
+	udriver->probe = usb_serial_probe;
 	rc = usb_register(udriver);
 	if (rc)
 		return rc;
