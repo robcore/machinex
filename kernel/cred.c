@@ -38,14 +38,6 @@ struct cred init_cred = {
 	.subscribers		= ATOMIC_INIT(2),
 	.magic			= CRED_MAGIC,
 #endif
-	.uid			= GLOBAL_ROOT_UID,
-	.gid			= GLOBAL_ROOT_GID,
-	.suid			= GLOBAL_ROOT_UID,
-	.sgid			= GLOBAL_ROOT_GID,
-	.euid			= GLOBAL_ROOT_UID,
-	.egid			= GLOBAL_ROOT_GID,
-	.fsuid			= GLOBAL_ROOT_UID,
-	.fsgid			= GLOBAL_ROOT_GID,
 	.securebits		= SECUREBITS_DEFAULT,
 	.cap_inheritable	= CAP_EMPTY_SET,
 	.cap_permitted		= CAP_FULL_SET,
@@ -406,10 +398,10 @@ int commit_creds(struct cred *new)
 	get_cred(new); /* we will require a ref for the subj creds too */
 
 	/* dumpability changes */
-	if (!uid_eq(old->euid, new->euid) ||
-	    !gid_eq(old->egid, new->egid) ||
-	    !uid_eq(old->fsuid, new->fsuid) ||
-	    !gid_eq(old->fsgid, new->fsgid) ||
+	if (old->euid != new->euid ||
+	    old->egid != new->egid ||
+	    old->fsuid != new->fsuid ||
+	    old->fsgid != new->fsgid ||
 	    !cap_issubset(new->cap_permitted, old->cap_permitted)) {
 		if (task->mm)
 			set_dumpable(task->mm, suid_dumpable);
@@ -418,9 +410,9 @@ int commit_creds(struct cred *new)
 	}
 
 	/* alter the thread keyring */
-	if (!uid_eq(new->fsuid, old->fsuid))
+	if (new->fsuid != old->fsuid)
 		key_fsuid_changed(task);
-	if (!gid_eq(new->fsgid, old->fsgid))
+	if (new->fsgid != old->fsgid)
 		key_fsgid_changed(task);
 
 	/* do it
@@ -437,16 +429,16 @@ int commit_creds(struct cred *new)
 	alter_cred_subscribers(old, -2);
 
 	/* send notifications */
-	if (!uid_eq(new->uid,   old->uid)  ||
-	    !uid_eq(new->euid,  old->euid) ||
-	    !uid_eq(new->suid,  old->suid) ||
-	    !uid_eq(new->fsuid, old->fsuid))
+	if (new->uid   != old->uid  ||
+	    new->euid  != old->euid ||
+	    new->suid  != old->suid ||
+	    new->fsuid != old->fsuid)
 		proc_id_connector(task, PROC_EVENT_UID);
 
-	if (!gid_eq(new->gid,   old->gid)  ||
-	    !gid_eq(new->egid,  old->egid) ||
-	    !gid_eq(new->sgid,  old->sgid) ||
-	    !gid_eq(new->fsgid, old->fsgid))
+	if (new->gid   != old->gid  ||
+	    new->egid  != old->egid ||
+	    new->sgid  != old->sgid ||
+	    new->fsgid != old->fsgid)
 		proc_id_connector(task, PROC_EVENT_GID);
 
 	/* release the old obj and subj refs both */

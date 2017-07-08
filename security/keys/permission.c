@@ -53,8 +53,7 @@ int key_task_permission(const key_ref_t key_ref, const struct cred *cred,
 			goto use_these_perms;
 		}
 
-		ret = groups_search(cred->group_info,
-				    make_kgid(current_user_ns(), key->gid));
+		ret = groups_search(cred->group_info, key->gid);
 		if (ret) {
 			kperm = key->perm >> 8;
 			goto use_these_perms;
