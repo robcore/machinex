@@ -721,9 +721,6 @@ static inline struct compat_timeval ns_to_compat_timeval(s64 nsec)
 	return ctv;
 }
 
-asmlinkage long compat_sys_sendfile(int out_fd, int in_fd,
-				    compat_off_t __user *offset, compat_size_t count);
-
 #else /* !CONFIG_COMPAT */
 
 #define is_compat_task() (0)

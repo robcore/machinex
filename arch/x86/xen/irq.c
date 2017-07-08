@@ -5,7 +5,6 @@
 #include <xen/interface/xen.h>
 #include <xen/interface/sched.h>
 #include <xen/interface/vcpu.h>
-#include <xen/events.h>
 
 #include <asm/xen/hypercall.h>
 #include <asm/xen/hypervisor.h>

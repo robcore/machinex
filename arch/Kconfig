@@ -430,7 +430,4 @@ config OLD_SIGACTION
 config COMPAT_OLD_SIGACTION
 	bool
 
-config HAVE_ARCH_TRANSPARENT_HUGEPAGE
-	bool
-
 source "kernel/gcov/Kconfig"

@@ -192,13 +192,11 @@ retry:
 		if (pte) {
 			/* Nuke the page table entry. */
 			flush_cache_page(vma, address, pte_pfn(*pte));
-			pteval = ptep_clear_flush(vma, address, pte);
+			pteval = ptep_clear_flush_notify(vma, address, pte);
 			page_remove_rmap(page);
 			dec_mm_counter(mm, MM_FILEPAGES);
 			BUG_ON(pte_dirty(pteval));
 			pte_unmap_unlock(pte, ptl);
-			/* must invalidate_page _before_ freeing the page */
-			mmu_notifier_invalidate_page(mm, address);
 			page_cache_release(page);
 		}
 	}
@@ -404,8 +402,6 @@ xip_file_write(struct file *filp, const char __user *buf, size_t len,
 	loff_t pos;
 	ssize_t ret;
 
-	sb_start_write(inode->i_sb);
-
 	mutex_lock(&inode->i_mutex);
 
 	if (!access_ok(VERIFY_READ, buf, len)) {
@@ -415,6 +411,8 @@ xip_file_write(struct file *filp, const char __user *buf, size_t len,
 
 	pos = *ppos;
 	count = len;
+
+	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
 
 	/* We can write back this queue in page reclaim */
 	current->backing_dev_info = mapping->backing_dev_info;
@@ -439,7 +437,6 @@ xip_file_write(struct file *filp, const char __user *buf, size_t len,
 	current->backing_dev_info = NULL;
  out_up:
 	mutex_unlock(&inode->i_mutex);
-	sb_end_write(inode->i_sb);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(xip_file_write);
