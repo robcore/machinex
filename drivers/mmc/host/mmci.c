@@ -1527,6 +1527,12 @@ static void mmci_dt_populate_generic_pdata(struct device_node *np,
 {
 	return;
 }
+#else
+static void mmci_dt_populate_generic_pdata(struct device_node *np,
+					struct mmci_platform_data *pdata)
+{
+	return;
+}
 #endif
 
 static const struct dev_pm_ops mmci_dev_pm_ops = {
