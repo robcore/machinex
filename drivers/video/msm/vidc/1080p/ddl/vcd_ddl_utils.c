@@ -151,7 +151,7 @@ void *ddl_pmem_alloc(struct ddl_buf_addr *addr, size_t sz, u32 alignment)
 		msm_subsystem_map_buffer((unsigned long)addr->alloced_phys_addr,
 			alloc_size, flags, &vidc_mmu_subsystem[index],
 			sizeof(vidc_mmu_subsystem[index])/sizeof(unsigned int));
-		if (IS_ERR(addr->mapped_buffer)) {
+		if (IS_ERR(addr->mapped_buffer) || addr->mapped_buffer == NULL) {
 			pr_err(" %s() buffer map failed", __func__);
 			goto free_acm_alloc;
 		}
