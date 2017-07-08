@@ -382,16 +382,15 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 	struct kiocb kiocb;
 	ssize_t ret;
 
-	file_start_write(filp);
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
 
 	ret = do_aio_read(&kiocb, &iov, 1, kiocb.ki_pos);
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;
-	file_end_write(filp);
 	return ret;
 }
 
@@ -458,6 +457,7 @@ ssize_t do_sync_write(struct file *filp, const char __user *buf, size_t len, lof
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
 
 	ret = do_aio_write(&kiocb, &iov, 1, *ppos);
@@ -635,6 +635,7 @@ ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
+	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
 
 	ret = fn(&kiocb, iov, nr_segs, kiocb.ki_pos);
@@ -791,12 +792,10 @@ static ssize_t do_readv_writev(int type, struct file *file,
 			fnv = do_aio_write;
 	}
 
-	if (fnv) {
-		file_start_write(file);
+	if (fnv)
 		ret = do_sync_readv_writev(file, iov, nr_segs, tot_len,
 						pos, fnv);
-		file_end_write(file);
-	} else
+	else
 		ret = do_loop_readv_writev(file, iov, nr_segs, pos, fn);
 
 out:
@@ -929,8 +928,8 @@ SYSCALL_DEFINE5(pwritev, unsigned long, fd, const struct iovec __user *, vec,
 	return ret;
 }
 
-ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos, size_t count,
-		    loff_t max)
+static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
+		  	   size_t count, loff_t max)
 {
 	struct fd in, out;
 	struct inode *in_inode, *out_inode;

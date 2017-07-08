@@ -569,7 +569,6 @@ struct dlm_ls {
 	spinlock_t		ls_recover_list_lock;
 	int			ls_recover_list_count;
 	wait_queue_head_t	ls_wait_general;
-	wait_queue_head_t	ls_recover_lock_wait;
 	struct mutex		ls_clear_proc_locks;
 
 	struct list_head	ls_root_list;	/* root resources */
@@ -632,7 +631,7 @@ static inline int dlm_locking_stopped(struct dlm_ls *ls)
 
 static inline int dlm_recovery_stopped(struct dlm_ls *ls)
 {
-	return test_bit(LSFL_RECOVER_STOP, &ls->ls_flags);
+	return test_bit(LSFL_RECOVERY_STOP, &ls->ls_flags);
 }
 
 static inline int dlm_no_directory(struct dlm_ls *ls)

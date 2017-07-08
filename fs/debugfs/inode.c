@@ -28,7 +28,7 @@
 #include <linux/magic.h>
 #include <linux/slab.h>
 
-#define DEBUGFS_DEFAULT_MODE	0700
+#define DEBUGFS_DEFAULT_MODE	0755
 
 static struct vfsmount *debugfs_mount;
 static int debugfs_mount_count;
@@ -127,8 +127,8 @@ static inline int debugfs_positive(struct dentry *dentry)
 }
 
 struct debugfs_mount_opts {
-	kuid_t uid;
-	kgid_t gid;
+	uid_t uid;
+	gid_t gid;
 	umode_t mode;
 };
 
@@ -155,8 +155,6 @@ static int debugfs_parse_options(char *data, struct debugfs_mount_opts *opts)
 	substring_t args[MAX_OPT_ARGS];
 	int option;
 	int token;
-	kuid_t uid;
-	kgid_t gid;
 	char *p;
 
 	opts->mode = DEBUGFS_DEFAULT_MODE;
@@ -170,18 +168,12 @@ static int debugfs_parse_options(char *data, struct debugfs_mount_opts *opts)
 		case Opt_uid:
 			if (match_int(&args[0], &option))
 				return -EINVAL;
-			uid = make_kuid(current_user_ns(), option);
-			if (!uid_valid(uid))
-				return -EINVAL;
-			opts->uid = uid;
+			opts->uid = option;
 			break;
 		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return -EINVAL;
-			gid = make_kgid(current_user_ns(), option);
-			if (!gid_valid(gid))
-				return -EINVAL;
-			opts->gid = gid;
+			opts->gid = option;
 			break;
 		case Opt_mode:
 			if (match_octal(&args[0], &option))
@@ -234,12 +226,10 @@ static int debugfs_show_options(struct seq_file *m, struct dentry *root)
 	struct debugfs_fs_info *fsi = root->d_sb->s_fs_info;
 	struct debugfs_mount_opts *opts = &fsi->mount_opts;
 
-	if (!uid_eq(opts->uid, GLOBAL_ROOT_UID))
-		seq_printf(m, ",uid=%u",
-			   from_kuid_munged(&init_user_ns, opts->uid));
-	if (!gid_eq(opts->gid, GLOBAL_ROOT_GID))
-		seq_printf(m, ",gid=%u",
-			   from_kgid_munged(&init_user_ns, opts->gid));
+	if (opts->uid != 0)
+		seq_printf(m, ",uid=%u", opts->uid);
+	if (opts->gid != 0)
+		seq_printf(m, ",gid=%u", opts->gid);
 	if (opts->mode != DEBUGFS_DEFAULT_MODE)
 		seq_printf(m, ",mode=%o", opts->mode);
 

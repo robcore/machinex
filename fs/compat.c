@@ -1107,12 +1107,10 @@ static ssize_t compat_do_readv_writev(int type, struct file *file,
 			fnv = do_aio_write;
 	}
 
-	if (fnv) {
-		file_start_write(file);
+	if (fnv)
 		ret = do_sync_readv_writev(file, iov, nr_segs, tot_len,
 						pos, fnv);
-		file_end_write(file);
-	} else
+	else
 		ret = do_loop_readv_writev(file, iov, nr_segs, pos, fn);
 
 out:
@@ -1703,25 +1701,3 @@ COMPAT_SYSCALL_DEFINE3(open_by_handle_at, int, mountdirfd,
 	return do_handle_open(mountdirfd, handle, flags);
 }
 #endif
-
-#ifdef __ARCH_WANT_COMPAT_SYS_SENDFILE
-asmlinkage long compat_sys_sendfile(int out_fd, int in_fd,
-				    compat_off_t __user *offset, compat_size_t count)
-{
-	loff_t pos;
-	off_t off;
-	ssize_t ret;
-
-	if (offset) {
-		if (unlikely(get_user(off, offset)))
-			return -EFAULT;
-		pos = off;
-		ret = do_sendfile(out_fd, in_fd, &pos, count, MAX_NON_LFS);
-		if (unlikely(put_user(pos, offset)))
-			return -EFAULT;
-		return ret;
-	}
-
-	return do_sendfile(out_fd, in_fd, NULL, count, 0);
-}
-#endif /* __ARCH_WANT_COMPAT_SYS_SENDFILE */

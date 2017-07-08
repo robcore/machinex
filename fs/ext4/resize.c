@@ -1173,12 +1173,17 @@ static struct buffer_head *ext4_get_bitmap(struct super_block *sb, __u64 block)
 	struct buffer_head *bh = sb_getblk(sb, block);
 	if (!bh)
 		return NULL;
-	if (!bh_uptodate_or_lock(bh)) {
-		if (bh_submit_read(bh) < 0) {
-			brelse(bh);
-			return NULL;
-		}
+
+	if (bitmap_uptodate(bh))
+		return bh;
+
+	lock_buffer(bh);
+	if (bh_submit_read(bh) < 0) {
+		unlock_buffer(bh);
+		brelse(bh);
+		return NULL;
 	}
+	unlock_buffer(bh);
 
 	return bh;
 }
@@ -1204,7 +1209,8 @@ static int ext4_set_bitmap_checksums(struct super_block *sb,
 	bh = ext4_get_bitmap(sb, group_data->block_bitmap);
 	if (!bh)
 		return -EIO;
-	ext4_block_bitmap_csum_set(sb, group, gdp, bh);
+	ext4_block_bitmap_csum_set(sb, group, gdp, bh,
+				   EXT4_BLOCKS_PER_GROUP(sb) / 8);
 	brelse(bh);
 
 	return 0;
@@ -1252,9 +1258,6 @@ static int ext4_setup_new_descs(handle_t *handle, struct super_block *sb,
 		ext4_free_group_clusters_set(sb, gdp,
 			EXT4_NUM_B2C(sbi, group_data->free_blocks_count));
 		ext4_free_inodes_set(sb, gdp, EXT4_INODES_PER_GROUP(sb));
-		if (ext4_has_group_desc_csum(sb))
-			ext4_itable_unused_set(sb, gdp,
-					       EXT4_INODES_PER_GROUP(sb));
 		gdp->bg_flags = cpu_to_le16(*bg_flags);
 		ext4_group_desc_csum_set(sb, group, gdp);
 

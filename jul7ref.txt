@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/12patches/4323-compat-fs-Generic-compat_sys_sendfile-implementation.patch

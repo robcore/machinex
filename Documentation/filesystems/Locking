@@ -136,8 +136,8 @@ evict_inode:
 put_super:		write
 write_super:		read
 sync_fs:		read
-freeze_fs:		write
-unfreeze_fs:		write
+freeze_fs:		read
+unfreeze_fs:		read
 statfs:			maybe(read)	(see below)
 remount_fs:		write
 umount_begin:		no

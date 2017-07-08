@@ -40,7 +40,6 @@
 
 #include <net/tcp.h>
 
-#include <xen/xen.h>
 #include <xen/events.h>
 #include <xen/interface/memory.h>
 

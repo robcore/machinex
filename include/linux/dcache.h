@@ -51,7 +51,6 @@ extern struct dentry_stat_t dentry_stat;
 /* Name hashing routines. Initial hash value */
 /* Hash courtesy of the R5 hash in reiserfs modulo sign bits */
 #define init_name_hash()		0
-#define QSTR_INIT(n,l) { { { .len = l } }, .name = n }
 
 /* partial hash update function. Assume roughly 4 bits per character */
 static inline unsigned long

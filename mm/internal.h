@@ -208,7 +208,12 @@ extern unsigned int munlock_vma_page(struct page *page);
  * If called for a page that is still mapped by mlocked vmas, all we do
  * is revert to lazy LRU behaviour -- semantics are not broken.
  */
-extern void clear_page_mlock(struct page *page);
+extern void __clear_page_mlock(struct page *page);
+static inline void clear_page_mlock(struct page *page)
+{
+	if (unlikely(TestClearPageMlocked(page)))
+		__clear_page_mlock(page);
+}
 
 /*
  * mlock_migrate_page - called only from migrate_page_copy() to

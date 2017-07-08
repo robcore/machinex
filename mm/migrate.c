@@ -311,10 +311,9 @@ static inline bool buffer_migrate_lock_buffers(struct buffer_head *head,
  * 2 for pages with a mapping
  * 3 for pages with a mapping and PagePrivate/PagePrivate2 set.
  */
-int migrate_page_move_mapping(struct address_space *mapping,
+static int migrate_page_move_mapping(struct address_space *mapping,
 		struct page *newpage, struct page *page,
-		struct buffer_head *head, enum migrate_mode mode,
-		int extra_count);
+		struct buffer_head *head, enum migrate_mode mode)
 {
 	struct zone *oldzone, *newzone;
 	int dirty;
@@ -336,7 +335,7 @@ int migrate_page_move_mapping(struct address_space *mapping,
 	pslot = radix_tree_lookup_slot(&mapping->page_tree,
  					page_index(page));
 
-	expected_count += 1 + page_has_private(page);
+	expected_count = 2 + page_has_private(page);
 	if (page_count(page) != expected_count ||
 		radix_tree_deref_slot_protected(pslot, &mapping->tree_lock) != page) {
 		spin_unlock_irq(&mapping->tree_lock);
@@ -534,7 +533,7 @@ int migrate_page(struct address_space *mapping,
 
 	BUG_ON(PageWriteback(page));	/* Writeback must be complete */
 
-	rc = migrate_page_move_mapping(mapping, newpage, page, NULL, mode, 0);
+	rc = migrate_page_move_mapping(mapping, newpage, page, NULL, mode);
 
 	if (rc != MIGRATEPAGE_SUCCESS)
 		return rc;
@@ -561,7 +560,7 @@ int buffer_migrate_page(struct address_space *mapping,
 
 	head = page_buffers(page);
 
-	rc = migrate_page_move_mapping(mapping, newpage, page, head, mode, 0);
+	rc = migrate_page_move_mapping(mapping, newpage, page, head, mode);
 
 	if (rc != MIGRATEPAGE_SUCCESS)
 		return rc;
