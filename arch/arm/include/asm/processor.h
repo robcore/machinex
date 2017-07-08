@@ -84,8 +84,6 @@ unsigned long get_wchan(struct task_struct *p);
 #define cpu_relax()			barrier()
 #endif
 
-void cpu_idle_wait(void);
-
 #define cpu_relax_yield()  	              cpu_relax()
 #define cpu_relax_lowlatency()                cpu_relax()
 
