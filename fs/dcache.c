@@ -1479,7 +1479,7 @@ struct dentry *d_make_root(struct inode *root_inode)
 	struct dentry *res = NULL;
 
 	if (root_inode) {
-		static const struct qstr name = { .name = "/", .len = 1 };
+		static const struct qstr name = QSTR_INIT("/", 1);
 
 		res = __d_alloc(root_inode->i_sb, &name);
 		if (res)
@@ -1749,10 +1749,9 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 				const struct qstr *name,
 				unsigned *seqp, struct inode **inode)
 {
-	unsigned int len = name->len;
-	unsigned int hash = name->hash;
+	u64 hashlen = name->hash_len;
 	const unsigned char *str = name->name;
-	struct hlist_bl_head *b = d_hash(parent, hash);
+	struct hlist_bl_head *b = d_hash(parent, hashlen_hash(hashlen));
 	struct hlist_bl_node *node;
 	struct dentry *dentry;
 
@@ -1782,9 +1781,6 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
 		const char *tname;
 		int tlen;
 
-		if (dentry->d_name.hash != hash)
-			continue;
-
 seqretry:
 		seq = read_seqcount_begin(&dentry->d_seq);
 		if (dentry->d_parent != parent)
@@ -1804,13 +1800,17 @@ seqretry:
 		if (read_seqcount_retry(&dentry->d_seq, seq))
 			goto seqretry;
 		if (unlikely(parent->d_flags & DCACHE_OP_COMPARE)) {
+			if (dentry->d_name.hash != hashlen_hash(hashlen))
+				continue;
 			if (parent->d_op->d_compare(parent, *inode,
 						dentry, i,
 						tlen, tname, name))
 				continue;
 		} else {
-			if (dentry_cmp(tname, tlen, str, len))
+			if (dentry->d_name.hash_len != hashlen)
 				continue;
+			if (!dentry_cmp(dentry, str, hashlen_len(hashlen)))
+				return dentry;
 		}
 		/*
 		 * No extra seqcount check is required after the name
