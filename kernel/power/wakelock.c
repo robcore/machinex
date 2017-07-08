@@ -57,6 +57,27 @@ ssize_t pm_show_wakelocks(char *buf, bool show_active)
 	return (str - buf);
 }
 
+//Tinno:CJ return how may wakelocks is in give status
+int pm_get_wakelocks(bool show_active)
+{
+	struct rb_node *node;
+	struct wakelock *wl;
+	int wakelok_count = 0;
+
+	mutex_lock(&wakelocks_lock);
+
+	for (node = rb_first(&wakelocks_tree); node; node = rb_next(node)) {
+		wl = rb_entry(node, struct wakelock, node);
+		if (wl->ws.active == show_active)
+		{
+			wakelok_count++;
+		}
+	}
+
+	mutex_unlock(&wakelocks_lock);
+	return wakelok_count;
+}
+
 #if CONFIG_PM_WAKELOCKS_LIMIT > 0
 static unsigned int number_of_wakelocks;
 
