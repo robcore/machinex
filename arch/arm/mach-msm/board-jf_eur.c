@@ -5544,6 +5544,11 @@ static void __init samsung_jf_init(void)
 #endif
 }
 
+static void __init jf_init_late(void)
+{
+	smd_debugfs_init();
+}
+
 MACHINE_START(JF, "SAMSUNG JF")
 	.smp = smp_ops(msm_smp_ops),
 	.map_io = apq8064_map_io,
@@ -5554,5 +5559,6 @@ MACHINE_START(JF, "SAMSUNG JF")
 	.init_machine = samsung_jf_init,
 	.init_early = apq8064_allocate_memory_regions,
 	.init_very_early = apq8064_early_reserve,
+	.init_late	= jf_init_late,
 	.restart = msm_restart,
 MACHINE_END
