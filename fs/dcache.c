@@ -198,30 +198,6 @@ static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *c
 
 static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *ct, unsigned tcount)
 {
-#ifdef CONFIG_DCACHE_WORD_ACCESS
-	unsigned long a,b,mask;
-
-	const unsigned char *cs = dentry->d_name.name;
-
-	if (dentry->d_name.len != tcount)
-		return 1;
-
-	for (;;) {
-		a = *(unsigned long *)cs;
-		b = *(unsigned long *)ct;
-		if (tcount < sizeof(unsigned long))
-			break;
-		if (unlikely(a != b))
-			return 1;
-		cs += sizeof(unsigned long);
-		ct += sizeof(unsigned long);
-		tcount -= sizeof(unsigned long);
-		if (!tcount)
-			return 0;
-	}
-	mask = ~(~0ul << tcount*8);
-	return unlikely(!!((a ^ b) & mask));
-#else
 	if (scount != tcount)
 		return 1;
 
@@ -233,7 +209,6 @@ static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *c
 		tcount--;
 	} while (tcount);
 	return 0;
-#endif
 }
 
 #endif
