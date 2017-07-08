@@ -20,6 +20,7 @@
 #include <linux/ctype.h>
 #include <linux/jiffies.h>
 #include <linux/completion.h>
+#include <mach/board.h>
 
 #include <mach/msm_iomap.h>
 
