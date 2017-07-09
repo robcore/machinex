@@ -676,16 +676,6 @@ static inline void hlist_add_fake(struct hlist_node *n)
 	n->pprev = &n->next;
 }
 
-/*
- * Check whether the node is the only node of the head without
- * accessing head:
- */
-static inline bool
-hlist_is_singular_node(struct hlist_node *n, struct hlist_head *h)
-{
-	return !n->next && n->pprev == &h->first;
-}
-
 static inline bool hlist_fake(struct hlist_node *h)
 {
 	return h->pprev == &h->next;
