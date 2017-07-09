@@ -188,11 +188,20 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int lval, rval;
+	int addval, checksum;
 
 	sscanf(buf, "%d %d", &lval, &rval);
 
 	if (!snd_ctrl_enabled)
 		return count;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -200,6 +209,8 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
+
+	count = checksum;
 
 	return count;
 }
