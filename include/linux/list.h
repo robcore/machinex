@@ -694,6 +694,11 @@ hlist_is_singular_node(struct hlist_node *n, struct hlist_head *h)
 	return !n->next && n->pprev == &h->first;
 }
 
+static inline bool hlist_fake(struct hlist_node *h)
+{
+	return h->pprev == &h->next;
+}
+
 /*
  * Move a list from one list head to another. Fixup the pprev
  * reference of the first entry if it exists.
