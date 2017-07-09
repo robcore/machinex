@@ -49,9 +49,9 @@ struct files_stat_struct {
 };
 
 struct inodes_stat_t {
-	long nr_inodes;
-	long nr_unused;
-	long dummy[5];		/* padding for sysctl ABI compatibility */
+	int nr_inodes;
+	int nr_unused;
+	int dummy[5];		/* padding for sysctl ABI compatibility */
 };
 
 

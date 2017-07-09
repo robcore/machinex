@@ -1567,14 +1567,14 @@ static struct ctl_table fs_table[] = {
 	{
 		.procname	= "inode-nr",
 		.data		= &inodes_stat,
-		.maxlen		= 2*sizeof(long),
+		.maxlen		= 2*sizeof(int),
 		.mode		= 0444,
 		.proc_handler	= proc_nr_inodes,
 	},
 	{
 		.procname	= "inode-state",
 		.data		= &inodes_stat,
-		.maxlen		= 7*sizeof(long),
+		.maxlen		= 7*sizeof(int),
 		.mode		= 0444,
 		.proc_handler	= proc_nr_inodes,
 	},
@@ -1604,7 +1604,7 @@ static struct ctl_table fs_table[] = {
 	{
 		.procname	= "dentry-state",
 		.data		= &dentry_stat,
-		.maxlen		= 6*sizeof(long),
+		.maxlen		= 6*sizeof(int),
 		.mode		= 0444,
 		.proc_handler	= proc_nr_dentry,
 	},

@@ -70,33 +70,33 @@ EXPORT_SYMBOL(empty_aops);
  */
 struct inodes_stat_t inodes_stat;
 
-static DEFINE_PER_CPU(unsigned long, nr_inodes);
-static DEFINE_PER_CPU(unsigned long, nr_unused);
+static DEFINE_PER_CPU(unsigned int, nr_inodes);
+static DEFINE_PER_CPU(unsigned int, nr_unused);
 
 static struct kmem_cache *inode_cachep __read_mostly;
 
-static long get_nr_inodes(void)
+static int get_nr_inodes(void)
 {
 	int i;
-	long sum = 0;
+	int sum = 0;
 	for_each_possible_cpu(i)
 		sum += per_cpu(nr_inodes, i);
 	return sum < 0 ? 0 : sum;
 }
 
-static inline long get_nr_inodes_unused(void)
+static inline int get_nr_inodes_unused(void)
 {
 	int i;
-	long sum = 0;
+	int sum = 0;
 	for_each_possible_cpu(i)
 		sum += per_cpu(nr_unused, i);
 	return sum < 0 ? 0 : sum;
 }
 
-long get_nr_dirty_inodes(void)
+int get_nr_dirty_inodes(void)
 {
 	/* not actually dirty inodes, but a wild approximation */
-	long nr_dirty = get_nr_inodes() - get_nr_inodes_unused();
+	int nr_dirty = get_nr_inodes() - get_nr_inodes_unused();
 	return nr_dirty > 0 ? nr_dirty : 0;
 }
 
@@ -109,7 +109,7 @@ int proc_nr_inodes(struct ctl_table *table, int write,
 {
 	inodes_stat.nr_inodes = get_nr_inodes();
 	inodes_stat.nr_unused = get_nr_inodes_unused();
-	return proc_doulongvec_minmax(table, write, buffer, lenp, ppos);
+	return proc_dointvec(table, write, buffer, lenp, ppos);
 }
 #endif
 
@@ -182,7 +182,7 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
 	}
 	inode->i_private = NULL;
 	inode->i_mapping = mapping;
-	INIT_HLIST_HEAD(&inode->i_dentry);	/* buggered by rcu freeing */
+	INIT_LIST_HEAD(&inode->i_dentry);	/* buggered by rcu freeing */
 #ifdef CONFIG_FS_POSIX_ACL
 	inode->i_acl = inode->i_default_acl = ACL_NOT_CACHED;
 #endif
@@ -705,11 +705,10 @@ static int can_unuse(struct inode *inode)
  * LRU does not have strict ordering. Hence we don't want to reclaim inodes
  * with this flag set because they are the inodes that are out of order.
  */
-long prune_icache_sb(struct super_block *sb, unsigned long nr_to_scan)
+void prune_icache_sb(struct super_block *sb, int nr_to_scan)
 {
 	LIST_HEAD(freeable);
-	long nr_scanned;
-	long freed = 0;
+	int nr_scanned;
 	unsigned long reap = 0;
 
 	spin_lock(&sb->s_inode_lru_lock);
@@ -779,7 +778,6 @@ long prune_icache_sb(struct super_block *sb, unsigned long nr_to_scan)
 		list_move(&inode->i_lru, &freeable);
 		sb->s_nr_inodes_unused--;
 		this_cpu_dec(nr_unused);
-		freed++;
 	}
 	if (current_is_kswapd())
 		__count_vm_events(KSWAPD_INODESTEAL, reap);
@@ -790,7 +788,6 @@ long prune_icache_sb(struct super_block *sb, unsigned long nr_to_scan)
 		current->reclaim_state->reclaimed_slab += reap;
 
 	dispose_list(&freeable);
-	return freed;
 }
 
 static void __wait_on_freeing_inode(struct inode *inode);

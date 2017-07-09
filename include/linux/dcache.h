@@ -10,7 +10,6 @@
 #include <linux/cache.h>
 #include <linux/rcupdate.h>
 #include <linux/wait.h>
-#include <linux/lockref.h>
 
 struct nameidata;
 struct path;
@@ -56,11 +55,11 @@ struct qstr {
 #define hashlen_len(hashlen)  ((u32)((hashlen) >> 32))
 
 struct dentry_stat_t {
-	long nr_dentry;
-	long nr_unused;
-	long age_limit;          /* age in seconds */
-	long want_pages;         /* pages requested by system */
-	long dummy[2];
+	int nr_dentry;
+	int nr_unused;
+	int age_limit;          /* age in seconds */
+	int want_pages;         /* pages requested by system */
+	int dummy[2];
 };
 extern struct dentry_stat_t dentry_stat;
 
@@ -102,8 +101,6 @@ extern unsigned int full_name_hash(const unsigned char *, unsigned int);
 # endif
 #endif
 
-#define d_lock	d_lockref.lock
-
 struct dentry {
 	/* RCU lookup touched fields */
 	unsigned int d_flags;		/* protected by d_lock */
@@ -116,7 +113,8 @@ struct dentry {
 	unsigned char d_iname[DNAME_INLINE_LEN];	/* small names */
 
 	/* Ref lookup also touches following */
-	struct lockref d_lockref;	/* per-dentry lock and refcount */
+	unsigned int d_count;		/* protected by d_lock */
+	spinlock_t d_lock;		/* per dentry lock */
 	const struct dentry_operations *d_op;
 	struct super_block *d_sb;	/* The root of the dentry tree */
 	unsigned long d_time;		/* used by d_revalidate */
@@ -129,7 +127,7 @@ struct dentry {
 	 * d_alias and d_rcu can share memory
 	 */
 	union {
-		struct hlist_head d_alias;	/* inode alias list */
+		struct list_head d_alias;	/* inode alias list */
 	 	struct rcu_head d_rcu;
 	} d_u;
 };
@@ -149,8 +147,10 @@ enum dentry_d_lock_class
 struct dentry_operations {
 	int (*d_revalidate)(struct dentry *, unsigned int);
 	int (*d_weak_revalidate)(struct dentry *, unsigned int);
-	int (*d_hash)(const struct dentry *, struct qstr *);
-	int (*d_compare)(const struct dentry *, const struct dentry *,
+	int (*d_hash)(const struct dentry *, const struct inode *,
+			struct qstr *);
+	int (*d_compare)(const struct dentry *, const struct inode *,
+			const struct dentry *, const struct inode *,
 			unsigned int, const char *, const struct qstr *);
 	int (*d_delete)(const struct dentry *);
 	void (*d_release)(struct dentry *);
@@ -209,7 +209,6 @@ struct dentry_operations {
 #define DCACHE_MANAGED_DENTRY \
 	(DCACHE_MOUNTED|DCACHE_NEED_AUTOMOUNT|DCACHE_MANAGE_TRANSIT)
 
-#define DCACHE_LRU_LIST		0x80000
 #define DCACHE_DENTRY_KILLED	0x100000
 
 extern seqlock_t rename_lock;
@@ -248,14 +247,11 @@ extern struct dentry * d_make_root(struct inode *);
 /* <clickety>-<click> the ramfs-type tree */
 extern void d_genocide(struct dentry *);
 
-extern void d_tmpfile(struct dentry *, struct inode *);
-
 extern struct dentry *d_find_alias(struct inode *);
 extern void d_prune_aliases(struct inode *);
 
 /* test whether we have any submounts in a subdir tree */
 extern int have_submounts(struct dentry *);
-extern int check_submounts_and_drop(struct dentry *);
 
 /*
  * This adds the entry to the hash queues.
@@ -305,7 +301,30 @@ extern struct dentry *d_lookup(const struct dentry *, const struct qstr *);
 extern struct dentry *d_hash_and_lookup(struct dentry *, struct qstr *);
 extern struct dentry *__d_lookup(const struct dentry *, const struct qstr *);
 extern struct dentry *__d_lookup_rcu(const struct dentry *parent,
-				const struct qstr *name, unsigned *seq);
+				const struct qstr *name,
+				unsigned *seq, struct inode *inode);
+
+/**
+ * __d_rcu_to_refcount - take a refcount on dentry if sequence check is ok
+ * @dentry: dentry to take a ref on
+ * @seq: seqcount to verify against
+ * Returns: 0 on failure, else 1.
+ *
+ * __d_rcu_to_refcount operates on a dentry,seq pair that was returned
+ * by __d_lookup_rcu, to get a reference on an rcu-walk dentry.
+ */
+static inline int __d_rcu_to_refcount(struct dentry *dentry, unsigned seq)
+{
+	int ret = 0;
+
+	assert_spin_locked(&dentry->d_lock);
+	if (!read_seqcount_retry(&dentry->d_seq, seq)) {
+		ret = 1;
+		dentry->d_count++;
+	}
+
+	return ret;
+}
 
 /* validate "insecure" dentry pointer */
 extern int d_validate(struct dentry *, struct dentry *);
@@ -314,7 +333,6 @@ extern int d_validate(struct dentry *, struct dentry *);
  * helper function for dentry_operations.d_dname() members
  */
 extern char *dynamic_dname(struct dentry *, char *, int, const char *, ...);
-extern char *simple_dname(struct dentry *, char *, int);
 
 extern char *__d_path(const struct path *, const struct path *, char *, int);
 extern char *d_absolute_path(const struct path *, char *, int);
@@ -335,14 +353,17 @@ extern char *dentry_path(struct dentry *, char *, int);
 static inline struct dentry *dget_dlock(struct dentry *dentry)
 {
 	if (dentry)
-		dentry->d_lockref.count++;
+		dentry->d_count++;
 	return dentry;
 }
 
 static inline struct dentry *dget(struct dentry *dentry)
 {
-	if (dentry)
-		lockref_get(&dentry->d_lockref);
+	if (dentry) {
+		spin_lock(&dentry->d_lock);
+		dget_dlock(dentry);
+		spin_unlock(&dentry->d_lock);
+	}
 	return dentry;
 }
 

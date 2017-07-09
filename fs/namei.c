@@ -513,37 +513,6 @@ static inline void unlock_rcu_walk(void)
 	br_read_unlock(&vfsmount_lock);
 }
 
-/*
- * When we move over from the RCU domain to properly refcounted
- * long-lived dentries, we need to check the sequence numbers
- * we got before lookup very carefully.
- *
- * We cannot blindly increment a dentry refcount - even if it
- * is not locked - if it is zero, because it may have gone
- * through the final d_kill() logic already.
- *
- * So for a zero refcount, we need to get the spinlock (which is
- * safe even for a dead dentry because the de-allocation is
- * RCU-delayed), and check the sequence count under the lock.
- *
- * Once we have checked the sequence count, we know it is live,
- * and since we hold the spinlock it cannot die from under us.
- *
- * In contrast, if the reference count wasn't zero, we can just
- * increment the lockref without having to take the spinlock.
- * Even if the sequence number ends up being stale, we haven't
- * gone through the final dput() and killed the dentry yet.
- */
-static inline int d_rcu_to_refcount(struct dentry *dentry, seqcount_t *validate, unsigned seq)
-{
-	if (likely(lockref_get_not_dead(&dentry->d_lockref))) {
-		if (!read_seqcount_retry(validate, seq))
-				return 0;
-		dput(dentry);
-	}
-	return -ECHILD;
-}
-
 /**
  * unlazy_walk - try to switch to ref-walk mode.
  * @nd: nameidata pathwalk data
@@ -568,28 +537,29 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 				nd->root.dentry != fs->root.dentry)
 			goto err_root;
 	}
-
-	/*
-	 * For a negative lookup, the lookup sequence point is the parents
-	 * sequence point, and it only needs to revalidate the parent dentry.
-	 *
-	 * For a positive lookup, we need to move both the parent and the
-	 * dentry from the RCU domain to be properly refcounted. And the
-	 * sequence number in the dentry validates *both* dentry counters,
-	 * since we checked the sequence number of the parent after we got
-	 * the child sequence number. So we know the parent must still
-	 * be valid if the child sequence number is still valid.
-	 */
+	spin_lock(&parent->d_lock);
 	if (!dentry) {
-		if (d_rcu_to_refcount(parent, &parent->d_seq, nd->seq) < 0)
-			goto err_root;
+		if (!__d_rcu_to_refcount(parent, nd->seq))
+			goto err_parent;
 		BUG_ON(nd->inode != parent->d_inode);
 	} else {
-		if (d_rcu_to_refcount(dentry, &dentry->d_seq, nd->seq) < 0)
-			goto err_root;
-		if (d_rcu_to_refcount(parent, &dentry->d_seq, nd->seq) < 0)
+		if (dentry->d_parent != parent)
 			goto err_parent;
+		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
+		if (!__d_rcu_to_refcount(dentry, nd->seq))
+			goto err_child;
+		/*
+		 * If the sequence check on the child dentry passed, then
+		 * the child has not been removed from its parent. This
+		 * means the parent dentry must be valid and able to take
+		 * a reference at this point.
+		 */
+		BUG_ON(!IS_ROOT(dentry) && dentry->d_parent != parent);
+		BUG_ON(!parent->d_count);
+		parent->d_count++;
+		spin_unlock(&dentry->d_lock);
 	}
+	spin_unlock(&parent->d_lock);
 	if (want_root) {
 		path_get(&nd->root);
 		spin_unlock(&fs->lock);
@@ -600,8 +570,10 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 	nd->flags &= ~LOOKUP_RCU;
 	return 0;
 
+err_child:
+	spin_unlock(&dentry->d_lock);
 err_parent:
-	dput(dentry);
+	spin_unlock(&parent->d_lock);
 err_root:
 	if (want_root)
 		spin_unlock(&fs->lock);
@@ -632,11 +604,14 @@ static int complete_walk(struct nameidata *nd)
 		nd->flags &= ~LOOKUP_RCU;
 		if (!(nd->flags & LOOKUP_ROOT))
 			nd->root.mnt = NULL;
-
-		if (d_rcu_to_refcount(dentry, &dentry->d_seq, nd->seq) < 0) {
+		spin_lock(&dentry->d_lock);
+		if (unlikely(!__d_rcu_to_refcount(dentry, nd->seq))) {
+			spin_unlock(&dentry->d_lock);
 			unlock_rcu_walk();
 			return -ECHILD;
 		}
+		BUG_ON(nd->inode != dentry->d_inode);
+		spin_unlock(&dentry->d_lock);
 		mntget(nd->path.mnt);
 		unlock_rcu_walk();
 	}
@@ -1404,7 +1379,7 @@ static int lookup_fast(struct nameidata *nd,
 	 */
 	if (nd->flags & LOOKUP_RCU) {
 		unsigned seq;
-		dentry = __d_lookup_rcu(parent, &nd->last, &seq);
+		dentry = __d_lookup_rcu(parent, &nd->last, &seq, nd->inode);
 		if (!dentry)
 			goto unlazy;
 
@@ -1838,7 +1813,8 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 			struct dentry *parent = nd->path.dentry;
 			nd->flags &= ~LOOKUP_JUMPED;
 			if (unlikely(parent->d_flags & DCACHE_OP_HASH)) {
-				err = parent->d_op->d_hash(parent, &this);
+				err = parent->d_op->d_hash(parent, nd->inode,
+							   &this);
 				if (err < 0)
 					break;
 			}
@@ -2172,7 +2148,7 @@ struct dentry *lookup_one_len(const char *name, struct dentry *base, int len)
 	 * to use its own hash..
 	 */
 	if (base->d_flags & DCACHE_OP_HASH) {
-		int err = base->d_op->d_hash(base, &this);
+		int err = base->d_op->d_hash(base, base->d_inode, &this);
 		if (err < 0)
 			return ERR_PTR(err);
 	}
@@ -2975,61 +2951,6 @@ stale_open:
 	goto retry_lookup;
 }
 
-static int do_tmpfile(int dfd, struct filename *pathname,
-		struct nameidata *nd, int flags,
-		const struct open_flags *op,
-		struct file *file, int *opened)
-{
-	static const struct qstr name = QSTR_INIT("/", 1);
-	struct dentry *dentry, *child;
-	struct inode *dir;
-	int error = path_lookupat(dfd, pathname->name,
-				  flags | LOOKUP_DIRECTORY, nd);
-	if (unlikely(error))
-		return error;
-	error = mnt_want_write(nd->path.mnt);
-	if (unlikely(error))
-		goto out;
-	/* we want directory to be writable */
-	error = inode_permission(nd->inode, MAY_WRITE | MAY_EXEC);
-	if (error)
-		goto out2;
-	dentry = nd->path.dentry;
-	dir = dentry->d_inode;
-	if (!dir->i_op->tmpfile) {
-		error = -EOPNOTSUPP;
-		goto out2;
-	}
-	child = d_alloc(dentry, &name);
-	if (unlikely(!child)) {
-		error = -ENOMEM;
-		goto out2;
-	}
-	nd->flags &= ~LOOKUP_DIRECTORY;
-	nd->flags |= op->intent;
-	dput(nd->path.dentry);
-	nd->path.dentry = child;
-	error = dir->i_op->tmpfile(dir, nd->path.dentry, op->mode);
-	if (error)
-		goto out2;
-	audit_inode(pathname, nd->path.dentry, 0);
-	error = may_open(&nd->path, op->acc_mode, op->open_flag);
-	if (error)
-		goto out2;
-	file->f_path.mnt = nd->path.mnt;
-	error = finish_open(file, nd->path.dentry, NULL, opened);
-	if (error)
-		goto out2;
-	error = open_check_o_direct(file);
-	if (error)
-		fput(file);
-out2:
-	mnt_drop_write(nd->path.mnt);
-out:
-	path_put(&nd->path);
-	return error;
-}
-
 static struct file *path_openat(int dfd, struct filename *pathname,
 		struct nameidata *nd, const struct open_flags *op, int flags)
 {
@@ -3044,11 +2965,6 @@ static struct file *path_openat(int dfd, struct filename *pathname,
 		return file;
 
 	file->f_flags = op->open_flag;
-
-	if (unlikely(file->f_flags & O_TMPFILE)) {
-		error = do_tmpfile(dfd, pathname, nd, flags, op, file, &opened);
-		goto out;
-	}
 
 	error = path_init(dfd, pathname->name, flags | LOOKUP_PARENT, nd, &base);
 	if (unlikely(error))
@@ -3396,7 +3312,7 @@ void dentry_unhash(struct dentry *dentry)
 {
 	shrink_dcache_parent(dentry);
 	spin_lock(&dentry->d_lock);
-	if (dentry->d_lockref.count == 1)
+	if (dentry->d_count == 1)
 		__d_drop(dentry);
 	spin_unlock(&dentry->d_lock);
 }

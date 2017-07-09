@@ -1458,19 +1458,19 @@ xfs_fs_mount(
 	return mount_bdev(fs_type, flags, dev_name, data, xfs_fs_fill_super);
 }
 
-static long
+static int
 xfs_fs_nr_cached_objects(
 	struct super_block	*sb)
 {
 	return xfs_reclaim_inodes_count(XFS_M(sb));
 }
 
-static long
+static void
 xfs_fs_free_cached_objects(
 	struct super_block	*sb,
-	long			nr_to_scan)
+	int			nr_to_scan)
 {
-	return xfs_reclaim_inodes_nr(XFS_M(sb), nr_to_scan);
+	xfs_reclaim_inodes_nr(XFS_M(sb), nr_to_scan);
 }
 
 static const struct super_operations xfs_super_operations = {
