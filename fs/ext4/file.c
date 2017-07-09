@@ -135,6 +135,40 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
 	return ret;
 }
 
+static ssize_t
+ext4_file_write(struct kiocb *iocb, const struct iovec *iov,
+		unsigned long nr_segs, loff_t pos)
+{
+	struct inode *inode = iocb->ki_filp->f_path.dentry->d_inode;
+	ssize_t ret;
+
+	/*
+	 * If we have encountered a bitmap-format file, the size limit
+	 * is smaller than s_maxbytes, which is for extent-mapped files.
+	 */
+
+	if (!(ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))) {
+		struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
+		size_t length = iov_length(iov, nr_segs);
+
+		if ((pos > sbi->s_bitmap_maxbytes ||
+		    (pos == sbi->s_bitmap_maxbytes && length > 0)))
+			return -EFBIG;
+
+		if (pos + length > sbi->s_bitmap_maxbytes) {
+			nr_segs = iov_shorten((struct iovec *)iov, nr_segs,
+					      sbi->s_bitmap_maxbytes - pos);
+		}
+	}
+
+	if (unlikely(iocb->ki_filp->f_flags & O_DIRECT))
+		ret = ext4_file_dio_write(iocb, iov, nr_segs, pos);
+	else
+		ret = generic_file_aio_write(iocb, iov, nr_segs, pos);
+
+	return ret;
+}
+
 static const struct vm_operations_struct ext4_file_vm_ops = {
 	.fault		= filemap_fault,
 	.page_mkwrite   = ext4_page_mkwrite,
