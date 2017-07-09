@@ -2397,7 +2397,7 @@ out_err:
  */
 static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 {
-	struct dentry *dparent, *aparent;
+	struct dentry *dparent;
 
 	dentry_lock_for_move(anon, dentry);
 
@@ -2405,24 +2405,14 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	write_seqcount_begin(&anon->d_seq);
 
 	dparent = dentry->d_parent;
-	aparent = anon->d_parent;
 
 	switch_names(dentry, anon);
 	swap(dentry->d_name.hash, anon->d_name.hash);
 
-	dentry->d_parent = (aparent == anon) ? dentry : aparent;
-	list_del(&dentry->d_child);
-	if (!IS_ROOT(dentry))
-		list_add(&dentry->d_child, &dentry->d_parent->d_subdirs);
-	else
-		INIT_LIST_HEAD(&dentry->d_child);
-
-	anon->d_parent = (dparent == dentry) ? anon : dparent;
-	list_del(&anon->d_child);
-	if (!IS_ROOT(anon))
-		list_add(&anon->d_child, &anon->d_parent->d_subdirs);
-	else
-		INIT_LIST_HEAD(&anon->d_child);
+	dentry->d_parent = dentry;
+	list_del_init(&dentry->d_child);
+	anon->d_parent = dparent;
+	list_move(&anon->d_child, &dparent->d_subdirs);
 
 	write_seqcount_end(&dentry->d_seq);
 	write_seqcount_end(&anon->d_seq);
