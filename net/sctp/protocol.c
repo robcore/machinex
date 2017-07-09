@@ -209,7 +209,7 @@ static void sctp_get_local_addr_list(void)
 
 	rcu_read_lock();
 	for_each_netdev_rcu(&init_net, dev) {
-		__list_for_each(pos, &sctp_address_families) {
+		list_for_each(pos, &sctp_address_families) {
 			af = list_entry(pos, struct sctp_af, list);
 			af->copy_addrlist(&sctp_local_addr_list, dev);
 		}
