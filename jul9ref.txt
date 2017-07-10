@@ -1,0 +1,1 @@
+/media/root/robcore/android/msm_kernel_caf_3.14/patches/10patches/5837-sysfs-Fixed-a-trailing-white-space-error.patch
