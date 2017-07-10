@@ -1,0 +1,9 @@
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/12patches/2490-fuse-add-per-page-descriptor-offset-length-to-fuse_r.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/12patches/2491-fuse-use-req-page_descs-for-argpages-cases.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/12patches/2493-fuse-pass-iov-to-fuse_get_user_pages.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/12patches/2494-fuse-optimize-fuse_get_user_pages.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/12patches/2495-fuse-optimize-__fuse_direct_io.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/2patches/7449-fuse-pull-iov_iter-initializations-up.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/2patches/7450-fuse-switch-to-iov_iter_get_pages.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/2patches/7452-new-helper-iov_iter_npages.patch
+/media/root/robcore/android/linaro-8064-lt/kernel/patches/2patches/7492-bio_vec-backed-iov_iter.patch
