@@ -31,6 +31,7 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/freezer.h>
 
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
