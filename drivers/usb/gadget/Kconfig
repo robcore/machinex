@@ -860,6 +860,7 @@ config USB_GADGET_TARGET
 
 config USB_G_SERIAL
 	tristate "Serial Gadget (with CDC ACM and CDC OBEX support)"
+	depends on TTY
 	help
 	  The Serial Gadget talks to the Linux-USB generic serial driver.
 	  This driver supports a CDC-ACM module option, which can be used
@@ -970,6 +971,8 @@ config USB_NCM_SUPPORT_MTU_CHANGE
 	   If you enable this option,
 	   NCM MTU Change will be able to be used.
 
+if TTY
+
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET
@@ -1046,8 +1049,11 @@ config USB_G_MULTI_CDC
 
 	  If unsure, say "y".
 
+endif # TTY
+
 config USB_G_HID
 	tristate "HID Gadget"
+	depends on TTY
 	help
 	  The HID gadget driver provides generic emulation of USB
 	  Human Interface Devices (HID).
