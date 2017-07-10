@@ -1108,7 +1108,7 @@ static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 	unsigned offset;
 	int npages;
 
-	user_addr = (unsigned long)(struct iovec *)iov->ii->iov_base + ii->iov_offset;
+	user_addr = (unsigned long)ii->iov->iov_base + ii->iov_offset;
 	offset = user_addr & ~PAGE_MASK;
 
 	/* Special case for kernel I/O: can copy directly into the buffer */
