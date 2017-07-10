@@ -26,7 +26,7 @@ static int fuse_send_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 	struct fuse_req *req;
 	int err;
 
-	req = fuse_get_req_nopages(fc);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -58,7 +58,7 @@ struct fuse_file *fuse_file_alloc(struct fuse_conn *fc)
 		return NULL;
 
 	ff->fc = fc;
-	ff->reserved_req = fuse_request_alloc(0);
+	ff->reserved_req = fuse_request_alloc();
 	if (unlikely(!ff->reserved_req)) {
 		kfree(ff);
 		return NULL;
@@ -369,7 +369,7 @@ static int fuse_flush(struct file *file, fl_owner_t id)
 	if (fc->no_flush)
 		return 0;
 
-	req = fuse_get_req_nofail_nopages(fc, file);
+	req = fuse_get_req_nofail(fc, file);
 	memset(&inarg, 0, sizeof(inarg));
 	inarg.fh = ff->fh;
 	inarg.lock_owner = fuse_lock_owner_id(fc, id);
@@ -437,7 +437,7 @@ int fuse_fsync_common(struct file *file, loff_t start, loff_t end,
 
 	fuse_sync_writes(inode);
 
-	req = fuse_get_req_nopages(fc);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req)) {
 		err = PTR_ERR(req);
 		goto out;
@@ -546,7 +546,7 @@ static int fuse_readpage(struct file *file, struct page *page)
 	 */
 	fuse_wait_on_page_writeback(inode, page->index);
 
-	req = fuse_get_req(fc, 1);
+	req = fuse_get_req(fc);
 	err = PTR_ERR(req);
 	if (IS_ERR(req))
 		goto out;
@@ -659,7 +659,7 @@ static int fuse_readpages_fill(void *_data, struct page *page)
 	     (req->num_pages + 1) * PAGE_CACHE_SIZE > fc->max_read ||
 	     req->pages[req->num_pages - 1]->index + 1 != page->index)) {
 		fuse_send_readpages(req, data->file);
-		data->req = req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
+		data->req = req = fuse_get_req(fc);
 		if (IS_ERR(req)) {
 			unlock_page(page);
 			return PTR_ERR(req);
@@ -724,7 +724,7 @@ static int fuse_readpages(struct file *file, struct address_space *mapping,
 
 	data.file = file;
 	data.inode = inode;
-	data.req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
+	data.req = fuse_get_req(fc);
 	err = PTR_ERR(data.req);
 	if (IS_ERR(data.req))
 		goto out;
@@ -933,7 +933,7 @@ static ssize_t fuse_perform_write(struct file *file,
 		struct fuse_req *req;
 		ssize_t count;
 
-		req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
+		req = fuse_get_req(fc);
 		if (IS_ERR(req)) {
 			err = PTR_ERR(req);
 			break;
@@ -1116,7 +1116,7 @@ ssize_t fuse_direct_io(struct file *file, const char __user *buf,
 	ssize_t res = 0;
 	struct fuse_req *req;
 
-	req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -1152,7 +1152,7 @@ ssize_t fuse_direct_io(struct file *file, const char __user *buf,
 			break;
 		if (count) {
 			fuse_put_request(fc, req);
-			req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
+			req = fuse_get_req(fc);
 			if (IS_ERR(req))
 				break;
 		}
@@ -1316,7 +1316,7 @@ static int fuse_writepage_locked(struct page *page)
 
 	set_page_writeback(page);
 
-	req = fuse_request_alloc_nofs(1);
+	req = fuse_request_alloc_nofs();
 	if (!req)
 		goto err;
 
@@ -1516,7 +1516,7 @@ static int fuse_getlk(struct file *file, struct file_lock *fl)
 	struct fuse_lk_out outarg;
 	int err;
 
-	req = fuse_get_req_nopages(fc);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -1551,7 +1551,7 @@ static int fuse_setlk(struct file *file, struct file_lock *fl, int flock)
 	if (fl->fl_flags & FL_CLOSE)
 		return 0;
 
-	req = fuse_get_req_nopages(fc);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -1620,7 +1620,7 @@ static sector_t fuse_bmap(struct address_space *mapping, sector_t block)
 	if (!inode->i_sb->s_bdev || fc->no_bmap)
 		return 0;
 
-	req = fuse_get_req_nopages(fc);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return 0;
 
@@ -1905,7 +1905,7 @@ long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 		num_pages++;
 	}
 
-	req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req)) {
 		err = PTR_ERR(req);
 		req = NULL;
@@ -2108,7 +2108,7 @@ unsigned fuse_file_poll(struct file *file, poll_table *wait)
 		fuse_register_polled_file(fc, ff);
 	}
 
-	req = fuse_get_req_nopages(fc);
+	req = fuse_get_req(fc);
 	if (IS_ERR(req))
 		return POLLERR;
 
