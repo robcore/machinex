@@ -107,6 +107,28 @@ int snd_reg_access(unsigned int reg)
 }
 EXPORT_SYMBOL(snd_reg_access);
 
+static int get_double_checksum(int lval, int rval)
+{
+	int addval, checksum;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
+	return checksum;
+}
+
+int show_sound_value(int val)
+{
+	if (val > 50)
+	val -= 256;
+
+	return val;
+}
+
 static ssize_t sound_control_enabled_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -179,9 +201,9 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 {
 	return sprintf(buf, "%d %d\n",
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL),
+				show_sound_value(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL)),
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX5_VOL_CTL_B2_CTL));
+				show_sound_value(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL)));
 }
 
 static ssize_t speaker_gain_store(struct kobject *kobj,
@@ -195,14 +217,6 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled)
 		return count;
 
-	addval = lval + rval;
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-		lval += 256;
-		rval += 256;
-	}
-
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
@@ -210,7 +224,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
 
-	count = checksum;
+	count = get_double_checksum(lval, rval);
 
 	return count;
 }
@@ -220,9 +234,9 @@ static ssize_t headphone_gain_show(struct kobject *kobj,
 {
 	return sprintf(buf, "%d %d\n",
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL),
+				show_sound_value(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL)),
 			tabla_read(snd_engine_codec_ptr,
-				TABLA_A_CDC_RX2_VOL_CTL_B2_CTL));
+				show_sound_value(TABLA_A_CDC_RX2_VOL_CTL_B2_CTL)));
 }
 
 static ssize_t headphone_gain_store(struct kobject *kobj,
@@ -241,6 +255,8 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
+
+	count = get_double_checksum(lval, rval);
 
 	return count;
 }
