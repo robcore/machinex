@@ -2572,6 +2572,10 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 			error = create_error;
 			goto out;
 		}
+		if (create_error && dentry->d_inode == NULL) {
+			error = create_error;
+			goto out;
+		}
 		goto looked_up;
 	}
 
