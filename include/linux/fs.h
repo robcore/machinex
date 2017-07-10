@@ -162,6 +162,7 @@ struct address_space;
 struct writeback_control;
 
 struct iov_iter {
+	const struct iovec *iov;
 	struct iov_iter_ops *ops;
 	unsigned long data;
 	unsigned long nr_segs;
