@@ -62,8 +62,8 @@
  *  - add FUSE_AUTO_INVAL_DATA
  */
 
-#ifndef _LINUX_FUSE_H
-#define _LINUX_FUSE_H
+#ifndef _UAPI_LINUX_FUSE_H
+#define _UAPI_LINUX_FUSE_H
 
 #include <linux/types.h>
 
