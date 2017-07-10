@@ -107,6 +107,20 @@ int snd_reg_access(unsigned int reg)
 }
 EXPORT_SYMBOL(snd_reg_access);
 
+static int get_single_checksum(int val)
+{
+	int addval, checksum;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
+	return checksum;
+}
+
 static int get_double_checksum(int lval, int rval)
 {
 	int addval, checksum;
