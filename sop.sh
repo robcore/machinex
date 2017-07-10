@@ -1,27 +1,61 @@
 #!/bin/bash
-
-patch -p1 < "/root/machinex/patches/0020-remove-__list_for_each.patch"
-patch -p1 < "/root/machinex/patches/0021-list-change-list_for_each_entry-to-use-list_-_entry.patch"
-patch -p1 < "/root/machinex/patches/0022-list-introduce-list_last_entry-use-list_-first-last-.patch"
-patch -p1 < "/root/machinex/patches/0023-replace-refs-to-list_struct-with-list_head.patch"
-patch -p1 < "/root/machinex/patches/0024-add-hlist_fake-to-avoid-inode-hash-lock-in-evict.patch"
-patch -p1 < "/root/machinex/patches/0025-list-Use-WRITE_ONCE-when-initializing-list_head-stru.patch"
-patch -p1 < "/root/machinex/patches/0026-add-hlist_is_singular-helper.patch"
-patch -p1 < "/root/machinex/patches/0027-expand-list-first-entry-or-null.patch"
-patch -p1 < "/root/machinex/patches/0028-bootmem-make-___alloc_bootmem_node_nopanic-really-no.patch"
-patch -p1 < "/root/machinex/patches/0029-doubled.patch"
-patch -p1 < "/root/machinex/patches/0030-cleanup-dcache-and-list.h.patch"
-patch -p1 < "/root/machinex/patches/0031-extra-hlist_is_singular_node.patch"
-patch -p1 < "/root/machinex/patches/0032-vfs-d_obtain_alias-needs-to-use-as-default-name.patch"
-patch -p1 < "/root/machinex/patches/0033-added-back-for-the-future.patch"
-patch -p1 < "/root/machinex/patches/0034-__d_materialise_unique-is-too-generic.patch"
-patch -p1 < "/root/machinex/patches/0035-O_TMPFILE-again.patch"
-patch -p1 < "/root/machinex/patches/0036-kill-find_inode_number.patch"
-patch -p1 < "/root/machinex/patches/0037-Don-t-pass-inode-to-d_hash-and-d_compare.patch"
-patch -p1 < "/root/machinex/patches/0038-cope-with-potentially-long-d_dname-output-for-shmem.patch"
-patch -p1 < "/root/machinex/patches/0039-dcache-use-lockref-infrastructure.patch"
-patch -p1 < "/root/machinex/patches/0040-vfs-use-lockref_get_not_zero-for-optimistic-lockless.patch"
-patch -p1 < "/root/machinex/patches/0041-vfs-reimplement-d_rcu_to_refcount-using-lockref_get_.patch"
-patch -p1 < "/root/machinex/patches/0042-vfs-call-d_op-d_prune-before-unhashing-dentry.patch"
-patch -p1 < "/root/machinex/patches/0043-restructure-d_genocide.patch"
-patch -p1 < "/root/machinex/patches/0044-convert-superblock-shrinkers-to-new-api.patch"
+/root/machinex/patches/0001-ext4-release-sysfs-kobject-when-failing-to-enable-qu.patch
+/root/machinex/patches/0002-ext4-fix-memory-leak-when-quota-options-are-specifie.patch
+/root/machinex/patches/0003-ext4-add-punching-hole-support-for-non-extent-mapped.patch
+/root/machinex/patches/0004-ext4-Always-use-ext4_bio_write_page-for-writeout.patch
+/root/machinex/patches/0005-ext4-use-redirty_page_for_writepage-in-ext4_bio_writ.patch
+/root/machinex/patches/0006-ext4-remove-__ext4_journalled_writepage-from-mpage_d.patch
+/root/machinex/patches/0007-ext4-move-work-from-io_end-to-inode.patch
+/root/machinex/patches/0008-ext4-simplify-list-handling-in-ext4_do_flush_complet.patch
+/root/machinex/patches/0009-ext4-dirty-page-has-always-buffers-attached.patch
+/root/machinex/patches/0010-ext4-simplify-mpage_add_bh_to_extent.patch
+/root/machinex/patches/0011-eCryptfs-remove-unneeded-checks-in-virt_to_scatterli.patch
+/root/machinex/patches/0012-ext4-Make-ext4_bio_writepage-handle-unprepared-buf.patch
+/root/machinex/patches/0013-ext4-remove-unused-variable-flags.patch
+/root/machinex/patches/0014-ext4-remove-explicit-WARN_ON-when-ext4_map_blocks.patch
+/root/machinex/patches/0015-ext4-release-buffer-when-checksum-failed.patch
+/root/machinex/patches/0016-ext4-remove-unused-var.patch
+/root/machinex/patches/0017-ext4-remove-useless-assignment-in-dx_probe.patch
+/root/machinex/patches/0018-ext4-remove-unnecessary-NULL-pointer-check.patch
+/root/machinex/patches/0019-jbd2-don-t-wake-kjournald-unnecessarily.patch
+/root/machinex/patches/0020-ext4-use-WARN-in-ext4_alloc_blocks.patch
+/root/machinex/patches/0021-ext4-fix-smatch-warning-in-move_extent.c-s-mext.patch
+/root/machinex/patches/0022-ext4-reduce-one-if-comparison-in-ext4_dirhash.patch
+/root/machinex/patches/0023-actually-i-need-reclen.patch
+/root/machinex/patches/0024-fuse-add-FALLOCATE-operation.patch
+/root/machinex/patches/0025-fuse-implement-NFS-like-readdirplus-support.patch
+/root/machinex/patches/0026-fuse-general-infrastructure-for-pages-of-variable-si.patch
+/root/machinex/patches/0027-fuse-categorize-fuse_get_req.patch
+/root/machinex/patches/0028-fuse-rework-fuse_retrieve.patch
+/root/machinex/patches/0029-fuse-rework-fuse_readpages.patch
+/root/machinex/patches/0030-fuse-rework-fuse_perform_write.patch
+/root/machinex/patches/0031-fuse-rework-fuse_do_ioctl.patch
+/root/machinex/patches/0032-fuse-add-per-page-descriptor-offset-length-to-fuse.patch
+/root/machinex/patches/0033-fuse-use-req-page_descs-for-argpages-cases.patch
+/root/machinex/patches/0034-fuse-pass-iov-to-fuse_get_user_pages.patch
+/root/machinex/patches/0035-fuse-optimize-fuse_get_user_pages.patch
+/root/machinex/patches/0036-fuse-optimize-__fuse_direct_io.patch
+/root/machinex/patches/0037-fuse-cleanup-fuse_direct_io.patch
+/root/machinex/patches/0038-fuse-avoid-out-of-scope-stack-access.patch
+/root/machinex/patches/0039-fuse-send-poll-events.patch
+/root/machinex/patches/0040-ext4-move-several-mount-options-to-standard-loop-exc.patch
+/root/machinex/patches/0041-Ext2-remove-the-overhead-check-about-sb-in-the-func.patch
+/root/machinex/patches/0042-actually-forget-the-mount-options-commit.patch
+/root/machinex/patches/0043-revert-me.patch
+/root/machinex/patches/0044-reverted.patch
+/root/machinex/patches/0045-FUSE-Adapt-readdirplus-to-application-usage.patch
+/root/machinex/patches/0046-fuse-allow-control-of-adaptive-readdirplus-use.patch
+/root/machinex/patches/0047-made-up-a-quick-dummy-fuse-header-that-just-points-t.patch
+/root/machinex/patches/0048-how-has-this-been-working.patch
+/root/machinex/patches/0049-how-bout-now.patch
+/root/machinex/patches/0050-some-fixups.patch
+/root/machinex/patches/0051-HACK-just-fucking-add-iovec-to-struct-iov_iter.patch
+/root/machinex/patches/0052-k-so-semi-working.patch
+/root/machinex/patches/0053-possing-the-fuse-stuff-until-i-figure-out-iov.patch
+/root/machinex/patches/0054-possed.patch
+/root/machinex/patches/0055-hacked-in-my-fixups.still-no-clue-how-this-has-been-.patch
+/root/machinex/patches/0056-interesting.page_alloc-bootmem-limit-with-movablecor.patch
+/root/machinex/patches/0057-revert-that-bootmem-one.patch
+/root/machinex/patches/0058-writeback-replace-custom-worker-pool-implementation-.patch
+/root/machinex/patches/0059-writeback-expose-the-bdi_wq-workqueue.patch
+/root/machinex/patches/0060-slub-correct-to-calculate-num-of-acquired-objects-in.patch
