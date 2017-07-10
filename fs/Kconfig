@@ -4,12 +4,6 @@
 
 menu "File systems"
 
-config AIO_OPTIMIZATION
-	bool "AIO kernel optimization patches"
-	default y
-	help
-	  An experimental AIO FS kernel optimization
-
 # Use unaligned word dcache accesses
 config DCACHE_WORD_ACCESS
        bool
