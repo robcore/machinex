@@ -95,14 +95,10 @@
  *  - add FUSE_ASYNC_DIO
  */
 
-#ifndef _LINUX_FUSE_H
-#define _LINUX_FUSE_H
+#ifndef _UAPI_LINUX_FUSE_H
+#define _UAPI_LINUX_FUSE_H
 
-#ifdef __KERNEL__
 #include <linux/types.h>
-#else
-#include <stdint.h>
-#endif
 
 /*
  * Version negotiation:
