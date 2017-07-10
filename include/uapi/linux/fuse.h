@@ -1,9 +1,35 @@
 /*
-    FUSE: Filesystem in Userspace
+    This file defines the kernel interface of FUSE
     Copyright (C) 2001-2008  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU GPL.
     See the file COPYING.
+
+    This -- and only this -- header file may also be distributed under
+    the terms of the BSD Licence as follows:
+
+    Copyright (C) 2001-2007 Miklos Szeredi. All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+
+    THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
 */
 
 /*
@@ -60,12 +86,23 @@
  *
  * 7.20
  *  - add FUSE_AUTO_INVAL_DATA
+ *
+ * 7.21
+ *  - add FUSE_READDIRPLUS
+ *  - send the requested events in POLL request
+ *
+ * 7.22
+ *  - add FUSE_ASYNC_DIO
  */
 
 #ifndef _LINUX_FUSE_H
 #define _LINUX_FUSE_H
 
+#ifdef __KERNEL__
 #include <linux/types.h>
+#else
+#include <stdint.h>
+#endif
 
 /*
  * Version negotiation:
@@ -91,7 +128,7 @@
 #define FUSE_KERNEL_VERSION 7
 
 /** Minor version number of this interface */
-#define FUSE_KERNEL_MINOR_VERSION 20
+#define FUSE_KERNEL_MINOR_VERSION 22
 
 /** The node ID of the root inode */
 #define FUSE_ROOT_ID 1
@@ -575,7 +612,7 @@ struct fuse_ioctl_iovec {
 };
 
 struct fuse_ioctl_out {
-	int32_t	result;
+	int32_t		result;
 	uint32_t	flags;
 	uint32_t	in_iovs;
 	uint32_t	out_iovs;
@@ -585,7 +622,7 @@ struct fuse_poll_in {
 	uint64_t	fh;
 	uint64_t	kh;
 	uint32_t	flags;
-	uint32_t   events;
+	uint32_t	events;
 };
 
 struct fuse_poll_out {
