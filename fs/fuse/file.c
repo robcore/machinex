@@ -1106,7 +1106,7 @@ static inline unsigned long fuse_get_user_addr(const struct iov_iter *ii)
 	return (unsigned long)ii->iov->iov_base + ii->iov_offset;
 }
 
-static inline size_t fuse_get_frag_size(const struct iov_iter *ii,
+static inline size_t fuse_get_frag_size(struct iov_iter *ii,
 					size_t max_size)
 {
 	return min(iov_iter_single_seg_count(ii), max_size);
