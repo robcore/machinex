@@ -50,7 +50,6 @@ static unsigned int khugepaged_scan_sleep_millisecs __read_mostly = 10000;
 /* during fragmentation poll the hugepage allocator once every minute */
 static unsigned int khugepaged_alloc_sleep_millisecs __read_mostly = 60000;
 static struct task_struct *khugepaged_thread __read_mostly;
-static unsigned long huge_zero_pfn __read_mostly;
 static DEFINE_MUTEX(khugepaged_mutex);
 static DEFINE_SPINLOCK(khugepaged_mm_lock);
 static DECLARE_WAIT_QUEUE_HEAD(khugepaged_wait);
@@ -239,31 +238,6 @@ static struct shrinker huge_zero_page_shrinker = {
 	.shrink = shrink_huge_zero_page,
 	.seeks = DEFAULT_SEEKS,
 };
-
-static int init_huge_zero_pfn(void)
-{
-	struct page *hpage;
-	unsigned long pfn;
-
-	hpage = alloc_pages((GFP_TRANSHUGE | __GFP_ZERO) & ~__GFP_MOVABLE,
-			HPAGE_PMD_ORDER);
-	if (!hpage)
-		return -ENOMEM;
-	pfn = page_to_pfn(hpage);
-	if (cmpxchg(&huge_zero_pfn, 0, pfn))
-		__free_page(hpage);
-	return 0;
-}
-
-static inline bool is_huge_zero_pfn(unsigned long pfn)
-{
-	return huge_zero_pfn && pfn == huge_zero_pfn;
-}
-
-static inline bool is_huge_zero_pmd(pmd_t pmd)
-{
-	return is_huge_zero_pfn(pmd_pfn(pmd));
-}
 
 #ifdef CONFIG_SYSFS
 
@@ -827,18 +801,6 @@ static bool set_huge_zero_page(pgtable_t pgtable, struct mm_struct *mm,
 	return true;
 }
 
-static void set_huge_zero_page(pgtable_t pgtable, struct mm_struct *mm,
-		struct vm_area_struct *vma, unsigned long haddr, pmd_t *pmd)
-{
-	pmd_t entry;
-	entry = pfn_pmd(huge_zero_pfn, vma->vm_page_prot);
-	entry = pmd_wrprotect(entry);
-	entry = pmd_mkhuge(entry);
-	set_pmd_at(mm, haddr, pmd, entry);
-	pgtable_trans_huge_deposit(mm, pgtable);
-	mm->nr_ptes++;
-}
-
 int do_huge_pmd_anonymous_page(struct mm_struct *mm, struct vm_area_struct *vma,
 			       unsigned long address, pmd_t *pmd,
 			       unsigned int flags)
@@ -958,16 +920,6 @@ int copy_huge_pmd(struct mm_struct *dst_mm, struct mm_struct *src_mm,
 		set = set_huge_zero_page(pgtable, dst_mm, vma, addr, dst_pmd,
 				zero_page);
 		BUG_ON(!set); /* unexpected !pmd_none(dst_pmd) */
-		ret = 0;
-		goto out_unlock;
-	}
-	/*
-	 * mm->page_table_lock is enough to be sure that huge zero pmd is not
-	 * under splitting since we don't split the page itself, only pmd to
-	 * a page table.
-	 */
-	if (is_huge_zero_pmd(pmd)) {
-		set_huge_zero_page(pgtable, dst_mm, vma, addr, dst_pmd);
 		ret = 0;
 		goto out_unlock;
 	}
