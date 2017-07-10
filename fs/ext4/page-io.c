@@ -24,6 +24,7 @@
 #include <linux/workqueue.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/mm.h>
 #include <linux/ratelimit.h>
 
 #include "ext4_jbd2.h"
@@ -438,7 +439,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 
 	io_page = kmem_cache_alloc(io_page_cachep, GFP_NOFS);
 	if (!io_page) {
-		set_page_dirty(page);
+		redirty_page_for_writepage(wbc, page);
 		unlock_page(page);
 		return -ENOMEM;
 	}
@@ -470,7 +471,6 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 			set_buffer_uptodate(bh);
 			continue;
 		}
-		clear_buffer_dirty(bh);
 		ret = io_submit_add_bh(io, io_page, inode, wbc, bh);
 		if (ret) {
 			/*
@@ -478,9 +478,10 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 			 * we can do but mark the page as dirty, and
 			 * better luck next time.
 			 */
-			set_page_dirty(page);
+			redirty_page_for_writepage(wbc, page);
 			break;
 		}
+		clear_buffer_dirty(bh);
 	}
 	unlock_page(page);
 	/*
