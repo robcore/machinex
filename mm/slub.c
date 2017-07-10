@@ -1512,7 +1512,7 @@ static inline void remove_partial(struct kmem_cache_node *n,
  */
 static inline void *acquire_slab(struct kmem_cache *s,
 		struct kmem_cache_node *n, struct page *page,
-		int mode)
+		int mode, int *objects)
 {
 	void *freelist;
 	unsigned long counters;
@@ -1528,6 +1528,7 @@ static inline void *acquire_slab(struct kmem_cache *s,
 	freelist = page->freelist;
 	counters = page->counters;
 	new.counters = counters;
+	*objects = new.objects - new.inuse;
 	if (mode)
 		new.inuse = page->objects;
 
@@ -1546,7 +1547,7 @@ static inline void *acquire_slab(struct kmem_cache *s,
 	return freelist;
 }
 
-static int put_cpu_partial(struct kmem_cache *s, struct page *page, int drain);
+static void put_cpu_partial(struct kmem_cache *s, struct page *page, int drain);
 static inline bool pfmemalloc_match(struct page *page, gfp_t gfpflags);
 
 /*
@@ -1557,6 +1558,8 @@ static void *get_partial_node(struct kmem_cache *s, struct kmem_cache_node *n,
 {
 	struct page *page, *page2;
 	void *object = NULL;
+	int available = 0;
+	int objects;
 
 	/*
 	 * Racy check. If we mistakenly see no partial slabs then we
@@ -1570,23 +1573,22 @@ static void *get_partial_node(struct kmem_cache *s, struct kmem_cache_node *n,
 	spin_lock(&n->list_lock);
 	list_for_each_entry_safe(page, page2, &n->partial, lru) {
 		void *t;
-		int available;
 
 		if (!pfmemalloc_match(page, flags))
 			continue;
 
-		t = acquire_slab(s, n, page, object == NULL);
+		t = acquire_slab(s, n, page, object == NULL, &objects);
 		if (!t)
 			break;
 
+		available += objects;
 		if (!object) {
 			c->page = page;
 			stat(s, ALLOC_FROM_PARTIAL);
 			object = t;
-			available =  page->objects - page->inuse;
 		} else {
 			page->freelist = t;
-			available = put_cpu_partial(s, page, 0);
+			put_cpu_partial(s, page, 0);
 			stat(s, CPU_PARTIAL_NODE);
 		}
 		if (kmem_cache_debug(s) || available > s->cpu_partial / 2)
@@ -1964,7 +1966,7 @@ static void unfreeze_partials(struct kmem_cache *s,
  * If we did not find a slot then simply move all the partials to the
  * per node partial list.
  */
-static int put_cpu_partial(struct kmem_cache *s, struct page *page, int drain)
+static void put_cpu_partial(struct kmem_cache *s, struct page *page, int drain)
 {
 	struct page *oldpage;
 	int pages;
