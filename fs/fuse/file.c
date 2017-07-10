@@ -1090,110 +1090,62 @@ static void fuse_release_user_pages(struct fuse_req *req, int write)
 	}
 }
 
-static inline void fuse_page_descs_length_init(struct fuse_req *req,
-		unsigned index, unsigned nr_pages)
+static inline void fuse_page_descs_length_init(struct fuse_req *req)
 {
 	int i;
 
-	for (i = index; i < index + nr_pages; i++)
+	for (i = 0; i < req->num_pages; i++)
 		req->page_descs[i].length = PAGE_SIZE -
 			req->page_descs[i].offset;
 }
 
-static inline unsigned long fuse_get_user_addr(const struct iov_iter *ii)
-{
-	return (unsigned long)ii->iov->iov_base + ii->iov_offset;
-}
-
-static inline size_t fuse_get_frag_size(const struct iov_iter *ii,
-					size_t max_size)
-{
-	return min(iov_iter_single_seg_count(ii), max_size);
-}
-
-static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
+static int fuse_get_user_pages(struct fuse_req *req, const char __user *buf,
 			       size_t *nbytesp, int write)
 {
-	size_t nbytes = 0;  /* # bytes already packed in req */
+	size_t nbytes = *nbytesp;
+	unsigned long user_addr = (unsigned long) buf;
+	unsigned offset = user_addr & ~PAGE_MASK;
+	int npages;
 
 	/* Special case for kernel I/O: can copy directly into the buffer */
 	if (segment_eq(get_fs(), KERNEL_DS)) {
-		unsigned long user_addr = fuse_get_user_addr(ii);
-		size_t frag_size = fuse_get_frag_size(ii, *nbytesp);
-
 		if (write)
 			req->in.args[1].value = (void *) user_addr;
 		else
 			req->out.args[0].value = (void *) user_addr;
 
-		iov_iter_advance(ii, frag_size);
-		*nbytesp = frag_size;
 		return 0;
 	}
 
-	while (nbytes < *nbytesp && req->num_pages < req->max_pages) {
-		unsigned npages;
-		unsigned long user_addr = fuse_get_user_addr(ii);
-		unsigned offset = user_addr & ~PAGE_MASK;
-		size_t frag_size = fuse_get_frag_size(ii, *nbytesp - nbytes);
-		int ret;
+	nbytes = min_t(size_t, nbytes, FUSE_MAX_PAGES_PER_REQ << PAGE_SHIFT);
+	npages = (nbytes + offset + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	npages = clamp(npages, 1, FUSE_MAX_PAGES_PER_REQ);
+	npages = get_user_pages_fast(user_addr, npages, !write, req->pages);
+	if (npages < 0)
+		return npages;
 
-		unsigned n = req->max_pages - req->num_pages;
-		frag_size = min_t(size_t, frag_size, n << PAGE_SHIFT);
-
-		npages = (frag_size + offset + PAGE_SIZE - 1) >> PAGE_SHIFT;
-		npages = clamp(npages, 1U, n);
-
-		ret = get_user_pages_fast(user_addr, npages, !write,
-					  &req->pages[req->num_pages]);
-		if (ret < 0)
-			return ret;
-
-		npages = ret;
-		frag_size = min_t(size_t, frag_size,
-				  (npages << PAGE_SHIFT) - offset);
-		iov_iter_advance(ii, frag_size);
-
-		req->page_descs[req->num_pages].offset = offset;
-		fuse_page_descs_length_init(req, req->num_pages, npages);
-
-		req->num_pages += npages;
-		req->page_descs[req->num_pages - 1].length -=
-			(npages << PAGE_SHIFT) - offset - frag_size;
-
-		nbytes += frag_size;
-	}
+	req->num_pages = npages;
+	req->page_descs[0].offset = offset;
+	fuse_page_descs_length_init(req);
 
 	if (write)
 		req->in.argpages = 1;
 	else
 		req->out.argpages = 1;
 
-	*nbytesp = nbytes;
+	nbytes = (req->num_pages << PAGE_SHIFT) - req->page_descs[0].offset;
+
+	if (*nbytesp < nbytes)
+		req->page_descs[req->num_pages - 1].length -=
+			nbytes - *nbytesp;
+
+	*nbytesp = min(*nbytesp, nbytes);
 
 	return 0;
 }
 
-static inline int fuse_iter_npages(const struct iov_iter *ii_p)
-{
-	struct iov_iter ii = *ii_p;
-	int npages = 0;
-
-	while (iov_iter_count(&ii) && npages < FUSE_MAX_PAGES_PER_REQ) {
-		unsigned long user_addr = fuse_get_user_addr(&ii);
-		unsigned offset = user_addr & ~PAGE_MASK;
-		size_t frag_size = iov_iter_single_seg_count(&ii);
-
-		npages += (frag_size + offset + PAGE_SIZE - 1) >> PAGE_SHIFT;
-		iov_iter_advance(&ii, frag_size);
-	}
-
-	return min(npages, FUSE_MAX_PAGES_PER_REQ);
-}
-
-ssize_t fuse_direct_io(struct file *file, const struct iovec *iov,
-		       unsigned long nr_segs, size_t count, loff_t *ppos,
-		       int write)
+ssize_t fuse_direct_io(struct file *file, const char __user *buf,
+		       size_t count, loff_t *ppos, int write)
 {
 	struct fuse_file *ff = file->private_data;
 	struct fuse_conn *fc = ff->fc;
@@ -1201,11 +1153,8 @@ ssize_t fuse_direct_io(struct file *file, const struct iovec *iov,
 	loff_t pos = *ppos;
 	ssize_t res = 0;
 	struct fuse_req *req;
-	struct iov_iter ii;
 
-	iov_iter_init(&ii, iov, nr_segs, count, 0);
-
-	req = fuse_get_req(fc, fuse_iter_npages(&ii));
+	req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -1213,7 +1162,7 @@ ssize_t fuse_direct_io(struct file *file, const struct iovec *iov,
 		size_t nres;
 		fl_owner_t owner = current->files;
 		size_t nbytes = min(count, nmax);
-		int err = fuse_get_user_pages(req, &ii, &nbytes, write);
+		int err = fuse_get_user_pages(req, buf, &nbytes, write);
 		if (err) {
 			res = err;
 			break;
@@ -1236,11 +1185,12 @@ ssize_t fuse_direct_io(struct file *file, const struct iovec *iov,
 		count -= nres;
 		res += nres;
 		pos += nres;
+		buf += nres;
 		if (nres != nbytes)
 			break;
 		if (count) {
 			fuse_put_request(fc, req);
-			req = fuse_get_req(fc, fuse_iter_npages(&ii));
+			req = fuse_get_req(fc, FUSE_MAX_PAGES_PER_REQ);
 			if (IS_ERR(req))
 				break;
 		}
@@ -1254,8 +1204,8 @@ ssize_t fuse_direct_io(struct file *file, const struct iovec *iov,
 }
 EXPORT_SYMBOL_GPL(fuse_direct_io);
 
-static ssize_t __fuse_direct_read(struct file *file, const struct iovec *iov,
-				  unsigned long nr_segs, loff_t *ppos)
+static ssize_t fuse_direct_read(struct file *file, char __user *buf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t res;
 	struct inode *inode = file_inode(file);
@@ -1263,31 +1213,22 @@ static ssize_t __fuse_direct_read(struct file *file, const struct iovec *iov,
 	if (is_bad_inode(inode))
 		return -EIO;
 
-	res = fuse_direct_io(file, iov, nr_segs, iov_length(iov, nr_segs),
-			     ppos, 0);
+	res = fuse_direct_io(file, buf, count, ppos, 0);
 
 	fuse_invalidate_attr(inode);
 
 	return res;
 }
 
-static ssize_t fuse_direct_read(struct file *file, char __user *buf,
-				     size_t count, loff_t *ppos)
-{
-	struct iovec iov = { .iov_base = buf, .iov_len = count };
-	return __fuse_direct_read(file, &iov, 1, ppos);
-}
-
-static ssize_t __fuse_direct_write(struct file *file, const struct iovec *iov,
-				   unsigned long nr_segs, loff_t *ppos)
+static ssize_t __fuse_direct_write(struct file *file, const char __user *buf,
+				   size_t count, loff_t *ppos)
 {
 	struct inode *inode = file->f_path.dentry->d_inode;
-	size_t count = iov_length(iov, nr_segs);
 	ssize_t res;
 
 	res = generic_write_checks(file, ppos, &count, 0);
 	if (!res) {
-		res = fuse_direct_io(file, iov, nr_segs, count, ppos, 1);
+		res = fuse_direct_io(file, buf, count, ppos, 1);
 		if (res > 0)
 			fuse_write_update_size(inode, *ppos);
 	}
@@ -1300,7 +1241,6 @@ static ssize_t __fuse_direct_write(struct file *file, const struct iovec *iov,
 static ssize_t fuse_direct_write(struct file *file, const char __user *buf,
 				 size_t count, loff_t *ppos)
 {
-	struct iovec iov = { .iov_base = (void __user *)buf, .iov_len = count };
 	struct inode *inode = file_inode(file);
 	ssize_t res;
 
@@ -1309,7 +1249,7 @@ static ssize_t fuse_direct_write(struct file *file, const char __user *buf,
 
 	/* Don't allow parallel writes to the same file */
 	mutex_lock(&inode->i_mutex);
-	res = __fuse_direct_write(file, &iov, 1, ppos);
+	res = __fuse_direct_write(file, buf, count, ppos);
 	mutex_unlock(&inode->i_mutex);
 
 	return res;
@@ -2012,7 +1952,7 @@ long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 	}
 	memcpy(req->pages, pages, sizeof(req->pages[0]) * num_pages);
 	req->num_pages = num_pages;
-	fuse_page_descs_length_init(req, 0, req->num_pages);
+	fuse_page_descs_length_init(req);
 
 	/* okay, let's send it to the client */
 	req->in.h.opcode = FUSE_IOCTL;
@@ -2198,7 +2138,6 @@ unsigned fuse_file_poll(struct file *file, poll_table *wait)
 		return DEFAULT_POLLMASK;
 
 	poll_wait(file, &ff->poll_wait, wait);
-	inarg.events = (__u32)poll_requested_events(wait);
 
 	/*
 	 * Ask for notification iff there's someone waiting for it.
@@ -2258,6 +2197,41 @@ int fuse_notify_poll_wakeup(struct fuse_conn *fc,
 	spin_unlock(&fc->lock);
 	return 0;
 }
+
+static ssize_t fuse_loop_dio(struct file *filp, const struct iovec *iov,
+			     unsigned long nr_segs, loff_t *ppos, int rw)
+{
+	const struct iovec *vector = iov;
+	ssize_t ret = 0;
+
+	while (nr_segs > 0) {
+		void __user *base;
+		size_t len;
+		ssize_t nr;
+
+		base = vector->iov_base;
+		len = vector->iov_len;
+		vector++;
+		nr_segs--;
+
+		if (rw == WRITE)
+			nr = __fuse_direct_write(filp, base, len, ppos);
+		else
+			nr = fuse_direct_read(filp, base, len, ppos);
+
+		if (nr < 0) {
+			if (!ret)
+				ret = nr;
+			break;
+		}
+		ret += nr;
+		if (nr != len)
+			break;
+	}
+
+	return ret;
+}
+
 
 static ssize_t
 fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)

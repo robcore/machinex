@@ -445,8 +445,9 @@ __acquires(fc->lock)
 	}
 }
 
-static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
+void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
 {
+	req->isreply = 1;
 	spin_lock(&fc->lock);
 	if (!fc->connected)
 		req->out.h.error = -ENOTCONN;
@@ -462,12 +463,6 @@ static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
 		request_wait_answer(fc, req);
 	}
 	spin_unlock(&fc->lock);
-}
-
-void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
-{
-	req->isreply = 1;
-	__fuse_request_send(fc, req);
 }
 EXPORT_SYMBOL_GPL(fuse_request_send);
 
@@ -551,9 +546,7 @@ void fuse_force_forget(struct file *file, u64 nodeid)
 	req->in.args[0].size = sizeof(inarg);
 	req->in.args[0].value = &inarg;
 	req->isreply = 0;
-	__fuse_request_send(fc, req);
-	/* ignore errors */
-	fuse_put_request(fc, req);
+	fuse_request_send_nowait(fc, req);
 }
 
 /*
