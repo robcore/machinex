@@ -22,8 +22,8 @@
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
-#define SOUND_CONTROL_MAJOR_VERSION	4
-#define SOUND_CONTROL_MINOR_VERSION	9
+#define SOUND_CONTROL_MAJOR_VERSION	5
+#define SOUND_CONTROL_MINOR_VERSION	0
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -106,20 +106,6 @@ int snd_reg_access(unsigned int reg)
 	return ret;
 }
 EXPORT_SYMBOL(snd_reg_access);
-
-static int get_single_checksum(int val)
-{
-	int addval, checksum;
-
-	addval = lval + rval;
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-		lval += 256;
-		rval += 256;
-	}
-	return checksum;
-}
 
 static int get_double_checksum(int lval, int rval)
 {
@@ -286,17 +272,27 @@ static ssize_t cam_mic_gain_show(struct kobject *kobj,
 static ssize_t cam_mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int lval;
+	int val;
+	int sum, checksum;
 
-	sscanf(buf, "%d", &lval);
+	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
+	checksum = 255 - val;
+		if (val < 0) {
+			sum = 1 + val;
+			checksum = sum * -1;
+			val = val + 256;
+		}
+
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX6_VOL_CTL_GAIN, lval);
+		TABLA_A_CDC_TX6_VOL_CTL_GAIN, val);
 	snd_ctrl_locked = 1;
+
+	count = checksum;
 
 	return count;
 }
@@ -312,17 +308,27 @@ static ssize_t mic_gain_show(struct kobject *kobj,
 static ssize_t mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int lval;
+	int val;
+	int sum, checksum;
 
-	sscanf(buf, "%d", &lval);
+	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
+	checksum = 255 - val;
+		if (val < 0) {
+			sum = 1 + val;
+			checksum = sum * -1;
+			val = val + 256;
+		}
+
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX7_VOL_CTL_GAIN, lval);
+		TABLA_A_CDC_TX7_VOL_CTL_GAIN, val);
 	snd_ctrl_locked = 1;
+
+	count = checksum;
 
 	return count;
 }
