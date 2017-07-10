@@ -121,7 +121,7 @@ static int get_double_checksum(int lval, int rval)
 	return checksum;
 }
 
-int show_sound_value(int val)
+static int show_sound_value(int val)
 {
 	if (val > 50)
 	val -= 256;
