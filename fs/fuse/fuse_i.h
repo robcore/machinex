@@ -113,10 +113,6 @@ struct fuse_inode {
 
 /** FUSE inode state bits */
 enum {
-	/** Advise readdirplus  */
-	FUSE_I_ADVISE_RDPLUS,
-	/** Initialized with readdirplus */
-	FUSE_I_INIT_RDPLUS,
 	/** An operation changing file size is in progress  */
 	FUSE_I_SIZE_UNSTABLE,
 };
@@ -307,7 +303,6 @@ struct fuse_req {
 		struct {
 			struct fuse_write_in in;
 			struct fuse_write_out out;
-			struct fuse_req *next;
 		} write;
 		struct fuse_notify_retrieve_in retrieve_in;
 		struct fuse_lk_in lk_in;
@@ -516,11 +511,8 @@ struct fuse_conn {
 	/** Use enhanced/automatic page cache invalidation. */
 	unsigned auto_inval_data:1;
 
-	/** Does the filesystem support readdirplus? */
+	/** Does the filesystem support readdir-plus? */
 	unsigned do_readdirplus:1;
-
-	/** Does the filesystem want adaptive readdirplus? */
-	unsigned readdirplus_auto:1;
 
 	/** The number of requests waiting for completion */
 	atomic_t num_waiting;

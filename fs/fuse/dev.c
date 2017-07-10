@@ -537,7 +537,7 @@ void fuse_request_send_background_locked(struct fuse_conn *fc,
 
 void fuse_force_forget(struct file *file, u64 nodeid)
 {
-	struct inode *inode = file_inode(file);
+	struct inode *inode = file->f_path.dentry->d_inode;
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	struct fuse_req *req;
 	struct fuse_forget_in inarg;
@@ -1547,8 +1547,7 @@ static int fuse_notify_store(struct fuse_conn *fc, unsigned int size,
 
 		this_num = min_t(unsigned, num, PAGE_CACHE_SIZE - offset);
 		err = fuse_copy_page(cs, &page, offset, this_num, 0);
-		if (!err && offset == 0 &&
-		    (this_num == PAGE_CACHE_SIZE || file_size == end))
+		if (!err && offset == 0 && (num != 0 || file_size == end))
 			SetPageUptodate(page);
 		unlock_page(page);
 		page_cache_release(page);
@@ -1717,9 +1716,11 @@ static int fuse_notify(struct fuse_conn *fc, enum fuse_notify_code code,
 /* Look up request on processing list by unique ID */
 static struct fuse_req *request_find(struct fuse_conn *fc, u64 unique)
 {
-	struct fuse_req *req;
+	struct list_head *entry;
 
-	list_for_each_entry(req, &fc->processing, list) {
+	list_for_each(entry, &fc->processing) {
+		struct fuse_req *req;
+		req = list_entry(entry, struct fuse_req, list);
 		if (req->in.h.unique == unique || req->intr_unique == unique)
 			return req;
 	}
