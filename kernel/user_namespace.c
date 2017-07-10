@@ -9,6 +9,7 @@
 #include <linux/nsproxy.h>
 #include <linux/slab.h>
 #include <linux/user_namespace.h>
+#include <linux/proc_fs.h>
 #include <linux/highuid.h>
 #include <linux/cred.h>
 #include <linux/securebits.h>
@@ -25,6 +26,24 @@ static struct kmem_cache *user_ns_cachep __read_mostly;
 
 static bool new_idmap_permitted(struct user_namespace *ns, int cap_setid,
 				struct uid_gid_map *map);
+
+static void set_cred_user_ns(struct cred *cred, struct user_namespace *user_ns)
+{
+	/* Start with the same capabilities as init but useless for doing
+	 * anything as the capabilities are bound to the new user namespace.
+	 */
+	cred->securebits = SECUREBITS_DEFAULT;
+	cred->cap_inheritable = CAP_EMPTY_SET;
+	cred->cap_permitted = CAP_FULL_SET;
+	cred->cap_effective = CAP_FULL_SET;
+	cred->cap_bset = CAP_FULL_SET;
+#ifdef CONFIG_KEYS
+	key_put(cred->request_key_auth);
+	cred->request_key_auth = NULL;
+#endif
+	/* tgcred will be cleared in our caller bc CLONE_THREAD won't be set */
+	cred->user_ns = user_ns;
+}
 
 /*
  * Create a new user namespace, deriving the creator from the user in the
@@ -629,6 +648,58 @@ static bool new_idmap_permitted(struct user_namespace *ns, int cap_setid,
 
 	return false;
 }
+
+static void *userns_get(struct task_struct *task)
+{
+	struct user_namespace *user_ns;
+
+	rcu_read_lock();
+	user_ns = get_user_ns(__task_cred(task)->user_ns);
+	rcu_read_unlock();
+
+	return user_ns;
+}
+
+static void userns_put(void *ns)
+{
+	put_user_ns(ns);
+}
+
+static int userns_install(struct nsproxy *nsproxy, void *ns)
+{
+	struct user_namespace *user_ns = ns;
+	struct cred *cred;
+
+	/* Don't allow gaining capabilities by reentering
+	 * the same user namespace.
+	 */
+	if (user_ns == current_user_ns())
+		return -EINVAL;
+
+	/* Threaded many not enter a different user namespace */
+	if (atomic_read(&current->mm->mm_users) > 1)
+		return -EINVAL;
+
+	if (!ns_capable(user_ns, CAP_SYS_ADMIN))
+		return -EPERM;
+
+	cred = prepare_creds();
+	if (!cred)
+		return -ENOMEM;
+
+	put_user_ns(cred->user_ns);
+	set_cred_user_ns(cred, get_user_ns(user_ns));
+
+	return commit_creds(cred);
+}
+
+const struct proc_ns_operations userns_operations = {
+	.name		= "user",
+	.type		= CLONE_NEWUSER,
+	.get		= userns_get,
+	.put		= userns_put,
+	.install	= userns_install,
+};
 
 static __init int user_namespaces_init(void)
 {
