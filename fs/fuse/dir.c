@@ -13,7 +13,6 @@
 #include <linux/sched.h>
 #include <linux/namei.h>
 #include <linux/slab.h>
-#include <linux/fuse.h>
 
 static bool fuse_use_readdirplus(struct inode *dir, struct file *filp)
 {
