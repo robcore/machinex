@@ -445,8 +445,9 @@ __acquires(fc->lock)
 	}
 }
 
-static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
+void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
 {
+	req->isreply = 1;
 	spin_lock(&fc->lock);
 	if (!fc->connected)
 		req->out.h.error = -ENOTCONN;
@@ -462,12 +463,6 @@ static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
 		request_wait_answer(fc, req);
 	}
 	spin_unlock(&fc->lock);
-}
-
-void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
-{
-	req->isreply = 1;
-	__fuse_request_send(fc, req);
 }
 EXPORT_SYMBOL_GPL(fuse_request_send);
 
@@ -545,27 +540,6 @@ void fuse_force_forget(struct file *file, u64 nodeid)
 	memset(&inarg, 0, sizeof(inarg));
 	inarg.nlookup = 1;
 	req = fuse_get_req_nofail_nopages(fc, file);
-	req->in.h.opcode = FUSE_FORGET;
-	req->in.h.nodeid = nodeid;
-	req->in.numargs = 1;
-	req->in.args[0].size = sizeof(inarg);
-	req->in.args[0].value = &inarg;
-	req->isreply = 0;
-	__fuse_request_send(fc, req);
-	/* ignore errors */
-	fuse_put_request(fc, req);
-}
-
-void fuse_force_forget(struct file *file, u64 nodeid)
-{
-	struct inode *inode = file->f_path.dentry->d_inode;
-	struct fuse_conn *fc = get_fuse_conn(inode);
-	struct fuse_req *req;
-	struct fuse_forget_in inarg;
-
-	memset(&inarg, 0, sizeof(inarg));
-	inarg.nlookup = 1;
-	req = fuse_get_req_nofail(fc, file);
 	req->in.h.opcode = FUSE_FORGET;
 	req->in.h.nodeid = nodeid;
 	req->in.numargs = 1;
