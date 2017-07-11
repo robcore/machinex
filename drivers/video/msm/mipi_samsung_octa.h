@@ -37,7 +37,7 @@
 
 enum mipi_samsung_cmd_list {
 
-	PANEL_READY_TO_ON,
+	PANEL_READY_TO_ON = 0,
 	PANEL_READY_TO_OFF,
 	PANEL_ON,
 	PANEL_OFF,
@@ -53,7 +53,7 @@ enum mipi_samsung_cmd_list {
 };
 
 enum {
-	MIPI_SUSPEND_STATE,
+	MIPI_SUSPEND_STATE = 0,
 	MIPI_RESUME_STATE,
 };
 
