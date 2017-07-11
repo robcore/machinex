@@ -215,9 +215,9 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, val);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, val);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
 
 	count = checksum;
@@ -258,9 +258,9 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, val);
+		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, val);
+		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
 
 	count = checksum;
