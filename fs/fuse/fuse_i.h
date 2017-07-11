@@ -234,6 +234,20 @@ enum fuse_req_state {
 	FUSE_REQ_FINISHED
 };
 
+/** The request IO state (for asynchronous processing) */
+struct fuse_io_priv {
+	int async;
+	spinlock_t lock;
+	unsigned reqs;
+	ssize_t bytes;
+	size_t size;
+	__u64 offset;
+	bool write;
+	int err;
+	struct kiocb *iocb;
+	struct file *file;
+};
+
 /**
  * A request to the client
  */
@@ -337,6 +351,9 @@ struct fuse_req {
 
 	/** Inode used in the request or NULL */
 	struct inode *inode;
+
+	/** AIO control block */
+	struct fuse_io_priv *io;
 
 	/** Link on fi->writepages */
 	struct list_head writepages_entry;
