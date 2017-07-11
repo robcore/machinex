@@ -1217,10 +1217,11 @@ static inline void fuse_page_descs_length_init(struct fuse_req *req,
 
 static inline unsigned long fuse_get_user_addr(const struct iov_iter *ii)
 {
-	return (unsigned long)ii->iov->iov_base + ii->iov_offset;
+	struct iovec *iov;
+	return (unsigned long)iov->iov_base + ii->iov_offset;
 }
 
-static inline size_t fuse_get_frag_size(const struct iov_iter *ii,
+static inline size_t fuse_get_frag_size(struct iov_iter *ii,
 					size_t max_size)
 {
 	return min(iov_iter_single_seg_count(ii), max_size);
@@ -1306,25 +1307,28 @@ static inline int fuse_iter_npages(const struct iov_iter *ii_p)
 	return min(npages, FUSE_MAX_PAGES_PER_REQ);
 }
 
-ssize_t fuse_direct_io(struct fuse_io_priv *io, const struct iovec *iov,
-		       unsigned long nr_segs, size_t count, loff_t *ppos,
-		       int write)
+ssize_t fuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
+		       loff_t *ppos, int flags)
 {
+	int write = flags & FUSE_DIO_WRITE;
+	int cuse = flags & FUSE_DIO_CUSE;
 	struct file *file = io->file;
+	struct inode *inode = file->f_mapping->host;
 	struct fuse_file *ff = file->private_data;
 	struct fuse_conn *fc = ff->fc;
 	size_t nmax = write ? fc->max_write : fc->max_read;
 	loff_t pos = *ppos;
+	size_t count = iov_iter_count(iter);
+	pgoff_t idx_from = pos >> PAGE_SHIFT;
+	pgoff_t idx_to = (pos + count - 1) >> PAGE_SHIFT;
 	ssize_t res = 0;
 	struct fuse_req *req;
-	struct iov_iter ii;
-
-	iov_iter_init(&ii, iov, nr_segs, count, 0);
+	int err = 0;
 
 	if (io->async)
-		req = fuse_get_req_for_background(fc, fuse_iter_npages(&ii));
+		req = fuse_get_req_for_background(fc, fuse_iter_npages(iter));
 	else
-		req = fuse_get_req(fc, fuse_iter_npages(&ii));
+		req = fuse_get_req(fc, fuse_iter_npages(iter));
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -1409,7 +1413,8 @@ static ssize_t __fuse_direct_write(struct fuse_io_priv *io,
 				   const struct iovec *iov,
 				   unsigned long nr_segs, loff_t *ppos)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct file *file = io->file;
+	struct inode *inode = file_inode(file);
 	size_t count = iov_length(iov, nr_segs);
 	ssize_t res;
 
@@ -2408,8 +2413,9 @@ static inline loff_t fuse_round_up(loff_t off)
 }
 
 static ssize_t
-fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
+fuse_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 {
+	DECLARE_COMPLETION_ONSTACK(wait);
 	ssize_t ret = 0;
 	struct file *file = iocb->ki_filp;
 	struct fuse_file *ff = file->private_data;
@@ -2417,29 +2423,36 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	loff_t pos = 0;
 	struct inode *inode;
 	loff_t i_size;
-	size_t count = iov_length(iov, nr_segs);
+	size_t count = iov_iter_count(iter);
+	loff_t offset = iocb->ki_pos;
 	struct fuse_io_priv *io;
+	bool is_sync = is_sync_kiocb(iocb);
 
 	pos = offset;
 	inode = file->f_mapping->host;
 	i_size = i_size_read(inode);
 
+	if ((iov_iter_rw(iter) == READ) && (offset > i_size))
+		return 0;
+
 	/* optimization for short read */
-	if (async_dio && rw != WRITE && offset + count > i_size) {
+	if (async_dio && iov_iter_rw(iter) != WRITE && offset + count > i_size) {
 		if (offset >= i_size)
 			return 0;
-		count = min_t(loff_t, count, fuse_round_up(i_size - offset));
+		iov_iter_truncate(iter, fuse_round_up(i_size - offset));
+		count = iov_iter_count(iter);
 	}
 
 	io = kmalloc(sizeof(struct fuse_io_priv), GFP_KERNEL);
 	if (!io)
 		return -ENOMEM;
 	spin_lock_init(&io->lock);
+	kref_init(&io->refcnt);
 	io->reqs = 1;
 	io->bytes = -1;
 	io->size = 0;
 	io->offset = offset;
-	io->write = (rw == WRITE);
+	io->write = (iov_iter_rw(iter) == WRITE);
 	io->err = 0;
 	io->file = file;
 	/*
@@ -2454,27 +2467,40 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	 * to wait on real async I/O requests, so we must submit this request
 	 * synchronously.
 	 */
-	if (!is_sync_kiocb(iocb) && (offset + count > i_size) && rw == WRITE)
+	if (!is_sync && (offset + count > i_size) &&
+	    iov_iter_rw(iter) == WRITE)
 		io->async = false;
 
-	if (rw == WRITE)
-		ret = __fuse_direct_write(io, iov, nr_segs, &pos);
-	else
-		ret = __fuse_direct_read(io, iov, nr_segs, &pos, count);
+	if (io->async && is_sync) {
+		/*
+		 * Additional reference to keep io around after
+		 * calling fuse_aio_complete()
+		 */
+		kref_get(&io->refcnt);
+		io->done = &wait;
+	}
+
+	if (iov_iter_rw(iter) == WRITE) {
+		ret = fuse_direct_io(io, iter, &pos, FUSE_DIO_WRITE);
+		fuse_invalidate_attr(inode);
+	} else {
+		ret = __fuse_direct_read(io, iter, &pos);
+	}
 
 	if (io->async) {
 		fuse_aio_complete(io, ret < 0 ? ret : 0, -1);
 
 		/* we have a non-extending, async request, so return */
-		if (!is_sync_kiocb(iocb))
+		if (!is_sync)
 			return -EIOCBQUEUED;
 
-		ret = wait_on_sync_kiocb(iocb);
-	} else {
-		kfree(io);
+		wait_for_completion(&wait);
+		ret = fuse_get_res_by_io(io);
 	}
 
-	if (rw == WRITE) {
+	kref_put(&io->refcnt, fuse_io_release);
+
+	if (iov_iter_rw(iter) == WRITE) {
 		if (ret > 0)
 			fuse_write_update_size(inode, pos);
 		else if (ret < 0 && offset + count > i_size)
