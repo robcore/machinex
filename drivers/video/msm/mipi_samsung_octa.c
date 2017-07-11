@@ -560,11 +560,12 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 
 	return 0;
 }
-static bool first_boot_on;
+
 static int mipi_samsung_disp_on(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 	struct mipi_panel_info *mipi;
+	static int first_boot_on;
 	u32 tmp;
 
 	mfd = platform_get_drvdata(pdev);
@@ -577,7 +578,7 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	if (!first_boot_on) {
 		execute_panel_init(mfd);
-		first_boot_on = true;
+		first_boot_on = 1;
 	}
 
 	if (get_ldi_chip() == LDI_MAGNA) {
@@ -1678,8 +1679,6 @@ static int mipi_samsung_disp_probe(struct platform_device *pdev)
 				dev_attr_auto_brightness.attr.name);
 	}
 #endif
-
-	first_boot_on = false;
 
 #if defined(CONFIG_MDNIE_LITE_TUNING)
 	pr_info("[%s] CONFIG_MDNIE_LITE_TUNING ok ! init class called!\n",
