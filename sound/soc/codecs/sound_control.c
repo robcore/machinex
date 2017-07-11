@@ -23,7 +23,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	0
+#define SOUND_CONTROL_MINOR_VERSION	1
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -106,20 +106,6 @@ int snd_reg_access(unsigned int reg)
 	return ret;
 }
 EXPORT_SYMBOL(snd_reg_access);
-
-static int get_double_checksum(int lval, int rval)
-{
-	int addval, checksum;
-
-	addval = lval + rval;
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-		lval += 256;
-		rval += 256;
-	}
-	return checksum;
-}
 
 static int show_sound_value(int val)
 {
@@ -209,11 +195,23 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 {
 	int val;
 	int addval, checksum;
+	int lval, rval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
+
+	lval = val;
+	rval = val;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -222,7 +220,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, val);
 	snd_ctrl_locked = 1;
 
-	count = get_double_checksum(val, val);
+	count = checksum;
 
 	return count;
 }
@@ -239,11 +237,24 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
+	int addval, checksum;
+	int lval, rval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
+
+	lval = val;
+	rval = val;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -252,7 +263,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, val);
 	snd_ctrl_locked = 1;
 
-	count = get_double_checksum(val, val);
+	count = checksum;
 
 	return count;
 }
