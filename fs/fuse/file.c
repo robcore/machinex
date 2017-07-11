@@ -1102,7 +1102,6 @@ static inline void fuse_page_descs_length_init(struct fuse_req *req)
 static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 			       size_t *nbytesp, int write)
 {
-	//const struct iovec *iov = iov_iter_iovec(ii);
 	struct iovec *iov = (struct iovec *)ii->data;
 	size_t nbytes = *nbytesp;
 	size_t frag_size = min(iov_iter_single_seg_count(ii), nbytes);
@@ -2240,7 +2239,8 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	 * We'll eventually want to work with both iovec and bvec
 	 */
 	BUG_ON(!iov_iter_has_iovec(iter));
-
+	iov = (struct iovec *)ii->data;
+	nr_segs = iter->nr_segs;
 	file = iocb->ki_filp;
 	pos = offset;
 
