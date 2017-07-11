@@ -1106,7 +1106,7 @@ static inline unsigned long fuse_get_user_addr(const struct iov_iter *ii)
 	return (unsigned long)iov->iov_base + ii->iov_offset;
 }
 
-static inline size_t fuse_get_frag_size(const struct iov_iter *ii,
+static inline size_t fuse_get_frag_size(struct iov_iter *ii,
 					size_t max_size)
 {
 	return min(iov_iter_single_seg_count(ii), max_size);
@@ -1117,9 +1117,6 @@ static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 {
 	struct iovec *iov = (struct iovec *)ii->data;
 	size_t nbytes = 0;  /* # bytes already packed in req */
-
-	user_addr = (unsigned long)iov->iov_base + ii->iov_offset;
-	offset = user_addr & ~PAGE_MASK;
 
 	/* Special case for kernel I/O: can copy directly into the buffer */
 	if (segment_eq(get_fs(), KERNEL_DS)) {
