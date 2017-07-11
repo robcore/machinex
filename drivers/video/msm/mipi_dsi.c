@@ -54,7 +54,9 @@
 #endif
 
 struct wake_lock prometheus_rising;
-
+extern void check_prox_value_trig(bool trig);
+extern void set_screen_synaptic_on(void);
+extern void set_screen_synaptic_off(void);
 static bool display_on = true;
 bool is_display_on()
 {
@@ -194,6 +196,8 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	state_suspend();
 #endif
 	display_on = false;
+	set_screen_synaptic_off();
+	check_prox_value_trig(true);
 #ifdef CONFIG_PROMETHEUS
 	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
 	prometheus_panel_beacon(POWER_SUSPEND_ACTIVE);
@@ -481,6 +485,8 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	}
 
 	display_on = true;
+	set_screen_synaptic_on();
+	check_prox_value_trig(false);
 	pr_info("Rob's DSI ON HOOK\n");
 #ifdef CONFIG_PROMETHEUS
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
