@@ -159,15 +159,6 @@ read_block_bitmap(struct super_block *sb, unsigned int block_group)
 	return bh;
 }
 
-static void release_blocks(struct super_block *sb, int count)
-{
-	if (count) {
-		struct ext2_sb_info *sbi = EXT2_SB(sb);
-
-		percpu_counter_add(&sbi->s_freeblocks_counter, count);
-	}
-}
-
 static void group_adjust_blocks(struct super_block *sb, int group_no,
 	struct ext2_group_desc *desc, struct buffer_head *bh, int count)
 {
@@ -568,8 +559,11 @@ do_more:
 	}
 error_return:
 	brelse(bitmap_bh);
-	release_blocks(sb, freed);
-	dquot_free_block_nodirty(inode, freed);
+	if (freed) {
+		percpu_counter_add(&sbi->s_freeblocks_counter, freed);
+		dquot_free_block_nodirty(inode, freed);
+		mark_inode_dirty(inode);
+	}
 }
 
 /**
@@ -1411,9 +1405,11 @@ allocated:
 
 	*errp = 0;
 	brelse(bitmap_bh);
-	dquot_free_block_nodirty(inode, *count-num);
-	mark_inode_dirty(inode);
-	*count = num;
+	if (num < *count) {
+		dquot_free_block_nodirty(inode, *count-num);
+		mark_inode_dirty(inode);
+		*count = num;
+	}
 	return ret_block;
 
 io_error:
