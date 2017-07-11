@@ -21,6 +21,7 @@
 #include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/err.h>
+#include <linux/slab.h>
 
 #include "timed_output.h"
 
@@ -46,9 +47,18 @@ static ssize_t enable_store(
 	if (sscanf(buf, "%d", &value) != 1)
 		return -EINVAL;
 
-	tdev->enable(tdev, value);
+	if (value >= 0)
+		tdev->enable(tdev, value);
 
 	return size;
+}
+
+void machinex_send_vibration(unsigned int value)
+{
+	struct timed_output_dev *tdev = kzalloc(sizeof(*tdev), GFP_KERNEL);
+
+	if (tdev != NULL)
+		tdev->enable(tdev, value);
 }
 
 static DEVICE_ATTR(enable, S_IRUGO | S_IWUSR, enable_show, enable_store);
@@ -94,7 +104,6 @@ err_create_file:
 	device_destroy(timed_output_class, MKDEV(0, tdev->index));
 	pr_err("failed to register driver %s\n",
 			tdev->name);
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(timed_output_dev_register);
