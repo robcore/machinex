@@ -226,7 +226,7 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	pwrkey->key_release_irq = key_release_irq;
 	pwrkey->pwr = pwr;
 
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE_QPNP_PON
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
 	sweep2wake_setdev(pwrkey->pwr);
 	pr_info("[sweep2wake]: set device %s\n", pwrkey->pwr->name);
 #endif
