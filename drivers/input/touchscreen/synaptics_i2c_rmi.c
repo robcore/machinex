@@ -3244,10 +3244,8 @@ static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 			rmi4_data->f01_ctrl_base_addr,
 			&charger_connected,
 			sizeof(charger_connected));
-	if (retval < 0) {
-		pr_debug("rmi-couldn't do the thing");
+	if (retval < 0)
 		return;
-	}
 
 	if (ta_status == 0x01 || ta_status == 0x03)
 		charger_connected |= CHARGER_CONNECTED;
@@ -3272,14 +3270,11 @@ static void synaptics_ta_cb(struct synaptics_rmi_callbacks *cb, int ta_status)
 	rmi4_data->ta_status = ta_status;
 
 	/* if do not completed driver loading, ta_cb will not run. */
-	if (!rmi4_data->init_done.done) {
-		pr_debug("rmi-couldn't do the thing");
+	if (!rmi4_data->init_done.done)
 		return;
-	}
-	if (rmi4_data->touch_stopped || rmi4_data->doing_reflash) {
-		pr_debug("rmi-couldn't do the thing");
+
+	if (rmi4_data->touch_stopped || rmi4_data->doing_reflash)
 		return;
-	}
 
 	synaptics_charger_conn(rmi4_data, ta_status);
 
