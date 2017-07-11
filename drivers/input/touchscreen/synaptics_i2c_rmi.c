@@ -801,12 +801,10 @@ static int synaptics_rmi4_glove_mode_set(struct synaptics_rmi4_data *rmi4_data,
 	int retval = 0;
 	unsigned char glove_enable = 0;
 
-#if !defined(CONFIG_MACH_JACTIVE_EUR) && !defined(CONFIG_MACH_JACTIVE_ATT)
 	if (rmi4_data->panel_revision < OCTA_PANEL_REVISION_43) {
 		pr_debug("rmi-couldn't do the thing");
 		return 0;
 	}
-#endif
 
 	retval = synaptics_rmi4_i2c_read(rmi4_data,
 			rmi4_data->glove_touch_addr,
