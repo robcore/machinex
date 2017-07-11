@@ -212,7 +212,7 @@ static inline int iov_iter_fault_in_readable(struct iov_iter *i, size_t bytes)
 {
 	return i->ops->ii_fault_in_readable(i, bytes);
 }
-static inline size_t iov_iter_single_seg_count(struct iov_iter *i)
+static inline size_t iov_iter_single_seg_count(const struct iov_iter *i)
 {
 	return i->ops->ii_single_seg_count(i);
 }
