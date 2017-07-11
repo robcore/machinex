@@ -2909,7 +2909,7 @@ retry:
 		 * Now inode is being linked into dir (EXT4_DATA_TRANS_BLOCKS
 		 * + EXT4_INDEX_EXTRA_TRANS_BLOCKS), inode is also modified
 		 */
-		handle = ext4_journal_start(dir,
+		handle = ext4_journal_start(dir, EXT4_HT_DIR,
 				EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
 				EXT4_INDEX_EXTRA_TRANS_BLOCKS + 1);
 		if (IS_ERR(handle)) {
@@ -2959,8 +2959,9 @@ static int ext4_link(struct dentry *old_dentry,
 	dquot_initialize(dir);
 
 retry:
-	handle = ext4_journal_start(dir, EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-					EXT4_INDEX_EXTRA_TRANS_BLOCKS);
+	handle = ext4_journal_start(dir, EXT4_HT_DIR,
+		(EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+		 EXT4_INDEX_EXTRA_TRANS_BLOCKS));
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
