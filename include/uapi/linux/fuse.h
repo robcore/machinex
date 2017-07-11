@@ -582,7 +582,7 @@ struct fuse_poll_in {
 	uint64_t	fh;
 	uint64_t	kh;
 	uint32_t	flags;
-	uint32_t   padding;
+	uint32_t	events;
 };
 
 struct fuse_poll_out {
