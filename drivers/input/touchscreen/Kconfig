@@ -1182,4 +1182,21 @@ config TOUCHSCREEN_SWEEP2WAKE
         tristate "Sweep2Wake for touchscreens"
         default n
 
+choice
+	prompt "Sweep2wake power key device?"
+	depends on TOUCHSCREEN_SWEEP2WAKE
+	default n
+	help
+	  This option sets which pwrkey driver sweep2wake should use to emulate
+	  the power key presses. Selecting the wrong one will lead to null
+	  pointer exceptions!
+
+config TOUCHSCREEN_SWEEP2WAKE_PM8XXX
+        bool "Use pm8xxx-power-on to emulate power button presses."
+	help
+	  This uses the pm8xxx driver to register the sweep2wake power key device
+	  used to emulate the power key presses on touch events.
+
+endchoice
+
 endif
