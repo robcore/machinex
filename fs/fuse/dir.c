@@ -14,29 +14,6 @@
 #include <linux/namei.h>
 #include <linux/slab.h>
 
-static bool fuse_use_readdirplus(struct inode *dir, struct file *filp)
-{
-	struct fuse_conn *fc = get_fuse_conn(dir);
-	struct fuse_inode *fi = get_fuse_inode(dir);
-
-	if (!fc->do_readdirplus)
-		return false;
-	if (!fc->readdirplus_auto)
-		return true;
-	if (test_and_clear_bit(FUSE_I_ADVISE_RDPLUS, &fi->state))
-		return true;
-	if (filp->f_pos == 0)
-		return true;
-	return false;
-}
-
-static void fuse_advise_use_readdirplus(struct inode *dir)
-{
-	struct fuse_inode *fi = get_fuse_inode(dir);
-
-	set_bit(FUSE_I_ADVISE_RDPLUS, &fi->state);
-}
-
 #if BITS_PER_LONG >= 64
 static inline void fuse_dentry_settime(struct dentry *entry, u64 time)
 {
@@ -180,8 +157,6 @@ u64 fuse_get_attr_version(struct fuse_conn *fc)
 static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 {
 	struct inode *inode;
-	struct dentry *parent;
-	struct fuse_conn *fc;
 
 	inode = ACCESS_ONCE(entry->d_inode);
 	if (inode && is_bad_inode(inode))
@@ -189,8 +164,10 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 	else if (fuse_dentry_time(entry) < get_jiffies_64()) {
 		int err;
 		struct fuse_entry_out outarg;
+		struct fuse_conn *fc;
 		struct fuse_req *req;
 		struct fuse_forget_link *forget;
+		struct dentry *parent;
 		u64 attr_version;
 
 		/* For negative dentries, always do a fresh lookup */
@@ -241,13 +218,6 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 				       entry_attr_timeout(&outarg),
 				       attr_version);
 		fuse_change_entry_timeout(entry, &outarg);
-	} else if (inode) {
-		fc = get_fuse_conn(inode);
-		if (fc->readdirplus_auto) {
-			parent = dget_parent(entry);
-			fuse_advise_use_readdirplus(parent->d_inode);
-			dput(parent);
-		}
 	}
 	return 1;
 }
@@ -385,7 +355,6 @@ static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry,
 	else
 		fuse_invalidate_entry_cache(entry);
 
-	fuse_advise_use_readdirplus(dir);
 	return newent;
 
  out_iput:
@@ -1023,7 +992,7 @@ int fuse_reverse_inval_entry(struct super_block *sb, u64 parent_nodeid,
 
 /*
  * Calling into a user-controlled filesystem gives the filesystem
- * daemon ptrace-like capabilities over the current process.  This
+ * daemon ptrace-like capabilities over the requester process.  This
  * means, that the filesystem daemon is able to record the exact
  * filesystem operations performed, and can also control the behavior
  * of the requester process in otherwise impossible ways.  For example
@@ -1034,23 +1003,27 @@ int fuse_reverse_inval_entry(struct super_block *sb, u64 parent_nodeid,
  * for which the owner of the mount has ptrace privilege.  This
  * excludes processes started by other users, suid or sgid processes.
  */
-int fuse_allow_current_process(struct fuse_conn *fc)
+int fuse_allow_task(struct fuse_conn *fc, struct task_struct *task)
 {
 	const struct cred *cred;
+	int ret;
 
 	if (fc->flags & FUSE_ALLOW_OTHER)
 		return 1;
 
-	cred = current_cred();
+	rcu_read_lock();
+	ret = 0;
+	cred = __task_cred(task);
 	if (cred->euid == fc->user_id &&
 	    cred->suid == fc->user_id &&
 	    cred->uid  == fc->user_id &&
 	    cred->egid == fc->group_id &&
 	    cred->sgid == fc->group_id &&
 	    cred->gid  == fc->group_id)
-		return 1;
+		ret = 1;
+	rcu_read_unlock();
 
-	return 0;
+	return ret;
 }
 
 static int fuse_access(struct inode *inode, int mask)
@@ -1111,7 +1084,7 @@ static int fuse_permission(struct inode *inode, int mask)
 	bool refreshed = false;
 	int err = 0;
 
-	if (!fuse_allow_current_process(fc))
+	if (!fuse_allow_task(fc, current))
 		return -EACCES;
 
 	/*
@@ -1330,7 +1303,7 @@ static int parse_dirplusfile(char *buf, size_t nbytes, struct file *file,
 
 static int fuse_readdir(struct file *file, void *dstbuf, filldir_t filldir)
 {
-	int plus, err;
+	int err;
 	size_t nbytes;
 	struct page *page;
 	struct inode *inode = file_inode(file);
@@ -1350,13 +1323,11 @@ static int fuse_readdir(struct file *file, void *dstbuf, filldir_t filldir)
 		fuse_put_request(fc, req);
 		return -ENOMEM;
 	}
-
-	plus = fuse_use_readdirplus(inode, file);
 	req->out.argpages = 1;
 	req->num_pages = 1;
 	req->pages[0] = page;
 	req->page_descs[0].length = PAGE_SIZE;
-	if (plus) {
+	if (fc->do_readdirplus) {
 		attr_version = fuse_get_attr_version(fc);
 		fuse_read_fill(req, file, file->f_pos, PAGE_SIZE,
 			       FUSE_READDIRPLUS);
@@ -1369,7 +1340,7 @@ static int fuse_readdir(struct file *file, void *dstbuf, filldir_t filldir)
 	err = req->out.h.error;
 	fuse_put_request(fc, req);
 	if (!err) {
-		if (plus) {
+		if (fc->do_readdirplus) {
 			err = parse_dirplusfile(page_address(page), nbytes,
 						file, dstbuf, filldir,
 						attr_version);
@@ -1570,9 +1541,10 @@ void fuse_release_nowrite(struct inode *inode)
  * vmtruncate() doesn't allow for this case, so do the rlimit checking
  * and the actual truncation by hand.
  */
-int fuse_do_setattr(struct inode *inode, struct iattr *attr,
-		    struct file *file)
+static int fuse_do_setattr(struct dentry *entry, struct iattr *attr,
+			   struct file *file)
 {
+	struct inode *inode = entry->d_inode;
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	struct fuse_inode *fi = get_fuse_inode(inode);
 	struct fuse_req *req;
@@ -1581,6 +1553,9 @@ int fuse_do_setattr(struct inode *inode, struct iattr *attr,
 	bool is_truncate = false;
 	loff_t oldsize;
 	int err;
+
+	if (!fuse_allow_task(fc, current))
+		return -EACCES;
 
 	if (!(fc->flags & FUSE_DEFAULT_PERMISSIONS))
 		attr->ia_valid |= ATTR_FORCE;
@@ -1680,15 +1655,10 @@ error:
 
 static int fuse_setattr(struct dentry *entry, struct iattr *attr)
 {
-	struct inode *inode = entry->d_inode;
-
-	if (!fuse_allow_current_process(get_fuse_conn(inode)))
-		return -EACCES;
-
 	if (attr->ia_valid & ATTR_FILE)
-		return fuse_do_setattr(inode, attr, attr->ia_file);
+		return fuse_do_setattr(entry, attr, attr->ia_file);
 	else
-		return fuse_do_setattr(inode, attr, NULL);
+		return fuse_do_setattr(entry, attr, NULL);
 }
 
 static int fuse_getattr(struct vfsmount *mnt, struct dentry *entry,
@@ -1697,7 +1667,7 @@ static int fuse_getattr(struct vfsmount *mnt, struct dentry *entry,
 	struct inode *inode = entry->d_inode;
 	struct fuse_conn *fc = get_fuse_conn(inode);
 
-	if (!fuse_allow_current_process(fc))
+	if (!fuse_allow_task(fc, current))
 		return -EACCES;
 
 	return fuse_update_attributes(inode, stat, NULL, NULL);
@@ -1802,7 +1772,7 @@ static ssize_t fuse_listxattr(struct dentry *entry, char *list, size_t size)
 	struct fuse_getxattr_out outarg;
 	ssize_t ret;
 
-	if (!fuse_allow_current_process(fc))
+	if (!fuse_allow_task(fc, current))
 		return -EACCES;
 
 	if (fc->no_listxattr)

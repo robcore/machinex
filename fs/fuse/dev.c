@@ -113,7 +113,7 @@ static void restore_sigs(sigset_t *oldset)
 	sigprocmask(SIG_SETMASK, oldset, NULL);
 }
 
-void __fuse_get_request(struct fuse_req *req)
+static void __fuse_get_request(struct fuse_req *req)
 {
 	atomic_inc(&req->count);
 }
@@ -132,30 +132,20 @@ static void fuse_req_init_context(struct fuse_req *req)
 	req->in.h.pid = current->pid;
 }
 
-static bool fuse_block_alloc(struct fuse_conn *fc, bool for_background)
-{
-	return !fc->initialized || (for_background && fc->blocked);
-}
-
-static struct fuse_req *__fuse_get_req(struct fuse_conn *fc, unsigned npages,
-				       bool for_background)
+struct fuse_req *fuse_get_req(struct fuse_conn *fc, unsigned npages)
 {
 	struct fuse_req *req;
+	sigset_t oldset;
+	int intr;
 	int err;
+
 	atomic_inc(&fc->num_waiting);
-
-	if (fuse_block_alloc(fc, for_background)) {
-		sigset_t oldset;
-		int intr;
-
-		block_sigs(&oldset);
-		intr = wait_event_interruptible_exclusive(fc->blocked_waitq,
-				!fuse_block_alloc(fc, for_background));
-		restore_sigs(&oldset);
-		err = -EINTR;
-		if (intr)
-			goto out;
-	}
+	block_sigs(&oldset);
+	intr = wait_event_interruptible(fc->blocked_waitq, !fc->blocked);
+	restore_sigs(&oldset);
+	err = -EINTR;
+	if (intr)
+		goto out;
 
 	err = -ENOTCONN;
 	if (!fc->connected)
@@ -163,34 +153,18 @@ static struct fuse_req *__fuse_get_req(struct fuse_conn *fc, unsigned npages,
 
 	req = fuse_request_alloc(npages);
 	err = -ENOMEM;
-	if (!req) {
-		if (for_background)
-			wake_up(&fc->blocked_waitq);
+	if (!req)
 		goto out;
-	}
 
 	fuse_req_init_context(req);
 	req->waiting = 1;
-	req->background = for_background;
 	return req;
 
  out:
 	atomic_dec(&fc->num_waiting);
 	return ERR_PTR(err);
 }
-
-struct fuse_req *fuse_get_req(struct fuse_conn *fc, unsigned npages)
-{
-	return __fuse_get_req(fc, npages, false);
-}
 EXPORT_SYMBOL_GPL(fuse_get_req);
-
-struct fuse_req *fuse_get_req_for_background(struct fuse_conn *fc,
-					     unsigned npages)
-{
-	return __fuse_get_req(fc, npages, true);
-}
-EXPORT_SYMBOL_GPL(fuse_get_req_for_background);
 
 /*
  * Return request in fuse_file->reserved_req.  However that may
@@ -253,31 +227,19 @@ struct fuse_req *fuse_get_req_nofail_nopages(struct fuse_conn *fc,
 	struct fuse_req *req;
 
 	atomic_inc(&fc->num_waiting);
-	wait_event(fc->blocked_waitq, fc->initialized);
+	wait_event(fc->blocked_waitq, !fc->blocked);
 	req = fuse_request_alloc(0);
 	if (!req)
 		req = get_reserved_req(fc, file);
 
 	fuse_req_init_context(req);
 	req->waiting = 1;
-	req->background = 0;
 	return req;
 }
 
 void fuse_put_request(struct fuse_conn *fc, struct fuse_req *req)
 {
 	if (atomic_dec_and_test(&req->count)) {
-		if (unlikely(req->background)) {
-			/*
-			 * We get here in the unlikely case that a background
-			 * request was allocated but not sent
-			 */
-			spin_lock(&fc->lock);
-			if (!fc->blocked)
-				wake_up(&fc->blocked_waitq);
-			spin_unlock(&fc->lock);
-		}
-
 		if (req->waiting)
 			atomic_dec(&fc->num_waiting);
 
@@ -375,15 +337,10 @@ __releases(fc->lock)
 	list_del(&req->intr_entry);
 	req->state = FUSE_REQ_FINISHED;
 	if (req->background) {
-		req->background = 0;
-
-		if (fc->num_background == fc->max_background)
+		if (fc->num_background == fc->max_background) {
 			fc->blocked = 0;
-
-		/* Wake up next waiter, if any */
-		if (!fc->blocked && waitqueue_active(&fc->blocked_waitq))
-			wake_up(&fc->blocked_waitq);
-
+			wake_up_all(&fc->blocked_waitq);
+		}
 		if (fc->num_background == fc->congestion_threshold &&
 		    fc->connected && fc->bdi_initialized) {
 			clear_bdi_congested(&fc->bdi, BLK_RW_SYNC);
@@ -488,9 +445,9 @@ __acquires(fc->lock)
 	}
 }
 
-static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
+void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
 {
-	BUG_ON(req->background);
+	req->isreply = 1;
 	spin_lock(&fc->lock);
 	if (!fc->connected)
 		req->out.h.error = -ENOTCONN;
@@ -507,18 +464,12 @@ static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
 	}
 	spin_unlock(&fc->lock);
 }
-
-void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
-{
-	req->isreply = 1;
-	__fuse_request_send(fc, req);
-}
 EXPORT_SYMBOL_GPL(fuse_request_send);
 
 static void fuse_request_send_nowait_locked(struct fuse_conn *fc,
 					    struct fuse_req *req)
 {
-	BUG_ON(!req->background);
+	req->background = 1;
 	fc->num_background++;
 	if (fc->num_background == fc->max_background)
 		fc->blocked = 1;
@@ -595,9 +546,7 @@ void fuse_force_forget(struct file *file, u64 nodeid)
 	req->in.args[0].size = sizeof(inarg);
 	req->in.args[0].value = &inarg;
 	req->isreply = 0;
-	__fuse_request_send(fc, req);
-	/* ignore errors */
-	fuse_put_request(fc, req);
+	fuse_request_send_nowait(fc, req);
 }
 
 /*
@@ -2111,7 +2060,6 @@ void fuse_abort_conn(struct fuse_conn *fc)
 	if (fc->connected) {
 		fc->connected = 0;
 		fc->blocked = 0;
-		fc->initialized = 1;
 		end_io_requests(fc);
 		end_queued_requests(fc);
 		end_polls(fc);
@@ -2130,7 +2078,6 @@ int fuse_dev_release(struct inode *inode, struct file *file)
 		spin_lock(&fc->lock);
 		fc->connected = 0;
 		fc->blocked = 0;
-		fc->initialized = 1;
 		end_queued_requests(fc);
 		end_polls(fc);
 		wake_up_all(&fc->blocked_waitq);

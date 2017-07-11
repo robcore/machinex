@@ -60,13 +60,6 @@
  *
  * 7.20
  *  - add FUSE_AUTO_INVAL_DATA
- *
- * 7.21
- *  - add FUSE_READDIRPLUS
- *  - send the requested events in POLL request
- *
- * 7.22
- *  - add FUSE_ASYNC_DIO
  */
 
 #ifndef _UAPI_LINUX_FUSE_H
@@ -98,7 +91,7 @@
 #define FUSE_KERNEL_VERSION 7
 
 /** Minor version number of this interface */
-#define FUSE_KERNEL_MINOR_VERSION 22
+#define FUSE_KERNEL_MINOR_VERSION 20
 
 /** The node ID of the root inode */
 #define FUSE_ROOT_ID 1
@@ -186,9 +179,6 @@ struct fuse_file_lock {
  * FUSE_FLOCK_LOCKS: remote locking for BSD style file locks
  * FUSE_HAS_IOCTL_DIR: kernel supports ioctl on directories
  * FUSE_AUTO_INVAL_DATA: automatically invalidate cached pages
- * FUSE_DO_READDIRPLUS: do READDIRPLUS (READDIR+LOOKUP in one)
- * FUSE_READDIRPLUS_AUTO: adaptive readdirplus
- * FUSE_ASYNC_DIO: asynchronous direct I/O submission
  */
 #define FUSE_ASYNC_READ		(1 << 0)
 #define FUSE_POSIX_LOCKS	(1 << 1)
@@ -204,8 +194,6 @@ struct fuse_file_lock {
 #define FUSE_HAS_IOCTL_DIR	(1 << 11)
 #define FUSE_AUTO_INVAL_DATA	(1 << 12)
 #define FUSE_DO_READDIRPLUS	(1 << 13)
-#define FUSE_READDIRPLUS_AUTO	(1 << 14)
-#define FUSE_ASYNC_DIO		(1 << 15)
 
 /**
  * CUSE INIT request/reply flags
@@ -594,7 +582,7 @@ struct fuse_poll_in {
 	uint64_t	fh;
 	uint64_t	kh;
 	uint32_t	flags;
-	uint32_t	events;
+	uint32_t   padding;
 };
 
 struct fuse_poll_out {
