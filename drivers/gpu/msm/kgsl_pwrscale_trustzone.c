@@ -28,6 +28,7 @@
 #define TZ_GOVERNOR_PERFORMANCE 0
 #define TZ_GOVERNOR_ONDEMAND    1
 #define TZ_GOVERNOR_INTERACTIVE	2
+#define TZ_GOVERNOR_POWERSAVE 3
 
 struct tz_priv {
 	int governor;
@@ -90,6 +91,8 @@ static ssize_t tz_governor_show(struct kgsl_device *device,
 		ret = snprintf(buf, 10, "ondemand\n");
 	else if (priv->governor == TZ_GOVERNOR_INTERACTIVE)
 		ret = snprintf(buf, 13, "interactive\n");
+	else if (priv->governor == TZ_GOVERNOR_POWERSAVE)
+		ret = snprintf(buf, 11, "powersave\n");
 	else
 		ret = snprintf(buf, 13, "performance\n");
 
@@ -107,14 +110,19 @@ static ssize_t tz_governor_store(struct kgsl_device *device,
 
 	if (!strncmp(buf, "ondemand", 8))
 		priv->governor = TZ_GOVERNOR_ONDEMAND;
-        else if (!strncmp(buf, "interactive", 11))
+	else if (!strncmp(buf, "interactive", 11))
 		priv->governor = TZ_GOVERNOR_INTERACTIVE;
+	else if (!strncmp(buf, "powersave", 9))
+		priv->governor = TZ_GOVERNOR_POWERSAVE;
 	else if (!strncmp(buf, "performance", 11))
 		priv->governor = TZ_GOVERNOR_PERFORMANCE;
 
 	if (priv->governor == TZ_GOVERNOR_PERFORMANCE) {
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 		pwr->default_pwrlevel = pwr->max_pwrlevel;
+	} else if (priv->governor == TZ_GOVERNOR_POWERSAVE) {
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
+		pwr->default_pwrlevel = pwr->min_pwrlevel;
 	} else {
 		pwr->default_pwrlevel = pwr->init_pwrlevel;
 	}
@@ -153,7 +161,8 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
-	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
+	if (priv->governor == TZ_GOVERNOR_PERFORMANCE ||
+		priv->governor == TZ_GOVERNOR_POWERSAVE)
 		return;
 
 	device->ftbl->power_stats(device, &stats);
