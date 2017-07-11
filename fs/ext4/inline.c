@@ -543,7 +543,7 @@ static int ext4_convert_inline_data_to_extent(struct address_space *mapping,
 		return ret;
 
 retry:
-	handle = ext4_journal_start(inode, EXT4_HT_WRITE_PAGE, needed_blocks);
+	handle = ext4_journal_start(inode, needed_blocks);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		handle = NULL;
@@ -655,7 +655,7 @@ int ext4_try_to_write_inline_data(struct address_space *mapping,
 	 * The possible write could happen in the inode,
 	 * so try to reserve the space in inode first.
 	 */
-	handle = ext4_journal_start(inode, EXT4_HT_INODE, 1);
+	handle = ext4_journal_start(inode, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		handle = NULL;
@@ -851,7 +851,7 @@ int ext4_da_write_inline_data_begin(struct address_space *mapping,
 	if (ret)
 		return ret;
 
-	handle = ext4_journal_start(inode, EXT4_HT_INODE, 1);
+	handle = ext4_journal_start(inode, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		handle = NULL;
