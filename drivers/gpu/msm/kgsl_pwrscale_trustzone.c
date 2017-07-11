@@ -44,6 +44,9 @@ spinlock_t tz_lock;
 /* FLOOR is 5msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
+#define SWITCH_OFF		200
+#define SWITCH_OFF_RESET_TH	40
+#define SKIP_COUNTER		500
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
@@ -158,6 +161,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
+	int val, idle;
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
@@ -168,60 +172,98 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	device->ftbl->power_stats(device, &stats);
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
+	if (priv->governor == TZ_GOVERNOR_ONDEMAND) {
+		idle = priv->bin.total_time - priv->bin.busy_time;
+		/* Do not waste CPU cycles running this algorithm if
+		 * the GPU just started, or if less than FLOOR time
+		 * has passed since the last run.
+		 */
+		if ((stats.total_time == 0) ||
+			(priv->bin.total_time < floor))
+			return;
 
-	if (stats.total_time == 0 || priv->bin.busy_time < floor)
-		return;
+		/* If the GPU has stayed in turbo mode for a while, *
+		* stop writing out values. */
+		if (pwr->active_pwrlevel == 0) {
+			if (priv->no_switch_cnt > SWITCH_OFF) {
+				priv->skip_cnt++;
+				if (priv->skip_cnt > SKIP_COUNTER) {
+					priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
+					priv->skip_cnt = 0;
+				}
+				return;
+			}
+			priv->no_switch_cnt++;
+		} else {
+			priv->no_switch_cnt = 0;
+		}
 
-	if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24)
-	{
-		stats.busy_time >>= 7;
-		stats.total_time >>= 7;
-	}
+		/* If there is an extended block of busy processing,
+		* increase frequency.  Otherwise run the normal algorithm.
+		*/
+		if (priv->bin.busy_time > ceiling) {
+			val = -1;
+		} else {
+			idle = priv->bin.total_time - priv->bin.busy_time;
+			idle = (idle > 0) ? idle : 0;
+			val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
+		}
+		priv->bin.total_time = 0;
+		priv->bin.busy_time = 0;
+		if (val)
+			kgsl_pwrctrl_pwrlevel_change(device,
+					     pwr->active_pwrlevel + val);
+	} else if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
+		if (stats.total_time == 0 || priv->bin.busy_time < floor)
+			return;
 
-	/*
-	 * If there is an extended block of busy processing,
-	 * increase frequency. Otherwise run the normal algorithm.
-	 */
-	if (priv->bin.busy_time > ceiling)
-	{
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
-		goto clear;
-	}
+		if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24) {
+			stats.busy_time >>= 7;
+			stats.total_time >>= 7;
+		}
 
-	gpu_stats.load = (100 * priv->bin.busy_time);
-	if (priv->bin.total_time > 0)
-		do_div(gpu_stats.load, priv->bin.total_time);
-	else
-		gpu_stats.load = priv->bin.total_time - priv->bin.busy_time;
+		/*
+		 * If there is an extended block of busy processing,
+		 * increase frequency. Otherwise run the normal algorithm.
+		 */
+		if (priv->bin.busy_time > ceiling) {
+			kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+			goto clear;
+		}
 
-	gpu_stats.threshold = up_threshold;
-
-	if (pwr->active_pwrlevel == pwr->min_pwrlevel) {
-		if (pwr->active_pwrlevel > 0)
-			gpu_stats.threshold = up_threshold / pwr->active_pwrlevel;
+		gpu_stats.load = (100 * priv->bin.busy_time);
+		if (priv->bin.total_time > 0)
+			do_div(gpu_stats.load, priv->bin.total_time);
 		else
-			gpu_stats.threshold = pwr->active_pwrlevel + down_threshold;
-	} else if (pwr->active_pwrlevel < pwr->min_pwrlevel &&
-				pwr->active_pwrlevel > pwr->max_pwrlevel) {
-		gpu_stats.threshold = up_threshold - up_differential;
-	}
+			gpu_stats.load = priv->bin.total_time - priv->bin.busy_time;
 
-	if (gpu_stats.load > gpu_stats.threshold) {
+		gpu_stats.threshold = up_threshold;
 
-		if (pwr->active_pwrlevel > pwr->max_pwrlevel)
-			kgsl_pwrctrl_pwrlevel_change(device,
-					     pwr->active_pwrlevel - 1);
+		if (pwr->active_pwrlevel == pwr->min_pwrlevel) {
+			if (pwr->active_pwrlevel > 0)
+				gpu_stats.threshold = up_threshold / pwr->active_pwrlevel;
+			else
+				gpu_stats.threshold = pwr->active_pwrlevel + down_threshold;
+		} else if (pwr->active_pwrlevel < pwr->min_pwrlevel &&
+					pwr->active_pwrlevel > pwr->max_pwrlevel) {
+			gpu_stats.threshold = up_threshold - up_differential;
+		}
 
-	} else if (gpu_stats.load < down_threshold) {
+		if (gpu_stats.load > gpu_stats.threshold) {
 
-		if (pwr->active_pwrlevel < pwr->min_pwrlevel)
-			kgsl_pwrctrl_pwrlevel_change(device,
-					     pwr->active_pwrlevel + 1);
-	}
+			if (pwr->active_pwrlevel > pwr->max_pwrlevel)
+				kgsl_pwrctrl_pwrlevel_change(device,
+						     pwr->active_pwrlevel - 1);
 
+		} else if (gpu_stats.load < down_threshold) {
+			if (pwr->active_pwrlevel < pwr->min_pwrlevel)
+				kgsl_pwrctrl_pwrlevel_change(device,
+						     pwr->active_pwrlevel + 1);
+		}
 clear:
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
+	}
 }
 
 static void tz_busy(struct kgsl_device *device,
