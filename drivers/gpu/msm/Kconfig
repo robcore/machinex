@@ -116,10 +116,3 @@ config MSM_KGSL_SIMPLE_GOV
         depends on MSM_KGSL
         ---help---
           A simple KGSL GPU govenor for Qualcom Adreno XXX devices
-
-config MSM_KGSL_MACHINACTIVE
-        bool "Dynamic GPU gov with multiple modes"
-        default n
-        depends on MSM_KGSL
-        ---help---
-          An extension of the pwrscale interface that is mostly broken.
