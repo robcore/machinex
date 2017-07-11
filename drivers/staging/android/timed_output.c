@@ -57,8 +57,10 @@ void machinex_send_vibration(unsigned int value)
 {
 	struct timed_output_dev *tdev = kzalloc(sizeof(*tdev), GFP_KERNEL);
 
-	if (tdev != NULL)
+	if (tdev != NULL) {
 		tdev->enable(tdev, value);
+		kfree(tdev);
+	}
 }
 
 static DEVICE_ATTR(enable, S_IRUGO | S_IWUSR, enable_show, enable_store);
