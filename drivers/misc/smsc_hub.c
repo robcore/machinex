@@ -340,10 +340,8 @@ static int smsc_hub_lpm_exit(struct device *dev)
 #ifdef CONFIG_PM
 static const struct dev_pm_ops smsc_hub_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(smsc_hub_lpm_enter, smsc_hub_lpm_exit)
-#ifdef CONFIG_PM
 	SET_RUNTIME_PM_OPS(smsc_hub_lpm_enter, smsc_hub_lpm_exit,
 				msm_smsc_runtime_idle)
-#endif
 };
 #endif
 

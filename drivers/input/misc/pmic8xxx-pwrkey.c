@@ -34,6 +34,9 @@
 #define PON_CNTL_PULL_UP BIT(7)
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
 
+extern int poweroff_charging;
+extern bool is_display_on(void);
+
 /**
  * struct pmic8xxx_pwrkey - pmic8xxx pwrkey information
  * @key_press_irq: key press irq number
@@ -49,10 +52,6 @@ struct pmic8xxx_pwrkey {
 	struct wake_lock wake_lock;
 };
 struct wake_lock mx_pwrkey_boost;
-extern void sensorwake_setdev(struct pmic8xxx_pwrkey * input_device);
-extern void screenwake_setdev(struct pmic8xxx_pwrkey * input_device);
-extern int poweroff_charging;
-extern bool is_display_on(void);
 
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
@@ -194,10 +193,7 @@ static int pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	pwr->name = "pmic8xxx_pwrkey";
 	pwr->phys = "pmic8xxx_pwrkey/input0";
 	pwr->dev.parent = &pdev->dev;
-	
-	screenwake_setdev(pwrkey);
-	sensorwake_setdev(pwrkey);
-	
+
 	delay = (pdata->kpd_trigger_delay_us << 6) / USEC_PER_SEC;
 	delay = ilog2(delay);
 

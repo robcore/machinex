@@ -16,10 +16,6 @@
 
 #define LIMIT_DELAY_CNT		200
 
-extern void set_call_in_progress(bool state);
-extern void set_call_in_progress_prox(bool state);
-extern void set_call_in_progress_scrn(bool state);
-
 int waiting_wakeup_mcu(struct ssp_data *data)
 {
 	int iDelaycnt = 0;
@@ -222,20 +218,6 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 			data->uInstFailCnt++;
 			return FAIL;
 		}
-	}
-
-	//On a call/not on a call hook
-	if (uInst == ADD_SENSOR && uSensorType == PROXIMITY_SENSOR)
-	{
-		set_call_in_progress(true); //pr_alert("KT ON CALL ENABLE: %d-%d\n", uInst, uSensorType);
-		set_call_in_progress_prox(true);
-		set_call_in_progress_scrn(true);
-	}
-	else if (uInst == REMOVE_SENSOR && uSensorType == PROXIMITY_SENSOR)
-	{
-		set_call_in_progress(false); //pr_alert("KT ON CALL DISABLE: %d-%d\n", uInst, uSensorType);
-		set_call_in_progress_prox(false);
-		set_call_in_progress_scrn(false);
 	}
 
 	data->uInstFailCnt = 0;

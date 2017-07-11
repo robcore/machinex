@@ -204,7 +204,6 @@ int led_slope_down_2;
 /*path : /sys/class/leds/led_g/brightness*/
 /*path : /sys/class/leds/led_b/brightness*/
 #endif
-extern void notif_wakelock_forwake_funcs(bool state);
 
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 					u8 ledcc);
@@ -381,10 +380,8 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 
 	if (brightness == LED_OFF) {
 		leds_on(led, false, false, brightness);
-		notif_wakelock_forwake_funcs(false);
 		return;
-	} else
-		notif_wakelock_forwake_funcs(true);
+	}
 
 	if (brightness > LED_MAX_CURRENT)
 		brightness = LED_MAX_CURRENT;
@@ -448,14 +445,6 @@ static void an30259a_start_led_pattern(int mode)
 	if (mode > BOOTING)
 		return;
 */
-
-
-	if (mode == LED_OFF || mode == POWERING ||
-		mode == BOOTING)
-		notif_wakelock_forwake_funcs(false);
-	else
-		notif_wakelock_forwake_funcs(true);
-
 	if(disabled_samsung_pattern) {
 		return;
 	}
@@ -609,7 +598,6 @@ static void an30259a_start_led_pattern(int mode)
 		return;
 		break;
 	}
-
 	retval = leds_i2c_write_all(client);
 	if (retval)
 		pr_warn("leds_i2c_write_all failed\n");
