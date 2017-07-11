@@ -1102,13 +1102,14 @@ static inline void fuse_page_descs_length_init(struct fuse_req *req)
 static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 			       size_t *nbytesp, int write)
 {
+	const struct iovec *iov = iov_iter_iovec(ii);
 	size_t nbytes = *nbytesp;
 	size_t frag_size = min(iov_iter_single_seg_count(ii), nbytes);
 	unsigned long user_addr;
 	unsigned offset;
 	int npages;
 
-	user_addr = (unsigned long)ii->iov->iov_base + ii->iov_offset;
+	user_addr = (unsigned long)iov->iov_base + ii->iov_offset;
 	offset = user_addr & ~PAGE_MASK;
 
 	/* Special case for kernel I/O: can copy directly into the buffer */
@@ -2231,6 +2232,8 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	ssize_t ret = 0;
 	struct file *file = NULL;
 	loff_t pos = 0;
+	struct iovec *iov;
+	unsigned long nr_segs;
 
 	/*
 	 * We'll eventually want to work with both iovec and bvec
