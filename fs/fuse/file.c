@@ -2239,7 +2239,7 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	 * We'll eventually want to work with both iovec and bvec
 	 */
 	BUG_ON(!iov_iter_has_iovec(iter));
-	iov = (struct iovec *)ii->data;
+	iov = (struct iovec *)iter->data;
 	nr_segs = iter->nr_segs;
 	file = iocb->ki_filp;
 	pos = offset;
