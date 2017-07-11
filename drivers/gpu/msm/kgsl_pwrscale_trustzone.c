@@ -51,7 +51,7 @@ static unsigned int ceiling = 50000;
 static unsigned int floor = 15000;
 unsigned int up_threshold = 55;
 unsigned int down_threshold = 25;
-unsigned int up_differential = 10;
+unsigned int up_differential = 5;
 bool debug = 0;
 
 module_param(up_threshold, uint, 0664);
