@@ -49,7 +49,7 @@ spinlock_t tz_lock;
 
 static unsigned int ceiling = 50000;
 static unsigned int floor = 15000;
-unsigned int up_threshold = 50;
+unsigned int up_threshold = 55;
 unsigned int down_threshold = 25;
 unsigned int up_differential = 10;
 bool debug = 0;
