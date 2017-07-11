@@ -1102,7 +1102,8 @@ static inline void fuse_page_descs_length_init(struct fuse_req *req)
 static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 			       size_t *nbytesp, int write)
 {
-	const struct iovec *iov = iov_iter_iovec(ii);
+	//const struct iovec *iov = iov_iter_iovec(ii);
+	struct iovec *iov = (struct iovec *)ii->data;
 	size_t nbytes = *nbytesp;
 	size_t frag_size = min(iov_iter_single_seg_count(ii), nbytes);
 	unsigned long user_addr;
