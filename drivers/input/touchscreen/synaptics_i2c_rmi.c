@@ -27,6 +27,9 @@
 #include <linux/powersuspend.h>
 #endif
 #include "synaptics_i2c_rmi.h"
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
 
