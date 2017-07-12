@@ -318,7 +318,7 @@ static struct attribute *prometheus_attrs[] =
 	NULL,
 };
 
-static struct attribute_group prometheus_attr_group =
+static const struct attribute_group prometheus_attr_group =
 {
 	.attrs = prometheus_attrs,
 };

@@ -415,7 +415,7 @@ static struct attribute *sound_control_attrs[] =
 	NULL,
 };
 
-static struct attribute_group sound_control_attr_group =
+static const struct attribute_group sound_control_attr_group =
 {
 	.attrs = sound_control_attrs,
 };

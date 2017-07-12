@@ -626,7 +626,7 @@ static struct attribute *msm_l1_ev_formats[] = {
  * Format group is essential to access PMU's from userspace
  * via their .name field.
  */
-static struct attribute_group msm_pmu_format_group = {
+static const struct attribute_group msm_pmu_format_group = {
 	.name = "format",
 	.attrs = msm_l1_ev_formats,
 };
