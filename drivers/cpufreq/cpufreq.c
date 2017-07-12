@@ -1292,7 +1292,7 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	struct freq_attr *fattr = to_attr(attr);
 	ssize_t ret = -EINVAL;
 
-	cpus_read_lock();
+	get_online_cpus();
 
 	if (cpu_online(policy->cpu)) {
 		down_write(&policy->rwsem);
@@ -1300,7 +1300,7 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 		up_write(&policy->rwsem);
 	}
 
-	cpus_read_unlock();
+	put_online_cpus();
 
 	return ret;
 }
@@ -2899,7 +2899,7 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	pr_debug("trying to register driver %s\n", driver_data->name);
 
 	/* Protect against concurrent CPU online/offline. */
-	cpus_read_lock();
+	get_online_cpus();
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 	if (cpufreq_driver) {
@@ -2932,10 +2932,9 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 		goto err_if_unreg;
 	}
 
-	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_AP_ONLINE_DYN,
-						   "cpufreq:online",
-						   cpuhp_cpufreq_online,
-						   cpuhp_cpufreq_offline);
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "cpufreq:online",
+					cpuhp_cpufreq_online,
+					cpuhp_cpufreq_offline);
 	if (ret < 0)
 		goto err_if_unreg;
 	hp_online = ret;
@@ -2957,7 +2956,7 @@ err_null_driver:
 	cpufreq_driver = NULL;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 out:
-	cpus_read_unlock();
+	put_online_cpus();
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);
@@ -2980,10 +2979,10 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 	pr_debug("unregistering driver %s\n", driver->name);
 
 	/* Protect against concurrent cpu hotplug */
-	cpus_read_lock();
+	get_online_cpus();
 	subsys_interface_unregister(&cpufreq_interface);
 	remove_boost_sysfs_file();
-	cpuhp_remove_state_nocalls_cpuslocked(hp_online);
+	cpuhp_remove_state_nocalls(hp_online);
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
 #endif
@@ -2993,7 +2992,7 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 	cpufreq_driver = NULL;
 
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-	cpus_read_unlock();
+	put_online_cpus();
 
 	return 0;
 }
