@@ -237,7 +237,7 @@ static struct attribute * kernel_attrs[] = {
 	NULL
 };
 
-static struct attribute_group kernel_attr_group = {
+static const struct attribute_group kernel_attr_group = {
 	.attrs = kernel_attrs,
 };
 
