@@ -1817,7 +1817,7 @@ static struct attribute *cpuhp_cpu_attrs[] = {
 	NULL
 };
 
-static struct attribute_group cpuhp_cpu_attr_group = {
+static const struct attribute_group cpuhp_cpu_attr_group = {
 	.attrs = cpuhp_cpu_attrs,
 	.name = "hotplug",
 	NULL
@@ -1849,7 +1849,7 @@ static struct attribute *cpuhp_cpu_root_attrs[] = {
 	NULL
 };
 
-static struct attribute_group cpuhp_cpu_root_attr_group = {
+static const struct attribute_group cpuhp_cpu_root_attr_group = {
 	.attrs = cpuhp_cpu_root_attrs,
 	.name = "hotplug",
 	NULL
