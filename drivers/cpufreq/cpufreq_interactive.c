@@ -449,7 +449,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	if (is_screen_on())
+	if (is_display_on())
 		mod_delayed_work(interactive_wq, &speedchange_task_work, 0);
 	return;
 
