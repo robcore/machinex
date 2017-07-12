@@ -66,7 +66,7 @@ struct interactive_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (20 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 
 	/* The sample rate of the timer used to increase frequency */
@@ -145,7 +145,7 @@ static spinlock_t speedchange_cpumask_lock;
 #define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_SAMPLING_RATE (10 * USEC_PER_MSEC)
+#define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY
@@ -448,8 +448,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-	if (!frozen(speedchange_task))
-		wake_up_process(speedchange_task);
+
+	wake_up_process(speedchange_task);
 	return;
 
 exit:
@@ -547,7 +547,7 @@ again:
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		schedule();
+		schedule_timeout(msecs_to_jiffies(40));
 
 		if (kthread_should_stop())
 			return 0;
@@ -621,7 +621,7 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
-	if (wakeup && !frozen(speedchange_task))
+	if (wakeup)
 		wake_up_process(speedchange_task);
 }
 
