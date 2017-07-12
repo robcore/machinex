@@ -560,7 +560,7 @@ static void __ref speedchange_task(struct work_struct *work)
 		up_read(&icpu->enable_sem);
 	}
 	if (is_display_on())
-		mod_delayed_work(interactive_wq, &speedchange_task_work, msecs_to_jiffies(min_sample_time));
+		mod_delayed_work(interactive_wq, &speedchange_task_work, msecs_to_jiffies(tunables->sampling_rate));
 }
 
 static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
