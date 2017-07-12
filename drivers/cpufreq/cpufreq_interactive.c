@@ -540,16 +540,22 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	struct cpufreq_policy *policy;
 
 	if (data == NULL)
-		return -ENOMEM;
+		return 0;
 again:
+	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
-	__set_current_state(TASK_INTERRUPTIBLE);
 
 	if (cpumask_empty(&speedchange_cpumask)) {
+		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 		schedule_timeout(msecs_to_jiffies(40));
+
+		if (kthread_should_stop())
+			return 0;
+
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	}
 
-	__set_current_state(TASK_RUNNING);
+	set_current_state(TASK_RUNNING);
 	tmp_mask = speedchange_cpumask;
 	cpumask_clear(&speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
@@ -558,12 +564,9 @@ again:
 		icpu = &per_cpu(interactive_cpu, cpu);
 		if (icpu != NULL)
 			policy = icpu->ipolicy->policy;
-		else
-			return -ENOMEM;
 
 		if (policy == NULL)
-			return -ENOMEM;
-
+			return 0;
 		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
 			continue;
 
@@ -573,10 +576,7 @@ again:
 		up_read(&icpu->enable_sem);
 	}
 
-	if (!kthread_should_stop())
-		goto again;
-	else
-		return 0;
+	goto again;
 }
 
 static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
