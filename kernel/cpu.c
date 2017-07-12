@@ -1592,7 +1592,7 @@ unlock:
 EXPORT_SYMBOL_GPL(__cpuhp_state_add_instance);
 
 /**
- * __cpuhp_setup_state - Setup the callbacks for an hotplug machine state
+ * __cpuhp_setup_state_cpuslocked - Setup the callbacks for an hotplug machine state
  * @state:		The state to setup
  * @invoke:		If true, the startup function is invoked for cpus where
  *			cpu state >= @state
@@ -1607,14 +1607,16 @@ EXPORT_SYMBOL_GPL(__cpuhp_state_add_instance);
  *      0 for all other states
  *   On failure: proper (negative) error code
  */
-int __cpuhp_setup_state(enum cpuhp_state state,
-			const char *name, bool invoke,
-			int (*startup)(unsigned int cpu),
-			int (*teardown)(unsigned int cpu),
-			bool multi_instance)
+int __cpuhp_setup_state_cpuslocked(enum cpuhp_state state,
+				   const char *name, bool invoke,
+				   int (*startup)(unsigned int cpu),
+				   int (*teardown)(unsigned int cpu),
+				   bool multi_instance)
 {
 	int cpu, ret = 0;
 	bool dynstate;
+
+	lockdep_assert_cpus_held();
 
 	if (cpuhp_cb_check(state) || !name)
 		return -EINVAL;
@@ -1662,6 +1664,22 @@ out:
 	 */
 	if (!ret && dynstate)
 		return state;
+	return ret;
+}
+EXPORT_SYMBOL(__cpuhp_setup_state_cpuslocked);
+
+int __cpuhp_setup_state(enum cpuhp_state state,
+			const char *name, bool invoke,
+			int (*startup)(unsigned int cpu),
+			int (*teardown)(unsigned int cpu),
+			bool multi_instance)
+{
+	int ret;
+
+	cpus_read_lock();
+	ret = __cpuhp_setup_state_cpuslocked(state, name, invoke, startup,
+					     teardown, multi_instance);
+	cpus_read_unlock();
 	return ret;
 }
 EXPORT_SYMBOL(__cpuhp_setup_state);
