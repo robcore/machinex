@@ -31,7 +31,7 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/freezer.h>
+#include <linux/display_state.h>
 
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
@@ -136,7 +136,8 @@ struct interactive_cpu {
 static DEFINE_PER_CPU(struct interactive_cpu, interactive_cpu);
 
 /* Realtime thread handles frequency scaling */
-static struct task_struct *speedchange_task;
+static struct delayed_work speedchange_task_work;
+static struct workqueue_struct *interactive_wq;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
@@ -448,7 +449,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	wake_up_process(speedchange_task);
+	if (is_screen_on())
+		mod_delayed_work(interactive_wq, &speedchange_task_work, 0);
 	return;
 
 exit:
@@ -530,27 +532,17 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	}
 }
 
-static int cpufreq_interactive_speedchange_task(void *data)
+static void __ref speedchange_task(struct work_struct *work)
 {
 	unsigned int cpu;
 	cpumask_t tmp_mask;
 	unsigned long flags;
 
-again:
-	set_current_state(TASK_INTERRUPTIBLE);
+	if (!is_display_on())
+		return;
+
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
-	if (cpumask_empty(&speedchange_cpumask)) {
-		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		freezable_schedule();
-
-		if (kthread_should_stop())
-			return 0;
-
-		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
-	}
-
-	set_current_state(TASK_RUNNING);
 	tmp_mask = speedchange_cpumask;
 	cpumask_clear(&speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
@@ -567,8 +559,8 @@ again:
 
 		up_read(&icpu->enable_sem);
 	}
-
-	goto again;
+	if (is_display_on())
+		mod_delayed_work(interactive_wq, &speedchange_task_work, msecs_to_jiffies(min_sample_time));
 }
 
 static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
@@ -613,8 +605,8 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
-	if (wakeup)
-		wake_up_process(speedchange_task);
+	if (wakeup && is_display_on())
+		mod_delayed_work(interactive_wq, &speedchange_task_work, 0);
 }
 
 static int cpufreq_interactive_notifier(struct notifier_block *nb,
@@ -1356,16 +1348,11 @@ static int __init cpufreq_interactive_gov_init(void)
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
-	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
-					  NULL, "cfinteractive");
-	if (IS_ERR(speedchange_task))
-		return PTR_ERR(speedchange_task);
+	interactive_wq = create_singlethread_workqueue("interactive");
 
-	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
-	get_task_struct(speedchange_task);
-
-	/* wake up so the thread does not look hung to the freezer */
-	wake_up_process(speedchange_task);
+	INIT_DELAYED_WORK(&speedchange_task_work, speedchange_task);
+		queue_delayed_work(interactive_wq,
+				   &speedchange_task_work, 0);
 
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
@@ -1384,8 +1371,8 @@ module_init(cpufreq_interactive_gov_init);
 static void __exit cpufreq_interactive_gov_exit(void)
 {
 	cpufreq_unregister_governor(CPU_FREQ_GOV_INTERACTIVE);
-	kthread_stop(speedchange_task);
-	put_task_struct(speedchange_task);
+	cancel_delayed_work_sync(&speedchange_task_work);
+	destroy_workqueue(interactive_wq);
 }
 module_exit(cpufreq_interactive_gov_exit);
 
