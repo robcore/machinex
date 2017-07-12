@@ -537,6 +537,8 @@ static void __ref speedchange_task(struct work_struct *work)
 	unsigned int cpu;
 	cpumask_t tmp_mask;
 	unsigned long flags;
+	struct interactive_policy *ipolicy;
+	struct interactive_tunables *tunables;
 
 	if (!is_display_on())
 		return;
@@ -559,6 +561,7 @@ static void __ref speedchange_task(struct work_struct *work)
 
 		up_read(&icpu->enable_sem);
 	}
+	tunables = ipolicy->tunables;
 	if (is_display_on())
 		mod_delayed_work(interactive_wq, &speedchange_task_work, msecs_to_jiffies(tunables->sampling_rate));
 }
