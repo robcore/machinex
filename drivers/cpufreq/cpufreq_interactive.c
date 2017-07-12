@@ -32,6 +32,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/freezer.h>
+#include <linux/display_state.h>
 
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
@@ -1112,7 +1113,8 @@ interactive_policy_alloc(struct cpufreq_policy *policy)
 
 static void interactive_policy_free(struct interactive_policy *ipolicy)
 {
-	kfree(ipolicy);
+	if (ipolicy)
+		kfree(ipolicy);
 }
 
 static struct interactive_tunables *
