@@ -148,3 +148,5 @@ sound/soc/codecs/sound_control5.c
 drivers/tty/vt/defkeymap.c
 drivers/tty/vt/consolemap_deftbl.c
 vmlinux
+s2w1.txt
+s2w2.txt
