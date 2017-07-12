@@ -1140,7 +1140,8 @@ static void interactive_tunables_free(struct interactive_tunables *tunables)
 	if (!have_governor_per_policy())
 		global_tunables = NULL;
 
-	kfree(tunables);
+	if (tunables)
+		kfree(tunables);
 }
 
 int cpufreq_interactive_init(struct cpufreq_policy *policy)
