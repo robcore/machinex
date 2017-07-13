@@ -3545,7 +3545,9 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 		pr_debug("rmi-couldn't do the thing");
 		goto err_enable_irq;
 	}
-
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	enable_irq_wake(rmi4_data->i2c_client->irq);
+#endif
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		retval = sysfs_create_file(&rmi4_data->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
@@ -3835,25 +3837,30 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
 	struct synaptics_rmi4_data *rmi4_data =
 			container_of(h, struct synaptics_rmi4_data,
 			power_suspend);
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		if (s2w_switch == 0) {
+#endif
+		if (rmi4_data->stay_awake) {
+			rmi4_data->staying_awake = true;
+			return;
+		} else {
+			rmi4_data->staying_awake = false;
+		}
 
-	if (rmi4_data->stay_awake) {
-		rmi4_data->staying_awake = true;
-		return;
-	} else {
-		rmi4_data->staying_awake = false;
+		if (!rmi4_data->touch_stopped) {
+			pr_debug("rmi-couldn't do the thing");
+
+			disable_irq(rmi4_data->i2c_client->irq);
+			rmi4_data->board->power(false);
+			rmi4_data->touch_stopped = true;
+
+			gpio_free(rmi4_data->board->gpio);
+			/* release all finger when entered suspend */
+			synaptics_rmi4_release_all_finger(rmi4_data);
+		}
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
 	}
-
-	if (!rmi4_data->touch_stopped) {
-		pr_debug("rmi-couldn't do the thing");
-
-		disable_irq(rmi4_data->i2c_client->irq);
-		rmi4_data->board->power(false);
-		rmi4_data->touch_stopped = true;
-
-		gpio_free(rmi4_data->board->gpio);
-		/* release all finger when entered suspend */
-		synaptics_rmi4_release_all_finger(rmi4_data);
-	}
+#endif
 }
 
  /**
@@ -3871,53 +3878,58 @@ static void synaptics_rmi4_power_resume(struct power_suspend *h)
 			container_of(h, struct synaptics_rmi4_data,
 			power_suspend);
 	int retval;
-
-	if (rmi4_data->staying_awake)
-		return;
-
-	if (rmi4_data->touch_stopped) {
-		pr_debug("rmi-couldn't do the thing");
-
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
-		rmi4_data->board->hsync_onoff(false);
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		if (s2w_switch == 0) {
 #endif
-		rmi4_data->board->power(true);
-		rmi4_data->touch_stopped = false;
-		rmi4_data->current_page = MASK_8BIT;
+		if (rmi4_data->staying_awake)
+			return;
 
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
-		rmi4_data->board->hsync_onoff(true);
-#endif
-		retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
-		if (retval != 0) {
+		if (rmi4_data->touch_stopped) {
 			pr_debug("rmi-couldn't do the thing");
-			return ;
-		}
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
+			rmi4_data->board->hsync_onoff(false);
+#endif
+			rmi4_data->board->power(true);
+			rmi4_data->touch_stopped = false;
+			rmi4_data->current_page = MASK_8BIT;
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
+			rmi4_data->board->hsync_onoff(true);
+#endif
+			retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
+			if (retval != 0) {
+				pr_debug("rmi-couldn't do the thing");
+				return ;
+			}
 #ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
-		retval = synaptics_rmi4_query_device(rmi4_data);
-		if (retval < 0)
-			pr_debug("rmi-couldn't do the thing");
-		retval = synaptics_rmi4_open_lcd_ldi(rmi4_data);
-		if (retval < 0)
-			pr_debug("rmi-couldn't do the thing");
+			retval = synaptics_rmi4_query_device(rmi4_data);
+			if (retval < 0)
+				pr_debug("rmi-couldn't do the thing");
+			retval = synaptics_rmi4_open_lcd_ldi(rmi4_data);
+			if (retval < 0)
+				pr_debug("rmi-couldn't do the thing");
 
 #else
-		retval = synaptics_rmi4_reinit_device(rmi4_data);
-		if (retval < 0) {
-			pr_debug("rmi-couldn't do the thing");
-		}
+			retval = synaptics_rmi4_reinit_device(rmi4_data);
+			if (retval < 0) {
+				pr_debug("rmi-couldn't do the thing");
+			}
 #endif
-		if (rmi4_data->ta_status)
-			synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
+			if (rmi4_data->ta_status)
+				synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
 
-		enable_irq(rmi4_data->i2c_client->irq);
-	}
+			enable_irq(rmi4_data->i2c_client->irq);
+		}
 #ifdef CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL
-	retval = rmi4_data->board->tout1_on();
-	if (retval)
-		pr_debug("rmi-couldn't do the thing");
+		retval = rmi4_data->board->tout1_on();
+		if (retval)
+			pr_debug("rmi-couldn't do the thing");
 #endif
-	return;
+		return;
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	}
+#endif
 }
 #else
 
