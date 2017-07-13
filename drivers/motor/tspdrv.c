@@ -327,6 +327,25 @@ int vibetonz_clk_off(struct device *dev)
 }
 #endif	/* VIBE_ENABLE_SYSTEM_TIMER */
 
+void machinex_vibrator(int timeout)
+{
+	hrtimer_cancel(&timer);
+
+	/* set_vibetonz(value); */
+	vibrator_work = timeout;
+	schedule_work(&vibetonz_work);
+
+	if (timeout > 0){
+		if (timeout > max_timeout)
+			timeout = max_timeout;
+
+		hrtimer_start(&timer,
+			ktime_set(timeout / 1000, (timeout % 1000) * 1000000),
+			HRTIMER_MODE_REL);
+		vibrator_value = timeout;
+	}
+}
+
 static void tspdrv_power_suspend(struct power_suspend *h)
 {
 }
