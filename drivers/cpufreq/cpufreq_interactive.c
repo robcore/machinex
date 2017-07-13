@@ -31,8 +31,7 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/freezer.h>
-#include <linux/powersuspend.h>
+#include <linux/display_state.h>
 
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
@@ -136,14 +135,10 @@ struct interactive_cpu {
 
 static DEFINE_PER_CPU(struct interactive_cpu, interactive_cpu);
 
-/* WQ for speedchange task */
-static struct workqueue_struct *interactive_wq;
-static struct delayed_work speedchange_task_work;
-static struct delayed_work speedchange_schedule_work;
+/* Realtime thread handles frequency scaling */
+static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
-struct mutex interactive_suspend_mutex;
-static bool interactive_suspended;
 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 90
@@ -273,6 +268,8 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	unsigned int freq = policy->cur;
 	int index;
 
+	if (!is_display_on())
+		return -EFAULT;
 	do {
 		prevfreq = freq;
 		tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
@@ -372,14 +369,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	int cpu_load;
 	int cpu = smp_processor_id();
 
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
+	if (!is_display_on())
 		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, smp_processor_id());
@@ -462,7 +453,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	mod_delayed_work(interactive_wq, &speedchange_schedule_work, 0);
+	wake_up_process(speedchange_task);
 	return;
 
 exit:
@@ -471,15 +462,7 @@ exit:
 
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
-	if (!icpu)
+	if (!is_display_on())
 		return;
 
 	eval_target_freq(icpu);
@@ -517,9 +500,6 @@ static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
 	for_each_cpu(i, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, i);
 
-		if (!icpu)
-			return;
-
 		fvt = max(fvt, icpu->loc_floor_val_time);
 		if (icpu->target_freq > max_freq) {
 			max_freq = icpu->target_freq;
@@ -542,18 +522,6 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	unsigned int max_freq;
 	int i;
 
-	if (!policy)
-		return;
-
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
-
 	cpufreq_interactive_get_policy_info(policy, &max_freq, &hvt, &fvt);
 
 	for_each_cpu(i, policy->cpus) {
@@ -569,47 +537,40 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 		}
 	}
 }
-static void __ref speedchange_schedule(struct work_struct *work)
-{
-	mutex_lock(&interactive_suspend_mutex);
 
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
-
-	mod_delayed_work(interactive_wq, &speedchange_task_work, 0);
-}
-
-static void __ref speedchange_task(struct work_struct *work)
+static int cpufreq_interactive_speedchange_task(void *data)
 {
 	unsigned int cpu;
 	cpumask_t tmp_mask;
 	unsigned long flags;
-	struct interactive_cpu *icpu;
-	struct cpufreq_policy *policy;
+again:
+	if (!is_display_on())
+		return -EFAULT;
 
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
-
+	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		goto reschedule;
+		schedule();
+
+		if (kthread_should_stop())
+			return 0;
+
+		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	}
+
+	set_current_state(TASK_RUNNING);
 	tmp_mask = speedchange_cpumask;
 	cpumask_clear(&speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
 	for_each_cpu(cpu, &tmp_mask) {
+	if (interactive_cpu == NULL)
+		return 0;
+	struct interactive_cpu *icpu;
+	struct cpufreq_policy *policy;
+
 		icpu = &per_cpu(interactive_cpu, cpu);
 		if (icpu == NULL)
 			continue;
@@ -627,8 +588,8 @@ static void __ref speedchange_task(struct work_struct *work)
 
 		up_read(&icpu->enable_sem);
 	}
-reschedule:
-	mod_delayed_work(interactive_wq, &speedchange_schedule_work, 0);
+
+	goto again;
 }
 
 static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
@@ -674,15 +635,8 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
 	if (wakeup) {
-		mutex_lock(&interactive_suspend_mutex);
-
-		if (interactive_suspended) {
-			mutex_unlock(&interactive_suspend_mutex);
-			return;
-		}
-		mutex_unlock(&interactive_suspend_mutex);
-
-		mod_delayed_work(interactive_wq, &speedchange_schedule_work, 0);
+		if (is_display_on())
+			wake_up_process(speedchange_task);
 	}
 }
 
@@ -692,18 +646,11 @@ static int cpufreq_interactive_notifier(struct notifier_block *nb,
 	struct cpufreq_freqs *freq = data;
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu, freq->cpu);
 	unsigned long flags;
+	if (!is_display_on())
+		return -EFAULT;
 
 	if (val != CPUFREQ_POSTCHANGE)
 		return 0;
-
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return 0;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
 
 	if (!down_read_trylock(&icpu->enable_sem))
 		return 0;
@@ -1113,15 +1060,6 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 	struct interactive_tunables *tunables = ipolicy->tunables;
 	u64 delta_ns;
 
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
-
 	/*
 	 * The irq-work may not be allowed to be queued up right now.
 	 * Possible reasons:
@@ -1149,15 +1087,6 @@ static void gov_set_update_util(struct interactive_policy *ipolicy)
 	struct interactive_cpu *icpu;
 	int cpu;
 
-	mutex_lock(&interactive_suspend_mutex);
-
-	if (interactive_suspended) {
-		mutex_unlock(&interactive_suspend_mutex);
-		return;
-	}
-	mutex_unlock(&interactive_suspend_mutex);
-
-
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
 
@@ -1174,6 +1103,8 @@ static inline void gov_clear_update_util(struct cpufreq_policy *policy)
 
 	for_each_cpu(i, policy->cpus)
 		cpufreq_remove_update_util_hook(i);
+	if (is_display_on())
+		synchronize_sched();
 }
 
 static void icpu_cancel_work(struct interactive_cpu *icpu)
@@ -1282,10 +1213,6 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	spin_lock_init(&tunables->target_loads_lock);
 	spin_lock_init(&tunables->above_hispeed_delay_lock);
 
-	interactive_wq = create_singlethread_workqueue("interactive");
-	INIT_DELAYED_WORK(&speedchange_schedule_work, speedchange_schedule);
-	INIT_DELAYED_WORK(&speedchange_task_work, speedchange_task);
-
 	policy->governor_data = ipolicy;
 
 	ret = kobject_init_and_add(&tunables->attr_set.kobj,
@@ -1340,10 +1267,6 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 		interactive_tunables_free(tunables);
 
 	mutex_unlock(&global_tunables_lock);
-
-	cancel_delayed_work_sync(&speedchange_schedule_work);
-	cancel_delayed_work_sync(&speedchange_task_work);
-	destroy_workqueue(interactive_wq);
 
 	interactive_policy_free(ipolicy);
 }
@@ -1440,24 +1363,6 @@ static void cpufreq_interactive_nop_timer(unsigned long data)
 	 */
 }
 
-static void interactive_power_suspend(struct power_suspend *h)
-{
-	mutex_lock(&interactive_suspend_mutex);
-	interactive_suspended = true;
-	mutex_unlock(&interactive_suspend_mutex);
-}
-
-static void interactive_power_resume(struct power_suspend *h)
-{
-	interactive_suspended = false;
-}
-
-static struct power_suspend interactive_suspend_data =
-{
-	.suspend = interactive_power_suspend,
-	.resume = interactive_power_resume,
-};
-
 static int __init cpufreq_interactive_gov_init(void)
 {
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
@@ -1478,8 +1383,16 @@ static int __init cpufreq_interactive_gov_init(void)
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
-	mutex_init(&interactive_suspend_mutex);
-	register_power_suspend(&interactive_suspend_data);
+	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
+					  NULL, "cfinteractive");
+	if (IS_ERR(speedchange_task))
+		return PTR_ERR(speedchange_task);
+
+	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	get_task_struct(speedchange_task);
+
+	/* wake up so the thread does not look hung to the freezer */
+	wake_up_process(speedchange_task);
 
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
@@ -1497,13 +1410,14 @@ module_init(cpufreq_interactive_gov_init);
 
 static void __exit cpufreq_interactive_gov_exit(void)
 {
-	unregister_power_suspend(&interactive_suspend_data);
 	cpufreq_unregister_governor(CPU_FREQ_GOV_INTERACTIVE);
-
+	kthread_stop(speedchange_task);
+	put_task_struct(speedchange_task);
 }
 module_exit(cpufreq_interactive_gov_exit);
 
 MODULE_AUTHOR("Mike Chan <mike@android.com>");
 MODULE_DESCRIPTION("'cpufreq_interactive' - A dynamic cpufreq governor for Latency sensitive workloads");
 MODULE_LICENSE("GPL");
+
 
