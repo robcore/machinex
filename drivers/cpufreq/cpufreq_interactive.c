@@ -866,22 +866,6 @@ static ssize_t store_above_hispeed_delay(struct gov_attr_set *attr_set,
 	return count;
 }
 
-static ssize_t store_hispeed_freq(struct gov_attr_set *attr_set,
-				  const char *buf, size_t count)
-{
-	struct interactive_tunables *tunables = to_tunables(attr_set);
-	unsigned long int val;
-	int ret;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	tunables->hispeed_freq = val;
-
-	return count;
-}
-
 static ssize_t store_go_hispeed_load(struct gov_attr_set *attr_set,
 				     const char *buf, size_t count)
 {
@@ -1043,7 +1027,7 @@ show_one(io_is_busy, "%u");
 
 gov_attr_rw(target_loads);
 gov_attr_rw(above_hispeed_delay);
-gov_attr_rw(hispeed_freq);
+gov_attr_ro(hispeed_freq);
 gov_attr_rw(go_hispeed_load);
 gov_attr_rw(min_sample_time);
 gov_attr_rw(timer_rate);
