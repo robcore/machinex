@@ -539,8 +539,6 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	struct interactive_cpu *icpu;
 	struct cpufreq_policy *policy;
 
-	if (data == NULL)
-		return 0;
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
@@ -562,11 +560,13 @@ again:
 
 	for_each_cpu(cpu, &tmp_mask) {
 		icpu = &per_cpu(interactive_cpu, cpu);
-		if (icpu != NULL)
-			policy = icpu->ipolicy->policy;
+		if (icpu == NULL)
+			continue;
+
+		policy = icpu->ipolicy->policy;
 
 		if (policy == NULL)
-			return 0;
+			continue;
 
 		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
 			continue;
