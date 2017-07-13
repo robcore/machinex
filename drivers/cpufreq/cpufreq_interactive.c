@@ -588,11 +588,15 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	cpumask_t tmp_mask;
 	unsigned long flags;
 again:
+	if (kthread_should_stop())
+		return 0
+
 	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+
 		if (kthread_should_stop())
 			return 0;
 
@@ -633,8 +637,10 @@ again:
 
 		up_read(&icpu->enable_sem);
 	}
-
-	goto again;
+	if (kthread_should_stop())
+		return 0
+	else
+		goto again;
 }
 
 static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
