@@ -1281,8 +1281,13 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 #ifndef TYPE_B_PROTOCOL
-	if (touch_count == 0)
+	if (touch_count == 0) {
 		input_mt_sync(rmi4_data->input_dev);
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		if (s2w_switch > 0)
+			sweep2wake_reset();
+#endif
+	}
 #endif
 
 	input_sync(rmi4_data->input_dev);
@@ -1439,6 +1444,10 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 				BTN_TOUCH, 0);
 #ifndef TYPE_B_PROTOCOL
 		input_mt_sync(rmi4_data->input_dev);
+#endif
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		if (s2w_switch > 0)
+			sweep2wake_reset();
 #endif
 	}
 
