@@ -24,6 +24,7 @@
 #include "../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/gpio.h>
 #include <linux/sysfs_helpers.h>
+#include <linux/timed_output.h>
 /*
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
@@ -46,6 +47,12 @@
 #if defined(DDI_VIDEO_ENHANCE_TUNING)
 #include <linux/syscalls.h>
 #endif
+
+#define DEF_VIB 200
+static bool vibrate_on_wake;
+module_param(vibrate_on_wake, bool, 0644);
+static unsigned int vibrate_timeout = DEF_VIB;
+module_param(vibrate_timeout, uint, 0644)
 
 static int pm_gpio8;	/* ERR_FG */
 static int pm_gpio5;	/* LDI_CHIP_SELECT */
@@ -617,6 +624,9 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		state_resume();
 #endif
 */
+	if (vibrate_on_wake)
+		machinex_send_vibration(vibrate_timeout);
+
 	return 0;
 }
 

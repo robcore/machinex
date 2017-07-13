@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/err.h>
 #include <linux/slab.h>
+#include <linux/kernel.h>
 #include <linux/timed_output.h>
 
 static struct class *timed_output_class;
@@ -58,7 +59,7 @@ void machinex_send_vibration(unsigned int value)
 	struct device *dev;
 	struct timed_output_dev *tdev;
 
-	if (!timed_output_online)
+	if (!timed_output_online || system_state == SYSTEM_BOOTING)
 		return;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
