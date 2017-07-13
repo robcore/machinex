@@ -49,7 +49,7 @@
 #endif
 
 #define DEF_VIB 200
-static bool vibrate_on_wake;
+static bool vibrate_on_wake = false;;
 module_param(vibrate_on_wake, bool, 0644);
 static unsigned int vibrate_timeout = DEF_VIB;
 module_param(vibrate_timeout, uint, 0644);
