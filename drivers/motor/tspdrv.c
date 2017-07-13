@@ -45,6 +45,7 @@
 #include <linux/wakelock.h>
 #include <linux/io.h>
 #include <linux/timed_output.h>
+#include <linux/powersuspend.h>
 
 #include "tspdrv.h"
 #include <linux/vibrator.h>
@@ -66,6 +67,7 @@ static char g_szdevice_name[(VIBE_MAX_DEVICE_NAME_LENGTH
 static size_t g_cchdevice_name;
 
 static struct wake_lock vib_wake_lock;
+
 #define DEF_VIB 200
 static bool vibrate_on_wake = false;
 module_param(vibrate_on_wake, bool, 0644);
@@ -112,7 +114,8 @@ static DECLARE_WORK(vibetonz_work, _set_vibetonz_work);
 
 
 static struct hrtimer timer;
-static int max_timeout = 10000;
+static unsigned int max_timeout = 10000;
+module_param(max_timeout, uint, 0644);
 
 static int vibrator_value = -1;
 static int vibrator_work;
