@@ -786,7 +786,7 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 /* Powersuspend callback functions                                                */
 /* ------------------------------------------------------------------------------ */
 
-static void cpufreq_hardlimit_suspend(struct power_suspend * h)
+static void cpufreq_hardlimit_suspend(struct power_suspend *h)
 {
 	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
@@ -798,7 +798,7 @@ static void cpufreq_hardlimit_suspend(struct power_suspend * h)
 	}
 }
 
-static void cpufreq_hardlimit_resume(struct power_suspend * h)
+static void cpufreq_hardlimit_resume(struct power_suspend *h)
 {
 	unsigned int cpu = smp_processor_id();
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
