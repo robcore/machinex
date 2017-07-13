@@ -573,6 +573,9 @@ again:
 		if (icpu == NULL)
 			continue;
 
+		if (!icpu->ipolicy)
+			return -EFAULT;
+
 		policy = icpu->ipolicy->policy;
 
 		if (policy == NULL)
