@@ -27,7 +27,6 @@
 
 static struct class *timed_output_class;
 static atomic_t device_count;
-static bool timed_output_online = false;
 
 static ssize_t enable_show(struct device *dev, struct device_attribute *attr,
 		char *buf)
@@ -52,25 +51,6 @@ static ssize_t enable_store(
 		tdev->enable(tdev, value);
 
 	return size;
-}
-
-void machinex_send_vibration(unsigned int value)
-{
-	struct device *dev;
-	struct timed_output_dev *tdev;
-
-	if (!timed_output_online || system_state == SYSTEM_BOOTING)
-		return;
-
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (dev == NULL)
-		return;
-	tdev = dev_get_drvdata(dev);
-
-	if (tdev != NULL) {
-		tdev->enable(tdev, value);
-		kfree(dev);
-	}
 }
 
 static DEVICE_ATTR(enable, S_IRUGO | S_IWUSR, enable_show, enable_store);
@@ -110,7 +90,6 @@ int timed_output_dev_register(struct timed_output_dev *tdev)
 
 	dev_set_drvdata(tdev->dev, tdev);
 	tdev->state = 0;
-	timed_output_online = true;
 	return 0;
 
 err_create_file:

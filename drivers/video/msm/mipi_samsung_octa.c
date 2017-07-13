@@ -48,12 +48,6 @@
 #include <linux/syscalls.h>
 #endif
 
-#define DEF_VIB 200
-static bool vibrate_on_wake = false;
-module_param(vibrate_on_wake, bool, 0644);
-static unsigned int vibrate_timeout = DEF_VIB;
-module_param(vibrate_timeout, uint, 0644);
-
 static int pm_gpio8;	/* ERR_FG */
 static int pm_gpio5;	/* LDI_CHIP_SELECT */
 #define PMIC_GPIO_ERR_FG 8
@@ -564,9 +558,6 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		pm8xxx_gpio_config(pm_gpio8, &gpio_get_param);
 		pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	}
-
-	if (vibrate_on_wake)
-		machinex_send_vibration(vibrate_timeout);
 
 	return 0;
 }

@@ -44,7 +44,7 @@
 #include <linux/clk.h>
 #include <linux/wakelock.h>
 #include <linux/io.h>
-#include "../staging/android/timed_output.h"
+#include <linux/timed_output.h>
 
 #include "tspdrv.h"
 #include <linux/vibrator.h>
@@ -66,6 +66,11 @@ static char g_szdevice_name[(VIBE_MAX_DEVICE_NAME_LENGTH
 static size_t g_cchdevice_name;
 
 static struct wake_lock vib_wake_lock;
+#define DEF_VIB 200
+static bool vibrate_on_wake = false;
+module_param(vibrate_on_wake, bool, 0644);
+static unsigned int vibrate_timeout = DEF_VIB;
+module_param(vibrate_timeout, uint, 0644);
 
 /* Flag indicating whether the driver is in use */
 static char g_bisplaying;
@@ -317,6 +322,22 @@ int vibetonz_clk_off(struct device *dev)
 }
 #endif	/* VIBE_ENABLE_SYSTEM_TIMER */
 
+static void tspdrv_power_suspend(struct power_suspend *h)
+{
+}
+
+static void tspdrv_power_resume(struct power_suspend *h)
+{
+	if (vibrate_on_wake)
+		set_vibetonz(vibrate_timeout);
+}
+
+static struct power_suspend tspdrv_suspend_data =
+{
+	.suspend = tspdrv_power_suspend,
+	.resume = tspdrv_power_resume,
+};
+
 static int tspdrv_probe(struct platform_device *pdev)
 {
 	struct vibrator_platform_data *pdata;
@@ -384,6 +405,8 @@ static int tspdrv_probe(struct platform_device *pdev)
 	wake_lock_init(&vib_wake_lock, WAKE_LOCK_SUSPEND, "vib_present");
 
 	vibetonz_start();
+
+	register_power_suspend(&tspdrv_suspend_data);
 
 	return 0;
 }
@@ -466,12 +489,13 @@ static ssize_t write(struct file *file, const char *buf, size_t count,
 
 	/*
 	** Prevent unauthorized caller to write data.
-	** TouchSense service is the only valid caller.
-	*/
+	** TouchSense service is the only valid caller. NOT ANYMORE BITCHES!!!
+
 	if (file->private_data != (void *)TSPDRV_MAGIC_NUMBER) {
 		DbgOut((KERN_ERR "tspdrv: unauthorized write.\n"));
 		return 0;
 	}
+	*/
 
 	/* Check buffer size */
 	if ((count <= SPI_HEADER_SIZE) || (count > SPI_BUFFER_SIZE)) {
@@ -669,8 +693,6 @@ static int suspend(struct platform_device *pdev, pm_message_t state)
 
 static int resume(struct platform_device *pdev)
 {
-	/* Restart system timers */
-	DbgOut(KERN_DEBUG "tspdrv: %s.\n", __func__);
 	return 0;
 }
 
