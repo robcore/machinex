@@ -1283,10 +1283,6 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 #ifndef TYPE_B_PROTOCOL
 	if (touch_count == 0) {
 		input_mt_sync(rmi4_data->input_dev);
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-		if (s2w_switch > 0)
-			sweep2wake_reset();
-#endif
 	}
 #endif
 
@@ -1445,10 +1441,6 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 #ifndef TYPE_B_PROTOCOL
 		input_mt_sync(rmi4_data->input_dev);
 #endif
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-		if (s2w_switch > 0)
-			sweep2wake_reset();
-#endif
 	}
 
 	input_sync(rmi4_data->input_dev);
@@ -1551,10 +1543,6 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 
 	if (touch_count)
 		input_sync(rmi4_data->input_dev);
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	else if (s2w_switch > 0)
-		sweep2wake_reset();
-#endif
 
 	return;
 }
@@ -3181,11 +3169,6 @@ static void synaptics_rmi4_release_all_finger(
 	rmi4_data->f51_finger = false;
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	if (s2w_switch > 0)
-		sweep2wake_reset();
-#endif
-
 #ifdef CONFIG_FAKE_DVFS
 	synaptics_set_dvfs_lock(rmi4_data, -1);
 #endif
@@ -3242,11 +3225,6 @@ int synaptics_rmi4_reset_device(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 	synaptics_rmi4_release_support_fn(rmi4_data);
-
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	if (s2w_switch > 0)
-		sweep2wake_reset();
-#endif
 
 	retval = synaptics_rmi4_query_device(rmi4_data);
 	if (retval < 0) {
@@ -3568,9 +3546,7 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 		pr_debug("rmi-couldn't do the thing");
 		goto err_enable_irq;
 	}
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	enable_irq_wake(rmi4_data->i2c_client->irq);
-#endif
+
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		retval = sysfs_create_file(&rmi4_data->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
@@ -3860,9 +3836,7 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
 	struct synaptics_rmi4_data *rmi4_data =
 			container_of(h, struct synaptics_rmi4_data,
 			power_suspend);
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-		if (s2w_switch == 0) {
-#endif
+
 		if (rmi4_data->stay_awake) {
 			rmi4_data->staying_awake = true;
 			return;
@@ -3881,9 +3855,6 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
 			/* release all finger when entered suspend */
 			synaptics_rmi4_release_all_finger(rmi4_data);
 		}
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	}
-#endif
 }
 
  /**
@@ -3901,9 +3872,7 @@ static void synaptics_rmi4_power_resume(struct power_suspend *h)
 			container_of(h, struct synaptics_rmi4_data,
 			power_suspend);
 	int retval;
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-		if (s2w_switch == 0) {
-#endif
+
 		if (rmi4_data->staying_awake)
 			return;
 
@@ -3950,9 +3919,6 @@ static void synaptics_rmi4_power_resume(struct power_suspend *h)
 			pr_debug("rmi-couldn't do the thing");
 #endif
 		return;
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	}
-#endif
 }
 #else
 
