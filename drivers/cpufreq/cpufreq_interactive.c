@@ -646,6 +646,9 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	bool wakeup = false;
 	int i;
 
+	if (ipolicy == NULL)
+		return;
+
 	tunables->boosted = true;
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
@@ -1169,7 +1172,7 @@ static inline void gov_clear_update_util(struct cpufreq_policy *policy)
 	for_each_cpu(i, policy->cpus)
 		cpufreq_remove_update_util_hook(i);
 
-		synchronize_sched();
+	synchronize_sched();
 }
 
 static void icpu_cancel_work(struct interactive_cpu *icpu)
