@@ -52,7 +52,7 @@
 static bool vibrate_on_wake;
 module_param(vibrate_on_wake, bool, 0644);
 static unsigned int vibrate_timeout = DEF_VIB;
-module_param(vibrate_timeout, uint, 0644)
+module_param(vibrate_timeout, uint, 0644);
 
 static int pm_gpio8;	/* ERR_FG */
 static int pm_gpio5;	/* LDI_CHIP_SELECT */
