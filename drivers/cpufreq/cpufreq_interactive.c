@@ -494,10 +494,8 @@ exit:
 
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
-	if (frozen(speedchange_task)) {
+	if (icpu->ipolicy == NULL)
 		return;
-	}
-
 	eval_target_freq(icpu);
 	slack_timer_resched(icpu, smp_processor_id(), true);
 
