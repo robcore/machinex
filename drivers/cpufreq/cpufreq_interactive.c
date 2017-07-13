@@ -390,6 +390,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	int cpu_load;
 	int cpu = smp_processor_id();
 
+	if (icpu->ipolicy == NULL)
+		return;
+
 	tunables = icpu->ipolicy->tunables;
 	if (!tunables)
 		return;
@@ -1225,11 +1228,51 @@ static void interactive_tunables_free(struct interactive_tunables *tunables)
 		kfree(tunables);
 }
 
+static void cpufreq_interactive_nop_timer(unsigned long data)
+{
+	/*
+	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
+	 * to decrease its frequency if it is not set to minimum already.
+	 *
+	 * This is important for platforms where CPU with higher frequencies
+	 * consume higher power even at IDLE.
+	 */
+}
+
 int cpufreq_interactive_init(struct cpufreq_policy *policy)
 {
 	struct interactive_policy *ipolicy;
 	struct interactive_tunables *tunables;
 	int ret;
+
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	struct interactive_cpu *icpu;
+	unsigned int cpu;
+
+	for_each_possible_cpu(cpu) {
+		icpu = &per_cpu(interactive_cpu, cpu);
+
+		init_irq_work(&icpu->irq_work, irq_work);
+		spin_lock_init(&icpu->load_lock);
+		spin_lock_init(&icpu->target_freq_lock);
+		init_rwsem(&icpu->enable_sem);
+
+		/* Initialize per-cpu slack-timer */
+		init_timer_pinned(&icpu->slack_timer);
+		icpu->slack_timer.function = cpufreq_interactive_nop_timer;
+	}
+
+	spin_lock_init(&speedchange_cpumask_lock);
+	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
+					  NULL, "cfinteractive");
+	if (IS_ERR(speedchange_task))
+		return PTR_ERR(speedchange_task);
+
+	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	get_task_struct(speedchange_task);
+
+	/* NB: wake up so the thread does not look hung to the freezer */
+	wake_up_process(speedchange_task);
 
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
@@ -1261,7 +1304,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		goto free_int_policy;
 	}
 
-	tunables->hispeed_freq = 1890000;
+	tunables->hispeed_freq = policy->max;
 	tunables->above_hispeed_delay = default_above_hispeed_delay;
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
@@ -1333,6 +1376,10 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	mutex_unlock(&global_tunables_lock);
 
 	interactive_policy_free(ipolicy);
+
+	cpufreq_unregister_governor(CPU_FREQ_GOV_INTERACTIVE);
+	kthread_stop(speedchange_task);
+	put_task_struct(speedchange_task);
 }
 
 int cpufreq_interactive_start(struct cpufreq_policy *policy)
@@ -1416,48 +1463,8 @@ static struct interactive_governor interactive_gov = {
 	}
 };
 
-static void cpufreq_interactive_nop_timer(unsigned long data)
+static int __init interactive_gov_register(void)
 {
-	/*
-	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
-	 * to decrease its frequency if it is not set to minimum already.
-	 *
-	 * This is important for platforms where CPU with higher frequencies
-	 * consume higher power even at IDLE.
-	 */
-}
-
-static int __init cpufreq_interactive_gov_init(void)
-{
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
-	struct interactive_cpu *icpu;
-	unsigned int cpu;
-
-	for_each_possible_cpu(cpu) {
-		icpu = &per_cpu(interactive_cpu, cpu);
-
-		init_irq_work(&icpu->irq_work, irq_work);
-		spin_lock_init(&icpu->load_lock);
-		spin_lock_init(&icpu->target_freq_lock);
-		init_rwsem(&icpu->enable_sem);
-
-		/* Initialize per-cpu slack-timer */
-		init_timer_pinned(&icpu->slack_timer);
-		icpu->slack_timer.function = cpufreq_interactive_nop_timer;
-	}
-
-	spin_lock_init(&speedchange_cpumask_lock);
-	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
-					  NULL, "cfinteractive");
-	if (IS_ERR(speedchange_task))
-		return PTR_ERR(speedchange_task);
-
-	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
-	get_task_struct(speedchange_task);
-
-	/* NB: wake up so the thread does not look hung to the freezer */
-	wake_up_process(speedchange_task);
-
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
 
@@ -1467,18 +1474,10 @@ struct cpufreq_governor *cpufreq_default_governor(void)
 	return CPU_FREQ_GOV_INTERACTIVE;
 }
 
-fs_initcall(cpufreq_interactive_gov_init);
+fs_initcall(interactive_gov_register);
 #else
-module_init(cpufreq_interactive_gov_init);
+module_init(interactive_gov_register);
 #endif
-
-static void __exit cpufreq_interactive_gov_exit(void)
-{
-	cpufreq_unregister_governor(CPU_FREQ_GOV_INTERACTIVE);
-	kthread_stop(speedchange_task);
-	put_task_struct(speedchange_task);
-}
-module_exit(cpufreq_interactive_gov_exit);
 
 MODULE_AUTHOR("Mike Chan <mike@android.com>");
 MODULE_DESCRIPTION("'cpufreq_interactive' - A dynamic cpufreq governor for Latency sensitive workloads");
