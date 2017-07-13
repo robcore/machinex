@@ -646,9 +646,6 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	bool wakeup = false;
 	int i;
 
-	if (ipolicy == NULL)
-		return;
-
 	tunables->boosted = true;
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
