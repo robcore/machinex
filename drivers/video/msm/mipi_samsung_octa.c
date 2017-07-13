@@ -565,6 +565,9 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 		pm8xxx_gpio_config(pm_gpio5, &gpio_get_param);
 	}
 
+	if (vibrate_on_wake)
+		machinex_send_vibration(vibrate_timeout);
+
 	return 0;
 }
 
@@ -624,8 +627,6 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 		state_resume();
 #endif
 */
-	if (vibrate_on_wake)
-		machinex_send_vibration(vibrate_timeout);
 
 	return 0;
 }
