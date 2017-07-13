@@ -1551,6 +1551,10 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 
 	if (touch_count)
 		input_sync(rmi4_data->input_dev);
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	else if (s2w_switch > 0)
+		sweep2wake_reset();
+#endif
 
 	return;
 }
@@ -3177,6 +3181,11 @@ static void synaptics_rmi4_release_all_finger(
 	rmi4_data->f51_finger = false;
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	if (s2w_switch > 0)
+		sweep2wake_reset();
+#endif
+
 #ifdef CONFIG_FAKE_DVFS
 	synaptics_set_dvfs_lock(rmi4_data, -1);
 #endif
@@ -3233,6 +3242,11 @@ int synaptics_rmi4_reset_device(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 	synaptics_rmi4_release_support_fn(rmi4_data);
+
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	if (s2w_switch > 0)
+		sweep2wake_reset();
+#endif
 
 	retval = synaptics_rmi4_query_device(rmi4_data);
 	if (retval < 0) {
