@@ -566,8 +566,6 @@ again:
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
 	for_each_cpu(cpu, &tmp_mask) {
-	if (interactive_cpu == NULL)
-		return 0;
 	struct interactive_cpu *icpu;
 	struct cpufreq_policy *policy;
 
