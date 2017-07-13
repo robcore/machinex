@@ -618,7 +618,7 @@ again:
 			continue;
 
 		if (!icpu->ipolicy)
-			return 0;
+			continue;
 
 		policy = icpu->ipolicy->policy;
 
