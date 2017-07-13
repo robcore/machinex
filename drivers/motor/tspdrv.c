@@ -74,6 +74,7 @@ module_param(vibrate_on_wake, bool, 0644);
 static unsigned int vibrate_timeout = DEF_VIB;
 module_param(vibrate_timeout, uint, 0644);
 
+static bool enabled_by_os = false;
 /* Flag indicating whether the driver is in use */
 static char g_bisplaying;
 
@@ -135,7 +136,8 @@ static int set_vibetonz(int timeout)
 			ImmVibeSPI_ForceOut_AmpDisable(0);
 		}
 	} else {
-		wake_lock_timeout(&vib_wake_lock, msecs_to_jiffies(vibrator_value));
+		if (!enabled_by_os)
+			wake_lock_timeout(&vib_wake_lock, msecs_to_jiffies(vibrator_value));
 		DbgOut((KERN_INFO "tspdrv: ENABLE\n"));
 		if (vibrator_drvdata.vib_model == HAPTIC_PWM) {
 				strength = 126;
@@ -331,7 +333,7 @@ static void tspdrv_power_suspend(struct power_suspend *h)
 
 static void tspdrv_power_resume(struct power_suspend *h)
 {
-	if (!vibrate_on_wake)
+	if (!vibrate_on_wake || enabled_by_os)
 		return;
 
 	hrtimer_cancel(&timer);
@@ -668,6 +670,7 @@ static long ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case TSPDRV_ENABLE_AMP:
 		wake_lock(&vib_wake_lock);
+		enabled_by_os = true;
 		ImmVibeSPI_ForceOut_AmpEnable(arg);
 		DbgRecorderReset((arg));
 		DbgRecord((arg, ";------- TSPDRV_ENABLE_AMP ---------\n"));
@@ -685,6 +688,7 @@ static long ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		VibeOSKernelProcessData(NULL);
 		g_bisplaying = false;
 		wake_unlock(&vib_wake_lock);
+		enabled_by_os = false;
 		break;
 
 	case TSPDRV_GET_NUM_ACTUATORS:
