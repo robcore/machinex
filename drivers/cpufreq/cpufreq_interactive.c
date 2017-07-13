@@ -497,10 +497,10 @@ static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 	if (frozen(speedchange_task)) {
 		return;
 	}
-	if (icpu->policy) {
-		eval_target_freq(icpu);
-		slack_timer_resched(icpu, smp_processor_id(), true);
-	}
+
+	eval_target_freq(icpu);
+	slack_timer_resched(icpu, smp_processor_id(), true);
+
 }
 
 static void cpufreq_interactive_idle_end(void)
