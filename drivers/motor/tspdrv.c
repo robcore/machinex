@@ -135,6 +135,7 @@ static int set_vibetonz(int timeout)
 			ImmVibeSPI_ForceOut_AmpDisable(0);
 		}
 	} else {
+		wake_lock_timeout(&vib_wake_lock, msecs_to_jiffies(vibrator_value));
 		DbgOut((KERN_INFO "tspdrv: ENABLE\n"));
 		if (vibrator_drvdata.vib_model == HAPTIC_PWM) {
 				strength = 126;
