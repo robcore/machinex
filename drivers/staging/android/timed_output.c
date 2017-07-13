@@ -55,11 +55,17 @@ static ssize_t enable_store(
 
 void machinex_send_vibration(unsigned int value)
 {
-	struct timed_output_dev *tdev = kzalloc(sizeof(*tdev), GFP_KERNEL);
+	struct device *dev;
+	struct timed_output_dev *tdev;
+
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (dev == NULL)
+		return;
+	tdev = dev_get_drvdata(dev);
 
 	if (tdev != NULL) {
 		tdev->enable(tdev, value);
-		kfree(tdev);
+		kfree(dev);
 	}
 }
 
