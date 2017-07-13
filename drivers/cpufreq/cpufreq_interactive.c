@@ -572,6 +572,8 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 		__cpufreq_driver_target(policy, max_freq, CPUFREQ_RELATION_H);
 		for_each_cpu(i, policy->cpus) {
 			icpu = &per_cpu(interactive_cpu, i);
+		if (icpu == NULL)
+			continue;
 			icpu->pol_hispeed_val_time = hvt;
 		}
 	}
