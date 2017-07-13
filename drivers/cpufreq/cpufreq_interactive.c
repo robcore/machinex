@@ -547,7 +547,7 @@ again:
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		schedule_timeout(msecs_to_jiffies(40));
+		schedule();
 
 		if (kthread_should_stop())
 			return 0;
@@ -567,6 +567,7 @@ again:
 
 		if (policy == NULL)
 			return 0;
+
 		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
 			continue;
 
