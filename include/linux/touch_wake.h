@@ -4,7 +4,7 @@
 #define _LINUX_TOUCH_WAKE_H
 
 #include <linux/input.h>
-#include "../../drivers/sensorhub/stm32f/ssp.h"
+#include "../../drivers/sensorhub/ssp.h"
 
 #define TOUCHWAKE_DEBUG_PRINT
 
