@@ -36,9 +36,6 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #endif
-#ifdef CONFIG_TOUCH_WAKE
-#include <linux/touch_wake.h>
-#endif
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
 
@@ -642,10 +639,6 @@ static struct list_head exp_fn_list;
 
 #ifdef PROXIMITY
 static struct synaptics_rmi4_f51_handle *f51;
-#endif
-#ifdef CONFIG_TOUCH_WAKE
-static struct synaptics_rmi4_data *touchwake_data = NULL;
-int previous_touch_state = false;
 #endif
 #ifdef CONFIG_KT_WAKE_FUNCS
 /********** START KT wake functions **********/
@@ -1933,22 +1926,6 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	else
 		synaptics_set_dvfs_lock(rmi4_data, 0);
 #endif
-
-#ifdef CONFIG_TOUCH_WAKE
-	// Read touchscreen digitizer
-	if (touchwake_is_active() && touch_count > 0) {
-		if (previous_touch_state == false) {
-			#ifdef TOUCHWAKE_DEBUG_PRINT
-			pr_info("[TOUCHWAKE] Synaptics pressed\n");
-			#endif
-			touch_press(); // Yank555.lu - Screen touched
-			previous_touch_state = true; // once is enough
-		}
-	} else {
-		previous_touch_state = false; // touch released, restart listening
-	}
-#endif
-
 	return touch_count;
 }
 
@@ -3783,9 +3760,8 @@ static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 		}
 #endif
 	}
-#ifdef CONFIG_KT_WAKE_FUNCS
 	ischarging_relay(ischarging);
-#endif
+	
 	retval = synaptics_rmi4_i2c_write(rmi4_data,
 		rmi4_data->f01_ctrl_base_addr,
 		&charger_connected,
@@ -4152,13 +4128,6 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	/* for blocking to be excuted open function until probing */
 	complete_all(&rmi4_data->init_done);
 
-#ifdef CONFIG_TOUCH_WAKE
-	// Yank555.lu - Store the data for touchwake
-	touchwake_data = rmi4_data;
-	if (touchwake_data == NULL)
-		pr_err("[TOUCHWAKE] Failed to set Synaptics touchwake_data\n");
-#endif 
-
 	return retval;
 
 err_sysfs:
@@ -4360,13 +4329,7 @@ err_open:
 static void synaptics_rmi4_input_close(struct input_dev *dev)
 {
 	struct synaptics_rmi4_data *rmi4_data = input_get_drvdata(dev);
-#ifdef CONFIG_TOUCH_WAKE
-	// Don't change state if touchwake handles this
-	if (!touchwake_is_active()) {
-		#ifdef TOUCHWAKE_DEBUG_PRINT
-		pr_info("[TOUCHWAKE] Synaptics input close\n");
-		#endif
-#endif
+
 	if (!rmi4_data->touch_stopped) {
 		disable_irq(rmi4_data->i2c_client->irq);
 #ifdef CONFIG_KT_WAKE_FUNCS
@@ -4375,14 +4338,9 @@ static void synaptics_rmi4_input_close(struct input_dev *dev)
 		rmi4_data->board->power(false);
 		rmi4_data->touch_stopped = true;
 		synaptics_rmi4_release_all_finger(rmi4_data);
-	}
-#ifdef CONFIG_TOUCH_WAKE
 	} else {
-		#ifdef TOUCHWAKE_DEBUG_PRINT
-		pr_info("[TOUCHWAKE] Synaptics suspend not allowed at the moment\n");
-		#endif
+		pr_debug("rmi-couldn't do the thing");
 	}
-#endif
 }
 #endif
 
@@ -4566,6 +4524,28 @@ void set_screen_synaptic_on(void)
  */
 static void synaptics_rmi4_power_suspend(struct power_suspend *h)
 {
+	struct synaptics_rmi4_data *rmi4_data =
+			container_of(h, struct synaptics_rmi4_data,
+			power_suspend);
+
+		if (rmi4_data->stay_awake) {
+			rmi4_data->staying_awake = true;
+			return;
+		} else {
+			rmi4_data->staying_awake = false;
+		}
+
+		if (!rmi4_data->touch_stopped) {
+			pr_debug("rmi-couldn't do the thing");
+
+			disable_irq(rmi4_data->i2c_client->irq);
+			rmi4_data->board->power(false);
+			rmi4_data->touch_stopped = true;
+
+			gpio_free(rmi4_data->board->gpio);
+			/* release all finger when entered suspend */
+			synaptics_rmi4_release_all_finger(rmi4_data);
+		}
 }
 
  /**
@@ -4579,6 +4559,57 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
  */
 static void synaptics_rmi4_power_resume(struct power_suspend *h)
 {
+	struct synaptics_rmi4_data *rmi4_data =
+			container_of(h, struct synaptics_rmi4_data,
+			power_suspend);
+	int retval;
+
+		if (rmi4_data->staying_awake)
+			return;
+
+		if (rmi4_data->touch_stopped) {
+			pr_debug("rmi-couldn't do the thing");
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
+			rmi4_data->board->hsync_onoff(false);
+#endif
+			rmi4_data->board->power(true);
+			rmi4_data->touch_stopped = false;
+			rmi4_data->current_page = MASK_8BIT;
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
+			rmi4_data->board->hsync_onoff(true);
+#endif
+			retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
+			if (retval != 0) {
+				pr_debug("rmi-couldn't do the thing");
+				return ;
+			}
+#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
+			retval = synaptics_rmi4_query_device(rmi4_data);
+			if (retval < 0)
+				pr_debug("rmi-couldn't do the thing");
+			retval = synaptics_rmi4_open_lcd_ldi(rmi4_data);
+			if (retval < 0)
+				pr_debug("rmi-couldn't do the thing");
+
+#else
+			retval = synaptics_rmi4_reinit_device(rmi4_data);
+			if (retval < 0) {
+				pr_debug("rmi-couldn't do the thing");
+			}
+#endif
+			if (rmi4_data->ta_status)
+				synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
+
+			enable_irq(rmi4_data->i2c_client->irq);
+		}
+#ifdef CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL
+		retval = rmi4_data->board->tout1_on();
+		if (retval)
+			pr_debug("rmi-couldn't do the thing");
+#endif
+		return;
 }
 #else
 
@@ -4659,107 +4690,6 @@ static int synaptics_rmi4_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_TOUCH_WAKE
-// Yank555.lu - Add hooks to enable / disable the digitizer for touchwake
-void touchscreen_disable(void)
-{
-	struct synaptics_rmi4_data *rmi4_data;
-	if (touchwake_data != NULL) {
-#ifdef CONFIG_TOUCH_WAKE
-	// Don't change state if touchwake handles this
-	if (!touchwake_is_active()) {
-		#ifdef TOUCHWAKE_DEBUG_PRINT
-		pr_info("[TOUCHWAKE] Synaptics input close\n");
-		#endif
-#endif
-		if (rmi4_data->stay_awake) {
-			rmi4_data->staying_awake = true;
-			return;
-		} else {
-			rmi4_data->staying_awake = false;
-		}
-
-		if (!rmi4_data->touch_stopped) {
-			pr_debug("rmi-couldn't do the thing");
-
-			disable_irq(rmi4_data->i2c_client->irq);
-			rmi4_data->board->power(false);
-			rmi4_data->touch_stopped = true;
-
-			gpio_free(rmi4_data->board->gpio);
-			/* release all finger when entered suspend */
-			synaptics_rmi4_release_all_finger(rmi4_data);
-		}
-#ifdef CONFIG_TOUCH_WAKE
-	} else {
-		#ifdef TOUCHWAKE_DEBUG_PRINT
-		pr_info("[TOUCHWAKE] Synaptics suspend not allowed at the moment\n");
-		#endif
-	}
-	}
-#endif
-	return;
-}
-EXPORT_SYMBOL(touchscreen_disable);
-
-void touchscreen_enable(void)
-{
-	struct synaptics_rmi4_data *rmi4_data;
-	int retval;
-
-	if (touchwake_data != NULL) {
-
-		if (rmi4_data->staying_awake)
-			return;
-
-		if (rmi4_data->touch_stopped) {
-			pr_debug("rmi-couldn't do the thing");
-
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
-			rmi4_data->board->hsync_onoff(false);
-#endif
-			rmi4_data->board->power(true);
-			rmi4_data->touch_stopped = false;
-			rmi4_data->current_page = MASK_8BIT;
-
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
-			rmi4_data->board->hsync_onoff(true);
-#endif
-			retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
-			if (retval != 0) {
-				pr_debug("rmi-couldn't do the thing");
-				return ;
-			}
-#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
-			retval = synaptics_rmi4_query_device(rmi4_data);
-			if (retval < 0)
-				pr_debug("rmi-couldn't do the thing");
-			retval = synaptics_rmi4_open_lcd_ldi(rmi4_data);
-			if (retval < 0)
-				pr_debug("rmi-couldn't do the thing");
-
-#else
-			retval = synaptics_rmi4_reinit_device(rmi4_data);
-			if (retval < 0) {
-				pr_debug("rmi-couldn't do the thing");
-			}
-#endif
-			if (rmi4_data->ta_status)
-				synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
-
-			enable_irq(rmi4_data->i2c_client->irq);
-		}
-#ifdef CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL
-		retval = rmi4_data->board->tout1_on();
-		if (retval)
-			pr_debug("rmi-couldn't do the thing");
-#endif
-	}
-	return;
-}
-EXPORT_SYMBOL(touchscreen_enable);
-#endif
-
 #if 0
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
@@ -4797,12 +4727,6 @@ static struct i2c_driver synaptics_rmi4_driver = {
  */
 static int __init synaptics_rmi4_init(void)
 {
-#ifdef CONFIG_SAMSUNG_LPM_MODE
-	if (poweroff_charging) {
-		pr_notice("%s : LPM Charging Mode!!\n", __func__);
-		return 0;
-	}
-#endif
 	return i2c_add_driver(&synaptics_rmi4_driver);
 }
 

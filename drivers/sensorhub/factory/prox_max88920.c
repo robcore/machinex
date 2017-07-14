@@ -13,9 +13,6 @@
  *
  */
 #include "../ssp.h"
-#ifdef CONFIG_TOUCH_WAKE
-#include <linux/touch_wake.h>
-#endif
 
 #define	VENDOR		"MAXIM"
 #define	CHIP_ID		"MAX88920"
@@ -44,9 +41,6 @@
 #define TBD_LOW_THRESHOLD		45
 #define WHITE_HIGH_THRESHOLD		60
 #define WHITE_LOW_THRESHOLD		45
-#endif
-#ifdef CONFIG_TOUCH_WAKE
-struct ssp_data *touchwake_data;
 #endif
 /*************************************************************************/
 /* factory Sysfs                                                         */
@@ -432,15 +426,6 @@ static ssize_t barcode_emul_enable_store(struct device *dev,
 	return size;
 }
 
-#ifdef CONFIG_TOUCH_WAKE
-// Return the current proxy value for touchwake
-u16 get_proxy_data(void)
-{
-	return get_proximity_rawdata(touchwake_data);
-};
-EXPORT_SYMBOL(get_proxy_data);
-#endif
-
 static DEVICE_ATTR(vendor, S_IRUGO, prox_vendor_show, NULL);
 static DEVICE_ATTR(name, S_IRUGO, prox_name_show, NULL);
 static DEVICE_ATTR(state, S_IRUGO, proximity_state_show, NULL);
@@ -473,11 +458,6 @@ void initialize_prox_factorytest(struct ssp_data *data)
 {
 	sensors_register(data->prox_device, data,
 		prox_attrs, "proximity_sensor");
-#ifdef CONFIG_TOUCH_WAKE
-	touchwake_data = data;
-	if (touchwake_data == NULL)
-		pr_err("[TOUCHWAKE] Failed to set MAX88920 proximity touchwake_data\n");
-#endif
 }
 
 void remove_prox_factorytest(struct ssp_data *data)

@@ -867,12 +867,6 @@ config BLX
 	help
 	  Enable Battery Life eXtender
 
-config TOUCH_WAKE
-	bool "Support for Touch Wake (Yank555.lu)"
-	default y
-	help
-		Say Y here to enable Touch Wake
-
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
