@@ -272,10 +272,12 @@ ext4_es_alloc_extent(ext4_lblk_t start, ext4_lblk_t len)
 	es->start = start;
 	es->len = len;
 	return es;
+	percpu_counter_inc(&EXT4_SB(inode->i_sb)->s_extent_cache_cnt);
 }
 
 static void ext4_es_free_extent(struct extent_status *es)
 {
+	percpu_counter_dec(&EXT4_SB(inode->i_sb)->s_extent_cache_cnt);
 	kmem_cache_free(ext4_es_cachep, es);
 }
 
