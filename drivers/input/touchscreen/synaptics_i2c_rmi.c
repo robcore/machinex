@@ -4375,8 +4375,6 @@ static void synaptics_rmi4_input_close(struct input_dev *dev)
 		rmi4_data->board->power(false);
 		rmi4_data->touch_stopped = true;
 		synaptics_rmi4_release_all_finger(rmi4_data);
-	} else {
-		pr_debug("rmi-couldn't do the thing");
 	}
 #ifdef CONFIG_TOUCH_WAKE
 	} else {
@@ -4384,6 +4382,7 @@ static void synaptics_rmi4_input_close(struct input_dev *dev)
 		pr_info("[TOUCHWAKE] Synaptics suspend not allowed at the moment\n");
 		#endif
 	}
+#endif
 }
 #endif
 
