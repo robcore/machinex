@@ -87,10 +87,6 @@
 extern void touchscreen_enable(void);
 extern void touchscreen_disable(void);
 
-// Hooks in Wacom pen driver
-extern void touchscreen_pen_enable(void);
-extern void touchscreen_pen_disable(void);
-
 // Hook in MAX88920 proximity sensor
 extern u16 get_proxy_data(void);
 
@@ -119,7 +115,6 @@ static void touchwake_disable_touch(void)
 	pr_info("[TOUCHWAKE] Disable touch controls\n");
 	#endif
 	touchscreen_disable();
-	touchscreen_pen_disable();
 	touch_disabled = true;
 
 	return;
@@ -131,7 +126,6 @@ static void touchwake_enable_touch(void)
 	pr_info("[TOUCHWAKE] Enable touch controls\n");
 	#endif
 	touchscreen_enable();
-	touchscreen_pen_enable();
 	touch_disabled = false;
 	return;
 }

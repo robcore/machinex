@@ -4566,28 +4566,6 @@ void set_screen_synaptic_on(void)
  */
 static void synaptics_rmi4_power_suspend(struct power_suspend *h)
 {
-	struct synaptics_rmi4_data *rmi4_data =
-			container_of(h, struct synaptics_rmi4_data,
-			power_suspend);
-
-		if (rmi4_data->stay_awake) {
-			rmi4_data->staying_awake = true;
-			return;
-		} else {
-			rmi4_data->staying_awake = false;
-		}
-
-		if (!rmi4_data->touch_stopped) {
-			pr_debug("rmi-couldn't do the thing");
-
-			disable_irq(rmi4_data->i2c_client->irq);
-			rmi4_data->board->power(false);
-			rmi4_data->touch_stopped = true;
-
-			gpio_free(rmi4_data->board->gpio);
-			/* release all finger when entered suspend */
-			synaptics_rmi4_release_all_finger(rmi4_data);
-		}
 }
 
  /**
@@ -4601,57 +4579,6 @@ static void synaptics_rmi4_power_suspend(struct power_suspend *h)
  */
 static void synaptics_rmi4_power_resume(struct power_suspend *h)
 {
-	struct synaptics_rmi4_data *rmi4_data =
-			container_of(h, struct synaptics_rmi4_data,
-			power_suspend);
-	int retval;
-
-		if (rmi4_data->staying_awake)
-			return;
-
-		if (rmi4_data->touch_stopped) {
-			pr_debug("rmi-couldn't do the thing");
-
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
-			rmi4_data->board->hsync_onoff(false);
-#endif
-			rmi4_data->board->power(true);
-			rmi4_data->touch_stopped = false;
-			rmi4_data->current_page = MASK_8BIT;
-
-#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
-			rmi4_data->board->hsync_onoff(true);
-#endif
-			retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
-			if (retval != 0) {
-				pr_debug("rmi-couldn't do the thing");
-				return ;
-			}
-#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
-			retval = synaptics_rmi4_query_device(rmi4_data);
-			if (retval < 0)
-				pr_debug("rmi-couldn't do the thing");
-			retval = synaptics_rmi4_open_lcd_ldi(rmi4_data);
-			if (retval < 0)
-				pr_debug("rmi-couldn't do the thing");
-
-#else
-			retval = synaptics_rmi4_reinit_device(rmi4_data);
-			if (retval < 0) {
-				pr_debug("rmi-couldn't do the thing");
-			}
-#endif
-			if (rmi4_data->ta_status)
-				synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
-
-			enable_irq(rmi4_data->i2c_client->irq);
-		}
-#ifdef CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL
-		retval = rmi4_data->board->tout1_on();
-		if (retval)
-			pr_debug("rmi-couldn't do the thing");
-#endif
-		return;
 }
 #else
 
@@ -4736,26 +4663,98 @@ static int synaptics_rmi4_resume(struct device *dev)
 // Yank555.lu - Add hooks to enable / disable the digitizer for touchwake
 void touchscreen_disable(void)
 {
-	#ifdef TOUCHWAKE_DEBUG_PRINT
-	pr_info("[TOUCHWAKE] Synaptics disable\n");
-	#endif
+	struct synaptics_rmi4_data *rmi4_data;
+	if (touchwake_data != NULL) {
+#ifdef CONFIG_TOUCH_WAKE
+	// Don't change state if touchwake handles this
+	if (!touchwake_is_active()) {
+		#ifdef TOUCHWAKE_DEBUG_PRINT
+		pr_info("[TOUCHWAKE] Synaptics input close\n");
+		#endif
+#endif
+		if (rmi4_data->stay_awake) {
+			rmi4_data->staying_awake = true;
+			return;
+		} else {
+			rmi4_data->staying_awake = false;
+		}
 
-	if (touchwake_data != NULL)
-		synaptics_rmi4_input_close(touchwake_data->input_dev);
+		if (!rmi4_data->touch_stopped) {
+			pr_debug("rmi-couldn't do the thing");
 
+			disable_irq(rmi4_data->i2c_client->irq);
+			rmi4_data->board->power(false);
+			rmi4_data->touch_stopped = true;
+
+			gpio_free(rmi4_data->board->gpio);
+			/* release all finger when entered suspend */
+			synaptics_rmi4_release_all_finger(rmi4_data);
+		}
+#ifdef CONFIG_TOUCH_WAKE
+	} else {
+		#ifdef TOUCHWAKE_DEBUG_PRINT
+		pr_info("[TOUCHWAKE] Synaptics suspend not allowed at the moment\n");
+		#endif
+	}
+	}
+#endif
 	return;
 }
 EXPORT_SYMBOL(touchscreen_disable);
 
 void touchscreen_enable(void)
 {
-	#ifdef TOUCHWAKE_DEBUG_PRINT
-	pr_info("[TOUCHWAKE] Synaptics enable\n");
-	#endif
+	struct synaptics_rmi4_data *rmi4_data;
+	int retval;
 
-	if (touchwake_data != NULL)
-		synaptics_rmi4_input_open(touchwake_data->input_dev);
+	if (touchwake_data != NULL) {
 
+		if (rmi4_data->staying_awake)
+			return;
+
+		if (rmi4_data->touch_stopped) {
+			pr_debug("rmi-couldn't do the thing");
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
+			rmi4_data->board->hsync_onoff(false);
+#endif
+			rmi4_data->board->power(true);
+			rmi4_data->touch_stopped = false;
+			rmi4_data->current_page = MASK_8BIT;
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
+			rmi4_data->board->hsync_onoff(true);
+#endif
+			retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
+			if (retval != 0) {
+				pr_debug("rmi-couldn't do the thing");
+				return ;
+			}
+#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
+			retval = synaptics_rmi4_query_device(rmi4_data);
+			if (retval < 0)
+				pr_debug("rmi-couldn't do the thing");
+			retval = synaptics_rmi4_open_lcd_ldi(rmi4_data);
+			if (retval < 0)
+				pr_debug("rmi-couldn't do the thing");
+
+#else
+			retval = synaptics_rmi4_reinit_device(rmi4_data);
+			if (retval < 0) {
+				pr_debug("rmi-couldn't do the thing");
+			}
+#endif
+			if (rmi4_data->ta_status)
+				synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
+
+			enable_irq(rmi4_data->i2c_client->irq);
+		}
+#ifdef CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL
+		retval = rmi4_data->board->tout1_on();
+		if (retval)
+			pr_debug("rmi-couldn't do the thing");
+#endif
+	}
 	return;
 }
 EXPORT_SYMBOL(touchscreen_enable);
