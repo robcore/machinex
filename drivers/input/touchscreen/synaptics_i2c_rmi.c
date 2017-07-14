@@ -3760,8 +3760,9 @@ static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 		}
 #endif
 	}
+#ifdef CONFIG_KT_WAKE_FUNCS
 	ischarging_relay(ischarging);
-	
+#endif
 	retval = synaptics_rmi4_i2c_write(rmi4_data,
 		rmi4_data->f01_ctrl_base_addr,
 		&charger_connected,
