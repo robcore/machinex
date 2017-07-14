@@ -3964,13 +3964,18 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 		const struct i2c_device_id *dev_id)
 {
 	int retval;
+#ifdef CONFIG_KT_WAKE_FUNCS
+	int ret;
+#endif
 	unsigned char attr_count;
 	int attr_count_num;
 	struct synaptics_rmi4_data *rmi4_data;
 	struct synaptics_rmi4_device_info *rmi;
 	const struct synaptics_rmi4_platform_data *platform_data =
 			client->dev.platform_data;
-
+#ifdef CONFIG_KT_WAKE_FUNCS
+	gdev = &client->dev;
+#endif
 	if (!i2c_check_functionality(client->adapter,
 			I2C_FUNC_SMBUS_BYTE_DATA)) {
 		pr_debug("rmi-couldn't do the thing");
@@ -3987,7 +3992,12 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 		pr_debug("rmi-couldn't do the thing");
 		return -ENOMEM;
 	}
-
+#ifdef CONFIG_KT_WAKE_FUNCS
+	ret = pm_runtime_set_active(&client->dev);
+	if (ret < 0)
+		pr_alert("KT_PM unable to set runtime pm state\n");
+	pm_runtime_enable(&client->dev);
+#endif
 	rmi = &(rmi4_data->rmi4_mod_info);
 
 	rmi4_data->i2c_client = client;
@@ -4064,7 +4074,9 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 		pr_debug("rmi-couldn't do the thing");
 		goto err_enable_irq;
 	}
-
+#ifdef CONFIG_KT_WAKE_FUNCS
+	device_init_wakeup(&client->dev, 1);
+#endif
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		retval = sysfs_create_file(&rmi4_data->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
@@ -4375,6 +4387,131 @@ void notif_wakelock_forwake_funcs(bool state)
 		}
 	}
 }
+
+void set_screen_synaptic_off(void)
+{
+	int retval;
+	struct synaptics_rmi4_data *rmi4_data;
+	
+	if (gdev == NULL)
+		return;
+	rmi4_data = dev_get_drvdata(gdev);
+	
+	screen_is_off = true;
+	
+	mutex_lock(&rmi4_data->input_dev->mutex);
+	set_wakelock_options(true);
+	if (screen_wake_options && !call_in_progress)
+	{
+		char chTempbuf[2] = { 1, 20};
+
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d - %d", screen_wake_options, ischarging, call_in_progress);
+
+		if (main_prox_data != NULL)
+		{
+			send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+			main_prox_data->bProximityRawEnabled = true;
+		}
+
+		retval = synaptics_rmi4_reset_device(rmi4_data);
+		if (retval < 0) {
+			pr_alert("%s: Failed to issue reset command, error = %d\n",
+					__func__, retval);
+		}
+		enable_irq_wake(rmi4_data->i2c_client->irq);
+		screen_wake_options_when_off = screen_wake_options;
+	}
+	else
+	{
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF2 - %d - %d - %d", screen_wake_options, ischarging, call_in_progress);
+		rmi4_data->stay_awake = false;
+		rmi4_data->staying_awake = false;
+		disable_irq(rmi4_data->i2c_client->irq);
+		rmi4_data->irq_enabled = false;
+		rmi4_data->board->power(false);
+		rmi4_data->touch_stopped = true;
+		gpio_free(rmi4_data->board->gpio);
+		
+		screen_wake_options_when_off = 0;
+	}
+	// release all finger when entered suspend 
+	synaptics_rmi4_release_all_finger(rmi4_data);
+	
+	mutex_unlock(&rmi4_data->input_dev->mutex);
+}
+
+
+void set_screen_synaptic_on(void)
+{
+	int retval;
+	int ret;
+	struct synaptics_rmi4_data *rmi4_data;
+	
+	if (gdev == NULL)
+		return;
+	rmi4_data = dev_get_drvdata(gdev);
+
+	mutex_lock(&rmi4_data->input_dev->mutex);
+
+	wake_start = 0;
+	last_touch_time = 0;
+	screen_is_off = false;
+	
+	if (screen_wake_options_hold_wlock || wake_lock_active(&wakelock))
+		wake_unlock(&wakelock);
+
+	rmi4_data->board->power(true);
+	rmi4_data->touch_stopped = false;
+	rmi4_data->current_page = MASK_8BIT;
+
+	if (screen_wake_options_when_off && !call_in_progress)
+	{
+		char chTempbuf[2] = { 1, 20};
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER ON1 - %d - %d - %d - %d", screen_wake_options, screen_wake_options_when_off, ischarging, call_in_progress);
+		if (main_prox_data != NULL)
+		{
+			send_instruction(main_prox_data, REMOVE_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+			main_prox_data->bProximityRawEnabled = false;
+		}
+
+		disable_irq_wake(rmi4_data->i2c_client->irq);
+	}
+	else
+	{
+		if (screen_wake_options_debug)
+			pr_alert("SCREEN POWER ON2 - %d - %d - %d - %d",
+					 screen_wake_options, screen_wake_options_when_off,
+					 ischarging, call_in_progress);
+		retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
+		if (retval != 0) {
+			dev_info(&rmi4_data->i2c_client->dev,
+					 "%s: tsp int request failed, ret=%d", __func__, retval);
+		}
+	}
+	
+	ret = synaptics_rmi4_reinit_device(rmi4_data);
+	if (ret < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to reinit device\n",
+				__func__);
+	}
+
+	if (rmi4_data->ta_status)
+		synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
+	if (!rmi4_data->irq_enabled)
+	{
+		enable_irq(rmi4_data->i2c_client->irq);
+		if (screen_wake_options_when_off)
+			pr_alert("IRQ DISABLED FROM EXTERNAL");
+	}
+	rmi4_data->irq_enabled = true;
+
+	retval = rmi4_data->board->tout1_on();
+	if (retval)
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: touch_tout1_on failed\n", __func__);
+	mutex_unlock(&rmi4_data->input_dev->mutex);
+}
 #endif
  /**
  * synaptics_rmi4_power_suspend()
@@ -4498,6 +4635,9 @@ static int synaptics_rmi4_suspend(struct device *dev)
 	if (rmi4_data->input_dev->users) {
 		if (!rmi4_data->touch_stopped) {
 			disable_irq(rmi4_data->i2c_client->irq);
+#ifdef CONFIG_KT_WAKE_FUNCS
+			rmi4_data->irq_enabled = false;
+#endif
 			synaptics_rmi4_release_all_finger(rmi4_data);
 			rmi4_data->board->power(false);
 			rmi4_data->touch_stopped = true;
