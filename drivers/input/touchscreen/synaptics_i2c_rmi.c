@@ -36,6 +36,9 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #endif
+#ifdef CONFIG_TOUCH_WAKE
+#include <linux/touch_wake.h>
+#endif
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
 
@@ -639,6 +642,10 @@ static struct list_head exp_fn_list;
 
 #ifdef PROXIMITY
 static struct synaptics_rmi4_f51_handle *f51;
+#endif
+#ifdef CONFIG_TOUCH_WAKE
+static struct synaptics_rmi4_data *touchwake_data = NULL;
+int previous_touch_state = false;
 #endif
 #ifdef CONFIG_KT_WAKE_FUNCS
 /********** START KT wake functions **********/
@@ -1926,6 +1933,22 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	else
 		synaptics_set_dvfs_lock(rmi4_data, 0);
 #endif
+
+#ifdef CONFIG_TOUCH_WAKE
+	// Read touchscreen digitizer
+	if (touchwake_is_active() && touch_count > 0) {
+		if (previous_touch_state == false) {
+			#ifdef TOUCHWAKE_DEBUG_PRINT
+			pr_info("[TOUCHWAKE] Synaptics pressed\n");
+			#endif
+			touch_press(); // Yank555.lu - Screen touched
+			previous_touch_state = true; // once is enough
+		}
+	} else {
+		previous_touch_state = false; // touch released, restart listening
+	}
+#endif
+
 	return touch_count;
 }
 
@@ -4128,6 +4151,13 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	/* for blocking to be excuted open function until probing */
 	complete_all(&rmi4_data->init_done);
 
+#ifdef CONFIG_TOUCH_WAKE
+	// Yank555.lu - Store the data for touchwake
+	touchwake_data = rmi4_data;
+	if (touchwake_data == NULL)
+		pr_err("[TOUCHWAKE] Failed to set Synaptics touchwake_data\n");
+#endif 
+
 	return retval;
 
 err_sysfs:
@@ -4329,7 +4359,13 @@ err_open:
 static void synaptics_rmi4_input_close(struct input_dev *dev)
 {
 	struct synaptics_rmi4_data *rmi4_data = input_get_drvdata(dev);
-
+#ifdef CONFIG_TOUCH_WAKE
+	// Don't change state if touchwake handles this
+	if (!touchwake_is_active()) {
+		#ifdef TOUCHWAKE_DEBUG_PRINT
+		pr_info("[TOUCHWAKE] Synaptics input close\n");
+		#endif
+#endif
 	if (!rmi4_data->touch_stopped) {
 		disable_irq(rmi4_data->i2c_client->irq);
 #ifdef CONFIG_KT_WAKE_FUNCS
@@ -4340,6 +4376,12 @@ static void synaptics_rmi4_input_close(struct input_dev *dev)
 		synaptics_rmi4_release_all_finger(rmi4_data);
 	} else {
 		pr_debug("rmi-couldn't do the thing");
+	}
+#ifdef CONFIG_TOUCH_WAKE
+	} else {
+		#ifdef TOUCHWAKE_DEBUG_PRINT
+		pr_info("[TOUCHWAKE] Synaptics suspend not allowed at the moment\n");
+		#endif
 	}
 }
 #endif
@@ -4690,6 +4732,35 @@ static int synaptics_rmi4_resume(struct device *dev)
 }
 #endif
 
+#ifdef CONFIG_TOUCH_WAKE
+// Yank555.lu - Add hooks to enable / disable the digitizer for touchwake
+void touchscreen_disable(void)
+{
+	#ifdef TOUCHWAKE_DEBUG_PRINT
+	pr_info("[TOUCHWAKE] Synaptics disable\n");
+	#endif
+
+	if (touchwake_data != NULL)
+		synaptics_rmi4_input_close(touchwake_data->input_dev);
+
+	return;
+}
+EXPORT_SYMBOL(touchscreen_disable);
+
+void touchscreen_enable(void)
+{
+	#ifdef TOUCHWAKE_DEBUG_PRINT
+	pr_info("[TOUCHWAKE] Synaptics enable\n");
+	#endif
+
+	if (touchwake_data != NULL)
+		synaptics_rmi4_input_open(touchwake_data->input_dev);
+
+	return;
+}
+EXPORT_SYMBOL(touchscreen_enable);
+#endif
+
 #if 0
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
 	.suspend = synaptics_rmi4_suspend,
@@ -4727,6 +4798,12 @@ static struct i2c_driver synaptics_rmi4_driver = {
  */
 static int __init synaptics_rmi4_init(void)
 {
+#ifdef CONFIG_SAMSUNG_LPM_MODE
+	if (poweroff_charging) {
+		pr_notice("%s : LPM Charging Mode!!\n", __func__);
+		return 0;
+	}
+#endif
 	return i2c_add_driver(&synaptics_rmi4_driver);
 }
 
