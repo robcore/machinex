@@ -481,8 +481,8 @@ static void gpio_keys_irq_timer(unsigned long _data)
 
 	spin_lock_irqsave(&bdata->lock, flags);
 	if (bdata->key_pressed) {
-		keypress_vibration(bdata);
 		input_event(input, EV_KEY, bdata->button->code, 0);
+		vibration_cancel(bdata);
 		input_sync(input);
 		bdata->key_pressed = false;
 	}
@@ -506,6 +506,7 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 		(!is_display_on() && vol_key_wake && bdata->button->code == KEY_VOLUMEDOWN))
 			pm_wakeup_hard_event(bdata->input->dev.parent);
 		input_event(input, EV_KEY, button->code, 1);
+		keypress_vibration(bdata);
 		input_sync(input);
 
 		if (!bdata->timer_debounce) {
