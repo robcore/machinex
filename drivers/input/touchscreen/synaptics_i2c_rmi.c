@@ -4748,7 +4748,7 @@ static void __exit synaptics_rmi4_exit(void)
 {
 	if (poweroff_charging) {
 		pr_notice("%s : LPM Charging Mode!!\n", __func__);
-		return 0;
+		return;
 	}
 	i2c_del_driver(&synaptics_rmi4_driver);
 }
