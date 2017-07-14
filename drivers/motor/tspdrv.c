@@ -115,7 +115,7 @@ static DECLARE_WORK(vibetonz_work, _set_vibetonz_work);
 
 
 static struct hrtimer timer;
-static unsigned int max_timeout = 60000; //1 min
+static unsigned int max_timeout = 10000;
 module_param(max_timeout, uint, 0644);
 
 static int vibrator_value = -1;
