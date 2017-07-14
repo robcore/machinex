@@ -42,6 +42,7 @@
 #endif
 #include <linux/timed_output.h>
 #include <linux/display_state.h>
+#include <mach/jf_eur-gpio.h>
 
 #if 0
 static bool flip_cover;
