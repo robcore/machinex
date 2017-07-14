@@ -87,6 +87,20 @@ struct gpio_keys_drvdata {
 static bool use_syscore = true;
 static struct device *global_dev;
 static struct syscore_ops gpio_keys_syscore_pm_ops;
+static bool vol_key_wake;
+module_param(vol_key_wake, bool, 0644);
+static bool home_vibrate;
+module_param(home_vibrate, bool, 0644);
+static unsigned int home_vibrate_timeout = 100;
+module_param(home_vibrate_timeout, uint, 0644);
+static bool vol_up_vibrate;
+module_param(vol_up_vibrate, bool, 0644);
+static unsigned int vol_up_vibrate_timeout = 100;
+module_param(vol_up_vibrate_timeout, uint, 0644);
+static bool vol_down_vibrate;
+module_param(vol_down_vibrate, bool, 0644);
+static unsigned int vol_down_vibrate_timeout = 100;
+module_param(vol_down_vibrate_timeout, uint, 0644);
 
 static void gpio_keys_syscore_resume(void);
 
@@ -397,19 +411,6 @@ static void gpio_keys_gpio_timer(unsigned long _data)
 
 	schedule_work(&bdata->work);
 }
-
-static bool home_vibrate;
-module_param(home_vibrate, bool, 0644);
-static unsigned int home_vibrate_timeout = 100;
-module_param(home_vibrate_timeout, uint, 0644);
-static bool vol_up_vibrate;
-module_param(vol_up_vibrate, bool, 0644);
-static unsigned int vol_up_vibrate_timeout = 100;
-module_param(vol_up_vibrate_timeout, uint, 0644);
-static bool vol_down_vibrate;
-module_param(vol_down_vibrate, bool, 0644);
-static unsigned int vol_down_vibrate_timeout = 100;
-module_param(vol_down_vibrate_timeout, uint, 0644);
 
 /*TODO Add screen off options and synchronize with VoW*/
 static void keypress_vibration(void *dev_id)
@@ -782,9 +783,6 @@ static ssize_t  sysfs_key_onoff_show(struct device *dev,
 	return snprintf(buf, 5, "%d\n", state);
 }
 static DEVICE_ATTR(sec_key_pressed, 0444 , sysfs_key_onoff_show, NULL);
-
-static bool vol_key_wake;
-module_param(vol_key_wake, bool, 0644);
 
 /* the volume keys can be the wakeup keys in special case */
 static ssize_t wakeup_enable(struct device *dev,
