@@ -934,10 +934,8 @@ static ssize_t synaptics_rmi4_f01_flashprog_show(struct device *dev,
 			rmi4_data->f01_data_base_addr,
 			device_status.data,
 			sizeof(device_status.data));
-	if (retval < 0) {
-		pr_debug("rmi-couldn't do the thing");
+	if (retval < 0)
 		return retval;
-	}
 
 	return snprintf(buf, PAGE_SIZE, "%u\n",
 			device_status.flash_prog);
@@ -2410,6 +2408,7 @@ int synaptics_proximity_no_sleep_set(bool enables)
 
 	return retval;
 }
+EXPORT_SYMBOL(synaptics_proximity_no_sleep_set);
 
 static int synaptics_rmi4_f51_set_enables(struct synaptics_rmi4_data *rmi4_data)
 {
