@@ -9,6 +9,7 @@
 #define KEY_BOOSTER_OFF_TIME	300
 #define KEY_BOOSTER_CHG_TIME	200
 #endif
+#include <mach/jf_eur-gpio.h>
 
 struct device;
 
@@ -37,6 +38,8 @@ struct gpio_keys_platform_data {
 	const char *name;		/* input device name */
 #ifdef CONFIG_SENSORS_HALL
 	int gpio_flip_cover;
+	int volume_up_gpio;
+	int volume_down_gpio;
 #endif
 };
 

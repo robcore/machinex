@@ -329,7 +329,7 @@ int vibetonz_clk_off(struct device *dev)
 
 void machinex_vibrator(int timeout)
 {
-	if (enabled_by_os || true == g_bisplaying)
+	if (enabled_by_os)
 		return;
 
 	hrtimer_cancel(&timer);
