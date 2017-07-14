@@ -1398,7 +1398,6 @@ static ssize_t autocalibration_status(struct device *dev,
 	int ret;
 	struct cypress_touchkey_info *info = dev_get_drvdata(dev);
 
-	//printk(KERN_DEBUG "[Touchkey] %s\n", __func__);
 
 	ret = i2c_smbus_read_i2c_block_data(info->client,
 				CYPRESS_GEN, 6, data);
@@ -1417,7 +1416,6 @@ static ssize_t glove_mode_enable(struct device *dev,
 	int data;
 
 	sscanf(buf, "%d\n", &data);
-	//dev_info(&info->client->dev, "%s %d\n", __func__, data);
 
 	touchkey_glovemode(data);
 
