@@ -329,6 +329,9 @@ int vibetonz_clk_off(struct device *dev)
 
 void machinex_vibrator(int timeout)
 {
+	if (enabled_by_os || true == g_bisplaying)
+		return;
+
 	hrtimer_cancel(&timer);
 
 	/* set_vibetonz(value); */
@@ -352,7 +355,7 @@ static void tspdrv_power_suspend(struct power_suspend *h)
 
 static void tspdrv_power_resume(struct power_suspend *h)
 {
-	if (!vibrate_on_wake || enabled_by_os)
+	if (!vibrate_on_wake || enabled_by_os || true == g_bisplaying)
 		return;
 
 	hrtimer_cancel(&timer);
