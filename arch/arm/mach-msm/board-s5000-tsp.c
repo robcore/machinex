@@ -162,7 +162,12 @@ static struct synaptics_rmi_f1a_button_map tm1940_f1a_button_map = {
 static struct synaptics_rmi4_platform_data rmi4_platformdata = {
 	/*.irq_type = IRQF_TRIGGER_FALLING,*/
 	/*Direct IRQ for secure input*/
+#ifdef CONFIG_KT_WAKE_FUNCS
+	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT |
+				IRQF_NO_SUSPEND,
+#else
 	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+#endif
 #ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
 	.factory_flatform = true,
 #else
@@ -235,10 +240,6 @@ void __init S5000_tsp_input_init(int version)
 	touch_type = (version >> 12) & 0xF;
 	el_type = (version >> 8) & 0x1;
 
-#if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	/* JACITVE USE ONLY B Type */
-	touch_sleep_time = SYNAPTICS_HW_RESET_TIME_B0;
-#else
 	/* IF TSP IS is A1, B0 version : ID2 value is 40
 	 * IF TSP IS is B0 version : ID2 value is more than 40
 	 */
@@ -246,7 +247,6 @@ void __init S5000_tsp_input_init(int version)
 		touch_sleep_time = SYNAPTICS_HW_RESET_TIME_B0;
 	else
 		touch_sleep_time = SYNAPTICS_HW_RESET_TIME;
-#endif
 
 	if (touch_type < 5) {
 		if (el_type)
@@ -266,7 +266,6 @@ void __init S5000_tsp_input_init(int version)
 	rmi4_platformdata.recovery_mode = false;
 #endif
 
-#if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR)
 	if(system_rev >= BOARD_REV08)  {
 		rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
 		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
@@ -289,59 +288,5 @@ void __init S5000_tsp_input_init(int version)
 		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, bus2_i2c_devices,
 			ARRAY_SIZE(bus2_i2c_devices));
 	}
-#elif defined(CONFIG_MACH_JF_DCM)
-        rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
-		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0)
-			return ;
-
-		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
-			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
-			ARRAY_SIZE(bus2_i2c_devices));
-#elif defined(CONFIG_MACH_JACTIVE_ATT)
-        rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
-		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0)
-			return ;
-
-		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
-			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
-			ARRAY_SIZE(bus2_i2c_devices));
-#elif defined(CONFIG_MACH_JFVE_EUR)
-		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
-		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0)
-			return ;
-
-		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
-			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
-			ARRAY_SIZE(bus2_i2c_devices));
-#else
-	if(system_rev >= BOARD_REV09) {
-		rmi4_platformdata.gpio = NEW_GPIO_TOUCH_IRQ;
-		ret = gpio_request(NEW_GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0)
-			return ;
-
-		gpio_tlmm_config(GPIO_CFG(NEW_GPIO_TOUCH_IRQ, 0,
-			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, new_bus2_i2c_devices,
-			ARRAY_SIZE(bus2_i2c_devices));
-	}
-	else {
-		rmi4_platformdata.gpio = GPIO_TOUCH_IRQ;
-		ret = gpio_request(GPIO_TOUCH_IRQ, "tsp_int");
-		if (ret != 0)
-			return ;
-
-		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_IRQ, 0,
-			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
-		i2c_register_board_info(APQ_8064_GSBI3_QUP_I2C_BUS_ID, bus2_i2c_devices,
-			ARRAY_SIZE(bus2_i2c_devices));
-	}
-#endif
 	return ;
 }

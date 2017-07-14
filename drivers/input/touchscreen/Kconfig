@@ -1200,7 +1200,7 @@ config TOUCHSCREEN_SWEEP2WAKE_PM8XXX
 endchoice
 
 config WAKE_GESTURES
-	default y
+	default n
     bool "Wake Gestures"
 
 config TOUCHSCREEN_GEN_VKEYS
