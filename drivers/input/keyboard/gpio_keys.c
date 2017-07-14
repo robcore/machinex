@@ -400,15 +400,15 @@ static void gpio_keys_gpio_timer(unsigned long _data)
 
 static bool home_vibrate;
 module_param(home_vibrate, bool, 0644);
-static unsigned int home_vibrate_timeout = 150;
+static unsigned int home_vibrate_timeout = 100;
 module_param(home_vibrate_timeout, uint, 0644);
 static bool vol_up_vibrate;
 module_param(vol_up_vibrate, bool, 0644);
-static unsigned int vol_up_vibrate_timeout = 150;
+static unsigned int vol_up_vibrate_timeout = 100;
 module_param(vol_up_vibrate_timeout, uint, 0644);
 static bool vol_down_vibrate;
 module_param(vol_down_vibrate, bool, 0644);
-static unsigned int vol_down_vibrate_timeout = 150;
+static unsigned int vol_down_vibrate_timeout = 100;
 module_param(vol_down_vibrate_timeout, uint, 0644);
 
 /*TODO Add screen off options and synchronize with VoW*/
