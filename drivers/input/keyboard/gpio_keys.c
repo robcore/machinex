@@ -502,8 +502,8 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 
 	if (!bdata->key_pressed) {
 		if ((!is_display_on() && bdata->button->wakeup) ||
-		(vol_key_wake && bdata->button->code == KEY_VOLUMEUP) ||
-		(vol_key_wake && bdata->button->code == KEY_VOLUMEDOWN))
+		(!is_display_on() && vol_key_wake && bdata->button->code == KEY_VOLUMEUP) ||
+		(!is_display_on() && vol_key_wake && bdata->button->code == KEY_VOLUMEDOWN))
 			pm_wakeup_hard_event(bdata->input->dev.parent);
 		input_event(input, EV_KEY, button->code, 1);
 		input_sync(input);
