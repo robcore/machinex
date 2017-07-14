@@ -1604,6 +1604,7 @@ EXPORT_SYMBOL_GPL(fat_flush_inodes);
 
 static int __init init_fat_fs(void)
 {
+	struct super_block *sb;
 	int err;
 
 	err = fat_cache_init();
