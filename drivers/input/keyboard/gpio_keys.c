@@ -40,6 +40,8 @@
 #ifdef CONFIG_MACH_JF
 #include <linux/i2c/synaptics_rmi.h>
 #endif
+#include <linux/timed_output.h>
+#include <linux/display_state.h>
 
 #if 0
 static bool flip_cover;
@@ -395,6 +397,41 @@ static void gpio_keys_gpio_timer(unsigned long _data)
 	schedule_work(&bdata->work);
 }
 
+static bool home_vibrate;
+module_param(home_vibrate, bool, 0644);
+static unsigned int home_vibrate_timeout = 150;
+module_param(home_vibrate_timeout, uint, 0644);
+static bool vol_up_vibrate;
+module_param(vol_up_vibrate, bool, 0644);
+static unsigned int vol_up_vibrate_timeout = 150;
+module_param(vol_up_vibrate_timeout, uint, 0644);
+static bool vol_down_vibrate;
+module_param(vol_down_vibrate, bool, 0644);
+static unsigned int vol_down_vibrate_timeout = 150;
+module_param(vol_down_vibrate_timeout, uint, 0644);
+
+/*TODO Add screen off options and synchronize with VoW*/
+static void keypress_vibration(void *dev_id)
+{
+	struct gpio_button_data *bdata = dev_id;
+
+	if (!is_display_on())
+		return;
+
+	if (bdata->button->code == KEY_HOMEPAGE && home_vibrate) {
+		if (home_vibrate_timeout > 0)
+			machinex_vibrator(home_vibrate_timeout);
+	}
+	if (bdata->button->code == KEY_VOLUMEUP && vol_up_vibrate) {
+		if (vol_up_vibrate_timeout > 0)
+			machinex_vibrator(vol_up_vibrate_timeout);
+	}
+	if (bdata->button->code == KEY_VOLUMEDOWN && vol_down_vibrate) {
+		if (vol_down_vibrate_timeout > 0)
+			machinex_vibrator(vol_down_vibrate_timeout);
+	}
+}	
+
 static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 {
 	struct gpio_button_data *bdata = dev_id;
@@ -403,6 +440,9 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
 				pm_stay_awake(bdata->input->dev.parent);
+
+	keypress_vibration(bdata);
+
 	if (bdata->timer_debounce)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
@@ -528,7 +568,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 			    gpio_keys_gpio_timer, (unsigned long)bdata);
 
 		isr = gpio_keys_gpio_isr;
-		irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
+		irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
 
 	} else {
 		if (!button->irq) {

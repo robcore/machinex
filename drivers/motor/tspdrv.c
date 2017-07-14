@@ -68,11 +68,11 @@ static size_t g_cchdevice_name;
 
 static struct wake_lock vib_wake_lock;
 
-#define DEF_VIB 200
-static bool vibrate_on_wake = false;
+#define DEF_VIB 150
+bool vibrate_on_wake = false;
 module_param(vibrate_on_wake, bool, 0644);
-static unsigned int vibrate_timeout = DEF_VIB;
-module_param(vibrate_timeout, uint, 0644);
+static unsigned int wake_vibrate_timeout = DEF_VIB;
+module_param_named(vibrate_timeout, wake_vibrate_timeout, uint, 0644);
 
 static bool enabled_by_os = false;
 /* Flag indicating whether the driver is in use */
