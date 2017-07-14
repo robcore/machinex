@@ -401,7 +401,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 	gpio_keys_gpio_report_event(bdata);
 
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE ||
-		(vol_key_wake && (button->button->code == KEY_VOLUMEUP || button->button->code == KEY_VOLUMEDOWN)))
+		(vol_key_wake && (bdata->button->code == KEY_VOLUMEUP || bdata->button->code == KEY_VOLUMEDOWN)))
 		pm_relax(bdata->input->dev.parent);
 }
 
@@ -441,7 +441,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 	BUG_ON(irq != bdata->irq);
 
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE ||
-		(vol_key_wake && (button->button->code == KEY_VOLUMEUP || button->button->code == KEY_VOLUMEDOWN)))
+		(vol_key_wake && (bdata->button->code == KEY_VOLUMEUP || bdata->button->code == KEY_VOLUMEDOWN)))
 				pm_stay_awake(bdata->input->dev.parent);
 
 	if (bdata->timer_debounce)
@@ -979,7 +979,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			goto fail2;
 
 		if (button->wakeup || bdata->button->code == KEY_HOMEPAGE ||
-			(vol_key_wake && (button->button->code == KEY_VOLUMEUP || button->button->code == KEY_VOLUMEDOWN)))
+			(vol_key_wake && (bdata->button->code == KEY_VOLUMEUP || bdata->button->code == KEY_VOLUMEDOWN)))
 			wakeup = 1;
 	}
 
@@ -1103,7 +1103,7 @@ static int gpio_keys_suspend(struct device *dev)
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
 			if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE ||
-				(vol_key_wake && (button->button->code == KEY_VOLUMEUP || button->button->code == KEY_VOLUMEDOWN)))
+				(vol_key_wake && (bdata->button->code == KEY_VOLUMEUP || bdata->button->code == KEY_VOLUMEDOWN)))
 				enable_irq_wake(bdata->irq);
 		}
 
@@ -1136,7 +1136,7 @@ static int gpio_keys_resume(struct device *dev)
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
 			if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE ||
-				(vol_key_wake && (button->button->code == KEY_VOLUMEUP || button->button->code == KEY_VOLUMEDOWN)))
+				(vol_key_wake && (bdata->button->code == KEY_VOLUMEUP || bdata->button->code == KEY_VOLUMEDOWN)))
 				disable_irq_wake(bdata->irq);
 		}
 	} else {
