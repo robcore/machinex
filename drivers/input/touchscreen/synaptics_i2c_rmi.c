@@ -4728,6 +4728,10 @@ static struct i2c_driver synaptics_rmi4_driver = {
  */
 static int __init synaptics_rmi4_init(void)
 {
+	if (poweroff_charging) {
+		pr_notice("%s : LPM Charging Mode!!\n", __func__);
+		return 0;
+	}
 	return i2c_add_driver(&synaptics_rmi4_driver);
 }
 
@@ -4741,6 +4745,10 @@ static int __init synaptics_rmi4_init(void)
  */
 static void __exit synaptics_rmi4_exit(void)
 {
+	if (poweroff_charging) {
+		pr_notice("%s : LPM Charging Mode!!\n", __func__);
+		return 0;
+	}
 	i2c_del_driver(&synaptics_rmi4_driver);
 }
 
