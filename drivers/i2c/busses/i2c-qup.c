@@ -22,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
+#include <linux/i2c/i2c-qup.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
@@ -467,43 +468,6 @@ static int qup_i2c_poll_clock_ready(struct qup_i2c_dev *dev)
 	dev_err(dev->dev, "Error waiting for clk ready clk_state: 0x%x op_flgs: 0x%x\n",
 		clk_state, op_flgs);
 	return -ETIMEDOUT;
-}
-
-static inline int qup_i2c_request_gpios(struct qup_i2c_dev *dev)
-{
-	int i;
-	int result = 0;
-
-	for (i = 0; i < ARRAY_SIZE(i2c_rsrcs); ++i) {
-		if (dev->i2c_gpios[i] >= 0) {
-			result = gpio_request(dev->i2c_gpios[i], i2c_rsrcs[i]);
-			if (result) {
-				dev_err(dev->dev,
-					"gpio_request for pin %d failed\
-					with error %d\n", dev->i2c_gpios[i],
-					result);
-				goto error;
-			}
-		}
-	}
-	return 0;
-
-error:
-	for (; --i >= 0;) {
-		if (dev->i2c_gpios[i] >= 0)
-			gpio_free(dev->i2c_gpios[i]);
-	}
-	return result;
-}
-
-static inline void qup_i2c_free_gpios(struct qup_i2c_dev *dev)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(i2c_rsrcs); ++i) {
-		if (dev->i2c_gpios[i] >= 0)
-			gpio_free(dev->i2c_gpios[i]);
-	}
 }
 
 static inline int qup_i2c_request_gpios(struct qup_i2c_dev *dev)
@@ -1069,15 +1033,6 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 					if (timeout)
 						goto timeout_err;
 				}
-				if (screen_wake_options)
-				{
-					pm_runtime_disable(dev->dev);
-					pm_runtime_set_active(dev->dev);
-					qup_i2c_request_gpios(dev);
-					qup_i2c_pwr_mgmt(dev, 1);
-					//pm_runtime_enable(dev->dev);
-				}
-				
 				qup_i2c_recover_bus_busy(dev);
 				dev_err(dev->dev,
 					"Transaction timed out, SL-AD = 0x%x\n",
@@ -1086,14 +1041,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 				dev_err(dev->dev, "I2C Status: %x\n", istatus);
 				dev_err(dev->dev, "QUP Status: %x\n", qstatus);
 				dev_err(dev->dev, "OP Flags: %x\n", op_flgs);
-				dev_err(dev->dev, "CLK Rate: %x\n", dev->pdata->src_clk_rate);
 				writel_relaxed(1, dev->base + QUP_SW_RESET);
-				if (screen_wake_options)
-				{
-					dev->pdata->src_clk_rate = 50000000;
-					clk_set_rate(dev->clk, dev->pdata->src_clk_rate);
-				}
-
 				/* Make sure that the write has gone through
 				 * before returning from the function
 				 */
@@ -1391,9 +1339,7 @@ blsp_core_init:
 	if (ret)
 		dev_info(&pdev->dev, "clk_set_rate(core_clk, %dHz):%d\n",
 					dev->pdata->src_clk_rate, ret);
-	if (screen_wake_options)
-		pr_alert("SET QUP CLK - %d", dev->pdata->src_clk_rate);
-	
+
 	clk_prepare_enable(dev->clk);
 	clk_prepare_enable(dev->pclk);
 	/*
@@ -1671,11 +1617,18 @@ static struct platform_driver qup_i2c_driver = {
 };
 
 /* QUP may be needed to bring up other drivers */
-static int __init
-qup_i2c_init_driver(void)
+int __init qup_i2c_init_driver(void)
 {
+	static bool initialized;
+
+	if (initialized)
+		return 0;
+	else
+		initialized = true;
+
 	return platform_driver_register(&qup_i2c_driver);
 }
+EXPORT_SYMBOL(qup_i2c_init_driver);
 arch_initcall(qup_i2c_init_driver);
 
 static void __exit qup_i2c_exit_driver(void)

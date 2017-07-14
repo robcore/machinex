@@ -9,10 +9,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <linux/kt_wake_funcs.h>
-unsigned int prev_cable_state;
-unsigned int is_charging;
-
 #include <linux/battery/sec_battery.h>
 #include <linux/display_state.h>
 
@@ -1700,13 +1696,6 @@ skip_monitor:
 
 	wake_unlock(&battery->monitor_wake_lock);
 
-	if (battery->cable_type != prev_cable_state)
-	{
-		if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
-			is_charging = 0;
-		else
-			is_charging = 1;
-	}
 	return;
 }
 

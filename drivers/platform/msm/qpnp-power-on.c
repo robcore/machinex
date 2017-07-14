@@ -89,8 +89,6 @@ static u32 s1_delay[PON_S1_COUNT_MAX + 1] = {
 	3072, 4480, 6720, 10256
 };
 
-extern void screenwake_setdev(struct qpnp_pon * pon);
-
 static int
 qpnp_pon_masked_write(struct qpnp_pon *pon, u16 addr, u8 mask, u8 val)
 {
