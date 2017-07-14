@@ -441,8 +441,6 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
 				pm_stay_awake(bdata->input->dev.parent);
 
-	keypress_vibration(bdata);
-
 	if (bdata->timer_debounce)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
@@ -479,9 +477,10 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 	spin_lock_irqsave(&bdata->lock, flags);
 
 	if (!bdata->key_pressed) {
-		if (bdata->button->wakeup)
+		if (!is_display_on() && bdata->button->wakeup)
 			pm_wakeup_hard_event(bdata->input->dev.parent);
 
+		keypress_vibration(bdata);
 		input_event(input, EV_KEY, button->code, 1);
 		input_sync(input);
 
