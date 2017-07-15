@@ -365,6 +365,8 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
+	if (state < 0)
+		return;
 
 	if (type == EV_ABS) {
 		if (state)
@@ -542,6 +544,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 			dev_dbg(dev, "No IRQ specified\n");
 			return -EINVAL;
 		}
+
 		bdata->irq = button->irq;
 
 		if (button->type && button->type != EV_KEY) {
@@ -556,9 +559,6 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 		isr = gpio_keys_irq_isr;
 		irqflags = 0;
 	}
-
-	/*don't send dummy release event when system resumes*/
-	//__set_bit(INPUT_PROP_NO_DUMMY_RELEASE, input->propbit);
 
 	input_set_capability(input, button->type ?: EV_KEY, button->code);
 
@@ -848,8 +848,8 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 static void gpio_remove_key(struct gpio_button_data *bdata)
 {
 	free_irq(bdata->irq, bdata);
-	if (bdata->timer_debounce)
-		del_timer_sync(&bdata->timer);
+	if (bdata->release_delay)
+		del_timer_sync(&bdata->release_timer);
 	cancel_work_sync(&bdata->work);
 	if (gpio_is_valid(bdata->button->gpio))
 		gpio_free(bdata->button->gpio);
@@ -968,7 +968,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
 		gpio_remove_key(&ddata->data[i]);
 
 	platform_set_drvdata(pdev, NULL);
-	//wake_lock_destroy(&ddata->flip_wake_lock);
  fail1:
 	input_free_device(input);
 	kfree(ddata);
@@ -985,7 +984,6 @@ static int gpio_keys_remove(struct platform_device *pdev)
 	struct input_dev *input = ddata->input;
 	int i;
 
-	//wake_lock_destroy(&ddata->flip_wake_lock);
 	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 
 	device_init_wakeup(&pdev->dev, 0);
