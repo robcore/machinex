@@ -110,4 +110,5 @@ obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X)	+= cyttsp4_core.o cyttsp4_i2c.o cyttsp4
 obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X_SUPPORT_BUTTON)	+= cyttsp4_btn.o
 obj-$(CONFIG_ALUCARD_TOUCHSCREEN_BOOST)	+= alu-t-boost.o
 obj-$(CONFIG_WAKE_GESTURES)		+= wake_gestures.o
-obj-y += touchboost.o
+obj-$(CONFIG_GENERIC_TOUCHBOOST)	+= touchboost.o
+
