@@ -27,6 +27,8 @@
 #include <linux/freezer.h>
 #include <linux/export.h>
 
+#include "posix-timers.h"
+
 #if 0
 #define CREATE_TRACE_POINTS
 #include <trace/events/alarmtimer.h>
