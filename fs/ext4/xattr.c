@@ -1148,7 +1148,7 @@ ext4_xattr_set(struct inode *inode, int name_index, const char *name,
 	int error, retries = 0;
 
 retry:
-	handle = ext4_journal_start(inode, EXT4_HT_XATTR, credits);
+	handle = ext4_journal_start(inode, EXT4_HT_XATTR, 1);
 	if (IS_ERR(handle)) {
 		error = PTR_ERR(handle);
 	} else {
