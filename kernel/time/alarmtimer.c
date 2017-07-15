@@ -559,6 +559,18 @@ static int alarm_timer_forward(struct k_itimer *timr, ktime_t now)
 }
 
 /**
+ * alarm_timer_remaining - Posix timer callback to retrieve remaining time
+ * @timr:	Pointer to the posixtimer data struct
+ * @now:	Current time to calculate against
+ */
+static ktime_t alarm_timer_remaining(struct k_itimer *timr, ktime_t now)
+{
+	struct alarm *alarm = &timr->it.alarm.alarmtimer;
+
+	return ktime_sub(now, alarm->node.expires);
+}
+
+/**
  * alarm_clock_getres - posix getres interface
  * @which_clock: clockid
  * @tp: timespec to fill
@@ -904,15 +916,16 @@ static int __init alarmtimer_init(void)
 	int error = 0;
 	int i;
 	struct k_clock alarm_clock = {
-		.clock_getres	= alarm_clock_getres,
-		.clock_get	= alarm_clock_get,
-		.timer_create	= alarm_timer_create,
-		.timer_set	= alarm_timer_set,
-		.timer_del	= alarm_timer_del,
-		.timer_get	= alarm_timer_get,
-		.timer_rearm	= alarm_timer_rearm,
-		.timer_forward	= alarm_timer_forward,
-		.nsleep		= alarm_timer_nsleep,
+	.clock_getres		= alarm_clock_getres,
+	.clock_get		= alarm_clock_get,
+	.timer_create		= alarm_timer_create,
+	.timer_set		= alarm_timer_set,
+	.timer_del		= alarm_timer_del,
+	.timer_get		= alarm_timer_get,
+	.timer_rearm		= alarm_timer_rearm,
+	.timer_forward		= alarm_timer_forward,
+	.timer_remaining	= alarm_timer_remaining,
+	.nsleep			= alarm_timer_nsleep,
 	};
 
 	alarmtimer_rtc_timer_init();
