@@ -328,6 +328,7 @@ void posixtimer_rearm(struct siginfo *info)
 	if (timr->it_requeue_pending == info->si_sys_private) {
 		timr->kclock->timer_rearm(timr);
 
+		timr->it_active = 1;
 		timr->it_overrun_last = timr->it_overrun;
 		timr->it_overrun = -1;
 		++timr->it_requeue_pending;
@@ -383,6 +384,7 @@ static enum hrtimer_restart posix_timer_fn(struct hrtimer *timer)
 	timr = container_of(timer, struct k_itimer, it.real.timer);
 	spin_lock_irqsave(&timr->it_lock, flags);
 
+	timr->it_active = 0;
 	if (timr->it_interval != 0)
 		si_private = ++timr->it_requeue_pending;
 
@@ -430,6 +432,7 @@ static enum hrtimer_restart posix_timer_fn(struct hrtimer *timer)
 						timr->it_interval);
 			ret = HRTIMER_RESTART;
 			++timr->it_requeue_pending;
+			timr->it_active = 1;
 		}
 	}
 
@@ -774,6 +777,7 @@ common_timer_set(struct k_itimer *timr, int flags,
 	if (hrtimer_try_to_cancel(timer) < 0)
 		return TIMER_RETRY;
 
+	timr->it_active = 0;
 	timr->it_requeue_pending = (timr->it_requeue_pending + 2) &
 		~REQUEUE_PENDING;
 	timr->it_overrun_last = 0;
@@ -800,6 +804,7 @@ common_timer_set(struct k_itimer *timr, int flags,
 		return 0;
 	}
 
+	timr->it_active = 1;
 	hrtimer_start_expires(timer, mode);
 	return 0;
 }
@@ -858,6 +863,7 @@ static int common_timer_del(struct k_itimer *timer)
 
 	if (hrtimer_try_to_cancel(&timer->it.real.timer) < 0)
 		return TIMER_RETRY;
+	timer->it_active = 0;
 	return 0;
 }
 
