@@ -292,6 +292,17 @@ static inline void list_splice_init_rcu(struct list_head *list,
 		pos = list_entry_rcu(pos->member.next, typeof(*pos), member))
 
 /**
+ * list_for_each_entry_reverse_rcu - iterate backwards over rcu list of given type.
+ * @pos:	the type * to use as a loop cursor.
+ * @head:	the head for your list.
+ * @member:	the name of the list_struct within the struct.
+ */
+#define list_for_each_entry_reverse_rcu(pos, head, member)			\
+	for (pos = list_entry_rcu((head)->prev, typeof(*pos), member);	\
+	     &pos->member != (head); 	\
+pos = list_entry_rcu(pos->member.prev, typeof(*pos), member))
+
+/**
  * list_for_each_entry_continue_rcu - continue iteration over list of given type
  * @pos:	the type * to use as a loop cursor.
  * @head:	the head for your list.
