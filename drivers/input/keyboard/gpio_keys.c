@@ -70,18 +70,6 @@ struct gpio_keys_drvdata {
 };
 
 static struct device *global_dev;
-static bool home_vibrate;
-module_param(home_vibrate, bool, 0644);
-static unsigned int home_vibrate_timeout = 100;
-module_param(home_vibrate_timeout, uint, 0644);
-static bool vol_up_vibrate;
-module_param(vol_up_vibrate, bool, 0644);
-static unsigned int vol_up_vibrate_timeout = 100;
-module_param(vol_up_vibrate_timeout, uint, 0644);
-static bool vol_down_vibrate;
-module_param(vol_down_vibrate, bool, 0644);
-static unsigned int vol_down_vibrate_timeout = 100;
-module_param(vol_down_vibrate_timeout, uint, 0644);
 
 /*
  * SYSFS interface for enabling/disabling keys and switches:
@@ -413,29 +401,6 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 		pm_relax(bdata->input->dev.parent);
 }
 
-static void keypress_vibration(void *dev_id)
-{
-	struct gpio_button_data *bdata = dev_id;
-
-	if (bdata->button->wakeup && 
-		(bdata->button->code == KEY_HOMEPAGE && home_vibrate)) {
-		if (home_vibrate_timeout > 0)
-			machinex_vibrator(home_vibrate_timeout);
-	}
-
-	if (!is_display_on())
-		return;
-
-	if (bdata->button->code == KEY_VOLUMEUP && vol_up_vibrate) {
-		if (vol_up_vibrate_timeout > 0)
-			machinex_vibrator(vol_up_vibrate_timeout);
-	}
-	if (bdata->button->code == KEY_VOLUMEDOWN && vol_down_vibrate) {
-		if (vol_down_vibrate_timeout > 0)
-			machinex_vibrator(vol_down_vibrate_timeout);
-	}
-}
-
 static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 {
 	struct gpio_button_data *bdata = dev_id;
@@ -444,8 +409,6 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
 				pm_stay_awake(bdata->input->dev.parent);
-
-	keypress_vibration(bdata);
 
 	mod_delayed_work(system_wq,
 			 &bdata->work,
