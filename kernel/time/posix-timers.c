@@ -674,8 +674,7 @@ static int common_hrtimer_forward(struct k_itimer *timr, ktime_t now)
  * it is the same as a requeue pending timer WRT to what we should
  * report.
  */
-static void
-common_timer_get(struct k_itimer *timr, struct itimerspec64 *cur_setting)
+void common_timer_get(struct k_itimer *timr, struct itimerspec64 *cur_setting)
 {
 	const struct k_clock *kc = timr->kclock;
 	ktime_t now, remaining, iv;
@@ -805,10 +804,9 @@ static int common_hrtimer_try_to_cancel(struct k_itimer *timr)
 }
 
 /* Set a POSIX.1b interval timer. */
-static int
-common_timer_set(struct k_itimer *timr, int flags,
-		 struct itimerspec64 *new_setting,
-		 struct itimerspec64 *old_setting)
+int common_timer_set(struct k_itimer *timr, int flags,
+		     struct itimerspec64 *new_setting,
+		     struct itimerspec64 *old_setting)
 {
 	const struct k_clock *kc = timr->kclock;
 	bool sigev_none;
@@ -892,7 +890,7 @@ retry:
 	return error;
 }
 
-static int common_timer_del(struct k_itimer *timer)
+int common_timer_del(struct k_itimer *timer)
 {
 	const struct k_clock *kc = timer->kclock;
 
