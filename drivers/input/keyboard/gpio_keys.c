@@ -386,7 +386,7 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	const struct gpio_keys_button *button = bdata->button;
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
-	int state = (gpio_get_value_cansleep(button->gpio);
+	int state = (gpio_get_value_cansleep(button->gpio));
 
 	if (state < 0)
 		return;
@@ -532,7 +532,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 	if (gpio_is_valid(button->gpio)) {
 
-		error = devm_gpio_request_one(&pdev->dev, button->gpio,
+		error = devm_gpio_request_one(dev, button->gpio,
 					      GPIOF_IN, desc);
 		if (error < 0) {
 			dev_dbg(dev, "Failed to request GPIO %d, error %d\n",
@@ -591,10 +591,9 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 	 * Install custom action to cancel release timer and
 	 * workqueue item.
 	 */
-	error = devm_add_action(&pdev->dev, gpio_keys_quiesce_key, bdata);
+	error = devm_add_action(dev, gpio_keys_quiesce_key, bdata);
 	if (error) {
-		dev_err(&pdev->dev,
-			"failed to register quiesce action, error: %d\n",
+		dev_err(dev, "failed to register quiesce action, error: %d\n",
 			error);
 		return error;
 	}
@@ -606,8 +605,8 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 	if (!button->can_disable)
 		irqflags |= IRQF_SHARED;
 
-	error = devm_request_any_context_irq(&pdev->dev, bdata->irq,
-					     isr, irqflags, desc, bdata);
+	error = devm_request_any_context_irq(dev, bdata->irq, isr, irqflags,
+					     desc, bdata);
 	if (error < 0) {
 		dev_err(dev, "Unable to claim irq %d; error %d\n",
 			bdata->irq, error);
@@ -918,7 +917,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 	input->name = pdata->name ? : pdev->name;
 	input->phys = "gpio-keys/input0";
-	input->dev.parent = &pdev->dev;
+	input->dev.parent = dev;
 	input->evbit[0] |= BIT_MASK(EV_SW);
 	input_set_capability(input, EV_SW, SW_FLIP);
 	input->open = gpio_keys_open;
@@ -945,7 +944,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			wakeup = 1;
 	}
 
-	error = sysfs_create_group(&pdev->dev.kobj, &gpio_keys_attr_group);
+	error = sysfs_create_group(&dev->kobj, &gpio_keys_attr_group);
 	if (error) {
 		dev_err(dev, "Unable to export keys/switches, error: %d\n",
 			error);
@@ -970,12 +969,12 @@ static int gpio_keys_probe(struct platform_device *pdev)
 		goto fail3;
 	}
 
-	device_init_wakeup(&pdev->dev, wakeup);
+	device_init_wakeup(dev, wakeup);
 
 	return 0;
 
  fail3:
-	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
+	sysfs_remove_group(&dev->kobj, &gpio_keys_attr_group);
  fail2:
 	while (--i >= 0)
 		gpio_remove_key(&ddata->data[i]);
@@ -985,7 +984,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	input_free_device(input);
 	kfree(ddata);
 	/* If we have no platform data, we allocated pdata dynamically. */
-	if (!dev_get_platdata(&pdev->dev))
+	if (!dev_get_platdata(dev))
 		kfree(pdata);
 
 	return error;
