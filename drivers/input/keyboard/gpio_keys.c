@@ -23,6 +23,7 @@
 #include <linux/proc_fs.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+#include <linux/device.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
 #include <linux/workqueue.h>
@@ -30,7 +31,6 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 #include <linux/spinlock.h>
-#include <linux/pm_wakeup.h>
 #include <linux/sec_class.h>
 #include <linux/i2c/synaptics_rmi.h>
 #include <linux/timed_output.h>
