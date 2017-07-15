@@ -4546,8 +4546,6 @@ static struct gpio_keys_platform_data gpio_keys_data = {
 #ifdef CONFIG_SENSORS_HALL
 	.gpio_flip_cover = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_HALL_SENSOR_INT),
 #endif
-	.volume_up_gpio = GPIO_KEY_VOLUME_UP,
-	.volume_down_gpio = GPIO_KEY_VOLUME_DOWN,
 };
 
 static struct platform_device gpio_kp_pdev = {

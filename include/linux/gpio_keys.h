@@ -37,8 +37,6 @@ struct gpio_keys_platform_data {
 	const char *name;		/* input device name */
 #ifdef CONFIG_SENSORS_HALL
 	int gpio_flip_cover;
-	int volume_up_gpio;
-	int volume_down_gpio;
 #endif
 };
 
