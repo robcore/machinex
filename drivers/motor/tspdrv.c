@@ -386,8 +386,6 @@ static int tspdrv_probe(struct platform_device *pdev)
 	struct vibrator_platform_data *pdata;
 	int ret, i;   /* initialized below */
 
-	DbgOut((KERN_INFO "tspdrv: tspdrv_probe.\n"));
-
 	/* This condition will be removed,after all board files changes done */
 	if (pdev->dev.platform_data == NULL) {
 		DbgOut(KERN_ERR "tspdrv: tspdrv probe failed, pdata is NULL");
