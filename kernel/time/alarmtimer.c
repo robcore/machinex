@@ -571,6 +571,15 @@ static ktime_t alarm_timer_remaining(struct k_itimer *timr, ktime_t now)
 }
 
 /**
+ * alarm_timer_try_to_cancel - Posix timer callback to cancel a timer
+ * @timr:	Pointer to the posixtimer data struct
+ */
+static int alarm_timer_try_to_cancel(struct k_itimer *timr)
+{
+	return alarm_try_to_cancel(&timr->it.alarm.alarmtimer);
+}
+
+/**
  * alarm_clock_getres - posix getres interface
  * @which_clock: clockid
  * @tp: timespec to fill
@@ -925,6 +934,7 @@ static int __init alarmtimer_init(void)
 	.timer_rearm		= alarm_timer_rearm,
 	.timer_forward		= alarm_timer_forward,
 	.timer_remaining	= alarm_timer_remaining,
+	.timer_try_to_cancel	= alarm_timer_try_to_cancel,
 	.nsleep			= alarm_timer_nsleep,
 	};
 
