@@ -249,7 +249,6 @@ int pm_wake_lock(const char *buf)
 		ret = PTR_ERR(wl);
 		goto out;
 	}
-
 	if (timeout_ns) {
 		u64 timeout_ms = timeout_ns + NSEC_PER_MSEC - 1;
 
@@ -263,7 +262,6 @@ int pm_wake_lock(const char *buf)
 
  out:
 	mutex_unlock(&wakelocks_lock);
-
 	return ret;
 }
 
@@ -301,16 +299,12 @@ int pm_wake_unlock(const char *buf)
 		ret = PTR_ERR(wl);
 		goto out;
 	}
-
 	__pm_relax(&wl->ws);
 
 	wakelocks_lru_most_recent(wl);
 	wakelocks_gc();
 
-
-
  out:
 	mutex_unlock(&wakelocks_lock);
-
 	return ret;
 }
