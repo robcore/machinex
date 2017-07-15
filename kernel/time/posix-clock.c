@@ -327,7 +327,7 @@ out:
 	return err;
 }
 
-struct k_clock clock_posix_dynamic = {
+const struct k_clock clock_posix_dynamic = {
 	.clock_getres	= pc_clock_getres,
 	.clock_set	= pc_clock_settime,
 	.clock_get	= pc_clock_gettime,

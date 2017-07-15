@@ -131,9 +131,6 @@ static const struct k_clock clock_realtime, clock_monotonic;
  *	    have is CLOCK_REALTIME and its high res counter part, both of
  *	    which we beg off on and pass to do_sys_settimeofday().
  */
-
-static struct k_clock posix_clocks[MAX_CLOCKS];
-
 static struct k_itimer *__lock_timer(timer_t timer_id, unsigned long *flags);
 
 #define lock_timer(tid, flags)						   \
@@ -279,14 +276,6 @@ static int posix_get_hrtimer_res(clockid_t which_clock, struct timespec64 *tp)
  */
 static __init int init_posix_timers(void)
 {
-	posix_timers_register_clock(CLOCK_REALTIME, &clock_realtime);
-	posix_timers_register_clock(CLOCK_MONOTONIC, &clock_monotonic);
-	posix_timers_register_clock(CLOCK_MONOTONIC_RAW, &clock_monotonic_raw);
-	posix_timers_register_clock(CLOCK_REALTIME_COARSE, &clock_realtime_coarse);
-	posix_timers_register_clock(CLOCK_MONOTONIC_COARSE, &clock_monotonic_coarse);
-	posix_timers_register_clock(CLOCK_BOOTTIME, &clock_boottime);
-	posix_timers_register_clock(CLOCK_TAI, &clock_tai);
-
 	posix_timers_cache = kmem_cache_create("posix_timers_cache",
 					sizeof (struct k_itimer), 0, SLAB_PANIC,
 					NULL);
@@ -459,30 +448,6 @@ static struct pid *good_sigevent(sigevent_t * event)
 	return task_pid(rtn);
 }
 
-void posix_timers_register_clock(const clockid_t clock_id,
-				 struct k_clock *new_clock)
-{
-	if ((unsigned) clock_id >= MAX_CLOCKS) {
-		printk(KERN_WARNING "POSIX clock register failed for clock_id %d\n",
-		       clock_id);
-		return;
-	}
-
-	if (!new_clock->clock_get) {
-		printk(KERN_WARNING "POSIX clock id %d lacks clock_get()\n",
-		       clock_id);
-		return;
-	}
-	if (!new_clock->clock_getres) {
-		printk(KERN_WARNING "POSIX clock id %d lacks clock_getres()\n",
-		       clock_id);
-		return;
-	}
-
-	posix_clocks[clock_id] = *new_clock;
-}
-EXPORT_SYMBOL_GPL(posix_timers_register_clock);
-
 static struct k_itimer * alloc_posix_timer(void)
 {
 	struct k_itimer *tmr;
@@ -526,11 +491,10 @@ static int common_timer_create(struct k_itimer *new_timer)
 }
 
 /* Create a POSIX.1b interval timer. */
-
 static int do_timer_create(clockid_t which_clock, struct sigevent *event,
 			   timer_t __user *created_timer_id)
 {
-	struct k_clock *kc = clockid_to_kclock(which_clock);
+	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct k_itimer *new_timer;
 	int error, new_timer_id;
 	int it_id_set = IT_ID_NOT_SET;
@@ -545,7 +509,6 @@ static int do_timer_create(clockid_t which_clock, struct sigevent *event,
 		return -EAGAIN;
 
 	spin_lock_init(&new_timer->it_lock);
-
 	new_timer_id = posix_timer_add(new_timer);
 	if (new_timer_id < 0) {
 		error = new_timer_id;
@@ -754,7 +717,7 @@ void common_timer_get(struct k_itimer *timr, struct itimerspec64 *cur_setting)
 static int do_timer_gettime(timer_t timer_id,  struct itimerspec64 *setting)
 {
 	struct k_itimer *timr;
-	struct k_clock *kc;
+	const struct k_clock *kc;
 	unsigned long flags;
 	int ret = 0;
 
@@ -999,7 +962,6 @@ static inline int timer_delete_hook(struct k_itimer *timer)
 
 	if (WARN_ON_ONCE(!kc || !kc->timer_del))
 		return -EINVAL;
-
 	return kc->timer_del(timer);
 }
 
@@ -1075,7 +1037,7 @@ void exit_itimers(struct signal_struct *sig)
 SYSCALL_DEFINE2(clock_settime, const clockid_t, which_clock,
 		const struct timespec __user *, tp)
 {
-	struct k_clock *kc = clockid_to_kclock(which_clock);
+	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 new_tp;
 
 	if (!kc || !kc->clock_set)
@@ -1090,7 +1052,7 @@ SYSCALL_DEFINE2(clock_settime, const clockid_t, which_clock,
 SYSCALL_DEFINE2(clock_gettime, const clockid_t, which_clock,
 		struct timespec __user *,tp)
 {
-	struct k_clock *kc = clockid_to_kclock(which_clock);
+	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 kernel_tp;
 	int error;
 
@@ -1108,7 +1070,7 @@ SYSCALL_DEFINE2(clock_gettime, const clockid_t, which_clock,
 SYSCALL_DEFINE2(clock_adjtime, const clockid_t, which_clock,
 		struct timex __user *, utx)
 {
-	struct k_clock *kc = clockid_to_kclock(which_clock);
+	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timex ktx;
 	int err;
 
@@ -1208,7 +1170,7 @@ COMPAT_SYSCALL_DEFINE2(clock_adjtime, clockid_t, which_clock,
 COMPAT_SYSCALL_DEFINE2(clock_getres, clockid_t, which_clock,
 		       struct compat_timespec __user *, tp)
 {
-	struct k_clock *kc = clockid_to_kclock(which_clock);
+	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 ts;
 	int err;
 
@@ -1239,7 +1201,7 @@ SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,
 		const struct timespec __user *, rqtp,
 		struct timespec __user *, rmtp)
 {
-	struct k_clock *kc = clockid_to_kclock(which_clock);
+	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 t;
 
 	if (!kc)
