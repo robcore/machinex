@@ -720,7 +720,7 @@ repeat_in_this_group:
 		}
 		if (!handle) {
 			BUG_ON(nblocks <= 0);
-			handle = ext4_journal_start_sb(dir->i_sb, nblocks);
+			handle = ext4_journal_start_sb(dir->i_sb, EXT4_HT_MISC, nblocks);
 			if (IS_ERR(handle)) {
 				err = PTR_ERR(handle);
 				goto fail;
