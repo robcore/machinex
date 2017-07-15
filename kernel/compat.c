@@ -216,64 +216,6 @@ int compat_put_timespec(const struct timespec *ts, void __user *uts)
 }
 EXPORT_SYMBOL_GPL(compat_put_timespec);
 
-static long compat_nanosleep_restart(struct restart_block *restart)
-{
-	struct compat_timespec __user *rmtp;
-	struct timespec rmt;
-	mm_segment_t oldfs;
-	long ret;
-
-	restart->nanosleep.rmtp = (struct timespec __user *) &rmt;
-	oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	ret = hrtimer_nanosleep_restart(restart);
-	set_fs(oldfs);
-
-	if (ret) {
-		rmtp = restart->nanosleep.compat_rmtp;
-
-		if (rmtp && put_compat_timespec(&rmt, rmtp))
-			return -EFAULT;
-	}
-
-	return ret;
-}
-
-COMPAT_SYSCALL_DEFINE2(nanosleep, struct compat_timespec __user *, rqtp,
-		       struct compat_timespec __user *, rmtp)
-{
-	struct timespec tu, rmt;
-	struct timespec64 tu64;
-	mm_segment_t oldfs;
-	long ret;
-
-	if (get_compat_timespec(&tu, rqtp))
-		return -EFAULT;
-
-	tu64 = timespec_to_timespec64(tu);
-	if (!timespec64_valid(&tu64))
-		return -EINVAL;
-
-	oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	current->restart_block.nanosleep.rmtp =
-				rmtp ? (struct timespec __user *)&rmt : NULL;
-	ret = hrtimer_nanosleep(&tu64, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
-	set_fs(oldfs);
-
-	if (ret) {
-		struct restart_block *restart = &current->restart_block;
-
-		restart->fn = compat_nanosleep_restart;
-		restart->nanosleep.compat_rmtp = rmtp;
-
-		if (rmtp && put_compat_timespec(&rmt, rmtp))
-			return -EFAULT;
-	}
-
-	return ret;
-}
-
 static inline long get_compat_itimerval(struct itimerval *o,
 		struct compat_itimerval __user *i)
 {
