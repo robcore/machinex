@@ -29,7 +29,7 @@
 #include "power.h"
 
 #define VERSION 2
-#define VERSION_MIN 6
+#define VERSION_MIN 7
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -116,7 +116,7 @@ static void power_suspend(struct work_struct *work)
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	pr_info("[PROMETHEUS] Suspending\n");
-	list_for_each_entry(pos, &power_suspend_handlers, link) {
+	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			pos->suspend(pos);
 		}
@@ -186,7 +186,7 @@ static void power_resume(struct work_struct *work)
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	pr_info("[PROMETHEUS] Resuming\n");
-	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
+	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
 		}
