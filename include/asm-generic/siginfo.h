@@ -15,7 +15,6 @@
 #define __SI_CODE(T,N)	((T) | ((N) & 0xffff))
 
 struct siginfo;
-void do_schedule_next_timer(struct siginfo *info);
 
 #ifndef HAVE_ARCH_COPY_SIGINFO
 
