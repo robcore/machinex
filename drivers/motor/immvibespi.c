@@ -34,7 +34,7 @@
 #include <linux/gpio.h>
 #include "tspdrv.h"
 
-#define LEVEL_MAX           100
+#define LEVEL_MAX           10000
 #define LEVEL_MIN           0
 #define LEVEL_DEFAULT       LEVEL_MAX
 #define LEVEL_THRESHOLD     -1
@@ -60,7 +60,7 @@ struct pm_gpio vib_pwm = {
 			};
 
 
-unsigned long pwm_val = 100;
+unsigned long pwm_val = 10000;
 
 static int32_t vibe_set_pwm_freq(int nForce)
 {
@@ -279,7 +279,7 @@ static int32_t ImmVibeSPI_ForceOut_SetSamples(u_int8_t nActuatorIndex,
 		return VIBE_E_FAIL;
 	}
 
-	nforce = nforce * pwm_val / 100;
+	nforce = nforce * pwm_val / 10000;
 
 	if (nforce == 0) {
 		/* Set 50% duty cycle or disable amp */
@@ -377,9 +377,9 @@ ssize_t pwm_value_store(struct device *dev, struct device_attribute *attr,
 	pr_info("[VIB] %s: pwm_val=%lu\n", __func__, pwm_val);
 
 	/* make sure new pwm duty is in range */
-	if(pwm_val > 100)
-		pwm_val = 100;
-	else if (pwm_val < 0)
+	if(pwm_val >= 10000)
+		pwm_val = 10000;
+	else if (pwm_val <= 0)
 		pwm_val = 0;
 
 	return size;
