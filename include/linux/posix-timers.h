@@ -53,6 +53,7 @@ struct k_itimer {
 	struct list_head list;		/* free/ allocate list */
 	struct hlist_node t_hash;
 	spinlock_t it_lock;
+	const struct k_clock	*kclock;
 	clockid_t it_clock;		/* which timer type */
 	timer_t it_id;			/* timer id */
 	int it_overrun;			/* overrun on pending signal  */
