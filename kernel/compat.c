@@ -114,44 +114,6 @@ int compat_put_timex(struct compat_timex __user *utp, const struct timex *txc)
 	return 0;
 }
 
-COMPAT_SYSCALL_DEFINE2(gettimeofday, struct compat_timeval __user *, tv,
-		       struct timezone __user *, tz)
-{
-	if (tv) {
-		struct timeval ktv;
-		do_gettimeofday(&ktv);
-		if (compat_put_timeval_convert(tv, &ktv))
-			return -EFAULT;
-	}
-	if (tz) {
-		if (copy_to_user(tz, &sys_tz, sizeof(sys_tz)))
-			return -EFAULT;
-	}
-
-	return 0;
-}
-
-COMPAT_SYSCALL_DEFINE2(settimeofday, struct compat_timeval __user *, tv,
-		       struct timezone __user *, tz)
-{
-	struct timespec64 new_ts;
-	struct timeval user_tv;
-	struct timezone new_tz;
-
-	if (tv) {
-		if (compat_get_timeval(&user_tv, tv))
-			return -EFAULT;
-		new_ts.tv_sec = user_tv.tv_sec;
-		new_ts.tv_nsec = user_tv.tv_usec * NSEC_PER_USEC;
-	}
-	if (tz) {
-		if (copy_from_user(&new_tz, tz, sizeof(*tz)))
-			return -EFAULT;
-	}
-
-	return do_sys_settimeofday64(tv ? &new_ts : NULL, tz ? &new_tz : NULL);
-}
-
 int get_compat_timeval(struct timeval *tv, const struct compat_timeval __user *ctv)
 {
 	return (!access_ok(VERIFY_READ, ctv, sizeof(*ctv)) ||
@@ -789,46 +751,6 @@ COMPAT_SYSCALL_DEFINE4(rt_sigtimedwait, compat_sigset_t __user *, uthese,
 
 	return ret;
 }
-
-#ifdef __ARCH_WANT_COMPAT_SYS_TIME
-
-/* compat_time_t is a 32 bit "long" and needs to get converted. */
-
-COMPAT_SYSCALL_DEFINE1(time, compat_time_t __user *, tloc)
-{
-	compat_time_t i;
-	struct timeval tv;
-
-	do_gettimeofday(&tv);
-	i = tv.tv_sec;
-
-	if (tloc) {
-		if (put_user(i,tloc))
-			return -EFAULT;
-	}
-	force_successful_syscall_return();
-	return i;
-}
-
-COMPAT_SYSCALL_DEFINE1(stime, compat_time_t __user *, tptr)
-{
-	struct timespec tv;
-	int err;
-
-	if (get_user(tv.tv_sec, tptr))
-		return -EFAULT;
-
-	tv.tv_nsec = 0;
-
-	err = security_settime(&tv, NULL);
-	if (err)
-		return err;
-
-	do_settimeofday(&tv);
-	return 0;
-}
-
-#endif /* __ARCH_WANT_COMPAT_SYS_TIME */
 
 #ifdef CONFIG_NUMA
 COMPAT_SYSCALL_DEFINE6(move_pages, pid_t, pid, compat_ulong_t, nr_pages,
