@@ -839,18 +839,12 @@ static struct attribute_group sec_key_attr_group = {
  * Handlers for alternative sources of platform_data
  */
 
-static inline struct gpio_keys_platform_data *
-gpio_keys_get_devtree_pdata(struct device *dev)
-{
-	return ERR_PTR(-ENODEV);
-}
-
 static void gpio_remove_key(struct gpio_button_data *bdata)
 {
 	free_irq(bdata->irq, bdata);
 	if (bdata->release_delay)
 		del_timer_sync(&bdata->release_timer);
-	cancel_work_sync(&bdata->work);
+	cancel_delayed_work_sync(&bdata->work);
 	if (gpio_is_valid(bdata->button->gpio))
 		gpio_free(bdata->button->gpio);
 }
