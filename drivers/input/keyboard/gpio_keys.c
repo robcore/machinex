@@ -860,12 +860,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	int i, error;
 	int wakeup = 0;
 
-	if (!pdata) {
-		pdata = gpio_keys_get_devtree_pdata(dev);
-		if (IS_ERR(pdata))
-			return PTR_ERR(pdata);
-	}
-
 	size = sizeof(struct gpio_keys_drvdata) +
 			pdata->nbuttons * sizeof(struct gpio_button_data);
 	ddata = devm_kzalloc(dev, size, GFP_KERNEL);
@@ -1054,7 +1048,6 @@ static int gpio_keys_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
 static SIMPLE_DEV_PM_OPS(gpio_keys_pm_ops, gpio_keys_suspend, gpio_keys_resume);
 
@@ -1063,7 +1056,6 @@ static struct platform_driver gpio_keys_device_driver = {
 	.remove		= gpio_keys_remove,
 	.driver		= {
 		.name	= "gpio-keys",
-		.owner	= THIS_MODULE,
 		.pm	= &gpio_keys_pm_ops,
 	}
 };
