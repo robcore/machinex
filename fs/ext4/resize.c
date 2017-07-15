@@ -95,7 +95,7 @@ static int verify_group_input(struct super_block *sb,
 		       "no-super", input->group, input->blocks_count,
 		       free_blocks_count, input->reserved_blocks);
 
-	ext4_get_group_no_and_offset(sb, start, NULL, &offset);
+	group = ext4_get_group_number(sb, start);
 	if (group != sbi->s_groups_count)
 		ext4_warning(sb, "Cannot add at group %u (only %u groups)",
 			     input->group, sbi->s_groups_count);
@@ -272,7 +272,7 @@ next_group:
 		if (start_blk >= last_blk)
 			goto next_group;
 		group_data[bb_index].block_bitmap = start_blk++;
-		ext4_get_group_no_and_offset(sb, start_blk - 1, &group, NULL);
+		group = ext4_get_group_number(sb, start_blk - 1);
 		group -= group_data[0].group;
 		group_data[group].free_blocks_count--;
 		if (flexbg_size > 1)
@@ -284,7 +284,7 @@ next_group:
 		if (start_blk >= last_blk)
 			goto next_group;
 		group_data[ib_index].inode_bitmap = start_blk++;
-		ext4_get_group_no_and_offset(sb, start_blk - 1, &group, NULL);
+		group = ext4_get_group_number(sb, start_blk - 1);
 		group -= group_data[0].group;
 		group_data[group].free_blocks_count--;
 		if (flexbg_size > 1)
@@ -296,7 +296,7 @@ next_group:
 		if (start_blk + EXT4_SB(sb)->s_itb_per_group > last_blk)
 			goto next_group;
 		group_data[it_index].inode_table = start_blk;
-		ext4_get_group_no_and_offset(sb, start_blk, &group, NULL);
+		group = ext4_get_group_number(sb, start_blk - 1);
 		group -= group_data[0].group;
 		group_data[group].free_blocks_count -=
 					EXT4_SB(sb)->s_itb_per_group;
@@ -392,7 +392,7 @@ static int set_flexbg_block_bitmap(struct super_block *sb, handle_t *handle,
 		ext4_group_t group;
 		int err;
 
-		ext4_get_group_no_and_offset(sb, block, &group, NULL);
+		group = ext4_get_group_number(sb, block);
 		start = ext4_group_first_block_no(sb, group);
 		group -= flex_gd->groups[0].group;
 
@@ -1403,7 +1403,7 @@ static int ext4_flex_group_add(struct super_block *sb,
 
 	reserved_gdb = le16_to_cpu(es->s_reserved_gdt_blocks);
 	o_blocks_count = ext4_blocks_count(es);
-	ext4_get_group_no_and_offset(sb, o_blocks_count, &group, &last);
+	group = ext4_get_group_number(sb, o_blocks_count);
 	BUG_ON(last);
 
 	err = setup_new_flex_group_blocks(sb, flex_gd);
@@ -1494,9 +1494,8 @@ static int ext4_setup_next_flex_gd(struct super_block *sb,
 	if (o_blocks_count == n_blocks_count)
 		return 0;
 
-	ext4_get_group_no_and_offset(sb, o_blocks_count, &group, &last);
-	BUG_ON(last);
-	ext4_get_group_no_and_offset(sb, n_blocks_count - 1, &n_group, &last);
+	group = ext4_get_group_number(sb, o_blocks_count);
+	group = ext4_get_group_number(sb, n_blocks_count - 1);
 
 	last_group = group | (flexbg_size - 1);
 	if (last_group > n_group)
@@ -1715,7 +1714,7 @@ int ext4_group_extend(struct super_block *sb, struct ext4_super_block *es,
 	}
 
 	/* Handle the remaining blocks in the last group only. */
-	ext4_get_group_no_and_offset(sb, o_blocks_count, &group, &last);
+	group = ext4_get_group_number(sb, o_blocks_count);
 
 	if (last == 0) {
 		ext4_warning(sb, "need to use ext2online to resize further");
@@ -1884,12 +1883,12 @@ retry:
 		/* Nothing need to do */
 		return 0;
 
-	ext4_get_group_no_and_offset(sb, n_blocks_count - 1, &n_group, &offset);
+	group = ext4_get_group_number(sb, n_blocks_count - 1);
 	if (n_group > (0xFFFFFFFFUL / EXT4_INODES_PER_GROUP(sb))) {
 		ext4_warning(sb, "resize would cause inodes_count overflow");
 		return -EINVAL;
 	}
-	ext4_get_group_no_and_offset(sb, o_blocks_count - 1, &o_group, &offset);
+	group = ext4_get_group_number((sb, o_blocks_count - 1);
 
 	n_desc_blocks = num_desc_blocks(sb, n_group + 1);
 	o_desc_blocks = num_desc_blocks(sb, sbi->s_groups_count);
