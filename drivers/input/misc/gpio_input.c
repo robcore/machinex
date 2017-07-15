@@ -418,7 +418,7 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 			return ret;
 		}
 		if (sysfs_create_file(keyboard_kobj, &dev_attr_vol_wakeup.attr))
-			printk(KERN_ERR "KEY_ERR: %s: sysfs_create_file "
+			pr_debug("KEY_ERR: %s: sysfs_create_file "
 					"return %d\n", __func__, ret);
 		wakeup_bitmask = 0;
 		set_wakeup = 0;
