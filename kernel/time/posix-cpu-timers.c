@@ -11,7 +11,6 @@
 #include <trace/events/timer.h>
 #include <linux/tick.h>
 #include <linux/workqueue.h>
-#include <linux/compat.h>
 
 #include "posix-timers.h"
 
@@ -1249,9 +1248,10 @@ static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
 	timer.it_process = current;
 	if (!error) {
 		static struct itimerspec64 zero_it;
-		struct restart_block *restart;
+		struct restart_block *restart = &current->restart_block;
+		struct timespec __user *rmtp;
 
-		memset(&it, 0, sizeof(it));
+		memset(&it, 0, sizeof it);
 		it.it_value = *rqtp;
 
 		spin_lock_irq(&timer.it_lock);
@@ -1316,20 +1316,12 @@ static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
 		/*
 		 * Report back to the user the time still remaining.
 		 */
-		restart = &current->restart_block;
-		if (restart->nanosleep.type != TT_NONE) {
+		rmtp = restart->nanosleep.rmtp;
+		if (rmtp) {
 			struct timespec ts;
 
 			ts = timespec64_to_timespec(it.it_value);
-#ifdef CONFIG_COMPAT
-			if (restart->nanosleep.type == TT_COMPAT) {
-				if (compat_put_timespec(&ts,
-						restart->nanosleep.compat_rmtp))
-					return -EFAULT;
-			} else
-#endif
-			if (copy_to_user(restart->nanosleep.rmtp, &ts,
-					sizeof(ts)))
+			if (copy_to_user(rmtp, &ts, sizeof(*rmtp)))
 				return -EFAULT;
 		}
 		restart->nanosleep.expires = timespec64_to_ns(rqtp);

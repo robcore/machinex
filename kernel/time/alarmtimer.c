@@ -689,7 +689,7 @@ static enum alarmtimer_restart alarmtimer_nsleep_wakeup(struct alarm *alarm,
 static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t absexp,
 				enum alarmtimer_type type)
 {
-	struct restart_block *restart;
+	struct timespec __user *rmtp;
 	alarm->data = (void *)current;
 	do {
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -707,8 +707,8 @@ static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t absexp,
 
 	if (freezing(current))
 		alarmtimer_freezerset(absexp, type);
-	restart = &current->restart_block;
-	if (restart->nanosleep.type != TT_NONE) {
+	rmtp = current->restart_block.nanosleep.rmtp;
+	if (rmtp) {
 		struct timespec rmt;
 		ktime_t rem;
 
@@ -718,14 +718,7 @@ static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t absexp,
 			return 0;
 		rmt = ktime_to_timespec(rem);
 
-#ifdef CONFIG_COMPAT
-		if (restart->nanosleep.type == TT_COMPAT) {
-			if (compat_put_timespec(&rmt,
-						restart->nanosleep.compat_rmtp))
-				return -EFAULT;
-		} else
-#endif
-		if (copy_to_user(restart->nanosleep.rmtp, &rmt, sizeof(rmt)))
+		if (copy_to_user(rmtp, &rmt, sizeof(*rmtp)))
 			return -EFAULT;
 	}
 	return -ERESTART_RESTARTBLOCK;

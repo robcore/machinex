@@ -50,7 +50,6 @@
 #include <linux/timex.h>
 #include <linux/timekeeper_internal.h>
 #include <linux/hashtable.h>
-#include <linux/compat.h>
 
 #include "timekeeping.h"
 #include "posix-timers.h"
