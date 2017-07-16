@@ -741,7 +741,7 @@ static unsigned int *get_tokenized_data(const char *buf, int *num_tokens)
 	if (!(ntokens & 0x1))
 		goto err;
 
-	tokenized_data = kcalloc(ntokens, sizeof(*tokenized_data), GFP_KERNEL);
+	tokenized_data = kcalloc(ntokens, (unsigned int)sizeof(*tokenized_data), GFP_KERNEL);
 	if (!tokenized_data) {
 		err = -ENOMEM;
 		goto err;
