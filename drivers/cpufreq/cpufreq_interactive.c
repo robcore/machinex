@@ -595,10 +595,10 @@ again:
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
+		schedule();
+
 		if (kthread_should_stop())
 			return 0;
-
-		schedule();
 
 		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	}
