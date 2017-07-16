@@ -2283,7 +2283,7 @@ void input_unregister_handler(struct input_handler *handler)
 
 	mutex_lock(&input_mutex);
 
-	list_for_each_entry_safe(handle, next, &handler->h_list, h_node)
+	list_for_each_entry_safe_reverse(handle, next, &handler->h_list, h_node)
 		handler->disconnect(handle);
 	WARN_ON(!list_empty(&handler->h_list));
 
