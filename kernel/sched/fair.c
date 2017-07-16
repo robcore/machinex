@@ -30,10 +30,13 @@
 #include <linux/mempolicy.h>
 #include <linux/migrate.h>
 #include <linux/task_work.h>
+#include <linux/sched.h>
+#include <linux/sched/topology.h>
 
 #include <trace/events/sched.h>
 
 #include "sched.h"
+
 
 /*
  * Targeted preemption latency for CPU-bound tasks:
