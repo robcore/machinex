@@ -36,7 +36,6 @@
 #include <linux/timed_output.h>
 #include <linux/display_state.h>
 #include <mach/jf_eur-gpio.h>
-#include <linux/sysfs_helpers.h>
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -67,52 +66,6 @@ struct gpio_keys_drvdata {
 #endif
 	struct gpio_button_data data[0];
 };
-
-static unsigned int enable_volume_wake;
-static ssize_t volume_wake_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	unsigned char bitmask = 0;
-	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
-	struct gpio_button_data *bdata;
-	unsigned int i;
-	int val;
-
-	sscanf(buf, "%d\n", &val);
-
-	sanitize_min_max(val, 0, 1);
-
-	enable_volume_wake = val;
-
-	if (enable_volume_wake) {
-		for (i = 0; i < ddata->pdata->nbuttons; i++) {
-			bdata = &ddata->data[i];
-			if (bdata->button->code == KEY_VOLUMEUP)
-				device_set_wakeup_capable(dev, true);
-			if (bdata->button->code == KEY_VOLUMEDOWN)
-				device_set_wakeup_capable(dev, true);
-		}
-	} else if (!enable_volume_wake){
-		for (i = 0; i < ddata->pdata->nbuttons; i++) {
-			bdata = &ddata->data[i];
-			if (bdata->button->code == KEY_VOLUMEUP)
-				device_set_wakeup_capable(dev, false);
-			if (bdata->button->code == KEY_VOLUMEDOWN)
-				device_set_wakeup_capable(dev, false);
-		}
-	}
-	return count;
-}
-
-static ssize_t volume_wake_show(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", enable_volume_wake);
-}
-
-static DEVICE_ATTR(volume_wake, 0644,
-					volume_wake_show, volume_wake_store);
 
 static struct device *global_dev;
 
@@ -407,7 +360,6 @@ static struct attribute *gpio_keys_attrs[] = {
 	&dev_attr_switches.attr,
 	&dev_attr_disabled_keys.attr,
 	&dev_attr_disabled_switches.attr,
-	&dev_attr_volume_wake.attr,
 	NULL,
 };
 
@@ -455,7 +407,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 
 	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
 				pm_stay_awake(bdata->input->dev.parent);
-
+skip_wake:
 	mod_delayed_work(system_wq,
 			 &bdata->work,
 			 msecs_to_jiffies(bdata->software_debounce));
@@ -1034,7 +986,8 @@ static int gpio_keys_suspend(struct device *dev)
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
-			if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
+			if (bdata->button->wakeup || \
+			    bdata->button->code == KEY_HOMEPAGE)
 				enable_irq_wake(bdata->irq);
 		}
 	} else {
@@ -1058,10 +1011,18 @@ static int gpio_keys_resume(struct device *dev)
 	int error = 0;
 	int i;
 
+#if defined(CONFIG_SENSORS_HALL)
+	if (!flip_bypass) {
+		if (device_may_wakeup(global_dev) && ddata->gpio_flip_cover != 0)
+			disable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
+	}
+#endif
+
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
-			if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
+			if (bdata->button->wakeup || \
+			    bdata->button->code == KEY_HOMEPAGE)
 				disable_irq_wake(bdata->irq);
 		}
 	} else {
@@ -1070,12 +1031,6 @@ static int gpio_keys_resume(struct device *dev)
 			error = gpio_keys_open(input);
 		mutex_unlock(&input->mutex);
 	}
-#if defined(CONFIG_SENSORS_HALL)
-	if (!flip_bypass) {
-		if (device_may_wakeup(global_dev) && ddata->gpio_flip_cover != 0)
-			disable_irq_wake(gpio_to_irq(ddata->gpio_flip_cover));
-	}
-#endif
 	if (error)
 		return error;
 
