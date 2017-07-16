@@ -520,6 +520,12 @@ struct rt_rq {
 	struct rq *rq;
 	struct task_group *tg;
 #endif
+	/*
+	 * "Active utilization" for this runqueue: increased when a
+	 * task wakes up (becomes TASK_RUNNING) and decreased when a
+	 * task blocks
+	 */
+	u64 running_bw;
 };
 
 /* Deadline class' related fields in a runqueue */
