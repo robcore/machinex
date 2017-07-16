@@ -488,7 +488,8 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 
 	if (frozen(speedchange_task))
 		return;
-	wake_up_process(speedchange_task);
+	if (speedchange_task)
+		wake_up_process_no_notif(speedchange_task);
 	return;
 
 exit:
@@ -684,8 +685,8 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
 	if (wakeup) {
-		if (!frozen(speedchange_task))
-			wake_up_process(speedchange_task);
+		if (speedchange_task && !frozen(speedchange_task))
+			wake_up_process_no_notif(speedchange_task);
 	}
 }
 
@@ -1443,7 +1444,8 @@ static int __init cpufreq_interactive_gov_init(void)
 	get_task_struct(speedchange_task);
 
 	/* wake up so the thread does not look hung to the freezer */
-	wake_up_process(speedchange_task);
+	if (speedchange_task)
+		wake_up_process_no_notif(speedchange_task);
 
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
