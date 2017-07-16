@@ -34,7 +34,7 @@
 
 #include <linux/interrupt.h>
 #include <linux/semaphore.h>
-#include <linux/sched/signal.h>
+#include <linux/sched.h>
 #include <linux/sem.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>

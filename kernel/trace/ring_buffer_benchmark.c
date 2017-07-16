@@ -6,7 +6,6 @@
 #include <linux/ring_buffer.h>
 #include <linux/completion.h>
 #include <linux/kthread.h>
-#include <uapi/linux/sched/types.h>
 #include <linux/module.h>
 #include <linux/time.h>
 #include <asm/local.h>

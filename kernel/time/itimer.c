@@ -10,7 +10,6 @@
 #include <linux/interrupt.h>
 #include <linux/syscalls.h>
 #include <linux/time.h>
-#include <linux/sched/signal.h>
 #include <linux/posix-timers.h>
 #include <linux/hrtimer.h>
 #include <trace/events/timer.h>

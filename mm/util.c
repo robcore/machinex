@@ -9,7 +9,6 @@
 #include <linux/swap.h>
 #include <linux/swapops.h>
 #include <linux/vmalloc.h>
-#include <linux/sched/mm.h>
 
 #include <asm/sections.h>
 #include <asm/uaccess.h>

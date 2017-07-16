@@ -21,7 +21,6 @@
 #include <linux/clk.h>
 #include <linux/gpio.h>
 #include <linux/slab.h>
-#include <linux/sched/clock.h>
 
 #include <net/irda/irda.h>
 #include <net/irda/irmod.h>

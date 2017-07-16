@@ -32,9 +32,6 @@
 #include <linux/swap.h>
 #include <linux/string.h>
 #include <linux/init.h>
-#include <linux/sched/mm.h>
-#include <linux/sched/coredump.h>
-#include <linux/sched/signal.h>
 #include <linux/pagemap.h>
 #include <linux/perf_event.h>
 #include <linux/highmem.h>

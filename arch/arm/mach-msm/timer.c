@@ -34,7 +34,6 @@
 #include <mach/msm_iomap.h>
 #include <mach/irqs.h>
 #include <mach/socinfo.h>
-#include <linux/sched/clock.h>
 
 #if defined(CONFIG_MSM_SMD)
 #include "smd_private.h"

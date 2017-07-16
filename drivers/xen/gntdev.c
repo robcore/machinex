@@ -30,7 +30,6 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/sched.h>
-#include <linux/sched/mm.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>
 #include <linux/highmem.h>

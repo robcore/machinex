@@ -9,7 +9,8 @@
  * as published by the Free Software Foundation; either version
  * 2 of the Licence, or (at your option) any later version.
  */
-#include <linux/sched/signal.h>
+
+#include <linux/sched.h>
 
 /*
  * Returns true if the task does not share ->mm with another thread/process.

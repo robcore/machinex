@@ -9,7 +9,6 @@
 #include <linux/bug.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
-#include <linux/sched/signal.h>
 #include <asm/traps.h>
 #include <asm/cplb.h>
 #include <asm/blackfin.h>

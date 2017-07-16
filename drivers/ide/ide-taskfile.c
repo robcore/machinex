@@ -19,7 +19,6 @@
 #include <linux/delay.h>
 #include <linux/hdreg.h>
 #include <linux/ide.h>
-#include <linux/nmi.h>
 #include <linux/scatterlist.h>
 #include <linux/uaccess.h>
 

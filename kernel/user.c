@@ -13,7 +13,6 @@
 #include <linux/slab.h>
 #include <linux/bitops.h>
 #include <linux/key.h>
-#include <linux/sched/user.h>
 #include <linux/interrupt.h>
 #include <linux/export.h>
 #include <linux/user_namespace.h>

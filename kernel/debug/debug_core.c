@@ -45,7 +45,6 @@
 #include <linux/init.h>
 #include <linux/kgdb.h>
 #include <linux/kdb.h>
-#include <linux/nmi.h>
 #include <linux/pid.h>
 #include <linux/smp.h>
 #include <linux/mm.h>
@@ -235,9 +234,9 @@ static void kgdb_flush_swbreak_addr(unsigned long addr)
 		int i;
 
 		for (i = 0; i < VMACACHE_SIZE; i++) {
-			if (!current->vmacache.vmas[i])
+			if (!current->vmacache[i])
 				continue;
-			flush_cache_range(current->vmacache.vmas[i],
+			flush_cache_range(current->vmacache[i],
 					  addr, addr + BREAK_INSTR_SIZE);
 		}
 	}

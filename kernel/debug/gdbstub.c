@@ -29,7 +29,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/sched/signal.h>
 #include <linux/kgdb.h>
 #include <linux/kdb.h>
 #include <linux/reboot.h>

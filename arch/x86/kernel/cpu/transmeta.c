@@ -1,6 +1,5 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
-#include <linux/sched/clock.h>
 #include <linux/mm.h>
 #include <linux/init.h>
 #include <asm/processor.h>

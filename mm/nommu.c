@@ -17,7 +17,6 @@
 
 #include <linux/export.h>
 #include <linux/mm.h>
-#include <linux/sched/mm.h>
 #include <linux/vmacache.h>
 #include <linux/mman.h>
 #include <linux/swap.h>
@@ -782,7 +781,7 @@ static void delete_vma_from_mm(struct vm_area_struct *vma)
 	mm->map_count--;
 	for (i = 0; i < VMACACHE_SIZE; i++) {
 		/* if the vma is cached, invalidate the entire cache */
-		if (curr->vmacache.vmas[i] == vma) {
+		if (curr->vmacache[i] == vma) {
 			vmacache_invalidate(curr->mm);
 			break;
 		}

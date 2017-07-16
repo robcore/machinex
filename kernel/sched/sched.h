@@ -1,12 +1,7 @@
 
 #include <linux/sched.h>
 #include <linux/sched/sysctl.h>
-#include <linux/sched/topology.h>
 #include <linux/sched/rt.h>
-#include <linux/sched/clock.h>
-#include <linux/sched/wake_q.h>
-#include <linux/sched/signal.h>
-#include <linux/sched/mm.h>
 #include <linux/u64_stats_sync.h>
 #include <linux/sched/deadline.h>
 #include <linux/kernel_stat.h>

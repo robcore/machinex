@@ -48,7 +48,6 @@
 #include <linux/socket.h>
 #include <linux/sockios.h>
 #include <linux/slab.h>
-#include <linux/sched/signal.h>
 #include <linux/init.h>
 #include <linux/net.h>
 #include <linux/irda.h>

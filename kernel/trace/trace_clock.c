@@ -18,7 +18,6 @@
 #include <linux/module.h>
 #include <linux/percpu.h>
 #include <linux/sched.h>
-#include <linux/sched/clock.h>
 #include <linux/ktime.h>
 #include <linux/trace_clock.h>
 

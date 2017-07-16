@@ -33,7 +33,6 @@
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/sched/signal.h>
 #include <linux/module.h>
 #include <linux/kref.h>
 #include <linux/netdevice.h>

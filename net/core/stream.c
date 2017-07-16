@@ -13,7 +13,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/sched/signal.h>
 #include <linux/net.h>
 #include <linux/signal.h>
 #include <linux/tcp.h>

@@ -12,7 +12,6 @@
 #include <linux/pagemap.h>
 #include <linux/rmap.h>
 #include <linux/sched.h>
-#include <linux/sched/coredump.h>
 
 struct stable_node;
 struct mem_cgroup;

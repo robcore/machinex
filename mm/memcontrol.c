@@ -60,7 +60,7 @@
 #include "internal.h"
 #include <net/sock.h>
 #include <net/tcp_memcontrol.h>
-#include <linux/sched/mm.h>
+
 #include <asm/uaccess.h>
 
 #include <trace/events/vmscan.h>

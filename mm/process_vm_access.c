@@ -12,7 +12,6 @@
 #include <linux/mm.h>
 #include <linux/uio.h>
 #include <linux/sched.h>
-#include <linux/sched/mm.h>
 #include <linux/highmem.h>
 #include <linux/ptrace.h>
 #include <linux/slab.h>

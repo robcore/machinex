@@ -8,7 +8,6 @@
  */
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/sched/clock.h>
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
 #include <linux/jiffies.h>

@@ -36,7 +36,7 @@
 #include <linux/bitops.h>
 #include <linux/log2.h>
 #include <linux/interrupt.h>
-#include <linux/sched/signal.h>
+#include <linux/sched.h>
 #include <linux/io.h>
 
 #include <scsi/scsi.h>

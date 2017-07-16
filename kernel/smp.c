@@ -17,7 +17,6 @@
 #include <linux/smp.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
-#include <linux/sched/idle.h>
 
 #include "smpboot.h"
 

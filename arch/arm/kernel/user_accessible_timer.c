@@ -15,7 +15,6 @@
 #include <linux/sched.h>
 #include <asm/user_accessible_timer.h>
 #include <asm/traps.h>
-#include <linux/sched/clock.h>
 
 #define USER_ACCESS_TIMER_OFFSET	0xf30
 #define USER_ACCESS_FEATURE_OFFSET	0xf34

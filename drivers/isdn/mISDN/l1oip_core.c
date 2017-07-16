@@ -234,8 +234,6 @@
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/sched/signal.h>
-
 #include <net/sock.h>
 #include "core.h"
 #include "l1oip.h"
