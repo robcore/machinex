@@ -37,8 +37,6 @@
 #include <linux/display_state.h>
 #include <mach/jf_eur-gpio.h>
 
-static unsigned int volume_key_wakeup;
-
 struct gpio_button_data {
 	struct gpio_keys_button *button;
 	struct input_dev *input;
@@ -70,6 +68,54 @@ struct gpio_keys_drvdata {
 };
 
 static struct device *global_dev;
+
+static unsigned int volume_key_wakeup;
+
+static ssize_t vol_wakeup_show(struct device *dev,
+					struct device_attribute *attr, char *buf)
+{
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n", volume_key_wakeup);
+}
+
+static ssize_t vol_wakeup_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned char bitmask = 0;
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+	bitmask = simple_strtoull(buf, NULL, 10);
+
+	mutex_lock(&ddata->attr_operation_lock);
+	if (bitmask) {
+		if (bitmask == 127)
+			ddata->wakeup_bitmask &= bitmask;
+		else if (bitmask > 128)
+			ddata->wakeup_bitmask &= bitmask;
+		else
+			ddata->wakeup_bitmask |= bitmask;
+	}
+
+	if (ddata->wakeup_bitmask && (!ddata->set_wakeup)) {
+		enable_irq_wake(vol_up_irq);
+		enable_irq_wake(vol_down_irq);
+		ddata->set_wakeup = 1;
+		KEY_LOGI("%s: change to wake up function(%d, %d)\n",
+					__func__, vol_up_irq, vol_down_irq);
+	} else if ((!ddata->wakeup_bitmask) && ddata->set_wakeup){
+		disable_irq_wake(vol_up_irq);
+		disable_irq_wake(vol_down_irq);
+		ddata->set_wakeup = 0;
+		KEY_LOGI("%s: change to non-wake up function(%d, %d)\n",
+					__func__, vol_up_irq, vol_down_irq);
+	}
+	mutex_unlock(&ddata->attr_operation_lock);
+	return count;
+}
+
+static DEVICE_ATTR(volume_key_wakeup, S_IWUSR | S_IWGRP | S_IRUGO,
+					vol_wakeup_show, vol_wakeup_store);
 
 /*
  * SYSFS interface for enabling/disabling keys and switches:
