@@ -535,10 +535,9 @@ static void intelli_plug_stop(void)
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
 	cancel_delayed_work(&intelli_plug_work);
-	for_each_possible_cpu(cpu) {
-		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
-	}
 	unregister_power_suspend(&intelli_suspend_data);
+	for_each_possible_cpu(cpu)
+		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
 }
