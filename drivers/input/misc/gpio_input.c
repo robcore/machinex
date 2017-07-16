@@ -29,9 +29,14 @@ static unsigned char set_wakeup;
 static unsigned int vol_up_irq;
 static unsigned int vol_down_irq;
 
-static ssize_t vol_wakeup_store(struct device *dev,
-					 struct device_attribute *attr,
-					 const char *buf, size_t count)
+static ssize_t vol_wakeup_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%x\n", wakeup_bitmask);
+}
+
+static ssize_t vol_wakeup_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned char bitmask = 0;
 	bitmask = simple_strtoull(buf, NULL, 10);
@@ -57,13 +62,24 @@ static ssize_t vol_wakeup_store(struct device *dev,
 	mutex_unlock(&wakeup_mutex);
 	return count;
 }
-static ssize_t vol_wakeup_show(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%x\n", wakeup_bitmask);
-}
 
-static DEVICE_ATTR(vol_wakeup, 0664, vol_wakeup_show, vol_wakeup_store);
+static struct kobj_attribute vol_wakeup_attribute =
+	__ATTR(vol_wakeup, 0644,
+		vol_wakeup_show,
+		vol_wakeup_store);
+
+static struct attribute *keyboard_attrs[] =
+{
+	&vol_wakeup_attribute.attr,
+	NULL,
+};
+
+static const struct attribute_group keyboard_attr_group =
+{
+	.attrs = keyboard_attrs,
+};
+
+static struct kobject *keyboard_kobj;
 
 enum {
 	DEBOUNCE_UNSTABLE     = BIT(0),	/* Got irq, while debouncing */
@@ -279,16 +295,12 @@ static int gpio_event_input_request_irqs(struct gpio_input_state *ds)
 /* volume wake */
 		if (ds->info->keymap[i].code == KEY_VOLUMEUP ||
 			ds->info->keymap[i].code == KEY_VOLUMEDOWN) {
-			pr_info("keycode = %d, gpio = %d, irq = %d\n",
-				ds->info->keymap[i].code,
-				ds->info->keymap[i].gpio, irq);
 			if (ds->info->keymap[i].code == KEY_VOLUMEUP)
 				vol_up_irq = irq;
-			else
+			else if (ds->info->keymap[i].code == KEY_VOLUMEDOWN)
 				vol_down_irq = irq;
-		} else {
+		} else
 			enable_irq_wake(irq);
-		}
 
 		if (ds->info->info.no_suspend) {
 			err = enable_irq_wake(irq);
@@ -326,6 +338,7 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 	struct gpio_input_state *ds = *data;
 	char *wlname;
 	struct kobject *keyboard_kobj;
+	int sysfs_result;
 
 	di = container_of(info, struct gpio_event_input_info, info);
 
@@ -411,15 +424,20 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 		ret = gpio_event_input_request_irqs(ds);
 
 //volume wake
-		keyboard_kobj = kobject_create_and_add("keyboard", NULL);
-		if (keyboard_kobj == NULL) {
-			printk(KERN_ERR "KEY_ERR: %s: subsystem_register failed\n", __func__);
-			ret = -ENOMEM;
-			return ret;
-		}
-		if (sysfs_create_file(keyboard_kobj, &dev_attr_vol_wakeup.attr))
-			pr_debug("KEY_ERR: %s: sysfs_create_file "
-					"return %d\n", __func__, ret);
+	keyboard_kobj = kobject_create_and_add("keyboard",
+		kernel_kobj);
+
+	if (!keyboard_kobj) {
+		pr_err("%s kobject create failed!\n", __FUNCTION__);
+	}
+
+	sysfs_result = sysfs_create_group(keyboard_kobj,
+		&keyboard_attr_group);
+
+	if (sysfs_result) {
+		pr_err("%s group create failed!\n", __FUNCTION__);
+		kobject_put(keyboard_kobj);
+	}
 		wakeup_bitmask = 0;
 		set_wakeup = 0;
 
