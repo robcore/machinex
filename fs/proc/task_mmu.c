@@ -11,6 +11,7 @@
 #include <linux/mempolicy.h>
 #include <linux/rmap.h>
 #include <linux/swap.h>
+#include <linux/sched/mm.h>
 #include <linux/swapops.h>
 
 #include <asm/elf.h>

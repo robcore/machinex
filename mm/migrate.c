@@ -37,7 +37,7 @@
 #include <linux/hugetlb_cgroup.h>
 #include <linux/gfp.h>
 #include <linux/balloon_compaction.h>
-
+#include <linux/sched/mm.h>
 #include <asm/tlbflush.h>
 
 #define CREATE_TRACE_POINTS
