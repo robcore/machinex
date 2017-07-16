@@ -1417,9 +1417,10 @@ static void cpufreq_interactive_nop_timer(unsigned long data)
 
 static int __init cpufreq_interactive_gov_init(void)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
+	int ret;
 
 	for_each_possible_cpu(cpu) {
 		icpu = &per_cpu(interactive_cpu, cpu);
@@ -1440,7 +1441,12 @@ static int __init cpufreq_interactive_gov_init(void)
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
-	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	ret = sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	if (ret) {
+		kthread_stop(thread);
+		pr_warn("%s: failed to set SCHED_FIFO\n", __func__);
+		return ret;
+	}
 	get_task_struct(speedchange_task);
 
 	/* wake up so the thread does not look hung to the freezer */
