@@ -13,7 +13,7 @@
 #include <linux/kdebug.h>
 #include <linux/module.h>
 #include <linux/notifier.h>
-#include <linux/sched.h>
+#include <linux/sched/signal.h>
 #include <linux/uaccess.h>
 
 #include <asm/addrspace.h>

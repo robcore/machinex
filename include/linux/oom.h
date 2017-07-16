@@ -13,7 +13,7 @@
 #define OOM_ADJUST_MAX 15
 
 
-#include <linux/sched.h>
+#include <linux/sched/signal.h>
 #include <linux/types.h>
 #include <linux/nodemask.h>
 #include <uapi/linux/oom.h>

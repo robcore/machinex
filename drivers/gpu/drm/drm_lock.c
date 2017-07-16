@@ -34,6 +34,8 @@
  */
 
 #include <linux/export.h>
+#include <linux/sched/signal.h>
+
 #include <drm/drmP.h>
 
 static int drm_notifier(void *priv);
