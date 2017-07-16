@@ -765,9 +765,9 @@ static ssize_t wakeup_enable(struct device *dev,
 		if (button->button->type == EV_KEY || button->button->code == KEY_HOMEPAGE) {
 			if (test_bit(button->button->code, bits)) {
 				if (!volume_key_wakeup) {
-					if (bdata->button->code == KEY_VOLUMEUP || \
-						bdata->button->code == KEY_VOLUMEDOWN)
-						button->button->wakeup = 0;;
+					if (button->button->code == KEY_VOLUMEUP || \
+						button->button->code == KEY_VOLUMEDOWN)
+						button->button->wakeup = 0;
 					else
 						button->button->wakeup = 1;
 				}
