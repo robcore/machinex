@@ -60,6 +60,7 @@
 #include <linux/sched/deadline.h>
 #include <linux/rcupdate_wait.h>
 #include <uapi/linux/sched/types.h>
+#include <linux/sched/loadavg.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
