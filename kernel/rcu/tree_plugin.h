@@ -31,6 +31,7 @@
 #include <linux/tick.h>
 #include <linux/cpu.h>
 #include "../time/tick-internal.h"
+#include <uapi/linux/sched/types.h>
 
 #ifdef CONFIG_RCU_BOOST
 

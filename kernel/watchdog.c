@@ -26,6 +26,7 @@
 #include <linux/sched/rt.h>
 #include <linux/workqueue.h>
 #include <linux/sched/clock.h>
+#include <uapi/linux/sched/types.h>
 
 #include <asm/irq_regs.h>
 #include <linux/kvm_para.h>
