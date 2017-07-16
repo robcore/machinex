@@ -94,14 +94,10 @@ static ssize_t vol_wakeup_store(struct device *dev,
 		enable_irq_wake(vol_up_irq);
 		enable_irq_wake(vol_down_irq);
 		ddata->set_wakeup = 1;
-		KEY_LOGI("%s: change to wake up function(%d, %d)\n",
-					__func__, vol_up_irq, vol_down_irq);
 	} else if ((!ddata->wakeup_bitmask) && ddata->set_wakeup){
 		disable_irq_wake(vol_up_irq);
 		disable_irq_wake(vol_down_irq);
 		ddata->set_wakeup = 0;
-		KEY_LOGI("%s: change to non-wake up function(%d, %d)\n",
-					__func__, vol_up_irq, vol_down_irq);
 	}
 	mutex_unlock(&ddata->attr_operation_lock);
 	return count;
