@@ -4505,7 +4505,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "volume_up_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-		.wakeup     = 0,
+		.wakeup     = 1,
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
@@ -4518,7 +4518,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.desc           = "volume_down_key",
 		.active_low     = 1,
 		.type		= EV_KEY,
-		.wakeup     = 0,
+		.wakeup     = 1,
 #ifdef CONFIG_SEC_FACTORY
 		.debounce_interval = 10,
 #else
@@ -4533,7 +4533,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.type		= EV_KEY,
 		.wakeup     = 1,
 //#ifdef CONFIG_SEC_FACTORY
-		.debounce_interval = 10,
+		.debounce_interval = 5,
 //#else
 		//.debounce_interval = 5,
 //#endif
