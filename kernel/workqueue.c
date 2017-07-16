@@ -4718,7 +4718,7 @@ int workqueue_offline_cpu(unsigned int cpu)
 
 	/* update NUMA affinity of unbound workqueues */
 	mutex_lock(&wq_pool_mutex);
-	list_for_each_entry(wq, &workqueues, list)
+	list_for_each_entry_reverse(wq, &workqueues, list)
 		wq_update_unbound_numa(wq, cpu, false);
 	mutex_unlock(&wq_pool_mutex);
 
@@ -4809,16 +4809,19 @@ void freeze_workqueues_begin(void)
 
 	mutex_lock(&wq_pool_mutex);
 
-	WARN_ON_ONCE(workqueue_freezing);
+	if (WARN_ON_ONCE(workqueue_freezing))
+		goto in_unlock;
+
 	workqueue_freezing = true;
 
-	list_for_each_entry(wq, &workqueues, list) {
+	list_for_each_entry_reverse(wq, &workqueues, list) {
 		mutex_lock(&wq->mutex);
 		for_each_pwq(pwq, wq)
 			pwq_adjust_max_active(pwq);
 		mutex_unlock(&wq->mutex);
 	}
 
+in_unlock:
 	mutex_unlock(&wq_pool_mutex);
 }
 
