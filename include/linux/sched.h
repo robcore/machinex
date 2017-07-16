@@ -889,6 +889,22 @@ extern struct user_struct root_user;
 
 struct backing_dev_info;
 struct reclaim_state;
+#ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
+enum vtime_state {
+	/* Task is sleeping or running in a CPU with VTIME inactive: */
+	VTIME_INACTIVE = 0,
+	/* Task runs in userspace in a CPU with VTIME active: */
+	VTIME_USER,
+	/* Task runs in kernelspace in a CPU with VTIME active: */
+	VTIME_SYS,
+};
+
+struct vtime {
+	seqcount_t		seqcount;
+	unsigned long long	starttime;
+	enum vtime_state	state;
+};
+#endif
 
 #ifdef CONFIG_SCHED_INFO
 struct sched_info {
@@ -1610,19 +1626,6 @@ struct task_struct {
 #endif
 	u64 gtime;
 	struct prev_cputime prev_cputime;
-#ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
-	seqcount_t vtime_seqcount;
-	unsigned long long vtime_starttime;
-	enum {
-		/* Task is sleeping or running in a CPU with VTIME inactive */
-		VTIME_INACTIVE = 0,
-		/* Task runs in userspace in a CPU with VTIME active */
-		VTIME_USER,
-		/* Task runs in kernelspace in a CPU with VTIME active */
-		VTIME_SYS,
-	} vtime_state;
-#endif
-
 #ifdef CONFIG_NO_HZ_FULL
 	atomic_t tick_dep_mask;
 #endif
