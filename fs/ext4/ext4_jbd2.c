@@ -258,7 +258,7 @@ int __ext4_handle_dirty_super(const char *where, unsigned int line,
 		if (err)
 			ext4_journal_abort_handle(where, line, __func__,
 						  bh, handle, err);
-	} else if (now) {
+	} else {
 		ext4_superblock_csum_set(sb,
 				(struct ext4_super_block *)bh->b_data);
 		mark_buffer_dirty(bh);
