@@ -3511,7 +3511,7 @@ void __sched schedule_idle(void)
 	 */
 	WARN_ON_ONCE(current->state);
 	do {
-		__schedule(false);
+		__schedule();
 	} while (need_resched());
 }
 
