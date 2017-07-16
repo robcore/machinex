@@ -166,7 +166,7 @@ static struct synaptics_rmi4_platform_data rmi4_platformdata = {
 	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT |
 				IRQF_NO_SUSPEND,
 #else
-	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_EARLY_RESUME,
 #endif
 #ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
 	.factory_flatform = true,
