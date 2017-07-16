@@ -594,25 +594,24 @@ again:
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+
 		if (kthread_should_stop())
 			return 0;
 
 		schedule();
 
-		if (kthread_should_stop())
-			return 0;
-
 		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	}
-
+	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 	set_current_state(TASK_RUNNING);
+	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	tmp_mask = speedchange_cpumask;
 	cpumask_clear(&speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
 	for_each_cpu(cpu, &tmp_mask) {
-	struct interactive_cpu *icpu;
-	struct cpufreq_policy *policy;
+		struct interactive_cpu *icpu;
+		struct cpufreq_policy *policy;
 
 		icpu = &per_cpu(interactive_cpu, cpu);
 		if (icpu == NULL)
