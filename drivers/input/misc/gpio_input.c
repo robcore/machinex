@@ -22,65 +22,6 @@
 #include <linux/slab.h>
 #include <linux/pm_wakeup.h>
 
-/* volume wake */
-static DEFINE_MUTEX(wakeup_mutex);
-static unsigned char wakeup_bitmask;
-static unsigned char set_wakeup;
-static unsigned int vol_up_irq;
-static unsigned int vol_down_irq;
-
-static ssize_t vol_wakeup_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%x\n", wakeup_bitmask);
-}
-
-static ssize_t vol_wakeup_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned char bitmask = 0;
-	bitmask = simple_strtoull(buf, NULL, 10);
-	mutex_lock(&wakeup_mutex);
-	if (bitmask) {
-		if (bitmask == 127)
-			wakeup_bitmask &= bitmask;
-		else if (bitmask > 128)
-			wakeup_bitmask &= bitmask;
-		else
-			wakeup_bitmask |= bitmask;
-	}
-
-	if (wakeup_bitmask && (!set_wakeup)) {
-		enable_irq_wake(vol_up_irq);
-		enable_irq_wake(vol_down_irq);
-		set_wakeup = 1;
-	} else if ((!wakeup_bitmask) && set_wakeup){
-		disable_irq_wake(vol_up_irq);
-		disable_irq_wake(vol_down_irq);
-		set_wakeup = 0;
-	}
-	mutex_unlock(&wakeup_mutex);
-	return count;
-}
-
-static struct kobj_attribute vol_wakeup_attribute =
-	__ATTR(vol_wakeup, 0644,
-		vol_wakeup_show,
-		vol_wakeup_store);
-
-static struct attribute *keyboard_attrs[] =
-{
-	&vol_wakeup_attribute.attr,
-	NULL,
-};
-
-static const struct attribute_group keyboard_attr_group =
-{
-	.attrs = keyboard_attrs,
-};
-
-static struct kobject *keyboard_kobj;
-
 enum {
 	DEBOUNCE_UNSTABLE     = BIT(0),	/* Got irq, while debouncing */
 	DEBOUNCE_PRESSED      = BIT(1),
@@ -292,16 +233,6 @@ static int gpio_event_input_request_irqs(struct gpio_input_state *ds)
 				ds->info->keymap[i].gpio, irq);
 			goto err_request_irq_failed;
 		}
-/* volume wake */
-		if (ds->info->keymap[i].code == KEY_VOLUMEUP ||
-			ds->info->keymap[i].code == KEY_VOLUMEDOWN) {
-			if (ds->info->keymap[i].code == KEY_VOLUMEUP)
-				vol_up_irq = irq;
-			else if (ds->info->keymap[i].code == KEY_VOLUMEDOWN)
-				vol_down_irq = irq;
-		} else
-			enable_irq_wake(irq);
-
 		if (ds->info->info.no_suspend) {
 			err = enable_irq_wake(irq);
 			if (err) {
@@ -337,8 +268,6 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 	struct gpio_event_input_info *di;
 	struct gpio_input_state *ds = *data;
 	char *wlname;
-	struct kobject *keyboard_kobj;
-	int sysfs_result;
 
 	di = container_of(info, struct gpio_event_input_info, info);
 
@@ -423,24 +352,6 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 
 		ret = gpio_event_input_request_irqs(ds);
 
-//volume wake
-	keyboard_kobj = kobject_create_and_add("keyboard",
-		kernel_kobj);
-
-	if (!keyboard_kobj) {
-		pr_err("%s kobject create failed!\n", __FUNCTION__);
-	}
-
-	sysfs_result = sysfs_create_group(keyboard_kobj,
-		&keyboard_attr_group);
-
-	if (sysfs_result) {
-		pr_err("%s group create failed!\n", __FUNCTION__);
-		kobject_put(keyboard_kobj);
-	}
-		wakeup_bitmask = 0;
-		set_wakeup = 0;
-
 		spin_lock_irqsave(&ds->irq_lock, irqflags);
 		ds->use_irq = ret == 0;
 		ds->is_removing = 0;
@@ -484,3 +395,4 @@ err_ws_failed:
 err_ds_alloc_failed:
 	return ret;
 }
+

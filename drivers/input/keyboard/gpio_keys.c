@@ -65,8 +65,6 @@ struct gpio_keys_drvdata {
 	//struct wake_lock flip_wake_lock;
 #endif
 	struct gpio_button_data data[0];
-	int volume_up_gpio;
-	int volume_down_gpio;
 };
 
 static struct device *global_dev;
