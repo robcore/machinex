@@ -3240,8 +3240,8 @@ static int ext4_ext_convert_to_initialized(handle_t *handle,
 	struct ext4_extent zero_ex;
 	struct ext4_extent *ex, *abut_ex;
 	ext4_lblk_t ee_block, eof_block;
-+	unsigned int ee_len, depth, map_len = map->m_len;
-+	int allocated = 0, max_zeroout = 0;
+	unsigned int ee_len, depth, map_len = map->m_len;
+	int allocated = 0, max_zeroout = 0;
 	int err = 0;
 	int split_flag = 0;
 
