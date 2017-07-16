@@ -51,6 +51,7 @@
 #include <linux/kprobes.h>
 #include <linux/user_namespace.h>
 #include <linux/sched.h>
+#include <linux/sched/autogroup.h>
 #include <linux/sched/loadavg.h>
 #include <linux/rcupdate.h>
 #include <linux/cred.h>
