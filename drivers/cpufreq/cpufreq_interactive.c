@@ -29,10 +29,11 @@
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
-#include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/freezer.h>
 #include <linux/display_state.h>
+#include <linux/workqueue.h>
+#include <linux/powersuspend.h>
 
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
@@ -136,10 +137,19 @@ struct interactive_cpu {
 
 static DEFINE_PER_CPU(struct interactive_cpu, interactive_cpu);
 
-/* Realtime thread handles frequency scaling */
-static struct task_struct *speedchange_task;
+/* WQ-based thread handles frequency scaling */
+static struct delayed_work interactive_work;
+static struct workqueue_struct *interactive_wq;
+static struct work_struct *speedchange;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
+
+struct ia_suspend {
+	struct mutex interactive_mutex;
+	unsigned int interactive_suspended;
+};
+
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct interactive_suspend, interactive_suspend_data);
 
 /* Target load. Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 90

@@ -50,7 +50,6 @@ static u64 last_input;
 static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
-static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
 
 struct ip_cpu_info {
@@ -485,7 +484,6 @@ static int intelli_plug_start(void)
 
 	intellinit = true;
 
-	mutex_init(&intelli_plug_mutex);
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
 		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
@@ -540,7 +538,6 @@ static void intelli_plug_stop(void)
 	for_each_possible_cpu(cpu) {
 		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
 	}
-	mutex_destroy(&intelli_plug_mutex);
 	unregister_power_suspend(&intelli_suspend_data);
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
