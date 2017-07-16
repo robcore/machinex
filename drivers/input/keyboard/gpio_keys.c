@@ -58,6 +58,9 @@ struct gpio_keys_drvdata {
 	struct input_dev *input;
 	struct device *sec_key;
 	struct mutex disable_lock;
+	struct mutex attr_operation_lock;
+	unsigned char wakeup_bitmask;
+	unsigned char set_wakeup;
 #if defined(CONFIG_SENSORS_HALL)
 	int gpio_flip_cover;
 	bool flip_cover;
@@ -66,6 +69,54 @@ struct gpio_keys_drvdata {
 #endif
 	struct gpio_button_data data[0];
 };
+
+static unsigned int vol_up_irq;
+static unsigned int vol_down_irq;
+static ssize_t vol_wakeup_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned char bitmask = 0;
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+	bitmask = simple_strtoull(buf, NULL, 10);
+
+	mutex_lock(&ddata->attr_operation_lock);
+	if (bitmask) {
+		if (bitmask == 127)
+			ddata->wakeup_bitmask &= bitmask;
+		else if (bitmask > 128)
+			ddata->wakeup_bitmask &= bitmask;
+		else
+			ddata->wakeup_bitmask |= bitmask;
+	}
+
+	if (ddata->wakeup_bitmask && (!ddata->set_wakeup)) {
+		enable_irq_wake(vol_up_irq);
+		enable_irq_wake(vol_down_irq);
+		ddata->set_wakeup = 1;
+		KEY_LOGI("%s: change to wake up function(%d, %d)\n",
+					__func__, vol_up_irq, vol_down_irq);
+	} else if ((!ddata->wakeup_bitmask) && ddata->set_wakeup){
+		disable_irq_wake(vol_up_irq);
+		disable_irq_wake(vol_down_irq);
+		ddata->set_wakeup = 0;
+		KEY_LOGI("%s: change to non-wake up function(%d, %d)\n",
+					__func__, vol_up_irq, vol_down_irq);
+	}
+	mutex_unlock(&ddata->attr_operation_lock);
+	return count;
+}
+
+static ssize_t vol_wakeup_show(struct device *dev,
+					struct device_attribute *attr, char *buf)
+{
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+
+	return scnprintf(buf, PAGE_SIZE, "%x\n", ddata->wakeup_bitmask);
+}
+
+static DEVICE_ATTR(vol_wakeup, S_IWUSR | S_IWGRP | S_IRUGO,
+					vol_wakeup_show, vol_wakeup_store);
 
 static struct device *global_dev;
 
@@ -360,6 +411,7 @@ static struct attribute *gpio_keys_attrs[] = {
 	&dev_attr_switches.attr,
 	&dev_attr_disabled_keys.attr,
 	&dev_attr_disabled_switches.attr,
+	&dev_attr_vol_wakeup.attr,
 	NULL,
 };
 
@@ -544,6 +596,8 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 		isr = gpio_keys_irq_isr;
 		irqflags = 0;
+		if (button->wakeup)
+			irqflags |= IRQF_EARLY_RESUME;
 	}
 
 	input_set_capability(input, button->type ?: EV_KEY, button->code);
@@ -573,6 +627,10 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 			bdata->irq, error);
 		goto fail;
 	}
+	if(bdata->button->code == KEY_VOLUMEUP)
+		vol_up_irq = bdata->irq;
+	else if(bdata->button->code == KEY_VOLUMEDOWN)
+		vol_down_irq = bdata->irq;
 
 	return 0;
 
@@ -590,9 +648,8 @@ static void gpio_keys_report_state(struct gpio_keys_drvdata *ddata)
 
 	for (i = 0; i < ddata->pdata->nbuttons; i++) {
 		struct gpio_button_data *bdata = &ddata->data[i];
-		if (gpio_is_valid(bdata->button->gpio)) {
+		if (gpio_is_valid(bdata->button->gpio))
 			gpio_keys_gpio_report_event(bdata);
-		}
 	}
 	input_sync(input);
 }
@@ -872,6 +929,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	ddata->pdata = pdata;
 	ddata->input = input;
 	mutex_init(&ddata->disable_lock);
+	mutex_init(&ddata->attr_operation_lock);
 
 	platform_set_drvdata(pdev, ddata);
 	input_set_drvdata(input, ddata);
@@ -923,6 +981,10 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			error);
 		goto fail2;
 	}
+
+	ddata->wakeup_bitmask = 0;
+	ddata->set_wakeup = 0;
+
 	error = input_register_device(input);
 	if (error) {
 		dev_err(dev, "Unable to register input device, error: %d\n",
