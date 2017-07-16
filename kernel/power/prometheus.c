@@ -237,7 +237,7 @@ static ssize_t prometheus_sync_store(struct kobject *kobj,
 {
 	int val;
 
-	sscanf(buf, "%u\n", &val);
+	sscanf(buf, "%d\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
