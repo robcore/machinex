@@ -45,6 +45,7 @@
 #include <linux/poll.h>
 #include <linux/irq_work.h>
 #include <linux/utsname.h>
+#include <linux/sched/clock.h>
 
 #include <asm/uaccess.h>
 

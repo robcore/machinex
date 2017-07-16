@@ -39,6 +39,7 @@
 #include <linux/hw_breakpoint.h>
 #include <linux/compat.h>
 #include <linux/module.h>
+#include <linux/sched/clock.h>
 
 #include "internal.h"
 

@@ -11,6 +11,7 @@
 #include "request.h"
 
 #include <linux/sort.h>
+#include <linux/sched/clock.h>
 
 static const char * const cache_replacement_policies[] = {
 	"lru",

@@ -21,6 +21,7 @@
 #include <linux/list.h>
 #include <linux/cpu.h>
 #include <linux/fs.h>
+#include <linux/sched/clock.h>
 
 #include <asm/local.h>
 #include "trace.h"
