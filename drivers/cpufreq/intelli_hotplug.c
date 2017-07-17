@@ -449,6 +449,7 @@ static void cycle_cpus(void)
 
 static void intelli_suspend(struct power_suspend * h)
 {
+	struct down_lock *dl;
 	unsigned int cpu = smp_processor_id();
 
 	if (atomic_read(&intelli_plug_active) == 0)
