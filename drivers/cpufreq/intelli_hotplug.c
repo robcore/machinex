@@ -469,7 +469,7 @@ static void intelli_suspend(struct power_suspend * h)
 
 static void intelli_resume(struct power_suspend * h)
 {
-	unsigned int cpu;
+	unsigned int cpu = smp_processor_id();
 
 	if (atomic_read(&intelli_plug_active) == 0)
 		return;
@@ -480,6 +480,7 @@ static void intelli_resume(struct power_suspend * h)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
+
 	for_each_online_cpu(cpu)
 		apply_down_lock(cpu);
 
