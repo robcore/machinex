@@ -1144,7 +1144,10 @@ static long do_splice_from(struct pipe_inode_info *pipe, struct file *out,
 	else
 		splice_write = default_file_splice_write;
 
-	return splice_write(pipe, out, ppos, len, flags);
+	file_start_write(out);
+	ret = splice_write(pipe, out, ppos, len, flags);
+	file_end_write(out);
+	return ret;
 }
 
 /*
