@@ -424,8 +424,11 @@ static void cycle_cpus(void)
 	unsigned int cpu;
 	int optimus;
 
-	while (atomic_read(&intelli_plug_active) == 1 && !hotplug_ready) {
-		mdelay(4);
+notready:
+	if (atomic_read(&intelli_plug_active) == 1 {
+		if (!hotplug_ready) {
+			mdelay(10);
+			goto notready;
 	}
 
 	optimus = cpumask_first(cpu_online_mask);
