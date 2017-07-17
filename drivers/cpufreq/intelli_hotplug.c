@@ -426,7 +426,7 @@ static void cycle_cpus(void)
 	int optimus;
 
 notready:
-	if (atomic_read(&intelli_plug_active) == 1 {
+	if (atomic_read(&intelli_plug_active) == 1) {
 		if (!hotplug_ready) {
 			mdelay(10);
 			goto notready;
