@@ -1398,10 +1398,12 @@ static ssize_t fuse_direct_read(struct file *file, char __user *buf,
 	return __fuse_direct_read(&io, &iov, 1, ppos, count);
 }
 
-static ssize_t __fuse_direct_write(struct file *file, const struct iovec *iov,
+static ssize_t __fuse_direct_write(struct fuse_io_priv *io,
+				   const struct iovec *iov,
 				   unsigned long nr_segs, loff_t *ppos)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
+	struct file *file = io->file;
+	struct inode *inode = file_inode(file);
 	size_t count = iov_length(iov, nr_segs);
 	ssize_t res;
 
