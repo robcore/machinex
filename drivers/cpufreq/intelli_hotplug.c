@@ -20,11 +20,12 @@
 #include <linux/kobject.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
+#include <linux/display_state.h>
 #include <linux/powersuspend.h>
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	9
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -56,7 +57,7 @@ static void refresh_cpus(void);
 struct ip_cpu_info {
 	unsigned long cpu_nr_running;
 };
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_cpu_info, ip_info);
+static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
@@ -65,7 +66,7 @@ static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
-static unsigned int online_cpus;
+static unsigned int online_cpus = 4;
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus = 0;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
@@ -159,7 +160,7 @@ struct down_lock {
 	unsigned int locked;
 	struct delayed_work lock_rem;
 };
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct down_lock, lock_info);
+static DEFINE_PER_CPU(struct down_lock, lock_info);
 
 static void report_current_cpus(void)
 {
@@ -168,27 +169,27 @@ static void report_current_cpus(void)
 
 static int check_down_lock(unsigned int cpu)
 {
-	struct down_lock *dl = &per_cpu(lock_info, cpu);
+	struct down_lock *dl;
+	for_each_possible_cpu(cpu) {
+		dl = &per_cpu(lock_info, cpu);
+	}
 	return dl->locked;
 }
 
-static void remove_down_lock(void)
+static void remove_down_lock(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
-	struct down_lock *dl = &per_cpu(lock_info, cpu);
-
+	struct down_lock *dl = container_of(work, struct down_lock,
+										lock_rem.work);
 	if (check_down_lock(cpu))
 		dl->locked = 0;
 }
 
-static void remove_down_lock_work(struct work_struct *work)
-{
-	remove_down_lock();
-}
-
 static void apply_down_lock(unsigned int cpu)
 {
-	struct down_lock *dl = &per_cpu(lock_info, cpu);
+	struct down_lock *dl;
+	for_each_possible_cpu(cpu) {
+		dl = &per_cpu(lock_info, cpu);
+	}
 
 	if (!check_down_lock(cpu)) {
 		dl->locked = 1;
@@ -452,7 +453,7 @@ notready:
 
 static void intelli_suspend(struct power_suspend * h)
 {
-	struct down_lock *dl;
+	struct down_lock *dl = &per_cpu(lock_info, cpu);
 	unsigned int cpu = smp_processor_id();
 
 	if (atomic_read(&intelli_plug_active) == 0)
@@ -460,7 +461,8 @@ static void intelli_suspend(struct power_suspend * h)
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		cancel_delayed_work_sync(&dl->lock_rem);
+		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+				      msecs_to_jiffies(down_lock_dur));
 	}
 	cancel_delayed_work(&intelli_plug_work);
 
@@ -469,9 +471,6 @@ static void intelli_suspend(struct power_suspend * h)
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-	}
-	for_each_online_cpu(cpu) {
-		remove_down_lock();
 	}
 }
 
@@ -505,7 +504,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
 	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready)
+	if (!hotplug_ready || !is_display_on())
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
@@ -563,7 +562,7 @@ static int intelli_plug_start(void)
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock_work);
+		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
