@@ -199,8 +199,19 @@ struct mpage_da_data {
 #define EXT4_IO_END_ERROR	0x0002
 #define EXT4_IO_END_DIRECT	0x0004
 
+struct ext4_io_page {
+	struct page	*p_page;
+	atomic_t	p_count;
+};
+
+#define MAX_IO_PAGES 128
+
 /*
  * For converting uninitialized extents on a work queue.
+ *
+ * 'page' is only used from the writepage() path; 'pages' is only used for
+ * buffered writes; they are used to keep page references until conversion
+ * takes place.  For AIO/DIO, neither field is filled in.
  */
 typedef struct ext4_io_end {
 	struct list_head	list;		/* per-file finished IO list */
@@ -210,13 +221,15 @@ typedef struct ext4_io_end {
 	ssize_t			size;		/* size of the extent */
 	struct kiocb		*iocb;		/* iocb struct for AIO */
 	int			result;		/* error value for AIO */
-	atomic_t		count;		/* reference counter */
+	int			num_io_pages;   /* for writepages() */
+	struct ext4_io_page	*pages[MAX_IO_PAGES]; /* for writepages() */
 } ext4_io_end_t;
 
 struct ext4_io_submit {
 	int			io_op;
 	struct bio		*io_bio;
 	ext4_io_end_t		*io_end;
+	struct ext4_io_page	*io_page;
 	sector_t		io_next_block;
 };
 
@@ -2569,14 +2582,11 @@ extern int ext4_move_extents(struct file *o_filp, struct file *d_filp,
 
 /* page-io.c */
 extern int __init ext4_init_pageio(void);
+extern void ext4_add_complete_io(ext4_io_end_t *io_end);
 extern void ext4_exit_pageio(void);
 extern void ext4_ioend_shutdown(struct inode *);
+extern void ext4_free_io_end(ext4_io_end_t *io);
 extern ext4_io_end_t *ext4_init_io_end(struct inode *inode, gfp_t flags);
-extern ext4_io_end_t *ext4_get_io_end(ext4_io_end_t *io_end);
-extern int ext4_put_io_end(ext4_io_end_t *io_end);
-extern void ext4_put_io_end_defer(ext4_io_end_t *io_end);
-extern void ext4_io_submit_init(struct ext4_io_submit *io,
-				struct writeback_control *wbc);
 extern void ext4_end_io_work(struct work_struct *work);
 extern void ext4_io_submit(struct ext4_io_submit *io);
 extern int ext4_bio_write_page(struct ext4_io_submit *io,
