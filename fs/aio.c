@@ -903,6 +903,7 @@ static ssize_t aio_rw_vect_retry(struct kiocb *iocb, int rw, aio_rw_op *rw_op)
 	struct address_space *mapping = file->f_mapping;
 	struct inode *inode = mapping->host;
 	ssize_t ret = 0;
+	unsigned int opcode = iocb->ki_opcode;
 
 	/* This matches the pread()/pwrite() logic */
 	if (iocb->ki_pos < 0)
