@@ -461,8 +461,8 @@ notready:
 
 static void intelli_suspend(struct power_suspend * h)
 {
-	struct down_lock *dl = &per_cpu(lock_info, cpu);
 	unsigned int cpu = smp_processor_id();
+	struct down_lock *dl;
 
 	if (atomic_read(&intelli_plug_active) == 0)
 		return;
