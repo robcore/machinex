@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -56,7 +56,7 @@ static void refresh_cpus(void);
 struct ip_cpu_info {
 	unsigned long cpu_nr_running;
 };
-static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_cpu_info, ip_info);
 
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
@@ -159,33 +159,39 @@ struct down_lock {
 	unsigned int locked;
 	struct delayed_work lock_rem;
 };
-static DEFINE_PER_CPU(struct down_lock, lock_info);
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct down_lock, lock_info);
 
 static void report_current_cpus(void)
 {
 	online_cpus = num_online_cpus();
 }
 
-static void remove_down_lock(struct work_struct *work)
+static int check_down_lock(unsigned int cpu)
 {
-	struct down_lock *dl = container_of(work, struct down_lock,
-					    lock_rem.work);
-	dl->locked = 0;
+	struct down_lock *dl = &per_cpu(lock_info, cpu);
+	return dl->locked;
+}
+
+static void remove_down_lock(void)
+{
+	unsigned int cpu = smp_processor_id();
+	struct down_lock *dl = &per_cpu(lock_info, cpu);
+	if (check_down_lock(cpu)
+		dl->locked = 0;
+}
+static void remove_down_lock_work(struct work_struct *work)
+{
+	remove_down_lock();
 }
 
 static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
-
-	dl->locked = 1;
-	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-			      msecs_to_jiffies(down_lock_dur));
-}
-
-static int check_down_lock(unsigned int cpu)
-{
-	struct down_lock *dl = &per_cpu(lock_info, cpu);
-	return dl->locked;
+	if (!check_down_lock(cpu) {
+		dl->locked = 1;
+		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+				      msecs_to_jiffies(down_lock_dur));
+	}
 }
 
 static unsigned int calculate_thread_stats(void)
@@ -295,7 +301,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (thermal_core_controlled)
 				goto reschedule;
-				cpu_up(cpu);
+			cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (num_online_cpus() == target)
 				break;
@@ -415,7 +421,7 @@ static void cycle_cpus(void)
 	unsigned int cpu;
 	int optimus;
 
-	while (!hotplug_ready) {
+	while (atomic_read(&intelli_plug_active) == 1 && !hotplug_ready) {
 		mdelay(4);
 	}
 
@@ -440,22 +446,20 @@ static void cycle_cpus(void)
 
 static void intelli_suspend(struct power_suspend * h)
 {
-	struct down_lock *dl;
-	unsigned int cpu;
+	unsigned int cpu = smp_processor_id();
 
 	if (atomic_read(&intelli_plug_active) == 0)
 		return;
 
 	for_each_possible_cpu(cpu) {
+		cancel_delayed_work(&intelli_plug_work);
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	for_each_online_cpu(cpu) {
-		dl = &per_cpu(lock_info, cpu);
-		if (check_down_lock(cpu))
-			mod_delayed_work(intelliplug_wq, &dl->lock_rem, 0);
+		remove_down_lock();
 	}
 }
 
@@ -546,7 +550,7 @@ static int intelli_plug_start(void)
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
+		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock_work);
 	}
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
@@ -571,11 +575,11 @@ static void intelli_plug_stop(void)
 		cancel_delayed_work_sync(&dl->lock_rem);
 	}
 	cancel_delayed_work(&intelli_plug_work);
+	mutex_destroy(&intelli_plug_mutex);
+	unregister_power_suspend(&intelli_suspend_data);
 	for_each_possible_cpu(cpu) {
 		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
 	}
-	mutex_destroy(&intelli_plug_mutex);
-	unregister_power_suspend(&intelli_suspend_data);
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
