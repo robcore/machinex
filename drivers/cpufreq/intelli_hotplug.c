@@ -467,14 +467,12 @@ static void intelli_suspend(struct power_suspend * h)
 	if (atomic_read(&intelli_plug_active) == 0)
 		return;
 
+	cancel_delayed_work(&intelli_plug_work);
+
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 				      msecs_to_jiffies(down_lock_dur));
-	}
-	cancel_delayed_work(&intelli_plug_work);
-
-	for_each_possible_cpu(cpu) {
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
@@ -489,15 +487,15 @@ static void intelli_resume(struct power_suspend * h)
 	if (atomic_read(&intelli_plug_active) == 0)
 		return;
 
+	for_each_online_cpu(cpu)
+		apply_down_lock(cpu);
+
 	for_each_possible_cpu(cpu) {
 		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
-
-	for_each_online_cpu(cpu)
-		apply_down_lock(cpu);
 
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 }
