@@ -1536,7 +1536,8 @@ static void mpage_da_map_and_submit(struct mpage_da_data *mpd)
 	 * nothing we can do about it so it might result in data loss.
 	 * So use reserved blocks to allocate metadata if possible.
 	 */
-	get_blocks_flags = EXT4_GET_BLOCKS_CREATE;
+	get_blocks_flags = EXT4_GET_BLOCKS_CREATE |
+			   EXT4_GET_BLOCKS_METADATA_NOFAIL;
 	if (ext4_should_dioread_nolock(mpd->inode))
 		get_blocks_flags |= EXT4_GET_BLOCKS_IO_CREATE_EXT;
 	if (mpd->b_state & (1 << BH_Delay))
