@@ -178,8 +178,11 @@ static int check_down_lock(unsigned int cpu)
 
 static void remove_down_lock(struct work_struct *work)
 {
-	struct down_lock *dl = container_of(work, struct down_lock,
+	struct down_lock *dl;
+	for_each_possible_cpu(cpu) {
+		dl = container_of(work, struct down_lock,
 										lock_rem.work);
+	}
 		if (dl->locked)
 			dl->locked = 0;
 }
@@ -511,7 +514,7 @@ static struct power_suspend intelli_suspend_data =
 static int intelliplug_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
-	/* Fail hotplug until this driver can get CPU clocks */
+	/* Fail hotplug until this driver can get CPU clocks, or screen off */
 	if (!hotplug_ready || !is_display_on())
 		return NOTIFY_OK;
 
@@ -547,7 +550,6 @@ static int intelli_plug_start(void)
 		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 	}
 
-//	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
