@@ -422,7 +422,7 @@ static struct input_handler intelli_plug_input_handler = {
 
 static void cycle_cpus(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = smp_processor_id();
 	int optimus;
 
 notready:
