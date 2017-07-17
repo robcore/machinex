@@ -178,6 +178,7 @@ static int check_down_lock(unsigned int cpu)
 
 static void remove_down_lock(struct work_struct *work)
 {
+	unsigned int cpu = smp_processor_id();
 	struct down_lock *dl;
 	for_each_possible_cpu(cpu) {
 		dl = container_of(work, struct down_lock,
