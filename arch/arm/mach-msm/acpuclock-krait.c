@@ -1106,6 +1106,7 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
 		break;
 	case CPU_UP_PREPARE:
+	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
 		if (!sc->initialized) {
 			rc = per_cpu_init(cpu);

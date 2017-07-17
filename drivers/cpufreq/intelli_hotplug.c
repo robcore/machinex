@@ -24,7 +24,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -65,7 +65,7 @@ static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
-
+static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus = 0;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
@@ -161,6 +161,11 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
+static int report_current_cpus(void)
+{
+	online_cpus = num_online_cpus();
+}
+
 static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
@@ -230,7 +235,6 @@ static void update_per_cpu_stat(void)
 
 static void cpu_up_down_work(struct work_struct *work)
 {
-	unsigned int online_cpus;
 	unsigned int cpu = smp_processor_id();
 	int primary;
 	long l_nr_threshold;
@@ -255,8 +259,6 @@ static void cpu_up_down_work(struct work_struct *work)
 		target = min_cpus_online;
 	else if (target >= max_cpus_online)
 		target = max_cpus_online;
-
-	online_cpus = num_online_cpus();
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
@@ -413,6 +415,10 @@ static void cycle_cpus(void)
 	unsigned int cpu;
 	int optimus;
 
+	while (!hotplug_ready) {
+		mdelay(4)
+	}		
+
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		if (cpu == optimus)
@@ -478,6 +484,36 @@ static struct power_suspend intelli_suspend_data =
 	.resume = intelli_resume,
 };
 
+static int intelliplug_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
+	static int prev_khz[NR_CPUS];
+	int rc, cpu = (int)hcpu;
+	struct scalable *sc = &drv.scalable[cpu];
+	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
+
+	/* Fail hotplug until this driver can get CPU clocks */
+	if (!hotplug_ready)
+		return NOTIFY_OK;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+		/* Fall through. */
+	case CPU_DEAD:
+	case CPU_UP_CANCELED:
+	case CPU_ONLINE:
+	case CPU_DOWN_FAILED:
+		report_current_cpus();
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block intelliplug_cpu_notifier = {
+	.notifier_call = intelliplug_cpu_callback,
+};
+
 static int intelli_plug_start(void)
 {
 	unsigned int cpu, ret = 0;
@@ -517,6 +553,8 @@ static int intelli_plug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
+	register_hotcpu_notifier(&intelliplug_cpu_notifier);
+
 	cycle_cpus();
 
 	return ret;
@@ -544,6 +582,8 @@ static void intelli_plug_stop(void)
 	unregister_power_suspend(&intelli_suspend_data);
 	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
+	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
+
 }
 
 static void intelli_plug_active_eval_fn(unsigned int status)
