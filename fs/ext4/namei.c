@@ -2736,7 +2736,7 @@ static int ext4_rmdir(struct inode *dir, struct dentry *dentry)
 		goto end_rmdir;
 
 	handle = ext4_journal_start(dir, EXT4_HT_DIR,
-				    EXT4_DELETE_TRANS_BLOCKS(dir->i_sb));
+				    EXT4_DATA_TRANS_BLOCKS(dir->i_sb));
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		handle = NULL;
@@ -2805,7 +2805,7 @@ static int ext4_unlink(struct inode *dir, struct dentry *dentry)
 		goto end_unlink;
 
 	handle = ext4_journal_start(dir, EXT4_HT_DIR,
-				    EXT4_DELETE_TRANS_BLOCKS(dir->i_sb));
+				    EXT4_DATA_TRANS_BLOCKS(dir->i_sb));
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		handle = NULL;
