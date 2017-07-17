@@ -590,15 +590,16 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	unsigned long flags;
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
-	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
-
+	if (!spin_trylock_irqsave(&speedchange_cpumask_lock, flags))
+		goto again;
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 		schedule();
 		if (kthread_should_stop())
 			return 0;
 
-		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+		if (!spin_trylock_irqsave(&speedchange_cpumask_lock, flags))
+			goto again;
 	}
 
 	set_current_state(TASK_RUNNING);
