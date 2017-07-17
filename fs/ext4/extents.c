@@ -3786,6 +3786,7 @@ ext4_ext_handle_uninitialized_extents(handle_t *handle, struct inode *inode,
 			ext4_set_io_unwritten_flag(inode, io);
 		else
 			ext4_set_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN);
+		map->m_flags |= EXT4_MAP_UNWRITTEN;
 		if (ext4_should_dioread_nolock(inode))
 			map->m_flags |= EXT4_MAP_UNINIT;
 		goto out;
@@ -3811,8 +3812,10 @@ ext4_ext_handle_uninitialized_extents(handle_t *handle, struct inode *inode,
 	 * repeat fallocate creation request
 	 * we already have an unwritten extent
 	 */
-	if (flags & EXT4_GET_BLOCKS_UNINIT_EXT)
+	if (flags & EXT4_GET_BLOCKS_UNINIT_EXT) {
+		map->m_flags |= EXT4_MAP_UNWRITTEN;
 		goto map_out;
+	}
 
 	/* buffered READ or buffered write_begin() lookup */
 	if ((flags & EXT4_GET_BLOCKS_CREATE) == 0) {
@@ -4243,6 +4246,7 @@ got_allocated_blocks:
 	/* Mark uninitialized */
 	if (flags & EXT4_GET_BLOCKS_UNINIT_EXT){
 		ext4_ext_mark_uninitialized(&newex);
+		map->m_flags |= EXT4_MAP_UNWRITTEN;
 		/*
 		 * io_end structure was created for every IO write to an
 		 * uninitialized extent. To avoid unnecessary conversion,
