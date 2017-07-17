@@ -2983,7 +2983,7 @@ static int ext4_split_extent_at(handle_t *handle,
 {
 	ext4_fsblk_t newblock;
 	ext4_lblk_t ee_block;
-	struct ext4_extent *ex, newex, orig_ex;
+	struct ext4_extent *ex, newex, orig_ex, zero_ex;
 	struct ext4_extent *ex2 = NULL;
 	unsigned int ee_len, depth;
 	int err = 0;
@@ -3054,12 +3054,26 @@ static int ext4_split_extent_at(handle_t *handle,
 	err = ext4_ext_insert_extent(handle, inode, path, &newex, flags);
 	if (err == -ENOSPC && (EXT4_EXT_MAY_ZEROOUT & split_flag)) {
 		if (split_flag & (EXT4_EXT_DATA_VALID1|EXT4_EXT_DATA_VALID2)) {
-			if (split_flag & EXT4_EXT_DATA_VALID1)
+			if (split_flag & EXT4_EXT_DATA_VALID1) {
 				err = ext4_ext_zeroout(inode, ex2);
-			else
+				zero_ex.ee_block = ex2->ee_block;
+				zero_ex.ee_len = ext4_ext_get_actual_len(ex2);
+				ext4_ext_store_pblock(&zero_ex,
+						      ext4_ext_pblock(ex2));
+			} else {
 				err = ext4_ext_zeroout(inode, ex);
-		} else
+				zero_ex.ee_block = ex->ee_block;
+				zero_ex.ee_len = ext4_ext_get_actual_len(ex);
+				ext4_ext_store_pblock(&zero_ex,
+						      ext4_ext_pblock(ex));
+			}
+		} else {
 			err = ext4_ext_zeroout(inode, &orig_ex);
+			zero_ex.ee_block = orig_ex.ee_block;
+			zero_ex.ee_len = ext4_ext_get_actual_len(&orig_ex);
+			ext4_ext_store_pblock(&zero_ex,
+					      ext4_ext_pblock(&orig_ex));
+		}
 
 		if (err)
 			goto fix_extent_len;
@@ -3067,6 +3081,12 @@ static int ext4_split_extent_at(handle_t *handle,
 		ex->ee_len = cpu_to_le16(ee_len);
 		ext4_ext_try_to_merge(handle, inode, path, ex);
 		err = ext4_ext_dirty(handle, inode, path + path->p_depth);
+		if (err)
+			goto fix_extent_len;
+
+		/* update extent status tree */
+		err = ext4_es_zeroout(inode, &zero_ex);
+
 		goto out;
 	} else if (err)
 		goto fix_extent_len;
@@ -3348,6 +3368,9 @@ static int ext4_ext_convert_to_initialized(handle_t *handle,
 		err = ext4_ext_zeroout(inode, ex);
 		if (err)
 			goto out;
+		zero_ex.ee_block = ex->ee_block;
+		zero_ex.ee_len = ext4_ext_get_actual_len(ex);
+		ext4_ext_store_pblock(&zero_ex, ext4_ext_pblock(ex));
 
 		err = ext4_ext_get_access(handle, inode, path + depth);
 		if (err)
@@ -3406,6 +3429,9 @@ static int ext4_ext_convert_to_initialized(handle_t *handle,
 		err = allocated;
 
 out:
+	/* If we have gotten a failure, don't zero out status tree */
+	if (!err)
+		err = ext4_es_zeroout(inode, &zero_ex);
 	return err ? err : allocated;
 }
 
