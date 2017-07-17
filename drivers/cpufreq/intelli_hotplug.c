@@ -454,6 +454,10 @@ static void intelli_suspend(struct power_suspend * h)
 	if (atomic_read(&intelli_plug_active) == 0)
 		return;
 
+	for_each_possible_cpu(cpu) {
+		dl = &per_cpu(lock_info, cpu);
+		cancel_delayed_work_sync(&dl->lock_rem);
+	}
 	cancel_delayed_work(&intelli_plug_work);
 
 	for_each_possible_cpu(cpu) {
