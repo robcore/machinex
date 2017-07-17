@@ -430,6 +430,7 @@ notready:
 		if (!hotplug_ready) {
 			mdelay(10);
 			goto notready;
+		}
 	}
 
 	optimus = cpumask_first(cpu_online_mask);
