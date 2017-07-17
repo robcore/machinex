@@ -450,8 +450,8 @@ notready:
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
-
-	online_cpus = 4;
+	if (!online_cpus)
+		report_current_cpus();
 
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
