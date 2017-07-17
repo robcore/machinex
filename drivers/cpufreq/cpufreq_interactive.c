@@ -175,7 +175,7 @@ static bool timer_slack_required(struct interactive_cpu *icpu)
 		else
 			return false;
 
-	if (tunables->timer_slack <= 0)
+	if (tunables->timer_slack < 0)
 		return false;
 
 	if (icpu->target_freq > ipolicy->policy->min)
@@ -347,7 +347,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		}
 
 		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq);
+	} while (freq != prevfreq && (!frozen(speedchange_task)));
 
 	return freq;
 }
@@ -390,6 +390,9 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	int cpu_load;
 	int cpu = smp_processor_id();
 
+	if (frozen(speedchange_task))
+		return;
+
 	if (icpu->ipolicy == NULL)
 		return;
 
@@ -401,8 +404,6 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 		return;
 	freq_table = policy->freq_table;
 	if (!freq_table)
-		return;
-	if (frozen(speedchange_task))
 		return;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
@@ -562,7 +563,6 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	unsigned int max_freq;
 	int i;
 
-
 	cpufreq_interactive_get_policy_info(policy, &max_freq, &hvt, &fvt);
 
 	for_each_cpu(i, policy->cpus) {
@@ -594,11 +594,7 @@ again:
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		if (kthread_should_stop())
-			return 0;
-
 		schedule();
-
 		if (kthread_should_stop())
 			return 0;
 
@@ -615,18 +611,18 @@ again:
 	struct cpufreq_policy *policy;
 
 		icpu = &per_cpu(interactive_cpu, cpu);
-		if (icpu == NULL)
+
+		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
+			continue;
+		if (!icpu)
 			continue;
 
-		if (!icpu->ipolicy)
+		if (unlikely(!icpu->ipolicy))
 			continue;
 
 		policy = icpu->ipolicy->policy;
 
-		if (policy == NULL)
-			continue;
-
-		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
+		if (!policy)
 			continue;
 
 		if (likely(icpu->ipolicy))
@@ -1328,6 +1324,10 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 	struct interactive_policy *ipolicy = policy->governor_data;
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
+
+frozen:
+	if (frozen(speedchange_task))
+		goto frozen;
 
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);

@@ -161,7 +161,7 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
-static int report_current_cpus(void)
+static void report_current_cpus(void)
 {
 	online_cpus = num_online_cpus();
 }
@@ -416,8 +416,8 @@ static void cycle_cpus(void)
 	int optimus;
 
 	while (!hotplug_ready) {
-		mdelay(4)
-	}		
+		mdelay(4);
+	}
 
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
@@ -486,11 +486,7 @@ static struct power_suspend intelli_suspend_data =
 
 static int intelliplug_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
-	static int prev_khz[NR_CPUS];
-	int rc, cpu = (int)hcpu;
-	struct scalable *sc = &drv.scalable[cpu];
-	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
-
+{
 	/* Fail hotplug until this driver can get CPU clocks */
 	if (!hotplug_ready)
 		return NOTIFY_OK;
