@@ -431,6 +431,8 @@ notready:
 			mdelay(10);
 			goto notready;
 		}
+	} else {
+		return;
 	}
 
 	optimus = cpumask_first(cpu_online_mask);
