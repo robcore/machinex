@@ -1146,6 +1146,7 @@ ext4_xattr_set(struct inode *inode, int name_index, const char *name,
 {
 	handle_t *handle;
 	int error, retries = 0;
+	int credits = ext4_jbd2_credits_xattr(inode);
 
 retry:
 	handle = ext4_journal_start(inode, EXT4_HT_XATTR, 1);

@@ -127,44 +127,6 @@ extern int ext4_xattr_ibody_get(struct inode *inode, int name_index,
 extern int ext4_xattr_ibody_set(handle_t *handle, struct inode *inode,
 				struct ext4_xattr_info *i,
 				struct ext4_xattr_ibody_find *is);
-
-extern int ext4_has_inline_data(struct inode *inode);
-extern int ext4_get_inline_size(struct inode *inode);
-extern int ext4_get_max_inline_size(struct inode *inode);
-extern int ext4_find_inline_data_nolock(struct inode *inode);
-extern void ext4_write_inline_data(struct inode *inode,
-				   struct ext4_iloc *iloc,
-				   void *buffer, loff_t pos,
-				   unsigned int len);
-extern int ext4_prepare_inline_data(handle_t *handle, struct inode *inode,
-				    unsigned int len);
-extern int ext4_init_inline_data(handle_t *handle, struct inode *inode,
-				 unsigned int len);
-extern int ext4_destroy_inline_data(handle_t *handle, struct inode *inode);
-
-extern int ext4_readpage_inline(struct inode *inode, struct page *page);
-extern int ext4_try_to_write_inline_data(struct address_space *mapping,
-					 struct inode *inode,
-					 loff_t pos, unsigned len,
-					 unsigned flags,
-					 struct page **pagep);
-extern int ext4_write_inline_data_end(struct inode *inode,
-				      loff_t pos, unsigned len,
-				      unsigned copied,
-				      struct page *page);
-extern struct buffer_head *
-ext4_journalled_write_inline_data(struct inode *inode,
-				  unsigned len,
-				  struct page *page);
-extern int ext4_da_write_inline_data_begin(struct address_space *mapping,
-					   struct inode *inode,
-					   loff_t pos, unsigned len,
-					   unsigned flags,
-					   struct page **pagep,
-					   void **fsdata);
-extern int ext4_da_write_inline_data_end(struct inode *inode, loff_t pos,
-					 unsigned len, unsigned copied,
-					 struct page *page);
 # else  /* CONFIG_EXT4_FS_XATTR */
 
 static inline int
