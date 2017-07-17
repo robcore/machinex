@@ -66,7 +66,7 @@ static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
-static unsigned int online_cpus = 4;
+static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus = 0;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
@@ -445,6 +445,9 @@ notready:
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}
+
+	online_cpus = 4;
+
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
 
