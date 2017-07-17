@@ -1443,7 +1443,7 @@ static int __init cpufreq_interactive_gov_init(void)
 
 	ret = sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
 	if (ret) {
-		kthread_stop(thread);
+		kthread_stop(speedchange_task);
 		pr_warn("%s: failed to set SCHED_FIFO\n", __func__);
 		return ret;
 	}

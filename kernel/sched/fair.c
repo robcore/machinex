@@ -5939,7 +5939,7 @@ static void set_last_buddy(struct sched_entity *se)
 		return;
 
 	for_each_sched_entity(se) {
-		if (SCHED_WARN_ON(!se->on_rq))
+		if (!se->on_rq)
 			return;
 		cfs_rq_of(se)->last = se;
 	}
@@ -5951,7 +5951,7 @@ static void set_next_buddy(struct sched_entity *se)
 		return;
 
 	for_each_sched_entity(se) {
-		if (SCHED_WARN_ON(!se->on_rq))
+		if (!se->on_rq)
 			return;
 		cfs_rq_of(se)->next = se;
 	}

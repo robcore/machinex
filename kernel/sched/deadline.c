@@ -17,7 +17,7 @@
 #include "sched.h"
 
 #include <linux/slab.h>
-#include <uapi/linux/sched/types.h>
+#include <linux/sched.h>
 
 struct dl_bandwidth def_dl_bandwidth;
 

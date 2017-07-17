@@ -1420,10 +1420,10 @@ struct sched_dl_entity {
 	 * during sched_setattr(), they will remain the same until
 	 * the next sched_setattr().
 	 */
-	u64 dl_runtime;		/* maximum runtime for each instance	*/
-	u64 dl_deadline;	/* relative deadline of each instance	*/
-	u64 dl_period;		/* separation of two instances (period) */
-	u64 dl_bw;		/* dl_runtime / dl_deadline		*/
+	u64				dl_runtime;	/* Maximum runtime for each instance	*/
+	u64				dl_deadline;	/* Relative deadline of each instance	*/
+	u64				dl_period;	/* Separation of two instances (period) */
+	u64				dl_bw;		/* dl_runtime / dl_period		*/
 	u64				dl_density;	/* dl_runtime / dl_deadline		*/
 
 	/*
@@ -1431,9 +1431,9 @@ struct sched_dl_entity {
 	 * they are continously updated during task execution. Note that
 	 * the remaining runtime could be < 0 in case we are in overrun.
 	 */
-	s64 runtime;		/* remaining runtime for this instance	*/
-	u64 deadline;		/* absolute deadline for this instance	*/
-	unsigned int flags;	/* specifying the scheduler behaviour	*/
+	s64				runtime;	/* Remaining runtime for this instance	*/
+	u64				deadline;	/* Absolute deadline for this instance	*/
+	unsigned int			flags;		/* Specifying the scheduler behaviour	*/
 
 	/*
 	 * Some bool flags:
@@ -1446,8 +1446,15 @@ struct sched_dl_entity {
 	 * outside bandwidth enforcement mechanism (but only until we
 	 * exit the critical section);
 	 *
-	 * @dl_yielded tells if task gave up the cpu before consuming
+	 * @dl_yielded tells if task gave up the CPU before consuming
 	 * all its available runtime during the last job.
+	 *
+	 * @dl_non_contending tells if the task is inactive while still
+	 * contributing to the active utilization. In other words, it
+	 * indicates if the inactive timer has been armed and its handler
+	 * has not been executed yet. This flag is useful to avoid race
+	 * conditions between the inactive timer handler and the wakeup
+	 * code.
 	 */
 	int				dl_throttled;
 	int				dl_boosted;
@@ -1458,15 +1465,26 @@ struct sched_dl_entity {
 	 * Bandwidth enforcement timer. Each -deadline task has its
 	 * own bandwidth to be enforced, thus we need one timer per task.
 	 */
-	struct hrtimer dl_timer;
+	struct hrtimer			dl_timer;
+
+	/*
+	 * Inactive timer, responsible for decreasing the active utilization
+	 * at the "0-lag time". When a -deadline task blocks, it contributes
+	 * to GRUB's active utilization until the "0-lag time", hence a
+	 * timer is needed to decrease the active utilization at the correct
+	 * time.
+	 */
+	struct hrtimer inactive_timer;
 };
 
 union rcu_special {
 	struct {
-		u8 blocked;
-		u8 need_qs;
-		u8 exp_need_qs;
-		u8 pad;	/* Otherwise the compiler can store garbage here. */
+		u8			blocked;
+		u8			need_qs;
+		u8			exp_need_qs;
+
+		/* Otherwise the compiler can store garbage here: */
+		u8			pad;
 	} b; /* Bits. */
 	u32 s; /* Set of bits. */
 };
