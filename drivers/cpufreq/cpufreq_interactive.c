@@ -694,11 +694,11 @@ static int cpufreq_interactive_notifier(struct notifier_block *nb,
 	struct interactive_cpu *icpu;
 	unsigned long flags;
 
-	icpu = &per_cpu(interactive_cpu, freq->cpu);
-	if (icpu == NULL)
+	if (frozen(speedchange_task))
 		return 0;
 
-	if (frozen(speedchange_task))
+	icpu = &per_cpu(interactive_cpu, freq->cpu);
+	if (icpu == NULL)
 		return 0;
 
 	if (val != CPUFREQ_POSTCHANGE)
@@ -1437,8 +1437,8 @@ static int __init cpufreq_interactive_gov_init(void)
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
-	speedchange_task = kthread_create_on_cpu(cpufreq_interactive_speedchange_task,
-					  NULL, 0, "cfinteractive");
+	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
+					  NULL, "cfinteractive");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
