@@ -180,8 +180,8 @@ static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
 										lock_rem.work);
-	if (check_down_lock(cpu))
-		dl->locked = 0;
+		if (dl->locked)
+			dl->locked = 0;
 }
 
 static void apply_down_lock(unsigned int cpu)
