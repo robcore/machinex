@@ -143,7 +143,7 @@ static long swap_inode_boot_loader(struct super_block *sb,
 	handle = ext4_journal_start(inode_bl, EXT4_HT_MOVE_EXTENTS, 2);
 	if (IS_ERR(handle)) {
 		err = -EINVAL;
-		goto journal_err_out;
+		goto swap_boot_out;
 	}
 
 	/* Protect extent tree against block allocations via delalloc */
@@ -152,8 +152,8 @@ static long swap_inode_boot_loader(struct super_block *sb,
 	if (inode_bl->i_nlink == 0) {
 		/* this inode has never been used as a BOOT_LOADER */
 		set_nlink(inode_bl, 1);
-		inode_bl->i_uid = 0;
-		inode_bl->i_gid = 0;
+		i_uid_write(inode_bl, 0);
+		i_gid_write(inode_bl, 0);
 		inode_bl->i_flags = 0;
 		ei_bl->i_flags = 0;
 		inode_bl->i_version = 1;
@@ -201,7 +201,6 @@ static long swap_inode_boot_loader(struct super_block *sb,
 
 	ext4_double_up_write_data_sem(inode, inode_bl);
 
-journal_err_out:
 	ext4_inode_resume_unlocked_dio(inode);
 	ext4_inode_resume_unlocked_dio(inode_bl);
 
