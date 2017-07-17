@@ -24,8 +24,8 @@
 #include <linux/powersuspend.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	7
-#define INTELLI_PLUG_MINOR_VERSION	9
+#define INTELLI_PLUG_MAJOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -436,11 +436,15 @@ notready:
 	for_each_online_cpu(cpu) {
 		if (cpu == optimus)
 			continue;
+		if (!cpu_online(cpu))
+			continue;
 		cpu_down(cpu);
 	}
 	mdelay(4);
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus)
+			continue;
+		if (cpu_online(cpu))
 			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
