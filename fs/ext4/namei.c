@@ -54,34 +54,28 @@
 
 static struct buffer_head *ext4_append(handle_t *handle,
 					struct inode *inode,
-					ext4_lblk_t *block, int *err)
+					ext4_lblk_t *block)
 {
 	struct buffer_head *bh;
+	int err = 0;
 
 	if (unlikely(EXT4_SB(inode->i_sb)->s_max_dir_size_kb &&
 		     ((inode->i_size >> 10) >=
-		      EXT4_SB(inode->i_sb)->s_max_dir_size_kb))) {
-		*err = -ENOSPC;
-		return NULL;
-	}
+		      EXT4_SB(inode->i_sb)->s_max_dir_size_kb)))
+		return ERR_PTR(-ENOSPC);
 
 	*block = inode->i_size >> inode->i_sb->s_blocksize_bits;
 
-	bh = ext4_bread(handle, inode, *block, 1, err);
-	if (bh) {
-		inode->i_size += inode->i_sb->s_blocksize;
-		EXT4_I(inode)->i_disksize = inode->i_size;
-		*err = ext4_journal_get_write_access(handle, bh);
-		if (*err) {
-			brelse(bh);
-			bh = NULL;
-		}
-	}
-	if (!bh && !(*err)) {
-		*err = -EIO;
-		ext4_error(inode->i_sb,
-			   "Directory hole detected on inode %lu\n",
-			   inode->i_ino);
+	bh = ext4_bread(handle, inode, *block, 1, &err);
+	if (!bh)
+		return ERR_PTR(err);
+	inode->i_size += inode->i_sb->s_blocksize;
+	EXT4_I(inode)->i_disksize = inode->i_size;
+	err = ext4_journal_get_write_access(handle, bh);
+	if (err) {
+		brelse(bh);
+		ext4_std_error(inode->i_sb, err);
+		return ERR_PTR(err);
 	}
 	return bh;
 }
@@ -1630,11 +1624,12 @@ static struct ext4_dir_entry_2 *do_split(handle_t *handle, struct inode *dir,
 				       EXT4_FEATURE_RO_COMPAT_METADATA_CSUM))
 		csum_size = sizeof(struct ext4_dir_entry_tail);
 
-	bh2 = ext4_append (handle, dir, &newblock, &err);
-	if (!(bh2)) {
+	bh2 = ext4_append(handle, dir, &newblock);
+	if (IS_ERR(bh2)) {
 		brelse(*bh);
 		*bh = NULL;
-		goto errout;
+		*error = PTR_ERR(bh2);
+		return NULL;
 	}
 
 	BUFFER_TRACE(*bh, "get_write_access");
@@ -1715,7 +1710,6 @@ journal_error:
 	brelse(bh2);
 	*bh = NULL;
 	ext4_std_error(dir->i_sb, err);
-errout:
 	*error = err;
 	return NULL;
 }
@@ -1859,10 +1853,10 @@ static int make_indexed_dir(handle_t *handle, struct dentry *dentry,
 	len = ((char *) root) + (blocksize - csum_size) - (char *) de;
 
 	/* Allocate new block for the 0th block's dirents */
-	bh2 = ext4_append(handle, dir, &block, &retval);
-	if (!(bh2)) {
+	bh2 = ext4_append(handle, dir, &block);
+	if (IS_ERR(bh2)) {
 		brelse(bh);
-		return retval;
+		return PTR_ERR(bh2);
 	}
 	ext4_set_inode_flag(dir, EXT4_INODE_INDEX);
 	data1 = bh2->b_data;
@@ -2003,9 +1997,9 @@ static int ext4_add_entry(handle_t *handle, struct dentry *dentry,
 		}
 		brelse(bh);
 	}
-	bh = ext4_append(handle, dir, &block, &retval);
-	if (!bh)
-		return retval;
+	bh = ext4_append(handle, dir, &block);
+	if (IS_ERR(bh))
+		return PTR_ERR(bh);
 	de = (struct ext4_dir_entry_2 *) bh->b_data;
 	de->inode = 0;
 	de->rec_len = ext4_rec_len_to_disk(blocksize - csum_size, blocksize);
@@ -2086,9 +2080,11 @@ static int ext4_dx_add_entry(handle_t *handle, struct dentry *dentry,
 			err = -ENOSPC;
 			goto cleanup;
 		}
-		bh2 = ext4_append (handle, dir, &newblock, &err);
-		if (!(bh2))
+		bh2 = ext4_append(handle, dir, &newblock);
+		if (IS_ERR(bh2)) {
+			err = PTR_ERR(bh2);
 			goto cleanup;
+		}
 		node2 = (struct dx_node *)(bh2->b_data);
 		entries2 = node2->entries;
 		memset(&node2->fake, 0, sizeof(struct fake_dirent));
