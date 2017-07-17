@@ -910,7 +910,6 @@ static struct inode *ext4_alloc_inode(struct super_block *sb)
 
 	ei->vfs_inode.i_version = 1;
 	ei->vfs_inode.i_data.writeback_index = 0;
-	memset(&ei->i_cached_extent, 0, sizeof(struct ext4_ext_cache));
 	INIT_LIST_HEAD(&ei->i_prealloc_list);
 	spin_lock_init(&ei->i_prealloc_lock);
 	ext4_es_init_tree(&ei->i_es_tree);
