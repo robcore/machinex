@@ -57,21 +57,21 @@ static __u32 ext4_inode_csum(struct inode *inode, struct ext4_inode *raw,
 	__u16 csum_hi = 0;
 	__u32 csum;
 
-	csum_lo = le16_to_cpu(raw->i_checksum_lo);
+	csum_lo = raw->i_checksum_lo;
 	raw->i_checksum_lo = 0;
 	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE &&
 	    EXT4_FITS_IN_INODE(raw, ei, i_checksum_hi)) {
-		csum_hi = le16_to_cpu(raw->i_checksum_hi);
+		csum_hi = raw->i_checksum_hi;
 		raw->i_checksum_hi = 0;
 	}
 
 	csum = ext4_chksum(sbi, ei->i_csum_seed, (__u8 *)raw,
 			   EXT4_INODE_SIZE(inode->i_sb));
 
-	raw->i_checksum_lo = cpu_to_le16(csum_lo);
+	raw->i_checksum_lo = csum_lo;
 	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE &&
 	    EXT4_FITS_IN_INODE(raw, ei, i_checksum_hi))
-		raw->i_checksum_hi = cpu_to_le16(csum_hi);
+		raw->i_checksum_hi = csum_hi;
 
 	return csum;
 }
@@ -1536,8 +1536,7 @@ static void mpage_da_map_and_submit(struct mpage_da_data *mpd)
 	 * nothing we can do about it so it might result in data loss.
 	 * So use reserved blocks to allocate metadata if possible.
 	 */
-	get_blocks_flags = EXT4_GET_BLOCKS_CREATE |
-			   EXT4_GET_BLOCKS_METADATA_NOFAIL;
+	get_blocks_flags = EXT4_GET_BLOCKS_CREATE;
 	if (ext4_should_dioread_nolock(mpd->inode))
 		get_blocks_flags |= EXT4_GET_BLOCKS_IO_CREATE_EXT;
 	if (mpd->b_state & (1 << BH_Delay))
@@ -3883,9 +3882,8 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	 * NeilBrown 1999oct15
 	 */
 	if (inode->i_nlink == 0) {
-		if ((inode->i_mode == 0 ||
-		     !(EXT4_SB(inode->i_sb)->s_mount_state & EXT4_ORPHAN_FS)) &&
-		    ino != EXT4_BOOT_LOADER_INO) {
+		if (inode->i_mode == 0 ||
+		    !(EXT4_SB(inode->i_sb)->s_mount_state & EXT4_ORPHAN_FS)) {
 			/* this inode is deleted */
 			ret = -ESTALE;
 			print_iloc_info(sb,iloc);
@@ -3894,9 +3892,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 		/* The only unlinked inodes we let through here have
 		 * valid i_mode and are being read by the orphan
 		 * recovery code: that's fine, we're about to complete
-		 * the process of deleting those.
-		 * OR it is the EXT4_BOOT_LOADER_INO which is
-		 * not initialized on a new filesystem. */
+		 * the process of deleting those. */
 	}
 	ei->i_flags = le32_to_cpu(raw_inode->i_flags);
 	inode->i_blocks = ext4_inode_blocks(raw_inode, ei);
@@ -4019,8 +4015,6 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 		else
 			init_special_inode(inode, inode->i_mode,
 			   new_decode_dev(le32_to_cpu(raw_inode->i_block[1])));
-	} else if (ino == EXT4_BOOT_LOADER_INO) {
-		make_bad_inode(inode);
 	} else {
 		ret = -EIO;
 		print_iloc_info(sb,iloc);

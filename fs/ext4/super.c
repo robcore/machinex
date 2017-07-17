@@ -82,7 +82,6 @@ static int ext4_feature_set_ok(struct super_block *sb, int readonly);
 static void ext4_destroy_lazyinit_thread(void);
 static void ext4_unregister_li_request(struct super_block *sb);
 static void ext4_clear_request_list(void);
-static int ext4_reserve_clusters(struct ext4_sb_info *, ext4_fsblk_t);
 
 #if !defined(CONFIG_EXT2_FS) && !defined(CONFIG_EXT2_FS_MODULE) && defined(CONFIG_EXT4_USE_FOR_EXT23)
 static struct file_system_type ext2_fs_type = {
@@ -828,7 +827,6 @@ static void ext4_put_super(struct super_block *sb)
 			ext4_abort(sb, "Couldn't clean up the journal");
 	}
 
-	ext4_es_unregister_shrinker(sb);
 	del_timer_sync(&sbi->s_err_report);
 	ext4_release_system_zone(sb);
 	ext4_mb_release(sb);
@@ -856,7 +854,6 @@ static void ext4_put_super(struct super_block *sb)
 	percpu_counter_destroy(&sbi->s_freeinodes_counter);
 	percpu_counter_destroy(&sbi->s_dirs_counter);
 	percpu_counter_destroy(&sbi->s_dirtyclusters_counter);
-	percpu_counter_destroy(&sbi->s_extent_cache_cnt);
 	brelse(sbi->s_sbh);
 #ifdef CONFIG_QUOTA
 	for (i = 0; i < MAXQUOTAS; i++)
@@ -918,8 +915,6 @@ static struct inode *ext4_alloc_inode(struct super_block *sb)
 	spin_lock_init(&ei->i_prealloc_lock);
 	ext4_es_init_tree(&ei->i_es_tree);
 	rwlock_init(&ei->i_es_lock);
-	INIT_LIST_HEAD(&ei->i_es_lru);
-	ei->i_es_lru_nr = 0;
 	ei->i_reserved_data_blocks = 0;
 	ei->i_reserved_meta_blocks = 0;
 	ei->i_allocated_meta_blocks = 0;
@@ -1010,7 +1005,6 @@ void ext4_clear_inode(struct inode *inode)
 	dquot_drop(inode);
 	ext4_discard_preallocations(inode);
 	ext4_es_remove_extent(inode, 0, EXT_MAX_BLOCKS);
-	ext4_es_lru_del(inode);
 	if (EXT4_I(inode)->jinode) {
 		jbd2_journal_release_jbd_inode(EXT4_JOURNAL(inode),
 					       EXT4_I(inode)->jinode);
@@ -1982,16 +1976,16 @@ static __le16 ext4_group_desc_csum(struct ext4_sb_info *sbi, __u32 block_group,
 	if ((sbi->s_es->s_feature_ro_compat &
 	     cpu_to_le32(EXT4_FEATURE_RO_COMPAT_METADATA_CSUM))) {
 		/* Use new metadata_csum algorithm */
-		__le16 save_csum;
+		__u16 old_csum;
 		__u32 csum32;
 
-		save_csum = gdp->bg_checksum;
+		old_csum = gdp->bg_checksum;
 		gdp->bg_checksum = 0;
 		csum32 = ext4_chksum(sbi, sbi->s_csum_seed, (__u8 *)&le_group,
 				     sizeof(le_group));
 		csum32 = ext4_chksum(sbi, csum32, (__u8 *)gdp,
 				     sbi->s_desc_size);
-		gdp->bg_checksum = save_csum;
+		gdp->bg_checksum = old_csum;
 
 		crc = csum32 & 0xFFFF;
 		goto out;
@@ -2531,27 +2525,6 @@ static ssize_t sbi_ui_store(struct ext4_attr *a,
 	return count;
 }
 
-static ssize_t reserved_clusters_show(struct ext4_attr *a,
-				  struct ext4_sb_info *sbi, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%llu\n",
-		(unsigned long long) atomic64_read(&sbi->s_resv_clusters));
-}
-
-static ssize_t reserved_clusters_store(struct ext4_attr *a,
-				   struct ext4_sb_info *sbi,
-				   const char *buf, size_t count)
-{
-	unsigned long long val;
-	int ret;
-
-	if (parse_strtoull(buf, -1ULL, &val))
-		return -EINVAL;
-	ret = ext4_reserve_clusters(sbi, val);
-
-	return ret ? ret : count;
-}
-
 #define EXT4_ATTR_OFFSET(_name,_mode,_show,_store,_elname) \
 static struct ext4_attr ext4_attr_##_name = {			\
 	.attr = {.name = __stringify(_name), .mode = _mode },	\
@@ -2572,7 +2545,6 @@ static struct ext4_attr ext4_attr_##name = __ATTR(name, mode, show, store)
 EXT4_RO_ATTR(delayed_allocation_blocks);
 EXT4_RO_ATTR(session_write_kbytes);
 EXT4_RO_ATTR(lifetime_write_kbytes);
-EXT4_RW_ATTR(reserved_clusters);
 EXT4_RW_ATTR(r_blocks_count);
 EXT4_ATTR_OFFSET(inode_readahead_blks, 0644, sbi_ui_show,
 		 inode_readahead_blks_store, s_inode_readahead_blks);
@@ -2590,7 +2562,6 @@ static struct attribute *ext4_attrs[] = {
 	ATTR_LIST(delayed_allocation_blocks),
 	ATTR_LIST(session_write_kbytes),
 	ATTR_LIST(lifetime_write_kbytes),
-	ATTR_LIST(reserved_clusters),
 	ATTR_LIST(r_blocks_count),
 	ATTR_LIST(inode_readahead_blks),
 	ATTR_LIST(inode_goal),
@@ -3267,40 +3238,6 @@ static int set_journal_csum_feature_set(struct super_block *sb)
 	return ret;
 }
 
-
-static ext4_fsblk_t ext4_calculate_resv_clusters(struct ext4_sb_info *sbi)
-{
-	ext4_fsblk_t resv_clusters;
-
-	/*
-	 * By default we reserve 2% or 4096 clusters, whichever is smaller.
-	 * This should cover the situations where we can not afford to run
-	 * out of space like for example punch hole, or converting
-	 * uninitialized extents in delalloc path. In most cases such
-	 * allocation would require 1, or 2 blocks, higher numbers are
-	 * very rare.
-	 */
-	resv_clusters = ext4_blocks_count(sbi->s_es) >> sbi->s_cluster_bits;
-
-	do_div(resv_clusters, 50);
-	resv_clusters = min_t(ext4_fsblk_t, resv_clusters, 4096);
-
-	return resv_clusters;
-}
-
-
-static int ext4_reserve_clusters(struct ext4_sb_info *sbi, ext4_fsblk_t count)
-{
-	ext4_fsblk_t clusters = ext4_blocks_count(sbi->s_es) >>
-				sbi->s_cluster_bits;
-
-	if (count >= clusters)
-		return -EINVAL;
-
-	atomic64_set(&sbi->s_resv_clusters, count);
-	return 0;
-}
-
 static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 {
 	char *orig_data = kstrdup(data, GFP_KERNEL);
@@ -3831,9 +3768,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	if (!err) {
 		err = percpu_counter_init(&sbi->s_dirtyclusters_counter, 0, GFP_KERNEL);
 	}
-	if (!err) {
-		err = percpu_counter_init(&sbi->s_extent_cache_cnt, 0);
-	}
 	if (err) {
 		ext4_msg(sb, KERN_ERR, "insufficient memory");
 		goto failed_mount3;
@@ -3842,9 +3776,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	sbi->s_stripe = ext4_get_stripe_size(sbi);
 	sbi->s_max_writeback_mb_bump = 128;
 	sbi->s_extent_max_zeroout_kb = 32;
-
-	/* Register extent status tree shrinker */
-	ext4_es_register_shrinker(sb);
 
 	/*
 	 * set up enough so that it can read an inode
@@ -4034,13 +3965,6 @@ no_journal:
 
 	atomic64_set(&sbi->s_r_blocks_count, ext4_r_blocks_count(es));
 
-	err = ext4_reserve_clusters(sbi, ext4_calculate_resv_clusters(sbi));
-	if (err) {
-		ext4_msg(sb, KERN_ERR, "failed to reserve %llu clusters for "
-			 "reserved pool", ext4_calculate_resv_clusters(sbi));
-		goto failed_mount4a;
-	}
-
 	err = ext4_setup_system_zone(sb);
 	if (err) {
 		ext4_msg(sb, KERN_ERR, "failed to initialize system "
@@ -4162,7 +4086,6 @@ failed_mount3:
 	percpu_counter_destroy(&sbi->s_freeinodes_counter);
 	percpu_counter_destroy(&sbi->s_dirs_counter);
 	percpu_counter_destroy(&sbi->s_dirtyclusters_counter);
-	percpu_counter_destroy(&sbi->s_extent_cache_cnt);
 	if (sbi->s_mmp_tsk)
 		kthread_stop(sbi->s_mmp_tsk);
 failed_mount2:
@@ -4903,10 +4826,9 @@ static int ext4_statfs(struct dentry *dentry, struct kstatfs *buf)
 	struct super_block *sb = dentry->d_sb;
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	struct ext4_super_block *es = sbi->s_es;
-	ext4_fsblk_t overhead = 0, resv_blocks;
+	ext4_fsblk_t overhead = 0;
 	u64 fsid;
 	s64 bfree;
-	resv_blocks = EXT4_C2B(sbi, atomic64_read(&sbi->s_resv_clusters));
 
 	if (!test_opt(sb, MINIX_DF))
 		overhead = sbi->s_overhead;
@@ -4918,9 +4840,8 @@ static int ext4_statfs(struct dentry *dentry, struct kstatfs *buf)
 		percpu_counter_sum_positive(&sbi->s_dirtyclusters_counter);
 	/* prevent underflow in case that few free space is available */
 	buf->f_bfree = EXT4_C2B(sbi, max_t(s64, bfree, 0));
-	buf->f_bavail = buf->f_bfree -
-			(ext4_r_blocks_count(es) + resv_blocks);
-	if (buf->f_bfree < (ext4_r_blocks_count(es) + resv_blocks))
+	buf->f_bavail = buf->f_bfree - atomic64_read(&sbi->s_r_blocks_count);
+	if (buf->f_bfree < atomic64_read(&sbi->s_r_blocks_count))
 		buf->f_bavail = 0;
 	buf->f_files = le32_to_cpu(es->s_inodes_count);
 	buf->f_ffree = percpu_counter_sum_positive(&sbi->s_freeinodes_counter);

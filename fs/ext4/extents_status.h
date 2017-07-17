@@ -42,9 +42,4 @@ extern int ext4_es_remove_extent(struct inode *inode, ext4_lblk_t start,
 extern ext4_lblk_t ext4_es_find_extent(struct inode *inode,
 				struct extent_status *es);
 
-extern void ext4_es_register_shrinker(struct super_block *sb);
-extern void ext4_es_unregister_shrinker(struct super_block *sb);
-extern void ext4_es_lru_add(struct inode *inode);
-extern void ext4_es_lru_del(struct inode *inode);
-
 #endif /* _EXT4_EXTENTS_STATUS_H */

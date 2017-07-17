@@ -2074,7 +2074,7 @@ TRACE_EVENT(ext4_ext_remove_space_done,
 		__entry->start		= start;
 		__entry->depth		= depth;
 		__entry->partial	= partial;
-		__entry->eh_entries	= le16_to_cpu(eh_entries);
+		__entry->eh_entries	= eh_entries;
 	),
 
 	TP_printk("dev %d,%d ino %lu since %u depth %d partial %lld "
@@ -2185,50 +2185,6 @@ TRACE_EVENT(ext4_es_find_extent_exit,
 		  MAJOR(__entry->dev), MINOR(__entry->dev),
 		  (unsigned long) __entry->ino,
 		  __entry->start, __entry->len, __entry->ret)
-);
-
-TRACE_EVENT(ext4_es_shrink_enter,
-	TP_PROTO(struct super_block *sb, int nr_to_scan, int cache_cnt),
-
-	TP_ARGS(sb, nr_to_scan, cache_cnt),
-
-	TP_STRUCT__entry(
-		__field(	dev_t,	dev			)
-		__field(	int,	nr_to_scan		)
-		__field(	int,	cache_cnt		)
-	),
-
-	TP_fast_assign(
-		__entry->dev		= sb->s_dev;
-		__entry->nr_to_scan	= nr_to_scan;
-		__entry->cache_cnt	= cache_cnt;
-	),
-
-	TP_printk("dev %d,%d nr_to_scan %d cache_cnt %d",
-		  MAJOR(__entry->dev), MINOR(__entry->dev),
-		  __entry->nr_to_scan, __entry->cache_cnt)
-);
-
-TRACE_EVENT(ext4_es_shrink_exit,
-	TP_PROTO(struct super_block *sb, int shrunk_nr, int cache_cnt),
-
-	TP_ARGS(sb, shrunk_nr, cache_cnt),
-
-	TP_STRUCT__entry(
-		__field(	dev_t,	dev			)
-		__field(	int,	shrunk_nr		)
-		__field(	int,	cache_cnt		)
-	),
-
-	TP_fast_assign(
-		__entry->dev		= sb->s_dev;
-		__entry->shrunk_nr	= shrunk_nr;
-		__entry->cache_cnt	= cache_cnt;
-	),
-
-	TP_printk("dev %d,%d shrunk_nr %d cache_cnt %d",
-		  MAJOR(__entry->dev), MINOR(__entry->dev),
-		  __entry->shrunk_nr, __entry->cache_cnt)
 );
 
 #endif /* _TRACE_EXT4_H */

@@ -122,8 +122,6 @@ typedef unsigned int ext4_group_t;
 #define EXT4_MB_STREAM_ALLOC		0x0800
 /* Use reserved root blocks if needed */
 #define EXT4_MB_USE_ROOT_BLOCKS		0x1000
-/* Use blocks from reserved pool */
-#define EXT4_MB_USE_RESERVED		0x2000
 
 struct ext4_allocation_request {
 	/* target inode for block we're allocating */
@@ -560,8 +558,9 @@ enum {
 #define EXT4_GET_BLOCKS_UNINIT_EXT		0x0002
 #define EXT4_GET_BLOCKS_CREATE_UNINIT_EXT	(EXT4_GET_BLOCKS_UNINIT_EXT|\
 						 EXT4_GET_BLOCKS_CREATE)
-	/* Caller is from the delayed allocation writeout path
-	 * finally doing the actual allocation of delayed blocks */
+	/* Caller is from the delayed allocation writeout path,
+	   so set the magic i_delalloc_reserve_flag after taking the
+	   inode allocation semaphore for */
 #define EXT4_GET_BLOCKS_DELALLOC_RESERVE	0x0004
 	/* caller is from the direct IO path, request to creation of an
 	unitialized extents if not allocated, split the uninitialized
@@ -573,9 +572,8 @@ enum {
 	/* Convert extent to initialized after IO complete */
 #define EXT4_GET_BLOCKS_IO_CONVERT_EXT		(EXT4_GET_BLOCKS_CONVERT|\
 					 EXT4_GET_BLOCKS_CREATE_UNINIT_EXT)
-	/* Eventual metadata allocation (due to growing extent tree)
-	 * should not fail, so try to use reserved blocks for that.*/
-#define EXT4_GET_BLOCKS_METADATA_NOFAIL		0x0020
+	/* Punch out blocks of an extent */
+#define EXT4_GET_BLOCKS_PUNCH_OUT_EXT		0x0020
 	/* Don't normalize allocation size (used for fallocate) */
 #define EXT4_GET_BLOCKS_NO_NORMALIZE		0x0040
 	/* Request will not result in inode size update (user for fallocate) */
@@ -617,7 +615,6 @@ enum {
 #define EXT4_IOC_ALLOC_DA_BLKS		_IO('f', 12)
 #define EXT4_IOC_MOVE_EXT		_IOWR('f', 15, struct move_extent)
 #define EXT4_IOC_RESIZE_FS		_IOW('f', 16, __u64)
-#define EXT4_IOC_SWAP_BOOT		_IO('f', 17)
 
 #if defined(__KERNEL__) && defined(CONFIG_COMPAT)
 /*
@@ -965,8 +962,6 @@ struct ext4_inode_info {
 	/* extents status tree */
 	struct ext4_es_tree i_es_tree;
 	rwlock_t i_es_lock;
-	struct list_head i_es_lru;
-	unsigned int i_es_lru_nr;	/* protected by i_es_lock */
 
 	/* ialloc */
 	ext4_group_t	i_last_alloc_group;
@@ -1265,7 +1260,6 @@ struct ext4_sb_info {
 	unsigned int s_def_mount_opt;
 	ext4_fsblk_t s_sb_block;
 	atomic64_t s_r_blocks_count;
-	atomic64_t s_resv_clusters;
 	uid_t s_resuid;
 	gid_t s_resgid;
 	unsigned short s_mount_state;
@@ -1391,12 +1385,6 @@ struct ext4_sb_info {
 
 	/* Precomputed FS UUID checksum for seeding other checksums */
 	__u32 s_csum_seed;
-
-	/* Reclaim extents from extent status tree */
-	struct shrinker s_es_shrinker;
-	struct list_head s_es_lru;
-	struct percpu_counter s_extent_cache_cnt;
-	spinlock_t s_es_lru_lock ____cacheline_aligned_in_smp;
 };
 
 static inline struct ext4_sb_info *EXT4_SB(struct super_block *sb)
@@ -1419,7 +1407,6 @@ static inline int ext4_valid_inum(struct super_block *sb, unsigned long ino)
 	return ino == EXT4_ROOT_INO ||
 		ino == EXT4_USR_QUOTA_INO ||
 		ino == EXT4_GRP_QUOTA_INO ||
-		ino == EXT4_BOOT_LOADER_INO ||
 		ino == EXT4_JOURNAL_INO ||
 		ino == EXT4_RESIZE_INO ||
 		(ino >= EXT4_FIRST_INO(sb) &&
@@ -2172,7 +2159,6 @@ extern long ext4_compat_ioctl(struct file *, unsigned int, unsigned long);
 
 /* migrate.c */
 extern int ext4_ext_migrate(struct inode *);
-extern int ext4_ind_migrate(struct inode *inode);
 
 /* namei.c */
 extern int ext4_dirent_csum_verify(struct inode *inode,
@@ -2575,15 +2561,10 @@ extern int ext4_ext_check_inode(struct inode *inode);
 extern int ext4_find_delalloc_cluster(struct inode *inode, ext4_lblk_t lblk);
 extern int ext4_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
 			__u64 start, __u64 len);
+extern int ext4_ind_migrate(struct inode *inode);
 
 
 /* move_extent.c */
-extern void ext4_double_down_write_data_sem(struct inode *first,
-					    struct inode *second);
-extern void ext4_double_up_write_data_sem(struct inode *orig_inode,
-					  struct inode *donor_inode);
-void ext4_inode_double_lock(struct inode *inode1, struct inode *inode2);
-void ext4_inode_double_unlock(struct inode *inode1, struct inode *inode2);
 extern int ext4_move_extents(struct file *o_filp, struct file *d_filp,
 			     __u64 start_orig, __u64 start_donor,
 			     __u64 len, __u64 *moved_len);
