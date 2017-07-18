@@ -158,6 +158,15 @@ static unsigned int default_above_hispeed_delay[] = {
 static struct interactive_tunables *global_tunables;
 static DEFINE_MUTEX(global_tunables_lock);
 
+static bool threads_are_frozen(void)
+{
+	if (speedchange_task != NULL) {
+		if (frozen(speedchange_task))
+			return true;
+		return false;
+	}
+	return false;
+
 static inline void update_slack_delay(struct interactive_tunables *tunables)
 {
 	tunables->timer_slack_delay = usecs_to_jiffies(tunables->timer_slack +
@@ -168,6 +177,9 @@ static bool timer_slack_required(struct interactive_cpu *icpu)
 {
 	struct interactive_policy *ipolicy;
 	struct interactive_tunables *tunables;
+
+	if (threads_are_frozen())
+		return false;
 
 	ipolicy = icpu->ipolicy;
 		if (ipolicy != NULL)
@@ -187,6 +199,10 @@ static bool timer_slack_required(struct interactive_cpu *icpu)
 static void gov_slack_timer_start(struct interactive_cpu *icpu, int cpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
+
+	if (threads_are_frozen())
+		return;
+
 	if (!tunables)
 		return;
 
@@ -197,6 +213,8 @@ static void gov_slack_timer_start(struct interactive_cpu *icpu, int cpu)
 static void gov_slack_timer_modify(struct interactive_cpu *icpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
+	if (threads_are_frozen())
+		return;
 	if (!tunables)
 		return;
 	mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
@@ -207,6 +225,8 @@ static void slack_timer_resched(struct interactive_cpu *icpu, int cpu,
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	unsigned long flags;
+	if (threads_are_frozen())
+		return;
 	if (!tunables)
 		return;
 	spin_lock_irqsave(&icpu->load_lock, flags);
@@ -234,6 +254,8 @@ freq_to_above_hispeed_delay(struct interactive_tunables *tunables,
 	unsigned long flags;
 	unsigned int ret;
 	int i;
+	if (threads_are_frozen())
+		return 0;
 
 	spin_lock_irqsave(&tunables->above_hispeed_delay_lock, flags);
 
@@ -253,6 +275,9 @@ static unsigned int freq_to_targetload(struct interactive_tunables *tunables,
 	unsigned long flags;
 	unsigned int ret;
 	int i;
+
+	if (threads_are_frozen())
+		return 0;
 
 	spin_lock_irqsave(&tunables->target_loads_lock, flags);
 
@@ -278,6 +303,9 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
 	unsigned int freq;
 	int index;
+
+	if (threads_are_frozen())
+		return 0;
 
 	if (policy == NULL)
 		return -ENOMEM;
@@ -347,7 +375,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		}
 
 		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq && (!frozen(speedchange_task)));
+	} while (freq != prevfreq && (!threads_are_frozen());
 
 	return freq;
 }
@@ -357,6 +385,9 @@ static u64 update_load(struct interactive_cpu *icpu, int cpu)
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	unsigned int delta_idle, delta_time;
 	u64 now_idle, now, active_time;
+
+	if (threads_are_frozen())
+		return 0;
 
 	if (!tunables)
 		return -ENOMEM;
@@ -390,7 +421,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	int cpu_load;
 	int cpu = smp_processor_id();
 
-	if (frozen(speedchange_task))
+	if (threads_are_frozen())
 		return;
 
 	if (icpu->ipolicy == NULL)
@@ -499,6 +530,8 @@ exit:
 
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
+	if (threads_are_frozen())
+		return;
 	if (icpu->ipolicy == NULL)
 		return;
 	eval_target_freq(icpu);
@@ -510,6 +543,8 @@ static void cpufreq_interactive_idle_end(void)
 {
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu,
 						smp_processor_id());
+	if (threads_are_frozen())
+		return;
 	if (icpu == NULL)
 		return;
 
@@ -535,6 +570,8 @@ static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
 	struct interactive_cpu *icpu;
 	u64 hvt = ~0ULL, fvt = 0;
 	unsigned int max_freq = 0, i;
+	if (threads_are_frozen())
+		return;
 
 	for_each_cpu(i, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, i);
@@ -562,6 +599,9 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	u64 hvt, fvt;
 	unsigned int max_freq;
 	int i;
+
+	if (threads_are_frozen())
+		return;
 
 	cpufreq_interactive_get_policy_info(policy, &max_freq, &hvt, &fvt);
 
@@ -647,6 +687,9 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	bool wakeup = false;
 	int i;
 
+	if (threads_are_frozen())
+		return;
+
 	tunables->boosted = true;
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
@@ -697,7 +740,7 @@ static int cpufreq_interactive_notifier(struct notifier_block *nb,
 	struct interactive_cpu *icpu;
 	unsigned long flags;
 
-	if (frozen(speedchange_task))
+	if (threads_are_frozen())
 		return 0;
 
 	icpu = &per_cpu(interactive_cpu, freq->cpu);
@@ -1086,6 +1129,9 @@ static void irq_work(struct irq_work *irq_work)
 	struct interactive_cpu *icpu = container_of(irq_work, struct
 						    interactive_cpu, irq_work);
 
+	if (threads_are_frozen())
+		return;
+
 	if (!icpu)
 		return;
 
@@ -1101,6 +1147,9 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 	struct interactive_policy *ipolicy = icpu->ipolicy;
 	struct interactive_tunables *tunables = ipolicy->tunables;
 	u64 delta_ns;
+
+	if (threads_are_frozen())
+		return;
 
 	/*
 	 * The irq-work may not be allowed to be queued up right now.
@@ -1132,6 +1181,10 @@ static void gov_set_update_util(struct interactive_policy *ipolicy)
 	struct interactive_cpu *icpu;
 	int cpu;
 	policy = ipolicy->policy;
+
+	if (threads_are_frozen())
+		return;
+
 	if (!policy)
 		return;
 
@@ -1330,7 +1383,7 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 	unsigned int cpu;
 
 frozen:
-	if (frozen(speedchange_task))
+	if (threads_are_frozen())
 		goto frozen;
 
 	for_each_cpu(cpu, policy->cpus) {
@@ -1378,6 +1431,9 @@ void cpufreq_interactive_limits(struct cpufreq_policy *policy)
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
 	unsigned long flags;
+
+	if (threads_are_frozen())
+		return;
 
 	cpufreq_policy_apply_limits(policy);
 
