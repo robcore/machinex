@@ -166,6 +166,7 @@ static bool threads_are_frozen(void)
 		return false;
 	}
 	return false;
+}
 
 static inline void update_slack_delay(struct interactive_tunables *tunables)
 {
