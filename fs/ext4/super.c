@@ -82,6 +82,7 @@ static int ext4_feature_set_ok(struct super_block *sb, int readonly);
 static void ext4_destroy_lazyinit_thread(void);
 static void ext4_unregister_li_request(struct super_block *sb);
 static void ext4_clear_request_list(void);
+static int ext4_reserve_clusters(struct ext4_sb_info *, ext4_fsblk_t);
 
 #if !defined(CONFIG_EXT2_FS) && !defined(CONFIG_EXT2_FS_MODULE) && defined(CONFIG_EXT4_USE_FOR_EXT23)
 static struct file_system_type ext2_fs_type = {
@@ -3242,6 +3243,40 @@ static int set_journal_csum_feature_set(struct super_block *sb)
 	return ret;
 }
 
+
+static ext4_fsblk_t ext4_calculate_resv_clusters(struct ext4_sb_info *sbi)
+{
+	ext4_fsblk_t resv_clusters;
+
+	/*
+	 * By default we reserve 2% or 4096 clusters, whichever is smaller.
+	 * This should cover the situations where we can not afford to run
+	 * out of space like for example punch hole, or converting
+	 * uninitialized extents in delalloc path. In most cases such
+	 * allocation would require 1, or 2 blocks, higher numbers are
+	 * very rare.
+	 */
+	resv_clusters = ext4_blocks_count(sbi->s_es) >> sbi->s_cluster_bits;
+
+	do_div(resv_clusters, 50);
+	resv_clusters = min_t(ext4_fsblk_t, resv_clusters, 4096);
+
+	return resv_clusters;
+}
+
+
+static int ext4_reserve_clusters(struct ext4_sb_info *sbi, ext4_fsblk_t count)
+{
+	ext4_fsblk_t clusters = ext4_blocks_count(sbi->s_es) >>
+				sbi->s_cluster_bits;
+
+	if (count >= clusters)
+		return -EINVAL;
+
+	atomic64_set(&sbi->s_resv_clusters, count);
+	return 0;
+}
+
 static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 {
 	char *orig_data = kstrdup(data, GFP_KERNEL);
@@ -3974,6 +4009,13 @@ no_journal:
 	}
 
 	atomic64_set(&sbi->s_r_blocks_count, ext4_r_blocks_count(es));
+
+	err = ext4_reserve_clusters(sbi, ext4_calculate_resv_clusters(sbi));
+	if (err) {
+		ext4_msg(sb, KERN_ERR, "failed to reserve %llu clusters for "
+			 "reserved pool", ext4_calculate_resv_clusters(sbi));
+		goto failed_mount4a;
+	}
 
 	err = ext4_setup_system_zone(sb);
 	if (err) {
@@ -4838,9 +4880,10 @@ static int ext4_statfs(struct dentry *dentry, struct kstatfs *buf)
 	struct super_block *sb = dentry->d_sb;
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	struct ext4_super_block *es = sbi->s_es;
-	ext4_fsblk_t overhead = 0;
+	ext4_fsblk_t overhead = 0, resv_blocks;
 	u64 fsid;
 	s64 bfree;
+	resv_blocks = EXT4_C2B(sbi, atomic64_read(&sbi->s_resv_clusters));
 
 	if (!test_opt(sb, MINIX_DF))
 		overhead = sbi->s_overhead;
