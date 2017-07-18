@@ -2375,7 +2375,7 @@ retry:
 	inode->i_op = &ext4_dir_inode_operations;
 	inode->i_fop = &ext4_dir_operations;
 	inode->i_size = 0;
-	if (!(dir_block = ext4_append(handle, inode, &block, &err)))
+	if (!(dir_block = ext4_append(handle, inode, &block)))
 		goto out_clear_inode;
 
 	BUFFER_TRACE(dir_block, "get_write_access");
