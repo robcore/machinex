@@ -94,18 +94,16 @@ enum mem_cgroup_stat_index {
 	/*
 	 * For MEM_CONTAINER_TYPE_ALL, usage = pagecache + rss.
 	 */
-	MEM_CGROUP_STAT_CACHE,		/* # of pages charged as cache */
-	MEM_CGROUP_STAT_RSS,		/* # of pages charged as anon rss */
-	MEM_CGROUP_STAT_RSS_HUGE,	/* # of pages charged as anon huge */
-	MEM_CGROUP_STAT_FILE_MAPPED,	/* # of pages charged as file rss */
-	MEM_CGROUP_STAT_SWAP,		/* # of pages, swapped out */
+	MEM_CGROUP_STAT_CACHE, 	   /* # of pages charged as cache */
+	MEM_CGROUP_STAT_RSS,	   /* # of pages charged as anon rss */
+	MEM_CGROUP_STAT_FILE_MAPPED,  /* # of pages charged as file rss */
+	MEM_CGROUP_STAT_SWAP, /* # of pages, swapped out */
 	MEM_CGROUP_STAT_NSTATS,
 };
 
 static const char * const mem_cgroup_stat_names[] = {
 	"cache",
 	"rss",
-	"rss_huge",
 	"mapped_file",
 	"swap",
 };
@@ -306,7 +304,7 @@ static void mem_cgroup_oom_notify(struct mem_cgroup *memcg);
  * a feature that will be implemented much later in the future.
  */
 struct mem_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	/*
 	 * the counter to account for memory usage
 	 */
@@ -569,12 +567,12 @@ struct vmpressure *memcg_to_vmpressure(struct mem_cgroup *memcg)
 	return &memcg->vmpressure;
 }
 
-struct cgroup_subsys_state *vmpressure_to_css(struct vmpressure *vmpr)
+struct cgroup_css *vmpressure_to_css(struct vmpressure *vmpr)
 {
 	return &container_of(vmpr, struct mem_cgroup, vmpressure)->css;
 }
 
-struct vmpressure *css_to_vmpressure(struct cgroup_subsys_state *css)
+struct vmpressure *css_to_vmpressure(struct cgroup_css *css)
 {
 	struct mem_cgroup *memcg = container_of(css, struct mem_cgroup, css);
 	return &memcg->vmpressure;
@@ -742,7 +740,7 @@ mem_cgroup_zoneinfo(struct mem_cgroup *memcg, int nid, int zid)
 	return &memcg->info.nodeinfo[nid]->zoneinfo[zid];
 }
 
-struct cgroup_subsys_state *mem_cgroup_css(struct mem_cgroup *memcg)
+struct cgroup_css *mem_cgroup_css(struct mem_cgroup *memcg)
 {
 	return &memcg->css;
 }
@@ -975,7 +973,6 @@ static unsigned long mem_cgroup_read_events(struct mem_cgroup *memcg,
 }
 
 static void mem_cgroup_charge_statistics(struct mem_cgroup *memcg,
-					 struct page *page,
 					 bool anon, int nr_pages)
 {
 	preempt_disable();
@@ -989,10 +986,6 @@ static void mem_cgroup_charge_statistics(struct mem_cgroup *memcg,
 				nr_pages);
 	else
 		__this_cpu_add(memcg->stat->count[MEM_CGROUP_STAT_CACHE],
-				nr_pages);
-
-	if (PageTransHuge(page))
-		__this_cpu_add(memcg->stat->count[MEM_CGROUP_STAT_RSS_HUGE],
 				nr_pages);
 
 	/* pagein of a big page is an event. So, ignore page size */
@@ -1212,7 +1205,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 	rcu_read_lock();
 	while (!memcg) {
 		struct mem_cgroup_reclaim_iter *uninitialized_var(iter);
-		struct cgroup_subsys_state *css = NULL;
+		struct cgroup_css *css = NULL;
 
 		if (reclaim) {
 			int nid = zone_to_nid(reclaim->zone);
@@ -2865,7 +2858,7 @@ static void __mem_cgroup_cancel_local_charge(struct mem_cgroup *memcg,
  */
 static struct mem_cgroup *mem_cgroup_lookup(unsigned short id)
 {
-	struct cgroup_subsys_state *css;
+	struct cgroup_css *css;
 
 	/* ID 0 is unused ID */
 	if (!id)
@@ -2964,7 +2957,7 @@ static void __mem_cgroup_commit_charge(struct mem_cgroup *memcg,
 	else
 		anon = false;
 
-	mem_cgroup_charge_statistics(memcg, page, anon, nr_pages);
+	mem_cgroup_charge_statistics(memcg, anon, nr_pages);
 	unlock_page_cgroup(pc);
 
 	/*
@@ -3755,7 +3748,6 @@ void mem_cgroup_split_huge_fixup(struct page *head)
 {
 	struct page_cgroup *head_pc;
 	struct page_cgroup *pc;
-	struct mem_cgroup *memcg;
 	int i;
 
 	if (mem_cgroup_disabled())
@@ -3763,15 +3755,12 @@ void mem_cgroup_split_huge_fixup(struct page *head)
 
 	head_pc = lookup_page_cgroup(head);
 
-	memcg = head_pc->mem_cgroup;
 	for (i = 1; i < HPAGE_PMD_NR; i++) {
 		pc = head_pc + i;
-		pc->mem_cgroup = memcg;
+		pc->mem_cgroup = head_pc->mem_cgroup;
 		smp_wmb();/* see __commit_charge() */
 		pc->flags = head_pc->flags & ~PCGF_NOCOPY_AT_SPLIT;
 	}
-	__this_cpu_sub(memcg->stat->count[MEM_CGROUP_STAT_RSS_HUGE],
-		       HPAGE_PMD_NR);
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
 
@@ -3827,11 +3816,11 @@ static int mem_cgroup_move_account(struct page *page,
 		__this_cpu_inc(to->stat->count[MEM_CGROUP_STAT_FILE_MAPPED]);
 		preempt_enable();
 	}
-	mem_cgroup_charge_statistics(from, page, anon, -nr_pages);
+	mem_cgroup_charge_statistics(from, anon, -nr_pages);
 
 	/* caller should have done css_get */
 	pc->mem_cgroup = to;
-	mem_cgroup_charge_statistics(to, page, anon, nr_pages);
+	mem_cgroup_charge_statistics(to, anon, nr_pages);
 	move_unlock_mem_cgroup(from, &flags);
 	ret = 0;
 unlock:
@@ -4205,7 +4194,7 @@ __mem_cgroup_uncharge_common(struct page *page, enum charge_type ctype,
 		break;
 	}
 
-	mem_cgroup_charge_statistics(memcg, page, anon, -nr_pages);
+	mem_cgroup_charge_statistics(memcg, anon, -nr_pages);
 
 	ClearPageCgroupUsed(pc);
 	/*
@@ -4567,7 +4556,7 @@ void mem_cgroup_replace_page_cache(struct page *oldpage,
 	lock_page_cgroup(pc);
 	if (PageCgroupUsed(pc)) {
 		memcg = pc->mem_cgroup;
-		mem_cgroup_charge_statistics(memcg, oldpage, false, -1);
+		mem_cgroup_charge_statistics(memcg, false, -1);
 		ClearPageCgroupUsed(pc);
 	}
 	unlock_page_cgroup(pc);
@@ -5094,10 +5083,6 @@ static inline u64 mem_cgroup_usage(struct mem_cgroup *memcg, bool swap)
 			return res_counter_read_u64(&memcg->memsw, RES_USAGE);
 	}
 
-	/*
-	 * Transparent hugepages are still accounted for in MEM_CGROUP_STAT_RSS
-	 * as well as in MEM_CGROUP_STAT_RSS_HUGE.
-	 */
 	val = mem_cgroup_recursive_stat(memcg, MEM_CGROUP_STAT_CACHE);
 	val += mem_cgroup_recursive_stat(memcg, MEM_CGROUP_STAT_RSS);
 
@@ -6462,8 +6447,8 @@ static void __init mem_cgroup_soft_limit_tree_init(void)
 	}
 }
 
-static struct cgroup_subsys_state * __ref
-mem_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css * __ref
+mem_cgroup_css_alloc(struct cgroup_css *parent_css)
 {
 	struct mem_cgroup *memcg;
 	long error = -ENOMEM;
@@ -6502,7 +6487,7 @@ free_out:
 }
 
 static int
-mem_cgroup_css_online(struct cgroup_subsys_state *css)
+mem_cgroup_css_online(struct cgroup_css *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(css));
@@ -6558,7 +6543,7 @@ mem_cgroup_css_online(struct cgroup_subsys_state *css)
 	return error;
 }
 
-static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
+static void mem_cgroup_css_offline(struct cgroup_css *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 	struct cgroup_event *event, *tmp;
@@ -6579,7 +6564,7 @@ static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
 	mem_cgroup_destroy_all_caches(memcg);
 }
 
-static void mem_cgroup_css_free(struct cgroup_subsys_state *css)
+static void mem_cgroup_css_free(struct cgroup_css *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 
@@ -6946,7 +6931,7 @@ static void mem_cgroup_clear_mc(void)
 	mem_cgroup_end_move(from);
 }
 
-static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
+static int mem_cgroup_can_attach(struct cgroup_css *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *p = cgroup_taskset_first(tset);
@@ -6993,7 +6978,7 @@ static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
 	return ret;
 }
 
-static void mem_cgroup_cancel_attach(struct cgroup_subsys_state *css,
+static void mem_cgroup_cancel_attach(struct cgroup_css *css,
 				     struct cgroup_taskset *tset)
 {
 	mem_cgroup_clear_mc();
@@ -7141,7 +7126,7 @@ retry:
 	up_read(&mm->mmap_sem);
 }
 
-static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
+static void mem_cgroup_move_task(struct cgroup_css *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *p = cgroup_taskset_first(tset);
@@ -7156,16 +7141,16 @@ static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
 		mem_cgroup_clear_mc();
 }
 #else	/* !CONFIG_MMU */
-static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
+static int mem_cgroup_can_attach(struct cgroup_css *css,
 				 struct cgroup_taskset *tset)
 {
 	return 0;
 }
-static void mem_cgroup_cancel_attach(struct cgroup_subsys_state *css,
+static void mem_cgroup_cancel_attach(struct cgroup_css *css,
 				     struct cgroup_taskset *tset)
 {
 }
-static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
+static void mem_cgroup_move_task(struct cgroup_css *css,
 				 struct cgroup_taskset *tset)
 {
 }
@@ -7175,7 +7160,7 @@ static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
  * Cgroup retains root cgroups across [un]mount cycles making it necessary
  * to verify sane_behavior flag on each mount attempt.
  */
-static void mem_cgroup_bind(struct cgroup_subsys_state *root_css)
+static void mem_cgroup_bind(struct cgroup_css *root_css)
 {
 	/*
 	 * use_hierarchy is forced with sane_behavior.  cgroup core
