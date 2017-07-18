@@ -118,8 +118,7 @@ static void sdcardfs_d_release(struct dentry *dentry)
 	return;
 }
 
-static int sdcardfs_hash_ci(const struct dentry *dentry, 
-				const struct inode *inode, struct qstr *qstr)
+static int sdcardfs_hash_ci(const struct dentry *dentry, struct qstr *qstr)
 {
 	/* 
 	 * This function is copy of vfat_hashi.
@@ -147,10 +146,9 @@ static int sdcardfs_hash_ci(const struct dentry *dentry,
 /*
  * Case insensitive compare of two vfat names.
  */
-static int sdcardfs_cmp_ci(const struct dentry *parent, 
-		const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
-		unsigned int len, const char *str, const struct qstr *name)
+static int sdcardfs_cmp_ci(const struct dentry *parent,
+		const struct dentry *dentry, unsigned int len,
+		const char *str, const struct qstr *name)
 {
 	/* This function is copy of vfat_cmpi */
 	// FIXME Should we support national language? 
