@@ -376,7 +376,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		}
 
 		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq && (!threads_are_frozen());
+	} while (freq != prevfreq && (!threads_are_frozen()));
 
 	return freq;
 }
