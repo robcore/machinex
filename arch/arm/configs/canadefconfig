@@ -3752,6 +3752,7 @@ CONFIG_IR_REMOCON_FPGA=y
 # CONFIG_FELICA is not set
 # CONFIG_NFC_FELICA is not set
 # CONFIG_MSM_VIBRATOR is not set
+# CONFIG_RESET_CONTROLLER is not set
 
 #
 # File systems
