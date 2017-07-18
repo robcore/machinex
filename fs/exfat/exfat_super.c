@@ -381,7 +381,7 @@ static int exfat_d_hash(const struct dentry *dentry, const struct inode *inode,
 	return 0;
 }
 
-static int exfat_d_hashi(const struct dentry *dentry, const struct inode *inode,
+static int exfat_d_hashi(const struct dentry *dentry,
 		struct qstr *qstr)
 {
 	struct nls_table *t = EXFAT_SB(dentry->d_sb)->nls_io;
@@ -400,7 +400,7 @@ static int exfat_d_hashi(const struct dentry *dentry, const struct inode *inode,
 	return 0;
 }
 
-static int exfat_cmpi(const struct dentry *parent, const struct inode *pinode,
+static int exfat_cmpi(const struct dentry *parent,
 		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name)
 {
