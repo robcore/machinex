@@ -3776,7 +3776,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 		err = percpu_counter_init(&sbi->s_dirtyclusters_counter, 0, GFP_KERNEL);
 	}
 	if (!err) {
-		err = percpu_counter_init(&sbi->s_extent_cache_cnt, 0);
+		err = percpu_counter_init(&sbi->s_extent_cache_cnt, 0, GFP_KERNEL);
 	}
 	if (err) {
 		ext4_msg(sb, KERN_ERR, "insufficient memory");
