@@ -248,8 +248,7 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 				return 0;
 		}
 	}
-out:
-	return ret;
+	return 0;
 }
 
 static inline int is_32bit_api(void)
