@@ -49,9 +49,9 @@ done:
 /*
  * hfs_readdir
  */
-static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
+static int hfs_readdir(struct file *file, struct dir_context *ctx)
 {
-	struct inode *inode = file_inode(filp);
+	struct inode *inode = file_inode(file);
 	struct super_block *sb = inode->i_sb;
 	int len, err;
 	char strbuf[HFS_MAX_NAMELEN];
@@ -60,7 +60,7 @@ static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	struct hfs_readdir_data *rd;
 	u16 type;
 
-	if (filp->f_pos >= inode->i_size)
+	if (ctx->pos >= inode->i_size)
 		return 0;
 
 	hfs_find_init(HFS_SB(sb)->cat_tree, &fd);
@@ -69,14 +69,13 @@ static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	if (err)
 		goto out;
 
-	switch ((u32)filp->f_pos) {
-	case 0:
+	if (ctx->pos == 0) {
 		/* This is completely artificial... */
-		if (filldir(dirent, ".", 1, 0, inode->i_ino, DT_DIR))
+		if (!dir_emit_dot(file, ctx))
 			goto out;
-		filp->f_pos++;
-		/* fall through */
-	case 1:
+		ctx->pos = 1;
+	}
+	if (ctx->pos == 1) {
 		if (fd.entrylength > sizeof(entry) || fd.entrylength < 0) {
 			err = -EIO;
 			goto out;
@@ -93,18 +92,16 @@ static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		//	err = -EIO;
 		//	goto out;
 		//}
-		if (filldir(dirent, "..", 2, 1,
+		if (!dir_emit(ctx, "..", 2,
 			    be32_to_cpu(entry.thread.ParID), DT_DIR))
 			goto out;
-		filp->f_pos++;
-		/* fall through */
-	default:
-		if (filp->f_pos >= inode->i_size)
-			goto out;
-		err = hfs_brec_goto(&fd, filp->f_pos - 1);
-		if (err)
-			goto out;
+		ctx->pos = 2;
 	}
+	if (ctx->pos >= inode->i_size)
+		goto out;
+	err = hfs_brec_goto(&fd, ctx->pos - 1);
+	if (err)
+		goto out;
 
 	for (;;) {
 		if (be32_to_cpu(fd.key->cat.ParID) != inode->i_ino) {
@@ -127,7 +124,7 @@ static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 				err = -EIO;
 				goto out;
 			}
-			if (filldir(dirent, strbuf, len, filp->f_pos,
+			if (!dir_emit(ctx, strbuf, len,
 				    be32_to_cpu(entry.dir.DirID), DT_DIR))
 				break;
 		} else if (type == HFS_CDR_FIL) {
@@ -136,7 +133,7 @@ static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 				err = -EIO;
 				goto out;
 			}
-			if (filldir(dirent, strbuf, len, filp->f_pos,
+			if (!dir_emit(ctx, strbuf, len,
 				    be32_to_cpu(entry.file.FlNum), DT_REG))
 				break;
 		} else {
@@ -144,22 +141,22 @@ static int hfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			err = -EIO;
 			goto out;
 		}
-		filp->f_pos++;
-		if (filp->f_pos >= inode->i_size)
+		ctx->pos++;
+		if (ctx->pos >= inode->i_size)
 			goto out;
 		err = hfs_brec_goto(&fd, 1);
 		if (err)
 			goto out;
 	}
-	rd = filp->private_data;
+	rd = file->private_data;
 	if (!rd) {
 		rd = kmalloc(sizeof(struct hfs_readdir_data), GFP_KERNEL);
 		if (!rd) {
 			err = -ENOMEM;
 			goto out;
 		}
-		filp->private_data = rd;
-		rd->file = filp;
+		file->private_data = rd;
+		rd->file = file;
 		list_add(&rd->list, &HFS_I(inode)->open_dir_list);
 	}
 	memcpy(&rd->key, &fd.key, sizeof(struct hfs_cat_key));
@@ -300,7 +297,7 @@ static int hfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 const struct file_operations hfs_dir_operations = {
 	.read		= generic_read_dir,
-	.readdir	= hfs_readdir,
+	.iterate	= hfs_readdir,
 	.llseek		= generic_file_llseek,
 	.release	= hfs_dir_release,
 };

@@ -123,16 +123,15 @@ exit:
 }
 
 /**
- * v9fs_dir_readdir - read a directory
- * @filp: opened file structure
- * @dirent: directory structure ???
- * @filldir: function to populate directory structure ???
+ * v9fs_dir_readdir - iterate through a directory
+ * @file: opened file structure
+ * @ctx: actor we feed the entries to
  *
  */
 
-static int v9fs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
+static int v9fs_dir_readdir(struct file *file, struct dir_context *ctx)
 {
-	int over;
+	bool over;
 	struct p9_wstat st;
 	int err = 0;
 	struct p9_fid *fid;
@@ -300,7 +299,7 @@ int v9fs_dir_release(struct inode *inode, struct file *filp)
 const struct file_operations v9fs_dir_operations = {
 	.read = generic_read_dir,
 	.llseek = generic_file_llseek,
-	.readdir = v9fs_dir_readdir,
+	.iterate = v9fs_dir_readdir,
 	.open = v9fs_file_open,
 	.release = v9fs_dir_release,
 };
@@ -308,7 +307,7 @@ const struct file_operations v9fs_dir_operations = {
 const struct file_operations v9fs_dir_operations_dotl = {
 	.read = generic_read_dir,
 	.llseek = generic_file_llseek,
-	.readdir = v9fs_dir_readdir_dotl,
+	.iterate = v9fs_dir_readdir_dotl,
 	.open = v9fs_file_open,
 	.release = v9fs_dir_release,
         .fsync = v9fs_file_fsync_dotl,

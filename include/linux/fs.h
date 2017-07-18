@@ -1479,7 +1479,6 @@ struct file_operations {
 	ssize_t (*read_iter) (struct kiocb *, struct iov_iter *, loff_t);
 	ssize_t (*aio_write) (struct kiocb *, const struct iovec *, unsigned long, loff_t);
 	ssize_t (*write_iter) (struct kiocb *, struct iov_iter *, loff_t);
-	int (*readdir) (struct file *, void *, filldir_t);
 	int (*iterate) (struct file *, struct dir_context *);
 	unsigned int (*poll) (struct file *, struct poll_table_struct *);
 	long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);

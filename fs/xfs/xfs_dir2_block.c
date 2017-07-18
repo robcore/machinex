@@ -433,9 +433,7 @@ xfs_dir2_block_addname(
 int						/* error */
 xfs_dir2_block_getdents(
 	xfs_inode_t		*dp,		/* incore inode */
-	void			*dirent,
-	xfs_off_t		*offset,
-	filldir_t		filldir)
+	struct dir_context	*ctx)
 {
 	xfs_dir2_data_hdr_t	*hdr;		/* block header */
 	xfs_dabuf_t		*bp;		/* buffer for block */
@@ -524,7 +522,7 @@ xfs_dir2_block_getdents(
 	 * Reached the end of the block.
 	 * Set the offset to a non-existent block 1 and return.
 	 */
-	*offset = xfs_dir2_db_off_to_dataptr(mp, mp->m_dirdatablk + 1, 0) &
+	ctx->pos = xfs_dir2_db_off_to_dataptr(mp, mp->m_dirdatablk + 1, 0) &
 			0x7fffffff;
 	xfs_da_brelse(NULL, bp);
 	return 0;

@@ -817,7 +817,7 @@ otherwise noted.
   write_iter: aio_write replacement, called by io_submit(2) and other
 	asynchronous I/O operations
 
-  readdir: called when the VFS needs to read the directory contents
+  iterate: called when the VFS needs to read the directory contents
 
   poll: called by the VFS when a process wants to check if there is
 	activity on this file and (optionally) go to sleep until there

@@ -31,8 +31,8 @@ extern int xfs_dir_cilookup_result(struct xfs_da_args *args,
 
 /* xfs_dir2_block.c */
 extern int xfs_dir2_block_addname(struct xfs_da_args *args);
-extern int xfs_dir2_block_getdents(struct xfs_inode *dp, void *dirent,
-		xfs_off_t *offset, filldir_t filldir);
+extern int xfs_dir2_block_getdents(struct xfs_inode *dp,
+		struct dir_context *ctx);
 extern int xfs_dir2_block_lookup(struct xfs_da_args *args);
 extern int xfs_dir2_block_removename(struct xfs_da_args *args);
 extern int xfs_dir2_block_replace(struct xfs_da_args *args);
@@ -126,8 +126,7 @@ extern int xfs_dir2_block_to_sf(struct xfs_da_args *args, struct xfs_dabuf *bp,
 		int size, xfs_dir2_sf_hdr_t *sfhp);
 extern int xfs_dir2_sf_addname(struct xfs_da_args *args);
 extern int xfs_dir2_sf_create(struct xfs_da_args *args, xfs_ino_t pino);
-extern int xfs_dir2_sf_getdents(struct xfs_inode *dp, void *dirent,
-		xfs_off_t *offset, filldir_t filldir);
+extern int xfs_dir2_sf_getdents(struct xfs_inode *dp, struct dir_context *ctx);
 extern int xfs_dir2_sf_lookup(struct xfs_da_args *args);
 extern int xfs_dir2_sf_removename(struct xfs_da_args *args);
 extern int xfs_dir2_sf_replace(struct xfs_da_args *args);
