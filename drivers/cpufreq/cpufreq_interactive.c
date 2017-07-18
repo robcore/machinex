@@ -1128,6 +1128,7 @@ static void gov_set_update_util(struct interactive_policy *ipolicy)
 	struct cpufreq_policy *policy;
 	struct interactive_cpu *icpu;
 	int cpu;
+
 	policy = ipolicy->policy;
 	if (!policy)
 		return;
