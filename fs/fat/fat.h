@@ -419,12 +419,8 @@ extern ssize_t fat_listxattr(struct dentry *dentry, char *list, size_t size);
 extern int fat_removexattr(struct dentry *dentry, const char *name);
 
 /* fat/nfs.c */
-struct fid;
-extern struct dentry *fat_fh_to_dentry(struct super_block *sb, struct fid *fid,
-				       int fh_len, int fh_type);
-extern struct dentry *fat_fh_to_parent(struct super_block *sb, struct fid *fid,
-				       int fh_len, int fh_type);
-extern struct dentry *fat_get_parent(struct dentry *child_dir);
+extern const struct export_operations fat_export_ops;
+extern const struct export_operations fat_export_ops_nostale;
 
 /* helper for printk */
 typedef unsigned long long	llu;
