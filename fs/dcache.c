@@ -177,6 +177,28 @@ static inline int dentry_string_cmp(const unsigned char *cs, const unsigned char
 
 static inline int dentry_string_cmp(const unsigned char *cs, const unsigned char *ct, unsigned tcount)
 {
+#ifdef CONFIG_DCACHE_WORD_ACCESS
+	unsigned long a,b,mask;
+
+	if (unlikely(scount != tcount))
+		return 1;
+
+	for (;;) {
+		a = *(unsigned long *)cs;
+		b = *(unsigned long *)ct;
+		if (tcount < sizeof(unsigned long))
+			break;
+		if (unlikely(a != b))
+			return 1;
+		cs += sizeof(unsigned long);
+		ct += sizeof(unsigned long);
+		tcount -= sizeof(unsigned long);
+		if (!tcount)
+			return 0;
+	}
+	mask = ~(~0ul << tcount*8);
+	return unlikely(!!((a ^ b) & mask));
+#else
 	do {
 		if (*cs != *ct)
 			return 1;
@@ -185,6 +207,7 @@ static inline int dentry_string_cmp(const unsigned char *cs, const unsigned char
 		tcount--;
 	} while (tcount);
 	return 0;
+#endif
 }
 
 #endif
