@@ -187,17 +187,6 @@ static int filemap_check_errors(struct address_space *mapping)
 	return ret;
 }
 
-static int filemap_check_errors(struct address_space *mapping)
-{
-	int ret = 0;
-	/* Check for outstanding write errors */
-	if (test_and_clear_bit(AS_ENOSPC, &mapping->flags))
-		ret = -ENOSPC;
-	if (test_and_clear_bit(AS_EIO, &mapping->flags))
-		ret = -EIO;
-	return ret;
-}
-
 /**
  * __filemap_fdatawrite_range - start writeback on mapping dirty pages in range
  * @mapping:	address space structure to write
@@ -818,8 +807,6 @@ repeat:
 			page_cache_release(page);
 			goto repeat;
 		}
-	} else {
-		err = filemap_check_errors(mapping);
 	}
 out:
 	rcu_read_unlock();
@@ -911,8 +898,6 @@ retry:
 			if (err == -EEXIST)
 				goto repeat;
 		}
-	} else {
-		err = filemap_check_errors(mapping);
 	}
 	return page;
 }
