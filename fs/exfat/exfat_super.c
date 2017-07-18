@@ -374,15 +374,13 @@ static unsigned int exfat_striptail_len(const struct qstr *qstr)
 	return __exfat_striptail_len(qstr->len, qstr->name);
 }
 
-static int exfat_d_hash(const struct dentry *dentry,
-		struct qstr *qstr)
+static int exfat_d_hash(const struct dentry *dentry, struct qstr *qstr)
 {
 	qstr->hash = full_name_hash(qstr->name, exfat_striptail_len(qstr));
 	return 0;
 }
 
-static int exfat_d_hashi(const struct dentry *dentry,
-		struct qstr *qstr)
+static int exfat_d_hashi(const struct dentry *dentry, struct qstr *qstr)
 {
 	struct nls_table *t = EXFAT_SB(dentry->d_sb)->nls_io;
 	const unsigned char *name;
@@ -400,8 +398,7 @@ static int exfat_d_hashi(const struct dentry *dentry,
 	return 0;
 }
 
-static int exfat_cmpi(const struct dentry *parent,
-		const struct dentry *dentry,
+static int exfat_cmpi(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	struct nls_table *t = EXFAT_SB(parent->d_sb)->nls_io;
@@ -416,8 +413,7 @@ static int exfat_cmpi(const struct dentry *parent,
 	return 1;
 }
 
-static int exfat_cmp(const struct dentry *parent,
-		const struct dentry *dentry, const struct inode *inode,
+static int exfat_cmp(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	unsigned int alen, blen;
