@@ -1946,8 +1946,8 @@ TRACE_EVENT(ext4_remove_blocks,
 	TP_fast_assign(
 		__entry->ino		= inode->i_ino;
 		__entry->dev		= inode->i_sb->s_dev;
-		__entry->ee_lblk	= cpu_to_le32(ex->ee_block);
 		__entry->ee_pblk	= ext4_ext_pblock(ex);
+		__entry->ee_lblk	= le32_to_cpu(ex->ee_block);
 		__entry->ee_len		= ext4_ext_get_actual_len(ex);
 		__entry->from		= from;
 		__entry->to		= to;
@@ -2074,7 +2074,7 @@ TRACE_EVENT(ext4_ext_remove_space_done,
 		__entry->start		= start;
 		__entry->depth		= depth;
 		__entry->partial	= partial;
-		__entry->eh_entries	= eh_entries;
+		__entry->eh_entries	= le16_to_cpu(eh_entries);
 	),
 
 	TP_printk("dev %d,%d ino %lu since %u depth %d partial %lld "
