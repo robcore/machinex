@@ -216,7 +216,8 @@ void ext4_evict_inode(struct inode *inode)
 			filemap_write_and_wait(&inode->i_data);
 		}
 		truncate_inode_pages(&inode->i_data, 0);
-		ext4_ioend_shutdown(inode);
+
+		WARN_ON(atomic_read(&EXT4_I(inode)->i_ioend_count));
 		goto no_delete;
 	}
 
@@ -227,7 +228,7 @@ void ext4_evict_inode(struct inode *inode)
 	if (ext4_should_order_data(inode))
 		ext4_begin_ordered_truncate(inode, 0);
 	truncate_inode_pages(&inode->i_data, 0);
-	ext4_ioend_shutdown(inode);
+	WARN_ON(atomic_read(&EXT4_I(inode)->i_ioend_count));
 
 	/*
 	 * Protect us against freezing - iput() caller didn't have to have any
