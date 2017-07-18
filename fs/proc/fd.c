@@ -258,7 +258,6 @@ static int proc_readfd_common(struct file *file, struct dir_context *ctx,
 	rcu_read_unlock();
 out_fd_loop:
 	put_files_struct(files);
-	}
 out:
 	put_task_struct(p);
 out_no_task:

@@ -611,22 +611,22 @@ static bool proc_sys_fill_cache(struct file *file,
 	return dir_emit(ctx, qname.name, qname.len, ino, type);
 }
 
-static int proc_sys_link_fill_cache(struct file *filp, void *dirent,
-				    filldir_t filldir,
+static bool proc_sys_link_fill_cache(struct file *file,
+				    struct dir_context *ctx,
 				    struct ctl_table_header *head,
 				    struct ctl_table *table)
 {
-	int err, ret = 0;
+	bool ret = true;
 	head = sysctl_head_grab(head);
 
 	if (S_ISLNK(table->mode)) {
 		/* It is not an error if we can not follow the link ignore it */
-		err = sysctl_follow_link(&head, &table);
+		int err = sysctl_follow_link(&head, &table, current->nsproxy);
 		if (err)
 			goto out;
 	}
 
-	ret = proc_sys_fill_cache(filp, dirent, filldir, head, table);
+	ret = proc_sys_fill_cache(file, ctx, head, table);
 out:
 	sysctl_head_finish(head);
 	return ret;
