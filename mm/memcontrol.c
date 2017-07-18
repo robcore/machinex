@@ -306,7 +306,7 @@ static void mem_cgroup_oom_notify(struct mem_cgroup *memcg);
  * a feature that will be implemented much later in the future.
  */
 struct mem_cgroup {
-	struct cgroup_css css;
+	struct cgroup_subsys_state css;
 	/*
 	 * the counter to account for memory usage
 	 */
@@ -569,12 +569,12 @@ struct vmpressure *memcg_to_vmpressure(struct mem_cgroup *memcg)
 	return &memcg->vmpressure;
 }
 
-struct cgroup_css *vmpressure_to_css(struct vmpressure *vmpr)
+struct cgroup_subsys_state *vmpressure_to_css(struct vmpressure *vmpr)
 {
 	return &container_of(vmpr, struct mem_cgroup, vmpressure)->css;
 }
 
-struct vmpressure *css_to_vmpressure(struct cgroup_css *css)
+struct vmpressure *css_to_vmpressure(struct cgroup_subsys_state *css)
 {
 	struct mem_cgroup *memcg = container_of(css, struct mem_cgroup, css);
 	return &memcg->vmpressure;
@@ -742,7 +742,7 @@ mem_cgroup_zoneinfo(struct mem_cgroup *memcg, int nid, int zid)
 	return &memcg->info.nodeinfo[nid]->zoneinfo[zid];
 }
 
-struct cgroup_css *mem_cgroup_css(struct mem_cgroup *memcg)
+struct cgroup_subsys_state *mem_cgroup_css(struct mem_cgroup *memcg)
 {
 	return &memcg->css;
 }
@@ -1212,7 +1212,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 	rcu_read_lock();
 	while (!memcg) {
 		struct mem_cgroup_reclaim_iter *uninitialized_var(iter);
-		struct cgroup_css *css = NULL;
+		struct cgroup_subsys_state *css = NULL;
 
 		if (reclaim) {
 			int nid = zone_to_nid(reclaim->zone);
@@ -2865,7 +2865,7 @@ static void __mem_cgroup_cancel_local_charge(struct mem_cgroup *memcg,
  */
 static struct mem_cgroup *mem_cgroup_lookup(unsigned short id)
 {
-	struct cgroup_css *css;
+	struct cgroup_subsys_state *css;
 
 	/* ID 0 is unused ID */
 	if (!id)
@@ -6462,8 +6462,8 @@ static void __init mem_cgroup_soft_limit_tree_init(void)
 	}
 }
 
-static struct cgroup_css * __ref
-mem_cgroup_css_alloc(struct cgroup_css *parent_css)
+static struct cgroup_subsys_state * __ref
+mem_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct mem_cgroup *memcg;
 	long error = -ENOMEM;
@@ -6502,7 +6502,7 @@ free_out:
 }
 
 static int
-mem_cgroup_css_online(struct cgroup_css *css)
+mem_cgroup_css_online(struct cgroup_subsys_state *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(css));
@@ -6558,7 +6558,7 @@ mem_cgroup_css_online(struct cgroup_css *css)
 	return error;
 }
 
-static void mem_cgroup_css_offline(struct cgroup_css *css)
+static void mem_cgroup_css_offline(struct cgroup_subsys_state *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 	struct cgroup_event *event, *tmp;
@@ -6579,7 +6579,7 @@ static void mem_cgroup_css_offline(struct cgroup_css *css)
 	mem_cgroup_destroy_all_caches(memcg);
 }
 
-static void mem_cgroup_css_free(struct cgroup_css *css)
+static void mem_cgroup_css_free(struct cgroup_subsys_state *css)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 
@@ -6946,7 +6946,7 @@ static void mem_cgroup_clear_mc(void)
 	mem_cgroup_end_move(from);
 }
 
-static int mem_cgroup_can_attach(struct cgroup_css *css,
+static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *p = cgroup_taskset_first(tset);
@@ -6993,7 +6993,7 @@ static int mem_cgroup_can_attach(struct cgroup_css *css,
 	return ret;
 }
 
-static void mem_cgroup_cancel_attach(struct cgroup_css *css,
+static void mem_cgroup_cancel_attach(struct cgroup_subsys_state *css,
 				     struct cgroup_taskset *tset)
 {
 	mem_cgroup_clear_mc();
@@ -7141,7 +7141,7 @@ retry:
 	up_read(&mm->mmap_sem);
 }
 
-static void mem_cgroup_move_task(struct cgroup_css *css,
+static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *p = cgroup_taskset_first(tset);
@@ -7156,16 +7156,16 @@ static void mem_cgroup_move_task(struct cgroup_css *css,
 		mem_cgroup_clear_mc();
 }
 #else	/* !CONFIG_MMU */
-static int mem_cgroup_can_attach(struct cgroup_css *css,
+static int mem_cgroup_can_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	return 0;
 }
-static void mem_cgroup_cancel_attach(struct cgroup_css *css,
+static void mem_cgroup_cancel_attach(struct cgroup_subsys_state *css,
 				     struct cgroup_taskset *tset)
 {
 }
-static void mem_cgroup_move_task(struct cgroup_css *css,
+static void mem_cgroup_move_task(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 }
@@ -7175,7 +7175,7 @@ static void mem_cgroup_move_task(struct cgroup_css *css,
  * Cgroup retains root cgroups across [un]mount cycles making it necessary
  * to verify sane_behavior flag on each mount attempt.
  */
-static void mem_cgroup_bind(struct cgroup_css *root_css)
+static void mem_cgroup_bind(struct cgroup_subsys_state *root_css)
 {
 	/*
 	 * use_hierarchy is forced with sane_behavior.  cgroup core
