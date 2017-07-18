@@ -347,7 +347,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 		}
 
 		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq && (!frozen(speedchange_task)));
+	} while (freq != prevfreq);
 
 	return freq;
 }
@@ -388,10 +388,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	unsigned int new_freq, loadadjfreq, index, delta_time;
 	unsigned long flags;
 	int cpu_load;
-	int cpu = smp_processor_id();
-
-	if (frozen(speedchange_task))
-		return;
+	int cpu;
 
 	if (icpu->ipolicy == NULL)
 		return;
@@ -402,6 +399,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	policy = icpu->ipolicy->policy;
 	if (!policy)
 		return;
+	cpu = icpu->ipolicy->policy->cpu;
 	freq_table = policy->freq_table;
 	if (!freq_table)
 		return;
@@ -487,8 +485,6 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	if (frozen(speedchange_task))
-		return;
 	if (speedchange_task)
 		wake_up_process(speedchange_task);
 	return;
@@ -685,7 +681,7 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
 	if (wakeup) {
-		if (speedchange_task && !frozen(speedchange_task))
+		if (speedchange_task)
 			wake_up_process(speedchange_task);
 	}
 }
@@ -696,9 +692,6 @@ static int cpufreq_interactive_notifier(struct notifier_block *nb,
 	struct cpufreq_freqs *freq = data;
 	struct interactive_cpu *icpu;
 	unsigned long flags;
-
-	if (frozen(speedchange_task))
-		return 0;
 
 	icpu = &per_cpu(interactive_cpu, freq->cpu);
 	if (icpu == NULL)
@@ -1326,10 +1319,6 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 	struct interactive_policy *ipolicy = policy->governor_data;
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
-
-frozen:
-	if (frozen(speedchange_task))
-		goto frozen;
 
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
