@@ -2534,7 +2534,7 @@ extern int ext4_try_create_inline_dir(handle_t *handle,
 				      struct inode *parent,
 				      struct inode *inode);
 extern int ext4_read_inline_dir(struct file *filp,
-				struct dir_context *ctx,
+				void *dirent, filldir_t filldir,
 				int *has_inline_data);
 extern struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 					const struct qstr *d_name,
