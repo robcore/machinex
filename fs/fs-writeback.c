@@ -1020,6 +1020,7 @@ void bdi_writeback_workfn(struct work_struct *work)
 	struct backing_dev_info *bdi = wb->bdi;
 	long pages_written;
 
+	set_worker_desc("flush-%s", dev_name(bdi->dev));
 	current->flags |= PF_SWAPWRITE;
 	if (likely(!current_is_workqueue_rescuer() ||
 		   list_empty(&bdi->bdi_list))) {
