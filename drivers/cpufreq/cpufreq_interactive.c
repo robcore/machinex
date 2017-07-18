@@ -518,10 +518,11 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	if (frozen(speedchange_task))
+	if (threads_are_frozen())
 		return;
-	if (speedchange_task)
-		wake_up_process(speedchange_task);
+
+	wake_up_process(speedchange_task);
+	
 	return;
 
 exit:
@@ -728,8 +729,9 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
 	if (wakeup) {
-		if (speedchange_task && !frozen(speedchange_task))
-			wake_up_process(speedchange_task);
+		if (threads_are_frozen())
+			return;
+		wake_up_process(speedchange_task);
 	}
 }
 
