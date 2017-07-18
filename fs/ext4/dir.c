@@ -58,8 +58,7 @@ static int is_dx_dir(struct inode *inode)
 	if (EXT4_HAS_COMPAT_FEATURE(inode->i_sb,
 		     EXT4_FEATURE_COMPAT_DIR_INDEX) &&
 	    ((ext4_test_inode_flag(inode, EXT4_INODE_INDEX)) ||
-	     ((inode->i_size >> sb->s_blocksize_bits) == 1) ||
-	     ext4_has_inline_data(inode)))
+	     ((inode->i_size >> sb->s_blocksize_bits) == 1)))
 		return 1;
 
 	return 0;
@@ -141,15 +140,6 @@ static int ext4_readdir(struct file *filp,
 		ext4_clear_inode_flag(file_inode(filp),
 				      EXT4_INODE_INDEX);
 	}
-
-	if (ext4_has_inline_data(inode)) {
-		int has_inline_data = 1;
-		ret = ext4_read_inline_dir(filp, dirent, filldir,
-					   &has_inline_data);
-		if (has_inline_data)
-			return ret;
-	}
-
 	stored = 0;
 	offset = filp->f_pos & (sb->s_blocksize - 1);
 
