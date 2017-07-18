@@ -22,10 +22,6 @@ config LOW_ORDER_SEQ_MALLOC
 	 This will cause system performance degradation.
 	 When high-order allocation is requested, change it to vmalloc.
 
-# Use unaligned word dcache accesses
-config DCACHE_WORD_ACCESS
-       bool
-
 if BLOCK
 
 source "fs/ext2/Kconfig"
