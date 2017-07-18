@@ -881,7 +881,6 @@ static int ext4_es_shrink(struct shrinker *shrink, struct shrink_control *sc)
 	int ret, nr_shrunk = 0;
 
 	ret = percpu_counter_read_positive(&sbi->s_extent_cache_cnt);
-	trace_ext4_es_shrink_enter(sbi->s_sb, nr_to_scan, ret);
 
 	if (!nr_to_scan)
 		return ret;
@@ -914,7 +913,6 @@ static int ext4_es_shrink(struct shrinker *shrink, struct shrink_control *sc)
 	spin_unlock(&sbi->s_es_lru_lock);
 
 	ret = percpu_counter_read_positive(&sbi->s_extent_cache_cnt);
-	trace_ext4_es_shrink_exit(sbi->s_sb, nr_shrunk, ret);
 	return ret;
 }
 
