@@ -1332,7 +1332,8 @@ frozen:
 
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
-
+		if (!icpu)
+			continue;
 		icpu->target_freq = policy->cur;
 		icpu->floor_freq = icpu->target_freq;
 		icpu->pol_floor_val_time = ktime_to_us(ktime_get());
