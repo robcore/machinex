@@ -968,12 +968,12 @@ cifs_push_posix_locks(struct cifsFileInfo *cfile)
 		return rc;
 	}
 
-	lock_flocks();
-	cifs_for_each_lock(cfile->dentry->d_inode, before) {
+	spin_lock(&inode->i_lock);
+	cifs_for_each_lock(inode, before) {
 		if ((*before)->fl_flags & FL_POSIX)
 			count++;
 	}
-	unlock_flocks();
+	spin_unlock(&inode->i_lock);
 
 	INIT_LIST_HEAD(&locks_to_send);
 
@@ -992,8 +992,8 @@ cifs_push_posix_locks(struct cifsFileInfo *cfile)
 	}
 
 	el = locks_to_send.next;
-	lock_flocks();
-	cifs_for_each_lock(cfile->dentry->d_inode, before) {
+	spin_lock(&inode->i_lock);
+	cifs_for_each_lock(inode, before) {
 		flock = *before;
 		if ((flock->fl_flags & FL_POSIX) == 0)
 			continue;
@@ -1018,7 +1018,7 @@ cifs_push_posix_locks(struct cifsFileInfo *cfile)
 		lck->offset = flock->fl_start;
 		el = el->next;
 	}
-	unlock_flocks();
+	spin_unlock(&inode->i_lock);
 
 	list_for_each_entry_safe(lck, tmp, &locks_to_send, llist) {
 		int stored_rc;
