@@ -1018,7 +1018,6 @@ static ssize_t store_io_is_busy(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
-show_one(hispeed_freq, "%u");
 show_one(go_hispeed_load, "%lu");
 show_one(min_sample_time, "%lu");
 show_one(timer_slack, "%lu");
@@ -1028,7 +1027,6 @@ show_one(io_is_busy, "%u");
 
 gov_attr_rw(target_loads);
 gov_attr_rw(above_hispeed_delay);
-gov_attr_ro(hispeed_freq);
 gov_attr_rw(go_hispeed_load);
 gov_attr_rw(min_sample_time);
 gov_attr_rw(timer_rate);
@@ -1041,7 +1039,6 @@ gov_attr_rw(io_is_busy);
 static struct attribute *interactive_attributes[] = {
 	&target_loads.attr,
 	&above_hispeed_delay.attr,
-	&hispeed_freq.attr,
 	&go_hispeed_load.attr,
 	&min_sample_time.attr,
 	&timer_rate.attr,
