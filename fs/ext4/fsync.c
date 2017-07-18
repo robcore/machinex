@@ -107,24 +107,23 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 		smp_rmb();
 		if (EXT4_SB(inode->i_sb)->s_mount_flags & EXT4_MF_FS_ABORTED)
 			ret = -EROFS;
-		goto out_trace;
+		goto out;
 	}
 
 	ret = ext4_flush_unwritten_io(inode);
 	if (ret < 0)
-		goto out_trace;
+		goto out;
 
 	if (!journal) {
 		ret = generic_file_fsync(file, start, end, datasync);
 		if (!ret && !list_empty(&inode->i_dentry))
 			ret = ext4_sync_parent(inode);
-		goto out_trace;
+		goto out;
 	}
 
 	ret = filemap_write_and_wait_range(inode->i_mapping, start, end);
 	if (ret)
 		return ret;
-	mutex_lock(&inode->i_mutex);
 
 	/*
 	 * data=writeback,ordered:
@@ -156,8 +155,6 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 			ret = err;
 	}
 out:
-	mutex_unlock(&inode->i_mutex);
-out_trace:
 	trace_ext4_sync_file_exit(inode, ret);
 	return ret;
 }
