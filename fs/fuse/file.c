@@ -2400,7 +2400,8 @@ static ssize_t
 fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 {
 	ssize_t ret = 0;
-	struct file *file = NULL;
+	struct file *file = iocb->ki_filp;
+	struct fuse_file *ff = file->private_data;
 	loff_t pos = 0;
 	struct inode *inode;
 	loff_t i_size;
@@ -2415,7 +2416,6 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	BUG_ON(!iov_iter_has_iovec(iter));
 	iov = (struct iovec *)iter->data;
 	nr_segs = iter->nr_segs;
-	file = iocb->ki_filp;
 	pos = offset;
 	inode = file->f_mapping->host;
 	i_size = i_size_read(inode);
@@ -2443,9 +2443,9 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	io->file = file;
 	/*
 	 * By default, we want to optimize all I/Os with async request
-	 * submission to the client filesystem.
+	 * submission to the client filesystem if supported.
 	 */
-	io->async = 1;
+	io->async = ff->fc->async_dio;
 	io->iocb = iocb;
 
 	/*
