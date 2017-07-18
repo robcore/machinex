@@ -23,7 +23,7 @@
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	1
+#define SOUND_CONTROL_MINOR_VERSION	2
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
@@ -144,43 +144,6 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 }
 
 static unsigned int selected_reg = 0xdeadbeef;
-
-static ssize_t sound_reg_select_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	if (!snd_ctrl_enabled)
-		return count;
-
-	sscanf(buf, "%u", &selected_reg);
-
-	return count;
-}
-
-static ssize_t sound_reg_read_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	if (selected_reg == 0xdeadbeef)
-		return -1;
-	else
-		return sprintf(buf, "%u\n",
-			tabla_read(snd_engine_codec_ptr, selected_reg));
-}
-
-static ssize_t sound_reg_write_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int out;
-
-	sscanf(buf, "%u", &out);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
-	if (selected_reg != 0xdeadbeef)
-		tabla_write(snd_engine_codec_ptr, selected_reg, out);
-
-	return count;
-}
 
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -354,24 +317,6 @@ static struct kobj_attribute sound_control_enabled_attribute =
 		sound_control_enabled_show,
 		sound_control_enabled_store);
 
-static struct kobj_attribute sound_reg_sel_attribute =
-	__ATTR(sound_reg_sel,
-		0222,
-		NULL,
-		sound_reg_select_store);
-
-static struct kobj_attribute sound_reg_read_attribute =
-	__ATTR(sound_reg_read,
-		0444,
-		sound_reg_read_show,
-		NULL);
-
-static struct kobj_attribute sound_reg_write_attribute =
-	__ATTR(sound_reg_write,
-		0222,
-		NULL,
-		sound_reg_write_store);
-
 static struct kobj_attribute headphone_gain_attribute =
 	__ATTR(gpl_headphone_gain,
 		0666,
@@ -404,9 +349,6 @@ static struct kobj_attribute sound_control_version_attribute =
 static struct attribute *sound_control_attrs[] =
 {
 	&sound_control_enabled_attribute.attr,
-	&sound_reg_sel_attribute.attr,
-	&sound_reg_read_attribute.attr,
-	&sound_reg_write_attribute.attr,
 	&headphone_gain_attribute.attr,
 	&speaker_gain_attribute.attr,
 	&cam_mic_gain_attribute.attr,
