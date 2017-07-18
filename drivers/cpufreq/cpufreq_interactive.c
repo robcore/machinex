@@ -1443,6 +1443,7 @@ static int __init cpufreq_interactive_gov_init(void)
 	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
 					  NULL, "cfinteractive");
 	if (IS_ERR(speedchange_task))
+		speedchange_task = NULL;
 		return PTR_ERR(speedchange_task);
 
 	ret = sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
