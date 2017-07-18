@@ -142,8 +142,6 @@ int dcache_readdir(struct file *file, struct dir_context *ctx)
 	struct dentry *dentry = file->f_path.dentry;
 	struct dentry *cursor = file->private_data;
 	struct list_head *p, *q = &cursor->d_child;
-	ino_t ino;
-	int i = filp->f_pos;
 
 	if (!dir_emit_dots(file, ctx))
 		return 0;
@@ -152,7 +150,7 @@ int dcache_readdir(struct file *file, struct dir_context *ctx)
 		list_move(q, &dentry->d_subdirs);
 
 	for (p = q->next; p != &dentry->d_subdirs; p = p->next) {
-		struct dentry *next = list_entry(p, struct dentry, d_u.d_child);
+		struct dentry *next = list_entry(p, struct dentry, d_child);
 		spin_lock_nested(&next->d_lock, DENTRY_D_LOCK_NESTED);
 		if (!simple_positive(next)) {
 			spin_unlock(&next->d_lock);
