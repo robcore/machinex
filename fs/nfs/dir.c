@@ -45,7 +45,7 @@
 
 static int nfs_opendir(struct inode *, struct file *);
 static int nfs_closedir(struct inode *, struct file *);
-static int nfs_readdir(struct file *, void *, filldir_t);
+static int nfs_readdir(struct file *, struct dir_context *);
 static int nfs_fsync_dir(struct file *, loff_t, loff_t, int);
 static loff_t nfs_llseek_dir(struct file *, loff_t, int);
 static void nfs_readdir_clear_array(struct page*);
@@ -53,7 +53,7 @@ static void nfs_readdir_clear_array(struct page*);
 const struct file_operations nfs_dir_operations = {
 	.llseek		= nfs_llseek_dir,
 	.read		= generic_read_dir,
-	.readdir	= nfs_readdir,
+	.iterate	= nfs_readdir,
 	.open		= nfs_opendir,
 	.release	= nfs_closedir,
 	.fsync		= nfs_fsync_dir,
@@ -146,6 +146,7 @@ typedef int (*decode_dirent_t)(struct xdr_stream *, struct nfs_entry *, int);
 typedef struct {
 	struct file	*file;
 	struct page	*page;
+	struct dir_context *ctx;
 	unsigned long	page_index;
 	u64		*dir_cookie;
 	u64		last_cookie;
@@ -251,7 +252,7 @@ out:
 static
 int nfs_readdir_search_for_pos(struct nfs_cache_array *array, nfs_readdir_descriptor_t *desc)
 {
-	loff_t diff = desc->file->f_pos - desc->current_index;
+	loff_t diff = desc->ctx->pos - desc->current_index;
 	unsigned int index;
 
 	if (diff < 0)
@@ -288,7 +289,7 @@ int nfs_readdir_search_for_cookie(struct nfs_cache_array *array, nfs_readdir_des
 			    || (nfsi->cache_validity & (NFS_INO_INVALID_ATTR|NFS_INO_INVALID_DATA))) {
 				ctx->duped = 0;
 				ctx->attr_gencount = nfsi->attr_gencount;
-			} else if (new_pos < desc->file->f_pos) {
+			} else if (new_pos < desc->ctx->pos) {
 				if (ctx->duped > 0
 				    && ctx->dup_cookie == *desc->dir_cookie) {
 					if (printk_ratelimit()) {
@@ -306,7 +307,7 @@ int nfs_readdir_search_for_cookie(struct nfs_cache_array *array, nfs_readdir_des
 				ctx->dup_cookie = *desc->dir_cookie;
 				ctx->duped = -1;
 			}
-			desc->file->f_pos = new_pos;
+			desc->ctx->pos = new_pos;
 			desc->cache_entry_index = i;
 			return 0;
 		}
@@ -697,13 +698,12 @@ int nfs_do_filldir(nfs_readdir_descriptor_t *desc, void *dirent,
 		struct nfs_cache_array_entry *ent;
 
 		ent = &array->array[i];
-		if (filldir(dirent, ent->string.name, ent->string.len,
-		    file->f_pos, nfs_compat_user_ino64(ent->ino),
-		    ent->d_type) < 0) {
+		if (!dir_emit(desc->ctx, ent->string.name, ent->string.len,
+		    nfs_compat_user_ino64(ent->ino), ent->d_type)) {
 			desc->eof = 1;
 			break;
 		}
-		file->f_pos++;
+		desc->ctx->pos++;
 		if (i < (array->size-1))
 			*desc->dir_cookie = array->array[i+1].cookie;
 		else
@@ -735,8 +735,7 @@ out:
  *	 directory in the page cache by the time we get here.
  */
 static inline
-int uncached_readdir(nfs_readdir_descriptor_t *desc, void *dirent,
-		     filldir_t filldir)
+int uncached_readdir(nfs_readdir_descriptor_t *desc)
 {
 	struct page	*page = NULL;
 	int		status;
@@ -761,7 +760,7 @@ int uncached_readdir(nfs_readdir_descriptor_t *desc, void *dirent,
 	if (status < 0)
 		goto out_release;
 
-	status = nfs_do_filldir(desc, dirent, filldir);
+	status = nfs_do_filldir(desc);
 
  out:
 	dfprintk(DIRCACHE, "NFS: %s: returns %d\n",
@@ -816,7 +815,7 @@ static int nfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			/* This means either end of directory */
 			if (*desc->dir_cookie && desc->eof == 0) {
 				/* Or that the server has 'lost' a cookie */
-				res = uncached_readdir(desc, dirent, filldir);
+				res = uncached_readdir(desc);
 				if (res == 0)
 					continue;
 			}
@@ -833,7 +832,7 @@ static int nfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		if (res < 0)
 			break;
 
-		res = nfs_do_filldir(desc, dirent, filldir);
+		res = nfs_do_filldir(desc);
 		if (res < 0)
 			break;
 	} while (!desc->eof);
