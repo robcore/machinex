@@ -357,8 +357,6 @@ retry_alloc:
 	}
 
 	/* keep subsequent assertions sane */
-	new_bh->b_state = 0;
-	init_buffer(new_bh, NULL, NULL);
 	atomic_set(&new_bh->b_count, 1);
 
 	jbd_lock_bh_state(bh_in);
