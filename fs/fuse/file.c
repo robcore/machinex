@@ -16,6 +16,7 @@
 #include <linux/compat.h>
 #include <linux/swap.h>
 #include <linux/aio.h>
+#include <linux/falloc.h>
 
 static const struct file_operations fuse_direct_io_file_operations;
 
@@ -2494,6 +2495,7 @@ static long fuse_file_fallocate(struct file *file, int mode, loff_t offset,
 				loff_t length)
 {
 	struct fuse_file *ff = file->private_data;
+	struct inode *inode = file->f_inode;
 	struct fuse_conn *fc = ff->fc;
 	struct fuse_req *req;
 	struct fuse_fallocate_in inarg = {
@@ -2504,9 +2506,16 @@ static long fuse_file_fallocate(struct file *file, int mode, loff_t offset,
 	};
 	int err;
 
+	if (mode & FALLOC_FL_PUNCH_HOLE) {
+		mutex_lock(&inode->i_mutex);
+		fuse_set_nowrite(inode);
+	}
+
 	req = fuse_get_req_nopages(fc);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
+	if (IS_ERR(req)) {
+		err = PTR_ERR(req);
+		goto out;
+	}
 
 	req->in.h.opcode = FUSE_FALLOCATE;
 	req->in.h.nodeid = ff->nodeid;
@@ -2516,6 +2525,15 @@ static long fuse_file_fallocate(struct file *file, int mode, loff_t offset,
 	fuse_request_send(fc, req);
 	err = req->out.h.error;
 	fuse_put_request(fc, req);
+
+out:
+	if (mode & FALLOC_FL_PUNCH_HOLE) {
+		if (!err)
+			truncate_pagecache_range(inode, offset,
+						 offset + length - 1);
+		fuse_release_nowrite(inode);
+		mutex_unlock(&inode->i_mutex);
+	}
 
 	return err;
 }
