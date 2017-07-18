@@ -137,7 +137,7 @@ static inline unsigned char dt_type(struct inode *inode)
  * both impossible due to the lock on directory.
  */
 
-int dcache_readdir(struct file * filp, void * dirent, filldir_t filldir)
+int dcache_readdir(struct file *file, struct dir_context *ctx)
 {
 	struct dentry *dentry = file->f_path.dentry;
 	struct dentry *cursor = file->private_data;
