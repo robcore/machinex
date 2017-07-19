@@ -2564,41 +2564,9 @@ retry:
 
 	inode->i_op = &ext4_dir_inode_operations;
 	inode->i_fop = &ext4_dir_operations;
-	inode->i_size = 0;
-	if (!(dir_block = ext4_append(handle, inode, &block)))
-		goto out_clear_inode;
-
-	BUFFER_TRACE(dir_block, "get_write_access");
-	err = ext4_journal_get_write_access(handle, dir_block);
+	err = ext4_init_new_dir(handle, dir, inode);
 	if (err)
 		goto out_clear_inode;
-	de = (struct ext4_dir_entry_2 *) dir_block->b_data;
-	de->inode = cpu_to_le32(inode->i_ino);
-	de->name_len = 1;
-	de->rec_len = ext4_rec_len_to_disk(EXT4_DIR_REC_LEN(de->name_len),
-					   blocksize);
-	strcpy(de->name, ".");
-	ext4_set_de_type(dir->i_sb, de, S_IFDIR);
-	de = ext4_next_entry(de, blocksize);
-	de->inode = cpu_to_le32(dir->i_ino);
-	de->rec_len = ext4_rec_len_to_disk(blocksize -
-					   (csum_size + EXT4_DIR_REC_LEN(1)),
-					   blocksize);
-	de->name_len = 2;
-	strcpy(de->name, "..");
-	ext4_set_de_type(dir->i_sb, de, S_IFDIR);
-	set_nlink(inode, 2);
-
-	if (csum_size) {
-		t = EXT4_DIRENT_TAIL(dir_block->b_data, blocksize);
-		initialize_dirent_tail(t, blocksize);
-	}
-
-	BUFFER_TRACE(dir_block, "call ext4_handle_dirty_metadata");
-	err = ext4_handle_dirty_dirent_node(handle, inode, dir_block);
-	if (err)
-		goto out_clear_inode;
-	set_buffer_verified(dir_block);
 	err = ext4_mark_inode_dirty(handle, inode);
 	if (!err)
 		err = ext4_add_entry(handle, dentry, inode);
