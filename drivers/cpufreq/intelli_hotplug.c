@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -51,7 +51,6 @@ static u64 last_input;
 static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
-static struct workqueue_struct *down_lock_wq;
 static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
 
@@ -180,7 +179,7 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-	mod_delayed_work_on(0, down_lock_wq, &dl->lock_rem,
+	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
 }
 
@@ -452,7 +451,7 @@ static void intelli_suspend(struct power_suspend * h)
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		mod_delayed_work_on(0, down_lock_wq, &dl->lock_rem,
+		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 				      msecs_to_jiffies(down_lock_dur));
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
@@ -543,15 +542,6 @@ static int intelli_plug_start(void)
 		goto err_out;
 	}
 
-	down_lock_wq = create_hipri_workqueue("dlwq");
-
-	if (!down_lock_wq) {
-		pr_err("%s: Failed to allocate downlock workqueue\n",
-		       INTELLI_PLUG);
-		ret = -ENOMEM;
-		goto err_out;
-	}
-
 	ret = input_register_handler(&intelli_plug_input_handler);
 	if (ret) {
 		pr_err("%s: Failed to register input handler: %d\n",
@@ -574,7 +564,6 @@ static int intelli_plug_start(void)
 
 	return ret;
 err_dev:
-	destroy_workqueue(down_lock_wq);
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
@@ -594,7 +583,6 @@ static void intelli_plug_stop(void)
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
 	input_unregister_handler(&intelli_plug_input_handler);
-	destroy_workqueue(down_lock_wq);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	for_each_possible_cpu(cpu) {
