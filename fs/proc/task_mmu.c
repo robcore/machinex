@@ -742,6 +742,23 @@ const struct file_operations proc_tid_smaps_operations = {
 	.release	= seq_release_private,
 };
 
+/*
+ * We do not want to have constant page-shift bits sitting in
+ * pagemap entries and are about to reuse them some time soon.
+ *
+ * Here's the "migration strategy":
+ * 1. when the system boots these bits remain what they are,
+ *    but a warning about future change is printed in log;
+ * 2. once anyone clears soft-dirty bits via clear_refs file,
+ *    these flag is set to denote, that user is aware of the
+ *    new API and those page-shift bits change their meaning.
+ *    The respective warning is printed in dmesg;
+ * 3. In a couple of releases we will remove all the mentions
+ *    of page-shift in pagemap entries.
+ */
+
+static bool soft_dirty_cleared __read_mostly;
+
 enum clear_refs_types {
 	CLEAR_REFS_ALL = 1,
 	CLEAR_REFS_ANON,
@@ -832,6 +849,11 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 	if ((type < CLEAR_REFS_ALL || type >= CLEAR_REFS_LAST) &&
 	    type != CLEAR_REFS_MM_HIWATER_RSS)
 		return -EINVAL;
+
+	if (type == CLEAR_REFS_SOFT_DIRTY) {
+		soft_dirty_cleared = true;
+	}
+
 	task = get_proc_task(file_inode(file));
 	if (!task)
 		return -ESRCH;
@@ -1158,7 +1180,7 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
 	if (!count)
 		goto out_task;
 
-	pm.v2 = false;
+	pm.v2 = soft_dirty_cleared;
 	pm.len = (PAGEMAP_WALK_SIZE >> PAGE_SHIFT);
 	pm.buffer = kmalloc(pm.len * PM_ENTRY_BYTES, GFP_TEMPORARY);
 	ret = -ENOMEM;
