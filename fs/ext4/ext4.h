@@ -2060,9 +2060,13 @@ extern struct inode *__ext4_new_inode(handle_t *, struct inode *, umode_t,
 				      uid_t *owner, int nblocks);
 
 #define ext4_new_inode(handle, dir, mode, qstr, goal, owner) \
-	__ext4_new_inode((handle), (dir), (mode), (qstr), (goal), (owner), 0)
-#define ext4_new_inode_start_handle(dir, mode, qstr, goal, owner, nblocks) \
-	__ext4_new_inode(NULL, (dir), (mode), (qstr), (goal), (owner), (nblocks))
+	__ext4_new_inode((handle), (dir), (mode), (qstr), (goal), (owner), \
+			 0, 0, 0)
+#define ext4_new_inode_start_handle(dir, mode, qstr, goal, owner, \
+				    type, nblocks)		    \
+	__ext4_new_inode(NULL, (dir), (mode), (qstr), (goal), (owner), \
+			 (type), __LINE__, (nblocks))
+
 
 extern void ext4_free_inode(handle_t *, struct inode *);
 extern struct inode * ext4_orphan_get(struct super_block *, unsigned long);
@@ -2178,6 +2182,13 @@ extern int ext4_orphan_add(handle_t *, struct inode *);
 extern int ext4_orphan_del(handle_t *, struct inode *);
 extern int ext4_htree_fill_tree(struct file *dir_file, __u32 start_hash,
 				__u32 start_minor_hash, __u32 *next_hash);
+extern int ext4_generic_delete_entry(handle_t *handle,
+				     struct inode *dir,
+				     struct ext4_dir_entry_2 *de_del,
+				     struct buffer_head *bh,
+				     void *entry_buf,
+				     int buf_size,
+				     int csum_size);
 
 /* resize.c */
 extern int ext4_group_add(struct super_block *sb,

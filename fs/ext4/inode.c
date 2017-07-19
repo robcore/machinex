@@ -3153,22 +3153,19 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 			ext4_inode_aio_set(inode, io_end);
 		}
 
-		if (overwrite)
-			ret = __blockdev_direct_IO(rw, iocb, inode,
-						 inode->i_sb->s_bdev, iter,
-						 offset,
-						 ext4_get_block_write_nolock,
-						 ext4_end_io_dio,
-						 NULL,
-						 0);
-		else
-			ret = __blockdev_direct_IO(rw, iocb, inode,
-						 inode->i_sb->s_bdev, iter,
-						 offset,
-						 ext4_get_block_write,
-						 ext4_end_io_dio,
-						 NULL,
-						 DIO_LOCKING);
+		if (overwrite) {
+			get_block_func = ext4_get_block_write_nolock;
+		} else {
+			get_block_func = ext4_get_block_write;
+			dio_flags = DIO_LOCKING;
+		}
+		ret = __blockdev_direct_IO(rw, iocb, inode,
+					 inode->i_sb->s_bdev, iov,
+					 offset, nr_segs,
+					 get_block_func,
+					 ext4_end_io_dio,
+					 NULL,
+					 dio_flags);
 	 	/*
 		 * Put our reference to io_end. This can free the io_end structure e.g.
 		 * in sync IO case or in case of error. It can even perform extent
