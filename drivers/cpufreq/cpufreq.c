@@ -1623,6 +1623,9 @@ static int cpufreq_online(unsigned int cpu)
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 
+	if (hotplug_ready)
+		hardlimit_ready = true;
+
 	if (hardlimit_ready) {
 		reapply_hard_limits(policy->cpu);
 	}
@@ -1719,11 +1722,7 @@ static int cpufreq_online(unsigned int cpu)
 		cpufreq_driver->ready(policy);
 	}
 
-	if (hotplug_ready)
-		hardlimit_ready = true;
-
-	pr_info("CPUFREQ %u: Init Complete!\n", cpu);
-
+	pr_debug("CPUFREQ %u: Init Complete!\n", cpu);
 
 	return 0;
 
