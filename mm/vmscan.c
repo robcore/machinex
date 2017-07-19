@@ -2907,9 +2907,6 @@ static bool kswapd_shrink_zone(struct zone *zone,
 	/* Account for the number of pages attempted to reclaim */
 	*nr_attempted += sc->nr_to_reclaim;
 
-	if (nr_slab == 0 && !zone_reclaimable(zone))
-		all_unreclaimable = 1;
-
 	zone_clear_flag(zone, ZONE_WRITEBACK);
 
 	/*
