@@ -2793,8 +2793,8 @@ static bool kswapd_shrink_zone(struct zone *zone,
 	shrink_zone(zone, sc);
 
 	reclaim_state->reclaimed_slab = 0;
-	nr_slab = shrink_slab(&shrink, sc.nr_scanned, lru_pages);
-	sc.nr_reclaimed += reclaim_state->reclaimed_slab;
+	nr_slab = shrink_slab(&shrink, sc->nr_scanned, lru_pages);
+	sc->nr_reclaimed += reclaim_state->reclaimed_slab;
 
 	/* Account for the number of pages attempted to reclaim */
 	*nr_attempted += sc->nr_to_reclaim;
