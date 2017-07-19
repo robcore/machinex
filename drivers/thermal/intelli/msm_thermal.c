@@ -62,7 +62,7 @@ static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
 static int limit_idx;
-static int thermal_limit_low = 4;
+static int thermal_limit_low;
 static int thermal_limit_high;
 static struct cpufreq_frequency_table *table;
 static unsigned long cpu_thermal_one;
@@ -172,7 +172,6 @@ static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
 	int i;
-	unsigned int temp_limit_low;
 
 	policy = cpufreq_cpu_get_raw(0);
 
@@ -186,7 +185,7 @@ static int msm_thermal_get_freq_table(void)
 	}
 
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
-		temp_limit_low = thermal_limit_low;
+		thermal_limit_low = 4;
 		thermal_limit_high = limit_idx = i - 1;
 
 	BUG_ON(thermal_limit_high <= 0);
