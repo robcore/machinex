@@ -2347,10 +2347,9 @@ static int ext4_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 
 	credits = (EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
 		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
-
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, credits);
+					    NULL, EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2382,10 +2381,9 @@ static int ext4_mknod(struct inode *dir, struct dentry *dentry,
 
 	credits = (EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
 		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
-
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, credits);
+					    NULL, EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2492,16 +2490,10 @@ static int ext4_init_new_dir(handle_t *handle, struct inode *dir,
 			goto out;
 	}
 
-	inode->i_size = EXT4_I(inode)->i_disksize = blocksize;
-	if (!(dir_block = ext4_bread(handle, inode, 0, 1, &err))) {
-		if (!err) {
-			err = -EIO;
-			ext4_error(inode->i_sb,
-				   "Directory hole detected on inode %lu\n",
-				   inode->i_ino);
-		}
-		goto out;
-	}
+	inode->i_size = 0;
+	dir_block = ext4_append(handle, inode, &block);
+	if (IS_ERR(dir_block))
+		return PTR_ERR(dir_block);
 	BUFFER_TRACE(dir_block, "get_write_access");
 	err = ext4_journal_get_write_access(handle, dir_block);
 	if (err)
@@ -2540,7 +2532,7 @@ static int ext4_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 retry:
 	inode = ext4_new_inode_start_handle(dir, S_IFDIR | mode,
 					    &dentry->d_name,
-					    0, NULL, credits);
+					    0, NULL, EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
@@ -2980,9 +2972,8 @@ static int ext4_symlink(struct inode *dir,
 retry:
 	inode = ext4_new_inode_start_handle(dir, S_IFLNK|S_IRWXUGO,
 					    &dentry->d_name, 0, NULL,
-					    credits);
+					    EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
-
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
 		goto out_stop;
@@ -3037,6 +3028,7 @@ retry:
 	err = ext4_add_nondir(handle, dentry, inode);
 	if (!err && IS_DIRSYNC(dir))
 		ext4_handle_sync(handle);
+
 out_stop:
 	if (handle)
 		ext4_journal_stop(handle);
@@ -3109,13 +3101,9 @@ static struct buffer_head *ext4_get_first_dir_block(handle_t *handle,
 	struct buffer_head *bh;
 
 	if (!ext4_has_inline_data(inode)) {
-		if (!(bh = ext4_bread(handle, inode, 0, 0, retval))) {
-			if (!*retval) {
-				*retval = -EIO;
-				ext4_error(inode->i_sb,
-					   "Directory hole detected on inode %lu\n",
-					   inode->i_ino);
-			}
+		bh = ext4_read_dirblock(inode, 0, EITHER);
+		if (IS_ERR(bh)) {
+			*retval = PTR_ERR(bh);
 			return NULL;
 		}
 		*parent_de = ext4_next_entry(
