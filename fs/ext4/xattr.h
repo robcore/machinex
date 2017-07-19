@@ -310,6 +310,20 @@ static inline int ext4_try_create_inline_dir(handle_t *handle,
 {
 	return 0;
 }
+
+static inline int ext4_try_add_inline_entry(handle_t *handle,
+					    struct dentry *dentry,
+					    struct inode *inode)
+{
+	return 0;
+}
+
+static inline int ext4_try_create_inline_dir(handle_t *handle,
+					     struct inode *parent,
+					     struct inode *inode)
+{
+	return 0;
+}
 # endif  /* CONFIG_EXT4_FS_XATTR */
 
 #ifdef CONFIG_EXT4_FS_SECURITY
