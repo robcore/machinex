@@ -5334,27 +5334,6 @@ static void __init check_for_regular_memory(pg_data_t *pgdat)
 #endif
 }
 
-unsigned long free_reserved_area(void *start, void *end, int poison, char *s)
-{
-	void *pos;
-	unsigned long pages = 0;
-
-	start = (void *)PAGE_ALIGN((unsigned long)start);
-	end = (void *)((unsigned long)end & PAGE_MASK);
-	for (pos = start; pos < end; pos += PAGE_SIZE, pages++) {
-		if (poison)
-			memset(pos, poison, PAGE_SIZE);
-		free_reserved_page(virt_to_page(pos));
-	}
-
-	if (pages && s)
-		pr_info("Freeing %s memory: %ldK (%p - %p)\n",
-			s, pages << (PAGE_SHIFT - 10), start, end);
-
-	return pages;
-}
-EXPORT_SYMBOL(free_reserved_area);
-
 /**
  * free_area_init_nodes - Initialise all pg_data_t and zone data
  * @max_zone_pfn: an array of max PFNs for each zone
@@ -5655,32 +5634,33 @@ early_param("movablemem_map", cmdline_parse_movablemem_map);
 
 #endif /* CONFIG_HAVE_MEMBLOCK_NODE_MAP */
 
+unsigned long free_reserved_area(void *start, void *end, int poison, char *s)
+{
+	void *pos;
+	unsigned long pages = 0;
+
+	start = (void *)PAGE_ALIGN((unsigned long)start);
+	end = (void *)((unsigned long)end & PAGE_MASK);
+	for (pos = start; pos < end; pos += PAGE_SIZE, pages++) {
+		if (poison)
+			memset(pos, poison, PAGE_SIZE);
+		free_reserved_page(virt_to_page(pos));
+	}
+
+	if (pages && s)
+		pr_info("Freeing %s memory: %ldK (%p - %p)\n",
+			s, pages << (PAGE_SHIFT - 10), start, end);
+
+	return pages;
+}
+EXPORT_SYMBOL(free_reserved_area);
+
 void adjust_managed_page_count(struct page *page, long count)
 {
 	spin_lock(&managed_page_count_lock);
 	page_zone(page)->managed_pages += count;
 	totalram_pages += count;
 	spin_unlock(&managed_page_count_lock);
-}
-
-unsigned long free_reserved_area(unsigned long start, unsigned long end,
-				 int poison, char *s)
-{
-	unsigned long pages, pos;
-
-	pos = start = PAGE_ALIGN(start);
-	end &= PAGE_MASK;
-	for (pages = 0; pos < end; pos += PAGE_SIZE, pages++) {
-		if (poison)
-			memset((void *)pos, poison, PAGE_SIZE);
-		free_reserved_page(virt_to_page((void *)pos));
-	}
-
-	if (pages && s)
-		pr_info("Freeing %s memory: %ldK (%lx - %lx)\n",
-			s, pages << (PAGE_SHIFT - 10), start, end);
-
-	return pages;
 }
 
 #ifdef	CONFIG_HIGHMEM
