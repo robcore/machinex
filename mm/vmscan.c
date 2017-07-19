@@ -3101,7 +3101,6 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 				if (i <= *classzone_idx)
 					balanced += zone->managed_pages;
 			}
-		}
 
 		/*
 		 * If the low watermark is met there is no need for processes
