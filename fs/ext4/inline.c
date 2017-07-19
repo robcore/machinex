@@ -1609,7 +1609,7 @@ struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 						EXT4_INLINE_DOTDOT_SIZE;
 	inline_size = EXT4_MIN_INLINE_DATA_SIZE - EXT4_INLINE_DOTDOT_SIZE;
 	ret = search_dir(iloc.bh, inline_start, inline_size,
-			 dir, d_name, 0, res_dir);
+			 dir, d_name, 0, NULL, res_dir);
 	if (ret == 1)
 		goto out_find;
 	if (ret < 0)
@@ -1622,7 +1622,7 @@ struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 	inline_size = ext4_get_inline_size(dir) - EXT4_MIN_INLINE_DATA_SIZE;
 
 	ret = search_dir(iloc.bh, inline_start, inline_size,
-			 dir, d_name, 0, res_dir);
+			 dir, d_name, 0, NULL, res_dir);
 	if (ret == 1)
 		goto out_find;
 
@@ -1810,7 +1810,7 @@ int ext4_inline_data_fiemap(struct inode *inode,
 	if (error)
 		goto out;
 
-	physical = iloc.bh->b_blocknr << inode->i_sb->s_blocksize_bits;
+	physical = (__u64)iloc.bh->b_blocknr << inode->i_sb->s_blocksize_bits;
 	physical += (char *)ext4_raw_inode(&iloc) - iloc.bh->b_data;
 	physical += offsetof(struct ext4_inode, i_block);
 	length = i_size_read(inode);
@@ -1878,7 +1878,7 @@ void ext4_inline_data_truncate(struct inode *inode, int *has_inline)
 
 
 	needed_blocks = ext4_writepage_trans_blocks(inode);
-	handle = ext4_journal_start(inode, needed_blocks);
+	handle = ext4_journal_start(inode, EXT4_HT_INODE, needed_blocks);
 	if (IS_ERR(handle))
 		return;
 
@@ -1970,7 +1970,7 @@ int ext4_convert_inline_data(struct inode *inode)
 	if (error)
 		return error;
 
-	handle = ext4_journal_start(inode, needed_blocks);
+	handle = ext4_journal_start(inode, EXT4_HT_WRITE_PAGE, needed_blocks);
 	if (IS_ERR(handle)) {
 		error = PTR_ERR(handle);
 		goto out_free;

@@ -1038,10 +1038,11 @@ static inline int search_dirblock(struct buffer_head *bh,
 				  struct inode *dir,
 				  const struct qstr *d_name,
 				  unsigned int offset,
-				  struct ext4_dir_entry_2 **res_dir)
+				  struct ext4_dir_entry_2 **res_dir,
+				  char *ci_name_buf)
 {
 	return search_dir(bh, bh->b_data, dir->i_sb->s_blocksize, dir,
-			  d_name, offset, res_dir);
+			  d_name, offset, ci_name_buf, res_dir);
 }
 
 /*
@@ -1375,8 +1376,8 @@ restart:
 		set_buffer_verified(bh);
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
 		i = search_dirblock(bh, dir, d_name,
-			    block << EXT4_BLOCK_SIZE_BITS(sb), res_dir,
-			    ci_name_buf);
+			    block << EXT4_BLOCK_SIZE_BITS(sb), 
+				res_dir, ci_name_buf);
 #else
 		i = search_dirblock(bh, dir, d_name,
 			    block << EXT4_BLOCK_SIZE_BITS(sb), res_dir);
@@ -1487,7 +1488,7 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
 #ifdef CONFIG_SDCARD_FS_CI_SEARCH
 	ci_name_buf[0] = '\0';
 	if (flags & LOOKUP_CASE_INSENSITIVE)
-		bh = ext4_find_entry(dir, &dentry->d_name, &de, ci_name_buf);
+		bh = ext4_find_entry(dir, &dentry->d_name, &de, ci_name_buf, NULL);
 	else
 		bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL, NULL);
 #else
@@ -1554,24 +1555,6 @@ struct dentry *ext4_get_parent(struct dentry *child)
 	}
 
 	return d_obtain_alias(ext4_iget_normal(child->d_inode->i_sb, ino));
-}
-
-#define S_SHIFT 12
-static unsigned char ext4_type_by_mode[S_IFMT >> S_SHIFT] = {
-	[S_IFREG >> S_SHIFT]	= EXT4_FT_REG_FILE,
-	[S_IFDIR >> S_SHIFT]	= EXT4_FT_DIR,
-	[S_IFCHR >> S_SHIFT]	= EXT4_FT_CHRDEV,
-	[S_IFBLK >> S_SHIFT]	= EXT4_FT_BLKDEV,
-	[S_IFIFO >> S_SHIFT]	= EXT4_FT_FIFO,
-	[S_IFSOCK >> S_SHIFT]	= EXT4_FT_SOCK,
-	[S_IFLNK >> S_SHIFT]	= EXT4_FT_SYMLINK,
-};
-
-static inline void ext4_set_de_type(struct super_block *sb,
-				struct ext4_dir_entry_2 *de,
-				umode_t mode) {
-	if (EXT4_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_FILETYPE))
-		de->file_type = ext4_type_by_mode[(mode & S_IFMT)>>S_SHIFT];
 }
 
 /*

@@ -124,9 +124,6 @@ extern int ext4_xattr_ibody_find(struct inode *inode, struct ext4_xattr_info *i,
 extern int ext4_xattr_ibody_get(struct inode *inode, int name_index,
 				const char *name,
 				void *buffer, size_t buffer_size);
-extern int ext4_xattr_ibody_set(handle_t *handle, struct inode *inode,
-				struct ext4_xattr_info *i,
-				struct ext4_xattr_ibody_find *is);
 extern int ext4_try_add_inline_entry(handle_t *handle, struct dentry *dentry,
 				     struct inode *inode);
 extern int ext4_try_create_inline_dir(handle_t *handle,
@@ -215,14 +212,6 @@ ext4_expand_extra_isize_ea(struct inode *inode, int new_extra_isize,
 static inline int
 ext4_xattr_ibody_find(struct inode *inode, struct ext4_xattr_info *i,
 		      struct ext4_xattr_ibody_find *is)
-{
-	return -EOPNOTSUPP;
-}
-
-static inline int
-ext4_xattr_ibody_set(handle_t *handle, struct inode *inode,
-		     struct ext4_xattr_info *i,
-		     struct ext4_xattr_ibody_find *is)
 {
 	return -EOPNOTSUPP;
 }
