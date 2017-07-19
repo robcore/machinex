@@ -127,6 +127,11 @@ extern int ext4_xattr_ibody_get(struct inode *inode, int name_index,
 extern int ext4_xattr_ibody_set(handle_t *handle, struct inode *inode,
 				struct ext4_xattr_info *i,
 				struct ext4_xattr_ibody_find *is);
+extern int ext4_try_add_inline_entry(handle_t *handle, struct dentry *dentry,
+				     struct inode *inode);
+extern int ext4_try_create_inline_dir(handle_t *handle,
+				      struct inode *parent,
+				      struct inode *inode);
 # else  /* CONFIG_EXT4_FS_XATTR */
 
 static inline int
@@ -288,6 +293,20 @@ ext4_da_write_inline_data_begin(struct address_space *mapping,
 static inline int ext4_da_write_inline_data_end(struct inode *inode, loff_t pos,
 						unsigned len, unsigned copied,
 						struct page *page)
+{
+	return 0;
+}
+
+static inline int ext4_try_add_inline_entry(handle_t *handle,
+					    struct dentry *dentry,
+					    struct inode *inode)
+{
+	return 0;
+}
+
+static inline int ext4_try_create_inline_dir(handle_t *handle,
+					     struct inode *parent,
+					     struct inode *inode)
 {
 	return 0;
 }
