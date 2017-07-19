@@ -1671,11 +1671,6 @@ struct ext4_dir_entry_tail {
 	__le32	det_checksum;		/* crc32c(uuid+inum+dirblock) */
 };
 
-#define EXT4_DIRENT_TAIL(block, blocksize) \
-	((struct ext4_dir_entry_tail *)(((void *)(block)) + \
-					((blocksize) - \
-					 sizeof(struct ext4_dir_entry_tail))))
-
 /*
  * Ext4 directory file types.  Only the low 3 bits are used.  The
  * other bits are reserved for now.
@@ -2022,30 +2017,14 @@ ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
 extern int __ext4_check_dir_entry(const char *, unsigned int, struct inode *,
 				  struct file *,
 				  struct ext4_dir_entry_2 *,
-				  struct buffer_head *, char *, int,
-				  unsigned int);
-#define ext4_check_dir_entry(dir, filp, de, bh, buf, size, offset)	\
+				  struct buffer_head *, unsigned int);
+#define ext4_check_dir_entry(dir, filp, de, bh, offset)			\
 	unlikely(__ext4_check_dir_entry(__func__, __LINE__, (dir), (filp), \
-					(de), (bh), (buf), (size), (offset)))
+					(de), (bh), (offset)))
 extern int ext4_htree_store_dirent(struct file *dir_file, __u32 hash,
 				    __u32 minor_hash,
 				    struct ext4_dir_entry_2 *dirent);
 extern void ext4_htree_free_dir_info(struct dir_private_info *p);
-extern int ext4_find_dest_de(struct inode *dir, struct inode *inode,
-			     struct buffer_head *bh,
-			     void *buf, int buf_size,
-			     const char *name, int namelen,
-			     struct ext4_dir_entry_2 **dest_de);
-void ext4_insert_dentry(struct inode *inode,
-			struct ext4_dir_entry_2 *de,
-			int buf_size,
-			const char *name, int namelen);
-static inline void ext4_update_dx_flag(struct inode *inode)
-{
-	if (!EXT4_HAS_COMPAT_FEATURE(inode->i_sb,
-				     EXT4_FEATURE_COMPAT_DIR_INDEX))
-		ext4_clear_inode_flag(inode, EXT4_INODE_INDEX);
-}
 
 /* fsync.c */
 extern int ext4_sync_file(struct file *, loff_t, loff_t, int);
@@ -2057,17 +2036,12 @@ extern int ext4fs_dirhash(const char *name, int len, struct
 /* ialloc.c */
 extern struct inode *__ext4_new_inode(handle_t *, struct inode *, umode_t,
 				      const struct qstr *qstr, __u32 goal,
-				      uid_t *owner, int handle_type,
-				      unsigned int line_no, int nblocks);
+				      uid_t *owner, int nblocks);
 
 #define ext4_new_inode(handle, dir, mode, qstr, goal, owner) \
-	__ext4_new_inode((handle), (dir), (mode), (qstr), (goal), (owner), \
-			 0, 0, 0)
-#define ext4_new_inode_start_handle(dir, mode, qstr, goal, owner, \
-				    type, nblocks)		    \
-	__ext4_new_inode(NULL, (dir), (mode), (qstr), (goal), (owner), \
-			 (type), __LINE__, (nblocks))
-
+	__ext4_new_inode((handle), (dir), (mode), (qstr), (goal), (owner), 0)
+#define ext4_new_inode_start_handle(dir, mode, qstr, goal, owner, nblocks) \
+	__ext4_new_inode(NULL, (dir), (mode), (qstr), (goal), (owner), (nblocks))
 
 extern void ext4_free_inode(handle_t *, struct inode *);
 extern struct inode * ext4_orphan_get(struct super_block *, unsigned long);
@@ -2183,20 +2157,6 @@ extern int ext4_orphan_add(handle_t *, struct inode *);
 extern int ext4_orphan_del(handle_t *, struct inode *);
 extern int ext4_htree_fill_tree(struct file *dir_file, __u32 start_hash,
 				__u32 start_minor_hash, __u32 *next_hash);
-extern int search_dir(struct buffer_head *bh,
-		      char *search_buf,
-		      int buf_size,
-		      struct inode *dir,
-		      const struct qstr *d_name,
-		      unsigned int offset,
-		      struct ext4_dir_entry_2 **res_dir);
-extern int ext4_generic_delete_entry(handle_t *handle,
-				     struct inode *dir,
-				     struct ext4_dir_entry_2 *de_del,
-				     struct buffer_head *bh,
-				     void *entry_buf,
-				     int buf_size,
-				     int csum_size);
 
 /* resize.c */
 extern int ext4_group_add(struct super_block *sb,
@@ -2366,14 +2326,6 @@ static inline int ext4_has_group_desc_csum(struct super_block *sb)
 					  EXT4_FEATURE_RO_COMPAT_METADATA_CSUM);
 }
 
-static inline int ext4_has_metadata_csum(struct super_block *sb)
-{
-	WARN_ON_ONCE(EXT4_HAS_RO_COMPAT_FEATURE(sb,
-			EXT4_FEATURE_RO_COMPAT_METADATA_CSUM) &&
-		     !EXT4_SB(sb)->s_chksum_driver);
-
-	return (EXT4_SB(sb)->s_chksum_driver != NULL);
-}
 static inline ext4_fsblk_t ext4_blocks_count(struct ext4_super_block *es)
 {
 	return ((ext4_fsblk_t)le32_to_cpu(es->s_blocks_count_hi) << 32) |
@@ -2640,11 +2592,6 @@ extern int ext4_try_create_inline_dir(handle_t *handle,
 extern int ext4_read_inline_dir(struct file *filp,
 				struct dir_context *ctx,
 				int *has_inline_data);
-extern int htree_inlinedir_to_tree(struct file *dir_file,
-				   struct inode *dir, ext4_lblk_t block,
-				   struct dx_hash_info *hinfo,
-				   __u32 start_hash, __u32 start_minor_hash,
-				   int *has_inline_data);
 extern struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 					const struct qstr *d_name,
 					struct ext4_dir_entry_2 **res_dir,
@@ -2672,15 +2619,6 @@ extern int ext4_convert_inline_data(struct inode *inode);
 extern const struct inode_operations ext4_dir_inode_operations;
 extern const struct inode_operations ext4_special_inode_operations;
 extern struct dentry *ext4_get_parent(struct dentry *child);
-extern struct ext4_dir_entry_2 *ext4_init_dot_dotdot(struct inode *inode,
-				 struct ext4_dir_entry_2 *de,
-				 int blocksize, int csum_size,
-				 unsigned int parent_ino, int dotdot_real_len);
-extern void initialize_dirent_tail(struct ext4_dir_entry_tail *t,
-				   unsigned int blocksize);
-extern int ext4_handle_dirty_dirent_node(handle_t *handle,
-					 struct inode *inode,
-					 struct buffer_head *bh);
 
 /* symlink.c */
 extern const struct inode_operations ext4_symlink_inode_operations;
@@ -2775,19 +2713,16 @@ extern void ext4_mmp_csum_set(struct super_block *sb, struct mmp_struct *mmp);
 extern int ext4_mmp_csum_verify(struct super_block *sb,
 				struct mmp_struct *mmp);
 
-/* BH_Uninit flag: blocks are allocated but uninitialized on disk */
+/*
+ * Note that these flags will never ever appear in a buffer_head's state flag.
+ * See EXT4_MAP_... to see where this is used.
+ */
 enum ext4_state_bits {
 	BH_Uninit	/* blocks are allocated but uninitialized on disk */
-	  = BH_JBDPrivateStart,
+	 = BH_JBDPrivateStart,
 	BH_AllocFromCluster,	/* allocated blocks were part of already
-				 * allocated cluster. Note that this flag will
-				 * never, ever appear in a buffer_head's state
-				 * flag. See EXT4_MAP_FROM_CLUSTER to see where
-				 * this is used. */
+				 * allocated cluster. */
 };
-
-BUFFER_FNS(Uninit, uninit)
-TAS_BUFFER_FNS(Uninit, uninit)
 
 /*
  * Add new method to test whether block and inode bitmaps are properly

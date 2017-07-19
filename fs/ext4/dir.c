@@ -27,7 +27,6 @@
 #include <linux/slab.h>
 #include <linux/rbtree.h>
 #include "ext4.h"
-#include "xattr.h"
 
 static unsigned char ext4_filetype_table[] = {
 	DT_UNKNOWN, DT_REG, DT_DIR, DT_CHR, DT_BLK, DT_FIFO, DT_SOCK, DT_LNK
@@ -58,8 +57,7 @@ static int is_dx_dir(struct inode *inode)
 	if (EXT4_HAS_COMPAT_FEATURE(inode->i_sb,
 		     EXT4_FEATURE_COMPAT_DIR_INDEX) &&
 	    ((ext4_test_inode_flag(inode, EXT4_INODE_INDEX)) ||
-	     ((inode->i_size >> sb->s_blocksize_bits) == 1) ||
-	     ext4_has_inline_data(inode)))
+	     ((inode->i_size >> sb->s_blocksize_bits) == 1)))
 		return 1;
 
 	return 0;
@@ -69,14 +67,11 @@ static int is_dx_dir(struct inode *inode)
  * Return 0 if the directory entry is OK, and 1 if there is a problem
  *
  * Note: this is the opposite of what ext2 and ext3 historically returned...
- *
- * bh passed here can be an inode block or a dir data block, depending
- * on the inode inline data flag.
  */
 int __ext4_check_dir_entry(const char *function, unsigned int line,
 			   struct inode *dir, struct file *filp,
 			   struct ext4_dir_entry_2 *de,
-			   struct buffer_head *bh, char *buf, int size,
+			   struct buffer_head *bh,
 			   unsigned int offset)
 {
 	const char *error_msg = NULL;
@@ -89,26 +84,29 @@ int __ext4_check_dir_entry(const char *function, unsigned int line,
 		error_msg = "rec_len % 4 != 0";
 	else if (unlikely(rlen < EXT4_DIR_REC_LEN(de->name_len)))
 		error_msg = "rec_len is too small for name_len";
-	else if (unlikely(((char *) de - buf) + rlen > size))
-		error_msg = "directory entry across range";
+	else if (unlikely(((char *) de - bh->b_data) + rlen >
+			  dir->i_sb->s_blocksize))
+		error_msg = "directory entry across blocks";
 	else if (unlikely(le32_to_cpu(de->inode) >
 			le32_to_cpu(EXT4_SB(dir->i_sb)->s_es->s_inodes_count)))
 		error_msg = "inode out of bounds";
 	else
 		return 0;
 
+	print_bh(dir->i_sb, bh, 0, EXT4_BLOCK_SIZE(dir->i_sb));
+
 	if (filp)
 		ext4_error_file(filp, function, line, bh->b_blocknr,
 				"bad entry in directory: %s - offset=%u(%u), "
 				"inode=%u, rec_len=%d, name_len=%d",
-				error_msg, (unsigned) (offset % size),
+				error_msg, (unsigned) (offset % bh->b_size),
 				offset, le32_to_cpu(de->inode),
 				rlen, de->name_len);
 	else
 		ext4_error_inode(dir, function, line, bh->b_blocknr,
 				"bad entry in directory: %s - offset=%u(%u), "
 				"inode=%u, rec_len=%d, name_len=%d",
-				error_msg, (unsigned) (offset % size),
+				error_msg, (unsigned) (offset % bh->b_size),
 				offset, le32_to_cpu(de->inode),
 				rlen, de->name_len);
 
@@ -137,15 +135,6 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 		ext4_clear_inode_flag(file_inode(file),
 				      EXT4_INODE_INDEX);
 	}
-
-	if (ext4_has_inline_data(inode)) {
-		int has_inline_data = 1;
-		int ret = ext4_read_inline_dir(file, ctx,
-					   &has_inline_data);
-		if (has_inline_data)
-			return ret;
-	}
-
 	stored = 0;
 	offset = ctx->pos & (sb->s_blocksize - 1);
 
@@ -229,9 +218,8 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 		while (ctx->pos < inode->i_size
 		       && offset < sb->s_blocksize) {
 			de = (struct ext4_dir_entry_2 *) (bh->b_data + offset);
-			if (ext4_check_dir_entry(inode, file, de, bh,
-						 bh->b_data, bh->b_size,
-						 offset)) {
+			if (ext4_check_dir_entry(inode, file, de,
+						 bh, offset)) {
 				/*
 				 * On error, skip to the next block
 				 */
