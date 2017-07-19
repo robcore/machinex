@@ -185,10 +185,10 @@ static int msm_thermal_get_freq_table(void)
 		return -EINVAL;
 	}
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
 		temp_limit_low = thermal_limit_low;
 		thermal_limit_high = limit_idx = i - 1;
-	}
+
 	BUG_ON(thermal_limit_high <= 0);
 	pr_info("MSM Thermal: Initial thermal_limit_low is %d\n", table[thermal_limit_low].frequency);
 
