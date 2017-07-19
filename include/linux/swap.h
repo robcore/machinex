@@ -151,6 +151,11 @@ enum {
 	SWP_SOLIDSTATE	= (1 << 4),	/* blkdev seeks are cheap */
 	SWP_CONTINUED	= (1 << 5),	/* swap_map has count continuation */
 	SWP_BLKDEV	= (1 << 6),	/* its a block device */
+#ifdef CONFIG_SWAPFILE
+	SWP_FILE	= (1 << 7),	/* set after swap_activate success */
+#else
+	SWP_DUMMY	= (1 << 7),	/* Does nothing */
+#endif
 					/* add others here before... */
 	SWP_SCANNING	= (1 << 8),	/* refcount in scan_swap_map */
 };
@@ -329,6 +334,9 @@ static inline void mem_cgroup_uncharge_swap(swp_entry_t ent)
 /* linux/mm/page_io.c */
 extern int swap_readpage(struct page *);
 extern int swap_writepage(struct page *page, struct writeback_control *wbc);
+#ifdef CONFIG_SWAPFILE
+extern int swap_set_page_dirty(struct page *page);
+#endif
 extern void end_swap_bio_write(struct bio *bio, int err);
 extern int __swap_writepage(struct page *page, struct writeback_control *wbc,
 	void (*end_write_func)(struct bio *, int));

@@ -27,7 +27,11 @@
  */
 static const struct address_space_operations swap_aops = {
 	.writepage	= swap_writepage,
+#ifdef CONFIG_SWAPFILE
+	.set_page_dirty	= swap_set_page_dirty,
+#else
 	.set_page_dirty	= __set_page_dirty_no_writeback,
+#endif
 	.migratepage	= migrate_page,
 };
 

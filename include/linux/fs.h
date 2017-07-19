@@ -344,6 +344,12 @@ struct address_space_operations {
 	int (*is_partially_uptodate) (struct page *, read_descriptor_t *,
 					unsigned long);
 	int (*error_remove_page)(struct address_space *, struct page *);
+
+#ifdef CONFIG_SWAPFILE
+	/* swapfile support */
+	int (*swap_activate)(struct file *file);
+	int (*swap_deactivate)(struct file *file);
+#endif
 };
 
 extern const struct address_space_operations empty_aops;
