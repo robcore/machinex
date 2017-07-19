@@ -2373,7 +2373,7 @@ static int ext4_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, credits);
+					    NULL, EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2407,7 +2407,7 @@ static int ext4_mknod(struct inode *dir, struct dentry *dentry,
 		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, credits);
+					    NULL, EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2556,7 +2556,7 @@ static int ext4_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 retry:
 	inode = ext4_new_inode_start_handle(dir, S_IFDIR | mode,
 					    &dentry->d_name,
-					    0, NULL, credits);
+					    0, NULL, EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
@@ -2619,6 +2619,7 @@ out_clear_inode:
 	d_instantiate(dentry, inode);
 	if (IS_DIRSYNC(dir))
 		ext4_handle_sync(handle);
+
 out_stop:
 	if (handle)
 		ext4_journal_stop(handle);
@@ -3029,9 +3030,8 @@ static int ext4_symlink(struct inode *dir,
 retry:
 	inode = ext4_new_inode_start_handle(dir, S_IFLNK|S_IRWXUGO,
 					    &dentry->d_name, 0, NULL,
-					    credits);
+					    EXT4_HT_DIR, credits);
 	handle = ext4_journal_current_handle();
-
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
 		goto out_stop;
@@ -3045,7 +3045,7 @@ retry:
 		 * for transaction commit if we are running out of space
 		 * and thus we deadlock. So we have to stop transaction now
 		 * and restart it when symlink contents is written.
-		 *
+		 * 
 		 * To keep fs consistent in case of crash, we have to put inode
 		 * to orphan list in the mean time.
 		 */
