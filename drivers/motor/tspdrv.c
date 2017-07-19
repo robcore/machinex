@@ -355,24 +355,10 @@ static void tspdrv_power_suspend(struct power_suspend *h)
 
 static void tspdrv_power_resume(struct power_suspend *h)
 {
-	if (!vibrate_on_wake || enabled_by_os || true == g_bisplaying)
+	if (!vibrate_on_wake || true == g_bisplaying)
 		return;
 
-	hrtimer_cancel(&timer);
-
-	/* set_vibetonz(value); */
-	vibrator_work = vibrate_timeout;
-	schedule_work(&vibetonz_work);
-
-	if (vibrate_timeout > 0){
-		if (vibrate_timeout > max_timeout)
-			vibrate_timeout = max_timeout;
-
-		hrtimer_start(&timer,
-			ktime_set(vibrate_timeout / 1000, (vibrate_timeout % 1000) * 1000000),
-			HRTIMER_MODE_REL);
-		vibrator_value = vibrate_timeout;
-	}
+		machinex_vibrator(vibrate_timeout);
 }
 
 static struct power_suspend tspdrv_suspend_data =
