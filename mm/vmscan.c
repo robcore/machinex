@@ -2908,7 +2908,7 @@ static bool kswapd_shrink_zone(struct zone *zone,
 	*nr_attempted += sc->nr_to_reclaim;
 
 	if (nr_slab == 0 && !zone_reclaimable(zone))
-		zone->all_unreclaimable = 1;
+		all_unreclaimable = 1;
 
 	zone_clear_flag(zone, ZONE_WRITEBACK);
 
@@ -2918,7 +2918,7 @@ static bool kswapd_shrink_zone(struct zone *zone,
 	 * BDIs but as pressure is relieved, speculatively avoid congestion
 	 * waits.
 	 */
-	if (!zone->all_unreclaimable &&
+	if (!all_unreclaimable &&
 	    zone_balanced(zone, testorder, 0, classzone_idx)) {
 		zone_clear_flag(zone, ZONE_CONGESTED);
 		zone_clear_flag(zone, ZONE_TAIL_LRU_DIRTY);
