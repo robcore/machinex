@@ -2790,7 +2790,7 @@ static bool kswapd_shrink_zone(struct zone *zone,
 		.gfp_mask = sc->gfp_mask,
 	};
 
-	shrink_zone(zone, &sc);
+	shrink_zone(zone, sc);
 
 	reclaim_state->reclaimed_slab = 0;
 	nr_slab = shrink_slab(&shrink, sc.nr_scanned, lru_pages);
