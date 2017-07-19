@@ -1438,7 +1438,10 @@ static void destroy_swap_extents(struct swap_info_struct *sis)
  *
  * This function rather assumes that it is called in ascending page order.
  */
-static int
+#ifndef CONFIG_SWAP_FILE
+static
+#endif
+ int
 add_swap_extent(struct swap_info_struct *sis, unsigned long start_page,
 		unsigned long nr_pages, sector_t start_block)
 {
@@ -1517,7 +1520,6 @@ static int setup_swap_extents(struct swap_info_struct *sis, sector_t *span)
 	struct inode *inode = mapping->host;
 #else
 	struct inode *inode;
-#endif
 	unsigned blocks_per_page;
 	unsigned long page_no;
 	unsigned blkbits;
@@ -1526,6 +1528,7 @@ static int setup_swap_extents(struct swap_info_struct *sis, sector_t *span)
 	sector_t lowest_block = -1;
 	sector_t highest_block = 0;
 	int nr_extents = 0;
+#endif
 	int ret;
 
 #ifndef CONFIG_SWAPFILE
@@ -1534,19 +1537,24 @@ static int setup_swap_extents(struct swap_info_struct *sis, sector_t *span)
 	if (S_ISBLK(inode->i_mode)) {
 		ret = add_swap_extent(sis, 0, sis->max, 0);
 		*span = sis->pages;
+#ifdef CONFIG_SWAPFILE
+		return ret;
+#else
 		goto out;
+#endif
 	}
 #ifdef CONFIG_SWAPFILE
 	if (mapping->a_ops->swap_activate) {
-		ret = mapping->a_ops->swap_activate(swap_file);
+		ret = mapping->a_ops->swap_activate(sis, swap_file, span);
 		if (!ret) {
 			sis->flags |= SWP_FILE;
 			ret = add_swap_extent(sis, 0, sis->max, 0);
 			*span = sis->pages;
 		}
-		goto out;
+		return ret;
 	}
 #endif
+#ifndef CONFIG_SWAPFILE
 	blkbits = inode->i_blkbits;
 	blocks_per_page = PAGE_SIZE >> blkbits;
 
@@ -1621,6 +1629,9 @@ bad_bmap:
 	printk(KERN_ERR "swapon: swapfile has holes\n");
 	ret = -EINVAL;
 	goto out;
+#else
+	return generic_swapfile_activate(sis, swap_file, span);
+#endif
 }
 
 static void _enable_swap_info(struct swap_info_struct *p, int prio,

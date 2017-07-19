@@ -43,6 +43,9 @@ struct kstatfs;
 struct vm_area_struct;
 struct vfsmount;
 struct cred;
+#ifdef CONFIG_SWAPFILE
+struct swap_info_struct;
+#endif
 struct seq_file;
 
 extern void __init inode_init(void);
@@ -347,8 +350,9 @@ struct address_space_operations {
 
 #ifdef CONFIG_SWAPFILE
 	/* swapfile support */
-	int (*swap_activate)(struct file *file);
-	int (*swap_deactivate)(struct file *file);
+	int (*swap_activate)(struct swap_info_struct *sis, struct file *file,
+				sector_t *span);
+	void (*swap_deactivate)(struct file *file);
 #endif
 };
 
