@@ -303,6 +303,11 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 				struct cpufreq_policy *new_policy);
 
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
+
+/* Disable Input boost while thermal limiting */
+static bool thermal_disables_boost = true;
+module_param(thermal_disables_boost, bool, 0644);
+
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -316,8 +321,8 @@ struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 		return NULL;
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
-/* Update limits in cpufreq */
 
+/* Update limits in cpufreq */
 void reapply_hard_limits(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -331,26 +336,34 @@ void reapply_hard_limits(unsigned int cpu)
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (input_boost_limit > policy->hlimit_min_screen_on &&
-			input_boost_limit < limited_max_freq_thermal &&
-			input_boost_limit <= policy->hlimit_max_screen_on &&
-			limited_max_freq_thermal == policy->hlimit_max_screen_on)
-			policy->curr_limit_min = input_boost_limit;
-		else
-			policy->curr_limit_min = policy->hlimit_min_screen_on;
-
 		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
 			limited_max_freq_thermal < policy->hlimit_max_screen_on)
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
+
+		if (thermal_disables_boost) {
+			if (input_boost_limit > policy->hlimit_min_screen_on &&
+				input_boost_limit <= policy->curr_limit_max &&
+				limited_max_freq_thermal == policy->hlimit_max_screen_on)
+				policy->curr_limit_min = input_boost_limit;
+			else
+				policy->curr_limit_min = policy->hlimit_min_screen_on;
+		} else {
+			if (input_boost_limit > policy->hlimit_min_screen_on &&
+				input_boost_limit <= policy->curr_limit_max)
+				policy->curr_limit_min = input_boost_limit;
+			else
+				policy->curr_limit_min = policy->hlimit_min_screen_on;
+		}
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
-		policy->curr_limit_min = policy->hlimit_min_screen_off;
 		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
 			limited_max_freq_thermal < policy->hlimit_max_screen_off)
 			policy->curr_limit_max = limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_off;
+
+		policy->curr_limit_min = policy->hlimit_min_screen_off;
 	}
 
 	update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
