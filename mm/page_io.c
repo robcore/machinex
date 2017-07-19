@@ -166,7 +166,7 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 	struct bio *bio;
 	int ret = 0, rw = WRITE;
 	struct swap_info_struct *sis = page_swap_info(page);
-#if 0
+
 	if (sis->flags & SWP_FILE) {
 		struct kiocb kiocb;
 		struct file *swap_file = sis->swap_file;
@@ -175,11 +175,6 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 			.iov_base = page_address(page),
 			.iov_len  = PAGE_SIZE,
 		};
-		struct iov_iter from = {
-			.nr_segs = 1,
-			.iov_offset = 0,
-			.count = PAGE_SIZE,
-		};
 
 		init_sync_kiocb(&kiocb, swap_file);
 		kiocb.ki_pos = page_file_offset(page);
@@ -187,7 +182,7 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 		kiocb.ki_nbytes = PAGE_SIZE;
 
 		unlock_page(page);
-		ret = mapping->a_ops->direct_IO(&kiocb, &from,
+		ret = mapping->a_ops->direct_IO(KERNEL_WRITE, &kiocb, &iov,
 						kiocb.ki_pos);
 		if (ret == PAGE_SIZE) {
 			count_vm_event(PSWPOUT);
@@ -195,7 +190,7 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 		}
 		return ret;
 	}
-#endif
+
 	bio = get_swap_bio(GFP_NOIO, page, end_write_func);
 	if (bio == NULL) {
 		set_page_dirty(page);
