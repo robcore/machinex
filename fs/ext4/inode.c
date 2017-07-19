@@ -3609,6 +3609,14 @@ void ext4_truncate(struct inode *inode)
 
 	ext4_discard_preallocations(inode);
 
+	if (ext4_has_inline_data(inode)) {
+		int has_inline = 1;
+
+		ext4_inline_data_truncate(inode, &has_inline);
+		if (has_inline)
+			return;
+	}
+
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
 		ext4_ext_truncate(handle, inode);
 	else
