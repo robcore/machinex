@@ -12,6 +12,7 @@
 #include <linux/rmap.h>
 #include <linux/swap.h>
 #include <linux/swapops.h>
+#include <linux/mmu_notifier.h>
 
 #include <asm/elf.h>
 #include <asm/uaccess.h>
@@ -759,6 +760,11 @@ static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 		if (!pte_present(ptent))
 			continue;
 
+		if (cp->type == CLEAR_REFS_SOFT_DIRTY) {
+			clear_soft_dirty(vma, addr, pte);
+			continue;
+		}
+
 		page = vm_normal_page(vma, addr, ptent);
 		if (!page)
 			continue;
@@ -820,6 +826,8 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 		}
 
 		down_read(&mm->mmap_sem);
+		if (type == CLEAR_REFS_SOFT_DIRTY)
+			mmu_notifier_invalidate_range_start(mm, 0, -1);
 		for (vma = mm->mmap; vma; vma = vma->vm_next) {
 			clear_refs_walk.private = vma;
 			if (is_vm_hugetlb_page(vma))
@@ -840,6 +848,8 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 			walk_page_range(vma->vm_start, vma->vm_end,
 					&clear_refs_walk);
 		}
+		if (type == CLEAR_REFS_SOFT_DIRTY)
+			mmu_notifier_invalidate_range_end(mm, 0, -1);
 		flush_tlb_mm(mm);
 		up_read(&mm->mmap_sem);
 out_mm:
@@ -882,6 +892,7 @@ struct pagemapread {
 /* in "new" pagemap pshift bits are occupied with more status bits */
 #define PM_STATUS2(v2, x)   (__PM_PSHIFT(v2 ? x : PAGE_SHIFT))
 
+#define __PM_SOFT_DIRTY      (1LL)
 #define PM_PRESENT          PM_STATUS(4LL)
 #define PM_SWAP             PM_STATUS(2LL)
 #define PM_FILE             PM_STATUS(1LL)
@@ -923,6 +934,7 @@ static void pte_to_pagemap_entry(pagemap_entry_t *pme, struct pagemapread *pm,
 {
 	u64 frame, flags;
 	struct page *page = NULL;
+	int flags2 = 0;
 
 	if (pte_present(pte)) {
 		frame = pte_pfn(pte);
@@ -943,13 +955,15 @@ static void pte_to_pagemap_entry(pagemap_entry_t *pme, struct pagemapread *pm,
 
 	if (page && !PageAnon(page))
 		flags |= PM_FILE;
+	if (pte_soft_dirty(pte))
+		flags2 |= __PM_SOFT_DIRTY;
 
-	*pme = make_pme(PM_PFRAME(frame) | PM_STATUS2(pm->v2, 0) | flags);
+	*pme = make_pme(PM_PFRAME(frame) | PM_STATUS2(pm->v2, flags2) | flags);
 }
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static void thp_pmd_to_pagemap_entry(pagemap_entry_t *pme, struct pagemapread *pm,
-					pmd_t pmd, int offset)
+		pmd_t pmd, int offset, int pmd_flags2)
 {
 	/*
 	 * Currently pmd for thp is always present because thp can not be
@@ -958,13 +972,13 @@ static void thp_pmd_to_pagemap_entry(pagemap_entry_t *pme, struct pagemapread *p
 	 */
 	if (pmd_present(pmd))
 		*pme = make_pme(PM_PFRAME(pmd_pfn(pmd) + offset)
-				| PM_STATUS2(pm->v2, 0) | PM_PRESENT);
+				| PM_STATUS2(pm->v2, pmd_flags2) | PM_PRESENT);
 	else
 		*pme = make_pme(PM_NOT_PRESENT(pm->v2));
 }
 #else
 static inline void thp_pmd_to_pagemap_entry(pagemap_entry_t *pme, struct pagemapread *pm,
-						pmd_t pmd, int offset)
+		pmd_t pmd, int offset, int pmd_flags2)
 {
 }
 #endif
@@ -981,12 +995,15 @@ static int pagemap_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 	/* find the first VMA at or above 'addr' */
 	vma = find_vma(walk->mm, addr);
 	if (vma && pmd_trans_huge_lock(pmd, vma) == 1) {
+		int pmd_flags2;
+
+		pmd_flags2 = (pmd_soft_dirty(*pmd) ? __PM_SOFT_DIRTY : 0);
 		for (; addr != end; addr += PAGE_SIZE) {
 			unsigned long offset;
 
 			offset = (addr & ~PAGEMAP_WALK_MASK) >>
 					PAGE_SHIFT;
-			thp_pmd_to_pagemap_entry(&pme, pm, *pmd, offset);
+			thp_pmd_to_pagemap_entry(&pme, pm, *pmd, offset, pmd_flags2);
 			err = add_to_pagemap(addr, &pme, pm);
 			if (err)
 				break;
