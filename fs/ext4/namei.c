@@ -2573,6 +2573,14 @@ static int empty_dir(struct inode *inode)
 	struct super_block *sb;
 	int err = 0;
 
+	if (ext4_has_inline_data(inode)) {
+		int has_inline_data = 1;
+
+		err = empty_inline_dir(inode, &has_inline_data);
+		if (has_inline_data)
+			return err;
+	}
+
 	sb = inode->i_sb;
 	if (inode->i_size < EXT4_DIR_REC_LEN(1) + EXT4_DIR_REC_LEN(2)) {
 		EXT4_ERROR_INODE(inode, "invalid size");
