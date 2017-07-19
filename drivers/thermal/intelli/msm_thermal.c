@@ -185,9 +185,10 @@ static int msm_thermal_get_freq_table(void)
 		return -EINVAL;
 	}
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
 		thermal_limit_low = 4;
 		thermal_limit_high = limit_idx = i - 1;
+	}
 	BUG_ON(thermal_limit_high <= 0);
 	pr_info("MSM Thermal: Initial thermal_limit_low is %d\n", table[thermal_limit_low].frequency);
 
@@ -340,7 +341,7 @@ static void __ref do_freq_control(void)
 
 static void __ref do_core_control(void)
 {
-	unsigned int cpu = 0;
+	unsigned int cpu = smp_processor_id();
 	int ret = 0;
 	unsigned int delta;
 
