@@ -55,9 +55,6 @@ extern unsigned long sysctl_admin_reserve_kbytes;
 /* to align the pointer to the (next) page boundary */
 #define PAGE_ALIGN(addr) ALIGN(addr, PAGE_SIZE)
 
-/* test whether an address (unsigned long or pointer) is aligned to PAGE_SIZE */
-#define PAGE_ALIGNED(addr)	IS_ALIGNED((unsigned long)addr, PAGE_SIZE)
-
 /*
  * Linux kernel virtual memory manager primitives.
  * The idea being to have a "virtual" mm in the same way
@@ -1334,7 +1331,7 @@ extern void free_initmem(void);
  * "poison" if it's non-zero.
  * Return pages freed into the buddy system.
  */
-extern unsigned long free_reserved_area(void *start, void *end,
+extern unsigned long free_reserved_area(unsigned long start, unsigned long end,
 					int poison, char *s);
 
 #ifdef	CONFIG_HIGHMEM
@@ -1376,7 +1373,8 @@ static inline unsigned long free_initmem_default(int poison)
 {
 	extern char __init_begin[], __init_end[];
 
-	return free_reserved_area(&__init_begin, &__init_end,
+	return free_reserved_area(PAGE_ALIGN((unsigned long)&__init_begin) ,
+				  ((unsigned long)&__init_end) & PAGE_MASK,
 				  poison, "unused kernel");
 }
 

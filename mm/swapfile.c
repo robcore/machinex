@@ -206,7 +206,7 @@ static unsigned long scan_swap_map(struct swap_info_struct *si,
 			si->cluster_nr = SWAPFILE_CLUSTER - 1;
 			goto checks;
 		}
-		if (si->flags & SWP_PAGE_DISCARD) {
+		if (si->flags & SWP_DISCARDABLE) {
 			/*
 			 * Start range check on racing allocations, in case
 			 * they overlap the cluster we eventually decide on
@@ -316,7 +316,7 @@ checks:
 
 	if (si->lowest_alloc) {
 		/*
-		 * Only set when SWP_PAGE_DISCARD, and there's a scan
+		 * Only set when SWP_DISCARDABLE, and there's a scan
 		 * for a free cluster in progress or just completed.
 		 */
 		if (found_free_cluster) {
@@ -1421,14 +1421,6 @@ static void destroy_swap_extents(struct swap_info_struct *sis)
 		list_del(&se->list);
 		kfree(se);
 	}
-
-	if (sis->flags & SWP_FILE) {
-		struct file *swap_file = sis->swap_file;
-		struct address_space *mapping = swap_file->f_mapping;
-
-		sis->flags &= ~SWP_FILE;
-		mapping->a_ops->swap_deactivate(swap_file);
-	}
 }
 
 /*
@@ -1510,9 +1502,7 @@ add_swap_extent(struct swap_info_struct *sis, unsigned long start_page,
  */
 static int setup_swap_extents(struct swap_info_struct *sis, sector_t *span)
 {
-	struct file *swap_file = sis->swap_file;
-	struct address_space *mapping = swap_file->f_mapping;
-	struct inode *inode = mapping->host;
+	struct inode *inode;
 	unsigned blocks_per_page;
 	unsigned long page_no;
 	unsigned blkbits;
@@ -1523,19 +1513,10 @@ static int setup_swap_extents(struct swap_info_struct *sis, sector_t *span)
 	int nr_extents = 0;
 	int ret;
 
+	inode = sis->swap_file->f_mapping->host;
 	if (S_ISBLK(inode->i_mode)) {
 		ret = add_swap_extent(sis, 0, sis->max, 0);
 		*span = sis->pages;
-		goto out;
-	}
-
-	if (mapping->a_ops->swap_activate) {
-		ret = mapping->a_ops->swap_activate(swap_file);
-		if (!ret) {
-			sis->flags |= SWP_FILE;
-			ret = add_swap_extent(sis, 0, sis->max, 0);
-			*span = sis->pages;
-		}
 		goto out;
 	}
 
@@ -2121,20 +2102,6 @@ static int setup_swap_map_and_extents(struct swap_info_struct *p,
 	return nr_extents;
 }
 
-/*
- * Helper to sys_swapon determining if a given swap
- * backing device queue supports DISCARD operations.
- */
-static bool swap_discardable(struct swap_info_struct *si)
-{
-	struct request_queue *q = bdev_get_queue(si->bdev);
-
-	if (!q || !blk_queue_discard(q))
-		return false;
-
-	return true;
-}
-
 SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
 {
 	struct swap_info_struct *p;
@@ -2242,37 +2209,8 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
 			p->flags |= SWP_SOLIDSTATE;
 			p->cluster_next = 1 + (prandom_u32() % p->highest_bit);
 		}
-
-		if ((swap_flags & SWAP_FLAG_DISCARD) && swap_discardable(p)) {
-			/*
-			 * When discard is enabled for swap with no particular
-			 * policy flagged, we set all swap discard flags here in
-			 * order to sustain backward compatibility with older
-			 * swapon(8) releases.
-			 */
-			p->flags |= (SWP_DISCARDABLE | SWP_AREA_DISCARD |
-				     SWP_PAGE_DISCARD);
-
-			/*
-			 * By flagging sys_swapon, a sysadmin can tell us to
-			 * either do single-time area discards only, or to just
-			 * perform discards for released swap page-clusters.
-			 * Now it's time to adjust the p->flags accordingly.
-			 */
-			if (swap_flags & SWAP_FLAG_DISCARD_ONCE)
-				p->flags &= ~SWP_PAGE_DISCARD;
-			else if (swap_flags & SWAP_FLAG_DISCARD_PAGES)
-				p->flags &= ~SWP_AREA_DISCARD;
-
-			/* issue a swapon-time discard if it's still required */
-			if (p->flags & SWP_AREA_DISCARD) {
-				int err = discard_swap(p);
-				if (unlikely(err))
-					printk(KERN_ERR
-					       "swapon: discard_swap(%p): %d\n",
-						p, err);
-			}
-		}
+		if ((swap_flags & SWAP_FLAG_DISCARD) && discard_swap(p) == 0)
+			p->flags |= SWP_DISCARDABLE;
 	}
 
 	mutex_lock(&swapon_mutex);
@@ -2283,13 +2221,11 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
 	enable_swap_info(p, prio, swap_map, frontswap_map);
 
 	printk(KERN_INFO "Adding %uk swap on %s.  "
-			"Priority:%d extents:%d across:%lluk %s%s%s%s%s\n",
+			"Priority:%d extents:%d across:%lluk %s%s%s\n",
 		p->pages<<(PAGE_SHIFT-10), name->name, p->prio,
 		nr_extents, (unsigned long long)span<<(PAGE_SHIFT-10),
 		(p->flags & SWP_SOLIDSTATE) ? "SS" : "",
 		(p->flags & SWP_DISCARDABLE) ? "D" : "",
-		(p->flags & SWP_AREA_DISCARD) ? "s" : "",
-		(p->flags & SWP_PAGE_DISCARD) ? "c" : "",
 		(frontswap_map) ? "FS" : "");
 
 	mutex_unlock(&swapon_mutex);

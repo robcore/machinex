@@ -12,7 +12,6 @@
 #include <linux/mount.h>
 #include <linux/slab.h>
 #include <linux/file.h>
-#include <linux/swap.h>
 #include "internal.h"
 
 /*
@@ -228,7 +227,8 @@ static void cachefiles_read_copier(struct fscache_operation *_op)
  */
 static int cachefiles_read_backing_file_one(struct cachefiles_object *object,
 					    struct fscache_retrieval *op,
-					    struct page *netpage)
+					    struct page *netpage,
+					    struct pagevec *pagevec)
 {
 	struct cachefiles_one_read *monitor;
 	struct address_space *bmapping;
@@ -236,6 +236,8 @@ static int cachefiles_read_backing_file_one(struct cachefiles_object *object,
 	int ret;
 
 	_enter("");
+
+	pagevec_reinit(pagevec);
 
 	_debug("read back %p{%lu,%d}",
 	       netpage, netpage->index, page_count(netpage));
@@ -281,7 +283,9 @@ installed_new_backing_page:
 	backpage = newpage;
 	newpage = NULL;
 
-	lru_cache_add_file(backpage);
+	page_cache_get(backpage);
+	pagevec_add(pagevec, backpage);
+	__pagevec_lru_add_file(pagevec);
 
 read_backing_page:
 	ret = bmapping->a_ops->readpage(NULL, backpage);
@@ -448,7 +452,8 @@ int cachefiles_read_or_alloc_page(struct fscache_retrieval *op,
 	if (block) {
 		/* submit the apparently valid page to the backing fs to be
 		 * read from disk */
-		ret = cachefiles_read_backing_file_one(object, op, page);
+		ret = cachefiles_read_backing_file_one(object, op, page,
+						       &pagevec);
 	} else if (cachefiles_has_space(cache, 0, 1) == 0) {
 		/* there's space in the cache we can use */
 		fscache_mark_page_cached(op, page);
@@ -477,10 +482,13 @@ static int cachefiles_read_backing_file(struct cachefiles_object *object,
 {
 	struct cachefiles_one_read *monitor = NULL;
 	struct address_space *bmapping = object->backer->d_inode->i_mapping;
+	struct pagevec lru_pvec;
 	struct page *newpage = NULL, *netpage, *_n, *backpage = NULL;
 	int ret = 0;
 
 	_enter("");
+
+	pagevec_init(&lru_pvec, 0);
 
 	list_for_each_entry_safe(netpage, _n, list, lru) {
 		list_del(&netpage->lru);
@@ -526,7 +534,9 @@ static int cachefiles_read_backing_file(struct cachefiles_object *object,
 		backpage = newpage;
 		newpage = NULL;
 
-		lru_cache_add_file(backpage);
+		page_cache_get(backpage);
+		if (!pagevec_add(&lru_pvec, backpage))
+			__pagevec_lru_add_file(&lru_pvec);
 
 	reread_backing_page:
 		ret = bmapping->a_ops->readpage(NULL, backpage);
@@ -549,7 +559,9 @@ static int cachefiles_read_backing_file(struct cachefiles_object *object,
 			goto nomem;
 		}
 
-		lru_cache_add_file(netpage);
+		page_cache_get(netpage);
+		if (!pagevec_add(&lru_pvec, netpage))
+			__pagevec_lru_add_file(&lru_pvec);
 
 		/* install a monitor */
 		page_cache_get(netpage);
@@ -631,7 +643,9 @@ static int cachefiles_read_backing_file(struct cachefiles_object *object,
 
 		fscache_mark_page_cached(op, netpage);
 
-		lru_cache_add_file(netpage);
+		page_cache_get(netpage);
+		if (!pagevec_add(&lru_pvec, netpage))
+			__pagevec_lru_add_file(&lru_pvec);
 
 		/* the netpage is unlocked and marked up to date here */
 		fscache_end_io(op, netpage, 0);
@@ -647,6 +661,8 @@ static int cachefiles_read_backing_file(struct cachefiles_object *object,
 
 out:
 	/* tidy up */
+	pagevec_lru_add_file(&lru_pvec);
+
 	if (newpage)
 		page_cache_release(newpage);
 	if (netpage)
