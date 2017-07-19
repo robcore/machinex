@@ -114,14 +114,6 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 	struct super_block *sb = inode->i_sb;
 	int dir_has_error = 0;
 
-	if (ext4_has_inline_data(inode)) {
-		int has_inline_data = 1;
-		ret = ext4_read_inline_dir(filp, dirent, filldir,
-					   &has_inline_data);
-		if (has_inline_data)
-			return ret;
-	}
-
 	if (is_dx_dir(inode)) {
 		err = ext4_dx_readdir(file, ctx);
 		if (err != ERR_BAD_DX_DIR) {
@@ -134,6 +126,15 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 		ext4_clear_inode_flag(file_inode(file),
 				      EXT4_INODE_INDEX);
 	}
+
+	if (ext4_has_inline_data(inode)) {
+		int has_inline_data = 1;
+		int ret = ext4_read_inline_dir(file, ctx,
+					   &has_inline_data);
+		if (has_inline_data)
+			return ret;
+	}
+
 	stored = 0;
 	offset = ctx->pos & (sb->s_blocksize - 1);
 
