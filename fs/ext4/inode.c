@@ -3506,7 +3506,7 @@ int ext4_can_truncate(struct inode *inode)
  * Returns: 0 on success or negative on failure
  */
 
-int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
+int ext4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 {
 #if 0
 	struct inode *inode = file_inode(file);

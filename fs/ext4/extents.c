@@ -4439,7 +4439,7 @@ long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 		return -EOPNOTSUPP;
 
 	if (mode & FALLOC_FL_PUNCH_HOLE)
-		return ext4_punch_hole(file, offset, len);
+		return ext4_punch_hole(inode, offset, len);
 
 	/*
 	 * currently supporting (pre)allocate mode for extent-based
