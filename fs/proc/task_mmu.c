@@ -788,6 +788,7 @@ static inline void clear_soft_dirty(struct vm_area_struct *vma,
 	ptent = pte_clear_flags(ptent, _PAGE_SOFT_DIRTY);
 	set_pte_at(vma->vm_mm, addr, pte, ptent);
 #endif
+}
 
 static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 				unsigned long end, struct mm_walk *walk)
