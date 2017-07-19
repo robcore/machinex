@@ -1671,6 +1671,11 @@ struct ext4_dir_entry_tail {
 	__le32	det_checksum;		/* crc32c(uuid+inum+dirblock) */
 };
 
+#define EXT4_DIRENT_TAIL(block, blocksize) \
+	((struct ext4_dir_entry_tail *)(((void *)(block)) + \
+					((blocksize) - \
+					 sizeof(struct ext4_dir_entry_tail))))
+
 /*
  * Ext4 directory file types.  Only the low 3 bits are used.  The
  * other bits are reserved for now.
@@ -2017,10 +2022,11 @@ ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
 extern int __ext4_check_dir_entry(const char *, unsigned int, struct inode *,
 				  struct file *,
 				  struct ext4_dir_entry_2 *,
-				  struct buffer_head *, unsigned int);
-#define ext4_check_dir_entry(dir, filp, de, bh, offset)			\
+				  struct buffer_head *, char *, int,
+				  unsigned int);
+#define ext4_check_dir_entry(dir, filp, de, bh, buf, size, offset)	\
 	unlikely(__ext4_check_dir_entry(__func__, __LINE__, (dir), (filp), \
-					(de), (bh), (offset)))
+					(de), (bh), (buf), (size), (offset)))
 extern int ext4_htree_store_dirent(struct file *dir_file, __u32 hash,
 				    __u32 minor_hash,
 				    struct ext4_dir_entry_2 *dirent);
@@ -2592,6 +2598,11 @@ extern int ext4_try_create_inline_dir(handle_t *handle,
 extern int ext4_read_inline_dir(struct file *filp,
 				struct dir_context *ctx,
 				int *has_inline_data);
+extern int htree_inlinedir_to_tree(struct file *dir_file,
+				   struct inode *dir, ext4_lblk_t block,
+				   struct dx_hash_info *hinfo,
+				   __u32 start_hash, __u32 start_minor_hash,
+				   int *has_inline_data);
 extern struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 					const struct qstr *d_name,
 					struct ext4_dir_entry_2 **res_dir,
@@ -2619,6 +2630,15 @@ extern int ext4_convert_inline_data(struct inode *inode);
 extern const struct inode_operations ext4_dir_inode_operations;
 extern const struct inode_operations ext4_special_inode_operations;
 extern struct dentry *ext4_get_parent(struct dentry *child);
+extern struct ext4_dir_entry_2 *ext4_init_dot_dotdot(struct inode *inode,
+				 struct ext4_dir_entry_2 *de,
+				 int blocksize, int csum_size,
+				 unsigned int parent_ino, int dotdot_real_len);
+extern void initialize_dirent_tail(struct ext4_dir_entry_tail *t,
+				   unsigned int blocksize);
+extern int ext4_handle_dirty_dirent_node(handle_t *handle,
+					 struct inode *inode,
+					 struct buffer_head *bh);
 
 /* symlink.c */
 extern const struct inode_operations ext4_symlink_inode_operations;
@@ -2713,16 +2733,19 @@ extern void ext4_mmp_csum_set(struct super_block *sb, struct mmp_struct *mmp);
 extern int ext4_mmp_csum_verify(struct super_block *sb,
 				struct mmp_struct *mmp);
 
-/*
- * Note that these flags will never ever appear in a buffer_head's state flag.
- * See EXT4_MAP_... to see where this is used.
- */
+/* BH_Uninit flag: blocks are allocated but uninitialized on disk */
 enum ext4_state_bits {
 	BH_Uninit	/* blocks are allocated but uninitialized on disk */
-	 = BH_JBDPrivateStart,
+	  = BH_JBDPrivateStart,
 	BH_AllocFromCluster,	/* allocated blocks were part of already
-				 * allocated cluster. */
+				 * allocated cluster. Note that this flag will
+				 * never, ever appear in a buffer_head's state
+				 * flag. See EXT4_MAP_FROM_CLUSTER to see where
+				 * this is used. */
 };
+
+BUFFER_FNS(Uninit, uninit)
+TAS_BUFFER_FNS(Uninit, uninit)
 
 /*
  * Add new method to test whether block and inode bitmaps are properly
