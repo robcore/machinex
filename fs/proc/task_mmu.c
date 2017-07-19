@@ -741,23 +741,10 @@ const struct file_operations proc_tid_smaps_operations = {
 	.release	= seq_release_private,
 };
 
-enum clear_refs_types {
-	CLEAR_REFS_ALL = 1,
-	CLEAR_REFS_ANON,
-	CLEAR_REFS_MAPPED,
-	CLEAR_REFS_MM_HIWATER_RSS,
-	CLEAR_REFS_LAST,
-};
-
-struct clear_refs_private {
-	struct vm_area_struct *vma;
-};
-
 static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 				unsigned long end, struct mm_walk *walk)
 {
-	struct clear_refs_private *cp = walk->private;
-	struct vm_area_struct *vma = cp->vma;
+	struct vm_area_struct *vma = walk->private;
 	pte_t *pte, ptent;
 	spinlock_t *ptl;
 	struct page *page;
@@ -785,6 +772,11 @@ static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 	return 0;
 }
 
+#define CLEAR_REFS_ALL 1
+#define CLEAR_REFS_ANON 2
+#define CLEAR_REFS_MAPPED 3
+#define CLEAR_REFS_MM_HIWATER_RSS 5
+
 static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 				size_t count, loff_t *ppos)
 {
@@ -792,8 +784,7 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 	char buffer[PROC_NUMBUF];
 	struct mm_struct *mm;
 	struct vm_area_struct *vma;
-	enum clear_refs_types type;
-	int itype;
+	int type;
 	int rv;
 
 	memset(buffer, 0, sizeof(buffer));
@@ -801,11 +792,10 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 		count = sizeof(buffer) - 1;
 	if (copy_from_user(buffer, buf, count))
 		return -EFAULT;
-	rv = kstrtoint(strstrip(buffer), 10, &itype);
+	rv = kstrtoint(strstrip(buffer), 10, &type);
 	if (rv < 0)
 		return rv;
-	type = (enum clear_refs_types)itype;
-	if ((type < CLEAR_REFS_ALL || type >= CLEAR_REFS_LAST) &&
+	if ((type < CLEAR_REFS_ALL || type > CLEAR_REFS_MAPPED) &&
 	    type != CLEAR_REFS_MM_HIWATER_RSS)
 		return -EINVAL;
 	task = get_proc_task(file_inode(file));
