@@ -2349,7 +2349,7 @@ static int ext4_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, EXT4_HT_DIR, credits);
+					    NULL, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2383,7 +2383,7 @@ static int ext4_mknod(struct inode *dir, struct dentry *dentry,
 		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, EXT4_HT_DIR, credits);
+					    NULL, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2411,7 +2411,6 @@ static int ext4_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 retry:
 	inode = ext4_new_inode_start_handle(dir, mode,
 					    NULL, 0, NULL,
-					    EXT4_HT_DIR,
 			EXT4_MAXQUOTAS_INIT_BLOCKS(dir->i_sb) +
 			  4 + EXT4_XATTR_TRANS_BLOCKS);
 	handle = ext4_journal_current_handle();
@@ -2532,7 +2531,7 @@ static int ext4_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 retry:
 	inode = ext4_new_inode_start_handle(dir, S_IFDIR | mode,
 					    &dentry->d_name,
-					    0, NULL, EXT4_HT_DIR, credits);
+					    0, NULL, credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
@@ -2972,7 +2971,7 @@ static int ext4_symlink(struct inode *dir,
 retry:
 	inode = ext4_new_inode_start_handle(dir, S_IFLNK|S_IRWXUGO,
 					    &dentry->d_name, 0, NULL,
-					    EXT4_HT_DIR, credits);
+					    credits);
 	handle = ext4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
