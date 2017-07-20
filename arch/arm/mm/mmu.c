@@ -1042,16 +1042,6 @@ static void * __initdata vmalloc_min =
  * bytes. This can be used to increase (or decrease) the vmalloc
  * area - the default is 240m.
  */
-static int __init castrated_early_vmalloc(char *arg)
-{
-	return 0;
-}
-early_param("vmalloc", castrated_early_vmalloc);
-
-/*
- * mxvmalloc=size does the same thing but takes control
- * back from the bootloader.
- */
 static int __init early_vmalloc(char *arg)
 {
 	unsigned long vmalloc_reserve = memparse(arg, NULL);
@@ -1073,7 +1063,7 @@ static int __init early_vmalloc(char *arg)
 	vmalloc_min = (void *)(VMALLOC_END - vmalloc_reserve);
 	return 0;
 }
-early_param("mxvmalloc", early_vmalloc);
+early_param("vmalloc", early_vmalloc);
 
 phys_addr_t arm_lowmem_limit __initdata = 0;
 
