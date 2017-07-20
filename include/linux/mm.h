@@ -29,7 +29,6 @@ struct writeback_control;
 extern unsigned long max_mapnr;
 #endif
 
-extern unsigned long num_physpages;
 extern unsigned long totalram_pages;
 #ifdef CONFIG_FIX_MOVABLE_ZONE
 extern unsigned long total_unmovable_pages;
