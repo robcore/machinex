@@ -33,10 +33,6 @@ unsigned int snd_ctrl_locked;
 static const int snd_ctrl_min = -84;
 static const int snd_ctrl_max = 50;
 
-enum {
-	ZEROSUM = 0,
-};
-
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
