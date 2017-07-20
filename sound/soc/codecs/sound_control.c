@@ -21,17 +21,14 @@
 #include <linux/export.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
-#include <linux/sysfs_helpers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	3
+#define SOUND_CONTROL_MINOR_VERSION	2
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
-static const int snd_ctrl_min = -84;
-static const int snd_ctrl_max = 50;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -118,53 +115,6 @@ static int show_sound_value(int val)
 	return val;
 }
 
-static int singlesum(unsigned int reg, int val)
-{	
-	int sum, checksum;
-
-	sanitize_min_max(val, snd_ctrl_min, snd_ctrl_max);
-
-	checksum = 255 - val;
-		if (val < 0) {
-			sum = 1 + val;
-			checksum = sum * -1;
-			val = val + 256;
-		}
-
-	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		reg, val);
-	snd_ctrl_locked = 1;
-
-	return checksum;
-}
-
-static int doublesum(unsigned int lreg, unsigned int rreg, int lval, int rval)
-{
-	int checksum, addval;
-
-	sanitize_min_max(lval, snd_ctrl_min, snd_ctrl_max);
-	sanitize_min_max(rval, snd_ctrl_min, snd_ctrl_max);
-
-	addval = lval + rval;
-
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-		lval += 256;
-		rval += 256;
-	}
-
-	snd_ctrl_locked = 0;
-	tabla_write(snd_engine_codec_ptr,
-		lreg, lval);
-	tabla_write(snd_engine_codec_ptr,
-		rreg, rval);
-	snd_ctrl_locked = 1;
-
-	return checksum;
-}
-
 static ssize_t sound_control_enabled_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -174,19 +124,22 @@ static ssize_t sound_control_enabled_show(struct kobject *kobj,
 static ssize_t sound_control_enabled_store(struct kobject *kobj,
         struct kobj_attribute *attr, const char *buf, size_t count)
 {
-    int val;
+    unsigned int val;
 
     sscanf(buf, "%u", &val);
 
-	sanitize_min_max(val, 0, 1);
+    if (val >= 1) {
+        val = 1;
+		snd_ctrl_locked = 1;
+	}
+
+	if (val == 0) {
+		val = 0;
+		snd_ctrl_locked = 0;
+	}
 
     snd_ctrl_enabled = val;
 
-    if (!snd_ctrl_enabled) {
-		snd_ctrl_locked = 0;
-	} else if (snd_ctrl_enabled) {
-		snd_ctrl_locked = 1;
-	}
     return count;
 }
 
@@ -204,13 +157,33 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
+	int addval, checksum;
+	int lval, rval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	count = singlesum(TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, val);
+	lval = val;
+	rval = val;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
+
+	snd_ctrl_locked = 0;
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
+	snd_ctrl_locked = 1;
+
+	count = checksum;
 
 	return count;
 }
@@ -227,15 +200,34 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
+	int addval, checksum;
+	int lval, rval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	count = doublesum(TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
-					  TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
-					  val, val);
+	lval = val;
+	rval = val;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
+
+	snd_ctrl_locked = 0;
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
+	snd_ctrl_locked = 1;
+
+	count = checksum;
+
 	return count;
 }
 
@@ -251,13 +243,26 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
+	int sum, checksum;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	count = singlesum(TABLA_A_CDC_TX6_VOL_CTL_GAIN, val);
+	checksum = 255 - val;
+		if (val < 0) {
+			sum = 1 + val;
+			checksum = sum * -1;
+			val = val + 256;
+		}
+
+	snd_ctrl_locked = 0;
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_TX6_VOL_CTL_GAIN, val);
+	snd_ctrl_locked = 1;
+
+	count = checksum;
 
 	return count;
 }
@@ -274,13 +279,26 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int val;
+	int sum, checksum;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	count = singlesum(TABLA_A_CDC_TX7_VOL_CTL_GAIN, val);
+	checksum = 255 - val;
+		if (val < 0) {
+			sum = 1 + val;
+			checksum = sum * -1;
+			val = val + 256;
+		}
+
+	snd_ctrl_locked = 0;
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_TX7_VOL_CTL_GAIN, val);
+	snd_ctrl_locked = 1;
+
+	count = checksum;
 
 	return count;
 }
@@ -369,6 +387,7 @@ static int sound_control_init(void)
 	}
 
 	snd_ctrl_enabled = 0;
+	//snd_ctrl_locked = 1;
 
 	return 0;
 }
