@@ -2858,6 +2858,8 @@ static bool kswapd_shrink_zone(struct zone *zone,
 			       unsigned long *nr_attempted)
 {
 	unsigned long nr_slab;
+	int testorder = sc->order;
+	unsigned long balance_gap;
 	struct reclaim_state *reclaim_state = current->reclaim_state;
 	struct shrink_control shrink = {
 		.gfp_mask = sc->gfp_mask,
