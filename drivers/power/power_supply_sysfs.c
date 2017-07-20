@@ -85,11 +85,9 @@ static ssize_t power_supply_show_property(struct device *dev,
 
 	if (ret < 0) {
 		if (ret == -ENODATA)
-			dev_dbg(dev, "driver has no data for `%s' property\n",
-				attr->attr.name);
+			pr_debug("driver failed to report some shit, you dick\n");
 		else if (ret != -ENODEV)
-			dev_err(dev, "driver failed to report `%s' property: %zd\n",
-				attr->attr.name, ret);
+			pr_debug("driver failed to report some shit, you dick\n");
 		return ret;
 	}
 
