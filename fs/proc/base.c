@@ -1975,10 +1975,6 @@ static struct dentry *proc_map_files_lookup(struct inode *dir,
 	int result;
 	struct mm_struct *mm;
 
-	result = -EPERM;
-	if (!capable(CAP_SYS_ADMIN))
-		goto out;
-
 	result = -ENOENT;
 	task = get_proc_task(dir);
 	if (!task)
@@ -2031,10 +2027,6 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
 	struct map_files_info info;
 	struct map_files_info *p;
 	int ret;
-
-	ret = -EPERM;
-	if (!capable(CAP_SYS_ADMIN))
-		goto out;
 
 	ret = -ENOENT;
 	task = get_proc_task(file_inode(file));
