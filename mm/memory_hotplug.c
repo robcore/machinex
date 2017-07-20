@@ -910,6 +910,7 @@ static void node_states_set_node(int node, struct memory_notify *arg)
 
 int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_type)
 {
+	unsigned long flags;
 	unsigned long onlined_pages = 0;
 	struct zone *zone;
 	int need_zonelists_rebuild = 0;
@@ -990,7 +991,11 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_typ
 	}
 
 	zone->present_pages += onlined_pages;
+
+	pgdat_resize_lock(zone->zone_pgdat, &flags);
 	zone->zone_pgdat->node_present_pages += onlined_pages;
+	pgdat_resize_unlock(zone->zone_pgdat, &flags);
+
 	drain_all_pages();
 	if (onlined_pages) {
 		node_states_set_node(zone_to_nid(zone), &arg);
