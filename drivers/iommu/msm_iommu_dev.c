@@ -364,7 +364,6 @@ static int msm_iommu_ctx_probe(struct platform_device *pdev)
 		clk_disable_unprepare(drvdata->clk);
 	clk_disable_unprepare(drvdata->pclk);
 
-	dev_info(&pdev->dev, "context %s using bank %d\n", c->name, c->num);
 	return 0;
 fail:
 	kfree(ctx_drvdata);
