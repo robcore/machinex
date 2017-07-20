@@ -2852,7 +2852,7 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, long remaining,
  * This is used to determine if the scanning priority needs to be raised.
  */
 static bool kswapd_shrink_zone(struct zone *zone,
-				   int classzone_idx
+				   int classzone_idx,
 			       struct scan_control *sc,
 			       unsigned long lru_pages,
 			       unsigned long *nr_attempted)
