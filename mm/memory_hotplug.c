@@ -927,7 +927,7 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_typ
 	zone = page_zone(pfn_to_page(pfn));
 
 	if ((zone_idx(zone) > ZONE_NORMAL ||
-+	    online_type == MMOP_ONLINE_MOVABLE) &&
+	    online_type == MMOP_ONLINE_MOVABLE) &&
 	    !can_online_high_movable(zone)) {
 		unlock_memory_hotplug();
 		return -1;
@@ -990,6 +990,7 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_typ
 		return ret;
 	}
 
+	zone->managed_pages += onlined_pages;
 	zone->present_pages += onlined_pages;
 
 	pgdat_resize_lock(zone->zone_pgdat, &flags);
@@ -1647,6 +1648,7 @@ repeat:
 	/* reset pagetype flags and makes migrate type to be MOVABLE */
 	undo_isolate_page_range(start_pfn, end_pfn, MIGRATE_MOVABLE);
 	/* removal success */
+	zone->managed_pages -= offlined_pages;
 	if (offlined_pages > zone->present_pages)
 		zone->present_pages = 0;
 	else
