@@ -21,5 +21,3 @@ patch -p1 -R < "/root/machinex/patches/0022-vmcore-treat-memory-chunks-reference
 patch -p1 -R < "/root/machinex/patches/0021-vmcore-allocate-buffer-for-ELF-headers-on-page-size-.patch"
 patch -p1 -R < "/root/machinex/patches/0020-vmcore-clean-up-read_vmcore.patch"
 patch -p1 -R < "/root/machinex/patches/0019-include-linux-mm-add-PAGE_ALIGNED-helper.patch"
-patch -p1 -R < "/root/machinex/patches/0018-offline-pages-too.patch"
-patch -p1 -R < "/root/machinex/patches/0017-memory_hotplug-use-pgdat_resize_lock.patch"
