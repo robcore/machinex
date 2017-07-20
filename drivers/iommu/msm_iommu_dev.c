@@ -228,9 +228,6 @@ static int msm_iommu_probe(struct platform_device *pdev)
 	drvdata->ttbr_split = iommu_dev->ttbr_split;
 	drvdata->name = iommu_dev->name;
 
-	pr_info("device %s mapped at %p, with %d ctx banks\n",
-		iommu_dev->name, regs_base, iommu_dev->ncb);
-
 	platform_set_drvdata(pdev, drvdata);
 
 	if (iommu_clk)
