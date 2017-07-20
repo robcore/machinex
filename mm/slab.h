@@ -199,8 +199,6 @@ static inline struct kmem_cache *cache_from_obj(struct kmem_cache *s, void *x)
 	WARN_ON_ONCE(1);
 	return s;
 }
-#endif
-
 
 /*
  * The slab lists for all objects.
@@ -232,4 +230,6 @@ struct kmem_cache_node {
 #endif
 
 };
-
+void *s_next(struct seq_file *m, void *p, loff_t *pos);
+void s_stop(struct seq_file *m, void *p);
+#endif
