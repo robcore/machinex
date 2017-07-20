@@ -21,14 +21,19 @@
 #include <linux/export.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
+#include <linux/sysfs_helpers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	2
+#define SOUND_CONTROL_MINOR_VERSION	3
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
+#define HARDMIN (-84)
+#define HARDMAX 50
+static const int snd_ctrl_min = HARDMIN;
+static const int snd_ctrl_max = HARDMAX;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -162,8 +167,10 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled)
+	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
+
+	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
 
 	lval = val;
 	rval = val;
@@ -205,8 +212,10 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled)
+	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
+
+	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
 
 	lval = val;
 	rval = val;
@@ -247,8 +256,10 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled)
+	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
+
+	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
 
 	checksum = 255 - val;
 		if (val < 0) {
@@ -283,8 +294,10 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled)
+	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
+
+	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
 
 	checksum = 255 - val;
 		if (val < 0) {
@@ -301,6 +314,21 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	count = checksum;
 
 	return count;
+}
+
+static ssize_t sound_control_register_list_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Headphone Left: %u\n, \
+						 Headphone Right: %u\n, \
+						 Speaker: %u\n, \
+						 In Call Mic: %u\n, \
+						 Camera Mic: %u\n", \
+			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, \
+			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, \
+			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, \
+			TABLA_A_CDC_TX6_VOL_CTL_GAIN, \
+			TABLA_A_CDC_TX7_VOL_CTL_GAIN);
 }
 
 static ssize_t sound_control_version_show(struct kobject *kobj,
@@ -346,6 +374,11 @@ static struct kobj_attribute sound_control_version_attribute =
 		0444,
 		sound_control_version_show, NULL);
 
+static struct kobj_attribute sound_control_register_list_attribute =
+	__ATTR(gpl_sound_control_register_list,
+		0444,
+		sound_control_register_list_show, NULL);
+
 static struct attribute *sound_control_attrs[] =
 {
 	&sound_control_enabled_attribute.attr,
@@ -354,6 +387,7 @@ static struct attribute *sound_control_attrs[] =
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,
 	&sound_control_version_attribute.attr,
+	&sound_control_register_list_attribute.attr,
 	NULL,
 };
 

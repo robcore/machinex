@@ -8920,7 +8920,8 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 
 #ifdef CONFIG_SOUND_CONTROL
 	pr_info("tabla codec probe...\n");
-	snd_engine_codec_ptr = codec;
+	memcpy(snd_engine_codec_ptr, codec, sizeof(*codec));
+	//snd_engine_codec_ptr = codec;
 #endif
 
 	codec->control_data = dev_get_drvdata(codec->dev->parent);

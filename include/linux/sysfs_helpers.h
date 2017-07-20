@@ -46,6 +46,14 @@ static inline int read_into(int *container, int size, const char *buf, size_t co
 	return t;
 }
 
+static void mxsanitizer(int val, int min, int max)
+{
+	if (val <= min)
+		val = min;
+	if (val >= max)
+		val = max;
+}
+
 #define sanitize_min_max(val, min, max)		\
 	if(val <= min)				\
 		val = min;			\
