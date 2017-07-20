@@ -81,7 +81,7 @@ unsigned int snd_cache_read(unsigned int reg)
 	if (cache_select(reg) != NULL)
 		return *cache_select(reg);
 	else
-		return -1;
+		return -ENOMEM;
 }
 EXPORT_SYMBOL(snd_cache_read);
 

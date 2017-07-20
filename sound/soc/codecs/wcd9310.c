@@ -8039,7 +8039,7 @@ static void tabla_hs_gpio_handler(struct snd_soc_codec *codec)
 	wcd9xxx_nested_irq_unlock(core);
 	pr_debug("%s: leave\n", __func__);
 }
-
+static bool wake_needs_unlock = false;
 static irqreturn_t tabla_mechanical_plug_detect_irq(int irq, void *data)
 {
 	int r = IRQ_HANDLED;
@@ -8055,7 +8055,8 @@ static irqreturn_t tabla_mechanical_plug_detect_irq(int irq, void *data)
 		TABLA_ACQUIRE_LOCK(tabla->codec_resource_lock);
 		tabla->gpio_irq_resend = true;
 		TABLA_RELEASE_LOCK(tabla->codec_resource_lock);
-		wake_lock_timeout(&tabla->irq_resend_wlock, HZ);
+		wake_lock(&tabla->irq_resend_wlock);
+		wake_needs_unlock = true;
 		r = IRQ_NONE;
 	} else {
 		tabla_hs_gpio_handler(codec);
@@ -8073,9 +8074,6 @@ static void tabla_hs_correct_plug_nogpio(struct work_struct *work)
 	int retry = 0;
 	enum tabla_mbhc_plug_type plug_type;
 	bool is_headset = false;
-
-	pr_debug("%s(): Poll Microphone voltage for %d seconds\n",
-			 __func__, TABLA_HS_DETECT_PLUG_TIME_MS / 1000);
 
 	tabla = container_of(work, struct tabla_priv,
 						 hs_correct_plug_work_nogpio);
@@ -8180,7 +8178,7 @@ static int tabla_mbhc_init_and_calibrate(struct tabla_priv *tabla)
 					       NULL,
 					       tabla_mechanical_plug_detect_irq,
 					       (IRQF_TRIGGER_RISING |
-						IRQF_TRIGGER_FALLING),
+						IRQF_TRIGGER_FALLING | IRQF_ONESHOT),
 					       "tabla-gpio", codec);
 			if (!IS_ERR_VALUE(ret)) {
 				ret = enable_irq_wake(tabla->mbhc_cfg.gpio_irq);
@@ -8249,10 +8247,10 @@ int tabla_hs_detect(struct snd_soc_codec *codec,
 
 	if (cfg->mclk_rate != TABLA_MCLK_RATE_12288KHZ) {
 		if (cfg->mclk_rate == TABLA_MCLK_RATE_9600KHZ)
-			pr_err("Error: clock rate %dHz is not yet supported\n",
+			pr_debug("Error: clock rate %dHz is not yet supported\n",
 			       cfg->mclk_rate);
 		else
-			pr_err("Error: unsupported clock rate %d\n",
+			pr_debug("Error: unsupported clock rate %d\n",
 			       cfg->mclk_rate);
 		return -EINVAL;
 	}
@@ -9264,12 +9262,19 @@ static int tabla_resume(struct device *dev)
 			irq_set_pending(irq);
 			check_irq_resend(irq_to_desc(irq));
 
+			TABLA_RELEASE_LOCK(tabla->codec_resource_lock);
 			/* release suspend lock */
+			if (wake_needs_unlock)
+				wake_unlock(&tabla->irq_resend_wlock);
+		} else
+			TABLA_RELEASE_LOCK(tabla->codec_resource_lock);
+			/* release suspend lock */
+			if (wake_needs_unlock)
+				wake_unlock(&tabla->irq_resend_wlock);
+	} else {
+		if (wake_needs_unlock)
 			wake_unlock(&tabla->irq_resend_wlock);
-		}
-		TABLA_RELEASE_LOCK(tabla->codec_resource_lock);
 	}
-
 	return 0;
 }
 
