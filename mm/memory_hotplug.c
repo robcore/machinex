@@ -772,16 +772,13 @@ EXPORT_SYMBOL_GPL(restore_online_page_callback);
 
 void __online_page_set_limits(struct page *page)
 {
-	unsigned long pfn = page_to_pfn(page);
-
 	totalram_pages++;
 #ifdef CONFIG_FIX_MOVABLE_ZONE
 	if (zone_idx(page_zone(page)) != ZONE_MOVABLE)
 		total_unmovable_pages++;
 #endif
-	if (pfn >= num_physpages)
-		num_physpages = pfn + 1;
 }
+
 EXPORT_SYMBOL_GPL(__online_page_set_limits);
 
 void __online_page_increment_counters(struct page *page)
