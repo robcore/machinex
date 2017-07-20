@@ -30,10 +30,10 @@ extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
-#define HARDMIN (-84)
+#define HARDMIN (0xFFFFFFAE)
 #define HARDMAX 50
 static const int snd_ctrl_min = HARDMIN;
-static const int snd_ctrl_max = HARDMAX;
+static const unsigned int snd_ctrl_max = HARDMAX;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
