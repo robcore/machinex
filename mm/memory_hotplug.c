@@ -1648,7 +1648,12 @@ repeat:
 	/* reset pagetype flags and makes migrate type to be MOVABLE */
 	undo_isolate_page_range(start_pfn, end_pfn, MIGRATE_MOVABLE);
 	/* removal success */
-	zone->managed_pages -= offlined_pages;
+
+	if (offlined_pages > zone->managed_pages)
+		zone->managed_pages = 0;
+	else
+		zone->managed_pages -= offlined_pages;
+
 	if (offlined_pages > zone->present_pages)
 		zone->present_pages = 0;
 	else
