@@ -688,7 +688,7 @@ void __init mem_init(void)
 
 #ifdef CONFIG_SA1111
 	/* now that our DMA memory is actually so designated, we can free it */
-	free_reserved_area(__va(PHYS_PFN_OFFSET), swapper_pg_dir, 0, NULL);
+	free_reserved_area(__va(PHYS_PFN_OFFSET), swapper_pg_dir, -1, NULL);
 #endif
 
 	free_highpages();
@@ -831,7 +831,7 @@ void free_initmem(void)
 	extern char __tcm_start, __tcm_end;
 
 	poison_init_mem(&__tcm_start, &__tcm_end - &__tcm_start);
-	free_reserved_area(&__tcm_start, &__tcm_end, 0, "TCM link");
+	free_reserved_area(&__tcm_start, &__tcm_end, -1, "TCM link");
 #endif
 
 	poison_init_mem(__init_begin, __init_end - __init_begin);
@@ -875,7 +875,7 @@ void free_initrd_mem(unsigned long start, unsigned long end)
 {
 	if (!keep_initrd) {
 		poison_init_mem((void *)start, PAGE_ALIGN(end) - start);
-		free_reserved_area((void *)start, (void *)end, 0, "initrd");
+		free_reserved_area((void *)start, (void *)end, -1, "initrd");
 	}
 }
 
