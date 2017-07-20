@@ -354,19 +354,6 @@ static int sound_control_init(void)
 {
 	int sysfs_result;
 
-	snd_ctrl_enabled = 1;
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX6_VOL_CTL_GAIN, ZEROSUM);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_TX7_VOL_CTL_GAIN, ZEROSUM);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, ZEROSUM);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, ZEROSUM);
-	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, ZEROSUM);
-	snd_ctrl_enabled = 0;
-
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
 
@@ -384,6 +371,8 @@ static int sound_control_init(void)
 		kobject_put(sound_control_kobj);
 		return -ENOMEM;
 	}
+
+	snd_ctrl_enabled = 0;
 
 	return 0;
 }
