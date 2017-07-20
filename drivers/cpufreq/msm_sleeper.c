@@ -391,8 +391,6 @@ static int __init msm_sleeper_init(void)
 		return ret;
 	}
 
-	pr_info("%s: Device init\n", MSM_SLEEPER);
-
 	return ret;
 }
 
