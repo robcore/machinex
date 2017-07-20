@@ -30,10 +30,6 @@ extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
-#define HARDMIN (0xFFFFFFAE)
-#define HARDMAX 50
-static const int snd_ctrl_min = HARDMIN;
-static const unsigned int snd_ctrl_max = HARDMAX;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -170,8 +166,6 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
 
-	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
-
 	lval = val;
 	rval = val;
 
@@ -215,8 +209,6 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
 
-	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
-
 	lval = val;
 	rval = val;
 
@@ -259,8 +251,6 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
 
-	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
-
 	checksum = 255 - val;
 		if (val < 0) {
 			sum = 1 + val;
@@ -296,8 +286,6 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
 		return count;
-
-	mxsanitizer(val, snd_ctrl_min, snd_ctrl_max);
 
 	checksum = 255 - val;
 		if (val < 0) {
