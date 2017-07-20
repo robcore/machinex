@@ -32,6 +32,7 @@
 #include <linux/pagevec.h>
 #include <linux/namei.h>
 #include <linux/mount.h>
+#include <linux/swap.h>
 #include <linux/sched.h>
 #include <linux/kmemleak.h>
 #include <linux/xattr.h>
@@ -1710,7 +1711,6 @@ int nfs_unlink(struct inode *dir, struct dentry *dentry)
  */
 int nfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 {
-	struct pagevec lru_pvec;
 	struct page *page;
 	char *kaddr;
 	struct iattr attr;
@@ -1750,11 +1750,8 @@ int nfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	 * No big deal if we can't add this page to the page cache here.
 	 * READLINK will get the missing page from the server if needed.
 	 */
-	pagevec_init(&lru_pvec, 0);
-	if (!add_to_page_cache(page, dentry->d_inode->i_mapping, 0,
+	if (!add_to_page_cache_lru(page, dentry->d_inode->i_mapping, 0,
 							GFP_KERNEL)) {
-		pagevec_add(&lru_pvec, page);
-		pagevec_lru_add_file(&lru_pvec);
 		SetPageUptodate(page);
 		unlock_page(page);
 		/*
