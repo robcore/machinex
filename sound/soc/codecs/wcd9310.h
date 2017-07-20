@@ -196,8 +196,6 @@ extern void *tabla_mbhc_cal_btn_det_mp(const struct tabla_mbhc_btn_detect_cfg
 				       *btn_det,
 				       const enum tabla_mbhc_btn_det_mem mem);
 
-extern int sound_control_init(void);
-
 #define TABLA_MBHC_CAL_SIZE(buttons, rload) ( \
 	sizeof(enum tabla_micbias_num) + \
 	sizeof(struct tabla_mbhc_general_cfg) + \

@@ -8915,17 +8915,12 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	struct tabla_priv *tabla;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	int ret = 0;
-	int engine_ret = 0;
 	int i;
 	int ch_cnt;
 
 #ifdef CONFIG_SOUND_CONTROL
-	pr_info("tabla codec probe...\n");
-	memcpy(snd_engine_codec_ptr, codec, sizeof(*codec));
-	//snd_engine_codec_ptr = codec;
-	/*Let normal function continue if sound engine fails*/
-	if (snd_engine_codec_ptr == NULL)
-		pr_err("Failed to Allocate Sound Engine Memory!\n");
+	pr_info("Tabla Sound Engine Probe\n");
+	snd_engine_codec_ptr = codec;
 #endif
 
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
@@ -9169,12 +9164,6 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 #endif
 
 	codec->ignore_pmdown_time = 1;
-
-	/*Let normal function continue if sound engine fails*/
-	engine_ret = sound_control_init();
-	if (engine_ret)
-		pr_err("Sound Control Engine FAILED!!!!\n");
-
 	return ret;
 
 err_hphr_ocp_irq:

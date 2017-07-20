@@ -22,7 +22,6 @@
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 #include <linux/sysfs_helpers.h>
-#include "wcd9310.h"
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
 #define SOUND_CONTROL_MINOR_VERSION	3
@@ -399,9 +398,12 @@ static const struct attribute_group sound_control_attr_group =
 
 static struct kobject *sound_control_kobj;
 
-int sound_control_init(void)
+static int sound_control_init(void)
 {
-	int sysfs_result, ret = 0;
+	int sysfs_result;
+	int ret = 0;
+
+	snd_ctrl_enabled = 0;
 
 	sound_control_kobj =
 		kobject_create_and_add("sound_control_3", kernel_kobj);
@@ -410,7 +412,7 @@ int sound_control_init(void)
 		pr_err("%s sound_control_kobj create failed!\n",
 			__FUNCTION__);
 		ret = -ENOMEM;
-		goto fin;
+		goto complete;
 	}
 
 	sysfs_result = sysfs_create_group(sound_control_kobj,
@@ -420,13 +422,10 @@ int sound_control_init(void)
 		pr_info("%s sysfs create failed!\n", __FUNCTION__);
 		kobject_put(sound_control_kobj);
 		ret = -ENOMEM;
-		goto fin;
+		goto complete;
 	}
 
-	snd_ctrl_enabled = 0;
-	//snd_ctrl_locked = 1;
-
-fin:
+complete:
 	return ret;
 }
 
@@ -435,6 +434,7 @@ static void sound_control_exit(void)
 	if (sound_control_kobj != NULL)
 		kobject_put(sound_control_kobj);
 }
+module_init(sound_control_init);
 module_exit(sound_control_exit);
 
 MODULE_LICENSE("GPL v2");
