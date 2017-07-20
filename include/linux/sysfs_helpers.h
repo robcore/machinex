@@ -9,7 +9,7 @@
  *  any later version.
  */
 
-static inline int read_into(int *container, int size, const char *buf, size_t count)
+static __always_inline int read_into(int *container, int size, const char *buf, size_t count)
 {
 	int i, j, t, n;
 	i=0; j=0; t=0; n=0;
@@ -46,7 +46,7 @@ static inline int read_into(int *container, int size, const char *buf, size_t co
 	return t;
 }
 
-static void mxsanitizer(int val, int min, int max)
+static __always_inline void mxsanitizer(int val, int min, int max)
 {
 	if (val <= min)
 		val = min;
