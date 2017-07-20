@@ -397,7 +397,6 @@ static int sb_finish_set_opts(struct super_block *sb)
 		rc = root_inode->i_op->getxattr(root, XATTR_NAME_SELINUX, NULL, 0);
 		if (rc < 0 && rc != -ENODATA) {
 			if (rc != -EOPNOTSUPP) {
-				pr_debug
 				goto out;
 			}
 		}
