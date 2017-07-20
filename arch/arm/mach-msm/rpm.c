@@ -149,8 +149,6 @@ static int msm_rpm_fill_sel_masks(
 		sel = msm_rpm_map_id_to_sel(req[i].id);
 
 		if (sel > msm_rpm_data.sel_last) {
-			pr_err("%s(): RPM ID %d not defined for target\n",
-					__func__, req[i].id);
 			return -EINVAL;
 		}
 
@@ -635,9 +633,6 @@ int msm_rpm_get_status(struct msm_rpm_iv_pair *status, int count)
 
 		target_status_id = target_status(status[i].id);
 		if (target_status_id >= MSM_RPM_STATUS_ID_LAST) {
-			pr_err("%s(): Status id %d not defined for target\n",
-					__func__,
-					target_status_id);
 			rc = -EINVAL;
 			goto get_status_exit;
 		}
