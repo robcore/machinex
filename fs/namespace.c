@@ -1756,8 +1756,8 @@ static int do_loopback(struct path *path, const char *old_name,
 		return err;
 
 	err = -EINVAL;
-	if (mnt_ns_loop(&old_path))
-		goto out;
+	if (mnt_ns_loop(old_path.dentry))
+		goto out; 
 
 	mp = lock_mount(path);
 	err = PTR_ERR(mp);
