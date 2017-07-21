@@ -92,8 +92,6 @@ int create_user_ns(struct cred *new)
 	/* Leave the reference to our user_ns with the new cred. */
 	new->user_ns = ns;
 
-	update_mnt_policy(ns);
-
 	return 0;
 }
 
