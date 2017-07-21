@@ -111,9 +111,6 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
 	} else {
 		ns = task_active_pid_ns(current);
 		options = data;
-
-		if (!current_user_ns()->may_mount_proc)
-			return ERR_PTR(-EPERM);
 	}
 
 	sb = sget(fs_type, proc_test_super, proc_set_super, flags, ns);

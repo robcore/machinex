@@ -2796,8 +2796,7 @@ bool current_chrooted(void)
 	ns_root.mnt = &current->nsproxy->mnt_ns->root->mnt;
 	ns_root.dentry = ns_root.mnt->mnt_root;
 	path_get(&ns_root);
-	while (d_mountpoint(ns_root.dentry) && follow_down_one(&ns_root))
-		;
+	while (d_mountpoint(ns_root.dentry) && follow_down_one(&ns_root));
 
 	get_fs_root(current->fs, &fs_root);
 
@@ -2857,11 +2856,6 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 	struct mnt_namespace *mnt_ns = ns;
 	struct path root;
 
-	if (!ns_capable(mnt_ns->user_ns, CAP_SYS_ADMIN) ||
-	    !nsown_capable(CAP_SYS_CHROOT) ||
-	    !nsown_capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
 	if (fs->users != 1)
 		return -EINVAL;
 
@@ -2873,8 +2867,7 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 	root.mnt    = &mnt_ns->root->mnt;
 	root.dentry = mnt_ns->root->mnt.mnt_root;
 	path_get(&root);
-	while(d_mountpoint(root.dentry) && follow_down_one(&root))
-		;
+	while(d_mountpoint(root.dentry) && follow_down_one(&root));
 
 	/* Update the pwd and root */
 	set_fs_pwd(fs, &root);
