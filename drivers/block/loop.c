@@ -76,7 +76,6 @@
 #include <linux/miscdevice.h>
 #include <linux/falloc.h>
 #include "loop.h"
-#include <linux/aio.h>
 
 #include <asm/uaccess.h>
 
@@ -218,47 +217,6 @@ lo_do_transfer(struct loop_device *lo, int cmd,
 
 	return lo->transfer(lo, cmd, rpage, roffs, lpage, loffs, size, rblock);
 }
-
-#ifdef CONFIG_AIO
-static void lo_rw_aio_complete(u64 data, long res)
-{
-	struct bio *bio = (struct bio *)(uintptr_t)data;
-
-	if (res > 0)
-		res = 0;
-	else if (res < 0)
-		res = -EIO;
-
-	bio_endio(bio, res);
-}
-
-static int lo_rw_aio(struct loop_device *lo, struct bio *bio)
-{
-	struct file *file = lo->lo_backing_file;
-	struct kiocb *iocb;
-	unsigned short op;
-	struct iov_iter iter;
-	struct bio_vec *bvec;
-	size_t nr_segs;
-	loff_t pos = ((loff_t) bio->bi_iter.bi_sector << 9) + lo->lo_offset;
-
-	iocb = aio_kernel_alloc(GFP_NOIO);
-	if (!iocb)
-		return -ENOMEM;
-
-	if (bio_rw(bio) & WRITE)
-		op = IOCB_CMD_WRITE_ITER;
-	else
-		op = IOCB_CMD_READ_ITER;
-
-	nr_segs = bio_segments(bio);
-	iov_iter_init_bvec(&iter, bvec, nr_segs, bvec_length(bvec, nr_segs), 0);
-	aio_kernel_init_iter(iocb, file, op, &iter, pos);
-	aio_kernel_init_callback(iocb, lo_rw_aio_complete, (u64)(uintptr_t)bio);
-
-	return aio_kernel_submit(iocb);
-}
-#endif /* CONFIG_AIO */
 
 /**
  * __do_lo_send_write - helper for writing data to a loop device
@@ -564,14 +522,6 @@ static inline void loop_handle_bio(struct loop_device *lo, struct bio *bio)
 				goto out;
 			}
 		}
-#ifdef CONFIG_AIO
-		if (lo->lo_flags & LO_FLAGS_USE_AIO &&
-		    lo->transfer == transfer_none) {
-			ret = lo_rw_aio(lo, bio);
-			if (ret == 0)
-				return;
-		} else
-#endif
 			ret = do_bio_filebacked(lo, bio);
 
 		if ((bio_rw(bio) == WRITE) && bio->bi_rw & REQ_FUA && !ret) {
@@ -858,7 +808,7 @@ static void loop_config_discard(struct loop_device *lo)
 
 	/*
 	 * We use punch hole to reclaim the free space used by the
-	 * image a.k.a. discard. However we do support discard if
+	 * image a.k.a. discard. However we do not support discard if
 	 * encryption is enabled, because it may give an attacker
 	 * useful information.
 	 */
@@ -928,14 +878,6 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 	if (!(file->f_mode & FMODE_WRITE) || !(mode & FMODE_WRITE) ||
 	    !file->f_op->write)
 		lo_flags |= LO_FLAGS_READ_ONLY;
-
-#ifdef CONFIG_AIO
-	if (file->f_op->write_iter && file->f_op->read_iter &&
-	    mapping->a_ops->direct_IO) {
-		file->f_flags |= O_DIRECT;
-		lo_flags |= LO_FLAGS_USE_AIO;
-	}
-#endif
 
 	lo_blocksize = S_ISBLK(inode->i_mode) ?
 		inode->i_bdev->bd_block_size : PAGE_SIZE;
@@ -1142,10 +1084,10 @@ loop_set_status(struct loop_device *lo, const struct loop_info64 *info)
 {
 	int err;
 	struct loop_func_table *xfer;
-	uid_t uid = current_uid();
+	kuid_t uid = current_uid();
 
 	if (lo->lo_encrypt_key_size &&
-	    lo->lo_key_owner != uid &&
+	    !uid_eq(lo->lo_key_owner, uid) &&
 	    !capable(CAP_SYS_ADMIN))
 		return -EPERM;
 	if (lo->lo_state != Lo_bound)
