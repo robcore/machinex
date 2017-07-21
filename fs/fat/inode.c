@@ -1369,6 +1369,18 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	sbi->vol_id = (((u32)bsx->vol_id[0]) | ((u32)bsx->vol_id[1] << 8) |
 		((u32)bsx->vol_id[2] << 16) | ((u32)bsx->vol_id[3] << 24));
 
+	/* interpret volume ID as a little endian 32 bit integer */
+	if (sbi->fat_bits == 32)
+		sbi->vol_id = (((u32)b->fat32.vol_id[0]) |
+					((u32)b->fat32.vol_id[1] << 8) |
+					((u32)b->fat32.vol_id[2] << 16) |
+					((u32)b->fat32.vol_id[3] << 24));
+	else /* fat 16 or 12 */
+		sbi->vol_id = (((u32)b->fat16.vol_id[0]) |
+					((u32)b->fat16.vol_id[1] << 8) |
+					((u32)b->fat16.vol_id[2] << 16) |
+					((u32)b->fat16.vol_id[3] << 24));
+
 	sbi->dir_per_block = sb->s_blocksize / sizeof(struct msdos_dir_entry);
 	sbi->dir_per_block_bits = ffs(sbi->dir_per_block) - 1;
 
