@@ -558,7 +558,7 @@ out_cleanup:
 out_freepcpu:
 	free_percpu(ctx->cpu);
 out_freeref:
-	percpu_ref_exit(&ctx->reqs);
+	//percpu_ref_exit(&ctx->reqs);
 	free_percpu(&ctx->users);
 out_freectx:
 	if (ctx->aio_ring_file)
