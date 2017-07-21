@@ -2924,14 +2924,8 @@ int vmtruncate_range(struct inode *inode, loff_t lstart, loff_t lend)
 
 /* common code */
 
-static char *shmem_dname(struct dentry *dentry, char *buffer, int buflen)
-{
-	return dynamic_dname(dentry, buffer, buflen, "/%s (deleted)",
-				dentry->d_name.name);
-}
-
 static struct dentry_operations anon_ops = {
-	.d_dname = shmem_dname
+	.d_dname = simple_dname
 };
 
 /**
