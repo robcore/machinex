@@ -51,4 +51,11 @@ extern int orderly_poweroff(bool force);
 extern void emergency_restart(void);
 #include <asm/emergency-restart.h>
 
+enum reboot_mode {
+	REBOOT_COLD = 0,
+	REBOOT_WARM,
+	REBOOT_HARD,
+	REBOOT_SOFT,
+};
+
 #endif /* _LINUX_REBOOT_H */
