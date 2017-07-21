@@ -163,7 +163,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
+	if (!snd_ctrl_enabled)
 		return count;
 
 	lval = val;
@@ -206,7 +206,7 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
+	if (!snd_ctrl_enabled)
 		return count;
 
 	lval = val;
@@ -248,7 +248,7 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
+	if (!snd_ctrl_enabled)
 		return count;
 
 	checksum = 255 - val;
@@ -284,7 +284,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &val);
 
-	if (!snd_ctrl_enabled || snd_engine_codec_ptr == NULL)
+	if (!snd_ctrl_enabled)
 		return count;
 
 	checksum = 255 - val;
@@ -399,8 +399,7 @@ static int sound_control_init(void)
 	if (!sound_control_kobj) {
 		pr_err("%s sound_control_kobj create failed!\n",
 			__FUNCTION__);
-		ret = -ENOMEM;
-		goto complete;
+		return -ENOMEM;
 	}
 
 	sysfs_result = sysfs_create_group(sound_control_kobj,
@@ -409,12 +408,10 @@ static int sound_control_init(void)
 	if (sysfs_result) {
 		pr_info("%s sysfs create failed!\n", __FUNCTION__);
 		kobject_put(sound_control_kobj);
-		ret = -ENOMEM;
-		goto complete;
+		return -ENOMEM;
 	}
 
-complete:
-	return ret;
+	return 0;
 }
 
 static void sound_control_exit(void)
