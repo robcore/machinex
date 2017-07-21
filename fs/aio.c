@@ -510,7 +510,7 @@ static struct kioctx *ioctx_alloc(unsigned nr_events)
 
 	ctx->max_reqs = nr_events;
 
-	if (percpu_ref_init(&ctx->users, free_ioctx_ref))
+	if (percpu_ref_init(&ctx->users, free_ioctx_ref, GFP_KERNEL))
 		goto out_freectx;
 
 	spin_lock_init(&ctx->ctx_lock);
