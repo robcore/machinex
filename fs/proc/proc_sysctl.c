@@ -365,22 +365,29 @@ void register_sysctl_root(struct ctl_table_root *root)
 }
 
 /*
- * sysctl_perm [*strike* does NOT*strike] DOES (does now, fucktwats)
- * grant the superuser all rights automatically, because
+ * sysctl_perm does NOT grant the superuser all rights automatically, because
  * some sysctl variables are readonly even to root.
  */
 
 static int test_perm(int mode, int op)
 {
-	return 0;
+	if (!current_euid())
+		mode >>= 6;
+	else if (in_egroup_p(0))
+		mode >>= 3;
+	if ((op & ~mode & (MAY_READ|MAY_WRITE|MAY_EXEC)) == 0)
+		return 0;
+	return -EACCES;
 }
 
-static int sysctl_perm(struct ctl_table_header *head, struct ctl_table *table, int op)
+static int sysctl_perm(struct ctl_table_root *root, struct ctl_table *table, int op)
 {
-	struct ctl_table_root *root = head->root;
 	int mode;
 
-	mode = root->permissions(head, table);
+	if (root->permissions)
+		mode = root->permissions(root, current->nsproxy, table);
+	else
+		mode = table->mode;
 
 	return test_perm(mode, op);
 }
@@ -475,11 +482,19 @@ static ssize_t proc_sys_call_handler(struct file *filp, void __user *buf,
 	struct inode *inode = file_inode(filp);
 	struct ctl_table_header *head = grab_header(inode);
 	struct ctl_table *table = PROC_I(inode)->sysctl_entry;
-	ssize_t error = 0;
+	ssize_t error;
 	size_t res;
 
 	if (IS_ERR(head))
 		return PTR_ERR(head);
+
+	/*
+	 * At this point we know that the sysctl was not unregistered
+	 * and won't be until we finish.
+	 */
+	error = -EPERM;
+	if (sysctl_perm(head->root, table, write ? MAY_WRITE : MAY_READ))
+		goto out;
 
 	/* if that can happen at all, it should be -EINVAL, not -EISDIR */
 	error = -EINVAL;
@@ -685,9 +700,9 @@ static int proc_sys_permission(struct inode *inode, int mask)
 
 	table = PROC_I(inode)->sysctl_entry;
 	if (!table) /* global root - r-xr-xr-x */
-		error = 0;
+		error = mask & MAY_WRITE ? -EACCES : 0;
 	else /* Use the permissions on the sysctl table entry */
-		error = sysctl_perm(head, table, mask & ~MAY_NOT_BLOCK);
+		error = sysctl_perm(head->root, table, mask & ~MAY_NOT_BLOCK);
 
 	sysctl_head_finish(head);
 	return error;
@@ -697,6 +712,9 @@ static int proc_sys_setattr(struct dentry *dentry, struct iattr *attr)
 {
 	struct inode *inode = dentry->d_inode;
 	int error;
+
+	if (attr->ia_valid & (ATTR_MODE | ATTR_UID | ATTR_GID))
+		return -EPERM;
 
 	error = inode_change_ok(inode, attr);
 	if (error)
@@ -991,6 +1009,10 @@ static int sysctl_check_table(const char *path, struct ctl_table *table)
 		}
 		if (!table->proc_handler)
 			err = sysctl_err(path, table, "No proc_handler");
+
+		if ((table->mode & (S_IRUGO|S_IWUGO)) != table->mode)
+			err = sysctl_err(path, table, "bogus .mode 0%o",
+				table->mode);
 	}
 	return err;
 }

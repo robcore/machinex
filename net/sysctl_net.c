@@ -42,13 +42,16 @@ static int is_seen(struct ctl_table_set *set)
 }
 
 /* Return standard mode bits for table entry. */
-static int net_ctl_permissions(struct ctl_table_header *head,
+static int net_ctl_permissions(struct ctl_table_root *root,
+			       struct nsproxy *nsproxy,
 			       struct ctl_table *table)
 {
 	/* Allow network administrator to have same access as root. */
-	int mode = (table->mode >> 6) & 7;
-	return (mode << 6) | (mode << 3) | mode;
-
+	if (capable(CAP_NET_ADMIN)) {
+		int mode = (table->mode >> 6) & 7;
+		return (mode << 6) | (mode << 3) | mode;
+	}
+	return table->mode;
 }
 
 static struct ctl_table_root net_sysctl_root = {
@@ -56,10 +59,13 @@ static struct ctl_table_root net_sysctl_root = {
 	.permissions = net_ctl_permissions,
 };
 
-static int net_ctl_ro_header_perms(struct ctl_table_header *head, 
-				  struct ctl_table *table)
+static int net_ctl_ro_header_perms(struct ctl_table_root *root,
+		struct nsproxy *namespaces, struct ctl_table *table)
 {
-	return table->mode;
+	if (net_eq(namespaces->net_ns, &init_net))
+		return table->mode;
+	else
+		return table->mode & ~0222;
 }
 
 static struct ctl_table_root net_sysctl_ro_root = {
