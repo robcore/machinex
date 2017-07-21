@@ -512,7 +512,7 @@ config ZBUD
 	  deterministic reclaim properties that make it preferable to a higher
 	  density approach when reclaim will be used.
 
-config ZSWAP
+config ZSWAPP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
 	select CRYPTO_LZO
@@ -581,7 +581,7 @@ config PGTABLE_MAPPING
 	  You can check speed with zsmalloc benchmark[1].
 	  [1] https://github.com/spartacus06/zsmalloc
 
-config ZSWAP_NEW
+config ZSWAP
 	bool "In-kernel swap page compression"
 	depends on FRONTSWAP && CRYPTO
 	select CRYPTO_LZO
@@ -597,27 +597,27 @@ config ZSWAP_NEW
 
 config ZSWAP_ENABLE_WRITEBACK
 	bool "Enable writeback"
-	depends on ZSWAP_NEW
+	depends on ZSWAP
 	default n
 
 config DIRECT_RECLAIM_FILE_PAGES_ONLY
 	bool "Reclaim file pages only on direct reclaim path"
-	depends on ZSWAP_NEW
+	depends on ZSWAP
 	default n
 
 config INCREASE_MAXIMUM_SWAPPINESS
 	bool "Allow swappiness to be set up to 200"
-	depends on ZSWAP_NEW
+	depends on ZSWAP
 	default n
 
 config FIX_INACTIVE_RATIO
 	bool "Fix active:inactive anon ratio to 1:1"
-	depends on ZSWAP_NEW
+	depends on ZSWAP
 	default n
 
 config TIGHT_PGDAT_BALANCE
 	bool "Set more tight balanced condition to kswapd"
-	depends on ZSWAP_NEW
+	depends on ZSWAP
 	default n
 
 config SWAP_ENABLE_READAHEAD

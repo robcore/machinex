@@ -1,4 +1,4 @@
 config VNSWAP
 	tristate "Fake device for swap"
-	depends on BLOCK && SYSFS && ZSWAP_NEW
+	depends on BLOCK && SYSFS && ZSWAP
 	default n
