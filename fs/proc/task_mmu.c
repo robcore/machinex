@@ -764,8 +764,9 @@ enum clear_refs_types {
 	CLEAR_REFS_ANON,
 	CLEAR_REFS_MAPPED,
 	CLEAR_REFS_SOFT_DIRTY,
-	CLEAR_REFS_LAST,
 	CLEAR_REFS_MM_HIWATER_RSS,
+	CLEAR_REFS_LAST,
+
 };
 
 struct clear_refs_private {
