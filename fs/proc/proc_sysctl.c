@@ -372,23 +372,15 @@ void register_sysctl_root(struct ctl_table_root *root)
 
 static int test_perm(int mode, int op)
 {
-	if (!current_euid())
-		mode >>= 6;
-	else if (in_egroup_p(0))
-		mode >>= 3;
-	if ((op & ~mode & (MAY_READ|MAY_WRITE|MAY_EXEC)) == 0)
-		return 0;
 	return 0;
 }
 
-static int sysctl_perm(struct ctl_table_root *root, struct ctl_table *table, int op)
+static int sysctl_perm(struct ctl_table_header *head, struct ctl_table *table, int op)
 {
+	struct ctl_table_root *root = head->root;
 	int mode;
 
-	if (root->permissions)
-		mode = root->permissions(root, current->nsproxy, table);
-	else
-		mode = table->mode;
+	mode = root->permissions(head, table);
 
 	return test_perm(mode, op);
 }
@@ -483,7 +475,7 @@ static ssize_t proc_sys_call_handler(struct file *filp, void __user *buf,
 	struct inode *inode = file_inode(filp);
 	struct ctl_table_header *head = grab_header(inode);
 	struct ctl_table *table = PROC_I(inode)->sysctl_entry;
-	ssize_t error;
+	ssize_t error = 0;
 	size_t res;
 
 	if (IS_ERR(head))
@@ -695,7 +687,7 @@ static int proc_sys_permission(struct inode *inode, int mask)
 	if (!table) /* global root - r-xr-xr-x */
 		error = 0;
 	else /* Use the permissions on the sysctl table entry */
-		error = sysctl_perm(head->root, table, mask & ~MAY_NOT_BLOCK);
+		error = sysctl_perm(head, table, mask & ~MAY_NOT_BLOCK);
 
 	sysctl_head_finish(head);
 	return error;
@@ -999,10 +991,6 @@ static int sysctl_check_table(const char *path, struct ctl_table *table)
 		}
 		if (!table->proc_handler)
 			err = sysctl_err(path, table, "No proc_handler");
-
-		if ((table->mode & (S_IRUGO|S_IWUGO)) != table->mode)
-			err = sysctl_err(path, table, "bogus .mode 0%o",
-				table->mode);
 	}
 	return err;
 }
