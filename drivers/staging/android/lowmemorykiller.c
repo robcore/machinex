@@ -42,10 +42,10 @@
 #include <linux/memory.h>
 #include <linux/memory_hotplug.h>
 #include <linux/ratelimit.h>
-#if defined(CONFIG_ZSWAP)
+#if defined(CONFIG_ZSWAP_NEW)
 #include <linux/swap.h>
 #include <linux/fs.h>
-#endif /* CONFIG_ZSWAP */
+#endif /* CONFIG_ZSWAP_NEW */
 
 #ifdef ENHANCED_LMK_ROUTINE
 #define ENHANCED_LMK_ROUTINE
@@ -165,7 +165,7 @@ static struct task_struct *pick_last_task(void);
 
 static DEFINE_MUTEX(scan_mutex);
 
-#if defined(CONFIG_ZSWAP)
+#if defined(CONFIG_ZSWAP_NEW)
 extern atomic_t zswap_pool_pages;
 extern atomic_t zswap_stored_pages;
 #endif
@@ -295,7 +295,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			continue;
 		}
 		tasksize = get_mm_rss(p->mm);
-#if defined(CONFIG_ZSWAP)
+#if defined(CONFIG_ZSWAP_NEW)
 		if (atomic_read(&zswap_stored_pages)) {
 			lowmem_print(3, "shown tasksize : %d\n", tasksize);
 			tasksize += atomic_read(&zswap_pool_pages) * get_mm_counter(p->mm, MM_SWAPENTS)
