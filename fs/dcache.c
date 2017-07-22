@@ -326,15 +326,80 @@ static void dentry_unlink_inode(struct dentry * dentry)
 }
 
 /*
+ * The DCACHE_LRU_LIST bit is set whenever the 'd_lru' entry
+ * is in use - which includes both the "real" per-superblock
+ * LRU list _and_ the DCACHE_SHRINK_LIST use.
+ *
+ * The DCACHE_SHRINK_LIST bit is set whenever the dentry is
+ * on the shrink list (ie not on the superblock LRU list).
+ *
+ * The per-cpu "nr_dentry_unused" counters are updated with
+ * the DCACHE_LRU_LIST bit.
+ *
+ * These helper functions make sure we always follow the
+ * rules. d_lock must be held by the caller.
+ */
+#define D_FLAG_VERIFY(dentry,x) WARN_ON_ONCE(((dentry)->d_flags & (DCACHE_LRU_LIST | DCACHE_SHRINK_LIST)) != (x))
+static void d_lru_add(struct dentry *dentry)
+{
+	D_FLAG_VERIFY(dentry, 0);
+	dentry->d_flags |= DCACHE_LRU_LIST;
+	this_cpu_inc(nr_dentry_unused);
+	WARN_ON_ONCE(!list_lru_add(&dentry->d_sb->s_dentry_lru, &dentry->d_lru));
+}
+
+static void d_lru_del(struct dentry *dentry)
+{
+	D_FLAG_VERIFY(dentry, DCACHE_LRU_LIST);
+	dentry->d_flags &= ~DCACHE_LRU_LIST;
+	this_cpu_dec(nr_dentry_unused);
+	WARN_ON_ONCE(!list_lru_del(&dentry->d_sb->s_dentry_lru, &dentry->d_lru));
+}
+
+static void d_shrink_del(struct dentry *dentry)
+{
+	D_FLAG_VERIFY(dentry, DCACHE_SHRINK_LIST | DCACHE_LRU_LIST);
+	list_del_init(&dentry->d_lru);
+	dentry->d_flags &= ~(DCACHE_SHRINK_LIST | DCACHE_LRU_LIST);
+	this_cpu_dec(nr_dentry_unused);
+}
+
+static void d_shrink_add(struct dentry *dentry, struct list_head *list)
+{
+	D_FLAG_VERIFY(dentry, 0);
+	list_add(&dentry->d_lru, list);
+	dentry->d_flags |= DCACHE_SHRINK_LIST | DCACHE_LRU_LIST;
+	this_cpu_inc(nr_dentry_unused);
+}
+
+/*
+ * These can only be called under the global LRU lock, ie during the
+ * callback for freeing the LRU list. "isolate" removes it from the
+ * LRU lists entirely, while shrink_move moves it to the indicated
+ * private list.
+ */
+static void d_lru_isolate(struct dentry *dentry)
+{
+	D_FLAG_VERIFY(dentry, DCACHE_LRU_LIST);
+	dentry->d_flags &= ~DCACHE_LRU_LIST;
+	this_cpu_dec(nr_dentry_unused);
+	list_del_init(&dentry->d_lru);
+}
+
+static void d_lru_shrink_move(struct dentry *dentry, struct list_head *list)
+{
+	D_FLAG_VERIFY(dentry, DCACHE_LRU_LIST);
+	dentry->d_flags |= DCACHE_SHRINK_LIST;
+	list_move_tail(&dentry->d_lru, list);
+}
+
+/*
  * dentry_lru_(add|del)_list) must be called with d_lock held.
  */
 static void dentry_lru_add(struct dentry *dentry)
 {
-	if (unlikely(!(dentry->d_flags & DCACHE_LRU_LIST))) {
-		if (list_lru_add(&dentry->d_sb->s_dentry_lru, &dentry->d_lru))
-			this_cpu_inc(nr_dentry_unused);
-		dentry->d_flags |= DCACHE_LRU_LIST;
-	}
+	if (unlikely(!(dentry->d_flags & DCACHE_LRU_LIST)))
+		d_lru_add(dentry);
 }
 
 /*
@@ -346,15 +411,11 @@ static void dentry_lru_add(struct dentry *dentry)
  */
 static void dentry_lru_del(struct dentry *dentry)
 {
-	if (dentry->d_flags & DCACHE_SHRINK_LIST) {
-		list_del_init(&dentry->d_lru);
-		dentry->d_flags &= ~DCACHE_SHRINK_LIST;
-		return;
+	if (dentry->d_flags & DCACHE_LRU_LIST) {
+		if (dentry->d_flags & DCACHE_SHRINK_LIST)
+			return d_shrink_del(dentry);
+		d_lru_del(dentry);
 	}
-
-	if (list_lru_del(&dentry->d_sb->s_dentry_lru, &dentry->d_lru))
-		this_cpu_dec(nr_dentry_unused);
-	dentry->d_flags &= ~DCACHE_LRU_LIST;
 }
 
 /**
@@ -450,7 +511,7 @@ EXPORT_SYMBOL(d_drop);
  * If ref is non-zero, then decrement the refcount too.
  * Returns dentry requiring refcount drop, or NULL if we're done.
  */
-static inline struct dentry *
+static struct dentry *
 dentry_kill(struct dentry *dentry, int unlock_on_failure)
 	__releases(dentry->d_lock)
 {
@@ -537,7 +598,8 @@ repeat:
  	if (d_unhashed(dentry))
 		goto kill_it;
 
-	dentry->d_flags |= DCACHE_REFERENCED;
+	if (!(dentry->d_flags & DCACHE_REFERENCED))
+		dentry->d_flags |= DCACHE_REFERENCED;
 	dentry_lru_add(dentry);
 
 	dentry->d_lockref.count--;
@@ -805,6 +867,12 @@ static void shrink_dentry_list(struct list_head *list)
 		dentry = list_entry_rcu(list->prev, struct dentry, d_lru);
 		if (&dentry->d_lru == list)
 			break; /* empty */
+
+		/*
+		 * Get the dentry lock, and re-verify that the dentry is
+		 * this on the shrinking list. If it is, we know that
+		 * DCACHE_SHRINK_LIST and DCACHE_LRU_LIST are set.
+		 */
 		spin_lock(&dentry->d_lock);
 		if (dentry != list_entry(list->prev, struct dentry, d_lru)) {
 			spin_unlock(&dentry->d_lock);
@@ -816,8 +884,7 @@ static void shrink_dentry_list(struct list_head *list)
 		 * to the LRU here, so we can simply remove it from the list
 		 * here regardless of whether it is referenced or not.
 		 */
-		list_del_init(&dentry->d_lru);
-		dentry->d_flags &= ~DCACHE_SHRINK_LIST;
+		d_shrink_del(dentry);
 
 		/*
 		 * We found an inuse dentry which was not removed from
@@ -829,12 +896,20 @@ static void shrink_dentry_list(struct list_head *list)
 		}
 		rcu_read_unlock();
 
+		/*
+		 * If 'try_to_prune()' returns a dentry, it will
+		 * be the same one we passed in, and d_lock will
+		 * have been held the whole time, so it will not
+		 * have been added to any other lists. We failed
+		 * to get the inode lock.
+		 *
+		 * We just add it back to the shrink list.
+		 */
 		dentry = try_prune_one_dentry(dentry);
 
 		rcu_read_lock();
 		if (dentry) {
-			dentry->d_flags |= DCACHE_SHRINK_LIST;
-			list_add(&dentry->d_lru, list);
+			d_shrink_add(dentry, list);
 			spin_unlock(&dentry->d_lock);
 		}
 	}
@@ -862,7 +937,7 @@ dentry_lru_isolate(struct list_head *item, spinlock_t *lru_lock, void *arg)
 	 * another pass through the LRU.
 	 */
 	if (dentry->d_lockref.count) {
-		list_del_init(&dentry->d_lru);
+		d_lru_isolate(dentry);
 		spin_unlock(&dentry->d_lock);
 		return LRU_REMOVED;
 	}
@@ -893,9 +968,7 @@ dentry_lru_isolate(struct list_head *item, spinlock_t *lru_lock, void *arg)
 		return LRU_ROTATE;
 	}
 
-	dentry->d_flags |= DCACHE_SHRINK_LIST;
-	list_move_tail(&dentry->d_lru, freeable);
-	this_cpu_dec(nr_dentry_unused);
+	d_lru_shrink_move(dentry, freeable);
 	spin_unlock(&dentry->d_lock);
 
 	return LRU_REMOVED;
@@ -940,9 +1013,7 @@ static enum lru_status dentry_lru_isolate_shrink(struct list_head *item,
 	if (!spin_trylock(&dentry->d_lock))
 		return LRU_SKIP;
 
-	dentry->d_flags |= DCACHE_SHRINK_LIST;
-	list_move_tail(&dentry->d_lru, freeable);
-	this_cpu_dec(nr_dentry_unused);
+	d_lru_shrink_move(dentry, freeable);
 	spin_unlock(&dentry->d_lock);
 
 	return LRU_REMOVED;
@@ -1235,14 +1306,6 @@ rename_retry_unlocked:
  * list is non-empty and continue searching.
  */
 
-/**
- * have_submounts - check for mounts over a dentry
- * @parent: dentry to check.
- *
- * Return true if the parent or its subdirectories contain
- * a mount point
- */
-
 static enum d_walk_ret check_mount(void *data, struct dentry *dentry)
 {
 	int *ret = data;
@@ -1253,6 +1316,13 @@ static enum d_walk_ret check_mount(void *data, struct dentry *dentry)
 	return D_WALK_CONTINUE;
 }
 
+/**
+ * have_submounts - check for mounts over a dentry
+ * @parent: dentry to check.
+ *
+ * Return true if the parent or its subdirectories contain
+ * a mount point
+ */
 int have_submounts(struct dentry *parent)
 {
 	int ret = 0;
@@ -1336,9 +1406,13 @@ static enum d_walk_ret select_collect(void *_data, struct dentry *dentry)
 	if (dentry->d_lockref.count) {
 		dentry_lru_del(dentry);
 	} else if (!(dentry->d_flags & DCACHE_SHRINK_LIST)) {
-		dentry_lru_del(dentry);
-		list_add_tail(&dentry->d_lru, &data->dispose);
-		dentry->d_flags |= DCACHE_SHRINK_LIST;
+		/*
+		 * We can't use d_lru_shrink_move() because we
+		 * need to get the global LRU lock and do the
+		 * LRU accounting.
+		 */
+		d_lru_del(dentry);
+		d_shrink_add(dentry, &data->dispose);
 		data->found++;
 		ret = D_WALK_NORETRY;
 	}
@@ -1377,6 +1451,91 @@ void shrink_dcache_parent(struct dentry *parent)
 	}
 }
 EXPORT_SYMBOL(shrink_dcache_parent);
+
+static enum d_walk_ret umount_collect(void *_data, struct dentry *dentry)
+{
+	struct select_data *data = _data;
+	enum d_walk_ret ret = D_WALK_CONTINUE;
+
+	if (dentry->d_lockref.count) {
+		dentry_lru_del(dentry);
+		if (likely(!list_empty(&dentry->d_subdirs)))
+			goto out;
+		if (dentry == data->start && dentry->d_lockref.count == 1)
+			goto out;
+		printk(KERN_ERR
+		       "BUG: Dentry %p{i=%lx,n=%s}"
+		       " still in use (%d)"
+		       " [unmount of %s %s]\n",
+		       dentry,
+		       dentry->d_inode ?
+		       dentry->d_inode->i_ino : 0UL,
+		       dentry->d_name.name,
+		       dentry->d_lockref.count,
+		       dentry->d_sb->s_type->name,
+		       dentry->d_sb->s_id);
+		BUG();
+	} else if (!(dentry->d_flags & DCACHE_SHRINK_LIST)) {
+		/*
+		 * We can't use d_lru_shrink_move() because we
+		 * need to get the global LRU lock and do the
+		 * LRU accounting.
+		 */
+		if (dentry->d_flags & DCACHE_LRU_LIST)
+			d_lru_del(dentry);
+		d_shrink_add(dentry, &data->dispose);
+		data->found++;
+		ret = D_WALK_NORETRY;
+	}
+out:
+	if (data->found && need_resched())
+		ret = D_WALK_QUIT;
+	return ret;
+}
+
+/*
+ * destroy the dentries attached to a superblock on unmounting
+ */
+void shrink_dcache_for_umount(struct super_block *sb)
+{
+	struct dentry *dentry;
+
+	if (down_read_trylock(&sb->s_umount))
+		BUG();
+
+	dentry = sb->s_root;
+	sb->s_root = NULL;
+	for (;;) {
+		struct select_data data;
+
+		INIT_LIST_HEAD(&data.dispose);
+		data.start = dentry;
+		data.found = 0;
+
+		d_walk(dentry, &data, umount_collect, NULL);
+		if (!data.found)
+			break;
+
+		shrink_dentry_list(&data.dispose);
+		cond_resched();
+	}
+	d_drop(dentry);
+	dput(dentry);
+
+	while (!hlist_bl_empty(&sb->s_anon)) {
+		struct select_data data;
+		dentry = hlist_bl_entry(hlist_bl_first(&sb->s_anon), struct dentry, d_hash);
+
+		INIT_LIST_HEAD(&data.dispose);
+		data.start = NULL;
+		data.found = 0;
+
+		d_walk(dentry, &data, umount_collect, NULL);
+		if (data.found)
+			shrink_dentry_list(&data.dispose);
+		cond_resched();
+	}
+}
 
 static enum d_walk_ret check_and_collect(void *_data, struct dentry *dentry)
 {
@@ -1700,6 +1859,33 @@ struct dentry *d_instantiate_unique(struct dentry *entry, struct inode *inode)
 }
 
 EXPORT_SYMBOL(d_instantiate_unique);
+
+/**
+ * d_instantiate_no_diralias - instantiate a non-aliased dentry
+ * @entry: dentry to complete
+ * @inode: inode to attach to this dentry
+ *
+ * Fill in inode information in the entry.  If a directory alias is found, then
+ * return an error (and drop inode).  Together with d_materialise_unique() this
+ * guarantees that a directory inode may never have more than one alias.
+ */
+int d_instantiate_no_diralias(struct dentry *entry, struct inode *inode)
+{
+	BUG_ON(!hlist_unhashed(&entry->d_alias));
+
+	spin_lock(&inode->i_lock);
+	if (S_ISDIR(inode->i_mode) && !hlist_empty(&inode->i_dentry)) {
+		spin_unlock(&inode->i_lock);
+		iput(inode);
+		return -EBUSY;
+	}
+	__d_instantiate(entry, inode);
+	spin_unlock(&inode->i_lock);
+	security_d_instantiate(entry, inode);
+
+	return 0;
+}
+EXPORT_SYMBOL(d_instantiate_no_diralias);
 
 struct dentry *d_make_root(struct inode *root_inode)
 {
@@ -2476,7 +2662,7 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	dentry_lock_for_move(dentry, target);
 
 	write_seqcount_begin(&dentry->d_seq);
-	write_seqcount_begin(&target->d_seq);
+	write_seqcount_begin_nested(&target->d_seq, DENTRY_D_LOCK_NESTED);
 
 	/* __d_drop does write_seqcount_barrier, but they're OK to nest. */
 
@@ -2608,7 +2794,7 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	dentry_lock_for_move(anon, dentry);
 
 	write_seqcount_begin(&dentry->d_seq);
-	write_seqcount_begin(&anon->d_seq);
+	write_seqcount_begin_nested(&anon->d_seq, DENTRY_D_LOCK_NESTED);
 
 	dparent = dentry->d_parent;
 
@@ -2791,6 +2977,7 @@ static int prepend_path(const struct path *path,
 	char *bptr;
 	int blen;
 
+	br_read_lock(&vfsmount_lock);
 	rcu_read_lock();
 restart:
 	bptr = *buffer;
@@ -2837,6 +3024,7 @@ restart:
 		goto restart;
 	}
 	done_seqretry(&rename_lock, seq);
+	br_read_unlock(&vfsmount_lock);
 
 	if (error >= 0 && bptr == *buffer) {
 		if (--blen < 0)
@@ -2873,9 +3061,7 @@ char *__d_path(const struct path *path,
 	int error;
 
 	prepend(&res, &buflen, "\0", 1);
-	br_read_lock(&vfsmount_lock);
 	error = prepend_path(path, root, &res, &buflen);
-	br_read_unlock(&vfsmount_lock);
 
 	if (error < 0)
 		return ERR_PTR(error);
@@ -2892,9 +3078,7 @@ char *d_absolute_path(const struct path *path,
 	int error;
 
 	prepend(&res, &buflen, "\0", 1);
-	br_read_lock(&vfsmount_lock);
 	error = prepend_path(path, &root, &res, &buflen);
-	br_read_unlock(&vfsmount_lock);
 
 	if (error > 1)
 		error = -EINVAL;
@@ -2923,6 +3107,16 @@ static int path_with_deleted(const struct path *path,
 static int prepend_unreachable(char **buffer, int *buflen)
 {
 	return prepend(buffer, buflen, "(unreachable)", 13);
+}
+
+static void get_fs_root_rcu(struct fs_struct *fs, struct path *root)
+{
+	unsigned seq;
+
+	do {
+		seq = read_seqcount_begin(&fs->seq);
+		*root = fs->root;
+	} while (read_seqcount_retry(&fs->seq, seq));
 }
 
 /**
@@ -2957,13 +3151,13 @@ char *d_path(const struct path *path, char *buf, int buflen)
 	if (path->dentry->d_op && path->dentry->d_op->d_dname)
 		return path->dentry->d_op->d_dname(path->dentry, buf, buflen);
 
-	get_fs_root(current->fs, &root);
-	br_read_lock(&vfsmount_lock);
+	rcu_read_lock();
+	get_fs_root_rcu(current->fs, &root);
 	error = path_with_deleted(path, &root, &res, &buflen);
-	br_read_unlock(&vfsmount_lock);
+	rcu_read_unlock();
+
 	if (error < 0)
 		res = ERR_PTR(error);
-	path_put(&root);
 	return res;
 }
 EXPORT_SYMBOL(d_path);
@@ -3071,15 +3265,16 @@ Elong:
 	return ERR_PTR(-ENAMETOOLONG);
 }
 
-static inline void get_fs_root_and_pwd(struct fs_struct *fs, struct path *root,
-				       struct path *pwd)
+static void get_fs_root_and_pwd_rcu(struct fs_struct *fs, struct path *root,
+				    struct path *pwd)
 {
-	spin_lock(&fs->lock);
-	*root = fs->root;
-	path_get(root);
-	*pwd = fs->pwd;
-	path_get(pwd);
-	spin_unlock(&fs->lock);
+	unsigned seq;
+
+	do {
+		seq = read_seqcount_begin(&fs->seq);
+		*root = fs->root;
+		*pwd = fs->pwd;
+	} while (read_seqcount_retry(&fs->seq, seq));
 }
 
 /*
@@ -3104,23 +3299,23 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 {
 	int error;
 	struct path pwd, root;
-	char *page = (char *) __get_free_page(GFP_USER);
+	char *page = __getname();
 
 	if (!page)
 		return -ENOMEM;
 
-	get_fs_root_and_pwd(current->fs, &root, &pwd);
+	rcu_read_lock();
+	get_fs_root_and_pwd_rcu(current->fs, &root, &pwd);
 
 	error = -ENOENT;
-	br_read_lock(&vfsmount_lock);
 	if (!d_unlinked(pwd.dentry)) {
 		unsigned long len;
-		char *cwd = page + PAGE_SIZE;
-		int buflen = PAGE_SIZE;
+		char *cwd = page + PATH_MAX;
+		int buflen = PATH_MAX;
 
 		prepend(&cwd, &buflen, "\0", 1);
 		error = prepend_path(&pwd, &root, &cwd, &buflen);
-		br_read_unlock(&vfsmount_lock);
+		rcu_read_unlock();
 
 		if (error < 0)
 			goto out;
@@ -3133,20 +3328,18 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 		}
 
 		error = -ERANGE;
-		len = PAGE_SIZE + page - cwd;
+		len = PATH_MAX + page - cwd;
 		if (len <= size) {
 			error = len;
 			if (copy_to_user(buf, cwd, len))
 				error = -EFAULT;
 		}
 	} else {
-		br_read_unlock(&vfsmount_lock);
+		rcu_read_unlock();
 	}
 
 out:
-	path_put(&pwd);
-	path_put(&root);
-	free_page((unsigned long) page);
+	__putname(page);
 	return error;
 }
 
