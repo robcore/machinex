@@ -400,7 +400,8 @@ static const struct super_operations nfs4_sops = {
 #endif
 
 static struct shrinker acl_shrinker = {
-	.shrink		= nfs_access_cache_shrinker,
+	.count_objects	= nfs_access_cache_count,
+	.scan_objects	= nfs_access_cache_scan,
 	.seeks		= DEFAULT_SEEKS,
 };
 
