@@ -185,7 +185,6 @@ static inline int dentry_string_cmp(const unsigned char *cs, const unsigned char
 		tcount--;
 	} while (tcount);
 	return 0;
-#endif
 }
 
 #endif
