@@ -307,10 +307,10 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 static ssize_t sound_control_register_list_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "Headphone Left: %u\n, \
-						 Headphone Right: %u\n, \
-						 Speaker: %u\n, \
-						 In Call Mic: %u\n, \
+	return sprintf(buf, "Headphone Left: %u\n \
+						 Headphone Right: %u\n \
+						 Speaker: %u\n \
+						 In Call Mic: %u\n \
 						 Camera Mic: %u\n", \
 			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, \
 			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, \
