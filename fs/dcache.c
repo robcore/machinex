@@ -2729,9 +2729,9 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
 
 /**
  * prepend_name - prepend a pathname in front of current buffer pointer
- * buffer: buffer pointer
- * buflen: allocated length of the buffer
- * name:   name string and length qstr structure
+ * @buffer: buffer pointer
+ * @buflen: allocated length of the buffer
+ * @name:   name string and length qstr structure
  *
  * With RCU path tracing, it may race with d_move(). Use ACCESS_ONCE() to
  * make sure that either the old or the new name pointer and length are
@@ -2769,14 +2769,15 @@ static int prepend_name(char **buffer, int *buflen, struct qstr *name)
  * @buffer: pointer to the end of the buffer
  * @buflen: pointer to buffer length
  *
- * The function tries to write out the pathname without taking any lock other
- * than the RCU read lock to make sure that dentries won't go away. It only
- * checks the sequence number of the global rename_lock as any change in the
- * dentry's d_seq will be preceded by changes in the rename_lock sequence
- * number. If the sequence number had been change, it will restart the whole
- * pathname back-tracing sequence again. It performs a total of 3 trials of
- * lockless back-tracing sequences before falling back to take the
- * rename_lock.
+ * The function will first try to write out the pathname without taking any
+ * lock other than the RCU read lock to make sure that dentries won't go away.
+ * It only checks the sequence number of the global rename_lock as any change
+ * in the dentry's d_seq will be preceded by changes in the rename_lock
+ * sequence number. If the sequence number had been changed, it will restart
+ * the whole pathname back-tracing sequence again by taking the rename_lock.
+ * In this case, there is no need to take the RCU read lock as the recursive
+ * parent pointer references will keep the dentry chain alive as long as no
+ * rename operation is performed.
  */
 static int prepend_path(const struct path *path,
 			const struct path *root,
@@ -3068,6 +3069,17 @@ char *dentry_path(struct dentry *dentry, char *buf, int buflen)
 	return retval;
 Elong:
 	return ERR_PTR(-ENAMETOOLONG);
+}
+
+static inline void get_fs_root_and_pwd(struct fs_struct *fs, struct path *root,
+				       struct path *pwd)
+{
+	spin_lock(&fs->lock);
+	*root = fs->root;
+	path_get(root);
+	*pwd = fs->pwd;
+	path_get(pwd);
+	spin_unlock(&fs->lock);
 }
 
 /*
