@@ -515,7 +515,7 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 	old = current_cred();
 
 	retval = -EPERM;
-	if ns_capable(old->user_ns, CAP_SETUID)) {
+	if (ns_capable(old->user_ns, CAP_SETUID)) {
 		new->suid = new->uid = uid;
 		if (uid != old->uid) {
 			retval = set_user(new);
