@@ -63,7 +63,7 @@ struct gen_pool_chunk {
 	atomic_t avail;
 	phys_addr_t phys_addr;		/* physical starting address of memory chunk */
 	u64 start_addr;			/* starting address of memory chunk */
-	u64 end_addr;			/* ending address of memory chunk */
+	u64 end_addr;			/* end address of memory chunk (inclusive) */
 	unsigned long bits[0];		/* bitmap for allocating memory chunk */
 };
 
