@@ -1395,9 +1395,6 @@ static int clear_qf_name(struct super_block *sb, int qtype)
 #define MOPT_QFMT	MOPT_NOSUPPORT
 #endif
 #define MOPT_DATAJ	0x0080
-#define MOPT_NO_EXT2	0x0100
-#define MOPT_NO_EXT3	0x0200
-#define MOPT_EXT4_ONLY	(MOPT_NO_EXT2 | MOPT_NO_EXT3)
 
 static const struct mount_opts {
 	int	token;
@@ -1410,29 +1407,21 @@ static const struct mount_opts {
 	{Opt_nogrpid, EXT4_MOUNT_GRPID, MOPT_CLEAR},
 	{Opt_block_validity, EXT4_MOUNT_BLOCK_VALIDITY, MOPT_SET},
 	{Opt_noblock_validity, EXT4_MOUNT_BLOCK_VALIDITY, MOPT_CLEAR},
-	{Opt_dioread_nolock, EXT4_MOUNT_DIOREAD_NOLOCK,
-	 MOPT_EXT4_ONLY | MOPT_SET},
-	{Opt_dioread_lock, EXT4_MOUNT_DIOREAD_NOLOCK,
-	 MOPT_EXT4_ONLY | MOPT_CLEAR},
+	{Opt_dioread_nolock, EXT4_MOUNT_DIOREAD_NOLOCK, MOPT_SET},
+	{Opt_dioread_lock, EXT4_MOUNT_DIOREAD_NOLOCK, MOPT_CLEAR},
 	{Opt_discard, EXT4_MOUNT_DISCARD, MOPT_SET},
 	{Opt_nodiscard, EXT4_MOUNT_DISCARD, MOPT_CLEAR},
-	{Opt_delalloc, EXT4_MOUNT_DELALLOC,
-	 MOPT_EXT4_ONLY | MOPT_SET | MOPT_EXPLICIT},
-	{Opt_nodelalloc, EXT4_MOUNT_DELALLOC,
-	 MOPT_EXT4_ONLY | MOPT_CLEAR | MOPT_EXPLICIT},
-	{Opt_journal_checksum, EXT4_MOUNT_JOURNAL_CHECKSUM,
-	 MOPT_EXT4_ONLY | MOPT_SET},
+	{Opt_delalloc, EXT4_MOUNT_DELALLOC, MOPT_SET | MOPT_EXPLICIT},
+	{Opt_nodelalloc, EXT4_MOUNT_DELALLOC, MOPT_CLEAR | MOPT_EXPLICIT},
+	{Opt_journal_checksum, EXT4_MOUNT_JOURNAL_CHECKSUM, MOPT_SET},
 	{Opt_journal_async_commit, (EXT4_MOUNT_JOURNAL_ASYNC_COMMIT |
-				    EXT4_MOUNT_JOURNAL_CHECKSUM),
-	 MOPT_EXT4_ONLY | MOPT_SET},
-	{Opt_noload, EXT4_MOUNT_NOLOAD, MOPT_NO_EXT2 | MOPT_SET},
+				    EXT4_MOUNT_JOURNAL_CHECKSUM), MOPT_SET},
+	{Opt_noload, EXT4_MOUNT_NOLOAD, MOPT_SET},
 	{Opt_err_panic, EXT4_MOUNT_ERRORS_PANIC, MOPT_SET | MOPT_CLEAR_ERR},
 	{Opt_err_ro, EXT4_MOUNT_ERRORS_RO, MOPT_SET | MOPT_CLEAR_ERR},
 	{Opt_err_cont, EXT4_MOUNT_ERRORS_CONT, MOPT_SET | MOPT_CLEAR_ERR},
-	{Opt_data_err_abort, EXT4_MOUNT_DATA_ERR_ABORT,
-	 MOPT_NO_EXT2 | MOPT_SET},
-	{Opt_data_err_ignore, EXT4_MOUNT_DATA_ERR_ABORT,
-	 MOPT_NO_EXT2 | MOPT_CLEAR},
+	{Opt_data_err_abort, EXT4_MOUNT_DATA_ERR_ABORT, MOPT_SET},
+	{Opt_data_err_ignore, EXT4_MOUNT_DATA_ERR_ABORT, MOPT_CLEAR},
 	{Opt_barrier, EXT4_MOUNT_BARRIER, MOPT_SET},
 	{Opt_nobarrier, EXT4_MOUNT_BARRIER, MOPT_CLEAR},
 	{Opt_noauto_da_alloc, EXT4_MOUNT_NO_AUTO_DA_ALLOC, MOPT_SET},
