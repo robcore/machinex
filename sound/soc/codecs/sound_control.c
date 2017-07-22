@@ -132,8 +132,8 @@ static ssize_t sound_control_snd_vib_feedback_timeout_store(struct kobject *kobj
 
     sscanf(buf, "%d", &val);
 
-    if (val >= 1)
-        val = 1;
+    if (val >= 60000)
+        val = 60000;
 	else if (val <= 0)
 		val = 0;
 
