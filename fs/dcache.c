@@ -88,44 +88,6 @@ EXPORT_SYMBOL(rename_lock);
 
 static struct kmem_cache *dentry_cache __read_mostly;
 
-/**
- * read_seqbegin_or_lock - begin a sequence number check or locking block
- * lock: sequence lock
- * seq : sequence number to be checked
- *
- * First try it once optimistically without taking the lock. If that fails,
- * take the lock. The sequence number is also used as a marker for deciding
- * whether to be a reader (even) or writer (odd).
- * N.B. seq must be initialized to an even number to begin with.
- */
-static inline void read_seqbegin_or_lock(seqlock_t *lock, int *seq)
-{
-	if (!(*seq & 1)) {	/* Even */
-		*seq = read_seqbegin(lock);
-		rcu_read_lock();
-	} else			/* Odd */
-		write_seqlock(lock);
-}
-
-/**
- * read_seqretry_or_unlock - end a seqretry or lock block & return retry status
- * lock	 : sequence lock
- * seq	 : sequence number
- * Return: 1 to retry operation again, 0 to continue
- */
-static inline int read_seqretry_or_unlock(seqlock_t *lock, int *seq)
-{
-	if (!(*seq & 1)) {	/* Even */
-		rcu_read_unlock();
-		if (read_seqretry(lock, *seq)) {
-			(*seq)++;	/* Take writer lock */
-			return 1;
-		}
-	} else			/* Odd */
-		write_sequnlock(lock);
-	return 0;
-}
-
 /*
  * This is the single most critical data structure when it comes
  * to the dcache: the hashtable for lookups. Somebody should try
@@ -2668,39 +2630,9 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
 	return 0;
 }
 
-/**
- * prepend_name - prepend a pathname in front of current buffer pointer
- * buffer: buffer pointer
- * buflen: allocated length of the buffer
- * name:   name string and length qstr structure
- *
- * With RCU path tracing, it may race with d_move(). Use ACCESS_ONCE() to
- * make sure that either the old or the new name pointer and length are
- * fetched. However, there may be mismatch between length and pointer.
- * The length cannot be trusted, we need to copy it byte-by-byte until
- * the length is reached or a null byte is found. It also prepends "/" at
- * the beginning of the name. The sequence number check at the caller will
- * retry it again when a d_move() does happen. So any garbage in the buffer
- * due to mismatched pointer and length will be discarded.
- */
 static int prepend_name(char **buffer, int *buflen, struct qstr *name)
 {
-	const char *dname = ACCESS_ONCE(name->name);
-	u32 dlen = ACCESS_ONCE(name->len);
-	char *p;
-
-	if (*buflen < dlen + 1)
-		return -ENAMETOOLONG;
-	*buflen -= dlen + 1;
-	p = *buffer -= dlen + 1;
-	*p++ = '/';
-	while (dlen--) {
-		char c = *dname++;
-		if (!c)
-			break;
-		*p++ = c;
-	}
-	return 0;
+	return prepend(buffer, buflen, name->name, name->len);
 }
 
 /**
@@ -2710,14 +2642,7 @@ static int prepend_name(char **buffer, int *buflen, struct qstr *name)
  * @buffer: pointer to the end of the buffer
  * @buflen: pointer to buffer length
  *
- * The function tries to write out the pathname without taking any lock other
- * than the RCU read lock to make sure that dentries won't go away. It only
- * checks the sequence number of the global rename_lock as any change in the
- * dentry's d_seq will be preceded by changes in the rename_lock sequence
- * number. If the sequence number had been change, it will restart the whole
- * pathname back-tracing sequence again. It performs a total of 3 trials of
- * lockless back-tracing sequences before falling back to take the
- * rename_lock.
+ * Caller holds the rename_lock.
  */
 static int prepend_path(const struct path *path,
 			const struct path *root,
@@ -2728,15 +2653,8 @@ static int prepend_path(const struct path *path,
 	struct mount *mnt = real_mount(vfsmnt);
 	char *orig_buffer = *buffer;
 	int orig_len = *buflen;
+	bool slash = false;
 	int error = 0;
-	unsigned seq = 0;
-	char *bptr;
-	int blen;
-
-restart:
-	bptr = *buffer;
-	blen = *buflen;
-	read_seqbegin_or_lock(&rename_lock, &seq);
 
 	while (dentry != root->dentry || vfsmnt != root->mnt) {
 		struct dentry * parent;
@@ -2819,7 +2737,9 @@ char *__d_path(const struct path *path,
 
 	prepend(&res, &buflen, "\0", 1);
 	br_read_lock(&vfsmount_lock);
+	write_seqlock(&rename_lock);
 	error = prepend_path(path, root, &res, &buflen);
+	write_sequnlock(&rename_lock);
 	br_read_unlock(&vfsmount_lock);
 
 	if (error < 0)
@@ -2838,7 +2758,9 @@ char *d_absolute_path(const struct path *path,
 
 	prepend(&res, &buflen, "\0", 1);
 	br_read_lock(&vfsmount_lock);
+	write_seqlock(&rename_lock);
 	error = prepend_path(path, &root, &res, &buflen);
+	write_sequnlock(&rename_lock);
 	br_read_unlock(&vfsmount_lock);
 
 	if (error > 1)
@@ -2904,7 +2826,9 @@ char *d_path(const struct path *path, char *buf, int buflen)
 
 	get_fs_root(current->fs, &root);
 	br_read_lock(&vfsmount_lock);
+	write_seqlock(&rename_lock);
 	error = path_with_deleted(path, &root, &res, &buflen);
+	write_sequnlock(&rename_lock);
 	br_read_unlock(&vfsmount_lock);
 	if (error < 0)
 		res = ERR_PTR(error);
@@ -2939,10 +2863,10 @@ char *simple_dname(struct dentry *dentry, char *buffer, int buflen)
 	char *end = buffer + buflen;
 	/* these dentries are never renamed, so d_lock is not needed */
 	if (prepend(&end, &buflen, " (deleted)", 11) ||
-	    prepend(&end, &buflen, dentry->d_name.name, dentry->d_name.len) ||
+	    prepend_name(&end, &buflen, &dentry->d_name) ||
 	    prepend(&end, &buflen, "/", 1))  
 		end = ERR_PTR(-ENAMETOOLONG);
-	return end;
+	return end;  
 }
 
 /*
@@ -2950,36 +2874,30 @@ char *simple_dname(struct dentry *dentry, char *buffer, int buflen)
  */
 static char *__dentry_path(struct dentry *dentry, char *buf, int buflen)
 {
-	char *end, *retval;
-	int len, seq = 0;
-	int error = 0;
+	char *end = buf + buflen;
+	char *retval;
 
-restart:
-	end = buf + buflen;
-	len = buflen;
-	prepend(&end, &len, "\0", 1);
+	prepend(&end, &buflen, "\0", 1);
 	if (buflen < 1)
 		goto Elong;
 	/* Get '/' right */
 	retval = end-1;
 	*retval = '/';
-	read_seqbegin_or_lock(&rename_lock, &seq);
+
 	while (!IS_ROOT(dentry)) {
 		struct dentry *parent = dentry->d_parent;
 		int error;
 
 		prefetch(parent);
-		error = prepend_name(&end, &len, &dentry->d_name);
-		if (error)
-			break;
+		spin_lock(&dentry->d_lock);
+		error = prepend_name(&end, &buflen, &dentry->d_name);
+		spin_unlock(&dentry->d_lock);
+		if (error != 0 || prepend(&end, &buflen, "/", 1) != 0)
+			goto Elong;
 
 		retval = end;
 		dentry = parent;
 	}
-	if (read_seqretry_or_unlock(&rename_lock, &seq))
-		goto restart;
-	if (error)
-		goto Elong;
 	return retval;
 Elong:
 	return ERR_PTR(-ENAMETOOLONG);
@@ -2987,7 +2905,13 @@ Elong:
 
 char *dentry_path_raw(struct dentry *dentry, char *buf, int buflen)
 {
-	return __dentry_path(dentry, buf, buflen);
+	char *retval;
+
+	write_seqlock(&rename_lock);
+	retval = __dentry_path(dentry, buf, buflen);
+	write_sequnlock(&rename_lock);
+
+	return retval;
 }
 EXPORT_SYMBOL(dentry_path_raw);
 
@@ -2996,6 +2920,7 @@ char *dentry_path(struct dentry *dentry, char *buf, int buflen)
 	char *p = NULL;
 	char *retval;
 
+	write_seqlock(&rename_lock);
 	if (d_unlinked(dentry)) {
 		p = buf + buflen;
 		if (prepend(&p, &buflen, "//deleted", 10) != 0)
@@ -3003,6 +2928,7 @@ char *dentry_path(struct dentry *dentry, char *buf, int buflen)
 		buflen++;
 	}
 	retval = __dentry_path(dentry, buf, buflen);
+	write_sequnlock(&rename_lock);
 	if (!IS_ERR(retval) && p)
 		*p = '/';	/* restore '/' overriden with '\0' */
 	return retval;
@@ -3041,6 +2967,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 
 	error = -ENOENT;
 	br_read_lock(&vfsmount_lock);
+	write_seqlock(&rename_lock);
 	if (!d_unlinked(pwd.dentry)) {
 		unsigned long len;
 		char *cwd = page + PAGE_SIZE;
@@ -3048,6 +2975,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 
 		prepend(&cwd, &buflen, "\0", 1);
 		error = prepend_path(&pwd, &root, &cwd, &buflen);
+		write_sequnlock(&rename_lock);
 		br_read_unlock(&vfsmount_lock);
 
 		if (error < 0)
@@ -3068,6 +2996,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 				error = -EFAULT;
 		}
 	} else {
+		write_sequnlock(&rename_lock);
 		br_read_unlock(&vfsmount_lock);
 	}
 
