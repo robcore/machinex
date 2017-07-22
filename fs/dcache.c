@@ -1136,7 +1136,7 @@ positive:
 		goto rename_retry_unlocked;
 	if (locked)
 		write_sequnlock(&rename_lock);
-	return 1;
+	return;
 
 rename_retry:
 	spin_unlock(&this_parent->d_lock);
