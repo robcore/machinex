@@ -33,6 +33,7 @@
 
 #include <linux/dcache.h>
 #include <linux/xattr.h>
+#include <linux/lockref.h>
 #include "scfs.h"
 
 /********************/
@@ -491,7 +492,7 @@ static int scfs_lookup_interpose(struct dentry *dentry, struct dentry *lower_den
 
 	lower_mnt = mntget(scfs_dentry_to_lower_mnt(dentry->d_parent));
 	fsstack_copy_attr_atime(dir, lower_dentry->d_parent->d_inode);
-	BUG_ON(!lower_dentry->d_count);
+	BUG_ON(!lower_dentry->d_lockref.count);
 
 	if (!dentry->d_fsdata) {
 		dentry_info = kmem_cache_alloc(scfs_dentry_info_cache, GFP_KERNEL);
