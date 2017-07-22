@@ -1121,7 +1121,7 @@ ascend:
 	}
 	if (!locked && read_seqretry(&rename_lock, seq))
 		goto rename_retry;
-	}
+
 	if (finish)
 		finish(data);
 
