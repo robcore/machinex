@@ -401,13 +401,13 @@ static ssize_t sound_control_version_show(struct kobject *kobj,
 }
 
 static struct kobj_attribute sound_control_snd_vib_feedback_timeout_attribute =
-	__ATTR(gpl_sound_control_enabled,
+	__ATTR(gpl_snd_vib_feedback_timeout,
 		0666,
 		sound_control_snd_vib_feedback_timeout_show,
 		sound_control_snd_vib_feedback_timeout_store);
 
 static struct kobj_attribute sound_control_snd_vib_feedback_attribute =
-	__ATTR(gpl_sound_control_enabled,
+	__ATTR(gpl_snd_vib_feedback,
 		0666,
 		sound_control_snd_vib_feedback_show,
 		sound_control_snd_vib_feedback_store);
