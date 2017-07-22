@@ -1002,33 +1002,56 @@ void shrink_dcache_for_umount(struct super_block *sb)
 }
 
 
-/*
- * Search for at least 1 mount point in the dentry's subdirs.
- * We descend to the next level whenever the d_subdirs
- * list is non-empty and continue searching.
+/**
+ * enum d_walk_ret - action to talke during tree walk
+ * @D_WALK_CONTINUE:	contrinue walk
+ * @D_WALK_QUIT:	quit walk
+ * @D_WALK_NORETRY:	quit when retry is needed
+ * @D_WALK_SKIP:	skip this dentry and its children
  */
+enum d_walk_ret {
+	D_WALK_CONTINUE,
+	D_WALK_QUIT,
+	D_WALK_NORETRY,
+	D_WALK_SKIP,
+};
 
 /**
- * have_submounts - check for mounts over a dentry
- * @parent: dentry to check.
+ * d_walk - walk the dentry tree
+ * @parent:	start of walk
+ * @data:	data passed to @enter() and @finish()
+ * @enter:	callback when first entering the dentry
+ * @finish:	callback when successfully finished the walk
  *
- * Return true if the parent or its subdirectories contain
- * a mount point
+ * The @enter() and @finish() callbacks are called with d_lock held.
  */
-int have_submounts(struct dentry *parent)
+static void d_walk(struct dentry *parent, void *data,
+		   enum d_walk_ret (*enter)(void *, struct dentry *),
+		   void (*finish)(void *))
 {
 	struct dentry *this_parent;
 	struct list_head *next;
 	unsigned seq;
 	int locked = 0;
+	enum d_walk_ret ret;
+	bool retry = true;
 
 	seq = read_seqbegin(&rename_lock);
 again:
 	this_parent = parent;
 
-	if (d_mountpoint(parent))
-		goto positive;
 	spin_lock(&this_parent->d_lock);
+	ret = enter(data, this_parent);
+	switch (ret) {
+	case D_WALK_CONTINUE:
+		break;
+	case D_WALK_QUIT:
+	case D_WALK_SKIP:
+		goto out_unlock;
+	case D_WALK_NORETRY:
+		retry = false;
+		break;
+	}
 repeat:
 	next = this_parent->d_subdirs.next;
 resume:
@@ -1038,11 +1061,19 @@ resume:
 		next = tmp->next;
 
 		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
-		/* Have we found a mount point ? */
-		if (d_mountpoint(dentry)) {
+		ret = enter(data, dentry);
+		switch (ret) {
+		case D_WALK_CONTINUE:
+			break;
+		case D_WALK_QUIT:
 			spin_unlock(&dentry->d_lock);
-			spin_unlock(&this_parent->d_lock);
-			goto positive;
+			goto out_unlock;
+		case D_WALK_NORETRY:
+			retry = false;
+			break;
+		case D_WALK_SKIP:
+			spin_unlock(&dentry->d_lock);
+			continue;
 		}
 
 		if (!list_empty(&dentry->d_subdirs)) {
@@ -1079,29 +1110,62 @@ ascend:
 		rcu_read_unlock();
 		goto resume;
 	}
-	if (!locked && read_seqretry(&rename_lock, seq))
+	if (!locked && read_seqretry(&rename_lock, seq)) {
 		goto rename_retry;
+	}
+	if (finish)
+		finish(data);
+
+out_unlock:
 	spin_unlock(&this_parent->d_lock);
-	rcu_read_unlock();
 	if (locked)
 		write_sequnlock(&rename_lock);
-	return 0; /* No mount points found in tree */
-positive:
-	if (!locked && read_seqretry(&rename_lock, seq))
-		goto rename_retry_unlocked;
-	if (locked)
-		write_sequnlock(&rename_lock);
-	return 1;
+	return;
 
 rename_retry:
 	spin_unlock(&this_parent->d_lock);
 	rcu_read_unlock();
+	if (!retry)
+		return;
 	if (locked)
 		goto again;
 rename_retry_unlocked:
 	locked = 1;
 	write_seqlock(&rename_lock);
 	goto again;
+}
+
+/*
+ * Search for at least 1 mount point in the dentry's subdirs.
+ * We descend to the next level whenever the d_subdirs
+ * list is non-empty and continue searching.
+ */
+
+/**
+ * have_submounts - check for mounts over a dentry
+ * @parent: dentry to check.
+ *
+ * Return true if the parent or its subdirectories contain
+ * a mount point
+ */
+
+static enum d_walk_ret check_mount(void *data, struct dentry *dentry)
+{
+	int *ret = data;
+	if (d_mountpoint(dentry)) {
+		*ret = 1;
+		return D_WALK_QUIT;
+	}
+	return D_WALK_CONTINUE;
+}
+
+int have_submounts(struct dentry *parent)
+{
+	int ret = 0;
+
+	d_walk(parent, &ret, check_mount, NULL);
+
+	return ret;
 }
 EXPORT_SYMBOL(have_submounts);
 
@@ -1119,111 +1183,82 @@ EXPORT_SYMBOL(have_submounts);
  * drop the lock and return early due to latency
  * constraints.
  */
-static int select_parent(struct dentry *parent, struct list_head *dispose)
-{
-	struct dentry *this_parent;
-	struct list_head *next;
-	unsigned seq;
-	int found = 0;
-	int locked = 0;
-
-	seq = read_seqbegin(&rename_lock);
-again:
-	this_parent = parent;
-	spin_lock(&this_parent->d_lock);
-repeat:
-	next = this_parent->d_subdirs.next;
-resume:
-	while (next != &this_parent->d_subdirs) {
-		struct list_head *tmp = next;
-		struct dentry *dentry = list_entry(tmp, struct dentry, d_child);
-		next = tmp->next;
-
-		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
-
-		/*
-		 * move only zero ref count dentries to the dispose list.
-		 *
-		 * Those which are presently on the shrink list, being processed
-		 * by shrink_dentry_list(), shouldn't be moved.  Otherwise the
-		 * loop in shrink_dcache_parent() might not make any progress
-		 * and loop forever.
-		 */
-		if (dentry->d_lockref.count) {
-			dentry_lru_del(dentry);
-		} else if (!(dentry->d_flags & DCACHE_SHRINK_LIST)) {
-			dentry_lru_move_list(dentry, dispose);
-			dentry->d_flags |= DCACHE_SHRINK_LIST;
-			found++;
-		}
-		/*
-		 * We can return to the caller if we have found some (this
-		 * ensures forward progress). We'll be coming back to find
-		 * the rest.
-		 */
-		if (found && need_resched()) {
-			spin_unlock(&dentry->d_lock);
-			rcu_read_lock();
-			goto out;
-		}
-
-		/*
-		 * Descend a level if the d_subdirs list is non-empty.
-		 */
-		if (!list_empty(&dentry->d_subdirs)) {
-			spin_unlock(&this_parent->d_lock);
-			spin_release(&dentry->d_lock.dep_map, 1, _RET_IP_);
-			this_parent = dentry;
-			spin_acquire(&this_parent->d_lock.dep_map, 0, 1, _RET_IP_);
-			goto repeat;
-		}
-
-		spin_unlock(&dentry->d_lock);
-	}
-	/*
-	 * All done at this level ... ascend and resume the search.
-	 */
-	rcu_read_lock();
-ascend:
-	if (this_parent != parent) {
-		struct dentry *child = this_parent;
-		this_parent = child->d_parent;
-
-		spin_unlock(&child->d_lock);
-		spin_lock(&this_parent->d_lock);
-
-		/* might go back up the wrong parent if we have had a rename */
-		if (!locked && read_seqretry(&rename_lock, seq))
-			goto rename_retry;
-		/* go into the first sibling still alive */
-		do {
-			next = child->d_child.next;
-			if (next == &this_parent->d_subdirs)
-				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
-		} while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED));
-		rcu_read_unlock();
-		goto resume;
-	}
-out:
-	if (!locked && read_seqretry(&rename_lock, seq))
-		goto rename_retry;
-	spin_unlock(&this_parent->d_lock);
-	rcu_read_unlock();
-	if (locked)
-		write_sequnlock(&rename_lock);
-	return found;
-
-rename_retry:
-	spin_unlock(&this_parent->d_lock);
-	rcu_read_unlock();
-	if (found)
-		return found;
-	if (locked)
-		goto again;
-	locked = 1;
-	write_seqlock(&rename_lock);
-	goto again;
++struct select_data {
++	struct dentry *start;
++	struct list_head dispose;
++	int found;
++};
+ 
+-		/*
+-		 * move only zero ref count dentries to the dispose list.
+-		 *
+-		 * Those which are presently on the shrink list, being processed
+-		 * by shrink_dentry_list(), shouldn't be moved.  Otherwise the
+-		 * loop in shrink_dcache_parent() might not make any progress
+-		 * and loop forever.
+-		 */
+-		if (dentry->d_lockref.count) {
+-			dentry_lru_del(dentry);
+-		} else if (!(dentry->d_flags & DCACHE_SHRINK_LIST)) {
+-			dentry_lru_move_list(dentry, dispose);
+-			dentry->d_flags |= DCACHE_SHRINK_LIST;
+-			found++;
+-		}
+-		/*
+-		 * We can return to the caller if we have found some (this
+-		 * ensures forward progress). We'll be coming back to find
+-		 * the rest.
+-		 */
+-		if (found && need_resched()) {
+-			spin_unlock(&dentry->d_lock);
+-			goto out;
+-		}
++static enum d_walk_ret select_collect(void *_data, struct dentry *dentry)
++{
++	struct select_data *data = _data;
++	enum d_walk_ret ret = D_WALK_CONTINUE;
+ 
+-		/*
+-		 * Descend a level if the d_subdirs list is non-empty.
+-		 */
+-		if (!list_empty(&dentry->d_subdirs)) {
+-			spin_unlock(&this_parent->d_lock);
+-			spin_release(&dentry->d_lock.dep_map, 1, _RET_IP_);
+-			this_parent = dentry;
+-			spin_acquire(&this_parent->d_lock.dep_map, 0, 1, _RET_IP_);
+-			goto repeat;
+-		}
++	if (data->start == dentry)
++		goto out;
+ 
+-		spin_unlock(&dentry->d_lock);
+-	}
+ 	/*
+-	 * All done at this level ... ascend and resume the search.
++	 * move only zero ref count dentries to the dispose list.
++	 *
++	 * Those which are presently on the shrink list, being processed
++	 * by shrink_dentry_list(), shouldn't be moved.  Otherwise the
++	 * loop in shrink_dcache_parent() might not make any progress
++	 * and loop forever.
+ 	 */
++	if (dentry->d_lockref.count) {
++		dentry_lru_del(dentry);
++	} else if (!(dentry->d_flags & DCACHE_SHRINK_LIST)) {
++		dentry_lru_move_list(dentry, &data->dispose);
++		dentry->d_flags |= DCACHE_SHRINK_LIST;
++		data->found++;
++		ret = D_WALK_NORETRY;
+ 	}
++	/*
++	 * We can return to the caller if we have found some (this
++	 * ensures forward progress). We'll be coming back to find
++	 * the rest.
++	 */
++	if (data->found && need_resched())
++		ret = D_WALK_QUIT;
+ out:
+	return ret;
 }
 
 /**
@@ -1232,13 +1267,20 @@ rename_retry:
  *
  * Prune the dcache to remove unused children of the parent dentry.
  */
-void shrink_dcache_parent(struct dentry * parent)
+void shrink_dcache_parent(struct dentry *parent)
 {
-	LIST_HEAD(dispose);
-	int found;
+	for (;;) {
+		struct select_data data;
 
-	while ((found = select_parent(parent, &dispose)) != 0) {
-		shrink_dentry_list(&dispose);
+		INIT_LIST_HEAD(&data.dispose);
+		data.start = parent;
+		data.found = 0;
+
+		d_walk(parent, &data, select_collect, NULL);
+		if (!data.found)
+			break;
+
+		shrink_dentry_list(&data.dispose);
 		cond_resched();
 	}
 }
