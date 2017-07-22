@@ -22,14 +22,17 @@
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 #include <linux/sysfs_helpers.h>
+#include <linux/timed_output.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	3
+#define SOUND_CONTROL_MINOR_VERSION	4
 
 extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
 unsigned int snd_ctrl_locked;
+unsigned int feedback_val = 125;
+unsigned int vib_feedback = 0;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -116,6 +119,61 @@ static int show_sound_value(int val)
 	return val;
 }
 
+static ssize_t sound_control_snd_vib_feedback_timeout_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", feedback_val);
+}
+
+static ssize_t sound_control_snd_vib_feedback_timeout_store(struct kobject *kobj,
+        struct kobj_attribute *attr, const char *buf, size_t count)
+{
+    int val;
+
+    sscanf(buf, "%d", &val);
+
+    if (val >= 1)
+        val = 1;
+	else if (val <= 0)
+		val = 0;
+
+    feedback_val = val;
+
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
+
+    return count;
+}
+
+static ssize_t sound_control_snd_vib_feedback_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", vib_feedback);
+}
+
+static ssize_t sound_control_snd_vib_feedback_store(struct kobject *kobj,
+        struct kobj_attribute *attr, const char *buf, size_t count)
+{
+    unsigned int val;
+
+    sscanf(buf, "%u", &val);
+
+    if (val >= 1) {
+        val = 1;
+	}
+
+	if (val == 0) {
+		val = 0;
+	}
+
+    vib_feedback = val;
+
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
+
+    return count;
+}
+
 static ssize_t sound_control_enabled_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -140,6 +198,9 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 	}
 
     snd_ctrl_enabled = val;
+
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
 
     return count;
 }
@@ -184,6 +245,9 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
 
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
+
 	count = checksum;
 
 	return count;
@@ -227,6 +291,9 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
 
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
+
 	count = checksum;
 
 	return count;
@@ -262,6 +329,9 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 	tabla_write(snd_engine_codec_ptr,
 		TABLA_A_CDC_TX6_VOL_CTL_GAIN, val);
 	snd_ctrl_locked = 1;
+
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
 
 	count = checksum;
 
@@ -299,6 +369,9 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 		TABLA_A_CDC_TX7_VOL_CTL_GAIN, val);
 	snd_ctrl_locked = 1;
 
+	if (vib_feedback)
+		machinex_vibrator(feedback_val);
+
 	count = checksum;
 
 	return count;
@@ -311,11 +384,11 @@ static ssize_t sound_control_register_list_show(struct kobject *kobj,
 						 Headphone Right: %u\n \
 						 Speaker: %u\n \
 						 In Call Mic: %u\n \
-						 Camera Mic: %u\n", \
-			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, \
-			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, \
-			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, \
-			TABLA_A_CDC_TX6_VOL_CTL_GAIN, \
+						 Camera Mic: %u\n",
+			TABLA_A_CDC_RX1_VOL_CTL_B2_CTL,
+			TABLA_A_CDC_RX2_VOL_CTL_B2_CTL,
+			TABLA_A_CDC_RX5_VOL_CTL_B2_CTL,
+			TABLA_A_CDC_TX6_VOL_CTL_GAIN,
 			TABLA_A_CDC_TX7_VOL_CTL_GAIN);
 }
 
@@ -326,6 +399,18 @@ static ssize_t sound_control_version_show(struct kobject *kobj,
 			SOUND_CONTROL_MAJOR_VERSION,
 			SOUND_CONTROL_MINOR_VERSION);
 }
+
+static struct kobj_attribute sound_control_snd_vib_feedback_timeout_attribute =
+	__ATTR(gpl_sound_control_enabled,
+		0666,
+		sound_control_snd_vib_feedback_timeout_show,
+		sound_control_snd_vib_feedback_timeout_store);
+
+static struct kobj_attribute sound_control_snd_vib_feedback_attribute =
+	__ATTR(gpl_sound_control_enabled,
+		0666,
+		sound_control_snd_vib_feedback_show,
+		sound_control_snd_vib_feedback_store);
 
 static struct kobj_attribute sound_control_enabled_attribute =
 	__ATTR(gpl_sound_control_enabled,
@@ -369,6 +454,8 @@ static struct kobj_attribute sound_control_register_list_attribute =
 
 static struct attribute *sound_control_attrs[] =
 {
+	&sound_control_snd_vib_feedback_attribute.attr,
+	&sound_control_snd_vib_feedback_timeout_attribute.attr,
 	&sound_control_enabled_attribute.attr,
 	&headphone_gain_attribute.attr,
 	&speaker_gain_attribute.attr,
@@ -410,6 +497,10 @@ static int sound_control_init(void)
 		kobject_put(sound_control_kobj);
 		return -ENOMEM;
 	}
+
+	pr_info("Sound Control Engine: %u.%u Initialized!\n",
+			SOUND_CONTROL_MAJOR_VERSION,
+			SOUND_CONTROL_MINOR_VERSION);
 
 	return 0;
 }
