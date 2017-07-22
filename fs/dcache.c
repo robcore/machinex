@@ -471,7 +471,7 @@ relock:
 	 * inform the fs via d_prune that this dentry is about to be
 	 * unhashed and destroyed.
 	 */
-	if (dentry->d_flags & DCACHE_OP_PRUNE)
+	if ((dentry->d_flags & DCACHE_OP_PRUNE) && !d_unhashed(dentry))
 		dentry->d_op->d_prune(dentry);
 
 	dentry_lru_del(dentry);
@@ -911,7 +911,8 @@ static void shrink_dcache_for_umount_subtree(struct dentry *dentry)
 			 * inform the fs that this dentry is about to be
 			 * unhashed and destroyed.
 			 */
-			if (dentry->d_flags & DCACHE_OP_PRUNE)
+			if ((dentry->d_flags & DCACHE_OP_PRUNE) &&
+			    !d_unhashed(dentry))
 				dentry->d_op->d_prune(dentry);
 
 			dentry_lru_del(dentry);
