@@ -40,8 +40,8 @@
 #include <linux/atomic.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
-#include <linux/rculist.h>
 #include <linux/compat.h>
+#include <linux/rculist.h>
 
 /*
  * LOCKING:
@@ -359,7 +359,7 @@ static inline struct epitem *ep_item_from_epqueue(poll_table *p)
 /* Tells if the epoll_ctl(2) operation needs an event copy from userspace */
 static inline int ep_op_has_event(int op)
 {
-	return op == EPOLL_CTL_ADD || op == EPOLL_CTL_MOD;
+	return op != EPOLL_CTL_DEL;
 }
 
 /* Initialize the poll safe wake up structure */
@@ -723,7 +723,6 @@ static int ep_remove(struct eventpoll *ep, struct epitem *epi)
 	spin_unlock_irqrestore(&ep->lock, flags);
 
 	wakeup_source_unregister(ep_wakeup_source(epi));
-
 	/*
 	 * At this point it is safe to free the eventpoll item. Use the union
 	 * field epi->rcu, since we are trying to minimize the size of
@@ -736,34 +735,6 @@ static int ep_remove(struct eventpoll *ep, struct epitem *epi)
 	atomic_long_dec(&ep->user->epoll_watches);
 
 	return 0;
-}
-
-/*
- * Disables a "struct epitem" in the eventpoll set. Returns -EBUSY if the item
- * had no event flags set, indicating that another thread may be currently
- * handling that item's events (in the case that EPOLLONESHOT was being
- * used). Otherwise a zero result indicates that the item has been disabled
- * from receiving events. A disabled item may be re-enabled via
- * EPOLL_CTL_MOD. Must be called with "mtx" held.
- */
-static int ep_disable(struct eventpoll *ep, struct epitem *epi)
-{
-	int result = 0;
-	unsigned long flags;
-
-	spin_lock_irqsave(&ep->lock, flags);
-	if (epi->event.events & ~EP_PRIVATE_BITS) {
-		if (ep_is_linked(&epi->rdllink))
-			list_del_init(&epi->rdllink);
-		/* Ensure ep_poll_callback will not add epi back onto ready
-		   list: */
-		epi->event.events &= EP_PRIVATE_BITS;
-		}
-	else
-		result = -EBUSY;
-	spin_unlock_irqrestore(&ep->lock, flags);
-
-	return result;
 }
 
 static void ep_free(struct eventpoll *ep)
@@ -1160,6 +1131,8 @@ static void ep_rbtree_insert(struct eventpoll *ep, struct epitem *epi)
 	rb_link_node(&epi->rbn, parent, p);
 	rb_insert_color(&epi->rbn, &ep->rbr);
 }
+
+
 
 #define PATH_ARR_SIZE 5
 /*
@@ -1626,7 +1599,7 @@ static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
 {
 	int res = 0, eavail, timed_out = 0;
 	unsigned long flags;
-	u64 slack = 0;
+	long slack = 0;
 	wait_queue_t wait;
 	ktime_t expires, *to = NULL;
 
@@ -1861,7 +1834,7 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 {
 	int error;
 	int full_check = 0;
-	struct file *file, *tfile;
+	struct fd f, tf;
 	struct eventpoll *ep;
 	struct epitem *epi;
 	struct epoll_event epds;
@@ -1872,20 +1845,19 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	    copy_from_user(&epds, event, sizeof(struct epoll_event)))
 		goto error_return;
 
-	/* Get the "struct file *" for the eventpoll file */
 	error = -EBADF;
-	file = fget(epfd);
-	if (!file)
+	f = fdget(epfd);
+	if (!f.file)
 		goto error_return;
 
 	/* Get the "struct file *" for the target file */
-	tfile = fget(fd);
-	if (!tfile)
+	tf = fdget(fd);
+	if (!tf.file)
 		goto error_fput;
 
 	/* The target file descriptor must support poll */
 	error = -EPERM;
-	if (!tfile->f_op || !tfile->f_op->poll)
+	if (!tf.file->f_op->poll)
 		goto error_tgt_fput;
 
 	/* Check if EPOLLWAKEUP is allowed */
@@ -1898,14 +1870,14 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 * adding an epoll file descriptor inside itself.
 	 */
 	error = -EINVAL;
-	if (file == tfile || !is_file_epoll(file))
+	if (f.file == tf.file || !is_file_epoll(f.file))
 		goto error_tgt_fput;
 
 	/*
 	 * At this point it is safe to assume that the "private_data" contains
 	 * our own data structure.
 	 */
-	ep = file->private_data;
+	ep = f.file->private_data;
 
 	/*
 	 * When we insert an epoll file descriptor, inside another epoll file
@@ -1924,23 +1896,23 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 */
 	mutex_lock_nested(&ep->mtx, 0);
 	if (op == EPOLL_CTL_ADD) {
-		if (!list_empty(&file->f_ep_links) ||
-						is_file_epoll(tfile)) {
+		if (!list_empty(&f.file->f_ep_links) ||
+						is_file_epoll(tf.file)) {
 			full_check = 1;
 			mutex_unlock(&ep->mtx);
 			mutex_lock(&epmutex);
-			if (is_file_epoll(tfile)) {
+			if (is_file_epoll(tf.file)) {
 				error = -ELOOP;
-				if (ep_loop_check(ep, tfile) != 0) {
+				if (ep_loop_check(ep, tf.file) != 0) {
 					clear_tfile_check_list();
 					goto error_tgt_fput;
 				}
 			} else
-				list_add(&tfile->f_tfile_llink,
+				list_add(&tf.file->f_tfile_llink,
 							&tfile_check_list);
 			mutex_lock_nested(&ep->mtx, 0);
-			if (is_file_epoll(tfile)) {
-				tep = tfile->private_data;
+			if (is_file_epoll(tf.file)) {
+				tep = tf.file->private_data;
 				mutex_lock_nested(&tep->mtx, 1);
 			}
 		}
@@ -1951,14 +1923,14 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 * above, we can be sure to be able to use the item looked up by
 	 * ep_find() till we release the mutex.
 	 */
-	epi = ep_find(ep, tfile, fd);
+	epi = ep_find(ep, tf.file, fd);
 
 	error = -EINVAL;
 	switch (op) {
 	case EPOLL_CTL_ADD:
 		if (!epi) {
 			epds.events |= POLLERR | POLLHUP;
-			error = ep_insert(ep, &epds, tfile, fd, full_check);
+			error = ep_insert(ep, &epds, tf.file, fd, full_check);
 		} else
 			error = -EEXIST;
 		if (full_check)
@@ -1977,12 +1949,6 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 		} else
 			error = -ENOENT;
 		break;
-	case EPOLL_CTL_DISABLE:
-		if (epi)
-			error = ep_disable(ep, epi);
-		else
-			error = -ENOENT;
-		break;
 	}
 	if (tep != NULL)
 		mutex_unlock(&tep->mtx);
@@ -1992,9 +1958,9 @@ error_tgt_fput:
 	if (full_check)
 		mutex_unlock(&epmutex);
 
-	fput(tfile);
+	fdput(tf);
 error_fput:
-	fput(file);
+	fdput(f);
 error_return:
 
 	return error;
