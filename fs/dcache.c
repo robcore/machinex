@@ -1875,6 +1875,8 @@ seqretry:
 
 		if (dentry->d_name.hash_len != hashlen)
 			continue;
+		if (d_unhashed(dentry))
+			continue;
 		*seqp = seq;
 		if (!dentry_cmp(dentry, str, hashlen_len(hashlen)))
 			return dentry;
