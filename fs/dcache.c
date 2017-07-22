@@ -553,7 +553,6 @@ EXPORT_SYMBOL(dput);
 
 int d_invalidate(struct dentry * dentry)
 {
-	const unsigned char *cs;
 	/*
 	 * If it's already been dropped, return OK.
 	 */
