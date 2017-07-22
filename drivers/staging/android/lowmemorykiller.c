@@ -170,7 +170,15 @@ extern atomic_t zswap_pool_pages;
 extern atomic_t zswap_stored_pages;
 #endif
 
-static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
+static unsigned long lowmem_count(struct shrinker *s,
+				  struct shrink_control *sc)
+{
+	return global_page_state(NR_ACTIVE_ANON) +
+		global_page_state(NR_ACTIVE_FILE) +
+		global_page_state(NR_INACTIVE_ANON) +
+		global_page_state(NR_INACTIVE_FILE);
+}
+static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
 #ifdef ENHANCED_LMK_ROUTINE
@@ -185,7 +193,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	static DEFINE_RATELIMIT_STATE(lmk_rs, 6*DEFAULT_RATELIMIT_INTERVAL, 0);
 #endif
 #endif
-	int rem = 0;
+	unsigned long rem = 0;
 	int tasksize;
 	int i;
 	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
@@ -231,22 +239,14 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			break;
 		}
 	}
-	if (nr_to_scan > 0)
-		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %hd\n",
-				nr_to_scan, sc->gfp_mask, other_free,
-				other_file, min_score_adj);
-	rem = global_page_state(NR_ACTIVE_ANON) +
-		global_page_state(NR_ACTIVE_FILE) +
-		global_page_state(NR_INACTIVE_ANON) +
-		global_page_state(NR_INACTIVE_FILE);
-	if (nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
-		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
-			     nr_to_scan, sc->gfp_mask, rem);
+	lowmem_print(3, "lowmem_scan %lu, %x, ofree %d %d, ma %hd\n",
+			sc->nr_to_scan, sc->gfp_mask, other_free,
+			other_file, min_score_adj);
 
-		if (nr_to_scan > 0)
-			mutex_unlock(&scan_mutex);
-
-		return rem;
+	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
+		lowmem_print(5, "lowmem_scan %lu, %x, return 0\n",
+			     sc->nr_to_scan, sc->gfp_mask);
+		return 0;
 	}
 
 #ifdef ENHANCED_LMK_ROUTINE
@@ -380,26 +380,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef ENHANCED_LMK_ROUTINE
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
 		if (selected[i]) {
-#ifdef CONFIG_SAMP_HOTNESS
-			lowmem_print(1, "send sigkill to %d (%s), adj %hd,\
-				     size %d, free memory = %d, reclaimable memory = %d ,hotness %d\n",
-				     selected[i]->pid, selected[i]->comm,
-				     selected_oom_score_adj[i],
-				     selected_tasksize[i],
-					 other_free, other_file,
-					 selected_hotness_adj);
-#else
-			lowmem_print(1, "send sigkill to %d (%s), adj %hd,\
-				     size %d, free memory = %d, reclaimable memory = %d\n",
-				     selected[i]->pid, selected[i]->comm,
-				     selected_oom_score_adj[i],
-				     selected_tasksize[i],
-					 other_free, other_file);
-#endif
 			lowmem_deathpending_timeout = jiffies + HZ;
 			send_sig(SIGKILL, selected[i], 0);
 			set_tsk_thread_flag(selected[i], TIF_MEMDIE);
-			rem -= selected_tasksize[i];
+			rem += selected_tasksize[i];
 			if(reclaim_state)
 				reclaim_state->reclaimed_slab += selected_tasksize[i];
 #ifdef LMK_COUNT_READ
@@ -409,31 +393,20 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	}
 #else
 	if (selected) {
-#ifdef CONFIG_SAMP_HOTNESS
-		lowmem_print(1, "send sigkill to %d (%s), adj %hd, size %d ,hotness %d\n",
-			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize,selected_hotness_adj);
-#else
-		lowmem_print(1, "send sigkill to %d (%s), adj %hd, size %d\n",
-			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize);
-#endif
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
-		rem -= selected_tasksize;
+		rem += selected_tasksize;
 		msleep_interruptible(20);
 		if(reclaim_state)
 			reclaim_state->reclaimed_slab = selected_tasksize;
 #ifdef LMK_COUNT_READ
 		lmk_count++;
 #endif
-	} 	 else
+	} else
 		rcu_read_unlock();
 #endif
 
-	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
-		     nr_to_scan, sc->gfp_mask, rem);
 	mutex_unlock(&scan_mutex);
 	return rem;
 }
@@ -627,7 +600,8 @@ static struct notifier_block android_oom_notifier = {
 #endif /* CONFIG_SEC_OOM_KILLER */
 
 static struct shrinker lowmem_shrinker = {
-	.shrink = lowmem_shrink,
+	.scan_objects = lowmem_scan,
+	.count_objects = lowmem_count,
 	.seeks = DEFAULT_SEEKS * 16
 };
 
