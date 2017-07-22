@@ -472,7 +472,7 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 	struct aio_ring *ring;
 
 	spin_lock(&mm->ioctx_lock);
-	table = mm->ioctx_table;
+	table = rcu_dereference(mm->ioctx_table);
 
 	while (1) {
 		if (table)
@@ -500,7 +500,7 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 		table->nr = new_nr;
 
 		spin_lock(&mm->ioctx_lock);
-		old = mm->ioctx_table;
+		old = rcu_dereference(mm->ioctx_table);
 
 		if (!old) {
 			rcu_assign_pointer(mm->ioctx_table, table);
@@ -625,7 +625,7 @@ static void kill_ioctx(struct mm_struct *mm, struct kioctx *ctx)
 		struct kioctx_table *table;
 
 		spin_lock(&mm->ioctx_lock);
-		table = mm->ioctx_table;
+		table = rcu_dereference(mm->ioctx_table);
 
 		WARN_ON(ctx != table->table[ctx->id]);
 		table->table[ctx->id] = NULL;
