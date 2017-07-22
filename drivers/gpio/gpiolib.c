@@ -1562,9 +1562,6 @@ EXPORT_SYMBOL_GPL(gpio_direction_output);
  * gpio_set_debounce - sets @debounce time for a @gpio
  * @gpio: the gpio to set debounce time
  * @debounce: debounce time is microseconds
- *
- * returns -ENOTSUPP if the controller does not support setting
- * debounce.
  */
 int gpio_set_debounce(unsigned gpio, unsigned debounce)
 {
