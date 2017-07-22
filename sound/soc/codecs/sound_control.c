@@ -450,8 +450,8 @@ static struct kobj_attribute sound_control_register_list_attribute =
 
 static struct attribute *sound_control_attrs[] =
 {
-	&sound_control_snd_vib_feedback_attribute.attr,
 	&sound_control_snd_vib_feedback_timeout_attribute.attr,
+	&sound_control_snd_vib_feedback_attribute.attr,
 	&sound_control_enabled_attribute.attr,
 	&headphone_gain_attribute.attr,
 	&speaker_gain_attribute.attr,
