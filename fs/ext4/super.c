@@ -1194,8 +1194,8 @@ enum {
 	Opt_nouid32, Opt_debug, Opt_removed,
 	Opt_user_xattr, Opt_nouser_xattr, Opt_acl, Opt_noacl,
 	Opt_auto_da_alloc, Opt_noauto_da_alloc, Opt_noload,
-	Opt_commit, Opt_min_batch_time, Opt_max_batch_time, Opt_journal_dev,
-	Opt_journal_path, Opt_journal_checksum, Opt_journal_async_commit,
+	Opt_commit, Opt_min_batch_time, Opt_max_batch_time,
+	Opt_journal_dev, Opt_journal_checksum, Opt_journal_async_commit,
 	Opt_abort, Opt_data_journal, Opt_data_ordered, Opt_data_writeback,
 	Opt_data_err_abort, Opt_data_err_ignore,
 	Opt_usrjquota, Opt_grpjquota, Opt_offusrjquota, Opt_offgrpjquota,
@@ -1239,7 +1239,6 @@ static const match_table_t tokens = {
 	{Opt_min_batch_time, "min_batch_time=%u"},
 	{Opt_max_batch_time, "max_batch_time=%u"},
 	{Opt_journal_dev, "journal_dev=%u"},
-	{Opt_journal_path, "journal_path=%s"},
 	{Opt_journal_checksum, "journal_checksum"},
 	{Opt_journal_async_commit, "journal_async_commit"},
 	{Opt_abort, "abort"},
@@ -1396,7 +1395,6 @@ static int clear_qf_name(struct super_block *sb, int qtype)
 #define MOPT_QFMT	MOPT_NOSUPPORT
 #endif
 #define MOPT_DATAJ	0x0080
-#define MOPT_STRING	0x0400
 
 static const struct mount_opts {
 	int	token;
