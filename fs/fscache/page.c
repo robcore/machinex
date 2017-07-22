@@ -278,7 +278,7 @@ static struct fscache_retrieval *fscache_alloc_retrieval(
 /*
  * wait for a deferred lookup to complete
  */
-static int fscache_wait_for_deferred_lookup(struct fscache_cookie *cookie)
+int fscache_wait_for_deferred_lookup(struct fscache_cookie *cookie)
 {
 	unsigned long jif;
 
@@ -430,10 +430,11 @@ int __fscache_read_or_alloc_page(struct fscache_cookie *cookie,
 
 	/* we wait for the operation to become active, and then process it
 	 * *here*, in this thread, and not in the thread pool */
-	ret = fscache_wait_for_retrieval_activation(
-		object, op,
+	ret = fscache_wait_for_operation_activation(
+		object, &op->op,
 		__fscache_stat(&fscache_n_retrieval_op_waits),
-		__fscache_stat(&fscache_n_retrievals_object_dead));
+		__fscache_stat(&fscache_n_retrievals_object_dead),
+		fscache_do_cancel_retrieval);
 	if (ret < 0)
 		goto error;
 
@@ -555,10 +556,11 @@ int __fscache_read_or_alloc_pages(struct fscache_cookie *cookie,
 
 	/* we wait for the operation to become active, and then process it
 	 * *here*, in this thread, and not in the thread pool */
-	ret = fscache_wait_for_retrieval_activation(
-		object, op,
+	ret = fscache_wait_for_operation_activation(
+		object, &op->op,
 		__fscache_stat(&fscache_n_retrieval_op_waits),
-		__fscache_stat(&fscache_n_retrievals_object_dead));
+		__fscache_stat(&fscache_n_retrievals_object_dead),
+		fscache_do_cancel_retrieval);
 	if (ret < 0)
 		goto error;
 
@@ -656,10 +658,11 @@ int __fscache_alloc_page(struct fscache_cookie *cookie,
 
 	fscache_stat(&fscache_n_alloc_ops);
 
-	ret = fscache_wait_for_retrieval_activation(
-		object, op,
+	ret = fscache_wait_for_operation_activation(
+		object, &op->op,
 		__fscache_stat(&fscache_n_alloc_op_waits),
-		__fscache_stat(&fscache_n_allocs_object_dead));
+		__fscache_stat(&fscache_n_allocs_object_dead),
+		fscache_do_cancel_retrieval);
 	if (ret < 0)
 		goto error;
 
