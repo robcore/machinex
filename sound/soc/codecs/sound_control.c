@@ -510,7 +510,7 @@ static void sound_control_exit(void)
 	if (sound_control_kobj != NULL)
 		kobject_put(sound_control_kobj);
 }
-module_init(sound_control_init);
+late_initcall(sound_control_init);
 module_exit(sound_control_exit);
 
 MODULE_LICENSE("GPL v2");
