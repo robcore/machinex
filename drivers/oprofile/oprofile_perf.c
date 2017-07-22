@@ -146,13 +146,13 @@ static int oprofile_perf_create_files(struct dentry *root)
 		char buf[4];
 
 		snprintf(buf, sizeof buf, "%d", i);
-		dir = oprofilefs_mkdir(root->d_sb, root, buf);
-		oprofilefs_create_ulong(root->d_sb, dir, "enabled", &counter_config[i].enabled);
-		oprofilefs_create_ulong(root->d_sb, dir, "event", &counter_config[i].event);
-		oprofilefs_create_ulong(root->d_sb, dir, "count", &counter_config[i].count);
-		oprofilefs_create_ulong(root->d_sb, dir, "unit_mask", &counter_config[i].unit_mask);
-		oprofilefs_create_ulong(root->d_sb, dir, "kernel", &counter_config[i].kernel);
-		oprofilefs_create_ulong(root->d_sb, dir, "user", &counter_config[i].user);
+		dir = oprofilefs_mkdir(root, buf);
+		oprofilefs_create_ulong(dir, "enabled", &counter_config[i].enabled);
+		oprofilefs_create_ulong(dir, "event", &counter_config[i].event);
+		oprofilefs_create_ulong(dir, "count", &counter_config[i].count);
+		oprofilefs_create_ulong(dir, "unit_mask", &counter_config[i].unit_mask);
+		oprofilefs_create_ulong(dir, "kernel", &counter_config[i].kernel);
+		oprofilefs_create_ulong(dir, "user", &counter_config[i].user);
 	}
 
 	return 0;
