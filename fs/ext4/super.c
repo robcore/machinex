@@ -1490,6 +1490,8 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 {
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	const struct mount_opts *m;
+	kuid_t uid;
+	kgid_t gid;
 	int arg = 0;
 
 #ifdef CONFIG_QUOTA
@@ -1518,6 +1520,7 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 	case Opt_i_version:
 		sb->s_flags |= MS_I_VERSION;
 		return 1;
+	}
 
 	for (m = ext4_mount_opts; m->token != Opt_err; m++)
 		if (token == m->token)
@@ -1567,11 +1570,10 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 	} else if (token == Opt_min_batch_time) {
 		sbi->s_min_batch_time = arg;
 	} else if (token == Opt_inode_readahead_blks) {
-		if (arg > (1 << 30))
-			return -1;
-		if (arg && !is_power_of_2(arg)) {
-			ext4_msg(sb, KERN_ERR, "EXT4-fs: inode_readahead_blks"
-				 " must be a power of 2");
+		if (arg && (arg > (1 << 30) || !is_power_of_2(arg))) {
+			ext4_msg(sb, KERN_ERR,
+				 "EXT4-fs: inode_readahead_blks must be "
+				 "0 or a power of 2 smaller than 2^31");
 			return -1;
 		}
 		sbi->s_inode_readahead_blks = arg;
@@ -1670,6 +1672,13 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 		    sbi->s_jquota_fmt != m->mount_opt) {
 			ext4_msg(sb, KERN_ERR, "Cannot change journaled "
 				 "quota options when quota turned on");
+			return -1;
+		}
+		if (EXT4_HAS_RO_COMPAT_FEATURE(sb,
+					       EXT4_FEATURE_RO_COMPAT_QUOTA)) {
+			ext4_msg(sb, KERN_ERR,
+				 "Cannot set journaled quota options "
+				 "when QUOTA feature is enabled");
 			return -1;
 		}
 		sbi->s_jquota_fmt = m->mount_opt;
@@ -1783,16 +1792,10 @@ static inline void ext4_show_quota_options(struct seq_file *seq,
 	}
 
 	if (sbi->s_qf_names[USRQUOTA])
-		seq_show_option(seq, "usrjquota", sbi->s_qf_names[USRQUOTA]);
+		seq_printf(seq, ",usrjquota=%s", sbi->s_qf_names[USRQUOTA]);
 
 	if (sbi->s_qf_names[GRPQUOTA])
-		seq_show_option(seq, "grpjquota", sbi->s_qf_names[GRPQUOTA]);
-
-	if (test_opt(sb, USRQUOTA))
-		seq_puts(seq, ",usrquota");
-
-	if (test_opt(sb, GRPQUOTA))
-		seq_puts(seq, ",grpquota");
+		seq_printf(seq, ",grpjquota=%s", sbi->s_qf_names[GRPQUOTA]);
 #endif
 }
 
