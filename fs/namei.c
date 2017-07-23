@@ -446,6 +446,16 @@ int inode_permission(struct inode *inode, int mask)
 	return __inode_permission(inode, mask);
 }
 
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
 /**
  * path_get - get a reference to a path
  * @path: path to get the reference to
@@ -459,6 +469,66 @@ void path_get(const struct path *path)
 }
 EXPORT_SYMBOL(path_get);
 
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
 /**
  * path_put - put a reference to a path
  * @path: path to put the reference to
@@ -471,6 +541,46 @@ void path_put(const struct path *path)
 	mntput(path->mnt);
 }
 EXPORT_SYMBOL(path_put);
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
+
+static inline void lock_rcu_walk(void)
+{
+	rcu_read_lock();
+}
+
+static inline void unlock_rcu_walk(void)
+{
+	rcu_read_unlock();
+}
 
 /**
  * path_connected - Verify that a path->dentry is below path->mnt.mnt_root
@@ -511,7 +621,9 @@ static inline void unlock_rcu_walk(void)
 	rcu_read_unlock();
 }
 
-/*
+ /**
+ * unlazy_walk - try to switch to ref-walk mode.
+ * @nd: nameidata pathwalk data
  * When we move over from the RCU domain to properly refcounted
  * long-lived dentries, we need to check the sequence numbers
  * we got before lookup very carefully.
