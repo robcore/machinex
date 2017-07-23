@@ -3051,8 +3051,7 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 				zone_clear_flag(zone, ZONE_CONGESTED);
 				zone_clear_flag(zone, ZONE_TAIL_LRU_DIRTY);
 			}
-			memcg = mem_cgroup_iter(root, memcg, &reclaim);
-		} while (memcg);
+		}
 
 		if (i < 0)
 			goto out;
@@ -3081,9 +3080,9 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 		 * If we're getting trouble reclaiming, start doing writepage
 		 * even in laptop mode.
 		 */
-
 		if (sc.priority < DEF_PRIORITY - 2)
 			sc.may_writepage = 1;
+
 		/*
 		 * Now scan the zone in the dma->highmem direction, stopping
 		 * at the last zone which needs scanning.
@@ -3133,6 +3132,7 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 		if (waitqueue_active(&pgdat->pfmemalloc_wait) &&
 				pfmemalloc_watermark_ok(pgdat))
 			wake_up(&pgdat->pfmemalloc_wait);
+
 		/*
 		 * Fragmentation may mean that the system cannot be rebalanced
 		 * for high-order allocations in all zones. If twice the
@@ -3163,6 +3163,7 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 			sc.priority--;
 	} while (sc.priority >= 1 &&
 		 !pgdat_balanced(pgdat, order, *classzone_idx));
+
 out:
 	/*
 	 * Return the order we were reclaiming at so prepare_kswapd_sleep()
