@@ -1293,8 +1293,10 @@ static int __init setup_vmstat(void)
 	__register_cpu_notifier(&vmstat_notifier);
 	init_cpu_node_state();
 
-	for_each_online_cpu(cpu)
+	for_each_online_cpu(cpu) {
 		start_cpu_timer(cpu);
+		node_set_state(cpu_to_node(cpu), N_CPU);
+	}
 	cpu_notifier_register_done();
 
 	vmstat_wq = alloc_workqueue("vmstat", WQ_MEM_RECLAIM, 0);
