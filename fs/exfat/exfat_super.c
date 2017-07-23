@@ -1547,7 +1547,7 @@ static void exfat_write_failed(struct address_space *mapping, loff_t to)
 {
 	struct inode *inode = mapping->host;
 	if (to > i_size_read(inode)) {
-		truncate_pagecache(inode, to, i_size_read(inode));
+		truncate_pagecache(inode, i_size_read(inode));
 		EXFAT_I(inode)->fid.size = i_size_read(inode);
 		_exfat_truncate(inode, i_size_read(inode));
 	}
