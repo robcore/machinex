@@ -179,7 +179,7 @@ static int sdcardfs_unlink(struct inode *dir, struct dentry *dentry)
 	err = mnt_want_write(lower_path.mnt);
 	if (err)
 		goto out_unlock;
-	err = vfs_unlink(lower_dir_inode, lower_dentry);
+	err = vfs_unlink(lower_dir_inode, lower_dentry, NULL);
 
 	/*
 	 * Note: unlinking on top of NFS can cause silly-renamed files.
@@ -819,7 +819,7 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	 * tries to open(), unlink(), then ftruncate() a file.
 	 */
 	mutex_lock(&lower_dentry->d_inode->i_mutex);
-	err = notify_change(lower_dentry, &lower_ia); /* note: lower_ia */
+	err = notify_change(lower_dentry, &lower_ia, NULL); /* note: lower_ia */
 	mutex_unlock(&lower_dentry->d_inode->i_mutex);
 	if (err)
 		goto out;
