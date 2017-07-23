@@ -174,8 +174,7 @@ struct slab {
 	struct {
 		struct list_head list;
 		void *s_mem;		/* including colour offset */
-		unsigned int inuse;	/* num of objs active in slab */
-		unsigned int free;
+		unsigned int active;	/* num of objs active in slab */
 	};
 };
 
@@ -1641,7 +1640,7 @@ slab_out_of_memory(struct kmem_cache *cachep, gfp_t gfpflags, int nodeid)
 			active_slabs++;
 		}
 		list_for_each_entry(slabp, &n->slabs_partial, list) {
-			active_objs += slabp->inuse;
+			active_objs += slabp->active;
 			active_slabs++;
 		}
 		list_for_each_entry(slabp, &n->slabs_free, list)
@@ -2441,7 +2440,7 @@ static int drain_freelist(struct kmem_cache *cache,
 
 		slabp = list_entry(p, struct slab, list);
 #if DEBUG
-		BUG_ON(slabp->inuse);
+		BUG_ON(slabp->active);
 #endif
 		list_del(&slabp->list);
 		/*
@@ -2560,9 +2559,8 @@ static struct slab *alloc_slabmgmt(struct kmem_cache *cachep,
 		slabp = addr + colour_off;
 		colour_off += cachep->slab_size;
 	}
-	slabp->inuse = 0;
+	slabp->active = 0;
 	slabp->s_mem = addr + colour_off;
-	slabp->free = 0;
 	return slabp;
 }
 
@@ -2632,12 +2630,11 @@ static void *slab_get_obj(struct kmem_cache *cachep, struct slab *slabp,
 {
 	void *objp;
 
-	slabp->inuse++;
-	objp = index_to_obj(cachep, slabp, slab_bufctl(slabp)[slabp->free]);
+	objp = index_to_obj(cachep, slabp, slab_bufctl(slabp)[slabp->active]);
+	slabp->active++;
 #if DEBUG
 	WARN_ON(page_to_nid(virt_to_page(objp)) != nodeid);
 #endif
-	slabp->free++;
 
 	return objp;
 }
@@ -2653,7 +2650,7 @@ static void slab_put_obj(struct kmem_cache *cachep, struct slab *slabp,
 	WARN_ON(page_to_nid(virt_to_page(objp)) != nodeid);
 
 	/* Verify double free bug */
-	for (i = slabp->free; i < cachep->num; i++) {
+	for (i = slabp->active; i < cachep->num; i++) {
 		if (slab_bufctl(slabp)[i] == objnr) {
 			printk(KERN_ERR "slab: double free detected in cache "
 					"'%s', objp %p\n", cachep->name, objp);
@@ -2661,9 +2658,8 @@ static void slab_put_obj(struct kmem_cache *cachep, struct slab *slabp,
 		}
 	}
 #endif
-	slabp->free--;
-	slab_bufctl(slabp)[slabp->free] = objnr;
-	slabp->inuse--;
+	slabp->active--;
+	slab_bufctl(slabp)[slabp->active] = objnr;
 }
 
 /*
@@ -2898,9 +2894,9 @@ retry:
 		 * there must be at least one object available for
 		 * allocation.
 		 */
-		BUG_ON(slabp->inuse >= cachep->num);
+		BUG_ON(slabp->active >= cachep->num);
 
-		while (slabp->inuse < cachep->num && batchcount--) {
+		while (slabp->active < cachep->num && batchcount--) {
 			STATS_INC_ALLOCED(cachep);
 			STATS_INC_ACTIVE(cachep);
 			STATS_SET_HIGH(cachep);
@@ -2911,7 +2907,7 @@ retry:
 
 		/* move slabp to correct slabp list: */
 		list_del(&slabp->list);
-		if (slabp->free == cachep->num)
+		if (slabp->active == cachep->num)
 			list_add(&slabp->list, &n->slabs_full);
 		else
 			list_add(&slabp->list, &n->slabs_partial);
@@ -3196,14 +3192,14 @@ retry:
 	STATS_INC_ACTIVE(cachep);
 	STATS_SET_HIGH(cachep);
 
-	BUG_ON(slabp->inuse == cachep->num);
+	BUG_ON(slabp->active == cachep->num);
 
 	obj = slab_get_obj(cachep, slabp, nodeid);
 	n->free_objects--;
 	/* move slabp to correct slabp list: */
 	list_del(&slabp->list);
 
-	if (slabp->free == cachep->num)
+	if (slabp->active == cachep->num)
 		list_add(&slabp->list, &n->slabs_full);
 	else
 		list_add(&slabp->list, &n->slabs_partial);
@@ -3370,7 +3366,7 @@ static void free_block(struct kmem_cache *cachep, void **objpp, int nr_objects,
 		n->free_objects++;
 
 		/* fixup slab chains */
-		if (slabp->inuse == 0) {
+		if (slabp->active == 0) {
 			if (n->free_objects > n->free_limit) {
 				n->free_objects -= cachep->num;
 				/* No need to drop any previously held
@@ -3431,7 +3427,7 @@ free_done:
 			struct slab *slabp;
 
 			slabp = list_entry(p, struct slab, list);
-			BUG_ON(slabp->inuse);
+			BUG_ON(slabp->active);
 
 			i++;
 			p = p->next;
@@ -4056,22 +4052,22 @@ void get_slabinfo(struct kmem_cache *cachep, struct slabinfo *sinfo)
 		spin_lock_irq(&n->list_lock);
 
 		list_for_each_entry(slabp, &n->slabs_full, list) {
-			if (slabp->inuse != cachep->num && !error)
+			if (slabp->active != cachep->num && !error)
 				error = "slabs_full accounting error";
 			active_objs += cachep->num;
 			active_slabs++;
 		}
 		list_for_each_entry(slabp, &n->slabs_partial, list) {
-			if (slabp->inuse == cachep->num && !error)
-				error = "slabs_partial inuse accounting error";
-			if (!slabp->inuse && !error)
-				error = "slabs_partial/inuse accounting error";
-			active_objs += slabp->inuse;
+			if (slabp->active == cachep->num && !error)
+				error = "slabs_partial accounting error";
+			if (!slabp->active && !error)
+				error = "slabs_partial accounting error";
+			active_objs += slabp->active;
 			active_slabs++;
 		}
 		list_for_each_entry(slabp, &n->slabs_free, list) {
-			if (slabp->inuse && !error)
-				error = "slabs_free/inuse accounting error";
+			if (slabp->active && !error)
+				error = "slabs_free accounting error";
 			num_slabs++;
 		}
 		free_objects += n->free_objects;
@@ -4233,7 +4229,7 @@ static void handle_slab(unsigned long *n, struct kmem_cache *c, struct slab *s)
 	for (i = 0, p = s->s_mem; i < c->num; i++, p += c->size) {
 		bool active = true;
 
-		for (j = s->free; j < c->num; j++) {
+		for (j = s->active; j < c->num; j++) {
 			/* Skip freed item */
 			if (slab_bufctl(s)[j] == i) {
 				active = false;
