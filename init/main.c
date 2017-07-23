@@ -964,7 +964,8 @@ static int __ref kernel_init(void *unused)
 		pr_err("Failed to execute %s (error %d).  Attempting defaults...\n",
 			execute_command, ret);
 	}
-	if (!try_to_run_init_process("/sbin/init") ||
+	if (!try_to_run_init_process("/init") ||
+	    !try_to_run_init_process("/sbin/init") ||
 	    !try_to_run_init_process("/etc/init") ||
 	    !try_to_run_init_process("/bin/init") ||
 	    !try_to_run_init_process("/bin/sh"))
