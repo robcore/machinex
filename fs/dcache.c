@@ -312,6 +312,7 @@ static void dentry_unlink_inode(struct dentry * dentry)
 	__releases(dentry->d_inode->i_lock)
 {
 	struct inode *inode = dentry->d_inode;
+	__d_clear_type(dentry);
 	dentry->d_inode = NULL;
 	hlist_del_init(&dentry->d_u.d_alias);
 	dentry_rcuwalk_invalidate(dentry);
@@ -1826,6 +1827,7 @@ struct dentry *d_obtain_alias(struct inode *inode)
 	static const struct qstr anonstring = { .name = "/", .len = 1 };
 	struct dentry *tmp;
 	struct dentry *res;
+	unsigned add_flags;
 
 	if (!inode)
 		return ERR_PTR(-ESTALE);
