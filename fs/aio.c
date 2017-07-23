@@ -563,10 +563,10 @@ static struct kioctx *ioctx_alloc(unsigned nr_events)
 
 	ctx->max_reqs = nr_events;
 
-	if (percpu_ref_init(&ctx->users, free_ioctx_users))
+	if (percpu_ref_init(&ctx->users, free_ioctx_users, GFP_KERNEL))
 		goto err;
 
-	if (percpu_ref_init(&ctx->reqs, free_ioctx_reqs))
+	if (percpu_ref_init(&ctx->reqs, free_ioctx_reqs, GFP_KERNEL))
 		goto err;
 
 	spin_lock_init(&ctx->ctx_lock);
