@@ -26,7 +26,7 @@
 #include "sysfs.h"
 
 DEFINE_MUTEX(sysfs_mutex);
-DEFINE_SPINLOCK(sysfs_assoc_lock);
+DEFINE_SPINLOCK(sysfs_symlink_target_lock);
 
 #define to_sysfs_dirent(X) rb_entry((X), struct sysfs_dirent, s_rb)
 
@@ -470,6 +470,23 @@ static char *sysfs_pathname(struct sysfs_dirent *sd, char *path)
 	return path;
 }
 
+void sysfs_warn_dup(struct sysfs_dirent *parent, const char *name)
+{
+	char *path;
+
+	path = kzalloc(PATH_MAX, GFP_KERNEL);
+	if (path) {
+		sysfs_pathname(parent, path);
+		strlcat(path, "/", PATH_MAX);
+		strlcat(path, name, PATH_MAX);
+	}
+
+	WARN(1, KERN_WARNING "sysfs: cannot create duplicate filename '%s'\n",
+	     path ? path : name);
+
+	kfree(path);
+}
+
 /**
  *	sysfs_add_one - add sysfs_dirent to parent
  *	@acxt: addrm context to use
@@ -497,18 +514,9 @@ int sysfs_add_one(struct sysfs_addrm_cxt *acxt, struct sysfs_dirent *sd,
 	int ret;
 
 	ret = __sysfs_add_one(acxt, sd, parent_sd);
-	if (ret == -EEXIST) {
-		char *path = kzalloc(PATH_MAX, GFP_KERNEL);
-		WARN(1, KERN_WARNING
-		     "sysfs: cannot create duplicate filename '%s'\n",
-		     (path == NULL) ? sd->s_name
-				    : (sysfs_pathname(parent_sd, path),
-				       strlcat(path, "/", PATH_MAX),
-				       strlcat(path, sd->s_name, PATH_MAX),
-				       path));
-		kfree(path);
-	}
 
+	if (ret == -EEXIST)
+		sysfs_warn_dup(parent_sd, sd->s_name);
 	return ret;
 }
 
@@ -813,7 +821,8 @@ static struct sysfs_dirent *sysfs_next_descendant_post(struct sysfs_dirent *pos,
 	return pos->s_parent;
 }
 
-void __sysfs_remove(struct sysfs_addrm_cxt *acxt, struct sysfs_dirent *sd)
+static void __sysfs_remove(struct sysfs_addrm_cxt *acxt,
+			   struct sysfs_dirent *sd)
 {
 	struct sysfs_dirent *pos, *next;
 
@@ -847,6 +856,41 @@ void sysfs_remove(struct sysfs_dirent *sd)
 }
 
 /**
+ * sysfs_hash_and_remove - find a sysfs_dirent by name and remove it
+ * @dir_sd: parent of the target
+ * @name: name of the sysfs_dirent to remove
+ * @ns: namespace tag of the sysfs_dirent to remove
+ *
+ * Look for the sysfs_dirent with @name and @ns under @dir_sd and remove
+ * it.  Returns 0 on success, -ENOENT if such entry doesn't exist.
+ */
+int sysfs_hash_and_remove(struct sysfs_dirent *dir_sd, const char *name,
+			  const void *ns)
+{
+	struct sysfs_addrm_cxt acxt;
+	struct sysfs_dirent *sd;
+
+	if (!dir_sd) {
+		WARN(1, KERN_WARNING "sysfs: can not remove '%s', no directory\n",
+			name);
+		return -ENOENT;
+	}
+
+	sysfs_addrm_start(&acxt);
+
+	sd = sysfs_find_dirent(dir_sd, name, ns);
+	if (sd)
+		__sysfs_remove(&acxt, sd);
+
+	sysfs_addrm_finish(&acxt);
+
+	if (sd)
+		return 0;
+	else
+		return -ENOENT;
+}
+
+/**
  *	sysfs_remove_dir - remove an object's directory.
  *	@kobj:	object.
  *
@@ -858,9 +902,21 @@ void sysfs_remove_dir(struct kobject *kobj)
 {
 	struct sysfs_dirent *sd = kobj->sd;
 
-	spin_lock(&sysfs_assoc_lock);
+	/*
+	 * In general, kboject owner is responsible for ensuring removal
+	 * doesn't race with other operations and sysfs doesn't provide any
+	 * protection; however, when @kobj is used as a symlink target, the
+	 * symlinking entity usually doesn't own @kobj and thus has no
+	 * control over removal.  @kobj->sd may be removed anytime and
+	 * symlink code may end up dereferencing an already freed sd.
+	 *
+	 * sysfs_symlink_target_lock synchronizes @kobj->sd disassociation
+	 * against symlink operations so that symlink code can safely
+	 * dereference @kobj->sd.
+	 */
+	spin_lock(&sysfs_symlink_target_lock);
 	kobj->sd = NULL;
-	spin_unlock(&sysfs_assoc_lock);
+	spin_unlock(&sysfs_symlink_target_lock);
 
 	if (sd) {
 		WARN_ON_ONCE(sysfs_type(sd) != SYSFS_DIR);

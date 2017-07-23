@@ -38,7 +38,7 @@ static int mnt_group_start = 1;
 static struct list_head *mount_hashtable __read_mostly;
 static struct list_head *mountpoint_hashtable __read_mostly;
 static struct kmem_cache *mnt_cache __read_mostly;
-static struct rw_semaphore namespace_sem;
+static DECLARE_RWSEM(namespace_sem);
 
 /* /sys/fs */
 struct kobject *fs_kobj;
@@ -61,8 +61,6 @@ static inline unsigned long hash(struct vfsmount *mnt, struct dentry *dentry)
 	tmp = tmp + (tmp >> HASH_SHIFT);
 	return tmp & (HASH_SIZE - 1);
 }
-
-#define MNT_WRITER_UNDERFLOW_LIMIT -(1<<16)
 
 /*
  * allocation is serialized by namespace_sem, but we need the spinlock to
@@ -456,7 +454,7 @@ static int mnt_make_readonly(struct mount *mnt)
 {
 	int ret = 0;
 
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	mnt->mnt.mnt_flags |= MNT_WRITE_HOLD;
 	/*
 	 * After storing MNT_WRITE_HOLD, we'll read the counters. This store
@@ -490,15 +488,15 @@ static int mnt_make_readonly(struct mount *mnt)
 	 */
 	smp_wmb();
 	mnt->mnt.mnt_flags &= ~MNT_WRITE_HOLD;
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	return ret;
 }
 
 static void __mnt_unmake_readonly(struct mount *mnt)
 {
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	mnt->mnt.mnt_flags &= ~MNT_READONLY;
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 }
 
 int sb_prepare_remount_readonly(struct super_block *sb)
@@ -510,7 +508,7 @@ int sb_prepare_remount_readonly(struct super_block *sb)
 	if (atomic_long_read(&sb->s_remove_count))
 		return -EBUSY;
 
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	list_for_each_entry(mnt, &sb->s_mounts, mnt_instance) {
 		if (!(mnt->mnt.mnt_flags & MNT_READONLY)) {
 			mnt->mnt.mnt_flags |= MNT_WRITE_HOLD;
@@ -532,7 +530,7 @@ int sb_prepare_remount_readonly(struct super_block *sb)
 		if (mnt->mnt.mnt_flags & MNT_WRITE_HOLD)
 			mnt->mnt.mnt_flags &= ~MNT_WRITE_HOLD;
 	}
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 
 	return err;
 }
@@ -548,29 +546,33 @@ static void free_vfsmnt(struct mount *mnt)
 }
 
 /*
- * find the first or last mount at @dentry on vfsmount @mnt depending on
- * @dir. If @dir is set return the first mount else return the last mount.
+ * find the first mount at @dentry on vfsmount @mnt.
  * vfsmount_lock must be held for read or write.
  */
-struct mount *__lookup_mnt(struct vfsmount *mnt, struct dentry *dentry,
-			      int dir)
+struct mount *__lookup_mnt(struct vfsmount *mnt, struct dentry *dentry)
 {
 	struct list_head *head = mount_hashtable + hash(mnt, dentry);
-	struct list_head *tmp = head;
-	struct mount *p, *found = NULL;
+	struct mount *p;
 
-	for (;;) {
-		tmp = dir ? tmp->next : tmp->prev;
-		p = NULL;
-		if (tmp == head)
-			break;
-		p = list_entry(tmp, struct mount, mnt_hash);
-		if (&p->mnt_parent->mnt == mnt && p->mnt_mountpoint == dentry) {
-			found = p;
-			break;
-		}
-	}
-	return found;
+	list_for_each_entry(p, head, mnt_hash)
+		if (&p->mnt_parent->mnt == mnt && p->mnt_mountpoint == dentry)
+			return p;
+	return NULL;
+}
+
+/*
+ * find the last mount at @dentry on vfsmount @mnt.
+ * vfsmount_lock must be held for read or write.
+ */
+struct mount *__lookup_mnt_last(struct vfsmount *mnt, struct dentry *dentry)
+{
+	struct list_head *head = mount_hashtable + hash(mnt, dentry);
+	struct mount *p;
+
+	list_for_each_entry_reverse(p, head, mnt_hash)
+		if (&p->mnt_parent->mnt == mnt && p->mnt_mountpoint == dentry)
+			return p;
+	return NULL;
 }
 
 /*
@@ -594,7 +596,7 @@ struct vfsmount *lookup_mnt(struct path *path)
 	struct mount *child_mnt;
 
 	br_read_lock(&vfsmount_lock);
-	child_mnt = __lookup_mnt(path->mnt, path->dentry, 1);
+	child_mnt = __lookup_mnt(path->mnt, path->dentry);
 	if (child_mnt) {
 		mnt_add_count(child_mnt, 1);
 		br_read_unlock(&vfsmount_lock);
@@ -794,9 +796,9 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 	mnt->mnt.mnt_sb = root->d_sb;
 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
 	mnt->mnt_parent = mnt;
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &root->d_sb->s_mounts);
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	return &mnt->mnt;
 }
 EXPORT_SYMBOL_GPL(vfs_kern_mount);
@@ -837,9 +839,9 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	mnt->mnt.mnt_root = dget(root);
 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
 	mnt->mnt_parent = mnt;
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 
 	if ((flag & CL_SLAVE) ||
 	    ((flag & CL_SHARED_TO_SLAVE) && IS_MNT_SHARED(old))) {
@@ -870,28 +872,6 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	return ERR_PTR(err);
 }
 
-static inline void mntfree(struct mount *mnt)
-{
-	struct vfsmount *m = &mnt->mnt;
-	struct super_block *sb = m->mnt_sb;
-
-	/*
-	 * This probably indicates that somebody messed
-	 * up a mnt_want/drop_write() pair.  If this
-	 * happens, the filesystem was probably unable
-	 * to make r/w->r/o transitions.
-	 */
-	/*
-	 * The locking used to deal with mnt_count decrement provides barriers,
-	 * so mnt_get_writers() below is safe.
-	 */
-	WARN_ON(mnt_get_writers(mnt));
-	fsnotify_vfsmount_delete(m);
-	dput(m->mnt_root);
-	free_vfsmnt(mnt);
-	deactivate_super(sb);
-}
-
 static void mntput_no_expire(struct mount *mnt)
 {
 put_again:
@@ -905,29 +885,44 @@ put_again:
 	}
 	br_read_unlock(&vfsmount_lock);
 
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	mnt_add_count(mnt, -1);
 	if (mnt_get_count(mnt)) {
-		br_write_unlock(&vfsmount_lock);
+		unlock_mount_hash();
 		return;
 	}
 #else
 	mnt_add_count(mnt, -1);
 	if (likely(mnt_get_count(mnt)))
 		return;
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 #endif
 	if (unlikely(mnt->mnt_pinned)) {
 		mnt_add_count(mnt, mnt->mnt_pinned + 1);
 		mnt->mnt_pinned = 0;
-		br_write_unlock(&vfsmount_lock);
+		unlock_mount_hash();
 		acct_auto_close_mnt(&mnt->mnt);
 		goto put_again;
 	}
 
 	list_del(&mnt->mnt_instance);
-	br_write_unlock(&vfsmount_lock);
-	mntfree(mnt);
+	unlock_mount_hash();
+
+	/*
+	 * This probably indicates that somebody messed
+	 * up a mnt_want/drop_write() pair.  If this
+	 * happens, the filesystem was probably unable
+	 * to make r/w->r/o transitions.
+	 */
+	/*
+	 * The locking used to deal with mnt_count decrement provides barriers,
+	 * so mnt_get_writers() below is safe.
+	 */
+	WARN_ON(mnt_get_writers(mnt));
+	fsnotify_vfsmount_delete(&mnt->mnt);
+	dput(mnt->mnt.mnt_root);
+	deactivate_super(mnt->mnt.mnt_sb);
+	free_vfsmnt(mnt);
 }
 
 void mntput(struct vfsmount *mnt)
@@ -952,21 +947,21 @@ EXPORT_SYMBOL(mntget);
 
 void mnt_pin(struct vfsmount *mnt)
 {
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	real_mount(mnt)->mnt_pinned++;
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 }
 EXPORT_SYMBOL(mnt_pin);
 
 void mnt_unpin(struct vfsmount *m)
 {
 	struct mount *mnt = real_mount(m);
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	if (mnt->mnt_pinned) {
 		mnt_add_count(mnt, 1);
 		mnt->mnt_pinned--;
 	}
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 }
 EXPORT_SYMBOL(mnt_unpin);
 
@@ -1083,12 +1078,12 @@ int may_umount_tree(struct vfsmount *m)
 	BUG_ON(!m);
 
 	/* write lock needed for mnt_get_count */
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	for (p = mnt; p; p = next_mnt(p, mnt)) {
 		actual_refs += mnt_get_count(p);
 		minimum_refs += 2;
 	}
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 
 	if (actual_refs > minimum_refs)
 		return 0;
@@ -1115,10 +1110,10 @@ int may_umount(struct vfsmount *mnt)
 {
 	int ret = 1;
 	down_read(&namespace_sem);
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	if (propagate_mount_busy(real_mount(mnt), 2))
 		ret = 0;
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	up_read(&namespace_sem);
 	return ret;
 }
@@ -1143,20 +1138,8 @@ static void namespace_unlock(void)
 	while (!list_empty(&head)) {
 		mnt = list_first_entry(&head, struct mount, mnt_hash);
 		list_del_init(&mnt->mnt_hash);
-		if (mnt_has_parent(mnt)) {
-			struct dentry *dentry;
-			struct mount *m;
-
-			br_write_lock(&vfsmount_lock);
-			dentry = mnt->mnt_mountpoint;
-			m = mnt->mnt_parent;
-			mnt->mnt_mountpoint = mnt->mnt.mnt_root;
-			mnt->mnt_parent = mnt;
-			m->mnt_ghosts--;
-			br_write_unlock(&vfsmount_lock);
-			dput(dentry);
-			mntput(&m->mnt);
-		}
+		if (mnt->mnt_ex_mountpoint.mnt)
+			path_put(&mnt->mnt_ex_mountpoint);
 		mntput(&mnt->mnt);
 	}
 }
@@ -1190,8 +1173,12 @@ void umount_tree(struct mount *mnt, int propagate)
 		__touch_mnt_namespace(p->mnt_ns);
 		p->mnt_ns = NULL;
 		if (mnt_has_parent(p)) {
-			p->mnt_parent->mnt_ghosts++;
 			put_mountpoint(p->mnt_mp);
+			/* move the reference to mountpoint into ->mnt_ex_mountpoint */
+			p->mnt_ex_mountpoint.dentry = p->mnt_mountpoint;
+			p->mnt_ex_mountpoint.mnt = &p->mnt_parent->mnt;
+			p->mnt_mountpoint = p->mnt.mnt_root;
+			p->mnt_parent = p;
 			p->mnt_mp = NULL;
 		}
 		change_mnt_propagation(p, MS_PRIVATE);
@@ -1225,12 +1212,12 @@ static int do_umount(struct mount *mnt, int flags)
 		 * probably don't strictly need the lock here if we examined
 		 * all race cases, but it's a slowpath.
 		 */
-		br_write_lock(&vfsmount_lock);
+		lock_mount_hash();
 		if (mnt_get_count(mnt) != 2) {
-			br_write_unlock(&vfsmount_lock);
+			unlock_mount_hash();
 			return -EBUSY;
 		}
-		br_write_unlock(&vfsmount_lock);
+		unlock_mount_hash();
 
 		if (!xchg(&mnt->mnt_expiry_mark, 1))
 			return -EAGAIN;
@@ -1274,7 +1261,7 @@ static int do_umount(struct mount *mnt, int flags)
 	}
 
 	namespace_lock();
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	event++;
 
 	if (!(flags & MNT_DETACH))
@@ -1286,7 +1273,7 @@ static int do_umount(struct mount *mnt, int flags)
 			umount_tree(mnt, 1);
 		retval = 0;
 	}
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	namespace_unlock();
 	return retval;
 }
@@ -1429,18 +1416,18 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
 			q = clone_mnt(p, p->mnt.mnt_root, flag);
 			if (IS_ERR(q))
 				goto out;
-			br_write_lock(&vfsmount_lock);
+			lock_mount_hash();
 			list_add_tail(&q->mnt_list, &res->mnt_list);
 			attach_mnt(q, parent, p->mnt_mp);
-			br_write_unlock(&vfsmount_lock);
+			unlock_mount_hash();
 		}
 	}
 	return res;
 out:
 	if (res) {
-		br_write_lock(&vfsmount_lock);
+		lock_mount_hash();
 		umount_tree(res, 0);
-		br_write_unlock(&vfsmount_lock);
+		unlock_mount_hash();
 	}
 	return q;
 }
@@ -1465,9 +1452,9 @@ struct vfsmount *collect_mounts(struct path *path)
 void drop_collected_mounts(struct vfsmount *mnt)
 {
 	namespace_lock();
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	umount_tree(real_mount(mnt), 0);
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	namespace_unlock();
 }
 
@@ -1594,7 +1581,7 @@ static int attach_recursive_mnt(struct mount *source_mnt,
 	if (err)
 		goto out_cleanup_ids;
 
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 
 	if (IS_MNT_SHARED(dest_mnt)) {
 		for (p = source_mnt; p; p = next_mnt(p, source_mnt))
@@ -1613,7 +1600,7 @@ static int attach_recursive_mnt(struct mount *source_mnt,
 		list_del_init(&child->mnt_hash);
 		commit_tree(child);
 	}
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 
 	return 0;
 
@@ -1715,10 +1702,10 @@ static int do_change_type(struct path *path, int flag)
 			goto out_unlock;
 	}
 
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	for (m = mnt; m; m = (recurse ? next_mnt(m, mnt) : NULL))
 		change_mnt_propagation(m, type);
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 
  out_unlock:
 	namespace_unlock();
@@ -1790,9 +1777,9 @@ static int do_loopback(struct path *path, const char *old_name,
 
 	err = graft_tree(mnt, parent, mp);
 	if (err) {
-		br_write_lock(&vfsmount_lock);
+		lock_mount_hash();
 		umount_tree(mnt, 0);
-		br_write_unlock(&vfsmount_lock);
+		unlock_mount_hash();
 	}
 out2:
 	unlock_mount(mp);
@@ -1851,17 +1838,13 @@ static int do_remount(struct path *path, int flags, int mnt_flags,
 	else
 		err = do_remount_sb(sb, flags, data, 0);
 	if (!err) {
-		br_write_lock(&vfsmount_lock);
+		lock_mount_hash();
 		mnt_flags |= mnt->mnt.mnt_flags & ~MNT_USER_SETTABLE_MASK;
 		mnt->mnt.mnt_flags = mnt_flags;
-		br_write_unlock(&vfsmount_lock);
+		touch_mnt_namespace(mnt->mnt_ns);
+		unlock_mount_hash();
 	}
 	up_write(&sb->s_umount);
-	if (!err) {
-		br_write_lock(&vfsmount_lock);
-		touch_mnt_namespace(mnt->mnt_ns);
-		br_write_unlock(&vfsmount_lock);
-	}
 	return err;
 }
 
@@ -2082,9 +2065,7 @@ fail:
 	/* remove m from any expiration list it may be on */
 	if (!list_empty(&mnt->mnt_expire)) {
 		namespace_lock();
-		br_write_lock(&vfsmount_lock);
 		list_del_init(&mnt->mnt_expire);
-		br_write_unlock(&vfsmount_lock);
 		namespace_unlock();
 	}
 	mntput(m);
@@ -2100,11 +2081,9 @@ fail:
 void mnt_set_expiry(struct vfsmount *mnt, struct list_head *expiry_list)
 {
 	namespace_lock();
-	br_write_lock(&vfsmount_lock);
 
 	list_add_tail(&real_mount(mnt)->mnt_expire, expiry_list);
 
-	br_write_unlock(&vfsmount_lock);
 	namespace_unlock();
 }
 EXPORT_SYMBOL(mnt_set_expiry);
@@ -2123,7 +2102,7 @@ void mark_mounts_for_expiry(struct list_head *mounts)
 		return;
 
 	namespace_lock();
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 
 	/* extract from the expiration list every vfsmount that matches the
 	 * following criteria:
@@ -2142,7 +2121,7 @@ void mark_mounts_for_expiry(struct list_head *mounts)
 		touch_mnt_namespace(mnt->mnt_ns);
 		umount_tree(mnt, 1);
 	}
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	namespace_unlock();
 }
 
@@ -2407,19 +2386,24 @@ static struct mnt_namespace *alloc_mnt_ns(struct user_namespace *user_ns)
 	return new_ns;
 }
 
-/*
- * Allocate a new namespace structure and populate it with contents
- * copied from the namespace of the passed in task structure.
- */
-static struct mnt_namespace *dup_mnt_ns(struct mnt_namespace *mnt_ns,
-		struct user_namespace *user_ns, struct fs_struct *fs)
+struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+		struct user_namespace *user_ns, struct fs_struct *new_fs)
 {
 	struct mnt_namespace *new_ns;
 	struct vfsmount *rootmnt = NULL, *pwdmnt = NULL;
 	struct mount *p, *q;
-	struct mount *old = mnt_ns->root;
+	struct mount *old;
 	struct mount *new;
 	int copy_flags;
+
+	BUG_ON(!ns);
+
+	if (likely(!(flags & CLONE_NEWNS))) {
+		get_mnt_ns(ns);
+		return ns;
+	}
+
+	old = ns->root;
 
 	new_ns = alloc_mnt_ns(user_ns);
 	if (IS_ERR(new_ns))
@@ -2428,7 +2412,7 @@ static struct mnt_namespace *dup_mnt_ns(struct mnt_namespace *mnt_ns,
 	namespace_lock();
 	/* First pass: copy the tree topology */
 	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
-	if (user_ns != mnt_ns->user_ns)
+	if (user_ns != ns->user_ns)
 		copy_flags |= CL_SHARED_TO_SLAVE | CL_UNPRIVILEGED;
 	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
 	if (IS_ERR(new)) {
@@ -2437,9 +2421,7 @@ static struct mnt_namespace *dup_mnt_ns(struct mnt_namespace *mnt_ns,
 		return ERR_CAST(new);
 	}
 	new_ns->root = new;
-	br_write_lock(&vfsmount_lock);
 	list_add_tail(&new_ns->list, &new->mnt_list);
-	br_write_unlock(&vfsmount_lock);
 
 	/*
 	 * Second pass: switch the tsk->fs->* elements and mark new vfsmounts
@@ -2450,13 +2432,13 @@ static struct mnt_namespace *dup_mnt_ns(struct mnt_namespace *mnt_ns,
 	q = new;
 	while (p) {
 		q->mnt_ns = new_ns;
-		if (fs) {
-			if (&p->mnt == fs->root.mnt) {
-				fs->root.mnt = mntget(&q->mnt);
+		if (new_fs) {
+			if (&p->mnt == new_fs->root.mnt) {
+				new_fs->root.mnt = mntget(&q->mnt);
 				rootmnt = &p->mnt;
 			}
-			if (&p->mnt == fs->pwd.mnt) {
-				fs->pwd.mnt = mntget(&q->mnt);
+			if (&p->mnt == new_fs->pwd.mnt) {
+				new_fs->pwd.mnt = mntget(&q->mnt);
 				pwdmnt = &p->mnt;
 			}
 		}
@@ -2474,23 +2456,6 @@ static struct mnt_namespace *dup_mnt_ns(struct mnt_namespace *mnt_ns,
 	if (pwdmnt)
 		mntput(pwdmnt);
 
-	return new_ns;
-}
-
-struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-		struct user_namespace *user_ns, struct fs_struct *new_fs)
-{
-	struct mnt_namespace *new_ns;
-
-	BUG_ON(!ns);
-	get_mnt_ns(ns);
-
-	if (!(flags & CLONE_NEWNS))
-		return ns;
-
-	new_ns = dup_mnt_ns(ns, user_ns, new_fs);
-
-	put_mnt_ns(ns);
 	return new_ns;
 }
 
@@ -2699,7 +2664,7 @@ SYSCALL_DEFINE2(pivot_root, const char __user *, new_root,
 	/* make certain new is below the root */
 	if (!is_path_reachable(new_mnt, new.dentry, &root))
 		goto out4;
-	br_write_lock(&vfsmount_lock);
+	lock_mount_hash();
 	detach_mnt(new_mnt, &parent_path);
 	detach_mnt(root_mnt, &root_parent);
 	if (root_mnt->mnt.mnt_flags & MNT_LOCKED) {
@@ -2711,7 +2676,7 @@ SYSCALL_DEFINE2(pivot_root, const char __user *, new_root,
 	/* mount new_root on / */
 	attach_mnt(new_mnt, real_mount(root_parent.mnt), root_mp);
 	touch_mnt_namespace(current->nsproxy->mnt_ns);
-	br_write_unlock(&vfsmount_lock);
+	unlock_mount_hash();
 	chroot_fs_refs(&root, &new);
 	put_mountpoint(root_mp);
 	error = 0;
@@ -2765,8 +2730,6 @@ void __init mnt_init(void)
 	unsigned u;
 	int err;
 
-	init_rwsem(&namespace_sem);
-
 	mnt_cache = kmem_cache_create("mnt_cache", sizeof(struct mount),
 			0, SLAB_HWCACHE_ALIGN | SLAB_PANIC, NULL);
 
@@ -2800,11 +2763,7 @@ void put_mnt_ns(struct mnt_namespace *ns)
 {
 	if (!atomic_dec_and_test(&ns->count))
 		return;
-	namespace_lock();
-	br_write_lock(&vfsmount_lock);
-	umount_tree(ns->root, 0);
-	br_write_unlock(&vfsmount_lock);
-	namespace_unlock();
+	drop_collected_mounts(&ns->root->mnt);
 	free_mnt_ns(ns);
 }
 
@@ -2827,9 +2786,9 @@ void kern_unmount(struct vfsmount *mnt)
 {
 	/* release long term mount so mount point can be released */
 	if (!IS_ERR_OR_NULL(mnt)) {
-		br_write_lock(&vfsmount_lock);
+		lock_mount_hash();
 		real_mount(mnt)->mnt_ns = NULL;
-		br_write_unlock(&vfsmount_lock);
+		unlock_mount_hash();
 		mntput(mnt);
 	}
 }
@@ -2872,7 +2831,7 @@ bool fs_fully_visible(struct file_system_type *type)
 	if (unlikely(!ns))
 		return false;
 
-	namespace_lock();
+	down_read(&namespace_sem);
 	list_for_each_entry(mnt, &ns->list, mnt_list) {
 		struct mount *child;
 		if (mnt->mnt.mnt_sb->s_type != type)
@@ -2893,7 +2852,7 @@ bool fs_fully_visible(struct file_system_type *type)
 	next:	;
 	}
 found:
-	namespace_unlock();
+	up_read(&namespace_sem);
 	return visible;
 }
 

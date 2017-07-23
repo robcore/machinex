@@ -1,6 +1,7 @@
 #include <linux/mount.h>
 #include <linux/seq_file.h>
 #include <linux/poll.h>
+#include <linux/lglock.h>
 
 struct mnt_namespace {
 	atomic_t		count;
@@ -55,7 +56,7 @@ struct mount {
 	int mnt_group_id;		/* peer group identifier */
 	int mnt_expiry_mark;		/* true if marked for expiry */
 	int mnt_pinned;
-	int mnt_ghosts;
+	struct path mnt_ex_mountpoint;
 };
 
 #define MNT_NS_INTERNAL ERR_PTR(-EINVAL) /* distinct from any mnt_namespace */
@@ -76,11 +77,24 @@ static inline int is_mounted(struct vfsmount *mnt)
 	return !IS_ERR_OR_NULL(real_mount(mnt));
 }
 
-extern struct mount *__lookup_mnt(struct vfsmount *, struct dentry *, int);
+extern struct mount *__lookup_mnt(struct vfsmount *, struct dentry *);
+extern struct mount *__lookup_mnt_last(struct vfsmount *, struct dentry *);
 
 static inline void get_mnt_ns(struct mnt_namespace *ns)
 {
 	atomic_inc(&ns->count);
+}
+
+extern struct lglock vfsmount_lock;
+
+static inline void lock_mount_hash(void)
+{
+	br_write_lock(&vfsmount_lock);
+}
+
+static inline void unlock_mount_hash(void)
+{
+	br_write_unlock(&vfsmount_lock);
 }
 
 struct proc_mounts {
