@@ -2587,8 +2587,20 @@ extern void *dev_seq_next(struct seq_file *seq, void *v, loff_t *pos);
 extern void dev_seq_stop(struct seq_file *seq, void *v);
 #endif
 
-extern int netdev_class_create_file(struct class_attribute *class_attr);
-extern void netdev_class_remove_file(struct class_attribute *class_attr);
+extern int netdev_class_create_file_ns(struct class_attribute *class_attr,
+				       const void *ns);
+extern void netdev_class_remove_file_ns(struct class_attribute *class_attr,
+					const void *ns);
+
+static inline int netdev_class_create_file(struct class_attribute *class_attr)
+{
+	return netdev_class_create_file_ns(class_attr, NULL);
+}
+
+static inline void netdev_class_remove_file(struct class_attribute *class_attr)
+{
+	netdev_class_remove_file_ns(class_attr, NULL);
+}
 
 extern struct kobj_ns_type_operations net_ns_type_operations;
 
