@@ -1367,8 +1367,8 @@ static struct dentry *lookup_dcache(struct qstr *name, struct dentry *dir,
 }
 
 /*
- * Call i_op->lookup on the dentry.  The dentry must be negative and
- * unhashed.
+ * Call i_op->lookup on the dentry.  The dentry must be negative but may be
+ * hashed if it was pouplated with DCACHE_NEED_LOOKUP.
  *
  * dir->d_inode->i_mutex must be held
  */
@@ -1570,9 +1570,18 @@ static void terminate_walk(struct nameidata *nd)
  * so we keep a cache of "no, this doesn't need follow_link"
  * for the common case.
  */
-static inline int should_follow_link(struct dentry *dentry, int follow)
+static inline int should_follow_link(struct inode *inode, int follow)
 {
-	return unlikely(d_is_symlink(dentry)) ? follow : 0;
+	if (unlikely(!(inode->i_opflags & IOP_NOFOLLOW))) {
+		if (likely(inode->i_op->follow_link))
+			return follow;
+
+		/* This gets set once for the inode lifetime */
+		spin_lock(&inode->i_lock);
+		inode->i_opflags |= IOP_NOFOLLOW;
+		spin_unlock(&inode->i_lock);
+	}
+	return 0;
 }
 
 static inline int walk_component(struct nameidata *nd, struct path *path,
@@ -1602,7 +1611,7 @@ static inline int walk_component(struct nameidata *nd, struct path *path,
 	if (!inode)
 		goto out_path_put;
 
-	if (should_follow_link(path->dentry, follow)) {
+	if (should_follow_link(inode, follow)) {
 		if (nd->flags & LOOKUP_RCU) {
 			if (unlikely(unlazy_walk(nd, path->dentry))) {
 				err = -ECHILD;
@@ -1658,6 +1667,26 @@ static inline int nested_symlink(struct path *path, struct nameidata *nd)
 	current->link_count--;
 	nd->depth--;
 	return res;
+}
+
+/*
+ * We really don't want to look at inode->i_op->lookup
+ * when we don't have to. So we keep a cache bit in
+ * the inode ->i_opflags field that says "yes, we can
+ * do lookup on this inode".
+ */
+static inline int can_lookup(struct inode *inode)
+{
+	if (likely(inode->i_opflags & IOP_LOOKUP))
+		return 1;
+	if (likely(!inode->i_op->lookup))
+		return 0;
+
+	/* We do this once for the lifetime of the inode */
+	spin_lock(&inode->i_lock);
+	inode->i_opflags |= IOP_LOOKUP;
+	spin_unlock(&inode->i_lock);
+	return 1;
 }
 
 /*
@@ -1862,7 +1891,7 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 			if (err)
 				return err;
 		}
-		if (!d_is_directory(nd->path.dentry)) {
+		if (!can_lookup(nd->inode)) {
 			err = -ENOTDIR;
 			break;
 		}
@@ -1880,10 +1909,9 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 	nd->flags = flags | LOOKUP_JUMPED;
 	nd->depth = 0;
 	if (flags & LOOKUP_ROOT) {
-		struct dentry *root = nd->root.dentry;
-		struct inode *inode = root->d_inode;
+		struct inode *inode = nd->root.dentry->d_inode;
 		if (*name) {
-			if (!d_is_directory(root))
+			if (!can_lookup(inode))
 				return -ENOTDIR;
 			retval = inode_permission(inode, MAY_EXEC);
 			if (retval)
@@ -1939,7 +1967,7 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 		dentry = f.file->f_path.dentry;
 
 		if (*name) {
-			if (!d_is_directory(dentry)) {
+			if (!can_lookup(dentry->d_inode)) {
 				fdput(f);
 				return -ENOTDIR;
 			}
@@ -2021,7 +2049,7 @@ static int path_lookupat(int dfd, const char *name,
 		err = complete_walk(nd);
 
 	if (!err && nd->flags & LOOKUP_DIRECTORY) {
-		if (!d_is_directory(nd->path.dentry)) {
+		if (!can_lookup(nd->inode)) {
 			path_put(&nd->path);
 			err = -ENOTDIR;
 		}
@@ -2314,7 +2342,7 @@ done:
 	}
 	path->dentry = dentry;
 	path->mnt = mntget(nd->path.mnt);
-	if (should_follow_link(dentry, nd->flags & LOOKUP_FOLLOW))
+	if (should_follow_link(dentry->d_inode, nd->flags & LOOKUP_FOLLOW))
 		return 1;
 	follow_mount(path);
 	error = 0;
@@ -2459,14 +2487,12 @@ static inline int check_sticky(struct inode *dir, struct inode *inode)
  * 10. We don't allow removal of NFS sillyrenamed files; it's handled by
  *     nfs_async_unlink().
  */
-static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
+static int may_delete(struct inode *dir,struct dentry *victim,int isdir)
 {
-	struct inode *inode = victim->d_inode;
 	int error;
 
-	if (d_is_negative(victim))
+	if (!victim->d_inode)
 		return -ENOENT;
-	BUG_ON(!inode);
 
 	BUG_ON(victim->d_parent->d_inode != dir);
 	audit_inode_child(dir, victim, AUDIT_TYPE_CHILD_DELETE);
@@ -2476,16 +2502,15 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
 		return error;
 	if (IS_APPEND(dir))
 		return -EPERM;
-
-	if (check_sticky(dir, inode) || IS_APPEND(inode) ||
-	    IS_IMMUTABLE(inode) || IS_SWAPFILE(inode))
+	if (check_sticky(dir, victim->d_inode)||IS_APPEND(victim->d_inode)||
+	    IS_IMMUTABLE(victim->d_inode) || IS_SWAPFILE(victim->d_inode))
 		return -EPERM;
 	if (isdir) {
-		if (!d_is_directory(victim) && !d_is_autodir(victim))
+		if (!S_ISDIR(victim->d_inode->i_mode))
 			return -ENOTDIR;
 		if (IS_ROOT(victim))
 			return -EBUSY;
-	} else if (d_is_directory(victim) || d_is_autodir(victim))
+	} else if (S_ISDIR(victim->d_inode->i_mode))
 		return -EISDIR;
 	if (IS_DEADDIR(dir))
 		return -ENOENT;
@@ -3024,7 +3049,7 @@ retry_lookup:
 	/*
 	 * create/update audit record if it already exists.
 	 */
-	if (d_is_positive(path->dentry))
+	if (path->dentry->d_inode)
 		audit_inode(name, path->dentry, 0);
 
 	/*
@@ -3053,12 +3078,12 @@ retry_lookup:
 finish_lookup:
 	/* we _can_ be in RCU mode here */
 	error = -ENOENT;
-	if (d_is_negative(path->dentry)) {
+	if (!inode) {
 		path_to_nameidata(path, nd);
 		goto out;
 	}
 
-	if (should_follow_link(path->dentry, !symlink_ok)) {
+	if (should_follow_link(inode, !symlink_ok)) {
 		if (nd->flags & LOOKUP_RCU) {
 			if (unlikely(unlazy_walk(nd, path->dentry))) {
 				error = -ECHILD;
@@ -3087,11 +3112,10 @@ finish_open:
 	}
 	audit_inode(name, nd->path.dentry, 0);
 	error = -EISDIR;
-	if ((open_flag & O_CREAT) &&
-	    (d_is_directory(nd->path.dentry) || d_is_autodir(nd->path.dentry)))
+	if ((open_flag & O_CREAT) && S_ISDIR(nd->inode->i_mode))
 		goto out;
 	error = -ENOTDIR;
-	if ((nd->flags & LOOKUP_DIRECTORY) && !d_is_directory(nd->path.dentry))
+	if ((nd->flags & LOOKUP_DIRECTORY) && !can_lookup(nd->inode))
 		goto out;
 	if (!S_ISREG(nd->inode->i_mode))
 		will_truncate = false;
@@ -3316,7 +3340,7 @@ struct file *do_file_open_root(struct dentry *dentry, struct vfsmount *mnt,
 	nd.root.mnt = mnt;
 	nd.root.dentry = dentry;
 
-	if (d_is_symlink(dentry) && op->intent & LOOKUP_OPEN)
+	if (dentry->d_inode->i_op->follow_link && op->intent & LOOKUP_OPEN)
 		return ERR_PTR(-ELOOP);
 
 	file = path_openat(-1, &filename, &nd, op, flags | LOOKUP_RCU);
@@ -3366,9 +3390,8 @@ struct dentry *kern_path_create(int dfd, const char *pathname,
 		goto unlock;
 
 	error = -EEXIST;
-	if (d_is_positive(dentry))
+	if (dentry->d_inode)
 		goto fail;
-
 	/*
 	 * Special case - lookup gave negative, but... we had foo/bar/
 	 * From the vfs_mknod() POV we just have a negative dentry -
@@ -3758,7 +3781,7 @@ retry:
 		if (nd.last.name[nd.last.len])
 			goto slashes;
 		inode = dentry->d_inode;
-		if (d_is_negative(dentry))
+		if (!inode)
 			goto slashes;
 		ihold(inode);
 		error = security_path_unlink(&nd.path, dentry);
@@ -3783,12 +3806,8 @@ exit1:
 	return error;
 
 slashes:
-	if (d_is_negative(dentry))
-		error = -ENOENT;
-	else if (d_is_directory(dentry) || d_is_autodir(dentry))
-		error = -EISDIR;
-	else
-		error = -ENOTDIR;
+	error = !dentry->d_inode ? -ENOENT :
+		S_ISDIR(dentry->d_inode->i_mode) ? -EISDIR : -ENOTDIR;
 	goto exit2;
 }
 
@@ -4102,7 +4121,7 @@ int vfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	       struct inode *new_dir, struct dentry *new_dentry)
 {
 	int error;
-	int is_dir = d_is_directory(old_dentry) || d_is_autodir(old_dentry);
+	int is_dir = S_ISDIR(old_dentry->d_inode->i_mode);
 	const unsigned char *old_name;
 
 	if (old_dentry->d_inode == new_dentry->d_inode)
@@ -4190,10 +4209,10 @@ retry:
 		goto exit3;
 	/* source must exist */
 	error = -ENOENT;
-	if (d_is_negative(old_dentry))
+	if (!old_dentry->d_inode)
 		goto exit4;
 	/* unless the source is a directory trailing slashes give -ENOTDIR */
-	if (!d_is_directory(old_dentry) && !d_is_autodir(old_dentry)) {
+	if (!S_ISDIR(old_dentry->d_inode->i_mode)) {
 		error = -ENOTDIR;
 		if (oldnd.last.name[oldnd.last.len])
 			goto exit4;
