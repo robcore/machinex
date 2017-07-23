@@ -194,32 +194,20 @@ static int fill_write_buffer(struct sysfs_open_file *of,
 	return error ? -EFAULT : count;
 }
 
-/**
- *	flush_write_buffer - push buffer to kobject.
- *	@of:		open file
- *	@count:		number of bytes
- *
- *	Get the correct pointers for the kobject and the attribute we're
- *	dealing with, then call the store() method for the attribute,
- *	passing the buffer that we acquired in fill_write_buffer().
- */
-
-static int flush_write_buffer(struct dentry *dentry,
-			      struct sysfs_open_file *of, size_t count)
+static int flush_write_buffer(struct sysfs_open_file *of, size_t count)
 {
-	struct sysfs_dirent *attr_sd = dentry->d_fsdata;
-	struct kobject *kobj = attr_sd->s_parent->s_dir.kobj;
+	struct kobject *kobj = of->sd->s_parent->s_dir.kobj;
 	const struct sysfs_ops *ops;
 	int rc;
 
-	/* need attr_sd for attr and ops, its parent for kobj */
-	if (!sysfs_get_active(attr_sd))
+	/* need @of->sd for attr and ops, its parent for kobj */
+	if (!sysfs_get_active(of->sd))
 		return -ENODEV;
 
-	ops = sysfs_file_ops(attr_sd);
-	rc = ops->store(kobj, attr_sd->s_attr.attr, of->page, count);
+	ops = sysfs_file_ops(of->sd);
+	rc = ops->store(kobj, of->sd->s_attr.attr, of->page, count);
 
-	sysfs_put_active(attr_sd);
+	sysfs_put_active(of->sd);
 
 	return rc;
 }
