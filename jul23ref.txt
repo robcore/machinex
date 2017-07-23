@@ -1,1 +1,4 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/3patches/0016-mm-migration-do-not-lose-soft-dirty-bit-if-page-is-i.patch
+/media/root/robcore/android/msm_kernel_caf_3.14/patches/3patches/4112-VFS-Put-a-small-type-field-into-struct-dentry-d_flag.patch
+/media/root/robcore/android/msm_kernel_caf_3.14/patches/6patches/1577-use-can_lookup-instead-of-direct-checks-of-i_op-look.patch
+/media/root/robcore/android/msm_kernel_caf_3.14/patches/6patches/4828-do_last-fix-missing-checks-for-LAST_BIND-case.patch
+/media/root/robcore/android/msm_kernel_caf_3.14/patches/9patches/4900-link_path_walk-move-assignments-to-nd-last-nd-last_t.patch
