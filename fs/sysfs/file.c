@@ -45,6 +45,8 @@ struct sysfs_open_dirent {
 };
 
 struct sysfs_open_file {
+	struct sysfs_dirent	*sd;
+	struct file		*file;
 	size_t			count;
 	char			*page;
 	struct mutex		mutex;
@@ -194,7 +196,6 @@ static int fill_write_buffer(struct sysfs_open_file *of,
 
 /**
  *	flush_write_buffer - push buffer to kobject.
- *	@dentry:	dentry to the attribute
  *	@of:		open file
  *	@count:		number of bytes
  *
@@ -248,7 +249,7 @@ static ssize_t sysfs_write_file(struct file *file, const char __user *buf,
 	mutex_lock(&of->mutex);
 	len = fill_write_buffer(of, buf, count);
 	if (len > 0)
-		len = flush_write_buffer(file->f_path.dentry, of, len);
+		len = flush_write_buffer(of, len);
 	if (len > 0)
 		*ppos += len;
 	mutex_unlock(&of->mutex);
@@ -388,6 +389,8 @@ static int sysfs_open_file(struct inode *inode, struct file *file)
 		goto err_out;
 
 	mutex_init(&of->mutex);
+	of->sd = attr_sd;
+	of->file = file;
 	file->private_data = of;
 
 	/* make sure we have open dirent struct */
