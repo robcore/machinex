@@ -569,19 +569,15 @@ an memcg since the pages are allowed to be allocated from any physical
 node.  One of the usecases is evaluating application performance by
 combining this information with the application's cpu allocation.
 
-Each memcg's numa_stat file includes "total", "file", "anon" and "unevictable"
-per-node page counts including "hierarchical_<counter>" which sums up all
-hierarchical children's values in addition to the memcg's own value.
-
-The ouput format of memory.numa_stat is:
+We export "total", "file", "anon" and "unevictable" pages per-node for
+each memcg.  The ouput format of memory.numa_stat is:
 
 total=<total pages> N0=<node 0 pages> N1=<node 1 pages> ...
 file=<total file pages> N0=<node 0 pages> N1=<node 1 pages> ...
 anon=<total anon pages> N0=<node 0 pages> N1=<node 1 pages> ...
 unevictable=<total anon pages> N0=<node 0 pages> N1=<node 1 pages> ...
-hierarchical_<counter>=<counter pages> N0=<node 0 pages> N1=<node 1 pages> ...
 
-The "total" count is sum of file + anon + unevictable.
+And we have total = file + anon + unevictable.
 
 6. Hierarchy support
 

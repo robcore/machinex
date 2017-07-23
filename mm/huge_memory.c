@@ -25,12 +25,11 @@
 #include "internal.h"
 
 /*
- * By default transparent hugepage support is disabled in order that avoid
- * to risk increase the memory footprint of applications without a guaranteed
- * benefit. When transparent hugepage support is enabled, is for all mappings,
- * and khugepaged scans all mappings.
- * Defrag is invoked by khugepaged hugepage allocations and by page faults
- * for all hugepage allocations.
+ * By default transparent hugepage support is enabled for all mappings
+ * and khugepaged scans all mappings. Defrag is only invoked by
+ * khugepaged hugepage allocations and by page faults inside
+ * MADV_HUGEPAGE regions to avoid the risk of slowing down short lived
+ * allocations.
  */
 unsigned long transparent_hugepage_flags __read_mostly =
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS
@@ -2745,7 +2744,6 @@ void __split_huge_page_pmd(struct vm_area_struct *vma, unsigned long address,
 
 	mmun_start = haddr;
 	mmun_end   = haddr + HPAGE_PMD_SIZE;
-again:
 	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
 	spin_lock(&mm->page_table_lock);
 	if (unlikely(!pmd_trans_huge(*pmd))) {
@@ -2768,14 +2766,7 @@ again:
 	split_huge_page(page);
 
 	put_page(page);
-
-	/*
-	 * We don't always have down_write of mmap_sem here: a racing
-	 * do_huge_pmd_wp_page() might have copied-on-write to another
-	 * huge page before our split_huge_page() got the anon_vma lock.
-	 */
-	if (unlikely(pmd_trans_huge(*pmd)))
-		goto again;
+	BUG_ON(pmd_trans_huge(*pmd));
 }
 
 void split_huge_page_pmd_mm(struct mm_struct *mm, unsigned long address,

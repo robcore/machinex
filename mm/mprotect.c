@@ -92,16 +92,13 @@ static unsigned long change_pte_range(struct vm_area_struct *vma, pmd_t *pmd,
 			swp_entry_t entry = pte_to_swp_entry(oldpte);
 
 			if (is_write_migration_entry(entry)) {
-				pte_t newpte;
 				/*
 				 * A protection check is difficult so
 				 * just be safe and disable write
 				 */
 				make_migration_entry_read(&entry);
-				newpte = swp_entry_to_pte(entry);
-				if (pte_swp_soft_dirty(oldpte))
-					newpte = pte_swp_mksoft_dirty(newpte);
-				set_pte_at(mm, addr, pte, newpte);
+				set_pte_at(mm, addr, pte,
+					swp_entry_to_pte(entry));
 
 				pages++;
 			}
@@ -138,7 +135,6 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 	unsigned long next;
 	unsigned long pages = 0;
 	bool all_same_node;
-	unsigned long nr_huge_updates = 0;
 
 	pmd = pmd_offset(pud, addr);
 	do {
@@ -153,10 +149,8 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 						newprot, prot_numa);
 
 				if (nr_ptes) {
-					if (nr_ptes == HPAGE_PMD_NR) {
-						pages += HPAGE_PMD_NR;
-						nr_huge_updates++;
-					}
+					if (nr_ptes == HPAGE_PMD_NR)
+						pages++;
 
 					continue;
 				}
@@ -189,7 +183,6 @@ static inline unsigned long change_pud_range(struct vm_area_struct *vma,
 	pud_t *pud;
 	unsigned long next;
 	unsigned long pages = 0;
-	unsigned long nr_huge_updates = 0;
 
 	pud = pud_offset(pgd, addr);
 	do {
@@ -212,7 +205,6 @@ static unsigned long change_protection_range(struct vm_area_struct *vma,
 	unsigned long next;
 	unsigned long start = addr;
 	unsigned long pages = 0;
-	unsigned long nr_huge_updates = 0;
 
 	BUG_ON(addr >= end);
 	pgd = pgd_offset(mm, addr);
@@ -229,8 +221,6 @@ static unsigned long change_protection_range(struct vm_area_struct *vma,
 	if (pages)
 		flush_tlb_range(vma, start, end);
 
-	if (nr_huge_updates)
-		count_vm_numa_events(NUMA_HUGE_PTE_UPDATES, nr_huge_updates);
 	return pages;
 }
 

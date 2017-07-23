@@ -254,7 +254,8 @@ static int kcore_update_ram(void)
 	end_pfn = 0;
 	for_each_node_state(nid, N_MEMORY) {
 		unsigned long node_end;
-		node_end = node_end_pfn(nid);
+		node_end  = NODE_DATA(nid)->node_start_pfn +
+			NODE_DATA(nid)->node_spanned_pages;
 		if (end_pfn < node_end)
 			end_pfn = node_end;
 	}

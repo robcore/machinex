@@ -929,7 +929,7 @@ int scfs_write_meta(struct file *file)
 		truncate_setsize(lower_inode, pos);
 
 		mutex_lock(&lower_inode->i_mutex);
-		ret = notify_change(lower_file->f_dentry, &ia, NULL);
+		ret = notify_change(lower_file->f_dentry, &ia);
 		mutex_unlock(&lower_inode->i_mutex);
 		if (ret) {
 			SCFS_PRINT_ERROR("f:%s error in lower_truncate, %d",
@@ -1118,7 +1118,7 @@ int scfs_truncate(struct dentry *dentry, loff_t size)
 	mutex_unlock(&sii->cinfo_mutex);
 
 	mutex_lock(&lower_dentry->d_inode->i_mutex);
-	ret = notify_change(lower_dentry, &ia, NULL);
+	ret = notify_change(lower_dentry, &ia);
 	mutex_unlock(&lower_dentry->d_inode->i_mutex);
 	if (ret)
 		return ret;

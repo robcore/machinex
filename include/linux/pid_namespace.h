@@ -23,7 +23,6 @@ struct bsd_acct_struct;
 struct pid_namespace {
 	struct kref kref;
 	struct pidmap pidmap[PIDMAP_ENTRIES];
-	struct rcu_head rcu;
 	int last_pid;
 	int nr_hashed;
 	struct task_struct *child_reaper;

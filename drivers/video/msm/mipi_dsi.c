@@ -574,7 +574,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	resource_size_t size ;
 
 	if ((pdev->id == 1) && (pdev->num_resources >= 0)) {
-		mipi_dsi_pdata = dev_get_platdata(&pdev->dev);
+		mipi_dsi_pdata = pdev->dev.platform_data;
 
 		size =  resource_size(&pdev->resource[0]);
 		mipi_dsi_base =  ioremap(pdev->resource[0].start, size);

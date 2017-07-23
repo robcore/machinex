@@ -143,8 +143,6 @@ obj-$(CONFIG_QMI_ENCDEC) += qmi_encdec.o
 obj-$(CONFIG_GENERIC_STRNCPY_FROM_USER) += strncpy_from_user.o
 obj-$(CONFIG_GENERIC_STRNLEN_USER) += strnlen_user.o
 
-obj-$(CONFIG_PERCPU_TEST) += percpu_test.o
-
 obj-$(CONFIG_ASN1) += asn1_decoder.o
 
 obj-$(CONFIG_PRIO_TREE_TEST) += prio_tree_test.o

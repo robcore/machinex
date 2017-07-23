@@ -286,7 +286,7 @@ static struct inode * scfs_do_create(struct inode *parent_inode,
 	inode = _scfs_get_inode(lower_file_dentry->d_inode, parent_inode->i_sb);
 	if (IS_ERR(inode)) {
 		SCFS_PRINT_ERROR("error in get_inode, so lower thing will be unlinked\n");
-		vfs_unlink(lower_parent_dentry->d_inode, lower_file_dentry, NULL);
+		vfs_unlink(lower_parent_dentry->d_inode, lower_file_dentry);
 		goto unlock;
 	}
 	fsstack_copy_attr_times(parent_inode, lower_parent_dentry->d_inode);
@@ -307,7 +307,7 @@ static int scfs_do_unlink(struct inode *dir, struct dentry *dentry, struct inode
 
 	dget(lower_dentry);
 	lower_dir_dentry = lock_parent(lower_dentry);
-	ret = vfs_unlink(lower_dir_inode, lower_dentry, NULL);
+	ret = vfs_unlink(lower_dir_inode, lower_dentry);
 	if (ret) {
 		SCFS_PRINT_ERROR("error in vfs_unlink, ret : %d\n", ret);
 		goto out;
@@ -611,7 +611,7 @@ static int scfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		goto out_lock;
 	}
 	ret = vfs_rename(lower_old_dir_dentry->d_inode, lower_old_dentry,
-			lower_new_dir_dentry->d_inode, lower_new_dentry, NULL);
+			lower_new_dir_dentry->d_inode, lower_new_dentry);
 	if (ret)
 		goto out_lock;
 	if (target_inode)
@@ -751,7 +751,7 @@ static int scfs_link(struct dentry *old_dentry, struct inode *dir,
 	dget(lower_new_dentry);
 	lower_dir_dentry = lock_parent(lower_new_dentry);
 	ret = vfs_link(lower_old_dentry, lower_dir_dentry->d_inode,
-		      lower_new_dentry, NULL);
+		      lower_new_dentry);
 	if (ret || !lower_new_dentry->d_inode)
 		goto out;
 	ret = scfs_interpose(lower_new_dentry, new_dentry, dir->i_sb);
@@ -800,7 +800,7 @@ static int scfs_setattr(struct dentry *dentry, struct iattr *ia)
 		lower_ia.ia_valid &= ~ATTR_MODE;
 
 	mutex_lock(&lower_dentry->d_inode->i_mutex);
-	ret = notify_change(lower_dentry, &lower_ia, NULL);
+	ret = notify_change(lower_dentry, &lower_ia);
 	mutex_unlock(&lower_dentry->d_inode->i_mutex);
 out:
 	fsstack_copy_attr_all(inode, lower_inode);

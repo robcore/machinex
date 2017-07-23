@@ -368,7 +368,6 @@ void cdev_put(struct cdev *p)
  */
 static int chrdev_open(struct inode *inode, struct file *filp)
 {
-	const struct file_operations *fops;
 	struct cdev *p;
 	struct cdev *new = NULL;
 	int ret = 0;
@@ -401,11 +400,10 @@ static int chrdev_open(struct inode *inode, struct file *filp)
 		return ret;
 
 	ret = -ENXIO;
-	fops = fops_get(p->ops);
-	if (!fops)
+	filp->f_op = fops_get(p->ops);
+	if (!filp->f_op)
 		goto out_cdev_put;
 
-	replace_fops(filp, fops);
 	if (filp->f_op->open) {
 		ret = filp->f_op->open(inode, filp);
 		if (ret)
@@ -576,8 +574,7 @@ static struct kobject *base_probe(dev_t dev, int *part, void *data)
 void __init chrdev_init(void)
 {
 	cdev_map = kobj_map_init(base_probe, &chrdevs_lock);
-	if (bdi_init(&directly_mappable_cdev_bdi))
-		panic("Failed to init directly mappable cdev bdi");
+	bdi_init(&directly_mappable_cdev_bdi);
 }
 
 

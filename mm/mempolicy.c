@@ -1091,7 +1091,7 @@ int do_migrate_pages(struct mm_struct *mm, const nodemask_t *from,
 	tmp = *from;
 	while (!nodes_empty(tmp)) {
 		int s,d;
-		int source = NUMA_NO_NODE;
+		int source = -1;
 		int dest = 0;
 
 		for_each_node_mask(s, tmp) {
@@ -1126,7 +1126,7 @@ int do_migrate_pages(struct mm_struct *mm, const nodemask_t *from,
 			if (!node_isset(dest, tmp))
 				break;
 		}
-		if (source == NUMA_NO_NODE)
+		if (source == -1)
 			break;
 
 		node_clear(source, tmp);
@@ -1800,7 +1800,7 @@ static unsigned offset_il_node(struct mempolicy *pol,
 	unsigned nnodes = nodes_weight(pol->v.nodes);
 	unsigned target;
 	int c;
-	int nid = NUMA_NO_NODE;
+	int nid = -1;
 
 	if (!nnodes)
 		return numa_node_id();
@@ -1837,11 +1837,11 @@ static inline unsigned interleave_nid(struct mempolicy *pol,
 
 /*
  * Return the bit number of a random bit set in the nodemask.
- * (returns NUMA_NO_NODE if nodemask is empty)
+ * (returns -1 if nodemask is empty)
  */
 int node_random(const nodemask_t *maskp)
 {
-	int w, bit = NUMA_NO_NODE;
+	int w, bit = -1;
 
 	w = nodes_weight(*maskp);
 	if (w)
@@ -2827,45 +2827,62 @@ out:
  * @maxlen:  length of @buffer
  * @pol:  pointer to mempolicy to be formatted
  *
- * Convert @pol into a string.  If @buffer is too short, truncate the string.
- * Recommend a @maxlen of at least 32 for the longest mode, "interleave", the
- * longest flag, "relative", and to display at least a few node ids.
+ * Convert a mempolicy into a string.
+ * Returns the number of characters in buffer (if positive)
+ * or an error (negative)
  */
-void mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
+int mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
 {
 	char *p = buffer;
-	nodemask_t nodes = NODE_MASK_NONE;
-	unsigned short mode = MPOL_DEFAULT;
-	unsigned short flags = 0;
+	int l;
+	nodemask_t nodes;
+	unsigned short mode;
+	unsigned short flags = pol ? pol->flags : 0;
 
-	if (pol && pol != &default_policy) {
+	/*
+	 * Sanity check:  room for longest mode, flag and some nodes
+	 */
+	VM_BUG_ON(maxlen < strlen("interleave") + strlen("relative") + 16);
+
+	if (!pol || pol == &default_policy)
+		mode = MPOL_DEFAULT;
+	else
 		mode = pol->mode;
-		flags = pol->flags;
-	}
 
 	switch (mode) {
 	case MPOL_DEFAULT:
+		nodes_clear(nodes);
 		break;
+
 	case MPOL_PREFERRED:
+		nodes_clear(nodes);
 		if (flags & MPOL_F_LOCAL)
 			mode = MPOL_LOCAL;
 		else
 			node_set(pol->v.preferred_node, nodes);
 		break;
+
 	case MPOL_BIND:
+		/* Fall through */
 	case MPOL_INTERLEAVE:
 		nodes = pol->v.nodes;
 		break;
+
 	default:
-		WARN_ON_ONCE(1);
-		snprintf(p, maxlen, "unknown");
-		return;
+		return -EINVAL;
 	}
 
-	p += snprintf(p, maxlen, policy_modes[mode]);
+	l = strlen(policy_modes[mode]);
+	if (buffer + maxlen < p + l + 1)
+		return -ENOSPC;
+
+	strcpy(p, policy_modes[mode]);
+	p += l;
 
 	if (flags & MPOL_MODE_FLAGS) {
-		p += snprintf(p, buffer + maxlen - p, "=");
+		if (buffer + maxlen < p + 2)
+			return -ENOSPC;
+		*p++ = '=';
 
 		/*
 		 * Currently, the only defined flags are mutually exclusive
@@ -2877,7 +2894,10 @@ void mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
 	}
 
 	if (!nodes_empty(nodes)) {
-		p += snprintf(p, buffer + maxlen - p, ":");
+		if (buffer + maxlen < p + 2)
+			return -ENOSPC;
+		*p++ = ':';
 	 	p += nodelist_scnprintf(p, buffer + maxlen - p, nodes);
 	}
+	return p - buffer;
 }

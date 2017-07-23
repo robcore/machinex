@@ -270,10 +270,7 @@ struct ecryptfs_inode_info {
  * vfsmount too. */
 struct ecryptfs_dentry_info {
 	struct path lower_path;
-	union {
-		struct ecryptfs_crypt_stat *crypt_stat;
-		struct rcu_head rcu;
-	};
+	struct ecryptfs_crypt_stat *crypt_stat;
 };
 
 /**
@@ -541,6 +538,13 @@ ecryptfs_dentry_to_lower(struct dentry *dentry)
 	return ((struct ecryptfs_dentry_info *)dentry->d_fsdata)->lower_path.dentry;
 }
 
+static inline void
+ecryptfs_set_dentry_lower(struct dentry *dentry, struct dentry *lower_dentry)
+{
+	((struct ecryptfs_dentry_info *)dentry->d_fsdata)->lower_path.dentry =
+		lower_dentry;
+}
+
 static inline struct vfsmount *
 ecryptfs_dentry_to_lower_mnt(struct dentry *dentry)
 {
@@ -551,6 +555,13 @@ static inline struct path *
 ecryptfs_dentry_to_lower_path(struct dentry *dentry)
 {
 	return &((struct ecryptfs_dentry_info *)dentry->d_fsdata)->lower_path;
+}
+
+static inline void
+ecryptfs_set_dentry_lower_mnt(struct dentry *dentry, struct vfsmount *lower_mnt)
+{
+	((struct ecryptfs_dentry_info *)dentry->d_fsdata)->lower_path.mnt =
+		lower_mnt;
 }
 
 #define ecryptfs_printk(type, fmt, arg...) \
