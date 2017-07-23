@@ -614,7 +614,7 @@ err_cleanup:
 err:
 	aio_free_ring(ctx);
 	free_percpu(ctx->cpu);
-	free_percpu(ctx->reqs.pcpu_count);
+	free_percpu(&ctx->reqs);
 	free_percpu(&ctx->users);
 	kmem_cache_free(kioctx_cachep, ctx);
 	pr_debug("error allocating ioctx %d\n", err);
