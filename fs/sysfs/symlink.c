@@ -28,17 +28,20 @@ static int sysfs_do_create_link_sd(struct sysfs_dirent *parent_sd,
 	struct sysfs_dirent *target_sd = NULL;
 	struct sysfs_dirent *sd = NULL;
 	struct sysfs_addrm_cxt acxt;
+	enum kobj_ns_type ns_type;
 	int error;
 
 	BUG_ON(!name || !parent_sd);
 
-	/* target->sd can go away beneath us but is protected with
-	 * sysfs_assoc_lock.  Fetch target_sd from it.
+	/*
+	 * We don't own @target and it may be removed at any time.
+	 * Synchronize using sysfs_symlink_target_lock.  See
+	 * sysfs_remove_dir() for details.
 	 */
-	spin_lock(&sysfs_assoc_lock);
+	spin_lock(&sysfs_symlink_target_lock);
 	if (target->sd)
 		target_sd = sysfs_get(target->sd);
-	spin_unlock(&sysfs_assoc_lock);
+	spin_unlock(&sysfs_symlink_target_lock);
 
 	error = -ENOENT;
 	if (!target_sd)
@@ -49,15 +52,29 @@ static int sysfs_do_create_link_sd(struct sysfs_dirent *parent_sd,
 	if (!sd)
 		goto out_put;
 
-	sd->s_ns = target_sd->s_ns;
+	ns_type = sysfs_ns_type(parent_sd);
+	if (ns_type)
+		sd->s_ns = target_sd->s_ns;
 	sd->s_symlink.target_sd = target_sd;
 	target_sd = NULL;	/* reference is now owned by the symlink */
 
 	sysfs_addrm_start(&acxt);
-	if (warn)
-		error = sysfs_add_one(&acxt, sd, parent_sd);
-	else
-		error = __sysfs_add_one(&acxt, sd, parent_sd);
+	/* Symlinks must be between directories with the same ns_type */
+	if (!ns_type ||
+	    (ns_type == sysfs_ns_type(sd->s_symlink.target_sd->s_parent))) {
+		if (warn)
+			error = sysfs_add_one(&acxt, sd, parent_sd);
+		else
+			error = __sysfs_add_one(&acxt, sd, parent_sd);
+	} else {
+		error = -EINVAL;
+		WARN(1, KERN_WARNING
+			"sysfs: symlink across ns_types %s/%s -> %s/%s\n",
+			parent_sd->s_name,
+			sd->s_name,
+			sd->s_symlink.target_sd->s_parent->s_name,
+			sd->s_symlink.target_sd->s_name);
+	}
 	sysfs_addrm_finish(&acxt);
 
 	if (error)
@@ -140,10 +157,16 @@ void sysfs_delete_link(struct kobject *kobj, struct kobject *targ,
 			const char *name)
 {
 	const void *ns = NULL;
-	spin_lock(&sysfs_assoc_lock);
-	if (targ->sd)
+
+	/*
+	 * We don't own @target and it may be removed at any time.
+	 * Synchronize using sysfs_symlink_target_lock.  See
+	 * sysfs_remove_dir() for details.
+	 */
+	spin_lock(&sysfs_symlink_target_lock);
+	if (targ->sd && sysfs_ns_type(kobj->sd))
 		ns = targ->sd->s_ns;
-	spin_unlock(&sysfs_assoc_lock);
+	spin_unlock(&sysfs_symlink_target_lock);
 	sysfs_hash_and_remove(kobj->sd, name, ns);
 }
 

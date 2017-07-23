@@ -180,7 +180,7 @@ struct iso9660_options{
  * Compute the hash for the isofs name corresponding to the dentry.
  */
 static int
-isofs_hash_common(const struct dentry *dentry, struct qstr *qstr, int ms)
+isofs_hash_common(struct qstr *qstr, int ms)
 {
 	const char *name;
 	int len;
@@ -201,7 +201,7 @@ isofs_hash_common(const struct dentry *dentry, struct qstr *qstr, int ms)
  * Compute the hash for the isofs name corresponding to the dentry.
  */
 static int
-isofs_hashi_common(const struct dentry *dentry, struct qstr *qstr, int ms)
+isofs_hashi_common(struct qstr *qstr, int ms)
 {
 	const char *name;
 	int len;
@@ -258,13 +258,13 @@ static int isofs_dentry_cmp_common(
 static int
 isofs_hash(const struct dentry *dentry, struct qstr *qstr)
 {
-	return isofs_hash_common(dentry, qstr, 0);
+	return isofs_hash_common(qstr, 0);
 }
 
 static int
 isofs_hashi(const struct dentry *dentry, struct qstr *qstr)
 {
-	return isofs_hashi_common(dentry, qstr, 0);
+	return isofs_hashi_common(qstr, 0);
 }
 
 static int
@@ -285,13 +285,13 @@ isofs_dentry_cmpi(const struct dentry *parent, const struct dentry *dentry,
 static int
 isofs_hash_ms(const struct dentry *dentry, struct qstr *qstr)
 {
-	return isofs_hash_common(dentry, qstr, 1);
+	return isofs_hash_common(qstr, 1);
 }
 
 static int
 isofs_hashi_ms(const struct dentry *dentry, struct qstr *qstr)
 {
-	return isofs_hashi_common(dentry, qstr, 1);
+	return isofs_hashi_common(qstr, 1);
 }
 
 static int

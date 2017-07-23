@@ -465,7 +465,7 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	attrs.ia_gid = gid; 
 	attrs.ia_valid = ATTR_UID | ATTR_GID;
 	mutex_lock(&dent->d_inode->i_mutex);
-	notify_change(dent, &attrs);
+	notify_change(dent, &attrs, NULL);
 	mutex_unlock(&dent->d_inode->i_mutex);
 
 out_drop:
@@ -523,21 +523,8 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 		return 1;
 
 out_invalid:
-	printk(KERN_INFO "statfs               : invalid return\n");
-	printk(KERN_INFO "vfs_statfs error#    : %d\n", err);
-	printk(KERN_INFO "statfs.f_type        : 0x%X\n", (u32)statfs.f_type);
-	printk(KERN_INFO "statfs.f_blocks      : %llu blocks\n", statfs.f_blocks);
-	printk(KERN_INFO "statfs.f_bfree       : %llu blocks\n", statfs.f_bfree);
-	printk(KERN_INFO "statfs.f_files       : %llu\n", statfs.f_files);
-	printk(KERN_INFO "statfs.f_ffree       : %llu\n", statfs.f_ffree);
-	printk(KERN_INFO "statfs.f_fsid.val[1] : 0x%X\n", (u32)statfs.f_fsid.val[1]);
-	printk(KERN_INFO "statfs.f_fsid.val[0] : 0x%X\n", (u32)statfs.f_fsid.val[0]);
-	printk(KERN_INFO "statfs.f_namelen     : %ld\n", statfs.f_namelen);
-	printk(KERN_INFO "statfs.f_frsize      : %ld\n", statfs.f_frsize);
-	printk(KERN_INFO "statfs.f_flags       : %ld\n", statfs.f_flags);
-	printk(KERN_INFO "sdcardfs reserved_mb : %u\n", sbi->options.reserved_mb);
 	if (sbi->devpath)
-		printk(KERN_INFO "sdcardfs source path : %s\n", sbi->devpath);
+		pr_debug("sdcardfs source path : %s\n", sbi->devpath);
 
 out_nospc:
 	printk_ratelimited(KERN_INFO "statfs.f_bavail : %llu blocks / "

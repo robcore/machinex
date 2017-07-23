@@ -154,7 +154,7 @@ static ssize_t sysfs_bin_read(struct file *file, char __user *userbuf,
 			      size_t bytes, loff_t *off)
 {
 	struct sysfs_open_file *of = sysfs_of(file);
-	struct bin_attribute *battr = of->sd->s_bin_attr.bin_attr;
+	struct bin_attribute *battr = of->sd->s_attr.bin_attr;
 	struct kobject *kobj = of->sd->s_parent->s_dir.kobj;
 	loff_t size = file_inode(file)->i_size;
 	int count = min_t(size_t, bytes, PAGE_SIZE);
@@ -236,7 +236,7 @@ static int flush_write_buffer(struct sysfs_open_file *of, char *buf, loff_t off,
 	}
 
 	if (sysfs_is_bin(of->sd)) {
-		struct bin_attribute *battr = of->sd->s_bin_attr.bin_attr;
+		struct bin_attribute *battr = of->sd->s_attr.bin_attr;
 
 		rc = -EIO;
 		if (battr->write)
@@ -466,7 +466,7 @@ static const struct vm_operations_struct sysfs_bin_vm_ops = {
 static int sysfs_bin_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct sysfs_open_file *of = sysfs_of(file);
-	struct bin_attribute *battr = of->sd->s_bin_attr.bin_attr;
+	struct bin_attribute *battr = of->sd->s_attr.bin_attr;
 	struct kobject *kobj = of->sd->s_parent->s_dir.kobj;
 	int rc;
 
@@ -477,7 +477,6 @@ static int sysfs_bin_mmap(struct file *file, struct vm_area_struct *vma)
 	if (!sysfs_get_active(of->sd))
 		goto out_unlock;
 
-	rc = -EINVAL;
 	if (!battr->mmap)
 		goto out_put;
 
@@ -618,7 +617,7 @@ static int sysfs_open_file(struct inode *inode, struct file *file)
 		return -ENODEV;
 
 	if (sysfs_is_bin(attr_sd)) {
-		struct bin_attribute *battr = attr_sd->s_bin_attr.bin_attr;
+		struct bin_attribute *battr = attr_sd->s_attr.bin_attr;
 
 		has_read = battr->read || battr->mmap;
 		has_write = battr->write || battr->mmap;
@@ -801,7 +800,7 @@ EXPORT_SYMBOL_GPL(sysfs_notify);
 const struct file_operations sysfs_file_operations = {
 	.read		= seq_read,
 	.write		= sysfs_write_file,
-	.llseek		= seq_lseek,
+	.llseek		= generic_file_llseek,
 	.open		= sysfs_open_file,
 	.release	= sysfs_release,
 	.poll		= sysfs_poll,

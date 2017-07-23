@@ -337,7 +337,7 @@ static int tdo24m_probe(struct spi_device *spi)
 	enum tdo24m_model model;
 	int err;
 
-	pdata = spi->dev.platform_data;
+	pdata = dev_get_platdata(&spi->dev);
 	if (pdata)
 		model = pdata->model;
 	else
