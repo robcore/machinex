@@ -1255,12 +1255,6 @@ static int notesize(struct memelfnote *en)
 	return sz;
 }
 
-static int alignfile(struct coredump_params *cprm)
-{
-	static const char buf[4] = { 0, };
-	return dump_emit(cprm, buf, roundup(cprm->written, 4) - cprm->written);
-}
-
 static int writenote(struct memelfnote *men, struct coredump_params *cprm)
 {
 	struct elf_note en;
@@ -1269,8 +1263,8 @@ static int writenote(struct memelfnote *men, struct coredump_params *cprm)
 	en.n_type = men->type;
 
 	return dump_emit(cprm, &en, sizeof(en)) &&
-	    dump_emit(cprm, men->name, en.n_namesz) && alignfile(cprm) &&
-	    dump_emit(cprm, men->data, men->datasz) && alignfile(cprm);
+	    dump_emit(cprm, men->name, en.n_namesz) && dump_align(cprm, 4) &&
+	    dump_emit(cprm, men->data, men->datasz) && dump_align(cprm, 4);
 }
 
 static void fill_elf_header(struct elfhdr *elf, int segs,
@@ -1617,7 +1611,7 @@ static int fill_thread_core_info(struct elf_thread_core_info *t,
 
 static int fill_note_info(struct elfhdr *elf, int phdrs,
 			  struct elf_note_info *info,
-			  siginfo_t *siginfo, struct pt_regs *regs)
+			  const siginfo_t *siginfo, struct pt_regs *regs)
 {
 	struct task_struct *dump_task = current;
 	const struct user_regset_view *view = task_user_regset_view(dump_task);
@@ -1866,34 +1860,31 @@ static int elf_note_info_init(struct elf_note_info *info)
 
 static int fill_note_info(struct elfhdr *elf, int phdrs,
 			  struct elf_note_info *info,
-			  siginfo_t *siginfo, struct pt_regs *regs)
+			  const siginfo_t *siginfo, struct pt_regs *regs)
 {
 	struct list_head *t;
+	struct core_thread *ct;
+	struct elf_thread_status *ets;
 
 	if (!elf_note_info_init(info))
 		return 0;
 
-	if (siginfo->si_signo) {
-		struct core_thread *ct;
-		struct elf_thread_status *ets;
+	for (ct = current->mm->core_state->dumper.next;
+					ct; ct = ct->next) {
+		ets = kzalloc(sizeof(*ets), GFP_KERNEL);
+		if (!ets)
+			return 0;
 
-		for (ct = current->mm->core_state->dumper.next;
-						ct; ct = ct->next) {
-			ets = kzalloc(sizeof(*ets), GFP_KERNEL);
-			if (!ets)
-				return 0;
+		ets->thread = ct->task;
+		list_add(&ets->list, &info->thread_list);
+	}
 
-			ets->thread = ct->task;
-			list_add(&ets->list, &info->thread_list);
-		}
+	list_for_each(t, &info->thread_list) {
+		int sz;
 
-		list_for_each(t, &info->thread_list) {
-			int sz;
-
-			ets = list_entry(t, struct elf_thread_status, list);
-			sz = elf_dump_thread_status(siginfo->si_signo, ets);
-			info->thread_status_size += sz;
-		}
+		ets = list_entry(t, struct elf_thread_status, list);
+		sz = elf_dump_thread_status(siginfo->si_signo, ets);
+		info->thread_status_size += sz;
 	}
 	/* now collect the dump for the current */
 	memset(info->prstatus, 0, sizeof(*info->prstatus));
@@ -2064,10 +2055,9 @@ static int elf_core_dump(struct coredump_params *cprm)
 	int has_dumped = 0;
 	mm_segment_t fs;
 	int segs;
-	size_t size = 0;
 	struct vm_area_struct *vma, *gate_vma;
 	struct elfhdr *elf = NULL;
-	loff_t offset = 0, dataoff, foffset;
+	loff_t offset = 0, dataoff;
 	struct elf_note_info info = { };
 	struct elf_phdr *phdr4note = NULL;
 	struct elf_shdr *shdr4extnum = NULL;
@@ -2123,7 +2113,6 @@ static int elf_core_dump(struct coredump_params *cprm)
 
 	offset += sizeof(*elf);				/* Elf header */
 	offset += segs * sizeof(struct elf_phdr);	/* Program headers */
-	foffset = offset;
 
 	/* Write notes phdr entry */
 	{
@@ -2186,18 +2175,15 @@ static int elf_core_dump(struct coredump_params *cprm)
 	if (!elf_core_write_extra_phdrs(cprm, offset))
 		goto end_coredump;
 
-	size = cprm->written;
-	cprm->written = foffset;	/* will disappear */
  	/* write out the notes section */
 	if (!write_note_info(&info, cprm))
 		goto end_coredump;
 
-	foffset = cprm->written;
-	if (elf_coredump_extra_notes_write(cprm->file, &foffset))
+	if (elf_coredump_extra_notes_write(cprm))
 		goto end_coredump;
 
 	/* Align to page */
-	if (!dump_seek(cprm->file, dataoff - foffset))
+	if (!dump_skip(cprm, dataoff - cprm->written))
 		goto end_coredump;
 
 	for (vma = first_vma(current, gate_vma); vma != NULL;
@@ -2214,26 +2200,21 @@ static int elf_core_dump(struct coredump_params *cprm)
 			page = get_dump_page(addr);
 			if (page) {
 				void *kaddr = kmap(page);
-				stop = ((size += PAGE_SIZE) > cprm->limit) ||
-					!dump_write(cprm->file, kaddr,
-						    PAGE_SIZE);
+				stop = !dump_emit(cprm, kaddr, PAGE_SIZE);
 				kunmap(page);
 				page_cache_release(page);
 			} else
-				stop = !dump_seek(cprm->file, PAGE_SIZE);
+				stop = !dump_skip(cprm, PAGE_SIZE);
 			if (stop)
 				goto end_coredump;
 		}
 	}
 
-	if (!elf_core_write_extra_data(cprm->file, &size, cprm->limit))
+	if (!elf_core_write_extra_data(cprm))
 		goto end_coredump;
 
 	if (e_phnum == PN_XNUM) {
-		size += sizeof(*shdr4extnum);
-		if (size > cprm->limit
-		    || !dump_write(cprm->file, shdr4extnum,
-				   sizeof(*shdr4extnum)))
+		if (!dump_emit(cprm, shdr4extnum, sizeof(*shdr4extnum)))
 			goto end_coredump;
 	}
 

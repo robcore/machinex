@@ -133,14 +133,6 @@ static void set_brk(unsigned long start, unsigned long end)
 
 #include <linux/coredump.h>
 
-#define DUMP_WRITE(addr, nr)			     \
-	if (!dump_write(cprm->file, (void *)(addr), (nr))) \
-		goto end_coredump;
-
-#define DUMP_SEEK(offset)		\
-	if (!dump_seek(cprm->file, offset))	\
-		goto end_coredump;
-
 #define START_DATA(u)	(u.u_tsize << PAGE_SHIFT)
 #define START_STACK(u)	(u.start_stack)
 
