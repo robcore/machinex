@@ -314,21 +314,6 @@ static inline pmd_t pmd_mksoft_dirty(pmd_t pmd)
 	return pmd_set_flags(pmd, _PAGE_SOFT_DIRTY);
 }
 
-static inline pte_t pte_swp_mksoft_dirty(pte_t pte)
-{
-	return pte_set_flags(pte, _PAGE_SWP_SOFT_DIRTY);
-}
-
-static inline int pte_swp_soft_dirty(pte_t pte)
-{
-	return pte_flags(pte) & _PAGE_SWP_SOFT_DIRTY;
-}
-
-static inline pte_t pte_swp_clear_soft_dirty(pte_t pte)
-{
-	return pte_clear_flags(pte, _PAGE_SWP_SOFT_DIRTY);
-}
-
 static inline pte_t pte_file_clear_soft_dirty(pte_t pte)
 {
 	return pte_clear_flags(pte, _PAGE_SOFT_DIRTY);
@@ -833,6 +818,24 @@ static inline void clone_pgd_range(pgd_t *dst, pgd_t *src, int count)
        memcpy(dst, src, count * sizeof(pgd_t));
 }
 
+
+static inline pte_t pte_swp_mksoft_dirty(pte_t pte)
+{
+	VM_BUG_ON(pte_present(pte));
+	return pte_set_flags(pte, _PAGE_SWP_SOFT_DIRTY);
+}
+
+static inline int pte_swp_soft_dirty(pte_t pte)
+{
+	VM_BUG_ON(pte_present(pte));
+	return pte_flags(pte) & _PAGE_SWP_SOFT_DIRTY;
+}
+
+static inline pte_t pte_swp_clear_soft_dirty(pte_t pte)
+{
+	VM_BUG_ON(pte_present(pte));
+	return pte_clear_flags(pte, _PAGE_SWP_SOFT_DIRTY);
+}
 
 #include <asm-generic/pgtable.h>
 #endif	/* __ASSEMBLY__ */
