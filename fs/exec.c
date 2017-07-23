@@ -1438,7 +1438,6 @@ int search_binary_handler(struct linux_binprm *bprm)
 				if (bprm->file)
 					fput(bprm->file);
 				bprm->file = NULL;
-				proc_exec_connector(current);
 				return retval;
 			}
 			read_lock(&binfmt_lock);
@@ -1489,6 +1488,7 @@ static int exec_binprm(struct linux_binprm *bprm)
 		trace_sched_process_exec(current, old_pid, bprm);
 		ptrace_event(PTRACE_EVENT_EXEC, old_vpid);
 		current->did_exec = 1;
+		proc_exec_connector(current);
 	}
 
 	return ret;
