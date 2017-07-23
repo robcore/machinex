@@ -1862,7 +1862,7 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 			if (err)
 				return err;
 		}
-		if (!d_is_directory(nd->inode)) {
+		if (!d_is_directory(nd->path.dentry)) {
 			err = -ENOTDIR;
 			break;
 		}
