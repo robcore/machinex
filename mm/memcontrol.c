@@ -96,6 +96,7 @@ enum mem_cgroup_stat_index {
 	MEM_CGROUP_STAT_CACHE, 	   /* # of pages charged as cache */
 	MEM_CGROUP_STAT_RSS,	   /* # of pages charged as anon rss */
 	MEM_CGROUP_STAT_FILE_MAPPED,  /* # of pages charged as file rss */
+	MEM_CGROUP_STAT_WRITEBACK,	/* # of pages under writeback */
 	MEM_CGROUP_STAT_SWAP, /* # of pages, swapped out */
 	MEM_CGROUP_STAT_NSTATS,
 };
@@ -104,6 +105,7 @@ static const char * const mem_cgroup_stat_names[] = {
 	"cache",
 	"rss",
 	"mapped_file",
+	"writeback",
 	"swap",
 };
 
@@ -2236,6 +2238,7 @@ void mem_cgroup_update_page_stat(struct page *page,
 	if (mem_cgroup_disabled())
 		return;
 
+	VM_BUG_ON(!rcu_read_lock_held());
 	memcg = pc->mem_cgroup;
 	if (unlikely(!memcg || !PageCgroupUsed(pc)))
 		return;
@@ -3675,6 +3678,20 @@ void mem_cgroup_split_huge_fixup(struct page *head)
 	}
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+
+static inline
+void mem_cgroup_move_account_page_stat(struct mem_cgroup *from,
+					struct mem_cgroup *to,
+					unsigned int nr_pages,
+					enum mem_cgroup_stat_index idx)
+{
+	/* Update stat data for mem_cgroup */
+	preempt_disable();
+	WARN_ON_ONCE(from->stat->count[idx] < nr_pages);
+	__this_cpu_add(from->stat->count[idx], -nr_pages);
+	__this_cpu_add(to->stat->count[idx], nr_pages);
+	preempt_enable();
+}
 
 /**
  * mem_cgroup_move_account - move account of the page
