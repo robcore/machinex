@@ -1929,6 +1929,10 @@ config VMALLOC_RESERVE
 	help
 	  Reserved vmalloc space if not specified on the kernel commandline.
 
+config SYS_SUPPORTS_HUGETLBFS
+       def_bool y
+       depends on ARM_LPAE
+
 source "mm/Kconfig"
 
 config ARCH_MEMORY_PROBE
