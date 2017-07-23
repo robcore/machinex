@@ -955,17 +955,12 @@ int sysfs_chmod_file(struct kobject *kobj, const struct attribute *attr,
 {
 	struct sysfs_dirent *sd;
 	struct iattr newattrs;
-	const void *ns;
 	int rc;
-
-	rc = sysfs_attr_ns(kobj, attr, &ns);
-	if (rc)
-		return rc;
 
 	mutex_lock(&sysfs_mutex);
 
 	rc = -ENOENT;
-	sd = sysfs_find_dirent(kobj->sd, ns, attr->name);
+	sd = sysfs_find_dirent(kobj->sd, attr->name, NULL);
 	if (!sd)
 		goto out;
 
