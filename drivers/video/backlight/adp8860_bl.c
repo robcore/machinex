@@ -216,7 +216,7 @@ static int adp8860_led_setup(struct adp8860_led *led)
 static int adp8860_led_probe(struct i2c_client *client)
 {
 	struct adp8860_backlight_platform_data *pdata =
-		dev_get_platdata(&client->dev);
+		client->dev.platform_data;
 	struct adp8860_bl *data = i2c_get_clientdata(client);
 	struct adp8860_led *led, *led_dat;
 	struct led_info *cur_led;
@@ -298,7 +298,7 @@ static int adp8860_led_probe(struct i2c_client *client)
 static int adp8860_led_remove(struct i2c_client *client)
 {
 	struct adp8860_backlight_platform_data *pdata =
-		dev_get_platdata(&client->dev);
+		client->dev.platform_data;
 	struct adp8860_bl *data = i2c_get_clientdata(client);
 	int i;
 
@@ -656,7 +656,7 @@ static int adp8860_probe(struct i2c_client *client,
 	struct backlight_device *bl;
 	struct adp8860_bl *data;
 	struct adp8860_backlight_platform_data *pdata =
-		dev_get_platdata(&client->dev);
+		client->dev.platform_data;
 	struct backlight_properties props;
 	uint8_t reg_val;
 	int ret;

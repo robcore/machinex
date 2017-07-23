@@ -2039,7 +2039,7 @@ void audit_putname(struct filename *name)
 	struct audit_context *context = current->audit_context;
 
 	BUG_ON(!context);
-	if (!name->aname || !context->in_syscall) {
+	if (!context->in_syscall) {
 #if AUDIT_DEBUG == 2
 		pr_err("%s:%d(:%d): final_putname(%p)\n",
 		       __FILE__, __LINE__, context->serial, name);

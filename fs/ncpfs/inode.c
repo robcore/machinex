@@ -764,17 +764,6 @@ out:
 	return error;
 }
 
-static void delayed_free(struct rcu_head *p)
-{
-	struct ncp_server *server = container_of(p, struct ncp_server, rcu);
-#ifdef CONFIG_NCPFS_NLS
-	/* unload the NLS charsets */
-	unload_nls(server->nls_vol);
-	unload_nls(server->nls_io);
-#endif /* CONFIG_NCPFS_NLS */
-	kfree(server);
-}
-
 static void ncp_put_super(struct super_block *sb)
 {
 	struct ncp_server *server = NCP_SBP(sb);
@@ -785,6 +774,11 @@ static void ncp_put_super(struct super_block *sb)
 
 	ncp_stop_tasks(server);
 
+#ifdef CONFIG_NCPFS_NLS
+	/* unload the NLS charsets */
+	unload_nls(server->nls_vol);
+	unload_nls(server->nls_io);
+#endif /* CONFIG_NCPFS_NLS */
 	mutex_destroy(&server->rcv.creq_mutex);
 	mutex_destroy(&server->root_setup_lock);
 	mutex_destroy(&server->mutex);
@@ -801,7 +795,8 @@ static void ncp_put_super(struct super_block *sb)
 	vfree(server->rxbuf);
 	vfree(server->txbuf);
 	vfree(server->packet);
-	call_rcu(&server->rcu, delayed_free);
+	sb->s_fs_info = NULL;
+	kfree(server);
 }
 
 static int ncp_statfs(struct dentry *dentry, struct kstatfs *buf)

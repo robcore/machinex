@@ -2024,7 +2024,7 @@ F:	kernel/cpuset.c
 
 CRAMFS FILESYSTEM
 W:	http://sourceforge.net/projects/cramfs/
-S:	Orphan / Obsolete
+S:	Orphan
 F:	Documentation/filesystems/cramfs.txt
 F:	fs/cramfs/
 

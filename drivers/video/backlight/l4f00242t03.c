@@ -153,7 +153,7 @@ static struct lcd_ops l4f_ops = {
 static int l4f00242t03_probe(struct spi_device *spi)
 {
 	struct l4f00242t03_priv *priv;
-	struct l4f00242t03_pdata *pdata = dev_get_platdata(&spi->dev);
+	struct l4f00242t03_pdata *pdata = spi->dev.platform_data;
 	int ret;
 
 	if (pdata == NULL) {

@@ -254,7 +254,7 @@ loff_t vfs_llseek(struct file *file, loff_t offset, int whence)
 
 	fn = no_llseek;
 	if (file->f_mode & FMODE_LSEEK) {
-		if (file->f_op->llseek)
+		if (file->f_op && file->f_op->llseek)
 			fn = file->f_op->llseek;
 	}
 	return fn(file, offset, whence);
@@ -502,7 +502,7 @@ ssize_t __kernel_write(struct file *file, const char *buf, size_t count, loff_t 
 	const char __user *p;
 	ssize_t ret;
 
-	if (!file->f_op->write && !file->f_op->aio_write)
+	if (!file->f_op || (!file->f_op->write && !file->f_op->aio_write))
 		return -EINVAL;
 
 	old_fs = get_fs();
@@ -793,6 +793,11 @@ static ssize_t do_readv_writev(int type, struct file *file,
 	ssize_t ret;
 	io_fn_t fn;
 	iov_fn_t fnv;
+
+	if (!file->f_op) {
+		ret = -EINVAL;
+		goto out;
+	}
 
 	ret = rw_copy_check_uvector(type, uvector, nr_segs,
 				    ARRAY_SIZE(iovstack), iovstack, &iov);

@@ -264,12 +264,12 @@ int propagate_mnt(struct mount *dest_mnt, struct mountpoint *dest_mp,
 		prev_src_mnt  = child;
 	}
 out:
-	lock_mount_hash();
+	br_write_lock(&vfsmount_lock);
 	while (!list_empty(&tmp_list)) {
 		child = list_first_entry(&tmp_list, struct mount, mnt_hash);
 		umount_tree(child, 0);
 	}
-	unlock_mount_hash();
+	br_write_unlock(&vfsmount_lock);
 	return ret;
 }
 
@@ -278,7 +278,8 @@ out:
  */
 static inline int do_refcount_check(struct mount *mnt, int count)
 {
-	return mnt_get_count(mnt) > count;
+	int mycount = mnt_get_count(mnt) - mnt->mnt_ghosts;
+	return (mycount > count);
 }
 
 /*
@@ -310,7 +311,7 @@ int propagate_mount_busy(struct mount *mnt, int refcnt)
 
 	for (m = propagation_next(parent, parent); m;
 	     		m = propagation_next(m, parent)) {
-		child = __lookup_mnt_last(&m->mnt, mnt->mnt_mountpoint);
+		child = __lookup_mnt(&m->mnt, mnt->mnt_mountpoint, 0);
 		if (child && list_empty(&child->mnt_mounts) &&
 		    (ret = do_refcount_check(child, 1)))
 			break;
@@ -332,8 +333,8 @@ static void __propagate_umount(struct mount *mnt)
 	for (m = propagation_next(parent, parent); m;
 			m = propagation_next(m, parent)) {
 
-		struct mount *child = __lookup_mnt_last(&m->mnt,
-						mnt->mnt_mountpoint);
+		struct mount *child = __lookup_mnt(&m->mnt,
+					mnt->mnt_mountpoint, 0);
 		/*
 		 * umount the child only if the child has no
 		 * other children

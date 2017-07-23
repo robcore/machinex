@@ -56,12 +56,11 @@ struct linux_binprm {
 
 /* Function parameter for binfmt->coredump */
 struct coredump_params {
-	const siginfo_t *siginfo;
+	siginfo_t *siginfo;
 	struct pt_regs *regs;
 	struct file *file;
 	unsigned long limit;
 	unsigned long mm_flags;
-	loff_t written;
 };
 
 /*
@@ -115,6 +114,7 @@ extern int copy_strings_kernel(int argc, const char *const *argv,
 extern int prepare_bprm_creds(struct linux_binprm *bprm);
 extern void install_exec_creds(struct linux_binprm *bprm);
 extern void set_binfmt(struct linux_binfmt *new);
+extern void free_bprm(struct linux_binprm *);
 extern ssize_t read_code(struct file *, unsigned long, loff_t, size_t);
 
 #endif /* _LINUX_BINFMTS_H */

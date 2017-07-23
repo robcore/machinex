@@ -105,8 +105,7 @@ int i2o_driver_register(struct i2o_driver *drv)
 			osm_err("too many drivers registered, increase "
 				"max_drivers\n");
 			spin_unlock_irqrestore(&i2o_drivers_lock, flags);
-			rc = -EFAULT;
-			goto out;
+			return -EFAULT;
 		}
 
 	drv->context = i;
@@ -125,14 +124,11 @@ int i2o_driver_register(struct i2o_driver *drv)
 	}
 
 	rc = driver_register(&drv->driver);
-	if (rc)
-		goto out;
-
-	return 0;
-out:
-	if (drv->event_queue) {
-		destroy_workqueue(drv->event_queue);
-		drv->event_queue = NULL;
+	if (rc) {
+		if (drv->event) {
+			destroy_workqueue(drv->event_queue);
+			drv->event_queue = NULL;
+		}
 	}
 
 	return rc;

@@ -1473,12 +1473,12 @@ static void fuse_writepage_finish(struct fuse_conn *fc, struct fuse_req *req)
 }
 
 /* Called under fc->lock, may release and reacquire it */
-static void fuse_send_writepage(struct fuse_conn *fc, struct fuse_req *req,
-				loff_t size)
+static void fuse_send_writepage(struct fuse_conn *fc, struct fuse_req *req)
 __releases(fc->lock)
 __acquires(fc->lock)
 {
 	struct fuse_inode *fi = get_fuse_inode(req->inode);
+	loff_t size = i_size_read(req->inode);
 	struct fuse_write_in *inarg = &req->misc.write.in;
 	__u64 data_size = req->num_pages * PAGE_CACHE_SIZE;
 
@@ -1519,13 +1519,12 @@ __acquires(fc->lock)
 {
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	struct fuse_inode *fi = get_fuse_inode(inode);
-	size_t crop = i_size_read(inode);
 	struct fuse_req *req;
 
 	while (fi->writectr >= 0 && !list_empty(&fi->queued_writes)) {
 		req = list_entry(fi->queued_writes.next, struct fuse_req, list);
 		list_del_init(&req->list);
-		fuse_send_writepage(fc, req, crop);
+		fuse_send_writepage(fc, req);
 	}
 }
 
@@ -1537,38 +1536,12 @@ static void fuse_writepage_end(struct fuse_conn *fc, struct fuse_req *req)
 	mapping_set_error(inode->i_mapping, req->out.h.error);
 	spin_lock(&fc->lock);
 	while (req->misc.write.next) {
-		struct fuse_conn *fc = get_fuse_conn(inode);
-		struct fuse_write_in *inarg = &req->misc.write.in;
 		struct fuse_req *next = req->misc.write.next;
 		req->misc.write.next = next->misc.write.next;
 		next->misc.write.next = NULL;
-		next->ff = fuse_file_get(req->ff);
 		list_add(&next->writepages_entry, &fi->writepages);
-
-		/*
-		 * Skip fuse_flush_writepages() to make it easy to crop requests
-		 * based on primary request size.
-		 *
-		 * 1st case (trivial): there are no concurrent activities using
-		 * fuse_set/release_nowrite.  Then we're on safe side because
-		 * fuse_flush_writepages() would call fuse_send_writepage()
-		 * anyway.
-		 *
-		 * 2nd case: someone called fuse_set_nowrite and it is waiting
-		 * now for completion of all in-flight requests.  This happens
-		 * rarely and no more than once per page, so this should be
-		 * okay.
-		 *
-		 * 3rd case: someone (e.g. fuse_do_setattr()) is in the middle
-		 * of fuse_set_nowrite..fuse_release_nowrite section.  The fact
-		 * that fuse_set_nowrite returned implies that all in-flight
-		 * requests were completed along with all of their secondary
-		 * requests.  Further primary requests are blocked by negative
-		 * writectr.  Hence there cannot be any in-flight requests and
-		 * no invocations of fuse_writepage_end() while we're in
-		 * fuse_set_nowrite..fuse_release_nowrite section.
-		 */
-		fuse_send_writepage(fc, next, inarg->offset + inarg->size);
+		list_add_tail(&next->list, &fi->queued_writes);
+		fuse_flush_writepages(inode);
 	}
 	fi->writectr--;
 	fuse_writepage_finish(fc, req);
@@ -1713,6 +1686,7 @@ static bool fuse_writepage_in_flight(struct fuse_req *new_req,
 
 	spin_lock(&fc->lock);
 	list_del(&new_req->writepages_entry);
+	new_req->num_pages = 1;
 	list_for_each_entry(old_req, &fi->writepages, writepages_entry) {
 		BUG_ON(old_req->inode != new_req->inode);
 		curr_index = old_req->misc.write.in.offset >> PAGE_CACHE_SHIFT;
@@ -1722,12 +1696,9 @@ static bool fuse_writepage_in_flight(struct fuse_req *new_req,
 			break;
 		}
 	}
-	if (!found) {
-		list_add(&new_req->writepages_entry, &fi->writepages);
+	if (!found)
 		goto out_unlock;
-	}
 
-	new_req->num_pages = 1;
 	for (tmp = old_req; tmp != NULL; tmp = tmp->misc.write.next) {
 		BUG_ON(tmp->inode != new_req->inode);
 		curr_index = tmp->misc.write.in.offset >> PAGE_CACHE_SHIFT;
@@ -1739,14 +1710,11 @@ static bool fuse_writepage_in_flight(struct fuse_req *new_req,
 
 	if (old_req->num_pages == 1 && (old_req->state == FUSE_REQ_INIT ||
 					old_req->state == FUSE_REQ_PENDING)) {
-		struct backing_dev_info *bdi = page->mapping->backing_dev_info;
-
 		copy_highpage(old_req->pages[0], page);
 		spin_unlock(&fc->lock);
 
-		dec_bdi_stat(bdi, BDI_WRITEBACK);
+		dec_bdi_stat(page->mapping->backing_dev_info, BDI_WRITEBACK);
 		dec_zone_page_state(page, NR_WRITEBACK_TEMP);
-		bdi_writeout_inc(bdi);
 		fuse_writepage_free(fc, new_req);
 		fuse_request_free(new_req);
 		goto out;

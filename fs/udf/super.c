@@ -76,9 +76,6 @@
 
 #define UDF_DEFAULT_BLOCKSIZE 2048
 
-#define VSD_FIRST_SECTOR_OFFSET		32768
-#define VSD_MAX_SECTOR_OFFSET		0x800000
-
 enum { UDF_MAX_LINKS = 0xffff };
 
 /* These are the "meat" - everything else is stuffing */
@@ -612,7 +609,7 @@ out_unlock:
 static loff_t udf_check_vsd(struct super_block *sb)
 {
 	struct volStructDesc *vsd = NULL;
-	loff_t sector = VSD_FIRST_SECTOR_OFFSET;
+	loff_t sector = 32768;
 	int sectorsize;
 	struct buffer_head *bh = NULL;
 	int nsr02 = 0;
@@ -630,18 +627,8 @@ static loff_t udf_check_vsd(struct super_block *sb)
 	udf_debug("Starting at sector %u (%ld byte sectors)\n",
 		  (unsigned int)(sector >> sb->s_blocksize_bits),
 		  sb->s_blocksize);
-	/* Process the sequence (if applicable). The hard limit on the sector
-	 * offset is arbitrary, hopefully large enough so that all valid UDF
-	 * filesystems will be recognised. There is no mention of an upper
-	 * bound to the size of the volume recognition area in the standard.
-	 *  The limit will prevent the code to read all the sectors of a
-	 * specially crafted image (like a bluray disc full of CD001 sectors),
-	 * potentially causing minutes or even hours of uninterruptible I/O
-	 * activity. This actually happened with uninitialised SSD partitions
-	 * (all 0xFF) before the check for the limit and all valid IDs were
-	 * added */
-	for (; !nsr02 && !nsr03 && sector < VSD_MAX_SECTOR_OFFSET;
-	     sector += sectorsize) {
+	/* Process the sequence (if applicable) */
+	for (; !nsr02 && !nsr03; sector += sectorsize) {
 		/* Read a block */
 		bh = udf_tread(sb, sector >> sb->s_blocksize_bits);
 		if (!bh)
@@ -651,7 +638,10 @@ static loff_t udf_check_vsd(struct super_block *sb)
 		vsd = (struct volStructDesc *)(bh->b_data +
 					      (sector & (sb->s_blocksize - 1)));
 
-		if (!strncmp(vsd->stdIdent, VSD_STD_ID_CD001,
+		if (vsd->stdIdent[0] == 0) {
+			brelse(bh);
+			break;
+		} else if (!strncmp(vsd->stdIdent, VSD_STD_ID_CD001,
 				    VSD_STD_ID_LEN)) {
 			switch (vsd->structType) {
 			case 0:
@@ -687,17 +677,6 @@ static loff_t udf_check_vsd(struct super_block *sb)
 		else if (!strncmp(vsd->stdIdent, VSD_STD_ID_NSR03,
 				    VSD_STD_ID_LEN))
 			nsr03 = sector;
-		else if (!strncmp(vsd->stdIdent, VSD_STD_ID_BOOT2,
-				    VSD_STD_ID_LEN))
-			; /* nothing */
-		else if (!strncmp(vsd->stdIdent, VSD_STD_ID_CDW02,
-				    VSD_STD_ID_LEN))
-			; /* nothing */
-		else {
-			/* invalid id : end of volume recognition area */
-			brelse(bh);
-			break;
-		}
 		brelse(bh);
 	}
 
@@ -705,8 +684,7 @@ static loff_t udf_check_vsd(struct super_block *sb)
 		return nsr03;
 	else if (nsr02)
 		return nsr02;
-	else if (!bh && sector - (sbi->s_session << sb->s_blocksize_bits) ==
-			VSD_FIRST_SECTOR_OFFSET)
+	else if (sector - (sbi->s_session << sb->s_blocksize_bits) == 32768)
 		return -1;
 	else
 		return 0;
@@ -1203,9 +1181,6 @@ static int udf_load_partdesc(struct super_block *sb, sector_t block)
 	 * PHYSICAL partitions are already set up
 	 */
 	type1_idx = i;
-#ifdef UDFFS_DEBUG
-	map = NULL; /* supress 'maybe used uninitialized' warning */
-#endif
 	for (i = 0; i < sbi->s_partitions; i++) {
 		map = &sbi->s_partmaps[i];
 
@@ -1782,9 +1757,7 @@ static int udf_load_vrs(struct super_block *sb, struct udf_options *uopt,
 			return 0;
 		}
 		if (nsr_off == -1)
-			udf_debug("Failed to read sector at offset %d. "
-				  "Assuming open disc. Skipping validity "
-				  "check\n", VSD_FIRST_SECTOR_OFFSET);
+			udf_debug("Failed to read byte 32768. Assuming open disc. Skipping validity check\n");
 		if (!sbi->s_last_block)
 			sbi->s_last_block = udf_get_last_block(sb);
 	} else {

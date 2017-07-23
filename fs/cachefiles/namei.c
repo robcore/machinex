@@ -289,7 +289,7 @@ static int cachefiles_bury_object(struct cachefiles_cache *cache,
 		if (ret < 0) {
 			cachefiles_io_error(cache, "Unlink security error");
 		} else {
-			ret = vfs_unlink(dir->d_inode, rep, NULL);
+			ret = vfs_unlink(dir->d_inode, rep);
 
 			if (preemptive)
 				cachefiles_mark_object_buried(cache, rep);
@@ -391,7 +391,7 @@ try_again:
 		cachefiles_io_error(cache, "Rename security error %d", ret);
 	} else {
 		ret = vfs_rename(dir->d_inode, rep,
-				 cache->graveyard->d_inode, grave, NULL);
+				 cache->graveyard->d_inode, grave);
 		if (ret != 0 && ret != -ENOMEM)
 			cachefiles_io_error(cache,
 					    "Rename failed with error %d", ret);

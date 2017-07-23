@@ -129,7 +129,6 @@ struct bio_list;
 struct fs_struct;
 struct perf_event_context;
 struct blk_plug;
-struct filename;
 
 #define VMACACHE_BITS 2
 #define VMACACHE_SIZE (1U << VMACACHE_BITS)
@@ -1930,10 +1929,11 @@ struct task_struct {
 	} memcg_batch;
 	unsigned int memcg_kmem_skip_account;
 	struct memcg_oom_info {
-		struct mem_cgroup *memcg;
-		gfp_t gfp_mask;
-		int order;
 		unsigned int may_oom:1;
+		unsigned int in_memcg_oom:1;
+		unsigned int oom_locked:1;
+		int wakeups;
+		struct mem_cgroup *wait_on_memcg;
 	} memcg_oom;
 #endif
 #ifdef CONFIG_HAVE_HW_BREAKPOINT
@@ -2788,7 +2788,7 @@ extern void flush_itimer_signals(void);
 
 extern void do_group_exit(int);
 
-extern int do_execve(struct filename *,
+extern int do_execve(const char *,
 		     const char __user * const __user *,
 		     const char __user * const __user *);
 extern long do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *);
