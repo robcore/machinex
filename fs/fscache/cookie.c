@@ -567,6 +567,7 @@ int __fscache_check_consistency(struct fscache_cookie *cookie)
 {
 	struct fscache_operation *op;
 	struct fscache_object *object;
+	bool wake_cookie = false;
 	int ret;
 
 	_enter("%p,", cookie);
@@ -599,7 +600,7 @@ int __fscache_check_consistency(struct fscache_cookie *cookie)
 
 	op->debug_id = atomic_inc_return(&fscache_op_debug_id);
 
-	atomic_inc(&cookie->n_active);
+	__fscache_use_cookie(cookie);
 	if (fscache_submit_op(object, op) < 0)
 		goto submit_failed;
 
@@ -621,9 +622,11 @@ int __fscache_check_consistency(struct fscache_cookie *cookie)
 	return ret;
 
 submit_failed:
-	atomic_dec(&cookie->n_active);
+	wake_cookie = __fscache_unuse_cookie(cookie);
 inconsistent:
 	spin_unlock(&cookie->lock);
+	if (wake_cookie)
+		__fscache_wake_unused_cookie(cookie);
 	kfree(op);
 	_leave(" = -ESTALE");
 	return -ESTALE;
