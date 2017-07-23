@@ -138,6 +138,7 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 	unsigned long next;
 	unsigned long pages = 0;
 	bool all_same_node;
+	unsigned long nr_huge_updates = 0;
 
 	pmd = pmd_offset(pud, addr);
 	do {
