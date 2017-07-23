@@ -1687,6 +1687,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			      option can be used as a workaround of firmware
                               bugs.
 
+	movable_node	[KNL,X86] Boot-time switch to enable the effects
+			of CONFIG_MOVABLE_NODE=y. See mm/Kconfig for details.
+
 	MTD_Partition=	[MTD]
 			Format: <name>,<region-number>,<size>,<offset>
 
