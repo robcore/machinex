@@ -269,7 +269,7 @@ static void cachefiles_drop_object(struct fscache_object *_object)
 #endif
 
 	/* delete retired objects */
-	if (test_bit(FSCACHE_COOKIE_RETIRED, &object->fscache.cookie->flags) &&
+	if (test_bit(FSCACHE_OBJECT_RETIRED, &object->fscache.flags) &&
 	    _object != cache->cache.fsdef
 	    ) {
 		_debug("- retire object OBJ%x", object->fscache.debug_id);

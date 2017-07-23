@@ -58,6 +58,7 @@ int __fscache_register_netfs(struct fscache_netfs *netfs)
 			goto already_registered;
 	}
 
+	netfs->primary_index->flags		= 1 << FSCACHE_COOKIE_ENABLED;
 	atomic_inc(&cookie->parent->usage);
 	atomic_inc(&cookie->parent->n_children);
 
