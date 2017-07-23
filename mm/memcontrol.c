@@ -549,6 +549,12 @@ struct mem_cgroup *mem_cgroup_from_css(struct cgroup_subsys_state *s)
 	return s ? container_of(s, struct mem_cgroup, css) : NULL;
 }
 
+/*
+ * We restrict the id in the range of [1, 65535], so it can fit into
+ * an unsigned short.
+ */
+#define MEM_CGROUP_ID_MAX	USHRT_MAX
+
 static inline unsigned short mem_cgroup_id(struct mem_cgroup *memcg)
 {
 	/*
@@ -6285,6 +6291,9 @@ mem_cgroup_css_online(struct cgroup_css *css)
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 	struct mem_cgroup *parent = mem_cgroup_from_css(css_parent(css));
 	int error = 0;
+
+	if (css->cgroup->id > MEM_CGROUP_ID_MAX)
+		return -ENOSPC;
 
 	if (!parent)
 		return 0;
