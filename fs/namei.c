@@ -501,18 +501,6 @@ static bool path_connected(const struct path *path)
  * to restart the path walk from the beginning in ref-walk mode.
  */
 
-static inline void lock_rcu_walk(void)
-{
-	br_read_lock(&vfsmount_lock);
-	rcu_read_lock();
-}
-
-static inline void unlock_rcu_walk(void)
-{
-	rcu_read_unlock();
-	br_read_unlock(&vfsmount_lock);
-}
-
 /*
  * When we move over from the RCU domain to properly refcounted
  * long-lived dentries, we need to check the sequence numbers
@@ -574,6 +562,27 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 	int want_root = 0;
 
 	BUG_ON(!(nd->flags & LOOKUP_RCU));
+
+	/*
+	 * After legitimizing the bastards, terminate_walk()
+	 * will do the right thing for non-RCU mode, and all our
+	 * subsequent exit cases should rcu_read_unlock()
+	 * before returning.  Do vfsmount first; if dentry
+	 * can't be legitimized, just set nd->path.dentry to NULL
+	 * and rely on dput(NULL) being a no-op.
+	 */
+	if (!legitimize_mnt(nd->path.mnt, nd->m_seq))
+		return -ECHILD;
+
+	mntget(nd->path.mnt);
+	nd->flags &= ~LOOKUP_RCU;
+
+	if (!lockref_get_not_dead(&parent->d_lockref)) {
+		nd->path.dentry = NULL;	
+		rcu_read_unlock();
+		return -ECHILD;
+	}
+
 	if (nd->root.mnt && !(nd->flags & LOOKUP_ROOT)) {
 		want_root = 1;
 		spin_lock(&fs->lock);
@@ -609,7 +618,7 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 	}
 	mntget(nd->path.mnt);
 
-	unlock_rcu_walk();
+	rcu_read_unlock();
 	nd->flags &= ~LOOKUP_RCU;
 	return 0;
 
@@ -646,12 +655,22 @@ static int complete_walk(struct nameidata *nd)
 		if (!(nd->flags & LOOKUP_ROOT))
 			nd->root.mnt = NULL;
 
-		if (d_rcu_to_refcount(dentry, &dentry->d_seq, nd->seq) < 0) {
-			unlock_rcu_walk();
+		if (!legitimize_mnt(nd->path.mnt, nd->m_seq)) {
+			rcu_read_unlock();
 			return -ECHILD;
 		}
-		mntget(nd->path.mnt);
-		unlock_rcu_walk();
+		if (unlikely(!lockref_get_not_dead(&dentry->d_lockref))) {
+			rcu_read_unlock();
+			mntput(nd->path.mnt);
+			return -ECHILD;
+		}
+		if (read_seqcount_retry(&dentry->d_seq, nd->seq)) {
+			rcu_read_unlock();
+			dput(dentry);
+			mntput(nd->path.mnt);
+			return -ECHILD;
+		}
+		rcu_read_unlock();
 	}
 
 	if (likely(!(nd->flags & LOOKUP_JUMPED)))
@@ -940,15 +959,15 @@ int follow_up(struct path *path)
 	struct mount *parent;
 	struct dentry *mountpoint;
 
-	br_read_lock(&vfsmount_lock);
+	read_seqlock_excl(&mount_lock);
 	parent = mnt->mnt_parent;
 	if (parent == mnt) {
-		br_read_unlock(&vfsmount_lock);
+		read_sequnlock_excl(&mount_lock);
 		return 0;
 	}
 	mntget(&parent->mnt);
 	mountpoint = dget(mnt->mnt_mountpoint);
-	br_read_unlock(&vfsmount_lock);
+	read_sequnlock_excl(&mount_lock);
 	dput(path->dentry);
 	path->dentry = mountpoint;
 	mntput(path->mnt);
@@ -1079,8 +1098,8 @@ static int follow_managed(struct path *path, unsigned flags)
 
 			/* Something is mounted on this dentry in another
 			 * namespace and/or whatever was mounted there in this
-			 * namespace got unmounted before we managed to get the
-			 * vfsmount_lock */
+			 * namespace got unmounted before lookup_mnt() could
+			 * get it */
 		}
 
 		/* Handle an automount point */
@@ -1208,7 +1227,7 @@ failed:
 	nd->flags &= ~LOOKUP_RCU;
 	if (!(nd->flags & LOOKUP_ROOT))
 		nd->root.mnt = NULL;
-	unlock_rcu_walk();
+	rcu_read_unlock();
 	return -ECHILD;
 }
 
@@ -1541,7 +1560,7 @@ static void terminate_walk(struct nameidata *nd)
 		nd->flags &= ~LOOKUP_RCU;
 		if (!(nd->flags & LOOKUP_ROOT))
 			nd->root.mnt = NULL;
-		unlock_rcu_walk();
+		rcu_read_unlock();
 	}
 }
 
@@ -1901,8 +1920,9 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 		nd->path = nd->root;
 		nd->inode = inode;
 		if (flags & LOOKUP_RCU) {
-			lock_rcu_walk();
+			rcu_read_lock();
 			nd->seq = __read_seqcount_begin(&nd->path.dentry->d_seq);
+			nd->m_seq = read_seqbegin(&mount_lock);
 		} else {
 			path_get(&nd->path);
 		}
@@ -1911,9 +1931,10 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 
 	nd->root.mnt = NULL;
 
+	nd->m_seq = read_seqbegin(&mount_lock);
 	if (*name=='/') {
 		if (flags & LOOKUP_RCU) {
-			lock_rcu_walk();
+			rcu_read_lock();
 			nd->seq = set_root_rcu(nd);
 		} else {
 			set_root(nd);
@@ -1925,7 +1946,7 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 			struct fs_struct *fs = current->fs;
 			unsigned seq;
 
-			lock_rcu_walk();
+			rcu_read_lock();
 
 			do {
 				seq = read_seqcount_begin(&fs->seq);
@@ -1957,7 +1978,7 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 			if (f.flags & FDPUT_FPUT)
 				*fp = f.file;
 			nd->seq = __read_seqcount_begin(&nd->path.dentry->d_seq);
-			lock_rcu_walk();
+			rcu_read_lock();
 		} else {
 			path_get(&nd->path);
 			fdput(f);
@@ -2508,6 +2529,7 @@ static int may_delete(struct inode *dir,struct dentry *victim,int isdir)
  */
 static inline int may_create(struct inode *dir, struct dentry *child)
 {
+	audit_inode_child(dir, child, AUDIT_TYPE_CHILD_CREATE);
 	if (child->d_inode)
 		return -EEXIST;
 	if (IS_DEADDIR(dir))

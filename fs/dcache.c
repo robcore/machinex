@@ -452,27 +452,6 @@ static struct dentry *d_kill(struct dentry *dentry, struct dentry *parent)
 	return parent;
 }
 
-/*
- * Unhash a dentry without inserting an RCU walk barrier or checking that
- * dentry->d_lock is locked.  The caller must take care of that, if
- * appropriate.
- */
-static void __d_shrink(struct dentry *dentry)
-{
-	if (!d_unhashed(dentry)) {
-		struct hlist_bl_head *b;
-		if (unlikely(dentry->d_flags & DCACHE_DISCONNECTED))
-			b = &dentry->d_sb->s_anon;
-		else
-			b = d_hash(dentry->d_parent, dentry->d_name.hash);
-
-		hlist_bl_lock(b);
-		__hlist_bl_del(&dentry->d_hash);
-		dentry->d_hash.pprev = NULL;
-		hlist_bl_unlock(b);
-	}
-}
-
 /**
  * d_drop - drop a dentry
  * @dentry: dentry to drop
@@ -491,7 +470,16 @@ static void __d_shrink(struct dentry *dentry)
 void __d_drop(struct dentry *dentry)
 {
 	if (!d_unhashed(dentry)) {
-		__d_shrink(dentry);
+		struct hlist_bl_head *b;
+		if (unlikely(dentry->d_flags & DCACHE_DISCONNECTED))
+			b = &dentry->d_sb->s_anon;
+		else
+			b = d_hash(dentry->d_parent, dentry->d_name.hash);
+
+		hlist_bl_lock(b);
+		__hlist_bl_del(&dentry->d_hash);
+		dentry->d_hash.pprev = NULL;
+		hlist_bl_unlock(b);
 		dentry_rcuwalk_invalidate(dentry);
 	}
 }
@@ -2855,15 +2843,18 @@ static int prepend_path(const struct path *path,
 	struct vfsmount *vfsmnt;
 	struct mount *mnt;
 	int error = 0;
-	unsigned seq = 0;
+	unsigned seq, m_seq = 0;
 	char *bptr;
 	int blen;
 
-	br_read_lock(&vfsmount_lock);
 	rcu_read_lock();
+restart_mnt:
+	read_seqbegin_or_lock(&mount_lock, &m_seq);
+	seq = 0;
 restart:
 	bptr = *buffer;
 	blen = *buflen;
+	error = 0;
 	dentry = path->dentry;
 	vfsmnt = path->mnt;
 	mnt = real_mount(vfsmnt);
@@ -2872,11 +2863,11 @@ restart:
 		struct dentry * parent;
 
 		if (dentry == vfsmnt->mnt_root || IS_ROOT(dentry)) {
-
+			struct mount *parent = ACCESS_ONCE(mnt->mnt_parent);
 			/* Global root? */
-			if (mnt_has_parent(mnt)) {
-				dentry = mnt->mnt_mountpoint;
-				mnt = mnt->mnt_parent;
+			if (mnt != parent) {
+				dentry = ACCESS_ONCE(mnt->mnt_mountpoint);
+				mnt = parent;
 				vfsmnt = &mnt->mnt;
 				continue;
 			}
@@ -2910,7 +2901,11 @@ restart:
 		goto restart;
 	}
 	done_seqretry(&rename_lock, seq);
-	br_read_unlock(&vfsmount_lock);
+	if (need_seqretry(&mount_lock, m_seq)) {
+		m_seq = 1;
+		goto restart_mnt;
+	}
+	done_seqretry(&mount_lock, m_seq);
 
 	if (error >= 0 && bptr == *buffer) {
 		if (--blen < 0)
