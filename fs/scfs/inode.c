@@ -751,7 +751,7 @@ static int scfs_link(struct dentry *old_dentry, struct inode *dir,
 	dget(lower_new_dentry);
 	lower_dir_dentry = lock_parent(lower_new_dentry);
 	ret = vfs_link(lower_old_dentry, lower_dir_dentry->d_inode,
-		      lower_new_dentry);
+		      lower_new_dentry, NULL);
 	if (ret || !lower_new_dentry->d_inode)
 		goto out;
 	ret = scfs_interpose(lower_new_dentry, new_dentry, dir->i_sb);
