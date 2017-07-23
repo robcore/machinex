@@ -212,6 +212,7 @@ static unsigned long change_protection_range(struct vm_area_struct *vma,
 	unsigned long next;
 	unsigned long start = addr;
 	unsigned long pages = 0;
+	unsigned long nr_huge_updates = 0;
 
 	BUG_ON(addr >= end);
 	pgd = pgd_offset(mm, addr);
