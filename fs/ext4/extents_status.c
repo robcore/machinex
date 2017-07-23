@@ -968,13 +968,14 @@ static unsigned long ext4_es_scan(struct shrinker *shrink,
 	int nr_to_scan = sc->nr_to_scan;
 	int ret, nr_shrunk;
 
+	ret = percpu_counter_read_positive(&sbi->s_extent_cache_cnt);
+
 	if (!nr_to_scan)
 		return ret;
 
 	nr_shrunk = __ext4_es_shrink(sbi, nr_to_scan, NULL);
 
-	ret = percpu_counter_read_positive(&sbi->s_extent_cache_cnt);
-	return nr_shrunk;;
+	return nr_shrunk;
 }
 
 void ext4_es_register_shrinker(struct ext4_sb_info *sbi)
