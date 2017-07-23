@@ -69,6 +69,7 @@ void hugetlb_unreserve_pages(struct inode *inode, long offset, long freed);
 int dequeue_hwpoisoned_huge_page(struct page *page);
 bool isolate_huge_page(struct page *page, struct list_head *list);
 void putback_active_hugepage(struct page *page);
+bool is_hugepage_active(struct page *page);
 void copy_huge_page(struct page *dst, struct page *src);
 
 #ifdef CONFIG_ARCH_WANT_HUGE_PMD_SHARE
@@ -144,6 +145,7 @@ static inline int dequeue_hwpoisoned_huge_page(struct page *page)
 
 #define isolate_huge_page(p, l) false
 #define putback_active_hugepage(p)	do {} while (0)
+#define is_hugepage_active(x)	false
 static inline void copy_huge_page(struct page *dst, struct page *src)
 {
 }
@@ -376,6 +378,9 @@ static inline int hstate_index(struct hstate *h)
 }
 
 
+extern void dissolve_free_huge_pages(unsigned long start_pfn,
+				     unsigned long end_pfn);
+
 #else	/* CONFIG_HUGETLB_PAGE */
 struct hstate {};
 #define alloc_huge_page_node(h, nid) NULL
@@ -401,6 +406,7 @@ static inline pgoff_t basepage_index(struct page *page)
 {
 	return page->index;
 }
-#endif
+#define dissolve_free_huge_pages(s, e)	do {} while (0)
+#endif	/* CONFIG_HUGETLB_PAGE */
 
 #endif /* _LINUX_HUGETLB_H */
