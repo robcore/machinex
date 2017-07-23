@@ -241,7 +241,7 @@ bool __get_page_tail(struct page *page)
 	} else {
 		unsigned long flags;
 
-		page_head = compound_trans_head(page);
+		page_head = compound_head(page);
 		if (likely(page != page_head &&
 					get_page_unless_zero(page_head))) {
 
