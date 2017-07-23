@@ -151,9 +151,7 @@ static bool global_reclaim(struct scan_control *sc)
 
 static bool mem_cgroup_should_soft_reclaim(struct scan_control *sc)
 {
-	struct mem_cgroup *root = sc->target_mem_cgroup;
-	return !mem_cgroup_disabled() &&
-		mem_cgroup_soft_reclaim_eligible(root, root) != SKIP_TREE;
+	return !mem_cgroup_disabled();
 }
 #else
 static bool global_reclaim(struct scan_control *sc)
@@ -2189,11 +2187,10 @@ static inline bool should_continue_reclaim(struct zone *zone,
 	}
 }
 
-static int
+static void
 __shrink_zone(struct zone *zone, struct scan_control *sc, bool soft_reclaim)
 {
 	unsigned long nr_reclaimed, nr_scanned;
-	int groups_scanned = 0;
 
 	do {
 		struct mem_cgroup *root = sc->target_mem_cgroup;
@@ -2201,17 +2198,21 @@ __shrink_zone(struct zone *zone, struct scan_control *sc, bool soft_reclaim)
 			.zone = zone,
 			.priority = sc->priority,
 		};
-		struct mem_cgroup *memcg = NULL;
-		mem_cgroup_iter_filter filter = (soft_reclaim) ?
-			mem_cgroup_soft_reclaim_eligible : NULL;
+		struct mem_cgroup *memcg;
 
 		nr_reclaimed = sc->nr_reclaimed;
 		nr_scanned = sc->nr_scanned;
 
-		while ((memcg = mem_cgroup_iter_cond(root, memcg, &reclaim, filter))) {
+		memcg = mem_cgroup_iter(root, NULL, &reclaim);
+		do {
 			struct lruvec *lruvec;
 
-			groups_scanned++;
+			if (soft_reclaim &&
+			    !mem_cgroup_soft_reclaim_eligible(memcg, root)) {
+				memcg = mem_cgroup_iter(root, memcg, &reclaim);
+				continue;
+			}
+
 			lruvec = mem_cgroup_zone_lruvec(zone, memcg);
 
 			shrink_lruvec(lruvec, sc);
@@ -2233,8 +2234,6 @@ __shrink_zone(struct zone *zone, struct scan_control *sc, bool soft_reclaim)
 			}
 	} while (should_continue_reclaim(zone, sc->nr_reclaimed - nr_reclaimed,
 					 sc->nr_scanned - nr_scanned, sc));
-
-	return groups_scanned;
 }
 
 
@@ -2242,19 +2241,8 @@ static void shrink_zone(struct zone *zone, struct scan_control *sc)
 {
 	bool do_soft_reclaim = mem_cgroup_should_soft_reclaim(sc);
 	unsigned long nr_scanned = sc->nr_scanned;
-	int scanned_groups;
 
-	scanned_groups = __shrink_zone(zone, sc, do_soft_reclaim);
-	/*
-	 * memcg iterator might race with other reclaimer or start from
-	 * a incomplete tree walk so the tree walk in __shrink_zone
-	 * might have missed groups that are above the soft limit. Try
-	 * another loop to catch up with others. Do it just once to
-	 * prevent from reclaim latencies when other reclaimers always
-	 * preempt this one.
-	 */
-	if (do_soft_reclaim && !scanned_groups)
-		__shrink_zone(zone, sc, do_soft_reclaim);
+	__shrink_zone(zone, sc, do_soft_reclaim);
 
 	/*
 	 * No group is over the soft limit or those that are do not have
@@ -3061,7 +3049,8 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 				zone_clear_flag(zone, ZONE_CONGESTED);
 				zone_clear_flag(zone, ZONE_TAIL_LRU_DIRTY);
 			}
-		}
+			memcg = mem_cgroup_iter(root, memcg, &reclaim);
+		} while (memcg);
 
 		if (i < 0)
 			goto out;

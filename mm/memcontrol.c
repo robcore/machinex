@@ -140,7 +140,6 @@ static const char * const mem_cgroup_lru_names[] = {
  */
 enum mem_cgroup_events_target {
 	MEM_CGROUP_TARGET_THRESH,
-	MEM_CGROUP_TARGET_SOFTLIMIT,
 	MEM_CGROUP_TARGET_NUMAINFO,
 	MEM_CGROUP_NTARGETS,
 };
@@ -358,22 +357,6 @@ struct mem_cgroup {
         /* Index in the kmem_cache->memcg_params->memcg_caches array */
 	int kmemcg_id;
 #endif
-	/*
-	 * Protects soft_contributed transitions.
-	 * See mem_cgroup_update_soft_limit
-	 */
-	spinlock_t soft_lock;
-
-	/*
-	 * If true then this group has increased parents' children_in_excess
-	 * when it got over the soft limit.
-	 * When a group falls bellow the soft limit, parents' children_in_excess
-	 * is decreased and soft_contributed changed to false.
-	 */
-	bool soft_contributed;
-
-	/* Number of children that are in soft limit excess */
-	atomic_t children_in_excess;
 
 	int last_scanned_node;
 #if MAX_NUMNODES > 1
@@ -891,9 +874,6 @@ static bool mem_cgroup_event_ratelimit(struct mem_cgroup *memcg,
 		case MEM_CGROUP_TARGET_THRESH:
 			next = val + THRESHOLDS_EVENTS_TARGET;
 			break;
-		case MEM_CGROUP_TARGET_SOFTLIMIT:
-			next = val + SOFTLIMIT_EVENTS_TARGET;
-			break;
 		case MEM_CGROUP_TARGET_NUMAINFO:
 			next = val + NUMAINFO_EVENTS_TARGET;
 			break;
@@ -906,57 +886,6 @@ static bool mem_cgroup_event_ratelimit(struct mem_cgroup *memcg,
 	return false;
 }
 
-static enum mem_cgroup_filter_t
-mem_cgroup_filter(struct mem_cgroup *memcg, struct mem_cgroup *root,
-		mem_cgroup_iter_filter cond)
-{
-	if (!cond)
-		return VISIT;
-	return cond(memcg, root);
-}
-
-/*
- * Called from rate-limited memcg_check_events when enough
- * MEM_CGROUP_TARGET_SOFTLIMIT events are accumulated and it makes sure
- * that all the parents up the hierarchy will be notified that this group
- * is in excess or that it is not in excess anymore. mmecg->soft_contributed
- * makes the transition a single action whenever the state flips from one to
- * the other.
- */
-static void mem_cgroup_update_soft_limit(struct mem_cgroup *memcg)
-{
-	unsigned long long excess = res_counter_soft_limit_excess(&memcg->res);
-	struct mem_cgroup *parent = memcg;
-	int delta = 0;
-
-	spin_lock(&memcg->soft_lock);
-	if (excess) {
-		if (!memcg->soft_contributed) {
-			delta = 1;
-			memcg->soft_contributed = true;
-		}
-	} else {
-		if (memcg->soft_contributed) {
-			delta = -1;
-			memcg->soft_contributed = false;
-		}
-	}
-
-	/*
-	 * Necessary to update all ancestors when hierarchy is used
-	 * because their event counter is not touched.
-	 * We track children even outside the hierarchy for the root
-	 * cgroup because tree walk starting at root should visit
-	 * all cgroups and we want to prevent from pointless tree
-	 * walk if no children is below the limit.
-	 */
-	while (delta && (parent = parent_mem_cgroup(parent)))
-		atomic_add(delta, &parent->children_in_excess);
-	if (memcg != root_mem_cgroup && !root_mem_cgroup->use_hierarchy)
-		atomic_add(delta, &root_mem_cgroup->children_in_excess);
-	spin_unlock(&memcg->soft_lock);
-}
-
 /*
  * Check events in order.
  *
@@ -967,11 +896,8 @@ static void memcg_check_events(struct mem_cgroup *memcg, struct page *page)
 	/* threshold event is triggered in finer grain than soft limit */
 	if (unlikely(mem_cgroup_event_ratelimit(memcg,
 						MEM_CGROUP_TARGET_THRESH))) {
-		bool do_softlimit;
 		bool do_numainfo __maybe_unused;
 
-		do_softlimit = mem_cgroup_event_ratelimit(memcg,
-						MEM_CGROUP_TARGET_SOFTLIMIT);
 #if MAX_NUMNODES > 1
 		do_numainfo = mem_cgroup_event_ratelimit(memcg,
 						MEM_CGROUP_TARGET_NUMAINFO);
@@ -979,8 +905,6 @@ static void memcg_check_events(struct mem_cgroup *memcg, struct page *page)
 		preempt_enable();
 
 		mem_cgroup_threshold(memcg);
-		if (unlikely(do_softlimit))
-			mem_cgroup_update_soft_limit(memcg);
 #if MAX_NUMNODES > 1
 		if (unlikely(do_numainfo))
 			atomic_inc(&memcg->numainfo_events);
@@ -1028,7 +952,6 @@ struct mem_cgroup *try_get_mem_cgroup_from_mm(struct mm_struct *mm)
  * @root: hierarchy root
  * @prev: previously returned memcg, NULL on first invocation
  * @reclaim: cookie for shared reclaim walks, NULL for full walks
- * @cond: filter for visited nodes, NULL for no filter
  *
  * Returns references to children of the hierarchy below @root, or
  * @root itself, or %NULL after a full round-trip.
@@ -1077,9 +1000,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 	if (!root->use_hierarchy && root != root_mem_cgroup) {
 		if (prev)
 			goto out_css_put;
-		if (mem_cgroup_filter(root, root, cond) == VISIT)
-			return root;
-		return NULL;
+		return root;
 	}
 
 	rcu_read_lock();
@@ -1900,22 +1821,14 @@ int mem_cgroup_select_victim_node(struct mem_cgroup *memcg)
  * hierarchy if
  *	a) it is over its soft limit
  *	b) any parent up the hierarchy is over its soft limit
- *
- * If the given group doesn't have any children over the limit then it
- * doesn't make any sense to iterate its subtree.
  */
-enum mem_cgroup_filter_t
-mem_cgroup_soft_reclaim_eligible(struct mem_cgroup *memcg,
+bool mem_cgroup_soft_reclaim_eligible(struct mem_cgroup *memcg,
 		struct mem_cgroup *root)
 {
-	struct mem_cgroup *parent;
-
-	if (!memcg)
-		memcg = root_mem_cgroup;
-	parent = memcg;
+	struct mem_cgroup *parent = memcg;
 
 	if (res_counter_soft_limit_excess(&memcg->res))
-		return VISIT;
+		return true;
 
 	/*
 	 * If any parent up to the root in the hierarchy is over its soft limit
@@ -1923,14 +1836,12 @@ mem_cgroup_soft_reclaim_eligible(struct mem_cgroup *memcg,
 	 */
 	while ((parent = parent_mem_cgroup(parent))) {
 		if (res_counter_soft_limit_excess(&parent->res))
-			return VISIT;
+			return true;
 		if (parent == root)
 			break;
 	}
 
-	if (!atomic_read(&memcg->children_in_excess))
-		return SKIP_TREE;
-	return SKIP;
+	return false;
 }
 
 static DEFINE_SPINLOCK(memcg_oom_lock);
@@ -6323,7 +6234,6 @@ mem_cgroup_css_online(struct cgroup_css *css)
 	mutex_unlock(&memcg_create_mutex);
 
 	vmpressure_init(&memcg->vmpressure);
-	spin_lock_init(&memcg->soft_lock);
 
 	return error;
 }
@@ -6348,13 +6258,6 @@ static void mem_cgroup_css_offline(struct cgroup_css *css)
 	spin_unlock(&memcg->event_list_lock);
 
 	mem_cgroup_reparent_charges(memcg);
-	if (memcg->soft_contributed) {
-		while ((memcg = parent_mem_cgroup(memcg)))
-			atomic_dec(&memcg->children_in_excess);
-
-		if (memcg != root_mem_cgroup && !root_mem_cgroup->use_hierarchy)
-			atomic_dec(&root_mem_cgroup->children_in_excess);
-	}
 	mem_cgroup_destroy_all_caches(memcg);
 	vmpressure_cleanup(&memcg->vmpressure);
 }
