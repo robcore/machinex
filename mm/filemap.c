@@ -1182,6 +1182,7 @@ static void shrink_readahead_size_eio(struct file *filp,
  * @filp:	the file to read
  * @ppos:	current file position
  * @desc:	read_descriptor
+ * @actor:	read method
  *
  * This is a generic file read routine, and uses the
  * mapping->a_ops->readpage() function for the actual low-level stuff.
@@ -1190,7 +1191,7 @@ static void shrink_readahead_size_eio(struct file *filp,
  * of the logic when it comes to error handling etc.
  */
 static void do_generic_file_read(struct file *filp, loff_t *ppos,
-		read_descriptor_t *desc)
+		read_descriptor_t *desc, read_actor_t actor)
 {
 	struct address_space *mapping = filp->f_mapping;
 	struct inode *inode = mapping->host;
@@ -1299,14 +1300,13 @@ page_ok:
 		 * Ok, we have the page, and it's up-to-date, so
 		 * now we can copy it to user space...
 		 *
-		 * The file_read_actor routine returns how many bytes were
-		 * actually used..
+		 * The actor routine returns how many bytes were actually used..
 		 * NOTE! This may not be the same as how much of a user buffer
 		 * we filled up (we may be padding etc), so we can only update
 		 * "pos" here (the actor routine has to update the user buffer
 		 * pointers and the remaining count).
 		 */
-		ret = file_read_actor(desc, page, offset, nr);
+		ret = actor(desc, page, offset, nr);
 		offset += ret;
 		index += offset >> PAGE_CACHE_SHIFT;
 		offset &= ~PAGE_CACHE_MASK;
@@ -1562,7 +1562,7 @@ generic_file_read_iter(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
 	desc.arg.data = iter;
 	desc.count = count;
 	desc.error = 0;
-	do_generic_file_read(filp, ppos, &desc);
+	do_generic_file_read(filp, ppos, &desc, file_read_iter_actor);
 	if (desc.written)
 		retval = desc.written;
 	else

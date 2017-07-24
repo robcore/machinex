@@ -138,7 +138,6 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 	unsigned long next;
 	unsigned long pages = 0;
 	bool all_same_node;
-	unsigned long nr_huge_updates = 0;
 
 	pmd = pmd_offset(pud, addr);
 	do {
@@ -153,10 +152,8 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 						newprot, prot_numa);
 
 				if (nr_ptes) {
-					if (nr_ptes == HPAGE_PMD_NR) {
-						pages += HPAGE_PMD_NR;
-						nr_huge_updates++;
-					}
+					if (nr_ptes == HPAGE_PMD_NR)
+						pages++;
 
 					continue;
 				}
@@ -178,9 +175,6 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 		if (prot_numa && this_pages && all_same_node)
 			change_pmd_protnuma(vma->vm_mm, addr, pmd);
 	} while (pmd++, addr = next, addr != end);
-
-	if (nr_huge_updates)
-		count_vm_numa_events(NUMA_HUGE_PTE_UPDATES, nr_huge_updates);
 
 	return pages;
 }

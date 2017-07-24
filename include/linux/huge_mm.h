@@ -55,8 +55,7 @@ enum page_check_address_pmd_flag {
 extern pmd_t *page_check_address_pmd(struct page *page,
 				     struct mm_struct *mm,
 				     unsigned long address,
-				     enum page_check_address_pmd_flag flag,
-				     spinlock_t **ptl);
+				     enum page_check_address_pmd_flag flag);
 
 #define HPAGE_PMD_ORDER (HPAGE_PMD_SHIFT-PAGE_SHIFT)
 #define HPAGE_PMD_NR (1<<HPAGE_PMD_ORDER)
@@ -131,15 +130,15 @@ extern void __vma_adjust_trans_huge(struct vm_area_struct *vma,
 				    unsigned long start,
 				    unsigned long end,
 				    long adjust_next);
-extern int __pmd_trans_huge_lock(pmd_t *pmd, struct vm_area_struct *vma,
-		spinlock_t **ptl);
+extern int __pmd_trans_huge_lock(pmd_t *pmd,
+				 struct vm_area_struct *vma);
 /* mmap_sem must be held on entry */
-static inline int pmd_trans_huge_lock(pmd_t *pmd, struct vm_area_struct *vma,
-		spinlock_t **ptl)
+static inline int pmd_trans_huge_lock(pmd_t *pmd,
+				      struct vm_area_struct *vma)
 {
 	VM_BUG_ON(!rwsem_is_locked(&vma->vm_mm->mmap_sem));
 	if (pmd_trans_huge(*pmd))
-		return __pmd_trans_huge_lock(pmd, vma, ptl);
+		return __pmd_trans_huge_lock(pmd, vma);
 	else
 		return 0;
 }
@@ -199,8 +198,8 @@ static inline void vma_adjust_trans_huge(struct vm_area_struct *vma,
 					 long adjust_next)
 {
 }
-static inline int pmd_trans_huge_lock(pmd_t *pmd, struct vm_area_struct *vma,
-		spinlock_t **ptl)
+static inline int pmd_trans_huge_lock(pmd_t *pmd,
+				      struct vm_area_struct *vma)
 {
 	return 0;
 }

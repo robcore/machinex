@@ -9,8 +9,6 @@
 #include <linux/swap.h>
 #include <linux/swapops.h>
 #include <linux/vmalloc.h>
-#include <linux/mman.h>
-#include <linux/hugetlb.h>
 
 #include <asm/sections.h>
 #include <asm/uaccess.h>
@@ -446,16 +444,6 @@ unsigned long vm_mmap(struct file *file, unsigned long addr,
 	return vm_mmap_pgoff(file, addr, len, prot, flag, offset >> PAGE_SHIFT);
 }
 EXPORT_SYMBOL(vm_mmap);
-
-/*
- * Committed memory limit enforced when OVERCOMMIT_NEVER policy is used
- */
-unsigned long vm_commit_limit(void)
-{
-	return ((totalram_pages - hugetlb_total_pages())
-		* sysctl_overcommit_ratio / 100) + total_swap_pages;
-}
-
 
 /* Tracepoints definitions. */
 EXPORT_TRACEPOINT_SYMBOL(kmalloc);

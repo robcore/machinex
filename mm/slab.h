@@ -172,12 +172,6 @@ static inline bool slab_equal_or_root(struct kmem_cache *s,
 {
 	return true;
 }
-
-static inline struct kmem_cache *
-cache_from_memcg_idx(struct kmem_cache *s, int idx)
-{
-	return NULL;
-}
 #endif
 
 static inline struct kmem_cache *cache_from_obj(struct kmem_cache *s, void *x)

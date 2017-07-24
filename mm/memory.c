@@ -385,7 +385,7 @@ static void free_pte_range(struct mmu_gather *tlb, pmd_t *pmd,
 	pgtable_t token = pmd_pgtable(*pmd);
 	pmd_clear(pmd);
 	pte_free_tlb(tlb, token, addr);
-	atomic_long_dec(&tlb->mm->nr_ptes);
+	tlb->mm->nr_ptes--;
 }
 
 static inline void free_pmd_range(struct mmu_gather *tlb, pud_t *pud,
@@ -553,7 +553,6 @@ void free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *vma,
 int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 		pmd_t *pmd, unsigned long address)
 {
-	spinlock_t *ptl;
 	pgtable_t new = pte_alloc_one(mm, address);
 	int wait_split_huge_page;
 	if (!new)
@@ -574,15 +573,15 @@ int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 	 */
 	smp_wmb(); /* Could be smp_wmb__xxx(before|after)_spin_lock */
 
-	ptl = pmd_lock(mm, pmd);
+	spin_lock(&mm->page_table_lock);
 	wait_split_huge_page = 0;
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
-		atomic_long_inc(&mm->nr_ptes);
+		mm->nr_ptes++;
 		pmd_populate(mm, pmd, new);
 		new = NULL;
 	} else if (unlikely(pmd_trans_splitting(*pmd)))
 		wait_split_huge_page = 1;
-	spin_unlock(ptl);
+	spin_unlock(&mm->page_table_lock);
 	if (new)
 		pte_free(mm, new);
 	if (wait_split_huge_page)
@@ -1528,20 +1527,20 @@ struct page *follow_page_mask(struct vm_area_struct *vma,
 			split_huge_page_pmd(vma, address, pmd);
 			goto split_fallthrough;
 		}
-		ptl = pmd_lock(mm, pmd);
+		spin_lock(&mm->page_table_lock);
 		if (likely(pmd_trans_huge(*pmd))) {
 			if (unlikely(pmd_trans_splitting(*pmd))) {
-				spin_unlock(ptl);
+				spin_unlock(&mm->page_table_lock);
 				wait_split_huge_page(vma->anon_vma, pmd);
 			} else {
 				page = follow_trans_huge_pmd(vma, address,
 							     pmd, flags);
-				spin_unlock(ptl);
+				spin_unlock(&mm->page_table_lock);
 				*page_mask = HPAGE_PMD_NR - 1;
 				goto out;
 			}
 		} else
-			spin_unlock(ptl);
+			spin_unlock(&mm->page_table_lock);
 		/* fall through */
 	}
 split_fallthrough:
