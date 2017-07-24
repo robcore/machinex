@@ -41,7 +41,6 @@
 
 #include <trace/events/task.h>
 #include "internal.h"
-#include "coredump.h"
 
 #include <trace/events/sched.h>
 
