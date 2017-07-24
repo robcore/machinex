@@ -1615,8 +1615,7 @@ void d_set_d_op(struct dentry *dentry, const struct dentry_operations *op)
 }
 EXPORT_SYMBOL(d_set_d_op);
 
-
-sstatic unsigned d_flags_for_inode(struct inode *inode)
+static unsigned d_flags_for_inode(struct inode *inode)
 {
 	unsigned add_flags = DCACHE_FILE_TYPE;
 
