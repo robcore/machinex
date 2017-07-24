@@ -2270,6 +2270,20 @@ out:
 	return err;
 }
 
+static int
+filename_mountpoint(int dfd, struct filename *s, struct path *path,
+			unsigned int flags)
+{
+	int error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_RCU);
+	if (unlikely(error == -ECHILD))
+		error = path_mountpoint(dfd, s->name, path, flags);
+	if (unlikely(error == -ESTALE))
+		error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_REVAL);
+	if (likely(!error))
+		audit_inode(s, path->dentry, 0);
+	return error;
+}
+
 /**
  * user_path_mountpoint_at - lookup a path from userland in order to umount it
  * @dfd:	directory file descriptor
@@ -2290,22 +2304,21 @@ user_path_mountpoint_at(int dfd, const char __user *name, unsigned int flags,
 {
 	struct filename *s = getname(name);
 	int error;
-
 	if (IS_ERR(s))
 		return PTR_ERR(s);
-
-	error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_RCU);
-	if (unlikely(error == -ECHILD))
-		error = path_mountpoint(dfd, s->name, path, flags);
-	if (unlikely(error == -ESTALE))
-		error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_REVAL);
-
-	if (likely(!error))
-		audit_inode(s, path->dentry, 0);
-
+	error = filename_mountpoint(dfd, s, path, flags);
 	putname(s);
 	return error;
 }
+
+int
+kern_path_mountpoint(int dfd, const char *name, struct path *path,
+			unsigned int flags)
+{
+	struct filename s = {.name = name};
+	return filename_mountpoint(dfd, &s, path, flags);
+}
+EXPORT_SYMBOL(kern_path_mountpoint);
 
 /*
  * Restricted form of lookup. Doesn't follow links, single-component only,
