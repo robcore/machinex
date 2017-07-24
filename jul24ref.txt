@@ -1,0 +1,1 @@
+/media/root/robcore/android/msm_kernel_caf_3.14/patches/3patches/7162-power_supply-Fix-Oops-from-NULL-pointer-dereference-.patch
