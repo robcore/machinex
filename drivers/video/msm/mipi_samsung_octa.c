@@ -699,7 +699,7 @@ static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 	if (pdev->id != 0)
 		return;
 
-	mipi_dsi_pdata = pdev->dev.platform_data;
+	mipi_dsi_pdata = dev_get_platdata(&pdev->dev);
 
 	if (mipi_dsi_pdata == NULL) {
 		pr_err("LCD Power off failure: No Platform Data\n");
