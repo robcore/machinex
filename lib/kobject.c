@@ -556,7 +556,7 @@ EXPORT_SYMBOL_GPL(kobject_move);
  */
 void kobject_del(struct kobject *kobj)
 {
-	struct sysfs_dirent *sd;
+	struct kernfs_node *sd;
 
 	if (!kobj)
 		return;
