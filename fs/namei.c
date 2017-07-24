@@ -2133,7 +2133,7 @@ int vfs_path_lookup(struct dentry *dentry, struct vfsmount *mnt,
 }
 
 /**
- * umount_lookup_last - look up last component for umount
+ * mountpoint_last - look up last component for umount
  * @nd:   pathwalk nameidata - currently pointing at parent directory of "last"
  * @path: pointer to container for result
  *
@@ -2160,7 +2160,7 @@ int vfs_path_lookup(struct dentry *dentry, struct vfsmount *mnt,
  *         to the link, and nd->path will *not* be put.
  */
 static int
-umount_lookup_last(struct nameidata *nd, struct path *path)
+mountpoint_last(struct nameidata *nd, struct path *path)
 {
 	int error = 0;
 	struct dentry *dentry;
@@ -2222,17 +2222,16 @@ out:
 }
 
 /**
- * path_umountat - look up a path to be umounted
+ * path_mountpoint - look up a path to be umounted
  * @dfd:	directory file descriptor to start walk from
  * @name:	full pathname to walk
  * @flags:	lookup flags
- * @nd:		pathwalk nameidata
  *
  * Look up the given name, but don't attempt to revalidate the last component.
  * Returns 0 and "path" will be valid on success; Retuns error otherwise.
  */
 static int
-path_umountat(int dfd, const char *name, struct path *path, unsigned int flags)
+path_mountpoint(int dfd, const char *name, struct path *path, unsigned int flags)
 {
 	struct file *base = NULL;
 	struct nameidata nd;
@@ -2247,7 +2246,7 @@ path_umountat(int dfd, const char *name, struct path *path, unsigned int flags)
 	if (err)
 		goto out;
 
-	err = umount_lookup_last(&nd, path);
+	err = mountpoint_last(&nd, path);
 	while (err > 0) {
 		void *cookie;
 		struct path link = *path;
@@ -2258,7 +2257,7 @@ path_umountat(int dfd, const char *name, struct path *path, unsigned int flags)
 		err = follow_link(&link, &nd, &cookie);
 		if (err)
 			break;
-		err = umount_lookup_last(&nd, path);
+		err = mountpoint_last(&nd, path);
 		put_link(&nd, &link, cookie);
 	}
 out:
@@ -2272,7 +2271,7 @@ out:
 }
 
 /**
- * user_path_umountat - lookup a path from userland in order to umount it
+ * user_path_mountpoint_at - lookup a path from userland in order to umount it
  * @dfd:	directory file descriptor
  * @name:	pathname from userland
  * @flags:	lookup flags
@@ -2286,7 +2285,7 @@ out:
  * Returns 0 and populates "path" on success.
  */
 int
-user_path_umountat(int dfd, const char __user *name, unsigned int flags,
+user_path_mountpoint_at(int dfd, const char __user *name, unsigned int flags,
 			struct path *path)
 {
 	struct filename *s = getname(name);
@@ -2295,11 +2294,11 @@ user_path_umountat(int dfd, const char __user *name, unsigned int flags,
 	if (IS_ERR(s))
 		return PTR_ERR(s);
 
-	error = path_umountat(dfd, s->name, path, flags | LOOKUP_RCU);
+	error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_RCU);
 	if (unlikely(error == -ECHILD))
-		error = path_umountat(dfd, s->name, path, flags);
+		error = path_mountpoint(dfd, s->name, path, flags);
 	if (unlikely(error == -ESTALE))
-		error = path_umountat(dfd, s->name, path, flags | LOOKUP_REVAL);
+		error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_REVAL);
 
 	if (likely(!error))
 		audit_inode(s, path->dentry, 0);
