@@ -11,6 +11,7 @@
 #include <linux/cache.h>
 #include <linux/list.h>
 #include <linux/list_lru.h>
+#include <linux/export.h>
 #include <linux/radix-tree.h>
 #include <linux/rbtree.h>
 #include <linux/init.h>
