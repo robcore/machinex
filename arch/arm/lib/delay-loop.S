@@ -22,6 +22,7 @@
  * r0  <= 2000
  * HZ  <= 1000
  */
+		.align 3
 
 ENTRY(__loop_udelay)
 		ldr	r2, .LC1
