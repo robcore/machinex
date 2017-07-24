@@ -208,7 +208,7 @@ ecryptfs_do_create(struct inode *directory_inode,
 	inode = __ecryptfs_get_inode(lower_dentry->d_inode,
 			directory_inode->i_sb);
 	if (IS_ERR(inode)) {
-		vfs_unlink(lower_dir_dentry->d_inode, lower_dentry);
+		vfs_unlink(lower_dir_dentry->d_inode, lower_dentry, NULL);
 		goto out_lock;
 	}
 	fsstack_copy_attr_times(directory_inode, lower_dir_dentry->d_inode);
