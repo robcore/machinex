@@ -15,7 +15,7 @@
 #include <linux/lockdep.h>
 #include <linux/rbtree.h>
 #include <linux/atomic.h>
-#include <linux/completion.h>
+#include <linux/wait.h>
 
 struct file;
 struct iattr;
@@ -34,16 +34,17 @@ enum kernfs_node_type {
 };
 
 #define KERNFS_TYPE_MASK	0x000f
-#define KERNFS_ACTIVE_REF	KERNFS_FILE
 #define KERNFS_FLAG_MASK	~KERNFS_TYPE_MASK
 
 enum kernfs_node_flag {
-	KERNFS_REMOVED		= 0x0010,
+	KERNFS_JUST_DEACTIVATED	= 0x0010, /* used to aid lockdep annotation */
 	KERNFS_NS		= 0x0020,
 	KERNFS_HAS_SEQ_SHOW	= 0x0040,
 	KERNFS_HAS_MMAP		= 0x0080,
 	KERNFS_LOCKDEP		= 0x0100,
 	KERNFS_STATIC_NAME	= 0x0200,
+	KERNFS_SUICIDAL		= 0x0400,
+	KERNFS_SUICIDED		= 0x0800,
 };
 
 /* type-specific structures for kernfs_node union members */
@@ -81,6 +82,8 @@ struct kernfs_elem_attr {
 struct kernfs_node {
 	atomic_t		count;
 	atomic_t		active;
+	int			deact_depth;
+	unsigned int		hash;	/* ns + name hash */
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	struct lockdep_map	dep_map;
 #endif
@@ -90,13 +93,7 @@ struct kernfs_node {
 
 	struct rb_node		rb;
 
-	union {
-		struct completion	*completion;
-		struct kernfs_node	*removed_list;
-	} u;
-
 	const void		*ns;	/* namespace tag */
-	unsigned int		hash;	/* ns + name hash */
 	union {
 		struct kernfs_elem_dir		dir;
 		struct kernfs_elem_symlink	symlink;
@@ -132,6 +129,7 @@ struct kernfs_root {
 	/* private fields, do not use outside kernfs proper */
 	struct ida		ino_ida;
 	struct kernfs_dir_ops	*dir_ops;
+	wait_queue_head_t	deactivate_waitq;
 };
 
 struct kernfs_open_file {
@@ -238,7 +236,12 @@ struct kernfs_node *__kernfs_create_file(struct kernfs_node *parent,
 struct kernfs_node *kernfs_create_link(struct kernfs_node *parent,
 				       const char *name,
 				       struct kernfs_node *target);
+void kernfs_deactivate(struct kernfs_node *kn);
+void kernfs_reactivate(struct kernfs_node *kn);
+void kernfs_deactivate_self(struct kernfs_node *kn);
+void kernfs_reactivate_self(struct kernfs_node *kn);
 void kernfs_remove(struct kernfs_node *kn);
+bool kernfs_remove_self(struct kernfs_node *kn);
 int kernfs_remove_by_name_ns(struct kernfs_node *parent, const char *name,
 			     const void *ns);
 int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
@@ -295,6 +298,9 @@ kernfs_create_link(struct kernfs_node *parent, const char *name,
 { return ERR_PTR(-ENOSYS); }
 
 static inline void kernfs_remove(struct kernfs_node *kn) { }
+
+static inline bool kernfs_remove_self(struct kernfs_node *kn)
+{ return false; }
 
 static inline int kernfs_remove_by_name_ns(struct kernfs_node *kn,
 					   const char *name, const void *ns)
