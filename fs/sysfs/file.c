@@ -344,7 +344,7 @@ int sysfs_chown_file(struct kobject *kobj, const struct attribute *attr,
 	int rc;
 
 	rc = -ENOENT;
-	kn = kernfs_find_and_get(kobj->kn, attr->name, NULL);
+	kn = kernfs_find_and_get(kobj->sd, attr->name);
 	if (!kn)
 		goto out;
 
