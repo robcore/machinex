@@ -985,7 +985,7 @@ asmlinkage long compat_sys_getdents(unsigned int fd,
 	return error;
 }
 
-#ifndef __ARCH_OMIT_COMPAT_SYS_GETDENTS64
+#ifdef __ARCH_WANT_COMPAT_SYS_GETDENTS64
 
 struct compat_getdents_callback64 {
 	struct dir_context ctx;
@@ -1070,7 +1070,7 @@ asmlinkage long compat_sys_getdents64(unsigned int fd,
 	fdput(f);
 	return error;
 }
-#endif /* ! __ARCH_OMIT_COMPAT_SYS_GETDENTS64 */
+#endif /* __ARCH_WANT_COMPAT_SYS_GETDENTS64 */
 
 static ssize_t compat_do_readv_writev(int type, struct file *file,
 			       const struct compat_iovec __user *uvector,
