@@ -172,9 +172,18 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 	max77693_update_reg(i2c, MAX77693_CHG_REG_SAFEOUT_CTRL, 0x00, 0x30);
 
 	max77693->muic = i2c_new_dummy(i2c->adapter, I2C_ADDR_MUIC);
+	if (!max77693->muic) {
+		dev_err(max77693->dev, "Failed to allocate I2C device for MUIC\n");
+		return -ENODEV;
+	}
 	i2c_set_clientdata(max77693->muic, max77693);
 
 	max77693->haptic = i2c_new_dummy(i2c->adapter, I2C_ADDR_HAPTIC);
+	if (!max77693->haptic) {
+		dev_err(max77693->dev, "Failed to allocate I2C device for Haptic\n");
+		ret = -ENODEV;
+		goto err;
+	}
 	i2c_set_clientdata(max77693->haptic, max77693);
 
 	ret = max77693_irq_init(max77693);
