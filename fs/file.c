@@ -653,7 +653,7 @@ static struct file *__fget(unsigned int fd, fmode_t mask)
 	file = fcheck_files(files, fd);
 	if (file) {
 		/* File object ref couldn't be taken */
-+		if ((file->f_mode & mask) || !get_file_rcu(file))
+		if ((file->f_mode & mask) || !get_file_rcu(file))
 			file = NULL;
 	}
 	rcu_read_unlock();
