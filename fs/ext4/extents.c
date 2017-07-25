@@ -4872,7 +4872,6 @@ long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 	if (mode & FALLOC_FL_ZERO_RANGE)
 		return ext4_zero_range(file, offset, len, mode);
 
-	trace_ext4_fallocate_enter(inode, offset, len, mode);
 	lblk = offset >> blkbits;
 	/*
 	 * We can't just convert len to max_blocks because
@@ -4926,7 +4925,6 @@ long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 	ext4_journal_stop(handle);
 out:
 	mutex_unlock(&inode->i_mutex);
-	trace_ext4_fallocate_exit(inode, offset, max_blocks, ret);
 	return ret;
 }
 
