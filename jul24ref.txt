@@ -1,1 +1,1 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/3patches/7162-power_supply-Fix-Oops-from-NULL-pointer-dereference-.patch
+/media/root/robcore/android/linaro-8064-lt/3.18/patches/7patches/7050-kernfs-fix-kernfs_node_from_dentry.patch
