@@ -355,6 +355,7 @@ int sysfs_chown_file(struct kobject *kobj, const struct attribute *attr,
 
 	rc = kernfs_setattr(kn, &newattrs);
 out:
+	kernfs_put(kn);
 	return rc;
 }
 EXPORT_SYMBOL_GPL(sysfs_chown_file);
