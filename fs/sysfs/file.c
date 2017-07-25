@@ -346,7 +346,7 @@ int sysfs_chown_file(struct kobject *kobj, const struct attribute *attr,
 	rc = -ENOENT;
 	kn = kernfs_find_and_get(kobj->sd, attr->name);
 	if (!kn)
-		goto out;
+		return rc;
 
 	memset(&newattrs, 0, sizeof(newattrs));
 	newattrs.ia_valid = ATTR_UID | ATTR_GID;
@@ -354,7 +354,7 @@ int sysfs_chown_file(struct kobject *kobj, const struct attribute *attr,
 	newattrs.ia_gid = gid;
 
 	rc = kernfs_setattr(kn, &newattrs);
-out:
+
 	kernfs_put(kn);
 	return rc;
 }
