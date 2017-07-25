@@ -16,6 +16,7 @@
 #include <linux/rbtree.h>
 #include <linux/atomic.h>
 #include <linux/wait.h>
+#include <linux/dcache.h>
 
 struct file;
 struct iattr;
