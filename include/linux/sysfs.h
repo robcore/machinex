@@ -178,9 +178,6 @@ struct sysfs_ops {
 
 #ifdef CONFIG_SYSFS
 
-int sysfs_schedule_callback(struct kobject *kobj, void (*func)(void *),
-			    void *data, struct module *owner);
-
 int __must_check sysfs_create_dir_ns(struct kobject *kobj, const void *ns);
 void sysfs_remove_dir(struct kobject *kobj);
 int __must_check sysfs_rename_dir_ns(struct kobject *kobj, const char *new_name,
@@ -200,6 +197,7 @@ int __must_check sysfs_chown_file(struct kobject *kobj,
 				  const struct attribute *attr, uid_t uid, gid_t gid);
 void sysfs_remove_file_ns(struct kobject *kobj, const struct attribute *attr,
 			  const void *ns);
+bool sysfs_remove_file_self(struct kobject *kobj, const struct attribute *attr);
 void sysfs_remove_files(struct kobject *kobj, const struct attribute **attr);
 
 int __must_check sysfs_create_bin_file(struct kobject *kobj,
@@ -248,13 +246,12 @@ void sysfs_notify(struct kobject *kobj, const char *dir, const char *attr);
 
 int __must_check sysfs_init(void);
 
-#else /* CONFIG_SYSFS */
-
-static inline int sysfs_schedule_callback(struct kobject *kobj,
-		void (*func)(void *), void *data, struct module *owner)
+static inline void sysfs_enable_ns(struct kernfs_node *kn)
 {
-	return -ENOSYS;
+	return kernfs_enable_ns(kn);
 }
+
+#else /* CONFIG_SYSFS */
 
 static inline int sysfs_create_dir_ns(struct kobject *kobj, const void *ns)
 {
@@ -301,6 +298,12 @@ static inline void sysfs_remove_file_ns(struct kobject *kobj,
 					const struct attribute *attr,
 					const void *ns)
 {
+}
+
+static inline bool sysfs_remove_file_self(struct kobject *kobj,
+					  const struct attribute *attr)
+{
+	return false;
 }
 
 static inline void sysfs_remove_files(struct kobject *kobj,
@@ -407,6 +410,10 @@ static inline void sysfs_notify(struct kobject *kobj, const char *dir,
 static inline int __must_check sysfs_init(void)
 {
 	return 0;
+}
+
+static inline void sysfs_enable_ns(struct kernfs_node *kn)
+{
 }
 
 #endif /* CONFIG_SYSFS */
