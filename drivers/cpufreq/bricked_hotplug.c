@@ -335,7 +335,7 @@ static ssize_t store_##file_name					\
 	TwTs_Threshold[arraypos] = input;				\
 	return count;							\
 }									\
-static DEVICE_ATTR(file_name, 644, show_##file_name, store_##file_name);
+static DEVICE_ATTR(file_name, 0644, show_##file_name, store_##file_name);
 define_one_twts(twts_threshold_0, 0);
 define_one_twts(twts_threshold_1, 1);
 define_one_twts(twts_threshold_2, 2);
@@ -364,7 +364,7 @@ static ssize_t store_##file_name					\
 	NwNs_Threshold[arraypos] = input;				\
 	return count;							\
 }									\
-static DEVICE_ATTR(file_name, 644, show_##file_name, store_##file_name);
+static DEVICE_ATTR(file_name, 0644, show_##file_name, store_##file_name);
 define_one_nwns(nwns_threshold_0, 0);
 define_one_nwns(nwns_threshold_1, 1);
 define_one_nwns(nwns_threshold_2, 2);
@@ -538,15 +538,15 @@ static ssize_t store_bricked_enabled(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(startdelay, 644, show_startdelay, store_startdelay);
-static DEVICE_ATTR(delay, 644, show_delay, store_delay);
-static DEVICE_ATTR(down_lock_duration, 644, show_down_lock_duration, store_down_lock_duration);
-static DEVICE_ATTR(idle_freq, 644, show_idle_freq, store_idle_freq);
-static DEVICE_ATTR(min_cpus, 644, show_min_cpus_online, store_min_cpus_online);
-static DEVICE_ATTR(max_cpus, 644, show_max_cpus_online, store_max_cpus_online);
-static DEVICE_ATTR(min_cpus_online, 644, show_min_cpus_online, store_min_cpus_online);
-static DEVICE_ATTR(max_cpus_online, 644, show_max_cpus_online, store_max_cpus_online);
-static DEVICE_ATTR(enabled, 644, show_bricked_enabled, store_bricked_enabled);
+static DEVICE_ATTR(startdelay, 0644, show_startdelay, store_startdelay);
+static DEVICE_ATTR(delay, 0644, show_delay, store_delay);
+static DEVICE_ATTR(down_lock_duration, 0644, show_down_lock_duration, store_down_lock_duration);
+static DEVICE_ATTR(idle_freq, 0644, show_idle_freq, store_idle_freq);
+static DEVICE_ATTR(min_cpus, 0644, show_min_cpus_online, store_min_cpus_online);
+static DEVICE_ATTR(max_cpus, 0644, show_max_cpus_online, store_max_cpus_online);
+static DEVICE_ATTR(min_cpus_online, 0644, show_min_cpus_online, store_min_cpus_online);
+static DEVICE_ATTR(max_cpus_online, 0644, show_max_cpus_online, store_max_cpus_online);
+static DEVICE_ATTR(enabled, 0644, show_bricked_enabled, store_bricked_enabled);
 
 static struct attribute *bricked_hotplug_attrs[] = {
 	&dev_attr_startdelay.attr,
