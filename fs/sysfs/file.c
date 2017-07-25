@@ -19,43 +19,7 @@
 #include <linux/seq_file.h>
 
 #include "sysfs.h"
-
-/*
- * There's one sysfs_open_file for each open file and one sysfs_open_dirent
- * for each sysfs_dirent with one or more open files.
- *
- * sysfs_dirent->s_attr.open points to sysfs_open_dirent.  s_attr.open is
- * protected by sysfs_open_dirent_lock.
- *
- * filp->private_data points to seq_file whose ->private points to
- * sysfs_open_file.  sysfs_open_files are chained at
- * sysfs_open_dirent->files, which is protected by sysfs_open_file_mutex.
- */
-static DEFINE_SPINLOCK(sysfs_open_dirent_lock);
-static DEFINE_MUTEX(sysfs_open_file_mutex);
-
-struct sysfs_open_dirent {
-	atomic_t		refcnt;
-	atomic_t		event;
-	wait_queue_head_t	poll;
-	struct list_head	files; /* goes through sysfs_open_file.list */
-};
-
-static struct sysfs_open_file *sysfs_of(struct file *file)
-{
-	return ((struct seq_file *)file->private_data)->private;
-}
-
-/*
- * Determine the kernfs_ops for the given sysfs_dirent.  This function must
- * be called while holding an active reference.
- */
-static const struct kernfs_ops *kernfs_ops(struct sysfs_dirent *sd)
-{
-	if (sd->s_flags & SYSFS_FLAG_LOCKDEP)
-		lockdep_assert_held(sd);
-	return sd->s_attr.ops;
-}
+#include "../kernfs/kernfs-internal.h"
 
 /*
  * Determine ktype->sysfs_ops for the given kernfs_node.  This function
@@ -83,12 +47,13 @@ static int sysfs_kf_seq_show(struct seq_file *sf, void *v)
 	ssize_t count;
 	char *buf;
 
-	/* acquire buffer and ensure that it's >= PAGE_SIZE */
+	/* acquire buffer and ensure that it's >= PAGE_SIZE and clear */
 	count = seq_get_buf(sf, &buf);
 	if (count < PAGE_SIZE) {
 		seq_commit(sf, -1);
 		return 0;
 	}
+	memset(buf, 0, PAGE_SIZE);
 
 	/*
 	 * Invoke show().  Control may reach here via seq file lseek even
