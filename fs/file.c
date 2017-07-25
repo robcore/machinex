@@ -644,7 +644,7 @@ void do_close_on_exec(struct files_struct *files)
 	spin_unlock(&files->file_lock);
 }
 
-struct file *fget(unsigned int fd)
+static struct file *__fget(unsigned int fd, fmode_t mask)
 {
 	struct file *file;
 	struct files_struct *files = current->files;
@@ -653,7 +653,7 @@ struct file *fget(unsigned int fd)
 	file = fcheck_files(files, fd);
 	if (file) {
 		/* File object ref couldn't be taken */
-		if (file->f_mode & FMODE_PATH || !get_file_rcu(file))
++		if ((file->f_mode & mask) || !get_file_rcu(file))
 			file = NULL;
 	}
 	rcu_read_unlock();
@@ -661,25 +661,16 @@ struct file *fget(unsigned int fd)
 	return file;
 }
 
+struct file *fget(unsigned int fd)
+{
+	return __fget(fd, FMODE_PATH);
+}
 EXPORT_SYMBOL(fget);
 
 struct file *fget_raw(unsigned int fd)
 {
-	struct file *file;
-	struct files_struct *files = current->files;
-
-	rcu_read_lock();
-	file = fcheck_files(files, fd);
-	if (file) {
-		/* File object ref couldn't be taken */
-		if (!atomic_long_inc_not_zero(&file->f_count))
-			file = NULL;
-	}
-	rcu_read_unlock();
-
-	return file;
+	return __fget(fd, 0);
 }
-
 EXPORT_SYMBOL(fget_raw);
 
 /*
