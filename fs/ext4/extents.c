@@ -1969,8 +1969,11 @@ int ext4_ext_insert_extent(handle_t *handle, struct inode *inode,
 		if (err)
 			return err;
 
+		uninit = ext4_ext_is_uninitialized(ex);
 		ex->ee_len = cpu_to_le16(ext4_ext_get_actual_len(ex)
 					+ ext4_ext_get_actual_len(newext));
+		if (uninit)
+			ext4_ext_mark_uninitialized(ex);
 		eh = path[depth].p_hdr;
 		nearex = ex;
 		goto merge;
@@ -2071,9 +2074,13 @@ has_space:
 
 	le16_add_cpu(&eh->eh_entries, 1);
 	path[depth].p_ext = nearex;
+
+	uninit = ext4_ext_is_uninitialized(ex);
 	nearex->ee_block = newext->ee_block;
 	ext4_ext_store_pblock(nearex, ext4_ext_pblock(newext));
 	nearex->ee_len = newext->ee_len;
+	if (uninit)
+		ext4_ext_mark_uninitialized(ex);
 
 merge:
 	/* try to merge extents to the right */
