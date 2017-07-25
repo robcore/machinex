@@ -1469,7 +1469,7 @@ int fcntl_getlease(struct file *filp)
  * conflict with the lease we're trying to set.
  */
 static int
-check_conflicting_open(const struct dentry *dentry, const long arg)
+check_conflicting_open(struct dentry *dentry, const long arg)
 {
 	int ret = 0;
 	struct inode *inode = dentry->d_inode;
