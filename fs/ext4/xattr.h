@@ -110,9 +110,6 @@ extern void ext4_xattr_put_super(struct super_block *);
 extern int ext4_expand_extra_isize_ea(struct inode *inode, int new_extra_isize,
 			    struct ext4_inode *raw_inode, handle_t *handle);
 
-extern int __init ext4_init_xattr(void);
-extern void ext4_exit_xattr(void);
-
 extern const struct xattr_handler *ext4_xattr_handlers[];
 
 extern int ext4_xattr_ibody_find(struct inode *inode, struct ext4_xattr_info *i,
@@ -152,6 +149,9 @@ extern int ext4_try_to_evict_inline_data(handle_t *handle,
 extern void ext4_inline_data_truncate(struct inode *inode, int *has_inline);
 
 extern int ext4_convert_inline_data(struct inode *inode);
+
+extern struct mb_cache *ext4_xattr_create_cache(char *name);
+extern void ext4_xattr_destroy_cache(struct mb_cache *);
 
 #ifdef CONFIG_EXT4_FS_SECURITY
 extern int ext4_init_security(handle_t *handle, struct inode *inode,
