@@ -85,6 +85,7 @@ struct ramoops_context {
 	int ecc_size;
 	unsigned int max_dump_cnt;
 	unsigned int dump_write_cnt;
+	/* _read_cnt need clear on ramoops_pstore_open */
 	unsigned int dump_read_cnt;
 	unsigned int console_read_cnt;
 	unsigned int ftrace_read_cnt;
@@ -100,6 +101,7 @@ static int ramoops_pstore_open(struct pstore_info *psi)
 
 	cxt->dump_read_cnt = 0;
 	cxt->console_read_cnt = 0;
+	cxt->ftrace_read_cnt = 0;
 	return 0;
 }
 
@@ -404,7 +406,6 @@ static int ramoops_probe(struct platform_device *pdev)
 	pdata->console_size = rounddown_pow_of_two(pdata->console_size);
 	pdata->ftrace_size = rounddown_pow_of_two(pdata->ftrace_size);
 
-	cxt->dump_read_cnt = 0;
 	cxt->size = pdata->mem_size;
 	cxt->phys_addr = pdata->mem_address;
 	cxt->record_size = pdata->record_size;
