@@ -281,7 +281,7 @@ int jffs2_init_acl_pre(struct inode *dir_i, struct inode *inode, umode_t *i_mode
 		if (S_ISDIR(*i_mode))
 			set_cached_acl(inode, ACL_TYPE_DEFAULT, acl);
 
-		rc = posix_acl_create(&acl, GFP_KERNEL, i_mode);
+		rc = __posix_acl_create(&acl, GFP_KERNEL, i_mode);
 		if (rc < 0)
 			return rc;
 		if (rc > 0)
@@ -321,7 +321,7 @@ int jffs2_acl_chmod(struct inode *inode)
 	acl = jffs2_get_acl(inode, ACL_TYPE_ACCESS);
 	if (IS_ERR(acl) || !acl)
 		return PTR_ERR(acl);
-	rc = posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
+	rc = __posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
 	if (rc)
 		return rc;
 	rc = jffs2_set_acl(inode, ACL_TYPE_ACCESS, acl);

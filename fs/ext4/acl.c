@@ -263,7 +263,7 @@ ext4_init_acl(handle_t *handle, struct inode *inode, struct inode *dir)
 			if (error)
 				goto cleanup;
 		}
-		error = posix_acl_create(&acl, GFP_NOFS, &inode->i_mode);
+		error = __posix_acl_create(&acl, GFP_NOFS, &inode->i_mode);
 		if (error < 0)
 			return error;
 
@@ -307,7 +307,7 @@ ext4_acl_chmod(struct inode *inode)
 	acl = ext4_get_acl(inode, ACL_TYPE_ACCESS);
 	if (IS_ERR(acl) || !acl)
 		return PTR_ERR(acl);
-	error = posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
+	error = __posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
 	if (error)
 		return error;
 retry:

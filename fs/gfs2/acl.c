@@ -137,7 +137,7 @@ int gfs2_acl_create(struct gfs2_inode *dip, struct inode *inode)
 			goto out;
 	}
 
-	error = posix_acl_create(&acl, GFP_NOFS, &mode);
+	error = __posix_acl_create(&acl, GFP_NOFS, &mode);
 	if (error < 0)
 		return error;
 
@@ -168,7 +168,7 @@ int gfs2_acl_chmod(struct gfs2_inode *ip, struct iattr *attr)
 	if (!acl)
 		return gfs2_setattr_simple(inode, attr);
 
-	error = posix_acl_chmod(&acl, GFP_NOFS, attr->ia_mode);
+	error = __posix_acl_chmod(&acl, GFP_NOFS, attr->ia_mode);
 	if (error)
 		return error;
 

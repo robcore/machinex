@@ -327,7 +327,7 @@ int ocfs2_acl_chmod(struct inode *inode)
 	acl = ocfs2_get_acl(inode, ACL_TYPE_ACCESS);
 	if (IS_ERR(acl) || !acl)
 		return PTR_ERR(acl);
-	ret = posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
+	ret = __posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
 	if (ret)
 		return ret;
 	ret = ocfs2_set_acl(NULL, inode, NULL, ACL_TYPE_ACCESS,
@@ -378,7 +378,7 @@ int ocfs2_init_acl(handle_t *handle,
 				goto cleanup;
 		}
 		mode = inode->i_mode;
-		ret = posix_acl_create(&acl, GFP_NOFS, &mode);
+		ret = __posix_acl_create(&acl, GFP_NOFS, &mode);
 		if (ret < 0)
 			return ret;
 

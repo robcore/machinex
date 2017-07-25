@@ -132,7 +132,7 @@ int jfs_init_acl(tid_t tid, struct inode *inode, struct inode *dir)
 			if (rc)
 				goto cleanup;
 		}
-		rc = posix_acl_create(&acl, GFP_KERNEL, &inode->i_mode);
+		rc = __posix_acl_create(&acl, GFP_KERNEL, &inode->i_mode);
 		if (rc < 0)
 			goto cleanup; /* posix_acl_release(NULL) is no-op */
 		if (rc > 0)
@@ -161,7 +161,7 @@ int jfs_acl_chmod(struct inode *inode)
 	if (IS_ERR(acl) || !acl)
 		return PTR_ERR(acl);
 
-	rc = posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
+	rc = __posix_acl_chmod(&acl, GFP_KERNEL, inode->i_mode);
 	if (rc)
 		return rc;
 
