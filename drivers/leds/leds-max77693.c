@@ -135,7 +135,7 @@ static ssize_t max77693_store_movie_brightness(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(movie_brightness, S_IWUSR|S_IWGRP|S_IRUGO,
+static DEVICE_ATTR(movie_brightness, 0644,
 	max77693_show_movie_brightness, max77693_store_movie_brightness);
 
 #endif
@@ -320,7 +320,7 @@ static ssize_t max77693_flash(struct device *dev,
 	return ret;
 }
 
-static DEVICE_ATTR(rear_flash, S_IWUSR|S_IWGRP|S_IROTH,
+static DEVICE_ATTR(rear_flash, 0644,
 	NULL, max77693_flash);
 
 static int max77693_led_probe(struct platform_device *pdev)
