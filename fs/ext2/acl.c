@@ -136,13 +136,6 @@ ext2_get_acl(struct inode *inode, int type)
 	struct posix_acl *acl;
 	int retval;
 
-	if (!test_opt(inode->i_sb, POSIX_ACL))
-		return NULL;
-
-	acl = get_cached_acl(inode, type);
-	if (acl != ACL_NOT_CACHED)
-		return acl;
-
 	switch (type) {
 	case ACL_TYPE_ACCESS:
 		name_index = EXT2_XATTR_INDEX_POSIX_ACL_ACCESS;
@@ -177,18 +170,13 @@ ext2_get_acl(struct inode *inode, int type)
 /*
  * inode->i_mutex: down
  */
-static int
-ext2_set_acl(struct inode *inode, int type, struct posix_acl *acl)
+int
+ext2_set_acl(struct inode *inode, struct posix_acl *acl, int type)
 {
 	int name_index;
 	void *value = NULL;
 	size_t size = 0;
 	int error;
-
-	if (S_ISLNK(inode->i_mode))
-		return -EOPNOTSUPP;
-	if (!test_opt(inode->i_sb, POSIX_ACL))
-		return 0;
 
 	switch(type) {
 		case ACL_TYPE_ACCESS:
