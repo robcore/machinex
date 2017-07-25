@@ -55,4 +55,7 @@ posix_acl_xattr_count(size_t size)
 struct posix_acl *posix_acl_from_xattr(const void *value, size_t size);
 int posix_acl_to_xattr(const struct posix_acl *acl, void *buffer, size_t size);
 
+extern const struct xattr_handler posix_acl_access_xattr_handler;
+extern const struct xattr_handler posix_acl_default_xattr_handler;
+
 #endif	/* _POSIX_ACL_XATTR_H */
