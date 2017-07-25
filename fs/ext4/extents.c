@@ -4707,8 +4707,6 @@ static long ext4_zero_range(struct file *file, loff_t offset,
 	struct address_space *mapping = inode->i_mapping;
 	unsigned int blkbits = inode->i_blkbits;
 
-	trace_ext4_zero_range(inode, offset, len, mode);
-
 	/*
 	 * Write out all dirty pages to avoid race conditions
 	 * Then release them.
