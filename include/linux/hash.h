@@ -16,6 +16,7 @@
 
 #include <asm/types.h>
 #include <asm/hash.h>
+#include <linux/export.h>
 #include <linux/compiler.h>
 
 /* 2^31 + 2^29 - 2^25 + 2^22 - 2^19 - 2^16 + 1 */
