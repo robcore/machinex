@@ -2556,9 +2556,6 @@ static inline void inode_dio_wait(struct inode *inode)
 }
 #endif
 
-extern void inode_set_flags(struct inode *inode, unsigned int flags,
-			    unsigned int mask);
-
 extern const struct file_operations generic_ro_fops;
 
 #define special_file(m) (S_ISCHR(m)||S_ISBLK(m)||S_ISFIFO(m)||S_ISSOCK(m))
