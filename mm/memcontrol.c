@@ -3401,7 +3401,7 @@ static DEFINE_MUTEX(memcg_cache_mutex);
 static struct kmem_cache *kmem_cache_dup(struct mem_cgroup *memcg,
 					 struct kmem_cache *s)
 {
-	struct kmem_cache *new;
+	struct kmem_cache *new = NULL;
 	static char *tmp_name = NULL;
 
 	lockdep_assert_held(&memcg_cache_mutex);
@@ -3415,7 +3415,7 @@ static struct kmem_cache *kmem_cache_dup(struct mem_cgroup *memcg,
 	if (!tmp_name) {
 		tmp_name = kmalloc(PATH_MAX, GFP_KERNEL);
 		if (!tmp_name)
-			return NULL;
+			goto out;
 	}
 
 	rcu_read_lock();
