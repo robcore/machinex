@@ -3223,6 +3223,10 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 			retval = -EMLINK;
 			if (new.dir != old.dir && EXT4_DIR_LINK_MAX(new.dir))
 				goto end_rename;
+		} else {
+			retval = -EMLINK;
+			if (new.dir != old.dir && EXT4_DIR_LINK_MAX(new.dir))
+				goto end_rename;
 		}
 		retval = ext4_rename_dir_prepare(handle, &old);
 		if (retval)
