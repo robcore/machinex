@@ -2541,9 +2541,8 @@ static int ext4_remove_blocks(handle_t *handle, struct inode *inode,
 		else if (*partial_cluster > 0)
 			*partial_cluster = 0;
 	} else
-		ext4_error(sbi->s_sb, "strange request: removal(2) "
-			   "%u-%u from %u:%u\n",
-			   from, to, le32_to_cpu(ex->ee_block), ee_len);
+		pr_debug("fuck\n");
+
 	return 0;
 }
 
