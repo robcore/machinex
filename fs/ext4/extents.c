@@ -4017,7 +4017,7 @@ ext4_ext_handle_unwritten_extents(handle_t *handle, struct inode *inode,
 						    allocated, newblock);
 
 	/* get_block() before submit the IO, split the extent */
-	if ((flags & EXT4_GET_BLOCKS_PRE_IO)) {
+	if (flags & EXT4_GET_BLOCKS_PRE_IO) {
 		ret = ext4_split_convert_extents(handle, inode, map,
 					 path, flags | EXT4_GET_BLOCKS_CONVERT);
 		if (ret <= 0)
@@ -4035,7 +4035,7 @@ ext4_ext_handle_unwritten_extents(handle_t *handle, struct inode *inode,
 		goto out;
 	}
 	/* IO end_io complete, convert the filled extent to written */
-	if ((flags & EXT4_GET_BLOCKS_CONVERT)) {
+	if (flags & EXT4_GET_BLOCKS_CONVERT) {
 		ret = ext4_convert_unwritten_extents_endio(handle, inode, map,
 							path);
 		if (ret >= 0) {
@@ -4474,7 +4474,7 @@ got_allocated_blocks:
 		 * For non asycn direct IO case, flag the inode state
 		 * that we need to perform conversion when IO is done.
 		 */
-		if ((flags & EXT4_GET_BLOCKS_PRE_IO))
+		if (flags & EXT4_GET_BLOCKS_PRE_IO)
 			set_unwritten = 1;
 	}
 
@@ -4736,6 +4736,13 @@ static long ext4_zero_range(struct file *file, loff_t offset,
 
 	if (!S_ISREG(inode->i_mode))
 		return -EINVAL;
+
+	/* Call ext4_force_commit to flush all data in case of data=journal. */
+	if (ext4_should_journal_data(inode)) {
+		ret = ext4_force_commit(inode->i_sb);
+		if (ret)
+			return ret;
+	}
 
 	/*
 	 * Write out all dirty pages to avoid race conditions
