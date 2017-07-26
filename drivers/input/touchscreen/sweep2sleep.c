@@ -285,7 +285,7 @@ static ssize_t vibration_timeout_store(struct device *dev,
 }
 
 static DEVICE_ATTR(vibration_timeout, 0644,
-	vibration_timeout_show, vibration_timeout_dump);
+	vibration_timeout_show, vibration_timeout_store);
 
 static struct kobject *sweep2sleep_kobj; 
 
