@@ -1040,9 +1040,6 @@ EXPORT_SYMBOL_GPL(cpu_up);
 
 #ifdef CONFIG_PM_SLEEP_SMP
 static cpumask_var_t max_screen_off;
-static unsigned int cpu1_allowed = 1;
-static unsigned int cpu2_allowed = 1;
-static unsigned int cpu3_allowed = 1;
 
 int lock_screen_off_cpus(int primary)
 {
