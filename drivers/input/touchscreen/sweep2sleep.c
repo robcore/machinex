@@ -4,6 +4,7 @@
 #include <linux/input.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/timed_output.h>
 
 #define DRIVER_AUTHOR "flar2 (asegaert at gmail.com)"
 #define DRIVER_DESCRIPTION "sweep2sleep driver"
