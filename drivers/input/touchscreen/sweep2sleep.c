@@ -8,7 +8,7 @@
 
 #define DRIVER_AUTHOR "flar2 (asegaert at gmail.com)"
 #define DRIVER_DESCRIPTION "sweep2sleep driver"
-#define DRIVER_VERSION "4.1"
+#define DRIVER_VERSION "4.2"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
@@ -24,6 +24,7 @@ MODULE_LICENSE("GPL");
 
 // 1=sweep right, 2=sweep left, 3=both
 static int s2s_switch = 0;
+static unsigned int vibration_timeout = 125;
 
 static int touch_x = 0, touch_y = 0, firstx = 0;
 static bool touch_x_called = false, touch_y_called = false;
@@ -52,7 +53,8 @@ static DECLARE_WORK(sweep2sleep_presspwr_work, sweep2sleep_presspwr);
 
 /* PowerKey trigger */
 static void sweep2sleep_pwrtrigger(void) {
-	machinex_vibrator(125);
+	if (vibration_timeout)
+		machinex_vibrator(vibration_timeout);
 	schedule_work(&sweep2sleep_presspwr_work);
         return;
 }
@@ -256,8 +258,34 @@ static ssize_t sweep2sleep_dump(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(sweep2sleep, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(sweep2sleep, 0644,
 	sweep2sleep_show, sweep2sleep_dump);
+
+static ssize_t vibration_timeout_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", vibration_timeout);
+}
+
+static ssize_t vibration_timeout_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int input;
+
+	sscanf(buf, "%d\n", &input);
+
+	if (input <= 0)
+		input = 0;				
+	if (input >= 10000)
+		input = 10000;
+
+	vibration_timeout = input;			
+	
+	return count;
+}
+
+static DEVICE_ATTR(vibration_timeout, 0644,
+	vibration_timeout_show, vibration_timeout_dump);
 
 static struct kobject *sweep2sleep_kobj; 
 
@@ -299,6 +327,10 @@ static int __init sweep2sleep_init(void)
 	}
 
 	rc = sysfs_create_file(sweep2sleep_kobj, &dev_attr_sweep2sleep.attr);
+	if (rc)
+		pr_err("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
+
+	rc = sysfs_create_file(sweep2sleep_kobj, &dev_attr_vibration_timeout.attr);
 	if (rc)
 		pr_err("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
 
