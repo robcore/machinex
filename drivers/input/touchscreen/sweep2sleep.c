@@ -35,7 +35,7 @@ static struct workqueue_struct *s2s_input_wq;
 static struct work_struct s2s_input_work;
 
 /* PowerKey work func */
-static void sweep2sleep_presspwr(struct work_struct * sweep2sleep_presspwr_work) {
+static void sweep2sleep_presspwr(struct work_struct *sweep2sleep_presspwr_work) {
 
 	if (!mutex_trylock(&pwrkeyworklock))
                 return;
