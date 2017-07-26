@@ -166,9 +166,6 @@ static ssize_t read_ahead_kb_store(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	if (read_ahead_kb > VM_MAX_READAHEAD)
-		read_ahead_kb = VM_MAX_READAHEAD;
-
 	bdi->ra_pages = read_ahead_kb >> (PAGE_SHIFT - 10);
 
 	return count;
