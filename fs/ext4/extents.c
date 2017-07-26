@@ -919,7 +919,7 @@ ext4_ext_find_extent(struct inode *inode, ext4_lblk_t block,
 
 		bh = read_extent_tree_block(inode, path[ppos].p_block, --i,
 					    flags);
-		if (IS_ERR(bh)) {
+		if (unlikely(IS_ERR(bh))) {
 			ret = PTR_ERR(bh);
 			goto err;
 		}
@@ -1736,7 +1736,7 @@ ext4_can_extents_be_merged(struct inode *inode, struct ext4_extent *ex1,
 	 * the extent that was written properly split out and conversion to
 	 * initialized is trivial.
 	 */
-	if (ext4_ext_is_uninitialized(ex1) || ext4_ext_is_uninitialized(ex2))
+	if (ext4_ext_is_uninitialized(ex1) != ext4_ext_is_uninitialized(ex2))
 		return 0;
 
 	ext1_ee_len = ext4_ext_get_actual_len(ex1);
@@ -1752,6 +1752,11 @@ ext4_can_extents_be_merged(struct inode *inode, struct ext4_extent *ex1,
 	 * this can result in the top bit of ee_len being set.
 	 */
 	if (ext1_ee_len + ext2_ee_len > EXT_INIT_MAX_LEN)
+		return 0;
+	if (ext4_ext_is_uninitialized(ex1) &&
+	    (ext4_test_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN) ||
+	     atomic_read(&EXT4_I(inode)->i_unwritten) ||
+	     (ext1_ee_len + ext2_ee_len > EXT_UNINIT_MAX_LEN)))
 		return 0;
 #ifdef AGGRESSIVE_TEST
 	if (ext1_ee_len >= 4)
@@ -1776,7 +1781,7 @@ static int ext4_ext_try_to_merge_right(struct inode *inode,
 {
 	struct ext4_extent_header *eh;
 	unsigned int depth, len;
-	int merge_done = 0;
+	int merge_done = 0, uninit;
 
 	depth = ext_depth(inode);
 	BUG_ON(path[depth].p_hdr == NULL);
@@ -1786,8 +1791,11 @@ static int ext4_ext_try_to_merge_right(struct inode *inode,
 		if (!ext4_can_extents_be_merged(inode, ex, ex + 1))
 			break;
 		/* merge with next extent! */
+		uninit = ext4_ext_is_uninitialized(ex);
 		ex->ee_len = cpu_to_le16(ext4_ext_get_actual_len(ex)
 				+ ext4_ext_get_actual_len(ex + 1));
+		if (uninit)
+			ext4_ext_mark_uninitialized(ex);
 
 		if (ex + 1 < EXT_LAST_EXTENT(eh)) {
 			len = (EXT_LAST_EXTENT(eh) - ex - 1)
