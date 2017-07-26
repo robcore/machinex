@@ -8,7 +8,7 @@
 
 #define DRIVER_AUTHOR "flar2 (asegaert at gmail.com)"
 #define DRIVER_DESCRIPTION "sweep2sleep driver"
-#define DRIVER_VERSION "4.0"
+#define DRIVER_VERSION "4.1"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
@@ -16,14 +16,14 @@ MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPL");
 
 //sweep2sleep
-#define S2S_PWRKEY_DUR          60
-#define S2S_Y_MAX             	1920
-#define S2S_Y_LIMIT             S2S_Y_MAX-180
+#define S2S_PWRKEY_DUR          10
+#define S2S_Y_MAX             	1919
+#define S2S_Y_LIMIT             S2S_Y_MAX-840
 #define SWEEP_RIGHT		0x01
 #define SWEEP_LEFT		0x02
 
 // 1=sweep right, 2=sweep left, 3=both
-static int s2s_switch = 2;
+static int s2s_switch = 0;
 
 static int touch_x = 0, touch_y = 0, firstx = 0;
 static bool touch_x_called = false, touch_y_called = false;
@@ -39,10 +39,10 @@ static void sweep2sleep_presspwr(struct work_struct * sweep2sleep_presspwr_work)
 
 	if (!mutex_trylock(&pwrkeyworklock))
                 return;
-	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_POWER, 1);
+	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_SLEEP, 1);
 	input_event(sweep2sleep_pwrdev, EV_SYN, 0, 0);
 	msleep(S2S_PWRKEY_DUR);
-	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_POWER, 0);
+	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_SLEEP, 0);
 	input_event(sweep2sleep_pwrdev, EV_SYN, 0, 0);
 	msleep(S2S_PWRKEY_DUR);
         mutex_unlock(&pwrkeyworklock);
@@ -173,7 +173,7 @@ static void s2s_input_event(struct input_handle *handle, unsigned int type,
 	if (touch_x_called && touch_y_called) {
 		touch_x_called = false;
 		touch_y_called = false;
-		queue_work_on(0, s2s_input_wq, &s2s_input_work);
+		queue_work(s2s_input_wq, &s2s_input_work);
 	}
 }
 
@@ -245,8 +245,10 @@ static ssize_t sweep2sleep_dump(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	if (input < 0 || input > 3)
+	if (input < 0)
 		input = 0;				
+	if (input > 3)
+		input = 3;
 
 	s2s_switch = input;			
 	
@@ -268,7 +270,7 @@ static int __init sweep2sleep_init(void)
 		goto err_alloc_dev;
 	}
 
-	input_set_capability(sweep2sleep_pwrdev, EV_KEY, KEY_POWER);
+	input_set_capability(sweep2sleep_pwrdev, EV_KEY, KEY_SLEEP);
 
 	sweep2sleep_pwrdev->name = "s2s_pwrkey";
 	sweep2sleep_pwrdev->phys = "s2s_pwrkey/input0";
