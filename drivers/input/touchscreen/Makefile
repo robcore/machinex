@@ -111,4 +111,4 @@ obj-$(CONFIG_TOUCHSCREEN_CYPRESS_TMA46X_SUPPORT_BUTTON)	+= cyttsp4_btn.o
 obj-$(CONFIG_ALUCARD_TOUCHSCREEN_BOOST)	+= alu-t-boost.o
 obj-$(CONFIG_WAKE_GESTURES)		+= wake_gestures.o
 obj-$(CONFIG_GENERIC_TOUCHBOOST)	+= touchboost.o
-
+obj-$(CONFIG_SWEEP2SLEEP)		+= sweep2sleep.o

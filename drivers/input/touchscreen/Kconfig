@@ -1220,4 +1220,10 @@ config TOUCHSCREEN_GEN_VKEYS
          To compile this driver as a module, choose M here: the
          module will be called gen_vkeys.
 
+config SWEEP2SLEEP
+        tristate "Sweep to put device to sleep"
+        default y
+        help
+          Say Y here to support sweep2sleep
+
 endif
