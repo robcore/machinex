@@ -4742,6 +4742,9 @@ static long ext4_zero_range(struct file *file, loff_t offset,
 			return ret;
 	}
 
+	if (!S_ISREG(inode->i_mode))
+		return -EINVAL;
+
 	/*
 	 * Round up offset. This is not fallocate, we neet to zero out
 	 * blocks, so convert interior block aligned part of the range to
