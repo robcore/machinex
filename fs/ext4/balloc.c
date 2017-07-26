@@ -543,7 +543,6 @@ static int ext4_has_free_clusters(struct ext4_sb_info *sbi,
 	}
 	/* No free blocks. Let's see if we can dip into reserved pool */
 	if (flags & EXT4_MB_USE_RESERVED) {
-
 		if (free_clusters >= (nclusters + dirty_clusters))
 			return 1;
 	}

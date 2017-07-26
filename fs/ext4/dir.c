@@ -84,8 +84,6 @@ int __ext4_check_dir_entry(const char *function, unsigned int line,
 	else
 		return 0;
 
-	print_bh(dir->i_sb, bh, 0, EXT4_BLOCK_SIZE(dir->i_sb));
-
 	if (filp)
 		ext4_error_file(filp, function, line, bh->b_blocknr,
 				"bad entry in directory: %s - offset=%u(%u), "
@@ -157,10 +155,6 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 			bh = ext4_bread(NULL, inode, map.m_lblk, 0, &err);
 		}
 
-		/*
-		 * We ignore I/O errors on directories so users have a chance
-		 * of recovering data when there's a bad sector
-		 */
 		if (!bh) {
 			if (!dir_has_error) {
 				EXT4_ERROR_FILE(file, 0,
