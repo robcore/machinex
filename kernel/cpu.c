@@ -1058,11 +1058,11 @@ int lock_screen_off_cpus(int primary)
 	for_each_online_cpu(cpu) {
 		if (cpu == primary)
 			continue;
-		if (cpu == 1 && !cpu1_allowed)
+		if (cpu == 1 && cpu1_allowed)
 			continue;
-		if (cpu == 2 && !cpu2_allowed)
+		if (cpu == 2 && cpu2_allowed)
 			continue;
-		if (cpu == 3 && !cpu3_allowed)
+		if (cpu == 3 && cpu3_allowed)
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
 		if (!error)
@@ -1090,7 +1090,7 @@ void unlock_screen_off_cpus(void)
 	if (cpumask_empty(max_screen_off))
 		goto out;
 
-	pr_info("Enabling non-boot CPUs ...\n");
+	pr_info("Enabling non-Screen-off CPUs ...\n");
 
 	for_each_cpu(cpu, max_screen_off) {
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
