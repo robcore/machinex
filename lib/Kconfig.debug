@@ -854,16 +854,6 @@ config DEBUG_NOMMU_REGIONS
 	  This option causes the global tree of anonymous and private mapping
 	  regions to be regularly checked for invalid topology.
 
-config DEBUG_WRITECOUNT
-	bool "Debug filesystem writers count"
-	depends on DEBUG_KERNEL
-	help
-	  Enable this to catch wrong use of the writers count in struct
-	  vfsmount.  This will increase the size of each file struct by
-	  32 bits.
-
-	  If unsure, say N.
-
 config DEBUG_MEMORY_INIT
 	bool "Debug memory initialisation" if EXPERT
 	default !EXPERT
