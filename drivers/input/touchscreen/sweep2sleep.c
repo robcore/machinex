@@ -52,7 +52,7 @@ static DECLARE_WORK(sweep2sleep_presspwr_work, sweep2sleep_presspwr);
 
 /* PowerKey trigger */
 static void sweep2sleep_pwrtrigger(void) {
-	machinex_vibrator(125)
+	machinex_vibrator(125);
 	schedule_work(&sweep2sleep_presspwr_work);
         return;
 }
