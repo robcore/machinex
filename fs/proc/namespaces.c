@@ -142,7 +142,7 @@ static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int bufl
 	struct task_struct *task;
 	void *ns;
 	char name[50];
-	int res = -EACCES;
+	int len = -EACCES;
 
 	task = get_proc_task(inode);
 	if (!task)
@@ -151,18 +151,24 @@ static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int bufl
 	if (!ptrace_may_access(task, PTRACE_MODE_READ))
 		goto out_put_task;
 
-	res = -ENOENT;
+	len = -ENOENT;
 	ns = ns_ops->get(task);
 	if (!ns)
 		goto out_put_task;
 
 	snprintf(name, sizeof(name), "%s:[%u]", ns_ops->name, ns_ops->inum(ns));
-	res = readlink_copy(buffer, buflen, name);
+	len = strlen(name);
+
+	if (len > buflen)
+		len = buflen;
+	if (copy_to_user(buffer, name, len))
+		len = -EFAULT;
+
 	ns_ops->put(ns);
 out_put_task:
 	put_task_struct(task);
 out:
-	return res;
+	return len;
 }
 
 static const struct inode_operations proc_ns_link_inode_operations = {

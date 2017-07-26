@@ -52,6 +52,7 @@ static void file_free_rcu(struct rcu_head *head)
 static inline void file_free(struct file *f)
 {
 	percpu_counter_dec(&nr_files);
+	file_check_state(f);
 	call_rcu(&f->f_u.fu_rcuhead, file_free_rcu);
 }
 
@@ -177,6 +178,7 @@ struct file *alloc_file(struct path *path, fmode_t mode,
 	 * that we can do debugging checks at __fput()
 	 */
 	if ((mode & FMODE_WRITE) && !special_file(path->dentry->d_inode->i_mode)) {
+		file_take_write(file);
 		WARN_ON(mnt_clone_write(path->mnt));
 	}
 	if ((mode & (FMODE_READ | FMODE_WRITE)) == FMODE_READ)
@@ -199,11 +201,14 @@ static void drop_file_write_access(struct file *file)
 	struct dentry *dentry = file->f_path.dentry;
 	struct inode *inode = dentry->d_inode;
 
+	put_write_access(inode);
+
 	if (special_file(inode->i_mode))
 		return;
-
-	put_write_access(inode);
+	if (file_check_writeable(file) != 0)
+		return;
 	__mnt_drop_write(mnt);
+	file_release_write(file);
 }
 
 /* the real guts of fput() - releasing the last reference to file
@@ -280,5 +285,6 @@ void __init files_init(unsigned long mempages)
 
 	n = (mempages * (PAGE_SIZE / 1024)) / 10;
 	files_stat.max_files = max_t(unsigned long, n, NR_FILE);
+	files_defer_init();
 	percpu_counter_init(&nr_files, 0, GFP_KERNEL);
 }

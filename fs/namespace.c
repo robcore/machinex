@@ -51,7 +51,7 @@ static int __init set_mphash_entries(char *str)
 }
 __setup("mphash_entries=", set_mphash_entries);
 
-static u64 event;
+static int event;
 static DEFINE_IDA(mnt_id_ida);
 static DEFINE_IDA(mnt_group_ida);
 static DEFINE_SPINLOCK(mnt_id_lock);
@@ -568,15 +568,11 @@ int sb_prepare_remount_readonly(struct super_block *sb)
 static void free_vfsmnt(struct mount *mnt)
 {
 	kfree(mnt->mnt_devname);
+	mnt_free_id(mnt);
 #ifdef CONFIG_SMP
 	free_percpu(mnt->mnt_pcp);
 #endif
 	kmem_cache_free(mnt_cache, mnt);
-}
-
-static void delayed_free_vfsmnt(struct rcu_head *head)
-{
-	free_vfsmnt(container_of(head, struct mount, mnt_rcu));
 }
 
 /* call under rcu_read_lock */
@@ -854,7 +850,6 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 
 	root = mount_fs(type, flags, name, data);
 	if (IS_ERR(root)) {
-		mnt_free_id(mnt);
 		free_vfsmnt(mnt);
 		return ERR_CAST(root);
 	}
@@ -892,7 +887,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 			goto out_free;
 	}
 
-	mnt->mnt.mnt_flags = old->mnt.mnt_flags & ~(MNT_WRITE_HOLD|MNT_MARKED);
+	mnt->mnt.mnt_flags = old->mnt.mnt_flags & ~MNT_WRITE_HOLD;
 	/* Don't allow unprivileged users to change mount flags */
 	if ((flag & CL_UNPRIVILEGED) && (mnt->mnt.mnt_flags & MNT_READONLY))
 		mnt->mnt.mnt_flags |= MNT_LOCK_READONLY;
@@ -935,9 +930,18 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	return mnt;
 
  out_free:
-	mnt_free_id(mnt);
 	free_vfsmnt(mnt);
 	return ERR_PTR(err);
+}
+
+static void delayed_free(struct rcu_head *head)
+{
+	struct mount *mnt = container_of(head, struct mount, mnt_rcu);
+	kfree(mnt->mnt_devname);
+#ifdef CONFIG_SMP
+	free_percpu(mnt->mnt_pcp);
+#endif
+	kmem_cache_free(mnt_cache, mnt);
 }
 
 static void mntput_no_expire(struct mount *mnt)
@@ -989,7 +993,7 @@ put_again:
 	dput(mnt->mnt.mnt_root);
 	deactivate_super(mnt->mnt.mnt_sb);
 	mnt_free_id(mnt);
-	call_rcu(&mnt->mnt_rcu, delayed_free_vfsmnt);
+	call_rcu(&mnt->mnt_rcu, delayed_free);
 }
 
 void mntput(struct vfsmount *mnt)
@@ -1098,29 +1102,14 @@ static void *m_start(struct seq_file *m, loff_t *pos)
 	struct proc_mounts *p = proc_mounts(m);
 
 	down_read(&namespace_sem);
-	if (p->cached_event == p->ns->event) {
-		void *v = p->cached_mount;
-		if (*pos == p->cached_index)
-			return v;
-		if (*pos == p->cached_index + 1) {
-			v = seq_list_next(v, &p->ns->list, &p->cached_index);
-			return p->cached_mount = v;
-		}
-	}
-
-	p->cached_event = p->ns->event;
-	p->cached_mount = seq_list_start(&p->ns->list, *pos);
-	p->cached_index = *pos;
-	return p->cached_mount;
+	return seq_list_start(&p->ns->list, *pos);
 }
 
 static void *m_next(struct seq_file *m, void *v, loff_t *pos)
 {
 	struct proc_mounts *p = proc_mounts(m);
 
-	p->cached_mount = seq_list_next(v, &p->ns->list, pos);
-	p->cached_index = *pos;
-	return p->cached_mount;
+	return seq_list_next(v, &p->ns->list, pos);
 }
 
 static void m_stop(struct seq_file *m, void *v)
@@ -1670,9 +1659,9 @@ static int attach_recursive_mnt(struct mount *source_mnt,
 		if (err)
 			goto out;
 		err = propagate_mnt(dest_mnt, dest_mp, source_mnt, &tree_list);
-		lock_mount_hash();
 		if (err)
 			goto out_cleanup_ids;
+		lock_mount_hash();
 		for (p = source_mnt; p; p = next_mnt(p, source_mnt))
 			set_mnt_shared(p);
 	} else {
@@ -1699,11 +1688,6 @@ static int attach_recursive_mnt(struct mount *source_mnt,
 	return 0;
 
  out_cleanup_ids:
-	while (!hlist_empty(&tree_list)) {
-		child = hlist_entry(tree_list.first, struct mount, mnt_hash);
-		umount_tree(child, 0);
-	}
-	unlock_mount_hash();
 	cleanup_group_ids(source_mnt, NULL);
  out:
 	return err;
@@ -2058,7 +2042,7 @@ static int do_add_mount(struct mount *newmnt, struct path *path, int mnt_flags)
 	struct mount *parent;
 	int err;
 
-	mnt_flags &= ~MNT_INTERNAL_FLAGS;
+	mnt_flags &= ~(MNT_SHARED | MNT_WRITE_HOLD | MNT_INTERNAL | MNT_DOOMED | MNT_SYNC_UMOUNT);
 
 	mp = lock_mount(path);
 	if (IS_ERR(mp))
