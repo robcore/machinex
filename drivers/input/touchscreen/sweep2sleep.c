@@ -75,8 +75,8 @@ static void detect_sweep2sleep(int x, int y, bool st)
 	if (firstx == 0)
 		firstx = x;
 
-	if (s2s_switch > 3)
-		s2s_switch = 3;
+	if (s2s_switch == 0)
+		return;
 
 	//left->right
 	if (single_touch && firstx < 810 && (s2s_switch & SWEEP_RIGHT)) {
