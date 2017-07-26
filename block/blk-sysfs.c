@@ -72,6 +72,10 @@ queue_requests_store(struct request_queue *q, const char *page, size_t count)
 	return ret;
 }
 
+#ifndef VM_MAX_READAHEAD
+#define VM_MAX_READAHEAD 128
+#endif
+
 static ssize_t queue_ra_show(struct request_queue *q, char *page)
 {
 	unsigned long ra_kb = q->backing_dev_info.ra_pages <<
@@ -88,6 +92,9 @@ queue_ra_store(struct request_queue *q, const char *page, size_t count)
 
 	if (ret < 0)
 		return ret;
+
+	if (ra_kb > VM_MAX_READAHEAD)
+		ra_kb = VM_MAX_READAHEAD;
 
 	q->backing_dev_info.ra_pages = ra_kb >> (PAGE_CACHE_SHIFT - 10);
 
