@@ -1039,6 +1039,77 @@ int cpu_up(unsigned int cpu)
 EXPORT_SYMBOL_GPL(cpu_up);
 
 #ifdef CONFIG_PM_SLEEP_SMP
+static cpumask_var_t max_screen_off;
+static unsigned int cpu1_allowed = 1;
+static unsigned int cpu2_allowed = 1;
+static unsigned int cpu3_allowed = 1;
+
+int lock_screen_off_cpus(int primary)
+{
+	int cpu, error = 0;
+
+	cpu_maps_update_begin();
+	if (!cpu_online(primary))
+		primary = cpumask_first(cpu_online_mask);
+	/*
+	 * We take down all of the non-boot CPUs in one shot to avoid races
+	 * with the userspace trying to use the CPU hotplug at the same time
+	 */
+	cpumask_clear(max_screen_off);
+
+	pr_info("Disabling non-screen off CPUs ...\n");
+	for_each_online_cpu(cpu) {
+		if (cpu == primary)
+			continue;
+		if (cpu == 1 && !cpu1_allowed)
+			continue;
+		if (cpu == 2 && !cpu2_allowed)
+			continue;
+		if (cpu == 3 && !cpu3_allowed)
+			continue;
+		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
+		if (!error)
+			cpumask_set_cpu(cpu, max_screen_off);
+		else {
+			pr_err("Error taking CPU%d down: %d\n", cpu, error);
+			break;
+		}
+	}
+
+	if (error)
+		pr_err("Non-Screen-Off CPUs are not disabled\n");
+
+	cpu_maps_update_done();
+	return error;
+}
+EXPORT_SYMBOL_GPL(lock_screen_off_cpus);
+
+void unlock_screen_off_cpus(void)
+{
+	int cpu, error;
+
+	/* Allow everyone to use the CPU hotplug again */
+	cpu_maps_update_begin();
+	if (cpumask_empty(max_screen_off))
+		goto out;
+
+	pr_info("Enabling non-boot CPUs ...\n");
+
+	for_each_cpu(cpu, max_screen_off) {
+		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
+		if (!error) {
+			pr_info("CPU%d is up\n", cpu);
+			continue;
+		}
+		pr_warn("Error taking CPU%d up: %d\n", cpu, error);
+	}
+
+	cpumask_clear(max_screen_off);
+out:
+	cpu_maps_update_done();
+}
+EXPORT_SYMBOL_GPL(unlock_screen_off_cpus);
+
 static cpumask_var_t frozen_cpus;
 
 int freeze_secondary_cpus(int primary)
@@ -1068,7 +1139,7 @@ int freeze_secondary_cpus(int primary)
 	}
 
 	if (!error)
-		BUG_ON(num_online_cpus() > 1);
+		WARN_ON_ONCE(num_online_cpus() > 1);
 	else
 		pr_err("Non-boot CPUs are not disabled\n");
 
