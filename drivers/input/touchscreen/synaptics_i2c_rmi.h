@@ -52,7 +52,7 @@
 #define FW_IMAGE_NAME_B0_HSYNC04	"tsp_synaptics/jactive/synaptics_b0_hsync04.fw"
 #define FW_IMAGE_NAME_B0_HSYNC04_FAC	"tsp_synaptics/jactive/synaptics_b0_hsync04_fac.fw"
 
-/* NON HYNC F/W will be removed */
+/* NON HSYNC F/W will be removed */
 /* PRODUCT ID : SY 01, SY 02, S5000B */
 #define FW_IMAGE_NAME_B0_NON_HSYNC	"tsp_synaptics/jactive/synaptics_b0_non_hsync.fw"
 #define FW_IMAGE_NAME_B0_NON_HSYNC_FAC	"tsp_synaptics/jactive/synaptics_b0_non_hsync_fac.fw"
