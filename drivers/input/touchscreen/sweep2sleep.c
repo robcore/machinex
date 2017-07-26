@@ -18,7 +18,7 @@ MODULE_LICENSE("GPL");
 //sweep2sleep
 #define S2S_PWRKEY_DUR          10
 #define S2S_Y_MAX             	1919
-#define S2S_Y_LIMIT             S2S_Y_MAX-840
+#define S2S_Y_LIMIT             S2S_Y_MAX-180
 #define SWEEP_RIGHT		0x01
 #define SWEEP_LEFT		0x02
 
@@ -178,7 +178,8 @@ static void s2s_input_event(struct input_handle *handle, unsigned int type,
 }
 
 static int input_dev_filter(struct input_dev *dev) {
-	if (strstr(dev->name, "synaptics_dsx_i2c")) {
+	if (strstr(dev->name, "synaptics_rmi4_i2c") ||
+		strstr(dev->name, "sec_touchscreen")) {
 		return 0;
 	} else {
 		return 1;
