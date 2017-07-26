@@ -20,9 +20,6 @@ MODULE_LICENSE("GPL");
 #define S2S_Y_LIMIT             S2S_Y_MAX-180
 #define SWEEP_RIGHT		0x01
 #define SWEEP_LEFT		0x02
-#define VIB_STRENGTH		20
-
-extern void set_vibrate(int value);
 
 // 1=sweep right, 2=sweep left, 3=both
 static int s2s_switch = 2;
@@ -35,7 +32,6 @@ static struct input_dev * sweep2sleep_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2s_input_wq;
 static struct work_struct s2s_input_work;
-static int vib_strength = VIB_STRENGTH;
 
 /* PowerKey work func */
 static void sweep2sleep_presspwr(struct work_struct * sweep2sleep_presspwr_work) {
@@ -55,7 +51,7 @@ static DECLARE_WORK(sweep2sleep_presspwr_work, sweep2sleep_presspwr);
 
 /* PowerKey trigger */
 static void sweep2sleep_pwrtrigger(void) {
-	set_vibrate(vib_strength);
+	machinex_vibrator(125)
 	schedule_work(&sweep2sleep_presspwr_work);
         return;
 }
@@ -259,34 +255,6 @@ static ssize_t sweep2sleep_dump(struct device *dev,
 static DEVICE_ATTR(sweep2sleep, (S_IWUSR|S_IRUGO),
 	sweep2sleep_show, sweep2sleep_dump);
 
-static ssize_t vib_strength_show(struct device *dev,
-		 struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n", vib_strength);
-}
-
-static ssize_t vib_strength_dump(struct device *dev,
-		 struct device_attribute *attr, const char *buf, size_t count)
-{
-	int ret;
-	unsigned long input;
-
-	ret = kstrtoul(buf, 0, &input);
-	if (ret < 0)
-		return ret;
-
-	if (input < 0 || input > 90)
-		input = 20;				
-
-	vib_strength = input;			
-	
-	return count;
-}
-
-static DEVICE_ATTR(vib_strength, (S_IWUSR|S_IRUGO),
-	vib_strength_show, vib_strength_dump);
-
-
 static struct kobject *sweep2sleep_kobj; 
 
 static int __init sweep2sleep_init(void)
@@ -329,10 +297,6 @@ static int __init sweep2sleep_init(void)
 	rc = sysfs_create_file(sweep2sleep_kobj, &dev_attr_sweep2sleep.attr);
 	if (rc)
 		pr_err("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
-
-	rc = sysfs_create_file(sweep2sleep_kobj, &dev_attr_vib_strength.attr);
-	if (rc)
-		pr_err("%s: sysfs_create_file failed for vib_strength\n", __func__);
 
 err_input_dev:
 	input_free_device(sweep2sleep_pwrdev);
