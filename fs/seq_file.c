@@ -137,6 +137,8 @@ static int traverse(struct seq_file *m, loff_t offset)
 
 Eoverflow:
 	m->op->stop(m, p);
+	kvfree(m->buf);
+	m->count = 0;
 #ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
 	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
 	m->size <<= 1;
@@ -219,10 +221,8 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 		size -= n;
 		buf += n;
 		copied += n;
-		if (!m->count) {
-			m->from = 0;
+		if (!m->count)
 			m->index++;
-		}
 		if (!size)
 			goto Done;
 	}
@@ -246,6 +246,8 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 		if (m->count < m->size)
 			goto Fill;
 		m->op->stop(m, p);
+		kvfree(m->buf);
+		m->count = 0;
 #ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
 		is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
 		m->size <<= 1;
@@ -261,7 +263,6 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 #endif
 		if (!m->buf)
 			goto Enomem;
-		m->count = 0;
 		m->version = 0;
 		pos = m->index;
 		p = m->op->start(m, &pos);
@@ -375,7 +376,7 @@ EXPORT_SYMBOL(seq_lseek);
 int seq_release(struct inode *inode, struct file *file)
 {
 	struct seq_file *m = file->private_data;
-	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
+	kvfree(m->buf);
 	kfree(m);
 	return 0;
 }
