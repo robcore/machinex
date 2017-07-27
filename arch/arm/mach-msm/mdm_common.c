@@ -1410,7 +1410,7 @@ static void __exit mdm_modem_exit(void)
 	platform_driver_unregister(&mdm_modem_driver);
 }
 
-subsys_initcall(mdm_modem_init);
+module_init(mdm_modem_init);
 module_exit(mdm_modem_exit);
 
 MODULE_LICENSE("GPL v2");
