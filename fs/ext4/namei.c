@@ -3154,6 +3154,7 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		.inode = new_dentry->d_inode,
 	};
 	int retval;
+
 	dquot_initialize(old.dir);
 	dquot_initialize(new.dir);
 
@@ -3281,10 +3282,10 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		old_bh2 = ext4_find_entry(old.dir, &old.dentry->d_name,
 					  &old_de2, NULL, NULL);
 #else
-+		old_bh2 = ext4_find_entry(old.dir, &old.dentry->d_name,
+		old_bh2 = ext4_find_entry(old.dir, &old.dentry->d_name,
 					  &old_de2, NULL);
 #endif
-		} else if (old_bh2) {
+		if (old_bh2) {
 			retval = ext4_delete_entry(handle, old.dir,
 						   old_de2, old_bh2);
 			brelse(old_bh2);
