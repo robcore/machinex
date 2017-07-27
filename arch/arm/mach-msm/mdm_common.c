@@ -1385,7 +1385,6 @@ static struct platform_driver mdm_modem_driver = {
 	.driver         = {
 		.name = "mdm2_modem",
 		.owner = THIS_MODULE,
-		.of_match_table = mdm_match_table,
 	},
 };
 
