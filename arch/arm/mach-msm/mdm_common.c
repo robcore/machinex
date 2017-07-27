@@ -1293,8 +1293,7 @@ static int mdm_modem_probe(struct platform_device *pdev)
 	mdev = kzalloc(sizeof(struct mdm_device), GFP_KERNEL);
 	if (!mdev) {
 		pr_err("%s: kzalloc fail.\n", __func__);
-		ret = -ENOMEM;
-		goto init_err;
+		return -ENOMEM;
 	}
 
 	platform_set_drvdata(pdev, mdev);
@@ -1411,7 +1410,7 @@ static void __exit mdm_modem_exit(void)
 	platform_driver_unregister(&mdm_modem_driver);
 }
 
-module_init(mdm_modem_init);
+subsys_initcall(mdm_modem_init);
 module_exit(mdm_modem_exit);
 
 MODULE_LICENSE("GPL v2");
