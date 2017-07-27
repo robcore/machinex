@@ -2817,8 +2817,6 @@ static int ext4_rmdir(struct inode *dir, struct dentry *dentry)
 #else
 	bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL);
 #endif
-	if (IS_ERR(bh))
-		return PTR_ERR(bh);
 	if (!bh)
 		goto end_rmdir;
 
@@ -3190,6 +3188,7 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if (!new.inode) {
 			brelse(new.bh);
 			new.bh = NULL;
+		}
 	}
 	if (new.inode && !test_opt(new.dir->i_sb, NO_AUTO_DA_ALLOC))
 		ext4_alloc_da_blocks(old.inode);
@@ -3219,11 +3218,6 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 						  &old.dir_inlined);
 		if (!old.dir_bh)
 			goto end_rename;
-		if (!inlined && !buffer_verified(dir.bh) &&
-		    !ext4_dirent_csum_verify(old.inode,
-				(struct ext4_dir_entry *)dir.bh->b_data))
-			goto end_rename;
-		set_buffer_verified(dir.bh);
 		if (le32_to_cpu(old.parent_de->inode) != old.dir->i_ino)
 			goto end_rename;
 		BUFFER_TRACE(old.dir_bh, "get_write_access");
