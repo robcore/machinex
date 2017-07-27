@@ -254,29 +254,13 @@ void msm_restart(char mode, const char *cmd)
 
 #ifndef CONFIG_SEC_DEBUG
 #ifdef CONFIG_MSM_DLOAD_MODE
-
-	/* This looks like a normal reboot at this point. */
-	set_dload_mode(0);
-
-	/* Write download mode flags if we're panic'ing */
-	set_dload_mode(in_panic);
-
 	/* Write download mode flags if restart_mode says so */
 	if (restart_mode == RESTART_DLOAD)
 		set_dload_mode(1);
-
-	/* Kill download mode if master-kill switch is set */
-	if (!download_mode)
+	else if (!download_mode)
 		set_dload_mode(0);
-#endif
-#endif
-
-#ifdef CONFIG_SEC_DEBUG_LOW_LOG
-#ifdef CONFIG_MSM_DLOAD_MODE
-	set_dload_mode(0);
-	set_dload_mode(in_panic);
-	if (restart_mode == RESTART_DLOAD)
-		set_dload_mode(1);
+	else
+		set_dload_mode(0);
 #endif
 #endif
 	printk(KERN_NOTICE "Going down for restart now\n");
@@ -315,11 +299,6 @@ void msm_restart(char mode, const char *cmd)
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	if (in_panic == 1)
-		set_kernel_crash_magic_number();
-reset:
-#endif /* CONFIG_LGE_CRASH_HANDLER */
 	} else {
 		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
@@ -419,7 +398,6 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;
 #endif
-
 	return 0;
 }
 early_initcall(msm_restart_init);
