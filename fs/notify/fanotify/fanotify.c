@@ -144,6 +144,10 @@ static int fanotify_handle_event(struct fsnotify_group *group,
 	BUILD_BUG_ON(FAN_ACCESS_PERM != FS_ACCESS_PERM);
 	BUILD_BUG_ON(FAN_ONDIR != FS_ISDIR);
 
+	if (!fanotify_should_send_event(inode_mark, fanotify_mark, mask, data,
+					data_type))
+		return 0;
+
 	pr_debug("%s: group=%p event=%p\n", __func__, group, event);
 
 	notify_event = fsnotify_add_notify_event(group, event, NULL, fanotify_merge);
@@ -165,18 +169,17 @@ static int fanotify_handle_event(struct fsnotify_group *group,
 	return ret;
 }
 
-static bool fanotify_should_send_event(struct fsnotify_group *group,
-				       struct inode *to_tell,
-				       struct fsnotify_mark *inode_mark,
+static bool fanotify_should_send_event(struct fsnotify_mark *inode_mark,
 				       struct fsnotify_mark *vfsmnt_mark,
-				       __u32 event_mask, void *data, int data_type)
+				       u32 event_mask,
+				       void *data, int data_type)
 {
 	__u32 marks_mask, marks_ignored_mask;
 	struct path *path = data;
 
-	pr_debug("%s: group=%p to_tell=%p inode_mark=%p vfsmnt_mark=%p "
-		 "mask=%x data=%p data_type=%d\n", __func__, group, to_tell,
-		 inode_mark, vfsmnt_mark, event_mask, data, data_type);
+	pr_debug("%s: inode_mark=%p vfsmnt_mark=%p mask=%x data=%p"
+		 " data_type=%d\n", __func__, inode_mark, vfsmnt_mark,
+		 event_mask, data, data_type);
 
 	/* if we don't have enough info to send an event to userspace say no */
 	if (data_type != FSNOTIFY_EVENT_PATH)
@@ -228,7 +231,6 @@ static void fanotify_free_group_priv(struct fsnotify_group *group)
 
 const struct fsnotify_ops fanotify_fsnotify_ops = {
 	.handle_event = fanotify_handle_event,
-	.should_send_event = fanotify_should_send_event,
 	.free_group_priv = fanotify_free_group_priv,
 	.free_event_priv = NULL,
 	.freeing_mark = NULL,

@@ -103,6 +103,14 @@ static int inotify_handle_event(struct fsnotify_group *group,
 
 	BUG_ON(vfsmount_mark);
 
+	if ((inode_mark->mask & FS_EXCL_UNLINK) &&
+	    (data_type == FSNOTIFY_EVENT_PATH)) {
+		struct path *path = data;
+
+		if (d_unlinked(path->dentry))
+			return 0;
+	}
+
 	pr_debug("%s: group=%p event=%p to_tell=%p mask=%x\n", __func__, group,
 		 event, event->to_tell, event->mask);
 
@@ -140,22 +148,6 @@ static int inotify_handle_event(struct fsnotify_group *group,
 static void inotify_freeing_mark(struct fsnotify_mark *fsn_mark, struct fsnotify_group *group)
 {
 	inotify_ignored_and_remove_idr(fsn_mark, group);
-}
-
-static bool inotify_should_send_event(struct fsnotify_group *group, struct inode *inode,
-				      struct fsnotify_mark *inode_mark,
-				      struct fsnotify_mark *vfsmount_mark,
-				      __u32 mask, void *data, int data_type)
-{
-	if ((inode_mark->mask & FS_EXCL_UNLINK) &&
-	    (data_type == FSNOTIFY_EVENT_PATH)) {
-		struct path *path = data;
-
-		if (d_unlinked(path->dentry))
-			return false;
-	}
-
-	return true;
 }
 
 /*
@@ -219,7 +211,6 @@ void inotify_free_event_priv(struct fsnotify_event_private_data *fsn_event_priv)
 
 const struct fsnotify_ops inotify_fsnotify_ops = {
 	.handle_event = inotify_handle_event,
-	.should_send_event = inotify_should_send_event,
 	.free_group_priv = inotify_free_group_priv,
 	.free_event_priv = inotify_free_event_priv,
 	.freeing_mark = inotify_freeing_mark,
