@@ -34,9 +34,9 @@
 #include <linux/syscalls.h>
 #include <linux/buffer_head.h> /* __set_page_dirty_buffers */
 #include <linux/pagevec.h>
-#include <linux/mm_inline.h>
 #include <linux/timer.h>
 #include <linux/sched/rt.h>
+#include <linux/mm_inline.h>
 #include <trace/events/writeback.h>
 
 #include "internal.h"
@@ -154,24 +154,6 @@ static unsigned long writeout_period_time = 0;
  * reflect changes in current writeout rate.
  */
 #define VM_COMPLETIONS_PERIOD_LEN (3*HZ)
-
-/*
- * Work out the current dirty-memory clamping and background writeout
- * thresholds.
- *
- * The main aim here is to lower them aggressively if there is a lot of mapped
- * memory around.  To avoid stressing page reclaim with lots of unreclaimable
- * pages.  It is better to clamp down on writers than to start swapping, and
- * performing lots of scanning.
- *
- * We only allow 1/2 of the currently-unmapped memory to be dirtied.
- *
- * We don't permit the clamping level to fall below 5% - that is getting rather
- * excessive.
- *
- * We make sure that the background writeout level is below the adjusted
- * clamping level.
- */
 
 /*
  * In a memory zone, there is a certain amount of pages we consider
