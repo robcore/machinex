@@ -125,7 +125,7 @@ static int dload_set(const char *val, struct kernel_param *kp)
 		return ret;
 
 	/* If download_mode is not zero or one, ignore. */
-	if (download_mode >> 1) {
+	if (download_mode > 1 || download_mode < 0) {
 		download_mode = old_val;
 		return -EINVAL;
 	}
