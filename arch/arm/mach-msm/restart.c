@@ -31,6 +31,11 @@
 #include <mach/msm_iomap.h>
 #include <mach/restart.h>
 #include <mach/socinfo.h>
+#ifdef CONFIG_SEC_DEBUG
+#include <mach/sec_debug.h>
+#include <linux/notifier.h>
+#include <linux/ftrace.h>
+#endif
 #include <mach/irqs.h>
 #include <mach/scm.h>
 #include "msm_watchdog.h"
@@ -52,32 +57,23 @@
 
 #define SCM_IO_DISABLE_PMIC_ARBITER	1
 
-#ifdef CONFIG_LGE_CRASH_HANDLER
-#define LGE_ERROR_HANDLER_MAGIC_NUM	0xA97F2C46
-#define LGE_ERROR_HANDLER_MAGIC_ADDR	0x18
-void *lge_error_handler_cookie_addr;
-static int ssr_magic_number = 0;
-#endif
-
 static int restart_mode;
-#ifndef CONFIG_SEC_DEBUG
 void *restart_reason;
-#endif
-int kernel_sec_get_debug_level(void);
-#define KERNEL_SEC_DEBUG_LEVEL_LOW      (0x574F4C44)
 int pmic_reset_irq;
 static void __iomem *msm_tmr0_base;
 
 #ifdef CONFIG_MSM_DLOAD_MODE
 static int in_panic;
 static void *dload_mode_addr;
+struct work_struct resout_helper_work;
+struct workqueue_struct *restart_wq;
+static void resout_helper(struct work_struct *work);
 
 /* Download mode master kill-switch */
 static int dload_set(const char *val, struct kernel_param *kp);
-static int download_mode = 0;
+static int download_mode = 1;
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
-
 static int panic_prep_restart(struct notifier_block *this,
 			      unsigned long event, void *ptr)
 {
@@ -95,24 +91,9 @@ static void set_dload_mode(int on)
 		__raw_writel(on ? 0xE47B337D : 0, dload_mode_addr);
 		__raw_writel(on ? 0xCE14091A : 0,
 		       dload_mode_addr + sizeof(unsigned int));
-#ifdef CONFIG_LGE_CRASH_HANDLER
-		__raw_writel(on ? LGE_ERROR_HANDLER_MAGIC_NUM : 0,
-				lge_error_handler_cookie_addr);
-#endif
 		mb();
-#ifdef CONFIG_SEC_DEBUG
-		pr_err("set_dload_mode <%d> ( %x )\n", on,
-					(unsigned int) CALLER_ADDR0);
-#endif
 	}
 }
-#ifdef CONFIG_SEC_DEBUG
-void sec_debug_set_qc_dload_magic(int on)
-{
-	pr_info("%s: on=%d\n", __func__, on);
-	set_dload_mode(on);
-}
-#endif
 
 static int dload_set(const char *val, struct kernel_param *kp)
 {
@@ -125,7 +106,7 @@ static int dload_set(const char *val, struct kernel_param *kp)
 		return ret;
 
 	/* If download_mode is not zero or one, ignore. */
-	if (download_mode > 1 || download_mode < 0) {
+	if (download_mode >> 1) {
 		download_mode = old_val;
 		return -EINVAL;
 	}
@@ -151,6 +132,21 @@ void msm_set_restart_mode(int mode)
 }
 EXPORT_SYMBOL(msm_set_restart_mode);
 
+static bool scm_pmic_arbiter_disable_supported;
+/*
+ * Force the SPMI PMIC arbiter to shutdown so that no more SPMI transactions
+ * are sent from the MSM to the PMIC.  This is required in order to avoid an
+ * SPMI lockup on certain PMIC chips if PS_HOLD is lowered in the middle of
+ * an SPMI transaction.
+ */
+static void halt_spmi_pmic_arbiter(void)
+{
+	if (scm_pmic_arbiter_disable_supported) {
+		pr_crit("Calling SCM to disable SPMI PMIC arbiter\n");
+		scm_call_atomic1(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER, 0);
+	}
+}
+
 static void __msm_power_off(int lower_pshold)
 {
 	printk(KERN_CRIT "Powering off the SoC\n");
@@ -160,8 +156,10 @@ static void __msm_power_off(int lower_pshold)
 	pm8xxx_reset_pwr_off(0);
 
 	if (lower_pshold) {
-		mb();
 		__raw_writel(0, PSHOLD_CTL_SU);
+		halt_spmi_pmic_arbiter();
+		__raw_writel(0, MSM_MPM2_PSHOLD_BASE);
+
 		mdelay(10000);
 		printk(KERN_ERR "Powering off has failed\n");
 	}
@@ -174,13 +172,13 @@ static void msm_power_off(void)
 	__msm_power_off(1);
 }
 
-static void cpu_power_off(unsigned int cpu)
+static void cpu_power_off(void *data)
 {
 	int rc;
 
 	pr_err("PMIC Initiated shutdown %s cpu=%d\n", __func__,
 						smp_processor_id());
-	if (cpu == 0) {
+	if (smp_processor_id() == 0) {
 		/*
 		 * PMIC initiated power off, do not lower ps_hold, pmic will
 		 * shut msm down
@@ -208,7 +206,7 @@ static int status;
 int resout_irq_control(int enable)
 {
 	if (!irq_enabled)
-		return -1;
+		return -EINVAL;
 
 	if (enable ^ status) {
 		if (enable) {
@@ -226,47 +224,50 @@ int resout_irq_control(int enable)
 	return 0;
 }
 
-static void resout_helper(void)
+static void resout_helper(struct work_struct *work)
 {
-	unsigned int cpu;
-
-	pr_warn("%s PMIC Initiated shutdown\n", __func__);
-	oops_in_progress = 1;
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_power_off(cpu);
-	}
-	cpu_power_off(0);
+	smp_call_function_many(cpu_online_mask, cpu_power_off, NULL, 0);
 }
 
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 {
-	resout_helper();
+
+	pr_warn("%s PMIC Initiated shutdown\n", __func__);
+	oops_in_progress = 1;
+	queue_work_on(0, restart_wq, &resout_helper_work);
+	if (smp_processor_id() == 0)
+		cpu_power_off(NULL);
+	preempt_disable();
 	while (1)
 		;
+
 	return IRQ_HANDLED;
 }
 
-void msm_restart(char mode, const char *cmd)
+static void msm_restart_prepare(const char *cmd)
 {
 	unsigned long value;
 
-#ifndef CONFIG_SEC_DEBUG
-#ifdef CONFIG_MSM_DLOAD_MODE
-	/* Write download mode flags if restart_mode says so */
+	set_dload_mode(0);
+	set_dload_mode(in_panic);
 	if (restart_mode == RESTART_DLOAD)
 		set_dload_mode(1);
-	else if (!download_mode)
+	if (restart_mode == RESTART_NORMAL)
+		set_dload_mode(0);
+
+	/* Kill download mode if master-kill switch is set */
+	if (!download_mode)
 		set_dload_mode(0);
 	else
 		set_dload_mode(0);
-#endif
-#endif
-	printk(KERN_NOTICE "Going down for restart now\n");
+	pr_info("Going down for restart now\n");
 
 	pm8xxx_reset_pwr_off(1);
 
+/*	if (!restart_reason)
+		restart_reason = ioremap_nocache((unsigned long)(MSM_IMEM_BASE \
+						+ RESTART_REASON_ADDR), SZ_4K);
+*/
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			__raw_writel(0x77665500, restart_reason);
@@ -293,9 +294,13 @@ void msm_restart(char mode, const char *cmd)
 				&& !kstrtoul(cmd + 7, 0, &value)) {
 			__raw_writel(0xfedc0000 | value, restart_reason);
 #endif
+        } else if (!strncmp(cmd, "diag", 4)
+                  && !kstrtoul(cmd + 4, 0, &value)) {
+                __raw_writel(0xabcc0000 | value, restart_reason);
 		} else if (strlen(cmd) == 0) {
 			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
 			__raw_writel(0x12345678, restart_reason);
+
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
@@ -305,6 +310,14 @@ void msm_restart(char mode, const char *cmd)
 	}
 
 	flush_cache_all();
+	outer_flush_all();
+}
+
+void msm_restart(char mode, const char *cmd)
+{
+	pr_notice("Going down for restart now\n");
+
+	msm_restart_prepare(cmd);
 
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
@@ -319,21 +332,13 @@ void msm_restart(char mode, const char *cmd)
 	__raw_writel(0x31F3, msm_tmr0_base + WDT0_BITE_TIME);
 	__raw_writel(1, msm_tmr0_base + WDT0_EN);
 
+	halt_spmi_pmic_arbiter();
+	__raw_writel(0, MSM_MPM2_PSHOLD_BASE);
+
+
 	mdelay(10000);
 	printk(KERN_ERR "Restarting has failed\n");
 }
-#ifdef CONFIG_SEC_DEBUG
-static int dload_mode_normal_reboot_handler(struct notifier_block *nb,
-				unsigned long l, void *p)
-{
-	set_dload_mode(0);
-	return 0;
-}
-
-static struct notifier_block dload_reboot_block = {
-	.notifier_call = dload_mode_normal_reboot_handler
-};
-#endif
 
 #ifdef CONFIG_KEXEC_HARDBOOT
 void msm_kexec_hardboot(void)
@@ -356,13 +361,6 @@ static int __init msm_pmic_restart_init(void)
 {
 	int rc;
 
-#if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS)
-	return 0;
-#elif defined(CONFIG_SEC_DEBUG)
-	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
-		return 0;
-#endif
-
 	if (pmic_reset_irq != 0) {
 		rc = request_any_context_irq(pmic_reset_irq,
 					resout_irq_handler, IRQF_TRIGGER_HIGH,
@@ -375,10 +373,6 @@ static int __init msm_pmic_restart_init(void)
 		pr_warn("no pmic restart interrupt specified\n");
 	}
 
-#ifdef CONFIG_LGE_CRASH_HANDLER
-	__raw_writel(0x6d63ad00, restart_reason);
-#endif
-
 	return 0;
 }
 
@@ -389,7 +383,6 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_MSM_DLOAD_MODE
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
 	dload_mode_addr = MSM_IMEM_BASE + DLOAD_MODE_ADDR;
-
 	set_dload_mode(download_mode);
 #endif
 	msm_tmr0_base = msm_timer_get_timer0_base();
@@ -398,6 +391,16 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;
 #endif
+	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER) > 0)
+		scm_pmic_arbiter_disable_supported = true;
+
+	restart_wq = alloc_workqueue("restart_wq", WQ_CPU_INTENSIVE, 0);
+	if (!restart_wq) {
+		pr_err("%s: out of memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	INIT_WORK(&resout_helper_work, resout_helper);
 	return 0;
 }
 early_initcall(msm_restart_init);
