@@ -37,8 +37,8 @@
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/ratelimit.h>
-#include <linux/bitops.h>
 #include <linux/aio.h>
+#include <linux/bitops.h>
 
 #include "ext4_jbd2.h"
 #include "xattr.h"
@@ -147,6 +147,9 @@ static int ext4_inode_is_fast_symlink(struct inode *inode)
 {
         int ea_blocks = EXT4_I(inode)->i_file_acl ?
 		EXT4_CLUSTER_SIZE(inode->i_sb) >> 9 : 0;
+
+	if (ext4_has_inline_data(inode))
+		return 0;
 
 	return (S_ISLNK(inode->i_mode) && inode->i_blocks - ea_blocks == 0);
 }
@@ -363,15 +366,6 @@ void ext4_da_update_reserve_space(struct inode *inode,
 		ei->i_allocated_meta_blocks = ei->i_reserved_meta_blocks;
 	}
 
-	if (unlikely(ei->i_allocated_meta_blocks > ei->i_reserved_meta_blocks)) {
-		ext4_msg(inode->i_sb, KERN_NOTICE, "%s: ino %lu, allocated %d "
-			 "with only %d reserved metadata blocks\n", __func__,
-			 inode->i_ino, ei->i_allocated_meta_blocks,
-			 ei->i_reserved_meta_blocks);
-		WARN_ON(1);
-		ei->i_allocated_meta_blocks = ei->i_reserved_meta_blocks;
-	}
-
 	/* Update per-inode reservations */
 	ei->i_reserved_data_blocks -= used;
 	ei->i_reserved_meta_blocks -= ei->i_allocated_meta_blocks;
@@ -420,10 +414,6 @@ static int __check_block_validity(struct inode *inode, const char *func,
 {
 	if (!ext4_data_block_valid(EXT4_SB(inode->i_sb), map->m_pblk,
 				   map->m_len)) {
-		printk(KERN_ERR "printing inode..\n");
-		print_block_data(inode->i_sb, 0, (unsigned char *)inode,
-				0, EXT4_INODE_SIZE(inode->i_sb));
-
 		ext4_error_inode(inode, func, line, map->m_pblk,
 				 "lblock %lu mapped to illegal pblock "
 				 "(length %d)", (unsigned long) map->m_lblk,
@@ -454,7 +444,7 @@ static void ext4_map_blocks_es_recheck(handle_t *handle,
 	 * could be converted.
 	 */
 	if (!(flags & EXT4_GET_BLOCKS_NO_LOCK))
-		down_read((&EXT4_I(inode)->i_data_sem));
+		down_read(&EXT4_I(inode)->i_data_sem);
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
 		retval = ext4_ext_map_blocks(handle, inode, map, flags &
 					     EXT4_GET_BLOCKS_KEEP_SIZE);
@@ -533,6 +523,10 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 	if (unlikely(map->m_len > INT_MAX))
 		map->m_len = INT_MAX;
 
+	/* We can handle the block number less than EXT_MAX_BLOCKS */
+	if (unlikely(map->m_lblk >= EXT_MAX_BLOCKS))
+		return -EIO;
+
 	/* Lookup extent status tree firstly */
 	if (ext4_es_lookup_extent(inode, map->m_lblk, &es)) {
 		ext4_es_lru_add(inode);
@@ -562,7 +556,7 @@ int ext4_map_blocks(handle_t *handle, struct inode *inode,
 	 * file system block.
 	 */
 	if (!(flags & EXT4_GET_BLOCKS_NO_LOCK))
-		down_read((&EXT4_I(inode)->i_data_sem));
+		down_read(&EXT4_I(inode)->i_data_sem);
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
 		retval = ext4_ext_map_blocks(handle, inode, map, flags &
 					     EXT4_GET_BLOCKS_KEEP_SIZE);
@@ -634,7 +628,7 @@ found:
 	 * the write lock of i_data_sem, and call get_blocks()
 	 * with create == 1 flag.
 	 */
-	down_write((&EXT4_I(inode)->i_data_sem));
+	down_write(&EXT4_I(inode)->i_data_sem);
 
 	/*
 	 * if the caller is from delayed allocation writeout path
@@ -959,6 +953,15 @@ static int ext4_write_begin(struct file *file, struct address_space *mapping,
 	from = pos & (PAGE_CACHE_SIZE - 1);
 	to = from + len;
 
+	if (ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+		ret = ext4_try_to_write_inline_data(mapping, inode, pos, len,
+						    flags, pagep);
+		if (ret < 0)
+			return ret;
+		if (ret == 1)
+			return 0;
+	}
+
 	/*
 	 * grab_cache_page_write_begin() can take a long time if the
 	 * system is thrashing due to memory pressure, or if the page
@@ -997,7 +1000,8 @@ retry_journal:
 
 	if (!ret && ext4_should_journal_data(inode)) {
 		ret = ext4_walk_page_buffers(handle, page_buffers(page),
-				from, to, NULL, do_journal_get_write_access);
+					     from, to, NULL,
+					     do_journal_get_write_access);
 	}
 
 	if (ret) {
@@ -1025,6 +1029,7 @@ retry_journal:
 			if (inode->i_nlink)
 				ext4_orphan_del(NULL, inode);
 		}
+
 		if (ret == -ENOSPC &&
 		    ext4_should_retry_alloc(inode->i_sb, &retries))
 			goto retry_journal;
@@ -1170,10 +1175,10 @@ static int ext4_journalled_write_end(struct file *file,
 			page_zero_new_buffers(page, from+copied, to);
 		}
 
-	ret = ext4_walk_page_buffers(handle, page_buffers(page), from,
-				to, &partial, write_end_fn);
-	if (!partial)
-		SetPageUptodate(page);
+		ret = ext4_walk_page_buffers(handle, page_buffers(page), from,
+					     to, &partial, write_end_fn);
+		if (!partial)
+			SetPageUptodate(page);
 	}
 	new_i_size = pos + copied;
 	if (new_i_size > inode->i_size)
@@ -1536,7 +1541,7 @@ static int ext4_da_map_blocks(struct inode *inode, sector_t iblock,
 		ext4_es_lru_add(inode);
 		if (ext4_es_is_hole(&es)) {
 			retval = 0;
-			down_read((&EXT4_I(inode)->i_data_sem));
+			down_read(&EXT4_I(inode)->i_data_sem);
 			goto add_delayed;
 		}
 
@@ -1573,7 +1578,7 @@ static int ext4_da_map_blocks(struct inode *inode, sector_t iblock,
 	 * Try to see if we can get the block without requesting a new
 	 * file system block.
 	 */
-	down_read((&EXT4_I(inode)->i_data_sem));
+	down_read(&EXT4_I(inode)->i_data_sem);
 	if (ext4_has_inline_data(inode)) {
 		/*
 		 * We will soon create blocks for this page, and let
@@ -1735,6 +1740,7 @@ static int __ext4_journalled_writepage(struct page *page,
 	struct buffer_head *inode_bh = NULL;
 
 	ClearPageChecked(page);
+
 	if (inline_data) {
 		BUG_ON(page->index != 0);
 		BUG_ON(len > ext4_get_max_inline_size(inode));
