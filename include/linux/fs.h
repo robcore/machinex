@@ -1899,6 +1899,11 @@ extern int current_umask(void);
 extern void ihold(struct inode * inode);
 extern void iput(struct inode *);
 
+static inline struct inode *file_inode(struct file *f)
+{
+	return f->f_inode;
+}
+
 /* /sys/fs */
 extern struct kobject *fs_kobj;
 
@@ -1908,7 +1913,7 @@ extern struct kobject *fs_kobj;
 #define FLOCK_VERIFY_WRITE 2
 
 #ifdef CONFIG_FILE_LOCKING
-extern int locks_mandatory_locked(struct inode *);
+extern int locks_mandatory_locked(struct file *);
 extern int locks_mandatory_area(int, struct inode *, struct file *, loff_t, size_t);
 
 /*
@@ -1931,10 +1936,10 @@ static inline int mandatory_lock(struct inode *ino)
 	return IS_MANDLOCK(ino) && __mandatory_lock(ino);
 }
 
-static inline int locks_verify_locked(struct inode *inode)
+static inline int locks_verify_locked(struct file *file)
 {
-	if (mandatory_lock(inode))
-		return locks_mandatory_locked(inode);
+	if (mandatory_lock(file_inode(file)))
+		return locks_mandatory_locked(file);
 	return 0;
 }
 
@@ -1995,7 +2000,7 @@ static inline int break_deleg_wait(struct inode **delegated_inode)
 }
 
 #else /* !CONFIG_FILE_LOCKING */
-static inline int locks_mandatory_locked(struct inode *inode)
+static inline int locks_mandatory_locked(struct file *file)
 {
 	return 0;
 }
@@ -2017,7 +2022,7 @@ static inline int mandatory_lock(struct inode *inode)
 	return 0;
 }
 
-static inline int locks_verify_locked(struct inode *inode)
+static inline int locks_verify_locked(struct file *file)
 {
 	return 0;
 }
@@ -2293,11 +2298,6 @@ extern int generic_permission(struct inode *, int);
 static inline bool execute_ok(struct inode *inode)
 {
 	return (inode->i_mode & S_IXUGO) || S_ISDIR(inode->i_mode);
-}
-
-static inline struct inode *file_inode(struct file *f)
-{
-	return f->f_inode;
 }
 
 static inline void file_start_write(struct file *file)
