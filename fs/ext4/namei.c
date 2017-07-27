@@ -3454,8 +3454,13 @@ static int ext4_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (!old.bh || le32_to_cpu(old.de->inode) != old.inode->i_ino)
 		goto end_rename;
 
+#ifdef CONFIG_SDCARD_FS_CI_SEARCH
+	new.bh = ext4_find_entry(new.dir, &new.dentry->d_name,
+				 &new.de, NULL, &new.inlined);
+#else
 	new.bh = ext4_find_entry(new.dir, &new.dentry->d_name,
 				 &new.de, &new.inlined);
+#endif
 
 	/* RENAME_EXCHANGE case: old *and* new must both exist */
 	if (!new.bh || le32_to_cpu(new.de->inode) != new.inode->i_ino)
