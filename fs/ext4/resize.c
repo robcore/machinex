@@ -346,7 +346,7 @@ static struct buffer_head *bclean(handle_t *handle, struct super_block *sb,
 	int err;
 
 	bh = sb_getblk(sb, blk);
-	if (!bh)
+	if (unlikely(!bh))
 		return ERR_PTR(-ENOMEM);
 	if ((err = ext4_journal_get_write_access(handle, bh))) {
 		brelse(bh);
@@ -423,7 +423,7 @@ static int set_flexbg_block_bitmap(struct super_block *sb, handle_t *handle,
 			return err;
 
 		bh = sb_getblk(sb, flex_gd->groups[group].block_bitmap);
-		if (!bh)
+		if (unlikely(!bh))
 			return -ENOMEM;
 
 		err = ext4_journal_get_write_access(handle, bh);
@@ -513,7 +513,7 @@ static int setup_new_flex_group_blocks(struct super_block *sb,
 				goto out;
 
 			gdb = sb_getblk(sb, block);
-			if (!gdb) {
+			if (unlikely(!gdb)) {
 				err = -ENOMEM;
 				goto out;
 			}
@@ -1081,8 +1081,8 @@ static void update_backups(struct super_block *sb, int blk_off, char *data,
 					ext4_bg_has_super(sb, group));
 
 		bh = sb_getblk(sb, backup_block);
-		if (!bh) {
-			err = -EIO;
+		if (unlikely(!bh)) {
+			err = -ENOMEM;
 			break;
 		}
 		ext4_debug("update metadata backup %#04lx\n",
@@ -1184,7 +1184,7 @@ static int ext4_add_new_descs(handle_t *handle, struct super_block *sb,
 static struct buffer_head *ext4_get_bitmap(struct super_block *sb, __u64 block)
 {
 	struct buffer_head *bh = sb_getblk(sb, block);
-	if (!bh)
+	if (unlikely(!bh))
 		return NULL;
 	if (!bh_uptodate_or_lock(bh)) {
 		if (bh_submit_read(bh) < 0) {
