@@ -140,7 +140,7 @@ static void mdm_device_list_remove(struct mdm_device *mdev)
 	struct mdm_device *lmdev, *tmp;
 
 	spin_lock_irqsave(&mdm_devices_lock, flags);
-	list_for_each_entry_safe(lmdev, tmp, &mdm_devices, link) {
+	list_for_each_entry_safe_reverse(lmdev, tmp, &mdm_devices, link) {
 		if (mdev && mdev == lmdev) {
 			pr_debug("%s: removing device id %d\n",
 			  __func__, mdev->mdm_data.device_id);
