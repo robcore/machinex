@@ -298,7 +298,7 @@ struct mdm_driver_notif_info *mdm_driver_register_notifier(
 				mdm_notif_add_subsys(name);
 		if (!notif)
 			return NULL;
-		pr_debug("%s : Created notifier node for %s\n", __func__, name);
+		pr_info("%s : Created notif for dev %s\n", __func__, name);
 	}
 	ret = srcu_notifier_chain_register(
 		&notif->mdm_driver_notif_rcvr_list, nb);
