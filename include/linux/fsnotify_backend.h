@@ -92,6 +92,10 @@ struct fsnotify_event_private_data;
  * 		userspace messages that marks have been removed.
  */
 struct fsnotify_ops {
+	bool (*should_send_event)(struct fsnotify_group *group, struct inode *inode,
+				  struct fsnotify_mark *inode_mark,
+				  struct fsnotify_mark *vfsmount_mark,
+				  __u32 mask, void *data, int data_type);
 	int (*handle_event)(struct fsnotify_group *group,
 			    struct fsnotify_mark *inode_mark,
 			    struct fsnotify_mark *vfsmount_mark,
