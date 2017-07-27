@@ -174,13 +174,13 @@ static void msm_power_off(void)
 	__msm_power_off(1);
 }
 
-static void cpu_power_off(void *data)
+static void cpu_power_off(unsigned int cpu)
 {
 	int rc;
 
 	pr_err("PMIC Initiated shutdown %s cpu=%d\n", __func__,
 						smp_processor_id());
-	if (smp_processor_id() == 0) {
+	if (cpu == 0) {
 		/*
 		 * PMIC initiated power off, do not lower ps_hold, pmic will
 		 * shut msm down
@@ -226,14 +226,23 @@ int resout_irq_control(int enable)
 	return 0;
 }
 
-static irqreturn_t resout_irq_handler(int irq, void *dev_id)
+static void resout_helper(void)
 {
+	unsigned int cpu;
+
 	pr_warn("%s PMIC Initiated shutdown\n", __func__);
 	oops_in_progress = 1;
-	preempt_disable();
-	smp_call_function_many(cpu_online_mask, cpu_power_off, NULL, 0);
-	if (smp_processor_id() == 0)
-		cpu_power_off(NULL);
+	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		cpu_power_off(cpu);
+	}
+	cpu_power_off(0);
+}
+
+static irqreturn_t resout_irq_handler(int irq, void *dev_id)
+{
+	resout_helper();
 	while (1)
 		;
 	return IRQ_HANDLED;
