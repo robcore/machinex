@@ -82,21 +82,6 @@ void unregister_power_suspend(struct power_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
-#if 0
-static bool wakeup_source_check(void)
-{
-	struct wakeup_source *ws = (struct wakeup_source);
-	ws->name = (struct wakeup_source *)name;
-	if (ws) {
-		if (!strcmp(ws->name, "msm_hsic_host")) {
-			if (ws->active)
-				return true;
-		}
-	}
-	return false;
-}
-#endif
-
 static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
