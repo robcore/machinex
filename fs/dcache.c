@@ -584,14 +584,14 @@ repeat:
 	if (lockref_put_or_lock(&dentry->d_lockref))
 		return;
 
-	/* Unreachable? Get rid of it */
- 	if (d_unhashed(dentry))
-		goto kill_it;
-
 	if (unlikely(dentry->d_flags & DCACHE_OP_DELETE)) {
 		if (dentry->d_op->d_delete(dentry))
 			goto kill_it;
 	}
+
+	/* Unreachable? Get rid of it */
+ 	if (d_unhashed(dentry))
+		goto kill_it;
 
 	if (!(dentry->d_flags & DCACHE_REFERENCED))
 		dentry->d_flags |= DCACHE_REFERENCED;
@@ -1124,11 +1124,11 @@ resume:
 	/*
 	 * All done at this level ... ascend and resume the search.
 	 */
-		rcu_read_lock();
 	if (this_parent != parent) {
 		struct dentry *child = this_parent;
 		this_parent = child->d_parent;
 
+		rcu_read_lock();
 		spin_unlock(&child->d_lock);
 		spin_lock(&this_parent->d_lock);
 
@@ -1149,7 +1149,6 @@ resume:
 	}
 	if (need_seqretry(&rename_lock, seq)) {
 		spin_unlock(&this_parent->d_lock);
-			rcu_read_unlock();
 		goto rename_retry;
 	}
 	if (finish)
