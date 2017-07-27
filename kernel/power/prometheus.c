@@ -30,7 +30,7 @@
 #include "power.h"
 
 #define VERSION 2
-#define VERSION_MIN 8
+#define VERSION_MIN 9
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -128,10 +128,10 @@ static void power_suspend(struct work_struct *work)
 		}
 	}
 
-	mutex_unlock(&prometheus_mtx);
-
 	if (limit_screen_off_cpus)
 		lock_screen_off_cpus(0);
+
+	mutex_unlock(&prometheus_mtx);
 
 	if (sync_on_panel_suspend) {
 		pr_info("[PROMETHEUS] Syncing\n");
@@ -194,6 +194,9 @@ static void power_resume(struct work_struct *work)
 
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
+	if (limit_screen_off_cpus)
+		unlock_screen_off_cpus();
+
 	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
@@ -201,8 +204,6 @@ static void power_resume(struct work_struct *work)
 		}
 	}
 	mutex_unlock(&prometheus_mtx);
-	if (limit_screen_off_cpus)
-		unlock_screen_off_cpus();
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
 
