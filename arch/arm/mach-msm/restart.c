@@ -362,7 +362,7 @@ static int __init msm_pmic_restart_init(void)
 	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER) > 0)
 		scm_pmic_arbiter_disable_supported = true;
 
-	restart_wq = alloc_workqueue("restart_wq", WQ_CPU_INTENSIVE, 0);
+	restart_wq = create_hipri_workqueue("restart_wq");
 	if (!restart_wq) {
 		pr_err("%s: out of memory\n", __func__);
 		return -ENOMEM;
