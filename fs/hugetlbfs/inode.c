@@ -366,13 +366,7 @@ static void truncate_hugepages(struct inode *inode, loff_t lstart)
 
 static void hugetlbfs_evict_inode(struct inode *inode)
 {
-	struct resv_map *resv_map;
-
 	truncate_hugepages(inode, 0);
-	resv_map = (struct resv_map *)inode->i_mapping->private_data;
-	/* root inode doesn't have the resv_map, so we should check it */
-	if (resv_map)
-		resv_map_release(&resv_map->refs);
 	clear_inode(inode);
 }
 
@@ -482,11 +476,6 @@ static struct inode *hugetlbfs_get_inode(struct super_block *sb,
 					umode_t mode, dev_t dev)
 {
 	struct inode *inode;
-	struct resv_map *resv_map;
-
-	resv_map = resv_map_alloc();
-	if (!resv_map)
-		return NULL;
 
 	inode = new_inode(sb);
 	if (inode) {
@@ -498,7 +487,7 @@ static struct inode *hugetlbfs_get_inode(struct super_block *sb,
 		inode->i_mapping->a_ops = &hugetlbfs_aops;
 		inode->i_mapping->backing_dev_info =&hugetlbfs_backing_dev_info;
 		inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-		inode->i_mapping->private_data = resv_map;
+		INIT_LIST_HEAD(&inode->i_mapping->private_list);
 		info = HUGETLBFS_I(inode);
 		/*
 		 * The policy is initialized here even if we are creating a
@@ -528,9 +517,7 @@ static struct inode *hugetlbfs_get_inode(struct super_block *sb,
 			break;
 		}
 		lockdep_annotate_inode_mutex_key(inode);
-	} else
-		kref_put(&resv_map->refs, resv_map_release);
-
+	}
 	return inode;
 }
 

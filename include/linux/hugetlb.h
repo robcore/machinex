@@ -5,8 +5,6 @@
 #include <linux/fs.h>
 #include <linux/hugetlb_inline.h>
 #include <linux/cgroup.h>
-#include <linux/list.h>
-#include <linux/kref.h>
 
 struct ctl_table;
 struct user_struct;
@@ -23,14 +21,6 @@ struct hugepage_subpool {
 	long count;
 	long max_hpages, used_hpages;
 };
-
-struct resv_map {
-	struct kref refs;
-	spinlock_t lock;
-	struct list_head regions;
-};
-extern struct resv_map *resv_map_alloc(void);
-void resv_map_release(struct kref *ref);
 
 extern spinlock_t hugetlb_lock;
 extern int hugetlb_max_hstate __read_mostly;

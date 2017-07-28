@@ -1331,7 +1331,7 @@ page_ok:
 #endif
 
 		page_cache_release(page);
-		if (ret == nr && iter->count)
+		if (ret == nr && desc->count)
 			continue;
 		goto out;
 
