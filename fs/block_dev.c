@@ -1529,7 +1529,7 @@ ssize_t blkdev_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		ssize_t err;
 
 		err = generic_write_sync(file, pos, ret);
-		if (err < 0 && ret > 0)
+		if (err < 0)
 			ret = err;
 	}
 	blk_finish_plug(&plug);
