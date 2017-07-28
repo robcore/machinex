@@ -602,7 +602,7 @@ EXPORT_SYMBOL_GPL(add_page_wait_queue);
  *
  * Unlocks the page and wakes up sleepers in ___wait_on_page_locked().
  * Also wakes sleepers in wait_on_page_writeback() because the wakeup
- * mechananism between PageLocked pages and PageWriteback pages is shared.
+ * mechanism between PageLocked pages and PageWriteback pages is shared.
  * But that's OK - sleepers in wait_on_page_writeback() just go back to sleep.
  *
  * The mb is necessary to enforce ordering between the clear_bit and the read
@@ -656,6 +656,17 @@ int __lock_page_killable(struct page *page)
 }
 EXPORT_SYMBOL_GPL(__lock_page_killable);
 
+/*
+ * Return values:
+ * 1 - page is locked; mmap_sem is still held.
+ * 0 - page is not locked.
+ *     mmap_sem has been released (up_read()), unless flags had both
+ *     FAULT_FLAG_ALLOW_RETRY and FAULT_FLAG_RETRY_NOWAIT set, in
+ *     which case mmap_sem is still held.
+ *
+ * If neither ALLOW_RETRY nor KILLABLE are set, will always return 1
+ * with the page locked and the mmap_sem unperturbed.
+ */
 int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
 			 unsigned int flags)
 {
@@ -710,22 +721,22 @@ int __lock_page_or_retry(struct page *page, struct mm_struct *mm,
  * if called under rcu_read_lock.
  */
 pgoff_t page_cache_next_hole(struct address_space *mapping,
-                             pgoff_t index, unsigned long max_scan)
+			     pgoff_t index, unsigned long max_scan)
 {
-        unsigned long i;
+	unsigned long i;
 
-        for (i = 0; i < max_scan; i++) {
-                struct page *page;
+	for (i = 0; i < max_scan; i++) {
+		struct page *page;
 
-                page = radix_tree_lookup(&mapping->page_tree, index);
-                if (!page || radix_tree_exceptional_entry(page))
-                        break;
-                index++;
-                if (index == 0)
-                        break;
-        }
+		page = radix_tree_lookup(&mapping->page_tree, index);
+		if (!page || radix_tree_exceptional_entry(page))
+			break;
+		index++;
+		if (index == 0)
+			break;
+	}
 
-        return index;
+	return index;
 }
 EXPORT_SYMBOL(page_cache_next_hole);
 
@@ -1095,10 +1106,17 @@ repeat:
 				goto restart;
 			}
 			/*
-			 * This function is never used on a shmem/tmpfs
-			 * mapping, so a swap entry won't be found here.
+			 * A shadow entry of a recently evicted page.
+			 *
+			 * Those entries should never be tagged, but
+			 * this tree walk is lockless and the tags are
+			 * looked up in bulk, one radix tree node at a
+			 * time, so there is a sizable window for page
+			 * reclaim to evict a page we saw tagged.
+			 *
+			 * Skip over it.
 			 */
-			BUG();
+			continue;
 		}
 
 		if (!page_cache_get_speculative(page))
@@ -1301,6 +1319,7 @@ page_ok:
 		 * Ok, we have the page, and it's up-to-date, so
 		 * now we can copy it to user space...
 		 */
+
 		ret = copy_page_to_iter(page, offset, nr, iter);
 		offset += ret;
 		index += offset >> PAGE_CACHE_SHIFT;
@@ -1332,9 +1351,14 @@ page_ok:
 #endif
 
 		page_cache_release(page);
-		if (ret == nr && desc->count)
-			continue;
-		goto out;
+		written += ret;
+		if (!iov_iter_count(iter))
+			goto out;
+		if (ret < nr) {
+			error = -EFAULT;
+			goto out;
+		}
+		continue;
 
 page_not_up_to_date:
 		/* Get exclusive access to the page ... */
@@ -1661,6 +1685,18 @@ static void do_async_mmap_readahead(struct vm_area_struct *vma,
  * The goto's are kind of ugly, but this streamlines the normal case of having
  * it in the page cache, and handles the special cases reasonably without
  * having a lot of duplicated code.
+ *
+ * vma->vm_mm->mmap_sem must be held on entry.
+ *
+ * If our return value has VM_FAULT_RETRY set, it's because
+ * lock_page_or_retry() returned 0.
+ * The mmap_sem has usually been released in this case.
+ * See __lock_page_or_retry() for the exception.
+ *
+ * If our return value does not have VM_FAULT_RETRY set, the mmap_sem
+ * has not been released.
+ *
+ * We never return with VM_FAULT_RETRY and a bit from VM_FAULT_ERROR set.
  */
 int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
@@ -1797,14 +1833,13 @@ int filemap_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 		ret = VM_FAULT_NOPAGE;
 		goto out;
 	}
-	wait_for_stable_page(page);
-
 	/*
 	 * We mark the page dirty already here so that when freeze is in
 	 * progress, we are guaranteed that writeback during freezing will
 	 * see the dirty page and writeprotect it again.
 	 */
 	set_page_dirty(page);
+	wait_for_stable_page(page);
 out:
 	sb_end_pagefault(inode->i_sb);
 	return ret;
@@ -2264,7 +2299,7 @@ again:
 
 		status = a_ops->write_begin(file, mapping, pos, bytes, flags,
 						&page, &fsdata);
-		if (unlikely(status))
+		if (unlikely(status < 0))
 			break;
 
 		if (mapping_writably_mapped(mapping))
