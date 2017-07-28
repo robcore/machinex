@@ -1249,9 +1249,9 @@ static ssize_t direct_IO_bvec(struct bio_vec *bvec, unsigned long nr_segs,
  */
 static inline ssize_t
 do_blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
-	struct block_device *bdev, struct iov_iter *iter, loff_t offset,
-	get_block_t get_block, dio_iodone_t end_io, dio_submit_t submit_io,
-	int flags)
+	struct block_device *bdev, const struct iovec *iov, loff_t offset, 
+	unsigned long nr_segs, get_block_t get_block, dio_iodone_t end_io,
+	dio_submit_t submit_io,	int flags)
 {
 	int seg;
 	size_t size;
@@ -1263,8 +1263,9 @@ do_blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	loff_t end = offset;
 	struct dio *dio;
 	struct dio_submit sdio = { 0, };
+	unsigned long user_addr;
+	size_t bytes;
 	struct buffer_head map_bh = { 0, };
-	unsigned long nr_segs = iter->nr_segs;
 
 	if (rw & WRITE)
 		rw = WRITE_ODIRECT;
@@ -1283,49 +1284,20 @@ do_blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	}
 
 	/* Check the memory alignment.  Blocks cannot straddle pages */
-	if (iov_iter_has_iovec(iter)) {
-		const struct iovec *iov = iov_iter_iovec(iter);
-
-		for (seg = 0; seg < nr_segs; seg++) {
-			addr = (unsigned long)iov[seg].iov_base;
-			size = iov[seg].iov_len;
-			end += size;
-			if (unlikely((addr & blocksize_mask) ||
-				     (size & blocksize_mask))) {
-				if (bdev)
-					blkbits = blksize_bits(
-						 bdev_logical_block_size(bdev));
-				blocksize_mask = (1 << blkbits) - 1;
-				if ((addr & blocksize_mask) ||
-				    (size & blocksize_mask))
-					goto out;
-			}
+	for (seg = 0; seg < nr_segs; seg++) {
+		addr = (unsigned long)iov[seg].iov_base;
+		size = iov[seg].iov_len;
+		end += size;
+		if (unlikely((addr & blocksize_mask) ||
+			     (size & blocksize_mask))) {
+			if (bdev)
+				blkbits = blksize_bits(
+					 bdev_logical_block_size(bdev));
+			blocksize_mask = (1 << blkbits) - 1;
+			if ((addr & blocksize_mask) || (size & blocksize_mask))
+				goto out;
 		}
-	} else if (iov_iter_has_bvec(iter)) {
-		/*
-		 * Is this necessary, or can we trust the in-kernel
-		 * caller? Can we replace this with
-		 *	end += iov_iter_count(iter); ?
-		 */
-		struct bio_vec *bvec = iov_iter_bvec(iter);
-
-		for (seg = 0; seg < nr_segs; seg++) {
-			addr = bvec[seg].bv_offset;
-			size = bvec[seg].bv_len;
-			end += size;
-			if (unlikely((addr & blocksize_mask) ||
-				     (size & blocksize_mask))) {
-				if (bdev)
-					blkbits = blksize_bits(
-						 bdev_logical_block_size(bdev));
-				blocksize_mask = (1 << blkbits) - 1;
-				if ((addr & blocksize_mask) ||
-				    (size & blocksize_mask))
-					goto out;
-			}
-		}
-	} else
-		BUG();
+	}
 
 	/* watch out for a 0 len io from a tricksy fs */
 	if (rw == READ && end == offset)
@@ -1419,12 +1391,45 @@ do_blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	if (unlikely(sdio.blkfactor))
 		sdio.pages_in_io = 2;
 
-	if (iov_iter_has_iovec(iter))
-		retval = direct_IO_iovec(iov_iter_iovec(iter), nr_segs, dio,
-					 &sdio, blkbits, &map_bh);
-	else
-		retval = direct_IO_bvec(iov_iter_bvec(iter), nr_segs, dio,
-					&sdio, blkbits, &map_bh);
+	for (seg = 0; seg < nr_segs; seg++) {
+		user_addr = (unsigned long)iov[seg].iov_base;
+		sdio.pages_in_io +=
+			((user_addr + iov[seg].iov_len + PAGE_SIZE-1) /
+				PAGE_SIZE - user_addr / PAGE_SIZE);
+	}
+
+	for (seg = 0; seg < nr_segs; seg++) {
+		user_addr = (unsigned long)iov[seg].iov_base;
+		sdio.size += bytes = iov[seg].iov_len;
+
+		/* Index into the first page of the first block */
+		sdio.first_block_in_page = (user_addr & ~PAGE_MASK) >> blkbits;
+		sdio.final_block_in_request = sdio.block_in_file +
+						(bytes >> blkbits);
+		/* Page fetching state */
+		sdio.head = 0;
+		sdio.tail = 0;
+		sdio.curr_page = 0;
+
+		sdio.total_pages = 0;
+		if (user_addr & (PAGE_SIZE-1)) {
+			sdio.total_pages++;
+			bytes -= PAGE_SIZE - (user_addr & (PAGE_SIZE - 1));
+		}
+		sdio.total_pages += (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+		sdio.curr_user_address = user_addr;
+
+		retval = do_direct_IO(dio, &sdio, &map_bh);
+
+		dio->result += iov[seg].iov_len -
+			((sdio.final_block_in_request - sdio.block_in_file) <<
+					blkbits);
+
+		if (retval) {
+			dio_cleanup(dio, &sdio);
+			break;
+		}
+	} /* end iovec loop */
 
 	if (retval == -ENOTBLK) {
 		/*
@@ -1491,9 +1496,9 @@ out:
 
 ssize_t
 __blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
-	struct block_device *bdev, struct iov_iter *iter, loff_t offset,
-	get_block_t get_block, dio_iodone_t end_io, dio_submit_t submit_io,
-	int flags)
+	struct block_device *bdev, const struct iovec *iov, loff_t offset,
+	unsigned long nr_segs, get_block_t get_block, dio_iodone_t end_io,
+	dio_submit_t submit_io,	int flags)
 {
 	/*
 	 * The block device state is needed in the end to finally
@@ -1507,8 +1512,9 @@ __blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	prefetch(bdev->bd_queue);
 	prefetch((char *)bdev->bd_queue + SMP_CACHE_BYTES);
 
-	return do_blockdev_direct_IO(rw, iocb, inode, bdev, iter, offset,
-				     get_block, end_io, submit_io, flags);
+	return do_blockdev_direct_IO(rw, iocb, inode, bdev, iov, offset,
+				     nr_segs, get_block, end_io,
+				     submit_io, flags);
 }
 
 EXPORT_SYMBOL(__blockdev_direct_IO);

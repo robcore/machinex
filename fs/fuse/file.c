@@ -1217,11 +1217,10 @@ static inline void fuse_page_descs_length_init(struct fuse_req *req,
 
 static inline unsigned long fuse_get_user_addr(const struct iov_iter *ii)
 {
-	struct iovec *iov = (struct iovec *)ii->data;
-	return (unsigned long)iov->iov_base + ii->iov_offset;
+	return (unsigned long)ii->iov->iov_base + ii->iov_offset;
 }
 
-static inline size_t fuse_get_frag_size(struct iov_iter *ii,
+static inline size_t fuse_get_frag_size(const struct iov_iter *ii,
 					size_t max_size)
 {
 	return min(iov_iter_single_seg_count(ii), max_size);
@@ -1230,7 +1229,6 @@ static inline size_t fuse_get_frag_size(struct iov_iter *ii,
 static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 			       size_t *nbytesp, int write)
 {
-	struct iovec *iov = (struct iovec *)ii->data;
 	size_t nbytes = 0;  /* # bytes already packed in req */
 
 	/* Special case for kernel I/O: can copy directly into the buffer */
@@ -2214,17 +2212,30 @@ static int fuse_ioctl_copy_user(struct page **pages, struct iovec *iov,
 	while (iov_iter_count(&ii)) {
 		struct page *page = pages[page_idx++];
 		size_t todo = min_t(size_t, PAGE_SIZE, iov_iter_count(&ii));
-		size_t left;
+		void *kaddr;
 
-		if (!to_user)
-			left = iov_iter_copy_from_user(page, &ii, 0, todo);
-		else
-			left = iov_iter_copy_to_user(page, &ii, 0, todo);
+		kaddr = kmap(page);
 
-		if (unlikely(left))
-			return -EFAULT;
+		while (todo) {
+			char __user *uaddr = ii.iov->iov_base + ii.iov_offset;
+			size_t iov_len = ii.iov->iov_len - ii.iov_offset;
+			size_t copy = min(todo, iov_len);
+			size_t left;
 
-		iov_iter_advance(&ii, todo);
+			if (!to_user)
+				left = copy_from_user(kaddr, uaddr, copy);
+			else
+				left = copy_to_user(uaddr, kaddr, copy);
+
+			if (unlikely(left))
+				return -EFAULT;
+
+			iov_iter_advance(&ii, copy);
+			todo -= copy;
+			kaddr += copy;
+		}
+
+		kunmap(page);
 	}
 
 	return 0;
@@ -2718,7 +2729,8 @@ static inline loff_t fuse_round_up(loff_t off)
 }
 
 static ssize_t
-fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
+fuse_direct_IO(int rw, struct kiocb *iocb, const struct iovec *iov,
+			loff_t offset, unsigned long nr_segs)
 {
 	ssize_t ret = 0;
 	struct file *file = iocb->ki_filp;
@@ -2727,17 +2739,9 @@ fuse_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
 	loff_t pos = 0;
 	struct inode *inode;
 	loff_t i_size;
-	struct iovec *iov = (struct iovec *)iter->data;
-	unsigned long nr_segs = iter->nr_segs;
 	size_t count = iov_length(iov, nr_segs);
 	struct fuse_io_priv *io;
 
-	/*
-	 * We'll eventually want to work with both iovec and bvec
-	 */
-	BUG_ON(!iov_iter_has_iovec(iter));
-	iov = (struct iovec *)iter->data;
-	nr_segs = iter->nr_segs;
 	pos = offset;
 	inode = file->f_mapping->host;
 	i_size = i_size_read(inode);

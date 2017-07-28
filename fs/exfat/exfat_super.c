@@ -1352,12 +1352,17 @@ static int exfat_file_release(struct inode *inode, struct file *filp)
 
 const struct file_operations exfat_file_operations = {
 	.llseek      = generic_file_llseek,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
 	.read        = do_sync_read,
 	.write       = do_sync_write,
 	.aio_read    = generic_file_aio_read,
 	.aio_write   = generic_file_aio_write,
-	.read_iter	= generic_file_read_iter,
-	.write_iter	= generic_file_write_iter,
+#else
+	.read        = new_sync_read,
+	.write       = new_sync_write,
+	.read_iter   = generic_file_read_iter,
+	.write_iter  = generic_file_write_iter,
+#endif
 	.mmap        = generic_file_mmap,
 	.release     = exfat_file_release,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
@@ -1595,7 +1600,7 @@ static int exfat_write_end(struct file *file, struct address_space *mapping,
 }
 
 static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
-#ifdef CONFIG_AIO_OPTIMIZATION
+#if 0
 				struct iov_iter *iter, loff_t offset)
 #else
 				const struct iovec *iov,
@@ -1610,7 +1615,7 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
 	ssize_t ret;
 
 	if (rw == WRITE) {
-#ifdef CONFIG_AIO_OPTIMIZATION
+#if 0
 		if (EXFAT_I(inode)->mmu_private <
 			(offset + iov_iter_count(iter)))
 #else
@@ -1619,7 +1624,7 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
 			return 0;
 	}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
-#ifdef CONFIG_AIO_OPTIMIZATION
+#if 0
 	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset,
 				 exfat_get_block);
 #else
@@ -1633,7 +1638,7 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,34)
 	if ((ret < 0) && (rw & WRITE))
-#ifdef CONFIG_AIO_OPTIMIZATION
+#if 0
 		exfat_write_failed(mapping, offset+iov_iter_count(iter));
 #else
 		exfat_write_failed(mapping, offset+iov_length(iov, nr_segs));
@@ -1923,7 +1928,7 @@ static void exfat_put_super(struct super_block *sb)
 	}
 
 	sb->s_fs_info = NULL;
-	kfree(sbi);
+	kvfree(sbi);
 
 	exfat_mnt_msg(sb, 0, err, "unmounted successfully!");
 }

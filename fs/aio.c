@@ -44,8 +44,6 @@
 #include <asm/kmap_types.h>
 #include <asm/uaccess.h>
 
-#include "read_write.h"
-
 #include "internal.h"
 
 #define AIO_RING_MAGIC			0xa10a10a1
@@ -559,10 +557,6 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 					rcu_read_unlock();
 					spin_unlock(&mm->ioctx_lock);
 
-					/* While kioctx setup is in progress,
-					 * we are protected from page migration
-					 * changes ring_pages by ->ring_lock.
-					 */
 					ring = kmap_atomic(ctx->ring_pages[0]);
 					ring->id = ctx->id;
 					kunmap_atomic(ring);
@@ -1245,26 +1239,6 @@ static ssize_t aio_setup_single_vector(struct kiocb *kiocb,
 	iovec->iov_len = kiocb->ki_nbytes;
 	*nr_segs = 1;
 	return 0;
-}
-
-static ssize_t aio_read_iter(struct kiocb *iocb)
-{
-	struct file *file = iocb->ki_filp;
-	ssize_t ret = -EINVAL;
-
-	if (file->f_op->read_iter)
-		ret = file->f_op->read_iter(iocb, iocb->ki_iter, iocb->ki_pos);
-	return ret;
-}
-
-static ssize_t aio_write_iter(struct kiocb *iocb)
-{
-	struct file *file = iocb->ki_filp;
-	ssize_t ret = -EINVAL;
-
-	if (file->f_op->write_iter)
-		ret = file->f_op->write_iter(iocb, iocb->ki_iter, iocb->ki_pos);
-	return ret;
 }
 
 /*

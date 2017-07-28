@@ -3131,17 +3131,22 @@ static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
  *
  */
 static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
-			      struct iov_iter *iter, loff_t offset)
+			      const struct iovec *iov, loff_t offset,
+			      unsigned long nr_segs)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
 	ssize_t ret;
-	size_t count = iov_iter_count(iter);
+	size_t count = iov_length(iov, nr_segs);
+	int overwrite = 0;
+	get_block_t *get_block_func = NULL;
+	int dio_flags = 0;
 	loff_t final_size = offset + count;
 	ext4_io_end_t *io_end = NULL;
 
-	if (rw == WRITE && final_size <= inode->i_size) {
-		int overwrite = 0;
+	/* Use the old path for reads and writes beyond i_size. */
+	if (rw != WRITE || final_size > inode->i_size)
+		return ext4_ind_direct_IO(rw, iocb, iov, offset, nr_segs);
 
 		/*
  		 * We could direct write to holes and fallocate.
@@ -3185,16 +3190,16 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 
 		if (overwrite)
 			ret = __blockdev_direct_IO(rw, iocb, inode,
-						 inode->i_sb->s_bdev, iter,
-						 offset,
+						 inode->i_sb->s_bdev, iov,
+						 offset, nr_segs,
 						 ext4_get_block_write_nolock,
 						 ext4_end_io_dio,
 						 NULL,
 						 0);
 		else
 			ret = __blockdev_direct_IO(rw, iocb, inode,
-						 inode->i_sb->s_bdev, iter,
-						 offset,
+						 inode->i_sb->s_bdev, iov,
+						 offset, nr_segs,
 						 ext4_get_block_write,
 						 ext4_end_io_dio,
 						 NULL,
@@ -3234,14 +3239,14 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 			ext4_clear_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN);
 		}
 		return ret;
-	}
 
 	/* for write the the end of file case, we fall back to old way */
-	return ext4_ind_direct_IO(rw, iocb, iter, offset);
+	return ext4_ind_direct_IO(rw, iocb, iov, offset, nr_segs);
 }
 
 static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
-			      struct iov_iter *iter, loff_t offset)
+			      const struct iovec *iov, loff_t offset,
+			      unsigned long nr_segs)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
@@ -3258,9 +3263,9 @@ static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
 		return 0;
 
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
-		ret = ext4_ext_direct_IO(rw, iocb, iter, offset);
+		ret = ext4_ext_direct_IO(rw, iocb, iov, offset, nr_segs);
 	else
-		ret = ext4_ind_direct_IO(rw, iocb, iter, offset);
+		ret = ext4_ind_direct_IO(rw, iocb, iov, offset, nr_segs);
 	return ret;
 }
 
@@ -3353,13 +3358,33 @@ void ext4_set_aops(struct inode *inode)
 }
 
 /*
+ * ext4_block_truncate_page() zeroes out a mapping from file offset `from'
+ * up to the end of the block which corresponds to `from'.
+ * This required during truncate. We need to physically zero the tail end
+ * of that block so it doesn't yield old data if the file is later grown.
+ */
+int ext4_block_truncate_page(handle_t *handle,
+		struct address_space *mapping, loff_t from)
+{
+	unsigned offset = from & (PAGE_CACHE_SIZE-1);
+	unsigned length;
+	unsigned blocksize;
+	struct inode *inode = mapping->host;
+
+	blocksize = inode->i_sb->s_blocksize;
+	length = blocksize - (offset & (blocksize - 1));
+
+	return ext4_block_zero_page_range(handle, mapping, from, length);
+}
+
+/*
  * ext4_block_zero_page_range() zeros out a mapping of length 'length'
  * starting from file offset 'from'.  The range to be zero'd must
  * be contained with in one block.  If the specified range exceeds
  * the end of the block it will be shortened to end of the block
  * that cooresponds to 'from'
  */
-static int ext4_block_zero_page_range(handle_t *handle,
+int ext4_block_zero_page_range(handle_t *handle,
 		struct address_space *mapping, loff_t from, loff_t length)
 {
 	ext4_fsblk_t index = from >> PAGE_CACHE_SHIFT;
@@ -3447,26 +3472,6 @@ unlock:
 	unlock_page(page);
 	page_cache_release(page);
 	return err;
-}
-
-/*
- * ext4_block_truncate_page() zeroes out a mapping from file offset `from'
- * up to the end of the block which corresponds to `from'.
- * This required during truncate. We need to physically zero the tail end
- * of that block so it doesn't yield old data if the file is later grown.
- */
-int ext4_block_truncate_page(handle_t *handle,
-		struct address_space *mapping, loff_t from)
-{
-	unsigned offset = from & (PAGE_CACHE_SIZE-1);
-	unsigned length;
-	unsigned blocksize;
-	struct inode *inode = mapping->host;
-
-	blocksize = inode->i_sb->s_blocksize;
-	length = blocksize - (offset & (blocksize - 1));
-
-	return ext4_block_zero_page_range(handle, mapping, from, length);
 }
 
 int ext4_zero_partial_blocks(handle_t *handle, struct inode *inode,

@@ -1559,17 +1559,56 @@ static int buffer_unmapped(handle_t *handle, struct buffer_head *bh)
 }
 
 /*
- * Note that whenever we need to map blocks we start a transaction even if
- * we're not journalling data.  This is to preserve ordering: any hole
- * instantiation within __block_write_full_page -> ext3_get_block() should be
- * journalled along with the data so we don't crash and then get metadata which
+ * Note that we always start a transaction even if we're not journalling
+ * data.  This is to preserve ordering: any hole instantiation within
+ * __block_write_full_page -> ext3_get_block() should be journalled
+ * along with the data so we don't crash and then get metadata which
  * refers to old data.
  *
  * In all journalling modes block_write_full_page() will start the I/O.
  *
+ * Problem:
+ *
+ *	ext3_writepage() -> kmalloc() -> __alloc_pages() -> page_launder() ->
+ *		ext3_writepage()
+ *
+ * Similar for:
+ *
+ *	ext3_file_write() -> generic_file_write() -> __alloc_pages() -> ...
+ *
+ * Same applies to ext3_get_block().  We will deadlock on various things like
+ * lock_journal and i_truncate_mutex.
+ *
+ * Setting PF_MEMALLOC here doesn't work - too many internal memory
+ * allocations fail.
+ *
+ * 16May01: If we're reentered then journal_current_handle() will be
+ *	    non-zero. We simply *return*.
+ *
+ * 1 July 2001: @@@ FIXME:
+ *   In journalled data mode, a data buffer may be metadata against the
+ *   current transaction.  But the same file is part of a shared mapping
+ *   and someone does a writepage() on it.
+ *
+ *   We will move the buffer onto the async_data list, but *after* it has
+ *   been dirtied. So there's a small window where we have dirty data on
+ *   BJ_Metadata.
+ *
+ *   Note that this only applies to the last partial page in the file.  The
+ *   bit which block_write_full_page() uses prepare/commit for.  (That's
+ *   broken code anyway: it's wrong for msync()).
+ *
+ *   It's a rare case: affects the final partial page, for journalled data
+ *   where the file is subject to bith write() and writepage() in the same
+ *   transction.  To fix it we'll need a custom block_write_full_page().
+ *   We'll probably need that anyway for journalling writepage() output.
+ *
  * We don't honour synchronous mounts for writepage().  That would be
  * disastrous.  Any write() or metadata operation will sync the fs for
  * us.
+ *
+ * AKPM2: if all the page's buffers are mapped to disk and !data=journal,
+ * we don't need to open a transaction here.
  */
 static int ext3_ordered_writepage(struct page *page,
 				struct writeback_control *wbc)
@@ -1634,9 +1673,12 @@ static int ext3_ordered_writepage(struct page *page,
 	 * block_write_full_page() succeeded.  Otherwise they are unmapped,
 	 * and generally junk.
 	 */
-	if (ret == 0)
-		ret = walk_page_buffers(handle, page_bufs, 0, PAGE_CACHE_SIZE,
+	if (ret == 0) {
+		err = walk_page_buffers(handle, page_bufs, 0, PAGE_CACHE_SIZE,
 					NULL, journal_dirty_data_fn);
+		if (!ret)
+			ret = err;
+	}
 	walk_page_buffers(handle, page_bufs, 0,
 			PAGE_CACHE_SIZE, NULL, bput_one);
 	err = ext3_journal_stop(handle);
@@ -1820,7 +1862,8 @@ static int ext3_releasepage(struct page *page, gfp_t wait)
  * VFS code falls back into buffered path in that case so we are safe.
  */
 static ssize_t ext3_direct_IO(int rw, struct kiocb *iocb,
-			struct iov_iter *iter, loff_t offset)
+			const struct iovec *iov, loff_t offset,
+			unsigned long nr_segs)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
@@ -1828,10 +1871,8 @@ static ssize_t ext3_direct_IO(int rw, struct kiocb *iocb,
 	handle_t *handle;
 	ssize_t ret;
 	int orphan = 0;
-	size_t count = iov_iter_count(iter);
+	size_t count = iov_length(iov, nr_segs);
 	int retries = 0;
-
-	trace_ext3_direct_IO_enter(inode, offset, count, rw);
 
 	if (rw == WRITE) {
 		loff_t final_size = offset + count;
@@ -1855,14 +1896,15 @@ static ssize_t ext3_direct_IO(int rw, struct kiocb *iocb,
 	}
 
 retry:
-	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset, ext3_get_block);
+	ret = blockdev_direct_IO(rw, iocb, inode, iov, offset, nr_segs,
+				 ext3_get_block);
 	/*
 	 * In case of error extending write may have instantiated a few
 	 * blocks outside i_size. Trim these off again.
 	 */
 	if (unlikely((rw & WRITE) && ret < 0)) {
 		loff_t isize = i_size_read(inode);
-		loff_t end = offset + count;
+		loff_t end = offset + iov_length(iov, nr_segs);
 
 		if (end > isize)
 			ext3_truncate_failed_direct_write(inode);
@@ -1907,7 +1949,6 @@ retry:
 			ret = err;
 	}
 out:
-	trace_ext3_direct_IO_exit(inode, offset, count, rw, ret);
 	return ret;
 }
 
