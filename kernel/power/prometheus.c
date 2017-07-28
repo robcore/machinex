@@ -29,8 +29,8 @@
 #include <linux/cpu.h>
 #include "power.h"
 
-#define VERSION 2
-#define VERSION_MIN 9
+#define VERSION 3
+#define VERSION_MIN 0
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -41,7 +41,7 @@ struct work_struct power_resume_work;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
-static int ps_state;
+static unsigned int ps_state = POWER_SUSPEND_INACTIVE;
 /* Robcore: Provide an option to sync the system on panel suspend */
 static unsigned int sync_on_panel_suspend;
 /* For Samsung devices that use it, disable completely when poweroff charging */
