@@ -11,7 +11,17 @@
 
 #ifndef _LINUX_DISPLAY_STATE_H
 #define _LINUX_DISPLAY_STATE_H
+#include <linux/kernel.h>
 
 bool is_display_on(void);
 
-#endif
+static bool system_is_restarting(void)
+{
+	if (system_state == SYSTEM_POWER_OFF ||
+		system_state == SYSTEM_RESTART ||
+		system_state == SYSTEM_HALT)
+		return true;
+	return false;
+}
+
+#endif /* _LINUX_DISPLAY_STATE_H */

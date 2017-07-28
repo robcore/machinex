@@ -9,6 +9,7 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/pm_wakeup.h>
+#include <linux/display_state.h>
 
 #include "power.h"
 
@@ -94,8 +95,7 @@ int pm_autosleep_set_state(suspend_state_t state)
 		return -EINVAL;
 #endif
 
-	if (system_state == SYSTEM_POWER_OFF ||
-		system_state == SYSTEM_RESTART)
+	if (system_is_restarting())
 		return -EINVAL;
 
 	__pm_stay_awake(autosleep_ws);

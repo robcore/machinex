@@ -29,6 +29,7 @@
 #include <trace/events/power.h>
 #include <linux/compiler.h>
 #include <linux/moduleparam.h>
+#include <linux/display_state.h>
 
 #include "power.h"
 
@@ -570,8 +571,7 @@ int pm_suspend(suspend_state_t state)
 	int error;
 
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX ||
-		system_state == SYSTEM_POWER_OFF ||
-		system_state == SYSTEM_RESTART)
+		system_is_restarting())
 		return -EINVAL;
 
 	error = enter_state(state);
