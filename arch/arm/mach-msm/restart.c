@@ -224,7 +224,7 @@ int resout_irq_control(int enable)
 
 static void resout_helper(struct work_struct *work)
 {
-	smp_call_function_many(cpu_online_mask, cpu_power_off, NULL, 0);
+	smp_call_function(cpu_power_off, NULL, 0);
 }
 
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
@@ -232,7 +232,7 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 
 	pr_warn("%s PMIC Initiated shutdown\n", __func__);
 	oops_in_progress = 1;
-	queue_work_on(0, restart_wq, &resout_helper_work);
+	queue_work(restart_wq, &resout_helper_work);
 	if (smp_processor_id() == 0)
 		cpu_power_off(NULL);
 	preempt_disable();
@@ -361,6 +361,7 @@ static int __init msm_pmic_restart_init(void)
 
 	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER) > 0)
 		scm_pmic_arbiter_disable_supported = true;
+
 	restart_wq = alloc_workqueue("restart_wq", WQ_CPU_INTENSIVE, 0);
 	if (!restart_wq) {
 		pr_err("%s: out of memory\n", __func__);
@@ -383,7 +384,6 @@ static int __init msm_pmic_restart_init(void)
 
 	return 0;
 }
-
 late_initcall(msm_pmic_restart_init);
 
 static int __init msm_restart_init(void)
@@ -399,7 +399,6 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;
 #endif
-
 	return 0;
 }
 early_initcall(msm_restart_init);
