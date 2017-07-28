@@ -508,17 +508,23 @@ static int enter_state(suspend_state_t state)
 {
 	int error;
 
-	if (state == PM_SUSPEND_FREEZE) {
 #ifdef CONFIG_PM_DEBUG
+	if (state == PM_SUSPEND_FREEZE) {
+
 		if (pm_test_level != TEST_NONE && pm_test_level <= TEST_CPUS) {
 			pr_warn("PM: Unsupported test mode for suspend to idle, please choose none/freezer/devices/platform.\n");
 			return -EAGAIN;
 		}
-#endif
+
 	} else if (!valid_state(state)) {
 		return -EINVAL;
 	}
-	if (!mutex_trylock(&pm_mutex))
+#else
+	if (!valid_state(state)) {
+		return -EINVAL;
+	}
+#endif
+	if (unlikely(!mutex_trylock(&pm_mutex)))
 		return -EBUSY;
 
 	if (state == PM_SUSPEND_FREEZE)
@@ -563,7 +569,9 @@ int pm_suspend(suspend_state_t state)
 {
 	int error;
 
-	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
+	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX ||
+		system_state == SYSTEM_POWER_OFF ||
+		system_state == SYSTEM_RESTART)
 		return -EINVAL;
 
 	error = enter_state(state);

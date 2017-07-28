@@ -94,6 +94,10 @@ int pm_autosleep_set_state(suspend_state_t state)
 		return -EINVAL;
 #endif
 
+	if (system_state == SYSTEM_POWER_OFF ||
+		system_state == SYSTEM_RESTART)
+		return -EINVAL;
+
 	__pm_stay_awake(autosleep_ws);
 
 	mutex_lock(&autosleep_lock);
