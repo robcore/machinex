@@ -441,13 +441,8 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-/*
-	if (mode > BOOTING)
+	if (mode > BOOTING || disabled_samsung_pattern)
 		return;
-*/
-	if(disabled_samsung_pattern) {
-		return;
-	}
 
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
