@@ -61,6 +61,8 @@ unsigned int cpu2_allowed = 1;
 unsigned int cpu3_allowed = 1;
 static bool suspend_completed;
 static bool resume_completed;
+static bool suspend_aborted;
+static bool resume_aborted;
 static unsigned int first_suspend = 1;
 
 void register_power_suspend(struct power_suspend *handler)
