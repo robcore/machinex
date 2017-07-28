@@ -210,7 +210,6 @@ static void requeue_io(struct inode *inode, struct bdi_writeback *wb)
 static void inode_sync_complete(struct inode *inode)
 {
 	inode->i_state &= ~I_SYNC;
-
 	/* If inode is clean an unused, put it into LRU now... */
 	inode_add_lru(inode);
 	/* Waiters must see I_SYNC cleared before being woken up */
@@ -1017,6 +1016,7 @@ void bdi_writeback_workfn(struct work_struct *work)
 
 	set_worker_desc("flush-%s", dev_name(bdi->dev));
 	current->flags |= PF_SWAPWRITE;
+
 	if (likely(!current_is_workqueue_rescuer() ||
 		   list_empty(&bdi->bdi_list))) {
 
@@ -1026,7 +1026,6 @@ void bdi_writeback_workfn(struct work_struct *work)
 		 * if @bdi is shutting down even when we're running off the
 		 * rescuer as work_list needs to be drained.
 		 */
-
 		do {
 			pages_written = wb_do_writeback(wb);
 			trace_writeback_pages_written(pages_written);
