@@ -1029,7 +1029,6 @@ static ssize_t fuse_fill_write_pages(struct fuse_req *req,
 
 		mark_page_accessed(page);
 
-		iov_iter_advance(ii, tmp);
 		if (!tmp) {
 			unlock_page(page);
 			page_cache_release(page);
@@ -1042,6 +1041,7 @@ static ssize_t fuse_fill_write_pages(struct fuse_req *req,
 		req->page_descs[req->num_pages].length = tmp;
 		req->num_pages++;
 
+		iov_iter_advance(ii, tmp);
 		count += tmp;
 		pos += tmp;
 		offset += tmp;
@@ -1237,6 +1237,7 @@ static int fuse_get_user_pages(struct fuse_req *req, struct iov_iter *ii,
 	if (segment_eq(get_fs(), KERNEL_DS)) {
 		unsigned long user_addr = fuse_get_user_addr(ii);
 		size_t frag_size = fuse_get_frag_size(ii, *nbytesp);
+
 		if (write)
 			req->in.args[1].value = (void *) user_addr;
 		else
