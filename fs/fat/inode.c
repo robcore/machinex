@@ -184,11 +184,13 @@ static int fat_write_end(struct file *file, struct address_space *mapping,
 }
 
 static ssize_t fat_direct_IO(int rw, struct kiocb *iocb,
-			     struct iov_iter *iter, loff_t offset)
+			     struct iov_iter *iter,
+			     loff_t offset)
 {
 	struct file *file = iocb->ki_filp;
 	struct address_space *mapping = file->f_mapping;
 	struct inode *inode = mapping->host;
+	size_t count = iov_iter_count(iter);
 	ssize_t ret;
 
 	if (rw == WRITE) {
@@ -201,7 +203,7 @@ static ssize_t fat_direct_IO(int rw, struct kiocb *iocb,
 		 *
 		 * Return 0, and fallback to normal buffered write.
 		 */
-		loff_t size = offset + iov_iter_count(iter);
+		loff_t size = offset + count;
 		if (MSDOS_I(inode)->mmu_private < size)
 			return 0;
 	}
@@ -212,7 +214,7 @@ static ssize_t fat_direct_IO(int rw, struct kiocb *iocb,
 	 */
 	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset, fat_get_block);
 	if (ret < 0 && (rw & WRITE))
-		fat_write_failed(mapping, offset + iov_iter_count(iter));
+		fat_write_failed(mapping, offset + count);
 
 	return ret;
 }
@@ -512,16 +514,11 @@ static void fat_put_super(struct super_block *sb)
 {
 	struct msdos_sb_info *sbi = MSDOS_SB(sb);
 
-	fat_msg(sb, KERN_INFO, "trying to unmount...");
-	ST_LOG("<%s> trying to umount... %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 
 	iput(sbi->fsinfo_inode);
 	iput(sbi->fat_inode);
 
 	call_rcu(&sbi->rcu, delayed_free);
-
-	fat_msg(sb, KERN_INFO, "unmounted successfully!");
-	ST_LOG("<%s> unmounted successfully! %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 }
 
 static struct kmem_cache *fat_inode_cachep;
@@ -1483,8 +1480,6 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		goto out_fail;
 	}
 
-	fat_msg(sb, KERN_INFO, "mounted successfully!");
-	ST_LOG("<%s> mounted successfully! %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 	return 0;
 
 out_invalid:
@@ -1493,8 +1488,6 @@ out_invalid:
 		fat_msg(sb, KERN_INFO, "Can't find a valid FAT filesystem");
 
 out_fail:
-	fat_msg(sb, KERN_ERR, "failed to mount!");
-	ST_LOG("<%s> failed to mount %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 	if (fsinfo_inode)
 		iput(fsinfo_inode);
 	if (fat_inode)

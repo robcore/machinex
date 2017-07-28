@@ -45,21 +45,21 @@
 /**
  * ecryptfs_read_update_atime
  *
- * generic_file_read_iter updates the atime of upper layer inode.  But, it
+ * generic_file_read updates the atime of upper layer inode.  But, it
  * doesn't give us a chance to update the atime of the lower layer
- * inode.  This function is a wrapper to generic_file_read_iter.  It
- * updates the atime of the lower level inode if generic_file_read_iter
+ * inode.  This function is a wrapper to generic_file_read.  It
+ * updates the atime of the lower level inode if generic_file_read
  * returns without any errors. This is to be used only for file reads.
  * The function to be used for directory reads is ecryptfs_read.
  */
 static ssize_t ecryptfs_read_update_atime(struct kiocb *iocb,
-				struct iov_iter *iter, loff_t pos)
+				struct iov_iter *to)
 {
 	ssize_t rc;
 	struct path *path;
 	struct file *file = iocb->ki_filp;
 
-	rc = generic_file_read_iter(iocb, iter, pos);
+	rc = generic_file_read_iter(iocb, to);
 	/*
 	 * Even though this is a async interface, we need to wait
 	 * for IO to finish to update atime
