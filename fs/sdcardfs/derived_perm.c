@@ -329,5 +329,3 @@ int setup_obb_dentry(struct dentry *dentry, struct path *lower_path)
 	}
 	return err;
 }
-
-

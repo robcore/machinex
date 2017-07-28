@@ -319,7 +319,6 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 	
 	/* if it is a local obb dentry, setup it with the base obbpath */
 	if(need_graft_path(dentry)) {
-
 		err = setup_obb_dentry(dentry, &lower_path);
 		if(err) {
 			/* if the sbi->obbpath is not available, the lower_path won't be 

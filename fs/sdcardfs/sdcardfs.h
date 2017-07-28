@@ -366,6 +366,15 @@ static inline void sdcardfs_put_reset_##pname(const struct dentry *dent) \
 SDCARDFS_DENT_FUNC(lower_path) 
 SDCARDFS_DENT_FUNC(orig_path)  
 
+static inline void sdcardfs_copy_lower_path(const struct dentry *dent,
+					struct path *lower_path)
+{
+	spin_lock(&SDCARDFS_D(dent)->lock);
+	pathcpy(lower_path, &SDCARDFS_D(dent)->lower_path);
+	spin_unlock(&SDCARDFS_D(dent)->lock);
+	return;
+}
+
 static inline int has_graft_path(const struct dentry *dent)
 {
 	int ret = 0;

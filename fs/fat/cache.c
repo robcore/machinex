@@ -62,11 +62,7 @@ void fat_cache_destroy(void)
 
 static inline struct fat_cache *fat_cache_alloc(struct inode *inode)
 {
-	int ret;
-	ret = kmem_cache_alloc(fat_cache_cachep, GFP_NOFS);
-	if (ret == NULL)
-		return -ENOMEM;
-	return ret;
+	return kmem_cache_alloc(fat_cache_cachep, GFP_NOFS);
 }
 
 static inline void fat_cache_free(struct fat_cache *cache)
@@ -300,9 +296,6 @@ static int fat_bmap_cluster(struct inode *inode, int cluster)
 	if (ret < 0)
 		return ret;
 	else if (ret == FAT_ENT_EOF) {
-		fat_fs_error_ratelimit(sb,
-				       "%s: request beyond EOF (i_pos %lld)",
-				       __func__, MSDOS_I(inode)->i_pos);
 		return -EIO;
 	}
 	return dclus;

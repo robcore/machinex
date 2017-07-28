@@ -231,9 +231,11 @@ static void remove_all_hashentrys(struct packagelist_data *pkgl_dat)
 	int i;
 
 	hash_for_each_safe(pkgl_dat->package_to_appid, i, h_t, hash_cur, hlist)
+	if (hash_cur)
 		remove_str_to_int(hash_cur);
 	hash_for_each_safe(pkgl_dat->appid_with_rw, i, h_t, hash_cur, hlist)
-                remove_int_to_null(hash_cur);
+	if (hash_cur)
+		remove_int_to_null(hash_cur);
 
 	hash_init(pkgl_dat->package_to_appid);
 	hash_init(pkgl_dat->appid_with_rw);

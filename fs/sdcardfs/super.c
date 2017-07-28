@@ -46,6 +46,9 @@ static void sdcardfs_put_super(struct super_block *sb)
 		path_put(&spd->obbpath);
 	}
 
+	if(spd->options.label)
+		kfree(spd->options.label);
+
 	/* decrement lower super references */
 	s = sdcardfs_lower_super(sb);
 	sdcardfs_set_lower_super(sb, NULL);

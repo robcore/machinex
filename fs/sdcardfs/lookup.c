@@ -67,11 +67,10 @@ int new_dentry_private_data(struct dentry *dentry)
 
 static int sdcardfs_inode_test(struct inode *inode, void *candidate_lower_inode)
 {
-	struct inode *current_lower_inode = sdcardfs_lower_inode(inode);
-	if (current_lower_inode == (struct inode *)candidate_lower_inode)
-		return 1; /* found a match */
-	else
-		return 0; /* no match */
+	/* if a lower_inode should have many upper inodes, (like obb)
+	   sdcardfs_iget() will offer many inodes
+	   because test func always will return fail although they have same hash */
+	return 0;
 }
 
 static int sdcardfs_inode_set(struct inode *inode, void *lower_inode)
@@ -131,6 +130,8 @@ static struct inode *sdcardfs_iget(struct super_block *sb,
 		inode->i_fop = &sdcardfs_dir_fops;
 	else
 		inode->i_fop = &sdcardfs_main_fops;
+
+	inode->i_mapping->a_ops = &sdcardfs_aops;
 
 	inode->i_atime.tv_sec = 0;
 	inode->i_atime.tv_nsec = 0;

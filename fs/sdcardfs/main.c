@@ -107,6 +107,8 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 			break;
 		case Opt_derive:
 			string_option = match_strdup(&args[0]);
+			if (!string_option)
+				return -ENOMEM;
 			if (!strcmp("none", string_option)) {
 				opts->derive = DERIVE_NONE;
 			} else if (!strcmp("legacy", string_option)) {
@@ -121,6 +123,8 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 			break;
 		case Opt_lower_fs:
 			string_option = match_strdup(&args[0]);
+			if (!string_option)
+				return -ENOMEM;
 			if (!strcmp("ext4", string_option)) {
 				opts->lower_fs = LOWER_FS_EXT4;
 			} else if (!strcmp("fat", string_option)) {
