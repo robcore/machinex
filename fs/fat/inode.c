@@ -1279,6 +1279,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		goto out_invalid;
 	}
 
+	error = -EIO;
 	if (logical_sector_size < sb->s_blocksize) {
 		fat_msg(sb, KERN_ERR, "logical sector size too small for device"
 		       " (logical sector size = %u)", logical_sector_size);
@@ -1473,6 +1474,15 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		fat_msg(sb, KERN_ERR, "get root inode failed");
 		goto out_fail;
 	}
+
+	if (sbi->options.discard) {
+		struct request_queue *q = bdev_get_queue(sb->s_bdev);
+		if (!blk_queue_discard(q))
+			fat_msg(sb, KERN_WARNING,
+					"mounting with \"discard\" option, but "
+					"the device does not support discard");
+	}
+
 	return 0;
 
 out_invalid:
