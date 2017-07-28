@@ -59,11 +59,6 @@ unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed = 1;
 unsigned int cpu2_allowed = 1;
 unsigned int cpu3_allowed = 1;
-static bool suspend_completed;
-static bool resume_completed;
-static bool suspend_aborted;
-static bool resume_aborted;
-static unsigned int first_suspend = 1;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -117,9 +112,6 @@ static void power_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 	}
-	suspend_completed = true;
-	if (first_suspend)
-		first_suspend = 0;
 
 	if (limit_screen_off_cpus)
 		lock_screen_off_cpus(0);
@@ -196,7 +188,6 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
-	resume_completed = true;
 	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
