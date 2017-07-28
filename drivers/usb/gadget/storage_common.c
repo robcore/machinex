@@ -683,11 +683,11 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	 * If we can't read the file, it's no good.
 	 * If we can't write the file, use it read-only.
 	 */
-	if (!file_readable(filp)) {
+	if (!(filp->f_op->read || filp->f_op->aio_read)) {
 		LINFO(curlun, "file not readable: %s\n", filename);
 		goto out;
 	}
-	if (!file_writable(filp))
+	if (!(filp->f_op->write || filp->f_op->aio_write))
 		ro = 1;
 
 	size = i_size_read(inode->i_mapping->host);
@@ -856,6 +856,9 @@ static ssize_t fsg_show_file(struct device *dev, struct device_attribute *attr,
 			rc = PTR_ERR(p);
 		else {
 			rc = strlen(p);
+			if (rc > PAGE_SIZE - 2)
+				rc = PAGE_SIZE - 2;
+
 			memmove(buf, p, rc);
 			buf[rc] = '\n';		/* Add a newline */
 			buf[++rc] = 0;
