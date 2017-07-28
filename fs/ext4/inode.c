@@ -607,7 +607,7 @@ found:
 	 * ext4_ext_get_block() returns the create = 0
 	 * with buffer head unmapped.
 	 */
-	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED)
+	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED) {
 		/*
 		 * If we need to convert extent to unwritten
 		 * we continue and do the actual work in
@@ -615,7 +615,7 @@ found:
 		 */
 		if (!(flags & EXT4_GET_BLOCKS_CONVERT_UNWRITTEN))
 			return retval;
-
+	}
 	/*
 	 * Here we clear m_flags because after allocating an new extent,
 	 * it will be set again.
@@ -3257,12 +3257,10 @@ static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
 	if (ext4_has_inline_data(inode))
 		return 0;
 
-	trace_ext4_direct_IO_enter(inode, offset, iov_iter_count(iter), rw);
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
 		ret = ext4_ext_direct_IO(rw, iocb, iter, offset);
 	else
 		ret = ext4_ind_direct_IO(rw, iocb, iter, offset);
-	trace_ext4_direct_IO_exit(inode, offset, iov_iter_count(iter), rw, ret);
 	return ret;
 }
 
@@ -3629,8 +3627,6 @@ void ext4_truncate(struct inode *inode)
 	handle_t *handle;
 	struct address_space *mapping = inode->i_mapping;
 
-	trace_ext4_truncate_enter(inode);
-
 	if (!ext4_can_truncate(inode))
 		return;
 
@@ -3638,6 +3634,14 @@ void ext4_truncate(struct inode *inode)
 
 	if (inode->i_size == 0 && !test_opt(inode->i_sb, NO_AUTO_DA_ALLOC))
 		ext4_set_inode_state(inode, EXT4_STATE_DA_ALLOC_CLOSE);
+
+	if (ext4_has_inline_data(inode)) {
+		int has_inline = 1;
+
+		ext4_inline_data_truncate(inode, &has_inline);
+		if (has_inline)
+			return;
+	}
 
 	/* If we zero-out tail of the page, we have to create jinode for jbd2 */
 	if (inode->i_size & (inode->i_sb->s_blocksize - 1)) {
@@ -3675,14 +3679,6 @@ void ext4_truncate(struct inode *inode)
 
 	ext4_discard_preallocations(inode);
 
-	if (ext4_has_inline_data(inode)) {
-		int has_inline = 1;
-
-		ext4_inline_data_truncate(inode, &has_inline);
-		if (has_inline)
-			return;
-	}
-
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
 		ext4_ext_truncate(handle, inode);
 	else
@@ -3707,8 +3703,6 @@ out_stop:
 	inode->i_mtime = inode->i_ctime = ext4_current_time(inode);
 	ext4_mark_inode_dirty(handle, inode);
 	ext4_journal_stop(handle);
-
-	trace_ext4_truncate_exit(inode);
 }
 
 /*
@@ -3745,7 +3739,7 @@ static int __ext4_get_inode_loc(struct inode *inode,
 	iloc->offset = (inode_offset % inodes_per_block) * EXT4_INODE_SIZE(sb);
 
 	bh = sb_getblk(sb, block);
-	if (!bh)
+	if (unlikely(!bh))
 		return -ENOMEM;
 	if (!buffer_uptodate(bh)) {
 		lock_buffer(bh);
@@ -3778,7 +3772,7 @@ static int __ext4_get_inode_loc(struct inode *inode,
 
 			/* Is the inode bitmap in cache? */
 			bitmap_bh = sb_getblk(sb, ext4_inode_bitmap(sb, gdp));
-			if (!bitmap_bh)
+			if (unlikely(!bitmap_bh))
 				goto make_io;
 
 			/*
@@ -3961,10 +3955,8 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	iloc.bh = NULL;
 
 	ret = __ext4_get_inode_loc(inode, &iloc, 0);
-	if (ret < 0) {
-		print_iloc_info(sb,iloc);
+	if (ret < 0)
 		goto bad_inode;
-	}
 	raw_inode = ext4_raw_inode(&iloc);
 
 	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
@@ -4023,7 +4015,6 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 		    ino != EXT4_BOOT_LOADER_INO) {
 			/* this inode is deleted */
 			ret = -ESTALE;
-			print_iloc_info(sb,iloc);
 			goto bad_inode;
 		}
 		/* The only unlinked inodes we let through here have
@@ -4107,7 +4098,6 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	ret = 0;
 	if (ei->i_file_acl &&
 	    !ext4_data_block_valid(EXT4_SB(sb), ei->i_file_acl, 1)) {
-		print_iloc_info(sb,iloc);
 		EXT4_ERROR_INODE(inode, "bad extended attribute block %llu",
 				 ei->i_file_acl);
 		ret = -EIO;
@@ -4126,10 +4116,8 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 			ret = ext4_ind_check_inode(inode);
 		}
 	}
-	if (ret) {
-		print_iloc_info(sb,iloc);
+	if (ret)
 		goto bad_inode;
-	}
 
 	if (S_ISREG(inode->i_mode)) {
 		inode->i_op = &ext4_file_inode_operations;
@@ -4160,7 +4148,6 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 		make_bad_inode(inode);
 	} else {
 		ret = -EIO;
-		print_iloc_info(sb,iloc);
 		EXT4_ERROR_INODE(inode, "bogus i_mode (%o)", inode->i_mode);
 		goto bad_inode;
 	}

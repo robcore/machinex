@@ -1375,3 +1375,4 @@ int ext4_free_hole_blocks(handle_t *handle, struct inode *inode,
 err:
 	return ret;
 }
+
