@@ -88,7 +88,7 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	unsigned int counter;
 
-	if ((poweroff_charging) || (system_state != SYSTEM_RUNNING)) {
+	if ((poweroff_charging) || (unlikely(system_state != SYSTEM_RUNNING))) {
 		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System \
 				State!\n");
 		return;
@@ -201,11 +201,11 @@ void set_power_suspend_state(int new_state)
 		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			ps_state = new_state;
 			pr_info("[PROMETHEUS] Suspend State Activated.\n");
-			queue_work(pwrsup_wq, &power_suspend_work);
+			queue_work_on(0, pwrsup_wq, &power_suspend_work);
 		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			ps_state = new_state;
 			pr_info("[PROMETHEUS] Resume State Activated.\n");
-			queue_work(pwrsup_wq, &power_resume_work);
+			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
 		spin_unlock_irqrestore(&ps_state_lock, irqflags);
 	} else {
