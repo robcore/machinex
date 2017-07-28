@@ -156,10 +156,8 @@ static void __msm_power_off(int lower_pshold)
 	pm8xxx_reset_pwr_off(0);
 
 	if (lower_pshold) {
-		__raw_writel(0, PSHOLD_CTL_SU);
 		halt_spmi_pmic_arbiter();
-		__raw_writel(0, MSM_MPM2_PSHOLD_BASE);
-
+		__raw_writel(0, PSHOLD_CTL_SU);
 		mdelay(10000);
 		printk(KERN_ERR "Powering off has failed\n");
 	}
@@ -333,7 +331,7 @@ void msm_restart(char mode, const char *cmd)
 	__raw_writel(1, msm_tmr0_base + WDT0_EN);
 
 	halt_spmi_pmic_arbiter();
-	__raw_writel(0, MSM_MPM2_PSHOLD_BASE);
+	__raw_writel(0, PSHOLD_CTL_SU);
 
 
 	mdelay(10000);
@@ -360,6 +358,16 @@ void msm_kexec_hardboot(void)
 static int __init msm_pmic_restart_init(void)
 {
 	int rc;
+
+	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER) > 0)
+		scm_pmic_arbiter_disable_supported = true;
+	restart_wq = alloc_workqueue("restart_wq", WQ_CPU_INTENSIVE, 0);
+	if (!restart_wq) {
+		pr_err("%s: out of memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	INIT_WORK(&resout_helper_work, resout_helper);
 
 	if (pmic_reset_irq != 0) {
 		rc = request_any_context_irq(pmic_reset_irq,
@@ -391,16 +399,7 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;
 #endif
-	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER) > 0)
-		scm_pmic_arbiter_disable_supported = true;
 
-	restart_wq = alloc_workqueue("restart_wq", WQ_CPU_INTENSIVE, 0);
-	if (!restart_wq) {
-		pr_err("%s: out of memory\n", __func__);
-		return -ENOMEM;
-	}
-
-	INIT_WORK(&resout_helper_work, resout_helper);
 	return 0;
 }
 early_initcall(msm_restart_init);
