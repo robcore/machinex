@@ -95,7 +95,7 @@ int pm_autosleep_set_state(suspend_state_t state)
 		return -EINVAL;
 #endif
 
-	if (system_is_restarting())
+	if (unlikely(system_is_restarting()))
 		return -EINVAL;
 
 	__pm_stay_awake(autosleep_ws);

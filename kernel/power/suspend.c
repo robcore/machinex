@@ -571,7 +571,7 @@ int pm_suspend(suspend_state_t state)
 	int error;
 
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX ||
-		system_is_restarting())
+		(unlikely(system_is_restarting())))
 		return -EINVAL;
 
 	error = enter_state(state);
