@@ -207,7 +207,7 @@ void led_trigger_unregister(struct led_trigger *trigger)
 
 	/* Remove from the list of led triggers */
 	down_write(&triggers_list_lock);
-	list_del(&trigger->next_trig);
+	list_del_init(&trigger->next_trig);
 	up_write(&triggers_list_lock);
 
 	/* Remove anyone actively using this trigger */
