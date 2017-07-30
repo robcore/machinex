@@ -453,7 +453,7 @@ int msm_rotator_imem_allocate(int requestor)
 		rc = 1;
 #endif
 	if (rc == 1) {
-		cancel_delayed_work_sync(&msm_rotator_dev->imem_clk_work);
+		cancel_delayed_work(&msm_rotator_dev->imem_clk_work);
 		if (msm_rotator_dev->imem_clk_state != CLK_EN
 			&& msm_rotator_dev->imem_clk) {
 			clk_prepare_enable(msm_rotator_dev->imem_clk);
