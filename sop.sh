@@ -55,6 +55,7 @@ patch -p1 < "/root/machinex/patches/0141-kernfs-add-back-missing-error-check-in-
 #patch -p1 < "/root/machinex/patches/0186-mm-compaction-make-isolate_freepages-start-at-pagebl.patch"
 #patch -p1 < "/root/machinex/patches/0187-mm-filemap-update-find_get_pages_tag-to-deal-with-sh.patch"
 #patch -p1 < "/root/machinex/patches/0188-autofs-fix-lockref-lookup.patch"
+#patch -p1 < "/root/machinex/patches/0189-revert-mm-vmscan-do-not-swap-anon-pages.patch"
 #patch -p1 < "/root/machinex/patches/0190-slub-use-sysfs-release-mechanism-for-kmem_cache.patch"
 #patch -p1 < "/root/machinex/patches/0191-fanotify-fix-EOVERFLOW-with-large-files-on-64-bit.patch"
 #patch -p1 < "/root/machinex/patches/0192-bvs.patch"
