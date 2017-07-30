@@ -279,23 +279,17 @@ static const struct pipe_buf_operations packet_pipe_buf_ops = {
 };
 
 static ssize_t
-pipe_read(struct kiocb *iocb, const struct iovec *_iov,
-	   unsigned long nr_segs, loff_t pos)
+pipe_read(struct kiocb *iocb, struct iov_iter *to)
 {
+	size_t total_len = iov_iter_count(to);
 	struct file *filp = iocb->ki_filp;
 	struct pipe_inode_info *pipe = filp->private_data;
 	int do_wakeup;
 	ssize_t ret;
-	struct iovec *iov = (struct iovec *)_iov;
-	size_t total_len;
-	struct iov_iter iter;
 
-	total_len = iov_length(iov, nr_segs);
 	/* Null read succeeds. */
 	if (unlikely(total_len == 0))
 		return 0;
-
-	iov_iter_init(&iter, READ, iov, nr_segs, total_len);
 
 	do_wakeup = 0;
 	ret = 0;
@@ -1087,8 +1081,8 @@ err:
 const struct file_operations pipefifo_fops = {
 	.open		= fifo_open,
 	.llseek		= no_llseek,
-	.read		= do_sync_read,
-	.aio_read	= pipe_read,
+	.read		= new_sync_read,
+	.read_iter	= pipe_read,
 	.write		= do_sync_write,
 	.aio_write	= pipe_write,
 	.poll		= pipe_poll,
