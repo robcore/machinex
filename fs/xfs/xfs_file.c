@@ -820,10 +820,7 @@ xfs_file_aio_write(
 
 	BUG_ON(iocb->ki_pos != pos);
 
-	ret = generic_segment_checks(iovp, &nr_segs, &ocount, VERIFY_READ);
-	if (ret)
-		return ret;
-
+	ocount = iov_length(iovp, nr_segs);
 	if (ocount == 0)
 		return 0;
 
