@@ -5412,13 +5412,6 @@ int ext4_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 	punch_start = offset >> EXT4_BLOCK_SIZE_BITS(sb);
 	punch_stop = (offset + len) >> EXT4_BLOCK_SIZE_BITS(sb);
 
-	/* Call ext4_force_commit to flush all data in case of data=journal. */
-	if (ext4_should_journal_data(inode)) {
-		ret = ext4_force_commit(inode->i_sb);
-		if (ret)
-			return ret;
-	}
-
 	/*
 	 * Need to round down offset to be aligned with page size boundary
 	 * for page size > block size.
