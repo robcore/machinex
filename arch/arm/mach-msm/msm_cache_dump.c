@@ -51,7 +51,7 @@ static int msm_cache_dump_panic(struct notifier_block *this,
 	 */
 	if (use_imem_dump_offset)
 		__raw_writel(0, MSM_IMEM_BASE + L2_DUMP_OFFSET);
-
+	preempt_disable();
 	scm_call_atomic1(L1C_SERVICE_ID, CACHE_BUFFER_DUMP_COMMAND_ID, 2);
 	scm_call_atomic1(L1C_SERVICE_ID, CACHE_BUFFER_DUMP_COMMAND_ID, 1);
 #endif

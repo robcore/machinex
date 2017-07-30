@@ -74,6 +74,9 @@ static int dload_set(const char *val, struct kernel_param *kp);
 static int download_mode = 1;
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
+
+
+
 static int panic_prep_restart(struct notifier_block *this,
 			      unsigned long event, void *ptr)
 {
@@ -143,25 +146,45 @@ static void halt_spmi_pmic_arbiter(void)
 {
 	if (scm_pmic_arbiter_disable_supported) {
 		pr_crit("Calling SCM to disable SPMI PMIC arbiter\n");
+		preempt_disable();
+		__iowmb();
 		scm_call_atomic1(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER, 0);
 	}
 }
 
+static void machinex_pm8xxx_restart_cmds(int enable)
+{
+	int ret = 0;
+	bool failed;
+
+	failed = false;
+
+	ret = pm8xxx_reset_pwr_off(enable);
+	if (ret) {
+		failed = true;
+		pm8xxx_watchdog_reset_control(1);
+	}
+
+	if (failed)
+		ret = pm8xxx_reset_pwr_off(enable);
+		if (ret)
+			panic();
+}
+
 static void __msm_power_off(int lower_pshold)
 {
-	printk(KERN_CRIT "Powering off the SoC\n");
+	pr_emerg("Powering off the SoC\n");
 #ifdef CONFIG_MSM_DLOAD_MODE
 	set_dload_mode(0);
 #endif
-	pm8xxx_reset_pwr_off(0);
+	machinex_pm8xxx_restart_cmds(0);
 
 	if (lower_pshold) {
 		halt_spmi_pmic_arbiter();
 		__raw_writel(0, PSHOLD_CTL_SU);
-		mdelay(10000);
-		printk(KERN_ERR "Powering off has failed\n");
+		mdelay(1000);
+		pr_emerg("Powering off has failed\n");
 	}
-	return;
 }
 
 static void msm_power_off(void)
@@ -172,8 +195,6 @@ static void msm_power_off(void)
 
 static void cpu_power_off(void *data)
 {
-	int rc;
-
 	pr_err("PMIC Initiated shutdown %s cpu=%d\n", __func__,
 						smp_processor_id());
 	if (smp_processor_id() == 0) {
@@ -184,16 +205,19 @@ static void cpu_power_off(void *data)
 		__msm_power_off(0);
 
 		pet_watchdog();
-		pr_err("Calling scm to disable arbiter\n");
+		pr_emerg("Calling scm to disable arbiter\n");
 		/* call secure manager to disable arbiter and never return */
-		rc = scm_call_atomic1(SCM_SVC_PWR,
+		preempt_disable();
+		__iowmb();
+		scm_call_atomic1(SCM_SVC_PWR,
 						SCM_IO_DISABLE_PMIC_ARBITER, 1);
 
-		pr_err("SCM returned even when asked to busy loop rc=%d\n", rc);
-		pr_err("waiting on pmic to shut msm down\n");
-	}
+		pr_emerg("SCM returned even when asked to busy loop rc=%d\n", rc);
+		pr_emerg("waiting on pmic to shut msm down\n");
+	} else
+		pr_emerg("FAILED TO SHUT DOWN!!!!\n");
+		panic();
 
-	preempt_disable();
 	while (1)
 		;
 }
@@ -230,12 +254,11 @@ static void resout_helper(struct work_struct *work)
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 {
 
-	pr_warn("%s PMIC Initiated shutdown\n", __func__);
+	pr_emerg("%s PMIC Initiated shutdown\n", __func__);
 	oops_in_progress = 1;
 	queue_work(restart_wq, &resout_helper_work);
 	if (smp_processor_id() == 0)
 		cpu_power_off(NULL);
-	preempt_disable();
 	while (1)
 		;
 
@@ -260,7 +283,7 @@ static void msm_restart_prepare(const char *cmd)
 		set_dload_mode(0);
 	pr_info("Going down for restart now\n");
 
-	pm8xxx_reset_pwr_off(1);
+	machinex_pm8xxx_restart_cmds(1);
 
 /*	if (!restart_reason)
 		restart_reason = ioremap_nocache((unsigned long)(MSM_IMEM_BASE \
@@ -321,7 +344,7 @@ void msm_restart(char mode, const char *cmd)
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
 		__raw_writel(0, PSHOLD_CTL_SU); /* Actually reset the chip */
-		mdelay(5000);
+		mdelay(500);
 		pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
 	}
 
@@ -334,7 +357,7 @@ void msm_restart(char mode, const char *cmd)
 	__raw_writel(0, PSHOLD_CTL_SU);
 
 
-	mdelay(10000);
+	mdelay(1000);
 	printk(KERN_ERR "Restarting has failed\n");
 }
 
@@ -347,7 +370,7 @@ void msm_kexec_hardboot(void)
 #endif
 
 	/* Set PM8XXX PMIC to reset on power off. */
-	pm8xxx_reset_pwr_off(1);
+	machinex_pm8xxx_restart_cmds(1);
 
 	/* Reboot with the recovery kernel since the boot kernel decompressor may
 	 * not support the hardboot jump. */
