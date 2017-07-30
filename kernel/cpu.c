@@ -1065,9 +1065,11 @@ int lock_screen_off_cpus(int primary)
 		if (cpu == 3 && cpu3_allowed)
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-		if (!error)
+		if (!error) {
 			cpumask_set_cpu(cpu, max_screen_off);
-		else {
+			if (cpu > 0 || cpu < 4)
+				pr_info("CPU%d is down\n", cpu);
+		} else {
 			pr_err("Error taking CPU%d down: %d\n", cpu, error);
 			break;
 		}
@@ -1127,9 +1129,11 @@ int freeze_secondary_cpus(int primary)
 		if (cpu == primary)
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-		if (!error)
+		if (!error) {
 			cpumask_set_cpu(cpu, frozen_cpus);
-		else {
+			if (cpu > 0 || cpu < 4)
+				pr_info("CPU%d is down\n", cpu);
+		} else {
 			pr_err("Error taking CPU%d down: %d\n", cpu, error);
 			break;
 		}
