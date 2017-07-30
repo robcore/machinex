@@ -46,7 +46,11 @@ static int process_vm_rw_pages(struct page **pages,
 			copy = len;
 
 		if (vm_write) {
-			copied = copy_page_from_iter(page, offset, copy, iter);
+			if (copy > iov_iter_count(iter))
+				copy = iov_iter_count(iter);
+			copied = iov_iter_copy_from_user(page, iter,
+					offset, copy);
+			iov_iter_advance(iter, copied);
 			set_page_dirty_lock(page);
 		} else {
 			copied = copy_page_to_iter(page, offset, copy, iter);

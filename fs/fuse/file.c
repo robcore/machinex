@@ -1230,7 +1230,12 @@ static ssize_t fuse_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 
 	WARN_ON(iocb->ki_pos != pos);
 
-	count = ocount = iov_length(iov, nr_segs);
+	ocount = 0;
+	err = generic_segment_checks(iov, &nr_segs, &ocount, VERIFY_READ);
+	if (err)
+		return err;
+
+	count = ocount;
 	mutex_lock(&inode->i_mutex);
 
 	/* We can write back this queue in page reclaim */
@@ -1252,13 +1257,15 @@ static ssize_t fuse_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		goto out;
 
 	if (file->f_flags & O_DIRECT) {
-		iov_iter_init(&i, iov, nr_segs, count, 0);
-		written = generic_file_direct_write(iocb, &i, pos, count, ocount);
+		written = generic_file_direct_write(iocb, iov, &nr_segs, pos, 
+						    count, ocount);
 		if (written < 0 || written == count)
 			goto out;
 
 		pos += written;
+		count -= written;
 
+		iov_iter_init(&i, iov, nr_segs, count, written);
 		written_buffered = fuse_perform_write(file, mapping, &i, pos);
 		if (written_buffered < 0) {
 			err = written_buffered;
