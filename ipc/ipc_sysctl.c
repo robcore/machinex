@@ -277,4 +277,4 @@ static int __init ipc_sysctl_init(void)
 	return 0;
 }
 
-__initcall(ipc_sysctl_init);
+device_initcall(ipc_sysctl_init);
