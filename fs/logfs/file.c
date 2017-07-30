@@ -271,7 +271,7 @@ const struct file_operations logfs_reg_fops = {
 	.llseek		= generic_file_llseek,
 	.mmap		= generic_file_readonly_mmap,
 	.open		= generic_file_open,
-	.read		= do_sync_read,
+	.read		= new_sync_read,
 	.write		= do_sync_write,
 };
 

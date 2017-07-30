@@ -662,7 +662,7 @@ v9fs_cached_file_read(struct file *filp, char __user *data, size_t count,
 {
 	if (filp->f_flags & O_DIRECT)
 		return v9fs_direct_read(filp, data, count, offset);
-	return do_sync_read(filp, data, count, offset);
+	return new_sync_read(filp, data, count, offset);
 }
 
 static ssize_t
