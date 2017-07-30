@@ -188,7 +188,7 @@ kmem_cache_create_memcg(struct mem_cgroup *memcg, const char *name, size_t size,
 	flags &= CACHE_CREATE_MASK;
 
 	if (!memcg) {
-		s = __kmem_cache_alias(memcg, name, size, align, flags, ctor);
+		s = __kmem_cache_alias(name, size, align, flags, ctor);
 		if (s)
 			goto out_unlock;
 	}
