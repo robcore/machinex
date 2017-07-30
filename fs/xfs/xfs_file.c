@@ -689,6 +689,7 @@ xfs_file_dio_aio_write(
 	int			iolock;
 	struct xfs_buftarg	*target = XFS_IS_REALTIME_INODE(ip) ?
 					mp->m_rtdev_targp : mp->m_ddev_targp;
+	struct iov_iter		from;
 
 	if ((pos & target->bt_smask) || (count & target->bt_smask))
 		return -XFS_ERROR(EINVAL);
@@ -743,8 +744,8 @@ xfs_file_dio_aio_write(
 	}
 
 	trace_xfs_file_direct_write(ip, count, iocb->ki_pos, 0);
-	ret = generic_file_direct_write(iocb, iovp,
-			&nr_segs, pos, count, ocount);
+	iov_iter_init(&from, iovp, nr_segs, count, 0);
+	ret = generic_file_direct_write(iocb, &from, pos, count, ocount);
 
 out:
 	xfs_rw_iunlock(ip, iolock);
