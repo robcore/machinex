@@ -336,10 +336,10 @@ const struct file_operations scfs_dir_fops = {
 
 const struct file_operations scfs_file_fops = {
 	.llseek		= generic_file_llseek,
-	.read 		= do_sync_read,
-	.aio_read 	= generic_file_aio_read,
-	.write 		= do_sync_write,
-	.aio_write 	= generic_file_aio_write,
+	.read = new_sync_read,
+	.read_iter = generic_file_read_iter,
+	.write = new_sync_write,
+	.write_iter = generic_file_write_iter,
 	.unlocked_ioctl	= scfs_unlocked_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl	= scfs_compat_ioctl,
