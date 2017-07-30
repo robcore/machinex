@@ -5425,6 +5425,13 @@ int ext4_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 	 */
 	ioffset = round_down(offset, PAGE_SIZE);
 
+	/* Call ext4_force_commit to flush all data in case of data=journal. */
+	if (ext4_should_journal_data(inode)) {
+		ret = ext4_force_commit(inode->i_sb);
+		if (ret)
+			return ret;
+	}
+
 	/* Write out all dirty pages */
 	ret = filemap_write_and_wait_range(inode->i_mapping, ioffset,
 					   LLONG_MAX);
