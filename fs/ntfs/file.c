@@ -2091,10 +2091,7 @@ static ssize_t ntfs_file_aio_write_nolock(struct kiocb *iocb,
 	size_t count;		/* after file limit checks */
 	ssize_t written, err;
 
-	count = 0;
-	err = generic_segment_checks(iov, &nr_segs, &count, VERIFY_READ);
-	if (err)
-		return err;
+	count = iov_length(iov, nr_segs);
 	pos = *ppos;
 	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
 	/* We can write back this queue in page reclaim. */

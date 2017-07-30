@@ -3255,8 +3255,7 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 }
 
 static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
-			      const struct iovec *iov, loff_t offset,
-			      unsigned long nr_segs)
+			      struct iov_iter *iter, loff_t offset)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
@@ -3273,9 +3272,9 @@ static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
 		return 0;
 
 	if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
-		ret = ext4_ext_direct_IO(rw, iocb, iov, offset, nr_segs);
+		ret = ext4_ext_direct_IO(rw, iocb, iter->iov, offset, iter->nr_segs);
 	else
-		ret = ext4_ind_direct_IO(rw, iocb, iov, offset, nr_segs);
+		ret = ext4_ind_direct_IO(rw, iocb, iter->iov, offset, iter->nr_segs);
 	return ret;
 }
 

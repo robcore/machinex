@@ -271,15 +271,17 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 			.iov_base = page_address(page),
 			.iov_len  = PAGE_SIZE,
 		};
+		struct iov_iter from;
 
 		init_sync_kiocb(&kiocb, swap_file);
 		kiocb.ki_pos = page_file_offset(page);
 		kiocb.ki_nbytes = PAGE_SIZE;
+		iov_iter_init(&from, &iov, 1, PAGE_SIZE, 0);
 
 		unlock_page(page);
 		ret = mapping->a_ops->direct_IO(KERNEL_WRITE,
-						&kiocb, &iov,
-						kiocb.ki_pos, 1);
+						&kiocb, &from,
+						kiocb.ki_pos);
 		if (ret == PAGE_SIZE) {
 			count_vm_event(PSWPOUT);
 			ret = 0;
