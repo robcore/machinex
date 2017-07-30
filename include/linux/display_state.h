@@ -19,8 +19,10 @@ static bool system_is_restarting(void)
 {
 	if (system_state == SYSTEM_POWER_OFF ||
 		system_state == SYSTEM_RESTART ||
-		system_state == SYSTEM_HALT)
+		system_state == SYSTEM_HALT ||
+		system_state == SYSTEM_BOOTING)
 		return true;
+
 	return false;
 }
 

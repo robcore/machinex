@@ -88,7 +88,8 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	unsigned int counter;
 
-	if ((poweroff_charging) || (unlikely(system_state != SYSTEM_RUNNING))) {
+	if ((poweroff_charging) || (unlikely(system_state != SYSTEM_RUNNING)) ||
+		(unlikely(system_is_restarting())) {
 		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System \
 				State!\n");
 		return;
