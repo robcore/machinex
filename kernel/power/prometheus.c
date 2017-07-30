@@ -27,10 +27,11 @@
 #include <linux/prometheus.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/cpu.h>
+#include <linux/display_state.h>
 #include "power.h"
 
 #define VERSION 3
-#define VERSION_MIN 0
+#define VERSION_MIN 1
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
