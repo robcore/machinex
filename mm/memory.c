@@ -3320,7 +3320,7 @@ oom:
 }
 
 /*
- * __do_fault() tries to create a new page mapping. It aggressively
+ * do_fault() tries to create a new page mapping. It aggressively
  * tries to share with existing pages, but makes a separate copy if
  * the FAULT_FLAG_WRITE is set in the flags parameter in order to avoid
  * the next page fault.
