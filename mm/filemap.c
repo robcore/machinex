@@ -33,7 +33,6 @@
 #include <linux/hardirq.h> /* for BUG_ON(!in_atomic()) only */
 #include <linux/memcontrol.h>
 #include <linux/cleancache.h>
-#include <linux/rmap.h>
 #include "internal.h"
 
 #define CREATE_TRACE_POINTS
@@ -1967,11 +1966,11 @@ int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	struct inode *inode = mapping->host;
 	pgoff_t offset = vmf->pgoff;
 	struct page *page;
-	loff_t size;
+	pgoff_t size;
 	int ret = 0;
 
-	size = round_up(i_size_read(inode), PAGE_CACHE_SIZE);
-	if (offset >= size >> PAGE_CACHE_SHIFT)
+	size = (i_size_read(inode) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
+	if (offset >= size)
 		return VM_FAULT_SIGBUS;
 
 	/*
@@ -2020,8 +2019,8 @@ retry_find:
 	 * Found the page and have a reference on it.
 	 * We must recheck i_size under page lock.
 	 */
-	size = round_up(i_size_read(inode), PAGE_CACHE_SIZE);
-	if (unlikely(offset >= size >> PAGE_CACHE_SHIFT)) {
+	size = (i_size_read(inode) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
+	if (unlikely(offset >= size)) {
 		unlock_page(page);
 		page_cache_release(page);
 		return VM_FAULT_SIGBUS;
@@ -2079,78 +2078,6 @@ page_not_uptodate:
 }
 EXPORT_SYMBOL(filemap_fault);
 
-void filemap_map_pages(struct vm_area_struct *vma, struct vm_fault *vmf)
-{
-	struct radix_tree_iter iter;
-	void **slot;
-	struct file *file = vma->vm_file;
-	struct address_space *mapping = file->f_mapping;
-	loff_t size;
-	struct page *page;
-	unsigned long address = (unsigned long) vmf->virtual_address;
-	unsigned long addr;
-	pte_t *pte;
-
-	rcu_read_lock();
-	radix_tree_for_each_slot(slot, &mapping->page_tree, &iter, vmf->pgoff) {
-		if (iter.index > vmf->max_pgoff)
-			break;
-repeat:
-		page = radix_tree_deref_slot(slot);
-		if (unlikely(!page))
-			goto next;
-		if (radix_tree_exception(page)) {
-			if (radix_tree_deref_retry(page))
-				break;
-			else
-				goto next;
-		}
-
-		if (!page_cache_get_speculative(page))
-			goto repeat;
-
-		/* Has the page moved? */
-		if (unlikely(page != *slot)) {
-			page_cache_release(page);
-			goto repeat;
-		}
-
-		if (!PageUptodate(page) ||
-				PageReadahead(page) ||
-				PageHWPoison(page))
-			goto skip;
-		if (!trylock_page(page))
-			goto skip;
-
-		if (page->mapping != mapping || !PageUptodate(page))
-			goto unlock;
-
-		size = round_up(i_size_read(mapping->host), PAGE_CACHE_SIZE);
-		if (page->index >= size >> PAGE_CACHE_SHIFT)
-			goto unlock;
-
-		pte = vmf->pte + page->index - vmf->pgoff;
-		if (!pte_none(*pte))
-			goto unlock;
-
-		if (file->f_ra.mmap_miss > 0)
-			file->f_ra.mmap_miss--;
-		addr = address + (page->index - vmf->pgoff) * PAGE_SIZE;
-		do_set_pte(vma, addr, page, pte, false, false);
-		unlock_page(page);
-		goto next;
-unlock:
-		unlock_page(page);
-skip:
-		page_cache_release(page);
-next:
-		if (iter.index == vmf->max_pgoff)
-			break;
-	}
-	rcu_read_unlock();
-}
-EXPORT_SYMBOL(filemap_map_pages);
-
 int filemap_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct page *page = vmf->page;
@@ -2180,7 +2107,6 @@ EXPORT_SYMBOL(filemap_page_mkwrite);
 
 const struct vm_operations_struct generic_file_vm_ops = {
 	.fault		= filemap_fault,
-	.map_pages	= filemap_map_pages,
 	.page_mkwrite	= filemap_page_mkwrite,
 	.remap_pages	= generic_file_remap_pages,
 };
