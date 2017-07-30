@@ -267,19 +267,25 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 		struct kiocb kiocb;
 		struct file *swap_file = sis->swap_file;
 		struct address_space *mapping = swap_file->f_mapping;
-		struct iovec iov = {
-			.iov_base = page_address(page),
-			.iov_len  = PAGE_SIZE,
+		struct bio_vec bv = {
+			.bv_page = page,
+			.bv_len  = PAGE_SIZE,
+			.bv_offset = 0
 		};
-		struct iov_iter from;
+		struct iov_iter from = {
+			.type = ITER_BVEC | WRITE,
+			.count = PAGE_SIZE,
+			.iov_offset = 0,
+			.nr_segs = 1,
+			.bvec = &bv
+		};
 
 		init_sync_kiocb(&kiocb, swap_file);
 		kiocb.ki_pos = page_file_offset(page);
 		kiocb.ki_nbytes = PAGE_SIZE;
-		iov_iter_init(&from, KERNEL_WRITE, &iov, 1, PAGE_SIZE);
 
 		unlock_page(page);
-		ret = mapping->a_ops->direct_IO(KERNEL_WRITE,
+		ret = mapping->a_ops->direct_IO(ITER_BVEC | WRITE,
 						&kiocb, &from,
 						kiocb.ki_pos);
 		if (ret == PAGE_SIZE) {
