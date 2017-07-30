@@ -72,6 +72,10 @@ size_t copy_page_to_iter(struct page *page, size_t offset, size_t bytes,
 	}
 	kunmap(page);
 done:
+	if (skip == iov->iov_len) {
+		iov++;
+		skip = 0;
+	}
 	i->count -= wanted - bytes;
 	i->nr_segs -= iov - i->iov;
 	i->iov = iov;
@@ -150,6 +154,10 @@ size_t copy_page_from_iter(struct page *page, size_t offset, size_t bytes,
 	}
 	kunmap(page);
 done:
+	if (skip == iov->iov_len) {
+		iov++;
+		skip = 0;
+	}
 	i->count -= wanted - bytes;
 	i->nr_segs -= iov - i->iov;
 	i->iov = iov;
