@@ -3078,6 +3078,7 @@ static ssize_t reiserfs_direct_IO(int rw, struct kiocb *iocb,
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
+	size_t count = iov_iter_count(iter);
 	ssize_t ret;
 
 	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset,
