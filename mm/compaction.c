@@ -541,7 +541,6 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 			mt = get_pageblock_migratetype(page);
 			if (!cc->sync && !migrate_async_suitable(mt)) {
 				cc->finished_update_migrate = true;
-				skipped_async_unsuitable = true;
 				goto next_pageblock;
 			}
 		}
