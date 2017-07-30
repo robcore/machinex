@@ -230,7 +230,7 @@ void ext4_evict_inode(struct inode *inode)
 
 	if (ext4_should_order_data(inode))
 		ext4_begin_ordered_truncate(inode, 0);
-	truncate_inode_pages(&inode->i_data, 0);
+	truncate_inode_pages_final(&inode->i_data);
 	WARN_ON(atomic_read(&EXT4_I(inode)->i_ioend_count));
 
 	/*
