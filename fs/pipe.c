@@ -122,52 +122,6 @@ void pipe_wait(struct pipe_inode_info *pipe)
 	pipe_lock(pipe);
 }
 
-static int
-pipe_iov_copy_from_user(void *addr, int *offset, struct iovec *iov,
-			size_t *remaining, int atomic)
-{
-	unsigned long copy;
-
-	while (*remaining > 0) {
-		while (!iov->iov_len)
-			iov++;
-		copy = min_t(unsigned long, *remaining, iov->iov_len);
-
-		if (atomic) {
-			if (__copy_from_user_inatomic(addr + *offset,
-						      iov->iov_base, copy))
-				return -EFAULT;
-		} else {
-			if (copy_from_user(addr + *offset,
-					   iov->iov_base, copy))
-				return -EFAULT;
-		}
-		*offset += copy;
-		*remaining -= copy;
-		iov->iov_base += copy;
-		iov->iov_len -= copy;
-	}
-	return 0;
-}
-
-/*
- * Pre-fault in the user memory, so we can use atomic copies.
- */
-static void iov_fault_in_pages_read(struct iovec *iov, unsigned long len)
-{
-	while (!iov->iov_len)
-		iov++;
-
-	while (len > 0) {
-		unsigned long this_len;
-
-		this_len = min_t(unsigned long, len, iov->iov_len);
-		fault_in_pages_readable(iov->iov_base, this_len);
-		len -= this_len;
-		iov++;
-	}
-}
-
 static void anon_pipe_buf_release(struct pipe_inode_info *pipe,
 				  struct pipe_buffer *buf)
 {
@@ -300,10 +254,9 @@ pipe_read(struct kiocb *iocb, struct iov_iter *to)
 			int curbuf = pipe->curbuf;
 			struct pipe_buffer *buf = pipe->bufs + curbuf;
 			const struct pipe_buf_operations *ops = buf->ops;
-			size_t chars = buf->len, remaining;
+			size_t chars = buf->len;
 			size_t written;
 			int error;
-			int offset;
 
 			if (chars > total_len)
 				chars = total_len;
@@ -314,7 +267,8 @@ pipe_read(struct kiocb *iocb, struct iov_iter *to)
 					ret = error;
 				break;
 			}
-			written = copy_page_to_iter(buf->page, buf->offset, chars, &iter);
+
+			written = copy_page_to_iter(buf->page, buf->offset, chars, to);
 			if (unlikely(written < chars)) {
 				if (!ret)
 					ret = -EFAULT;
@@ -419,8 +373,6 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 		int offset = buf->offset + buf->len;
 
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
-			size_t remaining = chars;
-
 			int error = ops->confirm(pipe, buf);
 			if (error)
 				goto out;
@@ -453,8 +405,6 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 			struct pipe_buffer *buf = pipe->bufs + newbuf;
 			struct page *page = pipe->tmp_page;
 			int copied;
-			int offset = 0;
-			size_t remaining;
 
 			if (!page) {
 				page = alloc_page(GFP_HIGHUSER);
