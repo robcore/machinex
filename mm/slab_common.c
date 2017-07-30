@@ -190,7 +190,7 @@ kmem_cache_create_memcg(struct mem_cgroup *memcg, const char *name, size_t size,
 	if (!memcg) {
 		s = __kmem_cache_alias(name, size, align, flags, ctor);
 		if (s)
-			goto out_unlock;
+			goto out_locked;
 	}
 
 	s = kmem_cache_zalloc(kmem_cache, GFP_KERNEL);
