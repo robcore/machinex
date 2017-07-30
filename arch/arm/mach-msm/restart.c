@@ -168,7 +168,7 @@ static void machinex_pm8xxx_restart_cmds(int enable)
 	if (failed)
 		ret = pm8xxx_reset_pwr_off(enable);
 		if (ret)
-			panic();
+			panic("PM8XXX reset FAILED!!%d\n", ret);
 }
 
 static void __msm_power_off(int lower_pshold)
@@ -209,14 +209,13 @@ static void cpu_power_off(void *data)
 		/* call secure manager to disable arbiter and never return */
 		preempt_disable();
 		__iowmb();
-		scm_call_atomic1(SCM_SVC_PWR,
+		int rc;
+		rc = scm_call_atomic1(SCM_SVC_PWR,
 						SCM_IO_DISABLE_PMIC_ARBITER, 1);
 
-		pr_emerg("SCM returned even when asked to busy loop rc=%d\n", rc);
+		panic("SCM returned even when asked to busy loop rc=%d\n", rc);
 		pr_emerg("waiting on pmic to shut msm down\n");
-	} else
-		pr_emerg("FAILED TO SHUT DOWN!!!!\n");
-		panic();
+	}
 
 	while (1)
 		;
