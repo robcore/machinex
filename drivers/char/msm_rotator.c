@@ -2249,7 +2249,7 @@ static int msm_rotator_do_rotate(unsigned long arg)
 		atomic_set(&mrd->commit_q_w, 0);
 	atomic_inc(&mrd->commit_q_cnt);
 
-	mod_delayed_work(system_wq, &mrd->commit_work, 0);
+	schedule_work(&mrd->commit_work);
 	mutex_unlock(&mrd->commit_mutex);
 
 	if (info.wait_for_finish)
@@ -3011,7 +3011,7 @@ static int msm_rotator_probe(struct platform_device *pdev)
 	}
 
 	init_waitqueue_head(&msm_rotator_dev->wq);
-	INIT_DELAYED_WORK(&msm_rotator_dev->commit_work, rot_commit_wq_handler);
+	INIT_WORK(&msm_rotator_dev->commit_work, rot_commit_wq_handler);
 	init_completion(&msm_rotator_dev->commit_comp);
 	mutex_init(&msm_rotator_dev->commit_mutex);
 	mutex_init(&msm_rotator_dev->commit_wq_mutex);
