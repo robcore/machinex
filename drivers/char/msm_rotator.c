@@ -453,7 +453,7 @@ int msm_rotator_imem_allocate(int requestor)
 		rc = 1;
 #endif
 	if (rc == 1) {
-		cancel_delayed_work_sync(&msm_rotator_dev->imem_clk_work);
+		cancel_delayed_work(&msm_rotator_dev->imem_clk_work);
 		if (msm_rotator_dev->imem_clk_state != CLK_EN
 			&& msm_rotator_dev->imem_clk) {
 			clk_prepare_enable(msm_rotator_dev->imem_clk);
@@ -469,12 +469,12 @@ void msm_rotator_imem_free(int requestor)
 {
 #ifdef CONFIG_MSM_ROTATOR_USE_IMEM
 	if (msm_rotator_dev->imem_owner == requestor) {
-		schedule_delayed_work(&msm_rotator_dev->imem_clk_work, HZ);
+		mod_delayed_work(system_wq, &msm_rotator_dev->imem_clk_work, msecs_to_jiffies(100));
 		mutex_unlock(&msm_rotator_dev->imem_lock);
 	}
 #else
 	if (requestor == JPEG_REQUEST)
-		schedule_delayed_work(&msm_rotator_dev->imem_clk_work, HZ);
+		mod_delayed_work(system_wq, &msm_rotator_dev->imem_clk_work, msecs_to_jiffies(100));
 #endif
 }
 EXPORT_SYMBOL(msm_rotator_imem_free);
@@ -2031,7 +2031,7 @@ static int msm_rotator_do_rotate_sub(
 	msm_rotator_wait_for_fence(commit_info->acq_fen);
 	commit_info->acq_fen = NULL;
 
-	cancel_delayed_work_sync(&msm_rotator_dev->rot_clk_work);
+	cancel_delayed_work(&msm_rotator_dev->rot_clk_work);
 	if (msm_rotator_dev->rot_clk_state != CLK_EN) {
 		enable_rot_clks();
 		msm_rotator_dev->rot_clk_state = CLK_EN;
@@ -2159,7 +2159,7 @@ do_rotate_exit:
 #ifdef CONFIG_MSM_ROTATOR_USE_IMEM
 	msm_rotator_imem_free(ROTATOR_REQUEST);
 #endif
-	schedule_delayed_work(&msm_rotator_dev->rot_clk_work, HZ);
+	mod_delayed_work(system_wq, &msm_rotator_dev->rot_clk_work, msecs_to_jiffies(100));
 	put_img(dstp1_file, dstp1_ihdl, ROTATOR_DST_DOMAIN,
 		img_info->secure);
 	put_img(srcp1_file, srcp1_ihdl, ROTATOR_SRC_DOMAIN, 0);
@@ -2191,7 +2191,7 @@ static void rot_wait_for_commit_queue(u32 is_all)
 		if ((!is_all) &&
 			(atomic_read(&mrd->commit_q_cnt) < MAX_COMMIT_QUEUE))
 			break;
-		INIT_COMPLETION(mrd->commit_comp);
+		reinit_completion(&mrd->commit_comp);
 		mutex_unlock(&mrd->commit_mutex);
 		ret = wait_for_completion_interruptible_timeout(
 				&mrd->commit_comp,
@@ -2249,7 +2249,7 @@ static int msm_rotator_do_rotate(unsigned long arg)
 		atomic_set(&mrd->commit_q_w, 0);
 	atomic_inc(&mrd->commit_q_cnt);
 
-	schedule_work(&mrd->commit_work);
+	mod_delayed_work(system_wq, &mrd->commit_work, 0);
 	mutex_unlock(&mrd->commit_mutex);
 
 	if (info.wait_for_finish)
@@ -3011,7 +3011,7 @@ static int msm_rotator_probe(struct platform_device *pdev)
 	}
 
 	init_waitqueue_head(&msm_rotator_dev->wq);
-	INIT_WORK(&msm_rotator_dev->commit_work, rot_commit_wq_handler);
+	INIT_DELAYED_WORK(&msm_rotator_dev->commit_work, rot_commit_wq_handler);
 	init_completion(&msm_rotator_dev->commit_comp);
 	mutex_init(&msm_rotator_dev->commit_mutex);
 	mutex_init(&msm_rotator_dev->commit_wq_mutex);
