@@ -2225,7 +2225,7 @@ cifs_iovec_write(struct file *file, const struct iovec *iov,
 	else
 		pid = current->tgid;
 
-	iov_iter_init(&it, iov, nr_segs, len, 0);
+	iov_iter_init(&it, WRITE, iov, nr_segs, len);
 	do {
 		size_t save_len;
 

@@ -744,7 +744,7 @@ xfs_file_dio_aio_write(
 	}
 
 	trace_xfs_file_direct_write(ip, count, iocb->ki_pos, 0);
-	iov_iter_init(&from, iovp, nr_segs, count, 0);
+	iov_iter_init(&from, WRITE, iovp, nr_segs, count);
 	ret = generic_file_direct_write(iocb, &from, pos, count, ocount);
 
 out:
