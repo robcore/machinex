@@ -195,6 +195,7 @@ static void msm_power_off(void)
 
 static void cpu_power_off(void *data)
 {
+	s32 rc;
 	pr_err("PMIC Initiated shutdown %s cpu=%d\n", __func__,
 						smp_processor_id());
 	if (smp_processor_id() == 0) {
@@ -209,10 +210,8 @@ static void cpu_power_off(void *data)
 		/* call secure manager to disable arbiter and never return */
 		preempt_disable();
 		__iowmb();
-		int rc;
 		rc = scm_call_atomic1(SCM_SVC_PWR,
 						SCM_IO_DISABLE_PMIC_ARBITER, 1);
-
 		panic("SCM returned even when asked to busy loop rc=%d\n", rc);
 		pr_emerg("waiting on pmic to shut msm down\n");
 	}
