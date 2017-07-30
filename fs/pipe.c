@@ -388,24 +388,19 @@ static inline int is_packetized(struct file *file)
 }
 
 static ssize_t
-pipe_write(struct kiocb *iocb, const struct iovec *_iov,
-	    unsigned long nr_segs, loff_t ppos)
+pipe_write(struct kiocb *iocb, struct iov_iter *from)
 {
 	struct file *filp = iocb->ki_filp;
 	struct pipe_inode_info *pipe = filp->private_data;
-	ssize_t ret;
-	int do_wakeup;
-	struct iovec *iov = (struct iovec *)_iov;
-	size_t total_len;
+	ssize_t ret = 0;
+	int do_wakeup = 0;
+	size_t total_len = iov_iter_count(from);
 	ssize_t chars;
 
-	total_len = iov_length(iov, nr_segs);
 	/* Null write succeeds. */
 	if (unlikely(total_len == 0))
 		return 0;
 
-	do_wakeup = 0;
-	ret = 0;
 	__pipe_lock(pipe);
 
 	if (!pipe->readers) {
@@ -424,39 +419,21 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 		int offset = buf->offset + buf->len;
 
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
-			int error, atomic = 1;
-			void *addr;
 			size_t remaining = chars;
 
-			error = ops->confirm(pipe, buf);
+			int error = ops->confirm(pipe, buf);
 			if (error)
 				goto out;
 
-			iov_fault_in_pages_read(iov, chars);
-redo1:
-			if (atomic)
-				addr = kmap_atomic(buf->page);
-			else
-				addr = kmap(buf->page);
-			error = pipe_iov_copy_from_user(addr, &offset, iov,
-							&remaining, atomic);
-			if (atomic)
-				kunmap_atomic(addr);
-			else
-				kunmap(buf->page);
-			ret = error;
-			do_wakeup = 1;
-			if (error) {
-				if (atomic) {
-					atomic = 0;
-					goto redo1;
-				}
+			ret = copy_page_from_iter(buf->page, offset, chars, from);
+			if (unlikely(ret < chars)) {
+				error = -EFAULT;
 				goto out;
 			}
+			do_wakeup = 1;
 			buf->len += chars;
-			total_len -= chars;
 			ret = chars;
-			if (!total_len)
+			if (!iov_iter_count(from))
 				goto out;
 		}
 	}
@@ -475,8 +452,7 @@ redo1:
 			int newbuf = (pipe->curbuf + bufs) & (pipe->buffers-1);
 			struct pipe_buffer *buf = pipe->bufs + newbuf;
 			struct page *page = pipe->tmp_page;
-			char *src;
-			int error, atomic = 1;
+			int copied;
 			int offset = 0;
 			size_t remaining;
 
@@ -494,41 +470,19 @@ redo1:
 			 * FIXME! Is this really true?
 			 */
 			do_wakeup = 1;
-			chars = PAGE_SIZE;
-			if (chars > total_len)
-				chars = total_len;
-
-			iov_fault_in_pages_read(iov, chars);
-			remaining = chars;
-redo2:
-			if (atomic)
-				src = kmap_atomic(page);
-			else
-				src = kmap(page);
-
-			error = pipe_iov_copy_from_user(src, &offset, iov,
-							&remaining, atomic);
-			if (atomic)
-				kunmap_atomic(src);
-			else
-				kunmap(page);
-
-			if (unlikely(error)) {
-				if (atomic) {
-					atomic = 0;
-					goto redo2;
-				}
+			copied = copy_page_from_iter(page, 0, PAGE_SIZE, from);
+			if (unlikely(copied < PAGE_SIZE && iov_iter_count(from))) {
 				if (!ret)
-					ret = error;
+					ret = -EFAULT;
 				break;
 			}
-			ret += chars;
+			ret += copied;
 
 			/* Insert it into the buffer array */
 			buf->page = page;
 			buf->ops = &anon_pipe_buf_ops;
 			buf->offset = 0;
-			buf->len = chars;
+			buf->len = copied;
 			buf->flags = 0;
 			if (is_packetized(filp)) {
 				buf->ops = &packet_pipe_buf_ops;
@@ -537,8 +491,7 @@ redo2:
 			pipe->nrbufs = ++bufs;
 			pipe->tmp_page = NULL;
 
-			total_len -= chars;
-			if (!total_len)
+			if (!iov_iter_count(from))
 				break;
 		}
 		if (bufs < pipe->buffers)
@@ -1083,8 +1036,8 @@ const struct file_operations pipefifo_fops = {
 	.llseek		= no_llseek,
 	.read		= new_sync_read,
 	.read_iter	= pipe_read,
-	.write		= do_sync_write,
-	.aio_write	= pipe_write,
+	.write		= new_sync_write,
+	.write_iter	= pipe_write,
 	.poll		= pipe_poll,
 	.unlocked_ioctl	= pipe_ioctl,
 	.release	= pipe_release,
