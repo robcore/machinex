@@ -2031,7 +2031,7 @@ static int msm_rotator_do_rotate_sub(
 	msm_rotator_wait_for_fence(commit_info->acq_fen);
 	commit_info->acq_fen = NULL;
 
-	cancel_delayed_work_sync(&msm_rotator_dev->rot_clk_work);
+	cancel_delayed_work(&msm_rotator_dev->rot_clk_work);
 	if (msm_rotator_dev->rot_clk_state != CLK_EN) {
 		enable_rot_clks();
 		msm_rotator_dev->rot_clk_state = CLK_EN;
