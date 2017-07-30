@@ -182,7 +182,7 @@ static void __msm_power_off(int lower_pshold)
 	if (lower_pshold) {
 		halt_spmi_pmic_arbiter();
 		__raw_writel(0, PSHOLD_CTL_SU);
-		mdelay(1000);
+		mdelay(8000);
 		pr_emerg("Powering off has failed\n");
 	}
 }
@@ -317,14 +317,14 @@ static void msm_restart_prepare(const char *cmd)
                   && !kstrtoul(cmd + 4, 0, &value)) {
                 __raw_writel(0xabcc0000 | value, restart_reason);
 		} else if (strlen(cmd) == 0) {
-			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
+			pr_notice("%s : value of cmd is NULL.\n", __func__);
 			__raw_writel(0x12345678, restart_reason);
 
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
 	} else {
-		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
+		pr_notice("%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
 	}
 
@@ -342,7 +342,7 @@ void msm_restart(char mode, const char *cmd)
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
 		__raw_writel(0, PSHOLD_CTL_SU); /* Actually reset the chip */
-		mdelay(500);
+		mdelay(3000);
 		pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
 	}
 
@@ -355,8 +355,8 @@ void msm_restart(char mode, const char *cmd)
 	__raw_writel(0, PSHOLD_CTL_SU);
 
 
-	mdelay(1000);
-	printk(KERN_ERR "Restarting has failed\n");
+	mdelay(8000);
+	pr_err("restarting has failed\n");
 }
 
 #ifdef CONFIG_KEXEC_HARDBOOT
