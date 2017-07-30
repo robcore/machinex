@@ -44,10 +44,15 @@ static void *alloc_fdmem(size_t size)
 	return vmalloc(size);
 }
 
+static void free_fdmem(void *ptr)
+{
+	is_vmalloc_addr(ptr) ? vfree(ptr) : kfree(ptr);
+}
+
 static void __free_fdtable(struct fdtable *fdt)
 {
-	kvfree(fdt->fd);
-	kvfree(fdt->open_fds);
+	free_fdmem(fdt->fd);
+	free_fdmem(fdt->open_fds);
 	kfree(fdt);
 }
 
@@ -125,7 +130,7 @@ static struct fdtable * alloc_fdtable(unsigned int nr)
 	return fdt;
 
 out_arr:
-	kvfree(fdt->fd);
+	free_fdmem(fdt->fd);
 out_fdt:
 	kfree(fdt);
 out:

@@ -50,7 +50,6 @@ CFLAGS_hweight.o = $(subst $(quote),,$(CONFIG_ARCH_HWEIGHT_CFLAGS))
 obj-$(CONFIG_GENERIC_HWEIGHT) += hweight.o
 
 obj-$(CONFIG_BTREE) += btree.o
-obj-$(CONFIG_INTERVAL_TREE) += interval_tree.o
 obj-$(CONFIG_ASSOCIATIVE_ARRAY) += assoc_array.o
 obj-$(CONFIG_DEBUG_PREEMPT) += smp_processor_id.o
 obj-$(CONFIG_DEBUG_LIST) += list_debug.o
@@ -151,6 +150,8 @@ obj-$(CONFIG_ASN1) += asn1_decoder.o
 
 obj-$(CONFIG_PRIO_TREE_TEST) += prio_tree_test.o
 obj-$(CONFIG_INTERVAL_TREE_TEST) += interval_tree_test.o
+
+interval_tree_test-objs := interval_tree_test_main.o interval_tree.o
 
 hostprogs-y	:= gen_crc32table
 clean-files	:= crc32table.h

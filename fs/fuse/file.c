@@ -206,8 +206,6 @@ void fuse_finish_open(struct inode *inode, struct file *file)
 		i_size_write(inode, 0);
 		spin_unlock(&fc->lock);
 		fuse_invalidate_attr(inode);
-		if (fc->writeback_cache)
-			file_update_time(file);
 	}
 	if ((file->f_mode & FMODE_WRITE) && fc->writeback_cache)
 		fuse_link_write_file(file);
@@ -217,26 +215,18 @@ int fuse_open_common(struct inode *inode, struct file *file, bool isdir)
 {
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	int err;
-	bool lock_inode = (file->f_flags & O_TRUNC) &&
-			  fc->atomic_o_trunc &&
-			  fc->writeback_cache;
 
 	err = generic_file_open(inode, file);
 	if (err)
 		return err;
 
-	if (lock_inode)
-		mutex_lock(&inode->i_mutex);
-
 	err = fuse_do_open(fc, get_node_id(inode), file, isdir);
+	if (err)
+		return err;
 
-	if (!err)
-		fuse_finish_open(inode, file);
+	fuse_finish_open(inode, file);
 
-	if (lock_inode)
-		mutex_unlock(&inode->i_mutex);
-
-	return err;
+	return 0;
 }
 
 static void fuse_prepare_release(struct fuse_file *ff, int flags, int opcode)
@@ -307,7 +297,10 @@ static int fuse_release(struct inode *inode, struct file *file)
 
 	/* see fuse_vma_close() for !writeback_cache case */
 	if (fc->writeback_cache)
-		write_inode_now(inode, 1);
+		filemap_write_and_wait(file->f_mapping);
+
+	if (test_bit(FUSE_I_MTIME_DIRTY, &get_fuse_inode(inode)->state))
+		fuse_flush_mtime(file, true);
 
 	fuse_release_common(file, FUSE_RELEASE);
 
@@ -429,7 +422,7 @@ static int fuse_flush(struct file *file, fl_owner_t id)
 	if (fc->no_flush)
 		return 0;
 
-	err = write_inode_now(inode, 1);
+	err = filemap_write_and_wait(file->f_mapping);
 	if (err)
 		return err;
 
@@ -470,6 +463,13 @@ int fuse_fsync_common(struct file *file, loff_t start, loff_t end,
 	if (is_bad_inode(inode))
 		return -EIO;
 
+	err = filemap_write_and_wait_range(inode->i_mapping, start, end);
+	if (err)
+		return err;
+
+	if ((!isdir && fc->no_fsync) || (isdir && fc->no_fsyncdir))
+		return 0;
+
 	mutex_lock(&inode->i_mutex);
 
 	/*
@@ -477,17 +477,17 @@ int fuse_fsync_common(struct file *file, loff_t start, loff_t end,
 	 * wait for all outstanding writes, before sending the FSYNC
 	 * request.
 	 */
-	err = filemap_write_and_wait_range(inode->i_mapping, start, end);
+	err = write_inode_now(inode, 0);
 	if (err)
 		goto out;
 
 	fuse_sync_writes(inode);
-	err = sync_inode_metadata(inode, 1);
-	if (err)
-		goto out;
 
-	if ((!isdir && fc->no_fsync) || (isdir && fc->no_fsyncdir))
-		goto out;
+	if (test_bit(FUSE_I_MTIME_DIRTY, &get_fuse_inode(inode)->state)) {
+		int err = fuse_flush_mtime(file, false);
+		if (err)
+			goto out;
+	}
 
 	req = fuse_get_req_nopages(fc);
 	if (IS_ERR(req)) {
@@ -1681,13 +1681,13 @@ static void fuse_writepage_end(struct fuse_conn *fc, struct fuse_req *req)
 	fuse_writepage_free(fc, req);
 }
 
-static struct fuse_file *__fuse_write_file_get(struct fuse_conn *fc,
-					       struct fuse_inode *fi)
+static struct fuse_file *fuse_write_file_get(struct fuse_conn *fc,
+					     struct fuse_inode *fi)
 {
 	struct fuse_file *ff = NULL;
 
 	spin_lock(&fc->lock);
-	if (!list_empty(&fi->write_files)) {
+	if (!WARN_ON(list_empty(&fi->write_files))) {
 		ff = list_entry(fi->write_files.next, struct fuse_file,
 				write_entry);
 		fuse_file_get(ff);
@@ -1695,29 +1695,6 @@ static struct fuse_file *__fuse_write_file_get(struct fuse_conn *fc,
 	spin_unlock(&fc->lock);
 
 	return ff;
-}
-
-static struct fuse_file *fuse_write_file_get(struct fuse_conn *fc,
-					     struct fuse_inode *fi)
-{
-	struct fuse_file *ff = __fuse_write_file_get(fc, fi);
-	WARN_ON(!ff);
-	return ff;
-}
-
-int fuse_write_inode(struct inode *inode, struct writeback_control *wbc)
-{
-	struct fuse_conn *fc = get_fuse_conn(inode);
-	struct fuse_inode *fi = get_fuse_inode(inode);
-	struct fuse_file *ff;
-	int err;
-
-	ff = __fuse_write_file_get(fc, fi);
-	err = fuse_flush_times(inode, ff);
-	if (ff)
-		fuse_file_put(ff, 0);
-
-	return err;
 }
 
 static int fuse_writepage_locked(struct page *page)
@@ -3044,8 +3021,12 @@ static long fuse_file_fallocate(struct file *file, int mode, loff_t offset,
 	if (!(mode & FALLOC_FL_KEEP_SIZE)) {
 		bool changed = fuse_write_update_size(inode, offset + length);
 
-		if (changed && fc->writeback_cache)
-			file_update_time(file);
+		if (changed && fc->writeback_cache) {
+			struct fuse_inode *fi = get_fuse_inode(inode);
+
+			inode->i_mtime = current_fs_time(inode->i_sb);
+			set_bit(FUSE_I_MTIME_DIRTY, &fi->state);
+		}
 	}
 
 	if (mode & FALLOC_FL_PUNCH_HOLE)
