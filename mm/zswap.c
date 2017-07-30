@@ -189,7 +189,7 @@ static void zswap_comp_exit(void)
  * type - the swap type for the entry.  Used to map back to the zswap_tree
  *        structure that contains the entry.
  * offset - the swap offset for the entry.  Index into the red-black tree.
- * handle - zsmalloc allocation handle that stores the compressed page data
+ * handle - zbud allocation handle that stores the compressed page data
  * length - the length in bytes of the compressed page data.  Needed during
  *           decompression
  */
@@ -444,7 +444,7 @@ static struct zs_ops zswap_zs_ops = {
 **********************************/
 
 /*
- * Carries out the common pattern of freeing and entry's zsmalloc allocation,
+ * Carries out the common pattern of freeing and entry's zbud allocation,
  * freeing the entry itself, and decrementing the number of stored pages.
  */
 static void zswap_free_entry(struct zswap_tree *tree, struct zswap_entry *entry)
