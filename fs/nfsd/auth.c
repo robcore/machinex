@@ -70,10 +70,8 @@ int nfsd_setuser(struct svc_rqst *rqstp, struct svc_export *exp)
 	if (new->fsgid == (gid_t) -1)
 		new->fsgid = exp->ex_anon_gid;
 
-	ret = set_groups(new, gi);
+	set_groups(new, gi);
 	put_group_info(gi);
-	if (ret < 0)
-		goto error;
 
 	if (new->fsuid)
 		new->cap_effective = cap_drop_nfsd_set(new->cap_effective);
@@ -88,7 +86,6 @@ int nfsd_setuser(struct svc_rqst *rqstp, struct svc_export *exp)
 
 oom:
 	ret = -ENOMEM;
-error:
 	abort_creds(new);
 	return ret;
 }
