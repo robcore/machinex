@@ -2191,7 +2191,7 @@ static void rot_wait_for_commit_queue(u32 is_all)
 		if ((!is_all) &&
 			(atomic_read(&mrd->commit_q_cnt) < MAX_COMMIT_QUEUE))
 			break;
-		reinit_completion(mrd->commit_comp);
+		reinit_completion(&mrd->commit_comp);
 		mutex_unlock(&mrd->commit_mutex);
 		ret = wait_for_completion_interruptible_timeout(
 				&mrd->commit_comp,
