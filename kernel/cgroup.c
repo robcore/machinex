@@ -1320,7 +1320,7 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 	/* Consistency checks */
 
 	if (opts->flags & CGRP_ROOT_SANE_BEHAVIOR) {
-		pr_warning("cgroup: sane_behavior: this is still under development and its behaviors will change, proceed at your own risk\n");
+		pr_warn("cgroup: sane_behavior: this is still under development and its behaviors will change, proceed at your own risk\n");
 
 		if (opts->flags & CGRP_ROOT_NOPREFIX) {
 			pr_err("cgroup: sane_behavior: noprefix is not allowed\n");
@@ -1379,8 +1379,8 @@ static int cgroup_remount(struct super_block *sb, int *flags, char *data)
 		goto out_unlock;
 
 	if (opts.subsys_mask != root->subsys_mask || opts.release_agent)
-		pr_warning("cgroup: option changes via remount are deprecated (pid=%d comm=%s)\n",
-			   task_tgid_nr(current), current->comm);
+		pr_warn("cgroup: option changes via remount are deprecated (pid=%d comm=%s)\n",
+			task_tgid_nr(current), current->comm);
 
 	added_mask = opts.subsys_mask & ~root->subsys_mask;
 	removed_mask = root->subsys_mask & ~opts.subsys_mask;
@@ -1784,7 +1784,7 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 				ret = -EINVAL;
 				goto out_unlock;
 			} else {
-				pr_warning("cgroup: new mount options do not match the existing superblock, will be ignored\n");
+				pr_warn("cgroup: new mount options do not match the existing superblock, will be ignored\n");
 			}
 		}
 	}
@@ -4048,10 +4048,10 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 
 	if (ss->broken_hierarchy && !ss->warned_broken_hierarchy &&
 	    parent->parent) {
-		pr_warning("cgroup: %s (%d) created nested cgroup for controller \"%s\" which has incomplete hierarchy support. Nested cgroups may change behavior in the future.\n",
-			   current->comm, current->pid, ss->name);
+		pr_warn("cgroup: %s (%d) created nested cgroup for controller \"%s\" which has incomplete hierarchy support. Nested cgroups may change behavior in the future.\n",
+			current->comm, current->pid, ss->name);
 		if (!strcmp(ss->name, "memory"))
-			pr_warning("cgroup: \"memory\" requires setting use_hierarchy to 1 on the root.\n");
+			pr_warn("cgroup: \"memory\" requires setting use_hierarchy to 1 on the root.\n");
 		ss->warned_broken_hierarchy = true;
 	}
 
