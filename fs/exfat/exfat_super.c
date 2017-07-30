@@ -1593,52 +1593,39 @@ static int exfat_write_end(struct file *file, struct address_space *mapping,
 }
 
 static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
-#if 0
-				struct iov_iter *iter, loff_t offset)
-#else
-				const struct iovec *iov,
-				loff_t offset, unsigned long nr_segs)
-#endif
-
+		struct iov_iter *iter,
+		loff_t offset)
 {
-	struct inode *inode = iocb->ki_filp->f_mapping->host;
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,34)
-	struct address_space *mapping = iocb->ki_filp->f_mapping;
-#endif
+	struct file *file = iocb->ki_filp;
+	struct address_space *mapping = file->f_mapping;
+	struct inode *inode = mapping->host;
+	size_t count = iov_iter_count(iter);
 	ssize_t ret;
 
 	if (rw == WRITE) {
-#if 0
-		if (EXFAT_I(inode)->mmu_private <
-			(offset + iov_iter_count(iter)))
-#else
-		if (EXFAT_I(inode)->mmu_private < (offset + iov_length(iov, nr_segs)))
-#endif
+		/*
+		 * FIXME: blockdev_direct_IO() doesn't use ->write_begin(),
+		 * so we need to update the ->mmu_private to block boundary.
+		 *
+		 * But we must fill the remaining area or hole by nul for
+		 * updating ->mmu_private.
+		 *
+		 * Return 0, and fallback to normal buffered write.
+		 */
+		loff_t size = offset + count;
+		if (EXFAT_I(inode)->mmu_private < size)
 			return 0;
 	}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
-#if 0
-	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset,
-				 exfat_get_block);
-#else
-	ret = blockdev_direct_IO(rw, iocb, inode, iov,
-					offset, nr_segs, exfat_get_block);
-#endif
-#else
-        ret = blockdev_direct_IO(rw, iocb, inode, inode->i_sb->s_bdev, iov,
-					offset, nr_segs, exfat_get_block, NULL);
-#endif
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,34)
-	if ((ret < 0) && (rw & WRITE))
-#if 0
-		exfat_write_failed(mapping, offset+iov_iter_count(iter));
-#else
-		exfat_write_failed(mapping, offset+iov_length(iov, nr_segs));
-#endif
-#endif
+	/*
+	 * FAT need to use the DIO_LOCKING for avoiding the race
+	 * condition of fat_get_block() and ->truncate().
+	 */
+	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset, exfat_get_block);
+	if (ret < 0 && (rw & WRITE))
+		exfat_write_failed(mapping, offset + count);
+
 	return ret;
-
 }
 
 static sector_t _exfat_bmap(struct address_space *mapping, sector_t block)
