@@ -2576,6 +2576,10 @@ int __init get_filesystem_list(char *buf);
 #define FMODE_ATOMIC_POS	((__force fmode_t)0x8000)
 /* Write access to underlying fs */
 #define FMODE_WRITER		((__force fmode_t)0x10000)
+/* Has read method(s) */
+#define FMODE_CAN_READ          ((__force fmode_t)0x20000)
+/* Has write method(s) */
+#define FMODE_CAN_WRITE         ((__force fmode_t)0x40000)
 
 #define __FMODE_NONOTIFY	((__force int) FMODE_NONOTIFY)
 
