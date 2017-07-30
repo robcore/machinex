@@ -12,10 +12,7 @@ patch -p1 < "/root/machinex/patches/0138-kernfs-implement-kernfs_root-supers-lis
 patch -p1 < "/root/machinex/patches/0139-kernfs-make-kernfs_notify-trigger-inotify-events-too.patch"
 patch -p1 < "/root/machinex/patches/0140-kernfs-fix-a-subdir-count-leak.patch"
 patch -p1 < "/root/machinex/patches/0141-kernfs-add-back-missing-error-check-in-kernfs_fop_mm.patch"
-patch -p1 < "/root/machinex/patches/0142-dox.patch"
-patch -p1 < "/root/machinex/patches/0143-cgroup-remove-orphaned-cgroup_pidlist_seq_operations.patch"
-patch -p1 < "/root/machinex/patches/0144-cgroup-replace-pr_warning-with-preferred-pr_warn.patch"
-patch -p1 < "/root/machinex/patches/0145-cgroup-Use-more-current-logging-style.patch"
+
 patch -p1 < "/root/machinex/patches/0146-fuse-add-__exit-to-fuse_ctl_cleanup.patch"
 patch -p1 < "/root/machinex/patches/0147-fuse-fix-mtime-update-error-in-fsync.patch"
 patch -p1 < "/root/machinex/patches/0148-fuse-do-not-use-uninitialized-i_mode.patch"
