@@ -714,7 +714,7 @@ err_out:
 
 buff_write:
 	mutex_unlock(&inode->i_mutex);
-	return do_sync_write(filp, data, count, offsetp);
+	return new_sync_write(filp, data, count, offsetp);
 }
 
 /**
@@ -732,7 +732,7 @@ v9fs_cached_file_write(struct file *filp, const char __user * data,
 
 	if (filp->f_flags & O_DIRECT)
 		return v9fs_direct_write(filp, data, count, offset);
-	return do_sync_write(filp, data, count, offset);
+	return new_sync_write(filp, data, count, offset);
 }
 
 static const struct vm_operations_struct v9fs_file_vm_ops = {
