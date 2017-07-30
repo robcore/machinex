@@ -1935,17 +1935,6 @@ static int fuse_removexattr(struct dentry *entry, const char *name)
 	return err;
 }
 
-static int fuse_update_time(struct inode *inode, struct timespec *now,
-			    int flags)
-{
-	if (flags & S_MTIME) {
-		inode->i_mtime = *now;
-		mark_inode_dirty_sync(inode);
-		BUG_ON(!S_ISREG(inode->i_mode));
-	}
-	return 0;
-}
-
 static const struct inode_operations fuse_dir_inode_operations = {
 	.lookup		= fuse_lookup,
 	.mkdir		= fuse_mkdir,
@@ -1985,7 +1974,6 @@ static const struct inode_operations fuse_common_inode_operations = {
 	.getxattr	= fuse_getxattr,
 	.listxattr	= fuse_listxattr,
 	.removexattr	= fuse_removexattr,
-	.update_time	= fuse_update_time,
 };
 
 static const struct inode_operations fuse_symlink_inode_operations = {
