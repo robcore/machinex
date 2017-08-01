@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/15patches/1997-ARM-7363-1-DEBUG_LL-limit-early-mapping-to-the-minim.patch

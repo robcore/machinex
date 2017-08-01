@@ -1,1 +1,0 @@
-/media/root/robcore/android/linaro-8064-lt/3.18/patches/6patches/0008-mm-Fix-warning-on-make-htmldocs-caused-by-slab.c.patch

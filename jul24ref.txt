@@ -1,1 +1,0 @@
-/media/root/robcore/android/linaro-8064-lt/3.18/patches/7patches/7050-kernfs-fix-kernfs_node_from_dentry.patch

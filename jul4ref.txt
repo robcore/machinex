@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/7patches/2355-proc-Move-some-bits-from-linux-proc_fs.h-to-linux-of.patch

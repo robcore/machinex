@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/5patches/7107-vfs-make-the-dentry-cache-use-the-lockref-infrastruc.patch

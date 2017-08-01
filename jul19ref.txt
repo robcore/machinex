@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/6patches/5517-mm-vmscan-move-logic-from-balance_pgdat-to-kswapd_sh.patch

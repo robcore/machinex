@@ -1,1 +1,0 @@
-/media/root/robcore/android/linaro-8064-lt/3.18/patches/5patches/0358-locks-make-proc-locks-show-IS_FILE_PVT-locks-as-type.patch

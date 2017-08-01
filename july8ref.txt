@@ -1,1 +1,0 @@
-/media/root/robcore/android/msm_kernel_caf_3.14/patches/15patches/7737-HAVE_RESTORE_SIGMASK-is-defined-on-all-architectures.patch
