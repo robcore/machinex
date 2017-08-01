@@ -2775,8 +2775,7 @@ static int cgroup_add_file(struct cgroup *cgrp, struct cftype *cft)
 		return -ENOMEM;
 
 	cgroup_file_name(cgrp, cft, name);
-	dentry = kernfs_mount(fs_type, flags, root->kf_root,
-				CGROUP_SUPER_MAGIC, &new_sb);
+	dentry = lookup_one_len(name, dir, strlen(name));
 	if (IS_ERR(dentry)) {
 		error = PTR_ERR(dentry);
 		goto out;
