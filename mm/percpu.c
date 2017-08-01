@@ -783,8 +783,7 @@ static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved,
 	if (unlikely(align < 2))
 		align = 2;
 
-	if (unlikely(size & 1))
-		size++;
+	size = ALIGN(size, 2);
 
 	size = ALIGN(size, 2);
 
