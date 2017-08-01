@@ -199,7 +199,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 
 	idr_preload(gfp_mask);
 	spin_lock_bh(&cgroup_idr_lock);
-	ret = mx_idr_alloc(idr, ptr, start, end, gfp_mask);
+	ret = idr_alloc(idr, ptr, start, end, gfp_mask);
 	spin_unlock_bh(&cgroup_idr_lock);
 	idr_preload_end();
 	return ret;
@@ -1571,14 +1571,10 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 
 	lockdep_assert_held(&cgroup_mutex);
 
-		do {
-			spin_lock_bh(&cgroup_idr_lock);
-			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
-					0, &root_cgrp->id);
-			spin_unlock_bh(&cgroup_idr_lock);
-			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
-					goto out;
-		} while (!ret);
+	ret = cgroup_idr_alloc(&root->cgroup_idr, root_cgrp, 1, 2, GFP_NOWAIT);
+	if (ret < 0)
+		goto out;
+	root_cgrp->id = ret;
 
 	ret = percpu_ref_init(&root_cgrp->self.refcnt, css_release, 0, GFP_KERNEL);
 	if (ret)
@@ -4322,17 +4318,10 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	if (err)
 		goto err_free_css;
 
-		spin_lock_bh(&cgroup_idr_lock);
-		while (idr_get_new_above(&ss->css_idr, css,
-				1, &css->id)) {
-			spin_unlock_bh(&cgroup_idr_lock);
-			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL)) {
-				err = -ENOMEM;
-				goto err_free_percpu_ref;
-			spin_lock_bh(&cgroup_idr_lock);
-			}
-		}
-		spin_unlock_bh(&cgroup_idr_lock);
+	err = cgroup_idr_alloc(&ss->css_idr, NULL, 2, 0, GFP_NOWAIT);
+	if (err < 0)
+		goto err_free_percpu_ref;
+	css->id = err;
 
 	err = cgroup_populate_dir(cgrp, 1 << ss->id);
 	if (err)
@@ -4396,20 +4385,11 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 	 * Temporarily set the pointer to NULL, so idr_find() won't return
 	 * a half-baked cgroup.
 	 */
-	spin_lock_bh(&cgroup_idr_lock);
-	while (idr_get_new_above(&root->cgroup_idr, NULL,
-					1, &cgrp->id)) {
-	spin_unlock_bh(&cgroup_idr_lock);
-	if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
+	cgrp->id = cgroup_idr_alloc(&root->cgroup_idr, NULL, 2, 0, GFP_NOWAIT);
+	if (cgrp->id < 0) {
 		ret = -ENOMEM;
 		goto out_cancel_ref;
-	spin_lock_bh(&cgroup_idr_lock);
 	}
-	spin_unlock_bh(&cgroup_idr_lock);
-
-	if (cgrp->id < 0)
-		ret = -ENOMEM;
-		goto out_cancel_ref;
 
 	init_cgroup_housekeeping(cgrp);
 
@@ -4682,7 +4662,6 @@ static struct kernfs_syscall_ops cgroup_kf_syscall_ops = {
 static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 {
 	struct cgroup_subsys_state *css;
-	int ret;
 
 	printk(KERN_INFO "Initializing cgroup subsys %s\n", ss->name);
 
@@ -4708,16 +4687,8 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 		/* allocation can't be done safely during early init */
 		css->id = 1;
 	} else {
-		spin_lock_bh(&cgroup_idr_lock);
-		while (idr_get_new_above(&ss->css_idr, css,
-				1, &css->id)) {
-			spin_unlock_bh(&cgroup_idr_lock);
-			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL)) {
-				break;
-			spin_lock_bh(&cgroup_idr_lock);
-			}
-		}
-		spin_unlock_bh(&cgroup_idr_lock);
+		css->id = cgroup_idr_alloc(&ss->css_idr, css, 1, 2, GFP_KERNEL);
+		BUG_ON(css->id < 0);
 	}
 
 	/* Update the init_css_set to contain a subsys
@@ -4804,17 +4775,10 @@ int __init cgroup_init(void)
 		if (ss->early_init) {
 			struct cgroup_subsys_state *css =
 				init_css_set.subsys[ss->id];
-				spin_lock_bh(&cgroup_idr_lock);
-				while (idr_get_new_above(&ss->css_idr, css,
-						1, &css->id))  {
-				spin_unlock_bh(&cgroup_idr_lock);
-					if (!idr_pre_get(&ss->css_idr, GFP_KERNEL)) {
-						spin_lock_bh(&cgroup_idr_lock);
-							break;
-					} else
-						spin_lock_bh(&cgroup_idr_lock);
-				}
-				spin_unlock_bh(&cgroup_idr_lock);
+
+			css->id = cgroup_idr_alloc(&ss->css_idr, css, 1, 2,
+						   GFP_KERNEL);
+			BUG_ON(css->id < 0);
 		} else {
 			cgroup_init_subsys(ss, false);
 		}
