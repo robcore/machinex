@@ -102,6 +102,12 @@ static DECLARE_RWSEM(css_set_rwsem);
 #endif
 
 /*
+ * Protects cgroup_idr so that IDs can be released without grabbing
+ * cgroup_mutex.
+ */
+static DEFINE_SPINLOCK(cgroup_idr_lock);
+
+/*
  * Protects cgroup_subsys->release_agent_path.  Modifying it also requires
  * cgroup_mutex.  Reading requires either cgroup_mutex or this spinlock.
  */
@@ -193,6 +199,46 @@ static void kill_css(struct cgroup_subsys_state *css);
 static int cgroup_addrm_files(struct cgroup *cgrp, struct cftype cfts[],
 			      bool is_add);
 static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
+
+/* IDR wrappers which synchronize using cgroup_idr_lock */
+static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
+			    gfp_t gfp_mask)
+{
+	int ret;
+	int id;
+
+		do {
+			spin_lock(&cgroup_idr_lock);
+			ret = idr_get_new_above(&root->cgroup_idr, ptr,
+					start, &id);
+			spin_unlock(&cgroup_idr_lock);
+			if (id > end)
+				return ret;
+			if (!idr_pre_get(&root->cgroup_idr, gfp_mask)) {
+				return ret;
+			}
+			root_cgrp->id = ret;
+		} while (ret);
+
+	return ret;
+}
+
+static void *cgroup_idr_replace(struct idr *idr, void *ptr, int id)
+{
+	void *ret;
+
+	spin_lock(&cgroup_idr_lock);
+	ret = idr_replace(idr, ptr, id);
+	spin_unlock(&cgroup_idr_lock);
+	return ret;
+}
+
+static void cgroup_idr_remove(struct idr *idr, int id)
+{
+	spin_lock(&cgroup_idr_lock);
+	idr_remove(idr, id);
+	spin_unlock(&cgroup_idr_lock);
+}
 
 /**
  * cgroup_css - obtain a cgroup's css for the specified subsystem
@@ -1058,9 +1104,7 @@ static void cgroup_put(struct cgroup *cgrp)
 	 * per-subsystem and moved to css->id so that lookups are
 	 * successful until the target css is released.
 	 */
-	mutex_lock(&cgroup_mutex);
-	idr_remove(&cgrp->root->cgroup_idr, cgrp->id);
-	mutex_unlock(&cgroup_mutex);
+	cgroup_idr_remove(&cgrp->root->cgroup_idr, cgrp->id);
 	cgrp->id = -1;
 
 	call_rcu(&cgrp->rcu_head, cgroup_free_rcu);
@@ -1531,13 +1575,9 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 	lockdep_assert_held(&cgroup_tree_mutex);
 	lockdep_assert_held(&cgroup_mutex);
 
-		do {
-			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
-					0, &root_cgrp->id);
-			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
-					goto out;
-			root_cgrp->id = ret;
-		} while (ret);
+	ret = cgroup_idr_alloc(&root->cgroup_idr, root_cgrp, 1, 2, GFP_NOWAIT);
+	if (ret > 0)
+		goto out;
 
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
@@ -4301,12 +4341,7 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 	 * Temporarily set the pointer to NULL, so idr_find() won't return
 	 * a half-baked cgroup.
 	 */
-	while (idr_get_new_above(&root->cgroup_idr, NULL,
-					1, &cgrp->id)) {
-	if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
-			return -ENOMEM;
-	}
-
+	cgrp->id = cgroup_idr_alloc(&root->cgroup_idr, NULL, 2, 0, GFP_NOWAIT);
 	if (cgrp->id < 0)
 		goto err_unlock;;
 
@@ -4347,7 +4382,7 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 	 * @cgrp is now fully operational.  If something fails after this
 	 * point, it'll be released via the normal destruction path.
 	 */
-	idr_replace(&root->cgroup_idr, cgrp, cgrp->id);
+	cgroup_idr_replace(&root->cgroup_idr, cgrp, cgrp->id);
 
 	err = cgroup_kn_set_ugid(kn);
 	if (err)
@@ -4381,7 +4416,7 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 	return 0;
 
 err_free_id:
-	idr_remove(&root->cgroup_idr, cgrp->id);
+	cgroup_idr_remove(&root->cgroup_idr, cgrp->id);
 err_unlock:
 	mutex_unlock(&cgroup_mutex);
 err_unlock_tree:
@@ -5242,7 +5277,7 @@ struct cgroup_subsys_state *css_from_id(int id, struct cgroup_subsys *ss)
 {
 	struct cgroup *cgrp;
 
-	cgroup_assert_mutexes_or_rcu_locked();
+	WARN_ON_ONCE(!rcu_read_lock_held());
 
 	cgrp = idr_find(&ss->root->cgroup_idr, id);
 	if (cgrp)
