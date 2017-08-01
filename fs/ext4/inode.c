@@ -923,6 +923,7 @@ int do_journal_get_write_access(handle_t *handle,
 	 */
 	if (dirty)
 		clear_buffer_dirty(bh);
+	BUFFER_TRACE(bh, "get write access");
 	ret = ext4_journal_get_write_access(handle, bh);
 	if (!ret && dirty)
 		ret = ext4_handle_dirty_metadata(handle, NULL, bh);
@@ -1784,6 +1785,7 @@ static int __ext4_journalled_writepage(struct page *page,
 	}
 
 	if (inline_data) {
+		BUFFER_TRACE(inode_bh, "get write access");
 		ret = ext4_journal_get_write_access(handle, inode_bh);
 
 		err = ext4_handle_dirty_metadata(handle, inode, inode_bh);
@@ -4328,6 +4330,7 @@ static int ext4_do_update_inode(handle_t *handle,
 			/* If this is the first large file
 			 * created, add a flag to the superblock.
 			 */
+			BUFFER_TRACE(EXT4_SB(sb)->s_sbh, "get write access");
 			err = ext4_journal_get_write_access(handle,
 					EXT4_SB(sb)->s_sbh);
 			if (err)
