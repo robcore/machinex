@@ -703,6 +703,7 @@ dqcache_shrink_scan(struct shrinker *shrink, struct shrink_control *sc)
 	struct dquot *dquot;
 	unsigned long freed = 0;
 
+	spin_lock(&dq_list_lock);
 	head = free_dquots.prev;
 	while (head != &free_dquots && sc->nr_to_scan) {
 		dquot = list_entry(head, struct dquot, dq_free);
@@ -714,6 +715,7 @@ dqcache_shrink_scan(struct shrinker *shrink, struct shrink_control *sc)
 		freed++;
 		head = free_dquots.prev;
 	}
+	spin_unlock(&dq_list_lock);
 	return freed;
 }
 
