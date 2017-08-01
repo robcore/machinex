@@ -4314,9 +4314,8 @@ err_clear_dir:
 err_free_id:
 	cgroup_idr_remove(&ss->css_idr, css->id);
 err_free_percpu_ref:
-	percpu_ref_cancel_init(&css->refcnt);
-err_free_css:
 	percpu_ref_exit(&css->refcnt);
+err_free_css:
 	call_rcu(&css->rcu_head, css_free_rcu_fn);
 	return err;
 }
