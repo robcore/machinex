@@ -77,6 +77,7 @@ struct cgroup_subsys_state {
 
 /* bits in struct cgroup_subsys_state flags field */
 enum {
+	CSS_NO_REF	= (1 << 0), /* no reference counting for this css */
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
 };
 
@@ -96,7 +97,8 @@ static inline void __css_get(struct cgroup_subsys_state *css, int count)
 extern void __css_get(struct cgroup_subsys_state *css, int count);
 static inline void css_get(struct cgroup_subsys_state *css)
 {
-	percpu_ref_get(&css->refcnt);
+	if (!(css->flags & CSS_NO_REF))
+		percpu_ref_get(&css->refcnt);
 }
 
 /**
@@ -111,7 +113,9 @@ static inline void css_get(struct cgroup_subsys_state *css)
  */
 static inline bool css_tryget_online(struct cgroup_subsys_state *css)
 {
-	return percpu_ref_tryget_live(&css->refcnt);
+	if (!(css->flags & CSS_NO_REF))
+		return percpu_ref_tryget_live(&css->refcnt);
+	return true;
 }
 
 /**
@@ -122,7 +126,8 @@ static inline bool css_tryget_online(struct cgroup_subsys_state *css)
  */
 static inline void css_put(struct cgroup_subsys_state *css)
 {
-	percpu_ref_put(&css->refcnt);
+	if (!(css->flags & CSS_NO_REF))
+		percpu_ref_put(&css->refcnt);
 }
 
 /* bits in struct cgroup flags field */
