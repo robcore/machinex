@@ -5035,18 +5035,28 @@ static void mem_cgroup_reparent_charges(struct mem_cgroup *memcg)
 	} while (usage > 0);
 }
 
+/*
+ * Test whether @memcg has children, dead or alive.  Note that this
+ * function doesn't care whether @memcg has use_hierarchy enabled and
+ * returns %true if there are child csses according to the cgroup
+ * hierarchy.  Testing use_hierarchy is the caller's responsiblity.
+ */
 static inline bool memcg_has_children(struct mem_cgroup *memcg)
 {
-	lockdep_assert_held(&memcg_create_mutex);
+	bool ret;
+
 	/*
-	 * The lock does not prevent addition or deletion to the list
-	 * of children, but it prevents a new child from being
-	 * initialized based on this parent in css_online(), so it's
-	 * enough to decide whether hierarchically inherited
-	 * attributes can still be changed or not.
+	 * The lock does not prevent addition or deletion of children, but
+	 * it prevents a new child from being initialized based on this
+	 * parent in css_online(), so it's enough to decide whether
+	 * hierarchically inherited attributes can still be changed or not.
 	 */
-	return memcg->use_hierarchy &&
-		!list_empty(&memcg->css.cgroup->children);
+	lockdep_assert_held(&memcg_create_mutex);
+
+	rcu_read_lock();
+	ret = css_next_child(NULL, &memcg->css);
+	rcu_read_unlock();
+	return ret;
 }
 
 /*
@@ -5119,7 +5129,7 @@ static int mem_cgroup_hierarchy_write(struct cgroup_subsys_state *css,
 	 */
 	if ((!parent_memcg || !parent_memcg->use_hierarchy) &&
 				(val == 1 || val == 0)) {
-		if (list_empty(&memcg->css.cgroup->children))
+		if (!memcg_has_children(memcg))
 			memcg->use_hierarchy = val;
 		else
 			retval = -EBUSY;
@@ -5223,7 +5233,8 @@ static int memcg_update_kmem_limit(struct cgroup_subsys_state *css, u64 val)
 	mutex_lock(&memcg_create_mutex);
 	mutex_lock(&set_limit_mutex);
 	if (!memcg->kmem_account_flags && val != RES_COUNTER_MAX) {
-		if (cgroup_has_tasks(css->cgroup) || memcg_has_children(memcg)) {
+	if (cgroup_has_tasks(memcg->css.cgroup) ||
+	    (memcg->use_hierarchy && memcg_has_children(memcg)))
 			ret = -EBUSY;
 			goto out;
 		}
