@@ -1564,8 +1564,7 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 			spin_unlock_bh(&cgroup_idr_lock);
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto out;
-			root_cgrp->id = ret;
-		} while (ret);
+		} while (!ret);
 
 	ret = percpu_ref_init(&root_cgrp->self.refcnt, css_release, 0, GFP_KERNEL);
 	if (ret)
@@ -4309,14 +4308,17 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	if (err)
 		goto err_free_css;
 
-		do {
-			spin_lock_bh(&cgroup_idr_lock);
-			err = idr_get_new_above(&ss->css_idr, css,
-					1, &css->id);
+		spin_lock_bh(&cgroup_idr_lock);
+		while (idr_get_new_above(&ss->css_idr, css,
+				1, &css->id)) {
 			spin_unlock_bh(&cgroup_idr_lock);
-			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
-					goto err_free_percpu_ref;
-		} while (err);
+			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL)) {
+				err = -ENOMEM;
+				goto err_free_percpu_ref;
+			spin_lock_bh(&cgroup_idr_lock);
+			}
+		}
+		spin_unlock_bh(&cgroup_idr_lock);
 
 	err = cgroup_populate_dir(cgrp, 1 << ss->id);
 	if (err)
@@ -4692,14 +4694,16 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 		/* allocation can't be done safely during early init */
 		css->id = 1;
 	} else {
-			do {
-				spin_lock_bh(&cgroup_idr_lock);
-				ret = idr_get_new_above(&ss->css_idr, css,
-						1, &css->id);
-				spin_unlock_bh(&cgroup_idr_lock);
-				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
-						break;
-			} while (ret && (css->id >= 0));
+		spin_lock_bh(&cgroup_idr_lock);
+		while (idr_get_new_above(&ss->css_idr, css,
+				1, &css->id)) {
+			spin_unlock_bh(&cgroup_idr_lock);
+			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL)) {
+				break;
+			spin_lock_bh(&cgroup_idr_lock);
+			}
+		}
+		spin_unlock_bh(&cgroup_idr_lock);
 	}
 
 	/* Update the init_css_set to contain a subsys
@@ -4786,14 +4790,17 @@ int __init cgroup_init(void)
 		if (ss->early_init) {
 			struct cgroup_subsys_state *css =
 				init_css_set.subsys[ss->id];
-			do {
 				spin_lock_bh(&cgroup_idr_lock);
-				err = idr_get_new_above(&ss->css_idr, css,
-						1, &css->id);
+				while (idr_get_new_above(&ss->css_idr, css,
+						1, &css->id))  {
 				spin_unlock_bh(&cgroup_idr_lock);
-				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
-						break;
-			} while (err && (!(css->id < 0)));
+					if (!idr_pre_get(&ss->css_idr, GFP_KERNEL)) {
+						spin_lock_bh(&cgroup_idr_lock);
+							break;
+					} else
+						spin_lock_bh(&cgroup_idr_lock);
+				}
+				spin_unlock_bh(&cgroup_idr_lock);
 		} else {
 			cgroup_init_subsys(ss, false);
 		}
