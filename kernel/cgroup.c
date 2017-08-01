@@ -2320,10 +2320,16 @@ retry_find_task:
 			 * if the default permission check fails, give each
 			 * cgroup a chance to extend the permission check
 			 */
-			struct cgroup_taskset tset = { };
-			tset.single.task = tsk;
-			tset.single.cgrp = cgrp;
+			struct cgroup_taskset tset = {
+				.src_csets = LIST_HEAD_INIT(tset.src_csets),
+				.dst_csets = LIST_HEAD_INIT(tset.dst_csets),
+				.csets = &tset.src_csets,
+			};
+			struct css_set *cset;
+			cset = task_css_set(tsk);
+			list_add(&cset->mg_node, &tset.src_csets);
 			ret = cgroup_allow_attach(cgrp, &tset);
+			list_del_init(&cset->mg_node);
 			if (ret) {
 				rcu_read_unlock();
 				goto out_unlock_cgroup;
