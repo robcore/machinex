@@ -205,7 +205,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
 	int ret;
-	int new_id;
+	int id;
 
 		do {
 			spin_lock_bh(&cgroup_idr_lock);
@@ -215,6 +215,8 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			if (!idr_pre_get(idr, gfp_mask)) {
 				return ret;
 			}
+			if (ret < 0)
+				return ret;
 		} while (id >= start && id <= end);
 
 	return id;
