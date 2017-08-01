@@ -1541,6 +1541,8 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		if (!atomic_inc_not_zero(&root->top_cgroup.refcnt)) {
 			mutex_unlock(&cgroup_mutex);
 			mutex_unlock(&cgroup_tree_mutex);
+			kfree(opts.release_agent);
+			kfree(opts.name);
 			msleep(10);
 			goto retry;
 		}
