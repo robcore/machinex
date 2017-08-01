@@ -167,6 +167,9 @@ struct cgroup {
 	 */
 	u64 serial_nr;
 
+	/* The bitmask of subsystems attached to this cgroup */
+	unsigned long subsys_mask;
+
 	/* Private pointers for each registered subsystem */
 	struct cgroup_subsys_state __rcu *subsys[CGROUP_SUBSYS_COUNT];
 
@@ -258,9 +261,6 @@ enum {
  */
 struct cgroupfs_root {
 	struct kernfs_root *kf_root;
-
-	/* The bitmask of subsystems attached to this hierarchy */
-	unsigned long subsys_mask;
 
 	/* Unique id for this hierarchy. */
 	int hierarchy_id;
