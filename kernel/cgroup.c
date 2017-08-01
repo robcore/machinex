@@ -205,7 +205,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
 	int ret;
-	int id;
+	unsigned int id;
 
 		do {
 			spin_lock_bh(&cgroup_idr_lock);
@@ -4765,6 +4765,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 			mutex_unlock(&cgroup_mutex);
 			mutex_unlock(&cgroup_tree_mutex);			
 			return;
+		}
 	}
 
 	/* Update the init_css_set to contain a subsys
