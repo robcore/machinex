@@ -253,6 +253,12 @@ kmem_cache_create(const char *name, size_t size, size_t align,
 }
 EXPORT_SYMBOL(kmem_cache_create);
 
+void slab_kmem_cache_release(struct kmem_cache *s)
+{
+	kfree(s->name);
+	kmem_cache_free(kmem_cache, s);
+}
+
 void kmem_cache_destroy(struct kmem_cache *s)
 {
 	/* Destroy all the children caches if we aren't a memcg cache */
@@ -270,8 +276,11 @@ void kmem_cache_destroy(struct kmem_cache *s)
 				rcu_barrier();
 
 			memcg_release_cache(s);
-			kfree(s->name);
-			kmem_cache_free(kmem_cache, s);
+#ifdef SLAB_SUPPORTS_SYSFS
+			sysfs_slab_remove(s);
+#else
+			slab_kmem_cache_release(s);
+#endif
 		} else {
 			list_add(&s->list, &slab_caches);
 			mutex_unlock(&slab_mutex);
