@@ -195,6 +195,25 @@ static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
 static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
+	int id, ret;
+
+	do {
+		if (!idr_pre_get(idr, gfp_mask))
+			return -ENOMEM;
+		spin_lock_bh(&cgroup_idr_lock);
+		ret = idr_get_new_above(idr, ptr, start, &id);
+		spin_unlock_bh(&cgroup_idr_lock);
+		if (!ret && id > end) {
+			spin_lock_bh(&cgroup_idr_lock);
+			idr_remove(idr, id);
+			spin_unlock_bh(&cgroup_idr_lock);
+			ret = -ENOSPC;
+		}
+	} while (ret == -EAGAIN);
+
+	return ret ? ret : id;
+}
+{
 	int ret;
 
 	idr_preload(gfp_mask);
@@ -873,7 +892,7 @@ static void cgroup_free_root(struct cgroup_root *root)
 		/* hierarhcy ID shoulid already have been released */
 		WARN_ON_ONCE(root->hierarchy_id);
 
-		mx_idr_destroy(&root->cgroup_idr);
+		idr_destroy(&root->cgroup_idr);
 		kfree(root);
 	}
 }
