@@ -3925,7 +3925,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	/* Register extent status tree shrinker */
 	ext4_es_register_shrinker(sbi);
 
-	if ((err = percpu_counter_init(&sbi->s_extent_cache_cnt, 0, 0, GFP_KERNEL)) != 0) {
+	if ((err = percpu_counter_init(&sbi->s_extent_cache_cnt, 0, GFP_KERNEL)) != 0) {
 		ext4_msg(sb, KERN_ERR, "insufficient memory");
 		goto failed_mount3;
 	}
