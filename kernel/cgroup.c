@@ -323,16 +323,24 @@ struct cgrp_cset_link {
 	struct list_head	cgrp_link;
 };
 
-/* The default css_set - used by init and its children prior to any
+/*
+ * The default css_set - used by init and its children prior to any
  * hierarchies being mounted. It contains a pointer to the root state
  * for each subsystem. Also used to anchor the list of css_sets. Not
  * reference-counted, to improve performance when child cgroups
  * haven't been created.
  */
+static struct css_set init_css_set = {
+	.refcount		= ATOMIC_INIT(1),
+	.cgrp_links		= LIST_HEAD_INIT(init_css_set.cgrp_links),
+	.tasks			= LIST_HEAD_INIT(init_css_set.tasks),
+	.mg_tasks		= LIST_HEAD_INIT(init_css_set.mg_tasks),
+	.mg_preload_node	= LIST_HEAD_INIT(init_css_set.mg_preload_node),
+	.mg_node		= LIST_HEAD_INIT(init_css_set.mg_node),
+};
 
-static struct css_set init_css_set;
 static struct cgrp_cset_link init_cgrp_cset_link;
-static int css_set_count;
+static int css_set_count	= 1;	/* 1 for init_css_set */
 
 /*
  * hash table for cgroup groups. This improves the performance to find
@@ -1297,7 +1305,8 @@ static void init_cgroup_housekeeping(struct cgroup *cgrp)
 	cgrp->dummy_css.cgroup = cgrp;
 }
 
-static void init_cgroup_root(struct cgroupfs_root *root)
+static void init_cgroup_root(struct cgroupfs_root *root,
+			     struct cgroup_sb_opts *opts)
 {
 	struct cgroup *cgrp = &root->top_cgroup;
 
@@ -1358,20 +1367,6 @@ static void cgroup_enable_task_cg_lists(void)
 	read_unlock(&tasklist_lock);
 out_unlock:
 	up_write(&css_set_rwsem);
-}
-
-static struct cgroupfs_root *cgroup_root_from_opts(struct cgroup_sb_opts *opts)
-{
-	struct cgroupfs_root *root;
-
-	if (!opts->subsys_mask && !opts->none)
-		return ERR_PTR(-EINVAL);
-
-	root = kzalloc(sizeof(*root), GFP_KERNEL);
-	if (!root)
-		return ERR_PTR(-ENOMEM);
-
-	init_cgroup_root(root);
 
 	root->flags = opts->flags;
 	if (opts->release_agent)
@@ -1380,7 +1375,6 @@ static struct cgroupfs_root *cgroup_root_from_opts(struct cgroup_sb_opts *opts)
 		strcpy(root->name, opts->name);
 	if (opts->cpuset_clone_children)
 		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &root->top_cgroup.flags);
-	return root;
 }
 
 static int cgroup_setup_root(struct cgroupfs_root *root, unsigned long ss_mask)
@@ -1550,12 +1544,23 @@ retry:
 		goto out_unlock;
 	}
 
-	/* no such thing, create a new one */
-	root = cgroup_root_from_opts(&opts);
-	if (IS_ERR(root)) {
-		ret = PTR_ERR(root);
+	/*
+	 * No such thing, create a new one.  name= matching without subsys
+	 * specification is allowed for already existing hierarchies but we
+	 * can't create new one without subsys specification.
+	 */
+	if (!opts.subsys_mask && !opts.none) {
+		ret = -EINVAL;
 		goto out_unlock;
 	}
+
+	root = kzalloc(sizeof(*root), GFP_KERNEL);
+	if (!root) {
+		ret = -ENOMEM;
+		goto out_unlock;
+	}
+
+	init_cgroup_root(root, &opts);
 
 	ret = cgroup_setup_root(root, opts.subsys_mask);
 	if (ret)
@@ -4105,25 +4110,12 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss)
  */
 int __init cgroup_init_early(void)
 {
+	static struct cgroup_sb_opts __initdata opts = { };
 	struct cgroup_subsys *ss;
 	int i;
 
-	atomic_set(&init_css_set.refcount, 1);
-	INIT_LIST_HEAD(&init_css_set.cgrp_links);
-	INIT_LIST_HEAD(&init_css_set.tasks);
-	INIT_LIST_HEAD(&init_css_set.mg_tasks);
-	INIT_LIST_HEAD(&init_css_set.mg_preload_node);
-	INIT_LIST_HEAD(&init_css_set.mg_node);
-	INIT_HLIST_NODE(&init_css_set.hlist);
-	css_set_count = 1;
-	init_cgroup_root(&cgroup_dummy_root);
-	cgroup_root_count = 1;
+	init_cgroup_root(&cgroup_dummy_root, &opts);
 	RCU_INIT_POINTER(init_task.cgroups, &init_css_set);
-
-	init_cgrp_cset_link.cset = &init_css_set;
-	init_cgrp_cset_link.cgrp = cgroup_dummy_top;
-	list_add(&init_cgrp_cset_link.cset_link, &cgroup_dummy_top->cset_links);
-	list_add(&init_cgrp_cset_link.cgrp_link, &init_css_set.cgrp_links);
 
 	for_each_subsys(ss, i) {
 		WARN(!ss->css_alloc || !ss->css_free || ss->name || ss->id,
@@ -4152,27 +4144,9 @@ int __init cgroup_init(void)
 {
 	struct cgroup_subsys *ss;
 	unsigned long key;
-	int i, err;
+	int ssid, err;
 
 	BUG_ON(cgroup_init_cftypes(NULL, cgroup_base_files));
-
-	/*
-	 * The latency of the synchronize_sched() is too high for cgroups,
-	 * avoid it at the cost of forcing all readers into the slow path.
-	 */
-	//rcu_sync_enter_start(&cgroup_threadgroup_rwsem.rss);
-
-	for_each_subsys(ss, i) {
-		if (!ss->early_init)
-			cgroup_init_subsys(ss);
-
-		/*
-		 * cftype registration needs kmalloc and can't be done
-		 * during early_init.  Register base cftypes separately.
-		 */
-		if (ss->base_cftypes)
-			WARN_ON(cgroup_add_cftypes(ss, ss->base_cftypes));
-	}
 
 	/* allocate id for the dummy hierarchy */
 	mutex_lock(&cgroup_mutex);
@@ -4192,7 +4166,25 @@ int __init cgroup_init(void)
 	err = cgroup_dummy_top->id;
 	WARN_ON(err < 0);
 
+	cgroup_root_count = 1;
+	init_cgrp_cset_link.cset = &init_css_set;
+	init_cgrp_cset_link.cgrp = cgroup_dummy_top;
+	list_add(&init_cgrp_cset_link.cset_link, &cgroup_dummy_top->cset_links);
+	list_add(&init_cgrp_cset_link.cgrp_link, &init_css_set.cgrp_links);
+
 	mutex_unlock(&cgroup_mutex);
+
+	for_each_subsys(ss, ssid) {
+		if (!ss->early_init)
+			cgroup_init_subsys(ss);
+
+		/*
+		 * cftype registration needs kmalloc and can't be done
+		 * during early_init.  Register base cftypes separately.
+		 */
+		if (ss->base_cftypes)
+			WARN_ON(cgroup_add_cftypes(ss, ss->base_cftypes));
+	}
 
 	cgroup_kobj = kobject_create_and_add("cgroup", fs_kobj);
 	if (!cgroup_kobj)
