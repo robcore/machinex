@@ -157,9 +157,6 @@ struct cgroup {
 
 	int id;				/* idr allocated in-hierarchy ID */
 
-	/* the number of attached css's */
-	int nr_css;
-
 	/*
 	 * If this cgroup contains any tasks, it contributes one to
 	 * populated_cnt.  All children with non-zero popuplated_cnt of
