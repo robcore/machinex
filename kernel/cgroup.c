@@ -4699,7 +4699,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 				spin_unlock_bh(&cgroup_idr_lock);
 				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 						break;
-			} while (ret && (css->id => 0));
+			} while (ret && (css->id >= 0));
 	}
 
 	/* Update the init_css_set to contain a subsys
