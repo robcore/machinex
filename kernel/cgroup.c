@@ -34,6 +34,7 @@
 #include <linux/kernel.h>
 #include <linux/export.h>
 #include <linux/list.h>
+#include <linux/magic.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/mount.h>
@@ -2774,7 +2775,8 @@ static int cgroup_add_file(struct cgroup *cgrp, struct cftype *cft)
 		return -ENOMEM;
 
 	cgroup_file_name(cgrp, cft, name);
-	dentry = lookup_one_len(name, dir, strlen(name));
+	dentry = kernfs_mount(fs_type, flags, root->kf_root,
+				CGROUP_SUPER_MAGIC, &new_sb);
 	if (IS_ERR(dentry)) {
 		error = PTR_ERR(dentry);
 		goto out;
