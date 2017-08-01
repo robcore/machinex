@@ -2329,8 +2329,6 @@ redo:
 	if (freelist)
 		goto load_freelist;
 
-	stat(s, ALLOC_SLOWPATH);
-
 	freelist = get_freelist(s, page);
 
 	if (!freelist) {
@@ -2435,10 +2433,10 @@ redo:
 
 	object = c->freelist;
 	page = c->page;
-	if (unlikely(!object || !page || !node_match(page, node)))
+	if (unlikely(!object || !page || !node_match(page, node))) {
 		object = __slab_alloc(s, gfpflags, node, addr, c);
-
-	else {
+		stat(s, ALLOC_SLOWPATH);
+	} else {
 		void *next_object = get_freepointer_safe(s, object);
 
 		/*
