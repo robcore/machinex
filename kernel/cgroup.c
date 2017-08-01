@@ -209,17 +209,18 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 
 		do {
 			spin_lock_bh(&cgroup_idr_lock);
-			ret = idr_get_new_above(idr, ptr,
+			ret = idr_get_new_above(&root->cgroup_idr, ptr,
 					start, &id);
 			spin_unlock_bh(&cgroup_idr_lock);
-			if (!idr_pre_get(idr, gfp_mask)) {
+			if (id > end)
+				return ret;
+			if (!idr_pre_get(&root->cgroup_idr, gfp_mask)) {
 				return ret;
 			}
-			if (ret < 0)
-				return ret;
-		} while (id >= start);
+			root_cgrp->id = ret;
+		} while (ret);
 
-	return id;
+	return ret;
 }
 
 static void *cgroup_idr_replace(struct idr *idr, void *ptr, int id)
@@ -1571,9 +1572,8 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 	lockdep_assert_held(&cgroup_mutex);
 
 	ret = cgroup_idr_alloc(&root->cgroup_idr, root_cgrp, 1, 2, GFP_NOWAIT);
-	if (ret < 0)
+	if (ret > 0)
 		goto out;
-	root_cgrp->id = ret;
 
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
@@ -4359,7 +4359,6 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 	 */
 	cgrp->id = cgroup_idr_alloc(&root->cgroup_idr, NULL, 2, 0, GFP_NOWAIT);
 	if (cgrp->id < 0) {
-		err = -ENOMEM;
 		goto err_unlock;
 	}
 
@@ -4741,7 +4740,6 @@ static struct kernfs_syscall_ops cgroup_kf_syscall_ops = {
 static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 {
 	struct cgroup_subsys_state *css;
-	int fakeid;
 
 	printk(KERN_INFO "Initializing cgroup subsys %s\n", ss->name);
 
@@ -4761,13 +4759,8 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 		/* idr_alloc() can't be called safely during early init */
 		css->id = 1;
 	} else {
-		fakeid = cgroup_idr_alloc(&ss->css_idr, css, 1, 2, GFP_KERNEL);
-		if (fakeid < 0) {
-			mutex_unlock(&cgroup_mutex);
-			mutex_unlock(&cgroup_tree_mutex);			
-			return;
-		}
-		css->id = fakeid;
+		css->id = cgroup_idr_alloc(&ss->css_idr, css, 1, 2, GFP_KERNEL);
+		BUG_ON(css->id < 0);
 	}
 
 	/* Update the init_css_set to contain a subsys
