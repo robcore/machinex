@@ -1461,7 +1461,7 @@ static int cgroup_setup_root(struct cgroupfs_root *root)
 			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
 					0, &root_cgrp->id);
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
-					goto out_unlock;
+					goto out;
 			root_cgrp->id = ret;
 		} while (ret);
 
