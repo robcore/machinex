@@ -214,7 +214,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			spin_unlock_bh(&cgroup_idr_lock);
 			if (id > end)
 				return ret;
-			if (!idr_pre_get(&root->cgroup_idr, gfp_mask)) {
+			if (!idr_pre_get(idr, gfp_mask)) {
 				return ret;
 			}
 			id = ret;
