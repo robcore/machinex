@@ -4762,7 +4762,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 				spin_unlock_bh(&cgroup_idr_lock);
 				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 						break;
-			} while (ret && (!(ret < 0)));
+			} while (ret && (!(css->id < 0)));
 	}
 
 	/* Update the init_css_set to contain a subsys
@@ -4857,7 +4857,7 @@ int __init cgroup_init(void)
 				spin_unlock_bh(&cgroup_idr_lock);
 				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 						break;
-			} while (err && (!(err < 0)));
+			} while (err && (!(css->id < 0)));
 		} else {
 			cgroup_init_subsys(ss, false);
 		}
