@@ -195,17 +195,26 @@ static void *cgroup_idr_replace(struct idr *idr, void *ptr, int id)
 {
 	void *ret;
 
-	spin_lock(&cgroup_idr_lock);
+	spin_lock_bh(&cgroup_idr_lock);
 	ret = idr_replace(idr, ptr, id);
-	spin_unlock(&cgroup_idr_lock);
+	spin_unlock_bh(&cgroup_idr_lock);
 	return ret;
 }
 
 static void cgroup_idr_remove(struct idr *idr, int id)
 {
-	spin_lock(&cgroup_idr_lock);
+	spin_lock_bh(&cgroup_idr_lock);
 	idr_remove(idr, id);
-	spin_unlock(&cgroup_idr_lock);
+	spin_unlock_bh(&cgroup_idr_lock);
+}
+
+static struct cgroup *cgroup_parent(struct cgroup *cgrp)
+{
+	struct cgroup_subsys_state *parent_css = cgrp->self.parent;
+
+	if (parent_css)
+		return container_of(parent_css, struct cgroup, self);
+	return NULL;
 }
 
 /**
@@ -250,9 +259,9 @@ static struct cgroup_subsys_state *cgroup_e_css(struct cgroup *cgrp,
 	if (!(cgrp->root->subsys_mask & (1 << ss->id)))
 		return NULL;
 
-	while (cgrp->parent &&
-	       !(cgrp->parent->child_subsys_mask & (1 << ss->id)))
-		cgrp = cgrp->parent;
+	while (cgroup_parent(cgrp) &&
+	       !(cgroup_parent(cgrp)->child_subsys_mask & (1 << ss->id)))
+		cgrp = cgroup_parent(cgrp);
 
 	return cgroup_css(cgrp, ss);
 }
@@ -261,19 +270,6 @@ static struct cgroup_subsys_state *cgroup_e_css(struct cgroup *cgrp,
 static inline bool cgroup_is_dead(const struct cgroup *cgrp)
 {
 	return test_bit(CGRP_DEAD, &cgrp->flags);
-}
-
-static int cgroup_is_releasable(const struct cgroup *cgrp)
-{
-	const int bits =
-		(1 << CGRP_RELEASABLE) |
-		(1 << CGRP_NOTIFY_ON_RELEASE);
-	return (cgrp->flags & bits) == bits;
-}
-
-static int notify_on_release(const struct cgroup *cgrp)
-{
-	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
 }
 
 struct cgroup_subsys_state *of_css(struct kernfs_open_file *of)
@@ -295,6 +291,38 @@ struct cgroup_subsys_state *of_css(struct kernfs_open_file *of)
 		return &cgrp->self;
 }
 EXPORT_SYMBOL_GPL(of_css);
+
+/**
+ * cgroup_is_descendant - test ancestry
+ * @cgrp: the cgroup to be tested
+ * @ancestor: possible ancestor of @cgrp
+ *
+ * Test whether @cgrp is a descendant of @ancestor.  It also returns %true
+ * if @cgrp == @ancestor.  This function is safe to call as long as @cgrp
+ * and @ancestor are accessible.
+ */
+bool cgroup_is_descendant(struct cgroup *cgrp, struct cgroup *ancestor)
+{
+	while (cgrp) {
+		if (cgrp == ancestor)
+			return true;
+		cgrp = cgroup_parent(cgrp);
+	}
+	return false;
+}
+
+static int cgroup_is_releasable(const struct cgroup *cgrp)
+{
+	const int bits =
+		(1 << CGRP_RELEASABLE) |
+		(1 << CGRP_NOTIFY_ON_RELEASE);
+	return (cgrp->flags & bits) == bits;
+}
+
+static int notify_on_release(const struct cgroup *cgrp)
+{
+	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
+}
 
 /**
  * for_each_css - iterate all css's of a cgroup
@@ -425,7 +453,7 @@ static void cgroup_update_populated(struct cgroup *cgrp, bool populated)
 
 		if (cgrp->populated_kn)
 			kernfs_notify(cgrp->populated_kn);
-		cgrp = cgrp->parent;
+		cgrp = cgroup_parent(cgrp);
 	} while (cgrp);
 }
 
@@ -448,14 +476,6 @@ static unsigned long css_set_hash(struct cgroup_subsys_state *css[])
 	key = (key >> 16) ^ key;
 
 	return key;
-}
-
-/*
- * refcounted get/put for css_set objects
- */
-static inline void get_css_set(struct css_set *cset)
-{
-	atomic_inc(&cset->refcount);
 }
 
 static void put_css_set_locked(struct css_set *cset, bool taskexit)
@@ -510,6 +530,14 @@ static void put_css_set(struct css_set *cset, bool taskexit)
 	down_write(&css_set_rwsem);
 	put_css_set_locked(cset, taskexit);
 	up_write(&css_set_rwsem);
+}
+
+/*
+ * refcounted get/put for css_set objects
+ */
+static inline void get_css_set(struct css_set *cset)
+{
+	atomic_inc(&cset->refcount);
 }
 
 /**
@@ -638,12 +666,10 @@ static void free_cgrp_cset_links(struct list_head *links_to_free)
 {
 	struct cgrp_cset_link *link, *tmp_link;
 
-	down_write(&css_set_rwsem);
 	list_for_each_entry_safe(link, tmp_link, links_to_free, cset_link) {
 		list_del(&link->cset_link);
 		kfree(link);
 	}
-	up_write(&css_set_rwsem);
 }
 
 /**
@@ -660,17 +686,15 @@ static int allocate_cgrp_cset_links(int count, struct list_head *tmp_links)
 	int i;
 
 	INIT_LIST_HEAD(tmp_links);
-	down_write(&css_set_rwsem);
+
 	for (i = 0; i < count; i++) {
 		link = kzalloc(sizeof(*link), GFP_KERNEL);
 		if (!link) {
-			up_write(&css_set_rwsem);
 			free_cgrp_cset_links(tmp_links);
 			return -ENOMEM;
 		}
 		list_add(&link->cset_link, tmp_links);
 	}
-	up_write(&css_set_rwsem);
 	return 0;
 }
 
@@ -956,7 +980,6 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * update of a tasks cgroup pointer by cgroup_attach_task()
  */
 
-static struct dentry *cgroup_lookup(struct inode *, struct dentry *, unsigned int);
 static int cgroup_populate_dir(struct cgroup *cgrp, unsigned int subsys_mask);
 static struct kernfs_syscall_ops cgroup_kf_syscall_ops;
 static const struct file_operations proc_cgroupstats_operations;
@@ -1209,13 +1232,13 @@ static int cgroup_show_options(struct seq_file *seq,
 
 	spin_lock(&release_agent_path_lock);
 	if (strlen(root->release_agent_path))
-		seq_show_option(seq, "release_agent", root->release_agent_path);
+		seq_printf(seq, ",release_agent=%s", root->release_agent_path);
 	spin_unlock(&release_agent_path_lock);
 
 	if (test_bit(CGRP_CPUSET_CLONE_CHILDREN, &root->cgrp.flags))
 		seq_puts(seq, ",clone_children");
 	if (strlen(root->name))
-		seq_show_option(seq, "name", root->name);
+		seq_printf(seq, ",name=%s", root->name);
 	return 0;
 }
 
@@ -2014,7 +2037,7 @@ static int cgroup_migrate_prepare_dst(struct cgroup *dst_cgrp,
 	 * Except for the root, child_subsys_mask must be zero for a cgroup
 	 * with tasks so that child cgroups don't compete against tasks.
 	 */
-	if (dst_cgrp && cgroup_on_dfl(dst_cgrp) && dst_cgrp->parent &&
+	if (dst_cgrp && cgroup_on_dfl(dst_cgrp) && cgroup_parent(dst_cgrp) &&
 	    dst_cgrp->child_subsys_mask)
 		return -EBUSY;
 
@@ -2096,8 +2119,7 @@ static int cgroup_migrate(struct cgroup *cgrp, struct task_struct *leader,
 	down_write(&css_set_rwsem);
 	rcu_read_lock();
 	task = leader;
-	for_each_thread(leader, task) {
-
+	do {
 		/* @task either already exited or can't exit until the end */
 		if (task->flags & PF_EXITING)
 			goto next;
@@ -2123,7 +2145,7 @@ static int cgroup_migrate(struct cgroup *cgrp, struct task_struct *leader,
 	next:
 		if (!threadgroup)
 			break;
-	}
+	} while_each_thread(leader, task);
 	rcu_read_unlock();
 	up_write(&css_set_rwsem);
 
@@ -2181,10 +2203,7 @@ out_release_tset:
 	list_splice_init(&tset.dst_csets, &tset.src_csets);
 	list_for_each_entry_safe(cset, tmp_cset, &tset.src_csets, mg_node) {
 		list_splice_tail_init(&cset->mg_tasks, &cset->tasks);
-		cset->mg_dst_cset = NULL;
-		cset->mg_src_cgrp = NULL;
 		list_del_init(&cset->mg_node);
-		put_css_set_locked(cset, false);
 	}
 	up_write(&css_set_rwsem);
 	return ret;
@@ -2300,9 +2319,9 @@ retry_find_task:
 		 * only need to check permissions on one of them.
 		 */
 		tcred = __task_cred(tsk);
-		if (cred->euid &&
-		    cred->euid != tcred->uid &&
-		    cred->euid != tcred->suid) {
+		if (!uid_eq(cred->euid, GLOBAL_ROOT_UID) &&
+		    !uid_eq(cred->euid, tcred->uid) &&
+		    !uid_eq(cred->euid, tcred->suid)) {
 			/*
 			 * if the default permission check fails, give each
 			 * cgroup a chance to extend the permission check
@@ -2333,8 +2352,7 @@ retry_find_task:
 	 * trapped in a cpuset, or RT worker may be born in a cgroup
 	 * with no rt_runtime allocated.  Just say no.
 	 */
-	if (tsk == kthreadd_task || 
-		tsk->no_cgroup_migration || (tsk->flags & PF_NO_SETAFFINITY)) {
+	if (tsk->no_cgroup_migration || (tsk->flags & PF_NO_SETAFFINITY)) {
 		ret = -EINVAL;
 		rcu_read_unlock();
 		goto out_unlock_cgroup;
@@ -2449,9 +2467,6 @@ static int cgroup_sane_behavior_show(struct seq_file *seq, void *v)
 	return 0;
 }
 
-/* A buffer size big enough for numbers or short strings */
-#define CGROUP_LOCAL_BUFFER_SIZE 64
-
 static void cgroup_print_ss_mask(struct seq_file *seq, unsigned int ss_mask)
 {
 	struct cgroup_subsys *ss;
@@ -2484,7 +2499,7 @@ static int cgroup_controllers_show(struct seq_file *seq, void *v)
 {
 	struct cgroup *cgrp = seq_css(seq)->cgroup;
 
-	cgroup_print_ss_mask(seq, cgrp->parent->child_subsys_mask);
+	cgroup_print_ss_mask(seq, cgroup_parent(cgrp)->child_subsys_mask);
 	return 0;
 }
 
@@ -2667,8 +2682,8 @@ static ssize_t cgroup_subtree_control_write(struct kernfs_open_file *of,
 
 			/* unavailable or not enabled on the parent? */
 			if (!(cgrp_dfl_root.subsys_mask & (1 << ssid)) ||
-			    (cgrp->parent &&
-			     !(cgrp->parent->child_subsys_mask & (1 << ssid)))) {
+			    (cgroup_parent(cgrp) &&
+			     !(cgroup_parent(cgrp)->child_subsys_mask & (1 << ssid)))) {
 				ret = -ENOENT;
 				goto out_unlock;
 			}
@@ -2697,7 +2712,7 @@ static ssize_t cgroup_subtree_control_write(struct kernfs_open_file *of,
 	 * Except for the root, child_subsys_mask must be zero for a cgroup
 	 * with tasks so that child cgroups don't compete against tasks.
 	 */
-	if (enable && cgrp->parent && !list_empty(&cgrp->cset_links)) {
+	if (enable && cgroup_parent(cgrp) && !list_empty(&cgrp->cset_links)) {
 		ret = -EBUSY;
 		goto out_unlock;
 	}
@@ -2889,14 +2904,6 @@ static int cgroup_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
 	return ret;
 }
 
-static struct dentry *cgroup_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
-{
-	if (dentry->d_name.len > NAME_MAX)
-		return ERR_PTR(-ENAMETOOLONG);
-	d_add(dentry, NULL);
-	return NULL;
-}
-
 /* set uid and gid of cgroup dirs and files to that of the creator */
 static int cgroup_kn_set_ugid(struct kernfs_node *kn)
 {
@@ -2963,9 +2970,9 @@ static int cgroup_addrm_files(struct cgroup *cgrp, struct cftype cfts[],
 			continue;
 		if ((cft->flags & CFTYPE_INSANE) && cgroup_sane_behavior(cgrp))
 			continue;
-		if ((cft->flags & CFTYPE_NOT_ON_ROOT) && !cgrp->parent)
+		if ((cft->flags & CFTYPE_NOT_ON_ROOT) && !cgroup_parent(cgrp))
 			continue;
-		if ((cft->flags & CFTYPE_ONLY_ON_ROOT) && cgrp->parent)
+		if ((cft->flags & CFTYPE_ONLY_ON_ROOT) && cgroup_parent(cgrp))
 			continue;
 
 		if (is_add) {
@@ -3251,22 +3258,6 @@ css_next_descendant_pre(struct cgroup_subsys_state *pos,
 
 	return NULL;
 }
-EXPORT_SYMBOL_GPL(css_next_descendant_pre);
-
-static bool cgroup_has_live_children(struct cgroup *cgrp)
-{
-	struct cgroup *child;
-
-	rcu_read_lock();
-	list_for_each_entry_rcu(child, &cgrp->children, sibling) {
-		if (!cgroup_is_dead(child)) {
-			rcu_read_unlock();
-			return true;
-		}
-	}
-	rcu_read_unlock();
-	return false;
-}
 
 /**
  * css_rightmost_descendant - return the rightmost descendant of a css
@@ -3352,7 +3343,21 @@ css_next_descendant_post(struct cgroup_subsys_state *pos,
 	/* no sibling left, visit parent */
 	return pos->parent;
 }
-EXPORT_SYMBOL_GPL(css_next_descendant_post);
+
+static bool cgroup_has_live_children(struct cgroup *cgrp)
+{
+	struct cgroup *child;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(child, &cgrp->children, sibling) {
+		if (!cgroup_is_dead(child)) {
+			rcu_read_unlock();
+			return true;
+		}
+	}
+	rcu_read_unlock();
+	return false;
+}
 
 /**
  * css_advance_task_iter - advance a task itererator to the next css_set
@@ -4162,14 +4167,14 @@ static void css_free_work_fn(struct work_struct *work)
 		atomic_dec(&cgrp->root->nr_cgrps);
 		cgroup_pidlist_destroy_all(cgrp);
 
-		if (cgrp->parent) {
+		if (cgroup_parent(cgrp)) {
 			/*
 			 * We get a ref to the parent, and put the ref when
 			 * this cgroup is being freed, so it's guaranteed
 			 * that the parent won't be destroyed before its
 			 * children.
 			 */
-			cgroup_put(cgrp->parent);
+			cgroup_put(cgroup_parent(cgrp));
 			kernfs_put(cgrp->kn);
 			kfree(cgrp);
 		} else {
@@ -4233,8 +4238,8 @@ static void init_and_link_css(struct cgroup_subsys_state *css,
 	css->ss = ss;
 	css->flags = 0;
 
-	if (cgrp->parent) {
-		css->parent = cgroup_css(cgrp->parent, ss);
+	if (cgroup_parent(cgrp)) {
+		css->parent = cgroup_css(cgroup_parent(cgrp), ss);
 		css_get(css->parent);
 	}
 
@@ -4288,7 +4293,7 @@ static void offline_css(struct cgroup_subsys_state *css)
  */
 static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 {
-	struct cgroup *parent = cgrp->parent;
+	struct cgroup *parent = cgroup_parent(cgrp);
 	struct cgroup_subsys_state *css;
 	int err;
 
@@ -4325,7 +4330,7 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 		goto err_clear_dir;
 
 	if (ss->broken_hierarchy && !ss->warned_broken_hierarchy &&
-	    parent->parent) {
+	    cgroup_parent(parent)) {
 		pr_warn("%s (%d) created nested cgroup for controller \"%s\" which has incomplete hierarchy support. Nested cgroups may change behavior in the future.\n",
 			current->comm, current->pid, ss->name);
 		if (!strcmp(ss->name, "memory"))
@@ -4392,7 +4397,6 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 
 	init_cgroup_housekeeping(cgrp);
 
-	cgrp->parent = parent;
 	cgrp->self.parent = &parent->self;
 	cgrp->root = root;
 
@@ -4419,7 +4423,7 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 	cgrp->serial_nr = cgroup_serial_nr_next++;
 
 	/* allocation complete, commit to creation */
-	list_add_tail_rcu(&cgrp->sibling, &cgrp->parent->children);
+	list_add_tail_rcu(&cgrp->sibling, &cgroup_parent(cgrp)->children);
 	atomic_inc(&root->nr_cgrps);
 	cgroup_get(parent);
 
@@ -4614,8 +4618,8 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	 */
 	kernfs_remove(cgrp->kn);
 
-	set_bit(CGRP_RELEASABLE, &cgrp->parent->flags);
-	check_for_release(cgrp->parent);
+	set_bit(CGRP_RELEASABLE, &cgroup_parent(cgrp)->flags);
+	check_for_release(cgroup_parent(cgrp));
 
 	/* put the base reference */
 	percpu_ref_kill(&cgrp->self.refcnt);
