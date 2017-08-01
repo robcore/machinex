@@ -77,7 +77,6 @@ struct cgroup_subsys_state {
 
 /* bits in struct cgroup_subsys_state flags field */
 enum {
-	CSS_ROOT	= (1 << 0), /* this CSS is the root of the subsystem */
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
 };
 
@@ -97,9 +96,7 @@ static inline void __css_get(struct cgroup_subsys_state *css, int count)
 extern void __css_get(struct cgroup_subsys_state *css, int count);
 static inline void css_get(struct cgroup_subsys_state *css)
 {
-	/* We don't need to reference count the root state */
-	if (!(css->flags & CSS_ROOT))
-		__css_get(css, 1);
+	percpu_ref_get(&css->refcnt);
 }
 
 /**
@@ -114,8 +111,6 @@ static inline void css_get(struct cgroup_subsys_state *css)
  */
 static inline bool css_tryget_online(struct cgroup_subsys_state *css)
 {
-	if (css->flags & CSS_ROOT)
-		return true;
 	return percpu_ref_tryget_live(&css->refcnt);
 }
 
@@ -127,8 +122,7 @@ static inline bool css_tryget_online(struct cgroup_subsys_state *css)
  */
 static inline void css_put(struct cgroup_subsys_state *css)
 {
-	if (!(css->flags & CSS_ROOT))
-		percpu_ref_put(&css->refcnt);
+	percpu_ref_put(&css->refcnt);
 }
 
 /* bits in struct cgroup flags field */
@@ -164,8 +158,6 @@ struct cgroup {
 	 * in this cgroup or its subtree.
 	 */
 	int populated_cnt;
-
-	atomic_t refcnt;
 
 	/*
 	 * We link our 'sibling' struct into our parent's 'children'.
@@ -222,10 +214,6 @@ struct cgroup {
 	 */
 	struct list_head pidlists;
 	struct mutex pidlist_mutex;
-
-	/* For css percpu_ref killing and RCU-protected deletion */
-	struct rcu_head rcu_head;
-	struct work_struct destroy_work;
 
 	/* used to wait for offlining of csses */
 	wait_queue_head_t offline_waitq;
