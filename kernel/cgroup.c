@@ -191,6 +191,20 @@ static int cgroup_addrm_files(struct cgroup *cgrp, struct cftype cfts[],
 			      bool is_add);
 static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
 
+/* IDR wrappers which synchronize using cgroup_idr_lock */
+static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
+			    gfp_t gfp_mask)
+{
+	int ret;
+
+	idr_preload(gfp_mask);
+	spin_lock_bh(&cgroup_idr_lock);
+	ret = mx_idr_alloc(idr, ptr, start, end, gfp_mask);
+	spin_unlock_bh(&cgroup_idr_lock);
+	idr_preload_end();
+	return ret;
+}
+
 static void *cgroup_idr_replace(struct idr *idr, void *ptr, int id)
 {
 	void *ret;

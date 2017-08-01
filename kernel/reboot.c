@@ -318,7 +318,6 @@ static int __orderly_poweroff(bool force)
 
 	if (ret && force) {
 		pr_warn("Failed to start orderly shutdown: forcing the issue\n");
-
 		/*
 		 * I guess this should try to kick off some daemon to sync and
 		 * poweroff asap.  Or not even bother syncing if we're doing an

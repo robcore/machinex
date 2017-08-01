@@ -116,6 +116,8 @@ void idr_init(struct idr *idp);
 bool idr_is_empty(struct idr *idp);
 void mx_idr_destroy(struct idr *idp);
 int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t gfp_mask);
+int idr_alloc(struct idr *idp, void *ptr, int start, int end,
+			    gfp_t gfp_mask);
 
 static inline void idr_preload(gfp_t gfp_mask)
 {

@@ -768,6 +768,14 @@ fail:
 }
 EXPORT_SYMBOL(mx_idr_alloc);
 
+int idr_alloc(struct idr *idp, void *ptr, int start, int end,
+			    gfp_t gfp_mask)
+{
+	return mx_idr_alloc(struct idr *idp, void *ptr,
+						int start, int end,
+						gfp_t gfp_mask)
+}
+EXPORT_SYMBOL(idr_alloc);
 /**
  * DOC: IDA description
  * IDA - IDR based ID allocator
