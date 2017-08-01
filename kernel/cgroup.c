@@ -205,7 +205,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
 	int ret;
-	unsigned int id;
+	int id;
 
 		do {
 			spin_lock_bh(&cgroup_idr_lock);
@@ -217,7 +217,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			}
 			if (ret < 0)
 				return ret;
-		} while (id >= start && id <= end);
+		} while (id >= start);
 
 	return id;
 }
@@ -4741,6 +4741,7 @@ static struct kernfs_syscall_ops cgroup_kf_syscall_ops = {
 static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 {
 	struct cgroup_subsys_state *css;
+	int fakeid;
 
 	printk(KERN_INFO "Initializing cgroup subsys %s\n", ss->name);
 
@@ -4760,12 +4761,13 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 		/* idr_alloc() can't be called safely during early init */
 		css->id = 1;
 	} else {
-		css->id = cgroup_idr_alloc(&ss->css_idr, css, 1, 2, GFP_KERNEL);
-		if (css->id < 0) {
+		fakeid = cgroup_idr_alloc(&ss->css_idr, css, 1, 2, GFP_KERNEL);
+		if (fakeid < 0) {
 			mutex_unlock(&cgroup_mutex);
 			mutex_unlock(&cgroup_tree_mutex);			
 			return;
 		}
+		css->id = fakeid;
 	}
 
 	/* Update the init_css_set to contain a subsys
