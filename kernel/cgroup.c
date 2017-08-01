@@ -4267,7 +4267,7 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 		do {
 			spin_lock_bh(&cgroup_idr_lock);
 			err = idr_get_new_above(&ss->css_idr, css,
-					2, &css->id);
+					1, &css->id);
 			spin_unlock_bh(&cgroup_idr_lock);
 			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 					goto err_free_percpu_ref;
@@ -4355,6 +4355,7 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 	spin_unlock_bh(&cgroup_idr_lock);
 
 	if (cgrp->id < 0)
+		err = -ENOMEM;
 		goto err_unlock;;
 
 	init_cgroup_housekeeping(cgrp);
@@ -4762,7 +4763,7 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 				spin_unlock_bh(&cgroup_idr_lock);
 				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 						break;
-			} while (ret && (!(css->id < 0)));
+			} while (ret && (css->id => 0));
 	}
 
 	/* Update the init_css_set to contain a subsys
