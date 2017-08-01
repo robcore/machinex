@@ -34,6 +34,7 @@
 #include <linux/kernel.h>
 #include <linux/export.h>
 #include <linux/list.h>
+#include <linux/magic.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/mount.h>
