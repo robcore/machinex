@@ -1558,7 +1558,7 @@ static long vmsplice_to_user(struct file *file, const struct iovec __user *uiov,
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
 	struct iov_iter iter;
-	ssize_t count = 0;
+	ssize_t count;
 
 	pipe = get_pipe_info(file);
 	if (!pipe)
@@ -1567,8 +1567,9 @@ static long vmsplice_to_user(struct file *file, const struct iovec __user *uiov,
 	ret = rw_copy_check_uvector(READ, uiov, nr_segs,
 				    ARRAY_SIZE(iovstack), iovstack, &iov);
 	if (ret <= 0)
-		return ret;
+		goto out;
 
+	count = ret;
 	iov_iter_init(&iter, READ, iov, nr_segs, count);
 
 	sd.len = 0;
@@ -1581,6 +1582,7 @@ static long vmsplice_to_user(struct file *file, const struct iovec __user *uiov,
 	ret = __splice_from_pipe(pipe, &sd, pipe_to_user);
 	pipe_unlock(pipe);
 
+out:
 	if (iov != iovstack)
 		kfree(iov);
 
