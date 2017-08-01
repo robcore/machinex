@@ -3279,6 +3279,21 @@ css_next_descendant_pre(struct cgroup_subsys_state *pos,
 }
 EXPORT_SYMBOL_GPL(css_next_descendant_pre);
 
+static bool cgroup_has_live_children(struct cgroup *cgrp)
+{
+	struct cgroup *child;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(child, &cgrp->children, sibling) {
+		if (!cgroup_is_dead(child)) {
+			rcu_read_unlock();
+			return true;
+		}
+	}
+	rcu_read_unlock();
+	return false;
+}
+
 /**
  * css_rightmost_descendant - return the rightmost descendant of a css
  * @pos: css of interest
@@ -4548,7 +4563,6 @@ static void kill_css(struct cgroup_subsys_state *css)
 static int cgroup_destroy_locked(struct cgroup *cgrp)
 	__releases(&cgroup_mutex) __acquires(&cgroup_mutex)
 {
-	struct cgroup *child;
 	struct cgroup_subsys_state *css;
 	bool empty;
 	int ssid;
@@ -4570,15 +4584,7 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	 * emptiness as dead children linger on it while being destroyed;
 	 * otherwise, "rmdir parent/child parent" may fail with -EBUSY.
 	 */
-	empty = true;
-	rcu_read_lock();
-	list_for_each_entry_rcu(child, &cgrp->children, sibling) {
-		empty = cgroup_is_dead(child);
-		if (!empty)
-			break;
-	}
-	rcu_read_unlock();
-	if (!empty)
+	if (cgroup_has_live_children(cgrp))
 		return -EBUSY;
 
 	/*
