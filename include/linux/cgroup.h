@@ -102,14 +102,17 @@ static inline void css_get(struct cgroup_subsys_state *css)
 		__css_get(css, 1);
 }
 
-/*
- * Call css_tryget() to take a reference on a css if your existing
- * (known-valid) reference isn't already ref-counted. Returns false if
- * the css has been destroyed.
+/**
+ * css_tryget_online - try to obtain a reference on the specified css if online
+ * @css: target css
+ *
+ * Obtain a reference on @css if it's online.  The caller naturally needs
+ * to ensure that @css is accessible but doesn't have to be holding a
+ * reference on it - IOW, RCU protected access is good enough for this
+ * function.  Returns %true if a reference count was successfully obtained;
+ * %false otherwise.
  */
-
-extern bool __css_tryget(struct cgroup_subsys_state *css);
-static inline bool css_tryget(struct cgroup_subsys_state *css)
+static inline bool css_tryget_online(struct cgroup_subsys_state *css)
 {
 	if (css->flags & CSS_ROOT)
 		return true;
@@ -120,7 +123,7 @@ static inline bool css_tryget(struct cgroup_subsys_state *css)
  * css_put - put a css reference
  * @css: target css
  *
- * Put a reference obtained via css_get() and css_tryget().
+ * Put a reference obtained via css_get() and css_tryget_online().
  */
 static inline void css_put(struct cgroup_subsys_state *css)
 {
@@ -912,8 +915,8 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
  * destroyed". The caller should check css and cgroup's status.
  */
 
-struct cgroup_subsys_state *css_tryget_from_dir(struct dentry *dentry,
-						struct cgroup_subsys *ss);
+struct cgroup_subsys_state *css_tryget_online_from_dir(struct dentry *dentry,
+						       struct cgroup_subsys *ss);
 
 /*
  * Default Android check for whether the current process is allowed to move a
