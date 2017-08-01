@@ -274,8 +274,8 @@ EXPORT_SYMBOL_GPL(seq_css);
 	for ((ssid) = 0; (ssid) < CGROUP_SUBSYS_COUNT &&		\
 	     (((ss) = cgroup_subsys[ssid]) || true); (ssid)++)
 
-/* iterate across the active hierarchies */
-#define for_each_active_root(root)					\
+/* iterate across the hierarchies */
+#define for_each_root(root)						\
 	list_for_each_entry((root), &cgroup_roots, root_list)
 
 /**
@@ -339,7 +339,6 @@ static struct css_set init_css_set = {
 	.mg_node		= LIST_HEAD_INIT(init_css_set.mg_node),
 };
 
-static struct cgrp_cset_link init_cgrp_cset_link;
 static int css_set_count	= 1;	/* 1 for init_css_set */
 
 /*
@@ -1488,8 +1487,11 @@ retry:
 		goto out_unlock;
 
 	/* look for a matching existing root */
-	for_each_active_root(root) {
+	for_each_root(root) {
 		bool name_match = false;
+
+		if (root == &cgroup_dummy_root)
+			continue;
 
 		/*
 		 * If we asked for a name then it must match.  Also, if
@@ -2163,11 +2165,16 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
 	int retval = 0;
 
 	mutex_lock(&cgroup_mutex);
-	for_each_active_root(root) {
+	for_each_root(root) {
 		struct cgroup *from_cgrp;
+
+		if (root == &cgroup_dummy_root)
+			continue;
+
 		down_read(&css_set_rwsem);
 		from_cgrp = task_cgroup_from_root(from, root);
 		up_read(&css_set_rwsem);
+
 		retval = cgroup_attach_task(from_cgrp, tsk, false);
 		if (retval)
 			break;
@@ -4148,31 +4155,17 @@ int __init cgroup_init(void)
 
 	BUG_ON(cgroup_init_cftypes(NULL, cgroup_base_files));
 
-	/* allocate id for the dummy hierarchy */
+	mutex_lock(&cgroup_tree_mutex);
 	mutex_lock(&cgroup_mutex);
 
 	/* Add init_css_set to the hash table */
 	key = css_set_hash(init_css_set.subsys);
 	hash_add(css_set_table, &init_css_set.hlist, key);
 
-	BUG_ON(cgroup_init_root_id(&cgroup_dummy_root));
-
-	while (idr_get_new_above(&cgroup_dummy_root.cgroup_idr, cgroup_dummy_top,
-				0, &cgroup_dummy_top->id)) {
-		if (!idr_pre_get(&cgroup_dummy_root.cgroup_idr, GFP_KERNEL))
-			return -ENOMEM;
-	}
-
-	err = cgroup_dummy_top->id;
-	WARN_ON(err < 0);
-
-	cgroup_root_count = 1;
-	init_cgrp_cset_link.cset = &init_css_set;
-	init_cgrp_cset_link.cgrp = cgroup_dummy_top;
-	list_add(&init_cgrp_cset_link.cset_link, &cgroup_dummy_top->cset_links);
-	list_add(&init_cgrp_cset_link.cgrp_link, &init_css_set.cgrp_links);
+	BUG_ON(cgroup_setup_root(&cgroup_dummy_root, 0));
 
 	mutex_unlock(&cgroup_mutex);
+	mutex_unlock(&cgroup_tree_mutex);
 
 	for_each_subsys(ss, ssid) {
 		if (!ss->early_init)
@@ -4256,10 +4249,13 @@ int proc_cgroup_show(struct seq_file *m, void *v)
 	mutex_lock(&cgroup_mutex);
 	down_read(&css_set_rwsem);
 
-	for_each_active_root(root) {
+	for_each_root(root) {
 		struct cgroup_subsys *ss;
 		struct cgroup *cgrp;
 		int ssid, count = 0;
+
+		if (root == &cgroup_dummy_root)
+			continue;
 
 		seq_printf(m, "%d:", root->hierarchy_id);
 		for_each_subsys(ss, ssid)
