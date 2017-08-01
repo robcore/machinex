@@ -1567,7 +1567,7 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 			root_cgrp->id = ret;
 		} while (ret);
 
-	ret = percpu_ref_init(&root_cgrp->self.refcnt, css_release);
+	ret = percpu_ref_init(&root_cgrp->self.refcnt, css_release, 0, GFP_KERNEL);
 	if (ret)
 		goto out;
 
@@ -4372,7 +4372,7 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 		goto out_unlock;
 	}
 
-	ret = percpu_ref_init(&cgrp->self.refcnt, css_release);
+	ret = percpu_ref_init(&cgrp->self.refcnt, css_release, 0, GFP_KERNEL);
 	if (ret)
 		goto out_free_cgrp;
 
