@@ -1625,7 +1625,8 @@ out_unlock:
 	if (ret)
 		return ERR_PTR(ret);
 
-	dentry = kernfs_mount(fs_type, flags, root->kf_root);
+	dentry = kernfs_mount(fs_type, flags, root->kf_root,
+				CGROUP_SUPER_MAGIC, &new_sb);
 	if (IS_ERR(dentry))
 		cgroup_put_root(root);
 	return dentry;
