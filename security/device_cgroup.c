@@ -695,7 +695,7 @@ struct cgroup_subsys devices_subsys = {
 	.css_online = devcgroup_online,
 	.css_offline = devcgroup_offline,
 	.subsys_id = devices_subsys_id,
-	.base_cftypes = dev_cgroup_files,
+	.legacy_cftypes = dev_cgroup_files,
 
 	/*
 	 * While devices cgroup has the rudimentary hierarchy support which
