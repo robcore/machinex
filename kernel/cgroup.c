@@ -205,22 +205,19 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
 	int ret;
-	int id;
+	int new_id;
 
 		do {
 			spin_lock_bh(&cgroup_idr_lock);
 			ret = idr_get_new_above(idr, ptr,
 					start, &id);
 			spin_unlock_bh(&cgroup_idr_lock);
-			if (id > end)
-				return ret;
 			if (!idr_pre_get(idr, gfp_mask)) {
 				return ret;
 			}
-			id = ret;
-		} while (ret);
+		} while (id >= start && id <= end);
 
-	return ret;
+	return id;
 }
 
 static void *cgroup_idr_replace(struct idr *idr, void *ptr, int id)
@@ -4762,7 +4759,10 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 		css->id = 1;
 	} else {
 		css->id = cgroup_idr_alloc(&ss->css_idr, css, 1, 2, GFP_KERNEL);
-		BUG_ON(css->id < 0);
+		if (css->id < 0) {
+			mutex_unlock(&cgroup_mutex);
+			mutex_unlock(&cgroup_tree_mutex);			
+			return;
 	}
 
 	/* Update the init_css_set to contain a subsys
