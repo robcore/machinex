@@ -272,7 +272,10 @@ static int parse_options(char *options, struct super_block *sb, s64 *newLVSize,
 		case Opt_resize:
 		{
 			char *resize = args[0].from;
-			*newLVSize = simple_strtoull(resize, &resize, 0);
+			int rc = kstrtoll(resize, 0, newLVSize);
+
+			if (rc)
+				goto cleanup;
 			break;
 		}
 		case Opt_resize_nosize:
@@ -340,7 +343,10 @@ static int parse_options(char *options, struct super_block *sb, s64 *newLVSize,
 		case Opt_umask:
 		{
 			char *umask = args[0].from;
-			sbi->umask = simple_strtoul(umask, &umask, 8);
+			int rc = kstrtouint(umask, 8, &sbi->umask);
+
+			if (rc)
+				goto cleanup;
 			if (sbi->umask & ~0777) {
 				pr_err("JFS: Invalid value of umask\n");
 				goto cleanup;
@@ -371,13 +377,15 @@ static int parse_options(char *options, struct super_block *sb, s64 *newLVSize,
 		{
 			struct request_queue *q = bdev_get_queue(sb->s_bdev);
 			char *minblks_trim = args[0].from;
+			int rc;
 			if (blk_queue_discard(q)) {
 				*flag |= JFS_DISCARD;
-				sbi->minblks_trim = simple_strtoull(
-					minblks_trim, &minblks_trim, 0);
-			} else {
+				rc = kstrtouint(minblks_trim, 0,
+						&sbi->minblks_trim);
+				if (rc)
+					goto cleanup;
+			} else
 				pr_err("JFS: discard option not supported on device\n");
-			}
 			break;
 		}
 
