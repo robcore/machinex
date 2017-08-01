@@ -1632,7 +1632,7 @@ destroy_root:
 exit_root_id:
 	cgroup_exit_root_id(root);
 cancel_ref:
-	percpu_ref_cancel_init(&root_cgrp->self.refcnt);
+	percpu_ref_exit(&root_cgrp->self.refcnt);
 out:
 	free_cgrp_cset_links(&tmp_links);
 	return ret;
@@ -4465,7 +4465,7 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 out_free_id:
 	cgroup_idr_remove(&root->cgroup_idr, cgrp->id);
 out_cancel_ref:
-	percpu_ref_cancel_init(&cgrp->self.refcnt);
+	percpu_ref_exit(&cgrp->self.refcnt);
 out_free_cgrp:
 	kfree(cgrp);
 out_unlock:
