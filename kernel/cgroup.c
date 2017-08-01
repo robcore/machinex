@@ -1465,13 +1465,6 @@ static int cgroup_setup_root(struct cgroupfs_root *root)
 			root_cgrp->id = ret;
 		} while (ret);
 
-	/* check for name clashes with existing mounts */
-	ret = -EBUSY;
-	if (strlen(root->name))
-		for_each_active_root(existing_root)
-			if (!strcmp(existing_root->name, root->name))
-				goto out_unlock;
-
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
 	 * but that's OK - it can only be increased by someone holding
