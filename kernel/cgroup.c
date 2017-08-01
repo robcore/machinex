@@ -34,7 +34,6 @@
 #include <linux/kernel.h>
 #include <linux/export.h>
 #include <linux/list.h>
-#include <linux/magic.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/mount.h>
@@ -1617,8 +1616,7 @@ out_unlock:
 	if (ret)
 		return ERR_PTR(ret);
 
-	dentry = kernfs_mount(fs_type, flags, root->kf_root,
-				CGROUP_SUPER_MAGIC, &new_sb);
+	dentry = kernfs_mount(fs_type, flags, root->kf_root);
 	if (IS_ERR(dentry))
 		cgroup_put_root(root);
 	return dentry;
