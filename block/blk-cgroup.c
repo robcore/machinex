@@ -1188,7 +1188,7 @@ int blkcg_policy_register(struct blkcg_policy *pol)
 
 	/* everything is in place, add intf files for the new policy */
 	if (blkcgp->cftypes)
-		WARN_ON(cgroup_add_cftypes(&blkcg_subsys, blkcgp->cftypes));
+		WARN_ON(cgroup_add_legacy_cftypes(&blkcg_subsys, blkcgp->cftypes));
 	ret = 0;
 out_unlock:
 	mutex_unlock(&blkcg_pol_mutex);
