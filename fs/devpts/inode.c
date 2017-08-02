@@ -10,6 +10,8 @@
  *
  * ------------------------------------------------------------------------- */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -148,10 +150,10 @@ static inline struct super_block *pts_sb_from_inode(struct inode *inode)
 
 /*
  * parse_mount_options():
- * 	Set @opts to mount options specified in @data. If an option is not
- * 	specified in @data, set it to its default value. The exception is
- * 	'newinstance' option which can only be set/cleared on a mount (i.e.
- * 	cannot be changed during remount).
+ *	Set @opts to mount options specified in @data. If an option is not
+ *	specified in @data, set it to its default value. The exception is
+ *	'newinstance' option which can only be set/cleared on a mount (i.e.
+ *	cannot be changed during remount).
  *
  * Note: @data may be NULL (in which case all options are set to default).
  */
@@ -217,7 +219,7 @@ static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 			break;
 #endif
 		default:
-			printk(KERN_ERR "devpts: called with bogus options\n");
+			pr_err("called with bogus options\n");
 			return -EINVAL;
 		}
 	}
@@ -246,7 +248,7 @@ static int mknod_ptmx(struct super_block *sb)
 
 	dentry = d_alloc_name(root, "ptmx");
 	if (!dentry) {
-		printk(KERN_NOTICE "Unable to alloc dentry for ptmx node\n");
+		pr_err("Unable to alloc dentry for ptmx node\n");
 		goto out;
 	}
 
@@ -255,7 +257,7 @@ static int mknod_ptmx(struct super_block *sb)
 	 */
 	inode = new_inode(sb);
 	if (!inode) {
-		printk(KERN_ERR "Unable to alloc inode for ptmx node\n");
+		pr_err("Unable to alloc inode for ptmx node\n");
 		dput(dentry);
 		goto out;
 	}
@@ -286,7 +288,7 @@ static void update_ptmx_mode(struct pts_fs_info *fsi)
 #else
 static inline void update_ptmx_mode(struct pts_fs_info *fsi)
 {
-       return;
+	return;
 }
 #endif
 
@@ -379,7 +381,7 @@ devpts_fill_super(struct super_block *s, void *data, int silent)
 	if (s->s_root)
 		return 0;
 
-	printk(KERN_ERR "devpts: get root dentry failed\n");
+	pr_err("get root dentry failed\n");
 
 fail:
 	return -ENOMEM;

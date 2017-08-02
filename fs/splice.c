@@ -32,6 +32,7 @@
 #include <linux/gfp.h>
 #include <linux/socket.h>
 #include <linux/compat.h>
+#include <linux/aio.h>
 
 #include "internal.h"
 
@@ -715,63 +716,6 @@ static int pipe_to_sendpage(struct pipe_inode_info *pipe,
 				    sd->len, &pos, more);
 }
 
-/*
- * This is a little more tricky than the file -> pipe splicing. There are
- * basically three cases:
- *
- *	- Destination page already exists in the address space and there
- *	  are users of it. For that case we have no other option that
- *	  copying the data. Tough luck.
- *	- Destination page already exists in the address space, but there
- *	  are no users of it. Make sure it's uptodate, then drop it. Fall
- *	  through to last case.
- *	- Destination page does not exist, we can add the pipe page to
- *	  the page cache and avoid the copy.
- *
- * If asked to move pages to the output file (SPLICE_F_MOVE is set in
- * sd->flags), we attempt to migrate pages from the pipe to the output
- * file address space page cache. This is possible if no one else has
- * the pipe page referenced outside of the pipe and page cache. If
- * SPLICE_F_MOVE isn't set, or we cannot move the page, we simply create
- * a new page in the output file page cache and fill/dirty that.
- */
-int pipe_to_file(struct pipe_inode_info *pipe, struct pipe_buffer *buf,
-		 struct splice_desc *sd)
-{
-	struct file *file = sd->u.file;
-	struct address_space *mapping = file->f_mapping;
-	unsigned int offset, this_len;
-	struct page *page;
-	void *fsdata;
-	int ret;
-
-	offset = sd->pos & ~PAGE_CACHE_MASK;
-
-	this_len = sd->len;
-	if (this_len + offset > PAGE_CACHE_SIZE)
-		this_len = PAGE_CACHE_SIZE - offset;
-
-	ret = pagecache_write_begin(file, mapping, sd->pos, this_len,
-				AOP_FLAG_UNINTERRUPTIBLE, &page, &fsdata);
-	if (unlikely(ret))
-		goto out;
-
-	if (buf->page != page) {
-		char *src = kmap_atomic(buf->page);
-		char *dst = kmap_atomic(page);
-
-		memcpy(dst + offset, src + buf->offset, this_len);
-		flush_dcache_page(page);
-		kunmap_atomic(dst);
-		kunmap_atomic(src);
-	}
-	ret = pagecache_write_end(file, mapping, sd->pos, this_len, this_len,
-				page, fsdata);
-out:
-	return ret;
-}
-EXPORT_SYMBOL(pipe_to_file);
-
 static void wakeup_pipe_writers(struct pipe_inode_info *pipe)
 {
 	smp_mb();
@@ -800,7 +744,7 @@ static void wakeup_pipe_writers(struct pipe_inode_info *pipe)
  *    locking is required around copying the pipe buffers to the
  *    destination.
  */
-int splice_from_pipe_feed(struct pipe_inode_info *pipe, struct splice_desc *sd,
+static int splice_from_pipe_feed(struct pipe_inode_info *pipe, struct splice_desc *sd,
 			  splice_actor *actor)
 {
 	int ret;
@@ -847,7 +791,6 @@ int splice_from_pipe_feed(struct pipe_inode_info *pipe, struct splice_desc *sd,
 
 	return 1;
 }
-EXPORT_SYMBOL(splice_from_pipe_feed);
 
 /**
  * splice_from_pipe_next - wait for some data to splice from
@@ -859,7 +802,7 @@ EXPORT_SYMBOL(splice_from_pipe_feed);
  *    value (one) if pipe buffers are available.  It will return zero
  *    or -errno if no more data needs to be spliced.
  */
-int splice_from_pipe_next(struct pipe_inode_info *pipe, struct splice_desc *sd)
+static int splice_from_pipe_next(struct pipe_inode_info *pipe, struct splice_desc *sd)
 {
 	/*
 	 * Check for signal early to make process killable when there are
@@ -891,7 +834,6 @@ int splice_from_pipe_next(struct pipe_inode_info *pipe, struct splice_desc *sd)
 
 	return 1;
 }
-EXPORT_SYMBOL(splice_from_pipe_next);
 
 /**
  * splice_from_pipe_begin - start splicing from pipe
@@ -902,12 +844,11 @@ EXPORT_SYMBOL(splice_from_pipe_next);
  *    splice_from_pipe_next() and splice_from_pipe_feed() to
  *    initialize the necessary fields of @sd.
  */
-void splice_from_pipe_begin(struct splice_desc *sd)
+static void splice_from_pipe_begin(struct splice_desc *sd)
 {
 	sd->num_spliced = 0;
 	sd->need_wakeup = false;
 }
-EXPORT_SYMBOL(splice_from_pipe_begin);
 
 /**
  * splice_from_pipe_end - finish splicing from pipe
@@ -919,12 +860,11 @@ EXPORT_SYMBOL(splice_from_pipe_begin);
  *    be called after a loop containing splice_from_pipe_next() and
  *    splice_from_pipe_feed().
  */
-void splice_from_pipe_end(struct pipe_inode_info *pipe, struct splice_desc *sd)
+static void splice_from_pipe_end(struct pipe_inode_info *pipe, struct splice_desc *sd)
 {
 	if (sd->need_wakeup)
 		wakeup_pipe_writers(pipe);
 }
-EXPORT_SYMBOL(splice_from_pipe_end);
 
 /**
  * __splice_from_pipe - splice data from a pipe to given actor
@@ -991,7 +931,7 @@ ssize_t splice_from_pipe(struct pipe_inode_info *pipe, struct file *out,
 }
 
 /**
- * generic_file_splice_write - splice data from a pipe to a file
+ * iter_file_splice_write - splice data from a pipe to a file
  * @pipe:	pipe info
  * @out:	file to write to
  * @ppos:	position in @out
@@ -1001,44 +941,122 @@ ssize_t splice_from_pipe(struct pipe_inode_info *pipe, struct file *out,
  * Description:
  *    Will either move or copy pages (determined by @flags options) from
  *    the given pipe inode to the given file.
+ *    This one is ->write_iter-based.
  *
  */
 ssize_t
-generic_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
+iter_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
 			  loff_t *ppos, size_t len, unsigned int flags)
 {
-	struct address_space *mapping = out->f_mapping;
-	struct inode *inode = mapping->host;
 	struct splice_desc sd = {
+		.total_len = len,
 		.flags = flags,
+		.pos = *ppos,
 		.u.file = out,
 	};
+	int nbufs = pipe->buffers;
+	struct bio_vec *array = kcalloc(nbufs, sizeof(struct bio_vec),
+					GFP_KERNEL);
 	ssize_t ret;
 
-	ret = generic_write_checks(out, ppos, &len, S_ISBLK(inode->i_mode));
-	if (ret)
-		return ret;
-	sd.total_len = len;
-	sd.pos = *ppos;
+	if (unlikely(!array))
+		return -ENOMEM;
 
 	pipe_lock(pipe);
 
 	splice_from_pipe_begin(&sd);
-	do {
+	while (sd.total_len) {
+		struct iov_iter from;
+		struct kiocb kiocb;
+		size_t left;
+		int n, idx;
+
 		ret = splice_from_pipe_next(pipe, &sd);
 		if (ret <= 0)
 			break;
 
-		mutex_lock_nested(&inode->i_mutex, I_MUTEX_CHILD);
-		ret = file_remove_suid(out);
-		if (!ret) {
-			ret = file_update_time(out);
-			if (!ret)
-				ret = splice_from_pipe_feed(pipe, &sd,
-							    pipe_to_file);
+		if (unlikely(nbufs < pipe->buffers)) {
+			kfree(array);
+			nbufs = pipe->buffers;
+			array = kcalloc(nbufs, sizeof(struct bio_vec),
+					GFP_KERNEL);
+			if (!array) {
+				ret = -ENOMEM;
+				break;
+			}
 		}
-		mutex_unlock(&inode->i_mutex);
-	} while (ret > 0);
+
+		/* build the vector */
+		left = sd.total_len;
+		for (n = 0, idx = pipe->curbuf; left && n < pipe->nrbufs; n++, idx++) {
+			struct pipe_buffer *buf = pipe->bufs + idx;
+			size_t this_len = buf->len;
+
+			if (this_len > left)
+				this_len = left;
+
+			if (idx == pipe->buffers - 1)
+				idx = -1;
+
+			ret = buf->ops->confirm(pipe, buf);
+			if (unlikely(ret)) {
+				if (ret == -ENODATA)
+					ret = 0;
+				goto done;
+			}
+
+			array[n].bv_page = buf->page;
+			array[n].bv_len = this_len;
+			array[n].bv_offset = buf->offset;
+			left -= this_len;
+		}
+
+		/* ... iov_iter */
+		from.type = ITER_BVEC | WRITE;
+		from.bvec = array;
+		from.nr_segs = n;
+		from.count = sd.total_len - left;
+		from.iov_offset = 0;
+
+		/* ... and iocb */
+		init_sync_kiocb(&kiocb, out);
+		kiocb.ki_pos = sd.pos;
+		kiocb.ki_nbytes = sd.total_len - left;
+
+		/* now, send it */
+		ret = out->f_op->write_iter(&kiocb, &from);
+		if (-EIOCBQUEUED == ret)
+			ret = wait_on_sync_kiocb(&kiocb);
+
+		if (ret <= 0)
+			break;
+
+		sd.num_spliced += ret;
+		sd.total_len -= ret;
+		*ppos = sd.pos = kiocb.ki_pos;
+
+		/* dismiss the fully eaten buffers, adjust the partial one */
+		while (ret) {
+			struct pipe_buffer *buf = pipe->bufs + pipe->curbuf;
+			if (ret >= buf->len) {
+				const struct pipe_buf_operations *ops = buf->ops;
+				ret -= buf->len;
+				buf->len = 0;
+				buf->ops = NULL;
+				ops->release(pipe, buf);
+				pipe->curbuf = (pipe->curbuf + 1) & (pipe->buffers - 1);
+				pipe->nrbufs--;
+				if (pipe->files)
+					sd.need_wakeup = true;
+			} else {
+				buf->offset += ret;
+				buf->len -= ret;
+				ret = 0;
+			}
+		}
+	}
+done:
+	kfree(array);
 	splice_from_pipe_end(pipe, &sd);
 
 	pipe_unlock(pipe);
@@ -1046,21 +1064,10 @@ generic_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
 	if (sd.num_spliced)
 		ret = sd.num_spliced;
 
-	if (ret > 0) {
-		int err;
-
-		err = generic_write_sync(out, *ppos, ret);
-		if (err)
-			ret = err;
-		else
-			*ppos += ret;
-		balance_dirty_pages_ratelimited(mapping);
-	}
-
 	return ret;
 }
 
-EXPORT_SYMBOL(generic_file_splice_write);
+EXPORT_SYMBOL(iter_file_splice_write);
 
 static int write_pipe_buf(struct pipe_inode_info *pipe, struct pipe_buffer *buf,
 			  struct splice_desc *sd)

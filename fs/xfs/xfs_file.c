@@ -1012,7 +1012,7 @@ const struct file_operations xfs_file_operations = {
 	.aio_read	= xfs_file_aio_read,
 	.aio_write	= xfs_file_aio_write,
 	.splice_read	= xfs_file_splice_read,
-	.splice_write	= xfs_file_splice_write,
+	.splice_write	= iter_file_splice_write,
 	.unlocked_ioctl	= xfs_file_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl	= xfs_file_compat_ioctl,

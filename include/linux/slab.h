@@ -315,7 +315,7 @@ static __always_inline void *kmem_cache_alloc_node(struct kmem_cache *s, gfp_t f
 }
 #endif
 
-#ifdef CONFIG_TRACING
+#if 0
 extern void *kmem_cache_alloc_trace(struct kmem_cache *, gfp_t, size_t);
 
 #ifdef CONFIG_NUMA
