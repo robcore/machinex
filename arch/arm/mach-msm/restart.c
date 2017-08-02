@@ -182,7 +182,7 @@ static void __msm_power_off(int lower_pshold)
 	if (lower_pshold) {
 		halt_spmi_pmic_arbiter();
 		__raw_writel(0, PSHOLD_CTL_SU);
-		mdelay(8000);
+		mdelay(10000);
 		pr_emerg("Powering off has failed\n");
 	}
 }
@@ -342,7 +342,7 @@ void msm_restart(char mode, const char *cmd)
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
 		__raw_writel(0, PSHOLD_CTL_SU); /* Actually reset the chip */
-		mdelay(3000);
+		mdelay(5000);
 		pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
 	}
 
@@ -355,9 +355,22 @@ void msm_restart(char mode, const char *cmd)
 	__raw_writel(0, PSHOLD_CTL_SU);
 
 
-	mdelay(8000);
+	mdelay(10000);
 	pr_err("restarting has failed\n");
 }
+
+static int do_msm_restart(struct notifier_block *nb, unsigned long action,
+			   void *data)
+{
+	msm_power_off();
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block restart_nb = {
+	.notifier_call = do_msm_restart,
+	.priority = 128,
+};
 
 #ifdef CONFIG_KEXEC_HARDBOOT
 void msm_kexec_hardboot(void)
@@ -416,6 +429,7 @@ static int __init msm_restart_init(void)
 #endif
 	msm_tmr0_base = msm_timer_get_timer0_base();
 	restart_reason = MSM_IMEM_BASE + RESTART_REASON_ADDR;
+	register_restart_handler(&restart_nb);
 	pm_power_off = msm_power_off;
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;
