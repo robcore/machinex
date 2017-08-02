@@ -246,19 +246,6 @@ static inline bool cgroup_is_dead(const struct cgroup *cgrp)
 	return test_bit(CGRP_DEAD, &cgrp->flags);
 }
 
-static int cgroup_is_releasable(const struct cgroup *cgrp)
-{
-	const int bits =
-		(1 << CGRP_RELEASABLE) |
-		(1 << CGRP_NOTIFY_ON_RELEASE);
-	return (cgrp->flags & bits) == bits;
-}
-
-static int notify_on_release(const struct cgroup *cgrp)
-{
-	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
-}
-
 struct cgroup_subsys_state *seq_css(struct seq_file *seq)
 {
 	struct kernfs_open_file *of = seq->private;
@@ -279,6 +266,38 @@ struct cgroup_subsys_state *seq_css(struct seq_file *seq)
 		return &cgrp->dummy_css;
 }
 EXPORT_SYMBOL_GPL(seq_css);
+
+/**
+ * cgroup_is_descendant - test ancestry
+ * @cgrp: the cgroup to be tested
+ * @ancestor: possible ancestor of @cgrp
+ *
+ * Test whether @cgrp is a descendant of @ancestor.  It also returns %true
+ * if @cgrp == @ancestor.  This function is safe to call as long as @cgrp
+ * and @ancestor are accessible.
+ */
+bool cgroup_is_descendant(struct cgroup *cgrp, struct cgroup *ancestor)
+{
+	while (cgrp) {
+		if (cgrp == ancestor)
+			return true;
+		cgrp = cgrp->parent;
+	}
+	return false;
+}
+
+static int cgroup_is_releasable(const struct cgroup *cgrp)
+{
+	const int bits =
+		(1 << CGRP_RELEASABLE) |
+		(1 << CGRP_NOTIFY_ON_RELEASE);
+	return (cgrp->flags & bits) == bits;
+}
+
+static int notify_on_release(const struct cgroup *cgrp)
+{
+	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
+}
 
 /**
  * for_each_css - iterate all css's of a cgroup
@@ -407,14 +426,6 @@ static unsigned long css_set_hash(struct cgroup_subsys_state *css[])
 	return key;
 }
 
-/*
- * refcounted get/put for css_set objects
- */
-static inline void get_css_set(struct css_set *cset)
-{
-	atomic_inc(&cset->refcount);
-}
-
 static void put_css_set_locked(struct css_set *cset, bool taskexit)
 {
 	struct cgrp_cset_link *link, *tmp_link;
@@ -434,16 +445,20 @@ static void put_css_set_locked(struct css_set *cset, bool taskexit)
 
 	list_for_each_entry_safe(link, tmp_link, &cset->cgrp_links, cgrp_link) {
 		struct cgroup *cgrp = link->cgrp;
+
 		list_del(&link->cset_link);
 		list_del(&link->cgrp_link);
 
 		/* @cgrp can't go away while we're holding css_set_rwsem */
-		if (list_empty(&cgrp->cset_links)) {
+		if (list_empty(&cgrp->cset_links) && notify_on_release(cgrp)) {
+			if (taskexit)
+				set_bit(CGRP_RELEASABLE, &cgrp->flags);
 			check_for_release(cgrp);
 		}
 
 		kfree(link);
 	}
+
 	kfree_rcu(cset, rcu_head);
 }
 
@@ -460,6 +475,14 @@ static void put_css_set(struct css_set *cset, bool taskexit)
 	down_write(&css_set_rwsem);
 	put_css_set_locked(cset, taskexit);
 	up_write(&css_set_rwsem);
+}
+
+/*
+ * refcounted get/put for css_set objects
+ */
+static inline void get_css_set(struct css_set *cset)
+{
+	atomic_inc(&cset->refcount);
 }
 
 /**
@@ -588,12 +611,10 @@ static void free_cgrp_cset_links(struct list_head *links_to_free)
 {
 	struct cgrp_cset_link *link, *tmp_link;
 
-	down_write(&css_set_rwsem);
 	list_for_each_entry_safe(link, tmp_link, links_to_free, cset_link) {
 		list_del(&link->cset_link);
 		kfree(link);
 	}
-	up_write(&css_set_rwsem);
 }
 
 /**
@@ -610,17 +631,15 @@ static int allocate_cgrp_cset_links(int count, struct list_head *tmp_links)
 	int i;
 
 	INIT_LIST_HEAD(tmp_links);
-	down_write(&css_set_rwsem);
+
 	for (i = 0; i < count; i++) {
 		link = kzalloc(sizeof(*link), GFP_KERNEL);
 		if (!link) {
-			up_write(&css_set_rwsem);
 			free_cgrp_cset_links(tmp_links);
 			return -ENOMEM;
 		}
 		list_add(&link->cset_link, tmp_links);
 	}
-	up_write(&css_set_rwsem);
 	return 0;
 }
 
@@ -904,10 +923,9 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * update of a tasks cgroup pointer by cgroup_attach_task()
  */
 
-static struct dentry *cgroup_lookup(struct inode *, struct dentry *, unsigned int);
 static int cgroup_populate_dir(struct cgroup *cgrp, unsigned long subsys_mask);
-static const struct file_operations proc_cgroupstats_operations;
 static struct kernfs_syscall_ops cgroup_kf_syscall_ops;
+static const struct file_operations proc_cgroupstats_operations;
 
 static char *cgroup_file_name(struct cgroup *cgrp, const struct cftype *cft,
 			      char *buf)
@@ -1145,13 +1163,13 @@ static int cgroup_show_options(struct seq_file *seq,
 
 	spin_lock(&release_agent_path_lock);
 	if (strlen(root->release_agent_path))
-		seq_show_option(seq, "release_agent", root->release_agent_path);
+		seq_printf(seq, ",release_agent=%s", root->release_agent_path);
 	spin_unlock(&release_agent_path_lock);
 
 	if (test_bit(CGRP_CPUSET_CLONE_CHILDREN, &root->cgrp.flags))
 		seq_puts(seq, ",clone_children");
 	if (strlen(root->name))
-		seq_show_option(seq, "name", root->name);
+		seq_printf(seq, ",name=%s", root->name);
 	return 0;
 }
 
@@ -1380,36 +1398,6 @@ static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
 	return ret;
 }
 
-static void init_cgroup_housekeeping(struct cgroup *cgrp)
-{
-	struct cgroup_subsys *ss;
-	int ssid;
-
-	atomic_set(&cgrp->refcnt, 1);
-	INIT_LIST_HEAD(&cgrp->sibling);
-	INIT_LIST_HEAD(&cgrp->children);
-	INIT_LIST_HEAD(&cgrp->cset_links);
-	INIT_LIST_HEAD(&cgrp->release_list);
-	INIT_LIST_HEAD(&cgrp->pidlists);
-	mutex_init(&cgrp->pidlist_mutex);
-	cgrp->dummy_css.cgroup = cgrp;
-
-	for_each_subsys(ss, ssid)
-		INIT_LIST_HEAD(&cgrp->e_csets[ssid]);
-}
-
-static void init_cgroup_root(struct cgroup_root *root,
-			     struct cgroup_sb_opts *opts)
-{
-	struct cgroup *cgrp = &root->cgrp;
-
-	INIT_LIST_HEAD(&root->root_list);
-	atomic_set(&root->nr_cgrps, 1);
-	cgrp->root = root;
-	init_cgroup_housekeeping(cgrp);
-	idr_init(&root->cgroup_idr);
-}
-
 /*
  * To reduce the fork() overhead for systems that are not actually using
  * their cgroups capability, we don't maintain the lists running through
@@ -1460,6 +1448,36 @@ static void cgroup_enable_task_cg_lists(void)
 	read_unlock(&tasklist_lock);
 out_unlock:
 	up_write(&css_set_rwsem);
+}
+
+static void init_cgroup_housekeeping(struct cgroup *cgrp)
+{
+	struct cgroup_subsys *ss;
+	int ssid;
+
+	atomic_set(&cgrp->refcnt, 1);
+	INIT_LIST_HEAD(&cgrp->sibling);
+	INIT_LIST_HEAD(&cgrp->children);
+	INIT_LIST_HEAD(&cgrp->cset_links);
+	INIT_LIST_HEAD(&cgrp->release_list);
+	INIT_LIST_HEAD(&cgrp->pidlists);
+	mutex_init(&cgrp->pidlist_mutex);
+	cgrp->dummy_css.cgroup = cgrp;
+
+	for_each_subsys(ss, ssid)
+		INIT_LIST_HEAD(&cgrp->e_csets[ssid]);
+}
+
+static void init_cgroup_root(struct cgroup_root *root,
+			     struct cgroup_sb_opts *opts)
+{
+	struct cgroup *cgrp = &root->cgrp;
+
+	INIT_LIST_HEAD(&root->root_list);
+	atomic_set(&root->nr_cgrps, 1);
+	cgrp->root = root;
+	init_cgroup_housekeeping(cgrp);
+	idr_init(&root->cgroup_idr);
 
 	root->flags = opts->flags;
 	if (opts->release_agent)
@@ -1498,7 +1516,6 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned long ss_mask)
 	if (ret)
 		goto out;
 
-	/* ID 0 is reserved for dummy root, 1 for unified hierarchy */
 	ret = cgroup_init_root_id(root);
 	if (ret)
 		goto out;
@@ -1570,7 +1587,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 	 */
 	if (!use_task_css_set_links)
 		cgroup_enable_task_cg_lists();
-
 
 	mutex_lock(&cgroup_tree_mutex);
 	mutex_lock(&cgroup_mutex);
@@ -2095,10 +2111,7 @@ out_release_tset:
 	list_splice_init(&tset.dst_csets, &tset.src_csets);
 	list_for_each_entry_safe(cset, tmp_cset, &tset.src_csets, mg_node) {
 		list_splice_tail_init(&cset->mg_tasks, &cset->tasks);
-		cset->mg_dst_cset = NULL;
-		cset->mg_src_cgrp = NULL;
 		list_del_init(&cset->mg_node);
-		put_css_set_locked(cset, false);
 	}
 	up_write(&css_set_rwsem);
 	return ret;
@@ -2316,16 +2329,14 @@ static int cgroup_procs_write(struct cgroup_subsys_state *css,
 static int cgroup_release_agent_write(struct cgroup_subsys_state *css,
 				      struct cftype *cft, char *buffer)
 {
-
 	struct cgroup_root *root = css->cgroup->root;
 
-	BUILD_BUG_ON(sizeof(css->cgroup->root->release_agent_path) < PATH_MAX);
-	if (strlen(buffer) >= PATH_MAX)
-		return -EINVAL;
+	BUILD_BUG_ON(sizeof(root->release_agent_path) < PATH_MAX);
 	if (!cgroup_lock_live_group(css->cgroup))
 		return -ENODEV;
 	spin_lock(&release_agent_path_lock);
-	strcpy(css->cgroup->root->release_agent_path, buffer);
+	strlcpy(root->release_agent_path, buffer,
+		sizeof(root->release_agent_path));
 	spin_unlock(&release_agent_path_lock);
 	mutex_unlock(&cgroup_mutex);
 	return 0;
@@ -2480,14 +2491,6 @@ static int cgroup_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
 	kernfs_unbreak_active_protection(kn);
 	kernfs_unbreak_active_protection(new_parent);
 	return ret;
-}
-
-static struct dentry *cgroup_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
-{
-	if (dentry->d_name.len > NAME_MAX)
-		return ERR_PTR(-ENAMETOOLONG);
-	d_add(dentry, NULL);
-	return NULL;
 }
 
 /* set uid and gid of cgroup dirs and files to that of the creator */
@@ -2671,7 +2674,7 @@ static int cgroup_rm_cftypes_locked(struct cftype *cfts)
 int cgroup_rm_cftypes(struct cftype *cfts)
 {
 	int ret;
-retry:
+
 	mutex_lock(&cgroup_tree_mutex);
 	ret = cgroup_rm_cftypes_locked(cfts);
 	mutex_unlock(&cgroup_tree_mutex);
@@ -3403,7 +3406,6 @@ int cgroupstats_build(struct cgroupstats *stats, struct dentry *dentry)
 	struct cgroup *cgrp;
 	struct css_task_iter it;
 	struct task_struct *tsk;
-        it.task = NULL;
 
 	/* it should be kernfs_node belonging to cgroupfs and is a directory */
 	if (dentry->d_sb->s_type != &cgroup_fs_type || !kn ||
@@ -3815,17 +3817,17 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 
 	err = percpu_ref_init(&css->refcnt, css_release, 0, GFP_KERNEL);
 	if (err)
-		goto err_free;
+		goto err_free_css;
 
 	init_css(css, ss, cgrp);
 
 	err = cgroup_populate_dir(cgrp, 1 << ss->id);
 	if (err)
-		goto err_free;
+		goto err_free_percpu_ref;
 
 	err = online_css(css);
 	if (err)
-		goto err_free;
+		goto err_clear_dir;
 
 	cgroup_get(cgrp);
 	css_get(css->parent);
@@ -3841,8 +3843,11 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 
 	return 0;
 
-err_free:
-	percpu_ref_exit(&css->refcnt);
+err_clear_dir:
+	cgroup_clear_dir(css->cgroup, 1 << css->ss->id);
+err_free_percpu_ref:
+	percpu_ref_cancel_init(&css->refcnt);
+err_free_css:
 	ss->css_free(css);
 	return err;
 }
