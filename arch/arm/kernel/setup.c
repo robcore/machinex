@@ -1170,8 +1170,10 @@ void __init setup_arch(char **cmdline_p)
 	paging_init(mdesc);
 	request_standard_resources(mdesc);
 
+#if 0
 	if (mdesc->restart)
 		arm_pm_restart = mdesc->restart;
+#endif
 
 	unflatten_device_tree();
 
@@ -1262,7 +1264,7 @@ static int c_show(struct seq_file *m, void *v)
 	int i, j;
 	u32 cpuid;
 
-	for_each_possible_cpu(i) {
+	for_each_online_cpu(i) {
 		/*
 		 * glibc reads /proc/cpuinfo to determine the number of
 		 * online processors, looking for lines beginning with
