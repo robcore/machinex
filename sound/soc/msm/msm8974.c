@@ -997,7 +997,7 @@ module_init(msm_audio_init);
 static void __exit msm_audio_exit(void)
 {
 	if (!machine_is_msm8974_sim()) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: 8974 - Not the right machine type\n", __func__);
 		return ;
 	}
 	msm_free_headset_mic_gpios();

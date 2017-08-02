@@ -2643,7 +2643,7 @@ static int __init msm8930_audio_init(void)
 	int ret;
 
 	if (!soc_class_is_msm8930()) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: msm8930 - Not the right machine type\n", __func__);
 		return -ENODEV ;
 	}
 #ifndef CONFIG_SLIMBUS_MSM_CTRL
@@ -2701,7 +2701,7 @@ module_init(msm8930_audio_init);
 static void __exit msm8930_audio_exit(void)
 {
 	if (!cpu_is_msm8930() && !cpu_is_msm8930aa() && !cpu_is_msm8627()) {
-		pr_err("%s: Not the right machine type\n", __func__);
+		pr_err("%s: msm8930-msm8627-Not the right machine type\n", __func__);
 		return ;
 	}
 /* Not used headset mic gpio in msm8930 sec model
