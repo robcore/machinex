@@ -4,6 +4,9 @@
  *  Copyright (C) 2013  Linus Torvalds
  */
 
+#define pr_fmt(fmt)	"reboot: " fmt
+
+#include <linux/ctype.h>
 #include <linux/export.h>
 #include <linux/kexec.h>
 #include <linux/kmod.h>
@@ -22,13 +25,33 @@ int C_A_D = 1;
 struct pid *cad_pid;
 EXPORT_SYMBOL(cad_pid);
 
+#if defined(CONFIG_ARM) || defined(CONFIG_UNICORE32)
+#define DEFAULT_REBOOT_MODE		= REBOOT_HARD
+#else
+#define DEFAULT_REBOOT_MODE
+#endif
+enum reboot_mode reboot_mode DEFAULT_REBOOT_MODE;
+
+/*
+ * This variable is used privately to keep track of whether or not
+ * reboot_type is still set to its default value (i.e., reboot= hasn't
+ * been set on the command line).  This is needed so that we can
+ * suppress DMI scanning for reboot quirks.  Without it, it's
+ * impossible to override a faulty reboot quirk without recompiling.
+ */
+int reboot_default = 1;
+int reboot_cpu;
+enum reboot_type reboot_type = BOOT_ACPI;
+int reboot_force;
+
 /*
  * If set, this is used for preparing the system to power off.
  */
 
 void (*pm_power_off_prepare)(void);
+
 /**
- * emergency_restart - reboot the system
+ *	emergency_restart - reboot the system
  *
  *	Without shutting down any hardware or taking any locks
  *	reboot the system.  This is called when we know we are in
@@ -81,10 +104,91 @@ int unregister_reboot_notifier(struct notifier_block *nb)
 }
 EXPORT_SYMBOL(unregister_reboot_notifier);
 
+/*
+ *	Notifier list for kernel code which wants to be called
+ *	to restart the system.
+ */
+static ATOMIC_NOTIFIER_HEAD(restart_handler_list);
+
+/**
+ *	register_restart_handler - Register function to be called to reset
+ *				   the system
+ *	@nb: Info about handler function to be called
+ *	@nb->priority:	Handler priority. Handlers should follow the
+ *			following guidelines for setting priorities.
+ *			0:	Restart handler of last resort,
+ *				with limited restart capabilities
+ *			128:	Default restart handler; use if no other
+ *				restart handler is expected to be available,
+ *				and/or if restart functionality is
+ *				sufficient to restart the entire system
+ *			255:	Highest priority restart handler, will
+ *				preempt all other restart handlers
+ *
+ *	Registers a function with code to be called to restart the
+ *	system.
+ *
+ *	Registered functions will be called from machine_restart as last
+ *	step of the restart sequence (if the architecture specific
+ *	machine_restart function calls do_kernel_restart - see below
+ *	for details).
+ *	Registered functions are expected to restart the system immediately.
+ *	If more than one function is registered, the restart handler priority
+ *	selects which function will be called first.
+ *
+ *	Restart handlers are expected to be registered from non-architecture
+ *	code, typically from drivers. A typical use case would be a system
+ *	where restart functionality is provided through a watchdog. Multiple
+ *	restart handlers may exist; for example, one restart handler might
+ *	restart the entire system, while another only restarts the CPU.
+ *	In such cases, the restart handler which only restarts part of the
+ *	hardware is expected to register with low priority to ensure that
+ *	it only runs if no other means to restart the system is available.
+ *
+ *	Currently always returns zero, as atomic_notifier_chain_register()
+ *	always returns zero.
+ */
+int register_restart_handler(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_register(&restart_handler_list, nb);
+}
+EXPORT_SYMBOL(register_restart_handler);
+
+/**
+ *	unregister_restart_handler - Unregister previously registered
+ *				     restart handler
+ *	@nb: Hook to be unregistered
+ *
+ *	Unregisters a previously registered restart handler function.
+ *
+ *	Returns zero on success, or %-ENOENT on failure.
+ */
+int unregister_restart_handler(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_unregister(&restart_handler_list, nb);
+}
+EXPORT_SYMBOL(unregister_restart_handler);
+
+/**
+ *	do_kernel_restart - Execute kernel restart handler call chain
+ *
+ *	Calls functions registered with register_restart_handler.
+ *
+ *	Expected to be called from machine_restart as last step of the restart
+ *	sequence.
+ *
+ *	Restarts the system immediately if a restart handler function has been
+ *	registered. Otherwise does nothing.
+ */
+void do_kernel_restart(char *cmd)
+{
+	atomic_notifier_call_chain(&restart_handler_list, reboot_mode, cmd);
+}
+
 void migrate_to_reboot_cpu(void)
 {
 	/* The boot cpu is always logical cpu 0 */
-	int cpu = 0;
+	int cpu = reboot_cpu;
 
 	cpu_hotplug_disable();
 
@@ -119,10 +223,6 @@ void kernel_restart(char *cmd)
 		pr_emerg("Restarting system\n");
 	else
 		pr_emerg("Restarting system with command '%s'\n", cmd);
-	pr_emerg("Current task:%s(%d) Parent task:%s(%d)\n",
-		current->comm, current->pid,
-		current->real_parent->comm,
-		current->real_parent->pid);
 	kmsg_dump(KMSG_DUMP_RESTART);
 	machine_restart(cmd);
 }
@@ -168,10 +268,6 @@ void kernel_power_off(void)
 	migrate_to_reboot_cpu();
 	syscore_shutdown();
 	pr_emerg("Power down\n");
-	pr_emerg("Current task:%s(%d) Parent task:%s(%d)\n",
-		current->comm, current->pid,
-		current->real_parent->comm,
-		current->real_parent->pid);
 	kmsg_dump(KMSG_DUMP_POWEROFF);
 	machine_power_off();
 }
@@ -297,8 +393,9 @@ void ctrl_alt_del(void)
 }
 
 char poweroff_cmd[POWEROFF_CMD_PATH_LEN] = "/sbin/poweroff";
+static const char reboot_cmd[] = "/sbin/reboot";
 
-static int __orderly_poweroff(bool force)
+static int run_cmd(const char *cmd)
 {
 	char **argv;
 	static char *envp[] = {
@@ -307,14 +404,37 @@ static int __orderly_poweroff(bool force)
 		NULL
 	};
 	int ret;
-
-	argv = argv_split(GFP_KERNEL, poweroff_cmd, NULL);
+	argv = argv_split(GFP_KERNEL, cmd, NULL);
 	if (argv) {
 		ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
 		argv_free(argv);
 	} else {
 		ret = -ENOMEM;
 	}
+
+	return ret;
+}
+
+static int __orderly_reboot(void)
+{
+	int ret;
+
+	ret = run_cmd(reboot_cmd);
+
+	if (ret) {
+		pr_warn("Failed to start orderly reboot: forcing the issue\n");
+		emergency_sync();
+		kernel_restart(NULL);
+	}
+
+	return ret;
+}
+
+static int __orderly_poweroff(bool force)
+{
+	int ret;
+
+	ret = run_cmd(poweroff_cmd);
 
 	if (ret && force) {
 		pr_warn("Failed to start orderly shutdown: forcing the issue\n");
@@ -347,11 +467,97 @@ static DECLARE_WORK(poweroff_work, poweroff_work_func);
  * This may be called from any context to trigger a system shutdown.
  * If the orderly shutdown fails, it will force an immediate shutdown.
  */
-int orderly_poweroff(bool force)
+void orderly_poweroff(bool force)
 {
 	if (force) /* do not override the pending "true" */
 		poweroff_force = true;
 	schedule_work(&poweroff_work);
-	return 0;
 }
 EXPORT_SYMBOL_GPL(orderly_poweroff);
+
+static void reboot_work_func(struct work_struct *work)
+{
+	__orderly_reboot();
+}
+
+static DECLARE_WORK(reboot_work, reboot_work_func);
+
+/**
+ * orderly_reboot - Trigger an orderly system reboot
+ *
+ * This may be called from any context to trigger a system reboot.
+ * If the orderly reboot fails, it will force an immediate reboot.
+ */
+void orderly_reboot(void)
+{
+	schedule_work(&reboot_work);
+}
+EXPORT_SYMBOL_GPL(orderly_reboot);
+
+static int __init reboot_setup(char *str)
+{
+	for (;;) {
+		/*
+		 * Having anything passed on the command line via
+		 * reboot= will cause us to disable DMI checking
+		 * below.
+		 */
+		reboot_default = 0;
+
+		switch (*str) {
+		case 'w':
+			reboot_mode = REBOOT_WARM;
+			break;
+
+		case 'c':
+			reboot_mode = REBOOT_COLD;
+			break;
+
+		case 'h':
+			reboot_mode = REBOOT_HARD;
+			break;
+
+		case 's':
+		{
+			int rc;
+
+			if (isdigit(*(str+1))) {
+				rc = kstrtoint(str+1, 0, &reboot_cpu);
+				if (rc)
+					return rc;
+			} else if (str[1] == 'm' && str[2] == 'p' &&
+				   isdigit(*(str+3))) {
+				rc = kstrtoint(str+3, 0, &reboot_cpu);
+				if (rc)
+					return rc;
+			} else
+				reboot_mode = REBOOT_SOFT;
+			break;
+		}
+		case 'g':
+			reboot_mode = REBOOT_GPIO;
+			break;
+
+		case 'b':
+		case 'a':
+		case 'k':
+		case 't':
+		case 'e':
+		case 'p':
+			reboot_type = *str;
+			break;
+
+		case 'f':
+			reboot_force = 1;
+			break;
+		}
+
+		str = strchr(str, ',');
+		if (str)
+			str++;
+		else
+			break;
+	}
+	return 1;
+}
+__setup("reboot=", reboot_setup);

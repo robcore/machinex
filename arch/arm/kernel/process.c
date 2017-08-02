@@ -140,7 +140,7 @@ void soft_restart(unsigned long addr)
 	u64 *stack = soft_restart_stack + ARRAY_SIZE(soft_restart_stack);
 
 	/* Disable interrupts first */
-	local_irq_disable();
+	raw_local_irq_disable();
 	local_fiq_disable();
 
 	/* Disable the L2 if we're the last man standing. */
@@ -204,16 +204,6 @@ void arch_cpu_idle_exit(void)
 {
 	idle_notifier_call_chain(IDLE_END);
 }
-
-static char reboot_mode = 'h';
-
-int __init reboot_setup(char *str)
-{
-	reboot_mode = str[0];
-	return 1;
-}
-
-__setup("reboot=", reboot_setup);
 
 /*
  * Called by kexec, immediately prior to machine_kexec().
