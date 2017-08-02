@@ -162,7 +162,7 @@ EXPORT_SYMBOL(_local_bh_enable);
 
 static inline void _local_bh_enable_ip(unsigned long ip)
 {
-	WARN_ON_ONCE(in_irq());
+	WARN_ON_ONCE(in_irq() || irqs_disabled());
 #ifdef CONFIG_TRACE_IRQFLAGS
 	local_irq_disable();
 #endif
@@ -475,7 +475,7 @@ void __tasklet_hi_schedule_first(struct tasklet_struct *t)
 }
 EXPORT_SYMBOL(__tasklet_hi_schedule_first);
 
-static void tasklet_action(struct softirq_action *a)
+static __latent_entropy void tasklet_action(struct softirq_action *a)
 {
 	struct tasklet_struct *list;
 
@@ -511,7 +511,7 @@ static void tasklet_action(struct softirq_action *a)
 	}
 }
 
-static void tasklet_hi_action(struct softirq_action *a)
+static __latent_entropy void tasklet_hi_action(struct softirq_action *a)
 {
 	struct tasklet_struct *list;
 
@@ -879,7 +879,6 @@ int __init __weak early_irq_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_GENERIC_HARDIRQS
 int __init __weak arch_probe_nr_irqs(void)
 {
 	return NR_IRQS_LEGACY;
@@ -889,8 +888,8 @@ int __init __weak arch_early_irq_init(void)
 {
 	return 0;
 }
+
 unsigned int __weak arch_dynirq_lower_bound(unsigned int from)
 {
 	return from;
 }
-#endif
