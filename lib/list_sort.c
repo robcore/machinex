@@ -209,18 +209,18 @@ static int __init cmp(void *priv, struct list_head *a, struct list_head *b)
 
 static int __init list_sort_test(void)
 {
-	int i, count = 1, err = -EINVAL;
+	int i, count = 1, err = -ENOMEM;
 	struct debug_el *el;
-	struct list_head *cur, *tmp;
+	struct list_head *cur;
 	LIST_HEAD(head);
 
 	printk(KERN_DEBUG "list_sort_test: start testing list_sort()\n");
 
-	elts = kmalloc(sizeof(void *) * TEST_LIST_LEN, GFP_KERNEL);
+	elts = kcalloc(TEST_LIST_LEN, sizeof(*elts), GFP_KERNEL);
 	if (!elts) {
 		printk(KERN_ERR "list_sort_test: error: cannot allocate "
 				"memory\n");
-		goto exit;
+		return err;
 	}
 
 	for (i = 0; i < TEST_LIST_LEN; i++) {
@@ -241,6 +241,7 @@ static int __init list_sort_test(void)
 
 	list_sort(NULL, &head, cmp);
 
+	err = -EINVAL;
 	for (cur = head.next; cur->next != &head; cur = cur->next) {
 		struct debug_el *el1;
 		int cmp_result;
@@ -273,6 +274,11 @@ static int __init list_sort_test(void)
 		}
 		count++;
 	}
+	if (head.prev != cur) {
+		printk(KERN_ERR "list_sort_test: error: list is corrupted\n");
+		goto exit;
+	}
+
 
 	if (count != TEST_LIST_LEN) {
 		printk(KERN_ERR "list_sort_test: error: bad list length %d",
@@ -282,11 +288,9 @@ static int __init list_sort_test(void)
 
 	err = 0;
 exit:
+	for (i = 0; i < TEST_LIST_LEN; i++)
+		kfree(elts[i]);
 	kfree(elts);
-	list_for_each_safe(cur, tmp, &head) {
-		list_del(cur);
-		kfree(container_of(cur, struct debug_el, list));
-	}
 	return err;
 }
 late_initcall(list_sort_test);
