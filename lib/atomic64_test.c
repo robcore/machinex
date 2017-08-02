@@ -8,9 +8,6 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  */
-
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/init.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
@@ -149,18 +146,18 @@ static __init int test_atomic64(void)
 	BUG_ON(v.counter != r);
 
 #ifdef CONFIG_X86
-	pr_info("passed for %s platform %s CX8 and %s SSE\n",
+	printk(KERN_INFO "atomic64 test passed for %s platform %s CX8 and %s SSE\n",
 #ifdef CONFIG_X86_64
-		"x86-64",
+	       "x86-64",
 #elif defined(CONFIG_X86_CMPXCHG64)
-		"i586+",
+	       "i586+",
 #else
-		"i386+",
+	       "i386+",
 #endif
 	       boot_cpu_has(X86_FEATURE_CX8) ? "with" : "without",
 	       boot_cpu_has(X86_FEATURE_XMM) ? "with" : "without");
 #else
-	pr_info("passed\n");
+	printk(KERN_INFO "atomic64 test passed\n");
 #endif
 
 	return 0;

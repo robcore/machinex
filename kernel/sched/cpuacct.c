@@ -55,7 +55,7 @@ static inline struct cpuacct *task_ca(struct task_struct *tsk)
 
 static inline struct cpuacct *parent_ca(struct cpuacct *ca)
 {
-	return css_ca(ca->css.parent);
+	return css_ca(css_parent(&ca->css));
 }
 
 static DEFINE_PER_CPU(struct cpuacct_usage, root_cpuacct_cpuusage);
@@ -386,6 +386,6 @@ void __init cpuacct_init(void)
 struct cgroup_subsys cpuacct_cgrp_subsys = {
 	.css_alloc	= cpuacct_css_alloc,
 	.css_free	= cpuacct_css_free,
-	.legacy_cftypes	= files,
+	.base_cftypes	= files,
 	.early_init	= 1,
 };

@@ -27,7 +27,6 @@
 #include <linux/radix-tree.h>
 #include <linux/percpu.h>
 #include <linux/slab.h>
-#include <linux/kmemleak.h>
 #include <linux/notifier.h>
 #include <linux/cpu.h>
 #include <linux/string.h>
@@ -201,10 +200,6 @@ radix_tree_node_alloc(struct radix_tree_root *root)
 			rtp->nodes[rtp->nr - 1] = NULL;
 			rtp->nr--;
 		}
-		/*
-		 * Update the allocation stack trace as this is more useful
-		 * for debugging.
-		 */
 	}
 	if (ret == NULL)
 		ret = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask);
@@ -1352,6 +1347,7 @@ static inline void radix_tree_shrink(struct radix_tree_root *root)
 /**
  *	__radix_tree_delete_node    -    try to free node after clearing a slot
  *	@root:		radix tree root
+ *	@index:		index key
  *	@node:		node containing @index
  *
  *	After clearing the slot at @index in @node from radix tree

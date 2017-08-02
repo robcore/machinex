@@ -1776,9 +1776,6 @@ static long shmem_fallocate(struct file *file, int mode, loff_t offset,
 	pgoff_t start, index, end;
 	int error;
 
-	if (mode & ~(FALLOC_FL_KEEP_SIZE | FALLOC_FL_PUNCH_HOLE))
-		return -EOPNOTSUPP;
-
 	mutex_lock(&inode->i_mutex);
 
 	if (mode & FALLOC_FL_PUNCH_HOLE) {
@@ -2657,7 +2654,7 @@ static const struct file_operations shmem_file_operations = {
 	.write_iter	= generic_file_write_iter,
 	.fsync		= noop_fsync,
 	.splice_read	= shmem_file_splice_read,
-	.splice_write	= iter_file_splice_write,
+	.splice_write	= generic_file_splice_write,
 	.fallocate	= shmem_fallocate,
 #endif
 };

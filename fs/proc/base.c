@@ -411,6 +411,21 @@ static const struct file_operations proc_lstats_operations = {
 
 #endif
 
+#ifdef CONFIG_CGROUPS
+static int cgroup_open(struct inode *inode, struct file *file)
+{
+	struct pid *pid = PROC_I(inode)->pid;
+	return single_open(file, proc_cgroup_show, pid);
+}
+
+static const struct file_operations proc_cgroup_operations = {
+	.open		= cgroup_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
+
 #ifdef CONFIG_PROC_PID_CPUSET
 
 static int cpuset_open(struct inode *inode, struct file *file)
@@ -2701,7 +2716,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("cpuset",     S_IRUGO, proc_cpuset_operations),
 #endif
 #ifdef CONFIG_CGROUPS
-	ONE("cgroup",  S_IRUGO, proc_cgroup_show),
+	REG("cgroup",  S_IRUGO, proc_cgroup_operations),
 #endif
 	INF("oom_score",  S_IRUGO, proc_oom_score),
 	ANDROID("oom_adj",S_IRUGO|S_IWUSR, oom_adjust),
@@ -3041,7 +3056,7 @@ static const struct pid_entry tid_base_stuff[] = {
 	REG("cpuset",    S_IRUGO, proc_cpuset_operations),
 #endif
 #ifdef CONFIG_CGROUPS
-	ONE("cgroup",  S_IRUGO, proc_cgroup_show),
+	REG("cgroup",  S_IRUGO, proc_cgroup_operations),
 #endif
 	INF("oom_score", S_IRUGO, proc_oom_score),
 	REG("oom_adj",   S_IRUGO|S_IWUSR, proc_oom_adjust_operations),

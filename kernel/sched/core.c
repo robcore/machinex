@@ -6103,7 +6103,7 @@ cpu_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 static int cpu_cgroup_css_online(struct cgroup_subsys_state *css)
 {
 	struct task_group *tg = css_tg(css);
-	struct task_group *parent = css_tg(css->parent);
+	struct task_group *parent = css_tg(css_parent(css));
 
 	if (parent)
 		sched_online_group(tg, parent);
@@ -6528,7 +6528,7 @@ struct cgroup_subsys cpu_cgrp_subsys = {
 	.attach		= cpu_cgroup_attach,
 	.allow_attach	= subsys_cgroup_allow_attach,
 	.exit		= cpu_cgroup_exit,
-	.legacy_cftypes	= cpu_files,
+	.base_cftypes	= cpu_files,
 	.early_init	= 1,
 };
 

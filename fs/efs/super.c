@@ -134,7 +134,7 @@ static const struct export_operations efs_export_ops = {
 
 static int __init init_efs_fs(void) {
 	int err;
-	pr_info(EFS_VERSION" - http://aeschi.ch.eu.org/efs/\n");
+	printk("EFS: "EFS_VERSION" - http://aeschi.ch.eu.org/efs/\n");
 	err = init_inodecache();
 	if (err)
 		goto out1;
@@ -179,12 +179,12 @@ static efs_block_t efs_validate_vh(struct volume_header *vh) {
 		csum += be32_to_cpu(cs);
 	}
 	if (csum) {
-		pr_warn("SGI disklabel: checksum bad, label corrupted\n");
+		printk(KERN_INFO "EFS: SGI disklabel: checksum bad, label corrupted\n");
 		return 0;
 	}
 
 #ifdef DEBUG
-	pr_debug("bf: \"%16s\"\n", vh->vh_bootfile);
+	printk(KERN_DEBUG "EFS: bf: \"%16s\"\n", vh->vh_bootfile);
 
 	for(i = 0; i < NVDIR; i++) {
 		int	j;
@@ -196,8 +196,9 @@ static efs_block_t efs_validate_vh(struct volume_header *vh) {
 		name[j] = (char) 0;
 
 		if (name[0]) {
-			pr_debug("vh: %8s block: 0x%08x size: 0x%08x\n",
-				name, (int) be32_to_cpu(vh->vh_vd[i].vd_lbn),
+			printk(KERN_DEBUG "EFS: vh: %8s block: 0x%08x size: 0x%08x\n",
+				name,
+				(int) be32_to_cpu(vh->vh_vd[i].vd_lbn),
 				(int) be32_to_cpu(vh->vh_vd[i].vd_nbytes));
 		}
 	}
@@ -210,11 +211,12 @@ static efs_block_t efs_validate_vh(struct volume_header *vh) {
 		}
 #ifdef DEBUG
 		if (be32_to_cpu(vh->vh_pt[i].pt_nblks)) {
-			pr_debug("pt %2d: start: %08d size: %08d type: 0x%02x (%s)\n",
-				 i, (int)be32_to_cpu(vh->vh_pt[i].pt_firstlbn),
-				 (int)be32_to_cpu(vh->vh_pt[i].pt_nblks),
-				 pt_type, (pt_entry->pt_name) ?
-				 pt_entry->pt_name : "unknown");
+			printk(KERN_DEBUG "EFS: pt %2d: start: %08d size: %08d type: 0x%02x (%s)\n",
+				i,
+				(int) be32_to_cpu(vh->vh_pt[i].pt_firstlbn),
+				(int) be32_to_cpu(vh->vh_pt[i].pt_nblks),
+				pt_type,
+				(pt_entry->pt_name) ? pt_entry->pt_name : "unknown");
 		}
 #endif
 		if (IS_EFS(pt_type)) {
@@ -224,10 +226,11 @@ static efs_block_t efs_validate_vh(struct volume_header *vh) {
 	}
 
 	if (slice == -1) {
-		pr_notice("partition table contained no EFS partitions\n");
+		printk(KERN_NOTICE "EFS: partition table contained no EFS partitions\n");
 #ifdef DEBUG
 	} else {
-		pr_info("using slice %d (type %s, offset 0x%x)\n", slice,
+		printk(KERN_INFO "EFS: using slice %d (type %s, offset 0x%x)\n",
+			slice,
 			(pt_entry->pt_name) ? pt_entry->pt_name : "unknown",
 			sblock);
 #endif
@@ -265,7 +268,7 @@ static int efs_fill_super(struct super_block *s, void *d, int silent)
  
 	s->s_magic		= EFS_SUPER_MAGIC;
 	if (!sb_set_blocksize(s, EFS_BLOCKSIZE)) {
-		pr_err("device does not support %d byte blocks\n",
+		printk(KERN_ERR "EFS: device does not support %d byte blocks\n",
 			EFS_BLOCKSIZE);
 		return -EINVAL;
 	}
@@ -274,7 +277,7 @@ static int efs_fill_super(struct super_block *s, void *d, int silent)
 	bh = sb_bread(s, 0);
 
 	if (!bh) {
-		pr_err("cannot read volume header\n");
+		printk(KERN_ERR "EFS: cannot read volume header\n");
 		return -EINVAL;
 	}
 
@@ -292,14 +295,13 @@ static int efs_fill_super(struct super_block *s, void *d, int silent)
 
 	bh = sb_bread(s, sb->fs_start + EFS_SUPER);
 	if (!bh) {
-		pr_err("cannot read superblock\n");
+		printk(KERN_ERR "EFS: cannot read superblock\n");
 		return -EINVAL;
 	}
 		
 	if (efs_validate_super(sb, (struct efs_super *) bh->b_data)) {
 #ifdef DEBUG
-		pr_warn("invalid superblock at block %u\n",
-			sb->fs_start + EFS_SUPER);
+		printk(KERN_WARNING "EFS: invalid superblock at block %u\n", sb->fs_start + EFS_SUPER);
 #endif
 		brelse(bh);
 		return -EINVAL;
@@ -308,7 +310,7 @@ static int efs_fill_super(struct super_block *s, void *d, int silent)
 
 	if (!(s->s_flags & MS_RDONLY)) {
 #ifdef DEBUG
-		pr_info("forcing read-only mode\n");
+		printk(KERN_INFO "EFS: forcing read-only mode\n");
 #endif
 		s->s_flags |= MS_RDONLY;
 	}
@@ -316,13 +318,13 @@ static int efs_fill_super(struct super_block *s, void *d, int silent)
 	s->s_export_op = &efs_export_ops;
 	root = efs_iget(s, EFS_ROOTINODE);
 	if (IS_ERR(root)) {
-		pr_err("get root inode failed\n");
+		printk(KERN_ERR "EFS: get root inode failed\n");
 		return PTR_ERR(root);
 	}
 
 	s->s_root = d_make_root(root);
 	if (!(s->s_root)) {
-		pr_err("get root dentry failed\n");
+		printk(KERN_ERR "EFS: get root dentry failed\n");
 		return -ENOMEM;
 	}
 

@@ -253,12 +253,6 @@ kmem_cache_create(const char *name, size_t size, size_t align,
 }
 EXPORT_SYMBOL(kmem_cache_create);
 
-void slab_kmem_cache_release(struct kmem_cache *s)
-{
-	kfree(s->name);
-	kmem_cache_free(kmem_cache, s);
-}
-
 void kmem_cache_destroy(struct kmem_cache *s)
 {
 	/* Destroy all the children caches if we aren't a memcg cache */
@@ -276,11 +270,8 @@ void kmem_cache_destroy(struct kmem_cache *s)
 				rcu_barrier();
 
 			memcg_release_cache(s);
-#ifdef SLAB_SUPPORTS_SYSFS
-			sysfs_slab_remove(s);
-#else
-			slab_kmem_cache_release(s);
-#endif
+			kfree(s->name);
+			kmem_cache_free(kmem_cache, s);
 		} else {
 			list_add(&s->list, &slab_caches);
 			mutex_unlock(&slab_mutex);
@@ -508,19 +499,6 @@ void __init create_kmalloc_caches(unsigned long flags)
 #endif
 }
 #endif /* !CONFIG_SLOB */
-
-void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
-{
-	void *ret;
-	struct page *page;
-
-	flags |= __GFP_COMP;
-	page = alloc_kmem_pages(flags, order);
-	ret = page ? page_address(page) : NULL;
-	kmemleak_alloc(ret, size, 1, flags);
-	return ret;
-}
-EXPORT_SYMBOL(kmalloc_order);
 
 #ifdef CONFIG_TRACING
 void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)

@@ -593,8 +593,7 @@ static inline int perf_cgroup_connect(int fd, struct perf_event *event,
 	if (!f.file)
 		return -EBADF;
 
-	css = css_tryget_online_from_dir(f.file->f_dentry,
-					 &perf_event_cgrp_subsys);
+	css = css_tryget_from_dir(f.file->f_dentry, &perf_event_cgrp_subsys);
 	if (IS_ERR(css)) {
 		ret = PTR_ERR(css);
 		goto out;
@@ -3082,22 +3081,6 @@ out:
 	local_irq_restore(flags);
 }
 
-void perf_event_exec(void)
-{
-	struct perf_event_context *ctx;
-	int ctxn;
-
-	rcu_read_lock();
-	for_each_task_context_nr(ctxn) {
-		ctx = current->perf_event_ctxp[ctxn];
-		if (!ctx)
-			continue;
-
-		perf_event_enable_on_exec(ctx);
-	}
-	rcu_read_unlock();
-}
-
 /*
  * Cross CPU call to read the hardware event
  */
@@ -5034,9 +5017,21 @@ static void perf_event_comm_event(struct perf_comm_event *comm_event)
 		       NULL);
 }
 
-void perf_event_comm(struct task_struct *task, bool exec)
+void perf_event_comm(struct task_struct *task)
 {
 	struct perf_comm_event comm_event;
+	struct perf_event_context *ctx;
+	int ctxn;
+
+	rcu_read_lock();
+	for_each_task_context_nr(ctxn) {
+		ctx = task->perf_event_ctxp[ctxn];
+		if (!ctx)
+			continue;
+
+		perf_event_enable_on_exec(ctx);
+	}
+	rcu_read_unlock();
 
 	if (!atomic_read(&nr_comm_events))
 		return;
@@ -5048,7 +5043,7 @@ void perf_event_comm(struct task_struct *task, bool exec)
 		.event_id  = {
 			.header = {
 				.type = PERF_RECORD_COMM,
-				.misc = exec ? PERF_RECORD_MISC_COMM_EXEC : 0,
+				.misc = 0,
 				/* .size */
 			},
 			/* .pid */

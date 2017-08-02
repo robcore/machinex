@@ -91,7 +91,6 @@ __kmem_cache_alias(const char *name, size_t size, size_t align,
 #define CACHE_CREATE_MASK (SLAB_CORE_FLAGS | SLAB_DEBUG_FLAGS | SLAB_CACHE_FLAGS)
 
 int __kmem_cache_shutdown(struct kmem_cache *);
-void slab_kmem_cache_release(struct kmem_cache *);
 
 struct seq_file;
 struct file;
@@ -141,26 +140,6 @@ static inline bool slab_equal_or_root(struct kmem_cache *s,
 	return (p == s) ||
 		(s->memcg_params && (p == s->memcg_params->root_cache));
 }
-
-static __always_inline int memcg_charge_slab(struct kmem_cache *s,
-					     gfp_t gfp, int order)
-{
-	if (!memcg_kmem_enabled())
-		return 0;
-	if (is_root_cache(s))
-		return 0;
-	return memcg_charge_kmem(s->memcg_params->memcg, gfp,
-				 PAGE_SIZE << order);
-}
-
-static __always_inline void memcg_uncharge_slab(struct kmem_cache *s, int order)
-{
-	if (!memcg_kmem_enabled())
-		return;
-	if (is_root_cache(s))
-		return;
-	memcg_uncharge_kmem(s->memcg_params->memcg, PAGE_SIZE << order);
-}
 #else
 static inline bool is_root_cache(struct kmem_cache *s)
 {
@@ -179,15 +158,6 @@ static inline bool slab_equal_or_root(struct kmem_cache *s,
 				      struct kmem_cache *p)
 {
 	return true;
-}
-
-static inline int memcg_charge_slab(struct kmem_cache *s, gfp_t gfp, int order)
-{
-	return 0;
-}
-
-static inline void memcg_uncharge_slab(struct kmem_cache *s, int order)
-{
 }
 #endif
 

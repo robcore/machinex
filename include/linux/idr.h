@@ -117,24 +117,6 @@ bool idr_is_empty(struct idr *idp);
 void mx_idr_destroy(struct idr *idp);
 int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t gfp_mask);
 
-static inline int idr_alloc(struct idr *idr, void *ptr, int start, int end,
-			    gfp_t gfp_mask)
-{
-	int id, ret;
-
-	do {
-		if (!idr_pre_get(idr, gfp_mask))
-			return -ENOMEM;
-		ret = idr_get_new_above(idr, ptr, start, &id);
-		if (!ret && id > end) {
-			idr_remove(idr, id);
-			ret = -ENOSPC;
-		}
-	} while (ret == -EAGAIN);
-
-	return ret ? ret : id;
-}
-
 static inline void idr_preload(gfp_t gfp_mask)
 {
 }

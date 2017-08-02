@@ -192,6 +192,7 @@ static struct file *aio_private_file(struct kioctx *ctx, loff_t nr_pages)
 	}
 
 	file->f_flags = O_RDWR;
+	file->private_data = ctx;
 	return file;
 }
 
@@ -201,7 +202,7 @@ static struct dentry *aio_mount(struct file_system_type *fs_type,
 	static const struct dentry_operations ops = {
 		.d_dname	= simple_dname,
 	};
-	return mount_pseudo(fs_type, "aio:", NULL, &ops, AIO_RING_MAGIC);
+	return mount_pseudo(fs_type, "aio:", NULL, &ops, 0xa10a10a1);
 }
 
 /* aio_setup
@@ -553,7 +554,8 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 	struct aio_ring *ring;
 
 	spin_lock(&mm->ioctx_lock);
-	table = rcu_dereference_raw(mm->ioctx_table);
+	rcu_read_lock();
+	table = rcu_dereference(mm->ioctx_table);
 
 	while (1) {
 		if (table)
@@ -561,6 +563,7 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 				if (!table->table[i]) {
 					ctx->id = i;
 					table->table[i] = ctx;
+					rcu_read_unlock();
 					spin_unlock(&mm->ioctx_lock);
 
 					ring = kmap_atomic(ctx->ring_pages[0]);
@@ -570,6 +573,8 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 				}
 
 		new_nr = (table ? table->nr : 1) * 4;
+
+		rcu_read_unlock();
 		spin_unlock(&mm->ioctx_lock);
 
 		table = kzalloc(sizeof(*table) + sizeof(struct kioctx *) *
@@ -580,7 +585,8 @@ static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
 		table->nr = new_nr;
 
 		spin_lock(&mm->ioctx_lock);
-		old = rcu_dereference_raw(mm->ioctx_table);
+		rcu_read_lock();
+		old = rcu_dereference(mm->ioctx_table);
 
 		if (!old) {
 			rcu_assign_pointer(mm->ioctx_table, table);
@@ -727,9 +733,12 @@ static int kill_ioctx(struct mm_struct *mm, struct kioctx *ctx,
 
 
 	spin_lock(&mm->ioctx_lock);
-	table = rcu_dereference_raw(mm->ioctx_table);
+	rcu_read_lock();
+	table = rcu_dereference(mm->ioctx_table);
+
 	WARN_ON(ctx != table->table[ctx->id]);
 	table->table[ctx->id] = NULL;
+	rcu_read_unlock();
 	spin_unlock(&mm->ioctx_lock);
 
 	/* percpu_ref_kill() will do the necessary call_rcu() */
@@ -778,57 +787,66 @@ EXPORT_SYMBOL(wait_on_sync_kiocb);
  */
 void exit_aio(struct mm_struct *mm)
 {
-	struct kioctx_table *table = rcu_dereference_raw(mm->ioctx_table);
-	int i;
+	struct kioctx_table *table;
+	struct kioctx *ctx;
+	unsigned i = 0;
 
-	if (!table)
-		return;
+	while (1) {
+		rcu_read_lock();
+		table = rcu_dereference(mm->ioctx_table);
 
-	for (i = 0; i < table->nr; ++i) {
-		struct kioctx *ctx = table->table[i];
+		do {
+			if (!table || i >= table->nr) {
+				rcu_read_unlock();
+				rcu_assign_pointer(mm->ioctx_table, NULL);
+				if (table)
+					kfree(table);
+				return;
+			}
 
-		if (!ctx)
-			continue;
+			ctx = table->table[i++];
+		} while (!ctx);
+
+		rcu_read_unlock();
+
 		/*
-		 * We don't need to bother with munmap() here - exit_mmap(mm)
-		 * is coming and it'll unmap everything. And we simply can't,
-		 * this is not necessarily our ->mm.
-		 * Since kill_ioctx() uses non-zero ->mmap_size as indicator
-		 * that it needs to unmap the area, just set it to 0.
+		 * We don't need to bother with munmap() here -
+		 * exit_mmap(mm) is coming and it'll unmap everything.
+		 * Since aio_free_ring() uses non-zero ->mmap_size
+		 * as indicator that it needs to unmap the area,
+		 * just set it to 0; aio_free_ring() is the only
+		 * place that uses ->mmap_size, so it's safe.
 		 */
 		ctx->mmap_size = 0;
+
 		kill_ioctx(mm, ctx, NULL);
 	}
-
-	RCU_INIT_POINTER(mm->ioctx_table, NULL);
-	kfree(table);
 }
 
 static void put_reqs_available(struct kioctx *ctx, unsigned nr)
 {
 	struct kioctx_cpu *kcpu;
-	unsigned long flags;
 
-	local_irq_save(flags);
+	preempt_disable();
 	kcpu = this_cpu_ptr(ctx->cpu);
-	kcpu->reqs_available += nr;
 
+	kcpu->reqs_available += nr;
 	while (kcpu->reqs_available >= ctx->req_batch * 2) {
 		kcpu->reqs_available -= ctx->req_batch;
 		atomic_add(ctx->req_batch, &ctx->reqs_available);
 	}
 
-	local_irq_restore(flags);
+	preempt_enable();
 }
 
 static bool get_reqs_available(struct kioctx *ctx)
 {
 	struct kioctx_cpu *kcpu;
 	bool ret = false;
-	unsigned long flags;
 
-	local_irq_save(flags);
+	preempt_disable();
 	kcpu = this_cpu_ptr(ctx->cpu);
+
 	if (!kcpu->reqs_available) {
 		int old, avail = atomic_read(&ctx->reqs_available);
 
@@ -847,7 +865,7 @@ static bool get_reqs_available(struct kioctx *ctx)
 	ret = true;
 	kcpu->reqs_available--;
 out:
-	local_irq_restore(flags);
+	preempt_enable();
 	return ret;
 }
 
@@ -999,7 +1017,6 @@ void aio_complete(struct kiocb *iocb, long res, long res2)
 
 	/* everything turned out well, dispose of the aiocb. */
 	kiocb_free(iocb);
-	put_reqs_available(ctx, 1);
 
 	/*
 	 * We have to order our ring_info tail store above and test
@@ -1016,7 +1033,7 @@ void aio_complete(struct kiocb *iocb, long res, long res2)
 }
 EXPORT_SYMBOL(aio_complete);
 
-/* aio_read_events_ring
+/* aio_read_events
  *	Pull an event off of the ioctx's event ring.  Returns the number of
  *	events fetched
  */
@@ -1040,9 +1057,6 @@ static long aio_read_events_ring(struct kioctx *ctx,
 
 	if (head == tail)
 		goto out;
-
-	head %= ctx->nr_events;
-	tail %= ctx->nr_events;
 
 	while (ret < nr) {
 		long avail;
@@ -1082,6 +1096,8 @@ static long aio_read_events_ring(struct kioctx *ctx,
 	flush_dcache_page(ctx->ring_pages[0]);
 
 	pr_debug("%li  h%u t%u\n", ret, head, tail);
+
+	put_reqs_available(ctx, ret);
 out:
 	mutex_unlock(&ctx->ring_lock);
 
@@ -1228,12 +1244,12 @@ static ssize_t aio_setup_vectored_rw(struct kiocb *kiocb,
 	if (compat)
 		ret = compat_rw_copy_check_uvector(rw,
 				(struct compat_iovec __user *)buf,
-				*nr_segs, UIO_FASTIOV, *iovec, iovec);
+				*nr_segs, 1, *iovec, iovec);
 	else
 #endif
 		ret = rw_copy_check_uvector(rw,
 				(struct iovec __user *)buf,
-				*nr_segs, UIO_FASTIOV, *iovec, iovec);
+				*nr_segs, 1, *iovec, iovec);
 	if (ret < 0)
 		return ret;
 
@@ -1257,8 +1273,9 @@ static ssize_t aio_setup_single_vector(struct kiocb *kiocb,
 }
 
 /*
- * aio_run_iocb:
- *	Performs the initial checks and io submission.
+ * aio_setup_iocb:
+ *	Performs the initial checks and aio retry method
+ *	setup for the kiocb at the time of io submission.
  */
 static ssize_t aio_run_iocb(struct kiocb *req, unsigned opcode,
 			    char __user *buf, bool compat)
@@ -1270,7 +1287,7 @@ static ssize_t aio_run_iocb(struct kiocb *req, unsigned opcode,
 	fmode_t mode;
 	aio_rw_op *rw_op;
 	rw_iter_op *iter_op;
-	struct iovec inline_vecs[UIO_FASTIOV], *iovec = inline_vecs;
+	struct iovec inline_vec, *iovec = &inline_vec;
 	struct iov_iter iter;
 
 	switch (opcode) {
@@ -1305,7 +1322,7 @@ rw_common:
 		if (!ret)
 			ret = rw_verify_area(rw, file, &req->ki_pos, req->ki_nbytes);
 		if (ret < 0) {
-			if (iovec != inline_vecs)
+			if (iovec != &inline_vec)
 				kfree(iovec);
 			return ret;
 		}
@@ -1352,7 +1369,7 @@ rw_common:
 		return -EINVAL;
 	}
 
-	if (iovec != inline_vecs)
+	if (iovec != &inline_vec)
 		kfree(iovec);
 
 	if (ret != -EIOCBQUEUED) {

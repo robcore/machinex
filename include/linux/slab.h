@@ -315,7 +315,7 @@ static __always_inline void *kmem_cache_alloc_node(struct kmem_cache *s, gfp_t f
 }
 #endif
 
-#if 0
+#ifdef CONFIG_TRACING
 extern void *kmem_cache_alloc_trace(struct kmem_cache *, gfp_t, size_t);
 
 #ifdef CONFIG_NUMA
@@ -356,7 +356,16 @@ kmem_cache_alloc_node_trace(struct kmem_cache *s,
 #error "Unknown slab allocator"
 #endif
 
-extern void *kmalloc_order(size_t size, gfp_t flags, unsigned int order);
+static __always_inline void *
+kmalloc_order(size_t size, gfp_t flags, unsigned int order)
+{
+	void *ret;
+
+	flags |= (__GFP_COMP | __GFP_KMEMCG);
+	ret = (void *) __get_free_pages(flags, order);
+	kmemleak_alloc(ret, size, 1, flags);
+	return ret;
+}
 
 #ifdef CONFIG_TRACING
 extern void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order);

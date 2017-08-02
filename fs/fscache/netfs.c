@@ -66,7 +66,8 @@ int __fscache_register_netfs(struct fscache_netfs *netfs)
 	list_add(&netfs->link, &fscache_netfs_list);
 	ret = 0;
 
-	pr_notice("Netfs '%s' registered for caching\n", netfs->name);
+	printk(KERN_NOTICE "FS-Cache: Netfs '%s' registered for caching\n",
+	       netfs->name);
 
 already_registered:
 	up_write(&fscache_addremove_sem);
@@ -94,8 +95,8 @@ void __fscache_unregister_netfs(struct fscache_netfs *netfs)
 
 	up_write(&fscache_addremove_sem);
 
-	pr_notice("Netfs '%s' unregistered from caching\n",
-		  netfs->name);
+	printk(KERN_NOTICE "FS-Cache: Netfs '%s' unregistered from caching\n",
+	       netfs->name);
 
 	_leave("");
 }

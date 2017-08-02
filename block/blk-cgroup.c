@@ -206,7 +206,7 @@ static struct blkcg_gq *blkg_create(struct blkcg *blkcg,
 	lockdep_assert_held(q->queue_lock);
 
 	/* blkg holds a reference to blkcg */
-	if (!css_tryget_online(&blkcg->css)) {
+	if (!css_tryget(&blkcg->css)) {
 		ret = -EINVAL;
 		goto err_free_blkg;
 	}
@@ -994,15 +994,7 @@ struct cgroup_subsys blkcg_subsys = {
 	/* note: blkcg_subsys_id is otherwise defined in blk-cgroup.h */
 	.subsys_id = blkcg_subsys_id,
 #endif
-	.legacy_cftypes = blkcg_files,
-#ifdef CONFIG_MEMCG
-	/*
-	 * This ensures that, if available, memcg is automatically enabled
-	 * together on the default hierarchy so that the owner cgroup can
-	 * be retrieved from writeback pages.
-	 */
-	.depends_on = 1 << memory_cgrp_id,
-#endif
+	.base_cftypes = blkcg_files,
 	.module = THIS_MODULE,
 
 };
@@ -1196,7 +1188,7 @@ int blkcg_policy_register(struct blkcg_policy *pol)
 
 	/* everything is in place, add intf files for the new policy */
 	if (blkcgp->cftypes)
-		WARN_ON(cgroup_add_legacy_cftypes(&blkcg_subsys, blkcgp->cftypes));
+		WARN_ON(cgroup_add_cftypes(&blkcg_subsys, blkcgp->cftypes));
 	ret = 0;
 out_unlock:
 	mutex_unlock(&blkcg_pol_mutex);

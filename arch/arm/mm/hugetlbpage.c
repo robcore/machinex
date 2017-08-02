@@ -31,11 +31,6 @@
 #include <asm/tlbflush.h>
 #include <asm/pgalloc.h>
 
-int pmd_huge_support(void)
-{
-	return 1;
-}
-
 /*
  * On ARM, huge pages are backed by pmd's rather than pte's, so we do a lot
  * of type casting from pmd_t * to pte_t *.

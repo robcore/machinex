@@ -2043,7 +2043,7 @@ int bio_associate_current(struct bio *bio)
 	/* associate blkcg if exists */
 	rcu_read_lock();
 	css = task_subsys_state(current, blkio_subsys_id);
-	if (css && css_tryget_online(css))
+	if (css && css_tryget(css))
 		bio->bi_css = css;
 	rcu_read_unlock();
 

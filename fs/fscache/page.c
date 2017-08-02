@@ -1102,8 +1102,10 @@ void fscache_mark_page_cached(struct fscache_retrieval *op, struct page *page)
 		static bool once_only;
 		if (!once_only) {
 			once_only = true;
-			pr_warn("Cookie type %s marked page %lx multiple times\n",
-				cookie->def->name, page->index);
+			printk(KERN_WARNING "FS-Cache:"
+			       " Cookie type %s marked page %lx"
+			       " multiple times\n",
+			       cookie->def->name, page->index);
 		}
 	}
 

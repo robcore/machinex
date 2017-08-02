@@ -53,7 +53,9 @@ static void unlock_dir(struct dentry *dir)
 
 static int ecryptfs_inode_test(struct inode *inode, void *lower_inode)
 {
-	return ecryptfs_inode_to_lower(inode) == lower_inode;
+	if (ecryptfs_inode_to_lower(inode) == (struct inode *)lower_inode)
+		return 1;
+	return 0;
 }
 
 static int ecryptfs_inode_set(struct inode *inode, void *opaque)

@@ -184,11 +184,29 @@ static int show_stat(struct seq_file *p, void *v)
 
 static int stat_open(struct inode *inode, struct file *file)
 {
-	size_t size = 1024 + 128 * num_online_cpus();
+	size_t size = 1024 + 128 * num_possible_cpus();
+	char *buf;
+	struct seq_file *m;
+	int res;
 
 	/* minimum size to display an interrupt count : 2 bytes */
 	size += 2 * nr_irqs;
-	return single_open_size(file, show_stat, NULL, size);
+
+	/* don't ask for more than the kmalloc() max size */
+	if (size > KMALLOC_MAX_SIZE)
+		size = KMALLOC_MAX_SIZE;
+	buf = kmalloc(size, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	res = single_open(file, show_stat, NULL);
+	if (!res) {
+		m = file->private_data;
+		m->buf = buf;
+		m->size = ksize(buf);
+	} else
+		kfree(buf);
+	return res;
 }
 
 static const struct file_operations proc_stat_operations = {

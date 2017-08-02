@@ -202,6 +202,10 @@ static const struct vm_operations_struct ext4_file_vm_ops = {
 
 static int ext4_file_mmap(struct file *file, struct vm_area_struct *vma)
 {
+	struct address_space *mapping = file->f_mapping;
+
+	if (!mapping->a_ops->readpage)
+		return -ENOEXEC;
 	file_accessed(file);
 	vma->vm_ops = &ext4_file_vm_ops;
 	return 0;
@@ -598,7 +602,7 @@ const struct file_operations ext4_file_operations = {
 	.release	= ext4_release_file,
 	.fsync		= ext4_sync_file,
 	.splice_read	= generic_file_splice_read,
-	.splice_write	= iter_file_splice_write,
+	.splice_write	= generic_file_splice_write,
 	.fallocate	= ext4_fallocate,
 };
 

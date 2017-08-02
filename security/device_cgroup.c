@@ -194,7 +194,7 @@ static inline bool is_devcg_online(const struct dev_cgroup *devcg)
 static int devcgroup_online(struct cgroup_css *css)
 {
 	struct dev_cgroup *dev_cgroup = css_to_devcgroup(css);
-	struct dev_cgroup *parent_dev_cgroup = css_to_devcgroup(css->parent);
+	struct dev_cgroup *parent_dev_cgroup = css_to_devcgroup(css_parent(css));
 	int ret = 0;
 
 	mutex_lock(&devcgroup_mutex);
@@ -386,7 +386,7 @@ static bool may_access(struct dev_cgroup *dev_cgroup,
 static int parent_has_perm(struct dev_cgroup *childcg,
 				  struct dev_exception_item *ex)
 {
-	struct dev_cgroup *parent = css_to_devcgroup(childcg->css.parent);
+	struct dev_cgroup *parent = css_to_devcgroup(css_parent(&childcg->css));
 
 	if (!parent)
 		return 1;
@@ -487,6 +487,13 @@ static int propagate_exception(struct dev_cgroup *devcg_root,
 	return rc;
 }
 
+static inline bool has_children(struct dev_cgroup *devcgroup)
+{
+	struct cgroup *cgrp = devcgroup->css.cgroup;
+
+	return !list_empty(&cgrp->children);
+}
+
 /*
  * Modify the exception list using allow/deny rules.
  * CAP_SYS_ADMIN is needed for this.  It's at least separate from CAP_MKNOD
@@ -507,7 +514,7 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 	char temp[12];		/* 11 + 1 characters needed for a u32 */
 	int count, rc = 0;
 	struct dev_exception_item ex;
-	struct dev_cgroup *parent = css_to_devcgroup(devcgroup->css.parent);
+	struct dev_cgroup *parent = css_to_devcgroup(css_parent(&devcgroup->css));
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
@@ -519,7 +526,7 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 	case 'a':
 		switch (filetype) {
 		case DEVCG_ALLOW:
-			if (css_has_online_children(&devcgroup->css))
+			if (has_children(devcgroup))
 				return -EINVAL;
 
 			if (!may_allow_all(parent))
@@ -535,7 +542,7 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 				return rc;
 			break;
 		case DEVCG_DENY:
-			if (css_has_online_children(&devcgroup->css))
+			if (has_children(devcgroup))
 				return -EINVAL;
 
 			dev_exception_clean(devcgroup);
@@ -656,27 +663,27 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 	return rc;
 }
 
-static ssize_t devcgroup_access_write(struct kernfs_open_file *of,
-				      char *buf, size_t nbytes, loff_t off)
+static int devcgroup_access_write(struct cgroup_subsys_state *css,
+				  struct cftype *cft, char *buffer)
 {
 	int retval;
 
 	mutex_lock(&devcgroup_mutex);
-	retval = devcgroup_update_access(css_to_devcgroup(of_css(of)),
-					 of_cft(of)->private, strstrip(buf));
+	retval = devcgroup_update_access(css_to_devcgroup(css),
+					 cft->private, buffer);
 	mutex_unlock(&devcgroup_mutex);
-	return retval ?: nbytes;
+	return retval;
 }
 
 static struct cftype dev_cgroup_files[] = {
 	{
 		.name = "allow",
-		.write = devcgroup_access_write,
+		.write_string  = devcgroup_access_write,
 		.private = DEVCG_ALLOW,
 	},
 	{
 		.name = "deny",
-		.write = devcgroup_access_write,
+		.write_string = devcgroup_access_write,
 		.private = DEVCG_DENY,
 	},
 	{
@@ -695,7 +702,7 @@ struct cgroup_subsys devices_subsys = {
 	.css_online = devcgroup_online,
 	.css_offline = devcgroup_offline,
 	.subsys_id = devices_subsys_id,
-	.legacy_cftypes = dev_cgroup_files,
+	.base_cftypes = dev_cgroup_files,
 
 	/*
 	 * While devices cgroup has the rudimentary hierarchy support which

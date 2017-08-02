@@ -71,6 +71,7 @@ struct dio_submit {
 					   been performed at the start of a
 					   write */
 	int pages_in_io;		/* approximate total IO pages */
+	size_t	size;			/* total request size (doesn't change)*/
 	sector_t block_in_file;		/* Current offset into the underlying
 					   file in dio_block units. */
 	unsigned blocks_available;	/* At block_in_file.  changes */
@@ -242,8 +243,9 @@ static inline int dio_refill_pages(struct dio *dio, struct dio_submit *sdio)
  * L1 cache.
  */
 static inline struct page *dio_get_page(struct dio *dio,
-					struct dio_submit *sdio)
+		struct dio_submit *sdio, size_t *from, size_t *to)
 {
+	int n;
 	if (dio_pages_present(sdio) == 0) {
 		int ret;
 
@@ -252,7 +254,10 @@ static inline struct page *dio_get_page(struct dio *dio,
 			return ERR_PTR(ret);
 		BUG_ON(dio_pages_present(sdio) == 0);
 	}
-	return dio->pages[sdio->head];
+	n = sdio->head++;
+	*from = n ? 0 : sdio->from;
+	*to = (n == sdio->tail - 1) ? sdio->to : PAGE_SIZE;
+	return dio->pages[n];
 }
 
 /**
@@ -952,15 +957,11 @@ static int do_direct_IO(struct dio *dio, struct dio_submit *sdio,
 	while (sdio->block_in_file < sdio->final_block_in_request) {
 		struct page *page;
 		size_t from, to;
-
-		page = dio_get_page(dio, sdio);
+		page = dio_get_page(dio, sdio, &from, &to);
 		if (IS_ERR(page)) {
 			ret = PTR_ERR(page);
 			goto out;
 		}
-		from = sdio->head ? 0 : sdio->from;
-		to = (sdio->head == sdio->tail - 1) ? sdio->to : PAGE_SIZE;
-		sdio->head++;
 
 		while (from < to) {
 			unsigned this_chunk_bytes;	/* # of bytes mapped */
@@ -1149,8 +1150,7 @@ do_blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	unsigned blkbits = i_blkbits;
 	unsigned blocksize_mask = (1 << blkbits) - 1;
 	ssize_t retval = -EINVAL;
-	size_t count = iov_iter_count(iter);
-	loff_t end = offset + count;
+	loff_t end = offset + iov_iter_count(iter);
 	struct dio *dio;
 	struct dio_submit sdio = { 0, };
 	struct buffer_head map_bh = { 0, };
@@ -1328,9 +1328,10 @@ do_blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	 */
 	BUG_ON(retval == -EIOCBQUEUED);
 	if (dio->is_async && retval == 0 && dio->result &&
-	    (rw == READ || dio->result == count))
+	    ((rw == READ) || (dio->result == sdio.size)))
 		retval = -EIOCBQUEUED;
-	else
+
+	if (retval != -EIOCBQUEUED)
 		dio_await_completion(dio);
 
 	if (drop_refcount(dio) == 0) {

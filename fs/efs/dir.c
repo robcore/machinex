@@ -26,8 +26,7 @@ static int efs_readdir(struct file *file, struct dir_context *ctx)
 	int			slot;
 
 	if (inode->i_size & (EFS_DIRBSIZE-1))
-		pr_warn("%s(): directory size not a multiple of EFS_DIRBSIZE\n",
-			__func__);
+		printk(KERN_WARNING "EFS: WARNING: readdir(): directory size not a multiple of EFS_DIRBSIZE\n");
 
 	/* work out where this entry can be found */
 	block = ctx->pos >> EFS_DIRBSIZE_BITS;
@@ -44,15 +43,14 @@ static int efs_readdir(struct file *file, struct dir_context *ctx)
 		bh = sb_bread(inode->i_sb, efs_bmap(inode, block));
 
 		if (!bh) {
-			pr_err("%s(): failed to read dir block %d\n",
-			       __func__, block);
+			printk(KERN_ERR "EFS: readdir(): failed to read dir block %d\n", block);
 			break;
 		}
 
 		dirblock = (struct efs_dir *) bh->b_data; 
 
 		if (be16_to_cpu(dirblock->magic) != EFS_DIRBLK_MAGIC) {
-			pr_err("%s(): invalid directory block\n", __func__);
+			printk(KERN_ERR "EFS: readdir(): invalid directory block\n");
 			brelse(bh);
 			break;
 		}
@@ -71,9 +69,10 @@ static int efs_readdir(struct file *file, struct dir_context *ctx)
 			inodenum = be32_to_cpu(dirslot->inode);
 			namelen  = dirslot->namelen;
 			nameptr  = dirslot->name;
-			pr_debug("%s(): block %d slot %d/%d: inode %u, name \"%s\", namelen %u\n",
-				 __func__, block, slot, dirblock->slots-1,
-				 inodenum, nameptr, namelen);
+
+#ifdef DEBUG
+			printk(KERN_DEBUG "EFS: readdir(): block %d slot %d/%d: inode %u, name \"%s\", namelen %u\n", block, slot, dirblock->slots-1, inodenum, nameptr, namelen);
+#endif
 			if (!namelen)
 				continue;
 			/* found the next entry */
@@ -81,8 +80,7 @@ static int efs_readdir(struct file *file, struct dir_context *ctx)
 
 			/* sanity check */
 			if (nameptr - (char *) dirblock + namelen > EFS_DIRBSIZE) {
-				pr_warn("directory entry %d exceeds directory block\n",
-					slot);
+				printk(KERN_WARNING "EFS: directory entry %d exceeds directory block\n", slot);
 				continue;
 			}
 

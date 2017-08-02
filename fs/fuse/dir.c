@@ -188,8 +188,7 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 	inode = ACCESS_ONCE(entry->d_inode);
 	if (inode && is_bad_inode(inode))
 		goto invalid;
-	else if (time_before64(fuse_dentry_time(entry), get_jiffies_64()) ||
-		 (flags & LOOKUP_REVAL)) {
+	else if (fuse_dentry_time(entry) < get_jiffies_64()) {
 		int err;
 		struct fuse_entry_out outarg;
 		struct fuse_req *req;
@@ -805,6 +804,13 @@ static int fuse_rename_common(struct inode *olddir, struct dentry *oldent,
 	return err;
 }
 
+static int fuse_rename(struct inode *olddir, struct dentry *oldent,
+		       struct inode *newdir, struct dentry *newent)
+{
+	return fuse_rename_common(olddir, oldent, newdir, newent, 0,
+				  FUSE_RENAME, sizeof(struct fuse_rename_in));
+}
+
 static int fuse_rename2(struct inode *olddir, struct dentry *oldent,
 			struct inode *newdir, struct dentry *newent,
 			unsigned int flags)
@@ -815,30 +821,17 @@ static int fuse_rename2(struct inode *olddir, struct dentry *oldent,
 	if (flags & ~(RENAME_NOREPLACE | RENAME_EXCHANGE))
 		return -EINVAL;
 
-	if (flags) {
-		if (fc->no_rename2 || fc->minor < 23)
-			return -EINVAL;
+	if (fc->no_rename2 || fc->minor < 23)
+		return -EINVAL;
 
-		err = fuse_rename_common(olddir, oldent, newdir, newent, flags,
-					 FUSE_RENAME2,
-					 sizeof(struct fuse_rename2_in));
-		if (err == -ENOSYS) {
-			fc->no_rename2 = 1;
-			err = -EINVAL;
-		}
-	} else {
-		err = fuse_rename_common(olddir, oldent, newdir, newent, 0,
-					 FUSE_RENAME,
-					 sizeof(struct fuse_rename_in));
+	err = fuse_rename_common(olddir, oldent, newdir, newent, flags,
+				 FUSE_RENAME2, sizeof(struct fuse_rename2_in));
+	if (err == -ENOSYS) {
+		fc->no_rename2 = 1;
+		err = -EINVAL;
 	}
-
 	return err;
-}
 
-static int fuse_rename(struct inode *olddir, struct dentry *oldent,
-		       struct inode *newdir, struct dentry *newent)
-{
-	return fuse_rename2(olddir, oldent, newdir, newent, 0);
 }
 
 static int fuse_link(struct dentry *entry, struct inode *newdir,
@@ -982,7 +975,7 @@ int fuse_update_attributes(struct inode *inode, struct kstat *stat,
 	int err;
 	bool r;
 
-	if (time_before64(fi->i_time, get_jiffies_64())) {
+	if (fi->i_time < get_jiffies_64()) {
 		r = true;
 		err = fuse_do_getattr(inode, stat, file);
 	} else {
@@ -1168,7 +1161,7 @@ static int fuse_permission(struct inode *inode, int mask)
 	    ((mask & MAY_EXEC) && S_ISREG(inode->i_mode))) {
 		struct fuse_inode *fi = get_fuse_inode(inode);
 
-		if (time_before64(fi->i_time, get_jiffies_64())) {
+		if (fi->i_time < get_jiffies_64()) {
 			refreshed = true;
 
 			err = fuse_perm_getattr(inode, mask);
