@@ -12,6 +12,7 @@
 
 #include <asm/cacheflush.h>
 #include <asm/idmap.h>
+#include <linux/export.h>
 
 #include "reboot.h"
 
@@ -83,7 +84,7 @@ void soft_restart(unsigned long addr)
 }
 
 static void null_restart(char mode, const char *cmd)
-+{
+{
 }
 
 /*
