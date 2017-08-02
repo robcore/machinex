@@ -3,7 +3,6 @@
 
 #include <linux/rcupdate.h>
 #include <linux/kobject.h>
-#include <linux/mutex.h>
 
 /*
  * Core internal functions to deal with irq descriptors
@@ -11,6 +10,7 @@
 
 struct irq_affinity_notify;
 struct proc_dir_entry;
+struct timer_rand_state;
 struct module;
 struct irq_desc;
 struct irq_domain;
@@ -18,8 +18,10 @@ struct pt_regs;
 
 /**
  * struct irq_desc - interrupt descriptor
- * @irq_common_data:	per irq and chip data passed down to chip functions
+ * @irq_data:		per irq and chip data passed down to chip functions
+ * @timer_rand_state:	pointer to timer rand state struct
  * @kstat_irqs:		irq stats per cpu
+ * @wakeup_irqs:	irq wakeup count from suspend
  * @handle_irq:		highlevel irq-events handler
  * @preflow_handler:	handler called before the flow handler (currently used by sparc)
  * @action:		the irq action chain
@@ -34,7 +36,8 @@ struct pt_regs;
  * @threads_handled_last: comparator field for deferred spurious detection of theraded handlers
  * @lock:		locking for SMP
  * @affinity_hint:	hint to user space for preferred irq affinity
- * @affinity_notify:	context for notification of affinity changes
+ * @affinity_notify:	list of notification clients for affinity changes
+ * @affinity_work:	Work queue for handling affinity change notifications
  * @pending_mask:	pending rebalanced interrupts
  * @threads_oneshot:	bitfield to handle shared oneshot threads
  * @threads_active:	number of irqaction threads currently running
@@ -46,15 +49,14 @@ struct pt_regs;
  *			IRQF_FORCE_RESUME set
  * @rcu:		rcu head for delayed free
  * @kobj:		kobject used to represent this struct in sysfs
- * @request_mutex:	mutex to protect request/free before locking desc->lock
  * @dir:		/proc/irq/ procfs entry
- * @debugfs_file:	dentry for the debugfs file
  * @name:		flow handler name for /proc/interrupts output
  */
 struct irq_desc {
 	struct irq_common_data	irq_common_data;
 	struct irq_data		irq_data;
 	unsigned int __percpu	*kstat_irqs;
+	unsigned int		wakeup_irqs;
 	irq_flow_handler_t	handle_irq;
 #ifdef CONFIG_IRQ_PREFLOW_FASTEOI
 	irq_preflow_handler_t	preflow_handler;
@@ -74,7 +76,9 @@ struct irq_desc {
 	const struct cpumask	*percpu_affinity;
 #ifdef CONFIG_SMP
 	const struct cpumask	*affinity_hint;
-	struct irq_affinity_notify *affinity_notify;
+	struct list_head	affinity_notify;
+	struct work_struct	affinity_work;
+	struct mutex		notify_lock;
 #ifdef CONFIG_GENERIC_PENDING_IRQ
 	cpumask_var_t		pending_mask;
 #endif
@@ -91,14 +95,10 @@ struct irq_desc {
 #ifdef CONFIG_PROC_FS
 	struct proc_dir_entry	*dir;
 #endif
-#ifdef CONFIG_GENERIC_IRQ_DEBUGFS
-	struct dentry		*debugfs_file;
-#endif
 #ifdef CONFIG_SPARSE_IRQ
 	struct rcu_head		rcu;
 	struct kobject		kobj;
 #endif
-	struct mutex		request_mutex;
 	int			parent_irq;
 	struct module		*owner;
 	const char		*name;
@@ -177,14 +177,10 @@ static inline int handle_domain_irq(struct irq_domain *domain,
 #endif
 
 /* Test to see if a driver has successfully requested an irq */
-static inline int irq_desc_has_action(struct irq_desc *desc)
-{
-	return desc->action != NULL;
-}
-
 static inline int irq_has_action(unsigned int irq)
 {
-	return irq_desc_has_action(irq_to_desc(irq));
+	struct irq_desc *desc = irq_to_desc(irq);
+	return desc->action != NULL;
 }
 
 /**
@@ -236,7 +232,7 @@ static inline int irq_balancing_disabled(unsigned int irq)
 	return desc->status_use_accessors & IRQ_NO_BALANCING_MASK;
 }
 
-static inline int irq_is_percpu(unsigned int irq)
+static inline int irq_is_per_cpu(unsigned int irq)
 {
 	struct irq_desc *desc;
 

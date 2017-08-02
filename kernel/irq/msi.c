@@ -16,65 +16,7 @@
 #include <linux/msi.h>
 #include <linux/slab.h>
 
-/**
- * alloc_msi_entry - Allocate an initialize msi_entry
- * @dev:	Pointer to the device for which this is allocated
- * @nvec:	The number of vectors used in this entry
- * @affinity:	Optional pointer to an affinity mask array size of @nvec
- *
- * If @affinity is not NULL then a an affinity array[@nvec] is allocated
- * and the affinity masks from @affinity are copied.
- */
-struct msi_desc *
-alloc_msi_entry(struct device *dev, int nvec, const struct cpumask *affinity)
-{
-	struct msi_desc *desc;
-
-	desc = kzalloc(sizeof(*desc), GFP_KERNEL);
-	if (!desc)
-		return NULL;
-
-	INIT_LIST_HEAD(&desc->list);
-	desc->dev = dev;
-	desc->nvec_used = nvec;
-	if (affinity) {
-		desc->affinity = kmemdup(affinity,
-			nvec * sizeof(*desc->affinity), GFP_KERNEL);
-		if (!desc->affinity) {
-			kfree(desc);
-			return NULL;
-		}
-	}
-
-	return desc;
-}
-
-void free_msi_entry(struct msi_desc *entry)
-{
-	kfree(entry->affinity);
-	kfree(entry);
-}
-
-void __get_cached_msi_msg(struct msi_desc *entry, struct msi_msg *msg)
-{
-	*msg = entry->msg;
-}
-
-void get_cached_msi_msg(unsigned int irq, struct msi_msg *msg)
-{
-	struct msi_desc *entry = irq_get_msi_desc(irq);
-
-	__get_cached_msi_msg(entry, msg);
-}
-EXPORT_SYMBOL_GPL(get_cached_msi_msg);
-
 #ifdef CONFIG_GENERIC_MSI_IRQ_DOMAIN
-static inline void irq_chip_write_msi_msg(struct irq_data *data,
-					  struct msi_msg *msg)
-{
-	data->chip->irq_write_msi_msg(data, msg);
-}
-
 /**
  * msi_domain_set_affinity - Generic affinity setter function for MSI domains
  * @irq_data:	The irq data associated to the interrupt
@@ -250,35 +192,32 @@ static void msi_domain_update_chip_ops(struct msi_domain_info *info)
 {
 	struct irq_chip *chip = info->chip;
 
-	BUG_ON(!chip || !chip->irq_mask || !chip->irq_unmask);
+	BUG_ON(!chip);
+	if (!chip->irq_mask)
+		chip->irq_mask = pci_msi_mask_irq;
+	if (!chip->irq_unmask)
+		chip->irq_unmask = pci_msi_unmask_irq;
 	if (!chip->irq_set_affinity)
 		chip->irq_set_affinity = msi_domain_set_affinity;
 }
 
 /**
  * msi_create_irq_domain - Create a MSI interrupt domain
- * @fwnode:	Optional fwnode of the interrupt controller
+ * @of_node:	Optional device-tree node of the interrupt controller
  * @info:	MSI domain info
  * @parent:	Parent irq domain
  */
-struct irq_domain *msi_create_irq_domain(struct fwnode_handle *fwnode,
+struct irq_domain *msi_create_irq_domain(struct device_node *node,
 					 struct msi_domain_info *info,
 					 struct irq_domain *parent)
 {
-	struct irq_domain *domain;
-
 	if (info->flags & MSI_FLAG_USE_DEF_DOM_OPS)
 		msi_domain_update_dom_ops(info);
 	if (info->flags & MSI_FLAG_USE_DEF_CHIP_OPS)
 		msi_domain_update_chip_ops(info);
 
-	domain = irq_domain_create_hierarchy(parent, IRQ_DOMAIN_FLAG_MSI, 0,
-					     fwnode, &msi_domain_ops, info);
-
-	if (domain && !domain->name && info->chip)
-		domain->name = info->chip->name;
-
-	return domain;
+	return irq_domain_add_hierarchy(parent, 0, 0, node, &msi_domain_ops,
+					info);
 }
 
 int msi_domain_prepare_irqs(struct irq_domain *domain, struct device *dev,
@@ -315,7 +254,7 @@ int msi_domain_populate_irqs(struct irq_domain *domain, struct device *dev,
 
 		ops->set_desc(arg, desc);
 		/* Assumes the domain mutex is held! */
-		ret = irq_domain_alloc_irqs_hierarchy(domain, virq, 1, arg);
+		ret = irq_domain_alloc_irqs_recursive(domain, virq, 1, arg);
 		if (ret)
 			break;
 
