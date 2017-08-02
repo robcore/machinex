@@ -735,8 +735,8 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 static int __init early_mem(char *p)
 {
 	static int usermem __initdata = 0;
-	phys_addr_t size;
-	phys_addr_t start;
+	u64 size;
+	u64 start;
 	char *endp;
 
 	/*

@@ -40,7 +40,7 @@ enum reboot_mode reboot_mode DEFAULT_REBOOT_MODE;
  * impossible to override a faulty reboot quirk without recompiling.
  */
 int reboot_default = 1;
-int reboot_cpu;
+int reboot_cpu = 0;
 enum reboot_type reboot_type = BOOT_ACPI;
 int reboot_force;
 
