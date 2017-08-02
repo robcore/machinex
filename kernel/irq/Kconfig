@@ -31,16 +31,6 @@ config GENERIC_IRQ_SHOW_LEVEL
 config GENERIC_IRQ_EFFECTIVE_AFF_MASK
        bool
 
-
-# Print wakeup count extra information
-config GENERIC_IRQ_SHOW_WAKEUP_COUNT
-	bool "Show extra wakeup count irq information"
-	depends on GENERIC_IRQ_SHOW
-	help
-	  This option will show the wakeup count extra information to
-	  the user through /proc/interrupts interface.
-	  If you don't know what to do here, say N.
-
 # Facility to allocate a hardware interrupt. This is legacy support
 # and should not be used in new code. Use irq domains instead.
 config GENERIC_IRQ_LEGACY_ALLOC_HWIRQ

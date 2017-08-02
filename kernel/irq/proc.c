@@ -13,7 +13,6 @@
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
-#include "../../fs/proc/internal.h"
 
 #include "internals.h"
 
@@ -38,19 +37,47 @@ static struct proc_dir_entry *root_irq_dir;
 
 #ifdef CONFIG_SMP
 
-static int show_irq_affinity(int type, struct seq_file *m, void *v)
+enum {
+	AFFINITY,
+	AFFINITY_LIST,
+	EFFECTIVE,
+	EFFECTIVE_LIST,
+};
+
+static int show_irq_affinity(int type, struct seq_file *m)
 {
 	struct irq_desc *desc = irq_to_desc((long)m->private);
-	const struct cpumask *mask = desc->irq_common_data.affinity;
+	const struct cpumask *mask;
 
+	switch (type) {
+	case AFFINITY:
+	case AFFINITY_LIST:
+		mask = desc->irq_common_data.affinity;
 #ifdef CONFIG_GENERIC_PENDING_IRQ
-	if (irqd_is_setaffinity_pending(&desc->irq_data))
-		mask = desc->pending_mask;
+		if (irqd_is_setaffinity_pending(&desc->irq_data))
+			mask = desc->pending_mask;
 #endif
-	if (type)
+		break;
+	case EFFECTIVE:
+	case EFFECTIVE_LIST:
+#ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+		mask = desc->irq_common_data.effective_affinity;
+		break;
+#else
+		return -EINVAL;
+#endif
+	};
+
+	switch (type) {
+	case AFFINITY_LIST:
+	case EFFECTIVE_LIST:
 		seq_printf(m, "%*pbl\n", cpumask_pr_args(mask));
-	else
+		break;
+	case AFFINITY:
+	case EFFECTIVE:
 		seq_printf(m, "%*pb\n", cpumask_pr_args(mask));
+		break;
+	}
 	return 0;
 }
 
@@ -81,12 +108,12 @@ static int irq_affinity_hint_proc_show(struct seq_file *m, void *v)
 int no_irq_affinity;
 static int irq_affinity_proc_show(struct seq_file *m, void *v)
 {
-	return show_irq_affinity(0, m, v);
+	return show_irq_affinity(AFFINITY, m);
 }
 
 static int irq_affinity_list_proc_show(struct seq_file *m, void *v)
 {
-	return show_irq_affinity(1, m, v);
+	return show_irq_affinity(AFFINITY_LIST, m);
 }
 
 
@@ -186,6 +213,44 @@ static const struct file_operations irq_affinity_list_proc_fops = {
 	.write		= irq_affinity_list_proc_write,
 };
 
+#ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+static int irq_effective_aff_proc_show(struct seq_file *m, void *v)
+{
+	return show_irq_affinity(EFFECTIVE, m);
+}
+
+static int irq_effective_aff_list_proc_show(struct seq_file *m, void *v)
+{
+	return show_irq_affinity(EFFECTIVE_LIST, m);
+}
+
+static int irq_effective_aff_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, irq_effective_aff_proc_show, PDE_DATA(inode));
+}
+
+static int irq_effective_aff_list_proc_open(struct inode *inode,
+					    struct file *file)
+{
+	return single_open(file, irq_effective_aff_list_proc_show,
+			   PDE_DATA(inode));
+}
+
+static const struct file_operations irq_effective_aff_proc_fops = {
+	.open		= irq_effective_aff_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static const struct file_operations irq_effective_aff_list_proc_fops = {
+	.open		= irq_effective_aff_list_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
+
 static int default_affinity_show(struct seq_file *m, void *v)
 {
 	seq_printf(m, "%*pb\n", cpumask_pr_args(irq_default_affinity));
@@ -284,45 +349,6 @@ static const struct file_operations irq_spurious_proc_fops = {
 	.release	= single_release,
 };
 
-static int irq_wake_depth_proc_show(struct seq_file *m, void *v)
-{
-	struct irq_desc *desc = irq_to_desc((long) m->private);
-
-	seq_printf(m, "wake_depth %u\n", desc->wake_depth);
-	return 0;
-}
-
-static int irq_wake_depth_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, irq_wake_depth_proc_show, PDE(inode)->data);
-}
-
-static const struct file_operations irq_wake_depth_proc_fops = {
-	.open		= irq_wake_depth_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static int irq_disable_depth_proc_show(struct seq_file *m, void *v)
-{
-	struct irq_desc *desc = irq_to_desc((long) m->private);
-
-	seq_printf(m, "disable_depth %u\n", desc->depth);
-	return 0;
-}
-
-static int irq_disable_depth_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, irq_disable_depth_proc_show, PDE(inode)->data);
-}
-
-static const struct file_operations irq_disable_depth_proc_fops = {
-	.open		= irq_disable_depth_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
 #define MAX_NAMELEN 128
 
 static int name_unique(unsigned int irq, struct irqaction *new_action)
@@ -366,6 +392,7 @@ void register_handler_proc(unsigned int irq, struct irqaction *action)
 void register_irq_proc(unsigned int irq, struct irq_desc *desc)
 {
 	static DEFINE_MUTEX(register_lock);
+	void __maybe_unused *irqp = (void *)(unsigned long) irq;
 	char name [MAX_NAMELEN];
 
 	if (!root_irq_dir || (desc->irq_data.chip == &no_irq_chip))
@@ -391,26 +418,27 @@ void register_irq_proc(unsigned int irq, struct irq_desc *desc)
 #ifdef CONFIG_SMP
 	/* create /proc/irq/<irq>/smp_affinity */
 	proc_create_data("smp_affinity", 0644, desc->dir,
-			 &irq_affinity_proc_fops, (void *)(long)irq);
+			 &irq_affinity_proc_fops, irqp);
 
 	/* create /proc/irq/<irq>/affinity_hint */
 	proc_create_data("affinity_hint", 0444, desc->dir,
-			 &irq_affinity_hint_proc_fops, (void *)(long)irq);
+			 &irq_affinity_hint_proc_fops, irqp);
 
 	/* create /proc/irq/<irq>/smp_affinity_list */
 	proc_create_data("smp_affinity_list", 0644, desc->dir,
-			 &irq_affinity_list_proc_fops, (void *)(long)irq);
+			 &irq_affinity_list_proc_fops, irqp);
 
 	proc_create_data("node", 0444, desc->dir,
-			 &irq_node_proc_fops, (void *)(long)irq);
+			 &irq_node_proc_fops, irqp);
+# ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+	proc_create_data("effective_affinity", 0444, desc->dir,
+			 &irq_effective_aff_proc_fops, irqp);
+	proc_create_data("effective_affinity_list", 0444, desc->dir,
+			 &irq_effective_aff_list_proc_fops, irqp);
+# endif
 #endif
-
 	proc_create_data("spurious", 0444, desc->dir,
 			 &irq_spurious_proc_fops, (void *)(long)irq);
-	proc_create_data("disable_depth", 0444, desc->dir,
-			 &irq_disable_depth_proc_fops, (void *)(long)irq);
-	proc_create_data("wake_depth", 0444, desc->dir,
-			 &irq_wake_depth_proc_fops, (void *)(long)irq);
 
 out_unlock:
 	mutex_unlock(&register_lock);
@@ -427,6 +455,10 @@ void unregister_irq_proc(unsigned int irq, struct irq_desc *desc)
 	remove_proc_entry("affinity_hint", desc->dir);
 	remove_proc_entry("smp_affinity_list", desc->dir);
 	remove_proc_entry("node", desc->dir);
+# ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+	remove_proc_entry("effective_affinity", desc->dir);
+	remove_proc_entry("effective_affinity_list", desc->dir);
+# endif
 #endif
 	remove_proc_entry("spurious", desc->dir);
 
@@ -521,10 +553,6 @@ int show_interrupts(struct seq_file *p, void *v)
 	for_each_online_cpu(j)
 		seq_printf(p, "%10u ", kstat_irqs_cpu(i, j));
 
-#ifdef CONFIG_GENERIC_IRQ_SHOW_WAKEUP_COUNT
-	seq_printf(p, "%10u ", desc->wakeup_irqs);
-	seq_printf(p, "%-4s", irqd_is_wakeup_set(&desc->irq_data) ? "w" : "");
-#endif
 	if (desc->irq_data.chip) {
 		if (desc->irq_data.chip->irq_print_chip)
 			desc->irq_data.chip->irq_print_chip(&desc->irq_data, p);

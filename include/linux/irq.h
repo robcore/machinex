@@ -22,6 +22,7 @@
 #include <linux/topology.h>
 #include <linux/wait.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 
 #include <asm/irq.h>
 #include <asm/ptrace.h>
@@ -29,8 +30,6 @@
 
 struct seq_file;
 struct module;
-struct irq_desc;
-struct irq_data;
 struct msi_msg;
 enum irqchip_irq_state;
 
@@ -135,8 +134,14 @@ struct irq_domain;
  *			Use accessor functions to deal with it
  * @node:		node index useful for balancing
  * @handler_data:	per-IRQ data for the irq_chip methods
- * @affinity:		IRQ affinity on SMP
+ * @affinity:		IRQ affinity on SMP. If this is an IPI
+ *			related irq, then this is the mask of the
+ *			CPUs to which an IPI can be sent.
+ * @effective_affinity:	The effective IRQ affinity on SMP as some irq
+ *			chips do not allow multi CPU destinations.
+ *			A subset of @affinity.
  * @msi_desc:		MSI descriptor
+ * @ipi_offset:		Offset of first IPI target cpu in @affinity. Optional.
  */
 struct irq_common_data {
 	unsigned int		state_use_accessors;
@@ -146,6 +151,12 @@ struct irq_common_data {
 	void			*handler_data;
 	struct msi_desc		*msi_desc;
 	cpumask_var_t		affinity;
+#ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+	cpumask_var_t		effective_affinity;
+#endif
+#ifdef CONFIG_GENERIC_IRQ_IPI
+	unsigned int		ipi_offset;
+#endif
 };
 
 /**
@@ -161,12 +172,9 @@ struct irq_common_data {
  *			irq_domain
  * @chip_data:		platform-specific per-chip private data for the chip
  *			methods, to allow shared chip implementations
- *
- * The fields here need to overlay the ones in irq_desc until we
- * cleaned up the direct references and switched everything over to
- * irq_data.
  */
 struct irq_data {
+	u32			mask;
 	unsigned int		irq;
 	unsigned long		hwirq;
 	struct irq_common_data	*common;
@@ -183,6 +191,7 @@ struct irq_data {
  *
  * IRQD_TRIGGER_MASK		- Mask for the trigger type bits
  * IRQD_SETAFFINITY_PENDING	- Affinity setting is pending
+ * IRQD_ACTIVATED		- Interrupt has already been activated
  * IRQD_NO_BALANCING		- Balancing disabled for this IRQ
  * IRQD_PER_CPU			- Interrupt is per cpu
  * IRQD_AFFINITY_SET		- Interrupt affinity was set
@@ -197,10 +206,15 @@ struct irq_data {
  * IRQD_WAKEUP_ARMED		- Wakeup mode armed
  * IRQD_FORWARDED_TO_VCPU	- The interrupt is forwarded to a VCPU
  * IRQD_AFFINITY_MANAGED	- Affinity is auto-managed by the kernel
+ * IRQD_IRQ_STARTED		- Startup state of the interrupt
+ * IRQD_MANAGED_SHUTDOWN	- Interrupt was shutdown due to empty affinity
+ *				  mask. Applies only to affinity managed irqs.
+ * IRQD_SINGLE_TARGET		- IRQ allows only a single affinity target
  */
 enum {
 	IRQD_TRIGGER_MASK		= 0xf,
 	IRQD_SETAFFINITY_PENDING	= (1 <<  8),
+	IRQD_ACTIVATED			= (1 <<  9),
 	IRQD_NO_BALANCING		= (1 << 10),
 	IRQD_PER_CPU			= (1 << 11),
 	IRQD_AFFINITY_SET		= (1 << 12),
@@ -213,9 +227,12 @@ enum {
 	IRQD_WAKEUP_ARMED		= (1 << 19),
 	IRQD_FORWARDED_TO_VCPU		= (1 << 20),
 	IRQD_AFFINITY_MANAGED		= (1 << 21),
+	IRQD_IRQ_STARTED		= (1 << 22),
+	IRQD_MANAGED_SHUTDOWN		= (1 << 23),
+	IRQD_SINGLE_TARGET		= (1 << 24),
 };
 
-#define __irqd_to_state(d)		((d)->common->state_use_accessors)
+#define __irqd_to_state(d) ACCESS_PRIVATE((d)->common, state_use_accessors)
 
 static inline bool irqd_is_setaffinity_pending(struct irq_data *d)
 {
@@ -259,6 +276,20 @@ static inline void irqd_set_trigger_type(struct irq_data *d, u32 type)
 static inline bool irqd_is_level_type(struct irq_data *d)
 {
 	return __irqd_to_state(d) & IRQD_LEVEL;
+}
+
+/*
+ * Must only be called of irqchip.irq_set_affinity() or low level
+ * hieararchy domain allocation functions.
+ */
+static inline void irqd_set_single_target(struct irq_data *d)
+{
+	__irqd_to_state(d) |= IRQD_SINGLE_TARGET;
+}
+
+static inline bool irqd_is_single_target(struct irq_data *d)
+{
+	return __irqd_to_state(d) & IRQD_SINGLE_TARGET;
 }
 
 static inline bool irqd_is_wakeup_set(struct irq_data *d)
@@ -311,20 +342,32 @@ static inline bool irqd_affinity_is_managed(struct irq_data *d)
 	return __irqd_to_state(d) & IRQD_AFFINITY_MANAGED;
 }
 
-/*
- * Functions for chained handlers which can be enabled/disabled by the
- * standard disable_irq/enable_irq calls. Must be called with
- * irq_desc->lock held.
- */
-static inline void irqd_set_chained_irq_inprogress(struct irq_data *d)
+static inline bool irqd_is_activated(struct irq_data *d)
 {
-	__irqd_to_state(d) |= IRQD_IRQ_INPROGRESS;
+	return __irqd_to_state(d) & IRQD_ACTIVATED;
 }
 
-static inline void irqd_clr_chained_irq_inprogress(struct irq_data *d)
+static inline void irqd_set_activated(struct irq_data *d)
 {
-	__irqd_to_state(d) &= ~IRQD_IRQ_INPROGRESS;
+	__irqd_to_state(d) |= IRQD_ACTIVATED;
 }
+
+static inline void irqd_clr_activated(struct irq_data *d)
+{
+	__irqd_to_state(d) &= ~IRQD_ACTIVATED;
+}
+
+static inline bool irqd_is_started(struct irq_data *d)
+{
+	return __irqd_to_state(d) & IRQD_IRQ_STARTED;
+}
+
+static inline bool irqd_is_managed_and_shutdown(struct irq_data *d)
+{
+	return __irqd_to_state(d) & IRQD_MANAGED_SHUTDOWN;
+}
+
+#undef __irqd_to_state
 
 static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
 {
@@ -345,11 +388,15 @@ static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
  * @irq_mask_ack:	ack and mask an interrupt source
  * @irq_unmask:		unmask an interrupt source
  * @irq_eoi:		end of interrupt
- * @irq_set_affinity:	set the CPU affinity on SMP machines
+ * @irq_set_affinity:	Set the CPU affinity on SMP machines. If the force
+ *			argument is true, it tells the driver to
+ *			unconditionally apply the affinity setting. Sanity
+ *			checks against the supplied affinity mask are not
+ *			required. This is used for CPU hotplug where the
+ *			target CPU is not yet set in the cpu_online_mask.
  * @irq_retrigger:	resend an IRQ to the CPU
  * @irq_set_type:	set the flow type (IRQ_TYPE_LEVEL/etc.) of an IRQ
  * @irq_set_wake:	enable/disable power-management wake-on of an IRQ
- * @irq_read_line:	return the current value on the irq line
  * @irq_bus_lock:	function to lock access to slow bus (i2c) chips
  * @irq_bus_sync_unlock:function to sync and unlock slow bus (i2c) chips
  * @irq_cpu_online:	configure an interrupt source for a secondary CPU
@@ -370,9 +417,9 @@ static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
  * @irq_get_irqchip_state:	return the internal state of an interrupt
  * @irq_set_irqchip_state:	set the internal state of a interrupt
  * @irq_set_vcpu_affinity:	optional to target a vCPU in a virtual machine
+ * @ipi_send_single:	send a single IPI to destination cpus
+ * @ipi_send_mask:	send an IPI to destination cpus in cpumask
  * @flags:		chip specific flags
- *
- * @release:		release function solely used by UML
  */
 struct irq_chip {
 	struct device	*parent_device;
@@ -391,7 +438,6 @@ struct irq_chip {
 	int		(*irq_set_affinity)(struct irq_data *data, const struct cpumask *dest, bool force);
 	int		(*irq_retrigger)(struct irq_data *data);
 	int		(*irq_set_type)(struct irq_data *data, unsigned int flow_type);
-	int		(*irq_read_line)(struct irq_data *data);
 	int		(*irq_set_wake)(struct irq_data *data, unsigned int on);
 
 	void		(*irq_bus_lock)(struct irq_data *data);
@@ -411,11 +457,15 @@ struct irq_chip {
 	void		(*irq_release_resources)(struct irq_data *data);
 
 	void		(*irq_compose_msi_msg)(struct irq_data *data, struct msi_msg *msg);
+	void		(*irq_write_msi_msg)(struct irq_data *data, struct msi_msg *msg);
 
 	int		(*irq_get_irqchip_state)(struct irq_data *data, enum irqchip_irq_state which, bool *state);
 	int		(*irq_set_irqchip_state)(struct irq_data *data, enum irqchip_irq_state which, bool state);
 
 	int		(*irq_set_vcpu_affinity)(struct irq_data *data, void *vcpu_info);
+
+	void		(*ipi_send_single)(struct irq_data *data, unsigned int cpu);
+	void		(*ipi_send_mask)(struct irq_data *data, const struct cpumask *dest);
 
 	unsigned long	flags;
 };
@@ -481,14 +531,11 @@ extern int irq_affinity_online_cpu(unsigned int cpu);
 #if defined(CONFIG_SMP) && defined(CONFIG_GENERIC_PENDING_IRQ)
 void irq_move_irq(struct irq_data *data);
 void irq_move_masked_irq(struct irq_data *data);
-bool irq_fixup_move_pending(struct irq_desc *desc, bool force_clear);
+void irq_force_complete_move(struct irq_desc *desc);
 #else
 static inline void irq_move_irq(struct irq_data *data) { }
 static inline void irq_move_masked_irq(struct irq_data *data) { }
-static inline bool irq_fixup_move_pending(struct irq_desc *desc, bool fclear)
-{
-	return false;
-}
+static inline void irq_force_complete_move(struct irq_desc *desc) { }
 #endif
 
 extern int no_irq_affinity;
@@ -531,17 +578,6 @@ extern void irq_chip_eoi_parent(struct irq_data *data);
 extern int irq_chip_set_affinity_parent(struct irq_data *data,
 					const struct cpumask *dest,
 					bool force);
-#endif
-
-#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
-extern void irq_chip_ack_parent(struct irq_data *data);
-extern int irq_chip_retrigger_hierarchy(struct irq_data *data);
-extern void irq_chip_mask_parent(struct irq_data *data);
-extern void irq_chip_unmask_parent(struct irq_data *data);
-extern void irq_chip_eoi_parent(struct irq_data *data);
-extern int irq_chip_set_affinity_parent(struct irq_data *data,
-					const struct cpumask *dest,
-					bool force);
 extern int irq_chip_set_wake_parent(struct irq_data *data, unsigned int on);
 extern int irq_chip_set_vcpu_affinity_parent(struct irq_data *data,
 					     void *vcpu_info);
@@ -550,6 +586,7 @@ extern int irq_chip_set_type_parent(struct irq_data *data, unsigned int type);
 
 /* Handling of unhandled and spurious interrupts: */
 extern void note_interrupt(struct irq_desc *desc, irqreturn_t action_ret);
+
 
 /* Enable/disable irq debugging output: */
 extern int noirqdebug_setup(char *str);
@@ -654,11 +691,6 @@ static inline void irq_set_percpu_devid_flags(unsigned int irq)
 			     IRQ_NOPROBE | IRQ_PER_CPU_DEVID);
 }
 
-/* Handle dynamic irq creation and destruction */
-extern unsigned int create_irq_nr(unsigned int irq_want, int node);
-extern int create_irq(void);
-extern void destroy_irq(unsigned int irq);
-
 /* Set/get chip/data for an IRQ: */
 extern int irq_set_chip(unsigned int irq, struct irq_chip *chip);
 extern int irq_set_handler_data(unsigned int irq, void *data);
@@ -708,7 +740,7 @@ static inline struct msi_desc *irq_get_msi_desc(unsigned int irq)
 	return d ? d->common->msi_desc : NULL;
 }
 
-static inline struct msi_desc *irq_data_get_msi(struct irq_data *d)
+static inline struct msi_desc *irq_data_get_msi_desc(struct irq_data *d)
 {
 	return d->common->msi_desc;
 }
@@ -744,6 +776,29 @@ static inline struct cpumask *irq_data_get_affinity_mask(struct irq_data *d)
 {
 	return d->common->affinity;
 }
+
+#ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+static inline
+struct cpumask *irq_data_get_effective_affinity_mask(struct irq_data *d)
+{
+	return d->common->effective_affinity;
+}
+static inline void irq_data_update_effective_affinity(struct irq_data *d,
+						      const struct cpumask *m)
+{
+	cpumask_copy(d->common->effective_affinity, m);
+}
+#else
+static inline void irq_data_update_effective_affinity(struct irq_data *d,
+						      const struct cpumask *m)
+{
+}
+static inline
+struct cpumask *irq_data_get_effective_affinity_mask(struct irq_data *d)
+{
+	return d->common->affinity;
+}
+#endif
 
 unsigned int arch_dynirq_lower_bound(unsigned int from);
 
@@ -888,10 +943,12 @@ struct irq_chip_type {
 struct irq_chip_generic {
 	raw_spinlock_t		lock;
 	void __iomem		*reg_base;
-	unsigned int		irq_base;
-	unsigned int		irq_cnt;
+	u32			(*reg_readl)(void __iomem *addr);
+	void			(*reg_writel)(u32 val, void __iomem *addr);
 	void			(*suspend)(struct irq_chip_generic *gc);
 	void			(*resume)(struct irq_chip_generic *gc);
+	unsigned int		irq_base;
+	unsigned int		irq_cnt;
 	u32			mask_cache;
 	u32			type_cache;
 	u32			polarity_cache;
@@ -913,11 +970,15 @@ struct irq_chip_generic {
  *				irq chips which need to call irq_set_wake() on
  *				the parent irq. Usually GPIO implementations
  * @IRQ_GC_MASK_CACHE_PER_TYPE:	Mask cache is chip type private
+ * @IRQ_GC_NO_MASK:		Do not calculate irq_data->mask
+ * @IRQ_GC_BE_IO:		Use big-endian register accesses (default: LE)
  */
 enum irq_gc_flags {
 	IRQ_GC_INIT_MASK_CACHE		= 1 << 0,
 	IRQ_GC_INIT_NESTED_LOCK		= 1 << 1,
 	IRQ_GC_MASK_CACHE_PER_TYPE	= 1 << 2,
+	IRQ_GC_NO_MASK			= 1 << 3,
+	IRQ_GC_BE_IO			= 1 << 4,
 };
 
 /*
@@ -967,6 +1028,9 @@ struct irq_chip_generic *
 devm_irq_alloc_generic_chip(struct device *dev, const char *name, int num_ct,
 			    unsigned int irq_base, void __iomem *reg_base,
 			    irq_flow_handler_t handler);
+int devm_irq_setup_generic_chip(struct device *dev, struct irq_chip_generic *gc,
+				u32 msk, enum irq_gc_flags flags,
+				unsigned int clr, unsigned int set);
 
 struct irq_chip_generic *irq_get_domain_generic_chip(struct irq_domain *d, unsigned int hw_irq);
 
@@ -983,6 +1047,19 @@ int __irq_alloc_domain_generic_chips(struct irq_domain *d, int irqs_per_chip,
 	__irq_alloc_domain_generic_chips(d, irqs_per_chip, num_ct, name,\
 					 handler, clr, set, flags);	\
 })
+
+static inline void irq_free_generic_chip(struct irq_chip_generic *gc)
+{
+	kfree(gc);
+}
+
+static inline void irq_destroy_generic_chip(struct irq_chip_generic *gc,
+					    u32 msk, unsigned int clr,
+					    unsigned int set)
+{
+	irq_remove_generic_chip(gc, msk, clr, set);
+	irq_free_generic_chip(gc);
+}
 
 static inline struct irq_chip_type *irq_data_get_chip_type(struct irq_data *d)
 {
@@ -1019,13 +1096,19 @@ static inline void irq_gc_unlock(struct irq_chip_generic *gc) { }
 static inline void irq_reg_writel(struct irq_chip_generic *gc,
 				  u32 val, int reg_offset)
 {
-	writel(val, gc->reg_base + reg_offset);
+	if (gc->reg_writel)
+		gc->reg_writel(val, gc->reg_base + reg_offset);
+	else
+		writel(val, gc->reg_base + reg_offset);
 }
 
 static inline u32 irq_reg_readl(struct irq_chip_generic *gc,
 				int reg_offset)
 {
-	return readl(gc->reg_base + reg_offset);
+	if (gc->reg_readl)
+		return gc->reg_readl(gc->reg_base + reg_offset);
+	else
+		return readl(gc->reg_base + reg_offset);
 }
 
 /* Contrary to Linux irqs, for hardware irqs the irq number 0 is valid */
