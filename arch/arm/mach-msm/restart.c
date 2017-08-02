@@ -359,19 +359,6 @@ static void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	pr_err("restarting has failed\n");
 }
 
-static int do_msm_poweroff(struct notifier_block *nb, unsigned long action,
-			   void *data)
-{
-	msm_power_off();
-
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block restart_nb = {
-	.notifier_call = do_msm_poweroff,
-	.priority = 128,
-};
-
 #ifdef CONFIG_KEXEC_HARDBOOT
 void msm_kexec_hardboot(void)
 {
@@ -429,7 +416,6 @@ static int msm_restart_probe(struct platform_device *pdev)
 #endif
 	msm_tmr0_base = msm_timer_get_timer0_base();
 	restart_reason = MSM_IMEM_BASE + RESTART_REASON_ADDR;
-	register_restart_handler(&restart_nb);
 	pm_power_off = msm_power_off;
 	arm_pm_restart = msm_restart;
 #ifdef CONFIG_KEXEC_HARDBOOT
@@ -449,5 +435,4 @@ static int __init msm_restart_init(void)
 {
 	return platform_driver_register(&msm_restart_driver);
 }
-device_initcall(msm_restart_init);
-
+early_initcall(msm_restart_init);
