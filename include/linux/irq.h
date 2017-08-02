@@ -481,9 +481,14 @@ extern int irq_affinity_online_cpu(unsigned int cpu);
 #if defined(CONFIG_SMP) && defined(CONFIG_GENERIC_PENDING_IRQ)
 void irq_move_irq(struct irq_data *data);
 void irq_move_masked_irq(struct irq_data *data);
+bool irq_fixup_move_pending(struct irq_desc *desc, bool force_clear);
 #else
 static inline void irq_move_irq(struct irq_data *data) { }
 static inline void irq_move_masked_irq(struct irq_data *data) { }
+static inline bool irq_fixup_move_pending(struct irq_desc *desc, bool fclear)
+{
+	return false;
+}
 #endif
 
 extern int no_irq_affinity;
