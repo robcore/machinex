@@ -9,8 +9,10 @@
 #include <linux/irq.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
-#include <linux/suspend.h>
 #include <linux/syscore_ops.h>
+#include <linux/suspend.h>
+#include <linux/wakeup_reason.h>
+#include <linux/irqdesc.h>
 
 #include "internals.h"
 
@@ -149,8 +151,6 @@ static void resume_irq(struct irq_desc *desc)
 
 	/* Pretend that it got disabled ! */
 	desc->depth++;
-	irq_state_set_disabled(desc);
-	irq_state_set_masked(desc);
 resume:
 	desc->istate &= ~IRQS_SUSPENDED;
 	__enable_irq(desc);
