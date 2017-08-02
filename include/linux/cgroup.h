@@ -74,39 +74,34 @@ enum {
 	CSS_ONLINE	= (1 << 1), /* between ->css_online() and ->css_offline() */
 };
 
-/* Caller must verify that the cgroup_subsys_state is not for root cgroup */
-static inline void __css_get(struct cgroup_subsys_state *css, int count)
-{
-		percpu_ref_get(&css->refcnt);
-}
-
-/*
- * Call css_get() to hold a reference on the css; it can be used
- * for a reference obtained via:
- * - an existing ref-counted reference to the css
- * - task->cgroups for a locked task
+/**
+ * css_get - obtain a reference on the specified css
+ * @css: target css
+ *
+ * The caller must already have a reference.
  */
-
-extern void __css_get(struct cgroup_subsys_state *css, int count);
 static inline void css_get(struct cgroup_subsys_state *css)
 {
 	/* We don't need to reference count the root state */
 	if (!(css->flags & CSS_ROOT))
-		__css_get(css, 1);
+		percpu_ref_get(&css->refcnt);
 }
 
-/*
- * Call css_tryget() to take a reference on a css if your existing
- * (known-valid) reference isn't already ref-counted. Returns false if
- * the css has been destroyed.
+/**
+ * css_tryget - try to obtain a reference on the specified css
+ * @css: target css
+ *
+ * Obtain a reference on @css if it's alive.  The caller naturally needs to
+ * ensure that @css is accessible but doesn't have to be holding a
+ * reference on it - IOW, RCU protected access is good enough for this
+ * function.  Returns %true if a reference count was successfully obtained;
+ * %false otherwise.
  */
-
-extern bool __css_tryget(struct cgroup_subsys_state *css);
 static inline bool css_tryget(struct cgroup_subsys_state *css)
 {
 	if (css->flags & CSS_ROOT)
 		return true;
-	return percpu_ref_tryget_live(&css->refcnt);
+	return percpu_ref_tryget(&css->refcnt);
 }
 
 /**
@@ -125,7 +120,10 @@ static inline void css_put(struct cgroup_subsys_state *css)
 enum {
 	/* Control Group is dead */
 	CGRP_DEAD,
-	/* Control Group has ever had a child cgroup or a task */
+	/*
+	 * Control Group has previously had a child cgroup or a task,
+	 * but no longer (only if CGRP_NOTIFY_ON_RELEASE is set)
+	 */
 	CGRP_RELEASABLE,
 	/* Control Group requires release notifications to userspace */
 	CGRP_NOTIFY_ON_RELEASE,
@@ -142,7 +140,15 @@ enum {
 struct cgroup {
 	unsigned long flags;		/* "unsigned long" so bitops work */
 
-	int id;				/* idr allocated in-hierarchy ID */
+	/*
+	 * idr allocated in-hierarchy ID.
+	 *
+	 * The ID of the root cgroup is always 0, and a new cgroup
+	 * will be assigned with a smallest available ID.
+	 *
+	 * Allocating/Removing ID must be protected by cgroup_mutex.
+	 */
+	int id;
 
 	/* the number of attached css's */
 	int nr_css;
@@ -239,6 +245,17 @@ enum {
 	 *   match.
 	 *
 	 * - Remount is disallowed.
+	 *
+	 * - rename(2) is disallowed.
+	 *
+	 * - "tasks" is removed.  Everything should be at process
+	 *   granularity.  Use "cgroup.procs" instead.
+	 *
+	 * - "cgroup.procs" is not sorted.  pids will be unique unless they
+	 *   got recycled inbetween reads.
+	 *
+	 * - "release_agent" and "notify_on_release" are removed.
+	 *   Replacement notification mechanism will be implemented.
 	 *
 	 * - "cgroup.clone_children" is removed.
 	 *
@@ -375,7 +392,6 @@ struct css_set {
 
 	/* For RCU-protected deletion */
 	struct rcu_head rcu_head;
-	struct work_struct work;
 };
 
 /*
@@ -412,8 +428,9 @@ struct cftype {
 	umode_t mode;
 
 	/*
-	 * If non-zero, defines the maximum length of string that can
-	 * be passed to write_string; defaults to 64
+	 * The maximum length of string, excluding trailing nul, that can
+	 * be passed to write_string.  If < PAGE_SIZE-1, PAGE_SIZE-1 is
+	 * assumed.
 	 */
 	size_t max_write_len;
 
@@ -537,26 +554,20 @@ static inline char * __must_check cgroup_path(struct cgroup *cgrp, char *buf,
 
 static inline void pr_cont_cgroup_name(struct cgroup *cgrp)
 {
-	/* dummy_top doesn't have a kn associated */
-	if (cgrp->kn)
-		pr_cont_kernfs_name(cgrp->kn);
-	else
-		pr_cont("/");
+	pr_cont_kernfs_name(cgrp->kn);
 }
 
 static inline void pr_cont_cgroup_path(struct cgroup *cgrp)
 {
-	/* dummy_top doesn't have a kn associated */
-	if (cgrp->kn)
-		pr_cont_kernfs_path(cgrp->kn);
-	else
-		pr_cont("/");
+	pr_cont_kernfs_path(cgrp->kn);
 }
 
 char *task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
 int cgroup_rm_cftypes(struct cftype *cfts);
+
+bool cgroup_is_descendant(struct cgroup *cgrp, struct cgroup *ancestor);
 
 /*
  * Control Group taskset, used to pass around set of tasks to cgroup_subsys
@@ -854,19 +865,6 @@ void css_task_iter_end(struct css_task_iter *it);
 
 int cgroup_attach_task_all(struct task_struct *from, struct task_struct *);
 int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from);
-
-/*
- * CSS ID is ID for cgroup_subsys_state structs under subsys. This only works
- * if cgroup_subsys.use_id == true. It can be used for looking up and scanning.
- * CSS ID is assigned at cgroup allocation (create) automatically
- * and removed when subsys calls free_css_id() function. This is because
- * the lifetime of cgroup_subsys_state is subsys's matter.
- *
- * Looking up and scanning function should be called under rcu_read_lock().
- * Taking cgroup_mutex is not necessary for following calls.
- * But the css returned by this routine can be "not populated yet" or "being
- * destroyed". The caller should check css and cgroup's status.
- */
 
 struct cgroup_subsys_state *css_tryget_from_dir(struct dentry *dentry,
 						struct cgroup_subsys *ss);
