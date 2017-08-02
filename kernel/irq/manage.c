@@ -1391,15 +1391,6 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 			/* Undo nested disables: */
 			desc->depth = 1;
 
-		/* Exclude IRQ from balancing if requested */
-		if (new->flags & IRQF_NOBALANCING) {
-			irq_settings_set_no_balancing(desc);
-			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
-		}
-
-		/* Set default affinity mask once everything is setup */
-		irq_setup_affinity(desc);
-
 	} else if (new->flags & IRQF_TRIGGER_MASK) {
 		unsigned int nmsk = new->flags & IRQF_TRIGGER_MASK;
 		unsigned int omsk = irqd_get_trigger_type(&desc->irq_data);
