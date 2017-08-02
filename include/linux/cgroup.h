@@ -139,11 +139,6 @@ enum {
 	CGRP_SANE_BEHAVIOR,
 };
 
-struct cgroup_name {
-	struct rcu_head rcu_head;
-	char name[];
-};
-
 struct cgroup {
 	unsigned long flags;		/* "unsigned long" so bitops work */
 
@@ -171,19 +166,6 @@ struct cgroup {
 	 * It's used to allow interrupting and resuming iterations.
 	 */
 	u64 serial_nr;
-
-	/*
-	 * This is a copy of dentry->d_name, and it's needed because
-	 * we can't use dentry->d_name in cgroup_path().
-	 *
-	 * You must acquire rcu_read_lock() to access cgrp->name, and
-	 * the only place that can change it is rename(), which is
-	 * protected by parent dir's i_mutex.
-	 *
-	 * Normally you should use cgroup_name() wrapper rather than
-	 * access it directly.
-	 */
-	struct cgroup_name __rcu *name;
 
 	/* Private pointers for each registered subsystem */
 	struct cgroup_subsys_state __rcu *subsys[CGROUP_SUBSYS_COUNT];
@@ -238,15 +220,15 @@ enum {
 	 *
 	 * The followings are the behaviors currently affected this flag.
 	 *
-	 * - Mount options "noprefix" and "clone_children" are disallowed.
-	 *   Also, cgroupfs file cgroup.clone_children is not created.
+	 * - Mount options "noprefix", "xattr", "clone_children",
+	 *   "release_agent" and "name" are disallowed.
 	 *
 	 * - When mounting an existing superblock, mount options should
 	 *   match.
 	 *
 	 * - Remount is disallowed.
 	 *
-	 * - "xattr" mount option is deprecated.  kernfs always enables it.
+	 * - "cgroup.clone_children" is removed.
 	 *
 	 * - cpuset: tasks will be kept in empty cpusets when hotplug happens
 	 *   and take masks of ancestors with non-empty cpus/mems, instead of
@@ -267,8 +249,6 @@ enum {
 
 	/* mount options live below bit 16 */
 	CGRP_ROOT_OPTION_MASK	= (1 << 16) - 1,
-
-	CGRP_ROOT_SUBSYS_BOUND	= (1 << 16), /* subsystems finished binding */
 };
 
 /*
@@ -282,16 +262,14 @@ struct cgroupfs_root {
 	/* The bitmask of subsystems attached to this hierarchy */
 	unsigned long subsys_mask;
 
-	atomic_t refcnt;
-
 	/* Unique id for this hierarchy. */
 	int hierarchy_id;
 
-	/* The root cgroup for this hierarchy */
+	/* The root cgroup.  Root is destroyed on its release. */
 	struct cgroup top_cgroup;
 
-	/* Tracks how many cgroups are currently defined in hierarchy.*/
-	int number_of_cgroups;
+	/* Number of cgroups in the hierarchy, used only for /proc/cgroups */
+	atomic_t nr_cgrps;
 
 	/* A list running through the active hierarchies */
 	struct list_head root_list;
@@ -329,10 +307,14 @@ struct css_set {
 	struct hlist_node hlist;
 
 	/*
-	 * List running through all tasks using this cgroup
-	 * group. Protected by css_set_lock
+	 * Lists running through all tasks using this cgroup group.
+	 * mg_tasks lists tasks which belong to this cset but are in the
+	 * process of being migrated out or in.  Protected by
+	 * css_set_rwsem, but, during migration, once tasks are moved to
+	 * mg_tasks, it can be read safely while holding cgroup_mutex.
 	 */
 	struct list_head tasks;
+	struct list_head mg_tasks;
 
 	/*
 	 * List of cgrp_cset_links pointing at cgroups referenced from this
@@ -346,6 +328,23 @@ struct css_set {
 	 * subsystem registration (at boot time).
 	 */
 	struct cgroup_subsys_state *subsys[CGROUP_SUBSYS_COUNT];
+
+	/*
+	 * List of csets participating in the on-going migration either as
+	 * source or destination.  Protected by cgroup_mutex.
+	 */
+	struct list_head mg_preload_node;
+	struct list_head mg_node;
+
+	/*
+	 * If this cset is acting as the source of migration the following
+	 * two fields are set.  mg_src_cgrp is the source cgroup of the
+	 * on-going migration and mg_dst_cset is the destination cset the
+	 * target tasks on this cset should be migrated to.  Protected by
+	 * cgroup_mutex.
+	 */
+	struct cgroup *mg_src_cgrp;
+	struct css_set *mg_dst_cset;
 
 	/* For RCU-protected deletion */
 	struct rcu_head rcu_head;
@@ -461,12 +460,6 @@ static inline bool cgroup_sane_behavior(const struct cgroup *cgrp)
 	return cgrp->root->flags & CGRP_ROOT_SANE_BEHAVIOR;
 }
 
-/* Caller should hold rcu_read_lock() */
-static inline const char *cgroup_name(const struct cgroup *cgrp)
-{
-	return rcu_dereference(cgrp->name)->name;
-}
-
 /* no synchronization, the result can only be used as a hint */
 static inline bool cgroup_has_tasks(struct cgroup *cgrp)
 {
@@ -491,11 +484,44 @@ static inline struct cftype *seq_cft(struct seq_file *seq)
 
 struct cgroup_subsys_state *seq_css(struct seq_file *seq);
 
+/*
+ * Name / path handling functions.  All are thin wrappers around the kernfs
+ * counterparts and can be called under any context.
+ */
+
+static inline int cgroup_name(struct cgroup *cgrp, char *buf, size_t buflen)
+{
+	return kernfs_name(cgrp->kn, buf, buflen);
+}
+
+static inline char * __must_check cgroup_path(struct cgroup *cgrp, char *buf,
+					      size_t buflen)
+{
+	return kernfs_path(cgrp->kn, buf, buflen);
+}
+
+static inline void pr_cont_cgroup_name(struct cgroup *cgrp)
+{
+	/* dummy_top doesn't have a kn associated */
+	if (cgrp->kn)
+		pr_cont_kernfs_name(cgrp->kn);
+	else
+		pr_cont("/");
+}
+
+static inline void pr_cont_cgroup_path(struct cgroup *cgrp)
+{
+	/* dummy_top doesn't have a kn associated */
+	if (cgrp->kn)
+		pr_cont_kernfs_path(cgrp->kn);
+	else
+		pr_cont("/");
+}
+
+char *task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
+
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);
 int cgroup_rm_cftypes(struct cftype *cfts);
-
-int cgroup_path(const struct cgroup *cgrp, char *buf, int buflen);
-int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
 
 /*
  * Control Group taskset, used to pass around set of tasks to cgroup_subsys
@@ -504,9 +530,6 @@ int task_cgroup_path(struct task_struct *task, char *buf, size_t buflen);
 struct cgroup_taskset;
 struct task_struct *cgroup_taskset_first(struct cgroup_taskset *tset);
 struct task_struct *cgroup_taskset_next(struct cgroup_taskset *tset);
-struct cgroup_subsys_state *cgroup_taskset_cur_css(struct cgroup_taskset *tset,
-						   int subsys_id);
-int cgroup_taskset_size(struct cgroup_taskset *tset);
 
 /**
  * cgroup_taskset_for_each - iterate cgroup_taskset
@@ -611,10 +634,12 @@ struct cgroup_subsys_state *css_parent(struct cgroup_subsys_state *css)
  */
 #ifdef CONFIG_PROVE_RCU
 extern struct mutex cgroup_mutex;
+extern struct rw_semaphore css_set_rwsem;
 #define task_css_set_check(task, __c)					\
 	rcu_dereference_check((task)->cgroups,				\
-		lockdep_is_held(&(task)->alloc_lock) ||			\
-		lockdep_is_held(&cgroup_mutex) || (__c))
+		lockdep_is_held(&cgroup_mutex) ||			\
+		lockdep_is_held(&css_set_rwsem) ||			\
+		((task)->flags & PF_EXITING) || (__c))
 #else
 #define task_css_set_check(task, __c)					\
 	rcu_dereference((task)->cgroups)
