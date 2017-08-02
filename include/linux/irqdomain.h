@@ -104,6 +104,7 @@ struct irq_domain_chip_generic;
  * @host_data: private data pointer for use by owner.  Not touched by irq_domain
  *             core code.
  * @flags: host per irq_domain flags
+ * @mapcount: The number of mapped interrupts
  *
  * Optional elements
  * @of_node: Pointer to device tree nodes associated with the irq_domain. Used
@@ -126,6 +127,7 @@ struct irq_domain {
 	const struct irq_domain_ops *ops;
 	void *host_data;
 	unsigned int flags;
+	unsigned int mapcount;
 
 	/* Optional data */
 	struct device_node *of_node;
