@@ -24,7 +24,7 @@
 
 #ifdef CONFIG_CGROUPS
 
-struct cgroupfs_root;
+struct cgroup_root;
 struct cgroup_subsys;
 struct inode;
 struct cgroup;
@@ -167,16 +167,28 @@ struct cgroup {
 	 */
 	u64 serial_nr;
 
+	/* the bitmask of subsystems enabled on the child cgroups */
+	unsigned long child_subsys_mask;
+
 	/* Private pointers for each registered subsystem */
 	struct cgroup_subsys_state __rcu *subsys[CGROUP_SUBSYS_COUNT];
 
-	struct cgroupfs_root *root;
+	struct cgroup_root *root;
 
 	/*
 	 * List of cgrp_cset_links pointing at css_sets with tasks in this
 	 * cgroup.  Protected by css_set_lock.
 	 */
 	struct list_head cset_links;
+
+	/*
+	 * On the default hierarchy, a css_set for a cgroup with some
+	 * susbsys disabled will point to css's which are associated with
+	 * the closest ancestor which has the subsys enabled.  The
+	 * following lists all css_sets which point to this cgroup's css
+	 * for the given subsystem.
+	 */
+	struct list_head e_csets[CGROUP_SUBSYS_COUNT];
 
 	/*
 	 * Linked list running through all cgroups that can
@@ -202,7 +214,7 @@ struct cgroup {
 
 #define MAX_CGROUP_ROOT_NAMELEN 64
 
-/* cgroupfs_root->flags */
+/* cgroup_root->flags */
 enum {
 	/*
 	 * Unfortunately, cgroup core and various controllers are riddled
@@ -230,6 +242,9 @@ enum {
 	 *
 	 * - "cgroup.clone_children" is removed.
 	 *
+	 * - If mount is requested with sane_behavior but without any
+	 *   subsystem, the default unified hierarchy is mounted.
+	 *
 	 * - cpuset: tasks will be kept in empty cpusets when hotplug happens
 	 *   and take masks of ancestors with non-empty cpus/mems, instead of
 	 *   being moved to an ancestor.
@@ -252,11 +267,11 @@ enum {
 };
 
 /*
- * A cgroupfs_root represents the root of a cgroup hierarchy, and may be
+ * A cgroup_root represents the root of a cgroup hierarchy, and may be
  * associated with a kernfs_root to form an active hierarchy.  This is
  * internal to cgroup core.  Don't access directly from controllers.
  */
-struct cgroupfs_root {
+struct cgroup_root {
 	struct kernfs_root *kf_root;
 
 	/* The bitmask of subsystems attached to this hierarchy */
@@ -266,7 +281,7 @@ struct cgroupfs_root {
 	int hierarchy_id;
 
 	/* The root cgroup.  Root is destroyed on its release. */
-	struct cgroup top_cgroup;
+	struct cgroup cgrp;
 
 	/* Number of cgroups in the hierarchy, used only for /proc/cgroups */
 	atomic_t nr_cgrps;
@@ -322,6 +337,9 @@ struct css_set {
 	 */
 	struct list_head cgrp_links;
 
+	/* the default cgroup associated with this css_set */
+	struct cgroup *dfl_cgrp;
+
 	/*
 	 * Set of subsystem states, one for each subsystem. This array is
 	 * immutable after creation apart from the init_css_set during
@@ -346,6 +364,15 @@ struct css_set {
 	struct cgroup *mg_src_cgrp;
 	struct css_set *mg_dst_cset;
 
+	/*
+	 * On the default hierarhcy, ->subsys[ssid] may point to a css
+	 * attached to an ancestor instead of the cgroup this css_set is
+	 * associated with.  The following node is anchored at
+	 * ->subsys[ssid]->cgroup->e_csets[ssid] and provides a way to
+	 * iterate through all css's attached to a given cgroup.
+	 */
+	struct list_head e_cset_node[CGROUP_SUBSYS_COUNT];
+
 	/* For RCU-protected deletion */
 	struct rcu_head rcu_head;
 	struct work_struct work;
@@ -365,6 +392,7 @@ enum {
 	CFTYPE_NOT_ON_ROOT	= (1 << 1),	/* don't create on root cgrp */
 	CFTYPE_INSANE		= (1 << 2),	/* don't create if sane_behavior */
 	CFTYPE_NO_PREFIX	= (1 << 3),	/* (DON'T USE FOR NEW FILES) no subsys prefix */
+	CFTYPE_ONLY_ON_DFL	= (1 << 4),	/* only on default hierarchy */
 };
 
 #define MAX_CFTYPE_NAME		64
@@ -450,6 +478,13 @@ struct cftype {
 	struct lock_class_key	lockdep_key;
 #endif
 };
+
+extern struct cgroup_root cgrp_dfl_root;
+
+static inline bool cgroup_on_dfl(const struct cgroup *cgrp)
+{
+	return cgrp->root == &cgrp_dfl_root;
+}
 
 /*
  * See the comment above CGRP_ROOT_SANE_BEHAVIOR for details.  This
@@ -590,7 +625,7 @@ struct cgroup_subsys {
 	const char *name;
 
 	/* link to parent, protected by cgroup_lock() */
-	struct cgroupfs_root *root;
+	struct cgroup_root *root;
 
 	/*
 	 * List of cftypes.  Each entry is the first entry of an array
@@ -802,9 +837,14 @@ css_next_descendant_post(struct cgroup_subsys_state *pos,
 
 /* A css_task_iter should be treated as an opaque object */
 struct css_task_iter {
-	struct cgroup_subsys_state	*origin_css;
-	struct list_head		*cset_link;
-	struct list_head		*task;
+	struct cgroup_subsys		*ss;
+
+	struct list_head		*cset_pos;
+	struct list_head		*cset_head;
+
+	struct list_head		*task_pos;
+	struct list_head		*tasks_head;
+	struct list_head		*mg_tasks_head;
 };
 
 void css_task_iter_start(struct cgroup_subsys_state *css,
