@@ -260,10 +260,10 @@ SYSCALL_DEFINE2(getpriority, int, which, int, who)
 		else
 			p = current;
 		if (p) {
-			niceval = nice_to_rlimit(task_nice(p));
-			if (niceval > retval)
-				retval = niceval;
-		}
+				niceval = nice_to_rlimit(task_nice(p));
+				if (niceval > retval)
+					retval = niceval;
+			}
 		break;
 	case PRIO_PGRP:
 		if (who)
@@ -271,7 +271,7 @@ SYSCALL_DEFINE2(getpriority, int, which, int, who)
 		else
 			pgrp = task_pgrp(current);
 		do_each_pid_thread(pgrp, PIDTYPE_PGID, p) {
-			niceval = nice_to_rlimit(task_nice(p));
+				niceval = nice_to_rlimit(task_nice(p));
 			if (niceval > retval)
 				retval = niceval;
 		} while_each_pid_thread(pgrp, PIDTYPE_PGID, p);
@@ -422,6 +422,7 @@ static int set_user(struct cred *new)
 
 	free_uid(new->user);
 	new->user = new_user;
+	sched_autogroup_create_attach(current);
 	return 0;
 }
 
@@ -1005,7 +1006,7 @@ out:
 	write_unlock_irq(&tasklist_lock);
 	if (err > 0) {
 		proc_sid_connector(group_leader);
-		sched_autogroup_create_attach(group_leader);
+
 	}
 	return err;
 }
@@ -1024,7 +1025,6 @@ DECLARE_RWSEM(uts_sem);
 /*
  * Work around broken programs that cannot handle "Linux 3.0".
  * Instead we map 3.x to 2.6.40+x, so e.g. 3.0 would be 2.6.40
- * And we map 4.x to 2.6.60+x, so 4.0 would be 2.6.60.
  */
 static int override_release(char __user *release, size_t len)
 {
@@ -1044,7 +1044,7 @@ static int override_release(char __user *release, size_t len)
 				break;
 			rest++;
 		}
-		v = ((LINUX_VERSION_CODE >> 8) & 0xff) + 60;
+		v = ((LINUX_VERSION_CODE >> 8) & 0xff) + 40;
 		copy = clamp_t(size_t, len, 1, sizeof(buf));
 		copy = scnprintf(buf, copy, "2.6.%u%s", v, rest);
 		ret = copy_to_user(release, buf, copy + 1);
@@ -1460,7 +1460,7 @@ static void k_getrusage(struct task_struct *p, int who, struct rusage *r)
 	u64 tgutime, tgstime, utime, stime;
 	unsigned long maxrss = 0;
 
-	memset((char *)r, 0, sizeof (*r));
+	memset((char *) r, 0, sizeof *r);
 	utime = stime = 0;
 
 	if (who == RUSAGE_THREAD) {
@@ -1519,7 +1519,6 @@ out:
 
 	if (who != RUSAGE_CHILDREN) {
 		struct mm_struct *mm = get_task_mm(p);
-
 		if (mm) {
 			setmax_mm_hiwater_rss(&maxrss, mm);
 			mmput(mm);
@@ -1531,7 +1530,6 @@ out:
 int getrusage(struct task_struct *p, int who, struct rusage __user *ru)
 {
 	struct rusage r;
-
 	k_getrusage(p, who, &r);
 	return copy_to_user(ru, &r, sizeof(r)) ? -EFAULT : 0;
 }

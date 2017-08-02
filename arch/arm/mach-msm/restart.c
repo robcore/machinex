@@ -12,6 +12,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/reboot.h>
@@ -26,7 +27,6 @@
 
 #include <asm/mach-types.h>
 #include <asm/cacheflush.h>
-#include <asm/system_misc.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/restart.h>
@@ -59,7 +59,6 @@
 
 static int restart_mode;
 void *restart_reason;
-static bool scm_pmic_arbiter_disable_supported;
 int pmic_reset_irq;
 static void __iomem *msm_tmr0_base;
 
@@ -136,6 +135,7 @@ void msm_set_restart_mode(int mode)
 }
 EXPORT_SYMBOL(msm_set_restart_mode);
 
+static bool scm_pmic_arbiter_disable_supported;
 /*
  * Force the SPMI PMIC arbiter to shutdown so that no more SPMI transactions
  * are sent from the MSM to the PMIC.  This is required in order to avoid an
@@ -182,7 +182,7 @@ static void __msm_power_off(int lower_pshold)
 	if (lower_pshold) {
 		halt_spmi_pmic_arbiter();
 		__raw_writel(0, PSHOLD_CTL_SU);
-		mdelay(10000);
+		mdelay(8000);
 		pr_emerg("Powering off has failed\n");
 	}
 }
@@ -332,7 +332,7 @@ static void msm_restart_prepare(const char *cmd)
 	outer_flush_all();
 }
 
-static void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
+void msm_restart(char mode, const char *cmd)
 {
 	pr_notice("Going down for restart now\n");
 
@@ -342,7 +342,7 @@ static void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
 		__raw_writel(0, PSHOLD_CTL_SU); /* Actually reset the chip */
-		mdelay(5000);
+		mdelay(3000);
 		pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
 	}
 
@@ -355,7 +355,7 @@ static void msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	__raw_writel(0, PSHOLD_CTL_SU);
 
 
-	mdelay(10000);
+	mdelay(8000);
 	pr_err("restarting has failed\n");
 }
 
@@ -407,7 +407,7 @@ static int __init msm_pmic_restart_init(void)
 }
 late_initcall(msm_pmic_restart_init);
 
-static int msm_restart_probe(struct platform_device *pdev)
+static int __init msm_restart_init(void)
 {
 #ifdef CONFIG_MSM_DLOAD_MODE
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
@@ -417,22 +417,9 @@ static int msm_restart_probe(struct platform_device *pdev)
 	msm_tmr0_base = msm_timer_get_timer0_base();
 	restart_reason = MSM_IMEM_BASE + RESTART_REASON_ADDR;
 	pm_power_off = msm_power_off;
-	arm_pm_restart = msm_restart;
 #ifdef CONFIG_KEXEC_HARDBOOT
 	kexec_hardboot_hook = msm_kexec_hardboot;
 #endif
 	return 0;
 }
-
-static struct platform_driver msm_restart_driver = {
-	.probe = msm_restart_probe,
-	.driver = {
-		.name = "msm-restart",
-	},
-};
-
-static int __init msm_restart_init(void)
-{
-	return platform_driver_register(&msm_restart_driver);
-}
-device_initcall(msm_restart_init);
+early_initcall(msm_restart_init);

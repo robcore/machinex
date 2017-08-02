@@ -84,7 +84,7 @@ __setup("fpe=", fpe_setup);
 
 extern void paging_init(struct machine_desc *desc);
 extern void sanity_check_meminfo(void);
-extern enum reboot_mode reboot_mode;
+extern void reboot_setup(char *str);
 extern void setup_dma_zone(struct machine_desc *desc);
 
 unsigned int processor_id;
@@ -735,8 +735,8 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 static int __init early_mem(char *p)
 {
 	static int usermem __initdata = 0;
-	u64 size;
-	u64 start;
+	phys_addr_t size;
+	phys_addr_t start;
 	char *endp;
 
 	/*
@@ -1146,8 +1146,8 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_dma_zone(mdesc);
 
-	if (mdesc->reboot_mode != REBOOT_HARD)
-		reboot_mode = mdesc->reboot_mode;
+	if (mdesc->restart_mode)
+		reboot_setup(&mdesc->restart_mode);
 
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code   = (unsigned long) _etext;
@@ -1262,7 +1262,7 @@ static int c_show(struct seq_file *m, void *v)
 	int i, j;
 	u32 cpuid;
 
-	for_each_online_cpu(i) {
+	for_each_possible_cpu(i) {
 		/*
 		 * glibc reads /proc/cpuinfo to determine the number of
 		 * online processors, looking for lines beginning with
