@@ -960,8 +960,8 @@ static int wcd9xxx_i2c_probe(struct i2c_client *client,
 			pdata = wcd9xxx_populate_dt_pdata(&client->dev);
 			client->dev.platform_data = pdata;
 		} else {
-			dev_dbg(&client->dev,
-				"%s:Platform data from board file\n", __func__);
+			dev_dbg(&client->dev, "%s:Platform data from\n"
+				"board file\n", __func__);
 			pdata = client->dev.platform_data;
 		}
 		wcd9xxx = kzalloc(sizeof(struct wcd9xxx), GFP_KERNEL);
@@ -974,13 +974,13 @@ static int wcd9xxx_i2c_probe(struct i2c_client *client,
 		if (!pdata) {
 			dev_dbg(&client->dev, "no platform data?\n");
 			ret = -EINVAL;
-			goto fail;
+			goto err_codec;
 		}
 		if (i2c_check_functionality(client->adapter,
 					    I2C_FUNC_I2C) == 0) {
 			dev_dbg(&client->dev, "can't talk I2C?\n");
 			ret = -EIO;
-			goto fail;
+			goto err_codec;
 		}
 		dev_set_drvdata(&client->dev, wcd9xxx);
 		wcd9xxx->dev = &client->dev;
@@ -994,10 +994,11 @@ static int wcd9xxx_i2c_probe(struct i2c_client *client,
 			       __func__);
 			goto err_codec;
 		}
+
 		ret = wcd9xxx_enable_static_supplies(wcd9xxx, pdata);
 		if (ret) {
 			pr_err("%s: Fail to enable Codec pre-reset supplies\n",
-				   __func__);
+			       __func__);
 			goto err_codec;
 		}
 
