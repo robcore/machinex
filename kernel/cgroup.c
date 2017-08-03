@@ -4273,11 +4273,13 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	if (IS_ERR(css))
 		return PTR_ERR(css);
 
+	init_css(css, ss, cgrp);
+	cgroup_get(cgrp);
+	css_get(css->parent);
+
 	err = percpu_ref_init(&css->refcnt, css_release, 0, GFP_KERNEL);
 	if (err)
 		goto err_free_css;
-
-	init_css(css, ss, cgrp);
 
 	err = cgroup_populate_dir(cgrp, 1 << ss->id);
 	if (err)
@@ -4286,9 +4288,6 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	err = online_css(css);
 	if (err)
 		goto err_clear_dir;
-
-	cgroup_get(cgrp);
-	css_get(css->parent);
 
 	if (ss->broken_hierarchy && !ss->warned_broken_hierarchy &&
 	    parent->parent) {
@@ -4306,7 +4305,7 @@ err_clear_dir:
 err_free_percpu_ref:
 	percpu_ref_exit(&css->refcnt);
 err_free_css:
-	ss->css_free(css);
+	call_rcu(&css->rcu_head, css_free_rcu_fn);
 	return err;
 }
 
