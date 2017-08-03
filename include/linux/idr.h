@@ -110,19 +110,21 @@ int idr_for_each(struct idr *idp,
 void *idr_get_next(struct idr *idp, int *nextid);
 void *idr_replace(struct idr *idp, void *ptr, int id);
 void idr_remove(struct idr *idp, int id);
-void idr_remove_all(struct idr *idp);
 void idr_destroy(struct idr *idp);
 void idr_init(struct idr *idp);
-bool idr_is_empty(struct idr *idp);
-void mx_idr_destroy(struct idr *idp);
-int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t gfp_mask);
 
-static inline void idr_preload(gfp_t gfp_mask)
-{
-}
+void __idr_remove_all(struct idr *idp);	/* don't use */
 
-static inline void idr_preload_end(void)
+/**
+ * idr_remove_all - remove all ids from the given idr tree
+ * @idp: idr handle
+ *
+ * If you're trying to destroy @idp, calling idr_destroy() is enough.
+ * This is going away.  Don't use.
+ */
+static inline void __deprecated idr_remove_all(struct idr *idp)
 {
+	__idr_remove_all(idp);
 }
 
 /*
