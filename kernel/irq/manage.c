@@ -373,7 +373,7 @@ EXPORT_SYMBOL(irq_release_affinity_notifier);
 /*
  * Generic version of the affinity autoselector.
  */
-static int irq_setup_affinity(struct irq_desc *desc)
+int irq_setup_affinity(struct irq_desc *desc)
 {
 	struct cpumask *set = irq_default_affinity;
 	int ret, node = irq_desc_get_node(desc);
@@ -434,12 +434,6 @@ int irq_select_affinity_usr(unsigned int irq)
 	ret = irq_setup_affinity(desc);
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 	return ret;
-}
-
-#else
-static inline int setup_affinity(struct irq_desc *desc)
-{
-	return 0;
 }
 #endif
 
