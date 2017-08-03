@@ -1381,29 +1381,14 @@ static int wcd9xxx_slim_probe(struct slim_device *slim)
 	struct wcd9xxx *wcd9xxx;
 	struct wcd9xxx_pdata *pdata;
 	int ret = 0;
+
 	if (wcd9xxx_intf == WCD9XXX_INTERFACE_TYPE_I2C) {
 		dev_dbg(&slim->dev, "%s:Codec is detected in I2C mode\n",
 			__func__);
 		return -ENODEV;
 	}
-	if (slim->dev.of_node) {
-		dev_info(&slim->dev, "Platform data from device tree\n");
-		pdata = wcd9xxx_populate_dt_pdata(&slim->dev);
-		ret = wcd9xxx_dt_parse_slim_interface_dev_info(&slim->dev,
-				&pdata->slimbus_slave_device);
-		if (ret) {
-			dev_err(&slim->dev, "Error, parsing slim interface\n");
-			devm_kfree(&slim->dev, pdata);
-			ret = -EINVAL;
-			goto err;
-		}
-		slim->dev.platform_data = pdata;
-
-	} else {
-		dev_info(&slim->dev, "Platform data from board file\n");
-		pdata = slim->dev.platform_data;
-	}
-
+	dev_info(&slim->dev, "Platform data from board file\n");
+	pdata = slim->dev.platform_data;
 	if (!pdata) {
 		dev_err(&slim->dev, "Error, no platform data\n");
 		ret = -EINVAL;
@@ -1450,10 +1435,14 @@ static int wcd9xxx_slim_probe(struct slim_device *slim)
 				     ARRAY_SIZE(wcd9xxx->slim->e_addr),
 				     &wcd9xxx->slim->laddr);
 	if (ret) {
-		pr_err("%s: failed to get slimbus %s logical address: %d\n",
+		pr_err("%s: First Pass: failed to get slimbus %s logical address: %d\n",
 		       __func__, wcd9xxx->slim->name, ret);
 		goto err_reset;
 	}
+
+	pr_info("%s: First Pass: successful allocation for %s logical address: %d\n",
+	       __func__, wcd9xxx->slim->name, ret);
+
 	wcd9xxx->read_dev = wcd9xxx_slim_read_device;
 	wcd9xxx->write_dev = wcd9xxx_slim_write_device;
 	wcd9xxx_pgd_la = wcd9xxx->slim->laddr;
@@ -1474,10 +1463,13 @@ static int wcd9xxx_slim_probe(struct slim_device *slim)
 				     ARRAY_SIZE(wcd9xxx->slim_slave->e_addr),
 				     &wcd9xxx->slim_slave->laddr);
 	if (ret) {
-		pr_err("%s: failed to get slimbus %s logical address: %d\n",
+		pr_err("%s: Second Pass: failed to get slimbus %s logical address: %d\n",
 		       __func__, wcd9xxx->slim->name, ret);
 		goto err_slim_add;
 	}
+	pr_info("%s: Second Pass: successful allocation for %s logical address: %d\n",
+	       __func__, wcd9xxx->slim->name, ret);
+
 	wcd9xxx_inf_la = wcd9xxx->slim_slave->laddr;
 	wcd9xxx_intf = WCD9XXX_INTERFACE_TYPE_SLIMBUS;
 
