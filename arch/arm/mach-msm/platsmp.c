@@ -257,7 +257,7 @@ static int msm_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	return pen_release != -1 ? -ENOSYS : 0;
 }
 
-int  msm_cpu_disable(unsigned int cpu)
+int msm_cpu_disable(unsigned int cpu)
 {
 	return 0; /* support hotplugging any cpu */
 }

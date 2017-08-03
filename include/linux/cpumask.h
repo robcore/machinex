@@ -88,19 +88,40 @@ extern struct cpumask __cpu_possible_mask;
 extern struct cpumask __cpu_online_mask;
 extern struct cpumask __cpu_present_mask;
 extern struct cpumask __cpu_active_mask;
+#ifdef CONFIG_CPU_HARDPLUG
+extern struct cpumask __cpu_hardplugged_mask; //offline
+extern struct cpumask __cpu_unplugged_mask; //online
+#endif
+
 #define cpu_possible_mask ((const struct cpumask *)&__cpu_possible_mask)
 #define cpu_online_mask   ((const struct cpumask *)&__cpu_online_mask)
 #define cpu_present_mask  ((const struct cpumask *)&__cpu_present_mask)
 #define cpu_active_mask   ((const struct cpumask *)&__cpu_active_mask)
 
+#ifdef CONFIG_CPU_HARDPLUG
+#define cpu_hardplugged_mask  ((const struct cpumask *)&__cpu_hardplugged_mask)
+#define cpu_unplugged_mask   ((const struct cpumask *)&__cpu_unplugged_mask)
+#endif
+
 #define num_online_cpus()	cpumask_weight(cpu_online_mask)
 #define num_possible_cpus()	cpumask_weight(cpu_possible_mask)
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
 #define num_active_cpus()	cpumask_weight(cpu_active_mask)
+
+#ifdef CONFIG_CPU_HARDPLUG
+#define num_hardplugged_cpus()	cpumask_weight(cpu_hardplugged_mask)
+#define num_unplugged_cpus()	cpumask_weight(cpu_unplugged_mask)
+#endif
+
 #define cpu_online(cpu)		cpumask_test_cpu((cpu), cpu_online_mask)
 #define cpu_possible(cpu)	cpumask_test_cpu((cpu), cpu_possible_mask)
 #define cpu_present(cpu)	cpumask_test_cpu((cpu), cpu_present_mask)
 #define cpu_active(cpu)		cpumask_test_cpu((cpu), cpu_active_mask)
+
+#ifdef CONFIG_CPU_HARDPLUG
+#define cpu_hardplugged(cpu)	cpumask_test_cpu((cpu), cpu_hardplugged_mask)
+#define cpu_unplugged(cpu)		cpumask_test_cpu((cpu), cpu_unplugged_mask)
+#endif
 
 /* verify cpu argument to cpumask_* operators */
 static inline unsigned int cpumask_check(unsigned int cpu)
@@ -736,10 +757,19 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 #define for_each_online_cpu(cpu)   for_each_cpu((cpu), cpu_online_mask)
 #define for_each_active_cpu(cpu)  for_each_cpu((cpu), cpu_active_mask)
 
+#ifdef CONFIG_CPU_HARDPLUG
+#define for_each_hardplugged_cpu(cpu)   for_each_cpu((cpu), cpu_hardplugged_mask)
+#define for_each_unplugged_cpu(cpu)  for_each_cpu((cpu), cpu_unplugged_mask)
+#endif
+
 /* Wrappers for arch boot code to manipulate normally-constant masks */
 void init_cpu_present(const struct cpumask *src);
 void init_cpu_possible(const struct cpumask *src);
 void init_cpu_online(const struct cpumask *src);
+
+#ifdef CONFIG_CPU_HARDPLUG
+void init_cpu_unplugged(const struct cpumask *src);
+#endif
 
 static inline void
 set_cpu_possible(unsigned int cpu, bool possible)
@@ -777,6 +807,25 @@ set_cpu_active(unsigned int cpu, bool active)
 		cpumask_clear_cpu(cpu, &__cpu_active_mask);
 }
 
+#ifdef CONFIG_CPU_HARDPLUG
+static inline void
+set_cpu_hardplugged(unsigned int cpu, bool hardplugged)
+{
+	if (active)
+		cpumask_set_cpu(cpu, &__cpu_hardplugged_mask);
+	else
+		cpumask_clear_cpu(cpu, &__cpu_hardplugged_mask);
+}
+
+static inline void
+set_cpu_unplugged(unsigned int cpu, bool unplugged)
+{
+	if (active)
+		cpumask_set_cpu(cpu, &__cpu_unplugged_mask);
+	else
+		cpumask_clear_cpu(cpu, &__cpu_unplugged_mask);
+}
+#endif
 
 /**
  * to_cpumask - convert an NR_CPUS bitmap to a struct cpumask *
