@@ -210,7 +210,7 @@ int adreno_drawctxt_create(struct kgsl_device *device,
 	return 0;
 err:
 	kfree(drawctxt);
-	return ERR_PTR(ret);
+	return ret;
 }
 
 /**
