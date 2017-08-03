@@ -4266,7 +4266,7 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 {
 	struct cgroup *parent = cgrp->parent;
 	struct cgroup_subsys_state *css;
-	int err;
+	int err, id;
 
 	lockdep_assert_held(&cgroup_mutex);
 
@@ -4280,10 +4280,18 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	if (err)
 		goto err_free_css;
 
-	err = cgroup_idr_alloc(&ss->css_idr, NULL, 2, 0, GFP_NOWAIT);
-	if (err < 0)
-		goto err_free_percpu_ref;
-	css->id = err;
+		do {
+			err = idr_get_new_above(&ss->css_idr, NULL,
+					1, &id);
+			if (id < 0)
+				break;
+			css->id = id;
+			spin_unlock(&cgroup_idr_lock);
+			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
+					goto err_free_percpu_ref;
+			spin_lock(&cgroup_idr_lock);
+		} while (err);
+		spin_unlock(&cgroup_idr_lock);
 
 	err = cgroup_populate_dir(cgrp, 1 << ss->id);
 	if (err)
@@ -4329,7 +4337,7 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 {
 	struct cgroup *cgrp;
 	struct cgroup_root *root = parent->root;
-	int ssid, err;
+	int ssid, id, ret, err;
 	struct cgroup_subsys *ss;
 	struct kernfs_node *kn;
 
@@ -4747,7 +4755,7 @@ static struct kernfs_syscall_ops cgroup_kf_syscall_ops = {
 static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 {
 	struct cgroup_subsys_state *css;
-	int id;
+	int id, ret;
 
 	printk(KERN_INFO "Initializing cgroup subsys %s\n", ss->name);
 
@@ -4847,7 +4855,7 @@ int __init cgroup_init(void)
 {
 	struct cgroup_subsys *ss;
 	unsigned long key;
-	int ssid, err;
+	int ssid, err, id, ret;
 
 	BUG_ON(cgroup_init_cftypes(NULL, cgroup_base_files));
 
