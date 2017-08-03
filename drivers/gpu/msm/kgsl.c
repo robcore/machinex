@@ -618,7 +618,9 @@ kgsl_context_destroy(struct kref *kref)
 {
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
-	struct kgsl_device *device = context->device;
+	struct kgsl_device *device;
+	device = context->dev_priv->device;
+
 	write_lock(&device->context_lock);
 	if (context->id != KGSL_CONTEXT_INVALID) {
 		idr_remove(&device->context_idr, context->id);
