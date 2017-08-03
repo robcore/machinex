@@ -368,7 +368,8 @@ static int __rpm_callback(int (*cb)(struct device *), struct device *dev)
  * Check if the device's runtime PM status allows it to be suspended.  If
  * another idle notification has been started earlier, return immediately.  If
  * the RPM_ASYNC flag is set then queue an idle-notification request; otherwise
- * run the ->runtime_idle() callback directly.
+ * run the ->runtime_idle() callback directly. If the ->runtime_idle callback
+ * doesn't exist or if it returns 0, call rpm_suspend with the RPM_AUTO flag.
  *
  * This function must be called under dev->power.lock with interrupts disabled.
  */
