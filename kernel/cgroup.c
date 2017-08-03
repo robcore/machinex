@@ -1582,16 +1582,17 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 	lockdep_assert_held(&cgroup_tree_mutex);
 	lockdep_assert_held(&cgroup_mutex);
 
+		spin_lock(&cgroup_idr_lock);
 		do {
-			spin_lock(&cgroup_idr_lock);
 			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
 					0, &root_cgrp->id);
+			root_cgrp->id = ret;
 			spin_unlock(&cgroup_idr_lock);
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto out;
-			root_cgrp->id = ret;
+			spin_lock(&cgroup_idr_lock);
 		} while (ret);
-
+		spin_unlock(&cgroup_idr_lock);
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
 	 * but that's OK - it can only be increased by someone holding
