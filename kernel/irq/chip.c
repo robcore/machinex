@@ -199,6 +199,10 @@ int irq_startup(struct irq_desc *desc, bool resend)
 	} else {
 		irq_enable(desc);
 	}
+
+	/* Set default affinity mask once everything is setup */
+	irq_setup_affinity(desc);
+
 	if (resend)
 		check_irq_resend(desc);
 	return ret;
