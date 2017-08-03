@@ -19,8 +19,7 @@ struct pt_regs;
 
 /**
  * struct irq_desc - interrupt descriptor
- * @irq_data:		per irq and chip data passed down to chip functions
- * @timer_rand_state:	pointer to timer rand state struct
+ * @irq_common_data:	per irq and chip data passed down to chip functions
  * @kstat_irqs:		irq stats per cpu
  * @wakeup_irqs:	irq wakeup count from suspend
  * @handle_irq:		highlevel irq-events handler
@@ -37,8 +36,7 @@ struct pt_regs;
  * @threads_handled_last: comparator field for deferred spurious detection of theraded handlers
  * @lock:		locking for SMP
  * @affinity_hint:	hint to user space for preferred irq affinity
- * @affinity_notify:	list of notification clients for affinity changes
- * @affinity_work:	Work queue for handling affinity change notifications
+ * @affinity_notify:	context for notification of affinity changes
  * @pending_mask:	pending rebalanced interrupts
  * @threads_oneshot:	bitfield to handle shared oneshot threads
  * @threads_active:	number of irqaction threads currently running
@@ -52,6 +50,7 @@ struct pt_regs;
  * @kobj:		kobject used to represent this struct in sysfs
  * @request_mutex:	mutex to protect request/free before locking desc->lock
  * @dir:		/proc/irq/ procfs entry
+ * @debugfs_file:	dentry for the debugfs file
  * @name:		flow handler name for /proc/interrupts output
  */
 struct irq_desc {
