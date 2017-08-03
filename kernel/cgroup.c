@@ -167,8 +167,6 @@ static int cgroup_root_count;
 
 /* hierarchy ID allocation and mapping, protected by cgroup_mutex */
 static DEFINE_IDR(cgroup_hierarchy_idr);
-static int next_hierarchy_id;
-static int next_cgroup_id;
 
 /*
  * Assign a monotonically increasing serial number to cgroups.  It
@@ -200,7 +198,7 @@ static int cgroup_addrm_files(struct cgroup *cgrp, struct cftype cfts[],
 			      bool is_add);
 static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
 
-/* IDR wrappers which synchronize using cgroup_idr_lock 
+/* IDR wrappers which synchronize using cgroup_idr_lock */
 static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 			    gfp_t gfp_mask)
 {
@@ -212,7 +210,7 @@ static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
 	spin_unlock(&cgroup_idr_lock);
 	idr_preload_end();
 	return ret;
-}*/
+}
 
 static void *cgroup_idr_replace(struct idr *idr, void *ptr, int id)
 {
@@ -853,27 +851,15 @@ static struct cgroup_root *cgroup_root_from_kf(struct kernfs_root *kf_root)
 
 static int cgroup_init_root_id(struct cgroup_root *root)
 {
-	int ret;
-	int next_hierarchy_id;
+	int id;
 
 	lockdep_assert_held(&cgroup_mutex);
 
-	do {
-		if (!idr_pre_get(&cgroup_hierarchy_idr, GFP_KERNEL))
-			return -ENOMEM;
-		/* Try to allocate the next unused ID */
-		ret = idr_get_new_above(&cgroup_hierarchy_idr, root, next_hierarchy_id,
-					&root->hierarchy_id);
-		if (ret == -ENOSPC)
-			/* Try again starting from 0 */
-			ret = idr_get_new(&cgroup_hierarchy_idr, root, &root->hierarchy_id);
-		if (!ret) {
-			next_hierarchy_id = root->hierarchy_id + 1;
-		} else if (ret != -EAGAIN) {
-			/* Can only get here if the 31-bit IDR is full ... */
-			WARN_ON(ret);
-		}
-	} while (ret);
+	id = idr_alloc_cyclic(&cgroup_hierarchy_idr, root, 0, 0, GFP_KERNEL);
+	if (id < 0)
+		return id;
+
+	root->hierarchy_id = id;
 	return 0;
 }
 
@@ -1577,22 +1563,16 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 	LIST_HEAD(tmp_links);
 	struct cgroup *root_cgrp = &root->cgrp;
 	struct css_set *cset;
-	int i, id, ret;
+	int i, ret;
 
 	lockdep_assert_held(&cgroup_tree_mutex);
 	lockdep_assert_held(&cgroup_mutex);
 
-		spin_lock(&cgroup_idr_lock);
-		do {
-			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
-					0, &id);
-			root_cgrp->id = id;
-			spin_unlock(&cgroup_idr_lock);
-			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
-					goto out;
-			spin_lock(&cgroup_idr_lock);
-		} while (ret);
-		spin_unlock(&cgroup_idr_lock);
+	ret = cgroup_idr_alloc(&root->cgroup_idr, root_cgrp, 0, 1, GFP_NOWAIT);
+	if (ret < 0)
+		goto out;
+	root_cgrp->id = ret;
+
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
 	 * but that's OK - it can only be increased by someone holding
@@ -4349,18 +4329,11 @@ static long cgroup_create(struct cgroup *parent, const char *name,
 	 * Temporarily set the pointer to NULL, so idr_find() won't return
 	 * a half-baked cgroup.
 	 */
-	spin_lock(&cgroup_idr_lock);
-	while (idr_get_new_above(&root->cgroup_idr, NULL,
-					1, &cgrp->id)) {
-	spin_unlock(&cgroup_idr_lock);
-	if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
-			return -ENOMEM;
-	spin_lock(&cgroup_idr_lock);
+	cgrp->id = cgroup_idr_alloc(&root->cgroup_idr, NULL, 1, 0, GFP_NOWAIT);
+	if (cgrp->id < 0) {
+		err = -ENOMEM;
+		goto err_unlock;
 	}
-	spin_unlock(&cgroup_idr_lock);
-
-	if (cgrp->id < 0)
-		goto err_unlock;;
 
 	init_cgroup_housekeeping(cgrp);
 
