@@ -1066,8 +1066,10 @@ static int wcd9xxx_i2c_remove(struct i2c_client *client)
 	struct wcd9xxx_pdata *pdata = client->dev.platform_data;
 	pr_debug("exit\n");
 	wcd9xxx = dev_get_drvdata(&client->dev);
-	wcd9xxx_disable_supplies(wcd9xxx, pdata);
-	wcd9xxx_device_exit(wcd9xxx);
+	if (wcd9xxx != NULL) {
+		wcd9xxx_disable_supplies(wcd9xxx, pdata);
+		wcd9xxx_device_exit(wcd9xxx);
+	}
 	return 0;
 }
 
@@ -1521,10 +1523,12 @@ static int wcd9xxx_slim_remove(struct slim_device *pdev)
 	debugfs_remove(debugfs_wcd9xxx_dent);
 #endif
 	wcd9xxx = slim_get_devicedata(pdev);
-	wcd9xxx_deinit_slimslave(wcd9xxx);
-	slim_remove_device(wcd9xxx->slim_slave);
-	wcd9xxx_disable_supplies(wcd9xxx, pdata);
-	wcd9xxx_device_exit(wcd9xxx);
+	if (wcd9xxx != NULL) {
+		wcd9xxx_deinit_slimslave(wcd9xxx);
+		slim_remove_device(wcd9xxx->slim_slave);
+		wcd9xxx_disable_supplies(wcd9xxx, pdata);
+		wcd9xxx_device_exit(wcd9xxx);
+	}
 	return 0;
 }
 
@@ -1551,7 +1555,10 @@ static int wcd9xxx_resume(struct wcd9xxx *wcd9xxx)
 static int wcd9xxx_slim_resume(struct slim_device *sldev)
 {
 	struct wcd9xxx *wcd9xxx = slim_get_devicedata(sldev);
-	return wcd9xxx_resume(wcd9xxx);
+	if (wcd9xxx != NULL)
+		return wcd9xxx_resume(wcd9xxx);
+	else
+		return 0;
 }
 
 static int wcd9xxx_i2c_resume(struct i2c_client *i2cdev)
@@ -1610,7 +1617,10 @@ static int wcd9xxx_suspend(struct wcd9xxx *wcd9xxx, pm_message_t pmesg)
 static int wcd9xxx_slim_suspend(struct slim_device *sldev, pm_message_t pmesg)
 {
 	struct wcd9xxx *wcd9xxx = slim_get_devicedata(sldev);
-	return wcd9xxx_suspend(wcd9xxx, pmesg);
+	if (wcd9xxx != NULL)
+		return wcd9xxx_suspend(wcd9xxx, pmesg);
+	else
+		return 0;
 }
 
 static int wcd9xxx_i2c_suspend(struct i2c_client *i2cdev, pm_message_t pmesg)
