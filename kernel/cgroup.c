@@ -1585,7 +1585,7 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto out;
 			spin_lock(&cgroup_idr_lock);
-		} while (ret = -EAGAIN);
+		} while (ret == -EAGAIN);
 		spin_unlock(&cgroup_idr_lock);
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
@@ -4887,7 +4887,7 @@ int __init cgroup_init(void)
 				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 						goto fthisnoise;
 				spin_lock(&cgroup_idr_lock);
-			} while (ret = -EAGAIN);
+			} while (ret == -EAGAIN);
 			spin_unlock(&cgroup_idr_lock);
 		} else {
 			cgroup_init_subsys(ss, false);
