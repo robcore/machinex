@@ -475,7 +475,7 @@ struct sg_table *ion_cp_heap_create_sg_table(struct ion_buffer *buffer)
 	struct sg_table *table;
 	int ret;
 
-	table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!table)
 		return ERR_PTR(-ENOMEM);
 

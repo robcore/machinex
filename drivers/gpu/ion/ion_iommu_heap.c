@@ -161,7 +161,7 @@ static int ion_iommu_heap_allocate(struct ion_heap *heap,
 		}
 
 		table = buffer->sg_table =
-				kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+				kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 
 		if (!table) {
 			ret = -ENOMEM;

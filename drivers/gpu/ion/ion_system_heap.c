@@ -386,7 +386,7 @@ struct sg_table *ion_system_contig_heap_map_dma(struct ion_heap *heap,
 	struct sg_table *table;
 	int ret;
 
-	table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!table)
 		return ERR_PTR(-ENOMEM);
 	ret = sg_alloc_table(table, 1, GFP_KERNEL);
