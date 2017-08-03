@@ -592,6 +592,7 @@ func_end:
  */
 void
 kgsl_context_detach(struct kgsl_context *context)
+{
 	struct kgsl_device *device;
 	if (context == NULL)
 		return;
