@@ -530,7 +530,8 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	idr_preload_end();
 	if (id < 0) {
 		ret = id;
-		goto func_end;
+		kfree(context);
+		return ret;
 	}
 
 	/* MAX - 1, there is one memdesc in memstore for device info */
