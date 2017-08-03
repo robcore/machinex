@@ -41,6 +41,10 @@ config GENERIC_IRQ_SHOW_WAKEUP_COUNT
 	  the user through /proc/interrupts interface.
 	  If you don't know what to do here, say N.
 
+# Supports effective affinity mask
+config GENERIC_IRQ_EFFECTIVE_AFF_MASK
+       bool
+
 # Facility to allocate a hardware interrupt. This is legacy support
 # and should not be used in new code. Use irq domains instead.
 config GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
