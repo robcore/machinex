@@ -354,7 +354,7 @@ static inline void irqd_clr_chained_irq_inprogress(struct irq_data *d)
 	__irqd_to_state(d) &= ~IRQD_IRQ_INPROGRESS;
 }
 
-static inline bool irqd_is_managed_shutdown(struct irq_data *d)
+static inline bool irqd_is_managed_and_shutdown(struct irq_data *d)
 {
 	return __irqd_to_state(d) & IRQD_MANAGED_SHUTDOWN;
 }
