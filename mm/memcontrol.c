@@ -552,11 +552,7 @@ struct mem_cgroup *mem_cgroup_from_css(struct cgroup_subsys_state *s)
 
 static inline unsigned short mem_cgroup_id(struct mem_cgroup *memcg)
 {
-	/*
-	 * The ID of the root cgroup is 0, but memcg treat 0 as an
-	 * invalid ID, so we return (cgroup_id + 1).
-	 */
-	return memcg->css.id; + 1;
+	return memcg->css.id;
 }
 
 static inline struct mem_cgroup *mem_cgroup_from_id(unsigned short id)
