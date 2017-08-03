@@ -13,7 +13,6 @@
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <linux/mutex.h>
-#include "../../fs/proc/internal.h"
 
 #include "internals.h"
 
@@ -350,45 +349,6 @@ static const struct file_operations irq_spurious_proc_fops = {
 	.release	= single_release,
 };
 
-static int irq_wake_depth_proc_show(struct seq_file *m, void *v)
-{
-	struct irq_desc *desc = irq_to_desc((long) m->private);
-
-	seq_printf(m, "wake_depth %u\n", desc->wake_depth);
-	return 0;
-}
-
-static int irq_wake_depth_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, irq_wake_depth_proc_show, PDE(inode)->data);
-}
-
-static const struct file_operations irq_wake_depth_proc_fops = {
-	.open		= irq_wake_depth_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static int irq_disable_depth_proc_show(struct seq_file *m, void *v)
-{
-	struct irq_desc *desc = irq_to_desc((long) m->private);
-
-	seq_printf(m, "disable_depth %u\n", desc->depth);
-	return 0;
-}
-
-static int irq_disable_depth_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, irq_disable_depth_proc_show, PDE(inode)->data);
-}
-
-static const struct file_operations irq_disable_depth_proc_fops = {
-	.open		= irq_disable_depth_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
 #define MAX_NAMELEN 128
 
 static int name_unique(unsigned int irq, struct irqaction *new_action)
@@ -479,10 +439,6 @@ void register_irq_proc(unsigned int irq, struct irq_desc *desc)
 #endif
 	proc_create_data("spurious", 0444, desc->dir,
 			 &irq_spurious_proc_fops, (void *)(long)irq);
-	proc_create_data("disable_depth", 0444, desc->dir,
-			 &irq_disable_depth_proc_fops, (void *)(long)irq);
-	proc_create_data("wake_depth", 0444, desc->dir,
-			 &irq_wake_depth_proc_fops, (void *)(long)irq);
 
 out_unlock:
 	mutex_unlock(&register_lock);
@@ -597,10 +553,6 @@ int show_interrupts(struct seq_file *p, void *v)
 	for_each_online_cpu(j)
 		seq_printf(p, "%10u ", kstat_irqs_cpu(i, j));
 
-#ifdef CONFIG_GENERIC_IRQ_SHOW_WAKEUP_COUNT
-	seq_printf(p, "%10u ", desc->wakeup_irqs);
-	seq_printf(p, "%-4s", irqd_is_wakeup_set(&desc->irq_data) ? "w" : "");
-#endif
 	if (desc->irq_data.chip) {
 		if (desc->irq_data.chip->irq_print_chip)
 			desc->irq_data.chip->irq_print_chip(&desc->irq_data, p);
