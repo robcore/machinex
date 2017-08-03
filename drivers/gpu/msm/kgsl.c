@@ -531,7 +531,7 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	if (id < 0) {
 		ret = id;
 		kfree(context);
-		return ret;
+		return ERR_PTR(ret);
 	}
 
 	/* MAX - 1, there is one memdesc in memstore for device info */
