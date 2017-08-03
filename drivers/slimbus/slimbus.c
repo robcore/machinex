@@ -590,7 +590,7 @@ int slim_add_numbered_controller(struct slim_controller *ctrl)
 	int	id;
 
 	mutex_lock(&slim_lock);
-	id = idr_alloc_cyclic(&ctrl_idr, ctrl, ctrl->nr, ctrl->nr + 1, GFP_KERNEL);
+	id = idr_alloc(&ctrl_idr, ctrl, ctrl->nr, ctrl->nr + 1, GFP_KERNEL);
 	mutex_unlock(&slim_lock);
 
 	if (id < 0)
