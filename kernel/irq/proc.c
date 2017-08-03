@@ -38,47 +38,19 @@ static struct proc_dir_entry *root_irq_dir;
 
 #ifdef CONFIG_SMP
 
-enum {
-	AFFINITY,
-	AFFINITY_LIST,
-	EFFECTIVE,
-	EFFECTIVE_LIST,
-};
-
-static int show_irq_affinity(int type, struct seq_file *m)
+static int show_irq_affinity(int type, struct seq_file *m, void *v)
 {
 	struct irq_desc *desc = irq_to_desc((long)m->private);
-	const struct cpumask *mask;
+	const struct cpumask *mask = desc->irq_common_data.affinity;
 
-	switch (type) {
-	case AFFINITY:
-	case AFFINITY_LIST:
-		mask = desc->irq_common_data.affinity;
 #ifdef CONFIG_GENERIC_PENDING_IRQ
-		if (irqd_is_setaffinity_pending(&desc->irq_data))
-			mask = desc->pending_mask;
+	if (irqd_is_setaffinity_pending(&desc->irq_data))
+		mask = desc->pending_mask;
 #endif
-		break;
-	case EFFECTIVE:
-	case EFFECTIVE_LIST:
-#ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
-		mask = desc->irq_common_data.effective_affinity;
-		break;
-#else
-		return -EINVAL;
-#endif
-	};
-
-	switch (type) {
-	case AFFINITY_LIST:
-	case EFFECTIVE_LIST:
+	if (type)
 		seq_printf(m, "%*pbl\n", cpumask_pr_args(mask));
-		break;
-	case AFFINITY:
-	case EFFECTIVE:
+	else
 		seq_printf(m, "%*pb\n", cpumask_pr_args(mask));
-		break;
-	}
 	return 0;
 }
 
@@ -109,12 +81,12 @@ static int irq_affinity_hint_proc_show(struct seq_file *m, void *v)
 int no_irq_affinity;
 static int irq_affinity_proc_show(struct seq_file *m, void *v)
 {
-	return show_irq_affinity(AFFINITY, m);
+	return show_irq_affinity(0, m, v);
 }
 
 static int irq_affinity_list_proc_show(struct seq_file *m, void *v)
 {
-	return show_irq_affinity(AFFINITY_LIST, m);
+	return show_irq_affinity(1, m, v);
 }
 
 
@@ -149,11 +121,9 @@ static ssize_t write_irq_affinity(int type, struct file *file,
 	 * one online CPU still has to be targeted.
 	 */
 	if (!cpumask_intersects(new_value, cpu_online_mask)) {
-		/*
-		 * Special case for empty set - allow the architecture code
-		 * to set default SMP affinity.
-		 */
-		err = irq_select_affinity_usr(irq) ? -EINVAL : count;
+		/* Special case for empty set - allow the architecture
+		   code to set default SMP affinity. */
+		err = irq_select_affinity_usr(irq, new_value) ? -EINVAL : count;
 	} else {
 		irq_set_affinity(irq, new_value);
 		err = count;
@@ -213,44 +183,6 @@ static const struct file_operations irq_affinity_list_proc_fops = {
 	.release	= single_release,
 	.write		= irq_affinity_list_proc_write,
 };
-
-#ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
-static int irq_effective_aff_proc_show(struct seq_file *m, void *v)
-{
-	return show_irq_affinity(EFFECTIVE, m);
-}
-
-static int irq_effective_aff_list_proc_show(struct seq_file *m, void *v)
-{
-	return show_irq_affinity(EFFECTIVE_LIST, m);
-}
-
-static int irq_effective_aff_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, irq_effective_aff_proc_show, PDE_DATA(inode));
-}
-
-static int irq_effective_aff_list_proc_open(struct inode *inode,
-					    struct file *file)
-{
-	return single_open(file, irq_effective_aff_list_proc_show,
-			   PDE_DATA(inode));
-}
-
-static const struct file_operations irq_effective_aff_proc_fops = {
-	.open		= irq_effective_aff_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static const struct file_operations irq_effective_aff_list_proc_fops = {
-	.open		= irq_effective_aff_list_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-#endif
 
 static int default_affinity_show(struct seq_file *m, void *v)
 {
@@ -432,7 +364,6 @@ void register_handler_proc(unsigned int irq, struct irqaction *action)
 void register_irq_proc(unsigned int irq, struct irq_desc *desc)
 {
 	static DEFINE_MUTEX(register_lock);
-	void __maybe_unused *irqp = (void *)(unsigned long) irq;
 	char name [MAX_NAMELEN];
 
 	if (!root_irq_dir || (desc->irq_data.chip == &no_irq_chip))
@@ -458,25 +389,20 @@ void register_irq_proc(unsigned int irq, struct irq_desc *desc)
 #ifdef CONFIG_SMP
 	/* create /proc/irq/<irq>/smp_affinity */
 	proc_create_data("smp_affinity", 0644, desc->dir,
-			 &irq_affinity_proc_fops, irqp);
+			 &irq_affinity_proc_fops, (void *)(long)irq);
 
 	/* create /proc/irq/<irq>/affinity_hint */
 	proc_create_data("affinity_hint", 0444, desc->dir,
-			 &irq_affinity_hint_proc_fops, irqp);
+			 &irq_affinity_hint_proc_fops, (void *)(long)irq);
 
 	/* create /proc/irq/<irq>/smp_affinity_list */
 	proc_create_data("smp_affinity_list", 0644, desc->dir,
-			 &irq_affinity_list_proc_fops, irqp);
+			 &irq_affinity_list_proc_fops, (void *)(long)irq);
 
 	proc_create_data("node", 0444, desc->dir,
-			 &irq_node_proc_fops, irqp);
-# ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
-	proc_create_data("effective_affinity", 0444, desc->dir,
-			 &irq_effective_aff_proc_fops, irqp);
-	proc_create_data("effective_affinity_list", 0444, desc->dir,
-			 &irq_effective_aff_list_proc_fops, irqp);
-# endif
+			 &irq_node_proc_fops, (void *)(long)irq);
 #endif
+
 	proc_create_data("spurious", 0444, desc->dir,
 			 &irq_spurious_proc_fops, (void *)(long)irq);
 	proc_create_data("disable_depth", 0444, desc->dir,
@@ -499,10 +425,6 @@ void unregister_irq_proc(unsigned int irq, struct irq_desc *desc)
 	remove_proc_entry("affinity_hint", desc->dir);
 	remove_proc_entry("smp_affinity_list", desc->dir);
 	remove_proc_entry("node", desc->dir);
-# ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
-	remove_proc_entry("effective_affinity", desc->dir);
-	remove_proc_entry("effective_affinity_list", desc->dir);
-# endif
 #endif
 	remove_proc_entry("spurious", desc->dir);
 

@@ -26,9 +26,6 @@ else
 	tree=${srctree}/
 fi
 
-# ignore userspace tools
-ignore="$ignore ( -path ${tree}tools ) -prune -o"
-
 # Find all available archs
 find_all_archs()
 {

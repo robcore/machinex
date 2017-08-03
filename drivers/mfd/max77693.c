@@ -195,8 +195,7 @@ static int max77693_i2c_probe(struct i2c_client *i2c,
 	if (ret < 0)
 		goto err_mfd;
 
-	if (pdata)
-		device_init_wakeup(max77693->dev, pdata->wakeup);
+	device_init_wakeup(max77693->dev, pdata->wakeup);
 
 	return ret;
 

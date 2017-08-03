@@ -306,7 +306,7 @@ static int register_trace_probe(struct trace_probe *tp)
 	/* Register new event */
 	ret = register_probe_event(tp);
 	if (ret) {
-		pr_warn("Failed to register probe event(%d)\n", ret);
+		pr_warning("Failed to register probe event(%d)\n", ret);
 		goto end;
 	}
 

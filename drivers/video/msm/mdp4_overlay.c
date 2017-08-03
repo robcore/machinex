@@ -306,6 +306,8 @@ void mdp4_overlay_iommu_pipe_free(int ndx, int all)
 	mutex_lock(&iommu_mutex);
 	mixer = pipe->mixer_num;
 	iom = &pipe->iommu;
+	pr_debug("%s: mixer=%d ndx=%d all=%d\n", __func__,
+				mixer, pipe->pipe_ndx, all);
 	for (plane = 0; plane < MDP4_MAX_PLANE; plane++) {
 		if (iom->prev_ihdl[plane]) {
 			mdp4_overlay_iommu_2freelist(mixer,
@@ -337,6 +339,9 @@ int mdp4_overlay_iommu_map_buf(int mem_id,
 		pr_err("ion_import_dma_buf() failed\n");
 		return PTR_ERR(*srcp_ihdl);
 	}
+	pr_debug("%s(): ion_hdl %p, ion_buf %d\n", __func__, *srcp_ihdl, mem_id);
+	pr_debug("mixer %u, pipe %u, plane %u\n", pipe->mixer_num,
+		pipe->pipe_ndx, plane);
 
 	if(mdp4_overlay_format2type(pipe->src_format) == OVERLAY_TYPE_RGB) {
 		ret = ion_handle_get_size(display_iclient, *srcp_ihdl, &size);

@@ -674,7 +674,6 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
-
 	trace_wakeup_source_activate(ws->name, cec);
 }
 

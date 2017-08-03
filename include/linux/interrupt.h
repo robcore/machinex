@@ -54,9 +54,7 @@
  * IRQF_ONESHOT - Interrupt is not reenabled after the hardirq handler finished.
  *                Used by threaded interrupts which need to keep the
  *                irq line disabled until the threaded handler has been run.
- * IRQF_NO_SUSPEND - Do not disable this IRQ during suspend.  Does not guarantee
- *                   that this interrupt will wake the system from a suspended
- *                   state.  See Documentation/power/suspend-and-interrupts.txt
+ * IRQF_NO_SUSPEND - Do not disable this IRQ during suspend
  * IRQF_FORCE_RESUME - Force enable it on resume even if IRQF_NO_SUSPEND is set
  * IRQF_NO_THREAD - Interrupt cannot be threaded
  * IRQF_EARLY_RESUME - Resume IRQ early during syscore instead of at device
@@ -99,29 +97,29 @@ typedef irqreturn_t (*irq_handler_t)(int, void *);
 /**
  * struct irqaction - per interrupt action descriptor
  * @handler:	interrupt handler function
+ * @flags:	flags (see IRQF_* above)
  * @name:	name of the device
  * @dev_id:	cookie to identify the device
  * @percpu_dev_id:	cookie to identify the device
  * @next:	pointer to the next irqaction for shared interrupts
  * @irq:	interrupt number
- * @flags:	flags (see IRQF_* above)
+ * @dir:	pointer to the proc/irq/NN/name entry
  * @thread_fn:	interrupt handler function for threaded interrupts
  * @thread:	thread pointer for threaded interrupts
  * @secondary:	pointer to secondary irqaction (force threading)
  * @thread_flags:	flags related to @thread
  * @thread_mask:	bitmask for keeping track of @thread activity
- * @dir:	pointer to the proc/irq/NN/name entry
  */
 struct irqaction {
 	irq_handler_t		handler;
+	unsigned long		flags;
 	void			*dev_id;
 	void __percpu		*percpu_dev_id;
 	struct irqaction	*next;
+	int			irq;
 	irq_handler_t		thread_fn;
 	struct task_struct	*thread;
 	struct irqaction	*secondary;
-	unsigned int		irq;
-	unsigned int		flags;
 	unsigned long		thread_flags;
 	unsigned long		thread_mask;
 	const char		*name;
@@ -129,16 +127,6 @@ struct irqaction {
 } ____cacheline_internodealigned_in_smp;
 
 extern irqreturn_t no_action(int cpl, void *dev_id);
-
-/*
- * If a (PCI) device interrupt is not connected we set dev->irq to
- * IRQ_NOTCONNECTED. This causes request_irq() to fail with -ENOTCONN, so we
- * can distingiush that case from other error returns.
- *
- * 0x80000000 is guaranteed to be outside the available range of interrupts
- * and easy to distinguish from other possible incorrect values.
- */
-#define IRQ_NOTCONNECTED	(1U << 31)
 
 extern int __must_check
 request_threaded_irq(unsigned int irq, irq_handler_t handler,
@@ -157,19 +145,10 @@ request_any_context_irq(unsigned int irq, irq_handler_t handler,
 			unsigned long flags, const char *name, void *dev_id);
 
 extern int __must_check
-__request_percpu_irq(unsigned int irq, irq_handler_t handler,
-		     unsigned long flags, const char *devname,
-		     void __percpu *percpu_dev_id);
-
-static inline int __must_check
 request_percpu_irq(unsigned int irq, irq_handler_t handler,
-		   const char *devname, void __percpu *percpu_dev_id)
-{
-	return __request_percpu_irq(irq, handler, 0,
-				    devname, percpu_dev_id);
-}
+		   const char *devname, void __percpu *percpu_dev_id);
 
-extern const void *free_irq(unsigned int, void *);
+extern void free_irq(unsigned int, void *);
 extern void free_percpu_irq(unsigned int, void __percpu *);
 
 struct device;
@@ -227,27 +206,7 @@ extern void suspend_device_irqs(void);
 extern void resume_device_irqs(void);
 
 /**
- * struct irq_affinity_notify - context for notification of IRQ affinity changes
- * @irq:		Interrupt to which notification applies
- * @kref:		Reference count, for internal use
- * @work:		Work item, for internal use
- * @notify:		Function to be called on change.  This will be
- *			called in process context.
- * @release:		Function to be called on release.  This will be
- *			called in process context.  Once registered, the
- *			structure must only be freed when this function is
- *			called or later.
- */
-struct irq_affinity_notify {
-	unsigned int irq;
-	struct kref kref;
-	struct work_struct work;
-	void (*notify)(struct irq_affinity_notify *, const cpumask_t *mask);
-	void (*release)(struct kref *ref);
-};
-
-/**
- * struct irq_affinity - Description for automatic irq affinity assignements
+ * struct irq_affinity - Description for automatic irq affinity assignments
  * @pre_vectors:	Don't apply affinity to @pre_vectors at beginning of
  *			the MSI(-X) vector space
  * @post_vectors:	Don't apply affinity to @post_vectors at end of
@@ -269,7 +228,7 @@ extern int __irq_set_affinity(unsigned int irq, const struct cpumask *cpumask,
 /**
  * irq_set_affinity - Set the irq affinity of a given irq
  * @irq:	Interrupt to set affinity
- * @cpumask:	cpumask
+ * @mask:	cpumask
  *
  * Fails if cpumask does not contain an online CPU
  */
@@ -282,7 +241,7 @@ irq_set_affinity(unsigned int irq, const struct cpumask *cpumask)
 /**
  * irq_force_affinity - Force the irq affinity of a given irq
  * @irq:	Interrupt to set affinity
- * @cpumask:	cpumask
+ * @mask:	cpumask
  *
  * Same as irq_set_affinity, but without checking the mask against
  * online cpus.
@@ -301,22 +260,39 @@ extern int irq_select_affinity(unsigned int irq);
 
 extern int irq_set_affinity_hint(unsigned int irq, const struct cpumask *m);
 
+/**
+ * struct irq_affinity_notify - context for notification of IRQ affinity changes
+ * @irq:		Interrupt to which notification applies
+ * @kref:		Reference count, for internal use
+ * @list:		Add to the notifier list, for internal use
+ * @notify:		Function to be called on change.  This will be
+ *			called in process context.
+ * @release:		Function to be called on release.  This will be
+ *			called in process context.  Once registered, the
+ *			structure must only be freed when this function is
+ *			called or later.
+ */
+struct irq_affinity_notify {
+	unsigned int irq;
+	struct kref kref;
+	struct list_head list;
+	void (*notify)(struct irq_affinity_notify *, const cpumask_t *mask);
+	void (*release)(struct kref *ref);
+};
+
 extern int
 irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify);
 
 struct cpumask *irq_create_affinity_masks(int nvec, const struct irq_affinity *affd);
 int irq_calc_affinity_vectors(int maxvec, const struct irq_affinity *affd);
 
+extern int
+irq_release_affinity_notifier(struct irq_affinity_notify *notify);
 #else /* CONFIG_SMP */
 
 static inline int irq_set_affinity(unsigned int irq, const struct cpumask *m)
 {
 	return -EINVAL;
-}
-
-static inline int irq_force_affinity(unsigned int irq, const struct cpumask *cpumask)
-{
-	return 0;
 }
 
 static inline int irq_can_set_affinity(unsigned int irq)
@@ -330,12 +306,6 @@ static inline int irq_set_affinity_hint(unsigned int irq,
 					const struct cpumask *m)
 {
 	return -EINVAL;
-}
-
-static inline int
-irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify)
-{
-	return 0;
 }
 
 static inline struct cpumask *
@@ -744,12 +714,6 @@ static inline void init_irq_proc(void)
 }
 #endif
 
-#ifdef CONFIG_IRQ_TIMINGS
-void irq_timings_enable(void);
-void irq_timings_disable(void);
-u64 irq_timings_next_event(u64 now);
-#endif
-
 struct seq_file;
 int show_interrupts(struct seq_file *p, void *v);
 int arch_show_interrupts(struct seq_file *p, int prec);
@@ -758,25 +722,4 @@ extern int early_irq_init(void);
 extern int arch_probe_nr_irqs(void);
 extern int arch_early_irq_init(void);
 extern void irq_set_pending(unsigned int irq);
-
-#if defined(CONFIG_FUNCTION_GRAPH_TRACER) || defined(CONFIG_KASAN)
-/*
- * We want to know which function is an entrypoint of a hardirq or a softirq.
- */
-#define __irq_entry		 __attribute__((__section__(".irqentry.text")))
-#define __softirq_entry  \
-	__attribute__((__section__(".softirqentry.text")))
-
-/* Limits of hardirq entrypoints */
-extern char __irqentry_text_start[];
-extern char __irqentry_text_end[];
-/* Limits of softirq entrypoints */
-extern char __softirqentry_text_start[];
-extern char __softirqentry_text_end[];
-
-#else
-#define __irq_entry
-#define __softirq_entry
-#endif
-
 #endif
