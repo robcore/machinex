@@ -7,7 +7,7 @@
  * This file contains the core interrupt handling code, for irq-chip
  * based architectures.
  *
- * Detailed information is available in Documentation/DocBook/genericirq
+ * Detailed information is available in Documentation/core-api/genericirq.rst
  */
 
 #include <linux/irq.h>
@@ -252,7 +252,7 @@ int irq_startup(struct irq_desc *desc, bool resend, bool force)
 {
 	struct irq_data *d = irq_desc_get_irq_data(desc);
 	struct cpumask *aff = irq_data_get_affinity_mask(d);
- 	int ret = 0;
+	int ret = 0;
 
 	desc->depth = 0;
 
@@ -279,6 +279,7 @@ int irq_startup(struct irq_desc *desc, bool resend, bool force)
 }
 
 static void __irq_disable(struct irq_desc *desc, bool mask);
+
 void irq_shutdown(struct irq_desc *desc)
 {
 	if (irqd_is_started(&desc->irq_data)) {
@@ -989,8 +990,8 @@ irq_set_chained_handler_and_data(unsigned int irq, irq_flow_handler_t handle,
 	if (!desc)
 		return;
 
-	__irq_do_set_handler(desc, handle, 1, NULL);
 	desc->irq_common_data.handler_data = data;
+	__irq_do_set_handler(desc, handle, 1, NULL);
 
 	irq_put_desc_busunlock(desc, flags);
 }

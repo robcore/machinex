@@ -78,9 +78,7 @@ struct irq_desc {
 	const struct cpumask	*percpu_affinity;
 #ifdef CONFIG_SMP
 	const struct cpumask	*affinity_hint;
-	struct list_head	affinity_notify;
-	struct work_struct	affinity_work;
-	struct mutex		notify_lock;
+	struct irq_affinity_notify *affinity_notify;
 #ifdef CONFIG_GENERIC_PENDING_IRQ
 	cpumask_var_t		pending_mask;
 #endif
@@ -235,7 +233,7 @@ static inline int irq_balancing_disabled(unsigned int irq)
 	return desc->status_use_accessors & IRQ_NO_BALANCING_MASK;
 }
 
-static inline int irq_is_per_cpu(unsigned int irq)
+static inline int irq_is_percpu(unsigned int irq)
 {
 	struct irq_desc *desc;
 
