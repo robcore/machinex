@@ -698,56 +698,6 @@ void idr_init(struct idr *idp)
 EXPORT_SYMBOL(idr_init);
 
 /**
- * backport of idr_alloc() usage
- *
- * This backports a patch series send by Tejun Heo:
- * https://lkml.org/lkml/2013/2/2/159
- */
-static DEFINE_SPINLOCK(mx_idr_lock);
-void mx_idr_destroy(struct idr *idp)
-{
-	idr_remove_all(idp);
-	idr_destroy(idp);
-}
-EXPORT_SYMBOL(mx_idr_destroy);
-
-int mx_idr_alloc(struct idr *idp, void *ptr, int start, int end,
-			    gfp_t gfp_mask)
-{
-	int id = -1;
-	int ret = 0;
-
-	spin_lock_irq(&mx_idr_lock);
-
-	while (ret == -EAGAIN) {
-		spin_unlock_irq(&mx_idr_lock);
-		if (!idr_pre_get(idp, gfp_mask))
-			goto fail;
-		spin_lock_irq(&mx_idr_lock);
-		ret = idr_get_new_above(idp, ptr, start, &id);
-		if (ret == -ENOSPC)
-			ret = idr_get_new(idp, ptr, &id);
-		if (!ret && id < end)
-			start = id + 1;
-		if (!ret && id > end)
-			spin_unlock_irq(&mx_idr_lock);
-			goto fail;
-	}
-
-	spin_unlock_irq(&mx_idr_lock);
-
-	return ret ? ret : id;
-fail:
-	if (id >= 0) {
-		spin_lock_irq(&mx_idr_lock);
-		idr_remove(idp, id);
-		spin_unlock_irq(&mx_idr_lock);
-	}
-	return 0;
-}
-EXPORT_SYMBOL(mx_idr_alloc);
-
-/**
  * DOC: IDA description
  * IDA - IDR based ID allocator
  *
