@@ -571,12 +571,12 @@ static int worker_pool_assign_id(struct worker_pool *pool)
 
 	lockdep_assert_held(&wq_pool_mutex);
 
-	do {
-		if (!idr_pre_get(&worker_pool_idr, GFP_KERNEL))
-			return -ENOMEM;
-		ret = idr_get_new_above(&worker_pool_idr, pool, 0, &pool->id);
-	} while (ret == -EAGAIN);
-
+	ret = idr_alloc(&worker_pool_idr, pool, 0, WORK_OFFQ_POOL_NONE,
+			GFP_KERNEL);
+	if (ret >= 0) {
+		pool->id = ret;
+		return 0;
+	}
 	return ret;
 }
 
@@ -1049,7 +1049,7 @@ static struct worker *find_worker_executing_work(struct worker_pool *pool,
  * move_linked_works - move linked works to a list
  * @work: start of series of works to be scheduled
  * @head: target list to append @work to
- * @nextp: out paramter for nested worklist walking
+ * @nextp: out parameter for nested worklist walking
  *
  * Schedule linked works starting from @work to @head.  Work series to
  * be scheduled starts at @work and includes any consecutive work with
@@ -1793,6 +1793,8 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	/* ID is needed to determine kthread name */
 	id = ida_simple_get(&pool->worker_ida, 0, 0, GFP_KERNEL);
+	if (id < 0)
+		goto fail;
 
 	worker = alloc_worker(pool->node);
 	if (!worker)
@@ -3223,7 +3225,7 @@ static bool wqattrs_equal(const struct workqueue_attrs *a,
  * init_worker_pool - initialize a newly zalloc'd worker_pool
  * @pool: worker_pool to initialize
  *
- * Initiailize a newly zalloc'd @pool.  It also allocates @pool->attrs.
+ * Initialize a newly zalloc'd @pool.  It also allocates @pool->attrs.
  *
  * Return: 0 on success, -errno on failure.  Even on failure, all fields
  * inside @pool proper are initialized and put_unbound_pool() can be called
@@ -3609,6 +3611,13 @@ static bool wq_calc_node_cpumask(const struct workqueue_attrs *attrs, int node,
 
 	/* yeap, return possible CPUs in @node that @attrs wants */
 	cpumask_and(cpumask, attrs->cpumask, wq_numa_possible_cpumask[node]);
+
+	if (cpumask_empty(cpumask)) {
+		pr_warn_once("WARNING: workqueue cpumask: online intersect > "
+				"possible intersect\n");
+		return false;
+	}
+
 	return !cpumask_equal(cpumask, attrs->cpumask);
 
 use_dfl:
