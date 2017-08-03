@@ -259,7 +259,6 @@ void nfs4_free_client(struct nfs_client *clp)
 	nfs_free_client(clp);
 }
 
-/* idr_remove_all is not needed as all id's are removed by nfs_put_client */
 void nfs_cleanup_cb_ident_idr(struct net *net)
 {
 	struct nfs_net *nn = net_generic(net, nfs_net_id);
