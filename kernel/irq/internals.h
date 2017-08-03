@@ -8,7 +8,7 @@
 #include <linux/irqdesc.h>
 #include <linux/kernel_stat.h>
 #include <linux/pm_runtime.h>
-#include <linux/sched.h>
+#include <linux/sched/clock.h>
 
 #ifdef CONFIG_SPARSE_IRQ
 # define IRQ_BITMAP_BITS	(NR_IRQS + 8196)
@@ -183,11 +183,6 @@ irq_put_desc_unlock(struct irq_desc *desc, unsigned long flags)
 }
 
 #define __irqd_to_state(d) ACCESS_PRIVATE((d)->common, state_use_accessors)
-
-static inline unsigned int irqd_get(struct irq_data *d)
-{
-	return __irqd_to_state(d);
-}
 
 /*
  * Manipulation functions for irq_data.state
@@ -385,7 +380,7 @@ irq_init_generic_chip(struct irq_chip_generic *gc, const char *name,
 		      void __iomem *reg_base, irq_flow_handler_t handler) { }
 #endif /* CONFIG_GENERIC_IRQ_CHIP */
 
-#ifdef CONFIG_GENERIC_PENDING_IRQ
+ifdef CONFIG_GENERIC_PENDING_IRQ
 static inline bool irq_can_move_pcntxt(struct irq_data *data)
 {
 	return irqd_can_move_in_process_context(data);

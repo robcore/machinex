@@ -7,7 +7,7 @@
  * This file contains the core interrupt handling code, for irq-chip
  * based architectures.
  *
- * Detailed information is available in Documentation/core-api/genericirq.rst
+ * Detailed information is available in Documentation/DocBook/genericirq
  */
 
 #include <linux/irq.h>
@@ -252,7 +252,7 @@ int irq_startup(struct irq_desc *desc, bool resend, bool force)
 {
 	struct irq_data *d = irq_desc_get_irq_data(desc);
 	struct cpumask *aff = irq_data_get_affinity_mask(d);
-	int ret = 0;
+ 	int ret = 0;
 
 	desc->depth = 0;
 
@@ -279,7 +279,6 @@ int irq_startup(struct irq_desc *desc, bool resend, bool force)
 }
 
 static void __irq_disable(struct irq_desc *desc, bool mask);
-
 void irq_shutdown(struct irq_desc *desc)
 {
 	if (irqd_is_started(&desc->irq_data)) {
@@ -432,6 +431,7 @@ void handle_nested_irq(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 	struct irqaction *action;
+	int mask_this_irq = 0;
 	irqreturn_t action_ret;
 
 	might_sleep();
@@ -443,6 +443,7 @@ void handle_nested_irq(unsigned int irq)
 	action = desc->action;
 	if (unlikely(!action || irqd_irq_disabled(&desc->irq_data))) {
 		desc->istate |= IRQS_PENDING;
+		mask_this_irq = 1;
 		goto out_unlock;
 	}
 
@@ -462,6 +463,11 @@ void handle_nested_irq(unsigned int irq)
 
 out_unlock:
 	raw_spin_unlock_irq(&desc->lock);
+	if (unlikely(mask_this_irq)) {
+		chip_bus_lock(desc);
+		mask_irq(desc);
+		chip_bus_sync_unlock(desc);
+	}
 }
 EXPORT_SYMBOL_GPL(handle_nested_irq);
 
@@ -685,7 +691,8 @@ void handle_fasteoi_irq(struct irq_desc *desc)
 	 * then mask it and get out of here:
 	 */
 	if (unlikely(!desc->action || irqd_irq_disabled(&desc->irq_data))) {
-		desc->istate |= IRQS_PENDING;
+		if (!irq_settings_is_level(desc))
+			desc->istate |= IRQS_PENDING;
 		mask_irq(desc);
 		goto out;
 	}
@@ -982,8 +989,8 @@ irq_set_chained_handler_and_data(unsigned int irq, irq_flow_handler_t handle,
 	if (!desc)
 		return;
 
-	desc->irq_common_data.handler_data = data;
 	__irq_do_set_handler(desc, handle, 1, NULL);
+	desc->irq_common_data.handler_data = data;
 
 	irq_put_desc_busunlock(desc, flags);
 }
@@ -1183,6 +1190,58 @@ int irq_chip_set_affinity_parent(struct irq_data *data,
 }
 
 /**
+ * irq_chip_mask_parent - Mask the parent interrupt
+ * @data:	Pointer to interrupt specific data
+ */
+void irq_chip_mask_parent(struct irq_data *data)
+{
+	data = data->parent_data;
+	data->chip->irq_mask(data);
+}
+EXPORT_SYMBOL_GPL(irq_chip_mask_parent);
+
+/**
+ * irq_chip_unmask_parent - Unmask the parent interrupt
+ * @data:	Pointer to interrupt specific data
+ */
+void irq_chip_unmask_parent(struct irq_data *data)
+{
+	data = data->parent_data;
+	data->chip->irq_unmask(data);
+}
+EXPORT_SYMBOL_GPL(irq_chip_unmask_parent);
+
+/**
+ * irq_chip_eoi_parent - Invoke EOI on the parent interrupt
+ * @data:	Pointer to interrupt specific data
+ */
+void irq_chip_eoi_parent(struct irq_data *data)
+{
+	data = data->parent_data;
+	data->chip->irq_eoi(data);
+}
+EXPORT_SYMBOL_GPL(irq_chip_eoi_parent);
+
+/**
+ * irq_chip_set_affinity_parent - Set affinity on the parent interrupt
+ * @data:	Pointer to interrupt specific data
+ * @dest:	The affinity mask to set
+ * @force:	Flag to enforce setting (disable online checks)
+ *
+ * Conditinal, as the underlying parent chip might not implement it.
+ */
+int irq_chip_set_affinity_parent(struct irq_data *data,
+				 const struct cpumask *dest, bool force)
+{
+	data = data->parent_data;
+	if (data->chip->irq_set_affinity)
+		return data->chip->irq_set_affinity(data, dest, force);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(irq_chip_set_type_parent);
+
+/**
  * irq_chip_set_type_parent - Set IRQ type on the parent interrupt
  * @data:	Pointer to interrupt specific data
  * @type:	IRQ_TYPE_{LEVEL,EDGE}_* value - see include/linux/irq.h
@@ -1312,3 +1371,31 @@ int irq_chip_pm_put(struct irq_data *data)
 
 	return (retval < 0) ? retval : 0;
 }
+
+#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
+/**
+ * irq_chip_ack_parent - Acknowledge the parent interrupt
+ * @data:	Pointer to interrupt specific data
+ */
+void irq_chip_ack_parent(struct irq_data *data)
+{
+	data = data->parent_data;
+	data->chip->irq_ack(data);
+}
+
+/**
+ * irq_chip_retrigger_hierarchy - Retrigger an interrupt in hardware
+ * @data:	Pointer to interrupt specific data
+ *
+ * Iterate through the domain hierarchy of the interrupt and check
+ * whether a hw retrigger function exists. If yes, invoke it.
+ */
+int irq_chip_retrigger_hierarchy(struct irq_data *data)
+{
+	for (data = data->parent_data; data; data = data->parent_data)
+		if (data->chip && data->chip->irq_retrigger)
+			return data->chip->irq_retrigger(data);
+
+	return -ENOSYS;
+}
+#endif
