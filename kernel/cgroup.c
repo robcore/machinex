@@ -4895,7 +4895,6 @@ int __init cgroup_init(void)
 
 		list_add_tail(&init_css_set.e_cset_node[ssid],
 			      &cgrp_dfl_root.cgrp.e_csets[ssid]);
-
 		/*
 		 * cftype registration needs kmalloc and can't be done
 		 * during early_init.  Register base cftypes separately.
@@ -4903,6 +4902,7 @@ int __init cgroup_init(void)
 		if (ss->base_cftypes)
 			WARN_ON(cgroup_add_cftypes(ss, ss->base_cftypes));
 fthisnoise:
+		pr_debug("I exist to make compilers happy\n");
 	}
 
 	cgroup_kobj = kobject_create_and_add("cgroup", fs_kobj);
