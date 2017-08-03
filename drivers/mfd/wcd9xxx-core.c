@@ -777,7 +777,6 @@ struct wcd9xxx_i2c *get_i2c_wcd9xxx_device_info(u16 reg)
 	int value = 0;
 	struct wcd9xxx_i2c *wcd9xxx = NULL;
 	value = ((reg & mask) >> 8) & 0x000f;
-
 	switch (value) {
 	case 0:
 		wcd9xxx = &wcd9xxx_modules[0];
@@ -794,7 +793,6 @@ struct wcd9xxx_i2c *get_i2c_wcd9xxx_device_info(u16 reg)
 	default:
 		break;
 	}
-
 	return wcd9xxx;
 }
 
