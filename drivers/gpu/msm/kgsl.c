@@ -451,7 +451,8 @@ kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
 		return -EBADF;
 	idr_preload(GFP_KERNEL);
 	spin_lock(&process->mem_lock);
-	id = idr_alloc(&process->mem_idr, entry, 1, 0, GFP_NOWAIT);
+	/* Allocate the ID but don't attach the pointer just yet */
+	id = idr_alloc(&process->mem_idr, NULL, 1, 0, GFP_NOWAIT);
 	spin_unlock(&process->mem_lock);
 	idr_preload_end();
 
@@ -522,7 +523,7 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	if (context == NULL)
 		return ERR_PTR(-ENOMEM);
 
-
+	idr_preload(GFP_KERNEL);
 	write_lock(&device->context_lock);
 	id = idr_alloc(&device->context_idr, context, 1, 0, GFP_NOWAIT);
 	context->id = id;
@@ -591,14 +592,10 @@ func_end:
  */
 void
 kgsl_context_detach(struct kgsl_context *context)
-{
-	int id;
 	struct kgsl_device *device;
 	if (context == NULL)
 		return;
 	device = context->dev_priv->device;
-	trace_kgsl_context_detach(device, context);
-	id = context->id;
 
 	if (device->ftbl->drawctxt_destroy)
 		device->ftbl->drawctxt_destroy(device, context);
@@ -611,10 +608,6 @@ kgsl_context_detach(struct kgsl_context *context)
 	 */
 	kgsl_context_cancel_events(device, context);
 
-	write_lock(&device->context_lock);
-	context->id = KGSL_CONTEXT_INVALID;
-	idr_remove(&device->context_idr, id);
-	write_unlock(&device->context_lock);
 	context->dev_priv = NULL;
 	kgsl_context_put(context);
 }
@@ -624,6 +617,13 @@ kgsl_context_destroy(struct kref *kref)
 {
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
+	struct kgsl_device *device = context->device;
+	write_lock(&device->context_lock);
+	if (context->id != KGSL_CONTEXT_INVALID) {
+		idr_remove(&device->context_idr, context->id);
+		context->id = KGSL_CONTEXT_INVALID;
+	}
+	write_unlock(&device->context_lock);
 	kgsl_sync_timeline_destroy(context);
 	kfree(context);
 }
@@ -905,8 +905,8 @@ static void kgsl_destroy_process_private(struct kref *kref)
 	list_del(&private->list);
 	mutex_unlock(&kgsl_driver.process_mutex);
 
-	kgsl_mmu_putpagetable(private->pagetable);
 	idr_destroy(&private->mem_idr);
+	kgsl_mmu_putpagetable(private->pagetable);
 
 	kfree(private);
 	return;
@@ -1141,8 +1141,6 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 
 	dev_priv = kzalloc(sizeof(struct kgsl_device_private), GFP_KERNEL);
 	if (dev_priv == NULL) {
-		KGSL_DRV_ERR(device, "kzalloc failed(%d)\n",
-			sizeof(struct kgsl_device_private));
 		result = -ENOMEM;
 		goto err_pmruntime;
 	}
@@ -1350,11 +1348,11 @@ kgsl_sharedmem_find_id(struct kgsl_process_private *process, unsigned int id)
 	int result = 0;
 	struct kgsl_mem_entry *entry;
 
-	rcu_read_lock();
+	spin_lock(&process->mem_lock);
 	entry = idr_find(&process->mem_idr, id);
 	if (entry)
 		result = kgsl_mem_entry_get(entry);
-	rcu_read_unlock();
+	spin_unlock(&process->mem_lock);
 
 	if (!result)
 		return NULL;
@@ -2336,10 +2334,12 @@ error_attach:
 		break;
 	case KGSL_MEM_ENTRY_ION:
 		ion_free(kgsl_ion_client, entry->priv_data);
+		entry->memdesc.sg = NULL;
 		break;
 	default:
 		break;
 	}
+	kgsl_sharedmem_free(&entry->memdesc);
 error:
 	kfree(entry);
 	return result;
@@ -2933,7 +2933,7 @@ kgsl_mmap_memstore(struct kgsl_device *device, struct vm_area_struct *vma)
 		return -EPERM;
 
 	if (memdesc->size  !=  vma_size) {
-		KGSL_MEM_ERR(device, "memstore bad size: %d should be %d\n",
+		KGSL_MEM_ERR(device, "memstore bad size: %d should be %zd\n",
 			     vma_size, memdesc->size);
 		return -EINVAL;
 	}
@@ -3347,7 +3347,6 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 		goto error;
 
 	kgsl_ion_client = msm_ion_client_create(UINT_MAX, KGSL_NAME);
-
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 					   device->iomemname);
 	if (res == NULL) {
