@@ -493,7 +493,7 @@ static int wcd9xxx_device_init(struct wcd9xxx *wcd9xxx, int irq)
 	ret = wcd9xxx_check_codec_type(wcd9xxx, &wcd9xxx_dev, &wcd9xxx_dev_size,
 				       &wcd9xxx->num_irqs);
 	if (ret < 0)
-		goto err_irq;
+		goto err;
 #if defined(CONFIG_MACH_JF)
 	if (wcd9xxx->irq != -1) {
 		ret = wcd9xxx_irq_init(wcd9xxx);
