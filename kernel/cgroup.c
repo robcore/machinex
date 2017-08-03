@@ -1577,7 +1577,7 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 	LIST_HEAD(tmp_links);
 	struct cgroup *root_cgrp = &root->cgrp;
 	struct css_set *cset;
-	int i, ret;
+	int i, id, ret;
 
 	lockdep_assert_held(&cgroup_tree_mutex);
 	lockdep_assert_held(&cgroup_mutex);
@@ -1585,8 +1585,8 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 		spin_lock(&cgroup_idr_lock);
 		do {
 			ret = idr_get_new_above(&root->cgroup_idr, root_cgrp,
-					0, &root_cgrp->id);
-			root_cgrp->id = ret;
+					0, &id);
+			root_cgrp->id = id;
 			spin_unlock(&cgroup_idr_lock);
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto out;
