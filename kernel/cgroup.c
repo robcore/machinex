@@ -1585,7 +1585,7 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 			if (!idr_pre_get(&root->cgroup_idr, GFP_KERNEL))
 					goto out;
 			spin_lock(&cgroup_idr_lock);
-		} while (ret);
+		} while (ret = -EAGAIN);
 		spin_unlock(&cgroup_idr_lock);
 	/*
 	 * We're accessing css_set_count without locking css_set_rwsem here,
@@ -4280,17 +4280,18 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss)
 	if (err)
 		goto err_free_css;
 
+		spin_lock(&cgroup_idr_lock);
 		do {
 			err = idr_get_new_above(&ss->css_idr, NULL,
 					1, &id);
-			if (id < 0)
-				break;
-			css->id = id;
 			spin_unlock(&cgroup_idr_lock);
+			if (id < 0)
+				goto err_free_percpu_ref;
+			css->id = id;
 			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 					goto err_free_percpu_ref;
 			spin_lock(&cgroup_idr_lock);
-		} while (err);
+		} while (err == -EAGAIN);
 		spin_unlock(&cgroup_idr_lock);
 
 	err = cgroup_populate_dir(cgrp, 1 << ss->id);
@@ -4773,23 +4774,23 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 	init_and_link_css(css, ss, &cgrp_dfl_root.cgrp);
 	if (early) {
 		/* idr_alloc() can't be called safely during early init */
-		css->id = 0;
+		css->id = 1;
 	} else {
 		spin_lock(&cgroup_idr_lock);
 		do {
 			ret = idr_get_new_above(&ss->css_idr, css,
 					0, &id);
-			if (id < 0)
-				break;
-			css->id = id;
 			spin_unlock(&cgroup_idr_lock);
+			if (id < 0)
+				goto move_along;
+			css->id = id;
 			if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 					goto move_along;
 			spin_lock(&cgroup_idr_lock);
-		} while (ret);
+		} while (ret == -EAGAIN);
 		spin_unlock(&cgroup_idr_lock);
 	}
-move_along:
+
 	/* Update the init_css_set to contain a subsys
 	 * pointer to this state - since the subsystem is
 	 * newly registered, all tasks and hence the
@@ -4807,7 +4808,7 @@ move_along:
 	BUG_ON(online_css(css));
 
 	cgrp_dfl_root.subsys_mask |= 1 << ss->id;
-
+move_along:
 	mutex_unlock(&cgroup_mutex);
 	mutex_unlock(&cgroup_tree_mutex);
 }
@@ -4879,19 +4880,19 @@ int __init cgroup_init(void)
 			do {
 				ret = idr_get_new_above(&ss->css_idr, css,
 						0, &id);
-				if (id < 0)
-					break;
-				css->id = id;
 				spin_unlock(&cgroup_idr_lock);
+				if (id < 0)
+					goto fthisnoise;
+				css->id = id;
 				if (!idr_pre_get(&ss->css_idr, GFP_KERNEL))
 						goto fthisnoise;
 				spin_lock(&cgroup_idr_lock);
-			} while (ret);
+			} while (ret = -EAGAIN);
 			spin_unlock(&cgroup_idr_lock);
 		} else {
 			cgroup_init_subsys(ss, false);
 		}
-fthisnoise:
+
 		list_add_tail(&init_css_set.e_cset_node[ssid],
 			      &cgrp_dfl_root.cgrp.e_csets[ssid]);
 
@@ -4901,6 +4902,7 @@ fthisnoise:
 		 */
 		if (ss->base_cftypes)
 			WARN_ON(cgroup_add_cftypes(ss, ss->base_cftypes));
+fthisnoise:
 	}
 
 	cgroup_kobj = kobject_create_and_add("cgroup", fs_kobj);
