@@ -377,7 +377,7 @@ static void kgsl_page_alloc_free(struct kgsl_memdesc *memdesc)
 
 static int kgsl_contiguous_vmflags(struct kgsl_memdesc *memdesc)
 {
-	return VM_DONTDUMP | VM_IO | VM_PFNMAP | VM_DONTEXPAND;
+	return VM_DONTDUMP | VM_PFNMAP | VM_DONTEXPAND;
 }
 
 /*
@@ -611,7 +611,7 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 		 * techniques for large order allocations
 		 */
 		if (page_size != PAGE_SIZE)
-			gfp_mask |= __GFP_COMP | //__GFP_NORETRY |
+			gfp_mask |= __GFP_COMP | __GFP_NORETRY |
 				__GFP_NO_KSWAPD | __GFP_NOWARN;
 		else
 			gfp_mask |= GFP_KERNEL;
@@ -633,7 +633,7 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 			memdesc->size = (size - len);
 
 			KGSL_CORE_ERR(
-				"Out of memory: only allocated %dKB of %dKB requested\n",
+				"Out of memory: only allocated %zuKB of %zuKB requested\n",
 				(size - len) >> 10, size >> 10);
 
 			ret = -ENOMEM;
