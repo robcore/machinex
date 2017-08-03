@@ -556,6 +556,7 @@ EXPORT_SYMBOL_GPL(slim_del_controller);
  * desired number with which slimbus framework registers the controller.
  * Function will return -EBUSY if the number is in use.
  */
+#if 0
 int slim_add_numbered_controller(struct slim_controller *ctrl)
 {
 	int	id;
@@ -581,6 +582,22 @@ retry:
 	if (status == 0)
 		status = slim_register_controller(ctrl);
 	return status;
+}
+EXPORT_SYMBOL_GPL(slim_add_numbered_controller);
+#endif
+int slim_add_numbered_controller(struct slim_controller *ctrl)
+{
+	int	id;
+
+	mutex_lock(&slim_lock);
+	id = idr_alloc_cyclic(&ctrl_idr, ctrl, ctrl->nr, ctrl->nr + 1, GFP_KERNEL);
+	mutex_unlock(&slim_lock);
+
+	if (id < 0)
+		return id;
+
+	ctrl->nr = id;
+	return slim_register_controller(ctrl);
 }
 EXPORT_SYMBOL_GPL(slim_add_numbered_controller);
 
