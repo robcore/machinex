@@ -1036,4 +1036,7 @@ int __ipi_send_mask(struct irq_desc *desc, const struct cpumask *dest);
 int ipi_send_single(unsigned int virq, unsigned int cpu);
 int ipi_send_mask(unsigned int virq, const struct cpumask *dest);
 
+/* Contrary to Linux irqs, for hardware irqs the irq number 0 is valid */
+#define INVALID_HWIRQ	(~0UL)
+
 #endif /* _LINUX_IRQ_H */
