@@ -545,9 +545,8 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	kref_init(&context->refcount);
 	context->dev_priv = dev_priv;
 	ret = kgsl_sync_timeline_create(context);
-	if (ret) {
+	if (ret)
 		goto fail_free_id;
-	}
 
 	/* Initialize the pending event list */
 	INIT_LIST_HEAD(&context->events);
