@@ -222,12 +222,18 @@ static inline int disable_nonboot_cpus(void)
 }
 extern void enable_nonboot_cpus(void);
 
+extern unsigned int limit_screen_on_cpus;
+extern unsigned int limit_screen_off_cpus;
 extern unsigned int cpu1_allowed_susp;
 extern unsigned int cpu2_allowed_susp;
 extern unsigned int cpu3_allowed_susp;
+extern unsigned int cpu1_allowed;
+extern unsigned int cpu2_allowed;
+extern unsigned int cpu3_allowed;
 
 extern int lock_screen_off_cpus(int primary);
 extern void unlock_screen_off_cpus(void);
+extern bool is_cpu_allowed(unsigned int cpu);
 #else /* !CONFIG_PM_SLEEP_SMP */
 static inline int disable_nonboot_cpus(void) { return 0; }
 static inline void enable_nonboot_cpus(void) {}
