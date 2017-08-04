@@ -1068,10 +1068,10 @@ int hardplug_cpus(int primary)
 		if (cpu == 3 && cpu3_allowed)
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-		if (!error)
+		if (!error) {
 			cpumask_set_cpu(cpu, cpu_hardplugged_mask);
 			pr_info("Hardplugged CPU%d\n", cpu);
-		else {
+		} else {
 			pr_err("Error Hardplugging CPU%d : %d\n", cpu, error);
 			break;
 		}
