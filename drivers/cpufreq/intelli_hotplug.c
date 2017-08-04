@@ -173,14 +173,9 @@ static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
-	if (is_display_on()) {
-		dl->locked = 1;
-		if (is_cpu_allowed(cpu))
-			mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-				      msecs_to_jiffies(down_lock_dur));
-		else
-			mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem, 0);
-	}
+	dl->locked = 1;
+		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+			      msecs_to_jiffies(down_lock_dur));
 }
 
 static int check_down_lock(unsigned int cpu)

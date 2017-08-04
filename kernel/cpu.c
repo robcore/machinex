@@ -1014,11 +1014,11 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 	if (!cpu_possible(cpu)) {
 		pr_err("can't online cpu %d because it is not configured as may-hotadd at boot time\n",
 		       cpu);
-#if defined(CONFIG_IA64)
-		pr_err("please check additional_cpus= boot parameter\n");
-#endif
 		return -EINVAL;
 	}
+
+	if (!is_cpu_allowed(cpu))
+		return -EBUSY;
 
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
@@ -1039,80 +1039,12 @@ out:
 
 int cpu_up(unsigned int cpu)
 {
+	if (!is_cpu_allowed(cpu))
+		return -EBUSY;
+
 	return do_cpu_up(cpu, CPUHP_ONLINE);
 }
 EXPORT_SYMBOL_GPL(cpu_up);
-
-extern cpumask_var_t cpu_hardplugged_mask;
-
-int hardplug_cpus(int primary)
-{
-	int cpu, error = 0;
-
-	cpu_maps_update_begin();
-	if (!cpu_online(primary))
-		primary = cpumask_first(cpu_online_mask);
-	/*
-	 * We take down all of the non-boot CPUs in one shot to avoid races
-	 * with the userspace trying to use the CPU hotplug at the same time
-	 */
-	cpumask_clear(cpu_hardplugged_mask);
-
-	for_each_online_cpu(cpu) {
-		if (cpu == primary)
-			continue;
-		if (cpu == 1 && cpu1_allowed)
-			continue;
-		if (cpu == 2 && cpu2_allowed)
-			continue;
-		if (cpu == 3 && cpu3_allowed)
-			continue;
-		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-		if (!error) {
-			cpumask_set_cpu(cpu, cpu_hardplugged_mask);
-			pr_info("Hardplugged CPU%d\n", cpu);
-		} else {
-			break;
-		}
-	}
-
-	if (error)
-		pr_err("Hardplugged CPUs are not disabled\n");
-
-	cpu_maps_update_done();
-	return error;
-}
-EXPORT_SYMBOL_GPL(hardplug_cpus);
-
-void unplug_cpus(void)
-{
-	int cpu, error;
-
-	cpu_maps_update_begin();
-	if (cpumask_empty(cpu_hardplugged_mask))
-		goto out;
-
-	for_each_cpu(cpu, cpu_hardplugged_mask) {
-		if (cpu == 1 && !cpu1_allowed)
-			continue;
-		if (cpu == 2 && !cpu2_allowed)
-			continue;
-		if (cpu == 3 && !cpu3_allowed)
-			continue;
-		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
-		if (!error) {
-			pr_info("CPU%d is Unplugged\n", cpu);
-			continue;
-		}
-		pr_warn("Error Unplugging CPU%d : %d\n", cpu, error);
-	}
-
-	cpumask_clear(cpu_hardplugged_mask);
-out:
-	cpu_maps_update_done();
-}
-EXPORT_SYMBOL_GPL(unplug_cpus);
-
 
 #ifdef CONFIG_PM_SLEEP_SMP
 static cpumask_var_t max_screen_off;

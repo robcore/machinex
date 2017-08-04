@@ -20,7 +20,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 2
+#define HARDPLUG_MINOR 3
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -31,7 +31,6 @@ unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
 unsigned int cpu2_allowed_susp = 1;
 unsigned int cpu3_allowed_susp = 1;
-extern cpumask_var_t cpu_hardplugged_mask;
 
 bool is_cpu_allowed(unsigned int cpu)
 {
@@ -61,6 +60,32 @@ bool is_cpu_allowed(unsigned int cpu)
 	return true;
 }
 
+static void takedown_cpu(cpu)
+{
+	if (!is_display_on() || !limit_screen_on_cpus)
+		return;
+
+	switch (cpu) {
+	case 0:
+		break;
+	case 1:
+		if (!cpu1_allowed)
+			cpu_down(1);
+		break;
+	case 2:
+		if (!cpu2_allowed)
+			cpu_down(2);
+		break;
+	case 3:
+		if (!cpu3_allowed)
+			cpu_down(3);
+		break;
+
+	default:
+		break;
+	}
+}
+
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -81,13 +106,6 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	limit_screen_on_cpus = val;
 
-	if (is_display_on()) {
-		if (limit_screen_on_cpus)
-			hardplug_cpus(0);
-		else if (!limit_screen_on_cpus &&
-				 !thermal_core_controlled)
-			unplug_cpus();
-	}
 	return count;
 }
 
@@ -117,19 +135,9 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	cpu1_allowed = val;
 
-	if (is_display_on()) {
-		if (cpu1_allowed == 0) {
-			cpu_maps_update_begin();
-			cpu_down(1);
-			cpumask_set_cpu(1, cpu_hardplugged_mask);
-			cpu_maps_update_done();
-		} else if (!thermal_core_controlled) {
-			cpu_maps_update_begin();
-			cpu_up(1);
-			cpumask_clear_cpu(1, cpu_hardplugged_mask);
-			cpu_maps_update_done();
-		}
-	}
+	if (!cpu1_allowed)
+		takedown_cpu(1);
+
 	return count;
 }
 
@@ -158,19 +166,8 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	cpu2_allowed = val;
 
-	if (is_display_on()) {
-		if (cpu2_allowed == 0) {
-			cpu_maps_update_begin();
-			cpu_down(2);
-			cpumask_set_cpu(2, cpu_hardplugged_mask);
-			cpu_maps_update_done();
-		} else if (!thermal_core_controlled) {
-			cpu_maps_update_begin();
-			cpu_up(2);
-			cpumask_clear_cpu(2, cpu_hardplugged_mask);
-			cpu_maps_update_done();
-		}
-	}
+	if (!cpu2_allowed)
+		takedown_cpu(2);
 
 	return count;
 }
@@ -200,19 +197,8 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	cpu3_allowed = val;
 
-	if (is_display_on()) {
-		if (cpu3_allowed == 0) {
-			cpu_maps_update_begin();
-			cpu_down(3);
-			cpumask_set_cpu(3, cpu_hardplugged_mask);
-			cpu_maps_update_done();
-		} else if (!thermal_core_controlled) {
-			cpu_maps_update_begin();
-			cpu_up(3);
-			cpumask_clear_cpu(3, cpu_hardplugged_mask);
-			cpu_maps_update_done();
-		}
-	}
+	if (!cpu3_allowed)
+		takedown_cpu(3);
 
 	return count;
 }

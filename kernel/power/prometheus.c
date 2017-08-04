@@ -112,9 +112,6 @@ static void power_suspend(struct work_struct *work)
 		}
 	}
 
-	if (limit_screen_on_cpus)
-		unplug_cpus();
-
 	if (limit_screen_off_cpus)
 		lock_screen_off_cpus(0);
 
@@ -183,8 +180,6 @@ static void power_resume(struct work_struct *work)
 
 	if (limit_screen_off_cpus)
 		unlock_screen_off_cpus();
-	if (limit_screen_on_cpus)
-		hardplug_cpus(0);
 
 	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
