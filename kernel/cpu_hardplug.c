@@ -20,7 +20,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 3
+#define HARDPLUG_MINOR 4
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -60,7 +60,7 @@ bool is_cpu_allowed(unsigned int cpu)
 	return true;
 }
 
-static void takedown_cpu(cpu)
+static void hardplug_cpu(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus)
 		return;
@@ -69,15 +69,15 @@ static void takedown_cpu(cpu)
 	case 0:
 		break;
 	case 1:
-		if (!cpu1_allowed)
+		if (!cpu1_allowed && cpu_online(1))
 			cpu_down(1);
 		break;
 	case 2:
-		if (!cpu2_allowed)
+		if (!cpu2_allowed && cpu_online(2))
 			cpu_down(2);
 		break;
 	case 3:
-		if (!cpu3_allowed)
+		if (!cpu3_allowed && cpu_online(3))
 			cpu_down(3);
 		break;
 
@@ -135,8 +135,8 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	cpu1_allowed = val;
 
-	if (!cpu1_allowed)
-		takedown_cpu(1);
+	if (!cpu1_allowed && limit_screen_on_cpus)
+		hardplug_cpu(1);
 
 	return count;
 }
@@ -166,8 +166,8 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	cpu2_allowed = val;
 
-	if (!cpu2_allowed)
-		takedown_cpu(2);
+	if (!cpu2_allowed && limit_screen_on_cpus)
+		hardplug_cpu(2);
 
 	return count;
 }
@@ -197,8 +197,8 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	cpu3_allowed = val;
 
-	if (!cpu3_allowed)
-		takedown_cpu(3);
+	if (!cpu3_allowed && limit_screen_on_cpus)
+		hardplug_cpu(3);
 
 	return count;
 }
