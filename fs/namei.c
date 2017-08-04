@@ -119,11 +119,13 @@
  */
 void final_putname(struct filename *name)
 {
-	if (name->separate) {
+	if (name->name && name->separate) {
 		__putname(name->name);
-		kfree(name);
+		if (name)
+			kfree(name);
 	} else {
-		__putname(name);
+		if (name)
+			__putname(name);
 	}
 }
 
