@@ -87,6 +87,79 @@ static struct kobj_attribute limit_screen_on_cpus_attribute =
 		limit_screen_on_cpus_show,
 		limit_screen_on_cpus_store);
 
+
+static ssize_t cpu1_allowed_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", cpu1_allowed);
+}
+
+static ssize_t cpu1_allowed_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%u\n", &val);
+
+	sanitize_min_max(val, 0, 1);
+
+	cpu1_allowed = val;
+	return count;
+}
+
+static struct kobj_attribute cpu1_allowed_attribute =
+	__ATTR(cpu1_allowed, 0644,
+		cpu1_allowed_show,
+		cpu1_allowed_store);
+
+static ssize_t cpu2_allowed_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", cpu2_allowed);
+}
+
+static ssize_t cpu2_allowed_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%u\n", &val);
+
+	sanitize_min_max(val, 0, 1);
+
+	cpu2_allowed = val;
+	return count;
+}
+
+static struct kobj_attribute cpu2_allowed_attribute =
+	__ATTR(cpu2_allowed, 0644,
+		cpu2_allowed_show,
+		cpu2_allowed_store);
+
+static ssize_t cpu3_allowed_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", cpu3_allowed);
+}
+
+static ssize_t cpu3_allowed_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%u\n", &val);
+
+	sanitize_min_max(val, 0, 1);
+
+	cpu3_allowed = val;
+	return count;
+}
+
+static struct kobj_attribute cpu3_allowed_attribute =
+	__ATTR(cpu3_allowed, 0644,
+		cpu3_allowed_show,
+		cpu3_allowed_store);
+
 static ssize_t limit_screen_off_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -197,6 +270,10 @@ static struct kobj_attribute cpu_hardplug_version_attribute =
 static struct attribute *cpu_hardplug_attrs[] =
 {
 	&cpu_hardplug_version_attribute.attr,
+	&limit_screen_on_cpus_attribute.attr,
+	&cpu1_allowed_attribute.attr,
+	&cpu2_allowed_attribute.attr,
+	&cpu3_allowed_attribute.attr,
 	&limit_screen_off_cpus_attribute.attr,
 	&cpu1_allowed_susp_attribute.attr,
 	&cpu2_allowed_susp_attribute.attr,
