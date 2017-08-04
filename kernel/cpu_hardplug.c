@@ -17,6 +17,7 @@
 #include <linux/cpu.h>
 #include <linux/powersuspend.h>
 #include <linux/sysfs_helpers.h>
+#include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 0
 #define HARDPLUG_MINOR 2
