@@ -18,99 +18,13 @@
 #include <asm/cmpxchg.h>
 #include <asm/barrier.h>
 
-/*
- * atomic_$op() - $op integer to atomic variable
- * @i: integer value to $op
- * @v: pointer to the atomic variable
- *
- * Atomically $ops @i to @v. Does not strictly guarantee a memory-barrier, use
- * smp_mb__{before,after}_atomic().
- */
-
-/*
- * atomic_$op_return() - $op interer to atomic variable and returns the result
- * @i: integer value to $op
- * @v: pointer to the atomic variable
- *
- * Atomically $ops @i to @v. Does imply a full memory barrier.
- */
-
 #ifdef CONFIG_SMP
-
-/* we can build all atomic primitives from cmpxchg */
-
-#define ATOMIC_OP(op, c_op)						\
-static inline void atomic_##op(int i, atomic_t *v)			\
-{									\
-	int c, old;							\
-									\
-	c = v->counter;							\
-	while ((old = cmpxchg(&v->counter, c, c c_op i)) != c)		\
-		c = old;						\
-}
-
-#define ATOMIC_OP_RETURN(op, c_op)					\
-static inline int atomic_##op##_return(int i, atomic_t *v)		\
-{									\
-	int c, old;							\
-									\
-	c = v->counter;							\
-	while ((old = cmpxchg(&v->counter, c, c c_op i)) != c)		\
-		c = old;						\
-									\
-	return c c_op i;						\
-}
-
-#else
-
-#include <linux/irqflags.h>
-
-#define ATOMIC_OP(op, c_op)						\
-static inline void atomic_##op(int i, atomic_t *v)			\
-{									\
-	unsigned long flags;						\
-									\
-	raw_local_irq_save(flags);					\
-	v->counter = v->counter c_op i;					\
-	raw_local_irq_restore(flags);					\
-}
-
-#define ATOMIC_OP_RETURN(op, c_op)					\
-static inline int atomic_##op##_return(int i, atomic_t *v)		\
-{									\
-	unsigned long flags;						\
-	int ret;							\
-									\
-	raw_local_irq_save(flags);					\
-	ret = (v->counter = v->counter c_op i);				\
-	raw_local_irq_restore(flags);					\
-									\
-	return ret;							\
-}
-
-#endif /* CONFIG_SMP */
-
-#ifndef atomic_add_return
-ATOMIC_OP_RETURN(add, +)
+/* Force people to define core atomics */
+# if !defined(atomic_add_return) || !defined(atomic_sub_return) || \
+     !defined(atomic_clear_mask) || !defined(atomic_set_mask)
+#  error "SMP requires a little arch-specific magic"
+# endif
 #endif
-
-#ifndef atomic_sub_return
-ATOMIC_OP_RETURN(sub, -)
-#endif
-
-#ifndef atomic_clear_mask
-ATOMIC_OP(and, &)
-#define atomic_clear_mask(i, v) atomic_and(~(i), (v))
-#endif
-
-#ifndef atomic_set_mask
-#define CONFIG_ARCH_HAS_ATOMIC_OR
-ATOMIC_OP(or, |)
-#define atomic_set_mask(i, v)	atomic_or((i), (v))
-#endif
-
-#undef ATOMIC_OP_RETURN
-#undef ATOMIC_OP
 
 /*
  * Atomic operations that C can't guarantee us.  Useful for
@@ -139,6 +53,52 @@ ATOMIC_OP(or, |)
 #define atomic_set(v, i) WRITE_ONCE((v)->counter, i)
 
 #include <linux/irqflags.h>
+
+/**
+ * atomic_add_return - add integer to atomic variable
+ * @i: integer value to add
+ * @v: pointer of type atomic_t
+ *
+ * Atomically adds @i to @v and returns the result
+ */
+#ifndef atomic_add_return
+static inline int atomic_add_return(int i, atomic_t *v)
+{
+	unsigned long flags;
+	int temp;
+
+	raw_local_irq_save(flags); /* Don't trace it in an irqsoff handler */
+	temp = v->counter;
+	temp += i;
+	v->counter = temp;
+	raw_local_irq_restore(flags);
+
+	return temp;
+}
+#endif
+
+/**
+ * atomic_sub_return - subtract integer from atomic variable
+ * @i: integer value to subtract
+ * @v: pointer of type atomic_t
+ *
+ * Atomically subtracts @i from @v and returns the result
+ */
+#ifndef atomic_sub_return
+static inline int atomic_sub_return(int i, atomic_t *v)
+{
+	unsigned long flags;
+	int temp;
+
+	raw_local_irq_save(flags); /* Don't trace it in an irqsoff handler */
+	temp = v->counter;
+	temp -= i;
+	v->counter = temp;
+	raw_local_irq_restore(flags);
+
+	return temp;
+}
+#endif
 
 static inline int atomic_add_negative(int i, atomic_t *v)
 {
@@ -177,11 +137,11 @@ static inline void atomic_dec(atomic_t *v)
 
 static inline int __atomic_add_unless(atomic_t *v, int a, int u)
 {
-	int c, old;
-	c = atomic_read(v);
-	while (c != u && (old = atomic_cmpxchg(v, c, c + a)) != c)
-		c = old;
-	return c;
+  int c, old;
+  c = atomic_read(v);
+  while (c != u && (old = atomic_cmpxchg(v, c, c + a)) != c)
+    c = old;
+  return c;
 }
 
 /**

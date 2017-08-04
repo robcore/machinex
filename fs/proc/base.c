@@ -3129,9 +3129,6 @@ static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry
 	tid = name_to_int(dentry);
 	if (tid == ~0U)
 		goto out;
-	/* It could be unhashed before we take rcu lock */
-	if (!pid_alive(leader))
-		goto out;
 
 	ns = dentry->d_sb->s_fs_info;
 	rcu_read_lock();

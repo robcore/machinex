@@ -38,10 +38,16 @@ int lockdep_rht_mutex_is_held(const struct rhashtable *ht)
 EXPORT_SYMBOL_GPL(lockdep_rht_mutex_is_held);
 #endif
 
-static void *rht_obj(const struct rhashtable *ht, const struct rhash_head *he)
+/**
+ * rht_obj - cast hash head to outer object
+ * @ht:		hash table
+ * @he:		hashed node
+ */
+void *rht_obj(const struct rhashtable *ht, const struct rhash_head *he)
 {
 	return (void *) he - ht->p.head_offset;
 }
+EXPORT_SYMBOL_GPL(rht_obj);
 
 static u32 __hashfn(const struct rhashtable *ht, const void *key,
 		      u32 len, u32 hsize)
@@ -55,7 +61,7 @@ static u32 __hashfn(const struct rhashtable *ht, const void *key,
 
 /**
  * rhashtable_hashfn - compute hash for key of given length
- * @ht:		hash table to compute for
+ * @ht:		hash table to compuate for
  * @key:	pointer to key
  * @len:	length of key
  *
@@ -86,7 +92,7 @@ static u32 obj_hashfn(const struct rhashtable *ht, const void *ptr, u32 hsize)
 
 /**
  * rhashtable_obj_hashfn - compute hash for hashed object
- * @ht:		hash table to compute for
+ * @ht:		hash table to compuate for
  * @ptr:	pointer to hashed object
  *
  * Computes the hash value using the hash function `hashfn` respectively
@@ -298,7 +304,7 @@ int rhashtable_shrink(struct rhashtable *ht, gfp_t flags)
 
 	ASSERT_RHT_MUTEX(ht);
 
-	if (ht->shift <= ht->p.min_shift)
+	if (tbl->size <= HASH_MIN_SIZE)
 		return 0;
 
 	ntbl = bucket_table_alloc(tbl->size / 2, flags);
@@ -380,7 +386,7 @@ EXPORT_SYMBOL_GPL(rhashtable_insert);
  * deletion when combined with walking or lookup.
  */
 void rhashtable_remove_pprev(struct rhashtable *ht, struct rhash_head *obj,
-			     struct rhash_head __rcu **pprev, gfp_t flags)
+			     struct rhash_head **pprev, gfp_t flags)
 {
 	struct bucket_table *tbl = rht_dereference(ht->tbl, ht);
 
@@ -506,10 +512,9 @@ void *rhashtable_lookup_compare(const struct rhashtable *ht, u32 hash,
 }
 EXPORT_SYMBOL_GPL(rhashtable_lookup_compare);
 
-static size_t rounded_hashtable_size(struct rhashtable_params *params)
+static size_t rounded_hashtable_size(unsigned int nelem)
 {
-	return max(roundup_pow_of_two(params->nelem_hint * 4 / 3),
-		   1UL << params->min_shift);
+	return max(roundup_pow_of_two(nelem * 4 / 3), HASH_MIN_SIZE);
 }
 
 /**
@@ -567,11 +572,8 @@ int rhashtable_init(struct rhashtable *ht, struct rhashtable_params *params)
 	    (!params->key_len && !params->obj_hashfn))
 		return -EINVAL;
 
-	params->min_shift = max_t(size_t, params->min_shift,
-				  ilog2(HASH_MIN_SIZE));
-
 	if (params->nelem_hint)
-		size = rounded_hashtable_size(params);
+		size = rounded_hashtable_size(params->nelem_hint);
 
 	tbl = bucket_table_alloc(size, GFP_KERNEL);
 	if (tbl == NULL)
@@ -593,13 +595,13 @@ EXPORT_SYMBOL_GPL(rhashtable_init);
  * rhashtable_destroy - destroy hash table
  * @ht:		the hash table to destroy
  *
- * Frees the bucket array. This function is not rcu safe, therefore the caller
- * has to make sure that no resizing may happen by unpublishing the hashtable
- * and waiting for the quiescent cycle before releasing the bucket array.
+ * Frees the bucket array.
  */
 void rhashtable_destroy(const struct rhashtable *ht)
 {
-	bucket_table_free(ht->tbl);
+	const struct bucket_table *tbl = rht_dereference(ht->tbl, ht);
+
+	bucket_table_free(tbl);
 }
 EXPORT_SYMBOL_GPL(rhashtable_destroy);
 

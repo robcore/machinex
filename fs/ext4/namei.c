@@ -2497,6 +2497,10 @@ static int ext4_init_new_dir(handle_t *handle, struct inode *dir,
 	dir_block = ext4_append(handle, inode, &block);
 	if (IS_ERR(dir_block))
 		return PTR_ERR(dir_block);
+	BUFFER_TRACE(dir_block, "get_write_access");
+	err = ext4_journal_get_write_access(handle, dir_block);
+	if (err)
+		goto out;
 	de = (struct ext4_dir_entry_2 *)dir_block->b_data;
 	ext4_init_dot_dotdot(inode, de, blocksize, csum_size, dir->i_ino, 0);
 	set_nlink(inode, 2);
@@ -3247,8 +3251,7 @@ static int ext4_find_delete_entry(handle_t *handle, struct inode *dir,
 	return retval;
 }
 
-static void ext4_rename_delete(handle_t *handle, struct ext4_renament *ent,
-			       int force_reread)
+static void ext4_rename_delete(handle_t *handle, struct ext4_renament *ent)
 {
 	int retval;
 	/*
@@ -3260,8 +3263,7 @@ static void ext4_rename_delete(handle_t *handle, struct ext4_renament *ent,
 	if (le32_to_cpu(ent->de->inode) != ent->inode->i_ino ||
 	    ent->de->name_len != ent->dentry->d_name.len ||
 	    strncmp(ent->de->name, ent->dentry->d_name.name,
-		    ent->de->name_len) ||
-	    force_reread) {
+		    ent->de->name_len)) {
 		retval = ext4_find_delete_entry(handle, ent->dir,
 						&ent->dentry->d_name);
 	} else {
@@ -3312,7 +3314,6 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		.dentry = new_dentry,
 		.inode = new_dentry->d_inode,
 	};
-	int force_reread;
 	int retval;
 
 	dquot_initialize(old.dir);
@@ -3377,15 +3378,6 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if (retval)
 			goto end_rename;
 	}
-	/*
-	 * If we're renaming a file within an inline_data dir and adding or
-	 * setting the new dirent causes a conversion from inline_data to
-	 * extents/blockmap, we need to force the dirent delete code to
-	 * re-read the directory, or else we end up trying to delete a dirent
-	 * from what is now the extent tree root (or a block map).
-	 */
-	force_reread = (new.dir->i_ino == old.dir->i_ino &&
-			ext4_test_inode_flag(new.dir, EXT4_INODE_INLINE_DATA));
 	if (!new.bh) {
 		retval = ext4_add_entry(handle, new.dentry, old.inode);
 		if (retval)
@@ -3396,9 +3388,6 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if (retval)
 			goto end_rename;
 	}
-	if (force_reread)
-		force_reread = !ext4_test_inode_flag(new.dir,
-						     EXT4_INODE_INLINE_DATA);
 
 	/*
 	 * Like most other Unix systems, set the ctime for inodes on a
@@ -3410,7 +3399,8 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
 	/*
 	 * ok, that's it
 	 */
-	ext4_rename_delete(handle, &old, force_reread);
+
+	ext4_rename_delete(handle, &old);
 
 	if (new.inode) {
 		ext4_dec_count(handle, new.inode);

@@ -470,7 +470,7 @@ int bdi_init(struct backing_dev_info *bdi)
 	bdi->write_bandwidth = INIT_BW;
 	bdi->avg_write_bandwidth = INIT_BW;
 
-	err = fprop_local_init_percpu(&bdi->completions, GFP_KERNEL);
+	err = fprop_local_init_percpu(&bdi->completions);
 
 	if (err) {
 err:
