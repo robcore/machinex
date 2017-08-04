@@ -34,8 +34,7 @@ unsigned int cpu3_allowed_susp = 1;
 
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus ||
-		thermal_core_controlled)
+	if (!is_display_on() || !limit_screen_on_cpus)
 		return true;
 
 	switch (cpu) {

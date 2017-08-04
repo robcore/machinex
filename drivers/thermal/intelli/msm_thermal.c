@@ -391,6 +391,8 @@ static void __ref do_core_control(void)
 			 */
 			if (cpu_online(cpu))
 				continue;
+			if (!is_cpu_allowed(cpu))
+				continue;
 			ret = cpu_up(cpu);
 			if (ret) {
 				thermal_core_controlled = true;
