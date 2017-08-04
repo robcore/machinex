@@ -386,6 +386,6 @@ void __init cpuacct_init(void)
 struct cgroup_subsys cpuacct_cgrp_subsys = {
 	.css_alloc	= cpuacct_css_alloc,
 	.css_free	= cpuacct_css_free,
-	.base_cftypes	= files,
+	.legacy_cftypes	= files,
 	.early_init	= 1,
 };

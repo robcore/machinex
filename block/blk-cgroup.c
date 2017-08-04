@@ -994,7 +994,7 @@ struct cgroup_subsys blkcg_subsys = {
 	/* note: blkcg_subsys_id is otherwise defined in blk-cgroup.h */
 	.subsys_id = blkcg_subsys_id,
 #endif
-	.base_cftypes = blkcg_files,
+	.legacy_cftypes = blkcg_files,
 #ifdef CONFIG_MEMCG
 	/*
 	 * This ensures that, if available, memcg is automatically enabled

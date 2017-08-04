@@ -293,7 +293,7 @@ struct cgroup_subsys net_prio_subsys = {
 	.css_free	= cgrp_css_free,
 	.attach		= net_prio_attach,
 	.subsys_id	= net_prio_subsys_id,
-	.base_cftypes	= ss_files,
+	.legacy_cftypes	= ss_files,
 	.module		= THIS_MODULE,
 
 	/*
