@@ -690,29 +690,35 @@ static const struct file_operations proc_single_file_operations = {
 	.release	= single_release,
 };
 
+
+struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
+{
+	struct task_struct *task = get_proc_task(inode);
+	struct mm_struct *mm = ERR_PTR(-ESRCH);
+
+	if (task) {
+		mm = mm_access(task, mode);
+		put_task_struct(task);
+
+		if (!IS_ERR_OR_NULL(mm)) {
+			/* ensure this mm_struct can't be freed */
+			atomic_inc(&mm->mm_count);
+			/* but do not pin its memory */
+			mmput(mm);
+		}
+	}
+
+	return mm;
+}
+
 static int __mem_open(struct inode *inode, struct file *file, unsigned int mode)
 {
-	struct task_struct *task = get_proc_task(file_inode(file));
-	struct mm_struct *mm;
-
-	if (!task)
-		return -ESRCH;
-
-	mm = mm_access(task, mode);
-	put_task_struct(task);
+	struct mm_struct *mm = proc_mem_open(inode, mode);
 
 	if (IS_ERR(mm))
 		return PTR_ERR(mm);
 
-	if (mm) {
-		/* ensure this mm_struct can't be freed */
-		atomic_inc(&mm->mm_count);
-		/* but do not pin its memory */
-		mmput(mm);
-	}
-
 	file->private_data = mm;
-
 	return 0;
 }
 
@@ -958,19 +964,6 @@ static ssize_t oom_adjust_write(struct file *file, const char __user *buf,
 		goto err_task_lock;
 	}
 
-	if (oom_adjust < task->signal->oom_adj && !capable(CAP_SYS_RESOURCE)) {
-		err = -EACCES;
-		goto err_sighand;
-	}
-
-	/*
-	 * Warn that /proc/pid/oom_adj is deprecated, see
-	 * Documentation/feature-removal-schedule.txt.
-	 */
-	pr_warn_once("%s (%d): /proc/%d/oom_adj is deprecated, please use /proc/%d/oom_score_adj instead.\n",
-		  current->comm, task_pid_nr(current), task_pid_nr(task),
-		  task_pid_nr(task));
-	task->signal->oom_adj = oom_adjust;
 	/*
 	 * Scale /proc/pid/oom_score_adj appropriately ensuring that a maximum
 	 * value is always attainable.
@@ -1807,6 +1800,8 @@ end_instantiate:
 	return dir_emit(ctx, name, len, 1, DT_UNKNOWN);
 }
 
+#if defined(CONFIG_CHECKPOINT_RESTORE) && defined(CONFIG_POSIX_TIMERS)
+
 /*
  * dname_to_vma_addr - maps a dentry name into two unsigned longs
  * which represent vma start and end addresses.
@@ -2111,7 +2106,6 @@ static const struct file_operations proc_map_files_operations = {
 	.llseek		= default_llseek,
 };
 
-#if defined(CONFIG_CHECKPOINT_RESTORE) && defined(CONFIG_POSIX_TIMERS)
 struct timers_private {
 	struct pid *pid;
 	struct task_struct *task;
@@ -2209,7 +2203,7 @@ static const struct file_operations proc_timers_operations = {
 	.llseek		= seq_lseek,
 	.release	= seq_release_private,
 };
-#endif /* CONFIG_CHECKPOINT_RESTORE && POSIX_TIMERS*/
+#endif /* CONFIG_CHECKPOINT_RESTORE */
 
 static int proc_pident_instantiate(struct inode *dir,
 	struct dentry *dentry, struct task_struct *task, const void *ptr)
@@ -2516,7 +2510,7 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
 		struct task_struct *t = task;
 
 		task_io_accounting_add(&acct, &task->signal->ioac);
-		for_each_thread(task, t)
+		while_each_thread(task, t)
 			task_io_accounting_add(&acct, &t->ioac);
 
 		unlock_task_sighand(task, &flags);
@@ -2941,7 +2935,7 @@ retry:
 	return iter;
 }
 
-#define TGID_OFFSET (FIRST_PROCESS_ENTRY + 1)
+#define TGID_OFFSET (FIRST_PROCESS_ENTRY + 2)
 
 /* for the /proc/ directory itself, after non-process stuff has been done */
 int proc_pid_readdir(struct file *file, struct dir_context *ctx)
@@ -2953,14 +2947,19 @@ int proc_pid_readdir(struct file *file, struct dir_context *ctx)
 	if (pos >= PID_MAX_LIMIT + TGID_OFFSET)
 		return 0;
 
-	if (pos == TGID_OFFSET - 1) {
+	if (pos == TGID_OFFSET - 2) {
 		struct inode *inode = ns->proc_self->d_inode;
 		if (!dir_emit(ctx, "self", 4, inode->i_ino, DT_LNK))
 			return 0;
-		iter.tgid = 0;
-	} else {
-		iter.tgid = pos - TGID_OFFSET;
+		ctx->pos = pos = pos + 1;
 	}
+	if (pos == TGID_OFFSET - 1) {
+		struct inode *inode = ns->proc_thread_self->d_inode;
+		if (!dir_emit(ctx, "thread-self", 11, inode->i_ino, DT_LNK))
+			return 0;
+		ctx->pos = pos = pos + 1;
+	}
+	iter.tgid = pos - TGID_OFFSET;
 	iter.task = NULL;
 	for (iter = next_tgid(ns, iter);
 	     iter.task;
@@ -3126,11 +3125,8 @@ static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry
 	if (!leader)
 		goto out_no_task;
 
-	tid = name_to_int(dentry);
+	tid = name_to_int(&dentry->d_name);
 	if (tid == ~0U)
-		goto out;
-	/* It could be unhashed before we take rcu lock */
-	if (!pid_alive(leader))
 		goto out;
 
 	ns = dentry->d_sb->s_fs_info;
