@@ -527,13 +527,6 @@ static int intelli_plug_start(void)
 
 	intellinit = true;
 
-	mutex_init(&intelli_plug_mutex);
-	for_each_possible_cpu(cpu) {
-		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
-		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
-		pr_info("Intelliplug Start: CPU %u is Online\n", cpu);
-	}
-
 	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 
 	if (!intelliplug_wq) {
@@ -548,6 +541,13 @@ static int intelli_plug_start(void)
 		pr_err("%s: Failed to register input handler: %d\n",
 			INTELLI_PLUG, ret);
 		goto err_dev;
+	}
+
+	mutex_init(&intelli_plug_mutex);
+	for_each_possible_cpu(cpu) {
+		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
+		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
+		pr_info("Intelliplug Start: CPU %u is Online\n", cpu);
 	}
 
 	register_power_suspend(&intelli_suspend_data);
