@@ -496,4 +496,11 @@ config OID_REGISTRY
 	help
 	  Enable fast lookup object identifier registry.
 
+#
+# sg chaining option
+#
+
+config ARCH_HAS_SG_CHAIN
+	def_bool n
+
 endmenu

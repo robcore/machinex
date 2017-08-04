@@ -78,6 +78,7 @@ config ARM_MPU
 	bool
 
 config ARM_HAS_SG_CHAIN
+	select ARCH_HAS_SG_CHAIN
 	bool
 
 config NEED_SG_DMA_LENGTH
