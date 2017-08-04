@@ -55,6 +55,7 @@ static unsigned int ignore_wakelocks = 1;
  * disliking the wakelock skip. TODO Use the power_supply framework.
  */
 extern bool mx_is_cable_attached(void);
+extern unsigned int limit_screen_off_cpus;
 
 void register_power_suspend(struct power_suspend *handler)
 {
