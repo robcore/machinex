@@ -103,6 +103,9 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
+	if (cpu1_allowed == val)
+		return count;
+
 	cpu1_allowed = val;
 	return count;
 }
@@ -126,6 +129,9 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
+
+	if (cpu2_allowed == val)
+		return count;
 
 	cpu2_allowed = val;
 	return count;
@@ -151,6 +157,9 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
+	if (cpu3_allowed == val)
+		return count;
+
 	cpu3_allowed = val;
 	return count;
 }
@@ -174,6 +183,9 @@ static ssize_t limit_screen_off_cpus_store(struct kobject *kobj,
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
+
+	if (limit_screen_off_cpus == val)
+		return count;
 
 	limit_screen_off_cpus = val;
 	return count;
@@ -199,6 +211,9 @@ static ssize_t cpu1_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
+	if (cpu1_allowed_susp == val)
+		return count;
+
 	cpu1_allowed_susp = val;
 	return count;
 }
@@ -223,6 +238,9 @@ static ssize_t cpu2_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
+	if (cpu2_allowed_susp == val)
+		return count;
+
 	cpu2_allowed_susp = val;
 	return count;
 }
@@ -246,6 +264,9 @@ static ssize_t cpu3_allowed_susp_store(struct kobject *kobj,
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
+
+	if (cpu3_allowed_susp == val)
+		return count;
 
 	cpu3_allowed_susp = val;
 	return count;
