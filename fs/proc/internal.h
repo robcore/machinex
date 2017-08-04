@@ -109,10 +109,10 @@ static inline int task_dumpable(struct task_struct *task)
 	return 0;
 }
 
-static inline unsigned name_to_int(struct dentry *dentry)
+static inline unsigned name_to_int(const struct qstr *qstr)
 {
-	const char *name = dentry->d_name.name;
-	int len = dentry->d_name.len;
+	const char *name = qstr->name;
+	int len = qstr->len;
 	unsigned n = 0;
 
 	if (len > 1 && *name == '0')
@@ -198,6 +198,12 @@ extern const struct inode_operations proc_ns_dir_inode_operations;
 extern const struct file_operations proc_ns_dir_operations;
 
 extern int proc_setup_self(struct super_block *);
+
+/*
+ * proc_thread_self.c
+ */
+extern int proc_setup_thread_self(struct super_block *);
+extern void proc_thread_self_init(void);
 
 /*
  * proc_devtree.c
