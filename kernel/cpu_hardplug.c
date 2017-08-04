@@ -35,40 +35,31 @@ unsigned int cpu3_allowed_susp = 1;
 bool is_cpu_allowed(unsigned int cpu)
 {
 	if (!is_display_on())
-		goto always_true;
+		return true;
 
 	if (!limit_screen_on_cpus)
-		goto always_true;
+		return true;
 
 	switch (cpu) {
 	case 0:
-		goto always_true;
 		break;
 	case 1:
 		if (!cpu1_allowed)
 			return false;
-		else
-			goto always_true;
 		break;
 	case 2:
 		if (!cpu2_allowed)
 			return false;
-		else
-			goto always_true;
 		break;
 	case 3:
 		if (!cpu3_allowed)
 			return false;
-		else
-			goto always_true;
 		break;
 
 	default:
-		return true;
 		break;
 	}
 
-always_true:
 	return true;
 }
 
