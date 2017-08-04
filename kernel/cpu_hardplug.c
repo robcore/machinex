@@ -16,6 +16,7 @@
 #include <linux/smpboot.h>
 #include <linux/cpu.h>
 #include <linux/powersuspend.h>
+#include <linux/sysfs_helpers.h>
 
 #define HARDPLUG_MAJOR 0
 #define HARDPLUG_MINOR 1
