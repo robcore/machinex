@@ -20,7 +20,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 4
+#define HARDPLUG_MINOR 5
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -32,9 +32,17 @@ unsigned int cpu1_allowed_susp = 1;
 unsigned int cpu2_allowed_susp = 1;
 unsigned int cpu3_allowed_susp = 1;
 
+static bool hardplug_up = false;
+
+static bool hardplug_alive = true;
+static bool is_hardplug_alive(void)
+{
+	return hardplug_alive;
+}
+
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus)
+	if (!is_hardplug_alive() || !limit_screen_on_cpus)
 		return true;
 
 	switch (cpu) {
@@ -62,7 +70,7 @@ bool is_cpu_allowed(unsigned int cpu)
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus)
+	if (!is_hardplug_alive() || !limit_screen_on_cpus)
 		return;
 
 	switch (cpu) {
@@ -95,6 +103,7 @@ static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
+	unsigned int cpu;
 	unsigned int val;
 
 	sscanf(buf, "%u\n", &val);
@@ -105,6 +114,11 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 		return count;
 
 	limit_screen_on_cpus = val;
+
+	if (limit_screen_on_cpus) {
+		for_each_online_cpu(cpu)
+			hardplug_cpu(cpu);
+	}
 
 	return count;
 }
@@ -171,6 +185,27 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	return count;
 }
+
+static void hardplug_wake(struct power_suspend * h)
+{
+	unsigned int cpu;
+
+	hardplug_alive = true;
+
+	for_each_online_cpu(cpu)
+		hardplug_cpu(cpu);
+}
+
+static void hardplug_sleep(struct power_suspend * h)
+{
+	hardplug_alive = false;
+}
+
+static struct power_suspend hardplug_suspend =
+{
+	.suspend = hardplug_wake,
+	.resume = hardplug_sleep,
+};
 
 static struct kobj_attribute cpu2_allowed_attribute =
 	__ATTR(cpu2_allowed, 0644,
@@ -369,6 +404,8 @@ static int __init cpu_hardplug_init(void)
 		return -ENOMEM;
 	}
 
+	hardplug_up = true;
+
 	return 0;
 }
 
@@ -377,10 +414,24 @@ static void cpu_hardplug_exit(void)
 {
 	if (cpu_hardplug_kobj != NULL)
 		kobject_put(cpu_hardplug_kobj);
+
+	unregister_power_suspend(&hardplug_suspend);
 }
 
 core_initcall(cpu_hardplug_init);
 module_exit(cpu_hardplug_exit);
+
+static int __init cpu_hardplug_late_init(void)
+{
+	if (hardplug_up)
+		register_power_suspend(&hardplug_suspend);
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+device_initcall(cpu_hardplug_late_init);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");

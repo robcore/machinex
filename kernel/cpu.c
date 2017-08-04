@@ -957,11 +957,6 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 		goto out;
 	}
 
-	if (!is_cpu_allowed(cpu)) {
-		ret = -EBUSY;
-		goto out;
-	}
-
 	/*
 	 * The caller of do_cpu_up might have raced with another
 	 * caller. Ignore it for now.
@@ -1016,9 +1011,6 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 		       cpu);
 		return -EINVAL;
 	}
-
-	if (!is_cpu_allowed(cpu))
-		return -EBUSY;
 
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
