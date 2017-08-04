@@ -88,7 +88,8 @@ extern struct cpumask __cpu_possible_mask;
 extern struct cpumask __cpu_online_mask;
 extern struct cpumask __cpu_present_mask;
 extern struct cpumask __cpu_active_mask;
-#ifdef CONFIG_CPU_HARDPLUG
+//#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 extern struct cpumask __cpu_hardplugged_mask; //offline
 extern struct cpumask __cpu_unplugged_mask; //online
 #endif
@@ -98,7 +99,7 @@ extern struct cpumask __cpu_unplugged_mask; //online
 #define cpu_present_mask  ((const struct cpumask *)&__cpu_present_mask)
 #define cpu_active_mask   ((const struct cpumask *)&__cpu_active_mask)
 
-#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 #define cpu_hardplugged_mask  ((const struct cpumask *)&__cpu_hardplugged_mask)
 #define cpu_unplugged_mask   ((const struct cpumask *)&__cpu_unplugged_mask)
 #endif
@@ -108,7 +109,7 @@ extern struct cpumask __cpu_unplugged_mask; //online
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
 #define num_active_cpus()	cpumask_weight(cpu_active_mask)
 
-#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 #define num_hardplugged_cpus()	cpumask_weight(cpu_hardplugged_mask)
 #define num_unplugged_cpus()	cpumask_weight(cpu_unplugged_mask)
 #endif
@@ -118,7 +119,7 @@ extern struct cpumask __cpu_unplugged_mask; //online
 #define cpu_present(cpu)	cpumask_test_cpu((cpu), cpu_present_mask)
 #define cpu_active(cpu)		cpumask_test_cpu((cpu), cpu_active_mask)
 
-#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 #define cpu_hardplugged(cpu)	cpumask_test_cpu((cpu), cpu_hardplugged_mask)
 #define cpu_unplugged(cpu)		cpumask_test_cpu((cpu), cpu_unplugged_mask)
 #endif
@@ -757,7 +758,7 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 #define for_each_online_cpu(cpu)   for_each_cpu((cpu), cpu_online_mask)
 #define for_each_active_cpu(cpu)  for_each_cpu((cpu), cpu_active_mask)
 
-#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 #define for_each_hardplugged_cpu(cpu)   for_each_cpu((cpu), cpu_hardplugged_mask)
 #define for_each_unplugged_cpu(cpu)  for_each_cpu((cpu), cpu_unplugged_mask)
 #endif
@@ -767,7 +768,7 @@ void init_cpu_present(const struct cpumask *src);
 void init_cpu_possible(const struct cpumask *src);
 void init_cpu_online(const struct cpumask *src);
 
-#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 void init_cpu_unplugged(const struct cpumask *src);
 #endif
 
@@ -807,7 +808,7 @@ set_cpu_active(unsigned int cpu, bool active)
 		cpumask_clear_cpu(cpu, &__cpu_active_mask);
 }
 
-#ifdef CONFIG_CPU_HARDPLUG
+#if 0
 static inline void
 set_cpu_hardplugged(unsigned int cpu, bool hardplugged)
 {
