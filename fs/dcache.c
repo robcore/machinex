@@ -1776,7 +1776,7 @@ struct dentry *d_find_any_alias(struct inode *inode)
 }
 EXPORT_SYMBOL(d_find_any_alias);
 
-struct dentry *__d_obtain_alias(struct inode *inode, int disconnected)
+static struct dentry *__d_obtain_alias(struct inode *inode, int disconnected)
 {
 	static const struct qstr anonstring = { .name = "/", .len = 1 };
 	struct dentry *tmp;
