@@ -21,10 +21,43 @@
 #define HARDPLUG_MAJOR 0
 #define HARDPLUG_MINOR 1
 
+unsigned int limit_screen_on_cpus = 0;
+unsigned int cpu1_allowed = 1;
+unsigned int cpu2_allowed = 1;
+unsigned int cpu3_allowed = 1;
+
 unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
 unsigned int cpu2_allowed_susp = 1;
 unsigned int cpu3_allowed_susp = 1;
+
+bool is_cpu_allowed(unsigned int cpu)
+{
+	
+
+static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", limit_screen_on_cpus);
+}
+
+static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int val;
+
+	sscanf(buf, "%u\n", &val);
+
+	sanitize_min_max(val, 0, 1);
+
+	limit_screen_on_cpus = val;
+	return count;
+}
+
+static struct kobj_attribute limit_screen_on_cpus_attribute =
+	__ATTR(limit_screen_on_cpus, 0644,
+		limit_screen_on_cpus_show,
+		limit_screen_on_cpus_store);
 
 static ssize_t limit_screen_off_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
