@@ -863,7 +863,7 @@ static inline const struct cpumask *get_cpu_mask(unsigned int cpu)
 	return to_cpumask(p);
 }
 
-#define cpu_is_offline(cpu)	unlikely(!cpu_online(cpu))
+#define cpu_is_offline(cpu)	(!cpu_online(cpu))
 
 #if NR_CPUS <= BITS_PER_LONG
 #define CPU_BITS_ALL						\
