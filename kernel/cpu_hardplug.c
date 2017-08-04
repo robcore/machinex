@@ -84,7 +84,8 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 	if (is_display_on()) {
 		if (limit_screen_on_cpus)
 			hardplug_cpus(0);
-		else if (!limit_screen_on_cpus)
+		else if (!limit_screen_on_cpus &&
+				 !thermal_core_controlled)
 			unplug_cpus();
 	}
 	return count;
@@ -122,7 +123,7 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 			cpu_down(1);
 			cpumask_set_cpu(1, cpu_hardplugged_mask);
 			cpu_maps_update_done();
-		} else {
+		} else if (!thermal_core_controlled) {
 			cpu_maps_update_begin();
 			cpu_up(1);
 			cpumask_clear_cpu(1, cpu_hardplugged_mask);
@@ -163,7 +164,7 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 			cpu_down(2);
 			cpumask_set_cpu(2, cpu_hardplugged_mask);
 			cpu_maps_update_done();
-		} else {
+		} else if (!thermal_core_controlled) {
 			cpu_maps_update_begin();
 			cpu_up(2);
 			cpumask_clear_cpu(2, cpu_hardplugged_mask);
@@ -205,7 +206,7 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 			cpu_down(3);
 			cpumask_set_cpu(3, cpu_hardplugged_mask);
 			cpu_maps_update_done();
-		} else {
+		} else if (!thermal_core_controlled) {
 			cpu_maps_update_begin();
 			cpu_up(3);
 			cpumask_clear_cpu(3, cpu_hardplugged_mask);
