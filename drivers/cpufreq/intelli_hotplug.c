@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -276,7 +276,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		for_each_online_cpu(cpu) {
 			if (cpu == primary)
 				continue;
-			if (!cpu_online(cpu))
+			if (cpu_is_offline(cpu))
 				continue;
 			if (check_down_lock(cpu))
 				break;
@@ -300,6 +300,8 @@ static void cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (thermal_core_controlled)
 				goto reschedule;
+			if (!is_cpu_allowed(cpu))
+				continue;
 			cpu_up(cpu);
 			apply_down_lock(cpu);
 			if (num_online_cpus() == target)
