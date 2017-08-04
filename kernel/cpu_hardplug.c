@@ -19,8 +19,8 @@
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
 
-#define HARDPLUG_MAJOR 0
-#define HARDPLUG_MINOR 2
+#define HARDPLUG_MAJOR 1
+#define HARDPLUG_MINOR 0
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -34,10 +34,8 @@ unsigned int cpu3_allowed_susp = 1;
 
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!is_display_on())
-		return true;
-
-	if (!limit_screen_on_cpus)
+	if (!is_display_on() || !limit_screen_on_cpus ||
+		thermal_core_controlled)
 		return true;
 
 	switch (cpu) {
