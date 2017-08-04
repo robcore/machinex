@@ -20,7 +20,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 0
+#define HARDPLUG_MINOR 2
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -31,6 +31,7 @@ unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
 unsigned int cpu2_allowed_susp = 1;
 unsigned int cpu3_allowed_susp = 1;
+extern cpumask_var_t cpu_hardplugged_mask;
 
 bool is_cpu_allowed(unsigned int cpu)
 {
@@ -79,6 +80,13 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 		return count;
 
 	limit_screen_on_cpus = val;
+
+	if (is_display_on()) {
+		if (limit_screen_on_cpus)
+			hardplug_cpus(0);
+		else if (!limit_screen_on_cpus)
+			unplug_cpus();
+	}
 	return count;
 }
 
@@ -107,6 +115,20 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 		return count;
 
 	cpu1_allowed = val;
+
+	if (is_display_on()) {
+		if (cpu1_allowed == 0) {
+			cpu_maps_update_begin();
+			cpu_down(1);
+			cpumask_set_cpu(1, cpu_hardplugged_mask);
+			cpu_maps_update_done();
+		} else {
+			cpu_maps_update_begin();
+			cpu_up(1);
+			cpumask_clear_cpu(1, cpu_hardplugged_mask);
+			cpu_maps_update_done();
+		}
+	}
 	return count;
 }
 
@@ -134,6 +156,21 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 		return count;
 
 	cpu2_allowed = val;
+
+	if (is_display_on()) {
+		if (cpu2_allowed == 0) {
+			cpu_maps_update_begin();
+			cpu_down(2);
+			cpumask_set_cpu(2, cpu_hardplugged_mask);
+			cpu_maps_update_done();
+		} else {
+			cpu_maps_update_begin();
+			cpu_up(2);
+			cpumask_clear_cpu(2, cpu_hardplugged_mask);
+			cpu_maps_update_done();
+		}
+	}
+
 	return count;
 }
 
@@ -161,6 +198,21 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 		return count;
 
 	cpu3_allowed = val;
+
+	if (is_display_on()) {
+		if (cpu3_allowed == 0) {
+			cpu_maps_update_begin();
+			cpu_down(3);
+			cpumask_set_cpu(3, cpu_hardplugged_mask);
+			cpu_maps_update_done();
+		} else {
+			cpu_maps_update_begin();
+			cpu_up(3);
+			cpumask_clear_cpu(3, cpu_hardplugged_mask);
+			cpu_maps_update_done();
+		}
+	}
+
 	return count;
 }
 

@@ -214,6 +214,13 @@ static inline void cpu_hotplug_done(void) { cpus_write_unlock(); }
 static inline void get_online_cpus(void) { cpus_read_lock(); }
 static inline void put_online_cpus(void) { cpus_read_unlock(); }
 
+cpumask_var_t cpu_hardplugged_mask;
+int hardplug_cpus(int primary);
+void unplug_cpus(void);
+extern unsigned int limit_screen_on_cpus;
+extern unsigned int cpu1_allowed;
+extern unsigned int cpu2_allowed;
+extern unsigned int cpu3_allowed;
 #ifdef CONFIG_PM_SLEEP_SMP
 extern int freeze_secondary_cpus(int primary);
 static inline int disable_nonboot_cpus(void)
@@ -222,14 +229,11 @@ static inline int disable_nonboot_cpus(void)
 }
 extern void enable_nonboot_cpus(void);
 
-extern unsigned int limit_screen_on_cpus;
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int cpu1_allowed_susp;
 extern unsigned int cpu2_allowed_susp;
 extern unsigned int cpu3_allowed_susp;
-extern unsigned int cpu1_allowed;
-extern unsigned int cpu2_allowed;
-extern unsigned int cpu3_allowed;
+
 
 extern int lock_screen_off_cpus(int primary);
 extern void unlock_screen_off_cpus(void);

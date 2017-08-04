@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -162,11 +162,6 @@ struct down_lock {
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
 
-static void report_current_cpus(void)
-{
-	online_cpus = num_online_cpus();
-}
-
 static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
@@ -178,9 +173,14 @@ static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
-	dl->locked = 1;
-	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-			      msecs_to_jiffies(down_lock_dur));
+	if (is_display_on()) {
+		dl->locked = 1;
+		if (is_cpu_allowed(cpu))
+			mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+				      msecs_to_jiffies(down_lock_dur));
+		else
+			mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem, 0);
+	}
 }
 
 static int check_down_lock(unsigned int cpu)
@@ -188,6 +188,12 @@ static int check_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 	return dl->locked;
 }
+
+static void report_current_cpus(void)
+{
+	online_cpus = num_online_cpus();
+}
+
 
 static unsigned int calculate_thread_stats(void)
 {
@@ -279,6 +285,8 @@ static void cpu_up_down_work(struct work_struct *work)
 			if (cpu_is_offline(cpu))
 				continue;
 			if (check_down_lock(cpu))
+				break;
+			if !(is_cpu_allowed(cpu))
 				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) /
@@ -453,12 +461,11 @@ static void intelli_suspend(struct power_suspend * h)
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-				      msecs_to_jiffies(down_lock_dur));
 		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem, 0);
 	}
 }
 
@@ -476,10 +483,12 @@ static void intelli_resume(struct power_suspend * h)
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 
-	for_each_online_cpu(cpu)
-		apply_down_lock(cpu);
-
+	for_each_online_cpu(cpu) {
+		if (is_cpu_allowed(cpu))
+			apply_down_lock(cpu);
+	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
+
 }
 
 static struct power_suspend intelli_suspend_data =
