@@ -129,8 +129,6 @@ static int tid_fd_revalidate(struct dentry *dentry, unsigned int flags)
 		}
 		put_task_struct(task);
 	}
-
-	d_drop(dentry);
 	return 0;
 }
 
@@ -259,7 +257,6 @@ out_fd_loop:
 	put_files_struct(files);
 out:
 	put_task_struct(p);
-out_no_task:
 	return 0;
 }
 

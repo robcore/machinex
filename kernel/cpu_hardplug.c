@@ -75,6 +75,9 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
+	if (limit_screen_on_cpus == val)
+		return count;
+
 	limit_screen_on_cpus = val;
 	return count;
 }
