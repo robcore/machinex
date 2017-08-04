@@ -175,7 +175,6 @@ static void power_resume(struct work_struct *work)
 		mutex_unlock(&prometheus_mtx);
 		return;
 	}
-
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	if (limit_screen_off_cpus)
