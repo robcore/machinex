@@ -1072,7 +1072,6 @@ int hardplug_cpus(int primary)
 			cpumask_set_cpu(cpu, cpu_hardplugged_mask);
 			pr_info("Hardplugged CPU%d\n", cpu);
 		} else {
-			pr_err("Error Hardplugging CPU%d : %d\n", cpu, error);
 			break;
 		}
 	}
