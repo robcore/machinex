@@ -1351,10 +1351,10 @@ static int tg_print_conf_uint(struct cgroup *cgrp, struct cftype *cft,
 	return 0;
 }
 
-static int tg_set_conf(struct cgroup *cgrp, struct cftype *cft, char *buf,
-		       bool is_u64)
+static ssize_t tg_set_conf(struct kernfs_open_file *of,
+			   char *buf, size_t nbytes, loff_t off, bool is_u64)
 {
-	struct blkcg *blkcg = cgroup_to_blkcg(cgrp);
+	struct blkcg *blkcg = css_to_blkcg(of_css(of));
 	struct blkg_conf_ctx ctx;
 	struct throtl_grp *tg;
 	struct throtl_service_queue *sq;
@@ -1373,9 +1373,9 @@ static int tg_set_conf(struct cgroup *cgrp, struct cftype *cft, char *buf,
 		ctx.v = -1;
 
 	if (is_u64)
-		*(u64 *)((void *)tg + cft->private) = ctx.v;
+		*(u64 *)((void *)tg + of_cft(of)->private) = ctx.v;
 	else
-		*(unsigned int *)((void *)tg + cft->private) = ctx.v;
+		*(unsigned int *)((void *)tg + of_cft(of)->private) = ctx.v;
 
 	throtl_log(&tg->service_queue,
 		   "limit change rbps=%llu wbps=%llu riops=%u wiops=%u",
@@ -1410,19 +1410,19 @@ static int tg_set_conf(struct cgroup *cgrp, struct cftype *cft, char *buf,
 	}
 
 	blkg_conf_finish(&ctx);
-	return 0;
+	return nbytes;
 }
 
-static int tg_set_conf_u64(struct cgroup *cgrp, struct cftype *cft,
-			   char *buf)
+static ssize_t tg_set_conf_u64(struct kernfs_open_file *of,
+			       char *buf, size_t nbytes, loff_t off)
 {
-	return tg_set_conf(cgrp, cft, buf, true);
+	return tg_set_conf(of, buf, nbytes, off, true);
 }
 
-static int tg_set_conf_uint(struct cgroup *cgrp, struct cftype *cft,
-			    char *buf)
+static ssize_t tg_set_conf_uint(struct kernfs_open_file *of,
+				char *buf, size_t nbytes, loff_t off)
 {
-	return tg_set_conf(cgrp, cft, buf, false);
+	return tg_set_conf(of, buf, nbytes, off, false);
 }
 
 static struct cftype throtl_files[] = {
@@ -1430,28 +1430,28 @@ static struct cftype throtl_files[] = {
 		.name = "throttle.read_bps_device",
 		.private = offsetof(struct throtl_grp, bps[READ]),
 		.read_seq_string = tg_print_conf_u64,
-		.write_string = tg_set_conf_u64,
+		.write = tg_set_conf_u64,
 		.max_write_len = 256,
 	},
 	{
 		.name = "throttle.write_bps_device",
 		.private = offsetof(struct throtl_grp, bps[WRITE]),
 		.read_seq_string = tg_print_conf_u64,
-		.write_string = tg_set_conf_u64,
+		.write = tg_set_conf_u64,
 		.max_write_len = 256,
 	},
 	{
 		.name = "throttle.read_iops_device",
 		.private = offsetof(struct throtl_grp, iops[READ]),
 		.read_seq_string = tg_print_conf_uint,
-		.write_string = tg_set_conf_uint,
+		.write = tg_set_conf_uint,
 		.max_write_len = 256,
 	},
 	{
 		.name = "throttle.write_iops_device",
 		.private = offsetof(struct throtl_grp, iops[WRITE]),
 		.read_seq_string = tg_print_conf_uint,
-		.write_string = tg_set_conf_uint,
+		.write = tg_set_conf_uint,
 		.max_write_len = 256,
 	},
 	{

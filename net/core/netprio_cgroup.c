@@ -176,8 +176,8 @@ static int read_priomap(struct cgroup *cont, struct cftype *cft,
 	return 0;
 }
 
-static int write_priomap(struct cgroup *cgrp, struct cftype *cft,
-			 char *buffer)
+static ssize_t write_priomap(struct kernfs_open_file *of,
+			     char *buf, size_t nbytes, loff_t off)
 {
 	char *devname = kstrdup(buffer, GFP_KERNEL);
 	int ret = -EINVAL;
@@ -282,7 +282,7 @@ static struct cftype ss_files[] = {
 	{
 		.name = "ifpriomap",
 		.read_map = read_priomap,
-		.write_string = write_priomap,
+		.write = write_priomap,
 	},
 	{ }	/* terminate */
 };
