@@ -286,7 +286,7 @@ static const struct attribute_group cpu_hardplug_attr_group =
 
 static struct kobject *cpu_hardplug_kobj;
 
-static int cpu_hardplug_init(void)
+static int __init cpu_hardplug_init(void)
 {
 	int sysfs_result;
 
