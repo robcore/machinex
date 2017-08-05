@@ -1069,8 +1069,6 @@ static void update_backups(struct super_block *sb, int blk_off, char *data,
 		last = (ext4_group_t)(group + EXT4_DESC_PER_BLOCK(sb) - 2);
 	}
 
-	ext4_superblock_csum_set(sb, (struct ext4_super_block *)data);
-
 	while (group < sbi->s_groups_count) {
 		struct buffer_head *bh;
 		ext4_fsblk_t backup_block;
@@ -1093,8 +1091,9 @@ static void update_backups(struct super_block *sb, int blk_off, char *data,
 			err = -ENOMEM;
 			break;
 		}
-		ext4_debug("update metadata backup %#04lx\n",
-			  (unsigned long)bh->b_blocknr);
+		ext4_debug("update metadata backup %llu(+%llu)\n",
+			   backup_block, backup_block -
+			   ext4_group_first_block_no(sb, group));
 		BUFFER_TRACE(bh, "get_write_access");
 		if ((err = ext4_journal_get_write_access(handle, bh)))
 			break;

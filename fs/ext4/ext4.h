@@ -2238,9 +2238,8 @@ extern int ext4_group_extend(struct super_block *sb,
 extern int ext4_resize_fs(struct super_block *sb, ext4_fsblk_t n_blocks_count);
 
 /* super.c */
-extern void ext4_superblock_csum_set(struct super_block *sb,
-				     struct ext4_super_block *es);
 extern int ext4_calculate_overhead(struct super_block *sb);
+extern void ext4_superblock_csum_set(struct super_block *sb);
 extern void *ext4_kvmalloc(size_t size, gfp_t flags);
 extern void *ext4_kvzalloc(size_t size, gfp_t flags);
 extern void ext4_kvfree(void *ptr);
