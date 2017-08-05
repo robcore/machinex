@@ -1597,7 +1597,7 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 	cypress_init_dvfs(info);
 #endif
 
-	ret = request_any_context_irq(client->irq, NULL,
+	ret = request_threaded_irq(client->irq, NULL,
 			cypress_touchkey_interrupt,
 			IRQF_TRIGGER_FALLING, client->dev.driver->name, info);
 	if (ret < 0) {
