@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -479,6 +479,8 @@ static void intelli_resume(struct power_suspend * h)
 	}
 
 	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
 		if (is_cpu_allowed(cpu))
 			apply_down_lock(cpu);
 	}
@@ -495,7 +497,7 @@ static struct power_suspend intelli_suspend_data =
 static int intelliplug_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
-	unsigned int cpu;
+	unsigned int cpu = (unsigned long)hcpu;
 	/* Fail hotplug until this driver can get CPU clocks, or screen off */
 	if (!hotplug_ready)
 		return NOTIFY_OK;

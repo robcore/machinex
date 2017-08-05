@@ -22,7 +22,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 6
+#define HARDPLUG_MINOR 7
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -38,7 +38,8 @@ static DEFINE_MUTEX(hardplug_mtx);
 
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus)
+	if (!is_display_on() || !limit_screen_on_cpus ||
+		!hotplug_ready)
 		return true;
 
 	switch (cpu) {
@@ -66,12 +67,13 @@ bool is_cpu_allowed(unsigned int cpu)
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus)
+	if (!is_display_on() || !limit_screen_on_cpus ||
+		!hotplug_ready)
 		return;
 
 	switch (cpu) {
 	case 0:
-		break;
+		return;
 	case 1:
 		if (!cpu1_allowed && cpu_online(1))
 			cpu_down(1);
@@ -92,7 +94,7 @@ static void hardplug_cpu(unsigned int cpu)
 
 void hardplug_all_cpus(void)
 {
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
 
 	if (!limit_screen_on_cpus)
 		return;
@@ -104,6 +106,34 @@ void hardplug_all_cpus(void)
 	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
+
+static int cpu_hardplug_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
+{
+	unsigned int cpu = (unsigned long)hcpu;
+	/* Fail hotplug until this driver can get CPU clocks, drivers is disabled
+	 * or screen off
+	 */
+	if (!is_display_on() || !limit_screen_on_cpus ||
+		!hotplug_ready)
+		return NOTIFY_OK;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+		/* Fall through. */
+	case CPU_ONLINE:
+	case CPU_DOWN_FAILED:
+		hardplug_cpu(cpu);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cpu_hardplug_notifier = {
+	.notifier_call = cpu_hardplug_callback,
+};
 
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -388,7 +418,7 @@ static int __init cpu_hardplug_init(void)
 		return -ENOMEM;
 	}
 
-	mutex_init(&hardplug_mtx);
+	register_hotcpu_notifier(&cpu_hardplug_notifier);
 
 	return 0;
 }
