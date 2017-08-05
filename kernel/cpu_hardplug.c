@@ -17,6 +17,7 @@
 #include <linux/irq.h>
 #include <linux/smpboot.h>
 #include <linux/cpu.h>
+#include <linux/cpufreq.h>
 #include <linux/powersuspend.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
