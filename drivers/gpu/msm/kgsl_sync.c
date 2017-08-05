@@ -172,7 +172,6 @@ int kgsl_add_fence_event(struct kgsl_device *device,
 		ret = -EINVAL;
 		goto fail_fd;
 	}
-	sync_fence_install(fence, priv.fence_fd);
 
 	if (copy_to_user(data, &priv, sizeof(priv))) {
 		ret = -EFAULT;
@@ -187,6 +186,7 @@ int kgsl_add_fence_event(struct kgsl_device *device,
 			kgsl_fence_event_cb, event, owner);
 	if (ret)
 		goto fail_event;
+	sync_fence_install(fence, priv.fence_fd);
 
 	return 0;
 

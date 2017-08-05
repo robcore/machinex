@@ -686,7 +686,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 	struct qseecom_command_scm_resp resp;
 	struct qseecom_check_app_ireq req;
 	struct qseecom_load_app_ireq load_req;
-
+	bool first_time = false;
 	/* Copy the relevant information needed for loading the image */
 	if (copy_from_user(&load_img_req,
 				(void __user *)argp,
@@ -723,6 +723,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		&qseecom.registered_app_list_lock, flags);
 		ret = 0;
 	} else {
+		first_time = true;
 		pr_debug("App (%s) does'nt exist, loading apps for first time\n",
 			(char *)(load_img_req.img_name));
 		/* Get the handle of the shared fd */
@@ -815,7 +816,14 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 	load_img_req.app_id = app_id;
 	if (copy_to_user(argp, &load_img_req, sizeof(load_img_req))) {
 		pr_debug("copy_to_user failed\n");
-		kzfree(entry);
+		if (first_time == true) {
+         		spin_lock_irqsave(
+            			&qseecom.registered_app_list_lock, flags);
+         		list_del(&entry->list);
+         		spin_unlock_irqrestore(
+            			&qseecom.registered_app_list_lock, flags);
+         		kzfree(entry);
+      		}
 		qsee_disable_clock_vote(CLK_SFPB);
 		return -EFAULT;
 	}
@@ -913,7 +921,8 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		if (ret) {
 			pr_debug("scm_call to unload app (id = %d) failed\n",
 					req.app_id);
-			return -EFAULT;
+			ret = -EFAULT;
+			goto unload_exit;
 		} else {
 			pr_debug("App id %d now unloaded\n", req.app_id);
 		}
@@ -931,7 +940,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			if (ret) {
 				pr_debug("process_incomplete_cmd fail err: %d\n",
 						ret);
-				return ret;
+				goto unload_exit;
 			}
 		}
 	}
@@ -970,6 +979,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 								flags1);
 	}
+unload_exit:
 	qseecom_unmap_ion_allocated_memory(data);
 	data->released = true;
 	return ret;
@@ -1792,7 +1802,7 @@ int qseecom_send_command(struct qseecom_handle *handle, void *send_buf,
 	if (ret)
 		return ret;
 
-	pr_debug("sending cmd_req->rsp size: %u, ptr: 0x%p\n",
+	pr_debug("sending cmd_req->rsp size: %u, ptr: 0x%pK\n",
 			req.resp_len, req.resp_buf);
 	return ret;
 }

@@ -826,8 +826,6 @@ static void mbim_notify_complete(struct usb_ep *ep, struct usb_request *req)
 
 	int notif_c = 0;
 
-	pr_info("dev:%p\n", mbim);
-
 	spin_lock(&mbim->lock);
 	switch (req->status) {
 	case 0:
@@ -869,7 +867,7 @@ static void mbim_notify_complete(struct usb_ep *ep, struct usb_request *req)
 
 	spin_unlock(&mbim->lock);
 
-	pr_info("dev:%p Exit\n", mbim);
+	pr_debug("%s: Exit\n", __func__);
 }
 
 static void mbim_ep0out_complete(struct usb_ep *ep, struct usb_request *req)
@@ -879,8 +877,6 @@ static void mbim_ep0out_complete(struct usb_ep *ep, struct usb_request *req)
 	struct usb_function	*f = req->context;
 	struct f_mbim		*mbim = func_to_mbim(f);
 	struct mbim_ntb_input_size *ntb = NULL;
-
-	pr_info("dev:%p\n", mbim);
 
 	req->context = NULL;
 	if (req->status || req->actual != req->length) {
@@ -918,7 +914,7 @@ static void mbim_ep0out_complete(struct usb_ep *ep, struct usb_request *req)
 invalid:
 	usb_ep_set_halt(ep);
 
-	pr_err("dev:%p Failed\n", mbim);
+	pr_err("%s: Failed\n", __func__);
 
 	return;
 }
@@ -940,11 +936,11 @@ fmbim_cmd_complete(struct usb_ep *ep, struct usb_request *req)
 		return;
 	}
 
-	pr_info("dev:%p port#%d\n", dev, dev->port_num);
+	pr_info("dev:%pK port#%d\n", dev, dev->port_num);
 
 	spin_lock(&dev->lock);
 	if (!dev->is_open) {
-		pr_err("mbim file handler %p is not open", dev);
+		pr_err("mbim file handler %pK is not open", dev);
 		spin_unlock(&dev->lock);
 		return;
 	}
@@ -1296,7 +1292,7 @@ static int mbim_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 					return ret;
 				}
 
-				pr_info("Set mbim port in_desc = 0x%p",
+				pr_info("Set mbim port in_desc = 0x%pK\n",
 					mbim->bam_port.in->desc);
 
 				ret = config_ep_by_speed(cdev->gadget, f,
@@ -1308,7 +1304,7 @@ static int mbim_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 					return ret;
 				}
 
-				pr_info("Set mbim port out_desc = 0x%p",
+				pr_info("Set mbim port out_desc = 0x%pK\n",
 					mbim->bam_port.out->desc);
 			} else {
 				pr_info("PORTS already SET");
