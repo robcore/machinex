@@ -2194,6 +2194,9 @@ int msm_ipc_router_register_server(struct msm_ipc_port *port_ptr,
 	if (!port_ptr || !name)
 		return -EINVAL;
 
+	if (port_ptr->type != CLIENT_PORT)
+		return -EINVAL;
+
 	if (name->addrtype != MSM_IPC_ADDR_NAME)
 		return -EINVAL;
 
@@ -2881,7 +2884,7 @@ int msm_ipc_router_get_curr_pkt_size(struct msm_ipc_port *port_ptr)
 
 int msm_ipc_router_bind_control_port(struct msm_ipc_port *port_ptr)
 {
-	if (unlikely(!port_ptr))
+	if (unlikely(!port_ptr || port_ptr->type != CLIENT_PORT))
 		return -EINVAL;
 
 	down_write(&local_ports_lock_lha2);
