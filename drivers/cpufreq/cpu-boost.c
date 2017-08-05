@@ -196,6 +196,7 @@ static void cpuboost_input_disconnect(struct input_handle *handle)
 
 static const struct input_device_id cpuboost_ids[] = {
 	/* multi-touch touchscreen */
+#if 
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
 			INPUT_DEVICE_ID_MATCH_ABSBIT,
@@ -216,6 +217,11 @@ static const struct input_device_id cpuboost_ids[] = {
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
 		.evbit = { BIT_MASK(EV_KEY) },
+	},
+	/*software keys*/
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.evbit = { BIT_MASK(EV_SW) },
 	},
 	{ },
 };
