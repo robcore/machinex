@@ -180,14 +180,15 @@ static void power_resume(struct work_struct *work)
 	if (limit_screen_off_cpus)
 		unlock_screen_off_cpus();
 
+	hardplug_all_cpus();
+
 	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
 		}
 	}
-	
-	hardplug_all_cpus();
+
 	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }

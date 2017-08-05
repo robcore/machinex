@@ -69,7 +69,6 @@ static void hardplug_cpu(unsigned int cpu)
 	if (!is_display_on() || !limit_screen_on_cpus)
 		return;
 
-	mutex_lock(&hardplug_mtx);
 	switch (cpu) {
 	case 0:
 		break;
@@ -89,7 +88,6 @@ static void hardplug_cpu(unsigned int cpu)
 	default:
 		break;
 	}
-	mutex_unlock(&hardplug_mtx);
 }
 
 void hardplug_all_cpus(void)
@@ -99,11 +97,11 @@ void hardplug_all_cpus(void)
 	if (!limit_screen_on_cpus)
 		return;
 
-	get_online_cpus();
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
+		if cpu == 0)
+			continue;
 		hardplug_cpu(cpu);
 	}
-	put_online_cpus();
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
 
