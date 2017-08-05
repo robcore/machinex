@@ -186,6 +186,8 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
+	
+	hardplug_all_cpus();
 	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }

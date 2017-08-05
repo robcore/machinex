@@ -1012,6 +1012,9 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 		return -EINVAL;
 	}
 
+	if (!is_cpu_allowed(cpu))
+		return -EINVAL;
+
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
 		return err;
@@ -1031,9 +1034,6 @@ out:
 
 int cpu_up(unsigned int cpu)
 {
-	if (!is_cpu_allowed(cpu))
-		return -EBUSY;
-
 	return do_cpu_up(cpu, CPUHP_ONLINE);
 }
 EXPORT_SYMBOL_GPL(cpu_up);

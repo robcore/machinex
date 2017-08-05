@@ -22,7 +22,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 5
+#define HARDPLUG_MINOR 6
 
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
@@ -34,22 +34,16 @@ unsigned int cpu1_allowed_susp = 1;
 unsigned int cpu2_allowed_susp = 1;
 unsigned int cpu3_allowed_susp = 1;
 
-static bool hardplug_up = false;
-
-static bool hardplug_alive = true;
-static bool is_hardplug_alive(void)
-{
-	return hardplug_alive;
-}
+static DEFINE_MUTEX(hardplug_mtx);
 
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!is_hardplug_alive() || !limit_screen_on_cpus)
+	if (!is_display_on() || !limit_screen_on_cpus)
 		return true;
 
 	switch (cpu) {
 	case 0:
-		break;
+		return true;
 	case 1:
 		if (!cpu1_allowed)
 			return false;
@@ -72,9 +66,10 @@ bool is_cpu_allowed(unsigned int cpu)
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (!is_hardplug_alive() || !limit_screen_on_cpus)
+	if (!is_display_on() || !limit_screen_on_cpus)
 		return;
 
+	mutex_lock(&hardplug_mtx);
 	switch (cpu) {
 	case 0:
 		break;
@@ -94,7 +89,23 @@ static void hardplug_cpu(unsigned int cpu)
 	default:
 		break;
 	}
+	mutex_unlock(&hardplug_mtx);
 }
+
+void hardplug_all_cpus(void)
+{
+	unsigned int cpu = smp_processor_id();
+
+	if (!limit_screen_on_cpus)
+		return;
+
+	get_online_cpus();
+	for_each_possible_cpu(cpu) {
+		hardplug_cpu(cpu);
+	}
+	put_online_cpus();
+}
+EXPORT_SYMBOL(hardplug_all_cpus);
 
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -117,10 +128,7 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	limit_screen_on_cpus = val;
 
-	if (limit_screen_on_cpus) {
-		for_each_online_cpu(cpu)
-			hardplug_cpu(cpu);
-	}
+	hardplug_all_cpus();
 
 	return count;
 }
@@ -151,8 +159,7 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	cpu1_allowed = val;
 
-	if (!cpu1_allowed && limit_screen_on_cpus)
-		hardplug_cpu(1);
+	hardplug_cpu(1);
 
 	return count;
 }
@@ -182,32 +189,10 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	cpu2_allowed = val;
 
-	if (!cpu2_allowed && limit_screen_on_cpus)
-		hardplug_cpu(2);
+	hardplug_cpu(2);
 
 	return count;
 }
-
-static void hardplug_wake(struct power_suspend * h)
-{
-	unsigned int cpu;
-
-	hardplug_alive = true;
-
-	for_each_online_cpu(cpu)
-		hardplug_cpu(cpu);
-}
-
-static void hardplug_sleep(struct power_suspend * h)
-{
-	hardplug_alive = false;
-}
-
-static struct power_suspend hardplug_suspend =
-{
-	.suspend = hardplug_wake,
-	.resume = hardplug_sleep,
-};
 
 static struct kobj_attribute cpu2_allowed_attribute =
 	__ATTR(cpu2_allowed, 0644,
@@ -234,8 +219,7 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	cpu3_allowed = val;
 
-	if (!cpu3_allowed && limit_screen_on_cpus)
-		hardplug_cpu(3);
+	hardplug_cpu(3);
 
 	return count;
 }
@@ -406,7 +390,7 @@ static int __init cpu_hardplug_init(void)
 		return -ENOMEM;
 	}
 
-	hardplug_up = true;
+	mutex_init(&hardplug_mtx);
 
 	return 0;
 }
@@ -416,24 +400,10 @@ static void cpu_hardplug_exit(void)
 {
 	if (cpu_hardplug_kobj != NULL)
 		kobject_put(cpu_hardplug_kobj);
-
-	unregister_power_suspend(&hardplug_suspend);
 }
 
 core_initcall(cpu_hardplug_init);
 module_exit(cpu_hardplug_exit);
-
-static int __init cpu_hardplug_late_init(void)
-{
-	if (hardplug_up)
-		register_power_suspend(&hardplug_suspend);
-	else
-		return -EINVAL;
-
-	return 0;
-}
-
-device_initcall(cpu_hardplug_late_init);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");

@@ -214,9 +214,8 @@ static inline void cpu_hotplug_done(void) { cpus_write_unlock(); }
 static inline void get_online_cpus(void) { cpus_read_lock(); }
 static inline void put_online_cpus(void) { cpus_read_unlock(); }
 
+static void hardplug_all_cpus(void);
 static cpumask_var_t cpu_hardplugged_mask;
-int hardplug_cpus(int primary);
-void unplug_cpus(void);
 extern unsigned int limit_screen_on_cpus;
 extern unsigned int cpu1_allowed;
 extern unsigned int cpu2_allowed;
