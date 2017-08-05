@@ -220,7 +220,7 @@ static struct input_handler cpuboost_input_handler = {
 	.event          = cpuboost_input_event,
 	.connect        = cpuboost_input_connect,
 	.disconnect     = cpuboost_input_disconnect,
-	.name           = "cpu-boost",
+	.name           = "cpufreq",
 	.id_table       = cpuboost_ids,
 };
 
