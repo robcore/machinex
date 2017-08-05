@@ -101,7 +101,9 @@ void hardplug_all_cpus(void)
 		return;
 
 	for_each_online_cpu(cpu) {
-		if cpu == 0)
+		if (cpu == 0)
+			continue;
+		if (cpu_is_offline(cpu))
 			continue;
 		hardplug_cpu(cpu);
 	}
