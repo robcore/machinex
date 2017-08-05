@@ -129,6 +129,7 @@ struct spmi_device {
 	struct spmi_resource	*dev_node;
 	u32			num_dev_node;
 	u8			sid;
+	int			id;
 };
 #define to_spmi_device(d) container_of(d, struct spmi_device, dev)
 
