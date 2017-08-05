@@ -54,6 +54,8 @@ struct gpio_button_data {
 	bool suspended;
 };
 
+static struct workqueue_struct *flipqueue;
+
 struct gpio_keys_drvdata {
 	const struct gpio_keys_platform_data *pdata;
 	struct input_dev *input;
@@ -535,7 +537,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 		INIT_DELAYED_WORK(&bdata->work, gpio_keys_gpio_work_func);
 
 		isr = gpio_keys_gpio_isr;
-		irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+		irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 
 	} else {
 		if (!button->irq) {
@@ -635,10 +637,8 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 	if (flip_bypass)
 		return IRQ_HANDLED;
 
-	cancel_delayed_work_sync(&ddata->flip_cover_dwork);
-
 	if (gpio_to_irq(ddata->gpio_flip_cover))
-		schedule_delayed_work(&ddata->flip_cover_dwork, msecs_to_jiffies(5));
+		mod_delayed_work(flipqueue, &ddata->flip_cover_dwork, msecs_to_jiffies(4));
 	return IRQ_HANDLED;
 }
 
@@ -671,7 +671,7 @@ static int gpio_keys_open(struct input_dev *input)
 			pr_debug("flip cover is fucked\n");
 
 		/* update the current status */
-		schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
+		mod_delayed_work(flipqueue, &ddata->flip_cover_dwork, msecs_to_jiffies(4));
 
 skip_flip:
 	if (pdata->enable) {
@@ -881,6 +881,9 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			input_set_capability(input, EV_SW, SW_FLIP);
 		}
 	}
+
+	flipqueue = alloc_workqueue("flipcov", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+
 	global_dev = dev;
 	ddata->pdata = pdata;
 	ddata->input = input;
@@ -978,6 +981,8 @@ static int gpio_keys_remove(struct platform_device *pdev)
 		gpio_remove_key(&ddata->data[i]);
 
 	input_unregister_device(input);
+
+	destroy_workqueue(flipqueue);
 
 	/* If we have no platform data, we allocated pdata dynamically. */
 	if (!dev_get_platdata(&pdev->dev))

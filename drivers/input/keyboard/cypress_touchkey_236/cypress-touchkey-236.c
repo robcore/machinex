@@ -1597,9 +1597,9 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 	cypress_init_dvfs(info);
 #endif
 
-	ret = request_threaded_irq(client->irq, NULL,
+	ret = request_any_context_irq(client->irq, NULL,
 			cypress_touchkey_interrupt,
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT, client->dev.driver->name, info);
+			IRQF_TRIGGER_FALLING, client->dev.driver->name, info);
 	if (ret < 0) {
 		dev_err(&client->dev, "Failed to request IRQ %d (err: %d).\n",
 				client->irq, ret);
@@ -1613,14 +1613,14 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 #endif /* CONFIG_POWERSUSPEND */
 
 #if defined(CONFIG_GLOVE_TOUCH)
-	info->glove_wq = alloc_workqueue("cypress_touchkey", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	info->glove_wq = alloc_workqueue("cypress_touchkey_glove", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!info->glove_wq)
 		dev_err(&client->dev, "fail to create glove workquewe.\n");
 	else
 		INIT_WORK(&info->glove_work, cypress_touchkey_glove_work);
 #endif
 
-	info->led_wq = alloc_workqueue("cypress_touchkey", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	info->led_wq = alloc_workqueue("cypress_touchkey_led", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!info->led_wq)
 		dev_err(&client->dev, "fail to create led workquewe.\n");
 	else
