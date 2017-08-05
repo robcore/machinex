@@ -96,7 +96,7 @@ static void update_policy_online(unsigned int cpu)
 static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpu_sync *i_sync_info
+	struct cpu_sync *i_sync_info;
 	struct cpufreq_policy policy;
 
 
