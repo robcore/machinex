@@ -214,7 +214,8 @@ static const struct input_device_id cpuboost_ids[] = {
 	},
 	/* Keypad */
 	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+				INPUT_DEVICE_ID_MATCH_RELBIT,
 		.evbit = { BIT_MASK(EV_KEY) },
 	},
 	/*software keys*/
