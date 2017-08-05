@@ -85,23 +85,24 @@ static void update_policy_online(unsigned int cpu)
 {
 	/* Nope just online
 	 */
-	get_online_cpus();
+	//get_online_cpus();
 	for_each_online_cpu(cpu) {
 		reapply_hard_limits(cpu);
 		cpufreq_update_policy(cpu);
 	}
-	put_online_cpus();
+	//put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
+	struct cpu_sync *i_sync_info
 	struct cpufreq_policy policy;
 
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
+		i_sync_info = &per_cpu(sync_info, cpu);
 		if (cpufreq_get_policy(&policy, cpu))
 			return;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
@@ -114,7 +115,7 @@ static void do_input_boost_rem(struct work_struct *work)
 static void do_input_boost(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
+	struct cpu_sync *i_sync_info;
 
 	if (!input_boost_enabled || !input_boost_ms ||
 		thermal_core_controlled)
@@ -122,6 +123,7 @@ static void do_input_boost(struct work_struct *work)
 
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
+		i_sync_info = &per_cpu(sync_info, cpu);
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
