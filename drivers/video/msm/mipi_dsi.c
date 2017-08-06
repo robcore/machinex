@@ -243,20 +243,12 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mipi_dsi_pdata->power_common();
 
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
-#if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
-	if( is_booting == 1 ) {
-		is_booting = 0;
-	}
-#endif
-
 	if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
 		mipi_dsi_pdata->panel_power_save(1);
 #endif
 
-#if !defined(CONFIG_SEC_PRODUCT_8930) && !defined(CONFIG_SEC_PRODUCT_8960)
 	if (system_rev == 6)
 		mdelay(500);
-#endif
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(1);
@@ -277,10 +269,6 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	mipi_dsi_phy_init(0, &(mfd->panel_info), target_type);
 
 	mipi_dsi_clk_enable();
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_QHD_PT_PANEL)
-	mipi_dsi_configure_dividers(60);
-#endif
-
 
 	MIPI_OUTP(MIPI_DSI_BASE + 0x114, 1);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x114, 0);
@@ -351,28 +339,8 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	}
 
 	mipi_dsi_host_init(mipi);
-#if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT_PANEL)
-	{
-		u32 tmp_reg0c, tmp_rega8;
-		udelay(200);
-		/* backup register values */
-		tmp_reg0c = MIPI_INP(MIPI_DSI_BASE + 0x000c);
-		tmp_rega8 = MIPI_INP(MIPI_DSI_BASE + 0xA8);
-		/* Clear HS  mode assertion and related flags */
-		MIPI_OUTP(MIPI_DSI_BASE + 0x0c, 0x8000);
-		MIPI_OUTP(MIPI_DSI_BASE + 0xA8, 0x0);
-		wmb();
-		mdelay(10);
-		if (mipi_dsi_pdata && mipi_dsi_pdata->lcd_rst_up)
-		mipi_dsi_pdata->lcd_rst_up();
-		/* restore previous values */
-		MIPI_OUTP(MIPI_DSI_BASE + 0x0c, tmp_reg0c);
-		MIPI_OUTP(MIPI_DSI_BASE + 0xa8, tmp_rega8);
-		wmb();
-	}
-#else
-	mdelay(10);
-#if defined (CONFIG_MIPI_DSI_RESET_LP11)
+
+	msleep(10);
 
 	/* LP11 */
 	tmp = MIPI_INP(MIPI_DSI_BASE + 0xA8);
@@ -381,18 +349,10 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	wmb();
 	/* LP11 */
 
-	mdelay(5);
+	usleep(5000);
 	if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 			mipi_dsi_pdata->active_reset(1); /* high */
-	mdelay(10);
-#endif
-#if defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
-	if(system_rev)
-		ret = panel_next_on(pdev);
-#elif defined(CONFIG_MACH_LT02_CHN_CTC)
-        ret = panel_next_on(pdev);
-#endif
-#endif
+	usleep(10000);
 	/* always high */
 	if (mipi->force_clk_lane_hs) {
 		tmp = MIPI_INP(MIPI_DSI_BASE + 0xA8);
@@ -406,13 +366,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	else
 		down(&mfd->dma->mutex);
 
-#if !defined(CONFIG_MACH_LT02_CHN_CTC)
-#if defined(CONFIG_MACH_LT02_SPR) || defined(CONFIG_MACH_LT02_ATT) || defined(CONFIG_MACH_LT02_TMO)
-	if(!system_rev)
-		ret = panel_next_on(pdev);
-#else
 	ret = panel_next_on(pdev);
-#endif
 #endif
 	mipi_dsi_op_mode_config(mipi->mode);
 

@@ -1043,6 +1043,8 @@ int mdp4_dsi_cmd_on(struct platform_device *pdev)
 	pr_debug("%s+: pid=%d\n", __func__, current->pid);
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+	if (mfd == NULL)
+		return -ENODEV;
 	mfd->cont_splash_done = 1;
 
 	vctrl = &vsync_ctrl_db[cndx];

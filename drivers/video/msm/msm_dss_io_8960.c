@@ -71,60 +71,56 @@ int mipi_dsi_clk_init(struct platform_device *pdev)
 
 	mfd = platform_get_drvdata(pdev);
 
+	if (mfd == NULL)
+		return -ENODEV;
+
 	amp_pclk = clk_get(dev, "arb_clk");
 	if (IS_ERR_OR_NULL(amp_pclk)) {
 		pr_err("can't find amp_pclk\n");
 		amp_pclk = NULL;
-		goto mipi_dsi_clk_err;
+		return -ENOMEM;
 	}
 
 	dsi_m_pclk = clk_get(dev, "master_iface_clk");
 	if (IS_ERR_OR_NULL(dsi_m_pclk)) {
 		pr_err("can't find dsi_m_pclk\n");
 		dsi_m_pclk = NULL;
-		goto mipi_dsi_clk_err;
+		goto dsi_m_pclk_err;
 	}
 
 	dsi_s_pclk = clk_get(dev, "slave_iface_clk");
 	if (IS_ERR_OR_NULL(dsi_s_pclk)) {
 		pr_err("can't find dsi_s_pclk\n");
 		dsi_s_pclk = NULL;
-		goto mipi_dsi_clk_err;
+		goto dsi_s_pclk_err;
 	}
 
 	dsi_byte_div_clk = clk_get(dev, "byte_clk");
 	if (IS_ERR(dsi_byte_div_clk)) {
 		pr_err("can't find dsi_byte_div_clk\n");
 		dsi_byte_div_clk = NULL;
-		goto mipi_dsi_clk_err;
+		goto dsi_byte_div_clk_err;
 	}
 
 	dsi_esc_clk = clk_get(dev, "esc_clk");
 	if (IS_ERR(dsi_esc_clk)) {
 		printk(KERN_ERR "can't find dsi_esc_clk\n");
 		dsi_esc_clk = NULL;
-		goto mipi_dsi_clk_err;
+		goto dsi_esc_clk_err;
 	}
 
 	return 0;
 
-mipi_dsi_clk_err:
-	mipi_dsi_clk_deinit(dev);
-	return -EPERM;
-}
+dsi_esc_clk_err:
+	clk_put(dsi_byte_div_clk);
+dsi_byte_div_clk_err:
+	clk_put(dsi_s_pclk);
+dsi_s_pclk_err:
+	clk_put(dsi_m_pclk);
+dsi_m_pclk_err:
+	clk_put(amp_pclk);
 
-void mipi_dsi_clk_deinit(struct device *dev)
-{
-	if (amp_pclk)
-		clk_put(amp_pclk);
-	if (amp_pclk)
-		clk_put(dsi_m_pclk);
-	if (dsi_s_pclk)
-		clk_put(dsi_s_pclk);
-	if (dsi_byte_div_clk)
-		clk_put(dsi_byte_div_clk);
-	if (dsi_esc_clk)
-		clk_put(dsi_esc_clk);
+	return -ENOMEM;
 }
 
 static void mipi_dsi_clk_ctrl(struct dsi_clk_desc *clk, int clk_en)
@@ -674,16 +670,61 @@ void mipi_dsi_phy_init(int panel_ndx, struct msm_panel_info const *panel_info,
 		mipi_dsi_configure_serdes();
 }
 
+static int mipi_dsi_prepare_enable_clocks(void)
+{
+	int rc = 0;
+
+	rc = clk_prepare_enable(dsi_byte_div_clk);
+	if (rc) {
+		pr_err("%s: dsi_byte_div_clk - "
+			"clk_prepare_enable failed\n", __func__);
+		return rc;
+	}
+
+	rc = clk_prepare_enable(dsi_esc_clk);
+	if (rc) {
+		pr_err("%s: dsi_esc_clk - "
+			"clk_prepare_enable failed\n", __func__);
+		return rc;
+	}
+
+	return rc;
+
+}
+
+static int mipi_dsi_unprepare_disable_clocks(void)
+{
+	int rc = 0;
+
+	rc = clk_unprepare_disable(dsi_esc_clk);
+		pr_err("%s: dsi_esc_clk - "
+			"clk_unprepare_disable failed\n", __func__);
+		return rc;
+	}
+	rc = clk_unprepare_disable(dsi_byte_div_clk);
+	if (rc) {
+		pr_err("%s: dsi_byte_div_clk - "
+			"clk_unprepare_disable failed\n", __func__);
+		return rc;
+	}
+	return rc;
+}
+
+static unsigned int cont_splash_clks_enabled = 0;
 void cont_splash_clk_ctrl(int enable)
 {
-	static int cont_splash_clks_enabled;
+	rc;
 	if (enable && !cont_splash_clks_enabled) {
-			clk_prepare_enable(dsi_byte_div_clk);
-			clk_prepare_enable(dsi_esc_clk);
+		rc = mipi_dsi_prepare_enable_clocks();
+		if (rc)
+			cont_splash_clks_enabled = 0;
+		else
 			cont_splash_clks_enabled = 1;
 	} else if (!enable && cont_splash_clks_enabled) {
-			clk_disable_unprepare(dsi_byte_div_clk);
-			clk_disable_unprepare(dsi_esc_clk);
+		rc = mipi_dsi_unprepare_disable_clocks();
+		if (rc)
+			cont_splash_clks_enabled = 1;
+		else
 			cont_splash_clks_enabled = 0;
 	}
 }
@@ -697,8 +738,8 @@ void mipi_dsi_prepare_ahb_clocks(void)
 
 void mipi_dsi_unprepare_ahb_clocks(void)
 {
-	clk_unprepare(dsi_m_pclk);
 	clk_unprepare(dsi_s_pclk);
+	clk_unprepare(dsi_m_pclk);
 	clk_unprepare(amp_pclk);
 }
 
@@ -735,8 +776,8 @@ void mipi_dsi_ahb_ctrl(u32 enable)
 			pr_info("%s: ahb clks already OFF\n", __func__);
 			return;
 		}
-		clk_disable(dsi_m_pclk);
 		clk_disable(dsi_s_pclk);
+		clk_disable(dsi_m_pclk);
 		clk_disable(amp_pclk); /* clock for AHB-master to AXI */
 		ahb_ctrl_done = 0;
 	}
@@ -746,24 +787,27 @@ void mipi_dsi_clk_enable(void)
 {
 	u32 pll_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0200);
 	if (mipi_dsi_clk_on) {
-		pr_info("%s: mipi_dsi_clks already ON\n", __func__);
+		pr_err("%s: mipi_dsi_clks already ON\n", __func__);
 		return;
 	}
 	MIPI_OUTP(MIPI_DSI_BASE + 0x0200, pll_ctrl | 0x01);
 	mipi_dsi_phy_rdy_poll();
 
 	if (clk_set_rate(dsi_byte_div_clk, 1) < 0)      /* divided by 1 */
-		pr_err("%s: dsi_byte_div_clk - "
+		panic("%s: dsi_byte_div_clk - "
 			"clk_set_rate failed\n", __func__);
 	if (clk_set_rate(dsi_esc_clk, esc_byte_ratio) < 0) /* divided by esc */
-		pr_err("%s: dsi_esc_clk - "                      /* clk ratio */
+		panic("%s: dsi_esc_clk - "                      /* clk ratio */
 			"clk_set_rate failed\n", __func__);
 	mipi_dsi_pclk_ctrl(&dsi_pclk, 1);
 	mipi_dsi_clk_ctrl(&dsicore_clk, 1);
-	clk_prepare_enable(dsi_byte_div_clk);
-	clk_prepare_enable(dsi_esc_clk);
-	mipi_dsi_clk_on = 1;
-	mdp4_stat.dsi_clk_on++;
+	if (mipi_dsi_prepare_enable_clocks()) {
+		mipi_dsi_clk_on = 0;
+		return;
+	} else {
+		mipi_dsi_clk_on = 1;
+		mdp4_stat.dsi_clk_on++;
+	}
 }
 
 void mipi_dsi_clk_disable(void)
@@ -774,8 +818,12 @@ void mipi_dsi_clk_disable(void)
 	}
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
-	mipi_dsi_pclk_ctrl(&dsi_pclk, 0);
+	if (mipi_dsi_unprepare_disable_clocks) {
+		mipi_dsi_clk_on = 1;
+		return;
+	}
 	mipi_dsi_clk_ctrl(&dsicore_clk, 0);
+	mipi_dsi_pclk_ctrl(&dsi_pclk, 0);
 	/* DSIPHY_PLL_CTRL_0, disable dsi pll */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x0200, 0x0);
 	mipi_dsi_clk_on = 0;

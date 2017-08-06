@@ -2067,4 +2067,3 @@ static int __init mipi_video_samsung_octa_full_hd_pt_init(void)
 }
 module_init(mipi_video_samsung_octa_full_hd_pt_init);
 MODULE_LICENSE("GPL v2");
-
