@@ -243,7 +243,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	unsigned int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
-	u64 delta;
+	s64 delta;
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -337,7 +337,7 @@ static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
-	u64 delta;
+	s64 delta;
 
 	now = ktime_to_us(ktime_get());
 	last_input = now;

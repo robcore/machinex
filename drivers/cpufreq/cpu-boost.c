@@ -32,6 +32,7 @@ struct cpu_sync {
 };
 
 static bool input_boosted;
+static bool force_unboost = false;
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
@@ -47,8 +48,12 @@ module_param(input_boost_ms, uint, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
+
 static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
+
+u64 min_interval = max(min_input_interval, input_boost_ms);
+
 unsigned int input_boost_limit;
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
@@ -109,9 +114,11 @@ static void do_input_boost_rem(struct work_struct *work)
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
 	}
-	input_boosted = false;
 	/* Update policies for all online CPUs */
 	update_policy_online(cpu);
+	input_boosted = false;
+	if (force_unboost)
+		force_unboost = false;
 }
 
 static void do_input_boost(struct work_struct *work)
@@ -132,9 +139,10 @@ static void do_input_boost(struct work_struct *work)
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
-	input_boosted = true;
+
 	/* Update policies for all online CPUs */
 	update_policy_online(cpu);
+	input_boosted = true;
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
@@ -144,17 +152,16 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
-	u64 delta;
-	u64 min_interval;
+	s64 delta;
 
-	if (!input_boost_enabled || !hotplug_ready)
+	if (!input_boost_enabled || !hotplug_ready 
+	    || force_unboost || !input_boost_ms)
 		return;
 
 	now = ktime_to_us(ktime_get());
-	min_interval = max(min_input_interval, input_boost_ms);
 	delta = (now - last_input_time);
 
-	if (delta < (min_interval * USEC_PER_MSEC))
+	if (delta < min_interval * USEC_PER_MSEC)
 		return;
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
@@ -262,6 +269,40 @@ static struct input_handler cpuboost_input_handler = {
 	.id_table       = cpuboost_ids,
 };
 
+static int cpuboost_cpufreq_callback(struct notifier_block *nfb,
+		unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	u64 current;
+	s64 delta;
+
+
+	if (!input_boost_enabled || !hotplug_ready 
+	    || !input_boost_ms)
+		return NOTIFY_OK;
+
+	switch (event & ~CPU_TASKS_FROZEN) {
+		/* Fall through. */
+	case CPUFREQ_NOTIFY:
+	case CPUFREQ_ADJUST:
+		current = ktime_to_us(ktime_get());
+		delta = current - last_input_time;
+		if (delta > input_boost_ms && input_boosted && !force_unboost) {
+			force_unboost = true;
+			mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem, 0);
+		}
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cpuboost_cpufreq_notifier = {
+	.notifier_call = cpuboost_cpufreq_callback,
+};
+
 static int cpu_boost_init(void)
 {
 	int cpu, ret;
@@ -281,10 +322,16 @@ static int cpu_boost_init(void)
 
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
-		pr_err("Cannot register cpuboost input handler.\n");
+		pr_err("ERROR! Cpuboost input handler registration failed!\n");
+
+	ret = cpufreq_register_notifier(&cpuboost_cpufreq_notifier,
+			CPUFREQ_POLICY_NOTIFIER);
+	if (ret)
+		pr_err("ERROR! Cpuboost freq notifier init failed!\n");
 
 	return ret;
 }
+
 late_initcall(cpu_boost_init);
 MODULE_AUTHOR("Neobuddy89/upstream/robcore");
 MODULE_DESCRIPTION("'cpu_boost' - Does what it says");
