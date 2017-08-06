@@ -24,15 +24,13 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#include <linux/display_state.h>
 
 struct cpu_sync {
 	unsigned int cpu;
 	unsigned int input_boost_min;
 	unsigned int input_boost_freq;
 };
-
-static bool input_boosted;
-static bool force_unboost = false;
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
@@ -87,8 +85,13 @@ static const struct kernel_param_ops param_ops_input_boost_freq = {
 };
 module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
-static void update_policy_online(unsigned int cpu)
+static void update_policy_online(void)
 {
+	unsigned int cpu;
+
+	if (!is_display_on())
+		return;
+
 	for_each_online_cpu(cpu) {
 		reapply_hard_limits(cpu);
 		cpufreq_update_policy(cpu);
@@ -97,51 +100,41 @@ static void update_policy_online(unsigned int cpu)
 
 static void do_input_boost_rem(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
 	struct cpu_sync *i_sync_info;
 	struct cpufreq_policy policy;
 
+	if (!is_display_on() || !input_boost_enabled || !input_boost_ms)
+		return;
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
 		i_sync_info = &per_cpu(sync_info, cpu);
-		i_sync_info->cpu = cpu;
 		if (cpufreq_get_policy(&policy, cpu))
-			return;
-		if (input_boost_limit == i_sync_info->input_boost_min &&
-			i_sync_info->input_boost_min == policy.hlimit_min_screen_on)
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
 	}
+
 	/* Update policies for all online CPUs */
-	update_policy_online(cpu);
-	input_boosted = false;
-	if (force_unboost)
-		force_unboost = false;
+	update_policy_online();
 }
 
 static void do_input_boost(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
 	struct cpu_sync *i_sync_info;
 
-	if (!input_boost_enabled || !input_boost_ms ||
-		thermal_core_controlled || force_unboost)
+	if (!input_boost_enabled || !input_boost_ms || !is_display_on())
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
 		i_sync_info = &per_cpu(sync_info, cpu);
-		i_sync_info->cpu = cpu;
-		if (input_boost_limit == i_sync_info->input_boost_min &&
-			i_sync_info->input_boost_min == i_sync_info->input_boost_freq)
-			continue;
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
 	/* Update policies for all online CPUs */
-	update_policy_online(cpu);
-	input_boosted = true;
+	update_policy_online();
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
@@ -150,18 +143,17 @@ static void do_input_boost(struct work_struct *work)
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-	u64 min_interval = max(min_input_interval, input_boost_ms);
+	u64 min_interval;
 	u64 now;
-	s64 delta;
 
 	if (!input_boost_enabled || !hotplug_ready 
-	    || force_unboost || !input_boost_ms)
+	    || !input_boost_ms || !is_display_on())
 		return;
 
+	min_interval = max(min_input_interval, input_boost_ms);
 	now = ktime_to_us(ktime_get());
-	delta = (now - last_input_time);
 
-	if (delta < min_interval * USEC_PER_MSEC)
+	if (now - last_input_time < min_interval * USEC_PER_MSEC)
 		return;
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
@@ -209,54 +201,24 @@ static const struct input_device_id cpuboost_ids[] = {
 	/* multi-touch touchscreen */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT |
-				INPUT_DEVICE_ID_MATCH_RELBIT,
+			INPUT_DEVICE_ID_MATCH_ABSBIT,
 		.evbit = { BIT_MASK(EV_ABS) },
 		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
 			BIT_MASK(ABS_MT_POSITION_X) |
 			BIT_MASK(ABS_MT_POSITION_Y) },
-		.relbit = { BIT_MASK(EV_REL) },
 	},
 	/* touchpad */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT |
-				INPUT_DEVICE_ID_MATCH_RELBIT,
+			INPUT_DEVICE_ID_MATCH_ABSBIT,
 		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
 		.absbit = { [BIT_WORD(ABS_X)] =
 			BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
-		.relbit = { BIT_MASK(EV_REL) },
 	},
 	/* Keypad */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
 		.evbit = { BIT_MASK(EV_KEY) },
-	},
-	/* switch/flipcover */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-				 INPUT_DEVICE_ID_MATCH_SWBIT,
-		.evbit = { BIT_MASK(EV_SW) },
-		.swbit = { [BIT_WORD(SW_FLIP)] = BIT_MASK(SW_FLIP) },
-	},
-	/* Keys */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-				INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { [BIT_WORD(EV_KEY)] = BIT_MASK(EV_KEY) },
-		.keybit = { [BIT_WORD(KEY_VOLUMEUP)] = BIT_MASK(KEY_VOLUMEUP) },
-	},
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-				INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { [BIT_WORD(EV_KEY)] = BIT_MASK(EV_KEY) },
-		.keybit = { [BIT_WORD(KEY_VOLUMEDOWN)] = BIT_MASK(KEY_VOLUMEDOWN) },
-	},
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-				INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { [BIT_WORD(EV_KEY)] = BIT_MASK(EV_KEY) },
-		.keybit = { [BIT_WORD(KEY_HOMEPAGE)] = BIT_MASK(KEY_HOMEPAGE) },
 	},
 	{ },
 };
@@ -265,42 +227,8 @@ static struct input_handler cpuboost_input_handler = {
 	.event          = cpuboost_input_event,
 	.connect        = cpuboost_input_connect,
 	.disconnect     = cpuboost_input_disconnect,
-	.name           = "cpufreq",
+	.name           = "cpu-boost",
 	.id_table       = cpuboost_ids,
-};
-
-static int cpuboost_cpufreq_callback(struct notifier_block *nfb,
-		unsigned long event, void *data)
-{
-	struct cpufreq_policy *policy = data;
-	u64 currboost;
-	s64 delta;
-
-
-	if (!input_boost_enabled || !hotplug_ready 
-	    || !input_boost_ms)
-		return NOTIFY_OK;
-
-	switch (event & ~CPU_TASKS_FROZEN) {
-		/* Fall through. */
-	case CPUFREQ_NOTIFY:
-	case CPUFREQ_ADJUST:
-		currboost = ktime_to_us(ktime_get());
-		delta = currboost - last_input_time;
-		if (delta > input_boost_ms && input_boosted && !force_unboost) {
-			force_unboost = true;
-			mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem, 0);
-		}
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block cpuboost_cpufreq_notifier = {
-	.notifier_call = cpuboost_cpufreq_callback,
 };
 
 static int cpu_boost_init(void)
@@ -323,11 +251,6 @@ static int cpu_boost_init(void)
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
 		pr_err("ERROR! Cpuboost input handler registration failed!\n");
-
-	ret = cpufreq_register_notifier(&cpuboost_cpufreq_notifier,
-			CPUFREQ_POLICY_NOTIFIER);
-	if (ret)
-		pr_err("ERROR! Cpuboost freq notifier init failed!\n");
 
 	return ret;
 }
