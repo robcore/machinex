@@ -237,7 +237,7 @@ static const struct input_device_id cpuboost_ids[] = {
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT | INPUT_DEVICE_ID_MATCH_KEYBIT,
 		.evbit = { BIT_MASK(EV_KEY) },
-		.keybit = { [BIT_WORD(KEY_HOME)] = BIT_MASK(KEY_HOME) },
+		.keybit = { [BIT_WORD(KEY_HOMEPAGE)] = BIT_MASK(KEY_HOMEPAGE) },
 	},
 
 	/*software keys*/
