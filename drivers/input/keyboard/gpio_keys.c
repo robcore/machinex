@@ -420,6 +420,8 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 			 * handler to run.
 			 */
 			input_report_key(bdata->input, button->code, 1);
+			/* And then relase it you fucking dumbass. */
+			input_report_key(bdata->input, button->code, 0);
 		}
 	}
 
