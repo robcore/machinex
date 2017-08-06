@@ -1,4 +1,5 @@
 /* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017, Rob Patershuk "robcore".
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -63,6 +64,7 @@ static struct clk *dsi_s_pclk;
 
 static struct clk *amp_pclk;
 int mipi_dsi_clk_on;
+static bool clocks_are_null = true;
 
 int mipi_dsi_clk_init(struct platform_device *pdev)
 {
@@ -109,6 +111,7 @@ int mipi_dsi_clk_init(struct platform_device *pdev)
 		goto dsi_esc_clk_err;
 	}
 
+	clocks_are_null = false;
 	return 0;
 
 dsi_esc_clk_err:
@@ -674,6 +677,9 @@ static int mipi_dsi_prepare_enable_clocks(void)
 {
 	int rc = 0;
 
+	if (clocks_are_null)
+		return -ENOMEM;
+
 	rc = clk_prepare_enable(dsi_byte_div_clk);
 	if (rc) {
 		pr_err("%s: dsi_byte_div_clk - "
@@ -692,21 +698,12 @@ static int mipi_dsi_prepare_enable_clocks(void)
 
 }
 
-static int mipi_dsi_disable_unprepare_clocks(void)
+static int mipi_dsi_disable_clocks(void)
 {
-	if (dsi_esc_clk == NULL) {
-		pr_err("%s: dsi_esc_clk is NULL - "
-			"clk_disable_unprepare failed\n", __func__);
+	if (clocks_are_null)
 		return -ENOMEM;
-	}
-	clk_disable_unprepare(dsi_esc_clk);
-
-	if (dsi_byte_div_clk == NULL) {
-		pr_err("%s: dsi_byte_div_clk is NULL - "
-			"clk_disable_unprepare failed\n", __func__);
-		return -ENOMEM;
-	}
-	clk_disable_unprepare(dsi_byte_div_clk);
+	clk_disable(dsi_esc_clk);
+	clk_disable(dsi_byte_div_clk);
 	return 0;
 }
 
@@ -818,7 +815,7 @@ void mipi_dsi_clk_disable(void)
 	}
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
-	if (mipi_dsi_disable_unprepare_clocks) {
+	if (mipi_dsi_disable_clocks) {
 		mipi_dsi_clk_on = 1;
 		return;
 	}
