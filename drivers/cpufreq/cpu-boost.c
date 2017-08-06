@@ -104,7 +104,8 @@ static void do_input_boost_rem(struct work_struct *work)
 		i_sync_info->cpu = cpu;
 		if (cpufreq_get_policy(&policy, cpu))
 			return;
-		if (input_boost_limit == i_sync_info->input_boost_min == policy.hlimit_min_screen_on)
+		if (input_boost_limit == i_sync_info->input_boost_min &&
+			i_sync_info->input_boost_min == policy.hlimit_min_screen_on)
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
 	}
@@ -126,7 +127,8 @@ static void do_input_boost(struct work_struct *work)
 	for_each_online_cpu(cpu) {
 		i_sync_info = &per_cpu(sync_info, cpu);
 		i_sync_info->cpu = cpu;
-		if (input_boost_limit == i_sync_info->input_boost_min == i_sync_info->input_boost_freq)
+		if (input_boost_limit == i_sync_info->input_boost_min &&
+			i_sync_info->input_boost_min == i_sync_info->input_boost_freq)
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
