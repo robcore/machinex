@@ -367,7 +367,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		down(&mfd->dma->mutex);
 
 	ret = panel_next_on(pdev);
-#endif
+
 	mipi_dsi_op_mode_config(mipi->mode);
 
 	if (mfd->panel_info.type == MIPI_CMD_PANEL) {
