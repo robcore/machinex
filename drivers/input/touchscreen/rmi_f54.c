@@ -3083,7 +3083,6 @@ static void boost_level(void)
 				rmi4_data->dvfs_lock_status = false;
 			}
 	}
-#endif
 
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
