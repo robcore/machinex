@@ -370,6 +370,7 @@ static struct attribute_group gpio_keys_attr_group = {
 	.attrs = gpio_keys_attrs,
 };
 
+static bool fakepressed = false;
 static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 {
 	const struct gpio_keys_button *button = bdata->button;
@@ -398,7 +399,12 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 
 	gpio_keys_gpio_report_event(bdata);
 
-	if (bdata->button->wakeup)
+	if (bdata->button->wakeup) {
+		if (fakepressed) {
+			input_report_key(bdata->input, button->code, 0);
+			gpio_keys_gpio_report_event(bdata);
+			fakepressed = false;
+	}
 		pm_relax(bdata->input->dev.parent);
 }
 
@@ -420,8 +426,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 			 * handler to run.
 			 */
 			input_report_key(bdata->input, button->code, 1);
-			/* And then relase it you fucking dumbass. */
-			input_report_key(bdata->input, button->code, 0);
+			fakepressed = true;
 		}
 	}
 
