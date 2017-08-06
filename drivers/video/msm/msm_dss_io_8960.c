@@ -694,20 +694,20 @@ static int mipi_dsi_prepare_enable_clocks(void)
 
 static int mipi_dsi_disable_unprepare_clocks(void)
 {
-	int rc = 0;
+	if (dsi_esc_clk == NULL) {
+		pr_err("%s: dsi_esc_clk is NULL - "
+			"clk_disable_unprepare failed\n", __func__);
+		return -ENOMEM;
+	}
+	clk_disable_unprepare(dsi_esc_clk);
 
-	rc = clk_disable_unprepare(dsi_esc_clk);
-		pr_err("%s: dsi_esc_clk - "
+	if (dsi_byte_div_clk == NULL) {
+		pr_err("%s: dsi_byte_div_clk is NULL - "
 			"clk_disable_unprepare failed\n", __func__);
-		return rc;
+		return -ENOMEM;
 	}
-	rc = clk_disable_unprepare(dsi_byte_div_clk);
-	if (rc) {
-		pr_err("%s: dsi_byte_div_clk - "
-			"clk_disable_unprepare failed\n", __func__);
-		return rc;
-	}
-	return rc;
+	clk_disable_unprepare(dsi_byte_div_clk);
+	return 0;
 }
 
 static unsigned int cont_splash_clks_enabled = 0;
