@@ -510,9 +510,6 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 		unsigned flags = GPIOF_IN;
 
-		if (button->active_low)
-			flags |= GPIOF_ACTIVE_LOW;
-
 		error = devm_gpio_request_one(dev, button->gpio, flags, desc);
 		if (error < 0) {
 			dev_dbg(dev, "Failed to request GPIO %d, error %d\n",
