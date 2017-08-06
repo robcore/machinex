@@ -398,7 +398,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 
 	gpio_keys_gpio_report_event(bdata);
 
-	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE)
+	if (bdata->button->wakeup)
 		pm_relax(bdata->input->dev.parent);
 }
 
@@ -408,9 +408,10 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 
 	BUG_ON(irq != bdata->irq);
 
-	if (bdata->button->wakeup || bdata->button->code == KEY_HOMEPAGE) {
+	if (bdata->button->wakeup) {
 		const struct gpio_keys_button *button = bdata->button;
-				pm_stay_awake(bdata->input->dev.parent);
+
+		pm_stay_awake(bdata->input->dev.parent);
 		if (bdata->suspended  &&
 		    (button->type == 0 || button->type == EV_KEY)) {
 			/*
@@ -457,7 +458,7 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 
 	if (!bdata->key_pressed) {
 		if (bdata->button->wakeup)
-			pm_wakeup_hard_event(bdata->input->dev.parent);
+			pm_wakeup_event(bdata->input->dev.parent, 0);
 
 		input_event(input, EV_KEY, button->code, 1);
 		input_sync(input);
@@ -507,8 +508,12 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 	if (gpio_is_valid(button->gpio)) {
 
-		error = devm_gpio_request_one(dev, button->gpio,
-					      GPIOF_IN, desc);
+		unsigned flags = GPIOF_IN;
+
+		if (button->active_low)
+			flags |= GPIOF_ACTIVE_LOW;
+
+		error = devm_gpio_request_one(dev, button->gpio, flags, desc);
 		if (error < 0) {
 			dev_dbg(dev, "Failed to request GPIO %d, error %d\n",
 				button->gpio, error);
@@ -558,7 +563,7 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 		isr = gpio_keys_irq_isr;
 		irqflags = 0;
-		irqflags |= IRQF_EARLY_RESUME;
+		//irqflags |= IRQF_EARLY_RESUME;
 	}
 
 	input_set_capability(input, button->type ?: EV_KEY, button->code);
@@ -754,7 +759,7 @@ static ssize_t wakeup_enable(struct device *dev,
 
 	for (i = 0; i < ddata->pdata->nbuttons; i++) {
 		struct gpio_button_data *button = &ddata->data[i];
-		if (button->button->type == EV_KEY || button->button->code == KEY_HOMEPAGE) {
+		if (button->button->type == EV_KEY) {
 			if (test_bit(button->button->code, bits))
 				button->button->wakeup = 1;
 			else
@@ -917,7 +922,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 		if (error)
 			goto fail2;
 
-		if (button->wakeup || bdata->button->code == KEY_HOMEPAGE)
+		if (button->wakeup)
 			wakeup = 1;
 	}
 
@@ -1002,8 +1007,7 @@ static int gpio_keys_suspend(struct device *dev)
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
-			if (bdata->button->wakeup || \
-			    bdata->button->code == KEY_HOMEPAGE)
+			if (bdata->button->wakeup)
 				enable_irq_wake(bdata->irq);
 			bdata->suspended = true;
 		}
@@ -1031,8 +1035,7 @@ static int gpio_keys_resume(struct device *dev)
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
-			if (bdata->button->wakeup || \
-			    bdata->button->code == KEY_HOMEPAGE)
+			if (bdata->button->wakeup)
 				disable_irq_wake(bdata->irq);
 			bdata->suspended = false;
 		}
@@ -1054,7 +1057,6 @@ static int gpio_keys_resume(struct device *dev)
 		return error;
 
 	gpio_keys_report_state(ddata);
-
 	return 0;
 }
 
