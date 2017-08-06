@@ -486,12 +486,12 @@ static struct pm8xxx_mpp_config_data MLCD_RESET_LOW_CONFIG = {
 	.control		= PM8XXX_MPP_DOUT_CTRL_LOW,
 };
 
-static unsigned int dsi_is_on = false;
 static int mipi_dsi_power(int enable)
 {
 	int rc = 0;
 
-	if (enable && !dsi_is_on) {
+	if (enable) {
+
 		pr_info("[lcd] DSI ON\n");
 		rc = regulator_set_optimum_mode(reg_l2, 100000);
 		if (rc < 0) {
@@ -504,8 +504,7 @@ static int mipi_dsi_power(int enable)
 			pr_err("enable L2 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
-		dsi_is_on = true;
-	} else if (!enable && dsi_is_on) {
+	} else {
 
 		pr_info("[lcd] DSI OFF\n");
 		rc = regulator_set_optimum_mode(reg_l2, 100);
@@ -519,7 +518,6 @@ static int mipi_dsi_power(int enable)
 			pr_err("disable reg_L2 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
-		dsi_is_on = false;
 	}
 
 	return rc;
@@ -870,7 +868,6 @@ static int mipi_dsi_power_octa_request(void)
 
 	rc = regulator_set_voltage(reg_L30, 3000000, 3000000);
 	if (rc) {
-		regulator_put(reg_L30);
 		pr_err("set_voltage L30 failed, rc=%d\n", rc);
 		return -EINVAL;
 	}
@@ -988,7 +985,6 @@ static int mipi_dsi_power_set(void)
 
 		rc = regulator_set_voltage(reg_l2, 1200000, 1200000);
 		if (rc) {
-			regulator_put(reg_l2);
 			pr_err("set_voltage L2 failed, rc=%d\n", rc);
 			return -EINVAL;
 		}
@@ -1114,13 +1110,11 @@ static int mipi_power_samsung_common(void)
 	return 0;
 }
 
-static bool power_samsung_on = false;
-
 static int mipi_dsi_power_samsung(int on)
 {
-	if (on && !power_samsung_on)
+	if (on)
 		mipi_dsi_power(1);
-	else if (!on && power_samsung_on)
+	else
 		mipi_dsi_power(0);
 
 	return 0;

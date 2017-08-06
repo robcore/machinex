@@ -288,8 +288,10 @@ int clk_prepare(struct clk *clk)
 	int ret = 0;
 	struct clk *parent;
 
-	if (IS_ERR_OR_NULL(clk))
-		return PTR_ERR(clk);
+	if (!clk)
+		return 0;
+	if (IS_ERR(clk))
+		return -EINVAL;
 
 	mutex_lock(&clk->prepare_lock);
 	if (clk->prepare_count == 0) {
@@ -334,8 +336,10 @@ int clk_enable(struct clk *clk)
 	struct clk *parent;
 	const char *name = clk ? clk->dbg_name : NULL;
 
-	if (IS_ERR_OR_NULL(clk))
-		return PTR_ERR(clk);
+	if (!clk)
+		return 0;
+	if (IS_ERR(clk))
+		return -EINVAL;
 
 	spin_lock_irqsave(&clk->lock, flags);
 	WARN(!clk->prepare_count,
@@ -432,7 +436,7 @@ EXPORT_SYMBOL(clk_unprepare);
 int clk_reset(struct clk *clk, enum clk_reset_action action)
 {
 	if (IS_ERR_OR_NULL(clk))
-		return PTR_ERR(clk);
+		return -EINVAL;
 
 	if (!clk->ops->reset)
 		return -ENOSYS;
@@ -460,7 +464,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	const char *name = clk ? clk->dbg_name : NULL;
 
 	if (IS_ERR_OR_NULL(clk))
-		return PTR_ERR(clk);
+		return -EINVAL;
 
 	if (!clk->ops->set_rate)
 		return -ENOSYS;
@@ -508,7 +512,7 @@ EXPORT_SYMBOL(clk_set_rate);
 long clk_round_rate(struct clk *clk, unsigned long rate)
 {
 	if (IS_ERR_OR_NULL(clk))
-		return PTR_ERR(clk);
+		return -EINVAL;
 
 	if (!clk->ops->round_rate)
 		return -ENOSYS;
@@ -520,7 +524,7 @@ EXPORT_SYMBOL(clk_round_rate);
 int clk_set_max_rate(struct clk *clk, unsigned long rate)
 {
 	if (IS_ERR_OR_NULL(clk))
-		return PTR_ERR(clk);
+		return -EINVAL;
 
 	if (!clk->ops->set_max_rate)
 		return -ENOSYS;
@@ -561,7 +565,7 @@ EXPORT_SYMBOL(clk_get_parent);
 int clk_set_flags(struct clk *clk, unsigned long flags)
 {
 	if (IS_ERR_OR_NULL(clk))
-		return -PTR_ERR(clk);
+		return -EINVAL;
 	if (!clk->ops->set_flags)
 		return -ENOSYS;
 

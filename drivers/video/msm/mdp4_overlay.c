@@ -3806,7 +3806,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 
 	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
 		if (!mfd->panel_power_on)		/* suspended */
-			return -EINVAL;
+			return -EPERM;
 
 	if (req->src.format == MDP_FB_FORMAT)
 		req->src.format = mfd->fb_imgType;

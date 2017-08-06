@@ -355,6 +355,7 @@ void mipi_dsi_phy_init(int panel_ndx, struct msm_panel_info const *panel_info,
 int mipi_dsi_clk_div_config(uint8 bpp, uint8 lanes,
 			    uint32 *expected_dsi_pclk);
 int mipi_dsi_clk_init(struct platform_device *pdev);
+void mipi_dsi_clk_deinit(struct device *dev);
 
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 void mipi_dsi_clk_enable(void);

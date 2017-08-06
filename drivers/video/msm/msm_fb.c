@@ -2041,7 +2041,7 @@ static int msm_fb_pan_display_ex(struct fb_info *info,
 	if (disp_commit->flags &
 		MDP_DISPLAY_COMMIT_OVERLAY) {
 		if (!mfd->panel_power_on) /* suspended */
-			return -EINVAL;
+			return -EPERM;
 	} else {
 	        /*
                 WFD panel info was not getting updated,
@@ -2060,7 +2060,7 @@ static int msm_fb_pan_display_ex(struct fb_info *info,
 
 		if (info->node != 0 || mfd->cont_splash_done)	/* primary */
 			if ((!mfd->op_enable) || (!mfd->panel_power_on))
-				return -EINVAL;
+				return -EPERM;
 
 		if (var->xoffset > (info->var.xres_virtual - info->var.xres))
 			return -EINVAL;
