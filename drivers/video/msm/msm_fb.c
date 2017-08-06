@@ -3974,17 +3974,13 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		ret = msmfb_overlay_get(info, argp);
 		break;
 	case MSMFB_OVERLAY_SET:
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_SET,SEC_DEBUG_IN);
 		ret = msmfb_overlay_set(info, argp);
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_SET,SEC_DEBUG_OUT);
 		break;
 	case MSMFB_OVERLAY_UNSET:
 		ret = msmfb_overlay_unset(info, argp);
 		break;
 	case MSMFB_OVERLAY_PLAY:
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_PLAY,SEC_DEBUG_IN);
 		ret = msmfb_overlay_play(info, argp);
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_PLAY,SEC_DEBUG_OUT);
 		break;
 	case MSMFB_OVERLAY_PLAY_ENABLE:
 		ret = msmfb_overlay_play_enable(info, argp);
@@ -4030,15 +4026,12 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 #endif
 	case MSMFB_VSYNC_CTRL:
 	case MSMFB_OVERLAY_VSYNC_CTRL:
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_VSYNC_CTRL, SEC_DEBUG_IN);
 		down(&msm_fb_ioctl_vsync_sem);
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_VSYNC_CTRL, SEC_DEBUG_LOCKED);
 		if (mdp_rev >= MDP_REV_40)
 			ret = msmfb_overlay_vsync_ctrl(info, argp);
 		else
 			ret = msmfb_vsync_ctrl(info, argp);
 		up(&msm_fb_ioctl_vsync_sem);
-		sec_debug_mdp_set_value(SEC_DEBUG_OVERLAY_VSYNC_CTRL, SEC_DEBUG_OUT);
 		break;
 	case MSMFB_BLIT:
 		down(&msm_fb_ioctl_ppp_sem);
@@ -4260,7 +4253,6 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			ret = copy_to_user(argp, &mdp_pp, sizeof(mdp_pp));
 		break;
 	case MSMFB_BUFFER_SYNC:
-		sec_debug_mdp_set_value(SEC_DEBUG_BUFFER_SYNC, SEC_DEBUG_IN);
 		ret = copy_from_user(&buf_sync, argp, sizeof(buf_sync));
 		if (ret)
 			return ret;
@@ -4269,13 +4261,10 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 		if (!ret)
 			ret = copy_to_user(argp, &buf_sync, sizeof(buf_sync));
-		sec_debug_mdp_set_value(SEC_DEBUG_BUFFER_SYNC, SEC_DEBUG_OUT);
 		break;
 
 	case MSMFB_DISPLAY_COMMIT:
-		sec_debug_mdp_set_value(SEC_DEBUG_DISPLAY_COMMIT, SEC_DEBUG_IN);
 		ret = msmfb_display_commit(info, argp);
-		sec_debug_mdp_set_value(SEC_DEBUG_DISPLAY_COMMIT, SEC_DEBUG_OUT);
 		break;
 
 	case MSMFB_METADATA_GET:
@@ -4286,7 +4275,6 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (!ret)
 			ret = copy_to_user(argp, &mdp_metadata,
 				sizeof(mdp_metadata));
-
 		break;
 
 	default:
