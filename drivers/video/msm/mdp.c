@@ -1936,7 +1936,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 
 			if (mdp_all_blocks_off) {
 				/* send workqueue to turn off mdp power */
-				queue_delayed_work(mdp_pipe_ctrl_wq,
+				mod_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
 						   msecs_to_jiffies(mdp_timer_duration));
 			}
@@ -1965,8 +1965,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 			 * accept the next job which is same as
 			 * queue_delayed_work(mdp_timer_duration = 0)
 			 */
-			//cancel_delayed_work(&mdp_pipe_ctrl_worker);
-		//}
+		cancel_delayed_work(&mdp_pipe_ctrl_worker);
 
 		if ((mdp_all_blocks_off) && (mdp_current_clk_on)) {
 			mutex_lock(&mdp_suspend_mutex);
@@ -2258,7 +2257,7 @@ static void mdp_drv_init(void)
 	spin_lock_init(&mdp_lut_push_lock);
 	mdp_dma_wq = create_singlethread_workqueue("mdp_dma_wq");
 	mdp_vsync_wq = create_singlethread_workqueue("mdp_vsync_wq");
-	mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
+	mdp_pipe_ctrl_wq = create_hipri_singlethread_workqueue("mdp_pipe_ctrl_wq");
 	INIT_DELAYED_WORK(&mdp_pipe_ctrl_worker,
 			  mdp_pipe_ctrl_workqueue_handler);
 
