@@ -535,24 +535,27 @@ static void an30259a_start_led_pattern(int mode)
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
 
-			leds_on(LED_R, true, true, LED_DYNAMIC_CURRENT);
+			leds_on(LED_R, true, true, LED_R_CURRENT);
 			leds_set_slope_mode(client, LED_R,
 					0, 0, 0, 5, 2, 2, 0, 0, 0, 0);
-			leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
+			leds_on(LED_G, true, true, LED_G_CURRENT);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 15, 8, 2, 2, 0, 0, 0, 0);
-			leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
+			leds_on(LED_B, true, true, LED_B_CURRENT);
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 0, 0, 2, 2, 0, 0, 0, 0);
 			booted = true;
 		} else {
 			pr_info("LED Powering Pattern OFF\n");
+			leds_on(LED_R, true, true, LED_R_CURRENT);
+			leds_set_slope_mode(client, LED_R,
+					0, 5, 0, 0, 5, 3, 1, 1, 1, 1);
 			leds_on(LED_G, true, true, LED_G_CURRENT);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 7, 1, 5, 3, 1, 2, 4, 6);
+					0, 15, 7, 2, 5, 3, 1, 2, 3, 4);
 			leds_on(LED_B, true, true, LED_B_CURRENT);
 			leds_set_slope_mode(client, LED_B,
-					3, 15, 7, 1, 5, 3, 0, 1, 3, 5);
+					4, 15, 7, 1, 5, 3, 1, 3, 3, 4);
 		}
 		break;
 
