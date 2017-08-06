@@ -692,19 +692,19 @@ static int mipi_dsi_prepare_enable_clocks(void)
 
 }
 
-static int mipi_dsi_unprepare_disable_clocks(void)
+static int mipi_dsi_disable_unprepare_clocks(void)
 {
 	int rc = 0;
 
-	rc = clk_unprepare_disable(dsi_esc_clk);
+	rc = clk_disable_unprepare(dsi_esc_clk);
 		pr_err("%s: dsi_esc_clk - "
-			"clk_unprepare_disable failed\n", __func__);
+			"clk_disable_unprepare failed\n", __func__);
 		return rc;
 	}
-	rc = clk_unprepare_disable(dsi_byte_div_clk);
+	rc = clk_disable_unprepare(dsi_byte_div_clk);
 	if (rc) {
 		pr_err("%s: dsi_byte_div_clk - "
-			"clk_unprepare_disable failed\n", __func__);
+			"clk_disable_unprepare failed\n", __func__);
 		return rc;
 	}
 	return rc;
@@ -721,7 +721,7 @@ void cont_splash_clk_ctrl(int enable)
 		else
 			cont_splash_clks_enabled = 1;
 	} else if (!enable && cont_splash_clks_enabled) {
-		rc = mipi_dsi_unprepare_disable_clocks();
+		rc = mipi_dsi_disable_unprepare_clocks();
 		if (rc)
 			cont_splash_clks_enabled = 1;
 		else
@@ -818,7 +818,7 @@ void mipi_dsi_clk_disable(void)
 	}
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
-	if (mipi_dsi_unprepare_disable_clocks) {
+	if (mipi_dsi_disable_unprepare_clocks) {
 		mipi_dsi_clk_on = 1;
 		return;
 	}
