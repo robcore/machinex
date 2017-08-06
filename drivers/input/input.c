@@ -145,8 +145,11 @@ static void input_pass_values(struct input_dev *dev,
 		count = input_to_handler(handle, vals, count);
 	} else {
 		list_for_each_entry_rcu(handle, &dev->h_list, d_node)
-			if (handle->open)
+			if (handle->open) {
 				count = input_to_handler(handle, vals, count);
+				if (!count)
+					break;
+			}
 	}
 
 	rcu_read_unlock();
