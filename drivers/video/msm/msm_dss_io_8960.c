@@ -65,6 +65,13 @@ static struct clk *dsi_s_pclk;
 static struct clk *amp_pclk;
 int mipi_dsi_clk_on;
 static bool clocks_are_null = true;
+static bool clocks_null(void)
+{
+	if (clocks_are_null)
+		pr_err("Clock functions called before initialization!!!\n");
+
+	return clocks_are_null;
+}
 
 int mipi_dsi_clk_init(struct platform_device *pdev)
 {
@@ -677,7 +684,7 @@ static int mipi_dsi_prepare_enable_clocks(void)
 {
 	int rc = 0;
 
-	if (clocks_are_null)
+	if (clocks_null())
 		return -ENOMEM;
 
 	rc = clk_prepare_enable(dsi_byte_div_clk);
@@ -697,10 +704,20 @@ static int mipi_dsi_prepare_enable_clocks(void)
 	return rc;
 
 }
+static int mipi_dsi_disable_unprepare_clocks(void)
+{
+	if (clocks_null())
+		return -ENOMEM;
+	clk_disable(dsi_esc_clk);
+	clk_unprepare(dsi_esc_clk);
+	clk_disable(dsi_byte_div_clk);
+	clk_unprepare(dsi_byte_div_clk);
+	return 0;
+}
 
 static int mipi_dsi_disable_clocks(void)
 {
-	if (clocks_are_null)
+	if (clocks_null())
 		return -ENOMEM;
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
@@ -710,7 +727,7 @@ static int mipi_dsi_disable_clocks(void)
 static unsigned int cont_splash_clks_enabled = 0;
 void cont_splash_clk_ctrl(int enable)
 {
-	rc;
+	int rc;
 	if (enable && !cont_splash_clks_enabled) {
 		rc = mipi_dsi_prepare_enable_clocks();
 		if (rc)
@@ -787,6 +804,9 @@ void mipi_dsi_clk_enable(void)
 		pr_err("%s: mipi_dsi_clks already ON\n", __func__);
 		return;
 	}
+	if (clocks_null())
+		return;
+
 	MIPI_OUTP(MIPI_DSI_BASE + 0x0200, pll_ctrl | 0x01);
 	mipi_dsi_phy_rdy_poll();
 
@@ -799,7 +819,6 @@ void mipi_dsi_clk_enable(void)
 	mipi_dsi_pclk_ctrl(&dsi_pclk, 1);
 	mipi_dsi_clk_ctrl(&dsicore_clk, 1);
 	if (mipi_dsi_prepare_enable_clocks()) {
-		mipi_dsi_clk_on = 0;
 		return;
 	} else {
 		mipi_dsi_clk_on = 1;
@@ -813,10 +832,13 @@ void mipi_dsi_clk_disable(void)
 		pr_info("%s: mipi_dsi_clks already OFF\n", __func__);
 		return;
 	}
+
+	if (clocks_null())
+		return;
+
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
 	if (mipi_dsi_disable_clocks) {
-		mipi_dsi_clk_on = 1;
 		return;
 	}
 	mipi_dsi_clk_ctrl(&dsicore_clk, 0);
