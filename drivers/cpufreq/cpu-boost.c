@@ -52,9 +52,8 @@ static u64 last_input_time;
 static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
 
-u64 min_interval = max(min_input_interval, input_boost_ms);
-
 unsigned int input_boost_limit;
+extern bool hotplug_ready;
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -127,7 +126,7 @@ static void do_input_boost(struct work_struct *work)
 	struct cpu_sync *i_sync_info;
 
 	if (!input_boost_enabled || !input_boost_ms ||
-		thermal_core_controlled)
+		thermal_core_controlled || force_unboost)
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
@@ -147,10 +146,11 @@ static void do_input_boost(struct work_struct *work)
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
-extern bool hotplug_ready;
+
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
+	u64 min_interval = max(min_input_interval, input_boost_ms);
 	u64 now;
 	s64 delta;
 
@@ -273,7 +273,7 @@ static int cpuboost_cpufreq_callback(struct notifier_block *nfb,
 		unsigned long event, void *data)
 {
 	struct cpufreq_policy *policy = data;
-	u64 current;
+	u64 currboost;
 	s64 delta;
 
 
@@ -285,8 +285,8 @@ static int cpuboost_cpufreq_callback(struct notifier_block *nfb,
 		/* Fall through. */
 	case CPUFREQ_NOTIFY:
 	case CPUFREQ_ADJUST:
-		current = ktime_to_us(ktime_get());
-		delta = current - last_input_time;
+		currboost = ktime_to_us(ktime_get());
+		delta = currboost - last_input_time;
 		if (delta > input_boost_ms && input_boosted && !force_unboost) {
 			force_unboost = true;
 			mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem, 0);
