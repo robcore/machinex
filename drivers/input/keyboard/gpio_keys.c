@@ -526,15 +526,19 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 						button->debounce_interval;
 		}
 
-		irq = gpio_to_irq(button->gpio);
-		if (irq < 0) {
-			error = irq;
-			dev_dbg(dev,
-				"Unable to get irq number for GPIO %d, error %d\n",
-				button->gpio, error);
-			goto fail;
+		if (button->irq) {
+			bdata->irq = button->irq;
+		} else {
+			irq = gpio_to_irq(button->gpio);
+			if (irq < 0) {
+				error = irq;
+				dev_err(dev,
+					"Unable to get irq number for GPIO %d, error %d\n",
+					button->gpio, error);
+				return error;
+			}
+			bdata->irq = irq;
 		}
-		bdata->irq = irq;
 
 		INIT_DELAYED_WORK(&bdata->work, gpio_keys_gpio_work_func);
 
@@ -546,7 +550,6 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 			dev_dbg(dev, "No IRQ specified\n");
 			return -EINVAL;
 		}
-
 		bdata->irq = button->irq;
 
 		if (button->type && button->type != EV_KEY) {
@@ -560,7 +563,6 @@ static int gpio_keys_setup_key(struct platform_device *pdev,
 
 		isr = gpio_keys_irq_isr;
 		irqflags = 0;
-		//irqflags |= IRQF_EARLY_RESUME;
 	}
 
 	input_set_capability(input, button->type ?: EV_KEY, button->code);

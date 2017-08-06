@@ -31,6 +31,8 @@ struct cpu_sync {
 	unsigned int input_boost_freq;
 };
 
+static bool input_boosted;
+
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
@@ -83,14 +85,10 @@ module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
 static void update_policy_online(unsigned int cpu)
 {
-	/* Nope just online
-	 */
-	//get_online_cpus();
 	for_each_online_cpu(cpu) {
 		reapply_hard_limits(cpu);
 		cpufreq_update_policy(cpu);
 	}
-	//put_online_cpus();
 }
 
 static void do_input_boost_rem(struct work_struct *work)
@@ -102,14 +100,16 @@ static void do_input_boost_rem(struct work_struct *work)
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
-		i_sync_info->cpu = cpu;
 		i_sync_info = &per_cpu(sync_info, cpu);
+		i_sync_info->cpu = cpu;
 		if (cpufreq_get_policy(&policy, cpu))
 			return;
+		if (input_boost_limit == i_sync_info->input_boost_min == policy.hlimit_min_screen_on)
+			continue;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
 	}
+	input_boosted = false;
 	/* Update policies for all online CPUs */
-
 	update_policy_online(cpu);
 }
 
@@ -124,11 +124,13 @@ static void do_input_boost(struct work_struct *work)
 
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
-		i_sync_info->cpu = cpu;
 		i_sync_info = &per_cpu(sync_info, cpu);
+		i_sync_info->cpu = cpu;
+		if (input_boost_limit == i_sync_info->input_boost_min == i_sync_info->input_boost_freq)
+			continue;
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
-
+	input_boosted = true;
 	/* Update policies for all online CPUs */
 	update_policy_online(cpu);
 
@@ -141,7 +143,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 {
 	u64 now;
 	u64 delta;
-	unsigned int min_interval;
+	u64 min_interval;
 
 	if (!input_boost_enabled || !hotplug_ready)
 		return;
@@ -198,52 +200,54 @@ static const struct input_device_id cpuboost_ids[] = {
 	/* multi-touch touchscreen */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT,
+			INPUT_DEVICE_ID_MATCH_ABSBIT |
+				INPUT_DEVICE_ID_MATCH_RELBIT,
 		.evbit = { BIT_MASK(EV_ABS) },
 		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
 			BIT_MASK(ABS_MT_POSITION_X) |
 			BIT_MASK(ABS_MT_POSITION_Y) },
+		.relbit = { BIT_MASK(EV_REL) },
 	},
 	/* touchpad */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT,
+			INPUT_DEVICE_ID_MATCH_ABSBIT |
+				INPUT_DEVICE_ID_MATCH_RELBIT,
 		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
 		.absbit = { [BIT_WORD(ABS_X)] =
 			BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
+		.relbit = { BIT_MASK(EV_REL) },
 	},
 	/* Keypad */
 	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+	},
+	/* switch/flipcover */
+	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-				INPUT_DEVICE_ID_MATCH_RELBIT,
-		.evbit = { BIT_MASK(EV_KEY) | BIT_MASK(EV_REL) },
+				 INPUT_DEVICE_ID_MATCH_SWBIT,
+		.evbit = { BIT_MASK(EV_SW) },
+		.swbit = { [BIT_WORD(SW_FLIP)] = BIT_MASK(SW_FLIP) },
 	},
-	/*Fuck everything and everyone, let's get specific*/
+	/* Keys */
 	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT | INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { BIT_MASK(EV_KEY) },
-		.keybit = { [BIT_WORD(KEY_VOLUMEDOWN)] = BIT_MASK(KEY_VOLUMEDOWN) },
-	},
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT | INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { BIT_MASK(EV_KEY) },
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+				INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { [BIT_WORD(EV_KEY)] = BIT_MASK(EV_KEY) },
 		.keybit = { [BIT_WORD(KEY_VOLUMEUP)] = BIT_MASK(KEY_VOLUMEUP) },
 	},
 	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT | INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { BIT_MASK(EV_KEY) },
-		.keybit = { [BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER) },
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+				INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { [BIT_WORD(EV_KEY)] = BIT_MASK(EV_KEY) },
+		.keybit = { [BIT_WORD(KEY_VOLUMEDOWN)] = BIT_MASK(KEY_VOLUMEDOWN) },
 	},
 	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT | INPUT_DEVICE_ID_MATCH_KEYBIT,
-		.evbit = { BIT_MASK(EV_KEY) },
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+				INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.evbit = { [BIT_WORD(EV_KEY)] = BIT_MASK(EV_KEY) },
 		.keybit = { [BIT_WORD(KEY_HOMEPAGE)] = BIT_MASK(KEY_HOMEPAGE) },
-	},
-
-	/*software keys*/
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
-		.evbit = { BIT_MASK(EV_SW) },
 	},
 	{ },
 };
