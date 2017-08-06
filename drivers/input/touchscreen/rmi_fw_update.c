@@ -86,6 +86,8 @@
 #define FW_NOT_SUPPORT_HSYNC(x)	 ((strncmp(x->product_id, "SY 01", 5) == 0) || (strncmp(x->product_id, "SY 02", 5) == 0))
 #endif
 
+struct wake_lock reflasher;
+
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
 		char *buf, loff_t pos, size_t count);
@@ -948,7 +950,7 @@ static int fwu_start_reflash(bool mode, bool factory_fw)
 				__func__);
 		return -ENODEV;
 	}
-
+	wake_lock(&reflasher);
 	fwu->rmi4_data->stay_awake = true;
 
 	if (fwu->ext_data_source) {
@@ -1126,11 +1128,11 @@ out:
 			"%s: in fw update, failed booster stop.\n",
 			__func__);
 #endif
+	wake_unlock(&reflasher);
+	fwu->rmi4_data->stay_awake = false;
 
 	dev_info(&fwu->rmi4_data->i2c_client->dev, "%s: End of reflash process\n",
 		 __func__);
-
-	fwu->rmi4_data->stay_awake = false;
 
 	return retval;
 }
@@ -1649,9 +1651,6 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 			SYNAPTICS_RMI4_PRODUCT_ID_SIZE);
 	fwu->product_id[SYNAPTICS_RMI4_PRODUCT_ID_SIZE] = 0;
 
-#if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	/* Fortius Use only B Type. So read and use ic_revision_of_ic from IC */
-#else
 	/* Check the IC revision from product ID value
 	 * we can check the ic revision with f34_ctrl_3 but to read production
 	 * ID is more safity. because it is non-user writerble area.
@@ -1664,7 +1663,6 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 					__func__);
 	else
 		rmi4_data->ic_revision_of_ic = 0xA1;
-#endif
 
 	dev_info(&rmi4_data->i2c_client->dev,
 			"%s: [IC] [F01 product info, ID(revision)] [0x%04X 0x%04X, %s(0X%X)], PANEL : 0x%02X\n",
@@ -1677,6 +1675,7 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 	if (retval < 0)
 		goto exit_free_mem;
 
+	wake_lock_init(&reflasher, WAKE_LOCK_SUSPEND, "synaptics_fw_flash");
 	mutex_init(&(fwu->status_mutex));
 	fwu->initialized = true;
 
@@ -1686,7 +1685,7 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 		dev_err(&rmi4_data->i2c_client->dev,
 				"%s: Failed to create sysfs bin file\n",
 				__func__);
-		goto exit_free_mem;
+		goto exit_flashlock;
 	}
 
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
@@ -1709,8 +1708,10 @@ exit_remove_attrs:
 		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
 			&attrs[attr_count].attr);
 }
+	sysfs_remove_bin_file(&rmi4_data->input_dev->dev.kobj, &dev_attr_data);
 
-sysfs_remove_bin_file(&rmi4_data->input_dev->dev.kobj, &dev_attr_data);
+exit_flashlock:
+	wake_lock_destroy(&reflasher);
 
 exit_free_mem:
 	kfree(fwu->fn_ptr);
@@ -1726,12 +1727,13 @@ static void synaptics_rmi4_fwu_remove(struct synaptics_rmi4_data *rmi4_data)
 {
 	unsigned char attr_count;
 
-	sysfs_remove_bin_file(&rmi4_data->input_dev->dev.kobj, &dev_attr_data);
-
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
 	}
+	sysfs_remove_bin_file(&rmi4_data->input_dev->dev.kobj, &dev_attr_data);
+
+	wake_lock_destroy(&reflasher);
 
 	kfree(fwu->fn_ptr);
 	kfree(fwu);
