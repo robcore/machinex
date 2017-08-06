@@ -838,9 +838,7 @@ void mipi_dsi_clk_disable(void)
 
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
-	if (mipi_dsi_disable_clocks) {
-		return;
-	}
+
 	mipi_dsi_clk_ctrl(&dsicore_clk, 0);
 	mipi_dsi_pclk_ctrl(&dsi_pclk, 0);
 	/* DSIPHY_PLL_CTRL_0, disable dsi pll */
