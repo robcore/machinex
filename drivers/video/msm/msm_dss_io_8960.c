@@ -64,22 +64,14 @@ static struct clk *dsi_s_pclk;
 
 static struct clk *amp_pclk;
 int mipi_dsi_clk_on;
-static bool clocks_are_null = true;
-static bool clocks_null(void)
-{
-	if (clocks_are_null)
-		pr_err("Clock functions called before initialization!!!\n");
-
-	return clocks_are_null;
-}
+static bool clocks_are_null;
 
 int mipi_dsi_clk_init(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 	struct device *dev = &pdev->dev;
-
+	clocks_are_null = true;
 	mfd = platform_get_drvdata(pdev);
-
 	if (mfd == NULL)
 		return -ENODEV;
 
@@ -131,6 +123,14 @@ dsi_m_pclk_err:
 	clk_put(amp_pclk);
 
 	return -ENOMEM;
+}
+
+static bool clocks_null(void)
+{
+	if (clocks_are_null)
+		pr_err("Clock functions called before initialization!!!\n");
+
+	return clocks_are_null;
 }
 
 static void mipi_dsi_clk_ctrl(struct dsi_clk_desc *clk, int clk_en)
