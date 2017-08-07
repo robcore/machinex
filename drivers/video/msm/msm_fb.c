@@ -546,14 +546,14 @@ static int msm_fb_remove(struct platform_device *pdev)
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
 
+	if (!mfd)
+		return -ENODEV;
+
 	msm_fb_pan_idle(mfd);
 
 	msm_fb_remove_sysfs(pdev);
 
 	pm_runtime_disable(mfd->fbi->dev);
-
-	if (!mfd)
-		return -ENODEV;
 
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
