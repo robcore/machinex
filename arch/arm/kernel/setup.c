@@ -1135,9 +1135,9 @@ void __init setup_arch(char **cmdline_p)
 	struct machine_desc *mdesc;
 
 	setup_processor();
-	mdesc = setup_machine_fdt(__atags_pointer);
+	mdesc = setup_machine_tags(machine_arch_type);
 	if (!mdesc)
-		mdesc = setup_machine_tags(machine_arch_type);
+		pr_err("Warning! Failed to setup machine tags!\n");
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 #ifdef CONFIG_SEC_DEBUG_SUBSYS
@@ -1146,8 +1146,8 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_dma_zone(mdesc);
 
-	if (mdesc->restart_mode)
-		reboot_setup(&mdesc->restart_mode);
+	if (mdesc->reboot_mode)
+		reboot_setup(&mdesc->reboot_mode);
 
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code   = (unsigned long) _etext;
@@ -1175,7 +1175,6 @@ void __init setup_arch(char **cmdline_p)
 
 	unflatten_device_tree();
 
-	arm_dt_init_cpu_maps();
 #ifdef CONFIG_SMP
 	if (is_smp()) {
 		smp_set_ops(mdesc->smp);

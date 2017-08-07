@@ -205,7 +205,7 @@ void arch_cpu_idle_exit(void)
 	idle_notifier_call_chain(IDLE_END);
 }
 
-static char reboot_mode = 'h';
+char reboot_mode = 'h';
 
 int __init reboot_setup(char *str)
 {
