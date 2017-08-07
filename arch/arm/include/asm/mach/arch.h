@@ -11,7 +11,6 @@
 #include <linux/types.h>
 
 #ifndef __ASSEMBLY__
-#include <linux/reboot.h>
 
 struct tag;
 struct meminfo;
@@ -44,11 +43,10 @@ struct machine_desc {
 	unsigned char		reserve_lp0 :1;	/* never has lp0	*/
 	unsigned char		reserve_lp1 :1;	/* never has lp1	*/
 	unsigned char		reserve_lp2 :1;	/* never has lp2	*/
-	const char			restart_mode;	/* default restart mode	*/
+	char			restart_mode;	/* default restart mode	*/
 	struct smp_operations	*smp;		/* SMP operations	*/
 	void			(*fixup)(struct tag *, char **,
 					 struct meminfo *);
-	void			(*init_meminfo)(void);
 	void			(*reserve)(void);/* reserve mem blocks	*/
 	void			(*map_io)(void);/* IO mapping function	*/
 	void			(*init_very_early)(void);
@@ -61,18 +59,17 @@ struct machine_desc {
 	void			(*handle_irq)(struct pt_regs *);
 #endif
 	void			(*restart)(char, const char *);
-	enum reboot_mode	reboot_mode;	/* default restart mode	*/
 };
 
 /*
  * Current machine - only accessible during boot.
  */
-extern const struct machine_desc *machine_desc;
+extern struct machine_desc *machine_desc;
 
 /*
  * Machine type table - also only accessible during boot
  */
-extern const struct machine_desc __arch_info_begin[], __arch_info_end[];
+extern struct machine_desc __arch_info_begin[], __arch_info_end[];
 #define for_each_machine_desc(p)			\
 	for (p = __arch_info_begin; p < __arch_info_end; p++)
 
