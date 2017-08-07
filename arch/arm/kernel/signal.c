@@ -578,10 +578,8 @@ static int do_signal(struct pt_regs *regs, int syscall)
 	 * decision to restart the system call.  But skip this if a
 	 * debugger has chosen to restart at a different PC.
 	 */
-	if (regs->ARM_pc != restart_addr)
-		restart = 0;
 	if (signr > 0) {
-		if (unlikely(restart)) {
+		if (unlikely(restart) && regs->ARM_pc == restart_addr) {
 			if (retval == -ERESTARTNOHAND ||
 			    retval == -ERESTART_RESTARTBLOCK
 			    || (retval == -ERESTARTSYS
@@ -592,18 +590,26 @@ static int do_signal(struct pt_regs *regs, int syscall)
 		}
 
 		handle_signal(signr, &ka, &info, regs);
-		return 0;
+	} else {
+		/* no handler */
+		restore_saved_sigmask();
+		if (unlikely(restart) && regs->ARM_pc == restart_addr) {
+			regs->ARM_pc = continue_addr;
+			return restart;
+		}
 	}
-
-	restore_saved_sigmask();
-	if (unlikely(restart))
-		regs->ARM_pc = continue_addr;
-	return restart;
+	return 0;
 }
 
 asmlinkage int
 do_work_pending(struct pt_regs *regs, unsigned int thread_flags, int syscall)
 {
+	/*
+	 * The assembly code enters us with IRQs off, but it hasn't
+	 * informed the tracing code of that for efficiency reasons.
+	 * Update the trace code with the current status.
+	 */
+	trace_hardirqs_off();
 	do {
 		if (likely(thread_flags & _TIF_NEED_RESCHED)) {
 			schedule();
