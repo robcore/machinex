@@ -899,7 +899,7 @@ void __init setup_arch(char **cmdline_p)
 	struct machine_desc *mdesc;
 
 	setup_processor();
-	mdesc = setup_machine_tags(__atags_pointer, machine_arch_type);
+	mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
 	if (!mdesc)
 		pr_err("Warning! Failed to setup machine tags!\n");
 	machine_desc = mdesc;
