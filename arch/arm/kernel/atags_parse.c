@@ -185,7 +185,8 @@ struct machine_desc * __init setup_machine_tags(phys_addr_t __atags_pointer,
 	struct machine_desc *mdesc = NULL, *p;
 	char *from = default_command_line;
 
-	default_tags.mem.start = PHYS_OFFSET;
+	default_tags.mem.start = PLAT_PHYS_OFFSET;
+	//init_tags.mem.start = PLAT_PHYS_OFFSET;
 
 	/*
 	 * locate machine in the list of supported machines.
