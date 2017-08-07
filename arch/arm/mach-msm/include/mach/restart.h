@@ -18,6 +18,7 @@
 #define RESTART_DLOAD  0x1
 
 #if defined(CONFIG_MSM_NATIVE_RESTART)
+#include <linux/reboot.h>
 void msm_set_restart_mode(int mode);
 void msm_restart(enum reboot_mode mode, const char *cmd);
 #elif defined(CONFIG_ARCH_FSM9XXX)
