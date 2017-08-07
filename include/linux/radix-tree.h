@@ -159,7 +159,7 @@ static inline bool radix_tree_empty(struct radix_tree_root *root)
  * radix_tree_gang_lookup_tag_slot
  * radix_tree_tagged
  *
- * The first 7 functions are able to be called locklessly, using RCU. The
+ * The first 8 functions are able to be called locklessly, using RCU. The
  * caller must ensure calls to these functions are made within rcu_read_lock()
  * regions. Other readers (lock-free or otherwise) and modifications may be
  * running concurrently.
