@@ -11,6 +11,7 @@
 #include <linux/types.h>
 
 #ifndef __ASSEMBLY__
+#include <linux/reboot.h>
 
 struct tag;
 struct meminfo;
@@ -60,6 +61,7 @@ struct machine_desc {
 	void			(*handle_irq)(struct pt_regs *);
 #endif
 	void			(*restart)(char, const char *);
+	enum reboot_mode	reboot_mode;	/* default restart mode	*/
 };
 
 /*

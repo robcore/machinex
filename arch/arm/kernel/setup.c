@@ -86,7 +86,7 @@ extern void paging_init(const struct machine_desc *desc);
 extern void early_paging_init(const struct machine_desc *,
 			      struct proc_info_list *);
 extern void sanity_check_meminfo(void);
-extern const int reboot_setup(const char *str);
+extern enum reboot_mode reboot_mode;
 extern void setup_dma_zone(const struct machine_desc *desc);
 
 unsigned int processor_id;
@@ -1148,8 +1148,8 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_dma_zone(mdesc);
 
-	if (mdesc->restart_mode)
-		reboot_setup(&mdesc->restart_mode);
+	if (mdesc->reboot_mode != REBOOT_HARD)
+		reboot_mode = mdesc->reboot_mode;
 
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code   = (unsigned long) _etext;
