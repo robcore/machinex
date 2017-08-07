@@ -94,9 +94,10 @@ static inline unsigned long get_slot_offset(struct radix_tree_node *parent,
 	return slot - parent->slots;
 }
 
-static unsigned radix_tree_descend(struct radix_tree_node *parent,
-				struct radix_tree_node **nodep, unsigned offset)
+static unsigned int radix_tree_descend(struct radix_tree_node *parent,
+			struct radix_tree_node **nodep, unsigned long index)
 {
+	unsigned int offset = (index >> parent->shift) & RADIX_TREE_MAP_MASK;
 	void **entry = rcu_dereference_raw(parent->slots[offset]);
 
 #ifdef CONFIG_RADIX_TREE_MULTIORDER
@@ -525,8 +526,7 @@ int __radix_tree_create(struct radix_tree_root *root, unsigned long index,
 
 		/* Go a level down */
 		node = entry_to_node(child);
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
-		offset = radix_tree_descend(node, &child, offset);
+		offset = radix_tree_descend(node, &child, index);
 		slot = &node->slots[offset];
 	}
 
@@ -614,13 +614,12 @@ void *__radix_tree_lookup(struct radix_tree_root *root, unsigned long index,
 {
 	struct radix_tree_node *node, *parent;
 	unsigned long maxindex;
-	unsigned int shift;
 	void **slot;
 
  restart:
 	parent = NULL;
 	slot = (void **)&root->rnode;
-	shift = radix_tree_load_root(root, &node, &maxindex);
+	radix_tree_load_root(root, &node, &maxindex);
 	if (index > maxindex)
 		return NULL;
 
@@ -630,9 +629,7 @@ void *__radix_tree_lookup(struct radix_tree_root *root, unsigned long index,
 		if (node == RADIX_TREE_RETRY)
 			goto restart;
 		parent = entry_to_node(node);
-		shift -= RADIX_TREE_MAP_SHIFT;
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
-		offset = radix_tree_descend(parent, &node, offset);
+		offset = radix_tree_descend(parent, &node, index);
 		slot = parent->slots + offset;
 	}
 
@@ -702,19 +699,15 @@ void *radix_tree_tag_set(struct radix_tree_root *root,
 {
 	struct radix_tree_node *node, *parent;
 	unsigned long maxindex;
-	unsigned int shift;
 
-	shift = radix_tree_load_root(root, &node, &maxindex);
+	radix_tree_load_root(root, &node, &maxindex);
 	BUG_ON(index > maxindex);
 
 	while (radix_tree_is_internal_node(node)) {
 		unsigned offset;
 
-		shift -= RADIX_TREE_MAP_SHIFT;
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
-
 		parent = entry_to_node(node);
-		offset = radix_tree_descend(parent, &node, offset);
+		offset = radix_tree_descend(parent, &node, index);
 		BUG_ON(!node);
 
 		if (!tag_get(parent, tag, offset))
@@ -768,21 +761,17 @@ void *radix_tree_tag_clear(struct radix_tree_root *root,
 {
 	struct radix_tree_node *node, *parent;
 	unsigned long maxindex;
-	unsigned int shift;
 	int uninitialized_var(offset);
 
-	shift = radix_tree_load_root(root, &node, &maxindex);
+	radix_tree_load_root(root, &node, &maxindex);
 	if (index > maxindex)
 		return NULL;
 
 	parent = NULL;
 
 	while (radix_tree_is_internal_node(node)) {
-		shift -= RADIX_TREE_MAP_SHIFT;
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
-
 		parent = entry_to_node(node);
-		offset = radix_tree_descend(parent, &node, offset);
+		offset = radix_tree_descend(parent, &node, index);
 	}
 
 	if (node)
@@ -812,25 +801,21 @@ int radix_tree_tag_get(struct radix_tree_root *root,
 {
 	struct radix_tree_node *node, *parent;
 	unsigned long maxindex;
-	unsigned int shift;
 
 	if (!root_tag_get(root, tag))
 		return 0;
 
-	shift = radix_tree_load_root(root, &node, &maxindex);
+	radix_tree_load_root(root, &node, &maxindex);
 	if (index > maxindex)
 		return 0;
 	if (node == NULL)
 		return 0;
 
 	while (radix_tree_is_internal_node(node)) {
-		int offset;
-
-		shift -= RADIX_TREE_MAP_SHIFT;
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
+		unsigned offset;
 
 		parent = entry_to_node(node);
-		offset = radix_tree_descend(parent, &node, offset);
+		offset = radix_tree_descend(parent, &node, index);
 
 		if (!node)
 			return 0;
@@ -863,7 +848,7 @@ static inline void __set_iter_shift(struct radix_tree_iter *iter,
 void **radix_tree_next_chunk(struct radix_tree_root *root,
 			     struct radix_tree_iter *iter, unsigned flags)
 {
-	unsigned shift, tag = flags & RADIX_TREE_ITER_TAG_MASK;
+	unsigned tag = flags & RADIX_TREE_ITER_TAG_MASK;
 	struct radix_tree_node *node, *child;
 	unsigned long index, offset, maxindex;
 
@@ -884,7 +869,7 @@ void **radix_tree_next_chunk(struct radix_tree_root *root,
 		return NULL;
 
  restart:
-	shift = radix_tree_load_root(root, &child, &maxindex);
+	radix_tree_load_root(root, &child, &maxindex);
 	if (index > maxindex)
 		return NULL;
 	if (!child)
@@ -901,9 +886,7 @@ void **radix_tree_next_chunk(struct radix_tree_root *root,
 
 	do {
 		node = entry_to_node(child);
-		shift -= RADIX_TREE_MAP_SHIFT;
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
-		offset = radix_tree_descend(node, &child, offset);
+		offset = radix_tree_descend(node, &child, index);
 
 		if ((flags & RADIX_TREE_ITER_TAGGED) ?
 				!tag_get(node, tag, offset) : !child) {
@@ -925,7 +908,7 @@ void **radix_tree_next_chunk(struct radix_tree_root *root,
 						break;
 				}
 			index &= ~node_maxindex(node);
-			index += offset << shift;
+			index += offset << node->shift;
 			/* Overflow after ~0UL */
 			if (!index)
 				return NULL;
@@ -941,7 +924,7 @@ void **radix_tree_next_chunk(struct radix_tree_root *root,
 	/* Update the iterator state */
 	iter->index = (index &~ node_maxindex(node)) | (offset << node->shift);
 	iter->next_index = (index | node_maxindex(node)) + 1;
-	__set_iter_shift(iter, shift);
+	__set_iter_shift(iter, node->shift);
 
 	/* Construct iter->tags bit-mask from node->tags[tag] array */
 	if (flags & RADIX_TREE_ITER_TAGGED) {
@@ -999,10 +982,10 @@ unsigned long radix_tree_range_tag_if_tagged(struct radix_tree_root *root,
 {
 	struct radix_tree_node *parent, *node, *child;
 	unsigned long maxindex;
-	unsigned int shift = radix_tree_load_root(root, &child, &maxindex);
 	unsigned long tagged = 0;
 	unsigned long index = *first_indexp;
 
+	radix_tree_load_root(root, &child, &maxindex);
 	last_index = min(last_index, maxindex);
 	if (index > last_index)
 		return 0;
@@ -1019,11 +1002,9 @@ unsigned long radix_tree_range_tag_if_tagged(struct radix_tree_root *root,
 	}
 
 	node = entry_to_node(child);
-	shift -= RADIX_TREE_MAP_SHIFT;
 
 	for (;;) {
-		unsigned offset = (index >> shift) & RADIX_TREE_MAP_MASK;
-		offset = radix_tree_descend(node, &child, offset);
+		unsigned offset = radix_tree_descend(node, &child, index);
 		if (!child)
 			goto next;
 		if (!tag_get(node, iftag, offset))
@@ -1031,7 +1012,6 @@ unsigned long radix_tree_range_tag_if_tagged(struct radix_tree_root *root,
 		/* Sibling slots never have tags set on them */
 		if (radix_tree_is_internal_node(child)) {
 			node = entry_to_node(child);
-			shift -= RADIX_TREE_MAP_SHIFT;
 			continue;
 		}
 
@@ -1052,12 +1032,12 @@ unsigned long radix_tree_range_tag_if_tagged(struct radix_tree_root *root,
 			tag_set(parent, settag, offset);
 		}
  next:
-		/* Go to next item at level determined by 'shift' */
-		index = ((index >> shift) + 1) << shift;
+		/* Go to next entry in node */
+		index = ((index >> node->shift) + 1) << node->shift;
 		/* Overflow can happen when last_index is ~0UL... */
 		if (index > last_index || !index)
 			break;
-		offset = (index >> shift) & RADIX_TREE_MAP_MASK;
+		offset = (index >> node->shift) & RADIX_TREE_MAP_MASK;
 		while (offset == 0) {
 			/*
 			 * We've fully scanned this node. Go up. Because
@@ -1065,8 +1045,7 @@ unsigned long radix_tree_range_tag_if_tagged(struct radix_tree_root *root,
 			 * we do below cannot wander astray.
 			 */
 			node = node->parent;
-			shift += RADIX_TREE_MAP_SHIFT;
-			offset = (index >> shift) & RADIX_TREE_MAP_MASK;
+			offset = (index >> node->shift) & RADIX_TREE_MAP_MASK;
 		}
 		if (is_sibling_entry(node, node->slots[offset]))
 			goto next;
@@ -1307,13 +1286,10 @@ struct locate_info {
 static unsigned long __locate(struct radix_tree_node *slot, void *item,
 			      unsigned long index, struct locate_info *info)
 {
-	unsigned int shift;
 	unsigned long i;
 
-	shift = slot->shift + RADIX_TREE_MAP_SHIFT;
-
 	do {
-		shift -= RADIX_TREE_MAP_SHIFT;
+		unsigned int shift = slot->shift;
 
 		for (i = (index >> shift) & RADIX_TREE_MAP_MASK;
 		     i < RADIX_TREE_MAP_SIZE;
@@ -1336,9 +1312,7 @@ static unsigned long __locate(struct radix_tree_node *slot, void *item,
 			slot = node;
 			break;
 		}
-		if (i == RADIX_TREE_MAP_SIZE)
-			break;
-	} while (shift);
+	} while (i < RADIX_TREE_MAP_SIZE);
 
 out:
 	if ((index == 0) && (i == RADIX_TREE_MAP_SIZE))
