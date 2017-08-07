@@ -27,4 +27,8 @@
 #define HWCAP_IDIV	(HWCAP_IDIVA | HWCAP_IDIVT)
 
 
+/*
+ * HWCAP2 flags - for elf_hwcap2 (in kernel) and AT_HWCAP2
+ */
+
 #endif /* _UAPI__ASMARM_HWCAP_H */

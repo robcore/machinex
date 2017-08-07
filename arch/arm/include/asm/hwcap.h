@@ -8,6 +8,7 @@
  * instruction set this cpu supports.
  */
 #define ELF_HWCAP	(elf_hwcap)
-extern unsigned int elf_hwcap;
+#define ELF_HWCAP2	(elf_hwcap2)
+extern unsigned int elf_hwcap, elf_hwcap2;
 #endif
 #endif
