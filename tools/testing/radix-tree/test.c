@@ -142,7 +142,7 @@ static int verify_node(struct radix_tree_node *slot, unsigned int tag,
 	int i;
 	int j;
 
-	slot = indirect_to_ptr(slot);
+	slot = entry_to_node(slot);
 
 	/* Verify consistency at this level */
 	for (i = 0; i < RADIX_TREE_TAG_LONGS; i++) {
