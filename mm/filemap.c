@@ -11,7 +11,6 @@
  */
 #include <linux/export.h>
 #include <linux/compiler.h>
-#include <linux/dax.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/aio.h>
@@ -122,9 +121,9 @@ static void page_cache_tree_delete(struct address_space *mapping,
 	__radix_tree_lookup(&mapping->page_tree, page->index, &node, &slot);
 
 	if (shadow) {
-		mapping->nrexceptional++;
+		mapping->nrshadows++;
 		/*
-		 * Make sure the nrexceptional update is committed before
+		 * Make sure the nrshadows update is committed before
 		 * the nrpages update so that final truncate racing
 		 * with reclaim does not see both counters 0 at the
 		 * same time and miss a shadow entry.
@@ -518,13 +517,9 @@ static int page_cache_tree_insert(struct address_space *mapping,
 		p = radix_tree_deref_slot_protected(slot, &mapping->tree_lock);
 		if (!radix_tree_exceptional_entry(p))
 			return -EEXIST;
-
-		if (WARN_ON(dax_mapping(mapping)))
-			return -EINVAL;
-
 		if (shadowp)
 			*shadowp = p;
-		mapping->nrexceptional--;
+		mapping->nrshadows--;
 		if (node)
 			workingset_node_shadows_dec(node);
 	}
@@ -1182,9 +1177,9 @@ repeat:
 			if (radix_tree_deref_retry(page))
 				goto restart;
 			/*
-			 * A shadow entry of a recently evicted page, a swap
-			 * entry from shmem/tmpfs or a DAX entry.  Return it
-			 * without attempting to raise page count.
+			 * A shadow entry of a recently evicted page,
+			 * or a swap entry from shmem/tmpfs.  Return
+			 * it without attempting to raise page count.
 			 */
 			goto export;
 		}
