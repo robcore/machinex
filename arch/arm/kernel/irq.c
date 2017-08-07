@@ -88,9 +88,9 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 		generic_handle_irq(irq);
 	}
 
-	/* AT91 specific workaround */
+	/* AT91 specific workaround
 	irq_finish(irq);
-
+ */
 	irq_exit();
 	set_irq_regs(old_regs);
 }
