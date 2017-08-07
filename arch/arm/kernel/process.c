@@ -206,16 +206,6 @@ void arch_cpu_idle_exit(void)
 	idle_notifier_call_chain(IDLE_END);
 }
 
-enum reboot_mode reboot_mode = REBOOT_HARD;
-
-static int __init reboot_setup(char *str)
-{
-	if ('s' == str[0])
-		reboot_mode = REBOOT_SOFT;
-	return 1;
-}
-__setup("reboot=", reboot_setup);
-
 /*
  * Called by kexec, immediately prior to machine_kexec().
  *
