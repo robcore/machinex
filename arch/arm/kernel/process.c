@@ -207,7 +207,7 @@ void arch_cpu_idle_exit(void)
 
 static char reboot_mode = 'h';
 
-int __init reboot_setup(char *str)
+int __init reboot_setup(const char *str)
 {
 	reboot_mode = str[0];
 	return 1;

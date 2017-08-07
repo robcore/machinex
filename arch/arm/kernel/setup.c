@@ -86,7 +86,7 @@ extern void paging_init(const struct machine_desc *desc);
 extern void early_paging_init(const struct machine_desc *,
 			      struct proc_info_list *);
 extern void sanity_check_meminfo(void);
-extern void reboot_setup(char *str);
+extern const int reboot_setup(const char *str);
 extern void setup_dma_zone(const struct machine_desc *desc);
 
 unsigned int processor_id;
@@ -1134,12 +1134,12 @@ void __init hyp_mode_check(void)
 
 void __init setup_arch(char **cmdline_p)
 {
-	struct machine_desc *mdesc;
+	const struct machine_desc *mdesc;
 
 	setup_processor();
-	mdesc = setup_machine_fdt(__atags_pointer);
+	mdesc = setup_machine_tags(machine_arch_type);
 	if (!mdesc)
-		mdesc = setup_machine_tags(machine_arch_type);
+		pr_err("failed to allocate machine tags!\n");
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 #ifdef CONFIG_SEC_DEBUG_SUBSYS
