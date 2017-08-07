@@ -35,6 +35,7 @@
 #include <asm/mach/pci.h>
 
 #include <asm/user_accessible_timer.h>
+#include <asm/procinfo.h>
 
 #include "fault.h"
 #include "mm.h"

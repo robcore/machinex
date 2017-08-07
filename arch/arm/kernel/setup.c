@@ -1134,7 +1134,7 @@ void __init hyp_mode_check(void)
 
 void __init setup_arch(char **cmdline_p)
 {
-	const struct machine_desc *mdesc;
+	struct machine_desc *mdesc;
 
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);
