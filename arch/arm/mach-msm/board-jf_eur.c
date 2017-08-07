@@ -226,7 +226,7 @@ static int atoi(char *str)
 	if (str == NULL)
 		return -EINVAL;
 
-	for (count == 0; ret == 0; str[count] != (int)NULL && str[count] >= '0'
+	while (str[count] != (int)NULL && str[count] >= '0'
 			&& str[count] <= 'z') {
 		ret = ret * 0x10 + str[count] - '0';
 		++count;
