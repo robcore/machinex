@@ -111,11 +111,14 @@ static void page_cache_tree_delete(struct address_space *mapping,
 				   struct page *page, void *shadow)
 {
 	struct radix_tree_node *node;
+	unsigned long index;
+	unsigned int offset;
+	unsigned int tag;
+	void **slot;
 
 	VM_BUG_ON(!PageLocked(page));
 
-	node = radix_tree_replace_clear_tags(&mapping->page_tree, page->index,
-								shadow);
+	__radix_tree_lookup(&mapping->page_tree, page->index, &node, &slot);
 
 	if (shadow) {
 		mapping->nrshadows++;
@@ -129,9 +132,23 @@ static void page_cache_tree_delete(struct address_space *mapping,
 	}
 	mapping->nrpages--;
 
-	if (!node)
+	if (!node) {
+		/* Clear direct pointer tags in root node */
+		mapping->page_tree.gfp_mask &= __GFP_BITS_MASK;
+		radix_tree_replace_slot(slot, shadow);
 		return;
+	}
 
+	/* Clear tree tags for the removed page */
+	index = page->index;
+	offset = index & RADIX_TREE_MAP_MASK;
+	for (tag = 0; tag < RADIX_TREE_MAX_TAGS; tag++) {
+		if (test_bit(offset, node->tags[tag]))
+			radix_tree_tag_clear(&mapping->page_tree, index, tag);
+	}
+
+	/* Delete page, swap shadow entry */
+	radix_tree_replace_slot(slot, shadow);
 	workingset_node_pages_dec(node);
 	if (shadow)
 		workingset_node_shadows_inc(node);
@@ -490,7 +507,7 @@ static int page_cache_tree_insert(struct address_space *mapping,
 	void **slot;
 	int error;
 
-	error = __radix_tree_create(&mapping->page_tree, page->index, 0,
+	error = __radix_tree_create(&mapping->page_tree, page->index,
 				    &node, &slot);
 	if (error)
 		return error;

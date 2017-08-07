@@ -7,8 +7,6 @@
 #include <stddef.h>
 #include <limits.h>
 
-#define RADIX_TREE_MAP_SHIFT	3
-
 #ifndef NULL
 #define NULL	0
 #endif
