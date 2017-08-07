@@ -2907,7 +2907,7 @@ static void __lockdep_trace_alloc(gfp_t gfp_mask, unsigned long flags)
 	gfp_mask = memalloc_noio_flags(gfp_mask);
 
 	/* no reclaim without waiting on it */
-	if (!(gfp_mask & __GFP_WAIT))
+	if (!(gfp_mask & __GFP_DIRECT_RECLAIM))
 		return;
 
 	/* this guy won't enter reclaim */

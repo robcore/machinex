@@ -2766,7 +2766,7 @@ static int cache_grow(struct kmem_cache *cachep,
 
 	offset *= cachep->colour_off;
 
-	if (local_flags & __GFP_WAIT)
+	if (gfpflags_allow_blocking(local_flags))
 		local_irq_enable();
 
 	/*
@@ -2796,7 +2796,7 @@ static int cache_grow(struct kmem_cache *cachep,
 
 	cache_init_objs(cachep, page);
 
-	if (local_flags & __GFP_WAIT)
+	if (gfpflags_allow_blocking(local_flags))
 		local_irq_disable();
 	check_irq_off();
 	spin_lock(&n->list_lock);
@@ -2810,7 +2810,7 @@ static int cache_grow(struct kmem_cache *cachep,
 opps1:
 	kmem_freepages(cachep, page);
 failed:
-	if (local_flags & __GFP_WAIT)
+	if (gfpflags_allow_blocking(local_flags))
 		local_irq_disable();
 	return 0;
 }
@@ -3002,7 +3002,7 @@ force_grow:
 static inline void cache_alloc_debugcheck_before(struct kmem_cache *cachep,
 						gfp_t flags)
 {
-	might_sleep_if(flags & __GFP_WAIT);
+	might_sleep_if(gfpflags_allow_blocking(flags));
 #if DEBUG
 	kmem_flagcheck(cachep, flags);
 #endif
@@ -3190,11 +3190,11 @@ retry:
 		 */
 		struct page *page;
 
-		if (local_flags & __GFP_WAIT)
+		if (gfpflags_allow_blocking(local_flags))
 			local_irq_enable();
 		kmem_flagcheck(cache, flags);
 		page = kmem_getpages(cache, local_flags, numa_mem_id());
-		if (local_flags & __GFP_WAIT)
+		if (gfpflags_allow_blocking(local_flags))
 			local_irq_disable();
 		if (page) {
 			/*
