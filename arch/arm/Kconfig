@@ -2143,6 +2143,23 @@ config USE_OF
 	help
 	  Include support for flattened device tree machine descriptions.
 
+config ATAGS
+	bool "Support for the traditional ATAGS boot data passing"
+	default y
+	help
+	  This is the traditional way of passing data to the kernel at boot
+	  time. If you are solely relying on the flattened device tree (or
+	  the ARM_ATAG_DTB_COMPAT option) then you may unselect this option
+	  to remove ATAGS support from your kernel binary.  If unsure,
+	  leave this to y.
+
+config DEPRECATED_PARAM_STRUCT
+	bool "Provide old way to pass kernel parameters"
+	depends on ATAGS
+	help
+	  This was deprecated in 2001 and announced to live on for 5 years.
+	  Some old boot loaders still use this way.
+
 # Compressed boot loader in ROM.  Yes, we really want to ask about
 # TEXT and BSS so we preserve their values in the config files.
 config ZBOOT_ROM_TEXT
@@ -2259,6 +2276,7 @@ endchoice
 config CMDLINE
 	string "Default kernel command string"
 	default ""
+	depends on ATAGS
 	help
 	  On some architectures (EBSA110 and CATS), there is currently no way
 	  for the boot loader to pass arguments to the kernel. For these
