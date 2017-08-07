@@ -133,9 +133,7 @@ struct stack {
 	u32 und[3];
 } ____cacheline_aligned;
 
-#ifndef CONFIG_CPU_V7M
 static struct stack stacks[NR_CPUS];
-#endif
 
 char elf_platform[ELF_PLATFORM_SIZE];
 EXPORT_SYMBOL(elf_platform);
@@ -218,7 +216,7 @@ static const char *proc_arch[] = {
 	"5TEJ",
 	"6TEJ",
 	"7",
-	"7M",
+	"?(11)",
 	"?(12)",
 	"?(13)",
 	"?(14)",
@@ -227,12 +225,6 @@ static const char *proc_arch[] = {
 	"?(17)",
 };
 
-#ifdef CONFIG_CPU_V7M
-static int __get_cpu_architecture(void)
-{
-	return CPU_ARCH_ARMv7M;
-}
-#else
 static int __get_cpu_architecture(void)
 {
 	int cpu_arch;
@@ -265,7 +257,6 @@ static int __get_cpu_architecture(void)
 
 	return cpu_arch;
 }
-#endif
 
 int __pure cpu_architecture(void)
 {
@@ -306,10 +297,10 @@ static int cpu_has_aliasing_icache(unsigned int arch)
 
 static void __init cacheid_init(void)
 {
-	unsigned int cachetype = read_cpuid_cachetype();
 	unsigned int arch = cpu_architecture();
 
 	if (arch >= CPU_ARCH_ARMv6) {
+		unsigned int cachetype = read_cpuid_cachetype();
 		if ((cachetype & (7 << 29)) == 4 << 29) {
 			/* ARMv7 register format */
 			arch = CPU_ARCH_ARMv7;
@@ -473,7 +464,6 @@ static void __init feat_v6_fixup(void)
  */
 void notrace cpu_init(void)
 {
-#ifndef CONFIG_CPU_V7M
 	unsigned int cpu = smp_processor_id();
 	struct stack *stk = &stacks[cpu];
 
@@ -524,7 +514,6 @@ void notrace cpu_init(void)
 	      "I" (offsetof(struct stack, und[0])),
 	      PLC (PSR_F_BIT | PSR_I_BIT | SVC_MODE)
 	    : "r14");
-#endif
 }
 
 u32 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = MPIDR_INVALID };
