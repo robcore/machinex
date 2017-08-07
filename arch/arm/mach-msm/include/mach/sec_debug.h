@@ -26,6 +26,7 @@
 
 #include <linux/sched.h>
 #include <linux/semaphore.h>
+#include <linux/reboot.h>
 
 extern void *restart_reason;
 
