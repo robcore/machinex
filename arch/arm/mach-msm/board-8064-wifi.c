@@ -248,7 +248,7 @@ static int brcm_wlan_power(int onoff)
 			ice_gpiox_set(FPGA_GPIO_BT_EN, 1);
 			pr_info("[brcm_wlan_power] Bluetooth Power On.\n");
 			if (system_state < SYSTEM_RUNNING)
-				msleep(50)
+				msleep(50);
 			else
 				mdelay(50);
 		}
@@ -286,7 +286,7 @@ static int brcm_wlan_power(int onoff)
 #ifdef ENABLE_4335BT_WAR
 	if(onoff && (bt_off == 1) && (bt_is_running == 0)) {
 			if (system_state < SYSTEM_RUNNING)
-				msleep(100)
+				msleep(100);
 			else
 				mdelay(100);
 		ice_gpiox_set(FPGA_GPIO_BT_EN, 0);
