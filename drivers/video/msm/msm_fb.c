@@ -2181,7 +2181,7 @@ static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 		//del_timer(&mfd->msmfb_no_update_notify_timer);
 
 	mfd->msmfb_no_update_notify_timer.expires = jiffies + (2 * HZ);
-	mod_timer(&mfd->msmfb_no_update_notify_timer);
+	mod_timer(&mfd->msmfb_no_update_notify_timer, mfd->msmfb_no_update_notify_timer.expires);
 	mutex_unlock(&msm_fb_notify_update_sem);
 
 	down(&msm_fb_pan_sem);
