@@ -58,6 +58,7 @@
 #include <asm/virt.h>
 #include <linux/irqchip/chained_irq.h>
 #include <linux/s_funcs.h>
+#include "atags.h"
 
 #if defined(CONFIG_FPE_NWFPE) || defined(CONFIG_FPE_FASTFPE)
 char fpe_type[8];
