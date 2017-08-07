@@ -598,11 +598,6 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 
 	msd.mpd->first_bl_hbm_psre = 0;
 
-
-#ifdef CONFIG_SEC_DEBUG_MDP
-	sec_debug_mdp_reset_value();
-#endif
-
 	pr_info("[%s]\n", __func__);
 	//printk("Rob's Panel Hook Msg.");
 /*#ifdef CONFIG_POWERSUSPEND
@@ -1532,9 +1527,7 @@ static int mipi_samsung_disp_probe(struct platform_device *pdev)
 
 		printk(KERN_INFO
 		"[lcd] pdev->id =%d,  pdev-name = %s\n", pdev->id, pdev->name);
-#ifdef CONFIG_SEC_DEBUG_MDP
-		sec_debug_mdp_init();
-#endif
+
 		printk(KERN_INFO "[lcd] mipi_samsung_disp_probe end since pdev-id is 0\n");
 
 		return 0;
