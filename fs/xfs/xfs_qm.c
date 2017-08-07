@@ -1529,7 +1529,7 @@ xfs_qm_shake(
 	LIST_HEAD		(dispose_list);
 	struct xfs_dquot	*dqp;
 
-	if ((sc->gfp_mask & (__GFP_FS|__GFP_DIRECT_RECLAIM)) != (__GFP_FS|__GFP_DIRECT_RECLAIM))
+	if ((sc->gfp_mask & (__GFP_FS|__GFP_WAIT)) != (__GFP_FS|__GFP_WAIT))
 		return 0;
 	if (!nr_to_scan)
 		goto out;

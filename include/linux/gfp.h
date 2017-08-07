@@ -69,7 +69,7 @@ struct vm_area_struct;
  * __GFP_MOVABLE: Flag that this page will be movable by the page migration
  * mechanism or reclaimed
  */
-#define __GFP_ATOMIC	((__force gfp_t)___GFP_ATOMIC)  /* Caller cannot wait or reschedule */
+#define __GFP_WAIT	((__force gfp_t)___GFP_WAIT)	/* Can wait and reschedule? */
 #define __GFP_HIGH	((__force gfp_t)___GFP_HIGH)	/* Should access emergency pools? */
 #define __GFP_IO	((__force gfp_t)___GFP_IO)	/* Can start physical IO? */
 #define __GFP_FS	((__force gfp_t)___GFP_FS)	/* Can call down to low-level FS? */
@@ -177,11 +177,6 @@ static inline int allocflags_to_migratetype(gfp_t gfp_flags)
 		(((gfp_flags & __GFP_CMA) != 0) << 1) |
 		((gfp_flags & __GFP_RECLAIMABLE) != 0);
 #endif
-}
-
-static inline bool gfpflags_allow_blocking(const gfp_t gfp_flags)
-{
-	return gfp_flags & __GFP_DIRECT_RECLAIM;
 }
 
 #ifdef CONFIG_HIGHMEM

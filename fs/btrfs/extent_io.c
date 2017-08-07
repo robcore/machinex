@@ -625,7 +625,7 @@ search_again:
 	if (start > end)
 		goto out;
 	spin_unlock(&tree->lock);
-	if (gfpflags_allow_blocking(mask))
+	if (mask & __GFP_WAIT)
 		cond_resched();
 	goto again;
 }
@@ -746,7 +746,7 @@ __set_extent_bit(struct extent_io_tree *tree, u64 start, u64 end,
 
 	bits |= EXTENT_FIRST_DELALLOC;
 again:
-	if (!prealloc && gfpflags_allow_blocking(mask)) {
+	if (!prealloc && (mask & __GFP_WAIT)) {
 		prealloc = alloc_extent_state(mask);
 		BUG_ON(!prealloc);
 	}
@@ -924,7 +924,7 @@ search_again:
 	if (start > end)
 		goto out;
 	spin_unlock(&tree->lock);
-	if (gfpflags_allow_blocking(mask))
+	if (mask & __GFP_WAIT)
 		cond_resched();
 	goto again;
 }
@@ -1123,7 +1123,7 @@ search_again:
 	if (start > end)
 		goto out;
 	spin_unlock(&tree->lock);
-	if (gfpflags_allow_blocking(mask))
+	if (mask & __GFP_WAIT)
 		cond_resched();
 	goto again;
 }
@@ -3672,7 +3672,7 @@ int try_release_extent_mapping(struct extent_map_tree *map,
 	u64 start = (u64)page->index << PAGE_CACHE_SHIFT;
 	u64 end = start + PAGE_CACHE_SIZE - 1;
 
-	if (gfpflags_allow_blocking(mask) &&
+	if ((mask & __GFP_WAIT) &&
 	    page->mapping->host->i_size > 16 * 1024 * 1024) {
 		u64 len;
 		while (start <= end) {

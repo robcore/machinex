@@ -45,7 +45,7 @@ EXPORT_SYMBOL(__fscache_wait_on_page_write);
 
 /*
  * decide whether a page can be released, possibly by cancelling a store to it
- * - we're allowed to sleep if __GFP_DIRECT_RECLAIM is flagged
+ * - we're allowed to sleep if __GFP_WAIT is flagged
  */
 bool __fscache_maybe_release_page(struct fscache_cookie *cookie,
 				  struct page *page,
@@ -109,7 +109,7 @@ page_busy:
 	 * allocator as the work threads writing to the cache may all end up
 	 * sleeping on memory allocation, so we may need to impose a timeout
 	 * too. */
-	if (!(gfp & __GFP_DIRECT_RECLAIM) || !(gfp & __GFP_FS)) {
+	if (!(gfp & __GFP_WAIT) || !(gfp & __GFP_FS)) {
 		fscache_stat(&fscache_n_store_vmscan_busy);
 		return false;
 	}

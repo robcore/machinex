@@ -1103,7 +1103,7 @@ int netlink_broadcast_filtered(struct sock *ssk, struct sk_buff *skb, u32 pid,
 		consume_skb(info.skb2);
 
 	if (info.delivered) {
-		if (info.congested && gfpflags_allow_blocking(allocation))
+		if (info.congested && (allocation & __GFP_WAIT))
 			yield();
 		return 0;
 	}

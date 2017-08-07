@@ -494,7 +494,7 @@ int rxrpc_connect_call(struct rxrpc_sock *rx,
 		if (bundle->num_conns >= 20) {
 			_debug("too many conns");
 
-			if (!gfpflags_allow_blocking(gfp)) {
+			if (!(gfp & __GFP_WAIT)) {
 				_leave(" = -EAGAIN");
 				return -EAGAIN;
 			}
