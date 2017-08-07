@@ -761,8 +761,8 @@ void mipi_dsi_clk_enable(void)
 	mipi_dsi_pclk_ctrl(&dsi_pclk, 1);
 	mipi_dsi_clk_ctrl(&dsicore_clk, 1);
 	
-	clk_enable(dsi_byte_div_clk);
-	clk_enable(dsi_esc_clk);
+	clk_prepare_enable(dsi_byte_div_clk);
+	clk_prepare_enable(dsi_esc_clk);
 	mipi_dsi_clk_on = 1;
 	mdp4_stat.dsi_clk_on++;
 }
