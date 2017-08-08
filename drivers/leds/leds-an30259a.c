@@ -269,7 +269,7 @@ void an30259a_set_brightness(struct led_classdev *cdev,
 {
 		struct an30259a_led *led = cdev_to_led(cdev);
 		led->brightness = (u8)brightness;
-		mod_delayed_work(system_wq, &led->brightness_work);
+		mod_delayed_work(system_wq, &led->brightness_work, 0);
 }
 
 static void an30259a_led_brightness_work(struct work_struct *work)
