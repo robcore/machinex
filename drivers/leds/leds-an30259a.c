@@ -580,7 +580,7 @@ static void an30259a_start_led_pattern(int mode)
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 0, 0, 1, 1, 0, 1, 1, 0);
 			leds_i2c_quick_write(client);
-			
+			return;
 		}
 		break;
 
