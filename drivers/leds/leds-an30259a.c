@@ -849,7 +849,6 @@ static ssize_t store_led_r(struct device *dev,
 		leds_on(LED_R, true, false, brightness);
 
 	leds_i2c_write_all(data->client);
-	an30259a_debug(data->client);
 out:
 	return count;
 }
@@ -879,7 +878,6 @@ static ssize_t store_led_g(struct device *dev,
 		leds_on(LED_G, true, false, brightness);
 
 	leds_i2c_write_all(data->client);
-	an30259a_debug(data->client);
 out:
 	return count;
 }
@@ -909,7 +907,6 @@ static ssize_t store_led_b(struct device *dev,
 		leds_on(LED_B, true, false, brightness);
 
 	leds_i2c_write_all(data->client);
-	an30259a_debug(data->client);
 out:
 	return count;
 
