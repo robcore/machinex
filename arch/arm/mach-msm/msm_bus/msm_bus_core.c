@@ -56,7 +56,7 @@ struct msm_bus_fabric_device *msm_bus_get_fabric_device(int fabid)
 {
 	struct device *dev;
 	struct msm_bus_fabric_device *fabric;
-	dev = bus_find_device(&msm_bus_type, NULL, (void *)fabid,
+	dev = bus_find_device(&msm_bus_type, NULL, (void *)&fabid,
 		msm_bus_device_match);
 	if (!dev)
 		return NULL;
