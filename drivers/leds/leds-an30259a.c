@@ -263,15 +263,6 @@ exit:
 	mutex_unlock(&data->mutex);
 	return ret;
 }
-
-void an30259a_set_brightness(struct led_classdev *cdev,
-			enum led_brightness brightness)
-{
-		struct an30259a_led *led = cdev_to_led(cdev);
-		led->brightness = (u8)brightness;
-		mod_delayed_work(system_wq, &led->brightness_work, 0);
-}
-
 static void an30259a_led_brightness_work(struct work_struct *work)
 {
 		struct i2c_client *client = b_client;
@@ -279,6 +270,14 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 				struct an30259a_led, brightness_work);
 		leds_on(led->channel, true, false, led->brightness);
 		leds_i2c_write_all(client);
+}
+
+void an30259a_set_brightness(struct led_classdev *cdev,
+			enum led_brightness brightness)
+{
+		struct an30259a_led *led = cdev_to_led(cdev);
+		led->brightness = (u8)brightness;
+		mod_delayed_work(system_wq, &led->brightness_work, 0);
 }
 
 /*
