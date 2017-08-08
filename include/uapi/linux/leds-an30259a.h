@@ -64,5 +64,4 @@ struct an30259a_pr_control {
 } __packed;
 
 extern struct class *sec_class;
-
-#endif
+#endif						/* _UAPI_LEDS_AN30259A_H */

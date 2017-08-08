@@ -158,7 +158,7 @@ static int regulator_led_probe(struct platform_device *pdev)
 		return PTR_ERR(vcc);
 	}
 
-	led = kzalloc(sizeof(*led), GFP_KERNEL);
+	led = devm_kzalloc(&pdev->dev, sizeof(*led), GFP_KERNEL);
 	if (led == NULL) {
 		ret = -ENOMEM;
 		goto err_vcc;
@@ -226,7 +226,7 @@ static struct platform_driver regulator_led_driver = {
 		   .owner = THIS_MODULE,
 		   },
 	.probe  = regulator_led_probe,
-	.remove = __devexit_p(regulator_led_remove),
+	.remove = regulator_led_remove,
 };
 
 module_platform_driver(regulator_led_driver);

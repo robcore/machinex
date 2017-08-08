@@ -112,9 +112,7 @@
 #define LED_IMAX_SHIFT			6
 #define AN30259A_CTN_RW_FLG		0x80
 
-#define LED_R_CURRENT		0x28
-#define LED_G_CURRENT		0x28
-#define LED_B_CURRENT		0x28
+#define LED_DEFAULT_CURRENT		0x28
 #define LED_MAX_CURRENT		0xFF
 #define LED_OFF				0x00
 
@@ -131,17 +129,17 @@ static struct an30259_led_conf led_conf[] = {
 	{
 		.name = "led_r",
 		.brightness = LED_OFF,
-		.max_brightness = LED_R_CURRENT,
+		.max_brightness = LED_DEFAULT_CURRENT,
 		.flags = 0,
 	}, {
 		.name = "led_g",
 		.brightness = LED_OFF,
-		.max_brightness = LED_G_CURRENT,
+		.max_brightness = LED_DEFAULT_CURRENT,
 		.flags = 0,
 	}, {
 		.name = "led_b",
 		.brightness = LED_OFF,
-		.max_brightness = LED_B_CURRENT,
+		.max_brightness = LED_DEFAULT_CURRENT,
 		.flags = 0,
 	}
 };
@@ -387,11 +385,11 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		brightness = LED_MAX_CURRENT;
 
 	if (led == LED_R)
-		LED_DYNAMIC_CURRENT = LED_R_CURRENT;
+		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
 	else if (led == LED_G)
-		LED_DYNAMIC_CURRENT = LED_G_CURRENT;
+		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
 	else if (led == LED_B)
-		LED_DYNAMIC_CURRENT = LED_B_CURRENT;
+		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
 
 	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
 	if (led_intensity == 40) /* Samsung stock behaviour */
@@ -457,9 +455,9 @@ static void an30259a_start_led_pattern(int mode)
 
 	/* Yank555.lu : Control LED intensity (normal, bright) */
 	if (led_intensity == 0) {
-		r_brightness = LED_R_CURRENT; /* CM stock behaviour */
-		g_brightness = LED_G_CURRENT;
-		b_brightness = LED_B_CURRENT;
+		r_brightness = LED_DEFAULT_CURRENT; /* CM stock behaviour */
+		g_brightness = LED_DEFAULT_CURRENT;
+		b_brightness = LED_DEFAULT_CURRENT;
 	} else {
 		r_brightness = MIN(led_intensity, LED_MAX_CURRENT);
 		g_brightness = MIN(led_intensity, LED_MAX_CURRENT);
@@ -535,25 +533,25 @@ static void an30259a_start_led_pattern(int mode)
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
 
-			leds_on(LED_R, true, true, LED_R_CURRENT);
+			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_R,
 					0, 0, 0, 5, 2, 2, 0, 0, 0, 0);
-			leds_on(LED_G, true, true, LED_G_CURRENT);
+			leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 7, 8, 2, 2, 0, 0, 0, 0);
-			leds_on(LED_B, true, true, LED_B_CURRENT);
+			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 0, 0, 2, 2, 0, 0, 0, 0);
 			booted = true;
 		} else {
 			pr_info("LED Powering Pattern OFF\n");
-			leds_on(LED_R, true, true, LED_R_CURRENT);
+			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_R,
 					0, 15, 0, 0, 1, 0, 0, 0, 0, 0);
-			leds_on(LED_G, true, true, LED_G_CURRENT);
+			leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_G,
 					1, 15, 5, 1, 1, 0, 0, 0, 0, 0);
-			leds_on(LED_B, true, true, LED_B_CURRENT);
+			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
 					2, 15, 0, 0, 1, 0, 0, 0, 0, 0);
 		}
@@ -562,20 +560,20 @@ static void an30259a_start_led_pattern(int mode)
 /* For later
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
-		leds_on(LED_R, true, true, LED_R_CURRENT);
-		leds_on(LED_G, true, true, LED_G_CURRENT);
-		leds_on(LED_B, true, true, LED_B_CURRENT);
+		leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
+		leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
+		leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_R, 0, 5, 5, 0, 1, 0, 2, 1, 1, 0);
 		leds_set_slope_mode(client, LED_G, 0, 15, 8, 15, 1, 0, 2, 1, 1, 0);
 		leds_set_slope_mode(client, LED_B, 0, 15, 10, 15, 0, 1, 2, 1, 1, 0);
 */
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
-		leds_on(LED_R, true, true, LED_R_CURRENT);
+		leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_R, 0, 0, 0, 5, 1, 1, 0, 0, 0, 0);
-		leds_on(LED_G, true, true, LED_G_CURRENT);
+		leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_G, 0, 15, 15, 5, 1, 1, 0, 0, 0, 0);
-		leds_on(LED_B, true, true, LED_B_CURRENT);
+		leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 
 		break;
