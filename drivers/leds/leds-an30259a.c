@@ -159,6 +159,7 @@ enum an30259a_pattern {
 	FULLY_CHARGED,
 	POWERING,
 	BOOTING,
+	CUSTOM,
 };
 
 struct an30259a_led {
@@ -435,6 +436,42 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 					0, 0, 0, 0);
 	}
 }
+static unsigned int custom_r_enabled = 1;
+static unsigned int custom_r_delay;
+static unsigned int custom_r_dutymax;
+static unsigned int custom_r_dutymid;
+static unsigned int custom_r_dutymin;
+static unsigned int custom_r_total1;
+static unsigned int custom_r_total2;
+static unsigned int custom_r_dt1;
+static unsigned int custom_r_dt2;
+static unsigned int custom_r_dt3;
+static unsigned int custom_r_dt4;
+
+static unsigned int custom_g_enabled = 1;
+static unsigned int custom_g_delay;
+static unsigned int custom_g_dutymax;
+static unsigned int custom_g_dutymid;
+static unsigned int custom_g_dutymin;
+static unsigned int custom_g_total1;
+static unsigned int custom_g_total2;
+static unsigned int custom_g_dt1;
+static unsigned int custom_g_dt2;
+static unsigned int custom_g_dt3;
+static unsigned int custom_g_dt4;
+
+static unsigned int custom_b_enabled = 1;
+static unsigned int custom_b_delay;
+static unsigned int custom_b_dutymax;
+static unsigned int custom_b_dutymid;
+static unsigned int custom_b_dutymin;
+static unsigned int custom_b_total1;
+static unsigned int custom_b_total2;
+static unsigned int custom_b_dt1;
+static unsigned int custom_b_dt2;
+static unsigned int custom_b_dt3;
+static unsigned int custom_b_dt4;
+
 static bool booted = false;
 static void an30259a_start_led_pattern(int mode)
 {
@@ -450,7 +487,7 @@ static void an30259a_start_led_pattern(int mode)
 
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
-	if (mode > BOOTING || disabled_samsung_pattern ||
+	if (mode > CUSTOM || disabled_samsung_pattern ||
 		mode == PATTERN_OFF || mode == LED_OFF)
 		return;
 
@@ -579,13 +616,43 @@ static void an30259a_start_led_pattern(int mode)
 		leds_on(LED_R, true, true, r_brightness);
 		leds_set_slope_mode(client, LED_R,
 				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-		leds_on(LED_G, true, true, r_brightness);
+		leds_on(LED_G, true, true, g_brightness);
 		leds_set_slope_mode(client, LED_G,
 				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-		leds_on(LED_B, true, true, r_brightness);
+		leds_on(LED_B, true, true, b_brightness);
 		leds_set_slope_mode(client, LED_B,
 				1, 15, 7, 0, 1, 1, 0, 0, 0, 0);
 		break;
+
+	case CUSTOM:
+		if (custom_r_enabled) {
+			leds_on(LED_R, true, true, r_brightness);
+			leds_set_slope_mode(client, LED_R,
+					custom_r_delay,
+					custom_r_dutymax, custom_r_dutymid, custom_r_dutymin,
+					custom_r_total1, custom_r_total2,
+					custom_r_dt1, custom_r_dt2, custom_r_dt3, custom_r_dt4);
+		}
+		if (custom_g_enabled) {
+			leds_on(LED_G, true, true, g_brightness);
+			leds_set_slope_mode(client, LED_G,
+					custom_g_delay,
+					custom_g_dutymax, custom_g_dutymid, custom_g_dutymin,
+					custom_g_total1, custom_g_total2,
+					custom_g_dt1, custom_g_dt2, custom_g_dt3, custom_g_dt4);
+		}
+		if (custom_b_enabled) {
+			leds_on(LED_B, true, true, b_brightness);
+			leds_set_slope_mode(client, LED_B,
+					custom_b_delay,
+					custom_b_dutymax, custom_b_dutymid, custom_b_dutymin,
+					custom_b_total1, custom_b_total2,
+					custom_b_dt1, custom_b_dt2, custom_b_dt3, custom_b_dt4);
+		}
+		break;
+
+
+
 #if 0
 		an30259a_set_led_blink(LED_R, 0, 2, r_brightness);
 		an30259a_set_led_blink(LED_G, 2, 0, g_brightness);
@@ -683,7 +750,6 @@ static ssize_t store_an30259a_led_pattern(struct device *dev,
 	}
 
 	an30259a_start_led_pattern(mode);
-	printk(KERN_DEBUG "led pattern : %d is activated\n", mode);
 
 	return count;
 }
