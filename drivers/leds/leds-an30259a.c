@@ -269,7 +269,7 @@ void an30259a_set_brightness(struct led_classdev *cdev,
 {
 		struct an30259a_led *led = cdev_to_led(cdev);
 		led->brightness = (u8)brightness;
-		schedule_work(&led->brightness_work);
+		mod_delayed_work(system_wq, &led->brightness_work);
 }
 
 static void an30259a_led_brightness_work(struct work_struct *work)
@@ -1197,7 +1197,7 @@ static int an30259a_probe(struct i2c_client *client,
 			}
 			goto exit;
 		}
-		INIT_WORK(&(data->leds[i].brightness_work),
+		INIT_DELAYED_WORK(&(data->leds[i].brightness_work),
 				 an30259a_led_brightness_work);
 	}
 
