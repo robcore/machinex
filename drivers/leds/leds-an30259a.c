@@ -1155,10 +1155,97 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
+#define store_switch(file_name)		\
+static ssize_t store_##file_name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)		\
+		return -EINVAL;			\
+	if (input >= 1)		\
+		input = 1;		\
+	if (input <= 0)		\
+		input = 0;		\
+	if (input == file_name) {			\
+		return count;			\
+	}					\
+	file_name = input;				\
+	return count;				\
+}
+
+#define store_long(file_name)		\
+static ssize_t store_##file_name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)		\
+		return -EINVAL;			\
+	if (input >= 10)		\
+		input = 10;		\
+	if (input <= 0)		\
+		input = 0;		\
+	if (input == file_name) {			\
+		return count;			\
+	}					\
+	file_name = input;				\
+	return count;				\
+}
+
+#define store_duty(file_name)		\
+static ssize_t store_##file_name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)		\
+		return -EINVAL;			\
+	if (input >= 15)		\
+		input = 15;		\
+	if (input <= 0)		\
+		input = 0;		\
+	if (input == file_name) {			\
+		return count;			\
+	}					\
+	file_name = input;				\
+	return count;				\
+}
+
+#define store_slpdt(file_name)		\
+static ssize_t store_##file_name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)		\
+		return -EINVAL;			\
+	if (input >= 15)		\
+		input = 15;		\
+	if (input <= 0)		\
+		input = 0;		\
+	if (input == file_name) {			\
+		return count;			\
+	}					\
+	file_name = input;				\
+	return count;				\
+}
+
 #define MX_ATTR_RW(_name) \
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
-
 
 show_one(custom_r_enabled);
 show_one(custom_r_delay);
@@ -1172,29 +1259,17 @@ show_one(custom_r_dt2);
 show_one(custom_r_dt3);
 show_one(custom_r_dt4);
 
-show_one(custom_g_enabled);
-show_one(custom_g_delay);
-show_one(custom_g_dutymax);
-show_one(custom_g_dutymid);
-show_one(custom_g_dutymin);
-show_one(custom_g_total1);
-show_one(custom_g_total2);
-show_one(custom_g_dt1);
-show_one(custom_g_dt2);
-show_one(custom_g_dt3);
-show_one(custom_g_dt4);
-
-show_one(custom_b_enabled);
-show_one(custom_b_delay);
-show_one(custom_b_dutymax);
-show_one(custom_b_dutymid);
-show_one(custom_b_dutymin);
-show_one(custom_b_total1);
-show_one(custom_b_total2);
-show_one(custom_b_dt1);
-show_one(custom_b_dt2);
-show_one(custom_b_dt3);
-show_one(custom_b_dt4);
+store_switch(custom_r_enabled);
+store_long(custom_r_delay);
+store_duty(custom_r_dutymax);
+store_duty(custom_r_dutymid);
+store_duty(custom_r_dutymin);
+store_long(custom_r_total1);
+store_long(custom_r_total2);
+store_slpdt(custom_r_dt1);
+store_slpdt(custom_r_dt2);
+store_slpdt(custom_r_dt3);
+store_slpdt(custom_r_dt4);
 
 MX_ATTR_RW(custom_r_enabled);
 MX_ATTR_RW(custom_r_delay);
@@ -1208,6 +1283,30 @@ MX_ATTR_RW(custom_r_dt2);
 MX_ATTR_RW(custom_r_dt3);
 MX_ATTR_RW(custom_r_dt4);
 
+show_one(custom_g_enabled);
+show_one(custom_g_delay);
+show_one(custom_g_dutymax);
+show_one(custom_g_dutymid);
+show_one(custom_g_dutymin);
+show_one(custom_g_total1);
+show_one(custom_g_total2);
+show_one(custom_g_dt1);
+show_one(custom_g_dt2);
+show_one(custom_g_dt3);
+show_one(custom_g_dt4);
+
+store_switch(custom_g_enabled);
+store_long(custom_g_delay);
+store_duty(custom_g_dutymax);
+store_duty(custom_g_dutymid);
+store_duty(custom_g_dutymin);
+store_long(custom_g_total1);
+store_long(custom_g_total2);
+store_slpdt(custom_g_dt1);
+store_slpdt(custom_g_dt2);
+store_slpdt(custom_g_dt3);
+store_slpdt(custom_g_dt4);
+
 MX_ATTR_RW(custom_g_enabled);
 MX_ATTR_RW(custom_g_delay);
 MX_ATTR_RW(custom_g_dutymax);
@@ -1219,6 +1318,30 @@ MX_ATTR_RW(custom_g_dt1);
 MX_ATTR_RW(custom_g_dt2);
 MX_ATTR_RW(custom_g_dt3);
 MX_ATTR_RW(custom_g_dt4);
+
+show_one(custom_b_enabled);
+show_one(custom_b_delay);
+show_one(custom_b_dutymax);
+show_one(custom_b_dutymid);
+show_one(custom_b_dutymin);
+show_one(custom_b_total1);
+show_one(custom_b_total2);
+show_one(custom_b_dt1);
+show_one(custom_b_dt2);
+show_one(custom_b_dt3);
+show_one(custom_b_dt4);
+
+store_switch(custom_b_enabled);
+store_long(custom_b_delay);
+store_duty(custom_b_dutymax);
+store_duty(custom_b_dutymid);
+store_duty(custom_b_dutymin);
+store_long(custom_b_total1);
+store_long(custom_b_total2);
+store_slpdt(custom_b_dt1);
+store_slpdt(custom_b_dt2);
+store_slpdt(custom_b_dt3);
+store_slpdt(custom_b_dt4);
 
 MX_ATTR_RW(custom_b_enabled);
 MX_ATTR_RW(custom_b_delay);
