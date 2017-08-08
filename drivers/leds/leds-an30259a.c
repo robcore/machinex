@@ -473,6 +473,7 @@ static unsigned int custom_b_dt3;
 static unsigned int custom_b_dt4;
 
 static bool booted = false;
+static unsigned int current_led_mode;
 static void an30259a_start_led_pattern(int mode)
 {
 	int retval;
@@ -483,12 +484,12 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-
+	current_led_mode = mode;
 
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
 	if (mode > CUSTOM || disabled_samsung_pattern ||
-		mode == PATTERN_OFF || mode == LED_OFF)
+		mode <= PATTERN_OFF || mode == LED_OFF)
 		return;
 
 	/* Set to low power consumption mode */
@@ -732,6 +733,12 @@ static ssize_t store_an30259a_led_br_lev(struct device *dev,
 	leds_set_imax(client, brightness_lev);
 
 	return count;
+}
+
+static ssize_t show_an30259a_led_pattern(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+		return sprintf(buf, "%u\n", current_led_mode);
 }
 
 static ssize_t store_an30259a_led_pattern(struct device *dev,
@@ -1089,7 +1096,7 @@ static DEVICE_ATTR(led_g, 0664, NULL, store_led_g);
 static DEVICE_ATTR(led_b, 0664, NULL, store_led_b);
 /* led_pattern node permission is 664 */
 /* To access sysfs node from other groups */
-static DEVICE_ATTR(led_pattern, 0664, NULL, \
+static DEVICE_ATTR(led_pattern, 0664, show_an30259a_led_pattern, \
 					store_an30259a_led_pattern);
 static DEVICE_ATTR(led_blink, 0664, NULL, \
 					store_an30259a_led_blink);
