@@ -24,7 +24,7 @@
 
 #define HARDPLUG_MAJOR 1
 #define HARDPLUG_MINOR 7
-
+#if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
 
@@ -44,15 +44,12 @@ static void plug_one_cpu(void)
 	unsigned int cpuid = 0;
 
 	if (num_online_cpus() > 1) {
-		if (!g_sd_tuners->cpu_hotplug_disable) {
 			cpuid = cpumask_next(0, cpu_online_mask);
-			pr_info("!!  we gonna unplug cpu%d  !!\n",cpuid);
 			cpu_down(cpuid);
-		}
 	}
 	return;
 }
-
+#endif
 unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
 unsigned int cpu2_allowed = 1;
