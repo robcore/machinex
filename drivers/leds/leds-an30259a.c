@@ -151,7 +151,7 @@ enum an30259a_led_enum {
 };
 
 enum an30259a_pattern {
-	PATTERN_OFF,
+	PATTERN_OFF = 0,
 	CHARGING,
 	CHARGING_ERR,
 	MISSED_NOTI,

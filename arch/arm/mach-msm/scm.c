@@ -313,7 +313,7 @@ int scm_call(u32 svc_id, u32 cmd_id, const void *cmd_buf, size_t cmd_len,
 	if (cmd_len > len || resp_len > len)
 		return -EINVAL;
 
-	cmd = kzalloc(PAGE_ALIGN(len), GFP_KERNEL);
+	cmd = kzalloc(PAGE_ALIGN(len), GFP_NOIO);
 	if (!cmd)
 		return -ENOMEM;
 
