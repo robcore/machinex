@@ -30,9 +30,12 @@ static unsigned int mx_version = CONFIG_MACHINEX_VERSION;
 static ssize_t mx_version_show(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "MARK%d\n", mx_version);
-}
+	ssize_t ret = 0;
 
+	ret = snprintf(buf, PAGE_SIZE, "mark%d", mx_version);
+	buf[strlen(buf) + 1] = '\0';
+	return ret;
+}
 MX_ATTR_RO(mx_version);
 
 struct kobject *mx_kobj;
