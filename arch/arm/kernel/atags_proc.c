@@ -1,6 +1,5 @@
 #include <linux/slab.h>
 #include <linux/proc_fs.h>
-#include <linux/s_funcs.h>
 #include <asm/setup.h>
 #include <asm/types.h>
 #include <asm/page.h>
