@@ -213,7 +213,7 @@ EXPORT_SYMBOL(msm_spm_reinit);
 
 int msm_spm_set_low_power_mode(unsigned int mode, bool notify_rpm)
 {
-	struct msm_spm_device *dev = &__get_cpu_var(msm_cpu_spm_device);
+	struct msm_spm_device *dev = this_cpu_ptr(&msm_cpu_spm_device);
 	bool pc_mode = (mode == MSM_SPM_MODE_POWER_COLLAPSE) ? true : false;
 	return msm_spm_dev_set_low_power_mode(dev, mode, notify_rpm, pc_mode);
 }

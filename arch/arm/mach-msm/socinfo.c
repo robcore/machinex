@@ -71,7 +71,8 @@ const char *hw_platform_subtype[] = {
 	[PLATFORM_SUBTYPE_UNKNOWN] = "Unknown",
 	[PLATFORM_SUBTYPE_CHARM] = "charm",
 	[PLATFORM_SUBTYPE_STRANGE] = "strange",
-	[PLATFORM_SUBTYPE_STRANGE_2A] = "strange_2a,"
+	[PLATFORM_SUBTYPE_STRANGE_2A] = "strange_2a",
+	[PLATFORM_SUBTYPE_INVALID] = "Invalid",
 };
 
 /* Used to parse shared memory.  Must match the modem. */
@@ -139,6 +140,7 @@ static union {
 static enum msm_cpu cpu_of_id[] = {
 
 	/* 7x01 IDs */
+	[0]  = MSM_CPU_UNKNOWN,
 	[1]  = MSM_CPU_7X01,
 	[16] = MSM_CPU_7X01,
 	[17] = MSM_CPU_7X01,
