@@ -436,41 +436,42 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 					0, 0, 0, 0);
 	}
 }
-static unsigned int custom_r_enabled = 1;
-static unsigned int custom_r_delay;
-static unsigned int custom_r_dutymax;
-static unsigned int custom_r_dutymid;
-static unsigned int custom_r_dutymin;
-static unsigned int custom_r_total1;
-static unsigned int custom_r_total2;
-static unsigned int custom_r_dt1;
-static unsigned int custom_r_dt2;
-static unsigned int custom_r_dt3;
-static unsigned int custom_r_dt4;
 
-static unsigned int custom_g_enabled = 1;
-static unsigned int custom_g_delay;
-static unsigned int custom_g_dutymax;
-static unsigned int custom_g_dutymid;
-static unsigned int custom_g_dutymin;
-static unsigned int custom_g_total1;
-static unsigned int custom_g_total2;
-static unsigned int custom_g_dt1;
-static unsigned int custom_g_dt2;
-static unsigned int custom_g_dt3;
-static unsigned int custom_g_dt4;
+static unsigned int custom_r_enabled = 0;
+static unsigned int custom_r_delay = 0;
+static unsigned int custom_r_dutymax = 15;
+static unsigned int custom_r_dutymid = 0;
+static unsigned int custom_r_dutymin = 0;
+static unsigned int custom_r_total1 = 1;
+static unsigned int custom_r_total2 = 1;
+static unsigned int custom_r_dt = 0;
+static unsigned int custom_r_dt2 = 0;
+static unsigned int custom_r_dt3 = 0;
+static unsigned int custom_r_dt4 = 0;
 
-static unsigned int custom_b_enabled = 1;
-static unsigned int custom_b_delay;
-static unsigned int custom_b_dutymax;
-static unsigned int custom_b_dutymid;
-static unsigned int custom_b_dutymin;
-static unsigned int custom_b_total1;
-static unsigned int custom_b_total2;
-static unsigned int custom_b_dt1;
-static unsigned int custom_b_dt2;
-static unsigned int custom_b_dt3;
-static unsigned int custom_b_dt4;
+static unsigned int custom_g_enabled = 0;
+static unsigned int custom_g_delay = 0;
+static unsigned int custom_g_dutymax = 15;
+static unsigned int custom_g_dutymid = 0;
+static unsigned int custom_g_dutymin = 0;
+static unsigned int custom_g_total1 = 1;
+static unsigned int custom_g_total2 = 1;
+static unsigned int custom_g_dt = 0;
+static unsigned int custom_g_dt2 = 0;
+static unsigned int custom_g_dt3 = 0;
+static unsigned int custom_g_dt4 = 0;
+
+static unsigned int custom_b_enabled = 0;
+static unsigned int custom_b_delay = 0;
+static unsigned int custom_b_dutymax = 15;
+static unsigned int custom_b_dutymid = 0;
+static unsigned int custom_b_dutymin = 0;
+static unsigned int custom_b_total1 = 1;
+static unsigned int custom_b_total2 = 1;
+static unsigned int custom_b_dt = 0;
+static unsigned int custom_b_dt2 = 0;
+static unsigned int custom_b_dt3 = 0;
+static unsigned int custom_b_dt4 = 0;
 
 static bool booted = false;
 static unsigned int current_led_mode;
