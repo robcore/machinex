@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -71,7 +71,6 @@ static int msm_bus_get_iid(int id)
 	return CHECK_ID(((id < SLAVE_ID_KEY) ? master_iids[id] :
 		slave_iids[id - SLAVE_ID_KEY]), id);
 }
-
 
 static struct msm_bus_board_algorithm msm_bus_id_algo = {
 	.get_iid = msm_bus_get_iid,
