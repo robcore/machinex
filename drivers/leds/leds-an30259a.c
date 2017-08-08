@@ -165,7 +165,6 @@ struct an30259a_led {
 	u8	channel;
 	u8	brightness;
 	struct led_classdev	cdev;
-	struct work_struct	brightness_work;
 	unsigned long delay_on_time_ms;
 	unsigned long delay_off_time_ms;
 };
@@ -268,15 +267,8 @@ void an30259a_set_brightness(struct led_classdev *cdev,
 			enum led_brightness brightness)
 {
 		struct an30259a_led *led = cdev_to_led(cdev);
-		led->brightness = (u8)brightness;
-		schedule_work(&led->brightness_work);
-}
-
-static void an30259a_led_brightness_work(struct work_struct *work)
-{
 		struct i2c_client *client = b_client;
-		struct an30259a_led *led = container_of(work,
-				struct an30259a_led, brightness_work);
+		led->brightness = (u8)brightness;
 		leds_on(led->channel, true, false, led->brightness);
 		leds_i2c_write_all(client);
 }
@@ -1157,7 +1149,6 @@ static void an30259a_deinitialize(struct an30259a_led *led, int channel)
 {
 	sysfs_remove_group(&led->cdev.dev->kobj,&common_led_attr_group);
 	led_classdev_unregister(&led->cdev);
-	cancel_work_sync(&led->brightness_work);
 }
 
 static int an30259a_probe(struct i2c_client *client,
@@ -1197,8 +1188,6 @@ static int an30259a_probe(struct i2c_client *client,
 			}
 			goto exit;
 		}
-		INIT_WORK(&(data->leds[i].brightness_work),
-				 an30259a_led_brightness_work);
 	}
 
 #ifdef SEC_LED_SPECIFIC
@@ -1261,7 +1250,6 @@ static int an30259a_remove(struct i2c_client *client)
 		sysfs_remove_group(&data->leds[i].cdev.dev->kobj,
 						&common_led_attr_group);
 		led_classdev_unregister(&data->leds[i].cdev);
-		cancel_work_sync(&data->leds[i].brightness_work);
 	}
 
 	mutex_destroy(&data->mutex);
@@ -1273,7 +1261,6 @@ static struct i2c_device_id an30259a_id[] = {
 	{"an30259a", 0},
 	{},
 };
-
 MODULE_DEVICE_TABLE(i2c, an30259a_id);
 
 static struct i2c_driver an30259a_i2c_driver = {
