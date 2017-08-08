@@ -726,22 +726,8 @@ int __init arm_add_memory(u64 start, u64 size)
 	}
 #endif
 
-	if (aligned_start < PLAT_PHYS_OFFSET) {
-		if (aligned_start + size <= PLAT_PHYS_OFFSET) {
-			pr_info("Ignoring memory below PHYS_OFFSET: 0x%08llx-0x%08llx\n",
-				aligned_start, aligned_start + size);
-			return -EINVAL;
-		}
-
-		pr_info("Ignoring memory below PHYS_OFFSET: 0x%08llx-0x%08llx\n",
-			aligned_start, (u64)PLAT_PHYS_OFFSET);
-
-		size -= PLAT_PHYS_OFFSET - aligned_start;
-		aligned_start = PLAT_PHYS_OFFSET;
-	}
-
 	bank->start = aligned_start;
-	bank->size = size & ~(phys_addr_t)(PLAT_PHYS_OFFSET - 1);
+	bank->size = size & ~(phys_addr_t)(PAGE_SIZE - 1);
 
 	/*
 	 * Check whether this memory region has non-zero size or
