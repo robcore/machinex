@@ -368,7 +368,7 @@ static void an30259a_reset_register_work(struct work_struct *work)
 		printk(KERN_WARNING "leds_i2c_write_all failed\n");
 }
 
-static int leds_i2c_quick_write(struct i2c_client *client)
+static void leds_i2c_quick_write(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	int ret;
