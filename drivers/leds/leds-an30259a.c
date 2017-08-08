@@ -368,6 +368,33 @@ static void an30259a_reset_register_work(struct work_struct *work)
 		printk(KERN_WARNING "leds_i2c_write_all failed\n");
 }
 
+static int leds_i2c_quick_write(struct i2c_client *client)
+{
+	struct an30259a_data *data = i2c_get_clientdata(client);
+	int ret;
+
+	/*we need to set all the configs setting first, then LEDON later*/
+	mutex_lock(&data->mutex);
+	ret = i2c_smbus_write_i2c_block_data(client,
+			AN30259A_REG_SEL | AN30259A_CTN_RW_FLG,
+			AN30259A_REG_MAX - AN30259A_REG_SEL,
+			&data->shadow_reg[AN30259A_REG_SEL]);
+	if (ret < 0) {
+		goto exit;
+	}
+	ret = i2c_smbus_write_byte_data(client, AN30259A_REG_LEDON,
+					data->shadow_reg[AN30259A_REG_LEDON]);
+	if (ret < 0) {
+		goto exit;
+	}
+	mutex_unlock(&data->mutex);
+	return;
+exit:
+	mutex_unlock(&data->mutex);
+	an30259a_reset_register_work(reset);
+	return;
+}
+
 static void an30259a_set_led_blink(enum an30259a_led_enum led,
 					unsigned int delay_on_time,
 					unsigned int delay_off_time,
@@ -439,12 +466,10 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (mode > BOOTING || disabled_samsung_pattern)
-		return;
-
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
-	if (mode == LED_OFF)
+	if (mode > BOOTING || disabled_samsung_pattern ||
+		mode == PATTERN_OFF || mode == LED_OFF)
 		return;
 
 	/* Set to low power consumption mode */
@@ -547,13 +572,15 @@ static void an30259a_start_led_pattern(int mode)
 			pr_info("LED Powering Pattern OFF\n");
 			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 0, 0, 1, 0, 0, 0, 0, 0);
+					0, 0, 5, 0, 1, 1, 1, 0, 0, 1);
 			leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_G,
-					1, 15, 5, 1, 1, 0, 0, 0, 0, 0);
+					0, 15, 7, 8, 1, 1, 0, 1, 1, 0);
 			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
-					2, 15, 0, 0, 1, 0, 0, 0, 0, 0);
+					0, 15, 0, 0, 1, 1, 0, 1, 1, 0);
+			leds_i2c_quick_write(client);
+			
 		}
 		break;
 
@@ -1081,7 +1108,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	/* reset an30259a*/
 	ret = i2c_smbus_write_byte_data(client, AN30259A_REG_SRESET,
 					AN30259A_SRESET);
-	if (ret < 0) {
+	if ((unlikely)ret < 0) {
 		dev_err(&client->adapter->dev,
 			"%s: failure on i2c write (reg = 0x%2x)\n",
 			__func__, AN30259A_REG_SRESET);
@@ -1090,7 +1117,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	ret = i2c_smbus_read_i2c_block_data(client,
 			AN30259A_REG_SRESET | AN30259A_CTN_RW_FLG,
 			AN30259A_REG_MAX, data->shadow_reg);
-	if (ret < 0) {
+	if ((unlikely)ret < 0) {
 		dev_err(&client->adapter->dev,
 			"%s: failure on i2c read block(ledxcc)\n",
 			__func__);
@@ -1105,7 +1132,7 @@ static int an30259a_initialize(struct i2c_client *client,
 
 	ret = led_classdev_register(dev, &led->cdev);
 
-	if (ret < 0) {
+	if ((unlikely)ret < 0) {
 		dev_err(dev, "can not register led channel : %d\n", channel);
 		return ret;
 	}
@@ -1113,7 +1140,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	ret = sysfs_create_group(&led->cdev.dev->kobj,
 			&common_led_attr_group);
 
-	if (ret < 0) {
+	if ((unlikely)ret < 0) {
 		dev_err(dev, "can not register sysfs attribute for led channel : %d\n", channel);
 		led_classdev_unregister(&led->cdev);
 		return ret;
@@ -1161,9 +1188,9 @@ static int an30259a_probe(struct i2c_client *client,
 
 		ret = an30259a_initialize(client, &data->leds[i], i);
 
-		if (ret < 0) {
+		if ((unlikely)ret < 0) {
 			dev_err(&client->adapter->dev, "failure on initialization at led channel:%d\n", i);
-			while(i>0) {
+			while(i > 0) {
 					i--;
 					an30259a_deinitialize(&data->leds[i], i);
 			}
@@ -1208,7 +1235,7 @@ exit:
 static int an30259a_remove(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
-	int i;
+	unsigned int i;
 	dev_dbg(&client->adapter->dev, "%s\n", __func__);
 
 	// this is not an ugly hack to shutdown led.
