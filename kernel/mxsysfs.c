@@ -23,7 +23,7 @@ static struct kobj_attribute _name##_attr = __ATTR_RO(_name)
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, _name##_show, _name##_store)
 
-static unsigned char *mx_version = CONFIG_MACHINEX_VERSION;
+static unsigned char mx_version = CONFIG_MACHINEX_VERSION;
 /* whether file capabilities are enabled */
 static ssize_t mx_version_show(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
@@ -31,7 +31,6 @@ static ssize_t mx_version_show(struct kobject *kobj,
 	ssize_t ret = 0;
 
 	ret = sprintf(buf, "mark%s\n", mx_version);
-	buf[strlen(buf) + 1] = '\0';
 	return ret;
 }
 MX_ATTR_RO(mx_version);
