@@ -61,6 +61,9 @@ rm -rf $(pwd)/arch/*/include/generated >> /dev/null;
 if [ -e /media/root/robcore/AIK/previous.txt ]; then
 	PREV=`cat /media/root/robcore/AIK/previous.txt`
 fi;
+if [ -e /media/root/robcore/AIK/prev_mx_ver.txt ]; then
+	MXPREV=`cat /media/root/robcore/AIK/prev_mx_ver.txt`
+fi;
 
 function countdown()
 {
@@ -80,6 +83,7 @@ if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 	rm -rf /media/root/robcore/AIK/$OUTFOLDER
 fi;
 	echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
+	echo "$OVNAME" > /media/root/robcore/AIK/prev_mx_ver.txt
 
 function ADBRETRY()
 {
@@ -821,7 +825,10 @@ fi;
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
+sed -i '/CONFIG_MACHINEX_VERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
+echo CONFIG_MACHINEX_VERSION='"'$MXPREV'"' >> arch/arm/configs/tmpconfig
+
 export SUBARCH=arm
 export ARCH=arm
 export CROSS_COMPILE=$TOOLCHAIN
