@@ -371,6 +371,7 @@ static void an30259a_reset_register_work(struct work_struct *work)
 static void leds_i2c_quick_write(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
+	struct work_struct *reset = 0;
 	int ret;
 
 	/*we need to set all the configs setting first, then LEDON later*/
