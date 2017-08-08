@@ -106,7 +106,9 @@ fi;
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
+sed -i '/CONFIG_MACHINEX_VERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
+echo CONFIG_MACHINEX_VERSION='"''-'$OVNAME'"' >> arch/arm/configs/tmpconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
@@ -282,7 +284,9 @@ fi;
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
+sed -i '/CONFIG_MACHINEX_VERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
+echo CONFIG_MACHINEX_VERSION='"''-'$OVNAME'"' >> arch/arm/configs/tmpconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
@@ -459,7 +463,9 @@ fi;
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
+sed -i '/CONFIG_MACHINEX_VERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
+echo CONFIG_MACHINEX_VERSION='"''-'$OVNAME'"' >> arch/arm/configs/tmpconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
@@ -620,7 +626,9 @@ fi;
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
 sed -i '/CONFIG_LOCALVERSION=/d' arch/arm/configs/tmpconfig
+sed -i '/CONFIG_MACHINEX_VERSION=/d' arch/arm/configs/tmpconfig
 echo CONFIG_LOCALVERSION='"''-'$OUTFOLDER'"' >> arch/arm/configs/tmpconfig
+echo CONFIG_MACHINEX_VERSION='"''-'$OVNAME'"' >> arch/arm/configs/tmpconfig
 
 echo -n "Automatically push to adb and cleanup the project?  y/n [ENTER]: "
 read AUTO
