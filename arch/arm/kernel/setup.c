@@ -652,7 +652,7 @@ static void __init setup_processor(void)
 	cpu_cache = *list->cache;
 #endif
 
-	pr_info("CPU: %s [%08x] revision %d (ARMv%s), cr=%08lx\n",
+	pr_info("CPU: %s [%08x] revision %d (ARMv%s), cr=%08u\n",
 		cpu_name, read_cpuid_id(), read_cpuid_id() & 15,
 		proc_arch[cpu_architecture()], get_cr());
 
@@ -668,8 +668,6 @@ static void __init setup_processor(void)
 #ifndef CONFIG_ARM_THUMB
 	elf_hwcap &= ~(HWCAP_THUMB | HWCAP_IDIVT);
 #endif
-
-	feat_v6_fixup();
 
 	cacheid_init();
 	cpu_init();
