@@ -541,10 +541,10 @@ static void an30259a_start_led_pattern(int mode)
 			pr_info("LED Powering Pattern ON\n");
 			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_R,
-					0, 0, 0, 5, 2, 2, 1, 0, 0, 1);
+					0, 15, 5, 0, 2, 2, 1, 0, 0, 1);
 			leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 8, 8, 2, 2, 1, 0, 0, 1);
+					0, 15, 7, 0, 2, 2, 1, 0, 0, 1);
 			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
 					1, 15, 0, 0, 2, 2, 0, 1, 1, 0);
@@ -673,10 +673,9 @@ static ssize_t store_an30259a_led_pattern(struct device *dev,
 {
 	int retval;
 	unsigned int mode = 0;
-	unsigned int type = 0;
 	struct an30259a_data *data = dev_get_drvdata(dev);
 
-	retval = sscanf(buf, "%d %d", &mode, &type);
+	retval = sscanf(buf, "%d", &mode);
 
 	if (retval == 0) {
 		dev_err(&data->client->dev, "fail to get led_pattern mode.\n");
