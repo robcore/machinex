@@ -263,7 +263,7 @@ static int __die(const char *str, int err, struct thread_info *thread, struct pt
 	set_crash_store_enable();
 #endif
 
-	printk(KERN_EMERG "Internal error: %s: %x [#%d]" S_PREEMPT S_SMP
+	pr_emerg("Internal error: %s: %x [#%d]" S_PREEMPT S_SMP
 	       S_ISA "\n", str, err, ++die_counter);
 
 #ifdef CONFIG_LGE_CRASH_HANDLER
