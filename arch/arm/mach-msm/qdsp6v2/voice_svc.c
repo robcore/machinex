@@ -36,8 +36,8 @@ struct voice_svc_device {
 };
 
 struct voice_svc_prvt {
-	void* apr_q6_mvm;
-	void* apr_q6_cvs;
+	void *apr_q6_mvm;
+	void *apr_q6_cvs;
 	uint16_t response_count;
 	struct list_head response_queue;
 	wait_queue_head_t response_wait;
@@ -73,17 +73,23 @@ static int32_t qdsp_apr_callback(struct apr_client_data *data, void *priv)
 
 	if ((data == NULL) || (priv == NULL)) {
 		pr_err("%s: data or priv is NULL\n", __func__);
+
 		return -EINVAL;
 	}
 
-	prtd = (struct voice_svc_prvt*)priv;
+	prtd = (struct voice_svc_prvt *)priv;
+	if (prtd == NULL) {
+		pr_err("%s: private data is NULL\n", __func__);
+
+		return -EINVAL;
+	}
 
 	pr_debug("%s: data->opcode %x\n", __func__,
 		 data->opcode);
 
 	if (data->opcode == RESET_EVENTS) {
 		if (data->reset_proc == APR_DEST_QDSP6) {
-			pr_debug("%s: Received reset event\n", __func__);
+			pr_debug("%s: Received ADSP reset event\n", __func__);
 
 			if (prtd->apr_q6_mvm != NULL) {
 				apr_reset(prtd->apr_q6_mvm);
@@ -94,9 +100,16 @@ static int32_t qdsp_apr_callback(struct apr_client_data *data, void *priv)
 				apr_reset(prtd->apr_q6_cvs);
 				prtd->apr_q6_cvs = NULL;
 			}
-		} else if (data->reset_proc ==APR_DEST_MODEM) {
+		} else if (data->reset_proc == APR_DEST_MODEM) {
 			pr_debug("%s: Received Modem reset event\n", __func__);
 		}
+		/* Set the remaining member variables to default values
+			for RESET_EVENTS */
+		data->payload_size = 0;
+		data->payload = NULL;
+		data->src_port = 0;
+		data->dest_port = 0;
+		data->token = 0;
 	}
 
 	spin_lock_irqsave(&prtd->response_lock, spin_flags);
@@ -108,28 +121,35 @@ static int32_t qdsp_apr_callback(struct apr_client_data *data, void *priv)
 		if (response_list == NULL) {
 			pr_err("%s: kmalloc failed\n", __func__);
 
+			spin_unlock_irqrestore(&prtd->response_lock,
+					       spin_flags);
 			return -ENOMEM;
 		}
 
 		response_list->resp.src_port = data->src_port;
+
+		/* Reverting the bit manipulation done in voice_svc_update_hdr
+		 * to the src_port which is returned to us as dest_port.
+		 */
 		response_list->resp.dest_port = ((data->dest_port) >> 8);
 		response_list->resp.token = data->token;
 		response_list->resp.opcode = data->opcode;
 		response_list->resp.payload_size = data->payload_size;
 		if (data->payload != NULL && data->payload_size > 0) {
 			memcpy(response_list->resp.payload, data->payload,
-				data->payload_size);
+			       data->payload_size);
 		}
 
 		list_add_tail(&response_list->list, &prtd->response_queue);
 		prtd->response_count++;
+		spin_unlock_irqrestore(&prtd->response_lock, spin_flags);
 
 		wake_up(&prtd->response_wait);
 	} else {
-		pr_err("%s: Response dropped since the queue is full\n", __func__);
+		spin_unlock_irqrestore(&prtd->response_lock, spin_flags);
+		pr_err("%s: Response dropped since the queue is full\n",
+		       __func__);
 	}
-
-	spin_unlock_irqrestore(&prtd->response_lock, spin_flags);
 
 	return 0;
 }
@@ -140,14 +160,20 @@ static int32_t qdsp_dummy_apr_callback(struct apr_client_data *data, void *priv)
 	return 0;
 }
 
-static void voice_svc_update_hdr(struct voice_svc_cmd_request* apr_req_data,
+static void voice_svc_update_hdr(struct voice_svc_cmd_request *apr_req_data,
 			    struct apr_data *aprdata,
 			    struct voice_svc_prvt *prtd)
 {
 
-	aprdata->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD, \
-				       APR_HDR_LEN(sizeof(struct apr_hdr)),\
+	aprdata->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				       APR_HDR_LEN(sizeof(struct apr_hdr)),
 				       APR_PKT_VER);
+	/* Bit manipulation is done on src_port so that a unique ID is sent.
+	 * This manipulation can be used in the future where the same service
+	 * is tried to open multiple times with the same src_port. At that
+	 * time 0x0001 can be replaced with other values depending on the
+	 * count.
+	 */
 	aprdata->hdr.src_port = ((apr_req_data->src_port) << 8 | 0x0001);
 	aprdata->hdr.dest_port = apr_req_data->dest_port;
 	aprdata->hdr.token = apr_req_data->token;
@@ -170,7 +196,7 @@ static int voice_svc_send_req(struct voice_svc_cmd_request *apr_request,
 		pr_err("%s: apr_request is NULL\n", __func__);
 
 		ret = -EINVAL;
-		goto done;
+		return ret;
 	}
 
 	user_payload_size = apr_request->payload_size;
@@ -182,7 +208,7 @@ static int voice_svc_send_req(struct voice_svc_cmd_request *apr_request,
 		pr_err("%s: aprdata kmalloc failed.", __func__);
 
 		ret = -ENOMEM;
-		goto done;
+		return ret;
 	}
 
 	voice_svc_update_hdr(apr_request, aprdata, prtd);
@@ -270,13 +296,19 @@ static int voice_svc_dereg(char *svc, void **handle)
 		goto done;
 	}
 
+	if (*handle == NULL) {
+		pr_err("%s: svc handle is NULL\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
 	apr_deregister(*handle);
 	*handle = NULL;
 	pr_debug("%s: deregister %s successful\n",
 		__func__, svc);
 
 done:
-	return 0;
+	return ret;
 }
 
 static int process_reg_cmd(struct voice_svc_register apr_reg_svc,
@@ -539,6 +571,7 @@ static int voice_svc_open(struct inode *inode, struct file *file)
 static int voice_svc_release(struct inode *inode, struct file *file)
 {
 	kfree(file->private_data);
+	file->private_data = NULL;
 	return 0;
 }
 
