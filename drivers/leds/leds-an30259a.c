@@ -1109,7 +1109,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	/* reset an30259a*/
 	ret = i2c_smbus_write_byte_data(client, AN30259A_REG_SRESET,
 					AN30259A_SRESET);
-	if ((unlikely)ret < 0) {
+	if (unlikely(ret < 0)) {
 		dev_err(&client->adapter->dev,
 			"%s: failure on i2c write (reg = 0x%2x)\n",
 			__func__, AN30259A_REG_SRESET);
@@ -1118,7 +1118,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	ret = i2c_smbus_read_i2c_block_data(client,
 			AN30259A_REG_SRESET | AN30259A_CTN_RW_FLG,
 			AN30259A_REG_MAX, data->shadow_reg);
-	if ((unlikely)ret < 0) {
+	if (unlikely(ret < 0)) {
 		dev_err(&client->adapter->dev,
 			"%s: failure on i2c read block(ledxcc)\n",
 			__func__);
@@ -1133,7 +1133,7 @@ static int an30259a_initialize(struct i2c_client *client,
 
 	ret = led_classdev_register(dev, &led->cdev);
 
-	if ((unlikely)ret < 0) {
+	if (unlikely(ret < 0)) {
 		dev_err(dev, "can not register led channel : %d\n", channel);
 		return ret;
 	}
@@ -1141,7 +1141,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	ret = sysfs_create_group(&led->cdev.dev->kobj,
 			&common_led_attr_group);
 
-	if ((unlikely)ret < 0) {
+	if (unlikely(ret < 0)) {
 		dev_err(dev, "can not register sysfs attribute for led channel : %d\n", channel);
 		led_classdev_unregister(&led->cdev);
 		return ret;
@@ -1189,7 +1189,7 @@ static int an30259a_probe(struct i2c_client *client,
 
 		ret = an30259a_initialize(client, &data->leds[i], i);
 
-		if ((unlikely)ret < 0) {
+		if (unlikely(ret < 0)) {
 			dev_err(&client->adapter->dev, "failure on initialization at led channel:%d\n", i);
 			while(i > 0) {
 					i--;
