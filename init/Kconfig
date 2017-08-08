@@ -6,6 +6,15 @@ config KERNELVERSION
 	string
 	option env="KERNELVERSION"
 
+config MACHINEX_VERSION
+	int "Machinex Version"
+	range 0 10000
+	help
+	  This option specifies the machinex version that will show up in
+	  mxsysfs. Prefaced with the word Mark. Ex. Mark98.
+
+	  Check which version you are building if unsure.
+
 config DEFCONFIG_LIST
 	string
 	depends on !UML

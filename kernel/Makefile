@@ -8,7 +8,7 @@ obj-y     = fork.o exec_domain.o panic.o \
 	    signal.o sys.o kmod.o workqueue.o pid.o task_work.o \
 	    extable.o params.o \
 	    kthread.o sys_ni.o nsproxy.o \
-	    notifier.o ksysfs.o cred.o reboot.o \
+	    notifier.o ksysfs.o mxsysfs.o cred.o reboot.o \
 	    async.o range.o groups.o smpboot.o
 
 ifdef CONFIG_FUNCTION_TRACER

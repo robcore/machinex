@@ -267,31 +267,31 @@ KERNEL_ATTR_RW(gentle_fair_sleepers);
 
 static ssize_t rt_runtime_sharing_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
- return sprintf(buf, "%u\n", Lrt_runtime_sharing);
+	return sprintf(buf, "%u\n", Lrt_runtime_sharing);
 }
 
 static ssize_t rt_runtime_sharing_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
- unsigned int input;
- int ret;
- ret = sscanf(buf, "%u", &input);
- if (input != 0 && input != 1)
- input = 0;
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (input != 0 && input != 1)
+	input = 0;
 
- Lrt_runtime_sharing = input;
- relay_rtrs(Lrt_runtime_sharing);
- return count;
+	Lrt_runtime_sharing = input;
+	relay_rtrs(Lrt_runtime_sharing);
+	return count;
 }
 KERNEL_ATTR_RW(rt_runtime_sharing);
 
 static struct attribute * sched_features_attrs[] = {
- &gentle_fair_sleepers_attr.attr,
- &rt_runtime_sharing_attr.attr,
-       NULL
+	&gentle_fair_sleepers_attr.attr,
+	&rt_runtime_sharing_attr.attr,
+	NULL
 };
 
 static struct attribute_group sched_features_attr_group = {
-.attrs = sched_features_attrs,
+	.attrs = sched_features_attrs,
 };
 
 /* Initialize fast charge sysfs folder */
@@ -311,10 +311,10 @@ static int __init ksysfs_init(void)
 		goto kset_exit;
 
 	sched_features_kobj = kobject_create_and_add("sched", kernel_kobj);
-        error = sysfs_create_group(sched_features_kobj, &sched_features_attr_group);
+		error = sysfs_create_group(sched_features_kobj, &sched_features_attr_group);
 
 	if (error)
-                kobject_put(sched_features_kobj);
+		kobject_put(sched_features_kobj);
 
 	if (notes_size > 0) {
 		notes_attr.size = notes_size;

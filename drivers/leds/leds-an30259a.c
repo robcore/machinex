@@ -1148,6 +1148,209 @@ static struct attribute_group sec_led_attr_group = {
 };
 #endif
 
+#define show_one(object)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object);			\
+}
+
+#define MX_ATTR_RW(_name) \
+static struct kobj_attribute _name##_attr = \
+	__ATTR(_name, 0644, show_##_name, store_##_name)
+
+
+show_one(custom_r_enabled);
+show_one(custom_r_delay);
+show_one(custom_r_dutymax);
+show_one(custom_r_dutymid);
+show_one(custom_r_dutymin);
+show_one(custom_r_total1);
+show_one(custom_r_total2);
+show_one(custom_r_dt1);
+show_one(custom_r_dt2);
+show_one(custom_r_dt3);
+show_one(custom_r_dt4);
+
+show_one(custom_g_enabled);
+show_one(custom_g_delay);
+show_one(custom_g_dutymax);
+show_one(custom_g_dutymid);
+show_one(custom_g_dutymin);
+show_one(custom_g_total1);
+show_one(custom_g_total2);
+show_one(custom_g_dt1);
+show_one(custom_g_dt2);
+show_one(custom_g_dt3);
+show_one(custom_g_dt4);
+
+show_one(custom_b_enabled);
+show_one(custom_b_delay);
+show_one(custom_b_dutymax);
+show_one(custom_b_dutymid);
+show_one(custom_b_dutymin);
+show_one(custom_b_total1);
+show_one(custom_b_total2);
+show_one(custom_b_dt1);
+show_one(custom_b_dt2);
+show_one(custom_b_dt3);
+show_one(custom_b_dt4);
+
+MX_ATTR_RW(custom_r_enabled);
+MX_ATTR_RW(custom_r_delay);
+MX_ATTR_RW(custom_r_dutymax);
+MX_ATTR_RW(custom_r_dutymid);
+MX_ATTR_RW(custom_r_dutymin);
+MX_ATTR_RW(custom_r_total1);
+MX_ATTR_RW(custom_r_total2);
+MX_ATTR_RW(custom_r_dt1);
+MX_ATTR_RW(custom_r_dt2);
+MX_ATTR_RW(custom_r_dt3);
+MX_ATTR_RW(custom_r_dt4);
+
+MX_ATTR_RW(custom_g_enabled);
+MX_ATTR_RW(custom_g_delay);
+MX_ATTR_RW(custom_g_dutymax);
+MX_ATTR_RW(custom_g_dutymid);
+MX_ATTR_RW(custom_g_dutymin);
+MX_ATTR_RW(custom_g_total1);
+MX_ATTR_RW(custom_g_total2);
+MX_ATTR_RW(custom_g_dt1);
+MX_ATTR_RW(custom_g_dt2);
+MX_ATTR_RW(custom_g_dt3);
+MX_ATTR_RW(custom_g_dt4);
+
+MX_ATTR_RW(custom_b_enabled);
+MX_ATTR_RW(custom_b_delay);
+MX_ATTR_RW(custom_b_dutymax);
+MX_ATTR_RW(custom_b_dutymid);
+MX_ATTR_RW(custom_b_dutymin);
+MX_ATTR_RW(custom_b_total1);
+MX_ATTR_RW(custom_b_total2);
+MX_ATTR_RW(custom_b_dt1);
+MX_ATTR_RW(custom_b_dt2);
+MX_ATTR_RW(custom_b_dt3);
+MX_ATTR_RW(custom_b_dt4);
+
+static struct attribute *cust_led_r_attrs[] = {
+	&custom_r_enabled_attr.attr,
+	&custom_r_delay_attr.attr,
+	&custom_r_dutymax_attr.attr,
+	&custom_r_dutymid_attr.attr,
+	&custom_r_dutymin_attr.attr,
+	&custom_r_total1_attr.attr,
+	&custom_r_total2_attr.attr,
+	&custom_r_dt1_attr.attr,
+	&custom_r_dt2_attr.attr,
+	&custom_r_dt3_attr.attr,
+	&custom_r_dt4_attr.attr,
+	NULL,
+};
+
+static struct attribute *cust_led_g_attrs[] = {
+	&custom_g_enabled_attr.attr,
+	&custom_g_delay_attr.attr,
+	&custom_g_dutymax_attr.attr,
+	&custom_g_dutymid_attr.attr,
+	&custom_g_dutymin_attr.attr,
+	&custom_g_total1_attr.attr,
+	&custom_g_total2_attr.attr,
+	&custom_g_dt1_attr.attr,
+	&custom_g_dt2_attr.attr,
+	&custom_g_dt3_attr.attr,
+	&custom_g_dt4_attr.attr,
+	NULL,
+};
+
+static struct attribute *cust_led_b_attrs[] = {
+	&custom_b_enabled_attr.attr,
+	&custom_b_delay_attr.attr,
+	&custom_b_dutymax_attr.attr,
+	&custom_b_dutymid_attr.attr,
+	&custom_b_dutymin_attr.attr,
+	&custom_b_total1_attr.attr,
+	&custom_b_total2_attr.attr,
+	&custom_b_dt1_attr.attr,
+	&custom_b_dt2_attr.attr,
+	&custom_b_dt3_attr.attr,
+	&custom_b_dt4_attr.attr,
+	NULL,
+};
+
+static struct attribute_group cust_led_r_attr_group = {
+	.attrs = cust_led_r_attrs,
+};
+
+static struct attribute_group cust_led_g_attr_group = {
+	.attrs = cust_led_g_attrs,
+};
+
+static struct attribute_group cust_led_b_attr_group = {
+	.attrs = cust_led_b_attrs,
+};
+
+static struct attribute * mx_custom_leds_attrs[] = {
+	NULL
+};
+
+static struct attribute_group mx_custom_leds_attr_group = {
+	.attrs = mx_custom_leds_attrs,
+};
+
+static struct kobject *mx_custom_leds_kobj;
+static struct kobject *custom_r_kobj;
+static struct kobject *custom_g_kobj;
+static struct kobject *custom_b_kobj;
+
+static int __init mx_leds_late_init(void)
+{
+	int error;
+
+	mx_custom_leds_kobj = kobject_create_and_add("mx_custom_leds", mx_kobj);
+	error = sysfs_create_group(mx_custom_leds_kobj, &mx_custom_leds_attr_group);
+	if (error) {
+		pr_err("Failed to create mx_custom_leds kobject!\n");
+		goto exit;
+	}
+
+	custom_r_kobj = kobject_create_and_add("custom_r", mx_custom_leds_kobj);
+	error = sysfs_create_group(custom_r_kobj, &cust_led_r_attr_group);
+	if (error) {
+		pr_err("Failed to create custom_r kobject!\n");
+		goto rexit;
+	}
+
+	custom_g_kobj = kobject_create_and_add("custom_g", mx_custom_leds_kobj);
+	error = sysfs_create_group(custom_g_kobj, &cust_led_g_attr_group);
+	if (error) {
+		pr_err("Failed to create custom_g kobject!\n");
+		goto gexit;
+	}
+
+	custom_b_kobj = kobject_create_and_add("custom_b", mx_custom_leds_kobj);
+	error = sysfs_create_group(custom_b_kobj, &cust_led_b_attr_group);
+	if (error) {
+		pr_err("Failed to create custom_b kobject!\n");
+		goto bexit;
+	}
+
+	return 0;
+
+bexit:
+	kobject_put(custom_b_kobj);
+	sysfs_remove_group(custom_g_kobj, &cust_led_g_attr_group);
+gexit:
+	kobject_put(custom_g_kobj);
+	sysfs_remove_group(custom_r_kobj, &cust_led_r_attr_group);
+rexit:
+	kobject_put(custom_r_kobj);
+	sysfs_remove_group(mx_custom_leds_kobj, &mx_custom_leds_attr_group);
+parent_exit:
+	kobject_put(mx_custom_leds_kobj);
+exit:
+	return error;
+}
+
 static int an30259a_initialize(struct i2c_client *client,
 					struct an30259a_led *led, int channel)
 {
@@ -1347,6 +1550,7 @@ static void __exit an30259a_exit(void)
 
 module_init(an30259a_init);
 module_exit(an30259a_exit);
+late_initcall(mx_leds_late_init);
 
 MODULE_DESCRIPTION("AN30259A LED driver");
 MODULE_AUTHOR("Kamaldeep Singla <kamal.singla@samsung.com");
