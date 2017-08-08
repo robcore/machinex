@@ -30,7 +30,7 @@ int msm_bus_get_num_fab(void)
 	return atomic_read(&num_fab);
 }
 
-int msm_bus_device_match(struct device *dev, void* id)
+int msm_bus_device_match(struct device *dev, void *id)
 {
 	struct msm_bus_fabric_device *fabdev = to_msm_bus_fabric_device(dev);
 
@@ -38,7 +38,7 @@ int msm_bus_device_match(struct device *dev, void* id)
 		MSM_BUS_WARN("Fabric %p returning 0\n", fabdev);
 		return 0;
 	}
-	return (fabdev->id == (int)id);
+	return fabdev->id == *(int *)id;
 }
 
 struct bus_type msm_bus_type = {
