@@ -446,17 +446,13 @@ static void an30259a_start_led_pattern(int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (booted) {
-		pr_info("LED Powering OFF\n");
-		return;
-	}
 
-	if (mode > BOOTING || disabled_samsung_pattern ||
-		mode == PATTERN_OFF || mode == LED_OFF)
-		return;
 
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
+	if (mode > BOOTING || disabled_samsung_pattern ||
+		mode == PATTERN_OFF || mode == LED_OFF)
+		return;
 
 	/* Set to low power consumption mode */
 	if (LED_LOWPOWER_MODE == 1)
@@ -543,7 +539,6 @@ static void an30259a_start_led_pattern(int mode)
 	case POWERING:
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-#if 0
 			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_R,
 					0, 0, 0, 5, 2, 2, 0, 0, 0, 0);
@@ -552,19 +547,12 @@ static void an30259a_start_led_pattern(int mode)
 					0, 15, 7, 8, 2, 2, 0, 0, 0, 0);
 			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 0, 0, 2, 2, 0, 0, 0, 0);
-#endif
-			leds_on(LED_R, true, true, r_brightness);
-			leds_set_slope_mode(client, LED_R,
-					0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-			leds_on(LED_G, true, true, r_brightness);
-			leds_set_slope_mode(client, LED_G,
-					0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-			leds_on(LED_B, true, true, r_brightness);
-			leds_set_slope_mode(client, LED_B,
-					1, 15, 7, 0, 1, 1, 0, 0, 0, 0);
+					2, 15, 0, 0, 2, 2, 0, 0, 0, 0);
 			booted = true;
 			break;
+		} else {
+			pr_info("LED Powering OFF\n");
+			return;
 		}
 
 /* For later
@@ -579,12 +567,24 @@ static void an30259a_start_led_pattern(int mode)
 */
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
+#if 0
 		leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_R, 0, 0, 0, 5, 1, 1, 0, 0, 0, 0);
 		leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_G, 0, 15, 15, 5, 1, 1, 0, 0, 0, 0);
 		leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
+		break;
+#endif
+		leds_on(LED_R, true, true, r_brightness);
+		leds_set_slope_mode(client, LED_R,
+				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
+		leds_on(LED_G, true, true, r_brightness);
+		leds_set_slope_mode(client, LED_G,
+				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
+		leds_on(LED_B, true, true, r_brightness);
+		leds_set_slope_mode(client, LED_B,
+				1, 15, 7, 0, 1, 1, 0, 0, 0, 0);
 		break;
 #if 0
 		an30259a_set_led_blink(LED_R, 0, 2, r_brightness);
@@ -611,7 +611,6 @@ static void an30259a_start_led_pattern(int mode)
 #endif
 	default:
 		return;
-		break;
 	}
 	retval = leds_i2c_write_all(client);
 	if (retval)
