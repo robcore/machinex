@@ -120,6 +120,13 @@ int msm_audio_ion_import(const char *name, struct ion_client **client,
 			ion_phys_addr_t *paddr, size_t *pa_len, void **vaddr)
 {
 	int rc = 0;
+
+	if ((msm_audio_ion_data.smmu_enabled == true) &&
+	    !(msm_audio_ion_data.device_status & MSM_AUDIO_ION_PROBED)) {
+		pr_debug("%s:probe is not done, deferred\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
 	if (!name || !client || !handle || !paddr || !vaddr || !pa_len) {
 		pr_err("%s: Invalid params\n", __func__);
 		rc = -EINVAL;
@@ -278,11 +285,6 @@ int msm_audio_ion_mmap(struct audio_buffer *ab,
 				, __func__ , ret);
 			return ret;
 		}
-		pr_debug("phys=%x len=%d\n", (unsigned int)phys_addr, phys_len);
-		pr_debug("vma=%p, vm_start=%x vm_end=%x vm_pgoff=%ld vm_page_prot=%ld\n",
-			vma, (unsigned int)vma->vm_start,
-			(unsigned int)vma->vm_end, vma->vm_pgoff,
-			(unsigned long int)vma->vm_page_prot);
 		va_len = vma->vm_end - vma->vm_start;
 		if ((offset > phys_len) || (va_len > phys_len-offset)) {
 			pr_err("wrong offset size %ld, lens= %d, va_len=%d\n",
@@ -316,7 +318,7 @@ struct ion_client *msm_audio_ion_client_create(unsigned int heap_mask,
 
 void msm_audio_ion_client_destroy(struct ion_client *client)
 {
-	pr_debug("%s: client = %p smmu_enabled = %d\n", __func__,
+	pr_debug("%s: client = %pK smmu_enabled = %d\n", __func__,
 		client, msm_audio_ion_data.smmu_enabled);
 
 	ion_client_destroy(client);
@@ -338,8 +340,6 @@ int msm_audio_ion_import_legacy(const char *name, struct ion_client *client,
 	bufsz should be 0 and fd shouldn't be 0 as of now
 	*/
 	*handle = ion_import_dma_buf(client, fd);
-	pr_debug("%s: DMA Buf name=%s, fd=%d handle=%p\n", __func__,
-							name, fd, *handle);
 	if (IS_ERR_OR_NULL((void *)(*handle))) {
 		pr_err("%s: ion import dma buffer failed\n",
 			__func__);
@@ -404,7 +404,6 @@ int msm_audio_ion_cache_operations(struct audio_buffer *abuff, int cache_op)
 	int msm_cache_ops = 0;
 
 	if (!abuff) {
-		pr_err("Invalid params: %p, %p\n", __func__, abuff);
 		return -EINVAL;
 	}
 	rc = ion_handle_get_flags(abuff->client, abuff->handle,
@@ -450,14 +449,10 @@ static int msm_audio_ion_get_phys(struct ion_client *client,
 			pr_err("%s: ION map iommu failed %d\n", __func__, rc);
 			return rc;
 		}
-		pr_debug("client=%p, domain=%p, domain_id=%d, group=%p",
-			client, msm_audio_ion_data.domain,
-			msm_audio_ion_data.domain_id, msm_audio_ion_data.group);
 	} else {
 		/* SMMU is disabled*/
 		rc = ion_phys(client, handle, addr, len);
 	}
-	pr_debug("phys=%x, len=%d, rc=%d\n", (unsigned int)*addr, *len, rc);
 	return rc;
 }
 
@@ -541,7 +536,7 @@ static struct platform_driver msm_audio_ion_driver = {
 		.of_match_table = msm_audio_ion_dt_match,
 	},
 	.probe = msm_audio_ion_probe,
-	.remove = __devexit_p(msm_audio_ion_remove),
+	.remove = msm_audio_ion_remove,
 };
 
 static int __init msm_audio_ion_init(void)
