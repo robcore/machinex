@@ -165,6 +165,7 @@ struct an30259a_led {
 	u8	channel;
 	u8	brightness;
 	struct led_classdev	cdev;
+	struct work_struct	brightness_work;
 	unsigned long delay_on_time_ms;
 	unsigned long delay_off_time_ms;
 };
@@ -267,8 +268,15 @@ void an30259a_set_brightness(struct led_classdev *cdev,
 			enum led_brightness brightness)
 {
 		struct an30259a_led *led = cdev_to_led(cdev);
-		struct i2c_client *client = b_client;
 		led->brightness = (u8)brightness;
+		schedule_work(&led->brightness_work);
+}
+
+static void an30259a_led_brightness_work(struct work_struct *work)
+{
+		struct i2c_client *client = b_client;
+		struct an30259a_led *led = container_of(work,
+				struct an30259a_led, brightness_work);
 		leds_on(led->channel, true, false, led->brightness);
 		leds_i2c_write_all(client);
 }
@@ -345,7 +353,7 @@ static int leds_set_imax(struct i2c_client *client, u8 imax)
 }
 
 #ifdef SEC_LED_SPECIFIC
-static void an30259a_reset_register_work(void)
+static void an30259a_reset_register_work(struct work_struct *work)
 {
 	int retval;
 	struct i2c_client *client;
@@ -363,6 +371,7 @@ static void an30259a_reset_register_work(void)
 static void leds_i2c_quick_write(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
+	struct work_struct *reset = 0;
 	int ret;
 
 	/*we need to set all the configs setting first, then LEDON later*/
@@ -371,19 +380,19 @@ static void leds_i2c_quick_write(struct i2c_client *client)
 			AN30259A_REG_SEL | AN30259A_CTN_RW_FLG,
 			AN30259A_REG_MAX - AN30259A_REG_SEL,
 			&data->shadow_reg[AN30259A_REG_SEL]);
-	if (unlikely(ret < 0)) {
+	if (ret < 0) {
 		goto exit;
 	}
 	ret = i2c_smbus_write_byte_data(client, AN30259A_REG_LEDON,
 					data->shadow_reg[AN30259A_REG_LEDON]);
-	if (unlikely(ret < 0)) {
+	if (ret < 0) {
 		goto exit;
 	}
 	mutex_unlock(&data->mutex);
 	return;
 exit:
 	mutex_unlock(&data->mutex);
-	an30259a_reset_register_work();
+	an30259a_reset_register_work(reset);
 	return;
 }
 
@@ -455,10 +464,11 @@ static void an30259a_start_led_pattern(int mode)
 	u8 g_brightness;
 	u8 b_brightness;
 	struct i2c_client *client;
+	struct work_struct *reset = 0;
 	client = b_client;
 
 	/* Set all LEDs Off */
-	an30259a_reset_register_work();
+	an30259a_reset_register_work(reset);
 	if (mode > BOOTING || disabled_samsung_pattern ||
 		mode == PATTERN_OFF || mode == LED_OFF)
 		return;
@@ -563,13 +573,13 @@ static void an30259a_start_led_pattern(int mode)
 			pr_info("LED Powering Pattern OFF\n");
 			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_R,
-					0, 0, 0, 5, 1, 1, 2, 0, 0, 2);
+					0, 0, 0, 5, 1, 1, 0, 2, 2, 0);
 			leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 7, 8, 1, 1, 2, 0, 0, 2);
+					0, 15, 7, 8, 1, 1, 0, 2, 2, 0);
 			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 0, 0, 1, 1, 0, 2, 2, 0);
+					0, 15, 0, 0, 1, 1, 2, 0, 0, 2);
 			leds_i2c_quick_write(client);
 			return;
 		}
@@ -711,6 +721,7 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 	u8 led_r_brightness = 0;
 	u8 led_g_brightness = 0;
 	u8 led_b_brightness = 0;
+	struct work_struct *reset = 0;
 
 	retval = sscanf(buf, "0x%x %d %d", &led_brightness,
 				&delay_on_time, &delay_off_time);
@@ -720,7 +731,7 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 		return count;
 	}
 	/*Reset an30259a*/
-	an30259a_reset_register_work();
+	an30259a_reset_register_work(reset);
 
 	/*Set LED blink mode*/
 	led_r_brightness = ((u32)led_brightness & LED_R_MASK)
@@ -1144,9 +1155,9 @@ static int an30259a_initialize(struct i2c_client *client,
 //if one led will fail to register than all led registration will fail
 static void an30259a_deinitialize(struct an30259a_led *led, int channel)
 {
-	an30259a_set_brightness(&led->cdev, LED_OFF);
 	sysfs_remove_group(&led->cdev.dev->kobj,&common_led_attr_group);
 	led_classdev_unregister(&led->cdev);
+	cancel_work_sync(&led->brightness_work);
 }
 
 static int an30259a_probe(struct i2c_client *client,
@@ -1186,6 +1197,8 @@ static int an30259a_probe(struct i2c_client *client,
 			}
 			goto exit;
 		}
+		INIT_WORK(&(data->leds[i].brightness_work),
+				 an30259a_led_brightness_work);
 	}
 
 #ifdef SEC_LED_SPECIFIC
@@ -1248,6 +1261,7 @@ static int an30259a_remove(struct i2c_client *client)
 		sysfs_remove_group(&data->leds[i].cdev.dev->kobj,
 						&common_led_attr_group);
 		led_classdev_unregister(&data->leds[i].cdev);
+		cancel_work_sync(&data->leds[i].brightness_work);
 	}
 
 	mutex_destroy(&data->mutex);
@@ -1259,6 +1273,7 @@ static struct i2c_device_id an30259a_id[] = {
 	{"an30259a", 0},
 	{},
 };
+
 MODULE_DEVICE_TABLE(i2c, an30259a_id);
 
 static struct i2c_driver an30259a_i2c_driver = {
