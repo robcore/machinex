@@ -143,7 +143,7 @@ static u32 smc(u32 cmd_addr)
 #ifdef REQUIRES_SEC
 			".arch_extension sec\n"
 #endif
-			"smc	#0	@ switch to secure world\n"
+			"smc	#0\n"
 			: "=r" (r0)
 			: "r" (r0), "r" (r1), "r" (r2)
 			: "r3");
@@ -271,7 +271,7 @@ int scm_call_noalloc(u32 svc_id, u32 cmd_id, const void *cmd_buf,
 	size_t len = SCM_BUF_LEN(cmd_len, resp_len);
 
 	if (cmd_len > scm_buf_len || resp_len > scm_buf_len ||
-	    len > scm_buf_len)
+	    len > scm_buf_len || len == 0)
 		return -EINVAL;
 
 	if (!IS_ALIGNED((unsigned long)scm_buf, PAGE_SIZE))
@@ -310,7 +310,7 @@ int scm_call(u32 svc_id, u32 cmd_id, const void *cmd_buf, size_t cmd_len,
 	int ret;
 	size_t len = SCM_BUF_LEN(cmd_len, resp_len);
 
-	if (cmd_len > len || resp_len > len)
+	if (cmd_len > len || resp_len > len || len == 0)
 		return -EINVAL;
 
 	cmd = kzalloc(PAGE_ALIGN(len), GFP_NOIO);
@@ -355,7 +355,7 @@ s32 scm_call_atomic1(u32 svc, u32 cmd, u32 arg1)
 #ifdef REQUIRES_SEC
 			".arch_extension sec\n"
 #endif
-		"smc	#0	@ switch to secure world\n"
+		"smc	#0\n"
 		: "=r" (r0)
 		: "r" (r0), "r" (r1), "r" (r2)
 		: "r3");
