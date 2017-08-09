@@ -46,7 +46,7 @@ static void sweep2sleep_presspwr(struct work_struct *sweep2sleep_presspwr_work) 
 	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_SLEEP, 0);
 	input_event(sweep2sleep_pwrdev, EV_SYN, 0, 0);
 	msleep(S2S_PWRKEY_DUR);
-        mutex_unlock(&pwrkeyworklock);
+	mutex_unlock(&pwrkeyworklock);
 	return;
 }
 static DECLARE_WORK(sweep2sleep_presspwr_work, sweep2sleep_presspwr);
@@ -56,7 +56,7 @@ static void sweep2sleep_pwrtrigger(void) {
 	if (vibration_timeout)
 		machinex_vibrator(vibration_timeout);
 	schedule_work(&sweep2sleep_presspwr_work);
-        return;
+	return;
 }
 
 /* reset on finger release */
