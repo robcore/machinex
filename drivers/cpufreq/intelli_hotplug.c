@@ -435,6 +435,8 @@ static void cycle_cpus(void)
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus)
 			continue;
+		if (!is_cpu_allowed(cpu))
+			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
 	}

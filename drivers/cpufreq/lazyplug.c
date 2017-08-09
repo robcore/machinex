@@ -222,6 +222,8 @@ static void cpu_all_ctrl(bool online) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
 				continue;
+			if (!is_cpu_allowed(cpu))
+				continue;
 			cpu_up(cpu);
 		}
 	} else {

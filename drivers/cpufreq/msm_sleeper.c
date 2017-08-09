@@ -65,7 +65,7 @@ static inline void plug_cpu(void)
 		goto reset;
 
 	cpu = cpumask_next_zero(0, cpu_online_mask);
-	if (cpu < nr_cpu_ids)
+	if (cpu < nr_cpu_ids && is_cpu_allowed(cpu))
 		cpu_up(cpu);
 
 reset:
@@ -169,9 +169,14 @@ static ssize_t store_enable_hotplug(struct device *dev,
 		flush_workqueue(sleeper_wq);
 		cancel_delayed_work_sync(&sleeper_work);
 
-		for_each_possible_cpu(cpu)
+		for_each_possible_cpu(cpu) {
+			if (cpu == 0)
+				continue;
+			if (!is_cpu_allowed(cpu))
+				continue;
 			if (cpu_is_offline(cpu))
 				cpu_up(cpu);
+		}
 	}
 
 	return count;

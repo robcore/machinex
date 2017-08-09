@@ -274,7 +274,7 @@ static void hotplug_work_fn(struct work_struct *work)
 	put_online_cpus();
 
 	for (cpu = 1; cpu < NR_CPUS; cpu++) {
-		if (hotplug_onoff[cpu] == ON)
+		if (hotplug_onoff[cpu] == ON && is_cpu_allowed(cpu))
 			cpu_up(cpu);
 		else if (hotplug_onoff[cpu] == OFF)
 			cpu_down(cpu);
