@@ -421,6 +421,7 @@ static struct attribute *cpu_hardplug_attrs[] =
 static const struct attribute_group cpu_hardplug_attr_group =
 {
 	.attrs = cpu_hardplug_attrs,
+	.name = cpu_hardplug,
 };
 
 static struct kobject *cpu_hardplug_kobj;
@@ -429,20 +430,11 @@ static int __init cpu_hardplug_init(void)
 {
 	int sysfs_result;
 
-	cpu_hardplug_kobj = kobject_create_and_add("cpu_hardplug",
-		kernel_kobj);
-
-	if (!cpu_hardplug_kobj) {
-		pr_err("%s kobject create failed!\n", __FUNCTION__);
-		return -ENOMEM;
-	}
-
-	sysfs_result = sysfs_create_group(cpu_hardplug_kobj,
+	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
 
 	if (sysfs_result) {
 		pr_info("%s group create failed!\n", __FUNCTION__);
-		kobject_put(cpu_hardplug_kobj);
 		return -ENOMEM;
 	}
 
@@ -454,8 +446,8 @@ static int __init cpu_hardplug_init(void)
 /* This should never have to be used except on shutdown */
 static void cpu_hardplug_exit(void)
 {
-	if (cpu_hardplug_kobj != NULL)
-		kobject_put(cpu_hardplug_kobj);
+	sysfs_remove_group(kernel_kobj,
+		&cpu_hardplug_attr_group);
 }
 
 core_initcall(cpu_hardplug_init);
