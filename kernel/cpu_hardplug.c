@@ -81,13 +81,10 @@ bool is_cpu_allowed(unsigned int cpu)
 void hardplug_cpus(void)
 {
 	unsigned int cpu;
-	unsigned int offlined_cpus;
 
 	if (!is_display_on() || !limit_screen_on_cpus ||
 		!hotplug_ready || cpumask_empty(hardplug_mask))
 		return;
-
-	offlined_cpus = num_possible_cpus() - num_online_cpus();
 
 	for_each_possible_cpu(cpu) {
 		if (cpu == 0)
@@ -96,7 +93,7 @@ void hardplug_cpus(void)
 			continue;
 		if (cpu_hardplugged(cpu) && cpu_online(cpu))
 			cpu_down(cpu);
-		if (cpumask_weight(hardplug_mask) == offlined_cpus)
+		if (cpumask_weight(hardplug_mask) == num_possible_cpus() - num_online_cpus())
 			break;
 	}
 }
@@ -210,7 +207,7 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 		return count;
 
 	if (!val) {
-		if (cpu1_allowed !cpu_hardplugged(1))
+		if (cpu1_allowed && !cpu_hardplugged(1))
 			cpumask_set_cpu(1, hardplug_mask);
 	} else if (val) {
 		if (!cpu1_allowed && cpu_hardplugged(1))
@@ -247,7 +244,7 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 		return count;
 
 	if (!val) {
-		if (cpu2_allowed !cpu_hardplugged(2))
+		if (cpu2_allowed && !cpu_hardplugged(2))
 			cpumask_set_cpu(2, hardplug_mask);
 	} else if (val) {
 		if (!cpu2_allowed && cpu_hardplugged(2))
@@ -284,7 +281,7 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 		return count;
 
 	if (!val) {
-		if (cpu3_allowed !cpu_hardplugged(3))
+		if (cpu3_allowed && !cpu_hardplugged(3))
 			cpumask_set_cpu(3, hardplug_mask);
 	} else if (val) {
 		if (!cpu3_allowed && cpu_hardplugged(3))
@@ -456,6 +453,7 @@ int __init cpu_hardplug_init(void)
 	pr_info("CPU Hardplug Online\n");
 	return 0;
 }
+EXPORT_SYMBOL(cpu_hardplug_init);
 
 static int __init alloc_hardplug_cpus(void)
 {
