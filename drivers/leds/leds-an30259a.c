@@ -584,10 +584,10 @@ static void an30259a_start_led_pattern(int mode)
 					0, 5, 0, 0, 2, 2, 0, 0, 0, 0);
 			leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 7, 0, 2, 2, 0, 0, 0, 0);
+					0, 15, 7, 1, 2, 2, 0, 0, 0, 0);
 			leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
 			leds_set_slope_mode(client, LED_B,
-					3, 15, 8, 0, 2, 2, 0, 0, 0, 0);
+					3, 15, 8, 1, 2, 2, 0, 0, 0, 0);
 			booted = true;
 			break;
 		} else {
@@ -601,10 +601,10 @@ static void an30259a_start_led_pattern(int mode)
 					0, 5, 0, 0, 2, 2, 0, 0, 0, 0);
 		leds_on(LED_G, true, true, g_brightness);
 		leds_set_slope_mode(client, LED_G,
-					0, 15, 7, 0, 2, 2, 0, 0, 0, 0);
+					0, 15, 7, 1, 2, 2, 0, 0, 0, 0);
 		leds_on(LED_B, true, true, b_brightness);
 		leds_set_slope_mode(client, LED_B,
-					3, 15, 8, 0, 2, 2, 0, 0, 0, 0);
+					3, 15, 8, 1, 2, 2, 0, 0, 0, 0);
 		break;
 
 /* For later
