@@ -23,7 +23,7 @@ MODULE_LICENSE("GPL");
 #define SWEEP_LEFT		0x02
 
 // 1=sweep right, 2=sweep left, 3=both
-static int s2s_switch = 0;
+static unsigned int s2s_switch = 0;
 static unsigned int vibration_timeout = 125;
 
 static int touch_x = 0, touch_y = 0, firstx = 0;
@@ -232,43 +232,45 @@ static struct input_handler s2s_input_handler = {
 	.id_table	= s2s_ids,
 };
 
-static ssize_t sweep2sleep_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+#define MX_ATTR_RW(_name) \
+static struct kobj_attribute _name##_attr = \
+	__ATTR(_name, 0644, show_##_name, store_##_name)
+
+static ssize_t show_sweep2sleep(struct kobject *kobj,
+			   struct kobj_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", s2s_switch);
+	return sprintf(buf, "%u\n", s2s_switch);
 }
 
-static ssize_t sweep2sleep_dump(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t store_sweep2sleep(struct kobject *kobj, 
+			   struct kobj_attribute *attr, 
+			   const char *buf, size_t count)
 {
-	int ret;
-	unsigned long input;
+	int input;
 
-	ret = kstrtoul(buf, 0, &input);
-	if (ret < 0)
-		return ret;
+	sscanf(buf, "%d\n", &input);
 
-	if (input < 0)
+	if (input <= 0)
 		input = 0;				
-	if (input > 3)
+	if (input >= 3)
 		input = 3;
 
 	s2s_switch = input;			
 	
 	return count;
 }
+MX_ATTR_RW(sweep2sleep);
 
-static DEVICE_ATTR(sweep2sleep, 0644,
-	sweep2sleep_show, sweep2sleep_dump);
 
-static ssize_t vibration_timeout_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+static ssize_t show_vibration_timeout(struct kobject *kobj,
+			   struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", vibration_timeout);
+	return sprintf(buf, "%u\n", vibration_timeout);
 }
 
-static ssize_t vibration_timeout_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t store_vibration_timeout(struct kobject *kobj, 
+			   struct kobj_attribute *attr, 
+			   const char *buf, size_t count)
 {
 	int input;
 
@@ -283,9 +285,18 @@ static ssize_t vibration_timeout_store(struct device *dev,
 	
 	return count;
 }
+MX_ATTR_RW(vibration_timeout);
 
-static DEVICE_ATTR(vibration_timeout, 0644,
-	vibration_timeout_show, vibration_timeout_store);
+static struct attribute *sweep2sleep_attrs[] = {
+	&sweep2sleep_attr.attr,
+	&vibration_timeout_attr.attr,
+	NULL,
+};
+
+static struct attribute_group sweep2sleep_attr_group = {
+	.attrs = sweep2sleep_attrs,
+	.name = "sweep2sleep",
+};
 
 static struct kobject *sweep2sleep_kobj; 
 
@@ -296,6 +307,7 @@ static int __init sweep2sleep_init(void)
 	sweep2sleep_pwrdev = input_allocate_device();
 	if (!sweep2sleep_pwrdev) {
 		pr_err("Failed to allocate sweep2sleep_pwrdev\n");
+		rc = -ENOMEM;
 		goto err_alloc_dev;
 	}
 
@@ -313,34 +325,39 @@ static int __init sweep2sleep_init(void)
 	s2s_input_wq = create_workqueue("s2s_iwq");
 	if (!s2s_input_wq) {
 		pr_err("%s: Failed to create workqueue\n", __func__);
-		return -EFAULT;
+		rc = -EFAULT;
+		goto err_unregister;
 	}
 	INIT_WORK(&s2s_input_work, s2s_input_callback);
 
 	rc = input_register_handler(&s2s_input_handler);
-	if (rc)
+	if (rc) {
 		pr_err("%s: Failed to register s2s_input_handler\n", __func__);
-
-	sweep2sleep_kobj = kobject_create_and_add("sweep2sleep", NULL) ;
-	if (sweep2sleep_kobj == NULL) {
-		pr_warn("%s: sweep2sleep_kobj failed\n", __func__);
+		goto err_wq;
+	}
+	sweep2sleep_kobj = kobject_create_and_add("sweep2sleep", mx_kobj) ;
+	rc = sysfs_create_group(sweep2sleep_kobj, &sweep2sleep_attr_group);
+	if (rc) {
+		pr_err("%s: sweep2sleep group failed\n", __func__);
+		goto err_group;
 	}
 
-	rc = sysfs_create_file(sweep2sleep_kobj, &dev_attr_sweep2sleep.attr);
-	if (rc)
-		pr_err("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
+	return 0;
 
-	rc = sysfs_create_file(sweep2sleep_kobj, &dev_attr_vibration_timeout.attr);
-	if (rc)
-		pr_err("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
-
+err_group:
+	kobject_put(sweep2sleep_kobj);
+	input_unregister_handler(&s2s_input_handler);
+err_wq:
+	destroy_workqueue(s2s_input_wq);
+err_unregister:
+	input_unregister_device(sweep2sleep_pwrdev);
 err_input_dev:
 	input_free_device(sweep2sleep_pwrdev);
 
 err_alloc_dev:
-	pr_info("%s done\n", __func__);
+	pr_info("%s Failed\n", __func__);
 
-	return 0;
+	return rc;
 }
 
 static void __exit sweep2sleep_exit(void)
