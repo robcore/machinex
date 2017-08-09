@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 0
+#define HARDPLUG_MINOR 1
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -100,18 +100,18 @@ static void update_mask(void)
 	unsigned int cpu;
 	
 	if (cpu1_allowed && !cpu_allowed(1))
-		cpumask_test_and_set_cpu(1, allowed_cpus);
+		cpumask_set_cpu(1, allowed_cpus);
 	if (cpu2_allowed && !cpu_allowed(2))
-		cpumask_test_and_set_cpu(2, allowed_cpus);
+		cpumask_set_cpu(2, allowed_cpus);
 	if (cpu3_allowed && !cpu_allowed(3))
-		cpumask_test_and_set_cpu(3, allowed_cpus);
+		cpumask_set_cpu(3, allowed_cpus);
 
 	if (!cpu1_allowed && cpu_allowed(1))
-		cpumask_test_and_clear_cpu(1, allowed_cpus);
+		cpumask_clear_cpu(1, allowed_cpus);
 	if (!cpu2_allowed && cpu_allowed(2))
-		cpumask_test_and_clear_cpu(2, allowed_cpus);
+		cpumask_clear_cpu(2, allowed_cpus);
 	if (!cpu3_allowed && cpu_allowed(3))
-		cpumask_test_and_clear_cpu(3, allowed_cpus);
+		cpumask_clear_cpu(3, allowed_cpus);
 
 	hardplug_cpus();
 }
