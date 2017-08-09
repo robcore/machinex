@@ -1195,6 +1195,10 @@ static int __init alloc_frozen_cpus(void)
 {
 	if (!alloc_cpumask_var(&frozen_cpus, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
+
+	if (!alloc_cpumask_var(&max_screen_off, GFP_KERNEL|__GFP_ZERO))
+		return -ENOMEM;
+
 	return 0;
 }
 core_initcall(alloc_frozen_cpus);

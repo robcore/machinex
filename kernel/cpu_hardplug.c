@@ -57,8 +57,7 @@ unsigned int cpu2_allowed_susp = 1;
 unsigned int cpu3_allowed_susp = 1;
 
 static DEFINE_MUTEX(hardplug_mtx);
-
-static struct cpumask *allowed_cpus;
+static cpumask_var_t allowed_cpus;
 
 #define cpu_allowed(cpu) cpumask_test_cpu((cpu), allowed_cpus)
 
@@ -124,6 +123,9 @@ static int cpu_hardplug_callback(struct notifier_block *nfb,
 	/* Fail hotplug until this driver can get CPU clocks, drivers is disabled
 	 * or screen off
 	 */
+	if (!hotplug_ready)
+		return NOTIFY_OK;
+
 	switch (action & ~CPU_TASKS_FROZEN) {
 		/* Fall through. */
 	case CPU_ONLINE:
@@ -395,55 +397,44 @@ static struct attribute *cpu_hardplug_attrs[] =
 	NULL,
 };
 
-static int create_hardplug_mask(void)
-{
-	unsigned int ret = 0;
-
-	cpumask_copy(allowed_cpus, cpu_possible_mask);
-	if (cpumask_equal(allowed_cpus, cpu_possible_mask))
-		ret = 1;
-
-	return ret;
-}
-
-static const struct attribute_group cpu_hardplug_attr_group =
+static struct attribute_group cpu_hardplug_attr_group =
 {
 	.attrs = cpu_hardplug_attrs,
+	.name = "cpu_hardplug",
+	NULL,
+	
 };
-
-static struct kobject *cpu_hardplug_kobj;
 
 static int __init cpu_hardplug_init(void)
 {
 	int sysfs_result;
 
-	cpu_hardplug_kobj = kobject_create_and_add("cpu_hardplug",
-		kernel_kobj);
-
-	if (!cpu_hardplug_kobj) {
-		pr_err("%s kobject create failed!\n", __FUNCTION__);
+	if (allowed_cpus)
+		cpumask_setall(allowed_cpus);
+	else
 		return -ENOMEM;
-	}
 
-	sysfs_result = sysfs_create_group(cpu_hardplug_kobj,
+	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
 
 	if (sysfs_result) {
-		pr_info("%s group create failed!\n", __FUNCTION__);
-		kobject_put(cpu_hardplug_kobj);
-		return -ENOMEM;
+		pr_info("ERROR! CPU Hardplug Sysfs group create failed!\n");
+		return sysfs_result;
 	}
 
-	if (create_hardplug_mask()) {
-		register_hotcpu_notifier(&cpu_hardplug_notifier);
-		return 0;
-	}
+	register_hotcpu_notifier(&cpu_hardplug_notifier);
 
-	pr_err("%s ERROR! HARDPLUG Mask Empty!\n", __func__);
-	return -EFAULT;
+	pr_info("CPU Hardplug Online\n");
+	return 0;
 }
 
-subsys_initcall(cpu_hardplug_init);
+static int __init alloc_hardplug_cpus(void)
+{
+	if (!alloc_cpumask_var(&allowed_cpus, GFP_KERNEL|__GFP_ZERO))
+		return -ENOMEM;
+	return cpu_hardplug_init();
+}
+core_initcall(alloc_hardplug_cpus);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");
