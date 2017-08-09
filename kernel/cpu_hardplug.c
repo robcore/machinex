@@ -17,13 +17,14 @@
 #include <linux/irq.h>
 #include <linux/smpboot.h>
 #include <linux/cpu.h>
+#include <linux/cpumask.h>
 #include <linux/cpufreq.h>
 #include <linux/powersuspend.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 2
+#define HARDPLUG_MINOR 3
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -86,9 +87,9 @@ void hardplug_cpus(void)
 		!hotplug_ready || cpumask_empty(hardplug_mask))
 		return;
 
-	offlined_cpus = num_possible_cpus - num_online_cpus;
+	offlined_cpus = num_possible_cpus() - num_online_cpus();
 
-	for_each_cpu_possible_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		if (cpu == 0)
 			continue;
 		if (!cpu_online(cpu))
@@ -141,7 +142,7 @@ static int cpu_hardplug_callback(struct notifier_block *nfb,
 	case CPU_DOWN_FAILED:
 		if (!is_cpu_allowed(cpu));
 			return NOTIFY_BAD;
-		if (is_cpu_allowed(cpu)
+		if (is_cpu_allowed(cpu))
 			return NOTIFY_OK;
 	default:
 		break;
@@ -438,7 +439,7 @@ static struct attribute_group cpu_hardplug_attr_group = {
 	.name = "cpu_hardplug",
 };
 
-static int __init cpu_hardplug_init(void)
+int __init cpu_hardplug_init(void)
 {
 	int sysfs_result;
 
@@ -455,13 +456,12 @@ static int __init cpu_hardplug_init(void)
 	pr_info("CPU Hardplug Online\n");
 	return 0;
 }
-device_initcall(cpu_hardplug_init);
 
 static int __init alloc_hardplug_cpus(void)
 {
 	if (!alloc_cpumask_var(&hardplug_mask, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
-	return cpu_hardplug_init();
+	return 0;
 }
 core_initcall(alloc_hardplug_cpus);
 
