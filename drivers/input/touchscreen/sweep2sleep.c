@@ -362,7 +362,8 @@ err_alloc_dev:
 
 static void __exit sweep2sleep_exit(void)
 {
-	kobject_del(sweep2sleep_kobj); 
+	sysfs_remove_group(sweep2sleep_kobj, &sweep2sleep_attr_group);
+	kobject_put(sweep2sleep_kobj);
 	input_unregister_handler(&s2s_input_handler);
 	destroy_workqueue(s2s_input_wq);
 	input_unregister_device(sweep2sleep_pwrdev);
