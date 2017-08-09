@@ -33,23 +33,29 @@ static bool exec_count = true;
 static struct input_dev * sweep2sleep_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2s_input_wq;
+static struct delayed_work sweep2sleep_releasepwr_work;
+static struct work_struct sweep2sleep_presspwr_work;
+static void sweep2sleep_releasepwr(struct work_struct *work);
+static void sweep2sleep_presspwr(struct work_struct *work);
 static struct work_struct s2s_input_work;
 
-/* PowerKey work func */
-static void sweep2sleep_presspwr(struct work_struct *sweep2sleep_presspwr_work) {
+/* PowerKeyReleased work func */
+static void sweep2sleep_releasepwr(struct work_struct *work)
+{
+	input_report_key(sweep2sleep_pwrdev, KEY_SLEEP, 0);
+	input_sync(sweep2sleep_pwrdev);
+	mutex_unlock(&pwrkeyworklock);
+}
 
+/* PowerKeyPressed work func */
+static void sweep2sleep_presspwr(struct work_struct *work)
+{
 	if (!mutex_trylock(&pwrkeyworklock))
                 return;
-	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_SLEEP, 1);
-	input_event(sweep2sleep_pwrdev, EV_SYN, 0, 0);
-	msleep(S2S_PWRKEY_DUR);
-	input_event(sweep2sleep_pwrdev, EV_KEY, KEY_SLEEP, 0);
-	input_event(sweep2sleep_pwrdev, EV_SYN, 0, 0);
-	msleep(S2S_PWRKEY_DUR);
-	mutex_unlock(&pwrkeyworklock);
-	return;
+	input_report_key(sweep2sleep_pwrdev, KEY_SLEEP, 1);
+	input_sync(sweep2sleep_pwrdev);
+	schedule_delayed_work(&sweep2sleep_releasepwr_work, msecs_to_jiffies(S2S_PWRKEY_DUR));
 }
-static DECLARE_WORK(sweep2sleep_presspwr_work, sweep2sleep_presspwr);
 
 /* PowerKey trigger */
 static void sweep2sleep_pwrtrigger(void) {
@@ -298,8 +304,6 @@ static struct attribute_group sweep2sleep_attr_group = {
 	.name = "sweep2sleep",
 };
 
-static struct kobject *sweep2sleep_kobj; 
-
 static int __init sweep2sleep_init(void)
 {
 	int rc = 0;
@@ -329,14 +333,15 @@ static int __init sweep2sleep_init(void)
 		goto err_unregister;
 	}
 	INIT_WORK(&s2s_input_work, s2s_input_callback);
+	INIT_WORK(&sweep2sleep_presspwr_work, sweep2sleep_presspwr);
+	INIT_DELAYED_WORK(&sweep2sleep_releasepwr_work, sweep2sleep_releasepwr);
 
 	rc = input_register_handler(&s2s_input_handler);
 	if (rc) {
 		pr_err("%s: Failed to register s2s_input_handler\n", __func__);
 		goto err_wq;
 	}
-	sweep2sleep_kobj = kobject_create_and_add("sweep2sleep", mx_kobj) ;
-	rc = sysfs_create_group(sweep2sleep_kobj, &sweep2sleep_attr_group);
+	rc = sysfs_create_group(mx_kobj, &sweep2sleep_attr_group);
 	if (rc) {
 		pr_err("%s: sweep2sleep group failed\n", __func__);
 		goto err_group;
@@ -345,7 +350,6 @@ static int __init sweep2sleep_init(void)
 	return 0;
 
 err_group:
-	kobject_put(sweep2sleep_kobj);
 	input_unregister_handler(&s2s_input_handler);
 err_wq:
 	destroy_workqueue(s2s_input_wq);
@@ -362,8 +366,7 @@ err_alloc_dev:
 
 static void __exit sweep2sleep_exit(void)
 {
-	sysfs_remove_group(sweep2sleep_kobj, &sweep2sleep_attr_group);
-	kobject_put(sweep2sleep_kobj);
+	sysfs_remove_group(mx_kobj, &sweep2sleep_attr_group);
 	input_unregister_handler(&s2s_input_handler);
 	destroy_workqueue(s2s_input_wq);
 	input_unregister_device(sweep2sleep_pwrdev);
