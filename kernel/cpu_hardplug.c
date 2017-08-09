@@ -409,7 +409,7 @@ static int __init cpu_hardplug_init(void)
 {
 	int sysfs_result;
 
-	if (allowed_cpus)
+	if (allowed_cpus != NULL)
 		cpumask_setall(allowed_cpus);
 	else
 		return -ENOMEM;
