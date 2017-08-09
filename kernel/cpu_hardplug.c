@@ -383,8 +383,7 @@ static struct kobj_attribute cpu_hardplug_version_attribute =
 		cpu_hardplug_version_show,
 		NULL);
 
-static struct attribute *cpu_hardplug_attrs[] =
-{
+static struct attribute *cpu_hardplug_attrs[] = {
 	&cpu_hardplug_version_attribute.attr,
 	&limit_screen_on_cpus_attribute.attr,
 	&cpu1_allowed_attribute.attr,
@@ -397,12 +396,9 @@ static struct attribute *cpu_hardplug_attrs[] =
 	NULL,
 };
 
-static struct attribute_group cpu_hardplug_attr_group =
-{
+static struct attribute_group cpu_hardplug_attr_group = {
 	.attrs = cpu_hardplug_attrs,
 	.name = "cpu_hardplug",
-	NULL,
-	
 };
 
 static int __init cpu_hardplug_init(void)
