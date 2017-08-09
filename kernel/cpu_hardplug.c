@@ -86,7 +86,6 @@ void hardplug_cpus(void)
 		!hotplug_ready || cpumask_full(allowed_cpus))
 		return;
 
-	get_online_cpus();
 	for_each_cpu_not(cpu, allowed_cpus) {
 		if (cpu == 0)
 			continue;
