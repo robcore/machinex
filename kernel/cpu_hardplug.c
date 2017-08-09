@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 7
+#define HARDPLUG_MINOR 8
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -450,7 +450,7 @@ static void cpu_hardplug_exit(void)
 		&cpu_hardplug_attr_group);
 }
 
-core_initcall(cpu_hardplug_init);
+postcore_initcall(cpu_hardplug_init);
 module_exit(cpu_hardplug_exit);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
