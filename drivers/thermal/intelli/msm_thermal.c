@@ -556,11 +556,11 @@ static int __ref update_offline_cores(int val)
 	unsigned int cpu = 0;
 	int ret = 0;
 
-	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	if (!core_control_enabled || intelli_init() ||
 		thermal_suspended || !hotplug_ready)
 		return ret;
 
+	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_possible_cpu(cpu) {
 		if (!(cpus_offlined & BIT(cpu)))
 			continue;
