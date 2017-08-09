@@ -30,7 +30,7 @@ static ssize_t mx_version_show(struct kobject *kobj,
 {
 	ssize_t ret = 0;
 
-	ret = sprintf(buf, "mark%s\n", mx_version);
+	ret = sprintf(buf, "Mark%s\n", mx_version);
 	return ret;
 }
 MX_ATTR_RO(mx_version);
