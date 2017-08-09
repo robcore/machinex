@@ -666,8 +666,6 @@ static void an30259a_start_led_pattern(int mode)
 		}
 		break;
 
-
-
 #if 0
 		an30259a_set_led_blink(LED_R, 0, 2, r_brightness);
 		an30259a_set_led_blink(LED_G, 2, 0, g_brightness);
