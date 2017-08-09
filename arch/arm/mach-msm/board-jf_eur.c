@@ -93,7 +93,7 @@
 #include <linux/platform_data/ram_console.h>
 #include <linux/i2c/cypress_touchkey.h>
 #include <mach/apq8064-gpio.h>
-
+#include <linux/cpu.h>
 #include "clock.h"
 #include "msm_watchdog.h"
 #include "board-8064.h"

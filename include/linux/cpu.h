@@ -220,7 +220,7 @@ extern unsigned int limit_screen_on_cpus;
 extern unsigned int cpu1_allowed;
 extern unsigned int cpu2_allowed;
 extern unsigned int cpu3_allowed;
-static int cpu_hardplug_init(void);
+extern int cpu_hardplug_init(void);
 #ifdef CONFIG_PM_SLEEP_SMP
 extern int freeze_secondary_cpus(int primary);
 static inline int disable_nonboot_cpus(void)
