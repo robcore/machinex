@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 1
+#define HARDPLUG_MINOR 2
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -423,12 +423,13 @@ static int __init cpu_hardplug_init(void)
 	pr_info("CPU Hardplug Online\n");
 	return 0;
 }
+device_initcall(cpu_hardplug_init);
 
 static int __init alloc_hardplug_cpus(void)
 {
 	if (!alloc_cpumask_var(&allowed_cpus, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
-	return cpu_hardplug_init();
+	return 0;
 }
 core_initcall(alloc_hardplug_cpus);
 
