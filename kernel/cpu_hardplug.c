@@ -421,7 +421,7 @@ static struct attribute *cpu_hardplug_attrs[] =
 static const struct attribute_group cpu_hardplug_attr_group =
 {
 	.attrs = cpu_hardplug_attrs,
-	.name = cpu_hardplug,
+	.name = "cpu_hardplug",
 };
 
 static struct kobject *cpu_hardplug_kobj;
