@@ -1697,7 +1697,7 @@ static int get_img(struct msmfb_data *fbd, int domain,
 {
 	int ret = 0;
 #ifdef CONFIG_FB
-	struct file *file = NULL;
+	struct fd f;
 	int put_needed, fb_num;
 #endif
 #ifdef CONFIG_ANDROID_PMEM
@@ -1708,20 +1708,19 @@ static int get_img(struct msmfb_data *fbd, int domain,
 
 #ifdef CONFIG_FB
 	if (fbd->flags & MDP_MEMORY_ID_TYPE_FB) {
-		file = fget_light(fbd->memory_id, &put_needed);
-		if (file == NULL) {
-			pr_err("fget_light returned NULL\n");
-			return -EINVAL;
+		f = __fdget_raw(fbd->memory_id);
+		if (IS_ERR(f.file))
+			return PTR_ERR(f.file);
 		}
 
-		if (MAJOR(file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
-			fb_num = MINOR(file->f_dentry->d_inode->i_rdev);
+		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
+			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
 			if (get_fb_phys_info(start, len, fb_num,
 				ROTATOR_SUBSYSTEM_ID)) {
 				pr_err("get_fb_phys_info() failed\n");
 				ret = -1;
 			} else {
-				*p_file = file;
+				*p_file = f.file;
 				*p_need = put_needed;
 			}
 		} else {
@@ -1729,7 +1728,7 @@ static int get_img(struct msmfb_data *fbd, int domain,
 			ret = -1;
 		}
 		if (ret)
-			fput_light(file, put_needed);
+			fdput(f.file);
 		return ret;
 	}
 #endif
