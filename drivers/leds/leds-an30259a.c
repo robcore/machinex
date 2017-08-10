@@ -1259,12 +1259,12 @@ static ssize_t store_##file_name		\
 	ret = sscanf(buf, "%u", &input);	\
 	if (ret != 1)		\
 		return -EINVAL;			\
+	if (input == file_name)			\
+		return count;			\
 	if (input >= 10)		\
 		input = 10;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name)			\
-		return count;			\
 								\
 	file_name = input;				\
 	an30259a_start_led_pattern(current_led_mode); \
@@ -1282,12 +1282,12 @@ static ssize_t store_##file_name		\
 	ret = sscanf(buf, "%u", &input);	\
 	if (ret != 1)		\
 		return -EINVAL;			\
+	if (input == file_name)			\
+		return count;			\
 	if (input >= 15)		\
 		input = 15;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name)			\
-		return count;			\
 					\
 	file_name = input;				\
 	an30259a_start_led_pattern(current_led_mode); \
@@ -1305,12 +1305,12 @@ static ssize_t store_##file_name		\
 	ret = sscanf(buf, "%u", &input);	\
 	if (ret != 1)		\
 		return -EINVAL;			\
+	if (input == file_name)			\
+		return count;			\
 	if (input >= 15)		\
 		input = 15;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name)			\
-		return count;			\
 					\
 	file_name = input;				\
 	an30259a_start_led_pattern(current_led_mode); \
@@ -1330,7 +1330,7 @@ static ssize_t store_custom_led_colours(struct kobject *kobj,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-	if (input == file_name) {
+	if (input == custom_led_colours) {
 		return count;
 
 	if (input <= NONE)
