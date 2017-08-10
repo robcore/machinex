@@ -55,7 +55,7 @@
  * specific registers and some other data for resume.
  *  r0 = suspend function arg0
  *  r1 = suspend function
- * r2 = MPIDR value the resuming CPU will use
+ *  r2 = MPIDR value the resuming CPU will use
  */
 ENTRY(__cpu_suspend)
 	stmfd	sp!, {r4 - r11, lr}
@@ -74,14 +74,14 @@ ENTRY(__cpu_suspend)
 	ALT_SMP(ldr r0, =mpidr_hash)
 	ALT_UP_B(1f)
 	/* This ldmia relies on the memory layout of the mpidr_hash struct */
-	ldmia	r0, {r1, r6-r8}		@ r1 = mpidr mask (r6,r7,r8) = l[0,1,2] shifts
+	ldmia	r0, {r1, r6-r8}	@ r1 = mpidr mask (r6,r7,r8) = l[0,1,2] shifts
 	compute_mpidr_hash	r0, r6, r7, r8, r2, r1
 	add	r3, r3, r0, lsl #2
 1:	mov	r2, r5			@ virtual SP
 	mov	r1, r4			@ size of save block
 	add	r0, sp, #8		@ pointer to save block
 	bl	__cpu_suspend_save
-	adr	lr, BSYM(cpu_suspend_abort)
+	badr	lr, cpu_suspend_abort
 	ldmfd	sp!, {r0, pc}		@ call suspend fn
 ENDPROC(__cpu_suspend)
 	.ltorg
@@ -116,14 +116,7 @@ cpu_resume_after_mmu:
 	ldmfd	sp!, {r4 - r11, pc}
 ENDPROC(cpu_resume_after_mmu)
 
-/*
- * Note: Yes, part of the following code is located into the .data section.
- *       This is to allow sleep_save_sp to be accessed with a relative load
- *       while we can't rely on any MMU translation.  We could have put
- *       sleep_save_sp in the .text section as well, but some setups might
- *       insist on it to be truly read-only.
- */
-	.data
+	.text
 	.align
 
 #ifdef CONFIG_MMU
@@ -136,7 +129,12 @@ ENTRY(cpu_resume_arm)
 #endif
 
 ENTRY(cpu_resume)
-mov	r1, #0
+ARM_BE8(setend be)			@ ensure we are in BE mode
+#ifdef CONFIG_ARM_VIRT_EXT
+	bl	__hyp_stub_install_secondary
+#endif
+	safe_svcmode_maskall r1
+	mov	r1, #0
 	ALT_SMP(mrc p15, 0, r0, c0, c0, 5)
 	ALT_UP_B(1f)
 	adr	r2, mpidr_hash_ptr
@@ -150,10 +148,11 @@ mov	r1, #0
 	compute_mpidr_hash	r1, r4, r5, r6, r0, r3
 1:
 	adr	r0, _sleep_save_sp
+	ldr	r2, [r0]
+	add	r0, r0, r2
 	ldr	r0, [r0, #SLEEP_SAVE_SP_PHYS]
 	ldr	r0, [r0, r1, lsl #2]
 
-	setmode	PSR_I_BIT | PSR_F_BIT | SVC_MODE, r1  @ set SVC, irqs off
 	@ load phys pgd, stack, resume fn
   ARM(	ldmia	r0!, {r1, sp, pc}	)
 THUMB(	ldmia	r0!, {r1, r2, r3}	)
@@ -166,10 +165,12 @@ ENDPROC(cpu_resume_arm)
 #endif
 
 	.align 2
+_sleep_save_sp:
+	.long	sleep_save_sp - .
 mpidr_hash_ptr:
 	.long	mpidr_hash - .			@ mpidr_hash struct offset
 
+	.data
 	.type	sleep_save_sp, #object
 ENTRY(sleep_save_sp)
-_sleep_save_sp:
 	.space	SLEEP_SAVE_SP_SZ		@ struct sleep_save_sp
