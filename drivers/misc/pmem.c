@@ -670,17 +670,17 @@ static int is_master_owner(struct file *file)
 {
 	struct file *master_file;
 	struct pmem_data *data = file->private_data;
-	int put_needed, ret = 0;
+	int ret = 0;
 
 	if (!has_allocation(file))
 		return 0;
 	if (PMEM_FLAGS_MASTERMAP & data->flags)
 		return 1;
-	master_file = fget_light(data->master_fd, &put_needed);
+	master_file = fget(data->master_fd);
 	if (master_file && data->master_file == master_file)
 		ret = 1;
 	if (master_file)
-		fput_light(master_file, put_needed);
+		fput(master_file);
 	return ret;
 }
 
@@ -1875,22 +1875,22 @@ EXPORT_SYMBOL(put_pmem_file);
 void put_pmem_fd(int fd)
 {
 	int put_needed;
-	struct file *file = fget_light(fd, &put_needed);
+	struct file *file = fget(fd);
 
 	if (file) {
 		put_pmem_file(file);
-		fput_light(file, put_needed);
+		fput(file);
 	}
 }
 
 void flush_pmem_fd(int fd, unsigned long offset, unsigned long len)
 {
 	int fput_needed;
-	struct file *file = fget_light(fd, &fput_needed);
+	struct file *file = fget(fd);
 
 	if (file) {
 		flush_pmem_file(file, offset, len);
-		fput_light(file, fput_needed);
+		fput(file);
 	}
 }
 
@@ -2043,7 +2043,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 		goto leave;
 	}
 
-	src_file = fget_light(connect, &put_needed);
+	src_file = fget(connect);
 
 	if (!src_file) {
 		pr_err("pmem: %s: src file not found!\n", __func__);
@@ -2117,7 +2117,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 		}
 	}
 put_src_file:
-	fput_light(src_file, put_needed);
+	fput(src_file);
 leave:
 	return ret;
 }
