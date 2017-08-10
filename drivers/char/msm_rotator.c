@@ -1693,43 +1693,38 @@ static int msm_rotator_rgb_types(struct msm_rotator_img_info *info,
 
 static int get_img(struct msmfb_data *fbd, int domain,
 	unsigned long *start, unsigned long *len, struct file **p_file,
-	int *p_need, struct ion_handle **p_ihdl, unsigned int secure)
+	struct ion_handle **p_ihdl, unsigned int secure)
 {
 	int ret = 0;
 #ifdef CONFIG_FB
-	struct file *file = NULL;
-	int put_needed, fb_num;
+	struct fd f;
+	int fb_num;
 #endif
 #ifdef CONFIG_ANDROID_PMEM
 	unsigned long vstart;
 #endif
 
-	*p_need = 0;
-
 #ifdef CONFIG_FB
 	if (fbd->flags & MDP_MEMORY_ID_TYPE_FB) {
-		file = fget(fbd->memory_id);
-		if (file == NULL) {
-			pr_err("fget returned NULL\n");
-			return -EINVAL;
-		}
+		f = fdget(fbd->memory_id);
+		if (IS_ERR(f.file))
+			return PTR_ERR(f.file);
 
-		if (MAJOR(file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
-			fb_num = MINOR(file->f_dentry->d_inode->i_rdev);
+		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
+			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
 			if (get_fb_phys_info(start, len, fb_num,
 				ROTATOR_SUBSYSTEM_ID)) {
 				pr_err("get_fb_phys_info() failed\n");
 				ret = -1;
 			} else {
-				*p_file = file;
-				*p_need = put_needed;
+				*p_file = f.file;
 			}
 		} else {
 			pr_err("invalid FB_MAJOR failed\n");
 			ret = -1;
 		}
 		if (ret)
-			fput(file);
+			fdput(f);
 		return ret;
 	}
 #endif
@@ -1838,7 +1833,7 @@ static int msm_rotator_rotate_prepare(
 	}
 
 	rc = get_img(&info.src, ROTATOR_SRC_DOMAIN, (unsigned long *)&in_paddr,
-			(unsigned long *)&src_len, &srcp0_file, &ps0_need,
+			(unsigned long *)&src_len, &srcp0_file,
 			&srcp0_ihdl, 0);
 	if (rc) {
 		pr_err("%s: in get_img() failed id=0x%08x\n",
@@ -1847,7 +1842,7 @@ static int msm_rotator_rotate_prepare(
 	}
 
 	rc = get_img(&info.dst, ROTATOR_DST_DOMAIN, (unsigned long *)&out_paddr,
-			(unsigned long *)&dst_len, &dstp0_file, &p_need,
+			(unsigned long *)&dst_len, &dstp0_file,
 			&dstp0_ihdl, img_info->secure);
 	if (rc) {
 		pr_err("%s: out get_img() failed id=0x%08x\n",
@@ -1878,7 +1873,7 @@ static int msm_rotator_rotate_prepare(
 
 		rc = get_img(&info.src_chroma, ROTATOR_SRC_DOMAIN,
 				(unsigned long *)&in_chroma_paddr,
-				(unsigned long *)&src_len, &srcp1_file, &p_need,
+				(unsigned long *)&src_len, &srcp1_file,
 				&srcp1_ihdl, 0);
 		if (rc) {
 			pr_err("%s: in chroma get_img() failed id=0x%08x\n",
@@ -1888,7 +1883,7 @@ static int msm_rotator_rotate_prepare(
 
 		rc = get_img(&info.dst_chroma, ROTATOR_DST_DOMAIN,
 				(unsigned long *)&out_chroma_paddr,
-				(unsigned long *)&dst_len, &dstp1_file, &p_need,
+				(unsigned long *)&dst_len, &dstp1_file,
 				&dstp1_ihdl, img_info->secure);
 		if (rc) {
 			pr_err("%s: out chroma get_img() failed id=0x%08x\n",
