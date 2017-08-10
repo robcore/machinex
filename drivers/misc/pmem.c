@@ -1832,7 +1832,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 
 	if (IS_ERR_OR_NULL(src.file)) {
 		pr_err("pmem: %s: src.file not found!\n", __func__);
-		return PTR_ERR(f.file);
+		return PTR_ERR(src.file);
 	}
 
 	if (src.file == file) { /* degenerative case, operator error */
