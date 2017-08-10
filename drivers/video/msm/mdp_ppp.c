@@ -1282,7 +1282,7 @@ int get_img(struct mdp_img *img, struct mdp_blit_req *req,
 		struct file **srcp_file, struct ion_handle **srcp_ihdl)
 {
 	int fb_num, ret = 0;
-	struct file *file;
+	struct fd f;
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 #endif
@@ -1291,23 +1291,23 @@ int get_img(struct mdp_img *img, struct mdp_blit_req *req,
 #endif
 
 	if (req->flags & MDP_MEMORY_ID_TYPE_FB) {
-		file = fget(img->memory_id);
-		if (file == NULL)
-			return -EINVAL;
+		f = fdget(img->memory_id);
+		if (f.file == NULL)
+			return -EBADF;
 
-		if (MAJOR(file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
-			fb_num = MINOR(file->f_dentry->d_inode->i_rdev);
+		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
+			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
 			if (get_fb_phys_info(start, len, fb_num,
 				DISPLAY_SUBSYSTEM_ID)) {
 				pr_err("get_fb_phys_info() failed\n");
-				fput(file);
+				fdput(f);
 			} else {
 				*srcp_file = file;
 			}
 
 			return ret;
 		} else {
-			fput(file);
+			fdput(f);
 		}
 	}
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
