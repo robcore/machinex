@@ -1339,7 +1339,7 @@ static ssize_t store_custom_led_colours(struct kobject *kobj,
 		input = GREEN_BLUE;
 
 	custom_led_colours = input;
-	pick_custom_colours(custom_led_colours);
+	pick_custom_colour(custom_led_colours);
 	return count;
 }
 MX_ATTR_RW(custom_led_colours);
