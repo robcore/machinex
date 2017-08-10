@@ -1697,7 +1697,7 @@ static int get_img(struct msmfb_data *fbd, int domain,
 {
 	int ret = 0;
 #ifdef CONFIG_FB
-	struct fd f;
+	struct file *file = NULL;
 	int put_needed, fb_num;
 #endif
 #ifdef CONFIG_ANDROID_PMEM
@@ -1708,18 +1708,20 @@ static int get_img(struct msmfb_data *fbd, int domain,
 
 #ifdef CONFIG_FB
 	if (fbd->flags & MDP_MEMORY_ID_TYPE_FB) {
-		f = fdget(fbd->memory_id);
-		if (IS_ERR(f.file))
-			return PTR_ERR(f.file);
+		file = fget(fbd->memory_id);
+		if (file == NULL) {
+			pr_err("fget returned NULL\n");
+			return -EINVAL;
+		}
 
-		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
-			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
+		if (MAJOR(file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
+			fb_num = MINOR(file->f_dentry->d_inode->i_rdev);
 			if (get_fb_phys_info(start, len, fb_num,
 				ROTATOR_SUBSYSTEM_ID)) {
 				pr_err("get_fb_phys_info() failed\n");
 				ret = -1;
 			} else {
-				*p_file = f.file;
+				*p_file = file;
 				*p_need = put_needed;
 			}
 		} else {
@@ -1727,7 +1729,7 @@ static int get_img(struct msmfb_data *fbd, int domain,
 			ret = -1;
 		}
 		if (ret)
-			fdput(f);
+			fput(file);
 		return ret;
 	}
 #endif
@@ -1979,7 +1981,7 @@ rotate_prepare_error:
 
 	/* only source may use frame buffer */
 	if (info.src.flags & MDP_MEMORY_ID_TYPE_FB)
-		fput_light(srcp0_file, ps0_need);
+		fput(srcp0_file);
 	else
 		put_img(srcp0_file, srcp0_ihdl, ROTATOR_SRC_DOMAIN, 0);
 	msm_rotator_signal_timeline_done(s);
@@ -2166,7 +2168,7 @@ do_rotate_exit:
 
 	/* only source may use frame buffer */
 	if (info.src.flags & MDP_MEMORY_ID_TYPE_FB)
-		fput_light(srcp0_file, ps0_need);
+		fput(srcp0_file);
 	else
 		put_img(srcp0_file, srcp0_ihdl, ROTATOR_SRC_DOMAIN, 0);
 	msm_rotator_signal_timeline_done(s);
