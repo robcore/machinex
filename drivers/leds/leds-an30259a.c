@@ -145,7 +145,7 @@ static struct an30259_led_conf led_conf[] = {
 };
 
 enum an30259a_led_enum {
-	LED_R,
+	LED_R = 0,
 	LED_G,
 	LED_B,
 };
@@ -1157,6 +1157,68 @@ static struct attribute_group sec_led_attr_group = {
 };
 #endif
 
+enum mx_led_combos {
+	NONE = 0,
+	RED,
+	GREEN,
+	BLUE,
+	RED_GREEN,
+	RED_BLUE,
+	GREEN_BLUE,
+};
+
+static int custom_led_colours = NONE;
+
+static void pick_custom_colour(int colour)
+{
+	if (colour <= NONE)
+		colour = NONE;
+	if (colour >= GREEN_BLUE)
+		colour = GREEN_BLUE;
+
+	switch(colour) {
+	case NONE:
+		custom_r_enabled = 0;
+		custom_g_enabled = 0;
+		custom_b_enabled = 0;
+		break;
+	case RED:
+		custom_r_enabled = 1;
+		custom_g_enabled = 0;
+		custom_b_enabled = 0;
+		break;
+	case GREEN:
+		custom_r_enabled = 0;
+		custom_g_enabled = 1;
+		custom_b_enabled = 0;
+		break;
+	case BLUE:
+		custom_r_enabled = 0;
+		custom_g_enabled = 0;
+		custom_b_enabled = 1;
+		break;
+	case RED_GREEN:
+		custom_r_enabled = 1;
+		custom_g_enabled = 1;
+		custom_b_enabled = 0;
+		break;
+	case RED_BLUE:
+		custom_r_enabled = 1;
+		custom_g_enabled = 0;
+		custom_b_enabled = 1;
+		break;
+	case GREEN_BLUE:
+		custom_r_enabled = 0;
+		custom_g_enabled = 1;
+		custom_b_enabled = 1;
+		break;
+	default:
+		break;
+	}
+
+	an30259a_start_led_pattern(current_mode);
+}
+
 #define show_one(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
@@ -1175,14 +1237,14 @@ static ssize_t store_##file_name		\
 	ret = sscanf(buf, "%u", &input);	\
 	if (ret != 1)		\
 		return -EINVAL;			\
+	if (input == file_name)			\
+		return count;			\
 	if (input >= 1)		\
 		input = 1;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name) {			\
-		return count;			\
-	}					\
 	file_name = input;				\
+	an30259a_start_led_pattern(current_mode); \
 	return count;				\
 }
 
@@ -1201,10 +1263,11 @@ static ssize_t store_##file_name		\
 		input = 10;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name) {			\
+	if (input == file_name)			\
 		return count;			\
-	}					\
+								\
 	file_name = input;				\
+	an30259a_start_led_pattern(current_mode); \
 	return count;				\
 }
 
@@ -1223,10 +1286,11 @@ static ssize_t store_##file_name		\
 		input = 15;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name) {			\
+	if (input == file_name)			\
 		return count;			\
-	}					\
+					\
 	file_name = input;				\
+	an30259a_start_led_pattern(current_mode); \
 	return count;				\
 }
 
@@ -1245,10 +1309,11 @@ static ssize_t store_##file_name		\
 		input = 15;		\
 	if (input <= 0)		\
 		input = 0;		\
-	if (input == file_name) {			\
+	if (input == file_name)			\
 		return count;			\
-	}					\
+					\
 	file_name = input;				\
+	an30259a_start_led_pattern(current_mode); \
 	return count;				\
 }
 
@@ -1256,7 +1321,29 @@ static ssize_t store_##file_name		\
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
 
-show_one(custom_r_enabled);
+show_one(custom_led_colours);
+static ssize_t store_custom_led_colours(struct kobject *kobj,
+			   struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+	if (input == file_name) {
+		return count;
+
+	if (input <= NONE)
+		input = NONE;
+	if (input >= GREEN_BLUE)
+		input = GREEN_BLUE;
+
+	custom_led_colours = input;
+	pick_custom_colours(custom_led_colours);
+	return count;
+}
+MX_ATTR_RW(custom_led_colours);
+
 show_one(custom_r_delay);
 show_one(custom_r_dutymax);
 show_one(custom_r_dutymid);
@@ -1268,7 +1355,6 @@ show_one(custom_r_dt2);
 show_one(custom_r_dt3);
 show_one(custom_r_dt4);
 
-store_switch(custom_r_enabled);
 store_long(custom_r_delay);
 store_duty(custom_r_dutymax);
 store_duty(custom_r_dutymid);
@@ -1280,7 +1366,6 @@ store_slpdt(custom_r_dt2);
 store_slpdt(custom_r_dt3);
 store_slpdt(custom_r_dt4);
 
-MX_ATTR_RW(custom_r_enabled);
 MX_ATTR_RW(custom_r_delay);
 MX_ATTR_RW(custom_r_dutymax);
 MX_ATTR_RW(custom_r_dutymid);
@@ -1292,7 +1377,6 @@ MX_ATTR_RW(custom_r_dt2);
 MX_ATTR_RW(custom_r_dt3);
 MX_ATTR_RW(custom_r_dt4);
 
-show_one(custom_g_enabled);
 show_one(custom_g_delay);
 show_one(custom_g_dutymax);
 show_one(custom_g_dutymid);
@@ -1304,7 +1388,6 @@ show_one(custom_g_dt2);
 show_one(custom_g_dt3);
 show_one(custom_g_dt4);
 
-store_switch(custom_g_enabled);
 store_long(custom_g_delay);
 store_duty(custom_g_dutymax);
 store_duty(custom_g_dutymid);
@@ -1316,7 +1399,6 @@ store_slpdt(custom_g_dt2);
 store_slpdt(custom_g_dt3);
 store_slpdt(custom_g_dt4);
 
-MX_ATTR_RW(custom_g_enabled);
 MX_ATTR_RW(custom_g_delay);
 MX_ATTR_RW(custom_g_dutymax);
 MX_ATTR_RW(custom_g_dutymid);
@@ -1328,7 +1410,6 @@ MX_ATTR_RW(custom_g_dt2);
 MX_ATTR_RW(custom_g_dt3);
 MX_ATTR_RW(custom_g_dt4);
 
-show_one(custom_b_enabled);
 show_one(custom_b_delay);
 show_one(custom_b_dutymax);
 show_one(custom_b_dutymid);
@@ -1340,7 +1421,6 @@ show_one(custom_b_dt2);
 show_one(custom_b_dt3);
 show_one(custom_b_dt4);
 
-store_switch(custom_b_enabled);
 store_long(custom_b_delay);
 store_duty(custom_b_dutymax);
 store_duty(custom_b_dutymid);
@@ -1352,7 +1432,6 @@ store_slpdt(custom_b_dt2);
 store_slpdt(custom_b_dt3);
 store_slpdt(custom_b_dt4);
 
-MX_ATTR_RW(custom_b_enabled);
 MX_ATTR_RW(custom_b_delay);
 MX_ATTR_RW(custom_b_dutymax);
 MX_ATTR_RW(custom_b_dutymid);
@@ -1365,7 +1444,6 @@ MX_ATTR_RW(custom_b_dt3);
 MX_ATTR_RW(custom_b_dt4);
 
 static struct attribute *cust_led_r_attrs[] = {
-	&custom_r_enabled_attr.attr,
 	&custom_r_delay_attr.attr,
 	&custom_r_dutymax_attr.attr,
 	&custom_r_dutymid_attr.attr,
@@ -1380,7 +1458,6 @@ static struct attribute *cust_led_r_attrs[] = {
 };
 
 static struct attribute *cust_led_g_attrs[] = {
-	&custom_g_enabled_attr.attr,
 	&custom_g_delay_attr.attr,
 	&custom_g_dutymax_attr.attr,
 	&custom_g_dutymid_attr.attr,
@@ -1395,7 +1472,6 @@ static struct attribute *cust_led_g_attrs[] = {
 };
 
 static struct attribute *cust_led_b_attrs[] = {
-	&custom_b_enabled_attr.attr,
 	&custom_b_delay_attr.attr,
 	&custom_b_dutymax_attr.attr,
 	&custom_b_dutymid_attr.attr,
@@ -1422,6 +1498,7 @@ static struct attribute_group cust_led_b_attr_group = {
 };
 
 static struct attribute * mx_custom_leds_attrs[] = {
+	&custom_led_colours_attr.attr,
 	NULL
 };
 
