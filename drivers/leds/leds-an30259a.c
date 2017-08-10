@@ -1216,7 +1216,7 @@ static void pick_custom_colour(int colour)
 		break;
 	}
 
-	an30259a_start_led_pattern(current_mode);
+	an30259a_start_led_pattern(current_led_mode);
 }
 
 #define show_one(object)				\
@@ -1244,7 +1244,7 @@ static ssize_t store_##file_name		\
 	if (input <= 0)		\
 		input = 0;		\
 	file_name = input;				\
-	an30259a_start_led_pattern(current_mode); \
+	an30259a_start_led_pattern(current_led_mode); \
 	return count;				\
 }
 
@@ -1267,7 +1267,7 @@ static ssize_t store_##file_name		\
 		return count;			\
 								\
 	file_name = input;				\
-	an30259a_start_led_pattern(current_mode); \
+	an30259a_start_led_pattern(current_led_mode); \
 	return count;				\
 }
 
@@ -1290,7 +1290,7 @@ static ssize_t store_##file_name		\
 		return count;			\
 					\
 	file_name = input;				\
-	an30259a_start_led_pattern(current_mode); \
+	an30259a_start_led_pattern(current_led_mode); \
 	return count;				\
 }
 
@@ -1313,7 +1313,7 @@ static ssize_t store_##file_name		\
 		return count;			\
 					\
 	file_name = input;				\
-	an30259a_start_led_pattern(current_mode); \
+	an30259a_start_led_pattern(current_led_mode); \
 	return count;				\
 }
 
