@@ -298,7 +298,7 @@ static ssize_t timerfd_read(struct file *file, char __user *buf, size_t count,
 }
 
 #ifdef CONFIG_PROC_FS
-static void timerfd_show(struct seq_file *m, struct file *file)
+static int timerfd_show(struct seq_file *m, struct file *file)
 {
 	struct timerfd_ctx *ctx = file->private_data;
 	struct itimerspec t;
@@ -308,7 +308,7 @@ static void timerfd_show(struct seq_file *m, struct file *file)
 	t.it_interval = ktime_to_timespec(ctx->tintv);
 	spin_unlock_irq(&ctx->wqh.lock);
 
-	seq_printf(m,
+	return seq_printf(m,
 		   "clockid: %d\n"
 		   "ticks: %llu\n"
 		   "settime flags: 0%o\n"
