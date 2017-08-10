@@ -1708,10 +1708,9 @@ static int get_img(struct msmfb_data *fbd, int domain,
 
 #ifdef CONFIG_FB
 	if (fbd->flags & MDP_MEMORY_ID_TYPE_FB) {
-		f = __fdget_raw(fbd->memory_id);
+		f = fdget(fbd->memory_id);
 		if (IS_ERR(f.file))
 			return PTR_ERR(f.file);
-		}
 
 		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
 			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
@@ -1728,7 +1727,7 @@ static int get_img(struct msmfb_data *fbd, int domain,
 			ret = -1;
 		}
 		if (ret)
-			fdput(f.file);
+			fdput(f);
 		return ret;
 	}
 #endif
