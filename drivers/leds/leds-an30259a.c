@@ -1165,6 +1165,7 @@ enum mx_led_combos {
 	RED_GREEN,
 	RED_BLUE,
 	GREEN_BLUE,
+	RED_GREEN_BLUE,
 };
 
 static int custom_led_colours = NONE;
@@ -1173,8 +1174,8 @@ static void pick_custom_colour(int colour)
 {
 	if (colour <= NONE)
 		colour = NONE;
-	if (colour >= GREEN_BLUE)
-		colour = GREEN_BLUE;
+	if (colour >= RED_GREEN_BLUE)
+		colour = RED_GREEN_BLUE;
 
 	switch(colour) {
 	case NONE:
@@ -1212,6 +1213,10 @@ static void pick_custom_colour(int colour)
 		custom_g_enabled = 1;
 		custom_b_enabled = 1;
 		break;
+	case RED_GREEN_BLUE:
+		custom_r_enabled = 1;
+		custom_g_enabled = 1;
+		custom_b_enabled = 1;
 	default:
 		break;
 	}
@@ -1335,8 +1340,8 @@ static ssize_t store_custom_led_colours(struct kobject *kobj,
 
 	if (input <= NONE)
 		input = NONE;
-	if (input >= GREEN_BLUE)
-		input = GREEN_BLUE;
+	if (input >= RED_GREEN_BLUE)
+		input = RED_GREEN_BLUE;
 
 	custom_led_colours = input;
 	pick_custom_colour(custom_led_colours);
