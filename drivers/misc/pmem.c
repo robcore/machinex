@@ -1249,7 +1249,7 @@ static int pmem_allocator_system(const int id,
 	struct alloc_list *list;
 	unsigned long aligned_len;
 	int count = SYSTEM_ALLOC_RETRY;
-	void *buf;
+	void *buf = NULL;
 
 	if ((pmem[id].allocator.system_mem.used + len) > pmem[id].size) {
 		return -1;
@@ -1266,11 +1266,8 @@ static int pmem_allocator_system(const int id,
 	}
 	list->vaddr = NULL;
 
-	buf = NULL;
 	while ((buf == NULL) && count--) {
 		buf = kmalloc((aligned_len), GFP_KERNEL);
-		if (buf == NULL) {
-		}
 	}
 	if (!buf) {
 		pr_crit("pmem: kmalloc failed for id= %d len= %ld\n",
@@ -1833,10 +1830,9 @@ static int pmem_connect(unsigned long connect, struct file *file)
 
 	src = fdget(connect);
 
-	if (!src.file) {
+	if (IS_ERR_OR_NULL(src.file)) {
 		pr_err("pmem: %s: src.file not found!\n", __func__);
-		ret = -EBADF;
-		goto leave;
+		return PTR_ERR(f.file);
 	}
 
 	if (src.file == file) { /* degenerative case, operator error */
