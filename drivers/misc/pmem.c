@@ -676,7 +676,7 @@ static int is_master_owner(struct file *file)
 		return 0;
 	if (PMEM_FLAGS_MASTERMAP & data->flags)
 		return 1;
-	master_file = fget(data->master_fd);
+	master_file = fget_raw(data->master_fd);
 	if (master_file && data->master_file == master_file)
 		ret = 1;
 	if (master_file)
@@ -1810,7 +1810,7 @@ int get_pmem_file(unsigned int fd, unsigned long *start, unsigned long *vstart,
 		  unsigned long *len, struct file **filp)
 {
 	int ret = -1;
-	struct file *file = fget(fd);
+	struct file *file = fget_raw(fd);
 
 	if (unlikely(file == NULL)) {
 		pr_err("pmem: %s: requested data from file "
@@ -1875,7 +1875,7 @@ EXPORT_SYMBOL(put_pmem_file);
 void put_pmem_fd(int fd)
 {
 	int put_needed;
-	struct file *file = fget(fd);
+	struct file *file = fget_raw(fd);
 
 	if (file) {
 		put_pmem_file(file);
@@ -1886,7 +1886,7 @@ void put_pmem_fd(int fd)
 void flush_pmem_fd(int fd, unsigned long offset, unsigned long len)
 {
 	int fput_needed;
-	struct file *file = fget(fd);
+	struct file *file = fget_raw(fd);
 
 	if (file) {
 		flush_pmem_file(file, offset, len);
@@ -2043,7 +2043,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 		goto leave;
 	}
 
-	src_file = fget(connect);
+	src_file = fget_raw(connect);
 
 	if (!src_file) {
 		pr_err("pmem: %s: src file not found!\n", __func__);
