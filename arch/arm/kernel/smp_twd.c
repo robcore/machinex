@@ -100,6 +100,7 @@ static void twd_timer_stop(struct clock_event_device *clk)
 }
 
 #ifdef CONFIG_CPU_FREQ
+#include <linux/cpufreq.h>
 
 /*
  * Updates clockevent frequency when the cpu frequency changes.
@@ -109,7 +110,7 @@ static void twd_update_frequency(void *data)
 {
 	twd_timer_rate = clk_get_rate(twd_clk);
 
-	clockevents_update_freq(*__this_cpu_ptr(twd_evt), twd_timer_rate);
+	clockevents_update_freq(raw_cpu_ptr(twd_evt), twd_timer_rate);
 }
 
 static int twd_cpufreq_transition(struct notifier_block *nb,
@@ -139,7 +140,7 @@ static struct notifier_block twd_cpufreq_nb = {
 
 static int twd_cpufreq_init(void)
 {
-	if (twd_evt && *__this_cpu_ptr(twd_evt) && !IS_ERR(twd_clk))
+	if (twd_evt && raw_cpu_ptr(twd_evt) && !IS_ERR(twd_clk))
 		return cpufreq_register_notifier(&twd_cpufreq_nb,
 			CPUFREQ_TRANSITION_NOTIFIER);
 
@@ -159,7 +160,7 @@ static void twd_calibrate_rate(void)
 	 * the timer ticks
 	 */
 	if (twd_timer_rate == 0) {
-		printk(KERN_INFO "Calibrating local timer... ");
+		pr_info("Calibrating local timer... ");
 
 		/* Wait for a tick to start */
 		waitjiffies = get_jiffies_64() + 1;
@@ -183,7 +184,7 @@ static void twd_calibrate_rate(void)
 
 		twd_timer_rate = (0xFFFFFFFFU - count) * (HZ / 5);
 
-		printk("%lu.%02luMHz.\n", twd_timer_rate / 1000000,
+		pr_cont("%lu.%02luMHz.\n", twd_timer_rate / 1000000,
 			(twd_timer_rate / 10000) % 100);
 	}
 }
@@ -235,7 +236,7 @@ static int twd_timer_setup(struct clock_event_device *clk)
 	 */
 	if (per_cpu(percpu_setup_called, cpu)) {
 		__raw_writel(0, twd_base + TWD_TIMER_CONTROL);
-		clockevents_register_device(*__this_cpu_ptr(twd_evt));
+		clockevents_register_device(*raw_cpu_ptr(twd_evt));
 		enable_percpu_irq(clk->irq, 0);
 		return 0;
 	}
@@ -276,7 +277,7 @@ static int twd_timer_setup(struct clock_event_device *clk)
 	clk->set_next_event = twd_set_next_event;
 	clk->irq = twd_ppi;
 
-	this_cpu_clk = __this_cpu_ptr(twd_evt);
+	this_cpu_clk = raw_cpu_ptr(twd_evt);
 	*this_cpu_clk = clk;
 
 	clockevents_config_and_register(clk, twd_timer_rate,
