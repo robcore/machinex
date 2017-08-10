@@ -1141,6 +1141,7 @@ int __mmc_claim_host(struct mmc_host *host, atomic_t *abort)
 		schedule();
 		spin_lock_irqsave(&host->lock, flags);
 	}
+	set_current_state(TASK_RUNNING);
 	if (!host->claimed || host->claimer == current) {
 		host->claimed = 1;
 		host->claimer = current;

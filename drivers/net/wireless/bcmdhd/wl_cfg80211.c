@@ -9809,6 +9809,7 @@ wl_cfg80211_netdev_notifier_call(struct notifier_block * nb,
 				}
 				set_current_state(TASK_INTERRUPTIBLE);
 				schedule_timeout(100);
+				set_current_state(TASK_RUNNING);
 				refcnt++;
 			}
 #endif /* LINUX_VERSION <  VERSION(3, 14, 0) */
