@@ -997,7 +997,6 @@ int mdp4_update_base_blend(struct msm_fb_data_type *mfd,
 u32 mdp4_get_mixer_num(u32 panel_type);
 int mdp4_overlay_reset(void);
 void mdp4_vg_csc_restore(void);
-void dump_underrun_pipe_info(void);
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 void dtv_update_camera_vector_override(uint8_t enable);
 #endif
