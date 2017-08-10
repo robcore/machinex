@@ -66,6 +66,7 @@
 #define early_machine_is_msm8226()	0
 #define machine_is_msm8226()		0
 #define machine_is_msm8226_sim()	0
+#define machine_is_jf()				1
 
 #endif
 

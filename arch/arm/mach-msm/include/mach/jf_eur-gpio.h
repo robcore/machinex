@@ -92,7 +92,7 @@
 
 /* gpio for changed list */
 enum {
-	BOARD_REV00,
+	BOARD_REV00 = 0,
 	BOARD_REV01,
 	BOARD_REV02,
 	BOARD_REV03,
