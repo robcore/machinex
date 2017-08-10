@@ -3684,7 +3684,7 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 	}
 
 	if (img->flags & MDP_MEMORY_ID_TYPE_FB) {
-		file = fget_light(img->memory_id, &put_needed);
+		file = fget(img->memory_id);
 		if (file == NULL)
 			return -EINVAL;
 
@@ -3701,7 +3701,7 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 		} else
 			ret = -1;
 		if (ret)
-			fput_light(file, put_needed);
+			fput(file);
 		return ret;
 	}
 

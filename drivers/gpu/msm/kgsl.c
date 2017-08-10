@@ -1876,7 +1876,7 @@ static int kgsl_get_phys_file(int fd, unsigned long *start, unsigned long *len,
 
 	fbfile = fget(fd);
 	if (fbfile == NULL) {
-		KGSL_CORE_ERR("fget_light failed\n");
+		KGSL_CORE_ERR("fget failed\n");
 		return -1;
 	}
 
