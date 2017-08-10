@@ -1292,8 +1292,8 @@ int get_img(struct mdp_img *img, struct mdp_blit_req *req,
 
 	if (req->flags & MDP_MEMORY_ID_TYPE_FB) {
 		f = fdget(img->memory_id);
-		if (f.file == NULL)
-			return -EBADF;
+		if (IS_ERR_OR_NULL(f.file))
+			return PTR_ERR(f.file);
 
 		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
 			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
@@ -1302,7 +1302,7 @@ int get_img(struct mdp_img *img, struct mdp_blit_req *req,
 				pr_err("get_fb_phys_info() failed\n");
 				fdput(f);
 			} else {
-				*srcp_file = file;
+				*srcp_file = f.file;
 			}
 
 			return ret;
