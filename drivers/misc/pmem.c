@@ -1681,7 +1681,7 @@ void flush_pmem_fd(int fd, unsigned long offset, unsigned long len)
 
 	if (f.file) {
 		flush_pmem_file(f.file, offset, len);
-		fdput(f.file);
+		fdput(f);
 	}
 }
 
