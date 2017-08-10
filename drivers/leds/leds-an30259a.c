@@ -1330,7 +1330,7 @@ static ssize_t store_custom_led_colours(struct kobject *kobj,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-	if (input == custom_led_colours) {
+	if (input == custom_led_colours)
 		return count;
 
 	if (input <= NONE)
