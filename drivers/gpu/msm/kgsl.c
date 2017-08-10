@@ -1863,7 +1863,7 @@ static inline int _check_region(unsigned long start, unsigned long size,
 static int kgsl_get_phys_file(int fd, unsigned long *start, unsigned long *len,
 			      unsigned long *vstart, struct file **filep)
 {
-	struct file *fbfile;
+	struct fd fb;
 	int ret = 0;
 	dev_t rdev;
 	struct fb_info *info;
@@ -1874,13 +1874,13 @@ static int kgsl_get_phys_file(int fd, unsigned long *start, unsigned long *len,
 		return 0;
 #endif
 
-	fbfile = fget(fd);
-	if (fbfile == NULL) {
-		KGSL_CORE_ERR("fget failed\n");
+	fb = fdget(fd);
+	if (fb.file == NULL) {
+		KGSL_CORE_ERR("fdget failed\n");
 		return -1;
 	}
 
-	rdev = fbfile->f_dentry->d_inode->i_rdev;
+	rdev = fb.file->f_dentry->d_inode->i_rdev;
 	info = MAJOR(rdev) == FB_MAJOR ? registered_fb[MINOR(rdev)] : NULL;
 	if (info) {
 		*start = info->fix.smem_start;
@@ -1893,7 +1893,7 @@ static int kgsl_get_phys_file(int fd, unsigned long *start, unsigned long *len,
 		ret = -1;
 	}
 
-	fput(fbfile);
+	fdput(fb);
 
 	return ret;
 }
