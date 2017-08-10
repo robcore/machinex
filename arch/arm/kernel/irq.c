@@ -26,6 +26,7 @@
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/irqchip.h>
 #include <linux/random.h>
 #include <linux/smp.h>
 #include <linux/init.h>
@@ -42,13 +43,6 @@
 #include <asm/mach/time.h>
 #include <asm/outercache.h>
 #include <linux/irqchip/chained_irq.h>
-
-/*
- * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
- */
-#ifndef irq_finish
-#define irq_finish(irq) do { } while (0)
-#endif
 
 unsigned long irq_err_count;
 
@@ -88,9 +82,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 		generic_handle_irq(irq);
 	}
 
-	/* AT91 specific workaround
-	irq_finish(irq);
- */
 	irq_exit();
 	set_irq_regs(old_regs);
 }
@@ -126,7 +117,10 @@ EXPORT_SYMBOL_GPL(set_irq_flags);
 
 void __init init_IRQ(void)
 {
-	machine_desc->init_irq();
+	if (!machine_desc->init_irq)
+		irqchip_init();
+	else
+		machine_desc->init_irq();
 }
 
 #ifdef CONFIG_MULTI_IRQ_HANDLER
@@ -150,7 +144,9 @@ int __init arch_probe_nr_irqs(void)
 static bool migrate_one_irq(struct irq_desc *desc)
 {
 	struct irq_data *d = irq_desc_get_irq_data(desc);
-	const struct cpumask *affinity = d->common->affinity;
+	const struct cpumask *affinity = irq_data_get_affinity_mask(d);
+	struct irq_chip *c;
+	bool ret = false;
 
 	/*
 	 * If this is a per-CPU interrupt, or the affinity does not
@@ -159,10 +155,18 @@ static bool migrate_one_irq(struct irq_desc *desc)
 	if (irqd_is_per_cpu(d) || !cpumask_test_cpu(smp_processor_id(), affinity))
 		return false;
 
-	if (cpumask_any_and(affinity, cpu_online_mask) >= nr_cpu_ids)
+	if (cpumask_any_and(affinity, cpu_online_mask) >= nr_cpu_ids) {
 		affinity = cpu_online_mask;
+		ret = true;
+	}
 
-	return irq_set_affinity_locked(d, affinity, false) == 0;
+	c = irq_data_get_irq_chip(d);
+	if (!c->irq_set_affinity)
+		pr_debug("IRQ%u: unable to set affinity\n", d->irq);
+	else if (c->irq_set_affinity(d, affinity, false) == IRQ_SET_MASK_OK && ret)
+		cpumask_copy(irq_data_get_affinity_mask(d), affinity);
+
+	return ret;
 }
 
 /*
