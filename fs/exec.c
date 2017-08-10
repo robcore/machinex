@@ -277,7 +277,10 @@ static int __bprm_mm_init(struct linux_binprm *bprm)
 	if (!vma)
 		return -ENOMEM;
 
-	down_write(&mm->mmap_sem);
+	if (down_write_killable(&mm->mmap_sem)) {
+		err = -EINTR;
+		goto err_free;
+	}
 	vma->vm_mm = mm;
 
 	/*
@@ -303,6 +306,7 @@ static int __bprm_mm_init(struct linux_binprm *bprm)
 	return 0;
 err:
 	up_write(&mm->mmap_sem);
+err_free:
 	bprm->vma = NULL;
 	kmem_cache_free(vm_area_cachep, vma);
 	return err;
@@ -710,7 +714,9 @@ int setup_arg_pages(struct linux_binprm *bprm,
 		bprm->loader -= stack_shift;
 	bprm->exec -= stack_shift;
 
-	down_write(&mm->mmap_sem);
+	if (down_write_killable(&mm->mmap_sem))
+		return -EINTR;
+
 	vm_flags = VM_STACK_FLAGS;
 
 	/*
@@ -795,11 +801,12 @@ static struct file *do_open_exec(struct filename *name)
 	if (file->f_path.mnt->mnt_flags & MNT_NOEXEC)
 		goto exit;
 
-	fsnotify_open(file);
-
 	err = deny_write_access(file);
 	if (err)
 		goto exit;
+
+	if (name->name[0] != '\0')
+		fsnotify_open(file);
 
 out:
 	return file;
@@ -937,10 +944,14 @@ static int de_thread(struct task_struct *tsk)
 	if (!thread_group_leader(tsk)) {
 		struct task_struct *leader = tsk->group_leader;
 
-		sig->notify_count = -1;	/* for exit_notify() */
 		for (;;) {
 			threadgroup_change_begin(tsk);
 			write_lock_irq(&tasklist_lock);
+			/*
+			 * Do this under tasklist_lock to ensure that
+			 * exit_notify() can't miss ->group_exit_task
+			 */
+			sig->notify_count = -1;
 			if (likely(leader->exit_state))
 				break;
 			__set_current_state(TASK_KILLABLE);
@@ -1091,7 +1102,13 @@ int flush_old_exec(struct linux_binprm * bprm)
 	if (retval)
 		goto out;
 
+	/*
+	 * Must be called _before_ exec_mmap() as bprm->mm is
+	 * not visibile until then. This also enables the update
+	 * to be lockless.
+	 */
 	set_mm_exe_file(bprm->mm, bprm->file);
+
 	/*
 	 * Release all of the old mmap stuff
 	 */
@@ -1108,6 +1125,13 @@ int flush_old_exec(struct linux_binprm * bprm)
 	flush_thread();
 	current->personality &= ~bprm->per_clear;
 
+	/*
+	 * We have to apply CLOEXEC before we change whether the process is
+	 * dumpable (in setup_new_exec) to avoid a race with a process in userspace
+	 * trying to access the should-be-closed file descriptors of a process
+	 * undergoing exec(2).
+	 */
+	do_close_on_exec(current->files);
 	return 0;
 
 out:
@@ -1154,11 +1178,8 @@ void setup_new_exec(struct linux_binprm * bprm)
 
 	/* An exec changes our domain. We are no longer part of the thread
 	   group */
-
 	current->self_exec_id++;
-
 	flush_signal_handlers(current, 0);
-	do_close_on_exec(current->files);
 }
 EXPORT_SYMBOL(setup_new_exec);
 
@@ -1238,6 +1259,36 @@ void install_exec_creds(struct linux_binprm *bprm)
 }
 EXPORT_SYMBOL(install_exec_creds);
 
+/*
+ * determine how safe it is to execute the proposed program
+ * - the caller must hold ->cred_guard_mutex to protect against
+ *   PTRACE_ATTACH or seccomp thread-sync
+ */
+static void check_unsafe_exec(struct linux_binprm *bprm)
+{
+	struct task_struct *p = current, *t;
+	unsigned n_fs;
+
+	if (p->ptrace)
+		bprm->unsafe |= LSM_UNSAFE_PTRACE;
+
+	t = p;
+	n_fs = 1;
+	spin_lock(&p->fs->lock);
+	rcu_read_lock();
+	while_each_thread(p, t) {
+		if (t->fs == p->fs)
+			n_fs++;
+	}
+	rcu_read_unlock();
+
+	if (p->fs->users > n_fs)
+		bprm->unsafe |= LSM_UNSAFE_SHARE;
+	else
+		p->fs->in_exec = 1;
+	spin_unlock(&p->fs->lock);
+}
+
 static void bprm_fill_uid(struct linux_binprm *bprm)
 {
 	struct inode *inode;
@@ -1253,7 +1304,7 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 		return;
 
 	inode = bprm->file->f_path.dentry->d_inode;
-	mode = ACCESS_ONCE(inode->i_mode);
+	mode = READ_ONCE(inode->i_mode);
 	if (!(mode & (S_ISUID|S_ISGID)))
 		return;
 
@@ -1275,41 +1326,6 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 		bprm->per_clear |= PER_CLEAR_ON_SETID;
 		bprm->cred->egid = gid;
 	}
-}
-
-/*
- * determine how safe it is to execute the proposed program
- * - the caller must hold ->cred_guard_mutex to protect against
- *   PTRACE_ATTACH or seccomp thread-sync
- */
-static void check_unsafe_exec(struct linux_binprm *bprm)
-{
-	struct task_struct *p = current, *t;
-	unsigned n_fs;
-
-	if (p->ptrace) {
-		if (p->ptrace & PT_PTRACE_CAP)
-			bprm->unsafe |= LSM_UNSAFE_PTRACE_CAP;
-		else
-			bprm->unsafe |= LSM_UNSAFE_PTRACE;
-	}
-
-	t = p;
-	n_fs = 1;
-	spin_lock(&p->fs->lock);
-	rcu_read_lock();
-	while_each_thread(p, t) {
-		if (t->fs == p->fs)
-			n_fs++;
-	}
-	rcu_read_unlock();
-
-	if (p->fs->users > n_fs)
-		bprm->unsafe |= LSM_UNSAFE_SHARE;
-	else
-		p->fs->in_exec = 1;
-
-	spin_unlock(&p->fs->lock);
 }
 
 /*
@@ -1413,14 +1429,19 @@ int search_binary_handler(struct linux_binprm *bprm)
 		read_unlock(&binfmt_lock);
 		bprm->recursion_depth++;
 		retval = fmt->load_binary(bprm);
-		bprm->recursion_depth--;
-		if (retval >= 0 || retval != -ENOEXEC ||
-		    bprm->mm == NULL || bprm->file == NULL) {
-			put_binfmt(fmt);
-			return retval;
-		}
 		read_lock(&binfmt_lock);
 		put_binfmt(fmt);
+		bprm->recursion_depth--;
+		if (retval < 0 && !bprm->mm) {
+			/* we got to flush_old_exec() and failed after it */
+			read_unlock(&binfmt_lock);
+			force_sigsegv(SIGSEGV, current);
+			return retval;
+		}
+		if (retval != -ENOEXEC || !bprm->file) {
+			read_unlock(&binfmt_lock);
+			return retval;
+		}
 	}
 	read_unlock(&binfmt_lock);
 
