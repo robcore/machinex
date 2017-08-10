@@ -2413,7 +2413,6 @@ static int dm_wait_for_completion(struct mapped_device *md, int interruptible)
 
 		io_schedule();
 	}
-	set_current_state(TASK_RUNNING);
 
 	remove_wait_queue(&md->wait, &wait);
 

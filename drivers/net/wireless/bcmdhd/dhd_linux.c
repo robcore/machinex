@@ -1208,7 +1208,6 @@ dhd_timeout_expired(dhd_timeout_t *tmo)
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(1);
 		remove_wait_queue(&delay_wait, &wait);
-		set_current_state(TASK_RUNNING);
 	}
 
 	return 0;
@@ -7161,7 +7160,6 @@ dhd_wait_pend8021x(struct net_device *dev)
 		if (pend) {
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule_timeout(timeout);
-			set_current_state(TASK_RUNNING);
 			ntimes--;
 		}
 		pend = dhd_get_pend_8021x_cnt(dhd);

@@ -218,9 +218,7 @@ err_kthread:
 	set_current_state(TASK_INTERRUPTIBLE);
 	while (!kthread_should_stop()) {
 		schedule();
-		set_current_state(TASK_INTERRUPTIBLE);
 	}
-	set_current_state(TASK_RUNNING);
 	return ret;
 }
 

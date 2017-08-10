@@ -210,7 +210,6 @@ ssize_t eventfd_ctx_read(struct eventfd_ctx *ctx, int no_wait, __u64 *cnt)
 			spin_lock_irq(&ctx->wqh.lock);
 		}
 		__remove_wait_queue(&ctx->wqh, &wait);
-		__set_current_state(TASK_RUNNING);
 	}
 	if (likely(res == 0)) {
 		eventfd_ctx_do_read(ctx, cnt);
@@ -274,7 +273,6 @@ static ssize_t eventfd_write(struct file *file, const char __user *buf, size_t c
 			spin_lock_irq(&ctx->wqh.lock);
 		}
 		__remove_wait_queue(&ctx->wqh, &wait);
-		__set_current_state(TASK_RUNNING);
 	}
 	if (likely(res > 0)) {
 		ctx->count += ucnt;

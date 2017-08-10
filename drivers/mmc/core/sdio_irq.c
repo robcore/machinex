@@ -131,7 +131,6 @@ static int sdio_irq_thread(void *_host)
 			set_current_state(TASK_INTERRUPTIBLE);
 			if (!kthread_should_stop())
 				schedule_timeout(HZ);
-			set_current_state(TASK_RUNNING);
 		}
 
 		/*
@@ -157,7 +156,6 @@ static int sdio_irq_thread(void *_host)
 		}
 		if (!kthread_should_stop())
 			schedule_timeout(period);
-		set_current_state(TASK_RUNNING);
 	} while (!kthread_should_stop());
 
 	if (host->caps & MMC_CAP_SDIO_IRQ) {
