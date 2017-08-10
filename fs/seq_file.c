@@ -66,23 +66,27 @@ static void *seq_buf_alloc(unsigned long size)
  *	ERR_PTR(error).  In the end of sequence they return %NULL. ->show()
  *	returns 0 in case of success and negative number in case of error.
  *	Returning SEQ_SKIP means "discard this element and move on".
+ *	Note: seq_open() will allocate a struct seq_file and store its
+ *	pointer in @file->private_data. This pointer should not be modified.
  */
 int seq_open(struct file *file, const struct seq_operations *op)
 {
-	struct seq_file *p = file->private_data;
+	struct seq_file *p;
 
-	if (!p) {
-		p = kmalloc(sizeof(*p), GFP_KERNEL);
-		if (!p)
-			return -ENOMEM;
-		file->private_data = p;
-	}
-	memset(p, 0, sizeof(*p));
+	WARN_ON(file->private_data);
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
+		return -ENOMEM;
+
+	file->private_data = p;
+
 	mutex_init(&p->lock);
 	p->op = op;
-#ifdef CONFIG_USER_NS
-	p->user_ns = file->f_cred->user_ns;
-#endif
+
+	// No refcounting: the lifetime of 'p' is constrained
+	// to the lifetime of the file.
+	p->file = file;
 
 	/*
 	 * Wrappers around seq_open(e.g. swaps_open) need to be
@@ -197,6 +201,13 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 	 */
 	m->version = file->f_version;
 
+	/*
+	 * if request is to read from zero offset, reset iterator to first
+	 * record as it might have been already advanced by previous requests
+	 */
+	if (*ppos == 0)
+		m->index = 0;
+
 	/* Don't assume *ppos is where we left it */
 	if (unlikely(*ppos != m->read_pos)) {
 		while ((err = traverse(m, *ppos)) == -EAGAIN)
@@ -230,8 +241,10 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 		size -= n;
 		buf += n;
 		copied += n;
-		if (!m->count)
+		if (!m->count) {
+			m->from = 0;
 			m->index++;
+		}
 		if (!size)
 			goto Done;
 	}
@@ -556,6 +569,7 @@ int seq_dentry(struct seq_file *m, struct dentry *dentry, const char *esc)
 
 	return res;
 }
+EXPORT_SYMBOL(seq_dentry);
 
 static void *single_start(struct seq_file *p, loff_t *pos)
 {
