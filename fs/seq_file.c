@@ -31,7 +31,28 @@ static void seq_set_overflow(struct seq_file *m)
 {
 	m->count = m->size;
 }
+#ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
+static void *seq_buf_alloc(unsigned long size)
+{
+	void *buf;
 
+	if (size <= (2*PAGE_SIZE))
+		buf = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
+	else
+		buf = vmalloc(size);
+	return buf;
+}
+#else
+static void *seq_buf_alloc(unsigned long size)
+{
+	void *buf;
+
+	buf = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
+	if (!buf && size > PAGE_SIZE)
+		buf = vmalloc(size);
+	return buf;
+}
+#endif
 /**
  *	seq_open -	initialize sequential file
  *	@file: file we initialize
@@ -98,7 +119,7 @@ static int traverse(struct seq_file *m, loff_t offset)
 		return 0;
 	}
 	if (!m->buf) {
-		m->buf = kmalloc(m->size = PAGE_SIZE, GFP_KERNEL);
+		m->buf = seq_buf_alloc(m->size = PAGE_SIZE);
 		if (!m->buf)
 			return -ENOMEM;
 	}
@@ -139,19 +160,7 @@ Eoverflow:
 	m->op->stop(m, p);
 	kvfree(m->buf);
 	m->count = 0;
-#ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
-	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
-	m->size <<= 1;
-	if (m->size <= (2* PAGE_SIZE))
-		m->buf = kmalloc(m->size, GFP_KERNEL);
-	else
-		m->buf = vmalloc(m->size);
-#else
-	is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
-	m->buf = kmalloc(m->size <<= 1, GFP_KERNEL | __GFP_NOWARN);
-	if (!m->buf)
-		m->buf = vmalloc(m->size);
-#endif
+	m->buf = seq_buf_alloc(m->size <<= 1);
 	return !m->buf ? -ENOMEM : -EAGAIN;
 }
 
@@ -206,7 +215,7 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 
 	/* grab buffer if we didn't have one */
 	if (!m->buf) {
-		m->buf = kmalloc(m->size = PAGE_SIZE, GFP_KERNEL);
+		m->buf = seq_buf_alloc(m->size = PAGE_SIZE);
 		if (!m->buf)
 			goto Enomem;
 	}
@@ -248,19 +257,7 @@ ssize_t seq_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
 		m->op->stop(m, p);
 		kvfree(m->buf);
 		m->count = 0;
-#ifdef CONFIG_LOW_ORDER_SEQ_MALLOC
-		is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
-		m->size <<= 1;
-		if (m->size <= (2* PAGE_SIZE))
-			m->buf = kmalloc(m->size, GFP_KERNEL);
-		else
-			m->buf = vmalloc(m->size);
-#else
-		is_vmalloc_addr(m->buf) ? vfree(m->buf) : kfree(m->buf);
-		m->buf = kmalloc(m->size <<= 1, GFP_KERNEL | __GFP_NOWARN);
-		if (!m->buf)
-			m->buf = vmalloc(m->size);
-#endif
+		m->buf = seq_buf_alloc(m->size <<= 1);
 		if (!m->buf)
 			goto Enomem;
 		m->version = 0;
@@ -599,13 +596,13 @@ EXPORT_SYMBOL(single_open);
 int single_open_size(struct file *file, int (*show)(struct seq_file *, void *),
 		void *data, size_t size)
 {
-	char *buf = kmalloc(size, GFP_KERNEL);
+	char *buf = seq_buf_alloc(size);
 	int ret;
 	if (!buf)
 		return -ENOMEM;
 	ret = single_open(file, show, data);
 	if (ret) {
-		kfree(buf);
+		kvfree(buf);
 		return ret;
 	}
 	((struct seq_file *)file->private_data)->buf = buf;

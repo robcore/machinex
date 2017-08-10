@@ -190,6 +190,7 @@ static ssize_t signalfd_dequeue(struct signalfd_ctx *ctx, siginfo_t *info,
 	spin_unlock_irq(&current->sighand->siglock);
 
 	remove_wait_queue(&current->sighand->signalfd_wqh, &wait);
+	__set_current_state(TASK_RUNNING);
 
 	return ret;
 }

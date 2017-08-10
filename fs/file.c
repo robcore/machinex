@@ -190,19 +190,6 @@ static int expand_files(struct files_struct *files, int nr)
 
 	fdt = files_fdtable(files);
 
-	/*
-	 * N.B. For clone tasks sharing a files structure, this test
-	 * will limit the total number of files that can be opened.
-	 */
-
-	if (nr >= rlimit(RLIMIT_NOFILE))
-	{
-		pr_err("[expand_files] NR : %d, RLIMIT : %lu, PID : %d, Process Name : %s\n",
-				nr, rlimit(RLIMIT_NOFILE), current->pid, current->comm);
-
-		return -EMFILE;
-	}
-
 	/* Do we need to expand? */
 	if (nr < fdt->max_fds)
 		return 0;
@@ -472,6 +459,15 @@ repeat:
 	if (fd < fdt->max_fds)
 		fd = find_next_zero_bit(fdt->open_fds, fdt->max_fds, fd);
 
+	/*
+	 * N.B. For clone tasks sharing a files structure, this test
+	 * will limit the total number of files that can be opened.
+	 */
+	error = -EMFILE;
+	if (fd >= end) {
+		goto out;
+	}
+
 	error = expand_files(files, fd);
 	if (error < 0)
 		goto out;
@@ -497,7 +493,7 @@ repeat:
 #if 1
 	/* Sanity check */
 	if (rcu_access_pointer(fdt->fd[fd]) != NULL) {
-		printk(KERN_WARNING "alloc_fd: slot %d not NULL!\n", fd);
+		pr_warn("alloc_fd: slot %d not NULL!\n", fd);
 		rcu_assign_pointer(fdt->fd[fd], NULL);
 	}
 #endif
@@ -638,14 +634,15 @@ void do_close_on_exec(struct files_struct *files)
 
 static struct file *__fget(unsigned int fd, fmode_t mask)
 {
-	struct file *file;
 	struct files_struct *files = current->files;
+	struct file *file;
 
 	rcu_read_lock();
 	file = fcheck_files(files, fd);
 	if (file) {
 		/* File object ref couldn't be taken */
-		if ((file->f_mode & mask) || !get_file_rcu(file))
+		if ((file->f_mode & mask) ||
+		    !atomic_long_inc_not_zero(&file->f_count))
 			file = NULL;
 	}
 	rcu_read_unlock();
@@ -681,34 +678,53 @@ EXPORT_SYMBOL(fget_raw);
  * The fput_needed flag returned by fget_light should be passed to the
  * corresponding fput_light.
  */
-struct file *__fget_light(unsigned int fd, fmode_t mask, int *fput_needed)
+static unsigned long __fget_light(unsigned int fd, fmode_t mask)
 {
 	struct files_struct *files = current->files;
 	struct file *file;
 
-	*fput_needed = 0;
 	if (atomic_read(&files->count) == 1) {
 		file = __fcheck_files(files, fd);
-		if (file && (file->f_mode & mask))
-			file = NULL;
+		if (!file || unlikely(file->f_mode & mask))
+			return 0;
+		return (unsigned long)file;
 	} else {
 		file = __fget(fd, mask);
-		if (file)
-			*fput_needed = 1;
+		if (!file)
+			return 0;
+		return FDPUT_FPUT | (unsigned long)file;
 	}
-
-	return file;
 }
-struct file *fget_light(unsigned int fd, int *fput_needed)
+unsigned long __fdget(unsigned int fd)
 {
-	return __fget_light(fd, FMODE_PATH, fput_needed);
+	return __fget_light(fd, FMODE_PATH);
 }
-EXPORT_SYMBOL(fget_light);
+EXPORT_SYMBOL(__fdget);
 
-struct file *fget_raw_light(unsigned int fd, int *fput_needed)
+unsigned long __fdget_raw(unsigned int fd)
 {
-	return __fget_light(fd, 0, fput_needed);
+	return __fget_light(fd, 0);
 }
+
+unsigned long __fdget_pos(unsigned int fd)
+{
+	unsigned long v = __fdget(fd);
+	struct file *file = (struct file *)(v & ~3);
+
+	if (file && (file->f_mode & FMODE_ATOMIC_POS)) {
+		if (file_count(file) > 1) {
+			v |= FDPUT_POS_UNLOCK;
+			mutex_lock(&file->f_pos_lock);
+		}
+	}
+	return v;
+}
+
+/*
+ * We only lock f_pos if we have threads or if the file might be
+ * shared with another process. In both cases we'll have an elevated
+ * file count (done either by fdget() or by fork()).
+ */
 
 void set_close_on_exec(unsigned int fd, int flag)
 {
@@ -737,6 +753,7 @@ bool get_close_on_exec(unsigned int fd)
 
 static int do_dup2(struct files_struct *files,
 	struct file *file, unsigned fd, unsigned flags)
+__releases(&files->file_lock)
 {
 	struct file *tofree;
 	struct fdtable *fdt;
@@ -812,8 +829,9 @@ SYSCALL_DEFINE3(dup3, unsigned int, oldfd, unsigned int, newfd, int, flags)
 	if (unlikely(oldfd == newfd))
 		return -EINVAL;
 
-	if (newfd >= rlimit(RLIMIT_NOFILE))
+	if (newfd >= rlimit(RLIMIT_NOFILE)) {
 		return -EBADF;
+	}
 
 	spin_lock(&files->file_lock);
 	err = expand_files(files, newfd);
