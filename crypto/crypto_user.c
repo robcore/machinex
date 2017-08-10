@@ -32,7 +32,7 @@
 
 #define null_terminated(x)	(strnlen(x, sizeof(x)) < sizeof(x))
 
-DEFINE_MUTEX(crypto_cfg_mutex);
+static DEFINE_MUTEX(crypto_cfg_mutex);
 
 /* The crypto netlink socket */
 static struct sock *crypto_nlsk;
