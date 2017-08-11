@@ -237,6 +237,7 @@ extern unsigned int cpu3_allowed_susp;
 extern int lock_screen_off_cpus(int primary);
 extern void unlock_screen_off_cpus(void);
 extern bool is_cpu_allowed(unsigned int cpu);
+extern bool is_cpu_allowed_susp(unsigned int cpu)
 #else /* !CONFIG_PM_SLEEP_SMP */
 static inline int disable_nonboot_cpus(void) { return 0; }
 static inline void enable_nonboot_cpus(void) {}
