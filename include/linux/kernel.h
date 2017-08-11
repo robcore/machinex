@@ -449,8 +449,6 @@ extern enum system_states {
 	SYSTEM_HALT,
 	SYSTEM_POWER_OFF,
 	SYSTEM_RESTART,
-	SYSTEM_DISPLAY_ON,
-	SYSTEM_DISPLAY_OFF,
 	SYSTEM_SUSPEND,
 } system_state;
 
