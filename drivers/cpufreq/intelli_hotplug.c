@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -255,7 +255,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	s64 delta;
 
 	if (thermal_core_controlled ||
-		!hotplug_ready)
+		!hotplug_ready || !is_display_on())
 		goto reschedule;
 
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
@@ -301,7 +301,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	} else if (target > online_cpus) {
-		for_each_cpu_not(cpu, cpu_online_mask) {
+		for_each_offline_cpu(cpu) {
 			if (cpu == primary)
 				continue;
 			if (cpu_online(cpu))
@@ -428,7 +428,6 @@ static void cycle_cpus(void)
 {
 	unsigned int cpu;
 
-	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
@@ -860,7 +859,7 @@ static int __init intelli_plug_init(void)
 	rc = sysfs_create_group(kernel_kobj, &intelli_plug_attr_group);
 	if (rc) {
 		pr_err("Intelliplug failed to create sysfs!\n");
-		return 
+		return -ENOMEM; 
 	}
 	pr_info("intelli_plug: version %d.%d\n",
 		 INTELLI_PLUG_MAJOR_VERSION,
