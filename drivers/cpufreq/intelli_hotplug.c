@@ -31,7 +31,7 @@
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define DEF_SAMPLING_MS			70
 #define RESUME_SAMPLING_MS		100
-#define START_DELAY_MS			95000
+#define START_DELAY_MS			2000
 #define INPUT_INTERVAL			2000
 #define BOOST_LOCK_DUR			500
 #define DEFAULT_NR_CPUS_BOOSTED		4
@@ -557,13 +557,12 @@ static int intelli_plug_start(void)
 	}
 
 	register_power_suspend(&intelli_suspend_data);
-
-	INIT_WORK(&up_down_work, cpu_up_down_work);
-	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
+	INIT_WORK(&up_down_work, cpu_up_down_work);
+	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
