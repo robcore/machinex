@@ -157,12 +157,12 @@ void hardplug_all_cpus(void)
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
-		if (cpu_is_offline(cpu))
-			continue;
 		hardplug_cpu(cpu);
 	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
+
+
 
 static int cpu_hardplug_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
