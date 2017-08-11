@@ -1013,7 +1013,7 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 	}
 
 	if (!is_cpu_allowed(cpu))
-		return -EINVAL;
+		return -EBUSY;
 
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
