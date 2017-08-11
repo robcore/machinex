@@ -943,6 +943,8 @@ void cpuhp_online_idle(enum cpuhp_state state)
 	complete(&st->done);
 }
 
+static bool hardplug_allowed = false;
+
 /* Requires cpu_add_remove_lock to be held */
 static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 {
@@ -950,16 +952,17 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 	struct task_struct *idle;
 	int ret = 0;
 
+	if (hardplug_allowed) {
+		if (!is_cpu_allowed(cpu) || !is_cpu_allowed_susp(cpu))
+			return -EINVAL;
+	}
+
 	cpus_write_lock();
 
 	if (!cpu_present(cpu)) {
 		ret = -EINVAL;
 		goto out;
 	}
-
-	if (!is_cpu_allowed(cpu) || !is_cpu_allowed_susp(cpu))
-		ret = -EINVAL;
-		goto out;
 
 	/*
 	 * The caller of do_cpu_up might have raced with another
@@ -1015,9 +1018,10 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 		       cpu);
 		return -EINVAL;
 	}
-
-	if (!is_cpu_allowed(cpu))
-		return -EBUSY;
+	if (hardplug_allowed) {
+		if (!is_cpu_allowed(cpu))
+			return -EBUSY;
+	}
 
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
@@ -1269,6 +1273,11 @@ static int __init alloc_conditional_cpumasks(void)
 }
 core_initcall(alloc_conditional_cpumasks);
 
+static int __init start_hardplug(void);
+{
+	hardplug_allowed = true;
+}
+late_initcall(start_hardplug);
 /*
  * When callbacks for CPU hotplug notifications are being executed, we must
  * ensure that the state of the system with respect to the tasks being frozen
