@@ -61,7 +61,7 @@
  *                resume time.
  * IRQF_COND_SUSPEND - If the IRQ is shared with a NO_SUSPEND user, execute this
  *                interrupt handler after suspending interrupts. For system
- *                wakeup devices users need to implement wakeup detection in
+ *                wakeup devices whose users need to implement wakeup detection in
  *                their interrupt handlers.
  */
 #define IRQF_DISABLED		0x00000020
@@ -431,7 +431,7 @@ extern bool force_irqthreads;
 
 enum
 {
-	HI_SOFTIRQ=0,
+	HI_SOFTIRQ = 0,
 	TIMER_SOFTIRQ,
 	NET_TX_SOFTIRQ,
 	NET_RX_SOFTIRQ,

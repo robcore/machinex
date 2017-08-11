@@ -217,11 +217,11 @@ static int msm_mpm_enable_irq_exclusive(
 {
 	uint32_t mpm_irq;
 
-	if (!msm_mpm_is_valid_apps_irq(irq))
-		return -EINVAL;
-
 	if (msm_mpm_bypass_apps_irq(irq))
 		return 0;
+
+	if (!msm_mpm_is_valid_apps_irq(irq))
+		return -EINVAL;
 
 	mpm_irq = msm_mpm_get_irq_a2m(irq);
 	if (mpm_irq) {
@@ -252,11 +252,12 @@ static int msm_mpm_set_irq_type_exclusive(
 {
 	uint32_t mpm_irq;
 
-	if (!msm_mpm_is_valid_apps_irq(irq))
-		return -EINVAL;
 
 	if (msm_mpm_bypass_apps_irq(irq))
 		return 0;
+
+	if (!msm_mpm_is_valid_apps_irq(irq))
+		return -EINVAL;
 
 	mpm_irq = msm_mpm_get_irq_a2m(irq);
 	if (mpm_irq) {
@@ -510,29 +511,29 @@ void __init msm_mpm_irq_extn_init(struct msm_mpm_device_data *mpm_data)
 
 static int __init msm_mpm_init(void)
 {
-	unsigned int irq = msm_mpm_dev_data.mpm_ipc_irq;
+	unsigned int mpm_irq = msm_mpm_dev_data.mpm_ipc_irq;
 	int rc;
 
-	rc = request_irq(irq, msm_mpm_irq,
+	rc = request_irq(mpm_irq, msm_mpm_irq,
 			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, "mpm_drv", msm_mpm_irq);
 
 	if (rc) {
 		pr_err("%s: failed to request irq %u: %d\n",
-			__func__, irq, rc);
+			__func__, mpm_irq, rc);
 		goto init_bail;
 	}
 
-	rc = irq_set_irq_wake(irq, 1);
+	rc = enable_irq_wake(mpm_irq);
 	if (rc) {
 		pr_err("%s: failed to set wakeup irq %u: %d\n",
-			__func__, irq, rc);
+			__func__, mpm_irq, rc);
 		goto init_free_bail;
 	}
 
 	return 0;
 
 init_free_bail:
-	free_irq(irq, msm_mpm_irq);
+	free_irq(mpm_irq, msm_mpm_irq);
 
 init_bail:
 	return rc;

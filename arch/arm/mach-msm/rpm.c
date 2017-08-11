@@ -982,7 +982,7 @@ int __init msm_rpm_init(struct msm_rpm_platform_data *data)
 		return rc;
 	}
 
-	rc = irq_set_irq_wake(data->irq_ack, 1);
+	rc = enable_irq_wake(data->irq_ack);
 	if (rc) {
 		pr_err("%s: failed to set wakeup irq %u: %d\n",
 			__func__, data->irq_ack, rc);
@@ -1007,7 +1007,7 @@ int __init msm_rpm_init(struct msm_rpm_platform_data *data)
 		return rc;
 	}
 
-	rc = irq_set_irq_wake(data->irq_wakeup, 1);
+	rc = enable_irq_wake(data->irq_wakeup);
 	if (rc) {
 		pr_err("%s: failed to set wakeup irq %u: %d\n",
 			__func__, data->irq_wakeup, rc);

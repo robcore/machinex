@@ -162,12 +162,7 @@ static struct synaptics_rmi_f1a_button_map tm1940_f1a_button_map = {
 static struct synaptics_rmi4_platform_data rmi4_platformdata = {
 	/*.irq_type = IRQF_TRIGGER_FALLING,*/
 	/*Direct IRQ for secure input*/
-#ifdef CONFIG_KT_WAKE_FUNCS
-	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT |
-				IRQF_NO_SUSPEND,
-#else
 	.irq_type = IRQF_TRIGGER_RISING | IRQF_ONESHOT,
-#endif
 #ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
 	.factory_flatform = true,
 #else
