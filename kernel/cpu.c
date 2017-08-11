@@ -1067,7 +1067,6 @@ int lock_screen_on_cpus(int primary)
 			error = 0;
 		else
 			error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-
 		if (!error)
 			cpumask_set_cpu(cpu, hardplugged);
 		else {
