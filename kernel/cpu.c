@@ -1276,6 +1276,7 @@ core_initcall(alloc_conditional_cpumasks);
 static int __init start_hardplug(void)
 {
 	hardplug_allowed = true;
+	return 0;
 }
 late_initcall(start_hardplug);
 /*

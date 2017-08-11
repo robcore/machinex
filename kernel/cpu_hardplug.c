@@ -63,15 +63,30 @@ unsigned int cpu3_allowed_susp = 1;
 
 static DEFINE_MUTEX(hardplug_mtx);
 
-bool is_cpu_allowed(unsigned int cpu)
+static bool common_awake(void)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
 		!hotplug_ready)
 		return true;
+	return false;
+}
+
+static bool common_asleep(void)
+{
+	if (is_display_on() || !limit_screen_off_cpus ||
+		!hotplug_ready)
+		return true;
+	return false;
+}
+
+bool is_cpu_allowed(unsigned int cpu)
+{
+	if (common_awake())
+		return true;
 
 	switch (cpu) {
 	case 0:
-		return true;
+		break;
 	case 1:
 		if (!cpu1_allowed)
 			return false;
@@ -95,8 +110,7 @@ EXPORT_SYMBOL(is_cpu_allowed);
 
 bool is_cpu_allowed_susp(unsigned int cpu)
 {
-	if (is_display_on() || !limit_screen_off_cpus ||
-		!hotplug_ready)
+	if (common_asleep())
 		return true;
 
 	switch (cpu) {
