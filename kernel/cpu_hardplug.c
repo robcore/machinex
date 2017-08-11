@@ -450,7 +450,7 @@ static void cpu_hardplug_exit(void)
 		&cpu_hardplug_attr_group);
 }
 
-postcore_initcall(cpu_hardplug_init);
+core_initcall(cpu_hardplug_init);
 module_exit(cpu_hardplug_exit);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
