@@ -957,6 +957,10 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 		goto out;
 	}
 
+	if (!is_cpu_allowed(cpu) || !is_cpu_allowed_susp(cpu))
+		ret = -EINVAL;
+		goto out;
+
 	/*
 	 * The caller of do_cpu_up might have raced with another
 	 * caller. Ignore it for now.
@@ -1251,21 +1255,20 @@ out:
 }
 EXPORT_SYMBOL_GPL(enable_nonboot_cpus);
 
-static int __init alloc_frozen_cpus(void)
+static int __init alloc_conditional_cpumasks(void)
 {
-	if (!alloc_cpumask_var(&frozen_cpus, GFP_KERNEL|__GFP_ZERO))
-		return -ENOMEM;
-
 	if (!alloc_cpumask_var(&hardplugged, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
-
 
 	if (!alloc_cpumask_var(&hardplugged_susp, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
 
+	if (!alloc_cpumask_var(&frozen_cpus, GFP_KERNEL|__GFP_ZERO))
+		return -ENOMEM;
+
 	return 0;
 }
-core_initcall(alloc_frozen_cpus);
+core_initcall(alloc_conditional_cpumasks);
 
 /*
  * When callbacks for CPU hotplug notifications are being executed, we must
