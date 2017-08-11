@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -174,10 +174,18 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 			      msecs_to_jiffies(down_lock_dur));
 }
 
+static void bring_up_locked(unsigned int cpu)
+{
+	int ret;
+
+	ret = cpu_up(cpu);
+	if (!ret)
+		apply_down_lock(cpu);
+}
 static int check_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
@@ -305,8 +313,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 			if (!is_cpu_allowed(cpu))
 				continue;
-			cpu_up(cpu);
-			apply_down_lock(cpu);
+			bring_up_locked(cpu);
 			if (num_online_cpus() == target)
 				break;
 		}
@@ -439,8 +446,7 @@ static void cycle_cpus(void)
 			continue;
 		if (cpu_online(cpu))
 			continue;
-		cpu_up(cpu);
-		apply_down_lock(cpu);
+		bring_up_locked(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
