@@ -526,7 +526,8 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 		break;
 	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
-		apply_down_lock(cpu);
+		if (!check_down_lock(cpu))
+			apply_down_lock(cpu);
 		report_current_cpus();
 	default:
 		break;
