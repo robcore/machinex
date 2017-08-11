@@ -113,9 +113,8 @@ static void power_suspend(struct work_struct *work)
 		}
 	}
 
-	unlock_screen_on_cpus();
-
-	lock_screen_off_cpus(0);
+	if (limit_screen_off_cpus)
+		lock_screen_off_cpus(0);
 
 	mutex_unlock(&prometheus_mtx);
 
@@ -184,9 +183,10 @@ static void power_resume(struct work_struct *work)
 	}
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
-	unlock_screen_off_cpus();
+	if (limit_screen_off_cpus)
+		unlock_screen_off_cpus();
 
-	lock_screen_on_cpus(0);
+	hardplug_all_cpus();
 
 	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
