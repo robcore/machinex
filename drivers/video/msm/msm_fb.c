@@ -649,9 +649,10 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	 * ON the panel in case the HDMI cable is still connected.
 	 */
 	if (mfd->panel_info.type == HDMI_PANEL ||
-	    mfd->panel_info.type == DTV_PANEL)
+	    mfd->panel_info.type == DTV_PANEL) {
 		mfd->suspend.panel_power_on = false;
-	else
+		system_state = SYSTEM_DISPLAY_OFF;
+	} else
 		mfd->suspend.panel_power_on = mfd->panel_power_on;
 
 	mfd->suspend.op_suspend = true;
@@ -1043,6 +1044,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 				down(&mfd->sem);
 				mfd->panel_power_on = TRUE;
 				up(&mfd->sem);
+				system_state = SYSTEM_DISPLAY_ON;
 				mfd->panel_driver_on = mfd->op_enable;
 			}
 		}
@@ -1067,6 +1069,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			down(&mfd->sem);
 			mfd->panel_power_on = FALSE;
 			up(&mfd->sem);
+			system_state = SYSTEM_DISPLAY_OFF;
 
 			if (mfd->msmfb_no_update_notify_timer.function)
 				del_timer(&mfd->msmfb_no_update_notify_timer);
@@ -1199,15 +1202,17 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 	if (mfd->op_enable == 0) {
 		if (blank_mode == FB_BLANK_UNBLANK) {
 			mfd->suspend.panel_power_on = TRUE;
+			system_state = SYSTEM_DISPLAY_ON;
 			/* if unblank is called when system is in suspend,
 			wait for the system to resume */
 			while (mfd->suspend.op_suspend) {
 				pr_debug("waiting for system to resume\n");
 				msleep(20);
 			}
-		}
-		else
+		} else {
 			mfd->suspend.panel_power_on = FALSE;
+			system_state = SYSTEM_DISPLAY_OFF;
+		}
 	}
 	return msm_fb_blank_sub(blank_mode, info, mfd->op_enable);
 }

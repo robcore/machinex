@@ -429,7 +429,7 @@ static void cycle_cpus(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu == optimus)
 			continue;
-		if (cpu_is_offline(cpu)
+		if (cpu_is_offline(cpu))
 			continue;
 		cpu_down(cpu);
 	}
@@ -437,7 +437,7 @@ static void cycle_cpus(void)
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus)
 			continue;
-		if (cpu_online(cpu)
+		if (cpu_online(cpu))
 			continue;
 		cpu_up(cpu);
 		apply_down_lock(cpu);
