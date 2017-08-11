@@ -1054,17 +1054,12 @@ void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd)
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
 
-	if (!fbi)
-		return;
-
-	if (!mfd->panel_power_on)
-		return;
-
 	mutex_lock(&mfd->dma->ov_mutex);
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
-	if (!pipe) {
+
+	if (!pipe || !mfd->panel_power_on) {
 		mutex_unlock(&mfd->dma->ov_mutex);
 		return;
 	}

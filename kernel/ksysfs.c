@@ -311,11 +311,7 @@ static int __init ksysfs_init(void)
 		goto kset_exit;
 
 	sched_features_kobj = kobject_create_and_add("sched", kernel_kobj);
-	if (!sched_features_kobj) {
-		error = -ENOMEM;
-		goto exit;
-	}
-	error = sysfs_create_group(sched_features_kobj, &sched_features_attr_group);
+		error = sysfs_create_group(sched_features_kobj, &sched_features_attr_group);
 
 	if (error)
 		kobject_put(sched_features_kobj);
