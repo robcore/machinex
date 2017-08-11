@@ -652,9 +652,11 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	    mfd->panel_info.type == DTV_PANEL) {
 		mfd->suspend.panel_power_on = false;
 		system_state = SYSTEM_DISPLAY_OFF;
-	} else
+		pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->suspend.panel_power_on);
+	} else {
 		mfd->suspend.panel_power_on = mfd->panel_power_on;
-
+		pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->suspend.panel_power_on);
+	}
 	mfd->suspend.op_suspend = true;
 
 	if (mfd->op_enable) {
@@ -717,15 +719,17 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 		if (mfd->panel_driver_on == FALSE)
 			msm_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
 				      mfd->op_enable);
-		ret =
-		     msm_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
+		ret = msm_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 				      mfd->op_enable);
 		if (ret)
 			MSM_FB_INFO("msm_fb_resume: can't turn on display!\n");
+		pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->suspend.panel_power_on);
 	} else {
-		if (mfd->index == 0)
+		if (mfd->index == 0) {
 			msm_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 				      mfd->op_enable);
+			pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->suspend.panel_power_on);
+		}
 	}
 
 	mfd->suspend.op_suspend = false;
@@ -1045,6 +1049,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 				mfd->panel_power_on = TRUE;
 				up(&mfd->sem);
 				system_state = SYSTEM_DISPLAY_ON;
+				pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->panel_power_on);
 				mfd->panel_driver_on = mfd->op_enable;
 			}
 		}
@@ -1070,7 +1075,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->panel_power_on = FALSE;
 			up(&mfd->sem);
 			system_state = SYSTEM_DISPLAY_OFF;
-
+			pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->panel_power_on);
 			if (mfd->msmfb_no_update_notify_timer.function)
 				del_timer(&mfd->msmfb_no_update_notify_timer);
 			complete(&mfd->msmfb_no_update_notify);
@@ -1082,9 +1087,10 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 					info->fix.smem_len);
 
 			ret = pdata->off(mfd->pdev);
-			if (ret)
+			if (ret) {
 				mfd->panel_power_on = curr_pwr_state;
-
+				pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->panel_power_on);
+			}
 			msm_fb_release_timeline(mfd);
 			mfd->op_enable = TRUE;
 		}
@@ -1203,6 +1209,7 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 		if (blank_mode == FB_BLANK_UNBLANK) {
 			mfd->suspend.panel_power_on = TRUE;
 			system_state = SYSTEM_DISPLAY_ON;
+			pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->suspend.panel_power_on);
 			/* if unblank is called when system is in suspend,
 			wait for the system to resume */
 			while (mfd->suspend.op_suspend) {
@@ -1212,6 +1219,7 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 		} else {
 			mfd->suspend.panel_power_on = FALSE;
 			system_state = SYSTEM_DISPLAY_OFF;
+			pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->suspend.panel_power_on);
 		}
 	}
 	return msm_fb_blank_sub(blank_mode, info, mfd->op_enable);
@@ -1575,6 +1583,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->sw_currently_refreshing = FALSE;
 	mfd->sw_refreshing_enable = TRUE;
 	mfd->panel_power_on = FALSE;
+	pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->panel_power_on);
 
 	mfd->pan_waiting = FALSE;
 	init_completion(&mfd->pan_comp);
@@ -1639,6 +1648,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 
 	mfd->op_enable = TRUE;
 	mfd->panel_power_on = FALSE;
+	pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->panel_power_on);
 
 	/* cursor memory allocation */
 	if (mfd->cursor_update) {
@@ -2450,6 +2460,7 @@ static int msm_fb_set_par(struct fb_info *info)
 		msm_fb_blank_sub(FB_BLANK_POWERDOWN, info, mfd->op_enable);
 		msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable);
 	}
+	pr_info("Line %d panel_power_on is %u\n", __LINE__, mfd->panel_power_on);
 
 	return 0;
 }
@@ -3831,12 +3842,12 @@ static int msmfb_handle_buf_sync_ioctl(struct msm_fb_data_type *mfd,
 	int acq_fen_fd[MDP_MAX_FENCE_FD];
 	struct sync_fence *fence;
 
+	if ((!mfd->op_enable) || (!mfd->panel_power_on))
+		return -EPERM;
+
 	if ((buf_sync->acq_fen_fd_cnt > MDP_MAX_FENCE_FD) ||
 		(mfd->timeline == NULL))
 		return -EINVAL;
-
-	if ((!mfd->op_enable) || (!mfd->panel_power_on))
-		return -EPERM;
 
 	if (buf_sync->acq_fen_fd_cnt)
 		ret = copy_from_user(acq_fen_fd, buf_sync->acq_fen_fd,
