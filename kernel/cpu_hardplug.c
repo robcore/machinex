@@ -91,6 +91,7 @@ bool is_cpu_allowed(unsigned int cpu)
 
 	return true;
 }
+EXPORT_SYMBOL(is_cpu_allowed);
 
 bool is_cpu_allowed_susp(unsigned int cpu)
 {
@@ -120,6 +121,7 @@ bool is_cpu_allowed_susp(unsigned int cpu)
 
 	return true;
 }
+EXPORT_SYMBOL(is_cpu_allowed_susp);
 
 static void hardplug_all_cpus(unsigned int lock)
 {
@@ -127,6 +129,7 @@ static void hardplug_all_cpus(unsigned int lock)
 		lock_screen_on_cpus(0);
 	else
 		unlock_screen_on_cpus();
+}
 
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
