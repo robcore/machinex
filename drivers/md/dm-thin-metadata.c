@@ -266,7 +266,7 @@ static void unpack_block_time(uint64_t v, dm_block_t *b, uint32_t *t)
 	*t = v & ((1 << 24) - 1);
 }
 
-static void data_block_inc(void *context, void *value_le)
+static void data_block_inc(void *context, const void *value_le)
 {
 	struct dm_space_map *sm = context;
 	__le64 v_le;
@@ -278,7 +278,7 @@ static void data_block_inc(void *context, void *value_le)
 	dm_sm_inc_block(sm, b);
 }
 
-static void data_block_dec(void *context, void *value_le)
+static void data_block_dec(void *context, const void *value_le)
 {
 	struct dm_space_map *sm = context;
 	__le64 v_le;
@@ -290,7 +290,7 @@ static void data_block_dec(void *context, void *value_le)
 	dm_sm_dec_block(sm, b);
 }
 
-static int data_block_equal(void *context, void *value1_le, void *value2_le)
+static int data_block_equal(void *context, const void *value1_le, const void *value2_le)
 {
 	__le64 v1_le, v2_le;
 	uint64_t b1, b2;
@@ -304,7 +304,7 @@ static int data_block_equal(void *context, void *value1_le, void *value2_le)
 	return b1 == b2;
 }
 
-static void subtree_inc(void *context, void *value)
+static void subtree_inc(void *context, const void *value)
 {
 	struct dm_btree_info *info = context;
 	__le64 root_le;
@@ -315,7 +315,7 @@ static void subtree_inc(void *context, void *value)
 	dm_tm_inc(info->tm, root);
 }
 
-static void subtree_dec(void *context, void *value)
+static void subtree_dec(void *context, const void *value)
 {
 	struct dm_btree_info *info = context;
 	__le64 root_le;
@@ -327,7 +327,7 @@ static void subtree_dec(void *context, void *value)
 		DMERR("btree delete failed\n");
 }
 
-static int subtree_equal(void *context, void *value1_le, void *value2_le)
+static int subtree_equal(void *context, const void *value1_le, const void *value2_le)
 {
 	__le64 v1_le, v2_le;
 	memcpy(&v1_le, value1_le, sizeof(v1_le));
