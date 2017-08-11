@@ -506,17 +506,16 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 	/* Fail hotplug until this driver can get CPU clocks, or screen off */
-	if (!hotplug_ready || !is_display_on())
+	if (!hotplug_ready)
 		return NOTIFY_OK;
 
-/*	if (!mutex_trylock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex));
+	if (!mutex_trylock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex));
 		return NOTIFY_OK;
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		return NOTIFY_OK;
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-*/
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 		/* Fall through. */
@@ -529,6 +528,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 		if (!check_down_lock(cpu))
 			apply_down_lock(cpu);
 		report_current_cpus();
+		break;
 	default:
 		break;
 	}
