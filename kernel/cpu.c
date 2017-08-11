@@ -1058,7 +1058,7 @@ int lock_screen_off_cpus(int primary)
 	for_each_online_cpu(cpu) {
 		if (cpu == primary)
 			continue;
-		if (is_cpu_allowed_susp(cpu)
+		if (is_cpu_allowed_susp(cpu))
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
 		if (!error)
