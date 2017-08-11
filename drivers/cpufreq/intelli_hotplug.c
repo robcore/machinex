@@ -274,7 +274,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		(delta <= msecs_to_jiffies(boost_lock_duration)))
 				goto reschedule;
 		update_per_cpu_stat();
-		for_each_online_cpu(cpu) {
+		for_each_possible_cpu(cpu) {
 			if (cpu == primary)
 				continue;
 			if (cpu_is_offline(cpu))
