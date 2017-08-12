@@ -279,8 +279,6 @@ static void cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (cpu_is_offline(cpu))
 				continue;
-			if (!is_cpu_allowed(cpu))
-				break;
 			if (check_down_lock(cpu))
 				break;
 			l_nr_threshold =
@@ -483,8 +481,7 @@ static void intelli_resume(struct power_suspend * h)
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
-		if (is_cpu_allowed(cpu))
-			apply_down_lock(cpu);
+		apply_down_lock(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 
