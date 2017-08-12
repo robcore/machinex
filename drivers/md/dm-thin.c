@@ -1319,6 +1319,7 @@ static void break_sharing(struct thin_c *tc, struct bio *bio, dm_block_t block,
 {
 	int r;
 	dm_block_t data_block;
+	struct pool *pool = tc->pool;
 
 	r = alloc_data_block(tc, &data_block);
 	switch (r) {
