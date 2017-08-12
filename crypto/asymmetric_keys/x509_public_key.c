@@ -18,10 +18,58 @@
 #include <linux/asn1_decoder.h>
 #include <keys/asymmetric-subtype.h>
 #include <keys/asymmetric-parser.h>
+#include <keys/system_keyring.h>
 #include <crypto/hash.h>
 #include "asymmetric_keys.h"
 #include "public_key.h"
 #include "x509_parser.h"
+
+/*
+ * Find a key in the given keyring by issuer and authority.
+ */
+static struct key *x509_request_asymmetric_key(
+	struct key *keyring,
+	const char *signer, size_t signer_len,
+	const char *authority, size_t auth_len)
+{
+	key_ref_t key;
+	char *id;
+
+	/* Construct an identifier. */
+	id = kmalloc(signer_len + 2 + auth_len + 1, GFP_KERNEL);
+	if (!id)
+		return ERR_PTR(-ENOMEM);
+
+	memcpy(id, signer, signer_len);
+	id[signer_len + 0] = ':';
+	id[signer_len + 1] = ' ';
+	memcpy(id + signer_len + 2, authority, auth_len);
+	id[signer_len + 2 + auth_len] = 0;
+
+	pr_debug("Look up: \"%s\"\n", id);
+
+	key = keyring_search(make_key_ref(keyring, 1),
+			     &key_type_asymmetric, id);
+	if (IS_ERR(key))
+		pr_debug("Request for module key '%s' err %ld\n",
+			 id, PTR_ERR(key));
+	kfree(id);
+
+	if (IS_ERR(key)) {
+		switch (PTR_ERR(key)) {
+			/* Hide some search errors */
+		case -EACCES:
+		case -ENOTDIR:
+		case -EAGAIN:
+			return ERR_PTR(-ENOKEY);
+		default:
+			return ERR_CAST(key);
+		}
+	}
+
+	pr_devel("<==%s() = 0 [%x]\n", __func__, key_serial(key_ref_to_ptr(key)));
+	return key_ref_to_ptr(key);
+}
 
 /*
  * Set up the signature parameters in an X.509 certificate.  This involves
@@ -103,12 +151,38 @@ int x509_check_signature(const struct public_key *pub,
 EXPORT_SYMBOL_GPL(x509_check_signature);
 
 /*
+ * Check the new certificate against the ones in the trust keyring.  If one of
+ * those is the signing key and validates the new certificate, then mark the
+ * new certificate as being trusted.
+ *
+ * Return 0 if the new certificate was successfully validated, 1 if we couldn't
+ * find a matching parent certificate in the trusted list and an error if there
+ * is a matching certificate but the signature check fails.
+ */
+static int x509_validate_trust(struct x509_certificate *cert,
+			       struct key *trust_keyring)
+{
+	const struct public_key *pk;
+	struct key *key;
+	int ret = 1;
+
+	key = x509_request_asymmetric_key(trust_keyring,
+					  cert->issuer, strlen(cert->issuer),
+					  cert->authority,
+					  strlen(cert->authority));
+	if (!IS_ERR(key))  {
+		pk = key->payload.data;
+		ret = x509_check_signature(pk, cert);
+	}
+	return ret;
+}
+
+/*
  * Attempt to parse a data blob for a key as an X509 certificate.
  */
 static int x509_key_preparse(struct key_preparsed_payload *prep)
 {
 	struct x509_certificate *cert;
-	struct tm now;
 	size_t srlen, sulen;
 	char *desc = NULL;
 	int ret;
@@ -119,6 +193,17 @@ static int x509_key_preparse(struct key_preparsed_payload *prep)
 
 	pr_devel("Cert Issuer: %s\n", cert->issuer);
 	pr_devel("Cert Subject: %s\n", cert->subject);
+
+	if (cert->pub->pkey_algo >= PKEY_ALGO__LAST ||
+	    cert->sig.pkey_algo >= PKEY_ALGO__LAST ||
+	    cert->sig.pkey_hash_algo >= PKEY_HASH__LAST ||
+	    !pkey_algo[cert->pub->pkey_algo] ||
+	    !pkey_algo[cert->sig.pkey_algo] ||
+	    !pkey_hash_algo_name[cert->sig.pkey_hash_algo]) {
+		ret = -ENOPKG;
+		goto error_free_cert;
+	}
+
 	pr_devel("Cert Key Algo: %s\n", pkey_algo_name[cert->pub->pkey_algo]);
 	pr_devel("Cert Valid From: %04ld-%02d-%02d %02d:%02d:%02d\n",
 		 cert->valid_from.tm_year + 1900, cert->valid_from.tm_mon + 1,
@@ -132,58 +217,26 @@ static int x509_key_preparse(struct key_preparsed_payload *prep)
 		 pkey_algo_name[cert->sig.pkey_algo],
 		 pkey_hash_algo_name[cert->sig.pkey_hash_algo]);
 
-	if (!cert->fingerprint || !cert->authority) {
-		pr_warn("Cert for '%s' must have SubjKeyId and AuthKeyId extensions\n",
+	if (!cert->fingerprint) {
+		pr_warn("Cert for '%s' must have a SubjKeyId extension\n",
 			cert->subject);
 		ret = -EKEYREJECTED;
-		goto error_free_cert;
-	}
-
-	time_to_tm(CURRENT_TIME.tv_sec, 0, &now);
-	pr_devel("Now: %04ld-%02d-%02d %02d:%02d:%02d\n",
-		 now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
-		 now.tm_hour, now.tm_min,  now.tm_sec);
-	if (now.tm_year < cert->valid_from.tm_year ||
-	    (now.tm_year == cert->valid_from.tm_year &&
-	     (now.tm_mon < cert->valid_from.tm_mon ||
-	      (now.tm_mon == cert->valid_from.tm_mon &&
-	       (now.tm_mday < cert->valid_from.tm_mday ||
-		(now.tm_mday == cert->valid_from.tm_mday &&
-		 (now.tm_hour < cert->valid_from.tm_hour ||
-		  (now.tm_hour == cert->valid_from.tm_hour &&
-		   (now.tm_min < cert->valid_from.tm_min ||
-		    (now.tm_min == cert->valid_from.tm_min &&
-		     (now.tm_sec < cert->valid_from.tm_sec
-		      ))))))))))) {
-		pr_warn("Cert %s is not yet valid\n", cert->fingerprint);
-		ret = -EKEYREJECTED;
-		goto error_free_cert;
-	}
-	if (now.tm_year > cert->valid_to.tm_year ||
-	    (now.tm_year == cert->valid_to.tm_year &&
-	     (now.tm_mon > cert->valid_to.tm_mon ||
-	      (now.tm_mon == cert->valid_to.tm_mon &&
-	       (now.tm_mday > cert->valid_to.tm_mday ||
-		(now.tm_mday == cert->valid_to.tm_mday &&
-		 (now.tm_hour > cert->valid_to.tm_hour ||
-		  (now.tm_hour == cert->valid_to.tm_hour &&
-		   (now.tm_min > cert->valid_to.tm_min ||
-		    (now.tm_min == cert->valid_to.tm_min &&
-		     (now.tm_sec > cert->valid_to.tm_sec
-		      ))))))))))) {
-		pr_warn("Cert %s has expired\n", cert->fingerprint);
-		ret = -EKEYEXPIRED;
 		goto error_free_cert;
 	}
 
 	cert->pub->algo = pkey_algo[cert->pub->pkey_algo];
 	cert->pub->id_type = PKEY_ID_X509;
 
-	/* Check the signature on the key */
-	if (strcmp(cert->fingerprint, cert->authority) == 0) {
-		ret = x509_check_signature(cert->pub, cert);
+	/* Check the signature on the key if it appears to be self-signed */
+	if (!cert->authority ||
+	    strcmp(cert->fingerprint, cert->authority) == 0) {
+		ret = x509_check_signature(cert->pub, cert); /* self-signed */
 		if (ret < 0)
 			goto error_free_cert;
+	} else {
+		ret = x509_validate_trust(cert, system_trusted_keyring);
+		if (!ret)
+			prep->trusted = 1;
 	}
 
 	/* Propose a description */
@@ -239,3 +292,6 @@ static void __exit x509_key_exit(void)
 
 module_init(x509_key_init);
 module_exit(x509_key_exit);
+
+MODULE_DESCRIPTION("X.509 certificate parser");
+MODULE_LICENSE("GPL");
