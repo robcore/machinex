@@ -864,8 +864,7 @@ static void cell_defer(struct thin_c *tc, struct dm_bio_prison_cell *cell,
 }
 
 /*
- * Same as cell_defer above, except it omits one particular detainee,
- * a write bio that covers the block and has already been processed.
+ * Same as cell_defer except it omits the original holder of the cell.
  */
 static void cell_defer_except(struct thin_c *tc, struct dm_bio_prison_cell *cell)
 {
@@ -1243,7 +1242,7 @@ static void process_discard(struct thin_c *tc, struct bio *bio)
 		 */
 		build_data_key(tc->td, lookup_result.block, &key2);
 		if (dm_bio_detain(tc->pool->prison, &key2, bio, &cell2)) {
-			dm_cell_release_singleton(cell, bio);
+			cell_defer_except(tc, cell);
 			break;
 		}
 
@@ -1291,13 +1290,13 @@ static void process_discard(struct thin_c *tc, struct bio *bio)
 		/*
 		 * It isn't provisioned, just forget it.
 		 */
-		dm_cell_release_singleton(cell, bio);
+		cell_defer_except(tc, cell);
 		bio_endio(bio, 0);
 		break;
 
 	default:
 		DMERR("discard: find block unexpectedly returned %d", r);
-		dm_cell_release_singleton(cell, bio);
+		cell_defer_except(tc, cell);
 		bio_io_error(bio);
 		break;
 	}
@@ -1352,7 +1351,7 @@ static void process_shared_bio(struct thin_c *tc, struct bio *bio,
 
 		h->shared_read_entry = dm_deferred_entry_inc(pool->shared_read_ds);
 
-		dm_cell_release_singleton(cell, bio);
+		cell_defer_except(tc, cell);
 		remap_and_issue(tc, bio, lookup_result->block);
 	}
 }
@@ -1377,7 +1376,7 @@ static void provision_block(struct thin_c *tc, struct bio *bio, dm_block_t block
 	 */
 	if (bio_data_dir(bio) == READ) {
 		zero_fill_bio(bio);
-		dm_cell_release_singleton(cell, bio);
+		cell_defer_except(tc, cell);
 		bio_endio(bio, 0);
 		return;
 	}
@@ -1430,7 +1429,7 @@ static void process_bio(struct thin_c *tc, struct bio *bio)
 		 * TODO: this will probably have to change when discard goes
 		 * back in.
 		 */
-		dm_cell_release_singleton(cell, bio);
+		cell_defer_except(tc, cell);
 
 		if (lookup_result.shared)
 			process_shared_bio(tc, bio, block, &lookup_result);
@@ -1440,7 +1439,7 @@ static void process_bio(struct thin_c *tc, struct bio *bio)
 
 	case -ENODATA:
 		if (bio_data_dir(bio) == READ && tc->origin_dev) {
-			dm_cell_release_singleton(cell, bio);
+			cell_defer_except(tc, cell);
 			remap_to_origin_and_issue(tc, bio);
 		} else
 			provision_block(tc, bio, block, cell);
@@ -1448,7 +1447,7 @@ static void process_bio(struct thin_c *tc, struct bio *bio)
 
 	default:
 		DMERR("dm_thin_find_block() failed, error = %d", r);
-		dm_cell_release_singleton(cell, bio);
+		cell_defer_except(tc, cell);
 		bio_io_error(bio);
 		break;
 	}
