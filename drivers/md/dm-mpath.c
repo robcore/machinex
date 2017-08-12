@@ -1251,6 +1251,7 @@ static int noretry_error(int error)
 	case -EREMOTEIO:
 	case -EILSEQ:
 	case -ENODATA:
+	case -ENOSPC:
 		return 1;
 	}
 
