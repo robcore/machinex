@@ -281,11 +281,6 @@ static const struct file_operations aio_ring_fops = {
 	.mmap = aio_ring_mmap,
 };
 
-static int aio_set_page_dirty(struct page *page)
-{
-	return 0;
-}
-
 #if IS_ENABLED(CONFIG_MIGRATION)
 static int aio_migratepage(struct address_space *mapping, struct page *new,
 			struct page *old, enum migrate_mode mode)
@@ -357,7 +352,7 @@ out:
 #endif
 
 static const struct address_space_operations aio_ctx_aops = {
-	.set_page_dirty = aio_set_page_dirty,
+	.set_page_dirty = __set_page_dirty_no_writeback,
 #if IS_ENABLED(CONFIG_MIGRATION)
 	.migratepage	= aio_migratepage,
 #endif
