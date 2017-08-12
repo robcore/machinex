@@ -1568,7 +1568,7 @@ static int multipath_ioctl(struct dm_target *ti, unsigned int cmd,
 	}
 
 	if ((pgpath && m->queue_io) || (!pgpath && m->queue_if_no_path))
-		r = -EAGAIN;
+		r = -ENOTCONN;
 	else if (!bdev)
 		r = -EIO;
 

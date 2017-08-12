@@ -368,6 +368,11 @@ static int __init dm_init(void)
 	while (i--)
 		_exits[i]();
 
+	if (r == -ENOTCONN) {
+		msleep(10);
+		goto retry;
+	}
+
 	return r;
 }
 
