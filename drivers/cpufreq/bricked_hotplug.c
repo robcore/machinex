@@ -224,7 +224,7 @@ static void bricked_hotplug_work(struct work_struct *work) {
 	case MSM_MPDEC_UP:
 		cpu = cpumask_next_zero(0, cpu_online_mask);
 		if (cpu < DEFAULT_MAX_CPUS_ONLINE) {
-			if (!cpu_online(cpu) && is_cpu_allowed(cpu)) {
+			if (!cpu_online(cpu)) {
 				cpu_up(cpu);
 				apply_down_lock(cpu);
 			}
@@ -465,8 +465,6 @@ static ssize_t store_min_cpus_online(struct device *dev,
 			if (num_online_cpus() >= hotplug.min_cpus_online)
 				break;
 			if (cpu_online(cpu))
-				continue;
-			if (!is_cpu_allowed(cpu))
 				continue;
 			cpu_up(cpu);
 		}

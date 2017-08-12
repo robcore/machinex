@@ -65,7 +65,7 @@ static inline void plug_cpu(void)
 		goto reset;
 
 	cpu = cpumask_next_zero(0, cpu_online_mask);
-	if (cpu < nr_cpu_ids && is_cpu_allowed(cpu))
+	if (cpu > 0 && cpu <= 4)
 		cpu_up(cpu);
 
 reset:
@@ -82,7 +82,7 @@ static inline void unplug_cpu(void)
 
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (cpu > 1) {
+		if (cpu > 0 && cpu <= 4) {
 			unsigned int curfreq = cpufreq_quick_get(cpu);
 			if (low_freq > curfreq) {
 				low_freq = curfreq;
@@ -171,8 +171,6 @@ static ssize_t store_enable_hotplug(struct device *dev,
 
 		for_each_possible_cpu(cpu) {
 			if (cpu == 0)
-				continue;
-			if (!is_cpu_allowed(cpu))
 				continue;
 			if (cpu_is_offline(cpu))
 				cpu_up(cpu);

@@ -428,10 +428,7 @@ static void cycle_cpus(void)
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus)
 			continue;
-		if (!is_cpu_allowed(cpu))
-			continue;
 		cpu_up(cpu);
-		apply_down_lock(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      msecs_to_jiffies(START_DELAY_MS));
