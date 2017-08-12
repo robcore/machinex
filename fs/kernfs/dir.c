@@ -809,6 +809,38 @@ struct kernfs_node *kernfs_create_dir_ns(struct kernfs_node *parent,
 	return ERR_PTR(rc);
 }
 
+/**
+ * kernfs_create_empty_dir - create an always empty directory
+ * @parent: parent in which to create a new directory
+ * @name: name of the new directory
+ *
+ * Returns the created node on success, ERR_PTR() value on failure.
+ */
+struct kernfs_node *kernfs_create_empty_dir(struct kernfs_node *parent,
+					    const char *name)
+{
+	struct kernfs_node *kn;
+	int rc;
+
+	/* allocate */
+	kn = kernfs_new_node(parent, name, S_IRUGO|S_IXUGO|S_IFDIR, KERNFS_DIR);
+	if (!kn)
+		return ERR_PTR(-ENOMEM);
+
+	kn->flags |= KERNFS_EMPTY_DIR;
+	kn->dir.root = parent->dir.root;
+	kn->ns = NULL;
+	kn->priv = NULL;
+
+	/* link in */
+	rc = kernfs_add_one(kn);
+	if (!rc)
+		return kn;
+
+	kernfs_put(kn);
+	return ERR_PTR(rc);
+}
+
 static struct dentry *kernfs_iop_lookup(struct inode *dir,
 					struct dentry *dentry,
 					unsigned int flags)
