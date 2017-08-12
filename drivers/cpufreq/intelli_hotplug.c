@@ -69,7 +69,7 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 #elif defined(INTELLI_USE_SPINLOCK)
 static unsigned int intelli_plug_active = 0;
-static spinlock_t ip_lock;
+static spinlock_t ips_lock;
 #endif
 
 
@@ -91,9 +91,9 @@ struct ip_suspend {
 	struct mutex intellisleep_mutex;
 	unsigned int intelli_suspended;
 };
-struct wake_lock ipwlock;
-
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_suspend, i_suspend_data);
+
+struct wake_lock ipwlock;
 
 #define dprintk(msg...)		\
 do {				\
@@ -165,9 +165,9 @@ static void intelli_lock(int lock)
 	unsigned long flags = 0;
 
 	if (lock)
-		spin_lock_irqsave(&ip_lock, flags);
+		spin_lock_irqsave(&ips_lock, flags);
 	else
-		spin_unlock_irqrestore(&ip_lock, flags);
+		spin_unlock_irqrestore(&ips_lock, flags);
 }
 
 static void _intelliget(void)
@@ -959,7 +959,7 @@ static int __init intelli_plug_init(void)
 	pr_info("intelli_plug: version %d.%d\n",
 		 INTELLI_PLUG_MAJOR_VERSION,
 		 INTELLI_PLUG_MINOR_VERSION);
-	spin_lock_init(&ip_lock);
+	spin_lock_init(&ips_lock);
 	wake_lock_init(&ipwlock, WAKE_LOCK_SUSPEND, "intelliplug");
 
 	return 0;
