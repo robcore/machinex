@@ -118,7 +118,7 @@ struct regmap {
 	unsigned int num_reg_defaults_raw;
 
 	/* if set, only the cache is modified not the HW */
-	u32 cache_only;
+	bool cache_only;
 	/* if set, only the HW is modified not the cache */
 	u32 cache_bypass;
 	/* if set, remember to free reg_defaults_raw */
@@ -127,7 +127,7 @@ struct regmap {
 	struct reg_default *reg_defaults;
 	const void *reg_defaults_raw;
 	void *cache;
-	u32 cache_dirty;
+	bool cache_dirty;
 
 	struct reg_default *patch;
 	int patch_regs;
