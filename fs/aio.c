@@ -1241,7 +1241,7 @@ static long read_events(struct kioctx *ctx, long min_nr, long nr,
 SYSCALL_DEFINE2(io_setup, unsigned, nr_events, aio_context_t __user *, ctxp)
 {
 	struct kioctx *ioctx = NULL;
-	unsigned long ctx;
+	unsigned long ctx = 0;
 	long ret;
 
 	ret = get_user(ctx, ctxp);
@@ -1250,7 +1250,7 @@ SYSCALL_DEFINE2(io_setup, unsigned, nr_events, aio_context_t __user *, ctxp)
 
 	ret = -EINVAL;
 	if (unlikely(ctx || nr_events == 0)) {
-		pr_debug("EINVAL: io_setup: ctx %lu nr_events %u\n",
+		pr_debug("EINVAL: ctx %lu nr_events %u\n",
 		         ctx, nr_events);
 		goto out;
 	}
@@ -1298,7 +1298,7 @@ SYSCALL_DEFINE1(io_destroy, aio_context_t, ctx)
 
 		return ret;
 	}
-	pr_debug("EINVAL: io_destroy: invalid context id\n");
+	pr_debug("EINVAL: invalid context id\n");
 	return -EINVAL;
 }
 
