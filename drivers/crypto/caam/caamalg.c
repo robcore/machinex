@@ -1310,12 +1310,21 @@ static struct aead_edesc *aead_edesc_alloc(struct aead_request *req,
 	bool all_contig = true;
 	int ivsize = crypto_aead_ivsize(aead);
 	int link_tbl_index, link_tbl_len = 0, link_tbl_bytes;
+	unsigned int authsize = ctx->authsize;
 
 	assoc_nents = sg_count(req->assoc, req->assoclen);
-	src_nents = sg_count(req->src, req->cryptlen);
-
-	if (unlikely(req->dst != req->src))
-		dst_nents = sg_count(req->dst, req->cryptlen);
+	if (unlikely(req->dst != req->src)) {
+		src_nents = sg_count(req->src, req->cryptlen, &src_chained);
+		dst_nents = sg_count(req->dst,
+				     req->cryptlen +
+					(encrypt ? authsize : (-authsize)),
+				     &dst_chained);
+	} else {
+		src_nents = sg_count(req->src,
+				     req->cryptlen +
+					(encrypt ? authsize : 0),
+				     &src_chained);
+	}
 
 	sgc = dma_map_sg(jrdev, req->assoc, assoc_nents ? : 1,
 			 DMA_BIDIRECTIONAL);
@@ -1493,7 +1502,7 @@ static struct aead_edesc *aead_giv_edesc_alloc(struct aead_givcrypt_request
 	src_nents = sg_count(req->src, req->cryptlen);
 
 	if (unlikely(req->dst != req->src))
-		dst_nents = sg_count(req->dst, req->cryptlen);
+		dst_nents = sg_count(req->dst, req->cryptlen + ctx->authsize);
 
 	sgc = dma_map_sg(jrdev, req->assoc, assoc_nents ? : 1,
 			 DMA_BIDIRECTIONAL);
