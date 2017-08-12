@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -575,6 +575,7 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
+	__smp_mb__after_atomic();
 	return ret;
 }
 
@@ -611,6 +612,7 @@ static void intelli_plug_active_eval_fn(unsigned int status)
 		intelli_plug_stop();
 
 	atomic_set(&intelli_plug_active, status);
+	__smp_mb__after_atomic();
 }
 
 #define show_one(file_name, object)				\
@@ -874,6 +876,7 @@ static void __exit intelli_plug_exit(void)
 		intelli_plug_stop();
 
 	atomic_set(&intelli_plug_active, 0);
+	__smp_mb__after_atomic();
 
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
