@@ -6394,6 +6394,12 @@ static int md_ioctl(struct block_device *bdev, fmode_t mode,
 		goto abort;
 	}
 
+	if (cmd == HOT_REMOVE_DISK)
+		/* need to ensure recovery thread has run */
+		wait_event_interruptible_timeout(mddev->sb_wait,
+						 !test_bit(MD_RECOVERY_NEEDED,
+							   &mddev->flags),
+						 msecs_to_jiffies(5000));
 	err = mddev_lock(mddev);
 	if (err) {
 		printk(KERN_INFO
@@ -7896,6 +7902,8 @@ void md_check_recovery(struct mddev *mddev)
 			md_new_event(mddev);
 		}
 	unlock:
+		wake_up(&mddev->sb_wait);
+
 		if (!mddev->sync_thread) {
 			clear_bit(MD_RECOVERY_RUNNING, &mddev->recovery);
 			if (test_and_clear_bit(MD_RECOVERY_RECOVER,
