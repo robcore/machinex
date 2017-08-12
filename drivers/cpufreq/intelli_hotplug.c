@@ -581,7 +581,6 @@ err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
 	atomic_set(&intelli_plug_active, 0);
-	__smp_mb__after_atomic();
 	intellinit = false;
 	wake_unlock(&ipwlock);
 	return ret;
@@ -620,7 +619,6 @@ static void intelli_plug_active_eval_fn(unsigned int status)
 		intelli_plug_stop();
 
 	atomic_set(&intelli_plug_active, status);
-	__smp_mb__after_atomic();
 }
 
 #define show_one(file_name, object)				\
