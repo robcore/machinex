@@ -62,6 +62,7 @@
 #include <linux/leds-an30259a.h>
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
+#include <linux/sec_battery.h>
 
 /* AN30259A register map */
 #define AN30259A_REG_SRESET		0x00
@@ -476,7 +477,7 @@ static unsigned int custom_b_dt4 = 0;
 
 static bool booted = false;
 static unsigned int current_led_mode;
-static void an30259a_start_led_pattern(int mode)
+static void an30259a_start_led_pattern(unsigned int mode)
 {
 	int retval;
 	u8 r_brightness;          /* Yank555.lu : Control LED intensity (normal, bright) */
@@ -533,6 +534,8 @@ static void an30259a_start_led_pattern(int mode)
  		break;
 
 	case MISSED_NOTI:
+		if (poweroff_charging)
+			return;
 		pr_info("LED Missed Notifications Pattern on\n");
 		leds_on(LED_B, true, true, b_brightness);
 		/* Yank555.lu : Handle fading / blinking */
@@ -546,6 +549,8 @@ static void an30259a_start_led_pattern(int mode)
 
 		break;
 	case LOW_BATTERY:
+		if (poweroff_charging)
+			return;
 		pr_info("LED Low Battery Pattern on\n");
 		leds_on(LED_R, true, true, r_brightness);
 		/* Yank555.lu : Handle fading / blinking */
@@ -577,6 +582,8 @@ static void an30259a_start_led_pattern(int mode)
 				0, 15, 10, 15, 6, 5, 4, 10, 10, 4);
 */
 	case POWERING:
+		if (poweroff_charging)
+			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
 			leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
@@ -595,6 +602,8 @@ static void an30259a_start_led_pattern(int mode)
 			return;
 		}
 	case FAKE_POWERING:
+		if (poweroff_charging)
+			return;
 		pr_info("LED Fake Powering Pattern ON\n");
 		leds_on(LED_R, true, true, r_brightness);
 		leds_set_slope_mode(client, LED_R,
@@ -618,6 +627,8 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 10, 15, 0, 1, 2, 1, 1, 0);
 */
 	case BOOTING:
+		if (poweroff_charging)
+			return;
 		pr_info("LED Booting Pattern on\n");
 #if 0
 		leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
@@ -640,6 +651,8 @@ static void an30259a_start_led_pattern(int mode)
 		break;
 
 	case CUSTOM:
+		if (poweroff_charging)
+			return;
 		if (custom_r_enabled) {
 			leds_on(LED_R, true, true, r_brightness);
 			leds_set_slope_mode(client, LED_R,
@@ -1691,7 +1704,8 @@ static int an30259a_probe(struct i2c_client *client,
 		goto exit;
 	}
 #endif
-	an30259a_start_led_pattern(BOOTING);
+	if (!poweroff_charging)
+		an30259a_start_led_pattern(BOOTING);
 	return ret;
 exit:
 	mutex_destroy(&data->mutex);
