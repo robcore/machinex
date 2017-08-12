@@ -1012,9 +1012,6 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 		return -EINVAL;
 	}
 
-	if (!is_cpu_allowed(cpu))
-		return -EINVAL;
-
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
 		return err;
@@ -1034,6 +1031,8 @@ out:
 
 int cpu_up(unsigned int cpu)
 {
+	if (!is_cpu_allowed(cpu))
+		return -EINVAL;
 	return do_cpu_up(cpu, CPUHP_ONLINE);
 }
 EXPORT_SYMBOL_GPL(cpu_up);
@@ -1175,6 +1174,8 @@ void enable_nonboot_cpus(void)
 	arch_enable_nonboot_cpus_begin();
 
 	for_each_cpu(cpu, frozen_cpus) {
+		if (cpumask_test_cpu(cpu, max_screen_off))
+			continue;
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {
 			pr_info("CPU%d is up\n", cpu);
