@@ -6,11 +6,9 @@
 
 #include <linux/tracepoint.h>
 
-struct search;
-
 DECLARE_EVENT_CLASS(bcache_request,
-	TP_PROTO(struct search *s, struct bio *bio),
-	TP_ARGS(s, bio),
+	TP_PROTO(struct bcache_device *d, struct bio *bio),
+	TP_ARGS(d, bio),
 
 	TP_STRUCT__entry(
 		__field(dev_t,		dev			)
