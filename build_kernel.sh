@@ -77,6 +77,7 @@ function adbcountdown()
 	echo "2"
 	sleep 1
 	echo "1"
+	sleep 1
 }
 
 function NORMAL()
@@ -98,11 +99,11 @@ function ADBRETRY()
 adb start-server
 adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == recovery ]]; then #if we are in recovery
+if [[ $ONLINE == recovery ]]; then
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
-else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+elif [[ $ONLINE == device ]]; then
 	echo "connected"
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
@@ -123,9 +124,9 @@ else
 			echo "pushed"
 		else
 			echo "push failed"
-		fi;
-	fi;
-fi;
+		fi
+	fi
+fi
 }
 
 cp -pf arch/arm/configs/canadefconfig arch/arm/configs/tmpconfig
@@ -283,7 +284,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
-else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
@@ -466,7 +467,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
-else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
@@ -636,7 +637,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
-else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
@@ -835,7 +836,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
-else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
@@ -939,7 +940,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
-else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
