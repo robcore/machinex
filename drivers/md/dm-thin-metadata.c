@@ -1373,12 +1373,12 @@ int dm_thin_get_highest_mapped_block(struct dm_thin_device *td,
 	return r;
 }
 
-static int __resize_data_dev(struct dm_pool_metadata *pmd, dm_block_t new_count)
+static int __resize_space_map(struct dm_space_map *sm, dm_block_t new_count)
 {
 	int r;
 	dm_block_t old_count;
 
-	r = dm_sm_get_nr_blocks(pmd->data_sm, &old_count);
+	r = dm_sm_get_nr_blocks(sm, &old_count);
 	if (r)
 		return r;
 
@@ -1403,6 +1403,20 @@ int dm_pool_resize_data_dev(struct dm_pool_metadata *pmd, dm_block_t new_count)
 
 	down_write(&pmd->root_lock);
 	r = __resize_data_dev(pmd, new_count);
+	up_write(&pmd->root_lock);
+
+	return r;
+}
+
+int dm_pool_register_metadata_threshold(struct dm_pool_metadata *pmd,
+					dm_block_t threshold,
+					dm_sm_threshold_fn fn,
+					void *context)
+{
+	int r;
+
+	down_write(&pmd->root_lock);
+	r = dm_sm_register_threshold_callback(pmd->metadata_sm, threshold, fn, context);
 	up_write(&pmd->root_lock);
 
 	return r;

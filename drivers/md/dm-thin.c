@@ -1149,7 +1149,7 @@ static int alloc_data_block(struct thin_c *tc, dm_block_t *result)
 		return r;
 
 	if (free_blocks <= pool->low_water_blocks && !pool->low_water_triggered) {
-		DMWARN("%s: reached low water mark, sending event.",
+		DMWARN("%s: reached low water mark for data device: sending event.",
 		       dm_device_name(pool->pool_md));
 		spin_lock_irqsave(&pool->lock, flags);
 		pool->low_water_triggered = 1;
@@ -1462,6 +1462,10 @@ static void process_bio(struct thin_c *tc, struct bio *bio)
 	}
 }
 
+/*
+ * FIXME: should we also commit due to size of transaction, measured in
+ * metadata blocks?
+ */
 static int need_commit_due_to_time(struct pool *pool)
 {
 	return jiffies < pool->last_commit_jiffies ||
@@ -1988,6 +1992,56 @@ static int parse_pool_features(struct dm_arg_set *as, struct pool_features *pf,
 	return r;
 }
 
+static void metadata_low_callback(void *context)
+{
+	struct pool *pool = context;
+
+	DMWARN("%s: reached low water mark for metadata device: sending event.",
+	       dm_device_name(pool->pool_md));
+
+	dm_table_event(pool->ti->table);
+}
+
+static sector_t get_metadata_dev_size(struct block_device *bdev)
+{
+	sector_t metadata_dev_size = i_size_read(bdev->bd_inode) >> SECTOR_SHIFT;
+	char buffer[BDEVNAME_SIZE];
+
+	if (metadata_dev_size > THIN_METADATA_MAX_SECTORS_WARNING) {
+		DMWARN("Metadata device %s is larger than %u sectors: excess space will not be used.",
+		       bdevname(bdev, buffer), THIN_METADATA_MAX_SECTORS);
+		metadata_dev_size = THIN_METADATA_MAX_SECTORS_WARNING;
+	}
+
+	return metadata_dev_size;
+}
+
+static dm_block_t get_metadata_dev_size_in_blocks(struct block_device *bdev)
+{
+	sector_t metadata_dev_size = get_metadata_dev_size(bdev);
+
+	sector_div(metadata_dev_size, THIN_METADATA_BLOCK_SIZE >> SECTOR_SHIFT);
+
+	return metadata_dev_size;
+}
+
+/*
+ * When a metadata threshold is crossed a dm event is triggered, and
+ * userland should respond by growing the metadata device.  We could let
+ * userland set the threshold, like we do with the data threshold, but I'm
+ * not sure they know enough to do this well.
+ */
+static dm_block_t calc_metadata_threshold(struct pool_c *pt)
+{
+	/*
+	 * 4M is ample for all ops with the possible exception of thin
+	 * device deletion which is harmless if it fails (just retry the
+	 * delete after you've grown the device).
+	 */
+	dm_block_t quarter = get_metadata_dev_size_in_blocks(pt->metadata_dev->bdev) / 4;
+	return min((dm_block_t)1024ULL /* 4M */, quarter);
+}
+
 /*
  * thin-pool <metadata dev> <data dev>
  *	     <data block size (sectors)>
@@ -2010,8 +2064,7 @@ static int pool_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	unsigned long block_size;
 	dm_block_t low_water_blocks;
 	struct dm_dev *metadata_dev;
-	sector_t metadata_dev_size;
-	char b[BDEVNAME_SIZE];
+	fmode_t metadata_mode;
 
 	/*
 	 * FIXME Remove validation from scope of lock.
@@ -2023,19 +2076,32 @@ static int pool_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		r = -EINVAL;
 		goto out_unlock;
 	}
+
 	as.argc = argc;
 	as.argv = argv;
 
-	r = dm_get_device(ti, argv[0], FMODE_READ | FMODE_WRITE, &metadata_dev);
+	/*
+	 * Set default pool features.
+	 */
+	pool_features_init(&pf);
+
+	dm_consume_args(&as, 4);
+	r = parse_pool_features(&as, &pf, ti);
+	if (r)
+		goto out_unlock;
+
+	metadata_mode = FMODE_READ | ((pf.mode == PM_READ_ONLY) ? 0 : FMODE_WRITE);
+	r = dm_get_device(ti, argv[0], metadata_mode, &metadata_dev);
 	if (r) {
 		ti->error = "Error opening metadata block device";
 		goto out_unlock;
 	}
 
-	metadata_dev_size = i_size_read(metadata_dev->bdev->bd_inode) >> SECTOR_SHIFT;
-	if (metadata_dev_size > THIN_METADATA_MAX_SECTORS_WARNING)
-		DMWARN("Metadata device %s is larger than %u sectors: excess space will not be used.",
-		       bdevname(metadata_dev->bdev, b), THIN_METADATA_MAX_SECTORS);
+	/*
+	 * Run for the side-effect of possibly issuing a warning if the
+	 * device is too big.
+	 */
+	(void) get_metadata_dev_size(metadata_dev->bdev);
 
 	r = dm_get_device(ti, argv[1], FMODE_READ | FMODE_WRITE, &data_dev);
 	if (r) {
@@ -2057,16 +2123,6 @@ static int pool_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		r = -EINVAL;
 		goto out;
 	}
-
-	/*
-	 * Set default pool features.
-	 */
-	pool_features_init(&pf);
-
-	dm_consume_args(&as, 4);
-	r = parse_pool_features(&as, &pf, ti);
-	if (r)
-		goto out;
 
 	pt = kzalloc(sizeof(*pt), GFP_KERNEL);
 	if (!pt) {
@@ -2117,6 +2173,13 @@ static int pool_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	}
 	ti->private = pt;
 
+	r = dm_pool_register_metadata_threshold(pt->pool->pmd,
+						calc_metadata_threshold(pt),
+						metadata_low_callback,
+						pool);
+	if (r)
+		goto out_free_pt;
+
 	pt->callbacks.congested_fn = pool_is_congested;
 	dm_table_add_target_callbacks(ti->table, &pt->callbacks);
 
@@ -2156,30 +2219,14 @@ static int pool_map(struct dm_target *ti, struct bio *bio)
 	return r;
 }
 
-/*
- * Retrieves the number of blocks of the data device from
- * the superblock and compares it to the actual device size,
- * thus resizing the data device in case it has grown.
- *
- * This both copes with opening preallocated data devices in the ctr
- * being followed by a resume
- * -and-
- * calling the resume method individually after userspace has
- * grown the data device in reaction to a table event.
- */
-static int pool_preresume(struct dm_target *ti)
+static int maybe_resize_data_dev(struct dm_target *ti, bool *need_commit)
 {
 	int r;
 	struct pool_c *pt = ti->private;
 	struct pool *pool = pt->pool;
 	dm_block_t data_size, sb_data_size;
 
-	/*
-	 * Take control of the pool object.
-	 */
-	r = bind_control_target(pool, ti);
-	if (r)
-		return r;
+	*need_commit = false;
 
 	data_size = ti->len >> pool->block_shift;
 	r = dm_pool_get_data_dev_size(pool->pmd, &sb_data_size);
@@ -2361,6 +2408,41 @@ static int process_set_transaction_id_mesg(unsigned argc, char **argv, struct po
 		DMWARN("Failed to change transaction id from %s to %s.",
 		       argv[1], argv[2]);
 		return r;
+	}
+
+	return 0;
+}
+
+static int maybe_resize_metadata_dev(struct dm_target *ti, bool *need_commit)
+{
+	int r;
+	struct pool_c *pt = ti->private;
+	struct pool *pool = pt->pool;
+	dm_block_t metadata_dev_size, sb_metadata_dev_size;
+
+	*need_commit = false;
+
+	metadata_dev_size = get_metadata_dev_size_in_blocks(pool->md_dev);
+
+	r = dm_pool_get_metadata_dev_size(pool->pmd, &sb_metadata_dev_size);
+	if (r) {
+		DMERR("failed to retrieve data device size");
+		return r;
+	}
+
+	if (metadata_dev_size < sb_metadata_dev_size) {
+		DMERR("metadata device (%llu blocks) too small: expected %llu",
+		      metadata_dev_size, sb_metadata_dev_size);
+		return -EINVAL;
+
+	} else if (metadata_dev_size > sb_metadata_dev_size) {
+		r = dm_pool_resize_metadata_dev(pool->pmd, metadata_dev_size);
+		if (r) {
+			DMERR("failed to resize metadata device");
+			return r;
+		}
+
+		*need_commit = true;
 	}
 
 	return 0;
