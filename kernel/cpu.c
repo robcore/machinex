@@ -1176,7 +1176,6 @@ void enable_nonboot_cpus(void)
 	for_each_cpu(cpu, frozen_cpus) {
 		if (cpumask_test_cpu(cpu, max_screen_off))
 			continue;
-
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {
 			pr_info("CPU%d is up\n", cpu);
