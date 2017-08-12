@@ -91,35 +91,6 @@ bool is_cpu_allowed(unsigned int cpu)
 	return true;
 }
 
-bool is_cpu_allowed_susp(unsigned int cpu)
-{
-	if (is_display_on() || !limit_screen_off_cpus ||
-		!hotplug_ready)
-		return true;
-
-	switch (cpu) {
-	case 0:
-		break;
-	case 1:
-		if (!cpu1_allowed_susp)
-			return false;
-		break;
-	case 2:
-		if (!cpu1_allowed_susp)
-			return false;
-		break;
-	case 3:
-		if (!cpu1_allowed_susp)
-			return false;
-		break;
-
-	default:
-		break;
-	}
-
-	return true;
-}
-
 static void hardplug_cpu(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
@@ -157,12 +128,12 @@ void hardplug_all_cpus(void)
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
+		if (cpu_is_offline(cpu))
+			continue;
 		hardplug_cpu(cpu);
 	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
-
-
 
 static int cpu_hardplug_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
@@ -479,7 +450,7 @@ static void cpu_hardplug_exit(void)
 		&cpu_hardplug_attr_group);
 }
 
-core_initcall(cpu_hardplug_init);
+postcore_initcall(cpu_hardplug_init);
 module_exit(cpu_hardplug_exit);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");

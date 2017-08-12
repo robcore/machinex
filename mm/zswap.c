@@ -78,14 +78,12 @@ static u64 zswap_duplicate_entry;
 static unsigned int zswap_enabled = 1;
 module_param_named(enabled, zswap_enabled, uint, 0644);
 
-/* Compressor to be used by zswap (fixed at boot for now) 
+/* Compressor to be used by zswap (fixed at boot for now) */
 #ifdef CONFIG_CRYPTO_LZ4
 #define ZSWAP_COMPRESSOR_DEFAULT "lz4"
 #else
 #define ZSWAP_COMPRESSOR_DEFAULT "lzo"
 #endif
-*/
-#define ZSWAP_COMPRESSOR_DEFAULT "lzo"
 static char *zswap_compressor = ZSWAP_COMPRESSOR_DEFAULT;
 module_param_named(compressor, zswap_compressor, charp, 0444);
 

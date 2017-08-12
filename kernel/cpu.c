@@ -957,10 +957,6 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 		goto out;
 	}
 
-	if (!is_cpu_allowed(cpu) || !is_cpu_allowed_susp(cpu))
-		ret = -EINVAL;
-		goto out;
-
 	/*
 	 * The caller of do_cpu_up might have raced with another
 	 * caller. Ignore it for now.
@@ -1017,7 +1013,7 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 	}
 
 	if (!is_cpu_allowed(cpu))
-		return -EBUSY;
+		return -EINVAL;
 
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
@@ -1042,76 +1038,8 @@ int cpu_up(unsigned int cpu)
 }
 EXPORT_SYMBOL_GPL(cpu_up);
 
-static cpumask_var_t hardplugged;
-
-int lock_screen_on_cpus(int primary)
-{
-	int cpu, error = 0;
-
-	cpu_maps_update_begin();
-	if (!cpu_online(primary))
-		primary = cpumask_first(cpu_online_mask);
-	/*
-	 * We take down all of the non-boot CPUs in one shot to avoid races
-	 * with the userspace trying to use the CPU hotplug at the same time
-	 */
-	cpumask_clear(hardplugged);
-
-	pr_info("Disabling Non-Screen-On CPUs ...\n");
-	for_each_possible_cpu(cpu) {
-		if (cpu == primary)
-			continue;
-		if (is_cpu_allowed(cpu))
-			continue;
-		if (!cpu_online(cpu))
-			error = 0;
-		else
-			error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
-
-		if (!error)
-			cpumask_set_cpu(cpu, hardplugged);
-		else {
-			pr_err("Error taking CPU%d down: %d\n", cpu, error);
-			break;
-		}
-	}
-
-	if (error)
-		pr_err("Non-Screen-On CPUs are not disabled\n");
-
-	cpu_maps_update_done();
-	return error;
-}
-EXPORT_SYMBOL_GPL(lock_screen_on_cpus);
-
-void unlock_screen_on_cpus(void)
-{
-	int cpu, error;
-
-	cpu_maps_update_begin();
-	if (cpumask_empty(hardplugged))
-		goto out;
-
-	pr_info("Enabling Non-Screen-On CPUs ...\n");
-
-	for_each_cpu(cpu, hardplugged) {
-		if (!is_cpu_allowed(cpu))
-			continue;
-		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
-		if (!error) {
-			cpumask_clear_cpu(cpu, hardplugged);
-			pr_info("CPU%d is up\n", cpu);
-			continue;
-		}
-		pr_warn("Error taking CPU%d up: %d\n", cpu, error);
-	}
-out:
-	cpu_maps_update_done();
-}
-EXPORT_SYMBOL_GPL(unlock_screen_on_cpus);
-
 #ifdef CONFIG_PM_SLEEP_SMP
-static cpumask_var_t hardplugged_susp;
+static cpumask_var_t max_screen_off;
 
 int lock_screen_off_cpus(int primary)
 {
@@ -1124,17 +1052,21 @@ int lock_screen_off_cpus(int primary)
 	 * We take down all of the non-boot CPUs in one shot to avoid races
 	 * with the userspace trying to use the CPU hotplug at the same time
 	 */
-	cpumask_clear(hardplugged_susp);
+	cpumask_clear(max_screen_off);
 
 	pr_info("Disabling non-screen off CPUs ...\n");
 	for_each_online_cpu(cpu) {
 		if (cpu == primary)
 			continue;
-		if (is_cpu_allowed_susp(cpu))
+		if (cpu == 1 && cpu1_allowed_susp)
+			continue;
+		if (cpu == 2 && cpu2_allowed_susp)
+			continue;
+		if (cpu == 3 && cpu3_allowed_susp)
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
 		if (!error)
-			cpumask_set_cpu(cpu, hardplugged_susp);
+			cpumask_set_cpu(cpu, max_screen_off);
 		else {
 			pr_err("Error taking CPU%d down: %d\n", cpu, error);
 			break;
@@ -1155,12 +1087,12 @@ void unlock_screen_off_cpus(void)
 
 	/* Allow everyone to use the CPU hotplug again */
 	cpu_maps_update_begin();
-	if (cpumask_empty(hardplugged_susp))
+	if (cpumask_empty(max_screen_off))
 		goto out;
 
 	pr_info("Enabling non-Screen-off CPUs ...\n");
 
-	for_each_cpu(cpu, hardplugged_susp) {
+	for_each_cpu(cpu, max_screen_off) {
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {
 			pr_info("CPU%d is up\n", cpu);
@@ -1169,7 +1101,7 @@ void unlock_screen_off_cpus(void)
 		pr_warn("Error taking CPU%d up: %d\n", cpu, error);
 	}
 
-	cpumask_clear(hardplugged_susp);
+	cpumask_clear(max_screen_off);
 out:
 	cpu_maps_update_done();
 }
@@ -1240,6 +1172,8 @@ void enable_nonboot_cpus(void)
 
 	pr_info("Enabling non-boot CPUs ...\n");
 
+	arch_enable_nonboot_cpus_begin();
+
 	for_each_cpu(cpu, frozen_cpus) {
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {
@@ -1249,26 +1183,25 @@ void enable_nonboot_cpus(void)
 		pr_warn("Error taking CPU%d up: %d\n", cpu, error);
 	}
 
+	arch_enable_nonboot_cpus_end();
+
 	cpumask_clear(frozen_cpus);
 out:
 	cpu_maps_update_done();
 }
 EXPORT_SYMBOL_GPL(enable_nonboot_cpus);
 
-static int __init alloc_conditional_cpumasks(void)
+static int __init alloc_frozen_cpus(void)
 {
-	if (!alloc_cpumask_var(&hardplugged, GFP_KERNEL|__GFP_ZERO))
-		return -ENOMEM;
-
-	if (!alloc_cpumask_var(&hardplugged_susp, GFP_KERNEL|__GFP_ZERO))
-		return -ENOMEM;
-
 	if (!alloc_cpumask_var(&frozen_cpus, GFP_KERNEL|__GFP_ZERO))
+		return -ENOMEM;
+
+	if (!alloc_cpumask_var(&max_screen_off, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
 
 	return 0;
 }
-core_initcall(alloc_conditional_cpumasks);
+core_initcall(alloc_frozen_cpus);
 
 /*
  * When callbacks for CPU hotplug notifications are being executed, we must
