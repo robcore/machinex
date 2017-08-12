@@ -104,6 +104,11 @@ int dm_bm_unlock(struct dm_block *b);
  */
 int dm_bm_unlock_move(struct dm_block *b, dm_block_t n);
 
+ /*
+  * Request data be prefetched into the cache.
+  */
+void dm_bm_prefetch(struct dm_block_manager *bm, dm_block_t b);
+
 /*
  * It's a common idiom to have a superblock that should be committed last.
  *
