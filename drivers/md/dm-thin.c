@@ -2846,7 +2846,6 @@ static struct target_type thin_target = {
 	.postsuspend = thin_postsuspend,
 	.status = thin_status,
 	.iterate_devices = thin_iterate_devices,
-	.io_hints = thin_io_hints,
 };
 
 /*----------------------------------------------------------------*/
