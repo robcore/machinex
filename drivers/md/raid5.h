@@ -358,6 +358,19 @@ struct disk_info {
 	struct md_rdev	*rdev, *replacement;
 };
 
+struct r5worker {
+	struct work_struct work;
+	struct r5worker_group *group;
+	bool working;
+};
+
+struct r5worker_group {
+	struct list_head handle_list;
+	struct r5conf *conf;
+	struct r5worker *workers;
+	int stripes_cnt;
+};
+
 struct r5conf {
 	struct hlist_head	*stripe_hashtbl;
 	struct mddev		*mddev;
@@ -381,6 +394,7 @@ struct r5conf {
 	int			prev_chunk_sectors;
 	int			prev_algo;
 	short			generation; /* increments with every reshape */
+	seqcount_t		gen_lock;	/* lock against generation changes */
 	unsigned long		reshape_checkpoint; /* Time we last updated
 						     * metadata */
 	long long		min_offset_diff; /* minimum difference between
@@ -453,6 +467,9 @@ struct r5conf {
 	 * the new thread here until we fully activate the array.
 	 */
 	struct md_thread	*thread;
+	struct r5worker_group	*worker_groups;
+	int			group_cnt;
+	int			worker_cnt_per_group;
 };
 
 /*

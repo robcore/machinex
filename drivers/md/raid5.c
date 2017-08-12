@@ -58,6 +58,10 @@
 #include "raid0.h"
 #include "bitmap.h"
 
+#define cpu_to_group(cpu) cpu_to_node(cpu)
+#define ANY_GROUP NUMA_NO_NODE
+
+static struct workqueue_struct *raid5_wq;
 /*
  * Stripe cache
  */
@@ -70,6 +74,7 @@
 #define BYPASS_THRESHOLD	1
 #define NR_HASH			(PAGE_SIZE / sizeof(struct hlist_head))
 #define HASH_MASK		(NR_HASH - 1)
+#define MAX_STRIPE_BATCH	8
 
 static inline struct hlist_head *stripe_hash(struct r5conf *conf, sector_t sect)
 {
@@ -342,6 +347,7 @@ static void init_stripe(struct stripe_head *sh, sector_t sector, int previous)
 		raid5_build_block(sh, i, previous);
 	}
 	insert_hash(conf, sh);
+	sh->cpu = smp_processor_id();
 }
 
 static struct stripe_head *__find_stripe(struct r5conf *conf, sector_t sector,
@@ -481,6 +487,10 @@ get_active_stripe(struct r5conf *conf, sector_t sector,
 				    !test_bit(STRIPE_EXPANDING, &sh->state))
 					BUG();
 				list_del_init(&sh->lru);
+				if (sh->group) {
+					sh->group->stripes_cnt--;
+					sh->group = NULL;
+				}
 			}
 		}
 	} while (sh == NULL);
@@ -3692,6 +3702,7 @@ static void raid5_activate_delayed(struct r5conf *conf)
 			if (!test_and_set_bit(STRIPE_PREREAD_ACTIVE, &sh->state))
 				atomic_inc(&conf->preread_active_stripes);
 			list_add_tail(&sh->lru, &conf->hold_list);
+			raid5_wakeup_stripe_thread(sh);
 		}
 	}
 }
@@ -3965,18 +3976,35 @@ static int chunk_aligned_read(struct mddev *mddev, struct bio * raid_bio)
  * head of the hold_list has changed, i.e. the head was promoted to the
  * handle_list.
  */
-static struct stripe_head *__get_priority_stripe(struct r5conf *conf)
+static struct stripe_head *__get_priority_stripe(struct r5conf *conf, int group)
 {
-	struct stripe_head *sh;
+	struct stripe_head *sh = NULL, *tmp;
+	struct list_head *handle_list = NULL;
+	struct r5worker_group *wg = NULL;
+
+	if (conf->worker_cnt_per_group == 0) {
+		handle_list = &conf->handle_list;
+	} else if (group != ANY_GROUP) {
+		handle_list = &conf->worker_groups[group].handle_list;
+		wg = &conf->worker_groups[group];
+	} else {
+		int i;
+		for (i = 0; i < conf->group_cnt; i++) {
+			handle_list = &conf->worker_groups[i].handle_list;
+			wg = &conf->worker_groups[i];
+			if (!list_empty(handle_list))
+				break;
+		}
+	}
 
 	pr_debug("%s: handle: %s hold: %s full_writes: %d bypass_count: %d\n",
 		  __func__,
-		  list_empty(&conf->handle_list) ? "empty" : "busy",
+		  list_empty(handle_list) ? "empty" : "busy",
 		  list_empty(&conf->hold_list) ? "empty" : "busy",
 		  atomic_read(&conf->pending_full_writes), conf->bypass_count);
 
-	if (!list_empty(&conf->handle_list)) {
-		sh = list_entry(conf->handle_list.next, typeof(*sh), lru);
+	if (!list_empty(handle_list)) {
+		sh = list_entry(handle_list->next, typeof(*sh), lru);
 
 		if (list_empty(&conf->hold_list))
 			conf->bypass_count = 0;
@@ -3994,14 +4022,32 @@ static struct stripe_head *__get_priority_stripe(struct r5conf *conf)
 		   ((conf->bypass_threshold &&
 		     conf->bypass_count > conf->bypass_threshold) ||
 		    atomic_read(&conf->pending_full_writes) == 0)) {
-		sh = list_entry(conf->hold_list.next,
-				typeof(*sh), lru);
-		conf->bypass_count -= conf->bypass_threshold;
-		if (conf->bypass_count < 0)
-			conf->bypass_count = 0;
-	} else
+
+		list_for_each_entry(tmp, &conf->hold_list,  lru) {
+			if (conf->worker_cnt_per_group == 0 ||
+			    group == ANY_GROUP ||
+			    !cpu_online(tmp->cpu) ||
+			    cpu_to_group(tmp->cpu) == group) {
+				sh = tmp;
+				break;
+			}
+		}
+
+		if (sh) {
+			conf->bypass_count -= conf->bypass_threshold;
+			if (conf->bypass_count < 0)
+				conf->bypass_count = 0;
+		}
+		wg = NULL;
+	}
+
+	if (!sh)
 		return NULL;
 
+	if (wg) {
+		wg->stripes_cnt--;
+		sh->group = NULL;
+	}
 	list_del_init(&sh->lru);
 	atomic_inc(&sh->count);
 	BUG_ON(atomic_read(&sh->count) != 1);
@@ -4136,8 +4182,10 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 		DEFINE_WAIT(w);
 		int disks, data_disks;
 		int previous;
+		int seq;
 
 	retry:
+		seq = read_seqcount_begin(&conf->gen_lock);
 		previous = 0;
 		disks = conf->raid_disks;
 		prepare_to_wait(&conf->wait_for_overlap, &w, TASK_UNINTERRUPTIBLE);
@@ -4173,7 +4221,7 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 						  previous,
 						  &dd_idx, NULL);
 		pr_debug("raid456: make_request, sector %llu logical %llu\n",
-			(unsigned long long)new_sector, 
+			(unsigned long long)new_sector,
 			(unsigned long long)logical_sector);
 
 		sh = get_active_stripe(conf, new_sector, previous,
@@ -4201,6 +4249,13 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 					schedule();
 					goto retry;
 				}
+			}
+			if (read_seqcount_retry(&conf->gen_lock, seq)) {
+				/* Might have got the wrong stripe_head
+				 * by accident
+				 */
+				release_stripe(sh);
+				goto retry;
 			}
 
 			if (rw == WRITE &&
@@ -4643,6 +4698,39 @@ static int  retry_aligned_read(struct r5conf *conf, struct bio *raid_bio)
 }
 
 
+static void raid5_do_work(struct work_struct *work)
+{
+	struct r5worker *worker = container_of(work, struct r5worker, work);
+	struct r5worker_group *group = worker->group;
+	struct r5conf *conf = group->conf;
+	int group_id = group - conf->worker_groups;
+	int handled;
+	struct blk_plug plug;
+
+	pr_debug("+++ raid5worker active\n");
+
+	blk_start_plug(&plug);
+	handled = 0;
+	spin_lock_irq(&conf->device_lock);
+	while (1) {
+		int batch_size, released;
+
+		released = release_stripe_list(conf);
+
+		batch_size = handle_active_stripes(conf, group_id, worker);
+		worker->working = false;
+		if (!batch_size && !released)
+			break;
+		handled += batch_size;
+	}
+	pr_debug("%d stripes handled\n", handled);
+
+	spin_unlock_irq(&conf->device_lock);
+	blk_finish_plug(&plug);
+
+	pr_debug("--- raid5worker inactive\n");
+}
+
 /*
  * This is our raid5 kernel thread.
  *
@@ -4823,16 +4911,124 @@ stripe_cache_active_show(struct mddev *mddev, char *page)
 static struct md_sysfs_entry
 raid5_stripecache_active = __ATTR_RO(stripe_cache_active);
 
+static ssize_t
+raid5_show_group_thread_cnt(struct mddev *mddev, char *page)
+{
+	struct r5conf *conf = mddev->private;
+	if (conf)
+		return sprintf(page, "%d\n", conf->worker_cnt_per_group);
+	else
+		return 0;
+}
+
+static int alloc_thread_groups(struct r5conf *conf, int cnt);
+static ssize_t
+raid5_store_group_thread_cnt(struct mddev *mddev, const char *page, size_t len)
+{
+	struct r5conf *conf = mddev->private;
+	unsigned long new;
+	int err;
+	struct r5worker_group *old_groups;
+	int old_group_cnt;
+
+	if (len >= PAGE_SIZE)
+		return -EINVAL;
+	if (!conf)
+		return -ENODEV;
+
+	if (kstrtoul(page, 10, &new))
+		return -EINVAL;
+
+	if (new == conf->worker_cnt_per_group)
+		return len;
+
+	mddev_suspend(mddev);
+
+	old_groups = conf->worker_groups;
+	old_group_cnt = conf->worker_cnt_per_group;
+
+	conf->worker_groups = NULL;
+	err = alloc_thread_groups(conf, new);
+	if (err) {
+		conf->worker_groups = old_groups;
+		conf->worker_cnt_per_group = old_group_cnt;
+	} else {
+		if (old_groups)
+			kfree(old_groups[0].workers);
+		kfree(old_groups);
+	}
+
+	mddev_resume(mddev);
+
+	if (err)
+		return err;
+	return len;
+}
+
+static struct md_sysfs_entry
+raid5_group_thread_cnt = __ATTR(group_thread_cnt, S_IRUGO | S_IWUSR,
+				raid5_show_group_thread_cnt,
+				raid5_store_group_thread_cnt);
+
 static struct attribute *raid5_attrs[] =  {
 	&raid5_stripecache_size.attr,
 	&raid5_stripecache_active.attr,
 	&raid5_preread_bypass_threshold.attr,
+	&raid5_group_thread_cnt.attr,
 	NULL,
 };
 static struct attribute_group raid5_attrs_group = {
 	.name = NULL,
 	.attrs = raid5_attrs,
 };
+
+static int alloc_thread_groups(struct r5conf *conf, int cnt)
+{
+	int i, j;
+	ssize_t size;
+	struct r5worker *workers;
+
+	conf->worker_cnt_per_group = cnt;
+	if (cnt == 0) {
+		conf->worker_groups = NULL;
+		return 0;
+	}
+	conf->group_cnt = num_possible_nodes();
+	size = sizeof(struct r5worker) * cnt;
+	workers = kzalloc(size * conf->group_cnt, GFP_NOIO);
+	conf->worker_groups = kzalloc(sizeof(struct r5worker_group) *
+				conf->group_cnt, GFP_NOIO);
+	if (!conf->worker_groups || !workers) {
+		kfree(workers);
+		kfree(conf->worker_groups);
+		conf->worker_groups = NULL;
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < conf->group_cnt; i++) {
+		struct r5worker_group *group;
+
+		group = &conf->worker_groups[i];
+		INIT_LIST_HEAD(&group->handle_list);
+		group->conf = conf;
+		group->workers = workers + i * cnt;
+
+		for (j = 0; j < cnt; j++) {
+			group->workers[j].group = group;
+			INIT_WORK(&group->workers[j].work, raid5_do_work);
+		}
+	}
+
+	return 0;
+}
+
+static void free_thread_groups(struct r5conf *conf)
+{
+	if (conf->worker_groups)
+		kfree(conf->worker_groups[0].workers);
+	kfree(conf->worker_groups);
+	conf->worker_groups = NULL;
+}
 
 static sector_t
 raid5_size(struct mddev *mddev, sector_t sectors, int raid_disks)
@@ -4894,6 +5090,7 @@ static void raid5_free_percpu(struct r5conf *conf)
 
 static void free_conf(struct r5conf *conf)
 {
+	free_thread_groups(conf);
 	shrink_stripes(conf);
 	raid5_free_percpu(conf);
 	kfree(conf->disks);
@@ -4999,7 +5196,11 @@ static struct r5conf *setup_conf(struct mddev *mddev)
 	conf = kzalloc(sizeof(struct r5conf), GFP_KERNEL);
 	if (conf == NULL)
 		goto abort;
+	/* Don't enable multi-threading by default*/
+	if (alloc_thread_groups(conf, 0))
+		goto abort;
 	spin_lock_init(&conf->device_lock);
+	seqcount_init(&conf->gen_lock);
 	init_waitqueue_head(&conf->wait_for_stripe);
 	init_waitqueue_head(&conf->wait_for_overlap);
 	INIT_LIST_HEAD(&conf->handle_list);
@@ -5807,6 +6008,7 @@ static int raid5_start_reshape(struct mddev *mddev)
 
 	atomic_set(&conf->reshape_stripes, 0);
 	spin_lock_irq(&conf->device_lock);
+	write_seqcount_begin(&conf->gen_lock);
 	conf->previous_raid_disks = conf->raid_disks;
 	conf->raid_disks += mddev->delta_disks;
 	conf->prev_chunk_sectors = conf->chunk_sectors;
@@ -5823,7 +6025,15 @@ static int raid5_start_reshape(struct mddev *mddev)
 	else
 		conf->reshape_progress = 0;
 	conf->reshape_safe = conf->reshape_progress;
+	write_seqcount_end(&conf->gen_lock);
 	spin_unlock_irq(&conf->device_lock);
+
+	/* Now make sure any requests that proceeded on the assumption
+	 * the reshape wasn't running - like Discard or Read - have
+	 * completed.
+	 */
+	mddev_suspend(mddev);
+	mddev_resume(mddev);
 
 	/* Add some new drives, as many as will fit.
 	 * We know there are enough to make the newly sized array work.
@@ -6299,6 +6509,10 @@ static struct md_personality raid4_personality =
 
 static int __init raid5_init(void)
 {
+	raid5_wq = alloc_workqueue("raid5wq",
+		WQ_UNBOUND|WQ_MEM_RECLAIM|WQ_CPU_INTENSIVE|WQ_SYSFS, 0);
+	if (!raid5_wq)
+		return -ENOMEM;
 	register_md_personality(&raid6_personality);
 	register_md_personality(&raid5_personality);
 	register_md_personality(&raid4_personality);
@@ -6310,6 +6524,7 @@ static void raid5_exit(void)
 	unregister_md_personality(&raid6_personality);
 	unregister_md_personality(&raid5_personality);
 	unregister_md_personality(&raid4_personality);
+	destroy_workqueue(raid5_wq);
 }
 
 module_init(raid5_init);
