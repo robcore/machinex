@@ -5,6 +5,7 @@
  */
 
 #include "dm-thin-metadata.h"
+#include "dm-bio-prison.h"
 #include "dm.h"
 
 #include <linux/device-mapper.h>
@@ -22,7 +23,6 @@
  * Tunable constants
  */
 #define ENDIO_HOOK_POOL_SIZE 1024
-#define DEFERRED_SET_SIZE 64
 #define MAPPING_POOL_SIZE 1024
 #define PRISON_CELLS 1024
 #define COMMIT_PERIOD HZ
