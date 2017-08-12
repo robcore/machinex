@@ -311,7 +311,7 @@ struct mq_policy {
 
 /*----------------------------------------------------------------*/
 /* Free/alloc mq cache entry structures. */
-static void takeout_queue(struct list_head *lh, struct queue *q)
+static void concat_queue(struct list_head *lh, struct queue *q)
 {
 	unsigned level;
 
@@ -323,8 +323,8 @@ static void free_entries(struct mq_policy *mq)
 {
 	struct entry *e, *tmp;
 
-	takeout_queue(&mq->free, &mq->pre_cache);
-	takeout_queue(&mq->free, &mq->cache);
+	concat_queue(&mq->free, &mq->pre_cache);
+	concat_queue(&mq->free, &mq->cache);
 
 	list_for_each_entry_safe(e, tmp, &mq->free, list)
 		kmem_cache_free(mq_entry_cache, e);
@@ -531,14 +531,16 @@ static void del(struct mq_policy *mq, struct entry *e)
  */
 static struct entry *pop(struct mq_policy *mq, struct queue *q)
 {
-	struct entry *e = container_of(queue_pop(q), struct entry, list);
+	struct entry *e;
+	struct list_head *h = queue_pop(q);
 
-	if (e) {
-		hash_remove(e);
+	if (!h)
+		return NULL;
 
-		if (e->in_cache)
-			free_cblock(mq, e->cblock);
-	}
+	e = container_of(h, struct entry, list);
+	hash_remove(e);
+	if (e->in_cache)
+		free_cblock(mq, e->cblock);
 
 	return e;
 }
@@ -697,7 +699,7 @@ static int cache_entry_found(struct mq_policy *mq,
 }
 
 /*
- * Moves and entry from the pre_cache to the cache.  The main work is
+ * Moves an entry from the pre_cache to the cache.  The main work is
  * finding which cache block to use.
  */
 static int pre_cache_to_cache(struct mq_policy *mq, struct entry *e,
@@ -1001,10 +1003,14 @@ static void mq_force_mapping(struct dm_cache_policy *p,
 
 static dm_cblock_t mq_residency(struct dm_cache_policy *p)
 {
+	dm_cblock_t r;
 	struct mq_policy *mq = to_mq_policy(p);
 
-	/* FIXME: lock mutex, not sure we can block here */
-	return to_cblock(mq->nr_cblocks_allocated);
+	mutex_lock(&mq->lock);
+	r = to_cblock(mq->nr_cblocks_allocated);
+	mutex_unlock(&mq->lock);
+
+	return r;
 }
 
 static void mq_tick(struct dm_cache_policy *p)

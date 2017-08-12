@@ -148,6 +148,10 @@ struct cache {
 	wait_queue_head_t migration_wait;
 	atomic_t nr_migrations;
 
+	wait_queue_head_t quiescing_wait;
+	atomic_t quiescing;
+	atomic_t quiescing_ack;
+
 	/*
 	 * cache_size entries, dirty if set
 	 */
@@ -186,7 +190,6 @@ struct cache {
 
 	bool need_tick_bio:1;
 	bool sized:1;
-	bool quiescing:1;
 	bool commit_requested:1;
 	bool loaded_mappings:1;
 	bool loaded_discards:1;
@@ -605,6 +608,7 @@ static void remap_to_origin_clear_discard(struct cache *cache, struct bio *bio,
 static void remap_to_cache_dirty(struct cache *cache, struct bio *bio,
 				 dm_oblock_t oblock, dm_cblock_t cblock)
 {
+	check_if_tick_bio_needed(cache, bio);
 	remap_to_cache(cache, bio, cblock);
 	if (bio_data_dir(bio) == WRITE) {
 		set_dirty(cache, oblock, cblock);
@@ -748,8 +752,9 @@ static void cell_defer(struct cache *cache, struct dm_bio_prison_cell *cell,
 
 static void cleanup_migration(struct dm_cache_migration *mg)
 {
-	dec_nr_migrations(mg->cache);
+	struct cache *cache = mg->cache;
 	free_migration(mg);
+	dec_nr_migrations(cache);
 }
 
 static void migration_failure(struct dm_cache_migration *mg)
@@ -765,13 +770,13 @@ static void migration_failure(struct dm_cache_migration *mg)
 		DMWARN_LIMIT("demotion failed; couldn't copy block");
 		policy_force_mapping(cache->policy, mg->new_oblock, mg->old_oblock);
 
-		cell_defer(cache, mg->old_ocell, mg->promote ? 0 : 1);
+		cell_defer(cache, mg->old_ocell, mg->promote ? false : true);
 		if (mg->promote)
-			cell_defer(cache, mg->new_ocell, 1);
+			cell_defer(cache, mg->new_ocell, true);
 	} else {
 		DMWARN_LIMIT("promotion failed; couldn't copy block");
 		policy_remove_mapping(cache->policy, mg->new_oblock);
-		cell_defer(cache, mg->new_ocell, 1);
+		cell_defer(cache, mg->new_ocell, true);
 	}
 
 	cleanup_migration(mg);
@@ -823,7 +828,7 @@ static void migration_success_post_commit(struct dm_cache_migration *mg)
 		return;
 
 	} else if (mg->demote) {
-		cell_defer(cache, mg->old_ocell, mg->promote ? 0 : 1);
+		cell_defer(cache, mg->old_ocell, mg->promote ? false : true);
 
 		if (mg->promote) {
 			mg->demote = false;
@@ -1346,34 +1351,34 @@ static void writeback_some_dirty_blocks(struct cache *cache)
 /*----------------------------------------------------------------
  * Main worker loop
  *--------------------------------------------------------------*/
+static bool is_quiescing(struct cache *cache)
+{
+	return atomic_read(&cache->quiescing);
+}
+
+static void ack_quiescing(struct cache *cache)
+{
+	if (is_quiescing(cache)) {
+		atomic_inc(&cache->quiescing_ack);
+		wake_up(&cache->quiescing_wait);
+	}
+}
+
+static void wait_for_quiescing_ack(struct cache *cache)
+{
+	wait_event(cache->quiescing_wait, atomic_read(&cache->quiescing_ack));
+}
+
 static void start_quiescing(struct cache *cache)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&cache->lock, flags);
-	cache->quiescing = 1;
-	spin_unlock_irqrestore(&cache->lock, flags);
+	atomic_inc(&cache->quiescing);
+	wait_for_quiescing_ack(cache);
 }
 
 static void stop_quiescing(struct cache *cache)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&cache->lock, flags);
-	cache->quiescing = 0;
-	spin_unlock_irqrestore(&cache->lock, flags);
-}
-
-static bool is_quiescing(struct cache *cache)
-{
-	int r;
-	unsigned long flags;
-
-	spin_lock_irqsave(&cache->lock, flags);
-	r = cache->quiescing;
-	spin_unlock_irqrestore(&cache->lock, flags);
-
-	return r;
+	atomic_set(&cache->quiescing, 0);
+	atomic_set(&cache->quiescing_ack, 0);
 }
 
 static void wait_for_migrations(struct cache *cache)
@@ -1420,15 +1425,14 @@ static void do_worker(struct work_struct *ws)
 	struct cache *cache = container_of(ws, struct cache, worker);
 
 	do {
-		if (!is_quiescing(cache))
+		if (!is_quiescing(cache)) {
+			writeback_some_dirty_blocks(cache);
+			process_deferred_writethrough_bios(cache);
 			process_deferred_bios(cache);
+		}
 
 		process_migrations(cache, &cache->quiesced_migrations, issue_copy);
 		process_migrations(cache, &cache->completed_migrations, complete_migration);
-
-		writeback_some_dirty_blocks(cache);
-
-		process_deferred_writethrough_bios(cache);
 
 		if (commit_if_needed(cache)) {
 			process_deferred_flush_bios(cache, false);
@@ -1442,6 +1446,9 @@ static void do_worker(struct work_struct *ws)
 			process_migrations(cache, &cache->need_commit_migrations,
 					   migration_success_post_commit);
 		}
+
+		ack_quiescing(cache);
+
 	} while (more_work(cache));
 }
 
@@ -1872,14 +1879,15 @@ static int set_config_values(struct cache *cache, int argc, const char **argv)
 static int create_cache_policy(struct cache *cache, struct cache_args *ca,
 			       char **error)
 {
-	cache->policy =	dm_cache_policy_create(ca->policy_name,
-					       cache->cache_size,
-					       cache->origin_sectors,
-					       cache->sectors_per_block);
-	if (!cache->policy) {
+	struct dm_cache_policy *p = dm_cache_policy_create(ca->policy_name,
+							   cache->cache_size,
+							   cache->origin_sectors,
+							   cache->sectors_per_block);
+	if (IS_ERR(p)) {
 		*error = "Error creating cache's policy";
-		return -ENOMEM;
+		return PTR_ERR(p);
 	}
+	cache->policy = p;
 
 	return 0;
 }
@@ -2005,6 +2013,10 @@ static int cache_create(struct cache_args *ca, struct cache **result)
 	atomic_set(&cache->nr_migrations, 0);
 	init_waitqueue_head(&cache->migration_wait);
 
+	init_waitqueue_head(&cache->quiescing_wait);
+	atomic_set(&cache->quiescing, 0);
+	atomic_set(&cache->quiescing_ack, 0);
+
 	r = -ENOMEM;
 	cache->nr_dirty = 0;
 	cache->dirty_bitset = alloc_bitset(from_cblock(cache->cache_size));
@@ -2064,7 +2076,6 @@ static int cache_create(struct cache_args *ca, struct cache **result)
 
 	cache->need_tick_bio = true;
 	cache->sized = false;
-	cache->quiescing = false;
 	cache->commit_requested = false;
 	cache->loaded_mappings = false;
 	cache->loaded_discards = false;
