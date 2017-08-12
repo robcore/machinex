@@ -67,12 +67,16 @@ fi;
 
 function countdown()
 {
+	sleep 1
+}
+
+function adbcountdown()
+{
 	echo "3"
 	sleep 1
 	echo "2"
 	sleep 1
 	echo "1"
-	sleep 1
 }
 
 function NORMAL()
@@ -91,24 +95,36 @@ fi;
 
 function ADBRETRY()
 {
-adb connect 192.168.1.103
-countdown
+adb start-server
+adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
+if [[ $ONLINE == recovery ]]; then #if we are in recovery
+	echo "recovery connected"
+	adb push $OUTFOLDER.zip /external_sd
+	echo "push complete"
+else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
-	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
-	echo "disconnected, retrying"
+	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
-	countdown
+	adbcountdown
 	if [[ $ONLINE == device ]]; then
+		echo "wireless connected"
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
+		echo "push complete"
 	else
-		echo "push failed"
-	fi
+		echo "disconnected, retrying"
+		adb connect 192.168.1.103
+		adbcountdown
+		if [[ $ONLINE == device ]]; then
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "pushed"
+		else
+			echo "push failed"
+		fi;
+	fi;
 fi;
 }
 
@@ -161,10 +177,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
 		if [[ $repadb = "y" ]]; then
-			echo "ENABLE ADB WIRELESS"
-			countdown
-			adb connect 192.168.1.103
-			countdown
+			echo "ENABLE ADB"
 			ADBRETRY
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
@@ -184,11 +197,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "Cleanup Finished"
 		fi;
 	else
-		echo "ENABLE ADB WIRELESS"
+		echo "ENABLE ADB"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		countdown
-		adb connect 192.168.1.103
-		countdown
 		ADBRETRY
 		cd ~/machinex
 		WASHME
@@ -234,7 +244,6 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -242,7 +251,6 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -253,7 +261,6 @@ if [[ $USEPRV = "n" ]]; then
 		OUTFOLDER=machinex-Mark$OVNAME
 		if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 			echo "removing previously compiled folder and zip of the same name"
-			countdown
 			rm -rf /media/root/robcore/AIK/$OUTFOLDER
 		fi;
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -269,24 +276,37 @@ fi;
 
 function ADBRETRY()
 {
-adb connect 192.168.1.103
-countdown
+adb start-server
+adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
+if [[ $ONLINE == recovery ]]; then #if we are in recovery
+	echo "recovery connected"
+	adb push $OUTFOLDER.zip /external_sd
+	echo "push complete"
+else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
-	countdown
+	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
-	echo "disconnected, retrying"
+	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
-	countdown
+	adbcountdown
 	if [[ $ONLINE == device ]]; then
+		echo "wireless connected"
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
+		echo "push complete"
 	else
-		echo "push failed"
-	fi
+		echo "disconnected, retrying"
+		adb connect 192.168.1.103
+		adbcountdown
+		if [[ $ONLINE == device ]]; then
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "pushed"
+		else
+			echo "push failed"
+		fi;
+	fi;
 fi;
 }
 
@@ -339,10 +359,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
 		if [[ $repadb = "y" ]]; then
-			echo "ENABLE ADB WIRELESS"
-			countdown
-			adb connect 192.168.1.103
-			countdown
+			echo "ENABLE ADB"
 			ADBRETRY
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
@@ -362,11 +379,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "Cleanup Finished"
 		fi;
 	else
-		echo "ENABLE ADB WIRELESS"
+		echo "ENABLE ADB"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		countdown
-		adb connect 192.168.1.103
-		countdown
 		ADBRETRY
 		cd ~/machinex
 		WASHME
@@ -413,7 +427,6 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION-$SUBVERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -421,7 +434,6 @@ if [[ $USEPRV = "n" ]]; then
 			OUTFOLDER=$KERNEL_NAME-$KERNEL_VERSION
 			if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 				echo "removing previously compiled folder and zip of the same name"
-				countdown
 				rm -rf /media/root/robcore/AIK/$OUTFOLDER
 			fi;
 			echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -432,7 +444,6 @@ if [[ $USEPRV = "n" ]]; then
 		OUTFOLDER=machinex-Mark$OVNAME
 		if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 			echo "removing previously compiled folder and zip of the same name"
-			countdown
 			rm -rf /media/root/robcore/AIK/$OUTFOLDER
 		fi;
 		echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
@@ -448,24 +459,37 @@ fi;
 
 function ADBRETRY()
 {
-adb connect 192.168.1.103
-countdown
+adb start-server
+adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
+if [[ $ONLINE == recovery ]]; then #if we are in recovery
+	echo "recovery connected"
+	adb push $OUTFOLDER.zip /external_sd
+	echo "push complete"
+else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
-	countdown
+	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
-	echo "disconnected, retrying"
+	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
-	countdown
+	adbcountdown
 	if [[ $ONLINE == device ]]; then
+		echo "wireless connected"
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
+		echo "push complete"
 	else
-		echo "push failed"
-	fi
+		echo "disconnected, retrying"
+		adb connect 192.168.1.103
+		adbcountdown
+		if [[ $ONLINE == device ]]; then
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "pushed"
+		else
+			echo "push failed"
+		fi;
+	fi;
 fi;
 }
 
@@ -518,10 +542,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
 		if [[ $repadb = "y" ]]; then
-			echo "ENABLE ADB WIRELESS"
-			countdown
-			adb connect 192.168.1.103
-			countdown
+			echo "ENABLE ADB"
 			ADBRETRY
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
@@ -541,11 +562,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "Cleanup Finished"
 		fi;
 	else
-		echo "ENABLE ADB WIRELESS"
+		echo "ENABLE ADB"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		countdown
-		adb connect 192.168.1.103
-		countdown
 		ADBRETRY
 		cd ~/machinex
 		WASHME
@@ -611,24 +629,37 @@ fi;
 
 function ADBRETRY()
 {
-adb connect 192.168.1.103
-countdown
+adb start-server
+adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
+if [[ $ONLINE == recovery ]]; then #if we are in recovery
+	echo "recovery connected"
+	adb push $OUTFOLDER.zip /external_sd
+	echo "push complete"
+else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
-	countdown
+	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
-	echo "disconnected, retrying"
+	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
-	countdown
+	adbcountdown
 	if [[ $ONLINE == device ]]; then
+		echo "wireless connected"
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
+		echo "push complete"
 	else
-		echo "push failed"
-	fi
+		echo "disconnected, retrying"
+		adb connect 192.168.1.103
+		adbcountdown
+		if [[ $ONLINE == device ]]; then
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "pushed"
+		else
+			echo "push failed"
+		fi;
+	fi;
 fi;
 }
 
@@ -681,10 +712,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
 		if [[ $repadb = "y" ]]; then
-			echo "ENABLE ADB WIRELESS"
-			countdown
-			adb connect 192.168.1.103
-			countdown
+			echo "ENABLE ADB"
 			ADBRETRY
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
@@ -704,11 +732,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "Cleanup Finished"
 		fi;
 	else
-		echo "ENABLE ADB WIRELESS"
+		echo "ENABLE ADB"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		countdown
-		adb connect 192.168.1.103
-		countdown
 		ADBRETRY
 		cd ~/machinex
 		WASHME
@@ -726,7 +751,6 @@ fi;
 function MISMATCH()
 {
 echo "Building CONFIG_SECTION_MISMATCH kernel"
-countdown
 	echo "your previous version was $PREV"
 	PRVS=$PREV-MISMATCH
 	OUTFOLDER=$PRVS
@@ -794,36 +818,47 @@ function REBUILD()
 {
 echo "REBUILDING Previous Kernel"
 echo "your previous version was $PREV"
-countdown
 
 PRVS=$PREV
 if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	echo "removing previously compiled folder and zip of the same name"
-	countdown
 	rm -rf /media/root/robcore/AIK/$PRVS
 fi;
 OUTFOLDER=$PRVS
 
 function ADBRETRY()
 {
-adb connect 192.168.1.103
-countdown
+adb start-server
+adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
+if [[ $ONLINE == recovery ]]; then #if we are in recovery
+	echo "recovery connected"
+	adb push $OUTFOLDER.zip /external_sd
+	echo "push complete"
+else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
-	countdown
+	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
-	echo "disconnected, retrying"
+	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
-	countdown
+	adbcountdown
 	if [[ $ONLINE == device ]]; then
+		echo "wireless connected"
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
+		echo "push complete"
 	else
-		echo "push failed"
-	fi
+		echo "disconnected, retrying"
+		adb connect 192.168.1.103
+		adbcountdown
+		if [[ $ONLINE == device ]]; then
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "pushed"
+		else
+			echo "push failed"
+		fi;
+	fi;
 fi;
 }
 
@@ -870,10 +905,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
 	cp ~/machinex/out/vmlinux ~/machinex/robstuff/vmlinux;
-	echo "ENABLE ADB WIRELESS"
-	countdown
-	adb connect 192.168.1.103
-	countdown
+	echo "ENABLE ADB"
 	ADBRETRY
 	cd ~/machinex
 	WASHME
@@ -890,36 +922,47 @@ function FAKEREBUILD()
 {
 echo "Rebuilding Fakeroot kernel"
 echo "your previous version was $PREV"
-countdown
 
 PRVS=$PREV
 if [ -d /media/root/robcore/AIK/$PRVS ]; then
 	echo "removing previously compiled folder and zip of the same name"
-	countdown
 	rm -rf /media/root/robcore/AIK/$PRVS
 fi;
 OUTFOLDER=$PRVS
 
 function ADBRETRY()
 {
-adb connect 192.168.1.103
-countdown
+adb start-server
+adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
-if [[ $ONLINE == device ]]; then
+if [[ $ONLINE == recovery ]]; then #if we are in recovery
+	echo "recovery connected"
+	adb push $OUTFOLDER.zip /external_sd
+	echo "push complete"
+else if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
-	countdown
+	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
-	echo "disconnected, retrying"
+	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
-	countdown
+	adbcountdown
 	if [[ $ONLINE == device ]]; then
+		echo "wireless connected"
 		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "pushed"
+		echo "push complete"
 	else
-		echo "push failed"
-	fi
+		echo "disconnected, retrying"
+		adb connect 192.168.1.103
+		adbcountdown
+		if [[ $ONLINE == device ]]; then
+			adb push $OUTFOLDER.zip /storage/extSdCard
+			echo "pushed"
+		else
+			echo "push failed"
+		fi;
+	fi;
 fi;
 }
 
@@ -963,10 +1006,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
 	cp ~/machinex/out/vmlinux ~/machinex/robstuff/vmlinux;
-	echo "ENABLE ADB WIRELESS"
-	countdown
-	adb connect 192.168.1.103
-	countdown
+	echo "ENABLE ADB"
 	ADBRETRY
 	cd ~/machinex
 	WASHME
