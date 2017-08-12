@@ -25,7 +25,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -79,6 +79,7 @@ struct ip_suspend {
 	struct mutex intellisleep_mutex;
 	unsigned int intelli_suspended;
 };
+struct wake_lock ipwlock;
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_suspend, i_suspend_data);
 
@@ -337,6 +338,9 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	u64 now;
 	s64 delta;
 
+	if (unlikely(intellinit))
+		return;
+
 	now = ktime_to_us(ktime_get());
 	last_input = now;
 	delta = (last_input - last_boost_time);
@@ -442,6 +446,7 @@ static void cycle_cpus(void)
 			      msecs_to_jiffies(START_DELAY_MS));
 
 	intellinit = false;
+	wake_unlock(&ipwlock);
 }
 
 static void intelli_suspend(struct power_suspend * h)
@@ -532,6 +537,7 @@ static int intelli_plug_start(void)
 	unsigned int cpu, ret = 0;
 	struct down_lock *dl;
 
+	wake_lock(&ipwlock);
 	intellinit = true;
 
 	intelliplug_wq = create_singlethread_workqueue("intelliplug");
@@ -576,6 +582,8 @@ err_dev:
 err_out:
 	atomic_set(&intelli_plug_active, 0);
 	__smp_mb__after_atomic();
+	intellinit = false;
+	wake_unlock(&ipwlock);
 	return ret;
 }
 
@@ -859,10 +867,14 @@ static int __init intelli_plug_init(void)
 	int rc;
 
 	rc = sysfs_create_group(kernel_kobj, &intelli_plug_attr_group);
+	if (rc)
+		return -ENOMEM;
 
 	pr_info("intelli_plug: version %d.%d\n",
 		 INTELLI_PLUG_MAJOR_VERSION,
 		 INTELLI_PLUG_MINOR_VERSION);
+
+	wake_lock_init(&ipwlock, WAKE_LOCK_SUSPEND, "intelliplug");
 
 	if (atomic_read(&intelli_plug_active) == 1)
 		intelli_plug_start();
