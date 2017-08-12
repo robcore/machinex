@@ -67,6 +67,11 @@ fi;
 
 function countdown()
 {
+	echo "3"
+	sleep 1
+	echo "2"
+	sleep 1
+	echo "1"
 	sleep 1
 }
 
@@ -79,7 +84,6 @@ read OVNAME
 OUTFOLDER=machinex-Mark$OVNAME
 if [ -d /media/root/robcore/AIK/$OUTFOLDER ]; then
 	echo "removing previously compiled folder and zip of the same name"
-	countdown
 	rm -rf /media/root/robcore/AIK/$OUTFOLDER
 fi;
 	echo "$OUTFOLDER" > /media/root/robcore/AIK/previous.txt
