@@ -876,9 +876,6 @@ static int __init intelli_plug_init(void)
 
 	wake_lock_init(&ipwlock, WAKE_LOCK_SUSPEND, "intelliplug");
 
-	if (atomic_read(&intelli_plug_active) == 1)
-		intelli_plug_start();
-
 	return 0;
 }
 
