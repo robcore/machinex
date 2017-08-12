@@ -28,7 +28,7 @@
  */
 struct module_signature {
 	enum pkey_algo		algo : 8;	/* Public-key crypto algorithm */
-	enum pkey_hash_algo	hash : 8;	/* Digest algorithm */
+	u8	hash;		/* Digest algorithm [enum hash_algo] */
 	enum pkey_id_type	id_type : 8;	/* Key identifier type */
 	u8			signer_len;	/* Length of signer's name */
 	u8			key_id_len;	/* Length of key identifier */
@@ -39,7 +39,7 @@ struct module_signature {
 /*
  * Digest the module contents.
  */
-static struct public_key_signature *mod_make_digest(enum pkey_hash_algo hash,
+static struct public_key_signature *mod_make_digest(enum hash_algo hash,
 						    const void *mod,
 						    unsigned long modlen)
 {
@@ -54,7 +54,7 @@ static struct public_key_signature *mod_make_digest(enum pkey_hash_algo hash,
 	/* Allocate the hashing algorithm we're going to need and find out how
 	 * big the hash operational data will be.
 	 */
-	tfm = crypto_alloc_shash(pkey_hash_algo_name[hash], 0, 0);
+	tfm = crypto_alloc_shash(hash_algo_name[hash], 0, 0);
 	if (IS_ERR(tfm))
 		return (PTR_ERR(tfm) == -ENOENT) ? ERR_PTR(-ENOPKG) : ERR_CAST(tfm);
 
@@ -217,7 +217,7 @@ int mod_verify_sig(const void *mod, unsigned long *_modlen)
 		return -ENOPKG;
 
 	if (ms.hash >= PKEY_HASH__LAST ||
-	    !pkey_hash_algo_name[ms.hash])
+	    !hash_algo_name[ms.hash])
 		return -ENOPKG;
 
 	key = request_asymmetric_key(sig, ms.signer_len,
