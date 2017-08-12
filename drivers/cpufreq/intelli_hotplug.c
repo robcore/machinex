@@ -884,11 +884,10 @@ static int __init intelli_plug_init(void)
 
 static void __exit intelli_plug_exit(void)
 {
-	if (atomic_read(&intelli_plug_active) == 1)
+	if (atomic_read(&intelli_plug_active) == 1) {
+		atomic_set(&intelli_plug_active, 0);
 		intelli_plug_stop();
-
-	atomic_set(&intelli_plug_active, 0);
-
+}
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
 
