@@ -215,8 +215,9 @@ static int do_one_async_hash_op(struct ahash_request *req,
 	return ret;
 }
 
-static int test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
-		     unsigned int tcount, bool use_digest)
+static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
+		       unsigned int tcount, bool use_digest,
+		       const int align_offset)
 {
 	const char *algo = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	unsigned int i, j, k, temp;
@@ -247,10 +248,15 @@ static int test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 		if (template[i].np)
 			continue;
 
+		ret = -EINVAL;
+		if (WARN_ON(align_offset + template[i].psize > PAGE_SIZE))
+			goto out;
+
 		j++;
 		memset(result, 0, 64);
 
 		hash_buff = xbuf[0];
+		hash_buff += align_offset;
 
 		memcpy(hash_buff, template[i].plaintext, template[i].psize);
 		sg_init_one(&sg[0], hash_buff, template[i].psize);
@@ -312,6 +318,10 @@ static int test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 
 	j = 0;
 	for (i = 0; i < tcount; i++) {
+		/* alignment tests are only done with continuous buffers */
+		if (align_offset != 0)
+			break;
+
 		if (template[i].np) {
 			j++;
 			memset(result, 0, 64);
@@ -435,15 +445,16 @@ static int test_aead(struct crypto_aead *tfm, int enc,
 		if (!template[i].np) {
 			j++;
 
-			/* some tepmplates have no input data but they will
+			/* some templates have no input data but they will
 			 * touch input
 			 */
 			input = xbuf[0];
+			input += align_offset;
 			assoc = axbuf[0];
 
 			ret = -EINVAL;
-			if (WARN_ON(template[i].ilen > PAGE_SIZE ||
-				    template[i].alen > PAGE_SIZE))
+			if (WARN_ON(align_offset + template[i].ilen >
+				    PAGE_SIZE || template[i].alen > PAGE_SIZE))
 				goto out;
 
 			memcpy(input, template[i].input, template[i].ilen);
@@ -537,6 +548,10 @@ static int test_aead(struct crypto_aead *tfm, int enc,
 	}
 
 	for (i = 0, j = 0; i < tcount; i++) {
+		/* alignment tests are only done with continuous buffers */
+		if (align_offset != 0)
+			break;
+
 		if (template[i].np) {
 			j++;
 
@@ -839,10 +854,12 @@ static int test_skcipher(struct crypto_ablkcipher *tfm, int enc,
 			j++;
 
 			ret = -EINVAL;
-			if (WARN_ON(template[i].ilen > PAGE_SIZE))
+			if (WARN_ON(align_offset + template[i].ilen >
+				    PAGE_SIZE))
 				goto out;
 
 			data = xbuf[0];
+			data += align_offset;
 			memcpy(data, template[i].input, template[i].ilen);
 
 			crypto_ablkcipher_clear_flags(tfm, ~0);
@@ -900,6 +917,9 @@ static int test_skcipher(struct crypto_ablkcipher *tfm, int enc,
 
 	j = 0;
 	for (i = 0; i < tcount; i++) {
+		/* alignment tests are only done with continuous buffers */
+		if (align_offset != 0)
+			break;
 
 		if (template[i].iv)
 			memcpy(iv, template[i].iv, MAX_IVLEN);
@@ -2907,6 +2927,35 @@ static const struct alg_test_desc alg_test_descs[] = {
 	}
 };
 
+static bool alg_test_descs_checked;
+
+static void alg_test_descs_check_order(void)
+{
+	int i;
+
+	/* only check once */
+	if (alg_test_descs_checked)
+		return;
+
+	alg_test_descs_checked = true;
+
+	for (i = 1; i < ARRAY_SIZE(alg_test_descs); i++) {
+		int diff = strcmp(alg_test_descs[i - 1].alg,
+				  alg_test_descs[i].alg);
+
+		if (WARN_ON(diff > 0)) {
+			pr_warn("testmgr: alg_test_descs entries in wrong order: '%s' before '%s'\n",
+				alg_test_descs[i - 1].alg,
+				alg_test_descs[i].alg);
+		}
+
+		if (WARN_ON(diff == 0)) {
+			pr_warn("testmgr: duplicate alg_test_descs entry: '%s'\n",
+				alg_test_descs[i].alg);
+		}
+	}
+}
+
 static int alg_find_test(const char *alg)
 {
 	int start = 0;
@@ -2937,6 +2986,8 @@ int alg_test(const char *driver, const char *alg, u32 type, u32 mask)
 	int i;
 	int j;
 	int rc = 0;
+
+	alg_test_descs_check_order();
 
 	if ((type & CRYPTO_ALG_TYPE_MASK) == CRYPTO_ALG_TYPE_CIPHER) {
 		char nalg[CRYPTO_MAX_ALG_NAME];

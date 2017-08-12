@@ -354,11 +354,9 @@ static void raid10_end_read_request(struct bio *bio, int error)
 		 * than fail the last device.  Here we redefine
 		 * "uptodate" to mean "Don't want to retry"
 		 */
-		unsigned long flags;
-		spin_lock_irqsave(&conf->device_lock, flags);
-		if (!enough(conf, rdev->raid_disk))
+		if (!_enough(conf, test_bit(R10BIO_Previous, &r10_bio->state),
+			     rdev->raid_disk))
 			uptodate = 1;
-		spin_unlock_irqrestore(&conf->device_lock, flags);
 	}
 	if (uptodate) {
 		raid_end_bio_io(r10_bio);
@@ -1544,9 +1542,18 @@ static void status(struct seq_file *seq, struct mddev *mddev)
  * Don't consider the device numbered 'ignore'
  * as we might be about to remove it.
  */
-static int _enough(struct r10conf *conf, struct geom *geo, int ignore)
+static int _enough(struct r10conf *conf, int previous, int ignore)
 {
 	int first = 0;
+	int has_enough = 0;
+	int disks, ncopies;
+	if (previous) {
+		disks = conf->prev.raid_disks;
+		ncopies = conf->prev.near_copies;
+	} else {
+		disks = conf->geo.raid_disks;
+		ncopies = conf->geo.near_copies;
+	}
 
 	do {
 		int n = conf->copies;
@@ -1582,18 +1589,18 @@ static void error(struct mddev *mddev, struct md_rdev *rdev)
 	 * next level up know.
 	 * else mark the drive as failed
 	 */
+	spin_lock_irqsave(&conf->device_lock, flags);
 	if (test_bit(In_sync, &rdev->flags)
-	    && !enough(conf, rdev->raid_disk))
+	    && !enough(conf, rdev->raid_disk)) {
 		/*
 		 * Don't fail the drive, just return an IO error.
 		 */
-		return;
-	if (test_and_clear_bit(In_sync, &rdev->flags)) {
-		unsigned long flags;
-		spin_lock_irqsave(&conf->device_lock, flags);
-		mddev->degraded++;
 		spin_unlock_irqrestore(&conf->device_lock, flags);
-		/*
+		return;
+	}
+	if (test_and_clear_bit(In_sync, &rdev->flags)) {
+		mddev->degraded++;
+			/*
 		 * if recovery is running, make sure it aborts.
 		 */
 		set_bit(MD_RECOVERY_INTR, &mddev->recovery);
@@ -1705,7 +1712,7 @@ static int raid10_add_disk(struct mddev *mddev, struct md_rdev *rdev)
 		 * very different from resync
 		 */
 		return -EBUSY;
-	if (rdev->saved_raid_disk < 0 && !_enough(conf, &conf->prev, -1))
+	if (rdev->saved_raid_disk < 0 && !_enough(conf, 1, -1))
 		return -EINVAL;
 
 	if (rdev->raid_disk >= 0)
