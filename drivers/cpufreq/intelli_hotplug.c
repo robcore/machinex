@@ -279,8 +279,6 @@ static void cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (cpu_is_offline(cpu))
 				continue;
-			if (!is_cpu_allowed(cpu))
-				break;
 			if (check_down_lock(cpu))
 				break;
 			l_nr_threshold =
