@@ -3,8 +3,8 @@
 
 static struct {
 	struct fault_attr attr;
-	u32 ignore_gfp_wait;
-	int cache_filter;
+	bool ignore_gfp_wait;
+	bool cache_filter;
 	u32 size;
 } failslab = {
 	.attr = FAULT_ATTR_INITIALIZER,

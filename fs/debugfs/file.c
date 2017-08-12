@@ -414,9 +414,9 @@ static int debugfs_atomic_t_get(void *data, u64 *val)
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(fops_atomic_t, debugfs_atomic_t_get,
-			debugfs_atomic_t_set, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(fops_atomic_t_ro, debugfs_atomic_t_get, NULL, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(fops_atomic_t_wo, NULL, debugfs_atomic_t_set, "%llu\n");
+			debugfs_atomic_t_set, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(fops_atomic_t_ro, debugfs_atomic_t_get, NULL, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(fops_atomic_t_wo, NULL, debugfs_atomic_t_set, "%lld\n");
 
 /**
  * debugfs_create_atomic_t - create a debugfs file that is used to read and
@@ -449,7 +449,7 @@ static ssize_t read_file_bool(struct file *file, char __user *user_buf,
 			      size_t count, loff_t *ppos)
 {
 	char buf[3];
-	u32 *val = file->private_data;
+	bool *val = file->private_data;
 
 	if (*val)
 		buf[0] = 'Y';
@@ -466,12 +466,13 @@ static ssize_t write_file_bool(struct file *file, const char __user *user_buf,
 	char buf[32];
 	size_t buf_size;
 	bool bv;
-	u32 *val = file->private_data;
+	bool *val = file->private_data;
 
 	buf_size = min(count, (sizeof(buf)-1));
 	if (copy_from_user(buf, user_buf, buf_size))
 		return -EFAULT;
 
+	buf[buf_size] = '\0';
 	if (strtobool(buf, &bv) == 0)
 		*val = bv;
 
@@ -510,7 +511,7 @@ static const struct file_operations fops_bool = {
  * code.
  */
 struct dentry *debugfs_create_bool(const char *name, umode_t mode,
-				   struct dentry *parent, u32 *value)
+				   struct dentry *parent, bool *value)
 {
 	return debugfs_create_file(name, mode, parent, value, &fops_bool);
 }
