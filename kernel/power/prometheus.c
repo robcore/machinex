@@ -136,7 +136,7 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
 				return;
 			} else {
-				if (unlikely(booting)
+				if (unlikely(booting))
 					pr_info("[PROMETHEUS] Skipping Initial System Suspend. Booting.\n");
 				else
 					pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
