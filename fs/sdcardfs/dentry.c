@@ -127,7 +127,7 @@ static void sdcardfs_d_release(struct dentry *dentry)
 static int sdcardfs_hash_ci(const struct dentry *dentry, 
 				struct qstr *qstr)
 {
-	/* 
+	/*
 	 * This function is copy of vfat_hashi.
 	 * FIXME Should we support national language?
 	 *       Refer to vfat_hashi()
@@ -139,7 +139,7 @@ static int sdcardfs_hash_ci(const struct dentry *dentry,
 
 	name = qstr->name;
 	//len = vfat_striptail_len(qstr);
-	len = qstr->len; 
+	len = qstr->len;
 
 	hash = init_name_hash();
 	while (len--)
@@ -153,12 +153,12 @@ static int sdcardfs_hash_ci(const struct dentry *dentry,
 /*
  * Case insensitive compare of two vfat names.
  */
-static int sdcardfs_cmp_ci(const struct dentry *parent, 
-		const struct dentry *dentry, unsigned int len,
-		const char *str, const struct qstr *name)
+static int sdcardfs_cmp_ci(const struct dentry *parent,
+		const struct dentry *dentry,
+		unsigned int len, const char *str, const struct qstr *name)
 {
 	/* This function is copy of vfat_cmpi */
-	// FIXME Should we support national language? 
+	// FIXME Should we support national language?
 	//struct nls_table *t = MSDOS_SB(parent->d_sb)->nls_io;
 	//unsigned int alen, blen;
 
@@ -173,7 +173,7 @@ static int sdcardfs_cmp_ci(const struct dentry *parent,
 	*/
 	if (name->len == len) {
 		if (strncasecmp(name->name, str, len) == 0)
-			return 0; 
+			return 0;
 	}
 	return 1;
 }
