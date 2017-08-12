@@ -1587,6 +1587,11 @@ static struct endio_hook *thin_hook_bio(struct thin_c *tc, struct bio *bio)
 	return h;
 }
 
+static bool is_factor(sector_t block_size, uint32_t n)
+{
+	return !sector_div(block_size, n);
+}
+
 /*
  * Non-blocking function called from the thin target's map function.
  */
