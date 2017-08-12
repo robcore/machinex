@@ -888,7 +888,6 @@ static void __exit intelli_plug_exit(void)
 		intelli_plug_stop();
 
 	atomic_set(&intelli_plug_active, 0);
-	__smp_mb__after_atomic();
 
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
