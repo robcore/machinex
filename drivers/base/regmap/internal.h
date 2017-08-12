@@ -120,7 +120,7 @@ struct regmap {
 	/* if set, only the cache is modified not the HW */
 	bool cache_only;
 	/* if set, only the HW is modified not the cache */
-	u32 cache_bypass;
+	bool cache_bypass;
 	/* if set, remember to free reg_defaults_raw */
 	bool cache_free;
 
