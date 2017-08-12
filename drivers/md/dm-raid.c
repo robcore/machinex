@@ -1155,6 +1155,31 @@ static int raid_map(struct dm_target *ti, struct bio *bio)
 	return DM_MAPIO_SUBMITTED;
 }
 
+static const char *decipher_sync_action(struct mddev *mddev)
+{
+	if (test_bit(MD_RECOVERY_FROZEN, &mddev->recovery))
+		return "frozen";
+
+	if (test_bit(MD_RECOVERY_RUNNING, &mddev->recovery) ||
+	    (!mddev->ro && test_bit(MD_RECOVERY_NEEDED, &mddev->recovery))) {
+		if (test_bit(MD_RECOVERY_RESHAPE, &mddev->recovery))
+			return "reshape";
+
+		if (test_bit(MD_RECOVERY_SYNC, &mddev->recovery)) {
+			if (!test_bit(MD_RECOVERY_REQUESTED, &mddev->recovery))
+				return "resync";
+			else if (test_bit(MD_RECOVERY_CHECK, &mddev->recovery))
+				return "check";
+			return "repair";
+		}
+
+		if (test_bit(MD_RECOVERY_RECOVER, &mddev->recovery))
+			return "recover";
+	}
+
+	return "idle";
+}
+
 static void raid_status(struct dm_target *ti, status_type_t type,
 			char *result, unsigned maxlen)
 {
@@ -1174,8 +1199,18 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 			sync = rs->md.recovery_cp;
 
 		if (sync >= rs->md.resync_max_sectors) {
+			/*
+			 * Sync complete.
+			 */
 			array_in_sync = 1;
 			sync = rs->md.resync_max_sectors;
+		} else if (test_bit(MD_RECOVERY_REQUESTED, &rs->md.recovery)) {
+			/*
+			 * If "check" or "repair" is occurring, the array has
+			 * undergone and initial sync and the health characters
+			 * should not be 'a' anymore.
+			 */
+			array_in_sync = 1;
 		} else {
 			/*
 			 * The array may be doing an initial sync, or it may
@@ -1187,6 +1222,7 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 				if (!test_bit(In_sync, &rs->dev[i].rdev.flags))
 					array_in_sync = 1;
 		}
+
 		/*
 		 * Status characters:
 		 *  'D' = Dead/Failed device
@@ -1215,6 +1251,21 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 		       (unsigned long long) sync,
 		       (unsigned long long) rs->md.resync_max_sectors);
 
+		/*
+		 * Sync action:
+		 *   See Documentation/device-mapper/dm-raid.c for
+		 *   information on each of these states.
+		 */
+		DMEMIT(" %s", decipher_sync_action(&rs->md));
+
+		/*
+		 * resync_mismatches/mismatch_cnt
+		 *   This field shows the number of discrepancies found when
+		 *   performing a "check" of the array.
+		 */
+		DMEMIT(" %llu",
+		       (unsigned long long)
+		       atomic64_read(&rs->md.resync_mismatches));
 		break;
 	case STATUSTYPE_TABLE:
 		/* The string you would use to construct this array */
@@ -1293,7 +1344,62 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 	}
 }
 
-static int raid_iterate_devices(struct dm_target *ti, iterate_devices_callout_fn fn, void *data)
+static int raid_message(struct dm_target *ti, unsigned argc, char **argv)
+{
+	struct raid_set *rs = ti->private;
+	struct mddev *mddev = &rs->md;
+
+	if (!strcasecmp(argv[0], "reshape")) {
+		DMERR("Reshape not supported.");
+		return -EINVAL;
+	}
+
+	if (!mddev->pers || !mddev->pers->sync_request)
+		return -EINVAL;
+
+	if (!strcasecmp(argv[0], "frozen"))
+		set_bit(MD_RECOVERY_FROZEN, &mddev->recovery);
+	else
+		clear_bit(MD_RECOVERY_FROZEN, &mddev->recovery);
+
+	if (!strcasecmp(argv[0], "idle") || !strcasecmp(argv[0], "frozen")) {
+		if (mddev->sync_thread) {
+			set_bit(MD_RECOVERY_INTR, &mddev->recovery);
+			md_reap_sync_thread(mddev);
+		}
+	} else if (test_bit(MD_RECOVERY_RUNNING, &mddev->recovery) ||
+		   test_bit(MD_RECOVERY_NEEDED, &mddev->recovery))
+		return -EBUSY;
+	else if (!strcasecmp(argv[0], "resync"))
+		set_bit(MD_RECOVERY_NEEDED, &mddev->recovery);
+	else if (!strcasecmp(argv[0], "recover")) {
+		set_bit(MD_RECOVERY_RECOVER, &mddev->recovery);
+		set_bit(MD_RECOVERY_NEEDED, &mddev->recovery);
+	} else {
+		if (!strcasecmp(argv[0], "check"))
+			set_bit(MD_RECOVERY_CHECK, &mddev->recovery);
+		else if (!!strcasecmp(argv[0], "repair"))
+			return -EINVAL;
+		set_bit(MD_RECOVERY_REQUESTED, &mddev->recovery);
+		set_bit(MD_RECOVERY_SYNC, &mddev->recovery);
+	}
+	if (mddev->ro == 2) {
+		/* A write to sync_action is enough to justify
+		 * canceling read-auto mode
+		 */
+		mddev->ro = 0;
+		if (!mddev->suspended)
+			md_wakeup_thread(mddev->sync_thread);
+	}
+	set_bit(MD_RECOVERY_NEEDED, &mddev->recovery);
+	if (!mddev->suspended)
+		md_wakeup_thread(mddev->thread);
+
+	return 0;
+}
+
+static int raid_iterate_devices(struct dm_target *ti,
+				iterate_devices_callout_fn fn, void *data)
 {
 	struct raid_set *rs = ti->private;
 	unsigned i;
