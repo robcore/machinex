@@ -92,6 +92,29 @@ int kernfs_name(struct kernfs_node *kn, char *buf, size_t buflen)
 }
 
 /**
+ * kernfs_path_len - determine the length of the full path of a given node
+ * @kn: kernfs_node of interest
+ *
+ * The returned length doesn't include the space for the terminating '\0'.
+ */
+size_t kernfs_path_len(struct kernfs_node *kn)
+{
+	size_t len = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&kernfs_rename_lock, flags);
+
+	do {
+		len += strlen(kn->name) + 1;
+		kn = kn->parent;
+	} while (kn && kn->parent);
+
+	spin_unlock_irqrestore(&kernfs_rename_lock, flags);
+
+	return len;
+}
+
+/**
  * kernfs_path - build full path of a given node
  * @kn: kernfs_node of interest
  * @buf: buffer to copy @kn's name into
@@ -201,10 +224,14 @@ static unsigned int kernfs_name_hash(const char *name, const void *ns)
 static int kernfs_name_compare(unsigned int hash, const char *name,
 			       const void *ns, const struct kernfs_node *kn)
 {
-	if (hash != kn->hash)
-		return hash - kn->hash;
-	if (ns != kn->ns)
-		return ns - kn->ns;
+	if (hash < kn->hash)
+		return -1;
+	if (hash > kn->hash)
+		return 1;
+	if (ns < kn->ns)
+		return -1;
+	if (ns > kn->ns)
+		return 1;
 	return strcmp(name, kn->name);
 }
 
@@ -407,8 +434,9 @@ void kernfs_put(struct kernfs_node *kn)
 
 	if (kernfs_type(kn) == KERNFS_LINK)
 		kernfs_put(kn->symlink.target_kn);
-	if (!(kn->flags & KERNFS_STATIC_NAME))
-		kfree(kn->name);
+
+	kfree_const(kn->name);
+
 	if (kn->iattr) {
 		if (kn->iattr->ia_secdata)
 			security_release_secctx(kn->iattr->ia_secdata,
@@ -463,21 +491,10 @@ static int kernfs_dop_revalidate(struct dentry *dentry, unsigned int flags)
 		goto out_bad;
 
 	mutex_unlock(&kernfs_mutex);
-out_valid:
 	return 1;
 out_bad:
 	mutex_unlock(&kernfs_mutex);
 out_bad_unlocked:
-	/*
-	 * @dentry doesn't match the underlying kernfs node, drop the
-	 * dentry and force lookup.  If we have submounts we must allow the
-	 * vfs caches to lie about the state of the filesystem to prevent
-	 * leaks and other nasty things, so use check_submounts_and_drop()
-	 * instead of d_drop().
-	 */
-	if (check_submounts_and_drop(dentry) != 0)
-		goto out_valid;
-
 	return 0;
 }
 
@@ -513,21 +530,25 @@ static struct kernfs_node *__kernfs_new_node(struct kernfs_root *root,
 					     const char *name, umode_t mode,
 					     unsigned flags)
 {
-	char *dup_name = NULL;
 	struct kernfs_node *kn;
 	int ret;
 
-	if (!(flags & KERNFS_STATIC_NAME)) {
-		name = dup_name = kstrdup(name, GFP_KERNEL);
-		if (!name)
-			return NULL;
-	}
+	name = kstrdup_const(name, GFP_KERNEL);
+	if (!name)
+		return NULL;
 
 	kn = kmem_cache_zalloc(kernfs_node_cache, GFP_KERNEL);
 	if (!kn)
 		goto err_out1;
 
-	ret = ida_simple_get(&root->ino_ida, 1, 0, GFP_KERNEL);
+	/*
+	 * If the ino of the sysfs entry created for a kmem cache gets
+	 * allocated from an ida layer, which is accounted to the memcg that
+	 * owns the cache, the memcg will get pinned forever. So do not account
+	 * ino ida allocations.
+	 */
+	ret = ida_simple_get(&root->ino_ida, 1, 0,
+			     GFP_KERNEL);
 	if (ret < 0)
 		goto err_out2;
 	kn->ino = ret;
@@ -545,7 +566,7 @@ static struct kernfs_node *__kernfs_new_node(struct kernfs_root *root,
  err_out2:
 	kmem_cache_free(kernfs_node_cache, kn);
  err_out1:
-	kfree(dup_name);
+	kfree_const(name);
 	return NULL;
 }
 
@@ -594,6 +615,9 @@ int kernfs_add_one(struct kernfs_node *kn)
 		goto out_unlock;
 
 	ret = -ENOENT;
+	if (parent->flags & KERNFS_EMPTY_DIR)
+		goto out_unlock;
+
 	if ((parent->flags & KERNFS_ACTIVATED) && !kernfs_active(parent))
 		goto out_unlock;
 
@@ -1256,7 +1280,8 @@ int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
 	mutex_lock(&kernfs_mutex);
 
 	error = -ENOENT;
-	if (!kernfs_active(kn) || !kernfs_active(new_parent))
+	if (!kernfs_active(kn) || !kernfs_active(new_parent) ||
+	    (new_parent->flags & KERNFS_EMPTY_DIR))
 		goto out;
 
 	error = 0;
@@ -1271,7 +1296,7 @@ int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
 	/* rename kernfs_node */
 	if (strcmp(kn->name, new_name) != 0) {
 		error = -ENOMEM;
-		new_name = kstrdup(new_name, GFP_KERNEL);
+		new_name = kstrdup_const(new_name, GFP_KERNEL);
 		if (!new_name)
 			goto out;
 	} else {
@@ -1292,9 +1317,7 @@ int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
 
 	kn->ns = new_ns;
 	if (new_name) {
-		if (!(kn->flags & KERNFS_STATIC_NAME))
-			old_name = kn->name;
-		kn->flags &= ~KERNFS_STATIC_NAME;
+		old_name = kn->name;
 		kn->name = new_name;
 	}
 
@@ -1304,7 +1327,7 @@ int kernfs_rename_ns(struct kernfs_node *kn, struct kernfs_node *new_parent,
 	kernfs_link_sibling(kn);
 
 	kernfs_put(old_parent);
-	kfree(old_name);
+	kfree_const(old_name);
 
 	error = 0;
  out:
