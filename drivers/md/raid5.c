@@ -2514,6 +2514,8 @@ handle_failed_sync(struct r5conf *conf, struct stripe_head *sh,
 	int i;
 
 	clear_bit(STRIPE_SYNCING, &sh->state);
+	if (test_and_clear_bit(R5_Overlap, &sh->dev[sh->pd_idx].flags))
+		wake_up(&conf->wait_for_overlap);
 	s->syncing = 0;
 	s->replacing = 0;
 	/* There is nothing more to do for sync/check/repair.
@@ -2687,6 +2689,7 @@ static void handle_stripe_clean_event(struct r5conf *conf,
 {
 	int i;
 	struct r5dev *dev;
+	int discard_pending = 0;
 
 	for (i = disks; i--; )
 		if (sh->dev[i].written) {
@@ -3536,6 +3539,8 @@ static void handle_stripe(struct stripe_head *sh)
 	    test_bit(STRIPE_INSYNC, &sh->state)) {
 		md_done_sync(conf->mddev, STRIPE_SECTORS, 1);
 		clear_bit(STRIPE_SYNCING, &sh->state);
+		if (test_and_clear_bit(R5_Overlap, &sh->dev[sh->pd_idx].flags))
+			wake_up(&conf->wait_for_overlap);
 	}
 
 	/* If the failed drives are just a ReadError, then we might need
@@ -4026,6 +4031,13 @@ static void make_discard_request(struct mddev *mddev, struct bio *bi)
 		sh = get_active_stripe(conf, logical_sector, 0, 0, 0);
 		prepare_to_wait(&conf->wait_for_overlap, &w,
 				TASK_UNINTERRUPTIBLE);
+		set_bit(R5_Overlap, &sh->dev[sh->pd_idx].flags);
+		if (test_bit(STRIPE_SYNCING, &sh->state)) {
+			release_stripe(sh);
+			schedule();
+			goto again;
+		}
+		clear_bit(R5_Overlap, &sh->dev[sh->pd_idx].flags);
 		spin_lock_irq(&sh->stripe_lock);
 		for (d = 0; d < conf->raid_disks; d++) {
 			if (d == sh->pd_idx || d == sh->qd_idx)
@@ -4038,6 +4050,7 @@ static void make_discard_request(struct mddev *mddev, struct bio *bi)
 				goto again;
 			}
 		}
+		set_bit(STRIPE_DISCARD, &sh->state);
 		finish_wait(&conf->wait_for_overlap, &w);
 		for (d = 0; d < conf->raid_disks; d++) {
 			if (d == sh->pd_idx || d == sh->qd_idx)
