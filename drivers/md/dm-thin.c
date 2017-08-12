@@ -731,6 +731,17 @@ static void remap_to_origin(struct thin_c *tc, struct bio *bio)
 	bio->bi_bdev = tc->origin_dev->bdev;
 }
 
+static void inc_all_io_entry(struct pool *pool, struct bio *bio)
+{
+	struct dm_thin_endio_hook *h;
+
+	if (bio->bi_rw & REQ_DISCARD)
+		return;
+
+	h = dm_get_mapinfo(bio)->ptr;
+	h->all_io_entry = dm_deferred_entry_inc(pool->all_io_ds);
+}
+
 static void issue(struct thin_c *tc, struct bio *bio)
 {
 	struct pool *pool = tc->pool;
@@ -1042,6 +1053,7 @@ static void schedule_copy(struct thin_c *tc, dm_block_t virt_block,
 		h->overwrite_mapping = m;
 		m->bio = bio;
 		save_and_set_endio(bio, &m->saved_bi_end_io, overwrite_endio);
+		inc_all_io_entry(pool, bio);
 		remap_and_issue(tc, bio, data_dest);
 	} else {
 		struct dm_io_region from, to;
@@ -1110,6 +1122,7 @@ static void schedule_zero(struct thin_c *tc, dm_block_t virt_block,
 		h->overwrite_mapping = m;
 		m->bio = bio;
 		save_and_set_endio(bio, &m->saved_bi_end_io, overwrite_endio);
+		inc_all_io_entry(pool, bio);
 		remap_and_issue(tc, bio, data_block);
 	} else {
 		int r;
@@ -1350,8 +1363,9 @@ static void process_shared_bio(struct thin_c *tc, struct bio *bio,
 		struct endio_hook *h = dm_get_mapinfo(bio)->ptr;
 
 		h->shared_read_entry = dm_deferred_entry_inc(pool->shared_read_ds);
-
+		inc_all_io_entry(pool, bio);
 		cell_defer_except(tc, cell);
+
 		remap_and_issue(tc, bio, lookup_result->block);
 	}
 }
@@ -1420,26 +1434,22 @@ static void process_bio(struct thin_c *tc, struct bio *bio)
 	r = dm_thin_find_block(tc->td, block, 1, &lookup_result);
 	switch (r) {
 	case 0:
-		/*
-		 * We can release this cell now.  This thread is the only
-		 * one that puts bios into a cell, and we know there were
-		 * no preceding bios.
-		 */
-		/*
-		 * TODO: this will probably have to change when discard goes
-		 * back in.
-		 */
-		cell_defer_except(tc, cell);
-
-		if (lookup_result.shared)
+		if (lookup_result.shared) {
 			process_shared_bio(tc, bio, block, &lookup_result);
-		else
+			cell_defer_except(tc, cell);
+		} else {
+			inc_all_io_entry(tc->pool, bio);
+			cell_defer_except(tc, cell);
+
 			remap_and_issue(tc, bio, lookup_result.block);
+		}
 		break;
 
 	case -ENODATA:
 		if (bio_data_dir(bio) == READ && tc->origin_dev) {
+			inc_all_io_entry(tc->pool, bio);
 			cell_defer_except(tc, cell);
+
 			remap_to_origin_and_issue(tc, bio);
 		} else
 			provision_block(tc, bio, block, cell);
@@ -1572,7 +1582,7 @@ static struct endio_hook *thin_hook_bio(struct thin_c *tc, struct bio *bio)
 
 	h->tc = tc;
 	h->shared_read_entry = NULL;
-	h->all_io_entry = bio->bi_rw & REQ_DISCARD ? NULL : dm_deferred_entry_inc(pool->all_io_ds);
+	h->all_io_entry = NULL;
 	h->overwrite_mapping = NULL;
 
 	return h;
@@ -1588,6 +1598,8 @@ static int thin_bio_map(struct dm_target *ti, struct bio *bio)
 	dm_block_t block = get_bio_block(tc, bio);
 	struct dm_thin_device *td = tc->td;
 	struct dm_thin_lookup_result result;
+	struct dm_bio_prison_cell *cell1, *cell2;
+	struct dm_cell_key key;
 
 	map_context->ptr = thin_hook_bio(tc, bio);
 	if (bio->bi_rw & (REQ_DISCARD | REQ_FLUSH | REQ_FUA)) {
@@ -1618,12 +1630,25 @@ static int thin_bio_map(struct dm_target *ti, struct bio *bio)
 			 * shared flag will be set in their case.
 			 */
 			thin_defer_bio(tc, bio);
-			r = DM_MAPIO_SUBMITTED;
-		} else {
-			remap(tc, bio, result.block);
-			r = DM_MAPIO_REMAPPED;
+			return DM_MAPIO_SUBMITTED;
 		}
-		break;
+
+		build_virtual_key(tc->td, block, &key);
+		if (dm_bio_detain(tc->pool->prison, &key, bio, &cell1))
+			return DM_MAPIO_SUBMITTED;
+
+		build_data_key(tc->td, result.block, &key);
+		if (dm_bio_detain(tc->pool->prison, &key, bio, &cell2)) {
+			cell_defer_except(tc, cell1);
+			return DM_MAPIO_SUBMITTED;
+		}
+
+		inc_all_io_entry(tc->pool, bio);
+		cell_defer_except(tc, cell2);
+		cell_defer_except(tc, cell1);
+
+		remap(tc, bio, result.block);
+		return DM_MAPIO_REMAPPED;
 
 	case -ENODATA:
 		/*
