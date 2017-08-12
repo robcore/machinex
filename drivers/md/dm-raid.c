@@ -1264,6 +1264,7 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 		 *   performing a "check" of the array.
 		 */
 		DMEMIT(" %llu",
+		       (strcmp(rs->md.last_sync_action, "check")) ? 0 :
 		       (unsigned long long)
 		       atomic64_read(&rs->md.resync_mismatches));
 		break;
