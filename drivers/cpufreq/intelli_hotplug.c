@@ -477,13 +477,6 @@ static void intelli_resume(struct power_suspend * h)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
 		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
-
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		if (is_cpu_allowed(cpu))
-			apply_down_lock(cpu);
-	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 
 }
