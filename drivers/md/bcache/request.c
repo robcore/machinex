@@ -769,10 +769,14 @@ static void bio_complete(struct search *s)
 static void do_bio_hook(struct search *s)
 {
 	struct bio *bio = &s->bio.bio;
-	memcpy(bio, s->orig_bio, sizeof(struct bio));
 
+	bio_init(bio);
+	bio->bi_io_vec		= s->bv;
+	bio->bi_max_vecs	= BIO_MAX_PAGES;
+	__bio_clone(bio, s->orig_bio);
 	bio->bi_end_io		= request_endio;
 	bio->bi_private		= &s->cl;
+
 	atomic_set(&bio->bi_cnt, 3);
 }
 
@@ -784,9 +788,6 @@ static void search_free(struct closure *cl)
 	if (s->iop.bio)
 		bio_put(s->iop.bio);
 
-	if (s->unaligned_bvec)
-		mempool_free(s->bio.bio.bi_io_vec, s->d->unaligned_bvec);
-
 	closure_debug_destroy(cl);
 	mempool_free(s, s->d->c->search);
 }
@@ -794,7 +795,6 @@ static void search_free(struct closure *cl)
 static struct search *search_alloc(struct bio *bio, struct bcache_device *d)
 {
 	struct search *s;
-	struct bio_vec *bv;
 
 	s = mempool_alloc(d->c->search, GFP_NOIO);
 	memset(s, 0, offsetof(struct search, iop.insert_keys));
