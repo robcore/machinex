@@ -565,8 +565,8 @@ static int intelli_plug_start(void)
 
 	register_power_suspend(&intelli_suspend_data);
 
-	INIT_WORK(&up_down_work, cpu_up_down_work);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
+	INIT_WORK(&up_down_work, cpu_up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
