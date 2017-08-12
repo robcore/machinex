@@ -1800,6 +1800,9 @@ static const struct alg_test_desc alg_test_descs[] = {
 			}
 		}
 	}, {
+		.alg = "compress_null",
+		.test = alg_test_null,
+	}, {
 		.alg = "crc32c",
 		.test = alg_test_crc32c,
 		.fips_allowed = 1,
@@ -1989,6 +1992,9 @@ static const struct alg_test_desc alg_test_descs[] = {
 			}
 		}
 	}, {
+		.alg = "digest_null",
+		.test = alg_test_null,
+	}, {
 		.alg = "ecb(__aes-aesni)",
 		.test = alg_test_null,
 		.fips_allowed = 1,
@@ -2110,6 +2116,9 @@ static const struct alg_test_desc alg_test_descs[] = {
 				}
 			}
 		}
+	}, {
+		.alg = "ecb(cipher_null)",
+		.test = alg_test_null,
 	}, {
 		.alg = "ecb(des)",
 		.test = alg_test_skcipher,
@@ -2592,8 +2601,6 @@ static const struct alg_test_desc alg_test_descs[] = {
 			}
 		}
 	}, {
-
-
 		.alg = "rfc4309(ccm(aes))",
 		.test = alg_test_aead,
 		.fips_allowed = 1,
@@ -2607,6 +2614,21 @@ static const struct alg_test_desc alg_test_descs[] = {
 					.vecs = aes_ccm_rfc4309_dec_tv_template,
 					.count = AES_CCM_4309_DEC_TEST_VECTORS
 				}
+			}
+		}
+	}, {
+		.alg = "rfc4543(gcm(aes))",
+		.test = alg_test_aead,
+		.suite = {
+			.aead = {
+				.enc = {
+					.vecs = aes_gcm_rfc4543_enc_tv_template,
+					.count = AES_GCM_4543_ENC_TEST_VECTORS
+				},
+				.dec = {
+					.vecs = aes_gcm_rfc4543_dec_tv_template,
+					.count = AES_GCM_4543_DEC_TEST_VECTORS
+				},
 			}
 		}
 	}, {
