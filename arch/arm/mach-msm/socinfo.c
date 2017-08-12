@@ -52,6 +52,7 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_LIQUID] = "Liquid",
 	[HW_PLATFORM_DRAGON] = "Dragon",
 	[HW_PLATFORM_QRD] = "QRD",
+	[HW_PLATFORM_INVALID] = "Invalid",
 };
 
 enum {
