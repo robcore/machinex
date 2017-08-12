@@ -602,6 +602,7 @@ int dm_bm_flush_and_unlock(struct dm_block_manager *bm,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(dm_bm_flush_and_unlock);
 
 u32 dm_bm_checksum(const void *data, size_t len, u32 init_xor)
 {

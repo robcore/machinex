@@ -66,6 +66,17 @@ struct dm_deferred_entry *dm_deferred_entry_inc(struct dm_deferred_set *ds);
 void dm_deferred_entry_dec(struct dm_deferred_entry *entry, struct list_head *head);
 int dm_deferred_set_add_work(struct dm_deferred_set *ds, struct list_head *work);
 
+/*
+ * Creates, or retrieves a cell for the given key.
+ *
+ * Returns 1 if pre-existing cell returned, zero if new cell created using
+ * @cell_prealloc.
+ */
+int dm_get_cell(struct dm_bio_prison *prison,
+		struct dm_cell_key *key,
+		struct dm_bio_prison_cell *cell_prealloc,
+		struct dm_bio_prison_cell **cell_result);
+
 /*----------------------------------------------------------------*/
 
 #endif
