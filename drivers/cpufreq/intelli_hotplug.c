@@ -228,6 +228,7 @@ static void update_per_cpu_stat(void)
 		l_ip_info = &per_cpu(ip_info, cpu);
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
+}
 
 static void cpu_up_down_work(struct work_struct *work)
 {
