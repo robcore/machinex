@@ -9,9 +9,7 @@
 struct search;
 
 DECLARE_EVENT_CLASS(bcache_request,
-
 	TP_PROTO(struct search *s, struct bio *bio),
-
 	TP_ARGS(s, bio),
 
 	TP_STRUCT__entry(
@@ -22,7 +20,6 @@ DECLARE_EVENT_CLASS(bcache_request,
 		__field(dev_t,		orig_sector		)
 		__field(unsigned int,	nr_sector		)
 		__array(char,		rwbs,	6		)
-		__array(char,		comm,	TASK_COMM_LEN	)
 	),
 
 	TP_fast_assign(
@@ -70,7 +67,6 @@ DECLARE_EVENT_CLASS(bcache_bio,
 		__field(sector_t,	sector			)
 		__field(unsigned int,	nr_sector		)
 		__array(char,		rwbs,	6		)
-		__array(char,		comm,	TASK_COMM_LEN	)
 	),
 
 	TP_fast_assign(
