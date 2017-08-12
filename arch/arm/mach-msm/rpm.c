@@ -974,7 +974,7 @@ int __init msm_rpm_init(struct msm_rpm_platform_data *data)
 		target_ctrl(MSM_RPM_CTRL_VERSION_BUILD), msm_rpm_data.ver[2]);
 
 	rc = request_irq(data->irq_ack, msm_rpm_ack_interrupt,
-			IRQF_TRIGGER_RISING,
+			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 			"rpm_drv", msm_rpm_ack_interrupt);
 	if (rc) {
 		pr_err("%s: failed to request irq %d: %d\n",
@@ -999,7 +999,7 @@ int __init msm_rpm_init(struct msm_rpm_platform_data *data)
 
 	rc = request_irq(data->irq_wakeup,
 			msm_pm_rpm_wakeup_interrupt,
-			IRQF_TRIGGER_RISING,
+			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 			"pm_drv", msm_pm_rpm_wakeup_interrupt);
 	if (rc) {
 		pr_err("%s: failed to request irq %u: %d\n",
