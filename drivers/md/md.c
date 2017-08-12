@@ -7402,9 +7402,6 @@ void md_do_sync(struct md_thread *thread)
 		mddev->curr_resync = 2;
 
 	try_again:
-		if (kthread_should_stop())
-			set_bit(MD_RECOVERY_INTR, &mddev->recovery);
-
 		if (test_bit(MD_RECOVERY_INTR, &mddev->recovery))
 			goto skip;
 		for_each_mddev(mddev2, tmp) {
@@ -7429,7 +7426,7 @@ void md_do_sync(struct md_thread *thread)
 				 * be caught by 'softlockup'
 				 */
 				prepare_to_wait(&resync_wait, &wq, TASK_INTERRUPTIBLE);
-				if (!kthread_should_stop() &&
+				if (!test_bit(MD_RECOVERY_INTR, &mddev->recovery) &&
 				    mddev2->curr_resync >= mddev->curr_resync) {
 					printk(KERN_INFO "md: delaying %s of %s"
 					       " until %s has finished (they"
@@ -7554,7 +7551,8 @@ void md_do_sync(struct md_thread *thread)
 			sysfs_notify(&mddev->kobj, NULL, "sync_completed");
 		}
 
-		while (j >= mddev->resync_max && !kthread_should_stop()) {
+		while (j >= mddev->resync_max &&
+		       !test_bit(MD_RECOVERY_INTR, &mddev->recovery)) {
 			/* As this condition is controlled by user-space,
 			 * we can block indefinitely, so use '_interruptible'
 			 * to avoid triggering warnings.
@@ -7562,17 +7560,18 @@ void md_do_sync(struct md_thread *thread)
 			flush_signals(current); /* just in case */
 			wait_event_interruptible(mddev->recovery_wait,
 						 mddev->resync_max > j
-						 || kthread_should_stop());
+						 || test_bit(MD_RECOVERY_INTR,
+							     &mddev->recovery));
 		}
 
-		if (kthread_should_stop())
-			goto interrupted;
+		if (test_bit(MD_RECOVERY_INTR, &mddev->recovery))
+			break;
 
 		sectors = mddev->pers->sync_request(mddev, j, &skipped,
 						  currspeed < speed_min(mddev));
 		if (sectors == 0) {
 			set_bit(MD_RECOVERY_INTR, &mddev->recovery);
-			goto out;
+			break;
 		}
 
 		if (!skipped) { /* actual IO requested */
@@ -7609,10 +7608,8 @@ void md_do_sync(struct md_thread *thread)
 			last_mark = next;
 		}
 
-
-		if (kthread_should_stop())
-			goto interrupted;
-
+		if (test_bit(MD_RECOVERY_INTR, &mddev->recovery))
+			break;
 
 		/*
 		 * this loop exits only if either when we are slower than
@@ -7635,7 +7632,10 @@ void md_do_sync(struct md_thread *thread)
 			}
 		}
 	}
-	printk(KERN_INFO "md: %s: %s done.\n",mdname(mddev), desc);
+
+	printk(KERN_INFO "md: %s: %s %s.\n",mdname(mddev), desc,
+	       test_bit(MD_RECOVERY_INTR, &mddev->recovery)
+	       ? "interrupted" : "done");
 	/*
 	 * this also signals 'finished resyncing' to md_stop
 	 */
@@ -7692,16 +7692,6 @@ void md_do_sync(struct md_thread *thread)
 	set_bit(MD_RECOVERY_DONE, &mddev->recovery);
 	md_wakeup_thread(mddev->thread);
 	return;
-
- interrupted:
-	/*
-	 * got a signal, exit.
-	 */
-	printk(KERN_INFO
-	       "md: md_do_sync() got signal ... exiting\n");
-	set_bit(MD_RECOVERY_INTR, &mddev->recovery);
-	goto out;
-
 }
 EXPORT_SYMBOL_GPL(md_do_sync);
 
