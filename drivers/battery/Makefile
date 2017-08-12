@@ -32,3 +32,4 @@ obj-$(CONFIG_CHARGER_MAX77XXX)  += max77693_charger_8930.o
 else
 obj-$(CONFIG_CHARGER_MAX77693)  += max77693_charger.o
 endif
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o

@@ -120,7 +120,7 @@ static ssize_t force_fast_charge_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute force_fast_charge_attribute =
-__ATTR(force_fast_charge, 0666,
+__ATTR(force_fast_charge, 0664,
 force_fast_charge_show, force_fast_charge_store);
 
 /* sysfs interface for "use_mtp_during_fast_charge" */
@@ -148,7 +148,7 @@ static ssize_t use_mtp_during_fast_charge_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute use_mtp_during_fast_charge_attribute =
-__ATTR(use_mtp_during_fast_charge, 0666,
+__ATTR(use_mtp_during_fast_charge, 0664,
 use_mtp_during_fast_charge_show, use_mtp_during_fast_charge_store);
 
 /* sysfs interface for "screen_on_current_limit" */
@@ -176,7 +176,7 @@ switch(new_screen_on_current_limit) {
 }
 
 static struct kobj_attribute screen_on_current_limit_attribute =
-__ATTR(screen_on_current_limit, 0666,
+__ATTR(screen_on_current_limit, 0664,
 screen_on_current_limit_show, screen_on_current_limit_store);
 
 
@@ -223,7 +223,7 @@ static ssize_t ac_charge_level_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute ac_charge_level_attribute =
-__ATTR(ac_charge_level, 0666,
+__ATTR(ac_charge_level, 0664,
 ac_charge_level_show, ac_charge_level_store);
 
 /* sysfs interface for "usb_charge_level" */
@@ -270,7 +270,7 @@ static ssize_t usb_charge_level_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute usb_charge_level_attribute =
-__ATTR(usb_charge_level, 0666,
+__ATTR(usb_charge_level, 0664,
 usb_charge_level_show, usb_charge_level_store);
 
 /* sysfs interface for "wireless_charge_level" */
@@ -312,7 +312,7 @@ static ssize_t wireless_charge_level_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute wireless_charge_level_attribute =
-__ATTR(wireless_charge_level, 0666,
+__ATTR(wireless_charge_level, 0664,
 wireless_charge_level_show, wireless_charge_level_store);
 
 /* sysfs interface for "failsafe" */
@@ -347,7 +347,7 @@ static ssize_t failsafe_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute failsafe_attribute =
-__ATTR(failsafe, 0666, failsafe_show, failsafe_store);
+__ATTR(failsafe, 0664, failsafe_show, failsafe_store);
 
 /* sysfs interface for "unstable_power_detection" */
 
@@ -376,7 +376,7 @@ static ssize_t unstable_power_detection_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute unstable_power_detection_attribute =
-	__ATTR(unstable_power_detection, 0666,
+	__ATTR(unstable_power_detection, 0664,
 		unstable_power_detection_show,
 		unstable_power_detection_store);
 

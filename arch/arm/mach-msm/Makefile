@@ -384,7 +384,6 @@ obj-$(CONFIG_MACH_JFDT) += board-jfdt.o
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
 CFLAGS_board-9615.o += -Idrivers/usb/gadget
 
-obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
 obj-$(CONFIG_LCD_KCAL) += msm_kcal_ctrl.o
 
 obj-$(CONFIG_ARCH_FSM9XXX) += board-fsm9xxx.o

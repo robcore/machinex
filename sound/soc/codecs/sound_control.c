@@ -398,43 +398,43 @@ static ssize_t sound_control_version_show(struct kobject *kobj,
 
 static struct kobj_attribute sound_control_snd_vib_feedback_timeout_attribute =
 	__ATTR(gpl_snd_vib_feedback_timeout,
-		0666,
+		0664,
 		sound_control_snd_vib_feedback_timeout_show,
 		sound_control_snd_vib_feedback_timeout_store);
 
 static struct kobj_attribute sound_control_snd_vib_feedback_attribute =
 	__ATTR(gpl_snd_vib_feedback,
-		0666,
+		0664,
 		sound_control_snd_vib_feedback_show,
 		sound_control_snd_vib_feedback_store);
 
 static struct kobj_attribute sound_control_enabled_attribute =
 	__ATTR(gpl_sound_control_enabled,
-		0666,
+		0664,
 		sound_control_enabled_show,
 		sound_control_enabled_store);
 
 static struct kobj_attribute headphone_gain_attribute =
 	__ATTR(gpl_headphone_gain,
-		0666,
+		0664,
 		headphone_gain_show,
 		headphone_gain_store);
 
 static struct kobj_attribute speaker_gain_attribute =
 	__ATTR(gpl_speaker_gain,
-		0666,
+		0664,
 		speaker_gain_show,
 		speaker_gain_store);
 
 static struct kobj_attribute cam_mic_gain_attribute =
 	__ATTR(gpl_cam_mic_gain,
-		0666,
+		0664,
 		cam_mic_gain_show,
 		cam_mic_gain_store);
 
 static struct kobj_attribute mic_gain_attribute =
 	__ATTR(gpl_mic_gain,
-		0666,
+		0664,
 		mic_gain_show,
 		mic_gain_store);
 

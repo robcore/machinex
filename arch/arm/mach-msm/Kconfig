@@ -3353,13 +3353,6 @@ config HAS_MACH_MEMUTILS
 	help
 	Faster memcpy performance for Krait
 
-config FORCE_FAST_CHARGE
-	bool "Force fast charging (AC/USB) by Yank555.lu"
-	default y
-	help
-	  A simple sysfs interface to force adapters that
-	  are detected as USB to charge as AC (1A/h) or to set
-	  custom charging currents for AC and USB.
 config KRAIT_WORKAROUND
 	bool "Use inapplicable 8064 errata workaround"
 	default n

@@ -201,17 +201,25 @@ config CHARGER_MAX77693
 	depends on MFD_MAX77693 && I2C
 	help
 	  Say Y here to enable support for the MAX77693 charger
-	  MAX77693 incluse muic, pmic, haptic, led,
-	  flash driver.
+	  The MAX77693 chip includes muic, pmic, haptic, led,
+	  and flash drivers.
 	  You have to define MFD_MAX77693
+
+config FORCE_FAST_CHARGE
+	bool "Force fast charging (AC/USB) by Yank555.lu"
+	default y
+	help
+	  A simple sysfs interface to force adapters that
+	  are detected as USB to charge as AC (2A/h) or to set
+	  custom charging currents for AC and USB.
 
 config CHARGER_MAX77803
 	tristate "MAX77803 battery charger support"
 	depends on MFD_MAX77693 && I2C
 	help
 	  Say Y here to enable support for the MAX77803 charger
-	  MAX77803 incluse muic, pmic, haptic, led,
-	  flash driver.
+	  The MAX77803 chip includes muic, pmic, haptic, led,
+	  and flash drivers.
 	  You have to define MFD_MAX77693
 
 config SAMSUNG_LPM_MODE
@@ -221,7 +229,7 @@ config SAMSUNG_LPM_MODE
 	  Say Y to include support for sec off charging support
 	  This value defined at bootloader.
 	  Before enable this feature,
-	  implemet power off charging in the bootloader.
+	  implement power off charging in the bootloader.
 
 config SAMSUNG_BATTERY_ENG_TEST
 	bool "enable ENG mode for battery test"
@@ -238,7 +246,7 @@ config SAMSUNG_BATTERY_FACTORY
 	help
 	  Say Y to include support for factory test
 	  enable this feature only factory mode
-	  this featuren must disabled user binary
+	  this feature must disabled, only for user binary
 	  stability test etc..
 
 config CHARGER_MAX77XXX
@@ -246,7 +254,7 @@ config CHARGER_MAX77XXX
 	depends on MFD_MAX77693 && I2C
 	help
 	  Say Y here to enable support for the MAX77803 charger
-	  MAX77803 incluse muic, pmic, haptic, led,
-	  flash driver.
+	  The MAX77803 chip includes muic, pmic, haptic, led,
+	  flash drivers.
 	  You have to define MFD_MAX77693
 
