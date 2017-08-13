@@ -419,6 +419,24 @@ static bool bch_alloc_sectors(struct bkey *k, unsigned sectors,
 	return true;
 }
 
+static int bch_keylist_realloc(struct keylist *l, unsigned u64s,
+			       struct cache_set *c)
+{
+	size_t oldsize = bch_keylist_nkeys(l);
+	size_t newsize = oldsize + u64s;
+
+	/*
+	 * The journalling code doesn't handle the case where the keys to insert
+	 * is bigger than an empty write: If we just return -ENOMEM here,
+	 * bio_insert() and bio_invalidate() will insert the keys created so far
+	 * and finish the rest when the keylist is empty.
+	 */
+	if (newsize * sizeof(uint64_t) > block_bytes(c) - sizeof(struct jset))
+		return -ENOMEM;
+
+	return __bch_keylist_realloc(l, u64s);
+}
+
 static void bch_data_invalidate(struct closure *cl)
 {
 	struct btree_op *op = container_of(cl, struct btree_op, cl);
@@ -644,7 +662,8 @@ static void bch_cache_read_endio(struct bio *bio, int error)
 
 	if (error)
 		s->iop.error = error;
-	else if (ptr_stale(s->iop.c, &b->key, 0)) {
+	else if (!KEY_DIRTY(&b->key) &&
+		 ptr_stale(s->iop.c, &b->key, 0)) {
 		atomic_long_inc(&s->iop.c->cache_read_races);
 		s->iop.error = -EINTR;
 	}
