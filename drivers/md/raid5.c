@@ -4054,8 +4054,7 @@ static struct stripe_head *__get_priority_stripe(struct r5conf *conf, int group)
 		sh->group = NULL;
 	}
 	list_del_init(&sh->lru);
-	atomic_inc(&sh->count);
-	BUG_ON(atomic_read(&sh->count) != 1);
+	BUG_ON(atomic_inc_return(&sh->count) != 1);
 	return sh;
 }
 
@@ -4215,6 +4214,7 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 				    : logical_sector >= conf->reshape_safe) {
 					spin_unlock_irq(&conf->device_lock);
 					schedule();
+					do_prepare = true;
 					goto retry;
 				}
 			}
@@ -4252,6 +4252,7 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 				if (must_retry) {
 					release_stripe(sh);
 					schedule();
+					do_prepare = true;
 					goto retry;
 				}
 			}
@@ -4275,8 +4276,10 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 				prepare_to_wait(&conf->wait_for_overlap,
 						&w, TASK_INTERRUPTIBLE);
 				if (logical_sector >= mddev->suspend_lo &&
-				    logical_sector < mddev->suspend_hi)
+				    logical_sector < mddev->suspend_hi) {
 					schedule();
+					do_prepare = true;
+				}
 				goto retry;
 			}
 
@@ -4289,9 +4292,9 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 				md_wakeup_thread(mddev->thread);
 				release_stripe(sh);
 				schedule();
+				do_prepare = true;
 				goto retry;
 			}
-			finish_wait(&conf->wait_for_overlap, &w);
 			set_bit(STRIPE_HANDLE, &sh->state);
 			clear_bit(STRIPE_DELAYED, &sh->state);
 			if ((bi->bi_rw & REQ_SYNC) &&
