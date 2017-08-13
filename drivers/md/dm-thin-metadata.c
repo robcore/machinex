@@ -1439,6 +1439,10 @@ int dm_pool_metadata_set_needs_check(struct dm_pool_metadata *pmd)
 	down_write(&pmd->root_lock);
 	pmd->flags |= THIN_METADATA_NEEDS_CHECK_FLAG;
 
+	r = save_sm_roots(pmd);
+	if (r < 0)
+		return r;
+
 	r = superblock_lock(pmd, &sblock);
 	if (r) {
 		DMERR("couldn't read superblock");
