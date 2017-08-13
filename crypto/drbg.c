@@ -184,7 +184,7 @@ static const struct drbg_core drbg_cores[] = {
 #endif /* CONFIG_CRYPTO_DRBG_HASH */
 #ifdef CONFIG_CRYPTO_DRBG_HMAC
 	{
-		.flags = DRBG_HMAC | DRBG_STRENGTH256,
+		.flags = DRBG_HMAC | DRBG_STRENGTH128,
 		.statelen = 20, /* block length of cipher */
 		.max_addtllen = 35,
 		.max_bits = 19,
@@ -356,6 +356,7 @@ static inline void drbg_add_buf(unsigned char *dst, size_t dstlen,
  ******************************************************************/
 
 #ifdef CONFIG_CRYPTO_DRBG_CTR
+#define CRYPTO_DRBG_CTR_STRING "CTR "
 static int drbg_kcapi_sym(struct drbg_state *drbg, const unsigned char *key,
 			  unsigned char *outval, const struct drbg_string *in);
 static int drbg_init_sym_kernel(struct drbg_state *drbg);
@@ -561,7 +562,21 @@ out:
 	return ret;
 }
 
-/* update function of CTR DRBG as defined in 10.2.1.2 */
+/*
+ * update function of CTR DRBG as defined in 10.2.1.2
+ *
+ * The reseed variable has an enhanced meaning compared to the update
+ * functions of the other DRBGs as follows:
+ * 0 => initial seed from initialization
+ * 1 => reseed via drbg_seed
+ * 2 => first invocation from drbg_ctr_update when addtl is present. In
+ *      this case, the df_data scratchpad is not deleted so that it is
+ *      available for another calls to prevent calling the DF function
+ *      again.
+ * 3 => second invocation from drbg_ctr_update. When the update function
+ *      was called with addtl, the df_data memory already contains the
+ *      DFed addtl information and we do not need to call DF again.
+ */
 static int drbg_ctr_update(struct drbg_state *drbg, struct list_head *seed,
 			   int reseed)
 {
@@ -576,7 +591,8 @@ static int drbg_ctr_update(struct drbg_state *drbg, struct list_head *seed,
 	unsigned char prefix = DRBG_PREFIX1;
 
 	memset(temp, 0, drbg_statelen(drbg) + drbg_blocklen(drbg));
-	memset(df_data, 0, drbg_statelen(drbg));
+	if (3 > reseed)
+		memset(df_data, 0, drbg_statelen(drbg));
 
 	/* 10.2.1.3.2 step 2 and 10.2.1.4.2 step 2 */
 	if (seed) {
@@ -618,7 +634,8 @@ static int drbg_ctr_update(struct drbg_state *drbg, struct list_head *seed,
 
 out:
 	memset(temp, 0, drbg_statelen(drbg) + drbg_blocklen(drbg));
-	memset(df_data, 0, drbg_statelen(drbg));
+	if (2 != reseed)
+		memset(df_data, 0, drbg_statelen(drbg));
 	return ret;
 }
 
@@ -629,7 +646,7 @@ out:
 /* Generate function of CTR DRBG as defined in 10.2.1.5.2 */
 static int drbg_ctr_generate(struct drbg_state *drbg,
 			     unsigned char *buf, unsigned int buflen,
-			     struct drbg_string *addtl)
+			     struct list_head *addtl)
 {
 	int len = 0;
 	int ret = 0;
@@ -639,11 +656,8 @@ static int drbg_ctr_generate(struct drbg_state *drbg,
 	memset(drbg->scratchpad, 0, drbg_blocklen(drbg));
 
 	/* 10.2.1.5.2 step 2 */
-	if (addtl && 0 < addtl->len) {
-		LIST_HEAD(addtllist);
-
-		list_add_tail(&addtl->list, &addtllist);
-		ret = drbg_ctr_update(drbg, &addtllist, 1);
+	if (addtl && !list_empty(addtl)) {
+		ret = drbg_ctr_update(drbg, addtl, 2);
 		if (ret)
 			return 0;
 	}
@@ -674,21 +688,8 @@ static int drbg_ctr_generate(struct drbg_state *drbg,
 			drbg_add_buf(drbg->V, drbg_blocklen(drbg), &prefix, 1);
 	}
 
-	/*
-	 * 10.2.1.5.2 step 6
-	 * The following call invokes the DF function again which could be
-	 * optimized. In step 2, the "additional_input" after step 2 is the
-	 * output of the DF function. If this result would be saved, the DF
-	 * function would not need to be invoked again at this point.
-	 */
-	if (addtl && 0 < addtl->len) {
-		LIST_HEAD(addtllist);
-
-		list_add_tail(&addtl->list, &addtllist);
-		ret = drbg_ctr_update(drbg, &addtllist, 1);
-	} else {
-		ret = drbg_ctr_update(drbg, NULL, 1);
-	}
+	/* 10.2.1.5.2 step 6 */
+	ret = drbg_ctr_update(drbg, NULL, 3);
 	if (ret)
 		len = ret;
 
@@ -717,6 +718,7 @@ static int drbg_fini_hash_kernel(struct drbg_state *drbg);
 #endif /* (CONFIG_CRYPTO_DRBG_HASH || CONFIG_CRYPTO_DRBG_HMAC) */
 
 #ifdef CONFIG_CRYPTO_DRBG_HMAC
+#define CRYPTO_DRBG_HMAC_STRING "HMAC "
 /* update function of HMAC DRBG as defined in 10.1.2.2 */
 static int drbg_hmac_update(struct drbg_state *drbg, struct list_head *seed,
 			    int reseed)
@@ -772,7 +774,7 @@ static int drbg_hmac_update(struct drbg_state *drbg, struct list_head *seed,
 static int drbg_hmac_generate(struct drbg_state *drbg,
 			      unsigned char *buf,
 			      unsigned int buflen,
-			      struct drbg_string *addtl)
+			      struct list_head *addtl)
 {
 	int len = 0;
 	int ret = 0;
@@ -780,11 +782,8 @@ static int drbg_hmac_generate(struct drbg_state *drbg,
 	LIST_HEAD(datalist);
 
 	/* 10.1.2.5 step 2 */
-	if (addtl && 0 < addtl->len) {
-		LIST_HEAD(addtllist);
-
-		list_add_tail(&addtl->list, &addtllist);
-		ret = drbg_hmac_update(drbg, &addtllist, 1);
+	if (addtl && !list_empty(addtl)) {
+		ret = drbg_hmac_update(drbg, addtl, 1);
 		if (ret)
 			return ret;
 	}
@@ -808,14 +807,10 @@ static int drbg_hmac_generate(struct drbg_state *drbg,
 	}
 
 	/* 10.1.2.5 step 6 */
-	if (addtl && 0 < addtl->len) {
-		LIST_HEAD(addtllist);
-
-		list_add_tail(&addtl->list, &addtllist);
-		ret = drbg_hmac_update(drbg, &addtllist, 1);
-	} else {
+	if (addtl && !list_empty(addtl))
+		ret = drbg_hmac_update(drbg, addtl, 1);
+	else
 		ret = drbg_hmac_update(drbg, NULL, 1);
-	}
 	if (ret)
 		return ret;
 
@@ -836,6 +831,7 @@ static struct drbg_state_ops drbg_hmac_ops = {
  ******************************************************************/
 
 #ifdef CONFIG_CRYPTO_DRBG_HASH
+#define CRYPTO_DRBG_HASH_STRING "HASH "
 /*
  * scratchpad usage: as drbg_hash_update and drbg_hash_df are used
  * interlinked, the scratchpad is used as follows:
@@ -938,7 +934,7 @@ out:
 
 /* processing of additional information string for Hash DRBG */
 static int drbg_hash_process_addtl(struct drbg_state *drbg,
-				   struct drbg_string *addtl)
+				   struct list_head *addtl)
 {
 	int ret = 0;
 	struct drbg_string data1, data2;
@@ -949,7 +945,7 @@ static int drbg_hash_process_addtl(struct drbg_state *drbg,
 	memset(drbg->scratchpad, 0, drbg_blocklen(drbg));
 
 	/* 10.1.1.4 step 2 */
-	if (!addtl || 0 == addtl->len)
+	if (!addtl || list_empty(addtl))
 		return 0;
 
 	/* 10.1.1.4 step 2a */
@@ -957,7 +953,7 @@ static int drbg_hash_process_addtl(struct drbg_state *drbg,
 	drbg_string_fill(&data2, drbg->V, drbg_statelen(drbg));
 	list_add_tail(&data1.list, &datalist);
 	list_add_tail(&data2.list, &datalist);
-	list_add_tail(&addtl->list, &datalist);
+	list_splice_tail(addtl, &datalist);
 	ret = drbg_kcapi_hash(drbg, NULL, drbg->scratchpad, &datalist);
 	if (ret)
 		goto out;
@@ -1023,7 +1019,7 @@ out:
 /* generate function for Hash DRBG as defined in  10.1.1.4 */
 static int drbg_hash_generate(struct drbg_state *drbg,
 			      unsigned char *buf, unsigned int buflen,
-			      struct drbg_string *addtl)
+			      struct list_head *addtl)
 {
 	int len = 0;
 	int ret = 0;
@@ -1103,7 +1099,7 @@ static int drbg_seed(struct drbg_state *drbg, struct drbg_string *pers,
 
 	/* 9.1 / 9.2 / 9.3.1 step 3 */
 	if (pers && pers->len > (drbg_max_addtl(drbg))) {
-		pr_devel("DRBG: personalization string too long %lu\n",
+		pr_devel("DRBG: personalization string too long %zu\n",
 			 pers->len);
 		return -EINVAL;
 	}
@@ -1341,6 +1337,12 @@ static int drbg_generate(struct drbg_state *drbg,
 {
 	int len = 0;
 	struct drbg_state *shadow = NULL;
+	LIST_HEAD(addtllist);
+	struct drbg_string timestamp;
+	union {
+		cycles_t cycles;
+		unsigned char char_cycles[sizeof(cycles_t)];
+	} now;
 
 	if (0 == buflen || !buf) {
 		pr_devel("DRBG: no output buffer provided\n");
@@ -1401,8 +1403,23 @@ static int drbg_generate(struct drbg_state *drbg,
 		/* 9.3.1 step 7.4 */
 		addtl = NULL;
 	}
+
+	/*
+	 * Mix the time stamp into the DRBG state if the DRBG is not in
+	 * test mode. If there are two callers invoking the DRBG at the same
+	 * time, i.e. before the first caller merges its shadow state back,
+	 * both callers would obtain the same random number stream without
+	 * changing the state here.
+	 */
+	if (!drbg->test_data) {
+		now.cycles = random_get_entropy();
+		drbg_string_fill(&timestamp, now.char_cycles, sizeof(cycles_t));
+		list_add_tail(&timestamp.list, &addtllist);
+	}
+	if (addtl && 0 < addtl->len)
+		list_add_tail(&addtl->list, &addtllist);
 	/* 9.3.1 step 8 and 10 */
-	len = shadow->d_ops->generate(shadow, buf, buflen, addtl);
+	len = shadow->d_ops->generate(shadow, buf, buflen, &addtllist);
 
 	/* 10.1.1.4 step 6, 10.1.2.5 step 7, 10.2.1.5.2 step 7 */
 	shadow->reseed_ctr++;
@@ -1755,7 +1772,7 @@ static int drbg_kcapi_init(struct crypto_tfm *tfm)
 	bool pr = false;
 	int coreref = 0;
 
-	drbg_convert_tfm_core(crypto_tfm_alg_name(tfm), &coreref, &pr);
+	drbg_convert_tfm_core(crypto_tfm_alg_driver_name(tfm), &coreref, &pr);
 	/*
 	 * when personalization string is needed, the caller must call reset
 	 * and provide the personalization string as seed information
@@ -1867,7 +1884,7 @@ static inline int __init drbg_healthcheck_sanity(void)
 
 #ifdef CONFIG_CRYPTO_DRBG_CTR
 	drbg_convert_tfm_core("drbg_nopr_ctr_aes128", &coreref, &pr);
-#elif CONFIG_CRYPTO_DRBG_HASH
+#elif defined CONFIG_CRYPTO_DRBG_HASH
 	drbg_convert_tfm_core("drbg_nopr_sha256", &coreref, &pr);
 #else
 	drbg_convert_tfm_core("drbg_nopr_hmac_sha256", &coreref, &pr);
@@ -1981,7 +1998,7 @@ static int __init drbg_init(void)
 
 	if (ARRAY_SIZE(drbg_cores) * 2 > ARRAY_SIZE(drbg_algs)) {
 		pr_info("DRBG: Cannot register all DRBG types"
-			"(slots needed: %lu, slots available: %lu)\n",
+			"(slots needed: %zu, slots available: %zu)\n",
 			ARRAY_SIZE(drbg_cores) * 2, ARRAY_SIZE(drbg_algs));
 		return ret;
 	}
@@ -2002,23 +2019,26 @@ static int __init drbg_init(void)
 	return crypto_register_algs(drbg_algs, (ARRAY_SIZE(drbg_cores) * 2));
 }
 
-void __exit drbg_exit(void)
+static void __exit drbg_exit(void)
 {
 	crypto_unregister_algs(drbg_algs, (ARRAY_SIZE(drbg_cores) * 2));
 }
 
 module_init(drbg_init);
 module_exit(drbg_exit);
+#ifndef CRYPTO_DRBG_HASH_STRING
+#define CRYPTO_DRBG_HASH_STRING ""
+#endif
+#ifndef CRYPTO_DRBG_HMAC_STRING
+#define CRYPTO_DRBG_HMAC_STRING ""
+#endif
+#ifndef CRYPTO_DRBG_CTR_STRING
+#define CRYPTO_DRBG_CTR_STRING ""
+#endif
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Stephan Mueller <smueller@chronox.de>");
-MODULE_DESCRIPTION("NIST SP800-90A Deterministic Random Bit Generator (DRBG) using following cores:"
-#ifdef CONFIG_CRYPTO_DRBG_HMAC
-"HMAC "
-#endif
-#ifdef CONFIG_CRYPTO_DRBG_HASH
-"Hash "
-#endif
-#ifdef CONFIG_CRYPTO_DRBG_CTR
-"CTR"
-#endif
-);
+MODULE_DESCRIPTION("NIST SP800-90A Deterministic Random Bit Generator (DRBG) "
+		   "using following cores: "
+		   CRYPTO_DRBG_HASH_STRING
+		   CRYPTO_DRBG_HMAC_STRING
+		   CRYPTO_DRBG_CTR_STRING);
