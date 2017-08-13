@@ -12,11 +12,9 @@
 #include "request.h"
 #include "writeback.h"
 
-#include <linux/cgroup.h>
 #include <linux/module.h>
 #include <linux/hash.h>
 #include <linux/random.h>
-#include "blk-cgroup.h"
 
 #include <trace/events/bcache.h>
 
@@ -462,7 +460,7 @@ static void bch_data_invalidate(struct closure *cl)
 	op->insert_data_done = true;
 	bio_put(bio);
 out:
-	continue_at(cl, bch_data_insert_keys, bcache_wq);
+	continue_at(cl, bch_data_insert_keys, op->wq);
 }
 
 static void bch_data_insert_error(struct closure *cl)
@@ -547,7 +545,7 @@ static void bch_data_insert_start(struct closure *cl)
 		if (bch_keylist_realloc(&s->insert_keys,
 					1 + (op->csum ? 1 : 0),
 					op->c))
-			continue_at(cl, bch_data_insert_keys, bcache_wq);
+			continue_at(cl, bch_data_insert_keys, op->wq);
 
 		k = s->insert_keys.top;
 		bkey_init(k);
@@ -1515,9 +1513,6 @@ void bch_flash_dev_request_init(struct bcache_device *d)
 
 void bch_request_exit(void)
 {
-#ifdef CONFIG_CGROUP_BCACHE
-	cgroup_unload_subsys(&bcache_subsys);
-#endif
 	if (bch_search_cache)
 		kmem_cache_destroy(bch_search_cache);
 }
@@ -1528,11 +1523,5 @@ int __init bch_request_init(void)
 	if (!bch_search_cache)
 		return -ENOMEM;
 
-#ifdef CONFIG_CGROUP_BCACHE
-	cgroup_load_subsys(&bcache_subsys);
-	init_bch_cgroup(&bcache_default_cgroup);
-
-	cgroup_add_cftypes(&bcache_subsys, bch_files);
-#endif
 	return 0;
 }

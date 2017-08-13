@@ -1,12 +1,11 @@
 #ifndef _BCACHE_REQUEST_H_
 #define _BCACHE_REQUEST_H_
 
-#include <linux/cgroup.h>
-
 struct data_insert_op {
 	struct closure		cl;
 	struct cache_set	*c;
 	struct bio		*bio;
+	struct workqueue_struct *wq;
 
 	unsigned		inode;
 	uint16_t		write_point;
