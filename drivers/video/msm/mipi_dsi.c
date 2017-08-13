@@ -827,7 +827,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	esc_byte_ratio = pinfo->mipi.esc_byte_ratio;
 
-	wake_lock_init(&prometheus_rising, WAKE_LOCK_SUSPEND, "prometheus");
+	wake_lock_init(&prometheus_rising, WAKE_LOCK_SUSPEND, "prometheus_rsm");
 
 
 	return 0;

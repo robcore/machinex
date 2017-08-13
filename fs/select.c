@@ -46,9 +46,9 @@
 
 #define MAX_SLACK	(100 * NSEC_PER_MSEC)
 
-static long __estimate_accuracy(struct timespec64 *tv)
+static long __estimate_accuracy(struct timespec *tv)
 {
-	long slack;
+	u64 slack;
 	int divfactor = 1000;
 
 	if (tv->tv_sec < 0)
@@ -69,10 +69,9 @@ static long __estimate_accuracy(struct timespec64 *tv)
 	return slack;
 }
 
-u64 select_estimate_accuracy(struct timespec64 *tv)
+u64 select_estimate_accuracy(struct timespec *tv)
 {
-	u64 ret;
-	struct timespec64 now;
+	struct timespec now;
 
 	/*
 	 * Realtime tasks get a slack of 0 for obvious reasons.
@@ -81,12 +80,10 @@ u64 select_estimate_accuracy(struct timespec64 *tv)
 	if (rt_task(current))
 		return 0;
 
-	ktime_get_ts64(&now);
-	now = timespec64_sub(*tv, now);
-	ret = __estimate_accuracy(&now);
-	if (ret < current->timer_slack_ns)
-		return current->timer_slack_ns;
-	return ret;
+	ktime_get_ts(&now);
+	now = timespec_sub(*tv, now);
+	return min_t(long, __estimate_accuracy(&now),
+			task_get_effective_timer_slack(current));
 }
 
 
@@ -231,7 +228,7 @@ static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
 }
 
 int poll_schedule_timeout(struct poll_wqueues *pwq, int state,
-			  ktime_t *expires, unsigned long slack)
+			  ktime_t *expires, u64 slack)
 {
 	int rc = -EINTR;
 
@@ -259,7 +256,7 @@ EXPORT_SYMBOL(poll_schedule_timeout);
 
 /**
  * poll_select_set_timeout - helper function to setup the timeout value
- * @to:		pointer to timespec64 variable for the final timeout
+ * @to:		pointer to timespec variable for the final timeout
  * @sec:	seconds (from user space)
  * @nsec:	nanoseconds (from user space)
  *
@@ -268,28 +265,26 @@ EXPORT_SYMBOL(poll_schedule_timeout);
  *
  * Returns -EINVAL if sec/nsec are not normalized. Otherwise 0.
  */
-int poll_select_set_timeout(struct timespec64 *to, time64_t sec, long nsec)
+int poll_select_set_timeout(struct timespec *to, long sec, long nsec)
 {
-	struct timespec64 ts = {.tv_sec = sec, .tv_nsec = nsec};
+	struct timespec ts = {.tv_sec = sec, .tv_nsec = nsec};
 
-	if (!timespec64_valid(&ts))
+	if (!timespec_valid(&ts))
 		return -EINVAL;
 
 	/* Optimize for the zero timeout value here */
 	if (!sec && !nsec) {
 		to->tv_sec = to->tv_nsec = 0;
 	} else {
-		ktime_get_ts64(to);
-		*to = timespec64_add_safe(*to, ts);
+		ktime_get_ts(to);
+		*to = timespec_add_safe(*to, ts);
 	}
 	return 0;
 }
 
-static int poll_select_copy_remaining(struct timespec64 *end_time,
-				      void __user *p,
+static int poll_select_copy_remaining(struct timespec *end_time, void __user *p,
 				      int timeval, int ret)
 {
-	struct timespec64 rts64;
 	struct timespec rts;
 	struct timeval rtv;
 
@@ -303,18 +298,16 @@ static int poll_select_copy_remaining(struct timespec64 *end_time,
 	if (!end_time->tv_sec && !end_time->tv_nsec)
 		return ret;
 
-	ktime_get_ts64(&rts64);
-	rts64 = timespec64_sub(*end_time, rts64);
-	if (rts64.tv_sec < 0)
-		rts64.tv_sec = rts64.tv_nsec = 0;
-
-	rts = timespec64_to_timespec(rts64);
+	ktime_get_ts(&rts);
+	rts = timespec_sub(*end_time, rts);
+	if (rts.tv_sec < 0)
+		rts.tv_sec = rts.tv_nsec = 0;
 
 	if (timeval) {
 		if (sizeof(rtv) > sizeof(rtv.tv_sec) + sizeof(rtv.tv_usec))
 			memset(&rtv, 0, sizeof(rtv));
-		rtv.tv_sec = rts64.tv_sec;
-		rtv.tv_usec = rts64.tv_nsec / NSEC_PER_USEC;
+		rtv.tv_sec = rts.tv_sec;
+		rtv.tv_usec = rts.tv_nsec / NSEC_PER_USEC;
 
 		if (!copy_to_user(p, &rtv, sizeof(rtv)))
 			return ret;

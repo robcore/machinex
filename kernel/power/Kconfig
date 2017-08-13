@@ -316,13 +316,6 @@ config PM_GENERIC_DOMAINS_OF
 config CPU_PM
 	bool
 
-config SUSPEND_TIME
-	bool "Log time spent in suspend"
-	---help---
-	  Prints the time spent in suspend in the kernel log, and
-	  keeps statistics on the time spent in suspend in
-	  /sys/kernel/debug/suspend_time
-
 config SUSPEND_TIME_TIMEKEEPING
 	bool "get suspend time from timekeeping"
 	default y
@@ -348,13 +341,6 @@ config PROMETHEUS
 config STATE_NOTIFIER
     bool "State Notifier"
 	default y
-
-config SPEEDUP_KEYRESUME
-	bool "Speed up late resume"
-	depends on SUSPEND
-	default y
-	---help---
-	  Speed up system resume
 
 config WAKEUP_REASON
 	bool "show last wakeup reason"

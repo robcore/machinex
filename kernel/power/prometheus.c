@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 3
-#define VERSION_MIN 3
+#define VERSION_MIN 4
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -43,7 +43,11 @@ static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static unsigned int ps_state = POWER_SUSPEND_INACTIVE;
-/* Robcore: Provide an option to sync the system on panel suspend */
+/* Robcore: Provide an option to sync the system on panel suspend
+ * accompanied by a wakelock to ensure stability
+ * at the cost of battery life
+ */
+struct wake_lock prsynclock;
 static unsigned int sync_on_panel_suspend;
 /* For Samsung devices that use it, disable completely when poweroff charging */
 extern int poweroff_charging;
@@ -119,8 +123,10 @@ static void power_suspend(struct work_struct *work)
 	mutex_unlock(&prometheus_mtx);
 
 	if (sync_on_panel_suspend) {
+		wake_lock(&prsynclock);
 		pr_info("[PROMETHEUS] Syncing\n");
 		sys_sync();
+		wake_unlock(&prsynclock);
 	}
 
 	if (use_global_suspend) {
@@ -360,6 +366,7 @@ static int prometheus_init(void)
 
 	mutex_init(&prometheus_mtx);
 	spin_lock_init(&ps_state_lock);
+	wake_lock_init(&prsynclock, WAKE_LOCK_SUSPEND, "prometheus_synclock");
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
