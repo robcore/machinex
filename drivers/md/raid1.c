@@ -1826,7 +1826,7 @@ static int fix_sync_read_error(struct r1bio *r1_bio)
 	return 1;
 }
 
-static int process_checks(struct r1bio *r1_bio)
+static void process_checks(struct r1bio *r1_bio)
 {
 	/* We have read all readable devices.  If we haven't
 	 * got the block, then there is no hope left.
@@ -1940,7 +1940,6 @@ static int process_checks(struct r1bio *r1_bio)
 
 		bio_copy_data(sbio, pbio);
 	}
-	return 0;
 }
 
 static void sync_request_write(struct mddev *mddev, struct r1bio *r1_bio)
@@ -1958,8 +1957,8 @@ static void sync_request_write(struct mddev *mddev, struct r1bio *r1_bio)
 			return;
 
 	if (test_bit(MD_RECOVERY_REQUESTED, &mddev->recovery))
-		if (process_checks(r1_bio) < 0)
-			return;
+		process_checks(r1_bio);
+
 	/*
 	 * schedule writes
 	 */
