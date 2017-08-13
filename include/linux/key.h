@@ -190,6 +190,7 @@ struct key {
 		unsigned long		value;
 		void __rcu		*rcudata;
 		void			*data;
+			void			*data2[2];
 		struct keyring_list __rcu *subscriptions;
 	} payload;
 };
