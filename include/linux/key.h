@@ -161,9 +161,6 @@ struct key {
 #define KEY_FLAG_NEGATIVE	5	/* set if key is negative */
 #define KEY_FLAG_ROOT_CAN_CLEAR	6	/* set if key can be cleared by root without permission */
 #define KEY_FLAG_INVALIDATED	7	/* set if key has been invalidated */
-#define KEY_FLAG_TRUSTED	8	/* set if key is trusted */
-#define KEY_FLAG_TRUSTED_ONLY	9	/* set if keyring only accepts links to trusted keys */
-#define KEY_FLAG_BUILTIN	10	/* set if key is builtin */
 
 	/* the description string
 	 * - this is used to match a key against search criteria
@@ -190,7 +187,6 @@ struct key {
 		unsigned long		value;
 		void __rcu		*rcudata;
 		void			*data;
-			void			*data2[2];
 		struct keyring_list __rcu *subscriptions;
 	} payload;
 };

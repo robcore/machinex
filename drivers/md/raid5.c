@@ -61,10 +61,6 @@
 #define cpu_to_group(cpu) cpu_to_node(cpu)
 #define ANY_GROUP NUMA_NO_NODE
 
-static bool devices_handle_discard_safely = false;
-module_param(devices_handle_discard_safely, bool, 0644);
-MODULE_PARM_DESC(devices_handle_discard_safely,
-		 "Set to Y if all devices in each array reliably return zeroes on reads from discarded regions");
 static struct workqueue_struct *raid5_wq;
 /*
  * Stripe cache
@@ -262,6 +258,7 @@ static inline void insert_hash(struct r5conf *conf, struct stripe_head *sh)
 	hlist_add_head(&sh->hash, hp);
 }
 
+
 /* find an idle stripe, make sure it is unhashed, and return it. */
 static struct stripe_head *get_free_stripe(struct r5conf *conf)
 {
@@ -335,6 +332,7 @@ static void init_stripe(struct stripe_head *sh, sector_t sector, int previous)
 	sh->sector = sector;
 	stripe_set_idx(sector, conf, previous, sh);
 	sh->state = 0;
+
 
 	for (i = sh->disks; i--; ) {
 		struct r5dev *dev = &sh->dev[i];
@@ -1118,6 +1116,7 @@ ops_run_compute6_2(struct stripe_head *sh, struct raid5_percpu *percpu)
 		}
 	}
 }
+
 
 static void ops_complete_prexor(void *stripe_head_ref)
 {
@@ -2136,6 +2135,7 @@ static sector_t raid5_compute_sector(struct r5conf *conf, sector_t r_sector,
 	return new_sector;
 }
 
+
 static sector_t compute_blocknr(struct stripe_head *sh, int i, int previous)
 {
 	struct r5conf *conf = sh->raid_conf;
@@ -2152,6 +2152,7 @@ static sector_t compute_blocknr(struct stripe_head *sh, int i, int previous)
 	int dummy1, dd_idx = i;
 	sector_t r_sector;
 	struct stripe_head sh2;
+
 
 	chunk_offset = sector_div(new_sector, sectors_per_chunk);
 	stripe = new_sector;
@@ -2255,6 +2256,7 @@ static sector_t compute_blocknr(struct stripe_head *sh, int i, int previous)
 	}
 	return r_sector;
 }
+
 
 static void
 schedule_reconstruction(struct stripe_head *sh, struct stripe_head_state *s,
@@ -2631,7 +2633,7 @@ static int fetch_block(struct stripe_head *sh, struct stripe_head_state *s,
 	      (!test_bit(R5_Insync, &dev->flags) || test_bit(STRIPE_PREREAD_ACTIVE, &sh->state)) &&
 	      !test_bit(R5_OVERWRITE, &fdev[0]->flags)) ||
 	     (sh->raid_conf->level == 6 && s->failed && s->to_write &&
-	      s->to_write - s->non_overwrite < sh->raid_conf->raid_disks - 2 &&
+	      s->to_write < sh->raid_conf->raid_disks - 2 &&
 	      (!test_bit(R5_Insync, &dev->flags) || test_bit(STRIPE_PREREAD_ACTIVE, &sh->state))))) {
 		/* we would like to get this block, possibly by computing it,
 		 * otherwise read it if the backing disk is insync
@@ -2717,6 +2719,7 @@ static void handle_stripe_fill(struct stripe_head *sh,
 				break;
 	set_bit(STRIPE_HANDLE, &sh->state);
 }
+
 
 /* handle_stripe_clean_event
  * any written block on an uptodate or failed drive can be returned.
@@ -2971,6 +2974,7 @@ static void handle_parity_checks5(struct r5conf *conf, struct stripe_head *sh,
 		BUG();
 	}
 }
+
 
 static void handle_parity_checks6(struct r5conf *conf, struct stripe_head *sh,
 				  struct stripe_head_state *s,
@@ -3605,6 +3609,7 @@ static void handle_stripe(struct stripe_head *sh)
 			}
 		}
 
+
 	/* Finish reconstruct operations initiated by the expansion process */
 	if (sh->reconstruct_state == reconstruct_state_result) {
 		struct stripe_head *sh_src
@@ -3789,6 +3794,7 @@ static int raid5_mergeable_bvec(struct request_queue *q,
 		return max;
 }
 
+
 static int in_chunk_boundary(struct mddev *mddev, struct bio *bio)
 {
 	sector_t sector = bio->bi_iter.bi_sector + get_start_sect(bio->bi_bdev);
@@ -3818,6 +3824,7 @@ static void add_bio_to_retry(struct bio *bi,struct r5conf *conf)
 	md_wakeup_thread(conf->mddev->thread);
 }
 
+
 static struct bio *remove_bio_from_retry(struct r5conf *conf)
 {
 	struct bio *bi;
@@ -3840,6 +3847,7 @@ static struct bio *remove_bio_from_retry(struct r5conf *conf)
 
 	return bi;
 }
+
 
 /*
  *  The "raid5_align_endio" should check if the read succeeded and if it
@@ -3871,6 +3879,7 @@ static void raid5_align_endio(struct bio *bi, int error)
 		return;
 	}
 
+
 	pr_debug("raid5_align_endio : io error...handing IO for a retry\n");
 
 	add_bio_to_retry(raid_bi, conf);
@@ -3894,6 +3903,7 @@ static int bio_fits_rdev(struct bio *bi)
 
 	return 1;
 }
+
 
 static int chunk_aligned_read(struct mddev *mddev, struct bio * raid_bio)
 {
@@ -3946,7 +3956,7 @@ static int chunk_aligned_read(struct mddev *mddev, struct bio * raid_bio)
 		rcu_read_unlock();
 		raid_bio->bi_next = (void*)rdev;
 		align_bi->bi_bdev =  rdev->bdev;
-		__clear_bit(BIO_SEG_VALID, &align_bi->bi_flags);
+		align_bi->bi_flags &= ~(1 << BIO_SEG_VALID);
 
 		if (!bio_fits_rdev(align_bi) ||
 		    is_badblock(rdev, align_bi->bi_sector, align_bi->bi_size>>9,
@@ -4965,6 +4975,7 @@ raid5_skip_copy = __ATTR(skip_copy, S_IRUGO | S_IWUSR,
 					raid5_show_skip_copy,
 					raid5_store_skip_copy);
 
+
 static ssize_t
 stripe_cache_active_show(struct mddev *mddev, char *page)
 {
@@ -5384,6 +5395,7 @@ static struct r5conf *setup_conf(struct mddev *mddev)
 		return ERR_PTR(-ENOMEM);
 }
 
+
 static int only_parity(int raid_disk, int algo, int raid_disks, int max_degraded)
 {
 	switch (algo) {
@@ -5396,7 +5408,7 @@ static int only_parity(int raid_disk, int algo, int raid_disks, int max_degraded
 			return 1;
 		break;
 	case ALGORITHM_PARITY_0_6:
-		if (raid_disk == 0 ||
+		if (raid_disk == 0 || 
 		    raid_disk == raid_disks - 1)
 			return 1;
 		break;
@@ -5650,6 +5662,7 @@ static int run(struct mddev *mddev)
 							"reshape");
 	}
 
+
 	/* Ok, everything is just fine now */
 	if (mddev->to_remove == &raid5_attrs_group)
 		mddev->to_remove = NULL;
@@ -5696,7 +5709,7 @@ static int run(struct mddev *mddev)
 		mddev->queue->limits.discard_granularity = stripe;
 		/*
 		 * unaligned part of discard request will be ignored, so can't
-		 * guarantee discard_zeroes_data
+		 * guarantee discard_zerors_data
 		 */
 		mddev->queue->limits.discard_zeroes_data = 0;
 
@@ -5721,18 +5734,6 @@ static int run(struct mddev *mddev)
 			    !bdev_get_queue(rdev->bdev)->
 						limits.discard_zeroes_data)
 				discard_supported = false;
-			/* Unfortunately, discard_zeroes_data is not currently
-			 * a guarantee - just a hint.  So we only allow DISCARD
-			 * if the sysadmin has confirmed that only safe devices
-			 * are in use by setting a module parameter.
-			 */
-			if (!devices_handle_discard_safely) {
-				if (discard_supported) {
-					pr_info("md/raid456: discard support disabled due to uncertainty.\n");
-					pr_info("Set raid456.devices_handle_discard_safely=Y to override.\n");
-				}
-				discard_supported = false;
-			}
 		}
 
 		if (discard_supported &&
@@ -6296,6 +6297,7 @@ static void raid5_quiesce(struct mddev *mddev, int state)
 	}
 }
 
+
 static void *raid45_takeover_raid0(struct mddev *mddev, int level)
 {
 	struct r0conf *raid0_conf = mddev->private;
@@ -6321,6 +6323,7 @@ static void *raid45_takeover_raid0(struct mddev *mddev, int level)
 
 	return setup_conf(mddev);
 }
+
 
 static void *raid5_takeover_raid1(struct mddev *mddev)
 {
@@ -6381,6 +6384,7 @@ static void *raid5_takeover_raid6(struct mddev *mddev)
 	mddev->raid_disks -= 1;
 	return setup_conf(mddev);
 }
+
 
 static int raid5_check_reshape(struct mddev *mddev)
 {
@@ -6529,6 +6533,7 @@ static void *raid6_takeover(struct mddev *mddev)
 	mddev->raid_disks += 1;
 	return setup_conf(mddev);
 }
+
 
 static struct md_personality raid6_personality =
 {

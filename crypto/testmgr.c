@@ -209,7 +209,9 @@ static void testmgr_free_buf(char *buf[XBUFSIZE])
 		free_page((unsigned long)buf[i]);
 }
 
-static int wait_async_op(struct tcrypt_result *tr, int ret)
+static int do_one_async_hash_op(struct ahash_request *req,
+				struct tcrypt_result *tr,
+				int ret)
 {
 	if (ret == -EINPROGRESS || ret == -EBUSY) {
 		ret = wait_for_completion_interruptible(&tr->completion);
@@ -227,20 +229,13 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 	const char *algo = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	unsigned int i, j, k, temp;
 	struct scatterlist sg[8];
-	char *result;
-	char *key;
+	char result[64];
 	struct ahash_request *req;
 	struct tcrypt_result tresult;
 	void *hash_buff;
 	char *xbuf[XBUFSIZE];
 	int ret = -ENOMEM;
 
-	result = kmalloc(MAX_DIGEST_SIZE, GFP_KERNEL);
-	if (!result)
-		return ret;
-	key = kmalloc(MAX_KEYLEN, GFP_KERNEL);
-	if (!key)
-		goto out_nobuf;
 	if (testmgr_alloc_buf(xbuf))
 		goto out_nobuf;
 
@@ -265,7 +260,7 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 			goto out;
 
 		j++;
-		memset(result, 0, MAX_DIGEST_SIZE);
+		memset(result, 0, 64);
 
 		hash_buff = xbuf[0];
 		hash_buff += align_offset;
@@ -275,14 +270,8 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 
 		if (template[i].ksize) {
 			crypto_ahash_clear_flags(tfm, ~0);
-			if (template[i].ksize > MAX_KEYLEN) {
-				pr_err("alg: hash: setkey failed on test %d for %s: key size %d > %d\n",
-				       j, algo, template[i].ksize, MAX_KEYLEN);
-				ret = -EINVAL;
-				goto out;
-			}
-			memcpy(key, template[i].key, template[i].ksize);
-			ret = crypto_ahash_setkey(tfm, key, template[i].ksize);
+			ret = crypto_ahash_setkey(tfm, template[i].key,
+						  template[i].ksize);
 			if (ret) {
 				printk(KERN_ERR "alg: hash: setkey failed on "
 				       "test %d for %s: ret=%d\n", j, algo,
@@ -293,26 +282,30 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 
 		ahash_request_set_crypt(req, sg, result, template[i].psize);
 		if (use_digest) {
-			ret = wait_async_op(&tresult, crypto_ahash_digest(req));
+			ret = do_one_async_hash_op(req, &tresult,
+						   crypto_ahash_digest(req));
 			if (ret) {
 				pr_err("alg: hash: digest failed on test %d "
 				       "for %s: ret=%d\n", j, algo, -ret);
 				goto out;
 			}
 		} else {
-			ret = wait_async_op(&tresult, crypto_ahash_init(req));
+			ret = do_one_async_hash_op(req, &tresult,
+						   crypto_ahash_init(req));
 			if (ret) {
 				pr_err("alt: hash: init failed on test %d "
 				       "for %s: ret=%d\n", j, algo, -ret);
 				goto out;
 			}
-			ret = wait_async_op(&tresult, crypto_ahash_update(req));
+			ret = do_one_async_hash_op(req, &tresult,
+						   crypto_ahash_update(req));
 			if (ret) {
 				pr_err("alt: hash: update failed on test %d "
 				       "for %s: ret=%d\n", j, algo, -ret);
 				goto out;
 			}
-			ret = wait_async_op(&tresult, crypto_ahash_final(req));
+			ret = do_one_async_hash_op(req, &tresult,
+						   crypto_ahash_final(req));
 			if (ret) {
 				pr_err("alt: hash: final failed on test %d "
 				       "for %s: ret=%d\n", j, algo, -ret);
@@ -336,75 +329,70 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 		if (align_offset != 0)
 			break;
 
-		if (!template[i].np)
-			continue;
+		if (template[i].np) {
+			j++;
+			memset(result, 0, 64);
 
-		j++;
-		memset(result, 0, MAX_DIGEST_SIZE);
+			temp = 0;
+			sg_init_table(sg, template[i].np);
+			ret = -EINVAL;
+			for (k = 0; k < template[i].np; k++) {
+				if (WARN_ON(offset_in_page(IDX[k]) +
+					    template[i].tap[k] > PAGE_SIZE))
+					goto out;
+				sg_set_buf(&sg[k],
+					   memcpy(xbuf[IDX[k] >> PAGE_SHIFT] +
+						  offset_in_page(IDX[k]),
+						  template[i].plaintext + temp,
+						  template[i].tap[k]),
+					   template[i].tap[k]);
+				temp += template[i].tap[k];
+			}
 
-		temp = 0;
-		sg_init_table(sg, template[i].np);
-		ret = -EINVAL;
-		for (k = 0; k < template[i].np; k++) {
-			if (WARN_ON(offset_in_page(IDX[k]) +
-				    template[i].tap[k] > PAGE_SIZE))
+			if (template[i].ksize) {
+				crypto_ahash_clear_flags(tfm, ~0);
+				ret = crypto_ahash_setkey(tfm, template[i].key,
+							  template[i].ksize);
+
+				if (ret) {
+					printk(KERN_ERR "alg: hash: setkey "
+					       "failed on chunking test %d "
+					       "for %s: ret=%d\n", j, algo,
+					       -ret);
+					goto out;
+				}
+			}
+
+			ahash_request_set_crypt(req, sg, result,
+						template[i].psize);
+			ret = crypto_ahash_digest(req);
+			switch (ret) {
+			case 0:
+				break;
+			case -EINPROGRESS:
+			case -EBUSY:
+				ret = wait_for_completion_interruptible(
+					&tresult.completion);
+				if (!ret && !(ret = tresult.err)) {
+					reinit_completion(&tresult.completion);
+					break;
+				}
+				/* fall through */
+			default:
+				printk(KERN_ERR "alg: hash: digest failed "
+				       "on chunking test %d for %s: "
+				       "ret=%d\n", j, algo, -ret);
 				goto out;
-			sg_set_buf(&sg[k],
-				   memcpy(xbuf[IDX[k] >> PAGE_SHIFT] +
-					  offset_in_page(IDX[k]),
-					  template[i].plaintext + temp,
-					  template[i].tap[k]),
-				   template[i].tap[k]);
-			temp += template[i].tap[k];
-		}
+			}
 
-		if (template[i].ksize) {
-			if (template[i].ksize > MAX_KEYLEN) {
-				pr_err("alg: hash: setkey failed on test %d for %s: key size %d > %d\n",
-				       j, algo, template[i].ksize, MAX_KEYLEN);
+			if (memcmp(result, template[i].digest,
+				   crypto_ahash_digestsize(tfm))) {
+				printk(KERN_ERR "alg: hash: Chunking test %d "
+				       "failed for %s\n", j, algo);
+				hexdump(result, crypto_ahash_digestsize(tfm));
 				ret = -EINVAL;
 				goto out;
 			}
-			crypto_ahash_clear_flags(tfm, ~0);
-			memcpy(key, template[i].key, template[i].ksize);
-			ret = crypto_ahash_setkey(tfm, key, template[i].ksize);
-
-			if (ret) {
-				printk(KERN_ERR "alg: hash: setkey "
-				       "failed on chunking test %d "
-				       "for %s: ret=%d\n", j, algo, -ret);
-				goto out;
-			}
-		}
-
-		ahash_request_set_crypt(req, sg, result, template[i].psize);
-		ret = crypto_ahash_digest(req);
-		switch (ret) {
-		case 0:
-			break;
-		case -EINPROGRESS:
-		case -EBUSY:
-			ret = wait_for_completion_interruptible(
-				&tresult.completion);
-			if (!ret && !(ret = tresult.err)) {
-				reinit_completion(&tresult.completion);
-				break;
-			}
-			/* fall through */
-		default:
-			printk(KERN_ERR "alg: hash: digest failed "
-			       "on chunking test %d for %s: "
-			       "ret=%d\n", j, algo, -ret);
-			goto out;
-		}
-
-		if (memcmp(result, template[i].digest,
-			   crypto_ahash_digestsize(tfm))) {
-			printk(KERN_ERR "alg: hash: Chunking test %d "
-			       "failed for %s\n", j, algo);
-			hexdump(result, crypto_ahash_digestsize(tfm));
-			ret = -EINVAL;
-			goto out;
 		}
 	}
 
@@ -415,8 +403,6 @@ out:
 out_noreq:
 	testmgr_free_buf(xbuf);
 out_nobuf:
-	kfree(key);
-	kfree(result);
 	return ret;
 }
 
@@ -490,14 +476,7 @@ static int test_aead(struct crypto_aead *tfm, int enc,
 				crypto_aead_set_flags(
 					tfm, CRYPTO_TFM_REQ_WEAK_KEY);
 
-			if (template[i].klen > MAX_KEYLEN) {
-				pr_err("alg: aead%s: setkey failed on test %d for %s: key size %d > %d\n",
-				       d, j, algo, template[i].klen,
-				       MAX_KEYLEN);
-				ret = -EINVAL;
-				goto out;
-			}
-			memcpy(key, template[i].key, template[i].klen);
+			key = template[i].key;
 
 			ret = crypto_aead_setkey(tfm, key,
 						 template[i].klen);
@@ -592,14 +571,7 @@ static int test_aead(struct crypto_aead *tfm, int enc,
 			if (template[i].wk)
 				crypto_aead_set_flags(
 					tfm, CRYPTO_TFM_REQ_WEAK_KEY);
-			if (template[i].klen > MAX_KEYLEN) {
-				pr_err("alg: aead%s: setkey failed on test %d for %s: key size %d > %d\n",
-				       d, j, algo, template[i].klen,
-				       MAX_KEYLEN);
-				ret = -EINVAL;
-				goto out;
-			}
-			memcpy(key, template[i].key, template[i].klen);
+			key = template[i].key;
 
 			ret = crypto_aead_setkey(tfm, key, template[i].klen);
 			if (!ret == template[i].fail) {
@@ -1562,14 +1534,16 @@ static int alg_test_crc32c(const struct alg_test_desc *desc,
 	}
 
 	do {
-		SHASH_DESC_ON_STACK(shash, tfm);
-		u32 *ctx = (u32 *)shash_desc_ctx(shash);
+		struct {
+			struct shash_desc shash;
+			char ctx[crypto_shash_descsize(tfm)];
+		} sdesc;
 
-		shash->tfm = tfm;
-		shash->flags = 0;
+		sdesc.shash.tfm = tfm;
+		sdesc.shash.flags = 0;
 
-		*ctx = le32_to_cpu(420553207);
-		err = crypto_shash_final(shash, (u8 *)&val);
+		*(u32 *)sdesc.ctx = le32_to_cpu(420553207);
+		err = crypto_shash_final(&sdesc.shash, (u8 *)&val);
 		if (err) {
 			printk(KERN_ERR "alg: crc32c: Operation failed for "
 			       "%s: %d\n", driver, err);
@@ -1624,7 +1598,7 @@ static int drbg_cavs_test(struct drbg_testvec *test, int pr,
 
 	drng = crypto_alloc_rng(driver, type, mask);
 	if (IS_ERR(drng)) {
-		printk(KERN_ERR "alg: drbg: could not allocate DRNG handle for "
+		printk(KERN_ERR "alg: drbg: could not allocate DRNG handle for"
 		       "%s\n", driver);
 		kzfree(buf);
 		return -ENOMEM;
@@ -1649,7 +1623,7 @@ static int drbg_cavs_test(struct drbg_testvec *test, int pr,
 			buf, test->expectedlen, &addtl);
 	}
 	if (ret <= 0) {
-		printk(KERN_ERR "alg: drbg: could not obtain random data for "
+		printk(KERN_ERR "alg: drbg: could not obtain random data for"
 		       "driver %s\n", driver);
 		goto outbuf;
 	}
@@ -1664,7 +1638,7 @@ static int drbg_cavs_test(struct drbg_testvec *test, int pr,
 			buf, test->expectedlen, &addtl);
 	}
 	if (ret <= 0) {
-		printk(KERN_ERR "alg: drbg: could not obtain random data for "
+		printk(KERN_ERR "alg: drbg: could not obtain random data for"
 		       "driver %s\n", driver);
 		goto outbuf;
 	}
@@ -2782,38 +2756,6 @@ static const struct alg_test_desc alg_test_descs[] = {
 				.dec = {
 					.vecs = tf_lrw_dec_tv_template,
 					.count = TF_LRW_DEC_TEST_VECTORS
-				}
-			}
-		}
-	}, {
-		.alg = "lz4",
-		.test = alg_test_comp,
-		.fips_allowed = 1,
-		.suite = {
-			.comp = {
-				.comp = {
-					.vecs = lz4_comp_tv_template,
-					.count = LZ4_COMP_TEST_VECTORS
-				},
-				.decomp = {
-					.vecs = lz4_decomp_tv_template,
-					.count = LZ4_DECOMP_TEST_VECTORS
-				}
-			}
-		}
-	}, {
-		.alg = "lz4hc",
-		.test = alg_test_comp,
-		.fips_allowed = 1,
-		.suite = {
-			.comp = {
-				.comp = {
-					.vecs = lz4hc_comp_tv_template,
-					.count = LZ4HC_COMP_TEST_VECTORS
-				},
-				.decomp = {
-					.vecs = lz4hc_decomp_tv_template,
-					.count = LZ4HC_DECOMP_TEST_VECTORS
 				}
 			}
 		}

@@ -37,6 +37,8 @@ static int key_get_type_from_user(char *type,
 		return ret;
 	if (ret == 0 || ret >= len)
 		return -EINVAL;
+	if (type[0] == '.')
+		return -EPERM;
 	type[len - 1] = '\0';
 	return 0;
 }
@@ -84,10 +86,6 @@ SYSCALL_DEFINE5(add_key, const char __user *, _type,
 		if (!*description) {
 			kfree(description);
 			description = NULL;
-		} else if ((description[0] == '.') &&
-			   (strncmp(type, "keyring", 7) == 0)) {
-			ret = -EPERM;
-			goto error2;
 		}
 	}
 

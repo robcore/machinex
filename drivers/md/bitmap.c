@@ -879,6 +879,7 @@ void bitmap_unplug(struct bitmap *bitmap)
 {
 	unsigned long i;
 	int dirty, need_write;
+	int wait = 0;
 
 	if (!bitmap || !bitmap->storage.filemap ||
 	    test_bit(BITMAP_STALE, &bitmap->flags))
@@ -896,13 +897,16 @@ void bitmap_unplug(struct bitmap *bitmap)
 			clear_page_attr(bitmap, i, BITMAP_PAGE_PENDING);
 			write_page(bitmap, bitmap->storage.filemap[i], 0);
 		}
+		if (dirty)
+			wait = 1;
 	}
-	if (bitmap->storage.file)
-		wait_event(bitmap->write_wait,
-			   atomic_read(&bitmap->pending_writes)==0);
-	else
-		md_super_wait(bitmap->mddev);
-
+	if (wait) { /* if any writes were performed, we need to wait on them */
+		if (bitmap->storage.file)
+			wait_event(bitmap->write_wait,
+				   atomic_read(&bitmap->pending_writes)==0);
+		else
+			md_super_wait(bitmap->mddev);
+	}
 	if (test_bit(BITMAP_WRITE_ERROR, &bitmap->flags))
 		bitmap_file_kick(bitmap);
 }

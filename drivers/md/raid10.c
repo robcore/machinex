@@ -328,6 +328,7 @@ static void raid10_end_read_request(struct bio *bio, int error)
 	struct md_rdev *rdev;
 	struct r10conf *conf = r10_bio->mddev->private;
 
+
 	slot = r10_bio->read_slot;
 	dev = r10_bio->devs[slot].devnum;
 	rdev = r10_bio->devs[slot].rdev;
@@ -1475,6 +1476,7 @@ static void make_request(struct mddev *mddev, struct bio *bio)
 
 	md_write_start(mddev, bio);
 
+
 	do {
 
 		/*
@@ -1590,12 +1592,13 @@ static void error(struct mddev *mddev, struct md_rdev *rdev)
 		spin_unlock_irqrestore(&conf->device_lock, flags);
 		return;
 	}
-	if (test_and_clear_bit(In_sync, &rdev->flags))
+	if (test_and_clear_bit(In_sync, &rdev->flags)) {
 		mddev->degraded++;
-	/*
-	 * If recovery is running, make sure it aborts.
-	 */
-	set_bit(MD_RECOVERY_INTR, &mddev->recovery);
+			/*
+		 * if recovery is running, make sure it aborts.
+		 */
+		set_bit(MD_RECOVERY_INTR, &mddev->recovery);
+	}
 	set_bit(Blocked, &rdev->flags);
 	set_bit(Faulty, &rdev->flags);
 	set_bit(MD_CHANGE_DEVS, &mddev->flags);
@@ -1687,6 +1690,7 @@ static int raid10_spare_active(struct mddev *mddev)
 	print_conf(conf);
 	return count;
 }
+
 
 static int raid10_add_disk(struct mddev *mddev, struct md_rdev *rdev)
 {
@@ -1832,6 +1836,7 @@ abort:
 	print_conf(conf);
 	return err;
 }
+
 
 static void end_sync_read(struct bio *bio, int error)
 {
@@ -2196,6 +2201,7 @@ static void recovery_request_write(struct mddev *mddev, struct r10bio *r10_bio)
 		generic_make_request(wbio2);
 	}
 }
+
 
 /*
  * Used by fix_read_error() to decay the per rdev read_errors.
@@ -2786,6 +2792,7 @@ static void raid10d(struct md_thread *thread)
 	blk_finish_plug(&plug);
 }
 
+
 static int init_resync(struct r10conf *conf)
 {
 	int buffs;
@@ -3004,7 +3011,6 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 			}
 
 			r10_bio = mempool_alloc(conf->r10buf_pool, GFP_NOIO);
-			r10_bio->state = 0;
 			raise_barrier(conf, rb2 != NULL);
 			atomic_set(&r10_bio->remaining, 0);
 
@@ -3191,7 +3197,6 @@ static sector_t sync_request(struct mddev *mddev, sector_t sector_nr,
 		if (sync_blocks < max_sync)
 			max_sync = sync_blocks;
 		r10_bio = mempool_alloc(conf->r10buf_pool, GFP_NOIO);
-		r10_bio->state = 0;
 
 		r10_bio->mddev = mddev;
 		atomic_set(&r10_bio->remaining, 0);
@@ -3686,8 +3691,6 @@ static int stop(struct mddev *mddev)
 		mempool_destroy(conf->r10bio_pool);
 	safe_put_page(conf->tmppage);
 	kfree(conf->mirrors);
-	kfree(conf->mirrors_old);
-	kfree(conf->mirrors_new);
 	kfree(conf);
 	mddev->private = NULL;
 	return 0;

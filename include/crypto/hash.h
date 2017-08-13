@@ -58,11 +58,6 @@ struct shash_desc {
 	void *__ctx[] CRYPTO_MINALIGN_ATTR;
 };
 
-#define SHASH_DESC_ON_STACK(shash, ctx)				  \
-	char __##shash##_desc[sizeof(struct shash_desc) +	  \
-		crypto_shash_descsize(ctx)] CRYPTO_MINALIGN_ATTR; \
-	struct shash_desc *shash = (struct shash_desc *)__##shash##_desc
-
 struct shash_alg {
 	int (*init)(struct shash_desc *desc);
 	int (*update)(struct shash_desc *desc, const u8 *data,
@@ -243,10 +238,10 @@ static inline struct ahash_request *ahash_request_cast(
 
 static inline void ahash_request_set_callback(struct ahash_request *req,
 					      u32 flags,
-					      crypto_completion_t compl,
+					      crypto_completion_t complete,
 					      void *data)
 {
-	req->base.complete = compl;
+	req->base.complete = complete;
 	req->base.data = data;
 	req->base.flags = flags;
 }
