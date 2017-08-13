@@ -3496,6 +3496,8 @@ level_store(struct mddev *mddev, const char *buf, size_t len)
 		mddev->level = LEVEL_NONE;
 		return rv;
 	}
+	if (mddev->ro)
+		return  -EROFS;
 
 	/* request to change the personality.  Need to ensure:
 	 *  - array is not engaged in resync/recovery/reshape
@@ -3684,6 +3686,8 @@ layout_store(struct mddev *mddev, const char *buf, size_t len)
 		int err;
 		if (mddev->pers->check_reshape == NULL)
 			return -EBUSY;
+		if (mddev->ro)
+			return -EROFS;
 		mddev->new_layout = n;
 		err = mddev->pers->check_reshape(mddev);
 		if (err) {
@@ -3773,6 +3777,8 @@ chunk_size_store(struct mddev *mddev, const char *buf, size_t len)
 		int err;
 		if (mddev->pers->check_reshape == NULL)
 			return -EBUSY;
+		if (mddev->ro)
+			return -EROFS;
 		mddev->new_chunk_sectors = n >> 9;
 		err = mddev->pers->check_reshape(mddev);
 		if (err) {
@@ -6192,6 +6198,8 @@ static int update_size(struct mddev *mddev, sector_t num_sectors)
 	 */
 	if (mddev->sync_thread)
 		return -EBUSY;
+	if (mddev->ro)
+		return -EROFS;
 
 	rdev_for_each(rdev, mddev) {
 		sector_t avail = rdev->sectors;
@@ -6214,6 +6222,8 @@ static int update_raid_disks(struct mddev *mddev, int raid_disks)
 	/* change the number of raid disks */
 	if (mddev->pers->check_reshape == NULL)
 		return -EINVAL;
+	if (mddev->ro)
+		return -EROFS;
 	if (raid_disks <= 0 ||
 	    (mddev->max_disks && raid_disks >= mddev->max_disks))
 		return -EINVAL;
