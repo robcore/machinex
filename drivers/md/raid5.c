@@ -474,8 +474,10 @@ get_active_stripe(struct r5conf *conf, sector_t sector,
 						     || !conf->inactive_blocked),
 						    conf->device_lock);
 				conf->inactive_blocked = 0;
-			} else
+			} else {
 				init_stripe(sh, sector, previous);
+				atomic_inc(&sh->count);
+			}
 		} else {
 			if (atomic_read(&sh->count)) {
 				BUG_ON(!list_empty(&sh->lru)
