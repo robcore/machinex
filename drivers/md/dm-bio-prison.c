@@ -22,13 +22,17 @@ struct dm_bio_prison_cell {
 	struct bio_list bios;
 };
 
-struct dm_bio_prison {
+struct bucket {
 	spinlock_t lock;
+	struct hlist_head cells;
+};
+
+struct dm_bio_prison {
 	mempool_t *cell_pool;
 
 	unsigned nr_buckets;
 	unsigned hash_mask;
-	struct hlist_head *cells;
+	struct bucket *buckets;
 };
 
 /*----------------------------------------------------------------*/
@@ -48,6 +52,12 @@ static uint32_t calc_nr_buckets(unsigned nr_cells)
 
 static struct kmem_cache *_cell_cache;
 
+static void init_bucket(struct bucket *b)
+{
+	spin_lock_init(&b->lock);
+	INIT_HLIST_HEAD(&b->cells);
+}
+
 /*
  * @nr_cells should be the number of cells you want in use _concurrently_.
  * Don't confuse it with the number of distinct keys.
@@ -57,13 +67,12 @@ struct dm_bio_prison *dm_bio_prison_create(unsigned nr_cells)
 	unsigned i;
 	uint32_t nr_buckets = calc_nr_buckets(nr_cells);
 	size_t len = sizeof(struct dm_bio_prison) +
-		(sizeof(struct hlist_head) * nr_buckets);
+		(sizeof(struct bucket) * nr_buckets);
 	struct dm_bio_prison *prison = kmalloc(len, GFP_KERNEL);
 
 	if (!prison)
 		return NULL;
 
-	spin_lock_init(&prison->lock);
 	prison->cell_pool = mempool_create_slab_pool(nr_cells, _cell_cache);
 	if (!prison->cell_pool) {
 		kfree(prison);
@@ -72,9 +81,9 @@ struct dm_bio_prison *dm_bio_prison_create(unsigned nr_cells)
 
 	prison->nr_buckets = nr_buckets;
 	prison->hash_mask = nr_buckets - 1;
-	prison->cells = (struct hlist_head *) (prison + 1);
+	prison->buckets = (struct bucket *) (prison + 1);
 	for (i = 0; i < nr_buckets; i++)
-		INIT_HLIST_HEAD(prison->cells + i);
+		init_bucket(prison->buckets + i);
 
 	return prison;
 }
@@ -245,13 +254,9 @@ void dm_cell_error(struct dm_bio_prison_cell *cell)
 	struct dm_bio_prison *prison = cell->prison;
 	struct bio_list bios;
 	struct bio *bio;
-	unsigned long flags;
 
 	bio_list_init(&bios);
-
-	spin_lock_irqsave(&prison->lock, flags);
-	__cell_release(cell, &bios);
-	spin_unlock_irqrestore(&prison->lock, flags);
+	dm_cell_release(prison, cell, &bios);
 
 	while ((bio = bio_list_pop(&bios)))
 		bio_io_error(bio);
