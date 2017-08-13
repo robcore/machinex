@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/workqueue.h>
+#include <linux/delay.h>
 #include <scsi/scsi_dh.h>
 #include <linux/atomic.h>
 
@@ -62,10 +63,10 @@ struct multipath {
 	struct list_head list;
 	struct dm_target *ti;
 
-	spinlock_t lock;
-
 	const char *hw_handler_name;
 	char *hw_handler_params;
+
+	spinlock_t lock;
 
 	unsigned nr_priority_groups;
 	struct list_head priority_groups;
@@ -82,10 +83,12 @@ struct multipath {
 	struct priority_group *next_pg;	/* Switch to this PG if set */
 	unsigned repeat_count;		/* I/Os left before calling PS again */
 
-	unsigned queue_io;		/* Must we queue all I/O? */
-	unsigned queue_if_no_path;	/* Queue I/O if last path fails? */
-	unsigned saved_queue_if_no_path;/* Saved state during suspension */
+	unsigned queue_io:1;		/* Must we queue all I/O? */
+	unsigned queue_if_no_path:1;	/* Queue I/O if last path fails? */
+	unsigned saved_queue_if_no_path:1; /* Saved state during suspension */
+	unsigned retain_attached_hw_handler:1; /* If there's already a hw_handler present, don't change it. */
 	unsigned pg_init_disabled:1;	/* pg_init is not currently allowed */
+
 	unsigned pg_init_retries;	/* Number of times to retry pg_init */
 	unsigned pg_init_count;		/* Number of times pg_init called */
 	unsigned pg_init_delay_msecs;	/* Number of msecs before pg_init retry */
@@ -334,14 +337,18 @@ static void __choose_pgpath(struct multipath *m, size_t nr_bytes)
 	/*
 	 * Loop through priority groups until we find a valid path.
 	 * First time we skip PGs marked 'bypassed'.
-	 * Second time we only try the ones we skipped.
+	 * Second time we only try the ones we skipped, but set
+	 * pg_init_delay_retry so we do not hammer controllers.
 	 */
 	do {
 		list_for_each_entry(pg, &m->priority_groups, list) {
 			if (pg->bypassed == bypassed)
 				continue;
-			if (!__choose_path_in_pg(m, pg, nr_bytes))
+			if (!__choose_path_in_pg(m, pg, nr_bytes)) {
+				if (!bypassed)
+					m->pg_init_delay_retry = 1;
 				return;
+			}
 		}
 	} while (bypassed--);
 
@@ -510,6 +517,8 @@ static struct pgpath *parse_path(struct dm_arg_set *as, struct path_selector *ps
 	int r;
 	struct pgpath *p;
 	struct multipath *m = ti->private;
+	struct request_queue *q = NULL;
+	const char *attached_handler_name;
 
 	/* we need at least a path arg */
 	if (as->argc < 1) {
@@ -528,13 +537,37 @@ static struct pgpath *parse_path(struct dm_arg_set *as, struct path_selector *ps
 		goto bad;
 	}
 
-	if (m->hw_handler_name) {
-		struct request_queue *q = bdev_get_queue(p->path.dev->bdev);
+	if (m->retain_attached_hw_handler || m->hw_handler_name)
+		q = bdev_get_queue(p->path.dev->bdev);
 
+	if (m->retain_attached_hw_handler) {
+		attached_handler_name = scsi_dh_attached_handler_name(q, GFP_KERNEL);
+		if (attached_handler_name) {
+			/*
+			 * Reset hw_handler_name to match the attached handler
+			 * and clear any hw_handler_params associated with the
+			 * ignored handler.
+			 *
+			 * NB. This modifies the table line to show the actual
+			 * handler instead of the original table passed in.
+			 */
+			kfree(m->hw_handler_name);
+			m->hw_handler_name = attached_handler_name;
+
+			kfree(m->hw_handler_params);
+			m->hw_handler_params = NULL;
+		}
+	}
+
+	if (m->hw_handler_name) {
+		/*
+		 * Increments scsi_dh reference, even when using an
+		 * already-attached handler.
+		 */
 		r = scsi_dh_attach(q, m->hw_handler_name);
 		if (r == -EBUSY) {
 			/*
-			 * Already attached to different hw_handler,
+			 * Already attached to different hw_handler:
 			 * try to reattach with correct one.
 			 */
 			scsi_dh_detach(q);
@@ -702,7 +735,7 @@ static int parse_features(struct dm_arg_set *as, struct multipath *m)
 	const char *arg_name;
 
 	static struct dm_arg _args[] = {
-		{0, 5, "invalid number of feature args"},
+		{0, 6, "invalid number of feature args"},
 		{1, 50, "pg_init_retries must be between 1 and 50"},
 		{0, 60000, "pg_init_delay_msecs must be between 0 and 60000"},
 	};
@@ -714,17 +747,17 @@ static int parse_features(struct dm_arg_set *as, struct multipath *m)
 	if (!argc)
 		return 0;
 
-	if (argc > as->argc) {
-		ti->error = "not enough arguments for features";
-		return -EINVAL;
-	}
-
 	do {
 		arg_name = dm_shift_arg(as);
 		argc--;
 
 		if (!strcasecmp(arg_name, "queue_if_no_path")) {
 			r = queue_if_no_path(m, 1, 0);
+			continue;
+		}
+
+		if (!strcasecmp(arg_name, "retain_attached_hw_handler")) {
+			m->retain_attached_hw_handler = 1;
 			continue;
 		}
 
@@ -1305,7 +1338,7 @@ static void multipath_resume(struct dm_target *ti)
  *      num_paths num_selector_args [path_dev [selector_args]* ]+ ]+
  */
 static void multipath_status(struct dm_target *ti, status_type_t type,
-			     char *result, unsigned int maxlen)
+			     unsigned status_flags, char *result, unsigned maxlen)
 {
 	int sz = 0;
 	unsigned long flags;
@@ -1323,13 +1356,16 @@ static void multipath_status(struct dm_target *ti, status_type_t type,
 	else {
 		DMEMIT("%u ", m->queue_if_no_path +
 			      (m->pg_init_retries > 0) * 2 +
-			      (m->pg_init_delay_msecs != DM_PG_INIT_DELAY_DEFAULT) * 2);
+			      (m->pg_init_delay_msecs != DM_PG_INIT_DELAY_DEFAULT) * 2 +
+			      m->retain_attached_hw_handler);
 		if (m->queue_if_no_path)
 			DMEMIT("queue_if_no_path ");
 		if (m->pg_init_retries)
 			DMEMIT("pg_init_retries %u ", m->pg_init_retries);
 		if (m->pg_init_delay_msecs != DM_PG_INIT_DELAY_DEFAULT)
 			DMEMIT("pg_init_delay_msecs %u ", m->pg_init_delay_msecs);
+		if (m->retain_attached_hw_handler)
+			DMEMIT("retain_attached_hw_handler ");
 	}
 
 	if (!m->hw_handler_name || type == STATUSTYPE_INFO)
@@ -1476,12 +1512,16 @@ out:
 static int multipath_ioctl(struct dm_target *ti, unsigned int cmd,
 			   unsigned long arg)
 {
-	struct multipath *m = (struct multipath *) ti->private;
-	struct block_device *bdev = NULL;
+	struct multipath *m = ti->private;
 	struct pgpath *pgpath;
-	fmode_t mode = 0;
+	struct block_device *bdev;
+	fmode_t mode;
 	unsigned long flags;
-	int r = 0;
+	int r;
+
+	bdev = NULL;
+	mode = 0;
+	r = 0;
 
 	spin_lock_irqsave(&m->lock, flags);
 
