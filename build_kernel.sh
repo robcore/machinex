@@ -103,11 +103,17 @@ if [[ $ONLINE == recovery ]]; then
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
+	adb kill-server
+	adbcountdown
 elif [[ $ONLINE == device ]]; then
 	echo "connected"
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
+	adb kill-server
+	adbcountdown
 else
+	adb kill-server
+	adbcountdown
 	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
 	adbcountdown
@@ -284,12 +290,16 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
+	adb kill-server
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
+	adb kill-server
+	adbcountdown
 else
+	adb kill-server
 	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
 	adbcountdown
@@ -836,12 +846,16 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
+	adb kill-server
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
+	adb kill-server
 else
+	adb kill-server
+	adbcountdown
 	echo "trying wireless" #fallback to wireless
 	adb connect 192.168.1.103
 	adbcountdown
