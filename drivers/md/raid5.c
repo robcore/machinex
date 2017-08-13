@@ -4661,8 +4661,8 @@ static inline sector_t sync_request(struct mddev *mddev, sector_t sector_nr, int
 	bitmap_start_sync(mddev->bitmap, sector_nr, &sync_blocks, still_degraded);
 
 	set_bit(STRIPE_SYNC_REQUESTED, &sh->state);
+	set_bit(STRIPE_HANDLE, &sh->state);
 
-	handle_stripe(sh);
 	release_stripe(sh);
 
 	return STRIPE_SECTORS;
@@ -4701,7 +4701,7 @@ static int  retry_aligned_read(struct r5conf *conf, struct bio *raid_bio)
 			/* already done this stripe */
 			continue;
 
-		sh = get_active_stripe(conf, sector, 0, 1, 0);
+		sh = get_active_stripe(conf, sector, 0, 1, 1);
 
 		if (!sh) {
 			/* failed to get a stripe - must wait */
