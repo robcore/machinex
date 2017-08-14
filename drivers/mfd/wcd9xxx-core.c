@@ -1624,7 +1624,7 @@ static int wcd9xxx_slim_suspend(struct slim_device *sldev, pm_message_t pmesg)
 static int wcd9xxx_i2c_suspend(struct i2c_client *i2cdev, pm_message_t pmesg)
 {
 	struct wcd9xxx *wcd9xxx = dev_get_drvdata(&i2cdev->dev);
-	if (wcd9xxx)
+	if (wcd9xxx != NULL)
 		return wcd9xxx_suspend(wcd9xxx, pmesg);
 	else
 		return 0;
