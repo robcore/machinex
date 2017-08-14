@@ -317,7 +317,6 @@ bool has_capability(struct task_struct *t, int cap)
 {
 	return has_ns_capability(t, &init_user_ns, cap);
 }
-EXPORT_SYMBOL(has_capability);
 
 /**
  * has_ns_capability_noaudit - Does a task have a capability (unaudited)
@@ -429,20 +428,19 @@ bool capable(int cap)
 EXPORT_SYMBOL(capable);
 
 /**
- * inode_capable - Check superior capability over inode
+ * capable_wrt_inode_uidgid - Check nsown_capable and uid and gid mapped
  * @inode: The inode in question
  * @cap: The capability in question
  *
- * Return true if the current task has the given superior capability
- * targeted at it's own user namespace and that the given inode is owned
- * by the current user namespace or a child namespace.
- *
- * Currently inodes can only be owned by the initial user namespace.
- *
+ * Return true if the current task has the given capability targeted at
+ * its own user namespace and that the given inode's uid and gid are
+ * mapped into the current user namespace.
  */
-bool inode_capable(const struct inode *inode, int cap)
+bool capable_wrt_inode_uidgid(const struct inode *inode, int cap)
 {
 	struct user_namespace *ns = current_user_ns();
 
-	return ns_capable(ns, cap) && (ns == &init_user_ns);
+	return ns_capable(ns, cap) && kuid_has_mapping(ns, inode->i_uid) &&
+		kgid_has_mapping(ns, inode->i_gid);
 }
+EXPORT_SYMBOL(capable_wrt_inode_uidgid);
