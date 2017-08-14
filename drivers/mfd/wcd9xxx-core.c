@@ -87,7 +87,9 @@ static int wcd9xxx_read(struct wcd9xxx *wcd9xxx, unsigned short reg,
 	if (ret < 0) {
 		dev_err(wcd9xxx->dev, "Codec read failed\n");
 		return ret;
-	}
+	} else
+		dev_dbg(wcd9xxx->dev, "Read 0x%02x from 0x%x\n",
+			 *buf, reg);
 
 	return 0;
 }
@@ -190,7 +192,9 @@ int wcd9xxx_bulk_read(struct wcd9xxx *wcd9xxx, unsigned short reg,
 	int ret;
 
 	mutex_lock(&wcd9xxx->io_lock);
+
 	ret = wcd9xxx_read(wcd9xxx, reg, count, buf, false);
+
 	mutex_unlock(&wcd9xxx->io_lock);
 
 	return ret;
@@ -203,7 +207,9 @@ int wcd9xxx_bulk_write(struct wcd9xxx *wcd9xxx, unsigned short reg,
 	int ret;
 
 	mutex_lock(&wcd9xxx->io_lock);
+
 	ret = wcd9xxx_write(wcd9xxx, reg, count, buf, false);
+
 	mutex_unlock(&wcd9xxx->io_lock);
 
 	return ret;
@@ -228,7 +234,7 @@ static int wcd9xxx_slim_read_device(struct wcd9xxx *wcd9xxx, unsigned short reg,
 		mutex_unlock(&wcd9xxx->xfer_lock);
 		if (likely(ret == 0) || (--slim_read_tries == 0))
 			break;
-		usleep_range(10000, 10100);
+		usleep_range(5000, 5000);
 	}
 
 	if (ret)
@@ -257,7 +263,7 @@ static int wcd9xxx_slim_write_device(struct wcd9xxx *wcd9xxx,
 		mutex_unlock(&wcd9xxx->xfer_lock);
 		if (likely(ret == 0) || (--slim_write_tries == 0))
 			break;
-		usleep_range(10000, 10100);
+		usleep_range(5000, 5000);
 	}
 
 	if (ret)
@@ -477,8 +483,11 @@ static int wcd9xxx_device_init(struct wcd9xxx *wcd9xxx, int irq)
 	wcd9xxx->wlock_holders = 0;
 	wcd9xxx->pm_state = WCD9XXX_PM_SLEEPABLE;
 	init_waitqueue_head(&wcd9xxx->pm_wq);
+	pm_qos_add_request(&wcd9xxx->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+				PM_QOS_DEFAULT_VALUE);
 
 	dev_set_drvdata(wcd9xxx->dev, wcd9xxx);
+
 	wcd9xxx_bring_up(wcd9xxx);
 
 	ret = wcd9xxx_check_codec_type(wcd9xxx, &wcd9xxx_dev, &wcd9xxx_dev_size,
@@ -508,6 +517,7 @@ err_irq:
 err:
 #endif
 	wcd9xxx_bring_down(wcd9xxx);
+	pm_qos_remove_request(&wcd9xxx->pm_qos_req);
 	mutex_destroy(&wcd9xxx->pm_lock);
 	mutex_destroy(&wcd9xxx->io_lock);
 	mutex_destroy(&wcd9xxx->xfer_lock);
@@ -520,6 +530,7 @@ static void wcd9xxx_device_exit(struct wcd9xxx *wcd9xxx)
 	wcd9xxx_bring_down(wcd9xxx);
 	wcd9xxx_free_reset(wcd9xxx);
 	mutex_destroy(&wcd9xxx->pm_lock);
+	pm_qos_remove_request(&wcd9xxx->pm_qos_req);
 	mutex_destroy(&wcd9xxx->io_lock);
 	mutex_destroy(&wcd9xxx->xfer_lock);
 	if (wcd9xxx_intf == WCD9XXX_INTERFACE_TYPE_SLIMBUS)
@@ -1551,7 +1562,7 @@ static int wcd9xxx_slim_resume(struct slim_device *sldev)
 static int wcd9xxx_i2c_resume(struct i2c_client *i2cdev)
 {
 	struct wcd9xxx *wcd9xxx = dev_get_drvdata(&i2cdev->dev);
-	if (wcd9xxx != NULL)
+	if (wcd9xxx)
 		return wcd9xxx_resume(wcd9xxx);
 	else
 		return 0;
