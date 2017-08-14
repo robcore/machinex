@@ -2827,7 +2827,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->stability_test = 0;
 	battery->eng_not_full_status = 0;
 #endif
-	battery->ps_enable= 0;
+	battery->ps_enable = 0;
 
 	hrtimer_init(&battery->event_termination_hrtimer,
 			CLOCK_BOOTTIME,
@@ -2930,7 +2930,8 @@ static int sec_battery_probe(struct platform_device *pdev)
 	if (battery->pdata->bat_irq) {
 		ret = request_threaded_irq(battery->pdata->bat_irq,
 				NULL, sec_bat_irq_thread,
-				battery->pdata->bat_irq_attr,
+				battery->pdata->bat_irq_attr
+				| IRQF_ONESHOT,
 				"battery-irq", battery);
 		if (ret)
 			goto err_supply_unreg_bat;

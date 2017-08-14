@@ -174,7 +174,7 @@ bool mx_is_cable_attached(void)
 	return mx_is_charging;
 }
 
-int current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
+int current_cable_type = CABLE_TYPE_UNKNOWN_MUIC;
 int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 {
 #ifdef CONFIG_CHARGER_MAX77693
