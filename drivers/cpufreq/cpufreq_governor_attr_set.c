@@ -36,6 +36,11 @@ static ssize_t governor_store(struct kobject *kobj, struct attribute *attr,
 	struct governor_attr *gattr = to_gov_attr(attr);
 	int ret;
 
+	if (attr_set == NULL || gattr == NULL) {
+		ret = -ENOMEM;
+		return ret;
+	}
+
 	mutex_lock(&attr_set->update_lock);
 	ret = attr_set->usage_count ? gattr->store(attr_set, buf, count) : -EBUSY;
 	mutex_unlock(&attr_set->update_lock);
