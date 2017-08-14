@@ -134,7 +134,7 @@ static inline uint32_t msm_spm_get_sts_curr_pmic_data(
  *****************************************************************************/
 int msm_spm_set_low_power_mode(unsigned int mode, bool notify_rpm)
 {
-	struct msm_spm_device *dev = &__get_cpu_var(msm_spm_devices);
+	struct msm_spm_device *dev = this_cpu_ptr(&msm_spm_devices);
 	uint32_t rpm_bypass = notify_rpm ? 0x00 : 0x01;
 
 	if (mode == dev->low_power_mode && notify_rpm == dev->notify_rpm
@@ -243,7 +243,7 @@ unsigned int msm_spm_get_vdd(unsigned int cpu)
 
 void msm_spm_reinit(void)
 {
-	struct msm_spm_device *dev = &__get_cpu_var(msm_spm_devices);
+	struct msm_spm_device *dev = this_cpu_ptr(&msm_spm_devices);
 	int i;
 
 	for (i = 0; i < MSM_SPM_REG_NR_INITIALIZE; i++)

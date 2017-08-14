@@ -132,7 +132,7 @@ static struct notifier_block hotplug_cpu_check_notifier = {
 int msm_platform_secondary_init(unsigned int cpu)
 {
 	int ret;
-	unsigned int *warm_boot = &__get_cpu_var(warm_boot_flag);
+	unsigned int *warm_boot = this_cpu_ptr(&warm_boot_flag);
 
 	if (!(*warm_boot)) {
 		*warm_boot = 1;
