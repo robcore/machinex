@@ -283,11 +283,14 @@ EXPORT_SYMBOL(locks_copy_conflock);
 
 void locks_copy_lock(struct file_lock *new, struct file_lock *fl)
 {
-	locks_release_private(new);
+	/* "new" must be a freshly-initialized lock */
+	WARN_ON_ONCE(new->fl_ops);
 
-	__locks_copy_lock(new, fl);
+	locks_copy_conflock(new, fl);
+
 	new->fl_file = fl->fl_file;
 	new->fl_ops = fl->fl_ops;
+
 	if (fl->fl_ops) {
 		if (fl->fl_ops->fl_copy_lock)
 			fl->fl_ops->fl_copy_lock(new, fl);
