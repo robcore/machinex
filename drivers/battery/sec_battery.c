@@ -322,8 +322,8 @@ static bool sec_bat_check_vf_adc(struct sec_battery_info *battery)
 	} else
 		battery->check_adc_value = adc;
 
-	if ((battery->check_adc_value < battery->pdata->check_adc_max) &&
-		(battery->check_adc_value > battery->pdata->check_adc_min))
+	if ((battery->check_adc_value <= battery->pdata->check_adc_max) &&
+		(battery->check_adc_value >= battery->pdata->check_adc_min))
 		return true;
 	else
 		return false;
@@ -632,7 +632,7 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 		battery->pdata->ovp_uvlo_result_callback(battery->health);
 		return false;
 	}
-	if ((battery->status == POWER_SUPPLY_STATUS_FULL) && \
+	if ((battery->status == POWER_SUPPLY_STATUS_FULL) &&
 		battery->is_recharging) {
 		psy_do_property(battery->pdata->fuelgauge_name, get,
 			POWER_SUPPLY_PROP_CAPACITY, value);
@@ -644,6 +644,7 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 			battery->voltage_now = 1080;
 			battery->voltage_avg = 1080;
 			power_supply_changed(&battery->psy_bat);
+			return false;
 		}
 	}
 
