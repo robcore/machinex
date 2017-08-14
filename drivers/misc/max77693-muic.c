@@ -31,6 +31,8 @@
 #include <linux/mfd/max77693.h>
 #include <linux/mfd/max77693-private.h>
 #include <linux/host_notify.h>
+#include <linux/wakelock.h>
+#include <linux/switch.h>
 #ifdef CONFIG_USBHUB_USB3803
 #include <linux/usb3803.h>
 #endif
@@ -120,6 +122,8 @@ struct max77693_muic_info {
 	int			irq_vbvolt;
 	int			irq_adc1k;
 	int			mansw;
+
+	struct wake_lock muic_wake_lock;
 
 	enum cable_type_muic	cable_type;
 	struct delayed_work	dock_work;
@@ -1693,15 +1697,15 @@ static int max77693_muic_handle_detach(struct max77693_muic_info *info, int irq)
 	}
 
 	switch (info->cable_type) {
+	case CABLE_TYPE_CHARGING_CABLE_MUIC:
+		info->cable_type = CABLE_TYPE_NONE_MUIC;
+		max77693_muic_set_charging_type(info, true);
+		break;
 	case CABLE_TYPE_OTG_MUIC:
 		info->cable_type = CABLE_TYPE_NONE_MUIC;
 
 		if (mdata->usb_cb && info->is_usb_ready)
 			mdata->usb_cb(USB_OTGHOST_DETACHED);
-		break;
-	case CABLE_TYPE_CHARGING_CABLE_MUIC:
-		info->cable_type = CABLE_TYPE_NONE_MUIC;
-		max77693_muic_set_charging_type(info, true);
 		break;
 	case CABLE_TYPE_USB_MUIC:
 	case CABLE_TYPE_CDP_MUIC:
@@ -1810,7 +1814,7 @@ static int max77693_muic_handle_detach(struct max77693_muic_info *info, int irq)
 		info->cable_type = CABLE_TYPE_NONE_MUIC;
 		max77693_muic_set_charging_type(info, false);
 
-		if (mdata->mhl_cb && info->is_mhl_ready)
+		if (mdata->mhl_cb && info->is_mhl_ready) {
 			mdata->mhl_cb(MAX77693_MUIC_DETACHED);
 		break;
 	case CABLE_TYPE_UNKNOWN_MUIC:
@@ -1850,6 +1854,8 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 	    max77693_muic_handle_dock_vol_key(info, status[0])) {
 		return;
 	}
+
+	wake_lock_timeout(&info->muic_wake_lock, msecs_to_jiffies(500));
 
 	adc = status[0] & STATUS1_ADC_MASK;
 	adcerr = status[0] & STATUS1_ADCERR_MASK;
@@ -2225,6 +2231,9 @@ static int max77693_muic_probe(struct platform_device *pdev)
 	info->is_factory_start = false;
 #endif /* !CONFIG_MUIC_MZX77693_SUPPORT_CAR_DOCK */
 
+	wake_lock_init(&info->muic_wake_lock, WAKE_LOCK_SUSPEND,
+		"muic_wake_lock");
+
 	info->cable_type = CABLE_TYPE_UNKNOWN_MUIC;
 	info->muic_data->sw_path = AP_USB_MODE;
 	gInfo = info;
@@ -2287,9 +2296,6 @@ static int max77693_muic_probe(struct platform_device *pdev)
 
 	/* init jig state */
 	max77693_update_jig_state(info);
-#ifdef CONFIG_VIDEO_MHL_V2
-	wake_lock_init(&info->muic_data->mhl_wake_lock, WAKE_LOCK_SUSPEND, "mhl_wake");
-#endif
 	/* initial cable detection */
 	INIT_DELAYED_WORK(&info->dock_work, max77693_muic_dock_detect);
 	schedule_delayed_work(&info->dock_work, msecs_to_jiffies(50));
@@ -2321,6 +2327,7 @@ static int max77693_muic_probe(struct platform_device *pdev)
  err_input:
 	platform_set_drvdata(pdev, NULL);
 	input_free_device(input);
+	wake_lock_destroy(&info->muic_wake_lock);
  err_kfree:
 	kfree(info);
  err_return:
@@ -2343,6 +2350,7 @@ static int max77693_muic_remove(struct platform_device *pdev)
 		free_irq(info->irq_chgtype, info);
 		free_irq(info->irq_vbvolt, info);
 		free_irq(info->irq_adc1k, info);
+		wake_lock_destroy(&info->muic_wake_lock);
 #ifndef CONFIG_TARGET_LOCALE_NA
 		gpio_free(info->muic_data->gpio_usb_sel);
 #endif /* CONFIG_TARGET_LOCALE_NA */

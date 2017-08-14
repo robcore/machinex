@@ -578,7 +578,14 @@ static void touchkey_ta_cb(struct touchkey_callbacks *cb, bool ta_status)
 {
 	struct cypress_touchkey_info *info =
 			container_of(cb, struct cypress_touchkey_info, callbacks);
-	struct i2c_client *client = info->client;
+	struct i2c_client *client;
+
+	if (info == NULL)
+		return;
+
+	client = info->client;
+	if (client == NULL)
+		return;
 
 	dev_info(&client->dev, "%s : 0x%02x\n", __func__, ic_fw_id);
 
@@ -1044,27 +1051,21 @@ static ssize_t touch_update_write(struct device *dev,
 	u8 data;
 
 	info->touchkey_update_status = 1;
-	//dev_info(dev, "[TouchKey] touch_update_write!\n");
 
 	disable_irq(info->irq);
 
 	if (ic_fw_id & CYPRESS_55_IC_MASK) {
-		//printk(KERN_INFO "[Touchkey] IC id 20055\n");
 		return 1;
 		}
 	else if (ic_fw_id & CYPRESS_65_IC_MASK)
 		pr_debug(KERN_INFO "[Touchkey] IC id 20065\n");
 	else {
-		//printk(KERN_INFO "[Touchkey] IC id 20045\n");
-		//printk(KERN_INFO "[TouchKey] FW update does not support!\n");
 		enable_irq(info->irq);
 		return 1;
 		}
 
 	while (retry--) {
 		if (ISSP_main() == 0) {
-			//dev_info(&info->client->dev,
-				//"[TouchKey] Update success!\n");
 			msleep(50);
 			cypress_touchkey_auto_cal(info);
 			info->touchkey_update_status = 0;
