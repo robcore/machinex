@@ -415,6 +415,7 @@ struct perf_event_mmap_page {
 #define PERF_RECORD_MISC_HYPERVISOR		(3 << 0)
 #define PERF_RECORD_MISC_GUEST_KERNEL		(4 << 0)
 #define PERF_RECORD_MISC_GUEST_USER		(5 << 0)
+#define PERF_RECORD_MISC_COMM_EXEC		(1 << 13)
 
 /*
  * Indicates that the content of PERF_SAMPLE_IP points to
