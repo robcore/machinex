@@ -1814,7 +1814,7 @@ static int max77693_muic_handle_detach(struct max77693_muic_info *info, int irq)
 		info->cable_type = CABLE_TYPE_NONE_MUIC;
 		max77693_muic_set_charging_type(info, false);
 
-		if (mdata->mhl_cb && info->is_mhl_ready) {
+		if (mdata->mhl_cb && info->is_mhl_ready)
 			mdata->mhl_cb(MAX77693_MUIC_DETACHED);
 		break;
 	case CABLE_TYPE_UNKNOWN_MUIC:
