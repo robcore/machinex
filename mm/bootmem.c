@@ -247,9 +247,6 @@ static inline void __init reset_node_managed_pages(pg_data_t *pgdat)
 {
 	struct zone *z;
 
-	if (reset_managed_pages_done)
-		return;
-
 	for (z = pgdat->node_zones; z < pgdat->node_zones + MAX_NR_ZONES; z++)
 		z->managed_pages = 0;
 }
@@ -258,8 +255,12 @@ void __init reset_all_zones_managed_pages(void)
 {
 	struct pglist_data *pgdat;
 
+	if (reset_managed_pages_done)
+		return;
+
 	for_each_online_pgdat(pgdat)
 		reset_node_managed_pages(pgdat);
+
 	reset_managed_pages_done = 1;
 }
 
@@ -292,6 +293,9 @@ static void __init __free(bootmem_data_t *bdata,
 		sidx + bdata->node_min_pfn,
 		eidx + bdata->node_min_pfn);
 
+	if (WARN_ON(bdata->node_bootmem_map == NULL))
+		return;
+
 	if (bdata->hint_idx > sidx)
 		bdata->hint_idx = sidx;
 
@@ -311,6 +315,9 @@ static int __init __reserve(bootmem_data_t *bdata, unsigned long sidx,
 		sidx + bdata->node_min_pfn,
 		eidx + bdata->node_min_pfn,
 		flags);
+
+	if (WARN_ON(bdata->node_bootmem_map == NULL))
+		return 0;
 
 	for (idx = sidx; idx < eidx; idx++)
 		if (test_and_set_bit(idx, bdata->node_bootmem_map)) {
