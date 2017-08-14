@@ -1064,9 +1064,6 @@ enter_exit:
 
 static int msm_pm_prepare_late(void)
 {
-		pm_gpio_dbg_showall(0);
-		pm_mpp_dbg_showall(0);
-
 #ifdef CONFIG_SEC_GPIO_DVS
 	/************************ Caution !!! ****************************/
 	/* This function must be located in appropriate SLEEP position
