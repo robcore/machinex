@@ -256,7 +256,8 @@ struct perf_event_attr {
 				exclude_guest  :  1, /* don't count in guest  */
 				constraint_duplicate : 1,
 
-				__reserved_1   : 42;
+				comm_exec      :  1, /* flag comm events that are due to an exec */
+				__reserved_1   : 39;
 
 	union {
 		__u32		wakeup_events;	  /* wakeup every n events */
