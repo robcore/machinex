@@ -245,7 +245,6 @@ nlmsvc_create_block(struct svc_rqst *rqstp, struct nlm_host *host,
 	block->b_daemon = rqstp->rq_server;
 	block->b_host   = host;
 	block->b_file   = file;
-	block->b_fl = NULL;
 	file->f_count++;
 
 	/* Add to file's list of blocks */
@@ -296,7 +295,6 @@ static void nlmsvc_free_block(struct kref *kref)
 	nlmsvc_freegrantargs(block->b_call);
 	nlmsvc_release_call(block->b_call);
 	nlm_release_file(block->b_file);
-	kfree(block->b_fl);
 	kfree(block);
 }
 
@@ -416,35 +414,6 @@ nlmsvc_lock(struct svc_rqst *rqstp, struct nlm_file *file,
 
 	/* Lock file against concurrent access */
 	mutex_lock(&file->f_mutex);
-	/* Get existing block (in case client is busy-waiting)
-	 * or create new block
-	 */
-	block = nlmsvc_lookup_block(file, lock);
-	if (block == NULL) {
-		block = nlmsvc_create_block(rqstp, host, file, lock, cookie);
-		ret = nlm_lck_denied_nolocks;
-		if (block == NULL)
-			goto out;
-		lock = &block->b_call->a_args.lock;
-	} else
-		lock->fl.fl_flags &= ~FL_SLEEP;
-
-	if (block->b_flags & B_QUEUED) {
-		dprintk("lockd: nlmsvc_lock deferred block %p flags %d\n",
-							block, block->b_flags);
-		if (block->b_granted) {
-			nlmsvc_unlink_block(block);
-			ret = nlm_granted;
-			goto out;
-		}
-		if (block->b_flags & B_TIMED_OUT) {
-			nlmsvc_unlink_block(block);
-			ret = nlm_lck_denied;
-			goto out;
-		}
-		ret = nlm_drop_reply;
-		goto out;
-	}
 
 	if (locks_in_grace() && !reclaim) {
 		ret = nlm_lck_denied_grace_period;
@@ -509,7 +478,6 @@ nlmsvc_testlock(struct svc_rqst *rqstp, struct nlm_file *file,
 		struct nlm_host *host, struct nlm_lock *lock,
 		struct nlm_lock *conflock, struct nlm_cookie *cookie)
 {
-	struct nlm_block 	*block = NULL;
 	int			error;
 	__be32			ret;
 
@@ -590,8 +558,6 @@ conf_lock:
 	locks_release_private(&lock->fl);
 	ret = nlm_lck_denied;
 out:
-	if (block)
-		nlmsvc_release_block(block);
 	return ret;
 }
 
@@ -662,7 +628,6 @@ nlmsvc_cancel_blocked(struct nlm_file *file, struct nlm_lock *lock)
  * This is a callback from the filesystem for VFS file lock requests.
  * It will be used if lm_grant is defined and the filesystem can not
  * respond to the request immediately.
- * For GETLK request it will copy the reply to the nlm_block.
  * For SETLK or SETLKW request it will get the local posix lock.
  * In all cases it will move the block to the head of nlm_blocked q where
  * nlmsvc_retry_blocked() can send back a reply for SETLKW or revisit the
