@@ -134,7 +134,7 @@ static int check_free_space(struct bsd_acct_struct *acct, struct file *file)
 	spin_lock(&acct_lock);
 	if (file != acct->file) {
 		if (act)
-			res = act > 0;
+			res = act>0;
 		goto out;
 	}
 
@@ -180,8 +180,8 @@ static void acct_file_reopen(struct bsd_acct_struct *acct, struct file *file,
 	if (file) {
 		acct->file = file;
 		acct->ns = ns;
-		acct->needcheck = jiffies;
-		acct->active = 0;
+		acct->needcheck = jiffies + ACCT_TIMEOUT*HZ;
+		acct->active = 1;
 		list_add(&acct->list, &acct_list);
 	}
 	if (old_acct) {
@@ -241,8 +241,6 @@ static int acct_on(struct filename *pathname)
 	return 0;
 }
 
-static DEFINE_MUTEX(acct_on_mutex);
-
 /**
  * sys_acct - enable/disable process accounting
  * @name: file name for accounting records or NULL to shutdown accounting
@@ -264,10 +262,8 @@ SYSCALL_DEFINE1(acct, const char __user *, name)
 	if (name) {
 		struct filename *tmp = getname(name);
 		if (IS_ERR(tmp))
-			return PTR_ERR(tmp);
-		mutex_lock(&acct_on_mutex);
+			return (PTR_ERR(tmp));
 		error = acct_on(tmp);
-		mutex_unlock(&acct_on_mutex);
 		putname(tmp);
 	} else {
 		struct bsd_acct_struct *acct;
@@ -460,16 +456,12 @@ static void do_acct_process(struct bsd_acct_struct *acct,
 {
 	struct pacct_struct *pacct = &current->signal->pacct;
 	acct_t ac;
+	mm_segment_t fs;
 	unsigned long flim;
 	u64 elapsed, run_time;
 	struct tty_struct *tty;
 	const struct cred *orig_cred;
 
-	/*
-	 * Accounting records are not subject to resource limits.
-	 */
-	flim = current->signal->rlim[RLIMIT_FSIZE].rlim_cur;
-	current->signal->rlim[RLIMIT_FSIZE].rlim_cur = RLIM_INFINITY;
 	/* Perform file operations on behalf of whoever enabled accounting */
 	orig_cred = override_creds(file->f_cred);
 
@@ -544,14 +536,20 @@ static void do_acct_process(struct bsd_acct_struct *acct,
 	 * Kernel segment override to datasegment and write it
 	 * to the accounting file.
 	 */
-	if (file_start_write_trylock(file)) {
-		/* it's been opened O_APPEND, so position is irrelevant */
-		loff_t pos = 0;
-		__kernel_write(file, (char *)&ac, sizeof(acct_t), &pos);
-		file_end_write(file);
-	}
-out:
+	file_start_write(file);
+	fs = get_fs();
+	set_fs(KERNEL_DS);
+	/*
+	 * Accounting records are not subject to resource limits.
+	 */
+	flim = current->signal->rlim[RLIMIT_FSIZE].rlim_cur;
+	current->signal->rlim[RLIMIT_FSIZE].rlim_cur = RLIM_INFINITY;
+	file->f_op->write(file, (char *)&ac,
+			       sizeof(acct_t), &file->f_pos);
 	current->signal->rlim[RLIMIT_FSIZE].rlim_cur = flim;
+	set_fs(fs);
+	file_end_write(file);
+out:
 	revert_creds(orig_cred);
 }
 

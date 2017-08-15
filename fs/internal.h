@@ -131,6 +131,7 @@ extern long prune_dcache_sb(struct super_block *sb, unsigned long nr_to_scan,
 /*
  * read_write.c
  */
+extern ssize_t __kernel_write(struct file *, const char *, size_t, loff_t *);
 extern int rw_verify_area(int, struct file *, const loff_t *, size_t);
 
 /*

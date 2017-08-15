@@ -1485,7 +1485,7 @@ SYSCALL_DEFINE4(semtimedop, int, semid, struct sembuf __user *, tsops,
 	/* We need to sleep on this operation, so we put the current
 	 * task into the pending queue and go to sleep.
 	 */
-
+		
 	queue.sops = sops;
 	queue.nsops = nsops;
 	queue.undo = un;
@@ -1605,7 +1605,7 @@ int copy_semundo(unsigned long clone_flags, struct task_struct *tsk)
 			return error;
 		atomic_inc(&undo_list->refcnt);
 		tsk->sysvsem.undo_list = undo_list;
-	} else
+	} else 
 		tsk->sysvsem.undo_list = NULL;
 
 	return 0;
