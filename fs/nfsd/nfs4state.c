@@ -2558,18 +2558,20 @@ static void nfsd_break_one_deleg(struct nfs4_delegation *dp)
 }
 
 /* Called from break_lease() with i_lock held. */
-static void nfsd_break_deleg_cb(struct file_lock *fl)
+static bool
+nfsd_break_deleg_cb(struct file_lock *fl)
 {
+	bool ret = false;
 	struct nfs4_file *fp = (struct nfs4_file *)fl->fl_owner;
 	struct nfs4_delegation *dp;
 
 	if (!fp) {
 		WARN(1, "(%p)->fl_owner NULL\n", fl);
-		return;
+		return ret;
 	}
 	if (fp->fi_had_conflict) {
 		WARN(1, "duplicate break on %p\n", fp);
-		return;
+		return ret;
 	}
 	/*
 	 * We don't want the locks code to timeout the lease for us;
