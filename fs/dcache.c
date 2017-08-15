@@ -252,14 +252,14 @@ static void __d_free(struct rcu_head *head)
 {
 	struct dentry *dentry = container_of(head, struct dentry, d_u.d_rcu);
 
-	WARN_ON(!hlist_unhashed(&dentry->d_u.d_alias));
+	//WARN_ON(!hlist_unhashed(&dentry->d_u.d_alias));
 	kmem_cache_free(dentry_cache, dentry); 
 }
 
 static void __d_free_external(struct rcu_head *head)
 {
 	struct dentry *dentry = container_of(head, struct dentry, d_u.d_rcu);
-	WARN_ON(!hlist_unhashed(&dentry->d_u.d_alias));
+	//WARN_ON(!hlist_unhashed(&dentry->d_u.d_alias));
 	kfree(external_name(dentry));
 	kmem_cache_free(dentry_cache, dentry); 
 }
@@ -1093,31 +1093,33 @@ resume:
 	/*
 	 * All done at this level ... ascend and resume the search.
 	 */
-	rcu_read_lock();
-ascend:
 	if (this_parent != parent) {
 		struct dentry *child = this_parent;
 		this_parent = child->d_parent;
 
+		rcu_read_lock();
 		spin_unlock(&child->d_lock);
 		spin_lock(&this_parent->d_lock);
 
-		/* might go back up the wrong parent if we have had a rename. */
-		if (need_seqretry(&rename_lock, seq))
+		/*
+		 * might go back up the wrong parent if we have had a rename
+		 * or deletion
+		 */
+		if (this_parent != child->d_parent ||
+			 (child->d_flags & DCACHE_DENTRY_KILLED) ||
+			 need_seqretry(&rename_lock, seq)) {
+			spin_unlock(&this_parent->d_lock);
+			rcu_read_unlock();
 			goto rename_retry;
-		/* go into the first sibling still alive */
-		do {
-			next = child->d_child.next;
-			if (next == &this_parent->d_subdirs)
-				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
-		} while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED));
+		}
 		rcu_read_unlock();
+		next = child->d_child.next;
 		goto resume;
 	}
-	if (need_seqretry(&rename_lock, seq))
+	if (need_seqretry(&rename_lock, seq)) {
+		spin_unlock(&this_parent->d_lock);
 		goto rename_retry;
-	rcu_read_unlock();
+	}
 	if (finish)
 		finish(data);
 
@@ -1127,9 +1129,6 @@ out_unlock:
 	return;
 
 rename_retry:
-	spin_unlock(&this_parent->d_lock);
-	rcu_read_unlock();
-	BUG_ON(seq & 1);
 	if (!retry)
 		return;
 	seq = 1;
