@@ -1835,11 +1835,11 @@ struct dentry *d_obtain_alias(struct inode *inode)
 
 	/* attach a disconnected dentry */
 	add_flags = d_flags_for_inode(inode);
-
 	add_flags |= DCACHE_DISCONNECTED;
 
 	spin_lock(&tmp->d_lock);
-	__d_set_inode_and_type(tmp, inode, add_flags);
+	tmp->d_inode = inode;
+	tmp->d_flags |= add_flags;
 	hlist_add_head(&tmp->d_u.d_alias, &inode->i_dentry);
 	hlist_bl_lock(&tmp->d_sb->s_anon);
 	hlist_bl_add_head(&tmp->d_hash, &tmp->d_sb->s_anon);
