@@ -1702,7 +1702,7 @@ static int generic_delete_lease(struct file *filp)
 			break;
 	}
 	trace_generic_delete_lease(inode, fl);
-	if (fl)
+	if (fl && IS_LEASE(fl))
 		error = fl->fl_lmops->lm_change(before, F_UNLCK, &dispose);
 	spin_unlock(&inode->i_lock);
 	locks_dispose_list(&dispose);
@@ -1727,7 +1727,7 @@ int generic_setlease(struct file *filp, long arg, struct file_lock **flp,
 	struct inode *inode = dentry->d_inode;
 	int error;
 
-	if ((current_fsuid() != inode->i_uid) && !capable(CAP_LEASE))
+	if ((!uid_eq(current_fsuid(), inode->i_uid)) && !capable(CAP_LEASE))
 		return -EACCES;
 	if (!S_ISREG(inode->i_mode))
 		return -EINVAL;
@@ -2633,4 +2633,3 @@ static int __init filelock_init(void)
 }
 
 core_initcall(filelock_init);
-
