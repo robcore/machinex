@@ -25,7 +25,7 @@ struct pid_namespace {
 	struct pidmap pidmap[PIDMAP_ENTRIES];
 	struct rcu_head rcu;
 	int last_pid;
-	int nr_hashed;
+	unsigned int nr_hashed;
 	struct task_struct *child_reaper;
 	struct kmem_cache *pid_cachep;
 	unsigned int level;
@@ -40,13 +40,15 @@ struct pid_namespace {
 #endif
 	struct user_namespace *user_ns;
 	struct work_struct proc_work;
-	gid_t pid_gid;
+	kgid_t pid_gid;
 	int hide_pid;
 	int reboot;	/* group exit code if this pidns was rebooted */
 	unsigned int proc_inum;
 };
 
 extern struct pid_namespace init_pid_ns;
+
+#define PIDNS_HASH_ADDING (1U << 31)
 
 #ifdef CONFIG_PID_NS
 static inline struct pid_namespace *get_pid_ns(struct pid_namespace *ns)

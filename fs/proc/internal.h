@@ -200,6 +200,12 @@ extern const struct file_operations proc_ns_dir_operations;
 extern int proc_setup_self(struct super_block *);
 
 /*
+ * proc_thread_self.c
+ */
+extern int proc_setup_thread_self(struct super_block *);
+extern void proc_thread_self_init(void);
+
+/*
  * proc_devtree.c
  */
 #ifdef CONFIG_PROC_DEVICETREE
@@ -214,3 +220,11 @@ extern void proc_tty_init(void);
 #else
 static inline void proc_tty_init(void) {}
 #endif
+
+/*
+ * root.c
+ */
+extern struct proc_dir_entry proc_root;
+
+extern void proc_self_init(void);
+extern int proc_remount(struct super_block *, int *, char *);
