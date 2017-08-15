@@ -359,9 +359,10 @@ static int sec_charger_remove(
 	return 0;
 }
 
-static int sec_charger_suspend(struct i2c_client *client,
-				pm_message_t state)
+static int sec_charger_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
+
 	if (!sec_hal_chg_suspend(client))
 		dev_err(&client->dev,
 			"%s: Failed to Suspend Charger\n", __func__);
@@ -369,14 +370,17 @@ static int sec_charger_suspend(struct i2c_client *client,
 	return 0;
 }
 
-static int sec_charger_resume(struct i2c_client *client)
+static int sec_charger_resume(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	if (!sec_hal_chg_resume(client))
 		dev_err(&client->dev,
 			"%s: Failed to Resume Charger\n", __func__);
 
 	return 0;
 }
+
+static SIMPLE_DEV_PM_OPS(sec_charger_pm, sec_charger_suspend, sec_charger_resume);
 
 static void sec_charger_shutdown(struct i2c_client *client)
 {
@@ -395,8 +399,7 @@ static struct i2c_driver sec_charger_driver = {
 	},
 	.probe	= sec_charger_probe,
 	.remove	= sec_charger_remove,
-	.suspend	= sec_charger_suspend,
-	.resume		= sec_charger_resume,
+	.pm		= &sec_charger_pm,
 	.shutdown	= sec_charger_shutdown,
 	.id_table	= sec_charger_id,
 };
