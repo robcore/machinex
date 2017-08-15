@@ -97,19 +97,26 @@ static void f_modown(struct file *filp, struct pid *pid, enum pid_type type,
 	write_unlock_irq(&filp->f_owner.lock);
 }
 
-void __f_setown(struct file *filp, struct pid *pid, enum pid_type type,
+int __f_setown(struct file *filp, struct pid *pid, enum pid_type type,
 		int force)
 {
-	security_file_set_fowner(filp);
+	int err;
+
+	err = security_file_set_fowner(filp);
+	if (err)
+		return err;
+
 	f_modown(filp, pid, type, force);
+	return 0;
 }
 EXPORT_SYMBOL(__f_setown);
 
-void f_setown(struct file *filp, unsigned long arg, int force)
+int f_setown(struct file *filp, unsigned long arg, int force)
 {
 	enum pid_type type;
 	struct pid *pid;
 	int who = arg;
+	int result;
 	type = PIDTYPE_PID;
 	if (who < 0) {
 		type = PIDTYPE_PGID;
@@ -117,8 +124,9 @@ void f_setown(struct file *filp, unsigned long arg, int force)
 	}
 	rcu_read_lock();
 	pid = find_vpid(who);
-	__f_setown(filp, pid, type, force);
+	result = __f_setown(filp, pid, type, force);
 	rcu_read_unlock();
+	return result;
 }
 EXPORT_SYMBOL(f_setown);
 
@@ -172,7 +180,7 @@ static int f_setown_ex(struct file *filp, unsigned long arg)
 	if (owner.pid && !pid)
 		ret = -ESRCH;
 	else
-		 __f_setown(filp, pid, type, 1);
+		ret = __f_setown(filp, pid, type, 1);
 	rcu_read_unlock();
 
 	return ret;
@@ -293,8 +301,7 @@ static long do_fcntl(int fd, unsigned int cmd, unsigned long arg,
 		force_successful_syscall_return();
 		break;
 	case F_SETOWN:
-		f_setown(filp, arg, 1);
-		err = 0;
+		err = f_setown(filp, arg, 1);
 		break;
 	case F_GETOWN_EX:
 		err = f_getown_ex(filp, arg);

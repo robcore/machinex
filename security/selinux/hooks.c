@@ -3227,12 +3227,14 @@ static int selinux_file_fcntl(struct file *file, unsigned int cmd,
 	return err;
 }
 
-static void selinux_file_set_fowner(struct file *file)
+static int selinux_file_set_fowner(struct file *file)
 {
 	struct file_security_struct *fsec;
 
 	fsec = file->f_security;
 	fsec->fown_sid = current_sid();
+
+	return 0;
 }
 
 static int selinux_file_send_sigiotask(struct task_struct *tsk,

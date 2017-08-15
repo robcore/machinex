@@ -230,12 +230,8 @@ void locks_release_private(struct file_lock *fl)
 			fl->fl_ops->fl_release_private(fl);
 		fl->fl_ops = NULL;
 	}
+	fl->fl_lmops = NULL;
 
-	if (fl->fl_lmops) {
-		if (fl->fl_lmops->lm_put_owner)
-			fl->fl_lmops->lm_put_owner(fl);
-		fl->fl_lmops = NULL;
-	}
 }
 EXPORT_SYMBOL_GPL(locks_release_private);
 
@@ -259,10 +255,21 @@ void locks_init_lock(struct file_lock *fl)
 
 EXPORT_SYMBOL(locks_init_lock);
 
+static void locks_copy_private(struct file_lock *new, struct file_lock *fl)
+{
+	if (fl->fl_ops) {
+		if (fl->fl_ops->fl_copy_lock)
+			fl->fl_ops->fl_copy_lock(new, fl);
+		new->fl_ops = fl->fl_ops;
+	}
+	if (fl->fl_lmops)
+		new->fl_lmops = fl->fl_lmops;
+}
+
 /*
  * Initialize a new lock from an existing file_lock structure.
  */
-void locks_copy_conflock(struct file_lock *new, struct file_lock *fl)
+void __locks_copy_lock(struct file_lock *new, const struct file_lock *fl)
 {
 	new->fl_owner = fl->fl_owner;
 	new->fl_pid = fl->fl_pid;
@@ -271,30 +278,21 @@ void locks_copy_conflock(struct file_lock *new, struct file_lock *fl)
 	new->fl_type = fl->fl_type;
 	new->fl_start = fl->fl_start;
 	new->fl_end = fl->fl_end;
-	new->fl_lmops = fl->fl_lmops;
 	new->fl_ops = NULL;
-
-	if (fl->fl_lmops) {
-		if (fl->fl_lmops->lm_get_owner)
-			fl->fl_lmops->lm_get_owner(new, fl);
-	}
+	new->fl_lmops = NULL;
 }
-EXPORT_SYMBOL(locks_copy_conflock);
+EXPORT_SYMBOL(__locks_copy_lock);
 
 void locks_copy_lock(struct file_lock *new, struct file_lock *fl)
 {
-	/* "new" must be a freshly-initialized lock */
-	WARN_ON_ONCE(new->fl_ops);
+	locks_release_private(new);
 
-	locks_copy_conflock(new, fl);
-
+	__locks_copy_lock(new, fl);
 	new->fl_file = fl->fl_file;
 	new->fl_ops = fl->fl_ops;
+	new->fl_lmops = fl->fl_lmops;
 
-	if (fl->fl_ops) {
-		if (fl->fl_ops->fl_copy_lock)
-			fl->fl_ops->fl_copy_lock(new, fl);
-	}
+	locks_copy_private(new, fl);
 }
 
 EXPORT_SYMBOL(locks_copy_lock);
@@ -327,7 +325,7 @@ static int flock_make_lock(struct file *filp, struct file_lock **lock,
 		return -ENOMEM;
 
 	fl->fl_file = filp;
-	fl->fl_owner = current->files;
+	fl->fl_owner = filp;
 	fl->fl_pid = current->tgid;
 	fl->fl_flags = FL_FLOCK;
 	fl->fl_type = type;
@@ -720,7 +718,7 @@ posix_test_lock(struct file *filp, struct file_lock *fl)
 			break;
 	}
 	if (cfl) {
-		locks_copy_conflock(fl, cfl);
+		__locks_copy_lock(fl, cfl);
 		if (cfl->fl_nspid)
 			fl->fl_pid = pid_vnr(cfl->fl_nspid);
 	} else
@@ -923,7 +921,7 @@ static int __posix_lock_file(struct inode *inode, struct file_lock *request, str
 			if (!posix_locks_conflict(request, fl))
 				continue;
 			if (conflock)
-				locks_copy_conflock(conflock, fl);
+				__locks_copy_lock(conflock, fl);
 			error = -EAGAIN;
 			if (!(request->fl_flags & FL_SLEEP))
 				goto out;
@@ -1033,7 +1031,7 @@ static int __posix_lock_file(struct inode *inode, struct file_lock *request, str
 				fl->fl_end = request->fl_end;
 				fl->fl_type = request->fl_type;
 				locks_release_private(fl);
-				locks_copy_lock(fl, request);
+				locks_copy_private(fl, request);
 				request = fl;
 				added = true;
 			}
@@ -1597,7 +1595,7 @@ static int generic_add_lease(struct file *filp, long arg, struct file_lock **flp
 	smp_mb();
 	error = check_conflicting_open(dentry, arg);
 	if (error)
-		locks_unlink_lock(before);
+		locks_unlink_lock(flp);
 out:
 	if (is_deleg)
 		mutex_unlock(&inode->i_mutex);
@@ -1756,7 +1754,7 @@ static int do_fcntl_add_lease(unsigned int fd, struct file *filp, long arg)
 	if (!fasync_insert_entry(fd, filp, &ret->fl_fasync, new))
 		new = NULL;
 
-	__f_setown(filp, task_pid(current), PIDTYPE_PID, 0);
+	error = __f_setown(filp, task_pid(current), PIDTYPE_PID, 0);
 	spin_unlock(&inode->i_lock);
 
 out_free_fasync:
@@ -1961,13 +1959,11 @@ int fcntl_getlk(struct file *filp, unsigned int cmd, struct flock __user *l)
 	if (file_lock.fl_type != F_UNLCK) {
 		error = posix_lock_to_flock(&flock, &file_lock);
 		if (error)
-			goto rel_priv;
+			goto out;
 	}
 	error = -EFAULT;
 	if (!copy_to_user(l, &flock, sizeof(flock)))
 		error = 0;
-rel_priv:
-	locks_release_private(&file_lock);
 out:
 	return error;
 }
@@ -2188,8 +2184,7 @@ int fcntl_getlk64(struct file *filp, unsigned int cmd, struct flock64 __user *l)
 	error = -EFAULT;
 	if (!copy_to_user(l, &flock, sizeof(flock)))
 		error = 0;
-
-	locks_release_private(&file_lock);
+  
 out:
 	return error;
 }
@@ -2569,6 +2564,86 @@ static int __init proc_locks_init(void)
 }
 module_init(proc_locks_init);
 #endif
+
+/**
+ *	lock_may_read - checks that the region is free of locks
+ *	@inode: the inode that is being read
+ *	@start: the first byte to read
+ *	@len: the number of bytes to read
+ *
+ *	Emulates Windows locking requirements.  Whole-file
+ *	mandatory locks (share modes) can prohibit a read and
+ *	byte-range POSIX locks can prohibit a read if they overlap.
+ *
+ *	N.B. this function is only ever called
+ *	from knfsd and ownership of locks is never checked.
+ */
+int lock_may_read(struct inode *inode, loff_t start, unsigned long len)
+{
+	struct file_lock *fl;
+	int result = 1;
+
+	spin_lock(&inode->i_lock);
+	for (fl = inode->i_flock; fl != NULL; fl = fl->fl_next) {
+		if (IS_POSIX(fl)) {
+			if (fl->fl_type == F_RDLCK)
+				continue;
+			if ((fl->fl_end < start) || (fl->fl_start > (start + len)))
+				continue;
+		} else if (IS_FLOCK(fl)) {
+			if (!(fl->fl_type & LOCK_MAND))
+				continue;
+			if (fl->fl_type & LOCK_READ)
+				continue;
+		} else
+			continue;
+		result = 0;
+		break;
+	}
+	spin_unlock(&inode->i_lock);
+	return result;
+}
+
+EXPORT_SYMBOL(lock_may_read);
+
+/**
+ *	lock_may_write - checks that the region is free of locks
+ *	@inode: the inode that is being written
+ *	@start: the first byte to write
+ *	@len: the number of bytes to write
+ *
+ *	Emulates Windows locking requirements.  Whole-file
+ *	mandatory locks (share modes) can prohibit a write and
+ *	byte-range POSIX locks can prohibit a write if they overlap.
+ *
+ *	N.B. this function is only ever called
+ *	from knfsd and ownership of locks is never checked.
+ */
+int lock_may_write(struct inode *inode, loff_t start, unsigned long len)
+{
+	struct file_lock *fl;
+	int result = 1;
+
+	spin_lock(&inode->i_lock);
+	for (fl = inode->i_flock; fl != NULL; fl = fl->fl_next) {
+		if (IS_POSIX(fl)) {
+			if ((fl->fl_end < start) || (fl->fl_start > (start + len)))
+				continue;
+		} else if (IS_FLOCK(fl)) {
+			if (!(fl->fl_type & LOCK_MAND))
+				continue;
+			if (fl->fl_type & LOCK_WRITE)
+				continue;
+		} else
+			continue;
+		result = 0;
+		break;
+	}
+	spin_unlock(&inode->i_lock);
+	return result;
+}
+
+EXPORT_SYMBOL(lock_may_write);
 
 static int __init filelock_init(void)
 {

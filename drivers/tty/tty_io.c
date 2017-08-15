@@ -2085,8 +2085,10 @@ static int __tty_fasync(int fd, struct file *filp, int on)
 		}
 		get_pid(pid);
 		spin_unlock_irqrestore(&tty->ctrl_lock, flags);
-		__f_setown(filp, pid, type, 0);
+		retval = __f_setown(filp, pid, type, 0);
 		put_pid(pid);
+		if (retval)
+			goto out;
 	} else {
 		if (!tty->fasync && !waitqueue_active(&tty->read_wait))
 			tty->minimum_to_wake = N_TTY_BUF_SIZE;

@@ -151,7 +151,7 @@ COMPAT_SYSCALL_DEFINE2(truncate, const char __user *, path, compat_off_t, length
 
 static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 {
-	struct inode *inode;
+	struct inode * inode;
 	struct dentry *dentry;
 	struct fd f;
 	int error;
@@ -180,7 +180,8 @@ static long do_sys_ftruncate(unsigned int fd, loff_t length, int small)
 		goto out_putf;
 
 	error = -EPERM;
-	if (IS_APPEND(inode))
+	/* Check IS_APPEND on real upper inode */
+	if (IS_APPEND(file_inode(f.file)))
 		goto out_putf;
 
 	sb_start_write(inode->i_sb);
@@ -308,6 +309,7 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
 		error = do_fallocate(f.file, mode, offset, len);
 		fdput(f);
 	}
+
 	return error;
 }
 
@@ -337,8 +339,7 @@ SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
 
 	if (!issecure(SECURE_NO_SETUID_FIXUP)) {
 		/* Clear the capabilities if we switch to a non-root user */
-		kuid_t root_uid = make_kuid(override_cred->user_ns, 0);
-		if (!uid_eq(override_cred->uid, root_uid))
+		if (override_cred->uid)
 			cap_clear(override_cred->cap_effective);
 		else
 			override_cred->cap_effective =
@@ -463,7 +464,7 @@ retry:
 		goto dput_and_out;
 
 	error = -EPERM;
-	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
+	if (!capable(CAP_SYS_CHROOT))
 		goto dput_and_out;
 	error = security_path_chroot(&path);
 	if (error)
@@ -552,39 +553,32 @@ static int chown_common(struct path *path, uid_t user, gid_t group)
 	struct inode *delegated_inode = NULL;
 	int error;
 	struct iattr newattrs;
-	kuid_t uid;
-	kgid_t gid;
 
-	uid = make_kuid(current_user_ns(), user);
-	gid = make_kgid(current_user_ns(), group);
-
-retry_deleg:
 	newattrs.ia_valid =  ATTR_CTIME;
 	if (user != (uid_t) -1) {
-		if (!uid_valid(uid))
-			return -EINVAL;
 		newattrs.ia_valid |= ATTR_UID;
-		newattrs.ia_uid = uid;
+		newattrs.ia_uid = user;
 	}
 	if (group != (gid_t) -1) {
-		if (!gid_valid(gid))
-			return -EINVAL;
 		newattrs.ia_valid |= ATTR_GID;
-		newattrs.ia_gid = gid;
+		newattrs.ia_gid = group;
 	}
 	if (!S_ISDIR(inode->i_mode))
 		newattrs.ia_valid |=
 			ATTR_KILL_SUID | ATTR_KILL_SGID | ATTR_KILL_PRIV;
+retry_deleg:
 	mutex_lock(&inode->i_mutex);
-	error = security_path_chown(path, uid, gid);
+	error = security_path_chown(path, user, group);
 	if (!error)
 		error = notify_change(path->dentry, &newattrs, &delegated_inode);
 	mutex_unlock(&inode->i_mutex);
+
 	if (delegated_inode) {
 		error = break_deleg_wait(&delegated_inode);
 		if (!error)
 			goto retry_deleg;
 	}
+
 	return error;
 }
 
@@ -635,6 +629,7 @@ SYSCALL_DEFINE3(fchown, unsigned int, fd, uid_t, user, gid_t, group)
 {
 	struct fd f = fdget(fd);
 	int error = -EBADF;
+	struct dentry * dentry;
 
 	if (!f.file)
 		goto out;
@@ -642,6 +637,7 @@ SYSCALL_DEFINE3(fchown, unsigned int, fd, uid_t, user, gid_t, group)
 	error = mnt_want_write_file(f.file);
 	if (error)
 		goto out_fput;
+
 	audit_inode(NULL, f.file->f_path.dentry, 0);
 	error = chown_common(&f.file->f_path, user, group);
 	mnt_drop_write_file(f.file);
@@ -707,7 +703,7 @@ static int do_dentry_open(struct file *f,
 		goto cleanup_all;
 	}
 
-	error = security_file_open(f, cred);
+	error = security_dentry_open(f, cred);
 	if (error)
 		goto cleanup_all;
 
@@ -743,6 +739,7 @@ cleanup_all:
 		put_write_access(inode);
 		__mnt_drop_write(f->f_path.mnt);
 	}
+
 cleanup_file:
 	path_put(&f->f_path);
 	f->f_path.mnt = NULL;
@@ -823,7 +820,8 @@ struct file *dentry_open(const struct path *path, int flags,
 	f = get_empty_filp();
 	if (!IS_ERR(f)) {
 		f->f_flags = flags;
-		error = vfs_open(path, f, cred);
+		f->f_path = *path;
+		error = do_dentry_open(f, NULL, cred);
 		if (!error) {
 			/* from now on we need fput() to dispose of f */
 			error = open_check_o_direct(f);
@@ -831,7 +829,7 @@ struct file *dentry_open(const struct path *path, int flags,
 				fput(f);
 				f = ERR_PTR(error);
 			}
-		} else { 
+		} else {
 			put_filp(f);
 			f = ERR_PTR(error);
 		}
@@ -839,26 +837,6 @@ struct file *dentry_open(const struct path *path, int flags,
 	return f;
 }
 EXPORT_SYMBOL(dentry_open);
-
-/**
- * vfs_open - open the file at the given path
- * @path: path to open
- * @filp: newly allocated file with f_flag initialized
- * @cred: credentials to use
- */
-int vfs_open(const struct path *path, struct file *filp,
-	     const struct cred *cred)
-{
-	struct inode *inode = path->dentry->d_inode;
-
-	if (inode->i_op->dentry_open)
-		return inode->i_op->dentry_open(path->dentry, filp, cred);
-	else {
-		filp->f_path = *path;
-		return do_dentry_open(filp, NULL, cred);
-	}
-}
-EXPORT_SYMBOL(vfs_open);
 
 static inline int build_open_flags(int flags, umode_t mode, struct open_flags *op)
 {
@@ -1045,9 +1023,12 @@ SYSCALL_DEFINE2(creat, const char __user *, pathname, umode_t, mode)
 int filp_close(struct file *filp, fl_owner_t id)
 {
 	int retval = 0;
+	long ret;
 
-	if (!file_count(filp)) {
-		printk(KERN_ERR "VFS: Close: file count is 0\n");
+	ret = file_count(filp);
+	if (ret <= 0) {
+		printk(KERN_ERR "VFS: Close: file count is %ld\n", ret);
+		WARN_ON(ret < 0);
 		return 0;
 	}
 

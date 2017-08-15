@@ -713,10 +713,8 @@ struct file_lock_operations {
 struct lock_manager_operations {
 	int (*lm_compare_owner)(struct file_lock *, struct file_lock *);
 	unsigned long (*lm_owner_key)(struct file_lock *);
-	void (*lm_get_owner)(struct file_lock *, struct file_lock *);
-	void (*lm_put_owner)(struct file_lock *);
 	void (*lm_notify)(struct file_lock *);	/* unblock callback */
-	int (*lm_grant)(struct file_lock *, int);
+	int (*lm_grant)(struct file_lock *, struct file_lock *, int);
 	void (*lm_break)(struct file_lock *);
 	int (*lm_change)(struct file_lock **, int);
 };
@@ -812,7 +810,7 @@ void locks_free_lock(struct file_lock *fl);
 extern void locks_init_lock(struct file_lock *);
 extern struct file_lock * locks_alloc_lock(void);
 extern void locks_copy_lock(struct file_lock *, struct file_lock *);
-extern void locks_copy_conflock(struct file_lock *, struct file_lock *);
+extern void __locks_copy_lock(struct file_lock *, const struct file_lock *);
 extern void locks_remove_posix(struct file *, fl_owner_t);
 extern void locks_remove_file(struct file *);
 extern void locks_release_private(struct file_lock *);
@@ -829,6 +827,8 @@ extern void lease_get_mtime(struct inode *, struct timespec *time);
 extern int generic_setlease(struct file *, long, struct file_lock **);
 extern int vfs_setlease(struct file *, long, struct file_lock **);
 extern int lease_modify(struct file_lock **, int);
+extern int lock_may_read(struct inode *, loff_t start, unsigned long count);
+extern int lock_may_write(struct inode *, loff_t start, unsigned long count);
 #else /* !CONFIG_FILE_LOCKING */
 static inline int fcntl_getlk(struct file *file, unsigned int cmd,
 			      struct flock __user *user)
@@ -870,7 +870,7 @@ static inline void locks_init_lock(struct file_lock *fl)
 	return;
 }
 
-static inline void locks_copy_conflock(struct file_lock *new, struct file_lock *fl)
+static inline void __locks_copy_lock(struct file_lock *new, struct file_lock *fl)
 {
 	return;
 }
@@ -959,6 +959,18 @@ static inline int lease_modify(struct file_lock **before, int arg)
 {
 	return -EINVAL;
 }
+
+static inline int lock_may_read(struct inode *inode, loff_t start,
+				unsigned long len)
+{
+	return 1;
+}
+
+static inline int lock_may_write(struct inode *inode, loff_t start,
+				 unsigned long len)
+{
+	return 1;
+}
 #endif /* !CONFIG_FILE_LOCKING */
 
 
@@ -983,8 +995,8 @@ extern void fasync_free(struct fasync_struct *);
 /* can be called from interrupts */
 extern void kill_fasync(struct fasync_struct **, int, int);
 
-extern void __f_setown(struct file *filp, struct pid *, enum pid_type, int force);
-extern void f_setown(struct file *filp, unsigned long arg, int force);
+extern int __f_setown(struct file *filp, struct pid *, enum pid_type, int force);
+extern int f_setown(struct file *filp, unsigned long arg, int force);
 extern void f_delown(struct file *filp);
 extern pid_t f_getown(struct file *filp);
 extern int send_sigurg(struct fown_struct *fown);
@@ -2437,7 +2449,6 @@ extern int simple_write_end(struct file *file, struct address_space *mapping,
 			struct page *page, void *fsdata);
 extern int always_delete_dentry(const struct dentry *);
 extern struct inode *alloc_anon_inode(struct super_block *);
-extern int simple_nosetlease(struct file *, long, struct file_lock **);
 extern const struct dentry_operations simple_dentry_operations;
 
 extern struct dentry *simple_lookup(struct inode *, struct dentry *, unsigned int flags);

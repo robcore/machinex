@@ -1666,7 +1666,9 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
 		goto out;
 
 	if (on) {
-		__f_setown(file, task_pid(current), PIDTYPE_PID, 0);
+		ret = __f_setown(file, task_pid(current), PIDTYPE_PID, 0);
+		if (ret)
+			goto out;
 		tun->flags |= TUN_FASYNC;
 	} else
 		tun->flags &= ~TUN_FASYNC;
