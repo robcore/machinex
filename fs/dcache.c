@@ -2690,8 +2690,7 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 
 	dparent = dentry->d_parent;
 
-	switch_names(dentry, anon);
-	swap(dentry->d_name.hash, anon->d_name.hash);
+	swap_names(dentry, anon);
 
 	dentry->d_parent = dentry;
 	list_del_init(&dentry->d_child);
