@@ -22,7 +22,6 @@
 
 #include <linux/export.h>
 #include <linux/slab.h>
-#include <linux/acct.h>
 #include <linux/blkdev.h>
 #include <linux/mount.h>
 #include <linux/security.h>
@@ -729,7 +728,7 @@ int do_remount_sb(struct super_block *sb, int flags, void *data, int force)
 #endif
 
 	if (flags & MS_RDONLY)
-		acct_auto_close(&sb->s_pins);
+			sb_pin_kill(sb);
 	shrink_dcache_sb(sb);
 
 	remount_ro = (flags & MS_RDONLY) && !(sb->s_flags & MS_RDONLY);
