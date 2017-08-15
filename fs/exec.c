@@ -1446,7 +1446,7 @@ int search_binary_handler(struct linux_binprm *bprm)
 	}
 	read_unlock(&binfmt_lock);
 
-	if (need_retry && retval == -ENOEXEC) {
+	if (need_retry) {
 		if (printable(bprm->buf[0]) && printable(bprm->buf[1]) &&
 		    printable(bprm->buf[2]) && printable(bprm->buf[3]))
 			return retval;
