@@ -180,8 +180,8 @@ static void acct_file_reopen(struct bsd_acct_struct *acct, struct file *file,
 	if (file) {
 		acct->file = file;
 		acct->ns = ns;
-		acct->needcheck = jiffies + ACCT_TIMEOUT*HZ;
-		acct->active = 1;
+		acct->needcheck = jiffies;
+		acct->active = 0;
 		list_add(&acct->list, &acct_list);
 	}
 	if (old_acct) {
@@ -241,6 +241,8 @@ static int acct_on(struct filename *pathname)
 	return 0;
 }
 
+static DEFINE_MUTEX(acct_on_mutex);
+
 /**
  * sys_acct - enable/disable process accounting
  * @name: file name for accounting records or NULL to shutdown accounting
@@ -263,7 +265,9 @@ SYSCALL_DEFINE1(acct, const char __user *, name)
 		struct filename *tmp = getname(name);
 		if (IS_ERR(tmp))
 			return PTR_ERR(tmp);
+		mutex_lock(&acct_on_mutex);
 		error = acct_on(tmp);
+		mutex_unlock(&acct_on_mutex);
 		putname(tmp);
 	} else {
 		struct bsd_acct_struct *acct;
