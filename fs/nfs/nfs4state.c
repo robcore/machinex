@@ -1901,6 +1901,7 @@ static void nfs4_state_manager(struct nfs_client *clp)
 				continue;
 			if (status < 0)
 				goto out_error;
+			continue;
 		}
 
 		nfs4_end_drain_session(clp);
