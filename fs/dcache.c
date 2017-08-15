@@ -1772,25 +1772,7 @@ struct dentry *d_find_any_alias(struct inode *inode)
 }
 EXPORT_SYMBOL(d_find_any_alias);
 
-/**
- * d_obtain_alias - find or allocate a dentry for a given inode
- * @inode: inode to allocate the dentry for
- *
- * Obtain a dentry for an inode resulting from NFS filehandle conversion or
- * similar open by handle operations.  The returned dentry may be anonymous,
- * or may have a full name (if the inode was already in the cache).
- *
- * When called on a directory inode, we must ensure that the inode only ever
- * has one dentry.  If a dentry is found, that is returned instead of
- * allocating a new one.
- *
- * On successful return, the reference to the inode has been transferred
- * to the dentry.  In case of an error the reference on the inode is released.
- * To make it easier to use in export operations a %NULL or IS_ERR inode may
- * be passed in and will be the error will be propagate to the return value,
- * with a %NULL @inode replaced by ERR_PTR(-ESTALE).
- */
-struct dentry *d_obtain_alias(struct inode *inode)
+static struct dentry *__d_obtain_alias(struct inode *inode, int disconnected)
 {
 	static const struct qstr anonstring = { .name = "/", .len = 1 };
 	struct dentry *tmp;
@@ -1822,7 +1804,9 @@ struct dentry *d_obtain_alias(struct inode *inode)
 
 	/* attach a disconnected dentry */
 	add_flags = d_flags_for_inode(inode);
-	add_flags |= DCACHE_DISCONNECTED;
+
+	if (disconnected)
+		add_flags |= DCACHE_DISCONNECTED;
 
 	spin_lock(&tmp->d_lock);
 	tmp->d_inode = inode;
@@ -1843,59 +1827,51 @@ struct dentry *d_obtain_alias(struct inode *inode)
 	iput(inode);
 	return res;
 }
+
+/**
+ * d_obtain_alias - find or allocate a DISCONNECTED dentry for a given inode
+ * @inode: inode to allocate the dentry for
+ *
+ * Obtain a dentry for an inode resulting from NFS filehandle conversion or
+ * similar open by handle operations.  The returned dentry may be anonymous,
+ * or may have a full name (if the inode was already in the cache).
+ *
+ * When called on a directory inode, we must ensure that the inode only ever
+ * has one dentry.  If a dentry is found, that is returned instead of
+ * allocating a new one.
+ *
+ * On successful return, the reference to the inode has been transferred
+ * to the dentry.  In case of an error the reference on the inode is released.
+ * To make it easier to use in export operations a %NULL or IS_ERR inode may
+ * be passed in and the error will be propagated to the return value,
+ * with a %NULL @inode replaced by ERR_PTR(-ESTALE).
+ */
+struct dentry *d_obtain_alias(struct inode *inode)
+{
+	return __d_obtain_alias(inode, 1);
+}
 EXPORT_SYMBOL(d_obtain_alias);
 
 /**
- * d_splice_alias - splice a disconnected dentry into the tree if one exists
- * @inode:  the inode which may have a disconnected dentry
- * @dentry: a negative dentry which we want to point to the inode.
+ * d_obtain_root - find or allocate a dentry for a given inode
+ * @inode: inode to allocate the dentry for
  *
- * If inode is a directory and has a 'disconnected' dentry (i.e. IS_ROOT and
- * DCACHE_DISCONNECTED), then d_move that in place of the given dentry
- * and return it, else simply d_add the inode to the dentry and return NULL.
+ * Obtain an IS_ROOT dentry for the root of a filesystem.
  *
- * This is needed in the lookup routine of any filesystem that is exportable
- * (via knfsd) so that we can build dcache paths to directories effectively.
+ * We must ensure that directory inodes only ever have one dentry.  If a
+ * dentry is found, that is returned instead of allocating a new one.
  *
- * If a dentry was found and moved, then it is returned.  Otherwise NULL
- * is returned.  This matches the expected return value of ->lookup.
- *
- * Cluster filesystems may call this function with a negative, hashed dentry.
- * In that case, we know that the inode will be a regular file, and also this
- * will only occur during atomic_open. So we need to check for the dentry
- * being already hashed only in the final case.
+ * On successful return, the reference to the inode has been transferred
+ * to the dentry.  In case of an error the reference on the inode is
+ * released.  A %NULL or IS_ERR inode may be passed in and will be the
+ * error will be propagate to the return value, with a %NULL @inode
+ * replaced by ERR_PTR(-ESTALE).
  */
-struct dentry *d_splice_alias(struct inode *inode, struct dentry *dentry)
+struct dentry *d_obtain_root(struct inode *inode)
 {
-	struct dentry *new = NULL;
-
-	if (IS_ERR(inode))
-		return ERR_CAST(inode);
-
-	if (inode && S_ISDIR(inode->i_mode)) {
-		spin_lock(&inode->i_lock);
-		new = __d_find_alias(inode);
-		if (new) {
-			BUG_ON(!(new->d_flags & DCACHE_DISCONNECTED));
-			spin_unlock(&inode->i_lock);
-			security_d_instantiate(new, inode);
-			d_move(new, dentry);
-			iput(inode);
-		} else {
-			/* already taking inode->i_lock, so d_add() by hand */
-			__d_instantiate(dentry, inode);
-			spin_unlock(&inode->i_lock);
-			security_d_instantiate(dentry, inode);
-			d_rehash(dentry);
-		}
-	} else {
-		d_instantiate(dentry, inode);
-		if (d_unhashed(dentry))
-			d_rehash(dentry);
-	}
-	return new;
+	return __d_obtain_alias(inode, 0);
 }
-EXPORT_SYMBOL(d_splice_alias);
+EXPORT_SYMBOL(d_obtain_root);
 
 /**
  * d_add_ci - lookup or allocate new dentry with case-exact name
@@ -2110,8 +2086,6 @@ seqretry:
 		}
 
 		if (dentry->d_name.hash_len != hashlen)
-			continue;
-		if (d_unhashed(dentry))
 			continue;
 		*seqp = seq;
 		if (!dentry_cmp(dentry, str, hashlen_len(hashlen)))
@@ -2484,25 +2458,29 @@ static void dentry_lock_for_move(struct dentry *dentry, struct dentry *target)
 	}
 }
 
-static void dentry_unlock_parents_for_move(struct dentry *dentry,
-					struct dentry *target)
+static void dentry_unlock_for_move(struct dentry *dentry, struct dentry *target)
 {
 	if (target->d_parent != dentry->d_parent)
 		spin_unlock(&dentry->d_parent->d_lock);
 	if (target->d_parent != target)
 		spin_unlock(&target->d_parent->d_lock);
+	spin_unlock(&target->d_lock);
+	spin_unlock(&dentry->d_lock);
 }
 
 /*
  * When switching names, the actual string doesn't strictly have to
  * be preserved in the target - because we're dropping the target
  * anyway. As such, we can just do a simple memcpy() to copy over
- * the new name before we switch.
- *
- * Note that we have to be a lot more careful about getting the hash
- * switched - we have to switch the hash value properly even if it
- * then no longer matches the actual (corrupted) string of the target.
- * The hash value has to match the hash queue that the dentry is on..
+ * the new name before we switch, unless we are going to rehash
+ * it.  Note that if we *do* unhash the target, we are not allowed
+ * to rehash it without giving it a new name/hash key - whether
+ * we swap or overwrite the names here, resulting name won't match
+ * the reality in filesystem; it's only there for d_path() purposes.
+ * Note that all of this is happening under rename_lock, so the
+ * any hash lookup seeing it in the middle of manipulations will
+ * be discarded anyway.  So we do not care what happens to the hash
+ * key in that case.
  */
 /*
  * __d_move - move a dentry
@@ -2548,38 +2526,33 @@ static void __d_move(struct dentry *dentry, struct dentry *target,
 			   d_hash(dentry->d_parent, dentry->d_name.hash));
 	}
 
-	list_del(&dentry->d_child);
-	list_del(&target->d_child);
-
 	/* Switch the names.. */
 	if (exchange)
 		swap_names(dentry, target);
 	else
 		copy_name(dentry, target);
 
-	/* ... and switch the parents */
+	/* ... and switch them in the tree */
 	if (IS_ROOT(dentry)) {
+		/* splicing a tree */
 		dentry->d_parent = target->d_parent;
 		target->d_parent = target;
-		INIT_LIST_HEAD(&target->d_child);
+		list_del_init(&target->d_child);
+		list_move(&dentry->d_child, &dentry->d_parent->d_subdirs);
 	} else {
+		/* swapping two dentries */
 		swap(dentry->d_parent, target->d_parent);
-
-		/* And add them back to the (new) parent lists */
-		list_add(&target->d_child, &target->d_parent->d_subdirs);
+		list_move(&target->d_child, &target->d_parent->d_subdirs);
+		list_move(&dentry->d_child, &dentry->d_parent->d_subdirs);
+		if (exchange)
+			fsnotify_d_move(target);
+		fsnotify_d_move(dentry);
 	}
-
-	list_add(&dentry->d_child, &dentry->d_parent->d_subdirs);
 
 	write_seqcount_end(&target->d_seq);
 	write_seqcount_end(&dentry->d_seq);
 
-	dentry_unlock_parents_for_move(dentry, target);
-	if (exchange)
-		fsnotify_d_move(target);
-	spin_unlock(&target->d_lock);
-	fsnotify_d_move(dentry);
-	spin_unlock(&dentry->d_lock);
+	dentry_unlock_for_move(dentry, target);
 }
 
 /*
@@ -2675,42 +2648,73 @@ out_err:
 	return ret;
 }
 
-/*
- * Prepare an anonymous dentry for life in the superblock's dentry tree as a
- * named dentry in place of the dentry to be replaced.
+/**
+ * d_splice_alias - splice a disconnected dentry into the tree if one exists
+ * @inode:  the inode which may have a disconnected dentry
+ * @dentry: a negative dentry which we want to point to the inode.
+ *
+ * If inode is a directory and has an IS_ROOT alias, then d_move that in
+ * place of the given dentry and return it, else simply d_add the inode
+ * to the dentry and return NULL.
+ *
+ * If a non-IS_ROOT directory is found, the filesystem is corrupt, and
+ * we should error out: directories can't have multiple aliases.
+ *
+ * This is needed in the lookup routine of any filesystem that is exportable
+ * (via knfsd) so that we can build dcache paths to directories effectively.
+ *
+ * If a dentry was found and moved, then it is returned.  Otherwise NULL
+ * is returned.  This matches the expected return value of ->lookup.
+ *
+ * Cluster filesystems may call this function with a negative, hashed dentry.
+ * In that case, we know that the inode will be a regular file, and also this
+ * will only occur during atomic_open. So we need to check for the dentry
+ * being already hashed only in the final case.
  */
-static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
+struct dentry *d_splice_alias(struct inode *inode, struct dentry *dentry)
 {
-	struct dentry *dparent;
+	struct dentry *new = NULL;
 
-	dentry_lock_for_move(anon, dentry);
+	if (IS_ERR(inode))
+		return ERR_CAST(inode);
 
-	write_seqcount_begin(&dentry->d_seq);
-	write_seqcount_begin_nested(&anon->d_seq, DENTRY_D_LOCK_NESTED);
-
-	dparent = dentry->d_parent;
-
-	swap_names(dentry, anon);
-
-	dentry->d_parent = dentry;
-	list_del_init(&dentry->d_child);
-	anon->d_parent = dparent;
-	list_move(&anon->d_child, &dparent->d_subdirs);
-	if (likely(!d_unhashed(anon))) {
-		hlist_bl_lock(&anon->d_sb->s_anon);
-		__hlist_bl_del(&anon->d_hash);
-		anon->d_hash.pprev = NULL;
-		hlist_bl_unlock(&anon->d_sb->s_anon);
+	if (inode && S_ISDIR(inode->i_mode)) {
+		spin_lock(&inode->i_lock);
+		new = __d_find_any_alias(inode);
+		if (new) {
+			if (!IS_ROOT(new)) {
+				spin_unlock(&inode->i_lock);
+				dput(new);
+				iput(inode);
+				return ERR_PTR(-EIO);
+			}
+			if (d_ancestor(new, dentry)) {
+				spin_unlock(&inode->i_lock);
+				dput(new);
+				iput(inode);
+				return ERR_PTR(-EIO);
+			}
+			write_seqlock(&rename_lock);
+			__d_move(new, dentry, false);
+			write_sequnlock(&rename_lock);
+			spin_unlock(&inode->i_lock);
+			security_d_instantiate(new, inode);
+			iput(inode);
+		} else {
+			/* already taking inode->i_lock, so d_add() by hand */
+			__d_instantiate(dentry, inode);
+			spin_unlock(&inode->i_lock);
+			security_d_instantiate(dentry, inode);
+			d_rehash(dentry);
+		}
+	} else {
+		d_instantiate(dentry, inode);
+		if (d_unhashed(dentry))
+			d_rehash(dentry);
 	}
-	__d_rehash(anon, d_hash(anon->d_parent, anon->d_name.hash));
-
-	write_seqcount_end(&dentry->d_seq);
-	write_seqcount_end(&anon->d_seq);
-
-	dentry_unlock_parents_for_move(anon, dentry);
-	spin_unlock(&dentry->d_lock);
-	spin_unlock(&anon->d_lock);
+	return new;
 }
+EXPORT_SYMBOL(d_splice_alias);
 
 /**
  * d_materialise_unique - introduce an inode into the tree
@@ -2752,7 +2756,7 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 			} else if (IS_ROOT(alias)) {
 				/* Is this an anonymous mountpoint that we
 				 * could splice into our tree? */
-				__d_materialise_dentry(dentry, alias);
+				__d_move(alias, dentry, false);
 				write_sequnlock(&rename_lock);
 				goto found;
 			} else {
