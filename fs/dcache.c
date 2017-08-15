@@ -1836,8 +1836,7 @@ struct dentry *d_obtain_alias(struct inode *inode)
 	/* attach a disconnected dentry */
 	add_flags = d_flags_for_inode(inode);
 
-	if (disconnected)
-		add_flags |= DCACHE_DISCONNECTED;
+	add_flags |= DCACHE_DISCONNECTED;
 
 	spin_lock(&tmp->d_lock);
 	__d_set_inode_and_type(tmp, inode, add_flags);
