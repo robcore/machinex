@@ -252,7 +252,7 @@ static void __d_free(struct rcu_head *head)
 {
 	struct dentry *dentry = container_of(head, struct dentry, d_u.d_rcu);
 
-	WARN_ON(!hlist_unhashed(&dentry->du.d_alias));
+	WARN_ON(!hlist_unhashed(&dentry->d_u.d_alias));
 	kmem_cache_free(dentry_cache, dentry); 
 }
 
@@ -262,6 +262,11 @@ static void __d_free_external(struct rcu_head *head)
 	WARN_ON(!hlist_unhashed(&dentry->d_u.d_alias));
 	kfree(external_name(dentry));
 	kmem_cache_free(dentry_cache, dentry); 
+}
+
+static inline int dname_external(const struct dentry *dentry)
+{
+	return dentry->d_name.name != dentry->d_iname;
 }
 
 static void dentry_free(struct dentry *dentry)
@@ -482,7 +487,7 @@ static void __dentry_kill(struct dentry *dentry)
 	 * inform the fs via d_prune that this dentry is about to be
 	 * unhashed and destroyed.
 	 */
-	if ((dentry->d_flags & DCACHE_OP_PRUNE) && !d_unhashed(dentry))
+	if (dentry->d_flags & DCACHE_OP_PRUNE)
 		dentry->d_op->d_prune(dentry);
 
 	if (dentry->d_flags & DCACHE_LRU_LIST) {
@@ -809,6 +814,7 @@ restart:
 			struct dentry *parent = lock_parent(dentry);
 			if (likely(!dentry->d_lockref.count)) {
 				__dentry_kill(dentry);
+				dput(parent);
 				goto restart;
 			}
 			if (parent)
