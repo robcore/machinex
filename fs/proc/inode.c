@@ -448,6 +448,7 @@ struct inode *proc_get_inode(struct super_block *sb, struct proc_dir_entry *de)
 int proc_fill_super(struct super_block *s)
 {
 	struct inode *root_inode;
+	int ret;
 
 	s->s_flags |= MS_NODIRATIME | MS_NOSUID | MS_NOEXEC;
 	s->s_blocksize = 1024;
@@ -469,5 +470,9 @@ int proc_fill_super(struct super_block *s)
 		return -ENOMEM;
 	}
 
-	return proc_setup_self(s);
+	ret = proc_setup_self(s);
+	if (ret) {
+		return ret;
+	}
+	return proc_setup_thread_self(s);
 }
