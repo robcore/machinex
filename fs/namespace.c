@@ -21,6 +21,7 @@
 #include <linux/fsnotify.h>	/* fsnotify_vfsmount_delete */
 #include <linux/uaccess.h>
 #include <linux/proc_ns.h>
+#include <linux/magic.h>
 #include <linux/bootmem.h>
 #include <linux/task_work.h>
 #include "pnode.h"
@@ -409,12 +410,11 @@ EXPORT_SYMBOL_GPL(mnt_clone_write);
  * __mnt_want_write_file - get write access to a file's mount
  * @file: the file who's mount on which to take a write
  *
- * This is like mnt_want_write, but it takes a file and can
+ * This is like __mnt_want_write, but it takes a file and can
  * do some optimisations if the file is open for write already
  */
 int __mnt_want_write_file(struct file *file)
 {
-	struct inode *inode =  file_inode(file);
 	if (!(file->f_mode & FMODE_WRITER))
 		return __mnt_want_write(file->f_path.mnt);
 	else
@@ -441,7 +441,7 @@ int mnt_want_write_file(struct file *file)
 EXPORT_SYMBOL_GPL(mnt_want_write_file);
 
 /**
- * __mnt_drop_write - give up write access to a mount - give up write access to a mount
+ * __mnt_drop_write - give up write access to a mount
  * @mnt: the mount on which to give up write access
  *
  * Tells the low-level filesystem that we are done
@@ -826,6 +826,20 @@ static void attach_mnt(struct mount *mnt,
 	list_add_tail(&mnt->mnt_child, &parent->mnt_mounts);
 }
 
+static void attach_shadowed(struct mount *mnt,
+			struct mount *parent,
+			struct mount *shadows)
+{
+	if (shadows) {
+		hlist_add_behind_rcu(&mnt->mnt_hash, &shadows->mnt_hash);
+		list_add(&mnt->mnt_child, &shadows->mnt_child);
+	} else {
+		hlist_add_head_rcu(&mnt->mnt_hash,
+				m_hash(&parent->mnt, mnt->mnt_mountpoint));
+		list_add_tail(&mnt->mnt_child, &parent->mnt_mounts);
+	}
+}
+
 /*
  * vfsmount lock must be held for write
  */
@@ -844,12 +858,7 @@ static void commit_tree(struct mount *mnt, struct mount *shadows)
 
 	list_splice(&head, n->list.prev);
 
-	if (shadows)
-		hlist_add_behind_rcu(&shadows->mnt_hash, &mnt->mnt_hash);
-	else
-		hlist_add_head_rcu(&mnt->mnt_hash,
-				m_hash(&parent->mnt, mnt->mnt_mountpoint));
-	list_add_tail(&mnt->mnt_child, &parent->mnt_mounts);
+	attach_shadowed(mnt, parent, shadows);
 	touch_mnt_namespace(n);
 }
 
@@ -1290,6 +1299,11 @@ static void namespace_unlock(void)
 	head.first->pprev = &head.first;
 	INIT_HLIST_HEAD(&unmounted);
 
+	/* undo decrements we'd done in umount_tree() */
+	hlist_for_each_entry(mnt, &head, mnt_hash)
+		if (mnt->mnt_ex_mountpoint.mnt)
+			mntget(mnt->mnt_ex_mountpoint.mnt);
+
 	up_write(&namespace_sem);
 
 	synchronize_rcu();
@@ -1326,6 +1340,9 @@ void umount_tree(struct mount *mnt, int how)
 		hlist_add_head(&p->mnt_hash, &tmp_list);
 	}
 
+	hlist_for_each_entry(p, &tmp_list, mnt_hash)
+		list_del_init(&p->mnt_child);
+
 	if (how)
 		propagate_umount(&tmp_list);
 
@@ -1339,6 +1356,7 @@ void umount_tree(struct mount *mnt, int how)
 		if (mnt_has_parent(p)) {
 			hlist_del_init(&p->mnt_mp_list);
 			put_mountpoint(p->mnt_mp);
+			mnt_add_count(p->mnt_parent, -1);
 			/* move the reference to mountpoint into ->mnt_ex_mountpoint */
 			p->mnt_ex_mountpoint.dentry = p->mnt_mountpoint;
 			p->mnt_ex_mountpoint.mnt = &p->mnt_parent->mnt;
@@ -1602,6 +1620,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
 			continue;
 
 		for (s = r; s; s = next_mnt(s, r)) {
+			struct mount *t = NULL;
 			if (!(flag & CL_COPY_UNBINDABLE) &&
 			    IS_MNT_UNBINDABLE(s)) {
 				s = skip_mnt_tree(s);
@@ -1623,7 +1642,14 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
 				goto out;
 			lock_mount_hash();
 			list_add_tail(&q->mnt_list, &res->mnt_list);
-			attach_mnt(q, parent, p->mnt_mp);
+			mnt_set_mountpoint(parent, p->mnt_mp, q);
+			if (!list_empty(&parent->mnt_mounts)) {
+				t = list_last_entry(&parent->mnt_mounts,
+					struct mount, mnt_child);
+				if (t->mnt_mp != p->mnt_mp)
+					t = NULL;
+			}
+			attach_shadowed(q, parent, t);
 			unlock_mount_hash();
 		}
 	}
@@ -2905,10 +2931,10 @@ SYSCALL_DEFINE2(pivot_root, const char __user *, new_root,
 	/* make sure we can reach put_old from new_root */
 	if (!is_path_reachable(old_mnt, old.dentry, &new))
 		goto out4;
-	root_mp->m_count++; /* pin it so it won't go away */
 	/* make certain new is below the root */
 	if (!is_path_reachable(new_mnt, new.dentry, &root))
 		goto out4;
+	root_mp->m_count++; /* pin it so it won't go away */
 	lock_mount_hash();
 	detach_mnt(new_mnt, &parent_path);
 	detach_mnt(root_mnt, &root_parent);
@@ -3060,7 +3086,8 @@ bool current_chrooted(void)
 	ns_root.mnt = &current->nsproxy->mnt_ns->root->mnt;
 	ns_root.dentry = ns_root.mnt->mnt_root;
 	path_get(&ns_root);
-	while (d_mountpoint(ns_root.dentry) && follow_down_one(&ns_root));
+	while (d_mountpoint(ns_root.dentry) && follow_down_one(&ns_root))
+		;
 
 	get_fs_root(current->fs, &fs_root);
 
@@ -3144,7 +3171,8 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 	root.mnt    = &mnt_ns->root->mnt;
 	root.dentry = mnt_ns->root->mnt.mnt_root;
 	path_get(&root);
-	while(d_mountpoint(root.dentry) && follow_down_one(&root));
+	while(d_mountpoint(root.dentry) && follow_down_one(&root))
+		;
 
 	/* Update the pwd and root */
 	set_fs_pwd(fs, &root);

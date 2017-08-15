@@ -464,9 +464,8 @@ repeat:
 	 * will limit the total number of files that can be opened.
 	 */
 	error = -EMFILE;
-	if (fd >= end) {
+	if (fd >= end)
 		goto out;
-	}
 
 	error = expand_files(files, fd);
 	if (error < 0)
@@ -829,9 +828,8 @@ SYSCALL_DEFINE3(dup3, unsigned int, oldfd, unsigned int, newfd, int, flags)
 	if (unlikely(oldfd == newfd))
 		return -EINVAL;
 
-	if (newfd >= rlimit(RLIMIT_NOFILE)) {
+	if (newfd >= rlimit(RLIMIT_NOFILE))
 		return -EBADF;
-	}
 
 	spin_lock(&files->file_lock);
 	err = expand_files(files, newfd);
