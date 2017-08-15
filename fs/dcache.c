@@ -1350,15 +1350,6 @@ static void check_and_drop(void *_data)
 }
 
 /**
- * check_submounts_and_drop - prune dcache, check for submounts and drop
- *
- * All done as a single atomic operation relative to has_unlinked_ancestor().
- * Returns 0 if successfully unhashed @parent.  If there were submounts then
- * return -EBUSY.
- *
- * @dentry: dentry to prune and drop
-
-/**
  * d_invalidate - detach submounts, prune dcache, and drop
  * @dentry: dentry to invalidate (aka detach, prune and drop)
  *
@@ -1370,6 +1361,7 @@ static void check_and_drop(void *_data)
  */
 void d_invalidate(struct dentry *dentry)
 {
+	int ret;
 	/*
 	 * If it's already been dropped, return OK.
 	 */
