@@ -2669,6 +2669,7 @@ out_err:
 /*
  * Prepare an anonymous dentry for life in the superblock's dentry tree as a
  * named dentry in place of the dentry to be replaced.
+ * returns with anon->d_lock held!
  */
 static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 {
@@ -2687,21 +2688,21 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	dentry->d_parent = dentry;
 	list_del_init(&dentry->d_child);
 	anon->d_parent = dparent;
-	list_move(&anon->d_child, &dparent->d_subdirs);
 	if (likely(!d_unhashed(anon))) {
 		hlist_bl_lock(&anon->d_sb->s_anon);
 		__hlist_bl_del(&anon->d_hash);
 		anon->d_hash.pprev = NULL;
 		hlist_bl_unlock(&anon->d_sb->s_anon);
 	}
-	__d_rehash(anon, d_hash(anon->d_parent, anon->d_name.hash));
+	list_move(&anon->d_child, &dparent->d_subdirs);
 
 	write_seqcount_end(&dentry->d_seq);
 	write_seqcount_end(&anon->d_seq);
 
 	dentry_unlock_parents_for_move(anon, dentry);
 	spin_unlock(&dentry->d_lock);
-	spin_unlock(&anon->d_lock);
+
+	/* anon->d_lock still locked, returns locked */
 }
 
 /**
@@ -2771,9 +2772,13 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 	actual = __d_instantiate_unique(dentry, inode);
 	if (!actual)
 		actual = dentry;
+	else
+		BUG_ON(!d_unhashed(actual));
 
-	d_rehash(actual);
+	spin_lock(&actual->d_lock);
 found:
+	_d_rehash(actual);
+	spin_unlock(&actual->d_lock);
 	spin_unlock(&inode->i_lock);
 out_nolock:
 	if (actual == dentry) {
@@ -2810,12 +2815,17 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
  * the beginning of the name. The sequence number check at the caller will
  * retry it again when a d_move() does happen. So any garbage in the buffer
  * due to mismatched pointer and length will be discarded.
+ *
+ * Data dependency barrier is needed to make sure that we see that terminating
+ * NUL.  Alpha strikes again, film at 11...
  */
 static int prepend_name(char **buffer, int *buflen, struct qstr *name)
 {
 	const char *dname = ACCESS_ONCE(name->name);
 	u32 dlen = ACCESS_ONCE(name->len);
 	char *p;
+
+	smp_read_barrier_depends();
 
 	*buflen -= dlen + 1;
 	if (*buflen < 0)
