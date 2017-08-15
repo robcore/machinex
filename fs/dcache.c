@@ -1887,7 +1887,7 @@ struct dentry *d_splice_alias(struct inode *inode, struct dentry *dentry)
 
 	if (inode && S_ISDIR(inode->i_mode)) {
 		spin_lock(&inode->i_lock);
-		new = __d_find_alias(inode, 1);
+		new = __d_find_alias(inode);
 		if (new) {
 			BUG_ON(!(new->d_flags & DCACHE_DISCONNECTED));
 			spin_unlock(&inode->i_lock);
@@ -2736,7 +2736,7 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 		struct dentry *alias;
 
 		/* Does an aliased dentry already exist? */
-		alias = __d_find_alias(inode, 0);
+		alias = __d_find_alias(inode);
 		if (alias) {
 			actual = alias;
 			write_seqlock(&rename_lock);
