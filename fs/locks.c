@@ -327,7 +327,7 @@ static int flock_make_lock(struct file *filp, struct file_lock **lock,
 		return -ENOMEM;
 
 	fl->fl_file = filp;
-	fl->fl_owner = current->owner;
+	fl->fl_owner = current->files;
 	fl->fl_pid = current->tgid;
 	fl->fl_flags = FL_FLOCK;
 	fl->fl_type = type;
@@ -1033,7 +1033,7 @@ static int __posix_lock_file(struct inode *inode, struct file_lock *request, str
 				fl->fl_end = request->fl_end;
 				fl->fl_type = request->fl_type;
 				locks_release_private(fl);
-				locks_copy_private(fl, request);
+				locks_copy_lock(fl, request);
 				request = fl;
 				added = true;
 			}
