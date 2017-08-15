@@ -1545,10 +1545,10 @@ static struct i2c_driver lis3dh_acc_driver = {
 	.driver = {
 			.owner = THIS_MODULE,
 			.name = LIS3DH_ACC_DEV_NAME,
+			.pm = &lis3dh_pm,
 		  },
 	.probe = lis3dh_acc_probe,
 	.remove = lis3dh_acc_remove,
-	.pm = &lis3dh_pm,
 	.id_table = lis3dh_acc_id,
 };
 
