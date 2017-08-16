@@ -565,7 +565,9 @@ static int bad_option(struct superblock_security_struct *sbsec, char flag,
  * labeling information.
  */
 static int selinux_set_mnt_opts(struct super_block *sb,
-				struct security_mnt_opts *opts)
+				struct security_mnt_opts *opts,
+				unsigned long kern_flags,
+				unsigned long *set_kern_flags)
 {
 	const struct cred *cred = current_cred();
 	int rc = 0, i;
@@ -588,6 +590,14 @@ static int selinux_set_mnt_opts(struct super_block *sb,
 			   server is ready to handle calls. */
 			goto out;
 		}
+		rc = -EINVAL;
+		printk(KERN_WARNING "SELinux: Unable to set superblock options "
+			"before the security server is initialized\n");
+		goto out;
+	}
+	if (kern_flags && !set_kern_flags) {
+		/* Specifying internal flags without providing a place to
+		 * place the results is not allowed */
 		rc = -EINVAL;
 		goto out;
 	}
@@ -753,7 +763,41 @@ out_double_mount:
 	goto out;
 }
 
-static void selinux_sb_clone_mnt_opts(const struct super_block *oldsb,
+static int selinux_cmp_sb_context(const struct super_block *oldsb,
+				    const struct super_block *newsb)
+{
+	struct superblock_security_struct *old = oldsb->s_security;
+	struct superblock_security_struct *new = newsb->s_security;
+	char oldflags = old->flags & SE_MNTMASK;
+	char newflags = new->flags & SE_MNTMASK;
+
+#ifdef CONFIG_RKP_KDP
+	if (security_integrity_current())
+		goto mismatch;
+#endif  /* CONFIG_RKP_KDP */
+	if (oldflags != newflags)
+		goto mismatch;
+	if ((oldflags & FSCONTEXT_MNT) && old->sid != new->sid)
+		goto mismatch;
+	if ((oldflags & CONTEXT_MNT) && old->mntpoint_sid != new->mntpoint_sid)
+		goto mismatch;
+	if ((oldflags & DEFCONTEXT_MNT) && old->def_sid != new->def_sid)
+		goto mismatch;
+	if (oldflags & ROOTCONTEXT_MNT) {
+		struct inode_security_struct *oldroot = oldsb->s_root->d_inode->i_security;
+		struct inode_security_struct *newroot = newsb->s_root->d_inode->i_security;
+		if (oldroot->sid != newroot->sid)
+			goto mismatch;
+	}
+	return 0;
+mismatch:
+	printk(KERN_WARNING "SELinux: mount invalid.  Same superblock, "
+			    "different security settings for (dev %s, "
+			    "type %s)\n", newsb->s_id, newsb->s_type->name);
+	return -EBUSY;
+}
+
+static int selinux_sb_clone_mnt_opts(const struct super_block *oldsb,
 					struct super_block *newsb)
 {
 	const struct superblock_security_struct *oldsbsec = oldsb->s_security;
@@ -768,14 +812,14 @@ static void selinux_sb_clone_mnt_opts(const struct super_block *oldsb,
 	 * mount options.  thus we can safely deal with this superblock later
 	 */
 	if (!ss_initialized)
-		return;
+		return 0;
 
 	/* how can we clone if the old one wasn't set up?? */
 	BUG_ON(!(oldsbsec->flags & SE_SBINITIALIZED));
 
-	/* if fs is reusing a sb, just let its options stand... */
+	/* if fs is reusing a sb, make sure that the contexts match */
 	if (newsbsec->flags & SE_SBINITIALIZED)
-		return;
+		return selinux_cmp_sb_context(oldsb, newsb);
 
 	mutex_lock(&newsbsec->lock);
 
@@ -808,6 +852,7 @@ static void selinux_sb_clone_mnt_opts(const struct super_block *oldsb,
 
 	sb_finish_set_opts(newsb);
 	mutex_unlock(&newsbsec->lock);
+	return 0;
 }
 
 static int selinux_parse_opts_str(char *options,
@@ -949,7 +994,7 @@ static int superblock_doinit(struct super_block *sb, void *data)
 		goto out_err;
 
 out:
-	rc = selinux_set_mnt_opts(sb, &opts);
+	rc = selinux_set_mnt_opts(sb, &opts, 0, NULL);
 
 out_err:
 	security_free_mnt_opts(&opts);
@@ -3264,44 +3309,15 @@ static int selinux_file_receive(struct file *file)
 	return file_has_perm(cred, file, file_to_av(file));
 }
 
-static int selinux_dentry_open(struct file *file, const struct cred *cred)
+static int selinux_file_open(struct file *file, const struct cred *cred)
 {
-	struct file_security_struct *fsec;
-	struct inode *inode;
-	struct inode_security_struct *isec;
-
-/* TmmSecure start */
-#ifdef SECSUBLSM_ENABLE
-   	int rc;
-   	rc = seclsm_Operations.dentry_open (file, cred);
-   	if (rc)
-   		return rc;
-#endif
-/* TmmSecure end */
-
-	inode = file->f_path.dentry->d_inode;
-	fsec = file->f_security;
-	isec = inode->i_security;
-	/*
-	 * Save inode label and policy sequence number
-	 * at open-time so that selinux_file_permission
-	 * can determine whether revalidation is necessary.
-	 * Task label is already saved in the file security
-	 * struct as its SID.
-	 */
-	fsec->isid = isec->sid;
-	fsec->pseqno = avc_policy_seqno();
-	/*
-	 * Since the inode label or policy seqno may have changed
-	 * between the selinux_inode_permission check and the saving
-	 * of state above, recheck that access is still permitted.
-	 * Otherwise, access might never be revalidated against the
-	 * new inode label or new policy.
-	 * This check is not redundant - do not remove.
-	 */
-	return inode_has_perm_noadp(cred, inode, open_file_to_av(file), 0);
+	return 0;
 }
 
+static int selinux_file_close(struct file *file)
+{
+	return 0;
+}
 /* task security operations */
 
 static int selinux_task_create(unsigned long clone_flags)
@@ -5777,7 +5793,8 @@ static struct security_operations selinux_ops = {
 	.file_send_sigiotask =		selinux_file_send_sigiotask,
 	.file_receive =			selinux_file_receive,
 
-	.dentry_open =			selinux_dentry_open,
+	.file_open =			selinux_file_open,
+	.file_close =			selinux_file_close,
 
 	.task_create =			selinux_task_create,
 	.cred_alloc_blank =		selinux_cred_alloc_blank,
