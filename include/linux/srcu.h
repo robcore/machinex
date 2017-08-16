@@ -36,6 +36,12 @@
 
 struct srcu_struct;
 
+/* Values for -> state variable. */
+#define SRCU_STATE_IDLE		0
+#define SRCU_STATE_SCAN1	1
+#define SRCU_STATE_SCAN2	2
+#define SRCU_STATE_DONE		3
+
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 
 int __init_srcu_struct(struct srcu_struct *sp, const char *name,

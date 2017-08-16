@@ -167,6 +167,51 @@ static inline void rcu_segcblist_dequeued_lazy(struct rcu_segcblist *rsclp)
 }
 
 /*
+ * Dequeue and return the first ready-to-invoke callback.  If there
+ * are no ready-to-invoke callbacks, return NULL.  Disables interrupts
+ * to avoid interference.  Does not protect from interference from other
+ * CPUs or tasks.
+ */
+static inline struct rcu_head *
+rcu_segcblist_dequeue(struct rcu_segcblist *rsclp)
+{
+	unsigned long flags;
+	int i;
+	struct rcu_head *rhp;
+
+	local_irq_save(flags);
+	if (!rcu_segcblist_ready_cbs(rsclp)) {
+		local_irq_restore(flags);
+		return NULL;
+	}
+	rhp = rsclp->head;
+	BUG_ON(!rhp);
+	rsclp->head = rhp->next;
+	for (i = RCU_DONE_TAIL; i < RCU_CBLIST_NSEGS; i++) {
+		if (rsclp->tails[i] != &rhp->next)
+			break;
+		rsclp->tails[i] = &rsclp->head;
+	}
+	smp_mb(); /* Dequeue before decrement for rcu_barrier(). */
+	WRITE_ONCE(rsclp->len, rsclp->len - 1);
+	local_irq_restore(flags);
+	return rhp;
+}
+
+/*
+ * Account for the fact that a previously dequeued callback turned out
+ * to be marked as lazy.
+ */
+static inline void rcu_segcblist_dequeued_lazy(struct rcu_segcblist *rsclp)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+	rsclp->len_lazy--;
+	local_irq_restore(flags);
+}
+
+/*
  * Interim function to return rcu_segcblist head pointer.  Longer term, the
  * rcu_segcblist will be used more pervasively, removing the need for this
  * function.
