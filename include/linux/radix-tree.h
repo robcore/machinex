@@ -26,6 +26,7 @@
 #include <linux/types.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
+#include <linux/spinlock_types.h>
 #include <linux/rcupdate.h>
 
 /*
