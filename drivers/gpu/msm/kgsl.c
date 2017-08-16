@@ -672,8 +672,9 @@ int kgsl_check_timestamp(struct kgsl_device *device,
 }
 EXPORT_SYMBOL(kgsl_check_timestamp);
 
-static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
+static int kgsl_suspend_device(struct device *dev)
 {
+	struct kgsl_device *device = dev_get_drvdata(dev);
 	int status = -EINVAL;
 	unsigned int nap_allowed_saved;
 	struct kgsl_pwrscale_policy *policy_saved;
@@ -738,8 +739,10 @@ end:
 	return status;
 }
 
-static int kgsl_resume_device(struct kgsl_device *device)
+static int kgsl_resume_device(struct device *dev)
 {
+
+	struct kgsl_device *device = dev_get_drvdata(dev);
 	if (!device)
 		return -EINVAL;
 
@@ -769,20 +772,6 @@ static int kgsl_resume_device(struct kgsl_device *device)
 	return 0;
 }
 
-static int kgsl_suspend(struct device *dev)
-{
-
-	pm_message_t arg = {0};
-	struct kgsl_device *device = dev_get_drvdata(dev);
-	return kgsl_suspend_device(device, arg);
-}
-
-static int kgsl_resume(struct device *dev)
-{
-	struct kgsl_device *device = dev_get_drvdata(dev);
-	return kgsl_resume_device(device);
-}
-
 static int kgsl_runtime_suspend(struct device *dev)
 {
 	return 0;
@@ -793,9 +782,10 @@ static int kgsl_runtime_resume(struct device *dev)
 	return 0;
 }
 
+SIMPLE_DEV_PM_OPS(kgsl_power_ops, kgsl_suspend_device, kgsl_resume_device);
+
 const struct dev_pm_ops kgsl_pm_ops = {
-	.suspend = kgsl_suspend,
-	.resume = kgsl_resume,
+	.pm = &kgsl_power_ops,
 	.runtime_suspend = kgsl_runtime_suspend,
 	.runtime_resume = kgsl_runtime_resume,
 };
