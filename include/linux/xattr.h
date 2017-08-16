@@ -9,10 +9,12 @@
 */
 #ifndef _LINUX_XATTR_H
 #define _LINUX_XATTR_H
-#include <uapi/linux/xattr.h>
+
+
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/spinlock.h>
+#include <uapi/linux/xattr.h>
 
 struct inode;
 struct dentry;
