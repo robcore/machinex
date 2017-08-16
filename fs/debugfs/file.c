@@ -20,6 +20,7 @@
 #include <linux/namei.h>
 #include <linux/debugfs.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 #include <linux/atomic.h>
 
 static ssize_t default_read_file(struct file *file, char __user *buf,
