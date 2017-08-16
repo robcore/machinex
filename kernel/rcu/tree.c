@@ -985,8 +985,7 @@ void rcu_irq_enter(void)
 	rdtp->dynticks_nesting++;
 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
 		     rdtp->dynticks_nesting == 0);
-	if (oldval)
-	else
+	if (!oldval)
 		rcu_eqs_exit_common(oldval, true);
 }
 
