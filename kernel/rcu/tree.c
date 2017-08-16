@@ -64,10 +64,8 @@
 #endif
 #define MODULE_PARAM_PREFIX "rcutree."
 
-# define DEFINE_RCU_TPS(sname)
 # define RCU_STATE_NAME(sname) __stringify(sname)
 #define RCU_STATE_INITIALIZER(sname, sabbr, cr) \
-DEFINE_RCU_TPS(sname) \
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct rcu_data, sname##_data); \
 struct rcu_state sname##_state = { \
 	.level = { &sname##_state.node[0] }, \

@@ -28,6 +28,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/spinlock.h>
+#include <linux/spinlock_types.h>
 #include <linux/percpu_ida.h>
 
 struct percpu_ida_cpu {
