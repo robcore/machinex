@@ -1964,19 +1964,6 @@ static bool has_locked_children(struct mount *mnt, struct dentry *dentry)
 	return false;
 }
 
-static bool has_locked_children(struct mount *mnt, struct dentry *dentry)
-{
-	struct mount *child;
-	list_for_each_entry(child, &mnt->mnt_mounts, mnt_child) {
-		if (!is_subdir(child->mnt_mountpoint, dentry))
-			continue;
-
-		if (child->mnt.mnt_flags & MNT_LOCKED)
-			return true;
-	}
-	return false;
-}
-
 /*
  * do loopback mount.
  */
@@ -3172,11 +3159,6 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 	struct fs_struct *fs = current->fs;
 	struct mnt_namespace *mnt_ns = ns;
 	struct path root;
-
-	if (!ns_capable(mnt_ns->user_ns, CAP_SYS_ADMIN) ||
-	    !ns_capable(current_user_ns(), CAP_SYS_CHROOT) ||
-	    !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
-		return -EPERM;
 
 	if (fs->users != 1)
 		return -EINVAL;
