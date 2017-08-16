@@ -894,7 +894,6 @@ static void rcu_eqs_exit_common(long long oldval, int user)
 		struct task_struct *idle __maybe_unused =
 			idle_task(smp_processor_id());
 
-				  oldval, rdtp->dynticks_nesting);
 		WARN_ONCE(1, "Current pid: %d comm: %s / Idle pid: %d comm: %s",
 			  current->pid, current->comm,
 			  idle->pid, idle->comm); /* must be idle task! */
