@@ -2545,7 +2545,7 @@ static void __d_move(struct dentry *dentry, struct dentry *target,
 		/* splicing a tree */
 		dentry->d_parent = target->d_parent;
 		target->d_parent = target;
-		list_del_init(&target->d_u.d_child);
+		list_del_init(&target->d_child);
 		list_move(&dentry->d_child, &dentry->d_parent->d_subdirs);
 	} else {
 		/* swapping two dentries */
