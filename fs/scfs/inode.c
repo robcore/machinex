@@ -582,7 +582,7 @@ static struct dentry * scfs_lookup(struct inode *dir, struct dentry *dentry,
 }
 
 static int scfs_rename(struct inode *old_dir, struct dentry *old_dentry,
-		struct inode *new_dir, struct dentry *new_dentry)
+		struct inode *new_dir, struct dentry *new_dentry, unsigned int flags)
 {
 	struct dentry *lower_old_dentry;
 	struct dentry *lower_new_dentry;
@@ -591,7 +591,6 @@ static int scfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	struct dentry *trap = NULL;
 	struct inode *target_inode;
 	int ret;
-	unsigned int flags;
 
 	lower_old_dentry = scfs_lower_dentry(old_dentry);
 	lower_new_dentry = scfs_lower_dentry(new_dentry);
@@ -978,7 +977,7 @@ const struct inode_operations scfs_dir_iops = {
 	.mkdir = scfs_mkdir,
 	.rmdir = scfs_rmdir,
 	.mknod = scfs_mknod,
-	.rename = scfs_rename,
+	.rename2 = scfs_rename,
 	.permission = scfs_permission,
 	.unlink = scfs_unlink,
 	.symlink = scfs_symlink,
