@@ -381,10 +381,10 @@ struct fuse_conn {
 	struct rcu_head rcu;
 
 	/** The user id for this mount */
-	uid_t user_id;
+	kuid_t user_id;
 
 	/** The group id for this mount */
-	gid_t group_id;
+	kgid_t group_id;
 
 	/** The fuse mount flags for this mount */
 	unsigned flags;
@@ -488,6 +488,9 @@ struct fuse_conn {
 	 * and hence races in setting them will not cause malfunction
 	 */
 
+	/** Is open/release not implemented by fs? */
+	unsigned no_open:1;
+
 	/** Is fsync not implemented by fs? */
 	unsigned no_fsync:1;
 
@@ -535,6 +538,9 @@ struct fuse_conn {
 
 	/** Are BSD file locking primitives not implemented by fs? */
 	unsigned no_flock:1;
+
+	/** Is fallocate not implemented by fs? */
+	unsigned no_fallocate:1;
 
 	/** Is rename with flags implemented by fs? */
 	unsigned no_rename2:1;
@@ -790,6 +796,8 @@ void fuse_abort_conn(struct fuse_conn *fc);
 void fuse_invalidate_attr(struct inode *inode);
 
 void fuse_invalidate_entry_cache(struct dentry *entry);
+
+void fuse_invalidate_atime(struct inode *inode);
 
 /**
  * Acquire reference to fuse_conn

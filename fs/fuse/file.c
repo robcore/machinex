@@ -769,8 +769,7 @@ static int fuse_readpage(struct file *file, struct page *page)
 		goto out;
 
 	err = fuse_do_readpage(file, page);
-
-	fuse_invalidate_attr(inode); /* atime changed */
+	fuse_invalidate_atime(inode);
  out:
 	unlock_page(page);
 	return err;
@@ -795,7 +794,7 @@ static void fuse_readpages_end(struct fuse_conn *fc, struct fuse_req *req)
 		if (!req->out.h.error && num_read < count)
 			fuse_short_read(req, inode, req->misc.read.attr_ver);
 
-		fuse_invalidate_attr(inode); /* atime changed */
+		fuse_invalidate_atime(inode);
 	}
 
 	for (i = 0; i < req->num_pages; i++) {
@@ -3005,6 +3004,10 @@ static long fuse_file_fallocate(struct file *file, int mode, loff_t offset,
 	req->in.args[0].value = &inarg;
 	fuse_request_send(fc, req);
 	err = req->out.h.error;
+	if (err == -ENOSYS) {
+		fc->no_fallocate = 1;
+		err = -EOPNOTSUPP;
+	}
 	fuse_put_request(fc, req);
 
 	if (err)
