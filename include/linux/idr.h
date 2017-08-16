@@ -16,6 +16,7 @@
 #include <linux/bitops.h>
 #include <linux/init.h>
 #include <linux/rcupdate.h>
+#include <linux/spinlock.h>
 
 /*
  * Using 6 bits at each layer allows us to allocate 7 layers out of each page.
