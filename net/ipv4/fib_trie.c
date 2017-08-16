@@ -185,7 +185,7 @@ static inline struct tnode *node_parent(const struct rt_trie_node *node)
 {
 	unsigned long parent;
 
-	parent = rcu_dereference_check(node->parent, lockdep_rtnl_is_held());
+	parent = rcu_dereference_index_check(node->parent, lockdep_rtnl_is_held());
 
 	return (struct tnode *)(parent & ~NODE_TYPE_MASK);
 }
@@ -197,7 +197,8 @@ static inline struct tnode *node_parent_rcu(const struct rt_trie_node *node)
 {
 	unsigned long parent;
 
-	parent = rcu_dereference_check(node->parent, lockdep_rtnl_is_held());
+	parent = rcu_dereference_index_check(node->parent, rcu_read_lock_held() ||
+							   lockdep_rtnl_is_held());
 
 	return (struct tnode *)(parent & ~NODE_TYPE_MASK);
 }
