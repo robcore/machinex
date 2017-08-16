@@ -29,7 +29,6 @@
 #include <linux/time.h>
 #include <linux/vmalloc.h>
 #include <linux/aio.h>
-#include "logger.h"
 
 #include <asm/ioctls.h>
 
