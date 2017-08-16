@@ -265,7 +265,7 @@ static bool srcu_readers_active(struct srcu_struct *sp)
  */
 void cleanup_srcu_struct(struct srcu_struct *sp)
 {
-	if (WARN_ON(srcu_readers_active(sp)))
+	if (WARN_ON(READ_ONCE(sp->srcu_state) != SRCU_STATE_IDLE))
 		return; /* Leakage unless caller handles error. */
 	free_percpu(sp->per_cpu_ref);
 	sp->per_cpu_ref = NULL;
