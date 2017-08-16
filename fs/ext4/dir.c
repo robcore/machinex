@@ -27,7 +27,6 @@
 #include <linux/slab.h>
 #include <linux/rbtree.h>
 #include "ext4.h"
-
 #include "xattr.h"
 
 static int ext4_dx_readdir(struct file *, struct dir_context *);
@@ -46,7 +45,8 @@ static int is_dx_dir(struct inode *inode)
 	if (EXT4_HAS_COMPAT_FEATURE(inode->i_sb,
 		     EXT4_FEATURE_COMPAT_DIR_INDEX) &&
 	    ((ext4_test_inode_flag(inode, EXT4_INODE_INDEX)) ||
-	     ((inode->i_size >> sb->s_blocksize_bits) == 1)))
+	     ((inode->i_size >> sb->s_blocksize_bits) == 1) ||
+	     ext4_has_inline_data(inode)))
 		return 1;
 
 	return 0;
@@ -151,7 +151,9 @@ static int ext4_readdir(struct file *file, struct dir_context *ctx)
 					&file->f_ra, file,
 					index, 1);
 			file->f_ra.prev_pos = (loff_t)index << PAGE_CACHE_SHIFT;
-			bh = ext4_bread(NULL, inode, map.m_lblk, 0, &err);
+			bh = ext4_bread(NULL, inode, map.m_lblk, 0);
+			if (IS_ERR(bh))
+				return PTR_ERR(bh);
 		}
 
 		if (!bh) {

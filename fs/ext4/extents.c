@@ -363,7 +363,7 @@ static int ext4_valid_extent(struct inode *inode, struct ext4_extent *ext)
 	ext4_lblk_t lblock = le32_to_cpu(ext->ee_block);
 	ext4_lblk_t last = lblock + len - 1;
 
-	if (lblock > last)
+	if (len == 0 || lblock > last)
 		return 0;
 	return ext4_data_block_valid(EXT4_SB(inode->i_sb), block, len);
 }
@@ -693,9 +693,11 @@ static void ext4_ext_show_move(struct inode *inode, struct ext4_ext_path *path,
 
 void ext4_ext_drop_refs(struct ext4_ext_path *path)
 {
-	int depth = path->p_depth;
-	int i;
+	int depth, i;
 
+	if (!path)
+		return;
+	depth = path->p_depth;
 	for (i = 0; i <= depth; i++, path++)
 		if (path->p_bh) {
 			brelse(path->p_bh);
@@ -874,7 +876,7 @@ ext4_ext_find_extent(struct inode *inode, ext4_lblk_t block,
 
 		bh = read_extent_tree_block(inode, path[ppos].p_block, --i,
 					    flags);
-		if (IS_ERR(bh)) {
+		if (unlikely(IS_ERR(bh))) {
 			ret = PTR_ERR(bh);
 			goto err;
 		}

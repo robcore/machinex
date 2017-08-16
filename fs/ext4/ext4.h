@@ -580,8 +580,8 @@ enum {
  * caching the extents when reading from the extent tree while a
  * truncate or punch hole operation is in progress.
  */
-#define EXT4_EX_NOCACHE				0x0400
-#define EXT4_EX_FORCE_CACHE			0x0800
+#define EXT4_EX_NOCACHE				0x40000000
+#define EXT4_EX_FORCE_CACHE			0x20000000
 
 /*
  * Flags used by ext4_free_blocks
