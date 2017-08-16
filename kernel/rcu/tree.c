@@ -64,7 +64,6 @@
 #endif
 #define MODULE_PARAM_PREFIX "rcutree."
 
-# define RCU_STATE_NAME(sname) __stringify(sname)
 #define RCU_STATE_INITIALIZER(sname, sabbr, cr) \
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct rcu_data, sname##_data); \
 struct rcu_state sname##_state = { \
@@ -78,7 +77,7 @@ struct rcu_state sname##_state = { \
 	.orphan_pend = RCU_CBLIST_INITIALIZER(sname##_state.orphan_pend), \
 	.orphan_done = RCU_CBLIST_INITIALIZER(sname##_state.orphan_done), \
 	.barrier_mutex = __MUTEX_INITIALIZER(sname##_state.barrier_mutex), \
-	.name = RCU_STATE_NAME(sname), \
+	.name = #sname, \
 	.abbr = sabbr, \
 	.exp_mutex = __MUTEX_INITIALIZER(sname##_state.exp_mutex), \
 	.exp_wake_mutex = __MUTEX_INITIALIZER(sname##_state.exp_wake_mutex), \
