@@ -496,7 +496,7 @@ out_unlock:
  * superblock-level name-space lock for renames and copy-ups.
  */
 static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
-			 struct inode *new_dir, struct dentry *new_dentry)
+			 struct inode *new_dir, struct dentry *new_dentry, unsigned int flags)
 {
 	int err = 0;
 	struct dentry *lower_old_dentry = NULL;
@@ -849,7 +849,7 @@ const struct inode_operations sdcardfs_symlink_iops = {
 	.getxattr	= sdcardfs_getxattr,
 	.listxattr	= sdcardfs_listxattr,
 	.removexattr = sdcardfs_removexattr,
-#endif // SDCARDFS_XATTR
+#endif // SDCARD_FS_XATTR
 	/* XXX Following operations are implemented, 
 	 *     but FUSE(sdcard) or FAT does not support them
 	 *     These methods are *NOT* perfectly tested. 
@@ -866,7 +866,7 @@ const struct inode_operations sdcardfs_dir_iops = {
 	.unlink		= sdcardfs_unlink,
 	.mkdir		= sdcardfs_mkdir,
 	.rmdir		= sdcardfs_rmdir,
-	.rename		= sdcardfs_rename,
+	.rename2	= sdcardfs_rename,
 	.setattr	= sdcardfs_setattr,
 	.getattr	= sdcardfs_getattr,
 #ifdef SDCARD_FS_XATTR
@@ -874,7 +874,7 @@ const struct inode_operations sdcardfs_dir_iops = {
 	.getxattr	= sdcardfs_getxattr,
 	.listxattr	= sdcardfs_listxattr,
 	.removexattr = sdcardfs_removexattr,
-#endif // SDCARDFS_XATTR
+#endif // SDCARD_FS_XATTR
 	/* XXX Following operations are implemented, 
 	 *     but FUSE(sdcard) or FAT does not support them
 	 *     These methods are *NOT* perfectly tested. 

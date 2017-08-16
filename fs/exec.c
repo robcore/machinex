@@ -1153,8 +1153,8 @@ void setup_new_exec(struct linux_binprm * bprm)
 	/* This is the point of no return */
 	current->sas_ss_sp = current->sas_ss_size = 0;
 
-	if (current_euid() == current_uid() && current_egid() == current_gid())
-		set_dumpable(current->mm, 1);
+	if (uid_eq(current_euid(), current_uid()) && gid_eq(current_egid(), current_gid()))
+		set_dumpable(current->mm, SUID_DUMP_USER);
 	else
 		set_dumpable(current->mm, suid_dumpable);
 
@@ -1168,8 +1168,8 @@ void setup_new_exec(struct linux_binprm * bprm)
 	current->mm->task_size = TASK_SIZE;
 
 	/* install the new credentials */
-	if (bprm->cred->uid != current_euid() ||
-	    bprm->cred->gid != current_egid()) {
+	if (!uid_eq(bprm->cred->uid, current_euid()) ||
+	    !gid_eq(bprm->cred->gid, current_egid())) {
 		current->pdeath_signal = 0;
 	} else {
 		would_dump(bprm, bprm->file);
@@ -1181,6 +1181,7 @@ void setup_new_exec(struct linux_binprm * bprm)
 	   group */
 	current->self_exec_id++;
 	flush_signal_handlers(current, 0);
+	do_close_on_exec(current->files);
 }
 EXPORT_SYMBOL(setup_new_exec);
 
@@ -1294,8 +1295,8 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 {
 	struct inode *inode;
 	unsigned int mode;
-	uid_t uid;
-	gid_t gid;
+	kuid_t uid;
+	kgid_t gid;
 
 	/* clear any previous set[ug]id data from a previous binary */
 	bprm->cred->euid = current_euid();
@@ -1304,7 +1305,7 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 	if (bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID)
 		return;
 
-	inode = bprm->file->f_path.dentry->d_inode;
+	inode = file_inode(bprm->file);
 	mode = READ_ONCE(inode->i_mode);
 	if (!(mode & (S_ISUID|S_ISGID)))
 		return;
@@ -1317,6 +1318,11 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 	uid = inode->i_uid;
 	gid = inode->i_gid;
 	mutex_unlock(&inode->i_mutex);
+
+	/* We ignore suid/sgid if there are no mappings for them in the ns */
+	if (!kuid_has_mapping(bprm->cred->user_ns, uid) ||
+		 !kgid_has_mapping(bprm->cred->user_ns, gid))
+		return;
 
 	if (mode & S_ISUID) {
 		bprm->per_clear |= PER_CLEAR_ON_SETID;
@@ -1337,8 +1343,6 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
  */
 int prepare_binprm(struct linux_binprm *bprm)
 {
-	struct inode *inode = file_inode(bprm->file);
-	umode_t mode = inode->i_mode;
 	int retval;
 
 	bprm_fill_uid(bprm);

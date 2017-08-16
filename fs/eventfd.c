@@ -118,18 +118,18 @@ static unsigned int eventfd_poll(struct file *file, poll_table *wait)
 {
 	struct eventfd_ctx *ctx = file->private_data;
 	unsigned int events = 0;
-	u64 count;
+	unsigned long flags;
 
 	poll_wait(file, &ctx->wqh, wait);
-	smp_rmb();
-	count = ctx->count;
 
-	if (count > 0)
+	spin_lock_irqsave(&ctx->wqh.lock, flags);
+	if (ctx->count > 0)
 		events |= POLLIN;
-	if (count == ULLONG_MAX)
+	if (ctx->count == ULLONG_MAX)
 		events |= POLLERR;
-	if (ULLONG_MAX - 1 > count)
+	if (ULLONG_MAX - 1 > ctx->count)
 		events |= POLLOUT;
+	spin_unlock_irqrestore(&ctx->wqh.lock, flags);
 
 	return events;
 }
