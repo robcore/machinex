@@ -241,7 +241,7 @@ static int mounts_open_common(struct inode *inode, struct file *file,
 	}
 	ns = nsp->mnt_ns;
 	if (!ns) {
-		task_lock(task);
+		task_unlock(task);
 		put_task_struct(task);
 		goto err;
 	}
