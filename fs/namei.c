@@ -120,6 +120,8 @@
  */
 void final_putname(struct filename *name)
 {
+	if (name == NULL)
+		return;
 	if (name->name && name->separate) {
 		__putname(name->name);
 		if (name)
@@ -2130,8 +2132,8 @@ struct dentry *lookup_one_len(const char *name, struct dentry *base, int len)
 	unsigned int c;
 	int err;
 
-	if (!mutex_is_locked(&base->d_inode->i_mutex));
-		pr_err("Fix this Rob\n");
+	WARN_ON_ONCE(!mutex_is_locked(&base->d_inode->i_mutex));
+
 	this.name = name;
 	this.len = len;
 	this.hash = full_name_hash(name, len);
@@ -2756,8 +2758,7 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 	}
 
 	if (error) {	/* returned 1, that is */
-		if (file->f_path.dentry == DENTRY_NOT_SET) {
-			pr_err("Fix this Rob\n");
+		if (WARN_ON(file->f_path.dentry == DENTRY_NOT_SET)) {
 			error = -EIO;
 			goto out;
 		}
@@ -2768,8 +2769,7 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 		if (*opened & FILE_CREATED)
 			fsnotify_create(dir, dentry);
 		if (!dentry->d_inode) {
-			if (*opened & FILE_CREATED)
-				pr_err("Fix this Rob\n");
+			WARN_ON(*opened & FILE_CREATED);
 			if (create_error) {
 				error = create_error;
 				goto out;
@@ -2789,8 +2789,7 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 	 */
 	acc_mode = op->acc_mode;
 	if (*opened & FILE_CREATED) {
-		if (!(open_flag & O_CREAT))
-			pr_err("Fix this Rob\n");
+		WARN_ON(!(open_flag & O_CREAT));
 		fsnotify_create(dir, dentry);
 		acc_mode = MAY_OPEN;
 	}
@@ -4232,8 +4231,7 @@ int vfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		error = old_dir->i_op->rename(old_dir, old_dentry,
 					      new_dir, new_dentry);
 	} else {
-		if (old_dir->i_op->rename != NULL)
-			pr_err("Fix this Rob\n");
+		WARN_ON(old_dir->i_op->rename != NULL);
 		error = old_dir->i_op->rename2(old_dir, old_dentry,
 					       new_dir, new_dentry, flags);
 	}
