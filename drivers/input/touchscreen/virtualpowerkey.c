@@ -32,7 +32,7 @@ static struct work_struct virtkey_input_work;
 static void wakeup_key_release(struct work_struct *work)
 {
 	input_report_key(virtkeydev, KEY_WAKEUP, 0);
-	input_sync(virtkeydev_pwrdev);
+	input_sync(virtkeydev);
 	mutex_unlock(&virtkeyworklock);
 }
 

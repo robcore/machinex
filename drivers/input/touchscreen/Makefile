@@ -11,8 +11,6 @@ obj-$(CONFIG_TOUCHSCREEN_SWEEP2WAKE)		+= sweep2wake.o
 # for doubletap2wake, leave 1st to avoid merge issues at the end of the file
 obj-$(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)	+= doubletap2wake.o
 
-obj-$(VIRTUAL_WAKEUP_KEY)		+= virtualpowerkey.o
-
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_AD7877)	+= ad7877.o
 obj-$(CONFIG_TOUCHSCREEN_AD7879)	+= ad7879.o
@@ -114,3 +112,4 @@ obj-$(CONFIG_ALUCARD_TOUCHSCREEN_BOOST)	+= alu-t-boost.o
 obj-$(CONFIG_WAKE_GESTURES)		+= wake_gestures.o
 obj-$(CONFIG_GENERIC_TOUCHBOOST)	+= touchboost.o
 obj-$(CONFIG_SWEEP2SLEEP)		+= sweep2sleep.o
+obj-$(CONFIG_VIRTUAL_WAKEUP_KEY)		+= virtualpowerkey.o
