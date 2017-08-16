@@ -18,13 +18,14 @@
 #ifndef _LINUX_NET_H
 #define _LINUX_NET_H
 
+#include <uapi/linux/net.h>
 #include <linux/stringify.h>
 #include <linux/random.h>
 #include <linux/wait.h>
 #include <linux/fcntl.h>	/* For O_CLOEXEC and O_NONBLOCK */
 #include <linux/kmemcheck.h>
+#include <linux/cache.h>
 #include <linux/rcupdate.h>
-#include <uapi/linux/net.h>
 
 struct poll_table_struct;
 struct pipe_inode_info;

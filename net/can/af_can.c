@@ -46,7 +46,6 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
-#include <linux/rcupdate.h>
 #include <linux/uaccess.h>
 #include <linux/net.h>
 #include <linux/netdevice.h>
