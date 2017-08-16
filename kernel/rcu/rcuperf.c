@@ -47,6 +47,8 @@
 #include <linux/torture.h>
 #include <linux/vmalloc.h>
 
+#include "rcu.h"
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Paul E. McKenney <paulmck@linux.vnet.ibm.com>");
 
@@ -62,10 +64,12 @@ torture_param(bool, gp_async, false, "Use asynchronous GP wait primitives");
 torture_param(int, gp_async_max, 1000, "Max # outstanding waits per reader");
 torture_param(bool, gp_exp, false, "Use expedited GP wait primitives");
 torture_param(int, holdoff, 10, "Holdoff time before test start (s)");
-torture_param(int, nreaders, -1, "Number of RCU reader threads");
+torture_param(int, nreaders, 0, "Number of RCU reader threads");
 torture_param(int, nwriters, -1, "Number of RCU updater threads");
-torture_param(bool, shutdown, false, "Shutdown at end of performance tests.");
+torture_param(bool, shutdown, !IS_ENABLED(MODULE),
+	      "Shutdown at end of performance tests.");
 torture_param(bool, verbose, true, "Enable verbose debugging printk()s");
+torture_param(int, writer_holdoff, 0, "Holdoff (us) between GPs, zero to disable");
 
 static char *perf_type = "rcu";
 module_param(perf_type, charp, 0444);
@@ -445,6 +449,8 @@ rcu_perf_writer(void *arg)
 	}
 
 	do {
+		if (writer_holdoff)
+			udelay(writer_holdoff);
 		wdp = &wdpp[i];
 		*wdp = ktime_get_mono_fast_ns();
 		if (gp_async) {

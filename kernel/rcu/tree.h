@@ -152,19 +152,6 @@ struct rcu_node {
 				/* Number of tasks boosted for expedited GP. */
 	unsigned long n_normal_boosts;
 				/* Number of tasks boosted for normal GP. */
-	unsigned long n_balk_blkd_tasks;
-				/* Refused to boost: no blocked tasks. */
-	unsigned long n_balk_exp_gp_tasks;
-				/* Refused to boost: nothing blocking GP. */
-	unsigned long n_balk_boost_tasks;
-				/* Refused to boost: already boosting. */
-	unsigned long n_balk_notblocked;
-				/* Refused to boost: RCU RS CS still running. */
-	unsigned long n_balk_notyet;
-				/* Refused to boost: not yet time. */
-	unsigned long n_balk_nos;
-				/* Refused to boost: not sure why, though. */
-				/*  This can happen due to race conditions. */
 #ifdef CONFIG_RCU_NOCB_CPU
 	struct swait_queue_head nocb_gp_wq[2];
 				/* Place for rcu_nocb_kthread() to wait GP. */
@@ -304,9 +291,9 @@ struct rcu_data {
 };
 
 /* Values for nocb_defer_wakeup field in struct rcu_data. */
-#define RCU_NOGP_WAKE_NOT	0
-#define RCU_NOGP_WAKE		1
-#define RCU_NOGP_WAKE_FORCE	2
+#define RCU_NOCB_WAKE_NOT	0
+#define RCU_NOCB_WAKE		1
+#define RCU_NOCB_WAKE_FORCE	2
 
 #define RCU_JIFFIES_TILL_FORCE_QS (1 + (HZ > 250) + (HZ > 500))
 					/* For jiffies_till_first_fqs and */
@@ -535,75 +522,3 @@ void srcu_offline_cpu(unsigned int cpu) { }
 #endif /* #else #ifdef CONFIG_SRCU */
 
 #endif /* #ifndef RCU_TREE_NONCORE */
-
-#ifdef CONFIG_RCU_TRACE
-/* Read out queue lengths for tracing. */
-static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
-{
-#ifdef CONFIG_RCU_NOCB_CPU
-	*ql = atomic_long_read(&rdp->nocb_q_count);
-	*qll = atomic_long_read(&rdp->nocb_q_count_lazy);
-#else /* #ifdef CONFIG_RCU_NOCB_CPU */
-	*ql = 0;
-	*qll = 0;
-#endif /* #else #ifdef CONFIG_RCU_NOCB_CPU */
-}
-#endif /* #ifdef CONFIG_RCU_TRACE */
-
-/*
- * Wrappers for the rcu_node::lock acquire and release.
- *
- * Because the rcu_nodes form a tree, the tree traversal locking will observe
- * different lock values, this in turn means that an UNLOCK of one level
- * followed by a LOCK of another level does not imply a full memory barrier;
- * and most importantly transitivity is lost.
- *
- * In order to restore full ordering between tree levels, augment the regular
- * lock acquire functions with smp_mb__after_unlock_lock().
- *
- * As ->lock of struct rcu_node is a __private field, therefore one should use
- * these wrappers rather than directly call raw_spin_{lock,unlock}* on ->lock.
- */
-static inline void raw_spin_lock_rcu_node(struct rcu_node *rnp)
-{
-	raw_spin_lock(&ACCESS_PRIVATE(rnp, lock));
-	smp_mb__after_unlock_lock();
-}
-
-static inline void raw_spin_unlock_rcu_node(struct rcu_node *rnp)
-{
-	raw_spin_unlock(&ACCESS_PRIVATE(rnp, lock));
-}
-
-static inline void raw_spin_lock_irq_rcu_node(struct rcu_node *rnp)
-{
-	raw_spin_lock_irq(&ACCESS_PRIVATE(rnp, lock));
-	smp_mb__after_unlock_lock();
-}
-
-static inline void raw_spin_unlock_irq_rcu_node(struct rcu_node *rnp)
-{
-	raw_spin_unlock_irq(&ACCESS_PRIVATE(rnp, lock));
-}
-
-#define raw_spin_lock_irqsave_rcu_node(rnp, flags)			\
-do {									\
-	typecheck(unsigned long, flags);				\
-	raw_spin_lock_irqsave(&ACCESS_PRIVATE(rnp, lock), flags);	\
-	smp_mb__after_unlock_lock();					\
-} while (0)
-
-#define raw_spin_unlock_irqrestore_rcu_node(rnp, flags)			\
-do {									\
-	typecheck(unsigned long, flags);				\
-	raw_spin_unlock_irqrestore(&ACCESS_PRIVATE(rnp, lock), flags);	\
-} while (0)
-
-static inline bool raw_spin_trylock_rcu_node(struct rcu_node *rnp)
-{
-	bool locked = raw_spin_trylock(&ACCESS_PRIVATE(rnp, lock));
-
-	if (locked)
-		smp_mb__after_unlock_lock();
-	return locked;
-}
