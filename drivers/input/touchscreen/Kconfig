@@ -1226,4 +1226,10 @@ config SWEEP2SLEEP
         help
           Say Y here to support sweep2sleep
 
+config VIRTUAL_WAKEUP_KEY
+        tristate "Hook to send Screen Wake Events from drivers"
+        default y
+        help
+          Say Y here to support Virtual Wakeup Key
+
 endif

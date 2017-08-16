@@ -107,8 +107,8 @@ static int tid_fd_revalidate(struct dentry *dentry, unsigned int flags)
 					inode->i_gid = cred->egid;
 					rcu_read_unlock();
 				} else {
-					inode->i_uid = 0;
-					inode->i_gid = 0;
+					inode->i_uid = GLOBAL_ROOT_UID;
+					inode->i_gid = GLOBAL_ROOT_GID;
 				}
 
 				if (S_ISLNK(inode->i_mode)) {
@@ -257,7 +257,6 @@ out_fd_loop:
 	put_files_struct(files);
 out:
 	put_task_struct(p);
-out_no_task:
 	return 0;
 }
 
