@@ -65,17 +65,6 @@ static inline bool rcu_batch_empty(struct rcu_batch *b)
 }
 
 /*
- * Are all batches empty for the specified srcu_struct?
- */
-static inline bool rcu_all_batches_empty(struct srcu_struct *sp)
-{
-	return rcu_batch_empty(&sp->batch_done) &&
-	       rcu_batch_empty(&sp->batch_check1) &&
-	       rcu_batch_empty(&sp->batch_check0) &&
-	       rcu_batch_empty(&sp->batch_queue);
-}
-
-/*
  * Remove the callback at the head of the specified rcu_batch structure
  * and return a pointer to it, or return NULL if the structure is empty.
  */
@@ -111,7 +100,7 @@ static int init_srcu_struct_fields(struct srcu_struct *sp)
 {
 	sp->completed = 0;
 	spin_lock_init(&sp->queue_lock);
-	sp->srcu_state = SRCU_STATE_IDLE;
+	sp->running = false;
 	rcu_batch_init(&sp->batch_queue);
 	rcu_batch_init(&sp->batch_check0);
 	rcu_batch_init(&sp->batch_check1);
@@ -265,7 +254,7 @@ static bool srcu_readers_active(struct srcu_struct *sp)
  */
 void cleanup_srcu_struct(struct srcu_struct *sp)
 {
-	if (WARN_ON(READ_ONCE(sp->srcu_state) != SRCU_STATE_IDLE))
+	if (WARN_ON(srcu_readers_active(sp)))
 		return; /* Leakage unless caller handles error. */
 	free_percpu(sp->per_cpu_ref);
 	sp->per_cpu_ref = NULL;
@@ -385,15 +374,16 @@ void call_srcu(struct srcu_struct *sp, struct rcu_head *head,
 	spin_lock_irqsave(&sp->queue_lock, flags);
 	smp_mb__after_unlock_lock(); /* Caller's prior accesses before GP. */
 	rcu_batch_queue(&sp->batch_queue, head);
-	if (READ_ONCE(sp->srcu_state) == SRCU_STATE_IDLE) {
-		WRITE_ONCE(sp->srcu_state, SRCU_STATE_SCAN1);
+	if (!sp->running) {
+		sp->running = true;
 		queue_delayed_work(system_power_efficient_wq, &sp->work, 0);
 	}
 	spin_unlock_irqrestore(&sp->queue_lock, flags);
 }
 EXPORT_SYMBOL_GPL(call_srcu);
 
-static void srcu_reschedule(struct srcu_struct *sp, unsigned long delay);
+static void srcu_advance_batches(struct srcu_struct *sp, int trycount);
+static void srcu_reschedule(struct srcu_struct *sp);
 
 /*
  * Helper function for synchronize_srcu() and synchronize_srcu_expedited().
@@ -402,6 +392,7 @@ static void __synchronize_srcu(struct srcu_struct *sp, int trycount)
 {
 	struct rcu_synchronize rcu;
 	struct rcu_head *head = &rcu.head;
+	bool done = false;
 
 	RCU_LOCKDEP_WARN(lock_is_held(&sp->dep_map) ||
 			 lock_is_held(&rcu_bh_lock_map) ||
@@ -409,8 +400,6 @@ static void __synchronize_srcu(struct srcu_struct *sp, int trycount)
 			 lock_is_held(&rcu_sched_lock_map),
 			 "Illegal synchronize_srcu() in same-type SRCU (or in RCU) read-side critical section");
 
-	if (rcu_scheduler_active == RCU_SCHEDULER_INACTIVE)
-		return;
 	might_sleep();
 	init_completion(&rcu.completion);
 
@@ -418,20 +407,30 @@ static void __synchronize_srcu(struct srcu_struct *sp, int trycount)
 	head->func = wakeme_after_rcu;
 	spin_lock_irq(&sp->queue_lock);
 	smp_mb__after_unlock_lock(); /* Caller's prior accesses before GP. */
-	if (READ_ONCE(sp->srcu_state) == SRCU_STATE_IDLE) {
+	if (!sp->running) {
 		/* steal the processing owner */
-		WRITE_ONCE(sp->srcu_state, SRCU_STATE_SCAN1);
+		sp->running = true;
 		rcu_batch_queue(&sp->batch_check0, head);
 		spin_unlock_irq(&sp->queue_lock);
+
+		srcu_advance_batches(sp, trycount);
+		if (!rcu_batch_empty(&sp->batch_done)) {
+			BUG_ON(sp->batch_done.head != head);
+			rcu_batch_dequeue(&sp->batch_done);
+			done = true;
+		}
 		/* give the processing owner to work_struct */
-		srcu_reschedule(sp, 0);
+		srcu_reschedule(sp);
 	} else {
 		rcu_batch_queue(&sp->batch_queue, head);
 		spin_unlock_irq(&sp->queue_lock);
 	}
 
-	wait_for_completion(&rcu.completion);
-	smp_mb(); /* Caller's later accesses after GP. */
+	if (!done) {
+		wait_for_completion(&rcu.completion);
+		smp_mb(); /* Caller's later accesses after GP. */
+	}
+
 }
 
 /**
@@ -542,9 +541,7 @@ static void srcu_collect_new(struct srcu_struct *sp)
  */
 static void srcu_advance_batches(struct srcu_struct *sp, int trycount)
 {
-	int idx;
-
-	WARN_ON_ONCE(sp->srcu_state == SRCU_STATE_IDLE);
+	int idx = 1 ^ (sp->completed & 1);
 
 	/*
 	 * Because readers might be delayed for an extended period after
@@ -554,56 +551,48 @@ static void srcu_advance_batches(struct srcu_struct *sp, int trycount)
 	 * invoking a callback.
 	 */
 
-	if (sp->srcu_state == SRCU_STATE_DONE)
-		WRITE_ONCE(sp->srcu_state, SRCU_STATE_SCAN1);
+	if (rcu_batch_empty(&sp->batch_check0) &&
+	    rcu_batch_empty(&sp->batch_check1))
+		return; /* no callbacks need to be advanced */
 
-	if (sp->srcu_state == SRCU_STATE_SCAN1) {
-		idx = 1 ^ (sp->completed & 1);
-		if (!try_check_zero(sp, idx, trycount))
-			return; /* readers present, retry after SRCU_INTERVAL */
+	if (!try_check_zero(sp, idx, trycount))
+		return; /* failed to advance, will try after SRCU_INTERVAL */
 
-		/*
-		 * The callbacks in ->batch_check1 have already done
-		 * with their first zero check and flip back when they were
-		 * enqueued on ->batch_check0 in a previous invocation of
-		 * srcu_advance_batches().  (Presumably try_check_zero()
-		 * returned false during that invocation, leaving the
-		 * callbacks stranded on ->batch_check1.) They are therefore
-		 * ready to invoke, so move them to ->batch_done.
-		 */
-		rcu_batch_move(&sp->batch_done, &sp->batch_check1);
-		srcu_flip(sp);
+	/*
+	 * The callbacks in ->batch_check1 have already done with their
+	 * first zero check and flip back when they were enqueued on
+	 * ->batch_check0 in a previous invocation of srcu_advance_batches().
+	 * (Presumably try_check_zero() returned false during that
+	 * invocation, leaving the callbacks stranded on ->batch_check1.)
+	 * They are therefore ready to invoke, so move them to ->batch_done.
+	 */
+	rcu_batch_move(&sp->batch_done, &sp->batch_check1);
 
-		/*
-		 * The callbacks in ->batch_check0 just finished their
-		 * first check zero and flip, so move them to ->batch_check1
-		 * for future checking on the other idx.
-		 */
-		rcu_batch_move(&sp->batch_check1, &sp->batch_check0);
+	if (rcu_batch_empty(&sp->batch_check0))
+		return; /* no callbacks need to be advanced */
+	srcu_flip(sp);
 
-		WRITE_ONCE(sp->srcu_state, SRCU_STATE_SCAN2);
-	}
+	/*
+	 * The callbacks in ->batch_check0 just finished their
+	 * first check zero and flip, so move them to ->batch_check1
+	 * for future checking on the other idx.
+	 */
+	rcu_batch_move(&sp->batch_check1, &sp->batch_check0);
 
-	if (sp->srcu_state == SRCU_STATE_SCAN2) {
+	/*
+	 * SRCU read-side critical sections are normally short, so check
+	 * at least twice in quick succession after a flip.
+	 */
+	trycount = trycount < 2 ? 2 : trycount;
+	if (!try_check_zero(sp, idx^1, trycount))
+		return; /* failed to advance, will try after SRCU_INTERVAL */
 
-		/*
-		 * SRCU read-side critical sections are normally short,
-		 * so check at least twice in quick succession after a flip.
-		 */
-		idx = 1 ^ (sp->completed & 1);
-		trycount = trycount < 2 ? 2 : trycount;
-		if (!try_check_zero(sp, idx, trycount))
-			return; /* readers present, retry after SRCU_INTERVAL */
-
-		/*
-		 * The callbacks in ->batch_check1 have now waited for
-		 * all pre-existing readers using both idx values.  They are
-		 * therefore ready to invoke, so move them to ->batch_done.
-		 */
-		rcu_batch_move(&sp->batch_done, &sp->batch_check1);
-
-		WRITE_ONCE(sp->srcu_state, SRCU_STATE_DONE);
-	}
+	/*
+	 * The callbacks in ->batch_check1 have now waited for all
+	 * pre-existing readers using both idx values.  They are therefore
+	 * ready to invoke, so move them to ->batch_done.
+	 */
+	rcu_batch_move(&sp->batch_done, &sp->batch_check1);
 }
 
 /*
@@ -631,22 +620,28 @@ static void srcu_invoke_callbacks(struct srcu_struct *sp)
  * Finished one round of SRCU grace period.  Start another if there are
  * more SRCU callbacks queued, otherwise put SRCU into not-running state.
  */
-static void srcu_reschedule(struct srcu_struct *sp, unsigned long delay)
+static void srcu_reschedule(struct srcu_struct *sp)
 {
 	bool pending = true;
 
-	if (rcu_all_batches_empty(sp)) {
+	if (rcu_batch_empty(&sp->batch_done) &&
+	    rcu_batch_empty(&sp->batch_check1) &&
+	    rcu_batch_empty(&sp->batch_check0) &&
+	    rcu_batch_empty(&sp->batch_queue)) {
 		spin_lock_irq(&sp->queue_lock);
-		if (rcu_all_batches_empty(sp) &&
-		    READ_ONCE(sp->srcu_state) == SRCU_STATE_DONE) {
-			WRITE_ONCE(sp->srcu_state, SRCU_STATE_IDLE);
+		if (rcu_batch_empty(&sp->batch_done) &&
+		    rcu_batch_empty(&sp->batch_check1) &&
+		    rcu_batch_empty(&sp->batch_check0) &&
+		    rcu_batch_empty(&sp->batch_queue)) {
+			sp->running = false;
 			pending = false;
 		}
 		spin_unlock_irq(&sp->queue_lock);
 	}
 
 	if (pending)
-		queue_delayed_work(system_power_efficient_wq, &sp->work, delay);
+		queue_delayed_work(system_power_efficient_wq,
+				   &sp->work, SRCU_INTERVAL);
 }
 
 /*
@@ -661,6 +656,6 @@ void process_srcu(struct work_struct *work)
 	srcu_collect_new(sp);
 	srcu_advance_batches(sp, 1);
 	srcu_invoke_callbacks(sp);
-	srcu_reschedule(sp, SRCU_INTERVAL);
+	srcu_reschedule(sp);
 }
 EXPORT_SYMBOL_GPL(process_srcu);

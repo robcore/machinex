@@ -89,7 +89,6 @@ struct srcu_struct {
 	unsigned long srcu_barrier_seq;		/* srcu_barrier seq #. */
 	struct mutex srcu_barrier_mutex;	/* Serialize barrier ops. */
 	struct completion srcu_barrier_completion;
-	int srcu_state;
 						/* Awaken barrier rq at end. */
 	atomic_t srcu_barrier_cpu_cnt;		/* # CPUs not yet posting a */
 						/*  callback for the barrier */
