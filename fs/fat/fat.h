@@ -13,7 +13,7 @@
 #ifdef CONFIG_FAT_SUPPORT_STLOG
 #include <linux/stlog.h>
 #else
-#define ST_LOG(fmt,...)
+#define ST_LOG(fmt,...) 
 #endif
 
 /*
@@ -33,8 +33,8 @@
 #define FAT_NFS_NOSTALE_RO	2      /* NFS RO support, no ESTALE issue */
 
 struct fat_mount_options {
-	uid_t fs_uid;
-	gid_t fs_gid;
+	kuid_t fs_uid;
+	kgid_t fs_gid;
 	unsigned short fs_fmask;
 	unsigned short fs_dmask;
 	unsigned short codepage;   /* Codepage for shortname conversions */
@@ -58,7 +58,8 @@ struct fat_mount_options {
 		 usefree:1,	   /* Use free_clusters for FAT32 */
 		 tz_set:1,	   /* Filesystem timestamps' offset set */
 		 rodir:1,	   /* allow ATTR_RO for directory */
-		 discard:1;	   /* Issue discard requests on deletions */
+		 discard:1,	   /* Issue discard requests on deletions */
+		 dos1xfloppy:1;	   /* Assume default BPB for DOS 1.x floppies */
 };
 
 #define FAT_HASH_BITS	8
@@ -89,10 +90,10 @@ struct msdos_sb_info {
 	struct fat_mount_options options;
 	struct nls_table *nls_disk;   /* Codepage used on disk */
 	struct nls_table *nls_io;     /* Charset used for input and display */
-	const void *dir_ops;		     /* Opaque; default directory operations */
-	int dir_per_block;	          /* dir entries per block */
+	const void *dir_ops;	      /* Opaque; default directory operations */
+	int dir_per_block;	      /* dir entries per block */
 	int dir_per_block_bits;	      /* log2(dir_per_block) */
-	unsigned long vol_id;         /* volume ID */
+	unsigned int vol_id;		/*volume ID*/
 
 	int fatent_shift;
 	struct fatent_operations *fatent_ops;
@@ -107,6 +108,7 @@ struct msdos_sb_info {
 	spinlock_t dir_hash_lock;
 	struct hlist_head dir_hashtable[FAT_HASH_SIZE];
 
+	unsigned int dirty;           /* fs state before mount */
 	struct rcu_head rcu;
 };
 
@@ -416,17 +418,17 @@ extern int fat_sync_bhs(struct buffer_head **bhs, int nr_bhs);
 int fat_cache_init(void);
 void fat_cache_destroy(void);
 
-/* fat/xattr.c */
-extern int fat_setxattr(struct dentry *dentry, const char *name,
-					const void *value, size_t size, int flags);
-extern ssize_t fat_getxattr(struct dentry *dentry, const char *name,
-					void *value, size_t size);
-extern ssize_t fat_listxattr(struct dentry *dentry, char *list, size_t size);
-extern int fat_removexattr(struct dentry *dentry, const char *name);
-
 /* fat/nfs.c */
 extern const struct export_operations fat_export_ops;
 extern const struct export_operations fat_export_ops_nostale;
+
+/* fat/xattr.c */
+extern int fat_setxattr(struct dentry *dentry, const char *name,
+				const void *value, size_t size, int flags);
+extern ssize_t fat_getxattr(struct dentry *dentry, const char *name,
+				void *value, size_t size);
+extern ssize_t fat_listxattr(struct dentry *dentry, char *list, size_t size);
+extern int fat_removexattr(struct dentry *dentry, const char *name);
 
 /* helper for printk */
 typedef unsigned long long	llu;

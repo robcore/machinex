@@ -484,9 +484,9 @@ parse_record:
 		nr_slots = 0;
 		if (de->name[0] == DELETED_FLAG)
 			continue;
-		if (!de->name[0])
-			goto end_of_dir;
 		if (de->attr != ATTR_EXT && (de->attr & ATTR_VOLUME))
+			continue;
+		if (de->attr != ATTR_EXT && IS_FREE(de->name))
 			continue;
 		if (de->attr == ATTR_EXT) {
 			int status = fat_parse_long(inode, &cpos, &bh, &de,
@@ -603,8 +603,8 @@ parse_record:
 			goto record_end;
 		if (de->attr != ATTR_EXT && (de->attr & ATTR_VOLUME))
 			goto record_end;
-		if (!de->name[0])
-			goto end_of_dir;
+		if (de->attr != ATTR_EXT && IS_FREE(de->name))
+			goto record_end;
 	} else {
 		if ((de->attr & ATTR_VOLUME) || IS_FREE(de->name))
 			goto record_end;
@@ -780,13 +780,6 @@ static int fat_ioctl_readdir(struct inode *inode, struct file *file,
 	return ret;
 }
 
-static int fat_ioctl_volume_id(struct inode *dir)
-{
-	struct super_block *sb = dir->i_sb;
-	struct msdos_sb_info *sbi = MSDOS_SB(sb);
-	return sbi->vol_id;
-}
-
 static long fat_dir_ioctl(struct file *filp, unsigned int cmd,
 			  unsigned long arg)
 {
@@ -803,8 +796,6 @@ static long fat_dir_ioctl(struct file *filp, unsigned int cmd,
 		short_only = 0;
 		both = 1;
 		break;
-	case VFAT_IOCTL_GET_VOLUME_ID:
-		return fat_ioctl_volume_id(inode);
 	default:
 		return fat_generic_ioctl(filp, cmd, arg);
 	}
@@ -914,7 +905,7 @@ EXPORT_SYMBOL_GPL(fat_get_dotdot_entry);
 int fat_dir_empty(struct inode *dir)
 {
 	struct buffer_head *bh;
-	struct msdos_dir_entry *de = NULL;
+	struct msdos_dir_entry *de;
 	loff_t cpos;
 	int result = 0;
 
@@ -939,7 +930,7 @@ EXPORT_SYMBOL_GPL(fat_dir_empty);
 int fat_subdirs(struct inode *dir)
 {
 	struct buffer_head *bh;
-	struct msdos_dir_entry *de = NULL;
+	struct msdos_dir_entry *de;
 	loff_t cpos;
 	int count = 0;
 

@@ -173,7 +173,6 @@ static void fat12_ent_put(struct fat_entry *fatent, int new)
 	mark_buffer_dirty_inode_sync(fatent->bhs[0], fatent->fat_inode);
 	if (fatent->nr_bhs == 2) {
 		mark_buffer_dirty_inode_sync(fatent->bhs[1], fatent->fat_inode);
-
 	}
 }
 

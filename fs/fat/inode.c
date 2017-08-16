@@ -35,9 +35,71 @@
 #define CONFIG_FAT_DEFAULT_IOCHARSET	""
 #endif
 
+#define KB_IN_SECTORS 2
+
+/*
+ * A deserialized copy of the on-disk structure laid out in struct
+ * fat_boot_sector.
+ */
+struct fat_bios_param_block {
+	u16	fat_sector_size;
+	u8	fat_sec_per_clus;
+	u16	fat_reserved;
+	u8	fat_fats;
+	u16	fat_dir_entries;
+	u16	fat_sectors;
+	u16	fat_fat_length;
+	u32	fat_total_sect;
+
+	u8	fat16_state;
+	u32	fat16_vol_id;
+
+	u32	fat32_length;
+	u32	fat32_root_cluster;
+	u16	fat32_info_sector;
+	u8	fat32_state;
+	u32	fat32_vol_id;
+};
+
 static int fat_default_codepage = CONFIG_FAT_DEFAULT_CODEPAGE;
 static char fat_default_iocharset[] = CONFIG_FAT_DEFAULT_IOCHARSET;
 
+static struct fat_floppy_defaults {
+	unsigned nr_sectors;
+	unsigned sec_per_clus;
+	unsigned dir_entries;
+	unsigned media;
+	unsigned fat_length;
+} floppy_defaults[] = {
+{
+	.nr_sectors = 160 * KB_IN_SECTORS,
+	.sec_per_clus = 1,
+	.dir_entries = 64,
+	.media = 0xFE,
+	.fat_length = 1,
+},
+{
+	.nr_sectors = 180 * KB_IN_SECTORS,
+	.sec_per_clus = 1,
+	.dir_entries = 64,
+	.media = 0xFC,
+	.fat_length = 2,
+},
+{
+	.nr_sectors = 320 * KB_IN_SECTORS,
+	.sec_per_clus = 2,
+	.dir_entries = 112,
+	.media = 0xFF,
+	.fat_length = 1,
+},
+{
+	.nr_sectors = 360 * KB_IN_SECTORS,
+	.sec_per_clus = 2,
+	.dir_entries = 112,
+	.media = 0xFD,
+	.fat_length = 2,
+},
+};
 
 static int fat_add_cluster(struct inode *inode)
 {
@@ -359,7 +421,7 @@ struct inode *fat_iget(struct super_block *sb, loff_t i_pos)
 
 static int is_exec(unsigned char *extension)
 {
-	unsigned char *exe_extensions = "EXECOMBAT", *walk;
+	unsigned char exe_extensions[] = "EXECOMBAT", *walk;
 
 	for (walk = exe_extensions; *walk; walk += 3)
 		if (!strncmp(extension, walk, 3))
@@ -501,6 +563,53 @@ static void fat_evict_inode(struct inode *inode)
 	fat_detach(inode);
 }
 
+static void fat_set_state(struct super_block *sb,
+			unsigned int set, unsigned int force)
+{
+	struct buffer_head *bh;
+	struct fat_boot_sector *b;
+	struct msdos_sb_info *sbi = sb->s_fs_info;
+
+	/* do not change any thing if mounted read only */
+	if ((sb->s_flags & MS_RDONLY) && !force)
+		return;
+
+	/* do not change state if fs was dirty */
+	if (sbi->dirty) {
+		/* warn only on set (mount). */
+		if (set)
+			fat_msg(sb, KERN_WARNING, "Volume was not properly "
+				"unmounted. Some data may be corrupt. "
+				"Please run fsck.");
+		return;
+	}
+
+	bh = sb_bread(sb, 0);
+	if (bh == NULL) {
+		fat_msg(sb, KERN_ERR, "unable to read boot sector "
+			"to mark fs as dirty");
+		return;
+	}
+
+	b = (struct fat_boot_sector *) bh->b_data;
+
+	if (sbi->fat_bits == 32) {
+		if (set)
+			b->fat32.state |= FAT_STATE_DIRTY;
+		else
+			b->fat32.state &= ~FAT_STATE_DIRTY;
+	} else /* fat 16 and 12 */ {
+		if (set)
+			b->fat16.state |= FAT_STATE_DIRTY;
+		else
+			b->fat16.state &= ~FAT_STATE_DIRTY;
+	}
+
+	mark_buffer_dirty_sync(bh);
+	sync_dirty_buffer(bh);
+	brelse(bh);
+}
+
 static void delayed_free(struct rcu_head *p)
 {
 	struct msdos_sb_info *sbi = container_of(p, struct msdos_sb_info, rcu);
@@ -515,10 +624,18 @@ static void fat_put_super(struct super_block *sb)
 {
 	struct msdos_sb_info *sbi = MSDOS_SB(sb);
 
+	fat_msg(sb, KERN_INFO, "trying to unmount...");
+	ST_LOG("<%s> trying to umount... %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
+
+	fat_set_state(sb, 0, 0);
+
 	iput(sbi->fsinfo_inode);
 	iput(sbi->fat_inode);
 
 	call_rcu(&sbi->rcu, delayed_free);
+
+	fat_msg(sb, KERN_INFO, "unmounted successfully!");
+	ST_LOG("<%s> unmounted successfully! %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 }
 
 static struct kmem_cache *fat_inode_cachep;
@@ -582,10 +699,20 @@ static void __exit fat_destroy_inodecache(void)
 
 static int fat_remount(struct super_block *sb, int *flags, char *data)
 {
+	int new_rdonly;
 	struct msdos_sb_info *sbi = MSDOS_SB(sb);
 	*flags |= MS_NODIRATIME | (sbi->options.isvfat ? 0 : MS_NOATIME);
 
 	sync_filesystem(sb);
+
+	/* make sure we update state on remount. */
+	new_rdonly = *flags & MS_RDONLY;
+	if (new_rdonly != (sb->s_flags & MS_RDONLY)) {
+		if (new_rdonly)
+			fat_set_state(sb, 0, 0);
+		else
+			fat_set_state(sb, 1, 1);
+	}
 	return 0;
 }
 
@@ -714,10 +841,12 @@ static int fat_show_options(struct seq_file *m, struct dentry *root)
 	struct fat_mount_options *opts = &sbi->options;
 	int isvfat = opts->isvfat;
 
-	if (opts->fs_uid != 0)
-		seq_printf(m, ",uid=%u", opts->fs_uid);
-	if (opts->fs_gid != 0)
-		seq_printf(m, ",gid=%u", opts->fs_gid);
+	if (!uid_eq(opts->fs_uid, GLOBAL_ROOT_UID))
+		seq_printf(m, ",uid=%u",
+				from_kuid_munged(&init_user_ns, opts->fs_uid));
+	if (!gid_eq(opts->fs_gid, GLOBAL_ROOT_GID))
+		seq_printf(m, ",gid=%u",
+				from_kgid_munged(&init_user_ns, opts->fs_gid));
 	seq_printf(m, ",fmask=%04o", opts->fs_fmask);
 	seq_printf(m, ",dmask=%04o", opts->fs_dmask);
 	if (opts->allow_utime)
@@ -792,6 +921,8 @@ static int fat_show_options(struct seq_file *m, struct dentry *root)
 		seq_puts(m, ",nfs=stale_rw");
 	if (opts->discard)
 		seq_puts(m, ",discard");
+	if (opts->dos1xfloppy)
+		seq_puts(m, ",dos1xfloppy");
 
 	return 0;
 }
@@ -806,7 +937,7 @@ enum {
 	Opt_uni_xl_no, Opt_uni_xl_yes, Opt_nonumtail_no, Opt_nonumtail_yes,
 	Opt_obsolete, Opt_flush, Opt_tz_utc, Opt_rodir, Opt_err_cont,
 	Opt_err_panic, Opt_err_ro, Opt_discard, Opt_nfs, Opt_time_offset,
-	Opt_nfs_stale_rw, Opt_nfs_nostale_ro, Opt_err,
+	Opt_nfs_stale_rw, Opt_nfs_nostale_ro, Opt_err, Opt_dos1xfloppy,
 };
 
 static const match_table_t fat_tokens = {
@@ -839,6 +970,7 @@ static const match_table_t fat_tokens = {
 	{Opt_nfs_stale_rw, "nfs"},
 	{Opt_nfs_stale_rw, "nfs=stale_rw"},
 	{Opt_nfs_nostale_ro, "nfs=nostale_ro"},
+	{Opt_dos1xfloppy, "dos1xfloppy"},
 	{Opt_obsolete, "conv=binary"},
 	{Opt_obsolete, "conv=text"},
 	{Opt_obsolete, "conv=auto"},
@@ -974,37 +1106,41 @@ static int parse_options(struct super_block *sb, char *options, int is_vfat,
 			break;
 		case Opt_uid:
 			if (match_int(&args[0], &option))
-				return 0;
-			opts->fs_uid = option;
+				return -EINVAL;
+			opts->fs_uid = make_kuid(current_user_ns(), option);
+			if (!uid_valid(opts->fs_uid))
+				return -EINVAL;
 			break;
 		case Opt_gid:
 			if (match_int(&args[0], &option))
-				return 0;
-			opts->fs_gid = option;
+				return -EINVAL;
+			opts->fs_gid = make_kgid(current_user_ns(), option);
+			if (!gid_valid(opts->fs_gid))
+				return -EINVAL;
 			break;
 		case Opt_umask:
 			if (match_octal(&args[0], &option))
-				return 0;
+				return -EINVAL;
 			opts->fs_fmask = opts->fs_dmask = option;
 			break;
 		case Opt_dmask:
 			if (match_octal(&args[0], &option))
-				return 0;
+				return -EINVAL;
 			opts->fs_dmask = option;
 			break;
 		case Opt_fmask:
 			if (match_octal(&args[0], &option))
-				return 0;
+				return -EINVAL;
 			opts->fs_fmask = option;
 			break;
 		case Opt_allow_utime:
 			if (match_octal(&args[0], &option))
-				return 0;
+				return -EINVAL;
 			opts->allow_utime = option & (S_IWGRP | S_IWOTH);
 			break;
 		case Opt_codepage:
 			if (match_int(&args[0], &option))
-				return 0;
+				return -EINVAL;
 			opts->codepage = option;
 			break;
 		case Opt_flush:
@@ -1012,9 +1148,9 @@ static int parse_options(struct super_block *sb, char *options, int is_vfat,
 			break;
 		case Opt_time_offset:
 			if (match_int(&args[0], &option))
-				return 0;
+				return -EINVAL;
 			if (option < -12 * 60 || option > 12 * 60)
-				return 0;
+				return -EINVAL;
 			opts->tz_set = 1;
 			opts->time_offset = option;
 			break;
@@ -1036,6 +1172,9 @@ static int parse_options(struct super_block *sb, char *options, int is_vfat,
 			break;
 		case Opt_nfs_nostale_ro:
 			opts->nfs = FAT_NFS_NOSTALE_RO;
+			break;
+		case Opt_dos1xfloppy:
+			opts->dos1xfloppy = 1;
 			break;
 
 		/* msdos specific */
@@ -1162,8 +1301,8 @@ static int fat_read_root(struct inode *inode)
 	MSDOS_I(inode)->mmu_private = inode->i_size;
 
 	fat_save_attrs(inode, ATTR_DIR);
-
-	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME_SEC;
+	inode->i_mtime.tv_sec = inode->i_atime.tv_sec = inode->i_ctime.tv_sec = 0;
+	inode->i_mtime.tv_nsec = inode->i_atime.tv_nsec = inode->i_ctime.tv_nsec = 0;
 	set_nlink(inode, fat_subdirs(inode)+2);
 
 	return 0;
@@ -1182,6 +1321,169 @@ static unsigned long calc_fat_clusters(struct super_block *sb)
 	return sbi->fat_length * sb->s_blocksize * 8 / sbi->fat_bits;
 }
 
+static bool fat_bpb_is_zero(struct fat_boot_sector *b)
+{
+	if (get_unaligned_le16(&b->sector_size))
+		return false;
+	if (b->sec_per_clus)
+		return false;
+	if (b->reserved)
+		return false;
+	if (b->fats)
+		return false;
+	if (get_unaligned_le16(&b->dir_entries))
+		return false;
+	if (get_unaligned_le16(&b->sectors))
+		return false;
+	if (b->media)
+		return false;
+	if (b->fat_length)
+		return false;
+	if (b->secs_track)
+		return false;
+	if (b->heads)
+		return false;
+	return true;
+}
+
+static int fat_read_bpb(struct super_block *sb, struct fat_boot_sector *b,
+	int silent, struct fat_bios_param_block *bpb)
+{
+	int error = -EINVAL;
+
+	/* Read in BPB ... */
+	memset(bpb, 0, sizeof(*bpb));
+	bpb->fat_sector_size = get_unaligned_le16(&b->sector_size);
+	bpb->fat_sec_per_clus = b->sec_per_clus;
+	bpb->fat_reserved = le16_to_cpu(b->reserved);
+	bpb->fat_fats = b->fats;
+	bpb->fat_dir_entries = get_unaligned_le16(&b->dir_entries);
+	bpb->fat_sectors = get_unaligned_le16(&b->sectors);
+	bpb->fat_fat_length = le16_to_cpu(b->fat_length);
+	bpb->fat_total_sect = le32_to_cpu(b->total_sect);
+
+	bpb->fat16_state = b->fat16.state;
+	bpb->fat16_vol_id = get_unaligned_le32(b->fat16.vol_id);
+
+	bpb->fat32_length = le32_to_cpu(b->fat32.length);
+	bpb->fat32_root_cluster = le32_to_cpu(b->fat32.root_cluster);
+	bpb->fat32_info_sector = le16_to_cpu(b->fat32.info_sector);
+	bpb->fat32_state = b->fat32.state;
+	bpb->fat32_vol_id = get_unaligned_le32(b->fat32.vol_id);
+
+	/* Validate this looks like a FAT filesystem BPB */
+	if (!bpb->fat_reserved) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR,
+				"bogus number of reserved sectors");
+		goto out;
+	}
+	if (!bpb->fat_fats) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR, "bogus number of FAT structure");
+		goto out;
+	}
+
+	/*
+	 * Earlier we checked here that b->secs_track and b->head are nonzero,
+	 * but it turns out valid FAT filesystems can have zero there.
+	 */
+
+	if (!fat_valid_media(b->media)) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR, "invalid media value (0x%02x)",
+				(unsigned)b->media);
+		goto out;
+	}
+
+	if (!is_power_of_2(bpb->fat_sector_size)
+	    || (bpb->fat_sector_size < 512)
+	    || (bpb->fat_sector_size > 4096)) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR, "bogus logical sector size %u",
+			       (unsigned)bpb->fat_sector_size);
+		goto out;
+	}
+
+	if (!is_power_of_2(bpb->fat_sec_per_clus)) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR, "bogus sectors per cluster %u",
+				(unsigned)bpb->fat_sec_per_clus);
+		goto out;
+	}
+
+	error = 0;
+
+out:
+	return error;
+}
+
+static int fat_read_static_bpb(struct super_block *sb,
+	struct fat_boot_sector *b, int silent,
+	struct fat_bios_param_block *bpb)
+{
+	static const char *notdos1x = "This doesn't look like a DOS 1.x volume";
+
+	struct fat_floppy_defaults *fdefaults = NULL;
+	int error = -EINVAL;
+	sector_t bd_sects;
+	unsigned i;
+
+	bd_sects = i_size_read(sb->s_bdev->bd_inode) / SECTOR_SIZE;
+
+	/* 16-bit DOS 1.x reliably wrote bootstrap short-jmp code */
+	if (b->ignored[0] != 0xeb || b->ignored[2] != 0x90) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR,
+				"%s; no bootstrapping code", notdos1x);
+		goto out;
+	}
+
+	/*
+	 * If any value in this region is non-zero, it isn't archaic
+	 * DOS.
+	 */
+	if (!fat_bpb_is_zero(b)) {
+		if (!silent)
+			fat_msg(sb, KERN_ERR,
+				"%s; DOS 2.x BPB is non-zero", notdos1x);
+		goto out;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(floppy_defaults); i++) {
+		if (floppy_defaults[i].nr_sectors == bd_sects) {
+			fdefaults = &floppy_defaults[i];
+			break;
+		}
+	}
+
+	if (fdefaults == NULL) {
+		if (!silent)
+			fat_msg(sb, KERN_WARNING,
+				"This looks like a DOS 1.x volume, but isn't a recognized floppy size (%llu sectors)",
+				(u64)bd_sects);
+		goto out;
+	}
+
+	if (!silent)
+		fat_msg(sb, KERN_INFO,
+			"This looks like a DOS 1.x volume; assuming default BPB values");
+
+	memset(bpb, 0, sizeof(*bpb));
+	bpb->fat_sector_size = SECTOR_SIZE;
+	bpb->fat_sec_per_clus = fdefaults->sec_per_clus;
+	bpb->fat_reserved = 1;
+	bpb->fat_fats = 2;
+	bpb->fat_dir_entries = fdefaults->dir_entries;
+	bpb->fat_sectors = fdefaults->nr_sectors;
+	bpb->fat_fat_length = fdefaults->fat_length;
+
+	error = 0;
+
+out:
+	return error;
+}
+
 /*
  * Read the super block of an MS-DOS FS.
  */
@@ -1191,16 +1493,16 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	struct inode *root_inode = NULL, *fat_inode = NULL;
 	struct inode *fsinfo_inode = NULL;
 	struct buffer_head *bh;
-	struct fat_boot_sector *b;
-	struct fat_boot_bsx *bsx;
+	struct fat_bios_param_block bpb;
 	struct msdos_sb_info *sbi;
 	u16 logical_sector_size;
 	u32 total_sectors, total_clusters, fat_clusters, rootdir_sectors;
 	int debug;
-	unsigned int media;
 	long error;
 	char buf[50];
 
+	fat_msg(sb, KERN_INFO, "trying to mount...");
+	ST_LOG("<%s> trying to mount... %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 	/*
 	 * GFP_KERNEL is ok here, because while we do hold the
 	 * supeblock lock, memory pressure can't call back into
@@ -1208,8 +1510,11 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	 * it and have no inodes etc active!
 	 */
 	sbi = kzalloc(sizeof(struct msdos_sb_info), GFP_KERNEL);
-	if (!sbi)
+	if (!sbi) {
+		fat_msg(sb, KERN_ERR, "failed to mount! (ENOMEM)");
+		ST_LOG("<%s> failed to mount! %d:%d (ENOMEM)", __func__, MAJOR(sb->s_dev), MINOR(sb->s_dev));
 		return -ENOMEM;
+	}
 	sb->s_fs_info = sbi;
 
 	sb->s_flags |= MS_NODIRATIME;
@@ -1234,101 +1539,72 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		goto out_fail;
 	}
 
-	b = (struct fat_boot_sector *) bh->b_data;
-	if (!b->reserved) {
-		if (!silent)
-			fat_msg(sb, KERN_ERR, "bogus number of reserved sectors");
-		brelse(bh);
-		goto out_invalid;
-	}
-	if (!b->fats) {
-		if (!silent)
-			fat_msg(sb, KERN_ERR, "bogus number of FAT structure");
-		brelse(bh);
-		goto out_invalid;
-	}
+	error = fat_read_bpb(sb, (struct fat_boot_sector *)bh->b_data, silent,
+		&bpb);
+	if (error == -EINVAL && sbi->options.dos1xfloppy)
+		error = fat_read_static_bpb(sb,
+			(struct fat_boot_sector *)bh->b_data, silent, &bpb);
+	brelse(bh);
 
-	/*
-	 * Earlier we checked here that b->secs_track and b->head are nonzero,
-	 * but it turns out valid FAT filesystems can have zero there.
-	 */
+	if (error == -EINVAL)
+		goto out_invalid;
+	else if (error)
+		goto out_fail;
 
-	media = b->media;
-	if (!fat_valid_media(media)) {
-		if (!silent)
-			fat_msg(sb, KERN_ERR, "invalid media value (0x%02x)",
-			       media);
-		brelse(bh);
-		goto out_invalid;
-	}
-	logical_sector_size = get_unaligned_le16(&b->sector_size);
-	if (!is_power_of_2(logical_sector_size)
-	    || (logical_sector_size < 512)
-	    || (logical_sector_size > 4096)) {
-		if (!silent)
-			fat_msg(sb, KERN_ERR, "bogus logical sector size %u",
-			       logical_sector_size);
-		brelse(bh);
-		goto out_invalid;
-	}
-	sbi->sec_per_clus = b->sec_per_clus;
-	if (!is_power_of_2(sbi->sec_per_clus)) {
-		if (!silent)
-			fat_msg(sb, KERN_ERR, "bogus sectors per cluster %u",
-			       sbi->sec_per_clus);
-		brelse(bh);
-		goto out_invalid;
-	}
+	logical_sector_size = bpb.fat_sector_size;
+	sbi->sec_per_clus = bpb.fat_sec_per_clus;
 
 	error = -EIO;
 	if (logical_sector_size < sb->s_blocksize) {
 		fat_msg(sb, KERN_ERR, "logical sector size too small for device"
 		       " (logical sector size = %u)", logical_sector_size);
-		brelse(bh);
 		goto out_fail;
 	}
+
 	if (logical_sector_size > sb->s_blocksize) {
-		brelse(bh);
+		struct buffer_head *bh_resize;
 
 		if (!sb_set_blocksize(sb, logical_sector_size)) {
 			fat_msg(sb, KERN_ERR, "unable to set blocksize %u",
 			       logical_sector_size);
 			goto out_fail;
 		}
-		bh = sb_bread(sb, 0);
-		if (bh == NULL) {
+
+		/* Verify that the larger boot sector is fully readable */
+		bh_resize = sb_bread(sb, 0);
+		if (bh_resize == NULL) {
 			fat_msg(sb, KERN_ERR, "unable to read boot sector"
 			       " (logical sector size = %lu)",
 			       sb->s_blocksize);
 			goto out_fail;
 		}
-		b = (struct fat_boot_sector *) bh->b_data;
+		brelse(bh_resize);
 	}
 
 	mutex_init(&sbi->s_lock);
 	sbi->cluster_size = sb->s_blocksize * sbi->sec_per_clus;
 	sbi->cluster_bits = ffs(sbi->cluster_size) - 1;
-	sbi->fats = b->fats;
+	sbi->fats = bpb.fat_fats;
 	sbi->fat_bits = 0;		/* Don't know yet */
-	sbi->fat_start = le16_to_cpu(b->reserved);
-	sbi->fat_length = le16_to_cpu(b->fat_length);
+	sbi->fat_start = bpb.fat_reserved;
+	sbi->fat_length = bpb.fat_fat_length;
 	sbi->root_cluster = 0;
 	sbi->free_clusters = -1;	/* Don't know yet */
 	sbi->free_clus_valid = 0;
 	sbi->prev_free = FAT_START_ENT;
 	sb->s_maxbytes = 0xffffffff;
 
-	if (!sbi->fat_length && b->fat32.length) {
+	if (!sbi->fat_length && bpb.fat32_length) {
 		struct fat_boot_fsinfo *fsinfo;
 		struct buffer_head *fsinfo_bh;
 
 		/* Must be FAT32 */
 		sbi->fat_bits = 32;
-		sbi->fat_length = le32_to_cpu(b->fat32.length);
-		sbi->root_cluster = le32_to_cpu(b->fat32.root_cluster);
+		sbi->fat_length = bpb.fat32_length;
+		sbi->root_cluster = bpb.fat32_root_cluster;
 
 		/* MC - if info_sector is 0, don't multiply by 0 */
-		sbi->fsinfo_sector = le16_to_cpu(b->fat32.info_sector);
+		sbi->fsinfo_sector = bpb.fat32_info_sector;
 		if (sbi->fsinfo_sector == 0)
 			sbi->fsinfo_sector = 1;
 
@@ -1336,11 +1612,8 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		if (fsinfo_bh == NULL) {
 			fat_msg(sb, KERN_ERR, "bread failed, FSINFO block"
 			       " (sector = %lu)", sbi->fsinfo_sector);
-			brelse(bh);
 			goto out_fail;
 		}
-
-		bsx = (struct fat_boot_bsx *)(bh->b_data + FAT32_BSX_OFFSET);
 
 		fsinfo = (struct fat_boot_fsinfo *)fsinfo_bh->b_data;
 		if (!IS_FSINFO(fsinfo)) {
@@ -1357,38 +1630,43 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		}
 
 		brelse(fsinfo_bh);
-	} else {
-		bsx = (struct fat_boot_bsx *)(bh->b_data + FAT16_BSX_OFFSET);
 	}
 
 	/* interpret volume ID as a little endian 32 bit integer */
-	sbi->vol_id = (((u32)bsx->vol_id[0]) | ((u32)bsx->vol_id[1] << 8) |
-		((u32)bsx->vol_id[2] << 16) | ((u32)bsx->vol_id[3] << 24));
+	if (sbi->fat_bits == 32)
+		sbi->vol_id = bpb.fat32_vol_id;
+	else /* fat 16 or 12 */
+		sbi->vol_id = bpb.fat16_vol_id;
 
 	sbi->dir_per_block = sb->s_blocksize / sizeof(struct msdos_dir_entry);
 	sbi->dir_per_block_bits = ffs(sbi->dir_per_block) - 1;
 
 	sbi->dir_start = sbi->fat_start + sbi->fats * sbi->fat_length;
-	sbi->dir_entries = get_unaligned_le16(&b->dir_entries);
+	sbi->dir_entries = bpb.fat_dir_entries;
 	if (sbi->dir_entries & (sbi->dir_per_block - 1)) {
 		if (!silent)
 			fat_msg(sb, KERN_ERR, "bogus directory-entries per block"
 			       " (%u)", sbi->dir_entries);
-		brelse(bh);
 		goto out_invalid;
 	}
 
 	rootdir_sectors = sbi->dir_entries
 		* sizeof(struct msdos_dir_entry) / sb->s_blocksize;
 	sbi->data_start = sbi->dir_start + rootdir_sectors;
-	total_sectors = get_unaligned_le16(&b->sectors);
+	total_sectors = bpb.fat_sectors;
 	if (total_sectors == 0)
-		total_sectors = le32_to_cpu(b->total_sect);
+		total_sectors = bpb.fat_total_sect;
 
 	total_clusters = (total_sectors - sbi->data_start) / sbi->sec_per_clus;
 
 	if (sbi->fat_bits != 32)
 		sbi->fat_bits = (total_clusters > MAX_FAT12) ? 16 : 12;
+
+	/* some OSes set FAT_STATE_DIRTY and clean it on unmount. */
+	if (sbi->fat_bits == 32)
+		sbi->dirty = bpb.fat32_state & FAT_STATE_DIRTY;
+	else /* fat 16 or 12 */
+		sbi->dirty = bpb.fat16_state & FAT_STATE_DIRTY;
 
 	/* check that FAT table does not overflow */
 	fat_clusters = calc_fat_clusters(sb);
@@ -1397,7 +1675,6 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		if (!silent)
 			fat_msg(sb, KERN_ERR, "count of clusters too big (%u)",
 			       total_clusters);
-		brelse(bh);
 		goto out_invalid;
 	}
 
@@ -1409,8 +1686,6 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	sbi->prev_free %= sbi->max_cluster;
 	if (sbi->prev_free < FAT_START_ENT)
 		sbi->prev_free = FAT_START_ENT;
-
-	brelse(bh);
 
 	/* set up enough so that it can read an inode */
 	fat_hash_init(sb);
@@ -1484,6 +1759,9 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 					"the device does not support discard");
 	}
 
+	fat_set_state(sb, 1, 0);
+	fat_msg(sb, KERN_INFO, "mounted successfully!");
+	ST_LOG("<%s> mounted successfully! %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 	return 0;
 
 out_invalid:
@@ -1492,6 +1770,8 @@ out_invalid:
 		fat_msg(sb, KERN_INFO, "Can't find a valid FAT filesystem");
 
 out_fail:
+	fat_msg(sb, KERN_ERR, "failed to mount!");
+	ST_LOG("<%s> failed to mount %d:%d",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 	if (fsinfo_inode)
 		iput(fsinfo_inode);
 	if (fat_inode)
