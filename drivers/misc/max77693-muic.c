@@ -37,6 +37,7 @@
 #include <linux/usb3803.h>
 #endif
 #include <linux/delay.h>
+#include <linux/timed_output.h>
 
 #define DEV_NAME	"max77693-muic"
 
@@ -45,6 +46,15 @@ static struct max77693_muic_info *gInfo;
 
 /* For restore charger interrupt states */
 static u8 chg_int_state;
+
+static bool enforce_disable;
+module_param_named(charger_killswitch, enforce_disable, bool, 0644);
+
+static bool wake_on_attach;
+module_param(wake_on_attach, bool, 0644);
+static bool wake_on_detach;
+module_param(wake_on_attach, bool, 0644);
+
 
 /* MAX77693 MUIC CHG_TYP setting values */
 enum {
@@ -341,7 +351,8 @@ static ssize_t max77693_muic_show_adc(struct device *dev,
 
 	ret = max77693_read_reg(info->muic, MAX77693_MUIC_REG_STATUS1, &val);
 
-	if (ret) {
+	if (ret) {static bool enforce_disable;
+module_param_named(charger_killswitch, enforce_disable, bool, 0644);
 		return sprintf(buf, "UNKNOWN\n");
 	}
 
@@ -718,9 +729,6 @@ static int max77693_muic_set_usb_path(struct max77693_muic_info *info, int path)
 	sysfs_notify(&switch_dev->kobj, NULL, "usb_sel");
 	return 0;
 }
-
-static bool enforce_disable;
-module_param_named(charger_killswitch, enforce_disable, bool, 0644);
 
 int max77693_muic_get_charging_type(void)
 {
@@ -1855,7 +1863,7 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 		return;
 	}
 
-	wake_lock_timeout(&info->muic_wake_lock, msecs_to_jiffies(500));
+	wake_lock_timeout(&info->muic_wake_lock, msecs_to_jiffies(1000));
 
 	adc = status[0] & STATUS1_ADC_MASK;
 	adcerr = status[0] & STATUS1_ADCERR_MASK;
@@ -1897,8 +1905,12 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 	}
 
 	if (intr == INT_ATTACH) {
+		if (wake_on_attach)
+			virt_wakeup_key_trig();
 		max77693_muic_handle_attach(info, status[0], status[1], irq);
 	} else if (intr == INT_DETACH) {
+		if (wake_on_detach)
+			virt_wakeup_key_trig();
 		max77693_muic_handle_detach(info, irq);
 	}
 	return;
