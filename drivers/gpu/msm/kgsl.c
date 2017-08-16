@@ -785,6 +785,7 @@ static int kgsl_runtime_resume(struct device *dev)
 SIMPLE_DEV_PM_OPS(kgsl_power_ops, kgsl_suspend_device, kgsl_resume_device);
 
 const struct dev_pm_ops kgsl_pm_ops = {
+	.pm = &kgsl_power_ops,
 	.runtime_suspend = kgsl_runtime_suspend,
 	.runtime_resume = kgsl_runtime_resume,
 };
@@ -3251,7 +3252,6 @@ static const struct file_operations kgsl_fops = {
 };
 
 struct kgsl_driver kgsl_driver  = {
-	.pm = &kgsl_power_ops,
 	.process_mutex = __MUTEX_INITIALIZER(kgsl_driver.process_mutex),
 	.ptlock = __SPIN_LOCK_UNLOCKED(kgsl_driver.ptlock),
 	.devlock = __MUTEX_INITIALIZER(kgsl_driver.devlock),
