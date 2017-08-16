@@ -226,9 +226,9 @@ static void __sched __mutex_lock_slowpath(struct mutex *lock);
  * (or statically defined) before it can be locked. memset()-ing
  * the mutex to 0 is not allowed.
  *
- * ( The CONFIG_DEBUG_MUTEXES .config option turns on debugging
- *   checks that will enforce the restrictions and will also do
- *   deadlock debugging. )
+ * (The CONFIG_DEBUG_MUTEXES .config option turns on debugging
+ * checks that will enforce the restrictions and will also do
+ * deadlock debugging)
  *
  * This function is similar to (but not equivalent to) down().
  */
@@ -729,7 +729,6 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 		    struct lockdep_map *nest_lock, unsigned long ip,
 		    struct ww_acquire_ctx *ww_ctx, const bool use_ww_ctx)
 {
-	struct task_struct *task = current;
 	struct mutex_waiter waiter;
 	bool first = false;
 	struct ww_mutex *ww;
@@ -793,7 +792,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 	if (__mutex_waiter_is_first(lock, &waiter))
 		__mutex_set_flag(lock, MUTEX_FLAG_WAITERS);
 
-	set_task_state(current, state);
+	set_current_state(state);
 	for (;;) {
 		/*
 		 * Once we hold wait_lock, we're serialized against
@@ -809,7 +808,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 		 * wait_lock. This ensures the lock cancellation is ordered
 		 * against mutex_unlock() and wake-ups do not go missing.
 		 */
-		if (unlikely(signal_pending_state(state, task))) {
+		if (unlikely(signal_pending_state(state, current))) {
 			ret = -EINTR;
 			goto err;
 		}
@@ -833,7 +832,7 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 				__mutex_set_flag(lock, MUTEX_FLAG_HANDOFF);
 		}
 
-		set_task_state(task, state);
+		set_current_state(state);
 		/*
 		 * Here we order against unlock; we must either see it change
 		 * state back to RUNNING and fall through the next schedule(),
@@ -847,9 +846,9 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 	}
 	spin_lock(&lock->wait_lock);
 acquired:
-	__set_task_state(task, TASK_RUNNING);
+	__set_current_state(TASK_RUNNING);
 
-	mutex_remove_waiter(lock, &waiter, task);
+	mutex_remove_waiter(lock, &waiter, current);
 	if (likely(list_empty(&lock->wait_list)))
 		__mutex_clear_flag(lock, MUTEX_FLAGS);
 
@@ -867,8 +866,8 @@ skip_wait:
 	return 0;
 
 err:
-	__set_task_state(task, TASK_RUNNING);
-	mutex_remove_waiter(lock, &waiter, task);
+	__set_current_state(TASK_RUNNING);
+	mutex_remove_waiter(lock, &waiter, current);
 err_early_backoff:
 	spin_unlock(&lock->wait_lock);
 	debug_mutex_free_waiter(&waiter);
