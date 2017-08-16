@@ -139,7 +139,27 @@ static void do_input_boost(struct work_struct *work)
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
+#if 0
+void cpuboost_keypress_event(unsigned int keytype)
+{
+	u64 min_interval;
+	u64 now;
 
+	if (!input_boost_enabled || !hotplug_ready 
+	    || !input_boost_ms || !is_display_on())
+		return;
+
+	min_interval = max(min_input_interval, input_boost_ms);
+	now = ktime_to_us(ktime_get());
+
+	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+		return;
+
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
+	last_input_time = ktime_to_us(ktime_get());
+}
+EXPORT_SYMBOL(cpuboost_keypress_event);
+#endif
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
