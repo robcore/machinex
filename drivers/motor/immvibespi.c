@@ -255,6 +255,10 @@ static int32_t ImmVibeSPI_ForceOut_SetSamples(u_int8_t nActuatorIndex,
 {
 	int8_t nforce;
 	static int8_t pre_nforce;
+
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+		return VIBE_E_FAIL;
+
 	switch (nOutputSignalBitDepth) {
 	case 8:
 		/* pForceOutputBuffer is expected to contain 1 byte */

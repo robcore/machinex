@@ -60,6 +60,10 @@ static void max77693_haptic_i2c(struct max77693_haptic_data *hap_data, bool en)
 #ifdef CONFIG_VIBETONZ
 void max77693_vibtonz_en(bool en)
 {
+
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+		return;
+
 	if (g_hap_data == NULL) {
 		printk(KERN_ERR "[VIB] the motor is not ready!!!");
 		return ;

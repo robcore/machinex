@@ -44,6 +44,9 @@ static ssize_t enable_store(
 	struct timed_output_dev *tdev = dev_get_drvdata(dev);
 	int value;
 
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+		return -EINVAL;
+
 	if (sscanf(buf, "%d", &value) != 1)
 		return -EINVAL;
 
