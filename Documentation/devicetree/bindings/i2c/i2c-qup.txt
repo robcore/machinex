@@ -36,6 +36,8 @@ Example:
 		reg = <0xf9966000 0x1000>;
 		reg-names = "qup_phys_addr";
 		interrupts = <0 104 0>;
+		qcom,noise-rjct-scl = <1>;
+		qcom,noise-rjct-sda = <1>;
 		interrupt-names = "qup_err_intr";
 		qcom,i2c-bus-freq = <100000>;
 		qcom,i2c-src-freq = <24000000>;
