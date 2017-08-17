@@ -47,15 +47,6 @@ static struct max77693_muic_info *gInfo;
 /* For restore charger interrupt states */
 static u8 chg_int_state;
 
-static bool enforce_disable;
-module_param_named(charger_killswitch, enforce_disable, bool, 0644);
-
-static bool wake_on_attach;
-module_param(wake_on_attach, bool, 0644);
-static bool wake_on_detach;
-module_param(wake_on_attach, bool, 0644);
-
-
 /* MAX77693 MUIC CHG_TYP setting values */
 enum {
 	/* No Valid voltage at VB (Vvb < Vvbdet) */
@@ -352,7 +343,6 @@ static ssize_t max77693_muic_show_adc(struct device *dev,
 	ret = max77693_read_reg(info->muic, MAX77693_MUIC_REG_STATUS1, &val);
 
 	if (ret) {static bool enforce_disable;
-module_param_named(charger_killswitch, enforce_disable, bool, 0644);
 		return sprintf(buf, "UNKNOWN\n");
 	}
 
@@ -729,6 +719,14 @@ static int max77693_muic_set_usb_path(struct max77693_muic_info *info, int path)
 	sysfs_notify(&switch_dev->kobj, NULL, "usb_sel");
 	return 0;
 }
+
+static bool enforce_disable;
+module_param_named(charger_killswitch, enforce_disable, bool, 0644);
+
+static bool force_wake_on_attach;
+module_param(force_wake_on_attach, bool, 0644);
+static bool force_wake_on_detach;
+module_param(force_wake_on_detach, bool, 0644);
 
 int max77693_muic_get_charging_type(void)
 {
@@ -1905,11 +1903,11 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 	}
 
 	if (intr == INT_ATTACH) {
-		if (wake_on_attach)
+		if (force_wake_on_attach)
 			virt_wakeup_key_trig();
 		max77693_muic_handle_attach(info, status[0], status[1], irq);
 	} else if (intr == INT_DETACH) {
-		if (wake_on_detach)
+		if (force_wake_on_detach)
 			virt_wakeup_key_trig();
 		max77693_muic_handle_detach(info, irq);
 	}
