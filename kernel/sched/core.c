@@ -3317,7 +3317,15 @@ static void __sched notrace __schedule(bool preempt)
 		++*switch_count;
 
 		/* Also unlocks the rq: */
-		rq = context_switch(rq, prev, next, &rf);
+		context_switch(rq, prev, next, &rf);
+		/*
+		 * The context switch have flipped the stack from under us
+		 * and restored the local variables which were saved when
+		 * this task called schedule() in the past. prev == current
+		 * is still correct, but it can be moved to another cpu/rq.
+		 */
+		cpu = smp_processor_id();
+		rq = cpu_rq(cpu);
 	} else {
 		rq->clock_update_flags &= ~(RQCF_ACT_SKIP|RQCF_REQ_SKIP);
 		rq_unlock_irq(rq, &rf);
