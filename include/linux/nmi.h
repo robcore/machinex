@@ -7,13 +7,6 @@
 #include <linux/sched.h>
 #include <asm/irq.h>
 
-#ifdef CONFIG_SOFTLOCKUP_DETECTOR
-extern void touch_softlockup_watchdog_sched(void);
-#else
-static inline void touch_softlockup_watchdog_sched(void)
-{
-}
-#endif
 /**
  * touch_nmi_watchdog - restart NMI watchdog timeout.
  * 
@@ -33,7 +26,6 @@ static inline void touch_nmi_watchdog(void)
 	touch_softlockup_watchdog();
 }
 #endif
-
 
 /*
  * Create trigger_all_cpu_backtrace() out of the arch-provided

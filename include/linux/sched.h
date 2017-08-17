@@ -2364,11 +2364,11 @@ static inline void set_wake_up_idle(bool enabled)
 }
 
 #ifdef CONFIG_NO_HZ_COMMON
-void calc_load_nohz_start(void);
-void calc_load_nohz_stop(void);
+void calc_load_enter_idle(void);
+void calc_load_exit_idle(void);
 #else
-static inline void calc_load_nohz_start(void) { }
-static inline void calc_load_nohz_stop(void) { }
+static inline void calc_load_enter_idle(void) { }
+static inline void calc_load_exit_idle(void) { }
 #endif /* CONFIG_NO_HZ_COMMON */
 
 #ifndef cpu_relax_yield
@@ -2410,7 +2410,7 @@ static inline void sched_clock_idle_sleep_event(void)
 {
 }
 
-static inline void sched_clock_idle_wakeup_event(void)
+static inline void sched_clock_idle_wakeup_event(u64 delta_ns)
 {
 }
 
@@ -2435,9 +2435,8 @@ extern int sched_clock_stable(void);
 extern void clear_sched_clock_stable(void);
 
 extern void sched_clock_tick(void);
-extern void sched_clock_tick_stable(void);
 extern void sched_clock_idle_sleep_event(void);
-static inline void sched_clock_idle_wakeup_event(void)
+extern void sched_clock_idle_wakeup_event(u64 delta_ns);
 
 /*
  * As outlined in clock.c, provides a fast, high resolution, nanosecond
@@ -2484,6 +2483,7 @@ extern void sched_exec(void);
 #endif
 
 extern void sched_clock_idle_sleep_event(void);
+extern void sched_clock_idle_wakeup_event(u64 delta_ns);
 
 #ifdef CONFIG_HOTPLUG_CPU
 extern void idle_task_exit(void);
