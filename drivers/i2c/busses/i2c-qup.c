@@ -211,7 +211,6 @@ struct qup_i2c_dev {
 static bool override_secure_input;
 module_param(override_secure_input, bool, 0644);
 #ifdef SECURE_INPUT
-static void qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state);
 static int is_secure_world = 0;
 extern int mxt_power_reset(void);
 static ssize_t qup_show(struct device *dev,
@@ -230,8 +229,8 @@ static ssize_t qup_store(struct device *dev,
 		is_secure_world = 0;
 	}
 	else if (!strncmp(buf, "1", 1)) {
-		if (pdev->pwr_state == 0)
-			qup_i2c_pwr_mgmt(pdev, 1);
+		if (pdev->pwr_state != MSM_I2C_PM_ACTIVE)
+			pdev->pwr_state = MSM_I2C_PM_ACTIVE;
 		pr_info("%s: %d-%d(%d)", __func__, is_secure_world, pdev->adapter.nr, pdev->pwr_state);
 		is_secure_world = 1;
 	}
@@ -659,6 +658,9 @@ static void i2c_qup_sys_suspend(struct qup_i2c_dev *dev)
 
 static void i2c_qup_resume(struct qup_i2c_dev *dev)
 {
+	if (dev->pwr_state == MSM_I2C_PM_ACTIVE)
+		return;
+
 	i2c_qup_gpio_request(dev);
 
 	i2c_qup_clk_path_postponed_register(dev);
@@ -1853,14 +1855,9 @@ blsp_core_init:
 			free_irq(dev->in_irq, dev);
 		}
 		free_irq(dev->err_irq, dev);
-	} else {
-		if (dev->dev->of_node) {
-			dev->adapter.dev.of_node = pdev->dev.of_node;
-			of_i2c_register_devices(&dev->adapter);
-		}
-
-		return 0;
 	}
+
+	return 0;
 
 
 err_request_irq_failed:
