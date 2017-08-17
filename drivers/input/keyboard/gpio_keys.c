@@ -746,6 +746,44 @@ static ssize_t  sysfs_key_onoff_show(struct device *dev,
 }
 static DEVICE_ATTR(sec_key_pressed, 0444 , sysfs_key_onoff_show, NULL);
 
+static ssize_t wakeup_enable_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+	int index;
+	int state, keycode;
+	char *buff;
+	char tmp[7] = {0};
+	ssize_t count;
+	int len = (ddata->pdata->nbuttons + 2) * 7 + 2;
+
+	buff = kmalloc(len, GFP_KERNEL);
+	if (!buff) {
+		pr_debug("gpio-failed to mem alloc\n");
+		return snprintf(buf, 5, "NG\n");
+	}
+
+	for (index = 0; index < ddata->pdata->nbuttons; index++) {
+		struct gpio_button_data *button;
+
+		button = &ddata->data[index];
+		state = (__gpio_get_value(button->button->wakeup) ? 1 : 0);
+		keycode = button->button->code;
+		if (index == 0) {
+			snprintf(buff, 7, "%d:%d", keycode, state);
+		} else {
+			snprintf(tmp, 7, ",%d:%d", keycode, state);
+			strncat(buff, tmp, 7);
+		}
+	}
+
+	count = snprintf(buf, strnlen(buff, len - 2) + 2, "%s\n", buff);
+
+	kfree(buff);
+
+	return count;
+}
+
 /* the volume keys can be the wakeup keys in special case */
 static ssize_t wakeup_enable(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -781,7 +819,7 @@ out:
 	kfree(bits);
 	return count;
 }
-static DEVICE_ATTR(wakeup_keys, 0644, NULL, wakeup_enable);
+static DEVICE_ATTR(wakeup_keys, 0644, wakeup_enable_show, wakeup_enable);
 
 
 static ssize_t keycode_pressed_show(struct device *dev,
@@ -815,18 +853,6 @@ static ssize_t keycode_pressed_show(struct device *dev,
 			strncat(buff, tmp, 7);
 		}
 	}
-
-#if defined(CONFIG_SEC_PM)
-	state = get_pkey_press();
-	keycode = KEY_POWER;
-	snprintf(tmp, 7, ",%d:%d", keycode, state);
-	strncat(buff, tmp, 7);
-
-	state = get_vdkey_press();
-	keycode = KEY_VOLUMEDOWN;
-	snprintf(tmp, 7, ",%d:%d", keycode, state);
-	strncat(buff, tmp, 7);
-#endif
 
 	count = snprintf(buf, strnlen(buff, len - 2) + 2, "%s\n", buff);
 
