@@ -818,6 +818,15 @@ static void __init check_system_tsc_reliable(void)
 		tsc_clocksource_reliable = 1;
 }
 
+static void tsc_cs_tick_stable(struct clocksource *cs)
+{
+	if (tsc_unstable)
+		return;
+
+	if (using_native_sched_clock())
+		sched_clock_tick_stable();
+}
+
 /*
  * Make an educated guess if the TSC is trustworthy and synchronized
  * over all CPUs.
