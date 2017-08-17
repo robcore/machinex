@@ -368,7 +368,7 @@ static struct notifier_block zswap_cpu_notifier_block = {
 	.notifier_call = zswap_cpu_notifier
 };
 
-static int zswap_cpu_init(void)
+static int __init zswap_cpu_init(void)
 {
 	unsigned long cpu;
 
@@ -388,7 +388,7 @@ cleanup:
 }
 
 /*********************************
-* zsmalloc callbacks
+* helpers
 **********************************/
 static mempool_t *zswap_page_pool;
 
