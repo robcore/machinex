@@ -723,7 +723,7 @@ static int max77693_muic_set_usb_path(struct max77693_muic_info *info, int path)
 static bool enforce_disable;
 module_param_named(charger_killswitch, enforce_disable, bool, 0644);
 
-static bool force_wake_on_attach;
+static bool force_wake_on_attach = true;
 module_param(force_wake_on_attach, bool, 0644);
 static bool force_wake_on_detach;
 module_param(force_wake_on_detach, bool, 0644);
