@@ -8,7 +8,7 @@
 
 #define DRIVER_AUTHOR "robcore"
 #define DRIVER_DESCRIPTION "virtualpowerkey(wakeup) driver"
-#define DRIVER_VERSION "1.1"
+#define DRIVER_VERSION "1.2"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
@@ -17,12 +17,13 @@ MODULE_LICENSE("GPLv2");
 
 /*Based on Sweep2Sleep by flar2 (Aaron Segaert) */
 
-#define WTIMEOUT 10
+#define WPTIMEOUT 100
+#define WRTIMEOUT 10
 
 static struct input_dev *virtkeydev;
 static struct workqueue_struct *virtkey_input_wq;
 static struct delayed_work wakeup_key_release_work;
-static struct work_struct wakeup_key_press_work;
+static struct delayed_work wakeup_key_press_work;
 static void wakeup_key_release(struct work_struct *work);
 static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
@@ -39,12 +40,12 @@ static void wakeup_key_press(struct work_struct *work)
 {
 	input_report_key(virtkeydev, KEY_WAKEUP, 1);
 	input_sync(virtkeydev);
-	schedule_delayed_work_on(0, &wakeup_key_release_work, msecs_to_jiffies(WTIMEOUT));
+	schedule_delayed_work(&wakeup_key_release_work, msecs_to_jiffies(WRTIMEOUT));
 }
 
 /* PowerKey trigger */
 void virt_wakeup_key_trig(void) {
-	schedule_work(&wakeup_key_press_work);
+	schedule_delayed_work_on(0, &wakeup_key_press_work, msecs_to_jiffies(WPTIMEOUT));
 }
 EXPORT_SYMBOL(virt_wakeup_key_trig);
 
@@ -117,7 +118,7 @@ static int __init virtual_wakeup_key_init(void)
 		rc = -EFAULT;
 		goto err_unregister;
 	}
-	INIT_WORK(&wakeup_key_press_work, wakeup_key_press);
+	INIT_DELAYED_WORK(&wakeup_key_press_work, wakeup_key_press);
 	INIT_DELAYED_WORK(&wakeup_key_release_work, wakeup_key_release);
 
 	rc = input_register_handler(&virtkey_input_handler);
