@@ -341,45 +341,18 @@ EXPORT_SYMBOL(current_fs_time);
 
 /*
  * Convert jiffies to milliseconds and back.
- *
- * Avoid unnecessary multiplications/divisions in the
- * two most common HZ cases:
  */
-unsigned int jiffies_to_msecs(const unsigned long j)
+unsigned int __jiffies_to_msecs(const unsigned long j)
 {
-#if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
-	return (MSEC_PER_SEC / HZ) * j;
-#elif HZ > MSEC_PER_SEC && !(HZ % MSEC_PER_SEC)
-	return (j + (HZ / MSEC_PER_SEC) - 1)/(HZ / MSEC_PER_SEC);
-#else
-# if BITS_PER_LONG == 32
-	return (HZ_TO_MSEC_MUL32 * j) >> HZ_TO_MSEC_SHR32;
-# else
-	return (j * HZ_TO_MSEC_NUM) / HZ_TO_MSEC_DEN;
-# endif
-#endif
+	return __inline_jiffies_to_msecs(j);
 }
-EXPORT_SYMBOL(jiffies_to_msecs);
+EXPORT_SYMBOL(__jiffies_to_msecs);
 
-unsigned int jiffies_to_usecs(const unsigned long j)
+unsigned int __jiffies_to_usecs(const unsigned long j)
 {
-	/*
-	 * Hz usually doesn't go much further MSEC_PER_SEC.
-	 * jiffies_to_usecs() and usecs_to_jiffies() depend on that.
-	 */
-	BUILD_BUG_ON(HZ > USEC_PER_SEC);
-
-#if !(USEC_PER_SEC % HZ)
-	return (USEC_PER_SEC / HZ) * j;
-#else
-# if BITS_PER_LONG == 32
-	return (HZ_TO_USEC_MUL32 * j) >> HZ_TO_USEC_SHR32;
-# else
-	return (j * HZ_TO_USEC_NUM) / HZ_TO_USEC_DEN;
-# endif
-#endif
+	return __inline_jiffies_to_usecs(j);
 }
-EXPORT_SYMBOL(jiffies_to_usecs);
+EXPORT_SYMBOL(__jiffies_to_usecs);
 
 /**
  * timespec_trunc - Truncate timespec to a granularity
@@ -525,6 +498,18 @@ struct timeval ns_to_timeval(const s64 nsec)
 }
 EXPORT_SYMBOL(ns_to_timeval);
 
+unsigned long __msecs_to_jiffies(const unsigned int m)
+{
+	return __inline_msecs_to_jiffies(m);
+}
+EXPORT_SYMBOL(__msecs_to_jiffies);
+
+unsigned long __usecs_to_jiffies(const unsigned int u)
+{
+	return __inline_usecs_to_jiffies(u);
+}
+EXPORT_SYMBOL(__usecs_to_jiffies);
+
 #if BITS_PER_LONG == 32
 /**
  * set_normalized_timespec - set timespec sec and nsec parts and normalize
@@ -587,49 +572,6 @@ struct timespec64 ns_to_timespec64(const s64 nsec)
 }
 EXPORT_SYMBOL(ns_to_timespec64);
 #endif
-/**
- * msecs_to_jiffies: - convert milliseconds to jiffies
- * @m:	time in milliseconds
- *
- * conversion is done as follows:
- *
- * - negative values mean 'infinite timeout' (MAX_JIFFY_OFFSET)
- *
- * - 'too large' values [that would result in larger than
- *   MAX_JIFFY_OFFSET values] mean 'infinite timeout' too.
- *
- * - all other values are converted to jiffies by either multiplying
- *   the input value by a factor or dividing it with a factor and
- *   handling any 32-bit overflows.
- *   for the details see __msecs_to_jiffies()
- *
- * msecs_to_jiffies() checks for the passed in value being a constant
- * via __builtin_constant_p() allowing gcc to eliminate most of the
- * code, __msecs_to_jiffies() is called if the value passed does not
- * allow constant folding and the actual conversion must be done at
- * runtime.
- * the _msecs_to_jiffies helpers are the HZ dependent conversion
- * routines found in include/linux/jiffies.h
- */
-unsigned long __msecs_to_jiffies(const unsigned int m)
-{
-	/*
-	 * Negative value, means infinite timeout:
-	 */
-	if ((int)m < 0)
-		return MAX_JIFFY_OFFSET;
-	return _msecs_to_jiffies(m);
-}
-EXPORT_SYMBOL(__msecs_to_jiffies);
-
-unsigned long __usecs_to_jiffies(const unsigned int u)
-{
-	if (u > jiffies_to_usecs(MAX_JIFFY_OFFSET))
-		return MAX_JIFFY_OFFSET;
-	return _usecs_to_jiffies(u);
-}
-EXPORT_SYMBOL(__usecs_to_jiffies);
-
 /*
  * The TICK_NSEC - 1 rounds up the value to the next resolution.  Note
  * that a remainder subtract here would not do the right thing as the
@@ -836,7 +778,6 @@ u64 nsecs_to_jiffies64(u64 n)
 	return div_u64(n * 9, (9ull * NSEC_PER_SEC + HZ / 2) / HZ);
 #endif
 }
-EXPORT_SYMBOL(nsecs_to_jiffies64);
 
 /**
  * nsecs_to_jiffies - Convert nsecs in u64 to jiffies
