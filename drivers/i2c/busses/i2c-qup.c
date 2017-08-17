@@ -195,9 +195,9 @@ static ssize_t qup_store(struct device *dev,
 		is_secure_world = 0;
 	}
 	else if (!strncmp(buf, "1", 1)) {
-		if (pdev->clk_state == 0)
+		if (pdev->pwr_state == 0)
 			qup_i2c_pwr_mgmt(pdev, 1);
-		pr_info("%s: %d-%d(%d)", __func__, is_secure_world, pdev->adapter.nr, pdev->clk_state);
+		pr_info("%s: %d-%d(%d)", __func__, is_secure_world, pdev->adapter.nr, pdev->pwr_state);
 		is_secure_world = 1;
 	}
 	else {
@@ -1638,12 +1638,10 @@ static int qup_i2c_resume(struct device *device)
 #endif /* CONFIG_PM */
 
 static const struct dev_pm_ops i2c_qup_dev_pm_ops = {
-	.suspend_noirq = qup_i2c_suspend,
-	.resume_noirq = qup_i2c_resume,
-	/*SET_SYSTEM_SLEEP_PM_OPS(
+	SET_SYSTEM_SLEEP_PM_OPS(
 		qup_i2c_suspend,
 		qup_i2c_resume
-	)*/
+	)
 	SET_RUNTIME_PM_OPS(
 		i2c_qup_pm_suspend_runtime,
 		i2c_qup_pm_resume_runtime,
