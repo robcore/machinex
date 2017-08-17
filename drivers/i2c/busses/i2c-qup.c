@@ -175,6 +175,8 @@ struct qup_i2c_dev {
 	int                          i2c_gpios[ARRAY_SIZE(i2c_rsrcs)];
 };
 
+static bool override_secure_input;
+module_param(override_secure_input, bool, 0644);
 #ifdef SECURE_INPUT
 static void qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state);
 static int is_secure_world = 0;
@@ -237,7 +239,7 @@ qup_i2c_interrupt(int irq, void *devid)
 	int err = 0;
 
 #ifdef SECURE_INPUT
-	if (is_secure_world && dev->adapter.nr == 3) {
+	if (is_secure_world && dev->adapter.nr == 3 && !override_secure_input) {
 		return 0;
 	}
 #endif
@@ -378,7 +380,7 @@ static void
 qup_i2c_pwr_mgmt(struct qup_i2c_dev *dev, unsigned int state)
 {
 #ifdef SECURE_INPUT
-	if (is_secure_world && dev->adapter.nr == 3) {
+	if (is_secure_world && dev->adapter.nr == 3 && !override_secure_input) {
 		return;
 	}
 #endif
@@ -823,7 +825,7 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	int err;
 
 #ifdef SECURE_INPUT
-	if (is_secure_world && dev->adapter.nr == 3) {
+	if (is_secure_world && dev->adapter.nr == 3 && !override_secure_input) {
 		return 0;
 	}
 #endif
@@ -1573,7 +1575,7 @@ static int i2c_qup_pm_suspend_runtime(struct device *device)
 	struct qup_i2c_dev *dev = platform_get_drvdata(pdev);
 
 #ifdef SECURE_INPUT
-	if (is_secure_world && dev->adapter.nr == 3) {
+	if (is_secure_world && dev->adapter.nr == 3 && !override_secure_input) {
 		pr_info("%s: %d-%d", __func__, is_secure_world, dev->adapter.nr);
 		return 0;
 	}
@@ -1596,7 +1598,7 @@ static int i2c_qup_pm_resume_runtime(struct device *device)
 	struct qup_i2c_dev *dev = platform_get_drvdata(pdev);
 	int ret = 0;
 #ifdef SECURE_INPUT
-	if (is_secure_world && dev->adapter.nr == 3) {
+	if (is_secure_world && dev->adapter.nr == 3 && !override_secure_input) {
 		pr_info("%s: %d-%d", __func__, is_secure_world, dev->adapter.nr);
 		return 0;
 	}
