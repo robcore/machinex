@@ -10,8 +10,6 @@
  * This file is released under the GPLv2.
  */
 
-#define pr_fmt(fmt) "PM: " fmt
-
 #include <linux/export.h>
 #include <linux/suspend.h>
 #include <linux/syscalls.h>
@@ -30,7 +28,6 @@
 #include <linux/syscore_ops.h>
 #include <linux/ctype.h>
 #include <linux/genhd.h>
-#include <linux/ktime.h>
 
 #include "power.h"
 
@@ -104,7 +101,7 @@ EXPORT_SYMBOL(system_entering_hibernation);
 #ifdef CONFIG_PM_DEBUG
 static void hibernation_debug_sleep(void)
 {
-	pr_info("hibernation debug: Waiting for 5 seconds.\n");
+	printk(KERN_INFO "hibernation debug: Waiting for 5 seconds.\n");
 	mdelay(5000);
 }
 
@@ -234,25 +231,29 @@ static void platform_recover(int platform_mode)
  * @nr_pages: Number of memory pages processed between @start and @stop.
  * @msg: Additional diagnostic message to print.
  */
-void swsusp_show_speed(ktime_t start, ktime_t stop,
-		      unsigned nr_pages, char *msg)
+void swsusp_show_speed(struct timeval *start, struct timeval *stop,
+			unsigned nr_pages, char *msg)
 {
-	ktime_t diff;
 	u64 elapsed_centisecs64;
 	unsigned int centisecs;
 	unsigned int k;
 	unsigned int kps;
 
-	diff = ktime_sub(stop, start);
-	elapsed_centisecs64 = ktime_divns(diff, 10*NSEC_PER_MSEC);
+	elapsed_centisecs64 = timeval_to_ns(stop) - timeval_to_ns(start);
+	/*
+	 * If "(s64)elapsed_centisecs64 < 0", it will print long elapsed time,
+	 * it is obvious enough for what went wrong.
+	 */
+	do_div(elapsed_centisecs64, NSEC_PER_SEC / 100);
 	centisecs = elapsed_centisecs64;
 	if (centisecs == 0)
 		centisecs = 1;	/* avoid div-by-zero */
 	k = nr_pages * (PAGE_SIZE / 1024);
 	kps = (k * 100) / centisecs;
-	pr_info("%s %u kbytes in %u.%02u seconds (%u.%02u MB/s)\n",
-		msg, k, centisecs / 100, centisecs % 100, kps / 1000,
-		(kps % 1000) / 10);
+	printk(KERN_INFO "PM: %s %u kbytes in %u.%02u seconds (%u.%02u MB/s)\n",
+			msg, k,
+			centisecs / 100, centisecs % 100,
+			kps / 1000, (kps % 1000) / 10);
 }
 
 /**
@@ -270,7 +271,8 @@ static int create_image(int platform_mode)
 
 	error = dpm_suspend_end(PMSG_FREEZE);
 	if (error) {
-		pr_err("Some devices failed to power down, aborting hibernation\n");
+		printk(KERN_ERR "PM: Some devices failed to power down, "
+			"aborting hibernation\n");
 		return error;
 	}
 
@@ -288,7 +290,8 @@ static int create_image(int platform_mode)
 
 	error = syscore_suspend();
 	if (error) {
-		pr_err("Some system devices failed to power down, aborting hibernation\n");
+		printk(KERN_ERR "PM: Some system devices failed to power down, "
+			"aborting hibernation\n");
 		goto Enable_irqs;
 	}
 
@@ -298,15 +301,13 @@ static int create_image(int platform_mode)
 	in_suspend = 1;
 	save_processor_state();
 	error = swsusp_arch_suspend();
+	if (error)
+		printk(KERN_ERR "PM: Error %d creating hibernation image\n",
+			error);
 	/* Restore control flow magically appears here */
 	restore_processor_state();
-	if (error)
-		pr_err("Error %d creating hibernation image\n", error);
-
-	if (!in_suspend) {
+	if (!in_suspend)
 		events_check_enabled = false;
-		clear_free_pages();
-	}
 
 	platform_leave(platform_mode);
 
@@ -410,11 +411,6 @@ int hibernation_snapshot(int platform_mode)
 	goto Close;
 }
 
-int __weak hibernate_resume_nonboot_cpu_disable(void)
-{
-	return disable_nonboot_cpus();
-}
-
 /**
  * resume_target_kernel - Restore system state from a hibernation image.
  * @platform_mode: Whether or not to use the platform driver.
@@ -430,7 +426,8 @@ static int resume_target_kernel(bool platform_mode)
 
 	error = dpm_suspend_end(PMSG_QUIESCE);
 	if (error) {
-		pr_err("Some devices failed to power down, aborting resume\n");
+		printk(KERN_ERR "PM: Some devices failed to power down, "
+			"aborting resume\n");
 		return error;
 	}
 
@@ -438,7 +435,7 @@ static int resume_target_kernel(bool platform_mode)
 	if (error)
 		goto Cleanup;
 
-	error = hibernate_resume_nonboot_cpu_disable();
+	error = disable_nonboot_cpus();
 	if (error)
 		goto Enable_cpus;
 
@@ -620,7 +617,7 @@ static void power_down(void)
 			/* Restore swap signature. */
 			error = swsusp_unmark();
 			if (error)
-				pr_err("Swap will be unusable! Try swapon -a.\n");
+				pr_err("PM: Swap will be unusable! Try swapon -a.\n");
 
 			return;
 		}
@@ -643,7 +640,7 @@ static void power_down(void)
 	 * Valid image is on the disk, if we continue we risk serious data
 	 * corruption after resume.
 	 */
-	pr_crit("Power down manually\n");
+	printk(KERN_CRIT "PM: Please power down manually\n");
 	while (1)
 		cpu_relax();
 }
@@ -674,9 +671,9 @@ int hibernate(void)
 		goto Exit;
 	}
 
-	pr_info("Syncing filesystems ... \n");
+	printk(KERN_INFO "PM: Syncing filesystems ... ");
 	sys_sync();
-	pr_info("done.\n");
+	printk("done.\n");
 
 	error = freeze_processes();
 	if (error)
@@ -702,7 +699,7 @@ int hibernate(void)
 		else
 		        flags |= SF_CRC32_MODE;
 
-		pr_debug("Writing image.\n");
+		pr_debug("PM: writing image.\n");
 		error = swsusp_write(flags);
 		swsusp_free();
 		if (!error)
@@ -777,10 +774,10 @@ static int software_resume(void)
 		goto Unlock;
 	}
 
-	pr_debug("Checking hibernation image partition %s\n", resume_file);
+	pr_debug("PM: Checking hibernation image partition %s\n", resume_file);
 
 	if (resume_delay) {
-		pr_info("Waiting %dsec before reading resume device ...\n",
+		printk(KERN_INFO "Waiting %dsec before reading resume device...\n",
 			resume_delay);
 		ssleep(resume_delay);
 	}
@@ -819,10 +816,10 @@ static int software_resume(void)
 	}
 
  Check_image:
-	pr_debug("Hibernation image partition %d:%d present\n",
+	pr_debug("PM: Hibernation image partition %d:%d present\n",
 		MAJOR(swsusp_resume_device), MINOR(swsusp_resume_device));
 
-	pr_debug("Looking for hibernation image.\n");
+	pr_debug("PM: Looking for hibernation image.\n");
 	error = swsusp_check();
 	if (error)
 		goto Unlock;
@@ -841,7 +838,7 @@ static int software_resume(void)
 		goto Close_Finish;
 	}
 
-	pr_debug("Preparing processes for restore.\n");
+	pr_debug("PM: Preparing processes for restore.\n");
 	error = freeze_processes();
 	if (error)
 		goto Close_Finish;
@@ -871,7 +868,7 @@ static int software_resume(void)
 	/* For success case, the suspend path will release the lock */
  Unlock:
 	mutex_unlock(&pm_mutex);
-	pr_debug("Hibernation image not present or could not be loaded.\n");
+	pr_debug("PM: Hibernation image not present or could not be loaded.\n");
 	return error;
  Close_Finish:
 	swsusp_close(FMODE_READ);
@@ -992,7 +989,7 @@ static ssize_t disk_store(struct kobject *kobj, struct kobj_attribute *attr,
 		error = -EINVAL;
 
 	if (!error)
-		pr_debug("Hibernation mode set to '%s'\n",
+		pr_debug("PM: Hibernation mode set to '%s'\n",
 			 hibernation_modes[mode]);
 	unlock_system_sleep();
 	return error ? error : n;
@@ -1010,28 +1007,26 @@ static ssize_t resume_show(struct kobject *kobj, struct kobj_attribute *attr,
 static ssize_t resume_store(struct kobject *kobj, struct kobj_attribute *attr,
 			    const char *buf, size_t n)
 {
+	unsigned int maj, min;
 	dev_t res;
-	int len = n;
-	char *name;
+	int ret = -EINVAL;
 
-	if (len && buf[len-1] == '\n')
-		len--;
-	name = kstrndup(buf, len, GFP_KERNEL);
-	if (!name)
-		return -ENOMEM;
+	if (sscanf(buf, "%u:%u", &maj, &min) != 2)
+		goto out;
 
-	res = name_to_dev_t(name);
-	kfree(name);
-	if (!res)
-		return -EINVAL;
+	res = MKDEV(maj,min);
+	if (maj != MAJOR(res) || min != MINOR(res))
+		goto out;
 
 	lock_system_sleep();
 	swsusp_resume_device = res;
 	unlock_system_sleep();
-	pr_info("Starting manual resume from disk\n");
+	printk(KERN_INFO "PM: Starting manual resume from disk\n");
 	noresume = 0;
 	software_resume();
-	return n;
+	ret = n;
+ out:
+	return ret;
 }
 
 power_attr(resume);
@@ -1125,11 +1120,11 @@ static int __init resume_offset_setup(char *str)
 
 static int __init hibernate_setup(char *str)
 {
-	if (!strncmp(str, "noresume", 8)) {
+	if (!strncmp(str, "noresume", 8))
 		noresume = 1;
-	} else if (!strncmp(str, "nocompress", 10)) {
+	else if (!strncmp(str, "nocompress", 10))
 		nocompress = 1;
-	} else if (!strncmp(str, "no", 2)) {
+	else if (!strncmp(str, "no", 2)) {
 		noresume = 1;
 		nohibernate = 1;
 	}

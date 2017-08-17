@@ -40,6 +40,8 @@ static inline char *check_image_kernel(struct swsusp_info *info)
 }
 #endif /* CONFIG_ARCH_HIBERNATION_HEADER */
 
+extern int hibernate_resume_nonboot_cpu_disable(void);
+
 /*
  * Keep some memory free so that I/O operations can succeed without paging
  * [Might this be more than 4 MB?]
@@ -102,6 +104,8 @@ extern asmlinkage int swsusp_arch_resume(void);
 extern int create_basic_memory_bitmaps(void);
 extern void free_basic_memory_bitmaps(void);
 extern int hibernate_preallocate_memory(void);
+
+extern void clear_free_pages(void);
 
 /**
  *	Auxiliary structure used for reading the snapshot image data and
