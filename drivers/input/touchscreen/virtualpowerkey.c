@@ -17,10 +17,9 @@ MODULE_LICENSE("GPLv2");
 
 /*Based on Sweep2Sleep by flar2 (Aaron Segaert) */
 
-#define WTIMEOUT 5
+#define WTIMEOUT 10
 
 static struct input_dev *virtkeydev;
-static DEFINE_MUTEX(virtkeyworklock);
 static struct workqueue_struct *virtkey_input_wq;
 static struct delayed_work wakeup_key_release_work;
 static struct work_struct wakeup_key_press_work;
@@ -33,17 +32,14 @@ static void wakeup_key_release(struct work_struct *work)
 {
 	input_report_key(virtkeydev, KEY_WAKEUP, 0);
 	input_sync(virtkeydev);
-	mutex_unlock(&virtkeyworklock);
 }
 
 /* WakeKeyPressed work func */
 static void wakeup_key_press(struct work_struct *work)
 {
-	if (!mutex_trylock(&virtkeyworklock))
-                return;
 	input_report_key(virtkeydev, KEY_WAKEUP, 1);
 	input_sync(virtkeydev);
-	schedule_delayed_work(&wakeup_key_release_work, msecs_to_jiffies(WTIMEOUT));
+	schedule_delayed_work_on(0, &wakeup_key_release_work, msecs_to_jiffies(WTIMEOUT));
 }
 
 /* PowerKey trigger */
