@@ -8,7 +8,7 @@
 
 #define DRIVER_AUTHOR "robcore"
 #define DRIVER_DESCRIPTION "virtualpowerkey(wakeup) driver"
-#define DRIVER_VERSION "1.0"
+#define DRIVER_VERSION "1.1"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
