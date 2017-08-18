@@ -161,8 +161,6 @@ EXPORT_SYMBOL(current_umask);
 struct fs_struct init_fs = {
 	.users		= 1,
 	.lock		= __SPIN_LOCK_UNLOCKED(init_fs.lock),
-#ifdef CONFIG_CPUSETS
-	.seq		= SEQCNT_ZERO,
-#endif
+	.seq		= SEQCNT_ZERO(init_fs.seq),
 	.umask		= 0022,
 };
