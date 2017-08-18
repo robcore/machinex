@@ -46,6 +46,7 @@ extern unsigned long init_bootmem_node(pg_data_t *pgdat,
 extern unsigned long init_bootmem(unsigned long addr, unsigned long memend);
 
 extern unsigned long free_all_bootmem(void);
+extern void reset_node_managed_pages(pg_data_t *pgdat);
 extern void reset_all_zones_managed_pages(void);
 
 extern void free_bootmem_node(pg_data_t *pgdat,
@@ -59,9 +60,9 @@ extern void __free_pages_bootmem(struct page *page, unsigned int order);
  * Flags for reserve_bootmem (also if CONFIG_HAVE_ARCH_BOOTMEM_NODE,
  * the architecture-specific code should honor this).
  *
- * If flags is 0, then the return value is always 0 (success). If
- * flags contains BOOTMEM_EXCLUSIVE, then -EBUSY is returned if the
- * memory already was reserved.
+ * If flags is BOOTMEM_DEFAULT, then the return value is always 0 (success).
+ * If flags contains BOOTMEM_EXCLUSIVE, then -EBUSY is returned if the memory
+ * already was reserved.
  */
 #define BOOTMEM_DEFAULT		0
 #define BOOTMEM_EXCLUSIVE	(1<<0)
@@ -280,22 +281,6 @@ static inline void * __init memblock_virt_alloc_from_nopanic(
 		phys_addr_t size, phys_addr_t align, phys_addr_t min_addr)
 {
 	return __alloc_bootmem_nopanic(size, align, min_addr);
-}
-
-static inline void * __init memblock_virt_alloc_low(
-					phys_addr_t size, phys_addr_t align)
-{
-	if (!align)
-		align = SMP_CACHE_BYTES;
-	return __alloc_bootmem_low(size, align, BOOTMEM_LOW_LIMIT);
-}
-
-static inline void * __init memblock_virt_alloc_low_nopanic(
-					phys_addr_t size, phys_addr_t align)
-{
-	if (!align)
-		align = SMP_CACHE_BYTES;
-	return __alloc_bootmem_low_nopanic(size, align, BOOTMEM_LOW_LIMIT);
 }
 
 static inline void * __init memblock_virt_alloc_node(
