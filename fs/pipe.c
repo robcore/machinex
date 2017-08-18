@@ -373,17 +373,18 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 		int offset = buf->offset + buf->len;
 
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
-			ret = ops->confirm(pipe, buf);
-			if (ret)
+			int error = ops->confirm(pipe, buf);
+			if (error)
 				goto out;
 
 			ret = copy_page_from_iter(buf->page, offset, chars, from);
 			if (unlikely(ret < chars)) {
-				ret = -EFAULT;
+				error = -EFAULT;
 				goto out;
 			}
 			do_wakeup = 1;
-			buf->len += ret;
+			buf->len += chars;
+			ret = chars;
 			if (!iov_iter_count(from))
 				goto out;
 		}
@@ -730,20 +731,17 @@ int create_pipe_files(struct file **res, int flags)
 
 	d_instantiate(path.dentry, inode);
 
+	err = -ENFILE;
 	f = alloc_file(&path, FMODE_WRITE, &pipefifo_fops);
-	if (IS_ERR(f)) {
-		err = PTR_ERR(f);
+	if (IS_ERR(f))
 		goto err_dentry;
-	}
 
 	f->f_flags = O_WRONLY | (flags & (O_NONBLOCK | O_DIRECT));
 	f->private_data = inode->i_pipe;
 
 	res[0] = alloc_file(&path, FMODE_READ, &pipefifo_fops);
-	if (IS_ERR(res[0])) {
-		err = PTR_ERR(res[0]);
+	if (IS_ERR(res[0]))
 		goto err_file;
-	}
 
 	path_get(&path);
 	res[0]->private_data = inode->i_pipe;
