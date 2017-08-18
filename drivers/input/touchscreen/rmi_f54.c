@@ -1924,6 +1924,11 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 		return count;
 	}
 
+	if ((int)count >= CMD_STR_LEN) {
+		pr_debug("no way\n");
+		return count;
+	}
+
 	mutex_lock(&data->cmd_lock);
 	data->cmd_is_running = true;
 	mutex_unlock(&data->cmd_lock);
@@ -1944,6 +1949,13 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 		memcpy(buffer, buf, pos - buf);
 	else
 		memcpy(buffer, buf, length);
+
+	list_for_each_entry(ft_cmd_ptr, &data->cmd_list_head, list) {
+		if (!strcmp(buffer, "spay_enable")) {
+			cmd_found = false;
+			goto fail;
+		}
+	}
 
 	/* find command */
 	list_for_each_entry(ft_cmd_ptr, &data->cmd_list_head, list) {
@@ -1988,37 +2000,45 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 	ft_cmd_ptr->cmd_func();
 
 	return count;
+fail:
+	mutex_lock(&data->cmd_lock);
+	data->cmd_is_running = false;
+	mutex_unlock(&data->cmd_lock);
+
+	data->cmd_state = CMD_STATUS_FAIL;
+
+	return -EINVAL;
 }
 
 static ssize_t cmd_status_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	char buffer[16];
+	char buffer[CMD_RESULT_STR_LEN];
 	struct factory_data *data = f54->factory_data;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
 
 	dev_info(&rmi4_data->i2c_client->dev, "%s: Command status = %d\n",
-	    __func__, data->cmd_state);
+			__func__, data->cmd_state);
 
 	switch (data->cmd_state) {
-	case CMD_STATUS_WAITING:
-		sprintf(buffer, "%s", tostring(WAITING));
-		break;
-	case CMD_STATUS_RUNNING:
-		sprintf(buffer, "%s", tostring(RUNNING));
-		break;
-	case CMD_STATUS_OK:
-		sprintf(buffer, "%s", tostring(OK));
-		break;
-	case CMD_STATUS_FAIL:
-		sprintf(buffer, "%s", tostring(FAIL));
-		break;
-	case CMD_STATUS_NOT_APPLICABLE:
-		sprintf(buffer, "%s", tostring(NOT_APPLICABLE));
-		break;
-	default:
-		sprintf(buffer, "%s", tostring(NOT_APPLICABLE));
-		break;
+		case CMD_STATUS_WAITING:
+		snprintf(buffer, CMD_RESULT_STR_LEN, "%s", tostring(WAITING));
+			break;
+		case CMD_STATUS_RUNNING:
+		snprintf(buffer, CMD_RESULT_STR_LEN, "%s", tostring(RUNNING));
+			break;
+		case CMD_STATUS_OK:
+		snprintf(buffer, CMD_RESULT_STR_LEN, "%s", tostring(OK));
+			break;
+		case CMD_STATUS_FAIL:
+		snprintf(buffer, CMD_RESULT_STR_LEN, "%s", tostring(FAIL));
+			break;
+		case CMD_STATUS_NOT_APPLICABLE:
+		snprintf(buffer, CMD_RESULT_STR_LEN, "%s", tostring(NOT_APPLICABLE));
+			break;
+		default:
+		snprintf(buffer, CMD_RESULT_STR_LEN, "%s", tostring(NOT_APPLICABLE));
+			break;
 	}
 
 	return snprintf(buf, PAGE_SIZE, "%s\n", buffer);
@@ -2031,7 +2051,7 @@ static ssize_t cmd_result_show(struct device *dev,
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
 
 	dev_info(&rmi4_data->i2c_client->dev, "%s: Command result = %s\n",
-		__func__, data->cmd_result);
+			__func__, data->cmd_result);
 
 	mutex_lock(&data->cmd_lock);
 	data->cmd_is_running = false;
@@ -3100,9 +3120,15 @@ static void not_support_cmd(void)
 	struct factory_data *data = f54->factory_data;
 
 	set_default_result(data);
-	sprintf(data->cmd_buff, "%s", tostring(NA));
+	snprintf(data->cmd_buff, CMD_RESULT_STR_LEN, "%s", tostring(NA));
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
-	data->cmd_state = CMD_STATUS_NOT_APPLICABLE;
+
+	mutex_lock(&data->cmd_lock);
+	data->cmd_is_running = false;
+	mutex_unlock(&data->cmd_lock);
+
+	data->cmd_state = CMD_STATUS_WAITING;
+	dev_err(&f54->rmi4_data->i2c_client->dev, "%s\n", __func__);
 }
 #endif
 
