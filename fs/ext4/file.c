@@ -196,6 +196,7 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 
 static const struct vm_operations_struct ext4_file_vm_ops = {
 	.fault		= filemap_fault,
+	.map_pages	= filemap_map_pages,
 	.page_mkwrite   = ext4_page_mkwrite,
 	.remap_pages	= generic_file_remap_pages,
 };
