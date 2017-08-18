@@ -321,12 +321,18 @@ static long madvise_remove(struct vm_area_struct *vma,
 	offset = (loff_t)(start - vma->vm_start)
 			+ ((loff_t)vma->vm_pgoff << PAGE_SHIFT);
 
-	/* filesystem's fallocate may need to take i_mutex */
+	/*
+	 * Filesystem's fallocate may need to take i_mutex.  We need to
+	 * explicitly grab a reference because the vma (and hence the
+	 * vma's reference to the file) can go away as soon as we drop
+	 * mmap_sem.
+	 */
 	get_file(f);
 	up_read(&current->mm->mmap_sem);
-	error = do_fallocate(vma->vm_file,
+	error = do_fallocate(f,
 				FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE,
-				offset, end - start);	fput(f);
+				offset, end - start);
+	fput(f);
 	down_read(&current->mm->mmap_sem);
 	return error;
 }
