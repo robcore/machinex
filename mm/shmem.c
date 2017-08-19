@@ -292,8 +292,8 @@ static int shmem_add_to_page_cache(struct page *page,
 {
 	int error;
 
-	VM_BUG_ON_PAGE(!PageLocked(page), page);
-	VM_BUG_ON_PAGE(!PageSwapBacked(page), page);
+	VM_BUG_ON(!PageLocked(page));
+	VM_BUG_ON(!PageSwapBacked(page));
 
 	page_cache_get(page);
 	page->mapping = mapping;
@@ -592,7 +592,7 @@ static int shmem_unuse_inode(struct shmem_inode_info *info,
 	radswap = swp_to_radix_entry(swap);
 	index = radix_tree_locate_item(&mapping->page_tree, radswap);
 	if (index == -1)
-		return -EAGAIN;	/* tell shmem_unuse we found nothing */
+		return 0;
 
 	/*
 	 * Move _head_ to start search for next from here.
@@ -651,6 +651,7 @@ static int shmem_unuse_inode(struct shmem_inode_info *info,
 			spin_unlock(&info->lock);
 			swap_free(swap);
 		}
+		error = 1;	/* not an error, but entry was found */
 	}
 	return error;
 }
@@ -662,7 +663,7 @@ int shmem_unuse(swp_entry_t swap, struct page *page)
 {
 	struct list_head *this, *next;
 	struct shmem_inode_info *info;
-	struct mem_cgroup *memcg;
+	int found = 0;
 	int error = 0;
 
 	/*
@@ -968,7 +969,6 @@ static int shmem_getpage_gfp(struct inode *inode, pgoff_t index,
 	struct address_space *mapping = inode->i_mapping;
 	struct shmem_inode_info *info;
 	struct shmem_sb_info *sbinfo;
-	struct mem_cgroup *memcg;
 	struct page *page;
 	swp_entry_t swap;
 	int error;
@@ -1058,15 +1058,11 @@ repeat:
 			 * Reset swap.val? No, leave it so "failed" goes back to
 			 * "repeat": reading a hole and writing should succeed.
 			 */
-			if (error) {
-				mem_cgroup_cancel_charge(page, memcg);
+			if (error)
 				delete_from_swap_cache(page);
-			}
 		}
 		if (error)
 			goto failed;
-
-		mem_cgroup_commit_charge(page, memcg, true);
 
 		spin_lock(&info->lock);
 		info->swapped--;
@@ -1110,10 +1106,9 @@ repeat:
 			radix_tree_preload_end();
 		}
 		if (error) {
-			mem_cgroup_cancel_charge(page, memcg);
+			mem_cgroup_uncharge_cache_page(page);
 			goto decused;
 		}
-		mem_cgroup_commit_charge(page, memcg, false);
 		lru_cache_add_anon(page);
 
 		spin_lock(&info->lock);

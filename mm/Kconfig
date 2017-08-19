@@ -231,9 +231,6 @@ config SPLIT_PTLOCK_CPUS
 config ARCH_ENABLE_SPLIT_PMD_PTLOCK
 	boolean
 
-config ARCH_ENABLE_SPLIT_PMD_PTLOCK
-	boolean
-
 #
 # support for memory balloon
 config MEMORY_BALLOON
@@ -714,15 +711,6 @@ config SWAP_ENABLE_READAHEAD
 	  also paged in expecting those pages will be used in near future.
 	  This behaviour is good at disk-based system, but not on in-memory
 	  compression (e.g. zram).
-
-config BALANCE_ANON_FILE_RECLAIM
-	bool "During reclaim treat anon and file backed pages equally"
-	depends on SWAP
-	help
-	  When performing memory reclaim treat anonymous and file backed pages
-	  equally.
-	  Swapping anonymous pages out to memory can be efficient enough to justify
-	  treating anonymous and file backed pages equally.
 
 config MIN_DIRTY_THRESH_PAGES
 	int "The lower bound of VM dirty_thresh value in number of pages"

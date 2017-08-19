@@ -93,13 +93,6 @@ struct page *balloon_page_dequeue(struct balloon_dev_info *b_dev_info)
 		 * to be released by the balloon driver.
 		 */
 		if (trylock_page(page)) {
-#ifdef CONFIG_BALLOON_COMPACTION
-			if (!PagePrivate(page)) {
-				/* raced with isolation */
-				unlock_page(page);
-				continue;
-			}
-#endif
 			spin_lock_irqsave(&b_dev_info->pages_lock, flags);
 			/*
 			 * Raise the page refcount here to prevent any wrong
@@ -139,14 +132,62 @@ struct page *balloon_page_dequeue(struct balloon_dev_info *b_dev_info)
 EXPORT_SYMBOL_GPL(balloon_page_dequeue);
 
 #ifdef CONFIG_BALLOON_COMPACTION
+/*
+ * balloon_mapping_alloc - allocates a special ->mapping for ballooned pages.
+ * @b_dev_info: holds the balloon device information descriptor.
+ * @a_ops: balloon_mapping address_space_operations descriptor.
+ *
+ * Driver must call it to properly allocate and initialize an instance of
+ * struct address_space which will be used as the special page->mapping for
+ * balloon device enlisted page instances.
+ */
+struct address_space *balloon_mapping_alloc(struct balloon_dev_info *b_dev_info,
+				const struct address_space_operations *a_ops)
+{
+	struct address_space *mapping;
+
+	mapping = kmalloc(sizeof(*mapping), GFP_KERNEL);
+	if (!mapping)
+		return ERR_PTR(-ENOMEM);
+
+	/*
+	 * Give a clean 'zeroed' status to all elements of this special
+	 * balloon page->mapping struct address_space instance.
+	 */
+	address_space_init_once(mapping);
+
+	/*
+	 * Set mapping->flags appropriately, to allow balloon pages
+	 * ->mapping identification.
+	 */
+	mapping_set_balloon(mapping);
+	mapping_set_gfp_mask(mapping, balloon_mapping_gfp_mask());
+
+	/* balloon's page->mapping->a_ops callback descriptor */
+	mapping->a_ops = a_ops;
+
+	/*
+	 * Establish a pointer reference back to the balloon device descriptor
+	 * this particular page->mapping will be servicing.
+	 * This is used by compaction / migration procedures to identify and
+	 * access the balloon device pageset while isolating / migrating pages.
+	 *
+	 * As some balloon drivers can register multiple balloon devices
+	 * for a single guest, this also helps compaction / migration to
+	 * properly deal with multiple balloon pagesets, when required.
+	 */
+	mapping->private_data = b_dev_info;
+	b_dev_info->mapping = mapping;
+
+	return mapping;
+}
+EXPORT_SYMBOL_GPL(balloon_mapping_alloc);
 
 static inline void __isolate_balloon_page(struct page *page)
 {
 	struct balloon_dev_info *b_dev_info = page->mapping->private_data;
 	unsigned long flags;
-
 	spin_lock_irqsave(&b_dev_info->pages_lock, flags);
-	ClearPagePrivate(page);
 	list_del(&page->lru);
 	b_dev_info->isolated_pages++;
 	spin_unlock_irqrestore(&b_dev_info->pages_lock, flags);
@@ -156,9 +197,7 @@ static inline void __putback_balloon_page(struct page *page)
 {
 	struct balloon_dev_info *b_dev_info = page->mapping->private_data;
 	unsigned long flags;
-
 	spin_lock_irqsave(&b_dev_info->pages_lock, flags);
-	SetPagePrivate(page);
 	list_add(&page->lru, &b_dev_info->pages);
 	b_dev_info->isolated_pages--;
 	spin_unlock_irqrestore(&b_dev_info->pages_lock, flags);

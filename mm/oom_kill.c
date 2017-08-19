@@ -169,7 +169,7 @@ unsigned long oom_badness(struct task_struct *p, struct mem_cgroup *memcg,
 	 * The baseline for the badness score is the proportion of RAM that each
 	 * task's rss, pagetable and swap space use.
 	 */
-	points = get_mm_rss(p->mm) + atomic_long_read(&p->mm->nr_ptes) +
+	points = get_mm_rss(p->mm) + p->mm->nr_ptes +
 		 get_mm_counter(p->mm, MM_SWAPENTS);
 	task_unlock(p);
 

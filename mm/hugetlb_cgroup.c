@@ -19,7 +19,7 @@
 #include <linux/hugetlb_cgroup.h>
 
 struct hugetlb_cgroup {
-	struct cgroup_subsys_state css;
+	struct cgroup_css css;
 	/*
 	 * the counter to account for hugepages from hugetlb.
 	 */
@@ -33,7 +33,7 @@ struct hugetlb_cgroup {
 static struct hugetlb_cgroup *root_h_cgroup __read_mostly;
 
 static inline
-struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_subsys_state *s)
+struct hugetlb_cgroup *hugetlb_cgroup_from_css(struct cgroup_css *s)
 {
 	return s ? container_of(s, struct hugetlb_cgroup, css) : NULL;
 }
@@ -66,8 +66,8 @@ static inline bool hugetlb_cgroup_have_usage(struct hugetlb_cgroup *h_cg)
 	return false;
 }
 
-static struct cgroup_subsys_state *
-hugetlb_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
+static struct cgroup_css *
+hugetlb_cgroup_css_alloc(struct cgroup_css *parent_css)
 {
 	struct hugetlb_cgroup *parent_h_cgroup = hugetlb_cgroup_from_css(parent_css);
 	struct hugetlb_cgroup *h_cgroup;
@@ -89,7 +89,7 @@ hugetlb_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 	return &h_cgroup->css;
 }
 
-static void hugetlb_cgroup_css_free(struct cgroup_subsys_state *css)
+static void hugetlb_cgroup_css_free(struct cgroup_css *css)
 {
 	struct hugetlb_cgroup *h_cgroup;
 
@@ -142,7 +142,7 @@ out:
  * Force the hugetlb cgroup to empty the hugetlb resources by moving them to
  * the parent cgroup.
  */
-static void hugetlb_cgroup_css_offline(struct cgroup_subsys_state *css)
+static void hugetlb_cgroup_css_offline(struct cgroup_css *css)
 {
 	struct hugetlb_cgroup *h_cg = hugetlb_cgroup_from_css(css);
 	struct hstate *h;
@@ -217,7 +217,7 @@ void hugetlb_cgroup_uncharge_page(int idx, unsigned long nr_pages,
 
 	if (hugetlb_cgroup_disabled())
 		return;
-	lockdep_assert_held(&hugetlb_lock);
+	VM_BUG_ON(!spin_is_locked(&hugetlb_lock));
 	h_cg = hugetlb_cgroup_from_page(page);
 	if (unlikely(!h_cg))
 		return;
@@ -275,7 +275,6 @@ static ssize_t hugetlb_cgroup_write(struct kernfs_open_file *of,
 		ret = res_counter_memparse_write_strategy(buf, &val);
 		if (ret)
 			break;
-		val = ALIGN(val, 1ULL << huge_page_shift(&hstates[idx]));
 		ret = res_counter_set_limit(&h_cg->hugepage[idx], val);
 		break;
 	default:
@@ -390,7 +389,7 @@ void hugetlb_cgroup_migrate(struct page *oldhpage, struct page *newhpage)
 	if (hugetlb_cgroup_disabled())
 		return;
 
-	VM_BUG_ON_PAGE(!PageHuge(oldhpage), oldhpage);
+	VM_BUG_ON(!PageHuge(oldhpage));
 	spin_lock(&hugetlb_lock);
 	h_cg = hugetlb_cgroup_from_page(oldhpage);
 	set_hugetlb_cgroup(oldhpage, NULL);
