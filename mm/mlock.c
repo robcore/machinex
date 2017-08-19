@@ -54,13 +54,10 @@ EXPORT_SYMBOL(can_do_mlock);
 /*
  *  LRU accounting for clear_page_mlock()
  */
-void __clear_page_mlock(struct page *page)
+void clear_page_mlock(struct page *page)
 {
-	VM_BUG_ON(!PageLocked(page));
-
-	if (!page->mapping) {	/* truncated ? */
+	if (!TestClearPageMlocked(page))
 		return;
-	}
 
 	mod_zone_page_state(page_zone(page), NR_MLOCK,
 			    -hpage_nr_pages(page));
