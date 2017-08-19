@@ -95,7 +95,7 @@ nodemask_t node_states[NR_NODE_STATES] __read_mostly = {
 #ifndef CONFIG_NUMA
 	[N_NORMAL_MEMORY] = { { [0] = 1UL } },
 #ifdef CONFIG_HIGHMEM
-	[N_HIGH_MEMORY] = { { [0] = 1UL } },
+	[N_MEMORY] = { { [0] = 1UL } },
 #endif
 #ifdef CONFIG_MOVABLE_NODE
 	[N_MEMORY] = { { [0] = 1UL } },
@@ -329,8 +329,7 @@ static inline int bad_range(struct zone *zone, struct page *page)
 }
 #endif
 
-static void bad_page(struct page *page, const char *reason,
-		unsigned long bad_flags)
+static void bad_page(struct page *page)
 {
 	static unsigned long resume;
 	static unsigned long nr_shown;
@@ -364,7 +363,7 @@ static void bad_page(struct page *page, const char *reason,
 
 	printk(KERN_ALERT "BUG: Bad page state in process %s  pfn:%05lx\n",
 		current->comm, page_to_pfn(page));
-	dump_page_badflags(page, reason, bad_flags);
+	dump_page(page);
 
 	print_modules();
 	dump_stack();
@@ -420,7 +419,7 @@ static int destroy_compound_page(struct page *page, unsigned long order)
 	int bad = 0;
 
 	if (unlikely(compound_order(page) != order)) {
-		bad_page(page, "wrong compound order", 0);
+		bad_page(page);
 		bad++;
 	}
 
@@ -429,11 +428,8 @@ static int destroy_compound_page(struct page *page, unsigned long order)
 	for (i = 1; i < nr_pages; i++) {
 		struct page *p = page + i;
 
-		if (unlikely(!PageTail(p))) {
-			bad_page(page, "PageTail not set", 0);
-			bad++;
-		} else if (unlikely(p->first_page != page)) {
-			bad_page(page, "first_page not consistent", 0);
+		if (unlikely(!PageTail(p) || (p->first_page != page))) {
+			bad_page(page);
 			bad++;
 		}
 		__ClearPageTail(p);
@@ -442,8 +438,7 @@ static int destroy_compound_page(struct page *page, unsigned long order)
 	return bad;
 }
 
-static inline void prep_zero_page(struct page *page, unsigned int order,
-							gfp_t gfp_flags)
+static inline void prep_zero_page(struct page *page, int order, gfp_t gfp_flags)
 {
 	int i;
 
@@ -487,7 +482,7 @@ static inline void set_page_guard_flag(struct page *page) { }
 static inline void clear_page_guard_flag(struct page *page) { }
 #endif
 
-static inline void set_page_order(struct page *page, unsigned int order)
+static inline void set_page_order(struct page *page, int order)
 {
 	set_page_private(page, order);
 	__SetPageBuddy(page);
@@ -538,31 +533,21 @@ __find_buddy_index(unsigned long page_idx, unsigned int order)
  * For recording page's order, we use page_private(page).
  */
 static inline int page_is_buddy(struct page *page, struct page *buddy,
-							unsigned int order)
+								int order)
 {
 	if (!pfn_valid_within(page_to_pfn(buddy)))
 		return 0;
 
+	if (page_zone_id(page) != page_zone_id(buddy))
+		return 0;
+
 	if (page_is_guard(buddy) && page_order(buddy) == order) {
-		VM_BUG_ON_PAGE(page_count(buddy) != 0, buddy);
-
-		if (page_zone_id(page) != page_zone_id(buddy))
-			return 0;
-
+		VM_BUG_ON(page_count(buddy) != 0);
 		return 1;
 	}
 
 	if (PageBuddy(buddy) && page_order(buddy) == order) {
-		VM_BUG_ON_PAGE(page_count(buddy) != 0, buddy);
-
-		/*
-		 * zone check is done late to avoid uselessly
-		 * calculating zone/node ids for pages that could
-		 * never merge.
-		 */
-		if (page_zone_id(page) != page_zone_id(buddy))
-			return 0;
-
+		VM_BUG_ON(page_count(buddy) != 0);
 		return 1;
 	}
 	return 0;
@@ -682,14 +667,12 @@ static inline void free_page_mlock(struct page *page)
 
 static inline int free_pages_check(struct page *page)
 {
-	const char *bad_reason = NULL;
 	if (unlikely(page_mapcount(page) |
 		(page->mapping != NULL)  |
 		(atomic_read(&page->_count) != 0) |
 		(page->flags & PAGE_FLAGS_CHECK_AT_FREE) |
 		(mem_cgroup_bad_page_check(page)))) {
-		bad_reason = "cgroup check failed";
-		bad_page(page, bad_reason, 0);
+		bad_page(page);
 		return 1;
 	}
 	page_nid_reset_last(page);
@@ -927,14 +910,12 @@ static inline void expand(struct zone *zone, struct page *page,
  */
 static inline int check_new_page(struct page *page)
 {
-	const char *bad_reason = NULL;
 	if (unlikely(page_mapcount(page) |
 		(page->mapping != NULL)  |
 		(atomic_read(&page->_count) != 0)  |
 		(page->flags & PAGE_FLAGS_CHECK_AT_PREP) |
 		(mem_cgroup_bad_page_check(page)))) {
-		bad_reason = "cgroup check failed";
-		bad_page(page, bad_reason, 0);
+		bad_page(page);
 		return 1;
 	}
 	return 0;
@@ -6884,7 +6865,7 @@ __offline_isolated_pages(unsigned long start_pfn, unsigned long end_pfn)
 {
 	struct page *page;
 	struct zone *zone;
-	unsigned int order, i;
+	int order, i;
 	unsigned long pfn;
 	unsigned long flags;
 	/* find the first valid pfn */
@@ -6942,7 +6923,7 @@ bool is_free_buddy_page(struct page *page)
 	struct zone *zone = page_zone(page);
 	unsigned long pfn = page_to_pfn(page);
 	unsigned long flags;
-	unsigned int order;
+	int order;
 
 	spin_lock_irqsave(&zone->lock, flags);
 	for (order = 0; order < MAX_ORDER; order++) {
@@ -6956,3 +6937,83 @@ bool is_free_buddy_page(struct page *page)
 	return order < MAX_ORDER;
 }
 #endif
+
+static const struct trace_print_flags pageflag_names[] = {
+	{1UL << PG_locked,		"locked"	},
+	{1UL << PG_error,		"error"		},
+	{1UL << PG_referenced,		"referenced"	},
+	{1UL << PG_uptodate,		"uptodate"	},
+	{1UL << PG_dirty,		"dirty"		},
+	{1UL << PG_lru,			"lru"		},
+	{1UL << PG_active,		"active"	},
+	{1UL << PG_slab,		"slab"		},
+	{1UL << PG_owner_priv_1,	"owner_priv_1"	},
+	{1UL << PG_arch_1,		"arch_1"	},
+	{1UL << PG_reserved,		"reserved"	},
+	{1UL << PG_private,		"private"	},
+	{1UL << PG_private_2,		"private_2"	},
+	{1UL << PG_writeback,		"writeback"	},
+#ifdef CONFIG_PAGEFLAGS_EXTENDED
+	{1UL << PG_head,		"head"		},
+	{1UL << PG_tail,		"tail"		},
+#else
+	{1UL << PG_compound,		"compound"	},
+#endif
+	{1UL << PG_swapcache,		"swapcache"	},
+	{1UL << PG_mappedtodisk,	"mappedtodisk"	},
+	{1UL << PG_reclaim,		"reclaim"	},
+	{1UL << PG_swapbacked,		"swapbacked"	},
+	{1UL << PG_unevictable,		"unevictable"	},
+#ifdef CONFIG_MMU
+	{1UL << PG_mlocked,		"mlocked"	},
+#endif
+#ifdef CONFIG_ARCH_USES_PG_UNCACHED
+	{1UL << PG_uncached,		"uncached"	},
+#endif
+#ifdef CONFIG_MEMORY_FAILURE
+	{1UL << PG_hwpoison,		"hwpoison"	},
+#endif
+	{1UL << PG_readahead,           "PG_readahead"  },
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
+	{1UL << PG_compound_lock,	"compound_lock"	},
+#endif
+};
+
+static void dump_page_flags(unsigned long flags)
+{
+	const char *delim = "";
+	unsigned long mask;
+	int i;
+
+	printk(KERN_ALERT "page flags: %#lx(", flags);
+
+	/* remove zone id */
+	flags &= (1UL << NR_PAGEFLAGS) - 1;
+
+	for (i = 0; i < ARRAY_SIZE(pageflag_names) && flags; i++) {
+
+		mask = pageflag_names[i].mask;
+		if ((flags & mask) != mask)
+			continue;
+
+		flags &= ~mask;
+		printk("%s%s", delim, pageflag_names[i].name);
+		delim = "|";
+	}
+
+	/* check for left over flags */
+	if (flags)
+		printk("%s%#lx", delim, flags);
+
+	printk(")\n");
+}
+
+void dump_page(struct page *page)
+{
+	printk(KERN_ALERT
+	       "page:%p count:%d mapcount:%d mapping:%p index:%#lx\n",
+		page, atomic_read(&page->_count), page_mapcount(page),
+		page->mapping, page->index);
+	dump_page_flags(page->flags);
+	mem_cgroup_print_bad_page(page);
+}
