@@ -20,8 +20,13 @@
 
 #######
 #Skydragon
-TOOLCHAIN=/root/skydragon/bin/arm-cortex_a15-linux-gnueabihf-
-export PATH=/root/skydragon/bin:$PATH
+#TOOLCHAIN=/root/skydragon/bin/arm-cortex_a15-linux-gnueabihf-
+#export PATH=/root/skydragon/bin:$PATH
+#######
+
+#ROBCORE'S TOOLCHAIN
+TOOLCHAIN=/root/x-tools/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+export PATH=/root/x-tools/arm-cortex_a15-linux-gnueabihf/bin:$PATH
 #######
 
 if [ -d $(pwd)/out ]; then

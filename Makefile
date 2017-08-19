@@ -214,8 +214,12 @@ ARCH		?=arm
 #CROSS_COMPILE	?=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 ###############
 ##Skydragon#
-CROSS_COMPILE	?=/root/skydragon/bin/arm-cortex_a15-linux-gnueabihf-
+#CROSS_COMPILE	?=/root/skydragon/bin/arm-cortex_a15-linux-gnueabihf-
 ###############
+#########
+#ROBCORE'S TOOLCHAIN
+CROSS_COMPILE	?=/root/x-tools/arm-cortex_a15-linux-gnueabihf/bin/arm-cortex_a15-linux-gnueabihf-
+#########
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
 SRCARCH 	:= $(ARCH)
