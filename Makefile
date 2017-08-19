@@ -211,9 +211,11 @@ ARCH		?=arm
 ###############
 ################
 ##LINARO May#
-CROSS_COMPILE	?=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+#CROSS_COMPILE	?=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 ###############
-
+##Skydragon#
+CROSS_COMPILE	?=/root/skydragon/bin/arm-linux-gnueabihf-
+###############
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
 SRCARCH 	:= $(ARCH)
@@ -262,9 +264,11 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	  else if [ -x /bin/bash ]; then echo /bin/bash; \
 	  else echo sh; fi ; fi)
 
+GRAPHITE = -fgraphite -fgraphite-identity -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -ftree-loop-linear -floop-nest-optimize
+
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -fgcse-las -flto -pthread $(GRAPHITE) -std=gnu89
 HOSTCXXFLAGS = -O2
 #-fgcse-las
 # Decide whether to build built-in, modular, or both.
@@ -382,8 +386,8 @@ CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
 CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4  -mvectorize-with-neon-quad -munaligned-access\
-				  #-fgraphite -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block \
-				  -ftree-vectorize -funroll-loops  -fno-prefetch-loop-arrays
+				  -fgraphite -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block \
+				  -funsafe-math-optimizations -ftree-vectorize -funroll-loops  -fno-prefetch-loop-arrays -fforce-addr -fsingle-precision-constant
 #-fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
@@ -413,14 +417,14 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-
 		   -fno-strict-aliasing -fno-common -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -std=gnu89 \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label  -Wno-logical-not-parentheses \
-		   -Wno-cpp -fno-var-tracking-assignments -Wfatal-errors \
+		   -Wno-cpp -fno-var-tracking-assignments -Wfatal-errors 		   -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr \ \
 		   -fno-aggressive-loop-optimizations -Wno-sequence-point
 #-Wno-array-bounds -Wno-declaration-after-statement -Wno-sizeof-pointer-memaccess #-Wno-misleading-indentation
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 KBUILD_AFLAGS_MODULE  := -DMODULE
-KBUILD_CFLAGS_MODULE  := -DMODULE
+KBUILD_CFLAGS_MODULE  := -DMODULE -fno-pic
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)

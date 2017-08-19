@@ -2,8 +2,8 @@
 
 ################
 ##LINARO-May#
-TOOLCHAIN=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
-export PATH=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin:$PATH
+#TOOLCHAIN=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+#export PATH=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin:$PATH
 ###############
 
 ################
@@ -22,6 +22,12 @@ export PATH=/root/toolchains/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf
 #OLDEST#
 #TOOLCHAIN=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin/arm-cortex_a15-linux-gnueabihf-
 #export PATH=/opt/toolchains/arm-cortex_a15-linux-gnueabihf_5.3/bin:$PATH
+#######
+
+#######
+#Skydragon
+TOOLCHAIN=/root/skydragon/bin/arm-linux-gnueabihf-
+export PATH=/root/skydragon/bin:$PATH
 #######
 
 washme()
