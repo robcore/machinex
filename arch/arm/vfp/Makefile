@@ -6,12 +6,11 @@
 
 # ccflags-y := -DDEBUG
 # asflags-y := -DDEBUG
-#ifeq ($(CONFIG_KERNEL_MODE_NEON),y)
-#KBUILD_AFLAGS	:=$(KBUILD_AFLAGS:-msoft-float=-Wa,-mfpu=neon-vfpv4 -mfloat-abi=softfp)
-#else
-#KBUILD_AFLAGS	:=$(KBUILD_AFLAGS:-mhard-float=-Wa,-mfpu=neon-vfpv4 -mfloat-abi=hard)
-#endif
+ifeq ($(CONFIG_KERNEL_MODE_NEON),y)
+KBUILD_AFLAGS	:=$(KBUILD_AFLAGS:-msoft-float=-Wa,-mfpu=neon-vfpv4 -mfloat-abi=softfp)
+else
 KBUILD_AFLAGS	:=$(KBUILD_AFLAGS:-mhard-float=-Wa,-mfpu=neon-vfpv4 -mfloat-abi=hard)
+endif
 LDFLAGS		+=--no-warn-mismatch
 
 obj-y			+= vfp.o
