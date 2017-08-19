@@ -363,7 +363,7 @@ static void bad_page(struct page *page)
 
 	printk(KERN_ALERT "BUG: Bad page state in process %s  pfn:%05lx\n",
 		current->comm, page_to_pfn(page));
-	dump_page(page);
+	dump_page_badflags(page, reason, bad_flags);
 
 	print_modules();
 	dump_stack();
