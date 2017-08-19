@@ -26,7 +26,7 @@
 
 #######
 #Skydragon
-TOOLCHAIN=/root/skydragon/bin/arm-linux-gnueabihf-
+TOOLCHAIN=/root/skydragon/bin/arm-cortex_a15-linux-gnueabihf-
 export PATH=/root/skydragon/bin:$PATH
 #######
 
