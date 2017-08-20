@@ -274,7 +274,7 @@ ENTRY(\name\()_processor_functions)
 
 	.if \suspend
 	.word	cpu_\name\()_suspend_size
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_ARM_CPU_SUSPEND
 	.word	cpu_\name\()_do_suspend
 	.word	cpu_\name\()_do_resume
 #else
@@ -322,4 +322,9 @@ ENTRY(\name\()_tlb_fns)
 		.long	\flags_up
 	.endif
 	.size	\name\()_tlb_fns, . - \name\()_tlb_fns
+.endm
+
+.macro globl_equ x, y
+	.globl	\x
+	.equ	\x, \y
 .endm
