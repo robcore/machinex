@@ -158,12 +158,6 @@ first_time:
 }
 EXPORT_SYMBOL(cpu_boost_event);
 
-static void cpuboost_input_event(struct input_handle *handle,
-		unsigned int type, unsigned int code, int value)
-{
-	void cpu_boost_event(void);
-}
-
 static int cpu_boost_init(void)
 {
 	int cpu, ret;
