@@ -85,10 +85,8 @@ static const struct kernel_param_ops param_ops_input_boost_freq = {
 };
 module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
-static void update_policy_online(void)
+static void update_policy_online(unsigned int cpu)
 {
-	unsigned int cpu;
-
 	if (!is_display_on())
 		return;
 
@@ -111,7 +109,7 @@ static void do_input_boost_rem(struct work_struct *work)
 		if (cpufreq_get_policy(&policy, cpu))
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
-		update_policy_online();
+		update_policy_online(cpu);
 	}
 
 
@@ -129,7 +127,7 @@ static void do_input_boost(struct work_struct *work)
 	for_each_online_cpu(cpu) {
 		i_sync_info = &per_cpu(sync_info, cpu);
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
-		update_policy_online();
+		update_policy_online(cpu);
 	}
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
