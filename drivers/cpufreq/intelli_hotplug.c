@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -386,11 +386,12 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 }
 
-static void intelli_plug_input_event(struct input_handle *handle,
-		unsigned int type, unsigned int code, int value)
+void intelli_boost(void)
 {
-	u64 now;
-	s64 delta;
+	u64 now, delta;
+
+	if (!intelli_plug_active || !is_display_on())
+		return;
 
 	if (unlikely(intellinit))
 		return;
@@ -410,71 +411,6 @@ static void intelli_plug_input_event(struct input_handle *handle,
 	schedule_work_on(0, &up_down_work);
 	last_boost_time = ktime_to_us(ktime_get());
 }
-
-static int intelli_plug_input_connect(struct input_handler *handler,
-				 struct input_dev *dev,
-				 const struct input_device_id *id)
-{
-	struct input_handle *handle;
-	int err;
-
-	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
-	if (!handle)
-		return -ENOMEM;
-
-	handle->dev = dev;
-	handle->handler = handler;
-	handle->name = handler->name;
-
-	err = input_register_handle(handle);
-	if (err)
-		goto err_register;
-
-	err = input_open_device(handle);
-	if (err)
-		goto err_open;
-
-	return 0;
-err_open:
-	input_unregister_handle(handle);
-err_register:
-	kfree(handle);
-	return err;
-}
-
-static void intelli_plug_input_disconnect(struct input_handle *handle)
-{
-	input_close_device(handle);
-	input_unregister_handle(handle);
-	kfree(handle);
-}
-
-static const struct input_device_id intelli_plug_ids[] = {
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-			 INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.evbit = { BIT_MASK(EV_ABS) },
-		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
-			    BIT_MASK(ABS_MT_POSITION_X) |
-			    BIT_MASK(ABS_MT_POSITION_Y) },
-	}, /* multi-touch touchscreen */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
-			 INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
-		.absbit = { [BIT_WORD(ABS_X)] =
-			    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
-	}, /* touchpad */
-	{ },
-};
-
-static struct input_handler intelli_plug_input_handler = {
-	.event          = intelli_plug_input_event,
-	.connect        = intelli_plug_input_connect,
-	.disconnect     = intelli_plug_input_disconnect,
-	.name           = "intelliplug_handler",
-	.id_table       = intelli_plug_ids,
-};
 
 static void cycle_cpus(void)
 {
@@ -610,13 +546,6 @@ static int intelli_plug_start(void)
 		goto err_out;
 	}
 
-	ret = input_register_handler(&intelli_plug_input_handler);
-	if (ret) {
-		pr_err("%s: Failed to register input handler: %d\n",
-			INTELLI_PLUG, ret);
-		goto err_dev;
-	}
-
 	mutex_init(&intelli_plug_mutex);
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
@@ -626,12 +555,13 @@ static int intelli_plug_start(void)
 
 	register_power_suspend(&intelli_suspend_data);
 
-	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
-	INIT_WORK(&up_down_work, cpu_up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
+
+	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
+	INIT_WORK(&up_down_work, cpu_up_down_work);
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
@@ -665,7 +595,6 @@ static void intelli_plug_stop(void)
 	}
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
-	input_unregister_handler(&intelli_plug_input_handler);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	for_each_possible_cpu(cpu) {
@@ -976,6 +905,8 @@ static void __exit intelli_plug_exit(void)
 #endif
 		intelli_plug_stop();
 }
+
+	wake_lock_destroy(&ipwlock);
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
 
