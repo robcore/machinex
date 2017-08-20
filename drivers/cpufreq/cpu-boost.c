@@ -140,11 +140,11 @@ static void do_input_boost(struct work_struct *work)
 					msecs_to_jiffies(input_boost_ms));
 }
 
+u64 min_interval;
+u64 now;
+
 void cpu_boost_event(void)
 {
-	u64 min_interval;
-	u64 now;
-
 	if (!input_boost_enabled || !hotplug_ready 
 	    || !input_boost_ms || !is_display_on())
 		return;
@@ -248,9 +248,6 @@ static int cpu_boost_init(void)
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
-	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
-	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
-
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
@@ -259,6 +256,9 @@ static int cpu_boost_init(void)
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
 		pr_err("ERROR! Cpuboost input handler registration failed!\n");
+
+	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
+	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	return ret;
 }
