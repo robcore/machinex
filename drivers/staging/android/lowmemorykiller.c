@@ -30,6 +30,8 @@
  *
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -71,7 +73,7 @@ static uint32_t oom_count = 0;
 #endif
 
 #ifdef MULTIPLE_OOM_KILLER
-#define OOM_DEPTH 4
+#define OOM_DEPTH 7
 #endif
 
 static uint32_t lowmem_debug_level = 1;
@@ -95,7 +97,7 @@ static unsigned long lowmem_deathpending_timeout;
 #define lowmem_print(level, x...)			\
 	do {						\
 		if (lowmem_debug_level >= (level))	\
-			printk(x);			\
+			pr_info(x);			\
 	} while (0)
 
 #if defined(CONFIG_SEC_DEBUG_LMK_MEMINFO_VERBOSE)
@@ -196,6 +198,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	unsigned long rem = 0;
 	int tasksize;
 	int i;
+	int ret = 0;
 	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
 #ifdef ENHANCED_LMK_ROUTINE
 	int selected_tasksize[LOWMEM_DEATHPENDING_DEPTH] = {0,};
@@ -239,6 +242,9 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			break;
 		}
 	}
+
+	ret = adjust_minadj(&min_score_adj);
+
 	lowmem_print(3, "lowmem_scan %lu, %x, ofree %d %d, ma %hd\n",
 			sc->nr_to_scan, sc->gfp_mask, other_free,
 			other_file, min_score_adj);
@@ -272,22 +278,27 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_SAMP_HOTNESS
 		int hotness_adj = 0;
 #endif
-		if (tsk->flags & PF_KTHREAD)
+		if (tsk->flags & PF_KTHREAD ||
+			tsk->state & TASK_UNINTERRUPTIBLE)
 			continue;
 
-		p = find_lock_task_mm(tsk);
-		if (!p)
+		/* if task no longer has any memory ignore it */
+		if (test_tsk_thread_flag(tsk, TIF_MM_RELEASED))
 			continue;
 
-		if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
-			time_before_eq(jiffies, lowmem_deathpending_timeout)) {
-				task_unlock(p);
+		if (time_before_eq(jiffies, lowmem_deathpending_timeout)) {
+			if (test_tsk_thread_flag(p, TIF_MEMDIE) {
 				rcu_read_unlock();
 				/* give the system time to free up the memory */
 				msleep_interruptible(20);
 				mutex_unlock(&scan_mutex);
 				return 0;
+			}
 		}
+
+		p = find_lock_task_mm(tsk);
+		if (!p)
+			continue;
 
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
@@ -394,15 +405,16 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #else
 	if (selected) {
 		lowmem_deathpending_timeout = jiffies + HZ;
-		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
+		send_sig(SIGKILL, selected, 0);
 		rem += selected_tasksize;
-		msleep_interruptible(20);
+		rcu_read_unlock();
 		if(reclaim_state)
 			reclaim_state->reclaimed_slab = selected_tasksize;
 #ifdef LMK_COUNT_READ
 		lmk_count++;
 #endif
+		msleep_interruptible(10);
 	} else
 		rcu_read_unlock();
 #endif
