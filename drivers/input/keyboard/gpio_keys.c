@@ -36,6 +36,7 @@
 #include <linux/timed_output.h>
 #include <linux/display_state.h>
 #include <mach/jf_eur-gpio.h>
+#include <linux/cpufreq.h>
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -398,6 +399,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 		container_of(work, struct gpio_button_data, work.work);
 
 	gpio_keys_gpio_report_event(bdata);
+	cpuboost_keypress_event();
 
 	if (bdata->button->wakeup) {
 		if (fakepressed) {
