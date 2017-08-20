@@ -92,10 +92,8 @@ static void update_policy_online(void)
 	if (!is_display_on())
 		return;
 
-	for_each_online_cpu(cpu) {
-		reapply_hard_limits(cpu);
-		cpufreq_update_policy(cpu);
-	}
+	reapply_hard_limits(cpu);
+	cpufreq_update_policy(cpu);
 }
 
 static void do_input_boost_rem(struct work_struct *work)
@@ -113,10 +111,10 @@ static void do_input_boost_rem(struct work_struct *work)
 		if (cpufreq_get_policy(&policy, cpu))
 			continue;
 		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
+		update_policy_online();
 	}
 
-	/* Update policies for all online CPUs */
-	update_policy_online();
+
 }
 
 static void do_input_boost(struct work_struct *work)
@@ -131,10 +129,8 @@ static void do_input_boost(struct work_struct *work)
 	for_each_online_cpu(cpu) {
 		i_sync_info = &per_cpu(sync_info, cpu);
 		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
+		update_policy_online();
 	}
-
-	/* Update policies for all online CPUs */
-	update_policy_online();
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
@@ -213,7 +209,6 @@ static const struct input_device_id cpuboost_ids[] = {
 			BIT_MASK(ABS_MT_POSITION_X) |
 			BIT_MASK(ABS_MT_POSITION_Y) },
 	},
-#if 0
 	/* touchpad */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
@@ -222,6 +217,7 @@ static const struct input_device_id cpuboost_ids[] = {
 		.absbit = { [BIT_WORD(ABS_X)] =
 			BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
 	},
+#if 0
 	/* Keypad */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
