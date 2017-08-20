@@ -118,6 +118,7 @@ if [[ $ONLINE == recovery ]]; then
 	adbcountdown
 elif [[ $ONLINE == device ]]; then
 	echo "connected"
+	adb shell su -C "input keyevent KEYCODE_POWER";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
@@ -305,6 +306,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
+	adb shell su -C "input keyevent KEYCODE_POWER";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
@@ -491,6 +493,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
+	adb shell su -C "input keyevent KEYCODE_POWER";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -661,6 +664,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
+	adb shell su -C "input keyevent KEYCODE_POWER";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -861,6 +865,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
+	adb shell su -C "input keyevent KEYCODE_POWER";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
@@ -968,6 +973,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
+	adb shell su -C "input keyevent KEYCODE_POWER";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
