@@ -146,9 +146,13 @@ void cpu_boost_event(void)
 	min_interval = max(min_input_interval, input_boost_ms);
 	now = ktime_to_us(ktime_get());
 
+	if (!last_input_time)
+		goto first_time;
+
 	if (now - last_input_time < min_interval * USEC_PER_MSEC)
 		return;
 
+first_time:
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
 	last_input_time = ktime_to_us(ktime_get());
 }
