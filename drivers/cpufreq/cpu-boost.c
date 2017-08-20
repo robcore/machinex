@@ -158,7 +158,7 @@ void cpu_boost_event(void)
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
 	last_input_time = ktime_to_us(ktime_get());
 }
-EXPORT_SYMBOL(cpuboost_event);
+EXPORT_SYMBOL(cpu_boost_event);
 
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
