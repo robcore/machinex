@@ -34,6 +34,7 @@
 #include "issp_extern.h"
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include "../../../../arch/arm/mach-msm/board-8064.h"
+#include <linux/cpufreq.h>
 
 #define CYPRESS_GEN		0X00
 #define CYPRESS_FW_VER		0X01
@@ -897,6 +898,7 @@ static irqreturn_t cypress_touchkey_interrupt(int irq, void *dev_id)
 #ifdef CONFIG_FAKE_DVFS
 	cypress_set_dvfs_lock(info, !!press);
 #endif
+	cpu_boost_event();
 
 out:
 	return IRQ_HANDLED;

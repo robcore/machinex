@@ -140,7 +140,7 @@ static void do_input_boost(struct work_struct *work)
 					msecs_to_jiffies(input_boost_ms));
 }
 
-void cpuboost_keypress_event(void)
+void cpu_boost_event(void)
 {
 	u64 min_interval;
 	u64 now;
@@ -158,26 +158,12 @@ void cpuboost_keypress_event(void)
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
 	last_input_time = ktime_to_us(ktime_get());
 }
-EXPORT_SYMBOL(cpuboost_keypress_event);
+EXPORT_SYMBOL(cpuboost_event);
 
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-	u64 min_interval;
-	u64 now;
-
-	if (!input_boost_enabled || !hotplug_ready 
-	    || !input_boost_ms || !is_display_on())
-		return;
-
-	min_interval = max(min_input_interval, input_boost_ms);
-	now = ktime_to_us(ktime_get());
-
-	if (now - last_input_time < min_interval * USEC_PER_MSEC)
-		return;
-
-	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
-	last_input_time = ktime_to_us(ktime_get());
+	void cpu_boost_event(void);
 }
 
 static int cpuboost_input_connect(struct input_handler *handler,

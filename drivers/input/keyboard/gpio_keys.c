@@ -399,7 +399,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 		container_of(work, struct gpio_button_data, work.work);
 
 	gpio_keys_gpio_report_event(bdata);
-	cpuboost_keypress_event();
+	cpu_boost_event();
 
 	if (bdata->button->wakeup) {
 		if (fakepressed) {
