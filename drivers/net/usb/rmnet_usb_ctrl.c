@@ -29,12 +29,11 @@ int subsystem_restart(const char *name);
 #endif
 #include "rmnet_usb.h"
 
-
 static char *rmnet_dev_names[MAX_RMNET_DEVS] = {"hsicctl"};
 module_param_array(rmnet_dev_names, charp, NULL, S_IRUGO | S_IWUSR);
 
 #define DEFAULT_READ_URB_LENGTH		0x1000
-#define UNLINK_TIMEOUT_MS		750 /*random value*/
+#define UNLINK_TIMEOUT_MS		500 /*random value*/
 
 /*Output control lines.*/
 #define ACM_CTRL_DTR		BIT(0)
@@ -90,7 +89,7 @@ enum {
 do { \
 	if (ctl_msg_dbg_mask & MSM_USB_CTL_DUMP_BUFFER) \
 			print_hex_dump(KERN_INFO, prestr, DUMP_PREFIX_NONE, \
-					16, 1, buf, cnt, false); \
+					16, 1, buf, (cnt < 16 ? cnt : 16), false); \
 } while (0)
 
 #define DBG(x...) \
@@ -184,6 +183,10 @@ static void get_encap_work(struct work_struct *w)
 	if (!test_bit(RMNET_CTRL_DEV_READY, &dev->status))
 		return;
 
+	if (dev->rcvurb->anchor) {
+		return;
+	}
+
 	udev = interface_to_usbdev(dev->intf);
 
 	status = usb_autopm_get_interface(dev->intf);
@@ -236,6 +239,10 @@ static void notification_available_cb(struct urb *urb)
 	struct usb_cdc_notification	*ctrl;
 	struct usb_device		*udev;
 	struct rmnet_ctrl_dev		*dev = urb->context;
+
+	/*usb device disconnect*/
+	if (urb->dev->state == USB_STATE_NOTATTACHED)
+		return;
 
 	udev = interface_to_usbdev(dev->intf);
 
@@ -930,6 +937,7 @@ int rmnet_usb_ctrl_probe(struct usb_interface *intf,
 	dev->inturb = usb_alloc_urb(0, GFP_KERNEL);
 	if (!dev->inturb) {
 		dev_err(dev->devicep, "Error allocating int urb\n");
+		kfree(dev);
 		return -ENOMEM;
 	}
 
@@ -990,13 +998,13 @@ void rmnet_usb_ctrl_disconnect(struct rmnet_ctrl_dev *dev)
 
 	clear_bit(RMNET_CTRL_DEV_READY, &dev->status);
 
+	wake_up(&dev->read_wait_queue);
+
 	mutex_lock(&dev->dev_lock);
 	/*TBD: for now just update CD status*/
 	dev->cbits_tolocal = ~ACM_CTRL_CD;
 	dev->cbits_tomdm = ~ACM_CTRL_DTR;
 	mutex_unlock(&dev->dev_lock);
-
-	wake_up(&dev->read_wait_queue);
 
 	cancel_work_sync(&dev->get_encap_work);
 
