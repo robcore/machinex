@@ -399,8 +399,6 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 		container_of(work, struct gpio_button_data, work.work);
 
 	gpio_keys_gpio_report_event(bdata);
-	intelli_boost();
-	cpu_boost_event();
 
 	if (bdata->button->wakeup) {
 		if (fakepressed) {
@@ -434,6 +432,9 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 			fakepressed = true;
 		}
 	}
+
+	cpu_boost_event();
+	intelli_boost();
 
 	mod_delayed_work(system_wq,
 			 &bdata->work,
