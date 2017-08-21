@@ -1959,12 +1959,13 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		goto error;
 	}
 
-	allowed = vm_commit_limit();
+	allowed = totalram_pages * sysctl_overcommit_ratio / 100;
 	/*
 	 * Reserve some 3% for root
 	 */
 	if (!cap_sys_admin)
 		allowed -= sysctl_admin_reserve_kbytes >> (PAGE_SHIFT - 10);
+	allowed += total_swap_pages;
 
 	/*
 	 * Don't let a single process grow so big a user can't recover

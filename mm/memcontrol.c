@@ -60,7 +60,6 @@
 #include "internal.h"
 #include <net/sock.h>
 #include <net/tcp_memcontrol.h>
-#include "slab.h"
 
 #include <asm/uaccess.h>
 
@@ -3020,7 +3019,7 @@ static struct kmem_cache *memcg_params_to_cache(struct memcg_cache_params *p)
 
 	VM_BUG_ON(p->is_root_cache);
 	cachep = p->root_cache;
-	return cache_from_memcg_idx(cachep, memcg_cache_id(p->memcg));
+	return cachep->memcg_params->memcg_caches[memcg_cache_id(p->memcg)];
 }
 
 #ifdef CONFIG_SLABINFO
@@ -3195,7 +3194,7 @@ int memcg_update_cache_size(struct kmem_cache *s, int num_groups)
 {
 	struct memcg_cache_params *cur_params = s->memcg_params;
 
-	VM_BUG_ON(!is_root_cache(s));
+	VM_BUG_ON(s->memcg_params && !s->memcg_params->is_root_cache);
 
 	if (num_groups > memcg_limited_groups_array_size) {
 		int i;
@@ -3459,7 +3458,7 @@ static struct kmem_cache *memcg_create_kmem_cache(struct mem_cgroup *memcg,
 	idx = memcg_cache_id(memcg);
 
 	mutex_lock(&memcg_cache_mutex);
-	new_cachep = cache_from_memcg_idx(cachep, idx);
+	new_cachep = cachep->memcg_params->memcg_caches[idx];
 	if (new_cachep) {
 		css_put(&memcg->css);
 		goto out;
@@ -3505,8 +3504,8 @@ void kmem_cache_destroy_memcg_children(struct kmem_cache *s)
 	 * we'll take the set_limit_mutex to protect ourselves against this.
 	 */
 	mutex_lock(&set_limit_mutex);
-	for_each_memcg_cache_index(i) {
-		c = cache_from_memcg_idx(s, i);
+	for (i = 0; i < memcg_limited_groups_array_size; i++) {
+		c = s->memcg_params->memcg_caches[i];
 		if (!c)
 			continue;
 
@@ -3639,8 +3638,8 @@ struct kmem_cache *__memcg_kmem_get_cache(struct kmem_cache *cachep,
 	 * code updating memcg_caches will issue a write barrier to match this.
 	 */
 	read_barrier_depends();
-	if (likely(cache_from_memcg_idx(cachep, idx))) {
-		cachep = cache_from_memcg_idx(cachep, idx);
+	if (likely(cachep->memcg_params->memcg_caches[idx])) {
+		cachep = cachep->memcg_params->memcg_caches[idx];
 		goto out;
 	}
 

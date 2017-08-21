@@ -70,8 +70,8 @@
 
 #include "internal.h"
 
-#ifdef LAST_CPUPID_NOT_IN_PAGE_FLAGS
-#warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_cpupid.
+#ifdef LAST_NID_NOT_IN_PAGE_FLAGS
+#warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_nid.
 #endif
 
 #ifndef CONFIG_NEED_MULTIPLE_NODES
@@ -117,8 +117,6 @@ __setup("norandmaps", disable_randmaps);
 unsigned long zero_pfn __read_mostly;
 unsigned long highest_memmap_pfn __read_mostly;
 
-EXPORT_SYMBOL(zero_pfn);
-
 /*
  * CONFIG_MMU architectures set up ZERO_PAGE in their paging_init()
  */
@@ -159,6 +157,9 @@ static void add_mm_counter_fast(struct mm_struct *mm, int member, int val)
 
 /* sync counter once per 64 page faults */
 #define TASK_RSS_EVENTS_THRESH	(64)
+#if defined(CONFIG_VMWARE_MVP)
+EXPORT_SYMBOL_GPL(get_mm_counter);
+#endif
 static void check_sync_rss_stat(struct task_struct *task)
 {
 	if (unlikely(task != current))
@@ -218,7 +219,9 @@ void tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm, unsigned long 
 
 	/* Is it from 0 to ~0? */
 	tlb->fullmm     = !(start | (end+1));
-	tlb->need_flush_all = 0;
+	tlb->start	= start;
+	tlb->end	= end;
+	tlb->need_flush = 0;
 	tlb->local.next = NULL;
 	tlb->local.nr   = 0;
 	tlb->local.max  = ARRAY_SIZE(tlb->__pages);
@@ -228,37 +231,25 @@ void tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm, unsigned long 
 #ifdef CONFIG_HAVE_RCU_TABLE_FREE
 	tlb->batch = NULL;
 #endif
-
-	__tlb_reset_range(tlb);
 }
 
-static void tlb_flush_mmu_tlbonly(struct mmu_gather *tlb)
+void tlb_flush_mmu(struct mmu_gather *tlb)
 {
-	if (!tlb->end)
-		return;
+	struct mmu_gather_batch *batch;
 
+	if (!tlb->need_flush)
+		return;
+	tlb->need_flush = 0;
 	tlb_flush(tlb);
 #ifdef CONFIG_HAVE_RCU_TABLE_FREE
 	tlb_table_flush(tlb);
 #endif
-	__tlb_reset_range(tlb);
-}
-
-static void tlb_flush_mmu_free(struct mmu_gather *tlb)
-{
-	struct mmu_gather_batch *batch;
 
 	for (batch = &tlb->local; batch; batch = batch->next) {
 		free_pages_and_swap_cache(batch->pages, batch->nr);
 		batch->nr = 0;
 	}
 	tlb->active = &tlb->local;
-}
-
-void tlb_flush_mmu(struct mmu_gather *tlb)
-{
-	tlb_flush_mmu_tlbonly(tlb);
-	tlb_flush_mmu_free(tlb);
 }
 
 /* tlb_finish_mmu
@@ -291,7 +282,7 @@ int __tlb_remove_page(struct mmu_gather *tlb, struct page *page)
 {
 	struct mmu_gather_batch *batch;
 
-	VM_BUG_ON(!tlb->end);
+	VM_BUG_ON(!tlb->need_flush);
 
 	batch = tlb->active;
 	batch->pages[batch->nr++] = page;
@@ -358,6 +349,8 @@ void tlb_remove_table(struct mmu_gather *tlb, void *table)
 {
 	struct mmu_table_batch **batch = &tlb->batch;
 
+	tlb->need_flush = 1;
+
 	/*
 	 * When there's less then two users of this mm there cannot be a
 	 * concurrent page-table walk.
@@ -392,7 +385,7 @@ static void free_pte_range(struct mmu_gather *tlb, pmd_t *pmd,
 	pgtable_t token = pmd_pgtable(*pmd);
 	pmd_clear(pmd);
 	pte_free_tlb(tlb, token, addr);
-	atomic_long_dec(&tlb->mm->nr_ptes);
+	tlb->mm->nr_ptes--;
 }
 
 static inline void free_pmd_range(struct mmu_gather *tlb, pud_t *pud,
@@ -560,7 +553,6 @@ void free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *vma,
 int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 		pmd_t *pmd, unsigned long address)
 {
-	spinlock_t *ptl;
 	pgtable_t new = pte_alloc_one(mm, address);
 	int wait_split_huge_page;
 	if (!new)
@@ -581,15 +573,15 @@ int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 	 */
 	smp_wmb(); /* Could be smp_wmb__xxx(before|after)_spin_lock */
 
-	ptl = pmd_lock(mm, pmd);
+	spin_lock(&mm->page_table_lock);
 	wait_split_huge_page = 0;
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
-		atomic_long_inc(&mm->nr_ptes);
+		mm->nr_ptes++;
 		pmd_populate(mm, pmd, new);
 		new = NULL;
 	} else if (unlikely(pmd_trans_splitting(*pmd)))
 		wait_split_huge_page = 1;
-	spin_unlock(ptl);
+	spin_unlock(&mm->page_table_lock);
 	if (new)
 		pte_free(mm, new);
 	if (wait_split_huge_page)
@@ -680,7 +672,7 @@ static void print_bad_pte(struct vm_area_struct *vma, unsigned long addr,
 		current->comm,
 		(long long)pte_val(pte), (long long)pmd_val(*pmd));
 	if (page)
-		dump_page(page, "bad pte");
+		dump_page(page);
 	printk(KERN_ALERT
 		"addr:%p vm_flags:%08lx anon_vma:%p mapping:%p index:%lx\n",
 		(void *)addr, vma->vm_flags, vma->anon_vma, mapping, index);
@@ -695,6 +687,11 @@ static void print_bad_pte(struct vm_area_struct *vma, unsigned long addr,
 		       vma->vm_file->f_op->mmap);
 	dump_stack();
 	add_taint(TAINT_BAD_PAGE, LOCKDEP_NOW_UNRELIABLE);
+}
+
+static inline int is_cow_mapping(vm_flags_t flags)
+{
+	return (flags & (VM_SHARED | VM_MAYWRITE)) == VM_MAYWRITE;
 }
 
 /*
