@@ -2800,7 +2800,6 @@ static void run_trx_short_test(void)
 {
 	struct factory_data *data = f54->factory_data;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
-	unsigned char command;
 	short *report_data;
 	unsigned char ii;
 	int retval = 0;
@@ -2851,7 +2850,6 @@ static void run_trx_short_test(void)
 	else
 		sprintf(data->cmd_buff, "OK");
 
-	f54->rmi4_data->reset_device(rmi4_data);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
 	cmd_state = CMD_STATUS_OK;
@@ -2859,20 +2857,8 @@ static void run_trx_short_test(void)
 exit:
 	enable_irq(rmi4_data->i2c_client->irq);
 
-	command = (unsigned char)COMMAND_FORCE_UPDATE;
-
-	/* soft reset */
-	retval = f54->fn_ptr->write(rmi4_data,
-		rmi4_data->f01_cmd_base_addr,
-		&command,
-		sizeof(command));
-
-	if (retval < 0) {
-		dev_err(&rmi4_data->i2c_client->dev,
-				"%s: Failed to issue reset command, error = %d\n",
-				__func__, retval);
-	}
-
+	f54->rmi4_data->reset_device(rmi4_data);
+	
 	data->cmd_state = cmd_state;
 
 	return;
