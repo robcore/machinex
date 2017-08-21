@@ -38,9 +38,9 @@
 #define TSP_DELTA_MIN	-10
 
 #define WATCHDOG_HRTIMER
-#define WATCHDOG_TIMEOUT_S	2 /* sec */
+#define WATCHDOG_TIMEOUT_S 2
 #define FORCE_TIMEOUT_100MS 10
-#define STATUS_WORK_INTERVAL	20 /* ms */
+#define STATUS_WORK_INTERVAL 20 /* ms */
 
 /*
 #define RAW_HEX
@@ -49,6 +49,7 @@
 
 #define STATUS_IDLE 0
 #define STATUS_BUSY 1
+#define STATUS_ERROR 2
 
 #define DATA_REPORT_INDEX_OFFSET 1
 #define DATA_REPORT_DATA_OFFSET 3
@@ -1572,6 +1573,8 @@ static int do_preparation(void)
 	unsigned char timeout_count;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
 
+	mutex_lock(&f54->control_mutex);
+
 	if (f54->query.touch_controller_family == 1) {
 		value = 0;
 		retval = f54->fn_ptr->write(rmi4_data,
@@ -1579,7 +1582,7 @@ static int do_preparation(void)
 				&value,
 				sizeof(f54->control.reg_7->data));
 		if (retval < 0) {
-			pr_debug("rmi-couldn't do the thing");
+			mutex_unlock(&f54->control_mutex);
 			return retval;
 		}
 	}
@@ -1595,6 +1598,7 @@ static int do_preparation(void)
 			dev_err(&rmi4_data->i2c_client->dev,
 					"%s: Failed to disable 0D CBC\n",
 					__func__);
+			mutex_unlock(&f54->control_mutex);
 			return retval;
 		}
 	}
@@ -1607,10 +1611,12 @@ static int do_preparation(void)
 				&value,
 				sizeof(f54->control.reg_41->data));
 		if (retval < 0) {
-			pr_debug("rmi-couldn't do the thing");
+			mutex_unlock(&f54->control_mutex);
 			return retval;
 		}
 	}
+
+	mutex_unlock(&f54->control_mutex);
 
 	command = (unsigned char)COMMAND_FORCE_UPDATE;
 
@@ -1698,10 +1704,10 @@ static void timeout_set_status(struct work_struct *work)
 				sizeof(command));
 		if (retval < 0) {
 			pr_debug("rmi-couldn't do the thing");
-			f54->status = -ETIMEDOUT;
+			f54->status = STATUS_ERROR;
 		} else if (command & COMMAND_GET_REPORT) {
 			pr_debug("rmi-couldn't do the thing");
-			f54->status = -ETIMEDOUT;
+			f54->status = STATUS_ERROR;
 		} else {
 			queue_delayed_work(f54->status_workqueue,
 					&f54->status_work,
@@ -1715,14 +1721,26 @@ static void timeout_set_status(struct work_struct *work)
 	mutex_unlock(&f54->status_mutex);
 
 	/* read fail : need ic reset */
-	if (f54->status == -ETIMEDOUT) {
+	if (f54->status == STATUS_ERROR) {
+		if (rmi4_data->touch_stopped) {
+			dev_err(&rmi4_data->i2c_client->dev, "%s: [ERROR] Touch is stopped\n",
+					__func__);
+			f54->status = STATUS_IDLE;
+			return;
+		}
+
+		retval = rmi4_data->reset_device(rmi4_data);
+		if (retval < 0) {
+			dev_err(&rmi4_data->i2c_client->dev,
+					"%s: Failed to issue reset command, error = %d\n",
+					__func__, retval);
+		}
+
 		mutex_lock(&f54->status_mutex);
-		retval = synaptics_rmi4_reset_device(rmi4_data);
-		if (retval < 0)
-			pr_debug("rmi-couldn't do the thing");
 		f54->status = STATUS_IDLE;
 		mutex_unlock(&f54->status_mutex);
 	}
+	
 	return;
 }
 
@@ -1790,7 +1808,6 @@ static void print_image_report(void)
 	case F54_TRUE_BASELINE:
 	case F54_FULL_RAW_CAP:
 	case F54_FULL_RAW_CAP_RX_COUPLING_COMP:
-		pr_debug("%s: Report data (image)\n", __func__);
 
 		report_data = (short *)f54->report_data;
 
@@ -1872,6 +1889,10 @@ static void remove_sysfs(void)
 	for (reg_num = 0; reg_num < ARRAY_SIZE(attrs_ctrl_regs); reg_num++)
 		sysfs_remove_group(f54->attr_dir, &attrs_ctrl_regs[reg_num]);
 
+#ifdef FACTORY_MODE
+	sysfs_remove_group(f54->attr_dir, &cmd_attr_group);
+#endif
+
 	kobject_put(f54->attr_dir);
 
 	return;
@@ -1918,14 +1939,13 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	}
 
-	if (data->cmd_is_running == true) {
-		dev_err(&rmi4_data->i2c_client->dev, "%s: Still servicing previous command. Skip cmd :%s\n",
-			 __func__, buf);
+	if ((int)count >= CMD_STR_LEN) {
 		return count;
 	}
 
-	if ((int)count >= CMD_STR_LEN) {
-		pr_debug("no way\n");
+	if (data->cmd_is_running == true) {
+		dev_err(&rmi4_data->i2c_client->dev, "%s: Still servicing previous command. Skip cmd :%s\n",
+			 __func__, buf);
 		return count;
 	}
 
@@ -1950,13 +1970,6 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 	else
 		memcpy(buffer, buf, length);
 
-	list_for_each_entry(ft_cmd_ptr, &data->cmd_list_head, list) {
-		if (!strcmp(buffer, "spay_enable")) {
-			cmd_found = false;
-			goto fail;
-		}
-	}
-
 	/* find command */
 	list_for_each_entry(ft_cmd_ptr, &data->cmd_list_head, list) {
 		if (!strcmp(buffer, ft_cmd_ptr->cmd_name)) {
@@ -1968,7 +1981,7 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 	/* set not_support_cmd */
 	if (!cmd_found) {
 		list_for_each_entry(ft_cmd_ptr,
-			&data->cmd_list_head, list) {
+				&data->cmd_list_head, list) {
 			if (!strcmp("not_support_cmd", ft_cmd_ptr->cmd_name))
 				break;
 		}
@@ -2000,14 +2013,6 @@ static ssize_t cmd_store(struct device *dev, struct device_attribute *attr,
 	ft_cmd_ptr->cmd_func();
 
 	return count;
-fail:
-	mutex_lock(&data->cmd_lock);
-	data->cmd_is_running = false;
-	mutex_unlock(&data->cmd_lock);
-
-	data->cmd_state = CMD_STATUS_FAIL;
-
-	return -EINVAL;
 }
 
 static ssize_t cmd_status_show(struct device *dev,
@@ -2220,12 +2225,13 @@ static void get_fac_fw_ver_bin(void)
 	const struct firmware *fw_entry = NULL;
 
 	set_default_result(data);
+
 #if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	retval = request_firmware(&fw_entry, FW_IMAGE_NAME_B0_HSYNC_FAC,
-			&rmi4_data->i2c_client->dev);
+		retval = request_firmware(&fw_entry, FW_IMAGE_NAME_B0_HSYNC_FAC,
+				&rmi4_data->i2c_client->dev);
 #else
-	retval = request_firmware_direct(&fw_entry, FW_IMAGE_NAME_B0_FAC,
-			&rmi4_data->i2c_client->dev);
+		retval = request_firmware_direct(&fw_entry, FW_IMAGE_NAME_B0_FAC,
+				&rmi4_data->i2c_client->dev);
 #endif
 
 	if (retval < 0) {
@@ -2302,10 +2308,10 @@ static void module_off_master(void)
 
 	rmi4_data->board->power(false);
 
+	mutex_unlock(&data->cmd_lock);
+
 	sprintf(data->cmd_buff, "%s", tostring(OK));
 	data->cmd_state = CMD_STATUS_OK;
-
-	mutex_unlock(&data->cmd_lock);
 
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 }
@@ -2314,6 +2320,7 @@ static void module_on_master(void)
 {
 	struct factory_data *data = f54->factory_data;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
+	int retval;
 
 	set_default_result(data);
 
@@ -2324,11 +2331,10 @@ static void module_on_master(void)
 	rmi4_data->touch_stopped = false;
 	rmi4_data->reset_device(rmi4_data);
 	enable_irq(rmi4_data->i2c_client->irq);
+	mutex_unlock(&data->cmd_lock);
 
 	sprintf(data->cmd_buff, "%s", tostring(OK));
 	data->cmd_state = CMD_STATUS_OK;
-
-	mutex_unlock(&data->cmd_lock);
 
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 }
@@ -2457,6 +2463,8 @@ static void run_rawcap_read(void)
 	struct factory_data *data = f54->factory_data;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
 	unsigned char command = 0x01;
+	int retry = 2;
+	unsigned char cmd_state = CMD_STATUS_RUNNING;
 
 	set_default_result(data);
 
@@ -2490,7 +2498,7 @@ static void run_rawcap_read(void)
 	}
 
 	if (!synaptics_rmi4_f54_get_report_type(CMD_REPORT_TYPE_RAWCAP)) {
-		data->cmd_state = CMD_STATUS_FAIL;
+		cmd_state = CMD_STATUS_FAIL;
 		goto exit;
 	}
 
@@ -2519,7 +2527,7 @@ static void run_rawcap_read(void)
 	sprintf(data->cmd_buff, "%d,%d", min_value, max_value);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
-	data->cmd_state = CMD_STATUS_OK;
+	cmd_state = CMD_STATUS_OK;
 
 exit:
 	/* soft reset */
@@ -2527,11 +2535,14 @@ exit:
 		rmi4_data->f01_cmd_base_addr,
 		&command,
 		sizeof(command));
+
 	if (retval < 0) {
 		dev_err(&rmi4_data->i2c_client->dev,
 				"%s: Failed to issue reset command, error = %d\n",
 				__func__, retval);
 	}
+
+	data->cmd_state = cmd_state;
 
 	return;
 }
@@ -2605,10 +2616,6 @@ static void run_delta_read(void)
 		for (jj = 0; jj < num_of_rx; jj++) {
 			cur_value = *report_data;
 			report_data++;
-			if (cur_value > TSP_DELTA_MAX || cur_value < TSP_DELTA_MIN)
-				dev_info(&rmi4_data->i2c_client->dev,
-					"tx = %02d, rx = %02d, data[%d] = %d\n",
-					ii, jj, kk, cur_value);
 			kk++;
 		}
 	}
@@ -2633,6 +2640,9 @@ static void run_abscap_read(void)
 	unsigned char ii;
 	unsigned short num_of_tx;
 	unsigned short num_of_rx;
+	int retval;
+	unsigned char command;
+	unsigned char cmd_state = CMD_STATUS_RUNNING;
 
 	set_default_result(data);
 
@@ -2655,8 +2665,8 @@ static void run_abscap_read(void)
 	}
 
 	if (!synaptics_rmi4_f54_get_report_type(F54_ABS_RAW_CAP)) {
-		data->cmd_state = CMD_STATUS_FAIL;
-		return;
+		cmd_state = CMD_STATUS_FAIL;
+		goto exit;
 	}
 
 	report_data = f54->factory_data->abscap_data;
@@ -2681,7 +2691,25 @@ static void run_abscap_read(void)
 	sprintf(data->cmd_buff, "%s", temp2);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
-	data->cmd_state = CMD_STATUS_OK;
+	cmd_state = CMD_STATUS_OK;
+
+exit:
+
+	command = (unsigned char)COMMAND_FORCE_UPDATE;
+
+	/* soft reset */
+	retval = f54->fn_ptr->write(rmi4_data,
+		rmi4_data->f01_cmd_base_addr,
+		&command,
+		sizeof(command));
+
+	if (retval < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to issue reset command, error = %d\n",
+				__func__, retval);
+	}
+
+	data->cmd_state = cmd_state;
 
 	return;
 }
@@ -2697,6 +2725,9 @@ static void run_absdelta_read(void)
 	unsigned char ii;
 	unsigned short num_of_tx;
 	unsigned short num_of_rx;
+	int retval;
+	unsigned char command;
+	unsigned char cmd_state = CMD_STATUS_RUNNING;
 
 	set_default_result(data);
 
@@ -2719,8 +2750,8 @@ static void run_absdelta_read(void)
 	}
 
 	if (!synaptics_rmi4_f54_get_report_type(F54_ABS_DELTA_CAP)) {
-		data->cmd_state = CMD_STATUS_FAIL;
-		return;
+		cmd_state = CMD_STATUS_FAIL;
+		goto exit;
 	}
 
 	report_data = f54->factory_data->absdelta_data;
@@ -2744,7 +2775,23 @@ static void run_absdelta_read(void)
 	sprintf(data->cmd_buff, "%s", temp2);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
-	data->cmd_state = CMD_STATUS_OK;
+	cmd_state = CMD_STATUS_OK;
+
+exit:
+	command = (unsigned char)COMMAND_FORCE_UPDATE;
+	/* soft reset */
+	retval = f54->fn_ptr->write(rmi4_data,
+		rmi4_data->f01_cmd_base_addr,
+		&command,
+		sizeof(command));
+
+	if (retval < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to issue reset command, error = %d\n",
+				__func__, retval);
+	}
+
+	data->cmd_state = cmd_state;
 
 	return;
 }
@@ -2753,10 +2800,11 @@ static void run_trx_short_test(void)
 {
 	struct factory_data *data = f54->factory_data;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
-
+	unsigned char command;
 	short *report_data;
 	unsigned char ii;
 	int retval = 0;
+	unsigned char cmd_state = CMD_STATUS_RUNNING;
 
 	set_default_result(data);
 
@@ -2780,8 +2828,8 @@ static void run_trx_short_test(void)
 
 	disable_irq(rmi4_data->i2c_client->irq);
 	if (!synaptics_rmi4_f54_get_report_type(F54_TREX_SHORTS)) {
-		data->cmd_state = CMD_STATUS_FAIL;
-		return;
+		cmd_state = CMD_STATUS_FAIL;
+		goto exit;
 	}
 
 	report_data = f54->factory_data->trx_short;
@@ -2803,12 +2851,29 @@ static void run_trx_short_test(void)
 	else
 		sprintf(data->cmd_buff, "OK");
 
-	enable_irq(rmi4_data->i2c_client->irq);
-
 	f54->rmi4_data->reset_device(rmi4_data);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
-	data->cmd_state = CMD_STATUS_OK;
+	cmd_state = CMD_STATUS_OK;
+
+exit:
+	enable_irq(rmi4_data->i2c_client->irq);
+
+	command = (unsigned char)COMMAND_FORCE_UPDATE;
+
+	/* soft reset */
+	retval = f54->fn_ptr->write(rmi4_data,
+		rmi4_data->f01_cmd_base_addr,
+		&command,
+		sizeof(command));
+
+	if (retval < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to issue reset command, error = %d\n",
+				__func__, retval);
+	}
+
+	data->cmd_state = cmd_state;
 
 	return;
 }
@@ -2862,7 +2927,7 @@ static void hover_no_sleep_enable(void)
 		snprintf(data->cmd_buff, sizeof(data->cmd_buff), "NG");
 		data->cmd_state = CMD_STATUS_FAIL;
 	} else {
-		int retval;
+		int retval = 0;
 
 		if (data->cmd_param[0])
 			retval = synaptics_proximity_no_sleep_set(true);
@@ -3651,13 +3716,23 @@ static int synaptics_rmi4_f54_set_sysfs(void)
 		}
 	}
 
+#ifdef FACTORY_MODE
+	retval = sysfs_create_group(f54->attr_dir, &cmd_attr_group);
+	if (retval < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to create sysfs attributes\n",
+				__func__);
+		goto exit_4;
+	}
+#endif
+
 	return 0;
 
 exit_4:
-	sysfs_remove_group(f54->attr_dir, &attr_group);
-
 	for (reg_num--; reg_num >= 0; reg_num--)
 		sysfs_remove_group(f54->attr_dir, &attrs_ctrl_regs[reg_num]);
+
+	sysfs_remove_group(f54->attr_dir, &attr_group);
 
 exit_3:
 	sysfs_remove_bin_file(f54->attr_dir, &dev_report_data);
@@ -4099,7 +4174,7 @@ static int synaptics_rmi4_f54_get_report_type(int type)
 {
 	int retval;
 	char buf[3];
-	unsigned char patience = 5;
+	unsigned char patience = 90;
 
 	memset(buf, 0x00, sizeof(buf));
 	snprintf(buf, 3, "%u\n", type);
@@ -4114,7 +4189,7 @@ static int synaptics_rmi4_f54_get_report_type(int type)
 		return 0;
 
 	do {
-		msleep(1000);
+		msleep(20);
 		if (f54->status == STATUS_IDLE)
 			break;
 	} while (--patience > 0);
@@ -4455,7 +4530,7 @@ static int synaptics_rmi4_f54_init(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 	f54->factory_data = factory_data;
-#endif
+#endif /* FACTORY_MODE */
 
 	f54->status_workqueue =
 			create_singlethread_workqueue("f54_status_workqueue");
@@ -4470,6 +4545,8 @@ static int synaptics_rmi4_f54_init(struct synaptics_rmi4_data *rmi4_data)
 	/* Work function to do actual cleaning up */
 	INIT_WORK(&f54->timeout_work, timeout_set_status);
 #endif
+
+	f54->status = STATUS_IDLE;
 
 	return 0;
 
@@ -4505,6 +4582,9 @@ exit:
 
 static void synaptics_rmi4_f54_remove(struct synaptics_rmi4_data *rmi4_data)
 {
+	if (!f54)
+		return;
+
 #ifdef WATCHDOG_HRTIMER
 	hrtimer_cancel(&f54->watchdog);
 #endif

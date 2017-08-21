@@ -636,6 +636,7 @@ err_sysfs_bin:
 err_sysfs_dir:
 err_char_device:
 	rmidev_device_cleanup(dev_data);
+	mutex_destroy(&dev_data->file_mutex);
 	kfree(dev_data);
 
 err_dev_data:
@@ -649,6 +650,7 @@ err_device_class:
 
 err_fn_ptr:
 	kfree(rmidev);
+	rmidev = NULL;
 
 err_rmidev:
 	return retval;
@@ -672,6 +674,7 @@ static void rmidev_remove_device(struct synaptics_rmi4_data *rmi4_data)
 	dev_data = rmidev->data;
 	if (dev_data) {
 		rmidev_device_cleanup(dev_data);
+		mutex_destroy(&dev_data->file_mutex);
 		kfree(dev_data);
 	}
 
@@ -681,6 +684,7 @@ static void rmidev_remove_device(struct synaptics_rmi4_data *rmi4_data)
 
 	kfree(rmidev->fn_ptr);
 	kfree(rmidev);
+	rmidev = NULL;
 
 	return;
 }
