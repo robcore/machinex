@@ -1081,6 +1081,15 @@ void __init setup_arch(char **cmdline_p)
 		mmu_cr4_features = read_cr4();
 	}
 
+	/*
+	 * In the memory hotplug case, the kernel needs info from SRAT to
+	 * determine which memory is hotpluggable before allocating memory
+	 * using memblock.
+	 */
+	acpi_boot_table_init();
+	early_acpi_boot_init();
+	early_parse_srat();
+
 #ifdef CONFIG_X86_32
 	/* sync back kernel address range */
 	clone_pgd_range(initial_page_table + KERNEL_PGD_BOUNDARY,
