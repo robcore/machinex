@@ -278,10 +278,10 @@ acpi_table_parse_srat(enum acpi_srat_type id,
 					    handler, max_entries);
 }
 
-static int srat_mem_cnt;
-
-void __init early_parse_srat(void)
+int __init acpi_numa_init(void)
 {
+	int cnt = 0;
+
 	/*
 	 * Should not limit number with cpu num that is from NR_CPUS or nr_cpus=
 	 * SRAT cpu entries could have different order with that in MADT.

@@ -379,14 +379,6 @@ static inline int acpi_nvs_for_each_region(int (*func)(__u64, __u64, void *),
 
 #endif	/* !CONFIG_ACPI */
 
-#ifdef CONFIG_ACPI_NUMA
-void __init early_parse_srat(void);
-#else
-static inline void early_parse_srat(void)
-{
-}
-#endif
-
 #ifdef CONFIG_ACPI
 void acpi_os_set_prepare_sleep(int (*func)(u8 sleep_state,
 			       u32 pm1a_ctrl,  u32 pm1b_ctrl));
