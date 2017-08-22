@@ -744,7 +744,6 @@ int PageHeadHuge(struct page *page_head)
 
 	return get_compound_page_dtor(page_head) == free_huge_page;
 }
-EXPORT_SYMBOL_GPL(PageHeadHuge);
 
 pgoff_t __basepage_index(struct page *page)
 {
@@ -2456,10 +2455,11 @@ int copy_hugetlb_page_range(struct mm_struct *dst, struct mm_struct *src,
 		spin_unlock(&src->page_table_lock);
 		spin_unlock(&dst->page_table_lock);
 	}
-	return 0;
 
-nomem:
-	return -ENOMEM;
+	if (cow)
+		mmu_notifier_invalidate_range_end(src, mmun_start, mmun_end);
+
+	return ret;
 }
 
 void __unmap_hugepage_range(struct mmu_gather *tlb, struct vm_area_struct *vma,
