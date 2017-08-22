@@ -182,9 +182,9 @@ static inline void audit_ptrace(struct task_struct *t)
 extern unsigned int audit_serial(void);
 extern int auditsc_get_stamp(struct audit_context *ctx,
 			      struct timespec *t, unsigned int *serial);
-extern int  audit_set_loginuid(kuid_t loginuid);
+extern int audit_set_loginuid(uid_t loginuid);
 
-static inline kuid_t audit_get_loginuid(struct task_struct *tsk)
+static inline uid_t audit_get_loginuid(struct task_struct *tsk)
 {
 	return tsk->loginuid;
 }
@@ -340,7 +340,7 @@ static inline int auditsc_get_stamp(struct audit_context *ctx,
 {
 	return 0;
 }
-static inline kuid_t audit_get_loginuid(struct task_struct *tsk)
+static inline uid_t audit_get_loginuid(struct task_struct *tsk)
 {
 	return INVALID_UID;
 }

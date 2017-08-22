@@ -64,7 +64,7 @@ struct posix_acl *jfs_get_acl(struct inode *inode, int type)
 		else
 			acl = ERR_PTR(size);
 	} else {
-		acl = posix_acl_from_xattr(&init_user_ns, value, size);
+		acl = posix_acl_from_xattr(value, size);
 	}
 	kfree(value);
 	if (!IS_ERR(acl))
@@ -105,7 +105,7 @@ static int __jfs_set_acl(tid_t tid, struct inode *inode, int type,
 		value = kmalloc(size, GFP_KERNEL);
 		if (!value)
 			return -ENOMEM;
-		rc = posix_acl_to_xattr(&init_user_ns, acl, value, size);
+		rc = posix_acl_to_xattr(acl, value, size);
 		if (rc < 0)
 			goto out;
 	}

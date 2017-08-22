@@ -665,7 +665,7 @@ struct xfrm_spi_skb_cb {
 /* Audit Information */
 struct xfrm_audit {
 	u32	secid;
-	kuid_t	loginuid;
+	uid_t	loginuid;
 	u32	sessionid;
 };
 
@@ -684,14 +684,13 @@ static inline struct audit_buffer *xfrm_audit_start(const char *op)
 	return audit_buf;
 }
 
-static inline void xfrm_audit_helper_usrinfo(kuid_t auid, u32 ses, u32 secid,
+static inline void xfrm_audit_helper_usrinfo(uid_t auid, u32 ses, u32 secid,
 					     struct audit_buffer *audit_buf)
 {
 	char *secctx;
 	u32 secctx_len;
 
-	audit_log_format(audit_buf, " auid=%u ses=%u",
-			 from_kuid(&init_user_ns, auid), ses);
+	audit_log_format(audit_buf, " auid=%u ses=%u", auid, ses);
 	if (secid != 0 &&
 	    security_secid_to_secctx(secid, &secctx, &secctx_len) == 0) {
 		audit_log_format(audit_buf, " subj=%s", secctx);
@@ -701,13 +700,13 @@ static inline void xfrm_audit_helper_usrinfo(kuid_t auid, u32 ses, u32 secid,
 }
 
 extern void xfrm_audit_policy_add(struct xfrm_policy *xp, int result,
-				  kuid_t auid, u32 ses, u32 secid);
+				  u32 auid, u32 ses, u32 secid);
 extern void xfrm_audit_policy_delete(struct xfrm_policy *xp, int result,
-				  kuid_t auid, u32 ses, u32 secid);
+				  u32 auid, u32 ses, u32 secid);
 extern void xfrm_audit_state_add(struct xfrm_state *x, int result,
-				 kuid_t auid, u32 ses, u32 secid);
+				 u32 auid, u32 ses, u32 secid);
 extern void xfrm_audit_state_delete(struct xfrm_state *x, int result,
-				    kuid_t auid, u32 ses, u32 secid);
+				    u32 auid, u32 ses, u32 secid);
 extern void xfrm_audit_state_replay_overflow(struct xfrm_state *x,
 					     struct sk_buff *skb);
 extern void xfrm_audit_state_replay(struct xfrm_state *x,
@@ -720,22 +719,22 @@ extern void xfrm_audit_state_icvfail(struct xfrm_state *x,
 #else
 
 static inline void xfrm_audit_policy_add(struct xfrm_policy *xp, int result,
-				  kuid_t auid, u32 ses, u32 secid)
+				  u32 auid, u32 ses, u32 secid)
 {
 }
 
 static inline void xfrm_audit_policy_delete(struct xfrm_policy *xp, int result,
-				  kuid_t auid, u32 ses, u32 secid)
+				  u32 auid, u32 ses, u32 secid)
 {
 }
 
 static inline void xfrm_audit_state_add(struct xfrm_state *x, int result,
-				 kuid_t auid, u32 ses, u32 secid)
+				 u32 auid, u32 ses, u32 secid)
 {
 }
 
 static inline void xfrm_audit_state_delete(struct xfrm_state *x, int result,
-				    kuid_t auid, u32 ses, u32 secid)
+				    u32 auid, u32 ses, u32 secid)
 {
 }
 

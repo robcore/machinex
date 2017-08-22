@@ -122,7 +122,7 @@ extern struct group_info init_groups;
 
 #ifdef CONFIG_AUDITSYSCALL
 #define INIT_IDS \
-	.loginuid = INVALID_UID, \
+	.loginuid = -1, \
 	.sessionid = -1,
 #else
 #define INIT_IDS
