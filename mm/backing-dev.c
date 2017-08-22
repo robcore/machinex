@@ -40,7 +40,7 @@ LIST_HEAD(bdi_list);
 /* bdi_wq serves all asynchronous writeback tasks */
 struct workqueue_struct *bdi_wq;
 
-void bdi_lock_two(struct bdi_writeback *wb1, struct bdi_writeback *wb2)
+static void bdi_lock_two(struct bdi_writeback *wb1, struct bdi_writeback *wb2)
 {
 	if (wb1 < wb2) {
 		spin_lock(&wb1->list_lock);
@@ -402,21 +402,15 @@ static void bdi_prune_sb(struct backing_dev_info *bdi)
 
 void bdi_unregister(struct backing_dev_info *bdi)
 {
-	struct device *dev = bdi->dev;
-
-	if (dev) {
+	if (bdi->dev) {
 		bdi_set_min_ratio(bdi, 0);
 		trace_writeback_bdi_unregister(bdi);
 		bdi_prune_sb(bdi);
 
 		bdi_wb_shutdown(bdi);
 		bdi_debug_unregister(bdi);
-
-		spin_lock_bh(&bdi->wb_lock);
+		device_unregister(bdi->dev);
 		bdi->dev = NULL;
-		spin_unlock_bh(&bdi->wb_lock);
-
-		device_unregister(dev);
 	}
 }
 EXPORT_SYMBOL(bdi_unregister);
@@ -470,7 +464,7 @@ int bdi_init(struct backing_dev_info *bdi)
 	bdi->write_bandwidth = INIT_BW;
 	bdi->avg_write_bandwidth = INIT_BW;
 
-	err = fprop_local_init_percpu(&bdi->completions);
+	err = fprop_local_init_percpu(&bdi->completions, GFP_KERNEL);
 
 	if (err) {
 err:
@@ -487,8 +481,17 @@ void bdi_destroy(struct backing_dev_info *bdi)
 	int i;
 
 	/*
-	 * Splice our entries to the default_backing_dev_info, if this
-	 * bdi disappears
+	 * Splice our entries to the default_backing_dev_info.  This
+	 * condition shouldn't happen.  @wb must be empty at this point and
+	 * dirty inodes on it might cause other issues.  This workaround is
+	 * added by ce5f8e779519 ("writeback: splice dirty inode entries to
+	 * default bdi on bdi_destroy()") without root-causing the issue.
+	 *
+	 * http://lkml.kernel.org/g/1253038617-30204-11-git-send-email-jens.axboe@oracle.com
+	 * http://thread.gmane.org/gmane.linux.file-systems/35341/focus=35350
+	 *
+	 * We should probably add WARN_ON() to find out whether it still
+	 * happens and track it down if so.
 	 */
 	if (bdi_has_dirty_io(bdi)) {
 		struct bdi_writeback *dst = &default_backing_dev_info.wb;
@@ -625,9 +628,8 @@ EXPORT_SYMBOL(congestion_wait_kswapd);
  * jiffies for either a BDI to exit congestion of the given @sync queue
  * or a write to complete.
  *
- * In the absence of zone congestion, a short sleep or a cond_resched is
- * performed to yield the processor and to allow other subsystems to make
- * a forward progress.
+ * In the absence of zone congestion, cond_resched() is called to yield
+ * the processor if necessary but otherwise does not sleep.
  *
  * The return value is 0 if the sleep is for the full timeout. Otherwise,
  * it is the number of jiffies that were still remaining when the function
@@ -646,20 +648,8 @@ long wait_iff_congested(struct zone *zone, int sync, long timeout)
 	 * of sleeping on the congestion queue
 	 */
 	if (atomic_read(&nr_bdi_congested[sync]) == 0 ||
-			!zone_is_reclaim_congested(zone)) {
-
-		/*
-		 * Memory allocation/reclaim might be called from a WQ
-		 * context and the current implementation of the WQ
-		 * concurrency control doesn't recognize that a particular
-		 * WQ is congested if the worker thread is looping without
-		 * ever sleeping. Therefore we have to do a short sleep
-		 * here rather than calling cond_resched().
-		 */
-		if (current->flags & PF_WQ_WORKER)
-			schedule_timeout_uninterruptible(1);
-		else
-			cond_resched();
+	    !test_bit(ZONE_CONGESTED, &zone->flags)) {
+		cond_resched();
 
 		/* In case we scheduled, work out time remaining */
 		ret = timeout - (jiffies - start);
