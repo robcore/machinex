@@ -98,6 +98,12 @@ void dump_page_badflags(struct page *page, const char *reason,
 	mem_cgroup_print_bad_page(page);
 }
 
+void dump_page(struct page *page, const char *reason)
+{
+	dump_page_badflags(page, reason, 0);
+}
+EXPORT_SYMBOL(dump_page);
+
 #ifdef CONFIG_DEBUG_VM
 
 static const struct trace_print_flags vmaflags_names[] = {

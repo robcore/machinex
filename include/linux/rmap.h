@@ -10,11 +10,6 @@
 #include <linux/rwsem.h>
 #include <linux/memcontrol.h>
 
-extern int isolate_lru_page(struct page *page);
-extern void putback_lru_page(struct page *page);
-extern unsigned long reclaim_pages_from_list(struct list_head *page_list,
-					     struct vm_area_struct *vma);
-
 /*
  * The anon_vma heads a list of private "related" vmas, to scan if
  * an anonymous page pointing to this anon_vma needs to be unmapped:
@@ -79,7 +74,7 @@ struct anon_vma_chain {
 	struct vm_area_struct *vma;
 	struct anon_vma *anon_vma;
 	struct list_head same_vma;   /* locked by mmap_sem & page_table_lock */
-	struct rb_node rb;			/* locked by anon_vma->rwsem */
+	struct rb_node rb;			/* locked by anon_vma->mutex */
 	unsigned long rb_subtree_last;
 #ifdef CONFIG_DEBUG_VM_RB
 	unsigned long cached_vma_start, cached_vma_last;
@@ -87,9 +82,10 @@ struct anon_vma_chain {
 };
 
 enum ttu_flags {
-	TTU_UNMAP = 1,			/* unmap mode */
-	TTU_MIGRATION = 2,		/* migration mode */
-	TTU_MUNLOCK = 4,		/* munlock mode */
+	TTU_UNMAP = 0,			/* unmap mode */
+	TTU_MIGRATION = 1,		/* migration mode */
+	TTU_MUNLOCK = 2,		/* munlock mode */
+	TTU_ACTION_MASK = 0xff,
 
 	TTU_IGNORE_MLOCK = (1 << 8),	/* ignore mlock */
 	TTU_IGNORE_ACCESS = (1 << 9),	/* don't age */
@@ -165,7 +161,7 @@ int anon_vma_fork(struct vm_area_struct *, struct vm_area_struct *);
 static inline void anon_vma_merge(struct vm_area_struct *vma,
 				  struct vm_area_struct *next)
 {
-	VM_BUG_ON_VMA(vma->anon_vma != next->anon_vma, vma);
+	VM_BUG_ON(vma->anon_vma != next->anon_vma);
 	unlink_anon_vmas(next);
 }
 
@@ -197,11 +193,14 @@ static inline void page_dup_rmap(struct page *page)
  */
 int page_referenced(struct page *, int is_locked,
 			struct mem_cgroup *memcg, unsigned long *vm_flags);
+int page_referenced_one(struct page *, struct vm_area_struct *,
+	unsigned long address, unsigned int *mapcount, unsigned long *vm_flags);
 
 #define TTU_ACTION(x) ((x) & TTU_ACTION_MASK)
 
-int try_to_unmap(struct page *, enum ttu_flags flags,
-			struct vm_area_struct *vma);
+int try_to_unmap(struct page *, enum ttu_flags flags);
+int try_to_unmap_one(struct page *, struct vm_area_struct *,
+			unsigned long address, enum ttu_flags flags);
 
 /*
  * Called from mm/filemap_xip.c to unmap empty zero page
@@ -247,27 +246,10 @@ void page_unlock_anon_vma_read(struct anon_vma *anon_vma);
 int page_mapped_in_vma(struct page *page, struct vm_area_struct *vma);
 
 /*
- * rmap_walk_control: To control rmap traversing for specific needs
- *
- * arg: passed to rmap_one() and invalid_vma()
- * rmap_one: executed on each vma where page is mapped
- * done: for checking traversing termination condition
- * file_nonlinear: for handling file nonlinear mapping
- * anon_lock: for getting anon_lock by optimized way rather than default
- * invalid_vma: for skipping uninterested vma
+ * Called by migrate.c to remove migration ptes, but might be used more later.
  */
-struct rmap_walk_control {
-	void *arg;
-	struct vm_area_struct *target_vma;
-	int (*rmap_one)(struct page *page, struct vm_area_struct *vma,
-					unsigned long addr, void *arg);
-	int (*done)(struct page *page);
-	int (*file_nonlinear)(struct page *, struct address_space *, void *arg);
-	struct anon_vma *(*anon_lock)(struct page *page);
-	bool (*invalid_vma)(struct vm_area_struct *vma, void *arg);
-};
-
-int rmap_walk(struct page *page, struct rmap_walk_control *rwc);
+int rmap_walk(struct page *page, int (*rmap_one)(struct page *,
+		struct vm_area_struct *, unsigned long, void *), void *arg);
 
 #else	/* !CONFIG_MMU */
 
@@ -283,7 +265,7 @@ static inline int page_referenced(struct page *page, int is_locked,
 	return 0;
 }
 
-#define try_to_unmap(page, refs, vma) SWAP_FAIL
+#define try_to_unmap(page, refs) SWAP_FAIL
 
 static inline int page_mkclean(struct page *page)
 {

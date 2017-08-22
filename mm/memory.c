@@ -2642,8 +2642,7 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	old_page = vm_normal_page(vma, address, orig_pte);
 	if (!old_page) {
 		/*
-		 * VM_MIXEDMAP !pfn_valid() case, or VM_SOFTDIRTY clear on a
-		 * VM_PFNMAP VMA.
+		 * VM_MIXEDMAP !pfn_valid() case
 		 *
 		 * We should not cow pages in a shared writeable mapping.
 		 * Just mark the pages writable as we can't do any dirty
