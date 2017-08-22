@@ -158,10 +158,9 @@ struct dquot {
 	atomic_t dq_count;		/* Use count */
 	wait_queue_head_t dq_wait_unused;	/* Wait queue for dquot to become unused */
 	struct super_block *dq_sb;	/* superblock this applies to */
-	unsigned int dq_id;		/* ID this applies to (uid, gid) */
+	struct kqid dq_id;		/* ID this applies to (uid, gid, projid) */
 	loff_t dq_off;			/* Offset of dquot on disk */
 	unsigned long dq_flags;		/* See DQ_* */
-	short dq_type;			/* Type of quota */
 	struct mem_dqblk dq_dqb;	/* Diskquota usage */
 };
 
@@ -200,8 +199,8 @@ struct quotactl_ops {
 	int (*quota_sync)(struct super_block *, int);
 	int (*get_info)(struct super_block *, int, struct if_dqinfo *);
 	int (*set_info)(struct super_block *, int, struct if_dqinfo *);
-	int (*get_dqblk)(struct super_block *, int, qid_t, struct fs_disk_quota *);
-	int (*set_dqblk)(struct super_block *, int, qid_t, struct fs_disk_quota *);
+	int (*get_dqblk)(struct super_block *, struct kqid, struct fs_disk_quota *);
+	int (*set_dqblk)(struct super_block *, struct kqid, struct fs_disk_quota *);
 	int (*get_xstate)(struct super_block *, struct fs_quota_stat *);
 	int (*set_xstate)(struct super_block *, unsigned int, int);
 	int (*get_xstatev)(struct super_block *, struct fs_quota_statv *);
@@ -251,10 +250,10 @@ static inline unsigned int dquot_generic_flag(unsigned int flags, int type)
 }
 
 #ifdef CONFIG_QUOTA_NETLINK_INTERFACE
-extern void quota_send_warning(short type, unsigned int id, dev_t dev,
+extern void quota_send_warning(struct kqid qid, dev_t dev,
 			       const char warntype);
 #else
-static inline void quota_send_warning(short type, unsigned int id, dev_t dev,
+static inline void quota_send_warning(struct kqid qid, dev_t dev,
 				      const char warntype)
 {
 	return;
