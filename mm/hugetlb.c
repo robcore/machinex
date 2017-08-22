@@ -725,11 +725,15 @@ static void __init prep_compound_gigantic_page(struct page *page,
  */
 int PageHuge(struct page *page)
 {
+	compound_page_dtor *dtor;
+
 	if (!PageCompound(page))
 		return 0;
 
 	page = compound_head(page);
-	return get_compound_page_dtor(page) == free_huge_page;
+	dtor = get_compound_page_dtor(page);
+
+	return dtor == free_huge_page;
 }
 EXPORT_SYMBOL_GPL(PageHuge);
 
@@ -739,11 +743,16 @@ EXPORT_SYMBOL_GPL(PageHuge);
  */
 int PageHeadHuge(struct page *page_head)
 {
+	compound_page_dtor *dtor;
+
 	if (!PageHead(page_head))
 		return 0;
 
-	return get_compound_page_dtor(page_head) == free_huge_page;
+	dtor = get_compound_page_dtor(page_head);
+
+	return dtor == free_huge_page;
 }
+EXPORT_SYMBOL_GPL(PageHeadHuge);
 
 pgoff_t __basepage_index(struct page *page)
 {
@@ -2455,11 +2464,10 @@ int copy_hugetlb_page_range(struct mm_struct *dst, struct mm_struct *src,
 		spin_unlock(&src->page_table_lock);
 		spin_unlock(&dst->page_table_lock);
 	}
+	return 0;
 
-	if (cow)
-		mmu_notifier_invalidate_range_end(src, mmun_start, mmun_end);
-
-	return ret;
+nomem:
+	return -ENOMEM;
 }
 
 void __unmap_hugepage_range(struct mmu_gather *tlb, struct vm_area_struct *vma,
@@ -3132,7 +3140,7 @@ long follow_hugetlb_page(struct mm_struct *mm, struct vm_area_struct *vma,
 same_page:
 		if (pages) {
 			pages[i] = mem_map_offset(page, pfn_offset);
-			get_page_foll(pages[i]);
+			get_page(pages[i]);
 		}
 
 		if (vmas)

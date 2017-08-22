@@ -610,7 +610,7 @@ static int me_pagecache_clean(struct page *p, unsigned long pfn)
 }
 
 /*
- * Dirty pagecache page
+ * Dirty cache page page
  * Issues: when the error hit a hole page the error is not properly
  * propagated.
  */

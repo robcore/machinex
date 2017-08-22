@@ -73,7 +73,11 @@ static inline void set_page_stable_node(struct page *page,
 struct page *ksm_might_need_to_copy(struct page *page,
 			struct vm_area_struct *vma, unsigned long address);
 
-int rmap_walk_ksm(struct page *page, struct rmap_walk_control *rwc);
+int page_referenced_ksm(struct page *page,
+			struct mem_cgroup *memcg, unsigned long *vm_flags);
+int try_to_unmap_ksm(struct page *page, enum ttu_flags flags);
+int rmap_walk_ksm(struct page *page, int (*rmap_one)(struct page *,
+		  struct vm_area_struct *, unsigned long, void *), void *arg);
 void ksm_migrate_page(struct page *newpage, struct page *oldpage);
 
 #else  /* !CONFIG_KSM */
@@ -111,8 +115,13 @@ static inline int page_referenced_ksm(struct page *page,
 	return 0;
 }
 
-static inline int rmap_walk_ksm(struct page *page,
-			struct rmap_walk_control *rwc)
+static inline int try_to_unmap_ksm(struct page *page, enum ttu_flags flags)
+{
+	return 0;
+}
+
+static inline int rmap_walk_ksm(struct page *page, int (*rmap_one)(struct page*,
+		struct vm_area_struct *, unsigned long, void *), void *arg)
 {
 	return 0;
 }
