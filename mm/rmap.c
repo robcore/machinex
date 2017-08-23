@@ -1125,15 +1125,46 @@ void page_add_new_anon_rmap(struct page *page,
  */
 void page_add_file_rmap(struct page *page)
 {
-	bool locked;
+	struct mem_cgroup *memcg;
 	unsigned long flags;
+	bool locked;
 
-	mem_cgroup_begin_update_page_stat(page, &locked, &flags);
+	memcg = mem_cgroup_begin_page_stat(page, &locked, &flags);
 	if (atomic_inc_and_test(&page->_mapcount)) {
 		__inc_zone_page_state(page, NR_FILE_MAPPED);
-		mem_cgroup_inc_page_stat(page, MEMCG_NR_FILE_MAPPED);
+		mem_cgroup_inc_page_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED);
 	}
-	mem_cgroup_end_update_page_stat(page, &locked, &flags);
+	mem_cgroup_end_page_stat(memcg, locked, flags);
+}
+
+static void page_remove_file_rmap(struct page *page)
+{
+	struct mem_cgroup *memcg;
+	unsigned long flags;
+	bool locked;
+
+	memcg = mem_cgroup_begin_page_stat(page, &locked, &flags);
+
+	/* page still mapped by someone else? */
+	if (!atomic_add_negative(-1, &page->_mapcount))
+		goto out;
+
+	/* Hugepages are not counted in NR_FILE_MAPPED for now. */
+	if (unlikely(PageHuge(page)))
+		goto out;
+
+	/*
+	 * We use the irq-unsafe __{inc|mod}_zone_page_stat because
+	 * these counters are not modified in interrupt context, and
+	 * pte lock(a spinlock) is held, which implies preemption disabled.
+	 */
+	__dec_zone_page_state(page, NR_FILE_MAPPED);
+	mem_cgroup_dec_page_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED);
+
+	if (unlikely(PageMlocked(page)))
+		clear_page_mlock(page);
+out:
+	mem_cgroup_end_page_stat(memcg, locked, flags);
 }
 
 /**
@@ -1144,62 +1175,33 @@ void page_add_file_rmap(struct page *page)
  */
 void page_remove_rmap(struct page *page)
 {
-	struct address_space *mapping = page_mapping(page);
-	bool anon = PageAnon(page);
-	bool locked;
-	unsigned long flags;
-
-	/*
-	 * The anon case has no mem_cgroup page_stat to update; but may
-	 * uncharge_page() below, where the lock ordering can deadlock if
-	 * we hold the lock against page_stat move: so avoid it on anon.
-	 */
-	if (!anon)
-		mem_cgroup_begin_update_page_stat(page, &locked, &flags);
+	if (!PageAnon(page)) {
+		page_remove_file_rmap(page);
+		return;
+	}
 
 	/* page still mapped by someone else? */
 	if (!atomic_add_negative(-1, &page->_mapcount))
-		goto out;
+		return;
+
+	/* Hugepages are not counted in NR_ANON_PAGES for now. */
+	if (unlikely(PageHuge(page)))
+		return;
 
 	/*
-	 * Now that the last pte has gone, s390 must transfer dirty
-	 * flag from storage key to struct page.  We can usually skip
-	 * this if the page is anon, so about to be freed; but perhaps
-	 * not if it's in swapcache - there might be another pte slot
-	 * containing the swap entry, but page not yet written to swap.
-	 *
-	 * And we can skip it on file pages, so long as the filesystem
-	 * participates in dirty tracking (note that this is not only an
-	 * optimization but also solves problems caused by dirty flag in
-	 * storage key getting set by a write from inside kernel); but need to
-	 * catch shm and tmpfs and ramfs pages which have been modified since
-	 * creation by read fault.
-	 *
-	 * Note that mapping must be decided above, before decrementing
-	 * mapcount (which luckily provides a barrier): once page is unmapped,
-	 * it could be truncated and page->mapping reset to NULL at any moment.
-	 * Note also that we are relying on page_mapping(page) to set mapping
-	 * to &swapper_space when PageSwapCache(page).
+	 * We use the irq-unsafe __{inc|mod}_zone_page_stat because
+	 * these counters are not modified in interrupt context, and
+	 * pte lock(a spinlock) is held, which implies preemption disabled.
 	 */
-	if (mapping && !mapping_cap_account_dirty(mapping) &&
-	    page_test_and_clear_dirty(page_to_pfn(page), 1))
-		set_page_dirty(page);
-	/*
-	 * Hugepages are not counted in NR_ANON_PAGES nor NR_FILE_MAPPED
-	 * and not charged by memcg for now.
-	 */
-	if (unlikely(PageHuge(page)))
-		goto out;
-	if (anon) {
-		if (PageTransHuge(page))
-			__dec_zone_page_state(page,
-					      NR_ANON_TRANSPARENT_HUGEPAGES);
-		__mod_zone_page_state(page_zone(page), NR_ANON_PAGES,
-				-hpage_nr_pages(page));
-	} else {
-		__dec_zone_page_state(page, NR_FILE_MAPPED);
-		mem_cgroup_dec_page_stat(page, MEMCG_NR_FILE_MAPPED);
-	}
+	if (PageTransHuge(page))
+		__dec_zone_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
+
+	__mod_zone_page_state(page_zone(page), NR_ANON_PAGES,
+			      -hpage_nr_pages(page));
+
+	if (unlikely(PageMlocked(page)))
+		clear_page_mlock(page);
+
 	/*
 	 * It would be tidy to reset the PageAnon mapping here,
 	 * but that might overwrite a racing page_add_anon_rmap
@@ -1209,9 +1211,6 @@ void page_remove_rmap(struct page *page)
 	 * Leaving it set also helps swapoff to reinstate ptes
 	 * faster for those pages still in swapcache.
 	 */
-out:
-	if (!anon)
-		mem_cgroup_end_update_page_stat(page, &locked, &flags);
 }
 
 /*

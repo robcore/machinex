@@ -20,9 +20,6 @@
 #include <asm/page.h>
 #include <linux/memcontrol.h>
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/kmem.h>
-
 #include "slab.h"
 
 enum slab_state slab_state;
