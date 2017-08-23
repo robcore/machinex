@@ -246,7 +246,6 @@ static int do_mmu_notifier_register(struct mmu_notifier *mn,
 	spin_lock(&mm->mmu_notifier_mm->lock);
 	hlist_add_head(&mn->hlist, &mm->mmu_notifier_mm->list);
 	spin_unlock(&mm->mmu_notifier_mm->lock);
-	srcu_read_unlock(&srcu, id);
 
 	mm_drop_all_locks(mm);
 out_clean:
