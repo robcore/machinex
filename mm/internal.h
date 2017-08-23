@@ -42,8 +42,8 @@ static inline unsigned long ra_submit(struct file_ra_state *ra,
  */
 static inline void set_page_refcounted(struct page *page)
 {
-	VM_BUG_ON(PageTail(page));
-	VM_BUG_ON(atomic_read(&page->_count));
+	VM_BUG_ON_PAGE(PageTail(page), page);
+	VM_BUG_ON_PAGE(atomic_read(&page->_count), page);
 	set_page_count(page, 1);
 }
 
@@ -88,7 +88,7 @@ static inline void get_page_foll(struct page *page)
 		 * Getting a normal page or the head of a compound page
 		 * requires to already have an elevated page->_count.
 		 */
-		VM_BUG_ON(atomic_read(&page->_count) <= 0);
+		VM_BUG_ON_PAGE(atomic_read(&page->_count) <= 0, page);
 		atomic_inc(&page->_count);
 	}
 }
@@ -193,7 +193,7 @@ static inline void munlock_vma_pages_all(struct vm_area_struct *vma)
 static inline int mlocked_vma_newpage(struct vm_area_struct *vma,
 				    struct page *page)
 {
-	VM_BUG_ON(PageLRU(page));
+	VM_BUG_ON_PAGE(PageLRU(page), page);
 
 	if (likely((vma->vm_flags & (VM_LOCKED | VM_SPECIAL)) != VM_LOCKED))
 		return 0;
