@@ -538,6 +538,26 @@ out:
 }
 EXPORT_SYMBOL(kmem_cache_destroy);
 
+/**
+ * kmem_cache_shrink - Shrink a cache.
+ * @cachep: The cache to shrink.
+ *
+ * Releases as many slabs as possible for a cache.
+ * To help debugging, a zero exit status indicates all slabs were released.
+ */
+int kmem_cache_shrink(struct kmem_cache *cachep)
+{
+	int ret;
+
+	get_online_cpus();
+	get_online_mems();
+	ret = __kmem_cache_shrink(cachep);
+	put_online_mems();
+	put_online_cpus();
+	return ret;
+}
+EXPORT_SYMBOL(kmem_cache_shrink);
+
 int slab_is_available(void)
 {
 	return slab_state >= UP;
