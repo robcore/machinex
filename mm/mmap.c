@@ -407,9 +407,8 @@ static void validate_mm_rb(struct rb_root *root, struct vm_area_struct *ignore)
 	for (nd = rb_first(root); nd; nd = rb_next(nd)) {
 		struct vm_area_struct *vma;
 		vma = rb_entry(nd, struct vm_area_struct, vm_rb);
-		VM_BUG_ON_VMA(vma != ignore &&
-			vma->rb_subtree_gap != vma_compute_subtree_gap(vma),
-			vma);
+		BUG_ON(vma != ignore &&
+		       vma->rb_subtree_gap != vma_compute_subtree_gap(vma));
 	}
 }
 
@@ -441,7 +440,7 @@ static void validate_mm(struct mm_struct *mm)
 		pr_emerg("map_count %d rb %d\n", mm->map_count, i);
 		bug = 1;
 	}
-	VM_BUG_ON_MM(bug, mm);
+	BUG_ON(bug);
 }
 #else
 #define validate_mm_rb(root, ignore) do { } while (0)
@@ -2807,7 +2806,7 @@ struct vm_area_struct *copy_vma(struct vm_area_struct **vmap,
 			 * safe. It is only safe to keep the vm_pgoff
 			 * linear if there are no pages mapped yet.
 			 */
-			VM_BUG_ON_VMA(faulted_in_anon_vma, new_vma);
+			VM_BUG_ON(faulted_in_anon_vma);
 			*vmap = vma = new_vma;
 		}
 		*need_rmap_locks = (new_vma->vm_pgoff <= vma->vm_pgoff);

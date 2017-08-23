@@ -173,7 +173,7 @@ static inline int page_cache_get_speculative(struct page *page)
 	 * disabling preempt, and hence no need for the "speculative get" that
 	 * SMP requires.
 	 */
-	VM_BUG_ON_PAGE(page_count(page) == 0, page);
+	VM_BUG_ON(page_count(page) == 0);
 	atomic_inc(&page->_count);
 
 #else
@@ -186,7 +186,7 @@ static inline int page_cache_get_speculative(struct page *page)
 		return 0;
 	}
 #endif
-	VM_BUG_ON_PAGE(PageTail(page), page);
+	VM_BUG_ON(PageTail(page));
 
 	return 1;
 }
@@ -202,14 +202,14 @@ static inline int page_cache_add_speculative(struct page *page, int count)
 # ifdef CONFIG_PREEMPT_COUNT
 	VM_BUG_ON(!in_atomic());
 # endif
-	VM_BUG_ON_PAGE(page_count(page) == 0, page);
+	VM_BUG_ON(page_count(page) == 0);
 	atomic_add(count, &page->_count);
 
 #else
 	if (unlikely(!atomic_add_unless(&page->_count, count, 0)))
 		return 0;
 #endif
-	VM_BUG_ON_PAGE(PageCompound(page) && page != compound_head(page), page);
+	VM_BUG_ON(PageCompound(page) && page != compound_head(page));
 
 	return 1;
 }
@@ -221,7 +221,7 @@ static inline int page_freeze_refs(struct page *page, int count)
 
 static inline void page_unfreeze_refs(struct page *page, int count)
 {
-	VM_BUG_ON_PAGE(page_count(page) != 0, page);
+	VM_BUG_ON(page_count(page) != 0);
 	VM_BUG_ON(count == 0);
 
 	atomic_set(&page->_count, count);
@@ -391,9 +391,6 @@ static inline int lock_page_killable(struct page *page)
 /*
  * lock_page_or_retry - Lock the page, unless this would block and the
  * caller indicated that it can handle a retry.
- *
- * Return value and mmap_sem implications depend on flags; see
- * __lock_page_or_retry().
  */
 static inline int lock_page_or_retry(struct page *page, struct mm_struct *mm,
 				     unsigned int flags)

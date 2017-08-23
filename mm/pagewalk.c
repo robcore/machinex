@@ -177,7 +177,7 @@ int walk_page_range(unsigned long addr, unsigned long end,
 	if (!walk->mm)
 		return -EINVAL;
 
-	VM_BUG_ON_MM(!rwsem_is_locked(&walk->mm->mmap_sem), walk->mm);
+	VM_BUG_ON(!rwsem_is_locked(&walk->mm->mmap_sem));
 
 	pgd = pgd_offset(walk->mm, addr);
 	do {
