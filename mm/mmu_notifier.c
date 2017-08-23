@@ -53,6 +53,7 @@ void __mmu_notifier_release(struct mm_struct *mm)
 		 */
 		if (mn->ops->release)
 			mn->ops->release(mn, mm);
+	srcu_read_unlock(&srcu, id);
 
 	spin_lock(&mm->mmu_notifier_mm->lock);
 	while (unlikely(!hlist_empty(&mm->mmu_notifier_mm->list))) {
@@ -68,7 +69,6 @@ void __mmu_notifier_release(struct mm_struct *mm)
 		hlist_del_init_rcu(&mn->hlist);
 	}
 	spin_unlock(&mm->mmu_notifier_mm->lock);
-	srcu_read_unlock(&srcu, id);
 
 	/*
 	 * synchronize_srcu here prevents mmu_notifier_release from returning to
@@ -226,6 +226,7 @@ static int do_mmu_notifier_register(struct mmu_notifier *mn,
 	spin_lock(&mm->mmu_notifier_mm->lock);
 	hlist_add_head(&mn->hlist, &mm->mmu_notifier_mm->list);
 	spin_unlock(&mm->mmu_notifier_mm->lock);
+	srcu_read_unlock(&srcu, id);
 
 	mm_drop_all_locks(mm);
 out_clean:
@@ -329,5 +330,4 @@ static int __init mmu_notifier_init(void)
 {
 	return init_srcu_struct(&srcu);
 }
-
-module_init(mmu_notifier_init);
+subsys_initcall(mmu_notifier_init);
