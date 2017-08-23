@@ -32,6 +32,7 @@
 #include <linux/gfp.h>
 #include <linux/hugetlb.h>
 #include <linux/aio.h>
+#include <linux/uio.h>
 
 #include "internal.h"
 
@@ -557,6 +558,17 @@ void mark_page_accessed(struct page *page)
 EXPORT_SYMBOL(mark_page_accessed);
 
 /*
+ * Used to mark_page_accessed(page) that is not visible yet and when it is
+ * still safe to use non-atomic ops
+ */
+void init_page_accessed(struct page *page)
+{
+	if (!PageReferenced(page))
+		__SetPageReferenced(page);
+}
+EXPORT_SYMBOL(init_page_accessed);
+
+/*
  * Queue the page for addition to the LRU via pagevec. The decision on whether
  * to add the page to the [in]active [file|anon] list is deferred until the
  * pagevec is drained. This gives a chance for the caller of __lru_cache_add()
@@ -826,9 +838,6 @@ void release_pages(struct page **pages, int nr, int cold)
 			__ClearPageLRU(page);
 			del_page_from_lru_list(page, lruvec, page_off_lru(page));
 		}
-
-		/* Clear Active bit in case of parallel mark_page_accessed */
-		ClearPageActive(page);
 
 		/* Clear Active bit in case of parallel mark_page_accessed */
 		ClearPageActive(page);
