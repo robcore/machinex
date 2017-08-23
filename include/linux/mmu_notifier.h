@@ -57,13 +57,10 @@ struct mmu_notifier_ops {
 	 * pte. This way the VM will provide proper aging to the
 	 * accesses to the page through the secondary MMUs and not
 	 * only to the ones through the Linux pte.
-	 * Start-end is necessary in case the secondary MMU is mapping the page
-	 * at a smaller granularity than the primary MMU.
 	 */
 	int (*clear_flush_young)(struct mmu_notifier *mn,
 				 struct mm_struct *mm,
-				 unsigned long start,
-				 unsigned long end);
+				 unsigned long address);
 
 	/*
 	 * test_young is called to check the young/accessed bitflag in
@@ -173,13 +170,10 @@ extern int __mmu_notifier_register(struct mmu_notifier *mn,
 				   struct mm_struct *mm);
 extern void mmu_notifier_unregister(struct mmu_notifier *mn,
 				    struct mm_struct *mm);
-extern void mmu_notifier_unregister_no_release(struct mmu_notifier *mn,
-					       struct mm_struct *mm);
 extern void __mmu_notifier_mm_destroy(struct mm_struct *mm);
 extern void __mmu_notifier_release(struct mm_struct *mm);
 extern int __mmu_notifier_clear_flush_young(struct mm_struct *mm,
-					  unsigned long start,
-					  unsigned long end);
+					  unsigned long address);
 extern int __mmu_notifier_test_young(struct mm_struct *mm,
 				     unsigned long address);
 extern void __mmu_notifier_change_pte(struct mm_struct *mm,
@@ -198,11 +192,10 @@ static inline void mmu_notifier_release(struct mm_struct *mm)
 }
 
 static inline int mmu_notifier_clear_flush_young(struct mm_struct *mm,
-					  unsigned long start,
-					  unsigned long end)
+					  unsigned long address)
 {
 	if (mm_has_notifiers(mm))
-		return __mmu_notifier_clear_flush_young(mm, start, end);
+		return __mmu_notifier_clear_flush_young(mm, address);
 	return 0;
 }
 
@@ -253,6 +246,50 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
 		__mmu_notifier_mm_destroy(mm);
 }
 
+/*
+ * These two macros will sometime replace ptep_clear_flush.
+ * ptep_clear_flush is implemented as macro itself, so this also is
+ * implemented as a macro until ptep_clear_flush will converted to an
+ * inline function, to diminish the risk of compilation failure. The
+ * invalidate_page method over time can be moved outside the PT lock
+ * and these two macros can be later removed.
+ */
+#define ptep_clear_flush_notify(__vma, __address, __ptep)		\
+({									\
+	pte_t __pte;							\
+	struct vm_area_struct *___vma = __vma;				\
+	unsigned long ___address = __address;				\
+	__pte = ptep_clear_flush(___vma, ___address, __ptep);		\
+	mmu_notifier_invalidate_page(___vma->vm_mm, ___address);	\
+	__pte;								\
+})
+
+#define pmdp_clear_flush_notify(__vma, __address, __pmdp)		\
+({									\
+	pmd_t __pmd;							\
+	struct vm_area_struct *___vma = __vma;				\
+	unsigned long ___address = __address;				\
+	VM_BUG_ON(__address & ~HPAGE_PMD_MASK);				\
+	mmu_notifier_invalidate_range_start(___vma->vm_mm, ___address,	\
+					    (__address)+HPAGE_PMD_SIZE);\
+	__pmd = pmdp_clear_flush(___vma, ___address, __pmdp);		\
+	mmu_notifier_invalidate_range_end(___vma->vm_mm, ___address,	\
+					  (__address)+HPAGE_PMD_SIZE);	\
+	__pmd;								\
+})
+
+#define pmdp_splitting_flush_notify(__vma, __address, __pmdp)		\
+({									\
+	struct vm_area_struct *___vma = __vma;				\
+	unsigned long ___address = __address;				\
+	VM_BUG_ON(__address & ~HPAGE_PMD_MASK);				\
+	mmu_notifier_invalidate_range_start(___vma->vm_mm, ___address,	\
+					    (__address)+HPAGE_PMD_SIZE);\
+	pmdp_splitting_flush(___vma, ___address, __pmdp);		\
+	mmu_notifier_invalidate_range_end(___vma->vm_mm, ___address,	\
+					  (__address)+HPAGE_PMD_SIZE);	\
+})
+
 #define ptep_clear_flush_young_notify(__vma, __address, __ptep)		\
 ({									\
 	int __young;							\
@@ -260,9 +297,7 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
 	unsigned long ___address = __address;				\
 	__young = ptep_clear_flush_young(___vma, ___address, __ptep);	\
 	__young |= mmu_notifier_clear_flush_young(___vma->vm_mm,	\
-						  ___address,		\
-						  ___address +		\
-							PAGE_SIZE);	\
+						  ___address);		\
 	__young;							\
 })
 
@@ -273,9 +308,7 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
 	unsigned long ___address = __address;				\
 	__young = pmdp_clear_flush_young(___vma, ___address, __pmdp);	\
 	__young |= mmu_notifier_clear_flush_young(___vma->vm_mm,	\
-						  ___address,		\
-						  ___address +		\
-							PMD_SIZE);	\
+						  ___address);		\
 	__young;							\
 })
 
@@ -289,10 +322,6 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
 	mmu_notifier_change_pte(___mm, ___address, ___pte);		\
 })
 
-extern void mmu_notifier_call_srcu(struct rcu_head *rcu,
-				   void (*func)(struct rcu_head *rcu));
-extern void mmu_notifier_synchronize(void);
-
 #else /* CONFIG_MMU_NOTIFIER */
 
 static inline void mmu_notifier_release(struct mm_struct *mm)
@@ -300,8 +329,7 @@ static inline void mmu_notifier_release(struct mm_struct *mm)
 }
 
 static inline int mmu_notifier_clear_flush_young(struct mm_struct *mm,
-					  unsigned long start,
-					  unsigned long end)
+					  unsigned long address)
 {
 	return 0;
 }
@@ -342,6 +370,9 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
 
 #define ptep_clear_flush_young_notify ptep_clear_flush_young
 #define pmdp_clear_flush_young_notify pmdp_clear_flush_young
+#define ptep_clear_flush_notify ptep_clear_flush
+#define pmdp_clear_flush_notify pmdp_clear_flush
+#define pmdp_splitting_flush_notify pmdp_splitting_flush
 #define set_pte_at_notify set_pte_at
 
 #endif /* CONFIG_MMU_NOTIFIER */

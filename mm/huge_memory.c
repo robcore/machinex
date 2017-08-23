@@ -666,7 +666,7 @@ out:
 	hugepage_exit_sysfs(hugepage_kobj);
 	return err;
 }
-subsys_initcall(hugepage_init);
+module_init(hugepage_init)
 
 static int __init setup_transparent_hugepage(char *str)
 {
@@ -1066,8 +1066,6 @@ static int do_huge_pmd_wp_page_fallback(struct mm_struct *mm,
 	pmd_t _pmd;
 	int ret = 0, i;
 	struct page **pages;
-	unsigned long mmun_start;	/* For mmu_notifiers */
-	unsigned long mmun_end;		/* For mmu_notifiers */
 
 	pages = kmalloc(sizeof(struct page *) * HPAGE_PMD_NR,
 			GFP_KERNEL);
@@ -1104,16 +1102,12 @@ static int do_huge_pmd_wp_page_fallback(struct mm_struct *mm,
 		cond_resched();
 	}
 
-	mmun_start = haddr;
-	mmun_end   = haddr + HPAGE_PMD_SIZE;
-	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
-
 	spin_lock(&mm->page_table_lock);
 	if (unlikely(!pmd_same(*pmd, orig_pmd)))
 		goto out_free_pages;
 	VM_BUG_ON(!PageHead(page));
 
-	pmdp_clear_flush(vma, haddr, pmd);
+	pmdp_clear_flush_notify(vma, haddr, pmd);
 	/* leave pmd empty until pte is filled */
 
 	pgtable = get_pmd_huge_pte(mm);
@@ -1135,8 +1129,6 @@ static int do_huge_pmd_wp_page_fallback(struct mm_struct *mm,
 	page_remove_rmap(page);
 	spin_unlock(&mm->page_table_lock);
 
-	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
-
 	ret |= VM_FAULT_WRITE;
 	put_page(page);
 
@@ -1145,7 +1137,6 @@ out:
 
 out_free_pages:
 	spin_unlock(&mm->page_table_lock);
-	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
 	mem_cgroup_uncharge_start();
 	for (i = 0; i < HPAGE_PMD_NR; i++) {
 		mem_cgroup_uncharge_page(pages[i]);
@@ -1162,8 +1153,6 @@ int do_huge_pmd_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	int ret = 0;
 	struct page *page = NULL, *new_page;
 	unsigned long haddr;
-	unsigned long mmun_start;	/* For mmu_notifiers */
-	unsigned long mmun_end;		/* For mmu_notifiers */
 
 	VM_BUG_ON(!vma->anon_vma);
 	haddr = address & HPAGE_PMD_MASK;
@@ -1254,13 +1243,9 @@ alloc:
 		}
 		ret |= VM_FAULT_WRITE;
 	}
-	spin_unlock(&mm->page_table_lock);
-out_mn:
-	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
-out:
-	return ret;
 out_unlock:
 	spin_unlock(&mm->page_table_lock);
+out:
 	return ret;
 }
 
@@ -1603,11 +1588,7 @@ static int __split_huge_page_splitting(struct page *page,
 	struct mm_struct *mm = vma->vm_mm;
 	pmd_t *pmd;
 	int ret = 0;
-	/* For mmu_notifiers */
-	const unsigned long mmun_start = address;
-	const unsigned long mmun_end   = address + HPAGE_PMD_SIZE;
 
-	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
 	spin_lock(&mm->page_table_lock);
 	pmd = page_check_address_pmd(page, mm, address,
 				     PAGE_CHECK_ADDRESS_PMD_NOTSPLITTING_FLAG);
@@ -1619,11 +1600,10 @@ static int __split_huge_page_splitting(struct page *page,
 		 * and it won't wait on the anon_vma->root->rwsem to
 		 * serialize against split_huge_page*.
 		 */
-		pmdp_splitting_flush(vma, address, pmd);
+		pmdp_splitting_flush_notify(vma, address, pmd);
 		ret = 1;
 	}
 	spin_unlock(&mm->page_table_lock);
-	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
 
 	return ret;
 }
@@ -2233,8 +2213,6 @@ static void collapse_huge_page(struct mm_struct *mm,
 	spinlock_t *ptl;
 	int isolated;
 	unsigned long hstart, hend;
-	unsigned long mmun_start;	/* For mmu_notifiers */
-	unsigned long mmun_end;		/* For mmu_notifiers */
 
 	VM_BUG_ON(address & ~HPAGE_PMD_MASK);
 #ifndef CONFIG_NUMA
@@ -2305,9 +2283,6 @@ static void collapse_huge_page(struct mm_struct *mm,
 	pte = pte_offset_map(pmd, address);
 	ptl = pte_lockptr(mm, pmd);
 
-	mmun_start = address;
-	mmun_end   = address + HPAGE_PMD_SIZE;
-	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
 	spin_lock(&mm->page_table_lock); /* probably unnecessary */
 	/*
 	 * After this gup_fast can't run anymore. This also removes
@@ -2315,9 +2290,8 @@ static void collapse_huge_page(struct mm_struct *mm,
 	 * huge and small TLB entries for the same virtual address
 	 * to avoid the risk of CPU bugs in that area.
 	 */
-	_pmd = pmdp_clear_flush(vma, address, pmd);
+	_pmd = pmdp_clear_flush_notify(vma, address, pmd);
 	spin_unlock(&mm->page_table_lock);
-	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
 
 	spin_lock(ptl);
 	isolated = __collapse_huge_page_isolate(vma, address, pte);

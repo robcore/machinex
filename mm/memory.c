@@ -689,7 +689,7 @@ static void print_bad_pte(struct vm_area_struct *vma, unsigned long addr,
 	add_taint(TAINT_BAD_PAGE, LOCKDEP_NOW_UNRELIABLE);
 }
 
-static inline bool is_cow_mapping(vm_flags_t flags)
+static inline int is_cow_mapping(vm_flags_t flags)
 {
 	return (flags & (VM_SHARED | VM_MAYWRITE)) == VM_MAYWRITE;
 }
@@ -1004,9 +1004,6 @@ int copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
 	unsigned long next;
 	unsigned long addr = vma->vm_start;
 	unsigned long end = vma->vm_end;
-	unsigned long mmun_start;	/* For mmu_notifiers */
-	unsigned long mmun_end;		/* For mmu_notifiers */
-	bool is_cow;
 	int ret;
 
 	/*
@@ -1040,12 +1037,8 @@ int copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
 	 * parent mm. And a permission downgrade will only happen if
 	 * is_cow_mapping() returns true.
 	 */
-	is_cow = is_cow_mapping(vma->vm_flags);
-	mmun_start = addr;
-	mmun_end   = end;
-	if (is_cow)
-		mmu_notifier_invalidate_range_start(src_mm, mmun_start,
-						    mmun_end);
+	if (is_cow_mapping(vma->vm_flags))
+		mmu_notifier_invalidate_range_start(src_mm, addr, end);
 
 	ret = 0;
 	dst_pgd = pgd_offset(dst_mm, addr);
@@ -1061,8 +1054,9 @@ int copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
 		}
 	} while (dst_pgd++, src_pgd++, addr = next, addr != end);
 
-	if (is_cow)
-		mmu_notifier_invalidate_range_end(src_mm, mmun_start, mmun_end);
+	if (is_cow_mapping(vma->vm_flags))
+		mmu_notifier_invalidate_range_end(src_mm,
+						  vma->vm_start, end);
 	return ret;
 }
 
@@ -1616,12 +1610,12 @@ split_fallthrough:
 		if (page->mapping && trylock_page(page)) {
 			lru_add_drain();  /* push cached pages to LRU */
 			/*
-			 * Because we lock page here, and migration is
-			 * blocked by the pte's page reference, and we
-			 * know the page is still mapped, we don't even
-			 * need to check for file-cache page truncation.
+			 * Because we lock page here and migration is
+			 * blocked by the pte's page reference, we need
+			 * only check for file-cache page truncation.
 			 */
-			mlock_vma_page(page);
+			if (page->mapping)
+				mlock_vma_page(page);
 			unlock_page(page);
 		}
 	}
@@ -2639,14 +2633,11 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		spinlock_t *ptl, pte_t orig_pte)
 	__releases(ptl)
 {
-	struct page *old_page, *new_page = NULL;
+	struct page *old_page, *new_page;
 	pte_t entry;
 	int ret = 0;
 	int page_mkwrite = 0;
 	struct page *dirty_page = NULL;
-	unsigned long mmun_start;	/* For mmu_notifiers */
-	unsigned long mmun_end;		/* For mmu_notifiers */
-	bool mmun_called = false;	/* For mmu_notifiers */
 
 	old_page = vm_normal_page(vma, address, orig_pte);
 	if (!old_page) {
@@ -2831,11 +2822,6 @@ gotten:
 	if (mem_cgroup_newpage_charge(new_page, mm, GFP_KERNEL))
 		goto oom_free_new;
 
-	mmun_start  = address & PAGE_MASK;
-	mmun_end    = (address & PAGE_MASK) + PAGE_SIZE;
-	mmun_called = true;
-	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
-
 	/*
 	 * Re-check the pte - we dropped the lock
 	 */
@@ -2902,8 +2888,6 @@ gotten:
 		page_cache_release(new_page);
 unlock:
 	pte_unmap_unlock(page_table, ptl);
-	if (mmun_called)
-		mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
 	if (old_page) {
 		/*
 		 * Don't let another task, with possibly unlocked vma,
