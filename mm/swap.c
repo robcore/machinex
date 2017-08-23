@@ -31,7 +31,6 @@
 #include <linux/memcontrol.h>
 #include <linux/gfp.h>
 #include <linux/hugetlb.h>
-#include <linux/aio.h>
 #include <linux/uio.h>
 
 #include "internal.h"
@@ -77,8 +76,7 @@ static void __put_compound_page(struct page *page)
 {
 	compound_page_dtor *dtor;
 
-	if (!PageHuge(page))
-		__page_cache_release(page);
+	__page_cache_release(page);
 	dtor = get_compound_page_dtor(page);
 	(*dtor)(page);
 }
@@ -533,6 +531,9 @@ static void __lru_cache_activate_page(struct page *page)
  * inactive,unreferenced	->	inactive,referenced
  * inactive,referenced		->	active,unreferenced
  * active,unreferenced		->	active,referenced
+ *
+ * When a newly allocated page is not yet visible, so safe for non-atomic ops,
+ * __SetPageReferenced(page) may be substituted for mark_page_accessed(page).
  */
 void mark_page_accessed(struct page *page)
 {
@@ -808,8 +809,6 @@ void release_pages(struct page **pages, int nr, int cold)
 	struct lruvec *lruvec;
 	unsigned long uninitialized_var(flags);
 
-	mem_cgroup_uncharge_start();
-
 	for (i = 0; i < nr; i++) {
 		struct page *page = pages[i];
 
@@ -841,7 +840,6 @@ void release_pages(struct page **pages, int nr, int cold)
 			__ClearPageLRU(page);
 			del_page_from_lru_list(page, lruvec, page_off_lru(page));
 		}
-		mem_cgroup_uncharge(page);
 
 		/* Clear Active bit in case of parallel mark_page_accessed */
 		ClearPageActive(page);
@@ -851,8 +849,7 @@ void release_pages(struct page **pages, int nr, int cold)
 	if (zone)
 		spin_unlock_irqrestore(&zone->lru_lock, flags);
 
-	mem_cgroup_uncharge_end();
-
+	mem_cgroup_uncharge_list(&pages_to_free);
 	free_hot_cold_page_list(&pages_to_free, cold);
 }
 EXPORT_SYMBOL(release_pages);
