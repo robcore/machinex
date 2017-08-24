@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 3
-#define VERSION_MIN 5
+#define VERSION_MIN 6
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -63,7 +63,7 @@ static unsigned int ignore_wakelocks = 1;
 extern bool mx_is_cable_attached(void);
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
-static unsigned int booting = 1;
+static bool booting = true;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -167,14 +167,22 @@ static void power_suspend(struct work_struct *work)
 	} else
 		goto skip_suspend;
 skip_check:
-		if (booting) {
+		if (unlikely(booting)) {
+			booting = false;
 			pr_info("[PROMETHEUS] Delaying Initial System Suspend. Booting.\n");
-			booting = 0;
 			queue_delayed_work_on(0, pwrsup_wq, &extra_suspend_work, msecs_to_jiffies(2000));
 			return;
 		}
 
-		queue_delayed_work_on(0, pwrsup_wq, &extra_suspend_work, 0);
+		if (!mutex_trylock(&pm_mutex)) {
+			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
+			return;
+		}
+
+		pr_info("[PROMETHEUS] Calling System Suspend!\n");
+		pm_suspend(PM_HIBERNATION_PREPARE);
+		mutex_unlock(&pm_mutex);
+
 skip_suspend:
 		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
 		return;
