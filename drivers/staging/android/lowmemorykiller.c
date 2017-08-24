@@ -181,12 +181,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	if (mutex_lock_interruptible(&scan_mutex) < 0)
 		return 0;
 
-#ifndef CONFIG_CMA
 	other_free = global_page_state(NR_FREE_PAGES);
-#else
-	other_free = global_page_state(NR_FREE_PAGES) -
-				global_page_state(NR_FREE_CMA_PAGES);
-#endif
 	other_file = global_page_state(NR_FILE_PAGES);
 
 	if ( global_page_state(NR_SHMEM) + total_swapcache_pages() < other_file)
