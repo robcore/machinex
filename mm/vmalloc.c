@@ -1406,10 +1406,8 @@ static struct vm_struct *__get_vm_area_node(unsigned long size,
 	if (unlikely(!area))
 		return NULL;
 
-	/*
-	 * We always allocate a guard page.
-	 */
-	size += PAGE_SIZE;
+	if (!(flags & VM_NO_GUARD))
+		size += PAGE_SIZE;
 
 	va = alloc_vmap_area(size, align, start, end, node, gfp_mask);
 	if (IS_ERR(va)) {
@@ -1465,12 +1463,10 @@ struct vm_struct *get_vm_area_caller(unsigned long size, unsigned long flags,
 {
 #ifdef CONFIG_ENABLE_VMALLOC_SAVING
 	return __get_vm_area_node(size, 1, flags, PAGE_OFFSET, VMALLOC_END,
-				  NUMA_NO_NODE, GFP_KERNEL,
-				  __builtin_return_address(0));
+				  NUMA_NO_NODE, GFP_KERNEL, caller);
 #else
 	return __get_vm_area_node(size, 1, flags, VMALLOC_START, VMALLOC_END,
-				  NUMA_NO_NODE, GFP_KERNEL,
-				  __builtin_return_address(0));
+				  NUMA_NO_NODE, GFP_KERNEL, caller);
 #endif
 }
 
@@ -2334,14 +2330,6 @@ struct vm_struct *alloc_vm_area(size_t size, pte_t **ptes)
 		free_vm_area(area);
 		return NULL;
 	}
-
-	/*
-	 * If the allocated address space is passed to a hypercall
-	 * before being used then we cannot rely on a page fault to
-	 * trigger an update of the page tables.  So sync all the page
-	 * tables here.
-	 */
-	vmalloc_sync_all();
 
 	return area;
 }
