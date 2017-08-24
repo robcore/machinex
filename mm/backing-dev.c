@@ -411,12 +411,10 @@ void bdi_unregister(struct backing_dev_info *bdi)
 
 		bdi_wb_shutdown(bdi);
 		bdi_debug_unregister(bdi);
-
+		device_unregister(dev);
 		spin_lock_bh(&bdi->wb_lock);
 		bdi->dev = NULL;
 		spin_unlock_bh(&bdi->wb_lock);
-
-		device_unregister(dev);
 	}
 }
 EXPORT_SYMBOL(bdi_unregister);
