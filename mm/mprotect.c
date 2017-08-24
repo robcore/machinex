@@ -208,7 +208,6 @@ static unsigned long change_protection_range(struct vm_area_struct *vma,
 	unsigned long next;
 	unsigned long start = addr;
 	unsigned long pages = 0;
-	unsigned long nr_huge_updates = 0;
 
 	BUG_ON(addr >= end);
 	pgd = pgd_offset(mm, addr);
@@ -225,8 +224,6 @@ static unsigned long change_protection_range(struct vm_area_struct *vma,
 	if (pages)
 		flush_tlb_range(vma, start, end);
 
-	if (nr_huge_updates)
-		count_vm_numa_events(NUMA_HUGE_PTE_UPDATES, nr_huge_updates);
 	return pages;
 }
 
