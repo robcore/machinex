@@ -231,6 +231,9 @@ config SPLIT_PTLOCK_CPUS
 config ARCH_ENABLE_SPLIT_PMD_PTLOCK
 	bool
 
+config ARCH_ENABLE_SPLIT_PMD_PTLOCK
+	boolean
+
 #
 # support for memory balloon
 config MEMORY_BALLOON

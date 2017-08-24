@@ -87,6 +87,20 @@ static inline void vm_events_fold_cpu(int cpu)
 #define count_vm_numa_events(x, y) do { (void)(y); } while (0)
 #endif /* CONFIG_NUMA_BALANCING */
 
+#ifdef CONFIG_DEBUG_TLBFLUSH
+#define count_vm_tlb_event(x)	   count_vm_event(x)
+#define count_vm_tlb_events(x, y)  count_vm_events(x, y)
+#else
+#define count_vm_tlb_event(x)     do {} while (0)
+#define count_vm_tlb_events(x, y) do { (void)(y); } while (0)
+#endif
+
+#ifdef CONFIG_DEBUG_VM_VMACACHE
+#define count_vm_vmacache_event(x) count_vm_event(x)
+#else
+#define count_vm_vmacache_event(x) do {} while (0)
+#endif
+
 #define __count_zone_vm_events(item, zone, delta) \
 		__count_vm_events(item##_NORMAL - ZONE_NORMAL + \
 		zone_idx(zone), delta)
@@ -146,7 +160,25 @@ static inline unsigned long zone_page_state_snapshot(struct zone *zone,
 	return x;
 }
 
-extern unsigned long global_reclaimable_pages(void);
+static inline unsigned long global_page_state_snapshot(enum zone_stat_item item)
+{
+	long x = atomic_long_read(&vm_stat[item]);
+
+#ifdef CONFIG_SMP
+	struct zone *zone;
+	int cpu;
+
+	for_each_online_cpu(cpu) {
+		for_each_populated_zone(zone)
+			x += per_cpu_ptr(zone->pageset,
+				cpu)->vm_stat_diff[item];
+	}
+
+	if (x < 0)
+		x = 0;
+#endif
+	return x;
+}
 
 #ifdef CONFIG_NUMA
 /*
@@ -272,6 +304,7 @@ static inline void __mod_zone_freepage_state(struct zone *zone, int nr_pages,
 	if (is_migrate_cma(migratetype))
 		__mod_zone_page_state(zone, NR_FREE_CMA_PAGES, nr_pages);
 }
+
 extern const char * const vmstat_text[];
 
 #endif /* _LINUX_VMSTAT_H */
