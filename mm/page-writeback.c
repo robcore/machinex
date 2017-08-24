@@ -1781,7 +1781,7 @@ void __init page_writeback_init(void)
 	cpuhp_setup_state(CPUHP_MM_WRITEBACK_DEAD, "mm/writeback:dead", NULL,
 			  page_writeback_cpu_online);
 
-	fprop_global_init(&writeout_completions);
+	fprop_global_init(&writeout_completions, GFP_KERNEL);
 }
 
 /**
