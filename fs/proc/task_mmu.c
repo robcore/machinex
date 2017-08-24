@@ -84,6 +84,32 @@ unsigned long task_statm(struct mm_struct *mm,
 	return mm->total_vm;
 }
 
+#ifdef CONFIG_NUMA
+/*
+ * Save get_task_policy() for show_numa_map().
+ */
+static void hold_task_mempolicy(struct proc_maps_private *priv)
+{
+	struct task_struct *task = priv->task;
+
+	task_lock(task);
+	priv->task_mempolicy = get_task_policy(task);
+	mpol_get(priv->task_mempolicy);
+	task_unlock(task);
+}
+static void release_task_mempolicy(struct proc_maps_private *priv)
+{
+	mpol_put(priv->task_mempolicy);
+}
+#else
+static void hold_task_mempolicy(struct proc_maps_private *priv)
+{
+}
+static void release_task_mempolicy(struct proc_maps_private *priv)
+{
+}
+#endif
+
 static void seq_print_vma_name(struct seq_file *m, struct vm_area_struct *vma)
 {
 	const char __user *name = vma_get_anon_name(vma);
@@ -897,8 +923,21 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 		}
 
 		down_read(&mm->mmap_sem);
-		if (type == CLEAR_REFS_SOFT_DIRTY)
+		if (type == CLEAR_REFS_SOFT_DIRTY) {
+			for (vma = mm->mmap; vma; vma = vma->vm_next) {
+				if (!(vma->vm_flags & VM_SOFTDIRTY))
+					continue;
+				up_read(&mm->mmap_sem);
+				down_write(&mm->mmap_sem);
+				for (vma = mm->mmap; vma; vma = vma->vm_next) {
+					vma->vm_flags &= ~VM_SOFTDIRTY;
+					vma_set_page_prot(vma);
+				}
+				downgrade_write(&mm->mmap_sem);
+				break;
+			}
 			mmu_notifier_invalidate_range_start(mm, 0, -1);
+		}
 		for (vma = mm->mmap; vma; vma = vma->vm_next) {
 			cp.vma = vma;
 			if (is_vm_hugetlb_page(vma))
@@ -911,6 +950,8 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 			 *
 			 * Writing 3 to /proc/pid/clear_refs only affects file
 			 * mapped pages.
+			 *
+			 * Writing 4 to /proc/pid/clear_refs affects all pages.
 			 */
 			if (type == CLEAR_REFS_ANON && vma->vm_file)
 				continue;
