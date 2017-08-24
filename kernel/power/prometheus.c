@@ -226,7 +226,7 @@ static void power_resume(struct work_struct *work)
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
 
-void set_power_suspend_state(int new_state)
+static void set_power_suspend_state(int new_state)
 {
 	unsigned long irqflags;
 
