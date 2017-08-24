@@ -31,16 +31,14 @@
 #include "power.h"
 
 #define VERSION 3
-#define VERSION_MIN 6
+#define VERSION_MIN 4
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
 static LIST_HEAD(power_suspend_handlers);
 static struct workqueue_struct *pwrsup_wq;
-struct delayed_work extra_suspend_work;
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
-static void extra_suspend(struct work_struct *work);
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
@@ -63,7 +61,7 @@ static unsigned int ignore_wakelocks = 1;
 extern bool mx_is_cable_attached(void);
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
-static bool booting = true;
+static unsigned int booting = 1;
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -87,18 +85,6 @@ void unregister_power_suspend(struct power_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
-static void extra_suspend(struct work_struct *work)
-{
-		if (!mutex_trylock(&pm_mutex)) {
-			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
-			return;
-		}
-
-		pr_info("[PROMETHEUS] Calling System Suspend!\n");
-		pm_suspend(PM_HIBERNATION_PREPARE);
-		mutex_unlock(&pm_mutex);
-}
-
 static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
@@ -113,13 +99,13 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	cancel_work_sync(&power_resume_work);
+
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_INACTIVE) {
 		spin_unlock_irqrestore(&ps_state_lock, irqflags);
 		mutex_unlock(&prometheus_mtx);
-		pr_info("[PROMETHEUS] Suspend Aborted! Screen on!\n");
 		return;
 	}
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
@@ -156,6 +142,9 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
 				return;
 			} else {
+				if (unlikely(booting))
+					pr_info("[PROMETHEUS] Skipping Initial System Suspend. Booting.\n");
+				else
 					pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 
 				goto skip_check;
@@ -164,16 +153,11 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
-	} else
-		goto skip_suspend;
 skip_check:
-		if (unlikely(booting)) {
-			booting = false;
-			pr_info("[PROMETHEUS] Delaying Initial System Suspend. Booting.\n");
-			queue_delayed_work_on(0, pwrsup_wq, &extra_suspend_work, msecs_to_jiffies(2000));
-			return;
-		}
-
+	if (booting) {
+		booting = 0;
+		return;
+	}
 		if (!mutex_trylock(&pm_mutex)) {
 			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
 			return;
@@ -182,10 +166,8 @@ skip_check:
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
 		pm_suspend(PM_HIBERNATION_PREPARE);
 		mutex_unlock(&pm_mutex);
-
-skip_suspend:
+	} else
 		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
-		return;
 }
 
 static void power_resume(struct work_struct *work)
@@ -198,7 +180,7 @@ static void power_resume(struct work_struct *work)
 				State!\n");
 		return;
 	}
-	cancel_delayed_work_sync(&extra_suspend_work);
+
 	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
@@ -226,7 +208,7 @@ static void power_resume(struct work_struct *work)
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
 
-static void set_power_suspend_state(int new_state)
+void set_power_suspend_state(int new_state)
 {
 	unsigned long irqflags;
 
@@ -387,7 +369,6 @@ static int prometheus_init(void)
 	wake_lock_init(&prsynclock, WAKE_LOCK_SUSPEND, "prometheus_synclock");
 
 	INIT_WORK(&power_suspend_work, power_suspend);
-	INIT_DELAYED_WORK(&extra_suspend_work, extra_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
 	return 0;

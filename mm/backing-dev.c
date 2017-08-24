@@ -40,7 +40,7 @@ LIST_HEAD(bdi_list);
 /* bdi_wq serves all asynchronous writeback tasks */
 struct workqueue_struct *bdi_wq;
 
-static void bdi_lock_two(struct bdi_writeback *wb1, struct bdi_writeback *wb2)
+void bdi_lock_two(struct bdi_writeback *wb1, struct bdi_writeback *wb2)
 {
 	if (wb1 < wb2) {
 		spin_lock(&wb1->list_lock);
@@ -411,10 +411,12 @@ void bdi_unregister(struct backing_dev_info *bdi)
 
 		bdi_wb_shutdown(bdi);
 		bdi_debug_unregister(bdi);
-		device_unregister(dev);
+
 		spin_lock_bh(&bdi->wb_lock);
 		bdi->dev = NULL;
 		spin_unlock_bh(&bdi->wb_lock);
+
+		device_unregister(dev);
 	}
 }
 EXPORT_SYMBOL(bdi_unregister);
@@ -468,7 +470,7 @@ int bdi_init(struct backing_dev_info *bdi)
 	bdi->write_bandwidth = INIT_BW;
 	bdi->avg_write_bandwidth = INIT_BW;
 
-	err = fprop_local_init_percpu(&bdi->completions, GFP_KERNEL);
+	err = fprop_local_init_percpu(&bdi->completions);
 
 	if (err) {
 err:
@@ -644,7 +646,7 @@ long wait_iff_congested(struct zone *zone, int sync, long timeout)
 	 * of sleeping on the congestion queue
 	 */
 	if (atomic_read(&nr_bdi_congested[sync]) == 0 ||
-	    !test_bit(ZONE_CONGESTED, &zone->flags)) {
+			!zone_is_reclaim_congested(zone)) {
 
 		/*
 		 * Memory allocation/reclaim might be called from a WQ
