@@ -113,13 +113,13 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	cancel_work_sync(&power_resume_work);
-
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_INACTIVE) {
 		spin_unlock_irqrestore(&ps_state_lock, irqflags);
 		mutex_unlock(&prometheus_mtx);
+		pr_info("[PROMETHEUS] Suspend Aborted! Screen on!\n");
 		return;
 	}
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
