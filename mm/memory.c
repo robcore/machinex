@@ -552,7 +552,6 @@ void free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *vma,
 int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 		pmd_t *pmd, unsigned long address)
 {
-	spinlock_t *ptl;
 	pgtable_t new = pte_alloc_one(mm, address);
 	int wait_split_huge_page;
 	if (!new)
@@ -573,7 +572,7 @@ int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 	 */
 	smp_wmb(); /* Could be smp_wmb__xxx(before|after)_spin_lock */
 
-	ptl = pmd_lock(mm, pmd);
+	spin_lock(&mm->page_table_lock);
 	wait_split_huge_page = 0;
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
 		atomic_long_inc(&mm->nr_ptes);
@@ -581,7 +580,7 @@ int __pte_alloc(struct mm_struct *mm, struct vm_area_struct *vma,
 		new = NULL;
 	} else if (unlikely(pmd_trans_splitting(*pmd)))
 		wait_split_huge_page = 1;
-	spin_unlock(ptl);
+	spin_unlock(&mm->page_table_lock);
 	if (new)
 		pte_free(mm, new);
 	if (wait_split_huge_page)
@@ -687,6 +686,11 @@ static void print_bad_pte(struct vm_area_struct *vma, unsigned long addr,
 		       vma->vm_file->f_op->mmap);
 	dump_stack();
 	add_taint(TAINT_BAD_PAGE, LOCKDEP_NOW_UNRELIABLE);
+}
+
+static inline bool is_cow_mapping(vm_flags_t flags)
+{
+	return (flags & (VM_SHARED | VM_MAYWRITE)) == VM_MAYWRITE;
 }
 
 /*
@@ -1526,20 +1530,20 @@ struct page *follow_page_mask(struct vm_area_struct *vma,
 			split_huge_page_pmd(vma, address, pmd);
 			goto split_fallthrough;
 		}
-		ptl = pmd_lock(mm, pmd);
+		spin_lock(&mm->page_table_lock);
 		if (likely(pmd_trans_huge(*pmd))) {
 			if (unlikely(pmd_trans_splitting(*pmd))) {
-				spin_unlock(ptl);
+				spin_unlock(&mm->page_table_lock);
 				wait_split_huge_page(vma->anon_vma, pmd);
 			} else {
 				page = follow_trans_huge_pmd(vma, address,
 							     pmd, flags);
-				spin_unlock(ptl);
+				spin_unlock(&mm->page_table_lock);
 				*page_mask = HPAGE_PMD_NR - 1;
 				goto out;
 			}
 		} else
-			spin_unlock(ptl);
+			spin_unlock(&mm->page_table_lock);
 		/* fall through */
 	}
 split_fallthrough:
@@ -4446,22 +4450,3 @@ void copy_user_huge_page(struct page *dst, struct page *src,
 	}
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE || CONFIG_HUGETLBFS */
-
-#if USE_SPLIT_PTE_PTLOCKS
-bool __ptlock_alloc(struct page *page)
-{
-	spinlock_t *ptl;
-
-	ptl = kmalloc(sizeof(spinlock_t), GFP_KERNEL);
-	if (!ptl)
-		return false;
-	page->ptl = (unsigned long)ptl;
-	return true;
-}
-
-void __ptlock_free(struct page *page)
-{
-	if (sizeof(spinlock_t) > sizeof(page->ptl))
-		kfree((spinlock_t *)page->ptl);
-}
-#endif
