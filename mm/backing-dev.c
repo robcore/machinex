@@ -644,7 +644,7 @@ long wait_iff_congested(struct zone *zone, int sync, long timeout)
 	 * of sleeping on the congestion queue
 	 */
 	if (atomic_read(&nr_bdi_congested[sync]) == 0 ||
-			!zone_is_reclaim_congested(zone)) {
+	    !test_bit(ZONE_CONGESTED, &zone->flags)) {
 
 		/*
 		 * Memory allocation/reclaim might be called from a WQ
