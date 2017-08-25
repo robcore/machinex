@@ -16,6 +16,7 @@
 #include <linux/percpu-defs.h>
 #include <linux/slab.h>
 #include <linux/tick.h>
+#include <linux/sysfs_helpers.h>
 
 #include "cpufreq_ondemand.h"
 
@@ -228,10 +229,10 @@ static ssize_t store_up_threshold(struct gov_attr_set *attr_set,
 	int ret;
 	ret = sscanf(buf, "%u", &input);
 
-	if (ret != 1 || input > MAX_FREQUENCY_UP_THRESHOLD ||
-			input < MIN_FREQUENCY_UP_THRESHOLD) {
+	if (ret != 1)
 		return -EINVAL;
-	}
+
+	sanitize_min_max(input, MIN_FREQUENCY_UP_THRESHOLD, MAX_FREQUENCY_UP_THRESHOLD);
 
 	dbs_data->up_threshold = input;
 	return count;
