@@ -3952,8 +3952,10 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 		flags |= __WQ_ORDERED;
 
 	/* see the comment above the definition of WQ_POWER_EFFICIENT */
-	if ((flags & WQ_POWER_EFFICIENT) && wq_power_efficient)
-		flags |= WQ_UNBOUND;
+	if (is_display_on()) {
+		if ((flags & WQ_POWER_EFFICIENT) && wq_power_efficient)
+			flags |= WQ_UNBOUND;
+	}
 
 	/* allocate wq and format name */
 	if (flags & WQ_UNBOUND)
