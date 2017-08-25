@@ -253,17 +253,16 @@ EXPORT_SYMBOL(__destroy_inode);
 static void i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
-	__destroy_inode(inode);
 	kmem_cache_free(inode_cachep, inode);
 }
 
 static void destroy_inode(struct inode *inode)
 {
 	BUG_ON(!list_empty(&inode->i_lru));
-	if (inode->i_sb->s_op->destroy_inode) {
-		__destroy_inode(inode);
+	__destroy_inode(inode);
+	if (inode->i_sb->s_op->destroy_inode)
 		inode->i_sb->s_op->destroy_inode(inode);
-	} else
+	else
 		call_rcu(&inode->i_rcu, i_callback);
 }
 
@@ -1850,3 +1849,81 @@ bool inode_owner_or_capable(const struct inode *inode)
 	return false;
 }
 EXPORT_SYMBOL(inode_owner_or_capable);
+
+/*
+ * Direct i/o helper functions
+ */
+static void __inode_dio_wait(struct inode *inode)
+{
+	wait_queue_head_t *wq = bit_waitqueue(&inode->i_state, __I_DIO_WAKEUP);
+	DEFINE_WAIT_BIT(q, &inode->i_state, __I_DIO_WAKEUP);
+
+	do {
+		prepare_to_wait(wq, &q.wait, TASK_UNINTERRUPTIBLE);
+		if (atomic_read(&inode->i_dio_count))
+			schedule();
+	} while (atomic_read(&inode->i_dio_count));
+	finish_wait(wq, &q.wait);
+}
+
+/**
+ * inode_dio_wait - wait for outstanding DIO requests to finish
+ * @inode: inode to wait for
+ *
+ * Waits for all pending direct I/O requests to finish so that we can
+ * proceed with a truncate or equivalent operation.
+ *
+ * Must be called under a lock that serializes taking new references
+ * to i_dio_count, usually by inode->i_mutex.
+ */
+void inode_dio_wait(struct inode *inode)
+{
+	if (atomic_read(&inode->i_dio_count))
+		__inode_dio_wait(inode);
+}
+EXPORT_SYMBOL(inode_dio_wait);
+
+/*
+ * inode_dio_done - signal finish of a direct I/O requests
+ * @inode: inode the direct I/O happens on
+ *
+ * This is called once we've finished processing a direct I/O request,
+ * and is used to wake up callers waiting for direct I/O to be quiesced.
+ */
+void inode_dio_done(struct inode *inode)
+{
+	if (atomic_dec_and_test(&inode->i_dio_count))
+		wake_up_bit(&inode->i_state, __I_DIO_WAKEUP);
+}
+EXPORT_SYMBOL(inode_dio_done);
+
+/*
+ * inode_set_flags - atomically set some inode flags
+ *
+ * Note: the caller should be holding i_mutex, or else be sure that
+ * they have exclusive access to the inode structure (i.e., while the
+ * inode is being instantiated).  The reason for the cmpxchg() loop
+ * --- which wouldn't be necessary if all code paths which modify
+ * i_flags actually followed this rule, is that there is at least one
+ * code path which doesn't today --- for example,
+ * __generic_file_aio_write() calls file_remove_suid() without holding
+ * i_mutex --- so we use cmpxchg() out of an abundance of caution.
+ *
+ * In the long run, i_mutex is overkill, and we should probably look
+ * at using the i_lock spinlock to protect i_flags, and then make sure
+ * it is so documented in include/linux/fs.h and that all code follows
+ * the locking convention!!
+ */
+void inode_set_flags(struct inode *inode, unsigned int flags,
+		     unsigned int mask)
+{
+	unsigned int old_flags, new_flags;
+
+	WARN_ON_ONCE(flags & ~mask);
+	do {
+		old_flags = ACCESS_ONCE(inode->i_flags);
+		new_flags = (old_flags & ~mask) | flags;
+	} while (unlikely(cmpxchg(&inode->i_flags, old_flags,
+				  new_flags) != old_flags));
+}
+EXPORT_SYMBOL(inode_set_flags);
