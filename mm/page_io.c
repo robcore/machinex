@@ -17,15 +17,11 @@
 #include <linux/swap.h>
 #include <linux/bio.h>
 #include <linux/swapops.h>
-#ifdef CONFIG_SWAPFILE
 #include <linux/buffer_head.h>
-#endif
 #include <linux/writeback.h>
-#include <linux/aio.h>
-#include <linux/blkdev.h>
-#include <linux/blk_types.h>
 #include <linux/frontswap.h>
 #include <linux/aio.h>
+#include <linux/blkdev.h>
 #include <asm/pgtable.h>
 
 static struct bio *get_swap_bio(gfp_t gfp_flags,
@@ -41,7 +37,6 @@ static struct bio *get_swap_bio(gfp_t gfp_flags,
 		bio->bi_io_vec[0].bv_len = PAGE_SIZE;
 		bio->bi_io_vec[0].bv_offset = 0;
 		bio->bi_vcnt = 1;
-		bio->bi_iter.bi_idx = 0;
 		bio->bi_iter.bi_size = PAGE_SIZE;
 		bio->bi_end_io = end_io;
 	}
@@ -100,33 +95,38 @@ void end_swap_bio_read(struct bio *bio, int err)
 	 * this optimization.
 	 */
 	if (likely(PageSwapCache(page))) {
-		/*
-		 * The swap subsystem performs lazy swap slot freeing,
-		 * expecting that the page will be swapped out again.
-		 * So we can avoid an unnecessary write if the page
-		 * isn't redirtied.
-		 * This is good for real swap storage because we can
-		 * reduce unnecessary I/O and enhance wear-leveling
-		 * if an SSD is used as the as swap device.
-		 * But if in-memory swap device (eg zram) is used,
-		 * this causes a duplicated copy between uncompressed
-		 * data in VM-owned memory and compressed data in
-		 * zram-owned memory.  So let's free zram-owned memory
-		 * and make the VM-owned decompressed page *dirty*,
-		 * so the page should be swapped out somewhere again if
-		 * we again wish to reclaim it.
-		 */
-		struct gendisk *disk = bio->bi_bdev->bd_disk;
-		if (disk->fops->swap_slot_free_notify) {
-			swp_entry_t entry;
-			unsigned long offset;
+		struct swap_info_struct *sis;
 
-			entry.val = page_private(page);
-			offset = swp_offset(entry);
+		sis = page_swap_info(page);
+		if (sis->flags & SWP_BLKDEV) {
+			/*
+			 * The swap subsystem performs lazy swap slot freeing,
+			 * expecting that the page will be swapped out again.
+			 * So we can avoid an unnecessary write if the page
+			 * isn't redirtied.
+			 * This is good for real swap storage because we can
+			 * reduce unnecessary I/O and enhance wear-leveling
+			 * if an SSD is used as the as swap device.
+			 * But if in-memory swap device (eg zram) is used,
+			 * this causes a duplicated copy between uncompressed
+			 * data in VM-owned memory and compressed data in
+			 * zram-owned memory.  So let's free zram-owned memory
+			 * and make the VM-owned decompressed page *dirty*,
+			 * so the page should be swapped out somewhere again if
+			 * we again wish to reclaim it.
+			 */
+			struct gendisk *disk = sis->bdev->bd_disk;
+			if (disk->fops->swap_slot_free_notify) {
+				swp_entry_t entry;
+				unsigned long offset;
 
-			SetPageDirty(page);
-			disk->fops->swap_slot_free_notify(bio->bi_bdev,
-					offset);
+				entry.val = page_private(page);
+				offset = swp_offset(entry);
+
+				SetPageDirty(page);
+				disk->fops->swap_slot_free_notify(sis->bdev,
+						offset);
+			}
 		}
 	}
 
@@ -135,9 +135,6 @@ out:
 	bio_put(bio);
 }
 
-int __swap_writepage(struct page *page, struct writeback_control *wbc,
-	void (*end_write_func)(struct bio *, int));
-#ifdef CONFIG_SWAPFILE
 int generic_swapfile_activate(struct swap_info_struct *sis,
 				struct file *swap_file,
 				sector_t *span)
@@ -229,7 +226,6 @@ bad_bmap:
 	ret = -EINVAL;
 	goto out;
 }
-#endif
 
 /*
  * We may have stale swap cache pages in memory: notice
@@ -260,12 +256,16 @@ out:
 	return ret;
 }
 
+static sector_t swap_page_sector(struct page *page)
+{
+	return (sector_t)__page_file_index(page) << (PAGE_CACHE_SHIFT - 9);
+}
+
 int __swap_writepage(struct page *page, struct writeback_control *wbc,
 	void (*end_write_func)(struct bio *, int))
 {
 	struct bio *bio;
-	int ret = 0, rw = WRITE;
-#ifdef CONFIG_SWAPFILE
+	int ret, rw = WRITE;
 	struct swap_info_struct *sis = page_swap_info(page);
 
 	if (sis->flags & SWP_FILE) {
@@ -282,13 +282,14 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 			.count = PAGE_SIZE,
 			.iov_offset = 0,
 			.nr_segs = 1,
-			.bvec = &bv
 		};
+		from.bvec = &bv;	/* older gcc versions are broken */
 
 		init_sync_kiocb(&kiocb, swap_file);
 		kiocb.ki_pos = page_file_offset(page);
 		kiocb.ki_nbytes = PAGE_SIZE;
 
+		set_page_writeback(page);
 		unlock_page(page);
 		ret = mapping->a_ops->direct_IO(ITER_BVEC | WRITE,
 						&kiocb, &from,
@@ -296,11 +297,33 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 		if (ret == PAGE_SIZE) {
 			count_vm_event(PSWPOUT);
 			ret = 0;
+		} else {
+			/*
+			 * In the case of swap-over-nfs, this can be a
+			 * temporary failure if the system has limited
+			 * memory for allocating transmit buffers.
+			 * Mark the page dirty and avoid
+			 * rotate_reclaimable_page but rate-limit the
+			 * messages but do not flag PageError like
+			 * the normal direct-to-bio case as it could
+			 * be temporary.
+			 */
+			set_page_dirty(page);
+			ClearPageReclaim(page);
+			pr_err_ratelimited("Write error on dio swapfile (%Lu)\n",
+				page_file_offset(page));
 		}
+		end_page_writeback(page);
 		return ret;
 	}
-#endif
 
+	ret = bdev_write_page(sis->bdev, swap_page_sector(page), page, wbc);
+	if (!ret) {
+		count_vm_event(PSWPOUT);
+		return 0;
+	}
+
+	ret = 0;
 	bio = get_swap_bio(GFP_NOIO, page, end_write_func);
 	if (bio == NULL) {
 		set_page_dirty(page);
@@ -322,17 +345,16 @@ int swap_readpage(struct page *page)
 {
 	struct bio *bio;
 	int ret = 0;
-#ifdef CONFIG_SWAPFILE
 	struct swap_info_struct *sis = page_swap_info(page);
-#endif
-	VM_BUG_ON(!PageLocked(page));
-	VM_BUG_ON(PageUptodate(page));
+
+	VM_BUG_ON_PAGE(!PageLocked(page), page);
+	VM_BUG_ON_PAGE(PageUptodate(page), page);
 	if (frontswap_load(page) == 0) {
 		SetPageUptodate(page);
 		unlock_page(page);
 		goto out;
 	}
-#ifdef CONFIG_SWAPFILE
+
 	if (sis->flags & SWP_FILE) {
 		struct file *swap_file = sis->swap_file;
 		struct address_space *mapping = swap_file->f_mapping;
@@ -342,8 +364,14 @@ int swap_readpage(struct page *page)
 			count_vm_event(PSWPIN);
 		return ret;
 	}
-#endif
 
+	ret = bdev_read_page(sis->bdev, swap_page_sector(page), page);
+	if (!ret) {
+		count_vm_event(PSWPIN);
+		return 0;
+	}
+
+	ret = 0;
 	bio = get_swap_bio(GFP_KERNEL, page, end_swap_bio_read);
 	if (bio == NULL) {
 		unlock_page(page);
@@ -355,7 +383,7 @@ int swap_readpage(struct page *page)
 out:
 	return ret;
 }
-#ifdef CONFIG_SWAPFILE
+
 int swap_set_page_dirty(struct page *page)
 {
 	struct swap_info_struct *sis = page_swap_info(page);
@@ -367,4 +395,3 @@ int swap_set_page_dirty(struct page *page)
 		return __set_page_dirty_no_writeback(page);
 	}
 }
-#endif

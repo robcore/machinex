@@ -27,11 +27,7 @@
  */
 static const struct address_space_operations swap_aops = {
 	.writepage	= swap_writepage,
-#ifdef CONFIG_SWAPFILE
 	.set_page_dirty	= swap_set_page_dirty,
-#else
-	.set_page_dirty	= __set_page_dirty_no_writeback,
-#endif
 	.migratepage	= migrate_page,
 };
 
@@ -440,6 +436,6 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 	blk_finish_plug(&plug);
 
 	lru_add_drain();	/* Push any new pages onto the LRU now */
-#endif /* CONFIG_SWAP_ENABLE_READAHEAD */
+#endif
 	return read_swap_cache_async(entry, gfp_mask, vma, addr);
 }

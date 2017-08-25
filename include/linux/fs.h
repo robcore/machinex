@@ -45,9 +45,7 @@ struct kstatfs;
 struct vm_area_struct;
 struct vfsmount;
 struct cred;
-#ifdef CONFIG_SWAPFILE
 struct swap_info_struct;
-#endif
 struct seq_file;
 struct workqueue_struct;
 struct iov_iter;
@@ -403,12 +401,10 @@ struct address_space_operations {
 	void (*is_dirty_writeback) (struct page *, bool *, bool *);
 	int (*error_remove_page)(struct address_space *, struct page *);
 
-#ifdef CONFIG_SWAPFILE
 	/* swapfile support */
 	int (*swap_activate)(struct swap_info_struct *sis, struct file *file,
 				sector_t *span);
 	void (*swap_deactivate)(struct file *file);
-#endif
 };
 
 extern const struct address_space_operations empty_aops;
