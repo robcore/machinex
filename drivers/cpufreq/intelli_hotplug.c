@@ -86,7 +86,6 @@ static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
-static unsigned int debug_intelli_plug = 0;
 
 struct ip_suspend {
 	struct mutex intellisleep_mutex;
@@ -95,12 +94,6 @@ struct ip_suspend {
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_suspend, i_suspend_data);
 
 struct wake_lock ipwlock;
-
-#define dprintk(msg...)		\
-do {				\
-	if (debug_intelli_plug)		\
-		pr_info(msg);	\
-} while (0)
 
 static unsigned int nr_run_thresholds_balance[] = {
 	(THREAD_CAPACITY * 775 * MULT_FACTOR) / DIV_FACTOR,
@@ -332,8 +325,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	delta = (now - last_input);
 
 	if (target < online_cpus) {
-		if ((online_cpus <= cpus_boosted) &&
-		(delta <= msecs_to_jiffies(boost_lock_duration)) ||
+		if (((online_cpus <= cpus_boosted) &&
+		(delta <= msecs_to_jiffies(boost_lock_duration))) ||
 		thermal_core_controlled)
 				goto reschedule;
 			if (intelli_skip > 0) {
@@ -664,7 +657,6 @@ show_one(min_cpus_online, min_cpus_online);
 show_one(max_cpus_online, max_cpus_online);
 show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
-show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
 show_one(nr_fshift, nr_fshift);
 show_one(intelli_skip, intelli_skip);
@@ -920,7 +912,6 @@ KERNEL_ATTR_RW(full_mode_profile);
 KERNEL_ATTR_RO(cpu_nr_run_threshold);
 KERNEL_ATTR_RW(boost_lock_duration);
 KERNEL_ATTR_RW(def_sampling_ms);
-KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
@@ -935,7 +926,6 @@ static struct attribute *intelli_plug_attrs[] = {
 	&cpu_nr_run_threshold_attr.attr,
 	&boost_lock_duration_attr.attr,
 	&def_sampling_ms_attr.attr,
-	&debug_intelli_plug_attr.attr,
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
 	&down_lock_dur_attr.attr,
