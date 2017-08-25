@@ -49,6 +49,7 @@
 #include <linux/moduleparam.h>
 #include <linux/uaccess.h>
 #include <linux/bug.h>
+#include <linux/display_state.h>
 
 #include "workqueue_internal.h"
 
