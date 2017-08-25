@@ -25,8 +25,8 @@
 #include <linux/spinlock.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MAJOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -72,7 +72,6 @@ static unsigned int intelli_plug_active = 0;
 static spinlock_t ips_lock;
 #endif
 
-static unsigned int intelli_skip = 0;
 
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
@@ -86,6 +85,7 @@ static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
+static unsigned int debug_intelli_plug = 0;
 
 struct ip_suspend {
 	struct mutex intellisleep_mutex;
@@ -94,6 +94,12 @@ struct ip_suspend {
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_suspend, i_suspend_data);
 
 struct wake_lock ipwlock;
+
+#define dprintk(msg...)		\
+do {				\
+	if (debug_intelli_plug)		\
+		pr_info(msg);	\
+} while (0)
 
 static unsigned int nr_run_thresholds_balance[] = {
 	(THREAD_CAPACITY * 775 * MULT_FACTOR) / DIV_FACTOR,
@@ -153,19 +159,17 @@ static unsigned int *nr_run_profiles[] = {
 	nr_run_thresholds_strict
 	};
 
-static void intelli_lock(unsigned int lock)
+#if defined(INTELLI_USE_SPINLOCK)
+static void intelli_lock(int lock)
 {
 	unsigned long flags = 0;
 
-	if (lock == 1)
+	if (lock)
 		spin_lock_irqsave(&ips_lock, flags);
-	else if (lock == 0)
-		spin_unlock_irqrestore(&ips_lock, flags);
 	else
-		return;
+		spin_unlock_irqrestore(&ips_lock, flags);
 }
 
-#if defined(INTELLI_USE_SPINLOCK)
 static void _intelliget(void)
 {
 	if (!intelli_plug_active)
@@ -192,13 +196,6 @@ static void intelliput(void)
 	intelli_lock(0);
 }
 #endif
-
-static void modify_intelli_skip(unsigned int skip_count)
-{
-	intelli_lock(1);
-	intelli_skip = skip_count;
-	intelli_lock(0);
-}
 
 static bool intellinit;
 
@@ -292,13 +289,12 @@ static void update_per_cpu_stat(void)
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	unsigned int primary;
+	int primary;
 	long l_nr_threshold;
 	unsigned int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	s64 delta;
-	unsigned int skipcounter = 0;
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -325,20 +321,9 @@ static void cpu_up_down_work(struct work_struct *work)
 	delta = (now - last_input);
 
 	if (target < online_cpus) {
-		if (((online_cpus <= cpus_boosted) &&
-		(delta <= msecs_to_jiffies(boost_lock_duration))) ||
-		thermal_core_controlled)
+		if ((online_cpus <= cpus_boosted) &&
+		(delta <= msecs_to_jiffies(boost_lock_duration)))
 				goto reschedule;
-			if (intelli_skip > 0) {
-				if (skipcounter < intelli_skip) {
-					skipcounter++;
-					goto reschedule;
-				} else if (skipcounter >= intelli_skip) {
-					skipcounter = 0;
-				}
-			} else {
-				skipcounter = 0;
-			}
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == primary)
@@ -352,8 +337,9 @@ static void cpu_up_down_work(struct work_struct *work)
 					(num_online_cpus());
 			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold) {
-				if (!skipcounter)
-					cpu_down(cpu);
+				if (thermal_core_controlled)
+					goto reschedule;
+				cpu_down(cpu);
 			}
 			if (num_online_cpus() == target)
 				break;
@@ -657,11 +643,11 @@ show_one(min_cpus_online, min_cpus_online);
 show_one(max_cpus_online, max_cpus_online);
 show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
+show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
 show_one(nr_fshift, nr_fshift);
-show_one(intelli_skip, intelli_skip);
 
-#define store_one_cpu(file_name, object)		\
+#define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
 (struct kobject *kobj,				\
  struct kobj_attribute *attr,			\
@@ -670,7 +656,7 @@ static ssize_t store_##file_name		\
 	unsigned int input;			\
 	int ret;				\
 	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1 || input > 4)		\
+	if (ret != 1 || input > 100)		\
 		return -EINVAL;			\
 	if (input == object) {			\
 		return count;			\
@@ -679,26 +665,10 @@ static ssize_t store_##file_name		\
 	return count;				\
 }
 
-#define store_one_full_mode(file_name, object)		\
-static ssize_t store_##file_name		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned int input;			\
-	int ret;				\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1 || input > 7)		\
-		return -EINVAL;			\
-	if (input == object) {			\
-		return count;			\
-	}					\
-	object = input;				\
-	return count;				\
-}
-
-store_one_cpu(cpus_boosted, cpus_boosted);
-store_one_full_mode(full_mode_profile, full_mode_profile);
+store_one(cpus_boosted, cpus_boosted);
+store_one(full_mode_profile, full_mode_profile);
+store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
+store_one(debug_intelli_plug, debug_intelli_plug);
 
 static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
 					 struct kobj_attribute *attr,
@@ -715,36 +685,6 @@ static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
 		val = 0;
 
 	nr_run_hysteresis = val;
-
-	return count;
-}
-
-static ssize_t show_intelli_intelli_skip(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					char *buf)
-{
-	return sprintf(buf, "%u\n", intelli_skip);
-}
-
-static ssize_t store_intelli_skip(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	int input;
-
-	ret = sscanf(buf, "%d", &input);
-	if (ret < 0)
-		return ret;
-
-	if (input <= 0)
-		input = 0;
-	if (input >= 10)
-		input = 10;
-	if (input == intelli_skip)
-		return count;
-
-	modify_intelli_skip(input);
 
 	return count;
 }
@@ -904,7 +844,6 @@ static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0444, show_##_name, NULL)
 
 KERNEL_ATTR_RW(intelli_plug_active);
-KERNEL_ATTR_RW(intelli_skip);
 KERNEL_ATTR_RW(cpus_boosted);
 KERNEL_ATTR_RW(min_cpus_online);
 KERNEL_ATTR_RW(max_cpus_online);
@@ -912,13 +851,13 @@ KERNEL_ATTR_RW(full_mode_profile);
 KERNEL_ATTR_RO(cpu_nr_run_threshold);
 KERNEL_ATTR_RW(boost_lock_duration);
 KERNEL_ATTR_RW(def_sampling_ms);
+KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
-	&intelli_skip_attr.attr,
 	&cpus_boosted_attr.attr,
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
@@ -926,6 +865,7 @@ static struct attribute *intelli_plug_attrs[] = {
 	&cpu_nr_run_threshold_attr.attr,
 	&boost_lock_duration_attr.attr,
 	&def_sampling_ms_attr.attr,
+	&debug_intelli_plug_attr.attr,
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
 	&down_lock_dur_attr.attr,
@@ -964,7 +904,7 @@ static void __exit intelli_plug_exit(void)
 		intelliput();
 #endif
 		intelli_plug_stop();
-	}
+}
 
 	wake_lock_destroy(&ipwlock);
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
