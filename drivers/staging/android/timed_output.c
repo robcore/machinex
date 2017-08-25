@@ -55,8 +55,13 @@ static ssize_t enable_store(
 
 	return size;
 }
+static DEVICE_ATTR_RW(enable);
 
-static DEVICE_ATTR(enable, S_IRUGO | S_IWUSR, enable_show, enable_store);
+static struct attribute *timed_output_attrs[] = {
+	&dev_attr_enable.attr,
+	NULL,
+};
+ATTRIBUTE_GROUPS(timed_output);
 
 static int create_timed_output_class(void)
 {
@@ -65,6 +70,7 @@ static int create_timed_output_class(void)
 		if (IS_ERR(timed_output_class))
 			return PTR_ERR(timed_output_class);
 		atomic_set(&device_count, 0);
+		timed_output_class->dev_groups = timed_output_groups;
 	}
 
 	return 0;
