@@ -32,9 +32,7 @@ static const struct address_space_operations swap_aops = {
 #else
 	.set_page_dirty	= __set_page_dirty_no_writeback,
 #endif
-#ifdef CONFIG_MIGRATION
 	.migratepage	= migrate_page,
-#endif
 };
 
 static struct backing_dev_info swap_backing_dev_info = {
@@ -68,8 +66,6 @@ unsigned long total_swapcache_pages(void)
 		ret += swapper_spaces[i].nrpages;
 	return ret;
 }
-
-static atomic_t swapin_readahead_hits = ATOMIC_INIT(4);
 
 void show_swap_cache_info(void)
 {
@@ -106,9 +102,6 @@ int __add_to_swap_cache(struct page *page, swp_entry_t entry)
 	if (likely(!error)) {
 		address_space->nrpages++;
 		__inc_zone_page_state(page, NR_FILE_PAGES);
-#ifdef CONFIG_SWAPFILE
-		__inc_zone_page_state(page, NR_SWAPCACHE);
-#endif
 		INC_CACHE_INFO(add_total);
 	}
 	spin_unlock_irq(&address_space->tree_lock);
@@ -161,9 +154,6 @@ void __delete_from_swap_cache(struct page *page)
 	ClearPageSwapCache(page);
 	address_space->nrpages--;
 	__dec_zone_page_state(page, NR_FILE_PAGES);
-#ifdef CONFIG_SWAPFILE
-	__dec_zone_page_state(page, NR_SWAPCACHE);
-#endif
 	INC_CACHE_INFO(del_total);
 }
 
@@ -274,12 +264,18 @@ void free_page_and_swap_cache(struct page *page)
 void free_pages_and_swap_cache(struct page **pages, int nr)
 {
 	struct page **pagep = pages;
-	int i;
 
 	lru_add_drain();
-	for (i = 0; i < nr; i++)
-		free_swap_cache(pagep[i]);
-	release_pages(pagep, nr, false);
+	while (nr) {
+		int todo = min(nr, PAGEVEC_SIZE);
+		int i;
+
+		for (i = 0; i < todo; i++)
+			free_swap_cache(pagep[i]);
+		release_pages(pagep, todo, 0);
+		pagep += todo;
+		nr -= todo;
+	}
 }
 
 /*
@@ -294,11 +290,8 @@ struct page * lookup_swap_cache(swp_entry_t entry)
 
 	page = find_get_page(swap_address_space(entry), entry.val);
 
-	if (page) {
+	if (page)
 		INC_CACHE_INFO(find_success);
-		if (TestClearPageReadahead(page))
-			atomic_inc(&swapin_readahead_hits);
-	}
 
 	INC_CACHE_INFO(find_total);
 	return page;
@@ -400,52 +393,6 @@ struct page *read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 	return found_page;
 }
 
-#ifdef CONFIG_SWAP_ENABLE_READAHEAD
-static unsigned long swapin_nr_pages(unsigned long offset)
-{
-	static unsigned long prev_offset;
-	unsigned int pages, max_pages, last_ra;
-	static atomic_t last_readahead_pages;
-
-	max_pages = 1 << ACCESS_ONCE(page_cluster);
-	if (max_pages <= 1)
-		return 1;
-
-	/*
-	 * This heuristic has been found to work well on both sequential and
-	 * random loads, swapping to hard disk or to SSD: please don't ask
-	 * what the "+ 2" means, it just happens to work well, that's all.
-	 */
-	pages = atomic_xchg(&swapin_readahead_hits, 0) + 2;
-	if (pages == 2) {
-		/*
-		 * We can have no readahead hits to judge by: but must not get
-		 * stuck here forever, so check for an adjacent offset instead
-		 * (and don't even bother to check whether swap type is same).
-		 */
-		if (offset != prev_offset + 1 && offset != prev_offset - 1)
-			pages = 1;
-		prev_offset = offset;
-	} else {
-		unsigned int roundup = 4;
-		while (roundup < pages)
-			roundup <<= 1;
-		pages = roundup;
-	}
-
-	if (pages > max_pages)
-		pages = max_pages;
-
-	/* Don't shrink readahead too fast */
-	last_ra = atomic_read(&last_readahead_pages) / 2;
-	if (pages < last_ra)
-		pages = last_ra;
-	atomic_set(&last_readahead_pages, pages);
-
-	return pages;
-}
-#endif
-
 /**
  * swapin_readahead - swap in pages in hope we need them soon
  * @entry: swap entry of this memory
@@ -470,16 +417,10 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 {
 #ifdef CONFIG_SWAP_ENABLE_READAHEAD
 	struct page *page;
-	unsigned long entry_offset = swp_offset(entry);
-	unsigned long offset = entry_offset;
+	unsigned long offset = swp_offset(entry);
 	unsigned long start_offset, end_offset;
-	unsigned long mask = is_swap_fast(entry) ? 0 :
-				(1UL << page_cluster) - 1;
+	unsigned long mask = (1UL << page_cluster) - 1;
 	struct blk_plug plug;
-
-	mask = swapin_nr_pages(offset) - 1;
-	if (!mask)
-		goto skip;
 
 	/* Read a page_cluster sized and aligned cluster around offset. */
 	start_offset = offset & ~mask;
@@ -494,14 +435,11 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 						gfp_mask, vma, addr);
 		if (!page)
 			continue;
-		if (offset != entry_offset)
-			SetPageReadahead(page);
 		page_cache_release(page);
 	}
 	blk_finish_plug(&plug);
 
 	lru_add_drain();	/* Push any new pages onto the LRU now */
-skip:
-#endif
+#endif /* CONFIG_SWAP_ENABLE_READAHEAD */
 	return read_swap_cache_async(entry, gfp_mask, vma, addr);
 }
