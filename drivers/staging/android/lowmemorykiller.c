@@ -101,7 +101,7 @@ static unsigned long lowmem_deathpending_timeout;
 	} while (0)
 
 #if defined(CONFIG_ZSWAP)
-extern atomic_t zswap_pool_pages;
+extern u64 zswap_pool_pages;
 extern atomic_t zswap_stored_pages;
 #endif
 
@@ -252,7 +252,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #if defined(CONFIG_ZSWAP)
 		if (atomic_read(&zswap_stored_pages)) {
 			lowmem_print(3, "shown tasksize : %d\n", tasksize);
-			tasksize += atomic_read(&zswap_pool_pages) * get_mm_counter(p->mm, MM_SWAPENTS)
+			tasksize += (int)zswap_pool_pages * get_mm_counter(p->mm, MM_SWAPENTS)
 				/ atomic_read(&zswap_stored_pages);
 			lowmem_print(3, "real tasksize : %d\n", tasksize);
 		}
