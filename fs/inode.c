@@ -1560,6 +1560,8 @@ void touch_atime(const struct path *path)
 	 * Btrfs), but since we touch atime while walking down the path we
 	 * really don't care if we failed to update the atime of the file,
 	 * so just ignore the return value.
+	 * We may also fail on filesystems that have the ability to make parts
+	 * of the fs read only, e.g. subvolumes in Btrfs.
 	 */
 	update_time(inode, &now, S_ATIME);
 	__mnt_drop_write(mnt);
@@ -1630,8 +1632,8 @@ int file_remove_suid(struct file *file)
 		error = security_inode_killpriv(dentry);
 	if (!error && killsuid)
 		error = __remove_suid(dentry, killsuid);
-	if (!error && (inode->i_sb->s_flags & MS_NOSEC))
-		inode->i_flags |= S_NOSEC;
+	if (!error)
+		inode_has_no_xattr(inode);
 
 	return error;
 }
