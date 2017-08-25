@@ -1,0 +1,311 @@
+[    0.000000] Truncating memory at 0xc0000000 to fit in 32-bit physical address space
+[    0.000000] sec_tsp_mode: LCD_ID = 0x428047, val: 0X428047, ret1: 0x8[    0.442199] sensor_power_on_vdd: done
+[    0.496673] i2c i2c-4: Failed to register i2c client imx135 at 0x10 (-16)
+[    0.496826] i2c i2c-4: Can't create device at 0x10
+[    0.497314] i2c i2c-4: Failed to register i2c client s5k3l1yx at 0x34 (-16)
+[    0.497467] i2c i2c-4: Can't create device at 0x34
+[    0.504852] AXI: msm_bus_fabric_init_driver(): msm_bus_fabric_init_driver
+[    0.550476] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:3 report inf element:0x0
+[    0.550567] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[    0.550720] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:4 report inf element:0x400
+[    0.550872] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[    0.633972] Error-Bad Function Input
+[    0.634979] Error-Bad Function Input
+[    0.924835] smd_channel_probe_worker: allocation table not initialized
+[    0.951324] mdm_modem_probe: registered mdm id 0
+[    1.002441] msm_slim_ctrl msm_slim_ctrl.1: Slim-dev:2 report inf element:0x400
+[    1.002624] msm_slim_ctrl msm_slim_ctrl.1: offset:0x0:bit mask:8
+[    1.194763] hdmi_msm hdmi_msm.1: external_common_state_create: sysfs group ddbcd608
+[    1.195770] Inside writeback_driver_init
+[    1.196166] Inside writeback_probe
+[    1.209167] Unknown PM state 0
+[    1.209320] Unknown PM state 3
+[    1.455017] wcd9xxx_slim_probe: First Pass: failed to get slimbus tabla-slim logical address: -6
+[    1.587982] msm_otg msm_otg: failed to get phy_clk
+[    1.804870] couldn't get usb power supply
+[    1.852416] [jc_spi_init:336] Entered
+[    1.852813] [jc_spi_probe:301] Entered
+[    1.853027] [jc_spi_probe:311] jc_spi successfully probed
+[    1.853485] msm_eeprom_probe probe_fail
+[    1.860961] msm_sensor_i2c_probe s5k6b2yx probe succeeded
+[    1.861145] msm_eeprom_probe probe_fail
+[    1.920318] mmc0: No card detect facilities available
+[    3.331329] sec_chg_get_property: Fail to get psy (battery)
+[    3.331970] max77693_get_health_state: Fail to get psy (battery)
+[    3.336547] sec_chg_get_property: Fail to get psy (battery)
+[    3.337188] max77693_get_health_state: Fail to get psy (battery)
+[    3.346008] qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+[    3.346221] qup_i2c qup_i2c.2: I2C slave addr:0x18 not connected
+[    3.406463] qup_i2c qup_i2c.2: QUP: I2C status flags :0x1300c8, irq:228
+[    3.406646] qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+[    4.320251] max77693_muic_charger_cb: cable type for charger: MUIC(0), CHARGER(1)
+[    4.320556] max77693_muic_charger_cb: fail to get battery/ps psy
+[    6.475006] qup_i2c qup_i2c.2: QUP: I2C status flags :0x11100c8, irq:228
+[    6.475219] qup_i2c qup_i2c.2: I2C slave addr:0x26 not connected
+[    7.013946] sec_chg_get_property: Fail to get psy (battery)
+[    7.029144] barcode_emul_ice4: probe complete barcode_emul_probe
+[    7.029876] Warning: unable to open an initial console.
+[    7.577301] init: /init.qcom.rc: 709: invalid command '/system/bin/log'
+[    7.579040] init: init.carrier.rc: 90: ignored duplicate definition of service 'privatemode'
+[    7.579162] init: init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+[    7.579284] init: init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+[    7.579406] init: init.carrier.rc: 195: invalid option 'write'
+[    7.579467] init: init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+[    7.579803] init: /init.carrier.rc: 84: ignored duplicate definition of service 'vcsFPService'
+[    7.579895] init: /init.carrier.rc: 90: ignored duplicate definition of service 'privatemode'
+[    7.580047] init: /init.carrier.rc: 130: ignored duplicate definition of service 'scranton_RD'
+[    7.580108] init: /init.carrier.rc: 150: ignored duplicate definition of service 'at_distributor'
+[    7.580230] init: /init.carrier.rc: 156: ignored duplicate definition of service 'diag_uart_log'
+[    7.580322] init: /init.carrier.rc: 162: ignored duplicate definition of service 'scranton_RD'
+[    7.580444] init: /init.carrier.rc: 177: ignored duplicate definition of service 'swapon'
+[    7.580566] init: /init.carrier.rc: 197: ignored duplicate definition of service 'edmaudit'
+[    7.586395] init: invalid uid 'fm_radio'
+[   10.690063] init: Running /dev/block/platform/msm_sdcc.1/by-name/cache on ext4
+[   10.719635] init: Running /dev/block/platform/msm_sdcc.1/by-name/efs on ext4
+[   10.743988] init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+[   10.773773] init: Running /dev/block/platform/msm_sdcc.1/by-name/persdata on ext4
+[   10.808135] init: failed to open '/sys/devices/soc0/soc_id'
+[   10.808319] init: failed to open '/sys/devices/soc0/platform_version'
+[   10.808441] init: failed to open '/sys/devices/soc0/hw_platform'
+[   10.808563] init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
+[   10.938385] init: do_restorecon: Could not access /carrier
+[   11.577911] Unknown PM state 0
+[   11.581359] Unknown PM state 3
+[   11.581756] Unknown PM state 0
+[   11.583282] Unknown PM state 3
+[   11.583984] Unknown PM state 0
+[   11.585418] Unknown PM state 3
+[   11.585754] Unknown PM state 0
+[   11.587249] Unknown PM state 3
+[   11.707519] init: Warning!  Service lmkd needs a SELinux domain defined; please fix!
+[   11.712738] init: Warning!  Service modem-sh needs a SELinux domain defined; please fix!
+[   11.715393] init: Warning!  Service qcom-c_core-sh needs a SELinux domain defined; please fix!
+[   11.716461] init: Warning!  Service config_bluetooth needs a SELinux domain defined; please fix!
+[   11.717681] init: Warning!  Service qcom-usb-sh needs a SELinux domain defined; please fix!
+[   11.720214] Unknown PM state 0
+[   11.722442] Unknown PM state 3
+[   11.725769] Unknown PM state 0
+[   11.730834] Unknown PM state 3
+[   11.746032] init: service 'console' requires console
+[   11.749420] init: Warning!  Service scs needs a SELinux domain defined; please fix!
+[   11.753997] init: cannot find '/system/bin/debuggerd64', disabling 'debuggerd64'
+[   11.755187] init: Warning!  Service DR-daemon needs a SELinux domain defined; please fix!
+[   11.830108] init: Warning!  Service qcom-c_main-sh needs a SELinux domain defined; please fix!
+[   11.831726] init: Warning!  Service sec-sh needs a SELinux domain defined; please fix!
+[   11.832244] init: cannot find '/system/bin/rf4ce', disabling 'rf4ce'
+[   11.833129] init: cannot find '/system/bin/imsqmidaemon', disabling 'imsqmidaemon'
+[   11.835235] init: Warning!  Service zygote needs a SELinux domain defined; please fix!
+[   11.837615] init: cannot find '/system/bin/dpmd', disabling 'dpmd'
+[   11.838104] init: Warning!  Service macloader needs a SELinux domain defined; please fix!
+[   11.838653] init: cannot find '/system/bin/loc_launcher', disabling 'loc_launcher'
+[   11.839111] init: Warning!  Service qcom-sh needs a SELinux domain defined; please fix!
+[   11.840698] init: Warning!  Service ppd needs a SELinux domain defined; please fix!
+[   11.847747] init: cannot find '/system/bin/vcsFPService', disabling 'vcsFPService'
+[   11.915649] init: service 'console' requires console
+[   11.917816] init: no such service 'quipc_igsn'
+[   11.937652] init: no such service 'quipc_main'
+[   11.944427] init: untracked pid 258 exited with status 0
+[   12.070129] init: Warning!  Service mcStarter needs a SELinux domain defined; please fix!
+[   12.326293] init: untracked pid 317 exited with status 1
+[   12.326446] init: untracked pid 341 exited with status 1
+[   12.792419] init: untracked pid 407 exited with status 1
+[   12.815734] init: untracked pid 403 exited with status 1
+[   12.874450] init: untracked pid 492 exited with status 0
+[   13.329620] init: untracked pid 314 exited with status 1
+[   13.582031] init: untracked pid 567 exited with status 1
+[   15.637817] init: untracked pid 800 exited with status 1
+[   15.757293] init: untracked pid 1120 exited with status 1
+[   18.880096] [SSP]: mag_store_hwoffset - get_hw_offset failed
+[   19.999023] mdm_driver_queue_notification: Couldn't find notif for dev modem
+[   26.094909] init: untracked pid 2040 exited with status 0
+[   26.435913] init: failed to open '/sys/devices/soc0/soc_id'
+[   26.436035] init: failed to open '/sys/devices/soc0/platform_version'
+[   26.436187] init: failed to open '/sys/devices/soc0/hw_platform'
+[   26.436309] init: Detected MSM SOC ID=153 SOC VER=65536 BOARD TYPE=MTP
+[   27.677947] init: untracked pid 2044 exited with status 1
+[   27.678131] init: untracked pid 2095 exited with status 1
+[   59.671478] init: Warning!  Service usf-post-boot needs a SELinux domain defined; please fix!
+[   60.181854] init: untracked pid 3450 exited with status 0
+[   60.191528] init: untracked pid 509 exited with status 0
+[   63.065887] q6asm_get_audio_client: invalid session: -1
+[   63.069854] q6asm_get_audio_client: invalid session: -1
+[   65.845703] Securing...
+[   65.884796] Unsecuring....
+[   91.643157] init: untracked pid 5327 killed by signal 9
+[   92.926910] [BT] Bluetooth Power Off.
+[   92.971679] [BT] Bluetooth Power On.
+[   92.993927] [BT] host_wake is low.
+[   93.017303] Unknown PM state 0
+[   99.429595] init: untracked pid 6208 killed by signal 9
+[  109.374084] synaptics_rmi4_i2c 3-0020: not_support_cmd
+[  130.842559] init: untracked pid 7295 exited with status 255
+[  136.332733] init: untracked pid 7917 killed by signal 9
+[  142.156341] ------------[ cut here ]------------
+[  142.156433] kernel BUG at /root/machinex/fs/ext4/inode.c:2294!
+[  142.156585] Internal error: Oops - BUG: 0 [#1] PREEMPT SMP ARM
+[  142.156646] Modules linked in: dhd
+[  142.156860] CPU: 1 PID: 5 Comm: kworker/u8:0 Not tainted 3.4.113-machinex-Mark98-N22 #04
+[  142.156982] Workqueue: writeback bdi_writeback_workfn (flush-179:0)
+[  142.157257] task: c7c514e0 ti: c7c68000 task.ti: c7c68000
+[  142.157348] PC is at mpage_prepare_extent_to_map+0x278/0x29c
+[  142.157470] LR is at 0x0
+[  142.157531] pc : [<c0272730>]    lr : [<00000000>]    psr: 40000013
+[  142.157531] sp : c7c69c88  ip : 00000001  fp : d32c9ea4
+[  142.157653] r10: c29a56b0  r9 : 00000001  r8 : ffffffff
+[  142.157745] r7 : c7c69ca8  r6 : 00000c00  r5 : 00000000  r4 : c7c69d58
+[  142.157867] r3 : 00000000  r2 : b421027d  r1 : 00000000  r0 : 00000000
+[  142.157928] Flags: nZcv  IRQs on  FIQs on  Mode SVC_32  ISA ARM  Segment kernel
+[  142.158081] Control: 10c5787d  Table: 9da5c06a  DAC: 00000015
+[  142.158203] 
+[  142.158203] PC: 0xc02726b0:
+[  142.158264] 26b0  eb1f4794 e59d3014 e1580003 2affff9b e3a00000 e28dd05c e1cd40d0 e1cd60d8
+[  142.158966] 26d0  e1cd81d0 e1cda1d8 e28dd020 e49df004 e3a0100d e1a0000a ebfbd9e0 e59a3000
+[  142.159667] 26f0  e3130a02 0affffb7 e7f001f2 e1a0000a ebfbdb52 eaffffde e3a04000 e59dc018
+[  142.160400] 2710  e35c0000 01a00004 0affffe9 e28d0018 e58d4008 ebfc27e5 e59d0008 eaffffe4
+[  142.161132] 2730  e7f001f2 e3a01002 e58d100c eaffff71 e1a04000 eafffff0 e28d0018 ebfc27db
+[  142.161834] 2750  eaffffd6 e16d42f0 e1cd60f8 e1cd81f0 e58da018 e58de01c e1c040d8 e24dd040
+[  142.162506] 2770  e1540005 2a000055 e5900000 e3510000 e1a07001 e2455001 e5909018 1a000067
+[  142.163208] 2790  e3a00000 e1540005 e58d0000 e58d0004 8a00004a e1a02004 e3a0300e e1a01009
+[  142.163879] 
+[  142.163879] SP: 0xc7c69c08:
+[  142.163940] 9c08  00000000 00000000 00000000 00000000 c4cb2a80 00000000 c7c68000 0000000e
+[  142.164703] 9c28  c7c69c9c d32c9ea4 c0272734 00000000 c000f5d8 c000f32c 00000000 00000000
+[  142.165435] 9c48  b421027d 00000000 c7c69d58 00000000 00000c00 c7c69ca8 ffffffff 00000001
+[  142.166107] 9c68  c29a56b0 d32c9ea4 00000001 c7c69c88 00000000 c0272730 40000013 ffffffff
+[  142.166809] 9c88  0000000e c01bfccc 00000000 00000000 00000008 00000001 00000001 00000000
+[  142.167510] 9ca8  c29a56b0 00000001 00000800 c02d64ac d83b71b0 00000000 d32c9dd8 dd9c9c00
+[  142.168243] 9cc8  00008180 00000008 00000000 00000985 00000002 c02adae0 00000002 d32c9dd8
+[  142.168975] 9ce8  000007f1 00008180 c7c68000 00000000 de32e3e8 00080080 00000800 c02782bc
+[  142.169799] 
+[  142.169799] FP: 0xd32c9e24:
+[  142.169891] 9e24  36f1dc2e 00070007 00000000 0000000c 00000000 00000008 00000000 00000002
+[  142.170654] 9e44  00000084 00000000 00000000 00000000 d32c9e54 d32c9e54 ffffc0c5 c7101018
+[  142.171386] 9e64  c4485adc ddea020c de685e68 d32c9e70 d32c9e70 d32caf88 d32c8d68 de5a9cb8
+[  142.172180] 9e84  c0290600 00000001 00000000 00000001 00000000 00000000 c0b193c0 00000000
+[  142.172882] 9ea4  d32c9dd8 00000000 02000020 c29a56b0 000f000f 00000000 00000000 d32c9ec0
+[  142.173675] 9ec4  d32c9ec0 00000000 00000000 00000000 d32c9ed4 d32c9ed4 00000001 00000000
+[  142.174468] 9ee4  00000000 c0b19570 000200da ddea00d0 00030003 d32c9ef8 d32c9ef8 00000000
+[  142.175201] 9f04  d32c9f04 d32c9f04 00000000 220a7b4f 00000000 00000000 00000000 dd985900
+[  142.175994] 
+[  142.175994] R4: 0xc7c69cd8:
+[  142.176147] 9cd8  00000002 c02adae0 00000002 d32c9dd8 000007f1 00008180 c7c68000 00000000
+[  142.176879] 9cf8  de32e3e8 00080080 00000800 c02782bc 00000000 c039b094 d83b7798 c4ded1c8
+[  142.177734] 9d18  011d9360 00000c00 dd9c9c00 c7c69e08 00000001 d32c9ea4 00000000 00000001
+[  142.178527] 9d38  d83b7798 00ea0000 c7c69d40 c7c69d40 c7c69d48 c7c69d48 c7c69d50 c7c69d50
+[  142.179229] 9d58  d32c9dd8 c7c69e08 00000000 00000001 ffffffff c7c69d68 c7c69d70 c7c69d70
+[  142.180023] 9d78  c7c69da0 00000000 c7c69e08 00000c00 00000001 00000000 de32e348 c0382940
+[  142.180847] 9d98  dd20e354 c0177bf4 c7c69da0 ddea01c8 d32c9dd8 c7c69e08 00000c00 c12523d8
+[  142.181640] 9db8  dd9c9800 d32c9ea4 00000006 c01f56b0 007fffff ddea01c8 d32c9e68 d32c9dd8
+[  142.182403] 
+[  142.182403] R7: 0xc7c69c28:
+[  142.182556] 9c28  c7c69c9c d32c9ea4 c0272734 00000000 c000f5d8 c000f32c 00000000 00000000
+[  142.183288] 9c48  b421027d 00000000 c7c69d58 00000000 00000c00 c7c69ca8 ffffffff 00000001
+[  142.184082] 9c68  c29a56b0 d32c9ea4 00000001 c7c69c88 00000000 c0272730 40000013 ffffffff
+[  142.184875] 9c88  0000000e c01bfccc 00000000 00000000 00000008 00000001 00000001 00000000
+[  142.185699] 9ca8  c29a56b0 00000001 00000800 c02d64ac d83b71b0 00000000 d32c9dd8 dd9c9c00
+[  142.186431] 9cc8  00008180 00000008 00000000 00000985 00000002 c02adae0 00000002 d32c9dd8
+[  142.187255] 9ce8  000007f1 00008180 c7c68000 00000000 de32e3e8 00080080 00000800 c02782bc
+[  142.188049] 9d08  00000000 c039b094 d83b7798 c4ded1c8 011d9360 00000c00 dd9c9c00 c7c69e08
+[  142.188781] 
+[  142.188781] R10: 0xc29a5630:
+[  142.188842] 5630  00000001 c299e110 c299ec50 00000000 00000000 b4040028 c965ff31 0009fe19
+[  142.189666] 5650  00000000 00000001 c298e3a8 c29a55a4 00000000 00000000 b4010228 de6159c4
+[  142.190429] 5670  000009fc 00000000 00000002 c299b968 c29a6738 00000000 00000000 b404026c
+[  142.191192] 5690  c495d361 000befff 00000000 00000001 c2a0fc54 c299b5c0 00000000 00000000
+[  142.191925] 56b0  b421027d d32c9ea4 00000000 ffffffff 00000002 c2d96738 c2c5f908 00000000
+[  142.192718] 56d0  d982b430 b4010228 de6159c4 000009fe 00000000 00000002 c29a6738 c32864ac
+[  142.193450] 56f0  00000000 00000000 b421022c dc12f494 000002c7 00000000 00000002 c27ab9a8
+[  142.194305] 5710  c27aa058 00000000 00000000 b4040068 cff35601 000000be 00000000 00000001
+[  142.195068] Process kworker/u8:0 (pid: 5, stack limit = 0xc7c682f8)
+[  142.195159] Stack: (0xc7c69c88 to 0xc7c6a000)
+[  142.195312] 9c80:                   0000000e c01bfccc 00000000 00000000 00000008 00000001
+[  142.195404] 9ca0: 00000001 00000000 c29a56b0 00000001 00000800 c02d64ac d83b71b0 00000000
+[  142.195526] 9cc0: d32c9dd8 dd9c9c00 00008180 00000008 00000000 00000985 00000002 c02adae0
+[  142.195678] 9ce0: 00000002 d32c9dd8 000007f1 00008180 c7c68000 00000000 de32e3e8 00080080
+[  142.195831] 9d00: 00000800 c02782bc 00000000 c039b094 d83b7798 c4ded1c8 011d9360 00000c00
+[  142.195892] 9d20: dd9c9c00 c7c69e08 00000001 d32c9ea4 00000000 00000001 d83b7798 00ea0000
+[  142.196044] 9d40: c7c69d40 c7c69d40 c7c69d48 c7c69d48 c7c69d50 c7c69d50 d32c9dd8 c7c69e08
+[  142.196197] 9d60: 00000000 00000001 ffffffff c7c69d68 c7c69d70 c7c69d70 c7c69da0 00000000
+[  142.196258] 9d80: c7c69e08 00000c00 00000001 00000000 de32e348 c0382940 dd20e354 c0177bf4
+[  142.196411] 9da0: c7c69da0 ddea01c8 d32c9dd8 c7c69e08 00000c00 c12523d8 dd9c9800 d32c9ea4
+[  142.196563] 9dc0: 00000006 c01f56b0 007fffff ddea01c8 d32c9e68 d32c9dd8 c7c69ee4 ddea020c
+[  142.196685] 9de0: dd9c9800 c7c68000 00000006 c01f78ac 00000001 c1108100 ffffc258 d32c9e28
+[  142.196777] 9e00: ddea021c 00000c00 00000c00 00000000 00000000 00000000 ffffffff 7fffffff
+[  142.196929] 9e20: 00000000 00000011 c114a39c ddea01c8 dd9c9800 dc0ff1e8 0000007a c7c69ee4
+[  142.197052] 9e40: ddea020c c1108100 ffffc262 c01f7aa0 c7c69ec0 ddea020c c7c69ee4 ddea01c8
+[  142.197204] 9e60: 000000c8 c12523d8 c1108100 ffffc258 c11b82a4 c01f7df4 ff0a0004 ffffffff
+[  142.197296] 9e80: c7c7c000 c7c2b500 c7c2b500 c1108100 ddea021c 00008240 00000000 ffffc190
+[  142.197448] 9ea0: ffffc060 00000004 ddea00d0 ffffc060 00000000 00000fa0 ddea01c8 ddea01d4
+[  142.197601] 9ec0: 00000006 c01f8904 00000000 ddea00d0 ddea0224 c11b82a8 c12523d8 c7c68000
+[  142.197692] 9ee0: de00c500 000081e5 00000000 c7c69e9c 00000000 00000006 00000003 00000000
+[  142.197814] 9f00: 00000000 00000000 c11e4aa8 ddea01d4 c7c2b500 c7c08000 ddfc4100 00000000
+[  142.197967] 9f20: c7c08018 00000000 c1251b54 c00af5b4 c7c68010 c7c514e0 c7c514e0 c7c08000
+[  142.198120] 9f40: c7c2b518 00000088 c1108100 c7c08018 c7c68000 ddea01d8 c7c2b500 c00afa48
+[  142.198211] 9f60: c7c08160 00000000 c00afa00 c7c68000 c7c514e0 00000000 c00afa00 c7c2b500
+[  142.198364] 9f80: 00000000 c7c514e0 00000000 c00b63a4 c7c2a840 c00b6274 00000000 00000000
+[  142.198516] 9fa0: 00000000 00000000 00000000 c000f760 00000000 00000000 00000000 00000000
+[  142.198669] 9fc0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+[  142.198730] 9fe0: 00000000 00000000 00000000 00000000 00000013 00000000 00000000 00000000
+[  142.198913] [<c0272730>] (mpage_prepare_extent_to_map+0x278/0x29c) from [<c02782bc>] (ext4_writepages+0x4c4/0x7d0)
+[  142.199066] [<c02782bc>] (ext4_writepages+0x4c4/0x7d0) from [<c01f56b0>] (__writeback_single_inode+0x54/0x41c)
+[  142.199218] [<c01f56b0>] (__writeback_single_inode+0x54/0x41c) from [<c01f78ac>] (writeback_sb_inodes+0x2bc/0x410)
+[  142.199371] [<c01f78ac>] (writeback_sb_inodes+0x2bc/0x410) from [<c01f7aa0>] (__writeback_inodes_wb+0xa0/0xd4)
+[  142.199523] [<c01f7aa0>] (__writeback_inodes_wb+0xa0/0xd4) from [<c01f7df4>] (wb_writeback+0x320/0x430)
+[  142.199615] [<c01f7df4>] (wb_writeback+0x320/0x430) from [<c01f8904>] (bdi_writeback_workfn+0x360/0x454)
+[  142.199768] [<c01f8904>] (bdi_writeback_workfn+0x360/0x454) from [<c00af5b4>] (process_one_work+0x140/0x58c)
+[  142.199920] [<c00af5b4>] (process_one_work+0x140/0x58c) from [<c00afa48>] (worker_thread+0x48/0x57c)
+[  142.200073] [<c00afa48>] (worker_thread+0x48/0x57c) from [<c00b63a4>] (kthread+0x130/0x160)
+[  142.200225] [<c00b63a4>] (kthread+0x130/0x160) from [<c000f760>] (ret_from_fork+0x14/0x34)
+[  142.200317] Code: e58d4008 ebfc27e5 e59d0008 eaffffe4 (e7f001f2) 
+[  142.200683] ---[ end trace 8dd0c380bd6467c9 ]---
+[  142.200775] Kernel panic - not syncing: Fatal exception
+[  142.200927] CPU0: stopping
+[  142.201019] CPU: 0 PID: 0 Comm: swapper/0 Tainted: G      D       3.4.113-machinex-Mark98-N22 #04
+[  142.201171] [<c0016778>] (unwind_backtrace+0x0/0xfc) from [<c0013650>] (show_stack+0x14/0x20)
+[  142.201324] [<c0013650>] (show_stack+0x14/0x20) from [<c0015710>] (handle_IPI+0x1e8/0x204)
+[  142.201416] [<c0015710>] (handle_IPI+0x1e8/0x204) from [<c0008714>] (gic_handle_irq+0x70/0x74)
+[  142.201568] [<c0008714>] (gic_handle_irq+0x70/0x74) from [<c000f280>] (__irq_svc+0x40/0x74)
+[  142.201721] Exception stack(0xc1107ee8 to 0xc1107f30)
+[  142.201782] 7ee0:                   00000000 00000003 00000003 c44118c0 c4411900 00000008
+[  142.201934] 7f00: c4411920 00000002 c006fe2c 000000c0 000000f0 1c2710ab c44118e0 c1107f30
+[  142.202087] 7f20: 77359400 c006fff8 60000013 ffffffff
+[  142.202178] [<c000f280>] (__irq_svc+0x40/0x74) from [<c006fff8>] (msm_cpuidle_enter+0x1cc/0x1ec)
+[  142.202331] [<c006fff8>] (msm_cpuidle_enter+0x1cc/0x1ec) from [<c075cd0c>] (cpuidle_enter_state+0xf4/0x250)
+[  142.202514] [<c075cd0c>] (cpuidle_enter_state+0xf4/0x250) from [<c00da114>] (cpu_startup_entry+0x1cc/0x278)
+[  142.202667] [<c00da114>] (cpu_startup_entry+0x1cc/0x278) from [<c1000db8>] (start_kernel+0x540/0x578)
+[  142.202819] CPU3: stopping
+[  142.202941] CPU: 3 PID: 0 Comm: swapper/3 Tainted: G      D       3.4.113-machinex-Mark98-N22 #04
+[  142.203155] [<c0016778>] (unwind_backtrace+0x0/0xfc) from [<c0013650>] (show_stack+0x14/0x20)
+[  142.203247] [<c0013650>] (show_stack+0x14/0x20) from [<c0015710>] (handle_IPI+0x1e8/0x204)
+[  142.203460] [<c0015710>] (handle_IPI+0x1e8/0x204) from [<c0008714>] (gic_handle_irq+0x70/0x74)
+[  142.203643] [<c0008714>] (gic_handle_irq+0x70/0x74) from [<c000f280>] (__irq_svc+0x40/0x74)
+[  142.203826] Exception stack(0xc7c7df28 to 0xc7c7df70)
+[  142.203948] df20:                   00000000 00000003 0000f424 00000000 c4435880 00000000
+[  142.204132] df40: c11630a8 c4435880 c006fe2c 000000c0 000000f0 1c2533d5 00000000 c7c7df70
+[  142.204254] df60: 77359400 c006fff8 60000013 ffffffff
+[  142.204437] [<c000f280>] (__irq_svc+0x40/0x74) from [<c006fff8>] (msm_cpuidle_enter+0x1cc/0x1ec)
+[  142.204650] [<c006fff8>] (msm_cpuidle_enter+0x1cc/0x1ec) from [<c075cd0c>] (cpuidle_enter_state+0xf4/0x250)
+[  142.204833] [<c075cd0c>] (cpuidle_enter_state+0xf4/0x250) from [<c00da114>] (cpu_startup_entry+0x1cc/0x278)
+[  142.204956] [<c00da114>] (cpu_startup_entry+0x1cc/0x278) from [<802081bc>] (0x802081bc)
+[  142.205139] CPU2: stopping
+[  142.205230] CPU: 2 PID: 218 Comm: servicemanager Tainted: G      D       3.4.113-machinex-Mark98-N22 #04
+[  142.205413] [<c0016778>] (unwind_backtrace+0x0/0xfc) from [<c0013650>] (show_stack+0x14/0x20)
+[  142.205596] [<c0013650>] (show_stack+0x14/0x20) from [<c0015710>] (handle_IPI+0x1e8/0x204)
+[  142.205749] [<c0015710>] (handle_IPI+0x1e8/0x204) from [<c0008714>] (gic_handle_irq+0x70/0x74)
+[  142.205871] [<c0008714>] (gic_handle_irq+0x70/0x74) from [<c000f280>] (__irq_svc+0x40/0x74)
+[  142.206024] Exception stack(0xdd5d5db0 to 0xdd5d5df8)
+[  142.206207] 5da0:                                     d863812c a00b0013 008e008e 00010000
+[  142.206298] 5dc0: dd53751c 40286301 00000000 dd537500 beff464c c1253a44 dd4ef400 40286301
+[  142.206451] 5de0: 00000000 dd5d5df8 c07b3884 c0a484e8 60000013 ffffffff
+[  142.206634] [<c000f280>] (__irq_svc+0x40/0x74) from [<c0a484e8>] (_raw_spin_unlock_irqrestore+0x28/0x54)
+[  142.206817] [<c0a484e8>] (_raw_spin_unlock_irqrestore+0x28/0x54) from [<c07b3884>] (binder_thread_write+0x2454/0x2c24)
+[  142.207000] [<c07b3884>] (binder_thread_write+0x2454/0x2c24) from [<c07b5988>] (binder_ioctl+0x758/0xac8)
+[  142.207092] [<c07b5988>] (binder_ioctl+0x758/0xac8) from [<c01db228>] (do_vfs_ioctl+0x3b0/0x564)
+[  142.207275] [<c01db228>] (do_vfs_ioctl+0x3b0/0x564) from [<c01db468>] (SyS_ioctl+0x8c/0x9c)
+[  142.207458] [<c01db468>] (SyS_ioctl+0x8c/0x9c) from [<c000f6c0>] (ret_fast_syscall+0x0/0x38)
+[  143.208526] Rebooting in 5 seconds..
+[  148.211883] Going down for restart now
+[  148.212036] Going down for restart now
+[  148.212219] msm_restart_prepare : clear reset flag
+
+No errors detected
