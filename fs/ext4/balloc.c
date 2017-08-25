@@ -540,7 +540,7 @@ static int ext4_has_free_clusters(struct ext4_sb_info *sbi,
 	 * r_blocks_count should always be multiple of the cluster ratio so
 	 * we are safe to do a plane bit shift only.
 	 */
-	rsv = (ext4_r_blocks_count(sbi->s_es) >> sbi->s_cluster_bits) +
+	rsv = (atomic64_read(&sbi->s_r_blocks_count) >> sbi->s_cluster_bits) +
 	      resv_clusters;
 
 	if (free_clusters - (nclusters + rsv + dirty_clusters) <
@@ -640,8 +640,7 @@ ext4_fsblk_t ext4_new_meta_blocks(handle_t *handle, struct inode *inode,
 	 * Account for the allocated meta blocks.  We will never
 	 * fail EDQUOT for metdata, but we do account for it.
 	 */
-	if (!(*errp) &&
-	    ext4_test_inode_state(inode, EXT4_STATE_DELALLOC_RESERVED)) {
+	if (!(*errp) && (flags & EXT4_MB_DELALLOC_RESERVED)) {
 		spin_lock(&EXT4_I(inode)->i_block_reservation_lock);
 		spin_unlock(&EXT4_I(inode)->i_block_reservation_lock);
 		dquot_alloc_block_nofail(inode,
