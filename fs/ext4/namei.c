@@ -57,7 +57,7 @@ static struct buffer_head *ext4_append(handle_t *handle,
 					ext4_lblk_t *block)
 {
 	struct buffer_head *bh;
-	int err;
+	int err = 0;
 
 	if (unlikely(EXT4_SB(inode->i_sb)->s_max_dir_size_kb &&
 		     ((inode->i_size >> 10) >=
@@ -66,9 +66,9 @@ static struct buffer_head *ext4_append(handle_t *handle,
 
 	*block = inode->i_size >> inode->i_sb->s_blocksize_bits;
 
-	bh = ext4_bread(handle, inode, *block, 1);
-	if (IS_ERR(bh))
-		return bh;
+	bh = ext4_bread(handle, inode, *block, 1, &err);
+	if (!bh)
+		return ERR_PTR(err);
 	inode->i_size += inode->i_sb->s_blocksize;
 	EXT4_I(inode)->i_disksize = inode->i_size;
 	BUFFER_TRACE(bh, "get_write_access");
@@ -98,20 +98,20 @@ static struct buffer_head *__ext4_read_dirblock(struct inode *inode,
 {
 	struct buffer_head *bh;
 	struct ext4_dir_entry *dirent;
-	int is_dx_block = 0;
+	int err = 0, is_dx_block = 0;
 
-	bh = ext4_bread(NULL, inode, block, 0);
-	if (IS_ERR(bh)) {
-		__ext4_warning(inode->i_sb, __func__, line,
-			       "error %ld reading directory block "
-			       "(ino %lu, block %lu)", PTR_ERR(bh), inode->i_ino,
-			       (unsigned long) block);
-
-		return bh;
-	}
+	bh = ext4_bread(NULL, inode, block, 0, &err);
 	if (!bh) {
-		ext4_error_inode(inode, __func__, line, block, "Directory hole found");
-		return ERR_PTR(-EIO);
+		if (err == 0) {
+			ext4_error_inode(inode, __func__, line, block,
+					       "Directory hole found");
+			return ERR_PTR(-EIO);
+		}
+		__ext4_warning(inode->i_sb, __func__, line,
+			       "error reading directory block "
+			       "(ino %lu, block %lu)", inode->i_ino,
+			       (unsigned long) block);
+		return ERR_PTR(err);
 	}
 	dirent = (struct ext4_dir_entry *) bh->b_data;
 	/* Determine whether or not we have an index block */
@@ -638,9 +638,7 @@ struct stats dx_show_entries(struct dx_hash_info *hinfo, struct inode *dir,
 		u32 range = i < count - 1? (dx_get_hash(entries + 1) - hash): ~hash;
 		struct stats stats;
 		printk("%s%3u:%03u hash %8x/%8x ",levels?"":"   ", i, block, hash, range);
-		bh = ext4_bread(NULL,dir, block, 0);
-		if (!bh || IS_ERR(bh))
-			continue;
+		if (!(bh = ext4_bread (NULL,dir, block, 0,&err))) continue;
 		stats = levels?
 		   dx_show_entries(hinfo, dir, ((struct dx_node *) bh->b_data)->entries, levels - 1):
 		   dx_show_leaf(hinfo, (struct ext4_dir_entry_2 *) bh->b_data, blocksize, 0);
@@ -729,7 +727,8 @@ dx_probe(const struct qstr *d_name, struct inode *dir,
 	}
 
 	dxtrace(printk("Look up %x", hash));
-	while (1) {
+	while (1)
+	{
 		count = dx_get_count(entries);
 		if (!count || count > dx_get_limit(entries)) {
 			ext4_warning(dir->i_sb,
@@ -741,7 +740,8 @@ dx_probe(const struct qstr *d_name, struct inode *dir,
 
 		p = entries + 1;
 		q = entries + count - 1;
-		while (p <= q) {
+		while (p <= q)
+		{
 			m = p + (q - p)/2;
 			dxtrace(printk("."));
 			if (dx_get_hash(m) > hash)
@@ -750,7 +750,8 @@ dx_probe(const struct qstr *d_name, struct inode *dir,
 				p = m + 1;
 		}
 
-		if (0) { // linear search cross check
+		if (0) // linear search cross check
+		{
 			unsigned n = count - 1;
 			at = entries;
 			while (n--)
@@ -1340,10 +1341,10 @@ restart:
 					break;
 				}
 				num++;
-				bh = ext4_getblk(NULL, dir, b++, 0);
-				if (unlikely(IS_ERR(bh))) {
+				bh = ext4_getblk(NULL, dir, b++, 0, &err);
+				if (unlikely(err)) {
 					if (ra_max == 0)
-						return bh;
+						return ERR_PTR(err);
 					break;
 				}
 				bh_use[ra_max] = bh;

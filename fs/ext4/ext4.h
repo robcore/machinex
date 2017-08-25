@@ -2136,8 +2136,10 @@ extern int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 extern int ext4_trim_fs(struct super_block *, struct fstrim_range *);
 
 /* inode.c */
-struct buffer_head *ext4_getblk(handle_t *, struct inode *, ext4_lblk_t, int);
-struct buffer_head *ext4_bread(handle_t *, struct inode *, ext4_lblk_t, int);
+struct buffer_head *ext4_getblk(handle_t *, struct inode *,
+						ext4_lblk_t, int, int *);
+struct buffer_head *ext4_bread(handle_t *, struct inode *,
+						ext4_lblk_t, int, int *);
 int ext4_get_block_write(struct inode *inode, sector_t iblock,
 			 struct buffer_head *bh_result, int create);
 int ext4_get_block(struct inode *inode, sector_t iblock,
@@ -2179,6 +2181,8 @@ extern int ext4_alloc_da_blocks(struct inode *inode);
 extern void ext4_set_aops(struct inode *inode);
 extern int ext4_writepage_trans_blocks(struct inode *);
 extern int ext4_chunk_trans_blocks(struct inode *, int nrblocks);
+extern int ext4_block_zero_page_range(handle_t *handle,
+		struct address_space *mapping, loff_t from, loff_t length);
 extern int ext4_zero_partial_blocks(handle_t *handle, struct inode *inode,
 			     loff_t lstart, loff_t lend);
 extern int ext4_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf);
@@ -2517,22 +2521,6 @@ static inline void ext4_update_i_disksize(struct inode *inode, loff_t newsize)
 	if (newsize > EXT4_I(inode)->i_disksize)
 		EXT4_I(inode)->i_disksize = newsize;
 	up_write(&EXT4_I(inode)->i_data_sem);
-}
-
-/* Update i_size, i_disksize. Requires i_mutex to avoid races with truncate */
-static inline int ext4_update_inode_size(struct inode *inode, loff_t newsize)
-{
-	int changed = 0;
-
-	if (newsize > inode->i_size) {
-		i_size_write(inode, newsize);
-		changed = 1;
-	}
-	if (newsize > EXT4_I(inode)->i_disksize) {
-		ext4_update_i_disksize(inode, newsize);
-		changed |= 2;
-	}
-	return changed;
 }
 
 struct ext4_group_info {
