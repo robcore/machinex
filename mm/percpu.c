@@ -160,7 +160,7 @@ static struct pcpu_chunk *pcpu_reserved_chunk;
 static int pcpu_reserved_chunk_limit;
 
 static DEFINE_SPINLOCK(pcpu_lock);	/* all internal data structures */
-static DEFINE_MUTEX(pcpu_alloc_mutex);	/* chunk create/destroy, [de]pop */
+static DEFINE_MUTEX(pcpu_alloc_mutex);	/* chunk create/destroy, [de]pop, map ext */
 
 static struct list_head *pcpu_slot __read_mostly; /* chunk list slots */
 
@@ -445,6 +445,8 @@ static int pcpu_extend_area_map(struct pcpu_chunk *chunk, int new_alloc)
 	int *old = NULL, *new = NULL;
 	size_t old_size = 0, new_size = new_alloc * sizeof(new[0]);
 	unsigned long flags;
+
+	lockdep_assert_held(&pcpu_alloc_mutex);
 
 	new = pcpu_mem_zalloc(new_size);
 	if (!new)
@@ -871,7 +873,7 @@ static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved,
 	static int warn_limit = 10;
 	struct pcpu_chunk *chunk;
 	const char *err;
-	bool is_atomic = !(gfp & GFP_KERNEL);
+	bool is_atomic = (gfp & GFP_KERNEL) != GFP_KERNEL;
 	int occ_pages = 0;
 	int slot, off, new_alloc, cpu, ret;
 	unsigned long flags;
@@ -891,6 +893,9 @@ static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved,
 		     "percpu allocation\n", size, align);
 		return NULL;
 	}
+
+	if (!is_atomic)
+		mutex_lock(&pcpu_alloc_mutex);
 
 	spin_lock_irqsave(&pcpu_lock, flags);
 
@@ -964,8 +969,6 @@ restart:
 	if (is_atomic)
 		goto fail;
 
-	mutex_lock(&pcpu_alloc_mutex);
-
 	if (list_empty(&pcpu_slot[pcpu_nr_slots - 1])) {
 		chunk = pcpu_create_chunk();
 		if (!chunk) {
@@ -979,7 +982,6 @@ restart:
 		spin_lock_irqsave(&pcpu_lock, flags);
 	}
 
-	mutex_unlock(&pcpu_alloc_mutex);
 	goto restart;
 
 area_found:
@@ -988,8 +990,6 @@ area_found:
 	/* populate if not all pages are already there */
 	if (!is_atomic) {
 		int page_start, page_end, rs, re;
-
-		mutex_lock(&pcpu_alloc_mutex);
 
 		page_start = PFN_DOWN(off);
 		page_end = PFN_UP(off + size);
@@ -1001,7 +1001,6 @@ area_found:
 
 			spin_lock_irqsave(&pcpu_lock, flags);
 			if (ret) {
-				mutex_unlock(&pcpu_alloc_mutex);
 				pcpu_free_area(chunk, off, &occ_pages);
 				err = "failed to populate";
 				goto fail_unlock;
@@ -1041,6 +1040,8 @@ fail:
 		/* see the flag handling in pcpu_blance_workfn() */
 		pcpu_atomic_alloc_failed = true;
 		pcpu_schedule_balance_work();
+	} else {
+		mutex_unlock(&pcpu_alloc_mutex);
 	}
 	return NULL;
 }
@@ -1142,6 +1143,7 @@ static void pcpu_balance_workfn(struct work_struct *work)
 		}
 		pcpu_destroy_chunk(chunk);
 	}
+
 
 	/* service chunks which requested async area map extension */
 	do {
