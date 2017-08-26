@@ -80,7 +80,7 @@ static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
-static unsigned int target_cpus = 0;
+static int target_cpus = 0;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
@@ -291,7 +291,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	unsigned int cpu = smp_processor_id();
 	int primary;
 	long l_nr_threshold;
-	unsigned int target = target_cpus;
+	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
 	u64 now;
 	s64 delta;
