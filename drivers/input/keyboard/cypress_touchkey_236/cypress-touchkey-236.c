@@ -899,7 +899,7 @@ static irqreturn_t cypress_touchkey_interrupt(int irq, void *dev_id)
 	cypress_set_dvfs_lock(info, !!press);
 #endif
 	cpu_boost_event();
-	intelli_boost();
+	intelli_boost(true, 0);
 
 out:
 	return IRQ_HANDLED;

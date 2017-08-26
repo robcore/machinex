@@ -400,7 +400,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 
 	gpio_keys_gpio_report_event(bdata);
 	cpu_boost_event();
-	intelli_boost();
+	intelli_boost(true, 0);
 
 	if (bdata->button->wakeup) {
 		if (fakepressed) {
