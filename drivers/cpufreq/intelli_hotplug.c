@@ -84,7 +84,7 @@ static int target_cpus = 0;
 static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
-static unsigned int nr_run_hysteresis = 8;
+static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
 static unsigned int debug_intelli_plug = 0;
 
 struct ip_suspend {
@@ -225,8 +225,8 @@ static void apply_down_lock(unsigned int cpu)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	dl->locked = 1;
-		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-			      msecs_to_jiffies(down_lock_dur));
+	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+		      msecs_to_jiffies(down_lock_dur));
 }
 
 static int check_down_lock(unsigned int cpu)
