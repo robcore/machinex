@@ -118,13 +118,7 @@ if [[ $ONLINE == recovery ]]; then
 	adbcountdown
 elif [[ $ONLINE == device ]]; then
 	echo "connected"
-		adb shell su -c "dumpsys power | grep -i 'SCREEN_ON' >/dev/null";
-		if [ $? -eq 0 ]; then
-			echo "Screen is on...";
-		else
-			echo "Pressing buttons to wake-up...";
-			adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		fi;
+	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
@@ -312,13 +306,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
-		adb shell su -c "dumpsys power | grep -i 'SCREEN_ON' >/dev/null";
-		if [ $? -eq 0 ]; then
-			echo "Screen is on...";
-		else
-			echo "Pressing buttons to wake-up...";
-			adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		fi;
+	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
@@ -505,13 +493,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
-		adb shell su -c "dumpsys power | grep -i 'SCREEN_ON' >/dev/null";
-		if [ $? -eq 0 ]; then
-			echo "Screen is on...";
-		else
-			echo "Pressing buttons to wake-up...";
-			adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		fi;
+	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -682,13 +664,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
-		adb shell su -c "dumpsys power | grep -i 'SCREEN_ON' >/dev/null";
-		if [ $? -eq 0 ]; then
-			echo "Screen is on...";
-		else
-			echo "Pressing buttons to wake-up...";
-			adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		fi;
+	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
@@ -889,13 +865,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
-		adb shell su -c "dumpsys power | grep -i 'SCREEN_ON' >/dev/null";
-		if [ $? -eq 0 ]; then
-			echo "Screen is on...";
-		else
-			echo "Pressing buttons to wake-up...";
-			adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		fi;
+	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
@@ -1003,13 +973,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
-		adb shell su -c "dumpsys power | grep -i 'SCREEN_ON' >/dev/null";
-		if [ $? -eq 0 ]; then
-			echo "Screen is on...";
-		else
-			echo "Pressing buttons to wake-up...";
-			adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		fi;
+	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 else
