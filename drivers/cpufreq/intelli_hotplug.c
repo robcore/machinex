@@ -140,7 +140,7 @@ static unsigned int nr_run_thresholds_tri[] = {
 };
 
 static unsigned int nr_run_thresholds_eco[] = {
-        (THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
 };
 
