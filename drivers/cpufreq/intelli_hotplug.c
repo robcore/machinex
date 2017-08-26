@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -243,50 +243,57 @@ static unsigned int calculate_thread_stats(void)
 	int avg_nr_run = avg_nr_running();
 	int nr_run;
 	unsigned int *current_profile;
+	int threshold_size;
 	unsigned long nr_threshold;
 
+	threshold_size = max_cpus_online;
 	nr_run_hysteresis = max_cpus_online * 2;
 	nr_fshift = max_cpus_online - 1;
 
-	for (nr_run = online_cpus; nr_run < ARRAY_SIZE(nr_run_profiles); ++nr_run) {
-		if (max_cpus_online == 4)
-			current_profile = nr_run_profiles[full_mode_profile];
-		else if (max_cpus_online == 3)
-			current_profile = nr_run_profiles[5];
-		else if (max_cpus_online == 2)
-			current_profile = nr_run_profiles[6];
-		else
-			current_profile = nr_run_profiles[7];
+	if (num_online_cpus() > min_cpus_online &&
+		num_online_cpus() <= max_cpus_online) {
+		for (nr_run = 1; nr_run < threshold_size; nr_run++) {
+			if (max_cpus_online == 4)
+				current_profile = nr_run_profiles[full_mode_profile];
+			else if (max_cpus_online == 3)
+				current_profile = nr_run_profiles[5];
+			else if (max_cpus_online == 2)
+				current_profile = nr_run_profiles[6];
+			else
+				current_profile = nr_run_profiles[7];
 
-		nr_threshold = current_profile[nr_run - 1];
+			nr_threshold = current_profile[nr_run - 1];
 
-		if (nr_run_last <= nr_run)
-			nr_threshold += nr_run_hysteresis;
-		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
-			break;
-	}
-
-	for ( ; nr_run > 1; --nr_run) {
-		if (max_cpus_online == 4)
-			current_profile = nr_run_profiles[full_mode_profile];
-		else if (max_cpus_online == 3)
-			current_profile = nr_run_profiles[5];
-		else if (max_cpus_online == 2)
-			current_profile = nr_run_profiles[6];
-		else
-			current_profile = nr_run_profiles[7];
-
-		nr_threshold = current_profile[nr_run - 1];
-
-		if (nr_run_last > nr_run)
-			nr_threshold -= nr_run_hysteresis;
-		if (avg_nr_run > (nr_threshold << (FSHIFT - nr_fshift)))
-			break;
+			if (nr_run_last <= nr_run)
+				nr_threshold += nr_run_hysteresis;
+			if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
+				break;
 		}
 
-	nr_run_last = nr_run;
+		nr_run_last = nr_run;
+	} else if (num_online_cpus() == min_cpus_online &&
+		num_online_cpus() < max_cpus_online) {
+		for (nr_run = threshold_size; nr_run > 1; --nr_run) {
+			if (max_cpus_online == 4)
+				current_profile = nr_run_profiles[full_mode_profile];
+			else if (max_cpus_online == 3)
+				current_profile = nr_run_profiles[5];
+			else if (max_cpus_online == 2)
+				current_profile = nr_run_profiles[6];
+			else
+				current_profile = nr_run_profiles[7];
 
-	return nr_run;
+			nr_threshold = current_profile[nr_run - 1];
+
+			if (nr_run_last >= nr_run)
+				nr_threshold -= nr_run_hysteresis;
+			if (avg_nr_run >= (nr_threshold << (FSHIFT - nr_fshift)))
+				break;
+			}
+
+		nr_run_last = nr_run;
+	}
+		return nr_run;
 }
 
 static void update_per_cpu_stat(void)
