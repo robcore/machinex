@@ -350,8 +350,8 @@ static int zap_threads(struct task_struct *tsk, struct mm_struct *mm,
 				continue;
 			if (unlikely(p->mm == mm)) {
 				lock_task_sighand(p, &flags);
-				nr += zap_process(p, exit_code,
-							SIGNAL_GROUP_EXIT);
+				nr += zap_process(p, exit_code);
+				p->signal->flags = SIGNAL_GROUP_EXIT;
 				unlock_task_sighand(p, &flags);
 			}
 			break;

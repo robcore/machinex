@@ -85,7 +85,7 @@ static u64 boost_lock_duration = BOOST_LOCK_DUR;
 static u64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = 8;
-static unsigned int debug_intelli_plug = 0;
+static unsigned int debug_intelli_plug = 1;
 
 struct ip_suspend {
 	struct mutex intellisleep_mutex;
@@ -272,6 +272,7 @@ static unsigned int calculate_thread_stats(void)
 	}
 	nr_run_last = nr_run;
 
+	dprintk("Intelliplug - nr_run is %d\n", nr_run);
 	return nr_run;
 }
 
