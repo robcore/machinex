@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	8
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	9
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -415,7 +415,7 @@ void intelli_boost(void)
 static void cycle_cpus(void)
 {
 	unsigned int cpu;
-	int optimus;
+	unsigned int optimus;
 
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
@@ -531,7 +531,8 @@ static struct notifier_block intelliplug_cpu_notifier = {
 
 static int intelli_plug_start(void)
 {
-	unsigned int cpu, ret = 0;
+	unsigned int cpu;
+	int ret = 0;
 	struct down_lock *dl;
 
 	wake_lock(&ipwlock);
