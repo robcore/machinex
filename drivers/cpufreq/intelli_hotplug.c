@@ -580,7 +580,7 @@ static int intelli_plug_start(void)
 	}
 
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
-	INIT_DELAYED_WORK(&up_down_work, cpu_up_down_work);
+	INIT_WORK(&up_down_work, cpu_up_down_work);
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
