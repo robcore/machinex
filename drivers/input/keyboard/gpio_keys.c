@@ -399,17 +399,20 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 		container_of(work, struct gpio_button_data, work.work);
 
 	gpio_keys_gpio_report_event(bdata);
-	cpu_boost_event();
-	intelli_boost(true, 0);
 
 	if (bdata->button->wakeup) {
 		if (fakepressed) {
 			const struct gpio_keys_button *button = bdata->button;
 			input_report_key(bdata->input, button->code, 0);
 			gpio_keys_gpio_report_event(bdata);
+			cpu_boost_event();
+			intelli_boost();
 			fakepressed = false;
 		}
 		pm_relax(bdata->input->dev.parent);
+	} else {
+		cpu_boost_event();
+		intelli_boost();
 	}
 }
 

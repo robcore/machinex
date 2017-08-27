@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -46,10 +46,11 @@
 #define MULT_FACTOR			4
 #define DIV_FACTOR			100000
 
-static u64 last_boost_time;
-static u64 last_input;
+static ktime_t last_boost_time;
+static ktime_t last_input;
 
 static struct delayed_work intelli_plug_work;
+static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
@@ -79,8 +80,9 @@ static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
-static u64 boost_lock_duration = BOOST_LOCK_DUR;
-static u64 def_sampling_ms = DEF_SAMPLING_MS;
+static int target_cpus = 0;
+static s64 boost_lock_duration = BOOST_LOCK_DUR;
+static s64 def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
 static unsigned int debug_intelli_plug = 0;
@@ -203,7 +205,7 @@ bool intelli_init(void)
 }
 
 static unsigned int nr_run_last;
-static u64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
+static s64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
 
 struct down_lock {
 	unsigned int locked;
@@ -238,26 +240,23 @@ static void report_current_cpus(void)
 	online_cpus = num_online_cpus();
 }
 
-static unsigned int current_online_cpus(void)
-{
-	report_current_cpus();
-	return online_cpus;
-}
+#define INTELLI_CNT_CEILING 6
+static atomic_t intellicount = ATOMIC_INIT(0);
 
-#define INTELLI_CNT_MAX 14
-static unsigned int intellicount = 0;
-
+#define INTELLICOUNT_TIMEOUT ((5 * MSEC_PER_SEC) / 1000)
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
 	unsigned int nr_run;
 	unsigned int threshold_size;
 	unsigned int *current_profile;
-	unsigned int selfboost = DEFAULT_MAX_CPUS_ONLINE;
+	unsigned int selfboost = max_cpus_online;
+	s64 last_pass = 0, delta = 0;
 
-	if (intellicount == INTELLI_CNT_MAX)
-		intellicount = 0;
+	if (atomic_read(&intellicount) >= INTELLI_CNT_CEILING) {
+		atomic_set(&intellicount, 0);
 		return selfboost;
+	}
 
 	threshold_size = max_cpus_online;
 	nr_run_hysteresis = max_cpus_online * 2;
@@ -282,9 +281,12 @@ static unsigned int calculate_thread_stats(void)
 			break;
 	}
 	nr_run_last = nr_run;
+	delta = (ktime_to_ms(ktime_get()) - last_pass);
 
-	if (nr_run < INTELLI_CNT_MAX)
-		intellicount += intellicount;
+	if (nr_run < INTELLI_CNT_CEILING && delta >= INTELLICOUNT_TIMEOUT) {
+		atomic_inc(&intellicount);
+		last_pass = ktime_to_ms(ktime_get());
+	}
 
 	return nr_run;
 }
@@ -300,57 +302,18 @@ static void update_per_cpu_stat(void)
 	}
 }
 
-static void cpu_up_work(int target)
+static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	unsigned int primary = cpumask_first(cpu_online_mask);
-
-	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == primary ||
-			cpu_online(cpu) ||
-			!is_cpu_allowed(cpu))
-			continue;
-		if (thermal_core_controlled)
-			break;
-		cpu_up(cpu);
-		apply_down_lock(cpu);
-		if (num_online_cpus() == target)
-			break;
-		}
-	return;
-}
-
-static void cpu_down_work(int target)
-{
-	unsigned int cpu = smp_processor_id();
-	int primary = cpumask_first(cpu_online_mask);
+	int primary;
 	long l_nr_threshold;
+	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
+	s64 now, delta;
 
-	for_each_online_cpu(cpu) {
-		if (cpu == primary ||
-			cpu_is_offline(cpu))
-			continue;
-		if (check_down_lock(cpu) ||
-			thermal_core_controlled)
-			break;
-		l_nr_threshold =
-			(cpu_nr_run_threshold << 1) /
-				(num_online_cpus());
-		l_ip_info = &per_cpu(ip_info, cpu);
-		if (l_ip_info->cpu_nr_running < l_nr_threshold)
-			cpu_down(cpu);
-		if (num_online_cpus() == target)
-			break;
-	}
-	return;
-}
-
-static void cpu_up_down_work(int target)
-{
-	unsigned int cpu = smp_processor_id();
-	u64 now;
-	s64 delta;
+	if (thermal_core_controlled ||
+		!hotplug_ready)
+		goto reschedule;
 
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
@@ -359,9 +322,7 @@ static void cpu_up_down_work(int target)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	if (thermal_core_controlled ||
-		!hotplug_ready)
-		goto reschedule;
+	primary = cpumask_first(cpu_online_mask);
 
 	if (target <= min_cpus_online)
 		target = min_cpus_online;
@@ -369,9 +330,9 @@ static void cpu_up_down_work(int target)
 		target = max_cpus_online;
 
 	if (!online_cpus)
-		online_cpus = current_online_cpus();
+		report_current_cpus();
 
-	now = ktime_to_us(ktime_get());
+	now = ktime_to_ms(ktime_get());
 	delta = (now - last_input);
 
 	if (target < online_cpus) {
@@ -379,62 +340,44 @@ static void cpu_up_down_work(int target)
 		(delta <= msecs_to_jiffies(boost_lock_duration)))
 				goto reschedule;
 		update_per_cpu_stat();
-		cpu_down_work(target);
+		for_each_online_cpu(cpu) {
+			if (cpu == primary)
+				continue;
+			if (cpu_is_offline(cpu))
+				continue;
+			if (check_down_lock(cpu))
+				break;
+			l_nr_threshold =
+				(cpu_nr_run_threshold << 1) /
+					(num_online_cpus());
+			l_ip_info = &per_cpu(ip_info, cpu);
+			if (l_ip_info->cpu_nr_running < l_nr_threshold) {
+				if (thermal_core_controlled)
+					goto reschedule;
+				cpu_down(cpu);
+			}
+			if (num_online_cpus() == target)
+				break;
+		}
 	} else if (target > online_cpus) {
-		cpu_up_work(target);
+		for_each_cpu_not(cpu, cpu_online_mask) {
+			if (cpu == primary)
+				continue;
+			if (cpu_online(cpu))
+				continue;
+			if (thermal_core_controlled)
+				goto reschedule;
+			if (!is_cpu_allowed(cpu))
+				continue;
+			cpu_up(cpu);
+			apply_down_lock(cpu);
+			if (num_online_cpus() == target)
+				break;
+		}
 	}
 reschedule:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 					msecs_to_jiffies(def_sampling_ms));
-}
-
-void intelli_boost(bool touch, unsigned int target_cpus)
-{
-	u64 now, delta;
-
-	if (!intelli_plug_active || !is_display_on())
-		return;
-
-	if (unlikely(intellinit))
-		goto reschedule;
-
-	if (target_cpus > 0)
-		goto preordered;
-
-	if (touch == false) {
-		target_cpus = calculate_thread_stats();
-		goto preordered;
-	}
-
-	now = ktime_to_us(ktime_get());
-	last_input = now;
-	delta = (last_input - last_boost_time);
-
-	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
-		goto reschedule;
-
-	if (touch == true) {
-		if (num_online_cpus() > cpus_boosted ||
-		    cpus_boosted <= min_cpus_online)
-			goto reschedule;
-
-		target_cpus = cpus_boosted;
-		last_boost_time = ktime_to_us(ktime_get());
-		goto preordered;
-	}
-
-	/*safety net that should NEVER be needed*/
-	if (!target_cpus)
-		target_cpus = calculate_thread_stats();
-
-preordered:
-	cpu_up_down_work(target_cpus);
-	return;
-
-reschedule:
-	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-		msecs_to_jiffies(def_sampling_ms));
-	return;
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
@@ -448,7 +391,40 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	intelli_boost(false, 0);
+#if defined(INTELLI_USE_ATOMIC)
+	if (atomic_read(&intelli_plug_active) == 1) {
+#elif defined(INTELLI_USE_SPINLOCK)
+	if (intelli_plug_active) {
+#endif
+		target_cpus = calculate_thread_stats();
+		schedule_work_on(0, &up_down_work);
+	}
+}
+
+void intelli_boost(void)
+{
+	s64 now, delta;
+
+	if (!intelli_plug_active || !is_display_on())
+		return;
+
+	if (unlikely(intellinit))
+		return;
+
+	now = ktime_to_ms(ktime_get());
+	last_input = now;
+	delta = (last_input - last_boost_time);
+
+	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
+		return;
+
+	if (num_online_cpus() > cpus_boosted ||
+	    cpus_boosted <= min_cpus_online)
+		return;
+
+	target_cpus = cpus_boosted;
+	schedule_work_on(0, &up_down_work);
+	last_boost_time = ktime_to_ms(ktime_get());
 }
 
 static void cycle_cpus(void)
@@ -601,6 +577,8 @@ static int intelli_plug_start(void)
 	}
 
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
+	INIT_WORK(&up_down_work, cpu_up_down_work);
+
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
 	cycle_cpus();
@@ -784,7 +762,7 @@ static ssize_t store_boost_lock_duration(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	boost_lock_duration = msecs_to_jiffies(val);
+	boost_lock_duration = val;
 
 	return count;
 }
@@ -846,7 +824,7 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	if (ret != 1 || val < 1 || val > NR_CPUS)
 		return -EINVAL;
 
-	if (val > max_cpus_online)
+	if (val >= max_cpus_online)
 		val = max_cpus_online;
 
 	min_cpus_online = val;
@@ -865,7 +843,7 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	if (ret != 1 || val < 1 || val > NR_CPUS)
 		return -EINVAL;
 
-	if (val < min_cpus_online)
+	if (val <= min_cpus_online)
 		val = min_cpus_online;
 
 	max_cpus_online = val;
@@ -957,3 +935,4 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPLv2");
+

@@ -938,7 +938,7 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
 void cpu_boost_event(void);
-void intelli_boost(bool touch, unsigned int target_cpus);
+void intelli_boost(void);
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
 extern bool hardlimit_ready;

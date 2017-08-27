@@ -1451,7 +1451,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 	if (touch_count) {
 		cpu_boost_event();
-		intelli_boost(true, 0);
+		intelli_boost();
 	}
 #ifdef CONFIG_FAKE_DVFS
 	if (touch_count)
