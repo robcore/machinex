@@ -26,21 +26,21 @@
 #include <linux/sysfs_helpers.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	9
+#define INTELLI_PLUG_MAJOR_VERSION	10
+#define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
+#define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
 #define INPUT_INTERVAL (200)
 #define BOOST_LOCK_DUR (50)
-#define DEFAULT_NR_CPUS_BOOSTED DEFAULT_MAX_CPUS_ONLINE
+#define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
-#define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
+#define DEFAULT_DOWN_LOCK_DUR (BOOST_LOCK_DUR)
 
 #define CAPACITY_RESERVE (50)
 #define THREAD_CAPACITY (339 - CAPACITY_RESERVE)
 #define CPU_NR_THRESHOLD ((THREAD_CAPACITY << 1) | (THREAD_CAPACITY >> 1))
-#define MULT_FACTOR NR_CPUS
+#define MULT_FACTOR (NR_CPUS)
 #define DIV_FACTOR	(100000)
 
 static ktime_t last_boost_time;
@@ -250,11 +250,8 @@ static unsigned int calculate_thread_stats(void)
 	s64 delta;
 	ktime_t now, last_pass;
 
-	if (!online_cpus)
-		report_current_cpus();
-
 	if (unlikely(atomic_read(&intellicount) >= max_intellicount &&
-		max_cpus_online > online_cpus())) {
+		max_cpus_online > num_online_cpus())) {
 		atomic_set(&intellicount, 0);
 		return selfboost;
 	}
@@ -288,7 +285,7 @@ static unsigned int calculate_thread_stats(void)
 	now = ktime_get();
 	delta = ktime_to_ms(ktime_sub(now, last_pass));
 
-	if (max_cpus_online > online_cpus() &&
+	if (max_cpus_online > num_online_cpus() &&
 		nr_run < max_intellicount && delta >= icount_tout) {
 		atomic_inc(&intellicount);
 		last_pass = ktime_get();
