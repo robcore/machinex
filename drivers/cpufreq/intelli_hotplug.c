@@ -241,8 +241,8 @@ static void report_current_cpus(void)
 	online_cpus = num_online_cpus();
 }
 static atomic_t intellicount = ATOMIC_INIT(0);
-static const unsigned int max_intellicount = 3;
-static const s64 icount_tout = 10000;
+static const unsigned int max_intellicount = 5;
+static const s64 icount_tout = 6000;
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
