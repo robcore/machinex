@@ -263,11 +263,7 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
-		if (nr_run)
-			nr_threshold = current_profile[nr_run - 1];
-		else
-			nr_threshold = current_profile[nr_run];
-
+		nr_threshold = current_profile[nr_run - 1];
 		nr_run_hysteresis = max_cpus_online * 2;
 		nr_fshift = max_cpus_online - 1;
 
@@ -275,8 +271,6 @@ static unsigned int calculate_thread_stats(void)
 			nr_threshold += nr_run_hysteresis;
 
 		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
-			break;
-		if (nr_run == max_cpus_online)
 			break;
 	}
 	nr_run_last = nr_run;
