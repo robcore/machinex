@@ -254,8 +254,6 @@ static unsigned int calculate_thread_stats(void)
 
 	for (nr_run = 0; nr_run < max_cpus_online; ++nr_run) {
 		unsigned long nr_threshold;
-		if (nr_run == max_cpus_online)
-			break;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
@@ -276,7 +274,11 @@ static unsigned int calculate_thread_stats(void)
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
 
-		if (INTELLILOAD(avg_nr_run) <= (nr_threshold << (FSHIFT - nr_fshift)))
+		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
+			break;
+		else if (INTELLILOAD(avg_nr_run) <= (nr_threshold << (FSHIFT - nr_fshift)))
+			break;
+		if (nr_run == max_cpus_online)
 			break;
 	}
 	nr_run_last = nr_run;
@@ -334,7 +336,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	target = target_cpus;
+	target = READ_ONCE(target_cpus);
 
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 
@@ -403,7 +405,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 #elif defined(INTELLI_USE_SPINLOCK)
 	if (intelli_plug_active) {
 #endif
-		target_cpus = calculate_thread_stats();
+		WRITE_ONCE(target_cpus, calculate_thread_stats());
 		schedule_work_on(0, &up_down_work);
 	}
 }
@@ -427,7 +429,7 @@ void intelli_boost(void)
 	    cpus_boosted <= min_cpus_online)
 		return;
 
-	target_cpus = cpus_boosted;
+	WRITE_ONCE(target_cpus, cpus_boosted);
 	schedule_work_on(0, &up_down_work);
 	last_boost_time = ktime_get();
 }
