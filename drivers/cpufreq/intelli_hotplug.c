@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -238,9 +238,9 @@ static void report_current_cpus(void)
 	online_cpus = num_online_cpus();
 }
 
-static unsigned int get_online_cpus(void)
+static unsigned int current_online_cpus(void)
 {
-	report_current_cpus(void);
+	report_current_cpus();
 	return online_cpus;
 }
 
@@ -274,7 +274,7 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
-		nr_threshold = (unsigned int *)current_profile[nr_run - 1];
+		nr_threshold = current_profile[nr_run - 1];
 
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
@@ -369,7 +369,7 @@ static void cpu_up_down_work(int target)
 		target = max_cpus_online;
 
 	if (!online_cpus)
-		online_cpus = get_online_cpus();
+		online_cpus = current_online_cpus();
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
