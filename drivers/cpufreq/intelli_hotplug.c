@@ -226,7 +226,7 @@ static void apply_down_lock(unsigned int cpu)
 
 	dl->locked = 1;
 	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-		      msecs_to_jiffies(down_lock_dur));
+		      down_lock_dur);
 }
 
 static int check_down_lock(unsigned int cpu)
@@ -379,7 +379,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 reschedule:
 		mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-					msecs_to_jiffies(def_sampling_ms));
+					def_sampling_ms);
 }
 
 static void intelli_plug_work_fn(struct work_struct *work)
@@ -450,7 +450,7 @@ static void cycle_cpus(void)
 		apply_down_lock(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      msecs_to_jiffies(START_DELAY_MS));
+			      START_DELAY_MS);
 
 	intellinit = false;
 	wake_unlock(&ipwlock);
