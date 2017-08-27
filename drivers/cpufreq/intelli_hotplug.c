@@ -48,7 +48,7 @@ static ktime_t last_boost_time;
 static ktime_t last_input;
 
 static struct delayed_work intelli_plug_work;
-static struct work_struct up_down_work;
+static struct delayed_work up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
@@ -403,33 +403,31 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	if (intelli_plug_active) {
 #endif
 		target_cpus = calculate_thread_stats();
-		schedule_work_on(0, &up_down_work);
+		mod_delayed_work_on(0, intelliplug_wq, &up_down_work, 0);
 	}
 }
 
 void intelli_boost(void)
 {
 	s64 delta;
-	ktime_t now;
 	if (!intelli_plug_active || !is_display_on())
 		return;
 
 	if (unlikely(intellinit))
 		return;
 
-	now = ktime_get();
-	last_input = now;
+	last_input = ktime_get();
 	delta = ktime_to_ms(ktime_sub(last_input, last_boost_time));
 
 	if (delta < INPUT_INTERVAL)
 		return;
 
-	if (num_online_cpus() > cpus_boosted ||
+	if (num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
 
 	target_cpus = cpus_boosted;
-	schedule_work_on(0, &up_down_work);
+	mod_delayed_work_on(0, intelliplug_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }
 
@@ -583,7 +581,7 @@ static int intelli_plug_start(void)
 	}
 
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
-	INIT_WORK(&up_down_work, cpu_up_down_work);
+	INIT_DELAYED_WORK(&up_down_work, cpu_up_down_work);
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
