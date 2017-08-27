@@ -286,9 +286,7 @@ static unsigned int calculate_thread_stats(void)
 
 	if (max_cpus_online > num_online_cpus() &&
 		nr_run < max_intellicount && delta >= icount_tout) {
-		rcu_read_lock();
-		intellicount += intellicount;
-		rcu_read_unlock();
+		WRITE_ONCE(intellicount, intellicount + 1);
 		last_pass = ktime_get();
 	}
 
