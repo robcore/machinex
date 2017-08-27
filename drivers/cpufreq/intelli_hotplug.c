@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -238,61 +238,55 @@ static void report_current_cpus(void)
 	online_cpus = num_online_cpus();
 }
 
+static unsigned int get_online_cpus(void)
+{
+	report_current_cpus(void);
+	return online_cpus;
+}
+
+#define INTELLI_CNT_MAX 14
+static unsigned int intellicount = 0;
+
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
-	int nr_run;
-	unsigned int *current_profile;
+	unsigned int nr_run;
 	unsigned int threshold_size;
-	unsigned long nr_threshold;
+	unsigned int *current_profile;
+	unsigned int selfboost = DEFAULT_MAX_CPUS_ONLINE;
+
+	if (intellicount == INTELLI_CNT_MAX)
+		intellicount = 0;
+		return selfboost;
 
 	threshold_size = max_cpus_online;
 	nr_run_hysteresis = max_cpus_online * 2;
 	nr_fshift = max_cpus_online - 1;
 
-	if (!online_cpus)
-		report_current_cpus();
+	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
+		unsigned long nr_threshold;
+		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
+			current_profile = nr_run_profiles[full_mode_profile];
+		else if (max_cpus_online == 3)
+			current_profile = nr_run_profiles[5];
+		else if (max_cpus_online == 2)
+			current_profile = nr_run_profiles[6];
+		else
+			current_profile = nr_run_profiles[7];
 
-	if (online_cpus > min_cpus_online) {
-		for (nr_run = 1; nr_run < threshold_size; nr_run++) {
-			if (max_cpus_online == 4)
-				current_profile = nr_run_profiles[full_mode_profile];
-			else if (max_cpus_online == 3)
-				current_profile = nr_run_profiles[5];
-			else if (max_cpus_online == 2)
-				current_profile = nr_run_profiles[6];
-			else
-				current_profile = nr_run_profiles[7];
+		nr_threshold = (unsigned int *)current_profile[nr_run - 1];
 
-			nr_threshold = current_profile[nr_run - 1];
-
-			if (nr_run_last <= nr_run)
-				nr_threshold += nr_run_hysteresis;
-			if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
-				break;
-		}
-		nr_run_last = nr_run;
-	} else {
-		for (nr_run = threshold_size; nr_run > 1; nr_run--) {
-			if (max_cpus_online == 4)
-				current_profile = nr_run_profiles[full_mode_profile];
-			else if (max_cpus_online == 3)
-				current_profile = nr_run_profiles[5];
-			else if (max_cpus_online == 2)
-				current_profile = nr_run_profiles[6];
-			else
-				current_profile = nr_run_profiles[7];
-
-			nr_threshold = current_profile[nr_run - 1];
-
-			if (nr_run_last >= nr_run)
-				nr_threshold -= nr_run_hysteresis;
-			if (avg_nr_run >= (nr_threshold << (FSHIFT - nr_fshift)))
-				break;
-			}
-		nr_run_last = nr_run;
+		if (nr_run_last <= nr_run)
+			nr_threshold += nr_run_hysteresis;
+		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
+			break;
 	}
-		return nr_run;
+	nr_run_last = nr_run;
+
+	if (nr_run < INTELLI_CNT_MAX)
+		intellicount += intellicount;
+
+	return nr_run;
 }
 
 static void update_per_cpu_stat(void)
@@ -309,10 +303,7 @@ static void update_per_cpu_stat(void)
 static void cpu_up_work(int target)
 {
 	unsigned int cpu = smp_processor_id();
-	int primary = cpumask_first(cpu_online_mask);
-
-	if (!online_cpus)
-		report_current_cpus();
+	unsigned int primary = cpumask_first(cpu_online_mask);
 
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == primary ||
@@ -326,6 +317,7 @@ static void cpu_up_work(int target)
 		if (num_online_cpus() == target)
 			break;
 		}
+	return;
 }
 
 static void cpu_down_work(int target)
@@ -334,9 +326,6 @@ static void cpu_down_work(int target)
 	int primary = cpumask_first(cpu_online_mask);
 	long l_nr_threshold;
 	struct ip_cpu_info *l_ip_info;
-
-	if (!online_cpus)
-		report_current_cpus();
 
 	for_each_online_cpu(cpu) {
 		if (cpu == primary ||
@@ -354,6 +343,7 @@ static void cpu_down_work(int target)
 		if (num_online_cpus() == target)
 			break;
 	}
+	return;
 }
 
 static void cpu_up_down_work(int target)
@@ -379,7 +369,7 @@ static void cpu_up_down_work(int target)
 		target = max_cpus_online;
 
 	if (!online_cpus)
-		report_current_cpus();
+		online_cpus = get_online_cpus();
 
 	now = ktime_to_us(ktime_get());
 	delta = (now - last_input);
@@ -398,7 +388,7 @@ reschedule:
 					msecs_to_jiffies(def_sampling_ms));
 }
 
-void intelli_boost(bool touch, int target_cpus)
+void intelli_boost(bool touch, unsigned int target_cpus)
 {
 	u64 now, delta;
 
@@ -408,15 +398,20 @@ void intelli_boost(bool touch, int target_cpus)
 	if (unlikely(intellinit))
 		goto reschedule;
 
+	if (target_cpus > 0)
+		goto preordered;
+
+	if (touch == false) {
+		target_cpus = calculate_thread_stats();
+		goto preordered;
+	}
+
 	now = ktime_to_us(ktime_get());
 	last_input = now;
 	delta = (last_input - last_boost_time);
 
 	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
 		goto reschedule;
-
-	if (target_cpus > 0)
-		goto preordered;
 
 	if (touch == true) {
 		if (num_online_cpus() > cpus_boosted ||
@@ -425,9 +420,6 @@ void intelli_boost(bool touch, int target_cpus)
 
 		target_cpus = cpus_boosted;
 		last_boost_time = ktime_to_us(ktime_get());
-		goto preordered;
-	} else if (touch == false) {
-		target_cpus = calculate_thread_stats();
 		goto preordered;
 	}
 
@@ -456,7 +448,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	intelli_boost(false, calculate_thread_stats());
+	intelli_boost(false, 0);
 }
 
 static void cycle_cpus(void)
