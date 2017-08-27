@@ -560,7 +560,7 @@ static int intelli_plug_start(void)
 		goto err_out;
 	}
 
-	updown_wq = create_freezable_workqueue("updown");
+	updown_wq = create_singlethread_workqueue("updown");
 
 	if (!updown_wq) {
 		pr_err("%s: Failed to allocate hotplug workqueue\n",
