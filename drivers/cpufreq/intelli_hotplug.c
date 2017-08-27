@@ -26,7 +26,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -81,8 +81,8 @@ static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
 static int target_cpus = 0;
-static s64 boost_lock_duration = BOOST_LOCK_DUR;
-static s64 def_sampling_ms = DEF_SAMPLING_MS;
+static u64 boost_lock_duration = BOOST_LOCK_DUR;
+static unsigned long def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
 static unsigned int debug_intelli_plug = 0;
@@ -205,7 +205,7 @@ bool intelli_init(void)
 }
 
 static unsigned int nr_run_last;
-static s64 down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
+static unsigned long down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
 
 struct down_lock {
 	unsigned int locked;
@@ -243,7 +243,7 @@ static void report_current_cpus(void)
 #define INTELLI_CNT_CEILING 6
 static atomic_t intellicount = ATOMIC_INIT(0);
 
-#define INTELLICOUNT_TIMEOUT ((5 * MSEC_PER_SEC) / 1000)
+#define INTELLICOUNT_TIMEOUT 5000
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
@@ -251,7 +251,8 @@ static unsigned int calculate_thread_stats(void)
 	unsigned int threshold_size;
 	unsigned int *current_profile;
 	unsigned int selfboost = max_cpus_online;
-	s64 last_pass = 0, delta = 0;
+	s64 delta = 0;
+	ktime_t now, last_pass;
 
 	if (atomic_read(&intellicount) >= INTELLI_CNT_CEILING) {
 		atomic_set(&intellicount, 0);
@@ -281,11 +282,11 @@ static unsigned int calculate_thread_stats(void)
 			break;
 	}
 	nr_run_last = nr_run;
-	delta = (ktime_to_ms(ktime_get()) - last_pass);
-
+	now = ktime_get();
+	delta = ktime_to_ms(ktime_sub(now, last_pass));
 	if (nr_run < INTELLI_CNT_CEILING && delta >= INTELLICOUNT_TIMEOUT) {
 		atomic_inc(&intellicount);
-		last_pass = ktime_to_ms(ktime_get());
+		last_pass = ktime_get();
 	}
 
 	return nr_run;
@@ -309,7 +310,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	long l_nr_threshold;
 	int target = target_cpus;
 	struct ip_cpu_info *l_ip_info;
-	s64 now, delta;
+	s64 delta;
+	ktime_t now;
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -332,12 +334,12 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (!online_cpus)
 		report_current_cpus();
 
-	now = ktime_to_ms(ktime_get());
-	delta = (now - last_input);
+	now = ktime_get();
+	delta = ktime_to_ms(ktime_sub(now, last_input));
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-		(delta <= msecs_to_jiffies(boost_lock_duration)))
+		(delta <= boost_lock_duration))
 				goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -403,19 +405,19 @@ static void intelli_plug_work_fn(struct work_struct *work)
 
 void intelli_boost(void)
 {
-	s64 now, delta;
-
+	s64 delta;
+	ktime_t now;
 	if (!intelli_plug_active || !is_display_on())
 		return;
 
 	if (unlikely(intellinit))
 		return;
 
-	now = ktime_to_ms(ktime_get());
+	now = ktime_get();
 	last_input = now;
-	delta = (last_input - last_boost_time);
+	delta = ktime_to_ms(ktime_sub(last_input, last_boost_time));
 
-	if (delta < msecs_to_jiffies(INPUT_INTERVAL))
+	if (delta < INPUT_INTERVAL)
 		return;
 
 	if (num_online_cpus() > cpus_boosted ||
@@ -424,7 +426,7 @@ void intelli_boost(void)
 
 	target_cpus = cpus_boosted;
 	schedule_work_on(0, &up_down_work);
-	last_boost_time = ktime_to_ms(ktime_get());
+	last_boost_time = ktime_get();
 }
 
 static void cycle_cpus(void)
@@ -771,7 +773,7 @@ static ssize_t show_def_sampling_ms(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", def_sampling_ms);
+	return sprintf(buf, "%lu\n", def_sampling_ms);
 }
 
 static ssize_t store_def_sampling_ms(struct kobject *kobj,
@@ -779,9 +781,9 @@ static ssize_t store_def_sampling_ms(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	u64 val;
+	unsigned long val;
 
-	ret = sscanf(buf, "%llu", &val);
+	ret = sscanf(buf, "%lu", &val);
 	if (ret != 1)
 		return -EINVAL;
 
@@ -794,7 +796,7 @@ static ssize_t show_down_lock_dur(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", down_lock_dur);
+	return sprintf(buf, "%lu\n", down_lock_dur);
 }
 
 static ssize_t store_down_lock_dur(struct kobject *kobj,
@@ -802,9 +804,9 @@ static ssize_t store_down_lock_dur(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	u64 val;
+	unsigned long val;
 
-	ret = sscanf(buf, "%llu", &val);
+	ret = sscanf(buf, "%lu", &val);
 	if (ret != 1)
 		return -EINVAL;
 
