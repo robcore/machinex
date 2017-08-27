@@ -47,7 +47,7 @@ static ktime_t last_boost_time;
 static ktime_t last_input;
 
 static struct delayed_work intelli_plug_work;
-static struct delayed_work up_down_work;
+static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
@@ -76,7 +76,7 @@ static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
-static unsigned long start_delay = 95000;
+static unsigned long start_delay = 9500;
 
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
@@ -238,26 +238,24 @@ static void report_current_cpus(void)
 {
 	online_cpus = num_online_cpus();
 }
-static atomic_t intellicount = ATOMIC_INIT(0);
+
+#define INTELLILOAD(x) ((x) >> FSHIFT)
+
+static unsigned int intellicount;
 static const unsigned int max_intellicount = 5;
 static const s64 icount_tout = 6000;
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
 	unsigned int nr_run;
-	unsigned int selfboost = max_cpus_online;
 	unsigned int *current_profile;
 	s64 delta;
 	ktime_t now, last_pass;
 
-	if (unlikely(atomic_read(&intellicount) >= max_intellicount &&
-		max_cpus_online > num_online_cpus())) {
-		atomic_set(&intellicount, 0);
-		return selfboost;
-	}
-
-	for (nr_run = 1; nr_run < max_cpus_online; nr_run++) {
+	for (nr_run = 0; nr_run < max_cpus_online; ++nr_run) {
 		unsigned long nr_threshold;
+		if (nr_run == max_cpus_online)
+			break;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
@@ -267,10 +265,10 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
-		if (nr_run < 1)
-			nr_run = 1;
-
-		nr_threshold = current_profile[nr_run - 1];
+		if (nr_run)
+			nr_threshold = current_profile[nr_run - 1];
+		else
+			nr_threshold = current_profile[nr_run];
 
 		nr_run_hysteresis = max_cpus_online * 2;
 		nr_fshift = max_cpus_online - 1;
@@ -278,16 +276,23 @@ static unsigned int calculate_thread_stats(void)
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
 
-		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
+		if (INTELLILOAD(avg_nr_run) <= (nr_threshold << (FSHIFT - nr_fshift)))
 			break;
 	}
 	nr_run_last = nr_run;
+
+	if (unlikely(intellicount >= max_intellicount &&
+		max_cpus_online > num_online_cpus())) {
+		intellicount = 0;
+		return max_cpus_online;
+	}
+
 	now = ktime_get();
 	delta = ktime_to_ms(ktime_sub(now, last_pass));
 
 	if (max_cpus_online > num_online_cpus() &&
 		nr_run < max_intellicount && delta >= icount_tout) {
-		atomic_inc(&intellicount);
+		intellicount += intellicount;
 		last_pass = ktime_get();
 	}
 
@@ -397,7 +402,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	if (intelli_plug_active) {
 #endif
 		target_cpus = calculate_thread_stats();
-		queue_delayed_work_on(0, system_wq, &up_down_work, 0);
+		schedule_work_on(0, &up_down_work);
 	}
 }
 
@@ -421,7 +426,7 @@ void intelli_boost(void)
 		return;
 
 	target_cpus = cpus_boosted;
-	queue_delayed_work_on(0, system_wq, &up_down_work, 0);
+	schedule_work_on(0, &up_down_work);
 	last_boost_time = ktime_get();
 }
 
