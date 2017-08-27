@@ -253,7 +253,7 @@ static unsigned int calculate_thread_stats(void)
 	s64 delta;
 	ktime_t now, last_pass;
 
-	for (nr_run = 1; nr_run < max_cpus_online; nr_run++) {
+	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
