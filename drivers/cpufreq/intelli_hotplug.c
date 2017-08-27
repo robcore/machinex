@@ -23,16 +23,18 @@
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
 #include <linux/spinlock.h>
+#include <linux/sysfs_helpers.h>
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define DEF_SAMPLING_MS			70
 #define RESUME_SAMPLING_MS		100
 #define START_DELAY_MS			95000
+static unsigned long start_delay = START_DELAY_MS;
 #define INPUT_INTERVAL			2000
 #define BOOST_LOCK_DUR			500
 #define DEFAULT_NR_CPUS_BOOSTED		4
@@ -81,10 +83,10 @@ static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
 static int target_cpus = 0;
-static u64 boost_lock_duration = BOOST_LOCK_DUR;
+static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
-static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
+static unsigned int nr_run_hysteresis = (max_cpus_online * 2);
 static unsigned int debug_intelli_plug = 0;
 
 struct ip_suspend {
@@ -240,28 +242,29 @@ static void report_current_cpus(void)
 	online_cpus = num_online_cpus();
 }
 
-#define INTELLI_CNT_CEILING 6
-static atomic_t intellicount = ATOMIC_INIT(0);
-
-#define INTELLICOUNT_TIMEOUT 5000
+#define INTELLI_CNT_CEILING 10
+#define INTELLICOUNT_TIMEOUT (10*1000)
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
 	unsigned int nr_run;
 	unsigned int threshold_size;
 	unsigned int *current_profile;
+	unsigned int intellicount = 0;
+	unsigned int max_intellicount = INTELLI_CNT_CEILING;
 	unsigned int selfboost = max_cpus_online;
+	s64 icount_tout = INTELLICOUNT_TIMEOUT;
 	s64 delta = 0;
 	ktime_t now, last_pass;
 
-	if (atomic_read(&intellicount) >= INTELLI_CNT_CEILING) {
-		atomic_set(&intellicount, 0);
+	if (intellicount >= INTELLI_CNT_CEILING &&
+		max_cpus_online > num_online_cpus()) {
+		intellicount = 0;
 		return selfboost;
 	}
 
 	threshold_size = max_cpus_online;
-	nr_run_hysteresis = max_cpus_online * 2;
-	nr_fshift = max_cpus_online - 1;
+	nr_fshift = DEFAULT_NR_FSHIFT;
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
 		unsigned long nr_threshold;
@@ -284,8 +287,8 @@ static unsigned int calculate_thread_stats(void)
 	nr_run_last = nr_run;
 	now = ktime_get();
 	delta = ktime_to_ms(ktime_sub(now, last_pass));
-	if (nr_run < INTELLI_CNT_CEILING && delta >= INTELLICOUNT_TIMEOUT) {
-		atomic_inc(&intellicount);
+	if (nr_run < INTELLI_CNT_CEILING && delta >= icount_tout) {
+		intellicount += intellicount;
 		last_pass = ktime_get();
 	}
 
@@ -450,7 +453,7 @@ static void cycle_cpus(void)
 		apply_down_lock(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      START_DELAY_MS);
+			      start_delay);
 
 	intellinit = false;
 	wake_unlock(&ipwlock);
@@ -688,25 +691,6 @@ store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
 
-static ssize_t store_nr_run_hysteresis(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	int val;
-
-	ret = sscanf(buf, "%d", &val);
-	if (ret < 0)
-		return ret;
-
-	if (val <= 0)
-		val = 0;
-
-	nr_run_hysteresis = val;
-
-	return count;
-}
-
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
@@ -750,7 +734,7 @@ static ssize_t show_boost_lock_duration(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%llu\n", (boost_lock_duration));
+	return sprintf(buf, "%u\n", (boost_lock_duration));
 }
 
 static ssize_t store_boost_lock_duration(struct kobject *kobj,
@@ -758,11 +742,13 @@ static ssize_t store_boost_lock_duration(struct kobject *kobj,
 					 const char *buf, size_t count)
 {
 	int ret;
-	u64 val;
+	int val;
 
-	ret = sscanf(buf, "%llu", &val);
+	ret = sscanf(buf, "%d", &val);
 	if (ret != 1)
 		return -EINVAL;
+
+	sanitize_min_max(val, 100, 5000);
 
 	boost_lock_duration = val;
 
