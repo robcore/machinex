@@ -449,8 +449,8 @@ static void cycle_cpus(void)
 			continue;
 		if (!is_cpu_allowed(cpu))
 			continue;
-		cpu_up(cpu);
-		apply_down_lock(cpu);
+		if (!cpu_up(cpu))
+			apply_down_lock(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      start_delay);
