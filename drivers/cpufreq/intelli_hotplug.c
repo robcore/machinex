@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -241,7 +241,7 @@ static void report_current_cpus(void)
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
 
-static unsigned int intellicount;
+static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = 5;
 static const s64 icount_tout = 6000;
 static unsigned int calculate_thread_stats(void)
@@ -281,9 +281,9 @@ static unsigned int calculate_thread_stats(void)
 	}
 	nr_run_last = nr_run;
 
-	if (unlikely(intellicount >= max_intellicount &&
-		max_cpus_online > num_online_cpus())) {
-		intellicount = 0;
+	if (READ_ONCE(intellicount) >= max_intellicount &&
+		max_cpus_online > num_online_cpus()) {
+		WRITE_ONCE(intellicount, 0);
 		return max_cpus_online;
 	}
 
@@ -292,7 +292,9 @@ static unsigned int calculate_thread_stats(void)
 
 	if (max_cpus_online > num_online_cpus() &&
 		nr_run < max_intellicount && delta >= icount_tout) {
+		rcu_read_lock();
 		intellicount += intellicount;
+		rcu_read_unlock();
 		last_pass = ktime_get();
 	}
 
