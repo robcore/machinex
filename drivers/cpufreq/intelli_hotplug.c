@@ -691,9 +691,29 @@ static ssize_t store_##file_name		\
 }
 
 store_one(cpus_boosted, cpus_boosted);
-store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(debug_intelli_plug, debug_intelli_plug);
+
+static ssize_t store_full_mode_profile(struct kobject *kobj,
+					 struct kobj_attribute *attr,
+					 const char *buf, size_t count)
+{
+	int ret;
+	int input;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret < 0)
+		return ret;
+
+	sanitize_min_max(input, 0, 4);
+
+	if (input == full_mode_profile)
+		return count;
+
+	full_mode_profile = input;
+
+	return count;
+}
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
