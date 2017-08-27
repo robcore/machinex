@@ -243,7 +243,7 @@ static unsigned int calculate_thread_stats(void)
 	int avg_nr_run = avg_nr_running();
 	int nr_run;
 	unsigned int *current_profile;
-	int threshold_size;
+	unsigned int threshold_size;
 	unsigned long nr_threshold;
 
 	threshold_size = max_cpus_online;
