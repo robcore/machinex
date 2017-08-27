@@ -288,7 +288,7 @@ static void update_per_cpu_stat(void)
 	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
 
-	for_each_online_cpu(cpu) {
+	for_each_active_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 #ifdef DEBUG_LAZYPLUG
@@ -305,14 +305,15 @@ static void unplug_cpu(int min_active_cpu)
 	int l_nr_threshold;
 
 	for_each_online_cpu(cpu) {
-		l_nr_threshold =
-			cpu_nr_run_threshold << 1 / (num_online_cpus());
 		if (cpu == 0)
 			continue;
+		l_nr_threshold =
+			cpu_nr_run_threshold << 1 / (num_online_cpus());
 		l_ip_info = &per_cpu(ip_info, cpu);
-		if (cpu > min_active_cpu)
+		if (cpu > min_active_cpu) {
 			if (l_ip_info->cpu_nr_running < l_nr_threshold)
 				cpu_down(cpu);
+		}
 	}
 }
 
