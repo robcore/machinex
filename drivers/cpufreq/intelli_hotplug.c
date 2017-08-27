@@ -611,6 +611,7 @@ static void intelli_plug_stop(void)
 	unsigned int cpu;
 	struct down_lock *dl;
 
+	cancel_delayed_work(&up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
@@ -618,6 +619,7 @@ static void intelli_plug_stop(void)
 	}
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
+	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	for_each_possible_cpu(cpu) {
