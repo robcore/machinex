@@ -243,7 +243,7 @@ static void report_current_cpus(void)
 
 static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = 5;
-static const s64 icount_tout = 6000;
+static const s64 icount_tout = 2000;
 static unsigned int calculate_thread_stats(void)
 {
 	int avg_nr_run = avg_nr_running();
@@ -252,7 +252,7 @@ static unsigned int calculate_thread_stats(void)
 	s64 delta;
 	ktime_t now, last_pass;
 
-	for (nr_run = 0; nr_run < max_cpus_online; ++nr_run) {
+	for (nr_run = 1; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
@@ -275,8 +275,6 @@ static unsigned int calculate_thread_stats(void)
 			nr_threshold += nr_run_hysteresis;
 
 		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
-			break;
-		else if (INTELLILOAD(avg_nr_run) <= (nr_threshold << (FSHIFT - nr_fshift)))
 			break;
 		if (nr_run == max_cpus_online)
 			break;
