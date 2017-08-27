@@ -86,7 +86,7 @@ static int target_cpus = 0;
 static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = DEF_SAMPLING_MS;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
-static unsigned int nr_run_hysteresis = (max_cpus_online * 2);
+static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
 static unsigned int debug_intelli_plug = 0;
 
 struct ip_suspend {
