@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	9
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	9
 
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -309,10 +309,10 @@ static void update_per_cpu_stat(void)
 
 static void cpu_up_down_work(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
+	int cpu;
 	int primary;
 	long l_nr_threshold;
-	int target = target_cpus;
+	int target;
 	struct ip_cpu_info *l_ip_info;
 	s64 delta;
 	ktime_t now;
@@ -321,6 +321,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		!hotplug_ready)
 		goto reschedule;
 
+
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
@@ -328,7 +329,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	primary = cpumask_first(cpu_online_mask);
+	target = target_cpus;
+
 
 	if (target <= min_cpus_online)
 		target = min_cpus_online;
@@ -341,25 +343,24 @@ static void cpu_up_down_work(struct work_struct *work)
 	now = ktime_get();
 	delta = ktime_to_ms(ktime_sub(now, last_input));
 
+	primary = cpumask_first(cpu_online_mask);
+
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-		(delta <= boost_lock_duration))
-				goto reschedule;
+			(delta <= boost_lock_duration))
+			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
-			if (cpu == primary)
+			if (cpu == primary || cpu_is_offline(cpu))
 				continue;
-			if (cpu_is_offline(cpu))
-				continue;
-			if (check_down_lock(cpu))
+			if (cpu > nr_cpu_ids || cpu < 0 ||
+				thermal_core_controlled ||
+				check_down_lock(cpu))
 				break;
 			l_nr_threshold =
-				(cpu_nr_run_threshold << 1) /
-					(num_online_cpus());
+				(cpu_nr_run_threshold << 1) / num_online_cpus();
 			l_ip_info = &per_cpu(ip_info, cpu);
 			if (l_ip_info->cpu_nr_running < l_nr_threshold) {
-				if (thermal_core_controlled)
-					goto reschedule;
 				cpu_down(cpu);
 			}
 			if (num_online_cpus() == target)
@@ -367,16 +368,14 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == primary)
+			if (cpu == primary || cpu_online(cpu) ||
+				!is_cpu_allowed(cpu))
 				continue;
-			if (cpu_online(cpu))
-				continue;
-			if (thermal_core_controlled)
-				goto reschedule;
-			if (!is_cpu_allowed(cpu))
-				continue;
-			cpu_up(cpu);
-			apply_down_lock(cpu);
+			if (cpu > nr_cpu_ids || cpu < 0 ||
+				thermal_core_controlled)
+				break;
+			if (!cpu_up(cpu))
+				apply_down_lock(cpu);
 			if (num_online_cpus() == target)
 				break;
 		}
