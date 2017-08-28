@@ -26,8 +26,8 @@
 #include <linux/sysfs_helpers.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	9
+#define INTELLI_PLUG_MAJOR_VERSION	11
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -554,7 +554,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DEAD:
 	case CPU_UP_CANCELED:
-		if (check_down_lock(cpu))
+		if (unlikely(check_down_lock(cpu)))
 			rm_down_lock(cpu, 0);
 		report_current_cpus();
 		break;
