@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -228,7 +228,7 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 	if (!duration)
 		dl->locked = false;
 	else
-		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+		mod_delayed_work(intelliplug_wq, &dl->lock_rem,
 		      duration);
 }
 
@@ -486,8 +486,7 @@ static void recycle_cpus(void)
 				apply_down_lock(cpu);
 		}
 	}
-	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      def_sampling_ms);
+	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 }
 
 static void intelli_suspend(struct power_suspend * h)
