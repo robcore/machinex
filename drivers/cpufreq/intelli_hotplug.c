@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -77,7 +77,7 @@ static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
-static unsigned long start_delay = 9500;
+static unsigned long start_delay = 5000;
 
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
@@ -218,16 +218,26 @@ static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
 					    lock_rem.work);
-	dl->locked = 0;
+	WRITE_ONCE(dl->locked, 0);
+}
+
+static void rm_down_lock(unsigned int cpu, unsigned long duration)
+{
+	struct down_lock *dl = &per_cpu(lock_info, cpu);
+
+	if (!duration)
+		WRITE_ONCE(dl->locked, 0);
+	else if (!is_display_on())
+		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
+		      duration);
 }
 
 static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
-	dl->locked = 1;
-	mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
-		      down_lock_dur);
+	WRITE_ONCE(dl->locked, 1);
+	rm_down_lock(cpu, down_lock_dur);
 }
 
 static int check_down_lock(unsigned int cpu)
@@ -272,7 +282,9 @@ static unsigned int calculate_thread_stats(void)
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
 
-		if (avg_nr_run <= (nr_threshold << (FSHIFT - nr_fshift)))
+		nr_threshold <<= FSHIFT - nr_fshift;
+
+		if (avg_nr_run <= nr_threshold)
 			break;
 	}
 	nr_run_last = nr_run;
@@ -280,6 +292,7 @@ static unsigned int calculate_thread_stats(void)
 	if (READ_ONCE(intellicount) >= max_intellicount &&
 		max_cpus_online > num_online_cpus()) {
 		WRITE_ONCE(intellicount, 0);
+		nr_run_last = nr_run;
 		return max_cpus_online;
 	}
 
@@ -309,7 +322,7 @@ static void update_per_cpu_stat(void)
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	int primary;
+	int	primary = cpumask_first(cpu_online_mask);
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
@@ -320,7 +333,6 @@ static void cpu_up_down_work(struct work_struct *work)
 		!hotplug_ready)
 		goto reschedule;
 
-
 	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
@@ -328,15 +340,11 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	target = READ_ONCE(target_cpus);
-
-	sanitize_min_max(target, min_cpus_online, max_cpus_online);
-
 	now = ktime_get();
 	delta = ktime_to_ms(ktime_sub(now, last_input));
 
-	primary = cpumask_first(cpu_online_mask);
-
+	target = READ_ONCE(target_cpus);
+	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 
 	if (!online_cpus)
 		report_current_cpus();
@@ -438,7 +446,6 @@ static void cycle_cpus(void)
 			continue;
 		cpu_down(cpu);
 	}
-	mdelay(4);
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus ||
 			!is_cpu_allowed(cpu))
@@ -466,7 +473,7 @@ static void recycle_cpus(void)
 		if (cpu == optimus || !cpu_online(cpu))
 			continue;
 		if (check_down_lock(cpu))
-			mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem, 0);
+			rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
@@ -501,7 +508,7 @@ static void intelli_suspend(struct power_suspend * h)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (check_down_lock(cpu))
-			mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem, 0);
+			rm_down_lock(cpu, 0);
 	}
 }
 
@@ -638,7 +645,7 @@ static void intelli_plug_stop(void)
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
-		dl->locked = 0;
+		rm_down_lock(cpu, 0);
 	}
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
