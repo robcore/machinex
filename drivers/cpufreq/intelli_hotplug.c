@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -440,7 +440,7 @@ static void cycle_cpus(void)
 {
 	unsigned int cpu;
 	unsigned int optimus;
-
+	intellinit = true;
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		if (cpu == optimus || cpu_online(cpu))
@@ -455,10 +455,10 @@ static void cycle_cpus(void)
 		if (!cpu_up(cpu))
 			apply_down_lock(cpu);
 	}
+	intellinit = false;
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 			      2000);
 
-	intellinit = false;
 	wake_unlock(&ipwlock);
 }
 
@@ -468,7 +468,7 @@ static void recycle_cpus(void)
 	unsigned int cpu;
 	unsigned int optimus;
 	struct down_lock *dl;
-
+	intellinit = true;
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
@@ -486,6 +486,7 @@ static void recycle_cpus(void)
 				apply_down_lock(cpu);
 		}
 	}
+	intellinit = false;
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 }
 
@@ -525,10 +526,8 @@ static void intelli_resume(struct power_suspend * h)
 #endif
 
 	for_each_possible_cpu(cpu) {
-		//mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
-		//mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 	}
 	recycle_cpus();
 }
@@ -580,7 +579,6 @@ static int intelli_plug_start(void)
 	struct down_lock *dl;
 
 	wake_lock(&ipwlock);
-	intellinit = true;
 
 	intelliplug_wq = create_singlethread_workqueue("intelliplug");
 
@@ -632,7 +630,6 @@ err_out:
 	if (intelli_plug_active)
 		intelliput();
 #endif
-	intellinit = false;
 	wake_unlock(&ipwlock);
 	return ret;
 }
