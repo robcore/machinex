@@ -243,7 +243,7 @@ static void apply_down_lock(unsigned int cpu)
 static int check_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
-	return dl->locked;
+	return READ_ONCE(dl->locked);
 }
 
 static void report_current_cpus(void)
