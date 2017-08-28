@@ -218,7 +218,8 @@ static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
 					    lock_rem.work);
-	dl->locked = false;
+	if (dl->locked)
+		dl->locked = false;
 }
 
 static void rm_down_lock(unsigned int cpu, unsigned long duration)
