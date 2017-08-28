@@ -228,7 +228,7 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 	if (!duration)
 		dl->locked = false;
 	else
-		mod_delayed_work(intelliplug_wq, &dl->lock_rem,
+		mod_delayed_work_on(cpu, intelliplug_wq, &dl->lock_rem,
 		      duration);
 }
 
@@ -551,9 +551,12 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-		/* Fall through/All of this is TODO*/
 	case CPU_DEAD:
 	case CPU_UP_CANCELED:
+		if (check_down_lock(cpu))
+			rm_down_lock(cpu, 0);
+		report_current_cpus();
+		break;
 	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
 		report_current_cpus();
