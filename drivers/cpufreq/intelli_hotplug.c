@@ -283,7 +283,7 @@ static unsigned int calculate_thread_stats(void)
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
 
-		nr_threshold <<= FSHIFT - nr_fshift;
+		nr_threshold = nr_threshold << (FSHIFT - nr_fshift);
 
 		if (avg_nr_run <= nr_threshold)
 			break;
