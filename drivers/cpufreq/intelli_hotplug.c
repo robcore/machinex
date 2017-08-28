@@ -397,7 +397,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	if (intelli_plug_active) {
 #endif
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
-		queue_delayed_work_on(0, intelliplug_wq, &up_down_work, 0);
+		mod_delayed_work_on(0, intelliplug_wq, &up_down_work, 0);
 	}
 }
 
@@ -462,7 +462,7 @@ static void intelli_suspend(struct power_suspend * h)
 	if (!intelli_plug_active)
 		return;
 #endif
-
+	cancel_delayed_work(&up_down_work);
 	cancel_delayed_work(&intelli_plug_work);
 
 	for_each_possible_cpu(cpu) {
