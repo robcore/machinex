@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -77,7 +77,7 @@ static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
-static unsigned long start_delay = 5000;
+static unsigned long start_delay = 9500;
 
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
@@ -446,6 +446,7 @@ static void cycle_cpus(void)
 			continue;
 		cpu_down(cpu);
 	}
+	mdelay(4);
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus ||
 			!is_cpu_allowed(cpu))
