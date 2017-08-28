@@ -209,7 +209,7 @@ static unsigned int nr_run_last;
 static unsigned long down_lock_dur = DEFAULT_DOWN_LOCK_DUR;
 
 struct down_lock {
-	unsigned int locked;
+	bool locked;
 	struct delayed_work lock_rem;
 };
 static DEFINE_PER_CPU(struct down_lock, lock_info);
@@ -218,7 +218,7 @@ static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
 					    lock_rem.work);
-	WRITE_ONCE(dl->locked, 0);
+	dl->locked = false;
 }
 
 static void rm_down_lock(unsigned int cpu, unsigned long duration)
@@ -226,8 +226,8 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
 	if (!duration)
-		WRITE_ONCE(dl->locked, 0);
-	else if (!is_display_on())
+		dl->locked = false;
+	else
 		mod_delayed_work_on(0, intelliplug_wq, &dl->lock_rem,
 		      duration);
 }
@@ -235,15 +235,16 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
-
-	WRITE_ONCE(dl->locked, 1);
+	if (unlikely(!is_display_on()))
+		return;
+	dl->locked = true;
 	rm_down_lock(cpu, down_lock_dur);
 }
 
 static int check_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
-	return READ_ONCE(dl->locked);
+	return dl->locked;
 }
 
 static void report_current_cpus(void)
@@ -455,7 +456,7 @@ static void cycle_cpus(void)
 			apply_down_lock(cpu);
 	}
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      start_delay);
+			      2000);
 
 	intellinit = false;
 	wake_unlock(&ipwlock);
@@ -508,7 +509,7 @@ static void intelli_suspend(struct power_suspend * h)
 		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
 			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
 		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (check_down_lock(cpu))
+		if (cpu != 0 && cpu_online(cpu) && check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 	}
 }
@@ -645,8 +646,11 @@ static void intelli_plug_stop(void)
 	cancel_delayed_work(&up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
+		if (cpu == 0)
+			continue;
 		cancel_delayed_work_sync(&dl->lock_rem);
-		rm_down_lock(cpu, 0);
+		if (check_down_lock(cpu))
+			rm_down_lock(cpu, 0);
 	}
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
