@@ -327,7 +327,6 @@ static void cpu_up_down_work(struct work_struct *work)
 	int target;
 	struct ip_cpu_info *l_ip_info;
 	s64 delta;
-	ktime_t now;
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -340,8 +339,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	now = ktime_get();
-	delta = ktime_to_ms(ktime_sub(now, last_input));
+	delta = ktime_to_ms(ktime_sub(ktime_get(), last_input));
 
 	target = READ_ONCE(target_cpus);
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
@@ -553,7 +551,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-		/* Fall through. */
+		/* Fall through/All of this is TODO*/
 	case CPU_DEAD:
 	case CPU_UP_CANCELED:
 	case CPU_ONLINE:
