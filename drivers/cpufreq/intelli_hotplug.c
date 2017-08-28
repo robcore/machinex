@@ -31,11 +31,11 @@
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
-#define INPUT_INTERVAL (200)
-#define BOOST_LOCK_DUR (50)
+#define INPUT_INTERVAL (1000)
+#define BOOST_LOCK_DUR (750)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
-#define DEFAULT_DOWN_LOCK_DUR (BOOST_LOCK_DUR)
+#define DEFAULT_DOWN_LOCK_DUR 500
 
 #define CAPACITY_RESERVE (50)
 #define THREAD_CAPACITY (339 - CAPACITY_RESERVE)
@@ -49,7 +49,6 @@ static ktime_t last_input;
 static struct delayed_work intelli_plug_work;
 static struct delayed_work up_down_work;
 static struct workqueue_struct *intelliplug_wq;
-static struct workqueue_struct *updown_wq;
 static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
 
@@ -81,6 +80,7 @@ static unsigned long start_delay = 9500;
 
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
+static unsigned int min_input_interval = INPUT_INTERVAL;
 static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = 70;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
@@ -397,7 +397,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	if (intelli_plug_active) {
 #endif
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
-		queue_delayed_work_on(0, updown_wq, &up_down_work, 0);
+		queue_delayed_work_on(0, intelliplug_wq, &up_down_work, 0);
 	}
 }
 
@@ -413,7 +413,7 @@ void intelli_boost(void)
 	last_input = ktime_get();
 	delta = ktime_to_ms(ktime_sub(last_input, last_boost_time));
 
-	if (delta < INPUT_INTERVAL)
+	if (delta < min_input_interval)
 		return;
 
 	if (num_online_cpus() >= cpus_boosted ||
@@ -421,7 +421,7 @@ void intelli_boost(void)
 		return;
 
 	WRITE_ONCE(target_cpus, cpus_boosted);
-	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
+	mod_delayed_work_on(0, intelliplug_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }
 
@@ -560,15 +560,6 @@ static int intelli_plug_start(void)
 		goto err_out;
 	}
 
-	updown_wq = create_singlethread_workqueue("updown");
-
-	if (!updown_wq) {
-		pr_err("%s: Failed to allocate hotplug workqueue\n",
-		       INTELLI_PLUG);
-		ret = -ENOMEM;
-		goto err_dev;
-	}
-
 	mutex_init(&intelli_plug_mutex);
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
@@ -619,7 +610,6 @@ static void intelli_plug_stop(void)
 	}
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
-	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	for_each_possible_cpu(cpu) {
@@ -656,24 +646,26 @@ static void intelli_plug_active_eval_fn(unsigned int status)
 #endif
 }
 
-#define show_one(file_name, object)				\
-static ssize_t show_##file_name					\
+#define show_one(object)				\
+static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
 {								\
 	return sprintf(buf, "%u\n", object);			\
 }
 
-show_one(cpus_boosted, cpus_boosted);
-show_one(min_cpus_online, min_cpus_online);
-show_one(max_cpus_online, max_cpus_online);
-show_one(full_mode_profile, full_mode_profile);
-show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
-show_one(debug_intelli_plug, debug_intelli_plug);
-show_one(nr_run_hysteresis, nr_run_hysteresis);
-show_one(nr_fshift, nr_fshift);
+show_one(cpus_boosted);
+show_one(min_cpus_online);
+show_one(max_cpus_online);
+show_one(full_mode_profile);
+show_one(cpu_nr_run_threshold);
+show_one(debug_intelli_plug);
+show_one(min_input_interval);
+show_one(boost_lock_duration);
+show_one(nr_run_hysteresis);
+show_one(nr_fshift);
 
-#define store_one(file_name, object)		\
-static ssize_t store_##file_name		\
+#define store_one(object, min, max)		\
+static ssize_t store_##object		\
 (struct kobject *kobj,				\
  struct kobj_attribute *attr,			\
  const char *buf, size_t count)			\
@@ -681,8 +673,12 @@ static ssize_t store_##file_name		\
 	unsigned int input;			\
 	int ret;				\
 	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1 || input > 100)		\
+	if (ret != 1)			\
 		return -EINVAL;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input > max)		\
+			input = max;		\
 	if (input == object) {			\
 		return count;			\
 	}					\
@@ -690,30 +686,12 @@ static ssize_t store_##file_name		\
 	return count;				\
 }
 
-store_one(cpus_boosted, cpus_boosted);
-store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
-store_one(debug_intelli_plug, debug_intelli_plug);
-
-static ssize_t store_full_mode_profile(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	int input;
-
-	ret = sscanf(buf, "%d", &input);
-	if (ret < 0)
-		return ret;
-
-	sanitize_min_max(input, 0, 4);
-
-	if (input == full_mode_profile)
-		return count;
-
-	full_mode_profile = input;
-
-	return count;
-}
+store_one(cpus_boosted, 0, 4);
+store_one(debug_intelli_plug, 0, 1);
+store_one(min_input_interval, boost_lock_duration, 5000);
+store_one(full_mode_profile, 0, 4);
+store_one(boost_lock_duration, down_lock_dur, 5000);
+store_one(down_lock_dur, 50, boost_lock_duration);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
@@ -754,31 +732,6 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t show_boost_lock_duration(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					char *buf)
-{
-	return sprintf(buf, "%u\n", (boost_lock_duration));
-}
-
-static ssize_t store_boost_lock_duration(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	int val;
-
-	ret = sscanf(buf, "%d", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(val, 100, 5000);
-
-	boost_lock_duration = val;
-
-	return count;
-}
-
 static ssize_t show_def_sampling_ms(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
@@ -798,29 +751,6 @@ static ssize_t store_def_sampling_ms(struct kobject *kobj,
 		return -EINVAL;
 
 	def_sampling_ms = val;
-
-	return count;
-}
-
-static ssize_t show_down_lock_dur(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					char *buf)
-{
-	return sprintf(buf, "%lu\n", down_lock_dur);
-}
-
-static ssize_t store_down_lock_dur(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	unsigned long val;
-
-	ret = sscanf(buf, "%lu", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	down_lock_dur = val;
 
 	return count;
 }
@@ -883,6 +813,7 @@ KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
+KENREL_ATTR_RW(min_input_interval);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
@@ -897,6 +828,7 @@ static struct attribute *intelli_plug_attrs[] = {
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
 	&down_lock_dur_attr.attr,
+	&min_input_interval_attr.attr,
 	NULL,
 };
 
@@ -943,8 +875,7 @@ module_exit(intelli_plug_exit);
 
 MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
-		Alucard24, Dorimanx, neobuddy89");
+		Alucard24, Dorimanx, neobuddy89, Robcore");
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPLv2");
-
