@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -80,7 +80,7 @@ static unsigned long start_delay = 9500;
 
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
-static unsigned int min_input_interval = INPUT_INTERVAL;
+static unsigned long min_input_interval = INPUT_INTERVAL;
 static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = 70;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
@@ -653,14 +653,22 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
+#define show_long(object)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%lu\n", object);			\
+}
+
 show_one(cpus_boosted);
 show_one(min_cpus_online);
 show_one(max_cpus_online);
 show_one(full_mode_profile);
 show_one(cpu_nr_run_threshold);
 show_one(debug_intelli_plug);
-show_one(min_input_interval);
+show_long(min_input_interval);
 show_one(boost_lock_duration);
+show_long(down_lock_dur);
 show_one(nr_run_hysteresis);
 show_one(nr_fshift);
 
@@ -677,7 +685,7 @@ static ssize_t store_##object		\
 		return -EINVAL;			\
 	if (input <= min)	\
 		input = min;	\
-	if (input > max)		\
+	if (input >= max)		\
 			input = max;		\
 	if (input == object) {			\
 		return count;			\
@@ -688,8 +696,8 @@ static ssize_t store_##object		\
 
 store_one(cpus_boosted, 0, 4);
 store_one(debug_intelli_plug, 0, 1);
-store_one(min_input_interval, boost_lock_duration, 5000);
 store_one(full_mode_profile, 0, 4);
+store_one(min_input_interval, boost_lock_duration, 5000);
 store_one(boost_lock_duration, down_lock_dur, 5000);
 store_one(down_lock_dur, 50, boost_lock_duration);
 
@@ -813,7 +821,7 @@ KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RO(nr_fshift);
 KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
-KENREL_ATTR_RW(min_input_interval);
+KERNEL_ATTR_RW(min_input_interval);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
