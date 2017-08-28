@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	10
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -263,7 +263,7 @@ static unsigned int calculate_thread_stats(void)
 	unsigned int nr_run;
 	unsigned int *current_profile;
 	s64 delta;
-	ktime_t now, last_pass;
+	ktime_t last_pass;
 
 	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;
@@ -297,11 +297,10 @@ static unsigned int calculate_thread_stats(void)
 		return max_cpus_online;
 	}
 
-	now = ktime_get();
-	delta = ktime_to_ms(ktime_sub(now, last_pass));
+	delta = ktime_to_ms(ktime_sub(ktime_get(), last_pass));
 
 	if (max_cpus_online > num_online_cpus() &&
-		nr_run < max_intellicount && delta >= icount_tout) {
+		nr_run < max_cpus_online && delta >= icount_tout) {
 		WRITE_ONCE(intellicount, intellicount + 1);
 		last_pass = ktime_get();
 	}
