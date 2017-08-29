@@ -291,7 +291,7 @@ static unsigned int calculate_thread_stats(void)
 	ktime_t now, last_pass;
 	unsigned long bigshift = (FSHIFT - nr_fshift);
 
-	offline_cpus = online_cpus - NR_CPUS;
+	offline_cpus = NR_CPUS - online_cpus;
 
 	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;
@@ -304,7 +304,7 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
-		if (!(nr_run - offline_cpus < 1))
+		if (nr_run - offline_cpus > 0)
 			nr_run -= offline_cpus;
 
 		nr_threshold = current_profile[nr_run - 1];
