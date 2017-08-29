@@ -656,7 +656,6 @@ queue_pages_range(struct mm_struct *mm, unsigned long start, unsigned long end,
 	int err = 0;
 	struct vm_area_struct *vma, *prev;
 
-
 	vma = find_vma(mm, start);
 	if (!vma)
 		return -EFAULT;
@@ -1647,24 +1646,24 @@ static struct mempolicy *get_vma_policy(struct vm_area_struct *vma,
 	return pol;
 }
 
-bool vma_policy_mof(struct task_struct *task, struct vm_area_struct *vma)
+bool vma_policy_mof(struct vm_area_struct *vma)
 {
-	struct mempolicy *pol = get_task_policy(task);
+	struct mempolicy *pol;
 
-	if (vma) {
-		if (vma->vm_ops && vma->vm_ops->get_policy) {
-			bool ret = false;
+	if (vma->vm_ops && vma->vm_ops->get_policy) {
+		bool ret = false;
 
-			pol = vma->vm_ops->get_policy(vma, vma->vm_start);
-			if (pol && (pol->flags & MPOL_F_MOF))
-				ret = true;
-			mpol_cond_put(pol);
+		pol = vma->vm_ops->get_policy(vma, vma->vm_start);
+		if (pol && (pol->flags & MPOL_F_MOF))
+			ret = true;
+		mpol_cond_put(pol);
 
-			return ret;
-		} else if (vma->vm_policy) {
-			pol = vma->vm_policy;
-		}
+		return ret;
 	}
+
+	pol = vma->vm_policy;
+	if (!pol)
+		pol = get_task_policy(current);
 
 	return pol->flags & MPOL_F_MOF;
 }
