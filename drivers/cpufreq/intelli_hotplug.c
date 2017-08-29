@@ -229,7 +229,7 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 	if (!duration)
 		dl->locked = false;
 	else
-		mod_delayed_work_on(cpu, intelliplug_wq, &dl->lock_rem,
+		queue_delayed_work_on(cpu, intelliplug_wq, &dl->lock_rem,
 		      duration);
 }
 
