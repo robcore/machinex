@@ -278,20 +278,19 @@ static void report_current_cpus(void)
 }
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
-#define MAX_INTELLICOUNT_TOUT (2000 * NSEC_PER_MSEC)
+#define MAX_INTELLICOUNT_TOUT (2 * MSEC_PER_MSEC)
 static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = 5;
-static const s64 icount_tout = MAX_INTELLICOUNT_TOUT;
+static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 
 static unsigned int calculate_thread_stats(void)
 {
-	unsigned int nr_run, offline_cpus;
+	unsigned int nr_run;
 	unsigned int *current_profile;
 	s64 delta;
 	ktime_t now, last_pass;
+	ktime_t timeout = ms_to_ktime(icount_tout);
 	unsigned long bigshift = (FSHIFT - nr_fshift);
-
-	offline_cpus = NR_CPUS - num_online_cpus();
 
 	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;

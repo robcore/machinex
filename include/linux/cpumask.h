@@ -108,6 +108,7 @@ extern struct cpumask __cpu_unplugged_mask; //online
 #define num_possible_cpus()	cpumask_weight(cpu_possible_mask)
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
 #define num_active_cpus()	cpumask_weight(cpu_active_mask)
+#define num_offline_cpus()  (num_possible_cpus() - num_online_cpus())
 
 #if 0
 #define num_hardplugged_cpus()	cpumask_weight(cpu_hardplugged_mask)
