@@ -179,7 +179,7 @@ static ssize_t rcu_normal_store(struct kobject *kobj,
 }
 KERNEL_ATTR_RW(rcu_normal);
 #endif /* #ifndef CONFIG_TINY_RCU */
-
+/*
 unsigned int late_init_complete = 0;
 
 static ssize_t late_init_complete_show(struct kobject *kobj,
@@ -195,14 +195,14 @@ static ssize_t late_init_complete_store(struct kobject *kobj,
 	int ret;
 
 	ret = sscanf(buf, "%u", &input);
-	if (input != 1) /* Literally a one shot deal */
+	if (input != 1)
 		return -EINVAL;
 
 	late_init_complete = input;
 	return count;
 }
 KERNEL_ATTR_RW(late_init_complete);
-
+*/
 extern int poweroff_charging;
 static ssize_t poweroff_charging_show(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
@@ -256,7 +256,7 @@ static struct attribute * kernel_attrs[] = {
 	&rcu_expedited_attr.attr,
 	&rcu_normal_attr.attr,
 #endif
-	&late_init_complete_attr.attr,
+//	&late_init_complete_attr.attr,
 	&poweroff_charging_attr.attr,
 	NULL
 };

@@ -98,7 +98,7 @@ static struct input_handler virtkey_input_handler = {
 	.name		= "virtual_power_key",
 	.id_table	= virtkey_ids,
 };
-
+/*
 static int bootup_force_screen_on(void)
 {
 	while (!late_init_complete) {
@@ -130,7 +130,7 @@ static int __init virtual_wakeup_key_late_init(void)
 }
 
 late_initcall(virtual_wakeup_key_late_init);
-
+*/
 static int __init virtual_wakeup_key_init(void)
 {
 	int rc = 0;
