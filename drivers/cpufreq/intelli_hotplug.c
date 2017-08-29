@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -342,9 +342,12 @@ static void update_per_cpu_stat(void)
 	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
 
-	for_each_online_cpu(cpu) {
+	for_each_active_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
-		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
+		if (cpu_online(cpu))
+			l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
+		else
+			l_ip_info->cpu_nr_running = 0;
 	}
 }
 
@@ -383,7 +386,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-			(ktime_compare(delta, local_boost) <= 0)
+			(ktime_compare(delta, local_boost) <= 0))
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -452,7 +455,7 @@ void intelli_boost(void)
 	last_input = ktime_get();
 	delta = ktime_sub(last_input, last_boost_time);
 
-	if (ktime_compare(delta, local_input_interval)  < 0) ||
+	if ((ktime_compare(delta, local_input_interval)  < 0) ||
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
