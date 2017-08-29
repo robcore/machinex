@@ -291,7 +291,7 @@ static unsigned int calculate_thread_stats(void)
 	ktime_t now, last_pass;
 	unsigned long bigshift = (FSHIFT - nr_fshift);
 
-	offline_cpus = NR_CPUS - online_cpus;
+	offline_cpus = NR_CPUS - num_online_cpus();
 
 	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;
