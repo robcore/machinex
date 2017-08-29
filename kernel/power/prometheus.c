@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 3
-#define VERSION_MIN 6
+#define VERSION_MIN 7
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -226,12 +226,9 @@ static void power_resume(struct work_struct *work)
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
 
-static void set_power_suspend_state(int new_state)
+static void set_power_suspend_state(unsigned int new_state)
 {
-	unsigned long irqflags;
-
 	if (ps_state != new_state) {
-		spin_lock_irqsave(&ps_state_lock, irqflags);
 		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			ps_state = new_state;
 			pr_info("[PROMETHEUS] Suspend State Activated.\n");
@@ -241,16 +238,19 @@ static void set_power_suspend_state(int new_state)
 			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
-		spin_unlock_irqrestore(&ps_state_lock, irqflags);
 	} else {
 		pr_info("[PROMETHEUS] Ignoring State Request.\n");
 	}
 }
 
-void prometheus_panel_beacon(int new_state)
+void prometheus_panel_beacon(unsigned int new_state)
 {
+	unsigned long irqflags;
 	pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
+
+	spin_lock_irqsave(&ps_state_lock, irqflags);
 	set_power_suspend_state(new_state);
+	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 }
 
 EXPORT_SYMBOL(prometheus_panel_beacon);

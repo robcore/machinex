@@ -96,10 +96,12 @@ struct power_suspend {
 void register_power_suspend(struct power_suspend *handler);
 void unregister_power_suspend(struct power_suspend *handler);
 
-#define POWER_SUSPEND_INACTIVE	0
-#define POWER_SUSPEND_ACTIVE	1
+enum {
+	POWER_SUSPEND_INACTIVE = 0,
+	POWER_SUSPEND_ACTIVE = 1,
+}
 
-void prometheus_panel_beacon(int new_state);
+void prometheus_panel_beacon(unsigned int new_state);
 bool prometheus_sec_jack(void);
 bool android_os_ws(void);
 #endif
