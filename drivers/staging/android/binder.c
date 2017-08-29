@@ -542,8 +542,8 @@ static struct binder_buffer *binder_buffer_lookup(struct binder_proc *proc,
 	struct binder_buffer *buffer;
 	struct binder_buffer *kern_ptr;
 
-	kern_ptr = user_ptr - proc->user_buffer_offset
-		- offsetof(struct binder_buffer, data);
+	kern_ptr = (struct binder_buffer *)(user_ptr - proc->user_buffer_offset
+		- offsetof(struct binder_buffer, data));
 
 	while (n) {
 		buffer = rb_entry(n, struct binder_buffer, rb_node);
