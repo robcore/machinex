@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
@@ -67,7 +67,7 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 #elif defined(INTELLI_USE_SPINLOCK)
 static unsigned int intelli_plug_active = 0;
-static spinlock_t ips_lock;
+static DEFINE_SPINLOCK(ips_lock);
 #endif
 
 
@@ -898,8 +898,9 @@ static int __init intelli_plug_init(void)
 	pr_info("intelli_plug: version %d.%d\n",
 		 INTELLI_PLUG_MAJOR_VERSION,
 		 INTELLI_PLUG_MINOR_VERSION);
-	spin_lock_init(&ips_lock);
 	wake_lock_init(&ipwlock, WAKE_LOCK_SUSPEND, "intelliplug");
+
+	intelli_plug_start();
 
 	return 0;
 }
