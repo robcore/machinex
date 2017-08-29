@@ -31,15 +31,20 @@
 
 #define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
 #define DEFAULT_MIN_CPUS_ONLINE (2)
-#define INPUT_INTERVAL (200)
-#define BOOST_LOCK_DUR (50)
+#define DEFAULT_SAMPLING_RATE (70 * NSEC_PER_MSEC)
+#define INPUT_INTERVAL (200 * NSEC_PER_MSEC)
+#define BOOST_LOCK_DUR (50 * NSEC_PER_MSEC)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR (BOOST_LOCK_DUR)
 
-#define CAPACITY_RESERVE (50)
+/*#define CAPACITY_RESERVE (50)
 #define THREAD_CAPACITY (339 - CAPACITY_RESERVE)
+
 #define CPU_NR_THRESHOLD ((THREAD_CAPACITY << 1) | (THREAD_CAPACITY >> 1))
+*/
+#define THREAD_CAPACITY (289)
+#define CPU_NR_THRESHOLD (722)
 #define MULT_FACTOR (NR_CPUS)
 #define DIV_FACTOR	(100000)
 
@@ -82,7 +87,7 @@ static unsigned int online_cpus;
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned long min_input_interval = INPUT_INTERVAL;
 static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
-static unsigned long def_sampling_ms = 70;
+static unsigned long def_sampling_ms = DEFAULT_SAMPLING_RATE;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
 static unsigned int debug_intelli_plug = 0;
@@ -273,17 +278,20 @@ static void report_current_cpus(void)
 }
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
-
+#define MAX_INTELLICOUNT_TOUT (2000 * NSEC_PER_MSEC)
 static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = 5;
-static const s64 icount_tout = 2000;
+static const s64 icount_tout = MAX_INTELLICOUNT_TOUT;
+
 static unsigned int calculate_thread_stats(void)
 {
-	int avg_nr_run = avg_nr_running();
-	unsigned int nr_run;
+	unsigned int nr_run, offline_cpus;
 	unsigned int *current_profile;
 	s64 delta;
-	ktime_t last_pass;
+	ktime_t now, last_pass;
+	unsigned long bigshift = (FSHIFT - nr_fshift);
+
+	offline_cpus = online_cpus - NR_CPUS;
 
 	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
 		unsigned long nr_threshold;
@@ -296,6 +304,9 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
+		if (!(nr_run - offline_cpus < 1))
+			nr_run -= offline_cpus;
+
 		nr_threshold = current_profile[nr_run - 1];
 		nr_run_hysteresis = max_cpus_online * 2;
 		nr_fshift = max_cpus_online - 1;
@@ -303,9 +314,9 @@ static unsigned int calculate_thread_stats(void)
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
 
-		nr_threshold = nr_threshold << (FSHIFT - nr_fshift);
+		nr_threshold <<= bigshift;
 
-		if (avg_nr_run <= nr_threshold)
+		if (avg_nr_running() <= nr_threshold)
 			break;
 	}
 	nr_run_last = nr_run;
@@ -317,7 +328,8 @@ static unsigned int calculate_thread_stats(void)
 		return max_cpus_online;
 	}
 
-	delta = ktime_to_ms(ktime_sub(ktime_get(), last_pass));
+	now = ktime_get();
+	delta = ktime_to_ms(ktime_sub(now, last_pass));
 
 	if (max_cpus_online > num_online_cpus() &&
 		nr_run < max_cpus_online && delta >= icount_tout) {
@@ -473,6 +485,8 @@ static void cycle_cpus(void)
 			force_down_lock(cpu);
 	}
 	intellinit = false;
+	if (!online_cpus)
+		report_current_cpus();
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 	wake_unlock(&ipwlock);
 }
