@@ -29,24 +29,26 @@
 #define INTELLI_PLUG_MAJOR_VERSION	11
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEFAULT_MAX_CPUS_ONLINE (NR_CPUS)
-#define DEFAULT_MIN_CPUS_ONLINE (2)
-#define DEFAULT_SAMPLING_RATE (70 * NSEC_PER_MSEC)
-#define INPUT_INTERVAL (200 * NSEC_PER_MSEC)
-#define BOOST_LOCK_DUR (50 * NSEC_PER_MSEC)
+#define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
+#define DEFAULT_MIN_CPUS_ONLINE 2
+#define INTELLI_MS(x) ((x) / MSEC_PER_SEC)
+#define DEFAULT_SAMPLING_RATE INTELLI_MS(70)
+#define INPUT_INTERVAL INTELLI_MS(200)
+#define BOOST_LOCK_DUR INTELLI_MS(50)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
-#define DEFAULT_DOWN_LOCK_DUR (BOOST_LOCK_DUR)
+#define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
+#define DEFAULT_HYSTERESIS (NR_CPUS << 1)
 
 /*#define CAPACITY_RESERVE (50)
 #define THREAD_CAPACITY (339 - CAPACITY_RESERVE)
 
 #define CPU_NR_THRESHOLD ((THREAD_CAPACITY << 1) | (THREAD_CAPACITY >> 1))
 */
-#define THREAD_CAPACITY (289)
-#define CPU_NR_THRESHOLD (722)
-#define MULT_FACTOR (NR_CPUS)
-#define DIV_FACTOR	(100000)
+#define THREAD_CAPACITY 289
+#define CPU_NR_THRESHOLD 722
+#define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
+#define DIV_FACTOR 100000
 
 static ktime_t last_boost_time;
 static ktime_t last_input;
@@ -89,7 +91,7 @@ static unsigned long min_input_interval = INPUT_INTERVAL;
 static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = DEFAULT_SAMPLING_RATE;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
-static unsigned int nr_run_hysteresis = (DEFAULT_MAX_CPUS_ONLINE * 2);
+static unsigned int nr_run_hysteresis = DEFAULT_HYSTERESIS;
 static unsigned int debug_intelli_plug = 0;
 
 struct ip_suspend {
@@ -278,7 +280,7 @@ static void report_current_cpus(void)
 }
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
-#define MAX_INTELLICOUNT_TOUT (2 * MSEC_PER_MSEC)
+#define MAX_INTELLICOUNT_TOUT (2 * MSEC_PER_SEC)
 static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = 5;
 static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
@@ -287,13 +289,10 @@ static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_run;
 	unsigned int *current_profile;
-	s64 delta;
-	ktime_t now, last_pass;
-	ktime_t timeout = ms_to_ktime(icount_tout);
-	unsigned long bigshift = (FSHIFT - nr_fshift);
+	ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
 
 	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
-		unsigned long nr_threshold;
+		unsigned long nr_threshold, bigshift;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
@@ -303,12 +302,10 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
-		if (nr_run - offline_cpus > 0)
-			nr_run -= offline_cpus;
-
 		nr_threshold = current_profile[nr_run - 1];
 		nr_run_hysteresis = max_cpus_online * 2;
 		nr_fshift = max_cpus_online - 1;
+		bigshift = FSHIFT - nr_fshift;
 
 		if (nr_run_last <= nr_run)
 			nr_threshold += nr_run_hysteresis;
@@ -318,6 +315,7 @@ static unsigned int calculate_thread_stats(void)
 		if (avg_nr_running() <= nr_threshold)
 			break;
 	}
+
 	nr_run_last = nr_run;
 
 	if (READ_ONCE(intellicount) >= max_intellicount &&
@@ -328,10 +326,10 @@ static unsigned int calculate_thread_stats(void)
 	}
 
 	now = ktime_get();
-	delta = ktime_to_ms(ktime_sub(now, last_pass));
+	delta = ktime_sub(now, last_pass);
 
 	if (max_cpus_online > num_online_cpus() &&
-		nr_run < max_cpus_online && delta >= icount_tout) {
+		nr_run < max_cpus_online && (ktime_compare(delta, timeout) >= 0) {
 		WRITE_ONCE(intellicount, intellicount + 1);
 		last_pass = ktime_get();
 	}
@@ -357,7 +355,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
-	s64 delta;
+
+	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -370,7 +369,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
 
-	delta = ktime_to_ms(ktime_sub(ktime_get(), last_input));
+	now = ktime_get();
+	delta = ktime_sub(now, last_input);
 
 	target = READ_ONCE(target_cpus);
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
@@ -383,7 +383,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-			(delta <= boost_lock_duration))
+			(ktime_compare(delta, local_boost) <= 0)
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -444,17 +444,15 @@ static void intelli_plug_work_fn(struct work_struct *work)
 
 void intelli_boost(void)
 {
-	s64 delta;
-	if (!intelliread() || !is_display_on())
-		return;
+	ktime_t delta, local_input_interval = ms_to_ktime(min_input_interval);
 
-	if (unlikely(intellinit))
+	if (!intelliread() || !is_display_on() || unlikely(intellinit))
 		return;
 
 	last_input = ktime_get();
-	delta = ktime_to_ms(ktime_sub(last_input, last_boost_time));
+	delta = ktime_sub(last_input, last_boost_time);
 
-	if (delta < min_input_interval ||
+	if (ktime_compare(delta, local_input_interval)  < 0) ||
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
