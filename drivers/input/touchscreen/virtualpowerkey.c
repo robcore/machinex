@@ -8,7 +8,7 @@
 
 #define DRIVER_AUTHOR "robcore"
 #define DRIVER_DESCRIPTION "virtualpowerkey(wakeup) driver"
-#define DRIVER_VERSION "1.2"
+#define DRIVER_VERSION "1.3"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
@@ -27,19 +27,28 @@ static struct delayed_work wakeup_key_press_work;
 static void wakeup_key_release(struct work_struct *work);
 static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
+static unsigned int key_is_pressed = 0;
+
+static void press_key(unsigned int pressed)
+{
+	if (pressed != 0 && pressed != 1)
+		return;
+
+	input_report_key(virtkeydev, KEY_WAKEUP, pressed);
+	input_sync(virtkeydev);
+	key_is_pressed = pressed;
+}
 
 /* WakeKeyReleased work func */
 static void wakeup_key_release(struct work_struct *work)
 {
-	input_report_key(virtkeydev, KEY_WAKEUP, 0);
-	input_sync(virtkeydev);
+	press_key(0);
 }
 
 /* WakeKeyPressed work func */
 static void wakeup_key_press(struct work_struct *work)
 {
-	input_report_key(virtkeydev, KEY_WAKEUP, 1);
-	input_sync(virtkeydev);
+	press_key(1);
 	schedule_delayed_work(&wakeup_key_release_work, msecs_to_jiffies(WRTIMEOUT));
 }
 
@@ -89,6 +98,38 @@ static struct input_handler virtkey_input_handler = {
 	.name		= "virtual_power_key",
 	.id_table	= virtkey_ids,
 };
+
+static int bootup_force_screen_on(void)
+{
+	while (!late_init_complete) {
+		press_key(1);
+		msleep(10);
+		press_key(0);
+		msleep(10);
+		if (late_init_complete)
+			break;
+	}
+
+	if (key_is_pressed)
+		press_key(0);
+
+	return key_is_pressed;
+}
+
+static int __init virtual_wakeup_key_late_init(void)
+{
+	int ret;
+
+	ret = bootup_force_screen_on();
+	if (ret)
+		pr_err("VPK System Late Init ERROR!!\n");
+	else
+		pr_info("VPK System Late Init Complete:%u\n", late_init_complete);
+
+	return ret;
+}
+
+late_initcall(virtual_wakeup_key_late_init);
 
 static int __init virtual_wakeup_key_init(void)
 {
