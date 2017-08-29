@@ -235,12 +235,22 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
-	if (unlikely(!is_display_on()))
+
+	if (!is_display_on())
 		return;
+
 	dl->locked = true;
 	rm_down_lock(cpu, down_lock_dur);
 }
 
+static void force_down_lock(unsigned int cpu)
+{
+	struct down_lock *dl = &per_cpu(lock_info, cpu);
+
+	dl->locked = true;
+	rm_down_lock(cpu, down_lock_dur);
+}
+	
 static int check_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
@@ -407,7 +417,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	if (intelli_plug_active) {
 #endif
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
-		queue_delayed_work_on(0, updown_wq, &up_down_work, 0);
+		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	}
 }
 
@@ -442,6 +452,7 @@ static void cycle_cpus(void)
 	for_each_online_cpu(cpu) {
 		if (cpu == optimus || !cpu_online(cpu))
 			continue;
+		rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
@@ -449,11 +460,10 @@ static void cycle_cpus(void)
 			!is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu))
-			apply_down_lock(cpu);
+			force_down_lock(cpu);
 	}
 	intellinit = false;
-	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work);
-
+	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 	wake_unlock(&ipwlock);
 }
 
@@ -640,8 +650,6 @@ static void intelli_plug_stop(void)
 	cancel_delayed_work(&up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		if (cpu == 0)
-			continue;
 		cancel_delayed_work_sync(&dl->lock_rem);
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
