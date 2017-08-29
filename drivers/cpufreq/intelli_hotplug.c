@@ -329,7 +329,7 @@ static unsigned int calculate_thread_stats(void)
 	delta = ktime_sub(now, last_pass);
 
 	if (max_cpus_online > num_online_cpus() &&
-		nr_run < max_cpus_online && (ktime_compare(delta, timeout) >= 0) {
+		nr_run < max_cpus_online && (ktime_compare(delta, timeout) >= 0)) {
 		WRITE_ONCE(intellicount, intellicount + 1);
 		last_pass = ktime_get();
 	}
