@@ -77,7 +77,6 @@ static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
-static unsigned long start_delay = 9500;
 
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
@@ -441,11 +440,10 @@ static void cycle_cpus(void)
 	intellinit = true;
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
-		if (cpu == optimus || cpu_online(cpu))
+		if (cpu == optimus || !cpu_online(cpu))
 			continue;
 		cpu_down(cpu);
 	}
-	mdelay(4);
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == optimus ||
 			!is_cpu_allowed(cpu))
@@ -454,8 +452,7 @@ static void cycle_cpus(void)
 			apply_down_lock(cpu);
 	}
 	intellinit = false;
-	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      2000);
+	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work);
 
 	wake_unlock(&ipwlock);
 }
@@ -920,7 +917,7 @@ static void __exit intelli_plug_exit(void)
 	sysfs_remove_group(kernel_kobj, &intelli_plug_attr_group);
 }
 
-late_initcall(intelli_plug_init);
+late_initcall_sync(intelli_plug_init);
 module_exit(intelli_plug_exit);
 
 MODULE_LICENSE("GPLv2");
@@ -929,5 +926,3 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPLv2");
-
-
