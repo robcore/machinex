@@ -293,9 +293,6 @@ static long madvise_dontneed(struct vm_area_struct *vma,
 /*
  * Application wants to free up the pages and associated backing store.
  * This is effectively punching a hole into the middle of a file.
- *
- * NOTE: Currently, only shmfs/tmpfs is supported for this operation.
- * Other filesystems return -ENOSYS.
  */
 static long madvise_remove(struct vm_area_struct *vma,
 				struct vm_area_struct **prev,
@@ -312,8 +309,9 @@ static long madvise_remove(struct vm_area_struct *vma,
 
 	f = vma->vm_file;
 
-	if (!f || !f->f_mapping || !f->f_mapping->host)
+	if (!f || !f->f_mapping || !f->f_mapping->host) {
 			return -EINVAL;
+	}
 
 	if ((vma->vm_flags & (VM_SHARED|VM_WRITE)) != (VM_SHARED|VM_WRITE))
 		return -EACCES;
