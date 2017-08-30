@@ -309,7 +309,7 @@ static int measure_freqs(void)
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (get_intellirate(cpu) >=
+		if (get_intellirate(cpu) >
 			high_load_threshold)
 			freq_load += 1;
 		else if (get_intellirate(cpu) <
