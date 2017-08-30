@@ -45,6 +45,9 @@
 
 #define CPU_NR_THRESHOLD ((THREAD_CAPACITY << 1) | (THREAD_CAPACITY >> 1))
 */
+
+#define HIGH_LOAD_FREQ 1566000
+#define MAX_LOAD_FREQ 1890000
 #define THREAD_CAPACITY 289
 #define CPU_NR_THRESHOLD 722
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
@@ -53,6 +56,8 @@
 #define INTELLIPLY(x) (x * INTELLIPLIER)
 #define INTELLIDIV(x) (DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR))
 
+static int high_load_threshold = HIGH_LOAD_FREQ;
+static int max_load_freq = MAX_LOAD_FREQ;
 static ktime_t last_boost_time;
 static ktime_t last_input;
 
@@ -291,11 +296,33 @@ static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = NR_CPUS;
 static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 
+static int get_intellirate(unsigned int cpu)
+{
+	return cpufreq_generic_get(cpu);
+}
+	
+static int measure_freqs(void)
+{
+	unsigned int cpu, freq_load;
+
+	freq_load = 0;
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (get_intellirate(cpu) < high_load_threshold)
+			continue;
+		else if (get_intellirate(cpu) >=
+			high_load_threshold)
+			freq_load += 1;
+	}
+	put_online_cpus();
+	return freq_load;
+}
+
 static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_cpus;
 	unsigned long *current_profile;
-	ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
+	//ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
 
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
@@ -323,7 +350,7 @@ static unsigned int calculate_thread_stats(void)
 		if (avg_nr_running() <= nr_threshold)
 			break;
 	}
-
+/*
 	if (READ_ONCE(intellicount) == 0)
 		last_pass = ktime_get();
 
@@ -337,14 +364,17 @@ static unsigned int calculate_thread_stats(void)
 		nr_run_last = max_cpus_online;
 		return max_cpus_online;
 	}
+*/
+	if (num_offline_cpus() > 0)
+		nr_cpus += measure_freqs();
 
 	nr_run_last = nr_cpus;
-
+/*
 	if (max_cpus_online > num_online_cpus() &&
 		nr_cpus < max_cpus_online) {
 		WRITE_ONCE(intellicount, intellicount + 1);
 	}
-
+*/
 	return nr_cpus;
 }
 

@@ -220,9 +220,7 @@ unsigned int cpufreq_generic_get(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
-	if (!policy) {
-		pr_err("%s: No %s associated to cpu: %d\n",
-		       __func__, policy ? "clk" : "policy", cpu);
+	if (!policy || !cpu_online(cpu)) {
 		return 0;
 	}
 
