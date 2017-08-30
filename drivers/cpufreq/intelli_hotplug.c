@@ -324,7 +324,7 @@ static unsigned int calculate_thread_stats(void)
 			break;
 	}
 
-	if (READ_ONCE(intellicount == 0)
+	if (READ_ONCE(intellicount == 0))
 		last_pass = ktime_get();
 
 	now = ktime_get();
