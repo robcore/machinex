@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -88,7 +88,7 @@ static unsigned int online_cpus;
 /* HotPlug Driver Tuning */
 static int target_cpus = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned long min_input_interval = INPUT_INTERVAL;
-static unsigned int boost_lock_duration = BOOST_LOCK_DUR;
+static unsigned long boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = DEFAULT_SAMPLING_RATE;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = DEFAULT_HYSTERESIS;
@@ -287,11 +287,11 @@ static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 
 static unsigned int calculate_thread_stats(void)
 {
-	unsigned int nr_run;
+	unsigned int nr_cpus;
 	unsigned int *current_profile;
 	ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
 
-	for (nr_run = min_cpus_online; nr_run < max_cpus_online; nr_run++) {
+	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
@@ -302,12 +302,12 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
-		nr_threshold = current_profile[nr_run - 1];
-		nr_run_hysteresis = max_cpus_online * 2;
+		nr_threshold = current_profile[nr_cpus - 1];
+		nr_run_hysteresis = ((max_cpus_online * 2) - 1);
 		nr_fshift = max_cpus_online - 1;
 		bigshift = FSHIFT - nr_fshift;
 
-		if (nr_run_last <= nr_run)
+		if (nr_run_last <= nr_cpus)
 			nr_threshold += nr_run_hysteresis;
 
 		nr_threshold <<= bigshift;
@@ -316,38 +316,34 @@ static unsigned int calculate_thread_stats(void)
 			break;
 	}
 
-	nr_run_last = nr_run;
-
 	if (READ_ONCE(intellicount) >= max_intellicount &&
 		max_cpus_online > num_online_cpus()) {
 		WRITE_ONCE(intellicount, 0);
-		nr_run_last = nr_run;
+		nr_run_last = nr_cpus;
 		return max_cpus_online;
 	}
 
+	nr_run_last = nr_cpus;
 	now = ktime_get();
 	delta = ktime_sub(now, last_pass);
 
 	if (max_cpus_online > num_online_cpus() &&
-		nr_run < max_cpus_online && (ktime_compare(delta, timeout) >= 0)) {
+		nr_cpus < max_cpus_online && (ktime_compare(delta, timeout) >= 0)) {
 		WRITE_ONCE(intellicount, intellicount + 1);
 		last_pass = ktime_get();
 	}
 
-	return nr_run;
+	return nr_cpus;
 }
 
 static void update_per_cpu_stat(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = cpumask_next(0, cpu_online_mask);
 	struct ip_cpu_info *l_ip_info;
 
-	for_each_active_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
-		if (cpu_online(cpu))
-			l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
-		else
-			l_ip_info->cpu_nr_running = 0;
+		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
 }
 
@@ -738,7 +734,7 @@ show_one(full_mode_profile);
 show_one(cpu_nr_run_threshold);
 show_one(debug_intelli_plug);
 show_long(min_input_interval);
-show_one(boost_lock_duration);
+show_long(boost_lock_duration);
 show_long(down_lock_dur);
 show_one(nr_run_hysteresis);
 show_one(nr_fshift);
@@ -768,9 +764,33 @@ static ssize_t store_##object		\
 store_one(cpus_boosted, 0, 4);
 store_one(debug_intelli_plug, 0, 1);
 store_one(full_mode_profile, 0, 4);
-store_one(min_input_interval, boost_lock_duration, 5000);
-store_one(boost_lock_duration, down_lock_dur, 5000);
-store_one(down_lock_dur, 50, boost_lock_duration);
+
+#define store_one_ktimer(object, min, max)		\
+static ssize_t store_##object		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned long input;			\
+	int ret;				\
+	ret = sscanf(buf, "%lu", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	if (input == object) {			\
+		return count;			\
+	}					\
+	object = INTELLI_MS(input);				\
+	return count;				\
+}
+
+store_one_ktimer(min_input_interval, boost_lock_duration, 5000);
+store_one_ktimer(boost_lock_duration, down_lock_dur, 5000);
+store_one_ktimer(down_lock_dur, 50, boost_lock_duration);
+
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
