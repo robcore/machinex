@@ -81,7 +81,7 @@ static DEFINE_RWLOCK(ips_lock);
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
-static unsigned int full_mode_profile = 0;
+static unsigned long full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
 
@@ -110,54 +110,54 @@ do {				\
 		pr_info(msg);	\
 } while (0)
 
-static unsigned int nr_run_thresholds_balance[] = {
+static unsigned long nr_run_thresholds_balance[] = {
 	((THREAD_CAPACITY * 775 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 1225 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 1550 * MULT_FACTOR) / DIV_FACTOR),
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_machinex[] = {
+static unsigned long nr_run_thresholds_machinex[] = {
 	((THREAD_CAPACITY * 585 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 825 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 1100 * MULT_FACTOR) / DIV_FACTOR),
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_performance[] = {
+static unsigned long nr_run_thresholds_performance[] = {
 	((THREAD_CAPACITY * 375 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 625 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR),
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_conservative[] = {
+static unsigned long nr_run_thresholds_conservative[] = {
 	((THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 1625 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 2125 * MULT_FACTOR) / DIV_FACTOR),
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_disable[] = {
+static unsigned long nr_run_thresholds_disable[] = {
 	0,  0,  0,  UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_tri[] = {
+static unsigned long nr_run_thresholds_tri[] = {
 	((THREAD_CAPACITY * 625 * MULT_FACTOR) / DIV_FACTOR),
 	((THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR),
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_eco[] = {
+static unsigned long nr_run_thresholds_eco[] = {
 	((THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR),
 	UINT_MAX
 };
 
-static unsigned int nr_run_thresholds_strict[] = {
+static unsigned long nr_run_thresholds_strict[] = {
 	UINT_MAX
 };
 
-static unsigned int *nr_run_profiles[] = {
+static unsigned long *nr_run_profiles[] = {
 	nr_run_thresholds_balance,
 	nr_run_thresholds_machinex,
 	nr_run_thresholds_performance,
@@ -290,7 +290,7 @@ static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_cpus;
-	unsigned int *current_profile;
+	unsigned long *current_profile;
 	ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
 
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
@@ -611,7 +611,7 @@ static struct notifier_block intelliplug_cpu_notifier = {
 
 static int intelli_plug_start(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = cpumask_next(cpu, cpu_possible_mask);
 	int ret = 0;
 	struct down_lock *dl;
 
@@ -670,7 +670,7 @@ err_out:
 
 static void intelli_plug_stop(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = cpumask_next(cpu, cpu_possible_mask);
 	struct down_lock *dl;
 
 	cancel_delayed_work(&up_down_work);
@@ -734,7 +734,7 @@ static ssize_t show_##object					\
 show_one(cpus_boosted);
 show_one(min_cpus_online);
 show_one(max_cpus_online);
-show_one(full_mode_profile);
+show_long(full_mode_profile);
 show_one(cpu_nr_run_threshold);
 show_one(debug_intelli_plug);
 show_long(min_input_interval);
@@ -768,7 +768,30 @@ static ssize_t store_##object		\
 
 store_one(cpus_boosted, 0, 4);
 store_one(debug_intelli_plug, 0, 1);
-store_one(full_mode_profile, 0, 4);
+
+#define store_one_long(object, min, max)		\
+static ssize_t store_##object		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned long input;			\
+	int ret;				\
+	ret = sscanf(buf, "%lu", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	if (input == object) {			\
+		return count;			\
+	}					\
+	object = input;				\
+	return count;				\
+}
+
+store_one_long(full_mode_profile, 0, 4);
 
 #define store_one_ktimer(object, min, max)		\
 static ssize_t store_##object		\
