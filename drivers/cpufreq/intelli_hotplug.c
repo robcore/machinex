@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	12
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -35,7 +35,7 @@
 #define DEFAULT_SAMPLING_RATE INTELLI_MS(70)
 #define INPUT_INTERVAL (INTELLI_MS(200) * NSEC_PER_MSEC)
 #define BOOST_LOCK_DUR (INTELLI_MS(50) * NSEC_PER_MSEC)
-#define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
+#define DEFAULT_NR_CPUS_BOOSTED DEFAULT_MAX_CPUS_ONLINE
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
 #define DEFAULT_HYSTERESIS (NR_CPUS << 1)
@@ -47,17 +47,15 @@
 */
 
 #define HIGH_LOAD_FREQ 1566000
-#define LOW_LOAD_FREQ 918000
 #define THREAD_CAPACITY 289
 #define CPU_NR_THRESHOLD 722
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
 #define INTELLIPLIER (THREAD_CAPACITY * MULT_FACTOR)
 #define DIV_FACTOR 100000
 #define INTELLIPLY(x) (x * INTELLIPLIER)
-#define INTELLIDIV(x) DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR)
+#define INTELLIDIV(x) (DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR))
 
 static int high_load_threshold = HIGH_LOAD_FREQ;
-static int low_load_freq = LOW_LOAD_FREQ;
 static ktime_t last_boost_time;
 static ktime_t last_input;
 
@@ -296,28 +294,20 @@ static unsigned int intellicount = 0;
 static const unsigned int max_intellicount = NR_CPUS;
 static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 
-static int get_intellirate(unsigned int cpu)
-{
-	return cpufreq_generic_get(cpu);
-}
-	
 static int measure_freqs(void)
 {
-	unsigned int cpu;
-	int freq_load;
+	unsigned int cpu, freq_load;
 
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (get_intellirate(cpu) >
+		if (get_intellirate(cpu) < high_load_threshold)
+			continue;
+		else if (cpufreq_generic_get(cpu) >=
 			high_load_threshold)
 			freq_load += 1;
 	}
 	put_online_cpus();
-
-	if (freq_load < 0)
-		freq_load = 0;
-
 	return freq_load;
 }
 
@@ -398,7 +388,7 @@ static atomic_t work_in_progress = ATOMIC_INIT(0);
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	int primary = cpumask_first(cpu_online_mask);
+	int primary;
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
@@ -418,11 +408,12 @@ static void cpu_up_down_work(struct work_struct *work)
 	now = ktime_get();
 	delta = ktime_sub(now, last_input);
 
-	if (unlikely(!online_cpus))
-		report_current_cpus();
-
 	target = READ_ONCE(target_cpus);
+
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
+	primary = cpumask_first(cpu_online_mask);
+	if (!online_cpus)
+		report_current_cpus();
 
 	if (target == online_cpus)
 		goto reschedule;
@@ -476,7 +467,9 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 	mutex_unlock(&intellisleep_mutex);
 
-#if defined(INTELLI_USE_SPINLOCK)
+#if defined(INTELLI_USE_ATOMIC)
+	if (atomic_read(&intelli_plug_active) == 1) {
+#elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
 		WRITE_ONCE(target_cpus, calculate_thread_stats());

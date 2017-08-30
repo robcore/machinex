@@ -23,7 +23,6 @@ MODULE_LICENSE("GPLv2");
 #define WRTIMEOUT 10
 
 static struct input_dev *virtkeydev;
-static struct workqueue_struct *virtkey_input_wq;
 static struct delayed_work wakeup_key_release_work;
 static struct delayed_work wakeup_key_press_work;
 static void wakeup_key_release(struct work_struct *work);
@@ -56,14 +55,14 @@ static void press_key(unsigned int pressed)
 	input_sync(virtkeydev);
 	WRITE_ONCE(key_is_pressed, pressed);
 
-	if (screen_on_lock && READ_ONCE(key_is_pressed) == 0)
+	if (screen_on_lock && key_is_pressed)
 		virt_wakeup_key_trig();
 }
 
 /* WakeKeyReleased work func */
 static void wakeup_key_release(struct work_struct *work)
 {
-	if (READ_ONCE(key_is_pressed) == 0)
+	if (!key_is_pressed)
 		return;
 	press_key(0);
 }
@@ -71,16 +70,16 @@ static void wakeup_key_release(struct work_struct *work)
 /* WakeKeyPressed work func */
 static void wakeup_key_press(struct work_struct *work)
 {
-	if (READ_ONCE(key_is_pressed) == 1)
+	if (key_is_pressed)
 		return;
 
 	press_key(1);
-	queue_delayed_work(virtkey_input_wq, &wakeup_key_release_work, msecs_to_jiffies(WRTIMEOUT));
+	schedule_delayed_work(&wakeup_key_release_work, msecs_to_jiffies(WRTIMEOUT));
 }
 
 /* PowerKey trigger */
 void virt_wakeup_key_trig(void) {
-	mod_delayed_work_on(0, virtkey_input_wq, &wakeup_key_press_work, msecs_to_jiffies(WPTIMEOUT));
+	schedule_delayed_work_on(0, &wakeup_key_press_work, msecs_to_jiffies(WPTIMEOUT));
 }
 EXPORT_SYMBOL(virt_wakeup_key_trig);
 
@@ -231,19 +230,13 @@ static int __init virtual_wakeup_key_init(void)
 		goto err_input_dev;
 	}
 
-	virtkey_input_wq = create_singlethread_workqueue("virtkeyq");
-	if (!virtkey_input_wq) {
-		pr_err("%s: Failed to create workqueue\n", __func__);
-		rc = -EFAULT;
-		goto err_unregister;
-	}
 	INIT_DELAYED_WORK(&wakeup_key_press_work, wakeup_key_press);
 	INIT_DELAYED_WORK(&wakeup_key_release_work, wakeup_key_release);
 
 	rc = input_register_handler(&virtkey_input_handler);
 	if (rc) {
 		pr_err("%s: Failed to register virtkey_input_handler\n", __func__);
-		goto err_wq;
+		goto err_unregister;
 	}
 
 	rc = sysfs_create_group(kernel_kobj, &virtual_wakeup_key_attr_group);
@@ -258,8 +251,6 @@ static int __init virtual_wakeup_key_init(void)
 
 err_handler:
 	input_unregister_handler(&virtkey_input_handler);
-err_wq:
-	destroy_workqueue(virtkey_input_wq);
 err_unregister:
 	input_unregister_device(virtkeydev);
 err_input_dev:
@@ -276,7 +267,6 @@ static void __exit virtual_wakeup_key_exit(void)
 	wake_lock_destroy(&vwklock);
 	sysfs_remove_group(kernel_kobj, &virtual_wakeup_key_attr_group);
 	input_unregister_handler(&virtkey_input_handler);
-	destroy_workqueue(virtkey_input_wq);
 	input_unregister_device(virtkeydev);
 	input_free_device(virtkeydev);
 	return;
