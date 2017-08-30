@@ -5,6 +5,8 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/timed_output.h>
+#include <linux/wakelock.h>
+#include <linux/sysfs_helpers.h>
 
 #define DRIVER_AUTHOR "robcore"
 #define DRIVER_DESCRIPTION "virtualpowerkey(wakeup) driver"
@@ -27,12 +29,25 @@ static struct delayed_work wakeup_key_press_work;
 static void wakeup_key_release(struct work_struct *work);
 static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
+struct wake_lock vwklock;
 static unsigned int key_is_pressed = 0;
 
 static void press_key(unsigned int pressed)
 {
-	if (pressed != 0 && pressed != 1)
+	if ((pressed != 0 && pressed != 1) ||
+		(pressed == key_is_pressed))
 		return;
+
+	switch (pressed) {
+	case 0:
+		wake_unlock(&vwklock);
+		break;
+	case 1:
+		wake_lock(&vwklock);
+		break;
+	default:
+		break;
+	}
 
 	input_report_key(virtkeydev, KEY_WAKEUP, pressed);
 	input_sync(virtkeydev);
@@ -217,6 +232,8 @@ static int __init virtual_wakeup_key_init(void)
 		goto err_handler;
 	}
 
+	wake_lock_init(&vwklock, WAKE_LOCK_SUSPEND, "vwkey");
+
 	return 0;
 
 err_handler:
@@ -236,7 +253,8 @@ err_alloc_dev:
 
 static void __exit virtual_wakeup_key_exit(void)
 {
-	sysfs_remove_group(kernel_kobj, &virtual_wakeup_attr_group);
+	wake_lock_destroy(&vwklock);
+	sysfs_remove_group(kernel_kobj, &virtual_wakeup_key_attr_group);
 	input_unregister_handler(&virtkey_input_handler);
 	destroy_workqueue(virtkey_input_wq);
 	input_unregister_device(virtkeydev);
