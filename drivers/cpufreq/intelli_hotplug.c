@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -305,8 +305,8 @@ static unsigned int calculate_thread_stats(void)
 			current_profile = nr_run_profiles[7];
 
 		nr_threshold = current_profile[nr_cpus - 1];
+		nr_run_hysteresis = ((max_cpus_online * 2) + 1);
 		nr_fshift = max_cpus_online - 1;
-		nr_run_hysteresis = (nr_fshift * 2);
 
 		bigshift = FSHIFT - nr_fshift;
 
@@ -341,19 +341,20 @@ static unsigned int calculate_thread_stats(void)
 
 static void update_per_cpu_stat(void)
 {
-	unsigned int cpu = cpumask_next(0, cpu_online_mask);
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 	struct ip_cpu_info *l_ip_info;
 
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
+		if (cpu > nr_cpu_ids)
+			break;
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
 }
 
 static void cpu_up_down_work(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
-	int	primary = cpumask_first(cpu_online_mask);
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
@@ -389,7 +390,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
-			if (cpu == primary || cpu_is_offline(cpu))
+			if (cpu_is_offline(cpu))
 				continue;
 			if (cpu > nr_cpu_ids || cpu < 0 ||
 				thermal_core_controlled ||
@@ -406,7 +407,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == primary || cpu_online(cpu) ||
+			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu))
 				continue;
 			if (cpu > nr_cpu_ids || cpu < 0 ||
@@ -425,8 +426,6 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
-
 	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
@@ -466,19 +465,22 @@ void intelli_boost(void)
 
 static void cycle_cpus(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 	unsigned int optimus;
 	intellinit = true;
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
-		if (cpu == optimus || !cpu_online(cpu))
+		if (cpu > nr_cpu_ids)
+			break;
+		if (!cpu_online(cpu))
 			continue;
 		rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == optimus ||
-			!is_cpu_allowed(cpu))
+		if (cpu > nr_cpu_ids)
+			break;
+		if (!is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu))
 			force_down_lock(cpu);
@@ -491,24 +493,27 @@ static void cycle_cpus(void)
 	pr_info("Intelliplug Start: Cycle Cpus Complete\n");
 }
 
-
 static void recycle_cpus(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 	unsigned int optimus;
 	struct down_lock *dl;
 	intellinit = true;
 	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		if (cpu == optimus || !cpu_online(cpu))
+		if (cpu > nr_cpu_ids)
+			break;
+		if (!cpu_online(cpu))
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == optimus || !is_cpu_allowed(cpu))
+		if (cpu > nr_cpu_ids)
+			break;
+		if (!is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu)) {
 			if (!check_down_lock(cpu))
@@ -532,12 +537,14 @@ static void intelli_suspend(struct power_suspend * h)
 
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_lock(&intellisleep_mutex);
-	if (intelli_suspended == 0)
-		intelli_suspended = 1;
+	if (intelli_suspended == INTELLI_AWAKE)
+		intelli_suspended = INTELLI_SUSPENDED;
 	mutex_unlock(&intellisleep_mutex);
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
+		if (cpu > nr_cpu_ids)
+			break;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 	}
@@ -554,8 +561,8 @@ static void intelli_resume(struct power_suspend * h)
 		return;
 #endif
 
-	if (intelli_suspended == 1);
-		intelli_suspended = 0;
+	if (intelli_suspended == INTELLI_SUSPENDED);
+		intelli_suspended = INTELLI_AWAKE;
 	recycle_cpus();
 }
 
@@ -630,7 +637,7 @@ static int intelli_plug_start(void)
 
 	mutex_init(&intelli_plug_mutex);
 	mutex_init(&(intellisleep_mutex));
-	intelli_suspended = 0;
+	intelli_suspended = INTELLI_AWAKE;
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
