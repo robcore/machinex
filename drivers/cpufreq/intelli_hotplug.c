@@ -296,7 +296,7 @@ static unsigned int calculate_thread_stats(void)
 	unsigned long *current_profile;
 	ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
 
-	for (nr_cpus = max_cpus_online; nr_cpus < min_cpus_online; nr_cpus--) {
+	for (nr_cpus = max_cpus_online; nr_cpus > 0; nr_cpus--) {
 		unsigned long nr_threshold, bigshift;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
