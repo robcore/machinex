@@ -2706,7 +2706,7 @@ int mpol_parse_str(char *str, struct mempolicy **mpol)
 			break;
 		}
 	}
-	if (mode >= MPOL_MAX || mode == MPOL_NOOP)
+	if (mode >= MPOL_MAX)
 		goto out;
 
 	switch (mode) {
@@ -2818,7 +2818,7 @@ void mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
 	unsigned short mode = MPOL_DEFAULT;
 	unsigned short flags = 0;
 
-	if (pol && pol != &default_policy) {
+	if (pol && pol != &default_policy && !(pol->flags & MPOL_F_MORON)) {
 		mode = pol->mode;
 		flags = pol->flags;
 	}
