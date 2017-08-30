@@ -244,6 +244,9 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
+	if (unlikely(cpu == 0))
+		return;
+
 	if (!duration)
 		dl->locked = false;
 	else
@@ -255,7 +258,7 @@ static void apply_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
-	if (!is_display_on())
+	if (!is_display_on() || unlikely(cpu == 0))
 		return;
 
 	dl->locked = true;
@@ -266,12 +269,16 @@ static void force_down_lock(unsigned int cpu)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
+	if (unlikely(cpu == 0))
+		return;
 	dl->locked = true;
 	rm_down_lock(cpu, down_lock_dur);
 }
 	
 static int check_down_lock(unsigned int cpu)
 {
+	if (unlikely(cpu == 0))
+		return;
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 	return dl->locked;
 }
@@ -611,7 +618,7 @@ static struct notifier_block intelliplug_cpu_notifier = {
 
 static int intelli_plug_start(void)
 {
-	unsigned int cpu = cpumask_next(cpu, cpu_possible_mask);
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 	int ret = 0;
 	struct down_lock *dl;
 
@@ -670,7 +677,7 @@ err_out:
 
 static void intelli_plug_stop(void)
 {
-	unsigned int cpu = cpumask_next(cpu, cpu_possible_mask);
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 	struct down_lock *dl;
 
 	cancel_delayed_work(&up_down_work);
