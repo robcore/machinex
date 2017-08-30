@@ -49,8 +49,8 @@
 #define CPU_NR_THRESHOLD 722
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
 #define INTELLIPLIER (THREAD_CAPACITY * MULT_FACTOR)
-#define INTELLIPLY(x) ((x) * INTELLIPLIER)
 #define DIV_FACTOR 100000
+#define INTELLIPLY(x) (((x) * INTELLIPLIER)/DIV_FACTOR)
 
 static ktime_t last_boost_time;
 static ktime_t last_input;
@@ -113,30 +113,30 @@ do {				\
 } while (0)
 
 static unsigned long nr_run_thresholds_balance[] = {
-	(INTELLIPLY(791) / DIV_FACTOR),
-	(INTELLIPLY(1237) / DIV_FACTOR),
-	(INTELLIPLY(1444) / DIV_FACTOR),
+	INTELLIPLY(791),
+	INTELLIPLY(1237),
+	INTELLIPLY(1444),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_machinex[] = {
-	(INTELLIPLY(585) / DIV_FACTOR),
-	(INTELLIPLY(825) / DIV_FACTOR),
-	(INTELLIPLY(1100) / DIV_FACTOR),
+	INTELLIPLY(585),
+	INTELLIPLY(825),
+	INTELLIPLY(1100),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_performance[] = {
-	(INTELLIPLY(375) / DIV_FACTOR),
-	(INTELLIPLY(625) / DIV_FACTOR),
-	(INTELLIPLY(875) / DIV_FACTOR),
+	INTELLIPLY(375),
+	INTELLIPLY(625),
+	INTELLIPLY(875),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_conservative[] = {
-	(INTELLIPLY(875) / DIV_FACTOR),
-	(INTELLIPLY(1625) / DIV_FACTOR),
-	(INTELLIPLY(2125) / DIV_FACTOR),
+	INTELLIPLY(875),
+	INTELLIPLY(1625),
+	INTELLIPLY(2125),
 	UINT_MAX
 };
 
@@ -145,13 +145,13 @@ static unsigned long nr_run_thresholds_disable[] = {
 };
 
 static unsigned long nr_run_thresholds_tri[] = {
-	(INTELLIPLY(625) / DIV_FACTOR),
-	(INTELLIPLY(875) / DIV_FACTOR),
+	INTELLIPLY(625),
+	INTELLIPLY(875),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_eco[] = {
-	(INTELLIPLY(380) / DIV_FACTOR),
+	INTELLIPLY(380),
 	UINT_MAX
 };
 
