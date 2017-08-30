@@ -1869,7 +1869,7 @@ struct zonelist *huge_zonelist(struct vm_area_struct *vma, unsigned long addr,
 {
 	struct zonelist *zl;
 
-	*mpol = get_vma_policy(current, vma, addr);
+	*mpol = get_vma_policy(vma, addr);
 	*nodemask = NULL;	/* assume !MPOL_BIND */
 
 	if (unlikely((*mpol)->mode == MPOL_INTERLEAVE)) {
@@ -2024,7 +2024,7 @@ alloc_pages_vma(gfp_t gfp, int order, struct vm_area_struct *vma,
 	unsigned int cpuset_mems_cookie;
 
 retry_cpuset:
-	pol = get_vma_policy(current, vma, addr);
+	pol = get_vma_policy(vma, addr);
 	cpuset_mems_cookie = read_mems_allowed_begin();
 
 	if (unlikely(pol->mode == MPOL_INTERLEAVE)) {
@@ -2291,7 +2291,7 @@ int mpol_misplaced(struct page *page, struct vm_area_struct *vma, unsigned long 
 
 	BUG_ON(!vma);
 
-	pol = get_vma_policy(current, vma, addr);
+	pol = get_vma_policy(vma, addr);
 	if (!(pol->flags & MPOL_F_MOF))
 		goto out;
 
