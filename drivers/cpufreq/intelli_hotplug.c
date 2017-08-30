@@ -50,7 +50,8 @@
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
 #define INTELLIPLIER (THREAD_CAPACITY * MULT_FACTOR)
 #define DIV_FACTOR 100000
-#define INTELLIPLY(x) (((x) * INTELLIPLIER)/DIV_FACTOR)
+#define INTELLIPLY(x) (x * INTELLIPLIER)
+#define INTELLIDIV(x) (DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR))
 
 static ktime_t last_boost_time;
 static ktime_t last_input;
@@ -113,50 +114,50 @@ do {				\
 } while (0)
 
 static unsigned long nr_run_thresholds_balance[] = {
-	INTELLIPLY(791),
-	INTELLIPLY(1237),
-	INTELLIPLY(1444),
-	UINT_MAX
+	INTELLIDIV(791),
+	INTELLIDIV(1237),
+	INTELLIDIV(1444),
+	ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_machinex[] = {
-	INTELLIPLY(585),
-	INTELLIPLY(825),
-	INTELLIPLY(1100),
-	UINT_MAX
+	INTELLIDIV(585),
+	INTELLIDIV(825),
+	INTELLIDIV(1100),
+	ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_performance[] = {
-	INTELLIPLY(375),
-	INTELLIPLY(625),
-	INTELLIPLY(875),
-	UINT_MAX
+	INTELLIDIV(375),
+	INTELLIDIV(625),
+	INTELLIDIV(875),
+	ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_conservative[] = {
-	INTELLIPLY(875),
-	INTELLIPLY(1625),
-	INTELLIPLY(2125),
-	UINT_MAX
+	INTELLIDIV(875),
+	INTELLIDIV(1625),
+	INTELLIDIV(2125),
+	ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_disable[] = {
-	0,  0,  0,  UINT_MAX
+	0,  0,  0,  ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_tri[] = {
-	INTELLIPLY(625),
-	INTELLIPLY(875),
-	UINT_MAX
+	INTELLIDIV(625),
+	INTELLIDIV(875),
+	ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_eco[] = {
-	INTELLIPLY(380),
-	UINT_MAX
+	INTELLIDIV(380),
+	ULONG_MAX
 };
 
 static unsigned long nr_run_thresholds_strict[] = {
-	UINT_MAX
+	ULONG_MAX
 };
 
 static unsigned long *nr_run_profiles[] = {
@@ -296,7 +297,7 @@ static unsigned int calculate_thread_stats(void)
 	unsigned long *current_profile;
 	ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
 
-	for (nr_cpus = max_cpus_online; nr_cpus > 1; nr_cpus--) {
+	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
 		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 			current_profile = nr_run_profiles[full_mode_profile];
