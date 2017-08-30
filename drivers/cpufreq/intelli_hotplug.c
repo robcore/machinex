@@ -474,7 +474,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 	mutex_unlock(&intellisleep_mutex);
 
-if defined(INTELLI_USE_SPINLOCK)
+#if defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
 
