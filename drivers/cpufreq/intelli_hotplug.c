@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -311,7 +311,7 @@ static unsigned int calculate_thread_stats(void)
 		
 		nr_threshold = current_profile[nr_cpus - 1];
 		nr_fshift = num_offline_cpus() + 1;
-		nr_run_hysteresis = ((max_cpus_online << 2) / num_online_cpus());
+		nr_run_hysteresis = DIV_ROUND_CLOSEST((max_cpus_online << 2), num_online_cpus());
 
 		bigshift = FSHIFT - nr_fshift;
 
@@ -859,9 +859,13 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 1 || val > NR_CPUS)
+	if (ret != 1)
 		return -EINVAL;
 
+	if (val <= 1)
+		val = 1;
+	if (val >= NR_CPUS)
+		val = NR_CPUS;
 	if (val >= max_cpus_online)
 		val = max_cpus_online;
 
@@ -878,9 +882,13 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
-	if (ret != 1 || val < 1 || val > NR_CPUS)
+	if (ret != 1)
 		return -EINVAL;
 
+	if (val <= 1)
+		val = 1;
+	if (val >= NR_CPUS)
+		val = NR_CPUS;
 	if (val <= min_cpus_online)
 		val = min_cpus_online;
 
