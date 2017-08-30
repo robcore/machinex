@@ -98,6 +98,13 @@ static struct input_handler virtkey_input_handler = {
 	.name		= "virtual_power_key",
 	.id_table	= virtkey_ids,
 };
+#if 0
+static ssize_t press_wakeup_key_show(struct kobject *kobj,
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", key_is_pressed);
+}
+#endif
 /*
 static int bootup_force_screen_on(void)
 {
