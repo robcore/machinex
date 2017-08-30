@@ -98,13 +98,49 @@ static struct input_handler virtkey_input_handler = {
 	.name		= "virtual_power_key",
 	.id_table	= virtkey_ids,
 };
-#if 0
+
 static ssize_t press_wakeup_key_show(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u\n", key_is_pressed);
 }
-#endif
+
+static ssize_t press_wakeup_key_store(struct kobject *kobj,
+ struct kobj_attribute *attr,
+ const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	sanitize_min_max(input, 0, 1);
+
+	if (input == key_is_pressed)
+		return count;
+
+	press_key(input);
+	return count;
+}
+
+static struct kobj_attribute press_wakeup_key_attr =
+					__ATTR(press_wakeup_key, 0644,
+					press_wakeup_key_show,
+					press_wakeup_key_store);
+
+static struct attribute *virtual_wakeup_key_attrs[] = {
+	&press_wakeup_key_attr.attr,
+	NULL,
+};
+
+static struct attribute_group virtual_wakeup_key_attr_group = {
+	.attrs = virtual_wakeup_key_attrs,
+	.name = "virtual_wakeup_key",
+};
+
 /*
 static int bootup_force_screen_on(void)
 {
@@ -175,8 +211,16 @@ static int __init virtual_wakeup_key_init(void)
 		goto err_wq;
 	}
 
+	rc = sysfs_create_group(kernel_kobj, &virtual_wakeup_key_attr_group);
+	if (rc) {
+		rc = -ENOMEM;
+		goto err_handler;
+	}
+
 	return 0;
 
+err_handler:
+	input_unregister_handler(&virtkey_input_handler);
 err_wq:
 	destroy_workqueue(virtkey_input_wq);
 err_unregister:
@@ -192,6 +236,7 @@ err_alloc_dev:
 
 static void __exit virtual_wakeup_key_exit(void)
 {
+	sysfs_remove_group(kernel_kobj, &virtual_wakeup_attr_group);
 	input_unregister_handler(&virtkey_input_handler);
 	destroy_workqueue(virtkey_input_wq);
 	input_unregister_device(virtkeydev);
