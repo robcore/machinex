@@ -311,7 +311,7 @@ static unsigned int calculate_thread_stats(void)
 			current_profile = nr_run_profiles[7];
 
 		nr_threshold = current_profile[nr_cpus - 1];
-		nr_run_hysteresis = ((max_cpus_online * 2) + 1);
+		nr_run_hysteresis = (max_cpus_online * 2);
 		nr_fshift = max_cpus_online - 1;
 
 		bigshift = FSHIFT - nr_fshift;
