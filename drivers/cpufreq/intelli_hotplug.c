@@ -364,7 +364,7 @@ static unsigned int calculate_thread_stats(void)
 		return max_cpus_online;
 	}
 */
-	if (max_cpus_online == num_online_cpus() &&
+	if (num_online_cpus() == max_cpus_online &&
 		nr_cpus < max_cpus_online)
 		nr_cpus += (measure_freqs() >> 1);
 	else if (num_offline_cpus() > 0)
@@ -508,7 +508,7 @@ retry:
 		return;
 	}
 	if (atomic_read(&work_in_progress) == 0) {
-		cpu_up_down_work(READ_ONCE(cpus_boosted));
+		cpu_up_down_work(cpus_boosted);
 		last_boost_time = ktime_get();
 		WRITE_ONCE(local_counter, 0);
 		return;
