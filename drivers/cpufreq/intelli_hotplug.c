@@ -324,7 +324,7 @@ static unsigned int calculate_thread_stats(void)
 			break;
 	}
 
-	if (READ_ONCE(intellicount == 0))
+	if (READ_ONCE(intellicount) == 0)
 		last_pass = ktime_get();
 
 	now = ktime_get();
@@ -334,7 +334,7 @@ static unsigned int calculate_thread_stats(void)
 		max_cpus_online > num_online_cpus() &&
 		(ktime_compare(delta, timeout) >= 0)) {
 		WRITE_ONCE(intellicount, 0);
-		nr_run_last = nr_cpus;
+		nr_run_last = max_cpus_online;
 		return max_cpus_online;
 	}
 
