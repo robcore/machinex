@@ -390,8 +390,9 @@ static void update_per_cpu_stat(void)
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
 }
-
+#if 0
 static atomic_t work_in_progress = ATOMIC_INIT(0);
+#endif
 
 static void cpu_up_down_work(int target)
 {
@@ -473,25 +474,22 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 	mutex_unlock(&intellisleep_mutex);
 
-#if defined(INTELLI_USE_ATOMIC)
-	if (atomic_read(&intelli_plug_active) == 1) {
-#elif defined(INTELLI_USE_SPINLOCK)
+if defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
 
-	atomic_set(&work_in_progress, 1);
-	local_target = calculate_thread_stats();
-	cpu_up_down_work(READ_ONCE(local_target));
-	atomic_set(&work_in_progress, 0);
+		local_target = calculate_thread_stats();
+		cpu_up_down_work(READ_ONCE(local_target));
 	}
 }
 
 void intelli_boost(void)
 {
 	ktime_t delta;
+#if 0
 	unsigned int local_counter;
 	const unsigned int max_count = 2;
-
+#endif
 	if (!intelliread() || !is_display_on() || unlikely(intellinit))
 		return;
 
@@ -502,6 +500,10 @@ void intelli_boost(void)
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
+
+	cpu_up_down_work(cpus_boosted);
+	last_boost_time = ktime_get();
+#if 0
 retry:
 	if (READ_ONCE(local_counter) >= max_count) {
 		WRITE_ONCE(local_counter, 0);
@@ -516,6 +518,7 @@ retry:
 		WRITE_ONCE(local_counter, local_counter + 1);
 		goto retry;
 	}
+#endif
 }
 
 static void cycle_cpus(void)
