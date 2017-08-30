@@ -731,7 +731,7 @@ show_one(debug_intelli_plug);
 show_long(min_input_interval);
 show_long(boost_lock_duration);
 show_long(down_lock_dur);
-show_one(nr_run_hysteresis);
+show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 
