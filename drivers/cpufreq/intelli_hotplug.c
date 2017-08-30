@@ -47,7 +47,7 @@
 */
 
 #define HIGH_LOAD_FREQ 1566000
-#define MAX_LOAD_FREQ 1890000
+#define LOW_LOAD_FREQ 918000
 #define THREAD_CAPACITY 289
 #define CPU_NR_THRESHOLD 722
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
@@ -57,11 +57,12 @@
 #define INTELLIDIV(x) DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR)
 
 static int high_load_threshold = HIGH_LOAD_FREQ;
-static int max_load_freq = MAX_LOAD_FREQ;
+static int low_load_freq = LOW_LOAD_FREQ;
 static ktime_t last_boost_time;
 static ktime_t last_input;
 
 static struct delayed_work intelli_plug_work;
+static struct delayed_work up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct workqueue_struct *updown_wq;
 static struct mutex intelli_plug_mutex;
@@ -302,18 +303,24 @@ static int get_intellirate(unsigned int cpu)
 	
 static int measure_freqs(void)
 {
-	unsigned int cpu, freq_load;
+	unsigned int cpu;
+	int freq_load;
 
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (get_intellirate(cpu) < high_load_threshold)
-			continue;
-		else if (get_intellirate(cpu) >=
+		if (get_intellirate(cpu) >=
 			high_load_threshold)
 			freq_load += 1;
+		else if (get_intellirate(cpu) <
+			low_load_freq)
+			freq_load -= 1;
 	}
 	put_online_cpus();
+
+	if (freq_load < 0)
+		freq_load = 0;
+
 	return freq_load;
 }
 
@@ -364,10 +371,7 @@ static unsigned int calculate_thread_stats(void)
 		return max_cpus_online;
 	}
 */
-	if (num_online_cpus() == max_cpus_online &&
-		nr_cpus < max_cpus_online)
-		nr_cpus += (measure_freqs() >> 1);
-	else if (num_offline_cpus() > 0)
+	if (nr_cpus < max_cpus_online)
 		nr_cpus += measure_freqs();
 
 	nr_run_last = nr_cpus;
@@ -394,11 +398,12 @@ static void update_per_cpu_stat(void)
 static atomic_t work_in_progress = ATOMIC_INIT(0);
 #endif
 
-static void cpu_up_down_work(int target)
+static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
-	int primary;
+	int primary = cpumask_first(cpu_online_mask);
 	long l_nr_threshold;
+	int target;
 	struct ip_cpu_info *l_ip_info;
 	ktime_t now, delta;
 
@@ -416,10 +421,11 @@ static void cpu_up_down_work(int target)
 	now = ktime_get();
 	delta = ktime_sub(now, last_input);
 
-	sanitize_min_max(target, min_cpus_online, max_cpus_online);
-	primary = cpumask_first(cpu_online_mask);
-	if (!online_cpus)
+	if (unlikely(!online_cpus))
 		report_current_cpus();
+
+	target = READ_ONCE(target_cpus);
+	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 
 	if (target == online_cpus)
 		goto reschedule;
@@ -466,7 +472,6 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
-	int local_target;
 	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
@@ -477,9 +482,8 @@ static void intelli_plug_work_fn(struct work_struct *work)
 #if defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
-
-		local_target = calculate_thread_stats();
-		cpu_up_down_work(READ_ONCE(local_target));
+		WRITE_ONCE(target_cpus, calculate_thread_stats());
+		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	}
 }
 
@@ -501,7 +505,8 @@ void intelli_boost(void)
 	    cpus_boosted <= min_cpus_online)
 		return;
 
-	cpu_up_down_work(cpus_boosted);
+	WRITE_ONCE(target_cpus, cpus_boosted);
+	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 #if 0
 retry:
@@ -689,6 +694,7 @@ static int intelli_plug_start(void)
 	}
 
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
+	INIT_DELAYED_WORK(&up_down_work, cpu_up_down_work);
 
 	register_power_suspend(&intelli_suspend_data);
 
@@ -716,6 +722,7 @@ static void intelli_plug_stop(void)
 	unsigned int cpu;
 	struct down_lock *dl;
 
+	cancel_delayed_work(&up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
@@ -773,15 +780,23 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%lu\n", object);			\
 }
 
+#define show_ktimer(object)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	unsigned long myktimer = ktime_to_ms(object);	\
+	return sprintf(buf, "%lu\n", myktimer);			\
+}
+
 show_one(cpus_boosted);
 show_one(min_cpus_online);
 show_one(max_cpus_online);
 show_long(full_mode_profile);
 show_one(cpu_nr_run_threshold);
 show_one(debug_intelli_plug);
-show_long(min_input_interval);
-show_long(boost_lock_duration);
-show_long(down_lock_dur);
+show_ktimer(min_input_interval);
+show_ktimer(boost_lock_duration);
+show_ktimer(down_lock_dur);
 show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
@@ -834,6 +849,7 @@ static ssize_t store_##object		\
 }
 
 store_one_long(full_mode_profile, 0, 4);
+store_one_long(def_sampling_ms, 5, 1000);
 
 #define store_one_ktimer(object, min, max)		\
 static ssize_t store_##object		\
@@ -853,14 +869,13 @@ static ssize_t store_##object		\
 	if (input == object) {			\
 		return count;			\
 	}					\
-	object = INTELLI_MS(input);				\
+	object = ms_to_ktime(INTELLI_MS(input));				\
 	return count;				\
 }
 
 store_one_ktimer(min_input_interval, boost_lock_duration, 5000);
 store_one_ktimer(boost_lock_duration, down_lock_dur, 5000);
 store_one_ktimer(down_lock_dur, 50, boost_lock_duration);
-store_one_ktimer(def_sampling_ms, 5, 1000);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
@@ -1035,3 +1050,4 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPLv2");
+
