@@ -384,6 +384,8 @@ static void update_per_cpu_stat(void)
 	}
 }
 
+static atomic_t from_boost = ATOMIC_INIT(0);
+
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
@@ -419,8 +421,9 @@ static void cpu_up_down_work(struct work_struct *work)
 		goto reschedule;
 
 	if (target < online_cpus) {
-		if ((online_cpus <= cpus_boosted) &&
-			(ktime_compare(delta, local_boost) < 0))
+		if ((atomic_read(&from_boost) == 1)  &&
+			(online_cpus <= cpus_boosted &&
+			ktime_compare(delta, local_boost) < 0))
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -472,6 +475,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 #elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
+		atomic_set(&from_boost, 0);
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
 		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	}
@@ -492,6 +496,7 @@ void intelli_boost(void)
 	    cpus_boosted <= min_cpus_online)
 		return;
 
+	atomic_set(&from_boost, 1);
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
