@@ -112,4 +112,4 @@ obj-$(CONFIG_ALUCARD_TOUCHSCREEN_BOOST)	+= alu-t-boost.o
 obj-$(CONFIG_WAKE_GESTURES)		+= wake_gestures.o
 obj-$(CONFIG_GENERIC_TOUCHBOOST)	+= touchboost.o
 obj-$(CONFIG_SWEEP2SLEEP)		+= sweep2sleep.o
-obj-$(CONFIG_VIRTUAL_WAKEUP_KEY)		+= virtualpowerkey.o
+obj-$(CONFIG_VIRTUAL_WAKEUP_KEY)		+= virtual_wakeup_key.o

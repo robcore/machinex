@@ -9,8 +9,8 @@
 #include <linux/sysfs_helpers.h>
 
 #define DRIVER_AUTHOR "robcore"
-#define DRIVER_DESCRIPTION "virtualpowerkey(wakeup) driver"
-#define DRIVER_VERSION "1.3"
+#define DRIVER_DESCRIPTION "virtual_wakeup_key driver"
+#define DRIVER_VERSION "1.5"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
@@ -19,7 +19,7 @@ MODULE_LICENSE("GPLv2");
 
 /*Based on Sweep2Sleep by flar2 (Aaron Segaert) */
 
-#define WPTIMEOUT 100
+#define WPTIMEOUT 80
 #define WRTIMEOUT 10
 
 static struct input_dev *virtkeydev;
@@ -31,6 +31,9 @@ static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
 struct wake_lock vwklock;
 static unsigned int key_is_pressed = 0;
+static unsigned int screen_on_lock = 0;
+/*forward declaration for screen_on_lock_usage*/
+void virt_wakeup_key_trig(void);
 
 static void press_key(unsigned int pressed)
 {
@@ -51,25 +54,33 @@ static void press_key(unsigned int pressed)
 
 	input_report_key(virtkeydev, KEY_WAKEUP, pressed);
 	input_sync(virtkeydev);
-	key_is_pressed = pressed;
+	WRITE_ONCE(key_is_pressed, pressed);
+
+	if (screen_on_lock && READ_ONCE(key_is_pressed) == 0)
+		virt_wakeup_key_trig();
 }
 
 /* WakeKeyReleased work func */
 static void wakeup_key_release(struct work_struct *work)
 {
+	if (READ_ONCE(key_is_pressed) == 0)
+		return;
 	press_key(0);
 }
 
 /* WakeKeyPressed work func */
 static void wakeup_key_press(struct work_struct *work)
 {
+	if (READ_ONCE(key_is_pressed) == 1)
+		return;
+
 	press_key(1);
-	schedule_delayed_work(&wakeup_key_release_work, msecs_to_jiffies(WRTIMEOUT));
+	queue_delayed_work(virtkey_input_wq, &wakeup_key_release_work, msecs_to_jiffies(WRTIMEOUT));
 }
 
 /* PowerKey trigger */
 void virt_wakeup_key_trig(void) {
-	schedule_delayed_work_on(0, &wakeup_key_press_work, msecs_to_jiffies(WPTIMEOUT));
+	mod_delayed_work_on(0, virtkey_input_wq, &wakeup_key_press_work, msecs_to_jiffies(WPTIMEOUT));
 }
 EXPORT_SYMBOL(virt_wakeup_key_trig);
 
@@ -110,17 +121,23 @@ static const struct input_device_id virtkey_ids[] = {
 static struct input_handler virtkey_input_handler = {
 	.connect	= virtkey_input_connect,
 	.disconnect	= virtkey_input_disconnect,
-	.name		= "virtual_power_key",
+	.name		= "virtual_wakeup_key",
 	.id_table	= virtkey_ids,
 };
 
-static ssize_t press_wakeup_key_show(struct kobject *kobj,
-				struct kobj_attribute *attr, char *buf)
+static void screenlock_decider(void)
 {
-	return sprintf(buf, "%u\n", key_is_pressed);
+	if (screen_on_lock)
+		virt_wakeup_key_trig();
 }
 
-static ssize_t press_wakeup_key_store(struct kobject *kobj,
+static ssize_t screen_on_lock_show(struct kobject *kobj,
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", screen_on_lock);
+}
+
+static ssize_t screen_on_lock_store(struct kobject *kobj,
  struct kobj_attribute *attr,
  const char *buf, size_t count)
 {
@@ -134,20 +151,23 @@ static ssize_t press_wakeup_key_store(struct kobject *kobj,
 
 	sanitize_min_max(input, 0, 1);
 
-	if (input == key_is_pressed)
+	if (input == screen_on_lock)
 		return count;
 
-	press_key(input);
+	screen_on_lock = input;
+
+	screenlock_decider();
+
 	return count;
 }
 
-static struct kobj_attribute press_wakeup_key_attr =
-					__ATTR(press_wakeup_key, 0644,
-					press_wakeup_key_show,
-					press_wakeup_key_store);
+static struct kobj_attribute screen_on_lock_attr =
+					__ATTR(screen_on_lock, 0644,
+					screen_on_lock_show,
+					screen_on_lock_store);
 
 static struct attribute *virtual_wakeup_key_attrs[] = {
-	&press_wakeup_key_attr.attr,
+	&screen_on_lock_attr.attr,
 	NULL,
 };
 
@@ -211,7 +231,7 @@ static int __init virtual_wakeup_key_init(void)
 		goto err_input_dev;
 	}
 
-	virtkey_input_wq = create_workqueue("virtkeyq");
+	virtkey_input_wq = create_singlethread_workqueue("virtkeyq");
 	if (!virtkey_input_wq) {
 		pr_err("%s: Failed to create workqueue\n", __func__);
 		rc = -EFAULT;
