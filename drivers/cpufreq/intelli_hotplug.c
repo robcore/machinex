@@ -277,9 +277,8 @@ static void force_down_lock(unsigned int cpu)
 	
 static int check_down_lock(unsigned int cpu)
 {
-	if (unlikely(cpu == 0))
-		return;
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
+
 	return dl->locked;
 }
 
@@ -473,9 +472,7 @@ void intelli_boost(void)
 static void cycle_cpus(void)
 {
 	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
-	unsigned int optimus;
 	intellinit = true;
-	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		if (cpu > nr_cpu_ids)
 			break;
@@ -503,10 +500,8 @@ static void cycle_cpus(void)
 static void recycle_cpus(void)
 {
 	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
-	unsigned int optimus;
 	struct down_lock *dl;
 	intellinit = true;
-	optimus = cpumask_first(cpu_online_mask);
 	for_each_online_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		if (cpu > nr_cpu_ids)
