@@ -347,20 +347,19 @@ static unsigned int calculate_thread_stats(void)
 
 static void update_per_cpu_stat(void)
 {
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
+	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
 
 	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
-		if (cpu > nr_cpu_ids)
-			break;
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
 }
 
 static void cpu_up_down_work(struct work_struct *work)
 {
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
+	unsigned int cpu = smp_processor_id();
+	int primary;
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
@@ -382,8 +381,9 @@ static void cpu_up_down_work(struct work_struct *work)
 	delta = ktime_sub(now, last_input);
 
 	target = READ_ONCE(target_cpus);
-	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 
+	sanitize_min_max(target, min_cpus_online, max_cpus_online);
+	primary = cpumask_first(cpu_online_mask);
 	if (!online_cpus)
 		report_current_cpus();
 
@@ -396,7 +396,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
-			if (cpu_is_offline(cpu))
+			if (cpu == primary || cpu_is_offline(cpu))
 				continue;
 			if (cpu > nr_cpu_ids || cpu < 0 ||
 				thermal_core_controlled ||
@@ -413,7 +413,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu_online(cpu) ||
+			if (cpu == primary || cpu_online(cpu) ||
 				!is_cpu_allowed(cpu))
 				continue;
 			if (cpu > nr_cpu_ids || cpu < 0 ||
@@ -471,20 +471,17 @@ void intelli_boost(void)
 
 static void cycle_cpus(void)
 {
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
+	unsigned int cpu;
+	unsigned int optimus = cpumask_first(cpu_online_mask);
 	intellinit = true;
 	for_each_online_cpu(cpu) {
-		if (cpu > nr_cpu_ids)
-			break;
-		if (!cpu_online(cpu))
+		if (!cpu_online(cpu) || cpu == optimus)
 			continue;
 		rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu > nr_cpu_ids)
-			break;
-		if (!is_cpu_allowed(cpu))
+		if (cpu == optimus || !is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu))
 			force_down_lock(cpu);
@@ -499,23 +496,18 @@ static void cycle_cpus(void)
 
 static void recycle_cpus(void)
 {
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
-	struct down_lock *dl;
+	unsigned int cpu;
+	unsigned int optimus = cpumask_first(cpu_online_mask);
 	intellinit = true;
 	for_each_online_cpu(cpu) {
-		dl = &per_cpu(lock_info, cpu);
-		if (cpu > nr_cpu_ids)
-			break;
-		if (!cpu_online(cpu))
+		if (cpu == optimus || !cpu_online(cpu))
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu > nr_cpu_ids)
-			break;
-		if (!is_cpu_allowed(cpu))
+		if (cpu == optimus || !is_cpu_allowed(cpu))
 			continue;
 		if (!cpu_up(cpu)) {
 			if (!check_down_lock(cpu))
@@ -529,7 +521,7 @@ static void recycle_cpus(void)
 static void intelli_suspend(struct power_suspend * h)
 {
 	struct down_lock *dl;
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
+	unsigned int cpu;
 #if defined(INTELLI_USE_ATOMIC)
 	if (atomic_read(&intelli_plug_active) == 0)
 #elif defined(INTELLI_USE_SPINLOCK)
@@ -545,8 +537,8 @@ static void intelli_suspend(struct power_suspend * h)
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		if (cpu > nr_cpu_ids)
-			break;
+		if (cpu == 0)
+			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 	}
@@ -613,7 +605,7 @@ static struct notifier_block intelliplug_cpu_notifier = {
 
 static int intelli_plug_start(void)
 {
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
+	unsigned int cpu;
 	int ret = 0;
 	struct down_lock *dl;
 
@@ -672,7 +664,7 @@ err_out:
 
 static void intelli_plug_stop(void)
 {
-	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
+	unsigned int cpu;
 	struct down_lock *dl;
 
 	cancel_delayed_work(&up_down_work);
