@@ -738,6 +738,7 @@ show_long(boost_lock_duration);
 show_long(down_lock_dur);
 show_one(nr_run_hysteresis);
 show_one(nr_fshift);
+show_long(def_sampling_ms);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\
@@ -790,7 +791,7 @@ static ssize_t store_##object		\
 store_one_ktimer(min_input_interval, boost_lock_duration, 5000);
 store_one_ktimer(boost_lock_duration, down_lock_dur, 5000);
 store_one_ktimer(down_lock_dur, 50, boost_lock_duration);
-
+store_one_ktimer(def_sampling_ms, 5, 1000);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
@@ -827,29 +828,6 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 		return count;
 
 	intelli_plug_active_eval_fn(input);
-
-	return count;
-}
-
-static ssize_t show_def_sampling_ms(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					char *buf)
-{
-	return sprintf(buf, "%lu\n", def_sampling_ms);
-}
-
-static ssize_t store_def_sampling_ms(struct kobject *kobj,
-					 struct kobj_attribute *attr,
-					 const char *buf, size_t count)
-{
-	int ret;
-	unsigned long val;
-
-	ret = sscanf(buf, "%lu", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	def_sampling_ms = val;
 
 	return count;
 }
