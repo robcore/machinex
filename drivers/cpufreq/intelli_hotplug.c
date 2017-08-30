@@ -26,15 +26,15 @@
 #include <linux/sysfs_helpers.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	9
+#define INTELLI_PLUG_MAJOR_VERSION	12
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define INTELLI_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
 #define DEFAULT_SAMPLING_RATE INTELLI_MS(70)
-#define INPUT_INTERVAL INTELLI_MS(200)
-#define BOOST_LOCK_DUR INTELLI_MS(50)
+#define INPUT_INTERVAL (INTELLI_MS(200) * NSEC_PER_MSEC)
+#define BOOST_LOCK_DUR (INTELLI_MS(50) * NSEC_PER_MSEC)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
@@ -54,7 +54,7 @@
 #define INTELLIPLIER (THREAD_CAPACITY * MULT_FACTOR)
 #define DIV_FACTOR 100000
 #define INTELLIPLY(x) (x * INTELLIPLIER)
-#define INTELLIDIV(x) (DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR))
+#define INTELLIDIV(x) DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR)
 
 static int high_load_threshold = HIGH_LOAD_FREQ;
 static int max_load_freq = MAX_LOAD_FREQ;
@@ -62,7 +62,6 @@ static ktime_t last_boost_time;
 static ktime_t last_input;
 
 static struct delayed_work intelli_plug_work;
-static struct delayed_work up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct workqueue_struct *updown_wq;
 static struct mutex intelli_plug_mutex;
@@ -365,7 +364,10 @@ static unsigned int calculate_thread_stats(void)
 		return max_cpus_online;
 	}
 */
-	if (num_offline_cpus() > 0)
+	if (max_cpus_online == num_online_cpus() &&
+		nr_cpus < max_cpus_online)
+		nr_cpus += (measure_freqs() >> 1);
+	else if (num_offline_cpus() > 0)
 		nr_cpus += measure_freqs();
 
 	nr_run_last = nr_cpus;
@@ -389,15 +391,15 @@ static void update_per_cpu_stat(void)
 	}
 }
 
-static void cpu_up_down_work(struct work_struct *work)
+static atomic_t work_in_progress = ATOMIC_INIT(0);
+
+static void cpu_up_down_work(int target)
 {
 	unsigned int cpu = smp_processor_id();
 	int primary;
 	long l_nr_threshold;
-	int target;
 	struct ip_cpu_info *l_ip_info;
-
-	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
+	ktime_t now, delta;
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -413,8 +415,6 @@ static void cpu_up_down_work(struct work_struct *work)
 	now = ktime_get();
 	delta = ktime_sub(now, last_input);
 
-	target = READ_ONCE(target_cpus);
-
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 	primary = cpumask_first(cpu_online_mask);
 	if (!online_cpus)
@@ -425,7 +425,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-			(ktime_compare(delta, local_boost) <= 0))
+			(ktime_compare(delta, boost_lock_duration) <= 0))
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -465,6 +465,7 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
+	int local_target;
 	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
@@ -477,14 +478,19 @@ static void intelli_plug_work_fn(struct work_struct *work)
 #elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
-		WRITE_ONCE(target_cpus, calculate_thread_stats());
-		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
+
+	atomic_set(&work_in_progress, 1);
+	local_target = calculate_thread_stats();
+	cpu_up_down_work(READ_ONCE(local_target));
+	atomic_set(&work_in_progress, 0);
 	}
 }
 
 void intelli_boost(void)
 {
-	ktime_t delta, local_input_interval = ms_to_ktime(min_input_interval);
+	ktime_t delta;
+	unsigned int local_counter;
+	const unsigned int max_count = 2;
 
 	if (!intelliread() || !is_display_on() || unlikely(intellinit))
 		return;
@@ -492,14 +498,24 @@ void intelli_boost(void)
 	last_input = ktime_get();
 	delta = ktime_sub(last_input, last_boost_time);
 
-	if ((ktime_compare(delta, local_input_interval)  < 0) ||
+	if ((ktime_compare(delta, min_input_interval)  < 0) ||
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
-
-	WRITE_ONCE(target_cpus, cpus_boosted);
-	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
-	last_boost_time = ktime_get();
+retry:
+	if (READ_ONCE(local_counter) >= max_count) {
+		WRITE_ONCE(local_counter, 0);
+		return;
+	}
+	if (atomic_read(&work_in_progress) == 0) {
+		cpu_up_down_work(READ_ONCE(cpus_boosted));
+		last_boost_time = ktime_get();
+		WRITE_ONCE(local_counter, 0);
+		return;
+	} else {
+		WRITE_ONCE(local_counter, local_counter + 1);
+		goto retry;
+	}
 }
 
 static void cycle_cpus(void)
@@ -670,7 +686,6 @@ static int intelli_plug_start(void)
 	}
 
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
-	INIT_DELAYED_WORK(&up_down_work, cpu_up_down_work);
 
 	register_power_suspend(&intelli_suspend_data);
 
@@ -698,7 +713,6 @@ static void intelli_plug_stop(void)
 	unsigned int cpu;
 	struct down_lock *dl;
 
-	cancel_delayed_work(&up_down_work);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
