@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	11
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -94,11 +94,13 @@ static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
 static unsigned int nr_run_hysteresis = DEFAULT_HYSTERESIS;
 static unsigned int debug_intelli_plug = 0;
 
-struct ip_suspend {
-	struct mutex intellisleep_mutex;
-	unsigned int intelli_suspended;
+enum {
+	INTELLI_AWAKE = 0,
+	INTELLI_SUSPENDED = 1,
 };
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct ip_suspend, i_suspend_data);
+
+struct mutex intellisleep_mutex;
+unsigned int intelli_suspended;
 
 struct wake_lock ipwlock;
 
@@ -362,12 +364,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		!hotplug_ready)
 		goto reschedule;
 
-	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
-		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	mutex_lock(&intellisleep_mutex);
+	if (intelli_suspended) {
+		mutex_unlock(&intellisleep_mutex);
 		return;
 	}
-	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	mutex_unlock(&intellisleep_mutex);
 
 	now = ktime_get();
 	delta = ktime_sub(now, last_input);
@@ -425,12 +427,12 @@ static void intelli_plug_work_fn(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
 
-	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
-		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	mutex_lock(&intellisleep_mutex);
+	if (intelli_suspended) {
+		mutex_unlock(&intellisleep_mutex);
 		return;
 	}
-	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	mutex_unlock(&intellisleep_mutex);
 
 #if defined(INTELLI_USE_ATOMIC)
 	if (atomic_read(&intelli_plug_active) == 1) {
@@ -486,6 +488,7 @@ static void cycle_cpus(void)
 		report_current_cpus();
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, 0);
 	wake_unlock(&ipwlock);
+	pr_info("Intelliplug Start: Cycle Cpus Complete\n");
 }
 
 
@@ -519,7 +522,7 @@ static void recycle_cpus(void)
 static void intelli_suspend(struct power_suspend * h)
 {
 	struct down_lock *dl;
-	unsigned int cpu;
+	unsigned int cpu = cpumask_next(0, cpu_possible_mask);
 #if defined(INTELLI_USE_ATOMIC)
 	if (atomic_read(&intelli_plug_active) == 0)
 #elif defined(INTELLI_USE_SPINLOCK)
@@ -528,14 +531,14 @@ static void intelli_suspend(struct power_suspend * h)
 #endif
 
 	cancel_delayed_work(&intelli_plug_work);
+	mutex_lock(&intellisleep_mutex);
+	if (intelli_suspended == 0)
+		intelli_suspended = 1;
+	mutex_unlock(&intellisleep_mutex);
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
-		mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 0)
-			per_cpu(i_suspend_data, cpu).intelli_suspended = 1;
-		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-		if (cpu != 0 && cpu_online(cpu) && check_down_lock(cpu))
+		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 	}
 }
@@ -551,10 +554,8 @@ static void intelli_resume(struct power_suspend * h)
 		return;
 #endif
 
-	for_each_possible_cpu(cpu) {
-		if (per_cpu(i_suspend_data, cpu).intelli_suspended == 1);
-			per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
-	}
+	if (intelli_suspended == 1);
+		intelli_suspended = 0;
 	recycle_cpus();
 }
 
@@ -572,12 +573,12 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 	if (!hotplug_ready)
 		return NOTIFY_OK;
 
-	mutex_lock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
-	if (per_cpu(i_suspend_data, cpu).intelli_suspended) {
-		mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	mutex_lock(&intellisleep_mutex);
+	if (intelli_suspended) {
+		mutex_unlock(&intellisleep_mutex);
 		return NOTIFY_OK;
 	}
-	mutex_unlock(&per_cpu(i_suspend_data, cpu).intellisleep_mutex);
+	mutex_unlock(&intellisleep_mutex);
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DEAD:
@@ -628,11 +629,8 @@ static int intelli_plug_start(void)
 	}
 
 	mutex_init(&intelli_plug_mutex);
-	for_each_possible_cpu(cpu) {
-		mutex_init(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
-		per_cpu(i_suspend_data, cpu).intelli_suspended = 0;
-		pr_info("Intelliplug Start: CPU %u is Online\n", cpu);
-	}
+	mutex_init(&(intellisleep_mutex));
+	intelli_suspended = 0;
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
@@ -680,9 +678,7 @@ static void intelli_plug_stop(void)
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
-	for_each_possible_cpu(cpu) {
-		mutex_destroy(&(per_cpu(i_suspend_data, cpu).intellisleep_mutex));
-	}
+	mutex_destroy(&(intellisleep_mutex));
 	mutex_destroy(&intelli_plug_mutex);
 }
 
