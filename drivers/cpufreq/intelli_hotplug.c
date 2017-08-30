@@ -27,15 +27,15 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	12
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define INTELLI_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define DEFAULT_SAMPLING_RATE INTELLI_MS(70)
-#define INPUT_INTERVAL (INTELLI_MS(200) * NSEC_PER_MSEC)
-#define BOOST_LOCK_DUR (INTELLI_MS(50) * NSEC_PER_MSEC)
-#define DEFAULT_NR_CPUS_BOOSTED DEFAULT_MAX_CPUS_ONLINE
+#define DEFAULT_SAMPLING_RATE INTELLI_MS(100)
+#define INPUT_INTERVAL INTELLI_MS(286)
+#define BOOST_LOCK_DUR INTELLI_MS(71)
+#define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
 #define DEFAULT_HYSTERESIS (NR_CPUS << 1)
@@ -47,6 +47,7 @@
 */
 
 #define HIGH_LOAD_FREQ 1566000
+#define MAX_LOAD_FREQ 1890000
 #define THREAD_CAPACITY 289
 #define CPU_NR_THRESHOLD 722
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
@@ -56,6 +57,7 @@
 #define INTELLIDIV(x) (DIV_ROUND_UP((x * INTELLIPLIER), DIV_FACTOR))
 
 static int high_load_threshold = HIGH_LOAD_FREQ;
+static int max_load_freq = MAX_LOAD_FREQ;
 static ktime_t last_boost_time;
 static ktime_t last_input;
 
@@ -381,9 +383,6 @@ static void update_per_cpu_stat(void)
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
 }
-#if 0
-static atomic_t work_in_progress = ATOMIC_INIT(0);
-#endif
 
 static void cpu_up_down_work(struct work_struct *work)
 {
@@ -392,7 +391,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
-	ktime_t now, delta;
+
+	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
 
 	if (thermal_core_controlled ||
 		!hotplug_ready)
@@ -420,7 +420,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-			(ktime_compare(delta, boost_lock_duration) <= 0))
+			(ktime_compare(delta, local_boost) <= 0))
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
@@ -479,18 +479,15 @@ static void intelli_plug_work_fn(struct work_struct *work)
 
 void intelli_boost(void)
 {
-	ktime_t delta;
-#if 0
-	unsigned int local_counter;
-	const unsigned int max_count = 2;
-#endif
+	ktime_t delta, local_input_interval = ms_to_ktime(min_input_interval);
+
 	if (!intelliread() || !is_display_on() || unlikely(intellinit))
 		return;
 
 	last_input = ktime_get();
 	delta = ktime_sub(last_input, last_boost_time);
 
-	if ((ktime_compare(delta, min_input_interval)  < 0) ||
+	if ((ktime_compare(delta, local_input_interval)  < 0) ||
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
@@ -498,22 +495,6 @@ void intelli_boost(void)
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
-#if 0
-retry:
-	if (READ_ONCE(local_counter) >= max_count) {
-		WRITE_ONCE(local_counter, 0);
-		return;
-	}
-	if (atomic_read(&work_in_progress) == 0) {
-		cpu_up_down_work(cpus_boosted);
-		last_boost_time = ktime_get();
-		WRITE_ONCE(local_counter, 0);
-		return;
-	} else {
-		WRITE_ONCE(local_counter, local_counter + 1);
-		goto retry;
-	}
-#endif
 }
 
 static void cycle_cpus(void)
@@ -770,23 +751,15 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%lu\n", object);			\
 }
 
-#define show_ktimer(object)				\
-static ssize_t show_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	unsigned long myktimer = ktime_to_ms(object);	\
-	return sprintf(buf, "%lu\n", myktimer);			\
-}
-
 show_one(cpus_boosted);
 show_one(min_cpus_online);
 show_one(max_cpus_online);
 show_long(full_mode_profile);
 show_one(cpu_nr_run_threshold);
 show_one(debug_intelli_plug);
-show_ktimer(min_input_interval);
-show_ktimer(boost_lock_duration);
-show_ktimer(down_lock_dur);
+show_long(min_input_interval);
+show_long(boost_lock_duration);
+show_long(down_lock_dur);
 show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
@@ -839,7 +812,6 @@ static ssize_t store_##object		\
 }
 
 store_one_long(full_mode_profile, 0, 4);
-store_one_long(def_sampling_ms, 5, 1000);
 
 #define store_one_ktimer(object, min, max)		\
 static ssize_t store_##object		\
@@ -859,13 +831,14 @@ static ssize_t store_##object		\
 	if (input == object) {			\
 		return count;			\
 	}					\
-	object = ms_to_ktime(INTELLI_MS(input));				\
+	object = INTELLI_MS(input);				\
 	return count;				\
 }
 
 store_one_ktimer(min_input_interval, boost_lock_duration, 5000);
 store_one_ktimer(boost_lock_duration, down_lock_dur, 5000);
 store_one_ktimer(down_lock_dur, 50, boost_lock_duration);
+store_one_ktimer(def_sampling_ms, 5, 1000);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
