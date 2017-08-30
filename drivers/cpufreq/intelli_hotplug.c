@@ -324,18 +324,21 @@ static unsigned int calculate_thread_stats(void)
 			break;
 	}
 
+	if (READ_ONCE(intellicount == 0)
+		last_pass = ktime_get();
+
+	now = ktime_get();
+	delta = ktime_sub(now, last_pass);
+	
 	if (READ_ONCE(intellicount) >= max_intellicount &&
 		max_cpus_online > num_online_cpus() &&
 		(ktime_compare(delta, timeout) >= 0)) {
 		WRITE_ONCE(intellicount, 0);
 		nr_run_last = nr_cpus;
-		last_pass = ktime_get();
 		return max_cpus_online;
 	}
 
 	nr_run_last = nr_cpus;
-	now = ktime_get();
-	delta = ktime_sub(now, last_pass);
 
 	if (max_cpus_online > num_online_cpus() &&
 		nr_cpus < max_cpus_online) {
