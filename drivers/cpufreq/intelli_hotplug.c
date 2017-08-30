@@ -420,7 +420,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	if (target < online_cpus) {
 		if ((online_cpus <= cpus_boosted) &&
-			(ktime_compare(delta, local_boost) <= 0))
+			(ktime_compare(delta, local_boost) < 0))
 			goto reschedule;
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
