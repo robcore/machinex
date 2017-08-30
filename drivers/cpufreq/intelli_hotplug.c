@@ -48,6 +48,8 @@
 #define THREAD_CAPACITY 289
 #define CPU_NR_THRESHOLD 722
 #define MULT_FACTOR DEFAULT_MAX_CPUS_ONLINE
+#define INTELLIPLIER (THREAD_CAPACITY * MULT_FACTOR)
+#define INTELLIPLY(x) ((x) * INTELLIPLIER)
 #define DIV_FACTOR 100000
 
 static ktime_t last_boost_time;
@@ -91,7 +93,7 @@ static unsigned long min_input_interval = INPUT_INTERVAL;
 static unsigned long boost_lock_duration = BOOST_LOCK_DUR;
 static unsigned long def_sampling_ms = DEFAULT_SAMPLING_RATE;
 static unsigned int nr_fshift = DEFAULT_NR_FSHIFT;
-static unsigned int nr_run_hysteresis = DEFAULT_HYSTERESIS;
+static unsigned long nr_run_hysteresis = DEFAULT_HYSTERESIS;
 static unsigned int debug_intelli_plug = 0;
 
 enum {
@@ -111,30 +113,30 @@ do {				\
 } while (0)
 
 static unsigned long nr_run_thresholds_balance[] = {
-	((THREAD_CAPACITY * 775 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 1225 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 1550 * MULT_FACTOR) / DIV_FACTOR),
+	(INTELLIPLY(791) / DIV_FACTOR),
+	(INTELLIPLY(1237) / DIV_FACTOR),
+	(INTELLIPLY(1444) / DIV_FACTOR),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_machinex[] = {
-	((THREAD_CAPACITY * 585 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 825 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 1100 * MULT_FACTOR) / DIV_FACTOR),
+	(INTELLIPLY(585) / DIV_FACTOR),
+	(INTELLIPLY(825) / DIV_FACTOR),
+	(INTELLIPLY(1100) / DIV_FACTOR),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_performance[] = {
-	((THREAD_CAPACITY * 375 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 625 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR),
+	(INTELLIPLY(375) / DIV_FACTOR),
+	(INTELLIPLY(625) / DIV_FACTOR),
+	(INTELLIPLY(875) / DIV_FACTOR),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_conservative[] = {
-	((THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 1625 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 2125 * MULT_FACTOR) / DIV_FACTOR),
+	(INTELLIPLY(875) / DIV_FACTOR),
+	(INTELLIPLY(1625) / DIV_FACTOR),
+	(INTELLIPLY(2125) / DIV_FACTOR),
 	UINT_MAX
 };
 
@@ -143,13 +145,13 @@ static unsigned long nr_run_thresholds_disable[] = {
 };
 
 static unsigned long nr_run_thresholds_tri[] = {
-	((THREAD_CAPACITY * 625 * MULT_FACTOR) / DIV_FACTOR),
-	((THREAD_CAPACITY * 875 * MULT_FACTOR) / DIV_FACTOR),
+	(INTELLIPLY(625) / DIV_FACTOR),
+	(INTELLIPLY(875) / DIV_FACTOR),
 	UINT_MAX
 };
 
 static unsigned long nr_run_thresholds_eco[] = {
-	((THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR),
+	(INTELLIPLY(380) / DIV_FACTOR),
 	UINT_MAX
 };
 
@@ -283,9 +285,9 @@ static void report_current_cpus(void)
 }
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
-#define MAX_INTELLICOUNT_TOUT (2 * MSEC_PER_SEC)
+#define MAX_INTELLICOUNT_TOUT (8 * MSEC_PER_SEC)
 static unsigned int intellicount = 0;
-static const unsigned int max_intellicount = 5;
+static const unsigned int max_intellicount = NR_CPUS;
 static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 
 static unsigned int calculate_thread_stats(void)
@@ -305,9 +307,10 @@ static unsigned int calculate_thread_stats(void)
 		else
 			current_profile = nr_run_profiles[7];
 
+		
 		nr_threshold = current_profile[nr_cpus - 1];
-		nr_run_hysteresis = (max_cpus_online * 2);
-		nr_fshift = max_cpus_online - 1;
+		nr_fshift = num_offline_cpus() + 1;
+		nr_run_hysteresis = ((max_cpus_online << 2) / num_online_cpus());
 
 		bigshift = FSHIFT - nr_fshift;
 
@@ -321,9 +324,11 @@ static unsigned int calculate_thread_stats(void)
 	}
 
 	if (READ_ONCE(intellicount) >= max_intellicount &&
-		max_cpus_online > num_online_cpus()) {
+		max_cpus_online > num_online_cpus() &&
+		(ktime_compare(delta, timeout) >= 0)) {
 		WRITE_ONCE(intellicount, 0);
 		nr_run_last = nr_cpus;
+		last_pass = ktime_get();
 		return max_cpus_online;
 	}
 
@@ -332,9 +337,8 @@ static unsigned int calculate_thread_stats(void)
 	delta = ktime_sub(now, last_pass);
 
 	if (max_cpus_online > num_online_cpus() &&
-		nr_cpus < max_cpus_online && (ktime_compare(delta, timeout) >= 0)) {
+		nr_cpus < max_cpus_online) {
 		WRITE_ONCE(intellicount, intellicount + 1);
-		last_pass = ktime_get();
 	}
 
 	return nr_cpus;
