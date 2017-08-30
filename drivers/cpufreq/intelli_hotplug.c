@@ -312,9 +312,6 @@ static int measure_freqs(void)
 		if (get_intellirate(cpu) >
 			high_load_threshold)
 			freq_load += 1;
-		else if (get_intellirate(cpu) <
-			low_load_freq)
-			freq_load -= 1;
 	}
 	put_online_cpus();
 
@@ -371,7 +368,7 @@ static unsigned int calculate_thread_stats(void)
 		return max_cpus_online;
 	}
 */
-	if (nr_cpus < max_cpus_online)
+	if (num_offline_cpus() > 0)
 		nr_cpus += measure_freqs();
 
 	nr_run_last = nr_cpus;
