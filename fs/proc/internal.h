@@ -64,6 +64,9 @@ struct proc_maps_private {
 #endif
 };
 
+struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode);
+
+
 void proc_init_inodecache(void);
 
 /*
