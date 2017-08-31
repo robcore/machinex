@@ -313,15 +313,11 @@ static int measure_freqs(void)
 	return freq_load;
 }
 
-static unsigned int calculate_thread_stats(unsigned int update_last_run)
+static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_cpus;
 	unsigned long *current_profile;
 	//ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
-
-	if (update_last_run)
-		nr_run_last = update_last_run;
-		return 0;
 
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
@@ -480,7 +476,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	if (intelliread()) {
 #endif
 		atomic_set(&from_boost, 0);
-		WRITE_ONCE(target_cpus, calculate_thread_stats(0));
+		WRITE_ONCE(target_cpus, calculate_thread_stats());
 		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	}
 }
@@ -502,7 +498,7 @@ void intelli_boost(void)
 
 	atomic_set(&from_boost, 1);
 	WRITE_ONCE(target_cpus, cpus_boosted);
-	calculate_thread_stats(target_cpus);
+	calculate_thread_stats();
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }
