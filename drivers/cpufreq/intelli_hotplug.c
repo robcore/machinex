@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	12
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -287,7 +287,7 @@ static int check_down_lock(unsigned int cpu)
 
 static void report_current_cpus(void)
 {
-	online_cpus = num_online_cpus();
+	WRITE_ONCE(online_cpus, num_online_cpus());
 }
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
@@ -384,6 +384,8 @@ static void update_per_cpu_stat(void)
 	}
 }
 
+static atomic_t from_boost = ATOMIC_INIT(0);
+
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
@@ -415,12 +417,14 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (target == online_cpus)
 		goto reschedule;
 
-	now = ktime_get();
-	delta = ktime_sub(now, last_input);
-	if (ktime_compare(delta, local_boost) < 0)
-			goto reschedule;
-
-	if (target < online_cpus) {
+	if (target < online_cpus > min_cpus_online) {
+		if ((atomic_read(&from_boost) == 1) && 
+			online_cpus == cpus_boosted) {
+			now = ktime_get();
+			delta = ktime_sub(now, last_input);
+			if (ktime_compare(delta, local_boost) <= 0)
+				goto reschedule;
+		}
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == primary || cpu_is_offline(cpu))
@@ -438,7 +442,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			if (num_online_cpus() == target)
 				break;
 		}
-	} else if (target > online_cpus) {
+	} else if (target > online_cpus < max_cpus_online) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == primary || cpu_online(cpu) ||
 				!is_cpu_allowed(cpu))
@@ -471,6 +475,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 #elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
+		atomic_set(&from_boost, 0);
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
 		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	}
@@ -491,6 +496,7 @@ void intelli_boost(void)
 	    cpus_boosted <= min_cpus_online)
 		return;
 
+	atomic_set(&from_boost, 1);
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
@@ -1012,4 +1018,3 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>, \
 MODULE_DESCRIPTION("'intell_plug' - An intelligent cpu hotplug driver for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPLv2");
-
