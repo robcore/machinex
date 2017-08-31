@@ -553,9 +553,7 @@ static void recycle_cpus(void)
 		}
 	}
 	intellinit = false;
-	if (!online_cpus)
-		report_current_cpus();
-	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
+	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, def_sampling_ms);
 }
 
 static void intelli_suspend(struct power_suspend * h)
