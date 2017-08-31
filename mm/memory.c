@@ -218,6 +218,7 @@ void tlb_gather_mmu(struct mmu_gather *tlb, struct mm_struct *mm, unsigned long 
 
 	/* Is it from 0 to ~0? */
 	tlb->fullmm     = !(start | (end+1));
+	tlb->need_flush_all = 0;
 	tlb->start	= start;
 	tlb->end	= end;
 	tlb->need_flush = 0;
