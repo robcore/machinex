@@ -54,7 +54,7 @@ extern const struct inode_operations proc_net_inode_operations;
 extern const struct inode_operations proc_pid_link_inode_operations;
 
 struct proc_maps_private {
-	struct pid *pid;
+	struct inode *inode;
 	struct task_struct *task;
 	struct mm_struct *mm;
 #ifdef CONFIG_MMU
