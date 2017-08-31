@@ -32,9 +32,9 @@
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define INTELLI_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define DEFAULT_SAMPLING_RATE INTELLI_MS(100)
-#define INPUT_INTERVAL INTELLI_MS(286)
-#define BOOST_LOCK_DUR INTELLI_MS(71)
+#define DEFAULT_SAMPLING_RATE INTELLI_MS(100UL)
+#define INPUT_INTERVAL INTELLI_MS(286UL)
+#define BOOST_LOCK_DUR INTELLI_MS(71UL)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
@@ -417,7 +417,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	now = ktime_get();
 	delta = ktime_sub(now, last_input);
-	if (ktime_compare(delta, local_boost) < 0))
+	if (ktime_compare(delta, local_boost) < 0)
 			goto reschedule;
 
 	if (target < online_cpus) {
