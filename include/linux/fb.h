@@ -482,9 +482,15 @@ struct fb_info {
 #endif
 	char __iomem *screen_base;	/* Virtual address */
 	unsigned long screen_size;	/* Amount of ioremapped VRAM or 0 */ 
-	void *pseudo_palette;		/* Fake palette of 16 colors */ 
+	void *pseudo_palette;		/* Fake palette of 16 colors */
+enum {
+	FBINFO_STATE_RUNNING = 0,
+	FBINFO_STATE_SUSPENDED = 1,
+};
+#if 0
 #define FBINFO_STATE_RUNNING	0
 #define FBINFO_STATE_SUSPENDED	1
+#endif
 	u32 state;			/* Hardware state i.e suspend */
 	void *fbcon_par;                /* fbcon use-only private area */
 	/* From here on everything is device dependent */

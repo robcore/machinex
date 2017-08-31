@@ -45,6 +45,7 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
+#include <linux/sysfs_helpers.h>
 
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
@@ -357,12 +358,9 @@ static ssize_t mdp_set_rgb(struct device *dev,
 
 	sscanf(buf, "%d %d %d", &r, &g, &b);
 
-	if (r < 0 || r > 32768)
-		return -EINVAL;
-	if (g < 0 || g > 32768)
-		return -EINVAL;
-	if (b < 0 || b > 32768)
-		return -EINVAL;
+	sanitize_min_max(r, 0, 32768);
+	sanitize_min_max(g, 0, 32768);
+	sanitize_min_max(b, 0, 32768);
 
 	pr_info("%s: r=%d g=%d b=%d", __func__, r, g, b);
 
@@ -585,8 +583,8 @@ static int msm_fb_remove(struct platform_device *pdev)
 	unregister_framebuffer(mfd->fbi);
 
 	if (lcd_backlight_registered) {
-		lcd_backlight_registered = 0;
 		led_classdev_unregister(&backlight_led);
+		lcd_backlight_registered = 0;
 	}
 
 #ifdef MSM_FB_ENABLE_DBGFS
