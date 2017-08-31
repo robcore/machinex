@@ -2106,7 +2106,7 @@ static int rgb_offset[][RGB_COMPENSATION] = {
 */
 {-1, 0, 0, 0, 0, -2, -2, 0, -3, -3, 1, -4, -5,
 3, -5, -3, 3, -3, -5, 4, -6, -13, 8, -13,},
-{0, 0, 0, 0, 0, -2, -2, 0, -3, -3, 1, -4, -5,
+{-1, 0, 0, 0, 0, -2, -2, 0, -3, -3, 1, -4, -5,
 3, -5, -3, 3, -3, -5, 4, -6, -13, 8, -13,},
 {-1, 0, 0, 0, 0, -1, -2, 0, -3, -3, 1, -4, -5,
 3, -5, -3, 3, -3, -5, 4, -6, -12, 8, -13,},
@@ -3137,7 +3137,7 @@ static int rgb_offset_Tulip_first[][RGB_COMPENSATION] = {
 	R87 G87 B87 R51 G51 B51 R35 G35 B35
 	R23 G23 B23 R11 G11 B11
 */
-	{0, 1, 0, -1, 0, -2, 0, 0, 0, -2, 2, -4, -4, 2, -6, -3, 3, -6, -2, 3, -8, 0, 4, -9,},
+	{-1, 0, -1, -1, 0, -2, 0, 0, 0, -2, 2, -4, -4, 2, -6, -3, 3, -6, -2, 3, -8, 0, 4, -9,},
 	{0, 0, 0, -1, 0, -1, -1, 0, -1, -1, 1, -4, -3, 2, -6, -3, 3, -6, -4, 3, -8, 0, 4, -10,},
 	{0, 0, 0, -1, 0, -1, -1, 0, -1, -3, 1, -4, -3, 2, -6, -3, 2, -6, -5, 2, -8, 0, 4, -10,},
 	{0, 0, 0, -1, 0, -1, -2, 0, -3, -1, 1, -2, -3, 2, -5, -3, 2, -6, -2, 2, -6, 0, 5, -12,},
@@ -3202,8 +3202,8 @@ static int rgb_offset_Tulip_first[][RGB_COMPENSATION] = {
 static void gamma_init_Tulip_first(
 				struct SMART_DIM *pSmart, char *str, int size)
 {
-	long long candela_level[S6E8FA_TABLE_MAX] = { -1, };
-	int bl_index[S6E8FA_TABLE_MAX] = { -1, };
+	long long candela_level[S6E8FA_TABLE_MAX] = {-1, };
+	int bl_index[S6E8FA_TABLE_MAX] = {-1, };
 	int gamma_setting[GAMMA_SET_MAX];
 
 	long long temp_cal_data = 0;
@@ -3267,7 +3267,7 @@ static void gamma_init_Tulip_first(
 
 	for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
 		point_index = S6E8FA_ARRAY[cnt+1];
-		if (cnt == (S6E8FA_TABLE_MAX - 1)) {
+		if(cnt == (S6E8FA_TABLE_MAX - 1)) {
 			temp_cal_data =
 			((long long)(candela_coeff_2p2[point_index])) *
 			((long long)(bl_level));
@@ -3465,9 +3465,9 @@ void get_min_lux_table(char *str, int size)
 static void mtp_sorting(struct SMART_DIM *psmart)
 {
 	int sorting[GAMMA_SET_MAX] = {
-		0, 1, 6, 8, 12, 15, 18, 21, 24, 27, 30, /* R*/
-		2, 3, 7, 9, 13, 16, 19, 22, 25, 28, 31, /* G */
-		4, 5, 8, 10, 14, 17, 20, 23, 26, 29, 32, /* B */
+		0, 1, 6, 9, 12, 15, 18, 21, 24, 27, 30, /* R*/
+		2, 3, 7, 10, 13, 16, 19, 22, 25, 28, 31, /* G */
+		4, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, /* B */
 	};
 	int loop;
 	char *pfrom, *pdest;
@@ -3479,8 +3479,8 @@ static void mtp_sorting(struct SMART_DIM *psmart)
 		pdest[loop] = pfrom[sorting[loop]];
 
 	if (get_ldi_chip() == LDI_MAGNA) {
-		pdest[10] = 2;
-		pdest[21] = 3;
+		pdest[10] = 3;
+		pdest[21] = 2;
 		pdest[32] = 2;
 	}
 }

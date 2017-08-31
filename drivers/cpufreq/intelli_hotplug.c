@@ -498,7 +498,6 @@ void intelli_boost(void)
 
 	atomic_set(&from_boost, 1);
 	WRITE_ONCE(target_cpus, cpus_boosted);
-	calculate_thread_stats();
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }

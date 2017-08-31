@@ -45,8 +45,6 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
-#include <linux/cpufreq.h>
-#include <linux/sysfs_helpers.h>
 
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
@@ -122,7 +120,6 @@ static int mdp_bl_scale_config(struct msm_fb_data_type *mfd,
 static void msm_fb_scale_bl(__u32 bl_max, __u32 *bl_lvl);
 static void msm_fb_commit_wq_handler(struct work_struct *work);
 static int msm_fb_pan_idle(struct msm_fb_data_type *mfd);
-static struct wake_lock mx_fb;
 
 #ifdef MSM_FB_ENABLE_DBGFS
 
@@ -360,9 +357,12 @@ static ssize_t mdp_set_rgb(struct device *dev,
 
 	sscanf(buf, "%d %d %d", &r, &g, &b);
 
-	sanitize_min_max(r, 0, 32768);
-	sanitize_min_max(g, 0, 32768);
-	sanitize_min_max(b, 0, 32768);
+	if (r < 0 || r > 32768)
+		return -EINVAL;
+	if (g < 0 || g > 32768)
+		return -EINVAL;
+	if (b < 0 || b > 32768)
+		return -EINVAL;
 
 	pr_info("%s: r=%d g=%d b=%d", __func__, r, g, b);
 
@@ -585,8 +585,8 @@ static int msm_fb_remove(struct platform_device *pdev)
 	unregister_framebuffer(mfd->fbi);
 
 	if (lcd_backlight_registered) {
-		led_classdev_unregister(&backlight_led);
 		lcd_backlight_registered = 0;
+		led_classdev_unregister(&backlight_led);
 	}
 
 #ifdef MSM_FB_ENABLE_DBGFS
@@ -616,8 +616,8 @@ static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
 	fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
 
 	ret = msm_fb_suspend_sub(mfd);
-	if (ret) {
-		pr_err("msm_fb: failed to suspend! %d\n", ret);
+	if (ret != 0) {
+		printk(KERN_ERR "msm_fb: failed to suspend! %d\n", ret);
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
 	} else {
 		pdev->dev.power.power_state = state;
@@ -1198,16 +1198,15 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 	msm_fb_pan_idle(mfd);
 	if (mfd->op_enable == 0) {
 		if (blank_mode == FB_BLANK_UNBLANK) {
-			wake_lock(&mx_fb);
 			mfd->suspend.panel_power_on = TRUE;
 			/* if unblank is called when system is in suspend,
 			wait for the system to resume */
 			while (mfd->suspend.op_suspend) {
 				pr_debug("waiting for system to resume\n");
-				msleep(1);
+				msleep(20);
 			}
-			wake_unlock(&mx_fb);
-		} else
+		}
+		else
 			mfd->suspend.panel_power_on = FALSE;
 	}
 	return msm_fb_blank_sub(blank_mode, info, mfd->op_enable);
@@ -1842,7 +1841,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		}
 	}
 #endif /* MSM_FB_ENABLE_DBGFS */
-	wake_lock_init(&mx_fb, WAKE_LOCK_SUSPEND, "machinex_blank_boost");
 
 	return ret;
 }

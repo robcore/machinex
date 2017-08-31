@@ -45,7 +45,6 @@ struct file;
 
 #define FB_MISC_PRIM_COLOR	1
 #define FB_MISC_1ST_DETAIL	2	/* First Detailed Timing is preferred */
-#define FB_MISC_HDMI		4
 struct fb_chroma {
 	__u32 redx;	/* in fraction of 1024 */
 	__u32 greenx;
@@ -482,7 +481,7 @@ struct fb_info {
 #endif
 	char __iomem *screen_base;	/* Virtual address */
 	unsigned long screen_size;	/* Amount of ioremapped VRAM or 0 */ 
-	void *pseudo_palette;		/* Fake palette of 16 colors */
+	void *pseudo_palette;		/* Fake palette of 16 colors */ 
 #define FBINFO_STATE_RUNNING	0
 #define FBINFO_STATE_SUSPENDED	1
 	u32 state;			/* Hardware state i.e suspend */
@@ -550,7 +549,7 @@ static inline struct apertures_struct *alloc_apertures(unsigned int max_num) {
 #define fb_memcpy_fromfb sbus_memcpy_fromio
 #define fb_memcpy_tofb sbus_memcpy_toio
 
-#elif defined(__i386__) || defined(__alpha__) || defined(__x86_64__) || defined(__hppa__) || defined(__sh__) || defined(__powerpc__) || defined(__avr32__) || defined(__bfin__) || defined(__arm__)
+#elif defined(__i386__) || defined(__alpha__) || defined(__x86_64__) || defined(__hppa__) || defined(__sh__) || defined(__powerpc__) || defined(__avr32__) || defined(__bfin__)
 
 #define fb_readb __raw_readb
 #define fb_readw __raw_readw
@@ -783,17 +782,5 @@ extern int fb_find_mode(struct fb_var_screeninfo *var,
 			unsigned int dbsize,
 			const struct fb_videomode *default_mode,
 			unsigned int default_bpp);
-
-/* Convenience logging macros */
-#define fb_err(fb_info, fmt, ...)					\
-	pr_err("fb%d: " fmt, (fb_info)->node, ##__VA_ARGS__)
-#define fb_notice(info, fmt, ...)					\
-	pr_notice("fb%d: " fmt, (fb_info)->node, ##__VA_ARGS__)
-#define fb_warn(fb_info, fmt, ...)					\
-	pr_warn("fb%d: " fmt, (fb_info)->node, ##__VA_ARGS__)
-#define fb_info(fb_info, fmt, ...)					\
-	pr_info("fb%d: " fmt, (fb_info)->node, ##__VA_ARGS__)
-#define fb_dbg(fb_info, fmt, ...)					\
-	pr_debug("fb%d: " fmt, (fb_info)->node, ##__VA_ARGS__)
 
 #endif /* _LINUX_FB_H */

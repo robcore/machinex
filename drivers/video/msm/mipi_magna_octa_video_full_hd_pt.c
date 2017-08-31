@@ -1423,7 +1423,7 @@ static int get_elvss_value(int candela, int id2, int id3)
 			elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
 			break;
 		case 250 ... 265:
-			elvss_value = DEFAULT_ELVSS + (0x01 << ELVSS_LSL);
+			elvss_value = DEFAULT_ELVSS + (0x02 << ELVSS_LSL);
 			break;
 		case 266 ... 282:
 			elvss_value = DEFAULT_ELVSS + (0x01 << ELVSS_LSL);
@@ -1483,7 +1483,7 @@ static int get_elvss_value(int candela, int id2, int id3)
 		elvss_value = DEFAULT_ELVSS + (0x04 << ELVSS_LSL);
 		break;
 	case 250 ... 265:
-		elvss_value = DEFAULT_ELVSS + (0x02 << ELVSS_LSL);
+		elvss_value = DEFAULT_ELVSS + (0x03 << ELVSS_LSL);
 		break;
 	case 266 ... 282:
 		elvss_value = DEFAULT_ELVSS + (0x01 << ELVSS_LSL);

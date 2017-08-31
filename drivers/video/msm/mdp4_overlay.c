@@ -3754,7 +3754,11 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	int ret, mixer;
 	struct mdp4_overlay_pipe *pipe;
 
-	if (mfd == NULL || info == NULL)
+	if (mfd == NULL) {
+		return -ENODEV;
+	}
+
+	if (info == NULL)
 		return -ENODEV;
 
 	if (info->node != 0 || mfd->cont_splash_done) {	/* primary */
@@ -3776,7 +3780,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 
 	if (ret < 0) {
 		mutex_unlock(&mfd->dma->ov_mutex);
-
+		pr_debug("%s: blt mode is required! ret=%d\n", __func__, ret);
 		return ret;
 	}
 

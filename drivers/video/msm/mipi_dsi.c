@@ -53,7 +53,7 @@
 #include "mipi_samsung_oled-8930.h"
 #endif
 
-static struct wake_lock prometheus_rising;
+struct wake_lock prometheus_rising;
 
 static bool display_on = true;
 bool is_display_on()
@@ -476,7 +476,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mx_is_booting = 0;
 		pr_info("Hello? I'm different.\n");
 	} else {
-		wake_lock_timeout(&prometheus_rising, 100);
+		wake_lock_timeout(&prometheus_rising, msecs_to_jiffies(100));
 		pr_info("Take me with you\n");
 	}
 

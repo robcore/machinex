@@ -606,6 +606,9 @@ static struct fb_videomode *fb_create_modedb(unsigned char *edid, int *dbsize)
 	int num = 0, i, first = 1;
 	int ver, rev;
 
+	ver = edid[EDID_STRUCT_VERSION];
+	rev = edid[EDID_STRUCT_REVISION];
+
 	mode = kzalloc(50 * sizeof(struct fb_videomode), GFP_KERNEL);
 	if (mode == NULL)
 		return NULL;
@@ -615,9 +618,6 @@ static struct fb_videomode *fb_create_modedb(unsigned char *edid, int *dbsize)
 		kfree(mode);
 		return NULL;
 	}
-
-	ver = edid[EDID_STRUCT_VERSION];
-	rev = edid[EDID_STRUCT_REVISION];
 
 	*dbsize = 0;
 
@@ -1010,20 +1010,13 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 	while (pos < edid[2]) {
 		u8 len = edid[pos] & 0x1f, type = (edid[pos] >> 5) & 7;
 		pr_debug("Data block %u of %u bytes\n", type, len);
-		if (type == 2) {
+		if (type == 2)
 			for (i = pos; i < pos + len; i++) {
 				u8 idx = edid[pos + i] & 0x7f;
 				svd[svd_n++] = idx;
 				pr_debug("N%sative mode #%d\n",
 					 edid[pos + i] & 0x80 ? "" : "on-n", idx);
 			}
-		} else if (type == 3 && len >= 3) {
-			/* Check Vendor Specific Data Block.  For HDMI,
-			   it is always 00-0C-03 for HDMI Licensing, LLC. */
-			if (edid[pos + 1] == 3 && edid[pos + 2] == 0xc &&
-			    edid[pos + 3] == 0)
-				specs->misc |= FB_MISC_HDMI;
-		}
 		pos += len + 1;
 	}
 
@@ -1033,7 +1026,7 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 
 	for (i = 0; i < (128 - edid[2]) / DETAILED_TIMING_DESCRIPTION_SIZE;
 	     i++, block += DETAILED_TIMING_DESCRIPTION_SIZE)
-		if (PIXEL_CLOCK != 0)
+		if (PIXEL_CLOCK)
 			edt[num++] = block - edid;
 
 	/* Yikes, EDID data is totally useless */
@@ -1380,100 +1373,6 @@ int fb_get_mode(int flags, u32 val, struct fb_var_screeninfo *var, struct fb_inf
 	kfree(timings);
 	return err;
 }
-
-#ifdef CONFIG_VIDEOMODE_HELPERS
-int fb_videomode_from_videomode(const struct videomode *vm,
-				struct fb_videomode *fbmode)
-{
-	unsigned int htotal, vtotal;
-
-	fbmode->xres = vm->hactive;
-	fbmode->left_margin = vm->hback_porch;
-	fbmode->right_margin = vm->hfront_porch;
-	fbmode->hsync_len = vm->hsync_len;
-
-	fbmode->yres = vm->vactive;
-	fbmode->upper_margin = vm->vback_porch;
-	fbmode->lower_margin = vm->vfront_porch;
-	fbmode->vsync_len = vm->vsync_len;
-
-	/* prevent division by zero in KHZ2PICOS macro */
-	fbmode->pixclock = vm->pixelclock ?
-			KHZ2PICOS(vm->pixelclock / 1000) : 0;
-
-	fbmode->sync = 0;
-	fbmode->vmode = 0;
-	if (vm->flags & DISPLAY_FLAGS_HSYNC_HIGH)
-		fbmode->sync |= FB_SYNC_HOR_HIGH_ACT;
-	if (vm->flags & DISPLAY_FLAGS_VSYNC_HIGH)
-		fbmode->sync |= FB_SYNC_VERT_HIGH_ACT;
-	if (vm->flags & DISPLAY_FLAGS_INTERLACED)
-		fbmode->vmode |= FB_VMODE_INTERLACED;
-	if (vm->flags & DISPLAY_FLAGS_DOUBLESCAN)
-		fbmode->vmode |= FB_VMODE_DOUBLE;
-	fbmode->flag = 0;
-
-	htotal = vm->hactive + vm->hfront_porch + vm->hback_porch +
-		 vm->hsync_len;
-	vtotal = vm->vactive + vm->vfront_porch + vm->vback_porch +
-		 vm->vsync_len;
-	/* prevent division by zero */
-	if (htotal && vtotal) {
-		fbmode->refresh = vm->pixelclock / (htotal * vtotal);
-	/* a mode must have htotal and vtotal != 0 or it is invalid */
-	} else {
-		fbmode->refresh = 0;
-		return -EINVAL;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(fb_videomode_from_videomode);
-
-#ifdef CONFIG_OF
-static inline void dump_fb_videomode(const struct fb_videomode *m)
-{
-	pr_debug("fb_videomode = %ux%u@%uHz (%ukHz) %u %u %u %u %u %u %u %u %u\n",
-		 m->xres, m->yres, m->refresh, m->pixclock, m->left_margin,
-		 m->right_margin, m->upper_margin, m->lower_margin,
-		 m->hsync_len, m->vsync_len, m->sync, m->vmode, m->flag);
-}
-
-/**
- * of_get_fb_videomode - get a fb_videomode from devicetree
- * @np: device_node with the timing specification
- * @fb: will be set to the return value
- * @index: index into the list of display timings in devicetree
- *
- * DESCRIPTION:
- * This function is expensive and should only be used, if only one mode is to be
- * read from DT. To get multiple modes start with of_get_display_timings ond
- * work with that instead.
- */
-int of_get_fb_videomode(struct device_node *np, struct fb_videomode *fb,
-			int index)
-{
-	struct videomode vm;
-	int ret;
-
-	ret = of_get_videomode(np, &vm, index);
-	if (ret)
-		return ret;
-
-	ret = fb_videomode_from_videomode(&vm, fb);
-	if (ret)
-		return ret;
-
-	pr_debug("%s: got %dx%d display mode from %s\n",
-		of_node_full_name(np), vm.hactive, vm.vactive, np->name);
-	dump_fb_videomode(fb);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(of_get_fb_videomode);
-#endif /* CONFIG_OF */
-#endif /* CONFIG_VIDEOMODE_HELPERS */
-
 #else
 int fb_parse_edid(unsigned char *edid, struct fb_var_screeninfo *var)
 {
