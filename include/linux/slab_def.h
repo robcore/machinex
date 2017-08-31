@@ -8,13 +8,17 @@
  */
 
 struct kmem_cache {
+	struct array_cache __percpu *cpu_cache;
+
 /* 1) Cache tunables. Protected by cache_chain_mutex */
+
 	unsigned int batchcount;
 	unsigned int limit;
 	unsigned int shared;
 
 	unsigned int size;
 	struct reciprocal_value reciprocal_buffer_size;
+
 /* 2) touched by every alloc & free from the backend */
 
 	unsigned int flags;		/* constant flags */
@@ -71,23 +75,7 @@ struct kmem_cache {
 	struct memcg_cache_params *memcg_params;
 #endif
 
-/* 6) per-cpu/per-node data, touched during every alloc/free */
-	/*
-	 * We put array[] at the end of kmem_cache, because we want to size
-	 * this array to nr_cpu_ids slots instead of NR_CPUS
-	 * (see kmem_cache_init())
-	 * We still use [NR_CPUS] and not [1] or [0] because cache_cache
-	 * is statically defined, so we reserve the max number of cpus.
-	 *
-	 * We also need to guarantee that the list is able to accomodate a
-	 * pointer for each node since "nodelists" uses the remainder of
-	 * available pointers.
-	 */
-	struct kmem_cache_node **node;
-	struct array_cache *array[NR_CPUS + MAX_NUMNODES];
-	/*
-	 * Do not add fields after array[]
-	 */
+	struct kmem_cache_node *node[MAX_NUMNODES];
 };
 
 #endif	/* _LINUX_SLAB_DEF_H */
