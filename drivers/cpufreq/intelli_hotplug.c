@@ -417,7 +417,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (target == online_cpus)
 		goto reschedule;
 
-	if (target < online_cpus > min_cpus_online) {
+	if (online_cpus > min_cpus_online && target < online_cpus) {
 		if ((atomic_read(&from_boost) == 1) && 
 			online_cpus == cpus_boosted) {
 			now = ktime_get();
@@ -442,7 +442,7 @@ static void cpu_up_down_work(struct work_struct *work)
 			if (num_online_cpus() == target)
 				break;
 		}
-	} else if (target > online_cpus < max_cpus_online) {
+	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == primary || cpu_online(cpu) ||
 				!is_cpu_allowed(cpu))
