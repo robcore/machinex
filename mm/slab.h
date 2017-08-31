@@ -170,26 +170,81 @@ static inline bool is_root_cache(struct kmem_cache *s)
 	return !s->memcg_params || s->memcg_params->is_root_cache;
 }
 
-static inline void memcg_bind_pages(struct kmem_cache *s, int order)
-{
-	if (!is_root_cache(s))
-		atomic_add(1 << order, &s->memcg_params->nr_pages);
-}
-
-static inline void memcg_release_pages(struct kmem_cache *s, int order)
-{
-	if (is_root_cache(s))
-		return;
-
-	if (atomic_sub_and_test((1 << order), &s->memcg_params->nr_pages))
-		mem_cgroup_destroy_cache(s);
-}
-
 static inline bool slab_equal_or_root(struct kmem_cache *s,
 					struct kmem_cache *p)
 {
 	return (p == s) ||
 		(s->memcg_params && (p == s->memcg_params->root_cache));
+}
+
+/*
+ * We use suffixes to the name in memcg because we can't have caches
+ * created in the system with the same name. But when we print them
+ * locally, better refer to them with the base name
+ */
+static inline const char *cache_name(struct kmem_cache *s)
+{
+	if (!is_root_cache(s))
+		return s->memcg_params->root_cache->name;
+	return s->name;
+}
+
+/*
+ * Note, we protect with RCU only the memcg_caches array, not per-memcg caches.
+ * That said the caller must assure the memcg's cache won't go away. Since once
+ * created a memcg's cache is destroyed only along with the root cache, it is
+ * true if we are going to allocate from the cache or hold a reference to the
+ * root cache by other means. Otherwise, we should hold either the slab_mutex
+ * or the memcg's slab_caches_mutex while calling this function and accessing
+ * the returned value.
+ */
+static inline struct kmem_cache *
+cache_from_memcg_idx(struct kmem_cache *s, int idx)
+{
+	struct kmem_cache *cachep;
+	struct memcg_cache_params *params;
+
+	if (!s->memcg_params)
+		return NULL;
+
+	rcu_read_lock();
+	params = rcu_dereference(s->memcg_params);
+	cachep = params->memcg_caches[idx];
+	rcu_read_unlock();
+
+	/*
+	 * Make sure we will access the up-to-date value. The code updating
+	 * memcg_caches issues a write barrier to match this (see
+	 * memcg_register_cache()).
+	 */
+	smp_read_barrier_depends();
+	return cachep;
+}
+
+static inline struct kmem_cache *memcg_root_cache(struct kmem_cache *s)
+{
+	if (is_root_cache(s))
+		return s;
+	return s->memcg_params->root_cache;
+}
+
+static __always_inline int memcg_charge_slab(struct kmem_cache *s,
+					     gfp_t gfp, int order)
+{
+	if (!memcg_kmem_enabled())
+		return 0;
+	if (is_root_cache(s))
+		return 0;
+	return __memcg_charge_slab(s, gfp, order);
+}
+
+static __always_inline void memcg_uncharge_slab(struct kmem_cache *s, int order)
+{
+	if (!memcg_kmem_enabled())
+		return;
+	if (is_root_cache(s))
+		return;
+	__memcg_uncharge_slab(s, order);
 }
 #else
 static inline bool is_root_cache(struct kmem_cache *s)
@@ -197,18 +252,35 @@ static inline bool is_root_cache(struct kmem_cache *s)
 	return true;
 }
 
-static inline void memcg_bind_pages(struct kmem_cache *s, int order)
-{
-}
-
-static inline void memcg_release_pages(struct kmem_cache *s, int order)
-{
-}
-
 static inline bool slab_equal_or_root(struct kmem_cache *s,
 				      struct kmem_cache *p)
 {
 	return true;
+}
+
+static inline const char *cache_name(struct kmem_cache *s)
+{
+	return s->name;
+}
+
+static inline struct kmem_cache *
+cache_from_memcg_idx(struct kmem_cache *s, int idx)
+{
+	return NULL;
+}
+
+static inline struct kmem_cache *memcg_root_cache(struct kmem_cache *s)
+{
+	return s;
+}
+
+static inline int memcg_charge_slab(struct kmem_cache *s, gfp_t gfp, int order)
+{
+	return 0;
+}
+
+static inline void memcg_uncharge_slab(struct kmem_cache *s, int order)
+{
 }
 #endif
 
