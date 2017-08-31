@@ -90,9 +90,7 @@ struct completion mdp_ppp_comp;
 struct semaphore mdp_ppp_mutex;
 struct semaphore mdp_pipe_ctrl_mutex;
 
-#define MDP_TIMERD ((50 * MSEC_PER_SEC)/MSEC_PER_SEC)
-
-unsigned long mdp_timer_duration = (MDP_TIMERD);   /* 50 msecond */
+unsigned long mdp_timer_duration = 50;   /* 50 msecond */
 
 boolean mdp_ppp_waiting = FALSE;
 uint32 mdp_tv_underflow_cnt;
@@ -1940,7 +1938,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 				/* send workqueue to turn off mdp power */
 				mod_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
-						   mdp_timer_duration);
+						   msecs_to_jiffies(mdp_timer_duration));
 			}
 		}
 	} else {
@@ -2003,7 +2001,7 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 				/* send workqueue to turn off mdp power */
 				mod_delayed_work(mdp_pipe_ctrl_wq,
 						   &mdp_pipe_ctrl_worker,
-						   mdp_timer_duration);
+						   msecs_to_jiffies(mdp_timer_duration));
 			}
 			mutex_unlock(&mdp_suspend_mutex);
 		} else if ((!mdp_all_blocks_off) && (!mdp_current_clk_on)) {
