@@ -95,10 +95,11 @@ function adbcountdown()
 
 function ADBRETRY()
 {
+
+ONLINE=`adb get-state 2> /dev/null`
+
 adb start-server
 adbcountdown
-ONLINE=`adb get-state 2> /dev/null`
-WAITFORME=`adb 'wait-for-usb-device'`
 if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adbcountdown
@@ -115,27 +116,8 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	adb reboot recovery
 	adb kill-server
 else
-	echo "waiting for connected device";
-	secs=30   # Set interval (duration) in seconds.
-	SECONDS=0   # Reset $SECONDS; counting of seconds will (re)start from 0(-ish).
-
-	while (( SECONDS < secs )) || [[ $ONLINE == device ]]; do    # Loop until interval has elapsed.
-		WAITFORME;
-	done
-
-	if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
-		echo "connected"
-		adbcountdown
-		adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		countdown
-		adb push $OUTFOLDER.zip /storage/extSdCard
-		echo "push complete, booting recovery"
-		adb reboot recovery
-		adb kill-server
-	else
-		echo "Nothing Connected, giving up"
-		adb kill-server
-	fi;
+	echo "Nothing Connected, giving up"
+	adb kill-server
 fi;
 }
 
