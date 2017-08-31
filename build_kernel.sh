@@ -112,33 +112,38 @@ adbcountdown
 ONLINE=`adb get-state 2> /dev/null`
 if [[ $ONLINE == recovery ]]; then
 	echo "recovery connected"
+	adbcountdown
 	adb push $OUTFOLDER.zip /external_sd
 	echo "push complete"
 	adb kill-server
-	adbcountdown
 elif [[ $ONLINE == device ]]; then
 	echo "connected"
 	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
+	adbcountdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete"
 	adb kill-server
-	adbcountdown
 else
 	adb kill-server
 	adbcountdown
 	echo "trying wireless" #fallback to wireless
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	if [[ $ONLINE == device ]]; then
 		echo "wireless connected"
+		adbcountdown
 		adb push $OUTFOLDER.zip /storage/extSdCard
 		echo "push complete"
 	else
+		adb kill-server
+		adbcountdown
 		echo "disconnected, retrying"
-		adb connect 192.168.1.103
+		adb connect 192.168.1.111
 		adbcountdown
 		if [[ $ONLINE == device ]]; then
+			adbcountdown
 			adb push $OUTFOLDER.zip /storage/extSdCard
+			adbcountdown
 			echo "pushed"
 		else
 			echo "push failed"
@@ -314,7 +319,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 else
 	adb kill-server
 	echo "trying wireless" #fallback to wireless
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	if [[ $ONLINE == device ]]; then
 		echo "wireless connected"
@@ -322,7 +327,7 @@ else
 		echo "push complete"
 	else
 		echo "disconnected, retrying"
-		adb connect 192.168.1.103
+		adb connect 192.168.1.111
 		adbcountdown
 		if [[ $ONLINE == device ]]; then
 			adb push $OUTFOLDER.zip /storage/extSdCard
@@ -498,7 +503,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "push complete"
 else
 	echo "trying wireless" #fallback to wireless
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	if [[ $ONLINE == device ]]; then
 		echo "wireless connected"
@@ -506,7 +511,7 @@ else
 		echo "push complete"
 	else
 		echo "disconnected, retrying"
-		adb connect 192.168.1.103
+		adb connect 192.168.1.111
 		adbcountdown
 		if [[ $ONLINE == device ]]; then
 			adb push $OUTFOLDER.zip /storage/extSdCard
@@ -669,7 +674,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "push complete"
 else
 	echo "trying wireless" #fallback to wireless
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	if [[ $ONLINE == device ]]; then
 		echo "wireless connected"
@@ -677,7 +682,7 @@ else
 		echo "push complete"
 	else
 		echo "disconnected, retrying"
-		adb connect 192.168.1.103
+		adb connect 192.168.1.111
 		adbcountdown
 		if [[ $ONLINE == device ]]; then
 			adb push $OUTFOLDER.zip /storage/extSdCard
@@ -873,7 +878,7 @@ else
 	adb kill-server
 	adbcountdown
 	echo "trying wireless" #fallback to wireless
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	if [[ $ONLINE == device ]]; then
 		echo "wireless connected"
@@ -881,7 +886,7 @@ else
 		echo "push complete"
 	else
 		echo "disconnected, retrying"
-		adb connect 192.168.1.103
+		adb connect 192.168.1.111
 		adbcountdown
 		if [[ $ONLINE == device ]]; then
 			adb push $OUTFOLDER.zip /storage/extSdCard
@@ -978,7 +983,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "push complete"
 else
 	echo "trying wireless" #fallback to wireless
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	if [[ $ONLINE == device ]]; then
 		echo "wireless connected"
@@ -986,7 +991,7 @@ else
 		echo "push complete"
 	else
 		echo "disconnected, retrying"
-		adb connect 192.168.1.103
+		adb connect 192.168.1.111
 		adbcountdown
 		if [[ $ONLINE == device ]]; then
 			adb push $OUTFOLDER.zip /storage/extSdCard
