@@ -29,6 +29,7 @@
 #include <linux/time.h>
 #include <linux/aio.h>
 #include "logger.h"
+#include <linux/powersuspend.h>
 
 #include <asm/ioctls.h>
 #ifdef CONFIG_SEC_DEBUG
@@ -57,6 +58,7 @@ struct logger_log {
 	size_t			size;	/* size of the log */
 };
 
+static bool log_suspended = false;
 static unsigned int log_enabled = 1;
 
 module_param(log_enabled, uint, 0644);
@@ -100,9 +102,10 @@ static inline struct logger_log *file_get_log(struct file *file)
 {
 	if (file->f_mode & FMODE_READ) {
 		struct logger_reader *reader = file->private_data;
+
 		return reader->log;
-	} else
-		return file->private_data;
+	}
+	return file->private_data;
 }
 
 /*
@@ -149,8 +152,7 @@ static size_t get_user_hdr_len(int ver)
 {
 	if (ver < 2)
 		return sizeof(struct user_logger_entry_compat);
-	else
-		return sizeof(struct logger_entry);
+	return sizeof(struct logger_entry);
 }
 
 static ssize_t copy_header_to_user(int ver, struct logger_entry *entry,
@@ -465,6 +467,21 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 	return count;
 }
 
+static void log_power_suspend(struct power_suspend *handler)
+{
+	log_suspended = true;
+}
+
+static void log_late_resume(struct power_suspend *handler)
+{
+	log_suspended = false;
+}
+
+static struct power_suspend log_suspend = {
+	.suspend = log_power_suspend,
+	.resume = log_late_resume,
+};
+
 /*
  * logger_aio_write - our write method, implementing support for write(),
  * writev(), and aio_write(). Writes are our fast path, and we try to optimize
@@ -473,15 +490,15 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 			 unsigned long nr_segs, loff_t ppos)
 {
-	struct logger_log *log = file_get_log(iocb->ki_filp);
-	size_t orig;
+	struct logger_log *log;
+	size_t orig, ret = 0;
 	struct logger_entry header;
 	struct timespec now;
-	ssize_t ret = 0;
 
-  	if (!log_enabled)
+  	if (!log_enabled || log_suspended)
      	return 0;
 
+	log = file_get_log(iocb->ki_filp);
 	getnstimeofday(&now);
 
 	header.pid = current->tgid;
@@ -533,11 +550,6 @@ static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 
 	/* wake up any blocked readers */
 	wake_up_interruptible(&log->wq);
-
-#ifdef CONFIG_SEC_DEBUG
-	if (strncmp(klog_buf, "!@", 2) == 0)
-		printk(KERN_INFO "%s\n", klog_buf);
-#endif
 
 	return ret;
 }
@@ -798,42 +810,12 @@ static int __init init_log(struct logger_log *log)
 		return ret;
 	}
 
-	printk(KERN_INFO "logger: created %luK log '%s'\n",
-	       (unsigned long) log->size >> 10, log->misc.name);
+	pr_info("Logger: created %luK log '%s'\n",
+		(unsigned long) log->size >> 10, log->misc.name);
 
 	return 0;
 }
-#if (defined CONFIG_SEC_DEBUG && defined CONFIG_SEC_DEBUG_SUBSYS)
-int sec_debug_subsys_set_logger_info(
-	struct sec_debug_subsys_logger_log_info *log_info)
-{
-	/*
-	struct secdbg_logger_log_info log_info = {
-		.stinfo = {
-			.buffer_offset = offsetof(struct logger_log, buffer),
-			.w_off_offset = offsetof(struct logger_log, w_off),
-			.head_offset = offsetof(struct logger_log, head),
-			.size_offset = offsetof(struct logger_log, size),
-			.size_t_typesize = sizeof(size_t),
-		},
-	};
-	*/
-	log_info->stinfo.buffer_offset = offsetof(struct logger_log, buffer);
-	log_info->stinfo.w_off_offset = offsetof(struct logger_log, w_off);
-	log_info->stinfo.head_offset = offsetof(struct logger_log, head);
-	log_info->stinfo.size_offset = offsetof(struct logger_log, size);
-	log_info->stinfo.size_t_typesize = sizeof(size_t);
-	log_info->main.log_paddr = __pa(&log_main);
-	log_info->main.buffer_paddr = __pa(_buf_log_main);
-	log_info->system.log_paddr = __pa(&log_system);
-	log_info->system.buffer_paddr = __pa(_buf_log_system);
-	log_info->events.log_paddr = __pa(&log_events);
-	log_info->events.buffer_paddr = __pa(_buf_log_events);
-	log_info->radio.log_paddr = __pa(&log_radio);
-	log_info->radio.buffer_paddr = __pa(_buf_log_radio);
-	return 0;
-}
-#endif
+
 static int __init logger_init(void)
 {
 	int ret;
@@ -854,11 +836,13 @@ static int __init logger_init(void)
 	if (unlikely(ret))
 		goto out;
 
-#ifdef CONFIG_SEC_DEBUG
-	sec_getlog_supply_loggerinfo(_buf_log_main, _buf_log_radio,
-				     _buf_log_events, _buf_log_system);
-#endif
+	register_power_suspend(&log_suspend);
+
 out:
 	return ret;
 }
 device_initcall(logger_init);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Robert Love, <rlove@google.com>");
+MODULE_DESCRIPTION("Android Logger");
