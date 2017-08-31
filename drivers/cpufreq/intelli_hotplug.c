@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	12
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -384,8 +384,6 @@ static void update_per_cpu_stat(void)
 	}
 }
 
-static atomic_t from_boost = ATOMIC_INIT(0);
-
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
@@ -407,9 +405,6 @@ static void cpu_up_down_work(struct work_struct *work)
 		!hotplug_ready)
 		goto reschedule;
 
-	now = ktime_get();
-	delta = ktime_sub(now, last_input);
-
 	target = READ_ONCE(target_cpus);
 
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
@@ -420,11 +415,12 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (target == online_cpus)
 		goto reschedule;
 
-	if (target < online_cpus) {
-		if ((atomic_read(&from_boost) == 1)  &&
-			(online_cpus <= cpus_boosted &&
-			ktime_compare(delta, local_boost) < 0))
+	now = ktime_get();
+	delta = ktime_sub(now, last_input);
+	if (ktime_compare(delta, local_boost) < 0))
 			goto reschedule;
+
+	if (target < online_cpus) {
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
 			if (cpu == primary || cpu_is_offline(cpu))
@@ -475,7 +471,6 @@ static void intelli_plug_work_fn(struct work_struct *work)
 #elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
 #endif
-		atomic_set(&from_boost, 0);
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
 		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	}
@@ -496,7 +491,6 @@ void intelli_boost(void)
 	    cpus_boosted <= min_cpus_online)
 		return;
 
-	atomic_set(&from_boost, 1);
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
