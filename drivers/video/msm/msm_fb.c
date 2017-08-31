@@ -45,6 +45,7 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
+#include <linux/cpufreq.h>
 #include <linux/sysfs_helpers.h>
 
 #ifdef CONFIG_SEC_DEBUG
