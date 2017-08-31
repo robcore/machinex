@@ -53,10 +53,18 @@ extern void create_boot_cache(struct kmem_cache *, const char *name,
 			size_t size, unsigned long flags);
 
 struct mem_cgroup;
+
+int slab_unmergeable(struct kmem_cache *s);
+struct kmem_cache *find_mergeable(size_t size, size_t align,
+		unsigned long flags, const char *name, void (*ctor)(void *));
 #ifdef CONFIG_SLUB
 struct kmem_cache *
 __kmem_cache_alias(const char *name, size_t size, size_t align,
 		   unsigned long flags, void (*ctor)(void *));
+
+unsigned long kmem_cache_flags(unsigned long object_size,
+	unsigned long flags, const char *name,
+	void (*ctor)(void *));
 
 unsigned long kmem_cache_flags(unsigned long object_size,
 	unsigned long flags, const char *name,
