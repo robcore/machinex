@@ -94,10 +94,8 @@ static int platform_lcd_probe(struct platform_device *pdev)
 
 	plcd = devm_kzalloc(&pdev->dev, sizeof(struct platform_lcd),
 			    GFP_KERNEL);
-	if (!plcd) {
-		dev_err(dev, "no memory for state\n");
+	if (!plcd)
 		return -ENOMEM;
-	}
 
 	plcd->us = dev;
 	plcd->pdata = pdata;
@@ -112,12 +110,9 @@ static int platform_lcd_probe(struct platform_device *pdev)
 	platform_lcd_set_power(plcd->lcd, FB_BLANK_NORMAL);
 
 	return 0;
-
- err:
-	return err;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 static int platform_lcd_suspend(struct device *dev)
 {
 	struct platform_lcd *plcd = dev_get_drvdata(dev);
@@ -137,10 +132,10 @@ static int platform_lcd_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static SIMPLE_DEV_PM_OPS(platform_lcd_pm_ops, platform_lcd_suspend,
 			platform_lcd_resume);
-#endif
 
 #ifdef CONFIG_OF
 static const struct of_device_id platform_lcd_of_match[] = {
@@ -153,10 +148,7 @@ MODULE_DEVICE_TABLE(of, platform_lcd_of_match);
 static struct platform_driver platform_lcd_driver = {
 	.driver		= {
 		.name	= "platform-lcd",
-		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm	= &platform_lcd_pm_ops,
-#endif
 		.of_match_table = of_match_ptr(platform_lcd_of_match),
 	},
 	.probe		= platform_lcd_probe,
