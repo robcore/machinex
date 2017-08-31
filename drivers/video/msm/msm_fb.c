@@ -1190,7 +1190,6 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 
 	if (blank_mode == FB_BLANK_POWERDOWN) {
-		cpu_boost_event();
 		intelli_boost();
 		struct fb_event event;
 		event.info = info;
