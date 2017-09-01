@@ -233,13 +233,14 @@ int force_page_cache_readahead(struct address_space *mapping, struct file *filp,
 }
 
 #define MAX_READAHEAD   ((512*4096)/PAGE_CACHE_SIZE)
+unsigned long max_readahead_pages = MAX_READAHEAD;
 /*
  * Given a desired number of PAGE_CACHE_SIZE readahead pages, return a
  * sensible upper limit.
  */
 unsigned long max_sane_readahead(unsigned long nr)
 {
-	return min(nr, MAX_READAHEAD);
+	return min(nr, max_readahead_pages);
 }
 
 /*
