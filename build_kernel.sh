@@ -199,7 +199,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
 	#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
-	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
+	SUMMY=($(md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip))
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
@@ -236,7 +236,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo "cleanup finished"
 	fi;
 
-	echo "MD5 and Kernel Location: $SUMMY"
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
+	echo "MD5 is $SUMMY"
 else
 	WASHME
 	echo "Build failed, Skipped Ramdisk Creation"
@@ -292,8 +293,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
 	#SDB=`adb shell md5sum /storage/extSdCard/$OUTFOLDER.zip`
-	SUMMY=`md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip`
-	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
+	SUMMY=($(md5sum /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip))
 	echo "$OUTFOLDER was built on:" >> ~/machinex/datetracker.txt
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
@@ -303,7 +303,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	cd ~/machinex
 	WASHME
 	echo "cleanup finished"
-	echo "MD5 and Kernel Location: $SUMMY"
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
+	echo "MD5 is $SUMMY"
 else
 	WASHME
 	echo "Build failed, Skipped Ramdisk Creation"
