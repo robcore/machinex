@@ -45,6 +45,8 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
+#include <linux/wakelock.h>
+#include <linux/display_state.h>
 
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
