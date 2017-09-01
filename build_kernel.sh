@@ -97,8 +97,8 @@ function ADBRETRY()
 {
 
 ONLINE=`adb get-state 2> /dev/null`
-
 adb start-server
+adb usb
 adbcountdown
 if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
