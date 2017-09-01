@@ -142,7 +142,8 @@ else
 	else
 		echo "Nothing Connected, giving up"
 		adb kill-server
-fi
+	fi;
+fi;
 }
 
 function NORMAL()
