@@ -1035,9 +1035,9 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 		return -ENODEV;
 	}
 
-	if (blank_mode = FB_BLANK_UNBLANK)
+	if (blank_mode == FB_BLANK_UNBLANK)
 		pr_info("[MSM FB]: msm_fb_blank_sub calls FB_BLANK_UNBLANK with value %d\n," blank_mode);
-	else if (blank_mode = FB_BLANK_POWERDOWN)
+	else if (blank_mode == FB_BLANK_POWERDOWN)
 		pr_info("[MSM FB]: msm_fb_blank_sub calls FB_BLANK_POWERDOWN with value %d\n," blank_mode);
 	else
 		pr_info("[MSM FB]: msm_fb_blank_sub called with value %d\n," blank_mode);
@@ -1200,9 +1200,9 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 
-	if (blank_mode = FB_BLANK_UNBLANK)
+	if (blank_mode == FB_BLANK_UNBLANK)
 		pr_info("[MSM FB]: msm_fb_blank calls FB_BLANK_UNBLANK with value %d\n," blank_mode);
-	else if (blank_mode = FB_BLANK_POWERDOWN)
+	else if (blank_mode == FB_BLANK_POWERDOWN)
 		pr_info("[MSM FB]: msm_fb_blank calls FB_BLANK_POWERDOWN with value %d\n," blank_mode);
 	else
 		pr_info("[MSM FB]: msm_fb_blank called with value %d\n," blank_mode);

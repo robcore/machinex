@@ -1052,9 +1052,9 @@ fb_blank(struct fb_info *info, int blank)
  	if (blank >= FB_BLANK_POWERDOWN)
  		blank = FB_BLANK_POWERDOWN;
 
-	if (blank = FB_BLANK_UNBLANK)
+	if (blank == FB_BLANK_UNBLANK)
 		pr_info("[fbmem]: fb_blank calls FB_BLANK_UNBLANK with value %d\n," blank);
-	else if (blank = FB_BLANK_POWERDOWN)
+	else if (blank == FB_BLANK_POWERDOWN)
 		pr_info("[fbmem]: fb_blank calls FB_BLANK_POWERDOWN with value %d\n," blank);
 	else
 		pr_info("[fbmem]: fb_blank called with value %d\n," blank);
