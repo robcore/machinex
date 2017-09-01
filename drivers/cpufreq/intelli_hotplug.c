@@ -791,7 +791,7 @@ static ssize_t store_##object		\
 	return count;				\
 }
 
-store_one(cpus_boosted, 0, 4);
+store_one(cpus_boosted, 0, max_cpus_online);
 store_one(debug_intelli_plug, 0, 1);
 
 #define store_one_long(object, min, max)		\
