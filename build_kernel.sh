@@ -110,7 +110,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
 	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
-	sleep 1
+	countdown
 	adb push $OUTFOLDER.zip /storage/extSdCard
 	echo "push complete, booting recovery"
 	adb reboot recovery
