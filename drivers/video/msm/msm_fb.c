@@ -597,39 +597,6 @@ static int msm_fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
-static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	struct msm_fb_data_type *mfd;
-	int ret = 0;
-
-	MSM_FB_DEBUG("msm_fb_suspend\n");
-
-	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
-
-	if ((!mfd) || (mfd->key != MFD_KEY))
-		return 0;
-
-	msm_fb_pan_idle(mfd);
-
-	console_lock();
-	fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
-
-	ret = msm_fb_suspend_sub(mfd);
-	if (ret != 0) {
-		printk(KERN_ERR "msm_fb: failed to suspend! %d\n", ret);
-		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
-	} else {
-		pdev->dev.power.power_state = state;
-	}
-
-	console_unlock();
-	return ret;
-}
-#else
-#define msm_fb_suspend NULL
-#endif
-
 static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
@@ -693,6 +660,41 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	return 0;
 }
 
+#if defined(CONFIG_PM) && !defined(CONFIG_HAS_POWERSUSPEND)
+static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct msm_fb_data_type *mfd;
+	int ret = 0;
+
+	pr_info("[MSM FB]: msm_fb_suspend requested INFO_STATE_SUSPENDED\n");
+
+	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+
+	if ((!mfd) || (mfd->key != MFD_KEY))
+		return 0;
+
+	msm_fb_pan_idle(mfd);
+
+	console_lock();
+	fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
+
+	ret = msm_fb_suspend_sub(mfd);
+	if (ret != 0) {
+		printk(KERN_ERR "msm_fb: failed to suspend! %d\n", ret);
+		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
+	} else {
+		pdev->dev.power.power_state = state;
+		pr_info("[MSM FB]: msm_fb_suspend_sub set INFO_STATE_SUSPENDED\n");
+
+	}
+
+	console_unlock();
+	return ret;
+}
+#else
+#define msm_fb_suspend NULL
+#endif
+
 #ifdef CONFIG_PM
 static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 {
@@ -725,6 +727,8 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 		if (mfd->index == 0)
 			msm_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 				      mfd->op_enable);
+
+	pr_info("[MSM FB]: msm_fb_resume_sub set FBINFO_STATE_RUNNING\n");
 	}
 
 	mfd->suspend.op_suspend = false;
@@ -741,7 +745,7 @@ static int msm_fb_resume(struct platform_device *pdev)
 	int ret = 0;
 	struct msm_fb_data_type *mfd;
 
-	MSM_FB_DEBUG("msm_fb_resume\n");
+	pr_info("[MSM FB]: msm_fb_resume requested FBINFO_STATE_RUNNING\n");
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
 
@@ -1031,6 +1035,13 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 		return -ENODEV;
 	}
 
+	if (blank_mode = FB_BLANK_UNBLANK)
+		pr_info("[MSM FB]: msm_fb_blank_sub calls FB_BLANK_UNBLANK with value %d\n," blank_mode);
+	else if (blank_mode = FB_BLANK_POWERDOWN)
+		pr_info("[MSM FB]: msm_fb_blank_sub calls FB_BLANK_POWERDOWN with value %d\n," blank_mode);
+	else
+		pr_info("[MSM FB]: msm_fb_blank_sub called with value %d\n," blank_mode);
+
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
@@ -1188,6 +1199,13 @@ static void msm_fb_imageblit(struct fb_info *info, const struct fb_image *image)
 static int msm_fb_blank(int blank_mode, struct fb_info *info)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+
+	if (blank_mode = FB_BLANK_UNBLANK)
+		pr_info("[MSM FB]: msm_fb_blank calls FB_BLANK_UNBLANK with value %d\n," blank_mode);
+	else if (blank_mode = FB_BLANK_POWERDOWN)
+		pr_info("[MSM FB]: msm_fb_blank calls FB_BLANK_POWERDOWN with value %d\n," blank_mode);
+	else
+		pr_info("[MSM FB]: msm_fb_blank called with value %d\n," blank_mode);
 
 	if (blank_mode == FB_BLANK_POWERDOWN) {
 		struct fb_event event;

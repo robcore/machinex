@@ -1049,8 +1049,15 @@ fb_blank(struct fb_info *info, int blank)
 	struct fb_event event;
 	int ret = -EINVAL, early_ret;
 
- 	if (blank > FB_BLANK_POWERDOWN)
+ 	if (blank >= FB_BLANK_POWERDOWN)
  		blank = FB_BLANK_POWERDOWN;
+
+	if (blank = FB_BLANK_UNBLANK)
+		pr_info("[fbmem]: fb_blank calls FB_BLANK_UNBLANK with value %d\n," blank);
+	else if (blank = FB_BLANK_POWERDOWN)
+		pr_info("[fbmem]: fb_blank calls FB_BLANK_POWERDOWN with value %d\n," blank);
+	else
+		pr_info("[fbmem]: fb_blank called with value %d\n," blank);
 
 	event.info = info;
 	event.data = &blank;
@@ -1067,8 +1074,10 @@ fb_blank(struct fb_info *info, int blank)
 		 * if fb_blank is failed then revert effects of
 		 * the early blank event.
 		 */
-		if (!early_ret)
+		if (!early_ret) {
 			fb_notifier_call_chain(FB_R_EARLY_EVENT_BLANK, &event);
+			pr_info("[fbmem]: fb_blank failed: reversing value %d\n," blank);
+		}
 	}
 
  	return ret;
