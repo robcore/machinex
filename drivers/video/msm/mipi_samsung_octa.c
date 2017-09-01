@@ -25,6 +25,7 @@
 #include <linux/gpio.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/timed_output.h>
+#include <linux/display_state.h>
 /*
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
