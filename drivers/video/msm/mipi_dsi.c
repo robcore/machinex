@@ -112,9 +112,6 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	mfd = platform_get_drvdata(pdev);
 	pinfo = &mfd->panel_info;
 
-	wake_unlock(&prometheus);
-
-
 	if (mdp_rev >= MDP_REV_41)
 		mutex_lock(&mfd->dma->ov_mutex);
 	else
@@ -158,9 +155,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	MIPI_OUTP(MIPI_DSI_BASE + 0x010c, 0); /* DSI_INTL_CTRL */
 	MDP_OUTP(MDP_BASE + DSI_VIDEO_BASE, 0);
-
 	mipi_dsi_phy_ctrl(0);
-
 	mipi_dsi_ahb_ctrl(0);
 	spin_unlock_bh(&dsi_clk_lock);
 
@@ -230,11 +225,6 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	if (mipi_dsi_pdata && mipi_dsi_pdata->power_common)
 		mipi_dsi_pdata->power_common();
 
-	if (mx_is_booting)
-		mx_is_booting = 0;
-	else
-		wake_lock(&prometheus);
-
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
 #if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
 	if( is_booting == 1 ) {
@@ -253,6 +243,11 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(1);
+
+	if (mx_is_booting)
+		mx_is_booting = 0;
+	else
+		wake_lock_timeout(&prometheus, msecs_to_jiffies(500));
 
 	display_on = true;
 #ifdef CONFIG_PROMETHEUS
