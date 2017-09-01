@@ -234,7 +234,9 @@ int force_page_cache_readahead(struct address_space *mapping, struct file *filp,
 
 #define BIG_READAHEAD ((512*4096)/PAGE_CACHE_SIZE)
 #define READAHEAD_DIV 16UL
-#define MAX_READAHEAD (BIG_READAHEAD/READAHEAD_DIV)
+#define MID_READAHEAD (BIG_READAHEAD/READAHEAD_DIV)
+#define READAHEADDIVTWO 4UL
+#define MAX_READAHEAD (MID_READAHEAD/READAHEADDIVTWO)
 unsigned long max_readahead_pages = MAX_READAHEAD;
 /*
  * Given a desired number of PAGE_CACHE_SIZE readahead pages, return a
