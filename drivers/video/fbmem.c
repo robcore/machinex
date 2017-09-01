@@ -32,8 +32,6 @@
 #include <linux/device.h>
 #include <linux/efi.h>
 #include <linux/fb.h>
-#include <linux/display_state.h>
-#include <linux/sysfs_helpers.h>
 
 #include <asm/fb.h>
 #include "dlog.h"
@@ -1045,19 +1043,14 @@ fb_set_var(struct fb_info *info, struct fb_var_screeninfo *var)
 	return ret;
 }
 
-static bool display_on = true;
-bool is_display_on()
-{
-	return READ_ONCE(display_on);
-}
-
 int
 fb_blank(struct fb_info *info, int blank)
 {	
 	struct fb_event event;
 	int ret = -EINVAL, early_ret;
 
-	sanitize_min_max(blank, FB_BLANK_UNBLANK, FB_BLANK_POWERDOWN);
+ 	if (blank > FB_BLANK_POWERDOWN)
+ 		blank = FB_BLANK_POWERDOWN;
 
 	event.info = info;
 	event.data = &blank;
@@ -1067,33 +1060,15 @@ fb_blank(struct fb_info *info, int blank)
 	if (info->fbops->fb_blank)
  		ret = info->fbops->fb_blank(blank, info);
 
-	if (!ret) {
+	if (!ret)
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
-		if (blank == FB_BLANK_UNBLANK) {
-			pr_info("[fbmem]: fb_blank calls FB_BLANK_UNBLANK with value %d\n", blank);
-			display_on = true;
-		} else if (blank == FB_BLANK_POWERDOWN) {
-			pr_info("[fbmem]: fb_blank calls FB_BLANK_POWERDOWN with value %d\n", blank);
-			display_on = false;
-		} else
-			pr_info("[fbmem]: fb_blank called with value %d\n", blank);
-	} else {
+	else {
 		/*
 		 * if fb_blank is failed then revert effects of
 		 * the early blank event.
 		 */
-		if (!early_ret) {
+		if (!early_ret)
 			fb_notifier_call_chain(FB_R_EARLY_EVENT_BLANK, &event);
-			pr_info("[fbmem]: fb_blank failed: reversing value %d\n", blank);
-		}
-		if (blank == FB_BLANK_UNBLANK) {
-			pr_info("[fbmem]: fb_blank calls FB_BLANK_UNBLANK with value %d\n", blank);
-			display_on = false;
-		} else if (blank == FB_BLANK_POWERDOWN) {
-			pr_info("[fbmem]: fb_blank calls FB_BLANK_POWERDOWN with value %d\n", blank);
-			display_on = true;
-		}
-
 	}
 
  	return ret;
