@@ -675,13 +675,16 @@ static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 		mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 }
 
-
 static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 {
 	mutex_lock(&brightness_mutex);
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		if (msd.mpd->backlight_control(mfd->bl_level)) {
+			if (is_display_on() && mfd->bl_level == 0 && screen_wake_lock) {
+				mutex_unlock(&brightness_mutex);
+				return;
+			}
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}

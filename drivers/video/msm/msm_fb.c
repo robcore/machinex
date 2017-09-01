@@ -1191,6 +1191,8 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 
 	if (blank_mode == FB_BLANK_POWERDOWN) {
 		struct fb_event event;
+		if (is_display_on() && screen_wake_lock)
+			return -EBUSY;
 		event.info = info;
 		event.data = &blank_mode;
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);

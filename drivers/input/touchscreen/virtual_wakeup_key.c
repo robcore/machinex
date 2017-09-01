@@ -30,9 +30,7 @@ static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
 struct wake_lock vwklock;
 static unsigned int key_is_pressed = 0;
-static unsigned int screen_on_lock = 0;
-/*forward declaration for screen_on_lock_usage*/
-void virt_wakeup_key_trig(void);
+unsigned int screen_wake_lock = 0;
 
 static void press_key(unsigned int pressed)
 {
@@ -53,10 +51,7 @@ static void press_key(unsigned int pressed)
 
 	input_report_key(virtkeydev, KEY_WAKEUP, pressed);
 	input_sync(virtkeydev);
-	WRITE_ONCE(key_is_pressed, pressed);
-
-	if (screen_on_lock && key_is_pressed)
-		virt_wakeup_key_trig();
+	key_is_pressed = pressed;
 }
 
 /* WakeKeyReleased work func */
@@ -124,19 +119,13 @@ static struct input_handler virtkey_input_handler = {
 	.id_table	= virtkey_ids,
 };
 
-static void screenlock_decider(void)
-{
-	if (screen_on_lock)
-		virt_wakeup_key_trig();
-}
-
-static ssize_t screen_on_lock_show(struct kobject *kobj,
+static ssize_t screen_wake_lock_show(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u\n", screen_on_lock);
+	return sprintf(buf, "%u\n", screen_wake_lock);
 }
 
-static ssize_t screen_on_lock_store(struct kobject *kobj,
+static ssize_t screen_wake_lock_store(struct kobject *kobj,
  struct kobj_attribute *attr,
  const char *buf, size_t count)
 {
@@ -150,23 +139,21 @@ static ssize_t screen_on_lock_store(struct kobject *kobj,
 
 	sanitize_min_max(input, 0, 1);
 
-	if (input == screen_on_lock)
+	if (input == screen_wake_lock)
 		return count;
 
-	screen_on_lock = input;
-
-	screenlock_decider();
+	screen_wake_lock = input;
 
 	return count;
 }
 
-static struct kobj_attribute screen_on_lock_attr =
-					__ATTR(screen_on_lock, 0644,
-					screen_on_lock_show,
-					screen_on_lock_store);
+static struct kobj_attribute screen_wake_lock_attr =
+					__ATTR(screen_wake_lock, 0644,
+					screen_wake_lock_show,
+					screen_wake_lock_store);
 
 static struct attribute *virtual_wakeup_key_attrs[] = {
-	&screen_on_lock_attr.attr,
+	&screen_wake_lock_attr.attr,
 	NULL,
 };
 
