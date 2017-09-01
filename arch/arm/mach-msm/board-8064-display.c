@@ -492,7 +492,7 @@ static int mipi_dsi_power(int enable)
 
 	if (enable) {
 
-		pr_info("[lcd] DSI ON\n");
+		pr_info("[lcd][MACHINEX] DSI ON\n");
 		rc = regulator_set_optimum_mode(reg_l2, 100000);
 		if (rc < 0) {
 			pr_err("set_optimum_mode L2 failed, rc=%d\n", rc);
@@ -506,7 +506,7 @@ static int mipi_dsi_power(int enable)
 		}
 	} else {
 
-		pr_info("[lcd] DSI OFF\n");
+		pr_info("[lcd][MACHINEX] DSI OFF\n");
 		rc = regulator_set_optimum_mode(reg_l2, 100);
 		if (rc < 0) {
 			pr_err("set_optimum_mode L2 failed, rc=%d\n", rc);
@@ -886,7 +886,7 @@ static int mipi_panel_power_oled(int enable)
 
 	if (enable) {
 
-		pr_info("[lcd] PANEL ON\n");
+		pr_info("[lcd] [MACHINEX] PANEL ON\n");
 
 		/* 3000mv VCI(ANALOG) */
 		rc = regulator_set_optimum_mode(reg_L30, 100000);
@@ -919,7 +919,7 @@ static int mipi_panel_power_oled(int enable)
 #endif
 	} else {
 
-		pr_info("[lcd] PANEL OFF\n");
+		pr_info("[lcd][MACHINEX] PANEL OFF\n");
 
 #ifdef CONFIG_LCD_VDD3_BY_PMGPIO
 		gpio_set_value_cansleep(pmic_gpio4, 0);
@@ -1001,7 +1001,7 @@ static int mipi_oled_power_set(void)
 
 	if (!oled_power_on) {
 
-		pr_info("[lcd] PANEL REGULATOR SET ...\n");
+		pr_info("[lcd][MACHINEX] PANEL REGULATOR SET ...\n");
 
 #ifdef CONFIG_LCD_VDD3_BY_PMGPIO
 		pmic_gpio4 = PM8921_GPIO_PM_TO_SYS(4);
