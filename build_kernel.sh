@@ -103,7 +103,7 @@ adbcountdown
 if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adbcountdown
-	adb push $OUTFOLDER.zip /external_sd
+	adb push $1.zip /external_sd
 	echo "push complete"
 	adb kill-server
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
@@ -111,7 +111,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	adbcountdown
 	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
 	countdown
-	adb push $OUTFOLDER.zip /storage/extSdCard
+	adb push $1.zip /storage/extSdCard
 	echo "push complete, booting recovery"
 	adb reboot recovery
 	adb kill-server
@@ -185,7 +185,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		read repadb
 		if [[ $repadb = "y" ]]; then
 			echo "ENABLE ADB"
-			ADBRETRY
+			ADBRETRY $OUTFOLDER
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
 		read objsave
@@ -206,7 +206,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	else
 		echo "ENABLE ADB"
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
-		ADBRETRY
+		ADBRETRY $OUTFOLDER
 		cd ~/machinex
 		WASHME
 		echo "cleanup finished"
@@ -276,7 +276,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "------------------------" >> ~/machinex/datetracker.txt
 	cp ~/machinex/out/vmlinux ~/machinex/robstuff/vmlinux;
 	echo "ENABLE ADB"
-	ADBRETRY
+	ADBRETRY $OUTFOLDER
 	cd ~/machinex
 	WASHME
 	echo "cleanup finished"
