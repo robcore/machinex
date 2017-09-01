@@ -647,6 +647,8 @@ struct thread_group_cputimer {
 	bool checking_timer;
 };
 
+extern bool disable_samp_hotness;
+
 #include <linux/rwsem.h>
 struct autogroup;
 

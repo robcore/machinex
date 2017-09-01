@@ -986,6 +986,9 @@ static ssize_t hotness_adjust_write(struct file *file, const char __user *buf,
 	unsigned long flags;
 	int err;
 
+	if (disable_samp_hotness)
+		return -EINVAL;
+
 	memset(buffer, 0, sizeof(buffer));
 	if (count > sizeof(buffer) - 1)
 		count = sizeof(buffer) - 1;
@@ -1018,11 +1021,6 @@ static ssize_t hotness_adjust_write(struct file *file, const char __user *buf,
 	if (!lock_task_sighand(task, &flags)) {
 		err = -ESRCH;
 		goto err_task_lock;
-	}
-
-	if (!capable(CAP_SYS_RESOURCE)) {
-		err = -EACCES;
-		goto err_sighand;
 	}
 
 	task->signal->hotness_adj = hotness_adjust >> 4;

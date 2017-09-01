@@ -79,6 +79,9 @@ static uint32_t oom_count = 0;
 #define OOM_DEPTH 7
 #endif
 
+bool disable_samp_hotness;
+module_param(disable_samp_hotness, bool, 0644);
+
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
@@ -335,26 +338,36 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #endif
 
 #ifdef CONFIG_SAMP_HOTNESS
-		hotness_adj = p->signal->hotness_adj;
+		if (!disable_samp_hotness)
+			hotness_adj = p->signal->hotness_adj;
 #endif
 		task_unlock(p);
 		if (tasksize <= 0)
 			continue;
 		if (selected) {
 #ifdef CONFIG_SAMP_HOTNESS
-			if (min_score_adj <= lowmem_adj[4]) {
-#endif
-			if (oom_score_adj < selected_oom_score_adj)
-				continue;
-			if (oom_score_adj == selected_oom_score_adj &&
-			    tasksize <= selected_tasksize)
-				continue;
-#ifdef CONFIG_SAMP_HOTNESS
+			if (!disable_samp_hotness) {
+				if (min_score_adj <= lowmem_adj[4]) {
+
+					if (oom_score_adj < selected_oom_score_adj)
+						continue;
+					if (oom_score_adj == selected_oom_score_adj &&
+					    tasksize <= selected_tasksize)
+						continue;
+				} else {
+					if (hotness_adj > selected_hotness_adj)
+						continue;
+					if (hotness_adj == selected_hotness_adj && tasksize <= selected_tasksize)
+						continue;
+				}
 			} else {
-				if (hotness_adj > selected_hotness_adj)
+#endif
+				if (oom_score_adj < selected_oom_score_adj)
 					continue;
-				if (hotness_adj == selected_hotness_adj && tasksize <= selected_tasksize)
+				if (oom_score_adj == selected_oom_score_adj &&
+					tasksize <= selected_tasksize)
 					continue;
+#ifdef CONFIG_SAMP_HOTNESS
 			}
 #endif
 		}
@@ -362,7 +375,8 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;
 #ifdef CONFIG_SAMP_HOTNESS
-		selected_hotness_adj = hotness_adj;
+		if (!disable_samp_hotness)
+			selected_hotness_adj = hotness_adj;
 #endif
 		lowmem_print(3, "select '%s' (%d), adj %hd, size %d, to kill\n",
 			     p->comm, p->pid, oom_score_adj, tasksize);
