@@ -1,0 +1,12 @@
+	{ SSpacer:{
+		height: 1
+	}},
+    { STitleBar:{
+        title:"Screen Wake Lock"
+    }},
+	{ SCheckBox:{
+		label:"Keepawake",
+		description:"WARNING! DO NOT USE!! If and when it functions properly, it will act as a direct Hardware Screen Wake lock using the virtual wakeup key driver by robcore.",
+		default:`cat /sys/kernel/virtual_wakeup_key/screen_wake_lock`,
+		action:"generic /sys/kernel/virtual_wakeup_key/screen_wake_lock"
+	}},
