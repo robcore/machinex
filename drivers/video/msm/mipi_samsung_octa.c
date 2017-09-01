@@ -682,10 +682,12 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 
 	if (mfd->resume_state == MIPI_RESUME_STATE) {
 		if (msd.mpd->backlight_control(mfd->bl_level)) {
+#if 0
 			if (is_display_on() && mfd->bl_level == 0 && screen_wake_lock) {
 				mutex_unlock(&brightness_mutex);
 				return;
 			}
+#endif
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
 			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
