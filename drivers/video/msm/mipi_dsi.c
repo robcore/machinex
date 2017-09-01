@@ -26,7 +26,6 @@
 #include <linux/platform_device.h>
 #include <linux/wakelock.h>
 #include <linux/powersuspend.h>
-#include <linux/display_state.h>
 #include <asm/system.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
@@ -54,12 +53,6 @@
 #endif
 
 struct wake_lock prometheus_rising;
-
-static bool display_on = true;
-bool is_display_on()
-{
-	return READ_ONCE(display_on);
-}
 
 u32 dsi_irq;
 u32 esc_byte_ratio;
@@ -193,7 +186,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 #if 0
 	state_suspend();
 #endif
-	WRITE_ONCE(display_on, false);
+
 #ifdef CONFIG_PROMETHEUS
 	 /*Yank555.lu : hook to handle powersuspend tasks (sleep)*/
 	prometheus_panel_beacon(POWER_SUSPEND_ACTIVE);
@@ -480,8 +473,6 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		pr_info("Take me with you\n");
 	}
 
-	WRITE_ONCE(display_on, true);
-	pr_info("Rob's DSI ON HOOK\n");
 #ifdef CONFIG_PROMETHEUS
 		/* Yank555.lu : hook to handle powersuspend tasks (wakeup) */
 	prometheus_panel_beacon(POWER_SUSPEND_INACTIVE);

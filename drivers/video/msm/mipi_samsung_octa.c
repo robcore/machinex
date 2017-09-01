@@ -766,12 +766,14 @@ static ssize_t mipi_samsung_disp_set_power(struct device *dev,
 		return 0;
 
 	if (power) {
+		pr_info("[mipi_samsung_octa] calls FB_BLANK_UNBLANK\n");
 		mfd->fbi->fbops->fb_blank(FB_BLANK_UNBLANK, mfd->fbi);
 		mfd->fbi->fbops->fb_pan_display(&mfd->fbi->var, mfd->fbi);
 		mipi_samsung_disp_send_cmd(mfd, PANEL_LATE_ON, true);
 		mipi_samsung_disp_backlight(mfd);
 	} else {
 		mfd->fbi->fbops->fb_blank(FB_BLANK_POWERDOWN, mfd->fbi);
+		pr_info("[mipi_samsung_octa] calls FB_BLANK_POWERDOWN\n");
 	}
 
 	pr_info("mipi_samsung_disp_set_power\n");
