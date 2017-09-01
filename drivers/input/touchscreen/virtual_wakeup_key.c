@@ -53,7 +53,7 @@ static void press_key(unsigned int pressed)
 
 	input_report_key(virtkeydev, KEY_WAKEUP, pressed);
 	input_sync(virtkeydev);
-	WRITE_ONCE(key_is_pressed, pressed);
+	key_is_pressed = pressed;
 
 	if (screen_on_lock && key_is_pressed)
 		virt_wakeup_key_trig();
@@ -124,12 +124,6 @@ static struct input_handler virtkey_input_handler = {
 	.id_table	= virtkey_ids,
 };
 
-static void screenlock_decider(void)
-{
-	if (screen_on_lock)
-		virt_wakeup_key_trig();
-}
-
 static ssize_t screen_on_lock_show(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf)
 {
@@ -154,8 +148,6 @@ static ssize_t screen_on_lock_store(struct kobject *kobj,
 		return count;
 
 	screen_on_lock = input;
-
-	screenlock_decider();
 
 	return count;
 }
