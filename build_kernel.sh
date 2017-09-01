@@ -95,11 +95,11 @@ function adbcountdown()
 
 function ADBRETRY()
 {
-
 ONLINE=`adb get-state 2> /dev/null`
 adb start-server
-adb usb
+adb root
 adbcountdown
+
 if [[ $ONLINE == recovery ]]; then #if we are in recovery
 	echo "recovery connected"
 	adbcountdown
@@ -109,7 +109,7 @@ if [[ $ONLINE == recovery ]]; then #if we are in recovery
 elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 	echo "connected"
 	adbcountdown
-	adb shell su -c "dumpsys power | grep "mScreenOn=true" | xargs -0 test -z" && adb shell su -c "input keyevent KEYCODE_WAKEUP";
+	adb shell su -c "input keyevent KEYCODE_WAKEUP"
 	countdown
 	adb push $1.zip /storage/extSdCard
 	echo "push complete, booting recovery"
@@ -118,7 +118,7 @@ elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 else
 	echo "Nothing Connected, giving up"
 	adb kill-server
-fi;
+fi
 }
 
 function NORMAL()
