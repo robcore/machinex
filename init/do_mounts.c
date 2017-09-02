@@ -530,12 +530,6 @@ void __init prepare_namespace(void)
 {
 	int is_floppy;
 
-	if (root_delay) {
-		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
-		       root_delay);
-		ssleep(root_delay);
-	}
-
 	/*
 	 * wait for the known devices to complete their probing
 	 *
@@ -562,6 +556,12 @@ void __init prepare_namespace(void)
 
 	if (initrd_load())
 		goto out;
+
+	if (root_delay) {
+		pr_info("Waiting %d sec before mounting root device...\n",
+			root_delay);
+		ssleep(root_delay);
+	}
 
 	/* wait for any asynchronous scanning to complete */
 	if ((ROOT_DEV == 0) && root_wait) {
