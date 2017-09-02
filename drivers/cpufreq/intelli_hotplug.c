@@ -379,7 +379,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
 
-	if (!mutex_lock(&intellisleep_mutex))
+	if (!mutex_trylock(&intellisleep_mutex))
 		goto reschedule;
 
 	if (intelli_suspended) {
