@@ -31,6 +31,7 @@ extern int vmpressure_notifier_unregister(struct notifier_block *nb);
 extern void vmpressure(gfp_t gfp, struct mem_cgroup *memcg,
 		       unsigned long scanned, unsigned long reclaimed);
 extern void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio);
+extern const unsigned int vmpressure_level_med;
 
 #ifdef CONFIG_MEMCG
 extern void vmpressure_init(struct vmpressure *vmpr);

@@ -103,7 +103,7 @@ ADBTYPE=`adb get-devpath 2> /dev/null`
 adb start-server
 adb root 2> /dev/null
 adbcountdown
-if [[ $ADBTYPE == "usb:5-4" ]]; then
+if [[ $ADBTYPE == usb:5-4 ]]; then
 	adb shell su -c "input keyevent KEYCODE_WAKEUP" 2> /dev/null
 	if [[ $ONLINE == "recovery" ]]; then #if we are in recovery
 		echo "recovery connected"
@@ -112,7 +112,7 @@ if [[ $ADBTYPE == "usb:5-4" ]]; then
 		adb push $1.zip /external_sd
 		echo "push complete"
 		adb kill-server
-	elif [[ $ONLINE == "device" ]]; then #if we are in os, connected via usb
+	elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 		echo "connected"
 		adbcountdown
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
@@ -131,7 +131,7 @@ if [[ $ADBTYPE == "usb:5-4" ]]; then
 else
 	adb connect 192.168.1.111
 	adbcountdown
-	if [[ $ONLINE == "device" ]]; then #if we are in os, connected via usb
+	if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 		echo "connected"
 		adbcountdown
 		countdown

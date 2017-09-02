@@ -125,21 +125,21 @@ static atomic_t shift_adj = ATOMIC_INIT(0);
 static short adj_max_shift = 353;
 
 /* User knob to enable/disable adaptive lmk feature */
-static unsigned int enable_adaptive_lmk = 1;
+static unsigned int enable_adaptive_lmk = 0;
 module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
-	S_IRUGO | S_IWUSR);
+	0644);
 
 /*
  * This parameter controls the behaviour of LMK when vmpressure is in
  * the range of 90-94. Adaptive lmk triggers based on number of file
- * pages wrt vmpressure_file_min, when vmpressure is in the range of
- * 90-94. Usually this is a pseudo minfree value, higher than the
- * highest configured value in minfree array.
- */
-static int vmpressure_file_min;
+ * pages with vmpressure_file_min. Usually this is a pseudo minfree value,
+ * higher than the highest configured value in minfree array.
+---------------------------------------->ROB NOTE: Fuck you guys juse use
+----------------------------------------> vmpressure_level_med.
+static int vmpressure_file_min = 70;
 module_param_named(vmpressure_file_min, vmpressure_file_min, int,
 	S_IRUGO | S_IWUSR);
-
+*/
 enum {
 	VMPRESSURE_NO_ADJUST = 0,
 	VMPRESSURE_ADJUST_ENCROACH,
@@ -196,7 +196,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		other_free = global_page_state(NR_FREE_PAGES);
 
 		if ((other_free < lowmem_minfree[array_size - 1]) &&
-			(other_file < vmpressure_file_min)) {
+			(other_file < vmpressure_level_med)) {
 				atomic_set(&shift_adj, 1);
 		}
 	} else if (atomic_read(&shift_adj)) {
