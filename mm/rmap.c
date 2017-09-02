@@ -1618,7 +1618,7 @@ int try_to_unmap(struct page *page, enum ttu_flags flags)
 	 * locking requirements of exec(), migration skips
 	 * temporary VMAs until after exec() completes.
 	 */
-	if (flags & TTU_MIGRATION && !PageKsm(page) && PageAnon(page))
+	if ((flags & TTU_MIGRATION) && !PageKsm(page) && PageAnon(page))
 		rwc.invalid_vma = invalid_migration_vma;
 
 	ret = rmap_walk(page, &rwc);
@@ -1645,14 +1645,26 @@ int try_to_unmap(struct page *page, enum ttu_flags flags)
  */
 int try_to_munlock(struct page *page)
 {
-	VM_BUG_ON(!PageLocked(page) || PageLRU(page));
+	int ret;
+	struct rmap_walk_control rwc = {
+		.rmap_one = try_to_unmap_one,
+		.arg = (void *)TTU_MUNLOCK,
+		.done = page_not_mapped,
+		/*
+		 * We don't bother to try to find the munlocked page in
+		 * nonlinears. It's costly. Instead, later, page reclaim logic
+		 * may call try_to_unmap() and recover PG_mlocked lazily.
+		 */
+		.file_nonlinear = NULL,
+		.anon_lock = page_lock_anon_vma_read,
+		.target_vma = NULL,
 
-	if (unlikely(PageKsm(page)))
-		return try_to_unmap_ksm(page, TTU_MUNLOCK);
-	else if (PageAnon(page))
-		return try_to_unmap_anon(page, TTU_MUNLOCK);
-	else
-		return try_to_unmap_file(page, TTU_MUNLOCK);
+	};
+
+	VM_BUG_ON_PAGE(!PageLocked(page) || PageLRU(page), page);
+
+	ret = rmap_walk(page, &rwc);
+	return ret;
 }
 
 void __put_anon_vma(struct anon_vma *anon_vma)
