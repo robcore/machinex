@@ -142,8 +142,6 @@ static void power_suspend(struct work_struct *work)
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
 				return;
 			} else {
-					pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
-
 				goto skip_check;
 			}
 		} else if (!pm_get_wakeup_count(&counter, false) || mx_pm_wakeup_pending()) {
@@ -158,6 +156,8 @@ skip_check:
 			pr_info("[PROMETHEUS] Skipping PM Suspend on first boot..\n");
 			return;
 		}
+
+		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 
 		if (!mutex_trylock(&pm_mutex)) {
 			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
