@@ -136,7 +136,7 @@ module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
  * higher than the highest configured value in minfree array.
  */
 
-static unsigned int vmpressure_file_min = 70;
+static unsigned int vmpressure_file_min = 0;
 module_param_named(vmpressure_file_min, vmpressure_file_min, uint,
 	0644);
 
