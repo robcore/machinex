@@ -1133,26 +1133,27 @@ int sysctl_extfrag_threshold = 500;
  * @nodemask: The allowed nodes to allocate from
  * @mode: The migration mode for async, sync light, or sync migration
  * @contended: Return value that is true if compaction was aborted due to lock contention
- * @candidate_zone: Return the zone where we think allocation should succeed
+ * @page: Optionally capture a free page of the requested order during compaction
  *
  * This is the main entry point for direct page compaction.
  */
 unsigned long try_to_compact_pages(struct zonelist *zonelist,
 			int order, gfp_t gfp_mask, nodemask_t *nodemask,
-			enum migrate_mode mode, bool *contended,
-			struct zone **candidate_zone)
+			enum migrate_mode mode, bool *contended)
 {
 	enum zone_type high_zoneidx = gfp_zone(gfp_mask);
 	int may_enter_fs = gfp_mask & __GFP_FS;
 	int may_perform_io = gfp_mask & __GFP_IO;
 	struct zoneref *z;
 	struct zone *zone;
-	int rc = COMPACT_DEFERRED;
+	int rc = COMPACT_SKIPPED;
 	int alloc_flags = 0;
 
 	/* Check if the GFP flags allow compaction */
 	if (!order || !may_enter_fs || !may_perform_io)
-		return COMPACT_SKIPPED;
+		return rc;
+
+	count_compact_event(COMPACTSTALL);
 
 #ifdef CONFIG_CMA
 	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
@@ -1163,33 +1164,14 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 								nodemask) {
 		int status;
 
-		if (compaction_deferred(zone, order))
-			continue;
-
 		status = compact_zone_order(zone, order, gfp_mask, mode,
 						contended);
 		rc = max(status, rc);
 
 		/* If a normal allocation would succeed, stop compacting */
 		if (zone_watermark_ok(zone, order, low_wmark_pages(zone), 0,
-				      alloc_flags)) {
-			*candidate_zone = zone;
-			/*
-			 * We think the allocation will succeed in this zone,
-			 * but it is not certain, hence the false. The caller
-			 * will repeat this with true if allocation indeed
-			 * succeeds in this zone.
-			 */
-			compaction_defer_reset(zone, order, false);
+				      alloc_flags))
 			break;
-		} else if (mode != MIGRATE_ASYNC) {
-			/*
-			 * We think that allocation won't succeed in this zone
-			 * so we defer compaction there. If it ends up
-			 * succeeding after all, it will be reset.
-			 */
-			defer_compaction(zone, order);
-		}
 	}
 
 	return rc;

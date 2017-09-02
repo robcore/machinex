@@ -2,16 +2,14 @@
 #define _LINUX_COMPACTION_H
 
 /* Return values for compact_zone() and try_to_compact_pages() */
-/* compaction didn't start as it was deferred due to past failures */
-#define COMPACT_DEFERRED	0
 /* compaction didn't start as it was not possible or direct reclaim was more suitable */
-#define COMPACT_SKIPPED		1
+#define COMPACT_SKIPPED		0
 /* compaction should continue to another pageblock */
-#define COMPACT_CONTINUE	2
+#define COMPACT_CONTINUE	1
 /* direct compaction partially compacted a zone and there are suitable pages */
-#define COMPACT_PARTIAL		3
+#define COMPACT_PARTIAL		2
 /* The full zone was compacted */
-#define COMPACT_COMPLETE	4
+#define COMPACT_COMPLETE	3
 
 #ifdef CONFIG_COMPACTION
 extern int sysctl_compact_memory;
@@ -24,8 +22,7 @@ extern int sysctl_extfrag_handler(struct ctl_table *table, int write,
 extern int fragmentation_index(struct zone *zone, unsigned int order);
 extern unsigned long try_to_compact_pages(struct zonelist *zonelist,
 			int order, gfp_t gfp_mask, nodemask_t *mask,
-			enum migrate_mode mode, bool *contended,
-			struct zone **candidate_zone);
+			enum migrate_mode mode, bool *contended);
 extern void compact_pgdat(pg_data_t *pgdat, int order);
 extern void reset_isolation_suitable(pg_data_t *pgdat);
 extern unsigned long compaction_suitable(struct zone *zone, int order);
@@ -94,8 +91,7 @@ static inline bool compaction_restarting(struct zone *zone, int order)
 #else
 static inline unsigned long try_to_compact_pages(struct zonelist *zonelist,
 			int order, gfp_t gfp_mask, nodemask_t *nodemask,
-			enum migrate_mode mode, bool *contended,
-			struct zone **candidate_zone)
+			enum migrate_mode mode, bool *contended)
 {
 	return COMPACT_CONTINUE;
 }
