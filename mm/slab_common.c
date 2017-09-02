@@ -20,10 +20,10 @@
 #include <asm/page.h>
 #include <linux/memcontrol.h>
 
-#include "slab.h"
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/kmem.h>
+
+#include "slab.h"
 
 enum slab_state slab_state;
 LIST_HEAD(slab_caches);
@@ -200,69 +200,6 @@ static inline void memcg_free_cache_params(struct kmem_cache *s)
 {
 }
 #endif /* CONFIG_MEMCG_KMEM */
-
-/*
- * Find a mergeable slab cache
- */
-int slab_unmergeable(struct kmem_cache *s)
-{
-	if (slab_nomerge || (s->flags & SLAB_NEVER_MERGE))
-		return 1;
-
-	if (!is_root_cache(s))
-		return 1;
-
-	if (s->ctor)
-		return 1;
-
-	/*
-	 * We may have set a slab to be unmergeable during bootstrap.
-	 */
-	if (s->refcount < 0)
-		return 1;
-
-	return 0;
-}
-
-struct kmem_cache *find_mergeable(size_t size, size_t align,
-		unsigned long flags, const char *name, void (*ctor)(void *))
-{
-	struct kmem_cache *s;
-
-	if (slab_nomerge || (flags & SLAB_NEVER_MERGE))
-		return NULL;
-
-	if (ctor)
-		return NULL;
-
-	size = ALIGN(size, sizeof(void *));
-	align = calculate_alignment(flags, align, size);
-	size = ALIGN(size, align);
-	flags = kmem_cache_flags(size, flags, name, NULL);
-
-	list_for_each_entry(s, &slab_caches, list) {
-		if (slab_unmergeable(s))
-			continue;
-
-		if (size > s->size)
-			continue;
-
-		if ((flags & SLAB_MERGE_SAME) != (s->flags & SLAB_MERGE_SAME))
-			continue;
-		/*
-		 * Check if alignment is compatible.
-		 * Courtesy of Adrian Drzewiecki
-		 */
-		if ((s->size & ~(align - 1)) != s->size)
-			continue;
-
-		if (s->size - size >= sizeof(void *))
-			continue;
-
-		return s;
-	}
-	return NULL;
-}
 
 /*
  * Find a mergeable slab cache

@@ -799,7 +799,6 @@ static long do_set_mempolicy(unsigned short mode, unsigned short flags,
 			     nodemask_t *nodes)
 {
 	struct mempolicy *new, *old;
-	struct mm_struct *mm = current->mm;
 	NODEMASK_SCRATCH(scratch);
 	int ret;
 
@@ -811,20 +810,11 @@ static long do_set_mempolicy(unsigned short mode, unsigned short flags,
 		ret = PTR_ERR(new);
 		goto out;
 	}
-	/*
-	 * prevent changing our mempolicy while show_numa_maps()
-	 * is using it.
-	 * Note:  do_set_mempolicy() can be called at init time
-	 * with no 'mm'.
-	 */
-	if (mm)
-		down_write(&mm->mmap_sem);
+
 	task_lock(current);
 	ret = mpol_set_nodemask(new, nodes, scratch);
 	if (ret) {
 		task_unlock(current);
-		if (mm)
-			up_write(&mm->mmap_sem);
 		mpol_put(new);
 		goto out;
 	}
@@ -834,9 +824,6 @@ static long do_set_mempolicy(unsigned short mode, unsigned short flags,
 	    nodes_weight(new->v.nodes))
 		current->il_next = first_node(new->v.nodes);
 	task_unlock(current);
-	if (mm)
-		up_write(&mm->mmap_sem);
-
 	mpol_put(old);
 	ret = 0;
 out:
@@ -1012,7 +999,7 @@ static int migrate_to_node(struct mm_struct *mm, int source, int dest,
 {
 	nodemask_t nmask;
 	LIST_HEAD(pagelist);
-	int err;
+	int err = 0;
 
 	nodes_clear(nmask);
 	node_set(source, nmask);
@@ -1023,7 +1010,7 @@ static int migrate_to_node(struct mm_struct *mm, int source, int dest,
 		return err;
 
 	if (!list_empty(&pagelist)) {
-		err = migrate_pages(&pagelist, new_node_page, dest,
+		err = migrate_pages(&pagelist, new_node_page, NULL, dest,
 					MIGRATE_SYNC, MR_SYSCALL);
 		if (err)
 			putback_movable_pages(&pagelist);
@@ -1271,8 +1258,8 @@ static long do_mbind(unsigned long start, unsigned long len,
 
 		if (!list_empty(&pagelist)) {
 			WARN_ON_ONCE(flags & MPOL_MF_LAZY);
-			nr_failed = migrate_pages(&pagelist, new_page, start,
-							MIGRATE_SYNC, MR_SYSCALL);
+			nr_failed = migrate_pages(&pagelist, new_page, NULL,
+				start, MIGRATE_SYNC, MR_SYSCALL);
 			if (nr_failed)
 				putback_movable_pages(&pagelist);
 		}
