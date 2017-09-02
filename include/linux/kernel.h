@@ -239,7 +239,9 @@ static inline u32 reciprocal_scale(u32 val, u32 ep_ro)
 {
 	return (u32)(((u64) val * ep_ro) >> 32);
 }
-#if defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_DEBUG_ATOMIC_SLEEP)
+
+#if defined(CONFIG_MMU) && \
+	(defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_DEBUG_ATOMIC_SLEEP))
 void might_fault(void);
 #else
 static inline void might_fault(void) { }
@@ -435,17 +437,6 @@ extern int func_ptr_is_kernel_text(void *ptr);
 
 struct pid;
 extern struct pid *session_of_pgrp(struct pid *pgrp);
-
-#ifdef CONFIG_LGE_CRASH_HANDLER
-extern void set_crash_store_enable(void);
-extern void set_crash_store_disable(void);
-extern void store_crash_log(char *p);
-extern void set_kernel_crash_magic_number(void);
-#ifdef CONFIG_CPU_CP15_MMU
-extern void lge_save_ctx(struct pt_regs*, unsigned int, unsigned int,
-	unsigned int);
-#endif
-#endif
 
 unsigned long int_sqrt(unsigned long);
 
