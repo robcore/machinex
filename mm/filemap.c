@@ -1092,7 +1092,7 @@ repeat:
 			page_cache_release(page);
 			goto repeat;
 		}
-		VM_BUG_ON(page->index != offset);
+		VM_BUG_ON_PAGE(page->index != offset, page);
 	}
 
 	if (page && (fgp_flags & FGP_ACCESSED))
@@ -2606,7 +2606,7 @@ ssize_t __generic_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 		 * that this differs from normal direct-io semantics, which
 		 * will return -EFOO even if some bytes were written.
 		 */
-		if (unlikely(status < 0) && !written) {
+		if (unlikely(status < 0)) {
 			err = status;
 			goto out;
 		}
