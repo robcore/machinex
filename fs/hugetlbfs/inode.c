@@ -469,7 +469,7 @@ static struct inode *hugetlbfs_get_root(struct super_block *sb,
  * annotation because huge_pmd_share() does an allocation under
  * i_mmap_mutex.
  */
-struct lock_class_key hugetlbfs_i_mmap_mutex_key;
+static struct lock_class_key hugetlbfs_i_mmap_mutex_key;
 
 static struct inode *hugetlbfs_get_inode(struct super_block *sb,
 					struct inode *dir,
@@ -885,8 +885,7 @@ hugetlbfs_fill_super(struct super_block *sb, void *data, int silent)
 		goto out_free;
 	return 0;
 out_free:
-	if (sbinfo->spool)
-		kfree(sbinfo->spool);
+	kfree(sbinfo->spool);
 	kfree(sbinfo);
 	return -ENOMEM;
 }
@@ -923,7 +922,7 @@ static int get_hstate_idx(int page_size_log)
 	return h - hstates;
 }
 
-static struct dentry_operations anon_ops = {
+static const struct dentry_operations anon_ops = {
 	.d_dname = simple_dname
 };
 
