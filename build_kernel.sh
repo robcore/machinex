@@ -224,7 +224,6 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		fi;
 	else
 		echo "ENABLE ADB"
-		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		ADBRETRY $OUTFOLDER
 		cd ~/machinex
 		WASHME
