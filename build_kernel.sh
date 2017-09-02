@@ -103,8 +103,7 @@ ADBTYPE=`adb get-devpath 2> /dev/null`
 adb start-server
 adbcountdown
 if [[ $ADBTYPE == usb:5-4 ]]; then
-	adb shell su -c "input keyevent KEYCODE_WAKEUP" 2> /dev/null
-	if [[ $ONLINE == "recovery" ]]; then #if we are in recovery
+	if [[ $ONLINE == recovery ]]; then #if we are in recovery
 		echo "recovery connected"
 		adbcountdown
 		echo "pushing $1"
