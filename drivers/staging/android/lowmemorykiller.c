@@ -137,7 +137,7 @@ module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
  */
 
 static unsigned int vmpressure_file_min = 70;
-module_param_named(vmpressure_file_min, vmpressure_file_min, unsigned int,
+module_param_named(vmpressure_file_min, vmpressure_file_min, uint,
 	0644);
 
 enum {
