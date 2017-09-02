@@ -135,7 +135,7 @@ else
 		adbcountdown
 		countdown
 		adb push $1.zip /storage/extSdCard
-		echo "push complete, booting recovery"
+		echo "push complete, disconnecting wireless connection"
 		adb disconnect
 		adb kill-server
 	fi;
