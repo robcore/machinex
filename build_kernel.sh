@@ -101,7 +101,6 @@ function ADBRETRY()
 ONLINE=`adb get-state 2> /dev/null`
 ADBTYPE=`adb get-devpath 2> /dev/null`
 adb start-server
-adb root 2> /dev/null
 adbcountdown
 if [[ $ADBTYPE == usb:5-4 ]]; then
 	adb shell su -c "input keyevent KEYCODE_WAKEUP" 2> /dev/null
@@ -124,23 +123,20 @@ if [[ $ADBTYPE == usb:5-4 ]]; then
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
 		adb reboot recovery
 		adb kill-server
-	else
-		echo "Nothing Connected, giving up"
-		adb kill-server
 	fi;
 else
 	adb connect 192.168.1.111
-	adbcountdown
-	if [[ $ONLINE == device ]]; then #if we are in os, connected via usb
+	status=$?;
+	if [ $status != 0 ]; then
+		echo "$status adb wireless failed!"
+	else
+		adbcountdown
 		echo "connected"
 		adbcountdown
 		countdown
 		adb push $1.zip /storage/extSdCard
 		echo "push complete, booting recovery"
 		adb disconnect
-		adb kill-server
-	else
-		echo "Nothing Connected, giving up"
 		adb kill-server
 	fi;
 fi;
