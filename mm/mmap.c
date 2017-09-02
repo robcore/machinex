@@ -203,7 +203,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 	 */
 	if (mm) {
 		reserve = sysctl_user_reserve_kbytes >> (PAGE_SHIFT - 10);
-		allowed -= min(mm->total_vm / 32, reserve);
+		allowed -= min_t(long, mm->total_vm / 32, reserve);
 	}
 
 	if (percpu_counter_read_positive(&vm_committed_as) < allowed)
@@ -1226,20 +1226,19 @@ static inline int mlock_future_check(struct mm_struct *mm,
 /*
  * The caller must hold down_write(&current->mm->mmap_sem).
  */
-
 unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 			unsigned long len, unsigned long prot,
 			unsigned long flags, unsigned long pgoff,
 			unsigned long *populate)
 {
-	struct mm_struct * mm = current->mm;
+	struct mm_struct *mm = current->mm;
 	vm_flags_t vm_flags;
 
 	*populate = 0;
 
 #ifdef CONFIG_SDCARD_FS
-	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
-		file = sdcardfs_lower_file(file);
+	while (file && (file->f_mode & FMODE_NONMAPPABLE))
+		file = file->f_op->get_lower_file(file);
 #endif
 
 	/*

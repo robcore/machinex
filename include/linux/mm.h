@@ -97,6 +97,12 @@ extern struct rw_semaphore nommu_region_sem;
 extern unsigned int kobjsize(const void *objp);
 #endif
 
+#ifdef CONFIG_ZSWAP
+extern int sysctl_zswap_compact;
+extern int sysctl_zswap_compaction_handler(struct ctl_table *table, int write,
+			void __user *buffer, size_t *length, loff_t *ppos);
+#endif
+
 /*
  * vm_flags in vm_area_struct, see mm_types.h.
  */
@@ -226,7 +232,7 @@ struct vm_fault {
 /*
  * These are the virtual MM functions - opening of an area, closing and
  * unmapping it (needed to keep files on disk up-to-date etc), pointer
- * to the functions called when a no-page or a wp-page exception occurs.
+ * to the functions called when a no-page or a wp-page exception occurs. 
  */
 struct vm_operations_struct {
 	void (*open)(struct vm_area_struct * area);
@@ -243,6 +249,12 @@ struct vm_operations_struct {
 	 */
 	int (*access)(struct vm_area_struct *vma, unsigned long addr,
 		      void *buf, int len, int write);
+
+	/* Called by the /proc/PID/maps code to ask the vma whether it
+	 * has a special name.  Returning non-NULL will also cause this
+	 * vma to be dumped unconditionally. */
+	const char *(*name)(struct vm_area_struct *vma);
+
 #ifdef CONFIG_NUMA
 	/*
 	 * set_policy() op must add a reference to any non-NULL @new mempolicy
@@ -279,6 +291,18 @@ struct inode;
 #define page_private(page)		((page)->private)
 #define set_page_private(page, v)	((page)->private = (v))
 
+/* It's valid only if the page is free path or free_list */
+static inline void set_freepage_migratetype(struct page *page, int migratetype)
+{
+	page->index = migratetype;
+}
+
+/* It's valid only if the page is free path or free_list */
+static inline int get_freepage_migratetype(struct page *page)
+{
+	return page->index;
+}
+
 /*
  * FIXME: take this include out, include page-flags.h in
  * files which need it (119 of them)
@@ -304,20 +328,35 @@ struct inode;
  */
 static inline int put_page_testzero(struct page *page)
 {
-	VM_BUG_ON(atomic_read(&page->_count) == 0);
+	VM_BUG_ON_PAGE(atomic_read(&page->_count) == 0, page);
 	return atomic_dec_and_test(&page->_count);
 }
 
 /*
  * Try to grab a ref unless the page has a refcount of zero, return false if
  * that is the case.
+ * This can be called when MMU is off so it must not access
+ * any of the virtual mappings.
  */
 static inline int get_page_unless_zero(struct page *page)
 {
 	return atomic_inc_not_zero(&page->_count);
 }
 
+/*
+ * Try to drop a ref unless the page has a refcount of one, return false if
+ * that is the case.
+ * This is to make sure that the refcount won't become zero after this drop.
+ * This can be called when MMU is off so it must not access
+ * any of the virtual mappings.
+ */
+static inline int put_page_unless_one(struct page *page)
+{
+	return atomic_add_unless(&page->_count, -1, 1);
+}
+
 extern int page_is_ram(unsigned long pfn);
+extern int region_is_ram(resource_size_t phys_addr, unsigned long size);
 
 /* Support for virtually mapped pages */
 struct page *vmalloc_to_page(const void *addr);
