@@ -570,7 +570,6 @@ asmlinkage __visible void __init start_kernel(void)
 	 * Set up the the initial canary ASAP:
 	 */
 
-	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
 
 	setup_command_line(command_line);
