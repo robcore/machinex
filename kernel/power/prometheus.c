@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 3
-#define VERSION_MIN 8
+#define VERSION_MIN 9
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
