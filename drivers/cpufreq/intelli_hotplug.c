@@ -65,7 +65,6 @@ static struct delayed_work intelli_plug_work;
 static struct delayed_work up_down_work;
 static struct workqueue_struct *intelliplug_wq;
 static struct workqueue_struct *updown_wq;
-static struct mutex intelli_plug_mutex;
 static void refresh_cpus(void);
 
 struct ip_cpu_info {
@@ -379,9 +378,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
 
-	if (!mutex_trylock(&intellisleep_mutex))
-		goto reschedule;
-
+	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
 		return;
@@ -587,14 +584,8 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 	/* Fail hotplug until this driver can get CPU clocks, or screen off */
-	if (!hotplug_ready || !mutex_trylock(&intellisleep_mutex))
+	if (!hotplug_ready || !is_display_on())
 		return NOTIFY_OK;
-
-	if (intelli_suspended) {
-		mutex_unlock(&intellisleep_mutex);
-		return NOTIFY_OK;
-	}
-	mutex_unlock(&intellisleep_mutex);
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DEAD:
@@ -644,7 +635,6 @@ static int intelli_plug_start(void)
 		goto err_dev;
 	}
 
-	mutex_init(&intelli_plug_mutex);
 	mutex_init(&(intellisleep_mutex));
 	intelli_suspended = INTELLI_AWAKE;
 
@@ -695,7 +685,6 @@ static void intelli_plug_stop(void)
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	mutex_destroy(&(intellisleep_mutex));
-	mutex_destroy(&intelli_plug_mutex);
 }
 
 static void intelli_plug_active_eval_fn(unsigned int status)

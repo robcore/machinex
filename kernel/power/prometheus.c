@@ -141,15 +141,16 @@ static void power_suspend(struct work_struct *work)
 			} else if (android_os_ws()) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
 				return;
-			} else {
+			} else
 				goto skip_check;
-			}
 		} else if (!pm_get_wakeup_count(&counter, false) || mx_pm_wakeup_pending()) {
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
-	} else
-		goto skip_suspend;
+	} else {
+		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
+		return;
+	}
 skip_check:
 		if (unlikely(booting)) {
 			booting = false;
@@ -167,10 +168,6 @@ skip_check:
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
 		pm_suspend(PM_HIBERNATION_PREPARE);
 		mutex_unlock(&pm_mutex);
-
-skip_suspend:
-		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
-		return;
 }
 
 static void power_resume(struct work_struct *work)
