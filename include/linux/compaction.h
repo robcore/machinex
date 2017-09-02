@@ -2,16 +2,14 @@
 #define _LINUX_COMPACTION_H
 
 /* Return values for compact_zone() and try_to_compact_pages() */
-/* compaction didn't start as it was deferred due to past failures */
-#define COMPACT_DEFERRED	0
 /* compaction didn't start as it was not possible or direct reclaim was more suitable */
-#define COMPACT_SKIPPED		1
+#define COMPACT_SKIPPED		0
 /* compaction should continue to another pageblock */
-#define COMPACT_CONTINUE	2
+#define COMPACT_CONTINUE	1
 /* direct compaction partially compacted a zone and there are suitable pages */
-#define COMPACT_PARTIAL		3
+#define COMPACT_PARTIAL		2
 /* The full zone was compacted */
-#define COMPACT_COMPLETE	4
+#define COMPACT_COMPLETE	3
 
 #ifdef CONFIG_COMPACTION
 extern int sysctl_compact_memory;
