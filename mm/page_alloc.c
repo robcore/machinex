@@ -2351,8 +2351,7 @@ __alloc_pages_direct_compact(gfp_t gfp_mask, unsigned int order,
 	struct zonelist *zonelist, enum zone_type high_zoneidx,
 	nodemask_t *nodemask, int alloc_flags, struct zone *preferred_zone,
 	int migratetype, enum migrate_mode mode,
-	bool *contended_compaction, bool *deferred_compaction,
-	unsigned long *did_some_progress)
+	bool *contended_compaction, bool *deferred_compaction)
 {
 	if (!order)
 		return NULL;
@@ -2392,13 +2391,6 @@ __alloc_pages_direct_compact(gfp_t gfp_mask, unsigned int order,
 		 * but not enough to satisfy watermarks.
 		 */
 		count_vm_event(COMPACTFAIL);
-
-		/*
-		 * As async compaction considers a subset of pageblocks, only
-		 * defer if the failure was a sync compaction failure.
-		 */
-		if (mode != MIGRATE_ASYNC)
-			defer_compaction(preferred_zone, order);
 
 		cond_resched();
 	}
@@ -2692,8 +2684,7 @@ rebalance:
 					high_zoneidx, nodemask, alloc_flags,
 					preferred_zone, migratetype,
 					migration_mode, &contended_compaction,
-					&deferred_compaction,
-					&did_some_progress);
+					&deferred_compaction);
 	if (page)
 		goto got_pg;
 	migration_mode = MIGRATE_SYNC_LIGHT;
@@ -2791,8 +2782,7 @@ rebalance:
 					high_zoneidx, nodemask, alloc_flags,
 					preferred_zone, migratetype,
 					migration_mode, &contended_compaction,
-					&deferred_compaction,
-					&did_some_progress);
+					&deferred_compaction);
 		if (page)
 			goto got_pg;
 	}
