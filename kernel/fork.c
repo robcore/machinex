@@ -972,9 +972,6 @@ static struct mm_struct *dup_mm(struct task_struct *tsk)
 	if (!mm_init(mm, tsk))
 		goto fail_nomem;
 
-	if (init_new_context(tsk, mm))
-		goto fail_nocontext;
-
 	err = dup_mmap(mm, oldmm);
 	if (err)
 		goto free_pt;
