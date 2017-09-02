@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	12
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -291,10 +291,6 @@ static void report_current_cpus(void)
 }
 
 #define INTELLILOAD(x) ((x) >> FSHIFT)
-#define MAX_INTELLICOUNT_TOUT (8 * MSEC_PER_SEC)
-static unsigned int intellicount = 0;
-static const unsigned int max_intellicount = NR_CPUS;
-static const u64 icount_tout = MAX_INTELLICOUNT_TOUT;
 
 static int measure_freqs(void)
 {
@@ -317,7 +313,7 @@ static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_cpus;
 	unsigned long *current_profile;
-	//ktime_t now, last_pass, delta, timeout = ms_to_ktime(icount_tout);
+	unsigned int intellicounter = 1;
 
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
@@ -345,31 +341,19 @@ static unsigned int calculate_thread_stats(void)
 		if (avg_nr_running() <= nr_threshold)
 			break;
 	}
-/*
-	if (READ_ONCE(intellicount) == 0)
-		last_pass = ktime_get();
 
-	now = ktime_get();
-	delta = ktime_sub(now, last_pass);
-	
-	if (READ_ONCE(intellicount) >= max_intellicount &&
-		max_cpus_online > num_online_cpus() &&
-		(ktime_compare(delta, timeout) >= 0)) {
-		WRITE_ONCE(intellicount, 0);
-		nr_run_last = max_cpus_online;
-		return max_cpus_online;
-	}
-*/
 	if (num_offline_cpus() > 0)
 		nr_cpus += measure_freqs();
+	else if (measure_freqs() > 0) {
+		if (!intellicounter) {
+			nr_cpus += 1;
+			intellicounter++;
+		} else {
+			intellicounter = 0;
+		}
+	}
 
 	nr_run_last = nr_cpus;
-/*
-	if (max_cpus_online > num_online_cpus() &&
-		nr_cpus < max_cpus_online) {
-		WRITE_ONCE(intellicount, intellicount + 1);
-	}
-*/
 	return nr_cpus;
 }
 
@@ -395,7 +379,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	struct ip_cpu_info *l_ip_info;
 	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
 
-	mutex_lock(&intellisleep_mutex);
+	if (!mutex_lock(&intellisleep_mutex))
+		goto reschedule;
 
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
@@ -602,10 +587,9 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 	/* Fail hotplug until this driver can get CPU clocks, or screen off */
-	if (!hotplug_ready)
+	if (!hotplug_ready || !mutex_trylock(&intellisleep_mutex))
 		return NOTIFY_OK;
 
-	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
 		return NOTIFY_OK;
