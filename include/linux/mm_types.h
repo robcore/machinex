@@ -547,10 +547,4 @@ static inline const char __user *vma_get_anon_name(struct vm_area_struct *vma)
 	return vma->shared.anon_name;
 }
 
-struct vm_special_mapping
-{
-	const char *name;
-	struct page **pages;
-};
-
 #endif /* _LINUX_MM_TYPES_H */
