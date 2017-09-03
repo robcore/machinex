@@ -735,9 +735,9 @@ out:
 	kfree(n);
 	kfree(t);
 
-	if (!selinux_enforcing)
+	//if (!selinux_enforcing)
 		return 0;
-	return -EPERM;
+
 }
 
 int security_validate_transition(u32 oldsid, u32 newsid, u32 tasksid,
