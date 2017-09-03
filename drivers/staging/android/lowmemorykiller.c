@@ -68,15 +68,15 @@ static uint32_t lmk_count = 0;
 
 #ifdef CONFIG_SEC_OOM_KILLER
 #define MULTIPLE_OOM_KILLER
+#define OOM_COUNT_READ
 #endif
 
-#undef OOM_COUNT_READ
 #ifdef OOM_COUNT_READ
 static uint32_t oom_count = 0;
 #endif
 
 #ifdef MULTIPLE_OOM_KILLER
-#define OOM_DEPTH 4
+#define OOM_DEPTH 7
 #endif
 
 bool disable_samp_hotness;
@@ -125,7 +125,7 @@ static atomic_t shift_adj = ATOMIC_INIT(0);
 static short adj_max_shift = 353;
 
 /* User knob to enable/disable adaptive lmk feature */
-static unsigned int enable_adaptive_lmk = 0;
+static unsigned int enable_adaptive_lmk = 1;
 module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
 	0644);
 

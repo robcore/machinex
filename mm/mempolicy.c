@@ -526,14 +526,9 @@ static void queue_pages_hugetlb_pmd_range(struct vm_area_struct *vma,
 #ifdef CONFIG_HUGETLB_PAGE
 	int nid;
 	struct page *page;
-	spinlock_t *ptl;
-	pte_t entry;
 
-	ptl = huge_pte_lock(hstate_vma(vma), vma->vm_mm, (pte_t *)pmd);
-	entry = huge_ptep_get((pte_t *)pmd);
-	if (!pte_present(entry))
-		goto unlock;
-	page = pte_page(entry);
+	spin_lock(&vma->vm_mm->page_table_lock);
+	page = pte_page(huge_ptep_get((pte_t *)pmd));
 	nid = page_to_nid(page);
 	if (node_isset(nid, *nodes) == !!(flags & MPOL_MF_INVERT))
 		goto unlock;
@@ -542,7 +537,7 @@ static void queue_pages_hugetlb_pmd_range(struct vm_area_struct *vma,
 	    (flags & MPOL_MF_MOVE && page_mapcount(page) == 1))
 		isolate_huge_page(page, private);
 unlock:
-	spin_unlock(ptl);
+	spin_unlock(&vma->vm_mm->page_table_lock);
 #else
 	BUG();
 #endif
@@ -654,7 +649,7 @@ static unsigned long change_prot_numa(struct vm_area_struct *vma,
  * @nodes and @flags,) it's isolated and queued to the pagelist which is
  * passed via @private.)
  */
-static int
+static struct vm_area_struct *
 queue_pages_range(struct mm_struct *mm, unsigned long start, unsigned long end,
 		const nodemask_t *nodes, unsigned long flags, void *private)
 {
@@ -804,6 +799,7 @@ static long do_set_mempolicy(unsigned short mode, unsigned short flags,
 			     nodemask_t *nodes)
 {
 	struct mempolicy *new, *old;
+	struct mm_struct *mm = current->mm;
 	NODEMASK_SCRATCH(scratch);
 	int ret;
 
@@ -815,11 +811,20 @@ static long do_set_mempolicy(unsigned short mode, unsigned short flags,
 		ret = PTR_ERR(new);
 		goto out;
 	}
-
+	/*
+	 * prevent changing our mempolicy while show_numa_maps()
+	 * is using it.
+	 * Note:  do_set_mempolicy() can be called at init time
+	 * with no 'mm'.
+	 */
+	if (mm)
+		down_write(&mm->mmap_sem);
 	task_lock(current);
 	ret = mpol_set_nodemask(new, nodes, scratch);
 	if (ret) {
 		task_unlock(current);
+		if (mm)
+			up_write(&mm->mmap_sem);
 		mpol_put(new);
 		goto out;
 	}
@@ -829,6 +834,9 @@ static long do_set_mempolicy(unsigned short mode, unsigned short flags,
 	    nodes_weight(new->v.nodes))
 		current->il_next = first_node(new->v.nodes);
 	task_unlock(current);
+	if (mm)
+		up_write(&mm->mmap_sem);
+
 	mpol_put(old);
 	ret = 0;
 out:
@@ -1004,22 +1012,18 @@ static int migrate_to_node(struct mm_struct *mm, int source, int dest,
 {
 	nodemask_t nmask;
 	LIST_HEAD(pagelist);
-	int err = 0;
+	int err;
 
 	nodes_clear(nmask);
 	node_set(source, nmask);
 
-	/*
-	 * This does not "check" the range but isolates all pages that
-	 * need migration.  Between passing in the full user address
-	 * space range and MPOL_MF_DISCONTIG_OK, this call can not fail.
-	 */
-	VM_BUG_ON(!(flags & (MPOL_MF_MOVE | MPOL_MF_MOVE_ALL)));
-	queue_pages_range(mm, mm->mmap->vm_start, mm->task_size, &nmask,
+	err = queue_pages_range(mm, mm->mmap->vm_start, mm->task_size, &nmask,
 			flags | MPOL_MF_DISCONTIG_OK, &pagelist);
+	if (err)
+		return err;
 
 	if (!list_empty(&pagelist)) {
-		err = migrate_pages(&pagelist, new_node_page, NULL, dest,
+		err = migrate_pages(&pagelist, new_node_page, dest,
 					MIGRATE_SYNC, MR_SYSCALL);
 		if (err)
 			putback_movable_pages(&pagelist);
@@ -1257,7 +1261,9 @@ static long do_mbind(unsigned long start, unsigned long len,
 
 	err = queue_pages_range(mm, start, end, nmask,
 			  flags | MPOL_MF_INVERT, &pagelist);
-	if (!err)
+
+	err = PTR_ERR(vma);	/* maybe ... */
+	if (!IS_ERR(vma))
 		err = mbind_range(mm, start, end, new);
 
 	if (!err) {
@@ -1265,8 +1271,8 @@ static long do_mbind(unsigned long start, unsigned long len,
 
 		if (!list_empty(&pagelist)) {
 			WARN_ON_ONCE(flags & MPOL_MF_LAZY);
-			nr_failed = migrate_pages(&pagelist, new_page, NULL,
-				start, MIGRATE_SYNC, MR_MEMPOLICY_MBIND);
+			nr_failed = migrate_pages(&pagelist, new_page, start,
+							MIGRATE_SYNC, MR_SYSCALL);
 			if (nr_failed)
 				putback_movable_pages(&pagelist);
 		}
@@ -2035,7 +2041,8 @@ retry_cpuset:
 	page = __alloc_pages_nodemask(gfp, order,
 				      policy_zonelist(gfp, pol, node),
 				      policy_nodemask(gfp, pol));
-	mpol_cond_put(pol);
+	if (unlikely(mpol_needs_cond_ref(pol)))
+		__mpol_put(pol);
 	if (unlikely(!page && read_mems_allowed_retry(cpuset_mems_cookie)))
 		goto retry_cpuset;
 	return page;

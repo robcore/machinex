@@ -28,9 +28,7 @@
 static const struct address_space_operations swap_aops = {
 	.writepage	= swap_writepage,
 	.set_page_dirty	= swap_set_page_dirty,
-#ifdef CONFIG_MIGRATION
 	.migratepage	= migrate_page,
-#endif
 };
 
 static struct backing_dev_info swap_backing_dev_info = {
@@ -267,12 +265,18 @@ void free_page_and_swap_cache(struct page *page)
 void free_pages_and_swap_cache(struct page **pages, int nr)
 {
 	struct page **pagep = pages;
-	int i;
 
 	lru_add_drain();
-	for (i = 0; i < nr; i++)
-		free_swap_cache(pagep[i]);
-	release_pages(pagep, nr, false);
+	while (nr) {
+		int todo = min(nr, PAGEVEC_SIZE);
+		int i;
+
+		for (i = 0; i < todo; i++)
+			free_swap_cache(pagep[i]);
+		release_pages(pagep, todo, false);
+		pagep += todo;
+		nr -= todo;
+	}
 }
 
 /*
@@ -393,7 +397,6 @@ struct page *read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 	return found_page;
 }
 
-#ifdef CONFIG_SWAP_ENABLE_READAHEAD
 static unsigned long swapin_nr_pages(unsigned long offset)
 {
 	static unsigned long prev_offset;
@@ -437,7 +440,6 @@ static unsigned long swapin_nr_pages(unsigned long offset)
 
 	return pages;
 }
-#endif
 
 /**
  * swapin_readahead - swap in pages in hope we need them soon
@@ -466,8 +468,7 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 	unsigned long entry_offset = swp_offset(entry);
 	unsigned long offset = entry_offset;
 	unsigned long start_offset, end_offset;
-	unsigned long mask = is_swap_fast(entry) ? 0 :
-				(1UL << page_cluster) - 1;
+	unsigned long mask;
 	struct blk_plug plug;
 
 	mask = swapin_nr_pages(offset) - 1;

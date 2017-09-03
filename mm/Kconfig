@@ -140,6 +140,9 @@ config HAVE_MEMBLOCK_PHYS_MAP
 config HAVE_GENERIC_RCU_GUP
 	boolean
 
+config HAVE_MEMBLOCK_PHYS_MAP
+	boolean
+
 config ARCH_DISCARD_MEMBLOCK
 	boolean
 
@@ -300,12 +303,6 @@ config BOUNCE
 # On the 'tile' arch, USB OHCI needs the bounce pool since tilegx will often
 # have more than 4GB of memory, but we don't currently use the IOTLB to present
 # a 32-bit address to OHCI.  So we need to use a bounce pool instead.
-#
-# We also use the bounce pool to provide stable page writes for jbd.  jbd
-# initiates buffer writeback without locking the page or setting PG_writeback,
-# and fixing that behavior (a second time; jbd2 doesn't have this problem) is
-# a major rework effort.  Instead, use the bounce buffer to snapshot pages
-# (until jbd goes away).  The only jbd user is ext3.
 config NEED_BOUNCE_POOL
 	bool
 	default y if TILE && USB_OHCI_HCD
@@ -342,6 +339,16 @@ config KSM
 	  See Documentation/vm/ksm.txt for more information: KSM is inactive
 	  until a program has madvised that an area is MADV_MERGEABLE, and
 	  root has set /sys/kernel/mm/ksm/run to 1 (if CONFIG_SYSFS is set).
+
+config KSM_CHECK_PAGE
+	bool "Check page before scanning"
+	depends on KSM
+	default n
+	help
+	  If enabled, this will check and skip if page is already scanned in
+	  same KSM scan cycle.
+	  This is useful in situation where you have parent and
+	  child process marking same area for KSM scanning.
 
 config DEFAULT_MMAP_MIN_ADDR
         int "Low address space to protect from user allocation"
@@ -446,6 +453,16 @@ choice
 	  memory footprint of applications without a guaranteed
 	  benefit.
 endchoice
+
+config CROSS_MEMORY_ATTACH
+	bool "Cross Memory Support"
+	depends on MMU
+	default y
+	help
+	  Enabling this option adds the system calls process_vm_readv and
+	  process_vm_writev which allow a process with the correct privileges
+	  to directly read from or write to to another process's address space.
+	  See the man page for more details.
 
 #
 # UP and nommu archs use km based percpu allocator
@@ -570,11 +587,28 @@ config MEM_SOFT_DIRTY
 
 	  See Documentation/vm/soft-dirty.txt for more details.
 
-config ZSWAP
+config ZPOOL
+	tristate "Common API for compressed memory storage"
+	default y
+	help
+	  Compressed memory storage API.  This allows using either zbud or
+	  zsmalloc.
+
+config ZBUD
+	tristate "Low density storage for compressed pages"
+	default n
+	help
+	  A special purpose allocator for storing compressed pages.
+	  It is designed to store up to two compressed pages per physical
+	  page.  While this design limits storage density, it has simple and
+	  deterministic reclaim properties that make it preferable to a higher
+	  density approach when reclaim will be used.
+
+config ZSWAPP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
 	select CRYPTO_LZO
-	select ZPOOL
+	select ZBUD
 	default n
 	help
 	  A lightweight compressed cache for swap pages.  It takes
@@ -590,36 +624,9 @@ config ZSWAP
 	  they have not be fully explored on the large set of potential
 	  configurations and workloads that exist.
 
-config ZSWAP_ENABLE_WRITEBACK
-	bool "Enable zswap writeback"
-	depends on ZSWAP
-	default n
-
-config ZSWAP_COMPACTION
-	bool "Enable runtime zswap compaction"
-	depends on ZSWAP && ZPOOL && ZSMALLOC
-	default n
-
-config ZPOOL
-	tristate "Common API for compressed memory storage"
-	default n
-	help
-	  Compressed memory storage API.  This allows using either zbud or
-	  zsmalloc.
-
-config ZBUD
-	tristate "Low density storage for compressed pages"
-	default n
-	help
-	  A special purpose allocator for storing compressed pages.
-	  It is designed to store up to two compressed pages per physical
-	  page.  While this design limits storage density, it has simple and
-	  deterministic reclaim properties that make it preferable to a higher
-	  density approach when reclaim will be used.
-
-config ZSMALLOC
+config ZSMALLOC_NEW
 	tristate "Memory allocator for compressed pages"
-	depends on MMU
+	depends on !ZSMALLOC
 	default n
 	help
 	  zsmalloc is a slab-based memory allocator designed to store
@@ -631,7 +638,7 @@ config ZSMALLOC
 
 config PGTABLE_MAPPING
 	bool "Use page table mapping to access object in zsmalloc"
-	depends on ZSMALLOC
+	depends on ZSMALLOC_NEW
 	help
 	  By default, zsmalloc uses a copy-based object mapping method to
 	  access allocations that span two pages. However, if a particular
@@ -639,8 +646,8 @@ config PGTABLE_MAPPING
 	  then you should select this. This causes zsmalloc to use page table
 	  mapping rather than copying for object mapping.
 
-	  You can check speed with zsmalloc benchmark:
-	  https://github.com/spartacus06/zsmapbench
+	  You can check speed with zsmalloc benchmark[1].
+	  [1] https://github.com/spartacus06/zsmalloc
 
 config GENERIC_EARLY_IOREMAP
 	bool
@@ -660,10 +667,33 @@ config MAX_STACK_SIZE_MB
 
 	  A sane initial value is 80 MB.
 
+config ZSWAP
+	bool "In-kernel swap page compression"
+	depends on FRONTSWAP && CRYPTO
+	select CRYPTO_LZO
+	default n
+	help
+	  Zswap is a backend for the frontswap mechanism in the VMM.
+	  It receives pages from frontswap and attempts to store them
+	  in a compressed memory pool, resulting in an effective
+	  partial memory reclaim.  In addition, pages and be retrieved
+	  from this compressed store much faster than most tradition
+	  swap devices resulting in reduced I/O and faster performance
+	  for many workloads.
+
+config ZSWAP_ENABLE_WRITEBACK
+	bool "Enable zswap writeback"
+	depends on ZSWAP
+	default n
+
+config ZSWAP_COMPACTION
+	bool "Enable runtime zswap compaction"
+	depends on ZSWAP && ZPOOL && ZSMALLOC_NEW
+	default n
 
 config ZSMALLOC_STAT
 	bool "Export zsmalloc statistics"
-	depends on ZSMALLOC
+	depends on ZSMALLOC_NEW
 	select DEBUG_FS
 	help
 	  This option enables code in the zsmalloc to collect various
@@ -673,7 +703,7 @@ config ZSMALLOC_STAT
 
 config ZSMALLOC_OBJ_SEQ
 	bool "Record the sequence number of each object in itself"
-	depends on ZSMALLOC
+	depends on ZSMALLOC_NEW
 	default n
 	help
 	  This option records the sequence number of each zs object in the object.
@@ -710,50 +740,28 @@ config SWAP_ENABLE_READAHEAD
 	  This behaviour is good at disk-based system, but not on in-memory
 	  compression (e.g. zram).
 
-config BALANCE_ANON_FILE_RECLAIM
-	bool "During reclaim treat anon and file backed pages equally"
-	depends on SWAP
+config MIN_DIRTY_THRESH_PAGES
+	int "The lower bound of VM dirty_thresh value in number of pages"
+	default 2560
 	help
-	  When performing memory reclaim treat anonymous and file backed pages
-	  equally.
-	  Swapping anonymous pages out to memory can be efficient enough to justify
-	  treating anonymous and file backed pages equally.
+	  Setting this to certain positive number guaranttees
+	  the VM Dirty-Thresh valus is always larger than that value.
+	  It is only effective when dirty_ratio is used. (Setting dirty_bytes
+	  disables this option.)
+	  Do not use it if you unsure.
 
-config KSWAPD_CPU_AFFINITY_MASK
-	string "kswapd cpu affinity mask"
-	depends on SMP
-	help
-	  Set the cpu affinity for the kswapd task.
-	  There can be power benefits on certain targets when limiting kswapd
-	  to run only on certain cores.
-	  The cpu affinity bitmask is represented by a hex string where commas
-	  group hex digits into chunks.  Each chunk defines exactly 32 bits of
-	  the resultant bitmask.
-	  For example to limit kswapd to the first 4 cores use the following:
-	  CONFIG_KSWAPD_CPU_AFFINITY_MASK="f"
+config ZCACHE
+       bool "Compressed cache for file pages (EXPERIMENTAL)"
+       depends on CRYPTO && CLEANCACHE
+       select CRYPTO_LZO
+       select ZBUD
+       default n
+       help
+         A compressed cache for file pages.
+         It takes active file pages that are in the process of being reclaimed
+         and attempts to compress them into a dynamically allocated RAM-based
+         memory pool.
 
-config FORCE_ALLOC_FROM_DMA_ZONE
-	bool "Force certain memory allocators to always return ZONE_DMA memory"
-	depends on ZONE_DMA
-	help
-	  Ensure certain memory allocators always return memory from ZONE_DMA.
-	  This option helps ensure that clients who require ZONE_DMA memory are
-	  always using ZONE_DMA memory.
-
-	  If unsure, say "n".
-
-config PROCESS_RECLAIM
-	bool "Enable process reclaim"
-	depends on PROC_FS
-	default n
-	help
-	 It allows to reclaim pages of the process by /proc/pid/reclaim.
-
-	 (echo file > /proc/PID/reclaim) reclaims file-backed pages only.
-	 (echo anon > /proc/PID/reclaim) reclaims anonymous pages only.
-	 (echo all > /proc/PID/reclaim) reclaims all pages.
-
-	 (echo addr size-byte > /proc/PID/reclaim) reclaims pages in
-	 (addr, addr + size-bytes) of the process.
-
-	 Any other vaule is ignored.
+         If this process is successful, when those file pages needed again, the
+         I/O reading operation was avoided. This results in a significant performance
+         gains under memory pressure for systems full with file pages.

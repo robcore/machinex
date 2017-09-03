@@ -28,19 +28,9 @@
 #define LLONG_MIN	(-LLONG_MAX - 1)
 #define ULLONG_MAX	(~0ULL)
 #define SIZE_MAX	(~(size_t)0)
-
-#define U8_MAX		((u8)~0U)
-#define S8_MAX		((s8)(U8_MAX>>1))
-#define S8_MIN		((s8)(-S8_MAX - 1))
-#define U16_MAX		((u16)~0U)
-#define S16_MAX		((s16)(U16_MAX>>1))
-#define S16_MIN		((s16)(-S16_MAX - 1))
-#define U32_MAX		((u32)~0U)
-#define S32_MAX		((s32)(U32_MAX>>1))
-#define S32_MIN		((s32)(-S32_MAX - 1))
-#define U64_MAX		((u64)~0ULL)
-#define S64_MAX		((s64)(U64_MAX>>1))
-#define S64_MIN		((s64)(-S64_MAX - 1))
+#ifndef U8_MAX
+#define U8_MAX 255
+#endif
 
 #define STACK_MAGIC	0xdeadbeef
 
@@ -90,8 +80,7 @@
 
 /*
  * Divide positive or negative dividend by positive divisor and round
- * to closest integer. Result is undefined for negative divisors and
- * for negative dividends if the divisor variable type is unsigned.
+ * to closest integer. Result is undefined for negative divisors.
  */
 #define DIV_ROUND_CLOSEST(x, divisor)(			\
 {							\
@@ -101,18 +90,6 @@
 	 ((typeof(divisor))-1) > 0 || (__x) > 0) ?	\
 		(((__x) + ((__d) / 2)) / (__d)) :	\
 		(((__x) - ((__d) / 2)) / (__d));	\
-}							\
-)
-/*
- * Same as above but for u64 dividends. divisor must be a 32-bit
- * number.
- */
-#define DIV_ROUND_CLOSEST_ULL(x, divisor)(		\
-{							\
-	typeof(divisor) __d = divisor;			\
-	unsigned long long _tmp = (x) + (__d) / 2;	\
-	do_div(_tmp, __d);				\
-	_tmp;						\
 }							\
 )
 
@@ -201,8 +178,6 @@ extern int _cond_resched(void);
 /*
  * abs() handles unsigned and signed longs, ints, shorts and chars.  For all
  * input types abs() returns a signed long.
- * abs() should not be used for 64-bit types (s64, u64, long long) - use abs64()
- * for those.
  */
 #define abs(x) ({						\
 		long ret;					\
@@ -214,11 +189,6 @@ extern int _cond_resched(void);
 			ret = (__x < 0) ? -__x : __x;		\
 		}						\
 		ret;						\
-	})
-
-#define abs64(x) ({				\
-		s64 __x = (x);			\
-		(__x < 0) ? -__x : __x;		\
 	})
 
 /**
@@ -239,9 +209,7 @@ static inline u32 reciprocal_scale(u32 val, u32 ep_ro)
 {
 	return (u32)(((u64) val * ep_ro) >> 32);
 }
-
-#if defined(CONFIG_MMU) && \
-	(defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_DEBUG_ATOMIC_SLEEP))
+#if defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_DEBUG_ATOMIC_SLEEP)
 void might_fault(void);
 #else
 static inline void might_fault(void) { }
@@ -437,6 +405,17 @@ extern int func_ptr_is_kernel_text(void *ptr);
 
 struct pid;
 extern struct pid *session_of_pgrp(struct pid *pgrp);
+
+#ifdef CONFIG_LGE_CRASH_HANDLER
+extern void set_crash_store_enable(void);
+extern void set_crash_store_disable(void);
+extern void store_crash_log(char *p);
+extern void set_kernel_crash_magic_number(void);
+#ifdef CONFIG_CPU_CP15_MMU
+extern void lge_save_ctx(struct pt_regs*, unsigned int, unsigned int,
+	unsigned int);
+#endif
+#endif
 
 unsigned long int_sqrt(unsigned long);
 

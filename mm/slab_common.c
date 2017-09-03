@@ -20,10 +20,10 @@
 #include <asm/page.h>
 #include <linux/memcontrol.h>
 
+#include "slab.h"
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/kmem.h>
-
-#include "slab.h"
 
 enum slab_state slab_state;
 LIST_HEAD(slab_caches);
@@ -774,24 +774,6 @@ void __init create_kmalloc_caches(unsigned long flags)
 #endif
 }
 #endif /* !CONFIG_SLOB */
-
-/*
- * To avoid unnecessary overhead, we pass through large allocation requests
- * directly to the page allocator. We use __GFP_COMP, because we will need to
- * know the allocation order to free the pages properly in kfree.
- */
-void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
-{
-	void *ret;
-	struct page *page;
-
-	flags |= __GFP_COMP;
-	page = alloc_kmem_pages(flags, order);
-	ret = page ? page_address(page) : NULL;
-	kmemleak_alloc(ret, size, 1, flags);
-	return ret;
-}
-EXPORT_SYMBOL(kmalloc_order);
 
 #ifdef CONFIG_TRACING
 void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)

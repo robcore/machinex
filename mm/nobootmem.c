@@ -45,9 +45,7 @@ static void * __init __alloc_memory_core_early(int nid, u64 size, u64 align,
 	if (!addr)
 		return NULL;
 
-	if (memblock_reserve(addr, size))
-		return NULL;
-
+	memblock_reserve(addr, size);
 	ptr = phys_to_virt(addr);
 	memset(ptr, 0, size);
 	/*
@@ -149,6 +147,8 @@ static inline void __init reset_node_managed_pages(pg_data_t *pgdat)
 {
 	struct zone *z;
 
+	if (reset_managed_pages_done)
+		return;
 	for (z = pgdat->node_zones; z < pgdat->node_zones + MAX_NR_ZONES; z++)
 		z->managed_pages = 0;
 }
@@ -157,12 +157,8 @@ void __init reset_all_zones_managed_pages(void)
 {
 	struct pglist_data *pgdat;
 
-	if (reset_managed_pages_done)
-		return;
-
 	for_each_online_pgdat(pgdat)
 		reset_node_managed_pages(pgdat);
-
 	reset_managed_pages_done = 1;
 }
 
@@ -196,6 +192,8 @@ unsigned long __init free_all_bootmem(void)
 	 * We need to use NUMA_NO_NODE instead of NODE_DATA(0)->node_id
 	 *  because in some case like Node0 doesn't have RAM installed
 	 *  low ram will be on Node1
+	 * Use MAX_NUMNODES will make sure all ranges in early_node_map[]
+	 *  will be used instead of only Node0 related
 	 */
 	pages = free_low_memory_core_early();
 	totalram_pages += pages;
@@ -216,6 +214,7 @@ unsigned long __init free_all_bootmem(void)
 void __init free_bootmem_node(pg_data_t *pgdat, unsigned long physaddr,
 			      unsigned long size)
 {
+	kmemleak_free_part(__va(physaddr), size);
 	memblock_free(physaddr, size);
 }
 
@@ -230,6 +229,7 @@ void __init free_bootmem_node(pg_data_t *pgdat, unsigned long physaddr,
  */
 void __init free_bootmem(unsigned long addr, unsigned long size)
 {
+	kmemleak_free_part(__va(addr), size);
 	memblock_free(addr, size);
 }
 

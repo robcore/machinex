@@ -87,18 +87,9 @@ bool is_cma_pageblock(struct page *page);
 
 extern int page_group_by_mobility_disabled;
 
-#define NR_MIGRATETYPE_BITS (PB_migrate_end - PB_migrate + 1)
-#define MIGRATETYPE_MASK ((1UL << NR_MIGRATETYPE_BITS) - 1)
-
-#define get_pageblock_migratetype(page)					\
-	get_pfnblock_flags_mask(page, page_to_pfn(page),		\
-			PB_migrate_end, MIGRATETYPE_MASK)
-
-static inline int get_pfnblock_migratetype(struct page *page, unsigned long pfn)
+static inline int get_pageblock_migratetype(struct page *page)
 {
-	BUILD_BUG_ON(PB_migrate_end - PB_migrate != 2);
-	return get_pfnblock_flags_mask(page, pfn, PB_migrate_end,
-					MIGRATETYPE_MASK);
+	return get_pageblock_flags_group(page, PB_migrate, PB_migrate_end);
 }
 
 struct free_area {
@@ -371,9 +362,6 @@ struct zone {
 	 * considered dirtyable memory.
 	 */
 	unsigned long		dirty_balance_reserve;
-#ifdef CONFIG_CMA
-	bool			cma_alloc;
-#endif
 
 #ifndef CONFIG_SPARSEMEM
 	/*
@@ -447,15 +435,6 @@ struct zone {
 	 */
 	int			nr_migrate_reserve_block;
 
-#ifdef CONFIG_MEMORY_ISOLATION
-	/*
-	 * Number of isolated pageblock. It is used to solve incorrect
-	 * freepage counting problem due to racy retrieving migratetype
-	 * of pageblock. Protected by zone->lock.
-	 */
-	unsigned long		nr_isolate_pageblock;
-#endif
-
 #ifdef CONFIG_MEMORY_HOTPLUG
 	/* see spanned/present_pages for more description */
 	seqlock_t		span_seqlock;
@@ -506,6 +485,7 @@ struct zone {
 
 	/* Fields commonly accessed by the page reclaim scanner */
 	spinlock_t		lru_lock;
+	unsigned long		pages_scanned;	   /* since last reclaim */
 	struct lruvec		lruvec;
 
 	/* Evictions & activations on the inactive file list */
@@ -561,6 +541,11 @@ enum zone_flags {
 					 */
 	ZONE_FAIR_DEPLETED,		/* fair zone policy batch depleted */
 };
+#ifdef CONFIG_SMP
+unsigned long zone_nr_free_pages(struct zone *zone);
+#else
+#define zone_nr_free_pages(zone) zone_page_state(zone, NR_FREE_PAGES)
+#endif /* CONFIG_SMP */
 
 static inline unsigned long zone_end_pfn(const struct zone *zone)
 {
@@ -808,10 +793,10 @@ static inline bool pgdat_is_empty(pg_data_t *pgdat)
 extern struct mutex zonelists_mutex;
 void build_all_zonelists(pg_data_t *pgdat, struct zone *zone);
 void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx);
-bool zone_watermark_ok(struct zone *z, unsigned int order,
-		unsigned long mark, int classzone_idx, int alloc_flags);
-bool zone_watermark_ok_safe(struct zone *z, unsigned int order,
-		unsigned long mark, int classzone_idx, int alloc_flags);
+bool zone_watermark_ok(struct zone *z, int order, unsigned long mark,
+		int classzone_idx, int alloc_flags);
+bool zone_watermark_ok_safe(struct zone *z, int order, unsigned long mark,
+		int classzone_idx, int alloc_flags);
 enum memmap_context {
 	MEMMAP_EARLY,
 	MEMMAP_HOTPLUG,
@@ -881,7 +866,7 @@ static inline int is_highmem_idx(enum zone_type idx)
 }
 
 /**
- * is_highmem - helper function to quickly check if a struct zone is a 
+ * is_highmem - helper function to quickly check if a struct zone is a
  *              highmem zone or not.  This is an attempt to keep references
  *              to ZONE_{DMA/NORMAL/HIGHMEM/etc} in general code to a minimum.
  * @zone - pointer to struct zone variable
@@ -904,6 +889,12 @@ int min_free_kbytes_sysctl_handler(struct ctl_table *, int,
 					void __user *, size_t *, loff_t *);
 extern int sysctl_lowmem_reserve_ratio[MAX_NR_ZONES-1];
 int lowmem_reserve_ratio_sysctl_handler(struct ctl_table *, int,
+					void __user *, size_t *, loff_t *);
+int wmark_min_kbytes_sysctl_handler(struct ctl_table *, int,
+					void __user *, size_t *, loff_t *);
+int wmark_low_kbytes_sysctl_handler(struct ctl_table *, int,
+					void __user *, size_t *, loff_t *);
+int wmark_high_kbytes_sysctl_handler(struct ctl_table *, int,
 					void __user *, size_t *, loff_t *);
 int percpu_pagelist_fraction_sysctl_handler(struct ctl_table *, int,
 					void __user *, size_t *, loff_t *);
@@ -986,7 +977,6 @@ static inline int zonelist_node_idx(struct zoneref *zoneref)
  * @z - The cursor used as a starting point for the search
  * @highest_zoneidx - The zone index of the highest zone to return
  * @nodes - An optional nodemask to filter the zonelist with
- * @zone - The first suitable zone found is returned via this parameter
  *
  * This function returns the next zone at or below a given zone index that is
  * within the allowed nodemask using a cursor as the starting point for the
@@ -996,8 +986,7 @@ static inline int zonelist_node_idx(struct zoneref *zoneref)
  */
 struct zoneref *next_zones_zonelist(struct zoneref *z,
 					enum zone_type highest_zoneidx,
-					nodemask_t *nodes,
-					struct zone **zone);
+					nodemask_t *nodes);
 
 /**
  * first_zones_zonelist - Returns the first zone at or below highest_zoneidx within the allowed nodemask in a zonelist
@@ -1016,8 +1005,10 @@ static inline struct zoneref *first_zones_zonelist(struct zonelist *zonelist,
 					nodemask_t *nodes,
 					struct zone **zone)
 {
-	return next_zones_zonelist(zonelist->_zonerefs, highest_zoneidx, nodes,
-								zone);
+	struct zoneref *z = next_zones_zonelist(zonelist->_zonerefs,
+							highest_zoneidx, nodes);
+	*zone = zonelist_zone(z);
+	return z;
 }
 
 /**
@@ -1034,7 +1025,8 @@ static inline struct zoneref *first_zones_zonelist(struct zonelist *zonelist,
 #define for_each_zone_zonelist_nodemask(zone, z, zlist, highidx, nodemask) \
 	for (z = first_zones_zonelist(zlist, highidx, nodemask, &zone);	\
 		zone;							\
-		z = next_zones_zonelist(++z, highidx, nodemask, &zone))	\
+		z = next_zones_zonelist(++z, highidx, nodemask),	\
+			zone = zonelist_zone(z))			\
 
 /**
  * for_each_zone_zonelist - helper macro to iterate over valid zones in a zonelist at or below a given zone index
@@ -1225,7 +1217,10 @@ static inline int pfn_present(unsigned long pfn)
 #define pfn_to_nid(pfn)		(0)
 #endif
 
+#ifndef early_pfn_valid
 #define early_pfn_valid(pfn)	pfn_valid(pfn)
+#endif
+
 void sparse_init(void);
 #else
 #define sparse_init()	do {} while (0)

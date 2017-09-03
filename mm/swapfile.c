@@ -1129,7 +1129,6 @@ static int unuse_pte(struct vm_area_struct *vma, pmd_t *pmd,
 	} else { /* ksm created a completely new copy */
 		page_add_new_anon_rmap(page, vma, addr);
 		mem_cgroup_commit_charge(page, memcg, false);
-		lru_cache_add_active_or_unevictable(page, vma);
 	}
 	swap_free(entry);
 	/*

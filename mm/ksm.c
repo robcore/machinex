@@ -37,7 +37,6 @@
 #include <linux/freezer.h>
 #include <linux/oom.h>
 #include <linux/numa.h>
-#include <linux/show_mem_notifier.h>
 
 #include <asm/tlbflush.h>
 #include "internal.h"
@@ -219,10 +218,10 @@ static unsigned long ksm_pages_unshared;
 static unsigned long ksm_rmap_items;
 
 /* Number of pages ksmd should scan in one batch */
-static unsigned int ksm_thread_pages_to_scan = 100;
+static unsigned int ksm_thread_pages_to_scan = 256;
 
 /* Milliseconds ksmd should sleep between batches */
-static unsigned int ksm_thread_sleep_millisecs = 20;
+static unsigned int ksm_thread_sleep_millisecs = 1500;
 
 /* Boolean to indicate whether to use deferred timer or not */
 static bool use_deferred_timer;
@@ -250,22 +249,6 @@ static DEFINE_SPINLOCK(ksm_mmlist_lock);
 #define KSM_KMEM_CACHE(__struct, __flags) kmem_cache_create("ksm_"#__struct,\
 		sizeof(struct __struct), __alignof__(struct __struct),\
 		(__flags), NULL)
-
-static int ksm_show_mem_notifier(struct notifier_block *nb,
-				unsigned long action,
-				void *data)
-{
-	if (action)
-		return 0;
-	pr_info("ksm_pages_sharing: %lu\n", ksm_pages_sharing);
-	pr_info("ksm_pages_shared: %lu\n", ksm_pages_shared);
-
-	return 0;
-}
-
-static struct notifier_block ksm_show_mem_notifier_block = {
-	.notifier_call = ksm_show_mem_notifier,
-};
 
 static int __init ksm_slab_init(void)
 {
@@ -663,7 +646,9 @@ static void remove_rmap_item_from_tree(struct rmap_item *rmap_item)
 		 * than left over from before.
 		 */
 		age = (unsigned char)(ksm_scan.seqnr - rmap_item->address);
+#ifndef CONFIG_KSM_CHECK_PAGE
 		BUG_ON(age > 1);
+#endif
 		if (!age)
 			rb_erase(&rmap_item->node,
 				 root_unstable_tree + NUMA(rmap_item->nid));
@@ -1706,6 +1691,31 @@ next_mm:
 	return NULL;
 }
 
+static inline int is_page_scanned(struct page *page)
+{
+#ifdef CONFIG_KSM_CHECK_PAGE
+	/* page is already marked as ksm, so this will be simple merge */
+	if (PageKsm(page))
+		return 0;
+
+	if (ksm_scan.seqnr & 0x1) {
+		/* odd cycle */
+		/* clear even cycle bit */
+		ClearPageKsmScan0(page);
+		/* get old value and mark it scanned */
+		return TestSetPageKsmScan1(page);
+	} else {
+		/* even cycle */
+		/* clear odd cycle bit */
+		ClearPageKsmScan1(page);
+		/* get old value and mark it scanned */
+		return TestSetPageKsmScan0(page);
+	}
+#else
+	return 0;
+#endif
+}
+
 /**
  * ksm_do_scan  - the ksm scanner main worker function.
  * @scan_npages - number of pages we want to scan before we return.
@@ -1949,30 +1959,21 @@ struct page *ksm_might_need_to_copy(struct page *page,
 	return new_page;
 }
 
-int rmap_walk_ksm(struct page *page, struct rmap_walk_control *rwc)
+int page_referenced_ksm(struct page *page, struct mem_cgroup *memcg,
+			unsigned long *vm_flags)
 {
 	struct stable_node *stable_node;
 	struct rmap_item *rmap_item;
-	int ret = SWAP_AGAIN;
+	unsigned int mapcount = page_mapcount(page);
+	int referenced = 0;
 	int search_new_forks = 0;
 
-	VM_BUG_ON_PAGE(!PageKsm(page), page);
-
-	/*
-	 * Rely on the page lock to protect against concurrent modifications
-	 * to that page's node of the stable tree.
-	 */
-	VM_BUG_ON_PAGE(!PageLocked(page), page);
+	VM_BUG_ON(!PageKsm(page));
+	VM_BUG_ON(!PageLocked(page));
 
 	stable_node = page_stable_node(page);
 	if (!stable_node)
-		return ret;
-
-	if (rwc->target_vma) {
-               unsigned long address = vma_address(page, rwc->target_vma);
-               ret = rwc->rmap_one(page, rwc->target_vma, address, rwc->arg);
-               goto out;
-	}
+		return 0;
 again:
 	hlist_for_each_entry(rmap_item, &stable_node->hlist, hlist) {
 		struct anon_vma *anon_vma = rmap_item->anon_vma;
@@ -1995,16 +1996,62 @@ again:
 			if ((rmap_item->mm == vma->vm_mm) == search_new_forks)
 				continue;
 
-			if (rwc->invalid_vma && rwc->invalid_vma(vma, rwc->arg))
+			if (memcg && !mm_match_cgroup(vma->vm_mm, memcg))
 				continue;
 
-			ret = rwc->rmap_one(page, vma,
-					rmap_item->address, rwc->arg);
-			if (ret != SWAP_AGAIN) {
-				anon_vma_unlock_read(anon_vma);
-				goto out;
-			}
-			if (rwc->done && rwc->done(page)) {
+			referenced += page_referenced_one(page, vma,
+				rmap_item->address, &mapcount, vm_flags);
+			if (!search_new_forks || !mapcount)
+				break;
+		}
+		anon_vma_unlock_read(anon_vma);
+		if (!mapcount)
+			goto out;
+	}
+	if (!search_new_forks++)
+		goto again;
+out:
+	return referenced;
+}
+
+int try_to_unmap_ksm(struct page *page, enum ttu_flags flags)
+{
+	struct stable_node *stable_node;
+	struct rmap_item *rmap_item;
+	int ret = SWAP_AGAIN;
+	int search_new_forks = 0;
+
+	VM_BUG_ON(!PageKsm(page));
+	VM_BUG_ON(!PageLocked(page));
+
+	stable_node = page_stable_node(page);
+	if (!stable_node)
+		return SWAP_FAIL;
+again:
+	hlist_for_each_entry(rmap_item, &stable_node->hlist, hlist) {
+		struct anon_vma *anon_vma = rmap_item->anon_vma;
+		struct anon_vma_chain *vmac;
+		struct vm_area_struct *vma;
+
+		anon_vma_lock_read(anon_vma);
+		anon_vma_interval_tree_foreach(vmac, &anon_vma->rb_root,
+					       0, ULONG_MAX) {
+			vma = vmac->vma;
+			if (rmap_item->address < vma->vm_start ||
+			    rmap_item->address >= vma->vm_end)
+				continue;
+			/*
+			 * Initially we examine only the vma which covers this
+			 * rmap_item; but later, if there is still work to do,
+			 * we examine covering vmas in other mms: in case they
+			 * were forked from the original since ksmd passed.
+			 */
+			if ((rmap_item->mm == vma->vm_mm) == search_new_forks)
+				continue;
+
+			ret = try_to_unmap_one(page, vma,
+					rmap_item->address, flags);
+			if (ret != SWAP_AGAIN || !page_mapped(page)) {
 				anon_vma_unlock_read(anon_vma);
 				goto out;
 			}
@@ -2018,6 +2065,56 @@ out:
 }
 
 #ifdef CONFIG_MIGRATION
+int rmap_walk_ksm(struct page *page, int (*rmap_one)(struct page *,
+		  struct vm_area_struct *, unsigned long, void *), void *arg)
+{
+	struct stable_node *stable_node;
+	struct rmap_item *rmap_item;
+	int ret = SWAP_AGAIN;
+	int search_new_forks = 0;
+
+	VM_BUG_ON(!PageKsm(page));
+	VM_BUG_ON(!PageLocked(page));
+
+	stable_node = page_stable_node(page);
+	if (!stable_node)
+		return ret;
+again:
+	hlist_for_each_entry(rmap_item, &stable_node->hlist, hlist) {
+		struct anon_vma *anon_vma = rmap_item->anon_vma;
+		struct anon_vma_chain *vmac;
+		struct vm_area_struct *vma;
+
+		anon_vma_lock_read(anon_vma);
+		anon_vma_interval_tree_foreach(vmac, &anon_vma->rb_root,
+					       0, ULONG_MAX) {
+			vma = vmac->vma;
+			if (rmap_item->address < vma->vm_start ||
+			    rmap_item->address >= vma->vm_end)
+				continue;
+			/*
+			 * Initially we examine only the vma which covers this
+			 * rmap_item; but later, if there is still work to do,
+			 * we examine covering vmas in other mms: in case they
+			 * were forked from the original since ksmd passed.
+			 */
+			if ((rmap_item->mm == vma->vm_mm) == search_new_forks)
+				continue;
+
+			ret = rmap_one(page, vma, rmap_item->address, arg);
+			if (ret != SWAP_AGAIN) {
+				anon_vma_unlock_read(anon_vma);
+				goto out;
+			}
+		}
+		anon_vma_unlock_read(anon_vma);
+	}
+	if (!search_new_forks++)
+		goto again;
+out:
+	return ret;
+}
+
 void ksm_migrate_page(struct page *newpage, struct page *oldpage)
 {
 	struct stable_node *stable_node;
@@ -2372,10 +2469,10 @@ static struct attribute *ksm_attrs[] = {
 	&pages_unshared_attr.attr,
 	&pages_volatile_attr.attr,
 	&full_scans_attr.attr,
-	&deferred_timer_attr.attr,
 #ifdef CONFIG_NUMA
 	&merge_across_nodes_attr.attr,
 #endif
+	&deferred_timer_attr.attr,
 	NULL,
 };
 
@@ -2396,7 +2493,7 @@ static int __init ksm_init(void)
 
 	ksm_thread = kthread_run(ksm_scan_thread, NULL, "ksmd");
 	if (IS_ERR(ksm_thread)) {
-		pr_err("ksm: creating kthread failed\n");
+		printk(KERN_ERR "ksm: creating kthread failed\n");
 		err = PTR_ERR(ksm_thread);
 		goto out_free;
 	}
@@ -2404,7 +2501,7 @@ static int __init ksm_init(void)
 #ifdef CONFIG_SYSFS
 	err = sysfs_create_group(mm_kobj, &ksm_attr_group);
 	if (err) {
-		pr_err("ksm: register sysfs failed\n");
+		printk(KERN_ERR "ksm: register sysfs failed\n");
 		kthread_stop(ksm_thread);
 		goto out_free;
 	}
@@ -2417,8 +2514,6 @@ static int __init ksm_init(void)
 	/* There is no significance to this priority 100 */
 	hotplug_memory_notifier(ksm_memory_callback, 100);
 #endif
-
-	show_mem_notifier_register(&ksm_show_mem_notifier_block);
 	return 0;
 
 out_free:
@@ -2426,4 +2521,4 @@ out_free:
 out:
 	return err;
 }
-subsys_initcall(ksm_init);
+module_init(ksm_init)

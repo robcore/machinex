@@ -50,7 +50,7 @@ void vmacache_flush_all(struct mm_struct *mm)
  * Also handle the case where a kernel thread has adopted this mm via use_mm().
  * That kernel thread's vmacache is not applicable to this mm.
  */
-static bool vmacache_valid_mm(struct mm_struct *mm)
+static inline bool vmacache_valid_mm(struct mm_struct *mm)
 {
 	return current->mm == mm && !(current->flags & PF_KTHREAD);
 }
@@ -88,8 +88,6 @@ struct vm_area_struct *vmacache_find(struct mm_struct *mm, unsigned long addr)
 	if (!vmacache_valid(mm))
 		return NULL;
 
-	count_vm_vmacache_event(VMACACHE_FIND_CALLS);
-
 	for (i = 0; i < VMACACHE_SIZE; i++) {
 		struct vm_area_struct *vma = current->vmacache[i];
 
@@ -97,10 +95,8 @@ struct vm_area_struct *vmacache_find(struct mm_struct *mm, unsigned long addr)
 			continue;
 		if (WARN_ON_ONCE(vma->vm_mm != mm))
 			break;
-		if (vma->vm_start <= addr && vma->vm_end > addr) {
-			count_vm_vmacache_event(VMACACHE_FIND_HITS);
+		if (vma->vm_start <= addr && vma->vm_end > addr)
 			return vma;
-		}
 	}
 
 	return NULL;
@@ -116,15 +112,11 @@ struct vm_area_struct *vmacache_find_exact(struct mm_struct *mm,
 	if (!vmacache_valid(mm))
 		return NULL;
 
-	count_vm_vmacache_event(VMACACHE_FIND_CALLS);
-
 	for (i = 0; i < VMACACHE_SIZE; i++) {
 		struct vm_area_struct *vma = current->vmacache[i];
 
-		if (vma && vma->vm_start == start && vma->vm_end == end) {
-			count_vm_vmacache_event(VMACACHE_FIND_HITS);
+		if (vma && vma->vm_start == start && vma->vm_end == end)
 			return vma;
-		}
 	}
 
 	return NULL;

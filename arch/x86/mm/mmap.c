@@ -31,7 +31,7 @@
 #include <linux/sched.h>
 #include <asm/elf.h>
 
-struct va_alignment __read_mostly va_align = {
+struct __read_mostly va_alignment va_align = {
 	.flags = -1,
 };
 

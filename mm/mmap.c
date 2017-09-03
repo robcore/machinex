@@ -91,28 +91,8 @@ pgprot_t vm_get_page_prot(unsigned long vm_flags)
 }
 EXPORT_SYMBOL(vm_get_page_prot);
 
-static pgprot_t vm_pgprot_modify(pgprot_t oldprot, unsigned long vm_flags)
-{
-	return pgprot_modify(oldprot, vm_get_page_prot(vm_flags));
-}
-
-/* Update vma->vm_page_prot to reflect vma->vm_flags. */
-void vma_set_page_prot(struct vm_area_struct *vma)
-{
-	unsigned long vm_flags = vma->vm_flags;
-
-	vma->vm_page_prot = vm_pgprot_modify(vma->vm_page_prot, vm_flags);
-	if (vma_wants_writenotify(vma)) {
-		vm_flags &= ~VM_SHARED;
-		vma->vm_page_prot = vm_pgprot_modify(vma->vm_page_prot,
-						     vm_flags);
-	}
-}
-
-
 int sysctl_overcommit_memory __read_mostly = OVERCOMMIT_GUESS;  /* heuristic overcommit */
 int sysctl_overcommit_ratio __read_mostly = 50;	/* default is 50% */
-unsigned long sysctl_overcommit_kbytes __read_mostly;
 int sysctl_max_map_count __read_mostly = DEFAULT_MAX_MAP_COUNT;
 unsigned long sysctl_user_reserve_kbytes __read_mostly = 1UL << 17; /* 128MB */
 unsigned long sysctl_admin_reserve_kbytes __read_mostly = 1UL << 13; /* 8MB */
@@ -154,7 +134,7 @@ EXPORT_SYMBOL_GPL(vm_memory_committed);
  */
 int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 {
-	long free, allowed, reserve;
+	unsigned long free, allowed, reserve;
 
 	VM_WARN_ONCE(percpu_counter_read(&vm_committed_as) <
 			-(s64)vm_committed_as_batch * num_online_cpus(),
@@ -210,19 +190,21 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		goto error;
 	}
 
-	allowed = vm_commit_limit();
+	allowed = (totalram_pages - hugetlb_total_pages())
+	       	* sysctl_overcommit_ratio / 100;
 	/*
 	 * Reserve some for root
 	 */
 	if (!cap_sys_admin)
 		allowed -= sysctl_admin_reserve_kbytes >> (PAGE_SHIFT - 10);
+	allowed += total_swap_pages;
 
 	/*
 	 * Don't let a single process grow so big a user can't recover
 	 */
 	if (mm) {
 		reserve = sysctl_user_reserve_kbytes >> (PAGE_SHIFT - 10);
-		allowed -= min_t(long, mm->total_vm / 32, reserve);
+		allowed -= min(mm->total_vm / 32, reserve);
 	}
 
 	if (percpu_counter_read_positive(&vm_committed_as) < allowed)
@@ -289,7 +271,7 @@ static unsigned long do_brk(unsigned long addr, unsigned long len);
 
 SYSCALL_DEFINE1(brk, unsigned long, brk)
 {
-	unsigned long retval;
+	unsigned long rlim, retval;
 	unsigned long newbrk, oldbrk;
 	struct mm_struct *mm = current->mm;
 	unsigned long min_brk;
@@ -319,8 +301,9 @@ SYSCALL_DEFINE1(brk, unsigned long, brk)
 	 * segment grow beyond its set limit the in case where the limit is
 	 * not page aligned -Ram Gupta
 	 */
-	if (check_data_rlimit(rlimit(RLIMIT_DATA), brk, mm->start_brk,
-			      mm->end_data, mm->start_data))
+	rlim = rlimit(RLIMIT_DATA);
+	if (rlim < RLIM_INFINITY && (brk - mm->start_brk) +
+			(mm->end_data - mm->start_data) > rlim)
 		goto out;
 
 	newbrk = PAGE_ALIGN(brk);
@@ -1245,12 +1228,13 @@ static inline int mlock_future_check(struct mm_struct *mm,
 /*
  * The caller must hold down_write(&current->mm->mmap_sem).
  */
+
 unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 			unsigned long len, unsigned long prot,
 			unsigned long flags, unsigned long pgoff,
 			unsigned long *populate)
 {
-	struct mm_struct *mm = current->mm;
+	struct mm_struct * mm = current->mm;
 	vm_flags_t vm_flags;
 
 	*populate = 0;
@@ -1258,10 +1242,8 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 #ifdef CONFIG_SDCARD_FS
 	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
 		file = sdcardfs_lower_file(file);
-#else
-	if (file && (file->f_mode & FMODE_NONMAPPABLE))
-		file = file->f_op->get_lower_file(file);
 #endif
+
 	/*
 	 * Does the application expect PROT_READ to imply PROT_EXEC?
 	 *
@@ -1419,13 +1401,8 @@ SYSCALL_DEFINE6(mmap_pgoff, unsigned long, addr, unsigned long, len,
 			goto out_fput;
 	} else if (flags & MAP_HUGETLB) {
 		struct user_struct *user = NULL;
-		struct hstate *hs;
 
-		hs = hstate_sizelog((flags >> MAP_HUGE_SHIFT) & SHM_HUGE_MASK);
-		if (!hs)
-			return -EINVAL;
-
-		len = ALIGN(len, huge_page_size(hs));
+		len = ALIGN(len, huge_page_size(&default_hstate));
 		/*
 		 * VM_NORESERVE is used because the reservations will be
 		 * taken when vm_ops->mmap() is called
@@ -1492,15 +1469,10 @@ int vma_wants_writenotify(struct vm_area_struct *vma)
 	if (vma->vm_ops && vma->vm_ops->page_mkwrite)
 		return 1;
 
-	/* The open routine did something to the protections that pgprot_modify
-	 * won't preserve? */
+	/* The open routine did something to the protections already? */
 	if (pgprot_val(vma->vm_page_prot) !=
-	    pgprot_val(vm_pgprot_modify(vma->vm_page_prot, vm_flags)))
+	    pgprot_val(vm_get_page_prot(vm_flags)))
 		return 0;
-
-	/* Do we need to track softdirty? */
-	if (IS_ENABLED(CONFIG_MEM_SOFT_DIRTY) && !(vm_flags & VM_SOFTDIRTY))
-		return 1;
 
 	/* Specialty mapping? */
 	if (vm_flags & VM_PFNMAP)
@@ -1638,6 +1610,21 @@ munmap_back:
 			goto free_vma;
 	}
 
+	if (vma_wants_writenotify(vma)) {
+		pgprot_t pprot = vma->vm_page_prot;
+
+		/* Can vma->vm_page_prot have changed??
+		 *
+		 * Answer: Yes, drivers may have changed it in their
+		 *         f_op->mmap method.
+		 *
+		 * Ensures that vmas marked as uncached stay that way.
+		 */
+		vma->vm_page_prot = vm_get_page_prot(vm_flags & ~VM_SHARED);
+		if (pgprot_val(pprot) == pgprot_val(pgprot_noncached(pprot)))
+			vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	}
+
 	vma_link(mm, vma, prev, rb_link, rb_parent);
 	/* Once vma denies write, undo our temporary denial count */
 	if (file) {
@@ -1658,18 +1645,6 @@ out:
 		else
 			vma->vm_flags &= ~VM_LOCKED;
 	}
-
-	/*
-	 * New (or expanded) vma always get soft dirty status.
-	 * Otherwise user-space soft-dirty page tracker won't
-	 * be able to distinguish situation when vma area unmapped,
-	 * then new mapped in-place (which must be aimed as
-	 * a completely new data area).
-	 */
-	vma->vm_flags |= VM_SOFTDIRTY;
-
-	vma_set_page_prot(vma);
-
 	return addr;
 
 unmap_and_free_vma:
@@ -1912,7 +1887,7 @@ arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	struct vm_area_struct *vma;
 	struct vm_unmapped_area_info info;
 
-	if (len > TASK_SIZE - mmap_min_addr)
+	if (len > TASK_SIZE)
 		return -ENOMEM;
 
 	if (flags & MAP_FIXED)
@@ -1921,14 +1896,14 @@ arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	if (addr) {
 		addr = PAGE_ALIGN(addr);
 		vma = find_vma(mm, addr);
-		if (TASK_SIZE - len >= addr && addr >= mmap_min_addr &&
+		if (TASK_SIZE - len >= addr &&
 		    (!vma || addr + len <= vma->vm_start))
 			return addr;
 	}
 
 	info.flags = 0;
 	info.length = len;
-	info.low_limit = mm->mmap_base;
+	info.low_limit = TASK_UNMAPPED_BASE;
 	info.high_limit = TASK_SIZE;
 	info.align_mask = 0;
 	return vm_unmapped_area(&info);
@@ -1951,7 +1926,7 @@ arch_get_unmapped_area_topdown(struct file *filp, const unsigned long addr0,
 	struct vm_unmapped_area_info info;
 
 	/* requested length too big for entire address space */
-	if (len > TASK_SIZE - mmap_min_addr)
+	if (len > TASK_SIZE)
 		return -ENOMEM;
 
 	if (flags & MAP_FIXED)
@@ -1961,14 +1936,14 @@ arch_get_unmapped_area_topdown(struct file *filp, const unsigned long addr0,
 	if (addr) {
 		addr = PAGE_ALIGN(addr);
 		vma = find_vma(mm, addr);
-		if (TASK_SIZE - len >= addr && addr >= mmap_min_addr &&
+		if (TASK_SIZE - len >= addr &&
 				(!vma || addr + len <= vma->vm_start))
 			return addr;
 	}
 
 	info.flags = VM_UNMAPPED_AREA_TOPDOWN;
 	info.length = len;
-	info.low_limit = max(PAGE_SIZE, mmap_min_addr);
+	info.low_limit = PAGE_SIZE;
 	info.high_limit = mm->mmap_base;
 	info.align_mask = 0;
 	addr = vm_unmapped_area(&info);
@@ -1986,6 +1961,15 @@ arch_get_unmapped_area_topdown(struct file *filp, const unsigned long addr0,
 		info.high_limit = TASK_SIZE;
 		addr = vm_unmapped_area(&info);
 	}
+
+	/*
+	 * New (or expanded) vma always get soft dirty status.
+	 * Otherwise user-space soft-dirty page tracker won't
+	 * be able to distinguish situation when vma area unmapped,
+	 * then new mapped in-place (which must be aimed as
+	 * a completely new data area).
+	 */
+	vma->vm_flags |= VM_SOFTDIRTY;
 
 	return addr;
 }
@@ -2915,31 +2899,6 @@ int may_expand_vm(struct mm_struct *mm, unsigned long npages)
 	return 1;
 }
 
-static int special_mapping_fault(struct vm_area_struct *vma,
-				 struct vm_fault *vmf);
-
-/*
- * Having a close hook prevents vma merging regardless of flags.
- */
-static void special_mapping_close(struct vm_area_struct *vma)
-{
-}
-
-static const char *special_mapping_name(struct vm_area_struct *vma)
-{
-	return ((struct vm_special_mapping *)vma->vm_private_data)->name;
-}
-
-static const struct vm_operations_struct special_mapping_vmops = {
-	.close = special_mapping_close,
-	.fault = special_mapping_fault,
-	.name = special_mapping_name,
-};
-
-static const struct vm_operations_struct legacy_special_mapping_vmops = {
-	.close = special_mapping_close,
-	.fault = special_mapping_fault,
-};
 
 static int special_mapping_fault(struct vm_area_struct *vma,
 				struct vm_fault *vmf)
@@ -2955,13 +2914,7 @@ static int special_mapping_fault(struct vm_area_struct *vma,
 	 */
 	pgoff = vmf->pgoff - vma->vm_pgoff;
 
-	if (vma->vm_ops == &legacy_special_mapping_vmops)
-		pages = vma->vm_private_data;
-	else
-		pages = ((struct vm_special_mapping *)vma->vm_private_data)->
-			pages;
-
-	for (; pgoff && *pages; ++pages)
+	for (pages = vma->vm_private_data; pgoff && *pages; ++pages)
 		pgoff--;
 
 	if (*pages) {
@@ -2974,11 +2927,30 @@ static int special_mapping_fault(struct vm_area_struct *vma,
 	return VM_FAULT_SIGBUS;
 }
 
-static struct vm_area_struct *__install_special_mapping(
-	struct mm_struct *mm,
-	unsigned long addr, unsigned long len,
-	unsigned long vm_flags, const struct vm_operations_struct *ops,
-	void *priv)
+/*
+ * Having a close hook prevents vma merging regardless of flags.
+ */
+static void special_mapping_close(struct vm_area_struct *vma)
+{
+}
+
+static const struct vm_operations_struct special_mapping_vmops = {
+	.close = special_mapping_close,
+	.fault = special_mapping_fault,
+};
+
+/*
+ * Called with mm->mmap_sem held for writing.
+ * Insert a new vma covering the given region, with the given flags.
+ * Its pages are supplied by the given array of struct page *.
+ * The array can be shorter than len >> PAGE_SHIFT if it's null-terminated.
+ * The region past the last page supplied will always produce SIGBUS.
+ * The array pointer and the pages it points to are assumed to stay alive
+ * for as long as this mapping might exist.
+ */
+struct vm_area_struct *_install_special_mapping(struct mm_struct *mm,
+			    unsigned long addr, unsigned long len,
+			    unsigned long vm_flags, struct page **pages)
 {
 	int ret;
 	struct vm_area_struct *vma;
@@ -2995,8 +2967,8 @@ static struct vm_area_struct *__install_special_mapping(
 	vma->vm_flags = vm_flags | mm->def_flags | VM_DONTEXPAND | VM_SOFTDIRTY;
 	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
 
-	vma->vm_ops = ops;
-	vma->vm_private_data = priv;
+	vma->vm_ops = &special_mapping_vmops;
+	vma->vm_private_data = pages;
 
 	ret = insert_vm_struct(mm, vma);
 	if (ret)
@@ -3013,33 +2985,16 @@ out:
 	return ERR_PTR(ret);
 }
 
-/*
- * Called with mm->mmap_sem held for writing.
- * Insert a new vma covering the given region, with the given flags.
- * Its pages are supplied by the given array of struct page *.
- * The array can be shorter than len >> PAGE_SHIFT if it's null-terminated.
- * The region past the last page supplied will always produce SIGBUS.
- * The array pointer and the pages it points to are assumed to stay alive
- * for as long as this mapping might exist.
- */
-struct vm_area_struct *_install_special_mapping(
-	struct mm_struct *mm,
-	unsigned long addr, unsigned long len,
-	unsigned long vm_flags, const struct vm_special_mapping *spec)
-{
-	return __install_special_mapping(mm, addr, len, vm_flags,
-					 &special_mapping_vmops, (void *)spec);
-}
-
 int install_special_mapping(struct mm_struct *mm,
 			    unsigned long addr, unsigned long len,
 			    unsigned long vm_flags, struct page **pages)
 {
-	struct vm_area_struct *vma = __install_special_mapping(
-		mm, addr, len, vm_flags, &legacy_special_mapping_vmops,
-		(void *)pages);
+	struct vm_area_struct *vma = _install_special_mapping(mm,
+			    addr, len, vm_flags, pages);
 
-	return PTR_ERR_OR_ZERO(vma);
+	if (IS_ERR(vma))
+		return PTR_ERR(vma);
+	return 0;
 }
 
 static DEFINE_MUTEX(mm_all_locks_mutex);
@@ -3237,7 +3192,7 @@ static int init_user_reserve(void)
 	sysctl_user_reserve_kbytes = min(free_kbytes / 32, 1UL << 17);
 	return 0;
 }
-subsys_initcall(init_user_reserve);
+module_init(init_user_reserve)
 
 /*
  * Initialise sysctl_admin_reserve_kbytes.
@@ -3258,7 +3213,7 @@ static int init_admin_reserve(void)
 	sysctl_admin_reserve_kbytes = min(free_kbytes / 32, 1UL << 13);
 	return 0;
 }
-subsys_initcall(init_admin_reserve);
+module_init(init_admin_reserve)
 
 /*
  * Reinititalise user and admin reserves if memory is added or removed.
@@ -3328,4 +3283,4 @@ static int __meminit init_reserve_notifier(void)
 
 	return 0;
 }
-subsys_initcall(init_reserve_notifier);
+module_init(init_reserve_notifier)

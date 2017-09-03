@@ -1810,7 +1810,6 @@ sub dump_function($$) {
     $prototype =~ s/__devinit +//;
     $prototype =~ s/__init +//;
     $prototype =~ s/__init_or_module +//;
-    $prototype =~ s/__meminit +//;
     $prototype =~ s/__must_check +//;
     $prototype =~ s/__weak +//;
     $prototype =~ s/^#\s*define\s+//; #ak added
