@@ -232,11 +232,16 @@ extern struct page *__page_cache_alloc(gfp_t gfp);
 #else
 static inline struct page *__page_cache_alloc(gfp_t gfp)
 {
-#if defined(CONFIG_CMA) && defined(CONFIG_SEC_PRODUCT_8930)
-	return alloc_pages(gfp & ~(__GFP_MOVABLE | __GFP_CMA), 0);
-#else
-	return alloc_pages(gfp, 0);
-#endif
+	struct page *page;
+
+	page = alloc_pages(gfp, 0);
+
+	if (page && is_cma_pageblock(page)) {
+		__free_page(page);
+		page = alloc_pages(gfp & ~__GFP_MOVABLE, 0);
+	}
+
+	return page;
 }
 #endif
 

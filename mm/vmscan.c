@@ -569,12 +569,10 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
 static int __remove_mapping(struct address_space *mapping, struct page *page,
 			    bool reclaimed)
 {
-	unsigned long flags;
-
 	BUG_ON(!PageLocked(page));
 	BUG_ON(mapping != page_mapping(page));
 
-	spin_lock_irqsave(&mapping->tree_lock, flags);
+	spin_lock_irq(&mapping->tree_lock);
 	/*
 	 * The non racy check for a busy page.
 	 *
@@ -633,7 +631,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 		    !mapping_exiting(mapping))
 			shadow = workingset_eviction(mapping, page);
 		__delete_from_page_cache(page, shadow);
-		spin_unlock_irqrestore(&mapping->tree_lock, flags);
+		spin_unlock_irq(&mapping->tree_lock);
 
 		if (freepage != NULL)
 			freepage(page);
@@ -642,7 +640,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 	return 1;
 
 cannot_free:
-	spin_unlock_irqrestore(&mapping->tree_lock, flags);
+	spin_unlock_irq(&mapping->tree_lock);
 	return 0;
 }
 
@@ -859,7 +857,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		struct address_space *mapping;
 		struct page *page;
 		int may_enter_fs;
-		enum page_references references = PAGEREF_RECLAIM_CLEAN;
+		enum page_references references = PAGEREF_RECLAIM;
 		bool dirty, writeback;
 
 		cond_resched();
@@ -1596,7 +1594,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	struct zone_reclaim_stat *reclaim_stat = &lruvec->reclaim_stat;
 
 	while (unlikely(too_many_isolated(zone, file, sc, safe))) {
-		congestion_wait_kswapd(BLK_RW_ASYNC, HZ/10);
+		congestion_wait(BLK_RW_ASYNC, HZ/10);
 
 		/* We are about to die and free our memory. Return now. */
 		if (fatal_signal_pending(current))
@@ -2442,35 +2440,6 @@ static inline bool compaction_ready(struct zone *zone, int order)
 		return false;
 
 	return watermark_ok;
-}
-
-/*
- * Helper functions to adjust nice level of kswapd, based on the priority of
- * the task (p) that called it. If it is already higher priority we do not
- * demote its nice level since it is still working on behalf of a higher
- * priority task. With kernel threads we leave it at nice 0.
- *
- * We don't ever run kswapd real time, so if a real time task calls kswapd we
- * set it to highest SCHED_NORMAL priority.
- */
-static inline int effective_sc_prio(struct task_struct *p)
-{
-	if (likely(p->mm)) {
-		if (rt_task(p))
-			return -20;
-		return task_nice(p);
-	}
-
-	current->reclaim_state = NULL;
-	return 0;
-}
-
-static void set_kswapd_nice(struct task_struct *kswapd, int active)
-{
-	long nice = effective_sc_prio(current);
-
-	if (task_nice(kswapd) > nice || !active)
-		set_user_nice(kswapd, nice);
 }
 
 /*
@@ -3590,8 +3559,8 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
    not required for correctness.  So if the last cpu in a node goes
    away, we get changed to run anywhere: as the first one comes back,
    restore their cpu bindings. */
-static int cpu_callback(struct notifier_block *nfb,
-				  unsigned long action, void *hcpu)
+static int cpu_callback(struct notifier_block *nfb, unsigned long action,
+			void *hcpu)
 {
 	int nid;
 

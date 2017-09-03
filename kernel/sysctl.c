@@ -1105,32 +1105,6 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec,
 	},
 #endif
-	{
-		.procname	= "wmark_min_kbytes",
-		.data		= &wmark_min_kbytes,
-		.maxlen		= sizeof(wmark_min_kbytes),
-		.mode		= 0644,
-		.proc_handler	= wmark_min_kbytes_sysctl_handler,
-		.extra1		= &zero,
-		.extra2		= &wmark_low_kbytes,
-	},
-	{
-		.procname	= "wmark_low_kbytes",
-		.data		= &wmark_low_kbytes,
-		.maxlen		= sizeof(wmark_low_kbytes),
-		.mode		= 0644,
-		.proc_handler	= wmark_low_kbytes_sysctl_handler,
-		.extra1		= &wmark_min_kbytes,
-		.extra2		= &wmark_high_kbytes,
-	},
-	{
-		.procname	= "wmark_high_kbytes",
-		.data		= &wmark_high_kbytes,
-		.maxlen		= sizeof(wmark_high_kbytes),
-		.mode		= 0644,
-		.proc_handler	= wmark_high_kbytes_sysctl_handler,
-		.extra1		= &wmark_low_kbytes,
-	},
 /*
  * NOTE: do not add new entries to this table unless you have read
  * Documentation/sysctl/ctl_unnumbered.txt
@@ -1337,6 +1311,15 @@ static struct ctl_table vm_table[] = {
 	},
 
 #endif /* CONFIG_COMPACTION */
+#ifdef CONFIG_ZSWAP
+	{
+		.procname	= "zswap_compact",
+		.data		= &sysctl_zswap_compact,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= sysctl_zswap_compaction_handler,
+	},
+#endif
 	{
 		.procname	= "min_free_kbytes",
 		.data		= &min_free_kbytes,
@@ -1548,6 +1531,20 @@ static struct ctl_table vm_table[] = {
 		.extra2		= &one,
 	},
 #endif
+	{
+		.procname	= "user_reserve_kbytes",
+		.data		= &sysctl_user_reserve_kbytes,
+		.maxlen		= sizeof(sysctl_user_reserve_kbytes),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
+	},
+	{
+		.procname	= "admin_reserve_kbytes",
+		.data		= &sysctl_admin_reserve_kbytes,
+		.maxlen		= sizeof(sysctl_admin_reserve_kbytes),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
+	},
 	{ }
 };
 
@@ -1732,13 +1729,6 @@ static struct ctl_table fs_table[] = {
 		.procname	= "pipe-user-pages-soft",
 		.data		= &pipe_user_pages_soft,
 		.maxlen		= sizeof(pipe_user_pages_soft),
-		.mode		= 0644,
-		.proc_handler	= proc_doulongvec_minmax,
-	},
-	{
-		.procname	= "admin_reserve_kbytes",
-		.data		= &sysctl_admin_reserve_kbytes,
-		.maxlen		= sizeof(sysctl_admin_reserve_kbytes),
 		.mode		= 0644,
 		.proc_handler	= proc_doulongvec_minmax,
 	},

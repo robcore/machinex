@@ -26,9 +26,9 @@
 
 int can_do_mlock(void)
 {
-	if (rlimit(RLIMIT_MEMLOCK) != 0)
-		return 1;
 	if (capable(CAP_IPC_LOCK))
+		return 1;
+	if (rlimit(RLIMIT_MEMLOCK) != 0)
 		return 1;
 	return 0;
 }
@@ -538,7 +538,7 @@ void munlock_vma_pages_range(struct vm_area_struct *vma,
 		page_increm = 1 + page_mask;
 		start += page_increm * PAGE_SIZE;
 next:
-		cond_resched_rcu_qs();
+		cond_resched();
 	}
 }
 

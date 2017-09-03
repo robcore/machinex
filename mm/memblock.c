@@ -690,6 +690,7 @@ int __init_memblock memblock_free(phys_addr_t base, phys_addr_t size)
 		     (unsigned long long)base + size - 1,
 		     (void *)_RET_IP_);
 
+	kmemleak_free_part(__va(base), size);
 	return memblock_remove_range(&memblock.reserved, base, size);
 }
 
@@ -1046,9 +1047,14 @@ static phys_addr_t __init memblock_alloc_range_nid(phys_addr_t size,
 		align = SMP_CACHE_BYTES;
 
 	found = memblock_find_in_range_node(size, align, start, end, nid);
-	if (found && !memblock_reserve(found, size))
+	if (found && !memblock_reserve(found, size)) {
+		/*
+		 * The min_count is set to 0 so that memblock allocations are
+		 * never reported as leaks.
+		 */
+		kmemleak_alloc(__va(found), size, 0, 0);
 		return found;
-
+	}
 	return 0;
 }
 
@@ -1405,9 +1411,8 @@ int __init_memblock memblock_search_pfn_nid(unsigned long pfn,
 	if (mid == -1)
 		return -1;
 
-	*start_pfn = type->regions[mid].base >> PAGE_SHIFT;
-	*end_pfn = (type->regions[mid].base + type->regions[mid].size)
-			>> PAGE_SHIFT;
+	*start_pfn = PFN_DOWN(type->regions[mid].base);
+	*end_pfn = PFN_DOWN(type->regions[mid].base + type->regions[mid].size);
 
 	return type->regions[mid].nid;
 }
@@ -1583,10 +1588,10 @@ static int __init memblock_init_debugfs(void)
 	struct dentry *root = debugfs_create_dir("memblock", NULL);
 	if (!root)
 		return -ENXIO;
-	debugfs_create_file("memory", S_IRUGO, root, &memblock.memory, &memblock_debug_fops);
-	debugfs_create_file("reserved", S_IRUGO, root, &memblock.reserved, &memblock_debug_fops);
+	debugfs_create_file("memory", S_IRUSR | S_IRGRP, root, &memblock.memory, &memblock_debug_fops);
+	debugfs_create_file("reserved", S_IRUSR | S_IRGRP, root, &memblock.reserved, &memblock_debug_fops);
 #ifdef CONFIG_HAVE_MEMBLOCK_PHYS_MAP
-	debugfs_create_file("physmem", S_IRUGO, root, &memblock.physmem, &memblock_debug_fops);
+	debugfs_create_file("physmem", S_IRUSR | S_IRGRP, root, &memblock.physmem, &memblock_debug_fops);
 #endif
 
 	return 0;
