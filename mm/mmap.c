@@ -1258,9 +1258,10 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 #ifdef CONFIG_SDCARD_FS
 	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
 		file = sdcardfs_lower_file(file);
-#else
-	if (file && (file->f_mode & FMODE_NONMAPPABLE))
+	else {
+		while (file && (file->f_mode & FMODE_NONMAPPABLE))
 		file = file->f_op->get_lower_file(file);
+	}
 #endif
 	/*
 	 * Does the application expect PROT_READ to imply PROT_EXEC?
