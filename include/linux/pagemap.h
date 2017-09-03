@@ -24,7 +24,6 @@ enum mapping_flags {
 	AS_ENOSPC	= __GFP_BITS_SHIFT + 1,	/* ENOSPC on async write */
 	AS_MM_ALL_LOCKS	= __GFP_BITS_SHIFT + 2,	/* under mm_take_all_locks() */
 	AS_UNEVICTABLE	= __GFP_BITS_SHIFT + 3,	/* e.g., ramdisk, SHM_LOCK */
-	AS_BALLOON_MAP  = __GFP_BITS_SHIFT + 4, /* balloon page special map */
 	AS_EXITING	= __GFP_BITS_SHIFT + 5, /* final truncate in progress */
 };
 
@@ -53,21 +52,6 @@ static inline int mapping_unevictable(struct address_space *mapping)
 	if (mapping)
 		return test_bit(AS_UNEVICTABLE, &mapping->flags);
 	return !!mapping;
-}
-
-static inline void mapping_set_balloon(struct address_space *mapping)
-{
-	set_bit(AS_BALLOON_MAP, &mapping->flags);
-}
-
-static inline void mapping_clear_balloon(struct address_space *mapping)
-{
-	clear_bit(AS_BALLOON_MAP, &mapping->flags);
-}
-
-static inline int mapping_balloon(struct address_space *mapping)
-{
-	return mapping && test_bit(AS_BALLOON_MAP, &mapping->flags);
 }
 
 static inline void mapping_set_exiting(struct address_space *mapping)
@@ -232,9 +216,7 @@ extern struct page *__page_cache_alloc(gfp_t gfp);
 #else
 static inline struct page *__page_cache_alloc(gfp_t gfp)
 {
-	struct page *page;
-
-	page = alloc_pages(gfp, 0);
+	struct page *page = alloc_pages(gfp, 0);
 
 	if (page && is_cma_pageblock(page)) {
 		__free_page(page);
@@ -619,56 +601,56 @@ static inline int fault_in_pages_readable(const char __user *uaddr, int size)
  */
 static inline int fault_in_multipages_writeable(char __user *uaddr, int size)
 {
-	int ret = 0;
 	char __user *end = uaddr + size - 1;
 
 	if (unlikely(size == 0))
-		return ret;
+		return 0;
 
+	if (unlikely(uaddr > end))
+		return -EFAULT;
 	/*
 	 * Writing zeroes into userspace here is OK, because we know that if
 	 * the zero gets there, we'll be overwriting it.
 	 */
-	while (uaddr <= end) {
-		ret = __put_user(0, uaddr);
-		if (ret != 0)
-			return ret;
+	do {
+		if (unlikely(__put_user(0, uaddr) != 0))
+			return -EFAULT;
 		uaddr += PAGE_SIZE;
-	}
+	} while (uaddr <= end);
 
 	/* Check whether the range spilled into the next page. */
 	if (((unsigned long)uaddr & PAGE_MASK) ==
 			((unsigned long)end & PAGE_MASK))
-		ret = __put_user(0, end);
+		return __put_user(0, end);
 
-	return ret;
+	return 0;
 }
 
 static inline int fault_in_multipages_readable(const char __user *uaddr,
 					       int size)
 {
 	volatile char c;
-	int ret = 0;
 	const char __user *end = uaddr + size - 1;
 
 	if (unlikely(size == 0))
-		return ret;
+		return 0;
 
-	while (uaddr <= end) {
-		ret = __get_user(c, uaddr);
-		if (ret != 0)
-			return ret;
+	if (unlikely(uaddr > end))
+		return -EFAULT;
+
+	do {
+		if (unlikely(__get_user(c, uaddr) != 0))
+			return -EFAULT;
 		uaddr += PAGE_SIZE;
-	}
+	} while (uaddr <= end);
 
 	/* Check whether the range spilled into the next page. */
 	if (((unsigned long)uaddr & PAGE_MASK) ==
 			((unsigned long)end & PAGE_MASK)) {
-		ret = __get_user(c, end);
-		(void)c;
+		return __get_user(c, end);
 	}
 
-	return ret;
+	return 0;
 }
 
 int add_to_page_cache_locked(struct page *page, struct address_space *mapping,
