@@ -68,9 +68,9 @@ static uint32_t lmk_count = 0;
 
 #ifdef CONFIG_SEC_OOM_KILLER
 #define MULTIPLE_OOM_KILLER
-#define OOM_COUNT_READ
 #endif
 
+#undef OOM_COUNT_READ
 #ifdef OOM_COUNT_READ
 static uint32_t oom_count = 0;
 #endif
@@ -82,7 +82,6 @@ static uint32_t oom_count = 0;
 bool disable_samp_hotness;
 module_param(disable_samp_hotness, bool, 0644);
 
-static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
 	1,
@@ -99,12 +98,6 @@ static int lowmem_minfree[6] = {
 static int lowmem_minfree_size = 4;
 
 static unsigned long lowmem_deathpending_timeout;
-
-#define lowmem_print(level, x...)			\
-	do {						\
-		if (lowmem_debug_level >= (level))	\
-			pr_info(x);			\
-	} while (0)
 
 #if defined(CONFIG_ZSWAP)
 extern u64 zswap_pool_pages;
@@ -125,7 +118,7 @@ static atomic_t shift_adj = ATOMIC_INIT(0);
 static short adj_max_shift = 353;
 
 /* User knob to enable/disable adaptive lmk feature */
-static unsigned int enable_adaptive_lmk = 1;
+static unsigned int enable_adaptive_lmk = 0;
 module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
 	0644);
 
@@ -280,13 +273,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 	ret = adjust_minadj(&min_score_adj);
 
-	lowmem_print(3, "lowmem_scan %lu, %x, ofree %d %d, ma %hd\n",
-			sc->nr_to_scan, sc->gfp_mask, other_free,
-			other_file, min_score_adj);
-
 	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
-		lowmem_print(5, "lowmem_scan %lu, %x, return 0\n",
-			     sc->nr_to_scan, sc->gfp_mask);
 		mutex_unlock(&scan_mutex);
 		return 0;
 	}
@@ -330,10 +317,8 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		tasksize = get_mm_rss(p->mm);
 #if defined(CONFIG_ZSWAP)
 		if (atomic_read(&zswap_stored_pages)) {
-			lowmem_print(3, "shown tasksize : %d\n", tasksize);
 			tasksize += (int)zswap_pool_pages * get_mm_counter(p->mm, MM_SWAPENTS)
 				/ atomic_read(&zswap_stored_pages);
-			lowmem_print(3, "real tasksize : %d\n", tasksize);
 		}
 #endif
 
@@ -378,8 +363,6 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		if (!disable_samp_hotness)
 			selected_hotness_adj = hotness_adj;
 #endif
-		lowmem_print(3, "select '%s' (%d), adj %hd, size %d, to kill\n",
-			     p->comm, p->pid, oom_score_adj, tasksize);
 	}
 	if (selected) {
 		lowmem_deathpending_timeout = jiffies + HZ;
@@ -476,8 +459,6 @@ static int android_oom_handler(struct notifier_block *nb,
 		if (tasksize <= 0)
 			continue;
 
-		lowmem_print(2, "oom: ------ %d (%s), adj %d, size %d\n",
-			     p->pid, p->comm, oom_score_adj, tasksize);
 #ifdef MULTIPLE_OOM_KILLER
 		if (all_selected_oom < OOM_DEPTH) {
 			for (i = 0; i < OOM_DEPTH; i++) {
@@ -510,10 +491,6 @@ static int android_oom_handler(struct notifier_block *nb,
 						max_selected_oom_idx = i;
 				}
 			}
-
-			lowmem_print(2, "oom: max_selected_oom_idx(%d) select %d (%s), adj %d, \
-					size %d, to kill\n",
-				max_selected_oom_idx, p->pid, p->comm, oom_score_adj, tasksize);
 		}
 #else
 		if (selected) {
@@ -526,18 +503,11 @@ static int android_oom_handler(struct notifier_block *nb,
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;
-		lowmem_print(2, "oom: select %d (%s), adj %d, size %d, to kill\n",
-			     p->pid, p->comm, oom_score_adj, tasksize);
 #endif
 	}
 #ifdef MULTIPLE_OOM_KILLER
 	for (i = 0; i < OOM_DEPTH; i++) {
 		if (selected[i]) {
-			lowmem_print(1, "oom: send sigkill to %d (%s), adj %d,\
-				     size %d\n",
-				     selected[i]->pid, selected[i]->comm,
-				     selected_oom_score_adj[i],
-				     selected_tasksize[i]);
 			send_sig(SIGKILL, selected[i], 0);
 			rem -= selected_tasksize[i];
 			*freed += (unsigned long)selected_tasksize[i];
@@ -548,9 +518,6 @@ static int android_oom_handler(struct notifier_block *nb,
 	}
 #else
 	if (selected) {
-		lowmem_print(1, "oom: send sigkill to %d (%s), adj %d, size %d\n",
-			     selected->pid, selected->comm,
-			     selected_oom_score_adj, selected_tasksize);
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
@@ -562,7 +529,6 @@ static int android_oom_handler(struct notifier_block *nb,
 #endif
 	read_unlock(&tasklist_lock);
 
-	lowmem_print(2, "oom: get memory %lu", *freed);
 	return rem;
 }
 
@@ -622,13 +588,10 @@ static void lowmem_autodetect_oom_adj_values(void)
 	if (oom_score_adj <= OOM_ADJUST_MAX)
 		return;
 
-	lowmem_print(1, "lowmem_shrink: convert oom_adj to oom_score_adj:\n");
 	for (i = 0; i < array_size; i++) {
 		oom_adj = lowmem_adj[i];
 		oom_score_adj = lowmem_oom_adj_to_oom_score_adj(oom_adj);
 		lowmem_adj[i] = oom_score_adj;
-		lowmem_print(1, "oom_adj %d => oom_score_adj %d\n",
-			     oom_adj, oom_score_adj);
 	}
 }
 
@@ -680,7 +643,6 @@ module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size,
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
-module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 #ifdef LMK_COUNT_READ
 module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #endif
@@ -692,4 +654,3 @@ module_init(lowmem_init);
 module_exit(lowmem_exit);
 
 MODULE_LICENSE("GPL");
-
