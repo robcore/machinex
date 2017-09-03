@@ -48,10 +48,6 @@ static const struct trace_print_flags pageflag_names[] = {
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	{1UL << PG_compound_lock,	"compound_lock"	},
 #endif
-#ifdef CONFIG_KSM_CHECK_PAGE
-	{1UL << PG_ksm_scan0,	"ksm_scan0"	},
-	{1UL << PG_ksm_scan1,	"ksm_scan1"	},
-#endif
 };
 
 static void dump_flags(unsigned long flags,
