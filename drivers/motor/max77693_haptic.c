@@ -61,7 +61,7 @@ static void max77693_haptic_i2c(struct max77693_haptic_data *hap_data, bool en)
 void max77693_vibtonz_en(bool en)
 {
 
-	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_RESTART)
 		return;
 
 	if (g_hap_data == NULL) {

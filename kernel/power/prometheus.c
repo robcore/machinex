@@ -30,8 +30,8 @@
 #include <linux/display_state.h>
 #include "power.h"
 
-#define VERSION 3
-#define VERSION_MIN 9
+#define VERSION 4
+#define VERSION_MIN 0
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -120,8 +120,6 @@ static void power_suspend(struct work_struct *work)
 	if (limit_screen_off_cpus)
 		lock_screen_off_cpus(0);
 
-	mutex_unlock(&prometheus_mtx);
-
 	if (sync_on_panel_suspend) {
 		wake_lock(&prsynclock);
 		pr_info("[PROMETHEUS] Syncing\n");
@@ -133,34 +131,41 @@ static void power_suspend(struct work_struct *work)
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
 			if (mx_is_cable_attached()) {
+				mutex_unlock(&prometheus_mtx);
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
 				return;
 			} else if (prometheus_sec_jack()) {
+				mutex_unlock(&prometheus_mtx);
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Jack is detected.\n");
 				return;
 			} else if (android_os_ws()) {
+				mutex_unlock(&prometheus_mtx);
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
 				return;
 			} else
 				goto skip_check;
 		} else if (!pm_get_wakeup_count(&counter, false) || mx_pm_wakeup_pending()) {
+				mutex_unlock(&prometheus_mtx);
 				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
 				return;
 		}
 	} else {
+		mutex_unlock(&prometheus_mtx);
 		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
 		return;
 	}
 skip_check:
 		if (unlikely(booting)) {
 			booting = false;
+			mutex_unlock(&prometheus_mtx);
 			pr_info("[PROMETHEUS] Skipping PM Suspend on first boot..\n");
 			return;
 		}
 
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 
-		if (!mutex_trylock(&pm_mutex)) {
+		if (unlikely(!mutex_trylock(&pm_mutex))) {
+			mutex_unlock(&prometheus_mtx);
 			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
 			return;
 		}
@@ -168,6 +173,7 @@ skip_check:
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
 		pm_suspend(PM_HIBERNATION_PREPARE);
 		mutex_unlock(&pm_mutex);
+		mutex_unlock(&prometheus_mtx);
 }
 
 static void power_resume(struct work_struct *work)

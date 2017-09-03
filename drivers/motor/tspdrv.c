@@ -128,7 +128,7 @@ struct vibrator_platform_data vibrator_drvdata;
 static int set_vibetonz(int timeout)
 {
 	int8_t strength;
-	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_RESTART)
 		return 0;
 	if (!timeout) {
 		if (vibrator_drvdata.vib_model == HAPTIC_PWM) {
@@ -192,7 +192,7 @@ static void enable_vibetonz_from_user(struct timed_output_dev *dev, int value)
 {
 	hrtimer_cancel(&timer);
 
-	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_RESTART)
 		return;
 	/* set_vibetonz(value); */
 	vibrator_work = value;
@@ -335,7 +335,7 @@ void machinex_vibrator(int timeout)
 {
 	hrtimer_cancel(&timer);
 
-	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND)
+	if (system_state >= SYSTEM_HALT && system_state <= SYSTEM_RESTART)
 		return;
 
 	/* set_vibetonz(value); */
@@ -360,7 +360,7 @@ static void tspdrv_power_suspend(struct power_suspend *h)
 static void tspdrv_power_resume(struct power_suspend *h)
 {
 	if (!vibrate_on_wake || enabled_by_os || true == g_bisplaying ||
-	(system_state >= SYSTEM_HALT && system_state <= SYSTEM_SUSPEND))
+	(system_state >= SYSTEM_HALT && system_state <= SYSTEM_RESTART))
 		return;
 
 		machinex_vibrator(vibrate_timeout);
