@@ -19,7 +19,7 @@ static LIST_HEAD(blk_mq_cpu_notify_list);
 static DEFINE_RAW_SPINLOCK(blk_mq_cpu_notify_lock);
 
 static int blk_mq_main_cpu_notify(struct notifier_block *self,
-				  unsigned long action, void *hcpu)
+					    unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long) hcpu;
 	struct blk_mq_cpu_notifier *notify;
