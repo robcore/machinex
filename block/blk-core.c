@@ -426,7 +426,7 @@ static void __blk_drain_queue(struct request_queue *q, bool drain_all)
 	}
 
 	/*
-	 * With queue marked dying, any woken up waiter will fail the
+	 * With queue marked dead, any woken up waiter will fail the
 	 * allocation path, so the wakeup chaining is lost and we're
 	 * left with hung waiters. We need to wake up those waiters.
 	 */
@@ -541,6 +541,9 @@ void blk_cleanup_queue(struct request_queue *q)
 	del_timer_sync(&q->backing_dev_info.laptop_mode_wb_timer);
 	blk_sync_queue(q);
 
+	if (q->mq_ops)
+		blk_mq_free_queue(q);
+
 	spin_lock_irq(lock);
 	if (q->queue_lock != &q->__queue_lock)
 		q->queue_lock = &q->__queue_lock;
@@ -598,7 +601,8 @@ struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id)
 	if (q->id < 0)
 		goto fail_q;
 
-	q->backing_dev_info.ra_pages = max_readahead_pages;
+	q->backing_dev_info.ra_pages =
+			(VM_MAX_READAHEAD * 1024) / PAGE_CACHE_SIZE;
 	q->backing_dev_info.state = 0;
 	q->backing_dev_info.capabilities = BDI_CAP_MAP_COPY;
 	q->backing_dev_info.name = "block";
@@ -941,7 +945,7 @@ static struct io_context *rq_ioc(struct bio *bio)
  * @gfp_mask: allocation mask
  *
  * Get a free request from @q.  This function may fail under memory
- * pressure or if @q is dying.
+ * pressure or if @q is dead.
  *
  * Must be called with @q->queue_lock held and,
  * Returns ERR_PTR on failure, with @q->queue_lock held.
@@ -1118,7 +1122,7 @@ rq_starved:
  * @gfp_mask: allocation mask
  *
  * Get a free request from @q.  If %__GFP_WAIT is set in @gfp_mask, this
- * function keeps retrying under memory pressure and fails iff @q is dying.
+ * function keeps retrying under memory pressure and fails iff @q is dead.
  *
  * Must be called with @q->queue_lock held and,
  * Returns ERR_PTR on failure, with @q->queue_lock held.
@@ -1247,7 +1251,7 @@ struct request *blk_make_request(struct request_queue *q, struct bio *bio,
 EXPORT_SYMBOL(blk_make_request);
 
 /**
- * blk_rq_set_block_pc - initialize a requeest to type BLOCK_PC
+ * blk_rq_set_block_pc - initialize a request to type BLOCK_PC
  * @rq:		request to be initialized
  *
  */
@@ -1978,6 +1982,27 @@ void generic_make_request(struct bio *bio)
 }
 EXPORT_SYMBOL(generic_make_request);
 
+#ifdef CONFIG_BLK_DEV_IO_TRACE
+static inline struct task_struct *get_dirty_task(struct bio *bio)
+{
+	/*
+	 * Not all the pages in the bio are dirtied by the
+	 * same task but most likely it will be, since the
+	 * sectors accessed on the device must be adjacent.
+	 */
+	if (bio->bi_io_vec && bio->bi_io_vec->bv_page &&
+		bio->bi_io_vec->bv_page->tsk_dirty)
+			return bio->bi_io_vec->bv_page->tsk_dirty;
+	else
+		return current;
+}
+#else
+static inline struct task_struct *get_dirty_task(struct bio *bio)
+{
+	return current;
+}
+#endif
+
 /**
  * submit_bio - submit a bio to the block device layer for I/O
  * @rw: whether to %READ or %WRITE, or maybe to %READA (read ahead)
@@ -1990,7 +2015,6 @@ EXPORT_SYMBOL(generic_make_request);
  */
 void submit_bio(int rw, struct bio *bio)
 {
-	struct task_struct *tsk = current;
 	bio->bi_rw |= rw;
 
 	/*
@@ -2014,16 +2038,9 @@ void submit_bio(int rw, struct bio *bio)
 
 		if (unlikely(block_dump)) {
 			char b[BDEVNAME_SIZE];
+			struct task_struct *tsk;
 
-			/*
-			 * Not all the pages in the bio are dirtied by the
-			 * same task but most likely it will be, since the
-			 * sectors accessed on the device must be adjacent.
-			 */
-			if (bio->bi_io_vec && bio->bi_io_vec->bv_page &&
-			    bio->bi_io_vec->bv_page->tsk_dirty)
-				tsk = bio->bi_io_vec->bv_page->tsk_dirty;
-
+			tsk = get_dirty_task(bio);
 			printk(KERN_DEBUG "%s(%d): %s block %Lu on %s (%u sectors)\n",
 				tsk->comm, task_pid_nr(tsk),
 				(rw & WRITE) ? "WRITE" : "READ",
