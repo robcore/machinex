@@ -1073,8 +1073,6 @@ static inline int slabs_tofree(struct kmem_cache *cachep,
 	return (n->free_objects + cachep->num - 1) / cachep->num;
 }
 
-#ifdef CONFIG_SMP
-
 static void cpuup_canceled(long cpu)
 {
 	struct kmem_cache *cachep;
