@@ -902,7 +902,7 @@ void __init hyp_mode_check(void)
 {
 #ifdef CONFIG_ARM_VIRT_EXT
 	sync_boot_mode();
-
+#if 0
 	if (is_hyp_mode_available()) {
 		pr_info("CPU: All CPU(s) started in HYP mode.\n");
 		pr_info("CPU: Virtualization extensions available.\n");
@@ -912,6 +912,7 @@ void __init hyp_mode_check(void)
 		pr_warn("CPU: This may indicate a broken bootloader or firmware.\n");
 	} else
 		pr_info("CPU: All CPU(s) started in SVC mode.\n");
+#endif
 #endif
 }
 
