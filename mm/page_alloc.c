@@ -1475,7 +1475,7 @@ void free_hot_cold_page(struct page *page, bool cold)
 		return;
 
 	migratetype = get_pageblock_migratetype(page);
-	set_freepage_migratetype(page, migratetype);
+	set_page_private(page, migratetype);
 	local_irq_save(flags);
 	__count_vm_event(PGFREE);
 
