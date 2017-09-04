@@ -78,7 +78,7 @@ static int msm_cpuidle_enter(
 	struct cpuidle_state_usage *st_usage = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_idle_lock, flags);
+	local_irq_disable();
 	cpu_pm_enter();
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
 
@@ -93,7 +93,7 @@ static int msm_cpuidle_enter(
 	}
 
 	cpu_pm_exit();
-	spin_unlock_irqrestore(&msm_idle_lock, flags);
+	local_irq_enable();
 
 	return ret;
 }
