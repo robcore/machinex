@@ -1580,7 +1580,7 @@ static int try_to_unmap_file(struct page *page, enum ttu_flags flags)
 	 * It's costly. Instead, later, page reclaim logic may call
 	 * try_to_unmap(TTU_MUNLOCK) and recover PG_mlocked lazily.
 	 */
-	if (TTU_ACTION(flags) == TTU_MUNLOCK)
+	if (!(flags & TTU_MUNLOCK))
 		goto out;
 
 	list_for_each_entry(vma, &mapping->i_mmap_nonlinear,
