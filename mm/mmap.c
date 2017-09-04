@@ -3023,9 +3023,7 @@ int install_special_mapping(struct mm_struct *mm,
 		mm, addr, len, vm_flags, &legacy_special_mapping_vmops,
 		(void *)pages);
 
-	if (IS_ERR(vma))
-		return PTR_ERR(vma);
-	return 0;
+	return PTR_ERR_OR_ZERO(vma);
 }
 
 static DEFINE_MUTEX(mm_all_locks_mutex);
