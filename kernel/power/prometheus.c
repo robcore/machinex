@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 0
+#define VERSION_MIN 1
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -226,14 +226,16 @@ static void set_power_suspend_state(unsigned int new_state)
 			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
 	} else {
-		pr_info("[PROMETHEUS] Ignoring State Request.\n");
+		if (likely(!booting))
+			pr_info("[PROMETHEUS] Ignoring State Request.\n");
 	}
 }
 
 void prometheus_panel_beacon(unsigned int new_state)
 {
 	unsigned long irqflags;
-	pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
+	if (likely(!booting))
+		pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
 
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	set_power_suspend_state(new_state);
