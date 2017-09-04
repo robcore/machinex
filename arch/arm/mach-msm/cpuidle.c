@@ -76,6 +76,7 @@ static int msm_cpuidle_enter(
 	enum msm_pm_sleep_mode pm_mode;
 	struct cpuidle_state_usage *st_usage = NULL;
 
+	local_irq_disable();
 	cpu_pm_enter();
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
 
@@ -89,8 +90,8 @@ static int msm_cpuidle_enter(
 		}
 	}
 
-	local_irq_enable();
 	cpu_pm_exit();
+	local_irq_enable();
 
 	return ret;
 }
