@@ -78,8 +78,6 @@ static int msm_cpuidle_enter(
 
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
 
-	cpu_pm_enter();
-
 	dev->last_residency = msm_pm_idle_enter(pm_mode);
 	for (i = 0; i < drv->state_count; i++) {
 		st_usage = &dev->states_usage[i];
@@ -89,7 +87,6 @@ static int msm_cpuidle_enter(
 			break;
 		}
 	}
-
 
 	local_irq_enable();
 
