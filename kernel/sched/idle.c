@@ -18,9 +18,6 @@ static void quiet_vmstat(void)
 {
 }
 
-/* Linker adds these: start and end of __cpuidle functions */
-extern char __cpuidle_text_start[], __cpuidle_text_end[];
-
 /**
  * sched_idle_set_state - Record idle state for the current CPU.
  * @idle_state: State to record.
@@ -58,7 +55,7 @@ static int __init cpu_idle_nopoll_setup(char *__unused)
 __setup("hlt", cpu_idle_nopoll_setup);
 #endif
 
-static noinline int __cpuidle cpu_idle_poll(void)
+static noinline int cpu_idle_poll(void)
 {
 	rcu_idle_enter();
 	local_irq_enable();
@@ -87,7 +84,7 @@ void __weak arch_cpu_idle(void)
  *
  * To use when the cpuidle framework cannot be used.
  */
-void __cpuidle default_idle_call(void)
+void default_idle_call(void)
 {
 	if (current_clr_polling_and_test()) {
 		local_irq_enable();
@@ -265,12 +262,6 @@ static void do_idle(void)
 
 	sched_ttwu_pending();
 	schedule_idle();
-}
-
-bool cpu_in_idle(unsigned long pc)
-{
-	return pc >= (unsigned long)__cpuidle_text_start &&
-		pc < (unsigned long)__cpuidle_text_end;
 }
 
 struct idle_timer {
