@@ -18,6 +18,7 @@
 #define _LINUX_SW_SYNC_H
 
 #include <linux/types.h>
+#include <linux/kconfig.h>
 
 #ifdef __KERNEL__
 

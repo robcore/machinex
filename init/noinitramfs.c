@@ -21,6 +21,7 @@
 #include <linux/stat.h>
 #include <linux/kdev_t.h>
 #include <linux/syscalls.h>
+#include <linux/kconfig.h>
 
 /*
  * Create a simple rootfs that is similar to the default initramfs
