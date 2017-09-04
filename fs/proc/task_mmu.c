@@ -823,9 +823,6 @@ static inline void clear_soft_dirty(struct vm_area_struct *vma,
 		ptent = pte_file_clear_soft_dirty(ptent);
 	}
 
-	if (vma->vm_flags & VM_SOFTDIRTY)
-		vma->vm_flags &= ~VM_SOFTDIRTY;
-
 	set_pte_at(vma->vm_mm, addr, pte, ptent);
 #endif
 }
@@ -936,11 +933,17 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 			 *
 			 * Writing 3 to /proc/pid/clear_refs only affects file
 			 * mapped pages.
+			 *
+			 * Writing 4 to /proc/pid/clear_refs affects all pages.
 			 */
 			if (type == CLEAR_REFS_ANON && vma->vm_file)
 				continue;
 			if (type == CLEAR_REFS_MAPPED && !vma->vm_file)
 				continue;
+			if (type == CLEAR_REFS_SOFT_DIRTY) {
+				if (vma->vm_flags & VM_SOFTDIRTY)
+					vma->vm_flags &= ~VM_SOFTDIRTY;
+			}
 			walk_page_range(vma->vm_start, vma->vm_end,
 					&clear_refs_walk);
 		}
