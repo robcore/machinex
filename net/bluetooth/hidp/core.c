@@ -907,7 +907,7 @@ int hidp_add_connection(struct hidp_connadd_req *req, struct socket *ctrl_sock, 
 
 	hidp_set_timer(session);
 
-	err = kernel_thread(hidp_session, session, CLONE_KERNEL);
+	err = kernel_thread(hidp_session, session, CLONE_FS | CLONE_FILES | CLONE_SIGHAND);
 	if (err < 0)
 		goto unlink;
 
