@@ -14,6 +14,7 @@
 #include <linux/cpuidle.h>
 #include <linux/cpumask.h>
 #include <linux/tick.h>
+#include <linux/cpu.h>
 
 #include "cpuidle.h"
 
@@ -178,26 +179,15 @@ static void __cpuidle_driver_init(struct cpuidle_driver *drv)
 }
 
 #ifdef CONFIG_ARCH_HAS_CPU_RELAX
-static int poll_idle(struct cpuidle_device *dev,
-		struct cpuidle_driver *drv, int index)
+static int __cpuidle poll_idle(struct cpuidle_device *dev,
+			       struct cpuidle_driver *drv, int index)
 {
-	ktime_t	t1, t2;
-	s64 diff;
-
-	t1 = ktime_get();
 	local_irq_enable();
 	if (!current_set_polling_and_test()) {
 		while (!need_resched())
 			cpu_relax();
 	}
 	current_clr_polling();
-
-	t2 = ktime_get();
-	diff = ktime_to_us(ktime_sub(t2, t1));
-	if (diff > INT_MAX)
-		diff = INT_MAX;
-
-	dev->last_residency = (int) diff;
 
 	return index;
 }
@@ -211,7 +201,6 @@ static void poll_idle_init(struct cpuidle_driver *drv)
 	state->exit_latency = 0;
 	state->target_residency = 0;
 	state->power_usage = -1;
-	state->flags = 0;
 	state->enter = poll_idle;
 	state->disabled = false;
 }
@@ -238,6 +227,10 @@ static int __cpuidle_register_driver(struct cpuidle_driver *drv)
 
 	if (!drv || !drv->state_count)
 		return -EINVAL;
+
+	ret = cpuidle_coupled_state_verify(drv);
+	if (ret)
+		return ret;
 
 	if (cpuidle_disabled())
 		return -ENODEV;

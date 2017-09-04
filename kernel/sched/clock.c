@@ -62,6 +62,7 @@
 #include <linux/workqueue.h>
 #include <linux/compiler.h>
 #include <linux/tick.h>
+#include <linux/init.h>
 
 /*
  * Scheduler clock - returns current time in nanosec units.
@@ -130,12 +131,19 @@ static void __scd_stamp(struct sched_clock_data *scd)
 
 static void __set_sched_clock_stable(void)
 {
-	struct sched_clock_data *scd = this_scd();
+	struct sched_clock_data *scd;
 
+	/*
+	 * Since we're still unstable and the tick is already running, we have
+	 * to disable IRQs in order to get a consistent scd->tick* reading.
+	 */
+	local_irq_disable();
+	scd = this_scd();
 	/*
 	 * Attempt to make the (initial) unstable->stable transition continuous.
 	 */
 	__sched_clock_offset = (scd->tick_gtod + __gtod_offset) - (scd->tick_raw);
+	local_irq_enable();
 
 	printk(KERN_INFO "sched_clock: Marking stable (%lld, %lld)->(%lld, %lld)\n",
 			scd->tick_gtod, __gtod_offset,
@@ -200,7 +208,11 @@ void clear_sched_clock_stable(void)
 		__clear_sched_clock_stable();
 }
 
-void sched_clock_init_late(void)
+/*
+ * We run this as late_initcall() such that it runs after all built-in drivers,
+ * notably: acpi_processor and intel_idle, which can mark the TSC as unstable.
+ */
+static int __init sched_clock_init_late(void)
 {
 	sched_clock_running = 2;
 	/*
@@ -214,7 +226,10 @@ void sched_clock_init_late(void)
 
 	if (__sched_clock_stable_early)
 		__set_sched_clock_stable();
+
+	return 0;
 }
+late_initcall(sched_clock_init_late);
 
 /*
  * min, max except they take wrapping into account
@@ -408,15 +423,21 @@ void sched_clock_idle_sleep_event(void)
 EXPORT_SYMBOL_GPL(sched_clock_idle_sleep_event);
 
 /*
- * We just idled delta nanoseconds (called with irqs disabled):
+ * We just idled; resync with ktime.
  */
-void sched_clock_idle_wakeup_event(u64 delta_ns)
+void sched_clock_idle_wakeup_event(void)
 {
-	if (timekeeping_suspended)
+	unsigned long flags;
+
+	if (sched_clock_stable())
 		return;
 
+	if (unlikely(timekeeping_suspended))
+		return;
+
+	local_irq_save(flags);
 	sched_clock_tick();
-	touch_softlockup_watchdog();
+	local_irq_restore(flags);
 }
 EXPORT_SYMBOL_GPL(sched_clock_idle_wakeup_event);
 

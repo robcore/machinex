@@ -2177,6 +2177,7 @@ extern int task_free_unregister(struct notifier_block *n);
 /*
  * Per process flags
  */
+#define PF_IDLE			0x00000002	/* I am an IDLE thread */
 #define PF_EXITING	0x00000004	/* getting shut down */
 #define PF_EXITPIDONE	0x00000008	/* pi exit done on shut down */
 #define PF_VCPU		0x00000010	/* I'm a virtual CPU */
@@ -2190,7 +2191,6 @@ extern int task_free_unregister(struct notifier_block *n);
 #define PF_NPROC_EXCEEDED 0x00001000	/* set_user noticed that RLIMIT_NPROC was exceeded */
 #define PF_USED_MATH	0x00002000	/* if unset the fpu must be initialized before use */
 #define PF_USED_ASYNC	0x00004000	/* used async_schedule*(), used by module init */
-#define PF_WAKE_UP_IDLE 0x00004000	/* try to wake up on an idle CPU */
 #define PF_NOFREEZE	0x00008000	/* this thread should not be frozen */
 #define PF_FROZEN	0x00010000	/* frozen for system suspend */
 #define PF_FSTRANS	0x00020000	/* inside a filesystem transaction */
@@ -2345,14 +2345,6 @@ static inline int set_cpus_allowed_ptr(struct task_struct *p,
 }
 #endif
 
-static inline void set_wake_up_idle(bool enabled)
-{
-	if (enabled)
-		current->flags |= PF_WAKE_UP_IDLE;
-	else
-		current->flags &= ~PF_WAKE_UP_IDLE;
-}
-
 #ifdef CONFIG_NO_HZ_COMMON
 void calc_load_enter_idle(void);
 void calc_load_exit_idle(void);
@@ -2400,7 +2392,7 @@ static inline void sched_clock_idle_sleep_event(void)
 {
 }
 
-static inline void sched_clock_idle_wakeup_event(u64 delta_ns)
+static inline void sched_clock_idle_wakeup_event(void)
 {
 }
 
@@ -2426,7 +2418,7 @@ extern void clear_sched_clock_stable(void);
 
 extern void sched_clock_tick(void);
 extern void sched_clock_idle_sleep_event(void);
-extern void sched_clock_idle_wakeup_event(u64 delta_ns);
+extern void sched_clock_idle_wakeup_event(void);
 
 /*
  * As outlined in clock.c, provides a fast, high resolution, nanosecond
@@ -2473,7 +2465,7 @@ extern void sched_exec(void);
 #endif
 
 extern void sched_clock_idle_sleep_event(void);
-extern void sched_clock_idle_wakeup_event(u64 delta_ns);
+extern void sched_clock_idle_wakeup_event(void);
 
 #ifdef CONFIG_HOTPLUG_CPU
 extern void idle_task_exit(void);
@@ -2487,11 +2479,11 @@ extern void wake_up_nohz_cpu(int cpu);
 static inline void wake_up_nohz_cpu(int cpu) { }
 #endif
 
+extern void schedule_idle(void);
 extern unsigned int sysctl_sched_latency;
 extern unsigned int sysctl_sched_min_granularity;
 extern unsigned int sysctl_sched_wakeup_granularity;
 extern unsigned int sysctl_sched_child_runs_first;
-extern unsigned int sysctl_sched_wake_to_idle;
 extern unsigned int sysctl_sched_wakeup_load_threshold;
 extern unsigned int sysctl_sched_window_stats_policy;
 #ifdef CONFIG_SCHED_DEBUG
@@ -2583,7 +2575,7 @@ extern struct task_struct *idle_task(int cpu);
  */
 static inline bool is_idle_task(const struct task_struct *p)
 {
-	return p->pid == 0;
+	return !!(p->flags & PF_IDLE);
 }
 extern struct task_struct *curr_task(int cpu);
 
@@ -3166,6 +3158,15 @@ extern int __cond_resched_softirq(void);
 	__cond_resched_softirq();					\
 })
 
+static inline void cond_resched_rcu(void)
+{
+#if defined(CONFIG_DEBUG_ATOMIC_SLEEP) || !defined(CONFIG_PREEMPT_RCU)
+	rcu_read_unlock();
+	cond_resched();
+	rcu_read_lock();
+#endif
+}
+
 /*
  * Does a critical section need to be broken due to another
  * task waiting?: (technically does not depend on CONFIG_PREEMPT,
@@ -3351,6 +3352,18 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
 }
 
 #endif /* CONFIG_SMP */
+
+/*
+ * In order to reduce various lock holder preemption latencies provide an
+ * interface to see if a vCPU is currently running or not.
+ *
+ * This allows us to terminate optimistic spin loops and block, analogous to
+ * the native optimistic spin heuristic of testing if the lock owner task is
+ * running or not.
+ */
+#ifndef vcpu_is_preempted
+# define vcpu_is_preempted(cpu)	false
+#endif
 
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);

@@ -78,9 +78,7 @@ static int msm_cpuidle_enter(
 
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
 
-	cpu_pm_enter();
-
-	dev->last_residency = msm_pm_idle_enter(pm_mode);
+	CPU_PM_CPU_IDLE_ENTER(msm_pm_idle_enter, pm_mode);
 	for (i = 0; i < drv->state_count; i++) {
 		st_usage = &dev->states_usage[i];
 		if ((enum msm_pm_sleep_mode)cpuidle_get_statedata(st_usage)

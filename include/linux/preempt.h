@@ -141,6 +141,29 @@ do { \
 
 #define preemptible()	(preempt_count() == 0 && !irqs_disabled())
 
+static __always_inline void set_preempt_need_resched(void)
+{
+}
+
+static __always_inline void clear_preempt_need_resched(void)
+{
+}
+
+static __always_inline bool test_preempt_need_resched(void)
+{
+	return false;
+}
+
+#define preempt_set_need_resched() \
+do { \
+	set_preempt_need_resched(); \
+} while (0)
+#define preempt_fold_need_resched() \
+do { \
+	if (tif_need_resched()) \
+		set_preempt_need_resched(); \
+} while (0)
+
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
 struct preempt_notifier;
