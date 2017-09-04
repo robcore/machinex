@@ -873,6 +873,10 @@ const char * const vmstat_text[] = {
 	"nr_tlb_local_flush_all",
 	"nr_tlb_local_flush_one",
 
+#ifdef CONFIG_DEBUG_VM_VMACACHE
+	"vmacache_find_calls",
+	"vmacache_find_hits",
+#endif
 #endif /* CONFIG_VM_EVENTS_COUNTERS */
 };
 #endif /* CONFIG_PROC_FS || CONFIG_SYSFS || CONFIG_NUMA */
