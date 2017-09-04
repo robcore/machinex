@@ -21,6 +21,7 @@
 #include "pm.h"
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuidle_device, msm_cpuidle_devs);
+static DEFINE_SPINLOCK(msm_idle_lock);
 
 static struct cpuidle_driver msm_cpuidle_driver = {
 	.name = "msm_idle",
@@ -75,8 +76,9 @@ static int msm_cpuidle_enter(
 	int i = 0;
 	enum msm_pm_sleep_mode pm_mode;
 	struct cpuidle_state_usage *st_usage = NULL;
+	unsigned long flags;
 
-	local_irq_disable();
+	spin_lock_irqsave(&msm_idle_lock, flags);
 	cpu_pm_enter();
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
 
@@ -91,7 +93,7 @@ static int msm_cpuidle_enter(
 	}
 
 	cpu_pm_exit();
-	local_irq_enable();
+	spin_unlock_irqrestore(&msm_idle_lock, flags);
 
 	return ret;
 }
