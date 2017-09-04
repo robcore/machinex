@@ -2891,8 +2891,6 @@ out:
 	if (unlikely(!page && read_mems_allowed_retry(cpuset_mems_cookie)))
 		goto retry_cpuset;
 
-	memcg_kmem_commit_charge(page, memcg, order);
-
 	return page;
 }
 EXPORT_SYMBOL(__alloc_pages_nodemask);
@@ -2946,27 +2944,51 @@ void free_pages(unsigned long addr, unsigned int order)
 EXPORT_SYMBOL(free_pages);
 
 /*
- * __free_memcg_kmem_pages and free_memcg_kmem_pages will free
- * pages allocated with __GFP_KMEMCG.
+ * alloc_kmem_pages charges newly allocated pages to the kmem resource counter
+ * of the current memory cgroup.
  *
- * Those pages are accounted to a particular memcg, embedded in the
- * corresponding page_cgroup. To avoid adding a hit in the allocator to search
- * for that information only to find out that it is NULL for users who have no
- * interest in that whatsoever, we provide these functions.
- *
- * The caller knows better which flags it relies on.
+ * It should be used when the caller would like to use kmalloc, but since the
+ * allocation is large, it has to fall back to the page allocator.
  */
-void __free_memcg_kmem_pages(struct page *page, unsigned int order)
+struct page *alloc_kmem_pages(gfp_t gfp_mask, unsigned int order)
+{
+	struct page *page;
+	struct mem_cgroup *memcg = NULL;
+
+	if (!memcg_kmem_newpage_charge(gfp_mask, &memcg, order))
+		return NULL;
+	page = alloc_pages(gfp_mask, order);
+	memcg_kmem_commit_charge(page, memcg, order);
+	return page;
+}
+
+struct page *alloc_kmem_pages_node(int nid, gfp_t gfp_mask, unsigned int order)
+{
+	struct page *page;
+	struct mem_cgroup *memcg = NULL;
+
+	if (!memcg_kmem_newpage_charge(gfp_mask, &memcg, order))
+		return NULL;
+	page = alloc_pages_node(nid, gfp_mask, order);
+	memcg_kmem_commit_charge(page, memcg, order);
+	return page;
+}
+
+/*
+ * __free_kmem_pages and free_kmem_pages will free pages allocated with
+ * alloc_kmem_pages.
+ */
+void __free_kmem_pages(struct page *page, unsigned int order)
 {
 	memcg_kmem_uncharge_pages(page, order);
 	__free_pages(page, order);
 }
 
-void free_memcg_kmem_pages(unsigned long addr, unsigned int order)
+void free_kmem_pages(unsigned long addr, unsigned int order)
 {
 	if (addr != 0) {
 		VM_BUG_ON(!virt_addr_valid((void *)addr));
-		__free_memcg_kmem_pages(virt_to_page((void *)addr), order);
+		__free_kmem_pages(virt_to_page((void *)addr), order);
 	}
 }
 
