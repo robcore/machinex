@@ -156,12 +156,10 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
 
 	idle_time = cur_wall_time - busy_time;
-	if (wall && cur_wall_time != 0)
+	if (wall)
 		*wall = div_u64(cur_wall_time, NSEC_PER_USEC);
-	if (idle_time != 0)
-		return div_u64(idle_time, NSEC_PER_USEC);
-	else
-		return 0;
+
+	return div_u64(idle_time, NSEC_PER_USEC);
 }
 
 u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy)
