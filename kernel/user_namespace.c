@@ -264,7 +264,7 @@ EXPORT_SYMBOL(from_kuid_munged);
 /**
  *	make_kgid - Map a user-namespace gid pair into a kgid.
  *	@ns:  User namespace that the gid is in
- *	@uid: group identifier
+ *	@gid: group identifier
  *
  *	Maps a user-namespace gid pair into a kernel internal kgid,
  *	and returns that kgid.
@@ -370,7 +370,8 @@ static int gid_m_show(struct seq_file *seq, void *v)
 	return 0;
 }
 
-static void *m_start(struct seq_file *seq, loff_t *ppos, struct uid_gid_map *map)
+static void *m_start(struct seq_file *seq, loff_t *ppos,
+		     struct uid_gid_map *map)
 {
 	struct uid_gid_extent *extent = NULL;
 	loff_t pos = *ppos;
@@ -491,7 +492,7 @@ static ssize_t map_write(struct file *file, const char __user *buf,
 	ret = -EINVAL;
 	pos = kbuf;
 	new_map.nr_extents = 0;
-	for (;pos; pos = next_line) {
+	for (; pos; pos = next_line) {
 		extent = &new_map.extent[new_map.nr_extents];
 
 		/* Find the end of line and ensure I don't look past it */
@@ -525,13 +526,16 @@ static ssize_t map_write(struct file *file, const char __user *buf,
 
 		/* Verify we have been given valid starting values */
 		if ((extent->first == (u32) -1) ||
-		    (extent->lower_first == (u32) -1 ))
+		    (extent->lower_first == (u32) -1))
 			goto out;
 
-		/* Verify count is not zero and does not cause the extent to wrap */
+		/* Verify count is not zero and does not cause the
+		 * extent to wrap
+		 */
 		if ((extent->first + extent->count) <= extent->first)
 			goto out;
-		if ((extent->lower_first + extent->count) <= extent->lower_first)
+		if ((extent->lower_first + extent->count) <=
+		     extent->lower_first)
 			goto out;
 
 		/* For now only accept extents that are strictly in order */
@@ -592,7 +596,8 @@ out:
 	return ret;
 }
 
-ssize_t proc_uid_map_write(struct file *file, const char __user *buf, size_t size, loff_t *ppos)
+ssize_t proc_uid_map_write(struct file *file, const char __user *buf,
+			   size_t size, loff_t *ppos)
 {
 	struct seq_file *seq = file->private_data;
 	struct user_namespace *ns = seq->private;
@@ -604,7 +609,8 @@ ssize_t proc_uid_map_write(struct file *file, const char __user *buf, size_t siz
 			 &ns->uid_map, &ns->parent->uid_map);
 }
 
-ssize_t proc_gid_map_write(struct file *file, const char __user *buf, size_t size, loff_t *ppos)
+ssize_t proc_gid_map_write(struct file *file, const char __user *buf,
+			   size_t size, loff_t *ppos)
 {
 	struct seq_file *seq = file->private_data;
 	struct user_namespace *ns = seq->private;
