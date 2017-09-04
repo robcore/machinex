@@ -106,7 +106,7 @@ void *dma_generic_alloc_coherent(struct device *dev, size_t size,
 
 	dma_mask = dma_alloc_coherent_mask(dev, flag);
 
-	flag |= __GFP_ZERO;
+	flag &= ~__GFP_ZERO;
 again:
 	if (!(flag & GFP_ATOMIC))
 		page = dma_alloc_from_contiguous(dev, count, get_order(size));
@@ -126,7 +126,7 @@ again:
 
 		return NULL;
 	}
-
+	memset(page_address(page), 0, size);
 	*dma_addr = addr;
 	return page_address(page);
 }
