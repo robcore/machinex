@@ -6,6 +6,8 @@
  * Copyright (C) 2002 Linus Torvalds.
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/thread_info.h>
 #include <asm/current.h>
@@ -806,8 +808,7 @@ hugetlbfs_parse_options(char *options, struct hugetlbfs_config *pconfig)
 			ps = memparse(args[0].from, &rest);
 			pconfig->hstate = size_to_hstate(ps);
 			if (!pconfig->hstate) {
-				printk(KERN_ERR
-				"hugetlbfs: Unsupported page size %lu MB\n",
+				pr_err("Unsupported page size %lu MB\n",
 					ps >> 20);
 				return -EINVAL;
 			}
@@ -815,8 +816,7 @@ hugetlbfs_parse_options(char *options, struct hugetlbfs_config *pconfig)
 		}
 
 		default:
-			printk(KERN_ERR "hugetlbfs: Bad mount option: \"%s\"\n",
-				 p);
+			pr_err("Bad mount option: \"%s\"\n", p);
 			return -EINVAL;
 			break;
 		}
@@ -836,8 +836,7 @@ hugetlbfs_parse_options(char *options, struct hugetlbfs_config *pconfig)
 	return 0;
 
 bad_val:
- 	printk(KERN_ERR "hugetlbfs: Bad value '%s' for mount option '%s'\n",
-	       args[0].from, p);
+	pr_err("Bad value '%s' for mount option '%s'\n", args[0].from, p);
  	return -EINVAL;
 }
 
@@ -954,8 +953,7 @@ struct file *hugetlb_file_setup(const char *name, size_t size,
 		*user = current_user();
 		if (user_shm_lock(size, *user)) {
 			task_lock(current);
-			printk_once(KERN_WARNING
-				"%s (%d): Using mlock ulimits for SHM_HUGETLB is deprecated\n",
+			pr_warn_once("%s (%d): Using mlock ulimits for SHM_HUGETLB is deprecated\n",
 				current->comm, current->pid);
 			task_unlock(current);
 		} else {
@@ -1039,7 +1037,7 @@ static int __init init_hugetlbfs_fs(void)
 							buf);
 
 		if (IS_ERR(hugetlbfs_vfsmount[i])) {
-			pr_err("hugetlb: Cannot mount internal hugetlbfs for "
+			pr_err("Cannot mount internal hugetlbfs for "
 				"page size %uK", ps_kb);
 			error = PTR_ERR(hugetlbfs_vfsmount[i]);
 			hugetlbfs_vfsmount[i] = NULL;
