@@ -3536,7 +3536,7 @@ COMPAT_SYSCALL_DEFINE3(sigaction, int, sig,
 }
 #endif
 
-#ifdef __ARCH_WANT_SYS_SGETMASK
+#ifdef CONFIG_SGETMASK_SYSCALL
 
 /*
  * For backwards compatibility.  Functionality superseded by sigprocmask.
@@ -3556,7 +3556,7 @@ SYSCALL_DEFINE1(ssetmask, int, newmask)
 
 	return old;
 }
-#endif /* __ARCH_WANT_SGETMASK */
+#endif /* CONFIG_SGETMASK_SYSCALL */
 
 #ifdef __ARCH_WANT_SYS_SIGNAL
 /*
