@@ -107,8 +107,6 @@ static unsigned long __init __free_memory_core(phys_addr_t start,
 		return 0;
 
 	__free_pages_memory(start_pfn, end_pfn);
-	fixup_zone_present_pages(pfn_to_nid(start >> PAGE_SHIFT),
-			start_pfn, end_pfn);
 
 	return end_pfn - start_pfn;
 }

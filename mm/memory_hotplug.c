@@ -167,7 +167,6 @@ void get_page_bootmem(unsigned long info,  struct page *page,
 void put_page_bootmem(struct page *page)
 {
 	unsigned long type;
-	struct zone *zone;
 
 	type = (unsigned long) page->lru.next;
 	BUG_ON(type < MEMORY_HOTPLUG_MIN_BOOTMEM_TYPE ||
