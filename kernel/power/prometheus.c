@@ -234,6 +234,7 @@ static void set_power_suspend_state(unsigned int new_state)
 void prometheus_panel_beacon(unsigned int new_state)
 {
 	unsigned long irqflags;
+
 	if (likely(!booting))
 		pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
 
