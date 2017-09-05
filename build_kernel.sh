@@ -98,33 +98,33 @@ function adbcountdown()
 
 function ADBRETRY()
 {
-ONLINE=`adb get-state 2> /dev/null`;
-ADBTYPE=`adb get-devpath 2> /dev/null`;
-adb start-server;
+ONLINE=`sudo adb get-state 2> /dev/null`;
+ADBTYPE=`sudo adb get-devpath 2> /dev/null`;
+sudo adb start-server;
 adbcountdown;
 if [[ $ADBTYPE == usb:5-4 ]]; then
 	if [[ $ONLINE == recovery ]]; then #if we are in recovery
 		echo "recovery connected";
 		adbcountdown;
 		echo "pushing $1";
-		adb push $1.zip /external_sd;
+		sudo adb push $1.zip /external_sd;
 		echo "push complete";
-		adb kill-server;
+		sudo adb kill-server;
 	elif [[ $ONLINE == device ]]; then #if we are in os, connected via usb
 		echo "connected";
 		adbcountdown;
-		adb shell su -c "input keyevent KEYCODE_WAKEUP";
+		sudo adb shell su -c "input keyevent KEYCODE_WAKEUP";
 		countdown;
 		echo "pushing $1";
-		adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		adb push $1.zip /storage/extSdCard;
+		sudo adb shell su -c "input keyevent KEYCODE_WAKEUP";
+		sudo adb push $1.zip /storage/extSdCard;
 		echo "push complete, booting recovery";
-		adb shell su -c "input keyevent KEYCODE_WAKEUP";
-		adb reboot recovery;
-		adb kill-server;
+		sudo adb shell su -c "input keyevent KEYCODE_WAKEUP";
+		sudo adb reboot recovery;
+		sudo adb kill-server;
 	fi;
 else
-	adb connect 192.168.1.111;
+	sudo adb connect 192.168.1.111;
 	status=$?;
 	if [ $status != 0 ]; then
 		echo "$status adb wireless failed!"
@@ -136,10 +136,10 @@ else
 			echo "connected";
 			adbcountdown;
 			countdown;
-			adb push $1.zip /storage/extSdCard;
+			sudo adb push $1.zip /storage/extSdCard;
 			echo "push complete, disconnecting wireless connection";
-			adb disconnect;
-			adb kill-server;
+			sudo adb disconnect;
+			sudo adb kill-server;
 		fi;
 	fi;
 fi;
