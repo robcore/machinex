@@ -636,11 +636,12 @@ static inline int pmd_trans_unstable(pmd_t *pmd)
 }
 
 #ifdef CONFIG_NUMA_BALANCING
-#ifdef CONFIG_ARCH_USES_NUMA_PROT_NONE
 /*
- * _PAGE_NUMA works identical to _PAGE_PROTNONE (it's actually the
- * same bit too). It's set only when _PAGE_PRESET is not set and it's
- * never set if _PAGE_PRESENT is set.
+ * _PAGE_NUMA distinguishes between an unmapped page table entry, an entry that
+ * is protected for PROT_NONE and a NUMA hinting fault entry. If the
+ * architecture defines __PAGE_PROTNONE then it should take that into account
+ * but those that do not can rely on the fact that the NUMA hinting scanner
+ * skips inaccessible VMAs.
  *
  * pte/pmd_present() returns true if pte/pmd_numa returns true. Page
  * fault triggers on those regions if pte/pmd_numa returns true
@@ -649,16 +650,14 @@ static inline int pmd_trans_unstable(pmd_t *pmd)
 #ifndef pte_numa
 static inline int pte_numa(pte_t pte)
 {
-	return (pte_flags(pte) &
-		(_PAGE_NUMA|_PAGE_PROTNONE|_PAGE_PRESENT)) == _PAGE_NUMA;
+	return ptenuma_flags(pte) == _PAGE_NUMA;
 }
 #endif
 
 #ifndef pmd_numa
 static inline int pmd_numa(pmd_t pmd)
 {
-	return (pmd_flags(pmd) &
-		(_PAGE_NUMA|_PAGE_PROTNONE|_PAGE_PRESENT)) == _PAGE_NUMA;
+	return pmdnuma_flags(pmd) == _PAGE_NUMA;
 }
 #endif
 
@@ -689,8 +688,14 @@ static inline pmd_t pmd_mknonnuma(pmd_t pmd)
 #ifndef pte_mknuma
 static inline pte_t pte_mknuma(pte_t pte)
 {
-	pte = pte_set_flags(pte, _PAGE_NUMA);
-	return pte_clear_flags(pte, _PAGE_PRESENT);
+ 	pteval_t val = pte_val(pte);
+ 
+	VM_BUG_ON(!(val & _PAGE_PRESENT));
+
+ 	val &= ~_PAGE_PRESENT;
+ 	val |= _PAGE_NUMA;
+
+	return val;
 }
 #endif
 
