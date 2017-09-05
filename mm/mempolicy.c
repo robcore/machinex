@@ -1646,6 +1646,9 @@ static struct mempolicy *get_vma_policy(struct vm_area_struct *vma,
 {
 	struct mempolicy *pol = __get_vma_policy(vma, addr);
 
+	if (!pol)
+		pol = get_task_policy(current);
+
 	return pol;
 }
 
@@ -1665,6 +1668,8 @@ bool vma_policy_mof(struct vm_area_struct *vma)
 	}
 
 	pol = vma->vm_policy;
+	if (!pol)
+		pol = get_task_policy(current);
 
 	return pol->flags & MPOL_F_MOF;
 }
@@ -2042,7 +2047,8 @@ retry_cpuset:
 	page = __alloc_pages_nodemask(gfp, order,
 				      policy_zonelist(gfp, pol, node),
 				      policy_nodemask(gfp, pol));
-	mpol_cond_put(pol);
+	if (unlikely(mpol_needs_cond_ref(pol)))
+		__mpol_put(pol);
 	if (unlikely(!page && read_mems_allowed_retry(cpuset_mems_cookie)))
 		goto retry_cpuset;
 	return page;
