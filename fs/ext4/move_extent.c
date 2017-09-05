@@ -893,13 +893,14 @@ out:
  * @o_filp:			file structure of original file
  * @donor_inode:		donor inode
  * @orig_page_offset:		page index on original file
+ * @donor_page_offset:		page index on donor file
  * @data_offset_in_page:	block index where data swapping starts
  * @block_len_in_page:		the number of blocks to be swapped
  * @unwritten:			orig extent is unwritten or not
  * @err:			pointer to save return value
  *
  * Save the data in original inode blocks and replace original inode extents
- * with donor inode extents by calling mext_replace_branches().
+ * with donor inode extents by calling ext4_swap_extents().
  * Finally, write out the saved data in new original inode blocks. Return
  * replaced block count.
  */
@@ -1215,41 +1216,14 @@ mext_check_arguments(struct inode *orig_inode,
  *
  * @o_filp:		file structure of the original file
  * @d_filp:		file structure of the donor file
- * @orig_start:		start offset in block for orig
- * @donor_start:	start offset in block for donor
+ * @orig_blk:		start offset in block for orig
+ * @donor_blk:		start offset in block for donor
  * @len:		the number of blocks to be moved
  * @moved_len:		moved block length
  *
  * This function returns 0 and moved block length is set in moved_len
  * if succeed, otherwise returns error value.
  *
- * Note: ext4_move_extents() proceeds the following order.
- * 1:ext4_move_extents() calculates the last block number of moving extent
- *   function by the start block number (orig_start) and the number of blocks
- *   to be moved (len) specified as arguments.
- *   If the {orig, donor}_start points a hole, the extent's start offset
- *   pointed by ext_cur (current extent), holecheck_path, orig_path are set
- *   after hole behind.
- * 2:Continue step 3 to step 5, until the holecheck_path points to last_extent
- *   or the ext_cur exceeds the block_end which is last logical block number.
- * 3:To get the length of continues area, call mext_next_extent()
- *   specified with the ext_cur (initial value is holecheck_path) re-cursive,
- *   until find un-continuous extent, the start logical block number exceeds
- *   the block_end or the extent points to the last extent.
- * 4:Exchange the original inode data with donor inode data
- *   from orig_page_offset to seq_end_page.
- *   The start indexes of data are specified as arguments.
- *   That of the original inode is orig_page_offset,
- *   and the donor inode is also orig_page_offset
- *   (To easily handle blocksize != pagesize case, the offset for the
- *   donor inode is block unit).
- * 5:Update holecheck_path and orig_path to points a next proceeding extent,
- *   then returns to step 2.
- * 6:Release holecheck_path, orig_path and set the len to moved_len
- *   which shows the number of moved blocks.
- *   The moved_len is useful for the command to calculate the file offset
- *   for starting next move extent ioctl.
- * 7:Return 0 on success, or a negative error value on failure.
  */
 int
 ext4_move_extents(struct file *o_filp, struct file *d_filp,
