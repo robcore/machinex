@@ -3295,7 +3295,7 @@ static struct inode *ext4_whiteout_for_rename(struct ext4_renament *ent,
 retry:
 	wh = ext4_new_inode_start_handle(ent->dir, S_IFCHR | WHITEOUT_MODE,
 					 &ent->dentry->d_name, 0, NULL,
-					 EXT4_HT_DIR, credits);
+					 credits);
 
 	handle = ext4_journal_current_handle();
 	if (IS_ERR(wh)) {
