@@ -672,48 +672,75 @@ static inline int pmd_numa(pmd_t pmd)
 #ifndef pte_mknonnuma
 static inline pte_t pte_mknonnuma(pte_t pte)
 {
-	pte = pte_clear_flags(pte, _PAGE_NUMA);
-	return pte_set_flags(pte, _PAGE_PRESENT|_PAGE_ACCESSED);
+	pteval_t val = pte_val(pte);
+
+	val &= ~_PAGE_NUMA;
+	val |= (_PAGE_PRESENT|_PAGE_ACCESSED);
+	return __pte(val);
 }
 #endif
 
 #ifndef pmd_mknonnuma
 static inline pmd_t pmd_mknonnuma(pmd_t pmd)
 {
-	pmd = pmd_clear_flags(pmd, _PAGE_NUMA);
-	return pmd_set_flags(pmd, _PAGE_PRESENT|_PAGE_ACCESSED);
+	pmdval_t val = pmd_val(pmd);
+
+	val &= ~_PAGE_NUMA;
+	val |= (_PAGE_PRESENT|_PAGE_ACCESSED);
+
+	return __pmd(val);
 }
 #endif
 
 #ifndef pte_mknuma
 static inline pte_t pte_mknuma(pte_t pte)
 {
- 	pteval_t val = pte_val(pte);
- 
+	pteval_t val = pte_val(pte);
+
 	VM_BUG_ON(!(val & _PAGE_PRESENT));
 
- 	val &= ~_PAGE_PRESENT;
- 	val |= _PAGE_NUMA;
+	val &= ~_PAGE_PRESENT;
+	val |= _PAGE_NUMA;
 
-	return val;
+	return __pte(val);
+}
+#endif
+
+#ifndef ptep_set_numa
+static inline void ptep_set_numa(struct mm_struct *mm, unsigned long addr,
+				 pte_t *ptep)
+{
+	pte_t ptent = *ptep;
+
+	ptent = pte_mknuma(ptent);
+	set_pte_at(mm, addr, ptep, ptent);
+	return;
 }
 #endif
 
 #ifndef pmd_mknuma
 static inline pmd_t pmd_mknuma(pmd_t pmd)
 {
-	pmd = pmd_set_flags(pmd, _PAGE_NUMA);
-	return pmd_clear_flags(pmd, _PAGE_PRESENT);
+	pmdval_t val = pmd_val(pmd);
+
+	val &= ~_PAGE_PRESENT;
+	val |= _PAGE_NUMA;
+
+	return __pmd(val);
 }
 #endif
-#else
-extern int pte_numa(pte_t pte);
-extern int pmd_numa(pmd_t pmd);
-extern pte_t pte_mknonnuma(pte_t pte);
-extern pmd_t pmd_mknonnuma(pmd_t pmd);
-extern pte_t pte_mknuma(pte_t pte);
-extern pmd_t pmd_mknuma(pmd_t pmd);
-#endif /* CONFIG_ARCH_USES_NUMA_PROT_NONE */
+
+#ifndef pmdp_set_numa
+static inline void pmdp_set_numa(struct mm_struct *mm, unsigned long addr,
+				 pmd_t *pmdp)
+{
+	pmd_t pmd = *pmdp;
+
+	pmd = pmd_mknuma(pmd);
+	set_pmd_at(mm, addr, pmdp, pmd);
+	return;
+}
+#endif
 #else
 static inline int pmd_numa(pmd_t pmd)
 {
@@ -740,9 +767,22 @@ static inline pte_t pte_mknuma(pte_t pte)
 	return pte;
 }
 
+static inline void ptep_set_numa(struct mm_struct *mm, unsigned long addr,
+				 pte_t *ptep)
+{
+	return;
+}
+
+
 static inline pmd_t pmd_mknuma(pmd_t pmd)
 {
 	return pmd;
+}
+
+static inline void pmdp_set_numa(struct mm_struct *mm, unsigned long addr,
+				 pmd_t *pmdp)
+{
+	return ;
 }
 #endif /* CONFIG_NUMA_BALANCING */
 
