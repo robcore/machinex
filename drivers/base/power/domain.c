@@ -678,6 +678,13 @@ static int __init genpd_power_off_unused(void)
 }
 late_initcall(genpd_power_off_unused);
 
+static int __init genpd_poweroff_unused(void)
+{
+	pm_genpd_poweroff_unused();
+	return 0;
+}
+late_initcall(genpd_poweroff_unused);
+
 #else
 
 static inline int genpd_dev_pm_qos_notifier(struct notifier_block *nb,
