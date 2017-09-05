@@ -224,10 +224,8 @@ int pm_wake_lock(const char *buf)
 	size_t len;
 	int ret = 0;
 
-#if 0
 	if (!capable(CAP_BLOCK_SUSPEND))
 		return -EPERM;
-#endif
 
 	while (*str && !isspace(*str))
 		str++;
