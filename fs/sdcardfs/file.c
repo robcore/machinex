@@ -328,11 +328,6 @@ static struct file *sdcardfs_get_lower_file(struct file *f)
 	return sdcardfs_lower_file(f);
 }
 
-static struct file *sdcardfs_get_lower_file(struct file *f)
-{
-	return sdcardfs_lower_file(f);
-}
-
 const struct file_operations sdcardfs_main_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= sdcardfs_read,
