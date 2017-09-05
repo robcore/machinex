@@ -3,7 +3,6 @@
 
 #include <stdarg.h>
 #include <linux/init.h>
-#include <linux/kern_levels.h>
 #include <linux/linkage.h>
 #include <linux/cache.h>
 
