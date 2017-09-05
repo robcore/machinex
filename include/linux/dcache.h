@@ -12,7 +12,6 @@
 #include <linux/lockref.h>
 #include <linux/wait.h>
 
-struct nameidata;
 struct path;
 struct vfsmount;
 
