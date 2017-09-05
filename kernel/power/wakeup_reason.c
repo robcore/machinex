@@ -26,7 +26,6 @@
 #include <linux/spinlock.h>
 #include <linux/notifier.h>
 #include <linux/suspend.h>
-#include <linux/debugfs.h>
 
 
 #define MAX_WAKEUP_REASON_IRQS 32
@@ -42,6 +41,11 @@ static ktime_t curr_monotime; /* monotonic time after last suspend */
 static ktime_t last_stime; /* monotonic boottime offset before last suspend */
 static ktime_t curr_stime; /* monotonic boottime offset after last suspend */
 
+#ifdef CONFIG_SEC_PM
+char last_resume_kernel_reason[512];
+int last_resume_kernel_reason_len;
+#endif
+
 static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribute *attr,
 		char *buf)
 {
@@ -51,6 +55,13 @@ static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribu
 	if (suspend_abort) {
 		buf_offset = sprintf(buf, "Abort: %s", abort_reason);
 	} else {
+#ifdef CONFIG_SEC_PM
+		pr_err("%s: %s(%d)\n", __func__,
+			last_resume_kernel_reason,
+			last_resume_kernel_reason_len);
+		buf_offset += sprintf(buf + buf_offset, "%d %s\n",
+				0, last_resume_kernel_reason);
+#endif
 		for (irq_no = 0; irq_no < irqcount; irq_no++) {
 			desc = irq_to_desc(irq_list[irq_no]);
 			if (desc && desc->action && desc->action->name)
@@ -60,11 +71,6 @@ static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribu
 				buf_offset += sprintf(buf + buf_offset, "%d\n",
 						irq_list[irq_no]);
 		}
-#ifdef CONFIG_SEC_PM_DEBUG
-		/* show INT_MBOX instead of Unknown to distinguish CP wakeup */
-		if (mbox_wakeup)
-			buf_offset += sprintf(buf, "%d %s", nr_irqs+1, "INT_MBOX");
-#endif
 	}
 	spin_unlock(&resume_reason_lock);
 	return buf_offset;
@@ -136,24 +142,6 @@ void log_wakeup_reason(int irq)
 	spin_unlock(&resume_reason_lock);
 }
 
-#ifdef CONFIG_SEC_PM_DEBUG
-void log_mbox_wakeup(void)
-{
-	spin_lock(&resume_reason_lock);
-
-	/* Mbox wakeup has already been occured. */
-	if (mbox_wakeup) {
-		spin_unlock(&resume_reason_lock);
-		return;
-	}
-
-	mbox_wakeup = true;
-	spin_unlock(&resume_reason_lock);
-
-	printk(KERN_INFO "Resume caused by INT_MBOX\n");
-}
-#endif
-
 int check_wakeup_reason(int irq)
 {
 	int irq_no;
@@ -197,14 +185,16 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		spin_lock(&resume_reason_lock);
 		irqcount = 0;
 		suspend_abort = false;
-#ifdef CONFIG_SEC_PM_DEBUG
-		mbox_wakeup = false;
-#endif
 		spin_unlock(&resume_reason_lock);
 		/* monotonic time since boot */
 		last_monotime = ktime_get();
 		/* monotonic time since boot including the time spent in suspend */
 		last_stime = ktime_get_boottime();
+#ifdef CONFIG_SEC_PM
+		/* reset resume kernel reason buffer */
+		last_resume_kernel_reason[0] = '\0';
+		last_resume_kernel_reason_len = 0;
+#endif
 		break;
 	case PM_POST_SUSPEND:
 		/* monotonic time since boot */
@@ -246,6 +236,12 @@ int __init wakeup_reason_init(void)
 		printk(KERN_WARNING "[%s] failed to create a sysfs group %d\n",
 				__func__, retval);
 	}
+
+#ifdef CONFIG_SEC_PM
+	/* reset resume kernel reason buffer */
+	last_resume_kernel_reason[0] = '\0';
+	last_resume_kernel_reason_len = 0;
+#endif
 	return 0;
 }
 
