@@ -1494,14 +1494,20 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
 #else
 	bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL);
 #endif
+	if (IS_ERR(bh))
+		return (struct dentry *) bh;
 	inode = NULL;
 	if (bh) {
 		__u32 ino = le32_to_cpu(de->inode);
-		brelse(bh);
 		if (!ext4_valid_inum(dir->i_sb, ino)) {
+			/* for debugging, sangwoo2.lee */
+			/* for debugging */
+			brelse(bh);
+
 			EXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
 			return ERR_PTR(-EIO);
 		}
+		brelse(bh);
 		if (unlikely(ino == dir->i_ino)) {
 			EXT4_ERROR_INODE(dir, "'%pd' linked to parent dir",
 					 dentry);
@@ -1540,6 +1546,8 @@ struct dentry *ext4_get_parent(struct dentry *child)
 #else
 	bh = ext4_find_entry(child->d_inode, &dotdot, &de, NULL);
 #endif
+	if (IS_ERR(bh))
+		return (struct dentry *) bh;
 	if (!bh)
 		return ERR_PTR(-ENOENT);
 	ino = le32_to_cpu(de->inode);
