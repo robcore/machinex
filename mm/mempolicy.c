@@ -1646,9 +1646,6 @@ static struct mempolicy *get_vma_policy(struct vm_area_struct *vma,
 {
 	struct mempolicy *pol = __get_vma_policy(vma, addr);
 
-	if (!pol)
-		pol = get_task_policy(current);
-
 	return pol;
 }
 
@@ -1668,8 +1665,6 @@ bool vma_policy_mof(struct vm_area_struct *vma)
 	}
 
 	pol = vma->vm_policy;
-	if (!pol)
-		pol = get_task_policy(current);
 
 	return pol->flags & MPOL_F_MOF;
 }
