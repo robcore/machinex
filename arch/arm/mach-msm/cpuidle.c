@@ -21,7 +21,6 @@
 #include "pm.h"
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuidle_device, msm_cpuidle_devs);
-static DEFINE_SPINLOCK(msm_idle_lock);
 
 static struct cpuidle_driver msm_cpuidle_driver = {
 	.name = "msm_idle",
