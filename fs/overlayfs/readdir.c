@@ -18,13 +18,13 @@
 #include "overlayfs.h"
 
 struct ovl_cache_entry {
-	const char *name;
 	unsigned int len;
 	unsigned int type;
 	u64 ino;
 	bool is_whiteout;
 	struct list_head l_node;
 	struct rb_node node;
+	char name[];
 };
 
 struct ovl_dir_cache {
@@ -36,9 +36,9 @@ struct ovl_dir_cache {
 struct ovl_readdir_data {
 	struct dir_context ctx;
 	bool is_merge;
-	struct rb_root *root;
+	struct rb_root root;
 	struct list_head *list;
-	struct list_head *middle;
+	struct list_head middle;
 	int count;
 	int err;
 };
@@ -82,13 +82,12 @@ static struct ovl_cache_entry *ovl_cache_entry_new(const char *name, int len,
 						   u64 ino, unsigned int d_type)
 {
 	struct ovl_cache_entry *p;
+	size_t size = offsetof(struct ovl_cache_entry, name[len + 1]);
 
-	p = kmalloc(sizeof(*p) + len + 1, GFP_KERNEL);
+	p = kmalloc(size, GFP_KERNEL);
 	if (p) {
-		char *name_copy = (char *) (p + 1);
-		memcpy(name_copy, name, len);
-		name_copy[len] = '\0';
-		p->name = name_copy;
+		memcpy(p->name, name, len);
+		p->name[len] = '\0';
 		p->len = len;
 		p->type = d_type;
 		p->ino = ino;
@@ -102,7 +101,7 @@ static int ovl_cache_entry_add_rb(struct ovl_readdir_data *rdd,
 				  const char *name, int len, u64 ino,
 				  unsigned int d_type)
 {
-	struct rb_node **newp = &rdd->root->rb_node;
+	struct rb_node **newp = &rdd->root.rb_node;
 	struct rb_node *parent = NULL;
 	struct ovl_cache_entry *p;
 
@@ -127,7 +126,7 @@ static int ovl_cache_entry_add_rb(struct ovl_readdir_data *rdd,
 
 	list_add_tail(&p->l_node, rdd->list);
 	rb_link_node(&p->node, parent, newp);
-	rb_insert_color(&p->node, rdd->root);
+	rb_insert_color(&p->node, &rdd->root);
 
 	return 0;
 }
@@ -138,15 +137,15 @@ static int ovl_fill_lower(struct ovl_readdir_data *rdd,
 {
 	struct ovl_cache_entry *p;
 
-	p = ovl_cache_entry_find(rdd->root, name, namelen);
+	p = ovl_cache_entry_find(&rdd->root, name, namelen);
 	if (p) {
-		list_move_tail(&p->l_node, rdd->middle);
+		list_move_tail(&p->l_node, &rdd->middle);
 	} else {
 		p = ovl_cache_entry_new(name, namelen, ino, d_type);
 		if (p == NULL)
 			rdd->err = -ENOMEM;
 		else
-			list_add_tail(&p->l_node, rdd->middle);
+			list_add_tail(&p->l_node, &rdd->middle);
 	}
 
 	return rdd->err;
@@ -278,12 +277,10 @@ static inline int ovl_dir_read_merged(struct path *upperpath,
 				      struct list_head *list)
 {
 	int err;
-	struct rb_root root = RB_ROOT;
-	struct list_head middle;
 	struct ovl_readdir_data rdd = {
 		.ctx.actor = ovl_fill_merge,
 		.list = list,
-		.root = &root,
+		.root = RB_ROOT,
 		.is_merge = false,
 	};
 
@@ -303,11 +300,10 @@ static inline int ovl_dir_read_merged(struct path *upperpath,
 		 * Insert lowerpath entries before upperpath ones, this allows
 		 * offsets to be reasonably constant
 		 */
-		list_add(&middle, rdd.list);
-		rdd.middle = &middle;
+		list_add(&rdd.middle, rdd.list);
 		rdd.is_merge = true;
 		err = ovl_dir_read(lowerpath, &rdd);
-		list_del(&middle);
+		list_del(&rdd.middle);
 	}
 out:
 	return err;
@@ -458,20 +454,27 @@ static int ovl_dir_fsync(struct file *file, loff_t start, loff_t end,
 	if (!od->is_upper && ovl_path_type(dentry) == OVL_PATH_MERGE) {
 		struct inode *inode = file_inode(file);
 
-		mutex_lock(&inode->i_mutex);
 		realfile = od->upperfile;
 		if (!realfile) {
 			struct path upperpath;
 
 			ovl_path_upper(dentry, &upperpath);
 			realfile = ovl_path_open(&upperpath, O_RDONLY);
-			if (IS_ERR(realfile)) {
-				mutex_unlock(&inode->i_mutex);
-				return PTR_ERR(realfile);
+			mutex_lock(&inode->i_mutex);
+			if (!od->upperfile) {
+				if (IS_ERR(realfile)) {
+					mutex_unlock(&inode->i_mutex);
+					return PTR_ERR(realfile);
+				}
+				od->upperfile = realfile;
+			} else {
+				/* somebody has beaten us to it */
+				if (!IS_ERR(realfile))
+					fput(realfile);
+				realfile = od->upperfile;
 			}
-			od->upperfile = realfile;
+			mutex_unlock(&inode->i_mutex);
 		}
-		mutex_unlock(&inode->i_mutex);
 	}
 
 	return vfs_fsync_range(realfile, start, end, datasync);
