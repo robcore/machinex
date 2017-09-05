@@ -175,14 +175,14 @@ bool mx_is_cable_attached(void)
 	return mx_is_charging;
 }
 
-int current_cable_type = CABLE_TYPE_UNKNOWN_MUIC;
+int current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
 int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 {
 #ifdef CONFIG_CHARGER_MAX77693
 	struct power_supply *psy = power_supply_get_by_name("battery");
 	struct power_supply *psy_ps = power_supply_get_by_name("ps");
 	union power_supply_propval value;
-	static enum cable_type_muic previous_cable_type = CABLE_TYPE_UNKNOWN_MUIC;
+	static enum cable_type_muic previous_cable_type = cable_type;
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI

@@ -138,7 +138,14 @@ static void power_supply_changed_work(struct work_struct *work)
 	dev_dbg(psy->dev, "%s\n", __func__);
 
 	spin_lock_irqsave(&psy->changed_lock, flags);
-	if (psy->changed) {
+	/*
+	 * Check 'changed' here to avoid issues due to race between
+	 * power_supply_changed() and this routine. In worst case
+	 * power_supply_changed() can be called again just before we take above
+	 * lock. During the first call of this routine we will mark 'changed' as
+	 * false and it will stay false for the next call as well.
+	 */
+	if (likely(psy->changed)) {
 		psy->changed = false;
 		spin_unlock_irqrestore(&psy->changed_lock, flags);
 
@@ -150,7 +157,12 @@ static void power_supply_changed_work(struct work_struct *work)
 		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
 		spin_lock_irqsave(&psy->changed_lock, flags);
 	}
-	if (!psy->changed)
+	/*
+	 * Hold the wakeup_source until all events are processed.
+	 * power_supply_changed() might have called again and have set 'changed'
+	 * to true.
+	 */
+	if (likely(!psy->changed))
 		wake_unlock(&psy->work_wake_lock);
 	spin_unlock_irqrestore(&psy->changed_lock, flags);
 }
@@ -247,7 +259,7 @@ int power_supply_set_battery_charged(struct power_supply *psy)
 }
 EXPORT_SYMBOL_GPL(power_supply_set_battery_charged);
 
-static int power_supply_match_device_by_name(struct device *dev, void *data)
+static int power_supply_match_device_by_name(struct device *dev, const void *data)
 {
 	const char *name = data;
 	struct power_supply *psy = dev_get_drvdata(dev);
@@ -255,7 +267,7 @@ static int power_supply_match_device_by_name(struct device *dev, void *data)
 	return strcmp(psy->name, name) == 0;
 }
 
-struct power_supply *power_supply_get_by_name(char *name)
+struct power_supply *power_supply_get_by_name(const char *name)
 {
 	struct device *dev = class_find_device(power_supply_class, NULL, name,
 					power_supply_match_device_by_name);
