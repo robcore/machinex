@@ -174,14 +174,14 @@ static __initdata enum state {
 } state, next_state;
 
 static __initdata char *victim;
-static unsigned long byte_count __initdata;
+static unsigned long count __initdata;
 static __initdata loff_t this_header, next_header;
 
 static inline void __init eat(unsigned n)
 {
 	victim += n;
 	this_header += n;
-	byte_count -= n;
+	count -= n;
 }
 
 static __initdata char *vcollected;
@@ -191,7 +191,7 @@ static __initdata char *collect;
 
 static void __init read_into(char *buf, unsigned size, enum state next)
 {
-	if (byte_count >= size) {
+	if (count >= size) {
 		collected = victim;
 		eat(size);
 		state = next;
@@ -214,8 +214,8 @@ static int __init do_start(void)
 static int __init do_collect(void)
 {
 	unsigned long n = remains;
-	if (byte_count < n)
-		n = byte_count;
+	if (count < n)
+		n = count;
 	memcpy(collect, victim, n);
 	eat(n);
 	collect += n;
@@ -257,8 +257,8 @@ static int __init do_header(void)
 
 static int __init do_skip(void)
 {
-	if (this_header + byte_count < next_header) {
-		eat(byte_count);
+	if (this_header + count < next_header) {
+		eat(count);
 		return 1;
 	} else {
 		eat(next_header - this_header);
@@ -269,9 +269,9 @@ static int __init do_skip(void)
 
 static int __init do_reset(void)
 {
-	while (byte_count && *victim == '\0')
+	while(count && *victim == '\0')
 		eat(1);
-	if (byte_count && (this_header & 3))
+	if (count && (this_header & 3))
 		error("broken padding");
 	return 1;
 }
@@ -286,11 +286,11 @@ static int __init maybe_link(void)
 	return 0;
 }
 
-static void __init clean_path(char *path, umode_t fmode)
+static void __init clean_path(char *path, umode_t mode)
 {
 	struct stat st;
 
-	if (!sys_newlstat(path, &st) && (st.st_mode ^ fmode) & S_IFMT) {
+	if (!sys_newlstat(path, &st) && (st.st_mode^mode) & S_IFMT) {
 		if (S_ISDIR(st.st_mode))
 			sys_rmdir(path);
 		else
@@ -345,7 +345,7 @@ static int __init do_name(void)
 
 static int __init do_copy(void)
 {
-	if (byte_count >= body_len) {
+	if (count >= body_len) {
 		sys_write(wfd, victim, body_len);
 		sys_close(wfd);
 		do_utime(vcollected, mtime);
@@ -386,12 +386,12 @@ static __initdata int (*actions[])(void) = {
 
 static long __init write_buffer(char *buf, unsigned long len)
 {
-	byte_count = len;
+	count = len;
 	victim = buf;
 
 	while (!actions[state]())
 		;
-	return len - byte_count;
+	return len - count;
 }
 
 static long __init flush_buffer(void *bufv, unsigned long len)
