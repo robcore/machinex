@@ -182,7 +182,7 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 	struct power_supply *psy = power_supply_get_by_name("battery");
 	struct power_supply *psy_ps = power_supply_get_by_name("ps");
 	union power_supply_propval value;
-	static enum cable_type_muic previous_cable_type = cable_type;
+	static enum cable_type_muic previous_cable_type;
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI
@@ -327,14 +327,14 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 		}
 	}
 	previous_cable_type = cable_type;
+
+	if (!first_chg_checked)
+		first_chg_checked = true;
 #endif
 skip:
 #ifdef CONFIG_JACK_MON
 	jack_event_handler("charger", is_cable_attached);
 #endif
-
-	if (!first_chg_checked)
-		first_chg_checked = true;
 
 	return 0;
 }
