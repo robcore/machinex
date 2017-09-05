@@ -1599,7 +1599,15 @@ static void o2net_start_connect(struct work_struct *work)
 	struct sockaddr_in myaddr = {0, }, remoteaddr = {0, };
 	int ret = 0, stop;
 	unsigned int timeout;
+	unsigned int noio_flag;
 
+	/*
+	 * sock_create allocates the sock with GFP_KERNEL. We must set
+	 * per-process flag PF_MEMALLOC_NOIO so that all allocations done
+	 * by this process are done as if GFP_NOIO was specified. So we
+	 * are not reentering filesystem while doing memory reclaim.
+	 */
+	noio_flag = memalloc_noio_save();
 	/* if we're greater we initiate tx, otherwise we accept */
 	if (o2nm_this_node() <= o2net_num_from_nn(nn))
 		goto out;
@@ -1703,6 +1711,7 @@ out:
 	if (mynode)
 		o2nm_node_put(mynode);
 
+	memalloc_noio_restore(noio_flag);
 	return;
 }
 
@@ -1828,6 +1837,15 @@ static int o2net_accept_one(struct socket *sock)
 	struct o2nm_node *local_node = NULL;
 	struct o2net_sock_container *sc = NULL;
 	struct o2net_node *nn;
+	unsigned int noio_flag;
+
+	/*
+	 * sock_create_lite allocates the sock with GFP_KERNEL. We must set
+	 * per-process flag PF_MEMALLOC_NOIO so that all allocations done
+	 * by this process are done as if GFP_NOIO was specified. So we
+	 * are not reentering filesystem while doing memory reclaim.
+	 */
+	noio_flag = memalloc_noio_save();
 
 	BUG_ON(sock == NULL);
 	ret = sock_create_lite(sock->sk->sk_family, sock->sk->sk_type,
@@ -1932,6 +1950,8 @@ out:
 		o2nm_node_put(local_node);
 	if (sc)
 		sc_put(sc);
+
+	memalloc_noio_restore(noio_flag);
 	return ret;
 }
 
