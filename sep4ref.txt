@@ -1,1 +1,1 @@
-/media/root/robcore/android/linaro2patches/patches/04patches/5643-mm-thp-avoid-excessive-compaction-latency-during-fau.patch
+/media/root/robcore/android/linaro2patches/patches/01patches/5809-prctl-PR_SET_MM-factor-out-mmap_sem-when-updating-mm.patch
