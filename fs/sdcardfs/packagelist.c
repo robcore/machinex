@@ -328,7 +328,7 @@ static int packagelist_reader(void *thread_data)
 
 	while (!kthread_should_stop()) {
 		if (signal_pending(current)) {
-			ssleep(1);
+			msleep(100);
 			continue;
 		}
 
@@ -338,7 +338,7 @@ static int packagelist_reader(void *thread_data)
 				if (res == -ENOENT || res == -EACCES) {
 				/* Framework may not have created yet, sleep and retry */
 					printk(KERN_ERR "sdcardfs: missing packages.list; retrying\n");
-					ssleep(2);
+					msleep(200);
 					printk(KERN_ERR "sdcardfs: missing packages.list_end; retrying\n");
 					continue;
 				} else {
