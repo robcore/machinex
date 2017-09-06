@@ -1115,7 +1115,7 @@ void page_add_new_anon_rmap(struct page *page,
  */
 void page_add_file_rmap(struct page *page)
 {
-	struct mem_cgroup *memcg;
+	struct mem_cgroup *uninitialized_var(memcg);
 	unsigned long flags;
 	bool locked;
 
