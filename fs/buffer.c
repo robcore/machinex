@@ -3140,6 +3140,11 @@ int _submit_bh(int rw, struct buffer_head *bh, unsigned long bio_flags)
 	bio->bi_private = bh;
 	bio->bi_flags |= bio_flags;
 
+	if(buffer_sync_flush(bh)) {
+		rw |= REQ_SYNC;
+		clear_buffer_sync_flush(bh);
+	}
+
 	/* Take care of bh's that straddle the end of the device */
 	guard_bio_eod(rw, bio);
 
@@ -3147,21 +3152,6 @@ int _submit_bh(int rw, struct buffer_head *bh, unsigned long bio_flags)
 		rw |= REQ_META;
 	if (buffer_prio(bh))
 		rw |= REQ_PRIO;
-
-	if(buffer_sync_flush(bh)) {
-		rw |= REQ_SYNC;
-		clear_buffer_sync_flush(bh);
-	}
-#ifdef CONFIG_JOURNAL_DATA_TAG
-	if(buffer_journal(bh)) {
-		set_bit(BIO_JOURNAL, &bio->bi_flags);
-		clear_buffer_journal(bh);
-	}
-	if(buffer_jmeta(bh)) {
-		//set_bit(BIO_JMETA, &bio->bi_flags);
-		clear_buffer_jmeta(bh);
-	}
-#endif
 
 	bio_get(bio);
 	submit_bio(rw, bio);
@@ -3199,8 +3189,8 @@ EXPORT_SYMBOL(submit_bh);
  * until the buffer gets unlocked).
  *
  * ll_rw_block sets b_end_io to simple completion handler that marks
- * the buffer up-to-date (if appropriate), unlocks the buffer and wakes
- * any waiters. 
+ * the buffer up-to-date (if approriate), unlocks the buffer and wakes
+ * any waiters.
  *
  * All of the buffers must be for the same device, and must also be a
  * multiple of the current approved size for the device.

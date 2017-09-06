@@ -197,9 +197,7 @@ void __delete_from_page_cache(struct page *page, void *shadow)
 	page->mapping = NULL;
 	/* Leave page->index set: truncation lookup relies upon it */
 
-	/* hugetlb pages do not participate in page cache accounting. */
-	if (!PageHuge(page))
-		__dec_zone_page_state(page, NR_FILE_PAGES);
+	__dec_zone_page_state(page, NR_FILE_PAGES);
 	if (PageSwapBacked(page))
 		__dec_zone_page_state(page, NR_SHMEM);
 	BUG_ON(page_mapped(page));
@@ -229,13 +227,12 @@ void delete_from_page_cache(struct page *page)
 {
 	struct address_space *mapping = page->mapping;
 	void (*freepage)(struct page *);
-	unsigned long flags;
 
 	BUG_ON(!PageLocked(page));
 
 	freepage = mapping->a_ops->freepage;
-	spin_lock_irqsave(&mapping->tree_lock, flags);
-	spin_unlock_irqrestore(&mapping->tree_lock, flags);
+	spin_lock_irq(&mapping->tree_lock);
+	__delete_from_page_cache(page, NULL);
 	spin_unlock_irq(&mapping->tree_lock);
 
 	if (freepage)
@@ -378,12 +375,7 @@ EXPORT_SYMBOL(filemap_fdatawait_range);
  * @mapping: address space structure to wait for
  *
  * Walk the list of under-writeback pages of the given address space
- * and wait for all of them.  Check error status of the address space
- * and return it.
- *
- * Since the error status of the address space is cleared by this function,
- * callers are responsible for checking the return value and handling and/or
- * reporting the error.
+ * and wait for all of them.
  */
 int filemap_fdatawait(struct address_space *mapping)
 {
@@ -480,7 +472,6 @@ int replace_page_cache_page(struct page *old, struct page *new, gfp_t gfp_mask)
 	if (!error) {
 		struct address_space *mapping = old->mapping;
 		void (*freepage)(struct page *);
-		unsigned long flags;
 
 		pgoff_t offset = old->index;
 		freepage = mapping->a_ops->freepage;
@@ -489,20 +480,15 @@ int replace_page_cache_page(struct page *old, struct page *new, gfp_t gfp_mask)
 		new->mapping = mapping;
 		new->index = offset;
 
-		spin_lock_irqsave(&mapping->tree_lock, flags);
+		spin_lock_irq(&mapping->tree_lock);
 		__delete_from_page_cache(old, NULL);
 		error = radix_tree_insert(&mapping->page_tree, offset, new);
 		BUG_ON(error);
 		mapping->nrpages++;
-
-		/*
-		 * hugetlb pages do not participate in page cache accounting.
-		 */
-		if (!PageHuge(new))
-			__inc_zone_page_state(new, NR_FILE_PAGES);
+		__inc_zone_page_state(new, NR_FILE_PAGES);
 		if (PageSwapBacked(new))
 			__inc_zone_page_state(new, NR_SHMEM);
-		spin_unlock_irqrestore(&mapping->tree_lock, flags);
+		spin_unlock_irq(&mapping->tree_lock);
 		mem_cgroup_migrate(old, new, true);
 		radix_tree_preload_end();
 		if (freepage)
@@ -591,10 +577,7 @@ static int __add_to_page_cache_locked(struct page *page,
 	radix_tree_preload_end();
 	if (unlikely(error))
 		goto err_insert;
-
-	/* hugetlb pages do not participate in page cache accounting. */
-	if (!huge)
-		__inc_zone_page_state(page, NR_FILE_PAGES);
+	__inc_zone_page_state(page, NR_FILE_PAGES);
 	spin_unlock_irq(&mapping->tree_lock);
 	if (!huge)
 		mem_cgroup_commit_charge(page, memcg, false);
@@ -2506,11 +2489,6 @@ again:
 			break;
 		}
 
-		if (fatal_signal_pending(current)) {
-			status = -EINTR;
-			break;
-		}
-
 		status = a_ops->write_begin(file, mapping, pos, bytes, flags,
 						&page, &fsdata);
 		if (unlikely(status < 0))
@@ -2548,6 +2526,10 @@ again:
 		written += copied;
 
 		balance_dirty_pages_ratelimited(mapping);
+		if (fatal_signal_pending(current)) {
+			status = -EINTR;
+			break;
+		}
 	} while (iov_iter_count(i));
 
 	return written ? written : status;
@@ -2702,7 +2684,7 @@ EXPORT_SYMBOL(generic_file_write_iter);
  * page is known to the local caching routines.
  *
  * The @gfp_mask argument specifies whether I/O may be performed to release
- * this page (__GFP_IO), and whether the call may block (__GFP_RECLAIM & __GFP_FS).
+ * this page (__GFP_IO), and whether the call may block (__GFP_WAIT & __GFP_FS).
  *
  */
 int try_to_release_page(struct page *page, gfp_t gfp_mask)

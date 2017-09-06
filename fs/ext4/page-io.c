@@ -56,7 +56,7 @@ void ext4_exit_pageio(void)
 static void buffer_io_error(struct buffer_head *bh)
 {
 	char b[BDEVNAME_SIZE];
-	printk_ratelimited(KERN_ERR "Buffer I/O error on device %s, logical block %llu\n",
+	printk(KERN_ERR "Buffer I/O error on device %s, logical block %llu\n",
 			bdevname(bh->b_bdev, b),
 			(unsigned long long)bh->b_blocknr);
 }
@@ -307,10 +307,9 @@ static void ext4_end_bio(struct bio *bio, int error)
 
 	if (error) {
 		struct inode *inode = io_end->inode;
-
-		ext4_warning(inode->i_sb, "I/O error %d writing to inode %lu "
+		ext4_warning(inode->i_sb, "I/O error writing to inode %lu "
 			     "(offset %llu size %ld starting block %llu)",
-			     error, inode->i_ino,
+			     inode->i_ino,
 			     (unsigned long long) io_end->offset,
 			     (long) io_end->size,
 			     (unsigned long long)
