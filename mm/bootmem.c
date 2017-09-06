@@ -243,7 +243,7 @@ static unsigned long __init free_all_bootmem_core(bootmem_data_t *bdata)
 
 static int reset_managed_pages_done __initdata;
 
-static inline void __init reset_node_managed_pages(pg_data_t *pgdat)
+void reset_node_managed_pages(pg_data_t *pgdat)
 {
 	struct zone *z;
 
