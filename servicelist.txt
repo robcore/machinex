@@ -1,0 +1,1544 @@
+ACTIVITY MANAGER SERVICES (dumpsys activity services)
+  User 0 active services:
+  * ServiceRecord{2e25035b u0 com.nuance.swype.dtc/com.nuance.swype.input.IME}
+    intent={act=android.view.InputMethod cmp=com.nuance.swype.dtc/com.nuance.swype.input.IME}
+    packageName=com.nuance.swype.dtc
+    processName=com.nuance.swype.dtc
+    permission=android.permission.BIND_INPUT_METHOD
+    baseDir=/data/app/com.nuance.swype.dtc-2/base.apk
+    dataDir=/data/data/com.nuance.swype.dtc
+    app=ProcessRecord{385e82d3 8668:com.nuance.swype.dtc/u0a191}
+    transactions=0
+    createTime=-9h44m24s999ms startingBgTimeout=--
+    lastActivity=-13m28s126ms restartTime=-3h38m41s657ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{1c810449 CREATE}:
+      intent={act=android.view.InputMethod cmp=com.nuance.swype.dtc/com.nuance.swype.input.IME}
+      binder=android.os.BinderProxy@bb3414e
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{298cc26f ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{3da0823f u0 CR !FG UI !VIS com.nuance.swype.dtc/com.nuance.swype.input.IME:@15e1de5e}
+    All Connections:
+      ConnectionRecord{3da0823f u0 CR !FG UI !VIS com.nuance.swype.dtc/com.nuance.swype.input.IME:@15e1de5e}
+
+  * ServiceRecord{16fd848e u0 com.sec.android.app.bluetoothtest/.BluetoothBDTestService}
+    intent={cmp=com.sec.android.app.bluetoothtest/.BluetoothBDTestService}
+    packageName=com.sec.android.app.bluetoothtest
+    processName=com.android.phone
+    permission=com.sec.android.app.bluetoothtest.permission.KEYSTRING
+    baseDir=/system/app/BluetoothTest/BluetoothTest.apk
+    dataDir=/data/data/com.sec.android.app.bluetoothtest
+    app=ProcessRecord{111be1c 3967:com.android.phone/1001}
+    transactions=0
+    createTime=-9h44m58s498ms startingBgTimeout=--
+    lastActivity=-3h39m15s244ms restartTime=-3h39m15s244ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{1368ea41 u0 com.android.settings/.wifi.hs20.Hs20UtilityService}
+    intent={cmp=com.android.settings/.wifi.hs20.Hs20UtilityService}
+    packageName=com.android.settings
+    processName=com.android.settings
+    baseDir=/system/priv-app/SecSettings/SecSettings.apk
+    dataDir=/data/data/com.android.settings
+    app=ProcessRecord{18c394e8 13884:com.android.settings/1000}
+    transactions=0
+    createTime=-9h45m15s931ms startingBgTimeout=-3h39m17s675ms
+    lastActivity=-1h11m39s939ms restartTime=-1h57m48s748ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=39
+    restartCount=0 restartDelay=-- nextRestartTime=-1h57m3s656ms crashCount=1
+
+  * ServiceRecord{b3c9402 u0 com.sec.android.daemonapp/.ap.accuweather.WeatherClockService}
+    intent={cmp=com.sec.android.daemonapp/.ap.accuweather.WeatherClockService}
+    packageName=com.sec.android.daemonapp
+    processName=com.sec.android.daemonapp
+    baseDir=/system/app/WeatherDaemon2015/WeatherDaemon2015.apk
+    dataDir=/data/data/com.sec.android.daemonapp
+    app=ProcessRecord{140e523d 27895:com.sec.android.daemonapp/u0a145}
+    transactions=0
+    createTime=-9h45m16s598ms startingBgTimeout=-3h39m18s342ms
+    lastActivity=-1h7m32s983ms restartTime=-1h7m32s983ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=4
+    restartCount=0 restartDelay=-- nextRestartTime=-1h7m33s56ms crashCount=0
+
+  * ServiceRecord{16a106ac u0 com.google.android.gms/.deviceconnection.service.DeviceConnectionWatcherService}
+    intent={cmp=com.google.android.gms/.deviceconnection.service.DeviceConnectionWatcherService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m3s607ms startingBgTimeout=--
+    lastActivity=-3h39m20s353ms restartTime=-3h39m20s353ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{4a771d2 u0 com.google.android.gms/com.google.android.location.places.service.PlaceDetectionAsyncService}
+    intent={act=com.google.android.gms.location.places.PlaceDetectionAsyncService pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-3h44m3s503ms startingBgTimeout=--
+    lastActivity=-1h27m27s550ms restartTime=-1h27m45s333ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=4
+    Bindings:
+    * IntentBindRecord{2506cb7c}:
+      intent={act=com.google.android.gms.location.places.PlaceDetectionAsyncService pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@33cc9c05
+      requested=true received=true hasBound=false doRebind=false
+
+  * ServiceRecord{2cc6dc28 u0 com.ruh.videoplayer.audioplayer.mp3.avi.mp4/com.ticlock.AnalyticsService}
+    intent={cmp=com.ruh.videoplayer.audioplayer.mp3.avi.mp4/com.ticlock.AnalyticsService}
+    packageName=com.ruh.videoplayer.audioplayer.mp3.avi.mp4
+    processName=com.ruh.videoplayer.audioplayer.mp3.avi.mp4
+    baseDir=/data/app/com.ruh.videoplayer.audioplayer.mp3.avi.mp4-2/base.apk
+    dataDir=/data/data/com.ruh.videoplayer.audioplayer.mp3.avi.mp4
+    app=null
+    transactions=0
+    createTime=-9h44m42s546ms startingBgTimeout=-3h38m44s290ms
+    lastActivity=-23m47s340ms restartTime=-23m49s383ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=15
+    restartCount=1 restartDelay=-3h19m46s439ms nextRestartTime=+7m44s360ms crashCount=0
+    Pending Starts:
+    #0 id=1 dxc=5
+      intent=Intent { cmp=com.ruh.videoplayer.audioplayer.mp3.avi.mp4/com.ticlock.AnalyticsService (has extras) }
+
+  * ServiceRecord{28a2e9b5 u0 com.google.android.gms/.tapandpay.hce.service.TpHceService}
+    intent={act=android.nfc.cardemulation.action.HOST_APDU_SERVICE cmp=com.google.android.gms/.tapandpay.hce.service.TpHceService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=android.permission.BIND_NFC_SERVICE
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m24s449ms startingBgTimeout=--
+    lastActivity=-3h39m38s843ms restartTime=-3h39m38s843ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{1686245a CREATE}:
+      intent={act=android.nfc.cardemulation.action.HOST_APDU_SERVICE cmp=com.google.android.gms/.tapandpay.hce.service.TpHceService}
+      binder=android.os.BinderProxy@2dcd168b
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{167ff381 ProcessRecord{2d37553b 3944:com.android.nfc/1027}}
+        Per-process Connections:
+          ConnectionRecord{e2989b1 u0 CR com.google.android.gms/.tapandpay.hce.service.TpHceService:@3297458}
+    All Connections:
+      ConnectionRecord{e2989b1 u0 CR com.google.android.gms/.tapandpay.hce.service.TpHceService:@3297458}
+
+  * ServiceRecord{3991713a u0 com.android.systemui/.keyguard.KeyguardService}
+    intent={cmp=com.android.systemui/.keyguard.KeyguardService}
+    packageName=com.android.systemui
+    processName=com.android.systemui
+    baseDir=/system/priv-app/SystemUI/SystemUI.apk
+    dataDir=/data/data/com.android.systemui
+    app=ProcessRecord{320dc7cf 3628:com.android.systemui/u0a53}
+    transactions=0
+    createTime=-9h45m22s805ms startingBgTimeout=--
+    lastActivity=-3h39m1s840ms restartTime=-3h39m39s551ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{27722c26 CREATE}:
+      intent={cmp=com.android.systemui/.keyguard.KeyguardService}
+      binder=android.os.BinderProxy@20749067
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2c4b0e14 ProcessRecord{320dc7cf 3628:com.android.systemui/u0a53}}
+        Per-process Connections:
+          ConnectionRecord{b392fac u0 CR com.android.systemui/.keyguard.KeyguardService:@416595f}
+          ConnectionRecord{34b39065 u0 CR com.android.systemui/.keyguard.KeyguardService:@1bd9555c}
+      * Client AppBindRecord{31b746bd ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{9f6c268 u0 CR com.android.systemui/.keyguard.KeyguardService:@1c6fd18b}
+    All Connections:
+      ConnectionRecord{b392fac u0 CR com.android.systemui/.keyguard.KeyguardService:@416595f}
+      ConnectionRecord{34b39065 u0 CR com.android.systemui/.keyguard.KeyguardService:@1bd9555c}
+      ConnectionRecord{9f6c268 u0 CR com.android.systemui/.keyguard.KeyguardService:@1c6fd18b}
+
+  * ServiceRecord{1d9e93f6 u0 com.google.android.gms/.measurement.service.MeasurementBrokerService}
+    intent={act=com.google.android.gms.measurement.START pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{12797cf5 16422:com.google.android.gms/u0a14}
+    transactions=0
+    createTime=-12m21s336ms startingBgTimeout=--
+    lastActivity=-12m21s271ms restartTime=-12m21s271ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{35c4e4b2 CREATE}:
+      intent={act=com.google.android.gms.measurement.START pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@362fcc03
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2fd4f780 ProcessRecord{19c1911b 16397:com.pspdfkit.viewer/u0a282}}
+        Per-process Connections:
+          ConnectionRecord{1ea0d891 u0 CR ACT com.google.android.gms/.measurement.service.MeasurementBrokerService:@78332b8}
+    All Connections:
+      ConnectionRecord{1ea0d891 u0 CR ACT com.google.android.gms/.measurement.service.MeasurementBrokerService:@78332b8}
+
+  * ServiceRecord{3058ead9 u0 com.android.bluetooth/.btservice.AdapterService}
+    intent={act=android.bluetooth.IBluetooth cmp=com.android.bluetooth/.btservice.AdapterService}
+    packageName=com.android.bluetooth
+    processName=com.android.bluetooth
+    baseDir=/system/app/Bluetooth/Bluetooth.apk
+    dataDir=/data/data/com.android.bluetooth
+    app=ProcessRecord{1c883b68 5474:com.android.bluetooth/1002}
+    transactions=0
+    createTime=-9h45m12s253ms startingBgTimeout=--
+    lastActivity=-3h39m28s929ms restartTime=-3h39m28s929ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{2e1691b9 CREATE}:
+      intent={act=android.bluetooth.IBluetooth cmp=com.android.bluetooth/.btservice.AdapterService}
+      binder=android.os.BinderProxy@2e1899fe
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{37d9255f ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{2213a87 u0 CR IMP com.android.bluetooth/.btservice.AdapterService:@21dcaac6}
+    All Connections:
+      ConnectionRecord{2213a87 u0 CR IMP com.android.bluetooth/.btservice.AdapterService:@21dcaac6}
+
+  * ServiceRecord{56de158 u0 com.android.systemui/.ImageWallpaper}
+    intent={act=android.service.wallpaper.WallpaperService cmp=com.android.systemui/.ImageWallpaper}
+    packageName=com.android.systemui
+    processName=com.android.systemui.imagewallpaper
+    permission=android.permission.BIND_WALLPAPER
+    baseDir=/system/priv-app/SystemUI/SystemUI.apk
+    dataDir=/data/data/com.android.systemui
+    app=ProcessRecord{205d67c9 3788:com.android.systemui.imagewallpaper/u0a53}
+    transactions=0
+    createTime=-9h45m30s636ms startingBgTimeout=--
+    lastActivity=-3h39m39s264ms restartTime=-3h39m47s290ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{37520bac CREATE}:
+      intent={act=android.service.wallpaper.WallpaperService cmp=com.android.systemui/.ImageWallpaper}
+      binder=android.os.BinderProxy@859075
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{1a60580a ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{1bbd6e0e u0 CR UI com.android.systemui/.ImageWallpaper:@1e58ec09}
+    All Connections:
+      ConnectionRecord{1bbd6e0e u0 CR UI com.android.systemui/.ImageWallpaper:@1e58ec09}
+
+  * ServiceRecord{2af8ce8a u0 com.google.android.gms/com.google.android.location.geocode.GeocodeService}
+    intent={act=com.android.location.service.GeocodeProvider pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=android.permission.WRITE_SECURE_SETTINGS
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h44m53s888ms startingBgTimeout=--
+    lastActivity=-3h39m10s634ms restartTime=-3h39m10s634ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{3794b87b CREATE}:
+      intent={act=com.android.location.service.GeocodeProvider pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@24aa3698
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{aabbef1 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{23f3d0f5 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.geocode.GeocodeService:@386fe2c}
+    All Connections:
+      ConnectionRecord{23f3d0f5 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.geocode.GeocodeService:@386fe2c}
+
+  * ServiceRecord{1e2e7aa3 u0 com.sec.android.app.videoplayer/.videowall.TranscodeService}
+    intent={cmp=com.sec.android.app.videoplayer/.videowall.TranscodeService}
+    packageName=com.sec.android.app.videoplayer
+    processName=com.sec.android.app.videoplayer
+    baseDir=/system/priv-app/SecVideoPlayer/SecVideoPlayer.apk
+    dataDir=/data/data/com.sec.android.app.videoplayer
+    app=ProcessRecord{3eb3ead6 10664:com.sec.android.app.videoplayer/u0a48}
+    transactions=0
+    createTime=-23m52s20ms startingBgTimeout=-23m37s19ms
+    lastActivity=-23m52s20ms restartTime=-23m52s20ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{22c1423e u0 com.google.android.gms/.auth.setup.devicesignals.LockScreenService}
+    intent={cmp=com.google.android.gms/.auth.setup.devicesignals.LockScreenService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m9s690ms startingBgTimeout=--
+    lastActivity=-3h39m26s436ms restartTime=-3h39m26s436ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{24034bb0 u0 com.google.android.gms/.gcm.GcmService}
+    intent={cmp=com.google.android.gms/.gcm.GcmService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=com.google.android.gtalkservice.permission.GTALK_SERVICE
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m7s803ms startingBgTimeout=--
+    lastActivity=-1h11m43s875ms restartTime=-3h39m24s548ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=14
+
+  * ServiceRecord{9739e02 u0 com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin}
+    intent={act=com.sec.enterprise.SimPinCode cmp=com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin}
+    packageName=com.sec.enterprise.mdm.services.simpin
+    processName=com.android.phone
+    permission=android.permission.sec.MDM_PHONE_RESTRICTION
+    baseDir=/system/app/EdmSimPinService/EdmSimPinService.apk
+    dataDir=/data/data/com.sec.enterprise.mdm.services.simpin
+    app=ProcessRecord{111be1c 3967:com.android.phone/1001}
+    transactions=0
+    createTime=-9h45m25s885ms startingBgTimeout=--
+    lastActivity=-3h39m42s631ms restartTime=-3h39m42s631ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{3bac6157 CREATE}:
+      intent={act=com.sec.enterprise.SimPinCode cmp=com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin}
+      binder=android.os.BinderProxy@e582444
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{72c592d ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{2492d34d u0 CR com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin:@3b01b2e4}
+    All Connections:
+      ConnectionRecord{2492d34d u0 CR com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin:@3b01b2e4}
+
+  * ServiceRecord{1f9545d9 u0 com.samsung.SMT/.SamsungTTSService}
+    intent={act=android.intent.action.TTS_SERVICE pkg=com.samsung.SMT}
+    packageName=com.samsung.SMT
+    processName=com.samsung.SMT
+    baseDir=/system/app/SamsungTTS/SamsungTTS.apk
+    dataDir=/data/data/com.samsung.SMT
+    app=ProcessRecord{1fcbb785 4371:com.samsung.SMT/1000}
+    transactions=0
+    createTime=-9h45m37s12ms startingBgTimeout=--
+    lastActivity=-3h39m42s728ms restartTime=-3h39m42s728ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{3b2bbbf3 CREATE}:
+      intent={act=android.intent.action.TTS_SERVICE pkg=com.samsung.SMT}
+      binder=android.os.BinderProxy@15d540b0
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{3da25b29 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{13d0fe1e u0 CR com.samsung.SMT/.SamsungTTSService:@2edf7259}
+    All Connections:
+      ConnectionRecord{13d0fe1e u0 CR com.samsung.SMT/.SamsungTTSService:@2edf7259}
+
+  * ServiceRecord{25121365 u0 com.dsi.ant.server/.AntService}
+    intent={act=com.dsi.ant.server.IAntHal}
+    packageName=com.dsi.ant.server
+    processName=system
+    permission=com.dsi.ant.permission.ANTRADIO
+    baseDir=/system/app/AntHalService/AntHalService.apk
+    dataDir=/data/data/com.dsi.ant.server
+    app=ProcessRecord{38e876a0 1461:system/1000}
+    transactions=0
+    createTime=-9h45m3s895ms startingBgTimeout=--
+    lastActivity=-3h39m20s641ms restartTime=-3h39m20s641ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=1
+
+  * ServiceRecord{33ca61ee u0 com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService}
+    intent={cmp=com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m2s169ms startingBgTimeout=--
+    lastActivity=-3h39m17s919ms restartTime=-3h39m18s914ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=1
+    Bindings:
+    * IntentBindRecord{209d7eae CREATE}:
+      intent={cmp=com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService}
+      binder=android.os.BinderProxy@83c244f
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{38c5b7dc ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}}
+        Per-process Connections:
+          ConnectionRecord{3c33c369 u0 CR com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService:@162621f0}
+    All Connections:
+      ConnectionRecord{3c33c369 u0 CR com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService:@162621f0}
+
+  * ServiceRecord{3c1d3be0 u0 com.sec.android.app.samsungapps/.account.SamsungAccountServiceReceiver}
+    intent={cmp=com.sec.android.app.samsungapps/.account.SamsungAccountServiceReceiver}
+    packageName=com.sec.android.app.samsungapps
+    processName=com.sec.android.app.samsungapps
+    baseDir=/data/app/com.sec.android.app.samsungapps-1/base.apk
+    dataDir=/data/data/com.sec.android.app.samsungapps
+    app=ProcessRecord{3a5c80e5 4780:com.sec.android.app.samsungapps/u0a13}
+    transactions=0
+    createTime=-58m28s754ms startingBgTimeout=-54m28s714ms
+    lastActivity=-54m43s715ms restartTime=-54m43s715ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=1
+
+  * ServiceRecord{3ca61fa1 u0 com.android.bluetooth/.gatt.GattService}
+    intent={cmp=com.android.bluetooth/.gatt.GattService}
+    packageName=com.android.bluetooth
+    processName=com.android.bluetooth
+    baseDir=/system/app/Bluetooth/Bluetooth.apk
+    dataDir=/data/data/com.android.bluetooth
+    app=ProcessRecord{1c883b68 5474:com.android.bluetooth/1002}
+    transactions=0
+    createTime=-9h45m9s335ms startingBgTimeout=--
+    lastActivity=-3h39m26s81ms restartTime=-3h39m26s81ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=1
+
+  * ServiceRecord{356cfbb u0 com.google.android.gms/.auth.account.service.WorkAccountService}
+    intent={act=com.google.android.gms.auth.account.ACTION_UPDATE_WORK_AUTHENTICATOR cmp=com.google.android.gms/.auth.account.service.WorkAccountService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m9s638ms startingBgTimeout=--
+    lastActivity=-3h39m26s383ms restartTime=-3h39m26s383ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=1
+
+  * ServiceRecord{15551073 u0 com.google.android.gms/.usagereporting.service.UsageReportingService}
+    intent={act=com.google.android.gms.usagereporting.service.START pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-8h24m59s89ms startingBgTimeout=--
+    lastActivity=-22m21s144ms restartTime=-2h19m25s274ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{1ec6d7ba CREATE}:
+      intent={act=com.google.android.gms.usagereporting.service.START pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@440b66b
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{8e475c8 ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}}
+        Per-process Connections:
+          ConnectionRecord{5af2919 u0 CR ACT com.google.android.gms/.usagereporting.service.UsageReportingService:@365dd060}
+    All Connections:
+      ConnectionRecord{5af2919 u0 CR ACT com.google.android.gms/.usagereporting.service.UsageReportingService:@365dd060}
+
+  * ServiceRecord{367de15f u0 org.simalliance.openmobileapi.service/.SmartcardService}
+    intent={act=org.simalliance.openmobileapi.service.ISmartcardService cmp=org.simalliance.openmobileapi.service/.SmartcardService}
+    packageName=org.simalliance.openmobileapi.service
+    processName=org.simalliance.openmobileapi.service:remote
+    permission=org.simalliance.openmobileapi.SMARTCARD
+    baseDir=/system/app/SmartcardService/SmartcardService.apk
+    dataDir=/data/data/org.simalliance.openmobileapi.service
+    app=ProcessRecord{9cc91ef 4254:org.simalliance.openmobileapi.service:remote/1101}
+    transactions=0
+    createTime=-9h45m28s117ms startingBgTimeout=--
+    lastActivity=-3h39m17s732ms restartTime=-3h39m44s779ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+    Bindings:
+    * IntentBindRecord{5d94661 CREATE}:
+      intent={act=org.simalliance.openmobileapi.service.ISmartcardService cmp=org.simalliance.openmobileapi.service/.SmartcardService}
+      binder=android.os.BinderProxy@fab586
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{39b24e47 ProcessRecord{2d37553b 3944:com.android.nfc/1027}}
+        Per-process Connections:
+          ConnectionRecord{1c670838 u0 CR org.simalliance.openmobileapi.service/.SmartcardService:@6214c9b}
+    All Connections:
+      ConnectionRecord{1c670838 u0 CR org.simalliance.openmobileapi.service/.SmartcardService:@6214c9b}
+
+  * ServiceRecord{21d851df u0 com.google.android.gms/com.google.android.location.fused.FusedLocationService}
+    intent={act=com.android.location.service.FusedLocationProvider pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=android.permission.WRITE_SECURE_SETTINGS
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h44m53s914ms startingBgTimeout=--
+    lastActivity=-3h39m10s659ms restartTime=-3h39m10s659ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{36af2674 CREATE}:
+      intent={act=com.android.location.service.FusedLocationProvider pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@1802e79d
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{1c3ca412 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{261ea87e u0 CR !FG !VIS com.google.android.gms/com.google.android.location.fused.FusedLocationService:@1249ca39}
+    All Connections:
+      ConnectionRecord{261ea87e u0 CR !FG !VIS com.google.android.gms/com.google.android.location.fused.FusedLocationService:@1249ca39}
+
+  * ServiceRecord{3f55ca32 u0 com.android.bluetooth/.a2dp.A2dpService}
+    intent={act=android.bluetooth.IBluetoothA2dp cmp=com.android.bluetooth/.a2dp.A2dpService}
+    packageName=com.android.bluetooth
+    processName=com.android.bluetooth
+    baseDir=/system/app/Bluetooth/Bluetooth.apk
+    dataDir=/data/data/com.android.bluetooth
+    app=null
+    transactions=0
+    createTime=-9h45m30s721ms startingBgTimeout=--
+    lastActivity=-3h39m47s467ms restartTime=-- createdFromFg=true
+    Bindings:
+    * IntentBindRecord{37bb87e3}:
+      intent={act=android.bluetooth.IBluetoothA2dp cmp=com.android.bluetooth/.a2dp.A2dpService}
+      binder=null
+      requested=false received=false hasBound=false doRebind=false
+      * Client AppBindRecord{1ad235e0 ProcessRecord{1c883b68 5474:com.android.bluetooth/1002}}
+        Per-process Connections:
+          ConnectionRecord{23490426 u0 com.android.bluetooth/.a2dp.A2dpService:@28b2b81}
+      * Client AppBindRecord{32b6099 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{2864ac74 u0 com.android.bluetooth/.a2dp.A2dpService:@e522c47}
+    All Connections:
+      ConnectionRecord{23490426 u0 com.android.bluetooth/.a2dp.A2dpService:@28b2b81}
+      ConnectionRecord{2864ac74 u0 com.android.bluetooth/.a2dp.A2dpService:@e522c47}
+
+  * ServiceRecord{d1422e7 u0 com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService}
+    intent={act=com.android.vending.contentfilters.IContentFiltersService.BIND pkg=com.android.vending}
+    packageName=com.android.vending
+    processName=com.android.vending
+    baseDir=/data/app/com.android.vending-1/base.apk
+    dataDir=/data/data/com.android.vending
+    app=ProcessRecord{f6fcf54 10915:com.android.vending/u0a25}
+    transactions=0
+    createTime=-23m51s442ms startingBgTimeout=--
+    lastActivity=-6m57s846ms restartTime=-23m51s371ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{203cef5e CREATE}:
+      intent={act=com.android.vending.contentfilters.IContentFiltersService.BIND pkg=com.android.vending}
+      binder=android.os.BinderProxy@b94bf3f
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2a54d00c ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}}
+        Per-process Connections:
+          ConnectionRecord{e0684ef u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3c87dce}
+          ConnectionRecord{f18ccf4 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@29b87ec7}
+          ConnectionRecord{17bffd05 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@1717107c}
+          ConnectionRecord{1da13863 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3560c692}
+          ConnectionRecord{23e47906 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@2a09e7e1}
+          ConnectionRecord{355ed6d4 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@314b0427}
+          ConnectionRecord{35d4c796 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3c0716b1}
+    All Connections:
+      ConnectionRecord{e0684ef u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3c87dce}
+      ConnectionRecord{17bffd05 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@1717107c}
+      ConnectionRecord{f18ccf4 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@29b87ec7}
+      ConnectionRecord{23e47906 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@2a09e7e1}
+      ConnectionRecord{355ed6d4 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@314b0427}
+      ConnectionRecord{1da13863 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3560c692}
+      ConnectionRecord{35d4c796 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3c0716b1}
+
+  * ServiceRecord{17241239 u0 com.android.incallui/.InCallServiceImpl}
+    intent={act=android.telecom.InCallService cmp=com.android.incallui/.InCallServiceImpl}
+    packageName=com.android.incallui
+    processName=com.android.incallui
+    permission=android.permission.BIND_INCALL_SERVICE
+    baseDir=/system/app/LegacyInCallUI/LegacyInCallUI.apk
+    dataDir=/data/data/com.android.incallui
+    app=ProcessRecord{bda9ece 4144:com.android.incallui/1001}
+    transactions=0
+    createTime=-9h45m28s726ms startingBgTimeout=--
+    lastActivity=-3h39m45s392ms restartTime=-3h39m45s392ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{12c86d55 CREATE}:
+      intent={act=android.telecom.InCallService cmp=com.android.incallui/.InCallServiceImpl}
+      binder=android.os.BinderProxy@3564a36a
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{33a0105b ProcessRecord{25348927 3927:com.android.server.telecom/1001}}
+        Per-process Connections:
+          ConnectionRecord{2a4285e8 u0 CR com.android.incallui/.InCallServiceImpl:@2e4a730b}
+    All Connections:
+      ConnectionRecord{2a4285e8 u0 CR com.android.incallui/.InCallServiceImpl:@2e4a730b}
+
+  * ServiceRecord{19fd8771 u0 com.google.android.gms/com.google.android.location.geofencer.service.GeofenceProviderService}
+    intent={act=com.android.location.service.GeofenceProvider pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h44m53s882ms startingBgTimeout=--
+    lastActivity=-3h39m10s627ms restartTime=-3h39m10s627ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{184e0f8 CREATE}:
+      intent={act=com.android.location.service.GeofenceProvider pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@19ef89d1
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2fa18c36 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{277bd118 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.geofencer.service.GeofenceProviderService:@239a2cfb}
+    All Connections:
+      ConnectionRecord{277bd118 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.geofencer.service.GeofenceProviderService:@239a2cfb}
+
+  * ServiceRecord{1df6166c u0 com.google.android.googlequicksearchbox/com.google.android.hotword.service.HotwordService}
+    intent={act=com.google.android.googlequicksearchbox.HOTWORD_SERVICE pkg=com.google.android.googlequicksearchbox}
+    packageName=com.google.android.googlequicksearchbox
+    processName=com.google.android.googlequicksearchbox:search
+    baseDir=/data/app/com.google.android.googlequicksearchbox-1/base.apk
+    dataDir=/data/data/com.google.android.googlequicksearchbox
+    app=ProcessRecord{29c136 16140:com.google.android.googlequicksearchbox:search/u0a56}
+    transactions=0
+    createTime=-9h45m22s443ms startingBgTimeout=--
+    lastActivity=-13m20s106ms restartTime=-13m21s743ms createdFromFg=false
+    restartCount=0 restartDelay=-- nextRestartTime=-13m21s815ms crashCount=0
+    Bindings:
+    * IntentBindRecord{28455737 CREATE}:
+      intent={act=com.google.android.googlequicksearchbox.HOTWORD_SERVICE pkg=com.google.android.googlequicksearchbox}
+      binder=android.os.BinderProxy@31a314a4
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2d91f20d ProcessRecord{32c89cea 3990:com.sec.android.app.launcher/u0a9}}
+        Per-process Connections:
+          ConnectionRecord{112fa31f u0 CR com.google.android.googlequicksearchbox/com.google.android.hotword.service.HotwordService:@326776be}
+    All Connections:
+      ConnectionRecord{112fa31f u0 CR com.google.android.googlequicksearchbox/com.google.android.hotword.service.HotwordService:@326776be}
+
+  * ServiceRecord{348d3fd u0 com.samsung.sec.android.application.csc/.CscUpdateService}
+    intent={cmp=com.samsung.sec.android.application.csc/.CscUpdateService}
+    packageName=com.samsung.sec.android.application.csc
+    processName=com.android.phone
+    permission=com.samsung.sec.android.application.csc
+    baseDir=/system/priv-app/CSC/CSC.apk
+    dataDir=/data/data/com.samsung.sec.android.application.csc
+    app=ProcessRecord{111be1c 3967:com.android.phone/1001}
+    transactions=0
+    createTime=-9h45m10s73ms startingBgTimeout=--
+    lastActivity=-3h37m54s280ms restartTime=-3h39m26s820ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=10
+
+  * ServiceRecord{3047a7 u0 com.android.contacts/com.samsung.contacts.sim.MakeSimDBService}
+    intent={cmp=com.android.contacts/com.samsung.contacts.sim.MakeSimDBService}
+    packageName=com.android.contacts
+    processName=com.android.contacts
+    baseDir=/system/priv-app/SecContacts_Phone_OSup/SecContacts_Phone_OSup.apk
+    dataDir=/data/data/com.android.contacts
+    app=ProcessRecord{21f235c2 28849:com.android.contacts/u0a20}
+    transactions=0
+    createTime=-9h44m36s398ms startingBgTimeout=-3h38m38s141ms
+    lastActivity=-1h5m52s718ms restartTime=-1h5m52s718ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=1
+    restartCount=0 restartDelay=-- nextRestartTime=+28m18s564ms crashCount=0
+    Delivered Starts:
+    #0 id=1 dur=-1h5m52s704ms dxc=3
+      intent=Intent { cmp=com.android.contacts/com.samsung.contacts.sim.MakeSimDBService (has extras) }
+
+  * ServiceRecord{27d324b0 u0 com.sec.spp.push/.PushClientService}
+    intent={cmp=com.sec.spp.push/.PushClientService}
+    packageName=com.sec.spp.push
+    processName=com.sec.spp.push
+    baseDir=/data/app/com.sec.spp.push-1/base.apk
+    dataDir=/data/data/com.sec.spp.push
+    app=ProcessRecord{16fa5e0b 7753:com.sec.spp.push/u0a33}
+    transactions=0
+    createTime=-9h44m48s470ms startingBgTimeout=-3h38m50s214ms
+    lastActivity=-5m46s903ms restartTime=-3h39m5s216ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=41
+
+  * ServiceRecord{1256455e u0 com.sec.android.app.GlanceView/.GlanceViewNLService}
+    intent={act=android.service.notification.NotificationListenerService cmp=com.sec.android.app.GlanceView/.GlanceViewNLService}
+    packageName=com.sec.android.app.GlanceView
+    processName=com.sec.android.app.GlanceView
+    permission=android.permission.BIND_NOTIFICATION_LISTENER_SERVICE
+    baseDir=/system/app/GlanceView/GlanceView.apk
+    dataDir=/data/data/com.sec.android.app.GlanceView
+    app=ProcessRecord{e6b24fc 3751:com.sec.android.app.GlanceView/u0a99}
+    transactions=0
+    createTime=-9h45m30s761ms startingBgTimeout=--
+    lastActivity=-3h39m47s446ms restartTime=-3h39m47s446ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{168e2fd3 CREATE}:
+      intent={act=android.service.notification.NotificationListenerService cmp=com.sec.android.app.GlanceView/.GlanceViewNLService}
+      binder=android.os.BinderProxy@3d4ed710
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{678a209 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{182d9bc8 u0 CR com.sec.android.app.GlanceView/.GlanceViewNLService:@27feb46b}
+    All Connections:
+      ConnectionRecord{182d9bc8 u0 CR com.sec.android.app.GlanceView/.GlanceViewNLService:@27feb46b}
+
+  * ServiceRecord{24c695bf u0 com.android.systemui/.SystemUIService}
+    intent={cmp=com.android.systemui/.SystemUIService}
+    packageName=com.android.systemui
+    processName=com.android.systemui
+    baseDir=/system/priv-app/SystemUI/SystemUI.apk
+    dataDir=/data/data/com.android.systemui
+    app=ProcessRecord{320dc7cf 3628:com.android.systemui/u0a53}
+    transactions=0
+    createTime=-9h45m32s86ms startingBgTimeout=--
+    lastActivity=-3h39m48s766ms restartTime=-3h39m48s766ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{202cecb7 u0 android/.hardware.location.GeofenceHardwareService}
+    intent={cmp=android/.hardware.location.GeofenceHardwareService}
+    packageName=android
+    processName=system
+    permission=android.permission.LOCATION_HARDWARE
+    baseDir=/system/framework/framework-res.apk
+    dataDir=/data/system
+    app=ProcessRecord{38e876a0 1461:system/1000}
+    transactions=0
+    createTime=-9h45m30s319ms startingBgTimeout=--
+    lastActivity=-3h39m47s66ms restartTime=-3h39m47s66ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{1eb1ec0e CREATE}:
+      intent={cmp=android/.hardware.location.GeofenceHardwareService}
+      binder=android.hardware.location.GeofenceHardwareService$1@2881f62f
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{70055c5 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{1dbc07b6 u0 CR android/.hardware.location.GeofenceHardwareService:@1940c351}
+    All Connections:
+      ConnectionRecord{1dbc07b6 u0 CR android/.hardware.location.GeofenceHardwareService:@1940c351}
+
+  * ServiceRecord{3fdf08c0 u0 com.sec.android.pagebuddynotisvc/.PageBuddyNotiSvc}
+    intent={act=com.sec.android.pagebuddynotisvc}
+    packageName=com.sec.android.pagebuddynotisvc
+    processName=com.sec.android.pagebuddynotisvc
+    baseDir=/system/priv-app/PageBuddyNotiSvcK/PageBuddyNotiSvcK.apk
+    dataDir=/data/data/com.sec.android.pagebuddynotisvc
+    app=ProcessRecord{30a4bb1a 5302:com.sec.android.pagebuddynotisvc/u0a24}
+    transactions=0
+    createTime=-9h45m2s463ms startingBgTimeout=-3h39m4s207ms
+    lastActivity=-53m41s212ms restartTime=-53m41s212ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=6
+    restartCount=0 restartDelay=-- nextRestartTime=-53m41s288ms crashCount=0
+
+  * ServiceRecord{bb58096 u0 com.fmm.dm/.XDMService}
+    intent={cmp=com.fmm.dm/.XDMService}
+    packageName=com.fmm.dm
+    processName=com.fmm.dm
+    baseDir=/system/priv-app/FmmDM/FmmDM.apk
+    dataDir=/data/data/com.fmm.dm
+    app=ProcessRecord{3741c64b 5374:com.fmm.dm/1000}
+    transactions=0
+    createTime=-9h45m5s831ms startingBgTimeout=-3h39m7s562ms
+    lastActivity=-52m35s569ms restartTime=-52m35s871ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=11
+    restartCount=0 restartDelay=-- nextRestartTime=-52m35s962ms crashCount=0
+
+  * ServiceRecord{1beaf156 u0 com.android.server.telecom/.BluetoothVoIPService}
+    intent={cmp=com.android.server.telecom/.BluetoothVoIPService}
+    packageName=com.android.server.telecom
+    processName=com.android.server.telecom
+    baseDir=/system/priv-app/Telecom/Telecom.apk
+    dataDir=/data/data/com.android.server.telecom
+    app=ProcessRecord{25348927 3927:com.android.server.telecom/1001}
+    transactions=0
+    createTime=-9h45m28s591ms startingBgTimeout=--
+    lastActivity=-3h39m43s321ms restartTime=-3h39m45s337ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=2
+    Bindings:
+    * IntentBindRecord{3a6e7828}:
+      intent={act=android.bluetooth.IBluetoothHeadsetVoIP cmp=com.android.server.telecom/.BluetoothVoIPService}
+      binder=android.os.BinderProxy@20958941
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{18c36ee6 ProcessRecord{111be1c 3967:com.android.phone/1001}}
+        Per-process Connections:
+          ConnectionRecord{3637e7fa u0 com.android.server.telecom/.BluetoothVoIPService:@222aa25}
+    All Connections:
+      ConnectionRecord{3637e7fa u0 com.android.server.telecom/.BluetoothVoIPService:@222aa25}
+
+  * ServiceRecord{2879fe03 u0 com.samsung.android.app.galaxyfinder/.tag.TagReadyService}
+    intent={act=com.samsung.android.app.galaxyfinder.tag.reload_service cmp=com.samsung.android.app.galaxyfinder/.tag.TagReadyService}
+    packageName=com.samsung.android.app.galaxyfinder
+    processName=com.samsung.android.app.galaxyfinder:tagService
+    baseDir=/system/priv-app/SFinder/SFinder.apk
+    dataDir=/data/data/com.samsung.android.app.galaxyfinder
+    app=ProcessRecord{1185d9da 8116:com.samsung.android.app.galaxyfinder:tagService/u0a30}
+    transactions=0
+    createTime=-9h44m19s564ms startingBgTimeout=-3h38m21s309ms
+    lastActivity=-54m46s2ms restartTime=-3h38m36s311ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=10
+
+  * ServiceRecord{6d76c4 u0 com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService}
+    intent={act=com.google.android.gms.location.reporting.service.START pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-8h24m59s154ms startingBgTimeout=--
+    lastActivity=-22m21s7ms restartTime=-2h19m25s340ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{2e47c27 CREATE}:
+      intent={act=com.google.android.gms.location.reporting.service.START pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@646eed4
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{14f0787d ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}}
+        Per-process Connections:
+          ConnectionRecord{2322fc63 u0 CR ACT com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService:@247f1a92}
+    All Connections:
+      ConnectionRecord{2322fc63 u0 CR ACT com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService:@247f1a92}
+
+  * ServiceRecord{f0103c1 u0 com.google.android.gms/.nearby.messages.service.NearbyMessagesService}
+    intent={act=com.google.android.gms.nearby.messages.service.NearbyMessagesService.START pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m2s964ms startingBgTimeout=--
+    lastActivity=-3h20m4s744ms restartTime=-3h39m19s710ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=5
+    Bindings:
+    * IntentBindRecord{1cc79372}:
+      intent={act=com.google.android.gms.nearby.messages.service.NearbyMessagesService.START pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@c12b3c3
+      requested=true received=true hasBound=false doRebind=true
+
+  * ServiceRecord{26bbe62c u0 com.android.incallui/.SecInCallService}
+    intent={act=com.android.incallui.SEC_IN_CALL_SERVICE cmp=com.android.incallui/.SecInCallService}
+    packageName=com.android.incallui
+    processName=com.android.incallui
+    permission=android.permission.BIND_INCALL_SERVICE
+    baseDir=/system/app/LegacyInCallUI/LegacyInCallUI.apk
+    dataDir=/data/data/com.android.incallui
+    app=ProcessRecord{bda9ece 4144:com.android.incallui/1001}
+    transactions=0
+    createTime=-9h45m28s647ms startingBgTimeout=--
+    lastActivity=-3h39m45s393ms restartTime=-3h39m45s393ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{228e2440 CREATE}:
+      intent={act=com.android.incallui.SEC_IN_CALL_SERVICE cmp=com.android.incallui/.SecInCallService}
+      binder=android.os.BinderProxy@f111f79
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{327774be ProcessRecord{25348927 3927:com.android.server.telecom/1001}}
+        Per-process Connections:
+          ConnectionRecord{3eafd9df u0 CR com.android.incallui/.SecInCallService:@28ff507e}
+    All Connections:
+      ConnectionRecord{3eafd9df u0 CR com.android.incallui/.SecInCallService:@28ff507e}
+
+  * ServiceRecord{6d8cf71 u0 com.android.server.telecom/.BluetoothPhoneService}
+    intent={cmp=com.android.server.telecom/.BluetoothPhoneService}
+    packageName=com.android.server.telecom
+    processName=com.android.server.telecom
+    baseDir=/system/priv-app/Telecom/Telecom.apk
+    dataDir=/data/data/com.android.server.telecom
+    app=ProcessRecord{25348927 3927:com.android.server.telecom/1001}
+    transactions=0
+    createTime=-9h45m28s595ms startingBgTimeout=--
+    lastActivity=-3h39m45s341ms restartTime=-3h39m45s341ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{5cb6b0d u0 com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService}
+    intent={cmp=com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService}
+    packageName=com.google.android.googlequicksearchbox
+    processName=com.google.android.googlequicksearchbox:search
+    baseDir=/data/app/com.google.android.googlequicksearchbox-1/base.apk
+    dataDir=/data/data/com.google.android.googlequicksearchbox
+    app=ProcessRecord{29c136 16140:com.google.android.googlequicksearchbox:search/u0a56}
+    transactions=0
+    createTime=-13m20s562ms startingBgTimeout=--
+    lastActivity=-13m19s854ms restartTime=-13m20s563ms createdFromFg=true
+    startRequested=false delayedStop=false stopIfKilled=false callStart=false lastStartId=1
+    Bindings:
+    * IntentBindRecord{2b62c91f CREATE}:
+      intent={cmp=com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService}
+      binder=android.os.BinderProxy@3f51446c
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{ffb3a35 ProcessRecord{29c136 16140:com.google.android.googlequicksearchbox:search/u0a56}}
+        Per-process Connections:
+          ConnectionRecord{3362d1a4 u0 CR com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService:@3069e837}
+    All Connections:
+      ConnectionRecord{3362d1a4 u0 CR com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService:@3069e837}
+
+  * ServiceRecord{19a224ed u0 com.google.android.gms/com.google.android.location.internal.server.GoogleLocationService}
+    intent={act=com.google.android.location.internal.GMS_NLP pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=android.permission.ACCESS_COARSE_LOCATION
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m22s422ms startingBgTimeout=--
+    lastActivity=-1h27m32s384ms restartTime=-3h39m39s168ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=34
+
+  * ServiceRecord{2a267007 u0 com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService}
+    intent={act=com.google.android.contextmanager.service.ContextManagerService.START pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h44m59s498ms startingBgTimeout=--
+    lastActivity=-3h37m52s611ms restartTime=-3h39m16s243ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+    Bindings:
+    * IntentBindRecord{13b21eca CREATE}:
+      intent={act=com.google.android.contextmanager.service.ContextManagerService.START pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@274d83b
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{1e443b58 ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}}
+        Per-process Connections:
+          ConnectionRecord{1d874646 u0 CR ACT com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService:@2ceea221}
+    All Connections:
+      ConnectionRecord{1d874646 u0 CR ACT com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService:@2ceea221}
+
+  * ServiceRecord{1167c200 u0 com.google.android.gms/com.google.android.location.network.NetworkLocationService}
+    intent={act=com.android.location.service.v3.NetworkLocationProvider pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=android.permission.WRITE_SECURE_SETTINGS
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h44m53s927ms startingBgTimeout=--
+    lastActivity=-3h39m10s674ms restartTime=-3h39m10s674ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{2b3244b1 CREATE}:
+      intent={act=com.android.location.service.v3.NetworkLocationProvider pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@73b5d96
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{22cebd17 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{b7d3083 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.network.NetworkLocationService:@90f0b32}
+    All Connections:
+      ConnectionRecord{b7d3083 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.network.NetworkLocationService:@90f0b32}
+
+  * ServiceRecord{4e83757 u0 com.android.stk/.StkAppService}
+    intent={cmp=com.android.stk/.StkAppService}
+    packageName=com.android.stk
+    processName=com.android.phone
+    baseDir=/system/app/Stk/Stk.apk
+    dataDir=/data/data/com.android.stk
+    app=ProcessRecord{111be1c 3967:com.android.phone/1001}
+    transactions=0
+    createTime=-9h45m0s855ms startingBgTimeout=--
+    lastActivity=-3h39m17s601ms restartTime=-3h39m17s601ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{3ef775f3 u0 com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService}
+    intent={act=com.google.android.location.internal.GoogleLocationManagerService.START pkg=com.google.android.gms}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m23s278ms startingBgTimeout=--
+    lastActivity=-52m35s822ms restartTime=-3h39m40s24ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=4
+    Bindings:
+    * IntentBindRecord{266db504 CREATE}:
+      intent={act=com.google.android.location.internal.GoogleLocationManagerService.START pkg=com.google.android.gms}
+      binder=android.os.BinderProxy@ef57aed
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2a47bd22 ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}}
+        Per-process Connections:
+          ConnectionRecord{23fa4062 u0 CR ACT com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService:@a1f032d}
+    All Connections:
+      ConnectionRecord{23fa4062 u0 CR ACT com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService:@a1f032d}
+
+  * ServiceRecord{3e358278 u0 android/com.android.server.DrmEventService}
+    intent={act=android.intent.action.BOOT_COMPLETED cmp=android/com.android.server.DrmEventService}
+    packageName=android
+    processName=system
+    baseDir=/system/framework/framework-res.apk
+    dataDir=/data/system
+    app=ProcessRecord{38e876a0 1461:system/1000}
+    transactions=0
+    createTime=-9h45m10s325ms startingBgTimeout=--
+    lastActivity=-3h39m27s71ms restartTime=-3h39m27s71ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=23
+
+  * ServiceRecord{2fce8383 u0 com.android.bluetooth/.hfp.HeadsetService}
+    intent={act=android.bluetooth.IBluetoothHeadset cmp=com.android.bluetooth/.hfp.HeadsetService}
+    packageName=com.android.bluetooth
+    processName=com.android.bluetooth
+    baseDir=/system/app/Bluetooth/Bluetooth.apk
+    dataDir=/data/data/com.android.bluetooth
+    app=null
+    transactions=0
+    createTime=-9h45m30s766ms startingBgTimeout=--
+    lastActivity=-3h39m47s512ms restartTime=-- createdFromFg=true
+    Bindings:
+    * IntentBindRecord{67813b3}:
+      intent={act=android.bluetooth.IBluetoothHeadset cmp=com.android.bluetooth/.hfp.HeadsetService}
+      binder=null
+      requested=false received=false hasBound=false doRebind=false
+      * Client AppBindRecord{6931d70 ProcessRecord{111be1c 3967:com.android.phone/1001}}
+        Per-process Connections:
+          ConnectionRecord{2ddc337b u0 com.android.bluetooth/.hfp.HeadsetService:@57cdf0a}
+      * Client AppBindRecord{143bd8e9 ProcessRecord{25348927 3927:com.android.server.telecom/1001}}
+        Per-process Connections:
+          ConnectionRecord{997cd7d u0 com.android.bluetooth/.hfp.HeadsetService:@145277d4}
+          ConnectionRecord{1fc0e5de u0 com.android.bluetooth/.hfp.HeadsetService:@18032119}
+          ConnectionRecord{2207a01d u0 com.android.bluetooth/.hfp.HeadsetService:@146970f4}
+      * Client AppBindRecord{6c8896e ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{15a87ddc u0 com.android.bluetooth/.hfp.HeadsetService:@2f76424f}
+    All Connections:
+      ConnectionRecord{2ddc337b u0 com.android.bluetooth/.hfp.HeadsetService:@57cdf0a}
+      ConnectionRecord{997cd7d u0 com.android.bluetooth/.hfp.HeadsetService:@145277d4}
+      ConnectionRecord{2207a01d u0 com.android.bluetooth/.hfp.HeadsetService:@146970f4}
+      ConnectionRecord{1fc0e5de u0 com.android.bluetooth/.hfp.HeadsetService:@18032119}
+      ConnectionRecord{15a87ddc u0 com.android.bluetooth/.hfp.HeadsetService:@2f76424f}
+
+  * ServiceRecord{60c0835 u0 com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService}
+    intent={act=android.service.voice.VoiceInteractionService cmp=com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService}
+    packageName=com.google.android.googlequicksearchbox
+    processName=com.google.android.googlequicksearchbox:interactor
+    permission=android.permission.BIND_VOICE_INTERACTION
+    baseDir=/data/app/com.google.android.googlequicksearchbox-1/base.apk
+    dataDir=/data/data/com.google.android.googlequicksearchbox
+    app=ProcessRecord{c36bde9 3776:com.google.android.googlequicksearchbox:interactor/u0a56}
+    transactions=0
+    createTime=-9h45m30s687ms startingBgTimeout=--
+    lastActivity=-3h39m47s320ms restartTime=-3h39m47s320ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{3656380f CREATE}:
+      intent={act=android.service.voice.VoiceInteractionService cmp=com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService}
+      binder=android.os.BinderProxy@1264a09c
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{277ce7a ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{189c3d10 u0 CR com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService:@1eb96dd3}
+    All Connections:
+      ConnectionRecord{189c3d10 u0 CR com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService:@1eb96dd3}
+
+  * ServiceRecord{21e0b6ee u0 com.samsung.android.providers.context/.ContextService}
+    intent={act=android.intent.action.BOOT_COMPLETED cmp=com.samsung.android.providers.context/.ContextService}
+    packageName=com.samsung.android.providers.context
+    processName=com.samsung.android.providers.context
+    permission=com.samsung.android.providers.context.permission.CONTEXTSERVICE
+    baseDir=/system/priv-app/ContextProvider_H/ContextProvider_H.apk
+    dataDir=/data/data/com.samsung.android.providers.context
+    app=ProcessRecord{3a48462b 17141:com.samsung.android.providers.context/u0a6}
+    transactions=0
+    createTime=-9h45m9s528ms startingBgTimeout=-3h39m11s272ms
+    lastActivity=-57s839ms restartTime=-57s966ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=true callStart=true lastStartId=4
+    restartCount=0 restartDelay=-- nextRestartTime=-58s39ms crashCount=0
+    Delivered Starts:
+    #0 id=1 dur=-57s963ms dxc=3
+      intent=Intent { act=android.intent.action.BOOT_COMPLETED cmp=com.samsung.android.providers.context/.ContextService }
+    #1 id=2 dur=-57s963ms dxc=3
+      intent=Intent { act=android.intent.action.BOOT_COMPLETED cmp=com.samsung.android.providers.context/.ContextService }
+    #2 id=3 dur=-57s963ms dxc=2
+      intent=Intent { act=android.intent.action.BOOT_COMPLETED cmp=com.samsung.android.providers.context/.ContextService }
+    #3 id=4 dur=-57s839ms dxc=1
+      intent=Intent { act=android.intent.action.BOOT_COMPLETED cmp=com.samsung.android.providers.context/.ContextService }
+
+  * ServiceRecord{1594508f u0 android/com.android.internal.backup.LocalTransportService}
+    intent={act=android.backup.TRANSPORT_HOST cmp=android/com.android.internal.backup.LocalTransportService}
+    packageName=android
+    processName=system
+    permission=android.permission.CONFIRM_FULL_BACKUP
+    baseDir=/system/framework/framework-res.apk
+    dataDir=/data/system
+    app=ProcessRecord{38e876a0 1461:system/1000}
+    transactions=0
+    createTime=-9h45m32s946ms startingBgTimeout=--
+    lastActivity=-3h39m49s693ms restartTime=-3h39m49s693ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{6692a88 CREATE}:
+      intent={act=android.backup.TRANSPORT_HOST cmp=android/com.android.internal.backup.LocalTransportService}
+      binder=android.app.backup.BackupTransport$TransportImpl@31e2b1bc
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{32ecbc21 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{f45b3ee u0 CR android/com.android.internal.backup.LocalTransportService:@a211d69}
+    All Connections:
+      ConnectionRecord{f45b3ee u0 CR android/com.android.internal.backup.LocalTransportService:@a211d69}
+
+  * ServiceRecord{1ad115b2 u0 com.android.systemui/.cover.SViewCoverService}
+    intent={cmp=com.android.systemui/.cover.SViewCoverService}
+    packageName=com.android.systemui
+    processName=com.android.systemui
+    baseDir=/system/priv-app/SystemUI/SystemUI.apk
+    dataDir=/data/data/com.android.systemui
+    app=ProcessRecord{320dc7cf 3628:com.android.systemui/u0a53}
+    transactions=0
+    createTime=-9h45m29s975ms startingBgTimeout=--
+    lastActivity=-3h39m46s721ms restartTime=-3h39m46s721ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{32a45846 CREATE}:
+      intent={cmp=com.android.systemui/.cover.SViewCoverService}
+      binder=android.os.BinderProxy@2f031a07
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{1eaa6734 ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{29819bbd u0 CR com.android.systemui/.cover.SViewCoverService:@18259714}
+    All Connections:
+      ConnectionRecord{29819bbd u0 CR com.android.systemui/.cover.SViewCoverService:@18259714}
+
+  * ServiceRecord{14225cfe u0 com.google.android.gms/.common.stats.GmsCoreStatsService}
+    intent={act=com.google.android.gms.common.stats.START cmp=com.google.android.gms/.common.stats.GmsCoreStatsService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h45m8s256ms startingBgTimeout=--
+    lastActivity=-3h39m25s2ms restartTime=-3h39m25s2ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{be96ccd u0 com.android.providers.media/.MediaScannerService}
+    intent={act=android.media.IMediaScannerService cmp=com.android.providers.media/.MediaScannerService}
+    packageName=com.android.providers.media
+    processName=android.process.media
+    baseDir=/system/priv-app/SecMediaProvider/SecMediaProvider.apk
+    dataDir=/data/data/com.android.providers.media
+    app=ProcessRecord{37f95d 16309:android.process.media/u0a42}
+    transactions=0
+    createTime=-12m21s12ms startingBgTimeout=--
+    lastActivity=-12m21s3ms restartTime=-12m21s11ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{20bdb2d2 CREATE}:
+      intent={act=android.media.IMediaScannerService cmp=com.android.providers.media/.MediaScannerService}
+      binder=android.os.BinderProxy@1dad4fa3
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{2c20c2a0 ProcessRecord{19c1911b 16397:com.pspdfkit.viewer/u0a282}}
+        Per-process Connections:
+          ConnectionRecord{15c70893 u0 CR com.android.providers.media/.MediaScannerService:@2517f982}
+          ConnectionRecord{2c94c264 u0 CR com.android.providers.media/.MediaScannerService:@13de23f7}
+    All Connections:
+      ConnectionRecord{2c94c264 u0 CR com.android.providers.media/.MediaScannerService:@13de23f7}
+      ConnectionRecord{15c70893 u0 CR com.android.providers.media/.MediaScannerService:@2517f982}
+
+  * ServiceRecord{317080b4 u0 com.samsung.android.app.galaxyfinder/.tag.LocationTagReadyService}
+    intent={act=com.samsung.android.app.galaxyfinder.tag.start_full_sync cmp=com.samsung.android.app.galaxyfinder/.tag.LocationTagReadyService}
+    packageName=com.samsung.android.app.galaxyfinder
+    processName=com.samsung.android.app.galaxyfinder:tagService
+    baseDir=/system/priv-app/SFinder/SFinder.apk
+    dataDir=/data/data/com.samsung.android.app.galaxyfinder
+    app=ProcessRecord{1185d9da 8116:com.samsung.android.app.galaxyfinder:tagService/u0a30}
+    transactions=0
+    createTime=-6h31m56s696ms startingBgTimeout=--
+    lastActivity=-1h11m43s993ms restartTime=-1h44m39s520ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=4
+
+  * ServiceRecord{2b594d51 u0 com.android.settings/.wifi.WifiCredService}
+    intent={cmp=com.android.settings/.wifi.WifiCredService}
+    packageName=com.android.settings
+    processName=com.android.settings
+    baseDir=/system/priv-app/SecSettings/SecSettings.apk
+    dataDir=/data/data/com.android.settings
+    app=ProcessRecord{18c394e8 13884:com.android.settings/1000}
+    transactions=0
+    createTime=-9h45m10s253ms startingBgTimeout=-3h39m11s996ms
+    lastActivity=-1h57m53s369ms restartTime=-1h57m53s369ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=7
+    restartCount=0 restartDelay=-- nextRestartTime=-1h57m18s274ms crashCount=1
+
+  * ServiceRecord{bab4224 u0 com.android.phone/.TelephonyDebugService}
+    intent={cmp=com.android.phone/.TelephonyDebugService}
+    packageName=com.android.phone
+    processName=com.android.phone
+    baseDir=/system/priv-app/TeleService/TeleService.apk
+    dataDir=/data/data/com.android.phone
+    app=ProcessRecord{111be1c 3967:com.android.phone/1001}
+    transactions=0
+    createTime=-9h45m27s6ms startingBgTimeout=--
+    lastActivity=-3h39m43s752ms restartTime=-3h39m43s752ms createdFromFg=true
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1
+
+  * ServiceRecord{27f2469b u0 com.sec.android.service.sm/.service.SecurityManagerService}
+    intent={cmp=com.sec.android.service.sm/.service.SecurityManagerService}
+    packageName=com.sec.android.service.sm
+    processName=com.sec.android.service.sm
+    permission=android.permission.BIND_DEVICE_ADMIN
+    baseDir=/system/app/SecurityManagerService/SecurityManagerService.apk
+    dataDir=/data/data/com.sec.android.service.sm
+    app=ProcessRecord{2cffce59 5463:com.sec.android.service.sm/1000}
+    transactions=0
+    createTime=-9h45m1s752ms startingBgTimeout=-3h39m3s495ms
+    lastActivity=-52m25s896ms restartTime=-52m25s896ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=6
+    restartCount=0 restartDelay=-- nextRestartTime=-52m25s968ms crashCount=0
+
+  * ServiceRecord{1521900 u0 com.android.bluetooth/.pan.PanService}
+    intent={act=android.bluetooth.IBluetoothPan cmp=com.android.bluetooth/.pan.PanService}
+    packageName=com.android.bluetooth
+    processName=com.android.bluetooth
+    baseDir=/system/app/Bluetooth/Bluetooth.apk
+    dataDir=/data/data/com.android.bluetooth
+    app=null
+    transactions=0
+    createTime=-9h45m33s506ms startingBgTimeout=--
+    lastActivity=-3h39m50s253ms restartTime=-- createdFromFg=true
+    Bindings:
+    * IntentBindRecord{ba02a1e}:
+      intent={act=android.bluetooth.IBluetoothPan cmp=com.android.bluetooth/.pan.PanService}
+      binder=null
+      requested=false received=false hasBound=false doRebind=false
+      * Client AppBindRecord{313b42ff ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{1ccc965f u0 com.android.bluetooth/.pan.PanService:@23df2efe}
+    All Connections:
+      ConnectionRecord{1ccc965f u0 com.android.bluetooth/.pan.PanService:@23df2efe}
+
+  * ServiceRecord{34438217 u0 com.google.android.gms/.backup.BackupTransportService}
+    intent={act=android.backup.TRANSPORT_HOST cmp=com.google.android.gms/.backup.BackupTransportService}
+    packageName=com.google.android.gms
+    processName=com.google.android.gms.persistent
+    permission=android.permission.CONFIRM_FULL_BACKUP
+    baseDir=/data/app/com.google.android.gms-1/base.apk
+    dataDir=/data/data/com.google.android.gms
+    app=ProcessRecord{1f369bfe 4345:com.google.android.gms.persistent/u0a14}
+    transactions=0
+    createTime=-9h44m54s744ms startingBgTimeout=--
+    lastActivity=-3h39m11s490ms restartTime=-3h39m11s490ms createdFromFg=true
+    Bindings:
+    * IntentBindRecord{14df68cc CREATE}:
+      intent={act=android.backup.TRANSPORT_HOST cmp=com.google.android.gms/.backup.BackupTransportService}
+      binder=android.os.BinderProxy@ed5f715
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{31a0ca2a ProcessRecord{38e876a0 1461:system/1000}}
+        Per-process Connections:
+          ConnectionRecord{38241696 u0 CR com.google.android.gms/.backup.BackupTransportService:@9d641b1}
+    All Connections:
+      ConnectionRecord{38241696 u0 CR com.google.android.gms/.backup.BackupTransportService:@9d641b1}
+
+  Restarting services:
+  * Restarting ServiceRecord{2cc6dc28 u0 com.ruh.videoplayer.audioplayer.mp3.avi.mp4/com.ticlock.AnalyticsService}
+    intent={cmp=com.ruh.videoplayer.audioplayer.mp3.avi.mp4/com.ticlock.AnalyticsService}
+    packageName=com.ruh.videoplayer.audioplayer.mp3.avi.mp4
+    processName=com.ruh.videoplayer.audioplayer.mp3.avi.mp4
+    baseDir=/data/app/com.ruh.videoplayer.audioplayer.mp3.avi.mp4-2/base.apk
+    dataDir=/data/data/com.ruh.videoplayer.audioplayer.mp3.avi.mp4
+    app=null
+    transactions=0
+    createTime=-9h44m47s165ms startingBgTimeout=-3h38m48s908ms
+    lastActivity=-23m51s958ms restartTime=-23m54s1ms createdFromFg=false
+    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=15
+    restartCount=1 restartDelay=-3h19m51s57ms nextRestartTime=+7m39s742ms crashCount=0
+    Pending Starts:
+    #0 id=1 dxc=5
+      intent=Intent { cmp=com.ruh.videoplayer.audioplayer.mp3.avi.mp4/com.ticlock.AnalyticsService (has extras) }
+
+  Connection bindings to services:
+  * ConnectionRecord{3637e7fa u0 com.android.server.telecom/.BluetoothVoIPService:@222aa25}
+    binding=AppBindRecord{18c36ee6 com.android.server.telecom/.BluetoothVoIPService:com.android.phone}
+    conn=android.os.BinderProxy@222aa25 flags=0x0
+  * ConnectionRecord{23490426 u0 com.android.bluetooth/.a2dp.A2dpService:@28b2b81}
+    binding=AppBindRecord{1ad235e0 com.android.bluetooth/.a2dp.A2dpService:com.android.bluetooth}
+    conn=android.os.BinderProxy@28b2b81 flags=0x0
+  * ConnectionRecord{e2989b1 u0 CR com.google.android.gms/.tapandpay.hce.service.TpHceService:@3297458}
+    binding=AppBindRecord{167ff381 com.google.android.gms/.tapandpay.hce.service.TpHceService:com.android.nfc}
+    conn=android.os.BinderProxy@3297458 flags=0x1
+  * ConnectionRecord{23f3d0f5 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.geocode.GeocodeService:@386fe2c}
+    binding=AppBindRecord{aabbef1 com.google.android.gms/com.google.android.location.geocode.GeocodeService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@386fe2c flags=0x40000005
+  * ConnectionRecord{e0684ef u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3c87dce}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3c87dce flags=0x1
+  * ConnectionRecord{b392fac u0 CR com.android.systemui/.keyguard.KeyguardService:@416595f}
+    binding=AppBindRecord{2c4b0e14 com.android.systemui/.keyguard.KeyguardService:com.android.systemui}
+    conn=android.os.BinderProxy@416595f flags=0x1
+  * ConnectionRecord{46a2f75 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@579c6ac}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@579c6ac flags=0x1
+  * ConnectionRecord{2ddc337b u0 com.android.bluetooth/.hfp.HeadsetService:@57cdf0a}
+    binding=AppBindRecord{6931d70 com.android.bluetooth/.hfp.HeadsetService:com.android.phone}
+    conn=android.os.BinderProxy@57cdf0a flags=0x0
+  * ConnectionRecord{1c670838 u0 CR org.simalliance.openmobileapi.service/.SmartcardService:@6214c9b}
+    binding=AppBindRecord{39b24e47 org.simalliance.openmobileapi.service/.SmartcardService:com.android.nfc}
+    conn=android.os.BinderProxy@6214c9b flags=0x1
+  * ConnectionRecord{2a8ce83f u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@6c81c5e}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@6c81c5e flags=0x1
+  * ConnectionRecord{1ea0d891 u0 CR ACT com.google.android.gms/.measurement.service.MeasurementBrokerService:@78332b8}
+    binding=AppBindRecord{2fd4f780 com.google.android.gms/.measurement.service.MeasurementBrokerService:com.pspdfkit.viewer}
+    conn=android.os.BinderProxy@78332b8 flags=0x81
+  * ConnectionRecord{b7d3083 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.network.NetworkLocationService:@90f0b32}
+    binding=AppBindRecord{22cebd17 com.google.android.gms/com.google.android.location.network.NetworkLocationService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@90f0b32 flags=0x40000005
+  * ConnectionRecord{38241696 u0 CR com.google.android.gms/.backup.BackupTransportService:@9d641b1}
+    binding=AppBindRecord{31a0ca2a com.google.android.gms/.backup.BackupTransportService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@9d641b1 flags=0x1
+  * ConnectionRecord{23fa4062 u0 CR ACT com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService:@a1f032d}
+    binding=AppBindRecord{2a47bd22 com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@a1f032d flags=0x81
+  * ConnectionRecord{f45b3ee u0 CR android/com.android.internal.backup.LocalTransportService:@a211d69}
+    binding=AppBindRecord{32ecbc21 android/com.android.internal.backup.LocalTransportService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@a211d69 flags=0x1
+  * ConnectionRecord{1a23fa72 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@bf21b7d}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@bf21b7d flags=0x1
+  * ConnectionRecord{226f5b7 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@ca494b6}
+    binding=AppBindRecord{2b0045b8 com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@ca494b6 flags=0x1
+  * ConnectionRecord{2864ac74 u0 com.android.bluetooth/.a2dp.A2dpService:@e522c47}
+    binding=AppBindRecord{32b6099 com.android.bluetooth/.a2dp.A2dpService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@e522c47 flags=0x0
+  * ConnectionRecord{2663237c u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@fc37a6f}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@fc37a6f flags=0x1
+  * ConnectionRecord{aeef420 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@11f75723}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@11f75723 flags=0x1
+  * ConnectionRecord{261ea87e u0 CR !FG !VIS com.google.android.gms/com.google.android.location.fused.FusedLocationService:@1249ca39}
+    binding=AppBindRecord{1c3ca412 com.google.android.gms/com.google.android.location.fused.FusedLocationService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@1249ca39 flags=0x40000005
+  * ConnectionRecord{2c94c264 u0 CR com.android.providers.media/.MediaScannerService:@13de23f7}
+    binding=AppBindRecord{2c20c2a0 com.android.providers.media/.MediaScannerService:com.pspdfkit.viewer}
+    conn=android.os.BinderProxy@13de23f7 flags=0x1
+  * ConnectionRecord{997cd7d u0 com.android.bluetooth/.hfp.HeadsetService:@145277d4}
+    binding=AppBindRecord{143bd8e9 com.android.bluetooth/.hfp.HeadsetService:com.android.server.telecom}
+    conn=android.os.BinderProxy@145277d4 flags=0x0
+  * ConnectionRecord{2207a01d u0 com.android.bluetooth/.hfp.HeadsetService:@146970f4}
+    binding=AppBindRecord{143bd8e9 com.android.bluetooth/.hfp.HeadsetService:com.android.server.telecom}
+    conn=android.os.BinderProxy@146970f4 flags=0x0
+  * ConnectionRecord{3da0823f u0 CR !FG UI !VIS com.nuance.swype.dtc/com.nuance.swype.input.IME:@15e1de5e}
+    binding=AppBindRecord{298cc26f com.nuance.swype.dtc/com.nuance.swype.input.IME:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@15e1de5e flags=0x60000005
+  * ConnectionRecord{3c33c369 u0 CR com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService:@162621f0}
+    binding=AppBindRecord{38c5b7dc com.google.android.gms/com.google.location.nearby.direct.service.NearbyDirectService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@162621f0 flags=0x1
+  * ConnectionRecord{17bffd05 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@1717107c}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@1717107c flags=0x1
+  * ConnectionRecord{1fc0e5de u0 com.android.bluetooth/.hfp.HeadsetService:@18032119}
+    binding=AppBindRecord{143bd8e9 com.android.bluetooth/.hfp.HeadsetService:com.android.server.telecom}
+    conn=android.os.BinderProxy@18032119 flags=0x0
+  * ConnectionRecord{29819bbd u0 CR com.android.systemui/.cover.SViewCoverService:@18259714}
+    binding=AppBindRecord{1eaa6734 com.android.systemui/.cover.SViewCoverService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@18259714 flags=0x1
+  * ConnectionRecord{1dbc07b6 u0 CR android/.hardware.location.GeofenceHardwareService:@1940c351}
+    binding=AppBindRecord{70055c5 android/.hardware.location.GeofenceHardwareService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@1940c351 flags=0x1
+  * ConnectionRecord{34b39065 u0 CR com.android.systemui/.keyguard.KeyguardService:@1bd9555c}
+    binding=AppBindRecord{2c4b0e14 com.android.systemui/.keyguard.KeyguardService:com.android.systemui}
+    conn=android.os.BinderProxy@1bd9555c flags=0x1
+  * ConnectionRecord{ae90001 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@1c1e91e8}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@1c1e91e8 flags=0x1
+  * ConnectionRecord{9f6c268 u0 CR com.android.systemui/.keyguard.KeyguardService:@1c6fd18b}
+    binding=AppBindRecord{31b746bd com.android.systemui/.keyguard.KeyguardService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@1c6fd18b flags=0x1
+  * ConnectionRecord{1bbd6e0e u0 CR UI com.android.systemui/.ImageWallpaper:@1e58ec09}
+    binding=AppBindRecord{1a60580a com.android.systemui/.ImageWallpaper:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@1e58ec09 flags=0x20000001
+  * ConnectionRecord{189c3d10 u0 CR com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService:@1eb96dd3}
+    binding=AppBindRecord{277ce7a com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@1eb96dd3 flags=0x1
+  * ConnectionRecord{2213a87 u0 CR IMP com.android.bluetooth/.btservice.AdapterService:@21dcaac6}
+    binding=AppBindRecord{37d9255f com.android.bluetooth/.btservice.AdapterService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@21dcaac6 flags=0x41
+  * ConnectionRecord{22c292e1 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@22a92448}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@22a92448 flags=0x1
+  * ConnectionRecord{277bd118 u0 CR !FG !VIS com.google.android.gms/com.google.android.location.geofencer.service.GeofenceProviderService:@239a2cfb}
+    binding=AppBindRecord{2fa18c36 com.google.android.gms/com.google.android.location.geofencer.service.GeofenceProviderService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@239a2cfb flags=0x40000005
+  * ConnectionRecord{1ccc965f u0 com.android.bluetooth/.pan.PanService:@23df2efe}
+    binding=AppBindRecord{313b42ff com.android.bluetooth/.pan.PanService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@23df2efe flags=0x0
+  * ConnectionRecord{2322fc63 u0 CR ACT com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService:@247f1a92}
+    binding=AppBindRecord{14f0787d com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@247f1a92 flags=0x81
+  * ConnectionRecord{15c70893 u0 CR com.android.providers.media/.MediaScannerService:@2517f982}
+    binding=AppBindRecord{2c20c2a0 com.android.providers.media/.MediaScannerService:com.pspdfkit.viewer}
+    conn=android.os.BinderProxy@2517f982 flags=0x1
+  * ConnectionRecord{182d9bc8 u0 CR com.sec.android.app.GlanceView/.GlanceViewNLService:@27feb46b}
+    binding=AppBindRecord{678a209 com.sec.android.app.GlanceView/.GlanceViewNLService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@27feb46b flags=0x1
+  * ConnectionRecord{3eafd9df u0 CR com.android.incallui/.SecInCallService:@28ff507e}
+    binding=AppBindRecord{327774be com.android.incallui/.SecInCallService:com.android.server.telecom}
+    conn=android.os.BinderProxy@28ff507e flags=0x1
+  * ConnectionRecord{f18ccf4 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@29b87ec7}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@29b87ec7 flags=0x1
+  * ConnectionRecord{23e47906 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@2a09e7e1}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@2a09e7e1 flags=0x1
+  * ConnectionRecord{1d874646 u0 CR ACT com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService:@2ceea221}
+    binding=AppBindRecord{1e443b58 com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@2ceea221 flags=0x81
+  * ConnectionRecord{2a4285e8 u0 CR com.android.incallui/.InCallServiceImpl:@2e4a730b}
+    binding=AppBindRecord{33a0105b com.android.incallui/.InCallServiceImpl:com.android.server.telecom}
+    conn=android.os.BinderProxy@2e4a730b flags=0x1
+  * ConnectionRecord{13d0fe1e u0 CR com.samsung.SMT/.SamsungTTSService:@2edf7259}
+    binding=AppBindRecord{3da25b29 com.samsung.SMT/.SamsungTTSService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@2edf7259 flags=0x1
+  * ConnectionRecord{3268dca2 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@2f71686d}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@2f71686d flags=0x1
+  * ConnectionRecord{15a87ddc u0 com.android.bluetooth/.hfp.HeadsetService:@2f76424f}
+    binding=AppBindRecord{6c8896e com.android.bluetooth/.hfp.HeadsetService:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@2f76424f flags=0x0
+  * ConnectionRecord{3e2a8b35 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3057396c}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3057396c flags=0x1
+  * ConnectionRecord{3362d1a4 u0 CR com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService:@3069e837}
+    binding=AppBindRecord{ffb3a35 com.google.android.googlequicksearchbox/com.google.android.apps.gsa.search.core.service.SearchService:com.google.android.googlequicksearchbox:search}
+    conn=android.os.BinderProxy@3069e837 flags=0x1
+  * ConnectionRecord{355ed6d4 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@314b0427}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@314b0427 flags=0x1
+  * ConnectionRecord{2153ec1e u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@32015859}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@32015859 flags=0x1
+  * ConnectionRecord{112fa31f u0 CR com.google.android.googlequicksearchbox/com.google.android.hotword.service.HotwordService:@326776be}
+    binding=AppBindRecord{2d91f20d com.google.android.googlequicksearchbox/com.google.android.hotword.service.HotwordService:com.sec.android.app.launcher}
+    activity=ActivityRecord{12a58575 u0 com.sec.android.app.launcher/com.android.launcher2.Launcher t1}
+    conn=android.os.BinderProxy@326776be flags=0x1
+  * ConnectionRecord{1da13863 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3560c692}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3560c692 flags=0x1
+  * ConnectionRecord{5af2919 u0 CR ACT com.google.android.gms/.usagereporting.service.UsageReportingService:@365dd060}
+    binding=AppBindRecord{8e475c8 com.google.android.gms/.usagereporting.service.UsageReportingService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@365dd060 flags=0x81
+  * ConnectionRecord{1dd877bd u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@365e6314}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@365e6314 flags=0x1
+  * ConnectionRecord{11a94676 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3734c511}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3734c511 flags=0x1
+  * ConnectionRecord{2f2c66a8 u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3aa05ecb}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3aa05ecb flags=0x1
+  * ConnectionRecord{2492d34d u0 CR com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin:@3b01b2e4}
+    binding=AppBindRecord{72c592d com.sec.enterprise.mdm.services.simpin/.EnterpriseSimPin:system}
+    conn=android.app.LoadedApk$ServiceDispatcher$InnerConnection@3b01b2e4 flags=0x1
+  * ConnectionRecord{21eabf2b u0 CR DEAD com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3ba48b7a}
+    binding=AppBindRecord{258b101b com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3ba48b7a flags=0x1
+  * ConnectionRecord{35d4c796 u0 CR com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:@3c0716b1}
+    binding=AppBindRecord{2a54d00c com.android.vending/com.google.android.finsky.contentfilterui.ContentFiltersService:com.google.android.gms.persistent}
+    conn=android.os.BinderProxy@3c0716b1 flags=0x1
+
+Found 147 services:
+0	sip: [android.net.sip.ISipService]
+1	phone: [com.android.internal.telephony.ITelephony]
+2	isms: [com.android.internal.telephony.ISms]
+3	iphonesubinfo: [com.android.internal.telephony.IPhoneSubInfo]
+4	simphonebook: [com.android.internal.telephony.IIccPhoneBook]
+5	handset: [com.gsma.services.utils.IHandset]
+6	offhostservice: [com.gsma.services.nfc.IOffHostService]
+7	secontroller: [com.gsma.services.nfc.ISEController]
+8	nfccontroller: [com.gsma.services.nfc.INfcController]
+9	com.broadcom.nfc.Factory: [com.broadcom.nfc.INfcFactory]
+10	nfc: [android.nfc.INfcAdapter]
+11	isub: [com.android.internal.telephony.ISub]
+12	telecom: [com.android.internal.telecom.ITelecomService]
+13	emergency_service: []
+14	sec_analytics: [com.sec.analytics.data.collection.serviceif.IDataCollectionManager]
+15	edmnativehelper: [mdm.edmnativehelperservice]
+16	imms: [com.android.internal.telephony.IMms]
+17	lpnet: [android.os.ILpnetManager]
+18	media_projection: [android.media.projection.IMediaProjectionManager]
+19	voip: [android.os.IVoIPInterface]
+20	launcherapps: [android.content.pm.ILauncherApps]
+21	fingerprint: [android.service.fingerprint.IFingerprintService]
+22	trust: [android.app.trust.ITrustManager]
+23	media_router: [android.media.IMediaRouterService]
+24	media_session: [android.media.session.ISessionManager]
+25	restrictions: [android.content.IRestrictionsManager]
+26	print: [android.print.IPrintManager]
+27	dreams: [android.service.dreams.IDreamManager]
+28	commontime_management: []
+29	samplingprofiler: []
+30	quickconnect: [com.samsung.android.quickconnect.IQuickConnectManager]
+31	spengestureservice: [com.samsung.android.smartclip.ISpenGestureService]
+32	mDNIe: [com.samsung.android.mdnie.IMdnieManager]
+33	diskstats: []
+34	SecExternalDisplayService: [android.os.ISecExternalDisplayService]
+35	voiceinteraction: [com.android.internal.app.IVoiceInteractionManagerService]
+36	appwidget: [com.android.internal.appwidget.IAppWidgetService]
+37	backup: [android.app.backup.IBackupManager]
+38	jobscheduler: [android.app.job.IJobScheduler]
+39	uimode: [android.app.IUiModeManager]
+40	serial: [android.hardware.ISerialManager]
+41	usb: [android.hardware.usb.IUsbManager]
+42	DockObserver: []
+43	audio: [android.media.IAudioService]
+44	wallpaper: [android.app.IWallpaperManager]
+45	dropbox: [com.android.internal.os.IDropBoxManagerService]
+46	search: [android.app.ISearchManager]
+47	country_detector: [android.location.ICountryDetector]
+48	location: [android.location.ILocationManager]
+49	devicestoragemonitor: []
+50	notification: [android.app.INotificationManager]
+51	updatelock: [android.os.IUpdateLock]
+52	servicediscovery: [android.net.nsd.INsdManager]
+53	sb_service: [com.samsung.android.smartbonding.ISmartBondingService]
+54	connectivity: [android.net.IConnectivityManager]
+55	rttmanager: [android.net.wifi.IRttManager]
+56	wifiscanner: [android.net.wifi.IWifiScanner]
+57	msapwifi: [android.net.wifi.IMsapWifiManager]
+58	wifi: [android.net.wifi.IWifiManager]
+59	wifip2p: [android.net.wifi.p2p.IWifiP2pManager]
+60	netpolicy: [android.net.INetworkPolicyManager]
+61	netstats: [android.net.INetworkStatsService]
+62	network_score: [android.net.INetworkScoreService]
+63	textservices: [com.android.internal.textservice.ITextServicesManager]
+64	ABTPersistenceService: [com.absolute.android.persistence.IABTPersistence]
+65	network_management: [android.os.INetworkManagementService]
+66	clipboardEx: [android.sec.clipboard.IClipboardService]
+67	clipboard: [android.content.IClipboard]
+68	statusbar: [com.android.internal.statusbar.IStatusBarService]
+69	enterprise_policy: [android.app.enterprise.IEnterpriseDeviceManager]
+70	knox_timakeystore_policy: [com.sec.enterprise.knox.keystore.ITimaKeystore]
+71	enterprise_billing_policy: [com.sec.enterprise.knox.billing.IEnterpriseBillingPolicy]
+72	remoteinjection: [android.app.enterprise.remotecontrol.IRemoteInjection]
+73	phone_restriction_policy: [android.app.enterprise.IPhoneRestrictionPolicy]
+74	wifi_policy: [android.app.enterprise.IWifiPolicy]
+75	application_policy: [android.app.enterprise.IApplicationPolicy]
+76	enterprise_license_policy: [android.app.enterprise.license.IEnterpriseLicense]
+77	log_manager_service: [android.app.enterprise.ILogManager]
+78	sdp: [android.service.sdp.ISdpManagerService]
+79	harmony_eas_service: [android.content.IHarmonyEAS]
+80	device_policy: [android.app.admin.IDevicePolicyManager]
+81	lock_settings: [com.android.internal.widget.ILockSettings]
+82	mount: [IMountService]
+83	cover: [com.samsung.android.cover.ICoverManager]
+84	motion_recognition: [com.samsung.android.motion.IMotionRecognitionService]
+85	accessibility: [android.view.accessibility.IAccessibilityManager]
+86	input_method: [com.android.internal.view.IInputMethodManager]
+87	rcp: [android.os.IRCPManager]
+88	bluetooth_secure_mode_manager: [android.bluetooth.IBluetoothSecureManagerService]
+89	bluetooth_manager: [android.bluetooth.IBluetoothManager]
+90	input: [android.hardware.input.IInputManager]
+91	window: [android.view.IWindowManager]
+92	multiwindow_facade: [com.samsung.android.multiwindow.IMultiWindowFacade]
+93	barbeam: [android.app.IBarBeamService]
+94	scontext: [android.hardware.scontext.ISContextService]
+95	context_aware: [com.samsung.android.contextaware.manager.IContextAwareService]
+96	alarm: [android.app.IAlarmManager]
+97	consumer_ir: [android.hardware.IConsumerIrService]
+98	samsung.smartfaceservice: [com.samsung.android.smartface.ISmartFaceService]
+99	CustomFrequencyManagerService: [android.os.ICustomFrequencyManager]
+100	cepproxyks: [com.samsung.android.cepproxyks.ISCEPKeystoreService]
+101	tw_toolbox: [com.samsung.android.toolbox.ITwToolBoxService]
+102	vibrator: [android.os.IVibratorService]
+103	sedenial: [android.service.ISEDenialService]
+104	ReactiveService: [com.samsung.android.service.reactive.IReactiveService]
+105	DirEncryptService: [IDirEncryptService]
+106	content: [android.content.IContentService]
+107	account: [android.accounts.IAccountManager]
+108	SEAMService: [com.sec.enterprise.knox.seams.ISEAMS]
+109	entropy: []
+110	telephony.registry: [com.android.internal.telephony.ITelephonyRegistry]
+111	scheduling_policy: [android.os.ISchedulingPolicyService]
+112	webviewupdate: [android.webkit.IWebViewUpdateService]
+113	usagestats: [android.app.usage.IUsageStatsManager]
+114	battery: []
+115	hardware: [android.os.IHardwareService]
+116	permission: [android.os.IPermissionController]
+117	cpuinfo: []
+118	dbinfo: []
+119	gfxinfo: []
+120	meminfo: []
+121	procstats: [com.android.internal.app.IProcessStats]
+122	activity: [android.app.IActivityManager]
+123	user: [android.os.IUserManager]
+124	package: [android.content.pm.IPackageManager]
+125	display: [android.hardware.display.IDisplayManager]
+126	power: [android.os.IPowerManager]
+127	appops: [com.android.internal.app.IAppOpsService]
+128	batterystats: [com.android.internal.app.IBatteryStats]
+129	user.additionsgb.service: [com.spazedog.xposed.additionsgb.backend.service.IXService]
+130	sensorservice: [android.gui.SensorServer]
+131	mdm.remotedesktop: [mdm.samsung.IRemoteDesktopService]
+132	media.sound_trigger_hw: [android.hardware.ISoundTriggerHwService]
+133	media.transcoder: [android.media.ITranscoderService]
+134	media.audio_policy: [android.media.IAudioPolicyService]
+135	user.xposed.app: [de.robv.android.xposed.IXposedService]
+136	user.xposed.system: [de.robv.android.xposed.IXposedService]
+137	media.camera: [android.hardware.ICameraService]
+138	media.player: [android.media.IMediaPlayerService]
+139	media.audio_flinger: [android.media.IAudioFlinger]
+140	SurfaceFlinger: [android.ui.ISurfaceComposer]
+141	drm.drmManager: [drm.IDrmManagerService]
+142	display.qservice: [android.display.IQService]
+143	batteryproperties: [android.os.IBatteryPropertiesRegistrar]
+144	TvoutService_C: [android.hardware.ISecExternalDisplayService]
+145	android.security.keystore: [android.security.keystore]
+146	sensorhubservice: [android.gui.SensorHubServer]
