@@ -276,7 +276,8 @@ int fsnotify(struct inode *to_tell, __u32 mask, void *data, int data_is,
 			}
 		}
 		ret = send_to_group(to_tell, inode_mark, vfsmount_mark, mask,
-				    data, data_is, cookie, file_name);
+				    data, data_is, cookie, file_name,
+					    &event);
 
 		if (ret && (mask & ALL_FSNOTIFY_PERM_EVENTS))
 			goto out;
