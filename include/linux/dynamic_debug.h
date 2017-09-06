@@ -1,6 +1,8 @@
 #ifndef _DYNAMIC_DEBUG_H
 #define _DYNAMIC_DEBUG_H
 
+#include <linux/printk.h>
+
 /*
  * An instance of this structure is created in a special
  * ELF section at every dynamic debug callsite.  At runtime,
@@ -109,8 +111,6 @@ static inline int ddebug_dyndbg_module_param_cb(char *param, char *val,
 						const char *modname)
 {
 	if (strstr(param, "dyndbg")) {
-		pr_warn("dyndbg supported only in "
-			"CONFIG_DYNAMIC_DEBUG builds\n");
 		return 0; /* allow and ignore */
 	}
 	return -EINVAL;
