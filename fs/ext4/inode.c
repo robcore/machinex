@@ -2678,22 +2678,7 @@ static int ext4_da_write_end(struct file *file,
 	if (copied && new_i_size > EXT4_I(inode)->i_disksize) {
 		if (ext4_has_inline_data(inode) ||
 		    ext4_da_should_update_i_disksize(page, end)) {
-			down_write(&EXT4_I(inode)->i_data_sem);
-			if (new_i_size > EXT4_I(inode)->i_disksize) {
-#ifndef CONFIG_EXT4_EFFECTIVE_WRITEBACK
-/*++++ Effective Write Back patch added for fsync latency control ++++*/
-				/*
-				 * Updating i_disksize when extending file
-				 * without needing block allocation
-				 */
-				if (ext4_should_order_data(inode))
-					ret = ext4_jbd2_file_inode(handle,
-								   inode);
-/*++++ Effective Write Back patch added for fsync latency control ++++*/
-#endif
-				EXT4_I(inode)->i_disksize = new_i_size;
-			}
-			up_write(&EXT4_I(inode)->i_data_sem);
+			ext4_update_i_disksize(inode, new_i_size);
 			/* We need to mark inode dirty even if
 			 * new_i_size is less that inode->i_size
 			 * bu greater than i_disksize.(hint delalloc)
