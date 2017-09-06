@@ -4428,7 +4428,7 @@ void __init setup_per_cpu_pageset(void)
 		setup_zone_pageset(zone);
 }
 
-static noinline __init
+static noinline __meminit
 int zone_wait_table_init(struct zone *zone, unsigned long zone_size_pages)
 {
 	int i;
