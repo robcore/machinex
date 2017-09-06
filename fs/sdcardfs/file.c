@@ -51,7 +51,7 @@ static ssize_t sdcardfs_read(struct file *file, char __user *buf,
 	/* update our inode atime upon a successful lower read */
 	if (err >= 0)
 		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 
 	return err;
 }
@@ -59,7 +59,7 @@ static ssize_t sdcardfs_read(struct file *file, char __user *buf,
 static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 			    size_t count, loff_t *ppos)
 {
-	int err = 0;
+	int err;
 	struct file *lower_file;
 	struct dentry *dentry = file->f_path.dentry;
 
@@ -74,9 +74,9 @@ static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 	/* update our inode times+sizes upon a successful lower write */
 	if (err >= 0) {
 		fsstack_copy_inode_size(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 		fsstack_copy_attr_times(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 	}
 
 	return err;
@@ -84,7 +84,7 @@ static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 
 static int sdcardfs_readdir(struct file *file, struct dir_context *ctx)
 {
-	int err = 0;
+	int err;
 	struct file *lower_file = NULL;
 	struct dentry *dentry = file->f_path.dentry;
 
@@ -95,7 +95,7 @@ static int sdcardfs_readdir(struct file *file, struct dir_context *ctx)
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
 		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 	return err;
 }
 
@@ -143,6 +143,7 @@ static int sdcardfs_mmap(struct file *file, struct vm_area_struct *vma)
 	bool willwrite;
 	struct file *lower_file;
 	const struct vm_operations_struct *saved_vm_ops = NULL;
+
 	/* this might be deferred to mmap's writepage */
 	willwrite = ((vma->vm_flags | VM_SHARED | VM_WRITE) == vma->vm_flags);
 

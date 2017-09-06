@@ -2,11 +2,11 @@
  * fs/sdcardfs/packagelist.c
  *
  * Copyright (c) 2013 Samsung Electronics Co. Ltd
- *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun, 
+ *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun,
  *               Sunghwan Yun, Sungjong Seo
- *                      
+ *
  * This program has been developed as a stackable file system based on
- * the WrapFS which written by 
+ * the WrapFS which written by
  *
  * Copyright (c) 1998-2011 Erez Zadok
  * Copyright (c) 2009     Shrikar Archak
@@ -29,8 +29,8 @@
 #define STRING_BUF_SIZE		(512)
 
 struct hashtable_entry {
-        struct hlist_node hlist;
-        void *key;
+	struct hlist_node hlist;
+	void *key;
 	int value;
 };
 
@@ -67,11 +67,12 @@ static unsigned int str_hash(void *key) {
 }
 
 static int contain_appid_key(struct packagelist_data *pkgl_dat, void *appid) {
-        struct hashtable_entry *hash_cur;
+	struct hashtable_entry *hash_cur;
 
-        hash_for_each_possible(pkgl_dat->appid_with_rw,	hash_cur, hlist, (unsigned int)appid)
-                if (appid == hash_cur->key)
-                        return 1;
+	hash_for_each_possible(pkgl_dat->appid_with_rw, hash_cur, hlist, (unsigned int)appid)
+
+		if (appid == hash_cur->key)
+			return 1;
 	return 0;
 }
 
@@ -80,7 +81,7 @@ int get_caller_has_rw_locked(void *pkgl_id, derive_t derive) {
 	struct packagelist_data *pkgl_dat = (struct packagelist_data *)pkgl_id;
 	appid_t appid;
 	int ret;
-	
+
 	/* No additional permissions enforcement */
 	if (derive == DERIVE_NONE) {
 		return 1;
@@ -157,7 +158,7 @@ int check_caller_access_to_name(struct inode *parent_node, const char* name,
 }
 
 /* This function is used when file opening. The open flags must be
- * checked before calling check_caller_access_to_name() */  
+ * checked before calling check_caller_access_to_name() */
 int open_flags_to_access_mode(int open_flags) {
 	if((open_flags & O_ACCMODE) == O_RDONLY) {
 		return 0; /* R_OK */
@@ -226,15 +227,12 @@ static void remove_int_to_null(struct hashtable_entry *h_entry) {
 static void remove_all_hashentrys(struct packagelist_data *pkgl_dat)
 {
 	struct hashtable_entry *hash_cur;
-	struct hlist_node *h_n;
 	struct hlist_node *h_t;
 	int i;
 
 	hash_for_each_safe(pkgl_dat->package_to_appid, i, h_t, hash_cur, hlist)
-	if (hash_cur)
 		remove_str_to_int(hash_cur);
 	hash_for_each_safe(pkgl_dat->appid_with_rw, i, h_t, hash_cur, hlist)
-	if (hash_cur)
 		remove_int_to_null(hash_cur);
 
 	hash_init(pkgl_dat->package_to_appid);
@@ -266,7 +264,7 @@ static int read_package_list(struct packagelist_data *pkgl_dat) {
 		int one_line_len = 0;
 		int additional_read;
 		unsigned long ret_gid;
-	
+
 		while (one_line_len < read_amount) {
 			if (pkgl_dat->read_buf[one_line_len] == '\n') {
 				one_line_len++;
@@ -276,7 +274,7 @@ static int read_package_list(struct packagelist_data *pkgl_dat) {
 		}
 		additional_read = read_amount - one_line_len;
 		if (additional_read > 0)
-			sys_lseek(fd, -additional_read, SEEK_CUR);	
+			sys_lseek(fd, -additional_read, SEEK_CUR);
 
 		if (sscanf(pkgl_dat->read_buf, "%s %d %*d %*s %*s %s",
 				pkgl_dat->app_name_buf, &appid,
@@ -330,7 +328,7 @@ static int packagelist_reader(void *thread_data)
 
 	while (!kthread_should_stop()) {
 		if (signal_pending(current)) {
-			msleep(100);
+			ssleep(1);
 			continue;
 		}
 
@@ -408,13 +406,13 @@ void * packagelist_create(gid_t write_gid)
 	hash_init(pkgl_dat->appid_with_rw);
 	pkgl_dat->write_gid = write_gid;
 
-	packagelist_thread = kthread_run(packagelist_reader, (void *)pkgl_dat, "pkgld");
-	if (IS_ERR(packagelist_thread)) {
-		printk(KERN_ERR "sdcardfs: creating kthread failed\n");
+        packagelist_thread = kthread_run(packagelist_reader, (void *)pkgl_dat, "pkgld");
+        if (IS_ERR(packagelist_thread)) {
+                printk(KERN_ERR "sdcardfs: creating kthread failed\n");
 		kfree(pkgl_dat);
 		return packagelist_thread;
-	}
-	pkgl_dat->thread_id = packagelist_thread;	
+        }
+	pkgl_dat->thread_id = packagelist_thread;
 
 	printk(KERN_INFO "sdcardfs: created packagelist pkgld/%d\n",
 				(int)pkgl_dat->thread_id->pid);
@@ -452,3 +450,5 @@ void packagelist_exit(void)
 	if (hashtable_entry_cachep)
 		kmem_cache_destroy(hashtable_entry_cachep);
 }
+
+

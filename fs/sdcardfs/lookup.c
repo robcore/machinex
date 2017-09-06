@@ -2,11 +2,11 @@
  * fs/sdcardfs/lookup.c
  *
  * Copyright (c) 2013 Samsung Electronics Co. Ltd
- *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun, 
+ *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun,
  *               Sunghwan Yun, Sungjong Seo
- *                      
+ *
  * This program has been developed as a stackable file system based on
- * the WrapFS which written by 
+ * the WrapFS which written by
  *
  * Copyright (c) 1998-2011 Erez Zadok
  * Copyright (c) 2009     Shrikar Archak
@@ -239,26 +239,26 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 
 	/* no error: handle positive dentries */
 	if (!err) {
-		/* check if the dentry is an obb dentry  
-		 * if true, the lower_inode must be replaced with 
+		/* check if the dentry is an obb dentry
+		 * if true, the lower_inode must be replaced with
 		 * the inode of the graft path */
 
 		if(need_graft_path(dentry)) {
 
 			/* setup_obb_dentry()
- 			 * The lower_path will be stored to the dentry's orig_path 
+ 			 * The lower_path will be stored to the dentry's orig_path
 			 * and the base obbpath will be copyed to the lower_path variable.
-			 * if an error returned, there's no change in the lower_path 
+			 * if an error returned, there's no change in the lower_path
 			 * 		returns: -ERRNO if error (0: no error) */
 			err = setup_obb_dentry(dentry, &lower_path);
 
-			if(err) { 
+			if(err) {
 				/* if the sbi->obbpath is not available, we can optionally
-				 * setup the lower_path with its orig_path. 
+				 * setup the lower_path with its orig_path.
 				 * but, the current implementation just returns an error
-				 * because the sdcard daemon also regards this case as 
+				 * because the sdcard daemon also regards this case as
 				 * a lookup fail. */
-				printk(KERN_INFO "sdcardfs: base obbpath is not available\n"); 
+				printk(KERN_INFO "sdcardfs: base obbpath is not available\n");
 				sdcardfs_put_reset_orig_path(dentry);
 				goto out;
 			}
@@ -303,22 +303,23 @@ setup_lower:
 	 * the VFS will continue the process of making this negative dentry
 	 * into a positive one.
 	 */
-	err = 0;
+	if (flags & (LOOKUP_CREATE|LOOKUP_RENAME_TARGET))
+		err = 0;
 
 out:
 	return ERR_PTR(err);
 }
 
-/* 
+/*
  * On success:
- * 	fills dentry object appropriate values and returns NULL. 
+ * 	fills dentry object appropriate values and returns NULL.
  * On fail (== error)
  * 	returns error ptr
  *
  * @dir : Parent inode. It is locked (dir->i_mutex)
  * @dentry : Target dentry to lookup. we should set each of fields.
  *	     (dentry->d_name is initialized already)
- * @nd : nameidata of parent inode 
+ * @nd : nameidata of parent inode
  */
 struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 			     unsigned int flags)
@@ -334,12 +335,12 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
 						sbi->options.derive, 0, 0)) {
 		ret = ERR_PTR(-EACCES);
-		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n" 
+		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
                          "	dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
 		goto out_err;
         }
-	
+
 	/* save current_cred and override it */
 	OVERRIDE_CRED_PTR(SDCARDFS_SB(dir->i_sb), saved_cred);
 
@@ -357,7 +358,7 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	{
 		goto out;
 	}
-	if (ret) 
+	if (ret)
 		dentry = ret;
 	if (dentry->d_inode) {
 		fsstack_copy_attr_times(dentry->d_inode,

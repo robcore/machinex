@@ -2,11 +2,11 @@
  * fs/sdcardfs/dentry.c
  *
  * Copyright (c) 2013 Samsung Electronics Co. Ltd
- *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun, 
+ *   Authors: Daeho Jeong, Woojoong Lee, Seunghwan Hyun,
  *               Sunghwan Yun, Sungjong Seo
- *                      
+ *
  * This program has been developed as a stackable file system based on
- * the WrapFS which written by 
+ * the WrapFS which written by
  *
  * Copyright (c) 1998-2011 Erez Zadok
  * Copyright (c) 2009     Shrikar Archak
@@ -45,7 +45,7 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	}
 	spin_unlock(&dentry->d_lock);
 
-	/* check uninitialized obb_dentry and  
+	/* check uninitialized obb_dentry and
 	 * whether the base obbpath has been changed or not */
 	if (is_obbpath_invalid(dentry)) {
 		d_drop(dentry);
@@ -71,12 +71,6 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	if (parent_lower_dentry != lower_cur_parent_dentry) {
 		d_drop(dentry);
 		err = 0;
-		goto out;
-	}
-
-	if (dentry == lower_dentry) {
-		err = 0;
-		//panic("sdcardfs: dentry is equal to lower_dentry\n");
 		goto out;
 	}
 
@@ -124,7 +118,7 @@ static void sdcardfs_d_release(struct dentry *dentry)
 	return;
 }
 
-static int sdcardfs_hash_ci(const struct dentry *dentry, 
+static int sdcardfs_hash_ci(const struct dentry *dentry,
 				struct qstr *qstr)
 {
 	/*
@@ -181,7 +175,7 @@ static int sdcardfs_cmp_ci(const struct dentry *parent,
 const struct dentry_operations sdcardfs_ci_dops = {
 	.d_revalidate	= sdcardfs_d_revalidate,
 	.d_release	= sdcardfs_d_release,
-	.d_hash 	= sdcardfs_hash_ci, 
+	.d_hash 	= sdcardfs_hash_ci,
 	.d_compare	= sdcardfs_cmp_ci,
 };
 
