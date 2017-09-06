@@ -1,1 +1,0 @@
-/media/root/robcore/android/linaro2patches/patches/01patches/6961-lib-scatterlist-fix-memory-leak-with-scsi-mq.patch

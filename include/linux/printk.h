@@ -1,10 +1,7 @@
 #ifndef __KERNEL_PRINTK__
 #define __KERNEL_PRINTK__
 
-#include <stdarg.h>
 #include <linux/init.h>
-#include <linux/linkage.h>
-#include <linux/cache.h>
 
 extern const char linux_banner[];
 extern const char linux_proc_banner[];
@@ -152,9 +149,9 @@ asmlinkage __printf(1, 0)
 int vprintk(const char *fmt, va_list args);
 
 asmlinkage __printf(5, 6) __cold
-int printk_emit(int facility, int level,
-		const char *dict, size_t dictlen,
-		const char *fmt, ...);
+asmlinkage int printk_emit(int facility, int level,
+			   const char *dict, size_t dictlen,
+			   const char *fmt, ...);
 
 asmlinkage __printf(1, 2) __cold
 int printk(const char *fmt, ...);

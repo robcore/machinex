@@ -531,6 +531,7 @@ static void acpi_thermal_check(void *data)
 }
 
 /* sys I/F for generic thermal sysfs support */
+#define KELVIN_TO_MILLICELSIUS(t, off) (((t) - (off)) * 100)
 
 static int thermal_get_temp(struct thermal_zone_device *thermal,
 			    unsigned long *temp)
@@ -545,8 +546,7 @@ static int thermal_get_temp(struct thermal_zone_device *thermal,
 	if (result)
 		return result;
 
-	*temp = DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(tz->temperature,
-							tz->kelvin_offset);
+	*temp = KELVIN_TO_MILLICELSIUS(tz->temperature, tz->kelvin_offset);
 	return 0;
 }
 
@@ -651,7 +651,7 @@ static int thermal_get_trip_temp(struct thermal_zone_device *thermal,
 
 	if (tz->trips.critical.flags.valid) {
 		if (!trip) {
-			*temp = DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(
+			*temp = KELVIN_TO_MILLICELSIUS(
 				tz->trips.critical.temperature,
 				tz->kelvin_offset);
 			return 0;
@@ -661,7 +661,7 @@ static int thermal_get_trip_temp(struct thermal_zone_device *thermal,
 
 	if (tz->trips.hot.flags.valid) {
 		if (!trip) {
-			*temp = DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(
+			*temp = KELVIN_TO_MILLICELSIUS(
 				tz->trips.hot.temperature,
 				tz->kelvin_offset);
 			return 0;
@@ -671,7 +671,7 @@ static int thermal_get_trip_temp(struct thermal_zone_device *thermal,
 
 	if (tz->trips.passive.flags.valid) {
 		if (!trip) {
-			*temp = DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(
+			*temp = KELVIN_TO_MILLICELSIUS(
 				tz->trips.passive.temperature,
 				tz->kelvin_offset);
 			return 0;
@@ -682,7 +682,7 @@ static int thermal_get_trip_temp(struct thermal_zone_device *thermal,
 	for (i = 0; i < ACPI_THERMAL_MAX_ACTIVE &&
 		tz->trips.active[i].flags.valid; i++) {
 		if (!trip) {
-			*temp = DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(
+			*temp = KELVIN_TO_MILLICELSIUS(
 				tz->trips.active[i].temperature,
 				tz->kelvin_offset);
 			return 0;
@@ -698,7 +698,7 @@ static int thermal_get_crit_temp(struct thermal_zone_device *thermal,
 	struct acpi_thermal *tz = thermal->devdata;
 
 	if (tz->trips.critical.flags.valid) {
-		*temperature = DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(
+		*temperature = KELVIN_TO_MILLICELSIUS(
 				tz->trips.critical.temperature,
 				tz->kelvin_offset);
 		return 0;

@@ -128,15 +128,21 @@ __clear_page_buffers(struct page *page)
 	page_cache_release(page);
 }
 
-static void buffer_io_error(struct buffer_head *bh, char *msg)
+
+static int quiet_error(struct buffer_head *bh)
+{
+	if (!test_bit(BH_Quiet, &bh->b_state) && printk_ratelimit())
+		return 0;
+	return 1;
+}
+
+
+static void buffer_io_error(struct buffer_head *bh)
 {
 	char b[BDEVNAME_SIZE];
-
-	if (!test_bit(BH_Quiet, &bh->b_state))
-		printk_ratelimited(KERN_ERR
-			"Buffer I/O error on dev %s, logical block %llu%s\n",
+	printk(KERN_ERR "Buffer I/O error on device %s, logical block %Lu\n",
 			bdevname(bh->b_bdev, b),
-			(unsigned long long)bh->b_blocknr, msg);
+			(unsigned long long)bh->b_blocknr);
 }
 
 /*
@@ -171,10 +177,17 @@ EXPORT_SYMBOL(end_buffer_read_sync);
 
 void end_buffer_write_sync(struct buffer_head *bh, int uptodate)
 {
+	char b[BDEVNAME_SIZE];
+
 	if (uptodate) {
 		set_buffer_uptodate(bh);
 	} else {
-		buffer_io_error(bh, ", lost sync page write");
+		if (!quiet_error(bh)) {
+			buffer_io_error(bh);
+			printk(KERN_WARNING "lost page write due to "
+					"I/O error on %s\n",
+				       bdevname(bh->b_bdev, b));
+		}
 		set_buffer_write_io_error(bh);
 		clear_buffer_uptodate(bh);
 	}
@@ -291,7 +304,8 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
 		set_buffer_uptodate(bh);
 	} else {
 		clear_buffer_uptodate(bh);
-		buffer_io_error(bh, ", async page read");
+		if (!quiet_error(bh))
+			buffer_io_error(bh);
 		SetPageError(page);
 	}
 
@@ -339,6 +353,7 @@ still_busy:
  */
 void end_buffer_async_write(struct buffer_head *bh, int uptodate)
 {
+	char b[BDEVNAME_SIZE];
 	unsigned long flags;
 	struct buffer_head *first;
 	struct buffer_head *tmp;
@@ -350,7 +365,12 @@ void end_buffer_async_write(struct buffer_head *bh, int uptodate)
 	if (uptodate) {
 		set_buffer_uptodate(bh);
 	} else {
-		buffer_io_error(bh, ", lost async page write");
+		if (!quiet_error(bh)) {
+			buffer_io_error(bh);
+			printk(KERN_WARNING "lost page write due to "
+					"I/O error on %s\n",
+			       bdevname(bh->b_bdev, b));
+		}
 		set_bit(AS_EIO, &page->mapping->flags);
 		set_buffer_write_io_error(bh);
 		clear_buffer_uptodate(bh);

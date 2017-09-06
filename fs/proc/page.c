@@ -132,9 +132,6 @@ u64 stable_page_flags(struct page *page)
 	if (PageBuddy(page))
 		u |= 1 << KPF_BUDDY;
 
-	if (PageBalloon(page))
-		u |= 1 << KPF_BALLOON;
-
 	u |= kpf_copy_bit(k, KPF_LOCKED,	PG_locked);
 
 	u |= kpf_copy_bit(k, KPF_SLAB,		PG_slab);
