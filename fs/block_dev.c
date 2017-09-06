@@ -274,11 +274,14 @@ int thaw_bdev(struct block_device *bdev, struct super_block *sb)
 		goto out;
 
 	error = thaw_super(sb);
-	if (error)
+	if (error) {
 		bdev->bd_fsfreeze_count++;
+		mutex_unlock(&bdev->bd_fsfreeze_mutex);
+		return error;
+	}
 out:
 	mutex_unlock(&bdev->bd_fsfreeze_mutex);
-	return error;
+	return 0;
 }
 EXPORT_SYMBOL(thaw_bdev);
 
@@ -1167,8 +1170,6 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 			if (!ret) {
 				bd_set_size(bdev,(loff_t)get_capacity(disk)<<9);
 				bdi = blk_get_backing_dev_info(bdev);
-				if (bdi == NULL)
-					bdi = &default_backing_dev_info;
 				bdev_inode_switch_bdi(bdev->bd_inode, bdi);
 			}
 
@@ -1184,7 +1185,6 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 				else if (ret == -ENOMEDIUM)
 					invalidate_partitions(disk, bdev);
 			}
-
 			if (ret)
 				goto out_clear;
 		} else {
