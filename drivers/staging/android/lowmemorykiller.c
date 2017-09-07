@@ -77,6 +77,7 @@ static uint32_t oom_count = 0;
 
 #ifdef MULTIPLE_OOM_KILLER
 #define OOM_DEPTH 7
+static unsigned int oom_depth = OOM_DEPTH;
 #endif
 
 bool disable_samp_hotness;
@@ -399,7 +400,7 @@ static int android_oom_handler(struct notifier_block *nb,
 {
 	struct task_struct *tsk;
 #ifdef MULTIPLE_OOM_KILLER
-	struct task_struct *selected[OOM_DEPTH] = {NULL,};
+	struct task_struct *selected[oom_depth] = {NULL,};
 #else
 	struct task_struct *selected = NULL;
 #endif
@@ -408,8 +409,8 @@ static int android_oom_handler(struct notifier_block *nb,
 	int i;
 	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
 #ifdef MULTIPLE_OOM_KILLER
-	int selected_tasksize[OOM_DEPTH] = {0,};
-	short selected_oom_score_adj[OOM_DEPTH] = {OOM_ADJUST_MAX,};
+	int selected_tasksize[oom_depth] = {0,};
+	short selected_oom_score_adj[oom_depth] = {OOM_ADJUST_MAX,};
 	int all_selected_oom = 0;
 	int max_selected_oom_idx = 0;
 #else
@@ -427,7 +428,7 @@ static int android_oom_handler(struct notifier_block *nb,
 
 	min_score_adj = 0;
 #ifdef MULTIPLE_OOM_KILLER
-	for (i = 0; i < OOM_DEPTH; i++)
+	for (i = 0; i < oom_depth; i++)
 		selected_oom_score_adj[i] = min_score_adj;
 #else
 	selected_oom_score_adj = min_score_adj;
@@ -460,8 +461,8 @@ static int android_oom_handler(struct notifier_block *nb,
 			continue;
 
 #ifdef MULTIPLE_OOM_KILLER
-		if (all_selected_oom < OOM_DEPTH) {
-			for (i = 0; i < OOM_DEPTH; i++) {
+		if (all_selected_oom < oom_depth) {
+			for (i = 0; i < oom_depth; i++) {
 				if (!selected[i]) {
 					is_exist_oom_task = 1;
 					max_selected_oom_idx = i;
@@ -479,11 +480,11 @@ static int android_oom_handler(struct notifier_block *nb,
 			selected_tasksize[max_selected_oom_idx] = tasksize;
 			selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
 
-			if (all_selected_oom < OOM_DEPTH)
+			if (all_selected_oom < oom_depth)
 				all_selected_oom++;
 
-			if (all_selected_oom == OOM_DEPTH) {
-				for (i = 0; i < OOM_DEPTH; i++) {
+			if (all_selected_oom == oom_depth) {
+				for (i = 0; i < oom_depth; i++) {
 					if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
 						max_selected_oom_idx = i;
 					else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
@@ -506,7 +507,7 @@ static int android_oom_handler(struct notifier_block *nb,
 #endif
 	}
 #ifdef MULTIPLE_OOM_KILLER
-	for (i = 0; i < OOM_DEPTH; i++) {
+	for (i = 0; i < oom_depth; i++) {
 		if (selected[i]) {
 			send_sig(SIGKILL, selected[i], 0);
 			rem -= selected_tasksize[i];
@@ -632,6 +633,7 @@ static const struct kparam_array __param_arr_adj = {
 };
 #endif
 
+module_param(oom_depth, uint, 0644);
 module_param_named(cost, lowmem_shrinker.seeks, int, S_IRUGO | S_IWUSR);
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 module_param_cb(adj, &lowmem_adj_array_ops,
