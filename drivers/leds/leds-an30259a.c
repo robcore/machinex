@@ -64,6 +64,7 @@
 #include <linux/wakelock.h>
 #include <linux/sec_battery.h>
 #include "leds-an30259a_reg.h"
+#include "leds-an30259a-smartglow_tuning.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
