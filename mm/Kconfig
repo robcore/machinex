@@ -140,9 +140,6 @@ config HAVE_MEMBLOCK_PHYS_MAP
 config HAVE_GENERIC_RCU_GUP
 	boolean
 
-config HAVE_MEMBLOCK_PHYS_MAP
-	boolean
-
 config ARCH_DISCARD_MEMBLOCK
 	boolean
 
@@ -231,15 +228,12 @@ config SPLIT_PTLOCK_CPUS
 	default "4"
 
 config ARCH_ENABLE_SPLIT_PMD_PTLOCK
-	bool
-
-config ARCH_ENABLE_SPLIT_PMD_PTLOCK
 	boolean
 
 #
 # support for memory balloon
 config MEMORY_BALLOON
-	bool
+	boolean
 
 #
 # support for memory balloon compaction
@@ -305,6 +299,12 @@ config BOUNCE
 # On the 'tile' arch, USB OHCI needs the bounce pool since tilegx will often
 # have more than 4GB of memory, but we don't currently use the IOTLB to present
 # a 32-bit address to OHCI.  So we need to use a bounce pool instead.
+#
+# We also use the bounce pool to provide stable page writes for jbd.  jbd
+# initiates buffer writeback without locking the page or setting PG_writeback,
+# and fixing that behavior (a second time; jbd2 doesn't have this problem) is
+# a major rework effort.  Instead, use the bounce buffer to snapshot pages
+# (until jbd goes away).  The only jbd user is ext3.
 config NEED_BOUNCE_POOL
 	bool
 	default y if TILE && USB_OHCI_HCD
@@ -579,28 +579,11 @@ config MEM_SOFT_DIRTY
 
 	  See Documentation/vm/soft-dirty.txt for more details.
 
-config ZPOOL
-	tristate "Common API for compressed memory storage"
-	default y
-	help
-	  Compressed memory storage API.  This allows using either zbud or
-	  zsmalloc.
-
-config ZBUD
-	tristate "Low density storage for compressed pages"
-	default n
-	help
-	  A special purpose allocator for storing compressed pages.
-	  It is designed to store up to two compressed pages per physical
-	  page.  While this design limits storage density, it has simple and
-	  deterministic reclaim properties that make it preferable to a higher
-	  density approach when reclaim will be used.
-
-config ZSWAPP
+config ZSWAP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
 	select CRYPTO_LZO
-	select ZBUD
+	select ZPOOL
 	default n
 	help
 	  A lightweight compressed cache for swap pages.  It takes
@@ -616,9 +599,36 @@ config ZSWAPP
 	  they have not be fully explored on the large set of potential
 	  configurations and workloads that exist.
 
-config ZSMALLOC_NEW
+config ZSWAP_ENABLE_WRITEBACK
+	bool "Enable zswap writeback"
+	depends on ZSWAP
+	default n
+
+config ZSWAP_COMPACTION
+	bool "Enable runtime zswap compaction"
+	depends on ZSWAP && ZPOOL && ZSMALLOC
+	default n
+
+config ZPOOL
+	tristate "Common API for compressed memory storage"
+	default n
+	help
+	  Compressed memory storage API.  This allows using either zbud or
+	  zsmalloc.
+
+config ZBUD
+	tristate "Low density storage for compressed pages"
+	default n
+	help
+	  A special purpose allocator for storing compressed pages.
+	  It is designed to store up to two compressed pages per physical
+	  page.  While this design limits storage density, it has simple and
+	  deterministic reclaim properties that make it preferable to a higher
+	  density approach when reclaim will be used.
+
+config ZSMALLOC
 	tristate "Memory allocator for compressed pages"
-	depends on !ZSMALLOC
+	depends on MMU
 	default n
 	help
 	  zsmalloc is a slab-based memory allocator designed to store
@@ -630,7 +640,7 @@ config ZSMALLOC_NEW
 
 config PGTABLE_MAPPING
 	bool "Use page table mapping to access object in zsmalloc"
-	depends on ZSMALLOC_NEW
+	depends on ZSMALLOC
 	help
 	  By default, zsmalloc uses a copy-based object mapping method to
 	  access allocations that span two pages. However, if a particular
@@ -638,8 +648,8 @@ config PGTABLE_MAPPING
 	  then you should select this. This causes zsmalloc to use page table
 	  mapping rather than copying for object mapping.
 
-	  You can check speed with zsmalloc benchmark[1].
-	  [1] https://github.com/spartacus06/zsmalloc
+	  You can check speed with zsmalloc benchmark:
+	  https://github.com/spartacus06/zsmapbench
 
 config GENERIC_EARLY_IOREMAP
 	bool
@@ -659,33 +669,10 @@ config MAX_STACK_SIZE_MB
 
 	  A sane initial value is 80 MB.
 
-config ZSWAP
-	bool "In-kernel swap page compression"
-	depends on FRONTSWAP && CRYPTO
-	select CRYPTO_LZO
-	default n
-	help
-	  Zswap is a backend for the frontswap mechanism in the VMM.
-	  It receives pages from frontswap and attempts to store them
-	  in a compressed memory pool, resulting in an effective
-	  partial memory reclaim.  In addition, pages and be retrieved
-	  from this compressed store much faster than most tradition
-	  swap devices resulting in reduced I/O and faster performance
-	  for many workloads.
-
-config ZSWAP_ENABLE_WRITEBACK
-	bool "Enable zswap writeback"
-	depends on ZSWAP
-	default n
-
-config ZSWAP_COMPACTION
-	bool "Enable runtime zswap compaction"
-	depends on ZSWAP && ZPOOL && ZSMALLOC_NEW
-	default n
 
 config ZSMALLOC_STAT
 	bool "Export zsmalloc statistics"
-	depends on ZSMALLOC_NEW
+	depends on ZSMALLOC
 	select DEBUG_FS
 	help
 	  This option enables code in the zsmalloc to collect various
@@ -695,7 +682,7 @@ config ZSMALLOC_STAT
 
 config ZSMALLOC_OBJ_SEQ
 	bool "Record the sequence number of each object in itself"
-	depends on ZSMALLOC_NEW
+	depends on ZSMALLOC
 	default n
 	help
 	  This option records the sequence number of each zs object in the object.
