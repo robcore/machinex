@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 2
+#define VERSION_MIN 1
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -171,7 +171,7 @@ skip_check:
 		}
 
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
-		pm_suspend(PM_SUSPEND_MEM);
+		pm_suspend(PM_HIBERNATION_PREPARE);
 		mutex_unlock(&pm_mutex);
 		mutex_unlock(&prometheus_mtx);
 }
