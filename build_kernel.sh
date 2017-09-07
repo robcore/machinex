@@ -113,8 +113,6 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 	elif [ "$ONLINE" = "device" ]; then #if we are in os, connected via usb
 		echo "connected"
 		adbcountdown
-		adb shell su -c "input keyevent KEYCODE_WAKEUP"
-		countdown
 		echo "pushing $1"
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
 		adb push $1.zip /storage/extSdCard
@@ -134,7 +132,6 @@ else
 			adbcountdown
 			echo "connected"
 			adbcountdown
-			countdown
 			adb push $1.zip /storage/extSdCard
 			echo "push complete, disconnecting wireless connection"
 			adb disconnect
