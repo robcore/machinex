@@ -61,9 +61,7 @@ static inline void __get_page_tail_foll(struct page *page,
 	 * speculative page access (like in
 	 * page_cache_get_speculative()) on tail pages.
 	 */
-	VM_BUG_ON(atomic_read(&page->first_page->_count) <= 0);
-	VM_BUG_ON(atomic_read(&page->_count) != 0);
-	VM_BUG_ON(page_mapcount(page) < 0);
+	VM_BUG_ON_PAGE(atomic_read(&page->first_page->_count) <= 0, page);
 	if (get_page_head)
 		atomic_inc(&page->first_page->_count);
 	get_huge_page_tail(page);
