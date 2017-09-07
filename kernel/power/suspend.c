@@ -103,7 +103,7 @@ static void freeze_enter(void)
 
 static void s2idle_loop(void)
 {
-	pr_debug("PM: suspend-to-idle\n");
+	pm_pr_dbg("suspend-to-idle\n");
 
 	do {
 		freeze_enter();
@@ -121,7 +121,7 @@ static void s2idle_loop(void)
 		pm_wakeup_clear(false);
 	} while (!dpm_suspend_noirq(PMSG_SUSPEND));
 
-	pr_debug("PM: resume from suspend-to-idle\n");
+	pm_pr_dbg("resume from suspend-to-idle\n");
 }
 
 void freeze_wake(void)
@@ -538,7 +538,7 @@ static int enter_state(suspend_state_t state)
 		printk("done.\n");
 	}
 
-	pr_debug("PM: Preparing system for sleep (%s)\n", pm_states[state]);
+	pm_pr_dbg("Preparing system for sleep (%s)\n", pm_states[state]);
 	pm_suspend_clear_flags();
 	error = suspend_prepare(state);
 	if (error)
@@ -553,7 +553,7 @@ static int enter_state(suspend_state_t state)
 	pm_restore_gfp_mask();
 
  Finish:
-	pr_debug("PM: Finishing wakeup.\n");
+	pm_pr_dbg("Finishing wakeup.\n");
 	suspend_finish();
  Unlock:
 	mutex_unlock(&pm_mutex);
