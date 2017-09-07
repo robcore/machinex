@@ -1092,7 +1092,7 @@ repeat:
 			page_cache_release(page);
 			goto repeat;
 		}
-		VM_BUG_ON(page->index != offset);
+		VM_BUG_ON_PAGE(page->index != offset, page);
 	}
 
 	if (page && (fgp_flags & FGP_ACCESSED))
