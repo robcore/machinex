@@ -556,6 +556,8 @@ static void copy_huge_page(struct page *dst, struct page *src)
  */
 void migrate_page_copy(struct page *newpage, struct page *page)
 {
+	int cpupid;
+
 	if (PageHuge(page) || PageTransHuge(page))
 		copy_huge_page(newpage, page);
 	else
@@ -580,6 +582,13 @@ void migrate_page_copy(struct page *newpage, struct page *page)
 	/* Move dirty on pages not done by migrate_page_move_mapping() */
 	if (PageDirty(page))
 		SetPageDirty(newpage);
+
+	/*
+	 * Copy NUMA information to the new page, to prevent over-eager
+	 * future migrations of this same page.
+	 */
+	cpupid = page_cpupid_xchg_last(page, -1);
+	page_cpupid_xchg_last(newpage, cpupid);
 
 	mlock_migrate_page(newpage, page);
 	ksm_migrate_page(newpage, page);
