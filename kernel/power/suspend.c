@@ -36,19 +36,19 @@
 #include "power.h"
 
 const char * const pm_labels[] = {
-	[PM_SUSPEND_FREEZE] = "freeze",
+	[PM_SUSPEND_TO_IDLE] = "freeze",
 	[PM_SUSPEND_STANDBY] = "standby",
 	[PM_SUSPEND_MEM] = "mem",
 };
 const char *pm_states[PM_SUSPEND_MAX];
 static const char * const mem_sleep_labels[] = {
-	[PM_SUSPEND_FREEZE] = "s2idle",
+	[PM_SUSPEND_TO_IDLE] = "s2idle",
 	[PM_SUSPEND_STANDBY] = "shallow",
 	[PM_SUSPEND_MEM] = "deep",
 };
 const char *mem_sleep_states[PM_SUSPEND_MAX];
 
-suspend_state_t mem_sleep_current = PM_SUSPEND_FREEZE;
+suspend_state_t mem_sleep_current = PM_SUSPEND_TO_IDLE;
 suspend_state_t mem_sleep_default = PM_SUSPEND_MAX;
 suspend_state_t pm_suspend_target_state;
 EXPORT_SYMBOL_GPL(pm_suspend_target_state);
@@ -172,19 +172,19 @@ void __init pm_states_init(void)
 {
 	/* "mem" and "freeze" are always present in /sys/power/state. */
 	pm_states[PM_SUSPEND_MEM] = pm_labels[PM_SUSPEND_MEM];
-	pm_states[PM_SUSPEND_FREEZE] = pm_labels[PM_SUSPEND_FREEZE];
+	pm_states[PM_SUSPEND_TO_IDLE] = pm_labels[PM_SUSPEND_TO_IDLE];
 	/*
 	 * Suspend-to-idle should be supported even without any suspend_ops,
 	 * initialize mem_sleep_states[] accordingly here.
 	 */
-	mem_sleep_states[PM_SUSPEND_FREEZE] = mem_sleep_labels[PM_SUSPEND_FREEZE];
+	mem_sleep_states[PM_SUSPEND_TO_IDLE] = mem_sleep_labels[PM_SUSPEND_TO_IDLE];
 }
 
 static int __init mem_sleep_default_setup(char *str)
 {
 	suspend_state_t state;
 
-	for (state = PM_SUSPEND_FREEZE; state <= PM_SUSPEND_MEM; state++)
+	for (state = PM_SUSPEND_TO_IDLE; state <= PM_SUSPEND_MEM; state++)
 		if (mem_sleep_labels[state] &&
 		    !strcmp(str, mem_sleep_labels[state])) {
 			mem_sleep_default = state;
@@ -236,48 +236,48 @@ EXPORT_SYMBOL_GPL(suspend_valid_only_mem);
 
 static bool sleep_state_supported(suspend_state_t state)
 {
-	return state == PM_SUSPEND_FREEZE || (suspend_ops && suspend_ops->enter);
+	return state == PM_SUSPEND_TO_IDLE || (suspend_ops && suspend_ops->enter);
 }
 
 static int platform_suspend_prepare(suspend_state_t state)
 {
-	return state != PM_SUSPEND_FREEZE && suspend_ops->prepare ?
+	return state != PM_SUSPEND_TO_IDLE && suspend_ops->prepare ?
 		suspend_ops->prepare() : 0;
 }
 
 static int platform_suspend_prepare_late(suspend_state_t state)
 {
-	return state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->prepare ?
+	return state == PM_SUSPEND_TO_IDLE && freeze_ops && freeze_ops->prepare ?
 		freeze_ops->prepare() : 0;
 }
 
 static int platform_suspend_prepare_noirq(suspend_state_t state)
 {
-	return state != PM_SUSPEND_FREEZE && suspend_ops->prepare_late ?
+	return state != PM_SUSPEND_TO_IDLE && suspend_ops->prepare_late ?
 		suspend_ops->prepare_late() : 0;
 }
 
 static void platform_resume_noirq(suspend_state_t state)
 {
-	if (state != PM_SUSPEND_FREEZE && suspend_ops->wake)
+	if (state != PM_SUSPEND_TO_IDLE && suspend_ops->wake)
 		suspend_ops->wake();
 }
 
 static void platform_resume_early(suspend_state_t state)
 {
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->restore)
+	if (state == PM_SUSPEND_TO_IDLE && freeze_ops && freeze_ops->restore)
 		freeze_ops->restore();
 }
 
 static void platform_resume_finish(suspend_state_t state)
 {
-	if (state != PM_SUSPEND_FREEZE && suspend_ops->finish)
+	if (state != PM_SUSPEND_TO_IDLE && suspend_ops->finish)
 		suspend_ops->finish();
 }
 
 static int platform_suspend_begin(suspend_state_t state)
 {
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->begin)
+	if (state == PM_SUSPEND_TO_IDLE && freeze_ops && freeze_ops->begin)
 		return freeze_ops->begin();
 	else if (suspend_ops && suspend_ops->begin)
 		return suspend_ops->begin(state);
@@ -287,7 +287,7 @@ static int platform_suspend_begin(suspend_state_t state)
 
 static void platform_resume_end(suspend_state_t state)
 {
-	if (state == PM_SUSPEND_FREEZE && freeze_ops && freeze_ops->end)
+	if (state == PM_SUSPEND_TO_IDLE && freeze_ops && freeze_ops->end)
 		freeze_ops->end();
 	else if (suspend_ops && suspend_ops->end)
 		suspend_ops->end();
@@ -295,13 +295,13 @@ static void platform_resume_end(suspend_state_t state)
 
 static void platform_recover(suspend_state_t state)
 {
-	if (state != PM_SUSPEND_FREEZE && suspend_ops->recover)
+	if (state != PM_SUSPEND_TO_IDLE && suspend_ops->recover)
 		suspend_ops->recover();
 }
 
 static bool platform_suspend_again(suspend_state_t state)
 {
-	return state != PM_SUSPEND_FREEZE && suspend_ops->suspend_again ?
+	return state != PM_SUSPEND_TO_IDLE && suspend_ops->suspend_again ?
 		suspend_ops->suspend_again() : false;
 }
 
@@ -395,7 +395,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	if (error)
 		goto Devices_early_resume;
 
-	if (state == PM_SUSPEND_FREEZE && pm_test_level != TEST_PLATFORM) {
+	if (state == PM_SUSPEND_TO_IDLE && pm_test_level != TEST_PLATFORM) {
 		s2idle_loop();
 		goto Platform_early_resume;
 	}
@@ -526,7 +526,7 @@ static int enter_state(suspend_state_t state)
 	int error;
 
 #ifdef CONFIG_PM_DEBUG
-	if (state == PM_SUSPEND_FREEZE) {
+	if (state == PM_SUSPEND_TO_IDLE) {
 
 		if (pm_test_level != TEST_NONE && pm_test_level <= TEST_CPUS) {
 			pr_warn("Unsupported test mode for suspend to idle, please choose none/freezer/devices/platform.\n");
@@ -544,7 +544,7 @@ static int enter_state(suspend_state_t state)
 	if (unlikely(!mutex_trylock(&pm_mutex)))
 		return -EBUSY;
 
-	if (state == PM_SUSPEND_FREEZE)
+	if (state == PM_SUSPEND_TO_IDLE)
 		freeze_begin();
 
 	if (suspendsync) {
