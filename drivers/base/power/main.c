@@ -541,9 +541,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 	const char *info = NULL;
 	int error = 0;
 
-	TRACE_DEVICE(dev);
-	TRACE_RESUME(0);
-
 	if (dev->power.syscore || dev->power.direct_complete)
 		goto Out;
 
@@ -576,14 +573,13 @@ static int device_resume_noirq(struct device *dev, pm_message_t state, bool asyn
 
  Out:
 	complete_all(&dev->power.completion);
-	TRACE_RESUME(error);
 	return error;
 }
 
 static bool is_async(struct device *dev)
 {
-	return dev->power.async_suspend && pm_async_enabled
-		&& !pm_trace_is_enabled();
+	return dev->power.async_suspend && pm_async_enabled;
+		//&& !pm_trace_is_enabled();
 }
 
 static void async_resume_noirq(void *data, async_cookie_t cookie)
@@ -678,9 +674,6 @@ static int device_resume_early(struct device *dev, pm_message_t state, bool asyn
 	const char *info = NULL;
 	int error = 0;
 
-	TRACE_DEVICE(dev);
-	TRACE_RESUME(0);
-
 	if (dev->power.syscore || dev->power.direct_complete)
 		goto Out;
 
@@ -712,7 +705,6 @@ static int device_resume_early(struct device *dev, pm_message_t state, bool asyn
 	dev->power.is_late_suspended = false;
 
  Out:
-	TRACE_RESUME(error);
 
 	pm_runtime_enable(dev);
 	complete_all(&dev->power.completion);
@@ -805,9 +797,6 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	int error = 0;
 	DECLARE_DPM_WATCHDOG_ON_STACK(wd);
 
-	TRACE_DEVICE(dev);
-	TRACE_RESUME(0);
-
 	if (dev->power.syscore)
 		goto Complete;
 
@@ -881,8 +870,6 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 
  Complete:
 	complete_all(&dev->power.completion);
-
-	TRACE_RESUME(error);
 
 	return error;
 }
@@ -1166,7 +1153,6 @@ int dpm_noirq_suspend_devices(pm_message_t state)
 	ktime_t starttime = ktime_get();
 	int error = 0;
 
-	trace_suspend_resume(TPS("dpm_suspend_noirq"), state.event, true);
 	mutex_lock(&dpm_list_mtx);
 	pm_transition = state;
 	async_error = 0;
