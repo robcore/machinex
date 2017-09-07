@@ -171,7 +171,7 @@ skip_check:
 		}
 
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
-		pm_suspend(PM_SUSPEND_MEM);
+		pm_suspend(PM_SUSPEND_MAX);
 		mutex_unlock(&pm_mutex);
 		mutex_unlock(&prometheus_mtx);
 }
