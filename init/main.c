@@ -399,9 +399,10 @@ static void __init setup_command_line(char *command_line)
 {
 	replace_str(boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
 
-	saved_command_line = alloc_bootmem(strlen(boot_command_line)+1);
-	static_command_line = alloc_bootmem(strlen(command_line)+1);
-
+	saved_command_line =
+		memblock_virt_alloc(strlen(boot_command_line) + 1, 0);
+	static_command_line =
+		memblock_virt_alloc(strlen(command_line) + 1, 0);
 	strcpy(saved_command_line, boot_command_line);
 	strcpy(static_command_line, command_line);
 }
