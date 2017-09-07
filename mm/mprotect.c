@@ -69,7 +69,7 @@ static unsigned long change_pte_range(struct vm_area_struct *vma, pmd_t *pmd,
 				page = vm_normal_page(vma, addr, oldpte);
 				if (page) {
 					if (!pte_numa(oldpte)) {
-						ptent = pte_mknuma(ptent);
+						ptep_set_numa(mm, addr, pte);
 						updated = true;
 					}
 				}
