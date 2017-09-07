@@ -134,7 +134,7 @@ EXPORT_SYMBOL_GPL(hwpoison_filter_memcg);
 static int hwpoison_filter_task(struct page *p)
 {
 	struct mem_cgroup *mem;
-	struct cgroup_css *css;
+	struct cgroup_subsys_state *css;
 	unsigned long ino;
 
 	if (!hwpoison_filter_memcg)
@@ -640,7 +640,7 @@ static int me_pagecache_clean(struct page *p, unsigned long pfn)
 }
 
 /*
- * Dirty cache page page
+ * Dirty pagecache page
  * Issues: when the error hit a hole page the error is not properly
  * propagated.
  */
