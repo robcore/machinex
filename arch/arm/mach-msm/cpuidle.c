@@ -119,7 +119,7 @@ static void __init msm_cpuidle_set_states(void)
 		state = &msm_cpuidle_driver.states[state_count];
 		snprintf(state->name, CPUIDLE_NAME_LEN, "%s", cstate->name);
 		snprintf(state->desc, CPUIDLE_DESC_LEN, "%s", cstate->desc);
-		state->flags = 0;
+		state->flags = CPUIDLE_FLAG_NONE;
 		state->exit_latency = 0;
 		state->power_usage = 0;
 		state->target_residency = 0;
