@@ -158,6 +158,7 @@ int __init msm_cpuidle_init(void)
 {
 	unsigned int cpu = 0;
 	int ret = 0;
+	unsigned int local_use_deepest_state = 1;
 
 	msm_cpuidle_set_states();
 	ret = cpuidle_register_driver(&msm_cpuidle_driver);
@@ -167,8 +168,8 @@ int __init msm_cpuidle_init(void)
 
 	for_each_possible_cpu(cpu) {
 		struct cpuidle_device *dev = &per_cpu(msm_cpuidle_devs, cpu);
-
 		dev->cpu = cpu;
+		dev->use_deepest_state = local_use_deepest_state;
 		msm_cpuidle_set_cpu_statedata(dev);
 		ret = cpuidle_register_device(dev);
 		if (ret) {
