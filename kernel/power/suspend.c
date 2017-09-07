@@ -90,17 +90,17 @@ static void s2idle_enter(void)
 	/* Push all the CPUs into the idle loop. */
 	wake_up_all_idle_cpus();
 	/* Make the current CPU wait so it can enter the idle loop too. */
-	wait_event(suspend_freeze_wait_head,
-		   suspend_freeze_state == FREEZE_STATE_WAKE);
+	wait_event(s2idle_wait_head,
+		   s2idle_state == S2IDLE_STATE_WAKE);
 
 	cpuidle_pause();
 	put_online_cpus();
 
-	spin_lock_irq(&suspend_freeze_lock);
+	spin_lock_irq(&s2idle_lock);
 
  out:
-	suspend_freeze_state = FREEZE_STATE_NONE;
-	spin_unlock_irq(&suspend_freeze_lock);
+	s2idle_state = S2IDLE_STATE_NONE;
+	spin_unlock_irq(&s2idle_lock);
 }
 
 static void s2idle_loop(void)
