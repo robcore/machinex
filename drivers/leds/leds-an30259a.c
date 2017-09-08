@@ -1,8 +1,5 @@
 /*
- * leds-an30259a.c - driver for Panasonic AN30259A led control chip
- *
- * leds-an30259a-smartglow.c - SmartGlow driver for Panasonic AN30259A 
- *		led control chip
+ * leds_an30259a.c - driver for panasonic AN30259A led control chip
  *
  * Copyright (C) 2012, Samsung Electronics Co. Ltd. All Rights Reserved.
  *
@@ -68,20 +65,10 @@
 #include <linux/sec_battery.h>
 #include "leds-an30259a_reg.h"
 
-#define LED_DEFAULT_IMAX		0x01
-#define LED_DEFAULT_CLK_MODE	0x00
-#define LED_DEFAULT_CURRENT		0x28
-#define LED_LOWPOWER_CURRENT	0x05
-#define LED_OFFSET_CURRENT		0x00
-#define LED_DEFAULT_IMAX		0x01
-
-#define MAX_SMARTGLOW_LEDS		4
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-
-u8 LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
-u8 LED_LOWPOWER_MODE = LED_OFFSET_CURRENT;
+u8 LED_DYNAMIC_CURRENT = 0x28;
+u8 LED_LOWPOWER_MODE = 0x0;
 
 unsigned long disabled_samsung_pattern = 0;
 
@@ -126,7 +113,6 @@ enum an30259a_pattern {
 struct an30259a_led {
 	u8	channel;
 	u8	brightness;
-	enum led_brightness	color;
 	struct led_classdev	cdev;
 	struct work_struct	brightness_work;
 	unsigned long delay_on_time_ms;
@@ -184,7 +170,7 @@ static int leds_i2c_write_all(struct i2c_client *client)
 			AN30259A_REG_SEL | AN30259A_CTN_RW_FLG,
 			AN30259A_REG_MAX - AN30259A_REG_SEL,
 			&data->shadow_reg[AN30259A_REG_SEL]);
-	if (unlikely(ret < 0)) {
+	if (ret < 0) {
 		dev_err(&client->adapter->dev,
 			"%s: failure on i2c block write\n",
 			__func__);
@@ -192,7 +178,7 @@ static int leds_i2c_write_all(struct i2c_client *client)
 	}
 	ret = i2c_smbus_write_byte_data(client, AN30259A_REG_LEDON,
 					data->shadow_reg[AN30259A_REG_LEDON]);
-	if (unlikely(ret < 0)) {
+	if (ret < 0) {
 		dev_err(&client->adapter->dev,
 			"%s: failure on i2c byte write\n",
 			__func__);
@@ -255,134 +241,6 @@ static void leds_set_slope_mode(struct i2c_client *client,
 	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 4 | slptt1;
 }
 
-/**
-* an30259a_set_color - To Set the RGB LED current
-**/
-static void __inline an30259a_set_color(struct i2c_client *client, u32 color)
-{
-	struct an30259a_data *data = i2c_get_clientdata(client);
-	
-	data->shadow_reg[AN30259A_REG_LED_R] = AN30259A_EXTRACT_R(color);
-	data->shadow_reg[AN30259A_REG_LED_G] = AN30259A_EXTRACT_G(color);
-	data->shadow_reg[AN30259A_REG_LED_B] = AN30259A_EXTRACT_B(color);
-}
-
-/**
-* an30259a_set_constant_current - To Set the LED intensity and enable them
-**/
-static void __inline an30259a_set_constant_current(struct i2c_client *client)
-{
-	struct an30259a_data *data = i2c_get_clientdata(client);
-	
-	/* Set the LED mode register for constant current */
-	data->shadow_reg[AN30259A_REG_LEDON] &= ~ALL_LED_SLOPE_MODE;
-
-#if 0	// TSN: Check.... If current will not be zero, enable only current particular LED
-	/* Enable each color LED, if non-zero */
-	if(data->shadow_reg[AN30259A_REG_LED_R])
-		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_R;
-	else
-		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_R);
-	
-	if(data->shadow_reg[AN30259A_REG_LED_G])
-		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_G;
-	else
-		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_G);
-	
-	if(data->shadow_reg[AN30259A_REG_LED_B])
-		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_B;
-	else
-		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_B);
-	
-#else // TSN: Check.... If current will be really zero, then, can write Enable ALL
-	data->shadow_reg[AN30259A_REG_LEDON] |= ALL_LED_ON;
-#endif
-}
-
-/**
-* an30259a_set_slope_current - To Set the LED intensity and enable them
-**/
-static void an30259a_set_slope_current(struct i2c_client *client, 
-				u16 ontime, u16 offtime)
-{
-	struct an30259a_data *data = i2c_get_clientdata(client);
-	
-	u8 delay, dutymax, dutymid, dutymin, slptt1, slptt2, 
-			dt1, dt2, dt3, dt4;
-			
-	delay = 0;
-	
-	dutymid = dutymax = 0xF;
-	dt2 = dt3 = 0;
-
-	/* Keep duty min always zero, as in blink has to be off for a while */
-	dutymin = 0;
-	slptt1 = ontime/500;
-	slptt2 = offtime/500;
-	if(!slptt1) slptt1 = 1;
-	if(!slptt2) slptt2 = 1;
-	
-	if(slptt1 > 1)	
-	{
-		slptt2 += (slptt1 >> 1);
-		
-		// Check if odd number, store ceiling value to slptt1
-		// in blink, for breathing effect ontime/2 is used for rasing and falling
-		slptt1 = (slptt1 & 1) ? (slptt1 >> 1) + 1 : (slptt1 >> 1);
-		
-		dt4 = slptt1;
-	}
-	else 
-	{
-		dt4 = 0;
-	}
-	dt1 = slptt1;
-	
-	data->shadow_reg[AN30259A_REG_LED1CNT1] = 
-		data->shadow_reg[AN30259A_REG_LED2CNT1] = 
-		data->shadow_reg[AN30259A_REG_LED3CNT1] = dutymax << 4 | dutymid;
-
-	data->shadow_reg[AN30259A_REG_LED1CNT2] =  
-		data->shadow_reg[AN30259A_REG_LED2CNT2] = 
-		data->shadow_reg[AN30259A_REG_LED3CNT2] = delay << 4 | dutymin;
-	
-	data->shadow_reg[AN30259A_REG_LED1CNT3] = 
-		data->shadow_reg[AN30259A_REG_LED2CNT3] = 	
-		data->shadow_reg[AN30259A_REG_LED3CNT3] = dt2 << 4 | dt1;
-	
-	data->shadow_reg[AN30259A_REG_LED1CNT4] = 
-		data->shadow_reg[AN30259A_REG_LED2CNT4] = 
-		data->shadow_reg[AN30259A_REG_LED3CNT4] = dt4 << 4 | dt3;
-	
-	data->shadow_reg[AN30259A_REG_LED1SLP] = 
-		data->shadow_reg[AN30259A_REG_LED2SLP] =  
-		data->shadow_reg[AN30259A_REG_LED3SLP] = slptt2 << 4 | slptt1;
-
-#if 0	// TSN: Check.... If current will not be zero, enable only current particular LED	
-	data->shadow_reg[AN30259A_REG_LEDON] |= ALL_LED_SLOPE_MODE;
-	
-	/* Enable each color LED, if non-zero */
-	if(data->shadow_reg[AN30259A_REG_LED_R])
-		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_R;
-	else
-		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_R);
-	
-	if(data->shadow_reg[AN30259A_REG_LED_G])
-		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_G;
-	else
-		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_G);
-	
-	if(data->shadow_reg[AN30259A_REG_LED_B])
-		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_B;
-	else
-		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_B);
-	
-#else // TSN: Check.... If current will be really zero, then, can write Enable ALL
-	data->shadow_reg[AN30259A_REG_LEDON] |= ALL_LED_SLOPE_MODE | ALL_LED_ON;
-#endif
-	
-}
-
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 			u8 ledcc)
 {
@@ -432,22 +290,6 @@ static void an30259a_reset_register_work(struct work_struct *work)
 	leds_on(LED_R, false, false, 0);
 	leds_on(LED_G, false, false, 0);
 	leds_on(LED_B, false, false, 0);
-
-	retval = leds_i2c_write_all(client);
-	if (retval)
-		printk(KERN_WARNING "leds_i2c_write_all failed\n");
-}
-
-/**
-* an30259a_standby - Reset an30259a register values through I2C 
-**/
-static void an30259a_standby(struct i2c_client *client)
-{
-	int retval;
-	
-	leds_on(LED_R, true, false, 0);
-	leds_on(LED_G, true, false, 0);
-	leds_on(LED_B, true, false, 0);
 
 	retval = leds_i2c_write_all(client);
 	if (retval)
@@ -735,6 +577,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		pr_info("LED Booting Pattern on\n");
 #if 0
+		leds_on(LED_R, true, true, LED_DEFAULT_CURRENT);
+		leds_set_slope_mode(client, LED_R, 0, 0, 0, 5, 1, 1, 0, 0, 0, 0);
+		leds_on(LED_G, true, true, LED_DEFAULT_CURRENT);
+		leds_set_slope_mode(client, LED_G, 0, 15, 15, 5, 1, 1, 0, 0, 0, 0);
+		leds_on(LED_B, true, true, LED_DEFAULT_CURRENT);
+		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
+		break;
+#endif
 		leds_on(LED_R, true, true, r_brightness);
 		leds_set_slope_mode(client, LED_R,
 				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
@@ -744,33 +594,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		leds_on(LED_B, true, true, b_brightness);
 		leds_set_slope_mode(client, LED_B,
 				1, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-#endif
-		while (mode == BOOTING) {
-			/* Get the fixed color map */
-			leds_on(LED_R, true, false, r_brightness);
-			leds_on(LED_G, true, false, g_brightness);
-			leds_on(LED_B, true, false, b_brightness);
-			an30259a_set_color(client, COLOR_YELLOW);
-			an30259a_set_constant_current(client);
-
-			retval = leds_i2c_write_all(client);
-			if (retval)
-				return;
-			an30259a_standby(client);
-
-			leds_on(LED_R, true, false, r_brightness);
-			leds_on(LED_G, true, false, g_brightness);
-			leds_on(LED_B, true, false, b_brightness);
-
-			an30259a_set_color(client, COLOR_BLUE);
-			an30259a_set_constant_current(client);
-
-			retval = leds_i2c_write_all(client);
-			if (retval)
-				return;
-			an30259a_standby(client);
-		}
-		return;
+		break;
 
 	case CUSTOM:
 		if (poweroff_charging)
