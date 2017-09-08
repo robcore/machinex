@@ -42,11 +42,11 @@ struct an30259a_data	*g_an30259a_data;
 unsigned char g_LEDState = 0;
 extern struct class *sec_class;
 
-enum an30259a_led_channel {
+enum an30259a_led_enum {
 	LED_R,
 	LED_G,
 	LED_B,
-	MAX_LED_CHANNEL,
+	MAX_NUM_LEDS,
 };
 
 struct an30259a_led {
@@ -76,9 +76,9 @@ struct an30259_led_conf {
 struct an30259a_data {
 	struct	i2c_client	*client;
 	struct	mutex	mutex;
-	struct	an30259a_led	led_channel[MAX_LED_CHANNEL];
+	struct	an30259a_led	led_channel[MAX_NUM_LEDS];
 	struct	an30259a_led	led;
-	struct  an30259_led_conf led_conf[MAX_LED_CHANNEL];
+	struct  an30259_led_conf led_conf[MAX_NUM_LEDS];
 	char * name;
 	u8		shadow_reg[AN30259A_REG_MAX];
 	u8		iMax;
@@ -131,7 +131,7 @@ struct an30259a_smartglow_data {
 #define LED_DEEP_DEBUG
 
 static void leds_on(struct i2c_client *client, 
-	enum an30259a_led_channel channel, bool on, bool slopemode, u8 ledcc);
+	enum an30259a_led_enum channel, bool on, bool slopemode, u8 ledcc);
 
 static inline struct an30259a_led *cdev_to_led(struct led_classdev *cdev)
 {
@@ -147,28 +147,177 @@ static inline struct an30259a_led *cdev_to_data(struct led_classdev *cdev)
 		);
 }
 
-#ifdef LED_DEEP_DEBUG
 /**
-* an30259a_debug - Display all register values for debugging 
+* leds_i2c_write_all - Writes all an30259a register values through I2C 
 **/
-static void an30259a_debug(struct i2c_client *client)
+static int leds_i2c_write_all(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	int ret;
-	u8 buff[21] = {0,};
-	ret = i2c_smbus_read_i2c_block_data(client,
-		AN30259A_REG_SRESET|AN30259A_CTN_RW_FLG,
-		sizeof(buff), buff);
-	if (ret != sizeof(buff)) {
-		dev_err(&data->client->dev,
-			"%s: failure on i2c_smbus_read_i2c_block_data\n",
-			__func__);
+
+	/*we need to set all the configs setting first, then LEDON later*/
+	mutex_lock(&data->mutex);
+	if( unlikely((ret = i2c_smbus_write_i2c_block_data(client,
+			AN30259A_REG_SEL | AN30259A_CTN_RW_FLG,
+			AN30259A_REG_MAX - AN30259A_REG_SEL,
+			&data->shadow_reg[AN30259A_REG_SEL]))) < 0) {
+		dev_err(&client->adapter->dev,
+			"%s: failure on i2c block write, %d\n",
+			__func__, ret);
+		goto exit;
 	}
-	print_hex_dump(KERN_ERR, "an30259a: ",
-		DUMP_PREFIX_OFFSET, 32, 1, buff,
-		sizeof(buff), false);
+	
+	if(unlikely((ret = i2c_smbus_write_byte_data(client, AN30259A_REG_LEDON,
+					data->shadow_reg[AN30259A_REG_LEDON]))) < 0) {
+		dev_err(&client->adapter->dev,
+			"%s: failure on i2c byte write, %d\n",
+			__func__, ret);
+		goto exit;
+	}
+	mutex_unlock(&data->mutex);
+	return 0;
+
+exit:
+	mutex_unlock(&data->mutex);
+	return ret;
 }
-#endif
+
+void an30259a_set_brightness(struct led_classdev *cdev,
+			enum led_brightness brightness)
+{
+	struct an30259a_led *led = cdev_to_led(cdev);
+	
+	if(led->IsSleep)
+	{
+		printk(KERN_ERR" [SmartGlow] Cant glow in sleep");
+		return; 
+	}
+	
+	led->brightness = brightness;
+	printk(KERN_ERR" [SmartGlow] an30259a_set_brightness %X", led->brightness);
+	schedule_work(&led->brightness_work);
+}
+#if 0
+/**
+* an30259a_led_brightness_work - set the brightness value written 
+*		from upper layer
+**/
+static void an30259a_led_brightness_work(struct work_struct *work)
+{
+	struct an30259a_led *led = container_of(work,
+			struct an30259a_led, brightness_work);
+			
+	printk(KERN_ERR"[SmartGlow] an30259a_led_brightness_work %X, LED STATE : %d", led->brightness, g_LEDState);
+ // TSN : Temp changes as kernel panic				
+	struct an30259a_data *data = (struct an30259a_data *)container_of( 
+			(led - led->channel), struct an30259a_data, led_channel);
+	
+	if(led->channel == MAX_NUM_LEDS)
+	{
+		unsigned char intensity = (led->brightness && 0xFF000000);
+		
+		/* Get the fixed color map */
+		led->brightness = an30259a_fixed_color_map(led->brightness & 0x00FFFFFF);
+		
+		/* Restore Intensity, as blink may require it */
+		led->brightness |= intensity;
+		intensity = (led->brightness >> 24) / 0xFF ;
+		
+		leds_on(data->client, LED_R, true, false, 
+				((led->brightness >> 16) & 0xFF) * intensity);
+		leds_on(data->client, LED_G, true, false, 
+				((led->brightness >> 8) & 0xFF) * intensity);
+		leds_on(data->client, LED_B, true, false, 
+				(led->brightness & 0xFF) * intensity );
+	}
+	else
+	{
+		leds_on(data->client, led->channel, true, false, led->brightness);
+	}
+	leds_i2c_write_all(data->client);
+#else
+	if(led->channel == MAX_NUM_LEDS)
+	{
+		struct an30259a_data *data = (struct an30259a_data *)container_of( 
+						led, struct an30259a_data, led);
+						
+		if(led->brightness)
+		{		
+			enum led_brightness color;
+				
+			/* Set Master imax */
+			leds_set_imax(data->client, data->iMax);
+
+			/* set Master clk mode */
+			leds_set_clk(data->client, data->clk_mode);
+			
+			/* If ALL LED OFF to 1st LED ON && current client is not the master */
+			if(!g_LEDState && (g_an30259a_data->client != led->client))
+			{
+				printk(KERN_ERR"[SmartGlow]Master is written");
+				
+				/* Master LED to stand-by mode */
+				an30259a_reset_register_work(g_an30259a_data->client);
+				
+				/* Set Master imax */
+				leds_set_imax(g_an30259a_data->client, g_an30259a_data->iMax);
+
+				/* set Master clk mode */
+				leds_set_clk(g_an30259a_data->client, g_an30259a_data->clk_mode);
+				
+				/* Enable */
+				an30259a_standby(g_an30259a_data->client);
+			}
+			
+			/* Keep The LED ON status */
+			g_LEDState |= 1 << (data->led_num - 1);
+				
+			/* Get the fixed color map */
+			color = an30259a_fixed_color_map( \
+								led->brightness, led->intensity);	
+			leds_on(led->client, LED_R, true, false, AN30259A_EXTRACT_R(color));
+			leds_on(led->client, LED_G, true, false, AN30259A_EXTRACT_G(color));
+			leds_on(led->client, LED_B, true, false, AN30259A_EXTRACT_B(color));
+		}
+		else
+		{
+			/* Update the LED ON status */
+			g_LEDState &= ~(1 << (data->led_num - 1));
+			
+			/* Put the slave LED to sleep state */
+			if(g_an30259a_data->client != led->client)
+			{
+				/* Disable the LED state */
+				an30259a_reset_register_work(led->client);
+				
+				an30259a_reset(led->client);
+			}
+			else
+			{
+				/* To Keep the Master in Stand by mode */
+				an30259a_standby(g_an30259a_data->client);
+			}
+			
+			/* If all the LEDs are Off, Disable the Master too */
+			if(!g_LEDState)
+			{
+				/* Disable the LED state */
+				an30259a_reset_register_work(g_an30259a_data->client);
+				
+				an30259a_reset(g_an30259a_data->client);
+			}
+			
+			return;
+		}
+	}
+	else
+	{
+		leds_on(led->client, led->channel, true, false, led->brightness);
+	}
+	leds_i2c_write_all(led->client);
+
+#endif	
+}
 
 /**
 * leds_set_imax - To set the IMAX register value
@@ -314,40 +463,7 @@ static void smartglow_reset()
 	//g_smartglow_data->led_state = 0;
 }
 
-/**
-* leds_i2c_write_all - Writes all an30259a register values through I2C 
-**/
-static int leds_i2c_write_all(struct i2c_client *client)
-{
-	struct an30259a_data *data = i2c_get_clientdata(client);
-	int ret;
 
-	/*we need to set all the configs setting first, then LEDON later*/
-	mutex_lock(&data->mutex);
-	if( unlikely((ret = i2c_smbus_write_i2c_block_data(client,
-			AN30259A_REG_SEL | AN30259A_CTN_RW_FLG,
-			AN30259A_REG_MAX - AN30259A_REG_SEL,
-			&data->shadow_reg[AN30259A_REG_SEL]))) < 0) {
-		dev_err(&client->adapter->dev,
-			"%s: failure on i2c block write, %d\n",
-			__func__, ret);
-		goto exit;
-	}
-	
-	if(unlikely((ret = i2c_smbus_write_byte_data(client, AN30259A_REG_LEDON,
-					data->shadow_reg[AN30259A_REG_LEDON]))) < 0) {
-		dev_err(&client->adapter->dev,
-			"%s: failure on i2c byte write, %d\n",
-			__func__, ret);
-		goto exit;
-	}
-	mutex_unlock(&data->mutex);
-	return 0;
-
-exit:
-	mutex_unlock(&data->mutex);
-	return ret;
-}
 
 
 /**
@@ -459,7 +575,7 @@ static void an30259a_standby(struct i2c_client *client)
  * @dt4: detention time at each step in slope operation 4, in multiple of 4ms.
  **/
 static void leds_set_slope_mode(struct i2c_client *client,
-				enum an30259a_led_channel channel, u8 delay,
+				enum an30259a_led_enum channel, u8 delay,
 				u8 dutymax, u8 dutymid, u8 dutymin,
 				u8 slptt1, u8 slptt2,
 				u8 dt1, u8 dt2, u8 dt3, u8 dt4)
@@ -606,7 +722,7 @@ static void an30259a_set_slope_current(struct i2c_client *client,
 /**
 * leds_on - To Set the LED intensity and enable them
 **/
-static void leds_on(struct i2c_client *client, enum an30259a_led_channel channel, 
+static void leds_on(struct i2c_client *client, enum an30259a_led_enum channel, 
 				bool on, bool slopemode, u8 ledcc)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
@@ -675,7 +791,7 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 	struct an30259a_data *data = (struct an30259a_data *)container_of( 
 			(led - led->channel), struct an30259a_data, led_channel);
 	
-	if(led->channel == MAX_LED_CHANNEL)
+	if(led->channel == MAX_NUM_LEDS)
 	{
 		unsigned char intensity = (led->brightness && 0xFF000000);
 		
@@ -699,7 +815,7 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 	}
 	leds_i2c_write_all(data->client);
 #else
-	if(led->channel == MAX_LED_CHANNEL)
+	if(led->channel == MAX_NUM_LEDS)
 	{
 		struct an30259a_data *data = (struct an30259a_data *)container_of( 
 						led, struct an30259a_data, led);
@@ -815,7 +931,7 @@ static void an30259a_led_blink_work(struct work_struct *work)
 	unsigned int dutymin = 0;
 	
 
-	if(led->channel == MAX_LED_CHANNEL)
+	if(led->channel == MAX_NUM_LEDS)
 	{
 		struct an30259a_data *data = (struct an30259a_data *)container_of( 
 						led, struct an30259a_data, led);
@@ -1120,7 +1236,7 @@ static ssize_t led_blink_store(struct device *dev,
 		return len;
 	}
 
-	if(led->channel == MAX_LED_CHANNEL){
+	if(led->channel == MAX_NUM_LEDS){
 		sscanf(buf, "%u %u %u", &blink_set, &led->delay_on_time_ms, \
 				&led->delay_off_time_ms);
 	}
@@ -1541,7 +1657,7 @@ static struct attribute_group common_smartglow_attr_group = {
 static int an30259a_parse_dt(struct device *dev, struct an30259a_data *data) {
 	struct device_node *np = dev->of_node;
 	int ret, temp;
-	enum an30259a_led_channel ch;
+	enum an30259a_led_enum ch;
 	
 	char *s[] = {"led_r", "led_g", "led_b"};
 	static int led_num = 0;
@@ -1591,7 +1707,7 @@ static int an30259a_parse_dt(struct device *dev, struct an30259a_data *data) {
 		sprintf(data->led_conf[ch].name, "led_%d",data->led_num);		
 	}
 	
-	for (ch = LED_R; ch < MAX_LED_CHANNEL; ch++)	{
+	for (ch = LED_R; ch < MAX_NUM_LEDS; ch++)	{
 		
 		/* LED Name */
 		ret = of_property_read_string_index(np, "an30259a,rgb-name", ch,
@@ -1716,7 +1832,7 @@ static int an30259a_initialize(struct i2c_client *client)
 * an30259a_register_rgbclass - Initializes each LED channels / colors.
 **/
 static int an30259a_register_rgbclass(struct i2c_client *client,
-				struct an30259a_led *led, enum an30259a_led_channel channel)
+				struct an30259a_led *led, enum an30259a_led_enum channel)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	struct device *dev = &client->dev;
@@ -1770,7 +1886,7 @@ static int smartglow_register_ledclass()
 	struct device *dev = &g_smartglow_data->pdata->dev;
 	int ret = 0;
 	
-	//g_smartglow_data->class_dev.channel = MAX_LED_CHANNEL;  
+	//g_smartglow_data->class_dev.channel = MAX_NUM_LEDS;  
 	g_smartglow_data->class_dev.brightness_set = smartglow_set_brightness;
 	g_smartglow_data->class_dev.name = "smartglow"; //g_smartglow_data->name;
 	g_smartglow_data->class_dev.brightness = 0;
@@ -1815,7 +1931,7 @@ static int an30259a_register_ledclass(struct i2c_client *client,
 	int ret = 0;
 	
 	// led->channel = data->led_num;
-	led->channel = MAX_LED_CHANNEL;    // Temp add for LED class
+	led->channel = MAX_NUM_LEDS;    // Temp add for LED class
 	led->cdev.brightness_set = an30259a_set_brightness;
 	led->cdev.name = data->name;
 	//led->cdev.brightness = data->brightness;
@@ -1862,7 +1978,7 @@ ERR_SYSFS:
 /**
 * an30259a_deinitialize - Deinitializes each LED channels / colors.
 **/
-void an30259a_deinitialize(struct an30259a_data *data, enum an30259a_led_channel channel)
+void an30259a_deinitialize(struct an30259a_data *data, enum an30259a_led_enum channel)
 {
 	/* Reset the device on failure */
 	an30259a_reset(data->client);
@@ -1936,7 +2052,7 @@ static int an30259a_probe(struct i2c_client *client,
 	}
 	
 	/* initialize LED */
-	for (ch = LED_R; ch < MAX_LED_CHANNEL; ch++) {
+	for (ch = LED_R; ch < MAX_NUM_LEDS; ch++) {
 		if(unlikely((ret = an30259a_register_rgbclass(client, 
 					 &data->led_channel[ch], ch)) < 0)) {
 			dev_err(&client->adapter->dev, "an30259a rgb class register failed\n");
@@ -1990,7 +2106,7 @@ exit_free:
 static int /* __devexit */ an30259a_remove(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
-	enum an30259a_led_channel ch;
+	enum an30259a_led_enum ch;
 	
 	dev_dbg(&client->adapter->dev, "%s\n", __func__);
 #ifdef SEC_LED_SPECIFIC
@@ -1998,7 +2114,7 @@ static int /* __devexit */ an30259a_remove(struct i2c_client *client)
 	sec_led_sysfs_destroy();
 #endif
 
-	for (ch = LED_R; ch < MAX_LED_CHANNEL; ch++) {
+	for (ch = LED_R; ch < MAX_NUM_LEDS; ch++) {
 		an30259a_deinitialize(data, ch);
 	}
 	mutex_destroy(&data->mutex);
