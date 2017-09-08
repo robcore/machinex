@@ -747,18 +747,23 @@ static void an30259a_start_led_pattern(unsigned int mode)
 #endif
 		while (mode == BOOTING) {
 			/* Get the fixed color map */
-			leds_on(AN30259A_EXTRACT_R(COLOR_YELLOW), true, false, LED_DEFAULT_CURRENT);
-			leds_on(AN30259A_EXTRACT_G(COLOR_YELLOW), true, false, LED_DEFAULT_CURRENT);
-			leds_on(AN30259A_EXTRACT_B(COLOR_YELLOW), true, false, LED_DEFAULT_CURRENT);
+			leds_on(LED_R, true, false, r_brightness);
+			leds_on(LED_G, true, false, g_brightness);
+			leds_on(LED_B, true, false, b_brightness);
+			an30259a_set_color(client, COLOR_YELLOW);
+			an30259a_set_constant_current(client);
 
 			retval = leds_i2c_write_all(client);
 			if (retval)
 				return;
 			an30259a_standby(client);
 
-			leds_on(AN30259A_EXTRACT_R(COLOR_BLUE), true, false, LED_DEFAULT_CURRENT);
-			leds_on(AN30259A_EXTRACT_G(COLOR_BLUE), true, false, LED_DEFAULT_CURRENT);
-			leds_on(AN30259A_EXTRACT_B(COLOR_BLUE), true, false, LED_DEFAULT_CURRENT);
+			leds_on(LED_R, true, false, r_brightness);
+			leds_on(LED_G, true, false, g_brightness);
+			leds_on(LED_B, true, false, b_brightness);
+
+			an30259a_set_color(client, COLOR_BLUE);
+			an30259a_set_constant_current(client);
 
 			retval = leds_i2c_write_all(client);
 			if (retval)
