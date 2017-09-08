@@ -143,7 +143,11 @@ struct scan_control {
  * From 0 .. whatever.  Higher means more swappy.
  */
 int vm_swappiness = 130;
-unsigned long vm_total_pages;	/* The total number of pages which the VM controls */
+/*
+ * The total number of pages which are beyond the high watermark within all
+ * zones.
+ */
+unsigned long vm_total_pages;
 
 static LIST_HEAD(shrinker_list);
 static DECLARE_RWSEM(shrinker_rwsem);
@@ -162,7 +166,7 @@ static bool global_reclaim(struct scan_control *sc)
 
 static unsigned long zone_reclaimable_pages(struct zone *zone)
 {
-	int nr;
+	unsigned long nr;
 
 	nr = zone_page_state(zone, NR_ACTIVE_FILE) +
 	     zone_page_state(zone, NR_INACTIVE_FILE);
