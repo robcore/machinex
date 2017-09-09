@@ -587,9 +587,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			an30259a_set_led_delayed_blink(LED_R, 0, 2, 2, 234);
-			an30259a_set_led_delayed_blink(LED_G, 0, 2, 2, 226);
-			an30259a_set_led_delayed_blink(LED_B, 2, 2, 2, 255);
+			an30259a_set_led_delayed_blink(LED_R, 0, 4, 4, 234);
+			an30259a_set_led_delayed_blink(LED_G, 0, 4, 4, 226);
+			an30259a_set_led_delayed_blink(LED_B, 4, 4, 4, 255);
 			booted = true;
 			break;
 		} else {
