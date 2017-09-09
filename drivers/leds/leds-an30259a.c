@@ -397,6 +397,15 @@ static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned 
 	if (brightness > LED_MAX_CURRENT)
 		brightness = LED_MAX_CURRENT;
 
+	if (led == LED_R || led == LED_G || led == LED_B)
+		led_dynamic_current = LED_DEFAULT_CURRENT;
+
+	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
+	if (led_intensity == 40) /* Samsung stock behaviour */
+		brightness = (brightness * led_dynamic_current) / LED_MAX_CURRENT;
+	else /* CM stock behaviour */
+		brightness = (brightness * led_intensity) / LED_MAX_CURRENT; /* override, darker or brighter */
+
 	if (delay_on_time > SLPTT_MAX_VALUE)
 		delay_on_time = SLPTT_MAX_VALUE;
 
