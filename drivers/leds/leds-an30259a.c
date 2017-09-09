@@ -594,15 +594,15 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			break;
 		} else {
 			pr_info("Fade to Black\n");
-			leds_on(LED_R, true, true, 90);
+			leds_on(LED_R, true, true, 217);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 10, 0, 2, 2, 1, 4, 3, 3);
-			leds_on(LED_G, true, true, 90);
+					0, 15, 13, 0, 4, 4, 0, 0, 8, 4);
+			leds_on(LED_G, true, true, 217);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 10, 0, 2, 2, 1, 4, 3, 3);
-			leds_on(LED_B, true, true, 90);
+					0, 15, 13, 0, 4, 4, 0, 0, 8, 4);
+			leds_on(LED_B, true, true, 214);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 10, 0, 2, 2, 1, 4, 3, 3);
+					0, 15, 13, 0, 4, 4, 0, 0, 8, 4);
 			break;
 		}
 	case FAKE_POWERING:
