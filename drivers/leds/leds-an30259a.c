@@ -340,11 +340,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	if (brightness > LED_MAX_CURRENT)
 		brightness = LED_MAX_CURRENT;
 
-	if (led == LED_R)
-		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
-	else if (led == LED_G)
-		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
-	else if (led == LED_B)
+	if (led == LED_R || led == LED_G || led == LED_B)
 		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
 
 	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
@@ -377,6 +373,63 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 					led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
 	} else {
 		leds_set_slope_mode(client, led, 0, (15 / led_speed), (15 / led_speed), 0,
+					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					0, 0, 0, 0);
+	}
+}
+
+static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned int initial_delay,
+					unsigned int delay_on_time,
+					unsigned int delay_off_time,
+					u8 brightness)
+{
+	struct i2c_client *client;
+	client = b_client;
+
+	if (brightness == LED_OFF) {
+		leds_on(led, false, false, brightness);
+		return;
+	}
+
+	if (brightness > LED_MAX_CURRENT)
+		brightness = LED_MAX_CURRENT;
+
+	if (led == LED_R || led == LED_G || led == LED_B)
+		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
+
+	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
+	if (led_intensity == 40) /* Samsung stock behaviour */
+		brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+	else if (led_intensity != 0) /* CM stock behaviour */
+		brightness = (brightness * led_intensity) / LED_MAX_CURRENT; /* override, darker or brighter */
+
+	if (delay_on_time > SLPTT_MAX_VALUE)
+		delay_on_time = SLPTT_MAX_VALUE;
+
+	if (delay_off_time > SLPTT_MAX_VALUE)
+		delay_off_time = SLPTT_MAX_VALUE;
+
+	if (delay_off_time == LED_OFF) {
+		leds_on(led, true, false, brightness);
+		if (brightness == LED_OFF)
+			leds_on(led, false, false, brightness);
+		return;
+	} else
+		leds_on(led, true, true, brightness);
+
+	/* Yank555.lu : Handle fading / blinking */
+	if (led_enable_fade == 1) {
+		leds_set_slope_mode(client, led, initial_delay, (15 / led_speed), (7 / led_speed), 0,
+					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+	} else {
+		leds_set_slope_mode(client, led, initial_delay, (15 / led_speed), (15 / led_speed), 0,
 					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
 					AN30259A_TIME_UNIT,
 					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
@@ -585,15 +638,10 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 		break;
 #endif
-		leds_on(LED_R, true, true, r_brightness);
-		leds_set_slope_mode(client, LED_R,
-				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-		leds_on(LED_G, true, true, g_brightness);
-		leds_set_slope_mode(client, LED_G,
-				0, 15, 7, 0, 1, 1, 0, 0, 0, 0);
-		leds_on(LED_B, true, true, b_brightness);
-		leds_set_slope_mode(client, LED_B,
-				1, 15, 7, 0, 1, 1, 0, 0, 0, 0);
+
+		an30259a_set_led_delayed_blink(LED_R, 0, 1, 1);
+		an30259a_set_led_delayed_blink(LED_G, 0, 1, 1);
+		an30259a_set_led_delayed_blink(LED_B, 1, 1, 1);
 		break;
 
 	case CUSTOM:
