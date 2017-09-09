@@ -124,19 +124,17 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 else
 	adb connect 192.168.1.111
 	adbcountdown
-	if [ $? -ne 0 ]; then
-		echo "$status adb wireless failed!"
-	elif [ "$ONLINE" != "device" ]; then
-			echo "$status adb wireless failed!"
+	echo "Trying Wireless"
+	adbcountdown
+	adb push $1.zip /storage/extSdCard
+	last=$?
+	if [ last -eq 0 ]; then
+		echo "Pushed $1.zip! Disconnecting wireless connection"
 	else
-			adbcountdown
-			echo "connected"
-			adbcountdown
-			adb push $1.zip /storage/extSdCard
-			echo "push complete, disconnecting wireless connection"
-			adb disconnect
-			adb kill-server
+		echo "Failed!"
 	fi
+	adb disconnect
+	adb kill-server
 fi
 }
 
