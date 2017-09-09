@@ -639,9 +639,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		break;
 #endif
 
-		an30259a_set_led_delayed_blink(LED_R, 0, 1, 1, LED_DEFAULT_CURRENT);
-		an30259a_set_led_delayed_blink(LED_G, 0, 1, 1, LED_DEFAULT_CURRENT);
-		an30259a_set_led_delayed_blink(LED_B, 1, 1, 1, LED_DEFAULT_CURRENT);
+		an30259a_set_led_delayed_blink(LED_R, 0, 1, 1, 0x96);
+		an30259a_set_led_delayed_blink(LED_G, 0, 1, 1, 0x32);
+		an30259a_set_led_delayed_blink(LED_B, 1, 1, 1, 0xFF);
 		break;
 
 	case CUSTOM:
