@@ -76,7 +76,7 @@ static uint32_t oom_count = 0;
 #endif
 
 #ifdef MULTIPLE_OOM_KILLER
-#define OOM_DEPTH 7
+#define OOM_DEPTH 4
 #endif
 
 bool disable_samp_hotness;
