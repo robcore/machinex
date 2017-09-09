@@ -67,8 +67,8 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-u8 LED_DYNAMIC_CURRENT = 0x28;
-u8 LED_LOWPOWER_MODE = 0x0;
+u8 led_dynamic_current = 0x28;
+u8 led_lowpower_mode = 0x0;
 
 unsigned long disabled_samsung_pattern = 0;
 
@@ -341,11 +341,11 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		brightness = LED_MAX_CURRENT;
 
 	if (led == LED_R || led == LED_G || led == LED_B)
-		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
+		led_dynamic_current = LED_DEFAULT_CURRENT;
 
 	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
 	if (led_intensity == 40) /* Samsung stock behaviour */
-		brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+		brightness = (brightness * led_dynamic_current) / LED_MAX_CURRENT;
 	else if (led_intensity != 0) /* CM stock behaviour */
 		brightness = (brightness * led_intensity) / LED_MAX_CURRENT; /* override, darker or brighter */
 
@@ -398,11 +398,11 @@ static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned 
 		brightness = LED_MAX_CURRENT;
 
 	if (led == LED_R || led == LED_G || led == LED_B)
-		LED_DYNAMIC_CURRENT = LED_DEFAULT_CURRENT;
+		led_dynamic_current = LED_DEFAULT_CURRENT;
 
 	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
 	if (led_intensity == 40) /* Samsung stock behaviour */
-		brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+		brightness = (brightness * led_dynamic_current) / LED_MAX_CURRENT;
 	else if (led_intensity != 0) /* CM stock behaviour */
 		brightness = (brightness * led_intensity) / LED_MAX_CURRENT; /* override, darker or brighter */
 
@@ -495,10 +495,10 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		return;
 
 	/* Set to low power consumption mode */
-	if (LED_LOWPOWER_MODE == 1)
-		LED_DYNAMIC_CURRENT = 0x9;
+	if (led_lowpower_mode == 1)
+		led_dynamic_current = 0x9;
 	else
-		LED_DYNAMIC_CURRENT = 0x48;
+		led_dynamic_current = 0x48;
 
 	/* Yank555.lu : Control LED intensity (normal, bright) */
 	if (led_intensity == 0) {
@@ -570,9 +570,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 /* For later
 	case POWERING:
 		pr_info("LED Powering Pattern on\n");
-		leds_on(LED_R, true, true, LED_DYNAMIC_CURRENT);
-		leds_on(LED_G, true, true, LED_DYNAMIC_CURRENT);
-		leds_on(LED_B, true, true, LED_DYNAMIC_CURRENT);
+		leds_on(LED_R, true, true, led_dynamic_current);
+		leds_on(LED_G, true, true, led_dynamic_current);
+		leds_on(LED_B, true, true, led_dynamic_current);
 		leds_set_slope_mode(client, LED_R,
 				0, 5, 5, 0, 6, 5, 4, 10, 10, 4);
 		leds_set_slope_mode(client, LED_G,
@@ -684,15 +684,15 @@ static void an30259a_start_led_pattern(unsigned int mode)
 #endif
 #if 0
 		do {
-			leds_on(LED_R, true, false, LED_DYNAMIC_CURRENT);
+			leds_on(LED_R, true, false, led_dynamic_current);
 			retval = leds_i2c_write_all(client);
 			leds_on(LED_R, false, false, 0);
 			retval = leds_i2c_write_all(client);
-			leds_on(LED_G, true, false, LED_DYNAMIC_CURRENT);
+			leds_on(LED_G, true, false, led_dynamic_current);
 			retval = leds_i2c_write_all(client);
 			leds_on(LED_G, false, false, 0);
 			retval = leds_i2c_write_all(client);
-			leds_on(LED_B, true, false, LED_DYNAMIC_CURRENT);
+			leds_on(LED_B, true, false, led_dynamic_current);
 			retval = leds_i2c_write_all(client);
 			leds_on(LED_B, false, false, 0);
 			retval = leds_i2c_write_all(client);
@@ -713,7 +713,7 @@ static ssize_t show_an30259a_led_lowpower(struct device *dev,
 {
 	struct an30259a_data *data = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%u\n", LED_LOWPOWER_MODE);
+	return sprintf(buf, "%u\n", led_lowpower_mode);
 }
 
 
@@ -731,7 +731,7 @@ static ssize_t store_an30259a_led_lowpower(struct device *dev,
 		return count;
 	}
 
-	LED_LOWPOWER_MODE = led_lowpower;
+	led_lowpower_mode = led_lowpower;
 
 	return count;
 }
