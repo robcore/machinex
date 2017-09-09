@@ -393,7 +393,7 @@ start_readmac:
 		set_fs(get_ds());
 
 		/* Generating the Random Bytes for 3 last octects of the MAC address */
-		erandom_get_random_bytes(randommac, 3);
+		randommac = prandom_u32());
 
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x00, 0x12, 0x34, randommac[0], randommac[1], randommac[2]);
@@ -710,7 +710,7 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 
 	if ((g_imac_flag == MACADDR_COB_RANDOM) ||
 	    (g_imac_flag == MACADDR_MOD_RANDOM)) {
-		erandom_get_random_bytes(randommac, 3);
+		randommac = prandom_u32());
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x60, 0xd0, 0xa9, randommac[0], randommac[1],
 			randommac[2]);
@@ -765,7 +765,7 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 		/* Generating the Random Bytes for
 		 * 3 last octects of the MAC address
 		 */
-		erandom_get_random_bytes(randommac, 3);
+		randommac = prandom_u32());
 
 		sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
 			0x60, 0xd0, 0xa9, randommac[0],
@@ -837,14 +837,14 @@ int dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 #endif /* RDWR_KORICS_MACADDR */
 
 #ifdef USE_CID_CHECK
-static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf_len)
+static int dhd_write_cid_file(const char *filepath_cid, const char *buf, size_t buf_len)
 {
-	struct file *fp = NULL;
 	mm_segment_t oldfs = {0};
+	struct file *fp = NULL;
 	int ret = 0;
 
 	/* File is always created. */
-	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0664);
+	fp = filp_open(filepath_cid, O_RDWR | O_CREAT, 0666);
 	if (IS_ERR(fp)) {
 		DHD_ERROR(("[WIFI_SEC] %s: File open error\n", filepath_cid));
 		return -1;
@@ -853,7 +853,7 @@ static int dhd_write_cid_file(const char *filepath_cid, const char *buf, int buf
 		set_fs(get_ds());
 
 		if (fp->f_mode & FMODE_WRITE) {
-			ret = fp->f_op->write(fp, buf, buf_len, &fp->f_pos);
+			ret = fp->f_op->write(fp, (const char *)buf, buf_len, &fp->f_pos);
 			if (ret < 0)
 				DHD_ERROR(("[WIFI_SEC] Failed to write CIS[%s]"
 					" into '%s'\n", buf, filepath_cid));
@@ -886,7 +886,7 @@ static void dhd_dump_cis(const unsigned char *buf, int size)
 typedef struct {
 	uint8 vid_length;
 	unsigned char vid[MAX_VID_LEN];
-	char vname[MAX_VNAME_LEN];
+	const char vname[MAX_VNAME_LEN];
 } vid_info_t;
 
 #if defined(BCM4330_CHIP)
@@ -897,20 +897,20 @@ vid_info_t vid_info[] = {
 };
 #elif defined(BCM4334_CHIP)
 vid_info_t vid_info[] = {
-	{ 6, { 0x00, 0x00, 0x00, 0x33, 0x33, }, { "semco" } },
-	{ 6, { 0x00, 0x00, 0x00, 0xfb, 0x50, }, { "semcosh" } },
-	{ 6, { 0x00, 0x20, 0xc7, 0x00, 0x00, }, { "murata" } },
+	{ 6, { 0x00, 0x00, 0x00, 0x33, 0x33, }, { "semco\0\n", } },
+	{ 6, { 0x00, 0x00, 0x00, 0xfb, 0x50, }, { "semcosh\0\n", } },
+	{ 6, { 0x00, 0x20, 0xc7, 0x00, 0x00, }, { "murata\0\n", } },
 	{ 0, { 0x00, }, { "murata" } }
 };
 #elif defined(BCM4335_CHIP)
 vid_info_t vid_info[] = {
-	{ 3, { 0x33, 0x66, }, { "semcosh" } },		/* B0 Sharp 5G-FEM */
-	{ 3, { 0x33, 0x33, }, { "semco" } },		/* B0 Skyworks 5G-FEM and A0 chip */
-	{ 3, { 0x33, 0x88, }, { "semco3rd" } },		/* B0 Syri 5G-FEM */
-	{ 3, { 0x00, 0x11, }, { "muratafem1" } },	/* B0 ANADIGICS 5G-FEM */
-	{ 3, { 0x00, 0x22, }, { "muratafem2" } },	/* B0 TriQuint 5G-FEM */
-	{ 3, { 0x00, 0x33, }, { "muratafem3" } },	/* 3rd FEM: Reserved */
-	{ 0, { 0x00, }, { "murata" } }	/* Default: for Murata A0 module */
+	{ 3, { 0x33, 0x66, }, { "semcosh\0\n", } },		/* B0 Sharp 5G-FEM */
+	{ 3, { 0x33, 0x33, }, { "semco\0\n", } },		/* B0 Skyworks 5G-FEM and A0 chip */
+	{ 3, { 0x33, 0x88, }, { "semco3rd\0\n", } },		/* B0 Syri 5G-FEM */
+	{ 3, { 0x00, 0x11, }, { "muratafem1\0\n", } },	/* B0 ANADIGICS 5G-FEM */
+	{ 3, { 0x00, 0x22, }, { "muratafem2\0\n", } },	/* B0 TriQuint 5G-FEM */
+	{ 3, { 0x00, 0x33, }, { "muratafem3\0\n", } },	/* 3rd FEM: Reserved */
+	{ 0, { 0x00, }, { "murata\0\n", } }	/* Default: for Murata A0 module */
 };
 #elif defined(BCM4339_CHIP) || defined(BCM4354_CHIP)
 vid_info_t vid_info[] = {			  /* 4339:2G FEM+5G FEM ,4354: 2G FEM+5G FEM */
@@ -1007,7 +1007,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 
 write_cid:
 	DHD_ERROR(("[WIFI_SEC] CIS MATCH FOUND : %s\n", cur_info->vname));
-	dhd_write_cid_file(cidfilepath, cur_info->vname, strlen(cur_info->vname + 1));
+	dhd_write_cid_file(cidfilepath, cur_info->vname, sizeof(cur_info->vname));
 #if defined(BCM4334_CHIP)
 	/* Try reading out from OTP to distinguish B2 or B3 */
 	memset(cis_buf, 0, sizeof(cis_buf));
