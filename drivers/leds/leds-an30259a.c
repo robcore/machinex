@@ -357,8 +357,6 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 
 	if (delay_off_time == LED_OFF) {
 		leds_on(led, true, false, brightness);
-		if (brightness == LED_OFF)
-			leds_on(led, false, false, brightness);
 		return;
 	} else
 		leds_on(led, true, true, brightness);
@@ -390,7 +388,7 @@ static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned 
 	client = b_client;
 
 	if (brightness == LED_OFF) {
-		leds_on(led, false, false, brightness);
+		leds_on(led, false, false, 0);
 		return;
 	}
 
@@ -414,8 +412,6 @@ static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned 
 
 	if (delay_off_time == LED_OFF) {
 		leds_on(led, true, false, brightness);
-		if (brightness == LED_OFF)
-			leds_on(led, false, false, brightness);
 		return;
 	} else
 		leds_on(led, true, true, brightness);
