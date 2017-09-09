@@ -422,14 +422,16 @@ static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned 
 
 	/* Yank555.lu : Handle fading / blinking */
 	if (led_enable_fade == 1) {
-		leds_set_slope_mode(client, led, initial_delay, (15 / led_speed), (7 / led_speed), 0,
+		leds_set_slope_mode(client, led, ((initial_delay / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT, (15 / led_speed), (7 / led_speed), 0,
 					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
 					AN30259A_TIME_UNIT,
 					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
 					AN30259A_TIME_UNIT,
 					led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
 	} else {
-		leds_set_slope_mode(client, led, initial_delay, (15 / led_speed), (15 / led_speed), 0,
+		leds_set_slope_mode(client, led, ((initial_delay / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT, (15 / led_speed), (15 / led_speed), 0,
 					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
 					AN30259A_TIME_UNIT,
 					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
@@ -585,23 +587,23 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			an30259a_set_led_delayed_blink(LED_R, 2, 2, 2, 0xEA);
-			an30259a_set_led_delayed_blink(LED_G, 2, 2, 2, 0xE2);
-			an30259a_set_led_delayed_blink(LED_B, 0, 2, 2, 0xFF);
+			an30259a_set_led_delayed_blink(LED_R, 0, 2, 2, 234);
+			an30259a_set_led_delayed_blink(LED_G, 0, 2, 2, 226);
+			an30259a_set_led_delayed_blink(LED_B, 2, 2, 2, 255);
 			booted = true;
 			break;
 		} else {
 			pr_info("Fade to Black\n");
-			leds_on(LED_R, true, true, 0xD9);
+			leds_on(LED_R, true, true, 90);
 			leds_set_slope_mode(client, LED_R,
 					0, 15, 10, 0, 2, 2, 1, 4, 3, 3);
-			leds_on(LED_G, true, true, 0xD9);
+			leds_on(LED_G, true, true, 90);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 10, 0, 2, 2, 1, 4, 3, 3);
-			leds_on(LED_B, true, true, 0xD6);
+			leds_on(LED_B, true, true, 90);
 			leds_set_slope_mode(client, LED_B,
-					3, 15, 10, 0, 2, 2, 1, 4, 3, 3);
-			return;
+					0, 15, 10, 0, 2, 2, 1, 4, 3, 3);
+			break;
 		}
 	case FAKE_POWERING:
 		if (poweroff_charging)
