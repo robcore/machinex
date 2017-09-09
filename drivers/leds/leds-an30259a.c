@@ -76,17 +76,17 @@ static struct an30259_led_conf led_conf[] = {
 	{
 		.name = "led_r",
 		.brightness = LED_OFF,
-		.max_brightness = LED_DEFAULT_CURRENT,
+		.max_brightness = LED_MAX_CURRENT,
 		.flags = 0,
 	}, {
 		.name = "led_g",
 		.brightness = LED_OFF,
-		.max_brightness = LED_DEFAULT_CURRENT,
+		.max_brightness = LED_MAX_CURRENT,
 		.flags = 0,
 	}, {
 		.name = "led_b",
 		.brightness = LED_OFF,
-		.max_brightness = LED_DEFAULT_CURRENT,
+		.max_brightness = LED_MAX_CURRENT,
 		.flags = 0,
 	}
 };
