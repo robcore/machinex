@@ -130,7 +130,7 @@ else
 	echo "Trying Wireless"
 	adb push $1.zip /storage/extSdCard
 	last=$?
-	if [ last -eq 0 ]; then
+	if [ $last -eq 0 ]; then
 		echo "Pushed $1.zip! Disconnecting wireless connection"
 	else
 		echo "Failed!"
