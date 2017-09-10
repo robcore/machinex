@@ -593,9 +593,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 229);
 			leds_on(LED_B, true, true, 255);
 			leds_set_slope_mode(client, LED_R,
-					0, 10, 10, 0, 4, 4, 2, 2, 2, 2);
+					0, 8, 1, 0, 4, 4, 2, 2, 2, 2);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 15, 0, 4, 4, 2, 2, 2, 2);
+					0, 15, 15, 1, 4, 4, 2, 2, 2, 2);
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 15, 0, 4, 4, 2, 2, 2, 2);
 			booted = true;
@@ -606,11 +606,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 255);
 			leds_on(LED_B, true, true, 245);
 			leds_set_slope_mode(client, LED_R,
-					0, 2, 0, 0, 1, 5, 8, 1, 3, 8);
+					0, 2, 0, 0, 3, 5, 8, 4, 3, 8);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 2, 0, 1, 5, 8, 1, 3, 8);
+					0, 15, 2, 0, 3, 5, 8, 4, 3, 8);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 2, 0, 1, 5, 8, 1, 3, 8);
+					0, 15, 2, 0, 3, 5, 8, 4, 3, 8);
 			break;
 		}
 	case FAKE_POWERING:
