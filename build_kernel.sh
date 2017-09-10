@@ -118,6 +118,7 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 		adb push $1.zip /storage/extSdCard
 		echo "push complete, booting recovery"
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
+		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
 	fi
