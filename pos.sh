@@ -1,4 +1,10 @@
 #!/bin/bash
+patch -p1 -R < "/root/machinex/patches/0068-nevermind.patch"
+patch -p1 -R < "/root/machinex/patches/0067-new-ip-again-this-router-blows.patch"
+patch -p1 -R < "/root/machinex/patches/0066-there-at-least-modernize-sdcardfs-a-bit-utilizing-th.patch"
+patch -p1 -R < "/root/machinex/patches/0065-add-back-d_canonical_path.patch"
+patch -p1 -R < "/root/machinex/patches/0064-possed.patch"
+patch -p1 -R < "/root/machinex/patches/0063-this-is-all-a-waste-possing.patch"
 patch -p1 -R < "/root/machinex/patches/0062-remove-redundant-op.patch"
 patch -p1 -R < "/root/machinex/patches/0061-ANDROID-sdcardfs-add-support-for-user-permission-iso.patch"
 patch -p1 -R < "/root/machinex/patches/0060-ANDROID-sdcardfs-Refactor-configfs-interface.patch"
