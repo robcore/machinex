@@ -314,7 +314,7 @@ static inline void pathcpy(struct path *dst, const struct path *src)
 }
 
 /* sdcardfs_get_pname functions calls path_get()
- * therefore, the caller must call "proper" path_put functions
+ * therefore, the caller must call "proper" path_put functions 
  */
 #define SDCARDFS_DENT_FUNC(pname) \
 static inline void sdcardfs_get_##pname(const struct dentry *dent, \
@@ -361,10 +361,10 @@ static inline void sdcardfs_put_reset_##pname(const struct dentry *dent) \
 	} else \
 		spin_unlock(&SDCARDFS_D(dent)->lock); \
 	return; \
-}
+} 
 
-SDCARDFS_DENT_FUNC(lower_path)
-SDCARDFS_DENT_FUNC(orig_path)
+SDCARDFS_DENT_FUNC(lower_path) 
+SDCARDFS_DENT_FUNC(orig_path)  
 
 static inline void sdcardfs_copy_lower_path(const struct dentry *dent,
 					struct path *lower_path)
@@ -379,7 +379,7 @@ static inline int has_graft_path(const struct dentry *dent)
 {
 	int ret = 0;
 
-	spin_lock(&SDCARDFS_D(dent)->lock);
+	spin_lock(&SDCARDFS_D(dent)->lock); 
 	if (SDCARDFS_D(dent)->orig_path.dentry != NULL)
 		ret = 1;
 	spin_unlock(&SDCARDFS_D(dent)->lock);
@@ -390,21 +390,21 @@ static inline int has_graft_path(const struct dentry *dent)
 static inline void sdcardfs_get_real_lower(const struct dentry *dent,
 						struct path *real_lower)
 {
-	/* in case of a local obb dentry
-	 * the orig_path should be returned
+	/* in case of a local obb dentry 
+	 * the orig_path should be returned 
 	 */
-	if(has_graft_path(dent))
+	if(has_graft_path(dent)) 
 		sdcardfs_get_orig_path(dent, real_lower);
-	else
+	else 
 		sdcardfs_get_lower_path(dent, real_lower);
 }
 
 static inline void sdcardfs_put_real_lower(const struct dentry *dent,
 						struct path *real_lower)
 {
-	if(has_graft_path(dent))
+	if(has_graft_path(dent)) 
 		sdcardfs_put_orig_path(dent, real_lower);
-	else
+	else 
 		sdcardfs_put_lower_path(dent, real_lower);
 }
 
@@ -433,13 +433,13 @@ extern int setup_obb_dentry(struct dentry *dentry, struct path *lower_path);
 static inline struct dentry *lock_parent(struct dentry *dentry)
 {
 	struct dentry *dir = dget_parent(dentry);
-	mutex_lock_nested(&d_inode(dir)->i_mutex, I_MUTEX_PARENT);
+	mutex_lock_nested(&dir->d_inode->i_mutex, I_MUTEX_PARENT);
 	return dir;
 }
 
 static inline void unlock_dir(struct dentry *dir)
 {
-	mutex_unlock(&d_inode(dir)->i_mutex);
+	mutex_unlock(&dir->d_inode->i_mutex);
 	dput(dir);
 }
 
@@ -449,21 +449,21 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	struct dentry *dent;
 	struct path path;
 	struct iattr attrs;
-
+	
 	dent = kern_path_create(AT_FDCWD, path_s, &path, LOOKUP_DIRECTORY);
-
+	
 	if (IS_ERR(dent)) {
 		err = PTR_ERR(dent);
 		if (err == -EEXIST)
 			err = 0;
 		return err;
 	}
-
+	
 	err = mnt_want_write(path.mnt);
-	if (err)
+	if (err) 
 		goto out;
-
-	err = vfs_mkdir(d_inode(path.dentry), dent, mode);
+	
+	err = vfs_mkdir(path.dentry->d_inode, dent, mode);
 	if (err) {
 		if (err == -EEXIST)
 			err = 0;
@@ -473,17 +473,17 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	attrs.ia_uid = uid; 
 	attrs.ia_gid = gid; 
 	attrs.ia_valid = ATTR_UID | ATTR_GID;
-	mutex_lock(&d_inode(dent)->i_mutex);
+	mutex_lock(&dent->d_inode->i_mutex);
 	notify_change(dent, &attrs, NULL);
-	mutex_unlock(&d_inode(dent)->i_mutex);
+	mutex_unlock(&dent->d_inode->i_mutex);
 
 out_drop:
 	mnt_drop_write(path.mnt);
 
-out:
+out: 
 	dput(dent);
 	/* parent dentry locked by kern_path_create */
-	mutex_unlock(&d_inode(path.dentry)->i_mutex);
+	mutex_unlock(&path.dentry->d_inode->i_mutex);
 	path_put(&path);
 	return err;
 }
@@ -505,25 +505,25 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 		sdcardfs_get_lower_path(dentry, &lower_path);
 		err = vfs_statfs(&lower_path, &statfs);
 		sdcardfs_put_lower_path(dentry, &lower_path);
-
+	
 		if (unlikely(err))
 			goto out_invalid;
-
+	
 		/* Invalid statfs informations. */
 		if (unlikely(statfs.f_bsize == 0))
 			goto out_invalid;
-
+	
 		/* if you are checking directory, set size to f_bsize. */
 		if (unlikely(dir))
 			size = statfs.f_bsize;
-
+	
 		/* available size */
 		avail = statfs.f_bavail * statfs.f_bsize;
-
+	
 		/* not enough space */
 		if ((u64)size > avail)
 			goto out_nospc;
-
+	
 		/* enough space */
 		if ((avail - size) > (sbi->options.reserved_mb * 1024 * 1024))
 			return 1;
@@ -552,7 +552,9 @@ out_nospc:
 	printk_ratelimited(KERN_INFO "statfs.f_bavail : %llu blocks / "
 				     "statfs.f_bsize : %ld bytes / "
 				     "required size : %llu byte\n"
-				,statfs.f_bavail, statfs.f_bsize, (u64)size);
+                                ,statfs.f_bavail, statfs.f_bsize, (u64)size);
+
 	return 0;
 }
+
 #endif	/* not _SDCARDFS_H_ */

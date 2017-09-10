@@ -79,7 +79,8 @@ static int sdcardfs_inode_set(struct inode *inode, void *lower_inode)
 	return 0;
 }
 
-static struct inode *sdcardfs_iget(struct super_block *sb, struct inode *lower_inode)
+static struct inode *sdcardfs_iget(struct super_block *sb,
+				 struct inode *lower_inode)
 {
 	struct sdcardfs_inode_info *info;
 	struct inode *inode; /* the new inode to return */
@@ -169,7 +170,7 @@ int sdcardfs_interpose(struct dentry *dentry, struct super_block *sb,
 	struct inode *lower_inode;
 	struct super_block *lower_sb;
 
-	lower_inode = d_inode(lower_path->dentry);
+	lower_inode = lower_path->dentry->d_inode;
 	lower_sb = sdcardfs_lower_super(sb);
 
 	/* check that the lower file system didn't cross a mount point */
@@ -331,7 +332,7 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	parent = dget_parent(dentry);
 
-	if(!check_caller_access_to_name(d_inode(parent), dentry->d_name.name,
+	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
 						sbi->options.derive, 0, 0)) {
 		ret = ERR_PTR(-EACCES);
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
@@ -359,16 +360,16 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	}
 	if (ret)
 		dentry = ret;
-	if (d_inode(dentry)) {
-		fsstack_copy_attr_times(d_inode(dentry),
-					sdcardfs_lower_inode(d_inode(dentry)));
+	if (dentry->d_inode) {
+		fsstack_copy_attr_times(dentry->d_inode,
+					sdcardfs_lower_inode(dentry->d_inode));
 		/* get drived permission */
 		get_derived_permission(parent, dentry);
-		fix_derived_permission(d_inode(dentry));
+		fix_derived_permission(dentry->d_inode);
 	}
 	/* update parent directory's atime */
-	fsstack_copy_attr_atime(d_inode(parent),
-				sdcardfs_lower_inode(d_inode(parent)));
+	fsstack_copy_attr_atime(parent->d_inode,
+				sdcardfs_lower_inode(parent->d_inode));
 
 out:
 	sdcardfs_put_lower_path(parent, &lower_parent_path);

@@ -31,7 +31,7 @@
 struct hashtable_entry {
 	struct hlist_node hlist;
 	void *key;
-	unsigned int value;
+	int value;
 };
 
 struct packagelist_data {
@@ -197,7 +197,7 @@ static void remove_str_to_int(struct hashtable_entry *h_entry) {
 	kmem_cache_free(hashtable_entry_cachep, h_entry);
 }
 
-static int insert_int_to_null(struct packagelist_data *pkgl_dat, void *key, unsigned int value) {
+static int insert_int_to_null(struct packagelist_data *pkgl_dat, void *key, int value) {
 	struct hashtable_entry *hash_cur;
 	struct hashtable_entry *new_entry;
 
@@ -338,7 +338,7 @@ static int packagelist_reader(void *thread_data)
 				if (res == -ENOENT || res == -EACCES) {
 				/* Framework may not have created yet, sleep and retry */
 					printk(KERN_ERR "sdcardfs: missing packages.list; retrying\n");
-					msleep(500);
+					msleep(200);
 					printk(KERN_ERR "sdcardfs: missing packages.list_end; retrying\n");
 					continue;
 				} else {
@@ -406,12 +406,12 @@ void * packagelist_create(gid_t write_gid)
 	hash_init(pkgl_dat->appid_with_rw);
 	pkgl_dat->write_gid = write_gid;
 
-	packagelist_thread = kthread_run(packagelist_reader, (void *)pkgl_dat, "pkgld");
-	if (IS_ERR(packagelist_thread)) {
-		printk(KERN_ERR "sdcardfs: creating kthread failed\n");
+        packagelist_thread = kthread_run(packagelist_reader, (void *)pkgl_dat, "pkgld");
+        if (IS_ERR(packagelist_thread)) {
+                printk(KERN_ERR "sdcardfs: creating kthread failed\n");
 		kfree(pkgl_dat);
 		return packagelist_thread;
-	}
+        }
 	pkgl_dat->thread_id = packagelist_thread;
 
 	printk(KERN_INFO "sdcardfs: created packagelist pkgld/%d\n",
@@ -442,7 +442,7 @@ int packagelist_init(void)
 		return -ENOMEM;
 	}
 
-	return 0;
+        return 0;
 }
 
 void packagelist_exit(void)
@@ -450,3 +450,5 @@ void packagelist_exit(void)
 	if (hashtable_entry_cachep)
 		kmem_cache_destroy(hashtable_entry_cachep);
 }
+
+

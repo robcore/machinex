@@ -49,8 +49,8 @@ void setup_derived_state(struct inode *inode, perm_t perm,
 void get_derived_permission(struct dentry *parent, struct dentry *dentry)
 {
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
-	struct sdcardfs_inode_info *info = SDCARDFS_I(d_inode(dentry));
-	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(d_inode(parent));
+	struct sdcardfs_inode_info *info = SDCARDFS_I(dentry->d_inode);
+	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(parent->d_inode);
 	appid_t appid;
 
 	/* By default, each inode inherits from its parent.
@@ -61,7 +61,10 @@ void get_derived_permission(struct dentry *parent, struct dentry *dentry)
 	 * stage of each system call by fix_derived_permission(inode).
 	 */
 
-	inherit_derived_state(d_inode(parent), d_inode(dentry));
+	inherit_derived_state(parent->d_inode, dentry->d_inode);
+
+	//printk(KERN_INFO "sdcardfs: derived: %s, %s, %d\n", parent->d_name.name,
+	//				dentry->d_name.name, parent_info->perm);
 
 	if (sbi->options.derive == DERIVE_NONE) {
 		return;
@@ -186,7 +189,7 @@ inline void update_derived_permission(struct dentry *dentry)
 {
 	struct dentry *parent;
 
-	if(!dentry || !d_inode(dentry)) {
+	if(!dentry || !dentry->d_inode) {
 		printk(KERN_ERR "sdcardfs: %s: invalid dentry\n", __func__);
 		return;
 	}
@@ -195,7 +198,7 @@ inline void update_derived_permission(struct dentry *dentry)
 	 * 2. remove the root dentry update
 	 */
 	if(IS_ROOT(dentry)) {
-		//setup_default_pre_root_state(d_inode(dentry));
+		//setup_default_pre_root_state(dentry->d_inode);
 	} else {
 		parent = dget_parent(dentry);
 		if(parent) {
@@ -203,14 +206,14 @@ inline void update_derived_permission(struct dentry *dentry)
 			dput(parent);
 		}
 	}
-	fix_derived_permission(d_inode(dentry));
+	fix_derived_permission(dentry->d_inode);
 }
 
 int need_graft_path(struct dentry *dentry)
 {
 	int ret = 0;
 	struct dentry *parent = dget_parent(dentry);
-	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(d_inode(parent));
+	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(parent->d_inode);
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 
 	if(parent_info->perm == PERM_ANDROID &&
@@ -247,7 +250,8 @@ int is_obbpath_invalid(struct dentry *dent)
 			path_buf = kmalloc(PATH_MAX, GFP_ATOMIC);
 			if(!path_buf) {
 				ret = 1;
-				printk(KERN_ERR "sdcardfs: fail to allocate path_buf in %s.\n", __func__);
+				printk(KERN_ERR "sdcardfs: "
+					"fail to allocate path_buf in %s.\n", __func__);
 			} else {
 				obbpath_s = d_path(&di->lower_path, path_buf, PATH_MAX);
 				if (d_unhashed(di->lower_path.dentry) ||
@@ -269,7 +273,7 @@ int is_base_obbpath(struct dentry *dentry)
 {
 	int ret = 0;
 	struct dentry *parent = dget_parent(dentry);
-	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(d_inode(parent));
+	struct sdcardfs_inode_info *parent_info= SDCARDFS_I(parent->d_inode);
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 
 	spin_lock(&SDCARDFS_D(dentry)->lock);
@@ -311,7 +315,8 @@ int setup_obb_dentry(struct dentry *dentry, struct path *lower_path)
 
 	if(!err) {
 		/* the obbpath base has been found */
-		printk(KERN_INFO "sdcardfs: the sbi->obbpath is found\n");
+		printk(KERN_INFO "sdcardfs: "
+				"the sbi->obbpath is found\n");
 		pathcpy(lower_path, &obbpath);
 	} else {
 		/* if the sbi->obbpath is not available, we can optionally
@@ -319,7 +324,8 @@ int setup_obb_dentry(struct dentry *dentry, struct path *lower_path)
 		 * but, the current implementation just returns an error
 		 * because the sdcard daemon also regards this case as
 		 * a lookup fail. */
-		printk(KERN_INFO "sdcardfs: the sbi->obbpath is not available\n");
+		printk(KERN_INFO "sdcardfs: "
+				"the sbi->obbpath is not available\n");
 	}
 	return err;
 }

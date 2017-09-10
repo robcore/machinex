@@ -50,7 +50,7 @@ static ssize_t sdcardfs_read(struct file *file, char __user *buf,
 	err = vfs_read(lower_file, buf, count, ppos);
 	/* update our inode atime upon a successful lower read */
 	if (err >= 0)
-		fsstack_copy_attr_atime(d_inode(dentry),
+		fsstack_copy_attr_atime(dentry->d_inode,
 					file_inode(lower_file));
 
 	return err;
@@ -73,9 +73,9 @@ static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 	err = vfs_write(lower_file, buf, count, ppos);
 	/* update our inode times+sizes upon a successful lower write */
 	if (err >= 0) {
-		fsstack_copy_inode_size(d_inode(dentry),
+		fsstack_copy_inode_size(dentry->d_inode,
 					file_inode(lower_file));
-		fsstack_copy_attr_times(d_inode(dentry),
+		fsstack_copy_attr_times(dentry->d_inode,
 					file_inode(lower_file));
 	}
 
@@ -94,7 +94,7 @@ static int sdcardfs_readdir(struct file *file, struct dir_context *ctx)
 	err = iterate_dir(lower_file, ctx);
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
-		fsstack_copy_attr_atime(d_inode(dentry),
+		fsstack_copy_attr_atime(dentry->d_inode,
 					file_inode(lower_file));
 	return err;
 }
@@ -218,7 +218,7 @@ static int sdcardfs_open(struct inode *inode, struct file *file)
 
 	has_rw = get_caller_has_rw_locked(sbi->pkgl_id, sbi->options.derive);
 
-	if(!check_caller_access_to_name(d_inode(parent), dentry->d_name.name,
+	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
 				sbi->options.derive,
 				open_flags_to_access_mode(file->f_flags), has_rw)) {
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
@@ -295,8 +295,8 @@ static int sdcardfs_file_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int sdcardfs_fsync(struct file *file, loff_t start, loff_t end,
-			int datasync)
+static int
+sdcardfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	int err;
 	struct file *lower_file;
@@ -342,7 +342,6 @@ const struct file_operations sdcardfs_main_fops = {
 	.release	= sdcardfs_file_release,
 	.fsync		= sdcardfs_fsync,
 	.fasync		= sdcardfs_fasync,
-	.get_lower_file = sdcardfs_get_lower_file,
 };
 
 /* trimmed directory options */
@@ -359,5 +358,4 @@ const struct file_operations sdcardfs_dir_fops = {
 	.flush		= sdcardfs_flush,
 	.fsync		= sdcardfs_fsync,
 	.fasync		= sdcardfs_fasync,
-	.get_lower_file = sdcardfs_get_lower_file,
 };
