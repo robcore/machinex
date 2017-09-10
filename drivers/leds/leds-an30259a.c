@@ -589,20 +589,26 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			an30259a_set_led_delayed_blink(LED_R, 0, 10, 10, 234, false);
-			an30259a_set_led_delayed_blink(LED_G, 0, 10, 10, 224, false);
-			an30259a_set_led_delayed_blink(LED_B, 10, 10, 10, 255, false);
+			leds_on(LED_R, true, true, 234);
+			leds_set_slope_mode(client, LED_R,
+					0, 15, 15, 1, 4, 4, 2, 2, 2, 2);
+			leds_on(LED_G, true, true, 224);
+			leds_set_slope_mode(client, LED_G,
+					0, 15, 15, 1, 4, 4, 2, 2, 2, 2);
+			leds_on(LED_B, true, true, 255);
+			leds_set_slope_mode(client, LED_B,
+					4, 15, 15, 1, 4, 4, 2, 2, 2, 2);
 			booted = true;
 			break;
 		} else {
 			pr_info("Fade to Black\n");
-			leds_on(LED_R, true, true, 65);
+			leds_on(LED_R, true, true, 15);
 			leds_set_slope_mode(client, LED_R,
 					0, 2, 0, 0, 1, 5, 8, 2, 2, 8);
 			leds_on(LED_G, true, true, 255);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
-			leds_on(LED_B, true, true, 255);
+			leds_on(LED_B, true, true, 245);
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
 			break;
