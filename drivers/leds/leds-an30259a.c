@@ -382,7 +382,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned int initial_delay,
 					unsigned int delay_on_time,
 					unsigned int delay_off_time,
-					u8 brightness)
+					u8 brightness, bool force_brightness)
 {
 	struct i2c_client *client;
 	client = b_client;
@@ -395,8 +395,14 @@ static void an30259a_set_led_delayed_blink(enum an30259a_led_enum led, unsigned 
 	if (brightness > LED_MAX_CURRENT)
 		brightness = LED_MAX_CURRENT;
 
-	if (led == LED_R || led == LED_G || led == LED_B)
-		led_dynamic_current = LED_DEFAULT_CURRENT;
+	if (led == LED_R || led == LED_G || led == LED_B) {
+		if (!force_brightness)
+			led_dynamic_current = LED_DEFAULT_CURRENT;
+		else {
+			led_dynamic_current = brightness;
+			led_intensity = brightness;
+		}
+	}
 
 	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
 	if (led_intensity == 40) /* Samsung stock behaviour */
@@ -583,20 +589,20 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			an30259a_set_led_delayed_blink(LED_R, 0, 4, 4, 234);
-			an30259a_set_led_delayed_blink(LED_G, 0, 4, 4, 224);
-			an30259a_set_led_delayed_blink(LED_B, 4, 4, 4, 255);
+			an30259a_set_led_delayed_blink(LED_R, 0, 10, 10, 234, false);
+			an30259a_set_led_delayed_blink(LED_G, 0, 10, 10, 224, false);
+			an30259a_set_led_delayed_blink(LED_B, 10, 10, 10, 255, false);
 			booted = true;
 			break;
 		} else {
 			pr_info("Fade to Black\n");
-			leds_on(LED_R, true, true, 15);
+			leds_on(LED_R, true, true, 65);
 			leds_set_slope_mode(client, LED_R,
 					0, 2, 0, 0, 1, 5, 8, 2, 2, 8);
-			leds_on(LED_G, true, true, 90);
+			leds_on(LED_G, true, true, 255);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
-			leds_on(LED_B, true, true, 90);
+			leds_on(LED_B, true, true, 255);
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
 			break;
@@ -605,15 +611,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (poweroff_charging)
 			return;
 		pr_info("LED Fake Powering Pattern ON\n");
-		leds_on(LED_R, true, true, r_brightness);
-		leds_set_slope_mode(client, LED_R,
-					0, 5, 0, 0, 2, 2, 0, 0, 0, 0);
-		leds_on(LED_G, true, true, g_brightness);
-		leds_set_slope_mode(client, LED_G,
-					0, 15, 7, 2, 2, 2, 0, 0, 0, 0);
-		leds_on(LED_B, true, true, b_brightness);
-		leds_set_slope_mode(client, LED_B,
-					3, 15, 8, 2, 2, 2, 0, 0, 0, 0);
+			an30259a_set_led_delayed_blink(LED_R, 0, 4, 4, 234, false);
+			an30259a_set_led_delayed_blink(LED_G, 0, 4, 4, 224, false);
+			an30259a_set_led_delayed_blink(LED_B, 4, 4, 4, 255, false);
+			booted = true;
+			break;
 		break;
 
 /* For later
@@ -640,9 +642,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		break;
 #endif
 
-		an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0xEA);
-		an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xE2);
-		an30259a_set_led_delayed_blink(LED_B, 0, 1, 1, 0xFF);
+		an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0xEA, false);
+		an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xE2, false);
+		an30259a_set_led_delayed_blink(LED_B, 0, 1, 1, 0xFF, false);
 		break;
 
 	case CUSTOM:
