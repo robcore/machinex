@@ -125,7 +125,7 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 else
 	adb kill-server
 	adbcountdown
-	adb connect 192.168.1.103
+	adb connect 192.168.1.111
 	adbcountdown
 	echo "Trying Wireless"
 	adb push $1.zip /storage/extSdCard
