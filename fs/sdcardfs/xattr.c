@@ -20,7 +20,7 @@ sdcardfs_setxattr(struct dentry *dentry, const char *name, const void *value, si
 	struct dentry *lower_dentry;
 
 	lower_dentry = sdcardfs_dentry_to_lower(dentry);
-	if (!lower_dentry->d_inode->i_op->setxattr) {
+	if (!d_inode(lower_dentry)->i_op->setxattr) {
 		rc = -EOPNOTSUPP;
 		goto out;
 	}
@@ -35,11 +35,11 @@ sdcardfs_getxattr_lower(struct dentry *lower_dentry, const char *name, void *val
 {
 	int rc = 0;
 
-	if (!lower_dentry->d_inode->i_op->getxattr) {
+	if (!d_inode(lower_dentry)->i_op->getxattr) {
 		rc = -EOPNOTSUPP;
 		goto out;
 	}
-	rc = lower_dentry->d_inode->i_op->getxattr(lower_dentry, name, value,
+	rc = d_inode(lower_dentry)->i_op->getxattr(lower_dentry, name, value,
 						   size);
 out:
 	return rc;
@@ -61,11 +61,11 @@ sdcardfs_listxattr(struct dentry *dentry, char *list, size_t size)
 	struct dentry *lower_dentry;
 
 	lower_dentry = sdcardfs_dentry_to_lower(dentry);
-	if (!lower_dentry->d_inode->i_op->listxattr) {
+	if (!d_inode(lower_dentry)->i_op->listxattr) {
 		rc = -EOPNOTSUPP;
 		goto out;
 	}
-	rc = lower_dentry->d_inode->i_op->listxattr(lower_dentry, list, size);
+	rc = d_inode(lower_dentry)->i_op->listxattr(lower_dentry, list, size);
 out:
 	return rc;
 }
@@ -77,13 +77,13 @@ sdcardfs_removexattr(struct dentry *dentry, const char *name)
 	struct dentry *lower_dentry;
 
 	lower_dentry = sdcardfs_dentry_to_lower(dentry);
-	if (!lower_dentry->d_inode->i_op->removexattr) {
+	if (!d_inode(lower_dentry)->i_op->removexattr) {
 		rc = -EOPNOTSUPP;
 		goto out;
 	}
-	mutex_lock(&lower_dentry->d_inode->i_mutex);
-	rc = lower_dentry->d_inode->i_op->removexattr(lower_dentry, name);
-	mutex_unlock(&lower_dentry->d_inode->i_mutex);
+	mutex_lock(&d_inode(lower_dentry)->i_mutex);
+	rc = d_inode(lower_dentry)->i_op->removexattr(lower_dentry, name);
+	mutex_unlock(&d_inode(lower_dentry)->i_mutex);
 out:
 	return rc;
 }
