@@ -590,25 +590,25 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
 			leds_on(LED_R, true, true, 234);
-			leds_set_slope_mode(client, LED_R,
-					0, 15, 15, 1, 4, 4, 2, 2, 2, 2);
 			leds_on(LED_G, true, true, 224);
-			leds_set_slope_mode(client, LED_G,
-					0, 15, 15, 1, 4, 4, 2, 2, 2, 2);
 			leds_on(LED_B, true, true, 255);
+			leds_set_slope_mode(client, LED_R,
+					0, 15, 15, 0, 4, 4, 2, 2, 2, 2);
+			leds_set_slope_mode(client, LED_G,
+					0, 15, 15, 0, 4, 4, 2, 2, 2, 2);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 15, 1, 4, 4, 2, 2, 2, 2);
+					4, 15, 15, 0, 4, 4, 2, 2, 2, 2);
 			booted = true;
 			break;
 		} else {
 			pr_info("Fade to Black\n");
 			leds_on(LED_R, true, true, 15);
+			leds_on(LED_G, true, true, 255);
+			leds_on(LED_B, true, true, 245);
 			leds_set_slope_mode(client, LED_R,
 					0, 2, 0, 0, 1, 5, 8, 2, 2, 8);
-			leds_on(LED_G, true, true, 255);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
-			leds_on(LED_B, true, true, 245);
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
 			break;
@@ -617,10 +617,15 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (poweroff_charging)
 			return;
 		pr_info("LED Fake Powering Pattern ON\n");
-			an30259a_set_led_delayed_blink(LED_R, 0, 4, 4, 234, false);
-			an30259a_set_led_delayed_blink(LED_G, 0, 4, 4, 224, false);
-			an30259a_set_led_delayed_blink(LED_B, 4, 4, 4, 255, false);
-			booted = true;
+			leds_on(LED_R, true, true, 15);
+			leds_on(LED_G, true, true, 255);
+			leds_on(LED_B, true, true, 245);
+			leds_set_slope_mode(client, LED_R,
+					0, 2, 0, 0, 1, 5, 8, 2, 2, 8);
+			leds_set_slope_mode(client, LED_G,
+					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
+			leds_set_slope_mode(client, LED_B,
+					0, 15, 2, 0, 1, 5, 8, 2, 2, 8);
 			break;
 		break;
 
@@ -647,7 +652,6 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		leds_set_slope_mode(client, LED_B, 0, 15, 0, 0, 1, 1, 0, 0, 0, 0);
 		break;
 #endif
-
 		an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0xEA, false);
 		an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xE2, false);
 		an30259a_set_led_delayed_blink(LED_B, 0, 1, 1, 0xFF, false);
