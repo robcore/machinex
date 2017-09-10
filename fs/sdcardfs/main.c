@@ -286,7 +286,7 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 		/* setup permission policy */
 		switch(sb_info->options.derive) {
 			case DERIVE_NONE:
-				setup_derived_state(sb->s_root->d_inode,
+				setup_derived_state(d_inode(sb->s_root),
 					PERM_ROOT, 0, AID_ROOT, AID_SDCARD_RW, 00775);
 				sb_info->obbpath_s = NULL;
 				break;
@@ -294,7 +294,7 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 				/* Legacy behavior used to support internal multiuser layout which
 				 * places user_id at the top directory level, with the actual roots
 				 * just below that. Shared OBB path is also at top level. */
-				setup_derived_state(sb->s_root->d_inode,
+				setup_derived_state(d_inode(sb->s_root),
 				        PERM_LEGACY_PRE_ROOT, 0, AID_ROOT, AID_SDCARD_R, 00771);
 				/* initialize the obbpath string and lookup the path
 				 * sb_info->obb_path will be deactivated by path_put
@@ -311,14 +311,14 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 			case DERIVE_UNIFIED:
 				/* Unified multiuser layout which places secondary user_id under
 				 * /Android/user and shared OBB path under /Android/obb. */
-				setup_derived_state(sb->s_root->d_inode,
+				setup_derived_state(d_inode(sb->s_root),
 						PERM_ROOT, 0, AID_ROOT, AID_SDCARD_R, 00771);
 
 				sb_info->obbpath_s = kzalloc(PATH_MAX, GFP_KERNEL);
 				snprintf(sb_info->obbpath_s, PATH_MAX, "%s/Android/obb", dev_name);
 				break;
 		}
-		fix_derived_permission(sb->s_root->d_inode);
+		fix_derived_permission(d_inode(sb->s_root));
 
 		sb_info->devpath = kzalloc(PATH_MAX, GFP_KERNEL);
 		if(sb_info->devpath && dev_name)
