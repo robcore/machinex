@@ -81,39 +81,33 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 		case Opt_debug:
 			*debug = 1;
 			break;
-		case Opt_uid:
+		case Opt_fsuid:
 			if (match_int(&args[0], &option))
 				return 0;
 			opts->fs_low_uid = option;
 			break;
-		case Opt_gid:
+		case Opt_fsgid:
 			if (match_int(&args[0], &option))
 				return 0;
 			opts->fs_low_gid = option;
 			break;
-		case Opt_wgid:
+		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return 0;
-			opts->write_gid = option;
+			opts->gid = option;
 			break;
-		case Opt_split:
-			opts->split_perms=1;
+		case Opt_userid:
+			if (match_int(&args[0], &option))
+				return 0;
+			opts->fs_user_id = option;
 			break;
-		case Opt_derive:
-			string_option = match_strdup(&args[0]);
-			if (!string_option)
-				return -ENOMEM;
-			if (!strcmp("none", string_option)) {
-				opts->derive = DERIVE_NONE;
-			} else if (!strcmp("legacy", string_option)) {
-				opts->derive = DERIVE_LEGACY;
-			} else if (!strcmp("unified", string_option)) {
-				opts->derive = DERIVE_UNIFIED;
-			} else {
-				kfree(string_option);
-				goto invalid_option;
-			}
-			kfree(string_option);
+		case Opt_mask:
+			if (match_int(&args[0], &option))
+				return 0;
+			opts->mask = option;
+			break;
+		case Opt_multiuser:
+			opts->multiuser = true;
 			break;
 		case Opt_reserved_mb:
 			if (match_int(&args[0], &option))
@@ -274,13 +268,13 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 	sb_info->obbpath_s = kzalloc(PATH_MAX, GFP_KERNEL);
 	mutex_lock(&sdcardfs_super_list_lock);
 	if(sb_info->options.multiuser) {
-		setup_derived_state(sb->s_root->d_inode, PERM_PRE_ROOT, sb_info->options.fs_user_id, AID_ROOT, false);
+		setup_derived_state(sb->s_root->d_inode, PERM_PRE_ROOT, sb_info->options.fs_user_id, AID_ROOT, false, sb->s_root->d_inode);
 		snprintf(sb_info->obbpath_s, PATH_MAX, "%s/obb", dev_name);
 		/*err =  prepare_dir(sb_info->obbpath_s,
 					sb_info->options.fs_low_uid,
 					sb_info->options.fs_low_gid, 00755);*/
 	} else {
-		setup_derived_state(sb->s_root->d_inode, PERM_ROOT, sb_info->options.fs_low_uid, AID_ROOT, false);
+		setup_derived_state(sb->s_root->d_inode, PERM_ROOT, sb_info->options.fs_low_uid, AID_ROOT, false, sb->s_root->d_inode);
 		snprintf(sb_info->obbpath_s, PATH_MAX, "%s/Android/obb", dev_name);
 	}
 	fix_derived_permission(sb->s_root->d_inode);
