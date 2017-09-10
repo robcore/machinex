@@ -87,7 +87,7 @@ int get_caller_has_rw_locked(void *pkgl_id, derive_t derive) {
 		return 1;
 	}
 
-	appid = multiuser_get_app_id(current_fsuid());
+	appid = multiuser_get_app_id(from_kuid(&init_user_ns, current_fsuid()));
 	mutex_lock(&pkgl_dat->hashtable_lock);
 	ret = contain_appid_key(pkgl_dat, (void *)appid);
 	mutex_unlock(&pkgl_dat->hashtable_lock);
@@ -139,7 +139,7 @@ int check_caller_access_to_name(struct inode *parent_node, const char* name,
 
 	/* Root always has access; access for any other UIDs should always
 	 * be controlled through packages.list. */
-	if (current_fsuid() == 0) {
+	if (from_kuid(&init_user_ns, current_fsuid()) == 0) {
 		return 1;
 	}
 
@@ -147,7 +147,8 @@ int check_caller_access_to_name(struct inode *parent_node, const char* name,
 	 * parent or holds sdcard_rw. */
 	if (w_ok) {
 		if (parent_node &&
-			(current_fsuid() == SDCARDFS_I(parent_node)->d_uid)) {
+			(from_kuid(&init_user_ns, current_fsuid()) ==
+			 SDCARDFS_I(parent_node)->d_uid)) {
 			return 1;
 		}
 		return has_rw;

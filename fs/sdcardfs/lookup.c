@@ -20,7 +20,6 @@
 
 #include "sdcardfs.h"
 #include "linux/delay.h"
-#include "../internal.h"
 
 /* The dentry cache is just so we have properly sized dentries */
 static struct kmem_cache *sdcardfs_dentry_cachep;
@@ -67,10 +66,11 @@ int new_dentry_private_data(struct dentry *dentry)
 
 static int sdcardfs_inode_test(struct inode *inode, void *candidate_lower_inode)
 {
-	/* if a lower_inode should have many upper inodes, (like obb)
-	   sdcardfs_iget() will offer many inodes
-	   because test func always will return fail although they have same hash */
-	return 0;
+	struct inode *current_lower_inode = sdcardfs_lower_inode(inode);
+	if (current_lower_inode == (struct inode *)candidate_lower_inode)
+		return 1; /* found a match */
+	else
+		return 0; /* no match */
 }
 
 static int sdcardfs_inode_set(struct inode *inode, void *lower_inode)
@@ -79,8 +79,7 @@ static int sdcardfs_inode_set(struct inode *inode, void *lower_inode)
 	return 0;
 }
 
-static struct inode *sdcardfs_iget(struct super_block *sb,
-				 struct inode *lower_inode)
+struct inode *sdcardfs_iget(struct super_block *sb, struct inode *lower_inode)
 {
 	struct sdcardfs_inode_info *info;
 	struct inode *inode; /* the new inode to return */
@@ -131,6 +130,8 @@ static struct inode *sdcardfs_iget(struct super_block *sb,
 	else
 		inode->i_fop = &sdcardfs_main_fops;
 
+	inode->i_mapping->a_ops = &sdcardfs_aops;
+
 	inode->i_atime.tv_sec = 0;
 	inode->i_atime.tv_nsec = 0;
 	inode->i_mtime.tv_sec = 0;
@@ -144,8 +145,8 @@ static struct inode *sdcardfs_iget(struct super_block *sb,
 		init_special_inode(inode, lower_inode->i_mode,
 				   lower_inode->i_rdev);
 
-	/* all well, copy inode attributes, don't need to hold i_mutex here */
-	sdcardfs_copy_inode_attr(inode, lower_inode);
+	/* all well, copy inode attributes */
+	fsstack_copy_attr_all(inode, lower_inode);
 	fsstack_copy_inode_size(inode, lower_inode);
 
 	fix_derived_permission(inode);
