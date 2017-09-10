@@ -133,11 +133,6 @@ typedef enum {
 	PERM_ANDROID_KNOX_DATA,
 } perm_t;
 
-typedef enum {
-	LOWER_FS_EXT4,
-	LOWER_FS_FAT,
-} lower_fs_t;
-
 struct sdcardfs_sb_info;
 struct sdcardfs_mount_options;
 
@@ -201,7 +196,6 @@ struct sdcardfs_mount_options {
 	gid_t fs_low_gid;
 	userid_t fs_user_id;
 	gid_t gid;
-	lower_fs_t lower_fs;
 	mode_t mask;
 	bool multiuser;
 	unsigned int reserved_mb;
