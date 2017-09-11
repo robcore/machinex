@@ -224,7 +224,7 @@ int pm_wake_lock(const char *buf)
 	size_t len;
 	int ret = 0;
 
-	if (!capable(CAP_BLOCK_SUSPEND))
+	if (!capable(CAP_BLOCK_SUSPEND) && strict_wl_perms)
 		return -EPERM;
 
 	while (*str && !isspace(*str))
@@ -276,10 +276,8 @@ int pm_wake_unlock(const char *buf)
 	start_time = ktime_get();
 #endif
 
-#if 0
-	if (!capable(CAP_BLOCK_SUSPEND))
+	if (!capable(CAP_BLOCK_SUSPEND) && strict_wl_perms)
 		return -EPERM;
-#endif
 
 	len = strlen(buf);
 	if (!len)

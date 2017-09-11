@@ -18,6 +18,7 @@
 #include <linux/hrtimer.h>
 #include <linux/suspend.h>
 #include <linux/fake_dvfs.h>
+#include <linux/sysfs_helpers.h>
 
 #include "power.h"
 
@@ -93,6 +94,30 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 }
 
 power_attr(pm_async);
+
+unsigned int strict_wl_perms;
+
+static ssize_t strict_wl_perms_show(struct kobject *kobj, struct kobj_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "%d\n", strict_wl_perms);
+}
+
+static ssize_t strict_wl_perms_store(struct kobject *kobj, struct kobj_attribute *attr,
+			      const char *buf, size_t n)
+{
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val))
+		return -EINVAL;
+
+	sanitize_min_max(val, 0, 1);
+
+	strict_wl_perms = val;
+	return n;
+}
+
+power_attr(strict_wl_perms);
 
 static ssize_t
 touch_event_show(struct kobject *kobj,
@@ -1131,6 +1156,7 @@ static struct attribute * g[] = {
 #endif
 #ifdef CONFIG_PM_SLEEP
 	&pm_async_attr.attr,
+	&strict_wl_perms_attr.attr,
 	&wakeup_count_attr.attr,
 #ifdef CONFIG_SUSPEND
 	&mem_sleep_attr.attr,
