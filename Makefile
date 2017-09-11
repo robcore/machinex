@@ -422,7 +422,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-unused-
 		   -std=gnu89 \
 		   -Wno-format-security -Wno-unused-function -Wno-unused-label -Wno-logical-not-parentheses \
 		   -Wno-cpp -fno-var-tracking-assignments -Wfatal-errors -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr \
-		   -fno-aggressive-loop-optimizations -Wno-sequence-point
+		   -fno-aggressive-loop-optimizations -Wno-sequence-point -Wno-misleading-indentation
 #-Wno-array-bounds -Wno-declaration-after-statement -Wno-sizeof-pointer-memaccess #-Wno-misleading-indentation -fno-aggressive-loop-optimizations
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
