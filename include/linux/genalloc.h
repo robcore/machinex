@@ -30,6 +30,8 @@
 #ifndef __GENALLOC_H__
 #define __GENALLOC_H__
 
+#include <linux/spinlock_types.h>
+
 struct device;
 struct device_node;
 
@@ -72,12 +74,9 @@ struct gen_pool_chunk {
 };
 
 extern struct gen_pool *gen_pool_create(int, int);
-extern phys_addr_t gen_pool_virt_to_phys(struct gen_pool *pool, u64);
-extern int gen_pool_add_virt(struct gen_pool *, u64, phys_addr_t,
+extern phys_addr_t gen_pool_virt_to_phys(struct gen_pool *pool, unsigned long);
+extern int gen_pool_add_virt(struct gen_pool *, unsigned long, phys_addr_t,
 			     size_t, int);
-
-bool addr_in_gen_pool(struct gen_pool *pool, unsigned long start,
-			size_t size);
 /**
  * gen_pool_add - add a new chunk of special memory to the pool
  * @pool: pool to add new memory chunk to
@@ -90,17 +89,21 @@ bool addr_in_gen_pool(struct gen_pool *pool, unsigned long start,
  *
  * Returns 0 on success or a -ve errno on failure.
  */
-static inline int gen_pool_add(struct gen_pool *pool, u64 addr,
+static inline int gen_pool_add(struct gen_pool *pool, unsigned long addr,
 			       size_t size, int nid)
 {
 	return gen_pool_add_virt(pool, addr, -1, size, nid);
 }
 extern void gen_pool_destroy(struct gen_pool *);
-extern void gen_pool_free(struct gen_pool *, u64, size_t);
+extern unsigned long gen_pool_alloc(struct gen_pool *, size_t);
+extern void *gen_pool_dma_alloc(struct gen_pool *pool, size_t size,
+		dma_addr_t *dma);
+extern void gen_pool_free(struct gen_pool *, unsigned long, size_t);
 extern void gen_pool_for_each_chunk(struct gen_pool *,
 	void (*)(struct gen_pool *, struct gen_pool_chunk *, void *), void *);
 extern size_t gen_pool_avail(struct gen_pool *);
 extern size_t gen_pool_size(struct gen_pool *);
+
 extern void gen_pool_set_algo(struct gen_pool *pool, genpool_algo_t algo,
 		void *data);
 
@@ -114,27 +117,12 @@ extern unsigned long gen_pool_first_fit_order_align(unsigned long *map,
 extern unsigned long gen_pool_best_fit(unsigned long *map, unsigned long size,
 		unsigned long start, unsigned int nr, void *data);
 
-u64 __must_check
-gen_pool_alloc_aligned(struct gen_pool *pool, size_t size,
-                       unsigned alignment_order);
-
-/**
- * gen_pool_alloc() - allocate special memory from the pool
- * @pool:       Pool to allocate from.
- * @size:       Number of bytes to allocate from the pool.
- *
- * Allocate the requested number of bytes from the specified pool.
- * Uses a first-fit algorithm.
- */
-static inline u64 __must_check
-gen_pool_alloc(struct gen_pool *pool, size_t size)
-{
-        return gen_pool_alloc_aligned(pool, size, 0);
-}
-
 extern struct gen_pool *devm_gen_pool_create(struct device *dev,
 		int min_alloc_order, int nid);
 extern struct gen_pool *dev_get_gen_pool(struct device *dev);
+
+bool addr_in_gen_pool(struct gen_pool *pool, unsigned long start,
+			size_t size);
 
 #ifdef CONFIG_OF
 extern struct gen_pool *of_get_named_gen_pool(struct device_node *np,

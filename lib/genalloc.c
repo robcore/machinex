@@ -180,7 +180,7 @@ EXPORT_SYMBOL(gen_pool_create);
  *
  * Returns 0 on success or a -ve errno on failure.
  */
-int gen_pool_add_virt(struct gen_pool *pool, u64 virt, phys_addr_t phys,
+int gen_pool_add_virt(struct gen_pool *pool, unsigned long virt, phys_addr_t phys,
 		 size_t size, int nid)
 {
 	struct gen_pool_chunk *chunk;
@@ -188,14 +188,9 @@ int gen_pool_add_virt(struct gen_pool *pool, u64 virt, phys_addr_t phys,
 	int nbytes = sizeof(struct gen_pool_chunk) +
 				BITS_TO_LONGS(nbits) * sizeof(long);
 
-	if (nbytes <= PAGE_SIZE)
-		chunk = kzalloc_node(nbytes, GFP_KERNEL, nid);
-	else
-		chunk = vmalloc(nbytes);
+	chunk = kzalloc_node(nbytes, GFP_KERNEL, nid);
 	if (unlikely(chunk == NULL))
 		return -ENOMEM;
-	if (nbytes > PAGE_SIZE)
-		memset(chunk, 0, nbytes);
 
 	chunk->phys_addr = phys;
 	chunk->start_addr = virt;
@@ -217,7 +212,7 @@ EXPORT_SYMBOL(gen_pool_add_virt);
  *
  * Returns the physical address on success, or -1 on error.
  */
-phys_addr_t gen_pool_virt_to_phys(struct gen_pool *pool, u64 addr)
+phys_addr_t gen_pool_virt_to_phys(struct gen_pool *pool, unsigned long addr)
 {
 	struct gen_pool_chunk *chunk;
 	phys_addr_t paddr = -1;
@@ -250,46 +245,35 @@ void gen_pool_destroy(struct gen_pool *pool)
 	int bit, end_bit;
 
 	list_for_each_safe(_chunk, _next_chunk, &pool->chunks) {
-		int nbytes;
 		chunk = list_entry(_chunk, struct gen_pool_chunk, next_chunk);
 		list_del(&chunk->next_chunk);
 
 		end_bit = chunk_size(chunk) >> order;
-		nbytes = sizeof(struct gen_pool_chunk) +
-				BITS_TO_LONGS(end_bit) * sizeof(long);
 		bit = find_next_bit(chunk->bits, end_bit, 0);
 		BUG_ON(bit < end_bit);
 
-		if (nbytes <= PAGE_SIZE)
-			kfree(chunk);
-		else
-			vfree(chunk);
+		kfree(chunk);
 	}
 	kfree(pool);
-	return;
 }
 EXPORT_SYMBOL(gen_pool_destroy);
 
 /**
- * gen_pool_alloc_aligned - allocate special memory from the pool
+ * gen_pool_alloc - allocate special memory from the pool
  * @pool: pool to allocate from
  * @size: number of bytes to allocate from the pool
- * @alignment_order: Order the allocated space should be
- *                   aligned to (eg. 20 means allocated space
- *                   must be aligned to 1MiB).
  *
  * Allocate the requested number of bytes from the specified pool.
  * Uses the pool allocation function (with first-fit algorithm by default).
  * Can not be used in NMI handler on architectures without
  * NMI-safe cmpxchg implementation.
  */
-u64 gen_pool_alloc_aligned(struct gen_pool *pool, size_t size,
-				     unsigned alignment_order)
+unsigned long gen_pool_alloc(struct gen_pool *pool, size_t size)
 {
 	struct gen_pool_chunk *chunk;
-	u64 addr = 0, align_mask = 0;
+	unsigned long addr = 0;
 	int order = pool->min_alloc_order;
-	int nbits, start_bit = 0, remain;
+	int nbits, start_bit = 0, end_bit, remain;
 
 #ifndef CONFIG_ARCH_HAVE_NMI_SAFE_CMPXCHG
 	BUG_ON(in_nmi());
@@ -297,9 +281,6 @@ u64 gen_pool_alloc_aligned(struct gen_pool *pool, size_t size,
 
 	if (size == 0)
 		return 0;
-
-	if (alignment_order > order)
-		align_mask = (1 << (alignment_order - order)) - 1;
 
 	nbits = (size + (1UL << order) - 1) >> order;
 	rcu_read_lock();
@@ -329,7 +310,7 @@ retry:
 	rcu_read_unlock();
 	return addr;
 }
-EXPORT_SYMBOL(gen_pool_alloc_aligned);
+EXPORT_SYMBOL(gen_pool_alloc);
 
 /**
  * gen_pool_dma_alloc - allocate special memory from the pool for DMA usage
@@ -370,7 +351,7 @@ EXPORT_SYMBOL(gen_pool_dma_alloc);
  * pool.  Can not be used in NMI handler on architectures without
  * NMI-safe cmpxchg implementation.
  */
-void gen_pool_free(struct gen_pool *pool, u64 addr, size_t size)
+void gen_pool_free(struct gen_pool *pool, unsigned long addr, size_t size)
 {
 	struct gen_pool_chunk *chunk;
 	int order = pool->min_alloc_order;
@@ -434,7 +415,7 @@ bool addr_in_gen_pool(struct gen_pool *pool, unsigned long start,
 			size_t size)
 {
 	bool found = false;
-	unsigned long end = start + size;
+	unsigned long end = start + size - 1;
 	struct gen_pool_chunk *chunk;
 
 	rcu_read_lock();
@@ -617,6 +598,7 @@ struct gen_pool *devm_gen_pool_create(struct device *dev, int min_alloc_order,
 
 	return pool;
 }
+EXPORT_SYMBOL(devm_gen_pool_create);
 
 /**
  * dev_get_gen_pool - Obtain the gen_pool (if any) for a device
@@ -656,6 +638,7 @@ struct gen_pool *of_get_named_gen_pool(struct device_node *np,
 	if (!np_pool)
 		return NULL;
 	pdev = of_find_device_by_node(np_pool);
+	of_node_put(np_pool);
 	if (!pdev)
 		return NULL;
 	return dev_get_gen_pool(&pdev->dev);
