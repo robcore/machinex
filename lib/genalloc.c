@@ -34,6 +34,7 @@
 #include <linux/rculist.h>
 #include <linux/interrupt.h>
 #include <linux/genalloc.h>
+#include <linux/mm.h>
 #include <linux/vmalloc.h>
 
 
