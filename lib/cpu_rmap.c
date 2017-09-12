@@ -191,7 +191,7 @@ int cpu_rmap_update(struct cpu_rmap *rmap, u16 index,
 	/* Update distances based on topology */
 	for_each_cpu(cpu, update_mask) {
 		if (cpu_rmap_copy_neigh(rmap, cpu,
-					topology_sibling_cpumask(cpu), 1))
+					topology_thread_cpumask(cpu), 1))
 			continue;
 		if (cpu_rmap_copy_neigh(rmap, cpu,
 					topology_core_cpumask(cpu), 2))
@@ -235,7 +235,7 @@ void free_irq_cpu_rmap(struct cpu_rmap *rmap)
 
 	for (index = 0; index < rmap->used; index++) {
 		glue = rmap->obj[index];
-		irq_release_affinity_notifier(&glue->notify);
+		irq_set_affinity_notifier(glue->notify.irq, NULL);
 	}
 
 	cpu_rmap_put(rmap);
