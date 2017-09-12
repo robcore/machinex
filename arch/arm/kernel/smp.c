@@ -668,7 +668,7 @@ void smp_send_all_cpu_backtrace(void)
  */
 static void ipi_cpu_backtrace(unsigned int cpu, struct pt_regs *regs)
 {
-	if (cpu_isset(cpu, backtrace_mask)) {
+	if (cpumask_test_cpu(cpu, &backtrace_mask)) {
 		raw_spin_lock(&backtrace_lock);
 		pr_warning("IPI backtrace for cpu %d\n", cpu);
 		show_regs(regs);
