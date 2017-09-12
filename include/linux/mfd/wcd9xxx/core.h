@@ -261,5 +261,4 @@ void wcd9xxx_disable_irq_sync(struct wcd9xxx *wcd9xxx, int irq);
 int __init wcd9xxx_irq_of_init(struct device_node *node,
 			       struct device_node *parent);
 #endif /* CONFIG_OF */
-extern struct snd_kcontrol_new *gpl_faux_snd_controls_ptr;
 #endif

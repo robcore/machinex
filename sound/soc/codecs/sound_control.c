@@ -19,34 +19,24 @@
 #include <linux/bitops.h>
 #include <linux/kallsyms.h>
 #include <linux/export.h>
-#include <sound/control.h>
-#include <sound/soc.h>
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9310_registers.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/timed_output.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	5
-#define SOUND_CONTROL_MINOR_VERSION	5
+#define SOUND_CONTROL_MINOR_VERSION	4
+
+extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 unsigned int snd_ctrl_enabled = 0;
-static unsigned int feedback_val = 125;
-static unsigned int vib_feedback = 0;
-static unsigned int snd_ctrl_locked;
+unsigned int snd_ctrl_locked;
+unsigned int feedback_val = 125;
+unsigned int vib_feedback = 0;
 
 unsigned int tabla_read(struct snd_soc_codec *codec, unsigned int reg);
 int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
-
-#define POWERAMP_LEFT 6
-#define POWERAMP_RIGHT 7
-
-enum {
-	HEADPHONE_PA_L_OFFSET = POWERAMP_LEFT,
-	HEADPHONE_PA_R_OFFSET = POWERAMP_RIGHT,
-};
-extern struct snd_kcontrol_new *gpl_faux_snd_controls_ptr;
-extern struct snd_soc_codec *snd_engine_codec_ptr;
 
 #define REG_SZ 5
 static unsigned int cached_regs[REG_SZ] = { 0, 0, 0, 0, 0 };
@@ -70,8 +60,6 @@ static unsigned int *cache_select(unsigned int reg)
 			break;
 		case TABLA_A_CDC_TX7_VOL_CTL_GAIN:
 			out = &cached_regs[4];
-			break;
-		default:
 			break;
 	}
 
@@ -144,7 +132,11 @@ static ssize_t sound_control_snd_vib_feedback_timeout_store(struct kobject *kobj
 
     sscanf(buf, "%d", &val);
 
-	sanitize_min_max(val, 0, 60000)
+    if (val >= 60000)
+        val = 60000;
+	else if (val <= 0)
+		val = 0;
+
     feedback_val = val;
 
 	if (vib_feedback)
@@ -162,11 +154,17 @@ static ssize_t sound_control_snd_vib_feedback_show(struct kobject *kobj,
 static ssize_t sound_control_snd_vib_feedback_store(struct kobject *kobj,
         struct kobj_attribute *attr, const char *buf, size_t count)
 {
-    int val;
+    unsigned int val;
 
-    sscanf(buf, "%d", &val);
+    sscanf(buf, "%u", &val);
 
-	sanitize_min_max(val, 0, 1)
+    if (val >= 1) {
+        val = 1;
+	}
+
+	if (val == 0) {
+		val = 0;
+	}
 
     vib_feedback = val;
 
@@ -185,12 +183,20 @@ static ssize_t sound_control_enabled_show(struct kobject *kobj,
 static ssize_t sound_control_enabled_store(struct kobject *kobj,
         struct kobj_attribute *attr, const char *buf, size_t count)
 {
-    int val;
+    unsigned int val;
 
-    sscanf(buf, "%d", &val);
+    sscanf(buf, "%u", &val);
 
-	sanitize_min_max(val, 0, 1)
-	snd_ctrl_locked = val ? 1 : 0;
+    if (val >= 1) {
+        val = 1;
+		snd_ctrl_locked = 1;
+	}
+
+	if (val == 0) {
+		val = 0;
+		snd_ctrl_locked = 0;
+	}
+
     snd_ctrl_enabled = val;
 
 	if (vib_feedback)
@@ -200,71 +206,6 @@ static ssize_t sound_control_enabled_store(struct kobject *kobj,
 }
 
 static unsigned int selected_reg = 0xdeadbeef;
-
-static int getsum(int val)
-{
-	int checksum, sum;
-
-	checksum = 255 - val;
-	if (val < 0) {
-		sum = val + 1;
-		checksum = ~sum + 1;
-	}
-	return checksum;
-}
-
-static int getval(int val)
-{
-	int checksum, sum;
-
-	checksum = 255 - val;
-	if (val < 0) {
-		sum = val + 1;
-		checksum = ~sum + 1;
-		val = val + 256;
-	}
-	return val;
-}
-
-static int getdoublesum(int lval, int rval)
-{
-	int checksum, sum, addval;
-
-	addval = lval + rval;
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-	}
-	return checksum;
-}
-
-static int get_lval(int lval, int rval)
-{
-	int checksum, sum, addval;
-
-	addval = lval + rval;
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-		lval += 256;
-		rval += 256;
-	}
-	return lval;
-}
-
-static int get_rval(int lval, int rval)
-{
-	int checksum, sum, addval;
-
-	addval = lval + rval;
-	checksum = 255 - addval;
-	if (checksum > 255) {
-		checksum -=256;
-		lval += 256;
-		rval += 256;
-	}
-	return rval;
-}
 
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -277,19 +218,31 @@ static ssize_t speaker_gain_show(struct kobject *kobj,
 static ssize_t speaker_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int val, checksum;
+	int val;
+	int addval, checksum;
+	int lval, rval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	checksum = getsum(val);
-	val = getsum(val);
+	lval = val;
+	rval = val;
+
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
-		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, val);
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, lval);
+	tabla_write(snd_engine_codec_ptr,
+		TABLA_A_CDC_RX5_VOL_CTL_B2_CTL, rval);
 	snd_ctrl_locked = 1;
 
 	if (vib_feedback)
@@ -311,18 +264,25 @@ static ssize_t headphone_gain_show(struct kobject *kobj,
 static ssize_t headphone_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int val, checksum, lval, rval;
+	int val;
+	int addval, checksum;
+	int lval, rval;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	lval = rval = val;
+	lval = val;
+	rval = val;
 
-	checksum = getdoublesum(lval, rval);
-	lval = get_lval(lval, rval);
-	rval = get_rval(lval, rval);
+	addval = lval + rval;
+	checksum = 255 - addval;
+	if (checksum > 255) {
+		checksum -=256;
+		lval += 256;
+		rval += 256;
+	}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -350,15 +310,20 @@ static ssize_t cam_mic_gain_show(struct kobject *kobj,
 static ssize_t cam_mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int val, checksum;
+	int val;
+	int sum, checksum;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	checksum = getsum(val);
-	val = getsum(val);
+	checksum = 255 - val;
+		if (val < 0) {
+			sum = 1 + val;
+			checksum = sum * -1;
+			val = val + 256;
+		}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -384,15 +349,20 @@ static ssize_t mic_gain_show(struct kobject *kobj,
 static ssize_t mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int val, checksum;
+	int val;
+	int sum, checksum;
 
 	sscanf(buf, "%d", &val);
 
 	if (!snd_ctrl_enabled)
 		return count;
 
-	checksum = getsum(val);
-	val = getsum(val);
+	checksum = 255 - val;
+		if (val < 0) {
+			sum = 1 + val;
+			checksum = sum * -1;
+			val = val + 256;
+		}
 
 	snd_ctrl_locked = 0;
 	tabla_write(snd_engine_codec_ptr,
@@ -403,57 +373,6 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 		machinex_vibrator(feedback_val);
 
 	count = checksum;
-
-	return count;
-}
-
-static ssize_t headphone_pa_gain_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	struct soc_mixer_control *l_mixer_ptr, *r_mixer_ptr;
-
-	l_mixer_ptr =
-		(struct soc_mixer_control *)
-			gpl_faux_snd_controls_ptr[HEADPHONE_PA_L_OFFSET].
-			private_value;
-	r_mixer_ptr =
-		(struct soc_mixer_control *)
-			gpl_faux_snd_controls_ptr[HEADPHONE_PA_R_OFFSET].
-			private_value;
-
-	return sprintf(buf, "%d\n",
-			l_mixer_ptr->max);
-}
-
-static ssize_t headphone_pa_gain_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int l_max, r_max;
-	int l_delta, r_delta;
-	struct soc_mixer_control *l_mixer_ptr, *r_mixer_ptr;
-
-	l_mixer_ptr =
-		(struct soc_mixer_control *)
-			gpl_faux_snd_controls_ptr[HEADPHONE_PA_L_OFFSET].
-			private_value;
-	r_mixer_ptr =
-		(struct soc_mixer_control *)
-			gpl_faux_snd_controls_ptr[HEADPHONE_PA_R_OFFSET].
-			private_value;
-
-	sscanf(buf, "%d", &l_max);
-
-	r_max = l_max;
-
-	l_delta = l_max - l_mixer_ptr->platform_max;
-	l_mixer_ptr->platform_max = l_max;
-	l_mixer_ptr->max = l_max;
-	l_mixer_ptr->min += l_delta;
-
-	r_delta = r_max - r_mixer_ptr->platform_max;
-	r_mixer_ptr->platform_max = r_max;
-	r_mixer_ptr->max = r_max;
-	r_mixer_ptr->min += r_delta;
 
 	return count;
 }
@@ -519,12 +438,6 @@ static struct kobj_attribute mic_gain_attribute =
 		mic_gain_show,
 		mic_gain_store);
 
-static struct kobj_attribute headphone_pa_gain_attribute =
-	__ATTR(gpl_headphone_pa_gain,
-		0644,
-		headphone_pa_gain_show,
-		headphone_pa_gain_store);
-
 static struct kobj_attribute sound_control_version_attribute =
 	__ATTR(gpl_sound_control_version,
 		0444,
@@ -544,7 +457,6 @@ static struct attribute *sound_control_attrs[] =
 	&speaker_gain_attribute.attr,
 	&cam_mic_gain_attribute.attr,
 	&mic_gain_attribute.attr,
-	&headphone_pa_gain_attribute.attr,
 	&sound_control_version_attribute.attr,
 	&sound_control_register_list_attribute.attr,
 	NULL,
@@ -559,12 +471,13 @@ static struct kobject *sound_control_kobj;
 
 static int sound_control_init(void)
 {
-	int sysfs_result, ret = 0;
+	int sysfs_result;
+	int ret = 0;
 
 	snd_ctrl_enabled = 0;
 
 	sound_control_kobj =
-		kobject_create_and_add("sound_control", kernel_kobj);
+		kobject_create_and_add("sound_control_3", kernel_kobj);
 
 	if (!sound_control_kobj) {
 		pr_err("%s sound_control_kobj create failed!\n",
@@ -599,3 +512,4 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("WCD93xx Sound Engine v4.x");
+
