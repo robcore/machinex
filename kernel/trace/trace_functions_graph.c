@@ -1463,7 +1463,7 @@ static struct tracer graph_trace __read_mostly = {
 
 static __init int init_graph_trace(void)
 {
-	max_bytes_for_cpu = snprintf(NULL, 0, "%d", nr_cpu_ids - 1);
+	max_bytes_for_cpu = snprintf(NULL, 0, "%u", nr_cpu_ids - 1);
 
 	if (!register_ftrace_event(&graph_trace_entry_event)) {
 		pr_warning("Warning: could not register graph trace events\n");

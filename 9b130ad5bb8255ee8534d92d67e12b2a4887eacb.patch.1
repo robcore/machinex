@@ -1,0 +1,302 @@
+From 9b130ad5bb8255ee8534d92d67e12b2a4887eacb Mon Sep 17 00:00:00 2001
+From: Alexey Dobriyan <adobriyan@gmail.com>
+Date: Fri, 8 Sep 2017 16:14:18 -0700
+Subject: [PATCH] treewide: make "nr_cpu_ids" unsigned
+
+First, number of CPUs can't be negative number.
+
+Second, different signnnedness leads to suboptimal code in the following
+cases:
+
+1)
+	kmalloc(nr_cpu_ids * sizeof(X));
+
+"int" has to be sign extended to size_t.
+
+2)
+	while (loff_t *pos < nr_cpu_ids)
+
+MOVSXD is 1 byte longed than the same MOV.
+
+Other cases exist as well. Basically compiler is told that nr_cpu_ids
+can't be negative which can't be deduced if it is "int".
+
+Code savings on allyesconfig kernel: -3KB
+
+	add/remove: 0/0 grow/shrink: 25/264 up/down: 261/-3631 (-3370)
+	function                                     old     new   delta
+	coretemp_cpu_online                          450     512     +62
+	rcu_init_one                                1234    1272     +38
+	pci_device_probe                             374     399     +25
+
+				...
+
+	pgdat_reclaimable_pages                      628     556     -72
+	select_fallback_rq                           446     369     -77
+	task_numa_find_cpu                          1923    1807    -116
+
+Link: http://lkml.kernel.org/r/20170819114959.GA30580@avx2
+Signed-off-by: Alexey Dobriyan <adobriyan@gmail.com>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ arch/arm64/kernel/smp.c              | 2 +-
+ arch/powerpc/kernel/paca.c           | 2 +-
+ arch/powerpc/kernel/setup-common.c   | 2 +-
+ arch/powerpc/sysdev/xive/native.c    | 4 ++--
+ arch/tile/kernel/setup.c             | 2 +-
+ arch/x86/kernel/apic/apic.c          | 2 +-
+ arch/x86/kernel/setup_percpu.c       | 2 +-
+ arch/x86/kernel/smpboot.c            | 2 +-
+ drivers/base/cpu.c                   | 4 ++--
+ drivers/scsi/scsi_debug.c            | 2 +-
+ include/linux/cpumask.h              | 6 +++---
+ kernel/rcu/tree.c                    | 2 +-
+ kernel/rcu/tree_plugin.h             | 2 +-
+ kernel/sched/topology.c              | 2 +-
+ kernel/smp.c                         | 2 +-
+ kernel/trace/trace_functions_graph.c | 2 +-
+ mm/slub.c                            | 2 +-
+ 17 files changed, 21 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm64/kernel/smp.c b/arch/arm64/kernel/smp.c
+index ffe089942ac4d..9f7195a5773ee 100644
+--- a/arch/arm64/kernel/smp.c
++++ b/arch/arm64/kernel/smp.c
+@@ -690,7 +690,7 @@ void __init smp_init_cpus(void)
+ 				      acpi_parse_gic_cpu_interface, 0);
+ 
+ 	if (cpu_count > nr_cpu_ids)
+-		pr_warn("Number of cores (%d) exceeds configured maximum of %d - clipping\n",
++		pr_warn("Number of cores (%d) exceeds configured maximum of %u - clipping\n",
+ 			cpu_count, nr_cpu_ids);
+ 
+ 	if (!bootcpu_valid) {
+diff --git a/arch/powerpc/kernel/paca.c b/arch/powerpc/kernel/paca.c
+index 70f073d6c3b27..2ff2b8a19f712 100644
+--- a/arch/powerpc/kernel/paca.c
++++ b/arch/powerpc/kernel/paca.c
+@@ -224,7 +224,7 @@ void __init allocate_pacas(void)
+ 	paca = __va(memblock_alloc_base(paca_size, PAGE_SIZE, limit));
+ 	memset(paca, 0, paca_size);
+ 
+-	printk(KERN_DEBUG "Allocated %u bytes for %d pacas at %p\n",
++	printk(KERN_DEBUG "Allocated %u bytes for %u pacas at %p\n",
+ 		paca_size, nr_cpu_ids, paca);
+ 
+ 	allocate_lppacas(nr_cpu_ids, limit);
+diff --git a/arch/powerpc/kernel/setup-common.c b/arch/powerpc/kernel/setup-common.c
+index 7de73589d8e24..0ac741fae90ea 100644
+--- a/arch/powerpc/kernel/setup-common.c
++++ b/arch/powerpc/kernel/setup-common.c
+@@ -551,7 +551,7 @@ void __init smp_setup_cpu_maps(void)
+ 		if (maxcpus > nr_cpu_ids) {
+ 			printk(KERN_WARNING
+ 			       "Partition configured for %d cpus, "
+-			       "operating system maximum is %d.\n",
++			       "operating system maximum is %u.\n",
+ 			       maxcpus, nr_cpu_ids);
+ 			maxcpus = nr_cpu_ids;
+ 		} else
+diff --git a/arch/powerpc/sysdev/xive/native.c b/arch/powerpc/sysdev/xive/native.c
+index 44f3a25ca630a..ebc244b08d674 100644
+--- a/arch/powerpc/sysdev/xive/native.c
++++ b/arch/powerpc/sysdev/xive/native.c
+@@ -511,13 +511,13 @@ static bool xive_parse_provisioning(struct device_node *np)
+ static void xive_native_setup_pools(void)
+ {
+ 	/* Allocate a pool big enough */
+-	pr_debug("XIVE: Allocating VP block for pool size %d\n", nr_cpu_ids);
++	pr_debug("XIVE: Allocating VP block for pool size %u\n", nr_cpu_ids);
+ 
+ 	xive_pool_vps = xive_native_alloc_vp_block(nr_cpu_ids);
+ 	if (WARN_ON(xive_pool_vps == XIVE_INVALID_VP))
+ 		pr_err("XIVE: Failed to allocate pool VP, KVM might not function\n");
+ 
+-	pr_debug("XIVE: Pool VPs allocated at 0x%x for %d max CPUs\n",
++	pr_debug("XIVE: Pool VPs allocated at 0x%x for %u max CPUs\n",
+ 		 xive_pool_vps, nr_cpu_ids);
+ }
+ 
+diff --git a/arch/tile/kernel/setup.c b/arch/tile/kernel/setup.c
+index 443a70bccc1c8..6becb96c60a03 100644
+--- a/arch/tile/kernel/setup.c
++++ b/arch/tile/kernel/setup.c
+@@ -1200,7 +1200,7 @@ static void __init validate_hv(void)
+ 	 * We use a struct cpumask for this, so it must be big enough.
+ 	 */
+ 	if ((smp_height * smp_width) > nr_cpu_ids)
+-		early_panic("Hypervisor %d x %d grid too big for Linux NR_CPUS %d\n",
++		early_panic("Hypervisor %d x %d grid too big for Linux NR_CPUS %u\n",
+ 			    smp_height, smp_width, nr_cpu_ids);
+ #endif
+ 
+diff --git a/arch/x86/kernel/apic/apic.c b/arch/x86/kernel/apic/apic.c
+index 7834f73efbf1e..8315e2f517a7e 100644
+--- a/arch/x86/kernel/apic/apic.c
++++ b/arch/x86/kernel/apic/apic.c
+@@ -2097,7 +2097,7 @@ static int allocate_logical_cpuid(int apicid)
+ 
+ 	/* Allocate a new cpuid. */
+ 	if (nr_logical_cpuids >= nr_cpu_ids) {
+-		WARN_ONCE(1, "APIC: NR_CPUS/possible_cpus limit of %i reached. "
++		WARN_ONCE(1, "APIC: NR_CPUS/possible_cpus limit of %u reached. "
+ 			     "Processor %d/0x%x and the rest are ignored.\n",
+ 			     nr_cpu_ids, nr_logical_cpuids, apicid);
+ 		return -EINVAL;
+diff --git a/arch/x86/kernel/setup_percpu.c b/arch/x86/kernel/setup_percpu.c
+index 6e8fcb6f7e1e4..28dafed6c6827 100644
+--- a/arch/x86/kernel/setup_percpu.c
++++ b/arch/x86/kernel/setup_percpu.c
+@@ -168,7 +168,7 @@ void __init setup_per_cpu_areas(void)
+ 	unsigned long delta;
+ 	int rc;
+ 
+-	pr_info("NR_CPUS:%d nr_cpumask_bits:%d nr_cpu_ids:%d nr_node_ids:%d\n",
++	pr_info("NR_CPUS:%d nr_cpumask_bits:%d nr_cpu_ids:%u nr_node_ids:%d\n",
+ 		NR_CPUS, nr_cpumask_bits, nr_cpu_ids, nr_node_ids);
+ 
+ 	/*
+diff --git a/arch/x86/kernel/smpboot.c b/arch/x86/kernel/smpboot.c
+index 54b9e89d4d6be..cd6622c3204e6 100644
+--- a/arch/x86/kernel/smpboot.c
++++ b/arch/x86/kernel/smpboot.c
+@@ -1461,7 +1461,7 @@ __init void prefill_possible_map(void)
+ 
+ 	/* nr_cpu_ids could be reduced via nr_cpus= */
+ 	if (possible > nr_cpu_ids) {
+-		pr_warn("%d Processors exceeds NR_CPUS limit of %d\n",
++		pr_warn("%d Processors exceeds NR_CPUS limit of %u\n",
+ 			possible, nr_cpu_ids);
+ 		possible = nr_cpu_ids;
+ 	}
+diff --git a/drivers/base/cpu.c b/drivers/base/cpu.c
+index 2c3b359b3536a..321cd7b4d817f 100644
+--- a/drivers/base/cpu.c
++++ b/drivers/base/cpu.c
+@@ -256,9 +256,9 @@ static ssize_t print_cpus_offline(struct device *dev,
+ 			buf[n++] = ',';
+ 
+ 		if (nr_cpu_ids == total_cpus-1)
+-			n += snprintf(&buf[n], len - n, "%d", nr_cpu_ids);
++			n += snprintf(&buf[n], len - n, "%u", nr_cpu_ids);
+ 		else
+-			n += snprintf(&buf[n], len - n, "%d-%d",
++			n += snprintf(&buf[n], len - n, "%u-%d",
+ 						      nr_cpu_ids, total_cpus-1);
+ 	}
+ 
+diff --git a/drivers/scsi/scsi_debug.c b/drivers/scsi/scsi_debug.c
+index 77a0335eb757d..09ba494f88967 100644
+--- a/drivers/scsi/scsi_debug.c
++++ b/drivers/scsi/scsi_debug.c
+@@ -5465,7 +5465,7 @@ static int sdebug_driver_probe(struct device * dev)
+ 		return error;
+ 	}
+ 	if (submit_queues > nr_cpu_ids) {
+-		pr_warn("%s: trim submit_queues (was %d) to nr_cpu_ids=%d\n",
++		pr_warn("%s: trim submit_queues (was %d) to nr_cpu_ids=%u\n",
+ 			my_name, submit_queues, nr_cpu_ids);
+ 		submit_queues = nr_cpu_ids;
+ 	}
+diff --git a/include/linux/cpumask.h b/include/linux/cpumask.h
+index 4bf4479a3a800..68c5a8290275a 100644
+--- a/include/linux/cpumask.h
++++ b/include/linux/cpumask.h
+@@ -32,15 +32,15 @@ typedef struct cpumask { DECLARE_BITMAP(bits, NR_CPUS); } cpumask_t;
+ #define cpumask_pr_args(maskp)		nr_cpu_ids, cpumask_bits(maskp)
+ 
+ #if NR_CPUS == 1
+-#define nr_cpu_ids		1
++#define nr_cpu_ids		1U
+ #else
+-extern int nr_cpu_ids;
++extern unsigned int nr_cpu_ids;
+ #endif
+ 
+ #ifdef CONFIG_CPUMASK_OFFSTACK
+ /* Assuming NR_CPUS is huge, a runtime limit is more efficient.  Also,
+  * not all bits may be allocated. */
+-#define nr_cpumask_bits	((unsigned int)nr_cpu_ids)
++#define nr_cpumask_bits	nr_cpu_ids
+ #else
+ #define nr_cpumask_bits	((unsigned int)NR_CPUS)
+ #endif
+diff --git a/kernel/rcu/tree.c b/kernel/rcu/tree.c
+index 84fe96641b2e0..1250e4bd4b85e 100644
+--- a/kernel/rcu/tree.c
++++ b/kernel/rcu/tree.c
+@@ -4091,7 +4091,7 @@ static void __init rcu_init_geometry(void)
+ 	if (rcu_fanout_leaf == RCU_FANOUT_LEAF &&
+ 	    nr_cpu_ids == NR_CPUS)
+ 		return;
+-	pr_info("RCU: Adjusting geometry for rcu_fanout_leaf=%d, nr_cpu_ids=%d\n",
++	pr_info("RCU: Adjusting geometry for rcu_fanout_leaf=%d, nr_cpu_ids=%u\n",
+ 		rcu_fanout_leaf, nr_cpu_ids);
+ 
+ 	/*
+diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
+index 55bde94b95728..e012b9be777e3 100644
+--- a/kernel/rcu/tree_plugin.h
++++ b/kernel/rcu/tree_plugin.h
+@@ -89,7 +89,7 @@ static void __init rcu_bootup_announce_oddness(void)
+ 	if (rcu_fanout_leaf != RCU_FANOUT_LEAF)
+ 		pr_info("\tBoot-time adjustment of leaf fanout to %d.\n", rcu_fanout_leaf);
+ 	if (nr_cpu_ids != NR_CPUS)
+-		pr_info("\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%d.\n", NR_CPUS, nr_cpu_ids);
++		pr_info("\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%u.\n", NR_CPUS, nr_cpu_ids);
+ #ifdef CONFIG_RCU_BOOST
+ 	pr_info("\tRCU priority boosting: priority %d delay %d ms.\n", kthread_prio, CONFIG_RCU_BOOST_DELAY);
+ #endif
+diff --git a/kernel/sched/topology.c b/kernel/sched/topology.c
+index 6f7b43982f735..5d0062cc10cb8 100644
+--- a/kernel/sched/topology.c
++++ b/kernel/sched/topology.c
+@@ -473,7 +473,7 @@ static int __init isolated_cpu_setup(char *str)
+ 	alloc_bootmem_cpumask_var(&cpu_isolated_map);
+ 	ret = cpulist_parse(str, cpu_isolated_map);
+ 	if (ret) {
+-		pr_err("sched: Error, all isolcpus= values must be between 0 and %d\n", nr_cpu_ids);
++		pr_err("sched: Error, all isolcpus= values must be between 0 and %u\n", nr_cpu_ids);
+ 		return 0;
+ 	}
+ 	return 1;
+diff --git a/kernel/smp.c b/kernel/smp.c
+index 81cfca9b4cc3b..c94dd85c8d417 100644
+--- a/kernel/smp.c
++++ b/kernel/smp.c
+@@ -550,7 +550,7 @@ static int __init maxcpus(char *str)
+ early_param("maxcpus", maxcpus);
+ 
+ /* Setup number of possible processor ids */
+-int nr_cpu_ids __read_mostly = NR_CPUS;
++unsigned int nr_cpu_ids __read_mostly = NR_CPUS;
+ EXPORT_SYMBOL(nr_cpu_ids);
+ 
+ /* An arch may set nr_cpu_ids earlier if needed, so this would be redundant */
+diff --git a/kernel/trace/trace_functions_graph.c b/kernel/trace/trace_functions_graph.c
+index d56123cdcc890..b8f1f54731af0 100644
+--- a/kernel/trace/trace_functions_graph.c
++++ b/kernel/trace/trace_functions_graph.c
+@@ -1543,7 +1543,7 @@ fs_initcall(init_graph_tracefs);
+ 
+ static __init int init_graph_trace(void)
+ {
+-	max_bytes_for_cpu = snprintf(NULL, 0, "%d", nr_cpu_ids - 1);
++	max_bytes_for_cpu = snprintf(NULL, 0, "%u", nr_cpu_ids - 1);
+ 
+ 	if (!register_trace_event(&graph_trace_entry_event)) {
+ 		pr_warn("Warning: could not register graph trace events\n");
+diff --git a/mm/slub.c b/mm/slub.c
+index ddb04576b342a..d39a5d3834b31 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -4232,7 +4232,7 @@ void __init kmem_cache_init(void)
+ 	cpuhp_setup_state_nocalls(CPUHP_SLUB_DEAD, "slub:dead", NULL,
+ 				  slub_cpu_dead);
+ 
+-	pr_info("SLUB: HWalign=%d, Order=%d-%d, MinObjects=%d, CPUs=%d, Nodes=%d\n",
++	pr_info("SLUB: HWalign=%d, Order=%d-%d, MinObjects=%d, CPUs=%u, Nodes=%d\n",
+ 		cache_line_size(),
+ 		slub_min_order, slub_max_order, slub_min_objects,
+ 		nr_cpu_ids, nr_node_ids);
