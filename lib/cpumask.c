@@ -5,21 +5,26 @@
 #include <linux/export.h>
 #include <linux/bootmem.h>
 
-/**
- * cpumask_next - get the next cpu in a cpumask
- * @n: the cpu prior to the place to search (ie. return will be > @n)
- * @srcp: the cpumask pointer
- *
- * Returns >= nr_cpu_ids if no further cpus set.
- */
-unsigned int cpumask_next(int n, const struct cpumask *srcp)
+int __first_cpu(const cpumask_t *srcp)
 {
-	/* -1 is a legal arg here. */
-	if (n != -1)
-		cpumask_check(n);
-	return find_next_bit(cpumask_bits(srcp), nr_cpumask_bits, n + 1);
+	return min_t(int, NR_CPUS, find_first_bit(srcp->bits, NR_CPUS));
 }
-EXPORT_SYMBOL(cpumask_next);
+EXPORT_SYMBOL(__first_cpu);
+
+int __next_cpu(int n, const cpumask_t *srcp)
+{
+	return min_t(int, NR_CPUS, find_next_bit(srcp->bits, NR_CPUS, n+1));
+}
+EXPORT_SYMBOL(__next_cpu);
+
+#if NR_CPUS > 64
+int __next_cpu_nr(int n, const cpumask_t *srcp)
+{
+	return min_t(int, nr_cpu_ids,
+				find_next_bit(srcp->bits, nr_cpu_ids, n+1));
+}
+EXPORT_SYMBOL(__next_cpu_nr);
+#endif
 
 /**
  * cpumask_next_and - get the next cpu in *src1p & *src2p
@@ -32,11 +37,10 @@ EXPORT_SYMBOL(cpumask_next);
 int cpumask_next_and(int n, const struct cpumask *src1p,
 		     const struct cpumask *src2p)
 {
-	struct cpumask tmp;
-
-	if (cpumask_and(&tmp, src1p, src2p))
-		return cpumask_next(n, &tmp);
-	return nr_cpu_ids;
+	while ((n = cpumask_next(n, src1p)) < nr_cpu_ids)
+		if (cpumask_test_cpu(n, src2p))
+			break;
+	return n;
 }
 EXPORT_SYMBOL(cpumask_next_and);
 
@@ -58,39 +62,6 @@ int cpumask_any_but(const struct cpumask *mask, unsigned int cpu)
 			break;
 	return i;
 }
-EXPORT_SYMBOL(cpumask_any_but);
-
-/**
- * cpumask_next_wrap - helper to implement for_each_cpu_wrap
- * @n: the cpu prior to the place to search
- * @mask: the cpumask pointer
- * @start: the start point of the iteration
- * @wrap: assume @n crossing @start terminates the iteration
- *
- * Returns >= nr_cpu_ids on completion
- *
- * Note: the @wrap argument is required for the start condition when
- * we cannot assume @start is set in @mask.
- */
-int cpumask_next_wrap(int n, const struct cpumask *mask, int start, bool wrap)
-{
-	int next;
-
-again:
-	next = cpumask_next(n, mask);
-
-	if (wrap && n < start && next >= start) {
-		return nr_cpumask_bits;
-
-	} else if (next >= nr_cpumask_bits) {
-		wrap = true;
-		n = -1;
-		goto again;
-	}
-
-	return next;
-}
-EXPORT_SYMBOL(cpumask_next_wrap);
 
 /* These are not inline because of header tangles. */
 #ifdef CONFIG_CPUMASK_OFFSTACK
@@ -118,6 +89,13 @@ bool alloc_cpumask_var_node(cpumask_var_t *mask, gfp_t flags, int node)
 		dump_stack();
 	}
 #endif
+	/* FIXME: Bandaid to save us from old primitives which go to NR_CPUS. */
+	if (*mask) {
+		unsigned char *ptr = (unsigned char *)cpumask_bits(*mask);
+		unsigned int tail;
+		tail = BITS_TO_LONGS(NR_CPUS - nr_cpumask_bits) * sizeof(long);
+		memset(ptr + cpumask_size() - tail, 0, tail);
+	}
 
 	return *mask != NULL;
 }
@@ -185,70 +163,6 @@ void __init free_bootmem_cpumask_var(cpumask_var_t mask)
 {
 	memblock_free_early(__pa(mask), cpumask_size());
 }
-
-/**
- * cpumask_set_cpu_local_first - set i'th cpu with local numa cpu's first
- *
- * @i: index number
- * @numa_node: local numa_node
- * @dstp: cpumask with the relevant cpu bit set according to the policy
- *
- * This function sets the cpumask according to a numa aware policy.
- * cpumask could be used as an affinity hint for the IRQ related to a
- * queue. When the policy is to spread queues across cores - local cores
- * first.
- *
- * Returns 0 on success, -ENOMEM for no memory, and -EAGAIN when failed to set
- * the cpu bit and need to re-call the function.
- */
-int cpumask_set_cpu_local_first(int i, int numa_node, cpumask_t *dstp)
-{
-	cpumask_var_t mask;
-	int cpu;
-	int ret = 0;
-
-	if (!zalloc_cpumask_var(&mask, GFP_KERNEL))
-		return -ENOMEM;
-
-	i %= num_online_cpus();
-
-	if (numa_node == -1 || !cpumask_of_node(numa_node)) {
-		/* Use all online cpu's for non numa aware system */
-		cpumask_copy(mask, cpu_online_mask);
-	} else {
-		int n;
-
-		cpumask_and(mask,
-			    cpumask_of_node(numa_node), cpu_online_mask);
-
-		n = cpumask_weight(mask);
-		if (i >= n) {
-			i -= n;
-
-			/* If index > number of local cpu's, mask out local
-			 * cpu's
-			 */
-			cpumask_andnot(mask, cpu_online_mask, mask);
-		}
-	}
-
-	for_each_cpu(cpu, mask) {
-		if (--i < 0)
-			goto out;
-	}
-
-	ret = -EAGAIN;
-
-out:
-	free_cpumask_var(mask);
-
-	if (!ret)
-		cpumask_set_cpu(cpu, dstp);
-
-	return ret;
-}
-EXPORT_SYMBOL(cpumask_set_cpu_local_first);
-
 #endif
 
 /**
