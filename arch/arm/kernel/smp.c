@@ -643,7 +643,7 @@ void smp_send_all_cpu_backtrace(void)
 		return;
 
 	cpumask_copy(&backtrace_mask, cpu_online_mask);
-	cpumask_clear_cpu(this_cpu, backtrace_mask);
+	cpumask_clear_cpu(this_cpu, &backtrace_mask);
 
 	pr_info("Backtrace for cpu %d (current):\n", this_cpu);
 	dump_stack();
@@ -673,7 +673,7 @@ static void ipi_cpu_backtrace(unsigned int cpu, struct pt_regs *regs)
 		pr_warning("IPI backtrace for cpu %d\n", cpu);
 		show_regs(regs);
 		raw_spin_unlock(&backtrace_lock);
-		cpumask_clear_cpu(cpu, backtrace_mask);
+		cpumask_clear_cpu(cpu, &backtrace_mask);
 	}
 }
 
