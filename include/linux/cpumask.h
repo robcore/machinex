@@ -249,6 +249,8 @@ int cpumask_set_cpu_local_first(int i, int numa_node, cpumask_t *dstp);
 		(cpu) = cpumask_next_zero((cpu), (mask)),	\
 		(cpu) < nr_cpu_ids;)
 
+int cpumask_set_cpu_local_first(int i, int numa_node, cpumask_t *dstp);
+
 /**
  * for_each_cpu_and - iterate over every cpu in both masks
  * @cpu: the (optionally unsigned) integer iterator
