@@ -8903,6 +8903,9 @@ static const struct file_operations poke_reg_fops = {
 #endif
 
 #ifdef CONFIG_SOUND_CONTROL
+struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
+		(struct snd_kcontrol_new *)tabla_snd_controls;
+
 struct snd_soc_codec *snd_engine_codec_ptr;
 EXPORT_SYMBOL(snd_engine_codec_ptr);
 #endif
