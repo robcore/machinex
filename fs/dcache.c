@@ -623,13 +623,9 @@ void dput(struct dentry *dentry)
 repeat:
 	if (dentry->d_lockref.count == 1)
 		might_sleep();
+
 	if (lockref_put_or_lock(&dentry->d_lockref))
 		return;
-
-	if (unlikely(dentry->d_flags & DCACHE_OP_DELETE)) {
-		if (dentry->d_op->d_delete(dentry))
-			goto kill_it;
-	}
 
 	/* Unreachable? Get rid of it */
 	if (unlikely(d_unhashed(dentry)))
