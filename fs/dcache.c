@@ -1357,7 +1357,6 @@ static void check_and_drop(void *_data)
  */
 void d_invalidate(struct dentry *dentry)
 {
-	int ret;
 	/*
 	 * If it's already been dropped, return OK.
 	 */
