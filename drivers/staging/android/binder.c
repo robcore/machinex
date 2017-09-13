@@ -1357,7 +1357,8 @@ static void binder_transaction(struct binder_proc *proc,
 
 	offp = (binder_size_t *)(t->buffer->data + ALIGN(tr->data_size, sizeof(void *)));
 
-	if (copy_from_user(t->buffer->data, tr->data.ptr.buffer, tr->data_size)) {
+	if (copy_from_user(t->buffer->data,  (const void __user *)(uintptr_t)
+			   tr->data.ptr.buffer, tr->data_size)) {
 		return_error = BR_FAILED_REPLY;
 		goto err_copy_data_failed;
 	}
@@ -1768,7 +1769,7 @@ static int binder_thread_write(struct binder_proc *proc,
 			if (get_user(cookie, (binder_uintptr_t __user *)ptr))
 				return -EFAULT;
 			ptr += sizeof(binder_uintptr_t);
-			ref = binder_get_ref(proc, target);
+			ref = binder_get_ref(proc, target, false);
 			if (ref == NULL) {
 				break;
 			}
