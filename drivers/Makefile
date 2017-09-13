@@ -176,6 +176,7 @@ obj-$(CONFIG_SEC_FPGA)	+= barcode_emul/
 obj-$(CONFIG_IRDA_MC96)		+= irda/
 
 obj-$(CONFIG_FELICA) += felica/
+obj-$(CONFIG_ANDROID)		+= android/
 
 ifeq (1, $(shell if [ -d ../../../../../../kernel/drivers/exfat ] ; then echo 1 ; fi))
 	obj-y   += exfat/
