@@ -373,6 +373,7 @@ static int nforce2_cpu_exit(struct cpufreq_policy *policy)
 
 static struct cpufreq_driver nforce2_driver = {
 	.name = "nforce2",
+	.flags = CPUFREQ_NO_AUTO_DYNAMIC_SWITCHING,
 	.verify = nforce2_verify,
 	.target = nforce2_target,
 	.get = nforce2_get,
