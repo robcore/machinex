@@ -1034,6 +1034,9 @@ struct vm_area_struct *vma_merge(struct mm_struct *mm,
 	struct vm_area_struct *area, *next;
 	int err;
 
+	while (file && (file->f_mode & FMODE_NONMAPPABLE))
+		file = file->f_op->get_lower_file(file);
+
 	/*
 	 * We later require that vma->vm_flags == vm_flags,
 	 * so this tests vma->vm_flags & VM_SPECIAL, too.
@@ -1257,8 +1260,8 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 	*populate = 0;
 
 #ifdef CONFIG_SDCARD_FS
-	if (file && (file->f_path.mnt->mnt_sb->s_magic == SDCARDFS_SUPER_MAGIC))
-		file = sdcardfs_lower_file(file);
+	while (file && (file->f_mode & FMODE_NONMAPPABLE))
+		file = file->f_op->get_lower_file(file);
 #endif
 
 	/*
