@@ -1388,6 +1388,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	}
 
 	policy->dvfs_possible_from_any_cpu = true;
+	policy->fast_switch_possible = true;
 
 out:
 	return ret;
