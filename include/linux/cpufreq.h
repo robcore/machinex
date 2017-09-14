@@ -19,6 +19,7 @@
 #include <linux/spinlock.h>
 #include <linux/sysfs.h>
 #include <linux/cputime.h>
+#include <linux/smp.h>
 
 /*********************************************************************
  *                        CPUFREQ INTERFACE                          *
