@@ -198,7 +198,8 @@ MODULE_PARM_DESC(torture_runnable, "Start rcutorture at boot");
 static u64 notrace rcu_trace_clock_local(void)
 {
 	u64 ts = trace_clock_local();
-	unsigned long __maybe_unused ts_rem = do_div(ts, NSEC_PER_USEC);
+
+	(void)do_div(ts, NSEC_PER_USEC);
 	return ts;
 }
 #else /* #ifdef CONFIG_RCU_TRACE */
@@ -495,7 +496,7 @@ static struct rcu_torture_ops rcu_busted_ops = {
 	.fqs		= NULL,
 	.stats		= NULL,
 	.irq_capable	= 1,
-	.name		= "rcu_busted"
+	.name		= "busted"
 };
 
 /*
@@ -521,7 +522,7 @@ static void srcu_read_delay(struct torture_random_state *rrsp)
 
 	delay = torture_random(rrsp) %
 		(nrealreaders * 2 * longdelay * uspertick);
-	if (!delay)
+	if (!delay && in_task())
 		schedule_timeout_interruptible(longdelay);
 	else
 		rcu_read_delay(rrsp);
@@ -582,6 +583,7 @@ static struct rcu_torture_ops srcu_ops = {
 	.call		= srcu_torture_call,
 	.cb_barrier	= srcu_torture_barrier,
 	.stats		= srcu_torture_stats,
+	.irq_capable	= 1,
 	.name		= "srcu"
 };
 
@@ -614,6 +616,7 @@ static struct rcu_torture_ops srcud_ops = {
 	.call		= srcu_torture_call,
 	.cb_barrier	= srcu_torture_barrier,
 	.stats		= srcu_torture_stats,
+	.irq_capable	= 1,
 	.name		= "srcud"
 };
 
@@ -1316,11 +1319,12 @@ rcu_torture_stats_print(void)
 		srcutorture_get_gp_data(cur_ops->ttype, srcu_ctlp,
 					&flags, &gpnum, &completed);
 		wtp = READ_ONCE(writer_task);
-		pr_alert("??? Writer stall state %s(%d) g%lu c%lu f%#x ->state %#lx\n",
+		pr_alert("??? Writer stall state %s(%d) g%lu c%lu f%#x ->state %#lx cpu %d\n",
 			 rcu_torture_writer_state_getname(),
 			 rcu_torture_writer_state,
 			 gpnum, completed, flags,
-			 wtp == NULL ? ~0UL : wtp->state);
+			 wtp == NULL ? ~0UL : wtp->state,
+			 wtp == NULL ? -1 : (int)task_cpu(wtp));
 		show_rcu_gp_kthreads();
 		rcu_ftrace_dump(DUMP_ALL);
 	}
