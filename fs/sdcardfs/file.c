@@ -276,10 +276,8 @@ static int sdcardfs_flush(struct file *file, fl_owner_t id)
 	struct file *lower_file = NULL;
 
 	lower_file = sdcardfs_lower_file(file);
-	if (lower_file && lower_file->f_op && lower_file->f_op->flush) {
-		filemap_write_and_wait(file->f_mapping);
+	if (lower_file && lower_file->f_op && lower_file->f_op->flush)
 		err = lower_file->f_op->flush(lower_file, id);
-	}
 
 	return err;
 }
@@ -307,15 +305,11 @@ static int sdcardfs_fsync(struct file *file, loff_t start, loff_t end,
 	struct path lower_path;
 	struct dentry *dentry = file->f_path.dentry;
 
-	err = __generic_file_fsync(file, start, end, datasync);
-	if (err)
-		goto out;
-
 	lower_file = sdcardfs_lower_file(file);
 	sdcardfs_get_lower_path(dentry, &lower_path);
 	err = vfs_fsync_range(lower_file, start, end, datasync);
 	sdcardfs_put_lower_path(dentry, &lower_path);
-out:
+
 	return err;
 }
 
