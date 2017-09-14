@@ -3968,6 +3968,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 	if (!info || !info->par)
 		return -EINVAL;
+
 	mfd = (struct msm_fb_data_type *)info->par;
 	if (mfd == NULL)
 		return -EINVAL;
