@@ -100,6 +100,8 @@ function ADBRETRY()
 {
 ONLINE=`adb get-state 2> /dev/null`
 ADBTYPE=`adb get-devpath 2> /dev/null`
+adb kill-server
+adbcountdown
 adb start-server
 adbcountdown
 if [ "$ADBTYPE" = "usb:5-4" ]; then
