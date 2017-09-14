@@ -1242,7 +1242,7 @@ static int msm_fb_mmap(struct fb_info *info, struct vm_area_struct * vma)
 	unsigned long off = vma->vm_pgoff << PAGE_SHIFT;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 
-	if (!start)
+	if (mfd == NULL || !start)
 		return -EINVAL;
 
 	if ((vma->vm_end <= vma->vm_start) ||
@@ -3969,6 +3969,9 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	if (!info || !info->par)
 		return -EINVAL;
 	mfd = (struct msm_fb_data_type *)info->par;
+	if (mfd == NULL)
+		return -EINVAL;
+
 	msm_fb_pan_idle(mfd);
 
 	switch (cmd) {
