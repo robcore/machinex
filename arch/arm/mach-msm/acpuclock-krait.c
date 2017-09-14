@@ -1367,7 +1367,6 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *mx_freq_table;
 	int ret = 0;
-	int cpu = smp_processor_id();
 
 	if (policy->cpu > NR_CPUS) {
 		ret = -EINVAL;
