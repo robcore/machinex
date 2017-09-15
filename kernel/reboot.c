@@ -4,6 +4,8 @@
  *  Copyright (C) 2013  Linus Torvalds
  */
 
+#define pr_fmt(fmt)	"reboot: " fmt
+
 #include <linux/ctype.h>
 #include <linux/export.h>
 #include <linux/kexec.h>
@@ -47,8 +49,9 @@ int reboot_force;
  */
 
 void (*pm_power_off_prepare)(void);
+
 /**
- * emergency_restart - reboot the system
+ *	emergency_restart - reboot the system
  *
  *	Without shutting down any hardware or taking any locks
  *	reboot the system.  This is called when we know we are in
