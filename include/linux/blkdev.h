@@ -103,7 +103,7 @@ struct request {
 		struct llist_node ll_list;
 	};
 	union {
-		struct call_single_data csd;
+		call_single_data_t csd;
 		unsigned long fifo_time;
 	};
 
