@@ -4801,10 +4801,8 @@ void freeze_workqueues_begin(void)
 
 	mutex_lock(&wq_pool_mutex);
 
-	if (WARN_ON_ONCE(workqueue_freezing)) {
-		workqueue_freezing = true;
+	if (workqueue_freezing)
 		goto in_unlock;
-	}
 
 	workqueue_freezing = true;
 
