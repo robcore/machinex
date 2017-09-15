@@ -13,17 +13,18 @@
 #include <linux/init.h>
 #include <linux/llist.h>
 
+extern void cpu_idle(void);
+
 typedef void (*smp_call_func_t)(void *info);
-struct __call_single_data {
-	struct llist_node llist;
+struct call_single_data {
+	union {
+		struct list_head list;
+		struct llist_node llist;
+	};
 	smp_call_func_t func;
 	void *info;
-	unsigned int flags;
+	u16 flags;
 };
-
-/* Use __aligned() to avoid to use 2 cache lines for 1 csd */
-typedef struct __call_single_data call_single_data_t
-	__aligned(sizeof(struct __call_single_data));
 
 /* total number of cpus in this system (may exceed NR_CPUS) */
 extern unsigned int total_cpus;
@@ -51,8 +52,6 @@ void on_each_cpu_mask(const struct cpumask *mask, smp_call_func_t func,
 void on_each_cpu_cond(bool (*cond_func)(int cpu, void *info),
 		smp_call_func_t func, void *info, bool wait,
 		gfp_t gfp_flags);
-
-int smp_call_function_single_async(int cpu, call_single_data_t *csd);
 
 #ifdef CONFIG_SMP
 
@@ -99,6 +98,8 @@ extern void smp_cpus_done(unsigned int max_cpus);
 int smp_call_function(smp_call_func_t func, void *info, int wait);
 void smp_call_function_many(const struct cpumask *mask,
 			    smp_call_func_t func, void *info, bool wait);
+
+int smp_call_function_single_async(int cpu, struct call_single_data *csd);
 
 int smp_call_function_any(const struct cpumask *mask,
 			  smp_call_func_t func, void *info, int wait);
@@ -166,13 +167,6 @@ smp_call_function_any(const struct cpumask *mask, smp_call_func_t func,
 static inline void kick_all_cpus_sync(void) {  }
 static inline void wake_up_all_idle_cpus(void) {  }
 
-#ifdef CONFIG_UP_LATE_INIT
-extern void __init up_late_init(void);
-static inline void smp_init(void) { up_late_init(); }
-#else
-static inline void smp_init(void) { }
-#endif
-
 static inline int get_boot_cpu_id(void)
 {
 	return 0;
@@ -210,9 +204,6 @@ static inline int get_boot_cpu_id(void)
  * boot command line:
  */
 extern void arch_disable_smp_support(void);
-
-extern void arch_enable_nonboot_cpus_begin(void);
-extern void arch_enable_nonboot_cpus_end(void);
 
 void smp_setup_processor_id(void);
 

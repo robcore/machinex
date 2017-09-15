@@ -11,7 +11,7 @@
 struct nullb_cmd {
 	struct list_head list;
 	struct llist_node ll_list;
-	call_single_data_t csd;
+	struct call_single_data csd;
 	struct request *rq;
 	struct bio *bio;
 	unsigned int tag;
@@ -248,7 +248,7 @@ static void null_ipi_cmd_end_io(void *data)
 
 static void null_cmd_end_ipi(struct nullb_cmd *cmd)
 {
-	call_single_data_t *data = &cmd->csd;
+	struct call_single_data *data = &cmd->csd;
 	int cpu = get_cpu();
 	struct completion_queue *cq = &per_cpu(completion_queues, cpu);
 
