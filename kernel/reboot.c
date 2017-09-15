@@ -16,7 +16,6 @@
 #include <linux/syscalls.h>
 #include <linux/syscore_ops.h>
 #include <linux/uaccess.h>
-#include "../arch/arm/mach-msm/include/mach/sec_debug.h"
 
 /*
  * this indicates whether you can reboot with ctrl-alt-del: the default is yes
@@ -214,9 +213,6 @@ void migrate_to_reboot_cpu(void)
  */
 void kernel_restart(char *cmd)
 {
-#ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
-	kernel_sec_set_normal_pwroff(1);
-#endif
 	kernel_restart_prepare(cmd);
 	migrate_to_reboot_cpu();
 	syscore_shutdown();
@@ -260,9 +256,6 @@ EXPORT_SYMBOL_GPL(kernel_halt);
  */
 void kernel_power_off(void)
 {
-#ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
-	kernel_sec_set_normal_pwroff(1);
-#endif
 	kernel_shutdown_prepare(SYSTEM_POWER_OFF);
 	if (pm_power_off_prepare)
 		pm_power_off_prepare();
