@@ -57,7 +57,7 @@ ssize_t pm_show_wakelocks(char *buf, bool show_active)
 	return (str - buf);
 }
 
-//Tinno:CJ return how may wakelocks is in give status
+//Tinno:CJ return how may wakelocks are taken
 int pm_get_wakelocks(bool show_active)
 {
 	struct rb_node *node;
