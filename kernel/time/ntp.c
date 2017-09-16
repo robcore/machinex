@@ -535,8 +535,8 @@ static void sync_cmos_clock(struct work_struct *work)
 	}
 
 	getnstimeofday64(&now);
-	if (abs(now.tv_nsec - (NSEC_PER_SEC / 2)) <= tick_nsec / 2) {
-		struct timespec adjust = timespec64_to_timespec(now);
+	if (abs(now.tv_nsec - (NSEC_PER_SEC / 2)) <= tick_nsec * 5) {
+		struct timespec64 adjust = now;
 
 		fail = -ENODEV;
 		if (persistent_clock_is_local)
@@ -544,6 +544,7 @@ static void sync_cmos_clock(struct work_struct *work)
 #ifdef CONFIG_GENERIC_CMOS_UPDATE
 		fail = update_persistent_clock64(adjust);
 #endif
+
 #ifdef CONFIG_RTC_SYSTOHC
 		if (fail == -ENODEV)
 			fail = rtc_set_ntp_time(adjust);
@@ -650,6 +651,8 @@ static inline void process_adjtimex_modes(struct timex *txc,
 	if (txc->modes & (ADJ_TICK|ADJ_FREQUENCY|ADJ_OFFSET))
 		ntp_update_frequency();
 }
+
+
 
 /**
  * ntp_validate_timex - Ensures the timex is ok for use in do_adjtimex
