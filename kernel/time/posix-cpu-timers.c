@@ -812,6 +812,7 @@ static void check_thread_timers(struct task_struct *tsk,
 				struct list_head *firing)
 {
 	struct list_head *timers = tsk->cpu_timers;
+	struct signal_struct *const sig = tsk->signal;
 	struct task_cputime *tsk_expires = &tsk->cputime_expires;
 	u64 expires;
 	unsigned long soft;
@@ -835,9 +836,10 @@ static void check_thread_timers(struct task_struct *tsk,
 	/*
 	 * Check for the special case thread timers.
 	 */
-	soft = task_rlimit(tsk, RLIMIT_RTTIME);
+	soft = READ_ONCE(sig->rlim[RLIMIT_RTTIME].rlim_cur);
 	if (soft != RLIM_INFINITY) {
-		unsigned long hard = task_rlimit_max(tsk, RLIMIT_RTTIME);
+		unsigned long hard =
+			READ_ONCE(sig->rlim[RLIMIT_RTTIME].rlim_max);
 
 		if (hard != RLIM_INFINITY &&
 		    tsk->rt.timeout > DIV_ROUND_UP(hard, USEC_PER_SEC/HZ)) {
@@ -856,8 +858,7 @@ static void check_thread_timers(struct task_struct *tsk,
 			 */
 			if (soft < hard) {
 				soft += USEC_PER_SEC;
-				tsk->signal->rlim[RLIMIT_RTTIME].rlim_cur =
-					soft;
+				sig->rlim[RLIMIT_RTTIME].rlim_cur = soft;
 			}
 			pr_info("RT Watchdog Timeout (soft): %s[%d]\n",
 				tsk->comm, task_pid_nr(tsk));
@@ -946,10 +947,11 @@ static void check_process_timers(struct task_struct *tsk,
 			 SIGPROF);
 	check_cpu_itimer(tsk, &sig->it[CPUCLOCK_VIRT], &virt_expires, utime,
 			 SIGVTALRM);
-	soft = task_rlimit(tsk, RLIMIT_CPU);
+	soft = READ_ONCE(sig->rlim[RLIMIT_CPU].rlim_cur);
 	if (soft != RLIM_INFINITY) {
 		unsigned long psecs = div_u64(ptime, NSEC_PER_SEC);
-		unsigned long hard = task_rlimit_max(tsk, RLIMIT_CPU);
+		unsigned long hard =
+			READ_ONCE(sig->rlim[RLIMIT_CPU].rlim_max);
 		u64 x;
 		if (psecs >= hard) {
 			/*
