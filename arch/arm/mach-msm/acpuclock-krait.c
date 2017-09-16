@@ -1363,27 +1363,9 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 	hotplug_ready = true;
 }
 
-static struct cpufreq_frequency_table mx_freq_table[] = {
-	{ .frequency = 384000 },
-	{ .frequency = 486000 },
-	{ .frequency = 594000 },
-	{ .frequency = 702000 },
-	{ .frequency = 810000 },
-	{ .frequency = 918000 },
-	{ .frequency = 1026000 },
-	{ .frequency = 1134000 },
-	{ .frequency = 1242000 },
-	{ .frequency = 1350000 },
-	{ .frequency = 1458000 },
-	{ .frequency = 1566000 },
-	{ .frequency = 1674000 },
-	{ .frequency = 1782000 },
-	{ .frequency = 1890000 },
-	{ .frequency = CPUFREQ_TABLE_END }
-};
-
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
+	struct cpufreq_frequency_table *mx_freq_table;
 	int ret = 0;
 
 	if (policy->cpu > NR_CPUS) {
@@ -1395,6 +1377,8 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		ret = -EBUSY;
 		goto out;
 	}
+
+	mx_freq_table = machinex_freq_table(policy);
 
 	ret = cpufreq_table_validate_and_show(policy, mx_freq_table);
 	if (ret) {
