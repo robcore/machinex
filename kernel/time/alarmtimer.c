@@ -26,7 +26,7 @@
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
 #include <linux/compat.h>
-#include <linux/export.h>
+#include <linux/module.h>
 
 #include "posix-timers.h"
 
@@ -99,6 +99,11 @@ static int alarmtimer_rtc_add_device(struct device *dev,
 
 	spin_lock_irqsave(&rtcdev_lock, flags);
 	if (!rtcdev) {
+		if (!try_module_get(rtc->owner)) {
+			spin_unlock_irqrestore(&rtcdev_lock, flags);
+			return -1;
+		}
+
 		rtcdev = rtc;
 		/* hold a reference so it doesn't go away */
 		get_device(dev);
