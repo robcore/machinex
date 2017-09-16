@@ -189,8 +189,10 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
-	rm image-new.img;
-	sh repackimg.sh --sudo;
+	if [ -e image-new.img ]; then
+		rm image-new.img;
+	fi
+	sudo sh repackimg.sh
 	cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
@@ -282,8 +284,10 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	fi
 	rm $(pwd)/split_img/boot.img-zImage;
 	cp -p ~/machinex/out/arch/arm/boot/zImage $(pwd)/split_img/boot.img-zImage;
-	rm image-new.img;
-	sh repackimg.sh --sudo;
+	if [ -e image-new.img ]; then
+		rm image-new.img;
+	fi
+	sudo sh repackimg.sh
 	cp -p image-new.img $(pwd)/$OUTFOLDER/boot.img
 	cd $OUTFOLDER
 	zip -r -9 - * > $OUTFOLDER.zip
