@@ -15,6 +15,7 @@
 #include <linux/init.h>
 #include <linux/cpuidle.h>
 #include <linux/cpu_pm.h>
+#include "rpm_resources.h"
 
 #include <mach/cpuidle.h>
 
@@ -78,7 +79,9 @@ static int msm_cpuidle_enter(
 	unsigned long flags;
 
 	local_irq_disable();
-	cpu_pm_enter();
+	if (is_from_idle)
+		cpu_pm_enter();
+
 	pm_mode = msm_pm_idle_prepare(dev, drv, index);
 
 	dev->last_residency = msm_pm_idle_enter(pm_mode);
@@ -91,7 +94,8 @@ static int msm_cpuidle_enter(
 		}
 	}
 
-	cpu_pm_exit();
+	if (is_from_idle)
+		cpu_pm_exit();
 	local_irq_enable();
 
 	return ret;

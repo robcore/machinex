@@ -102,6 +102,8 @@ struct msm_rpmrs_platform_data {
 	unsigned int rpmrs_target_id[MSM_RPMRS_ID_LAST];
 };
 
+extern bool is_from_idle;
+
 #if defined(CONFIG_MSM_RPM)
 
 int msm_rpmrs_set(int ctx, struct msm_rpm_iv_pair *req, int count);

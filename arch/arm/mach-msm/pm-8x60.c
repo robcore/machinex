@@ -84,6 +84,8 @@ module_param_named(
 	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
 
+bool is_from_idle;
+
 #ifdef CONFIG_MSM_SLEEP_TIME_OVERRIDE
 static int msm_pm_sleep_time_override;
 module_param_named(sleep_time_override,
@@ -482,6 +484,7 @@ static bool __ref msm_pm_spm_power_collapse(
 	int ret;
 	unsigned int saved_gic_cpu_ctrl;
 	bool save_cpu_regs = !cpu || from_idle;
+	is_from_idle = from_idle;
 
 	saved_gic_cpu_ctrl = readl_relaxed(MSM_QGIC_CPU_BASE + GIC_CPU_CTRL);
 	mb();
