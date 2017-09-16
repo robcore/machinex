@@ -1363,7 +1363,7 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 	hotplug_ready = true;
 }
 
-static struct cpufreq_frequency_table table[] = {
+static struct cpufreq_frequency_table mx_freq_table[] = {
 	{ .frequency = 384000 },
 	{ .frequency = 486000 },
 	{ .frequency = 594000 },
@@ -1381,8 +1381,6 @@ static struct cpufreq_frequency_table table[] = {
 	{ .frequency = 1890000 },
 	{ .frequency = CPUFREQ_TABLE_END }
 };
-
-static DEFINE_PER_CPU(table, mx_freq_table);
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
