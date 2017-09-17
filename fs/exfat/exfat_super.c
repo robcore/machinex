@@ -627,8 +627,7 @@ static long exfat_generic_ioctl(struct file *filp,
 #endif
 {
 #if EXFAT_CONFIG_KERNEL_DEBUG
-	struct dentry *mxdentry = filp->f_path.dentry;
-	struct inode *inode = mxdentry->d_inode;
+	struct inode *inode = filp->f_path.dentry->d_inode;
 	unsigned int flags;
 #endif
 
