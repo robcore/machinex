@@ -47,8 +47,7 @@ static int autofs4_mount_busy(struct vfsmount *mnt, struct dentry *dentry)
 	struct path path = {.mnt = mnt, .dentry = dentry};
 	int status = 1;
 
-	DPRINTK("dentry %p %.*s",
-		dentry, (int)dentry->d_name.len, dentry->d_name.name);
+	DPRINTK("dentry %p %pd", dentry, dentry);
 
 	path_get(&path);
 
@@ -203,8 +202,7 @@ static int autofs4_direct_busy(struct vfsmount *mnt,
 				unsigned long timeout,
 				int do_now)
 {
-	DPRINTK("top %p %.*s",
-		top, (int) top->d_name.len, top->d_name.name);
+	DPRINTK("top %p %pd", top, top);
 
 	/* If it's busy update the expiry counters */
 	if (!may_umount_tree(mnt)) {
@@ -232,8 +230,7 @@ static int autofs4_tree_busy(struct vfsmount *mnt,
 	struct autofs_info *top_ino = autofs4_dentry_ino(top);
 	struct dentry *p;
 
-	DPRINTK("top %p %.*s",
-		top, (int)top->d_name.len, top->d_name.name);
+	DPRINTK("top %p %pd", top, top);
 
 	/* Negative dentry - give up */
 	if (!simple_positive(top))
@@ -241,8 +238,7 @@ static int autofs4_tree_busy(struct vfsmount *mnt,
 
 	p = NULL;
 	while ((p = get_next_positive_dentry(p, top))) {
-		DPRINTK("dentry %p %.*s",
-			p, (int) p->d_name.len, p->d_name.name);
+		DPRINTK("dentry %p %pd", p, p);
 
 		/*
 		 * Is someone visiting anywhere in the subtree ?
@@ -288,13 +284,11 @@ static struct dentry *autofs4_check_leaves(struct vfsmount *mnt,
 {
 	struct dentry *p;
 
-	DPRINTK("parent %p %.*s",
-		parent, (int)parent->d_name.len, parent->d_name.name);
+	DPRINTK("parent %p %pd", parent, parent);
 
 	p = NULL;
 	while ((p = get_next_positive_dentry(p, parent))) {
-		DPRINTK("dentry %p %.*s",
-			p, (int) p->d_name.len, p->d_name.name);
+		DPRINTK("dentry %p %pd", p, p);
 
 		if (d_mountpoint(p)) {
 			/* Can we umount this guy */
@@ -464,8 +458,7 @@ int autofs4_expire_wait(struct dentry *dentry)
 	if (ino->flags & AUTOFS_INF_EXPIRING) {
 		spin_unlock(&sbi->fs_lock);
 
-		DPRINTK("waiting for expire %p name=%.*s",
-			 dentry, dentry->d_name.len, dentry->d_name.name);
+		DPRINTK("waiting for expire %p name=%pd", dentry, dentry);
 
 		status = autofs4_wait(sbi, dentry, NFY_NONE);
 		wait_for_completion(&ino->expire_complete);
