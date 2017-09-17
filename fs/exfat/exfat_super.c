@@ -627,9 +627,8 @@ static long exfat_generic_ioctl(struct file *filp,
 #endif
 {
 #if EXFAT_CONFIG_KERNEL_DEBUG
-#if !(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36))
-	struct inode *inode = filp->f_dentry->d_inode;
-#endif
+	struct dentry *mxdentry = filp->f_path.dentry;
+	struct inode *inode = mxdentry->d_inode;
 	unsigned int flags;
 #endif
 
