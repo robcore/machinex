@@ -186,7 +186,7 @@ void __init tauros2_init(void)
 		 */
 		feat = read_extra_features();
 		if (!(feat & 0x00400000)) {
-			printk(KERN_INFO "Tauros2: Enabling L2 cache.\n");
+			pr_info("Tauros2: Enabling L2 cache.\n");
 			write_extra_features(feat | 0x00400000);
 		}
 
@@ -246,7 +246,7 @@ void __init tauros2_init(void)
 		 */
 		actlr = read_actlr();
 		if (!(actlr & 0x00000002)) {
-			printk(KERN_INFO "Tauros2: Enabling L2 cache.\n");
+			pr_info("Tauros2: Enabling L2 cache.\n");
 			write_actlr(actlr | 0x00000002);
 		}
 
@@ -255,10 +255,10 @@ void __init tauros2_init(void)
 #endif
 
 	if (mode == NULL) {
-		printk(KERN_CRIT "Tauros2: Unable to detect CPU mode.\n");
+		pr_crit("Tauros2: Unable to detect CPU mode.\n");
 		return;
 	}
 
-	printk(KERN_INFO "Tauros2: L2 cache support initialised "
+	pr_info("Tauros2: L2 cache support initialised "
 			 "in %s mode.\n", mode);
 }

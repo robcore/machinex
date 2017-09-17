@@ -98,12 +98,12 @@ void machine_crash_shutdown(struct pt_regs *regs)
 		msecs--;
 	}
 	if (atomic_read(&waiting_for_crash_ipi) > 0)
-		printk(KERN_WARNING "Non-crashing CPUs did not react to IPI\n");
+		pr_warn("Non-crashing CPUs did not react to IPI\n");
 
 	crash_save_cpu(regs, smp_processor_id());
 	machine_kexec_mask_interrupts();
 
-	printk(KERN_INFO "Loading crashdump kernel...\n");
+	pr_info("Loading crashdump kernel...\n");
 }
 
 /*

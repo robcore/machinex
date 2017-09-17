@@ -212,14 +212,14 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 	}
 
 	if (!fp) {
-		printk("no frame pointer");
+		pr_cont("no frame pointer");
 		ok = 0;
 	} else if (verify_stack(fp)) {
-		printk("invalid frame pointer 0x%08x", fp);
+		pr_cont("invalid frame pointer 0x%08x", fp);
 		ok = 0;
 	} else if (fp < (unsigned long)end_of_stack(tsk))
-		printk("frame pointer underflow");
-	printk("\n");
+		pr_cont("frame pointer underflow");
+	pr_cont("\n");
 
 	if (ok)
 		c_backtrace(fp, mode);
@@ -458,7 +458,7 @@ asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
 die_sig:
 #ifdef CONFIG_DEBUG_USER
 	if (user_debug & UDBG_UNDEFINED) {
-		printk(KERN_INFO "%s (%d): undefined instruction: pc=%p\n",
+		pr_info("%s (%d): undefined instruction: pc=%p\n",
 			current->comm, task_pid_nr(current), pc);
 		dump_instr(KERN_INFO, regs);
 	}
@@ -488,7 +488,7 @@ asmlinkage void bad_mode(struct pt_regs *regs, int reason)
 {
 	console_verbose();
 
-	printk(KERN_CRIT "Bad mode in %s handler detected\n", handler[reason]);
+	pr_crit("Bad mode in %s handler detected\n", handler[reason]);
 
 	die("Oops - bad mode", regs, 0);
 	local_irq_disable();
@@ -506,7 +506,7 @@ static int bad_syscall(int n, struct pt_regs *regs)
 
 #ifdef CONFIG_DEBUG_USER
 	if (user_debug & UDBG_SYSCALL) {
-		printk(KERN_ERR "[%d] %s: obsolete system call %08x.\n",
+		pr_err("[%d] %s: obsolete system call %08x.\n",
 			task_pid_nr(current), current->comm, n);
 		dump_instr(KERN_ERR, regs);
 	}
@@ -705,7 +705,7 @@ asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 	 * something catastrophic has happened
 	 */
 	if (user_debug & UDBG_SYSCALL) {
-		printk("[%d] %s: arm syscall %d\n",
+		pr_err("[%d] %s: arm syscall %d\n",
 		       task_pid_nr(current), current->comm, no);
 		dump_instr("", regs);
 		if (user_mode(regs)) {
@@ -774,8 +774,8 @@ baddataabort(int code, unsigned long instr, struct pt_regs *regs)
 
 #ifdef CONFIG_DEBUG_USER
 	if (user_debug & UDBG_BADABORT) {
-		printk(KERN_ERR "[%d] %s: bad data abort: code %d instr 0x%08lx\n",
-			task_pid_nr(current), current->comm, code, instr);
+		pr_err("[%d] %s: bad data abort: code %d instr 0x%08lx\n",
+		       task_pid_nr(current), current->comm, code, instr);
 		dump_instr(KERN_ERR, regs);
 		show_pte(current->mm, addr);
 	}
@@ -791,29 +791,29 @@ baddataabort(int code, unsigned long instr, struct pt_regs *regs)
 
 void __readwrite_bug(const char *fn)
 {
-	printk("%s called, but not implemented\n", fn);
+	pr_err("%s called, but not implemented\n", fn);
 	BUG();
 }
 EXPORT_SYMBOL(__readwrite_bug);
 
 void __pte_error(const char *file, int line, pte_t pte)
 {
-	printk("%s:%d: bad pte %08llx.\n", file, line, (long long)pte_val(pte));
+	pr_err("%s:%d: bad pte %08llx.\n", file, line, (long long)pte_val(pte));
 }
 
 void __pmd_error(const char *file, int line, pmd_t pmd)
 {
-	printk("%s:%d: bad pmd %08llx.\n", file, line, (long long)pmd_val(pmd));
+	pr_err("%s:%d: bad pmd %08llx.\n", file, line, (long long)pmd_val(pmd));
 }
 
 void __pgd_error(const char *file, int line, pgd_t pgd)
 {
-	printk("%s:%d: bad pgd %08llx.\n", file, line, (long long)pgd_val(pgd));
+	pr_err("%s:%d: bad pgd %08llx.\n", file, line, (long long)pgd_val(pgd));
 }
 
 asmlinkage void __div0(void)
 {
-	printk("Division by zero in kernel.\n");
+	pr_err("Division by zero in kernel.\n");
 	dump_stack();
 }
 EXPORT_SYMBOL(__div0);
