@@ -1381,7 +1381,7 @@ static int wfd_open(struct file *filp)
 	INIT_LIST_HEAD(&inst->input_mem_list);
 	INIT_LIST_HEAD(&inst->minfo_list);
 
-	wfd_stats_init(&inst->stats, MINOR(filp->f_dentry->d_inode->i_rdev));
+	wfd_stats_init(&inst->stats, MINOR(filp->f_path.dentry->d_inode->i_rdev));
 
 	mdp_mops.secure = wfd_dev->secure_device;
 	mdp_mops.iommu_split_domain = wfd_dev->mdp_iommu_split_domain;

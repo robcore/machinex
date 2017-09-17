@@ -613,7 +613,7 @@ static void pmem_put_region(int id)
 
 static int get_id(struct file *file)
 {
-	return MINOR(file->f_dentry->d_inode->i_rdev);
+	return MINOR(file->f_path.dentry->d_inode->i_rdev);
 }
 
 static char *get_name(struct file *file)
@@ -626,12 +626,12 @@ static int is_pmem_file(struct file *file)
 {
 	int id;
 
-	if (unlikely(!file || !file->f_dentry || !file->f_dentry->d_inode))
+	if (unlikely(!file || !file->f_path.dentry || !file->f_path.dentry->d_inode))
 		return 0;
 
 	id = get_id(file);
 	return (unlikely(id >= PMEM_MAX_DEVICES ||
-		file->f_dentry->d_inode->i_rdev !=
+		file->f_path.dentry->d_inode->i_rdev !=
 		     MKDEV(MISC_MAJOR, pmem[id].dev.minor))) ? 0 : 1;
 }
 

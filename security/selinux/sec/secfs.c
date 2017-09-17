@@ -118,7 +118,7 @@ static int secfs_ctl_release(
 	type = secpolicy_getctlfsremove();
 	if ((type & CONTROL_FILEREMOVE_TYPE_CONTROL) != 0) {
 		g_entry_files[SECFS_KEY_CONTROL].mExist = false;
-		securityfs_remove(file->f_dentry);
+		securityfs_remove(file->f_path.dentry);
 		type &= ~CONTROL_FILEREMOVE_TYPE_CONTROL;
 		secpolicy_setctlfsremove(type);
 		if (secfs_count_using_files() == 0) {
@@ -195,7 +195,7 @@ static int secfs_policy_fileguard_release(
 	if ((type & CONTROL_FILEREMOVE_TYPE_FILE) != 0) {
 		g_entry_files[SECFS_KEY_POLICY_FILEACCESSGUARD].mExist
 								= false;
-		securityfs_remove(file->f_dentry);
+		securityfs_remove(file->f_path.dentry);
 		type &= ~CONTROL_FILEREMOVE_TYPE_FILE;
 		secpolicy_setctlfsremove(type);
 		if (secfs_count_using_files() == 0) {
@@ -272,7 +272,7 @@ static int secfs_policy_procguard_release(
 	if ((type & CONTROL_FILEREMOVE_TYPE_PROCESS) != 0) {
 		g_entry_files[SECFS_KEY_POLICY_PROCESSACCESSGUARD].mExist
 								= false;
-		securityfs_remove(file->f_dentry);
+		securityfs_remove(file->f_path.dentry);
 		type &= ~CONTROL_FILEREMOVE_TYPE_PROCESS;
 		secpolicy_setctlfsremove(type);
 		if (secfs_count_using_files() == 0) {

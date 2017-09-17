@@ -3646,8 +3646,8 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 			return PTR_ERR(f.file);
 
 		pipe->flags |= MDP_MEMORY_ID_TYPE_FB;
-		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
-			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
+		if (MAJOR(f.file->f_path.dentry->d_inode->i_rdev) == FB_MAJOR) {
+			fb_num = MINOR(f.file->f_path.dentry->d_inode->i_rdev);
 			if (get_fb_phys_info(start, len, fb_num,
 				DISPLAY_SUBSYSTEM_ID)) {
 				ret = -1;

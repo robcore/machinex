@@ -1295,8 +1295,8 @@ int get_img(struct mdp_img *img, struct mdp_blit_req *req,
 		if (IS_ERR_OR_NULL(f.file))
 			return PTR_ERR(f.file);
 
-		if (MAJOR(f.file->f_dentry->d_inode->i_rdev) == FB_MAJOR) {
-			fb_num = MINOR(f.file->f_dentry->d_inode->i_rdev);
+		if (MAJOR(f.file->f_path.dentry->d_inode->i_rdev) == FB_MAJOR) {
+			fb_num = MINOR(f.file->f_path.dentry->d_inode->i_rdev);
 			if (get_fb_phys_info(start, len, fb_num,
 				DISPLAY_SUBSYSTEM_ID)) {
 				pr_err("get_fb_phys_info() failed\n");

@@ -400,8 +400,8 @@ static int SMT113J_SPI_open(struct inode *inode, struct file *filp)
 
 	DEBUG_PRINT("SMT113J_SPI_open << Start >>");
 
-	majorno = imajor(filp->f_dentry->d_inode);
-	minorno = iminor(filp->f_dentry->d_inode);
+	majorno = imajor(filp->f_path.dentry->d_inode);
+	minorno = iminor(filp->f_path.dentry->d_inode);
 
 	if (( majorno != NODE_MAJOR ) || 
 		( minorno != NODE_MINOR )) 
