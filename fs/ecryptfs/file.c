@@ -175,7 +175,7 @@ static int read_or_initialize_metadata(struct dentry *dentry)
 	} else if ((mount_crypt_stat->flags & ECRYPTFS_ENABLE_FILTERING)
 			&& (crypt_stat->flags & ECRYPTFS_ENCRYPTED)) {
 		struct dentry *fp_dentry =
-			ecryptfs_inode_to_private(inode)->lower_file->f_dentry;
+			ecryptfs_inode_to_private(inode)->lower_file->f_path.dentry;
 		char filename[NAME_MAX+1] = {0};
 		if (fp_dentry->d_name.len <= NAME_MAX)
 			memcpy(filename, fp_dentry->d_name.name,
@@ -378,7 +378,7 @@ ecryptfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		struct ecryptfs_crypt_stat *crypt_stat =
 			&ecryptfs_inode_to_private(inode)->crypt_stat;
 		struct dentry *fp_dentry =
-			ecryptfs_inode_to_private(inode)->lower_file->f_dentry;
+			ecryptfs_inode_to_private(inode)->lower_file->f_path.dentry;
 		if (fp_dentry->d_name.len <= NAME_MAX)
 			memcpy(filename, fp_dentry->d_name.name,
 					fp_dentry->d_name.len + 1);
