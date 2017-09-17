@@ -201,7 +201,7 @@ static int debugfs_parse_options(char *data, struct debugfs_mount_opts *opts)
 static int debugfs_apply_options(struct super_block *sb)
 {
 	struct debugfs_fs_info *fsi = sb->s_fs_info;
-	struct inode *inode = sb->s_root->d_inode;
+	struct inode *inode = d_inode(sb->s_root);
 	struct debugfs_mount_opts *opts = &fsi->mount_opts;
 
 	inode->i_mode &= ~S_IALLUGO;
@@ -545,7 +545,7 @@ void debugfs_remove_recursive(struct dentry *dentry)
 
 	parent = dentry;
  down:
-	mutex_lock(&parent->d_inode->i_mutex);
+	mutex_lock(&d_inode(parent)->i_mutex);
  loop:
 	/*
 	 * The parent->d_subdirs is protected by the d_lock. Outside that
@@ -560,7 +560,7 @@ void debugfs_remove_recursive(struct dentry *dentry)
 		/* perhaps simple_empty(child) makes more sense */
 		if (!list_empty(&child->d_subdirs)) {
 			spin_unlock(&parent->d_lock);
-			mutex_unlock(&parent->d_inode->i_mutex);
+			mutex_unlock(&d_inode(parent)->i_mutex);
 			parent = child;
 			goto down;
 		}
@@ -581,10 +581,10 @@ void debugfs_remove_recursive(struct dentry *dentry)
 	}
 	spin_unlock(&parent->d_lock);
 
-	mutex_unlock(&parent->d_inode->i_mutex);
+	mutex_unlock(&d_inode(parent)->i_mutex);
 	child = parent;
 	parent = parent->d_parent;
-	mutex_lock(&parent->d_inode->i_mutex);
+	mutex_lock(&d_inode(parent)->i_mutex);
 
 	if (child != dentry)
 		/* go up */
@@ -592,7 +592,7 @@ void debugfs_remove_recursive(struct dentry *dentry)
 
 	if (!__debugfs_remove(child, parent))
 		simple_release_fs(&debugfs_mount, &debugfs_mount_count);
-	mutex_unlock(&parent->d_inode->i_mutex);
+	mutex_unlock(&d_inode(parent)->i_mutex);
 }
 EXPORT_SYMBOL_GPL(debugfs_remove_recursive);
 
@@ -637,15 +637,15 @@ struct dentry *debugfs_rename(struct dentry *old_dir, struct dentry *old_dentry,
 
 	old_name = fsnotify_oldname_init(old_dentry->d_name.name);
 
-	error = simple_rename(old_dir->d_inode, old_dentry, new_dir->d_inode,
+	error = simple_rename(d_inode(old_dir), old_dentry, d_inode(new_dir),
 		dentry);
 	if (error) {
 		fsnotify_oldname_free(old_name);
 		goto exit;
 	}
 	d_move(old_dentry, dentry);
-	fsnotify_move(old_dir->d_inode, new_dir->d_inode, old_name,
-		S_ISDIR(old_dentry->d_inode->i_mode),
+	fsnotify_move(d_inode(old_dir), d_inode(new_dir), old_name,
+		d_is_dir(old_dentry),
 		NULL, old_dentry);
 	fsnotify_oldname_free(old_name);
 	unlock_rename(new_dir, old_dir);
