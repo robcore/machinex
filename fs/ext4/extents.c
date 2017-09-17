@@ -2815,7 +2815,7 @@ again:
 		ext4_fsblk_t pblk;
 
 		/* find extent for or closest extent to this block */
-		path = ext4_ext_find_extent(inode, end, NULL, EXT4_EX_NOCACHE);
+		path = ext4_find_extent(inode, end, NULL, EXT4_EX_NOCACHE);
 		if (IS_ERR(path)) {
 			ext4_journal_stop(handle);
 			return PTR_ERR(path);
@@ -2828,7 +2828,7 @@ again:
 				EXT4_ERROR_INODE(inode,
 						 "path[%d].p_hdr == NULL",
 						 depth);
-				err = -EIO;
+				err = -EFSCORRUPTED;
 			}
 			goto out;
 		}
@@ -2854,12 +2854,6 @@ again:
 				partial_cluster =
 					-(long long) EXT4_B2C(sbi, pblk);
 			}
-
-			int split_flag = 0;
-
-			if (ext4_ext_is_unwritten(ex))
-				split_flag = EXT4_EXT_MARK_UNWRIT1 |
-					     EXT4_EXT_MARK_UNWRIT2;
 
 			/*
 			 * Split the extent in two so that 'end' is the last
@@ -2917,7 +2911,7 @@ again:
 		i = 0;
 
 		if (ext4_ext_check(inode, path[0].p_hdr, depth, 0)) {
-			err = -EIO;
+			err = -EFSCORRUPTED;
 			goto out;
 		}
 	}
