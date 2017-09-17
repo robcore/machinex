@@ -43,7 +43,7 @@ static inline u32 crc32_u32(u32 crc, u32 val)
 	return crc;
 }
 
-static u32 intel_crc4_2_hash(const void *data, u32 len, u32 seed)
+u32 __intel_crc4_2_hash(const void *data, u32 len, u32 seed)
 {
 	const u32 *p32 = (const u32 *) data;
 	u32 i, tmp = 0;
