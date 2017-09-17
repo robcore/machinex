@@ -3419,6 +3419,7 @@ M:	Jonathan Cameron <jic23@cam.ac.uk>
 L:	linux-iio@vger.kernel.org
 S:	Maintained
 F:	drivers/staging/iio/
+F:	include/linux/iio/
 
 IKANOS/ADI EAGLE ADSL USB DRIVER
 M:	Matthieu Castet <castet.matthieu@free.fr>
