@@ -1,4 +1,4 @@
-/* Internal procfs definitions
+/* internal.h: internal procfs definitions
  *
  * Copyright (C) 2004 Red Hat, Inc. All Rights Reserved.
  * Written by David Howells (dhowells@redhat.com)
@@ -11,9 +11,6 @@
 
 #include <linux/sched.h>
 #include <linux/proc_fs.h>
-#include <linux/proc_ns.h>
-#include <linux/spinlock.h>
-#include <linux/atomic.h>
 #include <linux/binfmts.h>
 struct  ctl_table_header;
 struct  mempolicy;
@@ -72,12 +69,6 @@ struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode);
 
 
 void proc_init_inodecache(void);
-
-
-struct proc_ns {
-	struct ns_common *ns;
-	const struct proc_ns_operations *ns_ops;
-};
 
 /*
  * General functions
@@ -241,4 +232,3 @@ extern struct proc_dir_entry proc_root;
 
 extern void proc_self_init(void);
 extern int proc_remount(struct super_block *, int *, char *);
-

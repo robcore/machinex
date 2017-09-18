@@ -337,17 +337,17 @@ EXPORT_SYMBOL_GPL(__put_net);
 
 struct net *get_net_ns_by_fd(int fd)
 {
+	struct proc_ns *ei;
 	struct file *file;
-	struct ns_common *ns;
 	struct net *net;
 
 	file = proc_ns_fget(fd);
 	if (IS_ERR(file))
 		return ERR_CAST(file);
 
-	ns = get_proc_ns(file_inode(file));
-	if (ns->ops == &netns_operations)
-		net = get_net(container_of(ns, struct net, ns));
+	ei = get_proc_ns(file_inode(file));
+	if (ei->ns_ops == &netns_operations)
+		net = get_net(ei->ns);
 	else
 		net = ERR_PTR(-EINVAL);
 
@@ -386,15 +386,12 @@ EXPORT_SYMBOL_GPL(get_net_ns_by_pid);
 
 static __net_init int net_ns_net_init(struct net *net)
 {
-#ifdef CONFIG_NET_NS
-	net->ns.ops = &netns_operations;
-#endif
-	return ns_alloc_inum(&net->ns);
+	return proc_alloc_inum(&net->proc_inum);
 }
 
 static __net_exit void net_ns_net_exit(struct net *net)
 {
-	ns_free_inum(&net->ns);
+	proc_free_inum(net->proc_inum);
 }
 
 static struct pernet_operations __net_initdata net_ns_ops = {
@@ -632,7 +629,7 @@ void unregister_pernet_device(struct pernet_operations *ops)
 EXPORT_SYMBOL_GPL(unregister_pernet_device);
 
 #ifdef CONFIG_NET_NS
-static struct ns_common *netns_get(struct task_struct *task)
+static void *netns_get(struct task_struct *task)
 {
 	struct net *net = NULL;
 	struct nsproxy *nsproxy;
@@ -643,22 +640,17 @@ static struct ns_common *netns_get(struct task_struct *task)
 		net = get_net(nsproxy->net_ns);
 	task_unlock(task);
 
-	return net ? &net->ns : NULL;
+	return net;
 }
 
-static inline struct net *to_net_ns(struct ns_common *ns)
+static void netns_put(void *ns)
 {
-	return container_of(ns, struct net, ns);
+	put_net(ns);
 }
 
-static void netns_put(struct ns_common *ns)
+static int netns_install(struct nsproxy *nsproxy, void *ns)
 {
-	put_net(to_net_ns(ns));
-}
-
-static int netns_install(struct nsproxy *nsproxy, struct ns_common *ns)
-{
-	struct net *net = to_net_ns(ns);
+	struct net *net = ns;
 
 	if (!ns_capable(net->user_ns, CAP_SYS_ADMIN) ||
 	    !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
@@ -669,11 +661,18 @@ static int netns_install(struct nsproxy *nsproxy, struct ns_common *ns)
 	return 0;
 }
 
+static unsigned int netns_inum(void *ns)
+{
+	struct net *net = ns;
+	return net->proc_inum;
+}
+
 const struct proc_ns_operations netns_operations = {
 	.name		= "net",
 	.type		= CLONE_NEWNET,
 	.get		= netns_get,
 	.put		= netns_put,
 	.install	= netns_install,
+	.inum		= netns_inum,
 };
 #endif

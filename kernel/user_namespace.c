@@ -62,12 +62,11 @@ int create_user_ns(struct cred *new)
 	if (!ns)
 		return -ENOMEM;
 
-	ret = ns_alloc_inum(&ns->ns);
+	ret = proc_alloc_inum(&ns->proc_inum);
 	if (ret) {
 		kmem_cache_free(user_ns_cachep, ns);
 		return ret;
 	}
-	ns->ns.ops = &userns_operations;
 
 	kref_init(&ns->kref);
 
@@ -107,7 +106,7 @@ static void free_user_ns_work(struct work_struct *work)
 		container_of(work, struct user_namespace, destroyer);
 	parent = ns->parent;
 	free_uid(ns->creator);
-	proc_free_inum(ns->ns.inum);
+	proc_free_inum(ns->proc_inum);
 	kmem_cache_free(user_ns_cachep, ns);
 	put_user_ns(parent);
 }

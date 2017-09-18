@@ -105,10 +105,9 @@ static struct pid_namespace *create_pid_namespace(struct user_namespace *user_ns
 	if (ns->pid_cachep == NULL)
 		goto out_free_map;
 
-	err = ns_alloc_inum(&ns->ns);
+	err = proc_alloc_inum(&ns->proc_inum);
 	if (err)
 		goto out_free_map;
-	ns->ns.ops = &pidns_operations;
 
 	kref_init(&ns->kref);
 	ns->level = level;
@@ -142,7 +141,7 @@ static void destroy_pid_namespace(struct pid_namespace *ns)
 {
 	int i;
 
-	ns_free_inum(&ns->ns);
+	proc_free_inum(ns->proc_inum);
 	for (i = 0; i < PIDMAP_ENTRIES; i++)
 		kfree(ns->pidmap[i].page);
 	put_user_ns(ns->user_ns);

@@ -44,7 +44,7 @@ struct user_namespace init_user_ns = {
 	},
 	.owner = GLOBAL_ROOT_UID,
 	.group = GLOBAL_ROOT_GID,
-	.ns.inum = PROC_USER_INIT_INO,
+	.proc_inum = PROC_USER_INIT_INO,
 };
 EXPORT_SYMBOL_GPL(init_user_ns);
 
