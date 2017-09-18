@@ -578,6 +578,17 @@ static void exit_mm(struct task_struct *tsk)
 		set_tsk_thread_flag(tsk, TIF_MM_RELEASED);
 }
 
+static struct task_struct *find_alive_thread(struct task_struct *p)
+{
+	struct task_struct *t;
+
+	for_each_thread(p, t) {
+		if (!(t->flags & PF_EXITING))
+			return t;
+	}
+	return NULL;
+}
+
 static struct task_struct *find_child_reaper(struct task_struct *father)
 	__releases(&tasklist_lock)
 	__acquires(&tasklist_lock)
@@ -588,9 +599,8 @@ static struct task_struct *find_child_reaper(struct task_struct *father)
 	if (likely(reaper != father))
 		return reaper;
 
-	for_each_thread(father, reaper) {
-		if (reaper->flags & PF_EXITING)
-			continue;
+	reaper = find_alive_thread(father);
+	if (reaper) {
 		pid_ns->child_reaper = reaper;
 		return reaper;
 	}
@@ -616,17 +626,13 @@ static struct task_struct *find_child_reaper(struct task_struct *father)
 static struct task_struct *find_new_reaper(struct task_struct *father,
 					   struct task_struct *child_reaper)
 {
-	struct task_struct *thread;
+	struct task_struct *thread, *reaper;
 
-	for_each_thread(father, thread) {
-		if (thread->flags & PF_EXITING)
- 			continue;
+	thread = find_alive_thread(father);
+	if (thread)
 		return thread;
-	}
-
 
 	if (father->signal->has_child_subreaper) {
-		struct task_struct *reaper;
 		/*
 		 * Find the first ->is_child_subreaper ancestor in our pid_ns.
 		 * We start from father to ensure we can not look into another
@@ -640,11 +646,9 @@ static struct task_struct *find_new_reaper(struct task_struct *father,
 				break;
 			if (!reaper->signal->is_child_subreaper)
 				continue;
-			thread = reaper;
-			for_each_thread(reaper, thread) {
-				if (!(thread->flags & PF_EXITING))
-					return thread;
-			}
+			thread = find_alive_thread(reaper);
+			if (thread)
+				return thread;
 		}
 	}
 
@@ -675,17 +679,26 @@ static void reparent_leader(struct task_struct *father, struct task_struct *p,
 	kill_orphaned_pgrp(p, father);
 }
 
-static void forget_original_parent(struct task_struct *father)
+/*
+ * This does two things:
+ *
+ * A.  Make init inherit all the child processes
+ * B.  Check to see if any process groups have become orphaned
+ *	as a result of our exiting, and if they have any stopped
+ *	jobs, send them a SIGHUP and then a SIGCONT.  (POSIX 3.2.2.2)
+ */
+static void forget_original_parent(struct task_struct *father,
+					struct list_head *dead)
 {
-	struct task_struct *p, *t, *n, *reaper;
-	LIST_HEAD(dead_children);
+	struct task_struct *p, *t, *reaper;
 
-	write_lock_irq(&tasklist_lock);
 	if (unlikely(!list_empty(&father->ptraced)))
-		exit_ptrace(father, &dead_children);
+		exit_ptrace(father, dead);
 
 	/* Can drop and reacquire tasklist_lock */
 	reaper = find_child_reaper(father);
+	if (list_empty(&father->children))
+		return;
 
 	reaper = find_new_reaper(father, reaper);
 	list_for_each_entry(p, &father->children, sibling) {
@@ -703,15 +716,9 @@ static void forget_original_parent(struct task_struct *father)
 		 * notify anyone anything has happened.
 		 */
 		if (!same_thread_group(reaper, father))
-			reparent_leader(father, p, &dead_children);
+			reparent_leader(father, p, dead);
 	}
 	list_splice_tail_init(&father->children, &reaper->children);
-	write_unlock_irq(&tasklist_lock);
-
-	list_for_each_entry_safe(p, n, &dead_children, ptrace_entry) {
-		list_del_init(&p->ptrace_entry);
-		release_task(p);
-	}
 }
 
 /*
@@ -721,18 +728,12 @@ static void forget_original_parent(struct task_struct *father)
 static void exit_notify(struct task_struct *tsk, int group_dead)
 {
 	bool autoreap;
-
-	/*
-	 * This does two things:
-	 *
-	 * A.  Make init inherit all the child processes
-	 * B.  Check to see if any process groups have become orphaned
-	 *	as a result of our exiting, and if they have any stopped
-	 *	jobs, send them a SIGHUP and then a SIGCONT.  (POSIX 3.2.2.2)
-	 */
-	forget_original_parent(tsk);
+	struct task_struct *p, *n;
+	LIST_HEAD(dead);
 
 	write_lock_irq(&tasklist_lock);
+	forget_original_parent(tsk, &dead);
+
 	if (group_dead)
 		kill_orphaned_pgrp(tsk->group_leader, NULL);
 
@@ -750,15 +751,18 @@ static void exit_notify(struct task_struct *tsk, int group_dead)
 	}
 
 	tsk->exit_state = autoreap ? EXIT_DEAD : EXIT_ZOMBIE;
+	if (tsk->exit_state == EXIT_DEAD)
+		list_add(&tsk->ptrace_entry, &dead);
 
 	/* mt-exec, de_thread() is waiting for group leader */
 	if (unlikely(tsk->signal->notify_count < 0))
 		wake_up_process(tsk->signal->group_exit_task);
 	write_unlock_irq(&tasklist_lock);
 
-	/* If the process is dead, release it - nobody will wait for it */
-	if (autoreap)
-		release_task(tsk);
+	list_for_each_entry_safe(p, n, &dead, ptrace_entry) {
+		list_del_init(&p->ptrace_entry);
+		release_task(p);
+	}
 }
 
 #ifdef CONFIG_DEBUG_STACK_USAGE
