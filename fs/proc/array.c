@@ -155,10 +155,10 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
 {
 	struct group_info *group_info;
 	int g;
+	struct fdtable *fdt = NULL;
 	const struct cred *cred;
 	pid_t ppid = 0, tpid = 0;
-	struct task_struct *leader = NULL;
-	unsigned int max_fds = 0;
+        struct task_struct *leader = NULL;
 
 	rcu_read_lock();
 	if (pid_alive(p)) {
@@ -169,12 +169,6 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
                 leader = p->group_leader;
 	}
 	cred = get_task_cred(p);
-
-	task_lock(p);
-	if (p->files)
-		max_fds = files_fdtable(p->files)->max_fds;
-	task_unlock(p);
-
 	seq_printf(m,
 		"State:\t%s\n"
 		"Tgid:\t%d\n"
@@ -182,15 +176,22 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
 		"PPid:\t%d\n"
 		"TracerPid:\t%d\n"
 		"Uid:\t%d\t%d\t%d\t%d\n"
-		"Gid:\t%d\t%d\t%d\t%d\n"
-		"FDSize:\t%d\nGroups:\t",
+		"Gid:\t%d\t%d\t%d\t%d\n",
 		get_task_state(p),
 		leader ? task_pid_nr_ns(leader, ns) : 0,
 		pid_nr_ns(pid, ns),
 		ppid, tpid,
 		cred->uid, cred->euid, cred->suid, cred->fsuid,
-		cred->gid, cred->egid, cred->sgid, cred->fsgid,
-		max_fds);
+		cred->gid, cred->egid, cred->sgid, cred->fsgid);
+
+	task_lock(p);
+	if (p->files)
+		fdt = files_fdtable(p->files);
+	seq_printf(m,
+		"FDSize:\t%d\n"
+		"Groups:\t",
+		fdt ? fdt->max_fds : 0);
+	task_unlock(p);
 	rcu_read_unlock();
 
 	group_info = cred->group_info;
