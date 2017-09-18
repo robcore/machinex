@@ -1,0 +1,1 @@
+/media/root/robcore/android/linaro2-4.4/patches/08patches/0889-exit-reparent-cleanup-the-changing-of-parent.patch
