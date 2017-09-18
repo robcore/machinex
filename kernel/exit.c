@@ -617,7 +617,9 @@ static struct task_struct *find_new_reaper(struct task_struct *father)
 		 * forget_original_parent() must move them somewhere.
 		 */
 		pid_ns->child_reaper = init_pid_ns.child_reaper;
-	} else if (father->signal->has_child_subreaper) {
+	}
+
+	if (father->signal->has_child_subreaper) {
 		struct task_struct *reaper;
 
 		/*
@@ -627,7 +629,7 @@ static struct task_struct *find_new_reaper(struct task_struct *father)
 		 * PID namespace. However we still need the check above, see
 		 * http://marc.info/?l=linux-kernel&m=131385460420380
 		 */
-		for (reaper = father->real_parent;
+		for (reaper = father;
 		     reaper != &init_task;
 		     reaper = reaper->real_parent) {
 			if (same_thread_group(reaper, pid_ns->child_reaper))
