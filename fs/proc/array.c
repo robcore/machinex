@@ -191,11 +191,10 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
 		"FDSize:\t%d\n"
 		"Groups:\t",
 		fdt ? fdt->max_fds : 0);
+	task_unlock(p);
 	rcu_read_unlock();
 
 	group_info = cred->group_info;
-	task_unlock(p);
-
 	for (g = 0; g < group_info->ngroups; g++)
 		seq_printf(m, "%d ", GROUP_AT(group_info, g));
 	put_cred(cred);
