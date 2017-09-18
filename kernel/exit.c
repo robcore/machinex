@@ -637,7 +637,7 @@ static struct task_struct *find_new_reaper(struct task_struct *father)
 			thread = reaper;
 			for_each_thread(reaper, thread) {
 				if (!(thread->flags & PF_EXITING))
-					return reaper;
+					return thread;
 			}
 		}
 	}
