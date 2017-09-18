@@ -67,6 +67,7 @@ int create_user_ns(struct cred *new)
 		kmem_cache_free(user_ns_cachep, ns);
 		return ret;
 	}
+	ns->ns.ops = &userns_operations;
 
 	kref_init(&ns->kref);
 
