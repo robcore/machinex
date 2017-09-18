@@ -915,7 +915,6 @@ void do_exit(long code)
 
 	exit_tasks_rcu_start();
 	exit_notify(tsk, group_dead);
-
 	proc_exit_connector(tsk);
 #ifdef CONFIG_NUMA
 	task_lock(tsk);
@@ -1141,6 +1140,8 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 
 		get_task_struct(p);
 		read_unlock(&tasklist_lock);
+		sched_annotate_sleep();
+
 		if ((exit_code & 0x7f) == 0) {
 			why = CLD_EXITED;
 			status = exit_code >> 8;
