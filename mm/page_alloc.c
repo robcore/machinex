@@ -6804,7 +6804,6 @@ void dump_page_badflags(struct page *page, const char *reason, unsigned long bad
 		pr_alert("bad because of flags:\n");
 		dump_page_flags(page->flags & badflags);
 	}
-	mem_cgroup_print_bad_page(page);
 }
 void dump_page(struct page *page, const char *reason)
 {
