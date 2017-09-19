@@ -2580,22 +2580,6 @@ __perform_reclaim(gfp_t gfp_mask, unsigned int order, struct zonelist *zonelist,
 	return progress;
 }
 
-static void
-set_page_owner(struct page *page, unsigned int order, gfp_t gfp_mask)
-{
-#ifdef CONFIG_PAGE_OWNER
-	struct stack_trace *trace = &page->trace;
-	trace->nr_entries = 0;
-	trace->max_entries = ARRAY_SIZE(page->trace_entries);
-	trace->entries = &page->trace_entries[0];
-	trace->skip = 3;
-	save_stack_trace(&page->trace);
-
-	page->order = (int) order;
-	page->gfp_mask = gfp_mask;
-#endif /* CONFIG_PAGE_OWNER */
-}
-
 /* The really slow allocator path where we enter direct reclaim */
 static inline struct page *
 __alloc_pages_direct_reclaim(gfp_t gfp_mask, unsigned int order,
