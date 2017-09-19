@@ -1,6 +1,6 @@
 # Makefile for vm tools
 #
-TARGETS=page-types slabinfo
+TARGETS=page-types slabinfo page_owner_sort
 
 LK_DIR = ../lib/lk
 LIBLK = $(LK_DIR)/liblk.a
@@ -18,5 +18,5 @@ liblk:
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
-	$(RM) page-types slabinfo
+	$(RM) page-types slabinfo page_owner_sort
 	make -C ../lib/lk clean

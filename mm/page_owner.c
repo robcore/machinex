@@ -7,11 +7,8 @@
 #include <linux/page_owner.h>
 #include "internal.h"
 
-static bool page_owner_disabled =
-	!IS_ENABLED(CONFIG_PAGE_OWNER_ENABLE_DEFAULT);
+static bool page_owner_disabled = true;
 bool page_owner_inited __read_mostly;
-
-static void init_early_allocated_pages(void);
 
 static int early_page_owner_param(char *buf)
 {
@@ -20,9 +17,6 @@ static int early_page_owner_param(char *buf)
 
 	if (strcmp(buf, "on") == 0)
 		page_owner_disabled = false;
-
-	if (strcmp(buf, "off") == 0)
-		page_owner_disabled = true;
 
 	return 0;
 }
@@ -42,7 +36,6 @@ static void init_page_owner(void)
 		return;
 
 	page_owner_inited = true;
-	init_early_allocated_pages();
 }
 
 struct page_ext_operations page_owner_ops = {
@@ -63,28 +56,22 @@ void __reset_page_owner(struct page *page, unsigned int order)
 
 void __set_page_owner(struct page *page, unsigned int order, gfp_t gfp_mask)
 {
-	struct page_ext *page_ext = lookup_page_ext(page);
-	struct stack_trace trace = {
-		.nr_entries = 0,
-		.max_entries = ARRAY_SIZE(page_ext->trace_entries),
-		.entries = &page_ext->trace_entries[0],
-		.skip = 3,
-	};
+	struct page_ext *page_ext;
+	struct stack_trace *trace;
 
-	save_stack_trace(&trace);
+	page_ext = lookup_page_ext(page);
+
+	trace = &page_ext->trace;
+	trace->nr_entries = 0;
+	trace->max_entries = ARRAY_SIZE(page_ext->trace_entries);
+	trace->entries = &page_ext->trace_entries[0];
+	trace->skip = 3;
+	save_stack_trace(&page_ext->trace);
 
 	page_ext->order = order;
 	page_ext->gfp_mask = gfp_mask;
-	page_ext->nr_entries = trace.nr_entries;
 
 	__set_bit(PAGE_EXT_OWNER, &page_ext->flags);
-}
-
-gfp_t __get_page_owner_gfp(struct page *page)
-{
-	struct page_ext *page_ext = lookup_page_ext(page);
-
-	return page_ext->gfp_mask;
 }
 
 static ssize_t
@@ -94,10 +81,6 @@ print_page_owner(char __user *buf, size_t count, unsigned long pfn,
 	int ret;
 	int pageblock_mt, page_mt;
 	char *kbuf;
-	struct stack_trace trace = {
-		.nr_entries = page_ext->nr_entries,
-		.entries = &page_ext->trace_entries[0],
-	};
 
 	kbuf = kmalloc(count, GFP_KERNEL);
 	if (!kbuf)
@@ -135,7 +118,8 @@ print_page_owner(char __user *buf, size_t count, unsigned long pfn,
 	if (ret >= count)
 		goto err;
 
-	ret += snprint_stack_trace(kbuf + ret, count - ret, &trace, 0);
+	ret += snprint_stack_trace(kbuf + ret, count - ret,
+					&page_ext->trace, 0);
 	if (ret >= count)
 		goto err;
 
@@ -200,8 +184,8 @@ read_page_owner(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 		page_ext = lookup_page_ext(page);
 
 		/*
-		 * Some pages could be missed by concurrent allocation or free,
-		 * because we don't hold the zone lock.
+		 * Pages allocated before initialization of page_owner are
+		 * non-buddy and have no page_owner info.
 		 */
 		if (!test_bit(PAGE_EXT_OWNER, &page_ext->flags))
 			continue;
@@ -213,92 +197,6 @@ read_page_owner(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 	}
 
 	return 0;
-}
-
-static void init_pages_in_zone(pg_data_t *pgdat, struct zone *zone)
-{
-	struct page *page;
-	struct page_ext *page_ext;
-	unsigned long pfn = zone->zone_start_pfn, block_end_pfn;
-	unsigned long end_pfn = pfn + zone->spanned_pages;
-	unsigned long count = 0;
-
-	/* Scan block by block. First and last block may be incomplete */
-	pfn = zone->zone_start_pfn;
-
-	/*
-	 * Walk the zone in pageblock_nr_pages steps. If a page block spans
-	 * a zone boundary, it will be double counted between zones. This does
-	 * not matter as the mixed block count will still be correct
-	 */
-	for (; pfn < end_pfn; ) {
-		if (!pfn_valid(pfn)) {
-			pfn = ALIGN(pfn + 1, MAX_ORDER_NR_PAGES);
-			continue;
-		}
-
-		block_end_pfn = ALIGN(pfn + 1, pageblock_nr_pages);
-		block_end_pfn = min(block_end_pfn, end_pfn);
-
-		page = pfn_to_page(pfn);
-
-		for (; pfn < block_end_pfn; pfn++) {
-			if (!pfn_valid_within(pfn))
-				continue;
-
-			page = pfn_to_page(pfn);
-
-			/*
-			 * We are safe to check buddy flag and order, because
-			 * this is init stage and only single thread runs.
-			 */
-			if (PageBuddy(page)) {
-				pfn += (1UL << page_order(page)) - 1;
-				continue;
-			}
-
-			if (PageReserved(page))
-				continue;
-
-			page_ext = lookup_page_ext(page);
-
-			/* Maybe overraping zone */
-			if (test_bit(PAGE_EXT_OWNER, &page_ext->flags))
-				continue;
-
-			/* Found early allocated page */
-			set_page_owner(page, 0, 0);
-			count++;
-		}
-	}
-
-	pr_info("Node %d, zone %8s: page owner found early allocated %lu pages\n",
-		pgdat->node_id, zone->name, count);
-}
-
-static void init_zones_in_node(pg_data_t *pgdat)
-{
-	struct zone *zone;
-	struct zone *node_zones = pgdat->node_zones;
-	unsigned long flags;
-
-	for (zone = node_zones; zone - node_zones < MAX_NR_ZONES; ++zone) {
-		if (!populated_zone(zone))
-			continue;
-
-		spin_lock_irqsave(&zone->lock, flags);
-		init_pages_in_zone(pgdat, zone);
-		spin_unlock_irqrestore(&zone->lock, flags);
-	}
-}
-
-static void init_early_allocated_pages(void)
-{
-	pg_data_t *pgdat;
-
-	drain_all_pages(NULL);
-	for_each_online_pgdat(pgdat)
-		init_zones_in_node(pgdat);
 }
 
 static const struct file_operations proc_page_owner_operations = {
@@ -321,4 +219,4 @@ static int __init pageowner_init(void)
 
 	return 0;
 }
-late_initcall(pageowner_init)
+module_init(pageowner_init)
