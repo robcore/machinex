@@ -604,7 +604,7 @@ nfs_scan_commit(struct inode *inode, struct list_head *dst)
 		ret += pnfs_scan_commit_lists(inode, max - ret,
 				&inode->i_lock);
 	}
-	spin_unlock(&inode->i_lock);
+	spin_unlock(&flctx->flc_lock);
 	return ret;
 }
 

@@ -204,7 +204,7 @@ int ceph_encode_locks_to_buffer(struct inode *inode,
 				int num_fcntl_locks, int num_flock_locks)
 {
 	struct file_lock *lock;
-	struct file_lock_context *ctx;
+	struct file_lock_context *ctx = inode->i_flctx;
 	int err = 0;
 	int seen_fcntl = 0;
 	int seen_flock = 0;

@@ -1268,10 +1268,13 @@ static int nfs4_reclaim_locks(struct nfs4_state *state, const struct nfs4_state_
 			/* kill_proc(fl->fl_pid, SIGLOST, 1); */
 			status = 0;
 		}
-		spin_lock(&inode->i_lock);
+		spin_lock(&flctx->flc_lock);
 	}
-out_unlock:
-	spin_unlock(&inode->i_lock);
+	if (list == &flctx->flc_posix) {
+		list = &flctx->flc_flock;
+		goto restart;
+	}
+	spin_unlock(&flctx->flc_lock);
 out:
 	up_write(&nfsi->rwsem);
 	return status;
