@@ -385,8 +385,6 @@ retry:
 			case 0:
 				goto out;
 			case -EACCES:
-				flags |= MS_RDONLY;
-				goto retry;
 			case -EINVAL:
 				continue;
 		}
@@ -408,6 +406,10 @@ retry:
 		       "explicit textual name for \"root=\" boot option.\n");
 #endif
 		panic("VFS: Unable to mount root fs on %s", b);
+	}
+	if (!(flags & MS_RDONLY)) {
+		flags |= MS_RDONLY;
+		goto retry;
 	}
 
 	printk("List of all partitions:\n");
