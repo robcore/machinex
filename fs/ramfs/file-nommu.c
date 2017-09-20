@@ -27,13 +27,12 @@
 #include "internal.h"
 
 static int ramfs_nommu_setattr(struct dentry *, struct iattr *);
-
-const struct address_space_operations ramfs_aops = {
-	.readpage		= simple_readpage,
-	.write_begin		= simple_write_begin,
-	.write_end		= simple_write_end,
-	.set_page_dirty		= __set_page_dirty_no_writeback,
-};
+static unsigned long ramfs_nommu_get_unmapped_area(struct file *file,
+						   unsigned long addr,
+						   unsigned long len,
+						   unsigned long pgoff,
+						   unsigned long flags);
+static int ramfs_nommu_mmap(struct file *file, struct vm_area_struct *vma);
 
 static unsigned ramfs_mmap_capabilities(struct file *file)
 {
@@ -45,9 +44,9 @@ const struct file_operations ramfs_file_operations = {
 	.mmap_capabilities	= ramfs_mmap_capabilities,
 	.mmap			= ramfs_nommu_mmap,
 	.get_unmapped_area	= ramfs_nommu_get_unmapped_area,
-	.read			= do_sync_read,
+	.read			= new_sync_read,
 	.read_iter		= generic_file_read_iter,
-	.write			= do_sync_write,
+	.write			= new_sync_write,
 	.write_iter		= generic_file_write_iter,
 	.fsync			= noop_fsync,
 	.splice_read		= generic_file_splice_read,
@@ -204,7 +203,7 @@ static int ramfs_nommu_setattr(struct dentry *dentry, struct iattr *ia)
  *   - the pages to be mapped must exist
  *   - the pages be physically contiguous in sequence
  */
-unsigned long ramfs_nommu_get_unmapped_area(struct file *file,
+static unsigned long ramfs_nommu_get_unmapped_area(struct file *file,
 					    unsigned long addr, unsigned long len,
 					    unsigned long pgoff, unsigned long flags)
 {
@@ -263,7 +262,7 @@ out:
 /*
  * set up a mapping for shared memory segments
  */
-int ramfs_nommu_mmap(struct file *file, struct vm_area_struct *vma)
+static int ramfs_nommu_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	if (!(vma->vm_flags & VM_SHARED))
 		return -ENOSYS;

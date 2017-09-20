@@ -43,6 +43,13 @@
 static const struct super_operations ramfs_ops;
 static const struct inode_operations ramfs_dir_inode_operations;
 
+static const struct address_space_operations ramfs_aops = {
+	.readpage	= simple_readpage,
+	.write_begin	= simple_write_begin,
+	.write_end	= simple_write_end,
+	.set_page_dirty	= __set_page_dirty_no_writeback,
+};
+
 struct inode *ramfs_get_inode(struct super_block *sb,
 				const struct inode *dir, umode_t mode, dev_t dev)
 {
@@ -246,6 +253,7 @@ static struct file_system_type ramfs_fs_type = {
 	.name		= "ramfs",
 	.mount		= ramfs_mount,
 	.kill_sb	= ramfs_kill_sb,
+	.fs_flags	= FS_USERNS_MOUNT,
 };
 
 int __init init_ramfs_fs(void)
