@@ -117,6 +117,20 @@ again:
 			return err;
 		goto again;
 	}
+
+	flctx = inode->i_flctx;
+	if (flctx) {
+		list_for_each_entry(fl, &flctx->flc_flock, fl_list) {
+			if (nfs_file_open_context(fl->fl_file) != ctx)
+				continue;
+			spin_unlock(&inode->i_lock);
+			status = nfs4_lock_delegation_recall(fl, state,
+								stateid);
+			if (status < 0)
+				goto out;
+			spin_lock(&inode->i_lock);
+		}
+	}
 	spin_unlock(&inode->i_lock);
 	return 0;
 }
