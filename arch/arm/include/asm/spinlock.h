@@ -279,13 +279,13 @@ static inline void arch_spin_unlock_wait(arch_spinlock_t *lock)
 
 static inline int arch_spin_is_locked(arch_spinlock_t *lock)
 {
-	unsigned long tmp = ACCESS_ONCE(lock->lock);
+	unsigned long tmp = READ_ONCE(lock->lock);
 	return (((tmp >> TICKET_SHIFT) ^ tmp) & TICKET_MASK) != 0;
 }
 
 static inline int arch_spin_is_contended(arch_spinlock_t *lock)
 {
-	unsigned long tmp = ACCESS_ONCE(lock->lock);
+	unsigned long tmp = READ_ONCE(lock->lock);
 	return ((tmp - (tmp >> TICKET_SHIFT)) & TICKET_MASK) > 1;
 }
 #endif
