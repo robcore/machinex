@@ -235,6 +235,7 @@ static char *scanarg(char *s, char del)
 				return NULL;
 		}
 	}
+	s[-1] ='\0';
 	return s;
 }
 
@@ -359,8 +360,7 @@ static Node *create_entry(const char __user *buffer, size_t count)
 		p = scanarg(p, del);
 		if (!p)
 			goto einval;
-		p[-1] = '\0';
-		if (p == e->magic)
+		if (!e->magic[0])
 			goto einval;
 		if (USE_DEBUG)
 			print_hex_dump_bytes(
@@ -372,8 +372,7 @@ static Node *create_entry(const char __user *buffer, size_t count)
 		p = scanarg(p, del);
 		if (!p)
 			goto einval;
-		p[-1] = '\0';
-		if (p == e->mask) {
+		if (!e->mask[0]) {
 			e->mask = NULL;
 			pr_debug("register:  mask[raw]: none\n");
 		} else if (USE_DEBUG)
