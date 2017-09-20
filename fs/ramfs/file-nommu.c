@@ -35,7 +35,14 @@ const struct address_space_operations ramfs_aops = {
 	.set_page_dirty		= __set_page_dirty_no_writeback,
 };
 
+static unsigned ramfs_mmap_capabilities(struct file *file)
+{
+	return NOMMU_MAP_DIRECT | NOMMU_MAP_COPY | NOMMU_MAP_READ |
+		NOMMU_MAP_WRITE | NOMMU_MAP_EXEC;
+}
+
 const struct file_operations ramfs_file_operations = {
+	.mmap_capabilities	= ramfs_mmap_capabilities,
 	.mmap			= ramfs_nommu_mmap,
 	.get_unmapped_area	= ramfs_nommu_get_unmapped_area,
 	.read			= do_sync_read,
