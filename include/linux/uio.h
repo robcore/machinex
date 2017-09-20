@@ -37,6 +37,11 @@ struct iov_iter {
 	unsigned long nr_segs;
 };
 
+static inline bool iter_is_iovec(struct iov_iter *i)
+{
+	return !(i->type & (ITER_BVEC | ITER_KVEC));
+}
+
 /*
  * Total number of bytes covered by an iovec.
  *
