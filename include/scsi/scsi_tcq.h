@@ -69,7 +69,7 @@ static inline void scsi_activate_tcq(struct scsi_device *sdev, int depth)
 
 	if (!blk_queue_tagged(sdev->request_queue))
 		blk_queue_init_tags(sdev->request_queue, depth,
-				    sdev->host->bqt);
+				    sdev->host->bqt, BLK_TAG_ALLOC_FIFO);
 
 	scsi_adjust_queue_depth(sdev, scsi_get_tag_type(sdev), depth);
 }
