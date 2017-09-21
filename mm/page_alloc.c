@@ -2913,17 +2913,19 @@ retry:
 #define SHOULD_CONSIDER_OOM !did_some_progress && boot_mode != 1
 #endif
 	if (SHOULD_CONSIDER_OOM) {
-		if (oom_gfp_allowed(gfp_mask)) {
-			if (oom_killer_disabled)
-				goto nopage;
-			/* Coredumps can quickly deplete all memory reserves */
-			if ((current->flags & PF_DUMPCORE) &&
-			    !(gfp_mask & __GFP_NOFAIL))
-				goto nopage;
+		/* Do not loop if specifically requested */
+		if (gfp_mask & __GFP_NORETRY)
+		goto noretry;
+		if (oom_killer_disabled)
+			goto nopage;
+		/* Coredumps can quickly deplete all memory reserves */
+		if ((current->flags & PF_DUMPCORE) &&
+		    !(gfp_mask & __GFP_NOFAIL))
+			goto nopage;
 #ifdef CONFIG_SEC_OOM_KILLER
-			if (did_some_progress)
-				pr_info("time's up : calling "
-					"__alloc_pages_may_oom(o:%d, gfp:0x%x)\n", order, gfp_mask);
+		if (did_some_progress)
+			pr_info("time's up : calling "
+				"__alloc_pages_may_oom(o:%d, gfp:0x%x)\n", order, gfp_mask);
 
 #endif
 			page = __alloc_pages_may_oom(gfp_mask, order,
@@ -2965,6 +2967,7 @@ retry:
 		wait_iff_congested(preferred_zone, BLK_RW_ASYNC, HZ/50);
 		goto retry;
 	} else {
+noretry:
 		/*
 		 * High-order allocations do not necessarily loop after
 		 * direct reclaim and reclaim/compaction depends on compaction
