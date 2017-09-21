@@ -285,7 +285,6 @@ struct vm_area_struct {
 			struct rb_node rb;
 			unsigned long rb_subtree_last;
 		} linear;
-		struct list_head nonlinear;
 		const char __user *anon_name;
 	} shared;
 
