@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 3
+#define VERSION_MIN 4
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -43,10 +43,7 @@ static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static unsigned int ps_state = POWER_SUSPEND_INACTIVE;
-bool is_power_suspended(void)
-{
-	return ps_state;
-}
+bool power_suspended = false;
 
 /* Robcore: Provide an option to sync the system on panel suspend
  * accompanied by a wakelock to ensure stability
@@ -121,6 +118,8 @@ static void power_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 	}
+
+	power_suspended = true;
 
 	if (limit_screen_off_cpus)
 		lock_screen_off_cpus(0);
@@ -213,6 +212,8 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
+
+	power_suspended = false;
 
 	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Resume Completed.\n");

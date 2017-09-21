@@ -101,7 +101,7 @@ enum {
 	POWER_SUSPEND_ACTIVE = 1,
 };
 
-extern bool is_power_suspended(void);
+extern bool power_suspended;
 
 void prometheus_panel_beacon(unsigned int new_state);
 bool prometheus_sec_jack(void);

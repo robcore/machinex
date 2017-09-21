@@ -2431,7 +2431,7 @@ __alloc_pages_may_oom(gfp_t gfp_mask, unsigned int order,
 
 	*did_some_progress = 0;
 
-	if (oom_killer_disabled || is_power_suspended())
+	if (oom_killer_disabled || power_suspended)
 		return NULL;
 
 	/*
@@ -2924,7 +2924,7 @@ retry:
 		/* Do not loop if specifically requested */
 		if (gfp_mask & __GFP_NORETRY)
 			goto noretry;
-		if (oom_killer_disabled || is_power_suspended)
+		if (oom_killer_disabled || power_suspended)
 			goto nopage;
 		/* Coredumps can quickly deplete all memory reserves */
 		if ((current->flags & PF_DUMPCORE) &&
