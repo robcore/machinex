@@ -34,94 +34,14 @@ static struct vfsmount *debugfs_mount;
 static int debugfs_mount_count;
 static bool debugfs_registered;
 
-static struct inode *debugfs_get_inode(struct super_block *sb, umode_t mode, dev_t dev,
-				       void *data, const struct file_operations *fops)
-
+static struct inode *debugfs_get_inode(struct super_block *sb)
 {
 	struct inode *inode = new_inode(sb);
-
 	if (inode) {
 		inode->i_ino = get_next_ino();
-		inode->i_mode = mode;
 		inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-		switch (mode & S_IFMT) {
-		default:
-			init_special_inode(inode, mode, dev);
-			break;
-		case S_IFREG:
-			inode->i_fop = fops ? fops : &debugfs_file_operations;
-			inode->i_private = data;
-			break;
-		case S_IFLNK:
-			inode->i_op = &debugfs_link_operations;
-			inode->i_private = data;
-			break;
-		case S_IFDIR:
-			inode->i_op = &simple_dir_inode_operations;
-			inode->i_fop = &simple_dir_operations;
-
-			/* directory inodes start off with i_nlink == 2
-			 * (for "." entry) */
-			inc_nlink(inode);
-			break;
-		}
 	}
 	return inode;
-}
-
-/* SMP-safe */
-static int debugfs_mknod(struct inode *dir, struct dentry *dentry,
-			 umode_t mode, dev_t dev, void *data,
-			 const struct file_operations *fops)
-{
-	struct inode *inode;
-	int error = -EPERM;
-
-	if (dentry->d_inode)
-		return -EEXIST;
-
-	inode = debugfs_get_inode(dir->i_sb, mode, dev, data, fops);
-	if (inode) {
-		d_instantiate(dentry, inode);
-		dget(dentry);
-		error = 0;
-	}
-	return error;
-}
-
-static int debugfs_mkdir(struct dentry *dentry, umode_t mode)
-{
-	struct inode *dir = dentry->d_parent->d_inode;
-	int res;
-
-	mode = (mode & (S_IRWXUGO | S_ISVTX)) | S_IFDIR;
-	res = debugfs_mknod(dir, dentry, mode, 0, NULL, NULL);
-	if (!res) {
-		inc_nlink(dir);
-		fsnotify_mkdir(dir, dentry);
-	}
-	return res;
-}
-
-static int debugfs_link(struct dentry *dentry, umode_t mode,
-			void *data)
-{
-	struct inode *dir = dentry->d_parent->d_inode;
-	mode = (mode & S_IALLUGO) | S_IFLNK;
-	return debugfs_mknod(dir, dentry, mode, 0, data, NULL);
-}
-
-static int debugfs_create(struct dentry *dentry, umode_t mode,
-			  void *data, const struct file_operations *fops)
-{
-	struct inode *dir = dentry->d_parent->d_inode;
-	int res;
-
-	mode = (mode & S_IALLUGO) | S_IFREG;
-	res = debugfs_mknod(dir, dentry, mode, 0, data, fops);
-	if (!res)
-		fsnotify_create(dir, dentry);
-	return res;
 }
 
 static inline int debugfs_positive(struct dentry *dentry)
@@ -264,6 +184,18 @@ static const struct super_operations debugfs_super_operations = {
 	.evict_inode	= debugfs_evict_inode,
 };
 
+static struct vfsmount *debugfs_automount(struct path *path)
+{
+	struct vfsmount *(*f)(void *);
+	f = (struct vfsmount *(*)(void *))path->dentry->d_fsdata;
+	return f(path->dentry->d_inode->i_private);
+}
+
+static const struct dentry_operations debugfs_dops = {
+	.d_delete = always_delete_dentry,
+	.d_automount = debugfs_automount,
+};
+
 static int debug_fill_super(struct super_block *sb, void *data, int silent)
 {
 	static struct tree_descr debug_files[] = {{""}};
@@ -288,6 +220,7 @@ static int debug_fill_super(struct super_block *sb, void *data, int silent)
 		goto fail;
 
 	sb->s_op = &debugfs_super_operations;
+	sb->s_d_op = &debugfs_dops;
 
 	debugfs_apply_options(sb);
 
@@ -345,15 +278,17 @@ static struct dentry *start_creating(const char *name, struct dentry *parent)
 	return dentry;
 }
 
-static struct dentry *end_creating(struct dentry *dentry, int error)
+static struct dentry *failed_creating(struct dentry *dentry)
 {
 	mutex_unlock(&dentry->d_parent->d_inode->i_mutex);
 	dput(dentry);
+	simple_release_fs(&debugfs_mount, &debugfs_mount_count);
+	return NULL;
+}
 
-	if (error) {
-		dentry = NULL;
-		simple_release_fs(&debugfs_mount, &debugfs_mount_count);
-	}
+static struct dentry *end_creating(struct dentry *dentry)
+{
+	mutex_unlock(&dentry->d_parent->d_inode->i_mutex);
 	return dentry;
 }
 
@@ -388,7 +323,7 @@ struct dentry *debugfs_create_file(const char *name, umode_t mode,
 				   const struct file_operations *fops)
 {
 	struct dentry *dentry;
-	int error;
+	struct inode *inode;
 
 	if (!(mode & S_IFMT))
 		mode |= S_IFREG;
@@ -398,8 +333,16 @@ struct dentry *debugfs_create_file(const char *name, umode_t mode,
 	if (IS_ERR(dentry))
 		return NULL;
 
-	error = debugfs_create(dentry, mode, data, fops);
-	return end_creating(dentry, error);
+	inode = debugfs_get_inode(dentry->d_sb);
+	if (unlikely(!inode))
+		return failed_creating(dentry);
+
+	inode->i_mode = mode;
+	inode->i_fop = fops ? fops : &debugfs_file_operations;
+	inode->i_private = data;
+	d_instantiate(dentry, inode);
+	fsnotify_create(dentry->d_parent->d_inode, dentry);
+	return end_creating(dentry);
 }
 EXPORT_SYMBOL_GPL(debugfs_create_file);
 
@@ -424,15 +367,62 @@ EXPORT_SYMBOL_GPL(debugfs_create_file);
 struct dentry *debugfs_create_dir(const char *name, struct dentry *parent)
 {
 	struct dentry *dentry = start_creating(name, parent);
-	int error;
+	struct inode *inode;
 
 	if (IS_ERR(dentry))
 		return NULL;
 
-	error = debugfs_mkdir(dentry, S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO);
-	return end_creating(dentry, error);
+	inode = debugfs_get_inode(dentry->d_sb);
+	if (unlikely(!inode))
+		return failed_creating(dentry);
+
+	inode->i_mode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
+	inode->i_op = &simple_dir_inode_operations;
+	inode->i_fop = &simple_dir_operations;
+
+	/* directory inodes start off with i_nlink == 2 (for "." entry) */
+	inc_nlink(inode);
+	d_instantiate(dentry, inode);
+	inc_nlink(dentry->d_parent->d_inode);
+	fsnotify_mkdir(dentry->d_parent->d_inode, dentry);
+	return end_creating(dentry);
 }
 EXPORT_SYMBOL_GPL(debugfs_create_dir);
+
+/**
+ * debugfs_create_automount - create automount point in the debugfs filesystem
+ * @name: a pointer to a string containing the name of the file to create.
+ * @parent: a pointer to the parent dentry for this file.  This should be a
+ *          directory dentry if set.  If this parameter is NULL, then the
+ *          file will be created in the root of the debugfs filesystem.
+ * @f: function to be called when pathname resolution steps on that one.
+ * @data: opaque argument to pass to f().
+ *
+ * @f should return what ->d_automount() would.
+ */
+struct dentry *debugfs_create_automount(const char *name,
+					struct dentry *parent,
+					struct vfsmount *(*f)(void *),
+					void *data)
+{
+	struct dentry *dentry = start_creating(name, parent);
+	struct inode *inode;
+
+	if (IS_ERR(dentry))
+		return NULL;
+
+	inode = debugfs_get_inode(dentry->d_sb);
+	if (unlikely(!inode))
+		return failed_creating(dentry);
+
+	inode->i_mode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
+	inode->i_flags |= S_AUTOMOUNT;
+	inode->i_private = data;
+	dentry->d_fsdata = (void *)f;
+	d_instantiate(dentry, inode);
+	return end_creating(dentry);
+}
+EXPORT_SYMBOL(debugfs_create_automount);
 
 /**
  * debugfs_create_symlink- create a symbolic link in the debugfs filesystem
@@ -461,25 +451,27 @@ struct dentry *debugfs_create_symlink(const char *name, struct dentry *parent,
 				      const char *target)
 {
 	struct dentry *dentry;
-	char *link;
-	int error;
-
-	link = kstrdup(target, GFP_KERNEL);
+	struct inode *inode;
+	char *link = kstrdup(target, GFP_KERNEL);
 	if (!link)
 		return NULL;
 
 	dentry = start_creating(name, parent);
-
 	if (IS_ERR(dentry)) {
 		kfree(link);
 		return NULL;
 	}
 
-	error = debugfs_link(dentry, S_IFLNK | S_IRWXUGO, link);
-	if (error)
+	inode = debugfs_get_inode(dentry->d_sb);
+	if (unlikely(!inode)) {
 		kfree(link);
-
-	return end_creating(dentry, error);
+		return failed_creating(dentry);
+	}
+	inode->i_mode = S_IFLNK | S_IRWXUGO;
+	inode->i_op = &debugfs_link_operations;
+	inode->i_private = link;
+	d_instantiate(dentry, inode);
+	return end_creating(dentry);
 }
 EXPORT_SYMBOL_GPL(debugfs_create_symlink);
 
