@@ -116,8 +116,8 @@ struct kmem_cache *kmem_cache_create(const char *, size_t, size_t,
 			unsigned long,
 			void (*)(void *));
 #ifdef CONFIG_MEMCG_KMEM
-struct kmem_cache *memcg_create_kmem_cache(struct mem_cgroup *,
-					   struct kmem_cache *);
+void memcg_create_kmem_cache(struct mem_cgroup *, struct kmem_cache *);
+void memcg_destroy_kmem_caches(struct mem_cgroup *);
 #endif
 void kmem_cache_destroy(struct kmem_cache *);
 int kmem_cache_shrink(struct kmem_cache *);
@@ -463,7 +463,6 @@ static __always_inline void *kmalloc_node(size_t size, gfp_t flags, int node)
  * Child caches will hold extra metadata needed for its operation. Fields are:
  *
  * @memcg: pointer to the memcg this cache belongs to
- * @list: list_head for the list of all caches in this memcg
  * @root_cache: pointer to the global, root cache, this cache was derived from
  * @dead: set to true after the memcg dies; the cache may still be around.
  * @destroy: worker to be called whenever we are ready, or believe we may be
@@ -475,7 +474,6 @@ struct memcg_cache_params {
 		struct kmem_cache *memcg_caches[0];
 		struct {
 			struct mem_cgroup *memcg;
-			struct list_head list;
 			struct kmem_cache *root_cache;
 			bool dead;
 			struct work_struct destroy;
