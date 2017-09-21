@@ -278,11 +278,48 @@ static struct cgroup_subsys_state *cgroup_e_css(struct cgroup *cgrp,
 	if (!(cgrp->root->subsys_mask & (1 << ss->id)))
 		return NULL;
 
+	/*
+	 * This function is used while updating css associations and thus
+	 * can't test the csses directly.  Use ->child_subsys_mask.
+	 */
 	while (cgroup_parent(cgrp) &&
 	       !(cgroup_parent(cgrp)->child_subsys_mask & (1 << ss->id)))
 		cgrp = cgroup_parent(cgrp);
 
 	return cgroup_css(cgrp, ss);
+}
+
+/**
+ * cgroup_get_e_css - get a cgroup's effective css for the specified subsystem
+ * @cgrp: the cgroup of interest
+ * @ss: the subsystem of interest
+ *
+ * Find and get the effective css of @cgrp for @ss.  The effective css is
+ * defined as the matching css of the nearest ancestor including self which
+ * has @ss enabled.  If @ss is not mounted on the hierarchy @cgrp is on,
+ * the root css is returned, so this function always returns a valid css.
+ * The returned css must be put using css_put().
+ */
+struct cgroup_subsys_state *cgroup_get_e_css(struct cgroup *cgrp,
+					     struct cgroup_subsys *ss)
+{
+	struct cgroup_subsys_state *css;
+
+	rcu_read_lock();
+
+	do {
+		css = cgroup_css(cgrp, ss);
+
+		if (css && css_tryget_online(css))
+			goto out_unlock;
+		cgrp = cgroup_parent(cgrp);
+	} while (cgrp);
+
+	css = init_css_set.subsys[ss->id];
+	css_get(css);
+out_unlock:
+	rcu_read_unlock();
+	return css;
 }
 
 /* convenient tests for these bits */
@@ -2896,6 +2933,24 @@ static ssize_t cgroup_subtree_control_write(struct kernfs_open_file *of,
 		}
 	}
 
+	/*
+	 * The effective csses of all the descendants (excluding @cgrp) may
+	 * have changed.  Subsystems can optionally subscribe to this event
+	 * by implementing ->css_e_css_changed() which is invoked if any of
+	 * the effective csses seen from the css's cgroup may have changed.
+	 */
+	for_each_subsys(ss, ssid) {
+		struct cgroup_subsys_state *this_css = cgroup_css(cgrp, ss);
+		struct cgroup_subsys_state *css;
+
+		if (!ss->css_e_css_changed || !this_css)
+			continue;
+
+		css_for_each_descendant_pre(css, this_css)
+			if (css != this_css)
+				ss->css_e_css_changed(css);
+	}
+
 	kernfs_activate(cgrp->kn);
 	ret = 0;
 out_unlock:
@@ -4443,6 +4498,8 @@ static void css_release_work_fn(struct work_struct *work)
 	if (ss) {
 		/* css release path */
 		cgroup_idr_remove(&ss->css_idr, css->id);
+		if (ss->css_released)
+			ss->css_released(css);
 	} else {
 		/* cgroup release path */
 		cgroup_idr_remove(&cgrp->root->cgroup_idr, cgrp->id);
