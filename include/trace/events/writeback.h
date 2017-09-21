@@ -36,7 +36,7 @@ struct wb_writeback_work;
 
 DECLARE_EVENT_CLASS(writeback_dirty_inode_template,
 
-	TP_PROTO(struct inode *inode, int flags),
+	PARAMS(struct inode *inode, int flags),
 
 	TP_ARGS(inode, flags),
 
@@ -68,28 +68,28 @@ DECLARE_EVENT_CLASS(writeback_dirty_inode_template,
 
 DEFINE_EVENT(writeback_dirty_inode_template, writeback_mark_inode_dirty,
 
-	TP_PROTO(struct inode *inode, int flags),
+	PARAMS(struct inode *inode, int flags),
 
 	TP_ARGS(inode, flags)
 );
 
 DEFINE_EVENT(writeback_dirty_inode_template, writeback_dirty_inode_start,
 
-	TP_PROTO(struct inode *inode, int flags),
+	PARAMS(struct inode *inode, int flags),
 
 	TP_ARGS(inode, flags)
 );
 
 DEFINE_EVENT(writeback_dirty_inode_template, writeback_dirty_inode,
 
-	TP_PROTO(struct inode *inode, int flags),
+	PARAMS(struct inode *inode, int flags),
 
 	TP_ARGS(inode, flags)
 );
 
 DECLARE_EVENT_CLASS(writeback_write_inode_template,
 
-	TP_PROTO(struct inode *inode, struct writeback_control *wbc),
+	PARAMS(struct inode *inode, struct writeback_control *wbc),
 
 	TP_ARGS(inode, wbc),
 
@@ -115,20 +115,20 @@ DECLARE_EVENT_CLASS(writeback_write_inode_template,
 
 DEFINE_EVENT(writeback_write_inode_template, writeback_write_inode_start,
 
-	TP_PROTO(struct inode *inode, struct writeback_control *wbc),
+	PARAMS(struct inode *inode, struct writeback_control *wbc),
 
 	TP_ARGS(inode, wbc)
 );
 
 DEFINE_EVENT(writeback_write_inode_template, writeback_write_inode,
 
-	TP_PROTO(struct inode *inode, struct writeback_control *wbc),
+	PARAMS(struct inode *inode, struct writeback_control *wbc),
 
 	TP_ARGS(inode, wbc)
 );
 
 DECLARE_EVENT_CLASS(writeback_work_class,
-	TP_PROTO(struct backing_dev_info *bdi, struct wb_writeback_work *work),
+	PARAMS(struct backing_dev_info *bdi, struct wb_writeback_work *work),
 	TP_ARGS(bdi, work),
 	TP_STRUCT__entry(
 		__array(char, name, 32)
@@ -165,7 +165,7 @@ DECLARE_EVENT_CLASS(writeback_work_class,
 );
 #define DEFINE_WRITEBACK_WORK_EVENT(name) \
 DEFINE_EVENT(writeback_work_class, name, \
-	TP_PROTO(struct backing_dev_info *bdi, struct wb_writeback_work *work), \
+	PARAMS(struct backing_dev_info *bdi, struct wb_writeback_work *work), \
 	TP_ARGS(bdi, work))
 DEFINE_WRITEBACK_WORK_EVENT(writeback_queue);
 DEFINE_WRITEBACK_WORK_EVENT(writeback_exec);
@@ -174,7 +174,7 @@ DEFINE_WRITEBACK_WORK_EVENT(writeback_written);
 DEFINE_WRITEBACK_WORK_EVENT(writeback_wait);
 
 TRACE_EVENT(writeback_pages_written,
-	TP_PROTO(long pages_written),
+	PARAMS(long pages_written),
 	TP_ARGS(pages_written),
 	TP_STRUCT__entry(
 		__field(long,		pages)
@@ -186,7 +186,7 @@ TRACE_EVENT(writeback_pages_written,
 );
 
 DECLARE_EVENT_CLASS(writeback_class,
-	TP_PROTO(struct backing_dev_info *bdi),
+	PARAMS(struct backing_dev_info *bdi),
 	TP_ARGS(bdi),
 	TP_STRUCT__entry(
 		__array(char, name, 32)
@@ -200,7 +200,7 @@ DECLARE_EVENT_CLASS(writeback_class,
 );
 #define DEFINE_WRITEBACK_EVENT(name) \
 DEFINE_EVENT(writeback_class, name, \
-	TP_PROTO(struct backing_dev_info *bdi), \
+	PARAMS(struct backing_dev_info *bdi), \
 	TP_ARGS(bdi))
 
 DEFINE_WRITEBACK_EVENT(writeback_nowork);
@@ -209,7 +209,7 @@ DEFINE_WRITEBACK_EVENT(writeback_bdi_register);
 DEFINE_WRITEBACK_EVENT(writeback_bdi_unregister);
 
 DECLARE_EVENT_CLASS(wbc_class,
-	TP_PROTO(struct writeback_control *wbc, struct backing_dev_info *bdi),
+	PARAMS(struct writeback_control *wbc, struct backing_dev_info *bdi),
 	TP_ARGS(wbc, bdi),
 	TP_STRUCT__entry(
 		__array(char, name, 32)
@@ -254,12 +254,12 @@ DECLARE_EVENT_CLASS(wbc_class,
 
 #define DEFINE_WBC_EVENT(name) \
 DEFINE_EVENT(wbc_class, name, \
-	TP_PROTO(struct writeback_control *wbc, struct backing_dev_info *bdi), \
+	PARAMS(struct writeback_control *wbc, struct backing_dev_info *bdi), \
 	TP_ARGS(wbc, bdi))
 DEFINE_WBC_EVENT(wbc_writepage);
 
 TRACE_EVENT(writeback_queue_io,
-	TP_PROTO(struct bdi_writeback *wb,
+	PARAMS(struct bdi_writeback *wb,
 		 struct wb_writeback_work *work,
 		 int moved),
 	TP_ARGS(wb, work, moved),
@@ -290,7 +290,7 @@ TRACE_EVENT(writeback_queue_io,
 
 TRACE_EVENT(global_dirty_state,
 
-	TP_PROTO(unsigned long background_thresh,
+	PARAMS(unsigned long background_thresh,
 		 unsigned long dirty_thresh
 	),
 
@@ -338,7 +338,7 @@ TRACE_EVENT(global_dirty_state,
 
 TRACE_EVENT(bdi_dirty_ratelimit,
 
-	TP_PROTO(struct backing_dev_info *bdi,
+	PARAMS(struct backing_dev_info *bdi,
 		 unsigned long dirty_rate,
 		 unsigned long task_ratelimit),
 
@@ -381,7 +381,7 @@ TRACE_EVENT(bdi_dirty_ratelimit,
 
 TRACE_EVENT(balance_dirty_pages,
 
-	TP_PROTO(struct backing_dev_info *bdi,
+	PARAMS(struct backing_dev_info *bdi,
 		 unsigned long thresh,
 		 unsigned long bg_thresh,
 		 unsigned long dirty,
@@ -462,7 +462,7 @@ TRACE_EVENT(balance_dirty_pages,
 
 TRACE_EVENT(writeback_sb_inodes_requeue,
 
-	TP_PROTO(struct inode *inode),
+	PARAMS(struct inode *inode),
 	TP_ARGS(inode),
 
 	TP_STRUCT__entry(
@@ -491,7 +491,7 @@ TRACE_EVENT(writeback_sb_inodes_requeue,
 
 DECLARE_EVENT_CLASS(writeback_congest_waited_template,
 
-	TP_PROTO(unsigned int usec_timeout, unsigned int usec_delayed),
+	PARAMS(unsigned int usec_timeout, unsigned int usec_delayed),
 
 	TP_ARGS(usec_timeout, usec_delayed),
 
@@ -512,21 +512,21 @@ DECLARE_EVENT_CLASS(writeback_congest_waited_template,
 
 DEFINE_EVENT(writeback_congest_waited_template, writeback_congestion_wait,
 
-	TP_PROTO(unsigned int usec_timeout, unsigned int usec_delayed),
+	PARAMS(unsigned int usec_timeout, unsigned int usec_delayed),
 
 	TP_ARGS(usec_timeout, usec_delayed)
 );
 
 DEFINE_EVENT(writeback_congest_waited_template, writeback_wait_iff_congested,
 
-	TP_PROTO(unsigned int usec_timeout, unsigned int usec_delayed),
+	PARAMS(unsigned int usec_timeout, unsigned int usec_delayed),
 
 	TP_ARGS(usec_timeout, usec_delayed)
 );
 
 DECLARE_EVENT_CLASS(writeback_single_inode_template,
 
-	TP_PROTO(struct inode *inode,
+	PARAMS(struct inode *inode,
 		 struct writeback_control *wbc,
 		 unsigned long nr_to_write
 	),
@@ -568,21 +568,21 @@ DECLARE_EVENT_CLASS(writeback_single_inode_template,
 );
 
 DEFINE_EVENT(writeback_single_inode_template, writeback_single_inode_start,
-	TP_PROTO(struct inode *inode,
+	PARAMS(struct inode *inode,
 		 struct writeback_control *wbc,
 		 unsigned long nr_to_write),
 	TP_ARGS(inode, wbc, nr_to_write)
 );
 
 DEFINE_EVENT(writeback_single_inode_template, writeback_single_inode,
-	TP_PROTO(struct inode *inode,
+	PARAMS(struct inode *inode,
 		 struct writeback_control *wbc,
 		 unsigned long nr_to_write),
 	TP_ARGS(inode, wbc, nr_to_write)
 );
 
 DECLARE_EVENT_CLASS(writeback_lazytime_template,
-	TP_PROTO(struct inode *inode),
+	PARAMS(struct inode *inode),
 
 	TP_ARGS(inode),
 
@@ -609,20 +609,20 @@ DECLARE_EVENT_CLASS(writeback_lazytime_template,
 );
 
 DEFINE_EVENT(writeback_lazytime_template, writeback_lazytime,
-	TP_PROTO(struct inode *inode),
+	PARAMS(struct inode *inode),
 
 	TP_ARGS(inode)
 );
 
 DEFINE_EVENT(writeback_lazytime_template, writeback_lazytime_iput,
-	TP_PROTO(struct inode *inode),
+	PARAMS(struct inode *inode),
 
 	TP_ARGS(inode)
 );
 
 DEFINE_EVENT(writeback_lazytime_template, writeback_dirty_inode_enqueue,
 
-	TP_PROTO(struct inode *inode),
+	PARAMS(struct inode *inode),
 
 	TP_ARGS(inode)
 );
