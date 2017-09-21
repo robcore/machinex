@@ -101,6 +101,8 @@ enum {
 	POWER_SUSPEND_ACTIVE = 1,
 };
 
+extern bool is_power_suspended(void);
+
 void prometheus_panel_beacon(unsigned int new_state);
 bool prometheus_sec_jack(void);
 bool android_os_ws(void);

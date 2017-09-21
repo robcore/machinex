@@ -43,6 +43,11 @@ static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
 static unsigned int ps_state = POWER_SUSPEND_INACTIVE;
+bool is_power_suspended(void)
+{
+	return ps_state;
+}
+
 /* Robcore: Provide an option to sync the system on panel suspend
  * accompanied by a wakelock to ensure stability
  * at the cost of battery life
