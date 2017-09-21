@@ -2325,6 +2325,8 @@ this_zone_null:
 		zlc_active = 0;
 		goto zonelist_scan;
 	}
+
+	return NULL;
 }
 
 /*
