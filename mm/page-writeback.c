@@ -2278,12 +2278,10 @@ EXPORT_SYMBOL(clear_page_dirty_for_io);
 int test_clear_page_writeback(struct page *page)
 {
 	struct address_space *mapping = page_mapping(page);
-	unsigned long memcg_flags;
 	struct mem_cgroup *memcg;
-	bool locked;
 	int ret;
 
-	memcg = mem_cgroup_begin_page_stat(page, &locked, &memcg_flags);
+	memcg = mem_cgroup_begin_page_stat(page);
 	if (mapping) {
 		struct backing_dev_info *bdi = inode_to_bdi(mapping->host);
 		unsigned long flags;
