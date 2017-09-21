@@ -3719,7 +3719,7 @@ static int do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
 
 out:
 	if (page_nid != -1)
-		task_numa_fault(last_cpupid, page_nid, 1, flags);
+		task_numa_fault(page_nid, 1, flags);
 	return 0;
 }
 
