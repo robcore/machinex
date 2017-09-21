@@ -2178,6 +2178,7 @@ void dump_page(struct page *page, const char *reason) {}
 void dump_page_badflags(struct page *page, const char *reason,
 			       unsigned long badflags) {}
 }
+#endif
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLBFS)
 extern void clear_huge_page(struct page *page,
 			    unsigned long addr,
