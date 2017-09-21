@@ -2958,7 +2958,6 @@ retry:
 #ifdef CONFIG_SEC_OOM_KILLER
 			oom_invoke_timeout = jiffies + HZ/4;
 #endif
-		}
 	}
 
 	/* Check if we should retry the allocation */
