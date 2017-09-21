@@ -404,6 +404,9 @@ struct scsi_host_template {
 	unsigned short sg_tablesize;
 	unsigned short sg_prot_tablesize;
 
+	/* If use block layer to manage tags, this is tag allocation policy */
+	int tag_alloc_policy;
+
 	/*
 	 * Set this if the host adapter has limitations beside segment count.
 	 */
