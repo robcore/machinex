@@ -45,67 +45,61 @@ static const struct trace_print_flags pageflag_names[] = {
 #ifdef CONFIG_MEMORY_FAILURE
 	{1UL << PG_hwpoison,		"hwpoison"	},
 #endif
+	{1UL << PG_readahead,           "PG_readahead"  },
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	{1UL << PG_compound_lock,	"compound_lock"	},
 #endif
 };
 
-static void dump_flags(unsigned long flags,
-			const struct trace_print_flags *names, int count)
+static void dump_page_flags(unsigned long flags)
 {
 	const char *delim = "";
 	unsigned long mask;
 	int i;
 
-	pr_emerg("flags: %#lx(", flags);
+	printk(KERN_ALERT "page flags: %#lx(", flags);
 
 	/* remove zone id */
 	flags &= (1UL << NR_PAGEFLAGS) - 1;
 
-	for (i = 0; i < count && flags; i++) {
+	for (i = 0; i < ARRAY_SIZE(pageflag_names) && flags; i++) {
 
-		mask = names[i].mask;
+		mask = pageflag_names[i].mask;
 		if ((flags & mask) != mask)
 			continue;
 
 		flags &= ~mask;
-		pr_cont("%s%s", delim, names[i].name);
+		printk("%s%s", delim, pageflag_names[i].name);
 		delim = "|";
 	}
 
 	/* check for left over flags */
 	if (flags)
-		pr_cont("%s%#lx", delim, flags);
+		printk("%s%#lx", delim, flags);
 
-	pr_cont(")\n");
+	printk(")\n");
 }
 
-void dump_page_badflags(struct page *page, const char *reason,
-		unsigned long badflags)
+void dump_page_badflags(struct page *page, const char *reason, unsigned long badflags)
+
 {
-	pr_emerg("page:%p count:%d mapcount:%d mapping:%p index:%#lx\n",
-		  page, atomic_read(&page->_count), page_mapcount(page),
-		  page->mapping, page->index);
-	BUILD_BUG_ON(ARRAY_SIZE(pageflag_names) != __NR_PAGEFLAGS);
-	dump_flags(page->flags, pageflag_names, ARRAY_SIZE(pageflag_names));
+	printk(KERN_ALERT
+	       "page:%p count:%d mapcount:%d mapping:%p index:%#lx\n",
+		page, atomic_read(&page->_count), page_mapcount(page),
+		page->mapping, page->index);
+	dump_page_flags(page->flags);
 	if (reason)
 		pr_alert("page dumped because: %s\n", reason);
 	if (page->flags & badflags) {
 		pr_alert("bad because of flags:\n");
-		dump_flags(page->flags & badflags,
-				pageflag_names, ARRAY_SIZE(pageflag_names));
+		dump_page_flags(page->flags & badflags);
 	}
-#ifdef CONFIG_MEMCG
-	if (page->mem_cgroup)
-		pr_alert("page->mem_cgroup:%p\n", page->mem_cgroup);
-#endif
 }
-
 void dump_page(struct page *page, const char *reason)
 {
 	dump_page_badflags(page, reason, 0);
 }
-EXPORT_SYMBOL(dump_page);
+EXPORT_SYMBOL_GPL(dump_page);
 
 #ifdef CONFIG_DEBUG_VM
 
