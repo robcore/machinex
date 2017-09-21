@@ -485,22 +485,6 @@ static int proc_register(struct proc_dir_entry * dir, struct proc_dir_entry * dp
 	if (ret)
 		return ret;
 
-	if (S_ISDIR(dp->mode)) {
-		dp->proc_fops = &proc_dir_operations;
-		dp->proc_iops = &proc_dir_inode_operations;
-		dir->nlink++;
-	} else if (S_ISLNK(dp->mode)) {
-		dp->proc_iops = &proc_link_inode_operations;
-	} else if (S_ISREG(dp->mode)) {
-		if (dp->proc_fops == NULL)
-			dp->proc_fops = &proc_file_operations;
-		dp->proc_iops = &proc_file_inode_operations;
-	} else {
-		WARN_ON(1);
-		proc_free_inum(dp->low_ino);
-		return -EINVAL;
-	}
-
 	spin_lock(&proc_subdir_lock);
 	dp->parent = dir;
 	if (pde_subdir_insert(dir, dp) == false) {
@@ -567,6 +551,7 @@ struct proc_dir_entry *proc_symlink(const char *name,
 		ent->data = kmalloc((ent->size=strlen(dest))+1, GFP_KERNEL);
 		if (ent->data) {
 			strcpy((char*)ent->data,dest);
+			ent->proc_iops = &proc_link_inode_operations;
 			if (proc_register(parent, ent) < 0) {
 				kfree(ent->data);
 				kfree(ent);
@@ -592,8 +577,12 @@ struct proc_dir_entry *proc_mkdir_data(const char *name, umode_t mode,
 	ent = __proc_create(&parent, name, S_IFDIR | mode, 2);
 	if (ent) {
 		ent->data = data;
+		ent->proc_fops = &proc_dir_operations;
+		ent->proc_iops = &proc_dir_inode_operations;
+		parent->nlink++;
 		if (proc_register(parent, ent) < 0) {
 			kfree(ent);
+			parent->nlink--;
 			ent = NULL;
 		}
 	}
@@ -659,6 +648,8 @@ struct proc_dir_entry *proc_create_data(const char *name, umode_t mode,
 		return NULL;
 	}
 
+	BUG_ON(proc_fops == NULL);
+
 	if ((mode & S_IALLUGO) == 0)
 		mode |= S_IRUGO;
 	pde = __proc_create(&parent, name, mode, 1);
@@ -666,6 +657,7 @@ struct proc_dir_entry *proc_create_data(const char *name, umode_t mode,
 		goto out;
 	pde->proc_fops = proc_fops;
 	pde->data = data;
+	pde->proc_iops = &proc_file_inode_operations;
 	if (proc_register(parent, pde) < 0)
 		goto out_free;
 	return pde;
