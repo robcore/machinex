@@ -1088,6 +1088,11 @@ static inline int cpu_core_flags(void)
 }
 #endif
 
+#define TNF_MIGRATED	0x01
+#define TNF_NO_GROUP	0x02
+#define TNF_SHARED	0x04
+#define TNF_FAULT_LOCAL	0x08
+
 #ifdef CONFIG_NUMA
 static inline int cpu_numa_flags(void)
 {
