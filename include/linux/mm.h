@@ -60,6 +60,17 @@ extern int sysctl_legacy_va_layout;
 #define __pa_symbol(x)  __pa(RELOC_HIDE((unsigned long)(x), 0))
 #endif
 
+/*
+ * To prevent common memory management code establishing
+ * a zero page mapping on a read fault.
+ * This macro should be defined within <asm/pgtable.h>.
+ * s390 does this to prevent multiplexing of hardware bits
+ * related to the physical page in case of virtualization.
+ */
+#ifndef mm_forbids_zeropage
+#define mm_forbids_zeropage(X)	(0)
+#endif
+
 extern unsigned long sysctl_user_reserve_kbytes;
 extern unsigned long sysctl_admin_reserve_kbytes;
 
@@ -122,6 +133,7 @@ extern unsigned int kobjsize(const void *objp);
 #define VM_NORESERVE	0x00200000	/* should the VM suppress accounting */
 #define VM_HUGETLB	0x00400000	/* Huge TLB Page VM */
 #define VM_ARCH_1	0x01000000	/* Architecture-specific flag */
+#define VM_ARCH_2	0x02000000
 #define VM_DONTDUMP	0x04000000	/* Do not include in the core dump */
 
 #ifdef CONFIG_MEM_SOFT_DIRTY
@@ -320,10 +332,24 @@ static inline int put_page_testzero(struct page *page)
 /*
  * Try to grab a ref unless the page has a refcount of zero, return false if
  * that is the case.
+ * This can be called when MMU is off so it must not access
+ * any of the virtual mappings.
  */
 static inline int get_page_unless_zero(struct page *page)
 {
 	return atomic_inc_not_zero(&page->_count);
+}
+
+/*
+ * Try to drop a ref unless the page has a refcount of one, return false if
+ * that is the case.
+ * This is to make sure that the refcount won't become zero after this drop.
+ * This can be called when MMU is off so it must not access
+ * any of the virtual mappings.
+ */
+static inline int put_page_unless_one(struct page *page)
+{
+	return atomic_add_unless(&page->_count, -1, 1);
 }
 
 extern int page_is_ram(unsigned long pfn);
@@ -409,6 +435,12 @@ static inline struct page *compound_head_by_tail(struct page *tail)
 	return tail;
 }
 
+/*
+ * Since either compound page could be dismantled asynchronously in THP
+ * or we access asynchronously arbitrary positioned struct page, there
+ * would be tail flag race. To handle this race, we should call
+ * smp_rmb() before checking tail flag. compound_head_by_tail() did it.
+ */
 static inline struct page *compound_head(struct page *page)
 {
 	if (unlikely(PageTail(page)))
@@ -1778,7 +1810,7 @@ extern int vma_adjust(struct vm_area_struct *vma, unsigned long start,
 extern struct vm_area_struct *vma_merge(struct mm_struct *,
 	struct vm_area_struct *prev, unsigned long addr, unsigned long end,
 	unsigned long vm_flags, struct anon_vma *, struct file *, pgoff_t,
-	struct mempolicy *, const char __user *);
+	struct mempolicy *);
 extern struct anon_vma *find_mergeable_anon_vma(struct vm_area_struct *);
 extern int split_vma(struct mm_struct *,
 	struct vm_area_struct *, unsigned long addr, int new_below);
