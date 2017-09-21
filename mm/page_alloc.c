@@ -2474,8 +2474,15 @@ __alloc_pages_may_oom(gfp_t gfp_mask, unsigned int order,
 		if (high_zoneidx < ZONE_NORMAL)
 			goto out;
 		/* The OOM killer does not compensate for light reclaim */
-		if (!(gfp_mask & __GFP_FS))
+		if (!(gfp_mask & __GFP_FS)) {
+			/*
+			 * XXX: Page reclaim didn't yield anything,
+			 * and the OOM killer can't be invoked, but
+			 * keep looping as per tradition.
+			 */
+			*did_some_progress = 1;
 			goto out;
+		}
 		/*
 		 * GFP_THISNODE contains __GFP_NORETRY and we never hit this.
 		 * Sanity check for bare calls of __GFP_THISNODE, not real OOM.
@@ -2922,16 +2929,11 @@ retry:
 		if ((current->flags & PF_DUMPCORE) &&
 		    !(gfp_mask & __GFP_NOFAIL))
 			goto nopage;
-#ifdef CONFIG_SEC_OOM_KILLER
-		if (did_some_progress)
-			pr_info("time's up : calling "
-				"__alloc_pages_may_oom(o:%d, gfp:0x%x)\n", order, gfp_mask);
 
-#endif
 			page = __alloc_pages_may_oom(gfp_mask, order,
 					zonelist, high_zoneidx,
 					nodemask, preferred_zone,
-					classzone_idx, migratetype);
+					classzone_idx, migratetype, &did_some_progress);
 			if (page)
 				goto got_pg;
 
