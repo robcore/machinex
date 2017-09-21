@@ -62,7 +62,6 @@
 #include <linux/hugetlb.h>
 #include <linux/sched/rt.h>
 #include <linux/page_owner.h>
-#include <linux/prometheus.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -2431,7 +2430,7 @@ __alloc_pages_may_oom(gfp_t gfp_mask, unsigned int order,
 
 	*did_some_progress = 0;
 
-	if (oom_killer_disabled || power_suspended)
+	if (oom_killer_disabled)
 		return NULL;
 
 	/*
@@ -2923,8 +2922,8 @@ retry:
 	if (SHOULD_CONSIDER_OOM) {
 		/* Do not loop if specifically requested */
 		if (gfp_mask & __GFP_NORETRY)
-			goto noretry;
-		if (oom_killer_disabled || power_suspended)
+		goto noretry;
+		if (oom_killer_disabled)
 			goto nopage;
 		/* Coredumps can quickly deplete all memory reserves */
 		if ((current->flags & PF_DUMPCORE) &&
