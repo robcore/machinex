@@ -2911,7 +2911,7 @@ retry:
 			goto nopage;
 
 			page = __alloc_pages_may_oom(gfp_mask, order,
-					zonelist, ac->high_zoneidx,
+					ac->zonelist, ac->high_zoneidx,
 					nodemask, preferred_zone,
 					classzone_idx, migratetype, &did_some_progress);
 			if (page)
