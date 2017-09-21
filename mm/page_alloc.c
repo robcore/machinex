@@ -2912,7 +2912,7 @@ retry:
 
 			page = __alloc_pages_may_oom(gfp_mask, order,
 					ac->zonelist, ac->high_zoneidx,
-					nodemask, preferred_zone,
+					ac->nodemask, preferred_zone,
 					classzone_idx, migratetype, &did_some_progress);
 			if (page)
 				goto got_pg;
