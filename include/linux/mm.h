@@ -2169,10 +2169,15 @@ extern void shake_page(struct page *p, int access);
 extern atomic_long_t num_poisoned_pages;
 extern int soft_offline_page(struct page *page, int flags);
 
+#ifdef CONFIG_MM_DEBUG
 extern void dump_page(struct page *page, const char *reason);
 extern void dump_page_badflags(struct page *page, const char *reason,
 			       unsigned long badflags);
-
+#else
+void dump_page(struct page *page, const char *reason) {}
+void dump_page_badflags(struct page *page, const char *reason,
+			       unsigned long badflags) {}
+}
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLBFS)
 extern void clear_huge_page(struct page *page,
 			    unsigned long addr,
