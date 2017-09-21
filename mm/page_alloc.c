@@ -2912,7 +2912,7 @@ retry:
 
 			page = __alloc_pages_may_oom(gfp_mask, order,
 					ac->zonelist, ac->high_zoneidx,
-					ac->nodemask, preferred_zone,
+					ac->nodemask, ac->preferred_zone,
 					classzone_idx, migratetype, &did_some_progress);
 			if (page)
 				goto got_pg;
@@ -2961,6 +2961,7 @@ retry:
 		wait_iff_congested(ac->preferred_zone, BLK_RW_ASYNC, HZ/50);
 		goto retry;
 	} else {
+noretry:
 		/*
 		 * High-order allocations do not necessarily loop after
 		 * direct reclaim and reclaim/compaction depends on compaction
@@ -2974,18 +2975,6 @@ retry:
 			goto got_pg;
 	}
 
-noretry:
-	/*
-	 * High-order allocations do not necessarily loop after
-	 * direct reclaim and reclaim/compaction depends on compaction
-	 * being called after reclaim so call directly if necessary
-	 */
-	page = __alloc_pages_direct_compact(gfp_mask, order, alloc_flags,
-					    ac, migration_mode,
-					    &contended_compaction,
-					    &deferred_compaction);
-	if (page)
-		goto got_pg;
 nopage:
 	warn_alloc_failed(gfp_mask, order, NULL);
 got_pg:
