@@ -51,7 +51,7 @@
 #include <linux/swap.h>
 #include <linux/fs.h>
 #endif /* CONFIG_ZSWAP */
-
+#include <linux/display_state.h>
 #ifdef ENHANCED_LMK_ROUTINE
 #define ENHANCED_LMK_ROUTINE
 #endif
@@ -81,6 +81,12 @@ static uint32_t oom_count = 0;
 
 bool disable_samp_hotness;
 module_param(disable_samp_hotness, bool, 0644);
+static bool samp_disabled(void)
+{
+	if (!is_display_on())
+		return true;
+	return disable_samp_hotness;
+}
 
 static short lowmem_adj[6] = {
 	0,
@@ -323,7 +329,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 #endif
 
 #ifdef CONFIG_SAMP_HOTNESS
-		if (!disable_samp_hotness)
+		if (!samp_disabled())
 			hotness_adj = p->signal->hotness_adj;
 #endif
 		task_unlock(p);
@@ -331,7 +337,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			continue;
 		if (selected) {
 #ifdef CONFIG_SAMP_HOTNESS
-			if (!disable_samp_hotness) {
+			if (!samp_disabled()) {
 				if (min_score_adj <= lowmem_adj[4]) {
 
 					if (oom_score_adj < selected_oom_score_adj)
@@ -360,7 +366,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;
 #ifdef CONFIG_SAMP_HOTNESS
-		if (!disable_samp_hotness)
+		if (!samp_disabled())
 			selected_hotness_adj = hotness_adj;
 #endif
 	}
