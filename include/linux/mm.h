@@ -2174,8 +2174,8 @@ extern void dump_page(struct page *page, const char *reason);
 extern void dump_page_badflags(struct page *page, const char *reason,
 			       unsigned long badflags);
 #else
-void dump_page(struct page *page, const char *reason) {}
-void dump_page_badflags(struct page *page, const char *reason,
+static void dump_page(struct page *page, const char *reason) {}
+static void dump_page_badflags(struct page *page, const char *reason,
 			       unsigned long badflags) {}
 #endif
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLBFS)
