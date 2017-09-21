@@ -34,32 +34,6 @@
 
 struct wb_writeback_work;
 
-TRACE_EVENT(writeback_dirty_page,
-
-	TP_PROTO(struct page *page, struct address_space *mapping),
-
-	TP_ARGS(page, mapping),
-
-	TP_STRUCT__entry (
-		__array(char, name, 32)
-		__field(unsigned long, ino)
-		__field(pgoff_t, index)
-	),
-
-	TP_fast_assign(
-		strncpy(__entry->name,
-			mapping ? dev_name(inode_to_bdi(mapping->host)->dev) : "(unknown)", 32);
-		__entry->ino = mapping ? mapping->host->i_ino : 0;
-		__entry->index = page->index;
-	),
-
-	TP_printk("bdi %s: ino=%lu index=%lu",
-		__entry->name,
-		__entry->ino,
-		__entry->index
-	)
-);
-
 DECLARE_EVENT_CLASS(writeback_dirty_inode_template,
 
 	TP_PROTO(struct inode *inode, int flags),
