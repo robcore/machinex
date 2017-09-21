@@ -636,7 +636,7 @@ static int gfs2_fsync(struct file *file, loff_t start, loff_t end,
 	}
 
 	if (datasync)
-		sync_state &= ~I_DIRTY_SYNC;
+		sync_state &= ~(I_DIRTY_SYNC | I_DIRTY_TIME);
 
 	if (sync_state) {
 		ret = sync_inode_metadata(inode, 1);
