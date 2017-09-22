@@ -949,7 +949,7 @@ cifs_push_posix_locks(struct cifsFileInfo *cfile)
 	struct cifs_tcon *tcon = tlink_tcon(cfile->tlink);
 	struct file_lock *flock;
 	struct file_lock_context *flctx = inode->i_flctx;
-	unsigned int i;
+	unsigned int count = 0, i;
 	int rc = 0, xid, type;
 	struct list_head locks_to_send, *el;
 	struct lock_to_push *lck, *tmp;
