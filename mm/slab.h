@@ -243,10 +243,6 @@ static inline void memcg_uncharge_slab(struct kmem_cache *s, int order)
 static inline void slab_init_memcg_params(struct kmem_cache *s)
 {
 }
-
-static inline void slab_init_memcg_params(struct kmem_cache *s)
-{
-}
 #endif /* CONFIG_MEMCG_KMEM */
 
 static inline struct kmem_cache *cache_from_obj(struct kmem_cache *s, void *x)
