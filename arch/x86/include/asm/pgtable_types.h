@@ -28,14 +28,6 @@
 #define _PAGE_BIT_SOFT_DIRTY	_PAGE_BIT_SOFTW3 /* software dirty tracking */
 #define _PAGE_BIT_NX           63       /* No execute: only valid after cpuid check */
 
-/*
- * Swap offsets on configurations that allow automatic NUMA balancing use the
- * bits after _PAGE_BIT_GLOBAL. To uniquely distinguish NUMA hinting PTEs from
- * swap entries, we use the first bit after _PAGE_BIT_GLOBAL and shrink the
- * maximum possible swap space from 16TB to 8TB.
- */
-#define _PAGE_BIT_NUMA		(_PAGE_BIT_GLOBAL+1)
-
 /* If _PAGE_BIT_PRESENT is clear, we use these: */
 /* - if the user mapped it with PROT_NONE; pte_present gives true */
 #define _PAGE_BIT_PROTNONE	_PAGE_BIT_GLOBAL
@@ -76,21 +68,6 @@
 #define _PAGE_SOFT_DIRTY	(_AT(pteval_t, 1) << _PAGE_BIT_SOFT_DIRTY)
 #else
 #define _PAGE_SOFT_DIRTY	(_AT(pteval_t, 0))
-#endif
-
-/*
- * _PAGE_NUMA distinguishes between a numa hinting minor fault and a page
- * that is not present. The hinting fault gathers numa placement statistics
- * (see pte_numa()). The bit is always zero when the PTE is not present.
- *
- * The bit picked must be always zero when the pmd is present and not
- * present, so that we don't lose information when we set it while
- * atomically clearing the present bit.
- */
-#ifdef CONFIG_NUMA_BALANCING
-#define _PAGE_NUMA	(_AT(pteval_t, 1) << _PAGE_BIT_NUMA)
-#else
-#define _PAGE_NUMA	(_AT(pteval_t, 0))
 #endif
 
 /*
@@ -328,20 +305,6 @@ static inline pteval_t pte_flags(pte_t pte)
 {
 	return native_pte_val(pte) & PTE_FLAGS_MASK;
 }
-
-#ifdef CONFIG_NUMA_BALANCING
-/* Set of bits that distinguishes present, prot_none and numa ptes */
-#define _PAGE_NUMA_MASK (_PAGE_NUMA|_PAGE_PROTNONE|_PAGE_PRESENT)
-static inline pteval_t ptenuma_flags(pte_t pte)
-{
-	return pte_flags(pte) & _PAGE_NUMA_MASK;
-}
-
-static inline pmdval_t pmdnuma_flags(pmd_t pmd)
-{
-	return pmd_flags(pmd) & _PAGE_NUMA_MASK;
-}
-#endif /* CONFIG_NUMA_BALANCING */
 
 #define pgprot_val(x)	((x).pgprot)
 #define __pgprot(x)	((pgprot_t) { (x) } )
