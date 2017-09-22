@@ -1670,6 +1670,8 @@ source "lib/Kconfig.kgdb"
 
 source "lib/Kconfig.kmemcheck"
 
+source "lib/Kconfig.kasan"
+
 config TEST_HEXDUMP
 	tristate "Test functions located in the hexdump module at runtime"
 
