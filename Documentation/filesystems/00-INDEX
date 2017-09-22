@@ -118,5 +118,3 @@ vfs.txt
 	- overview of the Virtual File System
 xfs.txt
 	- info and mount options for the XFS filesystem.
-xip.txt
-	- info on execute-in-place for file mappings.
