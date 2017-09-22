@@ -470,6 +470,7 @@ struct memcg_cache_array {
  */
 struct memcg_cache_params {
 	bool is_root_cache;
+	struct list_head list;
 	union {
 		struct memcg_cache_array __rcu *memcg_caches;
 		struct {
