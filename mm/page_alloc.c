@@ -2861,7 +2861,7 @@ retry:
 	if (SHOULD_CONSIDER_OOM) {
 		/* Do not loop if specifically requested */
 		if (gfp_mask & __GFP_NORETRY)
-		goto noretry;
+			goto noretry;
 		if (oom_killer_disabled)
 			goto nopage;
 		/* Coredumps can quickly deplete all memory reserves */

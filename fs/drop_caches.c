@@ -14,7 +14,7 @@
 /* A global variable is a bit ugly, but it keeps the code simple */
 int sysctl_drop_caches;
 
-void drop_pagecache_sb(struct super_block *sb, void *unused)
+static void drop_pagecache_sb(struct super_block *sb, void *unused)
 {
 	struct inode *inode, *toput_inode = NULL;
 
@@ -36,20 +36,6 @@ void drop_pagecache_sb(struct super_block *sb, void *unused)
 	}
 	spin_unlock(&inode_sb_list_lock);
 	iput(toput_inode);
-}
-
-void drop_slab(void)
-{
-	int nr_objects;
-
-	do {
-		int nid;
-
-		nr_objects = 0;
-		for_each_online_node(nid)
-			nr_objects += shrink_node_slabs(GFP_KERNEL, nid,
-							1000, 1000);
-	} while (nr_objects > 10);
 }
 
 int drop_caches_sysctl_handler(struct ctl_table *table, int write,
