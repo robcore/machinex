@@ -224,6 +224,7 @@ struct dentry_operations {
 #define DCACHE_FILE_TYPE		0x00400000 /* Other file type */
 
 #define DCACHE_MAY_FREE			0x00800000
+#define DCACHE_FALLTHRU			0x01000000 /* Fall through to lower layer */
 
 extern seqlock_t rename_lock;
 
@@ -458,6 +459,14 @@ static inline bool d_is_positive(const struct dentry *dentry)
 {
 	return !d_is_negative(dentry);
 }
+
+extern void d_set_fallthru(struct dentry *dentry);
+
+static inline bool d_is_fallthru(const struct dentry *dentry)
+{
+	return dentry->d_flags & DCACHE_FALLTHRU;
+}
+
 
 extern int sysctl_vfs_cache_pressure;
 
