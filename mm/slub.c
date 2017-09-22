@@ -3400,6 +3400,7 @@ int __kmem_cache_shrink(struct kmem_cache *s)
 	struct list_head discard;
 	struct list_head promote[SHRINK_PROMOTE_MAX];
 	unsigned long flags;
+	int ret = 0;
 
 	flush_all(s);
 	for_each_kmem_cache_node(s, node, n) {
@@ -3446,9 +3447,12 @@ int __kmem_cache_shrink(struct kmem_cache *s)
 		/* Release empty slabs */
 		list_for_each_entry_safe(page, t, &discard, lru)
 			discard_slab(s, page);
+
+		if (slabs_node(s, node))
+			ret = 1;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int slab_mem_going_offline_callback(void *arg)
