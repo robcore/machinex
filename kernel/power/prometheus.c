@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 3
+#define VERSION_MIN 4
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -62,7 +62,13 @@ extern bool mx_is_cable_attached(void);
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
 static bool booting = true;
-
+/*
+bool prometheus_disabled_oom = false;
+void prometheus_disable_oom(bool disable)
+{
+	prometheus_disabled_oom = disable;
+}
+*/
 void register_power_suspend(struct power_suspend *handler)
 {
 	struct list_head *pos;
@@ -171,6 +177,7 @@ skip_check:
 		}
 
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
+		//prometheus_disable_oom(true);
 		pm_suspend(PM_SUSPEND_MAX);
 		mutex_unlock(&pm_mutex);
 		mutex_unlock(&prometheus_mtx);

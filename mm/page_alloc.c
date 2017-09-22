@@ -62,6 +62,7 @@
 #include <linux/hugetlb.h>
 #include <linux/sched/rt.h>
 #include <linux/page_owner.h>
+#include <linux/prometheus.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
