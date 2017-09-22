@@ -1,10 +1,7 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0175-arm-drop-L_PTE_FILE-and-pte_file-related-helpers.patch"
-patch -p1 -R < "/root/machinex/patches/0174-mm-remove-rest-usage-of-VM_NONLINEAR-and-pte_file.patch"
-patch -p1 -R < "/root/machinex/patches/0173-mm-replace-vma-sharead.linear-with-vma-shared.patch"
-patch -p1 -R < "/root/machinex/patches/0172-rmap-drop-support-of-non-linear-mappings.patch"
-patch -p1 -R < "/root/machinex/patches/0171-proc-drop-handling-non-linear-mappings.patch"
-patch -p1 -R < "/root/machinex/patches/0170-mm-drop-vm_ops-remap_pages-and-generic_file_remap_pa.patch"
-patch -p1 -R < "/root/machinex/patches/0169-mm-drop-support-of-non-linear-mapping-from-fault-cod.patch"
-patch -p1 -R < "/root/machinex/patches/0168-mm-drop-support-of-non-linear-mapping-from-unmap-zap.patch"
-patch -p1 -R < "/root/machinex/patches/0167-mm-replace-remap_file_pages-syscall-with-emulation.patch"
+
+patch -p1 -R < "/root/machinex/patches/0056-squashed-include-work-and-dox.patch"
+patch -p1 -R < "/root/machinex/patches/0054-lib-idr.c-remove-redundant-include.patch"
+patch -p1 -R < "/root/machinex/patches/0053-lib-halfmd4.c-simplify-include.patch"
+patch -p1 -R < "/root/machinex/patches/0052-lib-dynamic_queue_limits.c-simplify-includes.patch"
+patch -p1 -R < "/root/machinex/patches/0051-lib-interval_tree.c-simplify-includes.patch"
