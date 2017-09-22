@@ -393,4 +393,4 @@ static int __init mmu_notifier_init(void)
 {
 	return init_srcu_struct(&srcu);
 }
-subsys_initcall(mmu_notifier_init);
+module_init(mmu_notifier_init);
