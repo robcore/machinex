@@ -75,7 +75,3 @@
 #define __HAVE_BUILTIN_BSWAP16__
 #endif
 #endif /* CONFIG_ARCH_USE_BUILTIN_BSWAP */
-
-#if GCC_VERSION >= 40902
-#define KASAN_ABI_VERSION 3
-#endif
