@@ -149,6 +149,7 @@ struct pde_opener {
 	int closing;
 	struct completion *c;
 };
+extern const struct inode_operations proc_link_inode_operations;
 
 ssize_t __proc_file_read(struct file *, char __user *, size_t, loff_t *);
 extern const struct file_operations proc_file_operations;
