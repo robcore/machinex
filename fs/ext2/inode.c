@@ -34,6 +34,7 @@
 #include <linux/aio.h>
 #include "ext2.h"
 #include "acl.h"
+#include "xip.h"
 #include "xattr.h"
 
 static int __ext2_write_inode(struct inode *inode, int do_sync);
@@ -730,14 +731,12 @@ static int ext2_get_blocks(struct inode *inode,
 		goto cleanup;
 	}
 
-	if (IS_DAX(inode)) {
+	if (ext2_use_xip(inode->i_sb)) {
 		/*
-		 * block must be initialised before we put it in the tree
-		 * so that it's not found by another thread before it's
-		 * initialised
+		 * we need to clear the block
 		 */
-		err = dax_clear_blocks(inode, le32_to_cpu(chain[depth-1].key),
-						1 << inode->i_blkbits);
+		err = ext2_clear_xip_target (inode,
+			le32_to_cpu(chain[depth-1].key));
 		if (err) {
 			mutex_unlock(&ei->truncate_mutex);
 			goto cleanup;
@@ -860,12 +859,7 @@ ext2_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter,
 	size_t count = iov_iter_count(iter);
 	ssize_t ret;
 
-	if (IS_DAX(inode))
-		ret = dax_do_io(rw, iocb, inode, iter, offset, ext2_get_block,
-				NULL, DIO_LOCKING);
-	else
-		ret = blockdev_direct_IO(rw, iocb, inode, iter, offset,
-					 ext2_get_block);
+	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset, ext2_get_block);
 	if (ret < 0 && (rw & WRITE))
 		ext2_write_failed(mapping, offset + count);
 	return ret;
@@ -889,6 +883,11 @@ const struct address_space_operations ext2_aops = {
 	.migratepage		= buffer_migrate_page,
 	.is_partially_uptodate	= block_is_partially_uptodate,
 	.error_remove_page	= generic_error_remove_page,
+};
+
+const struct address_space_operations ext2_aops_xip = {
+	.bmap			= ext2_bmap,
+	.get_xip_mem		= ext2_get_xip_mem,
 };
 
 const struct address_space_operations ext2_nobh_aops = {
@@ -1202,8 +1201,8 @@ static int ext2_setsize(struct inode *inode, loff_t newsize)
 
 	inode_dio_wait(inode);
 
-	if (IS_DAX(inode))
-		error = dax_truncate_page(inode, newsize, ext2_get_block);
+	if (mapping_is_xip(inode->i_mapping))
+		error = xip_truncate_page(inode->i_mapping, newsize);
 	else if (test_opt(inode->i_sb, NOBH))
 		error = nobh_truncate_page(inode->i_mapping,
 				newsize, ext2_get_block);
@@ -1274,8 +1273,7 @@ void ext2_set_inode_flags(struct inode *inode)
 {
 	unsigned int flags = EXT2_I(inode)->i_flags;
 
-	inode->i_flags &= ~(S_SYNC | S_APPEND | S_IMMUTABLE | S_NOATIME |
-				S_DIRSYNC | S_DAX);
+	inode->i_flags &= ~(S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC);
 	if (flags & EXT2_SYNC_FL)
 		inode->i_flags |= S_SYNC;
 	if (flags & EXT2_APPEND_FL)
@@ -1286,8 +1284,6 @@ void ext2_set_inode_flags(struct inode *inode)
 		inode->i_flags |= S_NOATIME;
 	if (flags & EXT2_DIRSYNC_FL)
 		inode->i_flags |= S_DIRSYNC;
-	if (test_opt(inode->i_sb, DAX))
-		inode->i_flags |= S_DAX;
 }
 
 /* Propagate flags from i_flags to EXT2_I(inode)->i_flags */
@@ -1384,9 +1380,9 @@ struct inode *ext2_iget (struct super_block *sb, unsigned long ino)
 
 	if (S_ISREG(inode->i_mode)) {
 		inode->i_op = &ext2_file_inode_operations;
-		if (test_opt(inode->i_sb, DAX)) {
-			inode->i_mapping->a_ops = &ext2_aops;
-			inode->i_fop = &ext2_dax_file_operations;
+		if (ext2_use_xip(inode->i_sb)) {
+			inode->i_mapping->a_ops = &ext2_aops_xip;
+			inode->i_fop = &ext2_xip_file_operations;
 		} else if (test_opt(inode->i_sb, NOBH)) {
 			inode->i_mapping->a_ops = &ext2_nobh_aops;
 			inode->i_fop = &ext2_file_operations;

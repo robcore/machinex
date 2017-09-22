@@ -747,6 +747,11 @@ struct address_space_operations {
         and transfer data directly between the storage and the
         application's address space.
 
+  get_xip_page: called by the VM to translate a block number to a page.
+	The page is valid until the corresponding filesystem is unmounted.
+	Filesystems that want to use execute-in-place (XIP) need to implement
+	it.  An example implementation can be found in fs/ext2/xip.c.
+
   migrate_page:  This is used to compact the physical memory usage.
         If the VM wants to relocate a page (maybe off a memory card
         that is signalling imminent failure) it will pass a new page
