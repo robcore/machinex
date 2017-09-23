@@ -135,8 +135,9 @@ static ssize_t sock_splice_read(struct file *file, loff_t *ppos,
 static const struct file_operations socket_file_ops = {
 	.owner =	THIS_MODULE,
 	.llseek =	no_llseek,
-	.aio_read =	sock_aio_read,
+/*	.aio_read =	sock_aio_read,
 	.aio_write =	sock_aio_write,
+*/
 	.poll =		sock_poll,
 	.unlocked_ioctl = sock_ioctl,
 #ifdef CONFIG_COMPAT
@@ -898,19 +899,15 @@ static ssize_t do_sock_read(struct msghdr *msg, struct kiocb *iocb,
 	return __sock_recvmsg(iocb, sock, msg, size, msg->msg_flags);
 }
 
-static ssize_t sock_aio_read(struct kiocb *iocb, const struct iovec *iov,
-				unsigned long nr_segs, loff_t pos)
+static ssize_t sock_aio_read(struct kiocb *iocb, const struct iovec *iov, loff_t pos)
 {
 	struct sock_iocb siocb, *x;
-	size_t len;
+	unsigned long nr_segs;
 
 	if (pos != 0)
 		return -ESPIPE;
 
-	len = iov_length(iov, nr_segs);
-	if (!len)	/* Match SYS5 behaviour */
-		return len;
-
+	nr_segs = &iov->iov_len;
 
 	x = alloc_sock_iocb(iocb, &siocb);
 	if (!x)
@@ -942,13 +939,15 @@ static ssize_t do_sock_write(struct msghdr *msg, struct kiocb *iocb,
 	return __sock_sendmsg(iocb, sock, msg, size);
 }
 
-static ssize_t sock_aio_write(struct kiocb *iocb, const struct iovec *iov,
-			  unsigned long nr_segs, loff_t pos)
+static ssize_t sock_aio_write(struct kiocb *iocb, const struct iovec *iov, loff_t pos)
 {
 	struct sock_iocb siocb, *x;
+	unsigned long nr_segs;
 
 	if (pos != 0)
 		return -ESPIPE;
+
+	nr_segs = iov->iov_len;
 
 	x = alloc_sock_iocb(iocb, &siocb);
 	if (!x)
