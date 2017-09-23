@@ -575,7 +575,7 @@ char *kstrdup_quotable_cmdline(struct task_struct *task, gfp_t gfp)
 {
 	char *buffer, *quoted;
 	int i, res;
-
+#if 0
 	buffer = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buffer)
 		return NULL;
@@ -596,7 +596,10 @@ char *kstrdup_quotable_cmdline(struct task_struct *task, gfp_t gfp)
 	quoted = kstrdup_quotable(buffer, gfp);
 	kfree(buffer);
 	return quoted;
+#else
+	return NULL;
 }
+#endif
 EXPORT_SYMBOL_GPL(kstrdup_quotable_cmdline);
 
 /*
@@ -607,7 +610,7 @@ EXPORT_SYMBOL_GPL(kstrdup_quotable_cmdline);
 char *kstrdup_quotable_file(struct file *file, gfp_t gfp)
 {
 	char *temp, *pathname;
-
+#if 0
 	if (!file)
 		return kstrdup("<unknown>", gfp);
 
@@ -624,5 +627,8 @@ char *kstrdup_quotable_file(struct file *file, gfp_t gfp)
 
 	kfree(temp);
 	return pathname;
+#else
+		return kstrdup("<unknown>", gfp);
+#endif
 }
 EXPORT_SYMBOL_GPL(kstrdup_quotable_file);
