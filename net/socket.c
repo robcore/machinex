@@ -1688,8 +1688,7 @@ SYSCALL_DEFINE6(sendto, int, fd, void __user *, buff, size_t, len,
 	iov.iov_base = buff;
 	iov.iov_len = len;
 	msg.msg_name = NULL;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
+	iov_iter_init(&msg.msg_iter, WRITE, &iov, 1, len);
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_namelen = 0;
@@ -1748,10 +1747,9 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
 
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
-	msg.msg_iovlen = 1;
-	msg.msg_iov = &iov;
 	iov.iov_len = size;
 	iov.iov_base = ubuf;
+	iov_iter_init(&msg.msg_iter, READ, &iov, 1, size);
 	/* Save some cycles and don't copy the address if not needed */
 	msg.msg_name = addr ? (struct sockaddr *)&address : NULL;
 	/* We assume all kernel code knows the size of sockaddr_storage */
