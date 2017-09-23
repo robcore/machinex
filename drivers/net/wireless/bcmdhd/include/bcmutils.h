@@ -462,7 +462,7 @@ extern char *bcmstrncat(char *dest, const char *src, uint size);
 extern ulong wchar2ascii(char *abuf, ushort *wbuf, ushort wbuflen, ulong abuflen);
 char* bcmstrtok(char **string, const char *delimiters, char *tokdelim);
 int bcmstricmp(const char *s1, const char *s2);
-int bcmstrncasecmp(const char* s1, const char* s2, int cnt);
+int bcmstrnicmp(const char* s1, const char* s2, int cnt);
 
 
 /* ethernet address */
