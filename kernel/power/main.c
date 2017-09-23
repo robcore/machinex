@@ -206,12 +206,12 @@ suspend_state_t machinex_test_state_max = PM_SUSPEND_MAX;
 static ssize_t machinex_suspend_states_show(struct kobject *kobj, struct kobj_attribute *attr,
 			      char *buf)
 {
-	return sprintf(buf, "PM_SUSPEND_ON:%d\n\
-		PM_SUSPEND_TO_IDLE:%d\n\
-		PM_SUSPEND_STANDBY:%d\n\
-		PM_SUSPEND_MEM:%d\n\
-		PM_SUSPEND_MIN:%d\n\
-		PM_SUSPEND_MAX:%d\n",
+	return sprintf(buf, "PM_SUSPEND_ON:%d\n"
+		"PM_SUSPEND_TO_IDLE:%d\n"
+		"PM_SUSPEND_STANDBY:%d\n"
+		"PM_SUSPEND_MEM:%d\n"
+		"PM_SUSPEND_MIN:%d\n"
+		"PM_SUSPEND_MAX:%d\n",
 		machinex_test_state_on, machinex_test_state_to_idle, machinex_test_state_standby,
 		machinex_test_state_mem, machinex_test_state_min, machinex_test_state_max);
 }
