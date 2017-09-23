@@ -345,7 +345,7 @@ static int ext4_alloc_branch(handle_t *handle, struct inode *inode,
 			new_blocks[i] = ext4_mb_new_blocks(handle, &ar, &err);
 		} else
 			goal = new_blocks[i] = ext4_new_meta_blocks(handle, inode,
-							goal, 0, NULL, &err);
+							goal, ar.flags & EXT4_MB_DELALLOC_RESERVED, NULL, &err);
 		if (err) {
 			i--;
 			goto failed;
@@ -525,6 +525,7 @@ int ext4_ind_map_blocks(handle_t *handle, struct inode *inode,
 			struct ext4_map_blocks *map,
 			int flags)
 {
+	struct ext4_allocation_request ar;
 	int err = -EIO;
 	ext4_lblk_t offsets[4];
 	Indirect chain[4];
