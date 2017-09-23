@@ -19,6 +19,7 @@
 #include <linux/suspend.h>
 #include <linux/fake_dvfs.h>
 #include <linux/sysfs_helpers.h>
+#include <linux/display_state.h>
 
 #include "power.h"
 
@@ -195,6 +196,27 @@ static enum hrtimer_restart tc_ev_stop(struct hrtimer *hrtimer)
 }
 
 #ifdef CONFIG_SUSPEND
+suspend_state_t machinex_test_state_on = PM_SUSPEND_ON;
+suspend_state_t machinex_test_state_to_idle = PM_SUSPEND_TO_IDLE;
+suspend_state_t machinex_test_state_standby = PM_SUSPEND_STANDBY;
+suspend_state_t machinex_test_state_mem = PM_SUSPEND_MEM;
+suspend_state_t machinex_test_state_min = PM_SUSPEND_MIN;
+suspend_state_t machinex_test_state_max = PM_SUSPEND_MAX;
+
+static ssize_t machinex_suspend_states_show(struct kobject *kobj, struct kobj_attribute *attr,
+			      char *buf)
+{
+	return sprintf(buf, "PM_SUSPEND_ON:%d\n\
+		PM_SUSPEND_TO_IDLE:%d\n\
+		PM_SUSPEND_STANDBY:%d\n\
+		PM_SUSPEND_MEM:%d\n\
+		PM_SUSPEND_MIN:%d\n\
+		PM_SUSPEND_MAX:%d\n",
+		machinex_test_state_on, machinex_test_state_to_idle, machinex_test_state_standby,
+		machinex_test_state_mem, machinex_test_state_min, machinex_test_state_max);
+}
+power_attr_ro(machinex_suspend_states);
+
 static ssize_t mem_sleep_show(struct kobject *kobj, struct kobj_attribute *attr,
 			      char *buf)
 {
@@ -617,6 +639,8 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 		error = pm_suspend(state);
 	} else if (state == PM_SUSPEND_MAX) {
+		if (is_display_on())
+			sweep2sleep_pwrtrigger();
 		error = hibernate();
 	} else {
 		error = -EINVAL;
@@ -732,8 +756,12 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
 		return -EINVAL;
 
-	if (state == PM_SUSPEND_MEM)
+	if (state == PM_SUSPEND_MEM) {
 		state = mem_sleep_current;
+	} else if (state == PM_SUSPEND_MAX) {
+		if (is_display_on())
+			sweep2sleep_pwrtrigger();
+	}
 
 	error = pm_autosleep_set_state(state);
 	return error ? error : n;
@@ -1159,6 +1187,7 @@ static struct attribute * g[] = {
 	&strict_wl_perms_attr.attr,
 	&wakeup_count_attr.attr,
 #ifdef CONFIG_SUSPEND
+	&machinex_suspend_states_attr.attr,
 	&mem_sleep_attr.attr,
 #endif
 	&touch_event_attr.attr,

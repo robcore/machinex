@@ -1,21 +1,17 @@
+/*Sweep to Sleep*/
 #include <linux/module.h>
 #include <linux/kernel.h>    
 #include <linux/init.h>
 #include <linux/input.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/suspend.h>
 #include <linux/timed_output.h>
 
 #define DRIVER_AUTHOR "flar2 (asegaert at gmail.com)"
 #define DRIVER_DESCRIPTION "sweep2sleep driver"
 #define DRIVER_VERSION "4.2"
 
-MODULE_AUTHOR(DRIVER_AUTHOR);
-MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
-MODULE_VERSION(DRIVER_VERSION);
-MODULE_LICENSE("GPL");
-
-//sweep2sleep
 #define S2S_PWRKEY_DUR          10
 #define S2S_Y_MAX             	1919
 #define S2S_Y_LIMIT             S2S_Y_MAX-180
@@ -58,7 +54,7 @@ static void sweep2sleep_presspwr(struct work_struct *work)
 }
 
 /* PowerKey trigger */
-static void sweep2sleep_pwrtrigger(void) {
+void sweep2sleep_pwrtrigger(void) {
 	if (vibration_timeout)
 		machinex_vibrator(vibration_timeout);
 	schedule_work(&sweep2sleep_presspwr_work);
@@ -377,3 +373,8 @@ static void __exit sweep2sleep_exit(void)
 
 module_init(sweep2sleep_init);
 module_exit(sweep2sleep_exit);
+
+MODULE_AUTHOR(DRIVER_AUTHOR);
+MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
+MODULE_VERSION(DRIVER_VERSION);
+MODULE_LICENSE("GPL");

@@ -694,9 +694,11 @@ int hibernate(void)
 		goto Exit;
 	}
 
-	pr_info("Syncing filesystems ... \n");
-	sys_sync();
-	pr_info("done.\n");
+	if (suspendsync) {
+		pr_info("Syncing filesystems ... \n");
+		sys_sync();
+		pr_info("done.\n");
+	}
 
 	error = freeze_processes();
 	if (error)
