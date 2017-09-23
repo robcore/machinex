@@ -2243,7 +2243,7 @@ static ssize_t ocfs2_file_aio_write(struct kiocb *iocb,
 		file->f_path.dentry->d_name.name,
 		(unsigned int)nr_segs);
 
-	if (iocb->ki_nbytes == 0)
+	if (count == 0)
 		return 0;
 
 	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
@@ -2295,8 +2295,7 @@ relock:
 	}
 
 	can_do_direct = direct_io;
-	ret = ocfs2_prepare_inode_for_write(file, ppos,
-					    iocb->ki_nbytes, appending,
+	ret = ocfs2_prepare_inode_for_write(file, ppos, count, appending,
 					    &can_do_direct, &has_refcount);
 	if (ret < 0) {
 		mlog_errno(ret);
@@ -2304,8 +2303,7 @@ relock:
 	}
 
 	if (direct_io && !is_sync_kiocb(iocb))
-		unaligned_dio = ocfs2_is_io_unaligned(inode, iocb->ki_nbytes,
-						      *ppos);
+		unaligned_dio = ocfs2_is_io_unaligned(inode, count, *ppos);
 
 	/*
 	 * We can't complete the direct I/O as requested, fall back to
