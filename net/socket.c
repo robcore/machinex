@@ -899,13 +899,15 @@ static ssize_t do_sock_read(struct msghdr *msg, struct kiocb *iocb,
 }
 
 static ssize_t sock_aio_read(struct kiocb *iocb, const struct iovec *iov,
-				unsigned long nr_segs, size_t len, loff_t pos)
+				unsigned long nr_segs, loff_t pos)
 {
 	struct sock_iocb siocb, *x;
+	size_t len;
 
 	if (pos != 0)
 		return -ESPIPE;
 
+	len = iov_length(iov, nr_segs);
 	if (!len)	/* Match SYS5 behaviour */
 		return len;
 
