@@ -33,6 +33,7 @@ static DEFINE_MUTEX(all_q_mutex);
 static LIST_HEAD(all_q_list);
 
 static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx);
+static void blk_mq_run_queues(struct request_queue *q);
 
 /*
  * Check if any of the ctx's have pending work in this hardware queue
@@ -77,16 +78,13 @@ static void blk_mq_hctx_clear_pending(struct blk_mq_hw_ctx *hctx,
 	clear_bit(CTX_TO_BIT(hctx, ctx), &bm->word);
 }
 
-static int blk_mq_queue_enter(struct request_queue *q, gfp_t gfp)
+static int blk_mq_queue_enter(struct request_queue *q)
 {
 	while (true) {
 		int ret;
 
 		if (percpu_ref_tryget_live(&q->mq_usage_counter))
 			return 0;
-
-		if (!(gfp & __GFP_WAIT))
-			return -EBUSY;
 
 		ret = wait_event_interruptible(q->mq_freeze_wq,
 				!q->mq_freeze_depth || blk_queue_dying(q));
@@ -112,23 +110,19 @@ static void blk_mq_usage_counter_release(struct percpu_ref *ref)
 
 void blk_mq_freeze_queue_start(struct request_queue *q)
 {
-	bool freeze;
-
 	spin_lock_irq(q->queue_lock);
-	freeze = !q->mq_freeze_depth++;
+	q->mq_freeze_depth++;
 	spin_unlock_irq(q->queue_lock);
 
-	if (freeze) {
-		percpu_ref_kill(&q->mq_usage_counter);
-		blk_mq_run_hw_queues(q, false);
-	}
+	percpu_ref_kill(&q->mq_usage_counter);
+	blk_mq_run_queues(q);
 }
-EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
 
 static void blk_mq_freeze_queue_wait(struct request_queue *q)
 {
 	wait_event(q->mq_freeze_wq, percpu_ref_is_zero(&q->mq_usage_counter));
 }
+EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
 
 /*
  * Guarantee no request is in use, so we can change any data structure of
@@ -143,7 +137,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue);
 
 void blk_mq_unfreeze_queue(struct request_queue *q)
 {
-	bool wake;
+	bool wake = false;
 
 	spin_lock_irq(q->queue_lock);
 	wake = !--q->mq_freeze_depth;
@@ -259,7 +253,7 @@ struct request *blk_mq_alloc_request(struct request_queue *q, int rw, gfp_t gfp,
 	struct blk_mq_alloc_data alloc_data;
 	int ret;
 
-	ret = blk_mq_queue_enter(q, gfp);
+	ret = blk_mq_queue_enter(q);
 	if (ret)
 		return ERR_PTR(ret);
 
@@ -766,8 +760,6 @@ static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx)
 	struct request_queue *q = hctx->queue;
 	struct request *rq;
 	LIST_HEAD(rq_list);
-	LIST_HEAD(driver_list);
-	struct list_head *dptr;
 	int queued;
 
 	WARN_ON(!cpumask_test_cpu(raw_smp_processor_id(), hctx->cpumask));
@@ -794,27 +786,16 @@ static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx)
 	}
 
 	/*
-	 * Start off with dptr being NULL, so we start the first request
-	 * immediately, even if we have more pending.
-	 */
-	dptr = NULL;
-
-	/*
 	 * Now process all the entries, sending them to the driver.
 	 */
 	queued = 0;
 	while (!list_empty(&rq_list)) {
-		struct blk_mq_queue_data bd;
 		int ret;
 
 		rq = list_first_entry(&rq_list, struct request, queuelist);
 		list_del_init(&rq->queuelist);
 
-		bd.rq = rq;
-		bd.list = dptr;
-		bd.last = list_empty(&rq_list);
-
-		ret = q->mq_ops->queue_rq(hctx, &bd);
+		ret = q->mq_ops->queue_rq(hctx, rq, list_empty(&rq_list));
 		switch (ret) {
 		case BLK_MQ_RQ_QUEUE_OK:
 			queued++;
@@ -833,13 +814,6 @@ static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx)
 
 		if (ret == BLK_MQ_RQ_QUEUE_BUSY)
 			break;
-
-		/*
-		 * We've done the first request. If we have more than 1
-		 * left in the list, set dptr to defer issue.
-		 */
-		if (!dptr && rq_list.next != rq_list.prev)
-			dptr = &driver_list;
 	}
 
 	if (!queued)
@@ -906,7 +880,7 @@ void blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx, bool async)
 			&hctx->run_work, 0);
 }
 
-void blk_mq_run_hw_queues(struct request_queue *q, bool async)
+static void blk_mq_run_queues(struct request_queue *q)
 {
 	struct blk_mq_hw_ctx *hctx;
 	int i;
@@ -917,10 +891,9 @@ void blk_mq_run_hw_queues(struct request_queue *q, bool async)
 		    test_bit(BLK_MQ_S_STOPPED, &hctx->state))
 			continue;
 
-		blk_mq_run_hw_queue(hctx, async);
+		blk_mq_run_hw_queue(hctx, false);
 	}
 }
-EXPORT_SYMBOL(blk_mq_run_hw_queues);
 
 void blk_mq_stop_hw_queue(struct blk_mq_hw_ctx *hctx)
 {
@@ -1189,7 +1162,7 @@ static struct request *blk_mq_map_request(struct request_queue *q,
 	int rw = bio_data_dir(bio);
 	struct blk_mq_alloc_data alloc_data;
 
-	if (unlikely(blk_mq_queue_enter(q, GFP_KERNEL))) {
+	if (unlikely(blk_mq_queue_enter(q))) {
 		bio_endio(bio, -EIO);
 		return NULL;
 	}
@@ -1253,17 +1226,7 @@ static void blk_mq_make_request(struct request_queue *q, struct bio *bio)
 		goto run_queue;
 	}
 
-	/*
-	 * If the driver supports defer issued based on 'last', then
-	 * queue it up like normal since we can potentially save some
-	 * CPU this way.
-	 */
-	if (is_sync && !(data.hctx->flags & BLK_MQ_F_DEFER_ISSUE)) {
-		struct blk_mq_queue_data bd = {
-			.rq = rq,
-			.list = NULL,
-			.last = 1
-		};
+	if (is_sync) {
 		int ret;
 
 		blk_mq_bio_to_request(rq, bio);
@@ -1273,7 +1236,7 @@ static void blk_mq_make_request(struct request_queue *q, struct bio *bio)
 		 * error (busy), just add it to our list as we previously
 		 * would have done
 		 */
-		ret = q->mq_ops->queue_rq(data.hctx, &bd);
+		ret = q->mq_ops->queue_rq(data.hctx, rq, true);
 		if (ret == BLK_MQ_RQ_QUEUE_OK)
 			goto done;
 		else {
@@ -1426,7 +1389,8 @@ static struct blk_mq_tags *blk_mq_init_rq_map(struct blk_mq_tag_set *set,
 	size_t rq_size, left;
 
 	tags = blk_mq_init_tags(set->queue_depth, set->reserved_tags,
-				set->numa_node);
+				set->numa_node,
+				BLK_MQ_FLAG_TO_ALLOC_POLICY(set->flags));
 	if (!tags)
 		return NULL;
 
@@ -1893,25 +1857,9 @@ void blk_mq_release(struct request_queue *q)
 
 struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *set)
 {
-	struct request_queue *uninit_q, *q;
-
-	uninit_q = blk_alloc_queue_node(GFP_KERNEL, set->numa_node);
-	if (!uninit_q)
-		return ERR_PTR(-ENOMEM);
-
-	q = blk_mq_init_allocated_queue(set, uninit_q);
-	if (IS_ERR(q))
-		blk_cleanup_queue(uninit_q);
-
-	return q;
-}
-EXPORT_SYMBOL(blk_mq_init_queue);
-
-struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
-						  struct request_queue *q)
-{
 	struct blk_mq_hw_ctx **hctxs;
 	struct blk_mq_ctx __percpu *ctx;
+	struct request_queue *q;
 	unsigned int *map;
 	int i;
 
@@ -1946,13 +1894,17 @@ struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
 		hctxs[i]->queue_num = i;
 	}
 
+	q = blk_alloc_queue_node(GFP_KERNEL, set->numa_node);
+	if (!q)
+		goto err_hctxs;
+
 	/*
 	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 	 * See blk_register_queue() for details.
 	 */
 	if (percpu_ref_init(&q->mq_usage_counter, blk_mq_usage_counter_release,
 			    PERCPU_REF_INIT_ATOMIC, GFP_KERNEL))
-		goto err_hctxs;
+		goto err_map;
 
 	setup_timer(&q->timeout, blk_mq_rq_timer, (unsigned long) q);
 	blk_queue_rq_timeout(q, 30000);
@@ -1995,7 +1947,7 @@ struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
 	blk_mq_init_cpu_queues(q, set->nr_hw_queues);
 
 	if (blk_mq_init_hw_queues(q, set))
-		goto err_hctxs;
+		goto err_hw;
 
 	mutex_lock(&all_q_mutex);
 	list_add_tail(&q->all_q_node, &all_q_list);
@@ -2007,6 +1959,8 @@ struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
 
 	return q;
 
+err_hw:
+	blk_cleanup_queue(q);
 err_hctxs:
 	kfree(map);
 	for (i = 0; i < set->nr_hw_queues; i++) {
@@ -2021,7 +1975,7 @@ err_percpu:
 	free_percpu(ctx);
 	return ERR_PTR(-ENOMEM);
 }
-EXPORT_SYMBOL(blk_mq_init_allocated_queue);
+EXPORT_SYMBOL(blk_mq_init_queue);
 
 void blk_mq_free_queue(struct request_queue *q)
 {

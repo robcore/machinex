@@ -71,8 +71,6 @@ void __init x86_64_start_kernel(char * real_mode_data)
 				(__START_KERNEL & PGDIR_MASK)));
 	BUILD_BUG_ON(__fix_to_virt(__end_of_fixed_addresses) <= MODULES_END);
 
-	kasan_map_early_shadow(early_level4_pgt);
-
 	/* clear bss before set_intr_gate with early_idt_handler */
 	clear_bss();
 
@@ -92,8 +90,6 @@ void __init x86_64_start_kernel(char * real_mode_data)
 
 	if (console_loglevel >= CONSOLE_LOGLEVEL_DEBUG)
 		early_printk("Kernel alive\n");
-
-	kasan_map_early_shadow(init_level4_pgt);
 
 	x86_64_start_reservations(real_mode_data);
 }

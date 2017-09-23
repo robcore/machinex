@@ -602,11 +602,11 @@ static int btrfs_may_delete(struct inode *dir,struct dentry *victim,int isdir)
 	    IS_IMMUTABLE(victim->d_inode) || IS_SWAPFILE(victim->d_inode))
 		return -EPERM;
 	if (isdir) {
-		if (!d_is_dir(victim))
+		if (!S_ISDIR(victim->d_inode->i_mode))
 			return -ENOTDIR;
 		if (IS_ROOT(victim))
 			return -EBUSY;
-	} else if (d_is_dir(victim))
+	} else if (S_ISDIR(victim->d_inode->i_mode))
 		return -EISDIR;
 	if (IS_DEADDIR(dir))
 		return -ENOENT;

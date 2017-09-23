@@ -421,21 +421,6 @@ static void do_write_log(struct logger_log *log, const void *buf, size_t count)
 
 }
 
-static void log_power_suspend(struct power_suspend *handler)
-{
-	log_suspended = true;
-}
-
-static void log_late_resume(struct power_suspend *handler)
-{
-	log_suspended = false;
-}
-
-static struct power_suspend log_suspend = {
-	.suspend = log_power_suspend,
-	.resume = log_late_resume,
-};
-
 /*
  * do_write_log_user - writes 'len' bytes from the user-space buffer 'buf' to
  * the log 'log'
@@ -448,9 +433,6 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 				      const void __user *buf, size_t count)
 {
 	size_t len;
-
-  	if (!log_enabled || log_suspended)
-     	return 0;
 
 	len = min(count, log->size - log->w_off);
 	if (len && copy_from_user(log->buffer + log->w_off, buf, len))
@@ -485,6 +467,21 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 	return count;
 }
 
+static void log_power_suspend(struct power_suspend *handler)
+{
+	log_suspended = true;
+}
+
+static void log_late_resume(struct power_suspend *handler)
+{
+	log_suspended = false;
+}
+
+static struct power_suspend log_suspend = {
+	.suspend = log_power_suspend,
+	.resume = log_late_resume,
+};
+
 /*
  * logger_aio_write - our write method, implementing support for write(),
  * writev(), and aio_write(). Writes are our fast path, and we try to optimize
@@ -497,12 +494,9 @@ static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	size_t orig, ret = 0;
 	struct logger_entry header;
 	struct timespec now;
-	size_t len;
 
   	if (!log_enabled || log_suspended)
      	return 0;
-
-	len = iov_length(iov, nr_segs);
 
 	log = file_get_log(iocb->ki_filp);
 	getnstimeofday(&now);
@@ -512,7 +506,7 @@ static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	header.sec = now.tv_sec;
 	header.nsec = now.tv_nsec;
 	header.euid = current_euid();
-	header.len = min_t(size_t, len, LOGGER_ENTRY_MAX_PAYLOAD);
+	header.len = min_t(size_t, iocb->ki_nbytes, LOGGER_ENTRY_MAX_PAYLOAD);
 	header.hdr_size = sizeof(struct logger_entry);
 
 	/* null writes succeed, return zero */

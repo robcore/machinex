@@ -2836,7 +2836,7 @@ no_open:
 			} else if (!dentry->d_inode) {
 				goto out;
 			} else if ((open_flag & O_TRUNC) &&
-				   d_is_reg(dentry)) {
+				   S_ISREG(dentry->d_inode->i_mode)) {
 				goto out;
 			}
 			/* will fail later, go on to get the right error */

@@ -679,10 +679,10 @@ static struct inode *get_inode(struct super_block *sb, struct dentry *dentry)
 		return ERR_PTR(-ENOMEM);
 	}
 
-	if (d_is_dir(dentry)) {
+	if (S_ISDIR(dentry->d_inode->i_mode)) {
 		inode->i_op = &hppfs_dir_iops;
 		inode->i_fop = &hppfs_dir_fops;
-	} else if (d_is_symlink(dentry)) {
+	} else if (S_ISLNK(dentry->d_inode->i_mode)) {
 		inode->i_op = &hppfs_link_iops;
 		inode->i_fop = &hppfs_file_fops;
 	} else {

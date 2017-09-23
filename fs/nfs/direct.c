@@ -220,7 +220,7 @@ static void nfs_direct_complete(struct nfs_direct_req *dreq)
 		long res = (long) dreq->error;
 		if (!res)
 			res = (long) dreq->count;
-		dreq->iocb->ki_complete(dreq->iocb, res, 0);
+		aio_complete(dreq->iocb, res, 0);
 	}
 	complete_all(&dreq->completion);
 

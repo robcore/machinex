@@ -3,6 +3,8 @@
 
 #include <linux/types.h>
 
+#include <uapi/linux/types.h>
+
 #define SHA_DIGEST_WORDS 5
 #define SHA_MESSAGE_BYTES (512 /*bits*/ / 8)
 #define SHA_WORKSPACE_WORDS 16

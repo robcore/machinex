@@ -25,10 +25,10 @@
 void string_get_size(u64 size, const enum string_size_units units,
 		     char *buf, int len)
 {
-	static const char *units_10[] = {
+	static const char *const units_10[] = {
 		"B", "kB", "MB", "GB", "TB", "PB", "EB"
 	};
-	static const char *units_2[] = {
+	static const char *const units_2[] = {
 		"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
 	};
 	const char **units_str[] = {

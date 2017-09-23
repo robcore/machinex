@@ -406,7 +406,7 @@ void __weak arch_kimage_file_post_load_cleanup(struct kimage *image)
 }
 
 /*
- * Free up memory used by kernel, initrd, and command line. This is temporary
+ * Free up memory used by kernel, initrd, and comand line. This is temporary
  * memory allocation which is not needed any more after these buffers have
  * been loaded into separate segments and have been copied elsewhere.
  */

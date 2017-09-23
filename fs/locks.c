@@ -905,6 +905,16 @@ static int flock_lock_file(struct file *filp, struct file_lock *request)
 		goto out;
 	}
 
+	/*
+	 * If a higher-priority process was blocked on the old file lock,
+	 * give it the opportunity to lock the file.
+	 */
+	if (found) {
+		spin_unlock(&ctx->flc_lock);
+		cond_resched();
+		spin_lock(&ctx->flc_lock);
+	}
+
 find_conflict:
 	list_for_each_entry(fl, &ctx->flc_flock, fl_list) {
 		if (!flock_locks_conflict(request, fl))
@@ -1116,7 +1126,6 @@ static int __posix_lock_file(struct inode *inode, struct file_lock *request, str
 		locks_copy_lock(new_fl, request);
 		locks_insert_lock_ctx(new_fl, &ctx->flc_posix_cnt,
 					&fl->fl_list);
-		fl = new_fl;
 		new_fl = NULL;
 	}
 	if (right) {
@@ -1678,8 +1687,7 @@ generic_add_lease(struct file *filp, long arg, struct file_lock **flp, void **pr
 	}
 
 	if (my_fl != NULL) {
-		lease = my_fl;
-		error = lease->fl_lmops->lm_change(lease, arg, &dispose);
+		error = lease->fl_lmops->lm_change(my_fl, arg, &dispose);
 		if (error)
 			goto out;
 		goto out_setup;
@@ -1741,7 +1749,7 @@ static int generic_delete_lease(struct file *filp, void *owner)
 			break;
 		}
 	}
-	trace_generic_delete_lease(inode, victim);
+	trace_generic_delete_lease(inode, fl);
 	if (victim)
 		error = fl->fl_lmops->lm_change(victim, F_UNLCK, &dispose);
 	spin_unlock(&ctx->flc_lock);
@@ -2440,8 +2448,7 @@ locks_remove_lease(struct file *filp)
 
 	spin_lock(&ctx->flc_lock);
 	list_for_each_entry_safe(fl, tmp, &ctx->flc_lease, fl_list)
-		if (filp == fl->fl_file)
-			lease_modify(fl, F_UNLCK, &dispose);
+		lease_modify(fl, F_UNLCK, &dispose);
 	spin_unlock(&ctx->flc_lock);
 	locks_dispose_list(&dispose);
 }

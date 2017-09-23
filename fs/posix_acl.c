@@ -564,11 +564,13 @@ posix_acl_create(struct inode *dir, umode_t *mode,
 
 	*acl = posix_acl_clone(p, GFP_NOFS);
 	if (!*acl)
-		goto no_mem;
+		return -ENOMEM;
 
 	ret = posix_acl_create_masq(*acl, mode);
-	if (ret < 0)
-		goto no_mem_clone;
+	if (ret < 0) {
+		posix_acl_release(*acl);
+		return -ENOMEM;
+	}
 
 	if (ret == 0) {
 		posix_acl_release(*acl);
@@ -589,12 +591,6 @@ no_acl:
 	*default_acl = NULL;
 	*acl = NULL;
 	return 0;
-
-no_mem_clone:
-	posix_acl_release(*acl);
-no_mem:
-	posix_acl_release(p);
-	return -ENOMEM;
 }
 EXPORT_SYMBOL_GPL(posix_acl_create);
 
@@ -776,7 +772,7 @@ posix_acl_xattr_get(struct dentry *dentry, const char *name,
 
 	if (!IS_POSIXACL(dentry->d_inode))
 		return -EOPNOTSUPP;
-	if (d_is_symlink(dentry))
+	if (S_ISLNK(dentry->d_inode->i_mode))
 		return -EOPNOTSUPP;
 
 	acl = get_acl(dentry->d_inode, type);
@@ -836,7 +832,7 @@ posix_acl_xattr_list(struct dentry *dentry, char *list, size_t list_size,
 
 	if (!IS_POSIXACL(dentry->d_inode))
 		return -EOPNOTSUPP;
-	if (d_is_symlink(dentry))
+	if (S_ISLNK(dentry->d_inode->i_mode))
 		return -EOPNOTSUPP;
 
 	if (type == ACL_TYPE_ACCESS)

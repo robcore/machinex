@@ -1000,7 +1000,16 @@ config BOOT_PRINTK_DELAY
 menu "RCU Debugging"
 
 config PROVE_RCU
-	def_bool PROVE_LOCKING
+	bool "RCU debugging: prove RCU correctness"
+	depends on PROVE_LOCKING
+	default n
+	help
+	 This feature enables lockdep extensions that check for correct
+	 use of RCU APIs.  This is currently under development.  Say Y
+	 if you want to debug RCU usage or help work on the PROVE_RCU
+	 feature.
+
+	 Say N if you are unsure.
 
 config SPARSE_RCU_POINTER
 	bool "RCU debugging: sparse-based checks for pointer usage"
@@ -1660,8 +1669,6 @@ source "samples/Kconfig"
 source "lib/Kconfig.kgdb"
 
 source "lib/Kconfig.kmemcheck"
-
-source "lib/Kconfig.kasan"
 
 config TEST_HEXDUMP
 	tristate "Test functions located in the hexdump module at runtime"

@@ -78,13 +78,7 @@ struct blk_mq_tag_set {
 	struct list_head	tag_list;
 };
 
-struct blk_mq_queue_data {
-	struct request *rq;
-	struct list_head *list;
-	bool last;
-};
-
-typedef int (queue_rq_fn)(struct blk_mq_hw_ctx *, const struct blk_mq_queue_data *);
+typedef int (queue_rq_fn)(struct blk_mq_hw_ctx *, struct request *, bool);
 typedef struct blk_mq_hw_ctx *(map_queue_fn)(struct request_queue *, const int);
 typedef enum blk_eh_timer_return (timeout_fn)(struct request *, bool);
 typedef int (init_hctx_fn)(struct blk_mq_hw_ctx *, void *, unsigned int);
@@ -142,10 +136,11 @@ enum {
 	BLK_MQ_RQ_QUEUE_ERROR	= 2,	/* end IO with error */
 
 	BLK_MQ_F_SHOULD_MERGE	= 1 << 0,
-	BLK_MQ_F_TAG_SHARED	= 1 << 1,
-	BLK_MQ_F_SG_MERGE	= 1 << 2,
-	BLK_MQ_F_SYSFS_UP	= 1 << 3,
-	BLK_MQ_F_DEFER_ISSUE	= 1 << 4,
+	BLK_MQ_F_SHOULD_SORT	= 1 << 1,
+	BLK_MQ_F_TAG_SHARED	= 1 << 2,
+	BLK_MQ_F_SG_MERGE	= 1 << 3,
+	BLK_MQ_F_SYSFS_UP	= 1 << 4,
+
 	BLK_MQ_F_ALLOC_POLICY_START_BIT = 8,
 	BLK_MQ_F_ALLOC_POLICY_BITS = 1,
 
@@ -164,8 +159,6 @@ enum {
 		<< BLK_MQ_F_ALLOC_POLICY_START_BIT)
 
 struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *);
-struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
-						  struct request_queue *q);
 void blk_mq_finish_init(struct request_queue *q);
 int blk_mq_register_disk(struct gendisk *);
 void blk_mq_unregister_disk(struct gendisk *);
@@ -220,7 +213,6 @@ void blk_mq_start_hw_queue(struct blk_mq_hw_ctx *hctx);
 void blk_mq_stop_hw_queues(struct request_queue *q);
 void blk_mq_start_hw_queues(struct request_queue *q);
 void blk_mq_start_stopped_hw_queues(struct request_queue *q, bool async);
-void blk_mq_run_hw_queues(struct request_queue *q, bool async);
 void blk_mq_delay_queue(struct blk_mq_hw_ctx *hctx, unsigned long msecs);
 void blk_mq_tag_busy_iter(struct blk_mq_hw_ctx *hctx, busy_iter_fn *fn,
 		void *priv);
