@@ -488,15 +488,18 @@ static struct power_suspend log_suspend = {
  * them above all else.
  */
 static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
-			 unsigned long nr_segs, size_t len, loff_t ppos)
+			 unsigned long nr_segs, loff_t ppos)
 {
 	struct logger_log *log;
 	size_t orig, ret = 0;
 	struct logger_entry header;
 	struct timespec now;
+	size_t len;
 
   	if (!log_enabled || log_suspended)
      	return 0;
+
+	len = iov_length(iov, nr_segs);
 
 	log = file_get_log(iocb->ki_filp);
 	getnstimeofday(&now);
