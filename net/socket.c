@@ -107,7 +107,7 @@
 #include <linux/atalk.h>
 
 static ssize_t sock_aio_read(struct kiocb *iocb, const struct iovec *iov,
-			 unsigned long nr_segs, loff_t pos);
+			 unsigned long nr_segs, size_t len, loff_t pos);
 static ssize_t sock_aio_write(struct kiocb *iocb, const struct iovec *iov,
 			  unsigned long nr_segs, loff_t pos);
 static int sock_mmap(struct file *file, struct vm_area_struct *vma);
@@ -903,15 +903,15 @@ static ssize_t do_sock_read(struct msghdr *msg, struct kiocb *iocb,
 }
 
 static ssize_t sock_aio_read(struct kiocb *iocb, const struct iovec *iov,
-				unsigned long nr_segs, loff_t pos)
+				unsigned long nr_segs, size_t len, loff_t pos)
 {
 	struct sock_iocb siocb, *x;
 
 	if (pos != 0)
 		return -ESPIPE;
 
-	if (iocb->ki_nbytes == 0)	/* Match SYS5 behaviour */
-		return 0;
+	if (!len)	/* Match SYS5 behaviour */
+		return len;
 
 
 	x = alloc_sock_iocb(iocb, &siocb);

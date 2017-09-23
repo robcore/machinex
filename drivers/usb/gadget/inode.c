@@ -701,7 +701,7 @@ fail:
 
 static ssize_t
 ep_aio_read(struct kiocb *iocb, const struct iovec *iov,
-		unsigned long nr_segs, loff_t o)
+		unsigned long nr_segs, size_t len, loff_t o)
 {
 	struct ep_data		*epdata = iocb->ki_filp->private_data;
 	char			*buf;
@@ -709,26 +709,25 @@ ep_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	if (unlikely(usb_endpoint_dir_in(&epdata->desc)))
 		return -EINVAL;
 
-	buf = kmalloc(iocb->ki_nbytes, GFP_KERNEL);
+	buf = kmalloc(len, GFP_KERNEL);
 	if (unlikely(!buf))
 		return -ENOMEM;
 
-	return ep_aio_rwtail(iocb, buf, iocb->ki_nbytes, epdata, iov, nr_segs);
+	return ep_aio_rwtail(iocb, buf, len, epdata, iov, nr_segs);
 }
 
 static ssize_t
 ep_aio_write(struct kiocb *iocb, const struct iovec *iov,
-		unsigned long nr_segs, loff_t o)
+		unsigned long nr_segs, size_t len, loff_t o)
 {
 	struct ep_data		*epdata = iocb->ki_filp->private_data;
 	char			*buf;
-	size_t			len = 0;
-	int			i = 0;
+	unsigned int			i = 0;
 
 	if (unlikely(!usb_endpoint_dir_in(&epdata->desc)))
 		return -EINVAL;
 
-	buf = kmalloc(iocb->ki_nbytes, GFP_KERNEL);
+	buf = kmalloc(len, GFP_KERNEL);
 	if (unlikely(!buf))
 		return -ENOMEM;
 

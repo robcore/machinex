@@ -488,7 +488,7 @@ static struct power_suspend log_suspend = {
  * them above all else.
  */
 static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
-			 unsigned long nr_segs, loff_t ppos)
+			 unsigned long nr_segs, size_t len, loff_t ppos)
 {
 	struct logger_log *log;
 	size_t orig, ret = 0;
@@ -506,7 +506,7 @@ static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	header.sec = now.tv_sec;
 	header.nsec = now.tv_nsec;
 	header.euid = current_euid();
-	header.len = min_t(size_t, iocb->ki_nbytes, LOGGER_ENTRY_MAX_PAYLOAD);
+	header.len = min_t(size_t, len, LOGGER_ENTRY_MAX_PAYLOAD);
 	header.hdr_size = sizeof(struct logger_entry);
 
 	/* null writes succeed, return zero */
