@@ -33,7 +33,6 @@ static DEFINE_MUTEX(all_q_mutex);
 static LIST_HEAD(all_q_list);
 
 static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx);
-static void blk_mq_run_queues(struct request_queue *q);
 
 /*
  * Check if any of the ctx's have pending work in this hardware queue
@@ -78,13 +77,16 @@ static void blk_mq_hctx_clear_pending(struct blk_mq_hw_ctx *hctx,
 	clear_bit(CTX_TO_BIT(hctx, ctx), &bm->word);
 }
 
-static int blk_mq_queue_enter(struct request_queue *q)
+static int blk_mq_queue_enter(struct request_queue *q, gfp_t gfp)
 {
 	while (true) {
 		int ret;
 
 		if (percpu_ref_tryget_live(&q->mq_usage_counter))
 			return 0;
+
+		if (!(gfp & __GFP_WAIT))
+			return -EBUSY;
 
 		ret = wait_event_interruptible(q->mq_freeze_wq,
 				!q->mq_freeze_depth || blk_queue_dying(q));
@@ -115,7 +117,7 @@ void blk_mq_freeze_queue_start(struct request_queue *q)
 	spin_unlock_irq(q->queue_lock);
 
 	percpu_ref_kill(&q->mq_usage_counter);
-	blk_mq_run_queues(q);
+	blk_mq_run_hw_queues(q, false);
 }
 
 static void blk_mq_freeze_queue_wait(struct request_queue *q)
@@ -253,7 +255,7 @@ struct request *blk_mq_alloc_request(struct request_queue *q, int rw, gfp_t gfp,
 	struct blk_mq_alloc_data alloc_data;
 	int ret;
 
-	ret = blk_mq_queue_enter(q);
+	ret = blk_mq_queue_enter(q, gfp);
 	if (ret)
 		return ERR_PTR(ret);
 
@@ -880,7 +882,7 @@ void blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx, bool async)
 			&hctx->run_work, 0);
 }
 
-static void blk_mq_run_queues(struct request_queue *q)
+void blk_mq_run_hw_queues(struct request_queue *q, bool async)
 {
 	struct blk_mq_hw_ctx *hctx;
 	int i;
@@ -891,9 +893,10 @@ static void blk_mq_run_queues(struct request_queue *q)
 		    test_bit(BLK_MQ_S_STOPPED, &hctx->state))
 			continue;
 
-		blk_mq_run_hw_queue(hctx, false);
+		blk_mq_run_hw_queue(hctx, async);
 	}
 }
+EXPORT_SYMBOL(blk_mq_run_hw_queues);
 
 void blk_mq_stop_hw_queue(struct blk_mq_hw_ctx *hctx)
 {
@@ -1162,7 +1165,7 @@ static struct request *blk_mq_map_request(struct request_queue *q,
 	int rw = bio_data_dir(bio);
 	struct blk_mq_alloc_data alloc_data;
 
-	if (unlikely(blk_mq_queue_enter(q))) {
+	if (unlikely(blk_mq_queue_enter(q, GFP_KERNEL))) {
 		bio_endio(bio, -EIO);
 		return NULL;
 	}
