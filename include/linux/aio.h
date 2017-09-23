@@ -40,7 +40,6 @@ struct kiocb {
 
 	union {
 		void __user		*user;
-		struct task_struct	*tsk;
 		void			(*complete)(u64 user_data, long res);
 	} ki_obj;
 
@@ -68,13 +67,11 @@ static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
 	*kiocb = (struct kiocb) {
 			.ki_ctx = NULL,
 			.ki_filp = filp,
-			.ki_obj.tsk = current,
 		};
 }
 
 /* prototypes */
 #ifdef CONFIG_AIO
-extern ssize_t wait_on_sync_kiocb(struct kiocb *iocb);
 extern void aio_complete(struct kiocb *iocb, long res, long res2);
 struct mm_struct;
 extern void exit_aio(struct mm_struct *mm);
@@ -85,7 +82,6 @@ void aio_kernel_free(struct kiocb *iocb);
 void aio_kernel_init_rw(struct kiocb *iocb, struct file *filp,
 			unsigned short op, void *ptr, size_t nr, loff_t off);
 #else
-static inline ssize_t wait_on_sync_kiocb(struct kiocb *iocb) { return 0; }
 static inline void aio_complete(struct kiocb *iocb, long res, long res2) { }
 struct mm_struct;
 static inline void exit_aio(struct mm_struct *mm) { }
