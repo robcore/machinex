@@ -136,8 +136,8 @@ int ncp__vol2io(struct ncp_server *, unsigned char *, unsigned int *,
 #define NCP_IO_TABLE(sb)	(NCP_SBP(sb)->nls_io)
 #define ncp_tolower(t, c)	nls_tolower(t, c)
 #define ncp_toupper(t, c)	nls_toupper(t, c)
-#define ncp_strnicmp(t, s1, s2, len) \
-	nls_strnicmp(t, s1, s2, len)
+#define ncp_strncasecmp(t, s1, s2, len) \
+	nls_strncasecmp(t, s1, s2, len)
 #define ncp_io2vol(S,m,i,n,k,U)	ncp__io2vol(S,m,i,n,k,U)
 #define ncp_vol2io(S,m,i,n,k,U)	ncp__vol2io(S,m,i,n,k,U)
 
@@ -155,7 +155,7 @@ int ncp__vol2io(unsigned char *, unsigned int *,
 #define ncp_vol2io(S,m,i,n,k,U)	ncp__vol2io(m,i,n,k,U)
 
 
-static inline int ncp_strnicmp(const struct nls_table *t,
+static inline int ncp_strncasecmp(const struct nls_table *t,
 		const unsigned char *s1, const unsigned char *s2, int len)
 {
 	while (len--) {

@@ -161,7 +161,7 @@ static int sdcardfs_cmp_ci(const struct dentry *parent,
 	alen = vfat_striptail_len(name);
 	blen = __vfat_striptail_len(len, str);
 	if (alen == blen) {
-		if (nls_strnicmp(t, name->name, str, alen) == 0)
+		if (nls_strncasecmp(t, name->name, str, alen) == 0)
 			return 0;
 	}
 	*/

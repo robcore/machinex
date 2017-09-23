@@ -1001,7 +1001,7 @@ bcmstricmp(const char *s1, const char *s2)
 
 
 /****************************************************************************
-* Function:   bcmstrnicmp
+* Function:   bcmstrncasecmp
 *
 * Purpose:    Compare to strings case insensitively, upto a max of 'cnt'
 *             characters.
@@ -1015,7 +1015,7 @@ bcmstricmp(const char *s1, const char *s2)
 *****************************************************************************
 */
 int
-bcmstrnicmp(const char* s1, const char* s2, int cnt)
+bcmstrncasecmp(const char* s1, const char* s2, int cnt)
 {
 	char dc, sc;
 

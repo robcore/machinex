@@ -488,7 +488,7 @@ int is_file_name_match(struct ecryptfs_mount_crypt_stat *mcs,
 				strcat(str, p->d_name.name);
 			}
 
-			if (strnicmp(str, mcs->enc_filter_name[i], len))
+			if (strncasecmp(str, mcs->enc_filter_name[i], len))
 				break;
 			p = p->d_parent;
 
@@ -525,7 +525,7 @@ int is_file_ext_match(struct ecryptfs_mount_crypt_stat *mcs, char *str)
 			return 0;
 		if (strlen(ext) != strlen(mcs->enc_filter_ext[i]))
 			continue;
-		if (!strnicmp(ext, mcs->enc_filter_ext[i], strlen(ext)))
+		if (!strncasecmp(ext, mcs->enc_filter_ext[i], strlen(ext)))
 			return 1;
 	}
 	return 0;

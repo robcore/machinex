@@ -167,7 +167,7 @@ ncp_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
 	if (ncp_case_sensitive(pinode))
 		return strncmp(str, name->name, len);
 
-	return ncp_strnicmp(NCP_IO_TABLE(pinode->i_sb), str, name->name, len);
+	return ncp_strncasecmp(NCP_IO_TABLE(pinode->i_sb), str, name->name, len);
 }
 
 /*

@@ -170,7 +170,7 @@ static int parse(void *cb_ctx)
 			    sscanf(tok, "0x%hx", &w) == 1) {
 				last_token = PT_HEXWORD;
 				cmd = w << 16;
-			} else if (strnicmp("!Preset", tok, 7) == 0) {
+			} else if (strncasecmp("!Preset", tok, 7) == 0) {
 				last_token = PT_PRESET;
 			} else if (*tok != 0) {
 				pr_debug("invalid token: '%s'", tok);
@@ -179,7 +179,7 @@ static int parse(void *cb_ctx)
 			}
 			break;
 		case PT_PRESET:
-			if (strnicmp(tok, "id:", 3) == 0) {
+			if (strncasecmp(tok, "id:", 3) == 0) {
 				last_token = PT_ID;
 			} else {
 				pr_debug("expecting 'id:' got '%s'\n", tok);

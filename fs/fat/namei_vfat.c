@@ -150,7 +150,7 @@ static int vfat_cmpi(const struct dentry *parent, const struct dentry *dentry,
 	alen = vfat_striptail_len(name);
 	blen = __vfat_striptail_len(len, str);
 	if (alen == blen) {
-		if (nls_strnicmp(t, name->name, str, alen) == 0)
+		if (nls_strncasecmp(t, name->name, str, alen) == 0)
 			return 0;
 	}
 	return 1;

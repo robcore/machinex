@@ -635,7 +635,7 @@ enum {
 
 static inline int strmatch(const char *a, const char *b)
 {
-	return strnicmp(a, b, strlen(b)) == 0;
+	return strncasecmp(a, b, strlen(b)) == 0;
 }
 
 /* parse the contents after the line "[codec]"

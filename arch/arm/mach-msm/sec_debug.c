@@ -1083,7 +1083,7 @@ static int sec_debug_panic_handler(struct notifier_block *nb,
 		sec_debug_set_upload_cause(UPLOAD_CAUSE_LPASS_RST_ERR);
 	else if (strnstr(buf, "dsps", len) != NULL)
 		sec_debug_set_upload_cause(UPLOAD_CAUSE_DSPS_RST_ERR);
-	else if (!strnicmp(buf, "subsys", len))
+	else if (!strncasecmp(buf, "subsys", len))
 		sec_debug_set_upload_cause(UPLOAD_CAUSE_PERIPHERAL_ERR);
 	else
 		sec_debug_set_upload_cause(UPLOAD_CAUSE_KERNEL_PANIC);

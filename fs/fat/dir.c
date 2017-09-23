@@ -263,7 +263,7 @@ static inline int fat_name_match(struct msdos_sb_info *sbi,
 		return 0;
 
 	if (sbi->options.name_check != 's')
-		return !nls_strnicmp(sbi->nls_io, a, b, a_len);
+		return !nls_strncasecmp(sbi->nls_io, a, b, a_len);
 	else
 		return !memcmp(a, b, a_len);
 }

@@ -784,7 +784,7 @@ static int cifs_ci_compare(const struct dentry *parent, const struct dentry *den
 	struct nls_table *codepage = CIFS_SB(parent->d_sb)->local_nls;
 
 	if ((name->len == len) &&
-	    (nls_strnicmp(codepage, name->name, str, len) == 0))
+	    (nls_strncasecmp(codepage, name->name, str, len) == 0))
 		return 0;
 	return 1;
 }

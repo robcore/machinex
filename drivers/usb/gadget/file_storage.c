@@ -3242,12 +3242,12 @@ static int __init check_parameters(struct fsg_dev *fsg)
 	prot = simple_strtol(mod_data.protocol_parm, NULL, 0);
 
 #ifdef CONFIG_USB_FILE_STORAGE_TEST
-	if (strnicmp(mod_data.transport_parm, "BBB", 10) == 0) {
+	if (strncasecmp(mod_data.transport_parm, "BBB", 10) == 0) {
 		;		// Use default setting
-	} else if (strnicmp(mod_data.transport_parm, "CB", 10) == 0) {
+	} else if (strncasecmp(mod_data.transport_parm, "CB", 10) == 0) {
 		mod_data.transport_type = USB_PR_CB;
 		mod_data.transport_name = "Control-Bulk";
-	} else if (strnicmp(mod_data.transport_parm, "CBI", 10) == 0) {
+	} else if (strncasecmp(mod_data.transport_parm, "CBI", 10) == 0) {
 		mod_data.transport_type = USB_PR_CBI;
 		mod_data.transport_name = "Control-Bulk-Interrupt";
 	} else {
@@ -3255,27 +3255,27 @@ static int __init check_parameters(struct fsg_dev *fsg)
 		return -EINVAL;
 	}
 
-	if (strnicmp(mod_data.protocol_parm, "SCSI", 10) == 0 ||
+	if (strncasecmp(mod_data.protocol_parm, "SCSI", 10) == 0 ||
 			prot == USB_SC_SCSI) {
 		;		// Use default setting
-	} else if (strnicmp(mod_data.protocol_parm, "RBC", 10) == 0 ||
+	} else if (strncasecmp(mod_data.protocol_parm, "RBC", 10) == 0 ||
 			prot == USB_SC_RBC) {
 		mod_data.protocol_type = USB_SC_RBC;
 		mod_data.protocol_name = "RBC";
-	} else if (strnicmp(mod_data.protocol_parm, "8020", 4) == 0 ||
-			strnicmp(mod_data.protocol_parm, "ATAPI", 10) == 0 ||
+	} else if (strncasecmp(mod_data.protocol_parm, "8020", 4) == 0 ||
+			strncasecmp(mod_data.protocol_parm, "ATAPI", 10) == 0 ||
 			prot == USB_SC_8020) {
 		mod_data.protocol_type = USB_SC_8020;
 		mod_data.protocol_name = "8020i (ATAPI)";
-	} else if (strnicmp(mod_data.protocol_parm, "QIC", 3) == 0 ||
+	} else if (strncasecmp(mod_data.protocol_parm, "QIC", 3) == 0 ||
 			prot == USB_SC_QIC) {
 		mod_data.protocol_type = USB_SC_QIC;
 		mod_data.protocol_name = "QIC-157";
-	} else if (strnicmp(mod_data.protocol_parm, "UFI", 10) == 0 ||
+	} else if (strncasecmp(mod_data.protocol_parm, "UFI", 10) == 0 ||
 			prot == USB_SC_UFI) {
 		mod_data.protocol_type = USB_SC_UFI;
 		mod_data.protocol_name = "UFI";
-	} else if (strnicmp(mod_data.protocol_parm, "8070", 4) == 0 ||
+	} else if (strncasecmp(mod_data.protocol_parm, "8070", 4) == 0 ||
 			prot == USB_SC_8070) {
 		mod_data.protocol_type = USB_SC_8070;
 		mod_data.protocol_name = "8070i";
