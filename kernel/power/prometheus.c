@@ -52,7 +52,7 @@ struct wake_lock prsynclock;
 static unsigned int sync_on_panel_suspend;
 /* For Samsung devices that use it, disable completely when poweroff charging */
 extern int poweroff_charging;
-#define GLOBAL_PM 1
+#define GLOBAL_PM 0
 static unsigned int use_global_suspend = GLOBAL_PM;
 #define IGNORE_WL 0
 static unsigned int ignore_wakelocks = IGNORE_WL;
