@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 8
+#define VERSION_MIN 9
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -100,8 +100,8 @@ static void power_suspend(struct work_struct *work)
 
 	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
 		(unlikely(system_is_restarting()))) {
-		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System \
-				State!\n");
+		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System"
+				"State!\n");
 		return;
 	}
 
@@ -137,17 +137,10 @@ static void power_suspend(struct work_struct *work)
 	if (use_global_suspend) {
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
-			if (mx_is_cable_attached()) {
+			if (mx_is_cable_attached() || prometheus_sec_jack() || android_os_ws()) {
 				mutex_unlock(&prometheus_mtx);
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Device is Charging.\n");
-				return;
-			} else if (prometheus_sec_jack()) {
-				mutex_unlock(&prometheus_mtx);
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Jack is detected.\n");
-				return;
-			} else if (android_os_ws()) {
-				mutex_unlock(&prometheus_mtx);
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Android Media Active.\n");
+				pr_info("[PROMETHEUS] Skipping PM Suspend.\nCharging Cable, Headphone Jack,"
+						"or Active Media Detected.\n");
 				return;
 			} else
 				goto skip_check;
@@ -177,8 +170,8 @@ static void power_resume(struct work_struct *work)
 	unsigned long irqflags;
 
 	if ((poweroff_charging)) {
-		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System \
-				State!\n");
+		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System"
+				"State!\n");
 		return;
 	}
 
@@ -393,8 +386,8 @@ static void prometheus_exit(void)
 subsys_initcall(prometheus_init);
 module_exit(prometheus_exit);
 
-MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com> \
-				Rob Patershuk <robpatershuk@gmail.com>");
-MODULE_DESCRIPTION("Prometheus was punished by the gods for giving the gift of knowledge to man." \
+MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com>"
+				"Rob Patershuk <robpatershuk@gmail.com>");
+MODULE_DESCRIPTION("Prometheus was punished by the gods for giving the gift of knowledge to man."
 			  "He was cast into the bowels of the earth and pecked by birds.");
 MODULE_LICENSE("GPL v2");
