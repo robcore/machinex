@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 7
+#define VERSION_MIN 8
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -105,6 +105,7 @@ static void power_suspend(struct work_struct *work)
 		return;
 	}
 
+	cancel_work_sync(&power_resume_work);
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
@@ -161,27 +162,12 @@ static void power_suspend(struct work_struct *work)
 		return;
 	}
 skip_check:
-		if (unlikely(booting)) {
+		if (unlikely(booting))
 			booting = false;
-			mutex_unlock(&prometheus_mtx);
-			pr_info("[PROMETHEUS] Skipping PM Suspend on first boot..\n");
-			return;
-		}
-
-		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
-
-
-		if (unlikely(pm_autosleep_lock())) {
-			mutex_unlock(&prometheus_mtx);
-			pr_info("[PROMETHEUS] Skipping PM Suspend. Autosleep Busy.\n");
-			return;
-		}
-
-		pr_info("[PROMETHEUS] Calling System Suspend!\n");
-		prometheus_control_oom(true);
-		pm_suspend(mem_sleep_current);
-		prometheus_control_oom(false);
-		pm_autosleep_unlock();
+		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
+		//prometheus_control_oom(true);
+		pm_suspend(PM_SUSPEND_MEM);
+		//prometheus_control_oom(false);
 		mutex_unlock(&prometheus_mtx);
 }
 
@@ -196,6 +182,7 @@ static void power_resume(struct work_struct *work)
 		return;
 	}
 
+	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
@@ -227,12 +214,10 @@ static void set_power_suspend_state(unsigned int new_state)
 	if (ps_state != new_state) {
 		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			ps_state = new_state;
-			cancel_work_sync(&power_resume_work);
 			pr_info("[PROMETHEUS] Suspend State Activated.\n");
 			queue_work_on(0, pwrsup_wq, &power_suspend_work);
 		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			ps_state = new_state;
-			cancel_work_sync(&power_suspend_work);
 			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
@@ -379,7 +364,7 @@ static int prometheus_init(void)
 		return -ENOMEM;
 	}
 
-	pwrsup_wq = alloc_workqueue("prometheus_work", WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+	pwrsup_wq = create_hipri_singlethread_workqueue("prometheus_work");
 	if (!pwrsup_wq)
 		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
 

@@ -436,7 +436,7 @@ __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active,
 #define create_hipri_workqueue(name)				\
 	alloc_ordered_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_CPU_INTENSIVE, name)
 #define create_hipri_singlethread_workqueue(name)				\
-	alloc_ordered_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM, name)
+	alloc_ordered_workqueue("%s", __WQ_LEGACY | WQ_MEM_RECLAIM | WQ_HIGHPRI, name)
 
 extern void destroy_workqueue(struct workqueue_struct *wq);
 
