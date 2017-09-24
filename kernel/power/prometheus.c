@@ -66,7 +66,15 @@ static bool booting = true;
 bool prometheus_disabled_oom __read_mostly = false;
 static void prometheus_control_oom(bool disable)
 {
-	prometheus_disabled_oom = disable;
+	if (disable != prometheus_disabled_oom);
+		prometheus_disabled_oom = disable;
+}
+
+bool extra_callbacks_disabled __read_mostly = false;
+static void prometheus_control_callbacks(bool disable)
+{
+	if (disable != extra_callbacks_disabled)
+		extra_callbacks_disabled = disable;
 }
 
 void register_power_suspend(struct power_suspend *handler)
@@ -159,7 +167,9 @@ skip_check:
 			booting = false;
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
 		//prometheus_control_oom(true);
+		prometheus_control_callbacks(true);
 		pm_suspend(PM_SUSPEND_MEM);
+		prometheus_control_callbacks(false);
 		//prometheus_control_oom(false);
 		mutex_unlock(&prometheus_mtx);
 }

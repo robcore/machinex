@@ -445,6 +445,7 @@ extern void pm_print_active_wakeup_sources(void);
 extern void pm_get_active_wakeup_sources(char *pending_sources, size_t max);
 extern void sweep2sleep_pwrtrigger(void);
 bool mx_pm_wakeup_pending(void);
+extern bool extra_callbacks_disabled;
 
 static inline void lock_system_sleep(void)
 {
