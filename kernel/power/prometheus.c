@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 6
+#define VERSION_MIN 7
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -63,7 +63,7 @@ extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
 static bool booting = true;
 
-bool prometheus_disabled_oom = false;
+bool prometheus_disabled_oom __read_mostly = false;
 static void prometheus_control_oom(bool disable)
 {
 	prometheus_disabled_oom = disable;
