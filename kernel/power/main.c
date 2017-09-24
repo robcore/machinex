@@ -760,7 +760,7 @@ static ssize_t autosleep_store(struct kobject *kobj,
 
 	error = pm_autosleep_set_state(state);
 	pr_info("Autosleep called:%s\n", pm_states[state] ?
-				pm_states[state] : "error")
+				pm_states[state] : "error");
 	return error ? error : n;
 }
 

@@ -54,7 +54,7 @@ extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
 #define IGNORE_WL 1
-static unsigned int ignore_wakelocks = 1;
+static unsigned int ignore_wakelocks = IGNORE_WL;
 /* For optional charging check due to charger
  * disliking the wakelock skip. TODO Use the power_supply framework.
  */
