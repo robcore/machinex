@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 5
-#define VERSION_MIN 3
+#define VERSION_MIN 4
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -165,29 +165,31 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	if (use_global_suspend) {
-		nrwl = pm_get_wakelocks(true);
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
+		if (unlikely(booting))
+			booting = false;
+		if (mx_is_cable_attached() || prometheus_sec_jack() || android_os_ws()) {
+			mutex_unlock(&prometheus_mtx);
+			pr_info("[PROMETHEUS] Skipping PM Suspend.\nCharging Cable, Headphone Jack,"
+					"or Active Media Detected.\n");
+			return;
+		}
 		if (ignore_wakelocks) {
-			if (mx_is_cable_attached() || prometheus_sec_jack() || android_os_ws()) {
-				mutex_unlock(&prometheus_mtx);
-				pr_info("[PROMETHEUS] Skipping PM Suspend.\nCharging Cable, Headphone Jack,"
-						"or Active Media Detected.\n");
-				return;
-			} else
-				goto skip_check;
-		} else if ((nrwl) || mx_pm_wakeup_pending()) {
+			goto skip_check;
+		} else {
+			nrwl = pm_get_wakelocks(true);
+			if ((nrwl) || mx_pm_wakeup_pending()) {
 				mutex_unlock(&prometheus_mtx);
 				pr_info("[PROMETHEUS] Skipping PM Suspend. %u Wakelocks held.\n", nrwl);
 				return;
+			}
 		}
 	} else {
 		mutex_unlock(&prometheus_mtx);
-		pr_info("[PROMETHEUS] Early Suspend Completed.\n");
+		pr_info("[PROMETHEUS] Initial Suspend Completed.\n");
 		return;
 	}
 skip_check:
-		if (unlikely(booting))
-			booting = false;
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
 		//prometheus_control_oom(true);
 		queue_delayed_work_on(0, pwrsup_wq, &deep_suspend_work, msecs_to_jiffies(1000));
