@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 5
-#define VERSION_MIN 1
+#define VERSION_MIN 2
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -168,7 +168,7 @@ skip_check:
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
 		//prometheus_control_oom(true);
 		prometheus_control_callbacks(true);
-		hibernate();
+		suspend_devices_and_enter(PM_SUSPEND_MEM);
 		prometheus_control_callbacks(false);
 		//prometheus_control_oom(false);
 		mutex_unlock(&prometheus_mtx);
