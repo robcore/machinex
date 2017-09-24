@@ -30,8 +30,8 @@
 #include <linux/display_state.h>
 #include "power.h"
 
-#define VERSION 4
-#define VERSION_MIN 9
+#define VERSION 5
+#define VERSION_MIN 0
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
