@@ -326,6 +326,7 @@ static inline suspend_state_t pm_autosleep_state(void) { return PM_SUSPEND_ON; }
 extern ssize_t pm_show_wakelocks(char *buf, bool show_active);
 extern int pm_wake_lock(const char *buf);
 extern int pm_wake_unlock(const char *buf);
+extern unsigned int pm_get_wakelocks(bool show_active);
 
 #endif /* !CONFIG_PM_WAKELOCKS */
 extern unsigned int strict_wl_perms;

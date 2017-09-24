@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 5
-#define VERSION_MIN 2
+#define VERSION_MIN 3
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -39,6 +39,7 @@ static LIST_HEAD(power_suspend_handlers);
 static struct workqueue_struct *pwrsup_wq;
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
+struct delayed_work deep_suspend_work;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
@@ -53,7 +54,7 @@ static unsigned int sync_on_panel_suspend;
 extern int poweroff_charging;
 #define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
-#define IGNORE_WL 1
+#define IGNORE_WL 0
 static unsigned int ignore_wakelocks = IGNORE_WL;
 /* For optional charging check due to charger
  * disliking the wakelock skip. TODO Use the power_supply framework.
@@ -99,12 +100,33 @@ void unregister_power_suspend(struct power_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
+static void deep_suspend(struct work_struct *work)
+{
+	suspend_state_t prometheus_deep_suspend = PM_SUSPEND_MEM;
+	int error;
+
+	error = pm_autosleep_lock();
+	if (error)
+		return;
+
+	if (pm_autosleep_state() > PM_SUSPEND_ON) {
+		goto out;
+	}
+
+	prometheus_control_callbacks(true);
+	pm_suspend(prometheus_deep_suspend);
+	prometheus_control_callbacks(false);
+out:
+	pm_autosleep_unlock();
+}
+
 static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
 	unsigned long irqflags;
 	unsigned int counter;
 	int error;
+	unsigned int nrwl;
 
 	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
 		(unlikely(system_is_restarting()))) {
@@ -143,6 +165,7 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	if (use_global_suspend) {
+		nrwl = pm_get_wakelocks(true);
 		pr_info("[PROMETHEUS] Initial Suspend Completed\n");
 		if (ignore_wakelocks) {
 			if (mx_is_cable_attached() || prometheus_sec_jack() || android_os_ws()) {
@@ -152,9 +175,9 @@ static void power_suspend(struct work_struct *work)
 				return;
 			} else
 				goto skip_check;
-		} else if (!pm_get_wakeup_count(&counter, false) || mx_pm_wakeup_pending()) {
+		} else if ((nrwl) || mx_pm_wakeup_pending()) {
 				mutex_unlock(&prometheus_mtx);
-				pr_info("[PROMETHEUS] Skipping PM Suspend. Wakelocks held.\n");
+				pr_info("[PROMETHEUS] Skipping PM Suspend. %u Wakelocks held.\n", nrwl);
 				return;
 		}
 	} else {
@@ -167,9 +190,7 @@ skip_check:
 			booting = false;
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
 		//prometheus_control_oom(true);
-		prometheus_control_callbacks(true);
-		suspend_devices_and_enter(PM_SUSPEND_MEM);
-		prometheus_control_callbacks(false);
+		queue_delayed_work_on(0, pwrsup_wq, &deep_suspend_work, msecs_to_jiffies(1000));
 		//prometheus_control_oom(false);
 		mutex_unlock(&prometheus_mtx);
 }
@@ -184,7 +205,7 @@ static void power_resume(struct work_struct *work)
 				"State!\n");
 		return;
 	}
-
+	cancel_delayed_work_sync(&deep_suspend_work);
 	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
@@ -376,6 +397,7 @@ static int prometheus_init(void)
 	wake_lock_init(&prsynclock, WAKE_LOCK_SUSPEND, "prometheus_synclock");
 
 	INIT_WORK(&power_suspend_work, power_suspend);
+	INIT_DELAYED_WORK(&deep_suspend_work, deep_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
 	return 0;
@@ -386,6 +408,7 @@ static void prometheus_exit(void)
 {
 	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
+	flush_delayed_work(&deep_suspend_work);
 	destroy_workqueue(pwrsup_wq);
 	mutex_destroy(&prometheus_mtx);
 
