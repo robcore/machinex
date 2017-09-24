@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 5
+#define VERSION_MIN 6
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -105,7 +105,6 @@ static void power_suspend(struct work_struct *work)
 		return;
 	}
 
-	cancel_work_sync(&power_resume_work);
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
@@ -196,7 +195,7 @@ static void power_resume(struct work_struct *work)
 				State!\n");
 		return;
 	}
-	cancel_work_sync(&power_suspend_work);
+
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
 	spin_lock_irqsave(&ps_state_lock, irqflags);
@@ -228,10 +227,12 @@ static void set_power_suspend_state(unsigned int new_state)
 	if (ps_state != new_state) {
 		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
 			ps_state = new_state;
+			cancel_work_sync(&power_resume_work);
 			pr_info("[PROMETHEUS] Suspend State Activated.\n");
 			queue_work_on(0, pwrsup_wq, &power_suspend_work);
 		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			ps_state = new_state;
+			cancel_work_sync(&power_suspend_work);
 			pr_info("[PROMETHEUS] Resume State Activated.\n");
 			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
