@@ -710,7 +710,8 @@ out:
  */
 struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
 			       umode_t mode, const struct qstr *qstr,
-			       __u32 goal, uid_t *owner, int nblocks)
+			       __u32 goal, uid_t *owner, int handle_type,
+			       unsigned int line_no, int nblocks)
 {
 	struct super_block *sb;
 	struct buffer_head *inode_bitmap_bh = NULL;
@@ -790,6 +791,15 @@ got_group:
 		if (!gdp)
 			goto out;
 
+		/*
+		 * Check free inodes count before loading bitmap.
+		 */
+		if (ext4_free_inodes_count(sb, gdp) == 0) {
+			if (++group == ngroups)
+				group = 0;
+			continue;
+		}
+
 		grp = ext4_get_group_info(sb, group);
 		/* Skip groups with already-known suspicious inode tables */
 		if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp)) {
@@ -798,9 +808,7 @@ got_group:
 			continue;
 		}
 
-		if (inode_bitmap_bh) {
-			brelse(inode_bitmap_bh);
-		}
+		brelse(inode_bitmap_bh);
 		inode_bitmap_bh = ext4_read_inode_bitmap(sb, group);
 		/* Skip groups with suspicious inode tables */
 		if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp) || !inode_bitmap_bh) {
@@ -827,7 +835,9 @@ repeat_in_this_group:
 		}
 		if (!handle) {
 			BUG_ON(nblocks <= 0);
-			handle = ext4_journal_start_sb(dir->i_sb, EXT4_HT_MISC, nblocks);
+			handle = __ext4_journal_start_sb(dir->i_sb, line_no,
+							 handle_type, nblocks,
+							 0);
 			if (IS_ERR(handle)) {
 				err = PTR_ERR(handle);
 				ext4_std_error(sb, err);
@@ -1110,13 +1120,11 @@ struct inode *ext4_orphan_get(struct super_block *sb, unsigned long ino)
 		goto iget_failed;
 
 	/*
-	 * If the orphans has i_nlinks > 0 then it should be able to
-	 * be truncated, otherwise it won't be removed from the orphan
-	 * list during processing and an infinite loop will result.
-	 * Similarly, it must not be a bad inode.
+	 * If the orphans has i_nlinks > 0 then it should be able to be
+	 * truncated, otherwise it won't be removed from the orphan list
+	 * during processing and an infinite loop will result.
 	 */
-	if ((inode->i_nlink && !ext4_can_truncate(inode)) ||
-	    is_bad_inode(inode))
+	if (inode->i_nlink && !ext4_can_truncate(inode))
 		goto bad_orphan;
 
 	if (NEXT_ORPHAN(inode) > max_ino)
