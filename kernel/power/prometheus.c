@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 4
-#define VERSION_MIN 4
+#define VERSION_MIN 5
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -62,13 +62,13 @@ extern bool mx_is_cable_attached(void);
 extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
 static bool booting = true;
-/*
+
 bool prometheus_disabled_oom = false;
-void prometheus_disable_oom(bool disable)
+static void prometheus_control_oom(bool disable)
 {
 	prometheus_disabled_oom = disable;
 }
-*/
+
 void register_power_suspend(struct power_suspend *handler)
 {
 	struct list_head *pos;
@@ -96,6 +96,7 @@ static void power_suspend(struct work_struct *work)
 	struct power_suspend *pos;
 	unsigned long irqflags;
 	unsigned int counter;
+	int error;
 
 	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
 		(unlikely(system_is_restarting()))) {
@@ -170,16 +171,18 @@ skip_check:
 
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Proceeding with PM Suspend.\n");
 
-		if (unlikely(!mutex_trylock(&pm_mutex))) {
+
+		if (unlikely(pm_autosleep_lock())) {
 			mutex_unlock(&prometheus_mtx);
-			pr_info("[PROMETHEUS] Skipping PM Suspend. PM Busy.\n");
+			pr_info("[PROMETHEUS] Skipping PM Suspend. Autosleep Busy.\n");
 			return;
 		}
 
 		pr_info("[PROMETHEUS] Calling System Suspend!\n");
-		//prometheus_disable_oom(true);
-		pm_suspend(PM_SUSPEND_MAX);
-		mutex_unlock(&pm_mutex);
+		prometheus_control_oom(true);
+		pm_suspend(mem_sleep_current);
+		prometheus_control_oom(false);
+		pm_autosleep_unlock();
 		mutex_unlock(&prometheus_mtx);
 }
 
