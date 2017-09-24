@@ -168,7 +168,7 @@ skip_check:
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
 		//prometheus_control_oom(true);
 		prometheus_control_callbacks(true);
-		pm_suspend(PM_SUSPEND_MEM);
+		hibernate();
 		prometheus_control_callbacks(false);
 		//prometheus_control_oom(false);
 		mutex_unlock(&prometheus_mtx);
