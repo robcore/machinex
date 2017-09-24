@@ -62,7 +62,7 @@
 #include <linux/hugetlb.h>
 #include <linux/sched/rt.h>
 #include <linux/page_owner.h>
-#include <linux/prometheus.h>
+//#include <linux/prometheus.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -2860,10 +2860,10 @@ retry:
 #endif
 	if (SHOULD_CONSIDER_OOM) {
 		/* Do not loop if specifically requested */
-		if (oom_killer_disabled || prometheus_disabled_oom)
-			goto nopage;
 		if (gfp_mask & __GFP_NORETRY)
 			goto noretry;
+		if (oom_killer_disabled)
+			goto nopage;
 		/* Coredumps can quickly deplete all memory reserves */
 		if ((current->flags & PF_DUMPCORE) &&
 		    !(gfp_mask & __GFP_NOFAIL))

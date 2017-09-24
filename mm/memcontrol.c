@@ -61,7 +61,6 @@
 #include <net/ip.h>
 #include <net/tcp_memcontrol.h>
 #include "slab.h"
-#include <linux/prometheus.h>
 
 #include <asm/uaccess.h>
 
@@ -1902,7 +1901,7 @@ bool mem_cgroup_oom_synchronize(bool handle)
 	if (!memcg)
 		return false;
 
-	if (!handle || oom_killer_disabled || prometheus_disabled_oom)
+	if (!handle || oom_killer_disabled)
 		goto cleanup;
 
 	owait.memcg = memcg;

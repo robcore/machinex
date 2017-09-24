@@ -104,7 +104,8 @@ enum {
 void prometheus_panel_beacon(unsigned int new_state);
 bool prometheus_sec_jack(void);
 bool android_os_ws(void);
-
+/*
 extern bool prometheus_disabled_oom;
-
+extern void prometheus_disable_oom(bool disable);
+*/
 #endif

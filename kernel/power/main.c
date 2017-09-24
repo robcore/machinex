@@ -650,6 +650,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 	pm_autosleep_unlock();
 	return error ? error : n;
 }
+
 power_attr(state);
 
 #ifdef CONFIG_PM_SLEEP
@@ -755,12 +756,14 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
 		return -EINVAL;
 
-	if (state == PM_SUSPEND_MEM)
+	if (state == PM_SUSPEND_MEM) {
 		state = mem_sleep_current;
+	} else if (state == PM_SUSPEND_MAX) {
+		if (is_display_on())
+			sweep2sleep_pwrtrigger();
+	}
 
 	error = pm_autosleep_set_state(state);
-	pr_info("Autosleep called:%s\n", pm_states[state] ?
-				pm_states[state] : "error")
 	return error ? error : n;
 }
 

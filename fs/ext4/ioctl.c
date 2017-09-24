@@ -78,6 +78,8 @@ static void swap_inode_data(struct inode *inode1, struct inode *inode2)
 	memswap(&ei1->i_disksize, &ei2->i_disksize, sizeof(ei1->i_disksize));
 	ext4_es_remove_extent(inode1, 0, EXT_MAX_BLOCKS);
 	ext4_es_remove_extent(inode2, 0, EXT_MAX_BLOCKS);
+	ext4_es_lru_del(inode1);
+	ext4_es_lru_del(inode2);
 
 	isize = i_size_read(inode1);
 	i_size_write(inode1, i_size_read(inode2));
@@ -141,8 +143,8 @@ static long swap_inode_boot_loader(struct super_block *sb,
 	if (inode_bl->i_nlink == 0) {
 		/* this inode has never been used as a BOOT_LOADER */
 		set_nlink(inode_bl, 1);
-		i_uid_write(inode_bl, 0);
-		i_gid_write(inode_bl, 0);
+		inode_bl->i_uid = 0;
+		inode_bl->i_gid = 0;
 		inode_bl->i_flags = 0;
 		ei_bl->i_flags = 0;
 		inode_bl->i_version = 1;

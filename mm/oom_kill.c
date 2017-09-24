@@ -35,7 +35,6 @@
 #include <linux/freezer.h>
 #include <linux/ftrace.h>
 #include <linux/ratelimit.h>
-#include <linux/prometheus.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/oom.h>
@@ -405,8 +404,7 @@ static DECLARE_RWSEM(oom_sem);
  */
 void mark_tsk_oom_victim(struct task_struct *tsk)
 {
-	if (oom_killer_disabled)
-		pr_err("WARNING!! OOM KILLER ENABLED!\n");
+	WARN_ON(oom_killer_disabled);
 	/* OOM killer might race with memcg OOM */
 	if (test_and_set_tsk_thread_flag(tsk, TIF_MEMDIE))
 		return;
@@ -435,8 +433,7 @@ void unmark_oom_victim(void)
 	 * There is no need to signal the lasst oom_victim if there
 	 * is nobody who cares.
 	 */
-	if (!atomic_dec_return(&oom_victims) && (oom_killer_disabled ||
-		prometheus_disabled_oom))
+	if (!atomic_dec_return(&oom_victims) && oom_killer_disabled)
 		wake_up_all(&oom_victims_wait);
 	up_read(&oom_sem);
 }
@@ -780,7 +777,7 @@ bool out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	bool ret = false;
 
 	down_read(&oom_sem);
-	if (!oom_killer_disabled || !prometheus_disabled_oom) {
+	if (!oom_killer_disabled) {
 		__out_of_memory(zonelist, gfp_mask, order, nodemask, force_kill);
 		ret = true;
 	}
@@ -804,7 +801,7 @@ void pagefault_out_of_memory(void)
 
 	zonelist = node_zonelist(first_memory_node, GFP_KERNEL);
 	if (oom_zonelist_trylock(zonelist, GFP_KERNEL)) {
-		if (!oom_killer_disabled || !prometheus_disabled_oom)
+		if (!oom_killer_disabled)
 			__out_of_memory(NULL, 0, 0, NULL, false);
 		else
 			/*
