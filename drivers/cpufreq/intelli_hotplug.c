@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	13
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -688,8 +688,7 @@ static ssize_t show_##object					\
 static ssize_t show_##object	 \
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf) \
 {															   \
-	clamp_val(object, min, max);							   \
-	return sprintf(buf, "%u\n", object);	   \
+	return sprintf(buf, "%u\n", clamp_val(object, min, max));	   \
 }
 
 #define show_long(object)				\
