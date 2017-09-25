@@ -767,6 +767,10 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		unsigned int min, unsigned int max)
 {
+	if (policy == NULL)
+		return;
+
+	reapply_hard_limits(policy->cpu);
 	min = check_cpufreq_hardlimit(min);
 	max = check_cpufreq_hardlimit(max);
 	if (policy->min < min)
