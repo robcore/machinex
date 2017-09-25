@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	13
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -340,6 +340,7 @@ static unsigned int calculate_thread_stats(void)
 		}
 	}
 
+	clamp_val(nr_cpus, min_cpus_online, max_cpus_online);
 	nr_run_last = nr_cpus;
 	return nr_cpus;
 }
@@ -378,8 +379,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		goto reschedule;
 
 	target = READ_ONCE(target_cpus);
-
-	sanitize_min_max(target, min_cpus_online, max_cpus_online);
+	clamp_val(target, min_cpus_online, max_cpus_online);
 	primary = cpumask_first(cpu_online_mask);
 	if (!online_cpus)
 		report_current_cpus();
@@ -463,6 +463,7 @@ void intelli_boost(void)
 		return;
 
 	atomic_set(&from_boost, 1);
+	clamp_val(target_cpus, min_cpus_online, max_cpus_online);
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
@@ -683,6 +684,14 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
+#define show_one_clamped(object, min, max) \
+static ssize_t show_##object	 \
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf) \
+{															   \
+	clamp_val(object, min, max);							   \
+	return sprintf(buf, "%u\n", object);	   \
+}
+
 #define show_long(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
@@ -703,7 +712,7 @@ show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 show_one(high_load_threshold);
-show_one(target_cpus);
+show_one_clamped(target_cpus, min_cpus_online, max_cpus_online);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\
