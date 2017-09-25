@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	13
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -308,7 +308,6 @@ static int measure_freqs(void)
 	return freq_load;
 }
 
-static unsigned int nr_goal;
 static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_cpus;
@@ -354,7 +353,6 @@ static unsigned int calculate_thread_stats(void)
 	}
 
 	nr_run_last = nr_cpus;
-	nr_goal = nr_cpus;
 	return nr_cpus;
 }
 
@@ -744,7 +742,7 @@ show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 show_one(high_load_threshold);
-show_one(nr_goal);
+show_one(target_cpus);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\
@@ -930,7 +928,7 @@ KERNEL_ATTR_RO(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_dur);
 KERNEL_ATTR_RW(min_input_interval);
 KERNEL_ATTR_RW(high_load_threshold);
-KERNEL_ATTR_RO(nr_goal);
+KERNEL_ATTR_RO(target_cpus);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
@@ -947,7 +945,7 @@ static struct attribute *intelli_plug_attrs[] = {
 	&down_lock_dur_attr.attr,
 	&min_input_interval_attr.attr,
 	&high_load_threshold_attr.attr,
-	&nr_goal_attr.attr,
+	&target_cpus_attr.attr,
 	NULL,
 };
 
