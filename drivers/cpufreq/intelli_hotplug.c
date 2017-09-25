@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	13
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -72,18 +72,9 @@ struct ip_cpu_info {
 };
 static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 
-/* Comment out whichever you aren't using */
-//#define INTELLI_USE_ATOMIC
-#define INTELLI_USE_SPINLOCK
-
 /* HotPlug Driver controls */
-#if defined(INTELLI_USE_ATOMIC)
-static atomic_t intelli_plug_active = ATOMIC_INIT(0);
-#elif defined(INTELLI_USE_SPINLOCK)
 static unsigned int intelli_plug_active = 0;
 static DEFINE_RWLOCK(ips_lock);
-#endif
-
 
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
@@ -452,11 +443,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 	}
 	mutex_unlock(&intellisleep_mutex);
 
-#if defined(INTELLI_USE_ATOMIC)
-	if (atomic_read(&intelli_plug_active) == 1) {
-#elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
-#endif
 		atomic_set(&from_boost, 0);
 		WRITE_ONCE(target_cpus, calculate_thread_stats());
 		mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
@@ -537,12 +524,9 @@ static void intelli_suspend(struct power_suspend * h)
 {
 	struct down_lock *dl;
 	unsigned int cpu;
-#if defined(INTELLI_USE_ATOMIC)
-	if (atomic_read(&intelli_plug_active) == 0)
-#elif defined(INTELLI_USE_SPINLOCK)
+
 	if (!intelliread())
 		return;
-#endif
 
 	cancel_delayed_work(&intelli_plug_work);
 	mutex_lock(&intellisleep_mutex);
@@ -561,12 +545,8 @@ static void intelli_resume(struct power_suspend * h)
 {
 	unsigned int cpu;
 
-#if defined(INTELLI_USE_ATOMIC)
-	if (atomic_read(&intelli_plug_active) == 0)
-#elif defined(INTELLI_USE_SPINLOCK)
 	if (!intelliread())
 		return;
-#endif
 
 	if (intelli_suspended == INTELLI_SUSPENDED);
 		intelli_suspended = INTELLI_AWAKE;
@@ -656,13 +636,9 @@ static int intelli_plug_start(void)
 err_dev:
 	destroy_workqueue(intelliplug_wq);
 err_out:
-#if defined(INTELLI_USE_ATOMIC)
-	atomic_set(&intelli_plug_active, 0);
-	wmb();
-#elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread())
 		intelliput();
-#endif
+
 	wake_unlock(&ipwlock);
 	return ret;
 }
@@ -690,17 +666,6 @@ static void intelli_plug_stop(void)
 static void intelli_plug_active_eval_fn(unsigned int status)
 {
 	int ret = 0;
-#if defined(INTELLI_USE_ATOMIC)
-	if (status == 1) {
-		ret = intelli_plug_start();
-		if (ret)
-			status = 0;
-	} else
-		intelli_plug_stop();
-
-	atomic_set(&intelli_plug_active, status);
-	wmb();
-#elif defined(INTELLI_USE_SPINLOCK)
 	if (status) {
 		ret = intelli_plug_start();
 		if (!ret)
@@ -712,7 +677,6 @@ static void intelli_plug_active_eval_fn(unsigned int status)
 
 	if (!status)
 		intelliput();
-#endif
 }
 
 #define show_one(object)				\
@@ -825,12 +789,7 @@ static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-#if defined(INTELLI_USE_ATOMIC)
-	return sprintf(buf, "%d\n",
-			atomic_read(&intelli_plug_active));
-#elif defined(INTELLI_USE_SPINLOCK)
 	return sprintf(buf, "%u\n", intelli_plug_active);
-#endif
 }
 
 static ssize_t store_intelli_plug_active(struct kobject *kobj,
@@ -848,11 +807,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 		input = 0;
 	if (input >= 1)
 		input = 1;
-#if defined(INTELLI_USE_ATOMIC)
-	if (input == atomic_read(&intelli_plug_active))
-#elif defined(INTELLI_USE_SPINLOCK)
 	if (input == intelli_plug_active)
-#endif
 		return count;
 
 	intelli_plug_active_eval_fn(input);
@@ -973,14 +928,7 @@ static int __init intelli_plug_init(void)
 
 static void __exit intelli_plug_exit(void)
 {
-#if defined(INTELLI_USE_ATOMIC)
-	if (atomic_read(&intelli_plug_active) == 1) {
-		intelli_plug_stop();
-		atomic_set(&intelli_plug_active, 0);
-	}
-#elif defined(INTELLI_USE_SPINLOCK)
 	if (intelliread()) {
-#endif
 		intelli_plug_stop();
 		intelliput();
 	}
