@@ -166,8 +166,6 @@ static unsigned long *nr_run_profiles[] = {
 	nr_run_thresholds_strict
 	};
 
-#if defined(INTELLI_USE_SPINLOCK)
-
 static unsigned int intelliread(void)
 {
 	unsigned int ret;
@@ -212,7 +210,6 @@ static void intelliput(void)
 	_intelliput();
 	intelli_lock(0);
 }
-#endif
 
 static bool intellinit;
 
