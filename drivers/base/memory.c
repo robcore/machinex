@@ -344,9 +344,9 @@ store_mem_state(struct device *dev,
 	}
 
 	switch (online_type) {
-+	case MMOP_ONLINE_KERNEL:
-+	case MMOP_ONLINE_MOVABLE:
-+	case MMOP_ONLINE_KEEP:
+	case MMOP_ONLINE_KERNEL:
+	case MMOP_ONLINE_MOVABLE:
+	case MMOP_ONLINE_KEEP:
 		/*
 		 * mem->online_type is not protected so there can be a
 		 * race here.  However, when racing online, the first
@@ -367,8 +367,11 @@ store_mem_state(struct device *dev,
 err:
 	unlock_device_hotplug();
 
-	if (ret)
+	if (ret < 0)
 		return ret;
+	if (ret)
+		return -EINVAL;
+
 	return count;
 }
 
