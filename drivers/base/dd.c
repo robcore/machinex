@@ -53,6 +53,7 @@ static DEFINE_MUTEX(deferred_probe_mutex);
 static LIST_HEAD(deferred_probe_pending_list);
 static LIST_HEAD(deferred_probe_active_list);
 static atomic_t deferred_trigger_count = ATOMIC_INIT(0);
+static bool initcalls_done;
 
 /*
  * In some cases, like suspend to RAM or hibernation, It might be reasonable
@@ -175,18 +176,7 @@ static void driver_deferred_probe_trigger(void)
 	 * Kick the re-probe thread.  It may already be scheduled, but it is
 	 * safe to kick it again.
 	 */
-	queue_work(deferred_wq, &deferred_probe_work);
-}
-
-static void enable_trigger_defer_cycle(void)
-{
-	driver_deferred_probe_enable = true;
-	driver_deferred_probe_trigger();
-	/*
-	 * Sort as many dependencies as possible before the next initcall
-	 * level
-	 */
-	flush_workqueue(deferred_wq);
+	schedule_work(&deferred_probe_work);
 }
 
 /**
