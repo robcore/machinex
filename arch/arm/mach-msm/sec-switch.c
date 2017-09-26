@@ -335,6 +335,7 @@ skip:
 	if (!first_chg_checked) {
 		first_chg_checked = true;
 		pr_info("First Charge Hacked!\n");
+	}
 
 	return 0;
 }
