@@ -26,8 +26,8 @@
 #include <linux/sysfs_helpers.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	13
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MAJOR_VERSION	14
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -304,7 +304,8 @@ static unsigned int calculate_thread_stats(void)
 
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
-		if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
+
+		if (likely(max_cpus_online == DEFAULT_MAX_CPUS_ONLINE))
 			current_profile = nr_run_profiles[full_mode_profile];
 		else if (max_cpus_online == 3)
 			current_profile = nr_run_profiles[5];
@@ -313,11 +314,9 @@ static unsigned int calculate_thread_stats(void)
 		else if (max_cpus_online == 1)
 			current_profile = nr_run_profiles[7];
 
-		
 		nr_threshold = current_profile[nr_cpus - 1];
 		nr_fshift = num_offline_cpus() + 1;
 		nr_run_hysteresis = DIV_ROUND_CLOSEST((max_cpus_online << 2), num_online_cpus());
-
 		bigshift = FSHIFT - nr_fshift;
 
 		if (nr_cpus >= nr_run_last)
@@ -340,10 +339,9 @@ static unsigned int calculate_thread_stats(void)
 		}
 	}
 
-
+	sanitize_min_max(nr_cpus, min_cpus_online, max_cpus_online);
 	nr_run_last = nr_cpus;
-	sanitize_min_max(nr_run_last, min_cpus_online, max_cpus_online);
-	return nr_run_last;
+	return nr_cpus;
 }
 
 static void update_per_cpu_stat(void)
