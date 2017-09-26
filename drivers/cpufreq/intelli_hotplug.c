@@ -378,8 +378,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		!hotplug_ready)
 		goto reschedule;
 
-	target = READ_ONCE(target_cpus);
-	clamp_val(target, min_cpus_online, max_cpus_online);
+	target = READ_ONCE(clamp_val(target, min_cpus_online, max_cpus_online));
 	primary = cpumask_first(cpu_online_mask);
 	if (!online_cpus)
 		report_current_cpus();
@@ -463,8 +462,7 @@ void intelli_boost(void)
 		return;
 
 	atomic_set(&from_boost, 1);
-	clamp_val(target_cpus, min_cpus_online, max_cpus_online);
-	WRITE_ONCE(target_cpus, cpus_boosted);
+	WRITE_ONCE(target_cpus, clamp_val(cpus_boosted, min_cpus_online, max_cpus_online));
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }
