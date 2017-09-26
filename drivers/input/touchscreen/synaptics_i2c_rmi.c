@@ -3311,8 +3311,8 @@ out:
 }
 
 bool is_charger_connected;
-static char *mx_charger_connected;
-module_param(mx_charger_connected, charp, 0444);
+static unsigned int mx_charger_connected;
+module_param(mx_charger_connected, uint, 0444);
 static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 				int ta_status)
 {
