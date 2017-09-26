@@ -26,7 +26,6 @@
 #include <linux/kernel.h>
 #include <linux/wait.h>
 #include <linux/atomic.h>
-#include <linux/workqueue.h>
 
 #define UEVENT_HELPER_PATH_LEN		256
 #define UEVENT_NUM_ENVP			32	/* number of env pointers */
@@ -57,8 +56,6 @@ enum kobject_action {
 	KOBJ_MOVE,
 	KOBJ_ONLINE,
 	KOBJ_OFFLINE,
-	KOBJ_BIND,
-	KOBJ_UNBIND,
 	KOBJ_MAX
 };
 
@@ -68,7 +65,7 @@ struct kobject {
 	struct kobject		*parent;
 	struct kset		*kset;
 	struct kobj_type	*ktype;
-	struct kernfs_node	*sd; /* sysfs directory entry */
+	struct kernfs_node	*sd;
 	struct kref		kref;
 	unsigned int state_initialized:1;
 	unsigned int state_in_sysfs:1;
@@ -215,7 +212,6 @@ extern struct kobject *mx_kobj;
 int kobject_uevent(struct kobject *kobj, enum kobject_action action);
 int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
 			char *envp[]);
-int kobject_synth_uevent(struct kobject *kobj, const char *buf, size_t count);
 
 __printf(2, 3)
 int add_uevent_var(struct kobj_uevent_env *env, const char *format, ...);
