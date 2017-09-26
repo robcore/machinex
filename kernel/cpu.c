@@ -1094,7 +1094,7 @@ void unlock_screen_off_cpus(void)
 	pr_info("Enabling non-Screen-off CPUs ...\n");
 
 	for_each_cpu(cpu, max_screen_off) {
-		(!is_cpu_allowed(cpu))
+		if (!is_cpu_allowed(cpu))
 			continue;
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {
