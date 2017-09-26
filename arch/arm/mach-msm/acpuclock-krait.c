@@ -538,6 +538,19 @@ module_param_named(
 	mclk, minus_vc, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
 
+static unsigned int is_cpu_freq(unsigned int rate)
+{
+	unsigned int i;
+
+	for (i = 0; drv.freq_table[i].speed.khz != 0; i++) {
+		if (drv.freq_table[i].use_for_scaling) {
+			if (drv.freq_table[i].speed.khz == rate)
+				break;
+		}
+	}
+	return drv.freq_table[i].speed.khz;
+}
+
 /* Set the CPU's clock rate and adjust the L2 rate, voltage and BW requests. */
 static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 				  enum setrate_reason reason)
@@ -547,10 +560,10 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	int tgt_l2_l;
 	enum src_id prev_l2_src = NUM_SRC_ID;
 	struct vdd_data vdd_data;
-	bool skip_regulators;
+	bool skip_regulators = false;
 	int rc = 0;
 
-	if (cpu > num_possible_cpus())
+	if (cpu > num_possible_cpus() || cpu < 0)
 		return -EINVAL;
 
 	if (reason == SETRATE_CPUFREQ || reason == SETRATE_HOTPLUG)
@@ -562,16 +575,21 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	if (rate == strt_acpu_s->khz)
 		goto out;
 
+	if (tgt->speed.khz == 0) {
+		rc = -EINVAL;
+		goto out;
+	}
+
+	if ((reason == SETRATE_CPUFREQ || reason == SETRATE_HOTPLUG) &&
+		rate == is_cpu_freq(rate))
+		rate = max_t(unsigned long, rate, limited_max_freq_thermal);
+
 	/* Find target frequency. */
 	for (tgt = drv.freq_table; tgt->speed.khz != 0; tgt++) {
 		if (tgt->speed.khz == rate) {
 			tgt_acpu_s = &tgt->speed;
 			break;
 		}
-	}
-	if (tgt->speed.khz == 0) {
-		rc = -EINVAL;
-		goto out;
 	}
 
 	/* Calculate voltage requirements for the current CPU. */
@@ -612,7 +630,8 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	 * its sleep set. This is needed to avoid voting for regulators with
 	 * sleeping APIs from an atomic context.
 	 */
-	skip_regulators = (reason == SETRATE_PC);
+	if (reason == SETRATE_PC);
+		skip_regulators = true;
 
 	/* Set the new CPU speed. */
 	set_speed(&drv.scalable[cpu], tgt_acpu_s, skip_regulators);

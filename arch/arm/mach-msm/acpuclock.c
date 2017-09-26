@@ -13,6 +13,7 @@
 #include <linux/cpu.h>
 #include <linux/smp.h>
 #include "acpuclock.h"
+#include <linux/cpufreq.h>
 #include <trace/events/power.h>
 
 static struct acpuclk_data *acpuclk_data;
@@ -37,7 +38,7 @@ EXPORT_SYMBOL(acpuclk_set_rate);
 
 uint32_t acpuclk_get_switch_time(void)
 {
-	if (!acpuclk_data)
+	if (!acpuclk_data || !acpuclk_data->switch_time_us)
 		return 0;
 	return acpuclk_data->switch_time_us;
 }

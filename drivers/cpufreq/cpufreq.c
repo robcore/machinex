@@ -909,6 +909,9 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 	return ret;
 }
 
+static int cpufreq_set_policy(struct cpufreq_policy *policy,
+				struct cpufreq_policy *new_policy);
+
 /**
  * cpufreq_per_cpu_attr_write() / store_##file_name() - sysfs write access
  */
@@ -2802,6 +2805,7 @@ void cpufreq_update_policy(unsigned int cpu)
 
 unlock:
 	up_write(&policy->rwsem);
+
 	cpufreq_cpu_put(policy);
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
@@ -2912,12 +2916,14 @@ static enum cpuhp_state hp_online;
 static int cpuhp_cpufreq_online(unsigned int cpu)
 {
 	cpufreq_online(cpu);
+
 	return 0;
 }
 
 static int cpuhp_cpufreq_offline(unsigned int cpu)
 {
 	cpufreq_offline(cpu);
+
 	return 0;
 }
 
@@ -3082,5 +3088,3 @@ static int __init cpufreq_core_init(void)
 }
 module_param(off, int, 0444);
 core_initcall(cpufreq_core_init);
-
-
