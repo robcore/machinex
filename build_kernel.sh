@@ -207,7 +207,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		read repadb
 		if [[ $repadb = "y" ]]; then
 			echo "ENABLE ADB"
-			ADBRETRY $OUTFOLDER
+			ADBRETRY /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
 		read objsave
@@ -227,7 +227,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		fi;
 	else
 		echo "ENABLE ADB"
-		ADBRETRY $OUTFOLDER
+		ADBRETRY /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
 		cd ~/machinex
 		WASHME
 		echo "cleanup finished"
@@ -298,7 +298,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "------------------------" >> ~/machinex/datetracker.txt
 	cp ~/machinex/out/vmlinux ~/machinex/robstuff/vmlinux;
 	echo "ENABLE ADB"
-	ADBRETRY $OUTFOLDER
+	ADBRETRY /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
 	cd ~/machinex
 	WASHME
 	echo "cleanup finished"
