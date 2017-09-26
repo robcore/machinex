@@ -325,7 +325,8 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 			}
 		}
 	}
-	previous_cable_type = cable_type;
+	if (likely(first_chg_checked))
+		previous_cable_type = cable_type;
 
 #endif
 skip:
