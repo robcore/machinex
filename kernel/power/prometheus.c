@@ -52,9 +52,9 @@ struct wake_lock prsynclock;
 static unsigned int sync_on_panel_suspend;
 /* For Samsung devices that use it, disable completely when poweroff charging */
 extern int poweroff_charging;
-#define GLOBAL_PM 0
+#define GLOBAL_PM 1
 static unsigned int use_global_suspend = GLOBAL_PM;
-#define IGNORE_WL 0
+#define IGNORE_WL 1
 static unsigned int ignore_wakelocks = IGNORE_WL;
 /* For optional charging check due to charger
  * disliking the wakelock skip. TODO Use the power_supply framework.
@@ -102,7 +102,7 @@ EXPORT_SYMBOL(unregister_power_suspend);
 
 static void deep_suspend(struct work_struct *work)
 {
-	suspend_state_t prometheus_deep_suspend = PM_SUSPEND_MEM;
+	suspend_state_t prometheus_deep_suspend = PM_SUSPEND_TO_IDLE;
 	int error;
 
 	error = pm_autosleep_lock();

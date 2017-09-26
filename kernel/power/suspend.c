@@ -395,7 +395,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	if (error)
 		goto Devices_early_resume;
 
-	if (state == PM_SUSPEND_TO_IDLE && pm_test_level != TEST_PLATFORM) {
+	if (state == PM_SUSPEND_TO_IDLE) {
 		s2idle_loop();
 		goto Platform_early_resume;
 	}
