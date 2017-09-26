@@ -1031,11 +1031,6 @@ static void msm_hs_set_termios(struct uart_port *uport,
 			}
 		if (!error_case)
 			spin_lock_irqsave(&uport->lock, flags);
-	} else {
-		spin_unlock_irqrestore(&uport->lock, flags);
-		pr_err("%s(): called with rx.dma_in_flight:%d\n",
-				__func__, msm_uport->rx.dma_in_flight);
-		spin_lock_irqsave(&uport->lock, flags);
 	}
 
 	/* Start Rx Transfer */
@@ -1642,7 +1637,7 @@ static void msm_hs_power(struct uart_port *port, unsigned int state,
 		msm_hs_request_clock_on(&msm_uport->uport);
 		break;
 	default:
-		pr_err("Unknown PM state %d\n", state);
+		break;
 	}
 }
 
@@ -1752,6 +1747,8 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 		return 0;  /* RXSTALE flush not complete - retry */
 	case CLK_REQ_OFF_RXSTALE_FLUSHED:
 		break;  /* continue */
+	case default:
+		break;
 	}
 
 	if (msm_uport->rx.flush != FLUSH_SHUTDOWN) {
@@ -1975,16 +1972,10 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	unsigned int data;
 	int ret = 0;
 
-	if(msm_uport->is_shutdown) {
-		printk(KERN_INFO "(msm_serial_hs) msm_hs_request_clock_on - uart shutdown, so return..\n");
-		return;
-	}
-
 	mutex_lock(&msm_uport->clk_mutex);
 	spin_lock_irqsave(&uport->lock, flags);
 
 	if (msm_uport->is_shutdown) {
-		pr_err("%s:Clock ON fail.UART port is closed\n", __func__);
 		spin_unlock_irqrestore(&uport->lock, flags);
 		mutex_unlock(&msm_uport->clk_mutex);
 		return;
