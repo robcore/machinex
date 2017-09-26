@@ -9,6 +9,8 @@
  *  any later version.
  */
 
+#include <linux/kernel.h>
+
 static __always_inline int read_into(int *container, int size, const char *buf, size_t count)
 {
 	int i, j, t, n;
@@ -45,17 +47,3 @@ static __always_inline int read_into(int *container, int size, const char *buf, 
 
 	return t;
 }
-
-static __always_inline void mxsanitizer(int val, int min, int max)
-{
-	if (val <= min)
-		val = min;
-	if (val >= max)
-		val = max;
-}
-
-#define sanitize_min_max(val, min, max)		\
-	if(val <= min)				\
-		val = min;			\
-	if(val >= max)				\
-		val = max;

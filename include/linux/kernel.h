@@ -743,6 +743,21 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  */
 #define clamp_val(val, lo, hi) clamp_t(typeof(val), val, lo, hi)
 
+/**
+ * This also does no typechecking, and is as simple as they come
+ * @val: input value
+ * @min: minimum allowable value
+ * @max: maximum allowable value
+ */
+#define sanitize_min_max(val, min, max)		\
+	if (min > max)			\
+		min = max;			\
+	if (max < min)			\
+		max = min;			\
+	if (val <= min)				\
+		val = min;			\
+	else if (val >= max)				\
+		val = max;			\
 
 /*
  * swap - swap value of @a and @b

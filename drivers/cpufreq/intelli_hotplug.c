@@ -320,7 +320,7 @@ static unsigned int calculate_thread_stats(void)
 
 		bigshift = FSHIFT - nr_fshift;
 
-		if (nr_run_last <= nr_cpus)
+		if (nr_cpus >= nr_run_last)
 			nr_threshold += nr_run_hysteresis;
 
 		nr_threshold <<= bigshift;
@@ -342,7 +342,8 @@ static unsigned int calculate_thread_stats(void)
 
 
 	nr_run_last = nr_cpus;
-	return 	clamp_val(nr_run_last, min_cpus_online, max_cpus_online);
+	sanitize_min_max(nr_run_last, min_cpus_online, max_cpus_online);
+	return nr_run_last;
 }
 
 static void update_per_cpu_stat(void)
@@ -379,7 +380,7 @@ static void cpu_up_down_work(struct work_struct *work)
 		goto reschedule;
 
 	target = READ_ONCE(target_cpus);
-	clamp_val(target, min_cpus_online, max_cpus_online);
+	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 	primary = cpumask_first(cpu_online_mask);
 	if (!online_cpus)
 		report_current_cpus();
@@ -463,7 +464,8 @@ void intelli_boost(void)
 		return;
 
 	atomic_set(&from_boost, 1);
-	WRITE_ONCE(target_cpus, clamp_val(cpus_boosted, min_cpus_online, max_cpus_online));
+	sanitize_min_max(cpus_boosted, min_cpus_online, max_cpus_online);
+	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }
@@ -683,13 +685,6 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
-#define show_one_clamped(object, min, max) \
-static ssize_t show_##object	 \
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf) \
-{															   \
-	return sprintf(buf, "%u\n", clamp_val(object, min, max));	   \
-}
-
 #define show_long(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
@@ -710,7 +705,7 @@ show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 show_one(high_load_threshold);
-show_one_clamped(target_cpus, min_cpus_online, max_cpus_online);
+show_one(target_cpus);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\

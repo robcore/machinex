@@ -370,6 +370,7 @@ EXPORT_SYMBOL(reapply_hard_limits);
 unsigned int check_cpufreq_hardlimit(unsigned int freq)
 {
 	unsigned int cpu;
+	bool need_check;
 	struct cpufreq_policy *policy;
 
 	if (!hardlimit_ready)
@@ -379,14 +380,19 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 	if (policy == NULL)
 		return freq;
 
-	if (!policy->curr_limit_min || !policy->curr_limit_max)
+	if (!policy->curr_limit_min || !policy->curr_limit_max) {
 		reapply_hard_limits(policy->cpu);
+		need_check = true;
+	}
 
-	/* Can't use this, it stifles cpuinfo.min/max.
-	if (limited_max_freq_thermal < policy->curr_limit_max)
-		(policy->curr_limit_max = limited_max_freq_thermal);*/
+	if (need_check) {
+		if (!policy->curr_limit_min || !policy->curr_limit_max)
+			need_check = false;
+			return freq;
+	}
 
-	return clamp_val(freq, policy->curr_limit_min, policy->curr_limit_max);
+	sanitize_min_max(freq, policy->curr_limit_min, policy->curr_limit_max);
+	return freq;
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
 #endif
@@ -767,9 +773,6 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		unsigned int min, unsigned int max)
 {
-	if (policy == NULL)
-		return;
-
 	min = check_cpufreq_hardlimit(min);
 	max = check_cpufreq_hardlimit(max);
 	if (policy->min < min)
@@ -830,9 +833,6 @@ static void cpufreq_hardlimit_suspend(struct power_suspend *h)
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 
-	if (policy == NULL)
-		return;
-
 	for_each_possible_cpu(policy->cpu) {
 		reapply_hard_limits(policy->cpu);
 		return;
@@ -845,9 +845,6 @@ static void cpufreq_hardlimit_resume(struct power_suspend *h)
 	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-
-	if (policy == NULL)
-		return;
 
 	for_each_possible_cpu(policy->cpu) {
 		reapply_hard_limits(policy->cpu);
@@ -2767,7 +2764,7 @@ void cpufreq_update_policy(unsigned int cpu)
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	struct cpufreq_policy new_policy;
 
-	if (policy == NULL || !policy)
+	if (!policy)
 		return;
 
 	down_write(&policy->rwsem);
