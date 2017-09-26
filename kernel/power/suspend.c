@@ -550,7 +550,7 @@ static int enter_state(suspend_state_t state)
 	if (suspendsync) {
 		pr_info("Syncing filesystems ... ");
 		sys_sync();
-		printk("done.\n");
+		pr_cont("done.\n");
 	}
 
 	pm_pr_dbg("Preparing system for sleep (%s)\n", mem_sleep_labels[state]);
