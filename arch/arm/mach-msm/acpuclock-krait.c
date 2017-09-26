@@ -548,7 +548,7 @@ static unsigned int is_cpu_freq(unsigned int rate)
 				break;
 		}
 	}
-	return drv.freq_table[i].speed.khz;
+	return drv.freq_table[i].speed.khz ? drv.freq_table[i].speed.khz : 0;
 }
 
 /* Set the CPU's clock rate and adjust the L2 rate, voltage and BW requests. */
@@ -575,11 +575,6 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	if (rate == strt_acpu_s->khz)
 		goto out;
 
-	if (tgt->speed.khz == 0) {
-		rc = -EINVAL;
-		goto out;
-	}
-
 	if ((reason == SETRATE_CPUFREQ || reason == SETRATE_HOTPLUG) &&
 		rate == is_cpu_freq(rate))
 		rate = max_t(unsigned long, rate, limited_max_freq_thermal);
@@ -590,6 +585,11 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 			tgt_acpu_s = &tgt->speed;
 			break;
 		}
+	}
+
+	if (!tgt->speed.khz) {
+		rc = -EINVAL;
+		goto out;
 	}
 
 	/* Calculate voltage requirements for the current CPU. */
