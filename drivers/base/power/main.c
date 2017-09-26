@@ -1810,22 +1810,14 @@ static bool pm_ops_is_empty(const struct dev_pm_ops *ops)
 void device_pm_check_callbacks(struct device *dev)
 {
 	spin_lock_irq(&dev->power.lock);
-	if (extra_callbacks_disabled)
-	 	dev->power.no_pm_callbacks =
-			(!dev->bus || pm_ops_is_empty(dev->bus->pm)) &&
-			(!dev->class || pm_ops_is_empty(dev->class->pm)) &&
-			(!dev->type || pm_ops_is_empty(dev->type->pm)) &&
-			(!dev->pm_domain || pm_ops_is_empty(&dev->pm_domain->ops)) &&
-			(!dev->driver || pm_ops_is_empty(dev->driver->pm));
-	else
-		dev->power.no_pm_callbacks =
-			(!dev->bus || (pm_ops_is_empty(dev->bus->pm) &&
-			 !dev->bus->suspend && !dev->bus->resume)) &&
-			(!dev->class || (pm_ops_is_empty(dev->class->pm) &&
-			 !dev->class->suspend && !dev->class->resume)) &&
-			(!dev->type || pm_ops_is_empty(dev->type->pm)) &&
-			(!dev->pm_domain || pm_ops_is_empty(&dev->pm_domain->ops)) &&
-			(!dev->driver || (pm_ops_is_empty(dev->driver->pm) &&
-			 !dev->driver->suspend && !dev->driver->resume));
+	dev->power.no_pm_callbacks =
+		(!dev->bus || (pm_ops_is_empty(dev->bus->pm) &&
+		 !dev->bus->suspend && !dev->bus->resume)) &&
+		(!dev->class || (pm_ops_is_empty(dev->class->pm) &&
+		 !dev->class->suspend && !dev->class->resume)) &&
+		(!dev->type || pm_ops_is_empty(dev->type->pm)) &&
+		(!dev->pm_domain || pm_ops_is_empty(&dev->pm_domain->ops)) &&
+		(!dev->driver || (pm_ops_is_empty(dev->driver->pm) &&
+		 !dev->driver->suspend && !dev->driver->resume));
 	spin_unlock_irq(&dev->power.lock);
 }

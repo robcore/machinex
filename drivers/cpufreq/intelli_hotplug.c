@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -355,8 +355,33 @@ static void update_per_cpu_stat(void)
 	}
 }
 
-static atomic_t from_boost = ATOMIC_INIT(0);
+static void do_override(void)
+{
+	unsigned int cpu = smp_processor_id();
+	int primary = cpumask_first(cpu_online_mask);
+	int ret;
 
+	if (!prometheus_override)
+		return;
+
+	if (thermal_core_controlled ||
+		!hotplug_ready)
+		return;
+
+	for_each_cpu_not(cpu, cpu_online_mask) {
+		if (cpu == primary || cpu_online(cpu) ||
+			!is_cpu_allowed(cpu))
+			continue;
+		if (cpu > nr_cpu_ids || cpu < 0 ||
+			thermal_core_controlled)
+			break;
+		ret = cpu_up(cpu);
+		if (ret)
+			pr_debug("Intelliplug - Unable to bring up cpu %u!\n", cpu);
+	}
+}
+
+static atomic_t from_boost = ATOMIC_INIT(0);
 static void cpu_up_down_work(struct work_struct *work)
 {
 	unsigned int cpu = smp_processor_id();
@@ -365,6 +390,10 @@ static void cpu_up_down_work(struct work_struct *work)
 	int target;
 	struct ip_cpu_info *l_ip_info;
 	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
+
+	if (unlikely(prometheus_override)) {
+		return;
+	}
 
 	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
@@ -432,6 +461,9 @@ reschedule:
 
 static void intelli_plug_work_fn(struct work_struct *work)
 {
+	if (unlikely(prometheus_override))
+		return;
+
 	mutex_lock(&intellisleep_mutex);
 	if (intelli_suspended) {
 		mutex_unlock(&intellisleep_mutex);
@@ -450,7 +482,8 @@ void intelli_boost(void)
 {
 	ktime_t delta, local_input_interval = ms_to_ktime(min_input_interval);
 
-	if (!intelliread() || !is_display_on() || unlikely(intellinit))
+	if (!intelliread() || !is_display_on() || unlikely(intellinit) ||
+		unlikely(prometheus_override))
 		return;
 
 	last_input = ktime_get();
@@ -466,6 +499,13 @@ void intelli_boost(void)
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
+}
+
+int intelli_suspend_booster(void)
+{
+	if (!intelliread() || unlikely(intellinit) || (unlikely(!prometheus_override)))
+		return;
+	do_override();
 }
 
 static void cycle_cpus(void)

@@ -106,5 +106,6 @@ bool prometheus_sec_jack(void);
 bool android_os_ws(void);
 
 extern bool prometheus_disabled_oom;
-
+extern bool prometheus_override;
+int intelli_suspend_booster(void);
 #endif
