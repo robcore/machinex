@@ -39,7 +39,7 @@
 extern bool hotplug_ready;
 static int limit_init;
 static int enabled;
-bool thermal_core_controlled;
+
 static struct msm_thermal_data msm_thermal_info = {
 	.sensor_id_one = 7,
 	.sensor_id_two = 8,
@@ -87,6 +87,15 @@ module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_
 
 static bool therm_freq_limited;
 static bool hotplug_check_needed;
+
+bool thermal_core_controlled(unsigned int cpu)
+{
+	if (core_control_enabled &&
+		(msm_thermal_info.core_control_mask & BIT(cpu)) &&
+		(cpus_offlined & BIT(cpu)))
+		return true;
+	return false;
+}
 
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
@@ -265,7 +274,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 		limited_max_freq_thermal = max_freq;
 		cpufreq_update_policy(cpu);
 	}
-		put_online_cpus();
+	put_online_cpus();
 
 }
 
@@ -346,7 +355,6 @@ static void __ref do_core_control(void)
 
 	if ((!core_control_enabled) || (intelli_init() ||
 		 !hotplug_ready || thermal_suspended)) {
-		thermal_core_controlled = false;
 		return;
 	}
 
@@ -370,11 +378,9 @@ static void __ref do_core_control(void)
 				continue;
 			ret = cpu_down(cpu);
 			if (ret)
-				thermal_core_controlled = false;
-			else
-				thermal_core_controlled = true;
-
-			cpus_offlined |= BIT(cpu);
+				pr_debug("cpu_down failed. you got problems\n");
+			if (is_cpu_allowed(cpu))
+				cpus_offlined |= BIT(cpu);
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
 			((cpu_thermal_one <= delta) &&
@@ -393,16 +399,9 @@ static void __ref do_core_control(void)
 			if (!is_cpu_allowed(cpu))
 				continue;
 			ret = cpu_up(cpu);
-			if (ret) {
-				thermal_core_controlled = true;
+			if (!ret)
 				pr_err("%s: Error %d online core %d\n",
 						KBUILD_MODNAME, ret, cpu);
-			} else {
-				thermal_core_controlled = false;
-				pr_debug("%s: Success %d online core %d\n",
-						KBUILD_MODNAME, ret, cpu);
-			}
-			break;
 		}
 	}
 	mutex_unlock(&core_control_mutex);
@@ -451,16 +450,12 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		if (core_control_enabled &&
 			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
 			(cpus_offlined & BIT(cpu))) {
-			thermal_core_controlled = true;
 			pr_debug(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
 			return NOTIFY_BAD;
 		}
 	}
-
-	thermal_core_controlled = false;
-
 	return NOTIFY_OK;
 }
 
@@ -566,15 +561,9 @@ static int __ref update_offline_cores(int val)
 		if (!cpu_online(cpu))
 			continue;
 		ret = cpu_down(cpu);
-		if (ret) {
-			thermal_core_controlled = false;
+		if (ret)
 			pr_err("%s: Unable to offline cpu%d\n",
 				KBUILD_MODNAME, cpu);
-		} else {
-			thermal_core_controlled = true;
-			pr_debug("%s: Thermal Offlined CPU%d\n",
-				KBUILD_MODNAME, cpu);
-		}
 	}
 	return ret;
 }

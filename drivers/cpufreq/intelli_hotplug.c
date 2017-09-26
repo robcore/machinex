@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -286,11 +286,11 @@ static int measure_freqs(void)
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (cpufreq_generic_get(cpu) < high_load_threshold)
-			continue;
-		else if (cpufreq_generic_get(cpu) >=
+		if (cpufreq_quick_get(cpu) >=
 			high_load_threshold)
 			freq_load += 1;
+		else
+			continue; 
 	}
 	put_online_cpus();
 	return freq_load;
@@ -302,17 +302,17 @@ static unsigned int calculate_thread_stats(void)
 	unsigned long *current_profile;
 	unsigned int intellicounter = 1;
 
+	if (likely(max_cpus_online == DEFAULT_MAX_CPUS_ONLINE))
+		current_profile = nr_run_profiles[full_mode_profile];
+	else if (max_cpus_online == 3)
+		current_profile = nr_run_profiles[5];
+	else if (max_cpus_online == 2)
+		current_profile = nr_run_profiles[6];
+	else if (max_cpus_online == 1)
+		current_profile = nr_run_profiles[7];
+
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
-
-		if (likely(max_cpus_online == DEFAULT_MAX_CPUS_ONLINE))
-			current_profile = nr_run_profiles[full_mode_profile];
-		else if (max_cpus_online == 3)
-			current_profile = nr_run_profiles[5];
-		else if (max_cpus_online == 2)
-			current_profile = nr_run_profiles[6];
-		else if (max_cpus_online == 1)
-			current_profile = nr_run_profiles[7];
 
 		nr_threshold = current_profile[nr_cpus - 1];
 		nr_fshift = num_offline_cpus() + 1;
@@ -364,16 +364,15 @@ static void do_override(void)
 	if (!prometheus_override)
 		return;
 
-	if (thermal_core_controlled ||
-		!hotplug_ready)
+	if (!hotplug_ready)
 		return;
 
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == primary || cpu_online(cpu) ||
-			!is_cpu_allowed(cpu))
+			!is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
 			continue;
-		if (cpu > nr_cpu_ids || cpu < 0 ||
-			thermal_core_controlled)
+		if (cpu > nr_cpu_ids || cpu < 0)
 			break;
 		ret = cpu_up(cpu);
 		if (ret)
@@ -402,8 +401,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	}
 	mutex_unlock(&intellisleep_mutex);
 
-	if (thermal_core_controlled ||
-		!hotplug_ready)
+	if (!hotplug_ready)
 		goto reschedule;
 
 	target = READ_ONCE(target_cpus);
@@ -425,11 +423,11 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 		update_per_cpu_stat();
 		for_each_online_cpu(cpu) {
-			if (cpu == primary || cpu_is_offline(cpu))
-				continue;
-			if (cpu > nr_cpu_ids || cpu < 0 ||
-				thermal_core_controlled ||
+			if (cpu == primary || cpu_is_offline(cpu) ||
+				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
+				continue;
+			if (cpu > nr_cpu_ids || cpu < 0)
 				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) / num_online_cpus();
@@ -443,10 +441,10 @@ static void cpu_up_down_work(struct work_struct *work)
 	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == primary || cpu_online(cpu) ||
-				!is_cpu_allowed(cpu))
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
 				continue;
-			if (cpu > nr_cpu_ids || cpu < 0 ||
-				thermal_core_controlled)
+			if (cpu > nr_cpu_ids || cpu < 0)
 				break;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
@@ -520,7 +518,8 @@ static void cycle_cpus(void)
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == optimus || !is_cpu_allowed(cpu))
+		if (cpu == optimus || !is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
 			continue;
 		if (!cpu_up(cpu))
 			force_down_lock(cpu);
@@ -546,7 +545,8 @@ static void recycle_cpus(void)
 		cpu_down(cpu);
 	}
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == optimus || !is_cpu_allowed(cpu))
+		if (cpu == optimus || !is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
 			continue;
 		if (!cpu_up(cpu)) {
 			if (!check_down_lock(cpu))
