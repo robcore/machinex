@@ -91,7 +91,7 @@ static struct drv_data {
 
 bool hotplug_ready;
 
-static unsigned long acpuclk_krait_get_rate(int cpu)
+static unsigned long acpuclk_krait_get_rate(unsigned int cpu)
 {
 	return drv.scalable[cpu].cur_speed->khz;
 }
@@ -316,7 +316,7 @@ struct vdd_data {
 };
 
 /* Apply any per-cpu voltage increases. */
-static int increase_vdd(int cpu, struct vdd_data *data,
+static int increase_vdd(unsigned int cpu, struct vdd_data *data,
 			enum setrate_reason reason)
 {
 	struct scalable *sc = &drv.scalable[cpu];
@@ -386,7 +386,7 @@ static int increase_vdd(int cpu, struct vdd_data *data,
 }
 
 /* Apply any per-cpu voltage decreases. */
-static void decrease_vdd(int cpu, struct vdd_data *data,
+static void decrease_vdd(unsigned int cpu, struct vdd_data *data,
 			 enum setrate_reason reason)
 {
 	struct scalable *sc = &drv.scalable[cpu];
@@ -539,7 +539,7 @@ module_param_named(
 );
 
 /* Set the CPU's clock rate and adjust the L2 rate, voltage and BW requests. */
-static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
+static int acpuclk_krait_set_rate(unsigned int cpu, unsigned long rate,
 				  enum setrate_reason reason)
 {
 	const struct core_speed *strt_acpu_s, *tgt_acpu_s;
@@ -891,7 +891,7 @@ static bool speed_equal(const struct core_speed *s1,
 		s1->pll_l_val == s2->pll_l_val);
 }
 
-static const struct acpu_level *find_cur_acpu_level(int cpu)
+static const struct acpu_level *find_cur_acpu_level(unsigned int cpu)
 {
 	struct scalable *sc = &drv.scalable[cpu];
 	const struct acpu_level *l;
@@ -928,7 +928,7 @@ static const struct acpu_level *find_min_acpu_level(void)
 	return NULL;
 }
 
-static int per_cpu_init(int cpu)
+static int per_cpu_init(unsigned int cpu)
 {
 	struct scalable *sc = &drv.scalable[cpu];
 	const struct acpu_level *acpu_level;
