@@ -241,54 +241,6 @@ static struct kobj_attribute prometheus_sync_attribute =
 		prometheus_sync_show,
 		prometheus_sync_store);
 
-static ssize_t global_suspend_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", use_global_suspend);
-}
-
-static ssize_t global_suspend_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int val;
-
-	sscanf(buf, "%u\n", &val);
-
-	sanitize_min_max(val, 0, 1);
-
-	use_global_suspend = val;
-	return count;
-}
-
-static struct kobj_attribute global_suspend_attribute =
-	__ATTR(global_suspend, 0644,
-		global_suspend_show,
-		global_suspend_store);
-
-static ssize_t ignore_wakelocks_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", ignore_wakelocks);
-}
-
-static ssize_t ignore_wakelocks_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int val;
-
-	sscanf(buf, "%u\n", &val);
-
-	sanitize_min_max(val, 0, 1);
-
-	ignore_wakelocks = val;
-	return count;
-}
-
-static struct kobj_attribute ignore_wakelocks_attribute =
-	__ATTR(ignore_wakelocks, 0644,
-		ignore_wakelocks_show,
-		ignore_wakelocks_store);
-
 static ssize_t prometheus_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -303,8 +255,6 @@ static struct kobj_attribute prometheus_version_attribute =
 static struct attribute *prometheus_attrs[] =
 {
 	&prometheus_sync_attribute.attr,
-	&global_suspend_attribute.attr,
-	&ignore_wakelocks_attribute.attr,
 	&prometheus_version_attribute.attr,
 	NULL,
 };
