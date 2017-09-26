@@ -238,12 +238,11 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 
 #ifdef CONFIG_CHARGER_MAX77693
 	/*  charger setting */
-	if (first_chg_checked) {
-		if (previous_cable_type == cable_type) {
-			pr_info("%s: SKIP cable setting\n", __func__);
-			goto skip;
-		}
-	}
+	if (!first_chg_checked && is_charger_connected &&
+		current_cable_type == POWER_SUPPLY_TYPE_BATTERY)
+		previous_cable_type = cable_type;
+	else if (previous_cable_type == cable_type)
+			 goto skip;
 
 	switch (cable_type) {
 	case CABLE_TYPE_NONE_MUIC:
@@ -328,13 +327,14 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 	}
 	previous_cable_type = cable_type;
 
-	if (!first_chg_checked)
-		first_chg_checked = true;
 #endif
 skip:
 #ifdef CONFIG_JACK_MON
 	jack_event_handler("charger", is_cable_attached);
 #endif
+	if (!first_chg_checked) {
+		first_chg_checked = true;
+		pr_info("First Charge Hacked!\n");
 
 	return 0;
 }

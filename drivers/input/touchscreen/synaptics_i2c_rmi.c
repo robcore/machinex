@@ -3310,6 +3310,9 @@ out:
 	return 0;
 }
 
+bool is_charger_connected;
+static char *mx_charger_connected;
+module_param(mx_charger_connected, charp, 0444);
 static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 				int ta_status)
 {
@@ -3324,10 +3327,15 @@ static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 		return;
 	}
 
-	if (ta_status == 0x01 || ta_status == 0x03)
+	if (ta_status == 0x01 || ta_status == 0x03) {
 		charger_connected |= CHARGER_CONNECTED;
-	else
+		is_charger_connected = true;
+	} else {
 		charger_connected &= CHARGER_DISCONNECTED;
+		is_charger_connected = false;
+	}
+
+	mx_charger_connected = charger_connected;
 
 	retval = synaptics_rmi4_i2c_write(rmi4_data,
 		rmi4_data->f01_ctrl_base_addr,

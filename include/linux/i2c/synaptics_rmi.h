@@ -28,6 +28,8 @@
 #define OCTA_PANEL_REVISION_40	0x01
 #define OCTA_PANEL_REVISION_34	0x00
 
+extern bool is_charger_connected;
+
 struct synaptics_rmi_f1a_button_map {
 	unsigned char nbuttons;
 	unsigned char *map;
