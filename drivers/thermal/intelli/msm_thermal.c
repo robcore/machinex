@@ -363,26 +363,25 @@ static void __ref do_core_control(void)
 		 cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC ||
 		 cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC ||
 		 cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
-		for (cpu = num_possible_cpus(); cpu > 0; cpu--) {
+		for (cpu = num_possible_cpus(); cpu > 1; cpu--) {
 			if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
 				continue;
 			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
 				continue;
 			ret = cpu_down(cpu);
-			if (ret) {
+			if (ret)
 				thermal_core_controlled = false;
-			} else {
+			else
 				thermal_core_controlled = true;
-			}
+
 			cpus_offlined |= BIT(cpu);
-			break;
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
 			((cpu_thermal_one <= delta) &&
 			   (cpu_thermal_two <= delta) &&
 			   (cpu_thermal_three <= delta) &&
 			   (cpu_thermal_four <= delta))) {
-		for (cpu = 0; cpu < num_possible_cpus(); cpu++) {
+		for (cpu = 1; cpu < num_possible_cpus(); cpu++) {
 			if (!(cpus_offlined & BIT(cpu)))
 				continue;
 			cpus_offlined &= ~BIT(cpu);
