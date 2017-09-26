@@ -757,7 +757,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 	if (val <= min)				\
 		val = min;			\
 	else if (val >= max)				\
-		val = max;			\
+		val = max;
 
 /*
  * swap - swap value of @a and @b
