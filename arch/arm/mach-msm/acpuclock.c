@@ -18,7 +18,7 @@
 
 static struct acpuclk_data *acpuclk_data;
 
-unsigned long acpuclk_get_rate(int cpu)
+unsigned long acpuclk_get_rate(unsigned int cpu)
 {
 	if (!acpuclk_data || !acpuclk_data->get_rate)
 		return 0;
