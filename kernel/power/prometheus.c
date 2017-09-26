@@ -94,11 +94,8 @@ static void power_suspend(struct work_struct *work)
 	int error;
 	unsigned int nrwl;
 
-	prometheus_override = true;
-
 	if (poweroff_charging || (unlikely(system_state != SYSTEM_RUNNING)) ||
 		(unlikely(system_is_restarting()))) {
-		prometheus_override = false;
 		pr_info("[PROMETHEUS] Cannot Suspend! Unsupported System"
 				"State!\n");
 		return;
@@ -107,6 +104,7 @@ static void power_suspend(struct work_struct *work)
 	cancel_work_sync(&power_resume_work);
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
+	prometheus_override = true;
 	spin_lock_irqsave(&ps_state_lock, irqflags);
 	if (ps_state == POWER_SUSPEND_INACTIVE) {
 		spin_unlock_irqrestore(&ps_state_lock, irqflags);
