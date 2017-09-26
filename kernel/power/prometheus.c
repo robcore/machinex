@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 5
-#define VERSION_MIN 4
+#define VERSION_MIN 5
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -39,7 +39,7 @@ static LIST_HEAD(power_suspend_handlers);
 static struct workqueue_struct *pwrsup_wq;
 struct work_struct power_suspend_work;
 struct work_struct power_resume_work;
-struct delayed_work deep_suspend_work;
+struct delayed_work kick_suspend_work;
 static void power_suspend(struct work_struct *work);
 static void power_resume(struct work_struct *work);
 /* Yank555.lu : Current powersuspend ps_state (screen on / off) */
@@ -100,9 +100,9 @@ void unregister_power_suspend(struct power_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_power_suspend);
 
-static void deep_suspend(struct work_struct *work)
+static void kick_suspend(struct work_struct *work)
 {
-	suspend_state_t prometheus_deep_suspend = PM_SUSPEND_TO_IDLE;
+	suspend_state_t prometheus_kick_suspend = PM_SUSPEND_TO_IDLE;
 	int error;
 
 	error = pm_autosleep_lock();
@@ -114,7 +114,7 @@ static void deep_suspend(struct work_struct *work)
 	}
 
 	prometheus_control_callbacks(true);
-	pm_suspend(prometheus_deep_suspend);
+	pm_suspend(prometheus_kick_suspend);
 	prometheus_control_callbacks(false);
 out:
 	pm_autosleep_unlock();
@@ -192,7 +192,7 @@ static void power_suspend(struct work_struct *work)
 skip_check:
 		pr_info("[PROMETHEUS] Wakelocks Safely ignored, Calling PM Suspend.\n");
 		//prometheus_control_oom(true);
-		queue_delayed_work_on(0, pwrsup_wq, &deep_suspend_work, msecs_to_jiffies(1000));
+		queue_delayed_work_on(0, pwrsup_wq, &kick_suspend_work, msecs_to_jiffies(1000));
 		//prometheus_control_oom(false);
 		mutex_unlock(&prometheus_mtx);
 }
@@ -207,7 +207,7 @@ static void power_resume(struct work_struct *work)
 				"State!\n");
 		return;
 	}
-	cancel_delayed_work_sync(&deep_suspend_work);
+	cancel_delayed_work_sync(&kick_suspend_work);
 	cancel_work_sync(&power_suspend_work);
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
@@ -399,7 +399,7 @@ static int prometheus_init(void)
 	wake_lock_init(&prsynclock, WAKE_LOCK_SUSPEND, "prometheus_synclock");
 
 	INIT_WORK(&power_suspend_work, power_suspend);
-	INIT_DELAYED_WORK(&deep_suspend_work, deep_suspend);
+	INIT_DELAYED_WORK(&kick_suspend_work, kick_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
 
 	return 0;
@@ -410,7 +410,7 @@ static void prometheus_exit(void)
 {
 	flush_work(&power_suspend_work);
 	flush_work(&power_resume_work);
-	flush_delayed_work(&deep_suspend_work);
+	flush_delayed_work(&kick_suspend_work);
 	destroy_workqueue(pwrsup_wq);
 	mutex_destroy(&prometheus_mtx);
 
