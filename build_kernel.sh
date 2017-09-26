@@ -107,23 +107,24 @@ adbcountdown
 if [ "$ADBTYPE" = "usb:5-4" ]; then
 	if [ "$ONLINE" == "recovery" ]; then #if we are in recovery
 		echo "recovery connected"
-		adbcountdown
 		echo "pushing $1"
 		adb push $1 /external_sd;
 		echo "push complete"
 		adb kill-server
 	else
 		echo "connected"
-		adbcountdown
 		echo "pushing $1"
-		adb shell su -c "input keyevent KEYCODE_USER"
+		adb shell su -c "input keyevent KEYCODE_WAKEUP"
+		sleep 1
+		adb shell su -c "input touchscreen swipe 930 880 930 380"
+		sleep 1
 		adb push $1 /storage/extSdCard;
 		echo "push complete, booting recovery"
-		adb shell su -c "input keyevent KEYCODE_USER"
+		adb shell su -c "input keyevent KEYCODE_WAKEUP"
 		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
-	fi
+	fi;
 else
 	adb kill-server
 	adbcountdown
@@ -133,13 +134,13 @@ else
 	adb push $1 /storage/extSdCard;
 	last=$?
 	if [ $last -eq 0 ]; then
-		echo "Pushed $1.zip! Disconnecting wireless connection"
+		echo "Pushed $1! Disconnecting wireless connection"
 	else
 		echo "Failed!"
 	fi
 	adb disconnect
 	adb kill-server
-fi
+fi;
 }
 
 function NORMAL()
