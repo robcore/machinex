@@ -109,7 +109,7 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 		echo "recovery connected"
 		adbcountdown
 		echo "pushing $1"
-		adb push $1.zip /external_sd;
+		adb push $1 /external_sd;
 		echo "push complete"
 		adb kill-server
 	else
@@ -117,7 +117,7 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 		adbcountdown
 		echo "pushing $1"
 		adb shell su -c "input keyevent KEYCODE_USER"
-		adb push $1.zip /storage/extSdCard;
+		adb push $1 /storage/extSdCard;
 		echo "push complete, booting recovery"
 		adb shell su -c "input keyevent KEYCODE_USER"
 		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
@@ -130,7 +130,7 @@ else
 	adb connect 192.168.1.111
 	adbcountdown
 	echo "Trying Wireless"
-	adb push $1.zip /storage/extSdCard;
+	adb push $1 /storage/extSdCard;
 	last=$?
 	if [ $last -eq 0 ]; then
 		echo "Pushed $1.zip! Disconnecting wireless connection"
@@ -207,7 +207,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		read repadb
 		if [[ $repadb = "y" ]]; then
 			echo "ENABLE ADB"
-			ADBRETRY /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+		ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+		ADBRETRY $ADBPATH
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
 		read objsave
@@ -227,7 +228,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		fi;
 	else
 		echo "ENABLE ADB"
-		ADBRETRY /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+		ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+		ADBRETRY $ADBPATH
 		cd ~/machinex
 		WASHME
 		echo "cleanup finished"
@@ -298,7 +300,8 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "------------------------" >> ~/machinex/datetracker.txt
 	cp ~/machinex/out/vmlinux ~/machinex/robstuff/vmlinux;
 	echo "ENABLE ADB"
-	ADBRETRY /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+	ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+	ADBRETRY $ADBPATH
 	cd ~/machinex
 	WASHME
 	echo "cleanup finished"
