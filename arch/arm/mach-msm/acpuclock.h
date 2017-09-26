@@ -42,7 +42,7 @@ struct acpuclk_pdata {
  * struct acpuclk_data - Function pointers and data for function implementations
  */
 struct acpuclk_data {
-	unsigned long (*get_rate)(int cpu);
+	unsigned long (*get_rate)(unsigned int cpu);
 	int (*set_rate)(unsigned int cpu, unsigned long rate, enum setrate_reason);
 	uint32_t switch_time_us;
 	unsigned long power_collapse_khz;
@@ -53,7 +53,7 @@ struct acpuclk_data {
  * acpulock_get_rate() - Get a CPU's clock rate in KHz
  * @cpu: CPU to query the rate of
  */
-unsigned long acpuclk_get_rate(int cpu);
+unsigned long acpuclk_get_rate(unsigned int cpu);
 
 /**
  * acpuclk_set_rate() - Set a CPU's clock rate
