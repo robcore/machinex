@@ -1747,7 +1747,7 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 		return 0;  /* RXSTALE flush not complete - retry */
 	case CLK_REQ_OFF_RXSTALE_FLUSHED:
 		break;  /* continue */
-	case default:
+	default:
 		break;
 	}
 
