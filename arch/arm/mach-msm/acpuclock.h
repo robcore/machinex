@@ -43,7 +43,7 @@ struct acpuclk_pdata {
  */
 struct acpuclk_data {
 	unsigned long (*get_rate)(int cpu);
-	int (*set_rate)(int cpu, unsigned long rate, enum setrate_reason);
+	int (*set_rate)(unsigned int cpu, unsigned long rate, enum setrate_reason);
 	uint32_t switch_time_us;
 	unsigned long power_collapse_khz;
 	unsigned long wait_for_irq_khz;
@@ -63,7 +63,7 @@ unsigned long acpuclk_get_rate(int cpu);
  *
  * Returns 0 for success.
  */
-int acpuclk_set_rate(int cpu, unsigned long rate, enum setrate_reason);
+int acpuclk_set_rate(unsigned int cpu, unsigned long rate, enum setrate_reason);
 
 /**
  * acpuclk_get_switch_time() - Query estimated time in us for a CPU rate switch
