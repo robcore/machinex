@@ -340,9 +340,9 @@ static unsigned int calculate_thread_stats(void)
 		}
 	}
 
-	clamp_val(nr_cpus, min_cpus_online, max_cpus_online);
+
 	nr_run_last = nr_cpus;
-	return nr_cpus;
+	return 	clamp_val(nr_run_last, min_cpus_online, max_cpus_online);
 }
 
 static void update_per_cpu_stat(void)
@@ -378,7 +378,8 @@ static void cpu_up_down_work(struct work_struct *work)
 		!hotplug_ready)
 		goto reschedule;
 
-	target = READ_ONCE(clamp_val(target, min_cpus_online, max_cpus_online));
+	target = READ_ONCE(target_cpus);
+	clamp_val(target, min_cpus_online, max_cpus_online);
 	primary = cpumask_first(cpu_online_mask);
 	if (!online_cpus)
 		report_current_cpus();
