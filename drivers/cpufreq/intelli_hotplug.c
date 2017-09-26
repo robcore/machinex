@@ -501,7 +501,7 @@ void intelli_boost(void)
 	last_boost_time = ktime_get();
 }
 
-int intelli_suspend_booster(void)
+void intelli_suspend_booster(void)
 {
 	if (!intelliread() || unlikely(intellinit) || (unlikely(!prometheus_override)))
 		return;
