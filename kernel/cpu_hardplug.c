@@ -65,7 +65,7 @@ static DEFINE_MUTEX(hardplug_mtx);
 bool is_cpu_allowed(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready)
+		!hotplug_ready || cpu == 0)
 		return true;
 
 	switch (cpu) {
@@ -83,7 +83,6 @@ bool is_cpu_allowed(unsigned int cpu)
 		if (!cpu3_allowed)
 			return false;
 		break;
-
 	default:
 		break;
 	}
