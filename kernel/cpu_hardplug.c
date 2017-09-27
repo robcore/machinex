@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 1
+#define HARDPLUG_MINOR 2
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -65,12 +65,10 @@ static DEFINE_MUTEX(hardplug_mtx);
 bool is_cpu_allowed(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0)
+		!hotplug_ready || cpu == 0 || !cpu_hardplugged(cpu))
 		return true;
 
 	switch (cpu) {
-	case 0:
-		return true;
 	case 1:
 		if (!cpu1_allowed)
 			return false;
@@ -93,25 +91,43 @@ bool is_cpu_allowed(unsigned int cpu)
 static void hardplug_cpu(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready)
+		!hotplug_ready || cpu == 0)
 		return;
+
+	if (cpu_online(cpu) && cpu_hardplugged(cpu))
+		set_cpu_hardplugged(cpu, false);
 
 	switch (cpu) {
-	case 0:
-		return;
 	case 1:
-		if (!cpu1_allowed && cpu_online(1))
-			cpu_down(1);
+		if (!cpu1_allowed &&
+			!cpu_hardplugged(1)) {
+			if (cpu_online(1)) {
+				if (!cpu_down(1))
+					set_cpu_hardplugged(1, true);
+			} else
+				set_cpu_hardplugged(1, true);
+		}
 		break;
 	case 2:
-		if (!cpu2_allowed && cpu_online(2))
-			cpu_down(2);
+		if (!cpu2_allowed &&
+			!cpu_hardplugged(2)) {
+			if (cpu_online(2)) {
+				if (!cpu_down(2))
+					set_cpu_hardplugged(2, true);
+			} else
+				set_cpu_hardplugged(2, true);
+		}
 		break;
 	case 3:
-		if (!cpu3_allowed && cpu_online(3))
-			cpu_down(3);
+		if (!cpu3_allowed &&
+			!cpu_hardplugged(3)) {
+			if (cpu_online(3)) {
+				if (!cpu_down(3))
+					set_cpu_hardplugged(3, true);
+			} else
+				set_cpu_hardplugged(3, true);
+		}
 		break;
-
 	default:
 		break;
 	}
@@ -132,21 +148,11 @@ EXPORT_SYMBOL(hardplug_all_cpus);
 
 unsigned int nr_hardplugged_cpus(void)
 {
-	unsigned int cpu;
-	unsigned int hardplugged_cpus = 0;
-
 	if (!is_display_on() || !limit_screen_on_cpus ||
 		!hotplug_ready)
-		return hardplugged_cpus;
+		return 0;
 
-	for_each_nonboot_cpu(cpu) {
-		if (!is_cpu_allowed(cpu))
-			hardplugged_cpus += 1;
-	}
-
-	sanitize_min_max(hardplugged_cpus, 0, 3);
-
-	return hardplugged_cpus;
+	return num_hardplugged_cpus();
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
@@ -195,12 +201,15 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (limit_screen_on_cpus == val)
+	if (val == limit_screen_on_cpus)
 		return count;
 
 	limit_screen_on_cpus = val;
 
-	hardplug_all_cpus();
+	if (limit_screen_on_cpus == 0)
+		reset_cpu_hardplugged_mask();
+	else
+		hardplug_all_cpus();
 
 	return count;
 }
@@ -226,12 +235,15 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu1_allowed == val)
+	if (val == cpu1_allowed)
 		return count;
 
 	cpu1_allowed = val;
 
-	hardplug_cpu(1);
+	if (cpu1_allowed == 0)
+		set_cpu_hardplugged(1, false);
+	else
+		hardplug_cpu(1);
 
 	return count;
 }
@@ -256,12 +268,15 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu2_allowed == val)
+	if (val == cpu2_allowed)
 		return count;
 
 	cpu2_allowed = val;
 
-	hardplug_cpu(2);
+	if (cpu2_allowed == 0)
+		set_cpu_hardplugged(2, false);
+	else
+		hardplug_cpu(2);
 
 	return count;
 }
@@ -286,12 +301,15 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu3_allowed == val)
+	if (val == cpu3_allowed)
 		return count;
 
 	cpu3_allowed = val;
 
-	hardplug_cpu(3);
+	if (cpu3_allowed == 0)
+		set_cpu_hardplugged(3, false);
+	else
+		hardplug_cpu(3);
 
 	return count;
 }
@@ -316,7 +334,7 @@ static ssize_t limit_screen_off_cpus_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (limit_screen_off_cpus == val)
+	if (val == limit_screen_off_cpus)
 		return count;
 
 	limit_screen_off_cpus = val;
@@ -343,7 +361,7 @@ static ssize_t cpu1_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu1_allowed_susp == val)
+	if (val == cpu1_allowed_susp)
 		return count;
 
 	cpu1_allowed_susp = val;
@@ -370,7 +388,7 @@ static ssize_t cpu2_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu2_allowed_susp == val)
+	if (val == cpu2_allowed_susp)
 		return count;
 
 	cpu2_allowed_susp = val;
@@ -397,7 +415,7 @@ static ssize_t cpu3_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu3_allowed_susp == val)
+	if (val == cpu3_allowed_susp)
 		return count;
 
 	cpu3_allowed_susp = val;

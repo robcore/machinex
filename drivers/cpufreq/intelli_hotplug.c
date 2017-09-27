@@ -383,7 +383,7 @@ static void do_override(void)
 	cpu = smp_processor_id();
 	primary = cpumask_first(cpu_online_mask);
 
-	for_each_cpu_not(cpu, cpu_online_mask) {
+	for_each_offline_cpu(cpu) {
 		if (cpu == primary || cpu_online(cpu) ||
 			!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
