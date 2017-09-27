@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -286,7 +286,7 @@ static int measure_freqs(void)
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (cpufreq_quick_get(cpu) >=
+		if (cpufreq_generic_get(cpu) >=
 			high_load_threshold)
 			freq_load += 1;
 		else
@@ -296,20 +296,25 @@ static int measure_freqs(void)
 	return freq_load;
 }
 
+static unsigned long *get_current_profile(void)
+{
+	unsigned long *retrieved_profile;
+	if (likely(max_cpus_online == DEFAULT_MAX_CPUS_ONLINE))
+		retrieved_profile = nr_run_profiles[full_mode_profile];
+	else if (max_cpus_online == 3)
+		retrieved_profile = nr_run_profiles[5];
+	else if (max_cpus_online == 2)
+		retrieved_profile = nr_run_profiles[6];
+	else if (max_cpus_online == 1)
+		retrieved_profile = nr_run_profiles[7];
+	return retrieved_profile;
+}
 static unsigned int calculate_thread_stats(void)
 {
 	unsigned int nr_cpus;
-	unsigned long *current_profile;
 	unsigned int intellicounter = 1;
+	unsigned long *current_profile = get_current_profile();
 
-	if (likely(max_cpus_online == DEFAULT_MAX_CPUS_ONLINE))
-		current_profile = nr_run_profiles[full_mode_profile];
-	else if (max_cpus_online == 3)
-		current_profile = nr_run_profiles[5];
-	else if (max_cpus_online == 2)
-		current_profile = nr_run_profiles[6];
-	else if (max_cpus_online == 1)
-		current_profile = nr_run_profiles[7];
 
 	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
