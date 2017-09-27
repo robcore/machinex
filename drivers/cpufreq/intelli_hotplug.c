@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -370,8 +370,8 @@ static void update_per_cpu_stat(void)
 
 static void do_override(void)
 {
-	unsigned int cpu = smp_processor_id();
-	int primary = cpumask_first(cpu_online_mask);
+	unsigned int cpu;
+	int primary;
 	int ret;
 
 	if (!prometheus_override)
@@ -379,6 +379,9 @@ static void do_override(void)
 
 	if (!hotplug_ready)
 		return;
+
+	cpu = smp_processor_id();
+	primary = cpumask_first(cpu_online_mask);
 
 	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == primary || cpu_online(cpu) ||
@@ -396,12 +399,12 @@ static void do_override(void)
 static atomic_t from_boost = ATOMIC_INIT(0);
 static void cpu_up_down_work(struct work_struct *work)
 {
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
 	int primary;
 	long l_nr_threshold;
 	int target;
 	struct ip_cpu_info *l_ip_info;
-	ktime_t now, delta, local_boost = ms_to_ktime(boost_lock_duration);
+	ktime_t delta;
 
 	if (unlikely(prometheus_override)) {
 		return;
@@ -417,6 +420,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (!hotplug_ready)
 		goto reschedule;
 
+	cpu = smp_processor_id();
 	target = READ_ONCE(target_cpus);
 	sanitize_min_max(target, min_cpus_online, real_max_online());
 	primary = cpumask_first(cpu_online_mask);
@@ -429,9 +433,8 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (online_cpus > min_cpus_online && target < online_cpus) {
 		if ((atomic_read(&from_boost) == 1) && 
 			online_cpus == cpus_boosted) {
-			now = ktime_get();
-			delta = ktime_sub(now, last_input);
-			if (ktime_compare(delta, local_boost) <= 0)
+			delta = ktime_sub(ktime_get(), last_input);
+			if (ktime_compare(delta, ms_to_ktime(boost_lock_duration)) <= 0)
 				goto reschedule;
 		}
 		update_per_cpu_stat();
@@ -491,7 +494,7 @@ static void intelli_plug_work_fn(struct work_struct *work)
 
 void intelli_boost(void)
 {
-	ktime_t delta, local_input_interval = ms_to_ktime(min_input_interval);
+	ktime_t delta;
 
 	if (!intelliread() || !is_display_on() || unlikely(intellinit) ||
 		unlikely(prometheus_override))
@@ -499,8 +502,8 @@ void intelli_boost(void)
 
 	last_input = ktime_get();
 	delta = ktime_sub(last_input, last_boost_time);
-
-	if ((ktime_compare(delta, local_input_interval)  < 0) ||
+	
+	if ((ktime_compare(delta, ms_to_ktime(min_input_interval))  < 0) ||
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
