@@ -139,8 +139,9 @@ unsigned int nr_hardplugged_cpus(void)
 	unsigned int cpu;
 	unsigned int hardplugged_cpus = 0;
 
-	if (!limit_screen_on_cpus)
-		return 0;
+	if (!is_display_on() || !limit_screen_on_cpus ||
+		!hotplug_ready)
+		return hardplugged_cpus;
 
 	for_each_possible_cpu(cpu) {
 		if (cpu == 0)
