@@ -371,8 +371,7 @@ static void __ref do_core_control(void)
 			ret = cpu_down(cpu);
 			if (ret)
 				pr_debug("cpu_down failed. you got problems\n");
-			if (is_cpu_allowed(cpu))
-				cpus_offlined |= BIT(cpu);
+			cpus_offlined |= BIT(cpu);
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
 			((cpu_thermal_one <= delta) &&
