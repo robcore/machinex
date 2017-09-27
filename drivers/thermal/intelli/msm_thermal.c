@@ -364,8 +364,9 @@ static void __ref do_core_control(void)
 		 cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC ||
 		 cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
 		for (cpu = num_possible_cpus(); cpu > 1; cpu--) {
-			if (!(msm_thermal_info.core_control_mask & BIT(cpu)) ||
-				cpus_offlined & BIT(cpu) && !cpu_online(cpu))
+			if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
+				continue;
+			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
 				continue;
 			ret = cpu_down(cpu);
 			if (ret)
@@ -378,9 +379,14 @@ static void __ref do_core_control(void)
 			   (cpu_thermal_three <= delta) &&
 			   (cpu_thermal_four <= delta))) {
 		for (cpu = 1; cpu < num_possible_cpus(); cpu++) {
-			if (!(cpus_offlined & BIT(cpu)) ||
-			cpu_online(cpu) ||
-			!is_cpu_allowed(cpu))
+			if (!(cpus_offlined & BIT(cpu)))
+				continue;
+			/* If this core is already online, then bring up the
+			 * next offlined core.
+			 */
+			if (cpu_online(cpu))
+				continue;
+			if (!is_cpu_allowed(cpu))
 				continue;
 			ret = cpu_up(cpu);
 			if (ret)
@@ -518,9 +524,11 @@ static void __ref update_offline_cores(int val)
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_possible_cpu(cpu) {
-		if (cpu <= 0 || cpu >= NR_CPUS ||
-			!(cpus_offlined & BIT(cpu)) ||
-			!cpu_online(cpu))
+		if (cpu <= 0 || cpu >= NR_CPUS)
+			continue;
+		if (!(cpus_offlined & BIT(cpu)))
+			continue;
+		if (!cpu_online(cpu))
 			continue;
 		ret = cpu_down(cpu);
 		if (ret)
