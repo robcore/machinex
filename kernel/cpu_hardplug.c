@@ -173,7 +173,8 @@ static int cpu_hardplug_callback(struct notifier_block *nfb,
 		/* Fall through. */
 	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
-		hardplug_cpu(cpu);
+		if (!is_cpu_allowed(cpu))
+			hardplug_cpu(cpu);
 		break;
 	default:
 		break;
