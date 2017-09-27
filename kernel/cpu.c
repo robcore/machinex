@@ -2005,11 +2005,6 @@ void init_cpu_online(const struct cpumask *src)
 	cpumask_copy(&__cpu_online_mask, src);
 }
 
-void init_cpu_nonboot(const struct cpumask *src)
-{
-	cpumask_copy(&__cpu_online_mask, src);
-}
-
 /*
  * Activate the first processor.
  */

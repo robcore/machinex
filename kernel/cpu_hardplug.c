@@ -124,11 +124,7 @@ void hardplug_all_cpus(void)
 	if (!limit_screen_on_cpus)
 		return;
 
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		if (cpu_is_offline(cpu))
-			continue;
+	for_each_nonboot_cpu(cpu) {
 		hardplug_cpu(cpu);
 	}
 }
@@ -143,9 +139,7 @@ unsigned int nr_hardplugged_cpus(void)
 		!hotplug_ready)
 		return hardplugged_cpus;
 
-	for_each_possible_cpu(cpu) {
-		if (cpu == 0)
-			continue;
+	for_each_nonboot_cpu(cpu) {
 		if (!is_cpu_allowed(cpu))
 			hardplugged_cpus += 1;
 	}
