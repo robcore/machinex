@@ -22,8 +22,8 @@
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
 
-#define HARDPLUG_MAJOR 1
-#define HARDPLUG_MINOR 9
+#define HARDPLUG_MAJOR 2
+#define HARDPLUG_MINOR 0
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -133,6 +133,30 @@ void hardplug_all_cpus(void)
 	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
+
+unsigned int nr_hardplugged_cpus(void)
+{
+	unsigned int cpu;
+	unsigned int hardplugged_cpus = 0;
+
+	if (!limit_screen_on_cpus)
+		return 0;
+
+	for_each_possible_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		if (!cpu_online(cpu) &&
+			!is_cpu_allowed(cpu)) {
+			hardplugged_cpus += 1;
+			continue;
+		}
+	}
+
+	sanitize_min_max(hardplugged_cpus, 0, 3);
+
+	return hardplugged_cpus;
+}
+EXPORT_SYMBOL(nr_hardplugged_cpus);
 
 static int cpu_hardplug_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
