@@ -666,7 +666,10 @@ static int msm_thermal_pm_event(struct notifier_block *this,
 	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
 		thermal_suspended = false;
-		update_offline_cores(cpus_offlined);
+		if (mutex_trylock(&core_control_mutex)) {
+			update_offline_cores(cpus_offlined);
+			mutex_unlock(&core_control_mutex);
+		}
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 		break;
 	case PM_HIBERNATION_PREPARE:
@@ -695,14 +698,10 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	enabled = 1;
 	mutex_init(&core_control_mutex);
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
-
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
-
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
-
 	register_pm_notifier(&msm_thermal_pm_notifier);
-
 	queue_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 
 	return 0;
