@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	5
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -573,7 +573,14 @@ static void recycle_cpus(void)
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, def_sampling_ms);
 }
 
-static void intelli_suspend(struct power_suspend * h)
+static void resume_worker(struct work_struct *work)
+{
+	recycle_cpus();
+}
+
+static DECLARE_DELAYED_WORK(delayed_recycle, resume_worker);
+
+static void intelli_suspend(struct power_suspend *h)
 {
 	struct down_lock *dl;
 	unsigned int cpu;
@@ -603,7 +610,11 @@ static void intelli_resume(struct power_suspend * h)
 
 	if (intelli_suspended == INTELLI_SUSPENDED);
 		intelli_suspended = INTELLI_AWAKE;
-	recycle_cpus();
+
+	if (!limit_screen_on_cpus)
+		recycle_cpus();
+	else
+		schedule_delayed_work(&delayed_recycle, 1000);
 }
 
 static struct power_suspend intelli_suspend_data =
