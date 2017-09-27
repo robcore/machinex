@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 2
+#define HARDPLUG_MINOR 3
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -65,7 +65,8 @@ static DEFINE_MUTEX(hardplug_mtx);
 bool is_cpu_allowed(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0 || !cpu_hardplugged(cpu))
+		!hotplug_ready || cpu == 0 ||
+		(!cpu_online(cpu) && cpu_hardplugged(cpu)))
 		return true;
 
 	switch (cpu) {
@@ -91,7 +92,8 @@ bool is_cpu_allowed(unsigned int cpu)
 static void hardplug_cpu(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0)
+		!hotplug_ready || cpu == 0 ||
+		(!cpu_online(cpu) && cpu_hardplugged(cpu)))
 		return;
 
 	if (cpu_online(cpu) && cpu_hardplugged(cpu))
