@@ -147,10 +147,8 @@ unsigned int nr_hardplugged_cpus(void)
 		if (cpu == 0)
 			continue;
 		if (!cpu_online(cpu) &&
-			!is_cpu_allowed(cpu)) {
+			!is_cpu_allowed(cpu))
 			hardplugged_cpus += 1;
-			continue;
-		}
 	}
 
 	sanitize_min_max(hardplugged_cpus, 0, 3);
