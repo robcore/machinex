@@ -521,7 +521,7 @@ static void __ref update_offline_cores(int val)
 
 	if (!core_control_enabled || intelli_init() ||
 		thermal_suspended || !hotplug_ready)
-		return ret;
+		return;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_possible_cpu(cpu) {
@@ -534,7 +534,6 @@ static void __ref update_offline_cores(int val)
 			pr_err("%s: Unable to offline cpu%d\n",
 				KBUILD_MODNAME, cpu);
 	}
-	return ret;
 }
 
 static ssize_t show_cc_enabled(struct kobject *kobj,
