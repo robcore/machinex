@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 0
+#define HARDPLUG_MINOR 1
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -146,8 +146,7 @@ unsigned int nr_hardplugged_cpus(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu == 0)
 			continue;
-		if (!cpu_online(cpu) &&
-			!is_cpu_allowed(cpu))
+		if (!is_cpu_allowed(cpu))
 			hardplugged_cpus += 1;
 	}
 
