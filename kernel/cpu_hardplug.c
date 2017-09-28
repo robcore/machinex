@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 3
+#define HARDPLUG_MINOR 4
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -129,11 +129,21 @@ EXPORT_SYMBOL(hardplug_all_cpus);
 
 unsigned int nr_hardplugged_cpus(void)
 {
+	unsigned int cpu;
+	unsigned int hardplugged_cpus = 0;
+
 	if (!is_display_on() || !limit_screen_on_cpus ||
 		!hotplug_ready)
-		return 0;
+		return hardplugged_cpus;
 
-	return num_hardplugged_cpus();
+	for_each_nonboot_cpu(cpu) {
+		if (!is_cpu_allowed(cpu))
+			hardplugged_cpus += 1;
+	}
+
+	sanitize_min_max(hardplugged_cpus, 0, 3);
+
+	return hardplugged_cpus;
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
@@ -177,20 +187,21 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 {
 	unsigned int cpu;
 	unsigned int val;
+	bool should_plug = false;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == limit_screen_on_cpus)
+	if (limit_screen_on_cpus == val)
 		return count;
+
+	if (val)
+		should_plug = true;
 
 	limit_screen_on_cpus = val;
 
-	if (limit_screen_on_cpus == 0) {
-		if (!cpumask_empty(cpu_hardplugged_mask))
-			cpumask_clear(cpu_hardplugged_mask);
-	} else
+	if (should_plug)
 		hardplug_all_cpus();
 
 	return count;
@@ -217,14 +228,12 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == cpu1_allowed)
+	if (cpu1_allowed == val)
 		return count;
 
 	cpu1_allowed = val;
 
-	if (cpu1_allowed == 0)
-		set_cpu_hardplugged(1, false);
-	else
+	if (limit_screen_on_cpus)
 		hardplug_cpu(1);
 
 	return count;
@@ -250,14 +259,12 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == cpu2_allowed)
+	if (cpu2_allowed == val)
 		return count;
 
 	cpu2_allowed = val;
 
-	if (cpu2_allowed == 0)
-		set_cpu_hardplugged(2, false);
-	else
+	if (limit_screen_on_cpus)
 		hardplug_cpu(2);
 
 	return count;
@@ -283,14 +290,12 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == cpu3_allowed)
+	if (cpu3_allowed == val)
 		return count;
 
 	cpu3_allowed = val;
 
-	if (cpu3_allowed == 0)
-		set_cpu_hardplugged(3, false);
-	else
+	if (limit_screen_on_cpus)
 		hardplug_cpu(3);
 
 	return count;
@@ -316,7 +321,7 @@ static ssize_t limit_screen_off_cpus_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == limit_screen_off_cpus)
+	if (limit_screen_off_cpus == val)
 		return count;
 
 	limit_screen_off_cpus = val;
@@ -343,7 +348,7 @@ static ssize_t cpu1_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == cpu1_allowed_susp)
+	if (cpu1_allowed_susp == val)
 		return count;
 
 	cpu1_allowed_susp = val;
@@ -370,7 +375,7 @@ static ssize_t cpu2_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == cpu2_allowed_susp)
+	if (cpu2_allowed_susp == val)
 		return count;
 
 	cpu2_allowed_susp = val;
@@ -397,7 +402,7 @@ static ssize_t cpu3_allowed_susp_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == cpu3_allowed_susp)
+	if (cpu3_allowed_susp == val)
 		return count;
 
 	cpu3_allowed_susp = val;
@@ -472,3 +477,4 @@ module_exit(cpu_hardplug_exit);
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");
 MODULE_LICENSE("GPL v2");
+
