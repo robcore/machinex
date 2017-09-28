@@ -771,7 +771,7 @@ static inline void reset_cpu_hardplugged_mask(void)
 	unsigned int cpu;
 
 	for_each_hardplugged_cpu(cpu)
-		set_cpu_hardplugged(cpu, false)
+		set_cpu_hardplugged(cpu, false);
 }
 
 
