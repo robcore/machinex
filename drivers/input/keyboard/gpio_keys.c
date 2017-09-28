@@ -405,14 +405,9 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 			const struct gpio_keys_button *button = bdata->button;
 			input_report_key(bdata->input, button->code, 0);
 			gpio_keys_gpio_report_event(bdata);
-			cpu_boost_event();
-			intelli_boost();
 			fakepressed = false;
 		}
 		pm_relax(bdata->input->dev.parent);
-	} else {
-		cpu_boost_event();
-		intelli_boost();
 	}
 }
 
@@ -437,6 +432,8 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 			fakepressed = true;
 		}
 	}
+	intelli_boost();
+	cpu_boost_event();
 
 	mod_delayed_work(system_wq,
 			 &bdata->work,
