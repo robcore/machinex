@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 5
-#define VERSION_MIN 8
+#define VERSION_MIN 9
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -172,10 +172,6 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
-
-	if (limit_screen_on_cpus)
-		hardplug_all_cpus();
-
 	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Resume Completed.\n");
 }
@@ -190,7 +186,7 @@ static void set_power_suspend_state(unsigned int new_state)
 		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
 			ps_state = new_state;
 			pr_info("[PROMETHEUS] Resume State Activated.\n");
-			queue_work(pwrsup_wq, &power_resume_work);
+			queue_work_on(0, pwrsup_wq, &power_resume_work);
 		}
 	} else {
 		if (likely(bootcomplete))
