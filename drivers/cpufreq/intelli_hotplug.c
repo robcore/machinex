@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	8
+#define INTELLI_PLUG_MINOR_VERSION	9
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -627,7 +627,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
-
+	/* Fail hotplug until this driver can get CPU clocks, or screen off */
 	if (!hotplug_ready || !is_display_on())
 		return NOTIFY_OK;
 
@@ -651,28 +651,6 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 
 static struct notifier_block intelliplug_cpu_notifier = {
 	.notifier_call = intelliplug_cpu_callback,
-};
-
-static int intellihard_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	if (!hotplug_ready || !is_display_on())
-		return NOTIFY_OK;
-
-	switch (event) {
-		case CPU_HARDPLUGGED:
-		case CPU_HARD_UNPLUGGED:
-			schedule_delayed_work(&delayed_recycle, 1000);
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block intell_hard_notifier = {
-	.notifier_call = intellihard_callback,
 };
 
 static int intelli_plug_start(void)
@@ -716,8 +694,6 @@ static int intelli_plug_start(void)
 
 	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
-	cpu_hardplug_register_notifier(&intell_hard_notifier);
-
 	cycle_cpus();
 
 	return ret;
@@ -745,7 +721,6 @@ static void intelli_plug_stop(void)
 	}
 	cancel_delayed_work(&intelli_plug_work);
 	unregister_power_suspend(&intelli_suspend_data);
-	cpu_hardplug_unregister_notifier(&intell_hard_notifier);
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
 	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
