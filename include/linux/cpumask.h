@@ -700,6 +700,7 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 #define for_each_present_cpu(cpu)  for_each_cpu((cpu), cpu_present_mask)
 #define for_each_nonboot_cpu(cpu)  for_each_cpu((cpu), cpu_nonboot_mask)
 #define for_each_offline_cpu(cpu)  for_each_cpu_not((cpu), cpu_online_mask)
+#define for_each_hardplugged_cpu(cpu) for_each_cpu((cpu), cpu_hardplugged_mask)
 
 /* Wrappers for arch boot code to manipulate normally-constant masks */
 void init_cpu_present(const struct cpumask *src);
@@ -709,11 +710,6 @@ void init_cpu_online(const struct cpumask *src);
 static inline void reset_cpu_possible_mask(void)
 {
 	bitmap_zero(cpumask_bits(&__cpu_possible_mask), NR_CPUS);
-}
-
-static inline void reset_cpu_hardplugged_mask(void)
-{
-	bitmap_zero(cpumask_bits(&__cpu_hardplugged_mask), NR_CPUS);
 }
 
 static inline void
@@ -768,6 +764,14 @@ set_cpu_hardplugged(unsigned int cpu, bool hardplugged)
 		cpumask_set_cpu(cpu, &__cpu_hardplugged_mask);
 	else
 		cpumask_clear_cpu(cpu, &__cpu_hardplugged_mask);
+}
+
+static inline void reset_cpu_hardplugged_mask(void)
+{
+	unsigned int cpu;
+
+	for_each_hardplugged_cpu(cpu)
+		set_cpu_hardplugged(cpu, false)
 }
 
 

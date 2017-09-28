@@ -65,8 +65,7 @@ static DEFINE_MUTEX(hardplug_mtx);
 bool is_cpu_allowed(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0 ||
-		(!cpu_online(cpu) && cpu_hardplugged(cpu)))
+		!hotplug_ready || cpu == 0)
 		return true;
 
 	switch (cpu) {
@@ -92,44 +91,23 @@ bool is_cpu_allowed(unsigned int cpu)
 static void hardplug_cpu(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0 ||
-		(!cpu_online(cpu) && cpu_hardplugged(cpu)))
+		!hotplug_ready || cpu == 0)
 		return;
-
-	if (cpu_online(cpu) && cpu_hardplugged(cpu))
-		set_cpu_hardplugged(cpu, false);
 
 	switch (cpu) {
 	case 1:
-		if (!cpu1_allowed &&
-			!cpu_hardplugged(1)) {
-			if (cpu_online(1)) {
-				if (!cpu_down(1))
-					set_cpu_hardplugged(1, true);
-			} else
-				set_cpu_hardplugged(1, true);
-		}
+		if (!cpu1_allowed && cpu_online(1))
+			cpu_down(1);
 		break;
 	case 2:
-		if (!cpu2_allowed &&
-			!cpu_hardplugged(2)) {
-			if (cpu_online(2)) {
-				if (!cpu_down(2))
-					set_cpu_hardplugged(2, true);
-			} else
-				set_cpu_hardplugged(2, true);
-		}
+		if (!cpu2_allowed && cpu_online(2))
+			cpu_down(2);
 		break;
 	case 3:
-		if (!cpu3_allowed &&
-			!cpu_hardplugged(3)) {
-			if (cpu_online(3)) {
-				if (!cpu_down(3))
-					set_cpu_hardplugged(3, true);
-			} else
-				set_cpu_hardplugged(3, true);
-		}
+		if (!cpu3_allowed && cpu_online(3))
+			cpu_down(3);
 		break;
+
 	default:
 		break;
 	}
@@ -139,11 +117,12 @@ void hardplug_all_cpus(void)
 {
 	unsigned int cpu;
 
-	if (!limit_screen_on_cpus)
-		return;
-
-	for_each_nonboot_cpu(cpu) {
-		hardplug_cpu(cpu);
+	if (limit_screen_on_cpus) {
+		for_each_nonboot_cpu(cpu) {
+			if (cpu_is_offline(cpu))
+				continue;
+			hardplug_cpu(cpu);
+		}
 	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
@@ -166,7 +145,7 @@ static int cpu_hardplug_callback(struct notifier_block *nfb,
 	 * or screen off
 	 */
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready)
+		!hotplug_ready || cpu == 0)
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
@@ -208,9 +187,10 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	limit_screen_on_cpus = val;
 
-	if (limit_screen_on_cpus == 0)
-		reset_cpu_hardplugged_mask();
-	else
+	if (limit_screen_on_cpus == 0) {
+		if (!cpumask_empty(cpu_hardplugged_mask))
+			cpumask_clear(cpu_hardplugged_mask);
+	} else
 		hardplug_all_cpus();
 
 	return count;
