@@ -575,6 +575,8 @@ static int enter_state(suspend_state_t state)
 	return error;
 }
 
+static bool debug_suspend_caller;
+module_param(debug_suspend_caller, bool, 0644);
 /**
  * pm_suspend - Externally visible function for suspending the system.
  * @state: System sleep state to enter.
@@ -585,6 +587,9 @@ static int enter_state(suspend_state_t state)
 int pm_suspend(suspend_state_t state)
 {
 	int error;
+
+	if (debug_suspend_caller)
+		WARN_ON_ONCE(1);
 
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
 		return -EINVAL;
