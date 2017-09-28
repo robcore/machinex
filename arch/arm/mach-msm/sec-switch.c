@@ -167,7 +167,6 @@ static int __init midas_sec_switch_init(void)
 	return 0;
 };
 
-static bool first_chg_checked = false;
 bool mx_is_charging;
 module_param_named(chrgr_cbl_attached, mx_is_charging, bool, 0444);
 bool mx_is_cable_attached(void)
@@ -182,7 +181,7 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 	struct power_supply *psy = power_supply_get_by_name("battery");
 	struct power_supply *psy_ps = power_supply_get_by_name("ps");
 	union power_supply_propval value;
-	static enum cable_type_muic previous_cable_type;
+	static enum cable_type_muic previous_cable_type = CABLE_TYPE_NONE_MUIC;
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI
@@ -238,11 +237,12 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 
 #ifdef CONFIG_CHARGER_MAX77693
 	/*  charger setting */
-	if (!first_chg_checked && is_charger_connected &&
-		current_cable_type == POWER_SUPPLY_TYPE_BATTERY)
-		previous_cable_type = cable_type;
-	else if (previous_cable_type == cable_type)
-			 goto skip;
+	if (previous_cable_type == cable_type) {
+		pr_info("%s: SKIP cable setting\n", __func__);
+		goto skip;
+	}
+
+	previous_cable_type = cable_type;
 
 	switch (cable_type) {
 	case CABLE_TYPE_NONE_MUIC:
@@ -250,16 +250,22 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 		mx_is_charging = false;
 		break;
 	case CABLE_TYPE_MHL_VB_MUIC:
-		if(poweroff_charging)
+		if(poweroff_charging) {
 			current_cable_type = POWER_SUPPLY_TYPE_USB;
-		else
+			mx_is_charging = true;
+		} else {
+			mx_is_charging = false;
 			goto skip;
+		}
 		break;
 	case CABLE_TYPE_MHL_MUIC:
-		if(poweroff_charging)
+		if(poweroff_charging) {
 			current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
-		else
+			mx_is_charging = false;
+		} else {
+			mx_is_charging = false;
 			goto skip;
+		}
 		break;
 	case CABLE_TYPE_USB_MUIC:
 	case CABLE_TYPE_JIG_USB_OFF_MUIC:
@@ -270,6 +276,7 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 		break;
 	case CABLE_TYPE_JIG_UART_OFF_VB_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_UARTOFF;
+		mx_is_charging = false;
 		break;
 	case CABLE_TYPE_TA_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_MAINS;
@@ -288,6 +295,7 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 		mx_is_charging = true;
 		break;
 	case CABLE_TYPE_OTG_MUIC:
+		mx_is_charging = true;
 		goto skip;
 	case CABLE_TYPE_JIG_UART_OFF_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
@@ -325,18 +333,11 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 			}
 		}
 	}
-	if (likely(first_chg_checked))
-		previous_cable_type = cable_type;
-
 #endif
 skip:
 #ifdef CONFIG_JACK_MON
 	jack_event_handler("charger", is_cable_attached);
 #endif
-	if (!first_chg_checked) {
-		first_chg_checked = true;
-		pr_info("First Charge Hacked!\n");
-	}
 
 	return 0;
 }
