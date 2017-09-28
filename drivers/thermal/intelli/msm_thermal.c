@@ -523,9 +523,7 @@ static void __ref update_offline_cores(int val)
 		return;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
-	for_each_possible_cpu(cpu) {
-		if (cpu <= 0 || cpu >= NR_CPUS)
-			continue;
+	for_each_nonboot_cpu(cpu) {
 		if (!(cpus_offlined & BIT(cpu)))
 			continue;
 		if (!cpu_online(cpu))
