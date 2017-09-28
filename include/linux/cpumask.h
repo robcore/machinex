@@ -89,27 +89,20 @@ extern struct cpumask __cpu_possible_mask;
 extern struct cpumask __cpu_online_mask;
 extern struct cpumask __cpu_present_mask;
 extern struct cpumask __cpu_active_mask;
-extern struct cpumask __cpu_nonboot_mask;
-extern struct cpumask __cpu_hardplugged_mask;
 #define cpu_possible_mask ((const struct cpumask *)&__cpu_possible_mask)
 #define cpu_online_mask   ((const struct cpumask *)&__cpu_online_mask)
 #define cpu_present_mask  ((const struct cpumask *)&__cpu_present_mask)
 #define cpu_active_mask   ((const struct cpumask *)&__cpu_active_mask)
-#define cpu_nonboot_mask   ((const struct cpumask *)&__cpu_nonboot_mask)
-#define cpu_hardplugged_mask ((const struct cpumask *)&__cpu_hardplugged_mask)
 
 #define num_online_cpus()	cpumask_weight(cpu_online_mask)
 #define num_possible_cpus()	cpumask_weight(cpu_possible_mask)
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
 #define num_active_cpus()	cpumask_weight(cpu_active_mask)
 #define num_offline_cpus()  (num_possible_cpus() - num_online_cpus())
-#define num_hardplugged_cpus() cpumask_weight(cpu_hardplugged_mask)
 #define cpu_online(cpu)		cpumask_test_cpu((cpu), cpu_online_mask)
 #define cpu_possible(cpu)	cpumask_test_cpu((cpu), cpu_possible_mask)
 #define cpu_present(cpu)	cpumask_test_cpu((cpu), cpu_present_mask)
 #define cpu_active(cpu)		cpumask_test_cpu((cpu), cpu_active_mask)
-#define cpu_nonboot(cpu)	cpumask_test_cpu((cpu), cpu_nonboot_mask)
-#define cpu_hardplugged(cpu) cpumask_test_cpu((cpu), cpu_hardplugged_mask)
 
 /* verify cpu argument to cpumask_* operators */
 static inline unsigned int cpumask_check(unsigned int cpu)
@@ -165,6 +158,18 @@ unsigned int cpumask_local_spread(unsigned int i, int node);
 		(cpu) < nr_cpu_ids;)
 
 /**
+ * for_each_cpu_but_zero - iterate over every cpu in a mask except zero
+ * @cpu: the (optionally unsigned) integer iterator
+ * @mask: the cpumask pointer
+ *
+ * After the loop, cpu is >= nr_cpu_ids.
+ */
+#define for_each_cpu_but_zero(cpu, mask)				\
+	for ((cpu) = 0;				\
+		(cpu) = cpumask_next((cpu), (mask)),	\
+		(cpu) < nr_cpu_ids;)
+
+/**
  * for_each_cpu_not - iterate over every cpu in a complemented mask
  * @cpu: the (optionally unsigned) integer iterator
  * @mask: the cpumask pointer
@@ -173,6 +178,18 @@ unsigned int cpumask_local_spread(unsigned int i, int node);
  */
 #define for_each_cpu_not(cpu, mask)				\
 	for ((cpu) = -1;					\
+		(cpu) = cpumask_next_zero((cpu), (mask)),	\
+		(cpu) < nr_cpu_ids;)
+
+/**
+ * for_each_cpu_not_but_zero - iterate over every cpu except boot in a complemented mask
+ * @cpu: the (optionally unsigned) integer iterator
+ * @mask: the cpumask pointer
+ *
+ * After the loop, cpu is >= nr_cpu_ids.
+ */
+#define for_each_cpu_not_but_zero(cpu, mask)				\
+	for ((cpu) = 0;					\
 		(cpu) = cpumask_next_zero((cpu), (mask)),	\
 		(cpu) < nr_cpu_ids;)
 
@@ -697,11 +714,12 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 
 #define for_each_possible_cpu(cpu) for_each_cpu((cpu), cpu_possible_mask)
 #define for_each_online_cpu(cpu)   for_each_cpu((cpu), cpu_online_mask)
-#define for_each_present_cpu(cpu)  for_each_cpu((cpu), cpu_present_mask)
-#define for_each_nonboot_cpu(cpu)  for_each_cpu((cpu), cpu_nonboot_mask)
 #define for_each_offline_cpu(cpu)  for_each_cpu_not((cpu), cpu_online_mask)
-#define for_each_hardplugged_cpu(cpu) for_each_cpu((cpu), cpu_hardplugged_mask)
-#define for_each_unplugged_cpu(cpu) for_each_cpu_not((cpu), cpu_hardplugged_mask);
+#define for_each_present_cpu(cpu)  for_each_cpu((cpu), cpu_present_mask)
+#define for_each_nonboot_cpu(cpu)  for_each_cpu_but_zero((cpu), cpu_possible_mask)
+#define for_each_nonboot_online_cpu(cpu) for_each_cpu_but_zero((cpu), cpu_online_mask)
+#define for_each_nonboot_offline_cpu(cpu) for_each_cpu_not_but_zero((cpu), cpu_online_mask)
+
 
 /* Wrappers for arch boot code to manipulate normally-constant masks */
 void init_cpu_present(const struct cpumask *src);
@@ -749,33 +767,6 @@ set_cpu_active(unsigned int cpu, bool active)
 		cpumask_clear_cpu(cpu, &__cpu_active_mask);
 }
 
-static inline void
-set_cpu_nonboot(unsigned int cpu, bool nonboot)
-{
-	if (nonboot)
-		cpumask_set_cpu(cpu, &__cpu_nonboot_mask);
-	else
-		cpumask_clear_cpu(cpu, &__cpu_nonboot_mask);
-}
-
-static inline void
-set_cpu_hardplugged(unsigned int cpu, bool hardplugged)
-{
-	if (hardplugged)
-		cpumask_set_cpu(cpu, &__cpu_hardplugged_mask);
-	else
-		cpumask_clear_cpu(cpu, &__cpu_hardplugged_mask);
-}
-
-static inline void reset_cpu_hardplugged_mask(void)
-{
-	unsigned int cpu;
-
-	for_each_hardplugged_cpu(cpu)
-		set_cpu_hardplugged(cpu, false);
-}
-
-
 /**
  * to_cpumask - convert an NR_CPUS bitmap to a struct cpumask *
  * @bitmap: the bitmap
@@ -813,7 +804,6 @@ static inline const struct cpumask *get_cpu_mask(unsigned int cpu)
 }
 
 #define cpu_is_offline(cpu)	(!cpu_online(cpu))
-#define cpu_unplugged(cpu) (!cpu_hardplugged(cpu))
 
 #if NR_CPUS <= BITS_PER_LONG
 #define CPU_BITS_ALL						\

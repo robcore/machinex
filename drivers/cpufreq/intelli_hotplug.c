@@ -26,8 +26,8 @@
 #include <linux/sysfs_helpers.h>
 
 #define INTELLI_PLUG			"intelli_plug"
-#define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	9
+#define INTELLI_PLUG_MAJOR_VERSION	15
+#define INTELLI_PLUG_MINOR_VERSION	0
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -371,7 +371,6 @@ static void update_per_cpu_stat(void)
 static void do_override(void)
 {
 	unsigned int cpu;
-	int primary;
 	int ret;
 
 	if (!prometheus_override)
@@ -381,14 +380,13 @@ static void do_override(void)
 		return;
 
 	cpu = smp_processor_id();
-	primary = cpumask_first(cpu_online_mask);
 
-	for_each_offline_cpu(cpu) {
-		if (cpu == primary || cpu_online(cpu) ||
+	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_online(cpu) ||
 			!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
-		if (cpu > nr_cpu_ids || cpu < 0)
+		if (cpu < 0 || cpu >= NR_CPUS)
 			break;
 		ret = cpu_up(cpu);
 		if (ret)
@@ -423,7 +421,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	cpu = smp_processor_id();
 	target = READ_ONCE(target_cpus);
 	sanitize_min_max(target, min_cpus_online, real_max_online());
-	primary = cpumask_first(cpu_online_mask);
+
 	if (!online_cpus)
 		report_current_cpus();
 
@@ -438,12 +436,12 @@ static void cpu_up_down_work(struct work_struct *work)
 				goto reschedule;
 		}
 		update_per_cpu_stat();
-		for_each_online_cpu(cpu) {
-			if (cpu == primary || cpu_is_offline(cpu) ||
+		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_is_offline(cpu) ||
 				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
-			if (cpu > nr_cpu_ids || cpu < 0)
+			if (cpu < 0 || cpu >= NR_CPUS)
 				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) / num_online_cpus();
@@ -455,12 +453,12 @@ static void cpu_up_down_work(struct work_struct *work)
 				break;
 		}
 	} else if (online_cpus < real_max_online() && target > online_cpus) {
-		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == primary || cpu_online(cpu) ||
+		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
 				thermal_core_controlled(cpu))
 				continue;
-			if (cpu > nr_cpu_ids || cpu < 0)
+			if (cpu < 0 || cpu >= NR_CPUS)
 				break;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
@@ -525,16 +523,16 @@ void intelli_suspend_booster(void)
 static void cycle_cpus(void)
 {
 	unsigned int cpu;
-	unsigned int optimus = cpumask_first(cpu_online_mask);
+
 	intellinit = true;
-	for_each_online_cpu(cpu) {
-		if (!cpu_online(cpu) || cpu == optimus)
+	for_each_nonboot_online_cpu(cpu) {
+		if (!cpu_online(cpu))
 			continue;
 		rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
-	for_each_cpu_not(cpu, cpu_online_mask) {
-		if (cpu == optimus || !is_cpu_allowed(cpu) ||
+	for_each_nonboot_offline_cpu(cpu) {
+		if (!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
 		if (!cpu_up(cpu))
@@ -551,17 +549,18 @@ static void cycle_cpus(void)
 static void recycle_cpus(void)
 {
 	unsigned int cpu;
-	unsigned int optimus = cpumask_first(cpu_online_mask);
 	intellinit = true;
-	for_each_online_cpu(cpu) {
-		if (cpu == optimus || !cpu_online(cpu))
+
+	for_each_nonboot_online_cpu(cpu) {
+		if (!cpu_online(cpu))
 			continue;
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
-	for_each_offline_cpu(cpu) {
-		if (cpu == optimus || !is_cpu_allowed(cpu) ||
+
+	for_each_nonboot_offline_cpu(cpu) {
+		if (!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
 		if (!cpu_up(cpu)) {

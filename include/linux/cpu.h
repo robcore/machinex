@@ -215,18 +215,11 @@ static inline void get_online_cpus(void) { cpus_read_lock(); }
 static inline void put_online_cpus(void) { cpus_read_unlock(); }
 
 void hardplug_all_cpus(void);
-void unplug_all_cpus(void);
 extern unsigned int limit_screen_on_cpus;
 extern unsigned int cpu1_allowed;
 extern unsigned int cpu2_allowed;
 extern unsigned int cpu3_allowed;
 unsigned int nr_hardplugged_cpus(void);
-
-#define CPU_HARDPLUGGED		0x01
-#define CPU_HARD_UNPLUGGED		0x02
-
-int cpu_hardplug_register_notifier(struct notifier_block *nb);
-int cpu_hardplug_unregister_notifier(struct notifier_block *nb);
 
 #ifdef CONFIG_PM_SLEEP_SMP
 extern int freeze_secondary_cpus(int primary);

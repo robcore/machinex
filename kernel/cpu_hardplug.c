@@ -119,8 +119,9 @@ void hardplug_all_cpus(void)
 	unsigned int cpu;
 
 	if (limit_screen_on_cpus) {
-		for_each_nonboot_cpu(cpu) {
-			if (cpu_is_offline(cpu))
+		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_is_offline(cpu) ||
+				cpu < 0 || >= NR_CPUS)
 				continue;
 			hardplug_cpu(cpu);
 		}
@@ -188,7 +189,6 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 {
 	unsigned int cpu;
 	unsigned int val;
-	bool should_plug = false;
 
 	sscanf(buf, "%u\n", &val);
 
@@ -197,13 +197,9 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 	if (limit_screen_on_cpus == val)
 		return count;
 
-	if (val)
-		should_plug = true;
-
 	limit_screen_on_cpus = val;
 
-	if (should_plug)
-		hardplug_all_cpus();
+	hardplug_all_cpus();
 
 	return count;
 }
@@ -234,8 +230,7 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	cpu1_allowed = val;
 
-	if (limit_screen_on_cpus)
-		hardplug_cpu(1);
+	hardplug_cpu(1);
 
 	return count;
 }
@@ -265,8 +260,7 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	cpu2_allowed = val;
 
-	if (limit_screen_on_cpus)
-		hardplug_cpu(2);
+	hardplug_cpu(2);
 
 	return count;
 }
@@ -296,8 +290,7 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	cpu3_allowed = val;
 
-	if (limit_screen_on_cpus)
-		hardplug_cpu(3);
+	hardplug_cpu(3);
 
 	return count;
 }

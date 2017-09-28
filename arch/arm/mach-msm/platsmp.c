@@ -279,9 +279,6 @@ static void __init msm_smp_init_cpus(void)
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
 
-	for (i = 1; i < ncores; i++)
-		set_cpu_nonboot(i, true);
-
 }
 
 static void __init msm_smp_prepare_cpus(unsigned int max_cpus)
@@ -298,3 +295,4 @@ struct smp_operations msm_smp_ops __initdata = {
 	.cpu_disable = msm_cpu_disable,
 #endif
 };
+
