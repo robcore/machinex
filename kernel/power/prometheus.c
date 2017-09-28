@@ -125,11 +125,12 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	prometheus_override = false;
+/*
 	if (limit_screen_on_cpus) {
 		if (num_hardplugged_cpus() > 0)
 			reset_cpu_hardplugged_mask();
 	}
-
+*/
 	if (limit_screen_off_cpus)
 		lock_screen_off_cpus(0);
 

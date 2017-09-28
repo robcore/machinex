@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 4
+#define HARDPLUG_MINOR 5
 #if 0
 #define DEFAULT_MAX_CPUS 4
 static unsigned int cpu_num_limit = DEFAULT_MAX_CPUS;
@@ -68,82 +68,38 @@ bool is_cpu_allowed(unsigned int cpu)
 		!hotplug_ready || cpu == 0)
 		return true;
 
-	switch (cpu) {
-	case 1:
-		if (!cpu1_allowed)
-			return false;
-		break;
-	case 2:
-		if (!cpu2_allowed)
-			return false;
-		break;
-	case 3:
-		if (!cpu3_allowed)
-			return false;
-		break;
-	default:
-		break;
-	}
+	if (cpu_hardplugged(cpu))
+		return false;
 
 	return true;
 }
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0)
-		return;
-
-	switch (cpu) {
-	case 1:
-		if (!cpu1_allowed && cpu_online(1))
-			cpu_down(1);
-		break;
-	case 2:
-		if (!cpu2_allowed && cpu_online(2))
-			cpu_down(2);
-		break;
-	case 3:
-		if (!cpu3_allowed && cpu_online(3))
-			cpu_down(3);
-		break;
-
-	default:
-		break;
-	}
+	if (!is_cpu_allowed(cpu) && cpu_online(cpu))
+		cpu_down(cpu);
 }
 
 void hardplug_all_cpus(void)
 {
 	unsigned int cpu;
 
-	if (limit_screen_on_cpus) {
-		for_each_nonboot_cpu(cpu) {
-			if (cpu_is_offline(cpu))
-				continue;
-			hardplug_cpu(cpu);
+		for_each_hardplugged_cpu(cpu) {
+			if (!is_cpu_allowed(cpu))
+				hardplug_cpu(cpu);
 		}
-	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
 
 unsigned int nr_hardplugged_cpus(void)
 {
 	unsigned int cpu;
-	unsigned int hardplugged_cpus = 0;
 
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready)
-		return hardplugged_cpus;
+		!hotplug_ready || cpumask_empty(cpu_hardplugged_mask))
+		return 0;
 
-	for_each_nonboot_cpu(cpu) {
-		if (!is_cpu_allowed(cpu))
-			hardplugged_cpus += 1;
-	}
-
-	sanitize_min_max(hardplugged_cpus, 0, 3);
-
-	return hardplugged_cpus;
+	return num_hardplugged_cpus();
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
@@ -187,7 +143,6 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 {
 	unsigned int cpu;
 	unsigned int val;
-	bool should_plug = false;
 
 	sscanf(buf, "%u\n", &val);
 
@@ -196,12 +151,10 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 	if (limit_screen_on_cpus == val)
 		return count;
 
-	if (val)
-		should_plug = true;
-
 	limit_screen_on_cpus = val;
 
-	if (should_plug)
+	if (limit_screen_on_cpus &&
+		!cpumask_empty(cpu_hardplugged_mask))
 		hardplug_all_cpus();
 
 	return count;
@@ -231,9 +184,20 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 	if (cpu1_allowed == val)
 		return count;
 
+	switch (val) {
+	case 0:
+		set_cpu_hardplugged(1, true);
+		break;
+	case 1:
+		set_cpu_hardplugged(1, false);
+	default:
+		break;
+	}
+
 	cpu1_allowed = val;
 
-	if (limit_screen_on_cpus)
+	if (limit_screen_on_cpus &&
+		!is_cpu_allowed(1))
 		hardplug_cpu(1);
 
 	return count;
@@ -262,9 +226,20 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 	if (cpu2_allowed == val)
 		return count;
 
+	switch (val) {
+	case 0:
+		set_cpu_hardplugged(2, true);
+		break;
+	case 1:
+		set_cpu_hardplugged(2, false);
+	default:
+		break;
+	}
+
 	cpu2_allowed = val;
 
-	if (limit_screen_on_cpus)
+	if (limit_screen_on_cpus &&
+		!is_cpu_allowed(2))
 		hardplug_cpu(2);
 
 	return count;
@@ -293,9 +268,20 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 	if (cpu3_allowed == val)
 		return count;
 
+	switch (val) {
+	case 0:
+		set_cpu_hardplugged(3, true);
+		break;
+	case 1:
+		set_cpu_hardplugged(3, false);
+	default:
+		break;
+	}
+
 	cpu3_allowed = val;
 
-	if (limit_screen_on_cpus)
+	if (limit_screen_on_cpus &&
+		!is_cpu_allowed(3))
 		hardplug_cpu(3);
 
 	return count;
