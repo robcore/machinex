@@ -517,15 +517,16 @@ static bool __ref msm_pm_spm_power_collapse(
 		local_fiq_enable();
 	}
 
-	if (from_idle)
-		cpu_pm_exit();
-
 	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: msm_pm_collapse returned, collapsed %d\n",
 			cpu, __func__, collapsed);
 
 	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
 	WARN_ON(ret);
+
+	if (from_idle)
+		cpu_pm_exit();
+
 	return collapsed;
 }
 
