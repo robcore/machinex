@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	14
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -662,7 +662,7 @@ static int intellihard_callback(struct notifier_block *this,
 	switch (event) {
 		case CPU_HARDPLUGGED:
 		case CPU_HARD_UNPLUGGED:
-			recycle_cpus();
+			schedule_delayed_work(&delayed_recycle, 1000);
 			break;
 		default:
 			break;
