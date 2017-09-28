@@ -121,7 +121,7 @@ void hardplug_all_cpus(void)
 	if (limit_screen_on_cpus) {
 		for_each_nonboot_online_cpu(cpu) {
 			if (cpu_is_offline(cpu) ||
-				cpu < 0 || >= NR_CPUS)
+				cpu < 0 || cpu >= NR_CPUS)
 				continue;
 			hardplug_cpu(cpu);
 		}
