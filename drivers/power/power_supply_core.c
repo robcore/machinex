@@ -129,35 +129,6 @@ static int __power_supply_changed_work(struct device *dev, void *data)
 	return 0;
 }
 
-static void power_supply_changed_work(struct work_struct *work)
-{
-	unsigned long flags;
-	struct power_supply *psy = container_of(work, struct power_supply,
-						changed_work);
-
-	spin_lock_irqsave(&psy->changed_lock, flags);
-	/*
-	 * Check 'changed' here to avoid issues due to race between
-	 * power_supply_changed() and this routine. In worst case
-	 * power_supply_changed() can be called again just before we take above
-	 * lock. During the first call of this routine we will mark 'changed' as
-	 * false and it will stay false for the next call as well.
-	 */
-
-	if (psy->changed) {
-		psy->changed = false;
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
-		class_for_each_device(power_supply_class, NULL, psy,
-				      __power_supply_changed_work);
-		power_supply_update_leds(psy);
-		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-		wake_unlock(&psy->work_wake_lock);
-	} else {
-		wake_unlock(&psy->work_wake_lock);
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
-	}
-}
-
 	/*
 	 *
 	 * ROB NOTE: logic was flawed here and is flawed upstream. So we have
@@ -181,15 +152,18 @@ void power_supply_changed(struct power_supply *psy)
 	unsigned long flags;
 
 	wake_lock(&psy->work_wake_lock);
-	spin_lock_irqsave(&psy->changed_lock, flags);
-	if (!psy->changed) {
-		psy->changed = true;
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
-		schedule_work(&psy->changed_work);
-	} else {
-		wake_unlock(&psy->work_wake_lock);
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
-	}
+	spin_lock_irq(&psy->changed_lock);
+	psy->changed = true;
+	spin_unlock_irq(&psy->changed_lock);
+	class_for_each_device(power_supply_class, NULL, psy,
+			      __power_supply_changed_work);
+	power_supply_update_leds(psy);
+	kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
+	spin_lock_irq(&psy->changed_lock);
+	psy->changed = false;
+	spin_unlock_irq(&psy->changed_lock);
+	wake_unlock(&psy->work_wake_lock);
+
 }
 EXPORT_SYMBOL_GPL(power_supply_changed);
 
@@ -318,8 +292,6 @@ int power_supply_register(struct device *parent, struct power_supply *psy)
 	dev_set_drvdata(dev, psy);
 	psy->dev = dev;
 
-	INIT_WORK(&psy->changed_work, power_supply_changed_work);
-
 	rc = kobject_set_name(&dev->kobj, "%s", psy->name);
 	if (rc)
 		goto kobject_set_name_failed;
@@ -352,7 +324,6 @@ EXPORT_SYMBOL_GPL(power_supply_register);
 
 void power_supply_unregister(struct power_supply *psy)
 {
-	cancel_work_sync(&psy->changed_work);
 	sysfs_remove_link(&psy->dev->kobj, "powers");
 	power_supply_remove_triggers(psy);
 	wake_lock_destroy(&psy->work_wake_lock);

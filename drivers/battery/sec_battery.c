@@ -534,7 +534,10 @@ static bool sec_bat_ovp_uvlo_result(
 			   when over-voltage status is detected	 */
 			wake_lock_timeout(&battery->vbus_wake_lock, msecs_to_jiffies(10000));
 			break;
+		default:
+			break;
 		}
+
 		power_supply_changed(&battery->psy_bat);
 		return true;
 	}
