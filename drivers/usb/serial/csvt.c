@@ -66,7 +66,7 @@ static struct usb_driver csvt_driver = {
 	.supports_autosuspend	= true,
 };
 
-#define CSVT_IFC_NUM	4
+#define CSVT_IFC_NUM 4
 
 static int csvt_probe(struct usb_serial *serial, const struct usb_device_id *id)
 {

@@ -594,7 +594,7 @@ static void rmnet_usb_setup(struct net_device *dev, int mux_enabled)
 	}
 
 	random_ether_addr(dev->dev_addr);
-	dev->watchdog_timeo = 1000; /* 10 seconds? */
+	dev->watchdog_timeo = 500;
 }
 
 static int rmnet_usb_data_status(struct seq_file *s, void *unused)
@@ -740,15 +740,12 @@ static int rmnet_usb_probe(struct usb_interface *iface,
 		status = device_create_file(&unet->net->dev,
 				&dev_attr_dbg_mask);
 		if (status) {
-			usbnet_disconnect(iface);
 			goto out;
 		}
 
 		status = rmnet_usb_ctrl_probe(iface, unet->status, info->data,
 				&unet->data[1]);
 		if (status) {
-			device_remove_file(&unet->net->dev, &dev_attr_dbg_mask);
-			usbnet_disconnect(iface);
 			goto out;
 		}
 
@@ -757,8 +754,6 @@ static int rmnet_usb_probe(struct usb_interface *iface,
 			dev_dbg(&iface->dev,
 					"mode debugfs file is not available\n");
 	}
-
-	usb_enable_autosuspend(udev);
 
 	if (udev->parent && !udev->parent->parent) {
 		/* allow modem and roothub to wake up suspended system */
