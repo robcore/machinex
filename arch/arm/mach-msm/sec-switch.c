@@ -303,11 +303,11 @@ int max77693_muic_charger_cb(enum cable_type_muic cable_type)
 		break;
 	case CABLE_TYPE_INCOMPATIBLE_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_UNKNOWN;
-		mx_is_charging = false;
+		mx_is_charging = true;
 		break;
 	case CABLE_TYPE_CHARGING_CABLE_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_POWER_SHARING;
-		mx_is_charging = true;
+		mx_is_charging = false;
 		break;
 	default:
 		pr_err("%s: invalid type for charger:%d\n",
