@@ -249,21 +249,6 @@ static int usb_unbind_device(struct device *dev)
 	return 0;
 }
 
-/*
- * Cancel any pending scheduled resets
- *
- * [see usb_queue_reset_device()]
- *
- * Called after unconfiguring / when releasing interfaces. See
- * comments in __usb_queue_reset_device() regarding
- * udev->reset_running.
- */
-static void usb_cancel_queued_reset(struct usb_interface *iface)
-{
-	if (iface->reset_running == 0)
-		cancel_work_sync(&iface->reset_ws);
-}
-
 /* called from driver core with dev locked */
 static int usb_probe_interface(struct device *dev)
 {
@@ -328,7 +313,6 @@ static int usb_probe_interface(struct device *dev)
  err:
 	intf->needs_remote_wakeup = 0;
 	intf->condition = USB_INTERFACE_UNBOUND;
-	usb_cancel_queued_reset(intf);
 
 	/* Unbound interfaces are always runtime-PM-disabled and -suspended */
 	if (driver->supports_autosuspend)
@@ -360,7 +344,6 @@ static int usb_unbind_interface(struct device *dev)
 		usb_disable_interface(udev, intf, false);
 
 	driver->disconnect(intf);
-	usb_cancel_queued_reset(intf);
 
 	/* Reset other interface state.
 	 * We cannot do a Set-Interface if the device is suspended or
