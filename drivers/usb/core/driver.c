@@ -421,13 +421,19 @@ static int usb_unbind_interface(struct device *dev)
  * Callers must own the device lock, so driver probe() entries don't need
  * extra locking, but other call contexts may need to explicitly claim that
  * lock.
+ *
+ * Return: 0 on success.
  */
 int usb_driver_claim_interface(struct usb_driver *driver,
 				struct usb_interface *iface, void *priv)
 {
-	struct device *dev = &iface->dev;
+	struct device *dev;
 	int retval = 0;
 
+	if (!iface)
+		return -ENODEV;
+
+	dev = &iface->dev;
 	if (dev->driver)
 		return -EBUSY;
 
@@ -605,6 +611,8 @@ EXPORT_SYMBOL_GPL(usb_match_one_id);
  * but some layered driver frameworks use it directly.
  * These device tables are exported with MODULE_DEVICE_TABLE, through
  * modutils, to support the driver loading functionality of USB hotplugging.
+ *
+ * Return: The first matching usb_device_id, or %NULL.
  *
  * What Matches:
  *
@@ -1156,8 +1164,8 @@ static int usb_resume_interface(struct usb_device *udev,
 						"reset_resume", status);
 		} else {
 			intf->needs_binding = 1;
-			dev_warn(&intf->dev, "no %s for driver %s?\n",
-					"reset_resume", driver->name);
+			dev_dbg(&intf->dev, "no reset_resume for driver %s?\n",
+					driver->name);
 		}
 	} else {
 		status = driver->resume(intf);
@@ -1196,6 +1204,8 @@ done:
  * unpredictable times.
  *
  * This routine can run only in process context.
+ *
+ * Return: 0 if the suspend succeeded.
  */
 static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 {
@@ -1275,6 +1285,8 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
  * unpredictable times.
  *
  * This routine can run only in process context.
+ *
+ * Return: 0 on success.
  */
 static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 {
@@ -1392,14 +1404,9 @@ int usb_suspend(struct device *dev, pm_message_t msg)
 {
 	struct usb_device	*udev = to_usb_device(dev);
 
-	if (udev->bus->skip_resume) {
-		if (udev->state == USB_STATE_SUSPENDED) {
-			return 0;
-		} else {
-			dev_err(dev, "abort suspend\n");
-			return -EBUSY;
-		}
-	}
+	if (udev->bus->skip_resume && udev->state == USB_STATE_SUSPENDED)
+		return 0;
+
 	unbind_no_pm_drivers_interfaces(udev);
 
 	/* From now on we are sure all drivers support suspend/resume
@@ -1460,10 +1467,6 @@ int usb_resume(struct device *dev, pm_message_t msg)
 		status = 0;
 	return status;
 }
-
-#endif /* CONFIG_PM */
-
-#ifdef CONFIG_USB_SUSPEND
 
 /**
  * usb_enable_autosuspend - allow a USB device to be autosuspended
@@ -1540,6 +1543,8 @@ void usb_autosuspend_device(struct usb_device *udev)
  * The caller must hold @udev's device lock.
  *
  * This routine can run only in process context.
+ *
+ * Return: 0 on success. A negative error code otherwise.
  */
 int usb_autoresume_device(struct usb_device *udev)
 {
@@ -1649,6 +1654,8 @@ EXPORT_SYMBOL_GPL(usb_autopm_put_interface_no_suspend);
  * However if the autoresume fails then the counter is re-decremented.
  *
  * This routine can run only in process context.
+ *
+ * Return: 0 on success.
  */
 int usb_autopm_get_interface(struct usb_interface *intf)
 {
@@ -1682,6 +1689,8 @@ EXPORT_SYMBOL_GPL(usb_autopm_get_interface);
  * resumed.
  *
  * This routine can run in atomic context.
+ *
+ * Return: 0 on success. A negative error code otherwise.
  */
 int usb_autopm_get_interface_async(struct usb_interface *intf)
 {
@@ -1759,12 +1768,8 @@ static int autosuspend_check(struct usb_device *udev)
 			}
 		}
 	}
-	if (w && !device_can_wakeup(&udev->dev)) {
-#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
-		dev_dbg(&udev->dev, "remote wakeup needed for autosuspend\n");
-#endif
+	if (w && !device_can_wakeup(&udev->dev))
 		return -EOPNOTSUPP;
-	}
 
 	/*
 	 * If the device is a direct child of the root hub and the HCD
@@ -1831,7 +1836,8 @@ int usb_runtime_idle(struct device *dev)
 	 */
 	if (autosuspend_check(udev) == 0)
 		pm_runtime_autosuspend(dev);
-	return 0;
+	/* Tell the core not to suspend it, though. */
+	return -EBUSY;
 }
 
 int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable)
@@ -1848,7 +1854,7 @@ int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable)
 	return ret;
 }
 
-#endif /* CONFIG_USB_SUSPEND */
+#endif /* CONFIG_PM */
 
 struct bus_type usb_bus_type = {
 	.name =		"usb",
