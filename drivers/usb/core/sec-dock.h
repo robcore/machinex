@@ -77,7 +77,7 @@ static void set_online(int host_state)
 
 static int call_battery_notify(struct usb_device *dev, bool bOnOff)
 {
-	struct usb_device_id	*id = battery_notify_exception_table;
+	struct usb_device_id*id = battery_notify_exception_table;
 
 	/* Smart Dock hub must be skipped */
 	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x1a40 &&
