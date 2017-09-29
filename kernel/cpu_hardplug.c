@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 2
-#define HARDPLUG_MINOR 8
+#define HARDPLUG_MINOR 9
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -55,6 +55,9 @@ unsigned int limit_screen_on_cpus = 0;
 unsigned int cpu1_allowed = 1;
 unsigned int cpu2_allowed = 1;
 unsigned int cpu3_allowed = 1;
+static bool cpu1_from_hardplug;
+static bool cpu2_from_hardplug;
+static bool cpu3_from_hardplug;
 
 unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
@@ -65,8 +68,11 @@ static DEFINE_MUTEX(hardplug_mtx);
 
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0)
+	if (!limit_screen_on_cpus)
+		return true;
+
+	if (!is_display_on() ||
+		!hotplug_ready || cpu_out_of_range_hp(cpu))
 		return true;
 
 	switch (cpu) {
@@ -92,21 +98,57 @@ bool is_cpu_allowed(unsigned int cpu)
 static void hardplug_cpu(unsigned int cpu)
 {
 	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0)
+		!hotplug_ready)
 		return;
 
 	switch (cpu) {
 	case 1:
-		if (!cpu1_allowed && cpu_online(1))
+		if (!cpu1_allowed && cpu_online(1)) {
 			cpu_down(1);
+			cpu1_from_hardplug = true;
+		}
 		break;
 	case 2:
-		if (!cpu2_allowed && cpu_online(2))
+		if (!cpu2_allowed && cpu_online(2)) {
 			cpu_down(2);
+			cpu2_from_hardplug = true;
+		}
 		break;
 	case 3:
-		if (!cpu3_allowed && cpu_online(3))
+		if (!cpu3_allowed && cpu_online(3)) {
 			cpu_down(3);
+			cpu3_from_hardplug = true;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+static void unplug_cpu(unsigned int cpu)
+{
+	switch (cpu) {
+	case 1:
+		if (cpu1_from_hardplug && cpu1_allowed &&
+			cpu_is_offline(1)) {
+			cpu_up(1);
+			cpu1_from_hardplug = false;
+		}
+		break;
+	case 2:
+		if (cpu2_from_hardplug && cpu2_allowed &&
+			cpu_is_offline(2)) {
+			cpu_up(2);
+			cpu2_from_hardplug = false;
+		}
+		break;
+	case 3:
+		if (cpu3_from_hardplug && cpu3_allowed &&
+			cpu_is_offline(3)) {
+			cpu_up(3);
+			cpu3_from_hardplug = false;
+		}
 		break;
 
 	default:
@@ -120,14 +162,24 @@ void hardplug_all_cpus(void)
 
 	if (limit_screen_on_cpus) {
 		for_each_nonboot_online_cpu(cpu) {
-			if (cpu_is_offline(cpu) ||
-				cpu < 0 || cpu >= NR_CPUS)
-				continue;
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			hardplug_cpu(cpu);
 		}
 	}
 }
 EXPORT_SYMBOL(hardplug_all_cpus);
+
+static void unplug_all_cpus(void)
+{
+	unsigned int cpu;
+
+	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		unplug_cpu(cpu);
+	}
+}
 
 unsigned int nr_hardplugged_cpus(void)
 {
@@ -149,23 +201,21 @@ unsigned int nr_hardplugged_cpus(void)
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
+/*
 static int cpu_hardplug_callback(struct notifier_block *nfb,
 					    unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
-	/* Fail hotplug until this driver can get CPU clocks, drivers is disabled
-	 * or screen off
-	 */
+
+	if (hotplug_ready)
+		return NOTIFY_OK;
 	if (!is_display_on() || !limit_screen_on_cpus ||
 		!hotplug_ready || cpu == 0)
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-		/* Fall through. */
 	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
-		if (!is_cpu_allowed(cpu))
-			hardplug_cpu(cpu);
 		break;
 	default:
 		break;
@@ -174,10 +224,11 @@ static int cpu_hardplug_callback(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
+
 static struct notifier_block cpu_hardplug_notifier = {
 	.notifier_call = cpu_hardplug_callback,
 };
-
+*/
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -199,7 +250,10 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	limit_screen_on_cpus = val;
 
-	hardplug_all_cpus();
+	if (val)
+		hardplug_all_cpus();
+	else
+		unplug_all_cpus();
 
 	return count;
 }
@@ -230,7 +284,10 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	cpu1_allowed = val;
 
-	hardplug_cpu(1);
+	if (val)
+		hardplug_cpu(1);
+	else
+		unplug_cpu(1);
 
 	return count;
 }
@@ -260,7 +317,10 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	cpu2_allowed = val;
 
-	hardplug_cpu(2);
+	if (val)
+		hardplug_cpu(2);
+	else
+		unplug_cpu(2);
 
 	return count;
 }
@@ -290,7 +350,10 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	cpu3_allowed = val;
 
-	hardplug_cpu(3);
+	if (val)
+		hardplug_cpu(3);
+	else
+		unplug_cpu(3);
 
 	return count;
 }
@@ -453,7 +516,7 @@ static int __init cpu_hardplug_init(void)
 		return -ENOMEM;
 	}
 
-	register_hotcpu_notifier(&cpu_hardplug_notifier);
+//	register_hotcpu_notifier(&cpu_hardplug_notifier);
 
 	return 0;
 }

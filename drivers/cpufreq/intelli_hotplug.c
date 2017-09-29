@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	0
+#define INTELLI_PLUG_MINOR_VERSION	1
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -166,14 +166,6 @@ static unsigned long *nr_run_profiles[] = {
 	nr_run_thresholds_strict
 };
 
-static unsigned int real_max_online(void)
-{
-	unsigned int retval;
-
-	retval = max_cpus_online - nr_hardplugged_cpus();
-	return retval;
-}
-
 static unsigned int intelliread(void)
 {
 	unsigned int ret;
@@ -308,13 +300,13 @@ static unsigned long *get_current_profile(void)
 {
 	unsigned long *retrieved_profile;
 
-	if (real_max_online() == DEFAULT_MAX_CPUS_ONLINE)
+	if (max_cpus_online == DEFAULT_MAX_CPUS_ONLINE)
 		retrieved_profile = nr_run_profiles[full_mode_profile];
-	else if (real_max_online() == 3)
+	else if (max_cpus_online == 3)
 		retrieved_profile = nr_run_profiles[5];
-	else if (real_max_online() == 2)
+	else if (max_cpus_online == 2)
 		retrieved_profile = nr_run_profiles[6];
-	else if (real_max_online() == 1)
+	else if (max_cpus_online == 1)
 		retrieved_profile = nr_run_profiles[7];
 	return retrieved_profile;
 }
@@ -324,12 +316,12 @@ static unsigned int calculate_thread_stats(void)
 	unsigned int intellicounter = 1;
 	unsigned long *current_profile = get_current_profile();
 
-	for (nr_cpus = min_cpus_online; nr_cpus < real_max_online(); nr_cpus++) {
+	for (nr_cpus = min_cpus_online; nr_cpus < max_cpus_online; nr_cpus++) {
 		unsigned long nr_threshold, bigshift;
 
 		nr_threshold = current_profile[nr_cpus - 1];
 		nr_fshift = num_offline_cpus() + 1;
-		nr_run_hysteresis = DIV_ROUND_CLOSEST((real_max_online() << 2), num_online_cpus());
+		nr_run_hysteresis = DIV_ROUND_CLOSEST((max_cpus_online << 2), num_online_cpus());
 		bigshift = FSHIFT - nr_fshift;
 
 		if (nr_cpus >= nr_run_last)
@@ -352,7 +344,7 @@ static unsigned int calculate_thread_stats(void)
 		}
 	}
 
-	sanitize_min_max(nr_cpus, min_cpus_online, real_max_online());
+	sanitize_min_max(nr_cpus, min_cpus_online, max_cpus_online);
 	nr_run_last = nr_cpus;
 	return nr_cpus;
 }
@@ -386,7 +378,7 @@ static void do_override(void)
 			!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
-		if (cpu < 0 || cpu >= NR_CPUS)
+		if (cpu_out_of_range_hp(cpu))
 			break;
 		ret = cpu_up(cpu);
 		if (ret)
@@ -420,7 +412,7 @@ static void cpu_up_down_work(struct work_struct *work)
 
 	cpu = smp_processor_id();
 	target = READ_ONCE(target_cpus);
-	sanitize_min_max(target, min_cpus_online, real_max_online());
+	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 
 	if (!online_cpus)
 		report_current_cpus();
@@ -441,7 +433,7 @@ static void cpu_up_down_work(struct work_struct *work)
 				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
-			if (cpu < 0 || cpu >= NR_CPUS)
+			if (cpu_out_of_range_hp(cpu))
 				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) / num_online_cpus();
@@ -452,13 +444,13 @@ static void cpu_up_down_work(struct work_struct *work)
 			if (num_online_cpus() == target)
 				break;
 		}
-	} else if (online_cpus < real_max_online() && target > online_cpus) {
+	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
 				thermal_core_controlled(cpu))
 				continue;
-			if (cpu < 0 || cpu >= NR_CPUS)
+			if (cpu_out_of_range_hp(cpu))
 				break;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
@@ -507,7 +499,7 @@ void intelli_boost(void)
 		return;
 
 	atomic_set(&from_boost, 1);
-	sanitize_min_max(cpus_boosted, min_cpus_online, real_max_online());
+	sanitize_min_max(cpus_boosted, min_cpus_online, max_cpus_online);
 	WRITE_ONCE(target_cpus, cpus_boosted);
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
@@ -549,6 +541,8 @@ static void cycle_cpus(void)
 static void recycle_cpus(void)
 {
 	unsigned int cpu;
+
+	wake_lock(&ipwlock);
 	intellinit = true;
 
 	for_each_nonboot_online_cpu(cpu) {
@@ -570,6 +564,7 @@ static void recycle_cpus(void)
 	}
 	intellinit = false;
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work, def_sampling_ms);
+	wake_unlock(&ipwlock);
 }
 
 static void resume_worker(struct work_struct *work)
