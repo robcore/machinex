@@ -135,8 +135,6 @@ static void power_supply_changed_work(struct work_struct *work)
 	struct power_supply *psy = container_of(work, struct power_supply,
 						changed_work);
 
-	dev_dbg(psy->dev, "%s\n", __func__);
-
 	spin_lock_irqsave(&psy->changed_lock, flags);
 	/*
 	 * Check 'changed' here to avoid issues due to race between
@@ -145,37 +143,46 @@ static void power_supply_changed_work(struct work_struct *work)
 	 * lock. During the first call of this routine we will mark 'changed' as
 	 * false and it will stay false for the next call as well.
 	 */
-	if (likely(psy->changed)) {
+
+	if (psy->changed) {
 		psy->changed = false;
 		spin_unlock_irqrestore(&psy->changed_lock, flags);
-
 		class_for_each_device(power_supply_class, NULL, psy,
 				      __power_supply_changed_work);
-
 		power_supply_update_leds(psy);
-
 		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-		spin_lock_irqsave(&psy->changed_lock, flags);
-	}
-	/*
-	 * Hold the wakeup_source until all events are processed.
-	 * power_supply_changed() might have called again and have set 'changed'
-	 * to true.
-	 */
-	if (likely(!psy->changed))
 		wake_unlock(&psy->work_wake_lock);
-	spin_unlock_irqrestore(&psy->changed_lock, flags);
+	} else {
+		wake_unlock(&psy->work_wake_lock);
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+	}
 }
+
+	/*
+	 *
+	 * ROB NOTE: logic was flawed here and is flawed upstream. So we have
+	 * multiple callers of this function, and a brief timeframe in which
+	 * our semi-vain attempts at synchronization will be circumvented.
+	 * For one thing, this interface is flawed, too many devices sharing one
+	 * notification mechanism. We should change it so that it just notifies
+	 * EVERY possible power supply of the change, and make their drivers
+	 * handle potential relevancy in their callback.
+	 * For another, if we have multiple callers, then psy->changed isn't
+	 * the only variable being changed, THE WAKE LOCK IS BEING HELD TOO YOU
+	 * FUCKING CRACKHEADS. So. Hold it before setting the property, which will
+	 * allow callers to implement their callbacks faster. Also, ensure that either
+	 * way the scheduled work releases the wakelock, because every new call is a
+	 * guarantee that we will be awake.  MOBILE DEVICES PEOPLE. 
+	 *
+	 */
 
 void power_supply_changed(struct power_supply *psy)
 {
 	unsigned long flags;
 
-	dev_dbg(psy->dev, "%s\n", __func__);
-
 	spin_lock_irqsave(&psy->changed_lock, flags);
-	psy->changed = true;
 	wake_lock(&psy->work_wake_lock);
+	psy->changed = true;
 	spin_unlock_irqrestore(&psy->changed_lock, flags);
 	schedule_work(&psy->changed_work);
 }
