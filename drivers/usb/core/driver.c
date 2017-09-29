@@ -311,6 +311,7 @@ static int usb_probe_interface(struct device *dev)
 	return error;
 
  err:
+	usb_set_intfdata(intf, NULL);
 	intf->needs_remote_wakeup = 0;
 	intf->condition = USB_INTERFACE_UNBOUND;
 
@@ -337,10 +338,11 @@ static int usb_unbind_interface(struct device *dev)
 	udev = interface_to_usbdev(intf);
 	error = usb_autoresume_device(udev);
 
-	/* Terminate all URBs for this interface unless the driver
-	 * supports "soft" unbinding.
+	/*
+	 * Terminate all URBs for this interface unless the driver
+	 * supports "soft" unbinding and the device is still present.
 	 */
-	if (!driver->soft_unbind)
+	if (!driver->soft_unbind || udev->state == USB_STATE_NOTATTACHED)
 		usb_disable_interface(udev, intf, false);
 
 	driver->disconnect(intf);
