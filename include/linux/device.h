@@ -362,9 +362,6 @@ int subsys_virtual_register(struct bus_type *subsys,
  * @devnode:	Callback to provide the devtmpfs.
  * @class_release: Called to release this class.
  * @dev_release: Called to release the device.
- * @suspend:	Used to put the device to sleep mode, usually to a low power
- *		state.
- * @resume:	Used to bring the device from the sleep mode.
  * @ns_type:	Callbacks so sysfs can detemine namespaces.
  * @namespace:	Namespace of the device belongs to this class.
  * @pm:		The default device power management operations of this class.
@@ -390,9 +387,6 @@ struct class {
 
 	void (*class_release)(struct class *class);
 	void (*dev_release)(struct device *dev);
-
-	int (*suspend)(struct device *dev, pm_message_t state);
-	int (*resume)(struct device *dev);
 
 	const struct kobj_ns_type_operations *ns_type;
 	const void *(*namespace)(struct device *dev);
