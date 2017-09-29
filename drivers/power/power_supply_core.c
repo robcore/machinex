@@ -149,8 +149,6 @@ static int __power_supply_changed_work(struct device *dev, void *data)
 
 void power_supply_changed(struct power_supply *psy)
 {
-	unsigned long flags;
-
 	wake_lock(&psy->work_wake_lock);
 	spin_lock_irq(&psy->changed_lock);
 	psy->changed = true;
