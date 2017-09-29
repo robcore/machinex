@@ -2398,6 +2398,8 @@ static void handle_start_ext_chg(struct pm8921_chg_chip *chip)
 	chip->ext_charging = true;
 	chip->ext_charge_done = false;
 	bms_notify_check(chip);
+	/* Update battery charging LEDs and user space battery info */
+	power_supply_changed(&chip->batt_psy);
 	/*
 	 * since we wont get a fastchg irq from external charger
 	 * use eoc worker to detect end of charging
@@ -2408,8 +2410,6 @@ static void handle_start_ext_chg(struct pm8921_chg_chip *chip)
 		schedule_delayed_work(&chip->btc_override_work,
 				round_jiffies_relative(msecs_to_jiffies
 					(chip->btc_delay_ms)));
-	/* Update battery charging LEDs and user space battery info */
-	power_supply_changed(&chip->batt_psy);
 }
 
 static void turn_off_ovp_fet(struct pm8921_chg_chip *chip, u16 ovptestreg)
@@ -3720,7 +3720,6 @@ static void eoc_worker(struct work_struct *work)
 		check_temp_thresholds(chip);
 		if (end != CHG_NOT_IN_PROGRESS)
 			adjust_vdd_max_for_fastchg(chip, vbat_batt_terminal_uv);
-		pr_debug("EOC count = %d\n", count);
 		schedule_delayed_work(&chip->eoc_work,
 			      round_jiffies_relative(msecs_to_jiffies
 						     (EOC_CHECK_PERIOD_MS)));
