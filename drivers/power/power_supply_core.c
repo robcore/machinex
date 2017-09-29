@@ -180,11 +180,16 @@ void power_supply_changed(struct power_supply *psy)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&psy->changed_lock, flags);
 	wake_lock(&psy->work_wake_lock);
-	psy->changed = true;
-	spin_unlock_irqrestore(&psy->changed_lock, flags);
-	schedule_work(&psy->changed_work);
+	spin_lock_irqsave(&psy->changed_lock, flags);
+	if (!psy->changed) {
+		psy->changed = true;
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		schedule_work(&psy->changed_work);
+	} else {
+		wake_unlock(&psy->work_wake_lock);
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+	}
 }
 EXPORT_SYMBOL_GPL(power_supply_changed);
 
