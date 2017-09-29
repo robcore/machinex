@@ -27,14 +27,14 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define INTELLI_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define DEFAULT_SAMPLING_RATE INTELLI_MS(100UL)
-#define INPUT_INTERVAL INTELLI_MS(200UL)
-#define BOOST_LOCK_DUR INTELLI_MS(150UL)
+#define DEFAULT_SAMPLING_RATE INTELLI_MS(250UL)
+#define INPUT_INTERVAL INTELLI_MS(250UL)
+#define BOOST_LOCK_DUR INTELLI_MS(300)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
@@ -239,9 +239,10 @@ static void rm_down_lock(unsigned int cpu, unsigned long duration)
 {
 	struct down_lock *dl = &per_cpu(lock_info, cpu);
 
-	if (!duration)
-		dl->locked = false;
-	else
+	if (!duration) {
+		if (dl->locked)
+			dl->locked = false;
+	} else
 		mod_delayed_work_on(cpu, intelliplug_wq, &dl->lock_rem,
 		      duration);
 }
@@ -253,8 +254,10 @@ static void apply_down_lock(unsigned int cpu)
 	if (!is_display_on())
 		return;
 
-	dl->locked = true;
-	rm_down_lock(cpu, down_lock_dur);
+	if (!dl->locked) {
+		dl->locked = true;
+		rm_down_lock(cpu, down_lock_dur);
+	}
 }
 
 static void force_down_lock(unsigned int cpu)
@@ -868,7 +871,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 		input = 0;
 	if (input >= 1)
 		input = 1;
-	if (input == intelli_plug_active)
+	if (input == intelliread())
 		return count;
 
 	intelli_plug_active_eval_fn(input);
