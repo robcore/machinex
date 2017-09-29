@@ -1889,6 +1889,9 @@ void usb_hcd_reset_endpoint(struct usb_device *udev,
  * Sets up a group of bulk endpoints to have num_streams stream IDs available.
  * Drivers may queue multiple transfers to different stream IDs, which may
  * complete in a different order than they were queued.
+ *
+ * Return: On success, the number of allocated streams. On failure, a negative
+ * error code.
  */
 int usb_alloc_streams(struct usb_interface *interface,
 		struct usb_host_endpoint **eps, unsigned int num_eps,
@@ -1896,7 +1899,7 @@ int usb_alloc_streams(struct usb_interface *interface,
 {
 	struct usb_hcd *hcd;
 	struct usb_device *dev;
-	int i;
+	int i, ret;
 
 	dev = interface_to_usbdev(interface);
 	hcd = bus_to_hcd(dev->bus);
@@ -1907,13 +1910,24 @@ int usb_alloc_streams(struct usb_interface *interface,
 	if (dev->state < USB_STATE_CONFIGURED)
 		return -ENODEV;
 
-	/* Streams only apply to bulk endpoints. */
-	for (i = 0; i < num_eps; i++)
+	for (i = 0; i < num_eps; i++) {
+		/* Streams only apply to bulk endpoints. */
 		if (!usb_endpoint_xfer_bulk(&eps[i]->desc))
 			return -EINVAL;
+		/* Re-alloc is not allowed */
+		if (eps[i]->streams)
+			return -EINVAL;
+	}
 
-	return hcd->driver->alloc_streams(hcd, dev, eps, num_eps,
+	ret = hcd->driver->alloc_streams(hcd, dev, eps, num_eps,
 			num_streams, mem_flags);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < num_eps; i++)
+		eps[i]->streams = ret;
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(usb_alloc_streams);
 
