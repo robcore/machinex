@@ -2278,6 +2278,9 @@ int pm8921_set_usb_power_supply_type(enum power_supply_type type)
 	if (type < POWER_SUPPLY_TYPE_USB && type > POWER_SUPPLY_TYPE_BATTERY)
 		return -EINVAL;
 
+	if (type == the_chip->usb_type)
+		return 0;
+
 	the_chip->usb_type = type;
 	power_supply_changed(&the_chip->usb_psy);
 	power_supply_changed(&the_chip->dc_psy);
@@ -2399,8 +2402,8 @@ static void handle_start_ext_chg(struct pm8921_chg_chip *chip)
 	 * since we wont get a fastchg irq from external charger
 	 * use eoc worker to detect end of charging
 	 */
-	schedule_delayed_work(&chip->eoc_work, delay);
 	wake_lock(&chip->eoc_wake_lock);
+	schedule_delayed_work(&chip->eoc_work, delay);
 	if (chip->btc_override)
 		schedule_delayed_work(&chip->btc_override_work,
 				round_jiffies_relative(msecs_to_jiffies
