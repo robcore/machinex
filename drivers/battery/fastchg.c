@@ -83,16 +83,18 @@
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/fastchg.h>
+#include "local_fc.h"
 
-int force_fast_charge;
-int failsafe;
-int use_mtp_during_fast_charge;
-int screen_on_current_limit;
-int unstable_power_detection;
-int ac_charge_level;
-int usb_charge_level;
-int wireless_charge_level;
-
+unsigned int force_fast_charge;
+unsigned int failsafe;
+unsigned int use_mtp_during_fast_charge;
+unsigned int screen_on_current_limit;
+unsigned int unstable_power_detection;
+unsigned int ac_charge_level;
+unsigned int usb_charge_level;
+unsigned int wireless_charge_level;
+unsigned int force_full_condition_soc;
+unsigned int full_condition_percentage;
 
 /* sysfs interface for "force_fast_charge" */
 static ssize_t force_fast_charge_show(struct kobject *kobj,
@@ -380,6 +382,80 @@ static struct kobj_attribute unstable_power_detection_attribute =
 		unstable_power_detection_show,
 		unstable_power_detection_store);
 
+static ssize_t force_full_condition_soc_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", force_full_condition_soc);
+}
+
+static ssize_t force_full_condition_soc_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+
+	int val;
+
+	sscanf(buf, "%du", &val);
+
+	sanitize_min_max(val, STOCK_FULL_CONDITION_EUR, FORCE_FULL_CONDITION_CUSTOM);
+
+	force_full_condition_soc = val;
+
+	return count;
+}
+
+static struct kobj_attribute force_full_condition_soc_attribute =
+	__ATTR(force_full_condition_soc, 0664,
+		force_full_condition_soc_show,
+		force_full_condition_soc_store);
+
+static ssize_t full_condition_percentage_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", full_condition_percentage);
+}
+
+static ssize_t full_condition_percentage_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+
+	int val;
+
+	sscanf(buf, "%du", &val);
+
+	sanitize_min_max(val, 90, 98);
+
+	full_condition_percentage = val;
+
+	return count;
+}
+
+static struct kobj_attribute full_condition_percentage_attribute =
+	__ATTR(full_condition_percentage, 0664,
+		full_condition_percentage_show,
+		full_condition_percentage_store);
+
+unsigned int real_full_condition_vcell(void) /* vcell callback for full condition changes */
+{
+	switch (force_full_condition_soc) {
+		case STOCK_FULL_CONDITION_EUR:
+			return 4250;
+		case STOCK_FULL_CONDITION_NA:
+			return 4275;
+		case FORCE_FULL_CONDITION_CUSTOM:
+			switch (full_condition_percentage) {
+				case 91 ... 92:
+					return 4225;
+				case 93 ... 96:
+					return 4250;
+				case 97:
+					return 4275;
+				case 98:
+					return 4300;
+			}
+	}
+	return 4250; //safe
+}
+
 /* sysfs interface for "ac_levels" */
 static ssize_t ac_levels_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -475,6 +551,8 @@ static struct attribute *force_fast_charge_attrs[] = {
 	&wireless_charge_level_attribute.attr,
 	&failsafe_attribute.attr,
 	&unstable_power_detection_attribute.attr,
+	&force_full_condition_soc_attribute.attr,
+	&full_condition_percentage_attribute.attr,
 	&ac_levels_attribute.attr,
 	&usb_levels_attribute.attr,
 	&wireless_levels_attribute.attr,
@@ -508,6 +586,10 @@ int force_fast_charge_init(void)
 	/* Allow only values in list by default   */
 	failsafe = FAIL_SAFE_ENABLED;
 
+	force_full_condition_soc = STOCK_FULL_CONDITION_EUR;
+
+	full_condition_percentage = FULL_PERCENTAGE_EUR;
+
         force_fast_charge_kobj =
 		kobject_create_and_add("fast_charge", kernel_kobj);
 
@@ -519,7 +601,7 @@ int force_fast_charge_init(void)
 			&force_fast_charge_attr_group);
 
         if (force_fast_charge_retval)
-                kobject_put(force_fast_charge_kobj);
+			kobject_put(force_fast_charge_kobj);
 
         return (force_fast_charge_retval);
 }
@@ -527,6 +609,8 @@ int force_fast_charge_init(void)
 
 void force_fast_charge_exit(void)
 {
+	sysfs_remove_group(force_fast_charge_kobj,
+		&force_fast_charge_attr_group);
 	kobject_put(force_fast_charge_kobj);
 }
 

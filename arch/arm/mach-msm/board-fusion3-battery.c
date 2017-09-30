@@ -1001,12 +1001,11 @@ sec_battery_platform_data_t sec_battery_pdata = {
 	.full_condition_type = SEC_BATTERY_FULL_CONDITION_SOC |
 		SEC_BATTERY_FULL_CONDITION_NOTIMEFULL |
 		SEC_BATTERY_FULL_CONDITION_VCELL,
-// I am undecided between these possible vals, will try both to
-// see which is better
-	//.full_condition_soc = 97,
-	//.full_condition_vcell = 4300,
-	.full_condition_soc = 93,
-	.full_condition_vcell = 4250,
+/*
+	The next two values are moot, as they are handled in the custom fast charge driver.
+*/
+	.full_condition_soc = 97,
+	.full_condition_vcell = 4275,
 
 	.recharge_check_count = 2,
 	.recharge_condition_type =
