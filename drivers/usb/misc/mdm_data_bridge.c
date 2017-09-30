@@ -67,6 +67,7 @@ static const char * const rmnet_hsusb_bridge_names[] = {
 static DEFINE_MUTEX(brdg_claim_lock);
 
 static struct workqueue_struct	*bridge_wq;
+static struct workqueue_struct	*kevent_wq;
 
 static unsigned int	fctrl_support = FLOW_CTRL_SUPPORT;
 module_param(fctrl_support, uint, S_IRUGO | S_IWUSR);
@@ -301,7 +302,7 @@ static void data_bridge_read_cb(struct urb *urb)
 	case -EPIPE:
 		set_bit(RX_HALT, &dev->flags);
 		dev_err(&dev->intf->dev, "%s: epout halted\n", __func__);
-		schedule_work(&dev->kevent);
+		queue_work(kevent_wq, &dev->kevent);
 		/* FALLTHROUGH */
 	case -ESHUTDOWN:
 	case -ENOENT: /* suspended */
@@ -540,7 +541,7 @@ static void data_bridge_write_cb(struct urb *urb)
 	case -EPIPE:
 		set_bit(TX_HALT, &dev->flags);
 		dev_err(&dev->intf->dev, "%s: epout halted\n", __func__);
-		schedule_work(&dev->kevent);
+		queue_work(kevent_wq, &dev->kevent);
 		/* FALLTHROUGH */
 	case -ESHUTDOWN:
 	case -ENOENT: /* suspended */
@@ -1176,6 +1177,13 @@ static int __init bridge_init(void)
 		goto free_ctrl;
 	}
 
+	kevent_wq  = create_singlethread_workqueue("mdm_kevent");
+	if (!kevent_wq) {
+		pr_err("%s: Unable to create workqueue:kevent\n", __func__);
+		ret = -ENOMEM;
+		goto free_bridge;
+	}
+
 	for (i = 0; i < MAX_BRIDGE_DEVICES; i++) {
 
 		dev = kzalloc(sizeof(*dev), GFP_KERNEL);
@@ -1218,6 +1226,8 @@ error:
 		kfree(__dev[i]);
 		__dev[i] = NULL;
 	}
+	destroy_workqueue(kevent_wq);
+free_bridge:
 	destroy_workqueue(bridge_wq);
 free_ctrl:
 	ctrl_bridge_exit();
@@ -1230,6 +1240,7 @@ static void __exit bridge_exit(void)
 
 	usb_deregister(&bridge_driver);
 	data_bridge_debugfs_exit();
+	destroy_workqueue(kevent_wq);
 	destroy_workqueue(bridge_wq);
 
 	for (i = 0; i < MAX_BRIDGE_DEVICES; i++) {
