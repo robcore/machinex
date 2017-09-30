@@ -724,7 +724,7 @@ sec_battery_platform_data_t sec_battery_pdata = {
 	.bat_gpio_ta_nconnected = 0,
 	.bat_polarity_ta_nconnected = 0,
 	.bat_irq = IF_PMIC_IRQ_BASE + MAX77693_CHG_IRQ_BATP_I,
-	.bat_irq_attr = IRQF_TRIGGER_FALLING,
+	.bat_irq_attr = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 #if defined(CONFIG_MACH_JF_VZW)
 	.cable_check_type =
 		SEC_BATTERY_CABLE_CHECK_PSY |
