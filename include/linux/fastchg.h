@@ -22,7 +22,7 @@
 #ifndef _LINUX_FASTCHG_H
 #define _LINUX_FASTCHG_H
 
-#define FAST_CHARGE_VERSION "v2.2 by Yank555.lu, ktoonsez, Tkkg1994, & robcore"
+#define FAST_CHARGE_VERSION "v2.1 by Yank555.lu, ktoonsez, Tkkg1994, & robcore"
 #define AC_LEVELS  "1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000 2100"
 #define USB_LEVELS "460 500 600 700 800 900 1000 1100 1200"
 #define WIRELESS_LEVELS "650 800 900 1000 1100 1200"
@@ -30,21 +30,32 @@
 #define ANY_LEVELS_USB "0 to 1200"
 #define ANY_LEVELS_WL "0 to 1200"
 
+
+extern int force_fast_charge;
+
 #define FAST_CHARGE_DISABLED 0
 #define FAST_CHARGE_FORCE_AC 1
 #define FAST_CHARGE_FORCE_CUSTOM_MA 2	/* default */
 
+extern int use_mtp_during_fast_charge;
+
 #define USE_MTP_DURING_FAST_CHARGE_DISABLED 0
 #define USE_MTP_DURING_FAST_CHARGE_ENABLED 1	/* default */
+
+extern int screen_on_current_limit;
 
 #define SCREEN_ON_CURRENT_LIMIT_DISABLED 0	/* default */
 #define SCREEN_ON_CURRENT_LIMIT_ENABLED 1
 
-#define FAIL_SAFE_DISABLED 0
+extern int failsafe;
 #define FAIL_SAFE_ENABLED 1	/* default */
+#define FAIL_SAFE_DISABLED 0
 
-#define UNSTABLE_POWER_DETECTION_DISABLED 0
+extern int unstable_power_detection;
 #define UNSTABLE_POWER_DETECTION_ENABLED 1	/* default */
+#define UNSTABLE_POWER_DETECTION_DISABLED 0
+
+extern int ac_charge_level;
 
 #define AC_CHARGE_1000 1000
 #define AC_CHARGE_1100 1100
@@ -59,6 +70,8 @@
 #define AC_CHARGE_2000 2000
 #define AC_CHARGE_2100 2100 /* default */
 
+extern int usb_charge_level;
+
 #define USB_CHARGE_460 460	/* default */
 #define USB_CHARGE_500 500
 #define USB_CHARGE_600 600
@@ -68,6 +81,8 @@
 #define USB_CHARGE_1000 1000
 #define USB_CHARGE_1100 1100
 #define USB_CHARGE_1200 1200
+
+extern int wireless_charge_level;
 
 #define WIRELESS_CHARGE_650 650	/* default */
 #define WIRELESS_CHARGE_800 800
@@ -79,13 +94,4 @@
 /* Whatever happens, this is the limit */
 #define MAX_CHARGE_LEVEL 2100
 
-extern unsigned int force_fast_charge;
-extern unsigned int use_mtp_during_fast_charge;
-extern unsigned int screen_on_current_limit;
-extern unsigned int failsafe;
-extern unsigned int unstable_power_detection;
-extern unsigned int force_full_condition_soc;
-extern unsigned int ac_charge_level;
-extern unsigned int usb_charge_level;
-extern unsigned int wireless_charge_level;
 #endif

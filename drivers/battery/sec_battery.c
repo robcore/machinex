@@ -11,7 +11,6 @@
  */
 #include <linux/battery/sec_battery.h>
 #include <linux/display_state.h>
-#include "local_fc.h"
 
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
@@ -640,40 +639,15 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 		battery->is_recharging) {
 		psy_do_property(battery->pdata->fuelgauge_name, get,
 			POWER_SUPPLY_PROP_CAPACITY, value);
-		switch (force_full_condition_soc) {
-			case STOCK_FULL_CONDITION_EUR:
-				if (value.intval <
-					FULL_PERCENTAGE_EUR &&
-						battery->voltage_now <
-						(battery->pdata->recharge_condition_vcell - 50)) {
-					battery->status = POWER_SUPPLY_STATUS_CHARGING;
-					battery->voltage_now = 1080;
-					battery->voltage_avg = 1080;
-					power_supply_changed(&battery->psy_bat);
-					return false;
-				}
-			case STOCK_FULL_CONDITION_NA:
-				if (value.intval <
-					FULL_PERCENTAGE_NA &&
-						battery->voltage_now <
-						(battery->pdata->recharge_condition_vcell - 50)) {
-					battery->status = POWER_SUPPLY_STATUS_CHARGING;
-					battery->voltage_now = 1080;
-					battery->voltage_avg = 1080;
-					power_supply_changed(&battery->psy_bat);
-					return false;
-				}
-			case FORCE_FULL_CONDITION_CUSTOM:
-				if (value.intval <
-					full_condition_percentage &&
-						battery->voltage_now <
-						(battery->pdata->recharge_condition_vcell - 50)) {
-					battery->status = POWER_SUPPLY_STATUS_CHARGING;
-					battery->voltage_now = 1080;
-					battery->voltage_avg = 1080;
-					power_supply_changed(&battery->psy_bat);
-					return false;
-				}
+		if (value.intval <
+			battery->pdata->full_condition_soc &&
+				battery->voltage_now <
+				(battery->pdata->recharge_condition_vcell - 50)) {
+			battery->status = POWER_SUPPLY_STATUS_CHARGING;
+			battery->voltage_now = 1080;
+			battery->voltage_avg = 1080;
+			power_supply_changed(&battery->psy_bat);
+			return false;
 		}
 	}
 
@@ -997,37 +971,18 @@ static bool sec_bat_check_fullcharged_condition(
 			break;
 	}
 
-	switch (force_full_condition_soc) {
-		case STOCK_FULL_CONDITION_EUR:
-		if (battery->pdata->full_condition_type &
-			SEC_BATTERY_FULL_CONDITION_SOC) {
-			if (battery->capacity <
-				FULL_PERCENTAGE_EUR) {
-				return false;
-			}
-		}
-		case STOCK_FULL_CONDITION_NA:
-		if (battery->pdata->full_condition_type &
-			SEC_BATTERY_FULL_CONDITION_SOC) {
-			if (battery->capacity <
-				FULL_PERCENTAGE_NA) {
-				return false;
-			}
-		}
-		case FORCE_FULL_CONDITION_CUSTOM:
-		if (battery->pdata->full_condition_type &
-			SEC_BATTERY_FULL_CONDITION_SOC) {
-			if (battery->capacity <
-				full_condition_percentage) {
-				return false;
-			}
+	if (battery->pdata->full_condition_type &
+		SEC_BATTERY_FULL_CONDITION_SOC) {
+		if (battery->capacity <
+			battery->pdata->full_condition_soc) {
+			return false;
 		}
 	}
 
 	if (battery->pdata->full_condition_type &
 		SEC_BATTERY_FULL_CONDITION_VCELL) {
 		if (battery->voltage_now <
-			real_full_condition_vcell()) {
+			battery->pdata->full_condition_vcell) {
 			return false;
 		}
 	}
