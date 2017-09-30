@@ -50,12 +50,13 @@ EXPORT_SYMBOL(polltime);
 module_param(polltime, long, 0644);
 MODULE_PARM_DESC(polltime, "How long to wait between polls (in nano seconds).");
 
-
 #define PDT_START_SCAN_LOCATION 0x00E9
 #define PDT_END_SCAN_LOCATION 0x0005
 #define PDT_ENTRY_SIZE 0x0006
 
 static DEFINE_MUTEX(rfi_mutex);
+static struct workqueue_struct *rmi_sensor_wq;
+static bool use_system = false;
 
 struct rmi_functions *rmi_find_function(int functionNum);
 
@@ -199,7 +200,10 @@ static void attention(struct rmi_phys_driver *physdrvr, int instance)
 	 * the work and enabling the interrupt still exists.
 	 */
 	if (physdrvr->sensor->workIsReady) {
-		schedule_work(&(physdrvr->sensor->work));
+		if (likely(!use_system))
+			queue_work(rmi_sensor_wq, &(physdrvr->sensor->work));
+		else
+			schedule_work(&(physdrvr->sensor->work));
 	} else {
 		/* Got an interrupt but we're not ready so enable the irq
 		 * so it doesn't get hung up
@@ -260,7 +264,10 @@ static enum hrtimer_restart sensor_poll_timer_func(struct hrtimer *timer)
 	struct rmi_sensor_driver *sensor = container_of(timer,
 			struct rmi_sensor_driver, timer);
 
-	schedule_work(&sensor->work);
+	if (likely(!use_system))
+		queue_work(rmi_sensor_wq, &sensor->work);
+	else
+		schedule_work(&sensor->work);
 	hrtimer_start(&sensor->timer, ktime_set(0, polltime),
 			HRTIMER_MODE_REL);
 	return HRTIMER_NORESTART;
@@ -634,7 +641,10 @@ static void rmi_sensor_unregister_driver(struct rmi_sensor_driver *driver)
 	if (rmi_polling_required(driver))
 		hrtimer_cancel(&driver->timer);
 
-	flush_scheduled_work(); /* Make sure all scheduled work is stopped */
+	if (likely(!use_system))
+		flush_work(&driver->work); /* Make sure all queued work is stopped */
+	else
+		flush_scheduled_work(); /* Make sure all scheduled work is stopped */
 
 	driver_unregister(&driver->drv);
 }
@@ -644,13 +654,21 @@ EXPORT_SYMBOL(rmi_sensor_unregister_driver);
 static int __init rmi_sensor_init(void)
 {
 	printk(KERN_DEBUG "%s: RMI Sensor Init\n", __func__);
+	rmi_sensor_wq = create_singlethread_workqueue("rmi_sensor");
+	if (!rmi_sensor_wq) {
+		pr_err("[RMI_SENSOR] Falling Back to System WQ\n");
+		use_system = true;
+	}
 	return 0;
 }
 
 static void __exit rmi_sensor_exit(void)
 {
 	printk(KERN_DEBUG "%s: RMI Sensor Driver Exit\n", __func__);
-	flush_scheduled_work(); /* Make sure all scheduled work is stopped */
+	if (likely(!use_system))
+		destroy_workqueue(rmi_sensor_wq);
+	else
+		flush_scheduled_work(); /* Make sure all scheduled work is stopped */
 }
 
 

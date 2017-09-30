@@ -283,13 +283,16 @@ static int prometheus_init(void)
 		return -ENOMEM;
 	}
 
-	pwrsup_wq = create_hipri_singlethread_workqueue("prometheus_work");
-	if (!pwrsup_wq)
-		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
-
 	mutex_init(&prometheus_mtx);
 	spin_lock_init(&ps_state_lock);
 	wake_lock_init(&prsynclock, WAKE_LOCK_SUSPEND, "prometheus_synclock");
+
+	pwrsup_wq = create_hipri_singlethread_workqueue("prometheus_work");
+	if (!pwrsup_wq) {
+		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
+		sysfs_remove_group(prometheus_kobj, &prometheus_attr_group);
+		kobject_put(prometheus_kobj);
+	}
 
 	INIT_WORK(&power_suspend_work, power_suspend);
 	INIT_WORK(&power_resume_work, power_resume);
@@ -300,11 +303,9 @@ static int prometheus_init(void)
 /* This should never have to be used except on shutdown */
 static void prometheus_exit(void)
 {
-	flush_work(&power_suspend_work);
-	flush_work(&power_resume_work);
 	destroy_workqueue(pwrsup_wq);
 	mutex_destroy(&prometheus_mtx);
-
+	sysfs_remove_group(prometheus_kobj, &prometheus_attr_group);
 	if (prometheus_kobj != NULL)
 		kobject_put(prometheus_kobj);
 }
