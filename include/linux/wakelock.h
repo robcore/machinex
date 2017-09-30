@@ -49,6 +49,15 @@ static inline void wake_lock(struct wake_lock *lock)
 	__pm_stay_awake(&lock->ws);
 }
 
+static inline unsigned int wake_trylock(struct wake_lock *lock)
+{
+	if (!lock->ws.active) {
+		__pm_stay_awake(&lock->ws);
+		return 1;
+	}
+	return 0;
+}
+
 static inline void wake_lock_timeout(struct wake_lock *lock, long timeout)
 {
 	__pm_wakeup_event(&lock->ws, jiffies_to_msecs(timeout));
