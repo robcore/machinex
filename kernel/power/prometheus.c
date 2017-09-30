@@ -288,10 +288,11 @@ static int prometheus_init(void)
 	wake_lock_init(&prsynclock, WAKE_LOCK_SUSPEND, "prometheus_synclock");
 
 	pwrsup_wq = create_hipri_singlethread_workqueue("prometheus_work");
-	if (!pwrsup_wq) {
+	if (pwrsup_wq == NULL) {
 		pr_err("[PROMETHEUS] Failed to allocate workqueue\n");
 		sysfs_remove_group(prometheus_kobj, &prometheus_attr_group);
 		kobject_put(prometheus_kobj);
+		return -ENOMEM;
 	}
 
 	INIT_WORK(&power_suspend_work, power_suspend);
@@ -306,8 +307,7 @@ static void prometheus_exit(void)
 	destroy_workqueue(pwrsup_wq);
 	mutex_destroy(&prometheus_mtx);
 	sysfs_remove_group(prometheus_kobj, &prometheus_attr_group);
-	if (prometheus_kobj != NULL)
-		kobject_put(prometheus_kobj);
+	kobject_put(prometheus_kobj);
 }
 
 subsys_initcall(prometheus_init);
