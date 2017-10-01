@@ -217,7 +217,7 @@ unsigned int cpufreq_quick_get_max(unsigned int cpu);
 unsigned int cpufreq_quick_get_min(unsigned int cpu);
 void disable_cpufreq(void);
 
-u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
+u64 get_cpu_idle_time(unsigned int cpu, u64 *wall);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 void cpufreq_update_policy(unsigned int cpu);
 bool have_governor_per_policy(void);

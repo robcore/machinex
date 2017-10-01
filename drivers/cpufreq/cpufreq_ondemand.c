@@ -34,20 +34,6 @@ static struct od_ops od_ops;
 static unsigned int default_powersave_bias;
 
 /*
- * Not all CPUs want IO time to be accounted as busy; this depends on how
- * efficient idling at a higher frequency/voltage is.
- * Pavel Machek says this is not so for various generations of AMD and old
- * Intel systems.
- * Mike Chan (android.com) claims this is also not true for ARM.
- * Because of this, whitelist specific known (series) of CPUs by default, and
- * leave all others up to the user.
- */
-static int should_io_be_busy(void)
-{
-	return 0;
-}
-
-/*
  * Find right freq to be set now with powersave_bias on.
  * Returns the freq_hi to be used right now and will set freq_hi_delay_us,
  * freq_lo, and freq_lo_delay_us in percpu area for averaging freqs.
@@ -194,24 +180,6 @@ static unsigned int od_dbs_update(struct cpufreq_policy *policy)
 /************************** sysfs interface ************************/
 static struct dbs_governor od_dbs_gov;
 
-static ssize_t store_io_is_busy(struct gov_attr_set *attr_set, const char *buf,
-				size_t count)
-{
-	struct dbs_data *dbs_data = to_dbs_data(attr_set);
-	unsigned int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-	dbs_data->io_is_busy = !!input;
-
-	/* we need to re-evaluate prev_cpu_idle */
-	gov_update_cpu_data(dbs_data);
-
-	return count;
-}
-
 static ssize_t store_up_threshold(struct gov_attr_set *attr_set,
 				  const char *buf, size_t count)
 {
@@ -310,11 +278,9 @@ gov_show_one_common(sampling_rate);
 gov_show_one_common(up_threshold);
 gov_show_one_common(sampling_down_factor);
 gov_show_one_common(ignore_nice_load);
-gov_show_one_common(io_is_busy);
 gov_show_one(od, powersave_bias);
 
 gov_attr_rw(sampling_rate);
-gov_attr_rw(io_is_busy);
 gov_attr_rw(up_threshold);
 gov_attr_rw(sampling_down_factor);
 gov_attr_rw(ignore_nice_load);
@@ -326,7 +292,6 @@ static struct attribute *od_attributes[] = {
 	&sampling_down_factor.attr,
 	&ignore_nice_load.attr,
 	&powersave_bias.attr,
-	&io_is_busy.attr,
 	NULL
 };
 
@@ -368,7 +333,6 @@ static int od_init(struct dbs_data *dbs_data)
 	dbs_data->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
 	dbs_data->ignore_nice_load = 0;
 	tuners->powersave_bias = default_powersave_bias;
-	dbs_data->io_is_busy = should_io_be_busy();
 
 	dbs_data->tuners = tuners;
 	return 0;

@@ -45,7 +45,6 @@ struct dbs_data {
 	unsigned int sampling_rate;
 	unsigned int sampling_down_factor;
 	unsigned int up_threshold;
-	unsigned int io_is_busy;
 };
 
 static inline struct dbs_data *to_dbs_data(struct gov_attr_set *attr_set)

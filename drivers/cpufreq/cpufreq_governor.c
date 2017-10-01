@@ -100,8 +100,7 @@ void gov_update_cpu_data(struct dbs_data *dbs_data)
 		for_each_cpu(j, policy_dbs->policy->cpus) {
 			struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);
 
-			j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_update_time,
-								  dbs_data->io_is_busy);
+			j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_update_time);
 			if (dbs_data->ignore_nice_load)
 				j_cdbs->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 		}
@@ -115,7 +114,7 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 	struct dbs_data *dbs_data = policy_dbs->dbs_data;
 	unsigned int ignore_nice = dbs_data->ignore_nice_load;
 	unsigned int max_load = 0, idle_periods = UINT_MAX;
-	unsigned int sampling_rate, io_busy, j;
+	unsigned int sampling_rate, j;
 
 	/*
 	 * Sometimes governors may use an additional multiplier to increase
@@ -129,7 +128,6 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 	 * that you're performance critical, and not that the system is actually
 	 * idle, so do not add the iowait time to the CPU idle time then.
 	 */
-	io_busy = dbs_data->io_is_busy;
 
 	/* Get Absolute Load */
 	for_each_cpu(j, policy->cpus) {
@@ -138,7 +136,7 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 		unsigned int idle_time, time_elapsed;
 		unsigned int load;
 
-		cur_idle_time = get_cpu_idle_time(j, &update_time, io_busy);
+		cur_idle_time = get_cpu_idle_time(j, &update_time);
 
 		time_elapsed = update_time - j_cdbs->prev_update_time;
 		j_cdbs->prev_update_time = update_time;
@@ -499,7 +497,6 @@ int cpufreq_dbs_governor_start(struct cpufreq_policy *policy)
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
 	struct dbs_data *dbs_data = policy_dbs->dbs_data;
 	unsigned int sampling_rate, ignore_nice, j;
-	unsigned int io_busy;
 
 	if (!policy->cur)
 		return -EINVAL;
@@ -509,12 +506,11 @@ int cpufreq_dbs_governor_start(struct cpufreq_policy *policy)
 
 	sampling_rate = dbs_data->sampling_rate;
 	ignore_nice = dbs_data->ignore_nice_load;
-	io_busy = dbs_data->io_is_busy;
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);
 
-		j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_update_time, io_busy);
+		j_cdbs->prev_cpu_idle = get_cpu_idle_time(j, &j_cdbs->prev_update_time);
 		/*
 		 * Make the first invocation of dbs_update() compute the load.
 		 */
