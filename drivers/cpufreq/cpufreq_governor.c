@@ -507,7 +507,6 @@ int cpufreq_dbs_governor_start(struct cpufreq_policy *policy)
 	policy_dbs->is_shared = policy_is_shared(policy);
 	policy_dbs->rate_mult = 1;
 
-	sampling_rate = dbs_data->sampling_rate;
 	ignore_nice = dbs_data->ignore_nice_load;
 	io_busy = dbs_data->io_is_busy;
 
@@ -526,7 +525,7 @@ int cpufreq_dbs_governor_start(struct cpufreq_policy *policy)
 
 	gov->start(policy);
 
-	gov_set_update_util(policy_dbs, sampling_rate);
+	gov_set_update_util(policy_dbs, dbs_data->sampling_rate);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(cpufreq_dbs_governor_start);

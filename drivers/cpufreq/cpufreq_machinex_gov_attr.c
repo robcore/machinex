@@ -42,6 +42,20 @@ unsigned int od_cpu3_micro_up_threshold = 95;
 unsigned int od_cpu3_sampling_down_factor = 1;
 unsigned int od_cpu3_ignore_nice_load = 0;
 
+unsigned int get_ondemand_sampling_rate(unsigned int cpu)
+{
+	switch (cpu) {
+		case 0:
+			return od_cpu0_sampling_rate;
+		case 1:
+			return od_cpu1_sampling_rate;
+		case 2:
+			return od_cpu3_sampling_rate;
+		case 3:
+			return od_cpu4_sampling_rate;
+	}
+	return 1000;
+}
 /* Machinex Conservative Tunables */
 unsigned int cs_cpu0_down_threshold = 20;
 unsigned int cs_cpu0_up_threshold = 80;

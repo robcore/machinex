@@ -52,6 +52,8 @@ extern unsigned int od_cpu3_micro_up_threshold;
 extern unsigned int od_cpu3_sampling_down_factor;
 extern unsigned int od_cpu3_ignore_nice_load;
 
+extern unsigned int get_ondemand_sampling_rate(unsigned int cpu);
+
 /* Machinex Conservative Tunables */
 extern unsigned int cs_cpu0_down_threshold;
 extern unsigned int cs_cpu0_up_threshold;
