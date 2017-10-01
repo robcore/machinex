@@ -538,7 +538,7 @@ static bool sec_bat_ovp_uvlo_result(
 			break;
 		}
 
-		power_supply_changed(&battery->psy_bat);
+		power_supply_changed(&battery->psy_bat, true);
 		return true;
 	}
 
@@ -646,7 +646,7 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 			battery->status = POWER_SUPPLY_STATUS_CHARGING;
 			battery->voltage_now = 1080;
 			battery->voltage_avg = 1080;
-			power_supply_changed(&battery->psy_bat);
+			power_supply_changed(&battery->psy_bat, true);
 			return false;
 		}
 	}
@@ -1688,7 +1688,7 @@ static void sec_bat_monitor_work(
 	sec_bat_fullcharged_check(battery);
 
 continue_monitor:
-	power_supply_changed(&battery->psy_bat);
+	power_supply_changed(&battery->psy_bat, false);
 
 skip_monitor:
 	sec_bat_set_polling(battery);
@@ -2482,7 +2482,7 @@ static int sec_bat_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		battery->capacity = val->intval;
-		power_supply_changed(&battery->psy_bat);
+		power_supply_changed(&battery->psy_bat, true);
 		break;
 	default:
 		return -EINVAL;
