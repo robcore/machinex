@@ -1345,7 +1345,7 @@ static void sec_check_chgcurrent(struct sec_bat_info *info)
 						pr_err("%s : UI full state! vcell(%d) \n",
                                                 __func__, info->batt_vcell);
 						power_supply_changed(&info->
-								     psy_bat);
+								     psy_bat, false);
 					}
 				}
 #endif /* CONFIG_TARGET_LOCALE_USA */
@@ -1638,7 +1638,7 @@ static void sec_bat_handle_unknown_disable(struct sec_bat_info *info)
 #endif
 	sec_bat_enable_charging(info, false);
 
-	power_supply_changed(&info->psy_bat);
+	power_supply_changed(&info->psy_bat, false);
 }
 
 static void sec_bat_cable_work(struct work_struct *work)
@@ -1819,9 +1819,9 @@ cable_skip:
 #ifdef ADJUST_RCOMP_WITH_CHARGING_STATUS
 	sec_fg_update_rcomp(info);
 #endif
-	power_supply_changed(&info->psy_ac);
-	power_supply_changed(&info->psy_usb);
-	power_supply_changed(&info->psy_bat);
+	power_supply_changed(&info->psy_ac, false);
+	power_supply_changed(&info->psy_usb, false);
+	power_supply_changed(&info->psy_bat, false);
 
 	wake_unlock(&info->cable_wake_lock);
 }
@@ -2116,7 +2116,7 @@ static void sec_bat_monitor_work(struct work_struct *work)
 			info->batt_raw_soc, info->batt_soc, info->batt_presoc,
 			info->batt_vcell, info->batt_temp_radc);
 
-	power_supply_changed(&info->psy_bat);
+	power_supply_changed(&info->psy_bat, false);
 
 monitoring_skip:
 	info->cur_monitor_time = alarm_get_elapsed_realtime();
