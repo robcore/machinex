@@ -18,6 +18,7 @@
 #include <linux/err.h>
 #include <linux/power_supply.h>
 #include <linux/delay.h>
+#include <linux/display_state.h>
 #include "power_supply.h"
 
 /* exported for the APM Power driver, APM emulation */
@@ -148,42 +149,65 @@ static int __power_supply_changed_work(struct device *dev, void *data)
 	 *
 	 */
 
-void power_supply_changed(struct power_supply *psy, bool needs_wake)
+static void get_psy_changed(struct power_supply *psy)
 {
 	unsigned long flags;
 
+	spin_lock_irqsave(&psy->changed_lock, flags);
+	psy->changed = true;
+	spin_unlock_irqrestore(&psy->changed_lock, flags);
+}
+
+static void put_psy_changed(struct power_supply *psy)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&psy->changed_lock, flags);
+	psy->changed = false;
+	spin_unlock_irqrestore(&psy->changed_lock, flags);
+}
+
+static int try_psy_changed(struct power_supply *psy)
+{
+	unsigned long flags;
+
+	if (spin_trylock_irqsave(&psy->changed_lock, flags)) {
+		psy->changed = false;
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		return 1;
+	}
+	return 0;
+}
+
+void power_supply_changed(struct power_supply *psy, bool needs_wake)
+{
+display_check:
+	if (!is_display_on())
+		goto try_again:
+
 	if (needs_wake) {
-try_again_wake:
 		if (!wake_trylock(&psy->work_wake_lock)) {
 			mdelay(1000);
-			goto try_again_wake;
+			goto display_check;
 		}
-		spin_lock_irqsave(&psy->changed_lock, flags);
-		psy->changed = true;
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		get_psy_changed(psy);
 		class_for_each_device(power_supply_class, NULL, psy,
 				      __power_supply_changed_work);
 		power_supply_update_leds(psy);
 		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-		spin_lock_irqsave(&psy->changed_lock, flags);
-		psy->changed = false;
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		put_psy_changed(psy);
 		wake_unlock(&psy->work_wake_lock);
 	} else {
 try_again:
-		if (!spin_trylock_irqsave(&psy->changed_lock, flags)) {
+		if (!try_psy_changed(psy)) {
 			mdelay(1000);
-			goto try_again;
+			goto display_check;
 		}
-		psy->changed = true;
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
 		class_for_each_device(power_supply_class, NULL, psy,
 				      __power_supply_changed_work);
 		power_supply_update_leds(psy);
 		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-		spin_lock_irqsave(&psy->changed_lock, flags);
-		psy->changed = false;
-		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		put_psy_changed(psy);
 	}
 }
 EXPORT_SYMBOL_GPL(power_supply_changed);
