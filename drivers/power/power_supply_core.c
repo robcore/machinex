@@ -328,7 +328,7 @@ int power_supply_register(struct device *parent, struct power_supply *psy)
 	if (rc)
 		goto create_triggers_failed;
 
-	power_supply_changed(psy);
+	power_supply_changed(psy, true);
 
 	goto success;
 

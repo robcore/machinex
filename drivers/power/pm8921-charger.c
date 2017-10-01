@@ -2282,8 +2282,8 @@ int pm8921_set_usb_power_supply_type(enum power_supply_type type)
 		return 0;
 
 	the_chip->usb_type = type;
-	power_supply_changed(&the_chip->usb_psy);
-	power_supply_changed(&the_chip->dc_psy);
+	power_supply_changed(&the_chip->usb_psy, true);
+	power_supply_changed(&the_chip->dc_psy, true);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(pm8921_set_usb_power_supply_type);
@@ -2312,8 +2312,8 @@ static void handle_usb_insertion_removal(struct pm8921_chg_chip *chip)
 	if (chip->usb_present ^ usb_present) {
 		notify_usb_of_the_plugin_event(usb_present);
 		chip->usb_present = usb_present;
-		power_supply_changed(&chip->usb_psy);
-		power_supply_changed(&chip->batt_psy);
+		power_supply_changed(&chip->usb_psy, true);
+		power_supply_changed(&chip->batt_psy, true);
 		pm8921_bms_calibrate_hkadc();
 	}
 	if (usb_present) {
@@ -2343,12 +2343,12 @@ static void handle_stop_ext_chg(struct pm8921_chg_chip *chip)
 	power_supply_set_charge_type(chip->ext_psy,
 					POWER_SUPPLY_CHARGE_TYPE_NONE);
 	pm8921_disable_source_current(false); /* release BATFET */
-	power_supply_changed(&chip->dc_psy);
+	power_supply_changed(&chip->dc_psy, true);
 	chip->ext_charging = false;
 	chip->ext_charge_done = false;
 	bms_notify_check(chip);
 	/* Update battery charging LEDs and user space battery info */
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 }
 
 static void handle_start_ext_chg(struct pm8921_chg_chip *chip)
@@ -2399,7 +2399,7 @@ static void handle_start_ext_chg(struct pm8921_chg_chip *chip)
 	chip->ext_charge_done = false;
 	bms_notify_check(chip);
 	/* Update battery charging LEDs and user space battery info */
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	/*
 	 * since we wont get a fastchg irq from external charger
 	 * use eoc worker to detect end of charging
@@ -2636,7 +2636,7 @@ static irqreturn_t batt_inserted_irq_handler(int irq, void *data)
 	schedule_work(&chip->battery_id_valid_work);
 	handle_start_ext_chg(chip);
 	pr_debug("battery present=%d", status);
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -2664,9 +2664,9 @@ static irqreturn_t vbatdet_low_irq_handler(int irq, void *data)
 	}
 	pr_debug("fsm_state=%d\n", pm_chg_get_fsm_state(data));
 
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
-	power_supply_changed(&chip->dc_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
+	power_supply_changed(&chip->dc_psy, true);
 
 	return IRQ_HANDLED;
 }
@@ -2703,9 +2703,9 @@ static irqreturn_t chgdone_irq_handler(int irq, void *data)
 
 	handle_stop_ext_chg(chip);
 
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
-	power_supply_changed(&chip->dc_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
+	power_supply_changed(&chip->dc_psy, true);
 
 	bms_notify_check(chip);
 
@@ -2728,9 +2728,9 @@ static irqreturn_t chgfail_irq_handler(int irq, void *data)
 			pm_chg_get_rt_status(chip, BAT_TEMP_OK_IRQ),
 			pm_chg_get_fsm_state(data));
 
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
-	power_supply_changed(&chip->dc_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
+	power_supply_changed(&chip->dc_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -2739,9 +2739,9 @@ static irqreturn_t chgstate_irq_handler(int irq, void *data)
 	struct pm8921_chg_chip *chip = data;
 
 	pr_debug("state_changed_to=%d\n", pm_chg_get_fsm_state(data));
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
-	power_supply_changed(&chip->dc_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
+	power_supply_changed(&chip->dc_psy, true);
 
 	bms_notify_check(chip);
 
@@ -2978,7 +2978,7 @@ static irqreturn_t fastchg_irq_handler(int irq, void *data)
 					round_jiffies_relative(msecs_to_jiffies
 						(chip->btc_delay_ms)));
 	}
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, false);
 	bms_notify_check(chip);
 	return IRQ_HANDLED;
 }
@@ -2987,7 +2987,7 @@ static irqreturn_t trklchg_irq_handler(int irq, void *data)
 {
 	struct pm8921_chg_chip *chip = data;
 
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -3000,7 +3000,7 @@ static irqreturn_t batt_removed_irq_handler(int irq, void *data)
 	pr_debug("battery present=%d state=%d", !status,
 					 pm_chg_get_fsm_state(data));
 	handle_stop_ext_chg(chip);
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -3009,7 +3009,7 @@ static irqreturn_t batttemp_hot_irq_handler(int irq, void *data)
 	struct pm8921_chg_chip *chip = data;
 
 	handle_stop_ext_chg(chip);
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -3018,8 +3018,8 @@ static irqreturn_t chghot_irq_handler(int irq, void *data)
 	struct pm8921_chg_chip *chip = data;
 
 	pr_debug("Chg hot fsm_state=%d\n", pm_chg_get_fsm_state(data));
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
 	handle_stop_ext_chg(chip);
 	return IRQ_HANDLED;
 }
@@ -3031,8 +3031,8 @@ static irqreturn_t batttemp_cold_irq_handler(int irq, void *data)
 	pr_debug("Batt cold fsm_state=%d\n", pm_chg_get_fsm_state(data));
 	handle_stop_ext_chg(chip);
 
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -3047,8 +3047,8 @@ static irqreturn_t chg_gone_irq_handler(int irq, void *data)
 	pr_debug("chg_gone=%d, usb_valid = %d\n", chg_gone, usb_chg_plugged_in);
 	pr_debug("Chg gone fsm_state=%d\n", pm_chg_get_fsm_state(data));
 
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
 	return IRQ_HANDLED;
 }
 /*
@@ -3077,8 +3077,8 @@ static irqreturn_t bat_temp_ok_irq_handler(int irq, void *data)
 	else
 		handle_stop_ext_chg(chip);
 
-	power_supply_changed(&chip->batt_psy);
-	power_supply_changed(&chip->usb_psy);
+	power_supply_changed(&chip->batt_psy, true);
+	power_supply_changed(&chip->usb_psy, true);
 	bms_notify_check(chip);
 	return IRQ_HANDLED;
 }
@@ -3112,7 +3112,7 @@ static irqreturn_t batfet_irq_handler(int irq, void *data)
 	struct pm8921_chg_chip *chip = data;
 
 	pr_debug("vreg ov\n");
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -3143,10 +3143,10 @@ static irqreturn_t dcin_valid_irq_handler(int irq, void *data)
 		if (dc_present)
 			schedule_delayed_work(&chip->unplug_check_work,
 				msecs_to_jiffies(UNPLUG_CHECK_WAIT_PERIOD_MS));
-		power_supply_changed(&chip->dc_psy);
+		power_supply_changed(&chip->dc_psy, true);
 	}
 
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	return IRQ_HANDLED;
 }
 
@@ -3228,7 +3228,7 @@ static void update_heartbeat(struct work_struct *work)
 				!wake_lock_active(&chip->eoc_wake_lock))
 		check_temp_thresholds(chip);
 
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(&chip->batt_psy, true);
 	if (chip->recent_reported_soc <= 20)
 		schedule_delayed_work(&chip->update_heartbeat_work,
 			      round_jiffies_relative(msecs_to_jiffies
