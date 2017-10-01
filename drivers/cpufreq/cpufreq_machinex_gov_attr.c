@@ -42,20 +42,12 @@ unsigned int od_cpu3_micro_up_threshold = 95;
 unsigned int od_cpu3_sampling_down_factor = 1;
 unsigned int od_cpu3_ignore_nice_load = 0;
 
-unsigned int get_ondemand_sampling_rate(unsigned int cpu)
-{
-	switch (cpu) {
-		case 0:
-			return od_cpu0_sampling_rate;
-		case 1:
-			return od_cpu1_sampling_rate;
-		case 2:
-			return od_cpu2_sampling_rate;
-		case 3:
-			return od_cpu3_sampling_rate;
-	}
-	return 1000;
-}
+unsigned int od_cpu_sampling_rate[NR_CPUS] = 1000;
+unsigned int od_cpu_up_threshold[NR_CPUS] = 80;
+unsigned int od_cpu_micro_up_threshold[NR_CPUS] = 95;
+unsigned int od_cpu_sampling_down_factor[NR_CPUS] = 1;
+unsigned int od_cpu_ignore_nice_load[NR_CPUS] = 0;
+
 /* Machinex Conservative Tunables */
 unsigned int cs_cpu0_down_threshold = 20;
 unsigned int cs_cpu0_up_threshold = 80;
@@ -87,33 +79,18 @@ unsigned int su_cpu1_rate_limit_us = 1000;
 unsigned int su_cpu2_rate_limit_us = 1000;
 unsigned int su_cpu3_rate_limit_us = 1000;
 
-#define show_one_mx(object)				\
+#define show_one_mx(object, cpu)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
 {								\
-	return sprintf(buf, "%u\n", object);			\
+	return sprintf(buf, "%u\n", object[cpu]);			\
 }
 
-show_one_mx(od_cpu0_sampling_rate);
-show_one_mx(od_cpu0_up_threshold);
-show_one_mx(od_cpu0_micro_up_threshold);
-show_one_mx(od_cpu0_sampling_down_factor);
-show_one_mx(od_cpu0_ignore_nice_load);
-show_one_mx(od_cpu1_sampling_rate);
-show_one_mx(od_cpu1_up_threshold);
-show_one_mx(od_cpu1_micro_up_threshold);
-show_one_mx(od_cpu1_sampling_down_factor);
-show_one_mx(od_cpu1_ignore_nice_load);
-show_one_mx(od_cpu2_sampling_rate);
-show_one_mx(od_cpu2_up_threshold);
-show_one_mx(od_cpu2_micro_up_threshold);
-show_one_mx(od_cpu2_sampling_down_factor);
-show_one_mx(od_cpu2_ignore_nice_load);
-show_one_mx(od_cpu3_sampling_rate);
-show_one_mx(od_cpu3_up_threshold);
-show_one_mx(od_cpu3_micro_up_threshold);
-show_one_mx(od_cpu3_sampling_down_factor);
-show_one_mx(od_cpu3_ignore_nice_load);
+show_one_mx(od_cpu_sampling_rate);
+show_one_mx(od_cpu_up_threshold);
+show_one_mx(od_cpu_micro_up_threshold);
+show_one_mx(od_cpu_sampling_down_factor);
+show_one_mx(od_cpu_ignore_nice_load);
 show_one_mx(cs_cpu0_down_threshold);
 show_one_mx(cs_cpu0_up_threshold);
 show_one_mx(cs_cpu0_freq_step);

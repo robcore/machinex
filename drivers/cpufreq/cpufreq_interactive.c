@@ -1326,10 +1326,6 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
 
-frozen:
-	if (frozen(speedchange_task))
-		goto frozen;
-
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
 

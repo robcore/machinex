@@ -38,7 +38,7 @@ enum {OD_NORMAL_SAMPLE, OD_SUB_SAMPLE};
  */
 
 /* Governor demand based switching data (per-policy or global). */
-struct dbs_data {
+struct od_dbs_data {
 	struct gov_attr_set attr_set;
 	void *tuners;
 	unsigned int ignore_nice_load;
@@ -47,26 +47,57 @@ struct dbs_data {
 	unsigned int up_threshold;
 };
 
-static inline struct dbs_data *to_dbs_data(struct gov_attr_set *attr_set)
+struct cs_dbs_data {
+	struct gov_attr_set attr_set;
+	void *tuners;
+	unsigned int ignore_nice_load;
+	unsigned int sampling_rate;
+	unsigned int sampling_down_factor;
+	unsigned int up_threshold;
+};
+
+static inline struct od_dbs_data *to_od_dbs_data(struct gov_attr_set *attr_set)
 {
-	return container_of(attr_set, struct dbs_data, attr_set);
+	return container_of(attr_set, struct od_dbs_data, attr_set);
 }
 
-#define gov_show_one(_gov, file_name)					\
+static inline struct cs_dbs_data *to_dbs_data(struct gov_attr_set *attr_set)
+{
+	return container_of(attr_set, struct cs_dbs_data, attr_set);
+}
+
+#define od_gov_show_one(_gov, file_name)					\
 static ssize_t show_##file_name						\
 (struct gov_attr_set *attr_set, char *buf)				\
 {									\
-	struct dbs_data *dbs_data = to_dbs_data(attr_set);		\
-	struct _gov##_dbs_tuners *tuners = dbs_data->tuners;		\
-	return sprintf(buf, "%u\n", tuners->file_name);			\
+	struct od_dbs_data *od_dbs_data = to_od_dbs_data(attr_set);		\
+	struct _gov##_od_dbs_tuners *od_tuners = od_dbs_data->tuners;		\
+	return sprintf(buf, "%u\n", od_tuners->file_name);			\
 }
 
-#define gov_show_one_common(file_name)					\
+#define cs_gov_show_one(_gov, file_name)					\
 static ssize_t show_##file_name						\
 (struct gov_attr_set *attr_set, char *buf)				\
 {									\
-	struct dbs_data *dbs_data = to_dbs_data(attr_set);		\
-	return sprintf(buf, "%u\n", dbs_data->file_name);		\
+	struct cs_dbs_data *cs_dbs_data = to_cs_dbs_data(attr_set);		\
+	struct _gov##_cs_dbs_tuners *cs_tuners = cs_dbs_data->cs_tuners;		\
+	return sprintf(buf, "%u\n", cs_tuners->file_name);			\
+}
+
+#define od_gov_show_one_common(file_name)					\
+static ssize_t show_##file_name						\
+(struct gov_attr_set *attr_set, char *buf)				\
+{									\
+	struct od_dbs_data *od_dbs_data = to_od_dbs_data(attr_set);		\
+	return sprintf(buf, "%u\n", od_dbs_data->file_name);		\
+}
+
+#define cs_gov_show_one_common(file_name)					\
+static ssize_t show_##file_name						\
+(struct gov_attr_set *attr_set, char *buf)				\
+{									\
+	struct cs_dbs_data *cs_dbs_data = to_cs_dbs_data(attr_set);		\
+	return sprintf(buf, "%u\n", cs_dbs_data->file_name);		\
 }
 
 #define gov_attr_ro(_name)						\
@@ -78,7 +109,32 @@ static struct governor_attr _name =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
 /* Common to all CPUs of a policy */
-struct policy_dbs_info {
+struct od_policy_dbs_info {
+	struct cpufreq_policy *policy;
+	/*
+	 * Per policy mutex that serializes load evaluation from limit-change
+	 * and work-handler.
+	 */
+	struct mutex update_mutex;
+
+	u64 last_sample_time;
+	s64 sample_delay_ns;
+	atomic_t work_count;
+	struct irq_work irq_work;
+	struct work_struct work;
+	/* dbs_data may be shared between multiple policy objects */
+	struct od_dbs_data *_oddbs_data;
+	struct list_head list;
+	/* Multiplier for increasing sample delay temporarily. */
+	unsigned int rate_mult;
+	unsigned int idle_periods;	/* For conservative */
+	/* Status indicators */
+	bool is_shared;		/* This object is used by multiple CPUs */
+	bool work_in_progress;	/* Work is being queued up or in progress */
+};
+
+/* Common to all CPUs of a policy */
+struct cs_policy_dbs_info {
 	struct cpufreq_policy *policy;
 	/*
 	 * Per policy mutex that serializes load evaluation from limit-change
