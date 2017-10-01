@@ -17,6 +17,7 @@
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/power_supply.h>
+#include <linux/delay.h>
 #include "power_supply.h"
 
 /* exported for the APM Power driver, APM emulation */
