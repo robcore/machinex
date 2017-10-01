@@ -83,5 +83,4 @@ extern unsigned int su_cpu0_rate_limit_us;
 extern unsigned int su_cpu1_rate_limit_us;
 extern unsigned int su_cpu2_rate_limit_us;
 extern unsigned int su_cpu3_rate_limit_us;
-
-
+#endif
