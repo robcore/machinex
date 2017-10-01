@@ -37,6 +37,7 @@
 #include <linux/display_state.h>
 #include <mach/jf_eur-gpio.h>
 #include <linux/cpufreq.h>
+#include <linux/wakelock.h>
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -70,6 +71,8 @@ struct gpio_keys_drvdata {
 #endif
 	struct gpio_button_data data[0];
 };
+
+static struct wake_lock gk_wake_lock;
 
 static struct device *global_dev;
 
@@ -409,7 +412,7 @@ static void gpio_keys_gpio_work_func(struct work_struct *work)
 			intelli_boost();
 			fakepressed = false;
 		}
-		pm_relax(bdata->input->dev.parent);
+		wake_unlock(&gk_wake_lock);
 	} else {
 		cpu_boost_event();
 		intelli_boost();
@@ -425,7 +428,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 	if (bdata->button->wakeup) {
 		const struct gpio_keys_button *button = bdata->button;
 
-		pm_stay_awake(bdata->input->dev.parent);
+		wake_lock(&gk_wake_lock);
 		if (bdata->suspended  &&
 		    (button->type == 0 || button->type == EV_KEY)) {
 			/*
@@ -459,7 +462,7 @@ static void gpio_keys_irq_timer(unsigned long _data)
 	}
 	spin_unlock_irqrestore(&bdata->lock, flags);
 }
-
+#define double_release_delay ((jiffies + msecs_to_jiffies(bdata->release_delay)) * 2)
 static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 {
 	struct gpio_button_data *bdata = dev_id;
@@ -473,7 +476,7 @@ static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 
 	if (!bdata->key_pressed) {
 		if (bdata->button->wakeup)
-			pm_wakeup_event(bdata->input->dev.parent, 0);
+			wake_lock_timeout(&gk_wake_lock, double_release_delay);
 
 		input_event(input, EV_KEY, button->code, 1);
 		input_sync(input);
@@ -928,6 +931,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	}
 
 	flipqueue = alloc_workqueue("flipcov", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	wake_lock_init(&gk_wake_lock, WAKE_LOCK_SUSPEND, "gpio_keys");
 
 	global_dev = dev;
 	ddata->pdata = pdata;

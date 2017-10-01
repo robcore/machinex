@@ -209,6 +209,11 @@ static inline void __pm_wakeup_event(struct wakeup_source *ws, unsigned int msec
 	return pm_wakeup_ws_event(ws, msec, false);
 }
 
+static inline void __pm_wakeup_hard_event(struct wakeup_source *ws, unsigned int msec)
+{
+	return pm_wakeup_ws_event(ws, msec, true);
+}
+
 static inline void pm_wakeup_event(struct device *dev, unsigned int msec)
 {
 	return pm_wakeup_dev_event(dev, msec, false);

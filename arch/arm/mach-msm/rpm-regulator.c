@@ -1835,8 +1835,7 @@ static int rpm_vreg_probe(struct platform_device *pdev)
 
 	}
 
-	if (platform_data->requires_tcxo_workaround
-	    && !requires_tcxo_workaround) {
+	if (platform_data->requires_tcxo_workaround) {
 		requires_tcxo_workaround = true;
 		wake_lock_init(&tcxo_wake_lock, WAKE_LOCK_SUSPEND,
 				"rpm_regulator_tcxo");
