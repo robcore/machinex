@@ -1324,8 +1324,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 
 	cpufreq_freq_transition_begin(policy, &freqs);
 	ret = acpuclk_set_rate(freqs.cpu, new_freq, SETRATE_CPUFREQ);
-	if (ret)
-		ret = freqs.old;
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 
 	return ret;
@@ -1335,7 +1333,6 @@ static int msm_cpufreq_target_index(struct cpufreq_policy *policy,
 				unsigned int index)
 {
 	int ret = 0;
-	int index;
 	struct cpufreq_frequency_table *table;
 
 	if (target_freq == policy->cur)
