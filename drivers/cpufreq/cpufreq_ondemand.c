@@ -347,7 +347,6 @@ static void od_start(struct cpufreq_policy *policy)
 {
 	struct od_policy_dbs_info *dbs_info = to_dbs_info(policy->governor_data);
 
-	dbs_info->dbs_data->sampling_rate = od_cpu_sampling_rate[policy->cpu];
 	dbs_info->sample_type = OD_NORMAL_SAMPLE;
 	ondemand_powersave_bias_init(policy);
 }
