@@ -50,9 +50,9 @@ unsigned int get_ondemand_sampling_rate(unsigned int cpu)
 		case 1:
 			return od_cpu1_sampling_rate;
 		case 2:
-			return od_cpu3_sampling_rate;
+			return od_cpu2_sampling_rate;
 		case 3:
-			return od_cpu4_sampling_rate;
+			return od_cpu3_sampling_rate;
 	}
 	return 1000;
 }
