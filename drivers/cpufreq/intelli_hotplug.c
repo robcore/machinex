@@ -27,7 +27,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	3
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -231,7 +231,7 @@ static void remove_down_lock(struct work_struct *work)
 {
 	struct down_lock *dl = container_of(work, struct down_lock,
 					    lock_rem.work);
-	if (dl->locked)
+	if (likely(dl->locked))
 		dl->locked = false;
 }
 
@@ -254,7 +254,7 @@ static void apply_down_lock(unsigned int cpu)
 	if (!is_display_on())
 		return;
 
-	if (!dl->locked) {
+	if (likely(!dl->locked)) {
 		dl->locked = true;
 		rm_down_lock(cpu, down_lock_dur);
 	}
