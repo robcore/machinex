@@ -358,18 +358,48 @@ static int od_init(struct dbs_data *dbs_data)
 	cpu = get_cpu();
 	idle_time = get_cpu_idle_time_us(cpu, NULL);
 	put_cpu();
-	if (idle_time != -1ULL) {
-		/* Idle micro accounting is supported. Use finer thresholds */
-		dbs_data->up_threshold = MICRO_FREQUENCY_UP_THRESHOLD;
-	} else {
-		dbs_data->up_threshold = DEF_FREQUENCY_UP_THRESHOLD;
+	switch (cpu) {
+		case 0:
+			if (idle_time != -1ULL) {
+				/* Idle micro accounting is supported. Use finer thresholds */
+				dbs_data->up_threshold = od_cpu0_micro_up_threshold;
+			} else {
+				dbs_data->up_threshold = od_cpu0_up_threshold;
+			}
+
+			dbs_data->sampling_down_factor = od_cpu0_sampling_down_factor;
+		case 1:
+			if (idle_time != -1ULL) {
+				/* Idle micro accounting is supported. Use finer thresholds */
+				dbs_data->up_threshold = od_cpu1_micro_up_threshold;
+			} else {
+				dbs_data->up_threshold = od_cpu1_up_threshold;
+			}
+
+			dbs_data->sampling_down_factor = od_cpu1_sampling_down_factor;
+		case 2:
+			if (idle_time != -1ULL) {
+				/* Idle micro accounting is supported. Use finer thresholds */
+				dbs_data->up_threshold = od_cpu2_micro_up_threshold;
+			} else {
+				dbs_data->up_threshold = od_cpu2_up_threshold;
+			}
+
+			dbs_data->sampling_down_factor = od_cpu2_sampling_down_factor;
+		case 3:
+			if (idle_time != -1ULL) {
+				/* Idle micro accounting is supported. Use finer thresholds */
+				dbs_data->up_threshold = od_cpu3_micro_up_threshold;
+			} else {
+				dbs_data->up_threshold = od_cpu3_up_threshold;
+			}
+
+			dbs_data->sampling_down_factor = od_cpu3_sampling_down_factor;
 	}
 
-	dbs_data->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
 	dbs_data->ignore_nice_load = 0;
 	tuners->powersave_bias = default_powersave_bias;
 	dbs_data->io_is_busy = should_io_be_busy();
-
 	dbs_data->tuners = tuners;
 	return 0;
 }

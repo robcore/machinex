@@ -1323,15 +1323,16 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	freqs.cpu = policy->cpu;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	ret = acpuclk_set_rate(policy->cpu, new_freq, SETRATE_CPUFREQ);
+	ret = acpuclk_set_rate(freqs.cpu, new_freq, SETRATE_CPUFREQ);
+	if (ret)
+		ret = freqs.old;
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 
 	return ret;
 }
 
-static int msm_cpufreq_target(struct cpufreq_policy *policy,
-				unsigned int target_freq,
-				unsigned int relation)
+static int msm_cpufreq_target_index(struct cpufreq_policy *policy,
+				unsigned int index)
 {
 	int ret = 0;
 	int index;
@@ -1341,9 +1342,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 
 	table = policy->freq_table;
-	index = cpufreq_frequency_table_target(policy,
-			target_freq,
-			relation);
 	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
 done:
@@ -1448,7 +1446,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 				  CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
 	.init		= msm_cpufreq_init,
 	.verify		= cpufreq_generic_frequency_table_verify,
-	.target		= msm_cpufreq_target,
+	.target_index = msm_cpufreq_target_index,
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,

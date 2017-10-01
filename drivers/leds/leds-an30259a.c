@@ -1243,7 +1243,7 @@ static void pick_custom_colour(int colour)
 	an30259a_start_led_pattern(current_led_mode);
 }
 
-#define show_one(object)				\
+#define show_one_led(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
 {								\
@@ -1341,11 +1341,7 @@ static ssize_t store_##file_name		\
 	return count;				\
 }
 
-#define MX_ATTR_RW(_name) \
-static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0644, show_##_name, store_##_name)
-
-show_one(custom_led_colours);
+show_one_led(custom_led_colours);
 static ssize_t store_custom_led_colours(struct kobject *kobj,
 			   struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -1368,16 +1364,16 @@ static ssize_t store_custom_led_colours(struct kobject *kobj,
 }
 MX_ATTR_RW(custom_led_colours);
 
-show_one(custom_r_delay);
-show_one(custom_r_dutymax);
-show_one(custom_r_dutymid);
-show_one(custom_r_dutymin);
-show_one(custom_r_total1);
-show_one(custom_r_total2);
-show_one(custom_r_dt1);
-show_one(custom_r_dt2);
-show_one(custom_r_dt3);
-show_one(custom_r_dt4);
+show_one_led(custom_r_delay);
+show_one_led(custom_r_dutymax);
+show_one_led(custom_r_dutymid);
+show_one_led(custom_r_dutymin);
+show_one_led(custom_r_total1);
+show_one_led(custom_r_total2);
+show_one_led(custom_r_dt1);
+show_one_led(custom_r_dt2);
+show_one_led(custom_r_dt3);
+show_one_led(custom_r_dt4);
 
 store_long(custom_r_delay);
 store_duty(custom_r_dutymax);
@@ -1401,16 +1397,16 @@ MX_ATTR_RW(custom_r_dt2);
 MX_ATTR_RW(custom_r_dt3);
 MX_ATTR_RW(custom_r_dt4);
 
-show_one(custom_g_delay);
-show_one(custom_g_dutymax);
-show_one(custom_g_dutymid);
-show_one(custom_g_dutymin);
-show_one(custom_g_total1);
-show_one(custom_g_total2);
-show_one(custom_g_dt1);
-show_one(custom_g_dt2);
-show_one(custom_g_dt3);
-show_one(custom_g_dt4);
+show_one_led(custom_g_delay);
+show_one_led(custom_g_dutymax);
+show_one_led(custom_g_dutymid);
+show_one_led(custom_g_dutymin);
+show_one_led(custom_g_total1);
+show_one_led(custom_g_total2);
+show_one_led(custom_g_dt1);
+show_one_led(custom_g_dt2);
+show_one_led(custom_g_dt3);
+show_one_led(custom_g_dt4);
 
 store_long(custom_g_delay);
 store_duty(custom_g_dutymax);
@@ -1434,16 +1430,16 @@ MX_ATTR_RW(custom_g_dt2);
 MX_ATTR_RW(custom_g_dt3);
 MX_ATTR_RW(custom_g_dt4);
 
-show_one(custom_b_delay);
-show_one(custom_b_dutymax);
-show_one(custom_b_dutymid);
-show_one(custom_b_dutymin);
-show_one(custom_b_total1);
-show_one(custom_b_total2);
-show_one(custom_b_dt1);
-show_one(custom_b_dt2);
-show_one(custom_b_dt3);
-show_one(custom_b_dt4);
+show_one_led(custom_b_delay);
+show_one_led(custom_b_dutymax);
+show_one_led(custom_b_dutymid);
+show_one_led(custom_b_dutymin);
+show_one_led(custom_b_total1);
+show_one_led(custom_b_total2);
+show_one_led(custom_b_dt1);
+show_one_led(custom_b_dt2);
+show_one_led(custom_b_dt3);
+show_one_led(custom_b_dt4);
 
 store_long(custom_b_delay);
 store_duty(custom_b_dutymax);

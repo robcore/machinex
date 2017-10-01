@@ -14,6 +14,7 @@
 
 #ifndef _CPUFREQ_MACHINEX_GOV_ATTR_H_
 #define _CPUFREQ_MACHINEX_GOV_ATTR_H_
+#include "cpufreq_governor.h"
 
 /**
  * I have a very specific, hacked kernel configuration.
@@ -28,63 +29,59 @@
  */
 
 /* Machinex OnDemand Tunables */
-unsigned int od_cpu0_sampling_rate;
-unsigned int od_cpu0_up_threshold;
-unsigned int od_cpu0_sampling_down_factor;
-unsigned int od_cpu0_ignore_nice_load;
-unsigned int od_cpu0_io_is_busy;
-unsigned int od_cpu0_powersave_bias;
+extern unsigned int od_cpu0_sampling_rate;
+extern unsigned int od_cpu0_up_threshold;
+extern unsigned int od_cpu0_micro_up_threshold;
+extern unsigned int od_cpu0_sampling_down_factor;
+extern unsigned int od_cpu0_ignore_nice_load;
 
-unsigned int od_cpu1_sampling_rate;
-unsigned int od_cpu1_up_threshold;
-unsigned int od_cpu1_sampling_down_factor;
-unsigned int od_cpu1_ignore_nice_load;
-unsigned int od_cpu1_io_is_busy;
-unsigned int od_cpu1_powersave_bias;
+extern unsigned int od_cpu1_sampling_rate;
+extern unsigned int od_cpu1_up_threshold;
+extern unsigned int od_cpu1_micro_up_threshold;
+extern unsigned int od_cpu1_sampling_down_factor;
+extern unsigned int od_cpu1_ignore_nice_load;
 
-unsigned int od_cpu2_sampling_rate;
-unsigned int od_cpu2_up_threshold;
-unsigned int od_cpu2_sampling_down_factor;
-unsigned int od_cpu2_ignore_nice_load;
-unsigned int od_cpu2_io_is_busy;
-unsigned int od_cpu2_powersave_bias;
+extern unsigned int od_cpu2_sampling_rate;
+extern unsigned int od_cpu2_up_threshold;
+extern unsigned int od_cpu2_micro_up_threshold;
+extern unsigned int od_cpu2_sampling_down_factor;
+extern unsigned int od_cpu2_ignore_nice_load;
 
-unsigned int od_cpu3_sampling_rate;
-unsigned int od_cpu3_up_threshold;
-unsigned int od_cpu3_sampling_down_factor;
-unsigned int od_cpu3_ignore_nice_load;
-unsigned int od_cpu3_io_is_busy;
-unsigned int od_cpu3_powersave_bias;
+extern unsigned int od_cpu3_sampling_rate;
+extern unsigned int od_cpu3_up_threshold;
+extern unsigned int od_cpu3_micro_up_threshold;
+extern unsigned int od_cpu3_sampling_down_factor;
+extern unsigned int od_cpu3_ignore_nice_load;
 
 /* Machinex Conservative Tunables */
-unsigned int cs_cpu0_down_threshold;
-unsigned int cs_cpu0_up_threshold;
-unsigned int cs_cpu0_freq_step;
-unsigned int cs_cpu0_sampling_down_factor;
-unsigned int cs_cpu0_ignore_nice_load;
+extern unsigned int cs_cpu0_down_threshold;
+extern unsigned int cs_cpu0_up_threshold;
+extern unsigned int cs_cpu0_freq_step;
+extern unsigned int cs_cpu0_sampling_down_factor;
+extern unsigned int cs_cpu0_ignore_nice_load;
 
-unsigned int cs_cpu1_down_threshold;
-unsigned int cs_cpu1_up_threshold;
-unsigned int cs_cpu1_freq_step;
-unsigned int cs_cpu1_sampling_down_factor;
-unsigned int cs_cpu1_ignore_nice_load;
+extern unsigned int cs_cpu1_down_threshold;
+extern unsigned int cs_cpu1_up_threshold;
+extern unsigned int cs_cpu1_freq_step;
+extern unsigned int cs_cpu1_sampling_down_factor;
+extern unsigned int cs_cpu1_ignore_nice_load;
 
-unsigned int cs_cpu2_down_threshold;
-unsigned int cs_cpu2_up_threshold;
-unsigned int cs_cpu2_freq_step;
-unsigned int cs_cpu2_sampling_down_factor;
-unsigned int cs_cpu2_ignore_nice_load;
+extern unsigned int cs_cpu2_down_threshold;
+extern unsigned int cs_cpu2_up_threshold;
+extern unsigned int cs_cpu2_freq_step;
+extern unsigned int cs_cpu2_sampling_down_factor;
+extern unsigned int cs_cpu2_ignore_nice_load;
 
-unsigned int cs_cpu3_down_threshold;
-unsigned int cs_cpu3_up_threshold;
-unsigned int cs_cpu3_freq_step;
-unsigned int cs_cpu3_sampling_down_factor;
-unsigned int cs_cpu3_ignore_nice_load;
+extern unsigned int cs_cpu3_down_threshold;
+extern unsigned int cs_cpu3_up_threshold;
+extern unsigned int cs_cpu3_freq_step;
+extern unsigned int cs_cpu3_sampling_down_factor;
+extern unsigned int cs_cpu3_ignore_nice_load;
 
 /* Machinex SchedUtil tunable */
-unsigned int su_cpu0_rate_limit_us;
-unsigned int su_cpu1_rate_limit_us;
-unsigned int su_cpu2_rate_limit_us;
-unsigned int su_cpu3_rate_limit_us;
+extern unsigned int su_cpu0_rate_limit_us;
+extern unsigned int su_cpu1_rate_limit_us;
+extern unsigned int su_cpu2_rate_limit_us;
+extern unsigned int su_cpu3_rate_limit_us;
 
 

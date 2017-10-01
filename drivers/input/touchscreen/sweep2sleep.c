@@ -234,10 +234,6 @@ static struct input_handler s2s_input_handler = {
 	.id_table	= s2s_ids,
 };
 
-#define MX_ATTR_RW(_name) \
-static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0644, show_##_name, store_##_name)
-
 static ssize_t show_sweep2sleep(struct kobject *kobj,
 			   struct kobj_attribute *attr, char *buf)
 {
@@ -261,8 +257,6 @@ static ssize_t store_sweep2sleep(struct kobject *kobj,
 	
 	return count;
 }
-MX_ATTR_RW(sweep2sleep);
-
 
 static ssize_t show_vibration_timeout(struct kobject *kobj,
 			   struct kobj_attribute *attr, char *buf)
@@ -287,6 +281,8 @@ static ssize_t store_vibration_timeout(struct kobject *kobj,
 	
 	return count;
 }
+
+MX_ATTR_RW(sweep2sleep);
 MX_ATTR_RW(vibration_timeout);
 
 static struct attribute *sweep2sleep_attrs[] = {
