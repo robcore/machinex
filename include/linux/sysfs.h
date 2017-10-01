@@ -149,7 +149,6 @@ static const struct attribute_group _name##_group = {		\
 };								\
 __ATTRIBUTE_GROUPS(_name)
 
-
 #define __MX_ATTR_RO(_name) {						\
 	.attr	= { .name = __stringify(_name), .mode = S_IRUGO },	\
 	.show	= show_##_name,						\
@@ -161,6 +160,27 @@ static struct kobj_attribute _name##_attr = __MX_ATTR_RO(_name)
 #define MX_ATTR_RW(_name) \
 static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
+
+#define store_one_clamp(name, min, max)		\
+static ssize_t store_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name)			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name = input;				\
+	return count;				\
+}
 
 struct file;
 struct vm_area_struct;
