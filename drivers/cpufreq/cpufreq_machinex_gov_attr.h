@@ -14,7 +14,6 @@
 
 #ifndef _CPUFREQ_MACHINEX_GOV_ATTR_H_
 #define _CPUFREQ_MACHINEX_GOV_ATTR_H_
-#include "cpufreq_governor.h"
 
 /**
  * I have a very specific, hacked kernel configuration.
