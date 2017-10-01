@@ -43,35 +43,35 @@ unsigned int od_cpu3_sampling_down_factor = 1;
 unsigned int od_cpu3_ignore_nice_load = 0;
 
 /* Machinex Conservative Tunables */
-unsigned int cs_cpu0_down_threshold;
-unsigned int cs_cpu0_up_threshold;
-unsigned int cs_cpu0_freq_step;
-unsigned int cs_cpu0_sampling_down_factor;
+unsigned int cs_cpu0_down_threshold = 20;
+unsigned int cs_cpu0_up_threshold = 80;
+unsigned int cs_cpu0_freq_step = 5;
+unsigned int cs_cpu0_sampling_down_factor = 1;
 unsigned int cs_cpu0_ignore_nice_load = 0;
 
-unsigned int cs_cpu1_down_threshold;
-unsigned int cs_cpu1_up_threshold;
-unsigned int cs_cpu1_freq_step;
-unsigned int cs_cpu1_sampling_down_factor;
+unsigned int cs_cpu1_down_threshold = 20;
+unsigned int cs_cpu1_up_threshold = 80;
+unsigned int cs_cpu1_freq_step = 5;
+unsigned int cs_cpu1_sampling_down_factor = 1;
 unsigned int cs_cpu1_ignore_nice_load = 0;
 
-unsigned int cs_cpu2_down_threshold;
-unsigned int cs_cpu2_up_threshold;
-unsigned int cs_cpu2_freq_step;
-unsigned int cs_cpu2_sampling_down_factor;
+unsigned int cs_cpu2_down_threshold = 20;
+unsigned int cs_cpu2_up_threshold = 80;
+unsigned int cs_cpu2_freq_step = 5;
+unsigned int cs_cpu2_sampling_down_factor = 1;
 unsigned int cs_cpu2_ignore_nice_load = 0;
 
-unsigned int cs_cpu3_down_threshold;
-unsigned int cs_cpu3_up_threshold;
-unsigned int cs_cpu3_freq_step;
-unsigned int cs_cpu3_sampling_down_factor;
+unsigned int cs_cpu3_down_threshold = 20;
+unsigned int cs_cpu3_up_threshold = 80;
+unsigned int cs_cpu3_freq_step = 5;
+unsigned int cs_cpu3_sampling_down_factor = 1;
 unsigned int cs_cpu3_ignore_nice_load = 0;
 
 /* Machinex SchedUtil tunable */
-unsigned int su_cpu0_rate_limit_us;
-unsigned int su_cpu1_rate_limit_us;
-unsigned int su_cpu2_rate_limit_us;
-unsigned int su_cpu3_rate_limit_us;
+unsigned int su_cpu0_rate_limit_us = 1000;
+unsigned int su_cpu1_rate_limit_us = 1000;
+unsigned int su_cpu2_rate_limit_us = 1000;
+unsigned int su_cpu3_rate_limit_us = 1000;
 
 #define show_one_mx(object)				\
 static ssize_t show_##object					\
