@@ -462,6 +462,7 @@ static void gpio_keys_irq_timer(unsigned long _data)
 	}
 	spin_unlock_irqrestore(&bdata->lock, flags);
 }
+
 #define double_release_delay ((jiffies + msecs_to_jiffies(bdata->release_delay)) * 2)
 static irqreturn_t gpio_keys_irq_isr(int irq, void *dev_id)
 {

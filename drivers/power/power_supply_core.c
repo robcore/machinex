@@ -183,7 +183,7 @@ void power_supply_changed(struct power_supply *psy, bool needs_wake)
 {
 display_check:
 	if (!is_display_on())
-		goto try_again:
+		goto try_again;
 
 	if (needs_wake) {
 		if (!wake_trylock(&psy->work_wake_lock)) {
