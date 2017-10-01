@@ -69,7 +69,7 @@ unsigned int su_cpu0_rate_limit_us;
 unsigned int su_cpu1_rate_limit_us;
 unsigned int su_cpu2_rate_limit_us;
 unsigned int su_cpu3_rate_limit_us;
-
+/*
 #define show_one_mx(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
@@ -120,7 +120,7 @@ show_one_mx(su_cpu0_rate_limit_us)
 show_one_mx(su_cpu1_rate_limit_us)
 show_one_mx(su_cpu2_rate_limit_us)
 show_one_mx(su_cpu3_rate_limit_us)
-
+*/
 static struct kobject *mx_cpufreq_kobj;
 
 
@@ -143,7 +143,7 @@ static struct kobject *mx_su0_kobj;
 static struct kobject *mx_su1_kobj;
 static struct kobject *mx_su2_kobj;
 static struct kobject *mx_su3_kobj;
-
+/*
 static int __init cpufreq_mx_attr_init(void)
 {
 	int ret;
@@ -157,3 +157,4 @@ static int __init cpufreq_mx_attr_init(void)
 	
 
 fs_initcall(cpufreq_mx_attr_init);
+*/
