@@ -63,6 +63,7 @@
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
 #include <linux/sec_battery.h>
+#include <linux/sysfs.h>
 #include "leds-an30259a_reg.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

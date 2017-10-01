@@ -18,7 +18,7 @@
 
 static unsigned char *mx_version = CONFIG_MACHINEX_VERSION;
 /* whether file capabilities are enabled */
-static ssize_t mx_version_show(struct kobject *kobj,
+static ssize_t show_mx_version(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
 {
 	ssize_t ret = 0;
