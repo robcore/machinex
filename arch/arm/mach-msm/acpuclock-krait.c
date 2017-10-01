@@ -1318,6 +1318,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	int ret = 0;
 	struct cpufreq_freqs freqs;
 
+	if (new_freq == policy->cur)
+		goto done;
+
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
@@ -1325,7 +1328,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	cpufreq_freq_transition_begin(policy, &freqs);
 	ret = acpuclk_set_rate(freqs.cpu, new_freq, SETRATE_CPUFREQ);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
-
+done:
 	return ret;
 }
 
@@ -1335,13 +1338,9 @@ static int msm_cpufreq_target_index(struct cpufreq_policy *policy,
 	int ret = 0;
 	struct cpufreq_frequency_table *table;
 
-	if (target_freq == policy->cur)
-		goto done;
-
 	table = policy->freq_table;
 	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
-done:
 	return ret;
 }
 
