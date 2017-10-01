@@ -80,7 +80,8 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
-show_one_mx(od_cpu0_up_threshold)
+show_one_mx(od_cpu0_sampling_rate);
+show_one_mx(od_cpu0_up_threshold);
 show_one_mx(od_cpu0_micro_up_threshold);
 show_one_mx(od_cpu0_sampling_down_factor);
 show_one_mx(od_cpu0_ignore_nice_load);
@@ -124,6 +125,7 @@ show_one_mx(su_cpu1_rate_limit_us);
 show_one_mx(su_cpu2_rate_limit_us);
 show_one_mx(su_cpu3_rate_limit_us);
 
+store_one_clamp(od_cpu0_sampling_rate, 1000, 10000);
 store_one_clamp(od_cpu0_up_threshold, 1, 99);
 store_one_clamp(od_cpu0_micro_up_threshold, 1, 99);
 store_one_clamp(od_cpu0_sampling_down_factor, 1, 100000);
@@ -168,6 +170,7 @@ store_one_clamp(su_cpu1_rate_limit_us, 1000, 10000);
 store_one_clamp(su_cpu2_rate_limit_us, 1000, 10000);
 store_one_clamp(su_cpu3_rate_limit_us, 1000, 10000);
 
+MX_ATTR_RW(od_cpu0_sampling_rate);
 MX_ATTR_RW(od_cpu0_up_threshold);
 MX_ATTR_RW(od_cpu0_micro_up_threshold);
 MX_ATTR_RW(od_cpu0_sampling_down_factor);
@@ -213,6 +216,7 @@ MX_ATTR_RW(su_cpu2_rate_limit_us);
 MX_ATTR_RW(su_cpu3_rate_limit_us);
 
 static struct attribute *ondemand0_attrs[] = {
+	&od_cpu0_sampling_rate_attr.attr,
 	&od_cpu0_up_threshold_attr.attr,
 	&od_cpu0_micro_up_threshold_attr.attr,
 	&od_cpu0_sampling_down_factor_attr.attr,
@@ -226,6 +230,7 @@ static struct attribute_group ondemand0_attr_group = {
 };
 
 static struct attribute *ondemand1_attrs[] = {
+	&od_cpu1_sampling_rate_attr.attr,
 	&od_cpu1_up_threshold_attr.attr,
 	&od_cpu1_micro_up_threshold_attr.attr,
 	&od_cpu1_sampling_down_factor_attr.attr,
@@ -239,6 +244,7 @@ static struct attribute_group ondemand1_attr_group = {
 };
 
 static struct attribute *ondemand2_attrs[] = {
+	&od_cpu2_sampling_rate_attr.attr,
 	&od_cpu2_up_threshold_attr.attr,
 	&od_cpu2_micro_up_threshold_attr.attr,
 	&od_cpu2_sampling_down_factor_attr.attr,
@@ -252,6 +258,7 @@ static struct attribute_group ondemand2_attr_group = {
 };
 
 static struct attribute *ondemand3_attrs[] = {
+	&od_cpu3_sampling_rate_attr.attr,
 	&od_cpu3_up_threshold_attr.attr,
 	&od_cpu3_micro_up_threshold_attr.attr,
 	&od_cpu3_sampling_down_factor_attr.attr,
