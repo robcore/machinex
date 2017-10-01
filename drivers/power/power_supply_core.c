@@ -147,21 +147,43 @@ static int __power_supply_changed_work(struct device *dev, void *data)
 	 *
 	 */
 
-void power_supply_changed(struct power_supply *psy)
+void power_supply_changed(struct power_supply *psy, bool needs_wake)
 {
-	wake_lock(&psy->work_wake_lock);
-	spin_lock_irq(&psy->changed_lock);
-	psy->changed = true;
-	spin_unlock_irq(&psy->changed_lock);
-	class_for_each_device(power_supply_class, NULL, psy,
-			      __power_supply_changed_work);
-	power_supply_update_leds(psy);
-	kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-	spin_lock_irq(&psy->changed_lock);
-	psy->changed = false;
-	spin_unlock_irq(&psy->changed_lock);
-	wake_unlock(&psy->work_wake_lock);
+	unsigned long flags;
 
+	if (needs_wake) {
+try_again_wake:
+		if (!wake_trylock(&psy->work_wake_lock)) {
+			mdelay(1000);
+			goto try_again_wake;
+		}
+		spin_lock_irqsave(&psy->changed_lock, flags);
+		psy->changed = true;
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		class_for_each_device(power_supply_class, NULL, psy,
+				      __power_supply_changed_work);
+		power_supply_update_leds(psy);
+		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
+		spin_lock_irqsave(&psy->changed_lock, flags);
+		psy->changed = false;
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		wake_unlock(&psy->work_wake_lock);
+	} else {
+try_again:
+		if (!spin_trylock_irqsave(&psy->changed_lock, flags)) {
+			mdelay(1000);
+			goto try_again;
+		}
+		psy->changed = true;
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+		class_for_each_device(power_supply_class, NULL, psy,
+				      __power_supply_changed_work);
+		power_supply_update_leds(psy);
+		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
+		spin_lock_irqsave(&psy->changed_lock, flags);
+		psy->changed = false;
+		spin_unlock_irqrestore(&psy->changed_lock, flags);
+	}
 }
 EXPORT_SYMBOL_GPL(power_supply_changed);
 
