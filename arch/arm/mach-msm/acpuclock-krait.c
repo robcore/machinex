@@ -1336,9 +1336,7 @@ static int msm_cpufreq_target_index(struct cpufreq_policy *policy,
 				unsigned int index)
 {
 	int ret = 0;
-	struct cpufreq_frequency_table *table;
-
-	table = policy->freq_table;
+	struct cpufreq_frequency_table *table = policy->freq_table;
 	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
 	return ret;
