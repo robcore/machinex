@@ -43,9 +43,6 @@ int drop_caches_sysctl_handler(struct ctl_table *table, int write,
 {
 	int ret;
 
-	if (!is_display_on())
-		return 0;
-
 	ret = proc_dointvec_minmax(table, write, buffer, length, ppos);
 	if (ret)
 		return ret;
