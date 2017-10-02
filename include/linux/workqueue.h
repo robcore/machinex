@@ -609,6 +609,12 @@ static inline bool schedule_delayed_work(struct delayed_work *dwork,
 	return queue_delayed_work(system_wq, dwork, delay);
 }
 
+static inline bool mod_scheduled_work(struct delayed_work *dwork,
+					 unsigned long delay)
+{
+	return mod_delayed_work(system_wq, dwork, delay);
+}
+
 #ifndef CONFIG_SMP
 static inline long work_on_cpu(int cpu, long (*fn)(void *), void *arg)
 {

@@ -836,18 +836,18 @@ static void wl_add_remove_pm_enable_work(struct bcm_cfg80211 *cfg, bool add_remo
 			schedule_delayed_work(&cfg->pm_enable_work,
 				msecs_to_jiffies(WL_PM_ENABLE_TIMEOUT));
 		} else {
-			cancel_delayed_work_sync(&cfg->pm_enable_work);
 			switch (type) {
 				case WL_HANDLER_MAINTAIN:
-					schedule_delayed_work(&cfg->pm_enable_work,
+					mod_scheduled_work(&cfg->pm_enable_work,
 						msecs_to_jiffies(WL_PM_ENABLE_TIMEOUT));
 					break;
 				case WL_HANDLER_PEND:
-					schedule_delayed_work(&cfg->pm_enable_work,
+					mod_scheduled_work(&cfg->pm_enable_work,
 						msecs_to_jiffies(WL_PM_ENABLE_TIMEOUT*2));
 					break;
 				case WL_HANDLER_DEL:
 				default:
+					cancel_delayed_work_sync(&cfg->pm_enable_work);
 					cfg->pm_enable_work_on = false;
 #ifdef CUSTOMER_HW4
 					DHD_OS_WAKE_UNLOCK(cfg->pub);
@@ -12844,7 +12844,7 @@ bool wl_cfg80211_is_p2p_active(void)
 	return (g_bcm_cfg && g_bcm_cfg->p2p);
 }
 
-static void wl_cfg80211_work_handler(struct work_struct * work)
+static void wl_cfg80211_work_handler(struct work_struct *work)
 {
 	struct bcm_cfg80211 *cfg = NULL;
 	struct net_info *iter, *next;
