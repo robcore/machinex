@@ -242,8 +242,25 @@ static ssize_t drop_caches_store
 	(struct device *dev, struct device_attribute *attr,\
 		const char *buf, size_t size)
 {
+	struct sysinfo i;
+
+	if (strlen(buf) > 2)
+		goto out;
+
+	if (buf[0] == '3') {
+		si_meminfo(&i);
+
+		iterate_supers(drop_pagecache_sb, NULL);
+		drop_slab();
+
+		si_meminfo(&i);
+
+		printk("Cached Drop done!\n");
+	}
+out:
 	return size;
 }
+
 static DEVICE_ATTR(drop_caches, S_IRUGO | S_IWUSR | S_IWGRP,\
 			drop_caches_show, drop_caches_store);
 
