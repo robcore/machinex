@@ -1315,6 +1315,11 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.skip_onerr		= true,
 		.cant_stop		= true,
 	},
+	/*
+	 * On the tear-down path, timers_dead_cpu() must be invoked
+	 * before blk_mq_queue_reinit_notify() from notify_dead(),
+	 * otherwise a RCU stall occurs.
+	 */
 	[CPUHP_TIMERS_DEAD] = {
 		.name			= "timers:dead",
 		.startup.single		= NULL,
