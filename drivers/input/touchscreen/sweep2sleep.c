@@ -182,8 +182,7 @@ static void s2s_input_event(struct input_handle *handle, unsigned int type,
 }
 
 static int input_dev_filter(struct input_dev *dev) {
-	if (strstr(dev->name, "synaptics_rmi4_i2c") ||
-		strstr(dev->name, "sec_touchscreen")) {
+	if (strstr(dev->name, "sec_touchscreen")) {
 		return 0;
 	} else {
 		return 1;
@@ -204,7 +203,7 @@ static int s2s_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "s2s";
+	handle->name = handler->name;
 
 	error = input_register_handle(handle);
 

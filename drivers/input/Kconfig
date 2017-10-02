@@ -180,6 +180,13 @@ config INPUT_BOOSTER
 	help
 	  Say Y here if you want to boost shen some keys and touches are pressed. If unsure, say N.
 
+config OMNIBOOST
+	tristate "EVERY input booster"
+	depends on INPUT
+	help
+	  Simplest universal booster for the S4, just throw your desired functions in the event handler.
+	  If unsure, say N.
+
 config INPUT_EXPANDED_ABS
 	tristate "Expanded ABS"
 	help

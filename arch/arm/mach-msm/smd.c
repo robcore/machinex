@@ -2592,7 +2592,7 @@ static int smsm_init(void)
 
 	wmb();
 
-	smsm_pm_notifier(&smsm_pm_nb, PM_POST_SUSPEND, NULL);
+	smsm_change_state(SMSM_APPS_STATE, 0, SMSM_PROC_AWAKE);
 	i = register_pm_notifier(&smsm_pm_nb);
 	if (i)
 		pr_err("%s: power state notif error %d\n", __func__, i);
