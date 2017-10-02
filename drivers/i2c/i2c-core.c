@@ -334,7 +334,7 @@ static int i2c_device_pm_resume(struct device *dev)
 	else
 		return i2c_legacy_resume(dev);
 }
-
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 static int i2c_device_pm_freeze(struct device *dev)
 {
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
@@ -374,6 +374,7 @@ static int i2c_device_pm_restore(struct device *dev)
 	else
 		return i2c_legacy_resume(dev);
 }
+#endif
 #else /* !CONFIG_PM_SLEEP */
 #define i2c_device_pm_suspend	NULL
 #define i2c_device_pm_resume	NULL
@@ -424,10 +425,12 @@ static const struct attribute_group *i2c_dev_attr_groups[] = {
 static const struct dev_pm_ops i2c_device_pm_ops = {
 	.suspend = i2c_device_pm_suspend,
 	.resume = i2c_device_pm_resume,
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 	.freeze = i2c_device_pm_freeze,
 	.thaw = i2c_device_pm_thaw,
 	.poweroff = i2c_device_pm_poweroff,
 	.restore = i2c_device_pm_restore,
+#endif
 	SET_RUNTIME_PM_OPS(
 		pm_generic_runtime_suspend,
 		pm_generic_runtime_resume,

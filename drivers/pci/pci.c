@@ -784,11 +784,8 @@ pci_power_t pci_choose_state(struct pci_dev *dev, pm_message_t state)
 	switch (state.event) {
 	case PM_EVENT_ON:
 		return PCI_D0;
-	case PM_EVENT_FREEZE:
-	case PM_EVENT_PRETHAW:
 		/* REVISIT both freeze and pre-thaw "should" use D0 */
 	case PM_EVENT_SUSPEND:
-	case PM_EVENT_HIBERNATE:
 		return PCI_D3hot;
 	default:
 		dev_info(&dev->dev, "unrecognized suspend event %d\n",
