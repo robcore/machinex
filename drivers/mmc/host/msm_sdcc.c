@@ -5131,8 +5131,12 @@ store_polling(struct device *dev, struct device_attribute *attr,
 	} else {
 		mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 	}
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
+#else
 #ifdef CONFIG_POWERSUSPEND
 	host->polling_enabled = mmc->caps & MMC_CAP_NEEDS_POLL;
+#endif
 #endif
 	spin_unlock_irqrestore(&host->lock, flags);
 	return count;
@@ -5252,7 +5256,37 @@ store_enable_auto_cmd21(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int msmsdcc_early_notify(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct msmsdcc_host *host =
+		container_of(nfb, struct msmsdcc_host, pm_notify);
+	unsigned long flags;
 
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		spin_lock_irqsave(&host->lock, flags);
+		host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
+		host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		spin_unlock_irqrestore(&host->lock, flags);
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		if (host->polling_enabled) {
+			spin_lock_irqsave(&host->lock, flags);
+			host->mmc->caps |= MMC_CAP_NEEDS_POLL;
+			mmc_detect_change(host->mmc, 0);
+			spin_unlock_irqrestore(&host->lock, flags);
+		}
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
+#else
 #ifdef CONFIG_POWERSUSPEND
 static void msmsdcc_power_suspend(struct power_suspend *h)
 {
@@ -5279,7 +5313,7 @@ static void msmsdcc_power_resume(struct power_suspend *h)
 	}
 };
 #endif
-
+#endif
 static void msmsdcc_print_regs(const char *name, void __iomem *base,
 			       u32 phys_base, unsigned int no_of_regs)
 {
@@ -6484,14 +6518,17 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->clk_scaling.down_threshold = 5;
 	mmc->clk_scaling.polling_delay_ms = 100;
 	mmc->caps2 |= MMC_CAP2_CLK_SCALE;
-
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	host->pm_notify.notifier_call = msmsdcc_early_notify;
+	register_pm_notifier(&host->pm_notify);
+#else
 #ifdef CONFIG_POWERSUSPEND
 	host->power_suspend.suspend = msmsdcc_power_suspend;
 	host->power_suspend.resume  = msmsdcc_power_resume;
 //	host->power_suspend.level   = POWER_SUSPEND_LEVEL_DISABLE_FB;
 	register_power_suspend(&host->power_suspend);
 #endif
-
+#endif
 	pr_info("%s: Qualcomm MSM SDCC-core at 0x%016llx irq %d,%d dma %d"
 		" dmacrcri %d\n", mmc_hostname(mmc),
 		(unsigned long long)core_memres->start,
@@ -6747,9 +6784,12 @@ static int msmsdcc_remove(struct platform_device *pdev)
 
 	iounmap(host->base);
 	mmc_free_host(mmc);
-
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	unregister_pm_notifier(&host->pm_notify);
+#else
 #ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&host->power_suspend);
+#endif
 #endif
 	pm_runtime_disable(&(pdev)->dev);
 	pm_runtime_set_suspended(&(pdev)->dev);

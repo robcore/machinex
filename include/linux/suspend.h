@@ -404,8 +404,9 @@ static inline bool hibernation_available(void) { return false; }
 #endif /* CONFIG_HIBERNATION */
 
 /* Hibernation and suspend events */
+#ifdef CONFIG_PROACTIVE_SUSPEND
 #define PM_PROACTIVE_SUSPEND	0x0001 /* panel/pm bridge */
-#define PM_REACTIVE_RESUME	0x0002 /* pm/panel bridge */
+#define PM_PROACTIVE_RESUME	0x0002 /* pm/panel bridge */
 #define PM_SUSPEND_PREPARE	0x0003 /* Going to suspend the system */
 #define PM_POST_SUSPEND		0x0004 /* Suspend finished */
 #define PM_RESTORE_PREPARE	0x0005 /* Going to restore a saved image */
@@ -413,7 +414,15 @@ static inline bool hibernation_available(void) { return false; }
 #define PM_USERSPACE_FROZEN	0x0007 /* Userspace frozen */
 #define PM_HIBERNATION_PREPARE	PM_PROACTIVE_SUSPEND /* Going to hibernate */
 #define PM_POST_HIBERNATION	PM_REACTIVE_RESUME /* Hibernation finished */
-
+#else
+#define PM_HIBERNATION_PREPARE	0x0001 /* Going to hibernate */
+#define PM_POST_HIBERNATION	0x0002  /* Hibernation finished */
+#define PM_SUSPEND_PREPARE	0x0003 /* Going to suspend the system */
+#define PM_POST_SUSPEND		0x0004 /* Suspend finished */
+#define PM_RESTORE_PREPARE	0x0005 /* Going to restore a saved image */
+#define PM_POST_RESTORE		0x0006 /* Restore failed */
+#define PM_USERSPACE_FROZEN	0x0007 /* Userspace frozen */
+#endif
 extern struct mutex pm_mutex;
 
 #ifdef CONFIG_PM_SLEEP

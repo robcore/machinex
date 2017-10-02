@@ -992,6 +992,9 @@ static noinline void __init kernel_init_freeable(void);
 static int __ref kernel_init(void *unused)
 {
 	int ret;
+
+	kernel_init_freeable();
+
 #ifdef CONFIG_SEC_GPIO_DVS
 	/************************ Caution !!! ****************************/
 	/* This function must be located in appropriate INIT position
@@ -1001,7 +1004,6 @@ static int __ref kernel_init(void *unused)
 	gpio_dvs_check_initgpio();
 #endif
 
-	kernel_init_freeable();
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
 	free_initmem();

@@ -62,7 +62,38 @@ static DECLARE_WAIT_QUEUE_HEAD(s2idle_wait_head);
 
 enum s2idle_states __read_mostly s2idle_state;
 static DEFINE_SPINLOCK(s2idle_lock);
+int state_check(suspend_state_t state);
 
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int proactive_suspend(suspend_state_t state)
+{
+	int error, nr_calls;
+
+	error = state_check(state);
+	if (error)
+		return error;
+
+	error = __pm_notifier_call_chain(PM_PROACTIVE_SUSPEND, -1, &nr_calls);
+	if (error) {
+		nr_calls--;
+	__pm_notifier_call_chain(PM_POST_SUSPEND, nr_calls, NULL);
+	}
+	return error ? error : 0;
+}
+
+static void proactive_resume(void)
+{
+	pm_notifier_call_chain(PM_PROACTIVE_RESUME);
+}
+#else
+static int proactive_suspend(suspend_state_t state)
+{
+	return 0;
+}
+static void proactive_resume(void)
+{
+}
+#endif
 void s2idle_set_ops(const struct platform_s2idle_ops *ops)
 {
 	lock_system_sleep();
@@ -170,6 +201,14 @@ static bool valid_state(suspend_state_t state)
 	 * implementation, no valid callback implies that none are valid.
 	 */
 	return suspend_ops && suspend_ops->valid && suspend_ops->valid(state);
+}
+
+int state_check(suspend_state_t state)
+{
+	if (unlikely(state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX ||
+		!valid_state(state)))
+		return -EINVAL;
+	return 0;
 }
 
 void __init pm_states_init(void)
@@ -399,7 +438,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	if (error)
 		goto Devices_early_resume;
 
-	if (state == PM_SUSPEND_TO_IDLE) {
+	if (unlikely(state == PM_SUSPEND_TO_IDLE)) {
 		s2idle_loop();
 		goto Platform_early_resume;
 	}
@@ -412,17 +451,21 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	error = platform_suspend_prepare_noirq(state);
 	if (error)
 		goto Platform_wake;
-
+#ifdef CONFIG_PM_DEBUG
 	if (suspend_test(TEST_PLATFORM))
 		goto Platform_wake;
 
 	error = disable_nonboot_cpus();
 	if (error || suspend_test(TEST_CPUS))
 		goto Enable_cpus;
-
+#else
+	error = disable_nonboot_cpus();
+	if (error)
+		goto Enable_cpus;
+#endif
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
-
+#ifdef CONFIG_PM_DEBUG
 	error = syscore_suspend();
 	if (!error) {
 		*wakeup = pm_wakeup_pending();
@@ -434,6 +477,19 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		}
 		syscore_resume();
 	}
+#else
+	error = syscore_suspend();
+	if (!error) {
+		*wakeup = pm_wakeup_pending();
+		if (!(*wakeup)) {
+			error = suspend_ops->enter(state);
+			events_check_enabled = false;
+		} else if (*wakeup) {
+			error = -EBUSY;
+		}
+		syscore_resume();
+	}
+#endif
 
 	arch_suspend_enable_irqs();
 	BUG_ON(irqs_disabled());
@@ -475,24 +531,31 @@ int suspend_devices_and_enter(suspend_state_t state)
 		goto Close;
 
 	suspend_console();
+#ifdef CONFIG_PM_DEBUG
 	suspend_test_start();
+#endif
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
 		pr_err("Some devices failed to suspend, or early wake event detected\n");
 		goto Recover_platform;
 	}
+#ifdef CONFIG_PM_DEBUG
 	suspend_test_finish("suspend devices");
 	if (suspend_test(TEST_DEVICES))
 		goto Recover_platform;
-
+#endif
 	do {
 		error = suspend_enter(state, &wakeup);
 	} while (!error && !wakeup && platform_suspend_again(state));
 
  Resume_devices:
+#ifdef CONFIG_PM_DEBUG
 	suspend_test_start();
+#endif
 	dpm_resume_end(PMSG_RESUME);
+#ifdef CONFIG_PM_DEBUG
 	suspend_test_finish("resume devices");
+#endif
 	resume_console();
  Close:
 	platform_resume_end(state);
@@ -529,44 +592,33 @@ static int enter_state(suspend_state_t state)
 {
 	int error;
 
-#ifdef CONFIG_PM_DEBUG
-	if (state == PM_SUSPEND_TO_IDLE) {
-
-		if (pm_test_level != TEST_NONE && pm_test_level <= TEST_CPUS) {
-			pr_warn("Unsupported test mode for suspend to idle, please choose none/freezer/devices/platform.\n");
-			return -EAGAIN;
-		}
-
-	} else if (!valid_state(state)) {
-		return -EINVAL;
-	}
-#else
-	if (!valid_state(state)) {
-		return -EINVAL;
-	}
-#endif
 	if (unlikely(!mutex_trylock(&pm_mutex)))
 		return -EBUSY;
 
-	if (state == PM_SUSPEND_TO_IDLE)
+	if (unlikely(state == PM_SUSPEND_TO_IDLE))
 		s2idle_begin();
 
-	if (suspendsync) {
+	if (unlikely(suspendsync)) {
 		pr_info("Syncing filesystems ... ");
 		sys_sync();
 		pr_cont("done.\n");
 	}
 
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	error = proactive_suspend(state);
+	if (error)
+		goto Unlock;
+#endif
 	pm_pr_dbg("Preparing system for sleep (%s)\n", mem_sleep_labels[state]);
 	pm_suspend_clear_flags();
 	error = suspend_prepare(state);
 	if (error)
-		goto Unlock;
-
+		goto Profin;
+#ifdef CONFIG_PM_DEBUG
 	if (suspend_test(TEST_FREEZER))
 		goto Finish;
-
-	pm_pr_dbg("Suspending system (%s)\n", mem_sleep_labels[state]);
+#endif
+	pr_info("Suspending system (%s)\n", mem_sleep_labels[state]);
 	pm_restrict_gfp_mask();
 	error = suspend_devices_and_enter(state);
 	pm_restore_gfp_mask();
@@ -574,7 +626,9 @@ static int enter_state(suspend_state_t state)
  Finish:
 	pm_pr_dbg("Finishing wakeup.\n");
 	suspend_finish();
- Unlock:
+Profin:
+	proactive_resume();
+Unlock:
 	mutex_unlock(&pm_mutex);
 	return error;
 }
@@ -590,7 +644,7 @@ int pm_suspend(suspend_state_t state)
 {
 	int error;
 
-	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
+	if (state_check(state))
 		return -EINVAL;
 
 	pr_info("suspend entry (%s)\n", mem_sleep_labels[state]);

@@ -387,12 +387,15 @@ struct msmsdcc_host {
 	struct msmsdcc_dma_data	dma;
 	struct msmsdcc_sps_data sps;
 	struct msmsdcc_pio_data	pio;
-
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	struct notifier_block pm_notify;
+	int polling_enabled;
+#else
 #ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
 	int polling_enabled;
 #endif
-
+#endif
 	struct tasklet_struct 	dma_tlet;
 
 	unsigned int prog_enable;

@@ -335,8 +335,17 @@ config PROMETHEUS
 	depends on SUSPEND
 	default y
 	---help---
-	A simplified combination of autosleep and powersuspend that links
+	A continuously updated powersuspend that will link
 	to the PM_SUSPEND subsystem if conditions allow.
+
+config PROACTIVE_SUSPEND
+	bool "Proactive Suspend"
+	depends on SUSPEND
+	default y
+	---help---
+	An earlysuspend-type helper that acts as its own
+	state during the pm suspend/resume operations.
+	(runs before and after)
 
 config STATE_NOTIFIER
     bool "State Notifier"

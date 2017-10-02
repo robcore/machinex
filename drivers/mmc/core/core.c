@@ -3407,7 +3407,6 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 			spin_unlock_irqrestore(&host->lock, flags);
 			break;
 		}
-
 		/* since its suspending anyway, disable rescan */
 		host->rescan_disable = 1;
 		spin_unlock_irqrestore(&host->lock, flags);
@@ -3415,7 +3414,6 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		/* Wait for pending detect work to be completed */
 		if (!(host->caps & MMC_CAP_NEEDS_POLL))
 			flush_work(&host->detect.work);
-
 		/*
 		 * In some cases, the detect work might be scheduled
 		 * just before rescan_disable is set to true.
@@ -3443,7 +3441,6 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		mmc_release_host(host);
 		host->pm_flags = 0;
 		break;
-
 	case PM_POST_SUSPEND:
 		spin_lock_irqsave(&host->lock, flags);
 		if (mmc_bus_manual_resume(host)) {
@@ -3454,19 +3451,16 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		spin_unlock_irqrestore(&host->lock, flags);
 
 #if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4334_MODULE)
-		if (host->card && msmhost && msmhost->pdev_id == 4)
-			printk(KERN_INFO"%s(): WLAN SKIP DETECT CHANGE\n",
-					__func__);
-		else
+		if (!(host->card && msmhost && msmhost->pdev_id == 4))
 #endif
-		mmc_detect_change(host, 0);
+			mmc_detect_change(host, 0);
 		break;
 
 	default:
 		return -EINVAL;
 	}
 
-	return 0;
+	return NOTIFY_OK;
 }
 #endif
 

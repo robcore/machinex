@@ -112,9 +112,12 @@ struct mpu_private_data {
 
 	struct hrtimer activate_timer;
 	int activate_timeout;
-
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	struct notifier_block pm_notify
+#else
 #ifdef CONFIG_POWERSUSPEND
 	struct power_suspend power_suspend;
+#endif
 #endif
 	int gyro_bias[3];
 };
@@ -1082,7 +1085,73 @@ static long mpu_dev_ioctl(struct file *file,
 
 	return retval;
 }
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int mpu_dev_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct mpu_private_data *mpu =
+	    (struct mpu_private_data *)i2c_get_clientdata(this_client);
+	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
+	struct i2c_adapter *slave_adapter[EXT_SLAVE_NUM_TYPES];
+	struct ext_slave_platform_data **pdata_slave = mldl_cfg->pdata_slave;
+	int ii;
 
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		printk(KERN_INFO"[@@@@@%s@@@@@](suspend)\n", __func__);
+
+		mpu_early_notifier_callback(mpu, PM_SUSPEND_PREPARE, NULL);
+
+		for (ii = 0; ii < EXT_SLAVE_NUM_TYPES; ii++) {
+			if (!pdata_slave[ii])
+				slave_adapter[ii] = NULL;
+			else
+				slave_adapter[ii] =
+					i2c_get_adapter(pdata_slave[ii]->adapt_num);
+		}
+		slave_adapter[EXT_SLAVE_TYPE_GYROSCOPE] = this_client->adapter;
+		mutex_lock(&mpu->mutex);
+		if (!mldl_cfg->inv_mpu_cfg->ignore_system_suspend) {
+			(void)inv_mpu_suspend(mldl_cfg,
+				slave_adapter[EXT_SLAVE_TYPE_GYROSCOPE],
+				slave_adapter[EXT_SLAVE_TYPE_ACCEL],
+				slave_adapter[EXT_SLAVE_TYPE_COMPASS],
+				slave_adapter[EXT_SLAVE_TYPE_PRESSURE],
+				INV_ALL_SENSORS);
+			}
+		mutex_unlock(&mpu->mutex);
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		printk(KERN_INFO"[@@@@@%s@@@@@](resume)\n", __func__);
+		for (ii = 0; ii < EXT_SLAVE_NUM_TYPES; ii++) {
+			if (!pdata_slave[ii])
+				slave_adapter[ii] = NULL;
+			else
+				slave_adapter[ii] =
+					i2c_get_adapter(pdata_slave[ii]->adapt_num);
+		}
+		slave_adapter[EXT_SLAVE_TYPE_GYROSCOPE] = this_client->adapter;
+	
+		mutex_lock(&mpu->mutex);
+		if (mpu->pid && !mldl_cfg->inv_mpu_cfg->ignore_system_suspend) {
+			(void)inv_mpu_resume(mldl_cfg,
+					slave_adapter[EXT_SLAVE_TYPE_GYROSCOPE],
+					slave_adapter[EXT_SLAVE_TYPE_ACCEL],
+					slave_adapter[EXT_SLAVE_TYPE_COMPASS],
+					slave_adapter[EXT_SLAVE_TYPE_PRESSURE],
+					mldl_cfg->inv_mpu_cfg->requested_sensors);
+		}
+		mutex_unlock(&mpu->mutex);
+		mpu_early_notifier_callback(mpu, PM_POST_SUSPEND, NULL);
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
+#else
 #ifdef CONFIG_POWERSUSPEND
 void mpu_dev_power_suspend(struct power_suspend *h)
 {
@@ -1146,6 +1215,7 @@ void mpu_dev_power_resume(struct power_suspend *h)
 	mutex_unlock(&mpu->mutex);
 	mpu_early_notifier_callback(mpu, PM_POST_SUSPEND, NULL);
 }
+#endif
 #endif
 
 
@@ -2554,14 +2624,17 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			dev_attr_calibration.attr.name);
 		goto out_gsensorcal_failed;
 	}
-
+#ifdef CONFIG_PROACTIVE_SUSPEND
+		mpu->pm_notify.notifier_call = mpu_dev_pm_callback;
+		register_pm_notifier(&mpu->pm_notify);
+#else
 #ifdef CONFIG_POWERSUSPEND
 //		mpu->power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB + 1;
 		mpu->power_suspend.suspend = mpu_dev_power_suspend;
 		mpu->power_suspend.resume = mpu_dev_power_resume;
 		register_power_suspend(&mpu->power_suspend);
 #endif
-
+#endif
 	return res;
 
 out_gsensorcal_failed:

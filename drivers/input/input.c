@@ -977,18 +977,10 @@ int input_set_keycode(struct input_dev *dev,
 }
 EXPORT_SYMBOL(input_set_keycode);
 
-#define MATCH_BIT(bit, max) \
-		for (i = 0; i < BITS_TO_LONGS(max); i++) \
-			if ((id->bit[i] & dev->bit[i]) != id->bit[i]) \
-				break; \
-		if (i != BITS_TO_LONGS(max)) \
-			continue;
-
 static const struct input_device_id *input_match_device(struct input_handler *handler,
 							struct input_dev *dev)
 {
 	const struct input_device_id *id;
-	int i;
 
 	for (id = handler->id_table; id->flags || id->driver_info; id++) {
 
@@ -1008,15 +1000,32 @@ static const struct input_device_id *input_match_device(struct input_handler *ha
 			if (id->version != dev->id.version)
 				continue;
 
-		MATCH_BIT(evbit,  EV_MAX);
-		MATCH_BIT(keybit, KEY_MAX);
-		MATCH_BIT(relbit, REL_MAX);
-		MATCH_BIT(absbit, ABS_MAX);
-		MATCH_BIT(mscbit, MSC_MAX);
-		MATCH_BIT(ledbit, LED_MAX);
-		MATCH_BIT(sndbit, SND_MAX);
-		MATCH_BIT(ffbit,  FF_MAX);
-		MATCH_BIT(swbit,  SW_MAX);
+		if (!bitmap_subset(id->evbit, dev->evbit, EV_MAX))
+			continue;
+
+		if (!bitmap_subset(id->keybit, dev->keybit, KEY_MAX))
+			continue;
+
+		if (!bitmap_subset(id->relbit, dev->relbit, REL_MAX))
+			continue;
+
+		if (!bitmap_subset(id->absbit, dev->absbit, ABS_MAX))
+			continue;
+
+		if (!bitmap_subset(id->mscbit, dev->mscbit, MSC_MAX))
+			continue;
+
+		if (!bitmap_subset(id->ledbit, dev->ledbit, LED_MAX))
+			continue;
+
+		if (!bitmap_subset(id->sndbit, dev->sndbit, SND_MAX))
+			continue;
+
+		if (!bitmap_subset(id->ffbit, dev->ffbit, FF_MAX))
+			continue;
+
+		if (!bitmap_subset(id->swbit, dev->swbit, SW_MAX))
+			continue;
 
 		if (!handler->match || handler->match(handler, dev))
 			return id;
@@ -1161,7 +1170,7 @@ static void input_seq_print_bitmap(struct seq_file *seq, const char *name,
 	 * If no output was produced print a single 0.
 	 */
 	if (skip_empty)
-		seq_puts(seq, "0");
+		seq_putc(seq, '0');
 
 	seq_putc(seq, '\n');
 }
@@ -1179,7 +1188,7 @@ static int input_devices_seq_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "P: Phys=%s\n", dev->phys ? dev->phys : "");
 	seq_printf(seq, "S: Sysfs=%s\n", path ? path : "");
 	seq_printf(seq, "U: Uniq=%s\n", dev->uniq ? dev->uniq : "");
-	seq_printf(seq, "H: Handlers=");
+	seq_puts(seq, "H: Handlers=");
 
 	list_for_each_entry(handle, &dev->h_list, d_node)
 		seq_printf(seq, "%s ", handle->name);
@@ -1697,10 +1706,7 @@ static int input_dev_uevent(struct device *device, struct kobj_uevent_env *env)
 		if (!test_bit(EV_##type, dev->evbit))			\
 			break;						\
 									\
-		for (i = 0; i < type##_MAX; i++) {			\
-			if (!test_bit(i, dev->bits##bit))		\
-				continue;				\
-									\
+		for_each_set_bit(i, dev->bits##bit, type##_CNT) {	\
 			active = test_bit(i, dev->bits);		\
 			if (!active && !on)				\
 				continue;				\
@@ -1748,7 +1754,7 @@ void input_reset_device(struct input_dev *dev)
 }
 EXPORT_SYMBOL(input_reset_device);
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 static int input_dev_suspend(struct device *dev)
 {
 	struct input_dev *input_dev = to_input_dev(dev);
@@ -1775,8 +1781,10 @@ static int input_dev_resume(struct device *dev)
 static const struct dev_pm_ops input_dev_pm_ops = {
 	.suspend	= input_dev_suspend,
 	.resume		= input_dev_resume,
+#ifdef CONFIG_HIBERNATE
 	.poweroff	= input_dev_suspend,
 	.restore	= input_dev_resume,
+#endif
 };
 #endif /* CONFIG_PM */
 
@@ -1811,7 +1819,7 @@ EXPORT_SYMBOL_GPL(input_class);
  */
 struct input_dev *input_allocate_device(void)
 {
-	static atomic_t input_no = ATOMIC_INIT(0);
+	static atomic_t input_no = ATOMIC_INIT(-1);
 	struct input_dev *dev;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
@@ -1825,8 +1833,8 @@ struct input_dev *input_allocate_device(void)
 		INIT_LIST_HEAD(&dev->h_list);
 		INIT_LIST_HEAD(&dev->node);
 
-		dev_set_name(&dev->dev, "input%ld",
-			     (unsigned long) atomic_inc_return(&input_no) - 1);
+		dev_set_name(&dev->dev, "input%lu",
+			     (unsigned long)atomic_inc_return(&input_no));
 
 		__module_get(THIS_MODULE);
 	}
@@ -2239,17 +2247,17 @@ EXPORT_SYMBOL(input_unregister_device);
 int input_register_handler(struct input_handler *handler)
 {
 	struct input_dev *dev;
-	int retval;
+	int error;
 
-	retval = mutex_lock_interruptible(&input_mutex);
-	if (retval)
-		return retval;
+	error = mutex_lock_interruptible(&input_mutex);
+	if (error)
+		return error;
 
 	INIT_LIST_HEAD(&handler->h_list);
 
 	if (handler->fops != NULL) {
 		if (input_table[handler->minor >> 5]) {
-			retval = -EBUSY;
+			error = -EBUSY;
 			goto out;
 		}
 		input_table[handler->minor >> 5] = handler;
@@ -2264,7 +2272,7 @@ int input_register_handler(struct input_handler *handler)
 
  out:
 	mutex_unlock(&input_mutex);
-	return retval;
+	return 0;
 }
 EXPORT_SYMBOL(input_register_handler);
 

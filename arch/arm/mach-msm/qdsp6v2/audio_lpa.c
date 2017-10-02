@@ -1114,6 +1114,13 @@ static void audlpa_unmap_ion_region(struct audio *audio)
 	}
 }
 
+#ifdef CONFIG_PROACTIVE_SUSPEND
+/*Forward declarations for the functions below*/
+static int audlpa_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored);
+#endif
+
 static int audio_release(struct inode *inode, struct file *file)
 {
 	struct audio *audio = file->private_data;
@@ -1133,8 +1140,12 @@ static int audio_release(struct inode *inode, struct file *file)
 	q6asm_audio_client_free(audio->ac);
 	audlpa_reset_ion_region(audio);
 	ion_client_destroy(audio->client);
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	unregister_pm_notifier(&audio->suspend_ctl.pm_notify);
+#else
 #ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&audio->suspend_ctl.node);
+#endif
 #endif
 	audio->opened = 0;
 	audio->out_enabled = 0;
@@ -1182,7 +1193,29 @@ static void audlpa_post_event(struct audio *audio, int type,
 	spin_unlock(&audio->event_queue_lock);
 	wake_up(&audio->event_wait);
 }
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int audlpa_pm_callback(struct notifier_block *nfb,
+					unsigned long action,
+					void *ignored)
+{
+	struct audlpa_suspend_ctl *ctl =
+		container_of(nfb, struct audlpa_suspend_ctl, pm_notify);
+	union msm_audio_event_payload payload;
 
+	switch (action) {
+	case PM_PROACTIVE_SUSPEND:
+		audlpa_post_event(ctl->audio, AUDIO_EVENT_SUSPEND, payload);
+		return NOTIFY_OK;
+	case PM_PROACTIVE_RESUME:
+		audlpa_post_event(ctl->audio, AUDIO_EVENT_RESUME, payload);
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_DONE;
+}
+#else
 #ifdef CONFIG_POWERSUSPEND
 static void audlpa_suspend(struct power_suspend *h)
 {
@@ -1190,7 +1223,6 @@ static void audlpa_suspend(struct power_suspend *h)
 		container_of(h, struct audlpa_suspend_ctl, node);
 	union msm_audio_event_payload payload;
 
-	pr_debug("%s:\n", __func__);
 	audlpa_post_event(ctl->audio, AUDIO_EVENT_SUSPEND, payload);
 }
 
@@ -1200,9 +1232,9 @@ static void audlpa_resume(struct power_suspend *h)
 		container_of(h, struct audlpa_suspend_ctl, node);
 	union msm_audio_event_payload payload;
 
-	pr_debug("%s:\n", __func__);
 	audlpa_post_event(ctl->audio, AUDIO_EVENT_RESUME, payload);
 }
+#endif
 #endif
 
 #ifdef CONFIG_DEBUG_FS
@@ -1361,12 +1393,18 @@ static int audio_open(struct inode *inode, struct file *file)
 	if (IS_ERR(audio->dentry))
 		pr_err("%s: debugfs_create_file failed\n", __func__);
 #endif
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	audio->suspend_ctl.audio = audio;
+	audio->suspend_ctl.pm_notify.notifier_call = audlpa_pm_callback;
+	register_pm_notifier(&audio->suspend_ctl.pm_notify);
+#else
 #ifdef CONFIG_POWERSUSPEND
 //	audio->suspend_ctl.node.level = POWER_SUSPEND_LEVEL_DISABLE_FB;
 	audio->suspend_ctl.node.resume = audlpa_resume;
 	audio->suspend_ctl.node.suspend = audlpa_suspend;
 	audio->suspend_ctl.audio = audio;
 	register_power_suspend(&audio->suspend_ctl.node);
+#endif
 #endif
 	for (i = 0; i < AUDLPA_EVENT_NUM; i++) {
 		e_node = kmalloc(sizeof(struct audlpa_event), GFP_KERNEL);
