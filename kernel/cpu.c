@@ -1226,12 +1226,10 @@ cpu_hotplug_pm_callback(struct notifier_block *nb,
 	switch (action) {
 
 	case PM_SUSPEND_PREPARE:
-	case PM_HIBERNATION_PREPARE:
 		cpu_hotplug_disable();
 		break;
 
 	case PM_POST_SUSPEND:
-	case PM_POST_HIBERNATION:
 		cpu_hotplug_enable();
 		break;
 

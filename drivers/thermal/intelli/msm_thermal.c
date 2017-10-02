@@ -663,7 +663,6 @@ static int msm_thermal_pm_event(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
 	switch (event) {
-	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
 		thermal_suspended = false;
 		if (mutex_trylock(&core_control_mutex)) {
@@ -672,7 +671,6 @@ static int msm_thermal_pm_event(struct notifier_block *this,
 		}
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work, 0);
 		break;
-	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
 		thermal_suspended = true;
 		break;

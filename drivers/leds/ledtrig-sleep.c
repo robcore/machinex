@@ -47,11 +47,9 @@ static int ledtrig_sleep_pm_callback(struct notifier_block *nfb,
 					void *ignored)
 {
 	switch (action) {
-	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
 		led_trigger_event(ledtrig_sleep, LED_OFF);
 		return NOTIFY_OK;
-	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
 		led_trigger_event(ledtrig_sleep, LED_FULL);
 		return NOTIFY_OK;

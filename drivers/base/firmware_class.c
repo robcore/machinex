@@ -1592,16 +1592,12 @@ static int fw_pm_notify(struct notifier_block *notify_block,
 			unsigned long mode, void *unused)
 {
 	switch (mode) {
-	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
-	case PM_RESTORE_PREPARE:
 		kill_requests_without_uevent();
 		device_cache_fw_images();
 		break;
 
 	case PM_POST_SUSPEND:
-	case PM_POST_HIBERNATION:
-	case PM_POST_RESTORE:
 		/*
 		 * In case that system sleep failed and syscore_suspend is
 		 * not called.
