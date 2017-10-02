@@ -277,7 +277,7 @@ static int usb_dev_resume(struct device *dev)
 {
 	return usb_resume(dev, PMSG_RESUME);
 }
-
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 static int usb_dev_freeze(struct device *dev)
 {
 	return usb_suspend(dev, PMSG_FREEZE);
@@ -297,16 +297,18 @@ static int usb_dev_restore(struct device *dev)
 {
 	return usb_resume(dev, PMSG_RESTORE);
 }
-
+#endif
 static const struct dev_pm_ops usb_device_pm_ops = {
 	.prepare =	usb_dev_prepare,
 	.complete =	usb_dev_complete,
 	.suspend =	usb_dev_suspend,
 	.resume =	usb_dev_resume,
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 	.freeze =	usb_dev_freeze,
 	.thaw =		usb_dev_thaw,
 	.poweroff =	usb_dev_poweroff,
 	.restore =	usb_dev_restore,
+#endif
 #ifdef CONFIG_USB_SUSPEND
 	.runtime_suspend =	usb_runtime_suspend,
 	.runtime_resume =	usb_runtime_resume,

@@ -157,6 +157,7 @@ static int spi_pm_resume(struct device *dev)
 		return spi_legacy_resume(dev);
 }
 
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 static int spi_pm_freeze(struct device *dev)
 {
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
@@ -196,6 +197,7 @@ static int spi_pm_restore(struct device *dev)
 	else
 		return spi_legacy_resume(dev);
 }
+#endif
 #else
 #define spi_pm_suspend	NULL
 #define spi_pm_resume	NULL
@@ -208,10 +210,12 @@ static int spi_pm_restore(struct device *dev)
 static const struct dev_pm_ops spi_pm = {
 	.suspend = spi_pm_suspend,
 	.resume = spi_pm_resume,
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 	.freeze = spi_pm_freeze,
 	.thaw = spi_pm_thaw,
 	.poweroff = spi_pm_poweroff,
 	.restore = spi_pm_restore,
+#endif
 	SET_RUNTIME_PM_OPS(
 		pm_generic_runtime_suspend,
 		pm_generic_runtime_resume,

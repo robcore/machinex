@@ -60,8 +60,7 @@ static int scsi_bus_suspend_common(struct device *dev, pm_message_t msg)
 		 * system hibernate identically (but not system freeze).
 		 */
 		if (pm_runtime_suspended(dev)) {
-			if (msg.event == PM_EVENT_SUSPEND ||
-			    msg.event == PM_EVENT_HIBERNATE)
+			if (msg.event == PM_EVENT_SUSPEND)
 				return 0;	/* already suspended */
 
 			/* wake up device so that FREEZE will succeed */
@@ -113,7 +112,7 @@ static int scsi_bus_suspend(struct device *dev)
 {
 	return scsi_bus_suspend_common(dev, PMSG_SUSPEND);
 }
-
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 static int scsi_bus_freeze(struct device *dev)
 {
 	return scsi_bus_suspend_common(dev, PMSG_FREEZE);
@@ -123,7 +122,7 @@ static int scsi_bus_poweroff(struct device *dev)
 {
 	return scsi_bus_suspend_common(dev, PMSG_HIBERNATE);
 }
-
+#endif
 #else /* CONFIG_PM_SLEEP */
 
 #define scsi_bus_resume_common		NULL
@@ -239,10 +238,12 @@ const struct dev_pm_ops scsi_bus_pm_ops = {
 	.prepare =		scsi_bus_prepare,
 	.suspend =		scsi_bus_suspend,
 	.resume =		scsi_bus_resume_common,
+#ifdef CONFIG_HIBERNATE_CALLBACKS
 	.freeze =		scsi_bus_freeze,
 	.thaw =			scsi_bus_resume_common,
 	.poweroff =		scsi_bus_poweroff,
 	.restore =		scsi_bus_resume_common,
+#endif
 	.runtime_suspend =	scsi_runtime_suspend,
 	.runtime_resume =	scsi_runtime_resume,
 	.runtime_idle =		scsi_runtime_idle,
