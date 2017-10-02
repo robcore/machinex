@@ -3460,9 +3460,9 @@ void mdp_footswitch_ctrl(boolean on)
 static void mdp_suspend_sub(void)
 {
 	/* cancel pipe ctrl worker */
-	cancel_delayed_work(&mdp_pipe_ctrl_worker);
+	cancel_delayed_work_sync(&mdp_pipe_ctrl_worker);
 
-	/* for workder can't be cancelled... */
+	/* for workers that can't be cancelled... */
 	flush_workqueue(mdp_pipe_ctrl_wq);
 
 	/* let's wait for PPP completion */
@@ -3478,7 +3478,34 @@ static void mdp_suspend_sub(void)
 }
 #endif
 
-/*#if defined(CONFIG_PM) && !defined(CONFIG_POWERSUSPEND)
+#ifdef CONFIG_PROACTIVE_SUSPEND
+static int mdp_pm_notifier(struct notifier_block *nb,
+				unsigned long event, void *unused)
+{
+	switch (event) {
+		case PM_PROACTIVE_SUSPEND:
+			mdp_suspend_sub();
+#ifdef CONFIG_FB_MSM_DTV
+			mdp4_dtv_set_black_screen();
+#endif
+			mdp_footswitch_ctrl(FALSE);
+			break;
+	case PM_PROACTIVE_RESUME:
+			mdp_footswitch_ctrl(TRUE);
+			mutex_lock(&mdp_suspend_mutex);
+			mdp_suspended = FALSE;
+			mutex_unlock(&mdp_suspend_mutex);
+			break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block mdp_pm_nb = {
+	.notifier_call = mdp_pm_notifier,
+};
+#endif
+
+#if 0
 static int mdp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	if (pdev->id == 0) {
@@ -3493,7 +3520,7 @@ static int mdp_suspend(struct platform_device *pdev, pm_message_t state)
 }
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
+#if 0
 static void mdp_power_suspend(struct power_suspend *h)
 {
 	mdp_suspend_sub();
@@ -3510,7 +3537,7 @@ static void mdp_power_resume(struct power_suspend *h)
 	mdp_suspended = FALSE;
 	mutex_unlock(&mdp_suspend_mutex);
 }
-#endif */
+#endif
 
 static int mdp_remove(struct platform_device *pdev)
 {
@@ -3535,13 +3562,15 @@ static int mdp_remove(struct platform_device *pdev)
 
 static int mdp_register_driver(void)
 {
-/*#ifdef CONFIG_POWERSUSPEND
-//	power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB - 1;
+#if 0
+	power_suspend.level = POWER_SUSPEND_LEVEL_DISABLE_FB - 1;
 	power_suspend.suspend = mdp_power_suspend;
 	power_suspend.resume = mdp_power_resume;
 	register_power_suspend(&power_suspend);
-#endif */
-
+#endif
+#ifdef CONFIG_PROACTIVE_SUSPEND
+	register_pm_notifier(&mdp_pm_nb);
+#endif
 	return platform_driver_register(&mdp_driver);
 }
 
