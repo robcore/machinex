@@ -821,33 +821,6 @@ static const struct {
 };
 #endif
 
-#if defined(CUSTOMER_HW4) && defined(DHD_DEBUG)
-uint prev_dhd_console_ms = 0;
-u32 prev_wl_dbg_level = 0;
-bool wl_scan_timeout_dbg_enabled = 0;
-static void wl_scan_timeout_dbg_set(void);
-static void wl_scan_timeout_dbg_clear(void);
-
-static void wl_scan_timeout_dbg_set(void)
-{
-	WL_ERR(("Enter \n"));
-	prev_dhd_console_ms = dhd_console_ms;
-	prev_wl_dbg_level = wl_dbg_level;
-
-	dhd_console_ms = 1;
-	wl_dbg_level |= (WL_DBG_ERR | WL_DBG_P2P_ACTION | WL_DBG_SCAN);
-
-	wl_scan_timeout_dbg_enabled = 1;
-}
-static void wl_scan_timeout_dbg_clear(void)
-{
-	WL_ERR(("Enter \n"));
-	dhd_console_ms = prev_dhd_console_ms;
-	wl_dbg_level = prev_wl_dbg_level;
-
-	wl_scan_timeout_dbg_enabled = 0;
-}
-#endif /* CUSTOMER_HW4 && DHD_DEBUG */
 
 static void wl_add_remove_pm_enable_work(struct bcm_cfg80211 *cfg, bool add_remove,
 	enum wl_handler_del_type type)
@@ -9759,10 +9732,6 @@ static void wl_scan_timeout(unsigned long data)
 	msg.status = hton32(WLC_E_STATUS_TIMEOUT);
 	msg.reason = 0xFFFFFFFF;
 	wl_cfg80211_event(bcmcfg_to_prmry_ndev(cfg), &msg, NULL);
-#if defined(CUSTOMER_HW4) && defined(DHD_DEBUG)
-	if (!wl_scan_timeout_dbg_enabled)
-		wl_scan_timeout_dbg_set();
-#endif /* CUSTOMER_HW4 && DHD_DEBUG */
 }
 
 static s32
@@ -10175,10 +10144,6 @@ static s32 wl_escan_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 			wl_notify_escan_complete(cfg, ndev, false, false);
 		}
 		wl_escan_increment_sync_id(cfg, SCAN_BUF_NEXT);
-#if defined(CUSTOMER_HW4) && defined(DHD_DEBUG)
-		if (wl_scan_timeout_dbg_enabled)
-			wl_scan_timeout_dbg_clear();
-#endif /* CUSTOMER_HW4 && DHD_DEBUG */
 	}
 	else if (status == WLC_E_STATUS_ABORT) {
 		cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
