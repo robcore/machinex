@@ -159,7 +159,7 @@ void cpufreq_stats_free_table(struct cpufreq_policy *policy)
 
 	pr_debug("%s: Free stats table\n", __func__);
 
-	sysfs_remove_group(policy->kobj, &stats_attr_group);
+	sysfs_remove_group(&policy->kobj, &stats_attr_group);
 	kfree(stats->time_in_state);
 	kfree(stats);
 	policy->stats = NULL;
@@ -209,7 +209,7 @@ void cpufreq_stats_create_table(struct cpufreq_policy *policy)
 	stats->last_index = freq_table_get_index(stats, policy->cur);
 
 	policy->stats = stats;
-	ret = sysfs_create_group(policy->kobj, &stats_attr_group);
+	ret = sysfs_create_group(&policy->kobj, &stats_attr_group);
 	if (!ret)
 		return;
 

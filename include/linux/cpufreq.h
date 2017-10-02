@@ -112,7 +112,7 @@ struct cpufreq_policy {
 	enum cpufreq_table_sorting freq_table_sorted;
 
 	struct list_head        policy_list;
-	struct kobject		*kobj;
+	struct kobject		kobj;
 	struct completion	kobj_unregister;
 
 	/*
@@ -176,12 +176,6 @@ struct cpufreq_policy {
 	unsigned int hlimit_min_screen_off;
 	unsigned int curr_limit_max;
 	unsigned int curr_limit_min;
-};
-
-/* contains per cpu sysfs info ./sys/devices/ssytem/cpu/cpu#/cpufreq */
-struct cpufreq_cpu_sysinfo {
-	struct cpufreq_policy *cpu_policy; /* policy for online cpu */
-	struct kobject cpu_kobj; /* per cpu kobject */
 };
 
 /* Only for ACPI */
