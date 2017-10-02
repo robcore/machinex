@@ -246,15 +246,16 @@ int resout_irq_control(int enable)
 
 static void resout_helper(struct work_struct *work)
 {
-	smp_call_function(cpu_power_off, NULL, 0);
+	unsigned int cpu;
+	for (cpu = 3; cpu > 1; cpu--)
+		cpu_power_off(NULL);
 }
 
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 {
-
-	pr_emerg("%s PMIC Initiated shutdown\n", __func__);
 	oops_in_progress = 1;
-	queue_work(restart_wq, &resout_helper_work);
+	pr_emerg("%s PMIC Initiated shutdown\n", __func__);
+	queue_work_on(0, restart_wq, &resout_helper_work);
 	if (smp_processor_id() == 0)
 		cpu_power_off(NULL);
 	while (1)

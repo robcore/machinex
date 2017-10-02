@@ -363,7 +363,7 @@ static void __ref do_core_control(void)
 		 cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC ||
 		 cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC ||
 		 cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
-		for (cpu = num_possible_cpus(); cpu > 1; cpu--) {
+		for (cpu = 3; cpu > 1; cpu--) {
 			if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
 				continue;
 			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
@@ -378,7 +378,7 @@ static void __ref do_core_control(void)
 			   (cpu_thermal_two <= delta) &&
 			   (cpu_thermal_three <= delta) &&
 			   (cpu_thermal_four <= delta))) {
-		for (cpu = 1; cpu < num_possible_cpus(); cpu++) {
+		for (cpu = 1; cpu < 3; cpu++) {
 			if (!(cpus_offlined & BIT(cpu)))
 				continue;
 			/* If this core is already online, then bring up the
