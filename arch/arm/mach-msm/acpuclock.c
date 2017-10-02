@@ -29,7 +29,7 @@ EXPORT_SYMBOL(acpuclk_get_rate);
 
 int acpuclk_set_rate(unsigned int cpu, unsigned long rate, enum setrate_reason reason)
 {
-	if (!acpuclk_data)
+	if (!acpuclk_data || (acpuclk_data->set_rate < 0))
 		return 0;
 
 	return acpuclk_data->set_rate(cpu, rate, reason);
