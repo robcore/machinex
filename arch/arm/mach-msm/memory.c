@@ -120,7 +120,7 @@ struct reserve_info *reserve_info;
 /* size of all memory banks contiguous to and below this one */
 static unsigned long total_size(unsigned long bank)
 {
-	int i;
+	unsigned int i;
 	struct membank *mb = &meminfo.bank[bank];
 	int memtype = reserve_info->paddr_to_memtype(mb->start);
 	unsigned long size;
@@ -146,7 +146,7 @@ static unsigned long total_size(unsigned long bank)
  */
 static void __init calculate_reserve_limits(void)
 {
-	int i;
+	unsigned int i;
 	struct membank *mb;
 	int memtype;
 	struct memtype_reserve *mt;
@@ -167,7 +167,7 @@ static void __init calculate_reserve_limits(void)
 
 static void __init adjust_reserve_sizes(void)
 {
-	int i;
+	unsigned int i;
 	struct memtype_reserve *mt;
 
 	mt = &reserve_info->memtype_reserve_table[0];
@@ -183,7 +183,7 @@ static void __init adjust_reserve_sizes(void)
 
 static void __init reserve_memory_for_mempools(void)
 {
-	int i, memtype, membank_type;
+	unsigned int i, memtype, membank_type;
 	struct memtype_reserve *mt;
 	struct membank *mb;
 	int ret;
@@ -382,7 +382,7 @@ static char * const memtype_names[] = {
 
 int msm_get_memory_type_from_name(const char *memtype_name)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(memtype_names); i++) {
 		if (memtype_names[i] &&
