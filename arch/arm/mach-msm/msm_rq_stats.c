@@ -244,10 +244,10 @@ static int system_suspend_handler(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	switch (val) {
-	case PM_POST_SUSPEND:
+	case PM_PROACTIVE_RESUME:
 		rq_info.hotplug_disabled = 0;
 		break;
-	case PM_SUSPEND_PREPARE:
+	case PM_PROACTIVE_SUSPEND:
 		rq_info.hotplug_disabled = 1;
 		break;
 	default:
