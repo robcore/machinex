@@ -23,9 +23,7 @@ MODULE_LICENSE("GPLv2");
 #define WRTIMEOUT 10
 
 static struct input_dev *virtkeydev;
-static struct delayed_work wakeup_key_release_work;
 static struct delayed_work wakeup_key_press_work;
-static void wakeup_key_release(struct work_struct *work);
 static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
 struct wake_lock vwklock;
@@ -156,12 +154,11 @@ static int __init virtual_wakeup_key_init(void)
 	}
 
 	INIT_DELAYED_WORK(&wakeup_key_press_work, wakeup_key_press);
-	INIT_DELAYED_WORK(&wakeup_key_release_work, wakeup_key_release);
 
 	rc = sysfs_create_group(kernel_kobj, &virtual_wakeup_key_attr_group);
 	if (rc) {
 		rc = -ENOMEM;
-		goto err_handler;
+		goto err_unregister;
 	}
 
 	wake_lock_init(&vwklock, WAKE_LOCK_SUSPEND, "vwkey");
@@ -182,7 +179,6 @@ static void __exit virtual_wakeup_key_exit(void)
 {
 	wake_lock_destroy(&vwklock);
 	sysfs_remove_group(kernel_kobj, &virtual_wakeup_key_attr_group);
-	input_unregister_handler(&virtkey_input_handler);
 	input_unregister_device(virtkeydev);
 	input_free_device(virtkeydev);
 	return;
