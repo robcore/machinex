@@ -685,7 +685,7 @@ static int evdev_enable_suspend_block(struct evdev *evdev,
 	wake_lock_init(&client->wake_lock, WAKE_LOCK_SUSPEND, client->name);
 	client->use_wake_lock = true;
 	if (client->packet_head != client->tail)
-		wake_lock(&client->wake_lock);
+		wake_trylock(&client->wake_lock);
 	spin_unlock_irq(&client->buffer_lock);
 	return 0;
 }
@@ -697,6 +697,10 @@ static int evdev_disable_suspend_block(struct evdev *evdev,
 		return 0;
 
 	spin_lock_irq(&client->buffer_lock);
+	if (client->packet_head != client->tail) {
+		if (wake_lock_active(&client->wake_lock))
+			wake_unlock(&client->wake_lock);
+	}
 	client->use_wake_lock = false;
 	spin_unlock_irq(&client->buffer_lock);
 	wake_lock_destroy(&client->wake_lock);

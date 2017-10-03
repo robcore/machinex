@@ -69,7 +69,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 u8 led_dynamic_current = 0x28;
-u8 led_lowpower_mode = 0x0;
+u8 led_lowpower_mode = 0x05;
 
 unsigned long disabled_samsung_pattern = 0;
 
@@ -94,8 +94,8 @@ static struct an30259_led_conf led_conf[] = {
 
 enum an30259a_led_enum {
 	LED_R = 0,
-	LED_G,
-	LED_B,
+	LED_G = 1,
+	LED_B = 2,
 };
 
 enum an30259a_pattern {
@@ -130,7 +130,6 @@ struct an30259a_data {
 struct i2c_client *b_client;
 
 #define SEC_LED_SPECIFIC
-
 #ifdef SEC_LED_SPECIFIC
 struct device *led_dev;
 int led_enable_fade;
@@ -1704,12 +1703,17 @@ static int an30259a_probe(struct i2c_client *client,
 	if (ret) {
 		dev_err(&client->dev,
 			"Failed to create sysfs group for samsung specific led\n");
-		goto exit;
+		goto exit1;
 	}
 #endif
 	if (!poweroff_charging)
 		an30259a_start_led_pattern(BOOTING);
 	return ret;
+
+#ifdef SEC_LED_SPECIFIC
+exit1:
+	device_destroy(sec_class, 0);
+#endif
 exit:
 	mutex_destroy(&data->mutex);
 	kfree(data);
