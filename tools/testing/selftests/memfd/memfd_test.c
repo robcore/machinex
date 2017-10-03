@@ -182,7 +182,7 @@ static void *mfd_assert_mmap_private(int fd)
 	return p;
 }
 
-static int mfd_assert_open(int fd, int flags, mode_t mode)
+static int mfd_assert_open(int fd, int flags, umode_t mode)
 {
 	char buf[512];
 	int r;
@@ -197,7 +197,7 @@ static int mfd_assert_open(int fd, int flags, mode_t mode)
 	return r;
 }
 
-static void mfd_fail_open(int fd, int flags, mode_t mode)
+static void mfd_fail_open(int fd, int flags, umode_t mode)
 {
 	char buf[512];
 	int r;

@@ -235,7 +235,7 @@ out:
 }
 #endif
 
-static int touch(char *abs_path, mode_t mode) {
+static int touch(char *abs_path, umode_t mode) {
 	struct file *filp = filp_open(abs_path, O_RDWR|O_CREAT|O_EXCL|O_NOFOLLOW, mode);
 	if (IS_ERR(filp)) {
 		if (PTR_ERR(filp) == -EEXIST) {

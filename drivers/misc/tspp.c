@@ -238,7 +238,7 @@
 
 struct debugfs_entry {
 	const char *name;
-	mode_t mode;
+	umode_t mode;
 	int offset;
 };
 

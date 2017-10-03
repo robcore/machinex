@@ -20,7 +20,7 @@ void event_attr_init(struct perf_event_attr *attr)
 	attr->size = sizeof(*attr);
 }
 
-int mkdir_p(char *path, mode_t mode)
+int mkdir_p(char *path, umode_t mode)
 {
 	struct stat st;
 	int err;

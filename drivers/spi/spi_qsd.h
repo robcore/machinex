@@ -193,7 +193,7 @@ static struct pm_qos_request qos_req_list;
 /* Used to create debugfs entries */
 static struct msm_spi_regs{
 	const char *name;
-	mode_t mode;
+	umode_t mode;
 	int offset;
 	struct msm_spi *dd;
 } debugfs_spi_regs[] = {

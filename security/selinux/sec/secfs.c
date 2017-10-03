@@ -48,7 +48,7 @@ struct secfs_entry_file {
 	int	mKey;		/* unique key (not use) */
 	bool	mExist;		/* file exists */
 	char	*mName;		/* file name */
-	mode_t	mMode;		/* file permission */
+	umode_t	mMode;		/* file permission */
 	const struct file_operations mOperations;
 				/* fops */
 };

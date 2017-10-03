@@ -783,7 +783,7 @@ static struct dentry *exfat_lookup(struct inode *dir, struct dentry *dentry,
 	FILE_ID_T fid;
 	loff_t i_pos;
 	UINT64 ret;
-	mode_t i_mode;
+	umode_t i_mode;
 
 	__lock_super(sb);
 	PRINTK("exfat_lookup entered\n");
@@ -1176,7 +1176,7 @@ static int exfat_cont_expand(struct inode *inode, loff_t size)
 
 static int exfat_allow_set_time(struct exfat_sb_info *sbi, struct inode *inode)
 {
-	mode_t allow_utime = sbi->options.allow_utime;
+	umode_t allow_utime = sbi->options.allow_utime;
 
 	if (current_fsuid() != inode->i_uid) {
 		if (in_group_p(inode->i_gid))
@@ -1191,7 +1191,7 @@ static int exfat_allow_set_time(struct exfat_sb_info *sbi, struct inode *inode)
 static int exfat_sanitize_mode(const struct exfat_sb_info *sbi,
 							   struct inode *inode, umode_t *mode_ptr)
 {
-	mode_t i_mode, mask, perm;
+	umode_t i_mode, mask, perm;
 
 	i_mode = inode->i_mode;
 

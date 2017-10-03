@@ -195,7 +195,7 @@ struct sdcardfs_inode_info {
 	userid_t userid;
 	uid_t d_uid;
 	gid_t d_gid;
-	mode_t d_mode; 
+	umode_t d_mode; 
 
 	struct inode vfs_inode;
 };
@@ -421,7 +421,7 @@ extern void packagelist_exit(void);
 
 /* for derived_perm.c */
 extern void setup_derived_state(struct inode *inode, perm_t perm, 
-			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
+			userid_t userid, uid_t uid, gid_t gid, umode_t mode);
 extern void get_derived_permission(struct dentry *parent, struct dentry *dentry);
 extern void update_derived_permission(struct dentry *dentry);
 extern int need_graft_path(struct dentry *dentry);
@@ -443,7 +443,7 @@ static inline void unlock_dir(struct dentry *dir)
 	dput(dir);
 }
 
-static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t mode)
+static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, umode_t mode)
 {
 	int err;
 	struct dentry *dent;

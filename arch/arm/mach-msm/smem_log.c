@@ -1943,7 +1943,7 @@ static const struct file_operations debug_ops_cont = {
 	.open = debug_open,
 };
 
-static void debug_create(const char *name, mode_t mode,
+static void debug_create(const char *name, umode_t mode,
 			 struct dentry *dent,
 			 int (*fill)(char *buf, int max, uint32_t cont),
 			 const struct file_operations *fops)

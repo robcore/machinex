@@ -128,8 +128,8 @@ static inline int exfat_mode_can_hold_ro(struct inode *inode)
 	return 0;
 }
 
-static inline mode_t exfat_make_mode(struct exfat_sb_info *sbi,
-									 u32 attr, mode_t mode)
+static inline umode_t exfat_make_mode(struct exfat_sb_info *sbi,
+									 u32 attr, umode_t mode)
 {
 	if ((attr & ATTR_READONLY) && !(attr & ATTR_SUBDIR))
 		mode &= ~S_IWUGO;

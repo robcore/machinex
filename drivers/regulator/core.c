@@ -3180,7 +3180,7 @@ static void rdev_init_debugfs(struct regulator_dev *rdev)
 	struct dentry *err_ptr = NULL;
 	struct regulator *reg;
 	struct regulator_ops *reg_ops;
-	mode_t mode;
+	umode_t mode;
 
 	if (IS_ERR(rdev) || rdev == NULL ||
 		IS_ERR(debugfs_root) || debugfs_root == NULL) {

@@ -35,7 +35,7 @@ static void inherit_derived_state(struct inode *parent, struct inode *child)
 
 /* helper function for derived state */
 void setup_derived_state(struct inode *inode, perm_t perm,
-                        userid_t userid, uid_t uid, gid_t gid, mode_t mode)
+                        userid_t userid, uid_t uid, gid_t gid, umode_t mode)
 {
 	struct sdcardfs_inode_info *info = SDCARDFS_I(inode);
 

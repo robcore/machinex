@@ -101,7 +101,7 @@
 /* used to create debugfs entries */
 static const struct {
 	const char *name;
-	mode_t mode;
+	umode_t mode;
 	int offset;
 } debugfs_tsif_regs[] = {
 	{"sts_ctl",      S_IRUGO | S_IWUSR, TSIF_STS_CTL_OFF},
@@ -1114,7 +1114,7 @@ static int debugfs_iomem_x32_get(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(fops_iomem_x32, debugfs_iomem_x32_get,
 			debugfs_iomem_x32_set, "0x%08llx\n");
 
-struct dentry *debugfs_create_iomem_x32(const char *name, mode_t mode,
+struct dentry *debugfs_create_iomem_x32(const char *name, umode_t mode,
 					struct dentry *parent, u32 *value)
 {
 	return debugfs_create_file(name, mode, parent, value, &fops_iomem_x32);
