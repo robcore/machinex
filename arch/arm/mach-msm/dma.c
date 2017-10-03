@@ -684,7 +684,8 @@ static irqreturn_t msm_dmov_isr(int irq, void *dev_id)
 	if (!dmov_conf[adm].channel_active && valid) {
 		disable_irq_nosync(dmov_conf[adm].irq);
 		dmov_conf[adm].clk_ctl = CLK_TO_BE_DIS;
-		schedule_delayed_work(&dmov_conf[adm].work, msecs_to_jiffies(10));
+		queue_delayed_work(dmov_conf[adm].cmd_wq, &dmov_conf[adm].work,
+						   msecs_to_jiffies(10));
 	}
 
 	spin_unlock_irqrestore(&dmov_conf[adm].lock, irq_flags);
