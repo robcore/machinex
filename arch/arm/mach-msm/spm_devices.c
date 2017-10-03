@@ -63,11 +63,13 @@ int msm_spm_set_vdd(unsigned int cpu, unsigned int vlevel)
 {
 	struct msm_spm_vdd_info info;
 	int ret;
+	int current_cpu;
 
 	info.cpu = cpu;
 	info.vlevel = vlevel;
 
-	if ((smp_processor_id() != cpu) && cpu_online(cpu)) {
+	current_cpu = get_cpu();
+	if ((current_cpu != cpu) && cpu_online(cpu)) {
 		/**
 		 * We do not want to set the voltage of another core from
 		 * this core, as its possible that we may race the vdd change
@@ -88,6 +90,7 @@ int msm_spm_set_vdd(unsigned int cpu, unsigned int vlevel)
 		msm_spm_smp_set_vdd(&info);
 		ret = info.err;
 	}
+	put_cpu();
 
 	return ret;
 }

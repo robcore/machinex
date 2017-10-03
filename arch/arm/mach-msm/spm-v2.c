@@ -369,10 +369,10 @@ int msm_spm_drv_set_vdd(struct msm_spm_driver_data *dev, unsigned int vlevel)
 	uint32_t timeout_us, new_level;
 	bool avs_enabled;
 
-	avs_enabled = msm_spm_drv_is_avs_enabled(dev);
-
 	if (!dev)
 		return -EINVAL;
+
+	avs_enabled = msm_spm_drv_is_avs_enabled(dev);
 
 	if (!msm_spm_pmic_arb_present(dev))
 		return -ENOSYS;

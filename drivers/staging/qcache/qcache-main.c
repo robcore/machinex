@@ -624,7 +624,7 @@ static int zcache_do_preload(struct tmem_pool *pool)
 		goto out;
 	}
 	preempt_disable();
-	kp = &__get_cpu_var(zcache_preloads);
+	kp = this_cpu_ptr(&zcache_preloads);
 	while (kp->nr < ARRAY_SIZE(kp->objnodes)) {
 		preempt_enable_no_resched();
 		objnode = kmem_cache_alloc(zcache_objnode_cache,
@@ -634,7 +634,7 @@ static int zcache_do_preload(struct tmem_pool *pool)
 			goto unlock_out;
 		}
 		preempt_disable();
-		kp = &__get_cpu_var(zcache_preloads);
+		kp = this_cpu_ptr(&zcache_preloads);
 		if (kp->nr < ARRAY_SIZE(kp->objnodes))
 			kp->objnodes[kp->nr++] = objnode;
 		else
@@ -653,7 +653,7 @@ static int zcache_do_preload(struct tmem_pool *pool)
 		goto unlock_out;
 	}
 	preempt_disable();
-	kp = &__get_cpu_var(zcache_preloads);
+	kp = this_cpu_ptr(&zcache_preloads);
 	if (kp->obj == NULL)
 		kp->obj = obj;
 	else
@@ -674,7 +674,7 @@ static void *zcache_get_free_page(void)
 	struct zcache_preload *kp;
 	void *page;
 
-	kp = &__get_cpu_var(zcache_preloads);
+	kp = this_cpu_ptr(&zcache_preloads);
 	page = kp->page;
 	BUG_ON(page == NULL);
 	kp->page = NULL;
@@ -691,7 +691,7 @@ static struct tmem_objnode *zcache_objnode_alloc(struct tmem_pool *pool)
 	unsigned long count;
 	struct zcache_preload *kp;
 
-	kp = &__get_cpu_var(zcache_preloads);
+	kp = this_cpu_ptr(&zcache_preloads);
 	if (kp->nr <= 0)
 		goto out;
 	objnode = kp->objnodes[kp->nr - 1];
@@ -719,7 +719,7 @@ static struct tmem_obj *zcache_obj_alloc(struct tmem_pool *pool)
 	unsigned long count;
 	struct zcache_preload *kp;
 
-	kp = &__get_cpu_var(zcache_preloads);
+	kp = this_cpu_ptr(&zcache_preloads);
 	obj = kp->obj;
 	BUG_ON(obj == NULL);
 	kp->obj = NULL;
@@ -742,7 +742,7 @@ static void zcache_flush_all_obj(void)
 	int pool_id;
 	struct zcache_preload *kp;
 
-	kp = &__get_cpu_var(zcache_preloads);
+	kp = this_cpu_ptr(&zcache_preloads);
 
 	for (pool_id = 0; pool_id < MAX_POOLS_PER_CLIENT; pool_id++) {
 		pool = zcache_get_pool_by_id(LOCAL_CLIENT, pool_id);

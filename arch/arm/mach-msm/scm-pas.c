@@ -218,6 +218,11 @@ EXPORT_SYMBOL(pas_supported);
 static int __init scm_pas_init(void)
 {
 	int i, rate;
+	static int is_inited;
+
+	if (is_inited)
+		return 0;
+
 	for (i = 0; i < NUM_CLKS; i++) {
 		scm_clocks[i] = clk_get_sys("scm", scm_clock_names[i]);
 		if (IS_ERR(scm_clocks[i]))
@@ -242,6 +247,7 @@ static int __init scm_pas_init(void)
 	if (!scm_perf_client)
 		pr_warn("unable to register bus client\n");
 
+	is_inited = 1;
 	return 0;
 }
 module_init(scm_pas_init);
