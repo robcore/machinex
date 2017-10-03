@@ -9,8 +9,7 @@
 struct vfsmount;
 
 enum { MAX_NESTED_LINKS = 8 };
-#define EMBEDDED_LEVELS 2
-#define MAXSYMLINKS 40
+
 struct nameidata {
 	struct path	path;
 	struct qstr	last;
@@ -21,18 +20,6 @@ struct nameidata {
 	int		last_type;
 	unsigned	depth;
 	char *saved_names[MAX_NESTED_LINKS + 1];
-	int		total_link_count;
-	struct saved {
-		struct path link;
-		void *cookie;
-		const char *name;
-		struct inode *inode;
-		unsigned seq;
-	} *stack, internal[EMBEDDED_LEVELS];
-	struct filename	*name;
-	struct nameidata *saved;
-	unsigned	root_seq;
-	int		dfd;
 };
 
 /*

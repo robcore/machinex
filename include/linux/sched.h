@@ -130,7 +130,6 @@ struct fs_struct;
 struct perf_event_context;
 struct blk_plug;
 struct filename;
-struct nameidata;
 
 #define VMACACHE_BITS 2
 #define VMACACHE_SIZE (1U << VMACACHE_BITS)
@@ -1687,7 +1686,6 @@ struct task_struct {
 				       it with task_lock())
 				     - initialized normally by setup_new_exec */
 /* file system info */
-	struct nameidata *nameidata;
 	int link_count, total_link_count;
 #ifdef CONFIG_SYSVIPC
 /* ipc stuff */

@@ -497,50 +497,6 @@ void path_put(const struct path *path)
 }
 EXPORT_SYMBOL(path_put);
 
-static void set_nameidata(struct nameidata *p, int dfd, struct filename *name)
-{
-	struct nameidata *old = current->nameidata;
-	p->stack = p->internal;
-	p->dfd = dfd;
-	p->name = name;
-	p->total_link_count = old ? old->total_link_count : 0;
-	p->saved = old;
-	current->nameidata = p;
-}
-
-static void restore_nameidata(void)
-{
-	struct nameidata *now = current->nameidata, *old = now->saved;
-
-	current->nameidata = old;
-	if (old)
-		old->total_link_count = now->total_link_count;
-	if (now->stack != now->internal) {
-		kfree(now->stack);
-		now->stack = now->internal;
-	}
-}
-
-static int __nd_alloc_stack(struct nameidata *nd)
-{
-	struct saved *p;
-
-	if (nd->flags & LOOKUP_RCU) {
-		p= kmalloc(MAXSYMLINKS * sizeof(struct saved),
-				  GFP_ATOMIC);
-		if (unlikely(!p))
-			return -ECHILD;
-	} else {
-		p= kmalloc(MAXSYMLINKS * sizeof(struct saved),
-				  GFP_KERNEL);
-		if (unlikely(!p))
-			return -ENOMEM;
-	}
-	memcpy(p, nd->internal, sizeof(nd->internal));
-	nd->stack = p;
-	return 0;
-}
-
 /**
  * path_connected - Verify that a path->dentry is below path->mnt.mnt_root
  * @path: nameidate to verify
@@ -559,81 +515,6 @@ static bool path_connected(const struct path *path)
 	return is_subdir(path->dentry, mnt->mnt_root);
 }
 
-static inline int nd_alloc_stack(struct nameidata *nd)
-{
-	if (likely(nd->depth != EMBEDDED_LEVELS))
-		return 0;
-	if (likely(nd->stack != nd->internal))
-		return 0;
-	return __nd_alloc_stack(nd);
-}
-
-static void drop_links(struct nameidata *nd)
-{
-	int i = nd->depth;
-	while (i--) {
-		struct saved *last = nd->stack + i;
-		struct inode *inode = last->inode;
-		if (last->cookie && inode->i_op->put_link) {
-			inode->i_op->put_link(inode, last->cookie);
-			last->cookie = NULL;
-		}
-	}
-}
-
-static void terminate_walk(struct nameidata *nd)
-{
-	drop_links(nd);
-	if (!(nd->flags & LOOKUP_RCU)) {
-		int i;
-		path_put(&nd->path);
-		for (i = 0; i < nd->depth; i++)
-			path_put(&nd->stack[i].link);
-		if (nd->root.mnt && !(nd->flags & LOOKUP_ROOT)) {
-			path_put(&nd->root);
-			nd->root.mnt = NULL;
-		}
-	} else {
-		nd->flags &= ~LOOKUP_RCU;
-		if (!(nd->flags & LOOKUP_ROOT))
-			nd->root.mnt = NULL;
-		rcu_read_unlock();
-	}
-	nd->depth = 0;
-}
-
-/* path_put is needed afterwards regardless of success or failure */
-static bool legitimize_path(struct nameidata *nd,
-			    struct path *path, unsigned seq)
-{
-	int res = __legitimize_mnt(path->mnt, nd->m_seq);
-	if (unlikely(res)) {
-		if (res > 0)
-			path->mnt = NULL;
-		path->dentry = NULL;
-		return false;
-	}
-	if (unlikely(!lockref_get_not_dead(&path->dentry->d_lockref))) {
-		path->dentry = NULL;
-		return false;
-	}
-	return !read_seqcount_retry(&path->dentry->d_seq, seq);
-}
-
-static bool legitimize_links(struct nameidata *nd)
-{
-	int i;
-	for (i = 0; i < nd->depth; i++) {
-		struct saved *last = nd->stack + i;
-		if (unlikely(!legitimize_path(nd, &last->link, last->seq))) {
-			drop_links(nd);
-			nd->depth = i + 1;
-			return false;
-		}
-	}
-	return true;
-}
-
 /*
  * Path walking has 2 modes, rcu-walk and ref-walk (see
  * Documentation/filesystems/path-lookup.txt).  In situations when we can't
@@ -649,14 +530,11 @@ static bool legitimize_links(struct nameidata *nd)
  * unlazy_walk - try to switch to ref-walk mode.
  * @nd: nameidata pathwalk data
  * @dentry: child of nd->path.dentry or NULL
- * @seq: seq number to check dentry against
  * Returns: 0 on success, -ECHILD on failure
  *
  * unlazy_walk attempts to legitimize the current nd->path, nd->root and dentry
  * for ref-walk mode.  @dentry must be a path found by a do_lookup call on
  * @nd or NULL.  Must be called from rcu-walk context.
- * Nothing should touch nameidata between unlazy_walk() failure and
- * terminate_walk().
  */
 static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 {
@@ -665,13 +543,22 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 
 	BUG_ON(!(nd->flags & LOOKUP_RCU));
 
+	/*
+	 * After legitimizing the bastards, terminate_walk()
+	 * will do the right thing for non-RCU mode, and all our
+	 * subsequent exit cases should rcu_read_unlock()
+	 * before returning.  Do vfsmount first; if dentry
+	 * can't be legitimized, just set nd->path.dentry to NULL
+	 * and rely on dput(NULL) being a no-op.
+	 */
+	if (!legitimize_mnt(nd->path.mnt, nd->m_seq))
+		return -ECHILD;
 	nd->flags &= ~LOOKUP_RCU;
-	if (unlikely(!legitimize_links(nd)))
-		goto out2;
-	if (unlikely(!legitimize_mnt(nd->path.mnt, nd->m_seq)))
-		goto out2;
-	if (unlikely(!lockref_get_not_dead(&parent->d_lockref)))
-		goto out1;
+
+	if (!lockref_get_not_dead(&parent->d_lockref)) {
+		nd->path.dentry = NULL;	
+		goto out;
+	}
 
 	/*
 	 * For a negative lookup, the lookup sequence point is the parents
@@ -700,24 +587,22 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 	 * still valid and get it if required.
 	 */
 	if (nd->root.mnt && !(nd->flags & LOOKUP_ROOT)) {
-		if (unlikely(!legitimize_path(nd, &nd->root, nd->root_seq))) {
-			rcu_read_unlock();
-			dput(dentry);
-			return -ECHILD;
-		}
+		spin_lock(&fs->lock);
+		if (nd->root.mnt != fs->root.mnt || nd->root.dentry != fs->root.dentry)
+			goto unlock_and_drop_dentry;
+		path_get(&nd->root);
+		spin_unlock(&fs->lock);
 	}
 
 	rcu_read_unlock();
 	return 0;
 
+unlock_and_drop_dentry:
+	spin_unlock(&fs->lock);
 drop_dentry:
 	rcu_read_unlock();
 	dput(dentry);
 	goto drop_root_mnt;
-out2:
-	nd->path.mnt = NULL;
-out1:
-	nd->path.dentry = NULL;
 out:
 	rcu_read_unlock();
 drop_root_mnt:
@@ -786,23 +671,24 @@ static int complete_walk(struct nameidata *nd)
 	return status;
 }
 
-static void set_root(struct nameidata *nd)
+static __always_inline void set_root(struct nameidata *nd)
 {
 	get_fs_root(current->fs, &nd->root);
 }
 
 static int link_path_walk(const char *, struct nameidata *);
 
-static void set_root_rcu(struct nameidata *nd)
+static __always_inline unsigned set_root_rcu(struct nameidata *nd)
 {
 	struct fs_struct *fs = current->fs;
-	unsigned seq;
+	unsigned seq, res;
 
 	do {
 		seq = read_seqcount_begin(&fs->seq);
 		nd->root = fs->root;
-		nd->root_seq = __read_seqcount_begin(&nd->root.dentry->d_seq);
+		res = __read_seqcount_begin(&nd->root.dentry->d_seq);
 	} while (read_seqcount_retry(&fs->seq, seq));
+	return res;
 }
 
 static void path_put_conditional(struct path *path, struct nameidata *nd)
@@ -2006,8 +1892,7 @@ static int path_init(int dfd, const char *name, unsigned int flags,
 	if (*name=='/') {
 		if (flags & LOOKUP_RCU) {
 			rcu_read_lock();
-			set_root_rcu(nd);
-			nd->seq = nd->root_seq;
+			nd->seq = set_root_rcu(nd);
 		} else {
 			set_root(nd);
 			path_get(&nd->root);
