@@ -515,6 +515,25 @@ static bool path_connected(const struct path *path)
 	return is_subdir(path->dentry, mnt->mnt_root);
 }
 
+static __always_inline unsigned set_root_rcu(struct nameidata *nd);
+
+static bool legitimize_path(struct nameidata *nd,
+			    struct path *path, unsigned seq)
+{
+	int res = legitimize_mnt(path->mnt, nd->m_seq);
+	if (unlikely(res)) {
+		if (res > 0)
+			path->mnt = NULL;
+		path->dentry = NULL;
+		return false;
+	}
+	if (unlikely(!lockref_get_not_dead(&path->dentry->d_lockref))) {
+		path->dentry = NULL;
+		return false;
+	}
+	return !read_seqcount_retry(&path->dentry->d_seq, seq);
+}
+
 /*
  * Path walking has 2 modes, rcu-walk and ref-walk (see
  * Documentation/filesystems/path-lookup.txt).  In situations when we can't
@@ -540,25 +559,15 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 {
 	struct fs_struct *fs = current->fs;
 	struct dentry *parent = nd->path.dentry;
+	unsigned int __maybe_unused tempseq;
 
 	BUG_ON(!(nd->flags & LOOKUP_RCU));
 
-	/*
-	 * After legitimizing the bastards, terminate_walk()
-	 * will do the right thing for non-RCU mode, and all our
-	 * subsequent exit cases should rcu_read_unlock()
-	 * before returning.  Do vfsmount first; if dentry
-	 * can't be legitimized, just set nd->path.dentry to NULL
-	 * and rely on dput(NULL) being a no-op.
-	 */
-	if (!legitimize_mnt(nd->path.mnt, nd->m_seq))
-		return -ECHILD;
 	nd->flags &= ~LOOKUP_RCU;
-
-	if (!lockref_get_not_dead(&parent->d_lockref)) {
-		nd->path.dentry = NULL;	
-		goto out;
-	}
+	if (unlikely(!legitimize_mnt(nd->path.mnt, nd->m_seq)))
+		goto out2;
+	if (unlikely(!lockref_get_not_dead(&parent->d_lockref)))
+		goto out1;
 
 	/*
 	 * For a negative lookup, the lookup sequence point is the parents
@@ -587,22 +596,25 @@ static int unlazy_walk(struct nameidata *nd, struct dentry *dentry)
 	 * still valid and get it if required.
 	 */
 	if (nd->root.mnt && !(nd->flags & LOOKUP_ROOT)) {
-		spin_lock(&fs->lock);
-		if (nd->root.mnt != fs->root.mnt || nd->root.dentry != fs->root.dentry)
-			goto unlock_and_drop_dentry;
-		path_get(&nd->root);
-		spin_unlock(&fs->lock);
+		tempseq = set_root_rcu(nd);
+		if (unlikely(!legitimize_path(nd, &nd->root, tempseq))) {
+			rcu_read_unlock();
+			dput(dentry);
+			return -ECHILD;
+		}
 	}
 
 	rcu_read_unlock();
 	return 0;
 
-unlock_and_drop_dentry:
-	spin_unlock(&fs->lock);
 drop_dentry:
 	rcu_read_unlock();
 	dput(dentry);
 	goto drop_root_mnt;
+out2:
+	nd->path.mnt = NULL;
+out1:
+	nd->path.dentry = NULL;
 out:
 	rcu_read_unlock();
 drop_root_mnt:
