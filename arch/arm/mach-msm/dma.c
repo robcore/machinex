@@ -806,6 +806,7 @@ static int msm_dmov_probe(struct platform_device *pdev)
 		platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	struct resource *mres =
 		platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	char wq_name[12];
 
 	if (pdata) {
 		dmov_conf[adm].sd = pdata->sd;
@@ -824,7 +825,8 @@ static int msm_dmov_probe(struct platform_device *pdev)
 	if (!dmov_conf[adm].base)
 		return -ENOMEM;
 
-	dmov_conf[adm].cmd_wq = alloc_ordered_workqueue("dmov%d_wq", 0, adm);
+	snprintf(wq_name, sizeof(wq_name), "dmov%d_wq", adm);
+	dmov_conf[adm].cmd_wq = alloc_workqueue(wq_name, WQ_CPU_INTENSIVE, 1);
 	if (!dmov_conf[adm].cmd_wq) {
 		PRINT_ERROR("Couldn't allocate ADM%d workqueue.\n", adm);
 		ret = -ENOMEM;
