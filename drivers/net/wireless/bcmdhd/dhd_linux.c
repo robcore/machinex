@@ -1124,7 +1124,8 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	dhd_pub_t *dhdp = &dhd->pub;
 	int ret = 0;
 
-	DHD_OS_WAKE_LOCK(dhdp);
+	if (!val)
+		DHD_OS_WAKE_LOCK(dhdp);
 	/* Set flag when early suspend was called */
 	dhdp->in_suspend = val;
 	if ((force || !dhdp->suspend_disable_flag) &&
@@ -1132,8 +1133,8 @@ static int dhd_suspend_resume_helper(struct dhd_info *dhd, int val, int force)
 	{
 		ret = dhd_set_suspend(val, dhdp);
 	}
-
-	DHD_OS_WAKE_UNLOCK(dhdp);
+	if (!val)
+		DHD_OS_WAKE_UNLOCK(dhdp);
 	return ret;
 }
 
@@ -2778,8 +2779,6 @@ dhd_dpc(ulong data)
 	if (dhd->pub.busstate != DHD_BUS_DOWN) {
 		if (dhd_bus_dpc(dhd->pub.bus))
 			tasklet_schedule(&dhd->tasklet);
-		else
-			DHD_OS_WAKE_UNLOCK(&dhd->pub);
 	} else {
 		dhd_bus_stop(dhd->pub.bus, TRUE);
 		DHD_OS_WAKE_UNLOCK(&dhd->pub);
@@ -3377,7 +3376,6 @@ dhd_stop(struct net_device *net)
 	int ifidx = 0;
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
 	DHD_OS_WAKE_LOCK(&dhd->pub);
-	DHD_TRACE(("%s: Enter %p\n", __FUNCTION__, net));
 	if (dhd->pub.up == 0) {
 		goto exit;
 	}
@@ -7318,11 +7316,7 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
 		if (dhd->wakelock_counter == 0 && !dhd->waive_wakelock) {
-#ifdef CONFIG_WAKELOCK
 			wake_lock(&dhd->wl_wifi);
-#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
-		dhd_bus_dev_pm_stay_awake(pub);
-#endif
 		}
 		dhd->wakelock_counter++;
 		ret = dhd->wakelock_counter;
@@ -7408,7 +7402,7 @@ int dhd_os_wd_wake_lock(dhd_pub_t *pub)
 		if (dhd->wakelock_wd_counter == 0 && !dhd->waive_wakelock) {
 #ifdef CONFIG_WAKELOCK
 			/* if wakelock_wd_counter was never used : lock it at once */
-			wake_lock(&dhd->wl_wdwake);
+			wake_trylock(&dhd->wl_wdwake);
 #endif
 		}
 		dhd->wakelock_wd_counter++;
@@ -7430,7 +7424,7 @@ int dhd_os_wd_wake_unlock(dhd_pub_t *pub)
 			dhd->wakelock_wd_counter = 0;
 			if (!dhd->waive_wakelock) {
 #ifdef CONFIG_WAKELOCK
-				wake_unlock(&dhd->wl_wdwake);
+				wake_try_unlock(&dhd->wl_wdwake);
 #endif
 			}
 		}
@@ -7477,19 +7471,10 @@ int dhd_wakelock_restore(dhd_info_t *dhdinfo)
 	* we need to make it up by calling wake_lock or pm_stay_awake. or if somebody releases
 	* the lock in between, do the same by calling wake_unlock or pm_relax
 	*/
-	if (dhdinfo->wakelock_before_waive == 0 && dhdinfo->wakelock_counter > 0) {
-#ifdef CONFIG_WAKELOCK
+	if (dhdinfo->wakelock_before_waive == 0 && dhdinfo->wakelock_counter > 0)
 		wake_lock(&dhdinfo->wl_wifi);
-#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
-			dhd_bus_dev_pm_stay_awake(&dhdinfo->pub);
-#endif
-	} else if (dhdinfo->wakelock_before_waive > 0 && dhdinfo->wakelock_counter == 0) {
-#ifdef CONFIG_WAKELOCK
+	else if (dhdinfo->wakelock_before_waive > 0 && dhdinfo->wakelock_counter == 0)
 		wake_unlock(&dhdinfo->wl_wifi);
-#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
-			dhd_bus_dev_pm_relax(&dhdinfo->pub);
-#endif
-	}
 	dhdinfo->wakelock_before_waive = 0;
 exit:
 	ret = dhdinfo->wakelock_wd_counter;

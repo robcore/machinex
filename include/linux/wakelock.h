@@ -68,6 +68,15 @@ static inline void wake_unlock(struct wake_lock *lock)
 	__pm_relax(&lock->ws);
 }
 
+static inline int wake_try_unlock(struct wake_lock *lock)
+{
+	if (lock->ws.active) {
+		__pm_relax(&lock->ws);
+		return 1;
+	}
+	return 0;
+}
+
 static inline int wake_lock_active(struct wake_lock *lock)
 {
 	return lock->ws.active;
