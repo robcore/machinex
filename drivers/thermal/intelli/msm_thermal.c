@@ -199,7 +199,7 @@ static int populate_freq_temps(void)
 {
 	struct tsens_device tsens_dev;
 	long temp = 0;
-	int ret = 0, j = 0, k = 0;
+	int ret = 0, j = 0;
 	unsigned int i;
 	unsigned int delta;
 
@@ -212,25 +212,22 @@ static int populate_freq_temps(void)
 	for (i = 0; i < (TSENS_MAX_SENSORS - 1); i++) {
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
-		if (!temp)
+		if (!temp || temp < delta)
 			continue;
 		if (temp >= msm_thermal_info.limit_temp_degC)
 			j++;
-		else if (temp < delta)
-			k++;
+		if (j)
+			break;
 	}
-	if ((j > 0) || (k == i && j == 0))
-		return j;
-	else
-		return 1;
+	return j;
 }
 
 static int populate_core_temps(void)
 {
 	struct tsens_device tsens_dev;
 	long temp = 0;
-	int ret = 0, j = 0, k = 0;
-	unsigned int i;
+	int ret = 0;
+	unsigned int i, j = 0;
 	unsigned int delta;
 
 	if (thermal_suspended)
@@ -242,17 +239,15 @@ static int populate_core_temps(void)
 	for (i = 0; i < (TSENS_MAX_SENSORS - 1); i++) {
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
-		if (!temp)
+		if (!temp || temp < delta)
 			continue;
 		if (temp >= msm_thermal_info.core_limit_temp_degC)
 			j++;
-		else if (temp < delta)
-			k++;
+		if (j)
+			break;
 	}
-	if ((j > 0) || (k == i && j == 0))
-		return j;
-	else
-		return 1;
+	return j;
+
 }
 
 static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
