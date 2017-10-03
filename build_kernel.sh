@@ -207,9 +207,10 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo -n "Shall I adb push this for you, sir?  y/n [ENTER]: "
 		read repadb
 		if [[ $repadb = "y" ]]; then
+			echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 			echo "ENABLE ADB"
-		ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
-		ADBRETRY $ADBPATH
+			ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
+			ADBRETRY $ADBPATH
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
 		read objsave
@@ -228,6 +229,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "Cleanup Finished"
 		fi;
 	else
+		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		echo "ENABLE ADB"
 		ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
 		ADBRETRY $ADBPATH
@@ -300,6 +302,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	date >> ~/machinex/datetracker.txt
 	echo "------------------------" >> ~/machinex/datetracker.txt
 	cp ~/machinex/out/vmlinux ~/machinex/robstuff/vmlinux;
+	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "ENABLE ADB"
 	ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
 	ADBRETRY $ADBPATH
