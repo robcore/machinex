@@ -1911,12 +1911,14 @@ void __init apq8064_init_gpiomux(void)
 
 	if (machine_is_apq8064_mtp()|| machine_is_JF()) {
 		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_DSDA2) {
+			pr_info("Platform Subtype is DSDA2\n");
 			msm_gpiomux_install(amdm_configs,
 					ARRAY_SIZE(amdm_configs));
 			msm_gpiomux_install(bmdm_configs,
 				ARRAY_SIZE(bmdm_configs));
 		} else if (socinfo_get_platform_subtype() ==
 					PLATFORM_SUBTYPE_SGLTE2) {
+			pr_info("Platform Subtype is SGLTE2\n");
 			msm_gpiomux_install(mdm_configs,
 					ARRAY_SIZE(mdm_configs));
 			msm_gpiomux_install(sglte2_qsc_configs,
@@ -1926,9 +1928,11 @@ void __init apq8064_init_gpiomux(void)
 			msm_gpiomux_install(apq8064_uartdm_gsbi4_configs,
 				ARRAY_SIZE(apq8064_uartdm_gsbi4_configs));
 		} else if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
+			pr_info("SOCINFO_VERSION_MINOR is 1\n");
 			msm_gpiomux_install(mdm_i2s_configs,
 					ARRAY_SIZE(mdm_i2s_configs));
 		} else {
+			pr_info("Installing mdm_configs\n");
 			msm_gpiomux_install(mdm_configs,
 					ARRAY_SIZE(mdm_configs));
 		}
@@ -1936,9 +1940,11 @@ void __init apq8064_init_gpiomux(void)
 
 	if (machine_is_apq8064_mtp()|| machine_is_JF()) {
 		if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
+			pr_info("installing cyts_gpio_alt_config\n");
 			msm_gpiomux_install(cyts_gpio_alt_config,
 					ARRAY_SIZE(cyts_gpio_alt_config));
 		} else {
+			pr_info("installing cyts_gpio_configs\n");
 			msm_gpiomux_install(cyts_gpio_configs,
 					ARRAY_SIZE(cyts_gpio_configs));
 		}

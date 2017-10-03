@@ -193,8 +193,6 @@ void __init apq8064_allocate_fb_region(void)
 	addr = memblock_virt_alloc(size, 0x1000);
 	msm_fb_resources[0].start = __pa(addr);
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
-	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
-			size, addr, __pa(addr));
 }
 
 #define MDP_VSYNC_GPIO 0
