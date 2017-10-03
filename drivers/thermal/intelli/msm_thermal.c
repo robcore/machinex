@@ -41,10 +41,6 @@ static int limit_init;
 static int enabled;
 
 static struct msm_thermal_data msm_thermal_info = {
-	.sensor_id_one = 7,
-	.sensor_id_two = 8,
-	.sensor_id_three = 9,
-	.sensor_id_four = 10,
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 5,
@@ -65,10 +61,7 @@ static int limit_idx;
 static int thermal_limit_low;
 static int thermal_limit_high;
 static struct cpufreq_frequency_table *table;
-static unsigned long cpu_thermal_one;
-static unsigned long cpu_thermal_two;
-static unsigned long cpu_thermal_three;
-static unsigned long cpu_thermal_four;
+static unsigned long cpu_thermal_temp;
 unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 static bool thermal_suspended = false;
 /* module parameters */
@@ -201,56 +194,65 @@ static int msm_thermal_get_freq_table(void)
 
 	return 0;
 }
-static int populate_temps(void)
+
+static int populate_freq_temps(void)
 {
-	struct tsens_device tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
-	long temp_one = 0;
-	long temp_two = 0;
-	long temp_three = 0;
-	long temp_four = 0;
-	int ret = 0;
+	struct tsens_device tsens_dev;
+	long temp = 0;
+	int ret = 0, j = 0, k = 0;
+	unsigned int i;
+	unsigned int delta;
 
 	if (thermal_suspended)
 		return -EINVAL;
 
-	tsens_dev_one.sensor_num = msm_thermal_info.sensor_id_one;
-	ret = tsens_get_temp(&tsens_dev_one, &temp_one);
-	cpu_thermal_one = temp_one;
-	if (!temp_one) {
-		pr_debug("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev_one.sensor_num);
-		return ret;
+	delta = (msm_thermal_info.limit_temp_degC - 
+			 msm_thermal_info.temp_hysteresis_degC);
+
+	for (i = 0; i < (TSENS_MAX_SENSORS - 1); i++) {
+		tsens_dev.sensor_num = i;
+		ret = tsens_get_temp(&tsens_dev, &temp);
+		if (!temp)
+			continue;
+		if (temp >= msm_thermal_info.limit_temp_degC)
+			j++;
+		else if (temp < delta)
+			k++;
 	}
+	if ((j > 0) || (k == i && j == 0))
+		return j;
+	else
+		return 1;
+}
 
+static int populate_core_temps(void)
+{
+	struct tsens_device tsens_dev;
+	long temp = 0;
+	int ret = 0, j = 0, k = 0;
+	unsigned int i;
+	unsigned int delta;
 
-	tsens_dev_two.sensor_num = msm_thermal_info.sensor_id_two;
-	ret = tsens_get_temp(&tsens_dev_two, &temp_two);
-	cpu_thermal_two = temp_two;
-	if (!temp_two) {
-		pr_debug("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev_two.sensor_num);
-		return ret;
+	if (thermal_suspended)
+		return -EINVAL;
+
+	delta = (msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC);
+
+	for (i = 0; i < (TSENS_MAX_SENSORS - 1); i++) {
+		tsens_dev.sensor_num = i;
+		ret = tsens_get_temp(&tsens_dev, &temp);
+		if (!temp)
+			continue;
+		if (temp >= msm_thermal_info.core_limit_temp_degC)
+			j++;
+		else if (temp < delta)
+			k++;
 	}
-
-	tsens_dev_three.sensor_num = msm_thermal_info.sensor_id_three;
-	ret = tsens_get_temp(&tsens_dev_three, &temp_three);
-	cpu_thermal_three = temp_three;
-	if (!temp_three) {
-		pr_debug("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev_three.sensor_num);
-		return ret;
-	}
-
-	tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_four;
-	ret = tsens_get_temp(&tsens_dev_four, &temp_four);
-	cpu_thermal_four = temp_four;
-	if (!temp_four) {
-		pr_debug("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev_four.sensor_num);
-		return ret;
-	}
-
-	return 0;
+	if ((j > 0) || (k == i && j == 0))
+		return j;
+	else
+		return 1;
 }
 
 static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
@@ -278,7 +280,6 @@ static void __ref do_freq_control(void)
 	struct cpufreq_policy policy;
 	unsigned int cpu = smp_processor_id();
 	unsigned long max_freq;
-	unsigned int delta;
 
 	if (!hotplug_ready || thermal_suspended) {
 		hotplug_check_needed = false;
@@ -290,19 +291,9 @@ static void __ref do_freq_control(void)
 		if (ret)
 			return;
 
-	ret = populate_temps();
-	if (ret)
-		return;
-
 	max_freq = limited_max_freq_thermal;
 
-	delta = (msm_thermal_info.limit_temp_degC - 
-			 msm_thermal_info.temp_hysteresis_degC);
-
-	if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
-		cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
+	if (populate_freq_temps()) {
 		if (limit_idx == thermal_limit_low) {
 			hotplug_check_needed = true;
 			return;
@@ -312,10 +303,7 @@ static void __ref do_freq_control(void)
 			limit_idx = thermal_limit_low;
 		max_freq = table[limit_idx].frequency;
 		hotplug_check_needed = true;
-	} else if ((cpu_thermal_one < delta) &&
-		(cpu_thermal_two < delta) &&
-		(cpu_thermal_three < delta) &&
-		(cpu_thermal_four < delta)) {
+	} else {
 		if (limit_idx == thermal_limit_high) {
 			hotplug_check_needed = false;
 			return;
@@ -343,26 +331,15 @@ static void __ref do_core_control(void)
 {
 	unsigned int cpu = smp_processor_id();
 	int ret = 0;
-	unsigned int delta;
 
 	if ((!core_control_enabled) || (intelli_init() ||
 		 !hotplug_ready || thermal_suspended)) {
 		return;
 	}
 
-	ret = populate_temps();
-	if (ret)
-		return;
-
-	delta = (msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC);
-
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask && 
-		(cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC ||
-		 cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC ||
-		 cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC ||
-		 cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
+		populate_core_temps()) {
 		for (cpu = 3; cpu > 1; cpu--) {
 			if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
 				continue;
@@ -374,10 +351,7 @@ static void __ref do_core_control(void)
 			cpus_offlined |= BIT(cpu);
 		}
 	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
-			((cpu_thermal_one <= delta) &&
-			   (cpu_thermal_two <= delta) &&
-			   (cpu_thermal_three <= delta) &&
-			   (cpu_thermal_four <= delta))) {
+			populate_core_temps() <= 0) {
 		for (cpu = 1; cpu < 3; cpu++) {
 			if (!(cpus_offlined & BIT(cpu)))
 				continue;
@@ -424,7 +398,7 @@ static void __ref check_temp(struct work_struct *work)
 	}
 
 reschedule:
-	if (enabled)
+	if (likely(enabled))
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
@@ -687,10 +661,6 @@ static struct notifier_block msm_thermal_pm_notifier = {
 int __init msm_thermal_init(struct msm_thermal_data *pdata)
 {
 	BUG_ON(!pdata);
-	BUG_ON(pdata->sensor_id_one >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_two >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_three >= TSENS_MAX_SENSORS ||
-	pdata->sensor_id_four >= TSENS_MAX_SENSORS);
 	memcpy(&msm_thermal_info, pdata, sizeof(*pdata));
 
 	enabled = 1;
