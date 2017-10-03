@@ -41,7 +41,6 @@ struct tsens_device {
 
 int32_t tsens_get_temp(struct tsens_device *dev, unsigned long *temp);
 int msm_tsens_early_init(struct tsens_platform_data *pdata);
-void tsens8960_get_temp(int sensor_num, unsigned long *temp);
 
 #if defined(CONFIG_THERMAL_TSENS8974) || defined(CONFIG_THERMAL_TSENS8960)
 int tsens_get_max_sensor_num(uint32_t *tsens_num_sensors);

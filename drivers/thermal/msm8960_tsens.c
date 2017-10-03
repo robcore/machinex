@@ -199,7 +199,7 @@ static int tsens_tz_degC_to_code(int degC, int sensor_num)
 	return code;
 }
 
-void tsens8960_get_temp(int sensor_num, unsigned long *temp)
+static void tsens8960_get_temp(int sensor_num, unsigned long *temp)
 {
 	unsigned int code, offset = 0, sensor_addr;
 
@@ -219,7 +219,6 @@ void tsens8960_get_temp(int sensor_num, unsigned long *temp)
 			(sensor_num << TSENS_STATUS_ADDR_OFFSET));
 	*temp = tsens_tz_code_to_degC(code, sensor_num);
 }
-EXPORT_SYMBOL(tsens8960_get_temp);
 
 static int tsens_tz_get_temp(struct thermal_zone_device *thermal,
 			     unsigned long *temp)
