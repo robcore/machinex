@@ -184,7 +184,7 @@ enum generic_types {
 
 struct generic_type {
 	const char *type;
-	umode_t mode;
+	mode_t mode;
 };
 
 static struct generic_type generic_type_table[] = {
