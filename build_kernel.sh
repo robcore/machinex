@@ -127,17 +127,17 @@ else
 	adb kill-server
 	adbcountdown
 	adb connect 192.168.1.111
-	adbcountdown
-	echo "Trying Wireless"
-	adb push $1 /storage/extSdCard;
 	last=$?
 	if [ $last -eq 0 ]; then
-		echo "Pushed $1! Disconnecting wireless connection"
+		echo "Connected! Pushing $1!"
+		adbcountdown
+		echo "Trying Wireless"
+		adb push $1 /storage/extSdCard;
+		adb disconnect
+		adb kill-server
 	else
 		echo "Failed!"
 	fi;
-	adb disconnect
-	adb kill-server
 fi
 }
 
