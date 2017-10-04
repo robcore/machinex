@@ -491,7 +491,7 @@ struct proc_dir_entry *create_proc_read_entry(
 		WARN_ON(1);	/* use proc_mkdir(), damnit */
 		return NULL;
 #else
-proc_mkdir_data(name, 0, parent, NULL);
+		proc_mkdir_data(name, 0, parent, NULL);
 #endif
 		}
 
