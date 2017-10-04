@@ -477,6 +477,40 @@ struct proc_dir_entry *proc_create_mount_point(const char *name)
 	return ent;
 }
 
+struct proc_dir_entry *create_proc_read_entry(
+	const char *name, umode_t mode, struct proc_dir_entry *parent, 
+	read_proc_t *read_proc, void *data)
+{
+	struct proc_dir_entry *ent;
+
+	if ((mode & S_IFMT) == 0)
+		mode |= S_IFREG;
+
+	if (!S_ISREG(mode)) {
+#if 0
+		WARN_ON(1);	/* use proc_mkdir(), damnit */
+		return NULL;
+#else
+proc_mkdir_data(name, 0, parent, NULL);
+#endif
+		}
+
+	if ((mode & S_IALLUGO) == 0)
+		mode |= S_IRUGO;
+
+	ent = __proc_create(&parent, name, mode, 1);
+	if (ent) {
+		ent->read_proc = read_proc;
+		ent->data = data;
+		if (proc_register(parent, ent) < 0) {
+			kfree(ent);
+			ent = NULL;
+		}
+	}
+	return ent;
+}
+EXPORT_SYMBOL(create_proc_read_entry);
+
 struct proc_dir_entry *proc_create_data(const char *name, umode_t mode,
 					struct proc_dir_entry *parent,
 					const struct file_operations *proc_fops,
