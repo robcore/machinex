@@ -68,7 +68,7 @@ static int proc_parse_options(char *options, struct pid_namespace *pid)
 		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return 0;
-			pid->pid_gid = option;
+			pid->pid_gid = make_kgid(current_user_ns(), option);
 			break;
 		case Opt_hidepid:
 			if (match_int(&args[0], &option))
@@ -111,9 +111,6 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
 	} else {
 		ns = task_active_pid_ns(current);
 		options = data;
-
-		if (!capable(CAP_SYS_ADMIN) && !fs_fully_visible(fs_type))
-			return ERR_PTR(-EPERM);
 
 		/* Does the mounter have privilege over the pid namespace? */
 		if (!ns_capable(ns->user_ns, CAP_SYS_ADMIN))
@@ -198,7 +195,7 @@ void __init proc_root_init(void)
 static int proc_root_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 )
 {
-	generic_fillattr(dentry->d_inode, stat);
+	generic_fillattr(d_inode(dentry), stat);
 	stat->nlink = proc_root.nlink + nr_processes();
 	return 0;
 }

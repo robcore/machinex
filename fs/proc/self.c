@@ -46,7 +46,7 @@ static unsigned self_inum;
 
 int proc_setup_self(struct super_block *s)
 {
-	struct inode *root_inode = s->s_root->d_inode;
+	struct inode *root_inode = d_inode(s->s_root);
 	struct pid_namespace *ns = s->s_fs_info;
 	struct dentry *self;
 
@@ -58,8 +58,8 @@ int proc_setup_self(struct super_block *s)
 			inode->i_ino = self_inum;
 			inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 			inode->i_mode = S_IFLNK | S_IRWXUGO;
-			inode->i_uid = 0;
-			inode->i_gid = 0;
+			inode->i_uid = GLOBAL_ROOT_UID;
+			inode->i_gid = GLOBAL_ROOT_GID;
 			inode->i_op = &proc_self_inode_operations;
 			d_add(self, inode);
 		} else {
