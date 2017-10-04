@@ -148,8 +148,3 @@ extern const struct file_operations pipefifo_fops;
  */
 extern void group_pin_kill(struct hlist_head *p);
 extern void mnt_pin_kill(struct mount *m);
-
-/*
- * fs/nsfs.c
- */
-extern struct dentry_operations ns_dentry_operations;

@@ -1989,10 +1989,7 @@ static int do_loopback(struct path *path, const char *old_name,
 	if (IS_MNT_UNBINDABLE(old))
 		goto out2;
 
-	if (!check_mnt(parent))
-		goto out2;
-
-	if (!check_mnt(old) && old_path.dentry->d_op != &ns_dentry_operations)
+	if (!check_mnt(parent) || !check_mnt(old))
 		goto out2;
 
 	if (!recurse && has_locked_children(old, old_path.dentry))

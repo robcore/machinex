@@ -84,7 +84,6 @@
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
 #include <linux/list.h>
-#include <linux/proc_ns.h>
 
 #ifdef CONFIG_SEC_GPIO_DVS
 #include <linux/secgpio_dvs.h>

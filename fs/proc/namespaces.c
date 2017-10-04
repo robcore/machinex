@@ -1,6 +1,10 @@
 #include <linux/proc_fs.h>
 #include <linux/nsproxy.h>
+#include <linux/sched.h>
 #include <linux/ptrace.h>
+#include <linux/fs_struct.h>
+#include <linux/mount.h>
+#include <linux/path.h>
 #include <linux/namei.h>
 #include <linux/file.h>
 #include <linux/utsname.h>
@@ -100,7 +104,7 @@ static struct dentry *proc_ns_get_dentry(struct super_block *sb,
 
 static void *proc_ns_follow_link(struct dentry *dentry, struct nameidata *nd)
 {
-	struct inode *inode = d_inode(dentry);
+	struct inode *inode = dentry->d_inode;
 	struct super_block *sb = inode->i_sb;
 	struct proc_inode *ei = PROC_I(inode);
 	struct task_struct *task;
