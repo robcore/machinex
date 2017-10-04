@@ -179,7 +179,7 @@ static int get_task_root(struct task_struct *task, struct path *root)
 
 static int proc_cwd_link(struct dentry *dentry, struct path *path)
 {
-	struct task_struct *task = get_proc_task(dentry->d_inode);
+	struct task_struct *task = get_proc_task(d_inode(dentry));
 	int result = -ENOENT;
 
 	if (task) {
@@ -196,7 +196,7 @@ static int proc_cwd_link(struct dentry *dentry, struct path *path)
 
 static int proc_root_link(struct dentry *dentry, struct path *path)
 {
-	struct task_struct *task = get_proc_task(dentry->d_inode);
+	struct task_struct *task = get_proc_task(d_inode(dentry));
 	int result = -ENOENT;
 
 	if (task) {
