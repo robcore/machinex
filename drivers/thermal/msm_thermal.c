@@ -290,14 +290,14 @@ static void __ref do_freq_control(void)
 		if (ret)
 			return;
 
-	ret = populate_temps();
-	if (ret)
-		return;
-
 	max_freq = limited_max_freq_thermal;
 
 	delta = (msm_thermal_info.limit_temp_degC - 
 			 msm_thermal_info.temp_hysteresis_degC);
+
+	ret = populate_temps();
+	if (ret)
+		return;
 
 	if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
 		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
@@ -350,12 +350,12 @@ static void __ref do_core_control(void)
 		return;
 	}
 
+	delta = (msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC);
+
 	ret = populate_temps();
 	if (ret)
 		return;
-
-	delta = (msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	mutex_lock(&core_control_mutex);
 	if (msm_thermal_info.core_control_mask && 
@@ -490,7 +490,8 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 	} else {
 		if (!enabled) {
 			enabled = 1;
-			intellithermal_wq = create_hipri_workqueue("intellithermal");
+			intellithermal_wq = alloc_ordered_workqueue("intellithermal",
+									WQ_MEM_RECLAIM | WQ_HIGHPRI);
 			INIT_DELAYED_WORK(&check_temp_work, check_temp);
 			queue_delayed_work_on(0, intellithermal_wq,
 					   &check_temp_work, 0);
