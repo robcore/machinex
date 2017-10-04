@@ -140,8 +140,8 @@ out:
  */
 extern int pid_delete_dentry(const struct dentry *);
 
-struct dentry *proc_lookup_de(struct proc_dir_entry *de, struct inode *ino,
-		struct dentry *dentry);
+extern struct dentry *proc_lookup_de(struct proc_dir_entry *, struct inode *,
+				     struct dentry *);
 
 struct pde_opener {
 	struct file *file;
@@ -174,7 +174,7 @@ static inline bool is_empty_pde(const struct proc_dir_entry *pde)
 {
 	return S_ISDIR(pde->mode) && !pde->proc_iops;
 }
-
+struct proc_dir_entry *proc_create_mount_point(const char *name);
 int proc_fill_super(struct super_block *);
 struct inode *proc_get_inode(struct super_block *, struct proc_dir_entry *);
 int proc_remount(struct super_block *sb, int *flags, char *data);

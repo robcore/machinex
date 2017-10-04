@@ -145,6 +145,14 @@ static inline const char *get_task_state(struct task_struct *tsk)
 {
 	unsigned int state = (tsk->state | tsk->exit_state) & TASK_REPORT;
 
+	/*
+	 * Parked tasks do not run; they sit in __kthread_parkme().
+	 * Without this check, we would report them as running, which is
+	 * clearly wrong, so we report them as sleeping instead.
+	 */
+	if (tsk->state == TASK_PARKED)
+		state = TASK_INTERRUPTIBLE;
+
 	BUILD_BUG_ON(1 + ilog2(TASK_REPORT) != ARRAY_SIZE(task_state_array)-1);
 
 	return task_state_array[fls(state)];
@@ -169,6 +177,12 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
                 leader = p->group_leader;
 	}
 	cred = get_task_cred(p);
+	task_lock(p);
+	if (p->files)
+		fdt = files_fdtable(p->files);
+	task_unlock(p);
+	rcu_read_unlock();
+
 	seq_printf(m,
 		"State:\t%s\n"
 		"Tgid:\t%d\n"
@@ -176,23 +190,15 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
 		"PPid:\t%d\n"
 		"TracerPid:\t%d\n"
 		"Uid:\t%d\t%d\t%d\t%d\n"
-		"Gid:\t%d\t%d\t%d\t%d\n",
+		"Gid:\t%d\t%d\t%d\t%d\n"
+		"FDSize:\t%d\nGroups:\t",
 		get_task_state(p),
 		leader ? task_pid_nr_ns(leader, ns) : 0,
 		pid_nr_ns(pid, ns),
 		ppid, tpid,
 		cred->uid, cred->euid, cred->suid, cred->fsuid,
-		cred->gid, cred->egid, cred->sgid, cred->fsgid);
-
-	task_lock(p);
-	if (p->files)
-		fdt = files_fdtable(p->files);
-	seq_printf(m,
-		"FDSize:\t%d\n"
-		"Groups:\t",
+		cred->gid, cred->egid, cred->sgid, cred->fsgid,
 		fdt ? fdt->max_fds : 0);
-	task_unlock(p);
-	rcu_read_unlock();
 
 	group_info = cred->group_info;
 	for (g = 0; g < group_info->ngroups; g++)
