@@ -541,7 +541,7 @@ static int proc_fd_access_allowed(struct inode *inode)
 int proc_setattr(struct dentry *dentry, struct iattr *attr)
 {
 	int error;
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 
 	if (attr->ia_valid & ATTR_MODE)
 		return -EPERM;
@@ -1512,7 +1512,7 @@ static int proc_exe_link(struct dentry *dentry, struct path *exe_path)
 	struct mm_struct *mm;
 	struct file *exe_file;
 
-	task = get_proc_task(dentry->d_inode);
+	task = get_proc_task(d_inode(dentry));
 	if (!task)
 		return -ENOENT;
 	mm = get_task_mm(task);
@@ -1532,7 +1532,7 @@ static int proc_exe_link(struct dentry *dentry, struct path *exe_path)
 
 static void *proc_pid_follow_link(struct dentry *dentry, struct nameidata *nd)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct path path;
 	int error = -EACCES;
 
@@ -1577,7 +1577,7 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
 static int proc_pid_readlink(struct dentry * dentry, char __user * buffer, int buflen)
 {
 	int error = -EACCES;
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct path path;
 
 	/* Are we allowed to snoop on the tasks file descriptors? */
@@ -1647,7 +1647,7 @@ out_unlock:
 
 int pid_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct task_struct *task;
 	const struct cred *cred;
 	struct pid_namespace *pid = dentry->d_sb->s_fs_info;
@@ -1655,8 +1655,8 @@ int pid_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
 	generic_fillattr(inode, stat);
 
 	rcu_read_lock();
-	stat->uid = 0;
-	stat->gid = 0;
+	stat->uid = GLOBAL_ROOT_UID;
+	stat->gid = GLOBAL_ROOT_GID;
 	task = pid_task(proc_pid(inode), PIDTYPE_PID);
 	if (task) {
 		if (!has_pid_permissions(pid, task, 2)) {
@@ -1704,7 +1704,7 @@ int pid_revalidate(struct dentry *dentry, unsigned int flags)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
-	inode = dentry->d_inode;
+	inode = d_inode(dentry);
 	task = get_proc_task(inode);
 
 	if (task) {
@@ -1716,8 +1716,8 @@ int pid_revalidate(struct dentry *dentry, unsigned int flags)
 			inode->i_gid = cred->egid;
 			rcu_read_unlock();
 		} else {
-			inode->i_uid = 0;
-			inode->i_gid = 0;
+			inode->i_uid = GLOBAL_ROOT_UID;
+			inode->i_gid = GLOBAL_ROOT_GID;
 		}
 		inode->i_mode &= ~(S_ISUID | S_ISGID);
 		security_task_to_inode(task, inode);
@@ -1738,7 +1738,7 @@ int pid_delete_dentry(const struct dentry *dentry)
 	 * If so, then don't put the dentry on the lru list,
 	 * kill it immediately.
 	 */
-	return proc_inode_is_dead(dentry->d_inode);
+	return proc_inode_is_dead(d_inode(dentry));
 }
 
 const struct dentry_operations pid_dentry_operations =
@@ -1776,12 +1776,12 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
 		child = d_alloc(dir, &qname);
 		if (!child)
 			goto end_instantiate;
-		if (instantiate(dir->d_inode, child, task, ptr) < 0) {
+		if (instantiate(d_inode(dir), child, task, ptr) < 0) {
 			dput(child);
 			goto end_instantiate;
 		}
 	}
-	inode = child->d_inode;
+	inode = d_inode(child);
 	ino = inode->i_ino;
 	type = inode->i_mode >> 12;
 	dput(child);
@@ -1817,12 +1817,7 @@ static int map_files_d_revalidate(struct dentry *dentry, unsigned int flags)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
-	if (!capable(CAP_SYS_ADMIN)) {
-		status = -EPERM;
-		goto out_notask;
-	}
-
-	inode = dentry->d_inode;
+	inode = d_inode(dentry);
 	task = get_proc_task(inode);
 	if (!task)
 		goto out_notask;
@@ -1847,8 +1842,8 @@ static int map_files_d_revalidate(struct dentry *dentry, unsigned int flags)
 			inode->i_gid = cred->egid;
 			rcu_read_unlock();
 		} else {
-			inode->i_uid = 0;
-			inode->i_gid = 0;
+			inode->i_uid = GLOBAL_ROOT_UID;
+			inode->i_gid = GLOBAL_ROOT_GID;
 		}
 		security_task_to_inode(task, inode);
 		status = 1;
@@ -1875,7 +1870,7 @@ static int proc_map_files_get_link(struct dentry *dentry, struct path *path)
 	int rc;
 
 	rc = -ENOENT;
-	task = get_proc_task(dentry->d_inode);
+	task = get_proc_task(d_inode(dentry));
 	if (!task)
 		goto out;
 
