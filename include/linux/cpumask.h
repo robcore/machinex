@@ -832,9 +832,9 @@ static inline const struct cpumask *get_cpu_mask(unsigned int cpu)
 }
 
 #define cpu_is_offline(cpu)	(!cpu_online(cpu))
-#define cpu_in_range(cpu) ((cpu) >= 0 && (cpu) < NR_CPUS)
+#define cpu_in_range(cpu) ((cpu) >= 0 && (cpu) <= (NR_CPUS - 1))
 #define cpu_out_of_range(cpu) ((cpu) < 0 || (cpu) >= NR_CPUS)
-#define cpu_in_range_hp(cpu) ((cpu) >= 1 && (cpu) < NR_CPUS)
+#define cpu_in_range_hp(cpu) ((cpu) >= 1 && (cpu) <= (NR_CPUS - 1))
 #define cpu_out_of_range_hp(cpu) ((cpu) < 1 || (cpu) >= NR_CPUS)
 
 #if NR_CPUS <= BITS_PER_LONG
