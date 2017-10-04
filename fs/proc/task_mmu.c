@@ -310,7 +310,7 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma, int is_pid)
 	 */
 	if (file) {
 		seq_pad(m, ' ');
-		seq_path(m, &file->f_path, "\n");
+		seq_file_path(m, file, "\n");
 		goto done;
 	}
 
