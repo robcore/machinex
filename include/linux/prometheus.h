@@ -86,6 +86,7 @@
 #include <linux/syscalls.h> /* sys_sync */
 #include <linux/power_supply.h>
 #include <linux/suspend.h>
+#include <linux/notifier.h>
 
 struct power_suspend {
 	struct list_head link;
@@ -95,6 +96,8 @@ struct power_suspend {
 
 void register_power_suspend(struct power_suspend *handler);
 void unregister_power_suspend(struct power_suspend *handler);
+extern int prometheus_register_notifier(struct notifier_block *nb);
+extern int prometheus_unregister_notifier(struct notifier_block *nb);
 
 enum {
 	POWER_SUSPEND_INACTIVE = 0,
@@ -108,4 +111,15 @@ bool android_os_ws(void);
 extern bool prometheus_disabled_oom;
 extern bool prometheus_override;
 void intelli_suspend_booster(void);
+
+enum prometheus_events {
+	/* Post powersuspend, pre-pm_suspend */
+	POST_PWR_SUSPEND = 0,
+
+	/* Post pm_restore, pre-powerresume */
+	PRE_PWR_RESUME = 1,
+};
+static unsigned long post_power_suspend = POST_PWR_SUSPEND;
+static unsigned long pre_power_resume = PRE_PWR_RESUME;
+
 #endif

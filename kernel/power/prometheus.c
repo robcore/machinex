@@ -30,8 +30,8 @@
 #include <linux/display_state.h>
 #include "power.h"
 
-#define VERSION 5
-#define VERSION_MIN 9
+#define VERSION 6
+#define VERSION_MIN 0
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -56,6 +56,73 @@ extern unsigned int limit_screen_off_cpus;
 extern unsigned int limit_screen_on_cpus;
 static bool bootcomplete;
 bool prometheus_override = false;
+
+/*
+ * 0 means screen on (resume)
+ * 1 means screen off (suspend)
+*/
+
+unsigned int report_state(void)
+{
+	unsigned long flg;
+	unsigned int currstate;
+
+	spin_lock_irqsave(&ps_state_lock, flg);
+	currstate = ps_state;
+	spin_unlock_irqrestore(&ps_state_lock, flg);
+	return currstate;
+}
+
+static RAW_NOTIFIER_HEAD(prometheus_notifier_chain);
+int prometheus_register_notifier(struct notifier_block *nb)
+{
+	int ret;
+
+	mutex_lock(&prometheus_mtx);
+	ret = raw_notifier_chain_register(&prometheus_notifier_chain, nb);
+	mutex_unlock(&prometheus_mtx);
+
+	return ret;
+}
+EXPORT_SYMBOL(prometheus_register_notifier);
+
+int prometheus_unregister_notifier(struct notifier_block *nb)
+{
+	int ret;
+
+	mutex_lock(&prometheus_mtx);
+	ret = raw_notifier_chain_unregister(&prometheus_notifier_chain, nb);
+	mutex_unlock(&prometheus_mtx);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(prometheus_unregister_notifier);
+
+static int prometheus_post_suspend_chain(void)
+{
+	int ret = 0;
+
+	if (!report_state())
+		goto skip;
+	pr_info("[PROMETHEUS] Calling Post Suspend Bridge\n");
+	ret = __raw_notifier_call_chain(&prometheus_notifier_chain, post_power_suspend, NULL,
+		-1, NULL);
+skip:
+	return notifier_to_errno(ret);
+}
+
+static int prometheus_pre_resume_chain(void)
+{
+	int ret = 0;
+	if (report_state())
+		goto skip;
+
+	pr_info("[PROMETHEUS] Calling Pre Resume Bridge\n");
+	ret = __raw_notifier_call_chain(&prometheus_notifier_chain, pre_power_resume, NULL,
+		-1, NULL);
+skip:
+	return notifier_to_errno(ret);
+}
 
 bool prometheus_disabled_oom __read_mostly = false;
 static void prometheus_control_oom(bool disable)
@@ -89,7 +156,6 @@ EXPORT_SYMBOL(unregister_power_suspend);
 static void power_suspend(struct work_struct *work)
 {
 	struct power_suspend *pos;
-	unsigned long irqflags;
 	unsigned int counter;
 	int error;
 	unsigned int nrwl;
@@ -105,15 +171,12 @@ static void power_suspend(struct work_struct *work)
 	pr_info("[PROMETHEUS] Entering Suspend\n");
 	mutex_lock(&prometheus_mtx);
 	prometheus_override = true;
-	spin_lock_irqsave(&ps_state_lock, irqflags);
-	if (ps_state == POWER_SUSPEND_INACTIVE) {
-		spin_unlock_irqrestore(&ps_state_lock, irqflags);
+	if (!report_state()) {
 		mutex_unlock(&prometheus_mtx);
 		prometheus_override = false;
 		pr_info("[PROMETHEUS] Suspend Aborted! Screen on!\n");
 		return;
 	}
-	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	intelli_suspend_booster();
 
@@ -135,16 +198,14 @@ static void power_suspend(struct work_struct *work)
 		sys_sync();
 		wake_unlock(&prsynclock);
 	}
-
-	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Shallow Suspend Completed.\n");
-	return;
+	mutex_unlock(&prometheus_mtx);
+	prometheus_post_suspend_chain();
 }
 
 static void power_resume(struct work_struct *work)
 {
 	struct power_suspend *pos;
-	unsigned long irqflags;
 
 	if ((poweroff_charging)) {
 		pr_info("[PROMETHEUS] Cannot Resume! Unsupported System"
@@ -153,15 +214,13 @@ static void power_resume(struct work_struct *work)
 	}
 
 	cancel_work_sync(&power_suspend_work);
+	prometheus_pre_resume_chain();
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
-	spin_lock_irqsave(&ps_state_lock, irqflags);
-	if (ps_state == POWER_SUSPEND_ACTIVE) {
-		spin_unlock_irqrestore(&ps_state_lock, irqflags);
+	if (report_state()) {
 		mutex_unlock(&prometheus_mtx);
 		return;
 	}
-	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 
 	if (limit_screen_off_cpus)
 		unlock_screen_off_cpus();
@@ -172,28 +231,9 @@ static void power_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 	}
-	mutex_unlock(&prometheus_mtx);
 	pr_info("[PROMETHEUS] Resume Completed.\n");
-}
+	mutex_unlock(&prometheus_mtx);
 
-static void set_power_suspend_state(unsigned int new_state)
-{
-	if (ps_state != new_state) {
-		if (ps_state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
-			ps_state = new_state;
-			pr_info("[PROMETHEUS] Suspend State Activated.\n");
-			queue_work_on(0, pwrsup_wq, &power_suspend_work);
-		} else if (ps_state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
-			ps_state = new_state;
-			pr_info("[PROMETHEUS] Resume State Activated.\n");
-			queue_work_on(0, pwrsup_wq, &power_resume_work);
-		}
-	} else {
-		if (likely(bootcomplete))
-			pr_info("[PROMETHEUS] Request Ignored, no change\n");
-		else
-			bootcomplete = true;
-	}		
 }
 
 void prometheus_panel_beacon(unsigned int new_state)
@@ -204,10 +244,24 @@ void prometheus_panel_beacon(unsigned int new_state)
 		pr_info("[PROMETHEUS] Panel Requests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "Suspend" : "Resume");
 
 	spin_lock_irqsave(&ps_state_lock, irqflags);
-	set_power_suspend_state(new_state);
+	if (ps_state != new_state) {
+		if (!ps_state && new_state) {
+			ps_state = new_state;
+			pr_info("[PROMETHEUS] Suspend State Activated.\n");
+			queue_work_on(0, pwrsup_wq, &power_suspend_work);
+		} else if (ps_state && !new_state) {
+			ps_state = new_state;
+			pr_info("[PROMETHEUS] Resume State Activated.\n");
+			queue_work_on(0, pwrsup_wq, &power_resume_work);
+		}
+	} else {
+		if (likely(bootcomplete))
+			pr_info("[PROMETHEUS] Request Ignored, no change\n");
+		else
+			bootcomplete = true;
+	}
 	spin_unlock_irqrestore(&ps_state_lock, irqflags);
 }
-
 EXPORT_SYMBOL(prometheus_panel_beacon);
 
 // ------------------------------------------ sysfs interface ------------------------------------------
@@ -301,18 +355,7 @@ static int prometheus_init(void)
 	return 0;
 }
 
-/* This should never have to be used except on shutdown */
-static void prometheus_exit(void)
-{
-	destroy_workqueue(pwrsup_wq);
-	mutex_destroy(&prometheus_mtx);
-	sysfs_remove_group(prometheus_kobj, &prometheus_attr_group);
-	kobject_put(prometheus_kobj);
-}
-
 subsys_initcall(prometheus_init);
-module_exit(prometheus_exit);
-
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com> / Jean-Pierre Rasquin <yank555.lu@gmail.com>"
 				"Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Prometheus was punished by the gods for giving the gift of knowledge to man."
