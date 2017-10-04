@@ -2396,7 +2396,7 @@ static int mdp_off(struct platform_device *pdev)
 	int ret = 0;
 	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
 
-	pr_debug("%s:+\n", __func__);
+	pr_info("%s:+\n", __func__);
 	mdp_histogram_ctrl_all(FALSE);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
