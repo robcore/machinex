@@ -263,8 +263,9 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 	for_each_possible_cpu(cpu) {
 		if ((unlikely(!(msm_thermal_info.freq_control_mask & BIT(cpu)))))
 			continue;
-		acpuclk_set_rate(cpu, max_freq, SETRATE_CPUFREQ);
 		limited_max_freq_thermal = max_freq;
+		if (acpuclk_get_rate(cpu) > limited_max_freq_thermal)
+			acpuclk_set_rate(cpu, limited_max_freq_thermal, SETRATE_CPUFREQ);
 		reapply_hard_limits(cpu);
 		cpufreq_update_policy(cpu);
 	}

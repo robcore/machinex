@@ -104,7 +104,7 @@ adb kill-server
 adbcountdown
 adb start-server
 adbcountdown
-if [ "$ONLINE" == "recovery" ]; then #if we are in recovery
+if [ $ONLINE == recovery ]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
 		adb push $1 /external_sd;

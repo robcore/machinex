@@ -1318,6 +1318,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	int ret = 0;
 	struct cpufreq_freqs freqs;
 
+	if (new_freq > limited_max_freq_thermal)
+		new_freq = limited_max_freq_thermal;
+
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
 	freqs.cpu = policy->cpu;
