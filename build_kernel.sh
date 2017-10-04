@@ -104,14 +104,13 @@ adb kill-server
 adbcountdown
 adb start-server
 adbcountdown
-if [ "$ADBTYPE" = "usb:5-4" ]; then
-	if [ "$ONLINE" == "recovery" ]; then #if we are in recovery
+if [ "$ONLINE" == "recovery" ]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
 		adb push $1 /external_sd;
 		echo "push complete"
 		adb kill-server
-	else
+elif [ "$ADBTYPE" = "usb:5-4" ]; then
 		echo "connected"
 		echo "pushing $1"
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
@@ -124,7 +123,6 @@ if [ "$ADBTYPE" = "usb:5-4" ]; then
 		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
-	fi;
 else
 	adb kill-server
 	adbcountdown
@@ -137,10 +135,10 @@ else
 		echo "Pushed $1! Disconnecting wireless connection"
 	else
 		echo "Failed!"
-	fi
+	fi;
 	adb disconnect
 	adb kill-server
-fi;
+fi
 }
 
 function NORMAL()

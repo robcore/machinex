@@ -224,10 +224,9 @@ static int cryptomgr_test(void *data)
 	u32 type = param->type;
 	int err = 0;
 
-// skip test procedure if it's not from POST.
-//#ifdef CONFIG_CRYPTO_MANAGER_DISABLE_TESTS
+#ifdef CONFIG_CRYPTO_MANAGER_DISABLE_TESTS
 	goto skiptest;
-//#endif
+#endif
 
 	if (type & CRYPTO_ALG_TESTED)
 		goto skiptest;
@@ -259,11 +258,13 @@ static int cryptomgr_schedule_test(struct crypto_alg *alg)
 	type = alg->cra_flags;
 
 	/* This piece of crap needs to disappear into per-type test hooks. */
-	if (!((type ^ CRYPTO_ALG_TYPE_BLKCIPHER) &
-	      CRYPTO_ALG_TYPE_BLKCIPHER_MASK) && !(type & CRYPTO_ALG_GENIV) &&
-	    ((alg->cra_flags & CRYPTO_ALG_TYPE_MASK) ==
-	     CRYPTO_ALG_TYPE_BLKCIPHER ? alg->cra_blkcipher.ivsize :
-					 alg->cra_ablkcipher.ivsize))
+	if ((!((type ^ CRYPTO_ALG_TYPE_BLKCIPHER) &
+	       CRYPTO_ALG_TYPE_BLKCIPHER_MASK) && !(type & CRYPTO_ALG_GENIV) &&
+	     ((alg->cra_flags & CRYPTO_ALG_TYPE_MASK) ==
+	      CRYPTO_ALG_TYPE_BLKCIPHER ? alg->cra_blkcipher.ivsize :
+					  alg->cra_ablkcipher.ivsize)) ||
+	    (!((type ^ CRYPTO_ALG_TYPE_AEAD) & CRYPTO_ALG_TYPE_MASK) &&
+	     alg->cra_type == &crypto_nivaead_type && alg->cra_aead.ivsize))
 		type |= CRYPTO_ALG_TESTED;
 
 	param->type = type;
@@ -289,7 +290,7 @@ static int cryptomgr_notify(struct notifier_block *this, unsigned long msg,
 	case CRYPTO_MSG_ALG_REQUEST:
 		return cryptomgr_schedule_probe(data);
 	case CRYPTO_MSG_ALG_REGISTER:
-		return NOTIFY_DONE;
+		return cryptomgr_schedule_test(data);
 	}
 
 	return NOTIFY_DONE;
