@@ -1682,10 +1682,12 @@ EXPORT_SYMBOL(d_set_d_op);
 
 static unsigned d_flags_for_inode(struct inode *inode)
 {
-	unsigned add_flags = DCACHE_REGULAR_TYPE;
+	unsigned add_flags;
 
-	if (!inode)
+	if (inode == NULL)
 		return DCACHE_MISS_TYPE;
+
+	add_flags = DCACHE_REGULAR_TYPE;
 
 	if (S_ISDIR(inode->i_mode)) {
 		add_flags = DCACHE_DIRECTORY_TYPE;
@@ -1717,7 +1719,12 @@ type_determined:
 
 static void __d_instantiate(struct dentry *dentry, struct inode *inode)
 {
-	unsigned add_flags = d_flags_for_inode(inode);
+	unsigned add_flags;
+
+	if (inode == NULL || dentry == NULL)
+		return;
+
+	add_flags = d_flags_for_inode(inode);
 
 	spin_lock(&dentry->d_lock);
 	if (inode)
