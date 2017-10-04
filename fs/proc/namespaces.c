@@ -113,13 +113,13 @@ static void *proc_ns_follow_link(struct dentry *dentry, struct nameidata *nd)
 
 	task = get_proc_task(inode);
 	if (!task)
-		goto out;
+		return error;
 
 	if (!ptrace_may_access(task, PTRACE_MODE_READ))
 		goto out_put_task;
 
 	ns_path.dentry = proc_ns_get_dentry(sb, task, ei->ns.ns_ops);
-	if (IS_ERR(ns_path.dentry)) {
+	if (IS_ERR_OR_NULL(ns_path.dentry)) {
 		error = ERR_CAST(ns_path.dentry);
 		goto out_put_task;
 	}
@@ -136,7 +136,7 @@ out:
 
 static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int buflen)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct proc_inode *ei = PROC_I(inode);
 	const struct proc_ns_operations *ns_ops = ei->ns.ns_ops;
 	struct task_struct *task;

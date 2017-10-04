@@ -369,7 +369,7 @@ EXPORT_SYMBOL(simple_rename);
  */
 int simple_setattr(struct dentry *dentry, struct iattr *iattr)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	int error;
 
 	error = inode_change_ok(inode, iattr);

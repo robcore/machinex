@@ -5092,7 +5092,7 @@ static void __init register_i2c_devices(void)
 	/* Build the matching 'supported_machs' bitmask */
 	if (machine_is_apq8064_cdp())
 		mach_mask = I2C_SURF;
-	else if (machine_is_apq8064_mtp()|| machine_is_JF())
+	else if (machine_is_apq8064_mtp()|| machine_is_jf())
 		mach_mask = I2C_FFA;
 	else if (machine_is_apq8064_liquid())
 		mach_mask = I2C_LIQUID;
@@ -5366,7 +5366,7 @@ static void __init apq8064_common_init(void)
 	enable_ddr3_regulator();
 	msm_hsic_pdata.swfi_latency =
 		msm_rpmrs_levels[0].latency_us;
-	if (machine_is_apq8064_mtp() || machine_is_JF()) {
+	if (machine_is_apq8064_mtp() || machine_is_jf()) {
 		msm_hsic_pdata.log2_irq_thresh = 5,
 		apq8064_device_hsic_host.dev.platform_data = &msm_hsic_pdata;
 		device_initialize(&apq8064_device_hsic_host.dev);
@@ -5374,7 +5374,7 @@ static void __init apq8064_common_init(void)
 	apq8064_pm8xxx_gpio_mpp_init();
 	apq8064_init_mmc();
 
-	if (machine_is_apq8064_mtp()|| machine_is_JF()) {
+	if (machine_is_apq8064_mtp()|| machine_is_jf()) {
 		mdm_8064_device.dev.platform_data = &mdm_platform_data;
 		platform_version = socinfo_get_platform_version();
 		if (SOCINFO_VERSION_MINOR(platform_version) == 1) {

@@ -125,7 +125,7 @@ static int duplicate_name(struct proc_dir_entry *de, const char *name)
 	struct proc_dir_entry *ent;
 	int found = 0;
 
-	spin_lock(&proc_subdir_lock);
+	write_lock(&proc_subdir_lock);
 
 	for (ent = de->subdir; ent != NULL; ent = ent->next) {
 		if (strcmp(ent->name, name) == 0) {
@@ -134,7 +134,7 @@ static int duplicate_name(struct proc_dir_entry *de, const char *name)
 		}
 	}
 
-	spin_unlock(&proc_subdir_lock);
+	write_unlock(&proc_subdir_lock);
 
 	return found;
 }

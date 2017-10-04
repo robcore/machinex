@@ -131,7 +131,7 @@ static int msm_fb_detect_panel(const char *name)
 					PANEL_NAME_MAX_LEN)))
 				return 0;
 		}
-	} else if (machine_is_apq8064_mtp() || machine_is_JF()) {
+	} else if (machine_is_apq8064_mtp() || machine_is_jf()) {
 		if (!strncmp(name, MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 				strnlen(MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME,
 					PANEL_NAME_MAX_LEN)))
@@ -1674,7 +1674,7 @@ void __init apq8064_init_fb(void)
 
 	if (machine_is_apq8064_liquid())
 		platform_device_register(&mipi_dsi2lvds_bridge_device);
-	if (machine_is_apq8064_mtp() || machine_is_JF())
+	if (machine_is_apq8064_mtp() || machine_is_jf())
 		platform_device_register(&mipi_dsi_toshiba_panel_device);
 	if (machine_is_mpq8064_dtv())
 		platform_device_register(&lvds_frc_panel_device);

@@ -67,10 +67,6 @@
 #define machine_is_msm8226()		0
 #define machine_is_msm8226_sim()	0
 #define machine_is_jf()				1
-#ifndef machine_is_JF()
-#define machine_is_JF()				1
-#endif
-
 #endif
 
 #define PLATFORM_SUBTYPE_MDM	1

@@ -1909,7 +1909,7 @@ void __init apq8064_init_gpiomux(void)
 		msm_gpiomux_install(mpq8064_mi2s_configs,
 			ARRAY_SIZE(mpq8064_mi2s_configs));
 
-	if (machine_is_apq8064_mtp()|| machine_is_JF()) {
+	if (machine_is_apq8064_mtp()|| machine_is_jf()) {
 		if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_DSDA2) {
 			pr_info("Platform Subtype is DSDA2\n");
 			msm_gpiomux_install(amdm_configs,
@@ -1938,7 +1938,7 @@ void __init apq8064_init_gpiomux(void)
 		}
 	}
 
-	if (machine_is_apq8064_mtp()|| machine_is_JF()) {
+	if (machine_is_apq8064_mtp()|| machine_is_jf()) {
 		if (SOCINFO_VERSION_MINOR(platform_version) == 1) {
 			pr_info("installing cyts_gpio_alt_config\n");
 			msm_gpiomux_install(cyts_gpio_alt_config,
@@ -1951,7 +1951,7 @@ void __init apq8064_init_gpiomux(void)
 	}
 
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
-	if (machine_is_apq8064_mtp()|| machine_is_JF())
+	if (machine_is_apq8064_mtp()|| machine_is_jf())
 		msm_gpiomux_install(apq8064_hsic_configs,
 				ARRAY_SIZE(apq8064_hsic_configs));
 #endif

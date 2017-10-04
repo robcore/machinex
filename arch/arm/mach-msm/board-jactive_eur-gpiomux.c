@@ -1562,7 +1562,7 @@ void __init apq8064_init_gpiomux(void)
 		msm_gpiomux_install(mpq8064_mi2s_configs,
 			ARRAY_SIZE(mpq8064_mi2s_configs));
 
-	if (machine_is_apq8064_mtp()|| machine_is_JF()) {
+	if (machine_is_apq8064_mtp()|| machine_is_jf()) {
 		if (SOCINFO_VERSION_MINOR(platform_version) == 1)
 			msm_gpiomux_install(mdm_i2s_configs,
 					ARRAY_SIZE(mdm_i2s_configs));
@@ -1572,7 +1572,7 @@ void __init apq8064_init_gpiomux(void)
 	}
 
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
-	if (machine_is_apq8064_mtp()|| machine_is_JF())
+	if (machine_is_apq8064_mtp()|| machine_is_jf())
 		msm_gpiomux_install(apq8064_hsic_configs,
 				ARRAY_SIZE(apq8064_hsic_configs));
 #endif

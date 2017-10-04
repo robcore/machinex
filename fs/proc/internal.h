@@ -154,7 +154,7 @@ ssize_t __proc_file_read(struct file *, char __user *, size_t, loff_t *);
 extern const struct file_operations proc_file_operations;
 void proc_entry_rundown(struct proc_dir_entry *);
 
-extern spinlock_t proc_subdir_lock;
+extern rwlock_t proc_subdir_lock;
 
 struct dentry *proc_pid_lookup(struct inode *dir, struct dentry * dentry, unsigned int);
 extern int proc_pid_readdir(struct file *, struct dir_context *);
@@ -170,6 +170,11 @@ static inline struct proc_dir_entry *pde_get(struct proc_dir_entry *pde)
 }
 void pde_put(struct proc_dir_entry *pde);
 
+static inline bool is_empty_pde(const struct proc_dir_entry *pde)
+{
+	return S_ISDIR(pde->mode) && !pde->proc_iops;
+}
+
 int proc_fill_super(struct super_block *);
 struct inode *proc_get_inode(struct super_block *, struct proc_dir_entry *);
 int proc_remount(struct super_block *sb, int *flags, char *data);
@@ -184,7 +189,7 @@ int proc_remount(struct super_block *sb, int *flags, char *data);
 extern int proc_readdir(struct file *, struct dir_context *);
 extern int proc_readdir_de(struct proc_dir_entry *, struct file *, struct dir_context *);
 struct dentry *proc_lookup(struct inode *, struct dentry *, unsigned int);
-
+extern const struct inode_operations proc_link_inode_operations;
 
 
 /* Lookups */

@@ -19,7 +19,6 @@
 #include <linux/mount.h>
 #include <linux/init.h>
 #include <linux/idr.h>
-#include <linux/namei.h>
 #include <linux/bitops.h>
 #include <linux/spinlock.h>
 #include <linux/completion.h>
@@ -27,7 +26,7 @@
 
 #include "internal.h"
 
-DEFINE_SPINLOCK(proc_subdir_lock);
+DEFINE_RWLOCK(proc_subdir_lock);
 
 static int proc_match(unsigned int len, const char *name, struct proc_dir_entry *de)
 {
@@ -100,144 +99,9 @@ static bool pde_subdir_insert(struct proc_dir_entry *dir,
 	return true;
 }
 
-/* buffer size is one page but our output routines use some slack for overruns */
-#define PROC_BLOCK_SIZE	(PAGE_SIZE - 1024)
-
-ssize_t
-__proc_file_read(struct file *file, char __user *buf, size_t nbytes,
-	       loff_t *ppos)
-{
-	struct inode * inode = file_inode(file);
-	char 	*page;
-	ssize_t	retval=0;
-	int	eof=0;
-	ssize_t	n, count;
-	char	*start;
-	struct proc_dir_entry * dp;
-	unsigned long long pos;
-
-	/*
-	 * Gaah, please just use "seq_file" instead. The legacy /proc
-	 * interfaces cut loff_t down to off_t for reads, and ignore
-	 * the offset entirely for writes..
-	 */
-	pos = *ppos;
-	if (pos > MAX_NON_LFS)
-		return 0;
-	if (nbytes > MAX_NON_LFS - pos)
-		nbytes = MAX_NON_LFS - pos;
-
-	dp = PDE(inode);
-	if (!(page = (char*) __get_free_page(GFP_TEMPORARY)))
-		return -ENOMEM;
-
-	while ((nbytes > 0) && !eof) {
-		count = min_t(size_t, PROC_BLOCK_SIZE, nbytes);
-
-		start = NULL;
-		if (!dp->read_proc)
-			break;
-
-		/* How to be a proc read function
-		 * ------------------------------
-		 * Prototype:
-		 *    int f(char *buffer, char **start, off_t offset,
-		 *          int count, int *peof, void *dat)
-		 *
-		 * Assume that the buffer is "count" bytes in size.
-		 *
-		 * If you know you have supplied all the data you have, set
-		 * *peof.
-		 *
-		 * You have three ways to return data:
-		 *
-		 * 0) Leave *start = NULL.  (This is the default.)  Put the
-		 *    data of the requested offset at that offset within the
-		 *    buffer.  Return the number (n) of bytes there are from
-		 *    the beginning of the buffer up to the last byte of data.
-		 *    If the number of supplied bytes (= n - offset) is greater
-		 *    than zero and you didn't signal eof and the reader is
-		 *    prepared to take more data you will be called again with
-		 *    the requested offset advanced by the number of bytes
-		 *    absorbed.  This interface is useful for files no larger
-		 *    than the buffer.
-		 *
-		 * 1) Set *start = an unsigned long value less than the buffer
-		 *    address but greater than zero.  Put the data of the
-		 *    requested offset at the beginning of the buffer.  Return
-		 *    the number of bytes of data placed there.  If this number
-		 *    is greater than zero and you didn't signal eof and the
-		 *    reader is prepared to take more data you will be called
-		 *    again with the requested offset advanced by *start.  This
-		 *    interface is useful when you have a large file consisting
-		 *    of a series of blocks which you want to count and return
-		 *    as wholes.
-		 *    (Hack by Paul.Russell@rustcorp.com.au)
-		 *
-		 * 2) Set *start = an address within the buffer.  Put the data
-		 *    of the requested offset at *start.  Return the number of
-		 *    bytes of data placed there.  If this number is greater
-		 *    than zero and you didn't signal eof and the reader is
-		 *    prepared to take more data you will be called again with
-		 *    the requested offset advanced by the number of bytes
-		 *    absorbed.
-		 */
-		n = dp->read_proc(page, &start, *ppos, count, &eof, dp->data);
-
-		if (n == 0)   /* end of file */
-			break;
-		if (n < 0) {  /* error */
-			if (retval == 0)
-				retval = n;
-			break;
-		}
-
-		if (start == NULL) {
-			if (n > PAGE_SIZE)	/* Apparent buffer overflow */
-				n = PAGE_SIZE;
-			n -= *ppos;
-			if (n <= 0)
-				break;
-			if (n > count)
-				n = count;
-			start = page + *ppos;
-		} else if (start < page) {
-			if (n > PAGE_SIZE)	/* Apparent buffer overflow */
-				n = PAGE_SIZE;
-			if (n > count) {
-				/*
-				 * Don't reduce n because doing so might
-				 * cut off part of a data block.
-				 */
-				pr_warn("proc_file_read: count exceeded\n");
-			}
-		} else /* start >= page */ {
-			unsigned long startoff = (unsigned long)(start - page);
-			if (n > (PAGE_SIZE - startoff))	/* buffer overflow? */
-				n = PAGE_SIZE - startoff;
-			if (n > count)
-				n = count;
-		}
-		
- 		n -= copy_to_user(buf, start < page ? page : start, n);
-		if (n == 0) {
-			if (retval == 0)
-				retval = -EFAULT;
-			break;
-		}
-
-		*ppos += start < page ? (unsigned long)start : n;
-		nbytes -= n;
-		buf += n;
-		retval += n;
-	}
-	free_page((unsigned long) page);
-	return retval;
-}
-
 static int proc_notify_change(struct dentry *dentry, struct iattr *iattr)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct proc_dir_entry *de = PDE(inode);
 	int error;
 
@@ -256,7 +120,7 @@ static int proc_notify_change(struct dentry *dentry, struct iattr *iattr)
 static int proc_getattr(struct vfsmount *mnt, struct dentry *dentry,
 			struct kstat *stat)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct proc_dir_entry *de = PDE(inode);
 	if (de && de->nlink)
 		set_nlink(inode, de->nlink);
@@ -308,9 +172,9 @@ static int xlate_proc_name(const char *name, struct proc_dir_entry **ret,
 {
 	int rv;
 
-	spin_lock(&proc_subdir_lock);
+	read_lock(&proc_subdir_lock);
 	rv = __xlate_proc_name(name, ret, residual);
-	spin_unlock(&proc_subdir_lock);
+	read_unlock(&proc_subdir_lock);
 	return rv;
 }
 
@@ -358,17 +222,6 @@ void proc_free_inum(unsigned int inum)
 	spin_unlock_irqrestore(&proc_inum_lock, flags);
 }
 
-static void *proc_follow_link(struct dentry *dentry, struct nameidata *nd)
-{
-	nd_set_link(nd, __PDE_DATA(dentry->d_inode));
-	return NULL;
-}
-
-static const struct inode_operations proc_link_inode_operations = {
-	.readlink	= generic_readlink,
-	.follow_link	= proc_follow_link,
-};
-
 /*
  * Don't create negative dentries here, return -ENOENT by hand
  * instead.
@@ -378,11 +231,11 @@ struct dentry *proc_lookup_de(struct proc_dir_entry *de, struct inode *dir,
 {
 	struct inode *inode;
 
-	spin_lock(&proc_subdir_lock);
+	read_lock(&proc_subdir_lock);
 	de = pde_subdir_find(de, dentry->d_name.name, dentry->d_name.len);
 	if (de) {
 		pde_get(de);
-		spin_unlock(&proc_subdir_lock);
+		read_unlock(&proc_subdir_lock);
 		inode = proc_get_inode(dir->i_sb, de);
 		if (!inode)
 			return ERR_PTR(-ENOMEM);
@@ -390,7 +243,7 @@ struct dentry *proc_lookup_de(struct proc_dir_entry *de, struct inode *dir,
 		d_add(dentry, inode);
 		return NULL;
 	}
-	spin_unlock(&proc_subdir_lock);
+	read_unlock(&proc_subdir_lock);
 	return ERR_PTR(-ENOENT);
 }
 
@@ -417,12 +270,12 @@ int proc_readdir_de(struct proc_dir_entry *de, struct file *file,
 	if (!dir_emit_dots(file, ctx))
 		return 0;
 
-	spin_lock(&proc_subdir_lock);
+	read_lock(&proc_subdir_lock);
 	de = pde_subdir_first(de);
 	i = ctx->pos - 2;
 	for (;;) {
 		if (!de) {
-			spin_unlock(&proc_subdir_lock);
+			read_unlock(&proc_subdir_lock);
 			return 0;
 		}
 		if (!i)
@@ -434,19 +287,19 @@ int proc_readdir_de(struct proc_dir_entry *de, struct file *file,
 	do {
 		struct proc_dir_entry *next;
 		pde_get(de);
-		spin_unlock(&proc_subdir_lock);
+		read_unlock(&proc_subdir_lock);
 		if (!dir_emit(ctx, de->name, de->namelen,
 			    de->low_ino, de->mode >> 12)) {
 			pde_put(de);
 			return 0;
 		}
-		spin_lock(&proc_subdir_lock);
+		read_lock(&proc_subdir_lock);
 		ctx->pos++;
 		next = pde_subdir_next(de);
 		pde_put(de);
 		de = next;
 	} while (de);
-	spin_unlock(&proc_subdir_lock);
+	read_unlock(&proc_subdir_lock);
 	return 1;
 }
 
@@ -485,18 +338,16 @@ static int proc_register(struct proc_dir_entry * dir, struct proc_dir_entry * dp
 	if (ret)
 		return ret;
 
-	spin_lock(&proc_subdir_lock);
+	write_lock(&proc_subdir_lock);
 	dp->parent = dir;
 	if (pde_subdir_insert(dir, dp) == false) {
 		WARN(1, "proc_dir_entry '%s/%s' already registered\n",
 		     dir->name, dp->name);
-		spin_unlock(&proc_subdir_lock);
-		if (S_ISDIR(dp->mode))
-			dir->nlink--;
+		write_unlock(&proc_subdir_lock);
 		proc_free_inum(dp->low_ino);
 		return -EEXIST;
 	}
-	spin_unlock(&proc_subdir_lock);
+	write_unlock(&proc_subdir_lock);
 
 	return 0;
 }
@@ -520,6 +371,9 @@ static struct proc_dir_entry *__proc_create(struct proc_dir_entry **parent,
 	}
 	if (*parent == &proc_root && name_to_int(&qstr) != ~0U) {
 		WARN(1, "create '/proc/%s' by hand\n", qstr.name);
+		return NULL;
+	}
+	if (is_empty_pde(*parent)) {
 		return NULL;
 	}
 
@@ -604,35 +458,24 @@ struct proc_dir_entry *proc_mkdir(const char *name,
 }
 EXPORT_SYMBOL(proc_mkdir);
 
-struct proc_dir_entry *create_proc_read_entry(
-	const char *name, umode_t mode, struct proc_dir_entry *parent, 
-	read_proc_t *read_proc, void *data)
+struct proc_dir_entry *proc_create_mount_point(const char *name)
 {
-	struct proc_dir_entry *ent;
+	umode_t mode = S_IFDIR | S_IRUGO | S_IXUGO;
+	struct proc_dir_entry *ent, *parent = NULL;
 
-	if ((mode & S_IFMT) == 0)
-		mode |= S_IFREG;
-
-	if (!S_ISREG(mode)) {
-		WARN_ON(1);	/* use proc_mkdir(), damnit */
-		return NULL;
-	}
-
-	if ((mode & S_IALLUGO) == 0)
-		mode |= S_IRUGO;
-
-	ent = __proc_create(&parent, name, mode, 1);
+	ent = __proc_create(&parent, name, mode, 2);
 	if (ent) {
-		ent->read_proc = read_proc;
-		ent->data = data;
+		ent->data = NULL;
+		ent->proc_fops = NULL;
+		ent->proc_iops = NULL;
 		if (proc_register(parent, ent) < 0) {
 			kfree(ent);
+			parent->nlink--;
 			ent = NULL;
 		}
 	}
 	return ent;
 }
-EXPORT_SYMBOL(create_proc_read_entry);
 
 struct proc_dir_entry *proc_create_data(const char *name, umode_t mode,
 					struct proc_dir_entry *parent,
@@ -705,9 +548,9 @@ void remove_proc_entry(const char *name, struct proc_dir_entry *parent)
 	const char *fn = name;
 	unsigned int len;
 
-	spin_lock(&proc_subdir_lock);
+	write_lock(&proc_subdir_lock);
 	if (__xlate_proc_name(name, &parent, &fn) != 0) {
-		spin_unlock(&proc_subdir_lock);
+		write_unlock(&proc_subdir_lock);
 		return;
 	}
 	len = strlen(fn);
@@ -715,7 +558,7 @@ void remove_proc_entry(const char *name, struct proc_dir_entry *parent)
 	de = pde_subdir_find(parent, fn, len);
 	if (de)
 		rb_erase(&de->subdir_node, &parent->subdir);
-	spin_unlock(&proc_subdir_lock);
+	write_unlock(&proc_subdir_lock);
 	if (!de) {
 		WARN(1, "name '%s'\n", name);
 		return;
@@ -739,16 +582,16 @@ int remove_proc_subtree(const char *name, struct proc_dir_entry *parent)
 	const char *fn = name;
 	unsigned int len;
 
-	spin_lock(&proc_subdir_lock);
+	write_lock(&proc_subdir_lock);
 	if (__xlate_proc_name(name, &parent, &fn) != 0) {
-		spin_unlock(&proc_subdir_lock);
+		write_unlock(&proc_subdir_lock);
 		return -ENOENT;
 	}
 	len = strlen(fn);
 
 	root = pde_subdir_find(parent, fn, len);
 	if (!root) {
-		spin_unlock(&proc_subdir_lock);
+		write_unlock(&proc_subdir_lock);
 		return -ENOENT;
 	}
 	rb_erase(&root->subdir_node, &parent->subdir);
@@ -761,7 +604,7 @@ int remove_proc_subtree(const char *name, struct proc_dir_entry *parent)
 			de = next;
 			continue;
 		}
-		spin_unlock(&proc_subdir_lock);
+		write_unlock(&proc_subdir_lock);
 
 		proc_entry_rundown(de);
 		next = de->parent;
@@ -772,7 +615,7 @@ int remove_proc_subtree(const char *name, struct proc_dir_entry *parent)
 			break;
 		pde_put(de);
 
-		spin_lock(&proc_subdir_lock);
+		write_lock(&proc_subdir_lock);
 		de = next;
 	}
 	pde_put(root);
