@@ -31,7 +31,7 @@ int __init sec_avc_log_init(void)
 
 	sec_avc_log_size = size + 8;
 	sec_avc_log_mag = kzalloc(sec_avc_log_size, GFP_NOWAIT);
-	pr_info("allocating %u bytes at %p (%lx physical) for avc log\n",
+	pr_info("allocating %u bytes at %p (%llx physical) for avc log\n",
 		sec_avc_log_size, sec_avc_log_mag, __pa(sec_avc_log_buf));
 
 	sec_avc_log_ptr = sec_avc_log_mag + 4;
