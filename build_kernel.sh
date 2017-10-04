@@ -104,7 +104,7 @@ adb kill-server
 adbcountdown
 adb start-server
 adbcountdown
-if [ $ONLINE == recovery ]; then #if we are in recovery
+if [ $ONLINE = recovery ]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
 		adb push $1 /external_sd;
@@ -127,8 +127,7 @@ else
 	adb kill-server
 	adbcountdown
 	adb connect 192.168.1.111
-	last=$?
-	if [ $last -eq 0 ]; then
+	if [ $? -eq 0 ]; then
 		echo "Connected! Pushing $1!"
 		adbcountdown
 		echo "Trying Wireless"
