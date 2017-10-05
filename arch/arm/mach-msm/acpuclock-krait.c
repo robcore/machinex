@@ -1329,9 +1329,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	return ret;
 }
 
-static bool extra_thermal_protect __read_mostly;
-module_param(extra_thermal_protect, bool, 0644);
-
 static int msm_cpufreq_target(struct cpufreq_policy *policy,
 				unsigned int target_freq,
 				unsigned int relation)
@@ -1339,11 +1336,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	int ret = 0;
 	int index;
 	struct cpufreq_frequency_table *table;
-
-	if (extra_thermal_protect) {
-		if (target_freq > limited_max_freq_thermal)
-			target_freq = limited_max_freq_thermal;
-	}
 
 	table = policy->freq_table;
 	index = cpufreq_frequency_table_target(policy,
