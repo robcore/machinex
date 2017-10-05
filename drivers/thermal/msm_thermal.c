@@ -227,7 +227,7 @@ enum {
 
 static int evaluate_freq_temp(void)
 {
-	struct tsens_device *tsens_dev;
+	struct tsens_device tsens_dev;
 	long temp;
 	int ret = 0;
 	uint32_t i;
@@ -242,10 +242,10 @@ static int evaluate_freq_temp(void)
 
 	for (i = 7; i < 10; i++) {
 		tsens_dev->sensor_num = i;
-		ret = tsens_get_temp(tsens_dev, &temp);
+		ret = tsens_get_temp(&tsens_dev, &temp);
 		if (!temp) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
-					KBUILD_MODNAME, tsens_dev->sensor_num);
+					KBUILD_MODNAME, tsens_dev.sensor_num);
 
 			if (i < 10) {
 				unsure++;
@@ -342,7 +342,7 @@ enum {
 
 static int evaluate_core_temp(void)
 {
-	struct tsens_device *tsens_dev;
+	struct tsens_device tsens_dev;
 	long temp = 0;
 	int ret = 0;
 	uint32_t i;
@@ -357,10 +357,10 @@ static int evaluate_core_temp(void)
 
 	for (i = 10; i > 7; i--) {
 		tsens_dev->sensor_num = i;
-		ret = tsens_get_temp(tsens_dev, &temp);
+		ret = tsens_get_temp(&tsens_dev, &temp);
 		if (!temp) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
-					KBUILD_MODNAME, tsens_dev->sensor_num);
+					KBUILD_MODNAME, tsens_dev.sensor_num);
 			if (i > 7) {
 				unsure++;
 				continue;
