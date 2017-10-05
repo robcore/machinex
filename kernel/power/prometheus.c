@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 6
-#define VERSION_MIN 0
+#define VERSION_MIN 1
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -73,67 +73,6 @@ unsigned int report_state(void)
 	return currstate;
 }
 
-static RAW_NOTIFIER_HEAD(prometheus_notifier_chain);
-int prometheus_register_notifier(struct notifier_block *nb)
-{
-	int ret;
-
-	mutex_lock(&prometheus_mtx);
-	ret = raw_notifier_chain_register(&prometheus_notifier_chain, nb);
-	mutex_unlock(&prometheus_mtx);
-
-	return ret;
-}
-EXPORT_SYMBOL(prometheus_register_notifier);
-
-int prometheus_unregister_notifier(struct notifier_block *nb)
-{
-	int ret;
-
-	mutex_lock(&prometheus_mtx);
-	ret = raw_notifier_chain_unregister(&prometheus_notifier_chain, nb);
-	mutex_unlock(&prometheus_mtx);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(prometheus_unregister_notifier);
-
-static int prometheus_post_suspend_chain(void)
-{
-	int ret = 0;
-
-	if (!report_state())
-		goto skip;
-	pr_info("[PROMETHEUS] Calling Post Suspend Bridge\n");
-	ret = __raw_notifier_call_chain(&prometheus_notifier_chain, post_power_suspend, NULL,
-		-1, NULL);
-skip:
-	return notifier_to_errno(ret);
-}
-
-static int prometheus_pre_resume_chain(void)
-{
-	int ret = 0;
-	if (report_state())
-		goto skip;
-
-	pr_info("[PROMETHEUS] Calling Pre Resume Bridge\n");
-	ret = __raw_notifier_call_chain(&prometheus_notifier_chain, pre_power_resume, NULL,
-		-1, NULL);
-skip:
-	return notifier_to_errno(ret);
-}
-
-void _send_post_power_suspend(void)
-{
-	prometheus_post_suspend_chain();
-}
-
-void _send_pre_power_resume(void)
-{
-	prometheus_pre_resume_chain();
-}
-
 bool prometheus_disabled_oom __read_mostly = false;
 static void prometheus_control_oom(bool disable)
 {
@@ -158,7 +97,7 @@ EXPORT_SYMBOL(register_power_suspend);
 void unregister_power_suspend(struct power_suspend *handler)
 {
 	mutex_lock(&prometheus_mtx);
-	list_del(&handler->link);
+	list_del_init(&handler->link);
 	mutex_unlock(&prometheus_mtx);
 }
 EXPORT_SYMBOL(unregister_power_suspend);

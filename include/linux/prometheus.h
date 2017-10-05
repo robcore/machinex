@@ -112,14 +112,4 @@ extern bool prometheus_disabled_oom;
 extern bool prometheus_override;
 void intelli_suspend_booster(void);
 
-enum prometheus_events {
-	/* Post powersuspend, pre-pm_suspend */
-	POST_PWR_SUSPEND = 0,
-
-	/* Post pm_restore, pre-powerresume */
-	PRE_PWR_RESUME = 1,
-};
-static unsigned long post_power_suspend = POST_PWR_SUSPEND;
-static unsigned long pre_power_resume = PRE_PWR_RESUME;
-
 #endif

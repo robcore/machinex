@@ -77,13 +77,15 @@ static int proactive_suspend(suspend_state_t state)
 	if (error) {
 		nr_calls--;
 	__pm_notifier_call_chain(PM_POST_SUSPEND, nr_calls, NULL);
-	}
+	} else
+		pr_info("Proactive Suspend\n");
 	return error ? error : 0;
 }
 
 static void proactive_resume(void)
 {
 	pm_notifier_call_chain(PM_PROACTIVE_RESUME);
+	pr_info("Proactive Resume\n");
 }
 #else
 static int proactive_suspend(suspend_state_t state)
