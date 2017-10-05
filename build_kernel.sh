@@ -86,46 +86,58 @@ function countdown()
 
 function adbcountdown()
 {
-	echo "countdown start"
-	sleep 3
-	echo "countdown end"
+	sleep 4
 }
 
 function ADBRETRY()
 {
-ONLINE=`adb get-state 2> /dev/null`
-ADBTYPE=`adb get-devpath 2> /dev/null`
-adbcountdown
+rm adbtmp
+rm devtmp
 adb start-server
 adbcountdown
-if [ "$ONLINE" = "recovery" ]; then #if we are in recovery
+adb shell input keyevent KEYCODE_WAKEUP;
+touch adbtmp
+adb -a get-state >&1 > adbtmp
+touch devtmp
+adb -a get-devpath >&1 > devtmp
+RECOV=recovery
+DEVS=device
+USBB=usb:5-4
+UNKNOW=unknown
+#dev=$(cat adbtmp 2>&1); echo $dev;
+ONLINE=$(cat adbtmp >&1)
+DEVICE=$(cat devtmp >&1)
+if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
-		adb push $1 /external_sd;
+		adb push $1 /external_sd 2> /dev/null
 		echo "push complete"
 		adb kill-server
-elif [ "$ONLINE" = "device" ]; then #if we are in recovery
+elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "connected"
 		echo "pushing $1"
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
 		sleep 1
 		adb shell su -c "input touchscreen swipe 930 880 930 380"
 		sleep 1
-		adb push $1 /storage/extSdCard;
+		adb push $1 /storage/extSdCard 2> /dev/null
 		echo "push complete, booting recovery"
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
 		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
 else
-	adb kill-server
-	adbcountdown
 	adb connect 192.168.1.111
-	if [ $? -eq 0 ]; then
+	adbcountdown
+	rm adbtmp
+	rm devtmp
+	touch adbtmp
+	adb -a get-state >&1 > adbtmp
+	touch devtmp
+	adb -a get-devpath >&1 > devtmp
+	if [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $UNKNOW ]]; then
 		echo "Connected! Pushing $1!"
-		adbcountdown
-		echo "Trying Wireless"
-		adb push $1 /storage/extSdCard;
+		adb push $1 /storage/extSdCard 2> /dev/null
 		adb disconnect
 		adb kill-server
 	else
