@@ -76,7 +76,7 @@ extern unsigned int curr_limit_min;
 extern unsigned int current_screen_state;
 #endif /* CONFIG_CPUFREQ_HARDLIMIT */
 extern bool hotplug_ready;
-
+extern unsigned long limited_max_freq_thermal;
 extern bool is_freq_limited(unsigned int cpu);
 
 struct cpufreq_policy {
@@ -969,7 +969,6 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
 
-extern unsigned long max_therm_freq;
 /* Sanitize cpufreq to hardlimits */
 unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
