@@ -241,7 +241,7 @@ static int evaluate_freq_temp(void)
 			 msm_thermal_info.temp_hysteresis_degC);
 
 	for (i = 7; i < 10; i++) {
-		tsens_dev->sensor_num = i;
+		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
 		if (!temp) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
@@ -287,9 +287,8 @@ static void __ref do_freq_control(void)
 			return;
 
 	freq_temp = evaluate_freq_temp();
-
 	if (freq_temp < 0) {
-		hotplug_check_needed = false;
+		hotplug_check_needed = true;
 		return;
 	}
 
@@ -356,7 +355,7 @@ static int evaluate_core_temp(void)
 			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	for (i = 10; i > 7; i--) {
-		tsens_dev->sensor_num = i;
+		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
 		if (!temp) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
