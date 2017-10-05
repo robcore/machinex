@@ -2860,7 +2860,6 @@ static void mdp_shutdown(struct platform_device *pdev)
 	if (!mfd)
 		return;
 
-	pr_info("%s: panel_next_off seq\n", __func__);
 #if defined(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) || defined(CONFIG_ESD_ERR_FG_RECOVERY)
 	mdp_shutdown_check = true;
 	mutex_lock(&power_state_change);
