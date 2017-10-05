@@ -91,8 +91,10 @@ function adbcountdown()
 
 function ADBRETRY()
 {
-rm adbtmp
-rm devtmp
+if [ -e adbtmp ]; then
+	rm adbtmp
+if [ -e devtmp ]; then
+	rm devtmp
 adb start-server
 adbcountdown
 adb shell input keyevent KEYCODE_WAKEUP;
@@ -129,8 +131,10 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 else
 	adb connect 192.168.1.111
 	adbcountdown
-	rm adbtmp
-	rm devtmp
+	if [ -e adbtmp ]; then
+		rm adbtmp
+	if [ -e devtmp ]; then
+		rm devtmp
 	touch adbtmp
 	adb -a get-state >&1 > adbtmp
 	touch devtmp

@@ -286,7 +286,7 @@ static void __ref do_freq_control(void)
 	freq_temp = evaluate_freq_temp();
 	mutex_unlock(&temp_mutex);
 
-	if (freq_temp <= 0) {
+	if (freq_temp < 0) {
 		atomic_set(&hotplug_check_needed, 0);
 		return;
 	}
@@ -318,7 +318,8 @@ static void __ref do_freq_control(void)
 				atomic_set(&hotplug_check_needed, 1);
 			}
 			break;
-		default:
+		case FREQ_NO_ACTION:
+			update_cpu_max_freq(max_freq);
 			break;
 	}
 
@@ -388,7 +389,7 @@ static void __ref do_core_control(void)
 	core_temp = evaluate_core_temp();
 	mutex_unlock(&temp_mutex);
 
-	if (core_temp <= 0)
+	if (core_temp < 0)
 		return;
 
 	mutex_lock(&core_control_mutex);
@@ -426,8 +427,6 @@ static void __ref do_core_control(void)
 					cpus_offlined &= ~BIT(cpu);
 				}
 			}
-			break;
-		default:
 			break;
 	}
 	mutex_unlock(&core_control_mutex);
