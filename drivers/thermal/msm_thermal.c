@@ -257,6 +257,7 @@ static void __ref do_freq_control(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
+		max_freq = per_cpu(limited_max_freq_thermal, cpu);
 		freqsensor = cpu + 7;
 		freq_temp = get_sensor_temp(freqsensor);
 		if (!freq_temp)
