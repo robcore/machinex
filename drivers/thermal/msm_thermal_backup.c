@@ -32,7 +32,7 @@
 #include <linux/suspend.h>
 #include <mach/cpufreq.h>
 #include <linux/sysfs_helpers.h>
-#include "../../arch/arm/mach-msm/acpuclock.h"
+#include "../../../arch/arm/mach-msm/acpuclock.h"
 
 #define DEFAULT_POLLING_MS	240
 
@@ -65,6 +65,10 @@ static int limit_idx;
 static int thermal_limit_low;
 static int thermal_limit_high;
 static struct cpufreq_frequency_table *table;
+static unsigned long cpu_thermal_one;
+static unsigned long cpu_thermal_two;
+static unsigned long cpu_thermal_three;
+static unsigned long cpu_thermal_four;
 unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 static bool thermal_suspended = false;
 /* module parameters */
@@ -197,6 +201,57 @@ static int msm_thermal_get_freq_table(void)
 
 	return 0;
 }
+static int populate_temps(void)
+{
+	struct tsens_device tsens_dev_one, tsens_dev_two, tsens_dev_three, tsens_dev_four;
+	long temp_one = 0;
+	long temp_two = 0;
+	long temp_three = 0;
+	long temp_four = 0;
+	int ret = 0;
+
+	if (thermal_suspended)
+		return -EINVAL;
+
+	tsens_dev_one.sensor_num = msm_thermal_info.sensor_id_one;
+	ret = tsens_get_temp(&tsens_dev_one, &temp_one);
+	cpu_thermal_one = temp_one;
+	if (!temp_one) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev_one.sensor_num);
+		return ret;
+	}
+
+
+	tsens_dev_two.sensor_num = msm_thermal_info.sensor_id_two;
+	ret = tsens_get_temp(&tsens_dev_two, &temp_two);
+	cpu_thermal_two = temp_two;
+	if (!temp_two) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev_two.sensor_num);
+		return ret;
+	}
+
+	tsens_dev_three.sensor_num = msm_thermal_info.sensor_id_three;
+	ret = tsens_get_temp(&tsens_dev_three, &temp_three);
+	cpu_thermal_three = temp_three;
+	if (!temp_three) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev_three.sensor_num);
+		return ret;
+	}
+
+	tsens_dev_four.sensor_num = msm_thermal_info.sensor_id_four;
+	ret = tsens_get_temp(&tsens_dev_four, &temp_four);
+	cpu_thermal_four = temp_four;
+	if (!temp_four) {
+		pr_debug("%s: Unable to read TSENS sensor %d\n",
+				KBUILD_MODNAME, tsens_dev_four.sensor_num);
+		return ret;
+	}
+
+	return 0;
+}
 
 static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 {
@@ -207,7 +262,7 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
-		if ((unlikely(!(msm_thermal_info.freq_control_mask & BIT(cpu)))))
+		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
 		reapply_hard_limits(cpu);
 		limited_max_freq_thermal = max_freq;
@@ -217,93 +272,13 @@ static void update_cpu_max_freq(unsigned int cpu, unsigned long max_freq)
 
 }
 
-#define SAFE_CONFIRMED 4
-
-enum {
-	FREQ_FAIL = -1,
-	FREQ_TEMP_OVER = 0,
-	FREQ_TEMP_SAFE = 1,
-	FREQ_NO_ACTION = 3
-};
-
-static int evaluate_freq_temp(void)
-{
-	struct tsens_device tsens_dev;
-	long temp = 0;
-	int ret = 0;
-	unsigned int safe = 0;
-	unsigned long delta;
-	if (thermal_suspended)
-		return FREQ_FAIL;
-
-	delta = (msm_thermal_info.limit_temp_degC - 
-			 msm_thermal_info.temp_hysteresis_degC);
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_one;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return FREQ_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.limit_temp_degC)
-		return FREQ_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_two;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return FREQ_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.limit_temp_degC)
-		return FREQ_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_three;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return FREQ_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.limit_temp_degC)
-		return FREQ_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_four;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return FREQ_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.limit_temp_degC)
-		return FREQ_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	if (safe == SAFE_CONFIRMED)
-		return FREQ_TEMP_SAFE;
-
-	return FREQ_NO_ACTION;
-}
-
 static void __ref do_freq_control(void)
 {
 	int ret = 0;
 	struct cpufreq_policy policy;
 	unsigned int cpu = smp_processor_id();
 	unsigned long max_freq;
-	int freq_temp;
+	unsigned int delta;
 
 	if (!hotplug_ready || thermal_suspended) {
 		hotplug_check_needed = false;
@@ -311,46 +286,50 @@ static void __ref do_freq_control(void)
 		return;
 	}
 
-	max_freq = limited_max_freq_thermal;
-
 	ret = cpufreq_get_policy(&policy, cpu);
 		if (ret)
-			goto err_no;
+			return;
 
-	freq_temp = evaluate_freq_temp();
+	ret = populate_temps();
+	if (ret)
+		return;
 
-	switch (freq_temp) {
-		case FREQ_FAIL:
-			goto err_no;
-		case FREQ_TEMP_OVER:
-			if (limit_idx == thermal_limit_low) {
-				hotplug_check_needed = true;
-				return;
-			}
-			limit_idx -= msm_thermal_info.freq_step;
-			if (limit_idx < thermal_limit_low)
-				limit_idx = thermal_limit_low;
+	max_freq = limited_max_freq_thermal;
+
+	delta = (msm_thermal_info.limit_temp_degC - 
+			 msm_thermal_info.temp_hysteresis_degC);
+
+	if (cpu_thermal_one >= msm_thermal_info.limit_temp_degC ||
+		cpu_thermal_two >= msm_thermal_info.limit_temp_degC ||
+		cpu_thermal_three >= msm_thermal_info.limit_temp_degC ||
+		cpu_thermal_four >= msm_thermal_info.limit_temp_degC) {
+		if (limit_idx == thermal_limit_low) {
+			hotplug_check_needed = true;
+			return;
+		}
+		limit_idx -= msm_thermal_info.freq_step;
+		if (limit_idx < thermal_limit_low)
+			limit_idx = thermal_limit_low;
+		max_freq = table[limit_idx].frequency;
+		hotplug_check_needed = true;
+	} else if ((cpu_thermal_one < delta) &&
+		(cpu_thermal_two < delta) &&
+		(cpu_thermal_three < delta) &&
+		(cpu_thermal_four < delta)) {
+		if (limit_idx == thermal_limit_high) {
+			hotplug_check_needed = false;
+			return;
+		}
+
+		limit_idx += msm_thermal_info.freq_step;
+		if (limit_idx >= thermal_limit_high) {
+			limit_idx = thermal_limit_high;
+			max_freq = policy.hlimit_max_screen_on;
+			hotplug_check_needed = false;
+		} else
 			max_freq = table[limit_idx].frequency;
 			hotplug_check_needed = true;
-			break;
-		case FREQ_TEMP_SAFE:
-			if (limit_idx == thermal_limit_high) {
-				hotplug_check_needed = false;
-				return;
-			}
-			limit_idx += msm_thermal_info.freq_step;
-			if (limit_idx >= thermal_limit_high) {
-				limit_idx = thermal_limit_high;
-				max_freq = policy.hlimit_max_screen_on;
-				hotplug_check_needed = false;
-			} else {
-				max_freq = table[limit_idx].frequency;
-				hotplug_check_needed = true;
-			}
-			break;
-		case FREQ_NO_ACTION:
-			break;
-		}
+	}
 
 	if (max_freq == limited_max_freq_thermal) {
 		hotplug_check_needed = false;
@@ -358,151 +337,65 @@ static void __ref do_freq_control(void)
 	}
 
 	update_cpu_max_freq(cpu, max_freq);
-	return;
-err_no:
-	mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
-		msecs_to_jiffies(msm_thermal_info.poll_ms));
-}
-
-enum {
-	CORE_FAIL = -1,
-	CORE_TEMP_OVER = 0,
-	CORE_TEMP_SAFE = 1,
-	CORE_NO_ACTION = 3
-};
-
-static int evaluate_core_temp(void)
-{
-	struct tsens_device tsens_dev;
-	long temp = 0;
-	int ret = 0;
-	unsigned int safe = 0;
-	unsigned long delta;
-
-	if (thermal_suspended)
-		return CORE_FAIL;
-
-	delta = (msm_thermal_info.core_limit_temp_degC -
-			 msm_thermal_info.core_temp_hysteresis_degC);
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_one;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return CORE_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.core_limit_temp_degC)
-		return CORE_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_two;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return CORE_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.core_limit_temp_degC)
-		return CORE_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_three;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return CORE_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.core_limit_temp_degC)
-		return CORE_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	tsens_dev.sensor_num = msm_thermal_info.sensor_id_four;
-	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (!temp) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
-				KBUILD_MODNAME, tsens_dev.sensor_num);
-		return CORE_FAIL;
-	}
-
-	if (temp >= msm_thermal_info.core_limit_temp_degC)
-		return CORE_TEMP_OVER;
-	else if (temp < delta)
-		safe++;
-
-	if (safe == SAFE_CONFIRMED)
-		return CORE_TEMP_SAFE;
-
-	return CORE_NO_ACTION;
 }
 
 static void __ref do_core_control(void)
 {
 	unsigned int cpu = smp_processor_id();
 	int ret = 0;
-	int core_temp;
+	unsigned int delta;
 
 	if ((!core_control_enabled) || (intelli_init() ||
 		 !hotplug_ready || thermal_suspended)) {
 		return;
 	}
 
-	mutex_lock(&core_control_mutex);
-	core_temp = evaluate_core_temp();
-	switch (core_temp) {
-		case CORE_FAIL:
-			goto resched;
-		case CORE_TEMP_OVER:
-			if (msm_thermal_info.core_control_mask) {
-				for (cpu = 3; cpu > 1; cpu--) {
-					if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
-						continue;
-					if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
-						continue;
-					ret = cpu_down(cpu);
-					if (ret)
-						pr_debug("cpu_down failed. you got problems\n");
-					cpus_offlined |= BIT(cpu);
-				}
-			}
-			break;
-		case CORE_TEMP_SAFE:
-			if (msm_thermal_info.core_control_mask && cpus_offlined) {
-				for (cpu = 1; cpu < 3; cpu++) {
-					if (!(cpus_offlined & BIT(cpu)))
-						continue;
-					/* If this core is already online, then bring up the
-					 * next offlined core.
-					 */
-					if (cpu_online(cpu))
-						continue;
-					if (!is_cpu_allowed(cpu))
-						continue;
-					ret = cpu_up(cpu);
-					if (ret)
-						pr_err("%s: Error %d online core %d\n",
-								KBUILD_MODNAME, ret, cpu);
-					cpus_offlined &= ~BIT(cpu);
-				}
-			}
-			break;
-		case CORE_NO_ACTION:
-			break;
-	}
+	ret = populate_temps();
+	if (ret)
+		return;
 
+	delta = (msm_thermal_info.core_limit_temp_degC -
+			 msm_thermal_info.core_temp_hysteresis_degC);
+
+	mutex_lock(&core_control_mutex);
+	if (msm_thermal_info.core_control_mask && 
+		(cpu_thermal_one >= msm_thermal_info.core_limit_temp_degC ||
+		 cpu_thermal_two >= msm_thermal_info.core_limit_temp_degC ||
+		 cpu_thermal_three >= msm_thermal_info.core_limit_temp_degC ||
+		 cpu_thermal_four >= msm_thermal_info.core_limit_temp_degC)) {
+		for (cpu = 3; cpu > 1; cpu--) {
+			if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
+				continue;
+			if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
+				continue;
+			ret = cpu_down(cpu);
+			if (ret)
+				pr_debug("cpu_down failed. you got problems\n");
+			cpus_offlined |= BIT(cpu);
+		}
+	} else if (msm_thermal_info.core_control_mask && cpus_offlined &&
+			((cpu_thermal_one <= delta) &&
+			   (cpu_thermal_two <= delta) &&
+			   (cpu_thermal_three <= delta) &&
+			   (cpu_thermal_four <= delta))) {
+		for (cpu = 1; cpu < 3; cpu++) {
+			if (!(cpus_offlined & BIT(cpu)))
+				continue;
+			/* If this core is already online, then bring up the
+			 * next offlined core.
+			 */
+			if (cpu_online(cpu))
+				continue;
+			if (!is_cpu_allowed(cpu))
+				continue;
+			ret = cpu_up(cpu);
+			if (ret)
+				pr_err("%s: Error %d online core %d\n",
+						KBUILD_MODNAME, ret, cpu);
+			cpus_offlined &= ~BIT(cpu);
+		}
+	}
 	mutex_unlock(&core_control_mutex);
-	return;
-resched:
-	mutex_unlock(&core_control_mutex);
-	mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
-		msecs_to_jiffies(msm_thermal_info.poll_ms));
 }
 
 static void __ref check_temp(struct work_struct *work)
@@ -597,8 +490,7 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 	} else {
 		if (!enabled) {
 			enabled = 1;
-			intellithermal_wq = alloc_ordered_workqueue("intellithermal",
-									WQ_MEM_RECLAIM | WQ_HIGHPRI);
+			intellithermal_wq = create_hipri_workqueue("intellithermal");
 			INIT_DELAYED_WORK(&check_temp_work, check_temp);
 			queue_delayed_work_on(0, intellithermal_wq,
 					   &check_temp_work, 0);
