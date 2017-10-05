@@ -106,8 +106,8 @@ int blkcipher_walk_done(struct blkcipher_desc *desc,
 	unsigned int nbytes = 0;
 
 #ifdef CONFIG_CRYPTO_FIPS
-    if (unlikely(in_fips_err())) 
-        return (-EACCES);
+	if (unlikely(in_fips_err())) 
+		return (-EACCES);
 #endif
 
 	if (likely(err >= 0)) {
@@ -328,19 +328,19 @@ static int blkcipher_walk_first(struct blkcipher_desc *desc,
 				struct blkcipher_walk *walk)
 {
 #ifdef CONFIG_CRYPTO_FIPS
-    if (unlikely(in_fips_err())) 
-        return (-EACCES);
+	if (unlikely(in_fips_err())) 
+		return (-EACCES);
 #endif
 
 	if (WARN_ON_ONCE(in_irq()))
 		return -EDEADLK;
 
-	walk->iv = desc->info;
 	walk->nbytes = walk->total;
 	if (unlikely(!walk->total))
 		return 0;
 
 	walk->buffer = NULL;
+	walk->iv = desc->info;
 	if (unlikely(((unsigned long)walk->iv & walk->alignmask))) {
 		int err = blkcipher_copy_iv(walk);
 		if (err)
@@ -436,8 +436,8 @@ static int async_encrypt(struct ablkcipher_request *req)
 	};
 
 #ifdef CONFIG_CRYPTO_FIPS
-    if (unlikely(in_fips_err())) 
-        return (-EACCES);
+	if (unlikely(in_fips_err())) 
+		return (-EACCES);
 #endif
 
 	return alg->encrypt(&desc, req->dst, req->src, req->nbytes);
@@ -454,8 +454,8 @@ static int async_decrypt(struct ablkcipher_request *req)
 	};
 
 #ifdef CONFIG_CRYPTO_FIPS
-    if (unlikely(in_fips_err())) 
-        return (-EACCES);
+	if (unlikely(in_fips_err())) 
+		return (-EACCES);
 #endif
 
 	return alg->decrypt(&desc, req->dst, req->src, req->nbytes);
@@ -620,8 +620,8 @@ struct crypto_instance *skcipher_geniv_alloc(struct crypto_template *tmpl,
 	int err;
 
 #ifdef CONFIG_CRYPTO_FIPS
-    if (unlikely(in_fips_err())) 
-        return ERR_PTR(-EACCES);
+	if (unlikely(in_fips_err())) 
+		return ERR_PTR(-EACCES);
 #endif
 
 	algt = crypto_get_attr_type(tb);
@@ -747,8 +747,8 @@ int skcipher_geniv_init(struct crypto_tfm *tfm)
 	struct crypto_ablkcipher *cipher;
 
 #ifdef CONFIG_CRYPTO_FIPS
-    if (unlikely(in_fips_err())) 
-        return (-EACCES);
+	if (unlikely(in_fips_err())) 
+		return (-EACCES);
 #endif
 
 	cipher = crypto_spawn_skcipher(crypto_instance_ctx(inst));
