@@ -597,8 +597,7 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 	} else {
 		if (!enabled) {
 			enabled = 1;
-			intellithermal_wq = alloc_ordered_workqueue("intellithermal",
-									WQ_MEM_RECLAIM | WQ_HIGHPRI);
+			intellithermal_wq = create_hipri_workqueue("intellithermal");
 			INIT_DELAYED_WORK(&check_temp_work, check_temp);
 			queue_delayed_work_on(0, intellithermal_wq,
 					   &check_temp_work, 0);
