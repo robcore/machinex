@@ -239,26 +239,6 @@ extern int cpumask_next_wrap(int n, const struct cpumask *mask, int start, bool 
 	[0] =  1UL						\
 }
 
-#define for_cpu_zero(mask)				\
-	for ((cpu) = -1;				\
-		(cpu) = cpumask_next((cpu), (mask)),	\
-		(cpu) < 1;)
-
-#define for_cpu_one(mask)				\
-	for ((cpu) = 0;				\
-		(cpu) = cpumask_next((cpu), (mask)),	\
-		(cpu) < 2;)
-
-#define for_cpu_two(mask)				\
-	for ((cpu) = 1;				\
-		(cpu) = cpumask_next((cpu), (mask)),	\
-		(cpu) < 3;)
-
-#define for_cpu_three(mask)				\
-	for ((cpu) = 2;				\
-		(cpu) = cpumask_next((cpu), (mask)),	\
-		(cpu) < 4;)
-
 /**
  * cpumask_set_cpu - set a cpu in a cpumask
  * @cpu: cpu number (< nr_cpu_ids)
