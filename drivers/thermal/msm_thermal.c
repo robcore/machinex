@@ -308,6 +308,7 @@ static void __ref do_freq_control(void)
 			hotplug_check_needed = true;
 			break;
 		case FREQ_TEMP_SAFE:
+		case FREQ_NO_ACTION: /*fall through*/
 			if (limit_idx == thermal_limit_high) {
 				hotplug_check_needed = false;
 				return;
@@ -321,8 +322,6 @@ static void __ref do_freq_control(void)
 				max_freq = table[limit_idx].frequency;
 				hotplug_check_needed = true;
 			}
-			break;
-		case FREQ_NO_ACTION:
 			break;
 	}
 
@@ -414,6 +413,7 @@ static void __ref do_core_control(void)
 			}
 			break;
 		case CORE_TEMP_SAFE:
+		case CORE_NO_ACTION: /*fall through*/
 			if (msm_thermal_info.core_control_mask && cpus_offlined) {
 				for (cpu = 1; cpu < 3; cpu++) {
 					if (!(cpus_offlined & BIT(cpu)))
