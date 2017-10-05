@@ -30,7 +30,7 @@
 #include <linux/ptrace.h>
 
 #include <linux/mutex.h>
-#include <linux/uaccess.h>
+#include <asm/uaccess.h>
 
 #include "util.h"
 
@@ -112,6 +112,9 @@ struct compat_shm_info {
 	compat_ulong_t shm_tot, shm_rss, shm_swp;
 	compat_ulong_t swap_attempts, swap_successes;
 };
+
+extern int sem_ctls[];
+#define sc_semopm	(sem_ctls[2])
 
 static inline int compat_ipc_parse_version(int *cmd)
 {
