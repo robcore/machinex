@@ -91,10 +91,14 @@ function adbcountdown()
 
 function ADBRETRY()
 {
+
 if [ -e adbtmp ]; then
 	rm adbtmp
+fi
+
 if [ -e devtmp ]; then
 	rm devtmp
+fi
 adb start-server
 adbcountdown
 adb shell input keyevent KEYCODE_WAKEUP;
@@ -133,8 +137,10 @@ else
 	adbcountdown
 	if [ -e adbtmp ]; then
 		rm adbtmp
+	fi
 	if [ -e devtmp ]; then
 		rm devtmp
+	fi
 	touch adbtmp
 	adb -a get-state >&1 > adbtmp
 	touch devtmp
