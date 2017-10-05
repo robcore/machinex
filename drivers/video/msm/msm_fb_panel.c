@@ -51,7 +51,6 @@ int panel_next_on(struct platform_device *pdev)
 				ret = next_pdata->on(next_pdev);
 		}
 	}
-	pr_info("MSM FB: Panel Next On\n");
 	return ret;
 }
 
@@ -74,7 +73,6 @@ int panel_next_off(struct platform_device *pdev)
 				ret = next_pdata->off(next_pdev);
 		}
 	}
-	pr_info("MSM FB: Panel Next Off\n");
 	return ret;
 }
 

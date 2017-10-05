@@ -124,6 +124,16 @@ skip:
 	return notifier_to_errno(ret);
 }
 
+void _send_post_power_suspend(void)
+{
+	prometheus_post_suspend_chain();
+}
+
+void _send_pre_power_resume(void)
+{
+	prometheus_pre_resume_chain();
+}
+
 bool prometheus_disabled_oom __read_mostly = false;
 static void prometheus_control_oom(bool disable)
 {
@@ -200,7 +210,6 @@ static void power_suspend(struct work_struct *work)
 	}
 	pr_info("[PROMETHEUS] Shallow Suspend Completed.\n");
 	mutex_unlock(&prometheus_mtx);
-	prometheus_post_suspend_chain();
 }
 
 static void power_resume(struct work_struct *work)
@@ -214,7 +223,6 @@ static void power_resume(struct work_struct *work)
 	}
 
 	cancel_work_sync(&power_suspend_work);
-	prometheus_pre_resume_chain();
 	pr_info("[PROMETHEUS] Entering Resume\n");
 	mutex_lock(&prometheus_mtx);
 	if (report_state()) {

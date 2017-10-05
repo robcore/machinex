@@ -210,7 +210,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		}
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
-		if (val)
 			kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel + val);
 	} else if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
@@ -227,7 +226,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		 * increase frequency. Otherwise run the normal algorithm.
 		 */
 		if (priv->bin.busy_time > ceiling) {
-			kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+			kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel - 1);
 			goto clear;
 		}
 
@@ -240,22 +239,19 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		gpu_stats.threshold = up_threshold;
 
 		if (pwr->active_pwrlevel == pwr->min_pwrlevel) {
-			if (pwr->active_pwrlevel > 0)
-				gpu_stats.threshold = up_threshold / pwr->active_pwrlevel;
-			else
-				gpu_stats.threshold = pwr->active_pwrlevel + down_threshold;
+				gpu_stats.threshold = up_threshold / pwr->active_pwrlevel + 1;
 		} else if (pwr->active_pwrlevel < pwr->min_pwrlevel &&
-					pwr->active_pwrlevel > pwr->max_pwrlevel) {
+					pwr->active_pwrlevel >= pwr->max_pwrlevel) {
 			gpu_stats.threshold = up_threshold - up_differential;
 		}
 
-		if (gpu_stats.load > gpu_stats.threshold) {
+		if (gpu_stats.load >= gpu_stats.threshold) {
 
 			if (pwr->active_pwrlevel > pwr->max_pwrlevel)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel - 1);
 
-		} else if (gpu_stats.load < down_threshold) {
+		} else {
 			if (pwr->active_pwrlevel < pwr->min_pwrlevel)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel + 1);
