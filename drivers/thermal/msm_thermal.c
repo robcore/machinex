@@ -20,6 +20,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/msm_tsens.h>
@@ -41,7 +42,7 @@ static int limit_init;
 static int enabled;
 
 static struct msm_thermal_data msm_thermal_info = {
-	.poll_ms = DEFAULT_POLLING_MS,
+	.poll_ms = 360,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 5,
 	.freq_step = 2,
@@ -50,7 +51,7 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
 };
-unsigned int up_freq_step = 4;
+
 extern unsigned int hlimit_max_screen_on;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
@@ -220,9 +221,8 @@ static void update_cpu_max_freq(unsigned long max_freq)
 #define SAFE_CONFIRMED 4
 
 enum {
-	FREQ_NO_ACTION = 0,
+	FREQ_TEMP_SAFE = 0,
 	FREQ_TEMP_OVER = 1,
-	FREQ_TEMP_SAFE = 2,
 };
 
 static int evaluate_freq_temp(void)
@@ -231,7 +231,7 @@ static int evaluate_freq_temp(void)
 	long temp;
 	int ret = 0;
 	uint32_t i;
-	unsigned int safe = 0, unsure = 0;
+	unsigned int safe = 0, fail = 0;
 	unsigned long delta;
 
 	if (thermal_suspended)
@@ -246,27 +246,24 @@ static int evaluate_freq_temp(void)
 		if (!temp) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
-
 			if (i < 10) {
-				unsure++;
+				fail++;
 				continue;
 			} else
 				break;
 		}
 
-		if (temp >= msm_thermal_info.limit_temp_degC)
+		if (temp >= msm_thermal_info.limit_temp_degC ||
+			temp > delta)
 			return FREQ_TEMP_OVER;
 		else if (temp <= delta)
 			safe++;
 	}
 
-	if (safe == SAFE_CONFIRMED)
+	if (!fail || safe > fail)
 		return FREQ_TEMP_SAFE;
 
-	if (safe + unsure >= SAFE_CONFIRMED)
-		return FREQ_TEMP_SAFE;
-
-	return FREQ_NO_ACTION;
+	return FREQ_TEMP_OVER;
 }
 
 static void __ref do_freq_control(void)
@@ -307,12 +304,11 @@ static void __ref do_freq_control(void)
 			hotplug_check_needed = true;
 			break;
 		case FREQ_TEMP_SAFE:
-		case FREQ_NO_ACTION: /*fall through*/
 			if (limit_idx == thermal_limit_high) {
 				hotplug_check_needed = false;
 				return;
 			}
-			limit_idx += up_freq_step;
+			limit_idx += msm_thermal_info.freq_step;
 			if (limit_idx >= thermal_limit_high) {
 				limit_idx = thermal_limit_high;
 				max_freq = policy.hlimit_max_screen_on;
@@ -333,10 +329,8 @@ static void __ref do_freq_control(void)
 }
 
 enum {
-	CORE_NO_ACTION = 0,
+	CORE_TEMP_SAFE = 0,
 	CORE_TEMP_OVER = 1,
-	CORE_TEMP_SAFE = 2,
-
 };
 
 static int evaluate_core_temp(void)
@@ -345,7 +339,7 @@ static int evaluate_core_temp(void)
 	long temp = 0;
 	int ret = 0;
 	uint32_t i;
-	unsigned int safe = 0, unsure = 0;
+	unsigned int safe = 0, fail = 0;
 	unsigned long delta;
 
 	if (thermal_suspended)
@@ -361,7 +355,7 @@ static int evaluate_core_temp(void)
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
 			if (i > 7) {
-				unsure++;
+				fail++;
 				continue;
 			} else
 				break;
@@ -371,13 +365,10 @@ static int evaluate_core_temp(void)
 		else if (temp <= delta)
 			safe++;
 	}
-	if (safe == SAFE_CONFIRMED)
+	if (!fail || safe > fail)
 		return CORE_TEMP_SAFE;
 
-	if (safe + unsure >= SAFE_CONFIRMED)
-		return CORE_TEMP_SAFE;
-
-	return CORE_NO_ACTION;
+	return CORE_TEMP_OVER;
 }
 
 static void __ref do_core_control(void)
@@ -412,7 +403,6 @@ static void __ref do_core_control(void)
 			}
 			break;
 		case CORE_TEMP_SAFE:
-		case CORE_NO_ACTION: /*fall through*/
 			if (msm_thermal_info.core_control_mask && cpus_offlined) {
 				for (cpu = 1; cpu < 3; cpu++) {
 					if (!(cpus_offlined & BIT(cpu)))
@@ -722,11 +712,12 @@ static struct notifier_block msm_thermal_pm_notifier = {
 	.notifier_call = msm_thermal_pm_event,
 };
 
-int __init msm_thermal_init(struct msm_thermal_data *pdata)
+int __init msm_thermal_init(void)
 {
-	BUG_ON(!pdata);
-	memcpy(&msm_thermal_info, pdata, sizeof(*pdata));
-
+	struct msm_thermal_data *msm_thermal_info;
+	msm_thermal_info = kzalloc(sizeof(struct msm_thermal_data), GFP_KERNEL);
+	if (!msm_thermal_info)
+		return -ENOMEM;
 	enabled = 1;
 	mutex_init(&core_control_mutex);
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
