@@ -86,21 +86,15 @@ function countdown()
 
 function adbcountdown()
 {
-	echo "4"
-	sleep 1
-	echo "3"
-	sleep 1
-	echo "2"
-	sleep 1
-	echo "1"
-	sleep 1
+	echo "countdown start"
+	sleep 3
+	echo "countdown end"
 }
 
 function ADBRETRY()
 {
 ONLINE=`adb get-state 2> /dev/null`
 ADBTYPE=`adb get-devpath 2> /dev/null`
-adb kill-server
 adbcountdown
 adb start-server
 adbcountdown
@@ -110,7 +104,7 @@ if [ "$ONLINE" = "recovery" ]; then #if we are in recovery
 		adb push $1 /external_sd;
 		echo "push complete"
 		adb kill-server
-elif [ "$ADBTYPE" = "usb:5-4" ]; then
+elif [ "$ONLINE" = "device" ]; then #if we are in recovery
 		echo "connected"
 		echo "pushing $1"
 		adb shell su -c "input keyevent KEYCODE_WAKEUP"
