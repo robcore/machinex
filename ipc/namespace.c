@@ -26,16 +26,17 @@ static struct ipc_namespace *create_ipc_ns(struct user_namespace *user_ns,
 	if (ns == NULL)
 		return ERR_PTR(-ENOMEM);
 
-	err = proc_alloc_inum(&ns->ns.inum);
+	err = ns_alloc_inum(&ns->ns);
 	if (err) {
 		kfree(ns);
 		return ERR_PTR(err);
 	}
+	ns->ns.ops = &ipcns_operations;
 
 	atomic_set(&ns->count, 1);
 	err = mq_init_ns(ns);
 	if (err) {
-		proc_free_inum(ns->ns.inum);
+		ns_free_inum(&ns->ns);
 		kfree(ns);
 		return ERR_PTR(err);
 	}
@@ -119,7 +120,7 @@ static void free_ipc_ns(struct ipc_namespace *ns)
 	 */
 	ipcns_notify(IPCNS_REMOVED);
 	put_user_ns(ns->user_ns);
-	proc_free_inum(ns->ns.inum);
+	ns_free_inum(&ns->ns);
 	kfree(ns);
 }
 
@@ -154,7 +155,7 @@ static inline struct ipc_namespace *to_ipc_ns(struct ns_common *ns)
 	return container_of(ns, struct ipc_namespace, ns);
 }
 
-static void *ipcns_get(struct task_struct *task)
+static struct ns_common *ipcns_get(struct task_struct *task)
 {
 	struct ipc_namespace *ns = NULL;
 	struct nsproxy *nsproxy;
@@ -168,12 +169,12 @@ static void *ipcns_get(struct task_struct *task)
 	return ns ? &ns->ns : NULL;
 }
 
-static void ipcns_put(void *ns)
+static void ipcns_put(struct ns_common *ns)
 {
 	return put_ipc_ns(to_ipc_ns(ns));
 }
 
-static int ipcns_install(struct nsproxy *nsproxy, void *new)
+static int ipcns_install(struct nsproxy *nsproxy, struct ns_common *new)
 {
 	struct ipc_namespace *ns = to_ipc_ns(new);
 	if (!ns_capable(ns->user_ns, CAP_SYS_ADMIN) ||
@@ -187,16 +188,10 @@ static int ipcns_install(struct nsproxy *nsproxy, void *new)
 	return 0;
 }
 
-static unsigned int ipcns_inum(void *vp)
-{
-	return ((struct ns_common *)vp)->inum;
-}
-
 const struct proc_ns_operations ipcns_operations = {
 	.name		= "ipc",
 	.type		= CLONE_NEWIPC,
 	.get		= ipcns_get,
 	.put		= ipcns_put,
 	.install	= ipcns_install,
-	.inum		= ipcns_inum,
 };

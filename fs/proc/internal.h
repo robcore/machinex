@@ -65,6 +65,11 @@ struct proc_maps_private {
 #endif
 };
 
+struct proc_ns {
+	struct ns_common *ns;
+	const struct proc_ns_operations *ns_ops;
+};
+
 struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode);
 
 

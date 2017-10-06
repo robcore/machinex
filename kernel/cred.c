@@ -38,6 +38,14 @@ struct cred init_cred = {
 	.subscribers		= ATOMIC_INIT(2),
 	.magic			= CRED_MAGIC,
 #endif
+	.uid			= GLOBAL_ROOT_UID,
+	.gid			= GLOBAL_ROOT_GID,
+	.suid			= GLOBAL_ROOT_UID,
+	.sgid			= GLOBAL_ROOT_GID,
+	.euid			= GLOBAL_ROOT_UID,
+	.egid			= GLOBAL_ROOT_GID,
+	.fsuid			= GLOBAL_ROOT_UID,
+	.fsgid			= GLOBAL_ROOT_GID,
 	.securebits		= SECUREBITS_DEFAULT,
 	.cap_inheritable	= CAP_EMPTY_SET,
 	.cap_permitted		= CAP_FULL_SET,
@@ -364,6 +372,31 @@ error_put:
 	return ret;
 }
 
+static bool cred_cap_issubset(const struct cred *set, const struct cred *subset)
+{
+	const struct user_namespace *set_ns = set->user_ns;
+	const struct user_namespace *subset_ns = subset->user_ns;
+
+	/* If the two credentials are in the same user namespace see if
+	 * the capabilities of subset are a subset of set.
+	 */
+	if (set_ns == subset_ns)
+		return cap_issubset(subset->cap_permitted, set->cap_permitted);
+
+	/* The credentials are in a different user namespaces
+	 * therefore one is a subset of the other only if a set is an
+	 * ancestor of subset and set->euid is owner of subset or one
+	 * of subsets ancestors.
+	 */
+	for (;subset_ns != &init_user_ns; subset_ns = subset_ns->parent) {
+		if ((set_ns == subset_ns->parent)  &&
+		    uid_eq(subset_ns->owner, set->euid))
+			return true;
+	}
+
+	return false;
+}
+
 /**
  * commit_creds - Install new credentials upon the current task
  * @new: The credentials to be assigned
@@ -398,11 +431,11 @@ int commit_creds(struct cred *new)
 	get_cred(new); /* we will require a ref for the subj creds too */
 
 	/* dumpability changes */
-	if (old->euid != new->euid ||
-	    old->egid != new->egid ||
-	    old->fsuid != new->fsuid ||
-	    old->fsgid != new->fsgid ||
-	    !cap_issubset(new->cap_permitted, old->cap_permitted)) {
+	if (!uid_eq(old->euid, new->euid) ||
+	    !gid_eq(old->egid, new->egid) ||
+	    !uid_eq(old->fsuid, new->fsuid) ||
+	    !gid_eq(old->fsgid, new->fsgid) ||
+	    !cred_cap_issubset(old, new)) {
 		if (task->mm)
 			set_dumpable(task->mm, suid_dumpable);
 		task->pdeath_signal = 0;
@@ -410,9 +443,9 @@ int commit_creds(struct cred *new)
 	}
 
 	/* alter the thread keyring */
-	if (new->fsuid != old->fsuid)
+	if (!uid_eq(new->fsuid, old->fsuid))
 		key_fsuid_changed(task);
-	if (new->fsgid != old->fsgid)
+	if (!gid_eq(new->fsgid, old->fsgid))
 		key_fsgid_changed(task);
 
 	/* do it
@@ -429,16 +462,16 @@ int commit_creds(struct cred *new)
 	alter_cred_subscribers(old, -2);
 
 	/* send notifications */
-	if (new->uid   != old->uid  ||
-	    new->euid  != old->euid ||
-	    new->suid  != old->suid ||
-	    new->fsuid != old->fsuid)
+	if (!uid_eq(new->uid,   old->uid)  ||
+	    !uid_eq(new->euid,  old->euid) ||
+	    !uid_eq(new->suid,  old->suid) ||
+	    !uid_eq(new->fsuid, old->fsuid))
 		proc_id_connector(task, PROC_EVENT_UID);
 
-	if (new->gid   != old->gid  ||
-	    new->egid  != old->egid ||
-	    new->sgid  != old->sgid ||
-	    new->fsgid != old->fsgid)
+	if (!gid_eq(new->gid,   old->gid)  ||
+	    !gid_eq(new->egid,  old->egid) ||
+	    !gid_eq(new->sgid,  old->sgid) ||
+	    !gid_eq(new->fsgid, old->fsgid))
 		proc_id_connector(task, PROC_EVENT_GID);
 
 	/* release the old obj and subj refs both */
@@ -694,9 +727,15 @@ static void dump_invalid_creds(const struct cred *cred, const char *label,
 	       atomic_read(&cred->usage),
 	       read_cred_subscribers(cred));
 	printk(KERN_ERR "CRED: ->*uid = { %d,%d,%d,%d }\n",
-	       cred->uid, cred->euid, cred->suid, cred->fsuid);
+		from_kuid_munged(&init_user_ns, cred->uid),
+		from_kuid_munged(&init_user_ns, cred->euid),
+		from_kuid_munged(&init_user_ns, cred->suid),
+		from_kuid_munged(&init_user_ns, cred->fsuid));
 	printk(KERN_ERR "CRED: ->*gid = { %d,%d,%d,%d }\n",
-	       cred->gid, cred->egid, cred->sgid, cred->fsgid);
+		from_kgid_munged(&init_user_ns, cred->gid),
+		from_kgid_munged(&init_user_ns, cred->egid),
+		from_kgid_munged(&init_user_ns, cred->sgid),
+		from_kgid_munged(&init_user_ns, cred->fsgid));
 #ifdef CONFIG_SECURITY
 	printk(KERN_ERR "CRED: ->security is %p\n", cred->security);
 	if ((unsigned long) cred->security >= PAGE_SIZE &&

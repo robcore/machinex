@@ -42,11 +42,13 @@ static struct uts_namespace *clone_uts_ns(struct user_namespace *user_ns,
 	if (!ns)
 		return ERR_PTR(-ENOMEM);
 
-	err = proc_alloc_inum(&ns->ns.inum);
+	err = ns_alloc_inum(&ns->ns);
 	if (err) {
 		kfree(ns);
 		return ERR_PTR(err);
 	}
+
+	ns->ns.ops = &utsns_operations;
 
 	down_read(&uts_sem);
 	memcpy(&ns->name, &old_ns->name, sizeof(ns->name));
@@ -84,7 +86,7 @@ void free_uts_ns(struct kref *kref)
 
 	ns = container_of(kref, struct uts_namespace, kref);
 	put_user_ns(ns->user_ns);
-	proc_free_inum(ns->ns.inum);
+	ns_free_inum(&ns->ns);
 	kfree(ns);
 }
 
@@ -93,7 +95,7 @@ static inline struct uts_namespace *to_uts_ns(struct ns_common *ns)
 	return container_of(ns, struct uts_namespace, ns);
 }
 
-static void *utsns_get(struct task_struct *task)
+static struct ns_common *utsns_get(struct task_struct *task)
 {
 	struct uts_namespace *ns = NULL;
 	struct nsproxy *nsproxy;
@@ -109,12 +111,12 @@ static void *utsns_get(struct task_struct *task)
 	return ns ? &ns->ns : NULL;
 }
 
-static void utsns_put(void *ns)
+static void utsns_put(struct ns_common *ns)
 {
 	put_uts_ns(to_uts_ns(ns));
 }
 
-static int utsns_install(struct nsproxy *nsproxy, void *new)
+static int utsns_install(struct nsproxy *nsproxy, struct ns_common *new)
 {
 	struct uts_namespace *ns = to_uts_ns(new);
 
@@ -128,16 +130,10 @@ static int utsns_install(struct nsproxy *nsproxy, void *new)
 	return 0;
 }
 
-static unsigned int utsns_inum(void *vp)
-{
-	return ((struct ns_common *)vp)->inum;
-}
-
 const struct proc_ns_operations utsns_operations = {
 	.name		= "uts",
 	.type		= CLONE_NEWUTS,
 	.get		= utsns_get,
 	.put		= utsns_put,
 	.install	= utsns_install,
-	.inum		= utsns_inum,
 };
