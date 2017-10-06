@@ -131,7 +131,7 @@ static bool set_one_prio_perm(struct task_struct *p)
 	if (pcred->user_ns == cred->user_ns &&
 	    (pcred->uid  == cred->euid ||
 	     pcred->euid == cred->euid))
-z		return true;
+		return true;
 	if (ns_capable(pcred->user_ns, CAP_SYS_NICE))
 		return true;
 	return false;
