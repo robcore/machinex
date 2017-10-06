@@ -1539,7 +1539,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 
 	if (pid != &init_struct_pid) {
 		pid = alloc_pid(p->nsproxy->pid_ns);
-		if (IS_ERR(pid)) {
+		if (IS_ERR_OR_NULL(pid)) {
 			retval = PTR_ERR(pid);
 			goto bad_fork_cleanup_thread;
 		}
@@ -1749,7 +1749,7 @@ static inline void init_idle_pids(struct pid_link *links)
 	}
 }
 
-struct task_struct * fork_idle(int cpu)
+struct task_struct *fork_idle(int cpu)
 {
 	struct task_struct *task;
 	task = copy_process(CLONE_VM, 0, 0, NULL, &init_struct_pid, 0);
@@ -1812,10 +1812,15 @@ long do_fork(unsigned long clone_flags,
 	 */
 	if (!IS_ERR(p)) {
 		struct completion vfork;
+		struct pid *pid;
 
 		trace_sched_process_fork(current, p);
 
-		nr = task_pid_vnr(p);
+		pid = get_task_pid(p, PIDTYPE_PID);
+		if (pid)
+			nr = pid_vnr(pid);
+		else
+			nr = task_pid_vnr(p);
 
 		if (clone_flags & CLONE_PARENT_SETTID)
 			put_user(nr, parent_tidptr);
@@ -1836,6 +1841,8 @@ long do_fork(unsigned long clone_flags,
 			if (!wait_for_vfork_done(p, &vfork))
 				ptrace_event(PTRACE_EVENT_VFORK_DONE, nr);
 		}
+		if (pid)
+			put_pid(pid);
 	} else {
 		nr = PTR_ERR(p);
 	}
@@ -1858,7 +1865,7 @@ SYSCALL_DEFINE0(fork)
 	return do_fork(SIGCHLD, 0, 0, NULL, NULL);
 #else
 	/* can not support in nommu mode */
-	return(-EINVAL);
+	return -EINVAL;
 #endif
 }
 #endif
@@ -1974,7 +1981,7 @@ static int check_unshare_flags(unsigned long unshare_flags)
 {
 	if (unshare_flags & ~(CLONE_THREAD|CLONE_FS|CLONE_NEWNS|CLONE_SIGHAND|
 				CLONE_VM|CLONE_FILES|CLONE_SYSVSEM|
-				CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWNET
+				CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWNET|
 				CLONE_NEWUSER|CLONE_NEWPID))
 		return -EINVAL;
 	/*
@@ -2047,15 +2054,30 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 	int do_sysvsem = 0;
 	int err;
 
-	err = check_unshare_flags(unshare_flags);
-	if (err)
-		goto bad_unshare_out;
-
+	/*
+	 * If unsharing a user namespace must also unshare the thread.
+	 */
+	if (unshare_flags & CLONE_NEWUSER)
+		unshare_flags |= CLONE_THREAD | CLONE_FS;
+	/*
+	 * If unsharing a thread from a thread group, must also unshare vm.
+	 */
+	if (unshare_flags & CLONE_THREAD)
+		unshare_flags |= CLONE_VM;
+	/*
+	 * If unsharing vm, must also unshare signal handlers.
+	 */
+	if (unshare_flags & CLONE_VM)
+		unshare_flags |= CLONE_SIGHAND;
 	/*
 	 * If unsharing namespace, must also unshare filesystem information.
 	 */
 	if (unshare_flags & CLONE_NEWNS)
 		unshare_flags |= CLONE_FS;
+
+	err = check_unshare_flags(unshare_flags);
+	if (err)
+		goto bad_unshare_out;
 	/*
 	 * CLONE_NEWIPC must also detach from the undolist: after switching
 	 * to a new ipc namespace, the semaphore arrays from the old
@@ -2119,7 +2141,6 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 bad_unshare_cleanup_cred:
 	if (new_cred)
 		put_cred(new_cred);
-
 bad_unshare_cleanup_fd:
 	if (new_fd)
 		put_files_struct(new_fd);
