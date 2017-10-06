@@ -578,7 +578,7 @@ struct pid *find_ge_pid(int nr, struct pid_namespace *ns)
 void __init pidhash_init(void)
 {
 	pid_hash = alloc_large_system_hash("PID", sizeof(*pid_hash), 0, 18,
-					   HASH_EARLY | HASH_SMALL | HASH_ZERO,
+					   HASH_EARLY | HASH_SMALL,
 					   &pidhash_shift, NULL,
 					   0, 4096);
 }
