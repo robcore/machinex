@@ -88,7 +88,7 @@ int create_user_ns(struct cred *new)
 		return ret;
 	}
 
-	kref_init(&ns->kref);
+	atomic_set(&ns->count, 1);
 	/* Leave the new->user_ns reference with the new user namespace. */
 	ns->parent = parent_ns;
 	ns->owner = owner;
@@ -130,16 +130,18 @@ int unshare_userns(unsigned long unshare_flags, struct cred **new_cred)
 	return create_user_ns(cred);
 }
 
-void free_user_ns(struct kref *kref)
+void free_user_ns(struct user_namespace *ns)
 {
-	struct user_namespace *ns =
-		container_of(kref, struct user_namespace, kref);
+	struct user_namespace *parent;
 
-	INIT_WORK(&ns->destroyer, free_user_ns_work);
-	schedule_work(&ns->destroyer);
+	do {
+		parent = ns->parent;
+		proc_free_inum(ns->proc_inum);
+		kmem_cache_free(user_ns_cachep, ns);
+		ns = parent;
+	} while (atomic_dec_and_test(&parent->count));
 }
-EXPORT_SYMBOL(free_user_ns);
-
+ EXPORT_SYMBOL(free_user_ns);
 static u32 map_id_range_down(struct uid_gid_map *map, u32 id, u32 count)
 {
 	unsigned idx, extents;
