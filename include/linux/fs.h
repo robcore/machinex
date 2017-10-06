@@ -12,7 +12,6 @@
 #include <linux/list.h>
 #include <linux/list_lru.h>
 #include <linux/export.h>
-#include <linux/llist.h>
 #include <linux/radix-tree.h>
 #include <linux/rbtree.h>
 #include <linux/init.h>
@@ -31,8 +30,6 @@
 #include <linux/lockdep.h>
 #include <linux/percpu-rwsem.h>
 #include <linux/blk_types.h>
-#include <linux/workqueue.h>
-#include <linux/percpu-rwsem.h>
 
 #include <asm/byteorder.h>
 #include <uapi/linux/fs.h>
@@ -661,7 +658,6 @@ struct inode {
 		struct pipe_inode_info	*i_pipe;
 		struct block_device	*i_bdev;
 		struct cdev		*i_cdev;
-		char			*i_link;
 	};
 
 	__u32			i_generation;
@@ -1230,9 +1226,6 @@ struct mm_struct;
 #define UMOUNT_NOFOLLOW	0x00000008	/* Don't follow symlink on umount */
 #define UMOUNT_UNUSED	0x80000000	/* Flag guaranteed to be unused */
 
-/* sb->s_iflags */
-#define SB_I_CGROUPWB	0x00000001	/* cgroup-aware writeback enabled */
-#define SB_I_NOEXEC	0x00000002	/* Ignore executables on this fs */
 
 /* Possible states of 'frozen' field */
 enum {
@@ -1271,7 +1264,6 @@ struct super_block {
 	const struct quotactl_ops	*s_qcop;
 	const struct export_operations *s_export_op;
 	unsigned long		s_flags;
-	unsigned long		s_iflags;	/* internal SB_I_* flags */
 	unsigned long		s_magic;
 	struct dentry		*s_root;
 	struct rw_semaphore	s_umount;
@@ -1991,6 +1983,7 @@ extern int vfs_ustat(dev_t, struct kstatfs *);
 extern int freeze_super(struct super_block *super);
 extern int thaw_super(struct super_block *super);
 extern bool our_mnt(struct vfsmount *mnt);
+extern bool fs_fully_visible(struct file_system_type *);
 
 extern int current_umask(void);
 
@@ -2667,9 +2660,6 @@ enum {
 
 	/* filesystem can handle aio writes beyond i_size */
 	DIO_ASYNC_EXTEND = 0x04,
-
-	/* inode/fs/bdev does not need truncate protection */
-	DIO_SKIP_DIO_COUNT = 0x08,
 };
 
 void dio_end_io(struct bio *bio, int error);
@@ -2707,7 +2697,7 @@ extern int __page_symlink(struct inode *inode, const char *symname, int len,
 		int nofs);
 extern int page_symlink(struct inode *inode, const char *symname, int len);
 extern const struct inode_operations page_symlink_inode_operations;
-extern void kfree_put_link(struct inode *, void *);
+extern void kfree_put_link(struct dentry *, struct nameidata *, void *);
 extern int generic_readlink(struct dentry *, char __user *, int);
 extern void generic_fillattr(struct inode *, struct kstat *);
 int vfs_getattr_nosec(struct path *path, struct kstat *stat);
@@ -2778,8 +2768,6 @@ extern struct dentry *simple_lookup(struct inode *, struct dentry *, unsigned in
 extern ssize_t generic_read_dir(struct file *, char __user *, size_t, loff_t *);
 extern const struct file_operations simple_dir_operations;
 extern const struct inode_operations simple_dir_inode_operations;
-extern void make_empty_dir_inode(struct inode *inode);
-extern bool is_empty_dir_inode(struct inode *inode);
 struct tree_descr { char *name; const struct file_operations *ops; int mode; };
 struct dentry *d_alloc_name(struct dentry *, const char *);
 extern int simple_fill_super(struct super_block *, unsigned long, struct tree_descr *);

@@ -105,10 +105,9 @@ static struct pid_namespace *create_pid_namespace(struct user_namespace *user_ns
 	if (ns->pid_cachep == NULL)
 		goto out_free_map;
 
-	err = ns_alloc_inum(&ns->ns);
+	err = proc_alloc_inum(&ns->proc_inum);
 	if (err)
 		goto out_free_map;
-	ns->ns.ops = &pidns_operations;
 
 	kref_init(&ns->kref);
 	ns->level = level;
@@ -142,7 +141,7 @@ static void destroy_pid_namespace(struct pid_namespace *ns)
 {
 	int i;
 
-	ns_free_inum(&ns->ns);
+	proc_free_inum(ns->proc_inum);
 	for (i = 0; i < PIDMAP_ENTRIES; i++)
 		kfree(ns->pidmap[i].page);
 	put_user_ns(ns->user_ns);
@@ -297,68 +296,6 @@ int reboot_pid_ns(struct pid_namespace *pid_ns, int cmd)
 	/* Not reached */
 	return 0;
 }
-
-static inline struct pid_namespace *to_pid_ns(struct ns_common *ns)
-{
-	return container_of(ns, struct pid_namespace, ns);
-}
-
-static struct ns_common *pidns_get(struct task_struct *task)
-{
-	struct pid_namespace *ns;
-
-	rcu_read_lock();
-	ns = task_active_pid_ns(task);
-	if (ns)
-		get_pid_ns(ns);
-	rcu_read_unlock();
-
-	return ns ? &ns->ns : NULL;
-}
-
-static void pidns_put(struct ns_common *ns)
-{
-	put_pid_ns(to_pid_ns(ns));
-}
-
-static int pidns_install(struct nsproxy *nsproxy, struct ns_common *ns)
-{
-	struct pid_namespace *active = task_active_pid_ns(current);
-	struct pid_namespace *ancestor, *new = to_pid_ns(ns);
-
-	if (!ns_capable(new->user_ns, CAP_SYS_ADMIN) ||
-	    !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
-		return -EPERM;
-
-	/*
-	 * Only allow entering the current active pid namespace
-	 * or a child of the current active pid namespace.
-	 *
-	 * This is required for fork to return a usable pid value and
-	 * this maintains the property that processes and their
-	 * children can not escape their current pid namespace.
-	 */
-	if (new->level < active->level)
-		return -EINVAL;
-
-	ancestor = new;
-	while (ancestor->level > active->level)
-		ancestor = ancestor->parent;
-	if (ancestor != active)
-		return -EINVAL;
-
-	put_pid_ns(nsproxy->pid_ns_for_children);
-	nsproxy->pid_ns_for_children = get_pid_ns(new);
-	return 0;
-}
-
-const struct proc_ns_operations pidns_operations = {
-	.name		= "pid",
-	.type		= CLONE_NEWPID,
-	.get		= pidns_get,
-	.put		= pidns_put,
-	.install	= pidns_install,
-};
 
 static __init int pid_namespaces_init(void)
 {

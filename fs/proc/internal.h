@@ -65,22 +65,6 @@ struct proc_maps_private {
 #endif
 };
 
-struct proc_inode {
-	struct pid *pid;
-	int fd;
-	union proc_op op;
-	struct proc_dir_entry *pde;
-	struct ctl_table_header *sysctl;
-	struct ctl_table *sysctl_entry;
-	const struct proc_ns_operations *ns_ops;
-	struct inode vfs_inode;
-};
-
-struct proc_ns {
-	struct ns_common *ns;
-	const struct proc_ns_operations *ns_ops;
-};
-
 struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode);
 
 

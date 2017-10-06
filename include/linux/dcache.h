@@ -162,9 +162,6 @@ struct dentry_operations {
 	char *(*d_dname)(struct dentry *, char *, int);
 	struct vfsmount *(*d_automount)(struct path *);
 	int (*d_manage)(struct dentry *, bool);
-	struct inode *(*d_select_inode)(struct dentry *, unsigned);
-	void (*d_canonical_path)(const struct path *, struct path *);
-	struct dentry *(*d_real)(struct dentry *, struct inode *);
 } ____cacheline_aligned;
 
 /*
@@ -220,19 +217,14 @@ struct dentry_operations {
 #define DCACHE_LRU_LIST			0x00080000
 
 #define DCACHE_ENTRY_TYPE		0x00700000
-#define DCACHE_MISS_TYPE		0x00000000 /* Negative dentry (maybe fallthru to nowhere) */
-#define DCACHE_WHITEOUT_TYPE		0x00100000 /* Whiteout dentry (stop pathwalk) */
-#define DCACHE_DIRECTORY_TYPE		0x00200000 /* Normal directory */
-#define DCACHE_AUTODIR_TYPE		0x00300000 /* Lookupless directory (presumed automount) */
+#define DCACHE_MISS_TYPE		0x00000000 /* Negative dentry */
+#define DCACHE_DIRECTORY_TYPE		0x00100000 /* Normal directory */
+#define DCACHE_AUTODIR_TYPE		0x00200000 /* Lookupless directory (presumed automount) */
 #define DCACHE_REGULAR_TYPE		0x00400000 /* Regular file type (or fallthru to such) */
 #define DCACHE_SPECIAL_TYPE		0x00500000 /* Other file type (or fallthru to such) */
 #define DCACHE_SYMLINK_TYPE		0x00600000 /* Symlink (or fallthru to such) */
 
 #define DCACHE_MAY_FREE			0x00800000
-#define DCACHE_FALLTHRU			0x01000000 /* Fall through to lower layer */
-#define DCACHE_OP_SELECT_INODE		0x02000000 /* Unioned entry: dcache op selects inode */
-#define DCACHE_OP_REAL			0x08000000
-#define DCACHE_WILL_INVALIDATE		0x80000000 /* will be invalidated */
 
 extern seqlock_t rename_lock;
 
@@ -254,7 +246,6 @@ extern struct dentry * d_splice_alias(struct inode *, struct dentry *);
 extern struct dentry * d_add_ci(struct dentry *, struct inode *, struct qstr *);
 extern struct dentry *d_find_any_alias(struct inode *inode);
 extern struct dentry * d_obtain_alias(struct inode *);
-extern struct dentry * d_obtain_root(struct inode *);
 extern void shrink_dcache_sb(struct super_block *);
 extern void shrink_dcache_parent(struct dentry *);
 extern void shrink_dcache_for_umount(struct super_block *);
@@ -434,16 +425,6 @@ static inline unsigned __d_entry_type(const struct dentry *dentry)
 	return dentry->d_flags & DCACHE_ENTRY_TYPE;
 }
 
-static inline bool d_is_miss(const struct dentry *dentry)
-{
-	return __d_entry_type(dentry) == DCACHE_MISS_TYPE;
-}
-
-static inline bool d_is_whiteout(const struct dentry *dentry)
-{
-	return __d_entry_type(dentry) == DCACHE_WHITEOUT_TYPE;
-}
-
 static inline bool d_can_lookup(const struct dentry *dentry)
 {
 	return __d_entry_type(dentry) == DCACHE_DIRECTORY_TYPE;
@@ -481,8 +462,7 @@ static inline bool d_is_file(const struct dentry *dentry)
 
 static inline bool d_is_negative(const struct dentry *dentry)
 {
-	// TODO: check d_is_whiteout(dentry) also.
-	return d_is_miss(dentry);
+	return __d_entry_type(dentry) == DCACHE_MISS_TYPE;
 }
 
 static inline bool d_is_positive(const struct dentry *dentry)
@@ -490,63 +470,7 @@ static inline bool d_is_positive(const struct dentry *dentry)
 	return !d_is_negative(dentry);
 }
 
-/**
- * d_really_is_negative - Determine if a dentry is really negative (ignoring fallthroughs)
- * @dentry: The dentry in question
- *
- * Returns true if the dentry represents either an absent name or a name that
- * doesn't map to an inode (ie. ->d_inode is NULL).  The dentry could represent
- * a true miss, a whiteout that isn't represented by a 0,0 chardev or a
- * fallthrough marker in an opaque directory.
- *
- * Note!  (1) This should be used *only* by a filesystem to examine its own
- * dentries.  It should not be used to look at some other filesystem's
- * dentries.  (2) It should also be used in combination with d_inode() to get
- * the inode.  (3) The dentry may have something attached to ->d_lower and the
- * type field of the flags may be set to something other than miss or whiteout.
- */
-static inline bool d_really_is_negative(const struct dentry *dentry)
-{
-	return dentry->d_inode == NULL;
-}
-
-/**
- * d_really_is_positive - Determine if a dentry is really positive (ignoring fallthroughs)
- * @dentry: The dentry in question
- *
- * Returns true if the dentry represents a name that maps to an inode
- * (ie. ->d_inode is not NULL).  The dentry might still represent a whiteout if
- * that is represented on medium as a 0,0 chardev.
- *
- * Note!  (1) This should be used *only* by a filesystem to examine its own
- * dentries.  It should not be used to look at some other filesystem's
- * dentries.  (2) It should also be used in combination with d_inode() to get
- * the inode.
- */
-static inline bool d_really_is_positive(const struct dentry *dentry)
-{
-	return dentry->d_inode != NULL;
-}
-
-static inline int simple_positive(struct dentry *dentry)
-{
-	return d_really_is_positive(dentry) && !d_unhashed(dentry);
-}
-
-extern void d_set_fallthru(struct dentry *dentry);
-
-static inline bool d_is_fallthru(const struct dentry *dentry)
-{
-	return dentry->d_flags & DCACHE_FALLTHRU;
-}
-
-
 extern int sysctl_vfs_cache_pressure;
-
-static inline unsigned long vfs_pressure_ratio(unsigned long val)
-{
-	return mult_frac(val, sysctl_vfs_cache_pressure, 100);
-}
 
 /**
  * d_inode - Get the actual inode of this dentry
@@ -604,36 +528,8 @@ static inline struct dentry *d_backing_dentry(struct dentry *upper)
 	return upper;
 }
 
-static inline struct dentry *d_real(struct dentry *dentry)
+static inline unsigned long vfs_pressure_ratio(unsigned long val)
 {
-	if (unlikely(dentry->d_flags & DCACHE_OP_REAL))
-		return dentry->d_op->d_real(dentry, NULL);
-	else
-		return dentry;
+	return mult_frac(val, sysctl_vfs_cache_pressure, 100);
 }
-
-static inline struct inode *vfs_select_inode(struct dentry *dentry,
-					     unsigned open_flags)
-{
-	struct inode *inode = d_inode(dentry);
-
-	if (inode && unlikely(dentry->d_flags & DCACHE_OP_SELECT_INODE))
-		inode = dentry->d_op->d_select_inode(dentry, open_flags);
-
-	return inode;
-}
-
-/**
- * d_real_inode - Return the real inode
- * @dentry: The dentry to query
- *
- * If dentry is on an union/overlay, then return the underlying, real inode.
- * Otherwise return d_inode().
- */
-static inline struct inode *d_real_inode(struct dentry *dentry)
-{
-	return d_backing_inode(d_real(dentry));
-}
-
-
 #endif	/* __LINUX_DCACHE_H */
