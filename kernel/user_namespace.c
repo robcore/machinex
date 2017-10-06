@@ -858,7 +858,7 @@ static bool new_idmap_permitted(const struct file *file,
 	return false;
 }
 
-static void *userns_get(struct task_struct *task)
+static struct ns_common *userns_get(struct task_struct *task)
 {
 	struct user_namespace *user_ns;
 
@@ -866,17 +866,17 @@ static void *userns_get(struct task_struct *task)
 	user_ns = get_user_ns(__task_cred(task)->user_ns);
 	rcu_read_unlock();
 
-	return user_ns;
+	return user_ns ? &user_ns->ns : NULL;
 }
 
-static void userns_put(void *ns)
+static void userns_put(struct ns_common *ns)
 {
-	put_user_ns(ns);
+	put_user_ns(to_user_ns(ns));
 }
 
-static int userns_install(struct nsproxy *nsproxy, void *ns)
+static int userns_install(struct nsproxy *nsproxy, struct ns_common *ns)
 {
-	struct user_namespace *user_ns = ns;
+	struct user_namespace *user_ns = to_user_ns(ns);
 	struct cred *cred;
 
 	/* Don't allow gaining capabilities by reentering
@@ -885,8 +885,8 @@ static int userns_install(struct nsproxy *nsproxy, void *ns)
 	if (user_ns == current_user_ns())
 		return -EINVAL;
 
-	/* Threaded processes may not enter a different user namespace */
-	if (atomic_read(&current->mm->mm_users) > 1)
+	/* Tasks that share a thread group must share a user namespace */
+	if (!thread_group_empty(current))
 		return -EINVAL;
 
 	if (current->fs->users != 1)
@@ -905,10 +905,27 @@ static int userns_install(struct nsproxy *nsproxy, void *ns)
 	return commit_creds(cred);
 }
 
-static unsigned int userns_inum(void *ns)
+struct ns_common *ns_get_owner(struct ns_common *ns)
 {
-	struct user_namespace *user_ns = ns;
-	return user_ns->ns.inum;
+	struct user_namespace *my_user_ns = current_user_ns();
+	struct user_namespace *owner, *p;
+
+	/* See if the owner is in the current user namespace */
+	owner = p = ns->ops->owner(ns);
+	for (;;) {
+		if (!p)
+			return ERR_PTR(-EPERM);
+		if (p == my_user_ns)
+			break;
+		p = p->parent;
+	}
+
+	return &get_user_ns(owner)->ns;
+}
+
+static struct user_namespace *userns_owner(struct ns_common *ns)
+{
+	return to_user_ns(ns)->parent;
 }
 
 const struct proc_ns_operations userns_operations = {
@@ -917,7 +934,8 @@ const struct proc_ns_operations userns_operations = {
 	.get		= userns_get,
 	.put		= userns_put,
 	.install	= userns_install,
-	.inum		= userns_inum,
+	.owner		= userns_owner,
+	.get_parent	= ns_get_owner,
 };
 
 static __init int user_namespaces_init(void)

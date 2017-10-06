@@ -73,28 +73,16 @@ struct pid_namespace init_pid_ns = {
 		[ 0 ... PIDMAP_ENTRIES-1] = { ATOMIC_INIT(BITS_PER_PAGE), NULL }
 	},
 	.last_pid = 0,
-	.nr_hashed = 1,
+	.nr_hashed = PIDNS_HASH_ADDING,
 	.level = 0,
 	.child_reaper = &init_task,
 	.user_ns = &init_user_ns,
 	.ns.inum = PROC_PID_INIT_INO,
+#ifdef CONFIG_PID_NS
+	.ns.ops = &pidns_operations,
+#endif
 };
 EXPORT_SYMBOL_GPL(init_pid_ns);
-
-int is_container_init(struct task_struct *tsk)
-{
-	int ret = 0;
-	struct pid *pid;
-
-	rcu_read_lock();
-	pid = task_pid(tsk);
-	if (pid != NULL && pid->numbers[pid->level].nr == 1)
-		ret = 1;
-	rcu_read_unlock();
-
-	return ret;
-}
-EXPORT_SYMBOL(is_container_init);
 
 /*
  * Note: disable interrupts while the pidmap_lock is held as an
@@ -275,9 +263,26 @@ void free_pid(struct pid *pid)
 	spin_lock_irqsave(&pidmap_lock, flags);
 	for (i = 0; i <= pid->level; i++) {
 		struct upid *upid = pid->numbers + i;
+		struct pid_namespace *ns = upid->ns;
 		hlist_del_rcu(&upid->pid_chain);
-		if (--upid->ns->nr_hashed == 0)
-			schedule_work(&upid->ns->proc_work);
+		switch(--ns->nr_hashed) {
+		case 2:
+		case 1:
+			/* When all that is left in the pid namespace
+			 * is the reaper wake up the reaper.  The reaper
+			 * may be sleeping in zap_pid_ns_processes().
+			 */
+			wake_up_process(ns->child_reaper);
+			break;
+		case PIDNS_HASH_ADDING:
+			/* Handle a fork failure of the first process */
+			WARN_ON(ns->child_reaper);
+			ns->nr_hashed = 0;
+			/* fall through */
+		case 0:
+			schedule_work(&ns->proc_work);
+			break;
+		}
 	}
 	spin_unlock_irqrestore(&pidmap_lock, flags);
 
@@ -298,14 +303,16 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 
 	pid = kmem_cache_alloc(ns->pid_cachep, GFP_KERNEL);
 	if (!pid)
-		goto out;
+		return ERR_PTR(retval);
 
 	tmp = ns;
 	pid->level = ns->level;
 	for (i = ns->level; i >= 0; i--) {
 		nr = alloc_pidmap(tmp);
-		if (nr < 0)
+		if (nr < 0) {
+			retval = nr;
 			goto out_free;
+		}
 
 		pid->numbers[i].nr = nr;
 		pid->numbers[i].ns = tmp;
@@ -313,8 +320,10 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 	}
 
 	if (unlikely(is_child_reaper(pid))) {
-		if (pid_ns_prepare_proc(ns))
+		if (pid_ns_prepare_proc(ns)) {
+			disable_pid_allocation(ns);
 			goto out_free;
+		}
 	}
 
 	get_pid_ns(ns);
@@ -324,6 +333,8 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 
 	upid = pid->numbers + ns->level;
 	spin_lock_irq(&pidmap_lock);
+	if (!(ns->nr_hashed & PIDNS_HASH_ADDING))
+		goto out_unlock;
 	for ( ; upid >= pid->numbers; --upid) {
 		hlist_add_head_rcu(&upid->pid_chain,
 				&pid_hash[pid_hashfn(upid->nr, upid->ns)]);
@@ -331,16 +342,25 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 	}
 	spin_unlock_irq(&pidmap_lock);
 
-out:
 	return pid;
+
+out_unlock:
+	spin_unlock_irq(&pidmap_lock);
+	put_pid_ns(ns);
 
 out_free:
 	while (++i <= ns->level)
 		free_pidmap(pid->numbers + i);
 
 	kmem_cache_free(ns->pid_cachep, pid);
-	pid = NULL;
-	goto out;
+	return ERR_PTR(retval);
+}
+
+void disable_pid_allocation(struct pid_namespace *ns)
+{
+	spin_lock_irq(&pidmap_lock);
+	ns->nr_hashed &= ~PIDNS_HASH_ADDING;
+	spin_unlock_irq(&pidmap_lock);
 }
 
 struct pid *find_pid_ns(int nr, struct pid_namespace *ns)
@@ -489,6 +509,7 @@ pid_t pid_nr_ns(struct pid *pid, struct pid_namespace *ns)
 	}
 	return nr;
 }
+EXPORT_SYMBOL_GPL(pid_nr_ns);
 
 pid_t pid_vnr(struct pid *pid)
 {
@@ -505,8 +526,11 @@ pid_t __task_pid_nr_ns(struct task_struct *task, enum pid_type type,
 	if (!ns)
 		ns = task_active_pid_ns(current);
 	if (likely(pid_alive(task))) {
-		if (type != PIDTYPE_PID)
+		if (type != PIDTYPE_PID) {
+			if (type == __PIDTYPE_TGID)
+				type = PIDTYPE_PID;
 			task = task->group_leader;
+		}
 		nr = pid_nr_ns(rcu_dereference(task->pids[type].pid), ns);
 	}
 	rcu_read_unlock();
@@ -553,20 +577,17 @@ struct pid *find_ge_pid(int nr, struct pid_namespace *ns)
  */
 void __init pidhash_init(void)
 {
-	unsigned int i, pidhash_size;
-
 	pid_hash = alloc_large_system_hash("PID", sizeof(*pid_hash), 0, 18,
-					   HASH_EARLY | HASH_SMALL,
+					   HASH_EARLY | HASH_SMALL | HASH_ZERO,
 					   &pidhash_shift, NULL,
 					   0, 4096);
-	pidhash_size = 1U << pidhash_shift;
-
-	for (i = 0; i < pidhash_size; i++)
-		INIT_HLIST_HEAD(&pid_hash[i]);
 }
 
 void __init pidmap_init(void)
 {
+	/* Verify no one has done anything silly: */
+	BUILD_BUG_ON(PID_MAX_LIMIT >= PIDNS_HASH_ADDING);
+
 	/* bump default and minimum pid_max based on number of cpus */
 	pid_max = min(pid_max_max, max_t(int, pid_max,
 				PIDS_PER_CPU_DEFAULT * num_possible_cpus()));
@@ -580,5 +601,5 @@ void __init pidmap_init(void)
 	atomic_dec(&init_pid_ns.pidmap[0].nr_free);
 
 	init_pid_ns.pid_cachep = KMEM_CACHE(pid,
-			SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+			SLAB_HWCACHE_ALIGN | SLAB_PANIC | SLAB_ACCOUNT);
 }
