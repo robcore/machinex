@@ -174,10 +174,8 @@ static void __init adjust_reserve_sizes(void)
 	for (i = 0; i < MEMTYPE_MAX; i++, mt++) {
 		if (mt->flags & MEMTYPE_FLAGS_1M_ALIGN)
 			mt->size = (mt->size + SECTION_SIZE - 1) & SECTION_MASK;
-		if (mt->size > mt->limit) {
-			pr_debug("Yo this reserve size is too damn big, mang. Reducing.");
+		if (mt->size > mt->limit)
 			mt->size = mt->limit;
-		}
 	}
 }
 
@@ -274,9 +272,6 @@ void __init msm_reserve(void)
 
 static int get_ebi_memtype(void)
 {
-	/* on 7x30 and 8x55 "EBI1 kernel PMEM" is really on EBI0 */
-	if (cpu_is_msm7x30() || cpu_is_msm8x55())
-		return MEMTYPE_EBI0;
 	return MEMTYPE_EBI1;
 }
 

@@ -3,7 +3,7 @@
 #
 # 14 Sep 2000, Christoph Hellwig <hch@infradead.org>
 # Rewritten to use lists instead of if-statements.
-# 
+#
 
 obj-y :=	open.o read_write.o file_table.o super.o \
 		char_dev.o stat.o exec.o pipe.o namei.o fcntl.o \
@@ -11,7 +11,7 @@ obj-y :=	open.o read_write.o file_table.o super.o \
 		attr.o bad_inode.o file.o filesystems.o namespace.o \
 		seq_file.o xattr.o libfs.o fs-writeback.o \
 		pnode.o splice.o sync.o utimes.o \
-		stack.o fs_struct.o statfs.o fs_pin.o
+		stack.o fs_struct.o statfs.o fs_pin.o nsfs.o
 
 ifeq ($(CONFIG_BLOCK),y)
 obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
@@ -62,11 +62,14 @@ obj-$(CONFIG_DLM)		+= dlm/
 # Do not add any filesystems before this line
 obj-$(CONFIG_FSCACHE)		+= fscache/
 obj-$(CONFIG_REISERFS_FS)	+= reiserfs/
-obj-$(CONFIG_EXT3_FS)		+= ext3/ # Before ext2 so root fs can be ext3
-obj-$(CONFIG_EXT2_FS)		+= ext2/
-# We place ext4 after ext2 so plain ext2 root fs's are mounted using ext2
-# unless explicitly requested by rootfstype
 obj-$(CONFIG_EXT4_FS)		+= ext4/
+obj-$(CONFIG_SDCARD_FS)		+= sdcardfs/
+obj-$(CONFIG_EXT3_FS)		+= ext3/ # Before ext2 so root fs can be ext3
+
+# We place ext4 before ext2 so that clean ext3 root fs's do NOT mount using the
+# ext2 driver, which doesn't know about journalling!  Explicitly request ext2
+# by giving the rootfstype= parameter.
+obj-$(CONFIG_EXT2_FS)		+= ext2/
 obj-$(CONFIG_JBD)		+= jbd/
 obj-$(CONFIG_JBD2)		+= jbd2/
 obj-$(CONFIG_CRAMFS)		+= cramfs/
@@ -82,7 +85,7 @@ obj-$(CONFIG_ISO9660_FS)	+= isofs/
 obj-$(CONFIG_HFSPLUS_FS)	+= hfsplus/ # Before hfs to find wrapped HFS+
 obj-$(CONFIG_HFS_FS)		+= hfs/
 obj-$(CONFIG_ECRYPT_FS)		+= ecryptfs/
-obj-$(CONFIG_SDCARD_FS)		+= sdcardfs/
+
 obj-$(CONFIG_VXFS_FS)		+= freevxfs/
 obj-$(CONFIG_NFS_FS)		+= nfs/
 obj-$(CONFIG_EXPORTFS)		+= exportfs/
