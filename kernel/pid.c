@@ -298,16 +298,14 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 
 	pid = kmem_cache_alloc(ns->pid_cachep, GFP_KERNEL);
 	if (!pid)
-		return ERR_PTR(retval);
+		goto out;
 
 	tmp = ns;
 	pid->level = ns->level;
 	for (i = ns->level; i >= 0; i--) {
 		nr = alloc_pidmap(tmp);
-		if (IS_ERR_VALUE(nr)) {
-			retval = nr;
+		if (nr < 0)
 			goto out_free;
-		}
 
 		pid->numbers[i].nr = nr;
 		pid->numbers[i].ns = tmp;
@@ -333,6 +331,7 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 	}
 	spin_unlock_irq(&pidmap_lock);
 
+out:
 	return pid;
 
 out_free:
@@ -340,7 +339,8 @@ out_free:
 		free_pidmap(pid->numbers + i);
 
 	kmem_cache_free(ns->pid_cachep, pid);
-	return ERR_PTR(retval);
+	pid = NULL;
+	goto out;
 }
 
 struct pid *find_pid_ns(int nr, struct pid_namespace *ns)
