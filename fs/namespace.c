@@ -1298,17 +1298,14 @@ static HLIST_HEAD(unmounted);	/* protected by namespace_sem */
 
 static void namespace_unlock(void)
 {
-	struct hlist_head head = unmounted;
+	struct hlist_head head;
 
-	if (likely(hlist_empty(&head))) {
-		up_write(&namespace_sem);
-		return;
-	}
-
-	head.first->pprev = &head.first;
-	INIT_HLIST_HEAD(&unmounted);
+	hlist_move_list(&unmounted, &head);
 
 	up_write(&namespace_sem);
+
+	if (likely(hlist_empty(&head)))
+		return;
 
 	synchronize_rcu_expedited();
 
