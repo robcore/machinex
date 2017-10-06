@@ -407,6 +407,9 @@ static void evaluate_temp(bool for_cc)
 			else if (temp <= delta)
 				safe++;
 		}
+
+		if (safe == SAFE_CONFIRMED)
+			return;
 	
 		if (!fail || safe > fail)
 			do_freq_control(FREQ_TEMP_SAFE);
