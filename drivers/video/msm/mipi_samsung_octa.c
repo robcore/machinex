@@ -660,9 +660,15 @@ static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata;
 	struct msm_fb_data_type *mfd;
 
-	mfd = platform_get_drvdata(pdev);
+	if (!pdev)
+		return;
 
 	if (pdev->id != 0)
+		return;
+
+	mfd = platform_get_drvdata(pdev);
+
+	if (!mfd)
 		return;
 
 	mipi_dsi_pdata = dev_get_platdata(&pdev->dev);
@@ -672,8 +678,7 @@ static void mipi_samsung_disp_shutdown(struct platform_device *pdev)
 		return;
 	}
 
-	if (mfd)
-		mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
+	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
 }
 
 static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
