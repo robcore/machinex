@@ -67,7 +67,7 @@ void *wlan_static_dhd_info_buf;
 
 #ifdef ENABLE_4335BT_WAR
 static int bt_off = 0;
-extern int bt_is_running;
+extern unsigned int bt_is_running;
 #endif /* ENABLE_4335BT_WAR */
 
 static void *brcm_wlan_mem_prealloc(int section, unsigned long size)

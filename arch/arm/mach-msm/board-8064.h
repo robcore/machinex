@@ -128,6 +128,7 @@ int msm8960_get_cable_status(void);
 extern int poweroff_charging;
 
 extern unsigned int system_rev;
+extern unsigned int bt_is_running;
 
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXTS)
 extern void __init mxt540s_tsp_input_init(void);

@@ -32,6 +32,7 @@
 #include <linux/platform_device.h>
 #include <linux/rfkill.h>
 #include <linux/wakelock.h>
+#include <linux/sysfs.h>
 
 #include <asm/mach-types.h>
 
@@ -66,7 +67,7 @@
 #define GPIO_BT_HOST_WAKE BT_HOST_WAKE
 
 #if defined(CONFIG_BCM4335) || defined(CONFIG_BCM4335_MODULE)
-int bt_is_running=0;
+unsigned int bt_is_running = 0;
 #endif
 
 EXPORT_SYMBOL(bt_is_running);
@@ -249,6 +250,27 @@ static const struct rfkill_ops bcm4335_bt_rfkill_ops = {
 	.set_block = bcm4335_bt_rfkill_set_power,
 };
 
+#define show_bluetooth(object)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object);			\
+}
+
+show_bluetooth(bt_is_running);
+MX_ATTR_RO(bt_is_running);
+
+static struct attribute *mx_bt_attrs[] = {
+	&bt_is_running_attr.attr,
+	NULL,
+};
+
+static struct attribute_group mx_bt_attr_group = {
+	.attrs = mx_bt_attrs,
+};
+
+static struct kobject *mx_bt_kobj;
+
 static int bcm4335_bluetooth_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -303,6 +325,14 @@ static int bcm4335_bluetooth_probe(struct platform_device *pdev)
 
 	rfkill_set_sw_state(bt_rfkill, true);
 
+	mx_bt_kobj = kobject_create_and_add("mx_bt", mx_kobj);
+	rc = sysfs_create_group(mx_bt_kobj, &mx_bt_attr_group);
+	if (rc) {
+		pr_err("Failed to create mx_bt kobject!\n");
+		kobject_put(mx_bt_kobj);
+		rc = 0;
+	}
+
 	return rc;
 }
 
@@ -337,6 +367,8 @@ static void __exit bcm4335_bluetooth_exit(void)
 #endif
 	platform_driver_unregister(&bcm4335_bluetooth_platform_driver);
 }
+
+
 
 module_init(bcm4335_bluetooth_init);
 module_exit(bcm4335_bluetooth_exit);
