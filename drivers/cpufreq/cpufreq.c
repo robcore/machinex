@@ -1653,46 +1653,6 @@ static int cpufreq_online(unsigned int cpu)
 		}
 	}
 
-	/*
-	 * Sometimes boot loaders set CPU frequency to a value outside of
-	 * frequency table present with cpufreq core. In such cases CPU might be
-	 * unstable if it has to run on that frequency for long duration of time
-	 * and so its better to set it to a frequency which is specified in
-	 * freq-table. This also makes cpufreq stats inconsistent as
-	 * cpufreq-stats would fail to register because current frequency of CPU
-	 * isn't found in freq-table.
-	 *
-	 * Because we don't want this change to effect boot process badly, we go
-	 * for the next freq which is >= policy->cur ('cur' must be set by now,
-	 * otherwise we will end up setting freq to lowest of the table as 'cur'
-	 * is initialized to zero).
-	 *
-	 * We are passing target-freq as "policy->cur - 1" otherwise
-	 * __cpufreq_driver_target() would simply fail, as policy->cur will be
-	 * equal to target-freq.
-	 */
-	if ((cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK)
-	    && has_target()) {
-		/* Are we running at unknown frequency ? */
-		ret = cpufreq_frequency_table_get_index(policy, policy->cur);
-		if (ret == -EINVAL) {
-			/* Warn user and fix it */
-			pr_warn("%s: CPU%d: Running at unlisted freq: %u KHz\n",
-				__func__, policy->cpu, policy->cur);
-			ret = __cpufreq_driver_target(policy, policy->cur - 1,
-				CPUFREQ_RELATION_L);
-
-			/*
-			 * Reaching here after boot in a few seconds may not
-			 * mean that system will remain stable at "unknown"
-			 * frequency for longer duration. Hence, a BUG_ON().
-			 */
-			BUG_ON(ret);
-			pr_warn("%s: CPU%d: Unlisted initial frequency changed to: %u KHz\n",
-				__func__, policy->cpu, policy->cur);
-		}
-	}
-
 	if (new_policy) {
 		ret = cpufreq_add_dev_interface(policy);
 		if (ret)
@@ -1782,7 +1742,7 @@ static int cpufreq_offline(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
-	if (has_target())
+	if (has_target() && !cpufreq_suspended)
 		cpufreq_stop_governor(policy);
 
 	cpumask_clear_cpu(cpu, policy->cpus);
@@ -1812,18 +1772,8 @@ static int cpufreq_offline(unsigned int cpu)
 	if (cpufreq_driver->stop_cpu)
 		cpufreq_driver->stop_cpu(policy);
 
-	if (has_target())
+	if (has_target() && !cpufreq_suspended)
 		cpufreq_exit_governor(policy);
-
-	/*
-	 * Perform the ->exit() even during light-weight tear-down,
-	 * since this is a core component, and is essential for the
-	 * subsequent light-weight ->init() to succeed.
-	 */
-	if (cpufreq_driver->exit) {
-		cpufreq_driver->exit(policy);
-		policy->freq_table = NULL;
-	}
 
 unlock:
 	up_write(&policy->rwsem);
@@ -2627,12 +2577,6 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
 		 policy->min, policy->max);
-
-	if (cpufreq_driver->setpolicy) {
-		policy->policy = new_policy->policy;
-		pr_debug("setting range\n");
-		return cpufreq_driver->setpolicy(new_policy);
-	}
 
 	if (new_policy->governor == policy->governor) {
 		pr_debug("cpufreq: governor limits update\n");
