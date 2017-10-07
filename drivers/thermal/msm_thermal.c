@@ -255,10 +255,7 @@ static int evaluate_freq_temp(void)
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
 			fail++;
-			if (i < 10) {
-				continue;
-			} else
-				break;
+			continue;
 		}
 
 		if (temp >= msm_thermal_info.limit_temp_degC ||
@@ -368,10 +365,7 @@ static int evaluate_core_temp(void)
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
 			fail++;
-			if (i > 7) {
 				continue;
-			} else
-				break;
 		}
 		if (temp >= msm_thermal_info.core_limit_temp_degC)
 			return CORE_TEMP_OVER;
