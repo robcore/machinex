@@ -88,9 +88,15 @@ function adbcountdown()
 {
 	sleep 4
 }
+wakeme() {
+	adb shell input keyevent KEYCODE_WAKEUP 2> /dev/null)
+}
 
-function ADBRETRY()
-{
+function ADBRETRY() {
+RECOV=recovery
+DEVS=device
+USBB=usb:5-4
+UNKNOW=unknown
 
 if [ -e adbtmp ]; then
 	rm adbtmp
@@ -101,18 +107,17 @@ if [ -e devtmp ]; then
 fi
 adb start-server
 adbcountdown
-adb shell input keyevent KEYCODE_WAKEUP;
 touch adbtmp
 adb -a get-state >&1 > adbtmp
 touch devtmp
 adb -a get-devpath >&1 > devtmp
-RECOV=recovery
-DEVS=device
-USBB=usb:5-4
-UNKNOW=unknown
 #dev=$(cat adbtmp 2>&1); echo $dev;
 ONLINE=$(cat adbtmp >&1)
 DEVICE=$(cat devtmp >&1)
+
+if [[ $ONLINE != $RECOV ]]; then
+	wakeme
+fi
 if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
@@ -122,7 +127,7 @@ if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "connected"
 		echo "pushing $1"
-		adb shell su -c "input keyevent KEYCODE_WAKEUP"
+		adb shell input keyevent KEYCODE_WAKEUP;
 		sleep 1
 		adb shell su -c "input touchscreen swipe 930 880 930 380"
 		sleep 1
@@ -153,6 +158,8 @@ else
 	else
 		echo "Failed!"
 	fi;
+rm adbtmp
+rm devtmp
 fi
 }
 
