@@ -1693,10 +1693,6 @@ static int cpufreq_online(unsigned int cpu)
 		policy = cpufreq_policy_alloc(cpu);
 		if (!policy)
 			return -ENOMEM;
-		if (alloc_count < NR_CPUS) {
-			pr_info("%s: Allocating CPU%u Policy\n", __func__, cpu);
-			alloc_count++;
-		}
 	}
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
