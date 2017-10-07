@@ -66,7 +66,7 @@ struct interactive_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 
 	/* The sample rate of the timer used to increase frequency */
@@ -82,6 +82,7 @@ struct interactive_tunables {
 
 	/* Non-zero means indefinite speed boost active */
 	int boost;
+#define DEFAULT_BOOST_TIME (40 * USEC_PER_MSEC)
 	/* Duration of a boot pulse in usecs */
 	int boostpulse_duration;
 	/* End time of boost pulse in ktime converted to usecs */
@@ -92,7 +93,7 @@ struct interactive_tunables {
 	 * Max additional time to wait in idle, beyond sampling_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (4 * DEFAULT_SAMPLING_RATE)
+#define DEFAULT_TIMER_SLACK (40 * USEC_PER_MSEC)
 	unsigned long timer_slack_delay;
 	unsigned long timer_slack;
 };
@@ -144,7 +145,7 @@ static spinlock_t speedchange_cpumask_lock;
 #define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_SAMPLING_RATE (10 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY
@@ -910,27 +911,10 @@ static ssize_t store_boostpulse(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
-static ssize_t store_boostpulse_duration(struct gov_attr_set *attr_set,
-					 const char *buf, size_t count)
-{
-	struct interactive_tunables *tunables = to_tunables(attr_set);
-	unsigned long val;
-	int ret;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	tunables->boostpulse_duration = val;
-
-	return count;
-}
-
 show_one(go_hispeed_load, "%lu");
 show_one(min_sample_time, "%lu");
 show_one(timer_slack, "%lu");
 show_one(boost, "%u");
-show_one(boostpulse_duration, "%u");
 
 gov_attr_rw(target_loads);
 gov_attr_rw(above_hispeed_delay);
@@ -940,7 +924,6 @@ gov_attr_rw(timer_rate);
 gov_attr_rw(timer_slack);
 gov_attr_rw(boost);
 gov_attr_wo(boostpulse);
-gov_attr_rw(boostpulse_duration);
 
 static struct attribute *interactive_attributes[] = {
 	&target_loads.attr,
@@ -1162,7 +1145,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	tunables->target_loads = default_target_loads;
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
-	tunables->boostpulse_duration = DEFAULT_MIN_SAMPLE_TIME;
+	tunables->boostpulse_duration = DEFAULT_BOOST_TIME;
 	tunables->sampling_rate = DEFAULT_SAMPLING_RATE;
 	tunables->timer_slack = DEFAULT_TIMER_SLACK;
 	update_slack_delay(tunables);
