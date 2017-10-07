@@ -31,7 +31,7 @@
 #include "power.h"
 
 #define VERSION 6
-#define VERSION_MIN 2
+#define VERSION_MIN 1
 
 static DEFINE_MUTEX(prometheus_mtx);
 static DEFINE_SPINLOCK(ps_state_lock);
@@ -128,7 +128,6 @@ static void power_suspend(struct work_struct *work)
 	}
 
 	intelli_suspend_booster();
-	cpufreq_hardlimit_suspend();
 
 	pr_info("[PROMETHEUS] Suspending\n");
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
@@ -136,6 +135,7 @@ static void power_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 	}
+
 	prometheus_override = false;
 
 	if (limit_screen_off_cpus)
@@ -171,8 +171,6 @@ static void power_resume(struct work_struct *work)
 
 	if (limit_screen_off_cpus)
 		unlock_screen_off_cpus();
-
-	cpufreq_hardlimit_resume();
 
 	pr_info("[PROMETHEUS] Resuming\n");
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
