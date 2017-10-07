@@ -29,8 +29,7 @@
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
-#include <trace/events/power.h>
-#include <linux/powersuspend.h>
+#include <linux/prometheus.h>
 
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
@@ -435,8 +434,6 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 		if (!(cpufreq_driver->flags & CPUFREQ_CONST_LOOPS)) {
 			if ((policy) && (policy->cpu == freqs->cpu) &&
 			    (policy->cur) && (policy->cur != freqs->old)) {
-				pr_debug("Warning: CPU frequency is %u, cpufreq assumed %u kHz\n",
-					 freqs->old, policy->cur);
 				freqs->old = policy->cur;
 			}
 		}
@@ -447,9 +444,6 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 
 	case CPUFREQ_POSTCHANGE:
 		adjust_jiffies(CPUFREQ_POSTCHANGE, freqs);
-		pr_debug("FREQ: %lu - CPU: %lu\n",
-			 (unsigned long)freqs->new, (unsigned long)freqs->cpu);
-		trace_cpu_frequency(freqs->new, freqs->cpu);
 		cpufreq_stats_record_transition(policy, freqs->new);
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
@@ -680,14 +674,8 @@ static ssize_t store_boost(struct kobject *kobj, struct attribute *attr,
 	if (ret != 1 || enable < 0 || enable > 1)
 		return -EINVAL;
 
-	if (cpufreq_boost_trigger_state(enable)) {
-		pr_err("%s: Cannot %s BOOST!\n",
-		       __func__, enable ? "enable" : "disable");
+	if (cpufreq_boost_trigger_state(enable))
 		return -EINVAL;
-	}
-
-	pr_debug("%s: cpufreq BOOST %s\n",
-		 __func__, enable ? "enabled" : "disabled");
 
 	return count;
 }
@@ -806,36 +794,28 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 /* Powersuspend callback functions                                                */
 /* ------------------------------------------------------------------------------ */
 
-static void cpufreq_hardlimit_suspend(struct power_suspend *h)
+void cpufreq_hardlimit_suspend(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 
-	for_each_possible_cpu(policy->cpu) {
-		reapply_hard_limits(policy->cpu);
+	for_each_possible_cpu(cpu) {
+		reapply_hard_limits(cpu);
 		return;
 	}
 }
 
-static void cpufreq_hardlimit_resume(struct power_suspend *h)
+void cpufreq_hardlimit_resume(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
 
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
-	for_each_possible_cpu(policy->cpu) {
-		reapply_hard_limits(policy->cpu);
+	for_each_possible_cpu(cpu) {
+		reapply_hard_limits(cpu);
 		return;
 	}
 }
-
-static struct power_suspend cpufreq_hardlimit_suspend_data =
-{
-	.suspend = cpufreq_hardlimit_suspend,
-	.resume = cpufreq_hardlimit_resume,
-};
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
 /**
  * cpufreq_per_cpu_attr_read() / show_##file_name() -
@@ -2951,10 +2931,6 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	hp_online = ret;
 	ret = 0;
 
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-	register_power_suspend(&cpufreq_hardlimit_suspend_data);
-#endif
-
 	pr_info("driver %s up and running\n", driver_data->name);
 	goto out;
 
@@ -2994,9 +2970,6 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 	subsys_interface_unregister(&cpufreq_interface);
 	remove_boost_sysfs_file();
 	cpuhp_remove_state_nocalls_cpuslocked(hp_online);
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-	unregister_power_suspend(&cpufreq_hardlimit_suspend_data);
-#endif
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 
