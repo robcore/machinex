@@ -111,5 +111,6 @@ bool android_os_ws(void);
 extern bool prometheus_disabled_oom;
 extern bool prometheus_override;
 void intelli_suspend_booster(void);
-
+extern void cpufreq_hardlimit_suspend(void);
+extern void cpufreq_hardlimit_resume(void);
 #endif

@@ -24,10 +24,11 @@
 #include <linux/powersuspend.h>
 #include <linux/spinlock.h>
 #include <linux/sysfs_helpers.h>
+#include "../../arch/arm/mach-msm/acpuclock.h"
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	4
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -289,7 +290,7 @@ static int measure_freqs(void)
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (cpufreq_generic_get(cpu) >=
+		if (acpuclk_get_rate(cpu) >=
 			high_load_threshold)
 			freq_load += 1;
 		else

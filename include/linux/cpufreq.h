@@ -220,7 +220,6 @@ void disable_cpufreq(void);
 u64 get_cpu_idle_time(unsigned int cpu, u64 *wall);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 void cpufreq_update_policy(unsigned int cpu);
-bool have_governor_per_policy(void);
 struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy);
 void cpufreq_enable_fast_switch(struct cpufreq_policy *policy);
 void cpufreq_disable_fast_switch(struct cpufreq_policy *policy);
@@ -240,17 +239,10 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
 static inline void disable_cpufreq(void) { }
 #endif
 
-#ifdef CONFIG_CPU_FREQ_STAT
 void cpufreq_stats_create_table(struct cpufreq_policy *policy);
 void cpufreq_stats_free_table(struct cpufreq_policy *policy);
 void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
 				     unsigned int new_freq);
-#else
-static inline void cpufreq_stats_create_table(struct cpufreq_policy *policy) { }
-static inline void cpufreq_stats_free_table(struct cpufreq_policy *policy) { }
-static inline void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
-						   unsigned int new_freq) { }
-#endif /* CONFIG_CPU_FREQ_STAT */
 
 /*********************************************************************
  *                      CPUFREQ DRIVER INTERFACE                     *
@@ -382,14 +374,6 @@ struct cpufreq_driver {
 						   transitions */
 #define CPUFREQ_PM_NO_WARN	(1 << 2)	/* don't warn on suspend/resume
 						   speed mismatches */
-
-/*
- * This should be set by platforms having multiple clock-domains, i.e.
- * supporting multiple policies. With this sysfs directories of governor would
- * be created in cpu/cpu<num>/cpufreq/ directory and so they can use the same
- * governor with different tunables for different clusters.
- */
-#define CPUFREQ_HAVE_GOVERNOR_PER_POLICY (1 << 3)
 
 /*
  * Driver will do POSTCHANGE notifications from outside of their ->target()
@@ -548,8 +532,6 @@ struct cpufreq_governor {
 };
 
 /* Pass a target to the cpufreq driver */
-unsigned int cpufreq_driver_fast_switch(struct cpufreq_policy *policy,
-					unsigned int target_freq);
 int cpufreq_driver_target(struct cpufreq_policy *policy,
 				 unsigned int target_freq,
 				 unsigned int relation);
