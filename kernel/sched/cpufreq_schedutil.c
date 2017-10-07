@@ -458,10 +458,6 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 	struct cpufreq_policy *policy = sg_policy->policy;
 	int ret;
 
-	/* kthread only required for slow path */
-	if (policy->fast_switch_enabled)
-		return 0;
-
 	kthread_init_work(&sg_policy->work, sugov_work);
 	kthread_init_worker(&sg_policy->worker);
 	thread = kthread_create(kthread_worker_fn, &sg_policy->worker,
@@ -482,8 +478,7 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 	sg_policy->thread = thread;
 
 	/* Kthread is bound to all CPUs by default */
-	if (!policy->dvfs_possible_from_any_cpu)
-		kthread_bind_mask(thread, policy->related_cpus);
+	kthread_bind_mask(thread, policy->related_cpus);
 
 	init_irq_work(&sg_policy->irq_work, sugov_irq_work);
 	mutex_init(&sg_policy->work_lock);
@@ -656,11 +651,9 @@ static void sugov_limits(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy = policy->governor_data;
 
-	if (!policy->fast_switch_enabled) {
-		mutex_lock(&sg_policy->work_lock);
-		cpufreq_policy_apply_limits(policy);
-		mutex_unlock(&sg_policy->work_lock);
-	}
+	mutex_lock(&sg_policy->work_lock);
+	cpufreq_policy_apply_limits(policy);
+	mutex_unlock(&sg_policy->work_lock);
 
 	sg_policy->need_freq_update = true;
 }

@@ -1365,7 +1365,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	struct cpufreq_frequency_table *mx_freq_table;
 	int ret = 0;
 
-	if (policy->cpu > NR_CPUS) {
+	if (cpu_out_of_range(policy->cpu)) {
 		ret = -EINVAL;
 		goto out;
 	}
