@@ -78,6 +78,7 @@ extern unsigned int current_screen_state;
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
 extern bool is_freq_limited(unsigned int cpu);
+extern bool cpufreq_suspended;
 
 struct cpufreq_policy {
 	/* CPUs sharing clock, require sw coordination */
