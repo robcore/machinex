@@ -95,7 +95,6 @@ struct interactive_tunables {
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_SAMPLING_RATE)
 	unsigned long timer_slack_delay;
 	unsigned long timer_slack;
-	bool io_is_busy;
 };
 
 /* Separate instance required for each 'struct cpufreq_policy' */
@@ -211,8 +210,7 @@ static void slack_timer_resched(struct interactive_cpu *icpu, int cpu,
 	spin_lock_irqsave(&icpu->load_lock, flags);
 
 	icpu->time_in_idle = get_cpu_idle_time(cpu,
-					       &icpu->time_in_idle_timestamp,
-					       tunables->io_is_busy);
+					       &icpu->time_in_idle_timestamp);
 	icpu->cputime_speedadj = 0;
 	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
 
@@ -360,7 +358,7 @@ static u64 update_load(struct interactive_cpu *icpu, int cpu)
 	if (!tunables)
 		return -ENOMEM;
 
-	now_idle = get_cpu_idle_time(cpu, &now, tunables->io_is_busy);
+	now_idle = get_cpu_idle_time(cpu, &now);
 	delta_idle = (unsigned int)(now_idle - icpu->time_in_idle);
 	delta_time = (unsigned int)(now - icpu->time_in_idle_timestamp);
 
@@ -994,28 +992,11 @@ static ssize_t store_boostpulse_duration(struct gov_attr_set *attr_set,
 	return count;
 }
 
-static ssize_t store_io_is_busy(struct gov_attr_set *attr_set, const char *buf,
-				size_t count)
-{
-	struct interactive_tunables *tunables = to_tunables(attr_set);
-	unsigned long val;
-	int ret;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	tunables->io_is_busy = val;
-
-	return count;
-}
-
 show_one(go_hispeed_load, "%lu");
 show_one(min_sample_time, "%lu");
 show_one(timer_slack, "%lu");
 show_one(boost, "%u");
 show_one(boostpulse_duration, "%u");
-show_one(io_is_busy, "%u");
 
 gov_attr_rw(target_loads);
 gov_attr_rw(above_hispeed_delay);
@@ -1026,7 +1007,6 @@ gov_attr_rw(timer_slack);
 gov_attr_rw(boost);
 gov_attr_wo(boostpulse);
 gov_attr_rw(boostpulse_duration);
-gov_attr_rw(io_is_busy);
 
 static struct attribute *interactive_attributes[] = {
 	&target_loads.attr,
@@ -1038,7 +1018,6 @@ static struct attribute *interactive_attributes[] = {
 	&boost.attr,
 	&boostpulse.attr,
 	&boostpulse_duration.attr,
-	&io_is_busy.attr,
 	NULL
 };
 
