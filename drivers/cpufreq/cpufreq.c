@@ -1538,6 +1538,10 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
+static unsigned int alloc_count = 0;
+static int cpufreq_policy_register(unsigned int cpu)
+{
+
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -1566,6 +1570,10 @@ static int cpufreq_online(unsigned int cpu)
 		policy = cpufreq_policy_alloc(cpu);
 		if (!policy)
 			return -ENOMEM;
+		if (alloc_count < NR_CPUS + 1) {
+			pr_info("%s: Allocating CPU%u Policy\n", __func__, cpu);
+			alloc_count++;
+		}
 	}
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
@@ -1587,6 +1595,7 @@ static int cpufreq_online(unsigned int cpu)
 	}
 
 	/*
+	 * SCRATCH THIS. WE ARE NOW.
 	 * affected cpus must always be the one, which are online. We aren't
 	 * managing offline cpus here.
 	 */
@@ -1951,7 +1960,7 @@ static unsigned int __cpufreq_get(struct cpufreq_policy *policy)
 	 * if fast frequency switching is used with the given policy, the check
 	 * against policy->cur is pointless, so skip it in that case too.
 	 */
-	if (unlikely(policy_is_inactive(policy)) || policy->fast_switch_enabled)
+	if (unlikely(policy_is_inactive(policy)))
 		return ret_freq;
 
 	if (ret_freq && policy->cur &&
@@ -2238,38 +2247,6 @@ EXPORT_SYMBOL(cpufreq_unregister_notifier);
 /*********************************************************************
  *                              GOVERNORS                            *
  *********************************************************************/
-
-/**
- * cpufreq_driver_fast_switch - Carry out a fast CPU frequency switch.
- * @policy: cpufreq policy to switch the frequency for.
- * @target_freq: New frequency to set (may be approximate).
- *
- * Carry out a fast frequency switch without sleeping.
- *
- * The driver's ->fast_switch() callback invoked by this function must be
- * suitable for being called from within RCU-sched read-side critical sections
- * and it is expected to select the minimum available frequency greater than or
- * equal to @target_freq (CPUFREQ_RELATION_L).
- *
- * This function must not be called if policy->fast_switch_enabled is unset.
- *
- * Governors calling this function must guarantee that it will never be invoked
- * twice in parallel for the same policy and that it will never be called in
- * parallel with either ->target() or ->target_index() for the same policy.
- *
- * Returns the actual frequency set for the CPU.
- *
- * If 0 is returned by the driver's ->fast_switch() callback to indicate an
- * error condition, the hardware configuration must be preserved.
- */
-unsigned int cpufreq_driver_fast_switch(struct cpufreq_policy *policy,
-					unsigned int target_freq)
-{
-	target_freq = clamp_val(target_freq, policy->min, policy->max);
-
-	return cpufreq_driver->fast_switch(policy, target_freq);
-}
-EXPORT_SYMBOL_GPL(cpufreq_driver_fast_switch);
 
 /* Must set freqs->new to intermediate frequency */
 static int __target_intermediate(struct cpufreq_policy *policy,
@@ -2659,8 +2636,6 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 		return 0;
 	}
 
-	pr_debug("governor switch\n");
-
 	/* save old, working values */
 	old_gov = policy->governor;
 	/* end old governor */
@@ -2685,10 +2660,12 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	pr_debug("starting governor %s failed\n", policy->governor->name);
 	if (old_gov) {
 		policy->governor = old_gov;
-		if (cpufreq_init_governor(policy))
+		if (cpufreq_init_governor(policy)) {
 			policy->governor = NULL;
-		else
+		} else {
 			cpufreq_start_governor(policy);
+			old_gov = NULL;
+		}
 	}
 
 	return ret;
@@ -2844,9 +2821,7 @@ int cpufreq_boost_enabled(void)
 }
 EXPORT_SYMBOL_GPL(cpufreq_boost_enabled);
 
-/*********************************************************************
- *               REGISTER / UNREGISTER CPUFREQ DRIVER                *
- *********************************************************************/
+
 static enum cpuhp_state hp_online;
 
 static int cpuhp_cpufreq_online(unsigned int cpu)
@@ -2862,7 +2837,9 @@ static int cpuhp_cpufreq_offline(unsigned int cpu)
 
 	return 0;
 }
-
+/*********************************************************************
+ *               REGISTER / UNREGISTER CPUFREQ DRIVER                *
+ *********************************************************************/
 /**
  * cpufreq_register_driver - register a CPU Frequency driver
  * @driver_data: A struct cpufreq_driver containing the values#

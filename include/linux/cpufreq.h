@@ -532,8 +532,6 @@ struct cpufreq_governor {
 };
 
 /* Pass a target to the cpufreq driver */
-unsigned int cpufreq_driver_fast_switch(struct cpufreq_policy *policy,
-					unsigned int target_freq);
 int cpufreq_driver_target(struct cpufreq_policy *policy,
 				 unsigned int target_freq,
 				 unsigned int relation);
