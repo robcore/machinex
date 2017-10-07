@@ -127,13 +127,13 @@ if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "connected"
 		echo "pushing $1"
-		adb shell input keyevent KEYCODE_WAKEUP;
+		wakeme
 		sleep 1
 		adb shell su -c "input touchscreen swipe 930 880 930 380"
 		sleep 1
 		adb push $1 /storage/extSdCard 2> /dev/null
 		echo "push complete, booting recovery"
-		adb shell su -c "input keyevent KEYCODE_WAKEUP"
+		wakeme
 		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
