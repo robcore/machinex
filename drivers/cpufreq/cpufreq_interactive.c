@@ -102,6 +102,7 @@ struct interactive_policy {
 	struct cpufreq_policy *policy;
 	struct interactive_tunables *tunables;
 	struct list_head tunables_hook;
+	struct task_struct *speedchange_task;
 };
 
 /* Separate instance required for each CPU */
@@ -136,7 +137,6 @@ struct interactive_cpu {
 static DEFINE_PER_CPU(struct interactive_cpu, interactive_cpu);
 
 /* Realtime thread handles frequency scaling */
-static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
@@ -164,14 +164,13 @@ static inline void update_slack_delay(struct interactive_tunables *tunables)
 
 static bool timer_slack_required(struct interactive_cpu *icpu)
 {
-	struct interactive_policy *ipolicy;
+	struct interactive_policy *ipolicy = icpu->ipolicy;
 	struct interactive_tunables *tunables;
 
-	ipolicy = icpu->ipolicy;
-		if (ipolicy != NULL)
-			tunables = ipolicy->tunables;
-		else
-			return false;
+	if (ipolicy != NULL)
+		tunables = ipolicy->tunables;
+	else
+		return false;
 
 	if (tunables->timer_slack < 0)
 		return false;
@@ -185,8 +184,6 @@ static bool timer_slack_required(struct interactive_cpu *icpu)
 static void gov_slack_timer_start(struct interactive_cpu *icpu, int cpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
-	if (!tunables)
-		return;
 
 	icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
 	add_timer_on(&icpu->slack_timer, cpu);
@@ -195,8 +192,7 @@ static void gov_slack_timer_start(struct interactive_cpu *icpu, int cpu)
 static void gov_slack_timer_modify(struct interactive_cpu *icpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
-	if (!tunables)
-		return;
+
 	mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
 }
 
@@ -205,8 +201,7 @@ static void slack_timer_resched(struct interactive_cpu *icpu, int cpu,
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 	unsigned long flags;
-	if (!tunables)
-		return;
+
 	spin_lock_irqsave(&icpu->load_lock, flags);
 
 	icpu->time_in_idle = get_cpu_idle_time(cpu,
@@ -271,19 +266,10 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 				unsigned int loadadjfreq)
 {
 	struct cpufreq_policy *policy = icpu->ipolicy->policy;
-	struct cpufreq_frequency_table *freq_table;
+	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	unsigned int prevfreq, freqmin = 0, freqmax = UINT_MAX, tl;
-	unsigned int freq;
+	unsigned int freq = policy->cur;
 	int index;
-
-	if (policy == NULL)
-		return -ENOMEM;
-
-	freq_table = policy->freq_table;
-	if (freq_table == NULL)
-		return -ENOMEM;
-
-	freq = policy->cur;
 
 	do {
 		prevfreq = freq;
@@ -352,15 +338,11 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 static u64 update_load(struct interactive_cpu *icpu, int cpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
-	unsigned int delta_idle, delta_time;
-	u64 now_idle, now, active_time;
-
-	if (!tunables)
-		return -ENOMEM;
+	u64 now_idle, now, active_time, delta_idle, delta_time;
 
 	now_idle = get_cpu_idle_time(cpu, &now);
-	delta_idle = (unsigned int)(now_idle - icpu->time_in_idle);
-	delta_time = (unsigned int)(now - icpu->time_in_idle_timestamp);
+	delta_idle = (now_idle - icpu->time_in_idle);
+	delta_time = (now - icpu->time_in_idle_timestamp);
 
 	if (delta_time <= delta_idle)
 		active_time = 0;
@@ -378,27 +360,14 @@ static u64 update_load(struct interactive_cpu *icpu, int cpu)
 /* Re-evaluate load to see if a frequency change is required or not */
 static void eval_target_freq(struct interactive_cpu *icpu)
 {
-	struct interactive_tunables *tunables;
-	struct cpufreq_policy *policy;
-	struct cpufreq_frequency_table *freq_table;
+	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
+	struct cpufreq_policy *policy = icpu->ipolicy->policy;
+	struct cpufreq_frequency_table *freq_table = policy->freq_table;
 	u64 cputime_speedadj, now, max_fvtime;
 	unsigned int new_freq, loadadjfreq, index, delta_time;
 	unsigned long flags;
 	int cpu_load;
 	int cpu = smp_processor_id();
-
-	if (icpu->ipolicy == NULL)
-		return;
-
-	tunables = icpu->ipolicy->tunables;
-	if (!tunables)
-		return;
-	policy = icpu->ipolicy->policy;
-	if (!policy)
-		return;
-	freq_table = policy->freq_table;
-	if (!freq_table)
-		return;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
 	now = update_load(icpu, smp_processor_id());
@@ -406,7 +375,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
 
-	if (!delta_time)
+	if (WARN_ON_ONCE(!delta_time))
 		return;
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
@@ -481,7 +450,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cpumask_set_cpu(cpu, &speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	wake_up_process(speedchange_task);
+	wake_up_process(icpu->ipolicy->speedchange_task);
 	return;
 
 exit:
@@ -490,19 +459,14 @@ exit:
 
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
-	if (icpu == NULL)
-		return;
 	eval_target_freq(icpu);
 	slack_timer_resched(icpu, smp_processor_id(), true);
-
 }
 
 static void cpufreq_interactive_idle_end(void)
 {
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu,
 						smp_processor_id());
-	if (icpu == NULL)
-		return;
 
 	if (!down_read_trylock(&icpu->enable_sem))
 		return;
@@ -527,12 +491,8 @@ static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
 	u64 hvt = ~0ULL, fvt = 0;
 	unsigned int max_freq = 0, i;
 
-	if (policy == NULL)
-		return;
 	for_each_cpu(i, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, i);
-		if (icpu == NULL)
-			return;
 
 		fvt = max(fvt, icpu->loc_floor_val_time);
 		if (icpu->target_freq > max_freq) {
@@ -556,14 +516,10 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	unsigned int max_freq;
 	int i;
 
-	if (policy == NULL)
-		return;
 	cpufreq_interactive_get_policy_info(policy, &max_freq, &hvt, &fvt);
 
 	for_each_cpu(i, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, i);
-		if (icpu == NULL)
-			continue;
 		icpu->pol_floor_val_time = fvt;
 	}
 
@@ -585,6 +541,7 @@ static int cpufreq_interactive_speedchange_task(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
+
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 		schedule();
@@ -600,29 +557,17 @@ again:
 	cpumask_clear(&speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	if (cpumask_empty(&tmp_mask));
-		goto again;
-
 	for_each_cpu(cpu, &tmp_mask) {
 		struct interactive_cpu *icpu = &per_cpu(interactive_cpu, cpu);
 		struct cpufreq_policy *policy;
-		icpu = &per_cpu(interactive_cpu, cpu);
-
-		if (icpu == NULL || !icpu->ipolicy)
-			continue;
 
 		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
 			continue;
 
-		policy = icpu->ipolicy->policy;
-
-		if (!policy) {
-			up_read(&icpu->enable_sem);
-			continue;
-		}
-
-		if (likely(icpu->ipolicy))
+		if (likely(icpu->ipolicy)) {
+			policy = icpu->ipolicy->policy;
 			cpufreq_interactive_adjust_cpu(cpu, policy);
+		}
 
 		up_read(&icpu->enable_sem);
 	}
@@ -645,13 +590,9 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 
 	for_each_ipolicy(ipolicy) {
 		policy = ipolicy->policy;
-		if (!policy)
-			return;
 
 		for_each_cpu(i, policy->cpus) {
 			icpu = &per_cpu(interactive_cpu, i);
-			if (!icpu)
-				return;
 
 			if (!down_read_trylock(&icpu->enable_sem))
 				continue;
@@ -677,21 +618,17 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
 	if (wakeup)
-		wake_up_process(speedchange_task);
+		wake_up_process(ipolicy->speedchange_task);
 }
 
 static int cpufreq_interactive_notifier(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freq = data;
-	struct interactive_cpu *icpu;
+	struct interactive_cpu *icpu = &per_cpu(interactive_cpu, freq->cpu);
 	unsigned long flags;
 
 	if (val != CPUFREQ_POSTCHANGE)
-		return 0;
-
-	icpu = &per_cpu(interactive_cpu, freq->cpu);
-	if (icpu == NULL)
 		return 0;
 
 	if (!down_read_trylock(&icpu->enable_sem))
@@ -1050,6 +987,7 @@ static void irq_work(struct irq_work *irq_work)
 {
 	struct interactive_cpu *icpu = container_of(irq_work, struct
 						    interactive_cpu, irq_work);
+
 	cpufreq_interactive_update(icpu);
 	icpu->work_in_progress = false;
 }
@@ -1060,7 +998,7 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 	struct interactive_cpu *icpu = container_of(data,
 					struct interactive_cpu, update_util);
 	struct interactive_policy *ipolicy = icpu->ipolicy;
-	struct interactive_tunables *tunables;
+	struct interactive_tunables *tunables = ipolicy->tunables;
 	u64 delta_ns;
 
 	/*
@@ -1069,13 +1007,6 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 	 * - Work has already been queued up or is in progress.
 	 * - It is too early (too little time from the previous sample).
 	 */
-	if (ipolicy == NULL)
-		return;
-
-	tunables = ipolicy->tunables;
-	if (!tunables)
-		return;
-
 	if (icpu->work_in_progress)
 		return;
 
@@ -1093,19 +1024,14 @@ static void update_util_handler(struct update_util_data *data, u64 time,
 
 static void gov_set_update_util(struct interactive_policy *ipolicy)
 {
-	struct cpufreq_policy *policy;
+	struct cpufreq_policy *policy = ipolicy->policy;
 	struct interactive_cpu *icpu;
 	int cpu;
-	policy = ipolicy->policy;
-	if (!policy)
-		return;
 
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
-		if (icpu == NULL)
-			return;
 
-	icpu->last_sample_time = 0;
+		icpu->last_sample_time = 0;
 		icpu->next_sample_jiffies = 0;
 		cpufreq_add_update_util_hook(cpu, &icpu->update_util,
 					     update_util_handler);
@@ -1124,8 +1050,6 @@ static inline void gov_clear_update_util(struct cpufreq_policy *policy)
 
 static void icpu_cancel_work(struct interactive_cpu *icpu)
 {
-	if (icpu == NULL)
-		return;
 	irq_work_sync(&icpu->irq_work);
 	icpu->work_in_progress = false;
 	del_timer_sync(&icpu->slack_timer);
@@ -1172,29 +1096,29 @@ static int interactive_kthread_create(struct interactive_policy *ipolicy)
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 	int ret;
 
-	speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
+	ipolicy->speedchange_task = kthread_create(cpufreq_interactive_speedchange_task,
 					  NULL, "cfinteractive");
-	if (IS_ERR(speedchange_task))
-		return PTR_ERR(speedchange_task);
+	if (IS_ERR(ipolicy->speedchange_task))
+		return PTR_ERR(ipolicy->speedchange_task);
 
-	ret = sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
+	ret = sched_setscheduler_nocheck(ipolicy->speedchange_task, SCHED_FIFO, &param);
 	if (ret) {
-		kthread_stop(speedchange_task);
+		kthread_stop(ipolicy->speedchange_task);
 		pr_warn("%s: failed to set SCHED_FIFO\n", __func__);
 		return ret;
 	}
-	get_task_struct(speedchange_task);
-	kthread_bind_mask(speedchange_task, ipolicy->policy->related_cpus);
+	get_task_struct(ipolicy->speedchange_task);
+	kthread_bind_mask(ipolicy->speedchange_task, ipolicy->policy->related_cpus);
 	/* wake up so the thread does not look hung to the freezer */
-	wake_up_process(speedchange_task);
+	wake_up_process(ipolicy->speedchange_task);
 
 	return 0;
 }
 
 static void interactive_kthread_stop(struct interactive_policy *ipolicy)
 {
-	kthread_stop(speedchange_task);
-	put_task_struct(speedchange_task);
+	kthread_stop(ipolicy->speedchange_task);
+	put_task_struct(ipolicy->speedchange_task);
 }
 
 
