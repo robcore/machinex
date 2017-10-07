@@ -488,9 +488,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (core_control_enabled &&
-			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
-			(cpus_offlined & BIT(cpu))) {
+		if (thermal_core_controlled(cpu)) {
 			pr_debug(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
