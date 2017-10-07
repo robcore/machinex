@@ -673,6 +673,9 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 	if(val >= max)				 \
 		val = max;
 
+#define value_out_of_range(val, min, max) ((val) < (min) || (val) > (max))
+#define value_in_range(val, min, max) ((val) > (min) && (val) < (max))
+#define value_in_range_eq(val, min, max) ((val) >= (min) && (val) <= (max))
 /*
  * min()/max()/clamp() macros that also do
  * strict type-checking.. See the

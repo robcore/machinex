@@ -247,7 +247,7 @@ static int evaluate_freq_temp(void)
 			 msm_thermal_info.temp_hysteresis_degC);
 
 	for (i = 7; i < 10; i++) {
-		if (i < 7 || i > 10)
+		if (value_out_of_range(i, 7, 10))
 			break;
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
@@ -357,7 +357,7 @@ static int evaluate_core_temp(void)
 			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	for (i = 10; i > 7; i--) {
-		if (i < 7 || i > 10)
+		if (value_out_of_range(i, 7, 10))
 			break;
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
