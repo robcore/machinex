@@ -114,29 +114,11 @@ static int __init init_cpufreq_transition_notifier_list(void)
 }
 pure_initcall(init_cpufreq_transition_notifier_list);
 
-static int off __read_mostly;
-static int cpufreq_disabled(void)
-{
-	return off;
-}
-void disable_cpufreq(void)
-{
-	off = 1;
-}
 static DEFINE_MUTEX(cpufreq_governor_mutex);
-
-bool have_governor_per_policy(void)
-{
-	return !!(cpufreq_driver->flags & CPUFREQ_HAVE_GOVERNOR_PER_POLICY);
-}
-EXPORT_SYMBOL_GPL(have_governor_per_policy);
 
 struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
 {
-	if (have_governor_per_policy())
 		return &policy->kobj;
-	else
-		return cpufreq_global_kobject;
 }
 EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
 
@@ -438,9 +420,6 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 		struct cpufreq_freqs *freqs, unsigned int state)
 {
 	BUG_ON(irqs_disabled());
-
-	if (cpufreq_disabled())
-		return;
 
 	freqs->flags = cpufreq_driver->flags;
 	pr_debug("notification %u of frequency transition to %u kHz\n",
@@ -2209,9 +2188,6 @@ int cpufreq_register_notifier(struct notifier_block *nb, unsigned int list)
 {
 	int ret;
 
-	if (cpufreq_disabled())
-		return -EINVAL;
-
 	WARN_ON(!init_cpufreq_transition_notifier_list_called);
 
 	switch (list) {
@@ -2254,9 +2230,6 @@ EXPORT_SYMBOL(cpufreq_register_notifier);
 int cpufreq_unregister_notifier(struct notifier_block *nb, unsigned int list)
 {
 	int ret;
-
-	if (cpufreq_disabled())
-		return -EINVAL;
 
 	switch (list) {
 	case CPUFREQ_TRANSITION_NOTIFIER:
@@ -2407,9 +2380,6 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 {
 	unsigned int old_target_freq = target_freq;
 	int index;
-
-	if (cpufreq_disabled())
-		return -ENODEV;
 
 	/* Make sure that target_freq is within supported range */
 	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
@@ -2575,9 +2545,6 @@ int cpufreq_register_governor(struct cpufreq_governor *governor)
 	if (!governor)
 		return -EINVAL;
 
-	if (cpufreq_disabled())
-		return -ENODEV;
-
 	mutex_lock(&cpufreq_governor_mutex);
 
 	err = -EBUSY;
@@ -2597,9 +2564,6 @@ void cpufreq_unregister_governor(struct cpufreq_governor *governor)
 	unsigned long flags;
 
 	if (!governor)
-		return;
-
-	if (cpufreq_disabled())
 		return;
 
 	/* clear last_governor for all inactive policies */
@@ -2934,9 +2898,6 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	unsigned long flags;
 	int ret;
 
-	if (cpufreq_disabled())
-		return -ENODEV;
-
 	if (!driver_data || !driver_data->verify || !driver_data->init ||
 	    !(driver_data->setpolicy || driver_data->target_index ||
 		    driver_data->target) ||
@@ -3065,9 +3026,6 @@ static int __init cpufreq_core_init(void)
 	int rc;
 #endif	/* CONFIG_CPU_VOLTAGE_TABLE */
 
-	if (cpufreq_disabled())
-		return -ENODEV;
-
 	cpufreq_global_kobject = kobject_create_and_add("cpufreq", &cpu_subsys.dev_root->kobj);
 	BUG_ON(!cpufreq_global_kobject);
 
@@ -3078,5 +3036,4 @@ static int __init cpufreq_core_init(void)
 
 	return 0;
 }
-module_param(off, int, 0444);
 core_initcall(cpufreq_core_init);

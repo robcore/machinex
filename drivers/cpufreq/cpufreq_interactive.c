@@ -155,8 +155,7 @@ static unsigned int default_above_hispeed_delay[] = {
 #define for_each_ipolicy(__ip)	\
 	list_for_each_entry(__ip, &tunables->attr_set.policy_list, tunables_hook)
 
-static struct interactive_tunables *global_tunables;
-static DEFINE_MUTEX(global_tunables_lock);
+static DEFINE_MUTEX(tunables_lock);
 
 static inline void update_slack_delay(struct interactive_tunables *tunables)
 {
@@ -1193,8 +1192,6 @@ interactive_tunables_alloc(struct interactive_policy *ipolicy)
 		return NULL;
 
 	gov_attr_set_init(&tunables->attr_set, &ipolicy->tunables_hook);
-	if (!have_governor_per_policy())
-		global_tunables = tunables;
 
 	ipolicy->tunables = tunables;
 
@@ -1203,9 +1200,6 @@ interactive_tunables_alloc(struct interactive_policy *ipolicy)
 
 static void interactive_tunables_free(struct interactive_tunables *tunables)
 {
-	if (!have_governor_per_policy())
-		global_tunables = NULL;
-
 	if (tunables)
 		kfree(tunables);
 }
@@ -1224,21 +1218,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	if (!ipolicy)
 		return -ENOMEM;
 
-	mutex_lock(&global_tunables_lock);
-
-	if (global_tunables) {
-		if (have_governor_per_policy()) {
-			ret = -EINVAL;
-			goto free_int_policy;
-		}
-
-		policy->governor_data = ipolicy;
-		ipolicy->tunables = global_tunables;
-
-		gov_attr_set_get(&global_tunables->attr_set,
-				 &ipolicy->tunables_hook);
-		goto out;
-	}
+	mutex_lock(&tunables_lock);
 
 	tunables = interactive_tunables_alloc(ipolicy);
 	if (!tunables) {
@@ -1279,7 +1259,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	}
 
  out:
-	mutex_unlock(&global_tunables_lock);
+	mutex_unlock(&tunables_lock);
 	return 0;
 
  fail:
@@ -1287,7 +1267,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	interactive_tunables_free(tunables);
 
  free_int_policy:
-	mutex_unlock(&global_tunables_lock);
+	mutex_unlock(&tunables_lock);
 
 	interactive_policy_free(ipolicy);
 	pr_err("governor initialization failed (%d)\n", ret);
@@ -1301,7 +1281,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	struct interactive_tunables *tunables = ipolicy->tunables;
 	unsigned int count;
 
-	mutex_lock(&global_tunables_lock);
+	mutex_lock(&tunables_lock);
 
 	/* Last policy using the governor ? */
 	if (!--interactive_gov.usage_count) {
@@ -1315,7 +1295,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	if (!count)
 		interactive_tunables_free(tunables);
 
-	mutex_unlock(&global_tunables_lock);
+	mutex_unlock(&tunables_lock);
 
 	interactive_policy_free(ipolicy);
 }

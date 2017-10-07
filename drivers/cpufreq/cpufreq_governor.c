@@ -404,19 +404,6 @@ int cpufreq_dbs_governor_init(struct cpufreq_policy *policy)
 	/* Protect gov->gdbs_data against concurrent updates. */
 	mutex_lock(&gov_dbs_data_mutex);
 
-	dbs_data = gov->gdbs_data;
-	if (dbs_data) {
-		if (WARN_ON(have_governor_per_policy())) {
-			ret = -EINVAL;
-			goto free_policy_dbs_info;
-		}
-		policy_dbs->dbs_data = dbs_data;
-		policy->governor_data = policy_dbs;
-
-		gov_attr_set_get(&dbs_data->attr_set, &policy_dbs->list);
-		goto out;
-	}
-
 	dbs_data = kzalloc(sizeof(*dbs_data), GFP_KERNEL);
 	if (!dbs_data) {
 		ret = -ENOMEM;
@@ -430,9 +417,6 @@ int cpufreq_dbs_governor_init(struct cpufreq_policy *policy)
 		goto free_policy_dbs_info;
 
 	dbs_data->sampling_rate = cpufreq_policy_transition_delay_us(policy);
-
-	if (!have_governor_per_policy())
-		gov->gdbs_data = dbs_data;
 
 	policy_dbs->dbs_data = dbs_data;
 	policy->governor_data = policy_dbs;
@@ -449,8 +433,6 @@ int cpufreq_dbs_governor_init(struct cpufreq_policy *policy)
 
 	policy->governor_data = NULL;
 
-	if (!have_governor_per_policy())
-		gov->gdbs_data = NULL;
 	gov->exit(dbs_data);
 	kfree(dbs_data);
 
@@ -478,9 +460,6 @@ void cpufreq_dbs_governor_exit(struct cpufreq_policy *policy)
 	policy->governor_data = NULL;
 
 	if (!count) {
-		if (!have_governor_per_policy())
-			gov->gdbs_data = NULL;
-
 		gov->exit(dbs_data);
 		kfree(dbs_data);
 	}

@@ -129,12 +129,6 @@ struct dbs_governor {
 	struct cpufreq_governor gov;
 	struct kobj_type kobj_type;
 
-	/*
-	 * Common data for platforms that don't set
-	 * CPUFREQ_HAVE_GOVERNOR_PER_POLICY
-	 */
-	struct dbs_data *gdbs_data;
-
 	unsigned int (*gov_dbs_update)(struct cpufreq_policy *policy);
 	struct policy_dbs_info *(*alloc)(void);
 	void (*free)(struct policy_dbs_info *policy_dbs);
