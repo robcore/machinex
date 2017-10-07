@@ -1666,13 +1666,13 @@ out_free_policy:
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	bool new_policy;
 	unsigned long flags;
 	unsigned int j;
 	int ret;
 
 	if (cpufreq_suspended)
 		return 0;
+
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -1683,62 +1683,25 @@ static int cpufreq_online(unsigned int cpu)
 			return cpufreq_add_policy_cpu(policy, cpu);
 
 		/* This is the only online CPU for the policy.  Start over. */
-		new_policy = false;
 		down_write(&policy->rwsem);
 		policy->cpu = cpu;
 		policy->governor = NULL;
 		up_write(&policy->rwsem);
-	} else {
-		new_policy = true;
-		policy = cpufreq_policy_alloc(cpu);
-		if (!policy)
-			return -ENOMEM;
 	}
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
 
-	/* call driver. From then on the cpufreq must be able
-	 * to accept all calls to ->verify and ->setpolicy for this CPU
-	 */
-	ret = cpufreq_driver->init(policy);
-	if (ret) {
-		pr_debug("initialization failed\n");
-		goto out_free_policy;
-	}
-
 	down_write(&policy->rwsem);
-
-	if (new_policy) {
-		/* related_cpus should at least include policy->cpus. */
-		cpumask_copy(policy->related_cpus, policy->cpus);
-	}
 
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
 	 * managing offline cpus here.
 	 */
-	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
+	cpumask_and(policy->cpus, policy->cpus, cpu_possible_mask);
 
 	/*
 	 * First boot, set defaults because they haven't been set yet.
 	 */
-	if (!policy->hlimit_max_screen_on)
-		policy->hlimit_max_screen_on = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-
-	if (!policy->hlimit_max_screen_off)
-		policy->hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
-
-	if (!policy->hlimit_min_screen_on)
-		policy->hlimit_min_screen_on = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-
-	if (!policy->hlimit_min_screen_off)
-		policy->hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK;
-
-	if (!policy->curr_limit_max)
-		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-
-	if (!policy->curr_limit_min)
-		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 
 	if (hotplug_ready)
 		hardlimit_ready = true;
@@ -1746,37 +1709,13 @@ static int cpufreq_online(unsigned int cpu)
 	if (hardlimit_ready)
 		reapply_hard_limits(policy->cpu);
 
-	if (new_policy) {
-		policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-		policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+	policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
+	policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
 
-		for_each_cpu(j, policy->related_cpus) {
-			per_cpu(cpufreq_cpu_data, j) = policy;
-			add_cpu_dev_symlink(policy, j);
-		}
-	} else {
-		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
-		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
-	}
-
-	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
-		policy->cur = cpufreq_driver->get(policy->cpu);
-		if (!policy->cur) {
-			pr_err("%s: ->get() failed\n", __func__);
-			goto out_exit_policy;
-		}
-	}
-
-	if (new_policy) {
-		ret = cpufreq_add_dev_interface(policy);
-		if (ret)
-			goto out_exit_policy;
-
-		cpufreq_stats_create_table(policy);
-
-		write_lock_irqsave(&cpufreq_driver_lock, flags);
-		list_add(&policy->policy_list, &cpufreq_policy_list);
-		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+	policy->cur = cpufreq_driver->get(policy->cpu);
+	if (!policy->cur) {
+		pr_err("%s: ->get() failed\n", __func__);
+		goto out_exit_policy;
 	}
 
 	ret = cpufreq_init_policy(policy);
@@ -1784,18 +1723,10 @@ static int cpufreq_online(unsigned int cpu)
 		pr_err("%s: Failed to initialize policy for cpu: %d (%d)\n",
 		       __func__, cpu, ret);
 		/* cpufreq_policy_free() will notify based on this */
-		new_policy = false;
 		goto out_exit_policy;
 	}
 
 	up_write(&policy->rwsem);
-
-	kobject_uevent(&policy->kobj, KOBJ_ADD);
-
-	/* Callback for handling stuff after policy is ready */
-	if (cpufreq_driver->ready) {
-		cpufreq_driver->ready(policy);
-	}
 
 	pr_debug("CPUFREQ %u: Init Complete!\n", cpu);
 
@@ -1803,15 +1734,6 @@ static int cpufreq_online(unsigned int cpu)
 
 out_exit_policy:
 	up_write(&policy->rwsem);
-
-	if (cpufreq_driver->exit)
-		cpufreq_driver->exit(policy);
-
-	for_each_cpu(j, policy->real_cpus)
-		remove_cpu_dev_symlink(policy, get_cpu_device(j));
-
-out_free_policy:
-	cpufreq_policy_free(policy);
 	return ret;
 }
 
@@ -1828,11 +1750,9 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 
 	dev_dbg(dev, "%s: adding CPU%u\n", __func__, cpu);
 
-	if (cpu_online(cpu)) {
-		ret = cpufreq_online(cpu);
-		if (ret)
-			return ret;
-	}
+	ret = cpufreq_register_core(cpu);
+	if (ret)
+		return ret;
 
 	/* Create sysfs link on CPU registration */
 	policy = per_cpu(cpufreq_cpu_data, cpu);
@@ -1862,29 +1782,8 @@ static int cpufreq_offline(unsigned int cpu)
 	if (has_target())
 		cpufreq_stop_governor(policy);
 
-	cpumask_clear_cpu(cpu, policy->cpus);
-
-	if (policy_is_inactive(policy)) {
-		if (has_target())
-			strncpy(policy->last_governor, policy->governor->name,
-				CPUFREQ_NAME_LEN);
-		else
-			policy->last_policy = policy->policy;
-	} else if (cpu == policy->cpu) {
-		/* Nominate new CPU */
-		policy->cpu = cpumask_any(policy->cpus);
-	}
-
-	/* Start governor again for active policy */
-	if (!policy_is_inactive(policy)) {
-		if (has_target()) {
-			ret = cpufreq_start_governor(policy);
-			if (ret)
-				pr_err("%s: Failed to start governor\n", __func__);
-		}
-
-		goto unlock;
-	}
+	strncpy(policy->last_governor, policy->governor->name,
+			CPUFREQ_NAME_LEN);
 
 	if (cpufreq_driver->stop_cpu)
 		cpufreq_driver->stop_cpu(policy);
