@@ -1417,8 +1417,6 @@ static int __init cpufreq_interactive_gov_init(void)
 	}
 	get_task_struct(speedchange_task);
 
-	kthread_bind_mask(speedchange_task, cpu);
-
 	/* wake up so the thread does not look hung to the freezer */
 	wake_up_process(speedchange_task);
 

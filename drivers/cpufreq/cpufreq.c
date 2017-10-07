@@ -1554,6 +1554,8 @@ static int cpufreq_online(unsigned int cpu)
 	unsigned int j;
 	int ret;
 
+	if (cpufreq_suspended)
+		return 0;
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -1742,7 +1744,7 @@ static int cpufreq_offline(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
-	if (has_target() && !cpufreq_suspended)
+	if (has_target())
 		cpufreq_stop_governor(policy);
 
 	cpumask_clear_cpu(cpu, policy->cpus);
@@ -1772,7 +1774,7 @@ static int cpufreq_offline(unsigned int cpu)
 	if (cpufreq_driver->stop_cpu)
 		cpufreq_driver->stop_cpu(policy);
 
-	if (has_target() && !cpufreq_suspended)
+	if (has_target())
 		cpufreq_exit_governor(policy);
 
 unlock:
@@ -2774,14 +2776,16 @@ static enum cpuhp_state hp_online;
 
 static int cpuhp_cpufreq_online(unsigned int cpu)
 {
-	cpufreq_online(cpu);
+	if (!cpufreq_suspended)
+		cpufreq_online(cpu);
 
 	return 0;
 }
 
 static int cpuhp_cpufreq_offline(unsigned int cpu)
 {
-	cpufreq_offline(cpu);
+	if (!cpufreq_suspended)
+		cpufreq_offline(cpu);
 
 	return 0;
 }
