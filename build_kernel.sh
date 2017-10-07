@@ -89,7 +89,7 @@ function adbcountdown()
 	sleep 4
 }
 wakeme() {
-	adb shell input keyevent KEYCODE_WAKEUP 2> /dev/null)
+	adb shell input keyevent KEYCODE_WAKEUP 2> /dev/null
 }
 
 function ADBRETRY() {
