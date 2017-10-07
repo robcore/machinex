@@ -251,7 +251,7 @@ static int evaluate_freq_temp(void)
 			break;
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
-		if (!temp) {
+		if (!temp || ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
 			fail++;
@@ -364,7 +364,7 @@ static int evaluate_core_temp(void)
 			break;
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
-		if (!temp) {
+		if (!temp || ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
 			fail++;
