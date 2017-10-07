@@ -934,7 +934,6 @@ static struct attribute *interactive_attributes[] = {
 	&timer_slack.attr,
 	&boost.attr,
 	&boostpulse.attr,
-	&boostpulse_duration.attr,
 	NULL
 };
 
