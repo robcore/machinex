@@ -1538,10 +1538,14 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
-static unsigned int alloc_count = 0;
+
+
+#if 0
 static int cpufreq_policy_register(unsigned int cpu)
 {
+#endif
 
+static unsigned int alloc_count = 0;
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -1570,7 +1574,7 @@ static int cpufreq_online(unsigned int cpu)
 		policy = cpufreq_policy_alloc(cpu);
 		if (!policy)
 			return -ENOMEM;
-		if (alloc_count < NR_CPUS + 1) {
+		if (alloc_count < NR_CPUS) {
 			pr_info("%s: Allocating CPU%u Policy\n", __func__, cpu);
 			alloc_count++;
 		}
