@@ -585,15 +585,15 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	unsigned long flags;
 	struct interactive_cpu *icpu;
 	struct cpufreq_policy *policy;
-again:
 
+again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
-		schedule();
 		if (kthread_should_stop())
 			return 0;
+		schedule();
 		spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 	}
 
@@ -602,7 +602,7 @@ again:
 	cpumask_clear(&speedchange_cpumask);
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
-	if (cpumask_empty(&tmp_mask);
+	if (cpumask_empty(&tmp_mask));
 		goto again;
 
 	for_each_cpu(cpu, &tmp_mask) {
