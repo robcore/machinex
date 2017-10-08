@@ -1671,9 +1671,6 @@ static int cpufreq_online(unsigned int cpu)
 	unsigned int j;
 	int ret;
 
-	if (cpufreq_suspended)
-		return 0;
-
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -1847,9 +1844,6 @@ static int cpufreq_offline(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	int ret;
-
-	if (cpufreq_suspended)
-		return 0;
 
 	pr_debug("%s: unregistering CPU %u\n", __func__, cpu);
 
