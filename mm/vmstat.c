@@ -498,7 +498,7 @@ static void refresh_cpu_vm_stats(void)
 			continue;
 
 		if (__this_cpu_read(p->pcp.count))
-			drain_zone_pages(zone, __this_cpu_ptr(&p->pcp));
+			drain_zone_pages(zone, raw_cpu_ptr(&p->pcp));
 #endif
 	}
 	fold_diff(global_diff);

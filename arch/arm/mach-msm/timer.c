@@ -929,7 +929,7 @@ int local_timer_setup(struct clock_event_device *evt)
 	evt->min_delta_ns = clockevent_delta2ns(4, evt);
 	evt->min_delta_ticks = 4;
 
-	*__this_cpu_ptr(clock->percpu_evt) = evt;
+	*raw_cpu_ptr(clock->percpu_evt) = evt;
 
 	clockevents_register_device(evt);
 	enable_percpu_irq(evt->irq, IRQ_TYPE_EDGE_RISING);
@@ -1092,7 +1092,7 @@ void __init msm_timer_init(void)
 				continue;
 			}
 
-			*__this_cpu_ptr(clock->percpu_evt) = ce;
+			*raw_cpu_ptr(clock->percpu_evt) = ce;
 			res = request_percpu_irq(ce->irq, msm_timer_interrupt,
 						 ce->name, clock->percpu_evt);
 			if (!res)
