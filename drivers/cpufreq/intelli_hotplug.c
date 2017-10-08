@@ -28,17 +28,17 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	4
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
 #define INTELLI_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
 #define DEFAULT_SAMPLING_RATE INTELLI_MS(250UL)
-#define INPUT_INTERVAL INTELLI_MS(250UL)
-#define BOOST_LOCK_DUR INTELLI_MS(300)
+#define INPUT_INTERVAL INTELLI_MS(500UL)
+#define BOOST_LOCK_DUR INTELLI_MS(500UL)
 #define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
-#define DEFAULT_DOWN_LOCK_DUR BOOST_LOCK_DUR
+#define DEFAULT_DOWN_LOCK_DUR INTELLI_MS(500UL)
 #define DEFAULT_HYSTERESIS (NR_CPUS << 1)
 
 /*#define CAPACITY_RESERVE (50)
@@ -794,7 +794,7 @@ static ssize_t store_##object		\
 
 store_one(cpus_boosted, 0, max_cpus_online);
 store_one(debug_intelli_plug, 0, 1);
-store_one(high_load_threshold, 0, 1890000);
+store_one(high_load_threshold, 0, MAX_LOAD_FREQ);
 
 #define store_one_long(object, min, max)		\
 static ssize_t store_##object		\
@@ -842,10 +842,11 @@ static ssize_t store_##object		\
 	return count;				\
 }
 
-store_one_ktimer(min_input_interval, boost_lock_duration, 5000);
-store_one_ktimer(boost_lock_duration, down_lock_dur, 5000);
-store_one_ktimer(down_lock_dur, 50, boost_lock_duration);
-store_one_ktimer(def_sampling_ms, 5, 1000);
+#define MAX_LOCK_TIMEOUT 1000
+store_one_ktimer(min_input_interval, 100, MAX_LOCK_TIMEOUT);
+store_one_ktimer(boost_lock_duration, 100, MAX_LOCK_TIMEOUT);
+store_one_ktimer(down_lock_dur, 100, MAX_LOCK_TIMEOUT);
+store_one_ktimer(def_sampling_ms, 5, MAX_LOCK_TIMEOUT);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
