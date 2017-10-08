@@ -1670,9 +1670,6 @@ static int cpufreq_online(unsigned int cpu)
 	unsigned int j;
 	int ret;
 
-	if (cpufreq_suspended)
-		return 0;
-
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -1767,11 +1764,6 @@ static int cpufreq_offline(unsigned int cpu)
 	struct cpufreq_policy *policy;
 	int ret;
 
-	if (cpufreq_suspended)
-		return 0;
-
-	pr_debug("%s: unregistering CPU %u\n", __func__, cpu);
-
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (!policy) {
 		pr_debug("%s: No cpu_data found\n", __func__);
@@ -1779,8 +1771,7 @@ static int cpufreq_offline(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
-	if (has_target())
-		cpufreq_stop_governor(policy);
+	cpufreq_stop_governor(policy);
 
 	strncpy(policy->last_governor, policy->governor->name,
 			CPUFREQ_NAME_LEN);
@@ -1788,8 +1779,7 @@ static int cpufreq_offline(unsigned int cpu)
 	if (cpufreq_driver->stop_cpu)
 		cpufreq_driver->stop_cpu(policy);
 
-	if (has_target())
-		cpufreq_exit_governor(policy);
+	cpufreq_exit_governor(policy);
 
 unlock:
 	up_write(&policy->rwsem);
@@ -1855,16 +1845,6 @@ unsigned int cpufreq_quick_get(unsigned int cpu)
 	struct cpufreq_policy *policy;
 	unsigned int ret_freq = 0;
 	unsigned long flags;
-
-	read_lock_irqsave(&cpufreq_driver_lock, flags);
-
-	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get) {
-		ret_freq = cpufreq_driver->get(cpu);
-		read_unlock_irqrestore(&cpufreq_driver_lock, flags);
-		return ret_freq;
-	}
-
-	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 	policy = cpufreq_cpu_get(cpu);
 	if (policy) {
