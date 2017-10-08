@@ -59,6 +59,9 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	ssize_t len = 0;
 	int i;
 
+	if (policy->fast_switch_enabled)
+		return 0;
+
 	cpufreq_stats_update(stats);
 	for (i = 0; i < stats->state_num; i++) {
 		len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
@@ -81,6 +84,9 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 	struct cpufreq_stats *stats = policy->stats;
 	ssize_t len = 0;
 	int i, j;
+
+	if (policy->fast_switch_enabled)
+		return 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len, "   From  :    To\n");
 	len += snprintf(buf + len, PAGE_SIZE - len, "         : ");
@@ -153,7 +159,7 @@ void cpufreq_stats_free_table(struct cpufreq_policy *policy)
 
 	pr_debug("%s: Free stats table\n", __func__);
 
-	sysfs_remove_group(policy->kobj, &stats_attr_group);
+	sysfs_remove_group(&policy->kobj, &stats_attr_group);
 	kfree(stats->time_in_state);
 	kfree(stats);
 	policy->stats = NULL;
@@ -203,7 +209,7 @@ void cpufreq_stats_create_table(struct cpufreq_policy *policy)
 	stats->last_index = freq_table_get_index(stats, policy->cur);
 
 	policy->stats = stats;
-	ret = sysfs_create_group(policy->kobj, &stats_attr_group);
+	ret = sysfs_create_group(&policy->kobj, &stats_attr_group);
 	if (!ret)
 		return;
 

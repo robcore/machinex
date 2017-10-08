@@ -112,7 +112,7 @@ struct cpufreq_policy {
 	enum cpufreq_table_sorting freq_table_sorted;
 
 	struct list_head        policy_list;
-	struct kobject		*kobj;
+	struct kobject		kobj;
 	struct completion	kobj_unregister;
 
 	/*
@@ -124,6 +124,17 @@ struct cpufreq_policy {
 	 *   mode before doing so.
 	 */
 	struct rw_semaphore	rwsem;
+
+	/*
+	 * Fast switch flags:
+	 * - fast_switch_possible should be set by the driver if it can
+	 *   guarantee that frequency can be changed on any CPU sharing the
+	 *   policy and that the change will affect all of the policy CPUs then.
+	 * - fast_switch_enabled is to be set by governors that support fast
+	 *   frequency switching with the help of cpufreq_enable_fast_switch().
+	 */
+	bool			fast_switch_possible;
+	bool			fast_switch_enabled;
 
 	/*
 	 * Preferred average time interval between consecutive invocations of
@@ -156,12 +167,6 @@ struct cpufreq_policy {
 	unsigned int hlimit_min_screen_off;
 	unsigned int curr_limit_max;
 	unsigned int curr_limit_min;
-};
-
-/* contains per cpu sysfs info ./sys/devices/ssytem/cpu/cpu#/cpufreq */
-struct cpufreq_cpu_sysinfo {
-	struct cpufreq_policy *cpu_policy; /* policy for online cpu */
-	struct kobject cpu_kobj; /* per cpu kobject */
 };
 
 /* Only for ACPI */
@@ -201,11 +206,14 @@ unsigned int cpufreq_get(unsigned int cpu);
 unsigned int cpufreq_quick_get(unsigned int cpu);
 unsigned int cpufreq_quick_get_max(unsigned int cpu);
 unsigned int cpufreq_quick_get_min(unsigned int cpu);
+void disable_cpufreq(void);
 
 u64 get_cpu_idle_time(unsigned int cpu, u64 *wall);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
 void cpufreq_update_policy(unsigned int cpu);
 struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy);
+void cpufreq_enable_fast_switch(struct cpufreq_policy *policy);
+void cpufreq_disable_fast_switch(struct cpufreq_policy *policy);
 #else
 static inline unsigned int cpufreq_get(unsigned int cpu)
 {
@@ -219,6 +227,7 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
 {
 	return 0;
 }
+static inline void disable_cpufreq(void) { }
 #endif
 
 void cpufreq_stats_create_table(struct cpufreq_policy *policy);
@@ -294,6 +303,8 @@ struct cpufreq_driver {
 				  unsigned int relation);	/* Deprecated */
 	int		(*target_index)(struct cpufreq_policy *policy,
 					unsigned int index);
+	unsigned int	(*fast_switch)(struct cpufreq_policy *policy,
+				       unsigned int target_freq);
 
 	/*
 	 * Caches and returns the lowest driver-supported frequency greater than
@@ -391,6 +402,7 @@ cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy);
 #ifdef CONFIG_CPU_FREQ
 void cpufreq_suspend(void);
 void cpufreq_resume(void);
+int cpufreq_generic_suspend(struct cpufreq_policy *policy);
 #else
 static inline void cpufreq_suspend(void) {}
 static inline void cpufreq_resume(void) {}
