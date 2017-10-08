@@ -18,16 +18,14 @@
  ****************************************************************
  ****************************************************************
  */
-
 #ifndef _LINUX_SYSCTL_H
 #define _LINUX_SYSCTL_H
-
-#include <uapi/linux/sysctl.h>
 
 #include <linux/list.h>
 #include <linux/rcupdate.h>
 #include <linux/wait.h>
 #include <linux/rbtree.h>
+#include <uapi/linux/sysctl.h>
 
 /* For the /proc/sys support */
 struct completion;
@@ -161,7 +159,8 @@ struct ctl_table_set {
 
 struct ctl_table_root {
 	struct ctl_table_set default_set;
-	struct ctl_table_set *(*lookup)(struct ctl_table_root *root);
+	struct ctl_table_set *(*lookup)(struct ctl_table_root *root,
+					   struct nsproxy *namespaces);
 	int (*permissions)(struct ctl_table_header *head, struct ctl_table *table);
 };
 
@@ -194,6 +193,9 @@ struct ctl_table_header *register_sysctl_paths(const struct ctl_path *path,
 void unregister_sysctl_table(struct ctl_table_header * table);
 
 extern int sysctl_init(void);
+
+extern struct ctl_table sysctl_mount_point[];
+
 #else /* CONFIG_SYSCTL */
 static inline struct ctl_table_header *register_sysctl_table(struct ctl_table * table)
 {

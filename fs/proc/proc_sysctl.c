@@ -20,6 +20,28 @@ static const struct inode_operations proc_sys_inode_operations;
 static const struct file_operations proc_sys_dir_file_operations;
 static const struct inode_operations proc_sys_dir_operations;
 
+/* Support for permanently empty directories */
+
+struct ctl_table sysctl_mount_point[] = {
+	{ }
+};
+
+static bool is_empty_dir(struct ctl_table_header *head)
+{
+	return head->ctl_table[0].child == sysctl_mount_point;
+}
+
+static void set_empty_dir(struct ctl_dir *dir)
+{
+	dir->header.ctl_table[0].child = sysctl_mount_point;
+}
+
+static void clear_empty_dir(struct ctl_dir *dir)
+
+{
+	dir->header.ctl_table[0].child = NULL;
+}
+
 void proc_sys_poll_notify(struct ctl_table_poll *poll)
 {
 	if (!poll)
@@ -51,7 +73,7 @@ static DEFINE_SPINLOCK(sysctl_lock);
 
 static void drop_sysctl_table(struct ctl_table_header *header);
 static int sysctl_follow_link(struct ctl_table_header **phead,
-	struct ctl_table **pentry);
+	struct ctl_table **pentry, struct nsproxy *namespaces);
 static int insert_links(struct ctl_table_header *head);
 static void put_links(struct ctl_table_header *header);
 
@@ -188,6 +210,17 @@ static int insert_header(struct ctl_dir *dir, struct ctl_table_header *header)
 	struct ctl_table *entry;
 	int err;
 
+	/* Is this a permanently empty directory? */
+	if (is_empty_dir(&dir->header))
+		return -EROFS;
+
+	/* Am I creating a permanently empty directory? */
+	if (header->ctl_table == sysctl_mount_point) {
+		if (!RB_EMPTY_ROOT(&dir->root))
+			return -EINVAL;
+		set_empty_dir(dir);
+	}
+
 	dir->header.nreg++;
 	header->parent = dir;
 	err = insert_links(header);
@@ -203,6 +236,8 @@ fail:
 	erase_header(header);
 	put_links(header);
 fail_links:
+	if (header->ctl_table == sysctl_mount_point)
+		clear_empty_dir(dir);
 	header->parent = NULL;
 	drop_sysctl_table(&dir->header);
 	return err;
@@ -285,11 +320,11 @@ static void sysctl_head_finish(struct ctl_table_header *head)
 }
 
 static struct ctl_table_set *
-lookup_header_set(struct ctl_table_root *root)
+lookup_header_set(struct ctl_table_root *root, struct nsproxy *namespaces)
 {
 	struct ctl_table_set *set = &root->default_set;
 	if (root->lookup)
-		set = root->lookup(root);
+		set = root->lookup(root, namespaces);
 	return set;
 }
 
@@ -420,6 +455,8 @@ static struct inode *proc_sys_make_inode(struct super_block *sb,
 		inode->i_mode |= S_IFDIR;
 		inode->i_op = &proc_sys_dir_operations;
 		inode->i_fop = &proc_sys_dir_file_operations;
+		if (is_empty_dir(head))
+			make_empty_dir_inode(inode);
 	}
 out:
 	return inode;
@@ -455,7 +492,7 @@ static struct dentry *proc_sys_lookup(struct inode *dir, struct dentry *dentry,
 		goto out;
 
 	if (S_ISLNK(p->mode)) {
-		ret = sysctl_follow_link(&h, &p);
+		ret = sysctl_follow_link(&h, &p, current->nsproxy);
 		err = ERR_PTR(ret);
 		if (ret)
 			goto out;
@@ -622,7 +659,7 @@ static bool proc_sys_link_fill_cache(struct file *file,
 
 	if (S_ISLNK(table->mode)) {
 		/* It is not an error if we can not follow the link ignore it */
-		int err = sysctl_follow_link(&head, &table);
+		int err = sysctl_follow_link(&head, &table, current->nsproxy);
 		if (err)
 			goto out;
 	}
@@ -912,7 +949,7 @@ static struct ctl_dir *get_subdir(struct ctl_dir *dir,
 found:
 	subdir->header.nreg++;
 failed:
-	if (unlikely(IS_ERR(subdir))) {
+	if (IS_ERR(subdir)) {
 		pr_err("sysctl could not get directory: ");
 		sysctl_print_dir(dir);
 		pr_cont("/%*.*s %ld\n",
@@ -939,7 +976,7 @@ static struct ctl_dir *xlate_dir(struct ctl_table_set *set, struct ctl_dir *dir)
 }
 
 static int sysctl_follow_link(struct ctl_table_header **phead,
-	struct ctl_table **pentry)
+	struct ctl_table **pentry, struct nsproxy *namespaces)
 {
 	struct ctl_table_header *head;
 	struct ctl_table_root *root;
@@ -951,7 +988,7 @@ static int sysctl_follow_link(struct ctl_table_header **phead,
 	ret = 0;
 	spin_lock(&sysctl_lock);
 	root = (*pentry)->data;
-	set = lookup_header_set(root);
+	set = lookup_header_set(root, namespaces);
 	dir = xlate_dir(set, (*phead)->parent);
 	if (IS_ERR(dir))
 		ret = PTR_ERR(dir);
@@ -1191,8 +1228,6 @@ struct ctl_table_header *__register_sysctl_table(
 			 sizeof(struct ctl_node)*nr_entries, GFP_KERNEL);
 	if (!header)
 		return NULL;
-
-	kmemleak_not_leak(header);
 
 	node = (struct ctl_node *)(header + 1);
 	init_header(header, root, set, node, table);
