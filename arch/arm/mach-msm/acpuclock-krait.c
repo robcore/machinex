@@ -1382,6 +1382,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		return ret;
 	}
+
 out:
 	return ret;
 }
