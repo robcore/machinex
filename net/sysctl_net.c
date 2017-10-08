@@ -68,8 +68,29 @@ static struct ctl_table_root net_sysctl_root = {
 	.permissions = net_ctl_permissions,
 };
 
+static int net_ctl_ro_header_perms(struct ctl_table_header *head,
+					struct ctl_table *table)
+{
+	struct net *net = container_of(head->set, struct net, sysctls);
+	kuid_t root_uid = make_kuid(net->user_ns, 0);
+	kgid_t root_gid = make_kgid(net->user_ns, 0);
+
+	if (ns_capable(net->user_ns, CAP_NET_ADMIN) ||
+	    uid_eq(root_uid, current_euid()))
+		return table->mode;
+	else
+		return table->mode & ~0222;
+}
+
+static struct ctl_table_root net_sysctl_ro_root = {
+	.permissions = net_ctl_ro_header_perms,
+};
+
+
 static int __net_init sysctl_net_init(struct net *net)
 {
+	setup_sysctl_set(&net_sysctl_ro_root.default_set, &net_sysctl_ro_root, NULL);
+	register_sysctl_root(&net_sysctl_ro_root);
 	setup_sysctl_set(&net->sysctls, &net_sysctl_root, is_seen);
 	return 0;
 }
@@ -114,6 +135,14 @@ struct ctl_table_header *register_net_sysctl_table(struct net *net,
 	return __register_sysctl_paths(&net->sysctls, path, table);
 }
 EXPORT_SYMBOL_GPL(register_net_sysctl_table);
+
+struct ctl_table_header *register_net_sysctl_rotable(const
+		struct ctl_path *path, struct ctl_table *table)
+{
+	return __register_sysctl_paths(&net_sysctl_ro_root.default_set,
+					path, table);
+}
+EXPORT_SYMBOL_GPL(register_net_sysctl_rotable);
 
 struct ctl_table_header *register_net_sysctl(struct net *net,
 	const char *path, struct ctl_table *table)
