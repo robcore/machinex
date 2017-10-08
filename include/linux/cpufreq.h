@@ -112,7 +112,7 @@ struct cpufreq_policy {
 	enum cpufreq_table_sorting freq_table_sorted;
 
 	struct list_head        policy_list;
-	struct kobject		kobj;
+	struct kobject		*kobj;
 	struct completion	kobj_unregister;
 
 	/*
