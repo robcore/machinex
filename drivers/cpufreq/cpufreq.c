@@ -1673,6 +1673,7 @@ static int cpufreq_online(unsigned int cpu)
 
 	if (cpufreq_suspended)
 		return 0;
+
 	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
 
 	/* Check if this CPU already has a policy to manage it */
@@ -2529,8 +2530,7 @@ static int cpufreq_start_governor(struct cpufreq_policy *policy)
 
 	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
 
-	if (cpufreq_driver->get && !cpufreq_driver->setpolicy)
-		cpufreq_update_current_freq(policy);
+	cpufreq_update_current_freq(policy);
 
 	if (policy->governor->start) {
 		ret = policy->governor->start(policy);

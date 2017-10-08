@@ -2075,16 +2075,9 @@ void cpufreq_resume(void)
 
 	cpufreq_suspended = false;
 
-	if (!has_target() && !cpufreq_driver->resume)
-		return;
-
 	pr_debug("%s: Resuming Governors\n", __func__);
 
 	for_each_active_policy(policy) {
-		if (cpufreq_driver->resume && cpufreq_driver->resume(policy)) {
-			pr_err("%s: Failed to resume driver: %p\n", __func__,
-				policy);
-		} else if (has_target()) {
 			down_write(&policy->rwsem);
 			ret = cpufreq_start_governor(policy);
 			up_write(&policy->rwsem);
@@ -2092,7 +2085,6 @@ void cpufreq_resume(void)
 			if (ret)
 				pr_err("%s: Failed to start governor for policy: %p\n",
 				       __func__, policy);
-		}
 	}
 }
 
@@ -2428,8 +2420,7 @@ static int cpufreq_start_governor(struct cpufreq_policy *policy)
 
 	pr_debug("%s: for CPU %u\n", __func__, policy->cpu);
 
-	if (cpufreq_driver->get && !cpufreq_driver->setpolicy)
-		cpufreq_update_current_freq(policy);
+	cpufreq_update_current_freq(policy);
 
 	if (policy->governor->start) {
 		ret = policy->governor->start(policy);
