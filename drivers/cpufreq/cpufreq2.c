@@ -700,40 +700,30 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 {
 	int err = -EINVAL;
 
-	if (cpufreq_driver->setpolicy) {
-		if (!strncasecmp(str_governor, "performance", CPUFREQ_NAME_LEN)) {
-			*policy = CPUFREQ_POLICY_PERFORMANCE;
-			err = 0;
-		} else if (!strncasecmp(str_governor, "powersave",
-						CPUFREQ_NAME_LEN)) {
-			*policy = CPUFREQ_POLICY_POWERSAVE;
-			err = 0;
-		}
-	} else {
-		struct cpufreq_governor *t;
+	struct cpufreq_governor *t;
 
-		mutex_lock(&cpufreq_governor_mutex);
+	mutex_lock(&cpufreq_governor_mutex);
 
-		t = find_governor(str_governor);
+	t = find_governor(str_governor);
 
-		if (t == NULL) {
-			int ret;
-
-			mutex_unlock(&cpufreq_governor_mutex);
-			ret = request_module("cpufreq_%s", str_governor);
-			mutex_lock(&cpufreq_governor_mutex);
-
-			if (ret == 0)
-				t = find_governor(str_governor);
-		}
-
-		if (t != NULL) {
-			*governor = t;
-			err = 0;
-		}
+	if (t == NULL) {
+		int ret;
 
 		mutex_unlock(&cpufreq_governor_mutex);
+		ret = request_module("cpufreq_%s", str_governor);
+		mutex_lock(&cpufreq_governor_mutex);
+
+		if (ret == 0)
+			t = find_governor(str_governor);
 	}
+
+	if (t != NULL) {
+		*governor = t;
+		err = 0;
+	}
+
+	mutex_unlock(&cpufreq_governor_mutex);
+
 	return err;
 }
 
@@ -851,14 +841,10 @@ static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
 	ssize_t ret;
 
-	if (cpufreq_driver && cpufreq_driver->setpolicy && cpufreq_driver->get)
-		ret = sprintf(buf, "%u\n", cpufreq_driver->get(policy->cpu));
-	else {
-		if (cpu_online(policy->cpu))
-			ret = sprintf(buf, "%u\n", policy->cur);
-		else
-			return -ENOSYS;
-	}
+	if (cpu_online(policy->cpu))
+		ret = sprintf(buf, "%u\n", policy->cur);
+	else
+		return -ENOSYS;
 	return ret;
 }
 
@@ -1402,14 +1388,6 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 
 	new_policy.governor = gov;
 
-	/* Use the default policy if there is no last_policy. */
-	if (cpufreq_driver->setpolicy) {
-		if (policy->last_policy)
-			new_policy.policy = policy->last_policy;
-		else
-			cpufreq_parse_governor(gov->name, &new_policy.policy,
-					       NULL);
-	}
 	/* set default policy */
 	return cpufreq_set_policy(policy, &new_policy);
 }
@@ -1687,6 +1665,15 @@ static int cpufreq_online(unsigned int cpu)
 	}
 
 	cpumask_copy(policy->cpus, cpumask_of(cpu));
+
+	/* call driver. From then on the cpufreq must be able
+	 * to accept all calls to ->verify and ->setpolicy for this CPU
+	 */
+	ret = cpufreq_driver->init(policy);
+	if (ret) {
+		pr_debug("initialization failed\n");
+		goto out_free_policy;
+	}
 
 	down_write(&policy->rwsem);
 
@@ -2552,10 +2539,12 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 			CPUFREQ_NOTIFY, new_policy);
 
-	reapply_hard_limits(policy->cpu);
+	policy->min = new_policy->min;
+	policy->max = new_policy->max;
 
-	policy->min = check_cpufreq_hardlimit(new_policy->min);
-	policy->max = check_cpufreq_hardlimit(new_policy->max);
+	if (unlikely(policy->min != policy->curr_limit_min ||
+		policy->max != policy->curr_limit_max))
+		reapply_hard_limits(policy->cpu);
 
 	policy->cached_target_freq = UINT_MAX;
 
@@ -2637,14 +2626,12 @@ void cpufreq_update_policy(unsigned int cpu)
 	 * BIOS might change freq behind our back
 	 * -> ask driver for current freq and notify governors about a change
 	 */
-	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
-		if (cpufreq_suspended)
-			goto unlock;
+	if (cpufreq_suspended)
+		goto unlock;
 
-		new_policy.cur = cpufreq_update_current_freq(policy);
-		if (WARN_ON(!new_policy.cur))
-			goto unlock;
-	}
+	new_policy.cur = cpufreq_update_current_freq(policy);
+	if (WARN_ON(!new_policy.cur))
+		goto unlock;
 
 	cpufreq_set_policy(policy, &new_policy);
 
@@ -2810,9 +2797,6 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	}
 	cpufreq_driver = driver_data;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
-	if (driver_data->setpolicy)
-		driver_data->flags |= CPUFREQ_CONST_LOOPS;
 
 	if (cpufreq_boost_supported()) {
 		ret = create_boost_sysfs_file();
