@@ -1395,7 +1395,7 @@ static int __init iface_stat_init(struct proc_dir_entry *parent_procdir)
 
 	iface_stat_procdir = proc_mkdir(iface_stat_procdirname, parent_procdir);
 	if (!iface_stat_procdir) {
-		pr_err("qtaguid: iface_stat: init failed to create proc entry\n");
+		pr_debug("qtaguid: iface_stat: init failed to create proc entry\n");
 		err = -1;
 		goto err;
 	}
@@ -1406,7 +1406,7 @@ static int __init iface_stat_init(struct proc_dir_entry *parent_procdir)
 						   &proc_iface_stat_fmt_fops,
 						   (void *)1 /* fmt1 */);
 	if (!iface_stat_all_procfile) {
-		pr_err("qtaguid: iface_stat: init "
+		pr_debug("qtaguid: iface_stat: init "
 		       " failed to create stat_old proc entry\n");
 		err = -1;
 		goto err_zap_entry;
@@ -1418,7 +1418,7 @@ static int __init iface_stat_init(struct proc_dir_entry *parent_procdir)
 						   &proc_iface_stat_fmt_fops,
 						   (void *)2 /* fmt2 */);
 	if (!iface_stat_fmt_procfile) {
-		pr_err("qtaguid: iface_stat: init "
+		pr_debug("qtaguid: iface_stat: init "
 		       " failed to create stat_all proc entry\n");
 		err = -1;
 		goto err_zap_all_stats_entry;
@@ -1427,20 +1427,20 @@ static int __init iface_stat_init(struct proc_dir_entry *parent_procdir)
 
 	err = register_netdevice_notifier(&iface_netdev_notifier_blk);
 	if (err) {
-		pr_err("qtaguid: iface_stat: init "
+		pr_debug("qtaguid: iface_stat: init "
 		       "failed to register dev event handler\n");
 		goto err_zap_all_stats_entries;
 	}
 	err = register_inetaddr_notifier(&iface_inetaddr_notifier_blk);
 	if (err) {
-		pr_err("qtaguid: iface_stat: init "
+		pr_debug("qtaguid: iface_stat: init "
 		       "failed to register ipv4 dev event handler\n");
 		goto err_unreg_nd;
 	}
 
 	err = register_inet6addr_notifier(&iface_inet6addr_notifier_blk);
 	if (err) {
-		pr_err("qtaguid: iface_stat: init "
+		pr_debug("qtaguid: iface_stat: init "
 		       "failed to register ipv6 dev event handler\n");
 		goto err_unreg_ip4_addr;
 	}
@@ -2379,7 +2379,7 @@ static void *qtaguid_stats_proc_next(struct seq_file *m, void *v, loff_t *pos)
 	struct rb_node *node;
 
 	if (!v) {
-		pr_err("qtaguid: %s(): unexpected v: NULL\n", __func__);
+		pr_debug("qtaguid: %s(): unexpected v: NULL\n", __func__);
 		return NULL;
 	}
 
@@ -2429,7 +2429,7 @@ static void *qtaguid_stats_proc_start(struct seq_file *m, loff_t *pos)
 	}
 	if (!qtaguid_stats_proc_iface_stat_ptr_valid(ppi->iface_entry)) {
 		if (ppi->iface_entry) {
-			pr_err("qtaguid: %s(): iface_entry %p not found\n",
+			pr_debug("qtaguid: %s(): iface_entry %p not found\n",
 			       __func__, ppi->iface_entry);
 			ppi->iface_entry = NULL;
 		}
@@ -2445,7 +2445,7 @@ static void *qtaguid_stats_proc_start(struct seq_file *m, loff_t *pos)
 		ts_entry = tag_stat_tree_search(
 				&ppi->iface_entry->tag_stat_tree, ppi->tag);
 		if (!ts_entry) {
-			pr_info("qtaguid: %s(): tag_stat.tag 0x%llx not found. Abort.\n",
+			pr_debug("qtaguid: %s(): tag_stat.tag 0x%llx not found. Abort.\n",
 				__func__, ppi->tag);
 			return NULL;
 		}
