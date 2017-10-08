@@ -77,26 +77,6 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 {
 	s64 delta_ns;
 
-	/*
-	 * Since cpufreq_update_util() is called with rq->lock held for
-	 * the @target_cpu, our per-cpu data is fully serialized.
-	 *
-	 * However, drivers cannot in general deal with cross-cpu
-	 * requests, so while get_next_freq() will work, our
-	 * sugov_update_commit() call may not for the fast switching platforms.
-	 *
-	 * Hence stop here for remote requests if they aren't supported
-	 * by the hardware, as calculating the frequency is pointless if
-	 * we cannot in fact act on it.
-	 *
-	 * For the slow switching platforms, the kthread is always scheduled on
-	 * the right set of CPUs and any CPU can find the next frequency and
-	 * schedule the kthread.
-	 */
-	if (sg_policy->policy->fast_switch_enabled &&
-	    !cpufreq_can_do_remote_dvfs(sg_policy->policy))
-		return false;
-
 	if (sg_policy->work_in_progress)
 		return false;
 
@@ -490,10 +470,6 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 
 static void sugov_kthread_stop(struct sugov_policy *sg_policy)
 {
-	/* kthread only required for slow path */
-	if (sg_policy->policy->fast_switch_enabled)
-		return;
-
 	kthread_flush_worker(&sg_policy->worker);
 	kthread_stop(sg_policy->thread);
 	mutex_destroy(&sg_policy->work_lock);
@@ -525,12 +501,10 @@ static int sugov_init(struct cpufreq_policy *policy)
 	if (policy->governor_data)
 		return -EBUSY;
 
-	cpufreq_enable_fast_switch(policy);
-
 	sg_policy = sugov_policy_alloc(policy);
 	if (!sg_policy) {
 		ret = -ENOMEM;
-		goto disable_fast_switch;
+		goto nope;
 	}
 
 	ret = sugov_kthread_create(sg_policy);
@@ -572,10 +546,7 @@ free_sg_policy:
 
 	sugov_policy_free(sg_policy);
 
-disable_fast_switch:
-	cpufreq_disable_fast_switch(policy);
-
-	pr_err("initialization failed (error %d)\n", ret);
+nope:
 	return ret;
 }
 
@@ -596,7 +567,6 @@ static void sugov_exit(struct cpufreq_policy *policy)
 
 	sugov_kthread_stop(sg_policy);
 	sugov_policy_free(sg_policy);
-	cpufreq_disable_fast_switch(policy);
 }
 
 static int sugov_start(struct cpufreq_policy *policy)
@@ -641,10 +611,8 @@ static void sugov_stop(struct cpufreq_policy *policy)
 
 	synchronize_sched();
 
-	if (!policy->fast_switch_enabled) {
-		irq_work_sync(&sg_policy->irq_work);
-		kthread_cancel_work_sync(&sg_policy->work);
-	}
+	irq_work_sync(&sg_policy->irq_work);
+	kthread_cancel_work_sync(&sg_policy->work);
 }
 
 static void sugov_limits(struct cpufreq_policy *policy)
