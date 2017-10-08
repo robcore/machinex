@@ -530,12 +530,7 @@ void cpufreq_freq_transition_end(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_freq_transition_end);
 
-/*
- * Fast frequency switching status count.  Positive means "enabled", negative
- * means "disabled" and 0 means "not decided yet".
- */
-static int cpufreq_fast_switch_count;
-static DEFINE_MUTEX(cpufreq_fast_switch_lock);
+static DEFINE_MUTEX(cpufreq_switch_lock);
 
 static void cpufreq_list_transition_notifiers(void)
 {
@@ -550,53 +545,6 @@ static void cpufreq_list_transition_notifiers(void)
 
 	mutex_unlock(&cpufreq_transition_notifier_list.mutex);
 }
-
-/**
- * cpufreq_enable_fast_switch - Enable fast frequency switching for policy.
- * @policy: cpufreq policy to enable fast frequency switching for.
- *
- * Try to enable fast frequency switching for @policy.
- *
- * The attempt will fail if there is at least one transition notifier registered
- * at this point, as fast frequency switching is quite fundamentally at odds
- * with transition notifiers.  Thus if successful, it will make registration of
- * transition notifiers fail going forward.
- */
-void cpufreq_enable_fast_switch(struct cpufreq_policy *policy)
-{
-	lockdep_assert_held(&policy->rwsem);
-
-	if (!policy->fast_switch_possible)
-		return;
-
-	mutex_lock(&cpufreq_fast_switch_lock);
-	if (cpufreq_fast_switch_count >= 0) {
-		cpufreq_fast_switch_count++;
-		policy->fast_switch_enabled = true;
-	} else {
-		pr_warn("CPU%u: Fast frequency switching not enabled\n",
-			policy->cpu);
-		cpufreq_list_transition_notifiers();
-	}
-	mutex_unlock(&cpufreq_fast_switch_lock);
-}
-EXPORT_SYMBOL_GPL(cpufreq_enable_fast_switch);
-
-/**
- * cpufreq_disable_fast_switch - Disable fast frequency switching for policy.
- * @policy: cpufreq policy to disable fast frequency switching for.
- */
-void cpufreq_disable_fast_switch(struct cpufreq_policy *policy)
-{
-	mutex_lock(&cpufreq_fast_switch_lock);
-	if (policy->fast_switch_enabled) {
-		policy->fast_switch_enabled = false;
-		if (!WARN_ON(cpufreq_fast_switch_count <= 0))
-			cpufreq_fast_switch_count--;
-	}
-	mutex_unlock(&cpufreq_fast_switch_lock);
-}
-EXPORT_SYMBOL_GPL(cpufreq_disable_fast_switch);
 
 /**
  * cpufreq_driver_resolve_freq - Map a target frequency to a driver-supported
@@ -1513,9 +1461,6 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
-
-
-#if 0
 static unsigned int alloc_count = 0;
 static int cpufreq_register_core(unsigned int cpu)
 {
@@ -1639,7 +1584,6 @@ out_free_policy:
 	cpufreq_policy_free(policy);
 	return ret;
 }
-#endif
 
 static int cpufreq_online(unsigned int cpu)
 {
@@ -2213,18 +2157,11 @@ int cpufreq_register_notifier(struct notifier_block *nb, unsigned int list)
 
 	switch (list) {
 	case CPUFREQ_TRANSITION_NOTIFIER:
-		mutex_lock(&cpufreq_fast_switch_lock);
+		mutex_lock(&cpufreq_switch_lock);
 
-		if (cpufreq_fast_switch_count > 0) {
-			mutex_unlock(&cpufreq_fast_switch_lock);
-			return -EBUSY;
-		}
 		ret = srcu_notifier_chain_register(
 				&cpufreq_transition_notifier_list, nb);
-		if (!ret)
-			cpufreq_fast_switch_count--;
-
-		mutex_unlock(&cpufreq_fast_switch_lock);
+		mutex_unlock(&cpufreq_switch_lock);
 		break;
 	case CPUFREQ_POLICY_NOTIFIER:
 		ret = blocking_notifier_chain_register(
@@ -2254,14 +2191,12 @@ int cpufreq_unregister_notifier(struct notifier_block *nb, unsigned int list)
 
 	switch (list) {
 	case CPUFREQ_TRANSITION_NOTIFIER:
-		mutex_lock(&cpufreq_fast_switch_lock);
+		mutex_lock(&cpufreq_switch_lock);
 
 		ret = srcu_notifier_chain_unregister(
 				&cpufreq_transition_notifier_list, nb);
-		if (!ret && !WARN_ON(cpufreq_fast_switch_count >= 0))
-			cpufreq_fast_switch_count++;
 
-		mutex_unlock(&cpufreq_fast_switch_lock);
+		mutex_unlock(&cpufreq_switch_lock);
 		break;
 	case CPUFREQ_POLICY_NOTIFIER:
 		ret = blocking_notifier_chain_unregister(
