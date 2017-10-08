@@ -328,7 +328,7 @@ int platform_device_add(struct platform_device *pdev)
 		}
 
 		if (p && insert_resource(p, r)) {
-			dev_err(&pdev->dev, "failed to claim resource %d\n", i);
+			dev_err(&pdev->dev, "failed to claim resource %d: %pR\n", i, r);
 			ret = -EBUSY;
 			goto failed;
 		}
@@ -482,9 +482,14 @@ static int platform_drv_probe(struct device *_dev)
 
 	ret = dev_pm_domain_attach(_dev, true);
 	if (ret != -EPROBE_DEFER) {
-		ret = drv->probe(dev);
-		if (ret)
-			dev_pm_domain_detach(_dev, true);
+		if (drv->probe) {
+			ret = drv->probe(dev);
+			if (ret)
+				dev_pm_domain_detach(_dev, true);
+		} else {
+			/* don't fail if just dev_pm_domain_attach failed */
+			ret = 0;
+		}
 	}
 
 	if (drv->prevent_deferred_probe && ret == -EPROBE_DEFER) {
@@ -504,9 +509,10 @@ static int platform_drv_remove(struct device *_dev)
 {
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
-	int ret;
+	int ret = 0;
 
-	ret = drv->remove(dev);
+	if (drv->remove)
+		ret = drv->remove(dev);
 	dev_pm_domain_detach(_dev, true);
 
 	return ret;
@@ -517,8 +523,8 @@ static void platform_drv_shutdown(struct device *_dev)
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
 
-	drv->shutdown(dev);
-	dev_pm_domain_detach(_dev, true);
+	if (drv->shutdown)
+		drv->shutdown(dev);
 }
 
 /**
