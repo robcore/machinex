@@ -601,6 +601,7 @@ static void cpuhp_thread_fun(unsigned int cpu)
 	 * that if we see ->should_run we also see the rest of the state.
 	 */
 	smp_mb();
+
 	if (WARN_ON_ONCE(!st->should_run))
 		return;
 
@@ -978,8 +979,6 @@ static int cpuhp_down_callbacks(unsigned int cpu, struct cpuhp_cpu_state *st,
 	}
 	return ret;
 }
-
-#ifdef CONFIG_HOTPLUG_CPU
 
 /* Requires cpu_add_remove_lock to be held */
 static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
