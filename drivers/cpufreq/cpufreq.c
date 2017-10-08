@@ -191,7 +191,7 @@ EXPORT_SYMBOL_GPL(cpufreq_generic_init);
 
 struct cpufreq_policy *cpufreq_cpu_get_raw(unsigned int cpu)
 {
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
+	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu)
 
 	return policy && cpumask_test_cpu(cpu, policy->cpus) ? policy : NULL;
 }
@@ -201,7 +201,7 @@ unsigned int cpufreq_generic_get(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
-	if (!policy || !cpu_online(cpu)) {
+	if (!policy) {
 		return 0;
 	}
 
@@ -467,7 +467,7 @@ static void cpufreq_notify_transition(struct cpufreq_policy *policy,
 		struct cpufreq_freqs *freqs, unsigned int state)
 {
 	for_each_cpu(freqs->cpu, policy->cpus)
-		__cpufreq_notify_transition(policy, freqs, state);
+			__cpufreq_notify_transition(policy, freqs, state);
 }
 
 /* Do post notifications when there are chances that transition has failed */
@@ -837,6 +837,8 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 
 
 	table = policy->freq_table; /* Get frequency table */
+	if (!table)
+		return -ENOMEM;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -857,6 +859,8 @@ static ssize_t store_hardlimit_max_screen_off(struct cpufreq_policy *policy, con
 		return -EINVAL;
 
 	table = policy->freq_table; /* Get frequency table */
+	if (!table)
+		return -ENOMEM;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -876,6 +880,8 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 		return -EINVAL;
 
 	table = policy->freq_table; /* Get frequency table */
+	if (!table)
+		return -ENOMEM;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -896,6 +902,8 @@ static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, con
 		return -EINVAL;
 
 	table = policy->freq_table; /* Get frequency table */
+	if (!table)
+		return -ENOMEM;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
@@ -1426,13 +1434,6 @@ static int cpufreq_register_core(unsigned int cpu)
 	cpumask_copy(policy->related_cpus, policy->cpus);
 
 	/*
-	 * SCRATCH THIS. WE ARE NOW.
-	 * affected cpus must always be the one, which are online. We aren't
-	 * managing offline cpus here.
-	 */
-	cpumask_and(policy->cpus, policy->cpus, cpu_possible_mask);
-
-	/*
 	 * First boot, set defaults because they haven't been set yet.
 	 */
 	if (!policy->hlimit_max_screen_on)
@@ -1552,12 +1553,6 @@ static int cpufreq_online(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
-
-	/*
-	 * affected cpus must always be the one, which are online. We aren't
-	 * managing offline cpus here.
-	 */
-	cpumask_and(policy->cpus, policy->cpus, cpu_possible_mask);
 
 	/*
 	 * First boot, set defaults because they haven't been set yet.
@@ -1825,6 +1820,9 @@ EXPORT_SYMBOL(cpufreq_get);
 static unsigned int cpufreq_update_current_freq(struct cpufreq_policy *policy)
 {
 	unsigned int new_freq;
+
+	if (cpu_is_offline(policy->cpu))
+		return 0;
 
 	new_freq = cpufreq_driver->get(policy->cpu);
 	if (!new_freq)
@@ -2105,6 +2103,8 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	unsigned int old_target_freq = target_freq;
 	int index;
 
+	if (cpu_is_offline(policy->cpu))
+		return 0;
 	/* Make sure that target_freq is within supported range */
 	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
 
