@@ -26,17 +26,16 @@ static struct ipc_namespace *create_ipc_ns(struct user_namespace *user_ns,
 	if (ns == NULL)
 		return ERR_PTR(-ENOMEM);
 
-	err = ns_alloc_inum(&ns->ns);
+	err = proc_alloc_inum(&ns->ns.inum);
 	if (err) {
 		kfree(ns);
 		return ERR_PTR(err);
 	}
-	ns->ns.ops = &ipcns_operations;
 
 	atomic_set(&ns->count, 1);
 	err = mq_init_ns(ns);
 	if (err) {
-		ns_free_inum(&ns->ns);
+		proc_free_inum(ns->ns.inum);
 		kfree(ns);
 		return ERR_PTR(err);
 	}
@@ -120,7 +119,7 @@ static void free_ipc_ns(struct ipc_namespace *ns)
 	 */
 	ipcns_notify(IPCNS_REMOVED);
 	put_user_ns(ns->user_ns);
-	ns_free_inum(&ns->ns);
+	proc_free_inum(ns->ns.inum);
 	kfree(ns);
 }
 
@@ -150,12 +149,7 @@ void put_ipc_ns(struct ipc_namespace *ns)
 	}
 }
 
-static inline struct ipc_namespace *to_ipc_ns(struct ns_common *ns)
-{
-	return container_of(ns, struct ipc_namespace, ns);
-}
-
-static struct ns_common *ipcns_get(struct task_struct *task)
+static void *ipcns_get(struct task_struct *task)
 {
 	struct ipc_namespace *ns = NULL;
 	struct nsproxy *nsproxy;
@@ -166,17 +160,17 @@ static struct ns_common *ipcns_get(struct task_struct *task)
 		ns = get_ipc_ns(nsproxy->ipc_ns);
 	task_unlock(task);
 
-	return ns ? &ns->ns : NULL;
+	return ns;
 }
 
-static void ipcns_put(struct ns_common *ns)
+static void ipcns_put(void *ns)
 {
-	return put_ipc_ns(to_ipc_ns(ns));
+	return put_ipc_ns(ns);
 }
 
-static int ipcns_install(struct nsproxy *nsproxy, struct ns_common *new)
+static int ipcns_install(struct nsproxy *nsproxy, void *new)
 {
-	struct ipc_namespace *ns = to_ipc_ns(new);
+	struct ipc_namespace *ns = new;
 	if (!ns_capable(ns->user_ns, CAP_SYS_ADMIN) ||
 	    !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
 		return -EPERM;
@@ -188,10 +182,18 @@ static int ipcns_install(struct nsproxy *nsproxy, struct ns_common *new)
 	return 0;
 }
 
+static unsigned int ipcns_inum(void *vp)
+{
+	struct ipc_namespace *ns = vp;
+
+	return ns->ns.inum;
+}
+
 const struct proc_ns_operations ipcns_operations = {
 	.name		= "ipc",
 	.type		= CLONE_NEWIPC,
 	.get		= ipcns_get,
 	.put		= ipcns_put,
 	.install	= ipcns_install,
+	.inum		= ipcns_inum,
 };

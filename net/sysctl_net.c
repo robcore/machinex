@@ -42,7 +42,8 @@ static int is_seen(struct ctl_table_set *set)
 }
 
 /* Return standard mode bits for table entry. */
-static int net_ctl_permissions(struct ctl_table_header *head,
+static int net_ctl_permissions(struct ctl_table_root *root,
+			       struct nsproxy *nsproxy,
 			       struct ctl_table *table)
 {
 	struct net *net = container_of(head->set, struct net, sysctls);
@@ -68,29 +69,8 @@ static struct ctl_table_root net_sysctl_root = {
 	.permissions = net_ctl_permissions,
 };
 
-static int net_ctl_ro_header_perms(struct ctl_table_header *head,
-					struct ctl_table *table)
-{
-	struct net *net = container_of(head->set, struct net, sysctls);
-	kuid_t root_uid = make_kuid(net->user_ns, 0);
-	kgid_t root_gid = make_kgid(net->user_ns, 0);
-
-	if (ns_capable(net->user_ns, CAP_NET_ADMIN) ||
-	    uid_eq(root_uid, current_euid()))
-		return table->mode;
-	else
-		return table->mode & ~0222;
-}
-
-static struct ctl_table_root net_sysctl_ro_root = {
-	.permissions = net_ctl_ro_header_perms,
-};
-
-
 static int __net_init sysctl_net_init(struct net *net)
 {
-	setup_sysctl_set(&net_sysctl_ro_root.default_set, &net_sysctl_ro_root, NULL);
-	register_sysctl_root(&net_sysctl_ro_root);
 	setup_sysctl_set(&net->sysctls, &net_sysctl_root, is_seen);
 	return 0;
 }
@@ -119,30 +99,11 @@ __init int net_sysctl_init(void)
 		goto out;
 	ret = register_pernet_subsys(&sysctl_pernet_ops);
 	if (ret)
-		goto out1;
+		goto out;
 	register_sysctl_root(&net_sysctl_root);
 out:
 	return ret;
-out1:
-	unregister_sysctl_table(net_header);
-	net_header = NULL;
-	goto out;
 }
-
-struct ctl_table_header *register_net_sysctl_table(struct net *net,
-	const struct ctl_path *path, struct ctl_table *table)
-{
-	return __register_sysctl_paths(&net->sysctls, path, table);
-}
-EXPORT_SYMBOL_GPL(register_net_sysctl_table);
-
-struct ctl_table_header *register_net_sysctl_rotable(const
-		struct ctl_path *path, struct ctl_table *table)
-{
-	return __register_sysctl_paths(&net_sysctl_ro_root.default_set,
-					path, table);
-}
-EXPORT_SYMBOL_GPL(register_net_sysctl_rotable);
 
 struct ctl_table_header *register_net_sysctl(struct net *net,
 	const char *path, struct ctl_table *table)

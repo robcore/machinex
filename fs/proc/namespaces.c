@@ -45,7 +45,7 @@ static const struct inode_operations ns_inode_operations = {
 static char *ns_dname(struct dentry *dentry, char *buffer, int buflen)
 {
 	struct inode *inode = dentry->d_inode;
-	const struct proc_ns_operations *ns_ops = dentry->d_fsdata;
+	const struct proc_ns_operations *ns_ops = PROC_I(inode)->ns.ns_ops;
 
 	return dynamic_dname(dentry, buffer, buflen, "%s:[%lu]",
 		ns_ops->name, inode->i_ino);
@@ -64,7 +64,7 @@ static struct dentry *proc_ns_get_dentry(struct super_block *sb,
 	struct inode *inode;
 	struct proc_inode *ei;
 	struct qstr qname = { .name = "", };
-	struct ns_common *ns;
+	void *ns;
 
 	ns = ns_ops->get(task);
 	if (!ns)
@@ -75,9 +75,8 @@ static struct dentry *proc_ns_get_dentry(struct super_block *sb,
 		ns_ops->put(ns);
 		return ERR_PTR(-ENOMEM);
 	}
-	dentry->d_fsdata = (void *)ns_ops;
 
-	inode = iget_locked(sb, ns->inum);
+	inode = iget_locked(sb, ns_ops->inum(ns));
 	if (!inode) {
 		dput(dentry);
 		ns_ops->put(ns);
@@ -145,7 +144,7 @@ static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int bufl
 	struct proc_inode *ei = PROC_I(inode);
 	const struct proc_ns_operations *ns_ops = ei->ns.ns_ops;
 	struct task_struct *task;
-	struct ns_common *ns;
+	void *ns;
 	char name[50];
 	int res = -EACCES;
 
@@ -161,7 +160,7 @@ static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int bufl
 	if (!ns)
 		goto out_put_task;
 
-	snprintf(name, sizeof(name), "%s:[%u]", ns_ops->name, ns->inum);
+	snprintf(name, sizeof(name), "%s:[%u]", ns_ops->name, ns_ops->inum(ns));
 	res = readlink_copy(buffer, buflen, name);
 	ns_ops->put(ns);
 out_put_task:
@@ -287,9 +286,9 @@ out_invalid:
 	return ERR_PTR(-EINVAL);
 }
 
-struct ns_common *get_proc_ns(struct inode *inode)
+struct proc_ns *get_proc_ns(struct inode *inode)
 {
-	return PROC_I(inode)->ns.ns;
+	return &PROC_I(inode)->ns;
 }
 
 bool proc_ns_inode(struct inode *inode)

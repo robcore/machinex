@@ -158,12 +158,6 @@ union proc_op {
 struct ctl_table_header;
 struct ctl_table;
 
-
-struct proc_ns {
-	struct ns_common *ns;
-	const struct proc_ns_operations *ns_ops;
-};
-
 struct proc_inode {
 	struct pid *pid;
 	int fd;

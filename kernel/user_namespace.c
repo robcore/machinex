@@ -85,12 +85,11 @@ int create_user_ns(struct cred *new)
 	if (!ns)
 		return -ENOMEM;
 
-	ret = ns_alloc_inum(&ns->ns);
+	ret = proc_alloc_inum(&ns->ns.inum);
 	if (ret) {
 		kmem_cache_free(user_ns_cachep, ns);
 		return ret;
 	}
-	ns->ns.ops = &userns_operations;
 
 	atomic_set(&ns->count, 1);
 	/* Leave the new->user_ns reference with the new user namespace. */
@@ -152,7 +151,7 @@ void free_user_ns(struct user_namespace *ns)
 #ifdef CONFIG_PERSISTENT_KEYRINGS
 		key_put(ns->persistent_keyring_register);
 #endif
-		ns_free_inum(&ns->ns);
+		proc_free_inum(ns->ns.inum);
 		kmem_cache_free(user_ns_cachep, ns);
 		ns = parent;
 	} while (atomic_dec_and_test(&parent->count));

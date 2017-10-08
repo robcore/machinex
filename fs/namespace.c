@@ -1561,12 +1561,16 @@ static bool is_mnt_ns_file(struct dentry *dentry)
 {
 	/* Is this a proxy for a mount namespace? */
 	struct inode *inode = dentry->d_inode;
-	return proc_ns_inode(inode) && dentry->d_fsdata == &mntns_operations;
-}
+	struct proc_ns *ei;
 
-struct mnt_namespace *to_mnt_ns(struct ns_common *ns)
-{
-	return container_of(ns, struct mnt_namespace, ns);
+	if (!proc_ns_inode(inode))
+		return false;
+
+	ei = get_proc_ns(inode);
+	if (ei->ns_ops != &mntns_operations)
+		return false;
+
+	return true;
 }
 
 static bool mnt_ns_loop(struct dentry *dentry)
@@ -1578,7 +1582,7 @@ static bool mnt_ns_loop(struct dentry *dentry)
 	if (!is_mnt_ns_file(dentry))
 		return false;
 
-	mnt_ns = to_mnt_ns(get_proc_ns(dentry->d_inode));
+	mnt_ns = get_proc_ns(dentry->d_inode)->ns;
 	return current->nsproxy->mnt_ns->seq >= mnt_ns->seq;
 }
 
@@ -2608,7 +2612,7 @@ dput_out:
 
 static void free_mnt_ns(struct mnt_namespace *ns)
 {
-	ns_free_inum(&ns->ns);
+	proc_free_inum(ns->ns.inum);
 	put_user_ns(ns->user_ns);
 	kfree(ns);
 }
@@ -2630,12 +2634,11 @@ static struct mnt_namespace *alloc_mnt_ns(struct user_namespace *user_ns)
 	new_ns = kmalloc(sizeof(struct mnt_namespace), GFP_KERNEL);
 	if (!new_ns)
 		return ERR_PTR(-ENOMEM);
-	ret = ns_alloc_inum(&new_ns->ns);
+	ret = proc_alloc_inum(&new_ns->ns.inum);
 	if (ret) {
 		kfree(new_ns);
 		return ERR_PTR(ret);
 	}
-	new_ns->ns.ops = &mntns_operations;
 	new_ns->seq = atomic64_add_return(1, &mnt_ns_seq);
 	atomic_set(&new_ns->count, 1);
 	new_ns->root = NULL;
@@ -3116,31 +3119,31 @@ found:
 	return visible;
 }
 
-static struct ns_common *mntns_get(struct task_struct *task)
+static void *mntns_get(struct task_struct *task)
 {
-	struct ns_common *ns = NULL;
+	struct mnt_namespace *ns = NULL;
 	struct nsproxy *nsproxy;
 
 	task_lock(task);
 	nsproxy = task->nsproxy;
 	if (nsproxy) {
-		ns = &nsproxy->mnt_ns->ns;
-		get_mnt_ns(to_mnt_ns(ns));
+		ns = nsproxy->mnt_ns;
+		get_mnt_ns(ns);
 	}
 	task_unlock(task);
 
 	return ns;
 }
 
-static void mntns_put(struct ns_common *ns)
+static void mntns_put(void *ns)
 {
-	put_mnt_ns(to_mnt_ns(ns));
+	put_mnt_ns(ns);
 }
 
-static int mntns_install(struct nsproxy *nsproxy, struct ns_common *ns)
+static int mntns_install(struct nsproxy *nsproxy, void *ns)
 {
 	struct fs_struct *fs = current->fs;
-	struct mnt_namespace *mnt_ns = to_mnt_ns(ns);
+	struct mnt_namespace *mnt_ns = ns;
 	struct path root;
 
 	if (fs->users != 1)
@@ -3165,10 +3168,17 @@ static int mntns_install(struct nsproxy *nsproxy, struct ns_common *ns)
 	return 0;
 }
 
+static unsigned int mntns_inum(void *ns)
+{
+	struct mnt_namespace *mnt_ns = ns;
+	return mnt_ns->ns.inum;
+}
+
 const struct proc_ns_operations mntns_operations = {
 	.name		= "mnt",
 	.type		= CLONE_NEWNS,
 	.get		= mntns_get,
 	.put		= mntns_put,
 	.install	= mntns_install,
+	.inum		= mntns_inum,
 };
