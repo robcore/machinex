@@ -26,13 +26,13 @@
 #include <linux/time.h>
 #include <linux/display_state.h>
 
-struct cpu_sync {
+struct cpuboost {
 	unsigned int cpu;
 	unsigned int input_boost_min;
 	unsigned int input_boost_freq;
 };
 
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpu_sync, sync_info);
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuboost, boostinfo);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct delayed_work input_boost_work;
@@ -63,7 +63,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 		return -EINVAL;
 
 	for_each_possible_cpu(cpu)
-		per_cpu(sync_info, cpu).input_boost_freq = val;
+		per_cpu(boostinfo, cpu).input_boost_freq = val;
 
 	return 0;
 }
@@ -71,10 +71,10 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
 	unsigned int cpu = smp_processor_id();
-	struct cpu_sync *i_sync_info = &per_cpu(sync_info, cpu);
+	struct cpuboost *localboost = &per_cpu(boostinfo, cpu);
 	ssize_t ret;
 
-	ret = sprintf(buf, "%u\n", i_sync_info->input_boost_freq);
+	ret = sprintf(buf, "%u\n", localboost->input_boost_freq);
 
 	return ret;
 }
@@ -97,7 +97,7 @@ static void update_policy_online(unsigned int cpu)
 static void do_input_boost_rem(struct work_struct *work)
 {
 	unsigned int cpu;
-	struct cpu_sync *i_sync_info;
+	struct cpuboost *localboost;
 	struct cpufreq_policy policy;
 
 	if (!is_display_on() || !input_boost_enabled || !input_boost_ms)
@@ -105,10 +105,10 @@ static void do_input_boost_rem(struct work_struct *work)
 
 	/* Reset the input_boost_min for all CPUs in the system */
 	for_each_possible_cpu(cpu) {
-		i_sync_info = &per_cpu(sync_info, cpu);
+		localboost = &per_cpu(boostinfo, cpu);
 		if (cpufreq_get_policy(&policy, cpu))
 			continue;
-		input_boost_limit = i_sync_info->input_boost_min = policy.hlimit_min_screen_on;
+		input_boost_limit = localboost->input_boost_min = policy.hlimit_min_screen_on;
 		update_policy_online(cpu);
 	}
 
@@ -118,15 +118,15 @@ static void do_input_boost_rem(struct work_struct *work)
 static void do_input_boost(struct work_struct *work)
 {
 	unsigned int cpu;
-	struct cpu_sync *i_sync_info;
+	struct cpuboost *localboost;
 
 	if (!input_boost_enabled || !input_boost_ms || !is_display_on())
 		return;
 
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
-		i_sync_info = &per_cpu(sync_info, cpu);
-		input_boost_limit = i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
+		localboost = &per_cpu(boostinfo, cpu);
+		input_boost_limit = localboost->input_boost_min = localboost->input_boost_freq;
 		update_policy_online(cpu);
 	}
 
@@ -161,14 +161,14 @@ EXPORT_SYMBOL(cpu_boost_event);
 static int cpu_boost_init(void)
 {
 	int cpu, ret;
-	struct cpu_sync *s;
+	struct cpuboost *s;
 
 	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
 	for_each_possible_cpu(cpu) {
-		s = &per_cpu(sync_info, cpu);
+		s = &per_cpu(boostinfo, cpu);
 		s->cpu = cpu;
 	}
 
