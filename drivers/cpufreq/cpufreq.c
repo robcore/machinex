@@ -45,7 +45,6 @@ bool hardlimit_ready = false;
 unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
-#define DEFAULT_INPUT_LIMIT CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK
 #define DEFAULT_INPUT_FREQ 1350000
 unsigned int input_boost_limit;
 unsigned int input_boost_freq = DEFAULT_INPUT_FREQ;
@@ -1826,7 +1825,7 @@ static int cpufreq_online(unsigned int cpu)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 
 	if (!policy->input_boost_limit)
-		policy->input_boost_limit = DEFAULT_INPUT_LIMIT;
+		policy->input_boost_limit = policy->hlimit_min_screen_on;
 
 	if (hotplug_ready)
 		hardlimit_ready = true;
