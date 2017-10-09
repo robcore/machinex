@@ -56,6 +56,7 @@ bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
+//unsigned int sens_id[NR_CPUS] = { 7, 8, 9, 10};
 static int limit_idx;
 static int thermal_limit_low;
 static int thermal_limit_high;
@@ -259,7 +260,6 @@ static int __ref do_freq_control(void)
 {
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
-	unsigned int internal_max_freq;
 	int freq_temp;
 	unsigned int hotplug_check_needed;
 
@@ -371,7 +371,7 @@ static int evaluate_core_temp(void)
 
 static void __ref do_core_control(void)
 {
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu;
 	int ret = 0;
 	int core_temp;
 
@@ -388,34 +388,27 @@ static void __ref do_core_control(void)
 	switch (core_temp) {
 		case CORE_TEMP_OVER:
 			if (msm_thermal_info.core_control_mask) {
-				for (cpu = 3; cpu > 1; cpu--) {
-					if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
+				for_each_nonboot_cpu_reverse(cpu) {
+					if (!(msm_thermal_info.core_control_mask & BIT(cpu)) ||
+						(cpus_offlined & BIT(cpu) && !cpu_online(cpu)))
 						continue;
-					if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
-						continue;
-					ret = cpu_down(cpu);
-					if (ret)
-						pr_debug("cpu_down failed. you got problems\n");
+					if (cpu_online(cpu))
+						cpu_down(cpu);
 					cpus_offlined |= BIT(cpu);
 				}
 			}
 			break;
 		case CORE_TEMP_SAFE:
 			if (msm_thermal_info.core_control_mask && cpus_offlined) {
-				for (cpu = 1; cpu < 3; cpu++) {
-					if (!(cpus_offlined & BIT(cpu)))
+				for_each_nonboot_offline_cpu(cpu) {
+					if (!(cpus_offlined & BIT(cpu)) && cpu_online(cpu))
 						continue;
 					/* If this core is already online, then bring up the
 					 * next offlined core.
 					 */
-					if (cpu_online(cpu))
+					if (cpu_online(cpu) || !is_cpu_allowed(cpu))
 						continue;
-					if (!is_cpu_allowed(cpu))
-						continue;
-					ret = cpu_up(cpu);
-					if (ret)
-						pr_err("%s: Error %d online core %d\n",
-								KBUILD_MODNAME, ret, cpu);
+					cpu_up(cpu);
 					cpus_offlined &= ~BIT(cpu);
 				}
 			}
@@ -501,6 +494,7 @@ static void __ref disable_msm_thermal(void)
 		return;
 	else
 		(limited_max_freq_thermal = table[thermal_limit_high].frequency);
+
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		reapply_hard_limits(cpu);
@@ -546,7 +540,6 @@ MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
 static void __ref update_offline_cores(int val)
 {
 	unsigned int cpu = 0;
-	int ret = 0;
 
 	if (!core_control_enabled || intelli_init() ||
 		thermal_suspended || !hotplug_ready)
@@ -554,15 +547,12 @@ static void __ref update_offline_cores(int val)
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_nonboot_online_cpu(cpu) {
-		if (cpu < 0 || cpu >= NR_CPUS ||
-			!cpu_online(cpu))
+		if (!cpu_online(cpu))
 			continue;
-		if (!(cpus_offlined & BIT(cpu)))
+		if (!(cpus_offlined & BIT(cpu)) && !cpu_online(cpu))
 			continue;
-		ret = cpu_down(cpu);
-		if (ret)
-			pr_err("%s: Unable to offline cpu%d\n",
-				KBUILD_MODNAME, cpu);
+		if (cpu_online(cpu))
+			cpu_down(cpu);
 	}
 }
 
