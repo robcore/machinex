@@ -1,9 +1,6 @@
 # CPUfreq core
 obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o cpufreq_stats.o
 
-# CPU boost
-obj-$(CONFIG_CPU_BOOST)					+= cpu-boost.o
-
 # CPUfreq governors
 obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
 obj-$(CONFIG_CPU_FREQ_GOV_ATTR_SET)	+= cpufreq_governor_attr_set.o # cpufreq_machinex_gov_attr.o

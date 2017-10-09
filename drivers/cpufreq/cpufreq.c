@@ -30,6 +30,8 @@
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
 #include <linux/prometheus.h>
+#include <linux/display_state.h>
+
 
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
@@ -38,11 +40,32 @@ unsigned int hlimit_max_screen_on;
 unsigned int hlimit_max_screen_off;
 unsigned int hlimit_min_screen_on;
 unsigned int hlimit_min_screen_off;
+
 bool hardlimit_ready = false;
 unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
+#define DEFAULT_INPUT_LIMIT CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK
+#define DEFAULT_INPUT_FREQ 1350000
+unsigned int input_boost_limit;
+unsigned int input_boost_freq = DEFAULT_INPUT_FREQ;
 extern unsigned long limited_max_freq_thermal;
+static struct workqueue_struct *cpu_boost_wq;
+
+static struct delayed_work input_boost_work;
+static struct delayed_work input_boost_rem;
+
+static bool input_boost_enabled = false;
+module_param(input_boost_enabled, bool, 0644);
+
+static unsigned int input_boost_ms = 100;
+module_param(input_boost_ms, uint, 0644);
+
+static struct delayed_work input_boost_rem;
+static u64 last_input_time;
+
+static unsigned int min_input_interval = 200;
+module_param(min_input_interval, uint, 0644);
 
 static LIST_HEAD(cpufreq_policy_list);
 
@@ -77,8 +100,6 @@ static LIST_HEAD(cpufreq_governor_list);
 static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
-
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuboost, coreboost);
 
 /* Flag to suspend/resume CPUFreq governors */
 static bool cpufreq_suspended;
@@ -305,7 +326,6 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 void reapply_hard_limits(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	struct cpuboost *bst = &per_cpu(coreboost, cpu);
 
 	if (!hardlimit_ready)
 		return;
@@ -323,16 +343,16 @@ void reapply_hard_limits(unsigned int cpu)
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
 
 		if (thermal_disables_boost) {
-			if (bst->input_boost_freq > policy->hlimit_min_screen_on &&
-				bst->input_boost_freq <= policy->curr_limit_max &&
+			if (policy->input_boost_limit > policy->hlimit_min_screen_on &&
+				policy->input_boost_limit <= policy->curr_limit_max &&
 				limited_max_freq_thermal == policy->hlimit_max_screen_on)
-				policy->curr_limit_min = bst->input_boost_freq;
+				policy->curr_limit_min = policy->input_boost_limit;
 			else
 				policy->curr_limit_min = policy->hlimit_min_screen_on;
 		} else {
-			if (bst->input_boost_freq > policy->hlimit_min_screen_on &&
-				bst->input_boost_freq <= policy->curr_limit_max)
-				policy->curr_limit_min = bst->input_boost_freq;
+			if (policy->input_boost_limit > policy->hlimit_min_screen_on &&
+				policy->input_boost_limit <= policy->curr_limit_max)
+				policy->curr_limit_min = policy->input_boost_limit;
 			else
 				policy->curr_limit_min = policy->hlimit_min_screen_on;
 		}
@@ -380,6 +400,71 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
 #endif
+
+static void do_input_boost_rem(struct work_struct *work)
+{
+	struct cpufreq_policy *policy;
+	unsigned int cpu;
+
+	if (!is_display_on() || !input_boost_enabled || !input_boost_ms)
+		return;
+
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (!policy)
+			continue;
+		/* Reset the input_boost_limit for all CPUs in the system */
+		policy->input_boost_limit = policy->hlimit_min_screen_on;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
+	}
+}
+
+static void do_input_boost(struct work_struct *work)
+{
+	struct cpufreq_policy *policy;
+	unsigned int cpu;
+
+	if (!input_boost_enabled || !input_boost_ms || !is_display_on())
+		return;
+
+	/* Set the input_boost_limit for all CPUs in the system */
+	for_each_possible_cpu(cpu) {
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (!policy)
+			continue;
+		policy->input_boost_limit = policy->input_boost_freq;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
+	}
+
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
+					msecs_to_jiffies(input_boost_ms));
+}
+
+u64 min_interval;
+u64 now;
+
+void cpu_boost_event(void)
+{
+	if (!input_boost_enabled || !hotplug_ready 
+	    || !input_boost_ms || !is_display_on())
+		return;
+
+	min_interval = max(min_input_interval, input_boost_ms);
+	now = ktime_to_us(ktime_get());
+
+	if (!last_input_time)
+		goto first_time;
+
+	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+		return;
+
+first_time:
+	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_work, 0);
+	last_input_time = ktime_to_us(ktime_get());
+}
+EXPORT_SYMBOL(cpu_boost_event);
 
 /**
  * adjust_jiffies - adjust the system "loops_per_jiffy"
@@ -837,6 +922,7 @@ show_one(hardlimit_min_screen_on, hlimit_min_screen_on);
 show_one(hardlimit_min_screen_off, hlimit_min_screen_off);
 show_one(current_limit_min, curr_limit_min);
 show_one(current_limit_max, curr_limit_max);
+show_one(input_boost_frequency, input_boost_freq);
 #endif
 
 /*WARNING! HACK!*/
@@ -958,6 +1044,24 @@ static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, con
 	return -EINVAL;
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
+static ssize_t store_input_boost_frequency(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int new_input_boost_freq, i;
+
+	struct cpufreq_frequency_table *table;
+
+	if (!sscanf(buf, "%u", &new_input_boost_freq))
+		return -EINVAL;
+
+	table = policy->freq_table; /* Get frequency table */
+
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+		if (table[i].frequency == new_input_boost_freq) {
+				policy->input_boost_freq = new_input_boost_freq;
+				return count;
+		}
+	return -EINVAL;
+}
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
@@ -1222,6 +1326,7 @@ cpufreq_freq_attr_rw(hardlimit_min_screen_on);
 cpufreq_freq_attr_rw(hardlimit_min_screen_off);
 cpufreq_freq_attr_ro(current_limit_min);
 cpufreq_freq_attr_ro(current_limit_max);
+cpufreq_freq_attr_rw(input_boost_frequency);
 #endif
 
 static struct attribute *default_attrs[] = {
@@ -1242,6 +1347,7 @@ static struct attribute *default_attrs[] = {
 	&hardlimit_min_screen_off.attr,
 	&current_limit_min.attr,
 	&current_limit_max.attr,
+	&input_boost_frequency.attr,
 	NULL
 };
 
@@ -1718,6 +1824,9 @@ static int cpufreq_online(unsigned int cpu)
 
 	if (!policy->curr_limit_min)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
+
+	if (!policy->input_boost_limit)
+		policy->input_boost_limit = DEFAULT_INPUT_LIMIT;
 
 	if (hotplug_ready)
 		hardlimit_ready = true;
@@ -3008,6 +3117,13 @@ static int __init cpufreq_core_init(void)
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
 #endif	/* CONFIG_CPU_VOLTAGE_TABLE */
+
+	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
+	if (!cpu_boost_wq)
+		return -EFAULT;
+
+	INIT_DELAYED_WORK(&input_boost_work, do_input_boost);
+	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	return 0;
 }

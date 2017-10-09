@@ -26,7 +26,6 @@
 #include <linux/time.h>
 #include <linux/display_state.h>
 
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuboost, boostinfo);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct delayed_work input_boost_work;

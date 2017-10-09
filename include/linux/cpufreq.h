@@ -65,11 +65,12 @@ struct cpufreq_user_policy {
 };
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 extern void reapply_hard_limits(unsigned int cpu);
-extern unsigned int input_boost_limit;
 extern unsigned int hlimit_max_screen_on;
 extern unsigned int hlimit_max_screen_off;
 extern unsigned int hlimit_min_screen_on;
 extern unsigned int hlimit_min_screen_off;
+extern unsigned int input_boost_limit;
+extern unsigned int input_boost_freq;
 
 extern unsigned int curr_limit_max;
 extern unsigned int curr_limit_min;
@@ -78,12 +79,6 @@ extern unsigned int current_screen_state;
 extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
 extern bool is_freq_limited(unsigned int cpu);
-
-struct cpuboost {
-	unsigned int cpu;
-	unsigned int input_boost_min;
-	unsigned int input_boost_freq;
-};
 
 struct cpufreq_policy {
 	/* CPUs sharing clock, require sw coordination */
@@ -173,6 +168,8 @@ struct cpufreq_policy {
 	unsigned int hlimit_min_screen_off;
 	unsigned int curr_limit_max;
 	unsigned int curr_limit_min;
+	unsigned int input_boost_limit;
+	unsigned int input_boost_freq;
 };
 
 /* Only for ACPI */

@@ -32,14 +32,6 @@ config CPU_FREQ_BOOST_SW
 	bool
 	depends on THERMAL
 
-config CPU_BOOST
-	tristate "Event base short term CPU freq boost"
-	depends on CPU_FREQ
-	help
-	  This driver boosts the frequency of one or more CPUs based on
-	  various events that might occur in the system. As of now, it
-	  is just touch.
-
 config SCHED_FREQ_INPUT
 	bool "Scheduler inputs to cpufreq governor"
 	help
