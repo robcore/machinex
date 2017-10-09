@@ -96,13 +96,13 @@ static struct delayed_work lazyplug_boost;
 static struct workqueue_struct *lazyplug_wq;
 static struct workqueue_struct *lazyplug_boost_wq;
 
-static unsigned int __read_mostly lazyplug_active = 0;
+static unsigned int lazyplug_active = 0;
 module_param(lazyplug_active, uint, 0664);
 
 static unsigned int __read_mostly touch_boost_active = 1;
 module_param(touch_boost_active, uint, 0664);
 
-static unsigned int __read_mostly nr_run_profile_sel = 0;
+static unsigned int nr_run_profile_sel = 0;
 module_param(nr_run_profile_sel, uint, 0664);
 
 /* default to something sane rather than zero */
@@ -197,17 +197,6 @@ module_param(cpu_nr_run_threshold, uint, 0664);
 static unsigned int __read_mostly nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
 module_param(nr_run_hysteresis, uint, 0664);
 
-#ifdef DEBUG_LAZYPLUG
-/* those 2 counters will malfunction if uptime exceeds 36.4 years */
-static unsigned int offline_state_count = 0;	/* Total time in all cores(except for CPU0) off, divided by DEF_SAMPLING_MS */
-module_param(offline_state_count, uint, 0444);
-static unsigned int online_state_count = 0;	/* Total time in all cores on, divided by DEF_SAMPLING_MS */
-module_param(online_state_count, uint, 0444);
-static unsigned int switch_count = 0;		/* Counts of switches between those two states, less is better */
-module_param(switch_count, uint, 0444);
-static bool previous_online_status = true;	/* Internal boolean to determine previous status */
-#endif
-
 static unsigned int nr_run_last;
 
 static unsigned int idle_count = 0;
@@ -219,15 +208,11 @@ static void cpu_all_ctrl(bool online) {
 	unsigned int cpu;
 
 	if (online) {
-		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
-				continue;
+		for_each_nonboot_offline_cpu(cpu) {
 			cpu_up(cpu);
 		}
 	} else {
-		for_each_online_cpu(cpu) {
-			if (cpu == 0)
-				continue;
+		for_each_nonboot_online_cpu(cpu) {
 			cpu_down(cpu);
 		}
 	}
@@ -304,9 +289,7 @@ static void unplug_cpu(int min_active_cpu)
 	struct ip_cpu_info *l_ip_info;
 	int l_nr_threshold;
 
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
+	for_each_nonboot_online_cpu(cpu) {
 		l_nr_threshold =
 			cpu_nr_run_threshold << 1 / (num_online_cpus());
 		l_ip_info = &per_cpu(ip_info, cpu);
