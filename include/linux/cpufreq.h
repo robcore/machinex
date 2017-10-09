@@ -79,6 +79,12 @@ extern bool hotplug_ready;
 extern unsigned long limited_max_freq_thermal;
 extern bool is_freq_limited(unsigned int cpu);
 
+struct cpuboost {
+	unsigned int cpu;
+	unsigned int input_boost_min;
+	unsigned int input_boost_freq;
+};
+
 struct cpufreq_policy {
 	/* CPUs sharing clock, require sw coordination */
 	cpumask_var_t		cpus;	/* Online CPUs only */

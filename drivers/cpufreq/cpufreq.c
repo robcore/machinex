@@ -78,6 +78,8 @@ static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
 
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuboost, coreboost);
+
 /* Flag to suspend/resume CPUFreq governors */
 static bool cpufreq_suspended;
 
@@ -303,6 +305,7 @@ EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 void reapply_hard_limits(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
+	struct cpuboost *bst = &per_cpu(coreboost, cpu);
 
 	if (!hardlimit_ready)
 		return;
@@ -320,16 +323,16 @@ void reapply_hard_limits(unsigned int cpu)
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
 
 		if (thermal_disables_boost) {
-			if (input_boost_limit > policy->hlimit_min_screen_on &&
-				input_boost_limit <= policy->curr_limit_max &&
+			if (bst->input_boost_freq > policy->hlimit_min_screen_on &&
+				bst->input_boost_freq <= policy->curr_limit_max &&
 				limited_max_freq_thermal == policy->hlimit_max_screen_on)
-				policy->curr_limit_min = input_boost_limit;
+				policy->curr_limit_min = bst->input_boost_freq;
 			else
 				policy->curr_limit_min = policy->hlimit_min_screen_on;
 		} else {
-			if (input_boost_limit > policy->hlimit_min_screen_on &&
-				input_boost_limit <= policy->curr_limit_max)
-				policy->curr_limit_min = input_boost_limit;
+			if (bst->input_boost_freq > policy->hlimit_min_screen_on &&
+				bst->input_boost_freq <= policy->curr_limit_max)
+				policy->curr_limit_min = bst->input_boost_freq;
 			else
 				policy->curr_limit_min = policy->hlimit_min_screen_on;
 		}
