@@ -110,7 +110,7 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 			if (thermal_limit_low < 0)
 				thermal_limit_low = 0;
 			if (thermal_limit_low >= CPUFREQ_TABLE_END - 1)
-				thermal_limit_low = CPUFREQ_TABLE_END -1;
+				thermal_limit_low = CPUFREQ_TABLE_END - 1;
 			return 0;
 		}
 	return -EINVAL;
