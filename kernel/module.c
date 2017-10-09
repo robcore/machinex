@@ -76,15 +76,7 @@
  * to ensure complete separation of code and data, but
  * only when CONFIG_DEBUG_SET_MODULE_RONX=y
  */
-#if 0
-# define debug_align(X) ALIGN(X, PAGE_SIZE)
-#else
-#ifdef CONFIG_DEBUG_SET_MODULE_RONX
-# define debug_align(X) ALIGN(X, PAGE_SIZE)
-#else
 # define debug_align(X) (X)
-#endif
-#endif
 
 /*
  * Given BASE and SIZE this macro calculates the number of pages the
@@ -357,9 +349,9 @@ static bool check_symbol(const struct symsearch *syms,
 		pr_warn("Symbol %s is marked as UNUSED, however this module is "
 			"using it.\n", fsa->name);
 		pr_warn("This symbol will go away in the future.\n");
-		pr_warn("Please evalute if this is the right api to use and if "
-			"it really is, submit a report the linux kernel "
-			"mailinglist together with submitting your code for "
+		pr_warn("Please evaluate if this is the right api to use and "
+			"if it really is, submit a report to the linux kernel "
+			"mailing list together with submitting your code for "
 			"inclusion.\n");
 	}
 #endif
@@ -421,7 +413,10 @@ const struct kernel_symbol *find_symbol(const char *name,
 }
 EXPORT_SYMBOL_GPL(find_symbol);
 
-/* Search for module by name: must hold module_mutex. */
+/*
+ * Search for module by name: must hold module_mutex (or preempt disabled
+ * for read-only access).
+ */
 static struct module *find_module_all(const char *name, size_t len,
 				      bool even_unformed)
 {
@@ -902,11 +897,11 @@ static inline void print_unload_info(struct seq_file *m, struct module *mod)
 
 	if (mod->init != NULL && mod->exit == NULL) {
 		printed_something = 1;
-		seq_printf(m, "[permanent],");
+		seq_puts(m, "[permanent],");
 	}
 
 	if (!printed_something)
-		seq_printf(m, "-");
+		seq_puts(m, "-");
 }
 
 void __symbol_put(const char *symbol)
@@ -1001,7 +996,7 @@ EXPORT_SYMBOL(module_put);
 static inline void print_unload_info(struct seq_file *m, struct module *mod)
 {
 	/* We don't know the usage count, or what modules are using. */
-	seq_printf(m, " - -");
+	seq_puts(m, " - -");
 }
 
 static inline void module_unload_free(struct module *mod)
