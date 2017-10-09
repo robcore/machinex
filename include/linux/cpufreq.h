@@ -80,6 +80,16 @@ extern bool hotplug_ready;
 extern unsigned int limited_max_freq_thermal;
 extern bool is_freq_limited(unsigned int cpu);
 
+#ifdef CONFIG_MACHINEX_THERMAL
+struct machinex_thermal_info {
+	unsigned int limited_max_freq_thermal; /* policy for online cpu */
+	int sensor_num[NR_CPUS] = {7, 8, 9, 10};
+	int limit_idx;
+	int thermal_limit_low;
+	int thermal_limit_high;
+};
+#endif
+
 struct cpufreq_policy {
 	/* CPUs sharing clock, require sw coordination */
 	cpumask_var_t		cpus;	/* Online CPUs only */

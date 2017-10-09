@@ -56,9 +56,9 @@ bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
-static int limit_idx;
-static int thermal_limit_low;
-static int thermal_limit_high;
+int limit_idx;
+int thermal_limit_low;
+int thermal_limit_high;
 static struct cpufreq_frequency_table *table;
 unsigned int limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 static bool thermal_suspended = false;
