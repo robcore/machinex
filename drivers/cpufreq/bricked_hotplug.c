@@ -121,8 +121,6 @@ static int get_slowest_cpu(void) {
 	unsigned int cpu, slow_cpu = 0, rate, slow_rate = 0;
 
 	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
 		rate = cpufreq_quick_get(cpu);
 		if (rate > 0 && slow_rate <= rate) {
 			slow_rate = rate;

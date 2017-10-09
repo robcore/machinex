@@ -270,7 +270,7 @@ static void hotplug_work_fn(struct work_struct *work)
 	}
 	put_online_cpus();
 
-	for (cpu = 1; cpu < NR_CPUS; cpu++) {
+	for_each_nonboot_cpu(cpu) {
 		if (hotplug_onoff[cpu] == ON)
 			cpu_up(cpu);
 		else if (hotplug_onoff[cpu] == OFF)
@@ -468,7 +468,7 @@ define_one_global_rw(hotplug_rate_3_0);
 define_one_global_rw(hotplug_rate_3_1);
 define_one_global_rw(hotplug_rate_4_0);
 
-static void cpus_hotplugging(int status) {
+static void cpus_hotplugging(unsigned int status) {
 	int ret = 0;
 
 	if (status) {
@@ -494,7 +494,7 @@ static ssize_t store_hotplug_sampling_rate(struct kobject *a,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(input, 10);
+	sanitize_min_max(input, 1, 10);
 
 	if (input == hotplug_tuners_ins.hotplug_sampling_rate)
 		return count;
@@ -515,15 +515,12 @@ static ssize_t store_hotplug_enable(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = input > 0;
+	sanitize_min_max(input, 0, 1);
 
 	if (hotplug_tuners_ins.hotplug_enable == input)
 		return count;
 
-	if (input > 0)
-		cpus_hotplugging(1);
-	else
-		cpus_hotplugging(0);
+	cpus_hotplugging(input);
 
 	return count;
 }
@@ -539,7 +536,7 @@ static ssize_t store_min_cpus_online(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(input > NR_CPUS ? NR_CPUS : input, 1);
+	sanitize_min_max(input, 1, hotplug_tuners_ins.max_cpus_online);
 
 	if (hotplug_tuners_ins.min_cpus_online == input)
 		return count;
@@ -560,7 +557,7 @@ static ssize_t store_max_cpus_online(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(input > NR_CPUS ? NR_CPUS : input, 1);
+	sanitize_min_max(input, hotplug_tuners_ins.min_cpus_online, NR_CPUS);
 
 	if (hotplug_tuners_ins.max_cpus_online == input)
 		return count;
@@ -582,7 +579,7 @@ static ssize_t store_max_cpus_online_susp(struct kobject *a,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = max(input > NR_CPUS ? NR_CPUS : input, 1);
+	sanitize_min_max(input, 1, 4);
 
 	if (hotplug_tuners_ins.max_cpus_online_susp == input)
 		return count;
@@ -707,4 +704,3 @@ MODULE_LICENSE("GPL");
 
 late_initcall(alucard_hotplug_init);
 module_exit(alucard_hotplug_exit);
-
