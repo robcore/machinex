@@ -50,7 +50,6 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_control_mask = 0xe,
 };
 
-extern unsigned int hlimit_max_screen_on;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
 bool core_control_enabled;
@@ -61,7 +60,7 @@ static int limit_idx;
 static int thermal_limit_low;
 static int thermal_limit_high;
 static struct cpufreq_frequency_table *table;
-unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+unsigned int limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 static bool thermal_suspended = false;
 /* module parameters */
 module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
@@ -203,7 +202,7 @@ static int msm_thermal_get_freq_table(void)
 	return 0;
 }
 
-static void update_cpu_max_freq(unsigned long max_freq)
+static void update_cpu_max_freq(unsigned int max_freq)
 {
 	int ret;
 	unsigned int cpu = smp_processor_id();
@@ -238,7 +237,7 @@ static int evaluate_freq_temp(void)
 	int ret = 0;
 	uint32_t i;
 	unsigned int safe = 0, fail = 0;
-	unsigned long delta;
+	long delta;
 
 	if (thermal_suspended)
 		return -EINVAL;
@@ -276,9 +275,8 @@ static int evaluate_freq_temp(void)
 static int __ref do_freq_control(void)
 {
 	int ret = 0;
-	struct cpufreq_policy policy;
 	unsigned int cpu = smp_processor_id();
-	unsigned long max_freq;
+	unsigned int max_freq;
 	int freq_temp;
 	unsigned int hotplug_check_needed;
 
@@ -348,7 +346,7 @@ static int evaluate_core_temp(void)
 	int ret = 0;
 	uint32_t i;
 	unsigned int safe = 0, fail = 0;
-	unsigned long delta;
+	unsigned int delta;
 
 	if (thermal_suspended)
 		return -EINVAL;

@@ -48,7 +48,7 @@ unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 #define DEFAULT_INPUT_FREQ 1350000
 unsigned int input_boost_limit;
 unsigned int input_boost_freq = DEFAULT_INPUT_FREQ;
-extern unsigned long limited_max_freq_thermal;
+extern unsigned int limited_max_freq_thermal;
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct delayed_work input_boost_work;
