@@ -721,9 +721,14 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 #define for_each_nonboot_offline_cpu(cpu) for_each_cpu_not_but_zero((cpu), cpu_online_mask)
 
 #define for_each_possible_cpu_reverse(cpu)		\
-	for ((cpu) = cpumask_of(3);				\
-		(cpu) = (cpu)-1,	\
+	for ((cpu) = 3;				\
+		(cpu)--,	\
 		(cpu) > 0;)
+
+#define for_each_nonboot_cpu_reverse(cpu)		\
+	for ((cpu) = 3;				\
+		(cpu)--,	\
+		(cpu) > 1;)
 
 /* Wrappers for arch boot code to manipulate normally-constant masks */
 void init_cpu_present(const struct cpumask *src);

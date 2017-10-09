@@ -492,7 +492,6 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
  */
 static void __ref disable_msm_thermal(void)
 {
-	struct cpufreq_policy *policy;
 	unsigned int cpu = smp_processor_id();
 
 	cancel_delayed_work_sync(&check_temp_work);
