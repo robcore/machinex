@@ -65,12 +65,6 @@ struct cpufreq_user_policy {
 };
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
 extern void reapply_hard_limits(unsigned int cpu);
-extern unsigned int hlimit_max_screen_on;
-extern unsigned int hlimit_max_screen_off;
-extern unsigned int hlimit_min_screen_on;
-extern unsigned int hlimit_min_screen_off;
-extern unsigned int input_boost_limit;
-extern unsigned int input_boost_freq;
 
 extern unsigned int curr_limit_max;
 extern unsigned int curr_limit_min;
@@ -179,6 +173,7 @@ struct cpufreq_policy {
 	unsigned int curr_limit_min;
 	unsigned int input_boost_limit;
 	unsigned int input_boost_freq;
+	unsigned int limited_max_freq_thermal;
 };
 
 /* Only for ACPI */
@@ -218,7 +213,7 @@ unsigned int cpufreq_get(unsigned int cpu);
 unsigned int cpufreq_quick_get(unsigned int cpu);
 unsigned int cpufreq_quick_get_max(unsigned int cpu);
 unsigned int cpufreq_quick_get_min(unsigned int cpu);
-void disable_cpufreq(void);
+void set_thermal_policy(unsigned int cpu, unsigned int freq);
 
 u64 get_cpu_idle_time(unsigned int cpu, u64 *wall);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
@@ -962,4 +957,3 @@ extern bool hardlimit_ready;
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */
-

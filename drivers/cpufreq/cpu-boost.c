@@ -26,6 +26,13 @@
 #include <linux/time.h>
 #include <linux/display_state.h>
 
+struct cpuboost {
+	unsigned int cpu;
+	unsigned int input_boost_min;
+	unsigned int input_boost_freq;
+};
+
+static DEFINE_PER_CPU_SHARED_ALIGNED(struct cpuboost, boostinfo);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct delayed_work input_boost_work;
@@ -43,6 +50,7 @@ static u64 last_input_time;
 static unsigned int min_input_interval = 200;
 module_param(min_input_interval, uint, 0644);
 
+unsigned int input_boost_limit;
 extern bool hotplug_ready;
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
@@ -100,7 +108,7 @@ static void do_input_boost_rem(struct work_struct *work)
 		localboost = &per_cpu(boostinfo, cpu);
 		if (cpufreq_get_policy(&policy, cpu))
 			continue;
-		localboost->input_boost_min = policy.hlimit_min_screen_on;
+		input_boost_limit = localboost->input_boost_min = policy.hlimit_min_screen_on;
 		update_policy_online(cpu);
 	}
 
@@ -118,7 +126,7 @@ static void do_input_boost(struct work_struct *work)
 	/* Set the input_boost_min for all CPUs in the system */
 	for_each_online_cpu(cpu) {
 		localboost = &per_cpu(boostinfo, cpu);
-		localboost->input_boost_min = localboost->input_boost_freq;
+		input_boost_limit = localboost->input_boost_min = localboost->input_boost_freq;
 		update_policy_online(cpu);
 	}
 

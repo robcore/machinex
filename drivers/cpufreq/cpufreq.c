@@ -36,18 +36,10 @@
 extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
-unsigned int hlimit_max_screen_on;
-unsigned int hlimit_max_screen_off;
-unsigned int hlimit_min_screen_on;
-unsigned int hlimit_min_screen_off;
 
 bool hardlimit_ready = false;
-unsigned int curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-unsigned int curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 #define DEFAULT_INPUT_FREQ 1350000
-unsigned int input_boost_limit;
-unsigned int input_boost_freq = DEFAULT_INPUT_FREQ;
 extern unsigned int limited_max_freq_thermal;
 static struct workqueue_struct *cpu_boost_wq;
 
@@ -399,6 +391,25 @@ unsigned int check_cpufreq_hardlimit(unsigned int freq)
 }
 EXPORT_SYMBOL(check_cpufreq_hardlimit);
 #endif
+
+void set_thermal_policy(unsigned int cpu, unsigned int freq)
+{
+	unsigned int cpu;
+	struct cpufreq_policy *policy;
+
+	policy = cpufreq_cpu_get_raw(cpu);
+	if (!policy)
+		return;
+
+	if (freq == policy->limited_max_freq_thermal)
+		return;
+	else {
+		policy->limited_max_freq_thermal = freq;
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
+	}
+}
+	
 
 static void do_input_boost_rem(struct work_struct *work)
 {
