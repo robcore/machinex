@@ -88,12 +88,11 @@ bool thermal_core_controlled(unsigned int cpu)
 
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val, i;
+	unsigned int i, val, cpu = 0;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
-	unsigned int cpu = 0;
 
-	if (!sscanf(buf, "%d", &val))
+	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
 
 	policy = cpufreq_cpu_get_raw(cpu);
@@ -146,7 +145,7 @@ module_param_cb(thermal_limit_low, &param_ops_thermal_limit_low, NULL, 0644);
 
 static int set_limit_temp_degC(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val;
+	int val;
 	if (!sscanf(buf, "%d", &val))
 		return -EINVAL;
 
@@ -160,7 +159,7 @@ static int get_limit_temp_degC(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret = 0;
 
-	ret = sprintf(buf, "%u", msm_thermal_info.limit_temp_degC);
+	ret = sprintf(buf, "%d", msm_thermal_info.limit_temp_degC);
 
 	return ret;
 }
@@ -173,7 +172,7 @@ module_param_cb(limit_temp_degC, &param_ops_limit_temp_degC, NULL, 0664);
 
 static int set_temp_hysteresis_degC(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val;
+	int val;
 	if (!sscanf(buf, "%d", &val))
 		return -EINVAL;
 
@@ -187,7 +186,7 @@ static int get_temp_hysteresis_degC(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret = 0;
 
-	ret = sprintf(buf, "%u", msm_thermal_info.temp_hysteresis_degC);
+	ret = sprintf(buf, "%d", msm_thermal_info.temp_hysteresis_degC);
 
 	return ret;
 }
@@ -200,7 +199,7 @@ module_param_cb(freq_limit_hysteresis, &param_ops_temp_hysteresis_degC, NULL, 06
 
 static int set_core_limit_temp_degC(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val;
+	int val;
 	if (!sscanf(buf, "%d", &val))
 		return -EINVAL;
 
@@ -214,7 +213,7 @@ static int get_core_limit_temp_degC(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret = 0;
 
-	ret = sprintf(buf, "%u", msm_thermal_info.core_limit_temp_degC);
+	ret = sprintf(buf, "%d", msm_thermal_info.core_limit_temp_degC);
 
 	return ret;
 }
@@ -227,7 +226,7 @@ module_param_cb(core_limit_temp_degC, &param_ops_core_limit_temp_degC, NULL, 066
 
 static int set_core_temp_hysteresis_degC(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int val;
+	int val;
 	if (!sscanf(buf, "%d", &val))
 		return -EINVAL;
 
@@ -241,7 +240,7 @@ static int get_core_temp_hysteresis_degC(char *buf, const struct kernel_param *k
 {
 	ssize_t ret = 0;
 
-	ret = sprintf(buf, "%u", msm_thermal_info.core_temp_hysteresis_degC);
+	ret = sprintf(buf, "%d", msm_thermal_info.core_temp_hysteresis_degC);
 
 	return ret;
 }
@@ -271,7 +270,7 @@ static int get_freq_step(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
 
-	ret = sprintf(buf, "%d\n", msm_thermal_info.freq_step);
+	ret = sprintf(buf, "%u\n", msm_thermal_info.freq_step);
 
 	return ret;
 }
@@ -301,7 +300,7 @@ static int get_poll_ms(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
 
-	ret = sprintf(buf, "%d\n", msm_thermal_info.poll_ms);
+	ret = sprintf(buf, "%u\n", msm_thermal_info.poll_ms);
 
 	return ret;
 }
@@ -320,10 +319,7 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	unsigned int top, cpu = 0;
-	int i;
-
-
+	unsigned int i, top, cpu = 0;
 
 	if (hotplug_ready || thermal_suspended) {
 		return -EINVAL;
@@ -369,7 +365,7 @@ static long evaluate_temp(unsigned int cpu)
 	tsens_dev.sensor_num = msm_sens_id[cpu];
 	ret = tsens_get_temp(&tsens_dev, &temp);
 	if (!temp || ret) {
-		pr_err("%s: Unable to read TSENS sensor %d\n",
+		pr_err("%s: Unable to read TSENS sensor %u\n",
 				KBUILD_MODNAME, tsens_dev.sensor_num);
 		return -EINVAL;
 	}
@@ -484,7 +480,7 @@ static void __ref do_core_control(void)
 					continue;
 				ret = cpu_up(cpu);
 				if (ret)
-					pr_err("%s: Error %d online core %d\n",
+					pr_err("%s: Error %d online core %u\n",
 							KBUILD_MODNAME, ret, cpu);
 				cpus_offlined &= ~BIT(cpu);
 		}
@@ -533,7 +529,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
 		if (thermal_core_controlled(cpu)) {
 			pr_debug(
-			"%s: Preventing cpu%d from coming online.\n",
+			"%s: Preventing cpu%u from coming online.\n",
 				KBUILD_MODNAME, cpu);
 			return NOTIFY_BAD;
 		}
@@ -623,7 +619,7 @@ static void __ref update_offline_cores(int val)
 			continue;
 		ret = cpu_down(cpu);
 		if (ret)
-			pr_err("%s: Unable to offline cpu%d\n",
+			pr_err("%s: Unable to offline cpu%u\n",
 				KBUILD_MODNAME, cpu);
 	}
 }
@@ -668,7 +664,7 @@ done_store_cc:
 static ssize_t show_cpus_offlined(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", cpus_offlined);
+	return snprintf(buf, PAGE_SIZE, "%u\n", cpus_offlined);
 }
 
 static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
@@ -820,4 +816,3 @@ MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("intelligent thermal driver for Qualcomm based SOCs");
 MODULE_DESCRIPTION("originally from Qualcomm's open source repo");
-

@@ -326,7 +326,7 @@ passive_show(struct device *dev, struct device_attribute *attr,
 {
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
 
-	return sprintf(buf, "%d\n", tz->forced_passive);
+	return sprintf(buf, "%u\n", tz->forced_passive);
 }
 
 static DEVICE_ATTR(type, 0444, type_show, NULL);
@@ -409,7 +409,7 @@ thermal_cooling_device_max_state_show(struct device *dev,
 	ret = cdev->ops->get_max_state(cdev, &state);
 	if (ret)
 		return ret;
-	return sprintf(buf, "%ld\n", state);
+	return sprintf(buf, "%lu\n", state);
 }
 
 static ssize_t
@@ -423,7 +423,7 @@ thermal_cooling_device_cur_state_show(struct device *dev,
 	ret = cdev->ops->get_cur_state(cdev, &state);
 	if (ret)
 		return ret;
-	return sprintf(buf, "%ld\n", state);
+	return sprintf(buf, "%lu\n", state);
 }
 
 static ssize_t
@@ -435,7 +435,7 @@ thermal_cooling_device_cur_state_store(struct device *dev,
 	unsigned long state;
 	int result;
 
-	if (!sscanf(buf, "%ld\n", &state))
+	if (!sscanf(buf, "%lu\n", &state))
 		return -EINVAL;
 
 	if ((long)state < 0)

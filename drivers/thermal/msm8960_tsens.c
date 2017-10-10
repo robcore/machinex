@@ -687,7 +687,7 @@ static void tsens_scheduler_fn(struct work_struct *work)
 				/* Notify user space */
 				schedule_work(&tm->sensor[i].work);
 				adc_code = readl_relaxed(sensor_addr);
-				pr_debug("Trigger (%d degrees) for sensor %d\n",
+				pr_debug("Trigger (%d degrees) for sensor %u\n",
 					tsens_tz_code_to_degC(adc_code, i), i);
 			}
 		}

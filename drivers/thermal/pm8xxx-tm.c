@@ -476,7 +476,7 @@ static void pm8xxx_tm_work(struct work_struct *work)
 		if (rc < 0)
 			goto bail;
 
-		pr_crit("%s: PMIC Temp Alarm - stage=%u, threshold=%u, temp=%lu mC\n",
+		pr_crit("%s: PMIC Temp Alarm - stage=%d, threshold=%d, temp=%lu mC\n",
 			chip->cdata.tm_name, stage, thresh, temp);
 
 		/* Notify user space */
@@ -635,20 +635,18 @@ static int pm8xxx_tm_probe(struct platform_device *pdev)
 	rc = request_irq(chip->tempstat_irq, pm8xxx_tm_isr, IRQF_TRIGGER_RISING,
 		chip->cdata.irq_name_temp_stat, chip);
 	if (rc < 0) {
-		pr_err("request_irq(%d) failed: %d\n", chip->tempstat_irq, rc);
+		pr_err("request_irq(%u) failed: %d\n", chip->tempstat_irq, rc);
 		goto err_cancel_work;
 	}
 
 	rc = request_irq(chip->overtemp_irq, pm8xxx_tm_isr, IRQF_TRIGGER_RISING,
 		chip->cdata.irq_name_over_temp, chip);
 	if (rc < 0) {
-		pr_err("request_irq(%d) failed: %d\n", chip->overtemp_irq, rc);
+		pr_err("request_irq(%u) failed: %d\n", chip->overtemp_irq, rc);
 		goto err_free_irq_tempstat;
 	}
 
 	platform_set_drvdata(pdev, chip);
-
-	pr_info("OK\n");
 
 	return 0;
 
