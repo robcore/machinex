@@ -60,9 +60,9 @@ static unsigned int msm_sens_id[NR_CPUS] = { 7, 8, 9, 10};
 
 struct msm_thermal_pcpu {
 	unsigned int cpu;
-	int limit_idx;
-	int thermal_limit_low;
-	int thermal_limit_high;
+	unsigned int limit_idx;
+	unsigned int thermal_limit_low;
+	unsigned int thermal_limit_high;
 	unsigned int limited_max_freq_thermal;
 	unsigned int internal_max_freq;
 };
@@ -109,7 +109,6 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 		if (table[i].frequency == val) {
 			for_each_possible_cpu(cpu)
 				per_cpu(tcpu, cpu).thermal_limit_low = cpufreq_frequency_table_get_index(policy, val);
-
 			return 0;
 		}
 	return -EINVAL;
@@ -322,38 +321,40 @@ static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
 	unsigned int cpu = 0;
-	struct msm_thermal_pcpu *lcpu;
-	unsigned int i;
+	unsigned int i, top;
+
+
+
+	if (hotplug_ready || thermal_suspended) {
+		return -EINVAL;
+	}
 
 	policy = cpufreq_cpu_get_raw(cpu);
-
-	if (policy == NULL || thermal_suspended) {
-		return -EINVAL;
-	}
+	if (!policy)
+		return -ENOMEM;
 
 	table = policy->freq_table;
-	if (table == NULL) {
-		return -EINVAL;
+	if (!table) {
+		return -ENOMEM;
 	}
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) 
-		for_each_possible_cpu(cpu) {
-			lcpu = &per_cpu(tcpu, cpu);
-			lcpu->thermal_limit_low = 4;
 
-			lcpu->limit_idx = i - 1;
-			lcpu->thermal_limit_high = lcpu->limit_idx;
-			sanitize_min_max(lcpu->limit_idx, 0, CPUFREQ_TABLE_END - 1);
-			sanitize_min_max(lcpu->thermal_limit_high, CPUFREQ_TABLE_END - 1, CPUFREQ_TABLE_END - 1);
-			sanitize_min_max(lcpu->thermal_limit_low, 0, CPUFREQ_TABLE_END - 1);
-		}
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
+		per_cpu(tcpu, cpu).thermal_limit_low = 4;
 
-	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[lcpu->thermal_limit_low].frequency);
-	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[lcpu->thermal_limit_high].frequency);
+	sanitize_min_max(per_cpu(tcpu, cpu).thermal_limit_low, 0, top);
+
+	top = i - 1;
+	per_cpu(tcpu, cpu).limit_idx = top;
+	sanitize_min_max(per_cpu(tcpu, cpu).limit_idx, 0, top);
+
+	per_cpu(tcpu, cpu).thermal_limit_high = top;
+	sanitize_min_max(per_cpu(tcpu, cpu).thermal_limit_high, top, top);
+
+	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[per_cpu(tcpu, cpu).thermal_limit_low].frequency);
+	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[per_cpu(tcpu, cpu).thermal_limit_high].frequency);
 
 	return 0;
 }
-
-#define SAFE_CONFIRMED 4
 
 static long evaluate_temp(unsigned int cpu)
 {
@@ -454,7 +455,7 @@ static void __ref do_core_control(void)
 			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	mutex_lock(&core_control_mutex);
-	for (cpu = 3; cpu > 1; cpu--) {
+	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		core_temp = evaluate_temp(cpu);
@@ -470,15 +471,7 @@ static void __ref do_core_control(void)
 				if (ret)
 					pr_debug("cpu_down failed. you got problems\n");
 				cpus_offlined |= BIT(cpu);
-		}
-	}
-	for (cpu = 1; cpu < 3; cpu++) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		core_temp = evaluate_temp(cpu);
-		if (core_temp < 0)
-			continue;
-		if (core_temp <= delta &&
+		} else if (core_temp <= delta &&
 			msm_thermal_info.core_control_mask && cpus_offlined) {
 				if (!(cpus_offlined & BIT(cpu)))
 					continue;
@@ -515,7 +508,7 @@ static void __ref check_temp(struct work_struct *work)
 	}
 
 	ret = do_freq_control();
-	if (ret < 0)
+	if (ret <= 0)
 		goto reschedule;
 	if (ret)
 		do_core_control();
