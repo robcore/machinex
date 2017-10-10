@@ -1667,13 +1667,12 @@ static int brightness_control(int bl_level)
 					sizeof(samsung_brightness_elvss_ref));
 
 	elvss_value = get_elvss_value(candela, id3);
-	if (debug_candela)
-		pr_info("%s brightness_level : %d, candela : %d",
-					__func__, mipi_pd.brightness_level, candela);		
+	
 	if (elvss_value >= 0x2F) {
 		elvss_value = 0x2F;
-		if (debug_candela)
-			pr_info("Candela adjusted to %d\n", elvss_value);
+	if (debug_candela)
+		pr_info("%s brightness_level : %d, candela : %d",
+					__func__, mipi_pd.brightness_level, candela);
 	}
 
 	samsung_brightness_elvss_ref[2] = elvss_value;

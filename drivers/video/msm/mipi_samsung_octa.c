@@ -694,7 +694,7 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 			}
 #endif
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
-			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
+			//pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
 		if (get_auto_brightness() >= 6)
 			msd.mpd->first_bl_hbm_psre = 0;
@@ -1208,6 +1208,24 @@ static ssize_t mipi_samsung_temperature_show(struct device *dev,
 
 	return rc;
 }
+/*
+static ssize_t mipi_samsung_temperature_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int rc;
+	struct msm_fb_data_type *mfd;
+
+	mfd = platform_get_drvdata(msd.msm_pdev);
+
+	rc = snprintf((char *)buf, 40,"-20, -19, 0, 1, 30, 40\n");
+	pr_info("%s msd.mpd->temperature : %d msd.mpd->temperature_value : 0x%x", __func__,
+						msd.mpd->temperature, msd.mpd->temperature_value);
+	pr_info("%s msd.mpd->temperature : %d msd.mpd->temperature_value : 0x%x", __func__,
+				msd.mpd->temperature, msd.mpd->temperature_value);
+
+	return rc;
+}
+*/
 
 static ssize_t mipi_samsung_temperature_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
