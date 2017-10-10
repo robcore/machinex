@@ -575,6 +575,7 @@ static void __ref disable_msm_thermal(void)
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
+	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
@@ -585,6 +586,7 @@ static void __ref disable_msm_thermal(void)
 			lcpu->limited_max_freq_thermal = table[lcpu->thermal_limit_high].frequency;
 		set_thermal_policy(cpu, lcpu->limited_max_freq_thermal);
 	}
+	put_online_cpus();
 }
 
 static int __ref set_enabled(const char *val, const struct kernel_param *kp)
