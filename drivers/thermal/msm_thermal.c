@@ -527,7 +527,7 @@ static void __ref check_temp(struct work_struct *work)
 	ret = do_freq_control();
 	if (ret <= 0)
 		goto reschedule;
-	if (ret)
+	else if (ret > 0)
 		do_core_control();
 
 reschedule:
