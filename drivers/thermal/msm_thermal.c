@@ -133,7 +133,7 @@ static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 	if (table == NULL)
 		return -ENOSYS;
 
-	ret = sprintf(buf, "%u", table[thermal_limit_low[0]].frequency);
+	ret = sprintf(buf, "%u", table[thermal_limit_low[cpu]].frequency);
 
 	return ret;
 }
