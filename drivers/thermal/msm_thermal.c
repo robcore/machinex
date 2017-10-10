@@ -321,7 +321,7 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	unsigned int templow, cpu = 0;
+	unsigned int templow, cpu;
 	int i;
 
 	if (!hotplug_ready || thermal_suspended)
