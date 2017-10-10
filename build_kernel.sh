@@ -140,26 +140,17 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 else
 	adb connect 192.168.1.111
 	adbcountdown
+	echo "Connected! Pushing $1!"
+	adb push $1 /storage/extSdCard 2> /dev/null
+	echo "Push Status: $?"
+	adb disconnect
+	adb kill-server
 	if [ -e adbtmp ]; then
 		rm adbtmp
 	fi
 	if [ -e devtmp ]; then
 		rm devtmp
 	fi
-	touch adbtmp
-	adb -a get-state >&1 > adbtmp
-	touch devtmp
-	adb -a get-devpath >&1 > devtmp
-	if [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $UNKNOW ]]; then
-		echo "Connected! Pushing $1!"
-		adb push $1 /storage/extSdCard 2> /dev/null
-		adb disconnect
-		adb kill-server
-	else
-		echo "Failed!"
-	fi;
-rm adbtmp
-rm devtmp
 fi
 }
 
