@@ -1046,7 +1046,7 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 {
 	int cpu;
 	for_each_possible_cpu(cpu) {
-		int i, freq_cnt = 0;
+		unsigned int i, freq_cnt = 0;
 		/* Construct the freq_table tables from freq_table. */
 		for (i = 0; drv.freq_table[i].speed.khz != 0
 				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
