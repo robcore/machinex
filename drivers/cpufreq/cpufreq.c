@@ -40,7 +40,6 @@ extern void set_gpu_vdd_levels(int uv_tbl[]);
 bool hardlimit_ready = false;
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 #define DEFAULT_INPUT_FREQ 1350000
-extern unsigned int limited_max_freq_thermal;
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct delayed_work input_boost_work;
@@ -327,16 +326,16 @@ void reapply_hard_limits(unsigned int cpu)
 
 	/* Recalculate the currently applicable min/max */
 	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_on)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (policy->limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+			policy->limited_max_freq_thermal < policy->hlimit_max_screen_on)
+			policy->curr_limit_max = policy->limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_on;
 
 		if (thermal_disables_boost) {
 			if (policy->input_boost_limit > policy->hlimit_min_screen_on &&
 				policy->input_boost_limit <= policy->curr_limit_max &&
-				limited_max_freq_thermal == policy->hlimit_max_screen_on)
+				policy->limited_max_freq_thermal == policy->hlimit_max_screen_on)
 				policy->curr_limit_min = policy->input_boost_limit;
 			else
 				policy->curr_limit_min = policy->hlimit_min_screen_on;
@@ -348,9 +347,9 @@ void reapply_hard_limits(unsigned int cpu)
 				policy->curr_limit_min = policy->hlimit_min_screen_on;
 		}
 	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
-		if (limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
-			limited_max_freq_thermal < policy->hlimit_max_screen_off)
-			policy->curr_limit_max = limited_max_freq_thermal;
+		if (policy->limited_max_freq_thermal >= policy->cpuinfo.min_freq &&
+			policy->limited_max_freq_thermal < policy->hlimit_max_screen_off)
+			policy->curr_limit_max = policy->limited_max_freq_thermal;
 		else
 			policy->curr_limit_max = policy->hlimit_max_screen_off;
 
@@ -394,7 +393,6 @@ EXPORT_SYMBOL(check_cpufreq_hardlimit);
 
 void set_thermal_policy(unsigned int cpu, unsigned int freq)
 {
-	unsigned int cpu;
 	struct cpufreq_policy *policy;
 
 	policy = cpufreq_cpu_get_raw(cpu);
@@ -404,8 +402,8 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 	if (freq == policy->limited_max_freq_thermal)
 		return;
 	else {
-		policy->limited_max_freq_thermal = freq;
 		reapply_hard_limits(cpu);
+		policy->limited_max_freq_thermal = freq;
 		cpufreq_update_policy(cpu);
 	}
 }
@@ -1837,6 +1835,10 @@ static int cpufreq_online(unsigned int cpu)
 
 	if (!policy->input_boost_limit)
 		policy->input_boost_limit = policy->hlimit_min_screen_on;
+
+	if (!policy->limited_max_freq_thermal)
+		policy->limited_max_freq_thermal = is_display_on() ? policy->hlimit_min_screen_on : 
+										   policy->hlimit_min_screen_off
 
 	if (hotplug_ready)
 		hardlimit_ready = true;

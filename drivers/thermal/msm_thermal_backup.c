@@ -35,8 +35,6 @@
 #include <linux/sysfs_helpers.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
-#define DEFAULT_POLLING_MS	240
-
 extern bool hotplug_ready;
 static int limit_init;
 static int enabled;
@@ -52,18 +50,20 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_control_mask = 0xe,
 };
 
-extern unsigned int hlimit_max_screen_on;
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
-bool core_control_enabled;
+static bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
+//unsigned int sens_id[NR_CPUS] = { 7, 8, 9, 10};
 static int limit_idx;
 static int thermal_limit_low;
 static int thermal_limit_high;
+unsigned int limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
+unsigned int internal_max_freq;
+
 static struct cpufreq_frequency_table *table;
-unsigned long limited_max_freq_thermal = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
 static bool thermal_suspended = false;
 /* module parameters */
 module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
@@ -79,7 +79,6 @@ module_param_named(core_limit_hysteresis, msm_thermal_info.core_temp_hysteresis_
 			 int, 0644);
 
 static bool therm_freq_limited;
-static bool hotplug_check_needed;
 
 bool thermal_core_controlled(unsigned int cpu)
 {
@@ -100,6 +99,8 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 		return -EINVAL;
 
 	policy = cpufreq_cpu_get_raw(0);
+	if (policy == NULL)
+		return -EINVAL;
 	table = policy->freq_table; /* Get frequency table */
 	if (table == NULL)
 		return -EINVAL;
@@ -111,6 +112,8 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 			thermal_limit_low = cpufreq_frequency_table_get_index(policy, val);
 			if (thermal_limit_low < 0)
 				thermal_limit_low = 0;
+			if (thermal_limit_low >= CPUFREQ_TABLE_END - 1)
+				thermal_limit_low = CPUFREQ_TABLE_END - 1;
 			return 0;
 		}
 	return -EINVAL;
@@ -123,6 +126,8 @@ static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 	struct cpufreq_frequency_table *table;
 
 	policy = cpufreq_cpu_get_raw(0);
+	if (policy == NULL)
+		return -ENOSYS;
 	table = policy->freq_table; /* Get frequency table */
 	if (table == NULL)
 		return -ENOSYS;
@@ -188,34 +193,17 @@ static int msm_thermal_get_freq_table(void)
 
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
 		thermal_limit_low = 4;
+
 		limit_idx = i - 1;
 		thermal_limit_high = limit_idx;
 
-	BUG_ON(thermal_limit_high <= 0);
+	sanitize_min_max(limit_idx, 0, CPUFREQ_TABLE_END - 1);
+	sanitize_min_max(thermal_limit_high, 1, CPUFREQ_TABLE_END - 1);
+	sanitize_min_max(thermal_limit_low, 0, CPUFREQ_TABLE_END - 1);
 	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[thermal_limit_low].frequency);
 	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[thermal_limit_high].frequency);
 
 	return 0;
-}
-
-static void update_cpu_max_freq(unsigned long max_freq)
-{
-	int ret;
-	unsigned int cpu = smp_processor_id();
-
-	if (thermal_suspended)
-		return;
-
-	get_online_cpus();
-	for_each_possible_cpu(cpu) {
-		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
-			continue;
-		reapply_hard_limits(cpu);
-		limited_max_freq_thermal = max_freq;
-		cpufreq_update_policy(cpu);
-	}
-	put_online_cpus();
-
 }
 
 #define SAFE_CONFIRMED 4
@@ -223,6 +211,7 @@ static void update_cpu_max_freq(unsigned long max_freq)
 enum {
 	FREQ_TEMP_SAFE = 0,
 	FREQ_TEMP_OVER = 1,
+	FREQ_DO_NOTHING = 2,
 };
 
 static int evaluate_freq_temp(void)
@@ -232,7 +221,7 @@ static int evaluate_freq_temp(void)
 	int ret = 0;
 	uint32_t i;
 	unsigned int safe = 0, fail = 0;
-	unsigned long delta;
+	long delta;
 
 	if (thermal_suspended)
 		return -EINVAL;
@@ -241,16 +230,15 @@ static int evaluate_freq_temp(void)
 			 msm_thermal_info.temp_hysteresis_degC);
 
 	for (i = 7; i < 10; i++) {
+		if (value_out_of_range(i, 7, 10))
+			break;
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
-		if (!temp) {
+		if (!temp || ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
-			if (i < 10) {
-				fail++;
-				continue;
-			} else
-				break;
+			fail++;
+			continue;
 		}
 
 		if (temp >= msm_thermal_info.limit_temp_degC ||
@@ -260,77 +248,86 @@ static int evaluate_freq_temp(void)
 			safe++;
 	}
 
-	if (!fail || safe > fail)
+	if (!fail || safe == SAFE_CONFIRMED)
 		return FREQ_TEMP_SAFE;
-
-	return FREQ_TEMP_OVER;
+	else if (fail)
+		return FREQ_TEMP_OVER;
+	else
+		return FREQ_DO_NOTHING;
 }
 
-static void __ref do_freq_control(void)
+static int __ref do_freq_control(void)
 {
 	int ret = 0;
-	struct cpufreq_policy policy;
 	unsigned int cpu = smp_processor_id();
-	unsigned long max_freq;
 	int freq_temp;
+	unsigned int hotplug_check_needed;
 
 	if (!hotplug_ready || thermal_suspended) {
 		pr_err("frequency control not ready!\n");		
-		return;
+		return -EINVAL;
 	}
-
-	ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			return;
 
 	freq_temp = evaluate_freq_temp();
 	if (freq_temp < 0) {
-		hotplug_check_needed = true;
-		return;
+		hotplug_check_needed = 1;
+		return hotplug_check_needed;
 	}
 
-	max_freq = limited_max_freq_thermal;
+	internal_max_freq = limited_max_freq_thermal;
 
 	switch (freq_temp) {
 		case FREQ_TEMP_OVER:
 			if (limit_idx == thermal_limit_low) {
-				hotplug_check_needed = true;
-				return;
+				hotplug_check_needed = 1;
+				return hotplug_check_needed;
 			}
 			limit_idx -= msm_thermal_info.freq_step;
 			if (limit_idx < thermal_limit_low)
 				limit_idx = thermal_limit_low;
-			max_freq = table[limit_idx].frequency;
-			hotplug_check_needed = true;
+			internal_max_freq = table[limit_idx].frequency;
+			hotplug_check_needed = 1;
 			break;
 		case FREQ_TEMP_SAFE:
 			if (limit_idx == thermal_limit_high) {
-				hotplug_check_needed = false;
-				return;
+				hotplug_check_needed = 0;
+				return 0;
 			}
 			limit_idx += msm_thermal_info.freq_step;
 			if (limit_idx >= thermal_limit_high) {
 				limit_idx = thermal_limit_high;
-				max_freq = policy.hlimit_max_screen_on;
-				hotplug_check_needed = false;
+				internal_max_freq = table[thermal_limit_high].frequency;
+				hotplug_check_needed = 0;
 			} else {
-				max_freq = table[limit_idx].frequency;
-				hotplug_check_needed = true;
+				internal_max_freq = table[limit_idx].frequency;
+				hotplug_check_needed = 1;
 			}
+			break;
+		case FREQ_DO_NOTHING:
 			break;
 	}
 
-	if (max_freq == limited_max_freq_thermal) {
-		hotplug_check_needed = false;
-		return;
+	if (internal_max_freq == limited_max_freq_thermal) {
+		hotplug_check_needed = 0;
+		return hotplug_check_needed;
 	}
 
-	update_cpu_max_freq(max_freq);
+	get_online_cpus();
+	for_each_possible_cpu(cpu) {
+		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
+			continue;
+		reapply_hard_limits(cpu);
+		limited_max_freq_thermal = internal_max_freq;
+		cpufreq_update_policy(cpu);
+	}
+	put_online_cpus();
+	return hotplug_check_needed;
 }
 
 enum {
 	CORE_TEMP_SAFE = 0,
 	CORE_TEMP_OVER = 1,
+	CORE_DO_NOTHING = 2,
 };
 
 static int evaluate_core_temp(void)
@@ -340,7 +337,7 @@ static int evaluate_core_temp(void)
 	int ret = 0;
 	uint32_t i;
 	unsigned int safe = 0, fail = 0;
-	unsigned long delta;
+	unsigned int delta;
 
 	if (thermal_suspended)
 		return -EINVAL;
@@ -349,26 +346,27 @@ static int evaluate_core_temp(void)
 			 msm_thermal_info.core_temp_hysteresis_degC);
 
 	for (i = 10; i > 7; i--) {
+		if (value_out_of_range(i, 7, 10))
+			break;
 		tsens_dev.sensor_num = i;
 		ret = tsens_get_temp(&tsens_dev, &temp);
-		if (!temp) {
+		if (!temp || ret) {
 			pr_err("%s: Unable to read TSENS sensor %d\n",
 					KBUILD_MODNAME, tsens_dev.sensor_num);
-			if (i > 7) {
-				fail++;
+			fail++;
 				continue;
-			} else
-				break;
 		}
 		if (temp >= msm_thermal_info.core_limit_temp_degC)
 			return CORE_TEMP_OVER;
 		else if (temp <= delta)
 			safe++;
 	}
-	if (!fail || safe > fail)
+	if (!fail || safe == SAFE_CONFIRMED)
 		return CORE_TEMP_SAFE;
-
-	return CORE_TEMP_OVER;
+	else if (fail)
+		return CORE_TEMP_OVER;
+	else
+		return CORE_DO_NOTHING;
 }
 
 static void __ref do_core_control(void)
@@ -422,6 +420,8 @@ static void __ref do_core_control(void)
 				}
 			}
 			break;
+		case CORE_DO_NOTHING:
+			break;
 	}
 	mutex_unlock(&core_control_mutex);
 }
@@ -441,17 +441,22 @@ static void __ref check_temp(struct work_struct *work)
 			limit_init = 1;
 	}
 
-	do_freq_control();
+	ret = do_freq_control();
+	if (ret < 0)
+		goto reschedule;
 
 	if (msm_thermal_info.limit_temp_degC <
 		msm_thermal_info.core_limit_temp_degC) {
-		if (hotplug_check_needed)
+		if (ret)
 			do_core_control();
 	} else {
 		do_core_control();
 	}
 
 reschedule:
+	if (thermal_suspended)
+		return;
+
 	if (likely(enabled))
 		mod_delayed_work_on(0, intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
@@ -466,9 +471,7 @@ static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (core_control_enabled &&
-			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
-			(cpus_offlined & BIT(cpu))) {
+		if (thermal_core_controlled(cpu)) {
 			pr_debug(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
@@ -489,22 +492,22 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
  */
 static void __ref disable_msm_thermal(void)
 {
-	struct cpufreq_policy *policy;
 	unsigned int cpu = smp_processor_id();
-
-	policy = cpufreq_cpu_get_raw(cpu);
-		if (!policy)
-			return;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
 
-	if (limited_max_freq_thermal == policy->hlimit_max_screen_on)
+	if (limited_max_freq_thermal == table[thermal_limit_high].frequency)
 		return;
 	else
-		(limited_max_freq_thermal = policy->hlimit_max_screen_on);
-	reapply_hard_limits(cpu);
-	update_cpu_max_freq(limited_max_freq_thermal);
+		(limited_max_freq_thermal = table[thermal_limit_high].frequency);
+
+	get_online_cpus();
+	for_each_possible_cpu(cpu) {
+		reapply_hard_limits(cpu);
+		cpufreq_update_policy(cpu);
+	}
+	put_online_cpus();
 }
 
 static int __ref set_enabled(const char *val, const struct kernel_param *kp)
@@ -552,7 +555,7 @@ static void __ref update_offline_cores(int val)
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_nonboot_online_cpu(cpu) {
-		if (cpu < 0 || cpu >= NR_CPUS ||
+		if (cpu < 0 || cpu > NR_CPUS - 1 ||
 			!cpu_online(cpu))
 			continue;
 		if (!(cpus_offlined & BIT(cpu)))
@@ -753,6 +756,7 @@ module_exit(msm_thermal_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
+MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("intelligent thermal driver for Qualcomm based SOCs");
 MODULE_DESCRIPTION("originally from Qualcomm's open source repo");
 
