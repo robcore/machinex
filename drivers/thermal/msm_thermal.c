@@ -799,9 +799,8 @@ int __init msm_thermal_init(void)
 	if (!msm_thermal_info)
 		return -ENOMEM;
 
-	t_init_cpu = kzalloc(sizeof(*t_init_cpu), GFP_KERNEL);
-	if (!t_init_cpu)
-		return -ENOMEM;
+	t_init_cpu = kzalloc(sizeof(struct msm_thermal_pcpu), GFP_KERNEL);
+	BUG_ON(!t_init_cpu);
 
 	enabled = 1;
 	mutex_init(&core_control_mutex);
