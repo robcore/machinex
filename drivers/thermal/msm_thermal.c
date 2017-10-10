@@ -49,6 +49,14 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_control_mask = 0xe,
 };
 
+static int limit_idx;
+static int thermal_limit_low;
+static int thermal_limit_high;
+unsigned int limited_max_freq_thermal;
+unsigned int resolve_max_freq;
+
+static uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
+
 struct msm_thermal_pcpu {
 	int limit_idx;
 	int thermal_limit_low;
@@ -64,8 +72,6 @@ static struct workqueue_struct *intellithermal_wq;
 static bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
-
-static uint32_t msm_sens_id[NR_CPUS] = {7, 8, 9, 10};
 
 static struct cpufreq_frequency_table *table;
 static bool thermal_suspended = false;
@@ -97,7 +103,7 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
 
-	sanitize_min_max(val, 0, 14);
+	sanitize_min_max(val, 0, CPUFREQ_TABLE_END - 1);
 
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (policy == NULL)
@@ -346,6 +352,9 @@ static int msm_thermal_get_freq_table(void)
 
 	limit_idx = i - 1;
 	thermal_limit_high = i - 1;
+	sanitize_min_max(limit_idx, 0, CPUFREQ_TABLE_END - 1);
+	sanitize_min_max(thermal_limit_high, 1, CPUFREQ_TABLE_END - 1);
+	sanitize_min_max(thermal_limit_low, 0, CPUFREQ_TABLE_END - 1);
 	limited_max_freq_thermal = table[thermal_limit_high].frequency;
 	resolve_max_freq = table[limit_idx].frequency;
 
