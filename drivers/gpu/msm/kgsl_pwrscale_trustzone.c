@@ -156,6 +156,8 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				device->pwrctrl.default_pwrlevel);
 }
 
+#define MIN_STEP 3
+#define MAX_STEP 0
 static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
@@ -180,7 +182,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		 */
 		if ((stats.total_time == 0) ||
 			(priv->bin.total_time < floor)) {
-			if (pwr->active_pwrlevel < pwr->min_pwrlevel)
+			if (pwr->active_pwrlevel < MIN_STEP)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel + 1);	
 			return;
@@ -210,7 +212,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			idle = priv->bin.total_time - priv->bin.busy_time;
 			idle = (idle > 0) ? idle : 0;
 			val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
-			pr_info("KGSL secure tz entry: %d\n", val);
+			pr_info("KGSL secure tz step entry: %d idle:%d\n", val, idle);
 		}
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
@@ -244,21 +246,21 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 		gpu_stats.threshold = up_threshold;
 
-		if (pwr->active_pwrlevel == pwr->min_pwrlevel) {
+		if (pwr->active_pwrlevel == MIN_STEP) {
 				gpu_stats.threshold = up_threshold / pwr->active_pwrlevel - 1;
-		} else if (pwr->active_pwrlevel < pwr->min_pwrlevel &&
-					pwr->active_pwrlevel >= pwr->max_pwrlevel) {
+		} else if (pwr->active_pwrlevel < MIN_STEP &&
+					pwr->active_pwrlevel >= MAX_STEP) {
 			gpu_stats.threshold = up_threshold + up_differential;
 		}
 
 		if (gpu_stats.load >= gpu_stats.threshold) {
 
-			if (pwr->active_pwrlevel > pwr->max_pwrlevel)
+			if (pwr->active_pwrlevel > MAX_STEP)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel - 1);
 
 		} else {
-			if (pwr->active_pwrlevel < pwr->min_pwrlevel)
+			if (pwr->active_pwrlevel < MIN_STEP)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel + 1);
 		}
