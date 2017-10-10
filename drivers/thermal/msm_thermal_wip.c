@@ -375,7 +375,7 @@ static int evaluate_core_temp(void)
 
 static void __ref do_core_control(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = smp_processor_id();
 	int ret = 0;
 	int core_temp;
 
@@ -392,27 +392,34 @@ static void __ref do_core_control(void)
 	switch (core_temp) {
 		case CORE_TEMP_OVER:
 			if (msm_thermal_info.core_control_mask) {
-				for_each_nonboot_cpu_reverse(cpu) {
-					if (!(msm_thermal_info.core_control_mask & BIT(cpu)) ||
-						(cpus_offlined & BIT(cpu) && !cpu_online(cpu)))
+				for (cpu = 3; cpu > 1; cpu--) {
+					if (!(msm_thermal_info.core_control_mask & BIT(cpu)));
 						continue;
-					if (cpu_online(cpu))
-						cpu_down(cpu);
+					if (cpus_offlined & BIT(cpu) && !cpu_online(cpu))
+						continue;
+					ret = cpu_down(cpu);
+					if (ret)
+						pr_debug("cpu_down failed. you got problems\n");
 					cpus_offlined |= BIT(cpu);
 				}
 			}
 			break;
 		case CORE_TEMP_SAFE:
 			if (msm_thermal_info.core_control_mask && cpus_offlined) {
-				for_each_nonboot_offline_cpu(cpu) {
-					if (!(cpus_offlined & BIT(cpu)) && cpu_online(cpu))
+				for (cpu = 1; cpu < 3; cpu++) {
+					if (!(cpus_offlined & BIT(cpu)))
 						continue;
 					/* If this core is already online, then bring up the
 					 * next offlined core.
 					 */
-					if (cpu_online(cpu) || !is_cpu_allowed(cpu))
+					if (cpu_online(cpu))
 						continue;
-					cpu_up(cpu);
+					if (!is_cpu_allowed(cpu))
+						continue;
+					ret = cpu_up(cpu);
+					if (ret)
+						pr_err("%s: Error %d online core %d\n",
+								KBUILD_MODNAME, ret, cpu);
 					cpus_offlined &= ~BIT(cpu);
 				}
 			}
@@ -544,6 +551,7 @@ MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
 static void __ref update_offline_cores(int val)
 {
 	unsigned int cpu = 0;
+	int ret = 0;
 
 	if (!core_control_enabled || intelli_init() ||
 		thermal_suspended || !hotplug_ready)
@@ -551,12 +559,15 @@ static void __ref update_offline_cores(int val)
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_nonboot_online_cpu(cpu) {
-		if (!cpu_online(cpu))
+		if (cpu < 0 || cpu > NR_CPUS - 1 ||
+			!cpu_online(cpu))
 			continue;
-		if (!(cpus_offlined & BIT(cpu)) && !cpu_online(cpu))
+		if (!(cpus_offlined & BIT(cpu)))
 			continue;
-		if (cpu_online(cpu))
-			cpu_down(cpu);
+		ret = cpu_down(cpu);
+		if (ret)
+			pr_err("%s: Unable to offline cpu%d\n",
+				KBUILD_MODNAME, cpu);
 	}
 }
 
