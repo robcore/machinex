@@ -52,7 +52,7 @@ static struct msm_thermal_data msm_thermal_info = {
 
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
-bool core_control_enabled;
+static bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 

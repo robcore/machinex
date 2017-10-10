@@ -274,7 +274,6 @@ void cpuhp_report_idle_dead(void);
 static inline void cpuhp_report_idle_dead(void) { }
 #endif /* #ifdef CONFIG_HOTPLUG_CPU */
 /* warning shut if msm thermal holding cores off on high temp. */
-extern bool core_control_enabled;
 extern bool thermal_core_controlled(unsigned int cpu);
 extern bool intelli_init(void);
 extern int cpu_idle_force_poll_hook;
