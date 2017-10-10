@@ -103,7 +103,8 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 	if (table == NULL)
 		return -ENOMEM;
 
-	sanitize_min_max(val, table[0].frequency, table[CPUFREQ_TABLE_END - 1].frequency - 1);
+	sanitize_min_max(val, 0, 14);
+
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == val) {
@@ -344,7 +345,7 @@ static int msm_thermal_get_freq_table(void)
 			continue;
 		}
 
-		for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
+		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 			lcpu->thermal_limit_low = 4;
 
 		lcpu->limit_idx = i - 1;
