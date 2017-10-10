@@ -212,7 +212,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			idle = priv->bin.total_time - priv->bin.busy_time;
 			idle = (idle > 0) ? idle : 0;
 			val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
-			pr_info("KGSL secure tz step entry: %d idle:%d\n", val, idle);
+			//SPAM!pr_info("KGSL secure tz step entry: %d idle:%d\n", val, idle);
 		}
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
