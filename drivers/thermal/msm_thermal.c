@@ -35,7 +35,6 @@
 #include <linux/sysfs_helpers.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
-extern bool hotplug_ready;
 static int limit_init;
 static int enabled;
 
@@ -49,23 +48,13 @@ static struct msm_thermal_data msm_thermal_info = {
 	.core_control_mask = 0xe,
 };
 
-static int limit_idx;
-static int thermal_limit_low;
-static int thermal_limit_high;
-unsigned int limited_max_freq_thermal;
-unsigned int resolve_max_freq;
+static int limit_idx[NR_CPUS];
+static int thermal_limit_low[NR_CPUS];
+static int thermal_limit_high[NR_CPUS];
+static unsigned int local_max_freq_thermal[NR_CPUS];
+static unsigned int resolve_max_freq[NR_CPUS];
 
 static uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
-
-struct msm_thermal_pcpu {
-	int limit_idx;
-	int thermal_limit_low;
-	int thermal_limit_high;
-	unsigned int limited_max_freq_thermal;
-	unsigned int resolve_max_freq;
-};
-
-static DEFINE_PER_CPU_SHARED_ALIGNED(struct msm_thermal_pcpu, tcpu);
 
 static struct delayed_work check_temp_work;
 static struct workqueue_struct *intellithermal_wq;
@@ -98,12 +87,11 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 	bool should_apply;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
-	struct msm_thermal_pcpu *lcpu;
 
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
 
-	sanitize_min_max(val, 0, CPUFREQ_TABLE_END - 1);
+	sanitize_min_max(val, 0, 14);
 
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (policy == NULL)
@@ -113,17 +101,17 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 		return -ENOMEM;
 
 
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		if (table[i].frequency == val) {
-			thermal_limit_low = cpufreq_frequency_table_get_index(policy, val);
 			should_apply = true;
+			break;
 		}
+	}
 	if (should_apply) {
 		for_each_possible_cpu(cpu) {
 			if (cpu_out_of_range(cpu))
 				break;
-			lcpu = &per_cpu(tcpu, cpu);
-			lcpu->thermal_limit_low = thermal_limit_low;
+			thermal_limit_low[cpu] = cpufreq_frequency_table_get_index(policy, val);
 		}
 			return 0;
 	}
@@ -136,7 +124,7 @@ static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 	ssize_t ret;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
-	unsigned int cpu = smp_processor_id();
+	unsigned int cpu = 0;
 
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (policy == NULL)
@@ -145,7 +133,7 @@ static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 	if (table == NULL)
 		return -ENOSYS;
 
-	ret = sprintf(buf, "%u", table[per_cpu(tcpu, cpu).thermal_limit_low].frequency);
+	ret = sprintf(buf, "%u", table[thermal_limit_low[0]].frequency);
 
 	return ret;
 }
@@ -329,18 +317,18 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 /*************************************************************************
  *                       END Module Parameters                           *
  *************************************************************************/
-
+#define DEFAULT_THERMIN 810000
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	unsigned int cpu = smp_processor_id();
-	struct msm_thermal_pcpu *lcpu;
+	unsigned int templow, cpu = 0;
 	int i;
 
 	if (!hotplug_ready || thermal_suspended)
 		return -EINVAL;
 
-	if (cpufreq_get_policy(policy, cpu))
+	policy = cpufreq_cpu_get_raw(0);
+	if (policy == NULL)
 		return -ENOMEM;
 
 	table = policy->freq_table;
@@ -348,29 +336,22 @@ static int msm_thermal_get_freq_table(void)
 		return -ENOMEM;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
-		thermal_limit_low = 4;
-
-	limit_idx = i - 1;
-	thermal_limit_high = i - 1;
-	sanitize_min_max(limit_idx, 0, CPUFREQ_TABLE_END - 1);
-	sanitize_min_max(thermal_limit_high, 1, CPUFREQ_TABLE_END - 1);
-	sanitize_min_max(thermal_limit_low, 0, CPUFREQ_TABLE_END - 1);
-	limited_max_freq_thermal = table[thermal_limit_high].frequency;
-	resolve_max_freq = table[limit_idx].frequency;
+			if (table[i].frequency == DEFAULT_THERMIN)
+				templow = i;
 
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		lcpu = &per_cpu(tcpu, cpu);
-		lcpu->thermal_limit_low = thermal_limit_low;
-		lcpu->limit_idx = limit_idx;
-		lcpu->thermal_limit_high = thermal_limit_high;
-		lcpu->limited_max_freq_thermal = limited_max_freq_thermal;
-		lcpu->resolve_max_freq = resolve_max_freq;
+		thermal_limit_low[cpu] = templow;
+		limit_idx[cpu] = i - 1;
+		thermal_limit_high[cpu] = i - 1;
+		sanitize_min_max(limit_idx[cpu], 0, 14);
+		sanitize_min_max(thermal_limit_high[cpu], 1, 14);
+		sanitize_min_max(thermal_limit_low[cpu], 0, 14);
 	}
 
-	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[thermal_limit_low].frequency);
-	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[thermal_limit_high].frequency);	
+	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[thermal_limit_low[0]].frequency);
+	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[thermal_limit_high[0]].frequency);	
 
 	return 0;
 }
@@ -399,7 +380,6 @@ static int __ref do_freq_control(void)
 	int ret = 0;
 	unsigned int cpu = smp_processor_id();
 	long freq_temp, delta;
-	struct msm_thermal_pcpu *lcpu;
 	unsigned int hotplug_check_needed = 0;
 
 
@@ -415,42 +395,41 @@ static int __ref do_freq_control(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		lcpu = &per_cpu(tcpu, cpu);
-		lcpu->resolve_max_freq = lcpu->limited_max_freq_thermal;
+		resolve_max_freq[cpu] = local_max_freq_thermal[cpu];
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
 			hotplug_check_needed++;
 			continue;
 		}
 		if (freq_temp >= msm_thermal_info.limit_temp_degC) {
-				if (lcpu->limit_idx == lcpu->thermal_limit_low) {
+				if (limit_idx[cpu] == thermal_limit_low[cpu]) {
 					hotplug_check_needed++;
 					continue;
 				}
-				lcpu->limit_idx -= msm_thermal_info.freq_step;
-				if (lcpu->limit_idx < lcpu->thermal_limit_low)
-					lcpu->limit_idx = lcpu->thermal_limit_low;
-				lcpu->resolve_max_freq = table[lcpu->limit_idx].frequency;
+				limit_idx[cpu] -= msm_thermal_info.freq_step;
+				if (limit_idx[cpu] < thermal_limit_low[cpu])
+					limit_idx[cpu] = thermal_limit_low[cpu];
+				resolve_max_freq[cpu] = table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
 		} else if (freq_temp <= delta) {
-				if (lcpu->limit_idx == lcpu->thermal_limit_high) {
+				if (limit_idx[cpu] == thermal_limit_high[cpu]) {
 					continue;
 				}
-				lcpu->limit_idx += msm_thermal_info.freq_step;
-				if (lcpu->limit_idx >= lcpu->thermal_limit_high) {
-					lcpu->limit_idx = lcpu->thermal_limit_high;
-					lcpu->resolve_max_freq = table[lcpu->thermal_limit_high].frequency;
+				limit_idx[cpu] += msm_thermal_info.freq_step;
+				if (limit_idx[cpu] >= thermal_limit_high[cpu]) {
+					limit_idx[cpu] = thermal_limit_high[cpu];
+					resolve_max_freq[cpu] = table[thermal_limit_high[cpu]].frequency;
 				} else {
-					lcpu->resolve_max_freq = table[lcpu->limit_idx].frequency;
+					resolve_max_freq[cpu] = table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
 
-		if (lcpu->resolve_max_freq == lcpu->limited_max_freq_thermal)
+		if (resolve_max_freq[cpu] == local_max_freq_thermal[cpu])
 			continue;
 
-		set_thermal_policy(cpu, lcpu->resolve_max_freq);
-		lcpu->limited_max_freq_thermal = lcpu->resolve_max_freq;
+		set_thermal_policy(cpu, resolve_max_freq[cpu]);
+		local_max_freq_thermal[cpu] = resolve_max_freq[cpu];
 	}
 	put_online_cpus();
 	return hotplug_check_needed;
@@ -570,7 +549,6 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 static void __ref disable_msm_thermal(void)
 {
 	unsigned int cpu = smp_processor_id();
-	struct msm_thermal_pcpu *lcpu;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
@@ -579,12 +557,11 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		lcpu = &per_cpu(tcpu, cpu);
-		if (lcpu->limited_max_freq_thermal == table[lcpu->thermal_limit_high].frequency)
+		if (local_max_freq_thermal[cpu] == table[thermal_limit_high[cpu]].frequency)
 			continue;
 		else
-			lcpu->limited_max_freq_thermal = table[lcpu->thermal_limit_high].frequency;
-		set_thermal_policy(cpu, lcpu->limited_max_freq_thermal);
+			local_max_freq_thermal[cpu] = table[thermal_limit_high[cpu]].frequency;
+		set_thermal_policy(cpu, local_max_freq_thermal[cpu]);
 	}
 	put_online_cpus();
 }
@@ -798,14 +775,10 @@ static struct notifier_block msm_thermal_pm_notifier = {
 int __init msm_thermal_init(void)
 {
 	struct msm_thermal_data *msm_thermal_info;
-	struct msm_thermal_pcpu *t_init_cpu;
 
 	msm_thermal_info = kzalloc(sizeof(struct msm_thermal_data), GFP_KERNEL);
 	if (!msm_thermal_info)
 		return -ENOMEM;
-
-	t_init_cpu = kzalloc(sizeof(struct msm_thermal_pcpu), GFP_KERNEL);
-	BUG_ON(!t_init_cpu);
 
 	enabled = 1;
 	mutex_init(&core_control_mutex);
