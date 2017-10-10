@@ -88,7 +88,8 @@ bool thermal_core_controlled(unsigned int cpu)
 
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
-	unsigned int i, val, cpu = 0;
+	unsigned int val, cpu = 0;
+	int i;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
 
@@ -319,7 +320,7 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	unsigned int i, top, cpu = 0;
+	int i, top, bottom, cpu = 0;
 
 	if (hotplug_ready || thermal_suspended) {
 		return -EINVAL;
@@ -334,18 +335,22 @@ static int msm_thermal_get_freq_table(void)
 		return -ENOMEM;
 	}
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
-		per_cpu(tcpu, cpu).thermal_limit_low = 4;
+	top = cpufreq_frequency_table_get_index(policy, policy->cpuinfo.max_freq);
+	bottom = cpufreq_frequency_table_get_index(policy, policy->cpuinfo.min_freq);
 
-	sanitize_min_max(per_cpu(tcpu, cpu).thermal_limit_low, 0, top);
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+			for_each_possible_cpu(cpu)
+				per_cpu(tcpu, cpu).thermal_limit_low = 4;
+	}
 
-	top = i - 1;
-	per_cpu(tcpu, cpu).limit_idx = top;
-	sanitize_min_max(per_cpu(tcpu, cpu).limit_idx, 0, top);
+	for_each_possible_cpu(cpu) {
+		sanitize_min_max(per_cpu(tcpu, cpu).thermal_limit_low, 4, top);
+		per_cpu(tcpu, cpu).limit_idx = top;
+		sanitize_min_max(per_cpu(tcpu, cpu).limit_idx, bottom, top);
 
-	per_cpu(tcpu, cpu).thermal_limit_high = top;
-	sanitize_min_max(per_cpu(tcpu, cpu).thermal_limit_high, top, top);
-
+		per_cpu(tcpu, cpu).thermal_limit_high = top;
+		sanitize_min_max(per_cpu(tcpu, cpu).thermal_limit_high, top, top);
+	}
 	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[per_cpu(tcpu, cpu).thermal_limit_low].frequency);
 	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[per_cpu(tcpu, cpu).thermal_limit_high].frequency);
 
