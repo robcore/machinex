@@ -1343,6 +1343,9 @@ static int elvss_array[][2] = {
 };
 #define EVLSS_ARRAY_SIZE (sizeof(elvss_array)/sizeof(elvss_array[0]))
 
+static bool debug_candela;
+module_param(debug_candela, bool, 0644);
+
 static int get_elvss_value(int candela, int id3)
 {
 	int elvss_value;
@@ -1361,6 +1364,8 @@ static int get_elvss_value(int candela, int id3)
 
 	if (candela <= 105) {
 		elvss_value = default_elvss + 0x0F;
+		if (debug_candela)
+			pr_info("DEBUG: current elvsss_value is %d\n", elvss_value);
 		return elvss_value;
 	}
 
@@ -1377,12 +1382,16 @@ static int get_elvss_value(int candela, int id3)
 				pr_debug("%s : candela = %d, elvss_array[%d+1][1] = %x\n",
 					__func__, candela, i, elvss_array[i+1][1]);
 				elvss_value = default_elvss + elvss_array[i+1][1];
+				if (debug_candela)
+					pr_info("DEBUG: current elvsss_value is %d\n", elvss_value);
 				break;
 			}
 		}
 	} else {
 		elvss_value = default_elvss +
 				elvss_array_default[((candela - 100)/10)-1][1];
+		if (debug_candela)
+			pr_info("DEBUG: current elvsss_value is %d\n", elvss_value);
 	}
 
 	return elvss_value;
@@ -1622,8 +1631,8 @@ static int brightness_control(int bl_level)
 		bl_level = 10;
 
 	candela = lux_tbl[get_candela_index(bl_level)];
-
-	pr_debug("%s brightness_level : %d, candela : %d, auto : %d\n",
+	if (debug_candela)
+		pr_info("%s brightness_level : %d, candela : %d, auto : %d\n",
 					__func__, mipi_pd.brightness_level, candela, get_auto_brightness());
 
 	cmd_size = 0;
@@ -1658,9 +1667,14 @@ static int brightness_control(int bl_level)
 					sizeof(samsung_brightness_elvss_ref));
 
 	elvss_value = get_elvss_value(candela, id3);
-
-	if (elvss_value >= 0x2F)
+	if (debug_candela)
+		pr_info("%s brightness_level : %d, candela : %d",
+					__func__, mipi_pd.brightness_level, candela);		
+	if (elvss_value >= 0x2F) {
 		elvss_value = 0x2F;
+		if (debug_candela)
+			pr_info("Candela adjusted to %d\n", elvss_value);
+	}
 
 	samsung_brightness_elvss_ref[2] = elvss_value;
 
@@ -1773,6 +1787,8 @@ static int brightness_control(int bl_level)
 	/* gamma ******************************************************************************/
 	/* 0xCA setting */
 	mipi_pd.smart_se6e8fa.brightness_level = candela;
+	if (debug_candela)
+		pr_info("Smart Gamma brightness: %d\n", mipi_pd.smart_se6e8fa.brightness_level);
 
 	generate_gamma(&mipi_pd.smart_se6e8fa,
 			&(samsung_brightness_gamma[1]), GAMMA_SET_MAX);
@@ -1806,6 +1822,8 @@ static int brightness_control(int bl_level)
 
 	mipi_pd.brightness.size = cmd_size;
 	mipi_pd.brightness_level = candela;
+	if (debug_candela)
+		pr_info("Final Candela (brightness level): %d\n", mipi_pd.brightness_level);
 
 	mipi_pd.need_update = 0;
 

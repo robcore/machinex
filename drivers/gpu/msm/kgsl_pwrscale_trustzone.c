@@ -202,7 +202,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		* increase frequency.  Otherwise run the normal algorithm.
 		*/
 		if (priv->bin.busy_time > ceiling) {
-			val = -1;
+			val = - 1;
 		} else {
 			idle = priv->bin.total_time - priv->bin.busy_time;
 			idle = (idle > 0) ? idle : 0;

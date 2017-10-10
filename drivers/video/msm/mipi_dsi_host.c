@@ -2271,7 +2271,6 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 				mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK, 0);
 				mipi_dsi_disable_irq_nosync(DSI_VIDEO_TERM);
 				complete(&dsi_fps_comp);
-				pr_info("%s CSC update done \n", __func__);
 				pr_debug("%s VIDEO_ENGINE NOT BUSY", __func__);
 #if !defined(CONFIG_SEC_PRODUCT_8930)
 			}
