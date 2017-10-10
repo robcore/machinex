@@ -1838,7 +1838,7 @@ static int cpufreq_online(unsigned int cpu)
 
 	if (!policy->limited_max_freq_thermal)
 		policy->limited_max_freq_thermal = is_display_on() ? policy->hlimit_min_screen_on : 
-										   policy->hlimit_min_screen_off
+										   policy->hlimit_min_screen_off;
 
 	if (hotplug_ready)
 		hardlimit_ready = true;

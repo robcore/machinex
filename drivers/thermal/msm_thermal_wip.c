@@ -325,9 +325,6 @@ static int msm_thermal_get_freq_table(void)
 	struct msm_thermal_pcpu *lcpu;
 	unsigned int i;
 
-	if (lcpu == NULL)
-		return -ENOMEM;
-
 	policy = cpufreq_cpu_get_raw(cpu);
 
 	if (policy == NULL || thermal_suspended) {
@@ -575,10 +572,8 @@ static void __ref disable_msm_thermal(void)
 		if (lcpu->limited_max_freq_thermal == table[lcpu->thermal_limit_high].frequency)
 			continue;
 		else
-			lcpu->limited_max_freq_thermal = table[lcpu->thermal_limit_high].frequency);
-
-		reapply_hard_limits(cpu);
-		cpufreq_update_policy(cpu);
+			lcpu->limited_max_freq_thermal = table[lcpu->thermal_limit_high].frequency;
+		set_thermal_policy(cpu, lcpu->limited_max_freq_thermal);
 	}
 }
 
@@ -627,7 +622,7 @@ static void __ref update_offline_cores(int val)
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 	for_each_nonboot_online_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu)
+		if (cpu_out_of_range_hp(cpu))
 			break;
 		if (!cpu_online(cpu))
 			continue;
