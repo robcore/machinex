@@ -432,9 +432,9 @@ static int __ref do_freq_control(void)
 				}
 		}
 
-		if (lcpu->internal_max_freq == lcpu->limited_max_freq_thermal) {
+		if (lcpu->internal_max_freq == lcpu->limited_max_freq_thermal)
 			continue;
-		}
+
 		set_thermal_policy(cpu, lcpu->internal_max_freq);
 		lcpu->limited_max_freq_thermal = lcpu->internal_max_freq;
 	}

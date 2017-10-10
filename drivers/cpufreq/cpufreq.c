@@ -399,8 +399,8 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 	if (!policy)
 		return;
 
-	reapply_hard_limits(policy->cpu);
 	policy->limited_max_freq_thermal = freq;
+	reapply_hard_limits(policy->cpu);
 	cpufreq_update_policy(policy->cpu);
 }
 	
