@@ -181,21 +181,18 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					kgsl_pwrctrl_pwrlevel_change(device,
 						device->pwrctrl.default_pwrlevel);
 					counter = 0;
-					last_wake = ktime_get();
-					return;
 				} else {
 					kgsl_pwrctrl_pwrlevel_change(device,
 						device->pwrctrl.default_pwrlevel + counter);
 						counter++;
-					last_wake = ktime_get();
-					return;
 				}
 			} else {
 				kgsl_pwrctrl_pwrlevel_change(device,
 					device->pwrctrl.default_pwrlevel + counter);
 					counter++;
-			last_wake = ktime_get();
+
 			}
+		last_wake = ktime_get();
 	}
 }
 
