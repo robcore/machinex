@@ -230,9 +230,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 						     level);
 			break;
 		case TZ_GOVERNOR_INTERACTIVE:
-			if (stats.total_time == 0 || priv->bin.busy_time < floor)
-				return;
-
 			if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24) {
 				stats.busy_time >>= 7;
 				stats.total_time >>= 7;
