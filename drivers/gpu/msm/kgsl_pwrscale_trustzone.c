@@ -159,8 +159,6 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
-
-
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
@@ -243,10 +241,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				break;
 			}
 
-			if (priv->bin.total_time > 1) {
-				gpu_stats.load = (priv->bin.busy_time * 100);
-				do_div(gpu_stats.load, priv->bin.total_time);
-			} else
+			if (priv->bin.total_time > 1)
+				gpu_stats.load = ((priv->bin.busy_time * 100) / priv->bin.total_time);
+			else
 				gpu_stats.load = (priv->bin.busy_time / 100);
 
 			if (level <= MIN_STEP && level > MAX_STEP) {
@@ -259,7 +256,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
-	loadview = (priv->bin.busy_time / 100);
+	loadview = priv->bin.busy_time / 100;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
