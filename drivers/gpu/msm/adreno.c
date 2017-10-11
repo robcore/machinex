@@ -20,6 +20,7 @@
 #include <linux/msm_kgsl.h>
 #include <linux/delay.h>
 #include <linux/input.h>
+#include <linux/display_state.h>
 
 #include <mach/socinfo.h>
 #include <mach/msm_bus_board.h>
@@ -85,13 +86,6 @@ static const struct kgsl_functable adreno_functable;
 
 static unsigned int adreno_touchboost;
 module_param(adreno_touchboost, uint, 0644);
-
-static bool can_adreno_boost(void)
-{
-	if (adreno_touchboost && is_display_on())
-		return true;
-	return false;
-}
 
 static void adreno_input_work(struct work_struct *work);
 
@@ -260,7 +254,9 @@ static void adreno_input_work(struct work_struct *work)
 			struct adreno_device, input_work);
 	struct kgsl_device *device = &adreno_dev->dev;
 
-	if (!can_adreno_boost)
+	if (!is_display_on())
+		return;
+	if (!adreno_touchboost)
 		return;
 
 	mutex_lock(&device->mutex);
@@ -294,7 +290,10 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 	struct kgsl_device *device = handle->handler->private;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 
-	if (!can_adreno_boost)
+	if (!is_display_on())
+		return;
+
+	if (!adreno_touchboost)
 		return;
 
 	device = handle->handler->private;

@@ -191,6 +191,7 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	}
 
 	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
+	loadview = 0;
 }
 
 #define MIN_STEP 3
