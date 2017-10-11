@@ -53,8 +53,8 @@ spinlock_t tz_lock;
 
 static unsigned int ceiling = 50000;
 static unsigned int floor = 15000;
-unsigned int up_threshold = 55;
-unsigned int down_threshold = 25;
+static unsigned int up_threshold = 65;
+static unsigned int down_threshold = 25;
 unsigned int up_differential = 5;
 bool debug = 0;
 
@@ -254,7 +254,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					gpu_stats.threshold = up_threshold / pwr->active_pwrlevel - 1;
 			} else if (pwr->active_pwrlevel < MIN_STEP &&
 						pwr->active_pwrlevel >= MAX_STEP) {
-				gpu_stats.threshold = up_threshold + up_differential;
+				gpu_stats.threshold = down_threshold;
 			}
 
 			if (gpu_stats.load >= gpu_stats.threshold) {
