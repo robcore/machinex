@@ -231,7 +231,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	int ret, max_level;
+	int ret;
 	unsigned int level = 0;
 
 	if (device == NULL)
@@ -243,21 +243,20 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if (min_max_lock)
-		return count;
-
 	mutex_lock(&device->mutex);
 
 	/* You can't set a maximum power level lower than the minimum */
 
 	sanitize_min_max(level, 0, pwr->min_pwrlevel);
-	max_level = pwr->max_pwrlevel = level;
+
+	if (!min_max_lock)
+		pwr->max_pwrlevel = level;
 	/*
 	 * Scratch that, only adjust the level here if there is no policy.
 	 */
 
 	if (device->pwrscale.policy == NULL)
-		kgsl_pwrctrl_pwrlevel_change(device, max_level);
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
 
 	mutex_unlock(&device->mutex);
 
@@ -282,7 +281,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 					 const char *buf, size_t count)
 {	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	int ret, min_level;
+	int ret;
 	unsigned int level = 0;
 
 	if (device == NULL)
@@ -294,23 +293,19 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if (min_max_lock)
-		return count;
-
 	mutex_lock(&device->mutex);
 
-	sanitize_min_max(level, pwr->max_pwrlevel, 3);
+	sanitize_min_max(level, pwr->max_pwrlevel, pwr->num_pwrlevels - 2);
 
-	min_level = pwr->min_pwrlevel = level;
-
-	pwr->min_pwrlevel = level;
+	if (!min_max_lock)
+		pwr->min_pwrlevel = level;
 
 	/* 
 	 * Scratch that, only do it if the current policy is NULL
 	 */
 
 	if (device->pwrscale.policy == NULL)
-		kgsl_pwrctrl_pwrlevel_change(device, min_level);
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 
 	mutex_unlock(&device->mutex);
 
@@ -374,17 +369,14 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if (min_max_lock)
-		return count;
-
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
-	if (level < 0)
-		goto done;
 
-	pwr->max_pwrlevel = level;
+	sanitize_min_max(level, 0, pwr->min_pwrlevel);
 
-done:
+	if (!min_max_lock)
+		pwr->max_pwrlevel = level;
+
 	mutex_unlock(&device->mutex);
 	return count;
 }
@@ -420,15 +412,14 @@ static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &val);
 	if (ret)
 		return ret;
-	if (min_max_lock)
-		return count;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
-	if (level < 0)
-		goto done;
 
-	pwr->min_pwrlevel = level;
+	sanitize_min_max(level, pwr->max_pwrlevel, 3);
+
+	if (!min_max_lock)
+		pwr->min_pwrlevel = level;
 
 done:
 	mutex_unlock(&device->mutex);
@@ -467,12 +458,11 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if (min_max_lock)
-		return count;
-
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
-	if (level >= 0)
+	sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel)
+
+	if (!min_max_lock)
 		kgsl_pwrctrl_pwrlevel_change(device, level);
 
 	mutex_unlock(&device->mutex);
@@ -695,7 +685,6 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 {
 	struct device *dev = stored_dev;
 	struct kgsl_device *device;
-	struct kgsl_pwrctrl *pwr;
 	int request_level = level;
 	char buf_level[2] = {0,};
 
@@ -711,12 +700,13 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 		return -EINVAL;
 	}
 
-	if (min_max_lock)
+	if (request_level < 0) {
+		printk("%s, invalid level : %d\n", __func__, request_level);
 		return -EINVAL;
+	}
 
-	pwr = &device->pwrctrl;
-
-	sanitize_min_max(request_level, pwr->max_pwrlevel, pwr->min_pwrlevel);
+	if (request_level > device->pwrctrl.num_pwrlevels - 2)
+		request_level = device->pwrctrl.num_pwrlevels - 2;
 
 	buf_level[0] = (char)(request_level + '0');
 

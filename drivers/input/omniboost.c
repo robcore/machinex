@@ -41,7 +41,6 @@ static void omniboost_input_event(struct input_handle *handle,
 		cpu_boost_event();
 		intelli_boost();
 	}
-	adrenoboost();
 }
 
 static int input_dev_filter(struct input_dev *dev) {

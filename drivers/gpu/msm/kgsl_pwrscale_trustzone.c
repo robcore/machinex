@@ -162,23 +162,35 @@ static struct attribute_group tz_attr_group = {
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
-	loadview = priv->bin.busy_time;
-	if ((device->state != KGSL_STATE_NAP) &&
-		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
-		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
+	unsigned int wakelevel;
+	struct kgsl_power_stats stats;
+
+	if (device->state == KGSL_STATE_NAP)
+		return;
+
+	switch (priv->governor) {
+		case TZ_GOVERNOR_INTERACTIVE:
+		case TZ_GOVERNOR_ONDEMAND:
+			device->ftbl->power_stats(device, &stats);
+			loadview += stats.busy_time;
 			if (loadview < 4000)
-				kgsl_pwrctrl_pwrlevel_change(device,
-					device->pwrctrl.default_pwrlevel + 3);
+				wakelevel = device->pwrctrl.max_pwrlevel + 3;
 			else if (loadview >= 4000 && loadview < 6000)
-					kgsl_pwrctrl_pwrlevel_change(device,
-					device->pwrctrl.default_pwrlevel + 2);
+					wakelevel = device->pwrctrl.max_pwrlevel + 2;
 			else if (loadview >= 6000 && loadview < 7000)
-					kgsl_pwrctrl_pwrlevel_change(device, 
-					device->pwrctrl.default_pwrlevel + 1);
+					wakelevel = device->pwrctrl.max_pwrlevel + 1;
 			else if (loadview >= 7000)
-				kgsl_pwrctrl_pwrlevel_change(device,
-					device->pwrctrl.default_pwrlevel);
+					wakelevel = device->pwrctrl.max_pwrlevel;
+			break;
+		case TZ_GOVERNOR_PERFORMANCE:
+			wakelevel = device->pwrctrl.max_pwrlevel;
+			break;
+		case TZ_GOVERNOR_POWERSAVE:
+			wakelevel = device->pwrctrl.min_pwrlevel;
+			break;
 	}
+
+	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
 }
 
 #define MIN_STEP 3
@@ -257,6 +269,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
+
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }

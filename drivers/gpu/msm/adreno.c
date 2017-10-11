@@ -277,15 +277,20 @@ static void adreno_input_work(struct work_struct *work)
 	mutex_unlock(&device->mutex);
 }
 
-void adrenoboost(void)
+/*
+ * Process input events and schedule work if needed.  At this point we are only
+ * interested in groking EV_ABS touchscreen events
+ */
+static void adreno_input_event(struct input_handle *handle, unsigned int type,
+		unsigned int code, int value)
 {
-
-	struct kgsl_device *device = (struct kgsl_device *)device;
-	struct adreno_device *adreno_dev;
+	struct kgsl_device *device = handle->handler->private;
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 
 	if (!adreno_touchboost)
 		return;
 
+	device = handle->handler->private;
 	adreno_dev = ADRENO_DEVICE(device);
 
 	/*
@@ -315,6 +320,72 @@ void adrenoboost(void)
 	} else if (device->state == KGSL_STATE_SLUMBER)
 		schedule_work(&adreno_dev->input_work);
 }
+
+static int input_dev_filter(struct input_dev *dev) {
+	if (strstr(dev->name, "pmic8xxx_pwrkey") ||
+		strstr(dev->name, "sec_touchscreen") ||
+		strstr(dev->name, "apq8064-tabla-snd-card Button Jack") ||
+		strstr(dev->name, "apq8064-tabla-snd-card Headset Jack") ||
+		strstr(dev->name, "gpio-keys") ||
+		strstr(dev->name, "sec_touchkey")) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+static int adreno_input_connect(struct input_handler *handler,
+		struct input_dev *dev, const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int ret;
+
+
+	if (input_dev_filter(dev))
+		return -ENODEV;
+
+	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
+	if (handle == NULL)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = handler->name;
+
+	ret = input_register_handle(handle);
+	if (ret) {
+		kfree(handle);
+		return ret;
+	}
+
+	ret = input_open_device(handle);
+	if (ret) {
+		input_unregister_handle(handle);
+		kfree(handle);
+	}
+
+	return ret;
+}
+
+static void adreno_input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id adreno_input_ids[] = {
+	{ .driver_info = 1 },
+	{ },
+};
+
+static struct input_handler adreno_input_handler = {
+	.event = adreno_input_event,
+	.connect = adreno_input_connect,
+	.disconnect = adreno_input_disconnect,
+	.name = "kgsl",
+	.id_table = adreno_input_ids,
+};
 
 /**
  * adreno_perfcounter_init: Reserve kernel performance counters
@@ -1647,6 +1718,15 @@ adreno_probe(struct platform_device *pdev)
 
 	device->flags &= ~KGSL_FLAGS_SOFT_RESET;
 
+	adreno_input_handler.private = device;
+
+	/*
+	 * It isn't fatal if we cannot register the input handler.  Sad,
+	 * perhaps, but not fatal
+	 */
+	if (input_register_handler(&adreno_input_handler))
+		KGSL_DRV_ERR(device, "Unable to register the input handler\n");
+
 	return 0;
 
 error_close_rb:
@@ -1664,6 +1744,8 @@ static int adreno_remove(struct platform_device *pdev)
 
 	device = (struct kgsl_device *)pdev->id_entry->driver_data;
 	adreno_dev = ADRENO_DEVICE(device);
+
+	input_unregister_handler(&adreno_input_handler);
 
 	kgsl_pwrscale_detach_policy(device);
 	kgsl_pwrscale_close(device);
