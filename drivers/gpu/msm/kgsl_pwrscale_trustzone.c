@@ -162,6 +162,7 @@ static struct attribute_group tz_attr_group = {
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
+	loadview = priv->bin.busy_time;
 	if ((device->state != KGSL_STATE_NAP) &&
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
 		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
@@ -256,7 +257,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
-	loadview = priv->bin.busy_time;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }

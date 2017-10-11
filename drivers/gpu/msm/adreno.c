@@ -277,13 +277,16 @@ static void adreno_input_work(struct work_struct *work)
 	mutex_unlock(&device->mutex);
 }
 
-void adrenoboost(struct input_handle *handle)
+void adrenoboost(void)
 {
-	struct kgsl_device *device = handle->handler->private;
-	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+
+	struct kgsl_device *device = (struct kgsl_device *)device;
+	struct adreno_device *adreno_dev;
 
 	if (!adreno_touchboost)
 		return;
+
+	adreno_dev = ADRENO_DEVICE(device);
 
 	/*
 	 * Don't do anything if anything hasn't been rendered since we've been
