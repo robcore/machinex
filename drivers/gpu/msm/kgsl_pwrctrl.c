@@ -181,7 +181,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	int ret;
 	unsigned int level = 0;
 
-	if (device == NULL || min_max_lock)
+	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -190,6 +190,8 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	if (ret)
 		return ret;
+	if (min_max_lock)
+		return count;
 
 	mutex_lock(&device->mutex);
 
@@ -234,7 +236,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	int ret, max_level;
 	unsigned int level = 0;
 
-	if (device == NULL || min_max_lock)
+	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -242,6 +244,9 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &level);
 	if (ret)
 		return ret;
+
+	if (min_max_lock)
+		return count;
 
 	mutex_lock(&device->mutex);
 
@@ -282,7 +287,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 	int ret, min_level;
 	unsigned int level = 0;
 
-	if (device == NULL || min_max_lock)
+	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -290,6 +295,9 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &level);
 	if (ret)
 		return ret;
+
+	if (min_max_lock)
+		return count;
 
 	mutex_lock(&device->mutex);
 
@@ -359,7 +367,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	unsigned int val = 0;
 	int ret, level;
 
-	if (device == NULL || min_max_lock)
+	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -367,6 +375,9 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &val);
 	if (ret)
 		return ret;
+
+	if (min_max_lock)
+		return count;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
@@ -403,7 +414,7 @@ static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,
 	unsigned int val = 0;
 	int ret, level;
 
-	if (device == NULL || min_max_lock)
+	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -411,6 +422,8 @@ static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &val);
 	if (ret)
 		return ret;
+	if (min_max_lock)
+		return count;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
@@ -447,7 +460,7 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 	unsigned int val = 0;
 	int ret, level;
 
-	if (device == NULL || min_max_lock)
+	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -455,6 +468,9 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &val);
 	if (ret)
 		return ret;
+
+	if (min_max_lock)
+		return count;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
@@ -685,9 +701,6 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 	int request_level = level;
 	char buf_level[2] = {0,};
 
-	if (min_max_lock)
-		return -EINVAL;
-
 	if (!dev) {
 		printk("%s, dev is null\n", __func__);
 		return -EINVAL;
@@ -699,6 +712,9 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 		printk("%s, fail to get device\n", __func__);
 		return -EINVAL;
 	}
+
+	if (min_max_lock)
+		return -EINVAL;
 
 	pwr = &device->pwrctrl;
 
