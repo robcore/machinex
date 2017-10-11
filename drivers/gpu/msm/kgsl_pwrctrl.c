@@ -110,11 +110,11 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	int delta;
 	int level;
 
-	if (new_level == pwr->active_pwrlevel)
-		return;
-
 	/* Adjust the power level to the current constraints */
 	sanitize_min_max(new_level, pwr->max_pwrlevel, pwr->min_pwrlevel);
+
+	if (new_level == pwr->active_pwrlevel)
+		return;
 
 	delta = new_level < pwr->active_pwrlevel ? -1 : 1;
 
@@ -203,7 +203,8 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	 * thermal level
 	 */
 
-	if (device->pwrscale.policy == NULL)
+	if (device->pwrscale.policy == NULL ||
+		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
 
 	mutex_unlock(&device->mutex);
@@ -246,7 +247,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 
 	/* You can't set a maximum power level lower than the minimum */
 
-	sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
+	sanitize_min_max(level, 0, pwr->min_pwrlevel);
 	max_level = pwr->max_pwrlevel = level;
 	/*
 	 * Scratch that, only adjust the level here if there is no policy.
@@ -292,7 +293,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 
 	mutex_lock(&device->mutex);
 
-	sanitize_min_max(level, 0, 3);
+	sanitize_min_max(level, pwr->max_pwrlevel, 3);
 
 	min_level = pwr->min_pwrlevel = level;
 
