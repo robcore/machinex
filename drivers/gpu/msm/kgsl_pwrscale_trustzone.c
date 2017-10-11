@@ -72,6 +72,9 @@ static struct clk_scaling_stats {
 	.load = 0,
 };
 
+static unsigned int loadview;
+module_param(loadview, uint, 0444);
+
 /* Trap into the TrustZone, and call funcs there. */
 static int __secure_tz_entry(u32 cmd, u32 val, u32 id)
 {
@@ -235,7 +238,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				break;
 			}
 
-			gpu_stats.load = (100 * priv->bin.busy_time);
+			loadview = gpu_stats.load = (100 * priv->bin.busy_time);
 			if (priv->bin.total_time > 0)
 				do_div(gpu_stats.load, priv->bin.total_time);
 			else
