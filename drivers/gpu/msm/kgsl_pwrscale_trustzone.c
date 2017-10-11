@@ -207,20 +207,20 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			*/
 			if (priv->bin.busy_time > ceiling) {
 				val = - 1;
-				idle_count++;
 			} else {
 				idle = priv->bin.total_time - priv->bin.busy_time;
 				idle = (idle > 0) ? idle : 0;
 				val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
+				idle_count++;
 			}
 
 			if (val && pwr->active_pwrlevel > MAX_STEP)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel + val);
-			else if (!val && idle_count == 5 && 
+			else if (!val && idle_count == 25 && 
 					 pwr->active_pwrlevel < MIN_STEP) {
 					kgsl_pwrctrl_pwrlevel_change(device,
-							     pwr->active_pwrlevel - 1);
+							     pwr->active_pwrlevel + 1);
 					idle_count = 0;
 			}
 			break;
