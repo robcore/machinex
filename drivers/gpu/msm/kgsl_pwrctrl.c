@@ -110,11 +110,11 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	int delta;
 	int level;
 
-	/* Adjust the power level to the current constraints */
-	sanitize_min_max(new_level, pwr->max_pwrlevel, pwr->min_pwrlevel);
-
 	if (new_level == pwr->active_pwrlevel)
 		return;
+
+	/* Adjust the power level to the current constraints */
+	sanitize_min_max(new_level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 
 	delta = new_level < pwr->active_pwrlevel ? -1 : 1;
 
