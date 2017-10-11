@@ -190,14 +190,14 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			* stop writing out values. */
 			if (pwr->active_pwrlevel == 0) {
 				if (priv->no_switch_cnt >= SWITCH_OFF &&
-					<= SKIP_COUNTER)
+					priv->no_switch_cnt < SKIP_COUNTER)
 					priv->skip_cnt++;
-				else if (priv->skip_cnt > SKIP_COUNTER) {
+				else if (priv->skip_cnt >= SKIP_COUNTER) {
 					priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
 					priv->skip_cnt = 0;
 				}
-					return;
 				priv->no_switch_cnt++;
+				return;
 			} else {
 				priv->no_switch_cnt = 0;
 			}
