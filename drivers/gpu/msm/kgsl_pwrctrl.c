@@ -109,7 +109,7 @@ static void update_clk_statistics(struct kgsl_device *device,
 
 static inline int _adjust_pwrlevel(struct kgsl_pwrctrl *pwr, int level)
 {
-	sanitize_min_max(level, max_pwrlevel, min_pwrlevel);
+	sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 
 	return level;
 }
