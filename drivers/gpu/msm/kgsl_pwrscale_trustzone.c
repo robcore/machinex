@@ -53,12 +53,12 @@ spinlock_t tz_lock;
 
 static unsigned int ceiling = 50000;
 static unsigned int floor = 5000;
-static unsigned int up_threshold = 75;
-static unsigned int down_threshold = 40;
+static unsigned int i_up_threshold = 75;
+static unsigned int i_down_threshold = 40;
 bool debug = 0;
 
-module_param(up_threshold, uint, 0664);
-module_param(down_threshold, uint, 0664);
+module_param(i_up_threshold, uint, 0664);
+module_param(i_down_threshold, uint, 0664);
 module_param(debug, bool, 0664);
 module_param(ceiling, uint, 0644);
 module_param(floor, uint, 0644);
@@ -166,11 +166,14 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
 		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
 			if (loadview < 40)
-				kgsl_pwrctrl_pwrlevel_change(device, 3);
+				kgsl_pwrctrl_pwrlevel_change(device,
+					device->pwrctrl.default_pwrlevel + 3);
 			else if (loadview >= 40 && loadview < 60)
-					kgsl_pwrctrl_pwrlevel_change(device, 2);
+					kgsl_pwrctrl_pwrlevel_change(device,
+					device->pwrctrl.default_pwrlevel + 2);
 			else if (loadview >= 60 && loadview < 70)
-					kgsl_pwrctrl_pwrlevel_change(device, 1);
+					kgsl_pwrctrl_pwrlevel_change(device, 
+					device->pwrctrl.default_pwrlevel + 1);
 			else if (loadview >= 70)
 				kgsl_pwrctrl_pwrlevel_change(device,
 					device->pwrctrl.default_pwrlevel);
@@ -241,17 +244,14 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				break;
 			}
 
-			if (priv->bin.total_time > 1)
-				gpu_stats.load = ((priv->bin.busy_time * 100) / priv->bin.total_time);
-			else
-				gpu_stats.load = (priv->bin.busy_time / 100);
+			gpu_stats.load = priv->bin.busy_time / 100;
 
 			if (level <= MIN_STEP && level > MAX_STEP) {
-					if (gpu_stats.load >= up_threshold)
+					if (gpu_stats.load >= i_up_threshold)
 						kgsl_pwrctrl_pwrlevel_change(device,
 								     level - 1);
 			} else if (level == MAX_STEP) {
-				if (gpu_stats.load < down_threshold)
+				if (gpu_stats.load < i_down_threshold)
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     level + 1);
 			}
