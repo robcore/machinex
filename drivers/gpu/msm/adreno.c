@@ -86,6 +86,13 @@ static const struct kgsl_functable adreno_functable;
 static unsigned int adreno_touchboost;
 module_param(adreno_touchboost, uint, 0644);
 
+static bool can_adreno_boost(void)
+{
+	if (adreno_touchboost && is_display_on())
+		return true;
+	return false;
+}
+
 static void adreno_input_work(struct work_struct *work);
 
 static struct adreno_device device_3d0 = {
@@ -253,7 +260,7 @@ static void adreno_input_work(struct work_struct *work)
 			struct adreno_device, input_work);
 	struct kgsl_device *device = &adreno_dev->dev;
 
-	if (!adreno_touchboost)
+	if (!can_adreno_boost)
 		return;
 
 	mutex_lock(&device->mutex);
@@ -287,7 +294,7 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 	struct kgsl_device *device = handle->handler->private;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 
-	if (!adreno_touchboost)
+	if (!can_adreno_boost)
 		return;
 
 	device = handle->handler->private;
