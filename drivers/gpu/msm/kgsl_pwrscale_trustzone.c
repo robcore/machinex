@@ -217,7 +217,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			if (val && pwr->active_pwrlevel > MAX_STEP)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel + val);
-			else if (!val && idle_count == 25 && 
+			else if (!val && idle_count == 50 && 
 					 pwr->active_pwrlevel < MIN_STEP) {
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     pwr->active_pwrlevel + 1);
