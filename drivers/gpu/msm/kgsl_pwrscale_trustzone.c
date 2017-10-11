@@ -181,12 +181,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		 * has passed since the last run.
 		 */
 		if ((stats.total_time == 0) ||
-			(priv->bin.total_time < floor)) {
-			if (pwr->active_pwrlevel < MIN_STEP)
-				kgsl_pwrctrl_pwrlevel_change(device,
-						     pwr->active_pwrlevel + 1);	
+			(priv->bin.total_time < floor))
 			return;
-		}
+
 		/* If the GPU has stayed in turbo mode for a while, *
 		* stop writing out values. */
 		if (pwr->active_pwrlevel == 0) {
@@ -219,6 +216,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		if (val)
 			kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel + val);
+		else if (pwr->active_pwrlevel < MIN_STEP)
+				kgsl_pwrctrl_pwrlevel_change(device,
+						     pwr->active_pwrlevel - val);
 
 	} else if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
 		if (stats.total_time == 0 || priv->bin.busy_time < floor)
