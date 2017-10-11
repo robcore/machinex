@@ -181,7 +181,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	int ret;
 	unsigned int level = 0;
 
-	if (device == NULL)
+	if (device == NULL || min_max_lock)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -193,9 +193,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	mutex_lock(&device->mutex);
 
-	if (level > pwr->num_pwrlevels - 2)
-		level = pwr->num_pwrlevels - 2;
-
+	sanitize_min_max(level, pwr->max_pwrlevel, pwr->max_pwrlevel);
 	pwr->thermal_pwrlevel = level;
 
 	/*
@@ -377,14 +375,6 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 
 	pwr->max_pwrlevel = level;
 
-	/*
-	 * if the thermal limit is lower than the current setting,
-	 * move the speed down immediately
-	 */
-
-	if (pwr->max_pwrlevel < pwr->active_pwrlevel)
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
-
 done:
 	mutex_unlock(&device->mutex);
 	return count;
@@ -413,7 +403,7 @@ static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,
 	unsigned int val = 0;
 	int ret, level;
 
-	if (device == NULL)
+	if (device == NULL || min_max_lock)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -1103,7 +1093,7 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 
 	pwr->max_pwrlevel = 0;
 	pwr->min_pwrlevel = pdata->num_levels - 2;
-	pwr->thermal_pwrlevel = 1;
+	pwr->thermal_pwrlevel = pwr->max_pwrlevel;
 
 	pwr->active_pwrlevel = pdata->init_level;
 	pwr->default_pwrlevel = pdata->init_level;
