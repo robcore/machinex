@@ -53,8 +53,8 @@ spinlock_t tz_lock;
 
 static unsigned int ceiling = 50000;
 static unsigned int floor = 5000;
-static unsigned int i_up_threshold = 75;
-static unsigned int i_down_threshold = 40;
+static unsigned int i_up_threshold = 7500;
+static unsigned int i_down_threshold = 4000;
 bool debug = 0;
 
 module_param(i_up_threshold, uint, 0664);
@@ -165,16 +165,16 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	if ((device->state != KGSL_STATE_NAP) &&
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
 		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
-			if (loadview < 40)
+			if (loadview < 4000)
 				kgsl_pwrctrl_pwrlevel_change(device,
 					device->pwrctrl.default_pwrlevel + 3);
-			else if (loadview >= 40 && loadview < 60)
+			else if (loadview >= 4000 && loadview < 6000)
 					kgsl_pwrctrl_pwrlevel_change(device,
 					device->pwrctrl.default_pwrlevel + 2);
-			else if (loadview >= 60 && loadview < 70)
+			else if (loadview >= 6000 && loadview < 7000)
 					kgsl_pwrctrl_pwrlevel_change(device, 
 					device->pwrctrl.default_pwrlevel + 1);
-			else if (loadview >= 70)
+			else if (loadview >= 7000)
 				kgsl_pwrctrl_pwrlevel_change(device,
 					device->pwrctrl.default_pwrlevel);
 	}
@@ -244,7 +244,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				break;
 			}
 
-			gpu_stats.load = priv->bin.busy_time / 100;
+			gpu_stats.load = priv->bin.busy_time;
 
 			if (level <= MIN_STEP && level > MAX_STEP) {
 					if (gpu_stats.load >= i_up_threshold)
@@ -256,7 +256,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
-	loadview = priv->bin.busy_time / 100;
+	loadview = priv->bin.busy_time;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
