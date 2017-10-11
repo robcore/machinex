@@ -400,7 +400,7 @@ static int kgsl_pwrctrl_max_gpuclk_show(struct device *dev,
 		return 0;
 	pwr = &device->pwrctrl;
 	return snprintf(buf, PAGE_SIZE, "%d\n",
-			pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq);
+			pwr->pwrlevels[pwr->max_pwrlevel].gpu_freq);
 }
 
 static int kgsl_pwrctrl_min_gpuclk_store(struct device *dev,

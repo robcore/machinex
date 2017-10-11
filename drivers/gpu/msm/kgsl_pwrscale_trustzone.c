@@ -165,9 +165,11 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct tz_priv *priv = pwrscale->priv;
 	if ((device->state != KGSL_STATE_NAP) &&
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
-		 priv->governor == TZ_GOVERNOR_INTERACTIVE))
+		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
 			kgsl_pwrctrl_pwrlevel_change(device,
 				device->pwrctrl.default_pwrlevel + 1);
+
+		}
 }
 
 #define MIN_STEP 3
@@ -219,6 +221,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			}
 			kgsl_pwrctrl_pwrlevel_change(device,
 						     level);
+			loadview = priv->bin.busy_time;
 				break;
 		case TZ_GOVERNOR_INTERACTIVE:
 			if (stats.total_time == 0 || priv->bin.busy_time < floor)
