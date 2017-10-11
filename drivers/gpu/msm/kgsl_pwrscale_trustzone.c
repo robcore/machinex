@@ -193,7 +193,8 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					priv->no_switch_cnt < SKIP_COUNTER)
 					priv->skip_cnt++;
 				else if (priv->skip_cnt >= SKIP_COUNTER) {
-					priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
+					if (priv->no_switch_cnt > SWITCH_OFF_RESET_TH)
+						priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
 					priv->skip_cnt = 0;
 				}
 				priv->no_switch_cnt++;
