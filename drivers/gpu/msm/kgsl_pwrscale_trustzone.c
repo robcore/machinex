@@ -54,8 +54,7 @@ spinlock_t tz_lock;
 static unsigned int ceiling = 50000;
 static unsigned int floor = 5000;
 static unsigned int up_threshold = 75;
-static unsigned int down_threshold = 25;
-unsigned int up_differential = 15;
+static unsigned int down_threshold = 40;
 bool debug = 0;
 
 module_param(up_threshold, uint, 0664);
@@ -160,39 +159,23 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
-#define KGMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define WAKE_INTERVAL KGMS(250UL)
-static unsigned long wake_interval = WAKE_INTERVAL;
-static ktime_t last_wake;
-#define RATE_PER_WAKE 3
-static int counter;
+
 
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
-	ktime_t delta;
-
 	if ((device->state != KGSL_STATE_NAP) &&
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
 		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
-			delta = ktime_sub(ktime_get(), last_wake);
-			if (ktime_compare(delta, ms_to_ktime(wake_interval)) <= 0) {
-				if (counter >= RATE_PER_WAKE) {
-					kgsl_pwrctrl_pwrlevel_change(device,
-						device->pwrctrl.default_pwrlevel);
-					counter = 0;
-				} else {
-					kgsl_pwrctrl_pwrlevel_change(device,
-						device->pwrctrl.default_pwrlevel + counter);
-						counter++;
-				}
-			} else {
+			if (loadview < 40)
+				kgsl_pwrctrl_pwrlevel_change(device, 3);
+			else if (loadview >= 40 && loadview < 60)
+					kgsl_pwrctrl_pwrlevel_change(device, 2);
+			else if (loadview >= 60 && loadview < 70)
+					kgsl_pwrctrl_pwrlevel_change(device, 1);
+			else if (loadview >= 70)
 				kgsl_pwrctrl_pwrlevel_change(device,
-					device->pwrctrl.default_pwrlevel + counter);
-					counter++;
-
-			}
-		last_wake = ktime_get();
+					device->pwrctrl.default_pwrlevel);
 	}
 }
 
@@ -240,13 +223,12 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 			if (val) {
 				level += val;
-				level = level > 0 ? level : 0;
+				level = level > pwr->max_pwrlevel ? level : pwr->max_pwrlevel;
 				level = level < pwr->min_pwrlevel ? level : pwr->min_pwrlevel;
 			}
 			kgsl_pwrctrl_pwrlevel_change(device,
 						     level);
-			loadview = priv->bin.busy_time;
-				break;
+			break;
 		case TZ_GOVERNOR_INTERACTIVE:
 			if (stats.total_time == 0 || priv->bin.busy_time < floor)
 				return;
@@ -260,21 +242,18 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			 * If there is an extended block of busy processing,
 			 * increase frequency. Otherwise run the normal algorithm.
 			 */
-			if (priv->bin.busy_time > ceiling) {
-				kgsl_pwrctrl_pwrlevel_change(device, level - 1);
+			if (priv->bin.busy_time < ceiling) {
 				break;
 			}
 
-			loadview = gpu_stats.load = (100 * priv->bin.busy_time);
-			if (priv->bin.total_time > 0)
+			if (priv->bin.total_time > 1) {
+				gpu_stats.load = (priv->bin.busy_time * 100);
 				do_div(gpu_stats.load, priv->bin.total_time);
-			else
-				do_div(gpu_stats.load, stats.total_time);
-
-			gpu_stats.threshold = up_threshold;
+			} else
+				gpu_stats.load = (priv->bin.busy_time / 100);
 
 			if (level <= MIN_STEP && level > MAX_STEP) {
-					if (gpu_stats.load >= up_threshold / level - 1)
+					if (gpu_stats.load >= up_threshold)
 						kgsl_pwrctrl_pwrlevel_change(device,
 								     level - 1);
 			} else if (level == MAX_STEP) {
@@ -283,7 +262,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
-
+	loadview = (priv->bin.busy_time / 100);
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
