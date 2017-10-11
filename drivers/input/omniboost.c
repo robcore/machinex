@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
+#include <linux/display_state.h>
 
 static bool __read_mostly boost_cores_first = true;
 module_param(boost_cores_first, bool, 0644);
@@ -30,6 +31,8 @@ module_param(boost_cores_first, bool, 0644);
 static void omniboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
+	if (!is_display_on())
+		return;
 /*boost functions go here*/
 	if (likely(boost_cores_first)) {
 		intelli_boost();
@@ -38,6 +41,7 @@ static void omniboost_input_event(struct input_handle *handle,
 		cpu_boost_event();
 		intelli_boost();
 	}
+	adrenoboost(handle);
 }
 
 static int input_dev_filter(struct input_dev *dev) {
