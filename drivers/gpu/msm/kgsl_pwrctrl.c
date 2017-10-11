@@ -109,13 +109,7 @@ static void update_clk_statistics(struct kgsl_device *device,
 
 static inline int _adjust_pwrlevel(struct kgsl_pwrctrl *pwr, int level)
 {
-	int max_pwrlevel = max_t(int, pwr->thermal_pwrlevel, pwr->max_pwrlevel);
-	int min_pwrlevel = max_t(int, pwr->thermal_pwrlevel, pwr->min_pwrlevel);
-
-	if (level < max_pwrlevel)
-		return max_pwrlevel;
-	if (level > min_pwrlevel)
-		return min_pwrlevel;
+	sanitize_min_max(level, max_pwrlevel, min_pwrlevel);
 
 	return level;
 }
@@ -223,8 +217,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	 * thermal level
 	 */
 
-	if (device->pwrscale.policy == NULL ||
-		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
+	if (device->pwrscale.policy == NULL)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
 
 	mutex_unlock(&device->mutex);
@@ -269,18 +262,13 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	if (level > pwr->min_pwrlevel)
 		level = pwr->min_pwrlevel;
 
-	pwr->max_pwrlevel = level;
-
-
-	max_level = max_t(int, pwr->thermal_pwrlevel, pwr->max_pwrlevel);
+	sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 
 	/*
-	 * If there is no policy then move to max by default.  Otherwise only
-	 * move max if the current level happens to be higher then the new max
+	 * Scratch that, only adjust the level here if there is no policy.
 	 */
 
-	if (device->pwrscale.policy == NULL ||
-		(max_level > pwr->active_pwrlevel))
+	if (device->pwrscale.policy == NULL)
 		kgsl_pwrctrl_pwrlevel_change(device, max_level);
 
 	mutex_unlock(&device->mutex);
@@ -319,22 +307,17 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 		return ret;
 
 	mutex_lock(&device->mutex);
-	if (level > pwr->num_pwrlevels - 2)
-		level = pwr->num_pwrlevels - 2;
 
-	/* You can't set a minimum power level lower than the maximum */
-	if (level < pwr->max_pwrlevel)
-		level = pwr->max_pwrlevel;
+	sanitize_min_max(level, 0, 3);
 
-	pwr->min_pwrlevel = level;
+	min_level = pwr->min_pwrlevel = level;
 
-	min_level = max_t(int, pwr->thermal_pwrlevel, pwr->min_pwrlevel);
 
-	/* Only move the power level higher if minimum is higher then the
-	 * current level
+	/* 
+	 * Scratch that, only do it if the current policy is NULL
 	 */
 
-	if (min_level < pwr->active_pwrlevel)
+	if (device->pwrscale.policy == NULL)
 		kgsl_pwrctrl_pwrlevel_change(device, min_level);
 
 	mutex_unlock(&device->mutex);
@@ -403,17 +386,6 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	level = _get_nearest_pwrlevel(pwr, val);
 	if (level < 0)
 		goto done;
-
-	pwr->thermal_pwrlevel = level;
-
-	/*
-	 * if the thermal limit is lower than the current setting,
-	 * move the speed down immediately
-	 */
-
-	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
-
 done:
 	mutex_unlock(&device->mutex);
 	return count;
@@ -497,8 +469,6 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
-	if (level >= 0)
-		kgsl_pwrctrl_pwrlevel_change(device, level);
 
 	mutex_unlock(&device->mutex);
 	return count;
@@ -535,10 +505,11 @@ static int kgsl_pwrctrl_pwrnap_store(struct device *dev,
 		return ret;
 
 	mutex_lock(&device->mutex);
+	sanitize_min_max(val, 0, 1);
 
-	if (val == 1)
+	if (val)
 		pwr->nap_allowed = true;
-	else if (val == 0)
+	else
 		pwr->nap_allowed = false;
 
 	mutex_unlock(&device->mutex);
@@ -734,13 +705,7 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 		return -EINVAL;
 	}
 
-	if (request_level < 0) {
-		printk("%s, invalid level : %d\n", __func__, request_level);
-		return -EINVAL;
-	}
-
-	if (request_level > device->pwrctrl.num_pwrlevels - 2)
-		request_level = device->pwrctrl.num_pwrlevels - 2;
+	sanitize_min_max(request_level, 0, 3);
 
 	buf_level[0] = (char)(request_level + '0');
 
@@ -1139,7 +1104,7 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 
 	pwr->max_pwrlevel = 0;
 	pwr->min_pwrlevel = pdata->num_levels - 2;
-	pwr->thermal_pwrlevel = 0;
+	pwr->thermal_pwrlevel = 1;
 
 	pwr->active_pwrlevel = pdata->init_level;
 	pwr->default_pwrlevel = pdata->init_level;
