@@ -190,8 +190,6 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	if (ret)
 		return ret;
-	if (min_max_lock)
-		return count;
 
 	mutex_lock(&device->mutex);
 
