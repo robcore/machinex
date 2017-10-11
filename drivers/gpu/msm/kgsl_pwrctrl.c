@@ -45,6 +45,9 @@ int graphics_boost_machinactive;
 int graphics_boost_elementalx = 4;
 #endif
 
+static bool min_max_lock;
+module_param(min_max_lock, bool, 0644);
+
 struct clk_pair {
 	const char *name;
 	uint map;
@@ -203,8 +206,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	 * thermal level
 	 */
 
-	if (device->pwrscale.policy == NULL ||
-		pwr->thermal_pwrlevel > pwr->active_pwrlevel)
+	if (device->pwrscale.policy == NULL)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
 
 	mutex_unlock(&device->mutex);
@@ -234,7 +236,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	int ret, max_level;
 	unsigned int level = 0;
 
-	if (device == NULL)
+	if (device == NULL || min_max_lock)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -282,7 +284,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 	int ret, min_level;
 	unsigned int level = 0;
 
-	if (device == NULL)
+	if (device == NULL || min_max_lock)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -359,7 +361,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	unsigned int val = 0;
 	int ret, level;
 
-	if (device == NULL)
+	if (device == NULL || min_max_lock)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -373,7 +375,16 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	if (level < 0)
 		goto done;
 
-	pwr->thermal_pwrlevel = level;
+	pwr->max_pwrlevel = level;
+
+	/*
+	 * if the thermal limit is lower than the current setting,
+	 * move the speed down immediately
+	 */
+
+	if (pwr->max_pwrlevel < pwr->active_pwrlevel)
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+
 done:
 	mutex_unlock(&device->mutex);
 	return count;
@@ -446,7 +457,7 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 	unsigned int val = 0;
 	int ret, level;
 
-	if (device == NULL)
+	if (device == NULL || min_max_lock)
 		return 0;
 
 	pwr = &device->pwrctrl;
@@ -680,8 +691,12 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 {
 	struct device *dev = stored_dev;
 	struct kgsl_device *device;
+	struct kgsl_pwrctrl *pwr;
 	int request_level = level;
 	char buf_level[2] = {0,};
+
+	if (min_max_lock)
+		return -EINVAL;
 
 	if (!dev) {
 		printk("%s, dev is null\n", __func__);
@@ -695,7 +710,9 @@ int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level)
 		return -EINVAL;
 	}
 
-	sanitize_min_max(request_level, 0, 3);
+	pwr = &device->pwrctrl;
+
+	sanitize_min_max(request_level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 
 	buf_level[0] = (char)(request_level + '0');
 
