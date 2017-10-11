@@ -160,16 +160,43 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
+#define KGMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
+#define WAKE_INTERVAL KGMS(250UL)
+static unsigned long wake_interval = WAKE_INTERVAL;
+static ktime_t last_wake;
+#define RATE_PER_WAKE 3
+static int counter;
+
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
+	ktime_t delta;
+
 	if ((device->state != KGSL_STATE_NAP) &&
 		(priv->governor == TZ_GOVERNOR_ONDEMAND ||
 		 priv->governor == TZ_GOVERNOR_INTERACTIVE)) {
-			kgsl_pwrctrl_pwrlevel_change(device,
-				device->pwrctrl.default_pwrlevel + 1);
-
-		}
+			delta = ktime_sub(ktime_get(), last_wake);
+			if (ktime_compare(delta, ms_to_ktime(wake_interval)) <= 0) {
+				if (counter >= RATE_PER_WAKE) {
+					kgsl_pwrctrl_pwrlevel_change(device,
+						device->pwrctrl.default_pwrlevel);
+					counter = 0;
+					last_wake = ktime_get();
+					return;
+				} else {
+					kgsl_pwrctrl_pwrlevel_change(device,
+						device->pwrctrl.default_pwrlevel + counter);
+						counter++;
+					last_wake = ktime_get();
+					return;
+				}
+			} else {
+				kgsl_pwrctrl_pwrlevel_change(device,
+					device->pwrctrl.default_pwrlevel + counter);
+					counter++;
+			last_wake = ktime_get();
+			}
+	}
 }
 
 #define MIN_STEP 3
