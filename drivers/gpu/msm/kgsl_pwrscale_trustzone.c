@@ -158,6 +158,7 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 #define MIN_STEP 3
 #define MAX_STEP 0
+static unsigned int idle_count;
 static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
@@ -205,21 +206,23 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		*/
 		if (priv->bin.busy_time > ceiling) {
 			val = - 1;
+			idle_count++;
 		} else {
 			idle = priv->bin.total_time - priv->bin.busy_time;
 			idle = (idle > 0) ? idle : 0;
 			val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
-			//SPAM!pr_info("KGSL secure tz step entry: %d idle:%d\n", val, idle);
 		}
 		priv->bin.total_time = 0;
 		priv->bin.busy_time = 0;
-		if (val)
+		if (val && pwr->active_pwrlevel > MAX_STEP)
 			kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel + val);
-		else if (pwr->active_pwrlevel < MIN_STEP)
+		else if (!val && idle_count == 5 && 
+				 pwr->active_pwrlevel < MIN_STEP) {
 				kgsl_pwrctrl_pwrlevel_change(device,
-						     pwr->active_pwrlevel - val);
-
+						     pwr->active_pwrlevel - 1);
+				idle_count = 0;
+		}
 	} else if (priv->governor == TZ_GOVERNOR_INTERACTIVE) {
 		if (stats.total_time == 0 || priv->bin.busy_time < floor)
 			return;
