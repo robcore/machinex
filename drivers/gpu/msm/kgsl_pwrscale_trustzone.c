@@ -189,14 +189,14 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			/* If the GPU has stayed in turbo mode for a while, *
 			* stop writing out values. */
 			if (pwr->active_pwrlevel == 0) {
-				if (priv->no_switch_cnt > SWITCH_OFF) {
+				if (priv->no_switch_cnt >= SWITCH_OFF &&
+					<= SKIP_COUNTER)
 					priv->skip_cnt++;
-					if (priv->skip_cnt > SKIP_COUNTER) {
-						priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
-						priv->skip_cnt = 0;
-					}
-					return;
+				else if (priv->skip_cnt > SKIP_COUNTER) {
+					priv->no_switch_cnt -= SWITCH_OFF_RESET_TH;
+					priv->skip_cnt = 0;
 				}
+					return;
 				priv->no_switch_cnt++;
 			} else {
 				priv->no_switch_cnt = 0;
@@ -205,7 +205,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			/* If there is an extended block of busy processing,
 			* increase frequency.  Otherwise run the normal algorithm.
 			*/
-			if (priv->bin.busy_time > ceiling) {
+			if (priv->bin.busy_time >= ceiling) {
 				val = - 1;
 			} else {
 				idle = priv->bin.total_time - priv->bin.busy_time;
@@ -217,7 +217,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			if (val && pwr->active_pwrlevel > MAX_STEP)
 				kgsl_pwrctrl_pwrlevel_change(device,
 						     pwr->active_pwrlevel + val);
-			else if (!val && idle_count == 50 && 
+			else if (!val && idle_count >= 250 && 
 					 pwr->active_pwrlevel < MIN_STEP) {
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     pwr->active_pwrlevel + 1);

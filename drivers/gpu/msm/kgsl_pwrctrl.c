@@ -245,11 +245,9 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 	mutex_lock(&device->mutex);
 
 	/* You can't set a maximum power level lower than the minimum */
-	if (level > pwr->min_pwrlevel)
-		level = pwr->min_pwrlevel;
 
 	sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
-
+	max_level = pwr->max_pwrlevel = level;
 	/*
 	 * Scratch that, only adjust the level here if there is no policy.
 	 */
@@ -298,6 +296,7 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 
 	min_level = pwr->min_pwrlevel = level;
 
+	pwr->min_pwrlevel = level;
 
 	/* 
 	 * Scratch that, only do it if the current policy is NULL
@@ -372,6 +371,8 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	level = _get_nearest_pwrlevel(pwr, val);
 	if (level < 0)
 		goto done;
+
+	pwr->thermal_pwrlevel = level;
 done:
 	mutex_unlock(&device->mutex);
 	return count;
@@ -455,6 +456,8 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
+	if (level >= 0)
+		kgsl_pwrctrl_pwrlevel_change(device, level);
 
 	mutex_unlock(&device->mutex);
 	return count;
