@@ -327,6 +327,10 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	switch (priv->governor) {
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
+			if (pwr->saved_pwrlevel) {
+				wakelevel = pwr->saved_pwrlevel;
+				break;
+			}
 			wakelevel = device->pwrctrl.max_pwrlevel;
 			if (previous_level >= device->pwrctrl.max_pwrlevel &&
 				previous_level < device->pwrctrl.min_pwrlevel)
@@ -445,6 +449,7 @@ static void tz_sleep(struct kgsl_device *device,
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
+	pwr->saved_pwrlevel = pwr->active_pwrlevel;
 	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 	__secure_tz_entry(TZ_RESET_ID, 0, device->id);
 	priv->bin.total_time = 0;
