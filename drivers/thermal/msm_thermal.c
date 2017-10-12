@@ -35,6 +35,7 @@
 #include <linux/sysfs_helpers.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
+static int limit_init;
 static int enabled;
 
 static struct msm_thermal_data msm_thermal_info = {
@@ -320,29 +321,19 @@ module_param_cb(poll_ms, &param_ops_poll_ms, NULL, 0644);
 static int msm_thermal_get_freq_table(void)
 {
 	struct cpufreq_policy *policy;
-	unsigned int templow, attemptcnt, cpu;
+	unsigned int templow, cpu;
 	int i;
 
-try_again:
-	if (attemptcnt >= 5)
+	if (!hotplug_ready || thermal_suspended)
 		return -EINVAL;
 
-	if (!hotplug_ready || thermal_suspended) {
-		attemptcnt++;
-		goto try_again;
-	}
-
 	policy = cpufreq_cpu_get_raw(0);
-	if (policy == NULL) {
-		attemptcnt++;
-		goto try_again;
-	}
+	if (policy == NULL)
+		return -ENOMEM;
 
 	table = policy->freq_table;
-	if (!table) {
-		attemptcnt++;
-		goto try_again;
-	}
+	if (!table)
+		return -ENOMEM;
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 			if (table[i].frequency == DEFAULT_THERMIN)
@@ -503,6 +494,14 @@ static void __ref check_temp(struct work_struct *work)
 
 	if (thermal_suspended)
 		return;
+
+	if (!limit_init) {
+		ret = msm_thermal_get_freq_table();
+		if (ret)
+			goto reschedule;
+		else
+			limit_init = 1;
+	}
 
 	ret = do_freq_control();
 	if (ret <= 0)
@@ -776,7 +775,7 @@ static struct notifier_block msm_thermal_pm_notifier = {
 int __init msm_thermal_init(void)
 {
 	struct msm_thermal_data *msm_thermal_info;
-	int ret;
+
 	msm_thermal_info = kzalloc(sizeof(struct msm_thermal_data), GFP_KERNEL);
 	if (!msm_thermal_info)
 		return -ENOMEM;
@@ -788,9 +787,6 @@ int __init msm_thermal_init(void)
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	register_pm_notifier(&msm_thermal_pm_notifier);
-	ret =  msm_thermal_get_freq_table();
-	BUG_ON(ret);
-
 	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
 	return 0;
 }
