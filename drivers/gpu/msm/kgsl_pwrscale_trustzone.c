@@ -328,7 +328,7 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
 			if (device->pwrctrl.saved_pwrlevel) {
-				wakelevel = device->pwrctrl.saved_pwrlevel;
+				wakelevel = device->pwrctrl.saved_pwrlevel - 1;
 				break;
 			}
 			wakelevel = device->pwrctrl.max_pwrlevel;
@@ -362,9 +362,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	int level, val;
 
 	device->ftbl->power_stats(device, &stats);
-	if (stats.total_time == 0)
-		return;
-
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
 
@@ -372,8 +369,14 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run.
 	 */
-	if (priv->bin.total_time < floor) {
+	if (priv->bin.total_time < floor ||
+		stats.total_time == 0)) {
 //		loadview = (priv->bin.busy_time*5243)>>19;
+		level = pwr->active_pwrlevel > pwr->max_pwrlevel ?
+		pwr->active_pwrlevel - 1 : 0;
+		if (level)
+			kgsl_pwrctrl_pwrlevel_change(device,
+			level);
 		return;
 	}
 
