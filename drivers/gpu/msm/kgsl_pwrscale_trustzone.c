@@ -374,15 +374,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		return;
 
 //		loadview = (priv->bin.busy_time*5243)>>19;
-	if (priv->bin.busy_time > ceiling) {
-		level = pwr->active_pwrlevel > pwr->max_pwrlevel ?
-		pwr->active_pwrlevel - 1 : 0;
-		if (level)
-			kgsl_pwrctrl_pwrlevel_change(device,
-			level);
-		return;
-	}
-
 	switch (priv->governor) {
 		case TZ_GOVERNOR_PERFORMANCE:
 		case TZ_GOVERNOR_POWERSAVE:
