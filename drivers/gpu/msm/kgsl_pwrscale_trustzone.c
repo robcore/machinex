@@ -51,28 +51,151 @@ spinlock_t tz_lock;
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
 
-static unsigned int ceiling = 50000;
-static unsigned int floor = 5000;
-static unsigned int i_up_threshold = 7500;
-static unsigned int i_down_threshold = 4000;
-bool debug = 0;
+static s64 ceiling = 50000;
+static s64 floor = 5000;
+static s64 i_up_threshold = 75;
+static s64 i_down_threshold = 40;
+static s64 loadview;
 
-module_param(i_up_threshold, uint, 0664);
-module_param(i_down_threshold, uint, 0664);
-module_param(debug, bool, 0664);
-module_param(ceiling, uint, 0644);
-module_param(floor, uint, 0644);
+static int set_ceiling(const char *buf, const struct kernel_param *kp)
+{
+	s64 val;
+
+	if (!sscanf(buf, "%lld", &val))
+		return -EINVAL;
+
+	sanitize_min_max(val, 10000, 100000);
+
+	ceiling = val;
+	return 0;
+}
+
+static int get_ceiling(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%lld", ceiling);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_ceiling = {
+	.set = set_ceiling,
+	.get = get_ceiling,
+};
+
+module_param_cb(ceiling, &param_ops_ceiling, NULL, 0644);
+
+static int set_i_up_threshold(const char *buf, const struct kernel_param *kp)
+{
+	s64 val;
+
+	if (!sscanf(buf, "%lld", &val))
+		return -EINVAL;
+
+	sanitize_min_max(val, 1, 99);
+
+	i_up_threshold = val;
+	return 0;
+}
+
+static int get_i_up_threshold(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%lld", i_up_threshold);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_i_up_threshold = {
+	.set = set_i_up_threshold,
+	.get = get_i_up_threshold,
+};
+
+module_param_cb(i_up_threshold, &param_ops_i_up_threshold, NULL, 0644);
+
+static int set_i_down_threshold(const char *buf, const struct kernel_param *kp)
+{
+	s64 val;
+
+	if (!sscanf(buf, "%lld", &val))
+		return -EINVAL;
+
+	sanitize_min_max(val, 1, 99);
+
+	i_down_threshold = val;
+	return 0;
+}
+
+static int get_i_down_threshold(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%lld", i_down_threshold);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_i_down_threshold = {
+	.set = set_i_down_threshold,
+	.get = get_i_down_threshold,
+};
+
+module_param_cb(i_down_threshold, &param_ops_i_down_threshold, NULL, 0644);
+
+static int set_floor(const char *buf, const struct kernel_param *kp)
+{
+	s64 val;
+
+	if (!sscanf(buf, "%lld", &val))
+		return -EINVAL;
+
+	sanitize_min_max(val, 1000, 20000);
+
+	floor = val;
+	return 0;
+}
+
+static int get_floor(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%lld", floor);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_floor = {
+	.set = set_floor,
+	.get = get_floor,
+};
+
+module_param_cb(floor, &param_ops_floor, NULL, 0644);
+
+static int get_loadview(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%lld", loadview);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_loadview = {
+	.set = NULL,
+	.get = get_loadview,
+};
+
+module_param_cb(loadview, &param_ops_loadview, NULL, 0444);
 
 static struct clk_scaling_stats {
 	unsigned long threshold;
-	unsigned int load;
+	s64 load;
 } gpu_stats = {
 	.threshold = 0,
 	.load = 0,
 };
-
-static unsigned int loadview;
-module_param(loadview, uint, 0444);
 
 /* Trap into the TrustZone, and call funcs there. */
 static int __secure_tz_entry(u32 cmd, u32 val, u32 id)
@@ -171,15 +294,11 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	switch (priv->governor) {
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
-			device->ftbl->power_stats(device, &stats);
-			loadview += stats.busy_time;
-			if (loadview < 4000)
-				wakelevel = device->pwrctrl.max_pwrlevel + 3;
-			else if (loadview >= 4000 && loadview < 6000)
+			if (loadview < 60)
 					wakelevel = device->pwrctrl.max_pwrlevel + 2;
-			else if (loadview >= 6000 && loadview < 7000)
+			else if (loadview >= 60 && loadview < 70)
 					wakelevel = device->pwrctrl.max_pwrlevel + 1;
-			else if (loadview >= 7000)
+			else if (loadview >= 70)
 					wakelevel = device->pwrctrl.max_pwrlevel;
 			break;
 		case TZ_GOVERNOR_PERFORMANCE:
@@ -191,7 +310,6 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	}
 
 	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
-	loadview = 0;
 }
 
 #define MIN_STEP 3
@@ -206,6 +324,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	int val;
 
 	device->ftbl->power_stats(device, &stats);
+	if (stats.total_time == 0)
+		return;
+
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
 
@@ -213,9 +334,10 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run.
 	 */
-	if ((stats.total_time == 0) ||
-		(priv->bin.total_time < floor))
+	if (priv->bin.total_time < floor) {
+		loadview = (priv->bin.busy_time*5243)>>19;
 		return;
+	}
 
 	level = pwr->active_pwrlevel;
 
@@ -245,11 +367,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 						     level);
 			break;
 		case TZ_GOVERNOR_INTERACTIVE:
-			if (stats.busy_time >= 1 << 24 || stats.total_time >= 1 << 24) {
-				stats.busy_time >>= 7;
-				stats.total_time >>= 7;
-			}
-
 			/*
 			 * If there is an extended block of busy processing,
 			 * increase frequency. Otherwise run the normal algorithm.
@@ -258,7 +375,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				break;
 			}
 
-			gpu_stats.load = priv->bin.busy_time;
+			gpu_stats.load = (priv->bin.busy_time*5243)>>19;
 
 			if (level <= MIN_STEP && level > MAX_STEP) {
 					if (gpu_stats.load >= i_up_threshold)
@@ -271,6 +388,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			}
 	}
 
+	loadview = (priv->bin.busy_time*5243)>>19;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
