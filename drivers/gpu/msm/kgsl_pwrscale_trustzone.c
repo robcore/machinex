@@ -370,7 +370,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * has passed since the last run.
 	 */
 	if (priv->bin.total_time < floor ||
-		stats.total_time == 0)) {
+		stats.total_time == 0) {
 //		loadview = (priv->bin.busy_time*5243)>>19;
 		level = pwr->active_pwrlevel > pwr->max_pwrlevel ?
 		pwr->active_pwrlevel - 1 : 0;
