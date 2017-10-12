@@ -1640,7 +1640,7 @@ void kgsl_active_count_put(struct kgsl_device *device)
 		return;
 	}
 
-	INIT_COMPLETION(device->suspend_gate);
+	reinit_completion(device->suspend_gate);
 
 	if (device->pwrctrl.nap_allowed == true &&
 			(device->state == KGSL_STATE_ACTIVE &&
