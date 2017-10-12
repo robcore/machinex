@@ -54,9 +54,9 @@ spinlock_t tz_lock;
 
 static s64 ceiling = 50000;
 static s64 floor = 5000;
-static s64 i_up_threshold = 75;
-static s64 i_down_threshold = 40;
-static s64 loadview;
+static s64 i_up_threshold = 70;
+static s64 i_down_threshold = 45;
+//static s64 loadview;
 
 static int set_ceiling(const char *buf, const struct kernel_param *kp)
 {
@@ -173,7 +173,7 @@ static const struct kernel_param_ops param_ops_floor = {
 };
 
 module_param_cb(floor, &param_ops_floor, NULL, 0644);
-
+/*
 static int get_loadview(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
@@ -189,7 +189,7 @@ static const struct kernel_param_ops param_ops_loadview = {
 };
 
 module_param_cb(loadview, &param_ops_loadview, NULL, 0444);
-
+*/
 static struct clk_scaling_stats {
 	unsigned long threshold;
 	s64 load;
@@ -317,6 +317,7 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
+	unsigned int previous_level = device->pwrctrl.active_pwrlevel;
 	unsigned int wakelevel;
 	struct kgsl_power_stats stats;
 
@@ -327,6 +328,12 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
 			wakelevel = device->pwrctrl.max_pwrlevel;
+			if (previous_level >= device->pwrctrl.max_pwrlevel &&
+				previous_level < device->pwrctrl.min_pwrlevel)
+				wakelevel += 1;
+			else if (previous_level > device->pwrctrl.max_pwrlevel &&
+				previous_level <= device->pwrctrl.min_pwrlevel)
+				wakelevel -= 1;
 			break;
 		case TZ_GOVERNOR_PERFORMANCE:
 			wakelevel = device->pwrctrl.max_pwrlevel;
@@ -389,6 +396,8 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				level = level > pwr->max_pwrlevel ? level : pwr->max_pwrlevel;
 				level = level < pwr->min_pwrlevel ? level : pwr->min_pwrlevel;
 			}
+			if (!val)
+				level += 1;
 			sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 			kgsl_pwrctrl_pwrlevel_change(device,
 						     level);
