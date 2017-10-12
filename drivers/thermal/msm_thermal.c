@@ -35,7 +35,6 @@
 #include <linux/sysfs_helpers.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
-static int limit_init;
 static int enabled;
 
 static struct msm_thermal_data msm_thermal_info = {
@@ -57,6 +56,7 @@ static unsigned int resolve_max_freq[NR_CPUS];
 static uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
 
 static struct delayed_work check_temp_work;
+static struct work_struct get_table_work;
 static struct workqueue_struct *intellithermal_wq;
 static bool core_control_enabled;
 static uint32_t cpus_offlined;
@@ -495,14 +495,6 @@ static void __ref check_temp(struct work_struct *work)
 	if (thermal_suspended)
 		return;
 
-	if (!limit_init) {
-		ret = msm_thermal_get_freq_table();
-		if (ret)
-			goto reschedule;
-		else
-			limit_init = 1;
-	}
-
 	ret = do_freq_control();
 	if (ret <= 0)
 		goto reschedule;
@@ -516,6 +508,21 @@ reschedule:
 	if (likely(enabled))
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
+}
+
+static void __ref get_table(struct work_struct *work)
+{
+	int ret;
+	ret = msm_thermal_get_freq_table();
+	if (ret)
+		goto reschedule;
+	else {
+		queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
+		return;
+	}	
+
+reschedule:
+		schedule_work(&get_table_work);
 }
 
 static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
@@ -578,9 +585,9 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 		if (!enabled) {
 			enabled = 1;
 			intellithermal_wq = create_hipri_workqueue("intellithermal");
+			INIT_WORK(&get_table_work, get_table);
 			INIT_DELAYED_WORK(&check_temp_work, check_temp);
-			queue_delayed_work(intellithermal_wq,
-					   &check_temp_work, 0);
+			schedule_work(&get_table_work);
 			pr_debug("msm_thermal: rescheduling...\n");
 		} else
 			pr_debug("msm_thermal: already running...\n");
@@ -783,11 +790,12 @@ int __init msm_thermal_init(void)
 	enabled = 1;
 	mutex_init(&core_control_mutex);
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
+	INIT_WORK(&get_table_work, get_table);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	register_pm_notifier(&msm_thermal_pm_notifier);
-	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
+	schedule_work(&get_table_work);
 	return 0;
 }
 
