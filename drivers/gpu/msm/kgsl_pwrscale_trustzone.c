@@ -283,6 +283,7 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
+#if 0
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
@@ -312,6 +313,32 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
 }
+#else
+static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
+{
+	struct tz_priv *priv = pwrscale->priv;
+	unsigned int wakelevel;
+	struct kgsl_power_stats stats;
+
+	if (device->state == KGSL_STATE_NAP)
+		return;
+
+	switch (priv->governor) {
+		case TZ_GOVERNOR_INTERACTIVE:
+		case TZ_GOVERNOR_ONDEMAND:
+			wakelevel = device->pwrctrl.max_pwrlevel;
+			break;
+		case TZ_GOVERNOR_PERFORMANCE:
+			wakelevel = device->pwrctrl.max_pwrlevel;
+			break;
+		case TZ_GOVERNOR_POWERSAVE:
+			wakelevel = device->pwrctrl.min_pwrlevel;
+			break;
+	}
+
+	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
+}
+#endif
 
 #define MIN_STEP 3
 #define MAX_STEP 0
@@ -335,7 +362,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	 * has passed since the last run.
 	 */
 	if (priv->bin.total_time < floor) {
-		loadview = (priv->bin.busy_time*5243)>>19;
+//		loadview = (priv->bin.busy_time*5243)>>19;
 		return;
 	}
 
@@ -388,11 +415,11 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
-	if (priv->bin.total_time > priv->bin.busy_time)
-		loadview = (do_div(priv->bin.busy_time, priv->bin.total_time) * 100);
-	else 
-		loadview = (priv->bin.busy_time*5243)>>19;
-
+/*
+	loadview = priv->bin.total_time > priv->bin.busy_time ?
+		(do_div(priv->bin.busy_time, priv->bin.total_time) * 5243)>>19 :
+		(priv->bin.busy_time*5243)>>19;
+*/
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
