@@ -20,6 +20,7 @@
 #include <mach/scm.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
+#include <asm/div64.h>
 
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
@@ -320,8 +321,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
-	int level;
-	int val;
+	int level, val;
 
 	device->ftbl->power_stats(device, &stats);
 	if (stats.total_time == 0)
@@ -339,8 +339,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		return;
 	}
 
-	level = pwr->active_pwrlevel;
-
 	switch (priv->governor) {
 		case TZ_GOVERNOR_PERFORMANCE:
 		case TZ_GOVERNOR_POWERSAVE:
@@ -348,6 +346,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	   the same */
 			return;
 		case TZ_GOVERNOR_ONDEMAND:
+			level = pwr->active_pwrlevel;
 			if (priv->bin.busy_time > ceiling) {
 				if (level)
 					val = (level * -1);
@@ -363,10 +362,12 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				level = level > pwr->max_pwrlevel ? level : pwr->max_pwrlevel;
 				level = level < pwr->min_pwrlevel ? level : pwr->min_pwrlevel;
 			}
+			sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 			kgsl_pwrctrl_pwrlevel_change(device,
 						     level);
 			break;
 		case TZ_GOVERNOR_INTERACTIVE:
+			level = pwr->active_pwrlevel;
 			/*
 			 * If there is an extended block of busy processing,
 			 * increase frequency. Otherwise run the normal algorithm.
@@ -387,8 +388,11 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 							     level + 1);
 			}
 	}
+	if (priv->bin.total_time > priv->bin.busy_time)
+		loadview = (do_div(priv->bin.busy_time, priv->bin.total_time) * 100);
+	else 
+		loadview = (priv->bin.busy_time*5243)>>19;
 
-	loadview = (priv->bin.busy_time*5243)>>19;
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
