@@ -51,7 +51,6 @@ static struct kgsl_pwrscale_policy *kgsl_pwrscale_policies[] = {
 #if 0
 	&kgsl_pwrscale_policy_msm,
 #endif
-	&kgsl_pwrscale_policy_machinactive,
 	NULL
 };
 
@@ -270,7 +269,18 @@ int kgsl_pwrscale_policy_add_files(struct kgsl_device *device,
 {
 	int ret;
 
+	ret = kobject_add(&pwrscale->kobj, &device->pwrscale_kobj,
+		"%s", pwrscale->policy->name);
+
+	if (ret)
+		return ret;
+
 	ret = sysfs_create_group(&pwrscale->kobj, attr_group);
+
+	if (ret) {
+		kobject_del(&pwrscale->kobj);
+		kobject_put(&pwrscale->kobj);
+	}
 
 	return ret;
 }
@@ -280,12 +290,19 @@ void kgsl_pwrscale_policy_remove_files(struct kgsl_device *device,
 				       struct attribute_group *attr_group)
 {
 	sysfs_remove_group(&pwrscale->kobj, attr_group);
+	kobject_del(&pwrscale->kobj);
+	kobject_put(&pwrscale->kobj);
 }
 
 static void _kgsl_pwrscale_detach_policy(struct kgsl_device *device)
 {
 	if (device->pwrscale.policy != NULL) {
 		device->pwrscale.policy->close(device, &device->pwrscale);
+
+		/*
+		 * Try to set max pwrlevel which will be limited to thermal by
+		 * kgsl_pwrctrl_pwrlevel_change if thermal is indeed lower
+		 */
 
 		kgsl_pwrctrl_pwrlevel_change(device,
 				device->pwrctrl.max_pwrlevel);
@@ -347,14 +364,11 @@ int kgsl_pwrscale_init(struct kgsl_device *device)
 
 	ret = kobject_init_and_add(&device->pwrscale_kobj, &ktype_pwrscale,
 		&device->dev->kobj, "pwrscale");
+
 	if (ret)
 		return ret;
 
-	ret = kobject_init_and_add(&device->pwrscale.kobj, &ktype_pwrscale_policy,
-		&device->pwrscale_kobj, "policy_config");
-	if (ret)
-		return ret;
-
+	kobject_init(&device->pwrscale.kobj, &ktype_pwrscale_policy);
 	return ret;
 }
 EXPORT_SYMBOL(kgsl_pwrscale_init);

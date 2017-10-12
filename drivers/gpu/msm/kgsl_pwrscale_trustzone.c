@@ -394,6 +394,10 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		stats.total_time == 0)
 		return;
 
+	if (!(device->flags & KGSL_FLAG_WAKE_ON_TOUCH))
+			kgsl_pwrctrl_pwrlevel_change(device,
+						     pwr->max_pwrlevel);
+			return;
 //		loadview = (priv->bin.busy_time*5243)>>19;
 	switch (priv->governor) {
 		case TZ_GOVERNOR_PERFORMANCE:
