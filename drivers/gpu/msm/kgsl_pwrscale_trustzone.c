@@ -52,8 +52,14 @@ spinlock_t tz_lock;
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
 
+#define FLOOR			5000
+/* CEILING is 50msec, larger than any standard
+ * frame length, but less than the idle timer.
+ */
+#define CEILING			CEILING
+
 static s64 ceiling = 50000;
-static s64 floor = 5000;
+static s64 floor = FLOOR;
 static s64 i_up_threshold = 70;
 static s64 i_down_threshold = 45;
 //static s64 loadview;
@@ -314,40 +320,55 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
 }
 #else
-static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
+
+static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
 	unsigned int previous_level = device->pwrctrl.active_pwrlevel;
-	unsigned int wakelevel;
-	struct kgsl_power_stats stats;
-
-	if (device->state == KGSL_STATE_NAP)
-		return;
+	unsigned int setlevel;
 
 	switch (priv->governor) {
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
-			if (device->pwrctrl.saved_pwrlevel) {
-				wakelevel = device->pwrctrl.saved_pwrlevel > device->pwrctrl.max_pwrlevel ?
-					wakelevel - 1 : device->pwrctrl.max_pwrlevel;
+			if (!(device->flags & KGSL_FLAG_WAKE_ON_TOUCH)) {
+				setlevel = device->pwrctrl.max_pwrlevel;
 				break;
 			}
-			wakelevel = device->pwrctrl.max_pwrlevel;
+			if (device->pwrctrl.saved_pwrlevel) {
+				setlevel = device->pwrctrl.saved_pwrlevel > device->pwrctrl.max_pwrlevel ?
+					device->pwrctrl.saved_pwrlevel - 1 : device->pwrctrl.max_pwrlevel;
+				break;
+			}
+			setlevel = device->pwrctrl.max_pwrlevel;
 			if (previous_level >= device->pwrctrl.max_pwrlevel &&
 				previous_level < device->pwrctrl.min_pwrlevel)
-				wakelevel += 1;
+				setlevel += 1;
 			else if (previous_level > device->pwrctrl.max_pwrlevel &&
 				previous_level <= device->pwrctrl.min_pwrlevel)
-				wakelevel -= 1;
+				setlevel -= 1;
 			break;
 		case TZ_GOVERNOR_PERFORMANCE:
-			wakelevel = device->pwrctrl.max_pwrlevel;
+			setlevel = device->pwrctrl.max_pwrlevel;
 			break;
 		case TZ_GOVERNOR_POWERSAVE:
-			wakelevel = device->pwrctrl.min_pwrlevel;
+			setlevel = device->pwrctrl.min_pwrlevel;
 			break;
 	}
+	sanitize_min_max(setlevel, device->pwrctrl.max_pwrlevel,
+					 device->pwrctrl.min_pwrlevel - 1);
 
+	return setlevel;
+}
+
+static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
+{
+	struct tz_priv *priv = pwrscale->priv;
+	unsigned int wakelevel;
+
+	if (device->state == KGSL_STATE_NAP)
+		return;
+
+	wakelevel = get_wake_level(device, pwrscale);
 	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
 }
 #endif
@@ -365,7 +386,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	device->ftbl->power_stats(device, &stats);
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
-
 	/* Do not waste CPU cycles running this algorithm if
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run.
@@ -410,7 +430,9 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			 * If there is an extended block of busy processing,
 			 * increase frequency. Otherwise run the normal algorithm.
 			 */
-			if (priv->bin.busy_time < ceiling) {
+			if (priv->bin.busy_time > ceiling) {
+				kgsl_pwrctrl_pwrlevel_change(device,
+				     level - 1);
 				break;
 			}
 
@@ -448,7 +470,6 @@ static void tz_sleep(struct kgsl_device *device,
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
 	pwr->saved_pwrlevel = pwr->active_pwrlevel;
-	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 	__secure_tz_entry(TZ_RESET_ID, 0, device->id);
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
