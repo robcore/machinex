@@ -294,9 +294,9 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	switch (priv->governor) {
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
-			if (loadview < 60)
+			if (loadview < 50)
 					wakelevel = device->pwrctrl.max_pwrlevel + 2;
-			else if (loadview >= 60 && loadview < 70)
+			else if (loadview >= 50 && loadview < 70)
 					wakelevel = device->pwrctrl.max_pwrlevel + 1;
 			else if (loadview >= 70)
 					wakelevel = device->pwrctrl.max_pwrlevel;
