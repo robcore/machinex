@@ -328,7 +328,7 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
 			if (pwr->saved_pwrlevel) {
-				wakelevel = pwr->saved_pwrlevel;
+				wakelevel = device->pwrctrl.saved_pwrlevel;
 				break;
 			}
 			wakelevel = device->pwrctrl.max_pwrlevel;
