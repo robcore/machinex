@@ -4992,7 +4992,6 @@ static void __init cgroup_init_subsys(struct cgroup_subsys *ss, bool early)
 	 * need to invoke fork callbacks here. */
 	BUG_ON(!list_empty(&init_task.tasks));
 
-	ss->active = 1;
 	BUG_ON(online_css(css));
 
 	mutex_unlock(&cgroup_mutex);

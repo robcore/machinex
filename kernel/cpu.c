@@ -1439,7 +1439,6 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.cant_stop		= true,
 	},
 	[CPUHP_PERF_PREPARE] = {
-		.name = "perf prepare",
 		.name			= "perf:prepare",
 		.startup.single		= perf_event_init_cpu,
 		.teardown.single	= perf_event_exit_cpu,
