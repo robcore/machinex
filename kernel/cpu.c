@@ -1119,7 +1119,8 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 
 	cpus_write_lock();
 
-	if (!cpu_present(cpu)) {
+	if (!cpu_present(cpu) ||
+		thermal_core_controlled(cpu)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1185,7 +1186,8 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 
 	cpu_maps_update_begin();
 
-	if (cpu_hotplug_disabled) {
+	if (cpu_hotplug_disabled ||
+		thermal_core_controlled(cpu)) {
 		err = -EBUSY;
 		goto out;
 	}
@@ -1198,7 +1200,8 @@ out:
 
 int cpu_up(unsigned int cpu)
 {
-	if (!is_cpu_allowed(cpu))
+	if (!is_cpu_allowed(cpu) ||
+		thermal_core_controlled(cpu))
 		return -EINVAL;
 	return do_cpu_up(cpu, CPUHP_ONLINE);
 }
@@ -1343,7 +1346,8 @@ void enable_nonboot_cpus(void)
 	arch_enable_nonboot_cpus_begin();
 
 	for_each_cpu(cpu, frozen_cpus) {
-		if (cpumask_test_cpu(cpu, max_screen_off))
+		if (cpumask_test_cpu(cpu, max_screen_off) ||
+			thermal_core_controlled(cpu))
 			continue;
 		error = _cpu_up(cpu, 1, CPUHP_ONLINE);
 		if (!error) {

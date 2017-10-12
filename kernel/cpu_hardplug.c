@@ -68,10 +68,8 @@ static DEFINE_MUTEX(hardplug_mtx);
 
 bool is_cpu_allowed(unsigned int cpu)
 {
-	if (!limit_screen_on_cpus)
-		return true;
-
-	if (!is_display_on() ||
+	if (!limit_screen_on_cpus ||
+		!is_display_on() ||
 		!hotplug_ready || cpu_out_of_range_hp(cpu))
 		return true;
 

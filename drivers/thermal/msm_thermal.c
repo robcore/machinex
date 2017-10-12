@@ -525,29 +525,6 @@ reschedule:
 		schedule_work(&get_table_work);
 }
 
-static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
-		unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	if (thermal_suspended || !hotplug_ready)
-		return NOTIFY_OK;
-
-	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (thermal_core_controlled(cpu)) {
-			pr_debug(
-			"%s: Preventing cpu%u from coming online.\n",
-				KBUILD_MODNAME, cpu);
-			return NOTIFY_BAD;
-		}
-	}
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __refdata msm_thermal_cpu_notifier = {
-	.notifier_call = msm_thermal_cpu_callback,
-};
-
 /**
  * We will reset the cpu frequencies limits here. The core online/offline
  * status will be carried over to the process stopping the msm_thermal, as
@@ -656,11 +633,9 @@ static ssize_t __ref store_cc_enabled(struct kobject *kobj,
 	core_control_enabled = !!val;
 	if (core_control_enabled) {
 		pr_debug("%s: Core control enabled\n", KBUILD_MODNAME);
-		register_cpu_notifier(&msm_thermal_cpu_notifier);
 		update_offline_cores(cpus_offlined);
 	} else {
 		pr_debug("%s: Core control disabled\n", KBUILD_MODNAME);
-		unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
 
 done_store_cc:
@@ -792,8 +767,6 @@ int __init msm_thermal_init(void)
 	intellithermal_wq = create_hipri_workqueue("intellithermal");
 	INIT_WORK(&get_table_work, get_table);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
-	if ((num_possible_cpus() > 1) && (core_control_enabled == true))
-		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	register_pm_notifier(&msm_thermal_pm_notifier);
 	schedule_work(&get_table_work);
 	return 0;
@@ -813,7 +786,6 @@ static void msm_thermal_exit(void)
 	enabled = 0;
 	disable_msm_thermal();
 	unregister_pm_notifier(&msm_thermal_pm_notifier);
-	unregister_cpu_notifier(&msm_thermal_cpu_notifier);
 	mutex_destroy(&core_control_mutex);
 }
 
