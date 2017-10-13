@@ -195,7 +195,7 @@ static int ipi_send_verify(struct irq_chip *chip, struct irq_data *data,
 	if (!chip->ipi_send_single && !chip->ipi_send_mask)
 		return -EINVAL;
 
-	if (cpu > nr_cpu_ids)
+	if (cpu >= nr_cpu_ids)
 		return -EINVAL;
 
 	if (dest) {
