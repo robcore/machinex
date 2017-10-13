@@ -199,34 +199,6 @@ unsigned int nr_hardplugged_cpus(void)
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
-/*
-static int cpu_hardplug_callback(struct notifier_block *nfb,
-					    unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	if (hotplug_ready)
-		return NOTIFY_OK;
-	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready || cpu == 0)
-		return NOTIFY_OK;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_ONLINE:
-	case CPU_DOWN_FAILED:
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-
-static struct notifier_block cpu_hardplug_notifier = {
-	.notifier_call = cpu_hardplug_callback,
-};
-*/
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -514,21 +486,10 @@ static int __init cpu_hardplug_init(void)
 		return -ENOMEM;
 	}
 
-//	register_hotcpu_notifier(&cpu_hardplug_notifier);
-
 	return 0;
 }
 
-/* This should never have to be used except on shutdown */
-static void cpu_hardplug_exit(void)
-{
-	sysfs_remove_group(kernel_kobj,
-		&cpu_hardplug_attr_group);
-}
-
 postcore_initcall(cpu_hardplug_init);
-module_exit(cpu_hardplug_exit);
-
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");
 MODULE_LICENSE("GPL v2");
