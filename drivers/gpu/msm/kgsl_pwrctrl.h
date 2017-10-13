@@ -78,7 +78,6 @@ struct kgsl_pwrctrl {
 	unsigned int init_pwrlevel;
 	unsigned int max_pwrlevel;
 	unsigned int min_pwrlevel;
-	unsigned int saved_pwrlevel;
 	unsigned int num_pwrlevels;
 	unsigned int interval_timeout;
 	bool strtstp_sleepwake;
