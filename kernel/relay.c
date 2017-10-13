@@ -407,7 +407,7 @@ static inline void relay_set_buf_dentry(struct rchan_buf *buf,
 					struct dentry *dentry)
 {
 	buf->dentry = dentry;
-	buf->dentry->d_inode->i_size = buf->early_bytes;
+	d_inode(buf->dentry)->i_size = buf->early_bytes;
 }
 
 static struct dentry *relay_create_buf_file(struct rchan *chan,
