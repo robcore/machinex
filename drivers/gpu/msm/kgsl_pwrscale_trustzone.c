@@ -440,7 +440,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					__secure_tz_entry3(TZ_UPDATE_ID,
 						level,
 						priv->bin.total_time,
-						priv->bin.busy_time)
+						priv->bin.busy_time);
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     level + 1);
 				}
@@ -461,7 +461,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					__secure_tz_entry3(TZ_UPDATE_ID,
 						level,
 						priv->bin.total_time,
-						priv->bin.busy_time)
+						priv->bin.busy_time);
 				} else if (load_hist >
 					thresholds[level].m_up_threshold)
 					val = -1;
