@@ -24,6 +24,7 @@
 #include <linux/tick.h>
 #include <linux/irq.h>
 #include <linux/smpboot.h>
+#include <linux/relay.h>
 #include <linux/slab.h>
 #include <linux/percpu-rwsem.h>
 
@@ -1466,6 +1467,11 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.name			= "slab:prepare",
 		.startup.single		= slab_prepare_cpu,
 		.teardown.single	= slab_dead_cpu,
+	},
+	[CPUHP_RELAY_PREPARE] = {
+		.name			= "relay:prepare",
+		.startup.single		= relay_prepare_cpu,
+		.teardown.single	= NULL,
 	},
 	[CPUHP_RCUTREE_PREP] = {
 		.name			= "RCU/tree:prepare",
