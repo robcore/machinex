@@ -334,7 +334,7 @@ static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrsc
 			}
 			if (device->pwrctrl.saved_pwrlevel) {
 				setlevel = device->pwrctrl.saved_pwrlevel > device->pwrctrl.max_pwrlevel ?
-					device->pwrctrl.saved_pwrlevel - 1 : device->pwrctrl.max_pwrlevel;
+					device->pwrctrl.saved_pwrlevel - 1 : device->pwrctrl.max_pwrlevel + 1;
 				break;
 			}
 			setlevel = device->pwrctrl.max_pwrlevel;
