@@ -86,6 +86,7 @@ static const struct kgsl_functable adreno_functable;
 
 static unsigned int adreno_touchboost;
 module_param(adreno_touchboost, uint, 0644);
+bool wakeboost_active;
 
 static void adreno_input_work(struct work_struct *work);
 
