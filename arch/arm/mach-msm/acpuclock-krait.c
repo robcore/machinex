@@ -1113,6 +1113,7 @@ int cpuhp_acpuclk_online(unsigned int cpu)
 
 	return 0;
 }
+
 int cpuhp_acpuclk_offline(unsigned int cpu)
 {
 	int rc;
@@ -1122,9 +1123,22 @@ int cpuhp_acpuclk_offline(unsigned int cpu)
 	if (!hotplug_ready)
 		return 0;
 
-	prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 	acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG);
 	regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
+
+	return 0;
+}
+
+int cpuhp_acpuclk_offline_prepare(unsigned int cpu)
+{
+	int rc;
+	struct scalable *sc = &drv.scalable[cpu];
+	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
+
+	if (!hotplug_ready)
+		return 0;
+
+	prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 
 	return 0;
 }
@@ -1304,9 +1318,13 @@ int __init acpuclk_krait_init(struct device *dev,
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
-	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_AP_ACPUCLOCK_ONLINE,
+	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_ACPUCLOCK_ONLINE,
 						   "acpuclk:online",
 						   cpuhp_acpuclk_online,
+						   cpuhp_acpuclk_offline_prepare);
+	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_ACPUCLOCK_PREPARE,
+						   "acpuclk:offline",
+						   NULL,
 						   cpuhp_acpuclk_offline);
 	return 0;
 }

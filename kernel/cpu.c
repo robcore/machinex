@@ -1583,16 +1583,6 @@ static struct cpuhp_step cpuhp_ap_states[] = {
 		.startup.single		= rcutree_online_cpu,
 		.teardown.single	= rcutree_offline_cpu,
 	},
-	[CPUHP_AP_ACPUCLOCK_ONLINE] = {
-		.name			= "acpuclk:online",
-		.startup.single		= cpuhp_acpuclk_online,
-		.teardown.single	= cpuhp_acpuclk_offline,
-	},
-	[CPUHP_AP_INTELLI_ONLINE] = {
-		.name			= "intelli:online",
-		.startup.single		= cpuhp_intelli_online,
-		.teardown.single	= cpuhp_intelli_offline,
-	},
 	/*
 	 * Online/down_prepare notifiers. Will be removed once the notifiers
 	 * are converted to states.

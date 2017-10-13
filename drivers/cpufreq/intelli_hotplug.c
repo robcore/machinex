@@ -683,11 +683,14 @@ static int intelli_plug_start(void)
 
 	register_power_suspend(&intelli_suspend_data);
 
-	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_AP_INTELLI_ONLINE,
+	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_ONLINE,
 						   "intelli:online",
 						   cpuhp_intelli_online,
+						   NULL);
+	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_PREPARE,
+						   "intelli:online",
+						   NULL,
 						   cpuhp_intelli_offline);
-
 	cycle_cpus();
 
 	return ret;
@@ -717,7 +720,8 @@ static void intelli_plug_stop(void)
 	unregister_power_suspend(&intelli_suspend_data);
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
-	cpuhp_remove_state_nocalls_cpuslocked(CPUHP_AP_INTELLI_ONLINE);
+	cpuhp_remove_state_nocalls(CPUHP_INTELLI_PREPARE);
+	cpuhp_remove_state_nocalls(CPUHP_INTELLI_ONLINE);
 	mutex_destroy(&(intellisleep_mutex));
 }
 
