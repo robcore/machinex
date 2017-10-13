@@ -776,7 +776,7 @@ show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 show_one(high_load_threshold);
-show_one_clamped(target_cpus);
+show_one_clamped(target_cpus, 1, 4);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\
