@@ -339,9 +339,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	unsigned int load_hist;
 	int level, val;
 
-	if (device->state == KGSL_STATE_NAP)
-		return;
-
 	device->ftbl->power_stats(device, &stats);
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
