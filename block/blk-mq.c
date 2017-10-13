@@ -1496,14 +1496,15 @@ static int blk_mq_alloc_bitmap(struct blk_mq_ctxmap *bitmap, int node)
 	return 0;
 }
 
-static int blk_mq_hctx_notify_dead(unsigned int cpu, struct hlist_node *node)
+static int blk_mq_hctx_cpu_offline(struct blk_mq_hw_ctx *hctx, int cpu)
 {
-	struct blk_mq_hw_ctx *hctx;
 	struct request_queue *q = hctx->queue;
 	struct blk_mq_ctx *ctx;
 	LIST_HEAD(tmp);
 
-	hctx = hlist_entry_safe(node, struct blk_mq_hw_ctx, cpuhp_dead);
+	/*
+	 * Move ctx entries to new CPU, if this one is going away.
+	 */
 	ctx = __blk_mq_get_ctx(q, cpu);
 
 	spin_lock(&ctx->lock);
@@ -1514,7 +1515,7 @@ static int blk_mq_hctx_notify_dead(unsigned int cpu, struct hlist_node *node)
 	spin_unlock(&ctx->lock);
 
 	if (list_empty(&tmp))
-		return 0;
+		return NOTIFY_OK;
 
 	ctx = blk_mq_get_ctx(q);
 	spin_lock(&ctx->lock);
@@ -1534,19 +1535,16 @@ static int blk_mq_hctx_notify_dead(unsigned int cpu, struct hlist_node *node)
 
 	blk_mq_run_hw_queue(hctx, true);
 	blk_mq_put_ctx(ctx);
-		return 0;
+	return NOTIFY_OK;
 }
-static int blk_mq_hctx_notify_online(unsigned int cpu, struct hlist_node *node)
+
+static int blk_mq_hctx_cpu_online(struct blk_mq_hw_ctx *hctx, int cpu)
 {
-	struct blk_mq_hw_ctx *hctx;
 	struct request_queue *q = hctx->queue;
 	struct blk_mq_tag_set *set = q->tag_set;
 
-	hctx = hlist_entry_safe(node, struct blk_mq_hw_ctx, cpuhp_dead);
-
 	if (set->tags[hctx->queue_num])
 		return NOTIFY_OK;
-
 
 	set->tags[hctx->queue_num] = blk_mq_init_rq_map(set, hctx->queue_num);
 	if (!set->tags[hctx->queue_num])
@@ -1554,13 +1552,21 @@ static int blk_mq_hctx_notify_online(unsigned int cpu, struct hlist_node *node)
 
 	hctx->tags = set->tags[hctx->queue_num];
 	return NOTIFY_OK;
-
-
-static void blk_mq_remove_cpuhp(struct blk_mq_hw_ctx *hctx)
-{
-	cpuhp_state_remove_instance_nocalls(CPUHP_BLK_MQ_DEAD,
-					    &hctx->cpuhp_dead);
 }
+
+static int blk_mq_hctx_notify(void *data, unsigned long action,
+			      unsigned int cpu)
+{
+	struct blk_mq_hw_ctx *hctx = data;
+
+	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN)
+		return blk_mq_hctx_cpu_offline(hctx, cpu);
+	else if (action == CPU_ONLINE || action == CPU_ONLINE_FROZEN)
+		return blk_mq_hctx_cpu_online(hctx, cpu);
+
+	return NOTIFY_OK;
+}
+
 static void blk_mq_exit_hctx(struct request_queue *q,
 		struct blk_mq_tag_set *set,
 		struct blk_mq_hw_ctx *hctx, unsigned int hctx_idx)
@@ -1577,7 +1583,7 @@ static void blk_mq_exit_hctx(struct request_queue *q,
 	if (set->ops->exit_hctx)
 		set->ops->exit_hctx(hctx, hctx_idx);
 
-	blk_mq_remove_cpuhp(hctx);
+	blk_mq_unregister_cpu_notifier(&hctx->cpu_notifier);
 	blk_free_flush_queue(hctx->fq);
 	kfree(hctx->ctxs);
 	blk_mq_free_bitmap(&hctx->ctx_map);
@@ -1625,7 +1631,9 @@ static int blk_mq_init_hctx(struct request_queue *q,
 	hctx->queue_num = hctx_idx;
 	hctx->flags = set->flags;
 
-	cpuhp_state_add_instance_nocalls(CPUHP_BLK_MQ_DEAD, &hctx->cpuhp_dead);
+	blk_mq_init_cpu_notifier(&hctx->cpu_notifier,
+					blk_mq_hctx_notify, hctx);
+	blk_mq_register_cpu_notifier(&hctx->cpu_notifier);
 
 	hctx->tags = set->tags[hctx_idx];
 
@@ -1669,7 +1677,8 @@ static int blk_mq_init_hctx(struct request_queue *q,
  free_ctxs:
 	kfree(hctx->ctxs);
  unregister_cpu_notifier:
-	blk_mq_remove_cpuhp(hctx);
+	blk_mq_unregister_cpu_notifier(&hctx->cpu_notifier);
+
 	return -1;
 }
 
@@ -2205,8 +2214,7 @@ void blk_mq_enable_hotplug(void)
 
 static int __init blk_mq_init(void)
 {
-	cpuhp_setup_state_multi(CPUHP_BLK_MQ_DEAD, "block/mq:dead", NULL,
-				blk_mq_hctx_notify_dead);
+	blk_mq_cpu_init();
 
 	hotcpu_notifier(blk_mq_queue_reinit_notify, 0);
 

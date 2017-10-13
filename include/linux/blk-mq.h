@@ -6,6 +6,12 @@
 struct blk_mq_tags;
 struct blk_flush_queue;
 
+struct blk_mq_cpu_notifier {
+	struct list_head list;
+	void *data;
+	int (*notify)(void *data, unsigned long action, unsigned int cpu);
+};
+
 struct blk_mq_ctxmap {
 	unsigned int map_size;
 	unsigned int bits_per_word;
@@ -51,8 +57,7 @@ struct blk_mq_hw_ctx {
 
 	atomic_t		nr_active;
 
-	struct hlist_node	cpuhp_dead;
-	struct hlist_node	cpuhp_online;
+	struct blk_mq_cpu_notifier	cpu_notifier;
 	struct kobject		kobj;
 };
 
