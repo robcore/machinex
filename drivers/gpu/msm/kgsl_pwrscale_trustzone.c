@@ -318,14 +318,56 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
+static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
+{
+	struct tz_priv *priv = pwrscale->priv;
+	unsigned int previous_level = device->pwrctrl.active_pwrlevel;
+	unsigned int setlevel;
+
+	switch (priv->governor) {
+		case TZ_GOVERNOR_MACHINACTIVE:
+		case TZ_GOVERNOR_INTERACTIVE:
+		case TZ_GOVERNOR_ONDEMAND:
+			if (wakeboost_active) {
+				setlevel = device->pwrctrl.max_pwrlevel;
+				break;
+			}
+			if (device->pwrctrl.saved_pwrlevel) {
+				setlevel = device->pwrctrl.saved_pwrlevel > device->pwrctrl.max_pwrlevel ?
+					device->pwrctrl.saved_pwrlevel - 1 : device->pwrctrl.max_pwrlevel + 1;
+				break;
+			}
+			setlevel = device->pwrctrl.max_pwrlevel;
+			if (previous_level >= device->pwrctrl.max_pwrlevel &&
+				previous_level < device->pwrctrl.min_pwrlevel)
+				setlevel += 1;
+			else if (previous_level > device->pwrctrl.max_pwrlevel &&
+				previous_level <= device->pwrctrl.min_pwrlevel)
+				setlevel -= 1;
+			break;
+		case TZ_GOVERNOR_PERFORMANCE:
+			setlevel = device->pwrctrl.max_pwrlevel;
+			break;
+		case TZ_GOVERNOR_POWERSAVE:
+			setlevel = device->pwrctrl.min_pwrlevel;
+			break;
+	}
+	sanitize_min_max(setlevel, device->pwrctrl.max_pwrlevel,
+					 device->pwrctrl.min_pwrlevel - 1);
+
+	return setlevel;
+}
+
 static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
+	unsigned int wakelevel;
 
 	if (device->state == KGSL_STATE_NAP)
 		return;
 
-	kgsl_pwrctrl_pwrlevel_change(device, device->pwrctrl.max_pwrlevel);
+	wakelevel = get_wake_level(device, pwrscale);
+	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
 }
 
 #define MIN_STEP 3
@@ -338,9 +380,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_power_stats stats;
 	unsigned int load_hist;
 	int level, val;
-
-	if (device->state == KGSL_STATE_NAP)
-		return;
 
 	device->ftbl->power_stats(device, &stats);
 	priv->bin.total_time += stats.total_time;
@@ -374,11 +413,13 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 			if (val) {
 				level += val;
-				sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
-				kgsl_pwrctrl_pwrlevel_change(device,
-							     level);
-			}
-
+				level = level > pwr->max_pwrlevel ? level : pwr->max_pwrlevel;
+				level = level < pwr->min_pwrlevel ? level : pwr->min_pwrlevel;
+			} else
+				level += 1;
+			sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
+			kgsl_pwrctrl_pwrlevel_change(device,
+						     level);
 			break;
 		case TZ_GOVERNOR_INTERACTIVE:
 			level = pwr->active_pwrlevel;
@@ -451,6 +492,7 @@ static void tz_sleep(struct kgsl_device *device,
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
+	pwr->saved_pwrlevel = pwr->active_pwrlevel;
 	__secure_tz_entry(TZ_RESET_ID, 0, device->id);
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;

@@ -1583,6 +1583,7 @@ static struct cpuhp_step cpuhp_ap_states[] = {
 		.startup.single		= rcutree_online_cpu,
 		.teardown.single	= rcutree_offline_cpu,
 	},
+
 	/*
 	 * Online/down_prepare notifiers. Will be removed once the notifiers
 	 * are converted to states.

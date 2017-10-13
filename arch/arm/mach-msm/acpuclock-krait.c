@@ -1045,11 +1045,8 @@ static struct cpufreq_frequency_table *
 machinex_freq_table(const struct cpufreq_policy *policy)
 {
 	int cpu;
-	int i, freq_cnt;
 	for_each_possible_cpu(cpu) {
-		freq_cnt = 0;
-		if (cpu_out_of_range(cpu))
-			break;
+		int i, freq_cnt = 0;
 		/* Construct the freq_table tables from freq_table. */
 		for (i = 0; drv.freq_table[i].speed.khz != 0
 				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
@@ -1100,13 +1097,15 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_DOWN_PREPARE:
+		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 		/* Fall through. */
 	case CPU_DEAD:
 	case CPU_UP_CANCELED:
-		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
 		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG); /* cpufreq_freq_transition_begin/end(policy, &freqs, ret); ? */
 		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
 		break;
+	case CPU_UP_PREPARE:
 	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
 		if (!sc->initialized) {

@@ -28,7 +28,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -433,12 +433,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 		update_per_cpu_stat();
 		for_each_nonboot_online_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu))
-				break;
 			if (cpu_is_offline(cpu) ||
 				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) / num_online_cpus();
 			l_ip_info = &per_cpu(ip_info, cpu);
@@ -450,12 +450,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_nonboot_offline_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu))
-				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
 				thermal_core_controlled(cpu))
 				continue;
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
 			if (num_online_cpus() == target)
@@ -748,14 +748,6 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
-#define show_one_clamped(object, minput, maxput)				\
-static ssize_t show_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	sanitize_min_max(object, minput, maxput);	\
-	return sprintf(buf, "%u\n", object);			\
-}
-
 #define show_long(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
@@ -776,7 +768,7 @@ show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 show_one(high_load_threshold);
-show_one_clamped(target_cpus, 1, 4);
+show_one(target_cpus);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\
@@ -877,7 +869,10 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 	if (ret < 0)
 		return ret;
 
-	sanitize_min_max(input, 0, 1);
+	if (input <= 0)
+		input = 0;
+	if (input >= 1)
+		input = 1;
 	if (input == intelliread())
 		return count;
 
@@ -897,7 +892,12 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	sanitize_min_max(val, 1, max_cpus_online);
+	if (val <= 1)
+		val = 1;
+	if (val >= NR_CPUS)
+		val = NR_CPUS;
+	if (val >= max_cpus_online)
+		val = max_cpus_online;
 
 	min_cpus_online = val;
 
@@ -915,7 +915,12 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	sanitize_min_max(val, min_cpus_online, NR_CPUS);
+	if (val <= 1)
+		val = 1;
+	if (val >= NR_CPUS)
+		val = NR_CPUS;
+	if (val <= min_cpus_online)
+		val = min_cpus_online;
 
 	max_cpus_online = val;
 
