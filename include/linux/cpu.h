@@ -282,6 +282,5 @@ extern int cpuhp_acpuclk_offline(unsigned int cpu);
 int cpuhp_acpuclk_offline_prepare(unsigned int cpu);
 extern int cpuhp_intelli_online(unsigned int cpu);
 extern int cpuhp_intelli_offline(unsigned int cpu);
-extern int cpuhp_blk_iopoll(unsigned int cpu);
 #endif /* _LINUX_CPU_H_ */
 
