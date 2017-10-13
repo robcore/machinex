@@ -433,12 +433,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 		update_per_cpu_stat();
 		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			if (cpu_is_offline(cpu) ||
 				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
-			if (cpu_out_of_range_hp(cpu))
-				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) / num_online_cpus();
 			l_ip_info = &per_cpu(ip_info, cpu);
@@ -450,12 +450,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
 				thermal_core_controlled(cpu))
 				continue;
-			if (cpu_out_of_range_hp(cpu))
-				break;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
 			if (num_online_cpus() == target)
