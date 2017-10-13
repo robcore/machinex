@@ -83,10 +83,11 @@ bool thermal_core_controlled(unsigned int cpu)
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val, cpu = 0;
-	int i;
+	unsigned int i;
 	bool should_apply;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
+	unsigned int temp_low;
 
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
@@ -102,21 +103,17 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-		if (table[i].frequency == val) {
-			should_apply = true;
+		if (table[i].frequency == val)
+			temp_low = cpufreq_frequency_table_get_index(policy, val);
 			break;
-		}
 	}
-	if (should_apply) {
-		for_each_possible_cpu(cpu) {
-			if (cpu_out_of_range(cpu))
-				break;
-			thermal_limit_low[cpu] = cpufreq_frequency_table_get_index(policy, val);
-		}
-			return 0;
+	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		thermal_limit_low[cpu] = temp_low;
 	}
 
-	return -EINVAL;
+	return 0;
 }
 
 static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
@@ -524,6 +521,29 @@ static void __ref get_table(struct work_struct *work)
 reschedule:
 		schedule_work(&get_table_work);
 }
+
+static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
+		unsigned long action, void *hcpu)
+{
+	unsigned int cpu = (unsigned long)hcpu;
+ 
+	if (thermal_suspended || !hotplug_ready)
+		return NOTIFY_OK;
+ 
+	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
+		if (thermal_core_controlled(cpu)) {
+			pr_debug(
+			"%s: Preventing cpu%u from coming online.\n",
+				KBUILD_MODNAME, cpu);
+			return NOTIFY_BAD;
+		}
+	}
+	return NOTIFY_OK;
+}
+ 
+static struct notifier_block __refdata msm_thermal_cpu_notifier = {
+	.notifier_call = msm_thermal_cpu_callback,
+};
 
 /**
  * We will reset the cpu frequencies limits here. The core online/offline
