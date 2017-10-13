@@ -323,6 +323,7 @@ static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrsc
 	struct tz_priv *priv = pwrscale->priv;
 	unsigned int previous_level = device->pwrctrl.active_pwrlevel;
 	unsigned int setlevel;
+	unsigned int load_hist;
 
 	switch (priv->governor) {
 		case TZ_GOVERNOR_MACHINACTIVE:
