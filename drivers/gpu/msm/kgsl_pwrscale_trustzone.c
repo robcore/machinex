@@ -415,8 +415,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 				level += val;
 				level = level > pwr->max_pwrlevel ? level : pwr->max_pwrlevel;
 				level = level < pwr->min_pwrlevel ? level : pwr->min_pwrlevel;
-			}
-			if (!val)
+			} else
 				level += 1;
 			sanitize_min_max(level, pwr->max_pwrlevel, pwr->min_pwrlevel);
 			kgsl_pwrctrl_pwrlevel_change(device,
@@ -428,11 +427,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 			 * If there is an extended block of busy processing,
 			 * increase frequency. Otherwise run the normal algorithm.
 			 */
-			if (priv->bin.busy_time > ceiling) {
-				kgsl_pwrctrl_pwrlevel_change(device,
-				     level - 1);
-				break;
-			}
 
 			gpu_stats.load = (priv->bin.busy_time*5243)>>19;
 
@@ -440,10 +434,16 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					if (gpu_stats.load >= i_up_threshold)
 						kgsl_pwrctrl_pwrlevel_change(device,
 								     level - 1);
+
 			} else if (level == MAX_STEP) {
-				if (gpu_stats.load < i_down_threshold)
+				if (gpu_stats.load < i_down_threshold) {
+					__secure_tz_entry3(TZ_UPDATE_ID,
+						level,
+						priv->bin.total_time,
+						priv->bin.busy_time)
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     level + 1);
+				}
 			}
 			break;
 		case TZ_GOVERNOR_MACHINACTIVE:
@@ -456,9 +456,13 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 				walltime_total = busytime_total = 0;
 
-				if (load_hist < thresholds[level].m_down_threshold)
+				if (load_hist < thresholds[level].m_down_threshold) {
 					val = 1;
-				else if (load_hist >
+					__secure_tz_entry3(TZ_UPDATE_ID,
+						level,
+						priv->bin.total_time,
+						priv->bin.busy_time)
+				} else if (load_hist >
 					thresholds[level].m_up_threshold)
 					val = -1;
 				if (val)
