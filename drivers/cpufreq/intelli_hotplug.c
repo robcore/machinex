@@ -748,6 +748,14 @@ static ssize_t show_##object					\
 	return sprintf(buf, "%u\n", object);			\
 }
 
+#define show_one_clamped(object, minput, maxput)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	sanitize_min_max(object, minput, maxput);	\
+	return sprintf(buf, "%u\n", object);			\
+}
+
 #define show_long(object)				\
 static ssize_t show_##object					\
 (struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
@@ -768,7 +776,7 @@ show_long(nr_run_hysteresis);
 show_one(nr_fshift);
 show_long(def_sampling_ms);
 show_one(high_load_threshold);
-show_one(target_cpus);
+show_one_clamped(target_cpus);
 
 #define store_one(object, min, max)		\
 static ssize_t store_##object		\
