@@ -72,7 +72,7 @@ static unsigned long busytime_total;
 
 struct m_load_thresholds {
 	unsigned int m_up_threshold;
-	unsigned int m down_threshold;
+	unsigned int m_down_threshold;
 };
 
 static struct m_load_thresholds thresholds[] = {
@@ -328,7 +328,7 @@ static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrsc
 		case TZ_GOVERNOR_MACHINACTIVE:
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
-			if (!(device->flags & KGSL_FLAG_WAKE_ON_TOUCH)) {
+			if (wakeboost_active) {
 				setlevel = device->pwrctrl.max_pwrlevel;
 				break;
 			}
@@ -391,10 +391,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		stats.total_time == 0)
 		return;
 
-	if (!(device->flags & KGSL_FLAG_WAKE_ON_TOUCH))
-			kgsl_pwrctrl_pwrlevel_change(device,
-						     pwr->max_pwrlevel);
-			return;
 //		loadview = (priv->bin.busy_time*5243)>>19;
 	switch (priv->governor) {
 		case TZ_GOVERNOR_PERFORMANCE:
@@ -459,10 +455,10 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 				walltime_total = busytime_total = 0;
 
-				if (load_hist < thresholds[level].down_threshold)
+				if (load_hist < thresholds[level].m_down_threshold)
 					val = 1;
 				else if (load_hist >
-					thresholds[level].up_threshold)
+					thresholds[level].m_up_threshold)
 					val = -1;
 				if (val)
 					kgsl_pwrctrl_pwrlevel_change(device,

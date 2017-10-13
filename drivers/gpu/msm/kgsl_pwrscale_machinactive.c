@@ -37,20 +37,49 @@
 #include "kgsl_device.h"
 #include "kgsl_pwrscale.h"
 
-#define MAX_LOAD		98
+/*
+ * Without locking i discovered that machinactive switches frequencies
+ * randomly at times, meaning that it up/downscales even if the load
+ * does not reach/cross the corresponding threshold.
+ */
+static DEFINE_SPINLOCK(machinactive_lock);
+
+/*
+ * KGSL policy scaling mode.
+ * Energy save locks the active pwrlevel to the highest present.
+ * Performance locks the active pwrlevel to the lowest present.
+ */
+static unsigned int mode[] = {
+	0,	/* Conservative (default)*/
+	1,	/* Energy save */
+	2	/* Machinactive */
+};
+
+static unsigned int scale_mode;
+
+/*
+ * Polling interval in us.
+ */
 #define MIN_POLL_INTERVAL	10000
 #define POLL_INTERVAL		100000
 #define MAX_POLL_INTERVAL	1000000
 
 static unsigned long polling_interval = POLL_INTERVAL;
 
+/*
+ * Total and busytime stats used to calculate the current GPU load.
+ */
 static unsigned long walltime_total;
 static unsigned long busytime_total;
 
+/*
+ * Load thresholds.
+ */
+#define MAX_LOAD		98
 
 struct load_thresholds {
-	unsigned int m_up_threshold;
-	unsigned int m down_threshold;
+	unsigned int up_threshold;
+	unsigned int down_threshold;
 };
 
 static struct load_thresholds thresholds[] = {
@@ -60,20 +89,13 @@ static struct load_thresholds thresholds[] = {
 	{40,		 0},	/* 128 MHz @pwrlevel 3 */
 	{ 0,	 	 0}	/*  27 MHz @pwrlevel 4 */
 };
-/*
- * Total and busytime stats used to calculate the current GPU load.
- */
-static unsigned long walltime_total;
-static unsigned long busytime_total;
-
-
 
 static void machinactive_wake(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_power_stats stats;
 
-	if (device->state != KGSL_STATE_NAP) {
+	if (device->state != KGSL_STATE_NAP && scale_mode == mode[0]) {
 		/* Reset the power stats counters. */
 		device->ftbl->power_stats(device, &stats);
 		walltime_total = 0;
@@ -96,7 +118,8 @@ static void machinactive_idle(struct kgsl_device *device,
 	 * Break out early if machinactive is running in energy saving
 	 * or performance mode.
 	 */
-	if (!stats.total_time)
+	if (!stats.total_time ||
+		scale_mode == mode[1] || scale_mode == mode[2])
 		return;
 
 	walltime_total += (unsigned long) stats.total_time;
@@ -107,15 +130,41 @@ static void machinactive_idle(struct kgsl_device *device,
 
 		walltime_total = busytime_total = 0;
 
+		/*
+		 * Scaling decision is the only part which really
+		 * needs locking. Leave it to that to keep overhead
+		 * as low as possible.
+		 */
+		spin_lock_irqsave(&machinactive_lock, flags);
+
 		if (load_hist < thresholds[pwr->active_pwrlevel].down_threshold)
 			val = 1;
 		else if (load_hist >
 			thresholds[pwr->active_pwrlevel].up_threshold)
 			val = -1;
+
+		spin_unlock_irqrestore(&machinactive_lock, flags);
+
 		if (val)
 			kgsl_pwrctrl_pwrlevel_change(device,
 						pwr->active_pwrlevel + val);
 	}
+}
+
+static void machinactive_busy(struct kgsl_device *device,
+				struct kgsl_pwrscale *pwrscale)
+{
+	device->on_time = ktime_to_us(ktime_get());
+}
+
+static void machinactive_sleep(struct kgsl_device *device,
+				struct kgsl_pwrscale *pwrscale)
+{
+	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
+
+	/* Bring GPU frequency all the way down on sleep */
+	if (scale_mode != mode[2] && pwr->active_pwrlevel != pwr->min_pwrlevel)
+		kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 }
 
 static ssize_t machinactive_polling_interval_show(struct kgsl_device *device,

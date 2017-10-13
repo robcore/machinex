@@ -275,6 +275,7 @@ static void adreno_input_work(struct work_struct *work)
 	 */
 	mod_timer(&device->idle_timer,
 		jiffies + msecs_to_jiffies(_wake_timeout));
+	wakeboost_active = false;
 	mutex_unlock(&device->mutex);
 }
 
@@ -299,7 +300,7 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 	 * here before
 	 */
 
-	if (device->flags & KGSL_FLAG_WAKE_ON_TOUCH)
+	if (device->flags & KGSL_FLAG_WAKE_ON_TOUCH || wakeboost_active)
 		return;
 
 	/*
@@ -319,8 +320,10 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 		mod_timer(&device->idle_timer,
 			jiffies + device->pwrctrl.interval_timeout);
 	} else if (device->state == KGSL_STATE_SLUMBER ||
-			   device->state == KGSL_STATE_SLEEP)
+			   device->state == KGSL_STATE_SLEEP) {
+		wakeboost_active = true;
 		schedule_work(&adreno_dev->input_work);
+	}
 }
 
 static int input_dev_filter(struct input_dev *dev) {

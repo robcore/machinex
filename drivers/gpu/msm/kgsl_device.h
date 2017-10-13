@@ -62,7 +62,7 @@
 #define KGSL_EVENT_CANCELLED 1
 
 #define KGSL_FLAG_WAKE_ON_TOUCH BIT(0)
-
+bool wakeboost_active;
 struct kgsl_device;
 struct platform_device;
 struct kgsl_device_private;
