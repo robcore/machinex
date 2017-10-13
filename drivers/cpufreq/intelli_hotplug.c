@@ -621,28 +621,35 @@ static struct power_suspend intelli_suspend_data =
 	.resume = intelli_resume,
 };
 
-int cpuhp_intelli_online(unsigned int cpu)
+static int intelliplug_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
 {
+	unsigned int cpu = (unsigned long)hcpu;
+	/* Fail hotplug until this driver can get CPU clocks, or screen off */
 	if (!hotplug_ready || !is_display_on())
-		return 0;
+		return NOTIFY_OK;
 
-	report_current_cpus();
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_DEAD:
+	case CPU_UP_CANCELED:
+		if (unlikely(check_down_lock(cpu)))
+			rm_down_lock(cpu, 0);
+		report_current_cpus();
+		break;
+	case CPU_ONLINE:
+	case CPU_DOWN_FAILED:
+		report_current_cpus();
+		break;
+	default:
+		break;
+	}
 
-	return 0;
+	return NOTIFY_OK;
 }
 
-int cpuhp_intelli_offline(unsigned int cpu)
-{
-	if (!hotplug_ready || !is_display_on())
-		return 0;
-
-	if (unlikely(check_down_lock(cpu)))
-		rm_down_lock(cpu, 0);
-
-	report_current_cpus();
-
-	return 0;
-}
+static struct notifier_block intelliplug_cpu_notifier = {
+	.notifier_call = intelliplug_cpu_callback,
+};
 
 static int intelli_plug_start(void)
 {
@@ -683,14 +690,8 @@ static int intelli_plug_start(void)
 
 	register_power_suspend(&intelli_suspend_data);
 
-	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_ONLINE,
-						   "intelli:online",
-						   cpuhp_intelli_online,
-						   NULL);
-	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_PREPARE,
-						   "intelli:online",
-						   NULL,
-						   cpuhp_intelli_offline);
+	register_hotcpu_notifier(&intelliplug_cpu_notifier);
+
 	cycle_cpus();
 
 	return ret;
@@ -720,8 +721,7 @@ static void intelli_plug_stop(void)
 	unregister_power_suspend(&intelli_suspend_data);
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
-	cpuhp_remove_state_nocalls(CPUHP_INTELLI_PREPARE);
-	cpuhp_remove_state_nocalls(CPUHP_INTELLI_ONLINE);
+	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	mutex_destroy(&(intellisleep_mutex));
 }
 
