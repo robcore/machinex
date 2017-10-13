@@ -1085,7 +1085,7 @@ static void __init dcvs_freq_init(void)
 }
 
 static int prev_khz[NR_CPUS];
-static int cpuhp_acpuclk_online(unsigned int cpu)
+int cpuhp_acpuclk_online(unsigned int cpu)
 {
 
 	int rc;
@@ -1093,34 +1093,32 @@ static int cpuhp_acpuclk_online(unsigned int cpu)
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
 	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready ||
-		cpuhp_tasks_frozen)
+	if (!hotplug_ready)
 		return 0;
 
 	if (!sc->initialized) {
 		rc = per_cpu_init(cpu);
-		return rc;
+		return 0;
 	}
 
 	if (WARN_ON(!prev_khz[cpu]))
 		return 0;
+
 	rc = regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg,
 					sc->vreg[VREG_CORE].cur_ua);
-	if (rc < 0)
-		return rc;
+
 	acpuclk_krait_set_rate(cpu, prev_khz[cpu], SETRATE_HOTPLUG);
 
 	return 0;
 }
-static int cpuhp_acpuclk_offline(unsigned int cpu)
+int cpuhp_acpuclk_offline(unsigned int cpu)
 {
 	int rc;
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
 	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready ||
-		cpuhp_tasks_frozen)
+	if (!hotplug_ready)
 		return 0;
 
 	prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
@@ -1305,7 +1303,7 @@ int __init acpuclk_krait_init(struct device *dev,
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
-	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_AP_ONLINE_DYN,
+	ret = cpuhp_setup_state_nocalls_cpuslocked(CPUHP_AP_ACPUCLOCK_ONLINE,
 						   "acpuclk:online",
 						   cpuhp_acpuclk_online,
 						   cpuhp_acpuclk_offline);
