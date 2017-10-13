@@ -877,10 +877,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 	if (ret < 0)
 		return ret;
 
-	if (input <= 0)
-		input = 0;
-	if (input >= 1)
-		input = 1;
+	sanitize_min_max(input, 0, 1);
 	if (input == intelliread())
 		return count;
 
@@ -900,12 +897,7 @@ static ssize_t store_min_cpus_online(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (val <= 1)
-		val = 1;
-	if (val >= NR_CPUS)
-		val = NR_CPUS;
-	if (val >= max_cpus_online)
-		val = max_cpus_online;
+	sanitize_min_max(val, 1, max_cpus_online);
 
 	min_cpus_online = val;
 
@@ -923,12 +915,7 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (val <= 1)
-		val = 1;
-	if (val >= NR_CPUS)
-		val = NR_CPUS;
-	if (val <= min_cpus_online)
-		val = min_cpus_online;
+	sanitize_min_max(val, min_cpus_online, NR_CPUS);
 
 	max_cpus_online = val;
 
