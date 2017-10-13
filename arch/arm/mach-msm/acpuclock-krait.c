@@ -1095,7 +1095,7 @@ int cpuhp_acpuclk_online(unsigned int cpu)
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
-	if (!hotplug_ready || cpuhp_tasks_frozen)
+	if (!hotplug_ready)
 		return 0;
 
 	if (!sc->initialized) {
@@ -1119,7 +1119,7 @@ int cpuhp_acpuclk_offline(unsigned int cpu)
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
-	if (!hotplug_ready || cpuhp_tasks_frozen)
+	if (!hotplug_ready)
 		return 0;
 
 	prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
