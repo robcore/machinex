@@ -30,6 +30,7 @@
 #define TZ_GOVERNOR_ONDEMAND    1
 #define TZ_GOVERNOR_INTERACTIVE	2
 #define TZ_GOVERNOR_POWERSAVE 3
+#define TZ_GOVERNOR_MACHINACTIVE 4
 
 struct tz_priv {
 	int governor;
@@ -57,6 +58,30 @@ spinlock_t tz_lock;
  * frame length, but less than the idle timer.
  */
 #define CEILING			CEILING
+
+#define MAX_LOAD		98
+#define MIN_POLL_INTERVAL	10000
+#define POLL_INTERVAL		100000
+#define MAX_POLL_INTERVAL	1000000
+
+static unsigned long polling_interval = POLL_INTERVAL;
+
+static unsigned long walltime_total;
+static unsigned long busytime_total;
+
+
+struct m_load_thresholds {
+	unsigned int m_up_threshold;
+	unsigned int m down_threshold;
+};
+
+static struct m_load_thresholds thresholds[] = {
+	{UINT_MAX,	65},	/* 400 MHz @pwrlevel 0 */
+	{75,		50},	/* 320 MHz @pwrlevel 1 */
+	{55,		30},	/* 200 MHz @pwrlevel 2 */
+	{40,		 0},	/* 128 MHz @pwrlevel 3 */
+	{ 0,	 	 0}	/*  27 MHz @pwrlevel 4 */
+};
 
 static s64 ceiling = 50000;
 static s64 floor = FLOOR;
@@ -239,8 +264,10 @@ static ssize_t tz_governor_show(struct kgsl_device *device,
 		ret = snprintf(buf, 13, "interactive\n");
 	else if (priv->governor == TZ_GOVERNOR_POWERSAVE)
 		ret = snprintf(buf, 11, "powersave\n");
-	else
+	else if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
 		ret = snprintf(buf, 13, "performance\n");
+	else if (priv->governor == TZ_GOVERNOR_MACHINACTIVE)
+		ret = snprintf(buf, 14, "machinactive\n");
 
 	return ret;
 }
@@ -262,6 +289,8 @@ static ssize_t tz_governor_store(struct kgsl_device *device,
 		priv->governor = TZ_GOVERNOR_POWERSAVE;
 	else if (!strncmp(buf, "performance", 11))
 		priv->governor = TZ_GOVERNOR_PERFORMANCE;
+	else if (!strncmp(buf, "machinactive", 12))
+		priv->governor = TZ_GOVERNOR_MACHINACTIVE;
 
 	if (priv->governor == TZ_GOVERNOR_PERFORMANCE) {
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
@@ -289,38 +318,6 @@ static struct attribute_group tz_attr_group = {
 	.name = "trustzone",
 };
 
-#if 0
-static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
-{
-	struct tz_priv *priv = pwrscale->priv;
-	unsigned int wakelevel;
-	struct kgsl_power_stats stats;
-
-	if (device->state == KGSL_STATE_NAP)
-		return;
-
-	switch (priv->governor) {
-		case TZ_GOVERNOR_INTERACTIVE:
-		case TZ_GOVERNOR_ONDEMAND:
-			if (loadview < 50)
-					wakelevel = device->pwrctrl.max_pwrlevel + 2;
-			else if (loadview >= 50 && loadview < 70)
-					wakelevel = device->pwrctrl.max_pwrlevel + 1;
-			else if (loadview >= 70)
-					wakelevel = device->pwrctrl.max_pwrlevel;
-			break;
-		case TZ_GOVERNOR_PERFORMANCE:
-			wakelevel = device->pwrctrl.max_pwrlevel;
-			break;
-		case TZ_GOVERNOR_POWERSAVE:
-			wakelevel = device->pwrctrl.min_pwrlevel;
-			break;
-	}
-
-	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
-}
-#else
-
 static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
@@ -328,6 +325,7 @@ static unsigned int get_wake_level(struct kgsl_device *device, struct kgsl_pwrsc
 	unsigned int setlevel;
 
 	switch (priv->governor) {
+		case TZ_GOVERNOR_MACHINACTIVE:
 		case TZ_GOVERNOR_INTERACTIVE:
 		case TZ_GOVERNOR_ONDEMAND:
 			if (!(device->flags & KGSL_FLAG_WAKE_ON_TOUCH)) {
@@ -371,7 +369,6 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	wakelevel = get_wake_level(device, pwrscale);
 	kgsl_pwrctrl_pwrlevel_change(device, wakelevel);
 }
-#endif
 
 #define MIN_STEP 3
 #define MAX_STEP 0
@@ -451,6 +448,27 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					kgsl_pwrctrl_pwrlevel_change(device,
 							     level + 1);
 			}
+			break;
+		case TZ_GOVERNOR_MACHINACTIVE:
+			level = pwr->active_pwrlevel;
+			walltime_total += (unsigned long) stats.total_time;
+			busytime_total += (unsigned long) stats.busy_time;
+
+			if (walltime_total > polling_interval) {
+				load_hist = (100 * busytime_total) / walltime_total;
+
+				walltime_total = busytime_total = 0;
+
+				if (load_hist < thresholds[level].down_threshold)
+					val = 1;
+				else if (load_hist >
+					thresholds[level].up_threshold)
+					val = -1;
+				if (val)
+					kgsl_pwrctrl_pwrlevel_change(device,
+								level + val);
+			}
+			break;
 	}
 /*
 	loadview = priv->bin.total_time > priv->bin.busy_time ?
@@ -477,6 +495,8 @@ static void tz_sleep(struct kgsl_device *device,
 	__secure_tz_entry(TZ_RESET_ID, 0, device->id);
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
+	walltime_total = 0;
+	busytime_total = 0;
 }
 
 #ifdef CONFIG_MSM_SCM

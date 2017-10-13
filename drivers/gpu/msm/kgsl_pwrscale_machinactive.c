@@ -37,25 +37,16 @@
 #include "kgsl_device.h"
 #include "kgsl_pwrscale.h"
 
-/*
- * Polling interval in us.
- */
+#define MAX_LOAD		98
 #define MIN_POLL_INTERVAL	10000
 #define POLL_INTERVAL		100000
 #define MAX_POLL_INTERVAL	1000000
 
 static unsigned long polling_interval = POLL_INTERVAL;
 
-/*
- * Total and busytime stats used to calculate the current GPU load.
- */
 static unsigned long walltime_total;
 static unsigned long busytime_total;
 
-/*
- * Load thresholds.
- */
-#define MAX_LOAD		98
 
 struct load_thresholds {
 	unsigned int m_up_threshold;
@@ -69,6 +60,13 @@ static struct load_thresholds thresholds[] = {
 	{40,		 0},	/* 128 MHz @pwrlevel 3 */
 	{ 0,	 	 0}	/*  27 MHz @pwrlevel 4 */
 };
+/*
+ * Total and busytime stats used to calculate the current GPU load.
+ */
+static unsigned long walltime_total;
+static unsigned long busytime_total;
+
+
 
 static void machinactive_wake(struct kgsl_device *device,
 				struct kgsl_pwrscale *pwrscale)
