@@ -822,7 +822,20 @@ static int pmu_cpu_notify(struct notifier_block *b,
 			smp_call_function_single(cpu,
 						 cpu_pmu->save_pm_registers,
 						 hcpu, 1);
-		if (cpu_has_active_perf(cpu)) {
+		break;
+	case CPU_ONLINE:
+		if (cpu_pmu && cpu_pmu->reset)
+			cpu_pmu->reset(NULL);
+		if (cpu_pmu && cpu_pmu->restore_pm_registers)
+			smp_call_function_single(cpu,
+						 cpu_pmu->restore_pm_registers,
+						 hcpu, 1);
+	}
+
+	if (cpu_has_active_perf((int)hcpu)) {
+		switch ((action & ~CPU_TASKS_FROZEN)) {
+
+		case CPU_DOWN_PREPARE:
 			armpmu_update_counters();
 			/*
 			 * If this is on a multicore CPU, we need
@@ -831,20 +844,12 @@ static int pmu_cpu_notify(struct notifier_block *b,
 			if (cpu_pmu &&
 				cpu_pmu->plat_device->dev.platform_data) {
 				irq = platform_get_irq(cpu_pmu->plat_device, 0);
-				smp_call_function_single(cpu,
+				smp_call_function_single((int)hcpu,
 						disable_irq_callback, &irq, 1);
 			}
 			return NOTIFY_DONE;
-		}
-		break;
-	case CPU_ONLINE:
-		if (cpu_pmu && cpu_pmu->reset)
-			cpu_pmu->reset(NULL);
-		if (cpu_pmu && cpu_pmu->restore_pm_registers)
-			smp_call_function_single(cpu,
-						 cpu_pmu->restore_pm_registers,
-						  hcpu, 1);
-		if (cpu_has_active_perf(cpu)) {
+
+		case CPU_ONLINE:
 			/*
 			 * If this is on a multicore CPU, we need
 			 * to arm the PMU IRQ before appearing.
@@ -861,10 +866,9 @@ static int pmu_cpu_notify(struct notifier_block *b,
 				pmu->pmu_enable(pmu);
 				return NOTIFY_OK;
 			}
+		default:
+			return NOTIFY_DONE;
 		}
-	break;
-	default:
-		return NOTIFY_DONE;
 	}
 
 	if ((action & ~CPU_TASKS_FROZEN) != CPU_ONLINE)
