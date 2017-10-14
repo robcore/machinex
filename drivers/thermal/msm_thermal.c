@@ -104,7 +104,7 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		if (table[i].frequency == val) {
-			temp_low = cpufreq_frequency_table_get_index(policy, val);
+			temp_low = i;
 			break;
 		}
 	}
