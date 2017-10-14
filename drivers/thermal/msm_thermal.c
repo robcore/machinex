@@ -83,16 +83,14 @@ bool thermal_core_controlled(unsigned int cpu)
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val, cpu = 0;
-	unsigned int i;
-	bool should_apply;
+	int i;
+
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
-	unsigned int temp_low;
+	int temp_low = -1;
 
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
-
-	sanitize_min_max(val, 0, 14);
 
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (policy == NULL)
@@ -101,6 +99,7 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 	if (table == NULL)
 		return -ENOMEM;
 
+	sanitize_min_max(val, 384000, 1782000);
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		if (table[i].frequency == val) {
@@ -108,6 +107,10 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 			break;
 		}
 	}
+
+	if (temp_low < 0)
+		return -EINVAL;
+
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
