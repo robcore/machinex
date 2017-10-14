@@ -116,7 +116,7 @@ extern int sysctl_nr_open_min, sysctl_nr_open_max;
 extern int sysctl_nr_trim_pages;
 #endif
 #ifdef CONFIG_BLOCK
-extern int blk_iopoll_enabled;
+extern int irq_poll_enabled;
 #endif
 
 /* Constants used for minimum and  maximum */
@@ -1082,8 +1082,8 @@ static struct ctl_table kern_table[] = {
 #endif
 #ifdef CONFIG_BLOCK
 	{
-		.procname	= "blk_iopoll",
-		.data		= &blk_iopoll_enabled,
+		.procname	= "irq_poll",
+		.data		= &irq_poll_enabled,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
