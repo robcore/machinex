@@ -956,7 +956,6 @@ exit:
 	complete(&mehci->rt_completion);
 	if (next_latency)
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
-
 	return 0;
 }
 
