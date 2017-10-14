@@ -62,7 +62,7 @@ static bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 
-static struct cpufreq_frequency_table *table;
+static struct cpufreq_frequency_table *therm_table;
 static bool thermal_suspended = false;
 
 /*************************************************************************
@@ -80,29 +80,26 @@ bool thermal_core_controlled(unsigned int cpu)
 	return false;
 }
 
+static bool can_mitigate(void)
+{
+	if (thermal_suspended || !hotplug_ready)
+		return false;
+
+	return true;
+}
+
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val, cpu = 0;
-	int i;
-
-	struct cpufreq_policy *policy;
-	struct cpufreq_frequency_table *table;
-	int temp_low = -1;
+	int i, temp_low = -1;
 
 	if (!sscanf(buf, "%u", &val))
 		return -EINVAL;
 
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
-		return -ENOMEM;
-	table = policy->freq_table; /* Get frequency table */
-	if (table == NULL)
-		return -ENOMEM;
-
 	sanitize_min_max(val, 384000, 1782000);
 
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-		if (table[i].frequency == val) {
+	for (i = 0; (therm_table[i].frequency != CPUFREQ_TABLE_END); i++) {
+		if (therm_table[i].frequency == val) {
 			temp_low = i;
 			break;
 		}
@@ -123,18 +120,9 @@ static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
 static int get_thermal_limit_low(char *buf, const struct kernel_param *kp)
 {
 	ssize_t ret;
-	struct cpufreq_policy *policy;
-	struct cpufreq_frequency_table *table;
 	unsigned int cpu = 0;
 
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
-		return -ENOSYS;
-	table = policy->freq_table; /* Get frequency table */
-	if (table == NULL)
-		return -ENOSYS;
-
-	ret = sprintf(buf, "%u", table[thermal_limit_low[cpu]].frequency);
+	ret = sprintf(buf, "%u", therm_table[thermal_limit_low[cpu]].frequency);
 
 	return ret;
 }
@@ -325,19 +313,19 @@ static int msm_thermal_get_freq_table(void)
 	unsigned int templow, cpu;
 	int i;
 
-	if (!hotplug_ready || thermal_suspended)
+	if (!can_mitigate())
 		return -EINVAL;
 
 	policy = cpufreq_cpu_get_raw(0);
 	if (policy == NULL)
 		return -ENOMEM;
 
-	table = policy->freq_table;
-	if (!table)
+	therm_table = policy->freq_table;
+	if (!therm_table)
 		return -ENOMEM;
 
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
-			if (table[i].frequency == DEFAULT_THERMIN)
+	for (i = 0; (therm_table[i].frequency != CPUFREQ_TABLE_END); i++)
+			if (therm_table[i].frequency == DEFAULT_THERMIN)
 				templow = i;
 
 	for_each_possible_cpu(cpu) {
@@ -351,8 +339,8 @@ static int msm_thermal_get_freq_table(void)
 		sanitize_min_max(thermal_limit_low[cpu], 0, 14);
 	}
 
-	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", table[thermal_limit_low[0]].frequency);
-	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", table[thermal_limit_high[0]].frequency);	
+	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[thermal_limit_low[0]].frequency);
+	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", therm_table[thermal_limit_high[0]].frequency);	
 
 	return 0;
 }
@@ -363,7 +351,7 @@ static long evaluate_temp(unsigned int cpu)
 	long temp;
 	int ret = 0;
 
-	if (thermal_suspended)
+	if (!can_mitigate())
 		return -EINVAL;
 
 	tsens_dev.sensor_num = msm_sens_id[cpu];
@@ -384,7 +372,7 @@ static int __ref do_freq_control(void)
 	unsigned int hotplug_check_needed = 0;
 
 
-	if (!hotplug_ready || thermal_suspended) {
+	if (!can_mitigate()) {
 		pr_err("frequency control not ready!\n");		
 		return -EINVAL;
 	}
@@ -410,7 +398,7 @@ static int __ref do_freq_control(void)
 				limit_idx[cpu] -= msm_thermal_info.freq_step;
 				if (limit_idx[cpu] < thermal_limit_low[cpu])
 					limit_idx[cpu] = thermal_limit_low[cpu];
-				resolve_max_freq[cpu] = table[limit_idx[cpu]].frequency;
+				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
 		} else if (freq_temp <= delta) {
 				if (limit_idx[cpu] == thermal_limit_high[cpu]) {
@@ -419,9 +407,9 @@ static int __ref do_freq_control(void)
 				limit_idx[cpu] += msm_thermal_info.freq_step;
 				if (limit_idx[cpu] >= thermal_limit_high[cpu]) {
 					limit_idx[cpu] = thermal_limit_high[cpu];
-					resolve_max_freq[cpu] = table[thermal_limit_high[cpu]].frequency;
+					resolve_max_freq[cpu] = therm_table[thermal_limit_high[cpu]].frequency;
 				} else {
-					resolve_max_freq[cpu] = table[limit_idx[cpu]].frequency;
+					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
@@ -444,7 +432,7 @@ static void __ref do_core_control(void)
 	long core_temp;
 
 	if ((!core_control_enabled) || (intelli_init() ||
-		 !hotplug_ready || thermal_suspended)) {
+		 !can_mitigate())) {
 		return;
 	}
 
@@ -493,7 +481,7 @@ static void __ref check_temp(struct work_struct *work)
 {
 	int ret = 0;
 
-	if (thermal_suspended)
+	if (!can_mitigate())
 		return;
 
 	ret = do_freq_control();
@@ -503,9 +491,6 @@ static void __ref check_temp(struct work_struct *work)
 		do_core_control();
 
 reschedule:
-	if (thermal_suspended)
-		return;
-
 	if (likely(enabled))
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
 				msecs_to_jiffies(msm_thermal_info.poll_ms));
@@ -542,10 +527,10 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		if (local_max_freq_thermal[cpu] == table[thermal_limit_high[cpu]].frequency)
+		if (local_max_freq_thermal[cpu] == therm_table[thermal_limit_high[cpu]].frequency)
 			continue;
 		else
-			local_max_freq_thermal[cpu] = table[thermal_limit_high[cpu]].frequency;
+			local_max_freq_thermal[cpu] = therm_table[thermal_limit_high[cpu]].frequency;
 		set_thermal_policy(cpu, local_max_freq_thermal[cpu]);
 	}
 	put_online_cpus();
@@ -591,7 +576,7 @@ static void __ref update_offline_cores(int val)
 	int ret = 0;
 
 	if (!core_control_enabled || intelli_init() ||
-		thermal_suspended || !hotplug_ready)
+		!can_mitigate())
 		return;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
