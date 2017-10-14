@@ -529,8 +529,8 @@ static void __ref disable_msm_thermal(void)
 			break;
 		if (local_max_freq_thermal[cpu] == therm_table[thermal_limit_high[cpu]].frequency)
 			continue;
-		else
-			local_max_freq_thermal[cpu] = therm_table[thermal_limit_high[cpu]].frequency;
+
+		local_max_freq_thermal[cpu] = therm_table[thermal_limit_high[cpu]].frequency;
 		set_thermal_policy(cpu, local_max_freq_thermal[cpu]);
 	}
 	put_online_cpus();
