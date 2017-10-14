@@ -2002,7 +2002,7 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 	wake_trylock(&mehci->wlock);
 	return msm_hsic_suspend(mehci);
-	wake_tryunlock(&mehci->wlock);
+	wake_try_unlock(&mehci->wlock);
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
@@ -2016,7 +2016,7 @@ static int msm_hsic_runtime_resume(struct device *dev)
 	dbg_log_event(NULL, "Run Time PM Resume", 0);
 	wake_trylock(&mehci->wlock);
 	ret = msm_hsic_resume(mehci);
-	wake_tryunlock(&mehci->wlock);
+	wake_try_unlock(&mehci->wlock);
 	return ret;
 }
 #endif
