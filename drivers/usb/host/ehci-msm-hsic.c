@@ -969,7 +969,7 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 	mehci->resume_status = 0;
 	resume_thread = kthread_run(msm_hsic_resume_thread,
 			mehci, "hsic_resume_thread");
-	if (IS_ERR(resume_thread)) {
+	if (IS_ERR_OR_NULL(resume_thread)) {
 		pr_err("Error creating resume thread:%lu\n",
 				PTR_ERR(resume_thread));
 		return PTR_ERR(resume_thread);
