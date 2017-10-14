@@ -76,10 +76,9 @@ struct pmu_hw_events {
 
 struct arm_pmu {
 	struct pmu	pmu;
-	enum arm_perf_pmu_ids id;
 	enum arm_pmu_type type;
 	cpumask_t	active_irqs;
-	const char	*name;
+	char		*name;
 	int		num_events;
 	atomic_t	active_events;
 	struct mutex	reserve_mutex;
