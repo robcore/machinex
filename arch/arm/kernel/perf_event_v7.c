@@ -130,7 +130,7 @@ static const unsigned armv7_a8_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= HW_OP_UNSUPPORTED,
 };
 
-static unsigned armv7_a8_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static const unsigned armv7_a8_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					  [PERF_COUNT_HW_CACHE_OP_MAX]
 					  [PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
@@ -254,7 +254,7 @@ static const unsigned armv7_a9_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= ARMV7_A9_PERFCTR_STALL_DISPATCH,
 };
 
-static unsigned armv7_a9_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static const unsigned armv7_a9_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					  [PERF_COUNT_HW_CACHE_OP_MAX]
 					  [PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
@@ -378,7 +378,7 @@ static const unsigned armv7_a5_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= HW_OP_UNSUPPORTED,
 };
 
-static unsigned armv7_a5_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static const unsigned armv7_a5_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					[PERF_COUNT_HW_CACHE_OP_MAX]
 					[PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
@@ -500,7 +500,7 @@ static const unsigned armv7_a15_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= HW_OP_UNSUPPORTED,
 };
 
-static unsigned armv7_a15_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static const unsigned armv7_a15_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					[PERF_COUNT_HW_CACHE_OP_MAX]
 					[PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
@@ -624,7 +624,7 @@ static const unsigned armv7_a7_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= HW_OP_UNSUPPORTED,
 };
 
-static unsigned armv7_a7_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static const unsigned armv7_a7_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					[PERF_COUNT_HW_CACHE_OP_MAX]
 					[PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
@@ -775,7 +775,7 @@ static unsigned armv7_a7_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 /*
  * PMXEVTYPER: Event selection reg
  */
-#define	ARMV7_EVTYPE_MASK	0xc80000ff	/* Mask for writable bits */
+#define	ARMV7_EVTYPE_MASK	0xc00000ff	/* Mask for writable bits */
 #define	ARMV7_EVTYPE_EVENT	0xff		/* Mask for EVENT bits */
 
 /*
@@ -993,11 +993,10 @@ static void armv7_pmnc_dump_regs(void)
 }
 #endif
 
-static void armv7pmu_enable_event(struct hw_perf_event *hwc, int idx, int cpu)
+static void armv7pmu_enable_event(struct hw_perf_event *hwc, int idx)
 {
 	unsigned long flags;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
-	unsigned long long prev_count = local64_read(&hwc->prev_count);
 
 	/*
 	 * Enable counter and interrupt, and set the counter to count
@@ -1022,9 +1021,6 @@ static void armv7pmu_enable_event(struct hw_perf_event *hwc, int idx, int cpu)
 	 * Enable interrupt for this counter
 	 */
 	armv7_pmnc_enable_intens(idx);
-
-	/* Restore prev val */
-	armv7pmu_write_counter(idx, prev_count & 0xffffffff);
 
 	/*
 	 * Enable counter
@@ -1081,7 +1077,7 @@ static irqreturn_t armv7pmu_handle_irq(int irq_num, void *dev)
 	 */
 	regs = get_irq_regs();
 
-	cpuc = this_cpu_ptr(&cpu_hw_events);
+	cpuc = &__get_cpu_var(cpu_hw_events);
 	for (idx = 0; idx < cpu_pmu->num_events; ++idx) {
 		struct perf_event *event = cpuc->events[idx];
 		struct hw_perf_event *hwc;
@@ -1236,32 +1232,7 @@ static int armv7_a7_map_event(struct perf_event *event)
 				&armv7_a7_perf_cache_map, 0xFF);
 }
 
-static DEFINE_PER_CPU(u32, armv7_pm_pmuserenr);
-
-static void armv7pmu_save_pm_registers(void *hcpu)
-{
-	u32 val;
-	u32 cpu = (int)hcpu;
-
-	/* Read PMUSERENR */
-	asm volatile("mrc p15, 0, %0, c9, c14, 0" : "=r" (val));
-	per_cpu(armv7_pm_pmuserenr, cpu) = val;
-}
-
-static void armv7pmu_restore_pm_registers(void *hcpu)
-{
-	u32 val;
-	u32 cpu = (int)hcpu;
-
-	val = per_cpu(armv7_pm_pmuserenr, cpu);
-	if (val != 0)
-		/* Restore PMUSERENR */
-		asm volatile("mcr p15, 0, %0, c9, c14, 0" : : "r" (val));
-}
-
 static struct arm_pmu armv7pmu = {
-	.request_pmu_irq	= armpmu_generic_request_irq,
-	.free_pmu_irq		= armpmu_generic_free_irq,
 	.handle_irq		= armv7pmu_handle_irq,
 	.enable			= armv7pmu_enable_event,
 	.disable		= armv7pmu_disable_event,
@@ -1272,8 +1243,6 @@ static struct arm_pmu armv7pmu = {
 	.stop			= armv7pmu_stop,
 	.reset			= armv7pmu_reset,
 	.max_period		= (1LLU << 32) - 1,
-	.save_pm_registers	= armv7pmu_save_pm_registers,
-	.restore_pm_registers	= armv7pmu_restore_pm_registers,
 };
 
 static u32 __init armv7_read_num_pmnc_events(void)
@@ -1289,7 +1258,6 @@ static u32 __init armv7_read_num_pmnc_events(void)
 
 static struct arm_pmu *__init armv7_a8_pmu_init(void)
 {
-	armv7pmu.id		= ARM_PERF_PMU_ID_CA8;
 	armv7pmu.name		= "ARMv7 Cortex-A8";
 	armv7pmu.map_event	= armv7_a8_map_event;
 	armv7pmu.num_events	= armv7_read_num_pmnc_events();
@@ -1298,7 +1266,6 @@ static struct arm_pmu *__init armv7_a8_pmu_init(void)
 
 static struct arm_pmu *__init armv7_a9_pmu_init(void)
 {
-	armv7pmu.id		= ARM_PERF_PMU_ID_CA9;
 	armv7pmu.name		= "ARMv7 Cortex-A9";
 	armv7pmu.map_event	= armv7_a9_map_event;
 	armv7pmu.num_events	= armv7_read_num_pmnc_events();
@@ -1307,7 +1274,6 @@ static struct arm_pmu *__init armv7_a9_pmu_init(void)
 
 static struct arm_pmu *__init armv7_a5_pmu_init(void)
 {
-	armv7pmu.id		= ARM_PERF_PMU_ID_CA5;
 	armv7pmu.name		= "ARMv7 Cortex-A5";
 	armv7pmu.map_event	= armv7_a5_map_event;
 	armv7pmu.num_events	= armv7_read_num_pmnc_events();
@@ -1316,7 +1282,6 @@ static struct arm_pmu *__init armv7_a5_pmu_init(void)
 
 static struct arm_pmu *__init armv7_a15_pmu_init(void)
 {
-	armv7pmu.id		= ARM_PERF_PMU_ID_CA15;
 	armv7pmu.name		= "ARMv7 Cortex-A15";
 	armv7pmu.map_event	= armv7_a15_map_event;
 	armv7pmu.num_events	= armv7_read_num_pmnc_events();
@@ -1326,7 +1291,6 @@ static struct arm_pmu *__init armv7_a15_pmu_init(void)
 
 static struct arm_pmu *__init armv7_a7_pmu_init(void)
 {
-	armv7pmu.id		= ARM_PERF_PMU_ID_CA7;
 	armv7pmu.name		= "ARMv7 Cortex-A7";
 	armv7pmu.map_event	= armv7_a7_map_event;
 	armv7pmu.num_events	= armv7_read_num_pmnc_events();
