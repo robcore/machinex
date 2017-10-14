@@ -1075,7 +1075,7 @@ static int msm_hsic_init_clocks(struct msm_hsic_hcd *mehci, u32 init)
 	int ret = 0;
 
 	if (!init)
-		goto put_clocks;
+		goto noput;
 
 	/*core_clk is required for LINK protocol engine
 	 *clock rate appropriately set by target specific clock driver */
@@ -1144,7 +1144,7 @@ put_alt_core_clk:
 	clk_put(mehci->alt_core_clk);
 put_core_clk:
 	clk_put(mehci->core_clk);
-
+noput:
 	return ret;
 }
 static irqreturn_t hsic_peripheral_status_change(int irq, void *dev_id)
