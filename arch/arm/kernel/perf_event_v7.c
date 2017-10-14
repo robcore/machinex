@@ -842,8 +842,10 @@ static inline int armv7_pmnc_select_counter(int idx)
 	return idx;
 }
 
-static inline u32 armv7pmu_read_counter(int idx)
+static inline u32 armv7pmu_read_counter(struct perf_event *event)
 {
+	struct hw_perf_event *hwc = &event->hw;
+	int idx = hwc->idx;
 	u32 value = 0;
 
 	if (!armv7_pmnc_counter_valid(idx))
@@ -857,8 +859,11 @@ static inline u32 armv7pmu_read_counter(int idx)
 	return value;
 }
 
-static inline void armv7pmu_write_counter(int idx, u32 value)
+static inline void armv7pmu_write_counter(struct perf_event *event, u32 value)
 {
+	struct hw_perf_event *hwc = &event->hw;
+	int idx = hwc->idx;
+
 	if (!armv7_pmnc_counter_valid(idx))
 		pr_err("CPU%u writing wrong counter %d\n",
 			smp_processor_id(), idx);
@@ -993,10 +998,13 @@ static void armv7_pmnc_dump_regs(void)
 }
 #endif
 
-static void armv7pmu_enable_event(struct hw_perf_event *hwc, int idx, int cpu)
+static void armv7pmu_enable_event(struct perf_event *event)
 {
 	unsigned long flags;
+	struct hw_perf_event *hwc = &event->hw;
+	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
+	int idx = hwc->idx;
 	unsigned long long prev_count = local64_read(&hwc->prev_count);
 
 	/*
@@ -1034,10 +1042,13 @@ static void armv7pmu_enable_event(struct hw_perf_event *hwc, int idx, int cpu)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static void armv7pmu_disable_event(struct hw_perf_event *hwc, int idx)
+static void armv7pmu_disable_event(struct perf_event *event)
 {
 	unsigned long flags;
+	struct hw_perf_event *hwc = &event->hw;
+	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
+	int idx = hwc->idx;
 
 	/*
 	 * Disable counter and interrupt
@@ -1061,7 +1072,8 @@ static irqreturn_t armv7pmu_handle_irq(int irq_num, void *dev)
 {
 	u32 pmnc;
 	struct perf_sample_data data;
-	struct pmu_hw_events *cpuc;
+	struct arm_pmu *cpu_pmu = (struct arm_pmu *)dev;
+	struct pmu_hw_events *cpuc = cpu_pmu->get_hw_events();
 	struct pt_regs *regs;
 	int idx;
 
@@ -1083,7 +1095,6 @@ static irqreturn_t armv7pmu_handle_irq(int irq_num, void *dev)
 
 	perf_sample_data_init(&data, 0);
 
-	cpuc = this_cpu_ptr(&cpu_hw_events);
 	for (idx = 0; idx < cpu_pmu->num_events; ++idx) {
 		struct perf_event *event = cpuc->events[idx];
 		struct hw_perf_event *hwc;
@@ -1100,13 +1111,13 @@ static irqreturn_t armv7pmu_handle_irq(int irq_num, void *dev)
 			continue;
 
 		hwc = &event->hw;
-		armpmu_event_update(event, hwc, idx);
+		armpmu_event_update(event);
 		data.period = event->hw.last_period;
-		if (!armpmu_event_set_period(event, hwc, idx))
+		if (!armpmu_event_set_period(event))
 			continue;
 
 		if (perf_event_overflow(event, &data, regs))
-			cpu_pmu->disable(hwc, idx);
+			cpu_pmu->disable(event);
 	}
 
 	/*
@@ -1121,7 +1132,7 @@ static irqreturn_t armv7pmu_handle_irq(int irq_num, void *dev)
 	return IRQ_HANDLED;
 }
 
-static void armv7pmu_start(void)
+static void armv7pmu_start(struct arm_pmu *cpu_pmu)
 {
 	unsigned long flags;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
@@ -1132,7 +1143,7 @@ static void armv7pmu_start(void)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static void armv7pmu_stop(void)
+static void armv7pmu_stop(struct arm_pmu *cpu_pmu)
 {
 	unsigned long flags;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
@@ -1144,10 +1155,12 @@ static void armv7pmu_stop(void)
 }
 
 static int armv7pmu_get_event_idx(struct pmu_hw_events *cpuc,
-				  struct hw_perf_event *event)
+				  struct perf_event *event)
 {
 	int idx;
-	unsigned long evtype = event->config_base & ARMV7_EVTYPE_EVENT;
+	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
+	struct hw_perf_event *hwc = &event->hw;
+	unsigned long evtype = hwc->config_base & ARMV7_EVTYPE_EVENT;
 
 	/* Always place a cycle counter into the cycle counter. */
 	if (evtype == ARMV7_PERFCTR_CPU_CYCLES) {
@@ -1198,11 +1211,14 @@ static int armv7pmu_set_event_filter(struct hw_perf_event *event,
 
 static void armv7pmu_reset(void *info)
 {
+	struct arm_pmu *cpu_pmu = (struct arm_pmu *)info;
 	u32 idx, nb_cnt = cpu_pmu->num_events;
 
 	/* The counter and interrupt enable registers are unknown at reset. */
-	for (idx = ARMV7_IDX_CYCLE_COUNTER; idx < nb_cnt; ++idx)
-		armv7pmu_disable_event(NULL, idx);
+	for (idx = ARMV7_IDX_CYCLE_COUNTER; idx < nb_cnt; ++idx) {
+		armv7_pmnc_disable_counter(idx);
+		armv7_pmnc_disable_intens(idx);
+	}
 
 	/* Initialize & Reset PMNC: C and P bits */
 	armv7_pmnc_write(ARMV7_PMNC_P | ARMV7_PMNC_C);

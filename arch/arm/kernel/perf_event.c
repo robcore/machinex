@@ -150,12 +150,10 @@ static int map_cpu_event(struct perf_event *event,
 	return -ENOENT;
 }
 
-int
-armpmu_event_set_period(struct perf_event *event,
-			struct hw_perf_event *hwc,
-			int idx)
+int armpmu_event_set_period(struct perf_event *event)
 {
 	struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
+	struct hw_perf_event *hwc = &event->hw;
 	s64 left = local64_read(&hwc->period_left);
 	s64 period = hwc->sample_period;
 	int ret = 0;
@@ -183,19 +181,17 @@ armpmu_event_set_period(struct perf_event *event,
 
 	local64_set(&hwc->prev_count, (u64)-left);
 
-	armpmu->write_counter(idx, (u64)(-left) & 0xffffffff);
+	armpmu->write_counter(event, (u64)(-left) & 0xffffffff);
 
 	perf_event_update_userpage(event);
 
 	return ret;
 }
 
-u64
-armpmu_event_update(struct perf_event *event,
-		    struct hw_perf_event *hwc,
-		    int idx)
+u64 armpmu_event_update(struct perf_event *event)
 {
 	struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
+	struct hw_perf_event *hwc = &event->hw;
 	u64 delta, prev_raw_count, new_raw_count;
 
 	if (event->state <= PERF_EVENT_STATE_OFF)
@@ -203,7 +199,7 @@ armpmu_event_update(struct perf_event *event,
 
 again:
 	prev_raw_count = local64_read(&hwc->prev_count);
-	new_raw_count = armpmu->read_counter(idx);
+	new_raw_count = armpmu->read_counter(event);
 
 	if (local64_cmpxchg(&hwc->prev_count, prev_raw_count,
 			     new_raw_count) != prev_raw_count)
@@ -226,7 +222,7 @@ armpmu_read(struct perf_event *event)
 	if (hwc->idx < 0)
 		return;
 
-	armpmu_event_update(event, hwc, hwc->idx);
+	armpmu_event_update(event);
 }
 
 static void
@@ -240,14 +236,13 @@ armpmu_stop(struct perf_event *event, int flags)
 	 * PERF_EF_UPDATE, see comments in armpmu_start().
 	 */
 	if (!(hwc->state & PERF_HES_STOPPED)) {
-		armpmu->disable(hwc, hwc->idx);
-		armpmu_event_update(event, hwc, hwc->idx);
+		armpmu->disable(event);
+		armpmu_event_update(event);
 		hwc->state |= PERF_HES_STOPPED | PERF_HES_UPTODATE;
 	}
 }
 
-static void
-armpmu_start(struct perf_event *event, int flags)
+static void armpmu_start(struct perf_event *event, int flags)
 {
 	struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
 	struct hw_perf_event *hwc = &event->hw;
@@ -267,8 +262,8 @@ armpmu_start(struct perf_event *event, int flags)
 	 * get an interrupt too soon or *way* too late if the overflow has
 	 * happened since disabling.
 	 */
-	armpmu_event_set_period(event, hwc, hwc->idx);
-	armpmu->enable(hwc, hwc->idx, event->cpu);
+	armpmu_event_set_period(event);
+	armpmu->enable(event);
 }
 
 static void
@@ -316,7 +311,7 @@ armpmu_add(struct perf_event *event, int flags)
 		}
 
 	/* If we don't have a space for the counter then finish early. */
-	idx = armpmu->get_event_idx(hw_events, hwc);
+	idx = armpmu->get_event_idx(hw_events, event);
 	if (idx < 0) {
 		err = idx;
 		goto out;
@@ -327,7 +322,7 @@ armpmu_add(struct perf_event *event, int flags)
 	 * sure it is disabled.
 	 */
 	event->hw.idx = idx;
-	armpmu->disable(hwc, idx);
+	armpmu->disable(event);
 	hw_events->events[idx] = event;
 
 	hwc->state = PERF_HES_STOPPED | PERF_HES_UPTODATE;
@@ -347,7 +342,6 @@ validate_event(struct pmu_hw_events *hw_events,
 	       struct perf_event *event)
 {
 	struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
-	struct hw_perf_event fake_event = event->hw;
 	struct pmu *leader_pmu = event->group_leader->pmu;
 
 	if (is_software_event(event))
@@ -359,7 +353,7 @@ validate_event(struct pmu_hw_events *hw_events,
 	if (event->state == PERF_EVENT_STATE_OFF && !event->attr.enable_on_exec)
 		return 1;
 
-	return armpmu->get_event_idx(hw_events, &fake_event) >= 0;
+	return armpmu->get_event_idx(hw_events, event) >= 0;
 }
 
 static int
@@ -426,7 +420,7 @@ armpmu_release_hardware(struct arm_pmu *armpmu)
 		if (!cpumask_test_and_clear_cpu(i, &armpmu->active_irqs))
 			continue;
 		irq = platform_get_irq(pmu_device, i);
-		armpmu->free_pmu_irq(irq);
+	armpmu->free_irq(armpmu);
 	}
 
 }
@@ -481,15 +475,14 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
 			continue;
 		}
 
-		err = armpmu->request_pmu_irq(irq, &handle_irq);
-
-                if (err) {
-                        pr_warning("unable to request IRQ%d for %s perf "
-                                "counters\n", irq, armpmu->name);
+		err = armpmu->request_irq(armpmu, armpmu_dispatch_irq);
+		if (err) {
+			pr_warning("unable to request IRQ%d for %s perf "
+					"counters\n", irq, armpmu->name);
 
 			armpmu_release_hardware(cpu_pmu);
                         return err;
-                }
+		}
 
 		cpumask_set_cpu(i, &armpmu->active_irqs);
 	}
@@ -646,13 +639,13 @@ static void armpmu_enable(struct pmu *pmu)
 	barrier();
 
 	if (enabled)
-		armpmu->start();
+		armpmu->start(armpmu);
 }
 
 static void armpmu_disable(struct pmu *pmu)
 {
 	struct arm_pmu *armpmu = to_arm_pmu(pmu);
-	armpmu->stop();
+	armpmu->stop(armpmu);
 }
 
 static void armpmu_init(struct arm_pmu *armpmu)
