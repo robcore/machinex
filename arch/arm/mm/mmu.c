@@ -210,13 +210,13 @@ void adjust_cr(unsigned long mask, unsigned long set)
 
 static int __init early_cachepolicy(char *p)
 {
-	pr_warn("cachepolicy kernel parameter not supported without cp15\n");
+	pr_warning("cachepolicy kernel parameter not supported without cp15\n");
 }
 early_param("cachepolicy", early_cachepolicy);
 
 static int __init noalign_setup(char *__unused)
 {
-	pr_warn("noalign kernel parameter not supported without cp15\n");
+	pr_warning("noalign kernel parameter not supported without cp15\n");
 }
 __setup("noalign", noalign_setup);
 

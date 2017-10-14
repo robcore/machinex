@@ -83,7 +83,7 @@ static unsigned xscale_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 		},
 		[C(OP_WRITE)] = {
 			[C(RESULT_ACCESS)]	= CACHE_OP_UNSUPPORTED,
-			[C(RESULT_MISS)]	= CACHE_OP_UNSUPPORTED,
+			[C(RESULT_MISS)]	= XSCALE_PERFCTR_ICACHE_MISS,
 		},
 		[C(OP_PREFETCH)] = {
 			[C(RESULT_ACCESS)]	= CACHE_OP_UNSUPPORTED,
@@ -224,8 +224,7 @@ xscale1pmu_handle_irq(int irq_num, void *dev)
 {
 	unsigned long pmnc;
 	struct perf_sample_data data;
-	struct arm_pmu *cpu_pmu = (struct arm_pmu *)dev;
-	struct pmu_hw_events *cpuc = cpu_pmu->get_hw_events();
+	struct pmu_hw_events *cpuc;
 	struct pt_regs *regs;
 	int idx;
 
@@ -251,6 +250,7 @@ xscale1pmu_handle_irq(int irq_num, void *dev)
 
 	perf_sample_data_init(&data, 0);
 
+	cpuc = &__get_cpu_var(cpu_hw_events);
 	for (idx = 0; idx < cpu_pmu->num_events; ++idx) {
 		struct perf_event *event = cpuc->events[idx];
 		struct hw_perf_event *hwc;
@@ -282,13 +282,11 @@ xscale1pmu_handle_irq(int irq_num, void *dev)
 	return IRQ_HANDLED;
 }
 
-static void xscale1pmu_enable_event(struct perf_event *event)
+static void
+xscale1pmu_enable_event(struct hw_perf_event *hwc, int idx)
 {
 	unsigned long val, mask, evt, flags;
-	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
-	struct hw_perf_event *hwc = &event->hw;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
-	int idx = hwc->idx;
 
 	switch (idx) {
 	case XSCALE_CYCLE_COUNTER:
@@ -318,13 +316,11 @@ static void xscale1pmu_enable_event(struct perf_event *event)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static void xscale1pmu_disable_event(struct perf_event *event)
+static void
+xscale1pmu_disable_event(struct hw_perf_event *hwc, int idx)
 {
 	unsigned long val, mask, evt, flags;
-	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
-	struct hw_perf_event *hwc = &event->hw;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
-	int idx = hwc->idx;
 
 	switch (idx) {
 	case XSCALE_CYCLE_COUNTER:
@@ -354,10 +350,9 @@ static void xscale1pmu_disable_event(struct perf_event *event)
 
 static int
 xscale1pmu_get_event_idx(struct pmu_hw_events *cpuc,
-				struct perf_event *event)
+			struct hw_perf_event *event)
 {
-	struct hw_perf_event *hwc = &event->hw;
-	if (XSCALE_PERFCTR_CCNT == hwc->config_base) {
+	if (XSCALE_PERFCTR_CCNT == event->config_base) {
 		if (test_and_set_bit(XSCALE_CYCLE_COUNTER, cpuc->used_mask))
 			return -EAGAIN;
 
@@ -373,7 +368,8 @@ xscale1pmu_get_event_idx(struct pmu_hw_events *cpuc,
 	}
 }
 
-static void xscale1pmu_start(struct arm_pmu *cpu_pmu)
+static void
+xscale1pmu_start(void)
 {
 	unsigned long flags, val;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
@@ -385,7 +381,8 @@ static void xscale1pmu_start(struct arm_pmu *cpu_pmu)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static void xscale1pmu_stop(struct arm_pmu *cpu_pmu)
+static void
+xscale1pmu_stop(void)
 {
 	unsigned long flags, val;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
@@ -397,10 +394,9 @@ static void xscale1pmu_stop(struct arm_pmu *cpu_pmu)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static inline u32 xscale1pmu_read_counter(struct perf_event *event)
+static inline u32
+xscale1pmu_read_counter(int counter)
 {
-	struct hw_perf_event *hwc = &event->hw;
-	int counter = hwc->idx;
 	u32 val = 0;
 
 	switch (counter) {
@@ -418,11 +414,9 @@ static inline u32 xscale1pmu_read_counter(struct perf_event *event)
 	return val;
 }
 
-static inline void xscale1pmu_write_counter(struct perf_event *event, u32 val)
+static inline void
+xscale1pmu_write_counter(int counter, u32 val)
 {
-	struct hw_perf_event *hwc = &event->hw;
-	int counter = hwc->idx;
-
 	switch (counter) {
 	case XSCALE_CYCLE_COUNTER:
 		asm volatile("mcr p14, 0, %0, c1, c0, 0" : : "r" (val));
@@ -576,8 +570,7 @@ xscale2pmu_handle_irq(int irq_num, void *dev)
 {
 	unsigned long pmnc, of_flags;
 	struct perf_sample_data data;
-	struct arm_pmu *cpu_pmu = (struct arm_pmu *)dev;
-	struct pmu_hw_events *cpuc = cpu_pmu->get_hw_events();
+	struct pmu_hw_events *cpuc;
 	struct pt_regs *regs;
 	int idx;
 
@@ -597,6 +590,7 @@ xscale2pmu_handle_irq(int irq_num, void *dev)
 
 	perf_sample_data_init(&data, 0);
 
+	cpuc = &__get_cpu_var(cpu_hw_events);
 	for (idx = 0; idx < cpu_pmu->num_events; ++idx) {
 		struct perf_event *event = cpuc->events[idx];
 		struct hw_perf_event *hwc;
@@ -628,13 +622,11 @@ xscale2pmu_handle_irq(int irq_num, void *dev)
 	return IRQ_HANDLED;
 }
 
-static void xscale2pmu_enable_event(struct perf_event *event)
+static void
+xscale2pmu_enable_event(struct hw_perf_event *hwc, int idx)
 {
 	unsigned long flags, ien, evtsel;
-	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
-	struct hw_perf_event *hwc = &event->hw;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
-	int idx = hwc->idx;
 
 	ien = xscale2pmu_read_int_enable();
 	evtsel = xscale2pmu_read_event_select();
@@ -674,13 +666,11 @@ static void xscale2pmu_enable_event(struct perf_event *event)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static void xscale2pmu_disable_event(struct perf_event *event)
+static void
+xscale2pmu_disable_event(struct hw_perf_event *hwc, int idx)
 {
 	unsigned long flags, ien, evtsel, of_flags;
-	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
-	struct hw_perf_event *hwc = &event->hw;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
-	int idx = hwc->idx;
 
 	ien = xscale2pmu_read_int_enable();
 	evtsel = xscale2pmu_read_event_select();
@@ -728,7 +718,7 @@ static void xscale2pmu_disable_event(struct perf_event *event)
 
 static int
 xscale2pmu_get_event_idx(struct pmu_hw_events *cpuc,
-				struct perf_event *event)
+			struct hw_perf_event *event)
 {
 	int idx = xscale1pmu_get_event_idx(cpuc, event);
 	if (idx >= 0)
@@ -742,7 +732,8 @@ out:
 	return idx;
 }
 
-static void xscale2pmu_start(struct arm_pmu *cpu_pmu)
+static void
+xscale2pmu_start(void)
 {
 	unsigned long flags, val;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
@@ -754,7 +745,8 @@ static void xscale2pmu_start(struct arm_pmu *cpu_pmu)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static void xscale2pmu_stop(struct arm_pmu *cpu_pmu)
+static void
+xscale2pmu_stop(void)
 {
 	unsigned long flags, val;
 	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
@@ -766,10 +758,9 @@ static void xscale2pmu_stop(struct arm_pmu *cpu_pmu)
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
-static inline u32 xscale2pmu_read_counter(struct perf_event *event)
+static inline u32
+xscale2pmu_read_counter(int counter)
 {
-	struct hw_perf_event *hwc = &event->hw;
-	int counter = hwc->idx;
 	u32 val = 0;
 
 	switch (counter) {
@@ -793,11 +784,9 @@ static inline u32 xscale2pmu_read_counter(struct perf_event *event)
 	return val;
 }
 
-static inline void xscale2pmu_write_counter(struct perf_event *event, u32 val)
+static inline void
+xscale2pmu_write_counter(int counter, u32 val)
 {
-	struct hw_perf_event *hwc = &event->hw;
-	int counter = hwc->idx;
-
 	switch (counter) {
 	case XSCALE_CYCLE_COUNTER:
 		asm volatile("mcr p14, 0, %0, c1, c1, 0" : : "r" (val));

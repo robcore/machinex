@@ -88,16 +88,16 @@ struct arm_pmu {
 	irqreturn_t	(*handle_irq)(int irq_num, void *dev);
 	int		(*request_pmu_irq)(int irq, irq_handler_t *irq_h);
 	void		(*free_pmu_irq)(int irq);
-	void		(*enable)(struct perf_event *event);
-	void		(*disable)(struct perf_event *event);
+	void		(*enable)(struct hw_perf_event *evt, int idx, int cpu);
+	void		(*disable)(struct hw_perf_event *evt, int idx);
 	int		(*get_event_idx)(struct pmu_hw_events *hw_events,
-					 struct perf_event *event);
+					 struct hw_perf_event *hwc);
 	int		(*set_event_filter)(struct hw_perf_event *evt,
 					    struct perf_event_attr *attr);
-	u32		(*read_counter)(struct perf_event *event);
-	void		(*write_counter)(struct perf_event *event, u32 val);
-	void		(*start)(struct arm_pmu *);
-	void		(*stop)(struct arm_pmu *);
+	u32		(*read_counter)(int idx);
+	void		(*write_counter)(int idx, u32 val);
+	void		(*start)(void);
+	void		(*stop)(void);
 	void		(*reset)(void *);
 	int		(*map_event)(struct perf_event *event);
 	struct pmu_hw_events	*(*get_hw_events)(void);
@@ -105,17 +105,19 @@ struct arm_pmu {
 	int	(*clear_event_constraints)(struct perf_event *event);
 	void		(*save_pm_registers)(void *hcpu);
 	void		(*restore_pm_registers)(void *hcpu);
-	int		(*request_irq)(struct arm_pmu *, irq_handler_t handler);
-	void		(*free_irq)(struct arm_pmu *);
 };
 
 #define to_arm_pmu(p) (container_of(p, struct arm_pmu, pmu))
 
-int armpmu_register(struct arm_pmu *armpmu, int type);
+int armpmu_register(struct arm_pmu *armpmu, char *name, int type);
 
-u64 armpmu_event_update(struct perf_event *event);
+u64 armpmu_event_update(struct perf_event *event,
+			struct hw_perf_event *hwc,
+			int idx);
 
-int armpmu_event_set_period(struct perf_event *event);
+int armpmu_event_set_period(struct perf_event *event,
+			    struct hw_perf_event *hwc,
+			    int idx);
 
 extern void enable_irq_callback(void *);
 extern void disable_irq_callback(void *);
