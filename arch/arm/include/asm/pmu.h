@@ -48,8 +48,8 @@ struct arm_pmu_platdata {
 				  irq_handler_t pmu_handler);
 	int	(*request_pmu_irq)(int irq, irq_handler_t *irq_h);
 	void	(*free_pmu_irq)(int irq);
-	int (*runtime_resume)(struct device *dev);
-	int (*runtime_suspend)(struct device *dev);
+	void (*enable_irq)(int irq);
+	void (*disable_irq)(int irq);
 };
 
 #ifdef CONFIG_HW_PERF_EVENTS
@@ -76,9 +76,10 @@ struct pmu_hw_events {
 
 struct arm_pmu {
 	struct pmu	pmu;
+	enum arm_perf_pmu_ids id;
 	enum arm_pmu_type type;
 	cpumask_t	active_irqs;
-	char		*name;
+	const char	*name;
 	int		num_events;
 	atomic_t	active_events;
 	struct mutex	reserve_mutex;
@@ -108,8 +109,6 @@ struct arm_pmu {
 
 #define to_arm_pmu(p) (container_of(p, struct arm_pmu, pmu))
 
-extern const struct dev_pm_ops armpmu_dev_pm_ops;
-
 int armpmu_register(struct arm_pmu *armpmu, char *name, int type);
 
 u64 armpmu_event_update(struct perf_event *event,
@@ -122,13 +121,6 @@ int armpmu_event_set_period(struct perf_event *event,
 
 extern void enable_irq_callback(void *);
 extern void disable_irq_callback(void *);
-
-int armpmu_map_event(struct perf_event *event,
-		     const unsigned (*event_map)[PERF_COUNT_HW_MAX],
-		     const unsigned (*cache_map)[PERF_COUNT_HW_CACHE_MAX]
-						[PERF_COUNT_HW_CACHE_OP_MAX]
-						[PERF_COUNT_HW_CACHE_RESULT_MAX],
-		     u32 raw_event_mask);
 
 #endif /* CONFIG_HW_PERF_EVENTS */
 
