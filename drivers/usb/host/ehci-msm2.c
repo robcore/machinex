@@ -553,7 +553,7 @@ static void msm_ehci_phy_susp_fail_work(struct work_struct *w)
 	msm_ehci_vbus_power(mhcd, 1);
 }
 
-#define PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
+#define PHY_SUSPEND_TIMEOUT_USEC	(1000 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP

@@ -532,13 +532,8 @@ static void msm_hsic_clk_reset(struct msm_hsic_hcd *mehci)
 		dev_err(mehci->dev, "hsic clk deassert failed:%d\n", ret);
 
 	usleep_range(10000, 12000);
-	/*
-	 * Required delay between the deassertion and
-	 *  clock enablement.
-	*/
-	ndelay(200);
 
-	clk_prepare_enable(mehci->core_clk);
+	clk_enable(mehci->core_clk);
 }
 
 #define HSIC_STROBE_GPIO_PAD_CTL	(MSM_TLMM_BASE+0x20C0)
@@ -621,8 +616,7 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 	return 0;
 }
 
-//#define PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
-#define JUSTFUCKINGSUSPEND (500 * 1000)
+#define PHY_SUSPEND_TIMEOUT_USEC	(1000 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC		(100 * 1000)
 
 #ifdef CONFIG_PM_SLEEP
@@ -632,6 +626,7 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	int cnt = 0, ret;
 	u32 val;
 	int none_vol, max_vol;
+	unsigned long flags;
 	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
 	if (atomic_read(&mehci->in_lpm)) {
@@ -658,14 +653,14 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	val &= ~PORT_RWC_BITS;
 	val |= PORTSC_PHCD;
 	writel_relaxed(val, USB_PORTSC);
-	while (cnt < JUSTFUCKINGSUSPEND) {
+	while (cnt < PHY_SUSPEND_TIMEOUT_USEC) {
 		if (readl_relaxed(USB_PORTSC) & PORTSC_PHCD)
 			break;
-		udelay(1);
+		msleep_interruptible(500);
 		cnt++;
 	}
 
-	if (cnt >= JUSTFUCKINGSUSPEND) {
+	if (cnt >= PHY_SUSPEND_TIMEOUT_USEC) {
 		dev_err(mehci->dev, "Unable to suspend PHY\n");
 		msm_hsic_config_gpios(mehci, 0);
 		msm_hsic_reset(mehci);
@@ -711,11 +706,14 @@ static int msm_hsic_suspend(struct msm_hsic_hcd *mehci)
 	atomic_set(&mehci->in_lpm, 1);
 	enable_irq(hcd->irq);
 
-	if (mehci->wakeup_irq) {
-		mehci->wakeup_irq_enabled = 1;
-		enable_irq_wake(mehci->wakeup_irq);
-		enable_irq(mehci->wakeup_irq);
-	}
+	wake_lock(&mehci->wlock);
+	spin_lock_irqsave(&mehci->wakeup_lock, flags);
+	mehci->wakeup_irq_enabled = 1;
+	enable_irq_wake(mehci->wakeup_irq);
+	enable_irq(mehci->wakeup_irq);
+	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
+
+	wake_unlock(&mehci->wlock);
 	dev_dbg(mehci->dev, "HSIC-USB in low power mode\n");
 
 	return 0;
@@ -746,6 +744,7 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 	}
 	spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 
+	wake_lock(&mehci->wlock);
 
 	if (mehci->bus_perf_client && debug_bus_voting_enabled) {
 		mehci->bus_vote = true;
@@ -1441,17 +1440,15 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 	dev_dbg(mehci->dev, "%s: hsic remote wakeup interrupt cnt: %u\n",
 			__func__, mehci->wakeup_int_cnt);
 
-	wake_trylock(&mehci->wlock);
+	wake_lock(&mehci->wlock);
 
-	if (mehci->wakeup_irq) {
-		spin_lock(&mehci->wakeup_lock);
-		if (mehci->wakeup_irq_enabled) {
-			mehci->wakeup_irq_enabled = 0;
-			disable_irq_wake(irq);
-			disable_irq_nosync(irq);
-		}
-		spin_unlock(&mehci->wakeup_lock);
+	spin_lock(&mehci->wakeup_lock);
+	if (mehci->wakeup_irq_enabled) {
+		mehci->wakeup_irq_enabled = 0;
+		disable_irq_wake(irq);
+		disable_irq_nosync(irq);
 	}
+	spin_unlock(&mehci->wakeup_lock);
 
 	if (!atomic_read(&mehci->pm_usage_cnt)) {
 		ret = pm_runtime_get(mehci->dev);
@@ -1670,11 +1667,10 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct msm_hsic_hcd *mehci;
 	struct msm_hsic_host_platform_data *pdata;
-	unsigned long wakeup_irq_flags = 0;
 	int ret;
 
 	dev_dbg(&pdev->dev, "ehci_msm-hsic probe\n");
-	wakeup_irq_flags = IRQF_TRIGGER_HIGH;
+
 	/* After parent device's probe is executed, it will be put in suspend
 	 * mode. When child device's probe is called, driver core is not
 	 * resuming parent device due to which parent will be in suspend even
@@ -1787,7 +1783,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		ret = request_threaded_irq(mehci->peripheral_status_irq,
 			NULL, hsic_peripheral_status_change,
 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
-						| IRQF_SHARED,
+						| IRQF_SHARED | IRQF_ONESHOT,
 			"hsic_peripheral_status", mehci);
 		if (ret)
 			dev_err(&pdev->dev, "%s:request_irq:%d failed:%d",
@@ -1803,7 +1799,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		 */
 		irq_set_status_flags(mehci->wakeup_irq, IRQ_NOAUTOEN);
 		ret = request_irq(mehci->wakeup_irq, msm_hsic_wakeup_irq,
-				wakeup_irq_flags,
+				IRQF_TRIGGER_HIGH,
 				"msm_hsic_wakeup", mehci);
 		if (ret) {
 			dev_err(&pdev->dev, "request_irq(%d) failed: %d\n",
@@ -2000,24 +1996,24 @@ static int msm_hsic_runtime_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
-	wake_trylock(&mehci->wlock);
+
+	dev_dbg(dev, "EHCI runtime suspend\n");
+
+	dbg_log_event(NULL, "Run Time PM Suspend", 0);
+
 	return msm_hsic_suspend(mehci);
-	wake_try_unlock(&mehci->wlock);
 }
 
 static int msm_hsic_runtime_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
-	int ret;
 
 	dev_dbg(dev, "EHCI runtime resume\n");
 
 	dbg_log_event(NULL, "Run Time PM Resume", 0);
-	wake_trylock(&mehci->wlock);
-	ret = msm_hsic_resume(mehci);
-	wake_try_unlock(&mehci->wlock);
-	return ret;
+
+	return msm_hsic_resume(mehci);
 }
 #endif
 
