@@ -418,9 +418,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	target = READ_ONCE(target_cpus);
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
 
-	if (!online_cpus)
-		report_current_cpus();
-
+	report_current_cpus();
 	if (target == online_cpus)
 		goto reschedule;
 
@@ -535,8 +533,7 @@ static void cycle_cpus(void)
 			force_down_lock(cpu);
 	}
 	intellinit = false;
-	if (!online_cpus)
-		report_current_cpus();
+	report_current_cpus();
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	wake_unlock(&ipwlock);
 	pr_info("Intelliplug Start: Cycle Cpus Complete\n");
@@ -634,12 +631,6 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 	case CPU_UP_CANCELED:
 		if (unlikely(check_down_lock(cpu)))
 			rm_down_lock(cpu, 0);
-		report_current_cpus();
-		break;
-	case CPU_ONLINE:
-	case CPU_DOWN_FAILED:
-		report_current_cpus();
-		break;
 	default:
 		break;
 	}
