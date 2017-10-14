@@ -526,29 +526,6 @@ reschedule:
 		schedule_work(&get_table_work);
 }
 
-static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
-		unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
- 
-	if (thermal_suspended || !hotplug_ready)
-		return NOTIFY_OK;
- 
-	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
-		if (thermal_core_controlled(cpu)) {
-			pr_debug(
-			"%s: Preventing cpu%u from coming online.\n",
-				KBUILD_MODNAME, cpu);
-			return NOTIFY_BAD;
-		}
-	}
-	return NOTIFY_OK;
-}
- 
-static struct notifier_block __refdata msm_thermal_cpu_notifier = {
-	.notifier_call = msm_thermal_cpu_callback,
-};
-
 /**
  * We will reset the cpu frequencies limits here. The core online/offline
  * status will be carried over to the process stopping the msm_thermal, as
