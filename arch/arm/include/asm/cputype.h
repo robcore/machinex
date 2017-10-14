@@ -54,6 +54,7 @@ extern unsigned int processor_id;
 		    : "cc");						\
 		__val;							\
 	})
+
 #define read_cpuid_ext(ext_reg)						\
 	({								\
 		unsigned int __val;					\
@@ -72,11 +73,42 @@ static inline unsigned int __attribute_const__ read_cpuid_id(void)
 {
 	return readl(BASEADDR_V7M_SCB + V7M_SCB_CPUID);
 }
+#else /* ifdef CONFIG_CPU_CP15 */
 
-#else /* ifdef CONFIG_CPU_CP15 / elif defined(CONFIG_CPU_V7M) */
-#define read_cpuid(reg) (processor_id)
-#define read_cpuid_ext(reg) 0
-#endif
+/*
+ * read_cpuid and read_cpuid_ext should only ever be called on machines that
+ * have cp15 so warn on other usages.
+ */
+#define read_cpuid(reg)							\
+	({								\
+		WARN_ON_ONCE(1);					\
+		0;							\
+	})
+
+#define read_cpuid_ext(reg) read_cpuid(reg)
+
+#endif /* ifdef CONFIG_CPU_CP15 / else */
+
+#ifdef CONFIG_CPU_CP15
+
+#define ARM_CPU_IMP_ARM			0x41
+#define ARM_CPU_IMP_INTEL		0x69
+#define ARM_CPU_IMP_QUALCOMM		0x51
+
+#define ARM_CPU_PART_ARM1136		0xB360
+#define ARM_CPU_PART_ARM1156		0xB560
+#define ARM_CPU_PART_ARM1176		0xB760
+#define ARM_CPU_PART_ARM11MPCORE	0xB020
+#define ARM_CPU_PART_CORTEX_A8		0xC080
+#define ARM_CPU_PART_CORTEX_A9		0xC090
+#define ARM_CPU_PART_CORTEX_A5		0xC050
+#define ARM_CPU_PART_CORTEX_A15		0xC0F0
+#define ARM_CPU_PART_CORTEX_A7		0xC070
+
+#define ARM_CPU_XSCALE_ARCH_MASK	0xe000
+#define ARM_CPU_XSCALE_ARCH_V1		0x2000
+#define ARM_CPU_XSCALE_ARCH_V2		0x4000
+#define ARM_CPU_XSCALE_ARCH_V3		0x6000
 
 /*
  * The CPU ID never changes at run time, so we might as well tell the
@@ -87,6 +119,30 @@ static inline unsigned int __attribute_const__ read_cpuid_id(void)
 {
 	return read_cpuid(CPUID_ID);
 }
+
+static inline unsigned int __attribute_const__ read_cpuid_implementor(void)
+{
+	return (read_cpuid_id() & 0xFF000000) >> 24;
+}
+
+static inline unsigned int __attribute_const__ read_cpuid_part_number(void)
+{
+	return read_cpuid_id() & 0xFFF0;
+}
+
+static inline unsigned int __attribute_const__ xscale_cpu_arch_version(void)
+{
+	return read_cpuid_part_number() & ARM_CPU_XSCALE_ARCH_MASK;
+}
+
+#else /* ifdef CONFIG_CPU_CP15 */
+
+static inline unsigned int __attribute_const__ read_cpuid_id(void)
+{
+	return processor_id;
+}
+
+#endif /* ifdef CONFIG_CPU_CP15 / else */
 
 static inline unsigned int __attribute_const__ read_cpuid_cachetype(void)
 {
