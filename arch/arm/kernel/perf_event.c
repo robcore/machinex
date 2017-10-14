@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
+#include <linux/pm_runtime.h>
 #include <linux/irq.h>
 
 #include <asm/cputype.h>
@@ -425,6 +426,7 @@ armpmu_release_hardware(struct arm_pmu *armpmu)
 		irq = platform_get_irq(pmu_device, i);
 		armpmu->free_pmu_irq(irq);
 	}
+	pm_runtime_put_sync(&pmu_device->dev);
 
 }
 
@@ -460,6 +462,8 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
 		pr_err("no irqs for PMUs defined\n");
 		return -ENODEV;
 	}
+
+	pm_runtime_get_sync(&pmu_device->dev);
 
 	for (i = 0; i < irqs; ++i) {
 		err = 0;
@@ -652,6 +656,28 @@ static void armpmu_disable(struct pmu *pmu)
 	armpmu->stop();
 }
 
+#ifdef CONFIG_PM_RUNTIME
+static int armpmu_runtime_resume(struct device *dev)
+{
+	struct arm_pmu_platdata *plat = dev_get_platdata(dev);
+
+	if (plat && plat->runtime_resume)
+		return plat->runtime_resume(dev);
+
+	return 0;
+}
+
+static int armpmu_runtime_suspend(struct device *dev)
+{
+	struct arm_pmu_platdata *plat = dev_get_platdata(dev);
+
+	if (plat && plat->runtime_suspend)
+		return plat->runtime_suspend(dev);
+
+	return 0;
+}
+#endif
+
 static void armpmu_init(struct arm_pmu *armpmu)
 {
 	atomic_set(&armpmu->active_events, 0);
@@ -719,9 +745,14 @@ static int armpmu_device_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct dev_pm_ops armpmu_dev_pm_ops = {
+	SET_RUNTIME_PM_OPS(armpmu_runtime_suspend, armpmu_runtime_resume, NULL)
+};
+
 static struct platform_driver armpmu_driver = {
 	.driver		= {
 		.name	= "cpu-arm-pmu",
+		.pm	= &armpmu_dev_pm_ops,
 		.of_match_table = armpmu_of_device_ids,
 	},
 	.probe		= armpmu_device_probe,

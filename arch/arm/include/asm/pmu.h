@@ -48,8 +48,8 @@ struct arm_pmu_platdata {
 				  irq_handler_t pmu_handler);
 	int	(*request_pmu_irq)(int irq, irq_handler_t *irq_h);
 	void	(*free_pmu_irq)(int irq);
-	void (*enable_irq)(int irq);
-	void (*disable_irq)(int irq);
+	int (*runtime_resume)(struct device *dev);
+	int (*runtime_suspend)(struct device *dev);
 };
 
 #ifdef CONFIG_HW_PERF_EVENTS
