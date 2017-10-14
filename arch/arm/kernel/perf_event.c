@@ -664,10 +664,10 @@ static void armpmu_init(struct arm_pmu *armpmu)
 	armpmu->pmu.events_across_hotplug = 1;
 }
 
-int armpmu_register(struct arm_pmu *armpmu, char *name, int type)
+int armpmu_register(struct arm_pmu *armpmu, int type)
 {
 	armpmu_init(armpmu);
-	return perf_pmu_register(&armpmu->pmu, name, type);
+	return perf_pmu_register(&armpmu->pmu, armpmu->name, type);
 }
 
 /* Include the PMU-specific implementations. */
