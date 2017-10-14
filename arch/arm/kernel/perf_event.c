@@ -32,27 +32,18 @@
 
 #include <linux/cpu_pm.h>
 
-/*
- * ARMv6 supports a maximum of 3 events, starting from index 0. If we add
- * another platform that supports more, we need to increase this to be the
- * largest of all platforms.
- *
- * ARMv7 supports up to 32 events:
- *  cycle counter CCNT + 31 events counters CNT0..30.
- *  Cortex-A8 has 1+4 counters, Cortex-A9 has 1+6 counters.
- */
-#define ARMPMU_MAX_HWEVENTS		32
+/* Set at runtime when we know what CPU type we are. */
+static struct arm_pmu *cpu_pmu;
 
 static DEFINE_PER_CPU(u32, from_idle);
 static DEFINE_PER_CPU(struct perf_event * [ARMPMU_MAX_HWEVENTS], hw_events);
 static DEFINE_PER_CPU(unsigned long [BITS_TO_LONGS(ARMPMU_MAX_HWEVENTS)], used_mask);
 static DEFINE_PER_CPU(struct pmu_hw_events, cpu_hw_events);
 
-#define to_arm_pmu(p) (container_of(p, struct arm_pmu, pmu))
-
-/* Set at runtime when we know what CPU type we are. */
-static struct arm_pmu *cpu_pmu;
-
+/*
+ * Despite the names, these two functions are CPU-specific and are used
+ * by the OProfile/perf code.
+ */
 const char *perf_pmu_name(void)
 {
 	if (!cpu_pmu)
@@ -72,13 +63,6 @@ int perf_num_counters(void)
 	return max_events;
 }
 EXPORT_SYMBOL_GPL(perf_num_counters);
-
-#define HW_OP_UNSUPPORTED		0xFFFF
-
-#define C(_x) \
-	PERF_COUNT_HW_CACHE_##_x
-
-#define CACHE_OP_UNSUPPORTED		0xFFFF
 
 static int
 armpmu_map_cache_event(unsigned (*cache_map)
@@ -110,7 +94,7 @@ armpmu_map_cache_event(unsigned (*cache_map)
 }
 
 static int
-armpmu_map_event(const unsigned (*event_map)[PERF_COUNT_HW_MAX], u64 config)
+armpmu_map_hw_event(const unsigned (*event_map)[PERF_COUNT_HW_MAX], u64 config)
 {
 	int mapping;
 
@@ -127,19 +111,20 @@ armpmu_map_raw_event(u32 raw_event_mask, u64 config)
 	return (int)(config & raw_event_mask);
 }
 
-static int map_cpu_event(struct perf_event *event,
-			 const unsigned (*event_map)[PERF_COUNT_HW_MAX],
-			 unsigned (*cache_map)
-					[PERF_COUNT_HW_CACHE_MAX]
-					[PERF_COUNT_HW_CACHE_OP_MAX]
-					[PERF_COUNT_HW_CACHE_RESULT_MAX],
-			 u32 raw_event_mask)
+int
+armpmu_map_event(struct perf_event *event,
+		 const unsigned (*event_map)[PERF_COUNT_HW_MAX],
+		 const unsigned (*cache_map)
+				[PERF_COUNT_HW_CACHE_MAX]
+				[PERF_COUNT_HW_CACHE_OP_MAX]
+				[PERF_COUNT_HW_CACHE_RESULT_MAX],
+		 u32 raw_event_mask)
 {
 	u64 config = event->attr.config;
 
 	switch (event->attr.type) {
 	case PERF_TYPE_HARDWARE:
-		return armpmu_map_event(event_map, config);
+		return armpmu_map_hw_event(event_map, config);
 	case PERF_TYPE_HW_CACHE:
 		return armpmu_map_cache_event(cache_map, config);
 	case PERF_TYPE_RAW:
@@ -679,6 +664,10 @@ static int armpmu_runtime_suspend(struct device *dev)
 }
 #endif
 
+const struct dev_pm_ops armpmu_dev_pm_ops = {
+	SET_RUNTIME_PM_OPS(armpmu_runtime_suspend, armpmu_runtime_resume, NULL)
+};
+
 static void armpmu_init(struct arm_pmu *armpmu)
 {
 	atomic_set(&armpmu->active_events, 0);
@@ -710,7 +699,7 @@ int armpmu_register(struct arm_pmu *armpmu, char *name, int type)
 #include "perf_event_msm_krait.c"
 #include "perf_event_msm.c"
 
-static struct pmu_hw_events *armpmu_get_cpu_events(void)
+static struct pmu_hw_events *cpu_pmu_get_cpu_events(void)
 {
 	return this_cpu_ptr(&cpu_hw_events);
 }
@@ -724,7 +713,7 @@ static void __init cpu_pmu_init(struct arm_pmu *armpmu)
 		events->used_mask = per_cpu(used_mask, cpu);
 		raw_spin_lock_init(&events->pmu_lock);
 	}
-	cpu_pmu->get_hw_events = armpmu_get_cpu_events;
+	cpu_pmu->get_hw_events = cpu_pmu_get_cpu_events;
 
 	/* Ensure the PMU has sane values out of reset. */
 	if (cpu_pmu && cpu_pmu->reset)
@@ -786,8 +775,8 @@ static void armpmu_update_counters(void)
  * UNKNOWN at reset, the PMU must be explicitly reset to avoid reading
  * junk values out of them.
  */
-static int pmu_cpu_notify(struct notifier_block *b,
-					unsigned long action, void *hcpu)
+static int cpu_pmu_notify(struct notifier_block *b,
+				    unsigned long action, void *hcpu)
 {
 	int irq;
 	struct pmu *pmu;
@@ -854,9 +843,8 @@ static int pmu_cpu_notify(struct notifier_block *b,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block pmu_cpu_notifier = {
-	.notifier_call = pmu_cpu_notify,
-};
+static struct notifier_block cpu_pmu_hotplug_notifier = {
+	.notifier_call = cpu_pmu_notify,
 
 /*TODO: Unify with pending patch from ARM */
 static int perf_cpu_pm_notifier(struct notifier_block *self, unsigned long cmd,
@@ -1020,7 +1008,7 @@ static int __devinit cpu_pmu_device_probe(struct platform_device *pdev)
 
 	cpu_pmu->plat_device = pdev;
 	cpu_pmu_init(cpu_pmu);
-	register_cpu_notifier(&pmu_cpu_notifier);
+	register_cpu_notifier(&cpu_pmu_hotplug_notifier);
 	armpmu_register(cpu_pmu, cpu_pmu->name, PERF_TYPE_RAW);
 
 	return 0;

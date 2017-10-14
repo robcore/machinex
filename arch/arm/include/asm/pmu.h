@@ -108,6 +108,8 @@ struct arm_pmu {
 
 #define to_arm_pmu(p) (container_of(p, struct arm_pmu, pmu))
 
+extern const struct dev_pm_ops armpmu_dev_pm_ops;
+
 int armpmu_register(struct arm_pmu *armpmu, char *name, int type);
 
 u64 armpmu_event_update(struct perf_event *event,
@@ -120,6 +122,13 @@ int armpmu_event_set_period(struct perf_event *event,
 
 extern void enable_irq_callback(void *);
 extern void disable_irq_callback(void *);
+
+int armpmu_map_event(struct perf_event *event,
+		     const unsigned (*event_map)[PERF_COUNT_HW_MAX],
+		     const unsigned (*cache_map)[PERF_COUNT_HW_CACHE_MAX]
+						[PERF_COUNT_HW_CACHE_OP_MAX]
+						[PERF_COUNT_HW_CACHE_RESULT_MAX],
+		     u32 raw_event_mask);
 
 #endif /* CONFIG_HW_PERF_EVENTS */
 
