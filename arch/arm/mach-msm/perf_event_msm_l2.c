@@ -13,15 +13,38 @@
 #include <linux/irq.h>
 #include <asm/pmu.h>
 #include <linux/platform_device.h>
+#include <linux/spinlock.h>
 
 
-#define MAX_SCORPION_L2_CTRS 5
+#define MAX_SCORPION_L2_CTRS 10
+
 #define SCORPION_L2CYCLE_CTR_BIT 31
-#define SCORPION_L2CYCLE_CTR_EVENT_IDX 4
 #define SCORPION_L2CYCLE_CTR_RAW_CODE 0xfe
 #define SCORPIONL2_PMNC_E       (1 << 0)	/* Enable all counters */
 #define SCORPION_L2_EVT_PREFIX 3
 #define SCORPION_MAX_L2_REG 4
+
+#define L2_EVT_MASK 0xfffff
+#define L2_EVT_PREFIX_MASK 0xf0000
+#define L2_EVT_PREFIX_SHIFT 16
+#define L2_SLAVE_EVT_PREFIX 4
+
+#define PMCR_NUM_EV_SHIFT 11
+#define PMCR_NUM_EV_MASK 0x1f
+
+/*
+ * The L2 PMU is shared between all CPU's, so protect
+ * its bitmap access.
+ */
+struct pmu_constraints {
+	u64 pmu_bitmap;
+	u8 codes[64];
+	raw_spinlock_t lock;
+} l2_pmu_constraints = {
+	.pmu_bitmap = 0,
+	.codes = {-1},
+	.lock = __RAW_SPIN_LOCK_UNLOCKED(l2_pmu_constraints.lock),
+};
 
 /* NRCCG format for perf RAW codes. */
 PMU_FORMAT_ATTR(l2_prefix,	"config:16-19");
@@ -51,9 +74,17 @@ static const struct attribute_group *msm_l2_pmu_attr_grps[] = {
 	NULL,
 };
 
+static u32 total_l2_ctrs;
+static u32 l2_cycle_ctr_idx;
+
 static u32 pmu_type;
 
 static struct arm_pmu scorpion_l2_pmu;
+
+static u32 l2_orig_filter_prefix = 0x000f0030;
+
+/* L2 slave port traffic filtering */
+static u32 l2_slv_filter_prefix = 0x000f0010;
 
 static struct perf_event *l2_events[MAX_SCORPION_L2_CTRS];
 static unsigned long l2_used_mask[BITS_TO_LONGS(MAX_SCORPION_L2_CTRS)];
@@ -404,7 +435,8 @@ static unsigned int get_scorpion_l2_evtinfo(unsigned int evt_type,
 	u8 group;
 
 	prefix = (evt_type & 0xF0000) >> 16;
-	if (prefix == SCORPION_L2_EVT_PREFIX) {
+	if (prefix == SCORPION_L2_EVT_PREFIX ||
+			prefix == L2_SLAVE_EVT_PREFIX) {
 		reg   = (evt_type & 0x0F000) >> 12;
 		code  = (evt_type & 0x00FF0) >> 4;
 		group =  evt_type & 0x0000F;
@@ -461,23 +493,29 @@ static inline void scorpion_l2_set_evtyper(int ctr, int val)
 	asm volatile ("mcr p15, 3, %0, c15, c6, 7" : : "r" (val));
 }
 
-static void scorpion_l2_set_evfilter_task_mode(void)
+static void scorpion_l2_set_evfilter_task_mode(unsigned int is_slv)
 {
-	u32 filter_val = 0x000f0030 | 1 << smp_processor_id();
+	u32 filter_val = l2_orig_filter_prefix | 1 << smp_processor_id();
+
+	if (is_slv)
+		filter_val = l2_slv_filter_prefix;
 
 	asm volatile ("mcr p15, 3, %0, c15, c6, 3" : : "r" (filter_val));
 }
 
-static void scorpion_l2_set_evfilter_sys_mode(void)
+static void scorpion_l2_set_evfilter_sys_mode(unsigned int is_slv)
 {
-	u32 filter_val = 0x000f003f;
+	u32 filter_val = l2_orig_filter_prefix | 0xf;
+
+	if (is_slv)
+		filter_val = l2_slv_filter_prefix;
 
 	asm volatile ("mcr p15, 3, %0, c15, c6, 3" : : "r" (filter_val));
 }
 
 static void scorpion_l2_enable_intenset(u32 idx)
 {
-	if (idx == SCORPION_L2CYCLE_CTR_EVENT_IDX) {
+	if (idx == l2_cycle_ctr_idx) {
 		asm volatile ("mcr p15, 3, %0, c15, c5, 1" : : "r"
 			      (1 << SCORPION_L2CYCLE_CTR_BIT));
 	} else {
@@ -487,7 +525,7 @@ static void scorpion_l2_enable_intenset(u32 idx)
 
 static void scorpion_l2_disable_intenclr(u32 idx)
 {
-	if (idx == SCORPION_L2CYCLE_CTR_EVENT_IDX) {
+	if (idx == l2_cycle_ctr_idx) {
 		asm volatile ("mcr p15, 3, %0, c15, c5, 0" : : "r"
 			      (1 << SCORPION_L2CYCLE_CTR_BIT));
 	} else {
@@ -497,7 +535,7 @@ static void scorpion_l2_disable_intenclr(u32 idx)
 
 static void scorpion_l2_enable_counter(u32 idx)
 {
-	if (idx == SCORPION_L2CYCLE_CTR_EVENT_IDX) {
+	if (idx == l2_cycle_ctr_idx) {
 		asm volatile ("mcr p15, 3, %0, c15, c4, 3" : : "r"
 			      (1 << SCORPION_L2CYCLE_CTR_BIT));
 	} else {
@@ -507,7 +545,7 @@ static void scorpion_l2_enable_counter(u32 idx)
 
 static void scorpion_l2_disable_counter(u32 idx)
 {
-	if (idx == SCORPION_L2CYCLE_CTR_EVENT_IDX) {
+	if (idx == l2_cycle_ctr_idx) {
 		asm volatile ("mcr p15, 3, %0, c15, c4, 2" : : "r"
 			      (1 << SCORPION_L2CYCLE_CTR_BIT));
 	} else {
@@ -520,7 +558,7 @@ static u32 scorpion_l2_read_counter(int idx)
 	u32 val;
 	unsigned long iflags;
 
-	if (idx == SCORPION_L2CYCLE_CTR_EVENT_IDX) {
+	if (idx == l2_cycle_ctr_idx) {
 		asm volatile ("mrc p15, 3, %0, c15, c4, 5" : "=r" (val));
 	} else {
 		raw_spin_lock_irqsave(&scorpion_l2_pmu_hw_events.pmu_lock,
@@ -540,7 +578,7 @@ static void scorpion_l2_write_counter(int idx, u32 val)
 {
 	unsigned long iflags;
 
-	if (idx == SCORPION_L2CYCLE_CTR_EVENT_IDX) {
+	if (idx == l2_cycle_ctr_idx) {
 		asm volatile ("mcr p15, 3, %0, c15, c4, 5" : : "r" (val));
 	} else {
 		raw_spin_lock_irqsave(&scorpion_l2_pmu_hw_events.pmu_lock,
@@ -570,11 +608,20 @@ static void scorpion_l2_enable(struct hw_perf_event *hwc, int idx, int cpu)
 	int evtype = hwc->config_base;
 	int ev_typer;
 	unsigned long iflags;
+	unsigned int is_slv = 0;
+	unsigned int evt_prefix;
 
 	raw_spin_lock_irqsave(&scorpion_l2_pmu_hw_events.pmu_lock, iflags);
 
 	if (hwc->config_base == SCORPION_L2CYCLE_CTR_RAW_CODE)
 		goto out;
+
+	/* Check if user requested any special origin filtering. */
+	evt_prefix = (hwc->config_base &
+			L2_EVT_PREFIX_MASK) >> L2_EVT_PREFIX_SHIFT;
+
+	if (evt_prefix == L2_SLAVE_EVT_PREFIX)
+		is_slv = 1;
 
 	memset(&evtinfo, 0, sizeof(evtinfo));
 
@@ -585,9 +632,9 @@ static void scorpion_l2_enable(struct hw_perf_event *hwc, int idx, int cpu)
 	scorpion_l2_set_evcntcr();
 
 	if (cpu < 0)
-		scorpion_l2_set_evfilter_task_mode();
+		scorpion_l2_set_evfilter_task_mode(is_slv);
 	else
-		scorpion_l2_set_evfilter_sys_mode();
+		scorpion_l2_set_evfilter_sys_mode(is_slv);
 
 	scorpion_l2_evt_setup(evtinfo.grp, evtinfo.val);
 
@@ -622,12 +669,14 @@ static int scorpion_l2_get_event_idx(struct pmu_hw_events *cpuc,
 	int ctr = 0;
 
 	if (hwc->config_base == SCORPION_L2CYCLE_CTR_RAW_CODE) {
-		if (!test_and_set_bit(SCORPION_L2CYCLE_CTR_EVENT_IDX,
+		if (test_and_set_bit(l2_cycle_ctr_idx,
 					cpuc->used_mask))
-			return SCORPION_L2CYCLE_CTR_EVENT_IDX;
+			return -EAGAIN;
+
+		return l2_cycle_ctr_idx;
 	}
 
-	for (ctr = 0; ctr < MAX_SCORPION_L2_CTRS - 1; ctr++) {
+	for (ctr = 0; ctr < total_l2_ctrs - 1; ctr++) {
 		if (!test_and_set_bit(ctr, cpuc->used_mask))
 			return ctr;
 	}
@@ -686,7 +735,7 @@ static irqreturn_t scorpion_l2_handle_irq(int irq_num, void *dev)
 		bitp = __ffs(pmovsr);
 
 		if (bitp == SCORPION_L2CYCLE_CTR_BIT)
-			idx = SCORPION_L2CYCLE_CTR_EVENT_IDX;
+			idx = l2_cycle_ctr_idx;
 		else
 			idx = bitp;
 
@@ -721,7 +770,7 @@ next:
 static int scorpion_l2_map_event(struct perf_event *event)
 {
 	if (pmu_type > 0 && pmu_type == event->attr.type)
-		return event->attr.config & 0xfffff;
+		return event->attr.config & L2_EVT_MASK;
 	else
 		return -ENOENT;
 }
@@ -741,6 +790,99 @@ scorpion_l2_pmu_generic_free_irq(int irq)
 		free_irq(irq, NULL);
 }
 
+static int msm_l2_test_set_ev_constraint(struct perf_event *event)
+{
+	u32 evt_type = event->attr.config & L2_EVT_MASK;
+	u8 prefix = (evt_type & 0xF0000) >> 16;
+	u8 reg   = (evt_type & 0x0F000) >> 12;
+	u8 group =  evt_type & 0x0000F;
+	u8 code = (evt_type & 0x00FF0) >> 4;
+	unsigned long flags;
+	u32 err = 0;
+	u64 bitmap_t;
+	u32 shift_idx;
+
+	if (!prefix)
+		return 0;
+	/*
+	 * Cycle counter collision is detected in
+	 * get_event_idx().
+	 */
+	if (evt_type == SCORPION_L2CYCLE_CTR_RAW_CODE)
+		return err;
+
+	raw_spin_lock_irqsave(&l2_pmu_constraints.lock, flags);
+
+	shift_idx = ((reg * 4) + group);
+
+	bitmap_t = 1 << shift_idx;
+
+	if (!(l2_pmu_constraints.pmu_bitmap & bitmap_t)) {
+		l2_pmu_constraints.pmu_bitmap |= bitmap_t;
+		l2_pmu_constraints.codes[shift_idx] = code;
+		goto out;
+	} else {
+		/*
+		 * If NRCCG's are identical,
+		 * its not column exclusion.
+		 */
+		if (l2_pmu_constraints.codes[shift_idx] != code)
+			err = -EPERM;
+		else
+			/*
+			 * If the event is counted in syswide mode
+			 * then we want to count only on one CPU
+			 * and set its filter to count from all.
+			 * This sets the event OFF on all but one
+			 * CPU.
+			 */
+			if (!(event->cpu < 0))
+				event->state = PERF_EVENT_STATE_OFF;
+	}
+
+out:
+	raw_spin_unlock_irqrestore(&l2_pmu_constraints.lock, flags);
+	return err;
+}
+
+static int msm_l2_clear_ev_constraint(struct perf_event *event)
+{
+	u32 evt_type = event->attr.config & L2_EVT_MASK;
+	u8 prefix = (evt_type & 0xF0000) >> 16;
+	u8 reg   = (evt_type & 0x0F000) >> 12;
+	u8 group =  evt_type & 0x0000F;
+	unsigned long flags;
+	u64 bitmap_t;
+	u32 shift_idx;
+
+	if (!prefix)
+		return 0;
+
+	raw_spin_lock_irqsave(&l2_pmu_constraints.lock, flags);
+
+	shift_idx = ((reg * 4) + group);
+
+	bitmap_t = 1 << shift_idx;
+
+	/* Clear constraint bit. */
+	l2_pmu_constraints.pmu_bitmap &= ~bitmap_t;
+
+	raw_spin_unlock_irqrestore(&l2_pmu_constraints.lock, flags);
+	return 1;
+}
+
+static int get_num_events(void)
+{
+	int val;
+
+	val = scorpion_l2_pmnc_read();
+	/*
+	 * Read bits 15:11 of the L2PMCR and add 1
+	 * for the cycle counter.
+	 */
+	return ((val >> PMCR_NUM_EV_SHIFT) & PMCR_NUM_EV_MASK) + 1;
+}
+
 static struct arm_pmu scorpion_l2_pmu = {
 	.id		=	ARM_PERF_PMU_ID_SCORPIONMP_L2,
 	.type		=	ARM_PMU_DEVICE_L2CC,
@@ -758,14 +900,16 @@ static struct arm_pmu scorpion_l2_pmu = {
 	.map_event	=	scorpion_l2_map_event,
 	.max_period	=	(1LLU << 32) - 1,
 	.get_hw_events	=	scorpion_l2_get_hw_events,
-	.num_events	=	MAX_SCORPION_L2_CTRS,
+	.test_set_event_constraints	= msm_l2_test_set_ev_constraint,
+	.clear_event_constraints	= msm_l2_clear_ev_constraint,
+	.pmu.attr_groups		= msm_l2_pmu_attr_grps,
 };
 
 static int scorpion_l2_pmu_device_probe(struct platform_device *pdev)
 {
 	scorpion_l2_pmu.plat_device = pdev;
 
-	if (!armpmu_register(&scorpion_l2_pmu, "scorpion-l2", -1))
+	if (!armpmu_register(&scorpion_l2_pmu, "msm-l2", -1))
 		pmu_type = scorpion_l2_pmu.pmu.type;
 
 	return 0;
@@ -782,6 +926,20 @@ static int __init register_scorpion_l2_pmu_driver(void)
 {
 	/* Avoid spurious interrupt if any */
 	scorpion_l2_get_reset_pmovsr();
+
+	total_l2_ctrs = get_num_events();
+	scorpion_l2_pmu.num_events = total_l2_ctrs;
+
+	pr_info("Detected %d counters on the L2CC PMU.\n",
+			total_l2_ctrs);
+
+	/*
+	 * The L2 cycle counter index in the used_mask
+	 * bit stream is always after the other counters.
+	 * Counter indexes begin from 0 to keep it consistent
+	 * with the h/w.
+	 */
+	l2_cycle_ctr_idx = total_l2_ctrs - 1;
 
 	return platform_driver_register(&scorpion_l2_pmu_driver);
 }

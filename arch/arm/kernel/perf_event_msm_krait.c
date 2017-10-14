@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, 2014,2016 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -219,9 +219,6 @@ static unsigned int get_krait_evtinfo(unsigned int krait_evt_type,
 	code = (krait_evt_type & 0x00FF0) >> 4;
 	group = krait_evt_type & 0x0000F;
 
-	if ((group > 3) || (reg > krait_max_l1_reg))
-		return -EINVAL;
-
 	if (prefix != KRAIT_EVT_PREFIX && prefix != KRAIT_VENUMEVT_PREFIX)
 		return -EINVAL;
 
@@ -231,6 +228,9 @@ static unsigned int get_krait_evtinfo(unsigned int krait_evt_type,
 		else
 			reg += VENUM_BASE_OFFSET;
 	}
+
+	if ((group > 3) || (reg > krait_max_l1_reg))
+		return -EINVAL;
 
 	evtinfo->group_setval = 0x80000000 | (code << (group * 8));
 	evtinfo->groupcode = reg;
@@ -454,37 +454,29 @@ static void krait_pmu_enable_event(struct hw_perf_event *hwc, int idx, int cpu)
 	/* Disable counter */
 	armv7_pmnc_disable_counter(idx);
 
-	/*
-	 * Set event (if destined for PMNx counters)
-	 * We don't need to set the event if it's a cycle count
-	 */
-	if (idx != ARMV7_IDX_CYCLE_COUNTER) {
-		val = hwc->config_base;
-		val &= KRAIT_EVENT_MASK;
+	val = hwc->config_base;
+	val &= KRAIT_EVENT_MASK;
 
-		if (val < 0x40) {
-			armv7_pmnc_write_evtsel(idx, hwc->config_base);
-		} else {
-			event = get_krait_evtinfo(val, &evtinfo);
+	/* set event for ARM-architected events, and filter for CC */
+	if ((val < 0x40) || (idx == ARMV7_IDX_CYCLE_COUNTER)) {
+		armv7_pmnc_write_evtsel(idx, hwc->config_base);
+	} else {
+		event = get_krait_evtinfo(val, &evtinfo);
 
-			if (event == -EINVAL)
-				goto krait_out;
+		if (event == -EINVAL)
+			goto krait_out;
 
-			/* Restore Mode-exclusion bits */
-			event |= (hwc->config_base & KRAIT_MODE_EXCL_MASK);
+		/* Restore Mode-exclusion bits */
+		event |= (hwc->config_base & KRAIT_MODE_EXCL_MASK);
 
-			/*
-			 * Set event (if destined for PMNx counters)
-			 * We don't need to set the event if it's a cycle count
-			 */
-			armv7_pmnc_write_evtsel(idx, event);
-			val = 0x0;
-			asm volatile("mcr p15, 0, %0, c9, c15, 0" : :
-				"r" (val));
-			val = evtinfo.group_setval;
-			gr = evtinfo.groupcode;
-			krait_evt_setup(gr, val, evtinfo.armv7_evt_type);
-		}
+		/* Set event (if destined for PMNx counters) */
+		armv7_pmnc_write_evtsel(idx, event);
+		val = 0x0;
+		asm volatile("mcr p15, 0, %0, c9, c15, 0" : :
+			"r" (val));
+		val = evtinfo.group_setval;
+		gr = evtinfo.groupcode;
+		krait_evt_setup(gr, val, evtinfo.armv7_evt_type);
 	}
 
 	/* Enable interrupt for this counter */
@@ -518,53 +510,6 @@ static void krait_pmu_reset(void *info)
 
 	/* Reset all ctrs to 0 */
 	armv7_pmnc_write(ARMV7_PMNC_P | ARMV7_PMNC_C);
-}
-
-static void enable_irq_callback(void *info)
-{
-        int irq = *(unsigned int *)info;
-
-        enable_percpu_irq(irq, IRQ_TYPE_EDGE_RISING);
-}
-
-static void disable_irq_callback(void *info)
-{
-        int irq = *(unsigned int *)info;
-
-        disable_percpu_irq(irq);
-}
-
-static int
-msm_request_irq(int irq, irq_handler_t *handle_irq)
-{
-        int err = 0;
-        int cpu;
-
-	err = request_percpu_irq(irq, *handle_irq, "l1-armpmu",
-			&cpu_hw_events);
-
-        if (!err) {
-                for_each_cpu(cpu, cpu_online_mask) {
-                        smp_call_function_single(cpu,
-                                        enable_irq_callback, &irq, 1);
-                }
-        }
-
-        return err;
-}
-
-static void
-msm_free_irq(int irq)
-{
-        int cpu;
-
-        if (irq >= 0) {
-                for_each_cpu(cpu, cpu_online_mask) {
-                        smp_call_function_single(cpu,
-                                        disable_irq_callback, &irq, 1);
-                }
-                free_percpu_irq(irq, &cpu_hw_events);
-        }
 }
 
 /*
@@ -619,10 +564,35 @@ static int msm_clear_ev_constraint(struct perf_event *event)
 	return 1;
 }
 
+static DEFINE_PER_CPU(u32, krait_pm_pmactlr);
+
+static void krait_save_pm_registers(void *hcpu)
+{
+	u32 val;
+	u32 cpu = (int)hcpu;
+
+	/* Read PMACTLR */
+	asm volatile("mrc p15, 0, %0, c9, c15, 5" : "=r" (val));
+	per_cpu(krait_pm_pmactlr, cpu) = val;
+
+	armv7pmu_save_pm_registers(hcpu);
+}
+
+static void krait_restore_pm_registers(void *hcpu)
+{
+	u32 val;
+	u32 cpu = (int)hcpu;
+
+	val = per_cpu(krait_pm_pmactlr, cpu);
+	if (val != 0)
+		/* Restore PMACTLR */
+		asm volatile("mcr p15, 0, %0, c9, c15, 5" : : "r" (val));
+
+	armv7pmu_restore_pm_registers(hcpu);
+}
+
 static struct arm_pmu krait_pmu = {
 	.handle_irq		= armv7pmu_handle_irq,
-	.request_pmu_irq	= msm_request_irq,
-	.free_pmu_irq		= msm_free_irq,
 	.enable			= krait_pmu_enable_event,
 	.disable		= krait_pmu_disable_event,
 	.read_counter		= armv7pmu_read_counter,
@@ -634,6 +604,8 @@ static struct arm_pmu krait_pmu = {
 	.test_set_event_constraints	= msm_test_set_ev_constraint,
 	.clear_event_constraints	= msm_clear_ev_constraint,
 	.max_period		= (1LLU << 32) - 1,
+	.save_pm_registers	= krait_save_pm_registers,
+	.restore_pm_registers	= krait_restore_pm_registers,
 };
 
 /* NRCCG format for perf RAW codes. */
@@ -654,7 +626,7 @@ static struct attribute *msm_l1_ev_formats[] = {
  * Format group is essential to access PMU's from userspace
  * via their .name field.
  */
-static struct attribute_group msm_pmu_format_group = {
+static const struct attribute_group msm_pmu_format_group = {
 	.name = "format",
 	.attrs = msm_l1_ev_formats,
 };
