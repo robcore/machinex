@@ -25,7 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
-#include <linux/android_pmem.h>
+
 #include <linux/clk.h>
 #include <linux/timer.h>
 #include <mach/msm_subsystem_map.h>
@@ -48,8 +48,6 @@ static struct vid_dec_dev *vid_dec_device_p;
 static dev_t vid_dec_dev_num;
 static struct class *vid_dec_class;
 
-static unsigned int vidc_mmu_subsystem[] = {
-	MSM_SUBSYSTEM_VIDEO};
 static s32 vid_dec_get_empty_client_index(void)
 {
 	u32 i, found = false;
@@ -231,7 +229,6 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	struct vid_dec_msg *vdec_msg;
 
 	unsigned long kernel_vaddr = 0, phy_addr = 0, user_vaddr = 0;
-	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 	enum vdec_picture pic_type;
@@ -268,7 +265,7 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 				      false, &user_vaddr, &kernel_vaddr,
-				      &phy_addr, &pmem_fd, &file,
+				      &phy_addr, &file,
 				      &buffer_index) ||
 		(vcd_frame_data->flags & VCD_FRAME_FLAG_EOS)) {
 
@@ -384,7 +381,7 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	}
 	if (vcd_frame_data->data_len > 0) {
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-				pmem_fd, kernel_vaddr, buffer_index,
+				kernel_vaddr, buffer_index,
 				&buff_handle);
 		#if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
 		  if (ion_flag & ION_FLAG_CACHED && buff_handle)
@@ -924,11 +921,8 @@ static u32 vid_dec_set_meta_buffers(struct video_client_ctx *client_ctx,
 {
 	struct vcd_property_hdr vcd_property_hdr;
 	struct vcd_property_meta_buffer *vcd_meta_buffer = NULL;
-	struct msm_mapped_buffer *mapped_buffer = NULL;
-	struct msm_mapped_buffer *mapped_buffer_iommu = NULL;
 	u32 vcd_status = VCD_ERR_FAIL;
-	u32 len = 0, flags = 0, len_iommu = 0, flags_iommu = 0, buf_size = 0;
-	struct file *file, *file_iommu;
+	u32 len = 0, len_iommu = 0, buf_size = 0;
 	int rc = 0;
 	unsigned long ionflag = 0, ionflag_iommu = 0;
 	unsigned long buffer_size = 0, buffer_size_iommu = 0;
@@ -958,54 +952,8 @@ static u32 vid_dec_set_meta_buffers(struct video_client_ctx *client_ctx,
 	}
 
 	if (!vcd_get_ion_status()) {
-		if (get_pmem_file(vcd_meta_buffer->pmem_fd,
-				(unsigned long *) (&(vcd_meta_buffer->
-				physical_addr)),
-				(unsigned long *) (&vcd_meta_buffer->
-							kernel_virtual_addr),
-				(unsigned long *) (&len), &file)) {
-				ERR("%s(): get_pmem_file failed\n", __func__);
-				return false;
-			}
-		put_pmem_file(file);
-		flags = MSM_SUBSYSTEM_MAP_IOVA;
-		mapped_buffer = msm_subsystem_map_buffer(
-			(unsigned long)vcd_meta_buffer->physical_addr,
-				len, flags, vidc_mmu_subsystem,
-				sizeof(vidc_mmu_subsystem)/
-				sizeof(unsigned int));
-		if (IS_ERR(mapped_buffer)) {
-			pr_err("buffer map failed");
-			return false;
-		}
-		vcd_meta_buffer->client_data = (void *) mapped_buffer;
-		vcd_meta_buffer->dev_addr =
-			(u8 *)mapped_buffer->iova[0];
-
-		if (get_pmem_file(vcd_meta_buffer->pmem_fd_iommu,
-				(unsigned long *) (&(vcd_meta_buffer->
-				physical_addr_iommu)),
-				(unsigned long *) (&vcd_meta_buffer->
-				kernel_virt_addr_iommu),
-				(unsigned long *) (&len_iommu), &file_iommu)) {
-				ERR("%s(): get_pmem_file failed\n", __func__);
-				return false;
-			}
-		put_pmem_file(file_iommu);
-		flags_iommu = MSM_SUBSYSTEM_MAP_IOVA;
-		mapped_buffer_iommu = msm_subsystem_map_buffer(
-			(unsigned long)vcd_meta_buffer->physical_addr_iommu,
-				len_iommu, flags_iommu, vidc_mmu_subsystem,
-				sizeof(vidc_mmu_subsystem)/
-				sizeof(unsigned int));
-		if (IS_ERR(mapped_buffer_iommu)) {
-			pr_err("buffer map failed");
-			return false;
-		}
-		vcd_meta_buffer->client_data_iommu =
-					(void *) mapped_buffer_iommu;
-		vcd_meta_buffer->dev_addr_iommu =
-					(u8 *)mapped_buffer_iommu->iova[0];
+		pr_err("PMEM Not available\n");
+		return false;
 	} else {
 		client_ctx->meta_buffer_ion_handle = ion_import_dma_buf(
 					client_ctx->user_ion_client,
@@ -1187,10 +1135,8 @@ static u32 vid_dec_set_h264_mv_buffers(struct video_client_ctx *client_ctx,
 {
 	struct vcd_property_hdr vcd_property_hdr;
 	struct vcd_property_h264_mv_buffer *vcd_h264_mv_buffer = NULL;
-	struct msm_mapped_buffer *mapped_buffer = NULL;
 	u32 vcd_status = VCD_ERR_FAIL;
-	u32 len = 0, flags = 0;
-	struct file *file;
+	u32 len = 0;
 	int rc = 0;
 	unsigned long ionflag = 0;
 	unsigned long buffer_size = 0;
@@ -1217,28 +1163,8 @@ static u32 vid_dec_set_h264_mv_buffers(struct video_client_ctx *client_ctx,
 	}
 
 	if (!vcd_get_ion_status()) {
-		if (get_pmem_file(vcd_h264_mv_buffer->pmem_fd,
-			(unsigned long *) (&(vcd_h264_mv_buffer->
-			physical_addr)),
-			(unsigned long *) (&vcd_h264_mv_buffer->
-						kernel_virtual_addr),
-			(unsigned long *) (&len), &file)) {
-			ERR("%s(): get_pmem_file failed\n", __func__);
-			return false;
-		}
-		put_pmem_file(file);
-		flags = MSM_SUBSYSTEM_MAP_IOVA;
-		mapped_buffer = msm_subsystem_map_buffer(
-			(unsigned long)vcd_h264_mv_buffer->physical_addr, len,
-				flags, vidc_mmu_subsystem,
-				sizeof(vidc_mmu_subsystem)/
-				sizeof(unsigned int));
-		if (IS_ERR(mapped_buffer)) {
-			pr_err("buffer map failed");
-			return false;
-		}
-		vcd_h264_mv_buffer->client_data = (void *) mapped_buffer;
-		vcd_h264_mv_buffer->dev_addr = (u8 *)mapped_buffer->iova[0];
+		pr_err("PMEM not available\n");
+		return false;
 	} else {
 		client_ctx->h264_mv_ion_handle = ion_import_dma_buf(
 					client_ctx->user_ion_client,
@@ -1519,7 +1445,7 @@ static u32 vid_dec_set_buffer(struct video_client_ctx *client_ctx,
 	/*If buffer cannot be set, ignore */
 	if (!vidc_insert_addr_table(client_ctx, dir_buffer,
 		(unsigned long)buffer_info->buffer.bufferaddr,
-		&kernel_vaddr, buffer_info->buffer.pmem_fd,
+		&kernel_vaddr,
 		buf_adr_offset, MAX_VIDEO_NUM_OF_BUFF, length)) {
 		DBG("%s() : user_virt_addr = %p cannot be set.",
 		    __func__, buffer_info->buffer.bufferaddr);
@@ -1669,7 +1595,6 @@ static u32 vid_dec_decode_frame(struct video_client_ctx *client_ctx,
 	struct vcd_frame_data vcd_input_buffer;
 	unsigned long kernel_vaddr, phy_addr, user_vaddr;
 	struct buf_addr_table *buf_addr_table;
-	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 	u32 vcd_status = VCD_ERR_FAIL;
@@ -1685,7 +1610,7 @@ static u32 vid_dec_decode_frame(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
 				      true, &user_vaddr, &kernel_vaddr,
-				      &phy_addr, &pmem_fd, &file,
+				      &phy_addr, &file,
 				      &buffer_index)) {
 
 		/* kernel_vaddr  is found. send the frame to VCD */
@@ -1718,7 +1643,6 @@ static u32 vid_dec_decode_frame(struct video_client_ctx *client_ctx,
 		if (vcd_input_buffer.data_len > 0) {
 			ion_flag = vidc_get_fd_info(client_ctx,
 						BUFFER_TYPE_INPUT,
-						pmem_fd,
 						kernel_vaddr,
 						buffer_index,
 						&buff_handle);
@@ -1755,7 +1679,6 @@ static u32 vid_dec_fill_output_buffer(struct video_client_ctx *client_ctx,
 		struct vdec_fillbuffer_cmd *fill_buffer_cmd)
 {
 	unsigned long kernel_vaddr, phy_addr, user_vaddr;
-	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 	u32 vcd_status = VCD_ERR_FAIL;
@@ -1770,7 +1693,7 @@ static u32 vid_dec_fill_output_buffer(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 				      true, &user_vaddr, &kernel_vaddr,
-				      &phy_addr, &pmem_fd, &file,
+				      &phy_addr, &file,
 				      &buffer_index)) {
 
 		memset((void *)&vcd_frame, 0,
@@ -1780,7 +1703,7 @@ static u32 vid_dec_fill_output_buffer(struct video_client_ctx *client_ctx,
 		vcd_frame.alloc_len = fill_buffer_cmd->buffer.buffer_len;
 		vcd_frame.ion_flag = vidc_get_fd_info(client_ctx,
 						 BUFFER_TYPE_OUTPUT,
-						pmem_fd, kernel_vaddr,
+						kernel_vaddr,
 						buffer_index,
 						&buff_handle);
 		vcd_frame.buff_ion_handle = buff_handle;
@@ -1900,7 +1823,6 @@ static long vid_dec_ioctl(struct file *file,
 	u32 vcd_status;
 	unsigned long kernel_vaddr, phy_addr, len;
 	unsigned long ker_vaddr;
-	struct file *pmem_file;
 	u32 result = true;
 	void __user *arg = (void __user *)u_arg;
 	int rc = 0;
@@ -2283,12 +2205,8 @@ static long vid_dec_ioctl(struct file *file,
 		}
 
 		if (!vcd_get_ion_status()) {
-			if (get_pmem_file(seq_header.pmem_fd,
-				  &phy_addr, &kernel_vaddr, &len, &pmem_file)) {
-				ERR("%s(): get_pmem_file failed\n", __func__);
-				return false;
-			}
-			put_pmem_file(pmem_file);
+			pr_err("PMEM Not available\n");
+			return -EINVAL;
 		} else {
 			client_ctx->seq_hdr_ion_handle = ion_import_dma_buf(
 				client_ctx->user_ion_client,

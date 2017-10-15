@@ -34,7 +34,6 @@ struct buf_addr_table {
 	unsigned long buff_ion_flag;
 	unsigned long buff_len;
 	struct ion_handle *buff_ion_handle;
-	int pmem_fd;
 	struct file *file;
 	unsigned long dev_addr;
 	void *client_data;
@@ -79,17 +78,17 @@ void __iomem *vidc_get_ioaddr(void);
 int vidc_load_firmware(void);
 void vidc_release_firmware(void);
 u32 vidc_get_fd_info(struct video_client_ctx *client_ctx,
-		enum buffer_dir buffer, int pmem_fd,
+		enum buffer_dir buffer,
 		unsigned long kvaddr, int index,
 		struct ion_handle **buff_handle);
 u32 vidc_lookup_addr_table(struct video_client_ctx *client_ctx,
 	enum buffer_dir buffer, u32 search_with_user_vaddr,
 	unsigned long *user_vaddr, unsigned long *kernel_vaddr,
-	unsigned long *phy_addr, int *pmem_fd, struct file **file,
+	unsigned long *phy_addr, struct file **file,
 	s32 *buffer_index);
 u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 	enum buffer_dir buffer, unsigned long user_vaddr,
-	unsigned long *kernel_vaddr, int pmem_fd,
+	unsigned long *kernel_vaddr,
 	unsigned long buffer_addr_offset,
 	unsigned int max_num_buffers, unsigned long length);
 u32 vidc_insert_addr_table_kernel(struct video_client_ctx *client_ctx,

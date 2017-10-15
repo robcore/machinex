@@ -25,7 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
-#include <linux/android_pmem.h>
+
 #include <linux/clk.h>
 #include <media/msm/vidc_type.h>
 #include <media/msm/vcd_api.h>
@@ -231,7 +231,7 @@ static void vid_enc_output_frame_done(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 		false, &user_vaddr, &kernel_vaddr,
-		&phy_addr, &pmem_fd, &file,
+		&phy_addr, &file,
 		&buffer_index)) {
 
 		/* Buffer address in user space */
@@ -269,7 +269,7 @@ static void vid_enc_output_frame_done(struct video_client_ctx *client_ctx,
 	}
 	if (venc_msg->venc_msg_info.buf.len > 0) {
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-					pmem_fd, kernel_vaddr, buffer_index,
+					kernel_vaddr, buffer_index,
 					&buff_handle);
 		#if !defined(CONFIG_MSM_IOMMU) && defined(CONFIG_SEC_PRODUCT_8960)
 		 if ((ion_flag & ION_FLAG_CACHED) && buff_handle)

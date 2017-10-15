@@ -219,7 +219,6 @@ static void venc_cb(u32 event, u32 status, void *info, u32 size, void *handle,
 			unsigned long kvaddr, phys_addr;
 			s32 buffer_index = -1, ion_flags = 0;
 			struct ion_handle *ion_handle;
-			int pmem_fd;
 			struct file *filp;
 			bool rc;
 
@@ -227,11 +226,11 @@ static void venc_cb(u32 event, u32 status, void *info, u32 size, void *handle,
 					BUFFER_TYPE_OUTPUT, true,
 					(unsigned long *)&frame_data->
 					frm_clnt_data, &kvaddr, &phys_addr,
-					&pmem_fd, &filp, &buffer_index);
+					&filp, &buffer_index);
 
 			if (rc)
 				ion_flags = vidc_get_fd_info(client_ctx,
-					BUFFER_TYPE_OUTPUT, pmem_fd,
+					BUFFER_TYPE_OUTPUT,
 					kvaddr, buffer_index, &ion_handle);
 			else
 				WFD_MSG_ERR("Got an output buffer that we " \
@@ -905,9 +904,6 @@ static long venc_request_frame(struct video_client_ctx *client_ctx, __s32 type)
 
 	int rc = 0;
 	switch (type) {
-	case V4L2_MPEG_MFC51_VIDEO_FORCE_FRAME_TYPE_DISABLED:
-		/*So...nothing to do?*/
-		break;
 	case V4L2_MPEG_MFC51_VIDEO_FORCE_FRAME_TYPE_I_FRAME:
 		vcd_property_hdr.prop_id = VCD_I_REQ_IFRAME;
 		vcd_property_hdr.sz = sizeof(struct vcd_property_req_i_frame);
@@ -1939,7 +1935,6 @@ static long venc_set_output_buffer(struct v4l2_subdev *sd, void *arg)
 	rc = vidc_insert_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 					mregion->cookie,
 					(unsigned long *)&mregion->kvaddr,
-					mregion->fd,
 					mregion->offset,
 					32,
 					mregion->size);
@@ -1968,7 +1963,6 @@ static long venc_fill_outbuf(struct v4l2_subdev *sd, void *arg)
 	struct mem_region *mregion = arg;
 	struct vcd_frame_data vcd_frame = {0};
 	unsigned long kernel_vaddr, phy_addr, user_vaddr;
-	int pmem_fd;
 	struct file *file;
 	struct ion_handle *buff_handle = NULL;
 	s32 buffer_index = -1;
@@ -1977,14 +1971,14 @@ static long venc_fill_outbuf(struct v4l2_subdev *sd, void *arg)
 		user_vaddr = mregion->cookie;
 		rc = vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 				true, &user_vaddr,
-				&kernel_vaddr, &phy_addr, &pmem_fd, &file,
+				&kernel_vaddr, &phy_addr, &file,
 				&buffer_index);
 		if (!rc) {
 			WFD_MSG_ERR("Address lookup failed\n");
 			goto err;
 		}
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-				pmem_fd, kernel_vaddr, buffer_index,
+				kernel_vaddr, buffer_index,
 				&buff_handle);
 
 		vcd_frame.virtual = (u8 *) kernel_vaddr;
@@ -2065,7 +2059,6 @@ static long venc_alloc_recon_buffers(struct v4l2_subdev *sd, void *arg)
 		for (i = 0; i < 4; ++i) {
 			ctrl = &client_ctx->recon_buffer[i];
 			ctrl->buffer_size = control.size;
-			ctrl->pmem_fd = 0;
 			ctrl->offset = 0;
 			ctrl->user_virtual_addr = (void *)i;
 			client_ctx->recon_buffer_ion_handle[i]

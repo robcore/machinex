@@ -25,7 +25,6 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
-#include <linux/android_pmem.h>
 #include <linux/clk.h>
 #include <mach/msm_subsystem_map.h>
 #include <media/msm/vidc_type.h>
@@ -1630,7 +1629,6 @@ u32 vid_enc_set_buffer(struct video_client_ctx *client_ctx,
 	if (!vidc_insert_addr_table(client_ctx, dir_buffer,
 					(unsigned long)buffer_info->pbuffer,
 					&kernel_vaddr,
-					buffer_info->fd,
 					(unsigned long)buffer_info->offset,
 					VID_ENC_MAX_NUM_OF_BUFF, length)) {
 		DBG("%s() : user_virt_addr = %p cannot be set.",
@@ -1675,7 +1673,7 @@ u32 vid_enc_free_buffer(struct video_client_ctx *client_ctx,
 	user_vaddr = (unsigned long)buffer_info->pbuffer;
 	if (!vidc_lookup_addr_table(client_ctx, dir_buffer,
 				true, &user_vaddr, &kernel_vaddr,
-				&phy_addr, &pmem_fd, &file,
+				&phy_addr, &file,
 				&buffer_index)) {
 		ERR("%s(): WNG: user_virt_addr = %p has not been set",
 		    __func__, buffer_info->pbuffer);
@@ -1724,7 +1722,7 @@ u32 vid_enc_encode_frame(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
 			true, &user_vaddr, &kernel_vaddr,
-			&phy_addr, &pmem_fd, &file,
+			&phy_addr, &file,
 			&buffer_index)) {
 
 		/* kernel_vaddr  is found. send the frame to VCD */
@@ -1757,7 +1755,7 @@ u32 vid_enc_encode_frame(struct video_client_ctx *client_ctx,
 		vcd_input_buffer.flags = input_frame_info->flags;
 
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_INPUT,
-				pmem_fd, kernel_vaddr, buffer_index,
+				kernel_vaddr, buffer_index,
 				&buff_handle);
 
 		if (vcd_input_buffer.data_len > 0) {
@@ -1812,13 +1810,13 @@ u32 vid_enc_fill_output_buffer(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 			true, &user_vaddr, &kernel_vaddr,
-			&phy_addr, &pmem_fd, &file,
+			&phy_addr, &file,
 			&buffer_index)) {
 
 		memset((void *)&vcd_frame, 0,
 					 sizeof(struct vcd_frame_data));
 		vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-				pmem_fd, kernel_vaddr, buffer_index,
+				kernel_vaddr, buffer_index,
 				&buff_handle);
 		vcd_frame.virtual = (u8 *) kernel_vaddr;
 		vcd_frame.frm_clnt_data = (u32) output_frame_info->clientdata;
@@ -1879,14 +1877,6 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 	control->user_virtual_addr = venc_recon->pbuffer;
 
 	if (!vcd_get_ion_status()) {
-		if (get_pmem_file(control->pmem_fd, (unsigned long *)
-			(&(control->physical_addr)), (unsigned long *)
-			(&control->kernel_virtual_addr),
-			(unsigned long *) (&len), &file)) {
-				ERR("%s(): get_pmem_file failed\n", __func__);
-				return false;
-			}
-			put_pmem_file(file);
 			flags = MSM_SUBSYSTEM_MAP_IOVA;
 			mapped_buffer = msm_subsystem_map_buffer(
 			(unsigned long)control->physical_addr, len,

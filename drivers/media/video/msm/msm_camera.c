@@ -12,7 +12,6 @@
  */
 //FIXME: most allocations need not be GFP_ATOMIC
 /* FIXME: management of mutexes */
-/* FIXME: msm_pmem_region_lookup return values */
 /* FIXME: way too many copy to/from user */
 /* FIXME: does region->active mean free */
 /* FIXME: check limits on command lenghts passed from userspace */
@@ -28,7 +27,6 @@
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/uaccess.h>
-#include <linux/android_pmem.h>
 #include <linux/poll.h>
 #include <media/msm_camera.h>
 #include <mach/camera.h>

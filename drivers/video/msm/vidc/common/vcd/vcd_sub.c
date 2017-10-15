@@ -227,18 +227,17 @@ u8 *vcd_pmem_get_physical(struct video_client_ctx *client_ctx,
 			  unsigned long kernel_vaddr)
 {
 	unsigned long phy_addr, user_vaddr;
-	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
 					  false, &user_vaddr, &kernel_vaddr,
-					  &phy_addr, &pmem_fd, &file,
+					  &phy_addr, &file,
 					  &buffer_index)) {
 
 		return (u8 *) phy_addr;
 	} else if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
-		false, &user_vaddr, &kernel_vaddr, &phy_addr, &pmem_fd, &file,
+		false, &user_vaddr, &kernel_vaddr, &phy_addr, &file,
 		&buffer_index)) {
 		return (u8 *) phy_addr;
 	} else {
@@ -254,7 +253,6 @@ u32 vcd_get_ion_flag(struct video_client_ctx *client_ctx,
 			struct ion_handle **buff_ion_handle)
 {
 	unsigned long phy_addr, user_vaddr;
-	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 	u32 ion_flag = 0;
@@ -262,19 +260,19 @@ u32 vcd_get_ion_flag(struct video_client_ctx *client_ctx,
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
 					  false, &user_vaddr, &kernel_vaddr,
-					  &phy_addr, &pmem_fd, &file,
+					  &phy_addr, &file,
 					  &buffer_index)) {
 
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_INPUT,
-				pmem_fd, kernel_vaddr, buffer_index,
+				kernel_vaddr, buffer_index,
 				&buff_handle);
 		*buff_ion_handle = buff_handle;
 		return ion_flag;
 	} else if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
-		false, &user_vaddr, &kernel_vaddr, &phy_addr, &pmem_fd, &file,
+		false, &user_vaddr, &kernel_vaddr, &phy_addr, &file,
 		&buffer_index)) {
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-				pmem_fd, kernel_vaddr, buffer_index,
+				kernel_vaddr, buffer_index,
 				&buff_handle);
 		*buff_ion_handle = buff_handle;
 		return ion_flag;
