@@ -388,18 +388,6 @@ static int msm_isp_notify_vfe(struct msm_cam_media_controller *pmctl,
 		struct msm_stats_buf *stats_buf = NULL;
 
 		isp_event->isp_data.isp_msg.msg_id = MSG_ID_STATS_COMPOSITE;
-		stats->aec.buff = msm_pmem_stats_ptov_lookup(pmctl,
-					stats->aec.buff, &(stats->aec.fd));
-		stats->awb.buff = msm_pmem_stats_ptov_lookup(pmctl,
-					stats->awb.buff, &(stats->awb.fd));
-		stats->af.buff = msm_pmem_stats_ptov_lookup(pmctl,
-					stats->af.buff, &(stats->af.fd));
-		stats->ihist.buff = msm_pmem_stats_ptov_lookup(pmctl,
-					stats->ihist.buff, &(stats->ihist.fd));
-		stats->rs.buff = msm_pmem_stats_ptov_lookup(pmctl,
-					stats->rs.buff, &(stats->rs.fd));
-		stats->cs.buff = msm_pmem_stats_ptov_lookup(pmctl,
-					stats->cs.buff, &(stats->cs.fd));
 
 		stats_buf = kmalloc(sizeof(struct msm_stats_buf), GFP_ATOMIC);
 		if (!stats_buf) {
@@ -462,27 +450,8 @@ static int msm_isp_notify_vfe(struct msm_cam_media_controller *pmctl,
 			pr_err("%s: Invalid msg type", __func__);
 			break;
 		}
-		if (!stats.buffer) {
-			pr_err("%s: msm_pmem_stats_ptov_lookup error\n",
-							__func__);
-			isp_event->isp_data.isp_msg.len = 0;
 			rc = -EFAULT;
-		} else {
-			struct msm_stats_buf *stats_buf =
-				kmalloc(sizeof(struct msm_stats_buf),
-							GFP_ATOMIC);
-			if (!stats_buf) {
-				pr_err("%s: out of memory. stats_id = %d\n",
-					__func__, isp_stats->id);
-				rc = -ENOMEM;
-			} else {
-				*stats_buf = stats;
-				isp_event->isp_data.isp_msg.len	=
-					sizeof(struct msm_stats_buf);
-				isp_event->isp_data.isp_msg.data = stats_buf;
-			}
-		}
-		}
+	}
 		break;
 	default:
 		pr_err("%s: Unsupport isp notification %d\n",
@@ -595,47 +564,8 @@ static int msm_put_stats_buffer(struct v4l2_subdev *sd,
 		ERR_COPY_FROM_USER();
 		return -EFAULT;
 	}
+	rc = -EINVAL;
 
-	CDBG("%s\n", __func__);
-	pphy = msm_pmem_stats_vtop_lookup(mctl, buf.buffer, buf.fd);
-
-	if (pphy != 0) {
-		if (buf.type == STAT_AF)
-			cfgcmd.cmd_type = CMD_STATS_AF_BUF_RELEASE;
-		else if (buf.type == STAT_AEC)
-			cfgcmd.cmd_type = CMD_STATS_AEC_BUF_RELEASE;
-		else if (buf.type == STAT_AWB)
-			cfgcmd.cmd_type = CMD_STATS_AWB_BUF_RELEASE;
-		else if (buf.type == STAT_IHIST)
-			cfgcmd.cmd_type = CMD_STATS_IHIST_BUF_RELEASE;
-		else if (buf.type == STAT_RS)
-			cfgcmd.cmd_type = CMD_STATS_RS_BUF_RELEASE;
-		else if (buf.type == STAT_CS)
-			cfgcmd.cmd_type = CMD_STATS_CS_BUF_RELEASE;
-		else if (buf.type == STAT_AEAW)
-			cfgcmd.cmd_type = CMD_STATS_BUF_RELEASE;
-		else if (buf.type == STAT_BG)
-			cfgcmd.cmd_type = CMD_STATS_BG_BUF_RELEASE;
-		else if (buf.type == STAT_BF)
-			cfgcmd.cmd_type = CMD_STATS_BF_BUF_RELEASE;
-		else if (buf.type == STAT_BHIST)
-			cfgcmd.cmd_type = CMD_STATS_BHIST_BUF_RELEASE;
-
-		else {
-			pr_err("%s: invalid buf type %d\n",
-				__func__,
-				buf.type);
-			rc = -EINVAL;
-			goto put_done;
-		}
-
-		cfgcmd.value = (void *)&buf;
-
-		rc = msm_isp_subdev_ioctl(sd, &cfgcmd, &pphy);
-	} else {
-		pr_err("%s: NULL physical address\n", __func__);
-		rc = -EINVAL;
-	}
 
 put_done:
 	return rc;

@@ -419,7 +419,6 @@ u32 ddl_decode_frame(u32 *ddl_handle,
 		(struct ddl_client_context *) ddl_handle;
 	struct ddl_context *ddl_context;
 	struct ddl_decoder_data *decoder;
-	DDL_MSG_HIGH("ddl_decode_frame");
 	ddl_context = ddl_get_context();
 	if (!DDL_IS_INITIALIZED(ddl_context)) {
 		DDL_MSG_ERROR("ddl_dec_frame:Not_inited");
@@ -498,7 +497,6 @@ u32 ddl_encode_frame(u32 *ddl_handle,
 	struct ddl_encoder_data *encoder =
 		&ddl->codec_data.encoder;
 	u32 vcd_status = VCD_S_SUCCESS;
-	DDL_MSG_LOW("%s: transc = 0x%x", __func__, (u32)ddl->client_data);
 	if (encoder->slice_delivery_info.enable) {
 		return ddl_encode_frame_batch(ddl_handle,
 					input_frame,

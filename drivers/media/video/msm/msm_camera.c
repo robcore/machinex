@@ -146,14 +146,6 @@ static inline void free_qcmd(struct msm_queue_cmd *qcmd)
 		kfree(qcmd);
 }
 
-static void msm_region_init(struct msm_sync *sync)
-{
-	INIT_HLIST_HEAD(&sync->pmem_frames);
-	INIT_HLIST_HEAD(&sync->pmem_stats);
-	spin_lock_init(&sync->pmem_frame_spinlock);
-	spin_lock_init(&sync->pmem_stats_spinlock);
-}
-
 static void msm_queue_init(struct msm_device_queue *queue, const char *name)
 {
 	spin_lock_init(&queue->lock);
@@ -255,474 +247,7 @@ static int check_overlap(struct hlist_head *ptype,
 			unsigned long paddr,
 			unsigned long len)
 {
-	struct msm_pmem_region *region;
-	struct msm_pmem_region t = { .paddr = paddr, .len = len };
-	struct hlist_node *node;
-
-	hlist_for_each_entry(region, node, ptype, list) {
-		if (CONTAINS(region, &t, paddr) ||
-				CONTAINS(&t, region, paddr) ||
-				OVERLAPS(region, &t, paddr)) {
-			CDBG(" region (PHYS %p len %ld)"
-				" clashes with registered region"
-				" (paddr %p len %ld)\n",
-				(void *)t.paddr, t.len,
-				(void *)region->paddr, region->len);
-			return -1;
-		}
-	}
-
 	return 0;
-}
-
-static int check_pmem_info(struct msm_pmem_info *info, int len)
-{
-	if (info->offset < len &&
-	    info->offset + info->len <= len &&
-	    info->planar0_off < len &&
-	    info->planar1_off < len &&
-	    info->planar2_off < len)
-		return 0;
-
-	pr_err("%s: check failed: off %d len %d y 0x%x cbcr_p1 0x%x p2_add 0x%x(total len %d)\n",
-		__func__,
-		info->offset,
-		info->len,
-		info->planar0_off,
-		info->planar1_off,
-		info->planar2_off,
-		len);
-	return -EINVAL;
-}
-static int msm_pmem_table_add(struct hlist_head *ptype,
-	struct msm_pmem_info *info, spinlock_t* pmem_spinlock,
-	struct msm_sync *sync)
-{
-	unsigned long paddr;
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	struct file *file;
-	unsigned long kvstart;
-#endif
-	unsigned long len;
-	int rc = -ENOMEM;
-	struct msm_pmem_region *region;
-	unsigned long flags;
-
-	region = kmalloc(sizeof(struct msm_pmem_region), GFP_KERNEL);
-	if (!region)
-		goto out;
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-		region->handle = ion_import_dma_buf(client_for_ion, info->fd);
-		if (IS_ERR_OR_NULL(region->handle))
-			goto out1;
-		ion_phys(client_for_ion, region->handle,
-			&paddr, (size_t *)&len);
-#else
-	rc = get_pmem_file(info->fd, &paddr, &kvstart, &len, &file);
-	if (rc < 0) {
-		pr_err("%s: get_pmem_file fd %d error %d\n",
-			__func__,
-			info->fd, rc);
-		goto out1;
-	}
-	region->file = file;
-#endif
-	if (!info->len)
-		info->len = len;
-
-	rc = check_pmem_info(info, len);
-	if (rc < 0)
-		goto out2;
-
-	paddr += info->offset;
-	len = info->len;
-
-	spin_lock_irqsave(pmem_spinlock, flags);
-	if (check_overlap(ptype, paddr, len) < 0) {
-		spin_unlock_irqrestore(pmem_spinlock, flags);
-		rc = -EINVAL;
-		goto out2;
-	}
-	spin_unlock_irqrestore(pmem_spinlock, flags);
-
-	spin_lock_irqsave(pmem_spinlock, flags);
-	INIT_HLIST_NODE(&region->list);
-
-	region->paddr = paddr;
-	region->len = len;
-	memcpy(&region->info, info, sizeof(region->info));
-
-	hlist_add_head(&(region->list), ptype);
-	spin_unlock_irqrestore(pmem_spinlock, flags);
-	CDBG("%s: type %d, paddr 0x%lx, vaddr 0x%lx p0_add = 0x%x"
-		"p1_addr = 0x%x p2_addr = 0x%x\n",
-		__func__, info->type, paddr, (unsigned long)info->vaddr,
-		info->planar0_off, info->planar1_off, info->planar2_off);
-	return 0;
-out2:
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	ion_free(client_for_ion, region->handle);
-#else
-	put_pmem_file(region->file);
-#endif
-out1:
-	kfree(region);
-out:
-	return rc;
-}
-
-/* return of 0 means failure */
-static uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
-	int pmem_type, struct msm_pmem_region *reg, uint8_t maxcount,
-	spinlock_t *pmem_spinlock)
-{
-	struct msm_pmem_region *region;
-	struct msm_pmem_region *regptr;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	uint8_t rc = 0;
-
-	regptr = reg;
-	spin_lock_irqsave(pmem_spinlock, flags);
-	hlist_for_each_entry_safe(region, node, n, ptype, list) {
-		if (region->info.type == pmem_type && region->info.active) {
-			*regptr = *region;
-			rc += 1;
-			if (rc >= maxcount)
-				break;
-			regptr++;
-		}
-	}
-	spin_unlock_irqrestore(pmem_spinlock, flags);
-	/* After lookup failure, dump all the list entries...*/
-	if (rc == 0) {
-		pr_err("%s: pmem_type = %d\n", __func__, pmem_type);
-		hlist_for_each_entry_safe(region, node, n, ptype, list) {
-			pr_err("listed region->info.type = %d, active = %d",
-				region->info.type, region->info.active);
-		}
-
-	}
-	return rc;
-}
-
-static uint8_t msm_pmem_region_lookup_2(struct hlist_head *ptype,
-					int pmem_type,
-					struct msm_pmem_region *reg,
-					uint8_t maxcount,
-					spinlock_t *pmem_spinlock)
-{
-	struct msm_pmem_region *region;
-	struct msm_pmem_region *regptr;
-	struct hlist_node *node, *n;
-	uint8_t rc = 0;
-	unsigned long flags = 0;
-	regptr = reg;
-	spin_lock_irqsave(pmem_spinlock, flags);
-	hlist_for_each_entry_safe(region, node, n, ptype, list) {
-		CDBG("%s:info.type=%d, pmem_type = %d,"
-						"info.active = %d\n",
-		__func__, region->info.type, pmem_type, region->info.active);
-
-		if (region->info.type == pmem_type && region->info.active) {
-			CDBG("%s:info.type=%d, pmem_type = %d,"
-							"info.active = %d,\n",
-				__func__, region->info.type, pmem_type,
-				region->info.active);
-			*regptr = *region;
-			region->info.type = MSM_PMEM_VIDEO;
-			rc += 1;
-			if (rc >= maxcount)
-				break;
-			regptr++;
-		}
-	}
-	spin_unlock_irqrestore(pmem_spinlock, flags);
-	return rc;
-}
-
-static int msm_pmem_frame_ptov_lookup(struct msm_sync *sync,
-		unsigned long p0addr,
-		unsigned long p1addr,
-		unsigned long p2addr,
-		struct msm_pmem_info *pmem_info,
-		int clear_active)
-{
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	spin_lock_irqsave(&sync->pmem_frame_spinlock, flags);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_frames, list) {
-		if (p0addr == (region->paddr + region->info.planar0_off) &&
-			p1addr == (region->paddr + region->info.planar1_off) &&
-			p2addr == (region->paddr + region->info.planar2_off) &&
-			region->info.active) {
-			/* offset since we could pass vaddr inside
-			 * a registerd pmem buffer
-			 */
-			memcpy(pmem_info, &region->info, sizeof(*pmem_info));
-			if (clear_active)
-				region->info.active = 0;
-			spin_unlock_irqrestore(&sync->pmem_frame_spinlock,
-				flags);
-			return 0;
-		}
-	}
-	/* After lookup failure, dump all the list entries... */
-	pr_err("%s, for plane0 addr = 0x%lx, plane1 addr = 0x%lx  plane2 addr = 0x%lx\n",
-			__func__, p0addr, p1addr, p2addr);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_frames, list) {
-		pr_err("listed p0addr 0x%lx, p1addr 0x%lx, p2addr 0x%lx, active = %d",
-				(region->paddr + region->info.planar0_off),
-				(region->paddr + region->info.planar1_off),
-				(region->paddr + region->info.planar2_off),
-				region->info.active);
-	}
-
-	spin_unlock_irqrestore(&sync->pmem_frame_spinlock, flags);
-	return -EINVAL;
-}
-
-static int msm_pmem_frame_ptov_lookup2(struct msm_sync *sync,
-		unsigned long p0_phy,
-		struct msm_pmem_info *pmem_info,
-		int clear_active)
-{
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	spin_lock_irqsave(&sync->pmem_frame_spinlock, flags);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_frames, list) {
-		if (p0_phy == (region->paddr + region->info.planar0_off) &&
-				region->info.active) {
-			/* offset since we could pass vaddr inside
-			 * a registerd pmem buffer
-			 */
-			memcpy(pmem_info, &region->info, sizeof(*pmem_info));
-			if (clear_active)
-				region->info.active = 0;
-			spin_unlock_irqrestore(&sync->pmem_frame_spinlock,
-				flags);
-			return 0;
-		}
-	}
-
-	spin_unlock_irqrestore(&sync->pmem_frame_spinlock, flags);
-	return -EINVAL;
-}
-
-static unsigned long msm_pmem_stats_ptov_lookup(struct msm_sync *sync,
-		unsigned long addr, int *fd)
-{
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	spin_lock_irqsave(&sync->pmem_stats_spinlock, flags);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_stats, list) {
-		if (addr == region->paddr && region->info.active) {
-			/* offset since we could pass vaddr inside a
-			 * registered pmem buffer */
-			*fd = region->info.fd;
-			region->info.active = 0;
-			spin_unlock_irqrestore(&sync->pmem_stats_spinlock,
-				flags);
-			return (unsigned long)(region->info.vaddr);
-		}
-	}
-	/* After lookup failure, dump all the list entries... */
-	pr_err("%s, lookup failure, for paddr 0x%lx\n",
-			__func__, addr);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_stats, list) {
-		pr_err("listed paddr 0x%lx, active = %d",
-				region->paddr,
-				region->info.active);
-	}
-	spin_unlock_irqrestore(&sync->pmem_stats_spinlock, flags);
-
-	return 0;
-}
-
-static unsigned long msm_pmem_frame_vtop_lookup(struct msm_sync *sync,
-		unsigned long buffer, uint32_t p0_off, uint32_t p1_off,
-		uint32_t p2_off, int fd, int change_flag)
-{
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	spin_lock_irqsave(&sync->pmem_frame_spinlock, flags);
-	hlist_for_each_entry_safe(region,
-		node, n, &sync->pmem_frames, list) {
-		if (((unsigned long)(region->info.vaddr) == buffer) &&
-				(region->info.planar0_off == p0_off) &&
-				(region->info.planar1_off == p1_off) &&
-				(region->info.planar2_off == p2_off) &&
-				(region->info.fd == fd) &&
-				(region->info.active == 0)) {
-			if (change_flag)
-				region->info.active = 1;
-			spin_unlock_irqrestore(&sync->pmem_frame_spinlock,
-				flags);
-			return region->paddr;
-		}
-	}
-	/* After lookup failure, dump all the list entries... */
-	pr_err("%s, failed for vaddr 0x%lx, p0_off %d p1_off %d\n",
-			__func__, buffer, p0_off, p1_off);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_frames, list) {
-		pr_err("%s, listed vaddr 0x%lx, r_p0 = 0x%x p0_off 0x%x"
-			"r_p1 = 0x%x, p1_off 0x%x, r_p2 = 0x%x, p2_off = 0x%x"
-			" active = %d\n", __func__, buffer,
-			region->info.planar0_off,
-			p0_off, region->info.planar1_off,
-			p1_off, region->info.planar2_off, p2_off,
-			region->info.active);
-	}
-
-	spin_unlock_irqrestore(&sync->pmem_frame_spinlock, flags);
-
-	return 0;
-}
-
-static unsigned long msm_pmem_stats_vtop_lookup(
-		struct msm_sync *sync,
-		unsigned long buffer,
-		int fd)
-{
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	spin_lock_irqsave(&sync->pmem_stats_spinlock, flags);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_stats, list) {
-		if (((unsigned long)(region->info.vaddr) == buffer) &&
-				(region->info.fd == fd) &&
-				region->info.active == 0) {
-			region->info.active = 1;
-			spin_unlock_irqrestore(&sync->pmem_stats_spinlock,
-				flags);
-			return region->paddr;
-		}
-	}
-	/* After lookup failure, dump all the list entries... */
-	pr_err("%s,look up error for vaddr %ld\n",
-			__func__, buffer);
-	hlist_for_each_entry_safe(region, node, n, &sync->pmem_stats, list) {
-		pr_err("listed vaddr 0x%p, active = %d",
-				region->info.vaddr,
-				region->info.active);
-	}
-	spin_unlock_irqrestore(&sync->pmem_stats_spinlock, flags);
-
-	return 0;
-}
-
-static int __msm_pmem_table_del(struct msm_sync *sync,
-		struct msm_pmem_info *pinfo)
-{
-	int rc = 0;
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-	unsigned long flags = 0;
-
-	switch (pinfo->type) {
-	case MSM_PMEM_PREVIEW:
-	case MSM_PMEM_THUMBNAIL:
-	case MSM_PMEM_MAINIMG:
-	case MSM_PMEM_RAW_MAINIMG:
-	case MSM_PMEM_C2D:
-	case MSM_PMEM_MAINIMG_VPE:
-	case MSM_PMEM_THUMBNAIL_VPE:
-		spin_lock_irqsave(&sync->pmem_frame_spinlock, flags);
-		hlist_for_each_entry_safe(region, node, n,
-			&sync->pmem_frames, list) {
-
-			if (pinfo->type == region->info.type &&
-					pinfo->vaddr == region->info.vaddr &&
-					pinfo->fd == region->info.fd) {
-				hlist_del(node);
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-				ion_free(client_for_ion, region->handle);
-#else
-				put_pmem_file(region->file);
-#endif
-				kfree(region);
-				CDBG("%s: type %d, vaddr  0x%p\n",
-					__func__, pinfo->type, pinfo->vaddr);
-			}
-		}
-		spin_unlock_irqrestore(&sync->pmem_frame_spinlock, flags);
-		break;
-
-	case MSM_PMEM_VIDEO:
-	case MSM_PMEM_VIDEO_VPE:
-		spin_lock_irqsave(&sync->pmem_frame_spinlock, flags);
-		hlist_for_each_entry_safe(region, node, n,
-			&sync->pmem_frames, list) {
-
-			if (((region->info.type == MSM_PMEM_VIDEO) ||
-				(region->info.type == MSM_PMEM_VIDEO_VPE)) &&
-				pinfo->vaddr == region->info.vaddr &&
-				pinfo->fd == region->info.fd) {
-				hlist_del(node);
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-				ion_free(client_for_ion, region->handle);
-#else
-				put_pmem_file(region->file);
-#endif
-				kfree(region);
-				CDBG("%s: type %d, vaddr  0x%p\n",
-					__func__, pinfo->type, pinfo->vaddr);
-			}
-		}
-		spin_unlock_irqrestore(&sync->pmem_frame_spinlock, flags);
-		break;
-
-	case MSM_PMEM_AEC_AWB:
-	case MSM_PMEM_AF:
-		spin_lock_irqsave(&sync->pmem_stats_spinlock, flags);
-		hlist_for_each_entry_safe(region, node, n,
-			&sync->pmem_stats, list) {
-
-			if (pinfo->type == region->info.type &&
-					pinfo->vaddr == region->info.vaddr &&
-					pinfo->fd == region->info.fd) {
-				hlist_del(node);
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-				ion_free(client_for_ion, region->handle);
-#else
-				put_pmem_file(region->file);
-#endif
-				kfree(region);
-				CDBG("%s: type %d, vaddr  0x%p\n",
-					__func__, pinfo->type, pinfo->vaddr);
-			}
-		}
-		spin_unlock_irqrestore(&sync->pmem_stats_spinlock, flags);
-		break;
-
-	default:
-		rc = -EINVAL;
-		break;
-	}
-
-	return rc;
-}
-
-static int msm_pmem_table_del(struct msm_sync *sync, void __user *arg)
-{
-	struct msm_pmem_info info;
-
-	if (copy_from_user(&info, arg, sizeof(info))) {
-		ERR_COPY_FROM_USER();
-		return -EFAULT;
-	}
-
-	return __msm_pmem_table_del(sync, &info);
 }
 
 static int __msm_get_frame(struct msm_sync *sync,
@@ -730,7 +255,6 @@ static int __msm_get_frame(struct msm_sync *sync,
 {
 	int rc = 0;
 
-	struct msm_pmem_info pmem_info;
 	struct msm_queue_cmd *qcmd = NULL;
 	struct msm_vfe_resp *vdata;
 	struct msm_vfe_phy_info *pphy;
@@ -742,47 +266,6 @@ static int __msm_get_frame(struct msm_sync *sync,
 		return -EAGAIN;
 	}
 
-	if ((!qcmd->command) && (qcmd->error_code & MSM_CAMERA_ERR_MASK)) {
-		frame->error_code = qcmd->error_code;
-		pr_err("%s: fake frame with camera error code = %d\n",
-			__func__, frame->error_code);
-		goto err;
-	}
-
-	vdata = (struct msm_vfe_resp *)(qcmd->command);
-	pphy = &vdata->phy;
-	CDBG("%s, pphy->p2_phy = 0x%x\n", __func__, pphy->p2_phy);
-
-	rc = msm_pmem_frame_ptov_lookup(sync,
-			pphy->p0_phy,
-			pphy->p1_phy,
-			pphy->p2_phy,
-			&pmem_info,
-			1); /* Clear the active flag */
-
-	if (rc < 0) {
-		pr_err("%s: cannot get frame, invalid lookup address"
-		"plane0 add %x plane1 add %x plane2 add%x\n",
-		__func__,
-		pphy->p0_phy,
-		pphy->p1_phy,
-		pphy->p2_phy);
-		goto err;
-	}
-
-	frame->ts = qcmd->ts;
-	frame->buffer = (unsigned long)pmem_info.vaddr;
-	frame->planar0_off = pmem_info.planar0_off;
-	frame->planar1_off = pmem_info.planar1_off;
-	frame->planar2_off = pmem_info.planar2_off;
-	frame->fd = pmem_info.fd;
-	frame->path = vdata->phy.output_id;
-	frame->frame_id = vdata->phy.frame_id;
-	CDBG("%s: plane0 %x, plane1 %x, plane2 %x,qcmd %x, virt_addr %x\n",
-		__func__, pphy->p0_phy, pphy->p1_phy, pphy->p2_phy,
-		(int) qcmd, (int) frame->buffer);
-
-err:
 	free_qcmd(qcmd);
 	return rc;
 }
@@ -1079,40 +562,6 @@ static int msm_divert_frame(struct msm_sync *sync,
 		struct msm_vfe_resp *data,
 		struct msm_stats_event_ctrl *se)
 {
-	struct msm_pmem_info pinfo;
-	struct msm_postproc buf;
-	int rc;
-
-	CDBG("%s: Frame PP sync->pp_mask %d\n", __func__, sync->pp_mask);
-
-	if (!(sync->pp_mask & PP_PREV)  && !(sync->pp_mask & PP_SNAP)) {
-		pr_err("%s: diverting frame, not in PP_PREV or PP_SNAP!\n",
-			__func__);
-		return -EINVAL;
-	}
-
-	rc = msm_pmem_frame_ptov_lookup(sync, data->phy.p0_phy,
-			data->phy.p1_phy, data->phy.p2_phy, &pinfo,
-			0); /* do not clear the active flag */
-
-	if (rc < 0) {
-		pr_err("%s: msm_pmem_frame_ptov_lookup failed\n", __func__);
-		return rc;
-	}
-
-	memset(&(buf.fmain), 0, sizeof(struct msm_frame));
-	buf.fmain.buffer = (unsigned long)pinfo.vaddr;
-	buf.fmain.planar0_off = pinfo.planar0_off;
-	buf.fmain.planar1_off = pinfo.planar1_off;
-	buf.fmain.fd = pinfo.fd;
-
-	CDBG("%s: buf 0x%x fd %d\n", __func__, (unsigned int)buf.fmain.buffer,
-		 buf.fmain.fd);
-	if (copy_to_user((void *)(se->stats_event.data),
-			&(buf.fmain), sizeof(struct msm_frame))) {
-		ERR_COPY_TO_USER();
-		return -EFAULT;
-	}
 	return 0;
 }
 
@@ -1122,7 +571,6 @@ static int msm_divert_frame(struct msm_sync *sync,
 static int msm_divert_st_frame(struct msm_sync *sync,
 	struct msm_vfe_resp *data, struct msm_stats_event_ctrl *se, int path)
 {
-	struct msm_pmem_info pinfo;
 	struct msm_st_frame buf;
 	struct video_crop_t *crop = NULL;
 	int rc = 0;
@@ -1132,20 +580,6 @@ static int msm_divert_st_frame(struct msm_sync *sync,
 	} else if (se->stats_event.msg_id == OUTPUT_TYPE_ST_R) {
 		buf.type = OUTPUT_TYPE_ST_R;
 	} else {
-		if (se->resptype == MSM_CAM_RESP_STEREO_OP_1) {
-			rc = msm_pmem_frame_ptov_lookup(sync, data->phy.p0_phy,
-				data->phy.p1_phy, data->phy.p2_phy, &pinfo,
-				1);  /* do clear the active flag */
-			buf.buf_info.path = path;
-		} else if (se->resptype == MSM_CAM_RESP_STEREO_OP_2) {
-			rc = msm_pmem_frame_ptov_lookup(sync, data->phy.p0_phy,
-				data->phy.p1_phy, data->phy.p2_phy, &pinfo,
-				0); /* do not clear the active flag */
-			buf.buf_info.path = path;
-		} else
-			CDBG("%s: Invalid resptype = %d\n", __func__,
-				se->resptype);
-
 		if (rc < 0) {
 			CDBG("%s: msm_pmem_frame_ptov_lookup failed\n",
 				__func__);
@@ -1195,13 +629,6 @@ static int msm_divert_st_frame(struct msm_sync *sync,
 			buf.packing = sync->sctrl.s_snap_packing;
 		else
 			buf.packing = sync->sctrl.s_video_packing;
-
-		buf.buf_info.buffer = (unsigned long)pinfo.vaddr;
-		buf.buf_info.phy_offset = pinfo.offset;
-		buf.buf_info.planar0_off = pinfo.planar0_off;
-		buf.buf_info.planar1_off = pinfo.planar1_off;
-		buf.buf_info.planar2_off = pinfo.planar2_off;
-		buf.buf_info.fd = pinfo.fd;
 
 		CDBG("%s: buf 0x%x fd %d\n", __func__,
 			(unsigned int)buf.buf_info.buffer, buf.buf_info.fd);
@@ -2138,104 +1565,10 @@ static int msm_put_pic_buffer(struct msm_sync *sync, void __user *arg)
 	return __msm_put_pic_buf(sync, &buf_t);
 }
 
-static int __msm_register_pmem(struct msm_sync *sync,
-		struct msm_pmem_info *pinfo)
-{
-	int rc = 0;
-
-	switch (pinfo->type) {
-	case MSM_PMEM_VIDEO:
-	case MSM_PMEM_PREVIEW:
-	case MSM_PMEM_THUMBNAIL:
-	case MSM_PMEM_MAINIMG:
-	case MSM_PMEM_RAW_MAINIMG:
-	case MSM_PMEM_VIDEO_VPE:
-	case MSM_PMEM_C2D:
-	case MSM_PMEM_MAINIMG_VPE:
-	case MSM_PMEM_THUMBNAIL_VPE:
-		rc = msm_pmem_table_add(&sync->pmem_frames, pinfo,
-			&sync->pmem_frame_spinlock, sync);
-		break;
-
-	case MSM_PMEM_AEC_AWB:
-	case MSM_PMEM_AF:
-	case MSM_PMEM_AEC:
-	case MSM_PMEM_AWB:
-	case MSM_PMEM_RS:
-	case MSM_PMEM_CS:
-	case MSM_PMEM_IHIST:
-	case MSM_PMEM_SKIN:
-
-		rc = msm_pmem_table_add(&sync->pmem_stats, pinfo,
-			 &sync->pmem_stats_spinlock, sync);
-		break;
-
-	default:
-		rc = -EINVAL;
-		break;
-	}
-
-	return rc;
-}
-
-static int msm_register_pmem(struct msm_sync *sync, void __user *arg)
-{
-	struct msm_pmem_info info;
-
-	if (copy_from_user(&info, arg, sizeof(info))) {
-		ERR_COPY_FROM_USER();
-		return -EFAULT;
-	}
-
-	return __msm_register_pmem(sync, &info);
-}
-
 static int msm_stats_axi_cfg(struct msm_sync *sync,
 		struct msm_vfe_cfg_cmd *cfgcmd)
 {
-	int rc = -EIO;
-	struct axidata axi_data;
-	void *data = &axi_data;
-
-	struct msm_pmem_region region[3];
-	int pmem_type = MSM_PMEM_MAX;
-
-	memset(&axi_data, 0, sizeof(axi_data));
-
-	switch (cfgcmd->cmd_type) {
-	case CMD_STATS_AXI_CFG:
-		pmem_type = MSM_PMEM_AEC_AWB;
-		break;
-	case CMD_STATS_AF_AXI_CFG:
-		pmem_type = MSM_PMEM_AF;
-		break;
-	case CMD_GENERAL:
-		data = NULL;
-		break;
-	default:
-		pr_err("%s: unknown command type %d\n",
-			__func__, cfgcmd->cmd_type);
-		return -EINVAL;
-	}
-
-	if (cfgcmd->cmd_type != CMD_GENERAL) {
-		axi_data.bufnum1 =
-			msm_pmem_region_lookup(&sync->pmem_stats, pmem_type,
-				&region[0], NUM_STAT_OUTPUT_BUFFERS,
-				&sync->pmem_stats_spinlock);
-		if (!axi_data.bufnum1) {
-			pr_err("%s %d: pmem region lookup error\n",
-				__func__, __LINE__);
-			return -EINVAL;
-		}
-	axi_data.region = &region[0];
-	}
-
-	/* send the AEC/AWB STATS configuration command to driver */
-	if (sync->vfefn.vfe_config)
-		rc = sync->vfefn.vfe_config(cfgcmd, &axi_data);
-
-	return rc;
+	return -EINVAL;
 }
 
 static int msm_put_stats_buffer(struct msm_sync *sync, void __user *arg)
@@ -2358,10 +1691,6 @@ static int __msm_get_pic(struct msm_sync *sync,
 		vdata = (struct msm_vfe_resp *)(qcmd->command);
 		pphy = &vdata->phy;
 
-		rc = msm_pmem_frame_ptov_lookup2(sync,
-				pphy->p0_phy,
-				&pmem_info,
-				1); /* mark pic frame in use */
 
 		if (rc < 0) {
 			pr_err("%s: cannot get pic frame, invalid lookup"
@@ -2370,17 +1699,7 @@ static int __msm_get_pic(struct msm_sync *sync,
 			goto err;
 		}
 
-		frame->ts = qcmd->ts;
-		frame->buffer = (unsigned long)pmem_info.vaddr;
-		frame->planar0_off = pmem_info.planar0_off;
-		frame->planar1_off = pmem_info.planar1_off;
-		frame->fd = pmem_info.fd;
-		if (sync->stereocam_enabled &&
-			sync->stereo_state != STEREO_RAW_SNAP_STARTED) {
-			if (pmem_info.type == MSM_PMEM_THUMBNAIL_VPE)
-				frame->path = OUTPUT_TYPE_T;
-			else
-				frame->path = OUTPUT_TYPE_S;
+		frame->path = OUTPUT_TYPE_S;
 		} else
 			frame->path = vdata->phy.output_id;
 
@@ -3077,8 +2396,6 @@ static int __msm_release(struct msm_sync *sync)
 			hlist_del(hnode);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 				ion_free(client_for_ion, region->handle);
-#else
-			put_pmem_file(region->file);
 #endif
 			kfree(region);
 		}
