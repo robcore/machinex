@@ -914,7 +914,7 @@ static int xc2028_signal(struct dvb_frontend *fe, u16 *strength)
 		goto ret;
 
 	/* Use both frq_lock and signal to generate the result */
-	signal = signal || ((signal & 0x07) << 12);
+	signal = signal | ((signal & 0x07) << 12);
 
 ret:
 	mutex_unlock(&priv->lock);
