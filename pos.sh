@@ -1,3 +1,11 @@
 #!/bin/bash
-patch -p1 -R < "/root/machinex/patches/0034-i-tried-a-thing-but-it-was-too-much-effort.patch"
-patch -p1 -R < "/root/machinex/patches/0033-im-gonna-do-a-whole-thing.patch"
+patch -p1 -R < "/root/machinex/patches/0010-this-was-pointless.patch"
+patch -p1 -R < "/root/machinex/patches/0009-this-will-fail-instantly.patch"
+patch -p1 -R < "/root/machinex/patches/0008-WHY-THE-FUCK-WOULD-YOU-DO-ALL-THE-TEARDOWN-WORK-FOR-.patch"
+patch -p1 -R < "/root/machinex/patches/0007-IS_ERR_OR_NULL.patch"
+patch -p1 -R < "/root/machinex/patches/0006-a-little-more-hackin.patch"
+patch -p1 -R < "/root/machinex/patches/0005-tried-my-best-to-smarten-it-up-without-breaking-it.patch"
+patch -p1 -R < "/root/machinex/patches/0004-REVERT-ehci-changes-did-some-review-will-try-somethi.patch"
+patch -p1 -R < "/root/machinex/patches/0003-there.patch"
+patch -p1 -R < "/root/machinex/patches/0002-gonna-regret-this.patch"
+patch -p1 -R < "/root/machinex/patches/0001-possed.patch"

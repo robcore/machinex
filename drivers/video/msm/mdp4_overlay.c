@@ -30,6 +30,7 @@
 #include <linux/fb.h>
 #include <linux/msm_mdp.h>
 #include <linux/file.h>
+#include <linux/android_pmem.h>
 #include <linux/major.h>
 #include <asm/system.h>
 #include <asm/mach-types.h>
@@ -3629,6 +3630,9 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 {
 	struct fd f;
 	int ret = 0, fb_num;
+#ifdef CONFIG_ANDROID_PMEM
+	unsigned long vstart;
+#endif
 
 	if (img->flags & MDP_BLIT_SRC_GEM) {
 		*srcp_file = NULL;
@@ -3660,6 +3664,13 @@ static int get_img(struct msmfb_data *img, struct fb_info *info,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	return mdp4_overlay_iommu_map_buf(img->memory_id, pipe, plane,
 		start, len, srcp_ihdl);
+#endif
+#ifdef CONFIG_ANDROID_PMEM
+	if (!get_pmem_file(img->memory_id, start, &vstart,
+					    len, srcp_file))
+		return 0;
+	else
+		return -EINVAL;
 #endif
 }
 

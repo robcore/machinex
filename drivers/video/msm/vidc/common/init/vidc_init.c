@@ -24,6 +24,7 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
+#include <linux/android_pmem.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/debugfs.h>
@@ -58,7 +59,7 @@ struct workqueue_struct *vidc_timer_wq;
 static irqreturn_t vidc_isr(int irq, void *dev);
 static spinlock_t vidc_spin_lock;
 
-u32 vidc_msg_timing, vidc_msg_register;
+u32 vidc_msg_timing, vidc_msg_pmem, vidc_msg_register;
 
 #ifdef VIDC_ENABLE_DBGFS
 struct dentry *vidc_debugfs_root;
@@ -304,6 +305,8 @@ static int __init vidc_init(void)
 	if (root) {
 		vidc_debugfs_file_create(root, "vidc_msg_timing",
 				(u32 *) &vidc_msg_timing);
+		vidc_debugfs_file_create(root, "vidc_msg_pmem",
+				(u32 *) &vidc_msg_pmem);
 		vidc_debugfs_file_create(root, "vidc_msg_register",
 				(u32 *) &vidc_msg_register);
 	}
@@ -368,7 +371,7 @@ void vidc_release_firmware(void)
 EXPORT_SYMBOL(vidc_release_firmware);
 
 u32 vidc_get_fd_info(struct video_client_ctx *client_ctx,
-		enum buffer_dir buffer,
+		enum buffer_dir buffer, int pmem_fd,
 		unsigned long kvaddr, int index,
 		struct ion_handle **buff_handle)
 {
@@ -380,6 +383,13 @@ u32 vidc_get_fd_info(struct video_client_ctx *client_ctx,
 		buf_addr_table = client_ctx->input_buf_addr_table;
 	else
 		buf_addr_table = client_ctx->output_buf_addr_table;
+	if (buf_addr_table[index].pmem_fd == pmem_fd) {
+		if (buf_addr_table[index].kernel_vaddr == kvaddr) {
+			rc = buf_addr_table[index].buff_ion_flag;
+			*buff_handle = buf_addr_table[index].buff_ion_handle;
+		} else
+			*buff_handle = NULL;
+	} else
 		*buff_handle = NULL;
 	return rc;
 }
@@ -531,7 +541,7 @@ u32 vidc_lookup_addr_table(struct video_client_ctx *client_ctx,
 	u32 search_with_user_vaddr,
 	unsigned long *user_vaddr,
 	unsigned long *kernel_vaddr,
-	unsigned long *phy_addr,
+	unsigned long *phy_addr, int *pmem_fd,
 	struct file **file, s32 *buffer_index)
 {
 	u32 num_of_buffers;
@@ -577,19 +587,20 @@ u32 vidc_lookup_addr_table(struct video_client_ctx *client_ctx,
 
 	if (found) {
 		*phy_addr = buf_addr_table[i].dev_addr;
+		*pmem_fd = buf_addr_table[i].pmem_fd;
 		*file = buf_addr_table[i].file;
 		*buffer_index = i;
 
 		if (search_with_user_vaddr)
 			DBG("kernel_vaddr = 0x%08lx, phy_addr = 0x%08lx "
-			" struct *file	= %p "
+			" pmem_fd = %d, struct *file	= %p "
 			"buffer_index = %d\n", *kernel_vaddr,
-			*phy_addr, *file, *buffer_index);
+			*phy_addr, *pmem_fd, *file, *buffer_index);
 		else
 			DBG("user_vaddr = 0x%08lx, phy_addr = 0x%08lx "
-			" struct *file	= %p "
+			" pmem_fd = %d, struct *file	= %p "
 			"buffer_index = %d\n", *user_vaddr, *phy_addr,
-			*file, *buffer_index);
+			*pmem_fd, *file, *buffer_index);
 		mutex_unlock(&client_ctx->enrty_queue_lock);
 		return true;
 	} else {
@@ -608,7 +619,7 @@ EXPORT_SYMBOL(vidc_lookup_addr_table);
 
 u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 	enum buffer_dir buffer, unsigned long user_vaddr,
-	unsigned long *kernel_vaddr,
+	unsigned long *kernel_vaddr, int pmem_fd,
 	unsigned long buffer_addr_offset, unsigned int max_num_buffers,
 	unsigned long length)
 {
@@ -677,6 +688,12 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 		goto bail_out_add;
 	} else {
 		if (!vcd_get_ion_status()) {
+			if (get_pmem_file(pmem_fd, &phys_addr,
+					kernel_vaddr, &len, &file)) {
+				ERR("%s(): get_pmem_file failed\n", __func__);
+				goto bail_out_add;
+			}
+			put_pmem_file(file);
 			flags = (buffer == BUFFER_TYPE_INPUT)
 			? MSM_SUBSYSTEM_MAP_IOVA :
 			MSM_SUBSYSTEM_MAP_IOVA|MSM_SUBSYSTEM_ALIGN_IOVA_8K;
@@ -693,7 +710,7 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 				mapped_buffer->iova[0];
 		} else {
 			buff_ion_handle = ion_import_dma_buf(
-				client_ctx->user_ion_client, 0);
+				client_ctx->user_ion_client, pmem_fd);
 			if (IS_ERR_OR_NULL(buff_ion_handle)) {
 				ERR("%s(): get_ION_handle failed\n",
 				 __func__);
@@ -748,6 +765,7 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 		(*kernel_vaddr) += buffer_addr_offset;
 		buf_addr_table[*num_of_buffers].user_vaddr = user_vaddr;
 		buf_addr_table[*num_of_buffers].kernel_vaddr = *kernel_vaddr;
+		buf_addr_table[*num_of_buffers].pmem_fd = pmem_fd;
 		buf_addr_table[*num_of_buffers].file = file;
 		buf_addr_table[*num_of_buffers].buff_len = length;
 		buf_addr_table[*num_of_buffers].phy_addr = phys_addr;
@@ -826,6 +844,7 @@ u32 vidc_insert_addr_table_kernel(struct video_client_ctx *client_ctx,
 		buf_addr_table[*num_of_buffers].dev_addr = phys_addr;
 		buf_addr_table[*num_of_buffers].user_vaddr = user_vaddr;
 		buf_addr_table[*num_of_buffers].kernel_vaddr = kernel_vaddr;
+		buf_addr_table[*num_of_buffers].pmem_fd = -1;
 		buf_addr_table[*num_of_buffers].file = NULL;
 		buf_addr_table[*num_of_buffers].buff_len = length;
 		buf_addr_table[*num_of_buffers].phy_addr = phys_addr;
@@ -906,6 +925,8 @@ u32 vidc_delete_addr_table(struct video_client_ctx *client_ctx,
 			buf_addr_table[*num_of_buffers - 1].kernel_vaddr;
 		buf_addr_table[i].phy_addr =
 			buf_addr_table[*num_of_buffers - 1].phy_addr;
+		buf_addr_table[i].pmem_fd =
+			buf_addr_table[*num_of_buffers - 1].pmem_fd;
 		buf_addr_table[i].file =
 			buf_addr_table[*num_of_buffers - 1].file;
 		buf_addr_table[i].buff_len =

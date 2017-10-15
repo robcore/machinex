@@ -27,6 +27,7 @@
 #include <linux/wait.h>
 #include <linux/mm.h>
 #include <linux/clk.h>
+#include <linux/android_pmem.h>
 #include <mach/board.h>
 
 static DEFINE_SPINLOCK(hw3d_lock);

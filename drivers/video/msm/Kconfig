@@ -156,7 +156,7 @@ config FB_MSM_LVDS
 	default n
 
 config FB_MSM_OVERLAY
-	depends on FB_MSM_MDP40
+	depends on FB_MSM_MDP40 && ANDROID_PMEM
 	bool "MDP4 overlay support"
 	default n
 

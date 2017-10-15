@@ -17,6 +17,7 @@
 #include <linux/clk.h>
 #include <mach/clk.h>
 #include <linux/io.h>
+#include <linux/android_pmem.h>
 #include <mach/camera.h>
 #include <mach/iommu_domains.h>
 
@@ -36,6 +37,8 @@ void msm_jpeg_platform_p2v(struct file  *file,
 	ion_unmap_iommu(jpeg_client, *ionhandle, domain_num, 0);
 	ion_free(jpeg_client, *ionhandle);
 	*ionhandle = NULL;
+#elif CONFIG_ANDROID_PMEM
+	put_pmem_file(file);
 #endif
 }
 
@@ -54,12 +57,18 @@ uint32_t msm_jpeg_platform_v2p(int fd, uint32_t len, struct file **file_p,
 			 SZ_4K, 0, &paddr, (unsigned long *)&size, UNCACHED, 0);
 	JPEG_DBG("%s:%d] addr 0x%x size %ld", __func__, __LINE__,
 							(uint32_t)paddr, size);
+
+#elif CONFIG_ANDROID_PMEM
+	unsigned long kvstart;
+	rc = get_pmem_file(fd, &paddr, &kvstart, &size, file_p);
 #else
 	rc = 0;
 	paddr = 0;
 	size = 0;
 #endif
 	if (rc < 0) {
+		JPEG_PR_ERR("%s: get_pmem_file fd %d error %d\n", __func__, fd,
+			rc);
 		goto error1;
 	}
 

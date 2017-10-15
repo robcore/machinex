@@ -25,6 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
+#include <linux/android_pmem.h>
 #include <linux/clk.h>
 #include <mach/msm_subsystem_map.h>
 #include <media/msm/vidc_type.h>
@@ -1629,6 +1630,7 @@ u32 vid_enc_set_buffer(struct video_client_ctx *client_ctx,
 	if (!vidc_insert_addr_table(client_ctx, dir_buffer,
 					(unsigned long)buffer_info->pbuffer,
 					&kernel_vaddr,
+					buffer_info->fd,
 					(unsigned long)buffer_info->offset,
 					VID_ENC_MAX_NUM_OF_BUFF, length)) {
 		DBG("%s() : user_virt_addr = %p cannot be set.",
