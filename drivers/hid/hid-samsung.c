@@ -135,8 +135,8 @@ static int samsung_kbd_input_mapping(struct hid_device *hdev,
 	struct hid_input *hi, struct hid_field *field, struct hid_usage *usage,
 	unsigned long **bit, int *max)
 {
-	if (!(HID_UP_CONSUMER == (usage->hid & HID_USAGE_PAGE) ||
-			HID_UP_KEYBOARD == (usage->hid & HID_USAGE_PAGE)))
+	if (HID_UP_CONSUMER != (usage->hid & HID_USAGE_PAGE) ||
+			HID_UP_KEYBOARD != (usage->hid & HID_USAGE_PAGE))
 		return 0;
 
 	dbg_hid("samsung wireless keyboard input mapping event [0x%x]\n",
