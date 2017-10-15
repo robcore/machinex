@@ -303,7 +303,7 @@ struct msm_cam_media_controller {
 	struct wake_lock wake_lock; /*avoid low power mode when active*/
 	struct pm_qos_request pm_qos_req_list;
 	struct msm_mctl_pp_info pp_info;
-
+	struct msm_mctl_stats_t stats_info; /*stats pmem info*/
 	uint32_t vfe_output_mode; /* VFE output mode */
 	struct ion_client *client;
 	struct kref refcount;
@@ -639,6 +639,24 @@ int msm_mctl_reserve_free_buf(struct msm_cam_media_controller *pmctl,
 int msm_mctl_release_free_buf(struct msm_cam_media_controller *pmctl,
 	struct msm_cam_v4l2_dev_inst *pcam_inst,
 	struct msm_free_buf *free_buf);
+/*Memory(PMEM) functions*/
+int msm_register_pmem(struct hlist_head *ptype, void __user *arg,
+	struct ion_client *client, int domain_num);
+int msm_pmem_table_del(struct hlist_head *ptype, void __user *arg,
+	struct ion_client *client, int domain_num);
+int msm_pmem_region_get_phy_addr(struct hlist_head *ptype,
+	struct msm_mem_map_info *mem_map, int32_t *phyaddr);
+uint8_t msm_pmem_region_lookup(struct hlist_head *ptype,
+	int pmem_type, struct msm_pmem_region *reg, uint8_t maxcount);
+uint8_t msm_pmem_region_lookup_2(struct hlist_head *ptype,
+	int pmem_type, struct msm_pmem_region *reg,
+	uint8_t maxcount);
+unsigned long msm_pmem_stats_vtop_lookup(
+	struct msm_cam_media_controller *mctl,
+	unsigned long buffer, int fd);
+unsigned long msm_pmem_stats_ptov_lookup(
+	struct msm_cam_media_controller *mctl,
+	unsigned long addr, int *fd);
 
 int msm_vfe_subdev_init(struct v4l2_subdev *sd);
 void msm_vfe_subdev_release(struct v4l2_subdev *sd);

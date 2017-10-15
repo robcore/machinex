@@ -16,6 +16,7 @@
 #include "vcd_ddl_core.h"
 #include "vcd_ddl.h"
 
+extern u32 vidc_msg_pmem;
 extern u32 vidc_msg_timing;
 
 enum timing_data {
@@ -32,6 +33,12 @@ enum timing_data {
 
 #define DDL_MALLOC(x)  kmalloc(x, GFP_KERNEL)
 #define DDL_FREE(x)   { if ((x)) kfree((x)); (x) = NULL; }
+
+#define DBG_PMEM(x...) \
+do { \
+	if (vidc_msg_pmem) \
+		printk(KERN_DEBUG x); \
+} while (0)
 
 void ddl_set_core_start_time(const char *func_name, u32 index);
 

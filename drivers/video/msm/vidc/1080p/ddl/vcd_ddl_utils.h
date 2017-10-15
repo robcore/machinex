@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <media/msm/vidc_type.h>
 
+extern u32 vidc_msg_pmem;
 extern u32 vidc_msg_timing;
 
 enum timing_data {
@@ -26,6 +27,12 @@ enum timing_data {
 	ENC_SLICE_OP_TIME,
 	MAX_TIME_DATA
 };
+
+#define DBG_PMEM(x...) \
+do { \
+	if (vidc_msg_pmem) \
+		printk(KERN_DEBUG x); \
+} while (0)
 
 #ifdef DDL_MSG_LOG
 #define DDL_MSG_LOW(x...)    printk(KERN_INFO x)

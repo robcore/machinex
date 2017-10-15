@@ -1060,6 +1060,13 @@ static int msm_addr_remap(struct msm_cam_v4l2_dev_inst *pcam_inst,
 		return -EFAULT;
 	}
 
+	rc = msm_pmem_region_get_phy_addr(&mctl->stats_info.pmem_stats_list,
+			&pcam_inst->mem_map,
+			&phyaddr);
+	if (rc) {
+		pr_err("%s: cannot map vaddr", __func__);
+		return -EFAULT;
+	}
 	size = vma->vm_end - vma->vm_start;
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 	retval = remap_pfn_range(vma, vma->vm_start,

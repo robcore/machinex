@@ -50,6 +50,7 @@ void *ddl_pmem_alloc(struct ddl_buf_addr *addr, size_t sz, u32 alignment)
 	ion_phys_addr_t phyaddr = 0;
 	size_t len = 0;
 	int rc = 0;
+	DBG_PMEM("\n%s() IN: Requested alloc size(%u)", __func__, (u32)sz);
 	if (!addr) {
 		DDL_MSG_ERROR("\n%s() Invalid Parameters", __func__);
 		goto bail_out;

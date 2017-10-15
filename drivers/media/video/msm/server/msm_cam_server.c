@@ -2820,6 +2820,9 @@ static int msm_open_config(struct inode *inode, struct file *fp)
 		return -ENODEV;
 	}
 
+	INIT_HLIST_HEAD(&config_cam->p_mctl->stats_info.pmem_stats_list);
+	spin_lock_init(&config_cam->p_mctl->stats_info.pmem_stats_spinlock);
+
 	config_cam->p_mctl->config_device = config_cam;
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	kref_get(&config_cam->p_mctl->refcount);
@@ -2932,6 +2935,19 @@ static long msm_ioctl_config(struct file *fp, unsigned int cmd,
 
 	switch (cmd) {
 	/* memory management shall be handeld here*/
+	case MSM_CAM_IOCTL_REGISTER_PMEM:
+		return msm_register_pmem(
+			&config_cam->p_mctl->stats_info.pmem_stats_list,
+			(void __user *)arg, config_cam->p_mctl->client,
+			config_cam->p_mctl->domain_num);
+		break;
+
+	case MSM_CAM_IOCTL_UNREGISTER_PMEM:
+		return msm_pmem_table_del(
+			&config_cam->p_mctl->stats_info.pmem_stats_list,
+			(void __user *)arg, config_cam->p_mctl->client,
+			config_cam->p_mctl->domain_num);
+		break;
 
 	case VIDIOC_SUBSCRIBE_EVENT:
 		if (copy_from_user(&temp_sub,
