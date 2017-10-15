@@ -2555,7 +2555,7 @@ static int pm8xxx_enable_time(struct regulator_dev *rdev)
 	return vreg->pdata.enable_time;
 }
 
-static const char const *pm8xxx_print_actions[] = {
+static const char *pm8xxx_print_actions[] = {
 	[PM8XXX_REGULATOR_ACTION_INIT]		= "initial    ",
 	[PM8XXX_REGULATOR_ACTION_ENABLE]	= "enable     ",
 	[PM8XXX_REGULATOR_ACTION_DISABLE]	= "disable    ",
