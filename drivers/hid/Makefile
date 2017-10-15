@@ -1,6 +1,7 @@
 #
 # Makefile for the HID driver
 #
+EXTRA_CFLAGS += -Wno-switch-unreachable
 hid-y			:= hid-core.o hid-input.o
 
 ifdef CONFIG_DEBUG_FS
