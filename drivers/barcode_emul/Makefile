@@ -1,6 +1,7 @@
 #
 # makefile for Barcode Emulator
 #
+EXTRA_CFLAGS += -Wno-pointer-compare 
 ifdef CONFIG_SEC_PRODUCT_8930
 ifdef CONFIG_SEC_FPGA_442
 obj-$(CONFIG_SEC_FPGA_442)	+= barcode_emul_ice4_8930_442.o
