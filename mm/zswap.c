@@ -1287,7 +1287,6 @@ static int __init init_zswap(void)
 	}
 
 	ret = cpuhp_setup_state(CPUHP_MM_ZSWP_MEM_PREPARE, "mm/zswap:prepare",
-				      "mm/zswap_pool:prepare",
 				      zswap_cpu_prepare,
 				      zswap_cpu_dead);
 	if (ret)
