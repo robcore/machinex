@@ -746,7 +746,12 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 
 	reserve_info->fixed_area_size = fixed_area_size;
 	reserve_info->fixed_area_start = APQ8064_FW_START;
-
+	ret = memblock_reserve(reserve_info->fixed_area_start,
+		reserve_info->fixed_area_size);
+	BUG_ON(ret);
+	ret = memblock_free(reserve_info->fixed_area_start,
+		reserve_info->fixed_area_size);
+			BUG_ON(ret);
 	ret = memblock_remove(reserve_info->fixed_area_start,
 		reserve_info->fixed_area_size);
 	BUG_ON(ret);
@@ -879,6 +884,12 @@ static void __init reserve_ion_memory(void)
 		BUG_ON(!IS_ALIGNED(fixed_low_start, cma_alignment));
 	} else {
 		BUG_ON(!IS_ALIGNED(fixed_low_size + HOLE_SIZE, SECTION_SIZE));
+		ret = memblock_reserve(fixed_low_start,
+				      fixed_low_size + HOLE_SIZE);
+		BUG_ON(ret);
+		ret = memblock_free(fixed_low_start,
+				      fixed_low_size + HOLE_SIZE);
+		BUG_ON(ret);
 		ret = memblock_remove(fixed_low_start,
 				      fixed_low_size + HOLE_SIZE);
 		BUG_ON(ret);
@@ -890,6 +901,10 @@ static void __init reserve_ion_memory(void)
 		BUG_ON(!IS_ALIGNED(fixed_middle_size, cma_alignment));
 	} else {
 		BUG_ON(!IS_ALIGNED(fixed_middle_size, SECTION_SIZE));
+		ret = memblock_reserve(fixed_middle_start, fixed_middle_size);
+		BUG_ON(ret);
+		ret = memblock_free(fixed_middle_start, fixed_middle_size);
+		BUG_ON(ret);
 		ret = memblock_remove(fixed_middle_start, fixed_middle_size);
 		BUG_ON(ret);
 	}
@@ -901,6 +916,10 @@ static void __init reserve_ion_memory(void)
 	} else {
 		/* This is the end of the fixed area so it's okay to round up */
 		fixed_high_size = ALIGN(fixed_high_size, SECTION_SIZE);
+		ret = memblock_reserve(fixed_high_start, fixed_high_size);
+		BUG_ON(ret);
+		ret = memblock_free(fixed_high_start, fixed_high_size);
+		BUG_ON(ret);
 		ret = memblock_remove(fixed_high_start, fixed_high_size);
 		BUG_ON(ret);
 	}
