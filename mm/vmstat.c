@@ -1362,61 +1362,52 @@ static void __init init_cpu_node_state(void)
 		node_set_state(cpu_to_node(cpu), N_CPU);
 }
 
-/*
- * Use the cpu notifier to insure that the thresholds are recalculated
- * when necessary.
- */
-static int vmstat_cpuup_callback(struct notifier_block *nfb,
-		unsigned long action,
-		void *hcpu)
+static int vmstat_cpu_online(unsigned int cpu)
 {
-	long cpu = (long)hcpu;
-
-	switch (action) {
-	case CPU_ONLINE:
-	case CPU_ONLINE_FROZEN:
-		refresh_zone_stat_thresholds();
-		start_cpu_timer(cpu);
-		node_set_state(cpu_to_node(cpu), N_CPU);
-		break;
-	case CPU_DOWN_PREPARE:
-	case CPU_DOWN_PREPARE_FROZEN:
-		cancel_delayed_work_sync(&per_cpu(vmstat_work, cpu));
-		per_cpu(vmstat_work, cpu).work.func = NULL;
-		break;
-	case CPU_DOWN_FAILED:
-	case CPU_DOWN_FAILED_FROZEN:
-		start_cpu_timer(cpu);
-		break;
-	case CPU_DEAD:
-	case CPU_DEAD_FROZEN:
-		refresh_zone_stat_thresholds();
-		break;
-	default:
-		break;
-	}
-	return NOTIFY_OK;
+	refresh_zone_stat_thresholds();
+	start_cpu_timer(cpu);
+	node_set_state(cpu_to_node(cpu), N_CPU);
+	return 0;
 }
 
-static struct notifier_block vmstat_notifier =
-	{ &vmstat_cpuup_callback, NULL, 0 };
+static int vmstat_cpu_down_prep(unsigned int cpu)
+{
+	cancel_delayed_work_sync(&per_cpu(vmstat_work, cpu));
+	per_cpu(vmstat_work, cpu).work.func = NULL;
+	return 0;
+}
+
+static int vmstat_cpu_dead(unsigned int cpu)
+{
+	refresh_zone_stat_thresholds();
+	return 0;
+}
 #endif
 
 static int __init setup_vmstat(void)
 {
 #ifdef CONFIG_SMP
-	int cpu;
-
-	cpu_notifier_register_begin();
-	__register_cpu_notifier(&vmstat_notifier);
-	init_cpu_node_state();
-
-	for_each_online_cpu(cpu)
-		start_cpu_timer(cpu);
-	cpu_notifier_register_done();
+	int cpu, ret;
 
 	vmstat_wq = alloc_workqueue("vmstat", WQ_MEM_RECLAIM, 0);
 
+	ret = cpuhp_setup_state_nocalls(CPUHP_MM_VMSTAT_DEAD, "mm/vmstat:dead",
+					NULL, vmstat_cpu_dead);
+	if (ret < 0)
+		pr_err("vmstat: failed to register 'dead' hotplug state\n");
+
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "mm/vmstat:online",
+					vmstat_cpu_online,
+					vmstat_cpu_down_prep);
+	if (ret < 0)
+		pr_err("vmstat: failed to register 'online' hotplug state\n");
+
+	get_online_cpus();
+	init_cpu_node_state();
+	put_online_cpus();
+
+	for_each_possible_cpu(cpu)
+		start_cpu_timer(cpu);
 #endif
 #ifdef CONFIG_PROC_FS
 	proc_create("buddyinfo", S_IRUGO, NULL, &fragmentation_file_operations);
