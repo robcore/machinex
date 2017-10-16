@@ -55,7 +55,7 @@ struct flow_flush_info {
 struct flow_cache {
 	u32				hash_shift;
 	struct flow_cache_percpu __percpu *percpu;
-	struct notifier_block		hotcpu_notifier;
+	struct hlist_node		node;
 	int				low_watermark;
 	int				high_watermark;
 	struct timer_list		rnd_timer;
@@ -423,27 +423,21 @@ static int flow_cache_cpu_prepare(struct flow_cache *fc, int cpu)
 	return 0;
 }
 
-static int flow_cache_cpu(struct notifier_block *nfb,
-			  unsigned long action,
-			  void *hcpu)
+static int flow_cache_cpu_up_prep(unsigned int cpu, struct hlist_node *node)
+
 {
-	struct flow_cache *fc = container_of(nfb, struct flow_cache, hotcpu_notifier);
-	int res, cpu = (unsigned long) hcpu;
+	struct flow_cache *fc = hlist_entry_safe(node, struct flow_cache, node);
+
+	return flow_cache_cpu_prepare(fc, cpu);
+}
+
+static int flow_cache_cpu_dead(unsigned int cpu, struct hlist_node *node)
+{
+	struct flow_cache *fc = hlist_entry_safe(node, struct flow_cache, node);
 	struct flow_cache_percpu *fcp = per_cpu_ptr(fc->percpu, cpu);
 
-	switch (action) {
-	case CPU_UP_PREPARE:
-	case CPU_UP_PREPARE_FROZEN:
-		res = flow_cache_cpu_prepare(fc, cpu);
-		if (res)
-			return notifier_from_errno(res);
-		break;
-	case CPU_DEAD:
-	case CPU_DEAD_FROZEN:
-		__flow_cache_shrink(fc, fcp, 0);
-		break;
-	}
-	return NOTIFY_OK;
+	__flow_cache_shrink(fc, fcp, 0);
+	return 0;
 }
 
 static int __init flow_cache_init(struct flow_cache *fc)
@@ -458,18 +452,8 @@ static int __init flow_cache_init(struct flow_cache *fc)
 	if (!fc->percpu)
 		return -ENOMEM;
 
-	cpu_notifier_register_begin();
-
-	for_each_online_cpu(i) {
-		if (flow_cache_cpu_prepare(fc, i))
-			goto err;
-	}
-	fc->hotcpu_notifier = (struct notifier_block){
-		.notifier_call = flow_cache_cpu,
-	};
-	__register_hotcpu_notifier(&fc->hotcpu_notifier);
-
-	cpu_notifier_register_done();
+	if (cpuhp_state_add_instance(CPUHP_NET_FLOW_PREPARE, &fc->node))
+		goto err;
 
 	setup_timer(&fc->rnd_timer, flow_cache_new_hashrnd,
 		    (unsigned long) fc);
@@ -479,18 +463,30 @@ static int __init flow_cache_init(struct flow_cache *fc)
 	return 0;
 
 err:
+	cpuhp_state_remove_instance_nocalls(CPUHP_NET_FLOW_PREPARE, &fc->node);
+
 	for_each_possible_cpu(i) {
 		struct flow_cache_percpu *fcp = per_cpu_ptr(fc->percpu, i);
 		kfree(fcp->hash_table);
 		fcp->hash_table = NULL;
 	}
 
-	cpu_notifier_register_done();
 
 	free_percpu(fc->percpu);
 	fc->percpu = NULL;
 
 	return -ENOMEM;
+}
+
+void __init flow_cache_hp_init(void)
+{
+	int ret;
+
+	ret = cpuhp_setup_state_multi(CPUHP_NET_FLOW_PREPARE,
+				      "net/flow:prepare",
+				      flow_cache_cpu_up_prep,
+				      flow_cache_cpu_dead);
+	WARN_ON(ret < 0);
 }
 
 static int __init flow_cache_init_global(void)

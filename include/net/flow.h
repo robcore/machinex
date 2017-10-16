@@ -228,5 +228,6 @@ extern struct flow_cache_object *flow_cache_lookup(
 extern void flow_cache_flush(void);
 extern void flow_cache_flush_deferred(void);
 extern atomic_t flow_cache_genid;
+void flow_cache_hp_init(void);
 
 #endif

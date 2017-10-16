@@ -2693,6 +2693,7 @@ static struct pernet_operations __net_initdata xfrm_net_ops = {
 
 void __init xfrm_init(void)
 {
+	flow_cache_hp_init();
 	register_pernet_subsys(&xfrm_net_ops);
 	xfrm_input_init();
 }
