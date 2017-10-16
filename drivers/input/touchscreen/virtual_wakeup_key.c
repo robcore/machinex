@@ -184,5 +184,5 @@ static void __exit virtual_wakeup_key_exit(void)
 	return;
 }
 
-module_init(virtual_wakeup_key_init);
+late_initcall(virtual_wakeup_key_init);
 module_exit(virtual_wakeup_key_exit);
