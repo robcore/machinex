@@ -427,6 +427,7 @@ static int zswap_cpu_dead(unsigned int cpu)
 	dst = per_cpu(zswap_dstmem, cpu);
 	kfree(dst);
 	per_cpu(zswap_dstmem, cpu) = NULL;
+	return 0;
 }
 
 /*********************************
