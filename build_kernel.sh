@@ -152,6 +152,13 @@ else
 		rm devtmp
 	fi
 fi
+if [ -e adbtmp ]; then
+	rm adbtmp
+fi
+
+if [ -e devtmp ]; then
+	rm devtmp
+fi
 }
 
 function NORMAL()
