@@ -81,13 +81,8 @@ lib/radix-tree.c
 mm/memcontrol.c
 mm/page_alloc.c
 mm/vmscan.c
-mm/vmstat.c
 mm/zcache.c
-mm/zsmalloc.c
-mm/zswap.c
 mm/zswapp.c
-net/core/dev.c
-net/core/flow.c
 net/iucv/iucv.c
 patches-all/allpatches.txt
 tools/testing/radix-tree/linux/cpu.h
