@@ -146,5 +146,6 @@ extern unsigned int dbs_sampling_down_factor[NR_CPUS];
 extern unsigned int dbs_ignore_nice_load[NR_CPUS];
 extern unsigned int dbs_down_threshold[NR_CPUS];
 extern unsigned int dbs_freq_step[NR_CPUS];
+extern unsigned int su_rate_limit_us[NR_CPUS];
 
 #endif

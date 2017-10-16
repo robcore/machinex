@@ -74,12 +74,20 @@ static unsigned int generic_powersave_bias_target(struct cpufreq_policy *policy,
 		dbs_info->freq_lo_delay_us = 0;
 		return freq_lo;
 	}
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+	delay_hi_us = (freq_avg - freq_lo) * dbs_cpu_sampling_rate[policy->cpu];
+#else
 	delay_hi_us = (freq_avg - freq_lo) * dbs_data->sampling_rate;
+#endif
 	delay_hi_us += (freq_hi - freq_lo) / 2;
 	delay_hi_us /= freq_hi - freq_lo;
 	dbs_info->freq_hi_delay_us = delay_hi_us;
 	dbs_info->freq_lo = freq_lo;
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+	dbs_info->freq_lo_delay_us = dbs_cpu_sampling_rate[policy->cpu] - delay_hi_us;
+#else
 	dbs_info->freq_lo_delay_us = dbs_data->sampling_rate - delay_hi_us;
+#endif
 	return freq_hi;
 }
 
@@ -122,10 +130,18 @@ static void od_update(struct cpufreq_policy *policy)
 	dbs_info->freq_lo = 0;
 
 	/* Check for frequency increase */
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+	if (load > dbs_up_threshold[policy->cpu]) {
+#else
 	if (load > dbs_data->up_threshold) {
+#endif
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+			policy_dbs->rate_mult = dbs_sampling_down_factor[policy->cpu];
+#else
 			policy_dbs->rate_mult = dbs_data->sampling_down_factor;
+#endif
 		dbs_freq_increase(policy, policy->max);
 	} else {
 		/* Calculate the next frequency proportional to load */
@@ -174,7 +190,11 @@ static unsigned int od_dbs_update(struct cpufreq_policy *policy)
 		return dbs_info->freq_hi_delay_us;
 	}
 
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+	return dbs_cpu_sampling_rate[policy->cpu] * policy_dbs->rate_mult;
+#else
 	return dbs_data->sampling_rate * policy_dbs->rate_mult;
+#endif
 }
 
 /************************** sysfs interface ************************/
@@ -322,16 +342,19 @@ static int od_init(struct dbs_data *dbs_data)
 
 	cpu = get_cpu();
 	idle_time = get_cpu_idle_time_us(cpu, NULL);
-	put_cpu();
+
 	if (idle_time != -1ULL) {
 		/* Idle micro accounting is supported. Use finer thresholds */
-		dbs_data->up_threshold = MICRO_FREQUENCY_UP_THRESHOLD;
+		dbs_data->up_threshold = dbs_micro_up_threshold[cpu];
 	} else {
-		dbs_data->up_threshold = DEF_FREQUENCY_UP_THRESHOLD;
+		dbs_data->up_threshold = dbs_up_threshold[cpu];
 	}
 
-	dbs_data->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
-	dbs_data->ignore_nice_load = 0;
+
+	dbs_data->sampling_down_factor = dbs_sampling_down_factor[cpu];
+	dbs_data->ignore_nice_load = dbs_ignore_nice_load[cpu];
+	put_cpu();
+
 	tuners->powersave_bias = default_powersave_bias;
 
 	dbs_data->tuners = tuners;

@@ -15,6 +15,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <trace/events/power.h>
+#include "../../drivers/cpufreq/cpufreq_machinex_gov_attr.h"
 
 #include "sched.h"
 
@@ -604,7 +605,8 @@ static int sugov_start(struct cpufreq_policy *policy)
 	struct sugov_policy *sg_policy = policy->governor_data;
 	unsigned int cpu;
 
-	sg_policy->freq_update_delay_ns = sg_policy->tunables->rate_limit_us * NSEC_PER_USEC;
+//	sg_policy->freq_update_delay_ns = sg_policy->tunables->rate_limit_us * NSEC_PER_USEC;
+	sg_policy->freq_update_delay_ns = su_rate_limit_us[policy->cpu] * NSEC_PER_USEC;
 	sg_policy->last_freq_update_time = 0;
 	sg_policy->next_freq = UINT_MAX;
 	sg_policy->work_in_progress = false;

@@ -122,7 +122,11 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 	 * so as to keep the wake-up-from-idle detection logic a bit
 	 * conservative.
 	 */
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+	sampling_rate = dbs_cpu_sampling_rate[policy->cpu] * policy_dbs->rate_mult;
+#else
 	sampling_rate = dbs_data->sampling_rate * policy_dbs->rate_mult;
+#endif
 	/*
 	 * For the purpose of ondemand, waiting for disk IO is an indication
 	 * that you're performance critical, and not that the system is actually
@@ -483,8 +487,14 @@ int cpufreq_dbs_governor_start(struct cpufreq_policy *policy)
 	policy_dbs->is_shared = policy_is_shared(policy);
 	policy_dbs->rate_mult = 1;
 
+#ifdef CONFIG_CPU_FREQ_MX_ATTR_SET
+	sampling_rate = dbs_cpu_sampling_rate[policy->cpu];
+	ignore_nice = dbs_ignore_nice_load[policy->cpu];
+#else
 	sampling_rate = dbs_data->sampling_rate;
 	ignore_nice = dbs_data->ignore_nice_load;
+#endif
+
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);

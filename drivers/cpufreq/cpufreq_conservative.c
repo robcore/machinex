@@ -40,10 +40,10 @@ struct cs_dbs_tuners {
 static inline unsigned int get_freq_step(struct cs_dbs_tuners *cs_tuners,
 					 struct cpufreq_policy *policy)
 {
-	unsigned int freq_step = (cs_tuners->freq_step * policy->max) / 100;
-
+//	unsigned int freq_step = (cs_tuners->freq_step * policy->max) / 100;
+	unsigned int freq_step = (dbs_freq_step[policy->cpu] * policy->max) / 100;
 	/* max freq cannot be less than 100. But who knows... */
-	if (unlikely(freq_step == 0))
+	if (unlikely(freq_step < 1))
 		freq_step = DEF_FREQUENCY_STEP;
 
 	return freq_step;
@@ -72,7 +72,8 @@ static unsigned int cs_dbs_update(struct cpufreq_policy *policy)
 	 * break out if we 'cannot' reduce the speed as the user might
 	 * want freq_step to be zero
 	 */
-	if (cs_tuners->freq_step == 0)
+//	if (cs_tuners->freq_step == 0)
+	if (unlikely(dbs_freq_step[policy->cpu] < 1))
 		goto out;
 
 	/*
@@ -101,7 +102,8 @@ static unsigned int cs_dbs_update(struct cpufreq_policy *policy)
 	}
 
 	/* Check for frequency increase */
-	if (load > dbs_data->up_threshold) {
+	if (load > dbs_up_threshold[policy->cpu]) {
+//	if (load > dbs_data->up_threshold) {
 		dbs_info->down_skip = 0;
 
 		/* if we are already at full speed then break out early */
@@ -122,8 +124,9 @@ static unsigned int cs_dbs_update(struct cpufreq_policy *policy)
 		goto out;
 	dbs_info->down_skip = 0;
 
-	/* Check for frequency decrease */
-	if (load < cs_tuners->down_threshold) {
+	/* Check for frequency decrease
+	if (load < cs_tuners->down_threshold) { */
+	if (load < dbs_down_threshold[policy->cpu]) {
 		/*
 		 * if we cannot reduce the frequency anymore, break out early
 		 */
@@ -140,7 +143,8 @@ static unsigned int cs_dbs_update(struct cpufreq_policy *policy)
 	}
 
  out:
-	return dbs_data->sampling_rate;
+	return dbs_cpu_sampling_rate[policy->cpu];
+//	return dbs_data->sampling_rate;
 }
 
 /************************** sysfs interface ************************/
@@ -284,16 +288,18 @@ static void cs_free(struct policy_dbs_info *policy_dbs)
 static int cs_init(struct dbs_data *dbs_data)
 {
 	struct cs_dbs_tuners *tuners;
+	unsigned int cpu;
 
 	tuners = kzalloc(sizeof(*tuners), GFP_KERNEL);
 	if (!tuners)
 		return -ENOMEM;
-
-	tuners->down_threshold = DEF_FREQUENCY_DOWN_THRESHOLD;
-	tuners->freq_step = DEF_FREQUENCY_STEP;
-	dbs_data->up_threshold = DEF_FREQUENCY_UP_THRESHOLD;
-	dbs_data->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
-	dbs_data->ignore_nice_load = 0;
+	cpu = get_cpu();
+	tuners->down_threshold = dbs_down_threshold[cpu];
+	tuners->freq_step = dbs_freq_step[cpu];
+	dbs_data->up_threshold = dbs_up_threshold[cpu];
+	dbs_data->sampling_down_factor = dbs_sampling_down_factor[cpu];
+	dbs_data->ignore_nice_load = dbs_ignore_nice_load[cpu];
+	put_cpu();
 	dbs_data->tuners = tuners;
 
 	return 0;
