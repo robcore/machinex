@@ -23,7 +23,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
-//#include "cpufreq_machinex_gov_attr.h"
+#include "cpufreq_machinex_gov_attr.h"
 
 /* Ondemand Sampling types */
 enum {OD_NORMAL_SAMPLE, OD_SUB_SAMPLE};

@@ -27,61 +27,124 @@
  * are built by a crazy person (me).
  */
 
-/* Machinex OnDemand Tunables */
-extern unsigned int od_cpu0_sampling_rate;
-extern unsigned int od_cpu0_up_threshold;
-extern unsigned int od_cpu0_micro_up_threshold;
-extern unsigned int od_cpu0_sampling_down_factor;
-extern unsigned int od_cpu0_ignore_nice_load;
+#define show_one_cpu0(object)				\
+static ssize_t show_cpu0_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object[0]);			\
+}
 
-extern unsigned int od_cpu1_sampling_rate;
-extern unsigned int od_cpu1_up_threshold;
-extern unsigned int od_cpu1_micro_up_threshold;
-extern unsigned int od_cpu1_sampling_down_factor;
-extern unsigned int od_cpu1_ignore_nice_load;
+#define show_one_cpu1(object)				\
+static ssize_t show_cpu1_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object[1]);			\
+}
 
-extern unsigned int od_cpu2_sampling_rate;
-extern unsigned int od_cpu2_up_threshold;
-extern unsigned int od_cpu2_micro_up_threshold;
-extern unsigned int od_cpu2_sampling_down_factor;
-extern unsigned int od_cpu2_ignore_nice_load;
+#define show_one_cpu2(object)				\
+static ssize_t show_cpu2_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object[2]);			\
+}
 
-extern unsigned int od_cpu3_sampling_rate;
-extern unsigned int od_cpu3_up_threshold;
-extern unsigned int od_cpu3_micro_up_threshold;
-extern unsigned int od_cpu3_sampling_down_factor;
-extern unsigned int od_cpu3_ignore_nice_load;
+#define show_one_cpu3(object)				\
+static ssize_t show_cpu3_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object[3]);			\
+}
 
-extern unsigned int get_ondemand_sampling_rate(unsigned int cpu);
+#define store_one_cpu0_clamp(name, min, max)		\
+static ssize_t store_cpu0_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[0])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[0] = input;				\
+	return count;				\
+}
 
-/* Machinex Conservative Tunables */
-extern unsigned int cs_cpu0_down_threshold;
-extern unsigned int cs_cpu0_up_threshold;
-extern unsigned int cs_cpu0_freq_step;
-extern unsigned int cs_cpu0_sampling_down_factor;
-extern unsigned int cs_cpu0_ignore_nice_load;
+#define store_one_cpu1_clamp(name, min, max)		\
+static ssize_t store_cpu1_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[1])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[1] = input;				\
+	return count;				\
+}
 
-extern unsigned int cs_cpu1_down_threshold;
-extern unsigned int cs_cpu1_up_threshold;
-extern unsigned int cs_cpu1_freq_step;
-extern unsigned int cs_cpu1_sampling_down_factor;
-extern unsigned int cs_cpu1_ignore_nice_load;
+#define store_one_cpu2_clamp(name, min, max)		\
+static ssize_t store_cpu2_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[2])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[2] = input;				\
+	return count;				\
+}
 
-extern unsigned int cs_cpu2_down_threshold;
-extern unsigned int cs_cpu2_up_threshold;
-extern unsigned int cs_cpu2_freq_step;
-extern unsigned int cs_cpu2_sampling_down_factor;
-extern unsigned int cs_cpu2_ignore_nice_load;
+#define store_one_cpu3_clamp(name, min, max)		\
+static ssize_t store_cpu3_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[3])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[3] = input;				\
+	return count;				\
+}
 
-extern unsigned int cs_cpu3_down_threshold;
-extern unsigned int cs_cpu3_up_threshold;
-extern unsigned int cs_cpu3_freq_step;
-extern unsigned int cs_cpu3_sampling_down_factor;
-extern unsigned int cs_cpu3_ignore_nice_load;
+extern unsigned int dbs_cpu_sampling_rate[NR_CPUS];
+extern unsigned int dbs_up_threshold[NR_CPUS];
+extern unsigned int dbs_micro_up_threshold[NR_CPUS];
+extern unsigned int dbs_sampling_down_factor[NR_CPUS];
+extern unsigned int dbs_ignore_nice_load[NR_CPUS];
+extern unsigned int dbs_down_threshold[NR_CPUS];
+extern unsigned int dbs_freq_step[NR_CPUS];
 
-/* Machinex SchedUtil tunable */
-extern unsigned int su_cpu0_rate_limit_us;
-extern unsigned int su_cpu1_rate_limit_us;
-extern unsigned int su_cpu2_rate_limit_us;
-extern unsigned int su_cpu3_rate_limit_us;
 #endif

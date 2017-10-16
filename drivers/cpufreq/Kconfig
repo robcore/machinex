@@ -32,6 +32,11 @@ config CPU_FREQ_BOOST_SW
 	bool
 	depends on THERMAL
 
+config CPU_FREQ_MX_ATTR_SET
+	bool "A wacky yet novel idea"
+	help
+	This is ridiculous.
+
 config SCHED_FREQ_INPUT
 	bool "Scheduler inputs to cpufreq governor"
 	help
