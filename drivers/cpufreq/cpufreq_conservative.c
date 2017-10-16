@@ -293,13 +293,12 @@ static int cs_init(struct dbs_data *dbs_data)
 	tuners = kzalloc(sizeof(*tuners), GFP_KERNEL);
 	if (!tuners)
 		return -ENOMEM;
-	cpu = get_cpu();
+	cpu = smp_processor_id();
 	tuners->down_threshold = dbs_down_threshold[cpu];
 	tuners->freq_step = dbs_freq_step[cpu];
 	dbs_data->up_threshold = dbs_up_threshold[cpu];
 	dbs_data->sampling_down_factor = dbs_sampling_down_factor[cpu];
 	dbs_data->ignore_nice_load = dbs_ignore_nice_load[cpu];
-	put_cpu();
 	dbs_data->tuners = tuners;
 
 	return 0;
