@@ -2612,6 +2612,7 @@ EXPORT_SYMBOL(unregister_console);
 
 static int __init printk_late_init(void)
 {
+	int ret;
 	struct console *con;
 
 	for_each_console(con) {
