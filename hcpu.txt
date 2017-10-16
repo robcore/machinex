@@ -79,11 +79,4 @@ kernel/trace/ring_buffer.c
 lib/cpu-notifier-error-inject.c
 lib/radix-tree.c
 mm/memcontrol.c
-mm/page_alloc.c
-mm/vmscan.c
-mm/zcache.c
-mm/zswapp.c
-net/iucv/iucv.c
-patches-all/allpatches.txt
-tools/testing/radix-tree/linux/cpu.h
-virt/kvm/kvm_main.c
+
