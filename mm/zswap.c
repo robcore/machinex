@@ -392,73 +392,41 @@ static struct zswap_entry *zswap_entry_find_get(struct rb_root *root,
 **********************************/
 static DEFINE_PER_CPU(u8 *, zswap_dstmem);
 
-static int __zswap_cpu_notifier(unsigned long action, unsigned long cpu)
+static int zswap_cpu_prepare(unsigned int cpu)
 {
 	struct crypto_comp *tfm;
 	u8 *dst;
 
-	switch (action) {
-	case CPU_UP_PREPARE:
-		tfm = crypto_alloc_comp(zswap_compressor, 0, 0);
-		if (IS_ERR(tfm)) {
-			pr_err("can't allocate compressor transform\n");
-			return NOTIFY_BAD;
-		}
-		*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = tfm;
-		dst = kmalloc_node(PAGE_SIZE * 2, GFP_KERNEL, cpu_to_node(cpu));
-		if (!dst) {
-			pr_err("can't allocate compressor buffer\n");
-			crypto_free_comp(tfm);
-			*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = NULL;
-			return NOTIFY_BAD;
-		}
-		per_cpu(zswap_dstmem, cpu) = dst;
-		break;
-	case CPU_DEAD:
-	case CPU_UP_CANCELED:
-		tfm = *per_cpu_ptr(zswap_comp_pcpu_tfms, cpu);
-		if (tfm) {
-			crypto_free_comp(tfm);
-			*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = NULL;
-		}
-		dst = per_cpu(zswap_dstmem, cpu);
-		kfree(dst);
-		per_cpu(zswap_dstmem, cpu) = NULL;
-		break;
-	default:
-		break;
+	tfm = crypto_alloc_comp(zswap_compressor, 0, 0);
+	if (IS_ERR(tfm)) {
+		pr_err("can't allocate compressor transform\n");
+		return NOTIFY_BAD;
 	}
-	return NOTIFY_OK;
-}
-
-static int zswap_cpu_notifier(struct notifier_block *nb,
-				unsigned long action, void *pcpu)
-{
-	unsigned long cpu = (unsigned long)pcpu;
-	return __zswap_cpu_notifier(action, cpu);
-}
-
-static struct notifier_block zswap_cpu_notifier_block = {
-	.notifier_call = zswap_cpu_notifier
-};
-
-static int __init zswap_cpu_init(void)
-{
-	unsigned long cpu;
-
-	cpu_notifier_register_begin();
-	for_each_online_cpu(cpu)
-		if (__zswap_cpu_notifier(CPU_UP_PREPARE, cpu) != NOTIFY_OK)
-			goto cleanup;
-	__register_cpu_notifier(&zswap_cpu_notifier_block);
-	cpu_notifier_register_done();
+	*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = tfm;
+	dst = kmalloc_node(PAGE_SIZE * 2, GFP_KERNEL, cpu_to_node(cpu));
+	if (!dst) {
+		pr_err("can't allocate compressor buffer\n");
+		crypto_free_comp(tfm);
+		*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = NULL;
+		return -ENOMEM;
+	}
+	per_cpu(zswap_dstmem, cpu) = dst;
 	return 0;
+}
 
-cleanup:
-	for_each_online_cpu(cpu)
-		__zswap_cpu_notifier(CPU_UP_CANCELED, cpu);
-	cpu_notifier_register_done();
-	return -ENOMEM;
+static int zswap_cpu_dead(unsigned int cpu)
+{
+	struct crypto_comp *tfm;
+	u8 *dst;
+
+	tfm = *per_cpu_ptr(zswap_comp_pcpu_tfms, cpu);
+	if (tfm) {
+		crypto_free_comp(tfm);
+		*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = NULL;
+	}
+	dst = per_cpu(zswap_dstmem, cpu);
+	kfree(dst);
+	per_cpu(zswap_dstmem, cpu) = NULL;
 }
 
 /*********************************
@@ -1315,10 +1283,13 @@ static int __init init_zswap(void)
 		pr_err("compressor initialization failed\n");
 		goto compfail;
 	}
-	if (zswap_cpu_init()) {
-		pr_err("per-cpu initialization failed\n");
-		goto pcpufail;
-	}
+
+	ret = cpuhp_setup_state_multi(CPUHP_MM_ZSWP_POOL_PREPARE,
+				      "mm/zswap_pool:prepare",
+				      zswap_cpu_prepare,
+				      zswap_cpu_dead);
+	if (ret)
+		goto hp_fail;
 
 	frontswap_register_ops(&zswap_frontswap_ops);
 	if (zswap_debugfs_init())
@@ -1326,6 +1297,8 @@ static int __init init_zswap(void)
 
 	show_mem_notifier_register(&zswap_size_nb);
 	return 0;
+hp_fail:
+	cpuhp_remove_state(CPUHP_MM_ZSWP_MEM_PREPARE);
 pcpufail:
 	zswap_comp_exit();
 compfail:
