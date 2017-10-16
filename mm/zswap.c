@@ -1253,6 +1253,7 @@ static struct notifier_block zswap_size_nb = {
 **********************************/
 static int __init init_zswap(void)
 {
+	int ret;
 	gfp_t gfp = __GFP_NORETRY | __GFP_NOWARN | __GFP_HIGHMEM;
 
 	if (!zswap_enabled)
