@@ -76,7 +76,4 @@ kernel/cpu_hardplug.c
 kernel/printk/printk.c
 kernel/profile.c
 kernel/trace/ring_buffer.c
-lib/cpu-notifier-error-inject.c
-lib/radix-tree.c
-mm/memcontrol.c
 

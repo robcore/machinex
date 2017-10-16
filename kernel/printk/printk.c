@@ -2083,36 +2083,30 @@ static DECLARE_WORK(console_cpu_notify_work, console_flush);
 
 /**
  * console_cpu_notify - print deferred console messages after CPU hotplug
- * @self: notifier struct
- * @action: CPU hotplug event
- * @hcpu: unused
+ * @cpu: unused
  *
  * If printk() is called from a CPU that is not online yet, the messages
- * will be spooled but will not show up on the console.  This function is
- * called when a new CPU comes online (or fails to come up), and ensures
- * that any such output gets printed.
- *
- * Special handling must be done for cases invoked from an atomic context,
- * as we can't be taking the console semaphore here.
+ * will be printed on the console only if there are CON_ANYTIME consoles.
+ * This function is called when a new CPU comes online (or fails to come
+ * up) or goes offline.
  */
-static int console_cpu_notify(struct notifier_block *self,
-	unsigned long action, void *hcpu)
+
+static int console_cpu_online(unsigned int cpu)
 {
-	switch (action) {
-	case CPU_DEAD:
-	case CPU_DOWN_FAILED:
-	case CPU_UP_CANCELED:
-		console_lock();
-		console_unlock();
-		break;
-	case CPU_ONLINE:
-		/* invoked with preemption disabled, so defer */
-		if (!console_trylock())
-			schedule_work(&console_cpu_notify_work);
-		else
+	if (!cpuhp_tasks_frozen) {
+		/* If trylock fails, someone else is doing the printing */
+		if (console_trylock())
 			console_unlock();
+		else
+			schedule_work(&console_cpu_notify_work);	
 	}
-	return NOTIFY_OK;
+	return 0;
+}
+static int console_cpu_dead(unsigned int cpu)
+{
+	console_lock();
+	console_unlock();
+	return 0;
 }
 
 /**
@@ -2625,7 +2619,12 @@ static int __init printk_late_init(void)
 			unregister_console(con);
 		}
 	}
-	hotcpu_notifier(console_cpu_notify, 0);
+	ret = cpuhp_setup_state_nocalls(CPUHP_PRINTK_DEAD, "printk:dead", NULL,
+					console_cpu_dead);
+	WARN_ON(ret < 0);
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "printk:online",
+					console_cpu_online, NULL);
+	WARN_ON(ret < 0);
 	return 0;
 }
 late_initcall(printk_late_init);
