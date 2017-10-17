@@ -161,6 +161,9 @@ static void hotplug_work_fn(struct work_struct *work)
 	HOTPLUG_STATUS hotplug_onoff[NR_CPUS] = {IDLE, IDLE, IDLE, IDLE};
 	int delay;
 
+	if (!hotplug_ready || !is_display_on())
+		return;
+
 	rq_avg = get_nr_run_avg();
 	upmax_cpus_online = hotplug_tuners_ins.max_cpus_online;
 
