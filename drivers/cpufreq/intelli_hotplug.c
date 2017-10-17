@@ -641,7 +641,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_UP_PREPARE_FROZEN:
+	case CPU_UP_PREPARE:
 	case CPU_ONLINE:
 		if (!is_cpu_allowed(cpu) &&
 			check_down_lock(cpu))
