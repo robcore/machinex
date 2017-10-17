@@ -551,6 +551,8 @@ static void recycle_cpus(void)
 	intellinit = true;
 
 	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (!cpu_online(cpu))
 			continue;
 		if (check_down_lock(cpu))
@@ -559,6 +561,8 @@ static void recycle_cpus(void)
 	}
 
 	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
@@ -681,6 +685,8 @@ static int intelli_plug_start(void)
 	intelli_suspended = INTELLI_AWAKE;
 
 	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
@@ -712,6 +718,8 @@ static void intelli_plug_stop(void)
 
 	cancel_delayed_work(&up_down_work);
 	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
 		if (check_down_lock(cpu))
