@@ -446,22 +446,27 @@ static void enable_erp_irq_callback(void *info)
 
 static void disable_erp_irq_callback(void *info)
 {
-
 	disable_percpu_irq(l1_erp_irq);
 }
 
-static int cpuhp_cache_erp_online(unsigned int cpu)
+static int cache_erp_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
 {
-	if (!cpuhp_tasks_frozen)
+	switch (action & (~CPU_TASKS_FROZEN)) {
+	case CPU_ONLINE:
 		enable_erp_irq_callback(NULL);
-	return 0;
-}
-static int cpuhp_cache_erp_dead(unsigned int cpu)
-{
-	if (!cpuhp_tasks_frozen)
+		break;
+
+	case CPU_DEAD:
 		disable_erp_irq_callback(NULL);
-	return 0;
+		break;
+	}
+	return NOTIFY_OK;
 }
+
+static struct notifier_block cache_erp_cpu_notifier = {
+	.notifier_call = cache_erp_cpu_callback,
+};
 
 static int msm_cache_erp_probe(struct platform_device *pdev)
 {
@@ -510,11 +515,9 @@ static int msm_cache_erp_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto fail_l2;
 	}
-	ret = cpuhp_setup_state_nocalls(CPUHP_CACHE_ERP_PREPARE, "cache_erp:prepare", cpuhp_cache_erp_online,
-					cpuhp_cache_erp_dead);
-	WARN_ON(ret < 0);
 
 	get_online_cpus();
+	register_hotcpu_notifier(&cache_erp_cpu_notifier);
 	for_each_cpu(cpu, cpu_online_mask)
 		smp_call_function_single(cpu, enable_erp_irq_callback, NULL, 1);
 	put_online_cpus();
@@ -535,12 +538,12 @@ fail:
 
 static int msm_cache_erp_remove(struct platform_device *pdev)
 {
-	int cpu, ret;
+	int cpu;
 	if (procfs_entry)
 		remove_proc_entry("cpu/msm_cache_erp", NULL);
 
-	cpuhp_remove_state_nocalls(CPUHP_CACHE_ERP_PREPARE);
 	get_online_cpus();
+	unregister_hotcpu_notifier(&cache_erp_cpu_notifier);
 	for_each_cpu(cpu, cpu_online_mask)
 		smp_call_function_single(cpu, disable_erp_irq_callback, NULL,
 					 1);

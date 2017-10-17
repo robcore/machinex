@@ -23,15 +23,21 @@ DEFINE_PER_CPU(u32[NUM_L2_PERCPU], previous_l2_cnts);
 DEFINE_PER_CPU(u32, old_pid);
 DEFINE_PER_CPU(u32, hotplug_flag);
 /* Reset per_cpu variables that store counter values uppn CPU hotplug */
-static int cpuhp_tracectr_online(unsigned int cpu)
+static int tracectr_cpu_hotplug_notifier(struct notifier_block *self,
+				    unsigned long action, void *hcpu)
 {
-	int ret = 0;
+	int ret = NOTIFY_OK;
+	int cpu = (int)hcpu;
 
-	if (!cpuhp_tasks_frozen)
+	if ((action & (~CPU_TASKS_FROZEN)) == CPU_ONLINE)
 		per_cpu(hotplug_flag, cpu) = 1;
 
 	return ret;
 }
+
+static struct notifier_block tracectr_cpu_hotplug_notifier_block = {
+	.notifier_call = tracectr_cpu_hotplug_notifier,
+};
 
 static void setup_prev_cnts(u32 cpu)
 {
@@ -85,10 +91,15 @@ static int tracectr_notifier(struct notifier_block *self, unsigned long cmd,
 	return NOTIFY_OK;
 }
 
+static struct notifier_block tracectr_notifier_block = {
+	.notifier_call  = tracectr_notifier,
+};
+
 static void enable_tp_pid(void)
 {
 	if (tp_pid_state == 0) {
 		tp_pid_state = 1;
+		thread_register_notifier(&tracectr_notifier_block);
 	}
 }
 
@@ -96,6 +107,7 @@ static void disable_tp_pid(void)
 {
 	if (tp_pid_state == 1) {
 		tp_pid_state = 0;
+		thread_unregister_notifier(&tracectr_notifier_block);
 	}
 }
 
@@ -147,7 +159,7 @@ int __init init_tracecounters(void)
 	struct dentry *dir;
 	struct dentry *file;
 	unsigned int value = 1;
-	int cpu, ret;
+	int cpu;
 
 	dir = debugfs_create_dir("perf_debug_tp", NULL);
 	if (!dir)
@@ -158,9 +170,7 @@ int __init init_tracecounters(void)
 		debugfs_remove(dir);
 		return -ENOMEM;
 	}
-	ret = cpuhp_setup_state_nocalls(CPUHP_ARM_PERF_TC, "perf_tc:online", cpuhp_tracectr_online,
-					NULL);
-	WARN_ON(ret < 0);
+	register_cpu_notifier(&tracectr_cpu_hotplug_notifier_block);
 	for_each_possible_cpu(cpu)
 		per_cpu(old_pid, cpu) = -1;
 	return 0;
@@ -168,6 +178,7 @@ int __init init_tracecounters(void)
 
 int __exit exit_tracecounters(void)
 {
+	unregister_cpu_notifier(&tracectr_cpu_hotplug_notifier_block);
 	return 0;
 }
 late_initcall(init_tracecounters);

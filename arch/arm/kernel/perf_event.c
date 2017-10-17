@@ -809,70 +809,77 @@ static void armpmu_update_counters(void)
  * UNKNOWN at reset, the PMU must be explicitly reset to avoid reading
  * junk values out of them.
  */
-static int pmu_cpu_dying(unsigned int cpu)
+static int pmu_cpu_notify(struct notifier_block *b,
+					unsigned long action, void *hcpu)
 {
 	int irq;
 	struct pmu *pmu;
+	int cpu = (int)hcpu;
 
-	if (cpuhp_tasks_frozen)
-		return 0;
-
-	if (cpu_pmu && cpu_pmu->save_pm_registers)
-		smp_call_function_single(cpu,
-					 cpu_pmu->save_pm_registers,
-					 &cpu, 1);
-
-	if (cpu_has_active_perf(cpu)) {
-		armpmu_update_counters();
-		/*
-		 * If this is on a multicore CPU, we need
-		 * to disarm the PMU IRQ before disappearing.
-		 */
-		if (cpu_pmu &&
-			cpu_pmu->plat_device->dev.platform_data) {
-			irq = platform_get_irq(cpu_pmu->plat_device, 0);
+	switch ((action & ~CPU_TASKS_FROZEN)) {
+	case CPU_DOWN_PREPARE:
+		if (cpu_pmu && cpu_pmu->save_pm_registers)
 			smp_call_function_single(cpu,
-					disable_irq_callback, &irq, 1);
+						 cpu_pmu->save_pm_registers,
+						 hcpu, 1);
+		break;
+	case CPU_ONLINE:
+		if (cpu_pmu && cpu_pmu->reset)
+			cpu_pmu->reset(NULL);
+		if (cpu_pmu && cpu_pmu->restore_pm_registers)
+			smp_call_function_single(cpu,
+						 cpu_pmu->restore_pm_registers,
+						 hcpu, 1);
+	}
+
+	if (cpu_has_active_perf((int)hcpu)) {
+		switch ((action & ~CPU_TASKS_FROZEN)) {
+
+		case CPU_DOWN_PREPARE:
+			armpmu_update_counters();
+			/*
+			 * If this is on a multicore CPU, we need
+			 * to disarm the PMU IRQ before disappearing.
+			 */
+			if (cpu_pmu &&
+				cpu_pmu->plat_device->dev.platform_data) {
+				irq = platform_get_irq(cpu_pmu->plat_device, 0);
+				smp_call_function_single((int)hcpu,
+						disable_irq_callback, &irq, 1);
+			}
+			return NOTIFY_DONE;
+
+		case CPU_ONLINE:
+			/*
+			 * If this is on a multicore CPU, we need
+			 * to arm the PMU IRQ before appearing.
+			 */
+			if (cpu_pmu &&
+				cpu_pmu->plat_device->dev.platform_data) {
+				irq = platform_get_irq(cpu_pmu->plat_device, 0);
+				enable_irq_callback(&irq);
+			}
+
+			if (cpu_pmu) {
+				__get_cpu_var(from_idle) = 1;
+				pmu = &cpu_pmu->pmu;
+				pmu->pmu_enable(pmu);
+				return NOTIFY_OK;
+			}
+		default:
+			return NOTIFY_DONE;
 		}
 	}
-	return 0;
+
+	if ((action & ~CPU_TASKS_FROZEN) != CPU_ONLINE)
+		return NOTIFY_DONE;
+
+	return NOTIFY_OK;
 }
 
-static int pmu_cpu_online(unsigned int cpu)
-{
-	int irq;
-	struct pmu *pmu;
-
-	if (cpuhp_tasks_frozen)
-		return 0;
-
-	if (cpu_pmu && cpu_pmu->reset)
-		cpu_pmu->reset(NULL);
-	if (cpu_pmu && cpu_pmu->restore_pm_registers)
-		smp_call_function_single(cpu,
-					 cpu_pmu->restore_pm_registers,
-					 &cpu, 1);
-
-	if (cpu_has_active_perf(cpu)) {
-		/*
-		 * If this is on a multicore CPU, we need
-		 * to arm the PMU IRQ before appearing.
-		 */
-		if (cpu_pmu &&
-			cpu_pmu->plat_device->dev.platform_data) {
-			irq = platform_get_irq(cpu_pmu->plat_device, 0);
-			enable_irq_callback(&irq);
-		}
-
-		if (cpu_pmu) {
-			__get_cpu_var(from_idle) = 1;
-			pmu = &cpu_pmu->pmu;
-			pmu->pmu_enable(pmu);
-			return 0;
-		}
-	}
-	return 0;
-}
+static struct notifier_block pmu_cpu_notifier = {
+	.notifier_call = pmu_cpu_notify,
+};
 
 /*TODO: Unify with pending patch from ARM */
 static int perf_cpu_pm_notifier(struct notifier_block *self, unsigned long cmd,
@@ -921,7 +928,6 @@ static struct notifier_block perf_cpu_pm_notifier_block = {
 static int __init
 init_hw_perf_events(void)
 {
-	int ret;
 	unsigned long cpuid = read_cpuid_id();
 	unsigned long implementor = (cpuid & 0xFF000000) >> 24;
 	unsigned long part_number = (cpuid & 0xFFF0);
@@ -988,11 +994,7 @@ init_hw_perf_events(void)
 		pr_info("enabled with %s PMU driver, %d counters available\n",
 			cpu_pmu->name, cpu_pmu->num_events);
 		cpu_pmu_init(cpu_pmu);
-
-		ret = cpuhp_setup_state_nocalls(CPUHP_ARM_PMU_ONLINE, "arm_perf_event:online",
-					pmu_cpu_online, pmu_cpu_dying);
-		WARN_ON(ret < 0);
-
+		register_cpu_notifier(&pmu_cpu_notifier);
 		armpmu_register(cpu_pmu, "cpu", PERF_TYPE_RAW);
 		cpu_pm_register_notifier(&perf_cpu_pm_notifier_block);
 	} else {

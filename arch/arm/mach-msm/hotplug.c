@@ -106,18 +106,28 @@ void __ref msm_cpu_die(unsigned int cpu)
 #define CPUSET_MASK	0xFFFF
 #define CPUSET_OF(n)	(((n) & CPUSET_MASK) << CPUSET_SHIFT)
 
-static int cpuhp_msmhp_dying(unsigned int cpu)
+static int hotplug_cpu_check_callback(struct notifier_block *nfb,
+				      unsigned long action, void *hcpu)
 {
-	if (cpuhp_tasks_frozen)
-		return 0;
+	int cpu = (int)hcpu;
 
-	if (cpu == 0) {
-		pr_err_ratelimited("CPU0 hotplug is not supported\n");
-		return -EINVAL;
+	switch (action & (~CPU_TASKS_FROZEN)) {
+	case CPU_DOWN_PREPARE:
+		if (cpu == 0) {
+			pr_err_ratelimited("CPU0 hotplug is not supported\n");
+			return NOTIFY_BAD;
+		}
+		break;
+	default:
+		break;
 	}
 
-	return 0;
+	return NOTIFY_OK;
 }
+static struct notifier_block hotplug_cpu_check_notifier = {
+	.notifier_call = hotplug_cpu_check_callback,
+	.priority = INT_MAX,
+};
 
 int msm_platform_secondary_init(unsigned int cpu)
 {
@@ -142,10 +152,6 @@ static int __init init_hotplug(void)
 {
 	int rc;
 
-	rc = cpuhp_setup_state_nocalls(CPUHP_MSMHP_DYING, "msmhp_dying:dead", NULL,
-					cpuhp_msmhp_dying);
-	WARN_ON(rc < 0);
-
-	return rc;
+	return register_hotcpu_notifier(&hotplug_cpu_check_notifier);
 }
 early_initcall(init_hotplug);

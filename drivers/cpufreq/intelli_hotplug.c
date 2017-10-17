@@ -28,7 +28,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	6
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -618,17 +618,29 @@ static struct power_suspend intelli_suspend_data =
 	.resume = intelli_resume,
 };
 
-static int cpuhp_intelli_down(unsigned int cpu)
+static int intelliplug_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
 {
+	unsigned int cpu = (unsigned long)hcpu;
 	/* Fail hotplug until this driver can get CPU clocks, or screen off */
 	if (!hotplug_ready || !is_display_on())
-		return 0;
-	if (!cpuhp_tasks_frozen) {
+		return NOTIFY_OK;
+
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_DEAD:
+	case CPU_UP_CANCELED:
 		if (unlikely(check_down_lock(cpu)))
 			rm_down_lock(cpu, 0);
+	default:
+		break;
 	}
-	return 0;
+
+	return NOTIFY_OK;
 }
+
+static struct notifier_block intelliplug_cpu_notifier = {
+	.notifier_call = intelliplug_cpu_callback,
+};
 
 static int intelli_plug_start(void)
 {
@@ -669,9 +681,7 @@ static int intelli_plug_start(void)
 
 	register_power_suspend(&intelli_suspend_data);
 
-	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_DYING, "intelli:dying", NULL,
-					cpuhp_intelli_down);
-	WARN_ON(ret < 0);
+	register_hotcpu_notifier(&intelliplug_cpu_notifier);
 
 	cycle_cpus();
 
@@ -702,7 +712,7 @@ static void intelli_plug_stop(void)
 	unregister_power_suspend(&intelli_suspend_data);
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
-	cpuhp_remove_state_nocalls(CPUHP_INTELLI_DYING);
+	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	mutex_destroy(&(intellisleep_mutex));
 }
 

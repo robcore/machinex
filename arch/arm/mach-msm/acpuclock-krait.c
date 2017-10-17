@@ -1084,52 +1084,54 @@ static void __init dcvs_freq_init(void)
 				drv.freq_table[i].vdd_core / 1000);
 }
 
-static int cpuhp_acpuclk_prepare(unsigned int cpu)
+static int acpuclk_cpu_callback(struct notifier_block *nfb,
+					    unsigned long action, void *hcpu)
 {
 	static int prev_khz[NR_CPUS];
-	int rc;
+	int rc, cpu = (int)hcpu;
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
+	/* Fail hotplug until this driver can get CPU clocks */
 	if (!hotplug_ready)
-		return 0;
+		return NOTIFY_OK;
 
-	acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG); /* cpufreq_freq_transition_begin/end(policy, &freqs, ret); ? */
-	regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
-	return 0;
-}
-
-static int cpuhp_acpuclk_dead(unsigned int cpu)
-{
-	static int prev_khz[NR_CPUS];
-	int rc;
-	struct scalable *sc = &drv.scalable[cpu];
-	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
-
-	if (!hotplug_ready)
-		return 0;
-
-	if (!sc->initialized) {
-		rc = per_cpu_init(cpu);
-		if (rc)
-			return rc;
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_DOWN_PREPARE:
+		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
+		/* Fall through. */
+	case CPU_DEAD:
+	case CPU_UP_CANCELED:
+		acpuclk_krait_set_rate(cpu, hot_unplug_khz, SETRATE_HOTPLUG); /* cpufreq_freq_transition_begin/end(policy, &freqs, ret); ? */
+		regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg, 0);
+		break;
+	case CPU_UP_PREPARE:
+	case CPU_ONLINE:
+	case CPU_DOWN_FAILED:
+		if (!sc->initialized) {
+			rc = per_cpu_init(cpu);
+			if (rc)
+				return NOTIFY_BAD;
+			break;
+		}
+		if (WARN_ON(!prev_khz[cpu]))
+			return NOTIFY_BAD;
+		rc = regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg,
+						sc->vreg[VREG_CORE].cur_ua);
+		if (rc < 0)
+			return NOTIFY_BAD;
+		acpuclk_krait_set_rate(cpu, prev_khz[cpu], SETRATE_HOTPLUG);
+		break;
+	default:
+		break;
 	}
-	if (WARN_ON(!prev_khz[cpu]))
-		return -EINVAL;
-	rc = regulator_set_optimum_mode(sc->vreg[VREG_CORE].reg,
-					sc->vreg[VREG_CORE].cur_ua);
-	if (rc < 0)
-		return rc;
-	acpuclk_krait_set_rate(cpu, prev_khz[cpu], SETRATE_HOTPLUG);
-	return 0;
+
+	return NOTIFY_OK;
 }
 
-static int cpuhp_acpuclk_dying(unsigned int cpu)
-{
-	static int prev_khz[NR_CPUS];
-	prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
-	return 0;
-}
+static struct notifier_block acpuclk_cpu_notifier = {
+	.notifier_call = acpuclk_cpu_callback,
+};
 
 static const int __init krait_needs_vmin(void)
 {
@@ -1300,15 +1302,12 @@ static void __init hw_init(void)
 int __init acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params)
 {
-	int ret;
 	drv_data_init(dev, params);
 	hw_init();
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
-	ret = cpuhp_setup_state_nocalls(CPUHP_ACPU_PREPARE, "acpu:prepare", cpuhp_acpuclk_prepare,
-					cpuhp_acpuclk_dead);
-	WARN_ON(ret < 0);
+	register_hotcpu_notifier(&acpuclk_cpu_notifier);
 
 	return 0;
 }
