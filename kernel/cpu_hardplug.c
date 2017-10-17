@@ -140,28 +140,6 @@ unsigned int nr_hardplugged_cpus(void)
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
-static int cpu_hardplug_callback(struct notifier_block *nfb,
-					    unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_ONLINE:
-		if (!is_cpu_allowed(cpu))
-			hardplug_cpu(cpu);
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-
-static struct notifier_block cpu_hardplug_notifier = {
-	.notifier_call = cpu_hardplug_callback,
-};
-
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -448,8 +426,6 @@ static int __init cpu_hardplug_init(void)
 		pr_info("%s group create failed!\n", __FUNCTION__);
 		return -ENOMEM;
 	}
-
-	register_hotcpu_notifier(&cpu_hardplug_notifier);
 
 	return 0;
 }
