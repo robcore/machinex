@@ -87,12 +87,8 @@ static int tracectr_notifier(struct notifier_block *self, unsigned long cmd,
 
 static void enable_tp_pid(void)
 {
-	int ret;
 	if (tp_pid_state == 0) {
 		tp_pid_state = 1;
-	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "perf_tc:online", cpuhp_tracectr_online,
-					NULL);
-	WARN_ON(ret < 0);
 	}
 }
 
@@ -151,7 +147,7 @@ int __init init_tracecounters(void)
 	struct dentry *dir;
 	struct dentry *file;
 	unsigned int value = 1;
-	int cpu;
+	int cpu, ret;
 
 	dir = debugfs_create_dir("perf_debug_tp", NULL);
 	if (!dir)
@@ -162,7 +158,9 @@ int __init init_tracecounters(void)
 		debugfs_remove(dir);
 		return -ENOMEM;
 	}
-	register_cpu_notifier(&tracectr_cpu_hotplug_notifier_block);
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "perf_tc:online", cpuhp_tracectr_online,
+					NULL);
+	WARN_ON(ret < 0);
 	for_each_possible_cpu(cpu)
 		per_cpu(old_pid, cpu) = -1;
 	return 0;
