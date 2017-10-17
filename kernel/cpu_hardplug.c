@@ -52,8 +52,8 @@ static void plug_one_cpu(void)
 }
 #endif
 unsigned int limit_screen_on_cpus = 0;
-unsigned int cpu_allowed[NR_CPUS] = { 1, 1, 1, 1 }
-static int cpu_from_hardplug[NR_CPUS] = { 0, 0, 0, 0 }
+static unsigned int cpu_allowed[NR_CPUS] = { 1, 1, 1, 1 };
+static int cpu_from_hardplug[NR_CPUS] = { 0, 0, 0, 0 };
 
 unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
@@ -81,7 +81,7 @@ static void hardplug_cpu(unsigned int cpu)
 {
 	if (!cpu_allowed[cpu] && cpu_online(cpu)) {
 		cpu_down(cpu);
-		cpu_from_hardplug[cpu] = true;
+		cpu_from_hardplug[cpu] = 1;
 	}
 }
 
@@ -90,7 +90,7 @@ static void unplug_cpu(unsigned int cpu)
 	if (cpu_from_hardplug[cpu] && cpu_allowed[cpu] &&
 		cpu_is_offline(cpu)) {
 		cpu_up(cpu);
-		cpu_from_hardplug[cpu] = false;
+		cpu_from_hardplug[cpu] = 0;
 	}
 }
 
