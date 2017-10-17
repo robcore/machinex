@@ -127,6 +127,8 @@ unsigned int nr_hardplugged_cpus(void)
 		return hardplugged_cpus;
 
 	for_each_nonboot_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (!is_cpu_allowed(cpu))
 			hardplugged_cpus += 1;
 	}
