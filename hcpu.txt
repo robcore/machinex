@@ -46,6 +46,5 @@ include/linux/cpu.h
 include/linux/padata.h
 kernel/cpu.c
 kernel/cpu_hardplug.c
-kernel/profile.c
 kernel/trace/ring_buffer.c
 
