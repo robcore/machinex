@@ -418,6 +418,7 @@ static void cpu_up_down_work(struct work_struct *work)
 	if (!hotplug_ready)
 		goto reschedule;
 
+	hardplug_all_cpus();
 	cpu = smp_processor_id();
 	target = READ_ONCE(target_cpus);
 	sanitize_min_max(target, min_cpus_online, max_cpus_online);
