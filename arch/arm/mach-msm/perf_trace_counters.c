@@ -87,9 +87,12 @@ static int tracectr_notifier(struct notifier_block *self, unsigned long cmd,
 
 static void enable_tp_pid(void)
 {
+	int ret;
 	if (tp_pid_state == 0) {
 		tp_pid_state = 1;
-	cpuhp_tracectr_online
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "perf_tc:online", cpuhp_tracectr_online,
+					NULL);
+	WARN_ON(ret < 0);
 	}
 }
 
