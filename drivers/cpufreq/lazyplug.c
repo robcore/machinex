@@ -508,7 +508,22 @@ static struct input_handler lazyplug_input_handler = {
 	.id_table       = lazyplug_ids,
 };
 
-unsigned int start_stop_lazy_plug(unsigned int enabled)
+static void lazy_suspend(struct power_suspend * h)
+{
+}
+static void lazy_resume(struct power_suspend * h)
+{
+		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
+			msecs_to_jiffies(10));
+}
+
+static struct power_suspend lazy_suspend_data =
+{
+	.suspend = lazy_suspend,
+	.resume = lazy_resume,
+};
+
+static void start_stop_lazy_plug(unsigned int enabled)
 {
 	int rc;
 
@@ -521,10 +536,12 @@ unsigned int start_stop_lazy_plug(unsigned int enabled)
 					WQ_HIGHPRI | WQ_UNBOUND, 1);
 		INIT_DELAYED_WORK(&lazyplug_work, lazyplug_work_fn);
 		INIT_DELAYED_WORK(&lazyplug_boost, lazyplug_boost_fn);
+		register_power_suspend(&lazy_suspend_data);
 
 		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
 			msecs_to_jiffies(10));
 	} else if (!enabled) {
+			unregister_power_suspend(&lazy_suspend_data);
 			cancel_delayed_work_sync(&lazyplug_boost);
 			cancel_delayed_work_sync(&lazyplug_work);
 			destroy_workqueue(lazyplug_boost_wq);
