@@ -203,6 +203,9 @@ static int mp_decision(void) {
 
 static void bricked_hotplug_work(struct work_struct *work) {
 	unsigned int cpu;
+	
+	if (!is_display_on() || !hotplug_ready)
+		return;
 
 	if (!mutex_trylock(&hotplug.bricked_cpu_mutex))
 		goto out;
@@ -215,14 +218,16 @@ static void bricked_hotplug_work(struct work_struct *work) {
 	case MSM_MPDEC_DOWN:
 		cpu = get_slowest_cpu();
 		if (cpu > 0) {
-			if (cpu_online(cpu) && !check_down_lock(cpu))
+			if (cpu_online(cpu) && !check_down_lock(cpu) &&
+			is_cpu_allowed(cpu) && !thermal_core_controlled(cpu))
 				cpu_down(cpu);
 		}
 		break;
 	case MSM_MPDEC_UP:
 		cpu = cpumask_next_zero(0, cpu_online_mask);
 		if (cpu < DEFAULT_MAX_CPUS_ONLINE) {
-			if (!cpu_online(cpu)) {
+			if (!cpu_online(cpu) &&
+			is_cpu_allowed(cpu) && !thermal_core_controlled(cpu)) {
 				cpu_up(cpu);
 				apply_down_lock(cpu);
 			}
@@ -240,6 +245,22 @@ out:
 					msecs_to_jiffies(hotplug.delay));
 	return;
 }
+
+static void bricked_suspend(struct power_suspend * h)
+{
+}
+static void bricked_resume(struct power_suspend * h)
+{
+	queue_delayed_work(hotplug_wq, &hotplug_work,
+				msecs_to_jiffies(hotplug.delay));
+}
+
+static struct power_suspend bricked_suspend_data =
+{
+	.suspend = bricked_suspend,
+	.resume = bricked_resume,
+};
+
 
 static int bricked_hotplug_start(void)
 {
@@ -262,6 +283,8 @@ static int bricked_hotplug_start(void)
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
+	register_power_suspend(&bricked_suspend_data);
+
 	if (hotplug.bricked_enabled)
 		queue_delayed_work(hotplug_wq, &hotplug_work,
 					msecs_to_jiffies(hotplug.startdelay));
@@ -279,6 +302,7 @@ static void bricked_hotplug_stop(void)
 	int cpu;
 	struct down_lock *dl;
 
+	unregister_power_suspend(&bricked_suspend_data);
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
@@ -288,13 +312,6 @@ static void bricked_hotplug_stop(void)
 	mutex_destroy(&hotplug.bricked_hotplug_mutex);
 	mutex_destroy(&hotplug.bricked_cpu_mutex);
 	destroy_workqueue(hotplug_wq);
-
-	/* Put all sibling cores to sleep */
-	for_each_online_cpu(cpu) {
-		if (cpu == 0)
-			continue;
-		cpu_down(cpu);
-	}
 }
 
 /**************************** SYSFS START ****************************/
@@ -462,7 +479,9 @@ static ssize_t store_min_cpus_online(struct device *dev,
 		for (cpu = 1; cpu < DEFAULT_MAX_CPUS_ONLINE; cpu++) {
 			if (num_online_cpus() >= hotplug.min_cpus_online)
 				break;
-			if (cpu_online(cpu))
+			if (cpu_online(cpu) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
 				continue;
 			cpu_up(cpu);
 		}
@@ -494,7 +513,9 @@ static ssize_t store_max_cpus_online(struct device *dev,
 		for (cpu = DEFAULT_MAX_CPUS_ONLINE; cpu > 0; cpu--) {
 			if (num_online_cpus() <= hotplug.max_cpus_online)
 				break;
-			if (!cpu_online(cpu))
+			if (!cpu_online(cpu)) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
 				continue;
 			cpu_down(cpu);
 		}

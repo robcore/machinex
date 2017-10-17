@@ -532,7 +532,7 @@ static void cycle_cpus(void)
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 		if (!is_cpu_allowed(cpu) ||
-			thermal_core_controlled)
+			thermal_core_controlled(cpu))
 			continue;
 		cpu_down(cpu);
 	}

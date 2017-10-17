@@ -97,7 +97,6 @@ static struct workqueue_struct *lazyplug_wq;
 static struct workqueue_struct *lazyplug_boost_wq;
 
 static unsigned int lazyplug_active = 0;
-module_param(lazyplug_active, uint, 0664);
 
 static unsigned int __read_mostly touch_boost_active = 1;
 module_param(touch_boost_active, uint, 0664);
@@ -207,12 +206,27 @@ extern unsigned long avg_cpu_nr_running(unsigned int cpu);
 static void cpu_all_ctrl(bool online) {
 	unsigned int cpu;
 
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
+
 	if (online) {
 		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (cpu_online(cpu) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
+				continue;
 			cpu_up(cpu);
 		}
 	} else {
 		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (!cpu_online(cpu) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
+				continue;
 			cpu_down(cpu);
 		}
 	}
@@ -258,6 +272,8 @@ static unsigned int calculate_thread_stats(void)
 
 static void lazyplug_boost_fn(struct work_struct *work)
 {
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
 	cpu_all_ctrl(true);
 }
 
@@ -272,6 +288,9 @@ static void update_per_cpu_stat(void)
 {
 	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
+
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
 
 	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
@@ -289,7 +308,16 @@ static void unplug_cpu(int min_active_cpu)
 	struct ip_cpu_info *l_ip_info;
 	int l_nr_threshold;
 
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
+
 	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		if (!cpu_online(cpu) ||
+			!is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
+			continue;
 		l_nr_threshold =
 			cpu_nr_run_threshold << 1 / (num_online_cpus());
 		l_ip_info = &per_cpu(ip_info, cpu);
@@ -306,48 +334,42 @@ static void lazyplug_work_fn(struct work_struct *work)
 	unsigned int cpu_count = 0;
 	unsigned int nr_cpus = 0;
 
-	if (lazyplug_active) {
-		nr_run_stat = calculate_thread_stats();
-		update_per_cpu_stat();
-		cpu_count = nr_run_stat;
-		nr_cpus = num_online_cpus();
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
 
-			if (persist_count > 0)
-				persist_count--;
+	nr_run_stat = calculate_thread_stats();
+	update_per_cpu_stat();
+	cpu_count = nr_run_stat;
+	nr_cpus = num_online_cpus();
 
-			if (cpu_count == 1) {
-				/* start counting idle states */
-				if (idle_count < DEF_IDLE_COUNT)
-					idle_count++;
+	if (persist_count > 0)
+		persist_count--;
 
-				if (idle_count == DEF_IDLE_COUNT && persist_count == 0) {
-					/* take down everyone */
-					unplug_cpu(0);
+	if (cpu_count == 1) {
+		/* start counting idle states */
+		if (idle_count < DEF_IDLE_COUNT)
+			idle_count++;
+
+		if (idle_count == DEF_IDLE_COUNT && persist_count == 0) {
+			/* take down everyone */
+			unplug_cpu(0);
 #ifdef DEBUG_LAZYPLUG
-					offline_state_count++;
-					if (previous_online_status == true) {
-						previous_online_status = false;
-						switch_count++;
-					}
-				} else {
-					online_state_count++;
-					if (previous_online_status == false) {
-						previous_online_status = true;
-						switch_count++;
-					}
-#endif
-				}
-			} else {
-				idle_count = 0;
-				cpu_all_ctrl(true);
-#ifdef DEBUG_LAZYPLUG
-				online_state_count++;
-				if (previous_online_status == false) {
-					previous_online_status = true;
-					switch_count++;
-				}
-#endif
+			offline_state_count++;
+			if (previous_online_status == true) {
+				previous_online_status = false;
+				switch_count++;
 			}
+		} else {
+			online_state_count++;
+			if (previous_online_status == false) {
+				previous_online_status = true;
+				switch_count++;
+			}
+#endif
+		}
+	} else {
+		idle_count = 0;
+		cpu_all_ctrl(true);
 	}
 	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
 		msecs_to_jiffies(sampling_time));
@@ -358,6 +380,9 @@ static void wakeup_boost_lazy(void)
 	unsigned int cpu;
 	struct cpufreq_policy *policy;
 	struct ip_cpu_info *l_ip_info;
+
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
 
 	for_each_online_cpu(cpu) {
 		policy = cpufreq_cpu_get_raw(cpu);
@@ -374,6 +399,9 @@ static DECLARE_WORK(cpu_all_up_work, cpu_all_up);
 
 static void cpu_all_up(struct work_struct *work)
 {
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
+
 	cpu_all_ctrl(true);
 	wakeup_boost_lazy();
 }
@@ -383,6 +411,9 @@ static unsigned int Ltouch_boost_active = true;
 static bool Lprevious_state = false;
 void lazyplug_enter_lazy(bool enter)
 {
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
+
 	mutex_lock(&lazymode_mutex);
 	if (enter && !Lprevious_state) {
 		pr_info("lazyplug: entering lazy mode\n");
@@ -403,6 +434,8 @@ void lazyplug_enter_lazy(bool enter)
 static void lazyplug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
+	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+		return;
 
 	if (lazyplug_active && touch_boost_active) {
 		idle_count = 0;
@@ -475,6 +508,63 @@ static struct input_handler lazyplug_input_handler = {
 	.id_table       = lazyplug_ids,
 };
 
+unsigned int start_stop_lazy_plug(unsigned int enabled)
+{
+	int rc;
+
+	if (enabled) {
+		rc = input_register_handler(&lazyplug_input_handler);
+
+		lazyplug_wq = alloc_workqueue("lazyplug",
+					WQ_HIGHPRI | WQ_UNBOUND, 1);
+		lazyplug_boost_wq = alloc_workqueue("lplug_boost",
+					WQ_HIGHPRI | WQ_UNBOUND, 1);
+		INIT_DELAYED_WORK(&lazyplug_work, lazyplug_work_fn);
+		INIT_DELAYED_WORK(&lazyplug_boost, lazyplug_boost_fn);
+
+		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
+			msecs_to_jiffies(10));
+	} else if (!enabled) {
+			cancel_delayed_work_sync(&lazyplug_boost);
+			cancel_delayed_work_sync(&lazyplug_work);
+			destroy_workqueue(lazyplug_boost_wq);
+			destroy_workqueue(lazyplug_wq);
+			input_unregister_handler(&lazyplug_input_handler);
+	}
+}
+
+static int set_lazyplug_active(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	if (sscanf(buf, "%u", &val) != 1)
+		return -EINVAL;
+
+	sanitize_min_max(val, 0, 1); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
+
+	lazyplug_active = val;
+	start_lazy_plug(lazyplug_active);
+
+	return 0;
+}
+
+static int get_lazyplug_active(char *buf, const struct kernel_param *kp)
+{
+	ssize_t ret;
+
+	ret = sprintf(buf, "%u\n", lazyplug_active);
+
+	return ret;
+}
+
+static const struct kernel_param_ops param_ops_lazyplug_active = {
+	.set = set_lazyplug_active,
+	.get = get_lazyplug_active,
+};
+
+module_param_cb(lazyplug_active, &param_ops_lazyplug_active, NULL, 0644);
+
+
 int __init lazyplug_init(void)
 {
 	int rc;
@@ -494,16 +584,8 @@ int __init lazyplug_init(void)
 		nr_run_profile_sel = NR_RUN_ECO_MODE_PROFILE;
 	}
 
-	rc = input_register_handler(&lazyplug_input_handler);
-
-	lazyplug_wq = alloc_workqueue("lazyplug",
-				WQ_HIGHPRI | WQ_UNBOUND, 1);
-	lazyplug_boost_wq = alloc_workqueue("lplug_boost",
-				WQ_HIGHPRI | WQ_UNBOUND, 1);
-	INIT_DELAYED_WORK(&lazyplug_work, lazyplug_work_fn);
-	INIT_DELAYED_WORK(&lazyplug_boost, lazyplug_boost_fn);
-	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
-		msecs_to_jiffies(10));
+	if (lazyplug_active)
+		start_lazy_plug(lazyplug_active);
 
 	return 0;
 }
