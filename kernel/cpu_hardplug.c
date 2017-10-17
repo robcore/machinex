@@ -79,7 +79,8 @@ bool is_cpu_allowed(unsigned int cpu)
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (!cpu_allowed[cpu] && cpu_online(cpu)) {
+	if (!cpu_from_hardplug[cpu] &&
+		!cpu_allowed[cpu] && cpu_online(cpu)) {
 		cpu_down(cpu);
 		cpu_from_hardplug[cpu] = 1;
 	}
