@@ -454,11 +454,13 @@ static int cpuhp_cache_erp_online(unsigned int cpu)
 {
 	if (!cpuhp_tasks_frozen)
 		enable_erp_irq_callback(NULL);
+	return 0;
 }
 static int cpuhp_cache_erp_dead(unsigned int cpu)
 {
 	if (!cpuhp_tasks_frozen)
 		disable_erp_irq_callback(NULL);
+	return 0;
 }
 
 static int msm_cache_erp_probe(struct platform_device *pdev)
