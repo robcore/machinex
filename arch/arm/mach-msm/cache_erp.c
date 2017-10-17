@@ -539,8 +539,7 @@ static int msm_cache_erp_remove(struct platform_device *pdev)
 	if (procfs_entry)
 		remove_proc_entry("cpu/msm_cache_erp", NULL);
 
-	cpuhp_remove_state_nocalls(CPUHP_CACHE_ERP_DEAD);
-	cpuhp_remove_state_nocalls(CPUHP_CACHE_ERP_ONLINE);
+	cpuhp_remove_state_nocalls(CPUHP_CACHE_ERP_PREPARE);
 	get_online_cpus();
 	for_each_cpu(cpu, cpu_online_mask)
 		smp_call_function_single(cpu, disable_erp_irq_callback, NULL,
