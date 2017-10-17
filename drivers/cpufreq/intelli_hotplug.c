@@ -28,7 +28,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -378,12 +378,12 @@ static void do_override(void)
 	cpu = smp_processor_id();
 
 	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (cpu_online(cpu) ||
 			!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
-		if (cpu_out_of_range_hp(cpu))
-			break;
 		ret = cpu_up(cpu);
 		if (ret)
 			pr_debug("Intelliplug - Unable to bring up cpu %u!\n", cpu);
@@ -431,12 +431,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 		update_per_cpu_stat();
 		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			if (cpu_is_offline(cpu) ||
 				thermal_core_controlled(cpu) ||
 				check_down_lock(cpu))
 				continue;
-			if (cpu_out_of_range_hp(cpu))
-				break;
 			l_nr_threshold =
 				(cpu_nr_run_threshold << 1) / num_online_cpus();
 			l_ip_info = &per_cpu(ip_info, cpu);
@@ -448,12 +448,12 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
 				thermal_core_controlled(cpu))
 				continue;
-			if (cpu_out_of_range_hp(cpu))
-				break;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
 			if (num_online_cpus() == target)
@@ -520,12 +520,16 @@ static void cycle_cpus(void)
 
 	intellinit = true;
 	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (!cpu_online(cpu))
 			continue;
 		rm_down_lock(cpu, 0);
 		cpu_down(cpu);
 	}
 	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (!is_cpu_allowed(cpu) ||
 			thermal_core_controlled(cpu))
 			continue;
@@ -627,8 +631,13 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_ONLINE_PREPARE:
+	case CPU_ONLINE:
+		if (!is_cpu_allowed(cpu) &&
+			check_down_lock(cpu))
+			rm_down_lock(cpu, 0);
+		break;
 	case CPU_DEAD:
-	case CPU_UP_CANCELED:
 		if (unlikely(check_down_lock(cpu)))
 			rm_down_lock(cpu, 0);
 	default:
