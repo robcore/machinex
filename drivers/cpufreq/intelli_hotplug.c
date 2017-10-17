@@ -290,6 +290,8 @@ static int measure_freqs(void)
 	freq_load = 0;
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		if (acpuclk_get_rate(cpu) >=
 			high_load_threshold)
 			freq_load += 1;
@@ -359,6 +361,8 @@ static void update_per_cpu_stat(void)
 	struct ip_cpu_info *l_ip_info;
 
 	for_each_online_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		l_ip_info = &per_cpu(ip_info, cpu);
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
 	}
@@ -598,6 +602,8 @@ static void intelli_suspend(struct power_suspend *h)
 	mutex_unlock(&intellisleep_mutex);
 
 	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		dl = &per_cpu(lock_info, cpu);
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
