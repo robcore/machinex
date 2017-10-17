@@ -71,6 +71,9 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/cpufreq.h>
+#include <linux/display_state.h>
+#include <linux/powersuspend.h>
+
 
 //#define DEBUG_LAZYPLUG
 #undef DEBUG_LAZYPLUG
@@ -560,7 +563,7 @@ static int set_lazyplug_active(const char *buf, const struct kernel_param *kp)
 	sanitize_min_max(val, 0, 1); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
 
 	lazyplug_active = val;
-	start_lazy_plug(lazyplug_active);
+	start_stop_lazy_plug(lazyplug_active);
 
 	return 0;
 }
@@ -602,7 +605,7 @@ int __init lazyplug_init(void)
 	}
 
 	if (lazyplug_active)
-		start_lazy_plug(lazyplug_active);
+		start_stop_lazy_plug(lazyplug_active);
 
 	return 0;
 }

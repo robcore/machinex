@@ -24,6 +24,8 @@
 #include <linux/slab.h>
 #include <linux/machinex_defines.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
+#include <linux/display_state.h>
+#include <linux/powersuspend.h>
 
 struct hotplug_cpuinfo {
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -170,8 +172,6 @@ static void hotplug_work_fn(struct work_struct *work)
 	get_online_cpus();
 	online_cpus = num_online_cpus();
 	for_each_online_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
 		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 		unsigned int upcpu = (cpu + 1);
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -181,6 +181,8 @@ static void hotplug_work_fn(struct work_struct *work)
 		int cur_load = -1;
 		unsigned int cur_freq = 0;
 		bool check_up = false, check_down = false;
+		if (cpu_out_of_range(cpu))
+			break;
 
 #ifdef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 		cur_load = cpufreq_quick_get_util(cpu);
@@ -335,10 +337,9 @@ static int hotplug_start(void)
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
+		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 		if (cpu_out_of_range(cpu))
 			break;
-		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
-
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 		pcpu_info->prev_cpu_idle = get_cpu_idle_time(cpu,
 				&pcpu_info->prev_cpu_wall);
@@ -697,10 +698,9 @@ static int __init alucard_hotplug_init(void)
 
 	/* INITIALIZE PCPU VARS */
 	for_each_possible_cpu(cpu) {
+		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 		if (cpu_out_of_range(cpu))
 			break;
-		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
-
 		pcpu_info->up_freq = hotplug_freq[cpu][UP_INDEX];
 		pcpu_info->down_freq = hotplug_freq[cpu][DOWN_INDEX];
 		pcpu_info->up_load = hotplug_load[cpu][UP_INDEX];

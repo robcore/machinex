@@ -23,6 +23,8 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/display_state.h>
+#include <linux/powersuspend.h>
 
 #define DEBUG 0
 
@@ -513,7 +515,7 @@ static ssize_t store_max_cpus_online(struct device *dev,
 		for (cpu = DEFAULT_MAX_CPUS_ONLINE; cpu > 0; cpu--) {
 			if (num_online_cpus() <= hotplug.max_cpus_online)
 				break;
-			if (!cpu_online(cpu)) ||
+			if (!cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
 				thermal_core_controlled(cpu))
 				continue;

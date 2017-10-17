@@ -19,10 +19,12 @@
 #include <linux/cpufreq.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
+#include <linux/display_state.h>
+#include <linux/powersuspend.h>
 
 #define MSM_SLEEPER "msm_sleeper"
 #define MSM_SLEEPER_MAJOR_VERSION	4
-#define MSM_SLEEPER_MINOR_VERSION	2
+#define MSM_SLEEPER_MINOR_VERSION	3
 #define MSM_SLEEPER_ENABLED		0
 #define MSM_SLEEPER_DEBUG		0
 #define DELAY				1000
