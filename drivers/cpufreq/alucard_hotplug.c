@@ -170,6 +170,8 @@ static void hotplug_work_fn(struct work_struct *work)
 	get_online_cpus();
 	online_cpus = num_online_cpus();
 	for_each_online_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 		unsigned int upcpu = (cpu + 1);
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -274,6 +276,11 @@ static void hotplug_work_fn(struct work_struct *work)
 	put_online_cpus();
 
 	for_each_nonboot_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		if (!is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
+			continue;
 		if (hotplug_onoff[cpu] == ON)
 			cpu_up(cpu);
 		else if (hotplug_onoff[cpu] == OFF)
@@ -328,6 +335,8 @@ static int hotplug_start(void)
 
 	get_online_cpus();
 	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -688,6 +697,8 @@ static int __init alucard_hotplug_init(void)
 
 	/* INITIALIZE PCPU VARS */
 	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
 		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
 
 		pcpu_info->up_freq = hotplug_freq[cpu][UP_INDEX];
