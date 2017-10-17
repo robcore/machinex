@@ -494,9 +494,7 @@ struct ring_buffer {
 
 	struct ring_buffer_per_cpu	**buffers;
 
-#ifdef CONFIG_HOTPLUG_CPU
-	struct notifier_block		cpu_notify;
-#endif
+	struct hlist_node		node;
 	u64				(*clock)(void);
 };
 
