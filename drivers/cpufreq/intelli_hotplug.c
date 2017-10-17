@@ -669,7 +669,7 @@ static int intelli_plug_start(void)
 
 	register_power_suspend(&intelli_suspend_data);
 
-	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_DEAD, "intelli:dead", NULL,
+	ret = cpuhp_setup_state_nocalls(CPUHP_INTELLI_DYING, "intelli:dying", NULL,
 					cpuhp_intelli_down);
 	WARN_ON(ret < 0);
 

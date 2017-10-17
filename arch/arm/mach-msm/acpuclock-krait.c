@@ -1084,7 +1084,7 @@ static void __init dcvs_freq_init(void)
 				drv.freq_table[i].vdd_core / 1000);
 }
 
-static int cpuhp_acpuclk_online(unsigned int cpu)
+static int cpuhp_acpuclk_prepare(unsigned int cpu)
 {
 	static int prev_khz[NR_CPUS];
 	int rc;
@@ -1306,11 +1306,7 @@ int __init acpuclk_krait_init(struct device *dev,
 	cpufreq_table_init();
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
-
-	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "acpu:online", cpuhp_acpuclk_online,
-					cpuhp_acpuclk_dying);
-	WARN_ON(ret < 0);
-	ret = cpuhp_setup_state_nocalls(CPUHP_ACPU_DEAD, "acpu:dead", NULL,
+	ret = cpuhp_setup_state_nocalls(CPUHP_ACPU_PREPARE, "acpu:prepare", cpuhp_acpuclk_prepare,
 					cpuhp_acpuclk_dead);
 	WARN_ON(ret < 0);
 

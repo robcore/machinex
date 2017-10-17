@@ -4180,8 +4180,8 @@ EXPORT_SYMBOL_GPL(ring_buffer_free_read_page);
  *
  * for example:
  *	rpage = ring_buffer_alloc_read_page(buffer, cpu);
- *	if (!rpage)
- *		return error;
+ *	if (IS_ERR(rpage))
+ *		return PTR_ERR(rpage);
  *	ret = ring_buffer_read_page(buffer, &rpage, len, cpu, 0);
  *	if (ret >= 0)
  *		process_page(rpage, ret);
@@ -4362,61 +4362,48 @@ int ring_buffer_read_page(struct ring_buffer *buffer,
 }
 EXPORT_SYMBOL_GPL(ring_buffer_read_page);
 
-#ifdef CONFIG_HOTPLUG_CPU
-static int rb_cpu_notify(struct notifier_block *self,
-			 unsigned long action, void *hcpu)
+/*
+ * We only allocate new buffers, never free them if the CPU goes down.
+ * If we were to free the buffer, then the user would lose any trace that was in
+ * the buffer.
+ */
+int trace_rb_cpu_prepare(unsigned int cpu, struct hlist_node *node)
 {
-	struct ring_buffer *buffer =
-		container_of(self, struct ring_buffer, cpu_notify);
-	long cpu = (long)hcpu;
-	int cpu_i, nr_pages_same;
-	unsigned int nr_pages;
+	struct ring_buffer *buffer;
+	long nr_pages_same;
+	int cpu_i;
+	unsigned long nr_pages;
 
-	switch (action) {
-	case CPU_UP_PREPARE:
-	case CPU_UP_PREPARE_FROZEN:
-		if (cpumask_test_cpu(cpu, buffer->cpumask))
-			return NOTIFY_OK;
+	buffer = container_of(node, struct ring_buffer, node);
+	if (cpumask_test_cpu(cpu, buffer->cpumask))
+		return 0;
 
-		nr_pages = 0;
-		nr_pages_same = 1;
-		/* check if all cpu sizes are same */
-		for_each_buffer_cpu(buffer, cpu_i) {
-			/* fill in the size from first enabled cpu */
-			if (nr_pages == 0)
-				nr_pages = buffer->buffers[cpu_i]->nr_pages;
-			if (nr_pages != buffer->buffers[cpu_i]->nr_pages) {
-				nr_pages_same = 0;
-				break;
-			}
+	nr_pages = 0;
+	nr_pages_same = 1;
+	/* check if all cpu sizes are same */
+	for_each_buffer_cpu(buffer, cpu_i) {
+		/* fill in the size from first enabled cpu */
+		if (nr_pages == 0)
+			nr_pages = buffer->buffers[cpu_i]->nr_pages;
+		if (nr_pages != buffer->buffers[cpu_i]->nr_pages) {
+			nr_pages_same = 0;
+			break;
 		}
-		/* allocate minimum pages, user can later expand it */
-		if (!nr_pages_same)
-			nr_pages = 2;
-		buffer->buffers[cpu] =
-			rb_allocate_cpu_buffer(buffer, nr_pages, cpu);
-		if (!buffer->buffers[cpu]) {
-			WARN(1, "failed to allocate ring buffer on CPU %ld\n",
-			     cpu);
-			return NOTIFY_OK;
-		}
-		smp_wmb();
-		cpumask_set_cpu(cpu, buffer->cpumask);
-		break;
-	case CPU_DOWN_PREPARE:
-	case CPU_DOWN_PREPARE_FROZEN:
-		/*
-		 * Do nothing.
-		 *  If we were to free the buffer, then the user would
-		 *  lose any trace that was in the buffer.
-		 */
-		break;
-	default:
-		break;
 	}
-	return NOTIFY_OK;
+	/* allocate minimum pages, user can later expand it */
+	if (!nr_pages_same)
+		nr_pages = 2;
+	buffer->buffers[cpu] =
+		rb_allocate_cpu_buffer(buffer, nr_pages, cpu);
+	if (!buffer->buffers[cpu]) {
+		WARN(1, "failed to allocate ring buffer on CPU %u\n",
+		     cpu);
+		return -ENOMEM;
+	}
+	smp_wmb();
+	cpumask_set_cpu(cpu, buffer->cpumask);
+	return 0;
 }
-#endif
 
 #ifdef CONFIG_RING_BUFFER_STARTUP_TEST
 /*

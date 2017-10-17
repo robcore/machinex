@@ -158,7 +158,7 @@ int __init init_tracecounters(void)
 		debugfs_remove(dir);
 		return -ENOMEM;
 	}
-	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "perf_tc:online", cpuhp_tracectr_online,
+	ret = cpuhp_setup_state_nocalls(CPUHP_ARM_PERF_TC, "perf_tc:online", cpuhp_tracectr_online,
 					NULL);
 	WARN_ON(ret < 0);
 	for_each_possible_cpu(cpu)

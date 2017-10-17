@@ -510,15 +510,11 @@ static int msm_cache_erp_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto fail_l2;
 	}
-
-	get_online_cpus();
-
-	ret = cpuhp_setup_state_nocalls(CPUHP_CACHE_ERP_DEAD, "cache_erp:dead", NULL,
+	ret = cpuhp_setup_state_nocalls(CPUHP_CACHE_ERP_PREPARE, "cache_erp:prepare", cpuhp_cache_erp_online,
 					cpuhp_cache_erp_dead);
 	WARN_ON(ret < 0);
-	ret = cpuhp_setup_state_nocalls(CPUHP_CACHE_ERP_ONLINE, "cache_erp:online", NULL,
-					NULL);
-	WARN_ON(ret < 0);
+
+	get_online_cpus();
 	for_each_cpu(cpu, cpu_online_mask)
 		smp_call_function_single(cpu, enable_erp_irq_callback, NULL, 1);
 	put_online_cpus();

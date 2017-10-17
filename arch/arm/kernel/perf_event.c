@@ -989,9 +989,10 @@ init_hw_perf_events(void)
 			cpu_pmu->name, cpu_pmu->num_events);
 		cpu_pmu_init(cpu_pmu);
 
-		ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "arm_perf_event:online",
+		ret = cpuhp_setup_state_nocalls(CPUHP_ARM_PMU_ONLINE, "arm_perf_event:online",
 					pmu_cpu_online, pmu_cpu_dying);
 		WARN_ON(ret < 0);
+
 		armpmu_register(cpu_pmu, "cpu", PERF_TYPE_RAW);
 		cpu_pm_register_notifier(&perf_cpu_pm_notifier_block);
 	} else {

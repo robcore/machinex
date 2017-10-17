@@ -5317,6 +5317,17 @@ __init static int tracer_alloc_buffers(void)
 	cpumask_copy(tracing_buffer_mask, cpu_possible_mask);
 	cpumask_copy(tracing_cpumask, cpu_all_mask);
 
+	/*
+	 * The prepare callbacks allocates some memory for the ring buffer. We
+	 * don't free the buffer if the if the CPU goes down. If we were to free
+	 * the buffer, then the user would lose any trace that was in the
+	 * buffer. The memory will be removed once the "instance" is removed.
+	 */
+	ret = cpuhp_setup_state_multi(CPUHP_TRACE_RB_PREPARE,
+				      "trace/RB:preapre", trace_rb_cpu_prepare,
+				      NULL);
+	if (ret < 0)
+		goto out_free_cpumask;
 	/* TODO: make the number of buffers hot pluggable with CPUS */
 	global_trace.buffer = ring_buffer_alloc(ring_buf_size, rb_flags);
 	if (!global_trace.buffer) {
@@ -5334,7 +5345,7 @@ __init static int tracer_alloc_buffers(void)
 		printk(KERN_ERR "tracer: failed to allocate max ring buffer!\n");
 		WARN_ON(1);
 		ring_buffer_free(global_trace.buffer);
-		goto out_free_cpumask;
+		goto out_rm_hp_state;
 	}
 #endif
 
@@ -5364,6 +5375,8 @@ __init static int tracer_alloc_buffers(void)
 
 	return 0;
 
+out_rm_hp_state:
+	cpuhp_remove_multi_state(CPUHP_TRACE_RB_PREPARE);
 out_free_cpumask:
 	free_cpumask_var(tracing_cpumask);
 out_free_buffer_mask:

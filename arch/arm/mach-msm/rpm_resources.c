@@ -1156,10 +1156,7 @@ static int __init msm_rpmrs_l2_init(void)
 		msm_rpmrs_l2_cache.aggregate = NULL;
 		msm_rpmrs_l2_cache.restore = NULL;
 
-		ret = cpuhp_setup_state_nocalls(CPUHP_RPM_ONLINE, "rpm:online", rpm_cpu_online,
-					NULL);
-		WARN_ON(ret < 0);
-		ret = cpuhp_setup_state_nocalls(CPUHP_RPM_DEAD, "rpm:dead", NULL,
+		ret = cpuhp_setup_state_nocalls(CPUHP_RPM_PREPARE, "rpm:online", rpm_cpu_online,
 					rpm_cpu_dead);
 		WARN_ON(ret < 0);
 	} else if (cpu_is_msm9615()) {
