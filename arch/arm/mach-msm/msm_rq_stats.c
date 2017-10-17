@@ -212,29 +212,24 @@ static void update_related_cpus(void)
 		cpumask_copy(this_cpu->related_cpus, cpu_policy.cpus);
 	}
 }
-
-static int cpu_hotplug_handler(struct notifier_block *nb,
-			unsigned long val, void *data)
+static int cpuhp_rqstats_online(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)data;
 	struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
 
 	if (!rq_info.hotplug_enabled)
-		return NOTIFY_OK;
+		return 0;
 
-	switch (val) {
-	case CPU_ONLINE:
+	if (!cpuhp_tasks_frozen) {
 		if (!this_cpu->cur_freq)
 			this_cpu->cur_freq = cpufreq_quick_get(cpu);
 		update_related_cpus();
-	case CPU_ONLINE_FROZEN:
+	} else {
 		this_cpu->avg_load_maxfreq = 0;
 #ifdef ALUCARD_HOTPLUG_USE_RQ_STATS
 		this_cpu->cpu_load = 0;
 #endif
 	}
-
-	return NOTIFY_OK;
+	return 0;
 }
 
 static int system_suspend_handler(struct notifier_block *nb,
@@ -513,11 +508,12 @@ static int __init msm_rq_stats_init(void)
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
 	}
 	freq_transition.notifier_call = cpufreq_transition_handler;
-	cpu_hotplug.notifier_call = cpu_hotplug_handler;
 	cpufreq_register_notifier(&freq_transition,
 					CPUFREQ_TRANSITION_NOTIFIER);
-	register_hotcpu_notifier(&cpu_hotplug);
-
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "rqstats:online", cpuhp_rqstats_online,
+					NULL);
+	WARN_ON(ret < 0);
+	
 	return ret;
 }
 late_initcall(msm_rq_stats_init);
