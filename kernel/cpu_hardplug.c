@@ -143,7 +143,7 @@ static int cpu_hardplug_callback(struct notifier_block *nfb,
 	unsigned int cpu = (unsigned long)hcpu;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_UP_PREPARE:
+	case CPU_ONLINE:
 		if (!is_cpu_allowed(cpu))
 			hardplug_cpu(cpu);
 		break;
