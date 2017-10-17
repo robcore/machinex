@@ -1121,11 +1121,6 @@ static void rb_free_cpu_buffer(struct ring_buffer_per_cpu *cpu_buffer)
 	kfree(cpu_buffer);
 }
 
-#ifdef CONFIG_HOTPLUG_CPU
-static int rb_cpu_notify(struct notifier_block *self,
-			 unsigned long action, void *hcpu);
-#endif
-
 /**
  * __ring_buffer_alloc - allocate a new ring_buffer
  * @size: the size in bytes per cpu that is needed.
@@ -1161,17 +1156,6 @@ struct ring_buffer *__ring_buffer_alloc(unsigned long size, unsigned flags,
 	if (nr_pages < 2)
 		nr_pages = 2;
 
-	/*
-	 * In case of non-hotplug cpu, if the ring-buffer is allocated
-	 * in early initcall, it will not be notified of secondary cpus.
-	 * In that off case, we need to allocate for all possible cpus.
-	 */
-#ifdef CONFIG_HOTPLUG_CPU
-	get_online_cpus();
-	cpumask_copy(buffer->cpumask, cpu_online_mask);
-#else
-	cpumask_copy(buffer->cpumask, cpu_possible_mask);
-#endif
 	buffer->cpus = nr_cpu_ids;
 
 	bsize = sizeof(void *) * nr_cpu_ids;
@@ -1187,13 +1171,10 @@ struct ring_buffer *__ring_buffer_alloc(unsigned long size, unsigned flags,
 			goto fail_free_buffers;
 	}
 
-#ifdef CONFIG_HOTPLUG_CPU
-	buffer->cpu_notify.notifier_call = rb_cpu_notify;
-	buffer->cpu_notify.priority = 0;
-	register_cpu_notifier(&buffer->cpu_notify);
-#endif
+	ret = cpuhp_state_add_instance(CPUHP_TRACE_RB_PREPARE, &buffer->node);
+	if (ret < 0)
+		goto fail_free_buffers;
 
-	put_online_cpus();
 	mutex_init(&buffer->mutex);
 
 	return buffer;
@@ -1207,7 +1188,6 @@ struct ring_buffer *__ring_buffer_alloc(unsigned long size, unsigned flags,
 
  fail_free_cpumask:
 	free_cpumask_var(buffer->cpumask);
-	put_online_cpus();
 
  fail_free_buffer:
 	kfree(buffer);
@@ -1224,16 +1204,10 @@ ring_buffer_free(struct ring_buffer *buffer)
 {
 	int cpu;
 
-	get_online_cpus();
-
-#ifdef CONFIG_HOTPLUG_CPU
-	unregister_cpu_notifier(&buffer->cpu_notify);
-#endif
+	cpuhp_state_remove_instance(CPUHP_TRACE_RB_PREPARE, &buffer->node);
 
 	for_each_buffer_cpu(buffer, cpu)
 		rb_free_cpu_buffer(buffer->buffers[cpu]);
-
-	put_online_cpus();
 
 	kfree(buffer->buffers);
 	free_cpumask_var(buffer->cpumask);
