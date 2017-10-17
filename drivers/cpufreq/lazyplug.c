@@ -563,7 +563,10 @@ static int set_lazyplug_active(const char *buf, const struct kernel_param *kp)
 	if (sscanf(buf, "%u", &val) != 1)
 		return -EINVAL;
 
-	sanitize_min_max(val, 0, 1); /*works best if in same multiple as thermal poll, 40ms. 1 sec max for safety*/
+	sanitize_min_max(val, 0, 1);
+
+	if (val == lazyplug_active)
+		return 0;
 
 	lazyplug_active = val;
 	start_stop_lazy_plug(lazyplug_active);

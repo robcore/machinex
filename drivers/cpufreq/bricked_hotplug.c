@@ -533,15 +533,14 @@ static ssize_t store_bricked_enabled(struct device *dev,
 				struct device_attribute *bricked_hotplug_attrs,
 				const char *buf, size_t count)
 {
-	unsigned int input;
+	int input;
 	int ret;
 
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input >= 1)
-		input = 1;
+	sanitize_min_max(input, 0, 1);
 
 	if (input == hotplug.bricked_enabled)
 		return count;
