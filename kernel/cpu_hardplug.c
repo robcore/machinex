@@ -155,7 +155,7 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	limit_screen_on_cpus = val;
 
-	if (val)
+	if (limit_screen_on_cpus)
 		hardplug_all_cpus();
 	else
 		unplug_all_cpus();
@@ -189,7 +189,7 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	cpu_allowed[1] = val;
 
-	if (val)
+	if (cpu_allowed[1])
 		hardplug_cpu(1);
 	else
 		unplug_cpu(1);
@@ -222,7 +222,7 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	cpu_allowed[2] = val;
 
-	if (val)
+	if (cpu_allowed[2])
 		hardplug_cpu(2);
 	else
 		unplug_cpu(2);
@@ -255,7 +255,7 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	cpu_allowed[3] = val;
 
-	if (val)
+	if (cpu_allowed[3])
 		hardplug_cpu(3);
 	else
 		unplug_cpu(3);

@@ -36,8 +36,9 @@
 #define DEF_MAX_CPUS_ONLINE_SUSP		1
 #define DEF_PLUG_ALL			0
 
+unsigned int msm_sleeper_enabled = 0;
+
 struct msm_sleeper_data {
-	unsigned int enabled;
 	unsigned int delay;
 	unsigned int up_threshold;
 	unsigned int max_cpus_online;
@@ -49,7 +50,6 @@ struct msm_sleeper_data {
 	bool plug_all;
 	struct notifier_block notif;
 } sleeper_data = {
-	.enabled = MSM_SLEEPER_ENABLED,
 	.delay = DELAY,
 	.up_threshold = DEF_UP_THRESHOLD,
 	.max_cpus_online = DEF_MAX_CPUS_ONLINE,
@@ -66,12 +66,19 @@ static inline void plug_cpu(void)
 {
 	unsigned int cpu;
 
+	if (!hotplug_ready || !is_display_on() || !msm_sleeper_enabled)
+		return;
+
 	if (num_online_cpus() == sleeper_data.max_cpus_online)
 		goto reset;
 
-	for_each_nonboot_offline_cpu(cpu)
-		cpu_up(cpu);
-
+	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		if (is_cpu_allowed(cpu) &&
+			!thermal_core_controlled(cpu))
+			cpu_up(cpu);
+	}
 reset:
 	sleeper_data.down_count = 0;
 	sleeper_data.up_count = 0;
@@ -80,6 +87,9 @@ reset:
 static inline void unplug_cpu(void)
 {
 	unsigned int cpu, low_cpu = 0, low_freq = ~0;
+
+	if (!hotplug_ready || !is_display_on() || !msm_sleeper_enabled)
+		return;
 
 	if (num_online_cpus() == sleeper_data.min_cpus_online)
 		goto reset;
@@ -93,7 +103,8 @@ static inline void unplug_cpu(void)
 		}
 	}
 	put_online_cpus();
-
+	if (is_cpu_allowed(low_cpu) &&
+		!thermal_core_controlled(low_cpu))
 	cpu_down(low_cpu);
 
 reset:
@@ -101,7 +112,7 @@ reset:
 	sleeper_data.up_count = 0;
 }
 
-static void reschedule_timer (void)
+static void reschedule_timer(void)
 {
 	queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(sleeper_data.delay));
 }
@@ -109,6 +120,9 @@ static void reschedule_timer (void)
 static void hotplug_func(struct work_struct *work)
 {
 	unsigned int cpu, loadavg = 0;
+
+	if (!hotplug_ready || !is_display_on() || !msm_sleeper_enabled)
+		return;
 
 	if (sleeper_data.max_cpus_online == sleeper_data.min_cpus_online)
 		goto reschedule;
@@ -118,6 +132,8 @@ static void hotplug_func(struct work_struct *work)
 			plug_cpu();
 		goto reschedule;
 	}
+
+	hardplug_all_cpus();
 
 	for_each_online_cpu(cpu)
 		loadavg += cpufreq_quick_get(cpu);
@@ -146,10 +162,44 @@ reschedule:
 	reschedule_timer();
 }
 
+static void sleeper_suspend(struct power_suspend * h)
+{
+}
+static void sleeper_resume(struct power_suspend * h)
+{
+	reschedule_timer();
+}
+
+static struct power_suspend sleeper_suspend_data =
+{
+	.suspend = sleeper_suspend,
+	.resume = sleeper_resume,
+};
+
+static void start_stop_sleeper(int enabled)
+{
+
+	if (enabled) {
+		sleeper_wq = alloc_workqueue("msm_sleeper_wq",
+					WQ_HIGHPRI, 1);
+		if (!sleeper_wq) {
+			return;
+		}
+
+		INIT_DELAYED_WORK(&sleeper_work, hotplug_func);
+		register_power_suspend(&sleeper_suspend_data);
+		queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(60000));
+	} else if (!enabled) {
+		unregister_power_suspend(&sleeper_suspend_data);
+		cancel_delayed_work_sync(&sleeper_work);
+		destroy_workqueue(sleeper_wq);
+	}
+}
+
 static ssize_t show_enable_hotplug(struct device *dev,
 				   struct device_attribute *msm_sleeper_attrs, char *buf)
 {
-	return sprintf(buf, "%u\n", sleeper_data.enabled);
+	return sprintf(buf, "%u\n", msm_sleeper_enabled);
 }
 
 static ssize_t store_enable_hotplug(struct device *dev,
@@ -163,14 +213,14 @@ static ssize_t store_enable_hotplug(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	sleeper_data.enabled = val;
+	sanitize_min_max(val, 0, 1);
 
-	if (sleeper_data.enabled) {
-		reschedule_timer();
-	} else {
-		flush_workqueue(sleeper_wq);
-		cancel_delayed_work_sync(&sleeper_work);
-	}
+	if (val == msm_sleeper_enabled)
+		return count;
+
+	msm_sleeper_enabled = val;
+
+	start_stop_sleeper(msm_sleeper_enabled);
 
 	return count;
 }
@@ -352,30 +402,13 @@ static int msm_sleeper_probe(struct platform_device *pdev)
 		MSM_SLEEPER_MAJOR_VERSION,
 		MSM_SLEEPER_MINOR_VERSION);
 
-	sleeper_wq = alloc_workqueue("msm_sleeper_wq",
-				WQ_HIGHPRI, 1);
-	if (!sleeper_wq) {
-		ret = -ENOMEM;
-		goto err_out;
-	}
-
 	ret = sysfs_create_group(&pdev->dev.kobj, &attr_group);
-	if (ret) {
-		ret = -EINVAL;
-		goto err_dev;
-	}
+	if (ret)
+		return ret;
 
-	INIT_DELAYED_WORK(&sleeper_work, hotplug_func);
+	if (msm_sleeper_enabled)
+		start_stop_sleeper(msm_sleeper_enabled);
 
-	if (sleeper_data.enabled)
-		queue_delayed_work_on(0, sleeper_wq, &sleeper_work, msecs_to_jiffies(60000));
-
-	return ret;
-
-err_dev:
-	destroy_workqueue(sleeper_wq);
-err_out:
-	sleeper_data.enabled = 0;
 	return ret;
 }
 

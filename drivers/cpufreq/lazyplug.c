@@ -212,6 +212,8 @@ static void cpu_all_ctrl(bool online) {
 	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
 		return;
 
+	hardplug_all_cpus();
+
 	if (online) {
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
@@ -340,6 +342,7 @@ static void lazyplug_work_fn(struct work_struct *work)
 	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
 		return;
 
+	hardplug_all_cpus();
 	nr_run_stat = calculate_thread_stats();
 	update_per_cpu_stat();
 	cpu_count = nr_run_stat;

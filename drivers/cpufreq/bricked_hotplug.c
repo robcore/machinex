@@ -511,6 +511,8 @@ static ssize_t store_max_cpus_online(struct device *dev,
 	if (!hotplug.bricked_enabled)
 		return count;
 
+	hardplug_all_cpus();
+
 	if (num_online_cpus() > hotplug.max_cpus_online) {
 		for (cpu = DEFAULT_MAX_CPUS_ONLINE; cpu > 0; cpu--) {
 			if (num_online_cpus() <= hotplug.max_cpus_online)

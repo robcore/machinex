@@ -166,6 +166,8 @@ static void hotplug_work_fn(struct work_struct *work)
 	if (!hotplug_ready || !is_display_on())
 		return;
 
+	hardplug_all_cpus();
+
 	rq_avg = get_nr_run_avg();
 	upmax_cpus_online = hotplug_tuners_ins.max_cpus_online;
 
