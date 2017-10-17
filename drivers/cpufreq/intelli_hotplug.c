@@ -702,7 +702,7 @@ static void intelli_plug_stop(void)
 	unregister_power_suspend(&intelli_suspend_data);
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
-	cpuhp_remove_state_nocalls(CPUHP_INTELLI_DEAD);
+	cpuhp_remove_state_nocalls(CPUHP_INTELLI_DYING);
 	mutex_destroy(&(intellisleep_mutex));
 }
 
