@@ -1307,10 +1307,7 @@ int __init acpuclk_krait_init(struct device *dev,
 	dcvs_freq_init();
 	acpuclk_register(&acpuclk_krait_data);
 
-	ret = cpuhp_setup_state_nocalls(CPUHP_ACPU_ONLINE, "acpu:online", cpuhp_acpuclk_online,
-					NULL);
-	WARN_ON(ret < 0);
-	ret = cpuhp_setup_state_nocalls(CPUHP_ACPU_DYING, "acpu:dying", NULL,
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "acpu:online", cpuhp_acpuclk_online,
 					cpuhp_acpuclk_dying);
 	WARN_ON(ret < 0);
 	ret = cpuhp_setup_state_nocalls(CPUHP_ACPU_DEAD, "acpu:dead", NULL,
