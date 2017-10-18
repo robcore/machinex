@@ -621,7 +621,7 @@ static void intelli_suspend(struct power_suspend *h)
 	}
 }
 
-static void intelli_resume(struct power_suspend * h)
+static void intelli_resume(struct power_suspend *h)
 {
 	unsigned int cpu;
 
