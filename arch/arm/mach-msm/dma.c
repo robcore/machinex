@@ -714,28 +714,7 @@ static int msm_dmov_suspend_late(struct device *dev)
 	return 0;
 }
 
-static int msm_dmov_runtime_suspend(struct device *dev)
-{
-	dev_dbg(dev, "pm_runtime: suspending...\n");
-	return 0;
-}
-
-static int msm_dmov_runtime_resume(struct device *dev)
-{
-	dev_dbg(dev, "pm_runtime: resuming...\n");
-	return 0;
-}
-
-static int msm_dmov_runtime_idle(struct device *dev)
-{
-	dev_dbg(dev, "pm_runtime: idling...\n");
-	return 0;
-}
-
 static const struct dev_pm_ops msm_dmov_dev_pm_ops = {
-	.runtime_suspend = msm_dmov_runtime_suspend,
-	.runtime_resume = msm_dmov_runtime_resume,
-	.runtime_idle = msm_dmov_runtime_idle,
 	.suspend = msm_dmov_suspend_late,
 };
 
