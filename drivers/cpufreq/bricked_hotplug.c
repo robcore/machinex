@@ -206,10 +206,11 @@ static int mp_decision(void) {
 static void bricked_hotplug_work(struct work_struct *work) {
 	unsigned int cpu;
 	
-	if (!is_display_on() || !hotplug_ready)
+	if (!is_display_on())
 		return;
 
-	if (!mutex_trylock(&hotplug.bricked_cpu_mutex))
+	if (!mutex_trylock(&hotplug.bricked_cpu_mutex) ||
+		!hotplug_ready)
 		goto out;
 
 	state = mp_decision();

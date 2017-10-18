@@ -163,9 +163,10 @@ static void hotplug_work_fn(struct work_struct *work)
 	HOTPLUG_STATUS hotplug_onoff[NR_CPUS] = {IDLE, IDLE, IDLE, IDLE};
 	int delay;
 
-	if (!hotplug_ready || !is_display_on())
+	if (!is_display_on())
 		return;
-
+	if (!hotplug_ready)
+		goto resched;
 	hardplug_all_cpus();
 
 	rq_avg = get_nr_run_avg();
@@ -300,6 +301,7 @@ static void hotplug_work_fn(struct work_struct *work)
 		delay -= jiffies % delay;
 	}
 */
+resched:
 	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
 							  delay);
 }

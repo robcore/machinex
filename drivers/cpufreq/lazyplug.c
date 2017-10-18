@@ -339,8 +339,11 @@ static void lazyplug_work_fn(struct work_struct *work)
 	unsigned int cpu_count = 0;
 	unsigned int nr_cpus = 0;
 
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
+
+	if (!hotplug_ready)
+		goto resched;
 
 	hardplug_all_cpus();
 	nr_run_stat = calculate_thread_stats();
@@ -377,6 +380,8 @@ static void lazyplug_work_fn(struct work_struct *work)
 		idle_count = 0;
 		cpu_all_ctrl(true);
 	}
+
+resched:
 	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
 		msecs_to_jiffies(sampling_time));
 }
