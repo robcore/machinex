@@ -152,8 +152,7 @@ static unsigned int default_above_hispeed_delay[] = {
 #define for_each_ipolicy(__ip)	\
 	list_for_each_entry(__ip, &tunables->attr_set.policy_list, tunables_hook)
 
-static struct interactive_tunables *global_tunables;
-static DEFINE_MUTEX(global_tunables_lock);
+static DEFINE_MUTEX(tunables_lock);
 
 static inline void update_slack_delay(struct interactive_tunables *tunables)
 {
@@ -1097,8 +1096,6 @@ interactive_tunables_alloc(struct interactive_policy *ipolicy)
 		return NULL;
 
 	gov_attr_set_init(&tunables->attr_set, &ipolicy->tunables_hook);
-	if (!have_governor_per_policy())
-		global_tunables = tunables;
 
 	ipolicy->tunables = tunables;
 
@@ -1107,9 +1104,6 @@ interactive_tunables_alloc(struct interactive_policy *ipolicy)
 
 static void interactive_tunables_free(struct interactive_tunables *tunables)
 {
-	if (!have_governor_per_policy())
-		global_tunables = NULL;
-
 	kfree(tunables);
 }
 
@@ -1155,7 +1149,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	/* wake up so the thread does not look hung to the freezer */
 	wake_up_process(speedchange_task);
 
-	mutex_lock(&global_tunables_lock);
+	mutex_lock(&tunables_lock);
 
 	tunables = interactive_tunables_alloc(ipolicy);
 	if (!tunables) {
@@ -1196,7 +1190,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	}
 
 out:
-	mutex_unlock(&global_tunables_lock);
+	mutex_unlock(&tunables_lock);
 	return 0;
 
 fail:
@@ -1204,7 +1198,7 @@ fail:
 	interactive_tunables_free(tunables);
 
 free_int_policy:
-	mutex_unlock(&global_tunables_lock);
+	mutex_unlock(&tunables_lock);
 	kthread_stop(speedchange_task);
 	put_task_struct(speedchange_task);
 nolock_free:
@@ -1220,7 +1214,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	struct interactive_tunables *tunables = ipolicy->tunables;
 	unsigned int count;
 
-	mutex_lock(&global_tunables_lock);
+	mutex_lock(&tunables_lock);
 
 	/* Last policy using the governor ? */
 	if (!--interactive_gov.usage_count) {
@@ -1234,7 +1228,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	if (!count)
 		interactive_tunables_free(tunables);
 
-	mutex_unlock(&global_tunables_lock);
+	mutex_unlock(&tunables_lock);
 
 	kthread_stop(speedchange_task);
 	put_task_struct(speedchange_task);
