@@ -141,6 +141,8 @@ static void asmp_work_fn(struct work_struct *work)
 						continue;
 			}
 		cycle[cpu]++;
+		if (nr_cpu_online == min_cpus_online)
+			break;
 		}
 	} else if (nr_cpu_online < max_cpus_online) {
 		for_each_nonboot_online_cpu(cpu) {
@@ -172,6 +174,8 @@ static void asmp_work_fn(struct work_struct *work)
 						continue;
 			}
 		cycle[cpu]++;
+		if (nr_cpu_online == max_cpus_online)
+			break;
 		}
 	}
 
