@@ -34,10 +34,10 @@
 
 #define ASMP_TAG			"AutoSMP:"
 #define ASMP_MS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define DEFAULT_BOOST_LOCK_DUR ASMP_MS(750UL)
+#define DEFAULT_BOOST_LOCK_DUR ASMP_MS(250UL)
 #define DEFAULT_NR_CPUS_BOOSTED		4
-#define DEFAULT_UPDATE_RATE		80
-#define MIN_INPUT_INTERVAL		200 * 1000L
+#define DEFAULT_UPDATE_RATE		ASMP_MS(80UL)
+#define MIN_INPUT_INTERVAL		ASMP_MS(200UL)
 #define DEFAULT_MIN_BOOST_FREQ		1566000
 
 static DEFINE_SPINLOCK(asmp_lock);
@@ -59,13 +59,25 @@ static ktime_t last_boost_time;
 static ktime_t last_input;
 static unsigned int cycle[NR_CPUS] = { 0, 0, 0, 0};
 
-static void reschedule_hotplug_work(void)
+static void reschedule_hotplug_work(bool from_boost)
 {
+	ktime_t delta;
+
 	if (!asmp_enabled || !is_display_on())
 		return;
 
-	mod_delayed_work_on(0, asmp_workq, &asmp_work,
-			msecs_to_jiffies(delay));
+	if (!from_boost) {
+		mod_delayed_work_on(0, asmp_workq, &asmp_work,
+				msecs_to_jiffies(delay));
+		return;
+	} else {
+		delta = ktime_sub(ktime_get(), last_input);
+
+		 if (num_online_cpus() < cpus_boosted &&
+			(ktime_compare(delta, ms_to_ktime(boost_lock_duration)) > 0))
+				mod_delayed_work_on(0, asmp_workq, &asmp_work,
+					msecs_to_jiffies(delay));
+	}
 }
 
 static void asmp_work_fn(struct work_struct *work)
@@ -76,7 +88,6 @@ static void asmp_work_fn(struct work_struct *work)
 	local_min_boost_freq = min_boost_freq;
 	unsigned int rate[NR_CPUS] = { 0, 0, 0, 0 };
 	unsigned long flags;
-	ktime_t delta;
 
 	if (!asmp_enabled || !is_display_on())
 		return;
@@ -95,57 +106,72 @@ static void asmp_work_fn(struct work_struct *work)
 	rate[0] = cpufreq_quick_get(0);
 	fast_rate = rate[0];
 
-	for_each_nonboot_online_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		if (!cpu_online(cpu))
-			continue;
-		rate[cpu] = cpufreq_quick_get(cpu);
-		if (rate[cpu] <= slow_rate) {
-			slow_cpu = cpu;
-			slow_rate = rate[cpu];
-		} else if (rate[cpu] > fast_rate)
-			fast_rate = rate[cpu];
+	if (nr_cpu_online < max_cpus_online) {
+		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (!cpu_online(cpu))
+				continue;
+			rate[cpu] = cpufreq_quick_get(cpu);
+			if (rate[cpu] <= slow_rate) {
+				slow_cpu = cpu;
+				slow_rate = rate[cpu];
+			} else if (rate[cpu] > fast_rate)
+				fast_rate = rate[cpu];
 
-		if (rate[0] < slow_rate)
-			slow_rate = rate[0];
+			if (rate[0] < slow_rate)
+				slow_rate = rate[0];
 
-		if (max_rate <= min_boost_freq)
-			local_min_boost_freq = max_rate;
+			if (max_rate <= min_boost_freq)
+				local_min_boost_freq = max_rate;
 
-		delta = ktime_sub(ktime_get(), last_input);
-		/* hotplug one core if all online cores are over up_rate limit */
-		if (slow_rate > up_rate && fast_rate >= local_min_boost_freq &&
-			nr_cpu_online < max_cpus_online &&
-					cycle[cpu] > cycle_up) {
-				if (cpu_is_offline(cpu)) {
-					cpu_up(cpu);
-					cycle[cpu] = 0;
-				} else
-					continue;
-		/* check if boost required */
-		} else if (nr_cpu_online < cpus_boosted &&
-				(ktime_compare(delta, ms_to_ktime(boost_lock_duration)) > 0) &&
-				nr_cpu_online < max_cpus_online) {
-				if (cpu_is_offline(cpu)) {
-					cpu_up(cpu);
-				} else
-					continue;
-		/* unplug slowest core if all online cores are under down_rate limit */
-		} else if (slow_cpu && (fast_rate < down_rate) &&
-				   nr_cpu_online > min_cpus_online &&
-					cycle[cpu] >= cycle_down) {
-				if (cpu_online(slow_cpu)) {
-		 			cpu_down(slow_cpu);
-					cycle[cpu] = 0;
-				} else
-					continue;
-		} /* else do nothing */
-	cycle[cpu]++;
+
+			/* hotplug one core if all online cores are over up_rate limit */
+			if (slow_rate > up_rate && fast_rate >= local_min_boost_freq &&
+				cycle[cpu] >= cycle_up) {
+					if (cpu_is_offline(cpu)) {
+						cpu_up(cpu);
+						cycle[cpu] = 0;
+					} else
+						continue;
+			}
+		cycle[cpu]++;
+		}
+	} else if (nr_cpu_online > min_cpus_online) {
+		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (!cpu_online(cpu))
+				continue;
+			rate[cpu] = cpufreq_quick_get(cpu);
+			if (rate[cpu] <= slow_rate) {
+				slow_cpu = cpu;
+				slow_rate = rate[cpu];
+			} else if (rate[cpu] > fast_rate)
+				fast_rate = rate[cpu];
+
+			if (rate[0] < slow_rate)
+				slow_rate = rate[0];
+
+			if (max_rate <= min_boost_freq)
+				local_min_boost_freq = max_rate;
+			/* unplug slowest core if all online cores are under down_rate limit */
+			if (slow_cpu && (fast_rate < down_rate) &&
+					   	cycle[cpu] >= cycle_down) {
+					if (cpu_online(slow_cpu)) {
+			 			cpu_down(slow_cpu);
+						cycle[cpu] = 0;
+					} else
+						continue;
+			}
+		cycle[cpu]++;
+		}
 	}
 
+
+
 resched:
-	reschedule_hotplug_work();
+	reschedule_hotplug_work(false);
 }
 
 static void asmp_suspend(struct power_suspend *h)
@@ -157,7 +183,7 @@ static void asmp_resume(struct power_suspend *h)
 	if (!asmp_enabled)
 		return;
 
-	reschedule_hotplug_work();
+	reschedule_hotplug_work(false);
 }
 
 static struct power_suspend asmp_suspend_data =
@@ -180,7 +206,7 @@ void autosmp_input_boost(void)
 		num_online_cpus() >= cpus_boosted ||
 	    cpus_boosted <= min_cpus_online)
 		return;
-
+	reschedule_hotplug_work(true);
 	last_boost_time = ktime_get();
 }
 
@@ -197,7 +223,7 @@ static void hotplug_start_stop(unsigned int enabled)
 
 		INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
 		register_power_suspend(&asmp_suspend_data);
-		reschedule_hotplug_work();
+		reschedule_hotplug_work(false);
 	} else {
 		cancel_delayed_work(&asmp_work);
 		unregister_power_suspend(&asmp_suspend_data);
