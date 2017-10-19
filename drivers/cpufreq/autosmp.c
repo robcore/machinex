@@ -80,7 +80,7 @@ static void reschedule_hotplug_work(bool from_boost)
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
 				break;
-			if (cpu_is_offline(cpu))
+			if (cpu_is_offline(cpu) && is_cpu_allowed(cpu))
 				cpu_up(cpu);				
 		}
 	}
@@ -133,7 +133,7 @@ static void asmp_work_fn(struct work_struct *work)
 			/* unplug slowest core if all online cores are under down_rate limit */
 			if (slow_cpu && (fast_rate < down_rate) &&
 					   	cycle[cpu] >= cycle_down) {
-					if (cpu_online(slow_cpu)) {
+					if (cpu_online(slow_cpu) && is_cpu_allowed(slow_cpu)) {
 			 			cpu_down(slow_cpu);
 						cycle[cpu] = 0;
 					} else
@@ -164,7 +164,7 @@ static void asmp_work_fn(struct work_struct *work)
 			/* hotplug one core if all online cores are over up_rate limit */
 			if (slow_rate > up_rate && fast_rate >= local_min_boost_freq &&
 				cycle[cpu] >= cycle_up) {
-					if (cpu_is_offline(cpu)) {
+					if (cpu_is_offline(cpu) && is_cpu_allowed(cpu)) {
 						cpu_up(cpu);
 						cycle[cpu] = 0;
 					} else
