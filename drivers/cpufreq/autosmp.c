@@ -123,7 +123,7 @@ static void asmp_work_fn(struct work_struct *work)
 		}
 	/* check if boost required */
 	} else if (nr_cpu_online < cpus_boosted &&
-			now - last_boost_time <= ms_to_ktime(boost_lock_duration) &&
+			now - last_boost_time <= us_to_ktime(boost_lock_duration) &&
 			nr_cpu_online < max_cpus_online) {
 			cpu = cpumask_next_zero(0, cpu_online_mask);
 			if (cpu_is_offline(cpu))
