@@ -302,6 +302,17 @@ asmp_store_one(cycle_down, 1, 3);
 asmp_store_one(cpus_boosted, min_cpus_online, max_cpus_online);
 asmp_store_one_ktimer(boost_lock_duration, 100, 1000);
 
+static ssize_t show_asmp_enabled(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	unsigned int tempval;
+	int ret;
+
+	tempval = is_asmp_enabled();
+	ret = sprintf(buf, "%u\n", tempval);
+
+	return ret;
+}
+
 static ssize_t store_asmp_enabled(struct kobject *kobj, 
 				struct kobj_attribute *attr, const char *buf,
 					 size_t count)
