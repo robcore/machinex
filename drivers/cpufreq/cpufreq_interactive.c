@@ -1235,9 +1235,6 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	policy->governor_data = NULL;
 	interactive_tunables_free(tunables);
 
-stop_kthread:
-	interactive_kthread_stop(ipolicy);
-
  free_int_policy:
 	mutex_unlock(&tunables_lock);
 
@@ -1269,7 +1266,6 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 
 	mutex_unlock(&tunables_lock);
 
-	interactive_kthread_stop(ipolicy);
 	interactive_policy_free(ipolicy);
 }
 
