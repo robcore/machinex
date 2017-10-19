@@ -1107,6 +1107,17 @@ static void interactive_tunables_free(struct interactive_tunables *tunables)
 	kfree(tunables);
 }
 
+static void cpufreq_interactive_nop_timer(unsigned long data)
+{
+	/*
+	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
+	 * to decrease its frequency if it is not set to minimum already.
+	 *
+	 * This is important for platforms where CPU with higher frequencies
+	 * consume higher power even at IDLE.
+	 */
+}
+
 int cpufreq_interactive_init(struct cpufreq_policy *policy)
 {
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
@@ -1315,17 +1326,6 @@ static struct interactive_governor interactive_gov = {
 		.limits			= cpufreq_interactive_limits,
 	}
 };
-
-static void cpufreq_interactive_nop_timer(unsigned long data)
-{
-	/*
-	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
-	 * to decrease its frequency if it is not set to minimum already.
-	 *
-	 * This is important for platforms where CPU with higher frequencies
-	 * consume higher power even at IDLE.
-	 */
-}
 
 static int __init cpufreq_interactive_gov_register(void)
 {
