@@ -63,7 +63,11 @@ static void reschedule_hotplug_work(bool from_boost)
 {
 	ktime_t delta;
 
-	if (!asmp_enabled || !is_display_on())
+	if (!asmp_enabled || !is_display_on() || !hotplug_ready)
+		return;
+
+	delta = ktime_sub(ktime_get(), last_input);
+	if (ktime_compare(delta, ms_to_ktime(boost_lock_duration)) <= 0)
 		return;
 
 	if (!from_boost) {
@@ -71,12 +75,14 @@ static void reschedule_hotplug_work(bool from_boost)
 				msecs_to_jiffies(delay));
 		return;
 	} else {
-		delta = ktime_sub(ktime_get(), last_input);
-
-		 if (num_online_cpus() < cpus_boosted &&
-			(ktime_compare(delta, ms_to_ktime(boost_lock_duration)) > 0))
-				mod_delayed_work_on(0, asmp_workq, &asmp_work,
-					msecs_to_jiffies(delay));
+		if (num_online_cpus() == cpus_boosted)
+			return;
+		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (cpu_is_offline(cpu))
+				cpu_up(cpu);				
+		}
 	}
 }
 
@@ -106,7 +112,36 @@ static void asmp_work_fn(struct work_struct *work)
 	rate[0] = cpufreq_quick_get(0);
 	fast_rate = rate[0];
 
-	if (nr_cpu_online < max_cpus_online) {
+	if (nr_cpu_online > min_cpus_online) {
+		for_each_nonboot_online_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (!cpu_online(cpu))
+				continue;
+			rate[cpu] = cpufreq_quick_get(cpu);
+			if (rate[cpu] <= slow_rate) {
+				slow_cpu = cpu;
+				slow_rate = rate[cpu];
+			} else if (rate[cpu] > fast_rate)
+				fast_rate = rate[cpu];
+
+			if (rate[0] < slow_rate)
+				slow_rate = rate[0];
+
+			if (max_rate <= min_boost_freq)
+				local_min_boost_freq = max_rate;
+			/* unplug slowest core if all online cores are under down_rate limit */
+			if (slow_cpu && (fast_rate < down_rate) &&
+					   	cycle[cpu] >= cycle_down) {
+					if (cpu_online(slow_cpu)) {
+			 			cpu_down(slow_cpu);
+						cycle[cpu] = 0;
+					} else
+						continue;
+			}
+		cycle[cpu]++;
+		}
+	} else if (nr_cpu_online < max_cpus_online) {
 		for_each_nonboot_online_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
 				break;
@@ -137,38 +172,7 @@ static void asmp_work_fn(struct work_struct *work)
 			}
 		cycle[cpu]++;
 		}
-	} else if (nr_cpu_online > min_cpus_online) {
-		for_each_nonboot_online_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu))
-				break;
-			if (!cpu_online(cpu))
-				continue;
-			rate[cpu] = cpufreq_quick_get(cpu);
-			if (rate[cpu] <= slow_rate) {
-				slow_cpu = cpu;
-				slow_rate = rate[cpu];
-			} else if (rate[cpu] > fast_rate)
-				fast_rate = rate[cpu];
-
-			if (rate[0] < slow_rate)
-				slow_rate = rate[0];
-
-			if (max_rate <= min_boost_freq)
-				local_min_boost_freq = max_rate;
-			/* unplug slowest core if all online cores are under down_rate limit */
-			if (slow_cpu && (fast_rate < down_rate) &&
-					   	cycle[cpu] >= cycle_down) {
-					if (cpu_online(slow_cpu)) {
-			 			cpu_down(slow_cpu);
-						cycle[cpu] = 0;
-					} else
-						continue;
-			}
-		cycle[cpu]++;
-		}
 	}
-
-
 
 resched:
 	reschedule_hotplug_work(false);
