@@ -57,7 +57,7 @@ static unsigned int min_boost_freq = DEFAULT_MIN_BOOST_FREQ;
 static unsigned long boost_lock_duration = DEFAULT_BOOST_LOCK_DUR;
 static ktime_t last_boost_time;
 static ktime_t last_input;
-static unsigned int cycle[NR_CPUS] = { 0, 0, 0, 0};
+static unsigned int cycle;
 
 static void reschedule_hotplug_work(bool from_boost)
 {
@@ -133,17 +133,18 @@ static void asmp_work_fn(struct work_struct *work)
 				local_min_boost_freq = max_rate;
 			/* unplug slowest core if all online cores are under down_rate limit */
 			if (slow_cpu && (fast_rate < down_rate) &&
-					   	cycle[cpu] >= cycle_down) {
+					   	cycle >= cycle_down) {
 					if (cpu_online(slow_cpu) && is_cpu_allowed(slow_cpu)) {
 			 			cpu_down(slow_cpu);
-						cycle[cpu] = 0;
+						cycle = 0;
 					} else
 						continue;
 			}
-		cycle[cpu]++;
+
 		if (nr_cpu_online == min_cpus_online)
 			break;
 		}
+		cycle++;
 	} else if (nr_cpu_online < max_cpus_online) {
 		for_each_nonboot_online_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
@@ -166,17 +167,17 @@ static void asmp_work_fn(struct work_struct *work)
 
 			/* hotplug one core if all online cores are over up_rate limit */
 			if (slow_rate > up_rate && fast_rate >= local_min_boost_freq &&
-				cycle[cpu] >= cycle_up) {
+				cycle >= cycle_up) {
 					if (cpu_is_offline(cpu) && is_cpu_allowed(cpu)) {
 						cpu_up(cpu);
-						cycle[cpu] = 0;
+						cycle = 0;
 					} else
 						continue;
 			}
-		cycle[cpu]++;
 		if (nr_cpu_online == max_cpus_online)
 			break;
 		}
+		cycle++;
 	}
 
 resched:
