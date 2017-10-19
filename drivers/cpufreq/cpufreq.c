@@ -2070,7 +2070,7 @@ unsigned int cpufreq_quick_get_max(unsigned int cpu)
 	unsigned int ret_freq = 0;
 
 	if (policy) {
-		ret_freq = check_cpufreq_hardlimit(policy->max);
+		ret_freq = policy->max;
 		cpufreq_cpu_put(policy);
 	}
 
@@ -2090,7 +2090,7 @@ unsigned int cpufreq_quick_get_min(unsigned int cpu)
 	unsigned int ret_freq = 0;
 
 	if (policy) {
-		ret_freq = check_cpufreq_hardlimit(policy->min);
+		ret_freq = policy->min;
 		cpufreq_cpu_put(policy);
 	}
 

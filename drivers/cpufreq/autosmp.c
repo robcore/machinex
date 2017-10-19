@@ -40,6 +40,7 @@
 #define MIN_INPUT_INTERVAL		200 * 1000L
 #define DEFAULT_MIN_BOOST_FREQ		1566000
 
+static DEFINE_SPINLOCK(asmp_lock);
 static struct delayed_work asmp_work;
 static struct workqueue_struct *asmp_workq;
 static unsigned int asmp_enabled = 0;
@@ -57,6 +58,18 @@ static unsigned long boost_lock_duration = DEFAULT_BOOST_LOCK_DUR;
 static u64 last_boost_time;
 static unsigned int cycle = 0;
 
+static unsigned int is_asmp_enabled(void)
+{
+	unsigned int temp;
+	unsigned long flags;
+
+	spin_lock_irqsave(&asmp_lock, flags);
+	temp = asmp_enabled;
+	spin_unlock_irqrestore(&asmp_lock, flags);
+
+	return temp;	
+}
+
 static void reschedule_hotplug_work(void)
 {
 	mod_delayed_work_on(0, asmp_workq, &asmp_work,
@@ -70,13 +83,14 @@ static void asmp_work_fn(struct work_struct *work)
 	max_rate, up_rate, down_rate, nr_cpu_online, \
 	local_min_boost_freq = min_boost_freq;
 	unsigned int rate[NR_CPUS];
+	unsigned long flags;
 	u64 now;
+
+	if (!is_asmp_enabled() || !is_display_on())
+		return;
 
 	if (!hotplug_ready)
 		goto resched;
-
-	if (!asmp_enabled || !is_display_on())
-		return;
 
 	/* get maximum possible hardlimit freq for cpu0 and
 	   calculate up/down limits */
@@ -86,21 +100,22 @@ static void asmp_work_fn(struct work_struct *work)
 
 	/* find current max and min cpu freq to estimate load */
 	nr_cpu_online = num_online_cpus();
-	rate[0] = acpuclk_get_rate(0);
+	rate[0] = cpufreq_quick_get(0);
 	fast_rate = rate[0];
 
-	get_online_cpus();
 	for_each_nonboot_online_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
-		rate[cpu] = acpuclk_get_rate(cpu);
+		if (cpu_online(cpu))
+			rate[cpu] = cpufreq_quick_get(cpu);
+		else
+			rate[cpu] = 0;
 		if (rate[cpu] <= slow_rate) {
 			slow_cpu = cpu;
 			slow_rate = rate[cpu];
 		} else if (rate[cpu] > fast_rate)
 			fast_rate = rate[cpu];
 	}
-	put_online_cpus();
 
 	if (rate[0] < slow_rate)
 		slow_rate = rate[0];
@@ -159,8 +174,9 @@ static struct power_suspend asmp_suspend_data =
 void autosmp_input_boost(void)
 {
 	u64 now;
+	unsigned long flags;
 
-	if (!asmp_enabled || !is_display_on() || !hotplug_ready)
+	if (!is_asmp_enabled() || !is_display_on() || !hotplug_ready)
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -170,30 +186,37 @@ void autosmp_input_boost(void)
 	if (cpus_boosted <= min_cpus_online)
 		return;
 
-	reschedule_hotplug_work();
-
 	last_boost_time = ktime_to_us(ktime_get());
 }
 
 static void hotplug_start_stop(unsigned int enabled)
 {
-	if (enabled && asmp_enabled) {
-		asmp_workq =
-			alloc_workqueue("autosmp_wq",
-				WQ_HIGHPRI | WQ_FREEZABLE, 0);
-		if (!asmp_workq) {
+	unsigned long flags;
+
+	if (enabled) {
+		spin_lock_irqsave(&asmp_lock, flags);
+		asmp_enabled = 1;
+		spin_unlock_irqrestore(&asmp_lock, flags);
+
+		asmp_workq = create_singlethread_workqueue("autosmp");
+		if (WARN_ON_ONCE(!asmp_workq)) {
 			pr_err("%s: Failed to allocate hotplug workqueue\n",
 						ASMP_TAG);
+			spin_lock_irqsave(&asmp_lock, flags);
 			asmp_enabled = 0;
+			spin_unlock_irqrestore(&asmp_lock, flags);
 			return;
 		}
 
 		INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
 		register_power_suspend(&asmp_suspend_data);
 		reschedule_hotplug_work();
-	} else if (!enabled && !asmp_enabled) {
+	} else {
+		spin_lock_irqsave(&asmp_lock, flags);
+		asmp_enabled = 0;
+		spin_unlock_irqrestore(&asmp_lock, flags);		
 		unregister_power_suspend(&asmp_suspend_data);
-		cancel_delayed_work_sync(&asmp_work);
+		cancel_delayed_work(&asmp_work);
 		destroy_workqueue(asmp_workq);
 	}
 }
@@ -223,7 +246,6 @@ asmp_show_one(cpufreq_down);
 asmp_show_one(cycle_up);
 asmp_show_one(cycle_down);
 asmp_show_one(cpus_boosted);
-
 asmp_show_long(boost_lock_duration);
 
 #define asmp_store_one(object, min, max)		\
@@ -280,33 +302,23 @@ asmp_store_one(cycle_down, 1, 3);
 asmp_store_one(cpus_boosted, min_cpus_online, max_cpus_online);
 asmp_store_one_ktimer(boost_lock_duration, 100, 1000);
 
-static int show_asmp_enabled(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-{
-	ssize_t ret;
-
-	ret = sprintf(buf, "%u\n", asmp_enabled);
-
-	return ret;
-}
-
-static int store_asmp_enabled(struct kobject *kobj, 
+static ssize_t store_asmp_enabled(struct kobject *kobj, 
 				struct kobj_attribute *attr, const char *buf,
 					 size_t count)
 {
-	unsigned int val;
+	int val;
 
 	if (sscanf(buf, "%u", &val) != 1)
 		return -EINVAL;
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == asmp_enabled)
-		return 0;
+	if (val == is_asmp_enabled())
+		return count;
 
-	asmp_enabled = val;
-	hotplug_start_stop(asmp_enabled);
+	hotplug_start_stop(val);
 
-	return 0;
+	return count;
 }
 
 #define ASMP_ATTR_RW(_name) \
@@ -348,21 +360,15 @@ static struct attribute_group asmp_attr_group = {
 static int __init asmp_init(void)
 {
 	int ret = 0;
+	unsigned long flags;
 
 	ret = sysfs_create_group(kernel_kobj, &asmp_attr_group);
 	if (ret) {
 		ret = -ENOMEM;
-		goto err;
+		return ret;
 	}
-	if (asmp_enabled)
-		hotplug_start_stop(asmp_enabled);
 
 	pr_info(ASMP_TAG "Init complete.\n");
-	return ret;
-
-err:
-	if (asmp_enabled)
-		asmp_enabled = 0;
 	return ret;
 }
 
