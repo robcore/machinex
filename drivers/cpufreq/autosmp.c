@@ -61,6 +61,7 @@ static unsigned int cycle[NR_CPUS] = { 0, 0, 0, 0};
 
 static void reschedule_hotplug_work(bool from_boost)
 {
+	unsigned int cpu;
 	ktime_t delta;
 
 	if (!asmp_enabled || !is_display_on() || !hotplug_ready)
