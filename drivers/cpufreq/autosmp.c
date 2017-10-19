@@ -58,18 +58,6 @@ static unsigned long boost_lock_duration = DEFAULT_BOOST_LOCK_DUR;
 static u64 last_boost_time;
 static unsigned int cycle = 0;
 
-static unsigned int is_asmp_enabled(void)
-{
-	unsigned int temp;
-	unsigned long flags;
-
-	spin_lock_irqsave(&asmp_lock, flags);
-	temp = asmp_enabled;
-	spin_unlock_irqrestore(&asmp_lock, flags);
-
-	return temp;	
-}
-
 static void reschedule_hotplug_work(void)
 {
 	mod_delayed_work_on(0, asmp_workq, &asmp_work,
@@ -82,11 +70,11 @@ static void asmp_work_fn(struct work_struct *work)
 	slow_rate = UINT_MAX, fast_rate, \
 	max_rate, up_rate, down_rate, nr_cpu_online, \
 	local_min_boost_freq = min_boost_freq;
-	unsigned int rate[NR_CPUS];
+	unsigned int rate[NR_CPUS] = { 0, 0, 0, 0 };
 	unsigned long flags;
 	u64 now;
 
-	if (!is_asmp_enabled() || !is_display_on())
+	if (!asmp_enabled || !is_display_on())
 		return;
 
 	if (!hotplug_ready)
@@ -176,7 +164,7 @@ void autosmp_input_boost(void)
 	u64 now;
 	unsigned long flags;
 
-	if (!is_asmp_enabled() || !is_display_on() || !hotplug_ready)
+	if (!asmp_enabled || !is_display_on() || !hotplug_ready)
 		return;
 
 	now = ktime_to_us(ktime_get());
@@ -194,17 +182,12 @@ static void hotplug_start_stop(unsigned int enabled)
 	unsigned long flags;
 
 	if (enabled) {
-		spin_lock_irqsave(&asmp_lock, flags);
 		asmp_enabled = 1;
-		spin_unlock_irqrestore(&asmp_lock, flags);
-
 		asmp_workq = create_singlethread_workqueue("autosmp");
 		if (WARN_ON_ONCE(!asmp_workq)) {
 			pr_err("%s: Failed to allocate hotplug workqueue\n",
 						ASMP_TAG);
-			spin_lock_irqsave(&asmp_lock, flags);
 			asmp_enabled = 0;
-			spin_unlock_irqrestore(&asmp_lock, flags);
 			return;
 		}
 
@@ -212,9 +195,7 @@ static void hotplug_start_stop(unsigned int enabled)
 		register_power_suspend(&asmp_suspend_data);
 		reschedule_hotplug_work();
 	} else {
-		spin_lock_irqsave(&asmp_lock, flags);
 		asmp_enabled = 0;
-		spin_unlock_irqrestore(&asmp_lock, flags);		
 		unregister_power_suspend(&asmp_suspend_data);
 		cancel_delayed_work(&asmp_work);
 		destroy_workqueue(asmp_workq);
@@ -304,11 +285,9 @@ asmp_store_one_ktimer(boost_lock_duration, 100, 1000);
 
 static ssize_t show_asmp_enabled(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	unsigned int tempval;
 	int ret;
 
-	tempval = is_asmp_enabled();
-	ret = sprintf(buf, "%u\n", tempval);
+	ret = sprintf(buf, "%u\n", asmp_enabled);
 
 	return ret;
 }
@@ -324,7 +303,7 @@ static ssize_t store_asmp_enabled(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (val == is_asmp_enabled())
+	if (val == asmp_enabled)
 		return count;
 
 	hotplug_start_stop(val);
