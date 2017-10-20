@@ -217,11 +217,8 @@ void autosmp_input_boost(void)
 
 	if ((ktime_compare(delta, ms_to_ktime(MIN_INPUT_INTERVAL))  <= 0) ||
 		num_online_cpus() >= cpus_boosted ||
-	    cpus_boosted <= min_cpus_online) {
-		mod_delayed_work_on(0, asmp_workq, &prework,
-				msecs_to_jiffies(delay * 2));
+	    cpus_boosted <= min_cpus_online)
 		return;
-	}
 
 	WRITE_ONCE(should_boost, 1);
 	reschedule_hotplug_work();
