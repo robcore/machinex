@@ -36,16 +36,10 @@ static void omniboost_input_event(struct input_handle *handle,
 /*boost functions go here*/
 	if (likely(boost_cores_first)) {
 		intelli_boost();
-#ifdef CONFIG_AUTOSMP
-		autosmp_input_boost();
-#endif
 		cpu_boost_event();
 	} else {
 		cpu_boost_event();
 		intelli_boost();
-#ifdef CONFIG_AUTOSMP
-		autosmp_input_boost();
-#endif
 	}
 }
 
