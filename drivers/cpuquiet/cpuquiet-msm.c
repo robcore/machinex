@@ -37,7 +37,7 @@ static struct cpuquiet_driver msm_cpuquiet_driver = {
 	.avg_hotplug_latency_ms	= MSM_AVG_HOTPLUG_LATENCY_MS,
 };
 
-static int __cpuinit msm_cpuquiet_probe(struct platform_device *pdev)
+static int msm_cpuquiet_probe(struct platform_device *pdev)
 {
 	int err;
 

@@ -107,7 +107,7 @@ int cpuquiet_cpu_up(unsigned int cpunumber, bool sync)
 }
 EXPORT_SYMBOL(cpuquiet_cpu_up);
 
-static void __cpuinit cpuquiet_work_func(struct work_struct *work)
+static void cpuquiet_work_func(struct work_struct *work)
 {
 	int count = -1;
 	unsigned int cpu;
@@ -216,7 +216,7 @@ static struct attribute_group cpuquiet_attrs_group = {
 };
 #endif /* CONFIG_CPU_QUIET_STATS */
 
-int __cpuinit cpuquiet_probe_common(struct platform_device *pdev)
+int cpuquiet_probe_common(struct platform_device *pdev)
 {
 	init_waitqueue_head(&wait_cpu);
 
