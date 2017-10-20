@@ -104,6 +104,7 @@ static void reschedule_hotplug_work(bool from_boost)
 		}
 		if (cycle > 0)
 			cycle--;
+		WRITE_ONCE(should_boost, 0);
 		mod_delayed_work_on(0, asmp_workq, &prework,
 				msecs_to_jiffies(delay));
 	}
