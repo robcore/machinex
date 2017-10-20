@@ -145,7 +145,7 @@ struct rq *__task_rq_lock(struct task_struct *p, struct rq_flags *rf)
 		}
 		raw_spin_unlock(&rq->lock);
 
-		while (task_on_rq_migrating(p))
+		while (unlikely(task_on_rq_migrating(p)))
 			cpu_relax();
 	}
 }
@@ -3339,6 +3339,37 @@ static void __sched notrace __schedule(bool preempt)
 	balance_callback(rq);
 }
 
+void __noreturn do_task_dead(void)
+{
+	/*
+	 * The setting of TASK_RUNNING by try_to_wake_up() may be delayed
+	 * when the following two conditions become true.
+	 *   - There is race condition of mmap_sem (It is acquired by
+	 *     exit_mm()), and
+	 *   - SMI occurs before setting TASK_RUNINNG.
+	 *     (or hypervisor of virtual machine switches to other guest)
+	 *  As a result, we may become TASK_RUNNING after becoming TASK_DEAD
+	 *
+	 * To avoid it, we have to wait for releasing tsk->pi_lock which
+	 * is held by try_to_wake_up()
+	 */
+	raw_spin_lock_irq(&current->pi_lock);
+	raw_spin_unlock_irq(&current->pi_lock);
+
+	/* Causes final put_task_struct in finish_task_switch(): */
+	__set_current_state(TASK_DEAD);
+
+	/* Tell freezer to ignore us: */
+	current->flags |= PF_NOFREEZE;
+
+	__schedule(false);
+	BUG();
+
+	/* Avoid "noreturn function does return" - but don't continue if BUG() is a NOP: */
+	for (;;)
+		cpu_relax();
+}
+
 static inline void sched_submit_work(struct task_struct *tsk)
 {
 	if (!tsk->state || tsk_is_pi_blocked(tsk))
@@ -3907,11 +3938,8 @@ static bool check_same_owner(struct task_struct *p)
 
 	rcu_read_lock();
 	pcred = __task_cred(p);
-	if (cred->user_ns == pcred->user_ns)
-		match = (cred->euid == pcred->euid ||
-			 cred->euid == pcred->uid);
-	else
-		match = false;
+	match = (uid_eq(cred->euid, pcred->euid) ||
+		 uid_eq(cred->euid, pcred->uid));
 	rcu_read_unlock();
 	return match;
 }
@@ -3930,8 +3958,8 @@ static int __sched_setscheduler(struct task_struct *p,
 	int queue_flags = DEQUEUE_SAVE | DEQUEUE_MOVE | DEQUEUE_NOCLOCK;
 	struct rq *rq;
 
-	/* May grab non-irq protected spin_locks: */
-	BUG_ON(in_interrupt());
+	/* The pi code expects interrupts enabled */
+	BUG_ON(pi && in_interrupt());
 recheck:
 	/* Double check policy once rq lock held: */
 	if (policy < 0) {
@@ -4560,11 +4588,11 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 	retval = -EPERM;
 	if (!check_same_owner(p)) {
 		rcu_read_lock();
-		if (!ns_capable(task_user_ns(p), CAP_SYS_NICE)) {
+		if (!ns_capable(__task_cred(p)->user_ns, CAP_SYS_NICE)) {
+			rcu_read_unlock();
+			goto out_free_new_mask;
+		}
 		rcu_read_unlock();
-		goto out_free_new_mask;
-	}
-	rcu_read_unlock();
 	}
 
 	retval = security_task_setscheduler(p);
