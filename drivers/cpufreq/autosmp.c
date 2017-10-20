@@ -102,6 +102,8 @@ static void reschedule_hotplug_work(bool from_boost)
 			if (num_online_cpus() == cpus_boosted)
 				return;
 		}
+		if (cycle > 0)
+			cycle--;
 		mod_delayed_work_on(0, asmp_workq, &prework,
 				msecs_to_jiffies(delay));
 	}
