@@ -490,7 +490,7 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 	struct cpufreq_freqs *freqs = data;
 	unsigned long cpu_freq;
 
-	if (state == CPUFREQ_POSTCHANGE || state == CPUFREQ_RESUMECHANGE) {
+	if (state == CPUFREQ_PRECHANGE || state == CPUFREQ_POSTCHANGE) {
 		cpu_freq = freqs->new;
 
 		switch (rqbalance_state) {
@@ -660,7 +660,7 @@ static void rqbalance_kickstart(void)
 	/*FIXME: Kick start the state machine by faking a freq notification*/
 	initial_freq.new = cpufreq_get(0);
 	if (initial_freq.new != 0)
-		balanced_cpufreq_transition(NULL, CPUFREQ_RESUMECHANGE,
+		balanced_cpufreq_transition(NULL, CPUFREQ_PRECHANGE,
 						&initial_freq);
 }
 
@@ -668,14 +668,11 @@ int rqbalance_pm_notify(struct notifier_block *notify_block,
 				unsigned long mode, void *unused)
 {
 	switch (mode) {
-	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
 		rqbalance_state = IDLE;
 		cancel_delayed_work_sync(&rqbalance_work);
 		break;
 	case PM_POST_SUSPEND:
-	case PM_POST_HIBERNATION:
-	case PM_POST_RESTORE:
 		cpuquiet_wake_cpu(1, false);
 		cpuquiet_wake_cpu(2, false);
 		cpuquiet_wake_cpu(3, false);

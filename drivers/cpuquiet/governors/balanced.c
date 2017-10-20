@@ -352,7 +352,7 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 	struct cpufreq_freqs *freqs = data;
 	unsigned long cpu_freq;
 
-	if (state == CPUFREQ_POSTCHANGE || state == CPUFREQ_RESUMECHANGE) {
+	if (state == CPUFREQ_POSTCHANGE || state == CPUFREQ_PRECHANGE) {
 		cpu_freq = freqs->new;
 
 		switch (balanced_state) {
@@ -530,7 +530,7 @@ static int balanced_start(void)
 	/*FIXME: Kick start the state machine by faking a freq notification*/
 	initial_freq.new = cpufreq_get(0);
 	if (initial_freq.new != 0)
-		balanced_cpufreq_transition(NULL, CPUFREQ_RESUMECHANGE,
+		balanced_cpufreq_transition(NULL, CPUFREQ_PRECHANGE,
 						&initial_freq);
 	return 0;
 }
