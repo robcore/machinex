@@ -22,7 +22,7 @@
 #include <linux/cpu.h>
 #include <linux/jiffies.h>
 #include <linux/slab.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #include "cpuquiet.h"
 
