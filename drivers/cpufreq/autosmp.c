@@ -95,7 +95,7 @@ static void reschedule_hotplug_work(bool from_boost)
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
 				break;
-			if (cpu_online)
+			if (cpu_online(cpu))
 				continue;
 			if (is_cpu_allowed(cpu) || !thermal_core_controlled(cpu))
 				cpu_up(cpu);
