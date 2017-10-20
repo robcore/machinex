@@ -25,16 +25,7 @@ static DEFINE_MUTEX(userspace_mutex);
 
 static int governor_set(unsigned int cpu, bool active)
 {
-	int err;
-
-	mutex_lock(&userspace_mutex);
-	if (active)
-		err = cpuquiet_wake_cpu(cpu, true);
-	else
-		err = cpuquiet_quiesence_cpu(cpu, true);
-	mutex_unlock(&userspace_mutex);
-
-	return err;
+	return 0;
 }
 
 struct cpuquiet_governor userspace_governor = {
