@@ -147,6 +147,7 @@ static void asmp_work_fn(struct work_struct *work)
 				slow_rate = rate[cpu];
 			} else if (rate[cpu] > fast_rate)
 				fast_rate = rate[cpu];
+		}
 
 			if (rate[0] < slow_rate)
 				slow_rate = rate[0];
@@ -160,12 +161,8 @@ static void asmp_work_fn(struct work_struct *work)
 			 			cpu_down(slow_cpu);
 						if (cycle > 0)
 							cycle--;
-					} else
-						continue;
+					}
 			}
-		if (nr_cpu_online == min_cpus_online)
-			break;
-		}
 		cycle++;
 	} else if (nr_cpu_online < max_cpus_online) {
 		for_each_nonboot_online_cpu(cpu) {
@@ -182,6 +179,8 @@ static void asmp_work_fn(struct work_struct *work)
 			} else if (rate[cpu] > fast_rate)
 				fast_rate = rate[cpu];
 
+		}
+
 			if (rate[0] < slow_rate)
 				slow_rate = rate[0];
 
@@ -192,16 +191,13 @@ static void asmp_work_fn(struct work_struct *work)
 			/* hotplug one core if all online cores are over up_rate limit */
 			if (slow_rate > up_rate && fast_rate >= local_min_boost_freq &&
 				cycle >= cycle_up) {
+				cpu = cpumask_next_zero(0, cpu_online_mask);
 					if (cpu_is_offline(cpu)) {
 						cpu_up(cpu);
 						if (cycle > 0)
 							cycle--;
-					} else
-						continue;
+					}
 			}
-		if (nr_cpu_online == max_cpus_online)
-			break;
-		}
 		cycle++;
 	}
 
