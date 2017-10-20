@@ -21,7 +21,6 @@
 #include <linux/cpumask.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
-#include <linux/pm_qos.h>
 #include <linux/jiffies.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
@@ -258,7 +257,7 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 	unsigned long balanced_speed = highest_speed * balance_level / 100;
 	unsigned long skewed_speed = balanced_speed / 2;
 	unsigned int nr_cpus = num_online_cpus();
-	unsigned int max_cpus = pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? : 4;
+	unsigned int max_cpus = 4;
 	unsigned int avg_nr_run = get_avg_nr_runnables();
 	unsigned int nr_run;
 	unsigned int *current_profile = rt_profiles[rt_profile_sel];

@@ -119,8 +119,8 @@ static unsigned int get_avg_nr_runnables(void)
 static int get_action(unsigned int nr_run)
 {
 	unsigned int nr_cpus = num_online_cpus();
-	int max_cpus = pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? : 4;
-	int min_cpus = pm_qos_request(PM_QOS_MIN_ONLINE_CPUS);
+	int max_cpus = 4;
+	int min_cpus = 1;
 
 	if ((nr_cpus > max_cpus || nr_run < nr_cpus) && nr_cpus >= min_cpus)
 		return -1;
