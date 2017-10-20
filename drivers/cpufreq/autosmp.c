@@ -179,7 +179,8 @@ static void asmp_work_fn(struct work_struct *work)
 	}
 
 resched:
-	reschedule_hotplug_work();
+	mod_delayed_work_on(0, asmp_workq, &prework,
+			msecs_to_jiffies(delay));
 }
 
 static void prework_fn(struct work_struct *work)
@@ -196,7 +197,8 @@ static void asmp_resume(struct power_suspend *h)
 	if (!asmp_enabled)
 		return;
 
-	reschedule_hotplug_work();
+	mod_delayed_work_on(0, asmp_workq, &prework,
+			msecs_to_jiffies(delay));
 }
 
 static struct power_suspend asmp_suspend_data =
@@ -221,7 +223,8 @@ void autosmp_input_boost(void)
 		return;
 
 	WRITE_ONCE(should_boost, 1);
-	reschedule_hotplug_work();
+	mod_delayed_work_on(0, asmp_workq, &prework,
+			msecs_to_jiffies(delay));
 	last_boost_time = ktime_get();
 }
 
@@ -239,7 +242,8 @@ static void hotplug_start_stop(unsigned int enabled)
 		INIT_DELAYED_WORK(&prework, prework_fn);
 		INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
 		register_power_suspend(&asmp_suspend_data);
-		reschedule_hotplug_work();
+		queue_delayed_work_on(0, asmp_workq, &prework,
+				msecs_to_jiffies(delay));
 	} else {
 		cancel_delayed_work(&prework);
 		cancel_delayed_work(&asmp_work);
