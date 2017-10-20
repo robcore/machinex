@@ -57,10 +57,12 @@ static void up_all(void)
 {
 	unsigned int cpu;
 
-	for_each_possible_cpu(cpu)
+	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (cpu_is_offline(cpu) && num_online_cpus() < max_cpus_online)
 			cpu_up(cpu);
-
+	}
 	down_timer = 0;
 }
 
@@ -70,7 +72,7 @@ static void up_one(void)
 	unsigned int cpu;
 
 	/* All CPUs are online, return */
-	if (num_online_cpus() >= max_cpus_online)
+	if (num_online_cpus() == max_cpus_online)
 		goto out;
 
 	cpu = cpumask_next_zero(0, cpu_online_mask);
@@ -79,6 +81,12 @@ static void up_one(void)
 out:
 	down_timer = 0;
 	up_timer = 0;
+}
+
+static void __down_one(unsigned int cpu)
+{
+	if (cpu_in_range_hp(cpu))
+		cpu_down(cpu);
 }
 
 /* Iterate through online CPUs and take offline the lowest loaded one */
@@ -92,7 +100,7 @@ static inline void down_one(void)
 	bool all_equal = false;
 
 	/* Min online CPUs, return */
-	if (num_online_cpus() <= min_cpus_online)
+	if (num_online_cpus() == min_cpus_online)
 		goto out;
 
 	for_each_online_cpu(cpu) {
@@ -119,9 +127,9 @@ static inline void down_one(void)
 	}
 
 	if (all_equal)
-		cpu_down(l_cpu);
+		__down_one(l_cpu);
 	else
-		cpu_down(p_cpu);
+		__down_one(p_cpu);
 out:
 	down_timer = 0;
 	up_timer = 0;
