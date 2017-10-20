@@ -38,7 +38,7 @@
 #include <linux/suspend.h>
 #include <linux/tick.h>
 #include <linux/workqueue.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 #define CPUNAMELEN 8
 
