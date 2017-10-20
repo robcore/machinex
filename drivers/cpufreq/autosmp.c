@@ -42,6 +42,7 @@
 
 static DEFINE_SPINLOCK(asmp_lock);
 static struct delayed_work asmp_work;
+static struct delayed_work prework;
 static struct workqueue_struct *asmp_workq;
 static unsigned int asmp_enabled = 0;
 
@@ -58,19 +59,32 @@ static unsigned long boost_lock_duration = DEFAULT_BOOST_LOCK_DUR;
 static ktime_t last_boost_time;
 static ktime_t last_input;
 static unsigned int cycle;
+static unsigned int should_boost;
 
 static void reschedule_hotplug_work(bool from_boost)
 {
 	unsigned int cpu;
 	ktime_t delta;
 
-	if (!asmp_enabled || !is_display_on() || !hotplug_ready)
+	if (from_boost)
+		WRITE_ONCE(should_boost, 1);
+	else
+		WRITE_ONCE(should_boost, 0);
+
+	if (!hotplug_ready) {
+		mod_delayed_work_on(0, asmp_workq, &prework,
+				msecs_to_jiffies(delay));
+		return;
+	}
+	if (!asmp_enabled || !is_display_on())
 		return;
 
 	delta = ktime_sub(ktime_get(), last_input);
-	if (ktime_compare(delta, ms_to_ktime(boost_lock_duration)) <= 0)
+	if (ktime_compare(delta, ms_to_ktime(boost_lock_duration)) <= 0) {
+		mod_delayed_work_on(0, asmp_workq, &prework,
+				msecs_to_jiffies(delay));
 		return;
-
+	}
 	if (!from_boost) {
 		mod_delayed_work_on(0, asmp_workq, &asmp_work,
 				msecs_to_jiffies(delay));
@@ -81,9 +95,15 @@ static void reschedule_hotplug_work(bool from_boost)
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
 				break;
-			if (cpu_is_offline(cpu) && is_cpu_allowed(cpu))
-				cpu_up(cpu);				
+			if (cpu_online)
+				continue;
+			if (is_cpu_allowed(cpu) || !thermal_core_controlled(cpu))
+				cpu_up(cpu);
+			if (num_online_cpus() == cpus_boosted)
+				return;
 		}
+		mod_delayed_work_on(0, asmp_workq, &prework,
+				msecs_to_jiffies(delay));
 	}
 }
 
@@ -119,6 +139,8 @@ static void asmp_work_fn(struct work_struct *work)
 				break;
 			if (!cpu_online(cpu))
 				continue;
+			if (!is_cpu_allowed(cpu) || thermal_core_controlled(cpu))
+				continue;
 			rate[cpu] = cpufreq_quick_get(cpu);
 			if (rate[cpu] <= slow_rate) {
 				slow_cpu = cpu;
@@ -134,13 +156,13 @@ static void asmp_work_fn(struct work_struct *work)
 			/* unplug slowest core if all online cores are under down_rate limit */
 			if (slow_cpu && (fast_rate < down_rate) &&
 					   	cycle >= cycle_down) {
-					if (cpu_online(slow_cpu) && is_cpu_allowed(slow_cpu)) {
+					if (cpu_online(slow_cpu)) {
 			 			cpu_down(slow_cpu);
-						cycle = 0;
+						if (cycle > 0)
+							cycle--;
 					} else
 						continue;
 			}
-
 		if (nr_cpu_online == min_cpus_online)
 			break;
 		}
@@ -149,7 +171,9 @@ static void asmp_work_fn(struct work_struct *work)
 		for_each_nonboot_online_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu))
 				break;
-			if (!cpu_online(cpu))
+			if (cpu_online(cpu))
+				continue;
+			if (!is_cpu_allowed(cpu) || thermal_core_controlled(cpu))
 				continue;
 			rate[cpu] = cpufreq_quick_get(cpu);
 			if (rate[cpu] <= slow_rate) {
@@ -168,9 +192,10 @@ static void asmp_work_fn(struct work_struct *work)
 			/* hotplug one core if all online cores are over up_rate limit */
 			if (slow_rate > up_rate && fast_rate >= local_min_boost_freq &&
 				cycle >= cycle_up) {
-					if (cpu_is_offline(cpu) && is_cpu_allowed(cpu)) {
+					if (cpu_is_offline(cpu)) {
 						cpu_up(cpu);
-						cycle = 0;
+						if (cycle > 0)
+							cycle--;
 					} else
 						continue;
 			}
@@ -182,6 +207,15 @@ static void asmp_work_fn(struct work_struct *work)
 
 resched:
 	reschedule_hotplug_work(false);
+}
+
+static void prework_fn(struct work_struct *work)
+{
+	if (READ_ONCE(should_boost))
+		reschedule_hotplug_work(true);
+	else
+		reschedule_hotplug_work(false);
+
 }
 
 static void asmp_suspend(struct power_suspend *h)
@@ -231,10 +265,12 @@ static void hotplug_start_stop(unsigned int enabled)
 			return;
 		}
 
+		INIT_DELAYED_WORK(&prework, prework_fn);
 		INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
 		register_power_suspend(&asmp_suspend_data);
 		reschedule_hotplug_work(false);
 	} else {
+		cancel_delayed_work(&prework);
 		cancel_delayed_work(&asmp_work);
 		unregister_power_suspend(&asmp_suspend_data);
 		destroy_workqueue(asmp_workq);
