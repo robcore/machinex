@@ -413,7 +413,7 @@ static inline bool hibernation_available(void) { return false; }
 #define PM_POST_RESTORE		0x0006 /* Restore failed */
 #define PM_USERSPACE_FROZEN	0x0007 /* Userspace frozen */
 #define PM_HIBERNATION_PREPARE	PM_PROACTIVE_SUSPEND /* Going to hibernate */
-#define PM_POST_HIBERNATION	PM_REACTIVE_RESUME /* Hibernation finished */
+#define PM_POST_HIBERNATION	PM_PROACTIVE_RESUME /* Hibernation finished */
 #else
 #define PM_HIBERNATION_PREPARE	0x0001 /* Going to hibernate */
 #define PM_POST_HIBERNATION	0x0002  /* Hibernation finished */
