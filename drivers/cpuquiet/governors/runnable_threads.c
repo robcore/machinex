@@ -78,7 +78,7 @@ static unsigned int get_avg_nr_runnables(void)
 
 	for_each_online_cpu(i) {
 		sample = &per_cpu(avg_nr_sample, i);
-		integral = nr_running_integral(i);
+		integral = avg_cpu_nr_running(i);
 		old_integral = sample->previous_integral;
 		sample->previous_integral = integral;
 		cur_time = ktime_to_ns(ktime_get());
