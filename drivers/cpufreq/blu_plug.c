@@ -24,6 +24,8 @@
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/display_state.h>
+#include <linux/powersuspend.h>
 #include <linux/machinex_defines.h>
 
 #define INIT_DELAY		20000
@@ -57,6 +59,9 @@ static void up_all(void)
 {
 	unsigned int cpu;
 
+	if (!blu_plug_enabled || !is_display_on())
+		return;
+
 	for_each_nonboot_offline_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
@@ -70,6 +75,9 @@ static void up_all(void)
 static void up_one(void)
 {
 	unsigned int cpu;
+
+	if (!blu_plug_enabled || !is_display_on())
+		return;
 
 	/* All CPUs are online, return */
 	if (num_online_cpus() == max_cpus_online)
@@ -85,6 +93,9 @@ out:
 
 static void __down_one(unsigned int cpu)
 {
+	if (!blu_plug_enabled || !is_display_on())
+		return;
+
 	if (cpu_in_range_hp(cpu))
 		cpu_down(cpu);
 }
@@ -98,6 +109,9 @@ static inline void down_one(void)
 	unsigned int p_cpu = 0;
 	unsigned int p_thres = 0;
 	bool all_equal = false;
+
+	if (!blu_plug_enabled || !is_display_on())
+		return;
 
 	/* Min online CPUs, return */
 	if (num_online_cpus() == min_cpus_online)
@@ -150,6 +164,9 @@ static void load_timer(struct work_struct *work)
 	unsigned cur_load;
 	unsigned int online_cpus = num_online_cpus();
 
+	if (!blu_plug_enabled || !is_display_on())
+		return;
+
 	if (down_timer < down_timer_cnt)
 		down_timer++;
 
@@ -161,7 +178,7 @@ static void load_timer(struct work_struct *work)
 		unsigned int wall_time, idle_time;
 
 
-		cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, 0);
+		cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time);
 
 		wall_time = (unsigned int)
 				(cur_wall_time -
@@ -191,219 +208,248 @@ static void load_timer(struct work_struct *work)
 #endif
 
 	if ((avg_load >= up_threshold && up_timer >= up_timer_cnt) ||
-		online_cpus < min_cpus_online)
+		online_cpus < max_cpus_online)
 		up_one();
-	else if (down_timer >= down_timer_cnt || online_cpus > max_cpus_online)
+	else if (down_timer >= down_timer_cnt || online_cpus > min_cpus_online)
 		down_one();
 
 	mod_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
 }
 
-/******************** Module parameters *********************/
-
-/* up_threshold */
-static int set_up_threshold(const char *val, const struct kernel_param *kp)
+static void blu_suspend(struct power_suspend *h)
 {
-	int ret = 0;
-	unsigned int i;
-
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 1 || i > 100)
-		return -EINVAL;
-
-	up_threshold = i;
-
-	return ret;
 }
 
-static struct kernel_param_ops up_threshold_ops = {
-	.set = set_up_threshold,
-	.get = param_get_uint,
-};
-
-module_param_cb(up_threshold, &up_threshold_ops, &up_threshold, 0644);
-
-/* min_cpus_online */
-static int set_min_cpus_online(const char *val, const struct kernel_param *kp)
+static void blu_resume(struct power_suspend *h)
 {
-	int ret = 0;
-	unsigned int i;
+	unsigned int cpu;
 
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 1 || i > max_cpus_online || i > num_possible_cpus())
-		return -EINVAL;
-
-	min_cpus_online = i;
-
-	return ret;
-}
-
-static struct kernel_param_ops min_cpus_online_ops = {
-	.set = set_min_cpus_online,
-	.get = param_get_uint,
-};
-
-module_param_cb(min_cpus_online, &min_cpus_online_ops, &min_cpus_online, 0644);
-
-/* max_cpus_online */
-static int set_max_cpus_online(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-	unsigned int i;
-
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 1 || i < min_cpus_online || i > num_possible_cpus())
-		return -EINVAL;
-
-	max_cpus_online = i;
-
-	return ret;
-}
-
-static struct kernel_param_ops max_cpus_online_ops = {
-	.set = set_max_cpus_online,
-	.get = param_get_uint,
-};
-
-module_param_cb(max_cpus_online, &max_cpus_online_ops, &max_cpus_online, 0644);
-
-/* down_timer_cnt */
-static int set_down_timer_cnt(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-	unsigned int i;
-
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 1 || i > 50)
-		return -EINVAL;
-
-	if (i < up_timer_cnt)
-		i = up_timer_cnt;
-
-	down_timer_cnt = i;
-
-	return ret;
-}
-
-static struct kernel_param_ops down_timer_cnt_ops = {
-	.set = set_down_timer_cnt,
-	.get = param_get_uint,
-};
-
-module_param_cb(down_timer_cnt, &down_timer_cnt_ops, &down_timer_cnt, 0644);
-
-/* up_timer_cnt */
-static int set_up_timer_cnt(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-	unsigned int i;
-
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 1 || i > 50)
-		return -EINVAL;
-
-	up_timer_cnt = i;
-
-	return ret;
-}
-
-static struct kernel_param_ops up_timer_cnt_ops = {
-	.set = set_up_timer_cnt,
-	.get = param_get_uint,
-};
-
-module_param_cb(up_timer_cnt, &up_timer_cnt_ops, &up_timer_cnt, 0644);
-
-/* plug_threshold */
-module_param_array(plug_threshold, uint, NULL, 0644);
-
-/***************** end of module parameters *****************/
-
-static int dyn_hp_init(void)
-{
 	if (!blu_plug_enabled)
-		return 0;
+		return;
 
-	dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
-	if (!dyn_workq)
+	queue_delayed_work_on(0, dyn_workq, &dyn_work,
+				 msecs_to_jiffies(INIT_DELAY));
+}
+
+static struct power_suspend blu_suspend_data =
+{
+	.suspend = blu_suspend,
+	.resume = blu_resume,
+};
+
+
+static void dyn_hp_init_exit(unsigned int enabled)
+{
+
+	if (enabled) {
+		dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
+		if (!dyn_workq)
+			return;
+
+		INIT_DELAYED_WORK(&dyn_work, load_timer);
+
+		register_power_suspend(&blu_suspend_data);
+		queue_delayed_work_on(0, dyn_workq, &dyn_work,
+					 msecs_to_jiffies(INIT_DELAY));
+
+		pr_info("%s: activated\n", __func__);
+	} else {
+		unregister_power_suspend(&blu_suspend_data);
+		cancel_delayed_work(&dyn_work);
+		destroy_workqueue(dyn_workq);
+	}
+}
+
+static ssize_t show_up_threshold(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", up_threshold);
+}
+
+static ssize_t store_up_threshold(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, 0, 100);
+
+	if (val == up_threshold)
+		return count;
+
+	up_threshold = val;
+	return count;
+}
+
+static ssize_t show_min_cpus_online(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", min_cpus_online);
+}
+
+static ssize_t store_min_cpus_online(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, 1, max_cpus_online);
+
+	if (val == min_cpus_online)
+		return count;
+
+	min_cpus_online = val;
+	return count;
+}
+
+static ssize_t show_max_cpus_online(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", max_cpus_online);
+}
+
+static ssize_t store_max_cpus_online(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, min_cpus_online, 4);
+
+	if (val == max_cpus_online)
+		return count;
+
+	max_cpus_online = val;
+	return count;
+}
+
+static ssize_t show_down_timer_cnt(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", down_timer_cnt);
+}
+
+static ssize_t store_down_timer_cnt(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, 1, 50);
+
+	if (val == down_timer_cnt)
+		return count;
+
+	down_timer_cnt = val;
+	return count;
+}
+
+static ssize_t show_up_timer_cnt(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", up_timer_cnt);
+}
+
+static ssize_t store_up_timer_cnt(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, 1, 50);
+
+	if (val == up_timer_cnt)
+		return count;
+
+	up_timer_cnt = val;
+	return count;
+}
+
+static ssize_t show_blu_plug_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", blu_plug_enabled);
+}
+
+static ssize_t store_blu_plug_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d\n", &val);
+
+	sanitize_min_max(val, 0, 1);
+
+	if (val == blu_plug_enabled)
+		return count;
+
+	blu_plug_enabled = val;
+
+	dyn_hp_init_exit(blu_plug_enabled);
+
+	return count;
+}
+
+#define BLU_ATTR(_name) \
+static struct kobj_attribute _name##_attr = \
+	__ATTR(_name, 0644, show_##_name, store_##_name)
+
+BLU_ATTR(up_threshold);
+BLU_ATTR(min_cpus_online);
+BLU_ATTR(max_cpus_online);
+BLU_ATTR(down_timer_cnt);
+BLU_ATTR(up_timer_cnt);
+BLU_ATTR(blu_plug_enabled);
+
+static struct attribute *blu_attrs[] =
+{
+	&up_threshold_attr.attr,
+	&min_cpus_online_attr.attr,
+	&max_cpus_online_attr.attr,
+	&down_timer_cnt_attr.attr,
+	&up_timer_cnt_attr.attr,
+	&blu_plug_enabled_attr.attr,
+	NULL,
+};
+
+static const struct attribute_group blu_attr_group =
+{
+	.attrs = blu_attrs,
+};
+
+static struct kobject *blu_kobj;
+
+static int basic_init(void)
+{
+	int sysfs_result;
+
+	blu_kobj = kobject_create_and_add("bluplug",
+		kernel_kobj);
+
+	if (!blu_kobj) {
+		pr_err("%s kobject create failed!\n", __FUNCTION__);
 		return -ENOMEM;
+	}
 
-	INIT_DELAYED_WORK(&dyn_work, load_timer);
-	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(INIT_DELAY));
+	sysfs_result = sysfs_create_group(blu_kobj,
+		&blu_attr_group);
 
-	pr_info("%s: activated\n", __func__);
-
+	if (sysfs_result) {
+		pr_info("%s group create failed!\n", __FUNCTION__);
+		kobject_put(blu_kobj);
+		return -ENOMEM;
+	}
 	return 0;
 }
-
-static void dyn_hp_exit(void)
-{
-	int cpu;
-
-	cancel_delayed_work_sync(&dyn_work);
-
-	destroy_workqueue(dyn_workq);
-
-	/* Wake up all the sibling cores */
-	for_each_possible_cpu(cpu)
-		if (!cpu_online(cpu))
-			cpu_up(cpu);
-
-	pr_info("%s: deactivated\n", __func__);
-}
-
-/* enabled */
-static int set_enabled(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-	unsigned int i;
-
-	ret = kstrtouint(val, 10, &i);
-	if (ret)
-		return -EINVAL;
-
-	if (i < 0 || i > 1)
-		return -EINVAL;
-
-	if (i == blu_plug_enabled)
-		return ret;
-
-	blu_plug_enabled = i;
-
-	if (blu_plug_enabled)
-		ret = dyn_hp_init();
-	else
-		dyn_hp_exit();
-
-	return ret;
-}
-
-static struct kernel_param_ops enabled_ops = {
-	.set = set_enabled,
-	.get = param_get_uint,
-};
-
-module_param_cb(enabled, &enabled_ops, &blu_plug_enabled, 0644);
 
 MODULE_AUTHOR("Stratos Karafotis <stratosk@semaphore.gr");
 MODULE_AUTHOR("engstk <eng.stk@sapo.pt>");
 MODULE_DESCRIPTION("'dyn_hotplug' - A dynamic hotplug driver for mako / hammerhead / shamu (blu_plug)");
 MODULE_LICENSE("GPLv2");
 
-late_initcall(dyn_hp_init);
-module_exit(dyn_hp_exit);
+late_initcall(basic_init);
