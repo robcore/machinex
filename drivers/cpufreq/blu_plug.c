@@ -69,6 +69,7 @@ static void up_all(void)
 			cpu_up(cpu);
 	}
 	down_timer = 0;
+	up_timer = 0;
 }
 
 /* Iterate through possible CPUs and bring online the first offline found */
@@ -84,7 +85,7 @@ static void up_one(void)
 		goto out;
 
 	cpu = cpumask_next_zero(0, cpu_online_mask);
-	if (cpu < nr_cpu_ids)
+	if (cpu_in_range_hp(cpu))
 		cpu_up(cpu);
 out:
 	down_timer = 0;
@@ -108,6 +109,8 @@ static inline void down_one(void)
 	unsigned int l_freq = ~0;
 	unsigned int p_cpu = 0;
 	unsigned int p_thres = 0;
+	unsigned int thres;
+	unsigned int cur;
 	bool all_equal = false;
 
 	if (!blu_plug_enabled || !is_display_on())
@@ -117,10 +120,11 @@ static inline void down_one(void)
 	if (num_online_cpus() == min_cpus_online)
 		goto out;
 
-	for_each_online_cpu(cpu) {
-		unsigned int thres = plug_threshold[cpu];
-
-		if (!cpu || thres == p_thres) {
+	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		thres = plug_threshold[cpu];
+		if (thres == p_thres) {
 			p_thres = thres;
 			p_cpu = cpu;
 			all_equal = true;
@@ -130,13 +134,10 @@ static inline void down_one(void)
 			all_equal = false;
 		}
 
-		if (cpu) {
-			unsigned int cur = cpufreq_quick_get(cpu);
-
-			if (l_freq > cur) {
-				l_freq = cur;
-				l_cpu = cpu;
-			}
+		cur = cpufreq_quick_get(cpu);
+		if (l_freq > cur) {
+			l_freq = cur;
+			l_cpu = cpu;
 		}
 	}
 
@@ -189,14 +190,12 @@ static void load_timer(struct work_struct *work)
 		prev_cpu_idle = cur_idle_time;
 		/* if wall_time < idle_time, evaluate cpu load next time */
 
-		if (wall_time >= idle_time) {
-			/*
-			 * if wall_time is equal to idle_time,
-			 * cpu_load is equal to 0
-			 */
-			cur_load = wall_time > idle_time ? (100 *
-				(wall_time - idle_time)) / wall_time : 0;
-		}
+		/*
+		 * if wall_time is equal to idle_time,
+		 * cpu_load is equal to 0
+		 */
+		cur_load = wall_time > idle_time ? (100 *
+			(wall_time - idle_time)) / wall_time : 0;
 	}
 		avg_load += cur_load;
 
