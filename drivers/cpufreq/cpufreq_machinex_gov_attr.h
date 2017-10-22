@@ -150,5 +150,5 @@ extern unsigned int su_rate_limit_us[NR_CPUS];
 /*Machinex Interactive tunables */
 extern unsigned int iactive_hispeed_freq[NR_CPUS];
 extern unsigned long iactive_go_hispeed_load[NR_CPUS];
-extern int iactive_ntarget_loads[NR_CPUS];
+extern int iactive_target_load[NR_CPUS];
 #endif

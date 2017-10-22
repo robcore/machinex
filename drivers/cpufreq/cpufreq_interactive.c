@@ -31,6 +31,7 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include "cpufreq_machinex_gov_attr.h"
 
 #define gov_attr_ro(_name)						\
 static struct governor_attr _name =					\
@@ -64,7 +65,7 @@ struct interactive_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 
 	/* The sample rate of the timer used to increase frequency */
@@ -90,7 +91,7 @@ struct interactive_tunables {
 	 * Max additional time to wait in idle, beyond sampling_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (4 * DEFAULT_SAMPLING_RATE)
+#define DEFAULT_TIMER_SLACK (2 * DEFAULT_SAMPLING_RATE)
 	unsigned long timer_slack_delay;
 	unsigned long timer_slack;
 };
@@ -111,6 +112,7 @@ struct interactive_cpu {
 	u64 last_sample_time;
 	unsigned long next_sample_jiffies;
 	bool work_in_progress;
+	bool timer_is_busy;
 
 	struct rw_semaphore enable_sem;
 	struct timer_list slack_timer;
@@ -178,8 +180,12 @@ static void gov_slack_timer_start(struct interactive_cpu *icpu, int cpu)
 {
 	struct interactive_tunables *tunables = icpu->ipolicy->tunables;
 
-	icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
-	add_timer_on(&icpu->slack_timer, cpu);
+	if (!timer_pending(&icpu->slack_timer)) {
+		icpu->slack_timer.expires = jiffies + tunables->timer_slack_delay;
+		add_timer_on(&icpu->slack_timer, cpu);
+	} else {
+		mod_timer(&icpu->slack_timer, jiffies + tunables->timer_slack_delay);
+	}
 }
 
 static void gov_slack_timer_modify(struct interactive_cpu *icpu)
@@ -202,7 +208,7 @@ static void slack_timer_resched(struct interactive_cpu *icpu, int cpu,
 	icpu->cputime_speedadj = 0;
 	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
 
-	if (timer_slack_required(icpu)) {
+	if (timer_slack_required(icpu) && !icpu->timer_is_busy) {
 		if (modify)
 			gov_slack_timer_modify(icpu);
 		else
@@ -267,7 +273,7 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 	do {
 		prevfreq = freq;
 		//tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
-		tl = iactive_ntarget_loads;
+		tl = iactive_target_load[policy->cpu];
 		/*
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
@@ -368,7 +374,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
 
-	if (WARN_ON_ONCE(!delta_time))
+	if (!delta_time)
 		return;
 
 	spin_lock_irqsave(&icpu->target_freq_lock, flags);
@@ -378,25 +384,25 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
-	if (cpu_load >= iactive_go_hispeed_load || tunables->boosted) {
+	if (cpu_load >= iactive_go_hispeed_load[policy->cpu] || tunables->boosted) {
 		//if (policy->cur < tunables->hispeed_freq) {
 			//new_freq = tunables->hispeed_freq;
-		if (policy->cur < iactive_hispeed_freq) {
-			new_freq = iactive_hispeed_freq;
+		if (policy->cur < iactive_hispeed_freq[policy->cpu]) {
+			new_freq = iactive_hispeed_freq[policy->cpu];
 		} else {
 			new_freq = choose_freq(icpu, loadadjfreq);
 
-			if (new_freq < iactive_hispeed_freq)
-				new_freq = iactive_hispeed_freq;
+			if (new_freq < iactive_hispeed_freq[policy->cpu])
+				new_freq = iactive_hispeed_freq[policy->cpu];
 		}
 	} else {
 		new_freq = choose_freq(icpu, loadadjfreq);
-		if (new_freq > iactive_hispeed_freq &&
-		    policy->cur < iactive_hispeed_freq)
-			new_freq = iactive_hispeed_freq;
+		if (new_freq > iactive_hispeed_freq[policy->cpu] &&
+		    policy->cur < iactive_hispeed_freq[policy->cpu])
+			new_freq = iactive_hispeed_freq[policy->cpu];
 	}
 
-	if (policy->cur >= iactive_hispeed_freq &&
+	if (policy->cur >= iactive_hispeed_freq[policy->cpu] &&
 	    new_freq > policy->cur &&
 	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
 		goto exit;
@@ -427,7 +433,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	 * (or the indefinite boost is turned off).
 	 */
 
-	if (!tunables->boosted || new_freq > iactive_hispeed_freq) {
+	if (!tunables->boosted || new_freq > iactive_hispeed_freq[policy->cpu]) {
 		icpu->floor_freq = new_freq;
 		if (icpu->target_freq >= policy->cur || new_freq >= policy->cur)
 			icpu->loc_floor_val_time = now;
@@ -606,8 +612,8 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 			}
 
 			spin_lock_irqsave(&icpu->target_freq_lock, flags[1]);
-			if (icpu->target_freq < iactive_hispeed_freq) {
-				icpu->target_freq = iactive_hispeed_freq;
+			if (icpu->target_freq < iactive_hispeed_freq[policy->cpu]) {
+				icpu->target_freq = iactive_hispeed_freq[policy->cpu];
 				cpumask_set_cpu(i, &speedchange_cpumask);
 				icpu->pol_hispeed_val_time = ktime_to_us(ktime_get());
 				wakeup = true;
@@ -1073,7 +1079,9 @@ static void icpu_cancel_work(struct interactive_cpu *icpu)
 {
 	irq_work_sync(&icpu->irq_work);
 	icpu->work_in_progress = false;
-	del_timer_sync(&icpu->slack_timer);
+	icpu->timer_is_busy = true;
+	WARN_ON_ONCE(del_timer(&icpu->slack_timer) < 0);
+	icpu->timer_is_busy = false;
 }
 
 static struct interactive_policy *
@@ -1138,11 +1146,11 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		goto free_int_policy;
 	}
 
-	tunables->hispeed_freq = iactive_hispeed_freq;
+	tunables->hispeed_freq = iactive_hispeed_freq[policy->cpu];
 	tunables->above_hispeed_delay = default_above_hispeed_delay;
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
-	tunables->go_hispeed_load = iactive_go_hispeed_load;
+	tunables->go_hispeed_load = iactive_go_hispeed_load[policy->cpu];
 	tunables->target_loads = default_target_loads;
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;

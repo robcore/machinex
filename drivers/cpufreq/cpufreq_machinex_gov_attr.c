@@ -31,7 +31,7 @@ unsigned int su_rate_limit_us[NR_CPUS] = { 1000, 1000, 1000, 1000 };
 /*Machinex Interactive tunables */
 unsigned int iactive_hispeed_freq[NR_CPUS] = {1782000, 1782000, 1782000, 1782000};
 unsigned long iactive_go_hispeed_load[NR_CPUS] = {99, 99, 99, 99};
-int iactive_ntarget_loads[NR_CPUS] = {90, 90, 90, 90};
+int iactive_target_load[NR_CPUS] = {90, 90, 90, 90};
 
 show_one_cpu0(dbs_cpu_sampling_rate);
 show_one_cpu0(dbs_up_threshold);
@@ -43,7 +43,7 @@ show_one_cpu0(dbs_freq_step);
 show_one_cpu0(su_rate_limit_us);
 show_one_cpu0(iactive_hispeed_freq);
 show_one_cpu0(iactive_go_hispeed_load);
-show_one_cpu0(iactive_ntarget_loads);
+show_one_cpu0(iactive_target_load);
 
 show_one_cpu1(dbs_cpu_sampling_rate);
 show_one_cpu1(dbs_up_threshold);
@@ -55,7 +55,7 @@ show_one_cpu1(dbs_freq_step);
 show_one_cpu1(su_rate_limit_us);
 show_one_cpu1(iactive_hispeed_freq);
 show_one_cpu1(iactive_go_hispeed_load);
-show_one_cpu1(iactive_ntarget_loads);
+show_one_cpu1(iactive_target_load);
 
 show_one_cpu2(dbs_cpu_sampling_rate);
 show_one_cpu2(dbs_up_threshold);
@@ -67,7 +67,7 @@ show_one_cpu2(dbs_freq_step);
 show_one_cpu2(su_rate_limit_us);
 show_one_cpu2(iactive_hispeed_freq);
 show_one_cpu2(iactive_go_hispeed_load);
-show_one_cpu2(iactive_ntarget_loads);
+show_one_cpu2(iactive_target_load);
 
 show_one_cpu3(dbs_cpu_sampling_rate);
 show_one_cpu3(dbs_up_threshold);
@@ -79,7 +79,7 @@ show_one_cpu3(dbs_freq_step);
 show_one_cpu3(su_rate_limit_us);
 show_one_cpu3(iactive_hispeed_freq);
 show_one_cpu3(iactive_go_hispeed_load);
-show_one_cpu3(iactive_ntarget_loads);
+show_one_cpu3(iactive_target_load);
 
 store_one_cpu0_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu0_clamp(dbs_up_threshold, 1, 99);
@@ -89,6 +89,9 @@ store_one_cpu0_clamp(dbs_ignore_nice_load, 0, 1);
 store_one_cpu0_clamp(dbs_down_threshold, 1, 99);
 store_one_cpu0_clamp(dbs_freq_step, 1, 5);
 store_one_cpu0_clamp(su_rate_limit_us, 1000, 10000);
+store_one_cpu0_clamp(iactive_hispeed_freq, 384000, 1890000);
+store_one_cpu0_clamp(iactive_go_hispeed_load, 1, 99);
+store_one_cpu0_clamp(iactive_target_load, 1, 99);
 
 store_one_cpu1_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu1_clamp(dbs_up_threshold, 1, 99);
@@ -98,6 +101,9 @@ store_one_cpu1_clamp(dbs_ignore_nice_load, 0, 1);
 store_one_cpu1_clamp(dbs_down_threshold, 1, 99);
 store_one_cpu1_clamp(dbs_freq_step, 1, 5);
 store_one_cpu1_clamp(su_rate_limit_us, 1000, 10000);
+store_one_cpu1_clamp(iactive_hispeed_freq, 384000, 1890000);
+store_one_cpu1_clamp(iactive_go_hispeed_load, 1, 99);
+store_one_cpu1_clamp(iactive_target_load, 1, 99);
 
 store_one_cpu2_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu2_clamp(dbs_up_threshold, 1, 99);
@@ -107,6 +113,9 @@ store_one_cpu2_clamp(dbs_ignore_nice_load, 0, 1);
 store_one_cpu2_clamp(dbs_down_threshold, 1, 99);
 store_one_cpu2_clamp(dbs_freq_step, 1, 5);
 store_one_cpu2_clamp(su_rate_limit_us, 1000, 10000);
+store_one_cpu2_clamp(iactive_hispeed_freq, 384000, 1890000);
+store_one_cpu2_clamp(iactive_go_hispeed_load, 1, 99);
+store_one_cpu2_clamp(iactive_target_load, 1, 99);
 
 store_one_cpu3_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu3_clamp(dbs_up_threshold, 1, 99);
@@ -116,6 +125,9 @@ store_one_cpu3_clamp(dbs_ignore_nice_load, 0, 1);
 store_one_cpu3_clamp(dbs_down_threshold, 1, 99);
 store_one_cpu3_clamp(dbs_freq_step, 1, 5);
 store_one_cpu3_clamp(su_rate_limit_us, 1000, 10000);
+store_one_cpu3_clamp(iactive_hispeed_freq, 384000, 1890000);
+store_one_cpu3_clamp(iactive_go_hispeed_load, 1, 99);
+store_one_cpu3_clamp(iactive_target_load, 1, 99);
 
 #define MX_CPU0_ATTR_RW(_name) \
 static struct kobj_attribute cpu0_##_name##_attr = \
@@ -140,6 +152,9 @@ MX_CPU0_ATTR_RW(dbs_ignore_nice_load);
 MX_CPU0_ATTR_RW(dbs_down_threshold);
 MX_CPU0_ATTR_RW(dbs_freq_step);
 MX_CPU0_ATTR_RW(su_rate_limit_us);
+MX_CPU0_ATTR_RW(iactive_hispeed_freq);
+MX_CPU0_ATTR_RW(iactive_go_hispeed_load);
+MX_CPU0_ATTR_RW(iactive_target_load);
 
 MX_CPU1_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU1_ATTR_RW(dbs_up_threshold);
@@ -149,6 +164,9 @@ MX_CPU1_ATTR_RW(dbs_ignore_nice_load);
 MX_CPU1_ATTR_RW(dbs_down_threshold);
 MX_CPU1_ATTR_RW(dbs_freq_step);
 MX_CPU1_ATTR_RW(su_rate_limit_us);
+MX_CPU1_ATTR_RW(iactive_hispeed_freq);
+MX_CPU1_ATTR_RW(iactive_go_hispeed_load);
+MX_CPU1_ATTR_RW(iactive_target_load);
 
 MX_CPU2_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU2_ATTR_RW(dbs_up_threshold);
@@ -158,6 +176,9 @@ MX_CPU2_ATTR_RW(dbs_ignore_nice_load);
 MX_CPU2_ATTR_RW(dbs_down_threshold);
 MX_CPU2_ATTR_RW(dbs_freq_step);
 MX_CPU2_ATTR_RW(su_rate_limit_us);
+MX_CPU2_ATTR_RW(iactive_hispeed_freq);
+MX_CPU2_ATTR_RW(iactive_go_hispeed_load);
+MX_CPU2_ATTR_RW(iactive_target_load);
 
 MX_CPU3_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU3_ATTR_RW(dbs_up_threshold);
@@ -167,6 +188,9 @@ MX_CPU3_ATTR_RW(dbs_ignore_nice_load);
 MX_CPU3_ATTR_RW(dbs_down_threshold);
 MX_CPU3_ATTR_RW(dbs_freq_step);
 MX_CPU3_ATTR_RW(su_rate_limit_us);
+MX_CPU3_ATTR_RW(iactive_hispeed_freq);
+MX_CPU3_ATTR_RW(iactive_go_hispeed_load);
+MX_CPU3_ATTR_RW(iactive_target_load);
 
 static struct attribute *cpu0_attrs[] = {
 	&cpu0_dbs_cpu_sampling_rate_attr.attr,
@@ -177,6 +201,9 @@ static struct attribute *cpu0_attrs[] = {
 	&cpu0_dbs_down_threshold_attr.attr,
 	&cpu0_dbs_freq_step_attr.attr,
 	&cpu0_su_rate_limit_us_attr.attr,
+	&cpu0_iactive_hispeed_freq_attr.attr,
+	&cpu0_iactive_go_hispeed_load_attr.attr,
+	&cpu0_iactive_target_load_attr.attr,
 	NULL,
 };
 
@@ -189,6 +216,9 @@ static struct attribute *cpu1_attrs[] = {
 	&cpu1_dbs_down_threshold_attr.attr,
 	&cpu1_dbs_freq_step_attr.attr,
 	&cpu1_su_rate_limit_us_attr.attr,
+	&cpu1_iactive_hispeed_freq_attr.attr,
+	&cpu1_iactive_go_hispeed_load_attr.attr,
+	&cpu1_iactive_target_load_attr.attr,
 	NULL,
 };
 
@@ -201,6 +231,9 @@ static struct attribute *cpu2_attrs[] = {
 	&cpu2_dbs_down_threshold_attr.attr,
 	&cpu2_dbs_freq_step_attr.attr,
 	&cpu2_su_rate_limit_us_attr.attr,
+	&cpu2_iactive_hispeed_freq_attr.attr,
+	&cpu2_iactive_go_hispeed_load_attr.attr,
+	&cpu2_iactive_target_load_attr.attr,
 	NULL,
 };
 
@@ -213,6 +246,9 @@ static struct attribute *cpu3_attrs[] = {
 	&cpu3_dbs_down_threshold_attr.attr,
 	&cpu3_dbs_freq_step_attr.attr,
 	&cpu3_su_rate_limit_us_attr.attr,
+	&cpu3_iactive_hispeed_freq_attr.attr,
+	&cpu3_iactive_go_hispeed_load_attr.attr,
+	&cpu3_iactive_target_load_attr.attr,
 	NULL,
 };
 
