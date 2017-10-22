@@ -526,7 +526,6 @@ static int mousedev_release(struct inode *inode, struct file *file)
 	kfree(client);
 
 	mousedev_close_device(mousedev);
-	put_device(&mousedev->dev);
 
 	return 0;
 }
@@ -913,6 +912,7 @@ static struct mousedev *mousedev_create(struct input_dev *dev,
 	}
 
 	cdev_init(&mousedev->cdev, &mousedev_fops);
+	mousedev->cdev.kobj.parent = &mousedev->dev.kobj;
 	error = cdev_add(&mousedev->cdev, mousedev->dev.devt, 1);
 	if (error)
 		goto err_unregister_handle;
