@@ -147,18 +147,8 @@ extern unsigned int dbs_ignore_nice_load[NR_CPUS];
 extern unsigned int dbs_down_threshold[NR_CPUS];
 extern unsigned int dbs_freq_step[NR_CPUS];
 extern unsigned int su_rate_limit_us[NR_CPUS];
-/*Machinex Interactive tunables WIP
-extern unsigned int ia_hispeed_freq[NR_CPUS];
-extern unsigned long ia_go_hispeed_load[NR_CPUS];
-extern int ia_ntarget_loads[NR_CPUS];
-extern unsigned long ia_min_sample_time[NR_CPUS];
-extern unsigned long ia_sampling_rate[NR_CPUS];
-extern int ia_above_hispeed_delay[NR_CPUS];
-extern int ia_boost[NR_CPUS];
-extern int ia_boostpulse_duration[NR_CPUS];
-extern u64 ia_boostpulse_endtime[NR_CPUS];
-extern bool ia_boosted[NR_CPUS];
-extern unsigned long ia_timer_slack_delay[NR_CPUS];
-extern unsigned long ia_timer_slack[NR_CPUS];
-*/
+/*Machinex Interactive tunables */
+extern unsigned int iactive_hispeed_freq[NR_CPUS];
+extern unsigned long iactive_go_hispeed_load[NR_CPUS];
+extern int iactive_ntarget_loads[NR_CPUS];
 #endif

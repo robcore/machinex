@@ -266,8 +266,8 @@ static unsigned int choose_freq(struct interactive_cpu *icpu,
 
 	do {
 		prevfreq = freq;
-		tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
-
+		//tl = freq_to_targetload(icpu->ipolicy->tunables, freq);
+		tl = iactive_ntarget_loads;
 		/*
 		 * Find the lowest frequency where the computed load is less
 		 * than or equal to the target load.
@@ -378,23 +378,25 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	tunables->boosted = tunables->boost ||
 			    now < tunables->boostpulse_endtime;
 
-	if (cpu_load >= tunables->go_hispeed_load || tunables->boosted) {
-		if (policy->cur < tunables->hispeed_freq) {
-			new_freq = tunables->hispeed_freq;
+	if (cpu_load >= iactive_go_hispeed_load || tunables->boosted) {
+		//if (policy->cur < tunables->hispeed_freq) {
+			//new_freq = tunables->hispeed_freq;
+		if (policy->cur < iactive_hispeed_freq) {
+			new_freq = iactive_hispeed_freq;
 		} else {
 			new_freq = choose_freq(icpu, loadadjfreq);
 
-			if (new_freq < tunables->hispeed_freq)
-				new_freq = tunables->hispeed_freq;
+			if (new_freq < iactive_hispeed_freq)
+				new_freq = iactive_hispeed_freq;
 		}
 	} else {
 		new_freq = choose_freq(icpu, loadadjfreq);
-		if (new_freq > tunables->hispeed_freq &&
-		    policy->cur < tunables->hispeed_freq)
-			new_freq = tunables->hispeed_freq;
+		if (new_freq > iactive_hispeed_freq &&
+		    policy->cur < iactive_hispeed_freq)
+			new_freq = iactive_hispeed_freq;
 	}
 
-	if (policy->cur >= tunables->hispeed_freq &&
+	if (policy->cur >= iactive_hispeed_freq &&
 	    new_freq > policy->cur &&
 	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
 		goto exit;
@@ -425,7 +427,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	 * (or the indefinite boost is turned off).
 	 */
 
-	if (!tunables->boosted || new_freq > tunables->hispeed_freq) {
+	if (!tunables->boosted || new_freq > iactive_hispeed_freq) {
 		icpu->floor_freq = new_freq;
 		if (icpu->target_freq >= policy->cur || new_freq >= policy->cur)
 			icpu->loc_floor_val_time = now;
@@ -604,8 +606,8 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 			}
 
 			spin_lock_irqsave(&icpu->target_freq_lock, flags[1]);
-			if (icpu->target_freq < tunables->hispeed_freq) {
-				icpu->target_freq = tunables->hispeed_freq;
+			if (icpu->target_freq < iactive_hispeed_freq) {
+				icpu->target_freq = iactive_hispeed_freq;
 				cpumask_set_cpu(i, &speedchange_cpumask);
 				icpu->pol_hispeed_val_time = ktime_to_us(ktime_get());
 				wakeup = true;
@@ -1136,11 +1138,11 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		goto free_int_policy;
 	}
 
-	tunables->hispeed_freq = policy->max;
+	tunables->hispeed_freq = iactive_hispeed_freq;
 	tunables->above_hispeed_delay = default_above_hispeed_delay;
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
-	tunables->go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
+	tunables->go_hispeed_load = iactive_go_hispeed_load;
 	tunables->target_loads = default_target_loads;
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;

@@ -28,20 +28,10 @@ unsigned int dbs_freq_step[NR_CPUS] = { 5, 5, 5, 5};
 /* Machinex SchedUtil tunable */
 unsigned int su_rate_limit_us[NR_CPUS] = { 1000, 1000, 1000, 1000 };
 
-/*Machinex Interactive tunables WIP
-unsigned int ia_hispeed_freq[NR_CPUS] = {1890000, 1890000, 1890000, 1890000};
-unsigned long ia_go_hispeed_load[NR_CPUS] = {};
-int ia_ntarget_loads[NR_CPUS] = {};
-unsigned long ia_min_sample_time[NR_CPUS] = {};
-unsigned long ia_sampling_rate[NR_CPUS] = {};
-int ia_above_hispeed_delay[NR_CPUS] = {};
-int ia_boost[NR_CPUS] = {};
-int ia_boostpulse_duration[NR_CPUS] = {};
-u64 ia_boostpulse_endtime[NR_CPUS] = {};
-bool ia_boosted[NR_CPUS] = {};
-unsigned long ia_timer_slack_delay[NR_CPUS] = {};
-unsigned long ia_timer_slack[NR_CPUS] = {};
-*/
+/*Machinex Interactive tunables */
+unsigned int iactive_hispeed_freq[NR_CPUS] = {1782000, 1782000, 1782000, 1782000};
+unsigned long iactive_go_hispeed_load[NR_CPUS] = {99, 99, 99, 99};
+int iactive_ntarget_loads[NR_CPUS] = {90, 90, 90, 90};
 
 show_one_cpu0(dbs_cpu_sampling_rate);
 show_one_cpu0(dbs_up_threshold);
@@ -51,6 +41,9 @@ show_one_cpu0(dbs_ignore_nice_load);
 show_one_cpu0(dbs_down_threshold);
 show_one_cpu0(dbs_freq_step);
 show_one_cpu0(su_rate_limit_us);
+show_one_cpu0(iactive_hispeed_freq);
+show_one_cpu0(iactive_go_hispeed_load);
+show_one_cpu0(iactive_ntarget_loads);
 
 show_one_cpu1(dbs_cpu_sampling_rate);
 show_one_cpu1(dbs_up_threshold);
@@ -60,6 +53,9 @@ show_one_cpu1(dbs_ignore_nice_load);
 show_one_cpu1(dbs_down_threshold);
 show_one_cpu1(dbs_freq_step);
 show_one_cpu1(su_rate_limit_us);
+show_one_cpu1(iactive_hispeed_freq);
+show_one_cpu1(iactive_go_hispeed_load);
+show_one_cpu1(iactive_ntarget_loads);
 
 show_one_cpu2(dbs_cpu_sampling_rate);
 show_one_cpu2(dbs_up_threshold);
@@ -69,6 +65,9 @@ show_one_cpu2(dbs_ignore_nice_load);
 show_one_cpu2(dbs_down_threshold);
 show_one_cpu2(dbs_freq_step);
 show_one_cpu2(su_rate_limit_us);
+show_one_cpu2(iactive_hispeed_freq);
+show_one_cpu2(iactive_go_hispeed_load);
+show_one_cpu2(iactive_ntarget_loads);
 
 show_one_cpu3(dbs_cpu_sampling_rate);
 show_one_cpu3(dbs_up_threshold);
@@ -78,6 +77,9 @@ show_one_cpu3(dbs_ignore_nice_load);
 show_one_cpu3(dbs_down_threshold);
 show_one_cpu3(dbs_freq_step);
 show_one_cpu3(su_rate_limit_us);
+show_one_cpu3(iactive_hispeed_freq);
+show_one_cpu3(iactive_go_hispeed_load);
+show_one_cpu3(iactive_ntarget_loads);
 
 store_one_cpu0_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu0_clamp(dbs_up_threshold, 1, 99);
