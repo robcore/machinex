@@ -63,7 +63,11 @@ struct input_value {
  *	software autorepeat
  * @timer: timer for software autorepeat
  * @rep: current values for autorepeat parameters (delay, rate)
- * @mt: pointer to multitouch state
+ * @mt: pointer to array of struct input_mt_slot holding current values
+ *	of tracked contacts
+ * @mtsize: number of MT slots the device uses
+ * @slot: MT slot currently being transmitted
+ * @trkid: stores MT tracking ID for the current contact
  * @absinfo: array of &struct input_absinfo elements holding information
  *	about absolute axes (current value, min, max, flat, fuzz,
  *	resolution)
@@ -147,7 +151,10 @@ struct input_dev {
 
 	int rep[REP_CNT];
 
-	struct input_mt *mt;
+	struct input_mt_slot *mt;
+	int mtsize;
+	int slot;
+	int trkid;
 
 	struct input_absinfo *absinfo;
 
@@ -254,8 +261,8 @@ struct input_handle;
  * @start: starts handler for given handle. This function is called by
  *	input core right after connect() method and also when a process
  *	that "grabbed" a device releases it
- * @legacy_minors: set to %true by drivers using legacy minor ranges
- * @minor: beginning of range of 32 legacy minors for devices this driver
+ * @fops: file operations this driver implements
+ * @minor: beginning of range of 32 minors for devices this driver
  *	can provide
  * @name: name of the handler, to be shown in /proc/bus/input/handlers
  * @id_table: pointer to a table of input_device_ids this driver can
@@ -289,7 +296,7 @@ struct input_handler {
 	void (*disconnect)(struct input_handle *handle);
 	void (*start)(struct input_handle *handle);
 
-	bool legacy_minors;
+	const struct file_operations *fops;
 	int minor;
 	const char *name;
 
@@ -357,10 +364,6 @@ void input_reset_device(struct input_dev *);
 
 int __must_check input_register_handler(struct input_handler *);
 void input_unregister_handler(struct input_handler *);
-
-int __must_check input_get_new_minor(int legacy_base, unsigned int legacy_num,
-				     bool allow_dynamic);
-void input_free_minor(unsigned int minor);
 
 int input_handler_for_each_handle(struct input_handler *, void *data,
 				  int (*fn)(struct input_handle *, void *));

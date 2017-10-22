@@ -14,7 +14,6 @@
 
 #include <linux/init.h>
 #include <linux/types.h>
-#include <linux/idr.h>
 #include <linux/input/mt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -33,9 +32,7 @@ MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
 MODULE_DESCRIPTION("Input core");
 MODULE_LICENSE("GPL");
 
-#define INPUT_MAX_CHAR_DEVICES		1024
-#define INPUT_FIRST_DYNAMIC_DEV		256
-static DEFINE_IDA(input_ida);
+#define INPUT_DEVICES	256
 #ifdef CONFIG_SAMSUNG_LPM_MODE
 extern int poweroff_charging;
 #endif
@@ -50,6 +47,8 @@ static LIST_HEAD(input_handler_list);
  * input handlers.
  */
 static DEFINE_MUTEX(input_mutex);
+
+static struct input_handler *input_table[8];
 
 static const struct input_value input_value_sync = { EV_SYN, SYN_REPORT, 1 };
 
@@ -215,7 +214,6 @@ static void input_repeat_key(unsigned long data)
 static int input_handle_abs_event(struct input_dev *dev,
 				  unsigned int code, int *pval)
 {
-	struct input_mt *mt = dev->mt;
 	bool is_mt_event;
 	int *pold;
 
@@ -224,8 +222,8 @@ static int input_handle_abs_event(struct input_dev *dev,
 		 * "Stage" the event; we'll flush it later, when we
 		 * get actual touch data.
 		 */
-		if (mt && *pval >= 0 && *pval < mt->num_slots)
-			mt->slot = *pval;
+		if (*pval >= 0 && *pval < dev->mtsize)
+			dev->slot = *pval;
 
 		return INPUT_IGNORE_EVENT;
 	}
@@ -234,8 +232,9 @@ static int input_handle_abs_event(struct input_dev *dev,
 
 	if (!is_mt_event) {
 		pold = &dev->absinfo[code].value;
-	} else if (mt) {
-		pold = &mt->slots[mt->slot].abs[code - ABS_MT_FIRST];
+	} else if (dev->mt) {
+		struct input_mt_slot *mtslot = &dev->mt[dev->slot];
+		pold = &mtslot->abs[code - ABS_MT_FIRST];
 	} else {
 		/*
 		 * Bypass filtering for multi-touch events when
@@ -288,30 +287,24 @@ static int input_get_disposition(struct input_dev *dev,
 		break;
 
 	case EV_KEY:
-		if (is_event_supported(code, dev->keybit, KEY_MAX)) {
+		if (is_event_supported(code, dev->keybit, KEY_MAX) &&
+		    !!test_bit(code, dev->key) != value) {
 
-			/* auto-repeat bypasses state updates */
-			if (value == 2) {
-				disposition = INPUT_PASS_TO_HANDLERS;
-				break;
-			}
-
-			if (!!test_bit(code, dev->key) != !!value) {
-
+			if (value != 2) {
 				__change_bit(code, dev->key);
-				disposition = INPUT_PASS_TO_HANDLERS;
-
 				if (value)
 					input_start_autorepeat(dev, code);
 				else
 					input_stop_autorepeat(dev);
 			}
+
+			disposition = INPUT_PASS_TO_HANDLERS;
 		}
 		break;
 
 	case EV_SW:
 		if (is_event_supported(code, dev->swbit, SW_MAX) &&
-		    !!test_bit(code, dev->sw) != !!value) {
+		    !!test_bit(code, dev->sw) != value) {
 
 			__change_bit(code, dev->sw);
 			disposition = INPUT_PASS_TO_HANDLERS;
@@ -338,7 +331,7 @@ static int input_get_disposition(struct input_dev *dev,
 
 	case EV_LED:
 		if (is_event_supported(code, dev->ledbit, LED_MAX) &&
-		    !!test_bit(code, dev->led) != !!value) {
+		    !!test_bit(code, dev->led) != value) {
 
 			__change_bit(code, dev->led);
 			disposition = INPUT_PASS_TO_ALL;
@@ -511,8 +504,7 @@ void input_set_abs_params(struct input_dev *dev, unsigned int axis,
 	absinfo->fuzz = fuzz;
 	absinfo->flat = flat;
 
-	__set_bit(EV_ABS, dev->evbit);
-	__set_bit(axis, dev->absbit);
+	dev->absbit[BIT_WORD(axis)] |= BIT_MASK(axis);
 }
 EXPORT_SYMBOL(input_set_abs_params);
 
@@ -1282,7 +1274,7 @@ static int input_handlers_seq_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "N: Number=%u Name=%s", state->pos, handler->name);
 	if (handler->filter)
 		seq_puts(seq, " (filter)");
-	if (handler->legacy_minors)
+	if (handler->fops)
 		seq_printf(seq, " Minor=%d", handler->minor);
 	seq_putc(seq, '\n');
 
@@ -2009,8 +2001,8 @@ static unsigned int input_estimate_events_per_packet(struct input_dev *dev)
 	int i;
 	unsigned int events;
 
-	if (dev->mt) {
-		mt_slots = dev->mt->num_slots;
+	if (dev->mtsize) {
+		mt_slots = dev->mtsize;
 	} else if (test_bit(ABS_MT_TRACKING_ID, dev->absbit)) {
 		mt_slots = dev->absinfo[ABS_MT_TRACKING_ID].maximum -
 			   dev->absinfo[ABS_MT_TRACKING_ID].minimum + 1,
@@ -2157,7 +2149,7 @@ int input_register_device(struct input_dev *dev)
 	if (dev->hint_events_per_packet < packet_size)
 		dev->hint_events_per_packet = packet_size;
 
-	dev->max_vals = dev->hint_events_per_packet + 2;
+	dev->max_vals = max(dev->hint_events_per_packet, packet_size) + 2;
 	dev->vals = kcalloc(dev->max_vals, sizeof(*dev->vals), GFP_KERNEL);
 	if (!dev->vals) {
 		error = -ENOMEM;
@@ -2261,11 +2253,15 @@ int input_register_handler(struct input_handler *handler)
 	if (error)
 		return error;
 
-	error = mutex_lock_interruptible(&input_mutex);
-	if (error)
-		return error;
-
 	INIT_LIST_HEAD(&handler->h_list);
+
+	if (handler->fops != NULL) {
+		if (input_table[handler->minor >> 5]) {
+			error = -EBUSY;
+			goto out;
+		}
+		input_table[handler->minor >> 5] = handler;
+	}
 
 	list_add_tail(&handler->node, &input_handler_list);
 
@@ -2274,6 +2270,7 @@ int input_register_handler(struct input_handler *handler)
 
 	input_wakeup_procfs_readers();
 
+ out:
 	mutex_unlock(&input_mutex);
 	return 0;
 }
@@ -2297,6 +2294,9 @@ void input_unregister_handler(struct input_handler *handler)
 	WARN_ON(!list_empty(&handler->h_list));
 
 	list_del_init(&handler->node);
+
+	if (handler->fops != NULL)
+		input_table[handler->minor >> 5] = NULL;
 
 	input_wakeup_procfs_readers();
 
@@ -2414,52 +2414,51 @@ void input_unregister_handle(struct input_handle *handle)
 }
 EXPORT_SYMBOL(input_unregister_handle);
 
-/**
- * input_get_new_minor - allocates a new input minor number
- * @legacy_base: beginning or the legacy range to be searched
- * @legacy_num: size of legacy range
- * @allow_dynamic: whether we can also take ID from the dynamic range
- *
- * This function allocates a new device minor for from input major namespace.
- * Caller can request legacy minor by specifying @legacy_base and @legacy_num
- * parameters and whether ID can be allocated from dynamic range if there are
- * no free IDs in legacy range.
- */
-int input_get_new_minor(int legacy_base, unsigned int legacy_num,
-			bool allow_dynamic)
+static int input_open_file(struct inode *inode, struct file *file)
 {
+	struct input_handler *handler;
+	const struct file_operations *old_fops, *new_fops = NULL;
+	int err;
+
+	err = mutex_lock_interruptible(&input_mutex);
+	if (err)
+		return err;
+
+	/* No load-on-demand here? */
+	handler = input_table[iminor(inode) >> 5];
+	if (handler)
+		new_fops = fops_get(handler->fops);
+
+	mutex_unlock(&input_mutex);
+
 	/*
-	 * This function should be called from input handler's ->connect()
-	 * methods, which are serialized with input_mutex, so no additional
-	 * locking is needed here.
+	 * That's _really_ odd. Usually NULL ->open means "nothing special",
+	 * not "no device". Oh, well...
 	 */
-	if (legacy_base >= 0) {
-		int minor = ida_simple_get(&input_ida,
-					   legacy_base,
-					   legacy_base + legacy_num,
-					   GFP_KERNEL);
-		if (minor >= 0 || !allow_dynamic)
-			return minor;
+	if (!new_fops || !new_fops->open) {
+		fops_put(new_fops);
+		err = -ENODEV;
+		goto out;
 	}
 
-	return ida_simple_get(&input_ida,
-			      INPUT_FIRST_DYNAMIC_DEV, INPUT_MAX_CHAR_DEVICES,
-			      GFP_KERNEL);
-}
-EXPORT_SYMBOL(input_get_new_minor);
+	old_fops = file->f_op;
+	file->f_op = new_fops;
 
-/**
- * input_free_minor - release previously allocated minor
- * @minor: minor to be released
- *
- * This function releases previously allocated input minor so that it can be
- * reused later.
- */
-void input_free_minor(unsigned int minor)
-{
-	ida_simple_remove(&input_ida, minor);
+	err = new_fops->open(inode, file);
+	if (err) {
+		fops_put(file->f_op);
+		file->f_op = fops_get(old_fops);
+	}
+	fops_put(old_fops);
+out:
+	return err;
 }
-EXPORT_SYMBOL(input_free_minor);
+
+static const struct file_operations input_fops = {
+	.owner = THIS_MODULE,
+	.open = input_open_file,
+	.llseek = noop_llseek,
+};
 
 static int __init input_init(void)
 {
@@ -2475,8 +2474,7 @@ static int __init input_init(void)
 	if (err)
 		goto fail1;
 
-	err = register_chrdev_region(MKDEV(INPUT_MAJOR, 0),
-				     INPUT_MAX_CHAR_DEVICES, "input");
+	err = register_chrdev(INPUT_MAJOR, "input", &input_fops);
 	if (err) {
 		pr_err("unable to register char major %d", INPUT_MAJOR);
 		goto fail2;
@@ -2492,8 +2490,7 @@ static int __init input_init(void)
 static void __exit input_exit(void)
 {
 	input_proc_exit();
-	unregister_chrdev_region(MKDEV(INPUT_MAJOR, 0),
-				 INPUT_MAX_CHAR_DEVICES);
+	unregister_chrdev(INPUT_MAJOR, "input");
 	class_unregister(&input_class);
 }
 
