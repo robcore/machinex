@@ -167,6 +167,9 @@ static bool timer_slack_required(struct interactive_cpu *icpu)
 	struct interactive_policy *ipolicy = icpu->ipolicy;
 	struct interactive_tunables *tunables = ipolicy->tunables;
 
+	if (icpu->timer_is_busy)
+		return false;
+
 	if (tunables->timer_slack < 0)
 		return false;
 
@@ -208,7 +211,7 @@ static void slack_timer_resched(struct interactive_cpu *icpu, int cpu,
 	icpu->cputime_speedadj = 0;
 	icpu->cputime_speedadj_timestamp = icpu->time_in_idle_timestamp;
 
-	if (timer_slack_required(icpu) && !icpu->timer_is_busy) {
+	if (timer_slack_required(icpu)) {
 		if (modify)
 			gov_slack_timer_modify(icpu);
 		else
