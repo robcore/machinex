@@ -100,13 +100,13 @@ struct interactive_policy {
 	struct cpufreq_policy *policy;
 	struct interactive_tunables *tunables;
 	struct list_head tunables_hook;
+	struct mutex ilock;
 };
 
 /* Separate instance required for each CPU */
 struct interactive_cpu {
 	struct update_util_data update_util;
 	struct interactive_policy *ipolicy;
-	unsigned int cpu;
 
 	struct irq_work irq_work;
 	u64 last_sample_time;
@@ -380,22 +380,22 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 			    now < tunables->boostpulse_endtime;
 
 	if (cpu_load >= tunables->go_hispeed_load || tunables->boosted) {
-		if (policy->cur < ia_hispeed_freq[policy->cpu]) {
-			new_freq = ia_hispeed_freq[policy->cpu];
+		if (policy->cur < tunables->hispeed_freq) {
+			new_freq = tunables->hispeed_freq;
 		} else {
 			new_freq = choose_freq(icpu, loadadjfreq);
 
-			if (new_freq < ia_hispeed_freq[policy->cpu])
-				new_freq = ia_hispeed_freq[policy->cpu];
+			if (new_freq < tunables->hispeed_freq)
+				new_freq = tunables->hispeed_freq;
 		}
 	} else {
 		new_freq = choose_freq(icpu, loadadjfreq);
-		if (new_freq > ia_hispeed_freq[policy->cpu] &&
-		    policy->cur < ia_hispeed_freq[policy->cpu])
-			new_freq = ia_hispeed_freq[policy->cpu];
+		if (new_freq > tunables->hispeed_freq &&
+		    policy->cur < tunables->hispeed_freq)
+			new_freq = tunables->hispeed_freq;
 	}
 
-	if (policy->cur >= ia_hispeed_freq[policy->cpu] &&
+	if (policy->cur >= tunables->hispeed_freq &&
 	    new_freq > policy->cur &&
 	    now - icpu->pol_hispeed_val_time < freq_to_above_hispeed_delay(tunables, policy->cur)) {
 		goto exit;
@@ -426,7 +426,7 @@ static void eval_target_freq(struct interactive_cpu *icpu)
 	 * (or the indefinite boost is turned off).
 	 */
 
-	if (!tunables->boosted || new_freq > ia_hispeed_freq[policy->cpu]) {
+	if (!tunables->boosted || new_freq > tunables->hispeed_freq) {
 		icpu->floor_freq = new_freq;
 		if (icpu->target_freq >= policy->cur || new_freq >= policy->cur)
 			icpu->loc_floor_val_time = now;
@@ -454,7 +454,7 @@ exit:
 static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 {
 	eval_target_freq(icpu);
-	slack_timer_resched(icpu, icpu->ipolicy->policy->cpu, true);
+	slack_timer_resched(icpu, smp_processor_id(), true);
 }
 
 static void cpufreq_interactive_idle_end(void)
@@ -486,8 +486,6 @@ static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
 	unsigned int max_freq = 0, i;
 
 	for_each_cpu(i, policy->cpus) {
-		if (cpu_out_of_range(i))
-			break;
 		icpu = &per_cpu(interactive_cpu, i);
 
 		fvt = max(fvt, icpu->loc_floor_val_time);
@@ -508,6 +506,7 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 					   struct cpufreq_policy *policy)
 {
 	struct interactive_cpu *icpu;
+	struct interactive_policy *ipolicy = policy->governor_data;
 	u64 hvt, fvt;
 	unsigned int max_freq;
 	int i;
@@ -515,17 +514,15 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	cpufreq_interactive_get_policy_info(policy, &max_freq, &hvt, &fvt);
 
 	for_each_cpu(i, policy->cpus) {
-		if (cpu_out_of_range(i))
-			break;
 		icpu = &per_cpu(interactive_cpu, i);
 		icpu->pol_floor_val_time = fvt;
 	}
 
 	if (max_freq != policy->cur) {
+		mutex_lock(&ipolicy->ilock);
 		__cpufreq_driver_target(policy, max_freq, CPUFREQ_RELATION_H);
+		mutex_unlock(&ipolicy->ilock);
 		for_each_cpu(i, policy->cpus) {
-			if (cpu_out_of_range(i))
-				break;
 			icpu = &per_cpu(interactive_cpu, i);
 			icpu->pol_hispeed_val_time = hvt;
 		}
@@ -544,6 +541,7 @@ again:
 
 	if (cpumask_empty(&speedchange_cpumask)) {
 		spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
+
 		schedule();
 
 		if (kthread_should_stop())
@@ -558,10 +556,12 @@ again:
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags);
 
 	for_each_cpu(cpu, &tmp_mask) {
-		if (cpu_out_of_range(cpu))
-			break;
 		struct interactive_cpu *icpu = &per_cpu(interactive_cpu, cpu);
 		struct cpufreq_policy *policy;
+		if (cpu_out_of_range(cpu))
+			break;
+		if (!cpu_online(cpu))
+			continue;
 
 		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
 			continue;
@@ -594,8 +594,6 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 		policy = ipolicy->policy;
 
 		for_each_cpu(i, policy->cpus) {
-			if (cpu_out_of_range(i))
-				break;
 			icpu = &per_cpu(interactive_cpu, i);
 
 			if (!down_read_trylock(&icpu->enable_sem))
@@ -607,8 +605,8 @@ static void cpufreq_interactive_boost(struct interactive_tunables *tunables)
 			}
 
 			spin_lock_irqsave(&icpu->target_freq_lock, flags[1]);
-			if (icpu->target_freq < ia_hispeed_freq[policy->cpu]) {
-				icpu->target_freq = ia_hispeed_freq[policy->cpu];
+			if (icpu->target_freq < tunables->hispeed_freq) {
+				icpu->target_freq = tunables->hispeed_freq;
 				cpumask_set_cpu(i, &speedchange_cpumask);
 				icpu->pol_hispeed_val_time = ktime_to_us(ktime_get());
 				wakeup = true;
@@ -1052,10 +1050,7 @@ static void gov_set_update_util(struct interactive_policy *ipolicy)
 	int cpu;
 
 	for_each_cpu(cpu, policy->cpus) {
-		if (cpu_out_of_range(cpu))
-			break;
 		icpu = &per_cpu(interactive_cpu, cpu);
-
 		icpu->last_sample_time = 0;
 		icpu->next_sample_jiffies = 0;
 		cpufreq_add_update_util_hook(cpu, &icpu->update_util,
@@ -1067,11 +1062,9 @@ static inline void gov_clear_update_util(struct cpufreq_policy *policy)
 {
 	int i;
 
-	for_each_cpu(i, policy->cpus) {
-		if (cpu_out_of_range(i))
-			break;
+	for_each_cpu(i, policy->cpus)
 		cpufreq_remove_update_util_hook(i);
-	}
+
 	synchronize_sched();
 }
 
@@ -1099,53 +1092,6 @@ interactive_policy_alloc(struct cpufreq_policy *policy)
 static void interactive_policy_free(struct interactive_policy *ipolicy)
 {
 	kfree(ipolicy);
-}
-
-static int interactive_kthread_create(struct interactive_policy *ipolicy)
-{
-	struct task_struct *thread;
-	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
-	struct cpufreq_policy *policy = ipolicy->policy;
-	int ret;
-
-	kthread_init_work(&ipolicy->work, interactive_work);
-	kthread_init_worker(&ipolicy->worker);
-	thread = kthread_create(kthread_worker_fn, &ipolicy->worker,
-				"interactive:%d",
-				cpumask_first(policy->related_cpus));
-	if (IS_ERR(thread)) {
-		pr_err("failed to create interactive thread: %ld\n", PTR_ERR(thread));
-		return PTR_ERR(thread);
-	}
-
-	ret = sched_setscheduler_nocheck(thread, SCHED_FIFO, &param);
-	if (ret) {
-		kthread_stop(thread);
-		pr_warn("%s: failed to set SCHED_FIFO\n", __func__);
-		return ret;
-	}
-
-	ipolicy->thread = thread;
-
-	/* Kthread is bound to all CPUs by default */
-	kthread_bind_mask(thread, policy->related_cpus);
-
-	init_irq_work(&ipolicy->irq_work, interactive_irq_work);
-	mutex_init(&ipolicy->work_lock);
-
-	wake_up_process(thread);
-
-	return 0;
-}
-
-static void interactive_kthread_stop(struct interactive_policy *ipolicy)
-{
-	/* kthread only required for slow path */
-	if (ipolicy->policy->fast_switch_enabled)
-		return;
-
-	kthread_flush_worker(&ipolicy->worker);
-	kthread_stop(ipolicy->thread);
 }
 
 static struct interactive_tunables *
@@ -1183,19 +1129,17 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	if (!ipolicy)
 		return -ENOMEM;
 
-	ret = interactive_kthread_create(ipolicy);
-	if (ret)
-		goto free_int_policy;
+	mutex_init(&ipolicy->ilock);
 
 	mutex_lock(&tunables_lock);
 
 	tunables = interactive_tunables_alloc(ipolicy);
 	if (!tunables) {
 		ret = -ENOMEM;
-		goto stop_kthread;
+		goto free_int_policy;
 	}
 
-	tunables->hispeed_freq = ia_hispeed_freq[policy->cpu];
+	tunables->hispeed_freq = policy->max;
 	tunables->above_hispeed_delay = default_above_hispeed_delay;
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
@@ -1265,7 +1209,7 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 		interactive_tunables_free(tunables);
 
 	mutex_unlock(&tunables_lock);
-
+	mutex_destroy(&ipolicy->ilock);
 	interactive_policy_free(ipolicy);
 }
 
@@ -1276,8 +1220,6 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 	unsigned int cpu;
 
 	for_each_cpu(cpu, policy->cpus) {
-		if (cpu_out_of_range(cpu))
-			break;
 		icpu = &per_cpu(interactive_cpu, cpu);
 
 		icpu->target_freq = policy->cur;
@@ -1286,7 +1228,6 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 		icpu->loc_floor_val_time = icpu->pol_floor_val_time;
 		icpu->pol_hispeed_val_time = icpu->pol_floor_val_time;
 		icpu->loc_hispeed_val_time = icpu->pol_floor_val_time;
-
 		down_write(&icpu->enable_sem);
 		icpu->ipolicy = ipolicy;
 		up_write(&icpu->enable_sem);
@@ -1301,38 +1242,36 @@ int cpufreq_interactive_start(struct cpufreq_policy *policy)
 void cpufreq_interactive_stop(struct cpufreq_policy *policy)
 {
 	struct interactive_policy *ipolicy = policy->governor_data;
-	struct interactive_cpu *icpu = &per_cpu(interactive_cpu, cpu);
+	struct interactive_cpu *icpu;
 	unsigned int cpu;
 
-	for_each_cpu(cpu, policy->cpus)
-		gov_clear_update_util(ipolicy->policy);
-
-	syncronize_sched();
-
-	icpu_cancel_work(icpu);
-	kthread_cancel_work_sync(&ipolicy->work);
+	gov_clear_update_util(ipolicy->policy);
+	for_each_cpu(cpu, policy->cpus) {
+		icpu = &per_cpu(interactive_cpu, cpu);
+		icpu_cancel_work(icpu);
+		down_write(&icpu->enable_sem);
+		icpu->ipolicy = NULL;
+		up_write(&icpu->enable_sem);
+	}
 }
 
 void cpufreq_interactive_limits(struct cpufreq_policy *policy)
 {
+	struct interactive_policy *ipolicy = policy->governor_data;
 	struct interactive_cpu *icpu;
 	unsigned int cpu;
 	unsigned long flags;
 
+	mutex_lock(&ipolicy->ilock);
 	cpufreq_policy_apply_limits(policy);
-
+	mutex_unlock(&ipolicy->ilock);
 	for_each_cpu(cpu, policy->cpus) {
-		if (cpu_out_of_range(cpu))
-			break;
 		icpu = &per_cpu(interactive_cpu, cpu);
-
 		spin_lock_irqsave(&icpu->target_freq_lock, flags);
-
 		if (policy->max < icpu->target_freq)
 			icpu->target_freq = policy->max;
 		else if (policy->min > icpu->target_freq)
 			icpu->target_freq = policy->min;
-
 		spin_unlock_irqrestore(&icpu->target_freq_lock, flags);
 	}
 }
@@ -1340,8 +1279,8 @@ void cpufreq_interactive_limits(struct cpufreq_policy *policy)
 static struct interactive_governor interactive_gov = {
 	.gov = {
 		.name			= "interactive",
-		.max_transition_latency	= TRANSITION_LATENCY_LIMIT,
 		.owner			= THIS_MODULE,
+		.dynamic_switching = true,
 		.init			= cpufreq_interactive_init,
 		.exit			= cpufreq_interactive_exit,
 		.start			= cpufreq_interactive_start,
@@ -1368,8 +1307,8 @@ static int __init cpufreq_interactive_gov_init(void)
 	unsigned int cpu;
 
 	for_each_possible_cpu(cpu) {
-		per_cpu(interactive_cpu, cpu).cpu = cpu;
 		icpu = &per_cpu(interactive_cpu, cpu);
+
 		init_irq_work(&icpu->irq_work, irq_work);
 		spin_lock_init(&icpu->load_lock);
 		spin_lock_init(&icpu->target_freq_lock);
@@ -1391,8 +1330,6 @@ static int __init cpufreq_interactive_gov_init(void)
 
 	/* wake up so the thread does not look hung to the freezer */
 	wake_up_process(speedchange_task);
-
-
 
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
