@@ -259,8 +259,11 @@ extern unsigned int dbs_ignore_nice_load[NR_CPUS];
 extern unsigned int dbs_down_threshold[NR_CPUS];
 extern unsigned int dbs_freq_step[NR_CPUS];
 extern unsigned int su_rate_limit_us[NR_CPUS];
-/*Machinex Interactive tunables */
 extern unsigned int iactive_hispeed_freq[NR_CPUS];
 extern unsigned long iactive_go_hispeed_load[NR_CPUS];
 extern int iactive_target_load[NR_CPUS];
+extern unsigned int two_phase_freq[NR_CPUS];
+extern unsigned int up_threshold_any_cpu_load[NR_CPUS];
+extern unsigned int sync_freq[NR_CPUS];
+extern unsigned int up_threshold_any_cpu_freq[NR_CPUS];
 #endif
