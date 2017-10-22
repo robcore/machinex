@@ -100,7 +100,6 @@ struct interactive_policy {
 	struct cpufreq_policy *policy;
 	struct interactive_tunables *tunables;
 	struct list_head tunables_hook;
-	struct mutex ilock;
 };
 
 /* Separate instance required for each CPU */
@@ -154,7 +153,7 @@ static unsigned int default_above_hispeed_delay[] = {
 	list_for_each_entry(__ip, &tunables->attr_set.policy_list, tunables_hook)
 
 static DEFINE_MUTEX(tunables_lock);
-
+static DEFINE_MUTEX(ilock);
 static inline void update_slack_delay(struct interactive_tunables *tunables)
 {
 	tunables->timer_slack_delay = usecs_to_jiffies(tunables->timer_slack +
@@ -519,9 +518,9 @@ static void cpufreq_interactive_adjust_cpu(unsigned int cpu,
 	}
 
 	if (max_freq != policy->cur) {
-		mutex_lock(&ipolicy->ilock);
+		mutex_lock(&ilock);
 		__cpufreq_driver_target(policy, max_freq, CPUFREQ_RELATION_H);
-		mutex_unlock(&ipolicy->ilock);
+		mutex_unlock(&ilock);
 		for_each_cpu(i, policy->cpus) {
 			icpu = &per_cpu(interactive_cpu, i);
 			icpu->pol_hispeed_val_time = hvt;
@@ -1129,8 +1128,6 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 	if (!ipolicy)
 		return -ENOMEM;
 
-	mutex_init(&ipolicy->ilock);
-
 	mutex_lock(&tunables_lock);
 
 	tunables = interactive_tunables_alloc(ipolicy);
@@ -1209,7 +1206,6 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 		interactive_tunables_free(tunables);
 
 	mutex_unlock(&tunables_lock);
-	mutex_destroy(&ipolicy->ilock);
 	interactive_policy_free(ipolicy);
 }
 
@@ -1262,9 +1258,9 @@ void cpufreq_interactive_limits(struct cpufreq_policy *policy)
 	unsigned int cpu;
 	unsigned long flags;
 
-	mutex_lock(&ipolicy->ilock);
+	mutex_lock(&ilock);
 	cpufreq_policy_apply_limits(policy);
-	mutex_unlock(&ipolicy->ilock);
+	mutex_unlock(&ilock);
 	for_each_cpu(cpu, policy->cpus) {
 		icpu = &per_cpu(interactive_cpu, cpu);
 		spin_lock_irqsave(&icpu->target_freq_lock, flags);
