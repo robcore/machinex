@@ -31,7 +31,6 @@
 
 struct evdev {
 	int open;
-	int minor;
 	struct input_handle handle;
 	wait_queue_head_t wait;
 	struct evdev_client __rcu *grab;
@@ -60,9 +59,6 @@ struct evdev_client {
 	unsigned int bufsize;
 	struct input_event buffer[];
 };
-
-static struct evdev *evdev_table[EVDEV_MINORS];
-static DEFINE_MUTEX(evdev_table_mutex);
 
 static void __pass_event(struct evdev_client *client,
 			 const struct input_event *event)
@@ -376,35 +372,16 @@ static unsigned int evdev_compute_buffer_size(struct input_dev *dev)
 
 static int evdev_open(struct inode *inode, struct file *file)
 {
-	struct evdev *evdev;
+	struct evdev *evdev = container_of(inode->i_cdev, struct evdev, cdev);
+	unsigned int bufsize = evdev_compute_buffer_size(evdev->handle.dev);
 	struct evdev_client *client;
-	int i = iminor(inode) - EVDEV_MINOR_BASE;
-	unsigned int bufsize;
 	int error;
-
-	if (i >= EVDEV_MINORS)
-		return -ENODEV;
-
-	error = mutex_lock_interruptible(&evdev_table_mutex);
-	if (error)
-		return error;
-	evdev = evdev_table[i];
-	if (evdev)
-		get_device(&evdev->dev);
-	mutex_unlock(&evdev_table_mutex);
-
-	if (!evdev)
-		return -ENODEV;
-
-	bufsize = evdev_compute_buffer_size(evdev->handle.dev);
 
 	client = kzalloc(sizeof(struct evdev_client) +
 				bufsize * sizeof(struct input_event),
 			 GFP_KERNEL);
-	if (!client) {
-		error = -ENOMEM;
-		goto err_put_evdev;
-	}
+	if (!client)
+		return -ENOMEM;
 
 	client->clkid = CLOCK_MONOTONIC;
 	client->bufsize = bufsize;
@@ -421,13 +398,12 @@ static int evdev_open(struct inode *inode, struct file *file)
 	file->private_data = client;
 	nonseekable_open(inode, file);
 
+	get_device(&evdev->dev);
 	return 0;
 
  err_free_client:
 	evdev_detach_client(evdev, client);
 	kvfree(client);
- err_put_evdev:
-	put_device(&evdev->dev);
 	return error;
 }
 
@@ -1055,26 +1031,6 @@ static const struct file_operations evdev_fops = {
 	.llseek		= no_llseek,
 };
 
-static int evdev_install_chrdev(struct evdev *evdev)
-{
-	/*
-	 * No need to do any locking here as calls to connect and
-	 * disconnect are serialized by the input core
-	 */
-	evdev_table[evdev->minor] = evdev;
-	return 0;
-}
-
-static void evdev_remove_chrdev(struct evdev *evdev)
-{
-	/*
-	 * Lock evdev table to prevent race with evdev_open()
-	 */
-	mutex_lock(&evdev_table_mutex);
-	evdev_table[evdev->minor] = NULL;
-	mutex_unlock(&evdev_table_mutex);
-}
-
 /*
  * Mark device non-existent. This disables writes, ioctls and
  * prevents new users from opening the device. Already posted
@@ -1093,7 +1049,8 @@ static void evdev_cleanup(struct evdev *evdev)
 
 	evdev_mark_dead(evdev);
 	evdev_hangup(evdev);
-	evdev_remove_chrdev(evdev);
+
+	cdev_del(&evdev->cdev);
 
 	/* evdev is marked dead so no one else accesses evdev->open */
 	if (evdev->open) {
@@ -1104,7 +1061,7 @@ static void evdev_cleanup(struct evdev *evdev)
 
 /*
  * Create new evdev device. Note that input core serializes calls
- * to connect and disconnect so we don't need to lock evdev_table here.
+ * to connect and disconnect.
  */
 static int evdev_connect(struct input_handler *handler, struct input_dev *dev,
 			 const struct input_device_id *id)
@@ -1152,7 +1109,8 @@ static int evdev_connect(struct input_handler *handler, struct input_dev *dev,
 	if (error)
 		goto err_free_evdev;
 
-	error = evdev_install_chrdev(evdev);
+	cdev_init(&evdev->cdev, &evdev_fops);
+	error = cdev_add(&evdev->cdev, evdev->dev.devt, 1);
 	if (error)
 		goto err_unregister_handle;
 
@@ -1168,6 +1126,8 @@ static int evdev_connect(struct input_handler *handler, struct input_dev *dev,
 	input_unregister_handle(&evdev->handle);
  err_free_evdev:
 	put_device(&evdev->dev);
+ err_free_minor:
+	input_free_minor(minor);
 	return error;
 }
 
@@ -1177,6 +1137,7 @@ static void evdev_disconnect(struct input_handle *handle)
 
 	device_del(&evdev->dev);
 	evdev_cleanup(evdev);
+	input_free_minor(MINOR(evdev->dev.devt));
 	input_unregister_handle(handle);
 	put_device(&evdev->dev);
 }
@@ -1193,7 +1154,7 @@ static struct input_handler evdev_handler = {
 	.events		= evdev_events,
 	.connect	= evdev_connect,
 	.disconnect	= evdev_disconnect,
-	.fops		= &evdev_fops,
+	.legacy_minors	= true,
 	.minor		= EVDEV_MINOR_BASE,
 	.name		= "evdev",
 	.id_table	= evdev_ids,
