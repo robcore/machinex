@@ -324,7 +324,7 @@ static int msm_thermal_get_freq_table(void)
 			break;
 		thermal_limit_low[cpu] = templow;
 		limit_idx[cpu] = i - 1;
-		sanitize_min_max(limit_idx[cpu], 0, MAX_IDX-1);
+		sanitize_min_max(limit_idx[cpu], 0, MAX_IDX);
 		sanitize_min_max(thermal_limit_low[cpu], 0, MAX_IDX-1);
 	}
 
