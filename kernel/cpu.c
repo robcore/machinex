@@ -1226,13 +1226,11 @@ int lock_screen_off_cpus(int primary)
 
 	pr_info("Disabling non-screen off CPUs ...\n");
 	for_each_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
 		if (cpu == primary)
 			continue;
-		if (cpu == 1 && cpu1_allowed_susp)
-			continue;
-		if (cpu == 2 && cpu2_allowed_susp)
-			continue;
-		if (cpu == 3 && cpu3_allowed_susp)
+		if (cpumask_test_cpu(cpu, &screen_off_allowd_msk))
 			continue;
 		error = _cpu_down(cpu, 1, CPUHP_OFFLINE);
 		if (!error)

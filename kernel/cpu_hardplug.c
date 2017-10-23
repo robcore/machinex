@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 2
+#define HARDPLUG_MINOR 3
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -54,9 +54,7 @@ static void plug_one_cpu(void)
 unsigned int limit_screen_on_cpus = 0;
 static cpumask_t screen_on_allowd_msk;
 unsigned int limit_screen_off_cpus = 0;
-unsigned int cpu1_allowed_susp = 1;
-unsigned int cpu2_allowed_susp = 1;
-unsigned int cpu3_allowed_susp = 1;
+cpumask_t screen_off_allowd_msk;
 static struct delayed_work hardplug_work;
 static struct workqueue_struct *hpwq;
 
@@ -309,22 +307,29 @@ static struct kobj_attribute limit_screen_off_cpus_attribute =
 static ssize_t cpu1_allowed_susp_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", cpu1_allowed_susp);
+		unsigned int tempallowed;
+
+		tempallowed = cpumask_test_cpu(1, &screen_off_allowd_msk);
+        return sprintf(buf, "%u\n", tempallowed);
 }
 
 static ssize_t cpu1_allowed_susp_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	unsigned int val, cpu = 1;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu1_allowed_susp == val)
+	if (val == cpumask_test_cpu(cpu, &screen_off_allowd_msk))
 		return count;
 
-	cpu1_allowed_susp = val;
+	if (val)
+		cpumask_set_cpu(cpu, &screen_off_allowd_msk);
+	else if (!val)
+		cpumask_clear_cpu(cpu, &screen_off_allowd_msk);
+
 	return count;
 }
 
@@ -336,22 +341,29 @@ static struct kobj_attribute cpu1_allowed_susp_attribute =
 static ssize_t cpu2_allowed_susp_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", cpu2_allowed_susp);
+		unsigned int tempallowed;
+
+		tempallowed = cpumask_test_cpu(2, &screen_off_allowd_msk);
+        return sprintf(buf, "%u\n", tempallowed);
 }
 
 static ssize_t cpu2_allowed_susp_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	unsigned int val, cpu = 2;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu2_allowed_susp == val)
+	if (val == cpumask_test_cpu(cpu, &screen_off_allowd_msk))
 		return count;
 
-	cpu2_allowed_susp = val;
+	if (val)
+		cpumask_set_cpu(cpu, &screen_off_allowd_msk);
+	else if (!val)
+		cpumask_clear_cpu(cpu, &screen_off_allowd_msk);
+
 	return count;
 }
 
@@ -363,22 +375,29 @@ static struct kobj_attribute cpu2_allowed_susp_attribute =
 static ssize_t cpu3_allowed_susp_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", cpu3_allowed_susp);
+		unsigned int tempallowed;
+
+		tempallowed = cpumask_test_cpu(3, &screen_off_allowd_msk);
+        return sprintf(buf, "%u\n", tempallowed);
 }
 
 static ssize_t cpu3_allowed_susp_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	unsigned int val, cpu = 3;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu3_allowed_susp == val)
+	if (val == cpumask_test_cpu(cpu, &screen_off_allowd_msk))
 		return count;
 
-	cpu3_allowed_susp = val;
+	if (val)
+		cpumask_set_cpu(cpu, &screen_off_allowd_msk);
+	else if (!val)
+		cpumask_clear_cpu(cpu, &screen_off_allowd_msk);
+
 	return count;
 }
 
@@ -429,6 +448,7 @@ static int __init cpu_hardplug_init(void)
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
+		cpumask_set_cpu(cpu, &screen_off_allowd_msk);
 	}
 
 	sysfs_result = sysfs_create_group(kernel_kobj,

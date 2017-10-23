@@ -227,10 +227,7 @@ static inline int disable_nonboot_cpus(void)
 extern void enable_nonboot_cpus(void);
 
 extern unsigned int limit_screen_off_cpus;
-extern unsigned int cpu1_allowed_susp;
-extern unsigned int cpu2_allowed_susp;
-extern unsigned int cpu3_allowed_susp;
-
+extern cpumask_t screen_off_allowd_msk;
 
 extern int lock_screen_off_cpus(int primary);
 extern void unlock_screen_off_cpus(void);
