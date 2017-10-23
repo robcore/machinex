@@ -1030,6 +1030,7 @@ static struct kobj_type intelliactive_tunables_ktype = {
 	.sysfs_ops = &governor_sysfs_ops,
 };
 
+#if 0
 static void intelliactive_input_event(struct input_handle *handle,
 		unsigned int type,
 		unsigned int code, int value)
@@ -1123,6 +1124,7 @@ static struct attribute_group intelliactive_attr_group = {
 	.attrs = intelliactive_attributes,
 	.name = "intelliactive",
 };
+#endif
 
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
@@ -1313,20 +1315,22 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 		idle_notifier_register(&cpufreq_intelliactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
+#if 0
 		ret = input_register_handler(&intelliactive_input_handler);
 		if (WARN_ON_ONCE(ret))
 			goto input_fail;
 	}
-
+#endif
 out:
 	mutex_unlock(&tunables_lock);
 	return 0;
-
+#if 0
 input_fail:
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
 	policy->governor_data = NULL;
 	if (!count)
 		intelliactive_tunables_free(tunables);
+#endif
 fail:
 	policy->governor_data = NULL;
 	intelliactive_tunables_free(tunables);
@@ -1350,7 +1354,9 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 
 	/* Last policy using the governor ? */
 	if (!--intelliactive_gov.usage_count) {
+#if 0
 		input_unregister_handler(&intelliactive_input_handler);
+#endif
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_intelliactive_idle_nb);
