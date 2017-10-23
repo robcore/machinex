@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 1
+#define HARDPLUG_MINOR 2
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -52,8 +52,7 @@ static void plug_one_cpu(void)
 }
 #endif
 unsigned int limit_screen_on_cpus = 0;
-static cpumask_t hardplug_mask;
-
+static cpumask_t screen_on_allowd_msk;
 unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
 unsigned int cpu2_allowed_susp = 1;
@@ -70,7 +69,7 @@ bool is_cpu_allowed(unsigned int cpu)
 		!hotplug_ready || cpu == 0)
 		return true;
 
-	if (cpumask_test_cpu(cpu, &hardplug_mask))
+	if (!cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return false;
 
 	return true;
@@ -78,13 +77,13 @@ bool is_cpu_allowed(unsigned int cpu)
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (cpumask_test_cpu(cpu, &hardplug_mask) && cpu_online(cpu))
+	if (!cpumask_test_cpu(cpu, &screen_on_allowd_msk) && cpu_online(cpu))
 		cpu_down(cpu);
 }
 
 static void unplug_cpu(unsigned int cpu)
 {
-	if (!cpumask_test_cpu(cpu, &hardplug_mask) &&
+	if (cpumask_test_cpu(cpu, &screen_on_allowd_msk) &&
 		cpu_is_offline(cpu))
 		cpu_up(cpu);
 }
@@ -174,11 +173,7 @@ static ssize_t cpu1_allowed_show(struct kobject *kobj,
 {
 		unsigned int tempallowed;
 
-		if (!cpumask_test_cpu(1, &hardplug_mask))
-			tempallowed = 1;
-		else if (cpumask_test_cpu(1, &hardplug_mask))
-			tempallowed = 0;
-
+		tempallowed = cpumask_test_cpu(1, &screen_on_allowd_msk);
         return sprintf(buf, "%u\n", tempallowed);
 }
 
@@ -191,15 +186,14 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if ((val == 0 && cpumask_test_cpu(cpu, &hardplug_mask)) ||
-		 (val == 1 && !cpumask_test_cpu(cpu, &hardplug_mask)))
+	if (val == cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return count;
 
 	if (!val) {
-		cpumask_set_cpu(cpu, &hardplug_mask);
+		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
 		hardplug_cpu(cpu);
 	} else {
-		cpumask_clear_cpu(cpu, &hardplug_mask);
+		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
 		unplug_cpu(cpu);
 	}
 
@@ -216,11 +210,7 @@ static ssize_t cpu2_allowed_show(struct kobject *kobj,
 {
 		unsigned int tempallowed;
 
-		if (!cpumask_test_cpu(2, &hardplug_mask))
-			tempallowed = 1;
-		else if (cpumask_test_cpu(2, &hardplug_mask))
-			tempallowed = 0;
-
+		tempallowed = cpumask_test_cpu(2, &screen_on_allowd_msk);
         return sprintf(buf, "%u\n", tempallowed);
 }
 
@@ -233,15 +223,14 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if ((val == 0 && cpumask_test_cpu(cpu, &hardplug_mask)) ||
-		 (val == 1 && !cpumask_test_cpu(cpu, &hardplug_mask)))
+	if (val == cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return count;
 
 	if (!val) {
-		cpumask_set_cpu(cpu, &hardplug_mask);
+		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
 		hardplug_cpu(cpu);
 	} else {
-		cpumask_clear_cpu(cpu, &hardplug_mask);
+		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
 		unplug_cpu(cpu);
 	}
 
@@ -258,11 +247,7 @@ static ssize_t cpu3_allowed_show(struct kobject *kobj,
 {
 		unsigned int tempallowed;
 
-		if (!cpumask_test_cpu(3, &hardplug_mask))
-			tempallowed = 1;
-		else if (cpumask_test_cpu(3, &hardplug_mask))
-			tempallowed = 0;
-
+		tempallowed = cpumask_test_cpu(3, &screen_on_allowd_msk);
         return sprintf(buf, "%u\n", tempallowed);
 }
 
@@ -275,15 +260,14 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if ((val == 0 && cpumask_test_cpu(cpu, &hardplug_mask)) ||
-		 (val == 1 && !cpumask_test_cpu(cpu, &hardplug_mask)))
+	if (val == cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return count;
 
 	if (!val) {
-		cpumask_set_cpu(cpu, &hardplug_mask);
+		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
 		hardplug_cpu(cpu);
 	} else {
-		cpumask_clear_cpu(cpu, &hardplug_mask);
+		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
 		unplug_cpu(cpu);
 	}
 
@@ -438,9 +422,14 @@ static struct kobject *cpu_hardplug_kobj;
 
 static int __init cpu_hardplug_init(void)
 {
+	unsigned int cpu;
 	int sysfs_result;
 
-	cpumask_clear(&hardplug_mask);
+	for_each_nonboot_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
+	}
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
