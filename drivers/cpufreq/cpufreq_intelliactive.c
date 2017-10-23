@@ -1319,8 +1319,9 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 		ret = input_register_handler(&intelliactive_input_handler);
 		if (WARN_ON_ONCE(ret))
 			goto input_fail;
-	}
 #endif
+	}
+
 out:
 	mutex_unlock(&tunables_lock);
 	return 0;
