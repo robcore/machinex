@@ -37,9 +37,9 @@
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
 static int enabled;
-
+#define MAX_IDX
 static struct msm_thermal_data msm_thermal_info = {
-	.poll_ms = 360,
+	.poll_ms = 320,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 5,
 	.freq_step = 2,
@@ -77,14 +77,6 @@ bool thermal_core_controlled(unsigned int cpu)
 		(cpus_offlined & BIT(cpu)))
 		return true;
 	return false;
-}
-
-static bool can_mitigate(void)
-{
-	if (thermal_suspended || !hotplug_ready)
-		return false;
-
-	return true;
 }
 
 static int set_thermal_limit_low(const char *buf, const struct kernel_param *kp)
@@ -312,7 +304,7 @@ static int msm_thermal_get_freq_table(void)
 	unsigned int templow, cpu;
 	int i;
 
-	if (!can_mitigate())
+	if (thermal_suspended || !hotplug_ready)
 		return -EINVAL;
 
 	policy = cpufreq_cpu_get_raw(0);
@@ -332,8 +324,8 @@ static int msm_thermal_get_freq_table(void)
 			break;
 		thermal_limit_low[cpu] = templow;
 		limit_idx[cpu] = i - 1;
-		sanitize_min_max(limit_idx[cpu], 0, 14);
-		sanitize_min_max(thermal_limit_low[cpu], 0, 14);
+		sanitize_min_max(limit_idx[cpu], 0, MAX_IDX-1);
+		sanitize_min_max(thermal_limit_low[cpu], 0, MAX_IDX-1);
 	}
 
 	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[thermal_limit_low[0]].frequency);
@@ -347,7 +339,7 @@ static long evaluate_temp(unsigned int cpu)
 	long temp;
 	int ret = 0;
 
-	if (!can_mitigate())
+	if (thermal_suspended || !hotplug_ready)
 		return -EINVAL;
 
 	tsens_dev.sensor_num = msm_sens_id[cpu];
@@ -368,8 +360,7 @@ static int __ref do_freq_control(void)
 	unsigned int hotplug_check_needed = 0;
 	struct cpufreq_policy policy;
 
-
-	if (!can_mitigate()) {
+	if (thermal_suspended || !hotplug_ready) {
 		pr_err("frequency control not ready!\n");		
 		return -EINVAL;
 	}
@@ -401,14 +392,14 @@ static int __ref do_freq_control(void)
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
 		} else if (freq_temp <= delta) {
-				if (limit_idx[cpu] == 14) {
+				if (limit_idx[cpu] == MAX_IDX) {
 					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
 										   policy.hlimit_max_screen_off;
 					continue;
 				}
 				limit_idx[cpu] += msm_thermal_info.freq_step;
-				if (limit_idx[cpu] >= 14) {
-					limit_idx[cpu] = 14;
+				if (limit_idx[cpu] >= MAX_IDX) {
+					limit_idx[cpu] = MAX_IDX;
 					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
 										   policy.hlimit_max_screen_off;
 				} else {
@@ -433,8 +424,8 @@ static void __ref do_core_control(void)
 	long delta;
 	long core_temp;
 
-	if ((!core_control_enabled) || (intelli_init() ||
-		 !can_mitigate())) {
+	if (!core_control_enabled || intelli_init() ||
+		 thermal_suspended || !hotplug_ready) {
 		return;
 	}
 
@@ -483,8 +474,11 @@ static void __ref check_temp(struct work_struct *work)
 {
 	int ret = 0;
 
-	if (!can_mitigate())
+	if (thermal_suspended)
 		return;
+
+	if (!hotplug_ready)
+		goto reschedule;
 
 	ret = do_freq_control();
 	if (ret <= 0)
@@ -587,7 +581,7 @@ static void __ref update_offline_cores(int val)
 	int ret = 0;
 
 	if (!core_control_enabled || intelli_init() ||
-		!can_mitigate())
+		thermal_suspended ||!hotplug_ready)
 		return;
 
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
