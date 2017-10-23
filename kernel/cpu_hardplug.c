@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 0
+#define HARDPLUG_MINOR 1
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -52,7 +52,7 @@ static void plug_one_cpu(void)
 }
 #endif
 unsigned int limit_screen_on_cpus = 0;
-static unsigned int cpu_allowed[NR_CPUS] = { 1, 1, 1, 1 };
+static cpumask_t hardplug_mask;
 
 unsigned int limit_screen_off_cpus = 0;
 unsigned int cpu1_allowed_susp = 1;
@@ -70,7 +70,7 @@ bool is_cpu_allowed(unsigned int cpu)
 		!hotplug_ready || cpu == 0)
 		return true;
 
-	if (!cpu_allowed[cpu])
+	if (cpumask_test_cpu(cpu, &hardplug_mask))
 		return false;
 
 	return true;
@@ -78,13 +78,13 @@ bool is_cpu_allowed(unsigned int cpu)
 
 static void hardplug_cpu(unsigned int cpu)
 {
-	if (!cpu_allowed[cpu] && cpu_online(cpu))
+	if (cpumask_test_cpu(cpu, &hardplug_mask) && cpu_online(cpu))
 		cpu_down(cpu);
 }
 
 static void unplug_cpu(unsigned int cpu)
 {
-	if (cpu_allowed[cpu] &&
+	if (!cpumask_test_cpu(cpu, &hardplug_mask) &&
 		cpu_is_offline(cpu))
 		cpu_up(cpu);
 }
@@ -172,27 +172,36 @@ static struct kobj_attribute limit_screen_on_cpus_attribute =
 static ssize_t cpu1_allowed_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", cpu_allowed[1]);
+		unsigned int tempallowed;
+
+		if (!cpumask_test_cpu(1, &hardplug_mask))
+			tempallowed = 1;
+		else if (cpumask_test_cpu(1, &hardplug_mask))
+			tempallowed = 0;
+
+        return sprintf(buf, "%u\n", tempallowed);
 }
 
 static ssize_t cpu1_allowed_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	unsigned int val, cpu = 1;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu_allowed[1] == val)
+	if ((val == 0 && cpumask_test_cpu(cpu, &hardplug_mask)) ||
+		 (val == 1 && !cpumask_test_cpu(cpu, &hardplug_mask)))
 		return count;
 
-	cpu_allowed[1] = val;
-
-	if (cpu_allowed[1])
-		hardplug_cpu(1);
-	else
-		unplug_cpu(1);
+	if (!val) {
+		cpumask_set_cpu(cpu, &hardplug_mask);
+		hardplug_cpu(cpu);
+	} else {
+		cpumask_clear_cpu(cpu, &hardplug_mask);
+		unplug_cpu(cpu);
+	}
 
 	return count;
 }
@@ -205,27 +214,36 @@ static struct kobj_attribute cpu1_allowed_attribute =
 static ssize_t cpu2_allowed_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", cpu_allowed[2]);
+		unsigned int tempallowed;
+
+		if (!cpumask_test_cpu(2, &hardplug_mask))
+			tempallowed = 1;
+		else if (cpumask_test_cpu(2, &hardplug_mask))
+			tempallowed = 0;
+
+        return sprintf(buf, "%u\n", tempallowed);
 }
 
 static ssize_t cpu2_allowed_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	unsigned int val, cpu = 2;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu_allowed[2] == val)
+	if ((val == 0 && cpumask_test_cpu(cpu, &hardplug_mask)) ||
+		 (val == 1 && !cpumask_test_cpu(cpu, &hardplug_mask)))
 		return count;
 
-	cpu_allowed[2] = val;
-
-	if (cpu_allowed[2])
-		hardplug_cpu(2);
-	else
-		unplug_cpu(2);
+	if (!val) {
+		cpumask_set_cpu(cpu, &hardplug_mask);
+		hardplug_cpu(cpu);
+	} else {
+		cpumask_clear_cpu(cpu, &hardplug_mask);
+		unplug_cpu(cpu);
+	}
 
 	return count;
 }
@@ -238,27 +256,36 @@ static struct kobj_attribute cpu2_allowed_attribute =
 static ssize_t cpu3_allowed_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", cpu_allowed[3]);
+		unsigned int tempallowed;
+
+		if (!cpumask_test_cpu(3, &hardplug_mask))
+			tempallowed = 1;
+		else if (cpumask_test_cpu(3, &hardplug_mask))
+			tempallowed = 0;
+
+        return sprintf(buf, "%u\n", tempallowed);
 }
 
 static ssize_t cpu3_allowed_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int val;
+	unsigned int val, cpu = 3;
 
 	sscanf(buf, "%u\n", &val);
 
 	sanitize_min_max(val, 0, 1);
 
-	if (cpu_allowed[3] == val)
+	if ((val == 0 && cpumask_test_cpu(cpu, &hardplug_mask)) ||
+		 (val == 1 && !cpumask_test_cpu(cpu, &hardplug_mask)))
 		return count;
 
-	cpu_allowed[3] = val;
-
-	if (cpu_allowed[3])
-		hardplug_cpu(3);
-	else
-		unplug_cpu(3);
+	if (!val) {
+		cpumask_set_cpu(cpu, &hardplug_mask);
+		hardplug_cpu(cpu);
+	} else {
+		cpumask_clear_cpu(cpu, &hardplug_mask);
+		unplug_cpu(cpu);
+	}
 
 	return count;
 }
@@ -412,6 +439,8 @@ static struct kobject *cpu_hardplug_kobj;
 static int __init cpu_hardplug_init(void)
 {
 	int sysfs_result;
+
+	cpumask_clear(&hardplug_mask);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
