@@ -76,6 +76,19 @@ bool thermal_core_controlled(unsigned int cpu)
 /*************************************************************************
  *                          Module Parameters                            *
  *************************************************************************/
+
+static int get_core_control_mask(char *buf, const struct kernel_param *kp)
+{
+	return cpumap_print_to_pagebuf(true, buf, &core_control_mask);
+}
+
+static const struct kernel_param_ops param_ops_core_control_mask = {
+	.set = NULL,
+	.get = get_core_control_mask,
+};
+
+module_param_cb(core_control_mask, &param_ops_core_control_mask, NULL, 0444);
+
 static int set_core1(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int val, cpu = 1;
@@ -591,11 +604,16 @@ static void __ref check_temp(struct work_struct *work)
 		goto reschedule;
 
 	ret = do_freq_control();
-	if (ret <= 0)
-		goto reschedule;
-	else if (ret > 0)
-		do_core_control();
-
+	if (msm_thermal_info.limit_temp_degC) <
+		msm_thermal_info.core_limit_temp_degC) {
+		if (ret <= 0)
+			goto reschedule;
+		else if (ret > 0)
+			do_core_control();
+	} else {
+		if (ret >= 0)
+			do_core_control();
+	}
 reschedule:
 	if (likely(enabled))
 		mod_delayed_work(intellithermal_wq, &check_temp_work,
