@@ -159,6 +159,14 @@ static unsigned int default_above_hispeed_delay[] = {
 
 static DEFINE_MUTEX(tunables_lock);
 static DEFINE_MUTEX(ilock);
+
+static unsigned	int boost[NR_CPUS] = {0, 0, 0, 0};
+/* Duration of a boot pulse in usecs */
+static int boostpulse_duration[NR_CPUS] = {DEFAULT_MIN_SAMPLE_TIME, DEFAULT_MIN_SAMPLE_TIME, DEFAULT_MIN_SAMPLE_TIME, DEFAULT_MIN_SAMPLE_TIME};
+/* End time of boost pulse in ktime converted to usecs */
+static u64 boostpulse_endtime[NR_CPUS];
+static unsigned int boosted[NR_CPUS] = {0, 0, 0, 0};
+
 static inline void update_slack_delay(struct intelliactive_tunables *tunables)
 {
 	tunables->timer_slack_delay = usecs_to_jiffies(tunables->timer_slack +
@@ -379,7 +387,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	unsigned int counter = 0;
 
 	spin_lock_irqsave(&icpu->load_lock, flags);
-	now = update_load(icpu, smp_processor_id());
+	now = update_load(icpu, policy->cpu);
 	delta_time = (unsigned int)(now - icpu->cputime_speedadj_timestamp);
 	cputime_speedadj = icpu->cputime_speedadj;
 	spin_unlock_irqrestore(&icpu->load_lock, flags);
@@ -391,9 +399,11 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / policy->cur;
-	tunables->boosted = tunables->boost ||
-			    now < tunables->boostpulse_endtime;
+//	tunables->boosted = tunables->boost ||
+//			    now < tunables->boostpulse_endtime;
 
+	boosted[policy->cpu] = boost[policy->cpu] ||
+			    now < boostpulse_endtime[policy->cpu];
 	if (counter < 5) {
 		counter++;
 		if (counter > 2) {
@@ -401,7 +411,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 		}
 	}
 
-	if (cpu_load >= iactive_go_hispeed_load[policy->cpu] || tunables->boosted) {
+	if (cpu_load >= iactive_go_hispeed_load[policy->cpu] || boosted[policy->cpu]) {
 		if (policy->cur < iactive_hispeed_freq[policy->cpu]) {
 			if (two_phase_freq[policy->cpu] < policy->cur)
 				phase = 1;
@@ -475,7 +485,7 @@ static void eval_target_freq(struct intelliactive_cpu *icpu)
 	 * (or the indefinite boost is turned off).
 	 */
 
-	if (!tunables->boosted || new_freq > iactive_hispeed_freq[policy->cpu]) {
+	if (!boosted[policy->cpu] || new_freq > iactive_hispeed_freq[policy->cpu]) {
 		icpu->floor_freq = new_freq;
 		if (icpu->target_freq >= policy->cur || new_freq >= policy->cur)
 			icpu->loc_floor_val_time = now;
@@ -626,24 +636,28 @@ again:
 	goto again;
 }
 
-static void cpufreq_intelliactive_boost(struct intelliactive_tunables *tunables)
+static void cpufreq_intelliactive_boost(void)
 {
 	struct intelliactive_policy *ipolicy;
 	struct cpufreq_policy *policy;
 	struct intelliactive_cpu *icpu;
+	unsigned int cpu;
 	unsigned long flags[2];
 	bool wakeup = false;
 	int i;
 
-	tunables->boosted = true;
-
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
 
-	for_each_ipolicy(ipolicy) {
-		policy = ipolicy->policy;
+		for_each_online_cpu(cpu) {
+			if (cpu_out_of_range(cpu))
+				break;
+			icpu = &per_cpu(intelliactive_cpu, cpu);
+			policy = icpu->ipolicy->policy;
 
-		for_each_cpu(i, policy->cpus) {
-			icpu = &per_cpu(intelliactive_cpu, i);
+			if (!policy)
+				continue;
+
+			boosted[cpu] = 1;
 
 			if (!down_read_trylock(&icpu->enable_sem))
 				continue;
@@ -664,7 +678,6 @@ static void cpufreq_intelliactive_boost(struct intelliactive_tunables *tunables)
 
 			up_read(&icpu->enable_sem);
 		}
-	}
 
 	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
 
@@ -935,70 +948,10 @@ static ssize_t store_timer_slack(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
-static ssize_t store_boost(struct gov_attr_set *attr_set, const char *buf,
-			   size_t count)
-{
-	struct intelliactive_tunables *tunables = to_tunables(attr_set);
-	unsigned long val;
-	int ret;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	tunables->boost = val;
-
-	if (tunables->boost) {
-		if (!tunables->boosted)
-			cpufreq_intelliactive_boost(tunables);
-	} else {
-		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-	}
-
-	return count;
-}
-
-static ssize_t store_boostpulse(struct gov_attr_set *attr_set, const char *buf,
-				size_t count)
-{
-	struct intelliactive_tunables *tunables = to_tunables(attr_set);
-	unsigned long val;
-	int ret;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
-					tunables->boostpulse_duration;
-	if (!tunables->boosted)
-		cpufreq_intelliactive_boost(tunables);
-
-	return count;
-}
-
-static ssize_t store_boostpulse_duration(struct gov_attr_set *attr_set,
-					 const char *buf, size_t count)
-{
-	struct intelliactive_tunables *tunables = to_tunables(attr_set);
-	unsigned long val;
-	int ret;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	tunables->boostpulse_duration = val;
-
-	return count;
-}
-
 show_one(hispeed_freq, "%u");
 show_one(go_hispeed_load, "%lu");
 show_one(min_sample_time, "%lu");
 show_one(timer_slack, "%lu");
-show_one(boost, "%u");
-show_one(boostpulse_duration, "%u");
 
 gov_attr_rw(target_loads);
 gov_attr_rw(above_hispeed_delay);
@@ -1007,9 +960,6 @@ gov_attr_rw(go_hispeed_load);
 gov_attr_rw(min_sample_time);
 gov_attr_rw(timer_rate);
 gov_attr_rw(timer_slack);
-gov_attr_rw(boost);
-gov_attr_wo(boostpulse);
-gov_attr_rw(boostpulse_duration);
 
 static struct attribute *intelliactive_attributes[] = {
 	&target_loads.attr,
@@ -1019,9 +969,6 @@ static struct attribute *intelliactive_attributes[] = {
 	&min_sample_time.attr,
 	&timer_rate.attr,
 	&timer_slack.attr,
-	&boost.attr,
-	&boostpulse.attr,
-	&boostpulse_duration.attr,
 	NULL
 };
 
@@ -1030,30 +977,22 @@ static struct kobj_type intelliactive_tunables_ktype = {
 	.sysfs_ops = &governor_sysfs_ops,
 };
 
-#if 0
+static struct attribute_group intelliactive_attr_group = {
+	.attrs = intelliactive_attributes,
+	.name = "intelliactive",
+};
+
 static void intelliactive_input_event(struct input_handle *handle,
 		unsigned int type,
 		unsigned int code, int value)
 {
 	unsigned int cpu = smp_processor_id();
-	struct intelliactive_cpu *icpu;
-	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
-
-	if (!policy)
-		return;
-
-	for_each_cpu(cpu, policy->cpus)
-		icpu = &per_cpu(intelliactive_cpu, cpu);
-
-	if (!icpu->ipolicy->tunables)
-		return;
 
 	if (type == EV_SYN && code == SYN_REPORT) {
-		icpu->ipolicy->tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
-			icpu->ipolicy->tunables->boostpulse_duration;
-	if (icpu->ipolicy->tunables->boost &&
-		!icpu->ipolicy->tunables->boosted)
-		cpufreq_intelliactive_boost(icpu->ipolicy->tunables);
+		boostpulse_endtime[cpu] = ktime_to_us(ktime_get()) +
+			boostpulse_duration[cpu];
+	if (!boosted[cpu])
+		cpufreq_intelliactive_boost();
 	}
 }
 
@@ -1119,12 +1058,6 @@ static struct input_handler intelliactive_input_handler = {
 	.name		= "intelliactive",
 	.id_table	= intelliactive_ids,
 };
-
-static struct attribute_group intelliactive_attr_group = {
-	.attrs = intelliactive_attributes,
-	.name = "intelliactive",
-};
-#endif
 
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
@@ -1293,7 +1226,7 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 	tunables->target_loads = default_target_loads;
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
-	tunables->boostpulse_duration = DEFAULT_MIN_SAMPLE_TIME;
+	tunables->boostpulse_duration = boostpulse_duration[policy->cpu];
 	tunables->sampling_rate = DEFAULT_SAMPLING_RATE;
 	tunables->timer_slack = DEFAULT_TIMER_SLACK;
 	update_slack_delay(tunables);
@@ -1315,23 +1248,19 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 		idle_notifier_register(&cpufreq_intelliactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
-#if 0
 		ret = input_register_handler(&intelliactive_input_handler);
 		if (WARN_ON_ONCE(ret))
 			goto input_fail;
-#endif
 	}
 
 out:
 	mutex_unlock(&tunables_lock);
 	return 0;
-#if 0
 input_fail:
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
 	policy->governor_data = NULL;
 	if (!count)
 		intelliactive_tunables_free(tunables);
-#endif
 fail:
 	policy->governor_data = NULL;
 	intelliactive_tunables_free(tunables);
@@ -1355,9 +1284,7 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 
 	/* Last policy using the governor ? */
 	if (!--intelliactive_gov.usage_count) {
-#if 0
 		input_unregister_handler(&intelliactive_input_handler);
-#endif
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_intelliactive_idle_nb);
