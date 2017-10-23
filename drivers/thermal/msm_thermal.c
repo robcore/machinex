@@ -37,7 +37,7 @@
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
 static int enabled;
-#define MAX_IDX
+#define MAX_IDX 14
 static struct msm_thermal_data msm_thermal_info = {
 	.poll_ms = 320,
 	.limit_temp_degC = 65,
