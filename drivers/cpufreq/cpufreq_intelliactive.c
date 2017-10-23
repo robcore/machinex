@@ -31,6 +31,7 @@
 #include <linux/timer.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/input.h>
 #include "cpufreq_machinex_gov_attr.h"
 
 #define gov_attr_ro(_name)						\
@@ -1029,6 +1030,94 @@ static struct kobj_type intelliactive_tunables_ktype = {
 	.sysfs_ops = &governor_sysfs_ops,
 };
 
+static void intelliactive_input_event(struct input_handle *handle,
+		unsigned int type,
+		unsigned int code, int value)
+{
+	unsigned int cpu = smp_processor_id();
+	struct intelliactive_cpu *icpu = &per_cpu(intelliactive_cpu, cpu);
+	struct intelliactive_policy *ipolicy = icpu->ipolicy;
+	struct intelliactive_tunables *tunables = ipolicy->tunables;
+
+	if (!tunables)
+		return;
+
+	if (type == EV_SYN && code == SYN_REPORT) {
+		tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
+			tunables->boostpulse_duration;
+	if (!tunables->boosted)
+		cpufreq_intelliactive_boost(tunables);
+	}
+}
+
+static int intelliactive_input_connect(struct input_handler *handler,
+		struct input_dev *dev, const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int error;
+
+	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
+	if (!handle)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = "cpufreq";
+
+	error = input_register_handle(handle);
+	if (error)
+		goto err2;
+
+	error = input_open_device(handle);
+	if (error)
+		goto err1;
+
+	return 0;
+err1:
+	input_unregister_handle(handle);
+err2:
+	kfree(handle);
+	return error;
+}
+
+static void intelliactive_input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id intelliactive_ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			 INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
+			    BIT_MASK(ABS_MT_POSITION_X) |
+			    BIT_MASK(ABS_MT_POSITION_Y) },
+	}, /* multi-touch touchscreen */
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
+			 INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
+		.absbit = { [BIT_WORD(ABS_X)] =
+			    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
+	}, /* touchpad */
+};
+
+static struct input_handler intelliactive_input_handler = {
+	.event		= intelliactive_input_event,
+	.connect	= intelliactive_input_connect,
+	.disconnect	= intelliactive_input_disconnect,
+	.name		= "intelliactive",
+	.id_table	= intelliactive_ids,
+};
+
+static struct attribute_group intelliactive_attr_group = {
+	.attrs = intelliactive_attributes,
+	.name = "intelliactive",
+};
+
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
@@ -1169,6 +1258,7 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 {
 	struct intelliactive_policy *ipolicy;
 	struct intelliactive_tunables *tunables;
+	unsigned int count;
 	int ret;
 
 	/* State should be equivalent to EXIT */
@@ -1217,17 +1307,25 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 		idle_notifier_register(&cpufreq_intelliactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
+		ret = input_register_handler(&intelliactive_input_handler);
+		if (WARN_ON_ONCE(ret))
+			goto input_fail;
 	}
 
- out:
+out:
 	mutex_unlock(&tunables_lock);
 	return 0;
 
- fail:
+input_fail:
+	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
+	policy->governor_data = NULL;
+	if (!count)
+		intelliactive_tunables_free(tunables);
+fail:
 	policy->governor_data = NULL;
 	intelliactive_tunables_free(tunables);
 
- free_int_policy:
+free_int_policy:
 	mutex_unlock(&tunables_lock);
 
 	intelliactive_policy_free(ipolicy);
@@ -1246,6 +1344,7 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 
 	/* Last policy using the governor ? */
 	if (!--intelliactive_gov.usage_count) {
+		input_unregister_handler(&intelliactive_input_handler);
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_intelliactive_idle_nb);
