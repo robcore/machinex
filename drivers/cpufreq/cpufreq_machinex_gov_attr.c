@@ -37,7 +37,7 @@ int iactive_target_load[NR_CPUS] = {90, 90, 90, 90};
 unsigned int two_phase_freq[NR_CPUS] = {1674000, 1674000, 1674000, 1674000};
 unsigned int up_threshold_any_cpu_load[NR_CPUS] = {80, 80, 80, 80};
 unsigned int sync_freq[NR_CPUS] = {1026000, 1026000, 1026000, 1026000};
-unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {1242000, 1242000, 1242000, 1242000};
+unsigned int up_threshold_any_cpu_freq[NR_CPUS] = {702000, 702000, 702000, 702000};
 
 show_one_cpu0(dbs_cpu_sampling_rate);
 show_one_cpu0(dbs_up_threshold);
