@@ -396,12 +396,12 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 	struct cpufreq_policy *policy;
 
 	policy = cpufreq_cpu_get_raw(cpu);
-	if (!policy)
+	if (policy == NULL)
 		return;
 
 	policy->limited_max_freq_thermal = freq;
-	reapply_hard_limits(policy->cpu);
 	cpufreq_update_policy(policy->cpu);
+	reapply_hard_limits(policy->cpu);
 }
 	
 

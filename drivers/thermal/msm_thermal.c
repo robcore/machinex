@@ -33,6 +33,7 @@
 #include <linux/suspend.h>
 #include <mach/cpufreq.h>
 #include <linux/sysfs_helpers.h>
+#include <linux/display_state.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
 static int enabled;
@@ -49,8 +50,6 @@ static struct msm_thermal_data msm_thermal_info = {
 
 static int limit_idx[NR_CPUS];
 static int thermal_limit_low[NR_CPUS];
-static int thermal_limit_high[NR_CPUS];
-static unsigned int local_max_freq_thermal[NR_CPUS];
 static unsigned int resolve_max_freq[NR_CPUS];
 
 static uint32_t msm_sens_id[NR_CPUS] = { 7, 8, 9, 10 };
@@ -333,14 +332,11 @@ static int msm_thermal_get_freq_table(void)
 			break;
 		thermal_limit_low[cpu] = templow;
 		limit_idx[cpu] = i - 1;
-		thermal_limit_high[cpu] = limit_idx[cpu];
 		sanitize_min_max(limit_idx[cpu], 0, 14);
-		sanitize_min_max(thermal_limit_high[cpu], 1, 14);
 		sanitize_min_max(thermal_limit_low[cpu], 0, 14);
 	}
 
 	pr_info("MSM Thermal: Initial thermal_limit_low is %u\n", therm_table[thermal_limit_low[0]].frequency);
-	pr_info("MSM Thermal: Initial thermal_limit_high is %u\n", therm_table[thermal_limit_high[0]].frequency);	
 
 	return 0;
 }
@@ -370,6 +366,7 @@ static int __ref do_freq_control(void)
 	unsigned int cpu = smp_processor_id();
 	long freq_temp, delta;
 	unsigned int hotplug_check_needed = 0;
+	struct cpufreq_policy policy;
 
 
 	if (!can_mitigate()) {
@@ -384,7 +381,10 @@ static int __ref do_freq_control(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		resolve_max_freq[cpu] = local_max_freq_thermal[cpu];
+		ret = cpufreq_get_policy(&policy, cpu);
+		if (ret)
+			continue;
+		resolve_max_freq[cpu] = policy.limited_max_freq_thermal;
 		freq_temp = evaluate_temp(cpu);
 		if (freq_temp <= 0) {
 			hotplug_check_needed++;
@@ -401,24 +401,26 @@ static int __ref do_freq_control(void)
 				resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 				hotplug_check_needed++;
 		} else if (freq_temp <= delta) {
-				if (limit_idx[cpu] == thermal_limit_high[cpu]) {
+				if (limit_idx[cpu] == 14) {
+					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
+										   policy.hlimit_max_screen_off;
 					continue;
 				}
 				limit_idx[cpu] += msm_thermal_info.freq_step;
-				if (limit_idx[cpu] >= thermal_limit_high[cpu]) {
-					limit_idx[cpu] = thermal_limit_high[cpu];
-					resolve_max_freq[cpu] = therm_table[thermal_limit_high[cpu]].frequency;
+				if (limit_idx[cpu] >= 14) {
+					limit_idx[cpu] = 14;
+					resolve_max_freq[cpu] = is_display_on() ? policy.hlimit_max_screen_on : 
+										   policy.hlimit_max_screen_off;
 				} else {
 					resolve_max_freq[cpu] = therm_table[limit_idx[cpu]].frequency;
 					hotplug_check_needed++;
 				}
 		}
 
-		if (resolve_max_freq[cpu] == local_max_freq_thermal[cpu])
+		if (resolve_max_freq[cpu] == policy.limited_max_freq_thermal)
 			continue;
 
 		set_thermal_policy(cpu, resolve_max_freq[cpu]);
-		local_max_freq_thermal[cpu] = resolve_max_freq[cpu];
 	}
 	put_online_cpus();
 	return hotplug_check_needed;
@@ -519,6 +521,8 @@ reschedule:
 static void __ref disable_msm_thermal(void)
 {
 	unsigned int cpu = smp_processor_id();
+	struct cpufreq_policy *policy;
+	unsigned int tempfreq;
 
 	cancel_delayed_work_sync(&check_temp_work);
 	destroy_workqueue(intellithermal_wq);
@@ -527,11 +531,18 @@ static void __ref disable_msm_thermal(void)
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
-		if (local_max_freq_thermal[cpu] == therm_table[thermal_limit_high[cpu]].frequency)
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (policy == NULL)
+			continue;
+		
+		if ((is_display_on() && policy->limited_max_freq_thermal == policy->hlimit_max_screen_on) ||
+			(!is_display_on() && policy->limited_max_freq_thermal == policy->hlimit_max_screen_off))
 			continue;
 
-		local_max_freq_thermal[cpu] = therm_table[thermal_limit_high[cpu]].frequency;
-		set_thermal_policy(cpu, local_max_freq_thermal[cpu]);
+		tempfreq = is_display_on() ? policy->hlimit_max_screen_on : 
+										   policy->hlimit_max_screen_off;
+
+		set_thermal_policy(cpu, tempfreq);
 	}
 	put_online_cpus();
 }
