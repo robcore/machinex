@@ -744,6 +744,37 @@ err:
 	return ERR_PTR(err);
 }
 
+static void intelliactive_boost_ondemand(unsigned int cpu, u64 timeframe, bool switcher)
+{
+	struct  intelliactive_cpu *icpu = &per_cpu(intelliactive_cpu, cpu);
+	struct intelliactive_tunables *tunables;
+
+	if (icpu && icpu->ipolicy->policy)
+		tunables = icpu->ipolicy->policy->governor_data;
+	else
+		return;
+
+	if (!tunables)
+		return;
+
+	if (!timeframe) {
+		 if (switcher) {
+			//trace_cpufreq_intelliactive_boost("on");
+			if (!tunables->boosted)
+				cpufreq_intelliactive_boost(tunables);
+		 } else {
+			tunables->boostpulse_endtime = ktime_to_us(ktime_get());
+			//trace_cpufreq_intelliactive_unboost("off");
+		 }
+	} else {
+		 tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
+			(timeframe * 1000);
+		 //trace_cpufreq_intelliactive_boost("pulse");
+		 if (!tunables->boosted)
+			cpufreq_intelliactive_boost(tunables);
+	}
+}
+
 /* Interactive governor sysfs interface */
 static struct intelliactive_tunables *to_tunables(struct gov_attr_set *attr_set)
 {
@@ -1029,30 +1060,18 @@ static struct kobj_type intelliactive_tunables_ktype = {
 	.sysfs_ops = &governor_sysfs_ops,
 };
 
-#if 0
 static void intelliactive_input_event(struct input_handle *handle,
 		unsigned int type,
 		unsigned int code, int value)
 {
-	unsigned int cpu = smp_processor_id();
-	struct intelliactive_cpu *icpu;
-	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
+	unsigned int cpu;
 
-	if (!policy)
-		return;
-
-	for_each_cpu(cpu, policy->cpus)
-		icpu = &per_cpu(intelliactive_cpu, cpu);
-
-	if (!icpu->ipolicy->tunables)
-		return;
-
-	if (type == EV_SYN && code == SYN_REPORT) {
-		icpu->ipolicy->tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
-			icpu->ipolicy->tunables->boostpulse_duration;
-	if (icpu->ipolicy->tunables->boost &&
-		!icpu->ipolicy->tunables->boosted)
-		cpufreq_intelliactive_boost(icpu->ipolicy->tunables);
+	for_each_online_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		if (!cpu_online(cpu))
+			continue;
+		intelliactive_boost_ondemand(cpu, 100, false);
 	}
 }
 
@@ -1115,7 +1134,7 @@ static struct input_handler intelliactive_input_handler = {
 	.event		= intelliactive_input_event,
 	.connect	= intelliactive_input_connect,
 	.disconnect	= intelliactive_input_disconnect,
-	.name		= "intelliactive",
+	.name		= "intelliactivity",
 	.id_table	= intelliactive_ids,
 };
 
@@ -1123,7 +1142,6 @@ static struct attribute_group intelliactive_attr_group = {
 	.attrs = intelliactive_attributes,
 	.name = "intelliactive",
 };
-#endif
 
 static int cpufreq_intelliactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
@@ -1314,23 +1332,21 @@ int cpufreq_intelliactive_init(struct cpufreq_policy *policy)
 		idle_notifier_register(&cpufreq_intelliactive_idle_nb);
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
-#if 0					  
 		ret = input_register_handler(&intelliactive_input_handler);
 		if (WARN_ON_ONCE(ret))
-			goto input_fail;
-#endif
+			ret = 0;
 	}
 
 out:
 	mutex_unlock(&tunables_lock);
 	return 0;
-#if 0
+
 input_fail:
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
 	policy->governor_data = NULL;
 	if (!count)
 		intelliactive_tunables_free(tunables);
-#endif
+
 fail:
 	policy->governor_data = NULL;
 	intelliactive_tunables_free(tunables);
@@ -1354,9 +1370,7 @@ void cpufreq_intelliactive_exit(struct cpufreq_policy *policy)
 
 	/* Last policy using the governor ? */
 	if (!--intelliactive_gov.usage_count) {
-#if 0
 		input_unregister_handler(&intelliactive_input_handler);
-#endif
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_intelliactive_idle_nb);
