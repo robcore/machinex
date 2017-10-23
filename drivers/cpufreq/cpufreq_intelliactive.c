@@ -127,7 +127,6 @@ struct intelliactive_cpu {
 
 	spinlock_t target_freq_lock; /*protects target freq */
 	unsigned int target_freq;
-	unsigned int two_phase_freq;
 
 	unsigned int floor_freq;
 	u64 pol_floor_val_time; /* policy floor_validate_time */
