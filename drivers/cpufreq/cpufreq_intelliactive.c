@@ -1035,18 +1035,24 @@ static void intelliactive_input_event(struct input_handle *handle,
 		unsigned int code, int value)
 {
 	unsigned int cpu = smp_processor_id();
-	struct intelliactive_cpu *icpu = &per_cpu(intelliactive_cpu, cpu);
-	struct intelliactive_policy *ipolicy = icpu->ipolicy;
-	struct intelliactive_tunables *tunables = ipolicy->tunables;
+	struct intelliactive_cpu *icpu;
+	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 
-	if (!tunables)
+	if (!policy)
+		return;
+
+	for_each_cpu(cpu, policy->cpus)
+		icpu = &per_cpu(intelliactive_cpu, cpu);
+
+	if (!icpu->ipolicy->tunables)
 		return;
 
 	if (type == EV_SYN && code == SYN_REPORT) {
-		tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
-			tunables->boostpulse_duration;
-	if (!tunables->boosted)
-		cpufreq_intelliactive_boost(tunables);
+		icpu->ipolicy->tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
+			icpu->ipolicy->tunables->boostpulse_duration;
+	if (icpu->ipolicy->tunables->boost &&
+		!icpu->ipolicy->tunables->boosted)
+		cpufreq_intelliactive_boost(icpu->ipolicy->tunables);
 	}
 }
 
@@ -1062,7 +1068,7 @@ static int intelliactive_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "cpufreq";
+	handle->name = "intellifreq";
 
 	error = input_register_handle(handle);
 	if (error)
