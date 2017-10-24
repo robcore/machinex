@@ -462,7 +462,7 @@ static int __init cpu_hardplug_init(void)
 	}
 
 	nbootcpus = cpumask_weight(&screen_on_allowd_msk);
-	pr_info("[CPU Hardplug Init] Nonboot Cpus: %d," nbootcpus);
+	pr_info("[CPU Hardplug Init] Nonboot Cpus: %d", nbootcpus);
 
 	return 0;
 }
