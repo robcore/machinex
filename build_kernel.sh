@@ -138,7 +138,7 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		if [ -e $MYSCRIPT ]; then
 			rm $MYSCRIPT
 		fi
-		echo "install /external_sd/$1" > $MYSCRIPT
+		echo "install /external_sd/$2" > $MYSCRIPT
 		echo "reboot" >> $MYSCRIPT
 		adb push $MYSCRIPT /cache/recovery 2> /dev/null
 		adb shell su -c "echo '0' > /sys/module/restart/parameters/download_mode"
@@ -235,7 +235,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 			echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 			echo "ENABLE ADB"
 			ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
-			ADBRETRY $ADBPATH
+			ADBRETRY $ADBPATH $OUTFOLDER.zip
 		fi;
 		echo -n "Save Object Files?  y/n [ENTER]: "
 		read objsave
@@ -257,7 +257,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 		echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 		echo "ENABLE ADB"
 		ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
-		ADBRETRY $ADBPATH
+		ADBRETRY $ADBPATH $OUTFOLDER.zip
 		cd ~/machinex
 		WASHME
 		echo "cleanup finished"
@@ -329,7 +329,7 @@ if [ -e ~/machinex/out/arch/arm/boot/zImage ]; then
 	echo "Kernel is located in /media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip"
 	echo "ENABLE ADB"
 	ADBPATH=/media/root/robcore/AIK/$OUTFOLDER/$OUTFOLDER.zip
-	ADBRETRY $ADBPATH
+	ADBRETRY $ADBPATH $OUTFOLDER.zip
 	cd ~/machinex
 	WASHME
 	echo "cleanup finished"
