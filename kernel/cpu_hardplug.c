@@ -449,7 +449,7 @@ static int __init cpu_hardplug_init(void)
 	int sysfs_result;
 
 	cpumask_copy(&screen_on_allowd_msk,
-			cpu_nonboot_mask)
+			cpu_nonboot_mask);
 	cpumask_copy(&screen_off_allowd_msk,
 			cpu_nonboot_mask);
 
