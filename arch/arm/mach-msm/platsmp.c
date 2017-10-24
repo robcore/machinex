@@ -282,7 +282,7 @@ static void __init msm_smp_init_cpus(void)
 		set_cpu_possible(i, true);
 
 	for (i = 1; i < HARDMAX; i++)
-		set_cpu_nonboot(cpu, true);
+		set_cpu_nonboot(i, true);
 
 	if (cpu_nonboot(bcpu))
 		set_cpu_nonboot(bcpu, false);
