@@ -190,8 +190,6 @@ static const struct attribute_group cpumask_calculator_attr_group =
 	.name = "cpumask_calculator",
 };
 
-static struct kobject *cpumask_calculator_kobj;
-
 static int __init cpumask_calculator_init(void)
 {
 	int sysfs_result;
