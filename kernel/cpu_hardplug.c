@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 7
+#define HARDPLUG_MINOR 8
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -135,10 +135,21 @@ unsigned int nr_hardplugged_cpus(void)
 }
 EXPORT_SYMBOL(nr_hardplugged_cpus);
 
+static ssize_t nonboot_cpus_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return cpumap_print_to_pagebuf(true, buf, &__cpu_nonboot_mask);
+}
+
+static struct kobj_attribute nonboot_cpus_attribute =
+	__ATTR(nonboot_cpus, 0444,
+		nonboot_cpus_show,
+		NULL);
+
 static ssize_t limit_screen_on_cpus_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", limit_screen_on_cpus);
+	return sprintf(buf, "%u\n", limit_screen_on_cpus);
 }
 
 static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
@@ -423,6 +434,7 @@ static struct kobj_attribute cpu_hardplug_version_attribute =
 
 static struct attribute *cpu_hardplug_attrs[] =
 {
+	&nonboot_cpus_attribute.attr,
 	&cpu_hardplug_version_attribute.attr,
 	&limit_screen_on_cpus_attribute.attr,
 	&cpu1_allowed_attribute.attr,
@@ -449,13 +461,32 @@ static int __init cpu_hardplug_init(void)
 	int sysfs_result;
 
 	cpumask_copy(&screen_on_allowd_msk,
-			cpu_nonboot_mask);
+			&__cpu_nonboot_mask);
 	cpumask_copy(&screen_off_allowd_msk,
-			cpu_nonboot_mask);
+			&__cpu_nonboot_mask);
+
+	for_each_possible_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		if (cpu && !cpumask_test_cpu(cpu, &screen_on_allowd_msk)) {
+			pr_err("Error: Cpu %u not in screen on mask, correcting\n", cpu);
+			cpumask_set_cpu(cpu, &screen_on_allowd_msk);
+		}
+		if (cpu && !cpumask_test_cpu(cpu, &screen_off_allowd_msk)) {
+			pr_err("Error: Cpu %u not in screen off mask, correcting\n", cpu);
+			cpumask_set_cpu(cpu, &screen_off_allowd_msk);
+		}
+		if (!cpu && cpumask_test_cpu(cpu, &screen_on_allowd_msk))
+			cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
+		if (!cpu && cpumask_test_cpu(cpu, &screen_off_allowd_msk))
+			cpumask_clear_cpu(cpu, &screen_off_allowd_msk);
+		if (!cpu)
+			continue;
+	}
 
 	for_each_cpu_and(cpu, &screen_on_allowd_msk,
 		&screen_off_allowd_msk)
-		pr_info("%[CPU Hardplug]: Cpu %u is allowed\n", cpu);
+		pr_info("[CPU Hardplug]: Cpu %u is allowed\n", cpu);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
