@@ -443,17 +443,10 @@ static const struct attribute_group cpu_hardplug_attr_group =
 
 static struct kobject *cpu_hardplug_kobj;
 
-#define HARDMAX 3
 static int __init cpu_hardplug_init(void)
 {
-	unsigned int cpu, nbootcpus, bcpu = 0;
+	unsigned int cpu, nbootcpus;
 	int sysfs_result;
-
-	for (cpu = 1; cpu < HARDMAX; cpu++)
-		set_cpu_nonboot(cpu, true);
-
-	if (cpu_nonboot(bcpu))
-		set_cpu_nonboot(bcpu, false);
 
 	cpumask_copy(&screen_on_allowd_msk,
 			cpu_nonboot_mask);
