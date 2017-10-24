@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 5
+#define HARDPLUG_MINOR 6
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -116,14 +116,13 @@ static void unplug_all_cpus(void)
 
 unsigned int nr_hardplugged_cpus(void)
 {
-	unsigned int cpu;
-	unsigned int hardplugged_cpus = 0;
+	unsigned int cpu, hardplugged_cpus = 0;
 
 	if (!is_display_on() || !limit_screen_on_cpus ||
 		!hotplug_ready)
 		return hardplugged_cpus;
 
-	for_each_nonboot_cpu(cpu) {
+	for_each_cpu_not(cpu, &screen_on_allowd_msk) {
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		if (!is_cpu_allowed(cpu))
@@ -446,16 +445,13 @@ static struct kobject *cpu_hardplug_kobj;
 
 static int __init cpu_hardplug_init(void)
 {
-	unsigned int cpu;
+	unsigned int cpu, nbootcpus;
 	int sysfs_result;
 
-	for_each_nonboot_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
-	}
-
-	cpumask_set_cpu(cpu, &screen_off_allowd_msk);
+	cpumask_copy(&screen_on_allowd_msk,
+			cpu_nonboot_mask)
+	cpumask_copy(&screen_off_allowd_msk,
+			cpu_nonboot_mask);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
@@ -464,6 +460,9 @@ static int __init cpu_hardplug_init(void)
 		pr_info("%s group create failed!\n", __FUNCTION__);
 		return -ENOMEM;
 	}
+
+	nbootcpus = cpumask_weight(&screen_on_allowed_mask);
+	pr_info("[CPU Hardplug Init] Nonboot Cpus: %d," nbootcpus);
 
 	return 0;
 }
