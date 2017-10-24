@@ -606,11 +606,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					0, 2, 1, 0, 15, 21, 10, 5, 5, 10);
+					0, 2, 1, 0, 15, 21, 5, 5, 7, 10);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 11, 0, 15, 21, 10, 5, 5, 10);
+					0, 15, 3, 0, 15, 21, 5, 5, 7, 10);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 6, 0, 15, 21, 10, 5, 5, 10);
+					0, 15, 2, 0, 15, 21, 5, 5, 7, 10);
 			break;
 		}
 	case FAKE_POWERING:
