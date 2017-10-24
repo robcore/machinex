@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 3
+#define HARDPLUG_MINOR 4
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -51,6 +51,11 @@ static void plug_one_cpu(void)
 	return;
 }
 #endif
+static enum {
+	NOT_ALLOWED = 0,
+	ALLOWED = 1,
+};
+	
 unsigned int limit_screen_on_cpus = 0;
 static cpumask_t screen_on_allowd_msk;
 unsigned int limit_screen_off_cpus = 0;
@@ -60,17 +65,17 @@ static struct workqueue_struct *hpwq;
 
 static DEFINE_MUTEX(hardplug_mtx);
 
-bool is_cpu_allowed(unsigned int cpu)
+unsigned int is_cpu_allowed(unsigned int cpu)
 {
 	if (!limit_screen_on_cpus ||
 		!is_display_on() ||
 		!hotplug_ready || cpu == 0)
-		return true;
+		return ALLOWED;
 
 	if (!cpumask_test_cpu(cpu, &screen_on_allowd_msk))
-		return false;
+		return NOT_ALLOWED;
 
-	return true;
+	return ALLOWED;
 }
 
 static void hardplug_cpu(unsigned int cpu)
@@ -147,7 +152,7 @@ static ssize_t limit_screen_on_cpus_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (limit_screen_on_cpus == val)
+	if (val == limit_screen_on_cpus)
 		return count;
 
 	limit_screen_on_cpus = val;
@@ -187,12 +192,12 @@ static ssize_t cpu1_allowed_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return count;
 
-	if (!val) {
-		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
-		hardplug_cpu(cpu);
-	} else {
+	if (val) {
 		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
 		unplug_cpu(cpu);
+	} else if (!val) {
+		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
+		hardplug_cpu(cpu);
 	}
 
 	return count;
@@ -224,12 +229,12 @@ static ssize_t cpu2_allowed_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return count;
 
-	if (!val) {
-		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
-		hardplug_cpu(cpu);
-	} else {
+	if (val) {
 		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
 		unplug_cpu(cpu);
+	} else if (!val) {
+		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
+		hardplug_cpu(cpu);
 	}
 
 	return count;
@@ -261,12 +266,12 @@ static ssize_t cpu3_allowed_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &screen_on_allowd_msk))
 		return count;
 
-	if (!val) {
-		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
-		hardplug_cpu(cpu);
-	} else {
+	if (val) {
 		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
 		unplug_cpu(cpu);
+	} else if (!val) {
+		cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
+		hardplug_cpu(cpu);
 	}
 
 	return count;
@@ -292,7 +297,7 @@ static ssize_t limit_screen_off_cpus_store(struct kobject *kobj,
 
 	sanitize_min_max(val, 0, 1);
 
-	if (limit_screen_off_cpus == val)
+	if (val == limit_screen_off_cpus)
 		return count;
 
 	limit_screen_off_cpus = val;
