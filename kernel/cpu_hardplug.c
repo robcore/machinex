@@ -445,13 +445,17 @@ static struct kobject *cpu_hardplug_kobj;
 
 static int __init cpu_hardplug_init(void)
 {
-	unsigned int cpu, nbootcpus;
+	unsigned int cpu;
 	int sysfs_result;
 
 	cpumask_copy(&screen_on_allowd_msk,
 			cpu_nonboot_mask);
 	cpumask_copy(&screen_off_allowd_msk,
 			cpu_nonboot_mask);
+
+	for_each_cpu_and(cpu, &screen_on_allowd_msk,
+		&screen_off_allowd_msk)
+		pr_info("%[CPU Hardplug]: Cpu %u is allowed\n", cpu);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
@@ -461,30 +465,9 @@ static int __init cpu_hardplug_init(void)
 		return -ENOMEM;
 	}
 
-	nbootcpus = cpumask_weight(&screen_on_allowd_msk);
-	pr_info("[CPU Hardplug Init] Nonboot Cpus: %d", nbootcpus);
-
 	return 0;
 }
 postcore_initcall(cpu_hardplug_init);
-
-#define HARDMIN 1
-#define HARDMAX 3
-static int __init nonboot_cpu_init(void)
-{
-	unsigned int i, bcpu;
-
-	bcpu = get_boot_cpu_id();
-
-	for (i = HARDMIN; i < HARDMAX; i++)
-		set_cpu_nonboot(i, true);
-
-	if (cpu_nonboot(bcpu))
-		set_cpu_nonboot(bcpu, false);
-
-	return 0;
-}
-core_initcall_sync(nonboot_cpu_init);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");

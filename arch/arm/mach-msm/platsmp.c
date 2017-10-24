@@ -272,13 +272,24 @@ static void __init msm_smp_init_cpus(void)
 	unsigned int i, ncores = get_core_count();
 
 	if (ncores > nr_cpu_ids) {
+		ncores = nr_cpu_ids;
 		pr_warn("SMP: %u cores greater than maximum (%u), clipping\n",
 			ncores, nr_cpu_ids);
-		ncores = nr_cpu_ids;
 	}
 
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
+
+	for_each_possible_cpu(i) {
+		if (i) {
+			set_cpu_nonboot(i, true);
+			pr_info("SMP: %u is a NonBoot CPU\n", i);
+		}
+	}
+	if (cpumask_test_cpu(0, cpu_nonboot_mask)) {
+		set_cpu_nonboot(0, false);
+		pr_warn("SMP: Boot Cpu in Nonboot Mask, Fixed\n");
+	}
 }
 
 static void __init msm_smp_prepare_cpus(unsigned int max_cpus)
