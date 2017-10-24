@@ -116,6 +116,10 @@ ONLINE=$(cat adbtmp >&1)
 DEVICE=$(cat devtmp >&1)
 MYSCRIPT=~/machinex/openrecoveryscript
 
+if [ -e $MYSCRIPT ]; then
+	rm $MYSCRIPT
+fi
+
 if [[ $ONLINE != $RECOV ]]; then
 	wakeme
 fi
@@ -135,12 +139,10 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		adb push $1 /storage/extSdCard 2> /dev/null
 		echo "push complete, open recovery time"
 		wakeme
-		if [ -e $MYSCRIPT ]; then
-			rm $MYSCRIPT
-		fi
 		echo "install /external_sd/$2" > $MYSCRIPT
 		echo "reboot" >> $MYSCRIPT
 		adb push $MYSCRIPT /cache/recovery 2> /dev/null
+		rm $MYSCRIPT
 		adb shell su -c "echo '0' > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
