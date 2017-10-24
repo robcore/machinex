@@ -22,8 +22,8 @@
 #include <linux/sysfs_helpers.h>
 #include <linux/display_state.h>
 
-#define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 8
+#define HARDPLUG_MAJOR 4
+#define HARDPLUG_MINOR 0
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
