@@ -142,6 +142,7 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "install /external_sd/$2" > $MYSCRIPT
 		echo "reboot" >> $MYSCRIPT
 		adb push $MYSCRIPT /cache/recovery 2> /dev/null
+		cp $MYSCRIPT ~/machinex/openrecoverytmp
 		rm $MYSCRIPT
 		adb shell su -c "echo '0' > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
