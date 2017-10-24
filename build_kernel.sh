@@ -132,9 +132,14 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		adb shell su -c "input touchscreen swipe 930 880 930 380"
 		sleep 1
 		adb push $1 /storage/extSdCard 2> /dev/null
-		echo "push complete, booting recovery"
+		echo "push complete, open recovery time"
 		wakeme
-		adb shell su -c "echo 0 > /sys/module/restart/parameters/download_mode"
+		adb shell su -c "if [ -e /cache/recovery/openrecoveryscript ]; then; rm -f /cache/recovery/openrecoveryscript; fi"
+		adb shell su -c "touch /cache/recovery/openrecoveryscript"
+		adb shell su -c "echo 'install /external_sd/$1' > /cache/recovery/openrecoveryscript"
+		adb shell su -c "echo 'rm -f /cache/recovery/openrecoveryscript' >> /cache/recovery/openrecoveryscript"
+		adb shell su -c "echo 'reboot' >> /cache/recovery/openrecoveryscript"
+		adb shell su -c "echo '0' > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
 else
