@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 4
+#define HARDPLUG_MINOR 5
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -453,8 +453,9 @@ static int __init cpu_hardplug_init(void)
 		if (cpu_out_of_range_hp(cpu))
 			break;
 		cpumask_set_cpu(cpu, &screen_on_allowd_msk);
-		cpumask_set_cpu(cpu, &screen_off_allowd_msk);
 	}
+
+	cpumask_set_cpu(cpu, &screen_off_allowd_msk);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);

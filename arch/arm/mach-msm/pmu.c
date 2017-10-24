@@ -23,7 +23,7 @@ static __ref int armpmu_cpu_up(int cpu)
 {
 	int ret = 0;
 
-	if (!cpumask_test_cpu(cpu, cpu_online_mask)) {
+	if (cpu_is_offline(cpu)) {
 		ret = cpu_up(cpu);
 		if (ret)
 			pr_err("Failed to bring up CPU: %d, ret: %d\n",
@@ -42,7 +42,7 @@ multicore_request_irq(int irq, irq_handler_t *handle_irq)
 			&pmu_irq_cookie);
 
 	if (!err) {
-		for_each_cpu(cpu, cpu_online_mask) {
+		for_each_online_cpu(cpu) {
 			smp_call_function_single(cpu,
 					enable_irq_callback, &irq, 1);
 		}

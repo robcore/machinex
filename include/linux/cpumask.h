@@ -49,10 +49,11 @@ extern unsigned int nr_cpu_ids;
  * The following particular system cpumasks and operations manage
  * possible, present, active and online cpus.
  *
- *     cpu_possible_mask- has bit 'cpu' set iff cpu is populatable
- *     cpu_present_mask - has bit 'cpu' set iff cpu is populated
- *     cpu_online_mask  - has bit 'cpu' set iff cpu available to scheduler
- *     cpu_active_mask  - has bit 'cpu' set iff cpu available to migration
+ *     cpu_possible_mask- has bit 'cpu' set if cpu is populatable
+ *     cpu_present_mask - has bit 'cpu' set if cpu is populated
+ *     cpu_online_mask  - has bit 'cpu' set if cpu available to scheduler
+ *     cpu_active_mask  - has bit 'cpu' set if cpu available to migration
+ *     cpu_nonboot_mask  - has bit 'cpu' set if it is a nonboot cpu
  *
  *  If !CONFIG_HOTPLUG_CPU, present == possible, and active == online.
  *
@@ -89,20 +90,24 @@ extern struct cpumask __cpu_possible_mask;
 extern struct cpumask __cpu_online_mask;
 extern struct cpumask __cpu_present_mask;
 extern struct cpumask __cpu_active_mask;
+extern struct cpumask __cpu_nonboot_mask;
 #define cpu_possible_mask ((const struct cpumask *)&__cpu_possible_mask)
 #define cpu_online_mask   ((const struct cpumask *)&__cpu_online_mask)
 #define cpu_present_mask  ((const struct cpumask *)&__cpu_present_mask)
 #define cpu_active_mask   ((const struct cpumask *)&__cpu_active_mask)
+#define cpu_nonboot_mask  ((const struct cpumask *)&__cpu_nonboot_mask)
 
 #define num_online_cpus()	cpumask_weight(cpu_online_mask)
 #define num_possible_cpus()	cpumask_weight(cpu_possible_mask)
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
 #define num_active_cpus()	cpumask_weight(cpu_active_mask)
 #define num_offline_cpus()  (num_possible_cpus() - num_online_cpus())
+#define num_nonboot_cpus()	cpumask_weight(cpu_nonboot_mask)
 #define cpu_online(cpu)		cpumask_test_cpu((cpu), cpu_online_mask)
 #define cpu_possible(cpu)	cpumask_test_cpu((cpu), cpu_possible_mask)
 #define cpu_present(cpu)	cpumask_test_cpu((cpu), cpu_present_mask)
 #define cpu_active(cpu)		cpumask_test_cpu((cpu), cpu_active_mask)
+#define cpu_nonboot(cpu)	cpumask_test_cpu((cpu), cpu_nonboot_mask)
 
 /* verify cpu argument to cpumask_* operators */
 static inline unsigned int cpumask_check(unsigned int cpu)
@@ -716,24 +721,25 @@ extern const DECLARE_BITMAP(cpu_all_bits, NR_CPUS);
 #define for_each_online_cpu(cpu)   for_each_cpu((cpu), cpu_online_mask)
 #define for_each_offline_cpu(cpu)  for_each_cpu_not((cpu), cpu_online_mask)
 #define for_each_present_cpu(cpu)  for_each_cpu((cpu), cpu_present_mask)
-#define for_each_nonboot_cpu(cpu)  for_each_cpu_but_zero((cpu), cpu_possible_mask)
+#define for_each_nonboot_cpu(cpu)  for_each_cpu((cpu), cpu_nonboot_mask)
 #define for_each_nonboot_online_cpu(cpu) for_each_cpu_but_zero((cpu), cpu_online_mask)
 #define for_each_nonboot_offline_cpu(cpu) for_each_cpu_not_but_zero((cpu), cpu_online_mask)
 
 #define for_each_possible_cpu_reverse(cpu)		\
 	for ((cpu) = 3;				\
 		(cpu)--,	\
-		(cpu) > 0;)
+		(cpu) > -1;)
 
 #define for_each_nonboot_cpu_reverse(cpu)		\
 	for ((cpu) = 3;				\
 		(cpu)--,	\
-		(cpu) > 1;)
+		(cpu) > 0;)
 
 /* Wrappers for arch boot code to manipulate normally-constant masks */
 void init_cpu_present(const struct cpumask *src);
 void init_cpu_possible(const struct cpumask *src);
 void init_cpu_online(const struct cpumask *src);
+void init_cpu_nonboot(const struct cpumask *src);
 
 static inline void reset_cpu_possible_mask(void)
 {
@@ -774,6 +780,15 @@ set_cpu_active(unsigned int cpu, bool active)
 		cpumask_set_cpu(cpu, &__cpu_active_mask);
 	else
 		cpumask_clear_cpu(cpu, &__cpu_active_mask);
+}
+
+static inline void
+set_cpu_nonboot(unsigned int cpu, bool active)
+{
+	if (active)
+		cpumask_set_cpu(cpu, &__cpu_nonboot_mask);
+	else
+		cpumask_clear_cpu(cpu, &__cpu_nonboot_mask);
 }
 
 /**
