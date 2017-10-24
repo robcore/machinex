@@ -590,14 +590,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
 			leds_on(LED_R, true, true, 192);
-			leds_on(LED_G, true, true, 221);
-			leds_on(LED_B, true, true, 254);
+			leds_on(LED_G, true, true, 188);
+			leds_on(LED_B, true, true, 255);
 			leds_set_slope_mode(client, LED_R,
 					0, 2, 1, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 10, 4, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 9, 0, 4, 4, 1, 1, 1, 1);
+					4, 15, 10, 0, 4, 4, 1, 1, 1, 1);
 			booted = true;
 			break;
 		} else {
@@ -606,26 +606,26 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					0, 2, 1, 0, 15, 21, 5, 5, 7, 10);
+					0, 2, 1, 0, 10, 28, 6, 5, 5, 10);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 3, 0, 15, 21, 5, 5, 7, 10);
+					0, 15, 3, 0, 10, 28, 6, 5, 5, 10);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 2, 0, 15, 21, 5, 5, 7, 10);
+					0, 15, 2, 0, 10, 28, 6, 5, 5 10);
 			break;
 		}
 	case FAKE_POWERING:
 		if (poweroff_charging)
 			return;
 		pr_info("LED Fake Powering Pattern ON\n");
-			leds_on(LED_R, true, true, 195);
-			leds_on(LED_G, true, true, 224);
-			leds_on(LED_B, true, true, 255);
+			leds_on(LED_R, true, true, 192);
+			leds_on(LED_G, true, true, 221);
+			leds_on(LED_B, true, true, 254);
 			leds_set_slope_mode(client, LED_R,
-					0, 1, 0, 0, 4, 4, 1, 1, 1, 1);
+					0, 2, 1, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 10, 1, 4, 4, 1, 1, 1, 1);
+					0, 15, 10, 4, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 10, 0, 4, 4, 1, 1, 1, 1);
+					4, 15, 9, 0, 4, 4, 1, 1, 1, 1);
 			break;
 
 /* For later
