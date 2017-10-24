@@ -51,7 +51,7 @@ static void plug_one_cpu(void)
 	return;
 }
 #endif
-static enum {
+enum {
 	NOT_ALLOWED = 0,
 	ALLOWED = 1,
 };
