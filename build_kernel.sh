@@ -127,7 +127,12 @@ if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
 		adb push $1 /external_sd 2> /dev/null
-		echo "push complete"
+		echo "push complete, flashing"
+		echo "install /external_sd/$2" > $MYSCRIPT
+		echo "reboot" >> $MYSCRIPT
+		adb push $MYSCRIPT /cache/recovery 2> /dev/null
+		mv -f $MYSCRIPT $MYSCRIPT-last.txt
+		adb shell "twrp runscript /cache/recovery/openrecoveryscript"
 		adb kill-server
 elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "connected"
@@ -137,12 +142,12 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		adb shell su -c "input touchscreen swipe 930 880 930 380"
 		sleep 1
 		adb push $1 /storage/extSdCard 2> /dev/null
-		echo "push complete, open recovery time"
+		echo "push complete, flashing"
 		wakeme
 		echo "install /external_sd/$2" > $MYSCRIPT
 		echo "reboot" >> $MYSCRIPT
 		adb push $MYSCRIPT /cache/recovery 2> /dev/null
-		rm $MYSCRIPT
+		mv -f $MYSCRIPT $MYSCRIPT-last.txt
 		adb shell su -c "echo '0' > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
