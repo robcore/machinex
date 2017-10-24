@@ -589,15 +589,15 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			leds_on(LED_R, true, true, 195);
-			leds_on(LED_G, true, true, 223);
-			leds_on(LED_B, true, true, 255);
+			leds_on(LED_R, true, true, 192);
+			leds_on(LED_G, true, true, 221);
+			leds_on(LED_B, true, true, 254);
 			leds_set_slope_mode(client, LED_R,
-					0, 1, 0, 0, 4, 4, 1, 1, 1, 1);
+					0, 2, 1, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 10, 4, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 10, 0, 4, 4, 1, 1, 1, 1);
+					4, 15, 9, 0, 4, 4, 1, 1, 1, 1);
 			booted = true;
 			break;
 		} else {
