@@ -867,6 +867,13 @@ config BLX
 	help
 	  Enable Battery Life eXtender
 
+config CPUMASK_CALC
+	bool "Enable cpumask calculator"
+	default y
+	help
+		A simple, in-kernel cpumask calculator for personal learning
+		development.  Completely inappropriate as it should be a
+		userspace program.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

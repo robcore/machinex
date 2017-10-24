@@ -10,65 +10,29 @@
 
 #define DRIVER_AUTHOR "robcore"
 #define DRIVER_DESCRIPTION "virtual_wakeup_key driver"
-#define DRIVER_VERSION "1.5"
-
-MODULE_AUTHOR(DRIVER_AUTHOR);
-MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
-MODULE_VERSION(DRIVER_VERSION);
-MODULE_LICENSE("GPLv2");
+#define DRIVER_VERSION "2.0"
 
 /*Based on Sweep2Sleep by flar2 (Aaron Segaert) */
-
-#define WPTIMEOUT 80
-#define WRTIMEOUT 10
-
 static struct input_dev *virtkeydev;
-static struct delayed_work wakeup_key_press_work;
-static void wakeup_key_press(struct work_struct *work);
 static struct work_struct virtkey_input_work;
 struct wake_lock vwklock;
 unsigned int screen_wake_lock = 0;
 
-static void press_key(unsigned int pressed)
+static void press_key(void)
 {
-	unsigned long flags;
-
-	/* disable keyboard interrupts */
-	local_irq_save(flags);
-	/* don't change CPU */
-	preempt_disable();
-
-	switch (pressed) {
-		case 1:
-			wake_lock(&vwklock);
-			input_report_key(virtkeydev, KEY_WAKEUP, 1);
-			input_sync(virtkeydev);
-			break;
-		case 0:
-			input_report_key(virtkeydev, KEY_WAKEUP, 0);
-			input_sync(virtkeydev);
-			wake_unlock(&vwklock);
-			break;
-		default:
-			break;
-	}
-	/* reenable preemption */
-	preempt_enable();
-	/* reenable keyboard interrupts */
-	local_irq_restore(flags);
-}
-
-/* WakeKeyPressed work func */
-static void wakeup_key_press(struct work_struct *work)
-{
-	press_key(1);
-	mdelay(100);
-	press_key(0);
+	input_report_key(virtkeydev, KEY_WAKEUP, 1);
+	input_sync(virtkeydev);
+	input_report_key(virtkeydev, KEY_WAKEUP, 0);
+	input_sync(virtkeydev);
 }
 
 /* PowerKey trigger */
 void virt_wakeup_key_trig(void) {
-	schedule_delayed_work_on(0, &wakeup_key_press_work, 0);
+	if (screen_wake_lock)
+			return;
+	wake_lock(&vwklock);
+	press_key();
+	wake_unlock(&vwklock);
 }
 EXPORT_SYMBOL(virt_wakeup_key_trig);
 
@@ -77,10 +41,12 @@ static void do_screen_wake(void)
 checker:
 	if (!screen_wake_lock)
 			return;
-	press_key(1);
-	mdelay(100);
-	press_key(0);
-	goto checker;
+	do {
+		wake_lock(&vwklock);
+		press_key();
+		wake_unlock(&vwklock);
+	} while (screen_wake_lock);
+
 }
 static ssize_t screen_wake_lock_show(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf)
@@ -153,8 +119,6 @@ static int __init virtual_wakeup_key_init(void)
 		goto err_input_dev;
 	}
 
-	INIT_DELAYED_WORK(&wakeup_key_press_work, wakeup_key_press);
-
 	rc = sysfs_create_group(kernel_kobj, &virtual_wakeup_key_attr_group);
 	if (rc) {
 		rc = -ENOMEM;
@@ -186,3 +150,8 @@ static void __exit virtual_wakeup_key_exit(void)
 
 late_initcall(virtual_wakeup_key_init);
 module_exit(virtual_wakeup_key_exit);
+
+MODULE_AUTHOR(DRIVER_AUTHOR);
+MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
+MODULE_VERSION(DRIVER_VERSION);
+MODULE_LICENSE("GPLv2");

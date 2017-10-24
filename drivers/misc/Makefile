@@ -107,4 +107,5 @@ obj-$(CONFIG_MPU_411_ENABLE)	+= inv_mpu/
 obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
 obj-$(CONFIG_GENERIC_BLN)	+= bln.o
 obj-$(CONFIG_BLX)		+= blx.o
+obj-$(CONFIG_CPUMASK_CALC)	+= cpumask_calculator.o
 
