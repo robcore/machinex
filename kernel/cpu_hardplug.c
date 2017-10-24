@@ -23,7 +23,7 @@
 #include <linux/display_state.h>
 
 #define HARDPLUG_MAJOR 3
-#define HARDPLUG_MINOR 6
+#define HARDPLUG_MINOR 7
 
 #if 0
 #define DEFAULT_MAX_CPUS 4
@@ -466,8 +466,25 @@ static int __init cpu_hardplug_init(void)
 
 	return 0;
 }
-
 postcore_initcall(cpu_hardplug_init);
+
+#define HARDMIN 1
+#define HARDMAX 3
+static int __init nonboot_cpu_init(void)
+{
+	unsigned int i, bcpu;
+
+	bcpu = get_boot_cpu_id();
+
+	for (i = HARDMIN; i < HARDMAX; i++)
+		set_cpu_nonboot(i, true);
+
+	if (cpu_nonboot(bcpu))
+		set_cpu_nonboot(bcpu, false);
+
+	return 0;
+}
+core_initcall_sync(nonboot_cpu_init);
 
 MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
 MODULE_DESCRIPTION("Hard Limiting for CPU cores.");

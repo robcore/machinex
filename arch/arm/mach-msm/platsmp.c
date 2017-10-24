@@ -266,11 +266,10 @@ int msm_cpu_disable(unsigned int cpu)
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
-#define HARDMAX 3
+
 static void __init msm_smp_init_cpus(void)
 {
 	unsigned int i, ncores = get_core_count();
-	unsigned int bcpu = 0;
 
 	if (ncores > nr_cpu_ids) {
 		pr_warn("SMP: %u cores greater than maximum (%u), clipping\n",
@@ -278,14 +277,8 @@ static void __init msm_smp_init_cpus(void)
 		ncores = nr_cpu_ids;
 	}
 
-	for (i = 0; i < HARDMAX; i++)
+	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
-
-	for (i = 1; i < HARDMAX; i++)
-		set_cpu_nonboot(i, true);
-
-	if (cpu_nonboot(bcpu))
-		set_cpu_nonboot(bcpu, false);
 }
 
 static void __init msm_smp_prepare_cpus(unsigned int max_cpus)
