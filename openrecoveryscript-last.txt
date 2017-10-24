@@ -1,2 +1,2 @@
-install /external_sd/machinex-MarkOneHundred-P129.zip
+install /external_sd/machinex-MarkOneHundred-P130.zip
 reboot

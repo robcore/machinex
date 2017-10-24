@@ -283,12 +283,7 @@ static void __init msm_smp_init_cpus(void)
 	for_each_possible_cpu(i) {
 		if (i) {
 			set_cpu_nonboot(i, true);
-			pr_info("SMP: %u is a NonBoot CPU\n", i);
 		}
-	}
-	if (cpumask_test_cpu(0, cpu_nonboot_mask)) {
-		set_cpu_nonboot(0, false);
-		pr_warn("SMP: Boot Cpu in Nonboot Mask, Fixed\n");
 	}
 }
 

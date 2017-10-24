@@ -465,29 +465,6 @@ static int __init cpu_hardplug_init(void)
 	cpumask_copy(&screen_off_allowd_msk,
 			&__cpu_nonboot_mask);
 
-	for_each_possible_cpu(cpu) {
-		if (cpu_out_of_range(cpu))
-			break;
-		if (cpu && !cpumask_test_cpu(cpu, &screen_on_allowd_msk)) {
-			pr_err("Error: Cpu %u not in screen on mask, correcting\n", cpu);
-			cpumask_set_cpu(cpu, &screen_on_allowd_msk);
-		}
-		if (cpu && !cpumask_test_cpu(cpu, &screen_off_allowd_msk)) {
-			pr_err("Error: Cpu %u not in screen off mask, correcting\n", cpu);
-			cpumask_set_cpu(cpu, &screen_off_allowd_msk);
-		}
-		if (!cpu && cpumask_test_cpu(cpu, &screen_on_allowd_msk))
-			cpumask_clear_cpu(cpu, &screen_on_allowd_msk);
-		if (!cpu && cpumask_test_cpu(cpu, &screen_off_allowd_msk))
-			cpumask_clear_cpu(cpu, &screen_off_allowd_msk);
-		if (!cpu)
-			continue;
-	}
-
-	for_each_cpu_and(cpu, &screen_on_allowd_msk,
-		&screen_off_allowd_msk)
-		pr_info("[CPU Hardplug]: Cpu %u is allowed\n", cpu);
-
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpu_hardplug_attr_group);
 
