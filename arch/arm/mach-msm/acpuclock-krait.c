@@ -1363,6 +1363,7 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *mx_freq_table;
+	unsigned int cur_freq, index;
 	int ret = 0;
 
 	if (cpu_out_of_range(policy->cpu)) {
@@ -1382,6 +1383,32 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
 		return ret;
 	}
+
+	cur_freq = acpuclk_get_rate(policy->cpu);
+
+	if (cpufreq_frequency_table_target(policy, cur_freq,
+		CPUFREQ_RELATION_H) &&
+		cpufreq_frequency_table_target(policy, cur_freq,
+		CPUFREQ_RELATION_L)) {
+		pr_info("cpufreq: cpu%d at invalid freq: %d\n",
+				policy->cpu, cur_freq);
+		return -EINVAL;
+	}
+
+	index = cpufreq_frequency_table_get_index(policy, cur_freq);
+	/*
+	 * Call set_cpu_freq unconditionally so that when cpu is set to
+	 * online, frequency limit will always be updated.
+	 */
+	ret = set_cpu_freq(policy, policy->freq_table[index].frequency,
+			   policy->freq_table[index].driver_data);
+	if (ret)
+		return ret;
+	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
+			policy->cpu, cur_freq, policy->freq_table[index].frequency);
+	policy->cur = policy->freq_table[index].frequency;
+
+	return 0;
 
 out:
 	return ret;
