@@ -64,8 +64,6 @@ struct cpufreq_user_policy {
 	unsigned int		max;    /* in kHz */
 };
 #ifdef CONFIG_CPUFREQ_HARDLIMIT
-extern void reapply_hard_limits(unsigned int cpu);
-
 extern unsigned int curr_limit_max;
 extern unsigned int curr_limit_min;
 extern unsigned int current_screen_state;
@@ -935,9 +933,6 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 
 #define CPUFREQ_HARDLIMIT_SCREEN_ON	0		/* default, consider we boot with screen on */
 #define CPUFREQ_HARDLIMIT_SCREEN_OFF	1
-
-/* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit(unsigned int freq);
 
 void cpu_boost_event(void);
 void intelli_boost(void);

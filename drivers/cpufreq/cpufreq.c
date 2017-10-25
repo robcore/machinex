@@ -270,33 +270,11 @@ void cpufreq_cpu_put(struct cpufreq_policy *policy)
 	kobject_put(&policy->kobj);
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
-
 /*********************************************************************
  *            EXTERNALLY AFFECTING FREQUENCY CHANGES                 *
  *********************************************************************/
-/* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-extern void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max)
-{
-	struct cpufreq_policy *policy;
-
-	policy = cpufreq_cpu_get(cpu);
-		if (policy != NULL) {
-			policy->user_policy.min = policy->min = freq_min;
-			policy->user_policy.max = policy->max = freq_max;
-			cpufreq_cpu_put(policy);
-		}
-}
-#endif
-
 static int cpufreq_set_policy(struct cpufreq_policy *policy,
 				struct cpufreq_policy *new_policy);
-
-#ifdef CONFIG_CPUFREQ_HARDLIMIT
-
-/* Disable Input boost while thermal limiting */
-static bool thermal_disables_boost = true;
-module_param(thermal_disables_boost, bool, 0644);
 
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 {
@@ -312,16 +290,16 @@ struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu)
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_get_table);
 
+/* Yank555.lu : CPU Hardlimit - Hook to force scaling_min/max_freq to be updated on Hardlimit change */
+#ifdef CONFIG_CPUFREQ_HARDLIMIT
+/* Disable Input boost while thermal limiting */
+static bool thermal_disables_boost = true;
+module_param(thermal_disables_boost, bool, 0644);
+
 /* Update limits in cpufreq */
-void reapply_hard_limits(unsigned int cpu)
+static void reapply_hard_limits(struct cpufreq_policy *policy, bool update_policy)
 {
-	struct cpufreq_policy *policy;
-
 	if (!hardlimit_ready)
-		return;
-
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
 		return;
 
 	/* Recalculate the currently applicable min/max */
@@ -356,33 +334,30 @@ void reapply_hard_limits(unsigned int cpu)
 		policy->curr_limit_min = policy->hlimit_min_screen_off;
 	}
 
-	update_scaling_limits(policy->cpu, policy->curr_limit_min, policy->curr_limit_max);
+	policy->user_policy.min = policy->min = policy->curr_limit_min;
+	policy->user_policy.max = policy->max = policy->curr_limit_max;
+
+	if (update_policy)
+		cpufreq_update_policy(policy->cpu);
 }
 EXPORT_SYMBOL(reapply_hard_limits);
 
 /* Sanitize cpufreq to hardlimits */
-unsigned int check_cpufreq_hardlimit(unsigned int freq)
+static unsigned int check_cpufreq_hardlimit(struct cpufreq_policy *policy, unsigned int freq)
 {
-	unsigned int cpu;
-	bool need_check;
-	struct cpufreq_policy *policy;
+	unsigned int cpu, count = 0;
 
 	if (!hardlimit_ready)
 		return freq;
 
-	policy = cpufreq_cpu_get_raw(cpu);
-	if (policy == NULL)
+recheck:
+	if (count >= 2)
 		return freq;
 
 	if (!policy->curr_limit_min || !policy->curr_limit_max) {
-		reapply_hard_limits(policy->cpu);
-		need_check = true;
-	}
-
-	if (need_check) {
-		if (!policy->curr_limit_min || !policy->curr_limit_max)
-			need_check = false;
-			return freq;
+		reapply_hard_limits(policy, false);
+		count += 1;
+		goto recheck;
 	}
 
 	sanitize_min_max(freq, policy->curr_limit_min, policy->curr_limit_max);
@@ -400,8 +375,7 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 		return;
 
 	policy->limited_max_freq_thermal = freq;
-	cpufreq_update_policy(policy->cpu);
-	reapply_hard_limits(policy->cpu);
+	reapply_hard_limits(policy, true);
 }
 	
 
@@ -419,8 +393,7 @@ static void do_input_boost_rem(struct work_struct *work)
 			continue;
 		/* Reset the input_boost_limit for all CPUs in the system */
 		policy->input_boost_limit = policy->hlimit_min_screen_on;
-		reapply_hard_limits(cpu);
-		cpufreq_update_policy(cpu);
+		reapply_hard_limits(policy, true);
 	}
 }
 
@@ -438,8 +411,7 @@ static void do_input_boost(struct work_struct *work)
 		if (!policy)
 			continue;
 		policy->input_boost_limit = policy->input_boost_freq;
-		reapply_hard_limits(cpu);
-		cpufreq_update_policy(cpu);
+		reapply_hard_limits(policy, true);
 	}
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
@@ -703,7 +675,7 @@ EXPORT_SYMBOL_GPL(cpufreq_disable_fast_switch);
 unsigned int cpufreq_driver_resolve_freq(struct cpufreq_policy *policy,
 					 unsigned int target_freq)
 {
-	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
+	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy, policy->min), check_cpufreq_hardlimit(policy, policy->max));
 	policy->cached_target_freq = target_freq;
 
 	if (cpufreq_driver->target_index) {
@@ -822,8 +794,8 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		unsigned int min, unsigned int max)
 {
-	min = check_cpufreq_hardlimit(min);
-	max = check_cpufreq_hardlimit(max);
+	min = check_cpufreq_hardlimit(policy, min);
+	max = check_cpufreq_hardlimit(policy, max);
 	if (policy->min < min)
 		policy->min = min;
 	if (policy->max < min)
@@ -837,30 +809,6 @@ void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 	return;
 }
 EXPORT_SYMBOL(cpufreq_verify_within_limits);
-
-void cpufreq_verify_within_thermal_limits(unsigned int cpu,
-										  unsigned int max)
-{
-	struct cpufreq_policy *policy = per_cpu(cpufreq_cpu_data, cpu);
-
-	if (policy == NULL || !hardlimit_ready)
-		return;
-
-	if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_ON) {
-		if (max <= policy->hlimit_max_screen_on)
-			policy->user_policy.max = policy->max = policy->curr_limit_max = max;
-		else
-			policy->user_policy.max = policy->max = policy->curr_limit_max = policy->hlimit_max_screen_on;
-			return;
-	} else if (current_screen_state == CPUFREQ_HARDLIMIT_SCREEN_OFF) {
-		if (max <= policy->hlimit_max_screen_off)
-			policy->user_policy.max = policy->max = policy->curr_limit_max = max;
-		else
-			policy->user_policy.max = policy->max = policy->curr_limit_max = policy->hlimit_max_screen_off;
-			return;
-	}
-}
-EXPORT_SYMBOL(cpufreq_verify_within_thermal_limits);
 
 void
 cpufreq_verify_within_cpu_limits(struct cpufreq_policy *policy)
@@ -879,23 +827,27 @@ EXPORT_SYMBOL(cpufreq_verify_within_cpu_limits);
 void cpufreq_hardlimit_suspend(void)
 {
 	unsigned int cpu = smp_processor_id();
+	struct cpufreq_policy *policy;
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_OFF;
 
 	for_each_possible_cpu(cpu) {
-		reapply_hard_limits(cpu);
-		return;
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (policy != NULL)
+			reapply_hard_limits(policy, false);
 	}
 }
 
 void cpufreq_hardlimit_resume(void)
 {
 	unsigned int cpu = smp_processor_id();
+	struct cpufreq_policy *policy;
 
 	current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 
 	for_each_possible_cpu(cpu) {
-		reapply_hard_limits(cpu);
-		return;
+		policy = cpufreq_cpu_get_raw(cpu);
+		if (policy != NULL)
+			reapply_hard_limits(policy, false);
 	}
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
@@ -984,7 +936,7 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 				policy->hlimit_max_screen_on = new_hardlimit;
-				reapply_hard_limits(policy->cpu);
+				reapply_hard_limits(policy, false);
 				return count;
 		}
 	return -EINVAL;
@@ -1023,7 +975,7 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 				policy->hlimit_min_screen_on = new_hardlimit;
-				reapply_hard_limits(policy->cpu);
+				reapply_hard_limits(policy, false);
 				return count;
 		}
 	return -EINVAL;
@@ -1840,19 +1792,19 @@ static int cpufreq_online(unsigned int cpu)
 		hardlimit_ready = true;
 
 	if (hardlimit_ready)
-		reapply_hard_limits(policy->cpu);
+		reapply_hard_limits(policy, false);
 
 	if (new_policy) {
-		policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-		policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
+		policy->user_policy.min = check_cpufreq_hardlimit(policy, policy->min);
+		policy->user_policy.max = check_cpufreq_hardlimit(policy, policy->max);
 
 		for_each_cpu(j, policy->related_cpus) {
 			per_cpu(cpufreq_cpu_data, j) = policy;
 			add_cpu_dev_symlink(policy, j);
 		}
 	} else {
-		policy->min = check_cpufreq_hardlimit(policy->user_policy.min);
-		policy->max = check_cpufreq_hardlimit(policy->user_policy.max);
+		policy->min = check_cpufreq_hardlimit(policy, policy->user_policy.min);
+		policy->max = check_cpufreq_hardlimit(policy, policy->user_policy.max);
 	}
 
 	policy->cur = cpufreq_driver->get(policy->cpu);
@@ -2491,7 +2443,7 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
 	int index;
 
 	/* Make sure that target_freq is within supported range */
-	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy->min), check_cpufreq_hardlimit(policy->max));
+	target_freq = clamp_val(target_freq, check_cpufreq_hardlimit(policy, policy->min), check_cpufreq_hardlimit(policy, policy->max));
 
 	pr_debug("target for CPU %u: %u kHz, relation %u, requested %u kHz\n",
 		 policy->cpu, target_freq, relation, old_target_freq);
@@ -2768,7 +2720,7 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	if (unlikely(policy->min != policy->curr_limit_min ||
 		policy->max != policy->curr_limit_max))
-		reapply_hard_limits(policy->cpu);
+		reapply_hard_limits(policy, false);
 
 	policy->cached_target_freq = UINT_MAX;
 
@@ -2840,8 +2792,8 @@ void cpufreq_update_policy(unsigned int cpu)
 	memcpy(&new_policy, policy, sizeof(*policy));
 	if (hardlimit_ready) {
 		/* Yank555.lu - Enforce hardlimit */
-		new_policy.min = check_cpufreq_hardlimit(policy->user_policy.min);
-		new_policy.max = check_cpufreq_hardlimit(policy->user_policy.max);
+		new_policy.min = check_cpufreq_hardlimit(policy, policy->user_policy.min);
+		new_policy.max = check_cpufreq_hardlimit(policy, policy->user_policy.max);
 	} else {
 		new_policy.min = policy->user_policy.min;
 		new_policy.max = policy->user_policy.max;
