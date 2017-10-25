@@ -278,10 +278,10 @@ static void __init msm_smp_init_cpus(void)
 	}
 
 	for (i = 0; i < ncores; i++) {
-		if (cpu_out_of_range(i))
-			break;
 		set_cpu_possible(i, true);
+		pr_info("SMP: Cpu: %u set as possible\n", i);
 	}
+
 	for_each_possible_cpu(i) {
 		if (i) {
 			set_cpu_nonboot(i, true);
