@@ -277,9 +277,11 @@ static void __init msm_smp_init_cpus(void)
 			ncores, nr_cpu_ids);
 	}
 
-	for (i = 0; i < ncores; i++)
+	for (i = 0; i < ncores; i++) {
+		if (cpu_out_of_range(i))
+			break;
 		set_cpu_possible(i, true);
-
+	}
 	for_each_possible_cpu(i) {
 		if (i) {
 			set_cpu_nonboot(i, true);
