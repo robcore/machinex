@@ -21,6 +21,9 @@
 #include <asm/backlight.h>
 #endif
 
+static unsigned int backlight_dbg;
+module_param(backlight_dbg, uint, 0644);
+
 static const char *const backlight_types[] = {
 	[BACKLIGHT_RAW] = "raw",
 	[BACKLIGHT_PLATFORM] = "platform",
@@ -57,6 +60,8 @@ static int fb_notifier_callback(struct notifier_block *self,
 				if (!bd->use_count++) {
 					bd->props.state &= ~BL_CORE_FBBLANK;
 					bd->props.fb_blank = FB_BLANK_UNBLANK;
+					if (backlight_dbg)
+						pr_info("Backlight: Unblank Event\n");
 					backlight_update_status(bd);
 				}
 			} else if (fb_blank != FB_BLANK_UNBLANK &&
@@ -65,6 +70,8 @@ static int fb_notifier_callback(struct notifier_block *self,
 				if (!(--bd->use_count)) {
 					bd->props.state |= BL_CORE_FBBLANK;
 					bd->props.fb_blank = fb_blank;
+					if (backlight_dbg)
+						pr_info("Backlight: Blank Event\n");
 					backlight_update_status(bd);
 				}
 			}
@@ -104,11 +111,17 @@ static void backlight_generate_event(struct backlight_device *bd,
 	switch (reason) {
 	case BACKLIGHT_UPDATE_SYSFS:
 		envp[0] = "SOURCE=sysfs";
+		if (backlight_dbg)
+			pr_info("Backlight: sysfs event detected\n");
 		break;
 	case BACKLIGHT_UPDATE_HOTKEY:
 		envp[0] = "SOURCE=hotkey";
+		if (backlight_dbg)
+			pr_info("Backlight: hotkey event detected\n");
 		break;
 	default:
+		if (backlight_dbg)
+			pr_info("Backlight: unknown event detected\n");
 		envp[0] = "SOURCE=unknown";
 		break;
 	}
@@ -139,7 +152,8 @@ static ssize_t bl_power_store(struct device *dev, struct device_attribute *attr,
 	rc = -ENXIO;
 	mutex_lock(&bd->ops_lock);
 	if (bd->ops) {
-		pr_debug("set power to %lu\n", power);
+		if (backlight_dbg)
+			pr_info("set power to %lu\n", power);
 		if (bd->props.power != power) {
 			bd->props.power = power;
 			backlight_update_status(bd);
@@ -178,7 +192,8 @@ static ssize_t brightness_store(struct device *dev,
 		if (brightness > bd->props.max_brightness)
 			rc = -EINVAL;
 		else {
-			pr_debug("set brightness to %lu\n", brightness);
+			if (backlight_dbg)
+				pr_info("set brightness to %lu\n", brightness);
 			bd->props.brightness = brightness;
 			backlight_update_status(bd);
 			rc = count;
@@ -290,6 +305,8 @@ void backlight_force_update(struct backlight_device *bd,
 	mutex_lock(&bd->ops_lock);
 	if (bd->ops && bd->ops->get_brightness)
 		bd->props.brightness = bd->ops->get_brightness(bd);
+		if (backlight_dbg)
+			pr_info("Backlight: Force Update Brightness %u\n", bd->props.brightness);
 	mutex_unlock(&bd->ops_lock);
 	backlight_generate_event(bd, reason);
 }
@@ -315,7 +332,7 @@ struct backlight_device *backlight_device_register(const char *name,
 	struct backlight_device *new_bd;
 	int rc;
 
-	pr_debug("backlight_device_register: name=%s\n", name);
+	pr_info("backlight_device_register: name=%s\n", name);
 
 	new_bd = kzalloc(sizeof(struct backlight_device), GFP_KERNEL);
 	if (!new_bd)
