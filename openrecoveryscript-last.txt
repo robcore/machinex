@@ -1,2 +1,0 @@
-install /external_sd/machinex-MarkOneHundred-P136.zip
-reboot
