@@ -21,6 +21,9 @@
 #define BLANK		1
 #define UNBLANK		0
 
+static unsigned int bl_trigger_dbg;
+module_param(bl_trigger_dbg, uint, 0644);
+
 struct bl_trig_notifier {
 	struct led_classdev *led;
 	int brightness;
@@ -47,8 +50,12 @@ static int fb_notifier_callback(struct notifier_block *p,
 		if ((n->old_status == UNBLANK) ^ n->invert) {
 			n->brightness = led->brightness;
 			led_set_brightness(led, LED_OFF);
+			if (bl_trigger_dbg)
+				pr_info("BL Trigger Set LED OFF\n");
 		} else {
 			led_set_brightness(led, n->brightness);
+			if (bl_trigger_dbg)
+				pr_info("BL Trigger Set Brightness %d\n", n->brightness);
 		}
 
 		n->old_status = new_status;
@@ -86,11 +93,15 @@ static ssize_t bl_trig_invert_store(struct device *dev,
 	n->invert = invert;
 
 	/* After inverting, we need to update the LED. */
-	if ((n->old_status == BLANK) ^ n->invert)
+	if ((n->old_status == BLANK) ^ n->invert) {
 		led_set_brightness(led, LED_OFF);
-	else
+		if (bl_trigger_dbg)
+			pr_info("BL Trigger Set LED OFF\n");
+	} else {
 		led_set_brightness(led, n->brightness);
-
+		if (bl_trigger_dbg)
+			pr_info("BL Trigger Set Brightness %d\n", n->brightness);
+	}
 	return num;
 }
 static DEVICE_ATTR(inverted, 0644, bl_trig_invert_show, bl_trig_invert_store);
