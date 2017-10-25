@@ -126,17 +126,19 @@ fi
 if [[ $ONLINE = $RECOV ]] && [[ $DEVICE = $USBB ]]; then #if we are in recovery
 		echo "recovery connected"
 		echo "pushing $1"
-		adb push $1 /external_sd 2> /dev/null
-		echo "push complete, flashing"
 		echo "install /external_sd/$2" > $MYSCRIPT
 		echo "reboot" >> $MYSCRIPT
+		adb push $1 /external_sd 2> /dev/null
+		echo "push complete, flashing"
 		adb push $MYSCRIPT /cache/recovery 2> /dev/null
-		mv -f $MYSCRIPT $MYSCRIPT-last.txt
 		adb shell "twrp runscript /cache/recovery/openrecoveryscript"
 		adb kill-server
+		mv -f $MYSCRIPT $MYSCRIPT-last.txt
 elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "connected"
 		echo "pushing $1"
+		echo "install /external_sd/$2" > $MYSCRIPT
+		echo "reboot" >> $MYSCRIPT
 		wakeme
 		sleep 1
 		adb shell su -c "input touchscreen swipe 930 880 930 380"
@@ -144,21 +146,23 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		adb push $1 /storage/extSdCard 2> /dev/null
 		echo "push complete, flashing"
 		wakeme
-		echo "install /external_sd/$2" > $MYSCRIPT
-		echo "reboot" >> $MYSCRIPT
 		adb push $MYSCRIPT /cache/recovery 2> /dev/null
-		mv -f $MYSCRIPT $MYSCRIPT-last.txt
 		adb shell su -c "echo '0' > /sys/module/restart/parameters/download_mode"
 		adb shell su -c "reboot recovery"
 		adb kill-server
+		mv -f $MYSCRIPT $MYSCRIPT-last.txt
 else
 	adb connect 192.168.1.111
 	adbcountdown
 	echo "Connected! Pushing $1!"
+	echo "install /external_sd/$2" > $MYSCRIPT
+	echo "reboot" >> $MYSCRIPT
 	adb push $1 /storage/extSdCard 2> /dev/null
+	adb push $MYSCRIPT /cache/recovery 2> /dev/null
 	echo "Push Status: $?"
 	adb disconnect
 	adb kill-server
+		mv -f $MYSCRIPT $MYSCRIPT-last.txt
 	if [ -e adbtmp ]; then
 		rm adbtmp
 	fi
