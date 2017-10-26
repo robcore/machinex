@@ -1040,19 +1040,19 @@ void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
 }
 #endif	/* CONFIG_CPU_VOTALGE_TABLE */
 
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+static struct cpufreq_frequency_table freq_table[35];
 static struct cpufreq_frequency_table *
 machinex_freq_table(const struct cpufreq_policy *policy)
 {
-	int cpu;
+	unsigned int cpu;
 	for_each_possible_cpu(cpu) {
-		int i, freq_cnt = 0;
+		unsigned int i, freq_cnt = 0;
 		/* Construct the freq_table tables from freq_table. */
 		for (i = 0; drv.freq_table[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
+				&& freq_cnt < sizeof(*freq_table)-1; i++) {
 			if (drv.freq_table[i].use_for_scaling) {
-				freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-				freq_table[cpu][freq_cnt].frequency
+				freq_table[freq_cnt].driver_data = freq_cnt;
+				freq_table[freq_cnt].frequency
 					= drv.freq_table[i].speed.khz;
 				freq_cnt++;
 			}
@@ -1060,12 +1060,11 @@ machinex_freq_table(const struct cpufreq_policy *policy)
 		/* freq_table not big enough to store all usable freqs. */
 		BUG_ON(drv.freq_table[i].speed.khz != 0);
 
-		freq_table[cpu][freq_cnt].driver_data = freq_cnt;
-		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
+		freq_table[freq_cnt].driver_data = freq_cnt;
+		freq_table[freq_cnt].frequency = CPUFREQ_TABLE_END;
 	}
-	cpu = cpumask_first(cpu_possible_mask);
 	/* Register table with CPUFreq. */
-	return freq_table[cpu];
+	return freq_table;
 }
 static void __init cpufreq_table_init(void)
 {
@@ -1384,17 +1383,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 		return ret;
 	}
 
-	cur_freq = acpuclk_get_rate(policy->cpu);
-
-	if (cpufreq_frequency_table_target(policy, cur_freq,
-		CPUFREQ_RELATION_H) &&
-		cpufreq_frequency_table_target(policy, cur_freq,
-		CPUFREQ_RELATION_L)) {
-		pr_info("cpufreq: cpu%d at invalid freq: %d\n",
-				policy->cpu, cur_freq);
-		return -EINVAL;
-	}
-
+	cur_freq = acpuclk_krait_get_rate(policy->cpu);
 	index = cpufreq_frequency_table_get_index(policy, cur_freq);
 	/*
 	 * Call set_cpu_freq unconditionally so that when cpu is set to
