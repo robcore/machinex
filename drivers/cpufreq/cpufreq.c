@@ -116,7 +116,12 @@ static void cpufreq_governor_limits(struct cpufreq_policy *policy);
  */
 static BLOCKING_NOTIFIER_HEAD(cpufreq_policy_notifier_list);
 static struct srcu_notifier_head cpufreq_transition_notifier_list;
-
+/*
+static struct mxpol {
+	char hardname[CPUFREQ_NAME_LEN];
+};
+static DEFINE_PER_CPU(struct mxpol *, mxpolicy);
+*/
 static bool init_cpufreq_transition_notifier_list_called;
 static int __init init_cpufreq_transition_notifier_list(void)
 {
@@ -1058,17 +1063,17 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	char	str_governor[16];
 	struct cpufreq_policy new_policy;
 
-	memcpy(&new_policy, policy, sizeof(*policy));
-
 	ret = sscanf(buf, "%15s", str_governor);
 	if (ret != 1)
 		return -EINVAL;
 
+	memcpy(&new_policy, policy, sizeof(*policy));
 	if (cpufreq_parse_governor(str_governor,
 						&new_policy.governor))
 		return -EINVAL;
 
 	ret = cpufreq_set_policy(policy, &new_policy);
+	
 	return ret ? ret : count;
 }
 
@@ -1902,17 +1907,13 @@ static int cpufreq_offline(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
-	if (has_target())
-		cpufreq_stop_governor(policy);
+	cpufreq_stop_governor(policy);
 
 	cpumask_clear_cpu(cpu, policy->cpus);
 
 	if (policy_is_inactive(policy)) {
-		if (has_target())
 			strncpy(policy->last_governor, policy->governor->name,
 				CPUFREQ_NAME_LEN);
-		else
-			policy->last_policy = policy->policy;
 	} else if (cpu == policy->cpu) {
 		/* Nominate new CPU */
 		policy->cpu = cpumask_any(policy->cpus);
@@ -1920,20 +1921,16 @@ static int cpufreq_offline(unsigned int cpu)
 
 	/* Start governor again for active policy */
 	if (!policy_is_inactive(policy)) {
-		if (has_target()) {
 			ret = cpufreq_start_governor(policy);
 			if (ret)
 				pr_err("%s: Failed to start governor\n", __func__);
-		}
-
 		goto unlock;
 	}
 
 	if (cpufreq_driver->stop_cpu)
 		cpufreq_driver->stop_cpu(policy);
 
-	if (has_target())
-		cpufreq_exit_governor(policy);
+	cpufreq_exit_governor(policy);
 
 unlock:
 	up_write(&policy->rwsem);
