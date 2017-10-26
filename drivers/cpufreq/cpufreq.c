@@ -759,7 +759,7 @@ static struct cpufreq_governor *find_governor(const char *str_governor)
 /**
  * cpufreq_parse_governor - parse a governor string
  */
-static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
+static int cpufreq_parse_governor(char *str_governor,
 				struct cpufreq_governor **governor)
 {
 	int err = -EINVAL;
@@ -1064,7 +1064,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (cpufreq_parse_governor(str_governor, &new_policy.policy,
+	if (cpufreq_parse_governor(str_governor,
 						&new_policy.governor))
 		return -EINVAL;
 
