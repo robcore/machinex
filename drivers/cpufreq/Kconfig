@@ -1312,5 +1312,9 @@ config AUTOSMP
 	  Automatically hotplugs the multiple cpu cores on and off
 	  based on cpu load and suspend state
 
+config IX_HOTPLUG
+	bool "Select ix_hotplug"
+	help
+	  A hotplugging driver created by instigatorX, updated by robcore.
 endif
 endmenu

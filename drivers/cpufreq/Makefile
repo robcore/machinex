@@ -80,6 +80,7 @@ obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
 obj-$(CONFIG_BLU_PLUG) += blu_plug.o
 obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
 obj-$(CONFIG_AUTOSMP)			+= autosmp.o
+obj-$(CONFIG_IX_HOTPLUG)		+= ix_hotplug.o
 obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
 obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
 CFLAGS_lazyplug.o			+= -finline-functions
