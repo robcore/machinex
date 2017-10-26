@@ -81,29 +81,41 @@ static unsigned int offline_sample;
 
 static void hotplug_online_single_work(void)
 {
-	cpu_up(online_cpus);
-	//pr_info("ix_hotplug: CPU%d up.\n", online_cpus);
-	return;
+	unsigned int cpuid = 0;
+
+	if (hotplug_suspended)
+		return;
+
+	cpuid = cpumask_next_zero(0, cpu_online_mask);
+	if (cpu_in_range_hp(cpuid))
+		cpu_up(cpuid);
 }
 
 static void hotplug_online_all_work(void)
 {
-	int cpu;
+	unsigned int cpu;
 
-	for_each_possible_cpu(cpu) {
-		if (likely(!cpu_online(cpu))) {
+	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		if (unlikely(cpu_online(cpu)))
+			continue;
 			cpu_up(cpu);
 			//pr_info("ix_hotplug: CPU%d up.\n", cpu);
-		}
 	}
 	return;
 }
 
 static void hotplug_offline_work(void)
 {
-	cpu_down(online_cpus - 1);
-	//pr_info("ix_hotplug: CPU%d down.\n", (online_cpus - 1));
-	return;
+	unsigned int cpuid = 0;
+
+	if (hotplug_suspended)
+		return;
+
+	cpuid = cpumask_next(0, cpu_online_mask);
+	if (cpu_in_range_hp(cpuid))
+		cpu_down(cpuid);
 }
 
 static void __ref hotplug_decision_work_fn(struct work_struct *work)
@@ -222,15 +234,7 @@ static struct attribute_group ix_hotplug_attr_group = {
 
 static void __ref ix_hotplug_suspend(struct work_struct *work)
 {
-	if (!hotplug_suspend)
-		return;
-
-	cancel_delayed_work_sync(&hotplug_decision_work);
-	drain_workqueue(ixwq);
-	cpu_down(1);
-	cpu_down(2);
-	cpu_down(3);
-	pr_info("ix_hotplug: Power Suspend\n");
+		hotplug_suspended = true;
 }
 
 static void __ref ix_hotplug_resume(struct work_struct *work)
