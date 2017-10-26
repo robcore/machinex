@@ -1363,7 +1363,6 @@ void msm_cpufreq_ready(struct cpufreq_policy *policy)
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *mx_freq_table;
-	unsigned int cur_freq, index;
 	int ret = 0;
 
 	if (cpu_out_of_range(policy->cpu)) {
