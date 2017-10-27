@@ -1358,6 +1358,7 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 void msm_cpufreq_ready(struct cpufreq_policy *policy)
 {
 	hotplug_ready = true;
+	pr_info("MSM CPUFREQ - HotPlug is READY!!\n");
 }
 
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
