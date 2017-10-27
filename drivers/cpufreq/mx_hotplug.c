@@ -92,8 +92,7 @@ static int machinex_hotplug_engine(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	if (!hotplug_ready || hotplug_suspended ||
-		!mx_hotplug_active)
+	if (!hotplug_ready || hotplug_suspended)
 		schedule();
 
 	if (kthread_should_stop())
@@ -154,15 +153,14 @@ static void mx_get_thread(void)
 {
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 
-	mx_hp_engine = kthread_create(machinex_hotplug_engine,
-					  NULL, "mx_hp_eng");
+	mx_hp_engine = kthread_create_on_cpu(machinex_hotplug_engine,
+					  NULL, 0, "mx_hp_eng");
 	if (IS_ERR(mx_hp_engine))
 		return;
 
 	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
 	get_task_struct(mx_hp_engine);
 
-	kthread_bind_mask(mx_hp_engine, cpumask_of(0));
 	wake_up_process(mx_hp_engine);
 }
 
