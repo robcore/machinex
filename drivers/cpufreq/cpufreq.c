@@ -1665,10 +1665,9 @@ static int cpufreq_online(unsigned int cpu)
 		policy->limited_max_freq_thermal = is_display_on() ? CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK : 
 										   CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
 
-	hardlimit_ready[cpu] = 1;
+	hardlimit_ready[policy->cpu] = 1;
 
-	if (hardlimit_ready)
-		reapply_hard_limits(policy, false);
+	reapply_hard_limits(policy, false);
 
 	if (new_policy) {
 		policy->user_policy.min = check_cpufreq_hardlimit(policy, policy->min);

@@ -940,7 +940,6 @@ void autosmp_input_boost(void);
 #endif
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
-extern bool hardlimit_ready;
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 #endif /* _LINUX_CPUFREQ_H */
