@@ -135,7 +135,7 @@ static void inject_nos(bool from_input)
 	}
 }
 
-static void gas(void)
+static void step_on_it(void)
 {
 	unsigned int cpu;
 	target_pistons = pistons + 1;
@@ -152,7 +152,7 @@ static void gas(void)
 	}
 }
 
-static void brakes(void)
+static void hit_the_brakes(void)
 {
 	unsigned int cpu;
 	target_pistons = pistons - 1;
@@ -182,7 +182,7 @@ again:
 
 
 	if (kthread_should_park()) {
-		parkme();
+		kthread_parkme();
 		/*might have woken up to stop*/
 		goto again;
 	}
@@ -200,15 +200,16 @@ again:
 		pistons >= min_cpus_online) {
 		if (avg_nr_running() > boost_threshold) {
 			inject_nos(false);
+			last_fuelcheck = ktime_get();
 			goto again;
 		}
 
 		if (air_to_fuel > upstage)
-			gas();
+			step_on_it();
 	} else if (pistons > min_cpus_online &&
 		pistons <= max_cpus_online) {
 		if (air_to_fuel < downstage)
-			brake();
+			hit_the_brakes();
 	}
 	last_fuelcheck = ktime_get();
 	goto again;

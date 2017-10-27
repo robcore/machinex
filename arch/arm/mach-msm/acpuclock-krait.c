@@ -51,6 +51,7 @@
 #include <trace/events/power.h>
 #include <mach/cpufreq.h>
 #include <mach/msm_bus.h>
+#include <linux/msm_thermal.h>
 
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
