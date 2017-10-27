@@ -149,17 +149,19 @@ static const struct attribute_group _name##_group = {		\
 };								\
 __ATTRIBUTE_GROUPS(_name)
 
-#define __MX_ATTR_RO(_name) {						\
-	.attr	= { .name = __stringify(_name), .mode = S_IRUGO },	\
-	.show	= show_##_name,						\
+#define mx_show_one(object)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%u\n", object);			\
 }
 
-#define MX_ATTR_RO(_name) \
-static struct kobj_attribute _name##_attr = __MX_ATTR_RO(_name)
-
-#define MX_ATTR_RW(_name) \
-static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0644, show_##_name, store_##_name)
+#define mx_show_long(object)				\
+static ssize_t show_##object					\
+(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
+{								\
+	return sprintf(buf, "%lu\n", object);			\
+}
 
 #define store_one_clamp(name, min, max)		\
 static ssize_t store_##name		\
@@ -181,6 +183,41 @@ static ssize_t store_##name		\
 	name = input;				\
 	return count;				\
 }
+
+#define mx_store_one_long(object, min, max)		\
+static ssize_t store_##object		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned long input;			\
+	int ret;				\
+	ret = sscanf(buf, "%lu", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	if (input == object) {			\
+		return count;			\
+	}					\
+	object = input;				\
+	return count;				\
+}
+
+#define __MX_ATTR_RO(_name) {						\
+	.attr	= { .name = __stringify(_name), .mode = S_IRUGO },	\
+	.show	= show_##_name,						\
+}
+
+#define MX_ATTR_RO(_name) \
+static struct kobj_attribute _name##_attr = __MX_ATTR_RO(_name)
+
+#define MX_ATTR_RW(_name) \
+static struct kobj_attribute _name##_attr = \
+	__ATTR(_name, 0644, show_##_name, store_##_name)
+
 
 struct file;
 struct vm_area_struct;
