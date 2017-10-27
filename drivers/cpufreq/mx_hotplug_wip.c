@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Steve Loebrich <sloebric@gmail.com>. All rights reserved.
+/* Copyright (c) 2017, Rob Patershuk <robpatershuk@gmail.com>. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,16 +17,9 @@
  */
 
 /*
- * Generic auto hotplug driver for ARM SoCs. Targeted at current generation
- * SoCs with dual and quad core applications processors.
- * Automatically hotplugs online and offline CPUs based on system load.
- * It is also capable of immediately onlining a core based on an external
- * event by calling void hotplug_boostpulse(void)
- *
- * Not recommended for use with OMAP4460 due to the potential for lockups
- * whilst hotplugging.
- *
- * Thanks to Thalamus for the inspiration!
+ * MX Hotplug - A hotplugging driver that plugs cores based on
+ * nr_running requests and load averages.
+ * Thanks to Thalamus and Steve Loebrich for the inspiration!
  */
 
 #include <linux/kernel.h>
@@ -34,70 +27,125 @@
 #include <linux/module.h>
 #include <linux/cpu.h>
 #include <linux/workqueue.h>
+#include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/mutex.h>
 #include <linux/cpufreq.h>
 #include <linux/kobject.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/machinex_defines.h>
-
 #include <linux/powersuspend.h>
 
-#define IX_HOTPLUG "ix_hotplug"
-
-/*
- * Load defines:
- * ENABLE_ALL is a high watermark to rapidly online all CPUs
- *
- * ENABLE is the load which is required to enable 1 extra CPU
- * DISABLE is the load at which a CPU is disabled
- * These two are scaled based on num_online_cpus()
- */
-
-static unsigned int ix_hotplug_active;
+#define MX_SAMPLE_RATE 500UL
+static unsigned int mx_hotplug_active;
 static bool hotplug_suspended;
+static struct task_struct *mx_hp_engine;
 
-static struct delayed_work hotplug_decision_work;
-static struct workqueue_struct *ixwq;
-
-static unsigned int enable_all_load = 702;
-static unsigned int enable_load[4] = {80, 220, 340, UINT_MAX};
-static unsigned int disable_load[4] = {12, 60, 120, 260};
-static unsigned int sample_rate[4] = {25, 50, 100, 50};
-static unsigned int online_sampling_periods[4] = {3, 3, 5, UINT_MAX};
-static unsigned int offline_sampling_periods[5] = {0, 8, 3, 4};
+static unsigned long boost_threshold = 2500;
+static unsigned long upstage = 850;
+static unsigned long downstage = 550;
+static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int online_cpus;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 
-#define DEF_SRATE 100
-static unsigned int sampling_rate = DEF_SRATE;
-static unsigned int online_sample;
-static unsigned int offline_sample;
+static void inject_nos(bool from_input)
+{
+	unsigned int cpu;
+	int ret;
 
+	if (!hotplug_ready)
+		return;
+
+	if (from_input) {
+		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu) ||
+				num_online_cpus() == cpus_boosted)
+				break;
+			if (cpu_online(cpu) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
+				continue;
+		cpu_up(cpu);
+		}
+	} else {
+		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (cpu_online(cpu) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
+				continue;
+		cpu_up(cpu);
+		}
+	}
+}
+
+
+static int machinex_hotplug_engine(void *data)
+{
+	unsigned int cpu;
+again:
+	set_current_state(TASK_INTERRUPTIBLE);
+
+	if (!hotplug_ready)
+		schedule();
+
+	if (kthread_should_stop())
+		return 0;
+
+	set_current_state(TASK_RUNNING);
+
+	if (avg_nr_running > boost_threshold) {
+		inject_nos();
+		goto end;
+	}
+
+	for_each_cpu(cpu, &tmp_mask) {
+		struct interactive_cpu *icpu = &per_cpu(interactive_cpu, cpu);
+		struct cpufreq_policy *policy;
+		if (cpu_out_of_range(cpu))
+			break;
+		if (!cpu_online(cpu))
+			continue;
+
+		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
+			continue;
+
+		if (likely(icpu->ipolicy)) {
+			policy = icpu->ipolicy->policy;
+			cpufreq_interactive_adjust_cpu(cpu, policy);
+		}
+
+		up_read(&icpu->enable_sem);
+	}
+
+end:
+	goto again;
+}
 
 static void hotplug_online_single_work(void)
 {
-	unsigned int cpuinc, cpuid = 0;
+	unsigned int cpuinc, cpu = 0;
 
 	if (hotplug_suspended || !hotplug_ready ||
-		!ix_hotplug_active)
+		!mx_hotplug_active)
 		return;
 
 	cpuinc = 0;
 
 retry:
-	cpuid = cpumask_next_zero(cpuinc, cpu_online_mask);
-	if (cpu_out_of_range_hp(cpuid))
+	cpu = cpumask_next_zero(cpuinc, cpu_online_mask);
+	if (cpu_out_of_range_hp(cpu))
 		return;
 
-	if (cpu_online(cpuid) || !is_cpu_allowed(cpuid) ||
-		thermal_core_controlled(cpuid)) {
+	if (cpu_online(cpu) || !is_cpu_allowed(cpu) ||
+		thermal_core_controlled(cpu)) {
 		cpuinc++;
 		goto retry;
 	}
 
-	cpu_up(cpuid);
+	cpu_up(cpu);
 }
 
 static void hotplug_online_all_work(void)
@@ -105,7 +153,7 @@ static void hotplug_online_all_work(void)
 	unsigned int cpu;
 
 	if (hotplug_suspended || !hotplug_ready ||
-		!ix_hotplug_active)
+		!mx_hotplug_active)
 		return;
 
 	for_each_nonboot_offline_cpu(cpu) {
@@ -115,7 +163,6 @@ static void hotplug_online_all_work(void)
 			thermal_core_controlled(cpu))
 			continue;
 			cpu_up(cpu);
-			//pr_info("ix_hotplug: CPU%d up.\n", cpu);
 	}
 	return;
 }
@@ -125,7 +172,7 @@ static void hotplug_offline_work(void)
 	unsigned int cpu;
 
 	if (hotplug_suspended || !hotplug_ready ||
-		!ix_hotplug_active)
+		!mx_hotplug_active)
 		return;
 	for_each_nonboot_online_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu))
@@ -142,7 +189,7 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 {
 	unsigned long avg_running;
 
-	if (hotplug_suspended || !ix_hotplug_active)
+	if (hotplug_suspended || !mx_hotplug_active)
 		return;
 
 	if (!hotplug_ready)
@@ -165,10 +212,8 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 			(online_cpus < max_cpus_online)) {
 		if (online_sample > online_sampling_periods[online_cpus]) {
 			if (avg_running > enable_all_load) {
-				//pr_info("ix_hotplug: Enable All\n");
 				hotplug_online_all_work();
 			} else {
-				//pr_info("ix_hotplug: Enable Single\n");
 				hotplug_online_single_work();
 			}
 			online_sample = 0;
@@ -181,10 +226,10 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 	else
 		sampling_rate = sample_rate[online_cpus - 1];
 resched:
-	queue_delayed_work_on(0, ixwq, &hotplug_decision_work, sampling_rate);
+	queue_delayed_work_on(0, mxwq, &hotplug_decision_work, sampling_rate);
 }
 
-static void ix_hotplug_suspend(struct power_suspend *h)
+static void mx_hotplug_suspend(struct power_suspend *h)
 {
 
 	if (!hotplug_suspended) {
@@ -193,65 +238,60 @@ static void ix_hotplug_suspend(struct power_suspend *h)
 	}
 }
 
-static void ix_hotplug_resume(struct power_suspend *h)
+static void mx_hotplug_resume(struct power_suspend *h)
 {
 	if (hotplug_suspended) {
 		hotplug_suspended = false;
 		offline_sample = 1;
 		online_sample = 1;
-		queue_delayed_work_on(0, ixwq, &hotplug_decision_work, sampling_rate);
+		queue_delayed_work_on(0, mxwq, &hotplug_decision_work, sampling_rate);
 	}
 }
 
-static struct power_suspend ix_suspend_data =
+static struct power_suspend mx_suspend_data =
 {
-	.suspend = ix_hotplug_suspend,
-	.resume = ix_hotplug_resume,
+	.suspend = mx_hotplug_suspend,
+	.resume = mx_hotplug_resume,
 };
 
-static void ix_hotplug_start(void)
+static void mx_hotplug_start(void)
 {
-	if (!ix_hotplug_active)
-		return;
-	ixwq = create_singlethread_workqueue("ix_hotplug_workqueue");
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
 
-    if (!ixwq)
+	if (!mx_hotplug_active)
+		return;
+	mxwq = create_singlethread_workqueue("mx_hotplug_workqueue");
+
+    if (!mxwq)
         return;
 
 	INIT_DELAYED_WORK(&hotplug_decision_work, hotplug_decision_work_fn);
-	register_power_suspend(&ix_suspend_data);
-	queue_delayed_work_on(0, ixwq, &hotplug_decision_work, sampling_rate);
+	register_power_suspend(&mx_suspend_data);
+	queue_delayed_work_on(0, mxwq, &hotplug_decision_work, sampling_rate);
 }
 
-static void ix_hotplug_stop(void)
+static void mx_hotplug_stop(void)
 {
-	if (!ixwq || ix_hotplug_active)
+	if (!mxwq || mx_hotplug_active)
 		return;
 	cancel_delayed_work_sync(&hotplug_decision_work);
-	unregister_power_suspend(&ix_suspend_data);
-	destroy_workqueue(ixwq);
+	unregister_power_suspend(&mx_suspend_data);
+	destroy_workqueue(mxwq);
 }
 
-static void ix_startstop(unsigned int status)
+static void mx_startstop(unsigned int status)
 {
 	if (status)
-		ix_hotplug_start();
+		mx_hotplug_start();
 	else
-		ix_hotplug_stop();
+		mx_hotplug_stop();
 }
 
-#define ix_show_one(object)				\
-static ssize_t show_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%u\n", object);			\
-}
+mx_show_one(mx_hotplug_active);
+mx_show_one(min_cpus_online);
+mx_show_one(max_cpus_online);
 
-ix_show_one(ix_hotplug_active);
-ix_show_one(min_cpus_online);
-ix_show_one(max_cpus_online);
-
-static ssize_t store_ix_hotplug_active(struct kobject *kobj,
+static ssize_t store_mx_hotplug_active(struct kobject *kobj,
 					 struct kobj_attribute *attr,
 					 const char *buf, size_t count)
 {
@@ -263,11 +303,11 @@ static ssize_t store_ix_hotplug_active(struct kobject *kobj,
 		return ret;
 
 	sanitize_min_max(input, 0, 1);
-	if (input == ix_hotplug_active)
+	if (input == mx_hotplug_active)
 		return count;
 
-	ix_hotplug_active = input;
-	ix_startstop(ix_hotplug_active);
+	mx_hotplug_active = input;
+	mx_startstop(mx_hotplug_active);
 
 	return count;
 }
@@ -319,32 +359,28 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	return count;
 }
 
-#define IX_ATTR_RW(_name) \
-static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0644, show_##_name, store_##_name)
-
-IX_ATTR_RW(ix_hotplug_active);
+IX_ATTR_RW(mx_hotplug_active);
 IX_ATTR_RW(min_cpus_online);
 IX_ATTR_RW(max_cpus_online);
 
-static struct attribute *ix_hotplug_attributes[] = {
-	&ix_hotplug_active_attr.attr,
+static struct attribute *mx_hotplug_attributes[] = {
+	&mx_hotplug_active_attr.attr,
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
 	NULL,
 };
 
-static struct attribute_group ix_hotplug_attr_group = {
-	.attrs = ix_hotplug_attributes,
-	.name = "ix_hotplug",
+static struct attribute_group mx_hotplug_attr_group = {
+	.attrs = mx_hotplug_attributes,
+	.name = "mx_hotplug",
 };
 
-static int ix_hotplug_init(void)
+static int mx_hotplug_init(void)
 {
 	int sysfs_result;
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
-		&ix_hotplug_attr_group);
+		&mx_hotplug_attr_group);
 
 	if (sysfs_result) {
 		pr_info("%s group create failed!\n", __FUNCTION__);
@@ -353,9 +389,7 @@ static int ix_hotplug_init(void)
 	return 0;
 }
 
-late_initcall(ix_hotplug_init);
-MODULE_AUTHOR("InstigatorX, \
-		Rob Patershuk <robpatershuk@gmail.com>");
-MODULE_DESCRIPTION("'ix_hotplug' - A simple hotplug driver "
-	"with full automation as a replacement for mpdecision");
+late_initcall(mx_hotplug_init);
+MODULE_AUTHOR("Rob Patershuk <robpatershuk@gmail.com>");
+MODULE_DESCRIPTION("'mx_hotplug' - An rq based hotplug driver");
 MODULE_LICENSE("GPLv2");
