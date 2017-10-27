@@ -60,12 +60,12 @@ static bool hotplug_suspended;
 static struct delayed_work hotplug_decision_work;
 static struct workqueue_struct *ixwq;
 
-static unsigned int enable_all_load = 800;
-static unsigned int enable_load[5] = {0, 120, 220, 340, 0};
-static unsigned int disable_load[5] = {0, 0, 60, 120, 260};
-static unsigned int sample_rate[5] = {0, 25, 50, 100, 50};
-static unsigned int online_sampling_periods[5] = {0, 3, 3, 5, 0};
-static unsigned int offline_sampling_periods[5] = {0, 0, 8, 3, 4};
+static unsigned int enable_all_load = 702;
+static unsigned int enable_load[4] = {80, 220, 340, UINT_MAX};
+static unsigned int disable_load[4] = {12, 60, 120, 260};
+static unsigned int sample_rate[4] = {25, 50, 100, 50};
+static unsigned int online_sampling_periods[4] = {3, 3, 5, UINT_MAX};
+static unsigned int offline_sampling_periods[5] = {0, 8, 3, 4};
 static unsigned int online_cpus;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
@@ -122,20 +122,25 @@ static void hotplug_online_all_work(void)
 
 static void hotplug_offline_work(void)
 {
-	unsigned int cpuid = 0;
+	unsigned int cpu;
 
 	if (hotplug_suspended || !hotplug_ready ||
 		!ix_hotplug_active)
 		return;
-
-	cpuid = cpumask_next(0, cpu_online_mask);
-	if (cpu_in_range_hp(cpuid))
-		cpu_down(cpuid);
+	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu))
+			break;
+		if (!cpu_online(cpu) || !is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
+			continue;
+		if (num_online_cpus() > min_cpus_online)
+			cpu_down(cpu);
+	}
 }
 
 static void __ref hotplug_decision_work_fn(struct work_struct *work)
 {
-	unsigned int avg_running, io_wait;
+	unsigned long avg_running;
 
 	if (hotplug_suspended || !ix_hotplug_active)
 		return;
@@ -145,21 +150,21 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 
 	online_cpus = num_online_cpus();
 
-	sched_get_nr_running_avg(&avg_running, &io_wait);
+	avg_running = avg_nr_running() / online_cpus;
 
-	if ((avg_running <= disable_load[online_cpus]) &&
+	if ((avg_running < disable_load[online_cpus]) &&
 			(online_cpus > min_cpus_online)) {
-		if (offline_sample >= offline_sampling_periods[online_cpus]) {
+		if (offline_sample > offline_sampling_periods[online_cpus]) {
 			hotplug_offline_work();
 			offline_sample = 0;
 		}
 		offline_sample++;
 		online_sample = 1;
-	} else if ((avg_running >= enable_all_load ||
-				avg_running >= enable_load[online_cpus]) &&
+	} else if ((avg_running > enable_all_load ||
+				avg_running > enable_load[online_cpus]) &&
 			(online_cpus < max_cpus_online)) {
-		if (online_sample >= online_sampling_periods[online_cpus]) {
-			if (avg_running >= enable_all_load) {
+		if (online_sample > online_sampling_periods[online_cpus]) {
+			if (avg_running > enable_all_load) {
 				//pr_info("ix_hotplug: Enable All\n");
 				hotplug_online_all_work();
 			} else {
@@ -171,9 +176,10 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 		online_sample++;
 		offline_sample = 1;
 	}
-
-	sampling_rate = sample_rate[num_online_cpus()];
-
+	if (online_cpus > 1)
+		sampling_rate = sample_rate[online_cpus];
+	else
+		sampling_rate = sample_rate[online_cpus - 1];
 resched:
 	queue_delayed_work_on(0, ixwq, &hotplug_decision_work, sampling_rate);
 }

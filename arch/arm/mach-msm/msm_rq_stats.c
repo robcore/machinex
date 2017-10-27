@@ -202,11 +202,11 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 
 static void update_related_cpus(void)
 {
+	struct cpufreq_policy cpu_policy;
 	unsigned int cpu;
 
 	for_each_cpu(cpu, cpu_online_mask) {
 		struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
-		struct cpufreq_policy cpu_policy;
 
 		cpufreq_get_policy(&cpu_policy, cpu);
 		cpumask_copy(this_cpu->related_cpus, cpu_policy.cpus);
