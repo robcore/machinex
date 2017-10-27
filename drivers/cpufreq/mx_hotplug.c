@@ -40,9 +40,12 @@
 #define MX_Q_RATE MXMS(150UL)
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
+static DEFINE_SPINLOCK(timer_lock);
 
 static bool hotplug_suspended;
 
+static struct workqueue_struct *transmission;
+static struct delayed_work gearshaft;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2500;
@@ -137,6 +140,9 @@ static void inject_nos(bool from_input)
 
 static void step_on_it(void)
 {
+	if (!mxread() || hotplug_suspended)
+		return;
+
 	unsigned int cpu;
 	target_pistons = pistons + 1;
 	for_each_nonboot_offline_cpu(cpu) {
@@ -154,6 +160,9 @@ static void step_on_it(void)
 
 static void hit_the_brakes(void)
 {
+	if (!mxread() || hotplug_suspended)
+		return;
+
 	unsigned int cpu;
 	target_pistons = pistons - 1;
 	for_each_nonboot_online_cpu(cpu) {
@@ -169,29 +178,26 @@ static void hit_the_brakes(void)
 	}
 }
 
-static int machinex_hotplug_engine(void *data)
+static int __ref machinex_hotplug_engine(void *data)
 {
+	unsigned long flags;
 	unsigned int cpu;
 	ktime_t delta;
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
+	spin_lock_irqsave(&timer_lock, flags);
+	delta = ktime_sub(ktime_get(), last_fuelcheck);
+	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) {
+		spin_unlock_irqrestore(&timer_lock, flags);
+		schedule();
+	} else
+		spin_unlock_irqrestore(&timer_lock, flags);
 
 	if (kthread_should_stop())
 		return 0;
 
-
-	if (kthread_should_park()) {
-		kthread_parkme();
-		/*might have woken up to stop*/
-		goto again;
-	}
-
 	set_current_state(TASK_RUNNING);
-
-	delta = ktime_sub(ktime_get(), last_fuelcheck);
-	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0)
-		goto again;
 
 	pistons = num_online_cpus();
 	air_to_fuel = avg_nr_running() / pistons;
@@ -211,21 +217,41 @@ again:
 		if (air_to_fuel < downstage)
 			hit_the_brakes();
 	}
-	last_fuelcheck = ktime_get();
+
 	goto again;
 }
+
+static void gearshift(struct work_struct *work)
+{
+	if (hotplug_suspended ||
+		!mxread())
+		return;
+
+	spin_lock_irqsave(&timer_lock);
+	if (wip) {
+		spin_unlock_irqrestore(&timer_lock);
+		goto out;
+	}
+	last_fuelcheck = ktime_get();
+	wip == true;
+	spin_lock_irqrestore(&timer_lock);
+
+	wake_up_process(mx_hp_engine);
+
+out:
+	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate / 3 * 2);
+}
+	
 
 static void mx_hotplug_suspend(struct power_suspend *h)
 {
 	hotplug_suspended = true;
-	kthread_park(mx_hp_engine);
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
 {
 	hotplug_suspended = false;
-	kthread_unpark(mx_hp_engine);
-	wake_up_process(mx_hp_engine);
+
 }
 
 static struct power_suspend mx_suspend_data =
@@ -238,12 +264,13 @@ static int mx_hotplug_start(void)
 {
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
-	mx_hp_engine = kthread_create_on_cpu(machinex_hotplug_engine,
-					  NULL, 0, "machinex_hp");
+	mx_hp_engine = kthread_create(machinex_hotplug_engine,
+					  NULL, "machinex_hp");
 	if (IS_ERR(mx_hp_engine)) {
 		pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
 		return PTR_ERR(mx_hp_engine);
 	}
+	kthread_bind(mx_hp_engine, 0);
 	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
 	get_task_struct(mx_hp_engine);
 	wake_up_process(mx_hp_engine);

@@ -961,7 +961,7 @@ CONFIG_BLU_PLUG=y
 # CONFIG_MAKO_HOTPLUG is not set
 # CONFIG_MSM_HOTPLUG is not set
 # CONFIG_AUTOSMP is not set
-CONFIG_MX_HOTPLUG=y
+# CONFIG_MX_HOTPLUG is not set
 
 #
 # CPU Idle
