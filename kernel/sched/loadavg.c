@@ -18,8 +18,8 @@ unsigned long this_cpu_load(void)
 
 unsigned long avg_nr_running(void)
 {
-	unsigned long i, sum = 0;
-	unsigned int seqcnt, ave_nr_running;
+	unsigned long ave_nr_running, sum = 0;
+	unsigned int seqcnt, i;
 
 	for_each_online_cpu(i) {
 		struct nr_stats_s *stats = &per_cpu(runqueue_stats, i);
@@ -47,7 +47,8 @@ EXPORT_SYMBOL(avg_nr_running);
 
 unsigned long avg_cpu_nr_running(unsigned int cpu)
 {
-	unsigned int seqcnt, ave_nr_running;
+	unsigned int seqcnt;
+	unsigned long ave_nr_running;
 
 	struct nr_stats_s *stats = &per_cpu(runqueue_stats, cpu);
 	struct rq *q = cpu_rq(cpu);
