@@ -63,8 +63,8 @@ obj-$(CONFIG_ARM_UNWIND)	+= unwind.o
 obj-$(CONFIG_HAVE_TCM)		+= tcm.o
 obj-$(CONFIG_OF)		+= devtree.o
 obj-$(CONFIG_CRASH_DUMP)	+= crash_dump.o
-obj-$(CONFIG_SWP_EMULATE)	+= swp_emulate.o
-CFLAGS_swp_emulate.o		:= -Wa,-march=armv7-a
+#obj-$(CONFIG_SWP_EMULATE)	+= swp_emulate.o
+#CFLAGS_swp_emulate.o		:= -Wa,-march=armv7-a
 obj-$(CONFIG_IDIV_EMULATE)	+= idiv_emulate.o
 obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
 obj-$(CONFIG_GENERIC_TIME_VSYSCALL_OLD)	+= update_vsyscall_arm.o
