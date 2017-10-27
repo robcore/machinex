@@ -99,11 +99,11 @@ again:
 	if (kthread_should_stop())
 		return 0;
 
+	set_current_state(TASK_RUNNING);
+
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0)
 		goto end;
-
-	set_current_state(TASK_RUNNING);
 
 	pistons = num_online_cpus();
 	air_to_fuel = avg_nr_running() / pistons;
@@ -147,13 +147,12 @@ again:
 		}
 	}
 	last_fuelcheck = ktime_get();
-end:
 	goto again;
 }
 
 static void mx_get_thread(void)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 
 	mx_hp_engine = kthread_create(machinex_hotplug_engine,
 					  NULL, "mx_hp_eng");
