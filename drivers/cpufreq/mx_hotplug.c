@@ -162,6 +162,8 @@ static void mx_get_thread(void)
 
 	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
 	get_task_struct(mx_hp_engine);
+
+	kthread_bind_mask(mx_hp_engine, cpumask_of(0));
 	wake_up_process(mx_hp_engine);
 }
 
