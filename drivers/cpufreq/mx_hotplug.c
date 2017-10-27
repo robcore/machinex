@@ -235,7 +235,7 @@ static struct power_suspend mx_suspend_data =
 
 static int mx_hotplug_start(void)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
 	mx_hp_engine = kthread_create_on_cpu(machinex_hotplug_engine,
 					  NULL, 0, "machinex_hp");

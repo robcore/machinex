@@ -1409,7 +1409,9 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 
 static int __init msm_cpufreq_register(void)
 {
-	return cpufreq_register_driver(&msm_cpufreq_driver);
+	if (!cpufreq_register_driver(&msm_cpufreq_driver))
+		msm_thermal_init();
+	return 0;
 }
 
 late_initcall(msm_cpufreq_register);

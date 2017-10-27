@@ -5288,7 +5288,6 @@ static void __init apq8064_common_init(void)
 	apq8064_device_otg.dev.platform_data = &msm_otg_pdata;
 	apq8064_ehci_host_init();
 	apq8064_init_buses();
-	msm_thermal_init();
 
 	platform_add_devices(early_common_devices,
 				ARRAY_SIZE(early_common_devices));
