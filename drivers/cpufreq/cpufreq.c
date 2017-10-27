@@ -37,7 +37,7 @@ extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
-unsigned int hardlimit_ready[NR_CPUS] = {0, 0, 0, 0};
+static unsigned int hardlimit_ready[NR_CPUS] = {0, 0, 0, 0};
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 #define DEFAULT_INPUT_FREQ 1350000
 static struct workqueue_struct *cpu_boost_wq;
