@@ -18,6 +18,51 @@ unsigned long this_cpu_load(unsigned int cpu)
 	return this->cpu_load[cpu];
 }
 
+static ssize_t show_cpu0_load(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = this_cpu_load(0);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+static ssize_t show_cpu1_load(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = this_cpu_load(1);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+static ssize_t show_cpu2_load(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = this_cpu_load(2);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+static ssize_t show_cpu3_load(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = this_cpu_load(3);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+MX_ATTR_RO(cpu0_load);
+MX_ATTR_RO(cpu1_load);
+MX_ATTR_RO(cpu2_load);
+MX_ATTR_RO(cpu3_load);
+
 unsigned long avg_nr_running(void)
 {
 	unsigned long ave_nr_running, sum = 0;
@@ -47,6 +92,18 @@ unsigned long avg_nr_running(void)
 }
 EXPORT_SYMBOL(avg_nr_running);
 
+static ssize_t show_avg_nr_running(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = avg_nr_running();
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+MX_ATTR_RO(avg_nr_running);
+
 unsigned long avg_cpu_nr_running(unsigned int cpu)
 {
 	unsigned int seqcnt;
@@ -71,6 +128,82 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 	return ave_nr_running;
 }
 EXPORT_SYMBOL(avg_cpu_nr_running);
+
+static ssize_t show_avg_cpu0_nr_running(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = avg_cpu_nr_running(0);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+static ssize_t show_avg_cpu1_nr_running(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = avg_cpu_nr_running(1);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+static ssize_t show_avg_cpu2_nr_running(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = avg_cpu_nr_running(2);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+static ssize_t show_avg_cpu3_nr_running(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	tmp = avg_cpu_nr_running(3);
+	return sprintf(buf, "%lu\n", tmp);
+}
+
+MX_ATTR_RO(avg_cpu0_nr_running);
+MX_ATTR_RO(avg_cpu1_nr_running);
+MX_ATTR_RO(avg_cpu2_nr_running);
+MX_ATTR_RO(avg_cpu3_nr_running);
+
+static struct attribute *loadavg_attrs[] = {
+	&cpu0_load_attr.attr,
+	&cpu1_load_attr.attr,
+	&cpu2_load_attr.attr,
+	&cpu3_load_attr.attr,
+	&avg_nr_running_attr.attr,
+	&avg_cpu0_nr_running_attr.attr,
+	&avg_cpu1_nr_running_attr.attr,
+	&avg_cpu2_nr_running_attr.attr,
+	&avg_cpu3_nr_running_attr.attr,
+	NULL,
+};
+
+static struct attribute_group loadavg_attr_group = {
+	.attrs = loadavg_attrs,
+	.name = "loadavg",
+};
+
+static int __init loadavg_init(void)
+{
+	int ret;
+
+	ret = sysfs_create_group(mx_kobj, &loadavg_attr_group);
+	if (ret)
+		return -ENOMEM;
+
+	return 0;
+}
+
+late_initcall(loadavg_init);
 
 /*
  * Global load-average calculations
