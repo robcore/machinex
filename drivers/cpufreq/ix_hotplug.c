@@ -150,7 +150,7 @@ static void __ref hotplug_decision_work_fn(struct work_struct *work)
 
 	online_cpus = num_online_cpus();
 
-	avg_running = avg_nr_running() / online_cpus;
+	avg_running = avg_nr_running();
 
 	if ((avg_running < disable_load[online_cpus]) &&
 			(online_cpus > min_cpus_online)) {
