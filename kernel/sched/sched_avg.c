@@ -85,7 +85,7 @@ EXPORT_SYMBOL(sched_get_nr_running_avg);
  *
  * Update average with latest nr_running value for CPU
  */
-void sched_update_nr_prod(int cpu, unsigned long nr_running, bool inc)
+void sched_update_nr_prod(unsigned int cpu, unsigned long nr_running, bool inc)
 {
 	int diff;
 	s64 curr_time;

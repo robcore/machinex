@@ -2890,7 +2890,7 @@ unsigned long nr_iowait(void)
  * runnable.
  */
 
-unsigned long nr_iowait_cpu(int cpu)
+unsigned long nr_iowait_cpu(unsigned int cpu)
 {
 	struct rq *this = cpu_rq(cpu);
 	return atomic_read(&this->nr_iowait);
@@ -6561,7 +6561,7 @@ struct cgroup_subsys cpu_cgrp_subsys = {
 
 #endif	/* CONFIG_CGROUP_SCHED */
 
-void dump_cpu_task(int cpu)
+void dump_cpu_task(unsigned int cpu)
 {
 	pr_info("Task dump for CPU %d:\n", cpu);
 	sched_show_task(cpu_curr(cpu));

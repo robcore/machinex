@@ -10,10 +10,12 @@
 
 #include "sched.h"
 
-unsigned long this_cpu_load(void)
+unsigned long this_cpu_load(unsigned int cpu)
 {
 	struct rq *this = this_rq();
-	return this->cpu_load[0];
+	if (!cpu_online(cpu))
+		return 0;
+	return this->cpu_load[cpu];
 }
 
 unsigned long avg_nr_running(void)
