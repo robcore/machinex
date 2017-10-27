@@ -28,7 +28,7 @@
 
 #define INTELLI_PLUG			"intelli_plug"
 #define INTELLI_PLUG_MAJOR_VERSION	15
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 #define DEFAULT_MIN_CPUS_ONLINE 2
@@ -436,7 +436,8 @@ static void cpu_up_down_work(struct work_struct *work)
 		}
 		update_per_cpu_stat();
 		for_each_nonboot_online_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu))
+			if (cpu_out_of_range_hp(cpu) ||
+				num_online_cpus() == target)
 				break;
 			if (cpu_is_offline(cpu) ||
 				!is_cpu_allowed(cpu) ||
@@ -449,12 +450,11 @@ static void cpu_up_down_work(struct work_struct *work)
 			if (l_ip_info->cpu_nr_running < l_nr_threshold) {
 				cpu_down(cpu);
 			}
-			if (num_online_cpus() == target)
-				break;
 		}
 	} else if (online_cpus < max_cpus_online && target > online_cpus) {
 		for_each_nonboot_offline_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu))
+			if (cpu_out_of_range_hp(cpu) ||
+				num_online_cpus() == target)
 				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
@@ -462,8 +462,6 @@ static void cpu_up_down_work(struct work_struct *work)
 				continue;
 			if (!cpu_up(cpu))
 				apply_down_lock(cpu);
-			if (num_online_cpus() == target)
-				break;
 		}
 	}
 reschedule:
