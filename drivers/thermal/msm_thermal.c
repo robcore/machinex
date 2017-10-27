@@ -428,7 +428,7 @@ static int msm_thermal_get_freq_table(void)
 	unsigned int templow, cpu;
 	int i;
 
-	if (thermal_suspended || !hotplug_ready)
+	if (thermal_suspended)
 		return -EINVAL;
 
 	policy = cpufreq_cpu_get_raw(0);
@@ -463,7 +463,7 @@ static long evaluate_temp(unsigned int cpu)
 	long temp;
 	int ret = 0;
 
-	if (thermal_suspended || !hotplug_ready)
+	if (thermal_suspended)
 		return -EINVAL;
 
 	tsens_dev.sensor_num = msm_sens_id[cpu];
@@ -484,7 +484,7 @@ static int __ref do_freq_control(void)
 	unsigned int hotplug_check_needed = 0;
 	struct cpufreq_policy policy;
 
-	if (thermal_suspended || !hotplug_ready) {
+	if (thermal_suspended) {
 		pr_err("frequency control not ready!\n");		
 		return -EINVAL;
 	}
@@ -549,7 +549,7 @@ static void __ref do_core_control(void)
 	long core_temp;
 
 	if (!core_control_enabled || intelli_init() ||
-		 thermal_suspended || !hotplug_ready ||
+		 thermal_suspended ||
 		 cpumask_empty(&core_control_mask)) {
 		return;
 	}
@@ -599,9 +599,6 @@ static void __ref check_temp(struct work_struct *work)
 
 	if (thermal_suspended)
 		return;
-
-	if (!hotplug_ready)
-		goto reschedule;
 
 	ret = do_freq_control();
 	if (msm_thermal_info.limit_temp_degC <
@@ -709,7 +706,7 @@ static void __ref update_offline_cores(void)
 	int ret = 0;
 
 	if (!core_control_enabled || intelli_init() ||
-		thermal_suspended ||!hotplug_ready)
+		thermal_suspended)
 		return;
 
 	for_each_nonboot_online_cpu(cpu) {

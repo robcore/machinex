@@ -209,7 +209,7 @@ extern unsigned long avg_cpu_nr_running(unsigned int cpu);
 static void cpu_all_ctrl(bool online) {
 	unsigned int cpu;
 
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	hardplug_all_cpus();
@@ -277,7 +277,7 @@ static unsigned int calculate_thread_stats(void)
 
 static void lazyplug_boost_fn(struct work_struct *work)
 {
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 	cpu_all_ctrl(true);
 }
@@ -294,7 +294,7 @@ static void update_per_cpu_stat(void)
 	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
 
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	for_each_online_cpu(cpu) {
@@ -313,7 +313,7 @@ static void unplug_cpu(int min_active_cpu)
 	struct ip_cpu_info *l_ip_info;
 	int l_nr_threshold;
 
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	for_each_nonboot_online_cpu(cpu) {
@@ -341,9 +341,6 @@ static void lazyplug_work_fn(struct work_struct *work)
 
 	if (!is_display_on() || !lazyplug_active)
 		return;
-
-	if (!hotplug_ready)
-		goto resched;
 
 	hardplug_all_cpus();
 	nr_run_stat = calculate_thread_stats();
@@ -392,7 +389,7 @@ static void wakeup_boost_lazy(void)
 	struct cpufreq_policy *policy;
 	struct ip_cpu_info *l_ip_info;
 
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	for_each_online_cpu(cpu) {
@@ -410,7 +407,7 @@ static DECLARE_WORK(cpu_all_up_work, cpu_all_up);
 
 static void cpu_all_up(struct work_struct *work)
 {
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	cpu_all_ctrl(true);
@@ -422,7 +419,7 @@ static unsigned int Ltouch_boost_active = true;
 static bool Lprevious_state = false;
 void lazyplug_enter_lazy(bool enter)
 {
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	mutex_lock(&lazymode_mutex);
@@ -445,7 +442,7 @@ void lazyplug_enter_lazy(bool enter)
 static void lazyplug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-	if (!is_display_on() || !hotplug_ready || !lazyplug_active)
+	if (!is_display_on() || !lazyplug_active)
 		return;
 
 	if (lazyplug_active && touch_boost_active) {

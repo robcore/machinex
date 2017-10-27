@@ -37,7 +37,7 @@ extern unsigned long acpuclk_get_rate(int cpu);
 extern ssize_t get_gpu_vdd_levels_str(char *buf);
 extern void set_gpu_vdd_levels(int uv_tbl[]);
 
-bool hardlimit_ready = false;
+unsigned int hardlimit_ready[NR_CPUS] = {0, 0, 0, 0};
 unsigned int current_screen_state = CPUFREQ_HARDLIMIT_SCREEN_ON;
 #define DEFAULT_INPUT_FREQ 1350000
 static struct workqueue_struct *cpu_boost_wq;
@@ -304,7 +304,7 @@ module_param(thermal_disables_boost, bool, 0644);
 /* Update limits in cpufreq */
 static void reapply_hard_limits(struct cpufreq_policy *policy, bool update_policy)
 {
-	if (!hardlimit_ready)
+	if (!hardlimit_ready[policy->cpu])
 		return;
 
 	/* Recalculate the currently applicable min/max */
@@ -350,9 +350,9 @@ EXPORT_SYMBOL(reapply_hard_limits);
 /* Sanitize cpufreq to hardlimits */
 static unsigned int check_cpufreq_hardlimit(struct cpufreq_policy *policy, unsigned int freq)
 {
-	unsigned int cpu, count = 0;
+	unsigned int count = 0;
 
-	if (!hardlimit_ready)
+	if (!hardlimit_ready[policy->cpu])
 		return freq;
 
 recheck:
@@ -428,8 +428,8 @@ u64 now;
 
 void cpu_boost_event(void)
 {
-	if (!input_boost_enabled || !hotplug_ready 
-	    || !input_boost_ms || !is_display_on())
+	if (!input_boost_enabled ||
+		!input_boost_ms || !is_display_on())
 		return;
 
 	min_interval = max(min_input_interval, input_boost_ms);
@@ -1583,134 +1583,6 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	kfree(policy);
 }
 
-
-
-#if 0
-static unsigned int alloc_count = 0;
-static int cpufreq_register_core(unsigned int cpu)
-{
-	struct cpufreq_policy *policy;
-	unsigned long flags;
-	unsigned int j;
-	int ret;
-
-	/* Check if this CPU already has a policy to manage it */
-	policy = per_cpu(cpufreq_cpu_data, cpu);
-	policy = cpufreq_policy_alloc(cpu);
-	if (!policy)
-		return -ENOMEM;
-
-	cpumask_copy(policy->cpus, cpumask_of(cpu));
-
-	/* call driver. From then on the cpufreq must be able
-	 * to accept all calls to ->verify and ->setpolicy for this CPU
-	 */
-	ret = cpufreq_driver->init(policy);
-	if (ret) {
-		pr_debug("initialization failed\n");
-		goto out_free_policy;
-	}
-
-	down_write(&policy->rwsem);
-
-	/* related_cpus should at least include policy->cpus. */
-	cpumask_copy(policy->related_cpus, policy->cpus);
-
-	/*
-	 * SCRATCH THIS. WE ARE NOW.
-	 * affected cpus must always be the one, which are online. We aren't
-	 * managing offline cpus here.
-	 */
-	cpumask_and(policy->cpus, policy->cpus, cpu_possible_mask);
-
-	/*
-	 * First boot, set defaults because they haven't been set yet.
-	 */
-	if (!policy->hlimit_max_screen_on)
-		policy->hlimit_max_screen_on = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-
-	if (!policy->hlimit_max_screen_off)
-		policy->hlimit_max_screen_off = CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
-
-	if (!policy->hlimit_min_screen_on)
-		policy->hlimit_min_screen_on = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-
-	if (!policy->hlimit_min_screen_off)
-		policy->hlimit_min_screen_off = CPUFREQ_HARDLIMIT_MIN_SCREEN_OFF_STOCK;
-
-	if (!policy->curr_limit_max)
-		policy->curr_limit_max = CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK;
-
-	if (!policy->curr_limit_min)
-		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
-
-	if (hotplug_ready)
-		hardlimit_ready = true;
-
-	if (hardlimit_ready)
-		reapply_hard_limits(policy->cpu);
-
-	policy->user_policy.min = check_cpufreq_hardlimit(policy->min);
-	policy->user_policy.max = check_cpufreq_hardlimit(policy->max);
-
-	for_each_cpu(j, policy->related_cpus) {
-		per_cpu(cpufreq_cpu_data, j) = policy;
-		add_cpu_dev_symlink(policy, j);
-	}
-
-	policy->cur = cpufreq_driver->get(policy->cpu);
-	if (!policy->cur) {
-		pr_err("%s: ->get() failed\n", __func__);
-		goto out_exit_policy;
-	}
-
-	ret = cpufreq_add_dev_interface(policy);
-	if (ret)
-		goto out_exit_policy;
-
-	cpufreq_stats_create_table(policy);
-
-	write_lock_irqsave(&cpufreq_driver_lock, flags);
-	list_add(&policy->policy_list, &cpufreq_policy_list);
-	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
-
-	ret = cpufreq_init_policy(policy);
-	if (ret) {
-		pr_err("%s: Failed to initialize policy for cpu: %d (%d)\n",
-		       __func__, cpu, ret);
-		/* cpufreq_policy_free() will notify based on this */
-		goto out_exit_policy;
-	}
-
-	up_write(&policy->rwsem);
-
-	kobject_uevent(&policy->kobj, KOBJ_ADD);
-
-	/* Callback for handling stuff after policy is ready */
-	if (cpufreq_driver->ready && alloc_count == NR_CPUS) {
-		cpufreq_driver->ready(policy);
-	}
-
-	if (alloc_count < NR_CPUS) {
-		pr_info("CPUFREQ %u: Init Complete!\n", cpu);
-				alloc_count++;
-	}
-
-	return 0;
-
-out_exit_policy:
-	up_write(&policy->rwsem);
-
-	for_each_cpu(j, policy->real_cpus)
-		remove_cpu_dev_symlink(policy, get_cpu_device(j));
-
-out_free_policy:
-	cpufreq_policy_free(policy);
-	return ret;
-}
-#endif
-
 static int cpufreq_online(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
@@ -1787,14 +1659,13 @@ static int cpufreq_online(unsigned int cpu)
 		policy->curr_limit_min = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 
 	if (!policy->input_boost_limit)
-		policy->input_boost_limit = policy->hlimit_min_screen_on;
+		policy->input_boost_limit = CPUFREQ_HARDLIMIT_MIN_SCREEN_ON_STOCK;
 
 	if (!policy->limited_max_freq_thermal)
-		policy->limited_max_freq_thermal = is_display_on() ? policy->hlimit_max_screen_on : 
-										   policy->hlimit_max_screen_off;
+		policy->limited_max_freq_thermal = is_display_on() ? CPUFREQ_HARDLIMIT_MAX_SCREEN_ON_STOCK : 
+										   CPUFREQ_HARDLIMIT_MAX_SCREEN_OFF_STOCK;
 
-	if (hotplug_ready)
-		hardlimit_ready = true;
+	hardlimit_ready[cpu] = 1;
 
 	if (hardlimit_ready)
 		reapply_hard_limits(policy, false);
@@ -2787,7 +2658,7 @@ void cpufreq_update_policy(unsigned int cpu)
 
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&new_policy, policy, sizeof(*policy));
-	if (hardlimit_ready) {
+	if (hardlimit_ready[policy->cpu]) {
 		/* Yank555.lu - Enforce hardlimit */
 		new_policy.min = check_cpufreq_hardlimit(policy, policy->user_policy.min);
 		new_policy.max = check_cpufreq_hardlimit(policy, policy->user_policy.max);

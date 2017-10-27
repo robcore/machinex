@@ -209,8 +209,7 @@ static void bricked_hotplug_work(struct work_struct *work) {
 	if (!is_display_on())
 		return;
 
-	if (!mutex_trylock(&hotplug.bricked_cpu_mutex) ||
-		!hotplug_ready)
+	if (!mutex_trylock(&hotplug.bricked_cpu_mutex))
 		goto out;
 
 	state = mp_decision();

@@ -36,9 +36,13 @@
 #include <linux/powersuspend.h>
 
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define MX_SAMPLE_RATE MXMS(500UL)
+#define MX_SAMPLE_RATE MXMS(150UL)
+#define MX_Q_RATE MXMS(150UL)
 static unsigned int mx_hotplug_active;
+static DEFINE_RWLOCK(mxhp_lock);
+
 static bool hotplug_suspended;
+
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2500;
@@ -48,14 +52,62 @@ static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
+unsigned long air_to_fuel;
+unsigned int pistons;
+unsigned int target_pistons;
 static ktime_t last_fuelcheck;
+
+static unsigned int mxread(void)
+{
+	unsigned int ret;
+	unsigned long flags;
+
+	read_lock_irqsave(&mxhp_lock, flags);
+	ret = mx_hotplug_active;
+	read_unlock_irqrestore(&mxhp_lock, flags);
+
+	return ret;
+}
+static void mx_lock(int lock)
+{
+	unsigned long flags = 0;
+
+	if (lock)
+		write_lock_irqsave(&mxhp_lock, flags);
+	else
+		write_unlock_irqrestore(&mxhp_lock, flags);
+}
+
+static void _mxget(void)
+{
+	mx_hotplug_active = 1;
+}
+
+static void mxget(void)
+{
+	mx_lock(1);
+	_mxget();
+	mx_lock(0);
+}
+
+static void _mxput(void)
+{
+	mx_hotplug_active = 0;
+}
+
+static void mxput(void)
+{
+	mx_lock(1);
+	_mxput();
+	mx_lock(0);
+}
 
 static void inject_nos(bool from_input)
 {
 	unsigned int cpu;
 	int ret;
 
-	if (!mx_hotplug_active || !hotplug_ready)
+	if (!mxread() || hotplug_suspended)
 		return;
 
 	if (from_input) {
@@ -83,26 +135,62 @@ static void inject_nos(bool from_input)
 	}
 }
 
+static void gas(void)
+{
+	unsigned int cpu;
+	target_pistons = pistons + 1;
+	for_each_nonboot_offline_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu) ||
+			num_online_cpus() == target_pistons ||
+			num_online_cpus() == max_cpus_online)
+			break;
+		if (cpu_online(cpu) ||
+			!is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
+			continue;
+		cpu_up(cpu);
+	}
+}
+
+static void brake(void)
+{
+	unsigned int cpu;
+	target_pistons = pistons - 1;
+	for_each_nonboot_online_cpu(cpu) {
+		if (cpu_out_of_range_hp(cpu) ||
+			num_online_cpus() == target_pistons ||
+			num_online_cpus() == min_cpus_online)
+			break;
+		if (!cpu_online(cpu) ||
+			!is_cpu_allowed(cpu) ||
+			thermal_core_controlled(cpu))
+			continue;
+		cpu_down(cpu);
+	}
+}
+
 static int machinex_hotplug_engine(void *data)
 {
-	unsigned long air_to_fuel;
-	unsigned int cpu, pistons, target_pistons;
+	unsigned int cpu;
 	ktime_t delta;
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	if (!hotplug_ready || hotplug_suspended)
-		schedule();
-
 	if (kthread_should_stop())
 		return 0;
+
+
+	if (kthread_should_park()) {
+		parkme();
+		/*might have woken up to stop*/
+		goto again;
+	}
 
 	set_current_state(TASK_RUNNING);
 
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0)
-		goto again;
 
 	pistons = num_online_cpus();
 	air_to_fuel = avg_nr_running() / pistons;
@@ -114,80 +202,29 @@ again:
 			goto again;
 		}
 
-		if (air_to_fuel > upstage) {
-			target_pistons = pistons + 1;
-			for_each_nonboot_offline_cpu(cpu) {
-				if (cpu_out_of_range_hp(cpu) ||
-					num_online_cpus() == target_pistons ||
-					num_online_cpus() == max_cpus_online)
-					break;
-				if (cpu_online(cpu) ||
-					!is_cpu_allowed(cpu) ||
-					thermal_core_controlled(cpu))
-					continue;
-				cpu_up(cpu);
-			}
-		}
+		if (air_to_fuel > upstage)
+			gas();
 	} else if (pistons > min_cpus_online &&
 		pistons <= max_cpus_online) {
 		if (air_to_fuel < downstage) {
-			target_pistons = pistons - 1;
-			for_each_nonboot_online_cpu(cpu) {
-				if (cpu_out_of_range_hp(cpu) ||
-					num_online_cpus() == target_pistons ||
-					num_online_cpus() == min_cpus_online)
-					break;
-				if (!cpu_online(cpu) ||
-					!is_cpu_allowed(cpu) ||
-					thermal_core_controlled(cpu))
-					continue;
-				cpu_down(cpu);
-			}
+			brake();
 		}
 	}
 	last_fuelcheck = ktime_get();
 	goto again;
 }
 
-static void mx_get_thread(void)
-{
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
-
-	mx_hp_engine = kthread_create_on_cpu(machinex_hotplug_engine,
-					  NULL, 0, "mx_hp_eng");
-	if (IS_ERR(mx_hp_engine))
-		return;
-
-	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
-	get_task_struct(mx_hp_engine);
-
-	wake_up_process(mx_hp_engine);
-}
-
-static void mx_put_thread(void)
-{
-	kthread_stop(mx_hp_engine);
-	put_task_struct(mx_hp_engine);
-}
-
 static void mx_hotplug_suspend(struct power_suspend *h)
 {
-	if (!mx_hotplug_active)
-		return;
-
-	if (!hotplug_suspended) {
-		hotplug_suspended = true;
-		mx_put_thread();
-	}
-
+	hotplug_suspended = true;
+	kthread_park(mx_hp_engine);
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
 {
-	if (hotplug_suspended) {
-		hotplug_suspended = false;
-		mx_get_thread();
-	}
+	hotplug_suspended = false;
+	kthread_unpark(mx_hp_engine);
+	wake_up_process(mx_hp_engine);
 }
 
 static struct power_suspend mx_suspend_data =
@@ -196,29 +233,40 @@ static struct power_suspend mx_suspend_data =
 	.resume = mx_hotplug_resume,
 };
 
-static void mx_hotplug_start(void)
+static int mx_hotplug_start(void)
 {
-	if (!mx_hotplug_active)
-		return;
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 
-	mx_get_thread();
+	mx_hp_engine = kthread_create_on_cpu(machinex_hotplug_engine,
+					  NULL, 0, "machinex_hp");
+	if (IS_ERR(mx_hp_engine)) {
+		pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
+		return PTR_ERR(mx_hp_engine);
+	}
+	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
+	get_task_struct(mx_hp_engine);
+	wake_up_process(mx_hp_engine);
 	register_power_suspend(&mx_suspend_data);
+	return 0;
 }
 
 static void mx_hotplug_stop(void)
 {
-	if (mx_hotplug_active)
-		return;
 	unregister_power_suspend(&mx_suspend_data);
-	mx_put_thread();
+	kthread_stop(mx_hp_engine);
+	put_task_struct(mx_hp_engine);
 }
 
 static void mx_startstop(unsigned int status)
 {
-	if (status)
-		mx_hotplug_start();
-	else
+	if (status) {
+		mxget();
+		if (mx_hotplug_start())
+			mxput();
+	} else {
+		mxput();
 		mx_hotplug_stop();
+	}
 }
 
 mx_show_one(mx_hotplug_active);
@@ -231,17 +279,19 @@ static ssize_t store_mx_hotplug_active(struct kobject *kobj,
 {
 	int ret;
 	int input;
+	unsigned int tmpread;
 
 	ret = sscanf(buf, "%d", &input);
 	if (ret < 0)
 		return ret;
 
 	sanitize_min_max(input, 0, 1);
-	if (input == mx_hotplug_active)
+	tmpread = mxread();
+
+	if (input == tmpread)
 		return count;
 
-	mx_hotplug_active = input;
-	mx_startstop(mx_hotplug_active);
+	mx_startstop(input);
 
 	return count;
 }

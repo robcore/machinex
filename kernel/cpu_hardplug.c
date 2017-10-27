@@ -69,7 +69,7 @@ unsigned int is_cpu_allowed(unsigned int cpu)
 {
 	if (!limit_screen_on_cpus ||
 		!is_display_on() ||
-		!hotplug_ready || cpu == 0)
+		cpu == 0)
 		return ALLOWED;
 
 	if (!cpumask_test_cpu(cpu, &screen_on_allowd_msk))
@@ -118,8 +118,7 @@ unsigned int nr_hardplugged_cpus(void)
 {
 	unsigned int cpu, hardplugged_cpus = 0;
 
-	if (!is_display_on() || !limit_screen_on_cpus ||
-		!hotplug_ready)
+	if (!is_display_on() || !limit_screen_on_cpus)
 		return hardplugged_cpus;
 
 	for_each_cpu_not(cpu, &screen_on_allowd_msk) {

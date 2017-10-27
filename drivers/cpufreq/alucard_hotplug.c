@@ -165,8 +165,7 @@ static void hotplug_work_fn(struct work_struct *work)
 
 	if (!is_display_on())
 		return;
-	if (!hotplug_ready)
-		goto resched;
+
 	hardplug_all_cpus();
 
 	rq_avg = get_nr_run_avg();

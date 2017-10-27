@@ -69,8 +69,7 @@ static inline void plug_cpu(void)
 	if (!is_display_on() || !msm_sleeper_enabled)
 		return;
 
-	if (num_online_cpus() == sleeper_data.max_cpus_online ||
-		!hotplug_ready)
+	if (num_online_cpus() == sleeper_data.max_cpus_online)
 		goto reset;
 
 	for_each_nonboot_offline_cpu(cpu) {
@@ -92,8 +91,7 @@ static inline void unplug_cpu(void)
 	if (!is_display_on() || !msm_sleeper_enabled)
 		return;
 
-	if (num_online_cpus() == sleeper_data.min_cpus_online ||
-		!hotplug_ready)
+	if (num_online_cpus() == sleeper_data.min_cpus_online)
 		goto reset;
 
 	get_online_cpus();
@@ -126,8 +124,7 @@ static void hotplug_func(struct work_struct *work)
 	if (!is_display_on() || !msm_sleeper_enabled)
 		return;
 
-	if (sleeper_data.max_cpus_online == sleeper_data.min_cpus_online ||
-		!hotplug_ready)
+	if (sleeper_data.max_cpus_online == sleeper_data.min_cpus_online)
 		goto reschedule;
 
 	if (sleeper_data.plug_all) {

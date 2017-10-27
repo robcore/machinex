@@ -68,7 +68,6 @@ extern unsigned int curr_limit_max;
 extern unsigned int curr_limit_min;
 extern unsigned int current_screen_state;
 #endif /* CONFIG_CPUFREQ_HARDLIMIT */
-extern bool hotplug_ready;
 extern bool is_freq_limited(unsigned int cpu);
 
 struct cpufreq_policy {

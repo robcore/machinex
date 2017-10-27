@@ -89,8 +89,6 @@ static struct drv_data {
 	struct device *dev;
 } drv;
 
-bool hotplug_ready = false;
-
 static unsigned long acpuclk_krait_get_rate(unsigned int cpu)
 {
 	return drv.scalable[cpu].cur_speed->khz;
@@ -1092,10 +1090,6 @@ static int acpuclk_cpu_callback(struct notifier_block *nfb,
 	struct scalable *sc = &drv.scalable[cpu];
 	unsigned long hot_unplug_khz = acpuclk_krait_data.power_collapse_khz;
 
-	/* Fail hotplug until this driver can get CPU clocks */
-	if (!hotplug_ready)
-		return NOTIFY_OK;
-
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_DOWN_PREPARE:
 		prev_khz[cpu] = acpuclk_krait_get_rate(cpu);
@@ -1355,12 +1349,6 @@ static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 		return 0;
 }
 
-void msm_cpufreq_ready(struct cpufreq_policy *policy)
-{
-	hotplug_ready = true;
-	pr_info("MSM CPUFREQ - HotPlug is READY!!\n");
-}
-
 static int msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *mx_freq_table;
@@ -1446,7 +1434,6 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.get		= msm_cpufreq_get_freq,
 	.name		= "msm",
 	.attr		= cpufreq_generic_attr,
-	.ready		= msm_cpufreq_ready,
 };
 
 static int __init msm_cpufreq_register(void)

@@ -376,9 +376,6 @@ static void do_override(void)
 	if (!prometheus_override)
 		return;
 
-	if (!hotplug_ready)
-		return;
-
 	cpu = smp_processor_id();
 
 	for_each_nonboot_offline_cpu(cpu) {
@@ -414,9 +411,6 @@ static void cpu_up_down_work(struct work_struct *work)
 		return;
 	}
 	mutex_unlock(&intellisleep_mutex);
-
-	if (!hotplug_ready)
-		goto reschedule;
 
 	hardplug_all_cpus();
 	cpu = smp_processor_id();
@@ -646,7 +640,7 @@ static int intelliplug_cpu_callback(struct notifier_block *nfb,
 {
 	unsigned int cpu = (unsigned long)hcpu;
 	/* Fail hotplug until this driver can get CPU clocks, or screen off */
-	if (!hotplug_ready || !is_display_on())
+	if (!is_display_on())
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {

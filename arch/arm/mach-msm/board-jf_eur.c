@@ -5258,7 +5258,6 @@ static void __init apq8064_common_init(void)
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm_tsens_early_init(&apq_tsens_pdata);
-	msm_thermal_init();
 	if (socinfo_init() < 0)
 		pr_err("socinfo_init() failed!\n");
 	BUG_ON(msm_rpm_init(&apq8064_rpm_data));
@@ -5289,6 +5288,7 @@ static void __init apq8064_common_init(void)
 	apq8064_device_otg.dev.platform_data = &msm_otg_pdata;
 	apq8064_ehci_host_init();
 	apq8064_init_buses();
+	msm_thermal_init();
 
 	platform_add_devices(early_common_devices,
 				ARRAY_SIZE(early_common_devices));
@@ -5368,7 +5368,7 @@ static void __init apq8064_common_init(void)
 		}
 	}
 
-	if (!poweroff_charging) {
+	if (unlikely(!poweroff_charging)) {
 		printk(KERN_DEBUG"[slimbus] starting init set up : %d %d\n",
 				system_rev, poweroff_charging);
 	        platform_device_register(&apq8064_slim_ctrl);
