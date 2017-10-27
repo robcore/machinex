@@ -112,7 +112,7 @@ again:
 		pistons >= min_cpus_online) {
 		if (avg_nr_running() > boost_threshold) {
 			inject_nos(false);
-			goto end;
+			goto again;
 		}
 
 		if (air_to_fuel > upstage) {
