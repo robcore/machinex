@@ -191,6 +191,7 @@ again:
 
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0)
+		goto again;
 
 	pistons = num_online_cpus();
 	air_to_fuel = avg_nr_running() / pistons;
@@ -206,9 +207,8 @@ again:
 			gas();
 	} else if (pistons > min_cpus_online &&
 		pistons <= max_cpus_online) {
-		if (air_to_fuel < downstage) {
+		if (air_to_fuel < downstage)
 			brake();
-		}
 	}
 	last_fuelcheck = ktime_get();
 	goto again;
