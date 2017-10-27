@@ -36,25 +36,27 @@
 #include <linux/machinex_defines.h>
 #include <linux/powersuspend.h>
 
-#define MX_SAMPLE_RATE 500UL
+#define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
+#define MX_SAMPLE_RATE MXMS(500UL)
 static unsigned int mx_hotplug_active;
 static bool hotplug_suspended;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2500;
-static unsigned long upstage = 850;
-static unsigned long downstage = 550;
+static unsigned long upstage = 625;
+static unsigned long downstage = 525;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
-static unsigned int online_cpus;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
+static unsigned int cpus_boosted = DEFAULT_MAX_CPUS_ONLINE;
+static ktime_t last_fuelcheck;
 
 static void inject_nos(bool from_input)
 {
 	unsigned int cpu;
 	int ret;
 
-	if (!hotplug_ready)
+	if (!mx_hotplug_active || !hotplug_ready)
 		return;
 
 	if (from_input) {
@@ -70,7 +72,8 @@ static void inject_nos(bool from_input)
 		}
 	} else {
 		for_each_nonboot_offline_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu))
+			if (cpu_out_of_range_hp(cpu) ||
+				num_online_cpus() == max_cpus_online)
 				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
@@ -84,167 +87,111 @@ static void inject_nos(bool from_input)
 
 static int machinex_hotplug_engine(void *data)
 {
-	unsigned int cpu;
+	unsigned long air_to_fuel;
+	unsigned int cpu, pistons, target_pistons;
+	ktime_t delta;
+
+	if (data == NULL)
+		return -ENOMEM;
+
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	if (!hotplug_ready)
+	if (!hotplug_ready || hotplug_suspended)
 		schedule();
 
 	if (kthread_should_stop())
 		return 0;
 
+	delta = ktime_sub(ktime_get(), last_fuelcheck);
+	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0)
+		goto end;
+
 	set_current_state(TASK_RUNNING);
 
-	if (avg_nr_running > boost_threshold) {
-		inject_nos();
-		goto end;
-	}
+	pistons = num_online_cpus();
+	air_to_fuel = avg_nr_running() / pistons;
 
-	for_each_cpu(cpu, &tmp_mask) {
-		struct interactive_cpu *icpu = &per_cpu(interactive_cpu, cpu);
-		struct cpufreq_policy *policy;
-		if (cpu_out_of_range(cpu))
-			break;
-		if (!cpu_online(cpu))
-			continue;
-
-		if (unlikely(!down_read_trylock(&icpu->enable_sem)))
-			continue;
-
-		if (likely(icpu->ipolicy)) {
-			policy = icpu->ipolicy->policy;
-			cpufreq_interactive_adjust_cpu(cpu, policy);
+	if (pistons < max_cpus_online &&
+		pistons >= min_cpus_online) {
+		if (avg_nr_running() > boost_threshold) {
+			inject_nos(false);
+			goto end;
 		}
 
-		up_read(&icpu->enable_sem);
+		if (air_to_fuel > upstage) {
+			target_pistons = pistons + 1;
+			for_each_nonboot_offline_cpu(cpu) {
+				if (cpu_out_of_range_hp(cpu) ||
+					num_online_cpus() == target_pistons ||
+					num_online_cpus() == max_cpus_online)
+					break;
+				if (cpu_online(cpu) ||
+					!is_cpu_allowed(cpu) ||
+					thermal_core_controlled(cpu))
+					continue;
+				cpu_up(cpu);
+			}
+		}
+	} else if (pistons > min_cpus_online &&
+		pistons <= max_cpus_online) {
+		if (air_to_fuel < downstage) {
+			target_pistons = pistons - 1;
+			for_each_nonboot_online_cpu(cpu) {
+				if (cpu_out_of_range_hp(cpu) ||
+					num_online_cpus() == target_pistons ||
+					num_online_cpus() == min_cpus_online)
+					break;
+				if (!cpu_online(cpu) ||
+					!is_cpu_allowed(cpu) ||
+					thermal_core_controlled(cpu))
+					continue;
+				cpu_down(cpu);
+			}
+		}
 	}
-
+	last_fuelcheck = ktime_get();
 end:
 	goto again;
 }
 
-static void hotplug_online_single_work(void)
+static void mx_get_thread(void);
 {
-	unsigned int cpuinc, cpu = 0;
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
 
-	if (hotplug_suspended || !hotplug_ready ||
-		!mx_hotplug_active)
+	mx_hp_engine = kthread_create(machinex_hotplug_engine,
+					  NULL, "mx_hp_eng");
+	if (IS_ERR(mx_hp_engine))
 		return;
 
-	cpuinc = 0;
-
-retry:
-	cpu = cpumask_next_zero(cpuinc, cpu_online_mask);
-	if (cpu_out_of_range_hp(cpu))
-		return;
-
-	if (cpu_online(cpu) || !is_cpu_allowed(cpu) ||
-		thermal_core_controlled(cpu)) {
-		cpuinc++;
-		goto retry;
-	}
-
-	cpu_up(cpu);
+	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
+	get_task_struct(mx_hp_engine);
+	wake_up_process(mx_hp_engine);
 }
 
-static void hotplug_online_all_work(void)
+static void mx_put_thread(void)
 {
-	unsigned int cpu;
-
-	if (hotplug_suspended || !hotplug_ready ||
-		!mx_hotplug_active)
-		return;
-
-	for_each_nonboot_offline_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		if (cpu_online(cpu) || !is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
-			cpu_up(cpu);
-	}
-	return;
-}
-
-static void hotplug_offline_work(void)
-{
-	unsigned int cpu;
-
-	if (hotplug_suspended || !hotplug_ready ||
-		!mx_hotplug_active)
-		return;
-	for_each_nonboot_online_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu))
-			break;
-		if (!cpu_online(cpu) || !is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
-		if (num_online_cpus() > min_cpus_online)
-			cpu_down(cpu);
-	}
-}
-
-static void __ref hotplug_decision_work_fn(struct work_struct *work)
-{
-	unsigned long avg_running;
-
-	if (hotplug_suspended || !mx_hotplug_active)
-		return;
-
-	if (!hotplug_ready)
-		goto resched;
-
-	online_cpus = num_online_cpus();
-
-	avg_running = avg_nr_running();
-
-	if ((avg_running < disable_load[online_cpus]) &&
-			(online_cpus > min_cpus_online)) {
-		if (offline_sample > offline_sampling_periods[online_cpus]) {
-			hotplug_offline_work();
-			offline_sample = 0;
-		}
-		offline_sample++;
-		online_sample = 1;
-	} else if ((avg_running > enable_all_load ||
-				avg_running > enable_load[online_cpus]) &&
-			(online_cpus < max_cpus_online)) {
-		if (online_sample > online_sampling_periods[online_cpus]) {
-			if (avg_running > enable_all_load) {
-				hotplug_online_all_work();
-			} else {
-				hotplug_online_single_work();
-			}
-			online_sample = 0;
-		}
-		online_sample++;
-		offline_sample = 1;
-	}
-	if (online_cpus > 1)
-		sampling_rate = sample_rate[online_cpus];
-	else
-		sampling_rate = sample_rate[online_cpus - 1];
-resched:
-	queue_delayed_work_on(0, mxwq, &hotplug_decision_work, sampling_rate);
+	kthread_stop(mx_hp_engine);
+	put_task_struct(mx_hp_engine);
 }
 
 static void mx_hotplug_suspend(struct power_suspend *h)
 {
+	if (!mx_hotplug_active)
+		return;
 
 	if (!hotplug_suspended) {
 		hotplug_suspended = true;
-		cancel_delayed_work(&hotplug_decision_work);
+		mx_put_thread();
 	}
+
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
 {
 	if (hotplug_suspended) {
 		hotplug_suspended = false;
-		offline_sample = 1;
-		online_sample = 1;
-		queue_delayed_work_on(0, mxwq, &hotplug_decision_work, sampling_rate);
+		mx_get_thread();
 	}
 }
 
@@ -256,27 +203,19 @@ static struct power_suspend mx_suspend_data =
 
 static void mx_hotplug_start(void)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
-
 	if (!mx_hotplug_active)
 		return;
-	mxwq = create_singlethread_workqueue("mx_hotplug_workqueue");
 
-    if (!mxwq)
-        return;
-
-	INIT_DELAYED_WORK(&hotplug_decision_work, hotplug_decision_work_fn);
+	mx_get_thread();
 	register_power_suspend(&mx_suspend_data);
-	queue_delayed_work_on(0, mxwq, &hotplug_decision_work, sampling_rate);
 }
 
 static void mx_hotplug_stop(void)
 {
-	if (!mxwq || mx_hotplug_active)
+	if (mx_hotplug_active)
 		return;
-	cancel_delayed_work_sync(&hotplug_decision_work);
 	unregister_power_suspend(&mx_suspend_data);
-	destroy_workqueue(mxwq);
+	mx_put_thread();
 }
 
 static void mx_startstop(unsigned int status)
@@ -359,9 +298,9 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	return count;
 }
 
-IX_ATTR_RW(mx_hotplug_active);
-IX_ATTR_RW(min_cpus_online);
-IX_ATTR_RW(max_cpus_online);
+MX_ATTR_RW(mx_hotplug_active);
+MX_ATTR_RW(min_cpus_online);
+MX_ATTR_RW(max_cpus_online);
 
 static struct attribute *mx_hotplug_attributes[] = {
 	&mx_hotplug_active_attr.attr,
