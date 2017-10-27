@@ -152,7 +152,7 @@ static void gas(void)
 	}
 }
 
-static void brake(void)
+static void brakes(void)
 {
 	unsigned int cpu;
 	target_pistons = pistons - 1;
