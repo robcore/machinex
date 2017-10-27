@@ -33,7 +33,6 @@
 #include <linux/cpufreq.h>
 #include <linux/kobject.h>
 #include <linux/sysfs_helpers.h>
-#include <linux/machinex_defines.h>
 #include <linux/powersuspend.h>
 
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
@@ -46,9 +45,9 @@ static unsigned long boost_threshold = 2500;
 static unsigned long upstage = 625;
 static unsigned long downstage = 525;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
-static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
-static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
-static unsigned int cpus_boosted = DEFAULT_MAX_CPUS_ONLINE;
+static unsigned int min_cpus_online = 2;
+static unsigned int max_cpus_online = NR_CPUS;
+static unsigned int cpus_boosted = NR_CPUS;
 static ktime_t last_fuelcheck;
 
 static void inject_nos(bool from_input)
@@ -84,20 +83,17 @@ static void inject_nos(bool from_input)
 	}
 }
 
-
 static int machinex_hotplug_engine(void *data)
 {
 	unsigned long air_to_fuel;
 	unsigned int cpu, pistons, target_pistons;
 	ktime_t delta;
 
-	if (data == NULL)
-		return -ENOMEM;
-
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	if (!hotplug_ready || hotplug_suspended)
+	if (!hotplug_ready || hotplug_suspended ||
+		!mx_hotplug_active)
 		schedule();
 
 	if (kthread_should_stop())

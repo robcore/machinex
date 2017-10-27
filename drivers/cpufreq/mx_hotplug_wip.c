@@ -84,15 +84,11 @@ static void inject_nos(bool from_input)
 	}
 }
 
-
 static int machinex_hotplug_engine(void *data)
 {
 	unsigned long air_to_fuel;
 	unsigned int cpu, pistons, target_pistons;
 	ktime_t delta;
-
-	if (data == NULL)
-		return -ENOMEM;
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
