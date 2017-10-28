@@ -162,7 +162,7 @@ void fuel_injector(void)
 			should_boost = true;
 			touch_count = 0;
 		} else
-			touchcount++;
+			touch_count++;
 	}
 		mutex_unlock(&mx_mutex);
 }
