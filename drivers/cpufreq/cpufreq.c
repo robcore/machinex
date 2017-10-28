@@ -1069,15 +1069,14 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 	if (cpufreq_parse_governor(str_governor,
-						&new_policy.governor))
-		return -EINVAL;
+						&new_policy.governor)) {
+		strncpy(policy->perm_governor, str_governor,
+			CPUFREQ_NAME_LEN);
+		return count;
+	}
 
 	ret = cpufreq_set_policy(policy, &new_policy);
-
-	if (ret)
-		strncpy(policy->perm_governor, new_policy.governor->name,
-			CPUFREQ_NAME_LEN);
-
+	
 	return count;
 }
 
@@ -1453,22 +1452,14 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 	if (boot_gov_count == NR_CPUS &&
 		strcmp(policy->perm_governor, policy->last_governor)) {
 		/* Update governor of new_policy to the governor if changed when hotplugged */
-		gov = find_governor(policy->perm_governor);
-		if (gov) {
-			pr_debug("Restoring governor %s for cpu %d\n",
-					policy->governor->name, policy->cpu);
-		} else {
-			gov = cpufreq_default_governor();
-			if (!gov)
-				return -ENODATA;
-		}
+		if (cpufreq_parse_governor(policy->perm_governor,
+						&new_policy.governor))
+			goto orig;
 
-		new_policy.governor = gov;
-
-		/* set default policy */
-		return cpufreq_set_policy(policy, &new_policy);
+	/* set new policy */
+	return cpufreq_set_policy(policy, &new_policy);
 	}
-	
+orig:
 	/* Update governor of new_policy to the governor used before hotplug */
 	gov = find_governor(policy->last_governor);
 	if (gov) {
