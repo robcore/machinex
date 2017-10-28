@@ -40,7 +40,6 @@
 #define MX_Q_RATE MXMS(100UL)
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
-static DEFINE_SPINLOCK(timer_lock);
 static DEFINE_MUTEX(mx_mutex);
 
 static bool hotplug_suspended;
@@ -185,12 +184,9 @@ static void hit_the_brakes(unsigned int nrcores)
 
 static void reset_wip(void)
 {
-	unsigned long flags;
 	mutex_lock(&mx_mutex);
-	spin_lock_irqsave(&timer_lock, flags);
 	if (wip)
 		wip = false;
-	spin_unlock_irqrestore(&timer_lock, flags);	
 	mutex_unlock(&mx_mutex);
 }
 
@@ -203,29 +199,20 @@ static int __ref machinex_hotplug_engine(void *data)
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	mutex_lock(&mx_mutex);
-	spin_lock_irqsave(&timer_lock, flags);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0 ||
-		!wip) {
-		spin_unlock_irqrestore(&timer_lock, flags);
+		!wip || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
-	} else {
-		spin_unlock_irqrestore(&timer_lock, flags);
+	} else
 		mutex_unlock(&mx_mutex);
-	}
 
 	if (kthread_should_stop()) {
 		inject_nos(false);
 		return 0;
 	}
 
-	if (kthread_should_park()) {
-		inject_nos(false);
-		kthread_parkme();
-	}
-
-	mutex_lock(&mx_mutex);
+	mutex_lock(&mx_mutex))
 	set_current_state(TASK_RUNNING);
 
 	pistons = num_online_cpus();
@@ -250,9 +237,7 @@ again:
 			hit_the_brakes(min_cpus_online);
 	}
 purge:
-	spin_lock_irqsave(&timer_lock, flags);
 	wip = false;
-	spin_unlock_irqrestore(&timer_lock, flags);
 	mutex_unlock(&mx_mutex);
 	goto again;
 }
@@ -260,26 +245,26 @@ purge:
 static void gearshift(struct work_struct *work)
 {
 	unsigned long flags;
-	if (hotplug_suspended ||
-		!mxread())
+	if (!mxread())
 		return;
 
 	if (!mutex_trylock(&mx_mutex))
 		goto out;
 
-	spin_lock_irqsave(&timer_lock, flags);
+	if (hotplug_suspended) {
+		mutex_unlock(&mx_mutex);
+		return;
+	}
+
 	if (wip) {
-		spin_unlock_irqrestore(&timer_lock, flags);
 		mutex_unlock(&mx_mutex);
 		goto out;
 	}
+
 	last_fuelcheck = ktime_get();
 	wip = true;
-	spin_unlock_irqrestore(&timer_lock, flags);
 	mutex_unlock(&mx_mutex);
-
 	wake_up_process(mx_hp_engine);
-
 out:
 	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
 }
@@ -287,16 +272,18 @@ out:
 
 static void mx_hotplug_suspend(struct power_suspend *h)
 {
+	mutex_lock(&mx_mutex);
 	hotplug_suspended = true;
+	mutex_unlock(&mx_mutex);
 	cancel_delayed_work_sync(&gearshaft);
-	kthread_park(mx_hp_engine);
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
 {
+	mutex_lock(&mx_mutex);
 	hotplug_suspended = false;
+	mutex_unlock(&mx_mutex);
 	reset_wip();
-	kthread_unpark(mx_hp_engine);
 	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
 }
 
@@ -306,54 +293,44 @@ static struct power_suspend mx_suspend_data =
 	.resume = mx_hotplug_resume,
 };
 
-static void ignition(struct work_struct *work)
-{
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
-
-	mxget();
-	reset_wip();
-	transmission = create_singlethread_workqueue("tmission");
-	if (!transmission) {
-		pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
-		mxput();
-		return;
-	}
-
-	INIT_DELAYED_WORK(&gearshaft, gearshift);
-
-	mx_hp_engine = kthread_create(machinex_hotplug_engine,
-					  NULL, "machinex_hp");
-	if (IS_ERR(mx_hp_engine)) {
-		pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
-//		return PTR_ERR(mx_hp_engine);
-		mxput();
-		return;
-	}
-	kthread_bind(mx_hp_engine, 0);
-	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
-	get_task_struct(mx_hp_engine);
-	wake_up_process(mx_hp_engine);
-	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
-	register_power_suspend(&mx_suspend_data);
-	return;
-}
-
-static void killswitch(struct work_struct *work)
-{
-	mxput();
-	unregister_power_suspend(&mx_suspend_data);
-	cancel_delayed_work_sync(&gearshaft);
-	destroy_workqueue(transmission);
-	kthread_stop(mx_hp_engine);
-	put_task_struct(mx_hp_engine);
-}
-
 static void mx_startstop(unsigned int status)
 {
 	if (status) {
-		schedule_work_on(0, &mx_hotplug_start);
+		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+
+		mxget();
+		transmission = create_singlethread_workqueue("tmission");
+		if (!transmission) {
+			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
+			mxput();
+			return;
+		}
+
+		INIT_DELAYED_WORK(&gearshaft, gearshift);
+
+		mx_hp_engine = kthread_create(machinex_hotplug_engine,
+						  NULL, "machinex_hp");
+		if (IS_ERR(mx_hp_engine)) {
+			pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
+	//		return PTR_ERR(mx_hp_engine);
+			mxput();
+			return;
+		}
+		kthread_bind(mx_hp_engine, 0);
+		sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
+		get_task_struct(mx_hp_engine);
+		wake_up_process(mx_hp_engine);
+		queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
+		register_power_suspend(&mx_suspend_data);
+		return;
 	} else {
-		schedule_work_on(0, &mx_hotplug_stop);
+		mxput();
+		unregister_power_suspend(&mx_suspend_data);
+		cancel_delayed_work_sync(&gearshaft);
+		destroy_workqueue(transmission);
+		kthread_stop(mx_hp_engine);
+		put_task_struct(mx_hp_engine);
+		reset_wip();
 	}
 }
 
@@ -471,9 +448,6 @@ static struct attribute_group mx_hotplug_attr_group = {
 static int mx_hotplug_init(void)
 {
 	int sysfs_result;
-
-	INIT_WORK(&mx_hotplug_start, ignition);
-	INIT_WORK(&mx_hotplug_stop, killswitch);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&mx_hotplug_attr_group);
