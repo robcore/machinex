@@ -539,6 +539,7 @@ struct cpufreq_governor *mx_gov_intelliactive(void);
 struct cpufreq_governor *mx_gov_performance(void);
 struct cpufreq_governor *mx_gov_powersave(void);
 struct cpufreq_governor *mx_gov_schedutil(void);
+struct cpufreq_governor *mx_gov_userspace(void);
 
 static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
 {

@@ -151,6 +151,7 @@ enum {
 	PERFORMANCE = 4,
 	POWERSAVE = 5,
 	SCHEDUTIL = 6,
+	USERSPACE = 7,
 };
 
 struct cpufreq_governor *get_mx_governor(unsigned int cpu)
@@ -170,6 +171,8 @@ struct cpufreq_governor *get_mx_governor(unsigned int cpu)
 			return mx_gov_powersave();
 		case SCHEDUTIL:
 			return mx_gov_schedutil();
+		case USERSPACE:
+			return mx_gov_userspace();
 		default:
 			return cpufreq_default_governor();
 	}
