@@ -215,9 +215,10 @@ again:
 		mutex_unlock(&mx_mutex);
 	}
 
-	if (kthread_should_stop())
+	if (kthread_should_stop()) {
 		inject_nos(false);
 		return 0;
+	}
 
 	if (kthread_should_park()) {
 		inject_nos(false);
