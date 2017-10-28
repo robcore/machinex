@@ -307,11 +307,22 @@ static void ignition(struct work_struct *work)
 {
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
+	mxget();
+	transmission = create_singlethread_workqueue("tmission");
+	if (!transmission) {
+		pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
+		mxput();
+		return;
+	}
+
+	INIT_DELAYED_WORK(&gearshaft, gearshift);
+
 	mx_hp_engine = kthread_create(machinex_hotplug_engine,
 					  NULL, "machinex_hp");
 	if (IS_ERR(mx_hp_engine)) {
 		pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
 //		return PTR_ERR(mx_hp_engine);
+		mxput();
 		return;
 	}
 	kthread_bind(mx_hp_engine, 0);
@@ -325,6 +336,7 @@ static void ignition(struct work_struct *work)
 
 static void killswitch(struct work_struct *work)
 {
+	mxput();
 	unregister_power_suspend(&mx_suspend_data);
 	cancel_delayed_work_sync(&gearshaft);
 	kthread_stop(mx_hp_engine);
@@ -335,11 +347,9 @@ static void killswitch(struct work_struct *work)
 static void mx_startstop(unsigned int status)
 {
 	if (status) {
-		mxget();
-		queue_work_on(0, transmission, &mx_hotplug_start);
+		schedule_work_on(0, &mx_hotplug_start);
 	} else {
-		mxput();
-		queue_work_on(0, transmission, &mx_hotplug_stop);
+		schedule_work_on(0, &mx_hotplug_stop);
 	}
 }
 
@@ -458,16 +468,8 @@ static int mx_hotplug_init(void)
 {
 	int sysfs_result;
 
-	transmission = create_singlethread_workqueue("tmission");
-
-	if (!transmission) {
-		pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
-		return -ENOMEM;
-	}
-
 	INIT_WORK(&mx_hotplug_start, ignition);
 	INIT_WORK(&mx_hotplug_stop, killswitch);
-	INIT_DELAYED_WORK(&gearshaft, gearshift);
 
 	sysfs_result = sysfs_create_group(kernel_kobj,
 		&mx_hotplug_attr_group);
