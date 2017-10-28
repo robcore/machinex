@@ -36,10 +36,12 @@ static void omniboost_input_event(struct input_handle *handle,
 /*boost functions go here*/
 	if (likely(boost_cores_first)) {
 		intelli_boost();
+		inject_nos(true);
 		cpu_boost_event();
 	} else {
 		cpu_boost_event();
 		intelli_boost();
+		inject_nos(true);
 	}
 }
 

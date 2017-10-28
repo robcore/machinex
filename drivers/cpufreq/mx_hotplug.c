@@ -36,8 +36,8 @@
 #include <linux/powersuspend.h>
 
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define MX_SAMPLE_RATE MXMS(150UL)
-#define MX_Q_RATE MXMS(150UL)
+#define MX_SAMPLE_RATE MXMS(100UL)
+#define MX_Q_RATE MXMS(100UL)
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_SPINLOCK(timer_lock);
@@ -51,9 +51,10 @@ static struct work_struct mx_hotplug_start;
 static struct work_struct mx_hotplug_stop;
 static struct task_struct *mx_hp_engine;
 
-static unsigned long boost_threshold = 2500;
-static unsigned long upstage = 625;
-static unsigned long downstage = 525;
+static unsigned long boost_threshold = 2000;
+static unsigned long fifthgear = 1000;
+static unsigned long reverse = 900;
+static unsigned long ebrake = 650;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -108,7 +109,7 @@ static void mxput(void)
 	mx_lock(0);
 }
 
-static void inject_nos(bool from_input)
+void inject_nos(bool from_input)
 {
 	unsigned int cpu;
 	int ret;
@@ -213,29 +214,38 @@ again:
 	}
 
 	if (kthread_should_stop())
+		inject_nos(false);
 		return 0;
+
+	if (kthread_should_park()) {
+		inject_nos(false);
+		kthread_parkme();
+	}
 
 	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
 	pistons = num_online_cpus();
-	air_to_fuel = avg_nr_running() / pistons;
+	air_to_fuel = avg_nr_running();
 
-	if (pistons < max_cpus_online &&
-		pistons >= min_cpus_online) {
-		if (avg_nr_running() > boost_threshold) {
+	if (air_to_fuel > boost_threshold) {
+		if (pistons < max_cpus_online &&
+			pistons >= min_cpus_online)
 			inject_nos(false);
 			goto purge;
 		}
-
-		if (air_to_fuel > upstage)
-			step_on_it(pistons + 1);
-	} else if (pistons > min_cpus_online &&
-		pistons <= max_cpus_online) {
-		if (air_to_fuel < downstage)
-			hit_the_brakes(pistons - 1);
 	}
 
+	if (air_to_fuel > fifthgear) {
+		if (pistons < max_cpus_online)
+			step_on_it(pistons + 1);
+	} else if (air_to_fuel < reverse && air_to_fuel > ebrake) {
+		if (pistons > min_cpus_online)
+			hit_the_brakes(pistons - 1);
+	} else if (air_to_fuel < ebrake) {
+		if (pistons > min_cpus_online)
+			hit_the_brakes(min_cpus_online);
+	}
 purge:
 	spin_lock_irqsave(&timer_lock, flags);
 	wip = false;
@@ -276,14 +286,14 @@ static void mx_hotplug_suspend(struct power_suspend *h)
 {
 	hotplug_suspended = true;
 	cancel_delayed_work_sync(&gearshaft);
-	kthread_stop(mx_hp_engine);
+	kthread_park(mx_hp_engine);
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
 {
 	hotplug_suspended = false;
 	reset_wip();
-	wake_up_process(mx_hp_engine);
+	kthread_unpark(mx_hp_engine);
 	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
 }
 
@@ -336,6 +346,7 @@ static void mx_startstop(unsigned int status)
 mx_show_one(mx_hotplug_active);
 mx_show_one(min_cpus_online);
 mx_show_one(max_cpus_online);
+mx_show_one(cpus_boosted);
 
 static ssize_t store_mx_hotplug_active(struct kobject *kobj,
 					 struct kobj_attribute *attr,
@@ -407,14 +418,34 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 	return count;
 }
 
+static ssize_t store_cpus_boosted(struct kobject *kobj,
+				     struct kobj_attribute *attr,
+				     const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+	if (ret != 1)
+		return -EINVAL;
+
+	sanitize_min_max(val, min_cpus_online, max_cpus_online);
+
+	cpus_boosted = val;
+
+	return count;
+}
+
 MX_ATTR_RW(mx_hotplug_active);
 MX_ATTR_RW(min_cpus_online);
 MX_ATTR_RW(max_cpus_online);
+MX_ATTR_RW(cpus_boosted);
 
 static struct attribute *mx_hotplug_attributes[] = {
 	&mx_hotplug_active_attr.attr,
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
+	&cpus_boosted_attr.attr,
 	NULL,
 };
 

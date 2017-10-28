@@ -271,5 +271,6 @@ static inline void cpuhp_report_idle_dead(void) { }
 extern bool thermal_core_controlled(unsigned int cpu);
 extern bool intelli_init(void);
 extern int cpu_idle_force_poll_hook;
+extern void inject_nos(bool from_input);
 #endif /* _LINUX_CPU_H_ */
 
