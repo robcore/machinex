@@ -847,6 +847,7 @@ void cpufreq_hardlimit_suspend(void)
 			down_write(&policy->rwsem);
 			reapply_hard_limits(policy, false);
 			up_write(&policy->rwsem);
+		}
 	}
 }
 
@@ -863,6 +864,7 @@ void cpufreq_hardlimit_resume(void)
 			down_write(&policy->rwsem);
 			reapply_hard_limits(policy, false);
 			up_write(&policy->rwsem);
+		}
 	}
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
@@ -951,9 +953,7 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
 				down_write(&policy->rwsem);
-				policy->hlimit_max_screen_on = new_hardlimit;
 				reapply_hard_limits(policy, false);
-				up_write(&policy->rwsem);
 				return count;
 		}
 	return -EINVAL;
@@ -972,9 +972,7 @@ static ssize_t store_hardlimit_max_screen_off(struct cpufreq_policy *policy, con
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-				down_write(&policy->rwsem);
 				policy->hlimit_max_screen_off = new_hardlimit;
-				up_write(&policy->rwsem);
 				return count;
 		}
 	return -EINVAL;
@@ -993,10 +991,8 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-				down_write(&policy->rwsem);
 				policy->hlimit_min_screen_on = new_hardlimit;
 				reapply_hard_limits(policy, false);
-				up_write(&policy->rwsem);
 				return count;
 		}
 	return -EINVAL;
@@ -1015,9 +1011,7 @@ static ssize_t store_hardlimit_min_screen_off(struct cpufreq_policy *policy, con
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-				down_write(&policy->rwsem);
 				policy->hlimit_min_screen_off = new_hardlimit;
-				up_write(&policy->rwsem);
 				return count;
 		}
 	return -EINVAL;
@@ -1036,9 +1030,7 @@ static ssize_t store_input_boost_frequency(struct cpufreq_policy *policy, const 
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_input_boost_freq) {
-				down_write(&policy->rwsem);
 				policy->input_boost_freq = new_input_boost_freq;
-				up_write(&policy->rwsem);
 				return count;
 		}
 	return -EINVAL;
