@@ -153,17 +153,14 @@ void fuel_injector(void)
 	if (!mxread() || hotplug_suspended)
 		return;
 
-	mutex_lock(&mx_mutex);
-	delta = ktime_sub(ktime_get(), last_boost);
-	if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0) {
-		should_boost = false;
-		mutex_unlock(&mx_mutex);
+	if (!mutex_lock(&mx_mutex))
 		return;
-	} else {
+
+	if (!should_boost) {
 		should_boost = true;
 		last_boost = ktime_get();
-		mutex_unlock(&mx_mutex);
 	}
+		mutex_unlock(&mx_mutex)
 }
 
 static void step_on_it(unsigned int nrcores)
@@ -241,10 +238,14 @@ again:
 
 	pistons = num_online_cpus();
 	air_to_fuel = avg_nr_running();
+	delta = ktime_sub(ktime_get(), last_boost);
+	if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
+		should_boost = false;
 
 	if (should_boost) {
 		if (pistons < cpus_boosted) {
 			inject_nos(true);
+			should_boost = false;
 			goto purge;
 		}
 	} else if (air_to_fuel > boost_threshold) {
