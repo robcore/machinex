@@ -44,11 +44,8 @@ static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_MUTEX(mx_mutex);
 
 static bool hotplug_suspended;
-
 static struct workqueue_struct *transmission;
 static struct delayed_work gearshaft;
-static struct work_struct mx_hotplug_start;
-static struct work_struct mx_hotplug_stop;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2000;
