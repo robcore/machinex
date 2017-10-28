@@ -252,6 +252,10 @@ again:
 			should_boost = false;
 			last_boost = ktime_get();
 			goto purge;
+		} else {
+			should_boost = false;
+			last_boost = ktime_get();
+			goto purge;
 		}
 	} else if (air_to_fuel > boost_threshold) {
 		if (pistons < max_cpus_online) {
