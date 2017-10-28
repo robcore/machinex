@@ -146,7 +146,6 @@ void inject_nos(bool from_input)
 void fuel_injector(void)
 {
 	ktime_t delta;
-	unsigned int touch_count = 0;
 
 	if (!mxread() || hotplug_suspended)
 		return;
@@ -154,14 +153,10 @@ void fuel_injector(void)
 	if (!mutex_trylock(&mx_mutex))
 		return;
 
-	if (!should_boost) {
-		if (touch_count >= 2) {
-			should_boost = true;
-			touch_count = 0;
-		} else
-			touch_count++;
-	}
-		mutex_unlock(&mx_mutex);
+	if (!should_boost)
+		should_boost = true;
+
+	mutex_unlock(&mx_mutex);
 }
 
 static void step_on_it(unsigned int nrcores)
