@@ -322,7 +322,6 @@ static void mx_startstop(unsigned int status)
 		wake_up_process(mx_hp_engine);
 		queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
 		register_power_suspend(&mx_suspend_data);
-		return;
 	} else {
 		mxput();
 		unregister_power_suspend(&mx_suspend_data);
