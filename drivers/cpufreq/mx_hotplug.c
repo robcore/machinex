@@ -241,7 +241,7 @@ again:
 
 	if (should_boost) {
 		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
-			goto_purge;
+			goto purge;
 		else if (pistons < cpus_boosted) {
 			inject_nos(true);
 			should_boost = false;
