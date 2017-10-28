@@ -51,8 +51,8 @@ static struct work_struct mx_hotplug_stop;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2000;
-static unsigned long fifthgear = 1000;
-static unsigned long reverse = 900;
+static unsigned long fifthgear = 1100;
+static unsigned long reverse = 950;
 static unsigned long ebrake = 650;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
