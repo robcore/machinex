@@ -158,7 +158,6 @@ void fuel_injector(void)
 
 	if (!should_boost) {
 		should_boost = true;
-		last_boost = ktime_get();
 	}
 		mutex_unlock(&mx_mutex);
 }
@@ -241,11 +240,12 @@ again:
 	delta = ktime_sub(ktime_get(), last_boost);
 
 	if (should_boost) {
-	if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
-		should_boost = false;
-	else if (pistons < cpus_boosted) {
+		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
+			goto_purge;
+		else if (pistons < cpus_boosted) {
 			inject_nos(true);
 			should_boost = false;
+			last_boost = ktime_get();
 			goto purge;
 		}
 	} else if (air_to_fuel > boost_threshold) {
