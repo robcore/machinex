@@ -1049,7 +1049,7 @@ static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 		return sprintf(buf, "performance\n");
 	else if (policy->governor)
 		return scnprintf(buf, CPUFREQ_NAME_PLEN, "%s\n",
-				policy->perm_governor);
+				policy->governor->name);
 	return -EINVAL;
 }
 
@@ -1070,14 +1070,14 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	memcpy(&new_policy, policy, sizeof(*policy));
 	if (cpufreq_parse_governor(str_governor,
 						&new_policy.governor)) {
-		strncpy(policy->perm_governor, str_governor,
-			CPUFREQ_NAME_LEN);
-		return count;
+		pr_info("CPUFREQ: Error parsing governor\n");
+		return -EINVAL;
 	}
-
 	ret = cpufreq_set_policy(policy, &new_policy);
+	if (ret)
+		pr_info("CPUFREQ: Error Setting Governor Policy\n");
 	
-	return count;
+	return ret ? ret : count;
 }
 
 /**
@@ -1441,7 +1441,6 @@ __weak struct cpufreq_governor *cpufreq_default_governor(void)
 	return NULL;
 }
 
-static unsigned int boot_gov_count;
 static int cpufreq_init_policy(struct cpufreq_policy *policy)
 {
 	struct cpufreq_governor *gov = NULL;
@@ -1449,17 +1448,6 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
-	if (boot_gov_count == NR_CPUS &&
-		strcmp(policy->perm_governor, policy->last_governor)) {
-		/* Update governor of new_policy to the governor if changed when hotplugged */
-		if (cpufreq_parse_governor(policy->perm_governor,
-						&new_policy.governor))
-			goto orig;
-
-	/* set new policy */
-	return cpufreq_set_policy(policy, &new_policy);
-	}
-orig:
 	/* Update governor of new_policy to the governor used before hotplug */
 	gov = find_governor(policy->last_governor);
 	if (gov) {
@@ -1473,11 +1461,6 @@ orig:
 
 	new_policy.governor = gov;
 
-	if (boot_gov_count < NR_CPUS) {
-		strncpy(policy->perm_governor, new_policy.governor->name,
-			CPUFREQ_NAME_LEN);
-		boot_gov_count++;
-	}
 	/* set default policy */
 	return cpufreq_set_policy(policy, &new_policy);
 }
@@ -2975,3 +2958,4 @@ static int __init cpufreq_core_init(void)
 	return 0;
 }
 core_initcall(cpufreq_core_init);
+
