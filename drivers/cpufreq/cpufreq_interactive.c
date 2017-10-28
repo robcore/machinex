@@ -1343,6 +1343,11 @@ static int __init cpufreq_interactive_gov_init(void)
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
 
+struct cpufreq_governor *mx_gov_interactive(void)
+{
+	return CPU_FREQ_GOV_INTERACTIVE;
+}
+
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 struct cpufreq_governor *cpufreq_default_governor(void)
 {

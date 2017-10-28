@@ -1386,6 +1386,11 @@ static int __init cpufreq_intelliactive_gov_init(void)
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTELLIACTIVE);
 }
 
+struct cpufreq_governor *mx_gov_intelliactive(void)
+{
+	return CPU_FREQ_GOV_INTELLIACTIVE;
+}
+
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIACTIVE
 struct cpufreq_governor *cpufreq_default_governor(void)
 {

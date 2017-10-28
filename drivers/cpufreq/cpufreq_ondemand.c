@@ -458,6 +458,11 @@ MODULE_DESCRIPTION("'cpufreq_ondemand' - A dynamic cpufreq governor for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");
 
+struct cpufreq_governor *mx_gov_ondemand(void)
+{
+	return CPU_FREQ_GOV_ONDEMAND;
+}
+
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
 struct cpufreq_governor *cpufreq_default_governor(void)
 {

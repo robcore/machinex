@@ -38,6 +38,11 @@ static void __exit cpufreq_gov_performance_exit(void)
 	cpufreq_unregister_governor(&cpufreq_gov_performance);
 }
 
+struct cpufreq_governor *mx_gov_performance(void)
+{
+	return &cpufreq_gov_performance;
+}
+
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 struct cpufreq_governor *cpufreq_default_governor(void)
 {

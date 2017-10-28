@@ -17,6 +17,7 @@
 #include <linux/kernel.h>
 #include <linux/sysfs.h>
 
+unsigned int mx_cpufreq_governor[NR_CPUS] = {0, 0, 0, 0};
 /* Machinex OnDemand and Conservative Tunables */
 unsigned int dbs_cpu_sampling_rate[NR_CPUS] = { 1000, 1000, 1000, 1000 };
 unsigned int dbs_up_threshold[NR_CPUS] = { 80, 80, 80, 80 };
@@ -54,6 +55,7 @@ show_one_cpu0(two_phase_freq);
 show_one_cpu0(up_threshold_any_cpu_load);
 show_one_cpu0(sync_freq);
 show_one_cpu0(up_threshold_any_cpu_freq);
+show_one_cpu0(mx_cpufreq_governor);
 
 show_one_cpu1(dbs_cpu_sampling_rate);
 show_one_cpu1(dbs_up_threshold);
@@ -70,6 +72,7 @@ show_one_cpu1(two_phase_freq);
 show_one_cpu1(up_threshold_any_cpu_load);
 show_one_cpu1(sync_freq);
 show_one_cpu1(up_threshold_any_cpu_freq);
+show_one_cpu1(mx_cpufreq_governor);
 
 show_one_cpu2(dbs_cpu_sampling_rate);
 show_one_cpu2(dbs_up_threshold);
@@ -86,6 +89,7 @@ show_one_cpu2(two_phase_freq);
 show_one_cpu2(up_threshold_any_cpu_load);
 show_one_cpu2(sync_freq);
 show_one_cpu2(up_threshold_any_cpu_freq);
+show_one_cpu2(mx_cpufreq_governor);
 
 show_one_cpu3(dbs_cpu_sampling_rate);
 show_one_cpu3(dbs_up_threshold);
@@ -102,6 +106,7 @@ show_one_cpu3(two_phase_freq);
 show_one_cpu3(up_threshold_any_cpu_load);
 show_one_cpu3(sync_freq);
 show_one_cpu3(up_threshold_any_cpu_freq);
+show_one_cpu3(mx_cpufreq_governor);
 
 store_one_cpu0_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu0_clamp(dbs_up_threshold, 1, 99);
@@ -118,6 +123,7 @@ store_one_cpu0_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu0_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu0_clamp(sync_freq, 0, 1890000);
 store_one_cpu0_clamp(up_threshold_any_cpu_freq, 0, 1890000);
+store_one_cpu0_clamp(mx_cpufreq_governor, 0, 6);
 
 store_one_cpu1_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu1_clamp(dbs_up_threshold, 1, 99);
@@ -134,6 +140,7 @@ store_one_cpu1_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu1_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu1_clamp(sync_freq, 0, 1890000);
 store_one_cpu1_clamp(up_threshold_any_cpu_freq, 0, 1890000);
+store_one_cpu1_clamp(mx_cpufreq_governor, 0, 6);
 
 store_one_cpu2_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu2_clamp(dbs_up_threshold, 1, 99);
@@ -150,6 +157,7 @@ store_one_cpu2_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu2_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu2_clamp(sync_freq, 0, 1890000);
 store_one_cpu2_clamp(up_threshold_any_cpu_freq, 0, 1890000);
+store_one_cpu2_clamp(mx_cpufreq_governor, 0, 6);
 
 store_one_cpu3_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu3_clamp(dbs_up_threshold, 1, 99);
@@ -166,6 +174,7 @@ store_one_cpu3_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu3_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu3_clamp(sync_freq, 0, 1890000);
 store_one_cpu3_clamp(up_threshold_any_cpu_freq, 0, 1890000);
+store_one_cpu3_clamp(mx_cpufreq_governor, 0, 6);
 
 #define MX_CPU0_ATTR_RW(_name) \
 static struct kobj_attribute cpu0_##_name##_attr = \
@@ -197,6 +206,7 @@ MX_CPU0_ATTR_RW(two_phase_freq);
 MX_CPU0_ATTR_RW(up_threshold_any_cpu_load);
 MX_CPU0_ATTR_RW(sync_freq);
 MX_CPU0_ATTR_RW(up_threshold_any_cpu_freq);
+MX_CPU0_ATTR_RW(mx_cpufreq_governor);
 
 MX_CPU1_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU1_ATTR_RW(dbs_up_threshold);
@@ -213,6 +223,7 @@ MX_CPU1_ATTR_RW(two_phase_freq);
 MX_CPU1_ATTR_RW(up_threshold_any_cpu_load);
 MX_CPU1_ATTR_RW(sync_freq);
 MX_CPU1_ATTR_RW(up_threshold_any_cpu_freq);
+MX_CPU1_ATTR_RW(mx_cpufreq_governor);
 
 MX_CPU2_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU2_ATTR_RW(dbs_up_threshold);
@@ -229,6 +240,7 @@ MX_CPU2_ATTR_RW(two_phase_freq);
 MX_CPU2_ATTR_RW(up_threshold_any_cpu_load);
 MX_CPU2_ATTR_RW(sync_freq);
 MX_CPU2_ATTR_RW(up_threshold_any_cpu_freq);
+MX_CPU2_ATTR_RW(mx_cpufreq_governor);
 
 MX_CPU3_ATTR_RW(dbs_cpu_sampling_rate);
 MX_CPU3_ATTR_RW(dbs_up_threshold);
@@ -245,6 +257,7 @@ MX_CPU3_ATTR_RW(two_phase_freq);
 MX_CPU3_ATTR_RW(up_threshold_any_cpu_load);
 MX_CPU3_ATTR_RW(sync_freq);
 MX_CPU3_ATTR_RW(up_threshold_any_cpu_freq);
+MX_CPU3_ATTR_RW(mx_cpufreq_governor);
 
 static struct attribute *cpu0_attrs[] = {
 	&cpu0_dbs_cpu_sampling_rate_attr.attr,
@@ -262,6 +275,7 @@ static struct attribute *cpu0_attrs[] = {
 	&cpu0_up_threshold_any_cpu_load_attr.attr,
 	&cpu0_sync_freq_attr.attr,
 	&cpu0_up_threshold_any_cpu_freq_attr.attr,
+	&cpu0_mx_cpufreq_governor_attr.attr,
 	NULL,
 };
 
@@ -281,6 +295,7 @@ static struct attribute *cpu1_attrs[] = {
 	&cpu1_up_threshold_any_cpu_load_attr.attr,
 	&cpu1_sync_freq_attr.attr,
 	&cpu1_up_threshold_any_cpu_freq_attr.attr,
+	&cpu1_mx_cpufreq_governor_attr.attr,
 	NULL,
 };
 
@@ -300,6 +315,7 @@ static struct attribute *cpu2_attrs[] = {
 	&cpu2_up_threshold_any_cpu_load_attr.attr,
 	&cpu2_sync_freq_attr.attr,
 	&cpu2_up_threshold_any_cpu_freq_attr.attr,
+	&cpu2_mx_cpufreq_governor_attr.attr,
 	NULL,
 };
 
@@ -319,6 +335,7 @@ static struct attribute *cpu3_attrs[] = {
 	&cpu3_up_threshold_any_cpu_load_attr.attr,
 	&cpu3_sync_freq_attr.attr,
 	&cpu3_up_threshold_any_cpu_freq_attr.attr,
+	&cpu3_mx_cpufreq_governor_attr.attr,
 	NULL,
 };
 

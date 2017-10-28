@@ -106,6 +106,7 @@ static void cpufreq_exit_governor(struct cpufreq_policy *policy);
 static int cpufreq_start_governor(struct cpufreq_policy *policy);
 static void cpufreq_stop_governor(struct cpufreq_policy *policy);
 static void cpufreq_governor_limits(struct cpufreq_policy *policy);
+extern unsigned int mx_cpufreq_governor[NR_CPUS];
 
 /**
  * Two notifier lists: the "policy" list is involved in the
@@ -138,6 +139,41 @@ struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
 		return &policy->kobj;
 }
 EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
+
+static bool mx_governor_override = true;
+module_param(mx_governor_override, bool, 0644);
+
+enum {
+	ONDEMAND = 0,
+	CONSERVATIVE = 1,
+	INTERACTIVE = 2,
+	INTELLIACTIVE = 3,
+	PERFORMANCE = 4,
+	POWERSAVE = 5,
+	SCHEDUTIL = 6,
+};
+
+struct cpufreq_governor *get_mx_governor(unsigned int cpu)
+{
+	switch(mx_cpufreq_governor[cpu]) {
+		case ONDEMAND:
+			return mx_gov_ondemand();
+		case CONSERVATIVE:
+			return mx_gov_conservative();
+		case INTERACTIVE:
+			return mx_gov_interactive();
+		case INTELLIACTIVE:
+			return mx_gov_intelliactive();
+		case PERFORMANCE:
+			return mx_gov_performance();
+		case POWERSAVE:
+			return mx_gov_powersave();
+		case SCHEDUTIL:
+			return mx_gov_schedutil();
+		default:
+			return cpufreq_default_governor();
+	}
+}
 
 static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 {
@@ -1069,12 +1105,6 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (!cpu_online(policy->cpu)) {
-			strncpy(policy->last_governor, str_governor,
-				CPUFREQ_NAME_LEN);
-		return count;
-	}
-
 	memcpy(&new_policy, policy, sizeof(*policy));
 	if (cpufreq_parse_governor(str_governor,
 						&new_policy.governor))
@@ -1451,7 +1481,16 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 	struct cpufreq_governor *gov = NULL;
 	struct cpufreq_policy new_policy;
 
-	memcpy(&new_policy, policy, sizeof(*policy));
+
+
+	if (mx_governor_override) {
+		gov = get_mx_governor(policy->cpu);
+
+		memcpy(&new_policy, policy, sizeof(*policy));
+		new_policy.governor = gov;
+		/* set default policy */
+		return cpufreq_set_policy(policy, &new_policy);
+	}
 
 	/* Update governor of new_policy to the governor used before hotplug */
 	gov = find_governor(policy->last_governor);

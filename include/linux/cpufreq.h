@@ -532,6 +532,14 @@ void cpufreq_unregister_governor(struct cpufreq_governor *governor);
 struct cpufreq_governor *cpufreq_default_governor(void);
 struct cpufreq_governor *cpufreq_fallback_governor(void);
 
+struct cpufreq_governor *mx_gov_ondemand(void);
+struct cpufreq_governor *mx_gov_conservative(void);
+struct cpufreq_governor *mx_gov_interactive(void);
+struct cpufreq_governor *mx_gov_intelliactive(void);
+struct cpufreq_governor *mx_gov_performance(void);
+struct cpufreq_governor *mx_gov_powersave(void);
+struct cpufreq_governor *mx_gov_schedutil(void);
+
 static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
 {
 	if (policy->max < policy->cur)

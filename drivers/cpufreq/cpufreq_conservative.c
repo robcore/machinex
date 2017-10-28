@@ -346,6 +346,11 @@ MODULE_DESCRIPTION("'cpufreq_conservative' - A dynamic cpufreq governor for "
 		"optimised for use in a battery environment");
 MODULE_LICENSE("GPL");
 
+struct cpufreq_governor *mx_gov_conservative(void)
+{
+	return CPU_FREQ_GOV_CONSERVATIVE;
+}
+
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
 struct cpufreq_governor *cpufreq_default_governor(void)
 {

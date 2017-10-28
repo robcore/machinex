@@ -251,6 +251,8 @@ static ssize_t store_cpu3_##name		\
 	return count;				\
 }
 
+extern unsigned int mx_cpufreq_governor[NR_CPUS];
+
 extern unsigned int dbs_cpu_sampling_rate[NR_CPUS];
 extern unsigned int dbs_up_threshold[NR_CPUS];
 extern unsigned int dbs_micro_up_threshold[NR_CPUS];

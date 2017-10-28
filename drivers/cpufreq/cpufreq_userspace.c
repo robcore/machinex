@@ -145,6 +145,11 @@ MODULE_AUTHOR("Dominik Brodowski <linux@brodo.de>, "
 MODULE_DESCRIPTION("CPUfreq policy governor 'userspace'");
 MODULE_LICENSE("GPL");
 
+struct cpufreq_governor *mx_gov_userspace(void)
+{
+	return &cpufreq_gov_userspace;
+}
+
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_USERSPACE
 struct cpufreq_governor *cpufreq_default_governor(void)
 {
