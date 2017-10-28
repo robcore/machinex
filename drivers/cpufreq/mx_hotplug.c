@@ -53,7 +53,7 @@ static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2000;
 static unsigned long fifthgear = 1100;
-static unsigned long reverse = 950;
+static unsigned long reverse = 975;
 static unsigned long ebrake = 650;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
@@ -158,7 +158,7 @@ void fuel_injector(void)
 		return;
 
 	if (!should_boost) {
-		if (touch_count >= 3) {
+		if (touch_count >= 2) {
 			should_boost = true;
 			touch_count = 0;
 		} else
@@ -210,8 +210,7 @@ static void hit_the_brakes(unsigned int nrcores)
 static void reset_wip(void)
 {
 	mutex_lock(&mx_mutex);
-	if (wip)
-		wip = false;
+	wip = false;
 	mutex_unlock(&mx_mutex);
 }
 
@@ -247,12 +246,9 @@ again:
 	if (should_boost) {
 		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
 			goto purge;
-		else if (pistons < cpus_boosted) {
-			inject_nos(true);
-			should_boost = false;
-			last_boost = ktime_get();
-			goto purge;
-		} else {
+		else {
+			if (pistons < cpus_boosted)
+				inject_nos(true);
 			should_boost = false;
 			last_boost = ktime_get();
 			goto purge;
