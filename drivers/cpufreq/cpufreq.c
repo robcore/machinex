@@ -378,10 +378,9 @@ void set_thermal_policy(unsigned int cpu, unsigned int freq)
 	policy = cpufreq_cpu_get_raw(cpu);
 	if (policy == NULL)
 		return;
-	down_write(&policy->rwsem);
+
 	policy->limited_max_freq_thermal = freq;
 	reapply_hard_limits(policy, true);
-	up_write(&policy->rwsem);
 }
 	
 
@@ -398,10 +397,8 @@ static void do_input_boost_rem(struct work_struct *work)
 		if (!policy)
 			continue;
 		/* Reset the input_boost_limit for all CPUs in the system */
-		down_write(&policy->rwsem);
 		policy->input_boost_limit = policy->hlimit_min_screen_on;
 		reapply_hard_limits(policy, true);
-		up_write(&policy->rwsem);
 	}
 }
 
@@ -418,11 +415,8 @@ static void do_input_boost(struct work_struct *work)
 		policy = cpufreq_cpu_get_raw(cpu);
 		if (!policy)
 			continue;
-		down_write(&policy->rwsem);
 		policy->input_boost_limit = policy->input_boost_freq;
 		reapply_hard_limits(policy, true);
-		up_write(&policy->rwsem);
-
 	}
 
 	mod_delayed_work_on(0, cpu_boost_wq, &input_boost_rem,
@@ -843,11 +837,8 @@ void cpufreq_hardlimit_suspend(void)
 
 	for_each_possible_cpu(cpu) {
 		policy = cpufreq_cpu_get_raw(cpu);
-		if (policy != NULL) {
-			down_write(&policy->rwsem);
+		if (policy != NULL)
 			reapply_hard_limits(policy, false);
-			up_write(&policy->rwsem);
-		}
 	}
 }
 
@@ -860,11 +851,8 @@ void cpufreq_hardlimit_resume(void)
 
 	for_each_possible_cpu(cpu) {
 		policy = cpufreq_cpu_get_raw(cpu);
-		if (policy != NULL) {
-			down_write(&policy->rwsem);
+		if (policy != NULL)
 			reapply_hard_limits(policy, false);
-			up_write(&policy->rwsem);
-		}
 	}
 }
 #endif /*CONFIG_CPUFREQ_HARDLIMIT*/
@@ -952,7 +940,7 @@ static ssize_t store_hardlimit_max_screen_on(struct cpufreq_policy *policy, cons
 
 	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++)
 		if (table[i].frequency == new_hardlimit) {
-				down_write(&policy->rwsem);
+				policy->hlimit_max_screen_on = new_hardlimit;
 				reapply_hard_limits(policy, false);
 				return count;
 		}
