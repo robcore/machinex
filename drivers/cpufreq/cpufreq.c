@@ -1043,13 +1043,15 @@ static ssize_t show_cpuinfo_cur_freq(struct cpufreq_policy *policy,
  */
 static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 {
-	if (policy->policy == CPUFREQ_POLICY_POWERSAVE)
-		return sprintf(buf, "powersave\n");
-	else if (policy->policy == CPUFREQ_POLICY_PERFORMANCE)
-		return sprintf(buf, "performance\n");
-	else if (policy->governor)
-		return scnprintf(buf, CPUFREQ_NAME_PLEN, "%s\n",
-				policy->governor->name);
+	if (policy->governor) {
+		if (cpu_online(policy->cpu))
+			return scnprintf(buf, CPUFREQ_NAME_PLEN, "%s\n",
+					policy->governor->name);
+		else
+			return scnprintf(buf, CPUFREQ_NAME_PLEN, "%s\n",
+					policy->last_governor);
+	}
+	
 	return -EINVAL;
 }
 
@@ -1066,6 +1068,12 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	ret = sscanf(buf, "%15s", str_governor);
 	if (ret != 1)
 		return -EINVAL;
+
+	if (!cpu_online(policy->cpu) {
+			strncpy(policy->last_governor, str_governor,
+				CPUFREQ_NAME_LEN);
+		return count;
+	}
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 	if (cpufreq_parse_governor(str_governor,
