@@ -49,8 +49,8 @@ static struct delayed_work gearshaft;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 2000;
-static unsigned long fifthgear = 1100;
-static unsigned long reverse = 975;
+static unsigned long fifthgear = 1045;
+static unsigned long reverse = 965;
 static unsigned long ebrake = 650;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
