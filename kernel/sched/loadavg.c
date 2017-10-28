@@ -9,6 +9,10 @@
 #include <linux/export.h>
 
 #include "sched.h"
+unsigned int debug_enabled;
+mx_show_one(debug_enabled);
+mx_store_one_long(debug_enabled, 0, 1);
+MX_ATTR_RW(debug_enabled);
 
 unsigned long this_cpu_load(unsigned int cpu)
 {
@@ -24,6 +28,9 @@ static ssize_t show_cpu0_load(struct kobject *kobj,
 {
 	unsigned long tmp;
 
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
+
 	tmp = this_cpu_load(0);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -33,7 +40,8 @@ static ssize_t show_cpu1_load(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = this_cpu_load(1);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -43,7 +51,8 @@ static ssize_t show_cpu2_load(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = this_cpu_load(2);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -53,7 +62,8 @@ static ssize_t show_cpu3_load(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = this_cpu_load(3);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -97,7 +107,8 @@ static ssize_t show_avg_nr_running(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = avg_nr_running();
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -134,7 +145,8 @@ static ssize_t show_avg_cpu0_nr_running(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = avg_cpu_nr_running(0);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -144,7 +156,8 @@ static ssize_t show_avg_cpu1_nr_running(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = avg_cpu_nr_running(1);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -154,7 +167,8 @@ static ssize_t show_avg_cpu2_nr_running(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = avg_cpu_nr_running(2);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -164,7 +178,8 @@ static ssize_t show_avg_cpu3_nr_running(struct kobject *kobj,
 					char *buf)
 {
 	unsigned long tmp;
-
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
 	tmp = avg_cpu_nr_running(3);
 	return sprintf(buf, "%lu\n", tmp);
 }
@@ -175,6 +190,7 @@ MX_ATTR_RO(avg_cpu2_nr_running);
 MX_ATTR_RO(avg_cpu3_nr_running);
 
 static struct attribute *loadavg_attrs[] = {
+	&debug_enabled_attr.attr,
 	&cpu0_load_attr.attr,
 	&cpu1_load_attr.attr,
 	&cpu2_load_attr.attr,
