@@ -230,7 +230,7 @@ again:
 
 	if (air_to_fuel > boost_threshold) {
 		if (pistons < max_cpus_online &&
-			pistons >= min_cpus_online)
+			pistons >= min_cpus_online) {
 			inject_nos(false);
 			goto purge;
 		}
