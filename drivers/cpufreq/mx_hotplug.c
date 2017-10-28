@@ -160,7 +160,7 @@ void fuel_injector(void)
 		mutex_unlock(&mx_mutex);
 		return;
 	} else {
-		should_boost == true;
+		should_boost = true;
 		last_boost = ktime_get();
 		mutex_unlock(&mx_mutex);
 	}
