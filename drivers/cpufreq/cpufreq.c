@@ -995,8 +995,8 @@ static ssize_t store_hardlimit_min_screen_on(struct cpufreq_policy *policy, cons
 		if (table[i].frequency == new_hardlimit) {
 				down_write(&policy->rwsem);
 				policy->hlimit_min_screen_on = new_hardlimit;
-				up_write(&policy->rwsem);
 				reapply_hard_limits(policy, false);
+				up_write(&policy->rwsem);
 				return count;
 		}
 	return -EINVAL;
