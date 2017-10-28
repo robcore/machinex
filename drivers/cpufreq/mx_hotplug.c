@@ -212,7 +212,7 @@ again:
 		return 0;
 	}
 
-	mutex_lock(&mx_mutex))
+	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
 	pistons = num_online_cpus();
