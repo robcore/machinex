@@ -207,9 +207,10 @@ again:
 		spin_unlock_irqrestore(&timer_lock, flags);
 		mutex_unlock(&mx_mutex);
 		schedule();
-	} else
+	} else {
 		spin_unlock_irqrestore(&timer_lock, flags);
 		mutex_unlock(&mx_mutex);
+	}
 
 	if (kthread_should_stop())
 		return 0;
