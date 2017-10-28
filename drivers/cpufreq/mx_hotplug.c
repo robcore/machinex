@@ -308,6 +308,7 @@ static void ignition(struct work_struct *work)
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
 	mxget();
+	reset_wip();
 	transmission = create_singlethread_workqueue("tmission");
 	if (!transmission) {
 		pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
@@ -339,9 +340,9 @@ static void killswitch(struct work_struct *work)
 	mxput();
 	unregister_power_suspend(&mx_suspend_data);
 	cancel_delayed_work_sync(&gearshaft);
+	destroy_workqueue(transmission);
 	kthread_stop(mx_hp_engine);
 	put_task_struct(mx_hp_engine);
-	reset_wip();
 }
 
 static void mx_startstop(unsigned int status)
