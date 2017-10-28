@@ -186,10 +186,12 @@ static void hit_the_brakes(unsigned int nrcores)
 static void reset_wip(void)
 {
 	unsigned long flags;
+	mutex_lock(&mx_mutex);
 	spin_lock_irqsave(&timer_lock, flags);
 	if (wip)
 		wip = false;
 	spin_unlock_irqrestore(&timer_lock, flags);	
+	mutex_unlock(&mx_mutex);
 }
 
 static int __ref machinex_hotplug_engine(void *data)
