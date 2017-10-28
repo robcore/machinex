@@ -1049,7 +1049,7 @@ static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 		return sprintf(buf, "performance\n");
 	else if (policy->governor)
 		return scnprintf(buf, CPUFREQ_NAME_PLEN, "%s\n",
-				policy->governor->name);
+				policy->perm_governor);
 	return -EINVAL;
 }
 
@@ -1073,8 +1073,12 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 		return -EINVAL;
 
 	ret = cpufreq_set_policy(policy, &new_policy);
-	
-	return ret ? ret : count;
+
+	if (ret)
+		strncpy(policy->perm_governor, new_policy.governor->name,
+			CPUFREQ_NAME_LEN);
+
+	return count;
 }
 
 /**
@@ -1438,6 +1442,7 @@ __weak struct cpufreq_governor *cpufreq_default_governor(void)
 	return NULL;
 }
 
+static unsigned int boot_gov_count;
 static int cpufreq_init_policy(struct cpufreq_policy *policy)
 {
 	struct cpufreq_governor *gov = NULL;
@@ -1445,6 +1450,25 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 
+	if (boot_gov_count == NR_CPUS &&
+		strcmp(policy->perm_governor, policy->last_governor)) {
+		/* Update governor of new_policy to the governor if changed when hotplugged */
+		gov = find_governor(policy->perm_governor);
+		if (gov) {
+			pr_debug("Restoring governor %s for cpu %d\n",
+					policy->governor->name, policy->cpu);
+		} else {
+			gov = cpufreq_default_governor();
+			if (!gov)
+				return -ENODATA;
+		}
+
+		new_policy.governor = gov;
+
+		/* set default policy */
+		return cpufreq_set_policy(policy, &new_policy);
+	}
+	
 	/* Update governor of new_policy to the governor used before hotplug */
 	gov = find_governor(policy->last_governor);
 	if (gov) {
@@ -1458,6 +1482,11 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 
 	new_policy.governor = gov;
 
+	if (boot_gov_count < NR_CPUS) {
+		strncpy(policy->perm_governor, new_policy.governor->name,
+			CPUFREQ_NAME_LEN);
+		boot_gov_count++;
+	}
 	/* set default policy */
 	return cpufreq_set_policy(policy, &new_policy);
 }
@@ -2955,4 +2984,3 @@ static int __init cpufreq_core_init(void)
 	return 0;
 }
 core_initcall(cpufreq_core_init);
-

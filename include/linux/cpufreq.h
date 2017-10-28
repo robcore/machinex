@@ -94,6 +94,7 @@ struct cpufreq_policy {
 	struct cpufreq_governor	*governor; /* see below */
 	void			*governor_data;
 	char			last_governor[CPUFREQ_NAME_LEN]; /* last governor used */
+	char perm_governor[CPUFREQ_NAME_LEN];
 
 	struct work_struct	update; /* if update_policy() needs to be
 					 * called, but you're in IRQ context */
