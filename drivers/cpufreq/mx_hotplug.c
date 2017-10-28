@@ -160,7 +160,7 @@ void fuel_injector(void)
 		should_boost = true;
 		last_boost = ktime_get();
 	}
-		mutex_unlock(&mx_mutex)
+		mutex_unlock(&mx_mutex);
 }
 
 static void step_on_it(unsigned int nrcores)
