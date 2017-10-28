@@ -38,6 +38,7 @@
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
 #define MX_SAMPLE_RATE MXMS(100UL)
 #define MX_Q_RATE MXMS(100UL)
+#define BOOST_LENGTH(250UL);
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_MUTEX(mx_mutex);
@@ -61,7 +62,10 @@ static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
 unsigned int pistons;
 static ktime_t last_fuelcheck;
+static unsigned long boost_timeout = BOOST_LENGTH;
+static ktime_t last_boost;
 static bool wip;
+static bool should_boost;
 
 static unsigned int mxread(void)
 {
@@ -142,6 +146,26 @@ void inject_nos(bool from_input)
 	
 }
 
+void fuel_injector(void)
+{
+	ktime_t delta;
+
+	if (!mxread() || hotplug_suspended)
+		return;
+
+	mutex_lock(&mx_mutex);
+	delta = ktime_sub(ktime_get(), last_boost);
+	if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0) {
+		should_boost = false;
+		mutex_unlock(&mx_mutex);
+		return;
+	} else {
+		should_boost == true;
+		last_boost = ktime_get();
+		mutex_unlock(&mx_mutex);
+	}
+}
+
 static void step_on_it(unsigned int nrcores)
 {
 	unsigned int cpu;
@@ -218,15 +242,17 @@ again:
 	pistons = num_online_cpus();
 	air_to_fuel = avg_nr_running();
 
-	if (air_to_fuel > boost_threshold) {
-		if (pistons < max_cpus_online &&
-			pistons >= min_cpus_online) {
+	if (should_boost) {
+		if (pistons < cpus_boosted) {
+			inject_nos(true);
+			goto purge;
+		}
+	} else if (air_to_fuel > boost_threshold) {
+		if (pistons < max_cpus_online) {
 			inject_nos(false);
 			goto purge;
 		}
-	}
-
-	if (air_to_fuel > fifthgear) {
+	} else if (air_to_fuel > fifthgear) {
 		if (pistons < max_cpus_online)
 			step_on_it(pistons + 1);
 	} else if (air_to_fuel < reverse && air_to_fuel > ebrake) {
