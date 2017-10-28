@@ -41,6 +41,7 @@
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_SPINLOCK(timer_lock);
+static DEFINE_MUTEX(mx_mutex);
 
 static bool hotplug_suspended;
 
@@ -59,7 +60,6 @@ static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
 unsigned int pistons;
-unsigned int target_pistons;
 static ktime_t last_fuelcheck;
 static bool wip;
 
@@ -142,18 +142,17 @@ static void inject_nos(bool from_input)
 	
 }
 
-static void step_on_it(void)
+static void step_on_it(unsigned int nrcores)
 {
 	unsigned int cpu;
 
 	if (!mxread() || hotplug_suspended)
 		return;
 
-	target_pistons = pistons + 1;
+	sanitize_min_max(nrcores, min_cpus_online, max_cpus_online);
 	for_each_nonboot_offline_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu) ||
-			num_online_cpus() == target_pistons ||
-			num_online_cpus() == max_cpus_online)
+			num_online_cpus() == nrcores)
 			break;
 		if (cpu_online(cpu) ||
 			!is_cpu_allowed(cpu) ||
@@ -163,18 +162,17 @@ static void step_on_it(void)
 	}
 }
 
-static void hit_the_brakes(void)
+static void hit_the_brakes(unsigned int nrcores)
 {
 	unsigned int cpu;
 
 	if (!mxread() || hotplug_suspended)
 		return;
 
-	target_pistons = pistons - 1;
+	sanitize_min_max(nrcores, min_cpus_online, max_cpus_online);
 	for_each_nonboot_online_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu) ||
-			num_online_cpus() == target_pistons ||
-			num_online_cpus() == min_cpus_online)
+			num_online_cpus() == nrcores)
 			break;
 		if (!cpu_online(cpu) ||
 			!is_cpu_allowed(cpu) ||
@@ -201,18 +199,22 @@ static int __ref machinex_hotplug_engine(void *data)
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
+	mutex_lock(&mx_mutex);
 	spin_lock_irqsave(&timer_lock, flags);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0 ||
 		!wip) {
 		spin_unlock_irqrestore(&timer_lock, flags);
+		mutex_unlock(&mx_mutex);
 		schedule();
 	} else
 		spin_unlock_irqrestore(&timer_lock, flags);
+		mutex_unlock(&mx_mutex);
 
 	if (kthread_should_stop())
 		return 0;
 
+	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
 	pistons = num_online_cpus();
@@ -226,18 +228,18 @@ again:
 		}
 
 		if (air_to_fuel > upstage)
-			step_on_it();
+			step_on_it(pistons + 1);
 	} else if (pistons > min_cpus_online &&
 		pistons <= max_cpus_online) {
 		if (air_to_fuel < downstage)
-			hit_the_brakes();
+			hit_the_brakes(pistons - 1);
 	}
 
 purge:
 	spin_lock_irqsave(&timer_lock, flags);
 	wip = false;
 	spin_unlock_irqrestore(&timer_lock, flags);
-
+	mutex_unlock(&mx_mutex);
 	goto again;
 }
 
@@ -248,14 +250,19 @@ static void gearshift(struct work_struct *work)
 		!mxread())
 		return;
 
+	if (!mutex_trylock(&mx_mutex))
+		goto out;
+
 	spin_lock_irqsave(&timer_lock, flags);
 	if (wip) {
 		spin_unlock_irqrestore(&timer_lock, flags);
+		mutex_unlock(&mx_mutex);
 		goto out;
 	}
 	last_fuelcheck = ktime_get();
 	wip = true;
 	spin_unlock_irqrestore(&timer_lock, flags);
+	mutex_unlock(&mx_mutex);
 
 	wake_up_process(mx_hp_engine);
 
@@ -275,6 +282,7 @@ static void mx_hotplug_resume(struct power_suspend *h)
 {
 	hotplug_suspended = false;
 	reset_wip();
+	wake_up_process(mx_hp_engine);
 	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
 }
 
@@ -298,6 +306,7 @@ static void ignition(struct work_struct *work)
 	kthread_bind(mx_hp_engine, 0);
 	sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
 	get_task_struct(mx_hp_engine);
+	wake_up_process(mx_hp_engine);
 	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
 	register_power_suspend(&mx_suspend_data);
 	return;
