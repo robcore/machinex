@@ -57,9 +57,9 @@ static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
-unsigned int pistons;
-static ktime_t last_fuelcheck;
+unsigned int cylinders;
 static unsigned long boost_timeout = BOOST_LENGTH;
+static ktime_t last_fuelcheck;
 static ktime_t last_boost;
 static bool wip;
 static bool should_boost;
@@ -231,7 +231,7 @@ again:
 	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
-	pistons = num_online_cpus();
+	cylinders = num_online_cpus();
 	air_to_fuel = avg_nr_running();
 	delta = ktime_sub(ktime_get(), last_boost);
 
@@ -239,25 +239,25 @@ again:
 		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
 			goto purge;
 		else {
-			if (pistons < cpus_boosted)
+			if (cylinders < cpus_boosted)
 				inject_nos(true);
 			should_boost = false;
 			last_boost = ktime_get();
 			goto purge;
 		}
 	} else if (air_to_fuel > boost_threshold) {
-		if (pistons < max_cpus_online) {
+		if (cylinders < max_cpus_online) {
 			inject_nos(false);
 			goto purge;
 		}
 	} else if (air_to_fuel > fifthgear) {
-		if (pistons < max_cpus_online)
-			step_on_it(pistons + 1);
+		if (cylinders < max_cpus_online)
+			step_on_it(cylinders + 1);
 	} else if (air_to_fuel < reverse && air_to_fuel > ebrake) {
-		if (pistons > min_cpus_online)
-			hit_the_brakes(pistons - 1);
+		if (cylinders > min_cpus_online)
+			hit_the_brakes(cylinders - 1);
 	} else if (air_to_fuel < ebrake) {
-		if (pistons > min_cpus_online)
+		if (cylinders > min_cpus_online)
 			hit_the_brakes(min_cpus_online);
 	}
 purge:
@@ -266,7 +266,7 @@ purge:
 	goto again;
 }
 
-static void gearshift(struct work_struct *work)
+static void shift_gears(struct work_struct *work)
 {
 	unsigned long flags;
 	if (!mxread())
@@ -317,7 +317,7 @@ static struct power_suspend mx_suspend_data =
 	.resume = mx_hotplug_resume,
 };
 
-static void mx_startstop(unsigned int status)
+static void ignition(unsigned int status)
 {
 	if (status) {
 		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
@@ -330,13 +330,12 @@ static void mx_startstop(unsigned int status)
 			return;
 		}
 
-		INIT_DELAYED_WORK(&gearshaft, gearshift);
+		INIT_DELAYED_WORK(&gearshaft, shift_gears);
 
 		mx_hp_engine = kthread_create(machinex_hotplug_engine,
 						  NULL, "machinex_hp");
 		if (IS_ERR(mx_hp_engine)) {
 			pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
-	//		return PTR_ERR(mx_hp_engine);
 			mxput();
 			return;
 		}
@@ -380,7 +379,7 @@ static ssize_t store_mx_hotplug_active(struct kobject *kobj,
 	if (input == tmpread)
 		return count;
 
-	mx_startstop(input);
+	ignition(input);
 
 	return count;
 }
