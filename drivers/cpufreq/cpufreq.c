@@ -1069,7 +1069,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (!cpu_online(policy->cpu) {
+	if (!cpu_online(policy->cpu)) {
 			strncpy(policy->last_governor, str_governor,
 				CPUFREQ_NAME_LEN);
 		return count;
