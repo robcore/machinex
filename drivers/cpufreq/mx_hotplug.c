@@ -47,10 +47,10 @@ static struct workqueue_struct *transmission;
 static struct delayed_work gearbox;
 static struct task_struct *mx_hp_engine;
 
-static unsigned long boost_threshold = 1651ul;
-static unsigned long thirdgear = 845ul;
-static unsigned long secondgear = 759ul;
-static unsigned long firstgear = 595ul;
+static unsigned long boost_threshold = 1551ul;
+static unsigned long thirdgear = 805ul;
+static unsigned long secondgear = 709ul;
+static unsigned long firstgear = 505ul;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
