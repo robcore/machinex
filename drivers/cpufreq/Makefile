@@ -84,6 +84,7 @@ obj-$(CONFIG_MX_HOTPLUG)		+= mx_hotplug.o
 obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
 obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
 CFLAGS_lazyplug.o			+= -finline-functions
+obj-$(CONFIG_USERSPACE_HOTPLUG) += userspace_hotplug.o
 
 obj-$(CONFIG_GENERIC_CPUFREQ_CPU0)	+= cpufreq-cpu0.o
 

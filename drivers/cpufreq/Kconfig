@@ -1315,6 +1315,12 @@ config AUTOSMP
 config MX_HOTPLUG
 	bool "Select mx_hotplug"
 	help
-	  A load/request based hotplug driver.
+	  A request based hotplug driver.
+
+config USERSPACE_HOTPLUG
+	bool "Select userspace hotplug"
+	help
+	  A very simple, manual userspace hotplug driver.
+
 endif
 endmenu
