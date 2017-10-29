@@ -323,7 +323,7 @@ static void ignition(unsigned int status)
 		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
 		mxget();
-		transmission = create_singlethread_workqueue("tmission");
+		transmission = create_singlethread_workqueue("transmission_q");
 		if (!transmission) {
 			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
 			mxput();
