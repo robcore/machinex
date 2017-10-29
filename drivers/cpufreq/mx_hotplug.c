@@ -45,13 +45,13 @@ static DEFINE_MUTEX(mx_mutex);
 
 static bool hotplug_suspended;
 static struct workqueue_struct *transmission;
-static struct delayed_work gearshaft;
+static struct delayed_work gearbox;
 static struct task_struct *mx_hp_engine;
 
-static unsigned long boost_threshold = 2000;
-static unsigned long fifthgear = 1045;
-static unsigned long reverse = 965;
-static unsigned long ebrake = 650;
+static unsigned long boost_threshold = 1899ul;
+static unsigned long thirdgear = 1040ul;
+static unsigned long secondgear = 960ul;
+static unsigned long firstgear = 650ul;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -61,7 +61,7 @@ unsigned int cylinders;
 static unsigned long boost_timeout = BOOST_LENGTH;
 static ktime_t last_fuelcheck;
 static ktime_t last_boost;
-static bool wip;
+static bool driving;
 static bool should_boost;
 
 static unsigned int mxread(void)
@@ -199,10 +199,10 @@ static void hit_the_brakes(unsigned int nrcores)
 	}
 }
 
-static void reset_wip(void)
+static void park_brake(void)
 {
 	mutex_lock(&mx_mutex);
-	wip = false;
+	driving = false;
 	mutex_unlock(&mx_mutex);
 }
 
@@ -217,7 +217,7 @@ again:
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0 ||
-		!wip || hotplug_suspended) {
+		!driving || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
 	} else
@@ -250,18 +250,18 @@ again:
 			inject_nos(false);
 			goto purge;
 		}
-	} else if (air_to_fuel > fifthgear) {
+	} else if (air_to_fuel > thirdgear) {
 		if (cylinders < max_cpus_online)
 			step_on_it(cylinders + 1);
-	} else if (air_to_fuel < reverse && air_to_fuel > ebrake) {
+	} else if (air_to_fuel < secondgear && air_to_fuel > firstgear) {
 		if (cylinders > min_cpus_online)
 			hit_the_brakes(cylinders - 1);
-	} else if (air_to_fuel < ebrake) {
+	} else if (air_to_fuel < firstgear) {
 		if (cylinders > min_cpus_online)
 			hit_the_brakes(min_cpus_online);
 	}
 purge:
-	wip = false;
+	driving = false;
 	mutex_unlock(&mx_mutex);
 	goto again;
 }
@@ -280,17 +280,17 @@ static void shift_gears(struct work_struct *work)
 		return;
 	}
 
-	if (wip) {
+	if (driving) {
 		mutex_unlock(&mx_mutex);
 		goto out;
 	}
 
 	last_fuelcheck = ktime_get();
-	wip = true;
+	driving = true;
 	mutex_unlock(&mx_mutex);
 	wake_up_process(mx_hp_engine);
 out:
-	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
+	queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 }
 	
 
@@ -299,7 +299,7 @@ static void mx_hotplug_suspend(struct power_suspend *h)
 	mutex_lock(&mx_mutex);
 	hotplug_suspended = true;
 	mutex_unlock(&mx_mutex);
-	cancel_delayed_work_sync(&gearshaft);
+	cancel_delayed_work_sync(&gearbox);
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
@@ -307,8 +307,8 @@ static void mx_hotplug_resume(struct power_suspend *h)
 	mutex_lock(&mx_mutex);
 	hotplug_suspended = false;
 	mutex_unlock(&mx_mutex);
-	reset_wip();
-	queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
+	park_brake();
+	queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 }
 
 static struct power_suspend mx_suspend_data =
@@ -330,7 +330,7 @@ static void ignition(unsigned int status)
 			return;
 		}
 
-		INIT_DELAYED_WORK(&gearshaft, shift_gears);
+		INIT_DELAYED_WORK(&gearbox, shift_gears);
 
 		mx_hp_engine = kthread_create(machinex_hotplug_engine,
 						  NULL, "machinex_hp");
@@ -343,16 +343,16 @@ static void ignition(unsigned int status)
 		sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
 		get_task_struct(mx_hp_engine);
 		wake_up_process(mx_hp_engine);
-		queue_delayed_work_on(0, transmission, &gearshaft, sampling_rate);
+		queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 		register_power_suspend(&mx_suspend_data);
 	} else {
 		mxput();
 		unregister_power_suspend(&mx_suspend_data);
-		cancel_delayed_work_sync(&gearshaft);
+		cancel_delayed_work_sync(&gearbox);
 		destroy_workqueue(transmission);
 		kthread_stop(mx_hp_engine);
 		put_task_struct(mx_hp_engine);
-		reset_wip();
+		park_brake();
 	}
 }
 
