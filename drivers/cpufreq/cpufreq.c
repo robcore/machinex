@@ -1479,22 +1479,42 @@ __weak struct cpufreq_governor *cpufreq_default_governor(void)
 	return NULL;
 }
 
+int mx_update_policy(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
+	struct cpufreq_governor *gov = NULL;
+	struct cpufreq_policy new_policy;
+	unsigned int ret = -EINVAL;
+
+	policy = cpufreq_cpu_get(cpu);
+
+	cpus_read_lock();
+	if (cpu_online(policy->cpu)) {
+		down_write(&policy->rwsem);
+		gov = get_mx_governor(policy->cpu);
+		memcpy(&new_policy, policy, sizeof(*policy));
+		new_policy.governor = gov;
+		/* set default policy */
+		ret = cpufreq_set_policy(policy, &new_policy);
+		up_write(&policy->rwsem);
+	}
+	cpus_read_unlock();
+	cpufreq_cpu_put(policy);
+	return ret;
+}
+
 static int cpufreq_init_policy(struct cpufreq_policy *policy)
 {
 	struct cpufreq_governor *gov = NULL;
 	struct cpufreq_policy new_policy;
 
+	gov = get_mx_governor(policy->cpu);
 
-
-	if (mx_governor_override) {
-		gov = get_mx_governor(policy->cpu);
-
-		memcpy(&new_policy, policy, sizeof(*policy));
-		new_policy.governor = gov;
-		/* set default policy */
-		return cpufreq_set_policy(policy, &new_policy);
-	}
-
+	memcpy(&new_policy, policy, sizeof(*policy));
+	new_policy.governor = gov;
+	/* set default policy */
+	return cpufreq_set_policy(policy, &new_policy);
+#if 0
 	/* Update governor of new_policy to the governor used before hotplug */
 	gov = find_governor(policy->last_governor);
 	if (gov) {
@@ -1510,6 +1530,7 @@ static int cpufreq_init_policy(struct cpufreq_policy *policy)
 
 	/* set default policy */
 	return cpufreq_set_policy(policy, &new_policy);
+#endif
 }
 
 static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)

@@ -123,7 +123,7 @@ store_one_cpu0_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu0_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu0_clamp(sync_freq, 0, 1890000);
 store_one_cpu0_clamp(up_threshold_any_cpu_freq, 0, 1890000);
-store_one_cpu0_clamp(mx_cpufreq_governor, 0, 7);
+store_cpu0_governor(mx_cpufreq_governor, 0, 7);
 
 store_one_cpu1_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu1_clamp(dbs_up_threshold, 1, 99);
@@ -140,7 +140,7 @@ store_one_cpu1_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu1_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu1_clamp(sync_freq, 0, 1890000);
 store_one_cpu1_clamp(up_threshold_any_cpu_freq, 0, 1890000);
-store_one_cpu1_clamp(mx_cpufreq_governor, 0, 7);
+store_cpu1_governor(mx_cpufreq_governor, 0, 7);
 
 store_one_cpu2_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu2_clamp(dbs_up_threshold, 1, 99);
@@ -157,7 +157,7 @@ store_one_cpu2_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu2_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu2_clamp(sync_freq, 0, 1890000);
 store_one_cpu2_clamp(up_threshold_any_cpu_freq, 0, 1890000);
-store_one_cpu2_clamp(mx_cpufreq_governor, 0, 7);
+store_cpu2_governor(mx_cpufreq_governor, 0, 7);
 
 store_one_cpu3_clamp(dbs_cpu_sampling_rate, 1000, 10000);
 store_one_cpu3_clamp(dbs_up_threshold, 1, 99);
@@ -174,7 +174,7 @@ store_one_cpu3_clamp(two_phase_freq, 0, 1890000);
 store_one_cpu3_clamp(up_threshold_any_cpu_load, 1, 80);
 store_one_cpu3_clamp(sync_freq, 0, 1890000);
 store_one_cpu3_clamp(up_threshold_any_cpu_freq, 0, 1890000);
-store_one_cpu3_clamp(mx_cpufreq_governor, 0, 7);
+store_cpu3_governor(mx_cpufreq_governor, 0, 7);
 
 #define MX_CPU0_ATTR_RW(_name) \
 static struct kobj_attribute cpu0_##_name##_attr = \

@@ -947,6 +947,97 @@ void intelli_boost(void);
 #ifdef CONFIG_AUTOSMP
 void autosmp_input_boost(void);
 #endif
+
+extern int mx_update_policy(unsigned int cpu);
+
+#define store_cpu0_governor(name, min, max)		\
+static ssize_t store_cpu0_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[0])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[0] = input;				\
+	mx_update_policy(0);		\
+	return count;				\
+}
+
+#define store_cpu1_governor(name, min, max)		\
+static ssize_t store_cpu1_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[1])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[1] = input;				\
+	mx_update_policy(1);		\
+	return count;				\
+}
+
+#define store_cpu2_governor(name, min, max)		\
+static ssize_t store_cpu2_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[2])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[2] = input;				\
+	mx_update_policy(2);		\
+	return count;				\
+}
+
+#define store_cpu3_governor(name, min, max)		\
+static ssize_t store_cpu3_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name[3])			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name[3] = input;				\
+	mx_update_policy(3);		\
+	return count;				\
+}
+
 /* Hook in cpufreq for scaling min./max. */
 void update_scaling_limits(unsigned int cpu, unsigned int freq_min, unsigned int freq_max);
 #endif /* CONFIG_CPUFREQ_HARDLIMIT*/
