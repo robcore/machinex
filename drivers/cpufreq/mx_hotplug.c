@@ -366,16 +366,14 @@ static ssize_t store_mx_hotplug_active(struct kobject *kobj,
 {
 	int ret;
 	int input;
-	unsigned int tmpread;
 
 	ret = sscanf(buf, "%d", &input);
 	if (ret < 0)
 		return ret;
 
 	sanitize_min_max(input, 0, 1);
-	tmpread = mxread();
 
-	if (input == tmpread)
+	if (input == mxread())
 		return count;
 
 	ignition(input);
