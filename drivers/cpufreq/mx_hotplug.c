@@ -50,7 +50,7 @@ static struct task_struct *mx_hp_engine;
 static unsigned long boost_threshold = 1651ul;
 static unsigned long thirdgear = 845ul;
 static unsigned long secondgear = 759ul;
-static unsigned long firstgear = 615ul;
+static unsigned long firstgear = 595ul;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -144,8 +144,6 @@ void inject_nos(bool from_input)
 
 void fuel_injector(void)
 {
-	ktime_t delta;
-
 	if (!mxread() || hotplug_suspended)
 		return;
 
