@@ -1095,30 +1095,6 @@ static ssize_t show_scaling_governor(struct cpufreq_policy *policy, char *buf)
 }
 
 /**
- * store_scaling_governor - store policy for the specified CPU
- */
-static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
-					const char *buf, size_t count)
-{
-	int ret;
-	char	str_governor[16];
-	struct cpufreq_policy new_policy;
-
-	ret = sscanf(buf, "%15s", str_governor);
-	if (ret != 1)
-		return -EINVAL;
-
-	memcpy(&new_policy, policy, sizeof(*policy));
-	if (cpufreq_parse_governor(str_governor,
-						&new_policy.governor))
-		return -EINVAL;
-
-	ret = cpufreq_set_policy(policy, &new_policy);
-	
-	return ret ? ret : count;
-}
-
-/**
  * show_scaling_driver - show the cpufreq driver currently loaded
  */
 static ssize_t show_scaling_driver(struct cpufreq_policy *policy, char *buf)
@@ -1308,7 +1284,7 @@ cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
 cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
-cpufreq_freq_attr_rw(scaling_governor);
+cpufreq_freq_attr_ro(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 define_one_global_rw(vdd_levels);
