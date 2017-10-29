@@ -19,7 +19,6 @@
 /*
  * MX Hotplug - A hotplugging driver that plugs cores based on
  * nr_running requests and load averages.
- * Thanks to Thalamus and Steve Loebrich for the inspiration!
  */
 
 #include <linux/kernel.h>
@@ -49,9 +48,9 @@ static struct delayed_work gearbox;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 1899ul;
-static unsigned long thirdgear = 1040ul;
-static unsigned long secondgear = 960ul;
-static unsigned long firstgear = 650ul;
+static unsigned long thirdgear = 1015ul;
+static unsigned long secondgear = 9150ul;
+static unsigned long firstgear = 630ul;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
@@ -61,7 +60,7 @@ unsigned int cylinders;
 static unsigned long boost_timeout = BOOST_LENGTH;
 static ktime_t last_fuelcheck;
 static ktime_t last_boost;
-static bool driving;
+static bool shifting_gears;
 static bool should_boost;
 
 static unsigned int mxread(void)
@@ -202,7 +201,7 @@ static void hit_the_brakes(unsigned int nrcores)
 static void park_brake(void)
 {
 	mutex_lock(&mx_mutex);
-	driving = false;
+	shifting_gears = false;
 	mutex_unlock(&mx_mutex);
 }
 
@@ -217,7 +216,7 @@ again:
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0 ||
-		!driving || hotplug_suspended) {
+		!shifting_gears || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
 	} else
@@ -261,7 +260,7 @@ again:
 			hit_the_brakes(min_cpus_online);
 	}
 purge:
-	driving = false;
+	shifting_gears = false;
 	mutex_unlock(&mx_mutex);
 	goto again;
 }
@@ -280,13 +279,13 @@ static void shift_gears(struct work_struct *work)
 		return;
 	}
 
-	if (driving) {
+	if (shifting_gears) {
 		mutex_unlock(&mx_mutex);
 		goto out;
 	}
 
 	last_fuelcheck = ktime_get();
-	driving = true;
+	shifting_gears = true;
 	mutex_unlock(&mx_mutex);
 	wake_up_process(mx_hp_engine);
 out:

@@ -10,6 +10,7 @@
 #include <linux/sysfs_helpers.h>
 
 static cpumask_t uplug_mask;
+static int uspace_cpu[NR_CPUS] = {1, 1, 1, 1};
 static unsigned int uplug_enabled;
 
 static ssize_t uplug_list_show(struct kobject *kobj,
@@ -55,11 +56,13 @@ static ssize_t cpu0_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	if (val) {
+	uspace_cpu[cpu] = val;
+
+	if (uspace_cpu[cpu]) {
 		if (!cpu_online(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!val) {
+	} else if (!uspace_cpu[cpu]) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
@@ -94,11 +97,13 @@ static ssize_t cpu1_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	if (val) {
+	uspace_cpu[cpu] = val;
+
+	if (uspace_cpu[cpu]) {
 		if (!cpu_online(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!val) {
+	} else if (!uspace_cpu[cpu]) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
@@ -133,15 +138,18 @@ static ssize_t cpu2_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	if (val) {
+	uspace_cpu[cpu] = val;
+
+	if (uspace_cpu[cpu]) {
 		if (!cpu_online(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!val) {
+	} else if (!uspace_cpu[cpu]) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
 	}
+
 	return count;
 }
 
@@ -171,11 +179,13 @@ static ssize_t cpu3_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	if (val) {
+	uspace_cpu[cpu] = val;
+
+	if (uspace_cpu[cpu]) {
 		if (!cpu_online(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!val) {
+	} else if (!uspace_cpu[cpu]) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
