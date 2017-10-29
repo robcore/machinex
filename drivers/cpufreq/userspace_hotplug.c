@@ -216,6 +216,10 @@ static const struct attribute_group cpumask_uplug_attr_group =
 	.name = "cpumask_uplug",
 };
 
+static void uplug_start_stop(unsigned int enabled)
+{
+
+}
 static int __init cpumask_uplug_init(void)
 {
 	int sysfs_result;
