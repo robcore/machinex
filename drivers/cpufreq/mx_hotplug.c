@@ -139,7 +139,6 @@ void inject_nos(bool from_input)
 		cpu_up(cpu);
 		}
 	}
-	
 }
 
 void fuel_injector(void)

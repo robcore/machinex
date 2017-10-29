@@ -56,6 +56,8 @@ static ssize_t store_uplug_enabled(struct kobject *kobj,
 	if (val == uplug_enabled)
 		return count;
 
+	uplug_enabled = val;
+
 	uplug_start_stop(uplug_enabled);
 
 	return count;
