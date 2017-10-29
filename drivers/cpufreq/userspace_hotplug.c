@@ -10,8 +10,10 @@
 #include <linux/sysfs_helpers.h>
 
 static cpumask_t uplug_mask;
-static int uspace_cpu[NR_CPUS] = {1, 1, 1, 1};
 static unsigned int uplug_enabled;
+
+mx_show_one(uplug_enabled);
+store_one_clamp(uplug_enabled);
 
 static ssize_t uplug_list_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -19,70 +21,10 @@ static ssize_t uplug_list_show(struct kobject *kobj,
 	return cpumap_print_to_pagebuf(true, buf, &uplug_mask);
 }
 
-static struct kobj_attribute uplug_list_attribute =
-	__ATTR(uplug_list, 0444,
-		uplug_list_show,
-		NULL);
-
 static ssize_t uplug_mask_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return cpumap_print_to_pagebuf(false, buf, &uplug_mask);
-}
-
-static struct kobj_attribute uplug_mask_attribute =
-	__ATTR(uplug_mask, 0444,
-		uplug_mask_show,
-		NULL);
-
-static ssize_t cpu0_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-		unsigned int temp;
-
-		temp = cpumask_test_cpu(0, &uplug_mask);
-        return sprintf(buf, "%u\n", temp);
-}
-
-static ssize_t cpu0_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int val, cpu = 0;
-
-	sscanf(buf, "%u\n", &val);
-
-	sanitize_min_max(val, 0, 1);
-
-	if (val == cpumask_test_cpu(cpu, &uplug_mask))
-		return count;
-
-	uspace_cpu[cpu] = val;
-
-	if (uspace_cpu[cpu]) {
-		if (!cpu_online(cpu))
-			cpu_up(cpu);
-		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!uspace_cpu[cpu]) {
-		if (cpu_online(cpu))
-			cpu_down(cpu);
-		cpumask_clear_cpu(cpu, &uplug_mask);
-	}
-
-	return count;
-}
-
-static struct kobj_attribute cpu0_attribute =
-	__ATTR(cpu0, 0644,
-		cpu0_show,
-		cpu0_store);
-
-static ssize_t cpu1_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-		unsigned int temp;
-
-		temp = cpumask_test_cpu(1, &uplug_mask);
-        return sprintf(buf, "%u\n", temp);
 }
 
 static ssize_t cpu1_store(struct kobject *kobj,
@@ -97,25 +39,22 @@ static ssize_t cpu1_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	uspace_cpu[cpu] = val;
-
-	if (uspace_cpu[cpu]) {
-		if (!cpu_online(cpu))
+	if (val) {
+		if (!cpu_online(cpu) && uplug_enabled &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!uspace_cpu[cpu]) {
-		if (cpu_online(cpu))
+	} else if (!val) {
+		if (cpu_online(cpu) && uplug_enabled &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
 	}
 
 	return count;
 }
-
-static struct kobj_attribute cpu1_attribute =
-	__ATTR(cpu1, 0644,
-		cpu1_show,
-		cpu1_store);
 
 static ssize_t cpu2_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -138,25 +77,22 @@ static ssize_t cpu2_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	uspace_cpu[cpu] = val;
-
-	if (uspace_cpu[cpu]) {
-		if (!cpu_online(cpu))
+	if (val) {
+		if (!cpu_online(cpu) && uplug_enabled &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!uspace_cpu[cpu]) {
-		if (cpu_online(cpu))
+	} else if (!val) {
+		if (cpu_online(cpu) && uplug_enabled &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
 	}
 
 	return count;
 }
-
-static struct kobj_attribute cpu2_attribute =
-	__ATTR(cpu2, 0644,
-		cpu2_show,
-		cpu2_store);
 
 static ssize_t cpu3_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -179,14 +115,16 @@ static ssize_t cpu3_store(struct kobject *kobj,
 	if (val == cpumask_test_cpu(cpu, &uplug_mask))
 		return count;
 
-	uspace_cpu[cpu] = val;
-
-	if (uspace_cpu[cpu]) {
-		if (!cpu_online(cpu))
+	if (val) {
+		if (!cpu_online(cpu) && uplug_enabled &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
 			cpu_up(cpu);
 		cpumask_set_cpu(cpu, &uplug_mask);
-	} else if (!uspace_cpu[cpu]) {
-		if (cpu_online(cpu))
+	} else if (!val) {
+		if (cpu_online(cpu) && uplug_enabled &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
 			cpu_down(cpu);
 		cpumask_clear_cpu(cpu, &uplug_mask);
 	}
@@ -194,19 +132,21 @@ static ssize_t cpu3_store(struct kobject *kobj,
 	return count;
 }
 
-static struct kobj_attribute cpu3_attribute =
-	__ATTR(cpu3, 0644,
-		cpu3_show,
-		cpu3_store);
+MX_ATTR_RW(uplug_enabled);
+MX_ATTR_RO(uplug_list);
+MX_ATTR_RO(uplug_mask);
+MX_ATTR_RW(cpu1);
+MX_ATTR_RW(cpu2);
+MX_ATTR_RW(cpu3);
 
 static struct attribute *cpumask_uplug_attrs[] =
 {
-	&uplug_list_attribute.attr,
-	&uplug_mask_attribute.attr,
-	&cpu0_attribute.attr,
-	&cpu1_attribute.attr,
-	&cpu2_attribute.attr,
-	&cpu3_attribute.attr,
+	&uplug_enabled_attr.attr,
+	&uplug_list_attr.attr,
+	&uplug_mask_attr.attr,
+	&cpu1_attr.attr,
+	&cpu2_attr.attr,
+	&cpu3_attr.attr,
 	NULL,
 };
 
@@ -218,15 +158,39 @@ static const struct attribute_group cpumask_uplug_attr_group =
 
 static void uplug_start_stop(unsigned int enabled)
 {
-
+	unsigned int cpu;
+	if (enabled) {
+		for_each_nonboot_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (cpumask_test_cpu(cpu, &uplug_mask) &&
+				!cpu_online(cpu) &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
+				cpu_up(cpu);
+			else if (!cpumask_test_cpu(cpu, &uplug_mask) &&
+				cpu_online(cpu) &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
+				cpu_down(cpu);
+		}
+	} else {
+		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu))
+				break;
+			if (!cpu_online(cpu) &&
+				!thermal_core_controlled(cpu) &&
+				cpu_allowed(cpu))
+				cpu_up(cpu)
+		}
+	}
 }
 static int __init cpumask_uplug_init(void)
 {
 	int sysfs_result;
 
 	cpumask_copy(&uplug_mask,
-			&__cpu_possible_mask);
-
+		&__cpu_nonboot_mask);
 	sysfs_result = sysfs_create_group(mx_kobj,
 		&cpumask_uplug_attr_group);
 
