@@ -206,7 +206,7 @@ static int __init cpumask_uplug_init(void)
 
 	cpumask_copy(&uplug_mask,
 		&__cpu_nonboot_mask);
-	sysfs_result = sysfs_create_group(mx_kobj,
+	sysfs_result = sysfs_create_group(kernel_kobj,
 		&cpumask_uplug_attr_group);
 
 	if (sysfs_result) {
