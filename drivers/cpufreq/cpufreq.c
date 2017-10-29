@@ -1216,13 +1216,6 @@ static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
  */
 static ssize_t show_bios_limit(struct cpufreq_policy *policy, char *buf)
 {
-	unsigned int limit;
-	int ret;
-	if (cpufreq_driver->bios_limit) {
-		ret = cpufreq_driver->bios_limit(policy->cpu, &limit);
-		if (!ret)
-			return sprintf(buf, "%u\n", limit);
-	}
 	return sprintf(buf, "%u\n", policy->cpuinfo.max_freq);
 }
 
@@ -1482,7 +1475,6 @@ __weak struct cpufreq_governor *cpufreq_default_governor(void)
 int mx_update_policy(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	struct cpufreq_governor *gov = NULL;
 	struct cpufreq_policy new_policy;
 	unsigned int ret = -ENOMEM;
 
@@ -1493,10 +1485,8 @@ int mx_update_policy(unsigned int cpu)
 	cpus_read_lock();
 	if (cpu_online(policy->cpu)) {
 		down_write(&policy->rwsem);
-		gov = get_mx_governor(policy->cpu);
 		memcpy(&new_policy, policy, sizeof(*policy));
-		new_policy.governor = gov;
-		/* set default policy */
+		new_policy.governor = get_mx_governor(policy->cpu);
 		ret = cpufreq_set_policy(policy, &new_policy);
 		up_write(&policy->rwsem);
 	}
@@ -1507,13 +1497,10 @@ int mx_update_policy(unsigned int cpu)
 
 static int cpufreq_init_policy(struct cpufreq_policy *policy)
 {
-	struct cpufreq_governor *gov = NULL;
 	struct cpufreq_policy new_policy;
 
-	gov = get_mx_governor(policy->cpu);
-
 	memcpy(&new_policy, policy, sizeof(*policy));
-	new_policy.governor = gov;
+	new_policy.governor = get_mx_governor(policy->cpu);
 	/* set default policy */
 	return cpufreq_set_policy(policy, &new_policy);
 #if 0
