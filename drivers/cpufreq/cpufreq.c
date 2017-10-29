@@ -1484,9 +1484,11 @@ int mx_update_policy(unsigned int cpu)
 	struct cpufreq_policy *policy;
 	struct cpufreq_governor *gov = NULL;
 	struct cpufreq_policy new_policy;
-	unsigned int ret = -EINVAL;
+	unsigned int ret = -ENOMEM;
 
 	policy = cpufreq_cpu_get(cpu);
+	if (!policy)
+		return ret;
 
 	cpus_read_lock();
 	if (cpu_online(policy->cpu)) {

@@ -968,7 +968,8 @@ static ssize_t store_cpu0_##name		\
 	if (input >= max)		\
 			input = max;		\
 	name[0] = input;				\
-	mx_update_policy(0);		\
+	if (cpu_online(0))			\
+		mx_update_policy(0);		\
 	return count;				\
 }
 
@@ -990,7 +991,8 @@ static ssize_t store_cpu1_##name		\
 	if (input >= max)		\
 			input = max;		\
 	name[1] = input;				\
-	mx_update_policy(1);		\
+	if (cpu_online(1))			\
+		mx_update_policy(1);		\
 	return count;				\
 }
 
@@ -1012,7 +1014,8 @@ static ssize_t store_cpu2_##name		\
 	if (input >= max)		\
 			input = max;		\
 	name[2] = input;				\
-	mx_update_policy(2);		\
+	if (cpu_online(2))			\
+		mx_update_policy(2);		\
 	return count;				\
 }
 
@@ -1034,7 +1037,8 @@ static ssize_t store_cpu3_##name		\
 	if (input >= max)		\
 			input = max;		\
 	name[3] = input;				\
-	mx_update_policy(3);		\
+	if (cpu_online(2))			\
+		mx_update_policy(3);		\
 	return count;				\
 }
 
