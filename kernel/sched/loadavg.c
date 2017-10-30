@@ -122,12 +122,11 @@ unsigned long avg_nr_running(void)
 		 * directly.
 		 */
 		seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
-		ave_nr_running = do_avg_nr_running(q);
 		if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
 			read_seqcount_begin(&stats->ave_seqcnt);
 			ave_nr_running = stats->ave_nr_running;
-		}
-
+		} else
+			ave_nr_running = do_avg_nr_running(q);
 		sum += ave_nr_running;
 	}
 
@@ -163,11 +162,11 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 	 * directly.
 	 */
 	seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
-	ave_nr_running = do_avg_nr_running(q);
 	if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
 		read_seqcount_begin(&stats->ave_seqcnt);
 		ave_nr_running = stats->ave_nr_running;
-	}
+	} else
+		ave_nr_running = do_avg_nr_running(q);
 
 	return ave_nr_running;
 }
