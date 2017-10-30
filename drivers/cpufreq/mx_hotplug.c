@@ -46,15 +46,21 @@ static struct workqueue_struct *transmission;
 static struct delayed_work gearbox;
 static struct task_struct *mx_hp_engine;
 
-static unsigned long boost_threshold = 1211ul;
+static unsigned long sixthgear = 1211ul;
 static unsigned long thirdgear = 645ul;
 static unsigned long secondgear = 539ul;
 static unsigned long firstgear = 385ul;
+static unsigned long sixthgear_rpm = 85ul;
+static unsigned long thirdgear_rpm = 65ul;
+static unsigned long secondgear_rpm = 50ul;
+static unsigned long firstgear_rpm = 35ul;
+
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
+unsigned long current_rpm;
 static unsigned long boost_timeout = BOOST_LENGTH;
 static ktime_t last_fuelcheck;
 static ktime_t last_boost;
@@ -238,13 +244,22 @@ again:
 	}
 
 	air_to_fuel = avg_nr_running();
-	if (air_to_fuel >= boost_threshold) {
+	current_rpm = all_cpu_load();
+	if (air_to_fuel >= sixthgear &&
+		current_rpm >= sixthgear_rpm) {
 		inject_nos(false);
-	} else if (air_to_fuel >= thirdgear && air_to_fuel < boost_threshold) {
+	} else if ((air_to_fuel >= thirdgear &&
+				air_to_fuel < sixthgear) &&
+			   (current_rpm >= thirdgear_rpm &&
+				current_rpm < sixthgear_rpm)) {
 		upshift();
-	} else if (air_to_fuel > firstgear && air_to_fuel <= secondgear) {
+	} else if ((air_to_fuel > firstgear &&
+				air_to_fuel <= secondgear) &&
+			   (current_rpm > firstgear_rpm &&
+				current_rpm <= secondgear_rpm)) {
 		downshift();
-	} else if (air_to_fuel <= firstgear) {
+	} else if ((air_to_fuel <= firstgear) &&
+			   (current_rpm <= firstgear_rpm)) {
 		hit_the_brakes();
 	}
 purge:
