@@ -40,6 +40,19 @@ unsigned long all_cpu_load(void)
 	return tmp;
 }
 
+static ssize_t show_total_load(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	unsigned long tmp;
+
+	if (!debug_enabled)
+		return sprintf(buf, "Disabled\n");
+
+	tmp = all_cpu_load();
+	return sprintf(buf, "%lu\n", tmp);
+}
+
 static ssize_t show_cpu0_load(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
@@ -86,6 +99,7 @@ static ssize_t show_cpu3_load(struct kobject *kobj,
 	return sprintf(buf, "%lu\n", tmp);
 }
 
+MX_ATTR_RO(total_load);
 MX_ATTR_RO(cpu0_load);
 MX_ATTR_RO(cpu1_load);
 MX_ATTR_RO(cpu2_load);
@@ -209,6 +223,7 @@ MX_ATTR_RO(avg_cpu3_nr_running);
 
 static struct attribute *loadavg_attrs[] = {
 	&debug_enabled_attr.attr,
+	&total_load_attr.attr,
 	&cpu0_load_attr.attr,
 	&cpu1_load_attr.attr,
 	&cpu2_load_attr.attr,
