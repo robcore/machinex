@@ -40,13 +40,11 @@
 #define BOOST_LENGTH MXMS(250UL)
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
-static DEFINE_MUTEX(speedlock);
 static DEFINE_MUTEX(mx_mutex);
 
 static bool hotplug_suspended;
 static struct workqueue_struct *transmission;
 static struct delayed_work gearbox;
-static struct task_struct *speedometer;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 1231ul;
@@ -57,9 +55,6 @@ static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
-static unsigned long speed_limit;
-static unsigned int distance;
-static unsigned int checkpoint = 1;
 unsigned long air_to_fuel;
 unsigned int cylinders;
 static unsigned long boost_timeout = BOOST_LENGTH;
@@ -207,46 +202,6 @@ static void release_brakes(void)
 	mutex_unlock(&mx_mutex);
 }
 
-static int __ref machinex_speedometer(void *data)
-{
-
-again:
-	set_current_state(TASK_INTERRUPTIBLE);
-	if (hotplug_suspended) {
-		schedule();
-	}
-
-	if (kthread_should_stop()) {
-		mutex_lock(&speedlock);
-		speed_limit = 0;
-		distance = 0;
-		checkpoint = 1;
-		mutex_unlock(&speedlock);
-		return 0;
-	}
-
-	mutex_lock(&speedlock);
-	set_current_state(TASK_RUNNING);
-
-	if (checkpoint >= 10) {
-		speed_limit = 0;
-		distance = 0;
-		checkpoint = 1;
-		mutex_unlock(&speedlock);
-		goto again;
-	}
-
-	distance += avg_nr_running();
-	if (unlikely(checkpoint < 1))
-		checkpoint = 1;
-
-	speed_limit = distance / checkpoint;
-	checkpoint++;
-
-	mutex_unlock(&speedlock);
-	goto again;
-}
-
 static int __ref machinex_hotplug_engine(void *data)
 {
 	unsigned int cpu;
@@ -272,9 +227,7 @@ again:
 	set_current_state(TASK_RUNNING);
 
 	cylinders = num_online_cpus();
-	mutex_lock(&speedlock);
-	air_to_fuel = speed_limit;
-	mutex_unlock(&speedlock);
+	air_to_fuel = avg_nr_running();
 	delta = ktime_sub(ktime_get(), last_boost);
 
 	if (should_boost) {
@@ -361,11 +314,10 @@ static struct power_suspend mx_suspend_data =
 
 static void ignition(unsigned int status)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
-
 	if (status) {
+		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+
 		mxget();
-		release_brakes();
 		transmission = create_singlethread_workqueue("transmission_q");
 		if (!transmission) {
 			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
@@ -375,26 +327,12 @@ static void ignition(unsigned int status)
 
 		INIT_DELAYED_WORK(&gearbox, shift_gears);
 
-		speedometer = kthread_create(machinex_speedometer,
-						  NULL, "mxhp_speedometer");
-		if (IS_ERR(speedometer)) {
-			pr_err("MX Hotplug: Failed to create speedometer kthread! Driver is broken!\n");
-			mxput();
-			destroy_workqueue(transmission);
-			return;
-		}
-		sched_setscheduler_nocheck(speedometer, SCHED_FIFO, &param);
-		get_task_struct(speedometer);
-		wake_up_process(speedometer);
-
 		mx_hp_engine = kthread_create(machinex_hotplug_engine,
 						  NULL, "mxhp_engine");
 		if (IS_ERR(mx_hp_engine)) {
 			pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
-			mxput();
 			destroy_workqueue(transmission);
-			kthread_stop(speedometer);
-			put_task_struct(speedometer);
+			mxput();
 			return;
 		}
 		kthread_bind(mx_hp_engine, 0);
@@ -410,8 +348,7 @@ static void ignition(unsigned int status)
 		destroy_workqueue(transmission);
 		kthread_stop(mx_hp_engine);
 		put_task_struct(mx_hp_engine);
-		kthread_stop(speedometer);
-		put_task_struct(speedometer);
+		release_brakes();
 	}
 }
 
