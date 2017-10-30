@@ -237,7 +237,7 @@ again:
 	}
 
 	distance += avg_nr_running();
-	if (checkpoint < 1)
+	if (unlikely(checkpoint < 1))
 		checkpoint = 1;
 
 	speed_limit = distance / checkpoint;
