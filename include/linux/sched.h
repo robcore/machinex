@@ -174,6 +174,7 @@ extern unsigned long avg_cpu_nr_running(unsigned int cpu);
 #endif
 extern unsigned long nr_iowait_cpu(unsigned int cpu);
 extern unsigned long this_cpu_load(unsigned int cpu);
+extern unsigned long all_cpu_load(void);
 extern void sched_update_nr_prod(unsigned int cpu, unsigned long nr, bool inc);
 extern void sched_get_nr_running_avg(int *avg, int *iowait_avg);
 

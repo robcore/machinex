@@ -22,6 +22,24 @@ unsigned long this_cpu_load(unsigned int cpu)
 	return this->cpu_load[cpu];
 }
 
+unsigned long all_cpu_load(void)
+{
+	struct rq *this = this_rq();
+	unsigned int cpu;
+	unsigned long tmp;
+
+	tmp = 0;
+	for_each_online_cpu(cpu) {
+		if (cpu_out_of_range(cpu))
+			break;
+		if (!cpu_online(cpu))
+			continue;
+		tmp += this->cpu_load[cpu];
+	}
+	tmp = tmp / num_online_cpus();
+	return tmp;
+}
+
 static ssize_t show_cpu0_load(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
