@@ -177,7 +177,7 @@ static void downshift(void)
 	cpu_down(cpu);
 }
 
-static void hit_the_brakes(unsigned int nrcores)
+static void hit_the_brakes(void)
 {
 	unsigned int cpu;
 
@@ -257,7 +257,7 @@ again:
 	} else if (air_to_fuel > firstgear && air_to_fuel <= secondgear) {
 		downshift();
 	} else if (air_to_fuel <= firstgear) {
-		hit_the_brakes(min_cpus_online);
+		hit_the_brakes();
 	}
 
 	shifting_gears = false;
