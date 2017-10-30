@@ -38,7 +38,7 @@ unsigned long all_cpu_load(void)
 		online_count++;
 	}
 
-	return tmp / online_count;
+	return (tmp / online_count) / 10;
 }
 
 static ssize_t show_total_load(struct kobject *kobj,
