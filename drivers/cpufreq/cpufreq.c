@@ -1250,8 +1250,6 @@ static ssize_t store_vdd_levels(struct kobject *a, struct attribute *b, const ch
 	else
 			return -EINVAL;
 
-	pr_warn("faux123: user voltage table modified!\n");
-
 	return count;
 }
 
