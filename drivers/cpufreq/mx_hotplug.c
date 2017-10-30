@@ -35,9 +35,8 @@
 #include <linux/powersuspend.h>
 
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
-#define MX_SAMPLE_RATE MXMS(100UL)
-#define MX_Q_RATE MXMS(100UL)
-#define BOOST_LENGTH MXMS(250UL)
+#define MX_SAMPLE_RATE MXMS(200UL)
+#define BOOST_LENGTH MXMS(300UL)
 static unsigned int mx_hotplug_active;
 static DEFINE_RWLOCK(mxhp_lock);
 static DEFINE_MUTEX(mx_mutex);
