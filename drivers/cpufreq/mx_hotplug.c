@@ -203,20 +203,6 @@ static void release_brakes(void)
 	mutex_unlock(&mx_mutex);
 }
 
-void fuel_injector(void)
-{
-	if (!mxread() || hotplug_suspended)
-		return;
-
-	if (!mutex_trylock(&mx_mutex))
-		return;
-
-	if (!should_boost)
-		should_boost = true;
-
-	mutex_unlock(&mx_mutex);
-}
-
 static int __ref machinex_hotplug_engine(void *data)
 {
 	unsigned int cpu;
@@ -226,7 +212,7 @@ again:
 	set_current_state(TASK_INTERRUPTIBLE);
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
-	if (ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0 ||
+	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
 		!shifting_gears || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
@@ -241,16 +227,18 @@ again:
 	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
-	air_to_fuel = avg_nr_running();
-	delta = ktime_sub(ktime_get(), last_boost);
-
 	if (should_boost) {
 		should_boost = false;
+		delta = ktime_sub(ktime_get(), last_boost);
 		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  >= 0) {
 			inject_nos(true);
 			last_boost = ktime_get();
 		}
-	} else if (air_to_fuel >= boost_threshold) {
+		goto purge;
+	}
+
+	air_to_fuel = avg_nr_running();
+	if (air_to_fuel >= boost_threshold) {
 		inject_nos(false);
 	} else if (air_to_fuel >= thirdgear && air_to_fuel < boost_threshold) {
 		upshift();
@@ -259,7 +247,7 @@ again:
 	} else if (air_to_fuel <= firstgear) {
 		hit_the_brakes();
 	}
-
+purge:
 	shifting_gears = false;
 	mutex_unlock(&mx_mutex);
 	goto again;
@@ -291,6 +279,22 @@ static void shift_gears(struct work_struct *work)
 out:
 	queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 }
+
+void fuel_injector(void)
+{
+	if (!mxread() || hotplug_suspended)
+		return;
+
+	if (!mutex_trylock(&mx_mutex))
+		return;
+
+	if (!should_boost)
+		should_boost = true;
+
+	mutex_unlock(&mx_mutex);
+
+	mod_delayed_work_on(0, transmission, &gearbox, 0);
+}
 	
 
 static void mx_hotplug_suspend(struct power_suspend *h)
@@ -299,6 +303,7 @@ static void mx_hotplug_suspend(struct power_suspend *h)
 	hotplug_suspended = true;
 	mutex_unlock(&mx_mutex);
 	cancel_delayed_work_sync(&gearbox);
+	synchronize_sched();
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
@@ -353,6 +358,7 @@ static void ignition(unsigned int status)
 		kthread_stop(mx_hp_engine);
 		put_task_struct(mx_hp_engine);
 		release_brakes();
+		synchronize_sched();
 	}
 }
 
