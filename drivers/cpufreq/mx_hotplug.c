@@ -112,10 +112,24 @@ static void mxput(void)
 	mx_lock(0);
 }
 
-void inject_nos(bool from_input)
+void inject_nos(bool from_input, bool last_uptick)
 {
 	unsigned int cpu, cylinders;
 	int ret;
+
+	if (last_uptick) {
+		for_each_nonboot_offline_cpu(cpu) {
+			if (cpu_out_of_range_hp(cpu) ||
+				num_online_cpus() == max_cpus_online)
+				break;
+			if (cpu_online(cpu) ||
+				!is_cpu_allowed(cpu) ||
+				thermal_core_controlled(cpu))
+				continue;
+		cpu_up(cpu);
+		}
+		return;
+	}
 
 	if (!mxread() || hotplug_suspended)
 		return;
@@ -211,7 +225,6 @@ static void release_brakes(void)
 
 static int __ref machinex_hotplug_engine(void *data)
 {
-	unsigned int cpu;
 	ktime_t delta;
 
 again:
@@ -226,7 +239,7 @@ again:
 		mutex_unlock(&mx_mutex);
 
 	if (kthread_should_stop()) {
-		inject_nos(false);
+		inject_nos(false, true);
 		return 0;
 	}
 
@@ -237,7 +250,7 @@ again:
 		should_boost = false;
 		delta = ktime_sub(ktime_get(), last_boost);
 		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  >= 0) {
-			inject_nos(true);
+			inject_nos(true, false);
 			last_boost = ktime_get();
 		}
 		goto purge;
@@ -247,7 +260,7 @@ again:
 	current_rpm = all_cpu_load();
 	if (air_to_fuel >= sixthgear &&
 		current_rpm >= sixthgear_rpm) {
-		inject_nos(false);
+		inject_nos(false, false);
 	} else if ((air_to_fuel >= thirdgear &&
 				air_to_fuel < sixthgear) &&
 			   (current_rpm >= thirdgear_rpm &&
