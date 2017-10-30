@@ -59,7 +59,7 @@ static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
 static unsigned long speed_limit;
 static unsigned int distance;
-static unsigned int checkpoint;
+static unsigned int checkpoint = 1;
 unsigned long air_to_fuel;
 unsigned int cylinders;
 static unsigned long boost_timeout = BOOST_LENGTH;
@@ -220,7 +220,7 @@ again:
 		mutex_lock(&speedlock);
 		speed_limit = 0;
 		distance = 0;
-		checkpoint = 0;
+		checkpoint = 1;
 		mutex_unlock(&speedlock);
 		return 0;
 	}
@@ -231,15 +231,17 @@ again:
 	if (checkpoint >= 10) {
 		speed_limit = 0;
 		distance = 0;
-		checkpoint = 0;
+		checkpoint = 1;
 		mutex_unlock(&speedlock);
 		goto again;
 	}
 
-	checkpoint++;
 	distance += avg_nr_running();
-	if (checkpoint > 0)
-		speed_limit = distance / checkpoint;
+	if (checkpoint < 1)
+		checkpoint = 1;
+
+	speed_limit = distance / checkpoint;
+	checkpoint++;
 
 	mutex_unlock(&speedlock);
 	goto again;
