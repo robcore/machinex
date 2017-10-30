@@ -47,7 +47,7 @@ static struct delayed_work gearbox;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 1211ul;
-static unsigned long thirdgear = 655ul;
+static unsigned long thirdgear = 645ul;
 static unsigned long secondgear = 539ul;
 static unsigned long firstgear = 385ul;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
@@ -55,7 +55,6 @@ static unsigned int min_cpus_online = 2;
 static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
-unsigned int cylinders;
 static unsigned long boost_timeout = BOOST_LENGTH;
 static ktime_t last_fuelcheck;
 static ktime_t last_boost;
@@ -109,16 +108,18 @@ static void mxput(void)
 
 void inject_nos(bool from_input)
 {
-	unsigned int cpu;
+	unsigned int cpu, cylinders;
 	int ret;
 
 	if (!mxread() || hotplug_suspended)
 		return;
 
 	if (from_input) {
+		cylinders = cpus_boosted;
+		sanitize_min_max(cylinders, min_cpus_online, max_cpus_online);
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu) ||
-				num_online_cpus() == cpus_boosted)
+				num_online_cpus() == cylinders)
 				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
@@ -140,38 +141,40 @@ void inject_nos(bool from_input)
 	}
 }
 
-void fuel_injector(void)
-{
-	if (!mxread() || hotplug_suspended)
-		return;
-
-	if (!mutex_trylock(&mx_mutex))
-		return;
-
-	if (!should_boost)
-		should_boost = true;
-
-	mutex_unlock(&mx_mutex);
-}
-
-static void step_on_it(unsigned int nrcores)
+static void upshift(void)
 {
 	unsigned int cpu;
 
 	if (!mxread() || hotplug_suspended)
 		return;
 
-	sanitize_min_max(nrcores, min_cpus_online, max_cpus_online);
-	for_each_nonboot_offline_cpu(cpu) {
-		if (cpu_out_of_range_hp(cpu) ||
-			num_online_cpus() == nrcores)
-			break;
-		if (cpu_online(cpu) ||
-			!is_cpu_allowed(cpu) ||
-			thermal_core_controlled(cpu))
-			continue;
-		cpu_up(cpu);
-	}
+	cpu = cpumask_next_zero(0, &__cpu_online_mask);
+	if (cpu_out_of_range_hp(cpu) ||
+		num_online_cpus() == max_cpus_online)
+		return;
+	if (cpu_online(cpu) ||
+		!is_cpu_allowed(cpu) ||
+		thermal_core_controlled(cpu))
+		return;
+	cpu_up(cpu);
+}
+
+static void downshift(void)
+{
+	unsigned int cpu;
+
+	if (!mxread() || hotplug_suspended)
+		return;
+
+	cpu = cpumask_next(0, &__cpu_online_mask);
+	if (cpu_out_of_range_hp(cpu) ||
+		num_online_cpus() == min_cpus_online)
+		return;
+	if (!cpu_online(cpu) ||
+		!is_cpu_allowed(cpu) ||
+		thermal_core_controlled(cpu))
+		return;
+	cpu_down(cpu);
 }
 
 static void hit_the_brakes(unsigned int nrcores)
@@ -181,10 +184,9 @@ static void hit_the_brakes(unsigned int nrcores)
 	if (!mxread() || hotplug_suspended)
 		return;
 
-	sanitize_min_max(nrcores, min_cpus_online, max_cpus_online);
 	for_each_nonboot_online_cpu(cpu) {
 		if (cpu_out_of_range_hp(cpu) ||
-			num_online_cpus() == nrcores)
+			num_online_cpus() == min_cpus_online)
 			break;
 		if (!cpu_online(cpu) ||
 			!is_cpu_allowed(cpu) ||
@@ -198,6 +200,20 @@ static void release_brakes(void)
 {
 	mutex_lock(&mx_mutex);
 	shifting_gears = false;
+	mutex_unlock(&mx_mutex);
+}
+
+void fuel_injector(void)
+{
+	if (!mxread() || hotplug_suspended)
+		return;
+
+	if (!mutex_trylock(&mx_mutex))
+		return;
+
+	if (!should_boost)
+		should_boost = true;
+
 	mutex_unlock(&mx_mutex);
 }
 
@@ -225,36 +241,25 @@ again:
 	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
 
-	cylinders = num_online_cpus();
 	air_to_fuel = avg_nr_running();
 	delta = ktime_sub(ktime_get(), last_boost);
 
 	if (should_boost) {
-		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  < 0)
-			goto purge;
-		else {
-			if (cylinders < cpus_boosted)
-				inject_nos(true);
-			should_boost = false;
+		should_boost = false;
+		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  >= 0) {
+			inject_nos(true);
 			last_boost = ktime_get();
-			goto purge;
 		}
-	} else if (air_to_fuel > boost_threshold) {
-		if (cylinders < max_cpus_online) {
-			inject_nos(false);
-			goto purge;
-		}
-	} else if (air_to_fuel > thirdgear) {
-		if (cylinders < max_cpus_online)
-			step_on_it(cylinders + 1);
-	} else if (air_to_fuel < secondgear && air_to_fuel > firstgear) {
-		if (cylinders > min_cpus_online)
-			hit_the_brakes(cylinders - 1);
-	} else if (air_to_fuel < firstgear) {
-		if (cylinders > min_cpus_online)
-			hit_the_brakes(min_cpus_online);
+	} else if (air_to_fuel >= boost_threshold) {
+		inject_nos(false);
+	} else if (air_to_fuel >= thirdgear && air_to_fuel < boost_threshold) {
+		upshift();
+	} else if (air_to_fuel > firstgear && air_to_fuel <= secondgear) {
+		downshift();
+	} else if (air_to_fuel <= firstgear) {
+		hit_the_brakes(min_cpus_online);
 	}
-purge:
+
 	shifting_gears = false;
 	mutex_unlock(&mx_mutex);
 	goto again;
