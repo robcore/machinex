@@ -258,11 +258,11 @@ again:
 
 	air_to_fuel = avg_nr_running();
 	current_rpm = all_cpu_load();
-	if (air_to_fuel >= sixthgear &&
+	if (air_to_fuel >= sixthgear ||
 		current_rpm >= sixthgear_rpm) {
 		inject_nos(false, false);
 	} else if ((air_to_fuel >= thirdgear &&
-				air_to_fuel < sixthgear) &&
+				air_to_fuel < sixthgear) ||
 			   (current_rpm >= thirdgear_rpm &&
 				current_rpm < sixthgear_rpm)) {
 		upshift();
