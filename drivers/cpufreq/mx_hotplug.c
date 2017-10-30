@@ -50,8 +50,8 @@ static struct task_struct *speedometer;
 static struct task_struct *mx_hp_engine;
 
 static unsigned long boost_threshold = 1231ul;
-static unsigned long thirdgear = 695ul;
-static unsigned long secondgear = 569ul;
+static unsigned long thirdgear = 675ul;
+static unsigned long secondgear = 559ul;
 static unsigned long firstgear = 405ul;
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
