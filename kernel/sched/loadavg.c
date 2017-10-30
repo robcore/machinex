@@ -19,7 +19,7 @@ unsigned long this_cpu_load(unsigned int cpu)
 	struct rq *this = this_rq();
 	if (!cpu_online(cpu))
 		return 0;
-	return this->cpu_load[cpu];
+	return this->cpu_load[cpu] / 10;
 }
 
 unsigned long all_cpu_load(void)
