@@ -90,6 +90,7 @@ function adbcountdown()
 }
 wakeme() {
 	adb shell input keyevent KEYCODE_WAKEUP 2> /dev/null
+	adb shell su -c "input touchscreen swipe 930 880 930 380"
 }
 
 function ADBRETRY() {
@@ -140,9 +141,6 @@ elif [[ $ONLINE = $DEVS ]] && [[ $DEVICE = $USBB ]]; then
 		echo "install /external_sd/$2" > $MYSCRIPT
 		echo "reboot" >> $MYSCRIPT
 		wakeme
-		sleep 1
-		adb shell su -c "input touchscreen swipe 930 880 930 380"
-		sleep 1
 		adb push $1 /storage/extSdCard 2> /dev/null
 		echo "push complete, flashing"
 		wakeme
