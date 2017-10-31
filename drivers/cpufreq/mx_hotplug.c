@@ -46,14 +46,14 @@ static struct workqueue_struct *transmission;
 static struct delayed_work gearbox;
 static struct task_struct *mx_hp_engine;
 
-static unsigned long sixthgear = 1071ul;
-static unsigned long thirdgear = 555ul;
-static unsigned long secondgear = 469ul;
-static unsigned long firstgear = 365ul;
-static unsigned long sixthgear_rpm = 70ul;
-static unsigned long thirdgear_rpm = 55ul;
-static unsigned long secondgear_rpm = 40ul;
-static unsigned long firstgear_rpm = 25ul;
+static unsigned long sixthgear = 1051ul;
+static unsigned long thirdgear = 535ul;
+static unsigned long secondgear = 449ul;
+static unsigned long firstgear = 345ul;
+static unsigned long sixthgear_rpm = 65ul;
+static unsigned long thirdgear_rpm = 50ul;
+static unsigned long secondgear_rpm = 35ul;
+static unsigned long firstgear_rpm = 20ul;
 
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
 static unsigned int min_cpus_online = 2;
@@ -117,29 +117,13 @@ void inject_nos(bool from_input, bool last_uptick)
 	unsigned int cpu, cylinders;
 	int ret;
 
-	if (last_uptick) {
+	if (!last_uptick && (!mxread() || hotplug_suspended))
+		return;
+
+	if (!from_input) {
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu) ||
 				num_online_cpus() == max_cpus_online)
-				break;
-			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
-				continue;
-		cpu_up(cpu);
-		}
-		return;
-	}
-
-	if (!mxread() || hotplug_suspended)
-		return;
-
-	if (from_input) {
-		cylinders = cpus_boosted;
-		sanitize_min_max(cylinders, min_cpus_online, max_cpus_online);
-		for_each_nonboot_offline_cpu(cpu) {
-			if (cpu_out_of_range_hp(cpu) ||
-				num_online_cpus() == cylinders)
 				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
@@ -148,9 +132,11 @@ void inject_nos(bool from_input, bool last_uptick)
 		cpu_up(cpu);
 		}
 	} else {
+		cylinders = cpus_boosted;
+		sanitize_min_max(cylinders, min_cpus_online, max_cpus_online);
 		for_each_nonboot_offline_cpu(cpu) {
 			if (cpu_out_of_range_hp(cpu) ||
-				num_online_cpus() == max_cpus_online)
+				num_online_cpus() == cylinders)
 				break;
 			if (cpu_online(cpu) ||
 				!is_cpu_allowed(cpu) ||
