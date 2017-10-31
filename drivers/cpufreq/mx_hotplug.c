@@ -297,7 +297,8 @@ out:
 
 void fuel_injector(void)
 {
-	if (!mxread() || hotplug_suspended)
+	if (!mxread() || hotplug_suspended ||
+		(unlikely(!ready))
 		return;
 
 	if (!mutex_trylock(&mx_mutex))
@@ -308,8 +309,7 @@ void fuel_injector(void)
 
 	mutex_unlock(&mx_mutex);
 
-	if (likely(ready))
-		mod_delayed_work_on(0, transmission, &gearbox, 0);
+	mod_delayed_work_on(0, transmission, &gearbox, 0);
 }
 	
 
@@ -343,15 +343,6 @@ static void ignition(unsigned int status)
 		struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
 
 		mxget();
-		transmission = create_singlethread_workqueue("transmission_q");
-		if (!transmission) {
-			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
-			mxput();
-			return;
-		}
-
-		INIT_DELAYED_WORK(&gearbox, shift_gears);
-
 		mx_hp_engine = kthread_create(machinex_hotplug_engine,
 						  NULL, "mxhp_engine");
 		if (IS_ERR(mx_hp_engine)) {
@@ -364,10 +355,19 @@ static void ignition(unsigned int status)
 		sched_setscheduler_nocheck(mx_hp_engine, SCHED_FIFO, &param);
 		get_task_struct(mx_hp_engine);
 		wake_up_process(mx_hp_engine);
+		transmission = create_singlethread_workqueue("transmission_q");
+		if (!transmission) {
+			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
+			mxput();
+			return;
+		}
+
+		INIT_DELAYED_WORK(&gearbox, shift_gears);
 		queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 		register_power_suspend(&mx_suspend_data);
 		ready = true;
 	} else {
+		ready = false;
 		mxput();
 		unregister_power_suspend(&mx_suspend_data);
 		cancel_delayed_work_sync(&gearbox);
@@ -375,7 +375,6 @@ static void ignition(unsigned int status)
 		kthread_stop(mx_hp_engine);
 		put_task_struct(mx_hp_engine);
 		release_brakes();
-		ready = false;
 		synchronize_sched();
 	}
 }
