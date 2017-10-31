@@ -64,7 +64,7 @@ unsigned long current_rpm;
 static unsigned long boost_timeout = BOOST_LENGTH;
 static ktime_t last_fuelcheck;
 static ktime_t last_boost;
-static bool shifting_gears;
+static bool clutch;
 static bool should_boost;
 
 static unsigned int mxread(void)
@@ -219,7 +219,7 @@ static void hit_the_brakes(void)
 static void release_brakes(void)
 {
 	mutex_lock(&mx_mutex);
-	shifting_gears = false;
+	clutch = false;
 	mutex_unlock(&mx_mutex);
 }
 
@@ -232,7 +232,7 @@ again:
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
-		!shifting_gears || hotplug_suspended) {
+		!clutch || hotplug_suspended) {
 		mutex_unlock(&mx_mutex);
 		schedule();
 	} else
@@ -276,7 +276,7 @@ again:
 		hit_the_brakes();
 	}
 purge:
-	shifting_gears = false;
+	clutch = false;
 	mutex_unlock(&mx_mutex);
 	goto again;
 }
@@ -295,13 +295,13 @@ static void shift_gears(struct work_struct *work)
 		return;
 	}
 
-	if (shifting_gears) {
+	if (clutch) {
 		mutex_unlock(&mx_mutex);
 		goto out;
 	}
 
 	last_fuelcheck = ktime_get();
-	shifting_gears = true;
+	clutch = true;
 	mutex_unlock(&mx_mutex);
 	wake_up_process(mx_hp_engine);
 out:
