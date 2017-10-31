@@ -66,6 +66,7 @@ static ktime_t last_fuelcheck;
 static ktime_t last_boost;
 static bool clutch;
 static bool should_boost;
+static bool ready;
 
 static unsigned int mxread(void)
 {
@@ -307,7 +308,8 @@ void fuel_injector(void)
 
 	mutex_unlock(&mx_mutex);
 
-	mod_delayed_work_on(0, transmission, &gearbox, 0);
+	if (likely(ready))
+		mod_delayed_work_on(0, transmission, &gearbox, 0);
 }
 	
 
@@ -364,6 +366,7 @@ static void ignition(unsigned int status)
 		wake_up_process(mx_hp_engine);
 		queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 		register_power_suspend(&mx_suspend_data);
+		ready = true;
 	} else {
 		mxput();
 		unregister_power_suspend(&mx_suspend_data);
@@ -372,6 +375,7 @@ static void ignition(unsigned int status)
 		kthread_stop(mx_hp_engine);
 		put_task_struct(mx_hp_engine);
 		release_brakes();
+		ready = false;
 		synchronize_sched();
 	}
 }
