@@ -1585,12 +1585,14 @@ EXPORT_SYMBOL(queue_delayed_work_on);
  * This function is safe to call from any context including IRQ handler.
  * See try_to_grab_pending() for details.
  */
-bool mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
+int mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
 			 struct delayed_work *dwork, unsigned long delay)
 {
 	unsigned long flags;
 	int ret;
 
+	if (unlikely(wq == NULL || dwork == NULL)
+		return -ENOMEM;
 	do {
 		ret = try_to_grab_pending(&dwork->work, true, &flags);
 	} while (unlikely(ret == -EAGAIN));

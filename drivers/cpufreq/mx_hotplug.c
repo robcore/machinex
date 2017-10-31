@@ -309,7 +309,8 @@ void fuel_injector(void)
 
 	mutex_unlock(&mx_mutex);
 
-	mod_delayed_work_on(0, transmission, &gearbox, 0);
+	if (mod_delayed_work_on(0, transmission, &gearbox, 0) < 0)
+		return;
 }
 	
 
