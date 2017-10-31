@@ -348,7 +348,6 @@ static void ignition(unsigned int status)
 						  NULL, "mxhp_engine");
 		if (IS_ERR(mx_hp_engine)) {
 			pr_err("MX Hotplug: Failed to create bound kthread! Driver is broken!\n");
-			destroy_workqueue(transmission);
 			mxput();
 			return;
 		}
@@ -360,6 +359,8 @@ static void ignition(unsigned int status)
 		if (!transmission) {
 			pr_err("MX HOTPLUG: Failed to allocate hotplug workqueue\n");
 			mxput();
+			kthread_stop(mx_hp_engine);
+			put_task_struct(mx_hp_engine);
 			return;
 		}
 
