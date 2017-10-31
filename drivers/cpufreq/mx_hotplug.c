@@ -298,7 +298,7 @@ out:
 void fuel_injector(void)
 {
 	if (!mxread() || hotplug_suspended ||
-		(unlikely(!ready))
+		(unlikely(!ready)))
 		return;
 
 	if (!mutex_trylock(&mx_mutex))
