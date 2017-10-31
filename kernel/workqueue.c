@@ -1591,7 +1591,7 @@ int mod_delayed_work_on(int cpu, struct workqueue_struct *wq,
 	unsigned long flags;
 	int ret;
 
-	if (unlikely(wq == NULL || dwork == NULL)
+	if (unlikely(wq == NULL || dwork == NULL))
 		return -ENOMEM;
 	do {
 		ret = try_to_grab_pending(&dwork->work, true, &flags);
