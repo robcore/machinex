@@ -886,10 +886,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 	if (ret < 0)
 		return ret;
 
-	if (input <= 0)
-		input = 0;
-	if (input >= 1)
-		input = 1;
+	sanitize_min_max(input, 0, 1);
 	if (input == intelliread())
 		return count;
 

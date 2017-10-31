@@ -216,6 +216,10 @@ static int __ref machinex_hotplug_engine(void *data)
 
 again:
 	set_current_state(TASK_INTERRUPTIBLE);
+	if (kthread_should_stop()) {
+		inject_nos(false, true);
+		return 0;
+
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
 	if ((!should_boost && ktime_compare(delta, ms_to_ktime(sampling_rate))  < 0) ||
@@ -224,11 +228,6 @@ again:
 		schedule();
 	} else
 		mutex_unlock(&mx_mutex);
-
-	if (kthread_should_stop()) {
-		inject_nos(false, true);
-		return 0;
-	}
 
 	mutex_lock(&mx_mutex);
 	set_current_state(TASK_RUNNING);
@@ -271,6 +270,7 @@ purge:
 static void shift_gears(struct work_struct *work)
 {
 	unsigned long flags;
+
 	if (!mxread())
 		return;
 
@@ -309,8 +309,7 @@ void fuel_injector(void)
 
 	mutex_unlock(&mx_mutex);
 
-	if (mod_delayed_work_on(0, transmission, &gearbox, 0) < 0)
-		return;
+	mod_delayed_work_on(0, transmission, &gearbox, 0);
 }
 	
 
@@ -320,7 +319,6 @@ static void mx_hotplug_suspend(struct power_suspend *h)
 	hotplug_suspended = true;
 	mutex_unlock(&mx_mutex);
 	cancel_delayed_work_sync(&gearbox);
-	synchronize_sched();
 }
 
 static void mx_hotplug_resume(struct power_suspend *h)
@@ -377,7 +375,6 @@ static void ignition(unsigned int status)
 		kthread_stop(mx_hp_engine);
 		put_task_struct(mx_hp_engine);
 		release_brakes();
-		synchronize_sched();
 	}
 }
 
