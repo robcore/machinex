@@ -246,6 +246,11 @@ static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 {
 	struct an30259a_data *data = i2c_get_clientdata(b_client);
 
+//#ifdef CONFIG_LEDS_BLUE_BRIGHTNESS_OFFSET
+	if (((LED_ON << led) == 0x4)&& ledcc > 0) {
+		ledcc+=40;
+	}
+//#endif
 	if (on)
 		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << led;
 	else {
