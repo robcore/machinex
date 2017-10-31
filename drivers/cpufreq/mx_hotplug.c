@@ -219,6 +219,7 @@ again:
 	if (kthread_should_stop()) {
 		inject_nos(false, true);
 		return 0;
+	}
 
 	mutex_lock(&mx_mutex);
 	delta = ktime_sub(ktime_get(), last_fuelcheck);
