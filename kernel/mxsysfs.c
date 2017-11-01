@@ -19,8 +19,8 @@
 unsigned int userspace_ready = 0;
 mx_show_one(userspace_ready);
 static ssize_t store_userspace_ready(struct kobject *kobj,
- struct kobj_attribute *attr,
- const char *buf, size_t count)
+struct kobj_attribute *attr,
+const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -36,6 +36,7 @@ static ssize_t store_userspace_ready(struct kobject *kobj,
 	userspace_ready = input;
 	return count;
 }
+MX_ATTR_RW(userspace_ready);
 
 static unsigned char *mx_version = CONFIG_MACHINEX_VERSION;
 /* whether file capabilities are enabled */
@@ -53,6 +54,7 @@ struct kobject *mx_kobj;
 EXPORT_SYMBOL_GPL(mx_kobj);
 
 static struct attribute * mx_attrs[] = {
+	&userspace_ready_attr.attr,
 	&mx_version_attr.attr,
 	NULL
 };
