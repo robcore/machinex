@@ -735,11 +735,13 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		} else {
 			pr_info("Fade to Black\n");
-			an30259a_set_slope_current(2000, 1750);
-			an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0, false);
+
+			an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0x1, false);
 			an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xF6, false);
 			an30259a_set_led_delayed_blink(LED_B, 1, 1, 1, 0xFF, false);
-			break;
+			leds_i2c_write_all(client);
+			an30259a_set_slope_current(2000, 1750);
+			return;
 		}
 	case FAKE_POWERING:
 		if (poweroff_charging)
