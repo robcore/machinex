@@ -574,7 +574,7 @@ static void do_powering(struct i2c_client *client)
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
-		leds_on(LED_R, true, true, 0xDB);
+		leds_on(LED_R, true, true, 0xDA);
 		leds_on(LED_G, true, true, 0xE5);
 		leds_set_slope_mode(client, LED_R,
 				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
