@@ -574,10 +574,48 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 	current_led_mode = mode;
 
+	if (booted || (mode == BOOTING && !booted)) {
+		/* Set all LEDs Off */
+		an30259a_reset_register_work(reset);
+		goto regops;
+	}
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
+
+again:
+	if (mode == POWERING) {
+		leds_on(LED_R, true, true, 0x96);
+		leds_on(LED_G, true, true, 0x32);
+		leds_set_slope_mode(client, LED_R,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_set_slope_mode(client, LED_G,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_i2c_write_all(client);
+		mdelay(2010);
+		leds_on(LED_R, false, false, 0);
+		leds_on(LED_G, false, false, 0);
+		leds_i2c_write_all(client);
+		mdelay(5);
+		leds_on(LED_G, true, true, 0xA7);
+		leds_on(LED_B, true, true, 0xE5);
+		leds_set_slope_mode(client, LED_G,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_set_slope_mode(client, LED_B,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_i2c_write_all(client);
+		mdelay(2010);
+		leds_on(LED_G, false, false, 0);
+		leds_on(LED_B, false, false, 0);
+		leds_i2c_write_all(client);
+		mdelay(10);
+		goto again;
+	} else {
+		booted = true;
+	}
+
+regops:
 	if (mode > CUSTOM || disabled_samsung_pattern ||
-		mode <= PATTERN_OFF || mode == LED_OFF)
+		mode <= PATTERN_OFF)
 		return;
 
 	/* Set to low power consumption mode */
@@ -669,34 +707,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 10, 0, 4, 4, 1, 1, 1, 1);
 #else
-		while (1) {
-			leds_set_slope_mode(client, ALL_LED_ON,
-					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
-			leds_on(LED_R, true, true, 0x96);
-			leds_on(LED_G, true, true, 0x32);
-			leds_on(LED_B, true, true, 0x0);
-			leds_i2c_write_all(client);
-			mdelay(2000);
-			leds_on(LED_R, true, false, 0);
-			leds_on(LED_G, true, false, 0);
-			leds_on(LED_B, true, false, 0);
-			leds_i2c_write_all(client);
+/*
+*/
 
-			leds_set_slope_mode(client, ALL_LED_ON,
-					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
-			leds_on(LED_R, true, true, 0x0);
-			leds_on(LED_G, true, true, 0xA7);
-			leds_on(LED_B, true, true, 0xE5);
-			leds_i2c_write_all(client);
-			mdelay(2000);
-			leds_on(LED_R, true, false, 0);
-			leds_on(LED_G, true, false, 0);
-			leds_on(LED_B, true, false, 0);
-			leds_i2c_write_all(client);
-
-			if (mode != POWERING)
-				break;
-		}
 #endif
 			booted = true;
 			return;
