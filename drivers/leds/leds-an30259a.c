@@ -1489,7 +1489,7 @@ static ssize_t store_inhale(struct kobject *kobj,
 	an30259a_set_slope_current(inhale, exhale);
 	return count;
 }
-
+MX_ATTR_RW(inhale);
 static ssize_t show_exhale(struct kobject *kobj, 
 				struct kobj_attribute *attr, char *buf)
 {
