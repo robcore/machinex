@@ -570,8 +570,10 @@ static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
 	while (mxcounter < 14) {
-		if (userspace_ready)
+		if (userspace_ready) {
+			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
+		}
 		leds_on(LED_R, true, true, 0xE5);
 		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_R,
@@ -599,6 +601,8 @@ static void do_powering(struct i2c_client *client)
 	leds_on(LED_G, false, false, 0);
 	leds_on(LED_B, false, false, 0);
 	leds_i2c_write_all(client);
+	mxcounter == 14 ? pr_info("MXCOUNTER MAX\n") :
+	pr_info("MXCOUNTER Reached:%u\n", mxcounter);
 	return;
 }
 
