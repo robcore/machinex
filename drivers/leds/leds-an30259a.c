@@ -569,29 +569,37 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
-		while (mxcounter < 14 || userspace_ready) {
-			leds_on(LED_R, true, true, 0xEA);
-			leds_on(LED_G, true, true, 0xE2);
-			leds_set_slope_mode(client, LED_R,
-					0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-			leds_set_slope_mode(client, LED_G,
-					0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-			leds_i2c_write_all(client);
-			mdelay(2010);
-			leds_on(LED_R, false, false, 0);
-			leds_on(LED_G, false, false, 0);
-			leds_i2c_write_all(client);
-			mdelay(5);
-			leds_on(LED_B, true, true, 0xFF);
-			leds_set_slope_mode(client, LED_B,
-					0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-			leds_i2c_write_all(client);
-			mdelay(2010);
-			leds_on(LED_B, false, false, 0);
-			leds_i2c_write_all(client);
-			mdelay(10);
-			mxcounter++;
-		}
+	while (mxcounter < 14) {
+		if (userspace_ready)
+			break;
+		leds_on(LED_R, true, true, 0xEA);
+		leds_on(LED_G, true, true, 0xE2);
+		leds_set_slope_mode(client, LED_R,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_set_slope_mode(client, LED_G,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_i2c_write_all(client);
+		mdelay(2010);
+		leds_on(LED_R, false, false, 0);
+		leds_on(LED_G, false, false, 0);
+		leds_i2c_write_all(client);
+		mdelay(5);
+		leds_on(LED_B, true, true, 0xFF);
+		leds_set_slope_mode(client, LED_B,
+				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+		leds_i2c_write_all(client);
+		mdelay(2010);
+		leds_on(LED_B, false, false, 0);
+		leds_i2c_write_all(client);
+		mxcounter++;
+		mdelay(10);
+
+	}
+	leds_on(LED_R, false, false, 0);
+	leds_on(LED_G, false, false, 0);
+	leds_on(LED_B, false, false, 0);
+	leds_i2c_write_all(client);
+	return;
 }
 
 static bool booted = false;

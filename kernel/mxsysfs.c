@@ -34,6 +34,7 @@ const char *buf, size_t count)
 		return count;
 
 	userspace_ready = input;
+	pr_info("[MACHINEX] USER SPACE READY\n");
 	return count;
 }
 MX_ATTR_RW(userspace_ready);
