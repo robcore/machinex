@@ -514,6 +514,7 @@ static void do_powering(struct i2c_client *client)
 }
 
 static bool booted = false;
+static bool early_boot = false;
 static unsigned int current_led_mode;
 static void an30259a_start_led_pattern(unsigned int mode)
 {
@@ -544,7 +545,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	g_brightness = LED_MAX_CURRENT;
 	b_brightness = LED_MAX_CURRENT;
 
-	if (breathing_leds)
+	if (breathing_leds && early_boot)
 		an30259a_set_slope_current(inhale, exhale);
 
  	switch (mode) {
@@ -652,6 +653,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0xEA, false);
 		an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xE2, false);
 		an30259a_set_led_delayed_blink(LED_B, 0, 1, 1, 0xFF, false);
+		if (!early_boot)
+			early_boot = true;
 		break;
 
 	case CUSTOM:
