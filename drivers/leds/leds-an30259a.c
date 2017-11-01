@@ -560,6 +560,34 @@ static unsigned int custom_b_dt2 = 0;
 static unsigned int custom_b_dt3 = 0;
 static unsigned int custom_b_dt4 = 0;
 
+static void do_powering(struct i2c_client *client)
+{
+	unsigned int mxcounter = 0;
+		while (mxcounter < 10) {
+			leds_on(LED_R, true, true, 0xEA);
+			leds_on(LED_G, true, true, 0xE2);
+			leds_set_slope_mode(client, LED_R,
+					0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+			leds_set_slope_mode(client, LED_G,
+					0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+			leds_i2c_write_all(client);
+			mdelay(2010);
+			leds_on(LED_R, false, false, 0);
+			leds_on(LED_G, false, false, 0);
+			leds_i2c_write_all(client);
+			mdelay(5);
+			leds_on(LED_B, true, true, 0xFF);
+			leds_set_slope_mode(client, LED_G,
+					0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
+			leds_i2c_write_all(client);
+			mdelay(2010);
+			leds_on(LED_B, false, false, 0);
+			leds_i2c_write_all(client);
+			mdelay(10);
+			mxcounter++;
+		}
+}
+
 static bool booted = false;
 static unsigned int current_led_mode;
 static void an30259a_start_led_pattern(unsigned int mode)
@@ -574,46 +602,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 	current_led_mode = mode;
 
-	if (booted || (mode == BOOTING && !booted)) {
-		/* Set all LEDs Off */
-		an30259a_reset_register_work(reset);
-		goto regops;
-	}
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
 
-again:
-	if (mode == POWERING) {
-		leds_on(LED_R, true, true, 0x96);
-		leds_on(LED_G, true, true, 0x32);
-		leds_set_slope_mode(client, LED_R,
-				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-		leds_set_slope_mode(client, LED_G,
-				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-		leds_i2c_write_all(client);
-		mdelay(2010);
-		leds_on(LED_R, false, false, 0);
-		leds_on(LED_G, false, false, 0);
-		leds_i2c_write_all(client);
-		mdelay(5);
-		leds_on(LED_G, true, true, 0xA7);
-		leds_on(LED_B, true, true, 0xE5);
-		leds_set_slope_mode(client, LED_G,
-				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-		leds_set_slope_mode(client, LED_B,
-				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
-		leds_i2c_write_all(client);
-		mdelay(2010);
-		leds_on(LED_G, false, false, 0);
-		leds_on(LED_B, false, false, 0);
-		leds_i2c_write_all(client);
-		mdelay(10);
-		goto again;
-	} else {
-		booted = true;
-	}
-
-regops:
 	if (mode > CUSTOM || disabled_samsung_pattern ||
 		mode <= PATTERN_OFF)
 		return;
@@ -707,9 +698,7 @@ regops:
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 10, 0, 4, 4, 1, 1, 1, 1);
 #else
-/*
-*/
-
+			do_powering(client);
 #endif
 			booted = true;
 			return;
@@ -719,11 +708,11 @@ regops:
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					15, 2, 1, 0, 10, 48, 12, 10, 10, 100);
+					15, 2, 1, 0, 12, 15, 12, 10, 10, 100);
 			leds_set_slope_mode(client, LED_G,
-					15, 15, 3, 0, 10, 48, 12, 10, 10, 100);
+					15, 15, 3, 0, 12, 15, 12, 10, 10, 100);
 			leds_set_slope_mode(client, LED_B,
-					15, 15, 2, 0, 10, 48, 12, 10, 10, 100);
+					15, 15, 2, 0, 12, 15, 12, 10, 10, 100);
 			break;
 		}
 	case FAKE_POWERING:
