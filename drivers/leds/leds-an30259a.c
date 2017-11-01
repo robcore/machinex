@@ -601,8 +601,7 @@ static void do_powering(struct i2c_client *client)
 	leds_on(LED_G, false, false, 0);
 	leds_on(LED_B, false, false, 0);
 	leds_i2c_write_all(client);
-	mxcounter == 14 ? pr_info("MXCOUNTER MAX\n") :
-	pr_info("MXCOUNTER Reached:%u\n", mxcounter);
+	pr_info("[MXCOUNTER]:%u\n", mxcounter);
 	return;
 }
 
