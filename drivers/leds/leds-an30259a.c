@@ -736,6 +736,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		} else {
 			pr_info("Fade to Black\n");
 			an30259a_set_slope_current(2000, 1500);
+			an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0, false);
 			an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xF6, false);
 			an30259a_set_led_delayed_blink(LED_B, 0, 1, 1, 0xFF, false);
 			break;
