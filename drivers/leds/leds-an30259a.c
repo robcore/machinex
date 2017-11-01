@@ -570,7 +570,7 @@ static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
 	while (mxcounter < 15) {
-		if (userspace_ready) {
+		if (userspace_ready || mxcounter == 14) {
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
