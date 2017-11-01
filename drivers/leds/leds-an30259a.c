@@ -314,7 +314,7 @@ static void leds_set_slope_mode(struct i2c_client *client,
 	struct an30259a_data *data = i2c_get_clientdata(client);
 
 	if ((delay * AN30259A_TIME_UNIT) > SLPTT_MAX_VALUE)
-		delay = SLPTT_MAX_VALUE/AN3059A_TIME_UNIT;
+		delay = SLPTT_MAX_VALUE/AN30259A_TIME_UNIT;
 
 	data->shadow_reg[AN30259A_REG_LED1CNT1 + led * 4] =
 							dutymax << 4 | dutymid;
@@ -653,14 +653,12 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		leds_on(LED_G, true, false, g_brightness);
 		break;
 
-EAB000
-
 	case POWERING:
 		if (poweroff_charging)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-#if NOT_TRYING_CRAZY_THING
+#ifdef NOT_TRYING_CRAZY_THING
 			leds_on(LED_R, true, true, 192);
 			leds_on(LED_G, true, true, 188);
 			leds_on(LED_B, true, true, 255);
@@ -813,9 +811,7 @@ EAB000
 	default:
 		return;
 	}
-	retval = leds_i2c_write_all(client);
-	if (retval)
-		pr_warn("leds_i2c_write_all failed\n");
+	leds_i2c_write_all(client);
 }
 
 /* Added for led common class */
