@@ -563,7 +563,7 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
-		while (mxcounter < 10) {
+		while (mxcounter < 14 || userspace_ready) {
 			leds_on(LED_R, true, true, 0xEA);
 			leds_on(LED_G, true, true, 0xE2);
 			leds_set_slope_mode(client, LED_R,
@@ -708,11 +708,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					15, 2, 1, 0, 12, 15, 12, 10, 10, 100);
+					12, 2, 1, 0, 12, 15, 12, 10, 10, 100);
 			leds_set_slope_mode(client, LED_G,
-					15, 15, 3, 0, 12, 15, 12, 10, 10, 100);
+					12, 15, 3, 0, 12, 15, 12, 10, 10, 100);
 			leds_set_slope_mode(client, LED_B,
-					15, 15, 2, 0, 12, 15, 12, 10, 10, 100);
+					12, 15, 2, 0, 12, 15, 12, 10, 10, 100);
 			break;
 		}
 	case FAKE_POWERING:

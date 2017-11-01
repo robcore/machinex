@@ -16,6 +16,27 @@
 #include <linux/capability.h>
 #include <linux/compiler.h>
 
+unsigned int userspace_ready = 0;
+mx_show_one(userspace_ready);
+static ssize_t store_userspace_ready(struct kobject *kobj,
+ struct kobj_attribute *attr,
+ const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	sanitize_min_max(input, 1, 1);
+
+	if (input == userspace_ready)
+		return count;
+
+	userspace_ready = input;
+	return count;
+}
+
 static unsigned char *mx_version = CONFIG_MACHINEX_VERSION;
 /* whether file capabilities are enabled */
 static ssize_t show_mx_version(struct kobject *kobj,
