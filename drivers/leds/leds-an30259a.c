@@ -224,10 +224,16 @@ static void an30259a_set_slope_current(struct i2c_client *client,
 
 	/* Keep duty min always zero, as in blink has to be off for a while */
 	dutymin = 0;
-	slptt1 = ontime/500;
-	slptt2 = offtime/500;
-	if(!slptt1) slptt1 = 1;
-	if(!slptt2) slptt2 = 1;
+
+	if (!ontime)
+		slptt1 = 1;
+	else
+		slptt1 = ontime / 500;
+
+	if (!offtime)
+		slptt2 = 1;
+	else
+		slptt2 = offtime / 500;
 	
 	if(slptt1 > 1) {
 		slptt2 += (slptt1 >> 1);
