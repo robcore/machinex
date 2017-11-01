@@ -34,8 +34,6 @@
 u8 led_dynamic_current = 0x28;
 u8 led_lowpower_mode = 0;
 
-unsigned long disabled_samsung_pattern = 0;
-
 static struct an30259_led_conf led_conf[] = {
 	{
 		.name = "led_r",
@@ -379,10 +377,10 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	} else
 		leds_on(led, true, true, brightness);
 
-	leds_set_slope_mode(client, led, 0, (15), (15), 0,
-				((delay_on_time) + AN30259A_TIME_UNIT - 1) /
+	leds_set_slope_mode(client, led, 0, 15, 15, 0,
+				(delay_on_time + AN30259A_TIME_UNIT - 1) /
 				AN30259A_TIME_UNIT,
-				((delay_off_time) + AN30259A_TIME_UNIT - 1) /
+				(delay_off_time + AN30259A_TIME_UNIT - 1) /
 				AN30259A_TIME_UNIT,
 				0, 0, 0, 0);
 }
@@ -1256,7 +1254,7 @@ static ssize_t store_exhale(struct kobject *kobj,
 
 	if (input == exhale)
 		return count;
-	inhale = input;
+	exhale = input;
 
 	if (breathing_leds)
 		an30259a_set_slope_current(inhale, exhale);
