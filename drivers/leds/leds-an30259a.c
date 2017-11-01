@@ -159,7 +159,7 @@ static inline struct an30259a_led *cdev_to_led(struct led_classdev *cdev)
 	return container_of(cdev, struct an30259a_led, cdev);
 }
 
-static int leds_i2c_write_all(struct i2c_client *client)
+static void leds_i2c_write_all(struct i2c_client *client)
 {
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	int ret;
@@ -184,12 +184,9 @@ static int leds_i2c_write_all(struct i2c_client *client)
 			__func__);
 		goto exit;
 	}
-	mutex_unlock(&data->mutex);
-	return 0;
-
 exit:
 	mutex_unlock(&data->mutex);
-	return ret;
+	return;
 }
 
 void an30259a_set_brightness(struct led_classdev *cdev,
@@ -207,6 +204,90 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 				struct an30259a_led, brightness_work);
 		leds_on(led->channel, true, false, led->brightness);
 		leds_i2c_write_all(client);
+}
+
+/**
+* an30259a_set_slope_current - To Set the LED intensity and enable them
+**/
+static void an30259a_set_slope_current(struct i2c_client *client, 
+				u16 ontime, u16 offtime)
+{
+	struct an30259a_data *data = i2c_get_clientdata(client);
+	
+	u8 delay, dutymax, dutymid, dutymin, slptt1, slptt2, 
+			dt1, dt2, dt3, dt4;
+			
+	delay = 0;
+	
+	dutymid = dutymax = 0xF;
+	dt2 = dt3 = 0;
+
+	/* Keep duty min always zero, as in blink has to be off for a while */
+	dutymin = 0;
+	slptt1 = ontime/500;
+	slptt2 = offtime/500;
+	if(!slptt1) slptt1 = 1;
+	if(!slptt2) slptt2 = 1;
+	
+	if(slptt1 > 1) {
+		slptt2 += (slptt1 >> 1);
+		
+		// Check if odd number, store ceiling value to slptt1
+		// in blink, for breathing effect ontime/2 is used for rasing and falling
+		slptt1 = (slptt1 & 1) ? (slptt1 >> 1) + 1 : (slptt1 >> 1);
+		
+		dt4 = slptt1;
+	} else
+		dt4 = 0;
+
+	dt1 = slptt1;
+	
+	data->shadow_reg[AN30259A_REG_LED1CNT1] = 
+		data->shadow_reg[AN30259A_REG_LED2CNT1] = 
+		data->shadow_reg[AN30259A_REG_LED3CNT1] = dutymax << 4 | dutymid;
+
+	data->shadow_reg[AN30259A_REG_LED1CNT2] =  
+		data->shadow_reg[AN30259A_REG_LED2CNT2] = 
+		data->shadow_reg[AN30259A_REG_LED3CNT2] = delay << 4 | dutymin;
+	
+	data->shadow_reg[AN30259A_REG_LED1CNT3] = 
+		data->shadow_reg[AN30259A_REG_LED2CNT3] = 	
+		data->shadow_reg[AN30259A_REG_LED3CNT3] = dt2 << 4 | dt1;
+	
+	data->shadow_reg[AN30259A_REG_LED1CNT4] = 
+		data->shadow_reg[AN30259A_REG_LED2CNT4] = 
+		data->shadow_reg[AN30259A_REG_LED3CNT4] = dt4 << 4 | dt3;
+	
+	data->shadow_reg[AN30259A_REG_LED1SLP] = 
+		data->shadow_reg[AN30259A_REG_LED2SLP] =  
+		data->shadow_reg[AN30259A_REG_LED3SLP] = slptt2 << 4 | slptt1;
+
+//#if 1	// TSN: Check.... If current will not be zero, enable only current particular LED	
+//	data->shadow_reg[AN30259A_REG_LEDON] |= ALL_LED_SLOPE_MODE;
+	
+	/* Enable each color LED, if non-zero 
+	if(data->shadow_reg[AN30259A_REG_LED_R])
+		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_R;
+	else
+		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_R);
+	
+	if(data->shadow_reg[AN30259A_REG_LED_G])
+		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_G;
+	else
+		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_G);
+	
+	if(data->shadow_reg[AN30259A_REG_LED_B])
+		data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_B;
+	else
+		data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << LED_B);
+*/	
+//#else // TSN: Check.... If current will be really zero, then, can write Enable ALL
+	//data->shadow_reg[AN30259A_REG_LEDON] |= ALL_LED_SLOPE_MODE | ALL_LED_ON;
+//#endif
+
+	data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_R;
+	data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_G;
+	data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_B;
 }
 
 /*
@@ -231,6 +312,9 @@ static void leds_set_slope_mode(struct i2c_client *client,
 {
 
 	struct an30259a_data *data = i2c_get_clientdata(client);
+
+	if ((delay * AN30259A_TIME_UNIT) > SLPTT_MAX_VALUE)
+		delay = SLPTT_MAX_VALUE/AN3059A_TIME_UNIT;
 
 	data->shadow_reg[AN30259A_REG_LED1CNT1 + led * 4] =
 							dutymax << 4 | dutymid;
@@ -291,9 +375,7 @@ static void an30259a_reset_register_work(struct work_struct *work)
 	leds_on(LED_G, false, false, 0);
 	leds_on(LED_B, false, false, 0);
 
-	retval = leds_i2c_write_all(client);
-	if (retval)
-		printk(KERN_WARNING "leds_i2c_write_all failed\n");
+	leds_i2c_write_all(client);
 }
 
 static void leds_i2c_quick_write(struct i2c_client *client)
@@ -571,24 +653,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		leds_on(LED_G, true, false, g_brightness);
 		break;
 
-/* For later
-	case POWERING:
-		pr_info("LED Powering Pattern on\n");
-		leds_on(LED_R, true, true, led_dynamic_current);
-		leds_on(LED_G, true, true, led_dynamic_current);
-		leds_on(LED_B, true, true, led_dynamic_current);
-		leds_set_slope_mode(client, LED_R,
-				0, 5, 5, 0, 6, 5, 4, 10, 10, 4);
-		leds_set_slope_mode(client, LED_G,
-				0, 15, 10, 15, 6, 5, 4, 10, 10, 4);
-		leds_set_slope_mode(client, LED_B,
-				0, 15, 10, 15, 6, 5, 4, 10, 10, 4);
-*/
+EAB000
+
 	case POWERING:
 		if (poweroff_charging)
 			return;
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
+#if NOT_TRYING_CRAZY_THING
 			leds_on(LED_R, true, true, 192);
 			leds_on(LED_G, true, true, 188);
 			leds_on(LED_B, true, true, 255);
@@ -598,19 +670,49 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					0, 15, 10, 4, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 10, 0, 4, 4, 1, 1, 1, 1);
+#else
+		while (1) {
+			leds_set_slope_mode(client, ALL_LED_ON,
+					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
+			leds_on(LED_R, true, true, 0x96);
+			leds_on(LED_G, true, true, 0x32);
+			leds_on(LED_B, true, true, 0x0);
+			leds_i2c_write_all(client);
+			mdelay(2000);
+			leds_on(LED_R, true, false, 0);
+			leds_on(LED_G, true, false, 0);
+			leds_on(LED_B, true, false, 0);
+			leds_i2c_write_all(client);
+
+			leds_set_slope_mode(client, ALL_LED_ON,
+					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
+			leds_on(LED_R, true, true, 0x0);
+			leds_on(LED_G, true, true, 0xA7);
+			leds_on(LED_B, true, true, 0xE5);
+			leds_i2c_write_all(client);
+			mdelay(2000);
+			leds_on(LED_R, true, false, 0);
+			leds_on(LED_G, true, false, 0);
+			leds_on(LED_B, true, false, 0);
+			leds_i2c_write_all(client);
+
+			if (mode != POWERING)
+				break;
+		}
+#endif
 			booted = true;
-			break;
+			return;
 		} else {
 			pr_info("Fade to Black\n");
 			leds_on(LED_R, true, true, 0xE);
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					18, 2, 1, 0, 10, 48, 12, 10, 10, 100);
+					15, 2, 1, 0, 10, 48, 12, 10, 10, 100);
 			leds_set_slope_mode(client, LED_G,
-					18, 15, 3, 0, 10, 48, 12, 10, 10, 100);
+					15, 15, 3, 0, 10, 48, 12, 10, 10, 100);
 			leds_set_slope_mode(client, LED_B,
-					18, 15, 2, 0, 10, 48, 12, 10, 10, 100);
+					15, 15, 2, 0, 10, 48, 12, 10, 10, 100);
 			break;
 		}
 	case FAKE_POWERING:
