@@ -569,8 +569,8 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
-	while (mxcounter < 15) {
-		if (userspace_ready || mxcounter == 14) {
+	while (mxcounter < 16) {
+		if (userspace_ready) {
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
@@ -594,6 +594,8 @@ static void do_powering(struct i2c_client *client)
 		leds_on(LED_B, false, false, 0);
 		leds_i2c_write_all(client);
 		mdelay(10);
+		if (mxcounter == 15)
+			break;
 		mxcounter++;
 	}
 	leds_on(LED_R, false, false, 0);
