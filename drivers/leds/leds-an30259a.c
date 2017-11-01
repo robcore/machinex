@@ -591,10 +591,10 @@ static void do_powering(struct i2c_client *client)
 				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
 		mdelay(2010);
-		leds_on(LED_B, false, false, 0);
-		leds_i2c_write_all(client);
 		if (mxcounter == 15)
 			break;
+		leds_on(LED_B, false, false, 0);
+		leds_i2c_write_all(client);
 		mdelay(10);
 		mxcounter++;
 	}
