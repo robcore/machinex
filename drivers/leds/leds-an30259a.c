@@ -213,11 +213,19 @@ static unsigned int breathing;
 static void an30259a_set_slope_current(u16 ontime, u16 offtime)
 {
 	struct i2c_client *client;
-	client = b_client;
-	struct an30259a_data *data = i2c_get_clientdata(client);
+
+	struct an30259a_data *data;
 	
 	u8 delay, dutymax, dutymid, dutymin, slptt1, slptt2, 
 			dt1, dt2, dt3, dt4;
+
+	client = b_client;
+	if (client == NULL)
+		return;
+
+	data = i2c_get_clientdata(client);
+	if (data == NULL)
+		return;
 
 	delay = 0;
 	
@@ -294,6 +302,7 @@ static void an30259a_set_slope_current(u16 ontime, u16 offtime)
 	data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_R;
 	data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_G;
 	data->shadow_reg[AN30259A_REG_LEDON] |= LED_ON << LED_B;
+	leds_i2c_write_all(client);
 }
 
 /*
