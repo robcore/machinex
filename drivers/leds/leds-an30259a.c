@@ -209,17 +209,15 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 /**
 * an30259a_set_slope_current - To Set the LED intensity and enable them
 **/
-static u16 breathing_ontime;
-static u16 breathing_offtime;
+static unsigned int breathing;
 static void an30259a_set_slope_current(u16 ontime, u16 offtime)
 {
-	struct an30259a_data *data = i2c_get_clientdata(b_client);
+	struct i2c_client *client;
+	client = b_client;
+	struct an30259a_data *data = i2c_get_clientdata(client);
 	
 	u8 delay, dutymax, dutymid, dutymin, slptt1, slptt2, 
 			dt1, dt2, dt3, dt4;
-
-	breathing_ontime = ontime;
-	breathing_offtime = offtime;
 
 	delay = 0;
 	
@@ -575,8 +573,8 @@ static void do_powering(struct i2c_client *client)
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
-		leds_on(LED_R, true, true, 0xDA);
-		leds_on(LED_G, true, true, 0xE5);
+		leds_on(LED_R, true, true, 0xD6);
+		leds_on(LED_G, true, true, 0xEC);
 		leds_set_slope_mode(client, LED_R,
 				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
 		leds_set_slope_mode(client, LED_G,
@@ -587,10 +585,10 @@ static void do_powering(struct i2c_client *client)
 		leds_on(LED_G, false, false, 0);
 		leds_i2c_write_all(client);
 		mdelay(5);
-		leds_on(LED_G, true, true, 0xFF);
+		leds_on(LED_G, true, true, 0x32);
 		leds_set_slope_mode(client, LED_G,
 				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
-		leds_on(LED_B, true, true, 0xA7);
+		leds_on(LED_B, true, true, 0xFF);
 		leds_set_slope_mode(client, LED_B,
 				0, 20, 15, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
@@ -1467,25 +1465,23 @@ static ssize_t store_##file_name		\
 static ssize_t show_breathing(struct kobject *kobj, 
 				struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u %u\n", breathing_ontime, breathing_offtime);
+	return sprintf(buf, "%u\n", breathing);
 }
 
 static ssize_t store_breathing(struct kobject *kobj,
 			   struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	unsigned int input;
-	unsigned int input2;
-	int ret;
-	ret = sscanf(buf, "%u %u", &input, &input2);
+	int input, ret;
+
+	ret = sscanf(buf, "%d", &input);
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input < 0)
-		input = 0;
-	if (input2 < 0)
-		input2 = 0;
+	if (input == breathing)
+		return count;
+	breathing = input;
 
-	an30259a_set_slope_current(input, input2);
+	an30259a_set_slope_current(breathing, breathing);
 	return count;
 }
 
