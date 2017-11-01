@@ -735,13 +735,16 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		} else {
 			pr_info("Fade to Black\n");
-
-			an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0x1, false);
-			an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xF6, false);
-			an30259a_set_led_delayed_blink(LED_B, 1, 1, 1, 0xFF, false);
-			leds_i2c_write_all(client);
-			an30259a_set_slope_current(2000, 1750);
-			return;
+			leds_on(LED_R, true, true, 0xE);
+			leds_on(LED_G, true, true, 0xFF);
+			leds_on(LED_B, true, true, 0xF6);
+			leds_set_slope_mode(client, LED_R,
+					13, 2, 1, 0, 12, 15, 12, 10, 10, 50);
+			leds_set_slope_mode(client, LED_G,
+					13, 16, 3, 0, 12, 15, 12, 10, 10, 50);
+			leds_set_slope_mode(client, LED_B,
+					13, 16, 2, 0, 12, 15, 12, 10, 10, 50);
+			break;
 		}
 	case FAKE_POWERING:
 		if (poweroff_charging)
@@ -1492,7 +1495,6 @@ static ssize_t store_inhale(struct kobject *kobj,
 	return count;
 }
 MX_ATTR_RW(inhale);
-
 static ssize_t show_exhale(struct kobject *kobj, 
 				struct kobj_attribute *attr, char *buf)
 {
