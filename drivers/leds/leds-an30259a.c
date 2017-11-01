@@ -209,7 +209,8 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 /**
 * an30259a_set_slope_current - To Set the LED intensity and enable them
 **/
-static unsigned int breathing;
+static unsigned int inhale;
+static unsigned int exhale;
 static void an30259a_set_slope_current(u16 ontime, u16 offtime)
 {
 	struct i2c_client *client;
@@ -734,15 +735,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		} else {
 			pr_info("Fade to Black\n");
-			leds_on(LED_R, true, true, 0xE);
-			leds_on(LED_G, true, true, 0xFF);
-			leds_on(LED_B, true, true, 0xF6);
-			leds_set_slope_mode(client, LED_R,
-					13, 2, 1, 0, 12, 15, 12, 10, 10, 50);
-			leds_set_slope_mode(client, LED_G,
-					13, 16, 3, 0, 12, 15, 12, 10, 10, 50);
-			leds_set_slope_mode(client, LED_B,
-					13, 16, 2, 0, 12, 15, 12, 10, 10, 50);
+			an30259a_set_slope_current(2000, 1500);
+			an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xF6, false);
+			an30259a_set_led_delayed_blink(LED_B, 0, 1, 1, 0xFF, false);
 			break;
 		}
 	case FAKE_POWERING:
@@ -1471,13 +1466,13 @@ static ssize_t store_##file_name		\
 	return count;				\
 }
 
-static ssize_t show_breathing(struct kobject *kobj, 
+static ssize_t show_inhale(struct kobject *kobj, 
 				struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u\n", breathing);
+	return sprintf(buf, "%u\n", inhale);
 }
 
-static ssize_t store_breathing(struct kobject *kobj,
+static ssize_t store_inhale(struct kobject *kobj,
 			   struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int input, ret;
@@ -1486,15 +1481,38 @@ static ssize_t store_breathing(struct kobject *kobj,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input == breathing)
+	if (input == inhale)
 		return count;
-	breathing = input;
+	inhale = input;
 
-	an30259a_set_slope_current(breathing, breathing);
+	an30259a_set_slope_current(inhale, exhale);
 	return count;
 }
 
-MX_ATTR_RW(breathing);
+static ssize_t show_exhale(struct kobject *kobj, 
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", exhale);
+}
+
+static ssize_t store_exhale(struct kobject *kobj,
+			   struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int input, ret;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input == exhale)
+		return count;
+	inhale = input;
+
+	an30259a_set_slope_current(inhale, exhale);
+	return count;
+}
+
+MX_ATTR_RW(exhale);
 
 show_one_led(custom_led_colours);
 static ssize_t store_custom_led_colours(struct kobject *kobj,
@@ -1673,7 +1691,8 @@ static struct attribute_group cust_led_b_attr_group = {
 };
 
 static struct attribute *mx_custom_leds_attrs[] = {
-	&breathing_attr.attr,
+	&inhale_attr.attr,
+	&exhale_attr.attr,
 	&custom_led_colours_attr.attr,
 	NULL
 };
