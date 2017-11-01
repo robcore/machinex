@@ -572,7 +572,7 @@ static void do_powering(struct i2c_client *client)
 	while (mxcounter < 14) {
 		if (userspace_ready)
 			break;
-		leds_on(LED_R, true, true, 0xEA);
+		leds_on(LED_R, true, true, 0xE5);
 		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_R,
 				0, 15, 5, 0, 4, 4, 1, 1, 1, 1);
