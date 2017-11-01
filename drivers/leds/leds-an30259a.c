@@ -209,14 +209,18 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 /**
 * an30259a_set_slope_current - To Set the LED intensity and enable them
 **/
-static void an30259a_set_slope_current(struct i2c_client *client, 
-				u16 ontime, u16 offtime)
+static u16 breathing_ontime;
+static u16 breathing_offtime;
+static void an30259a_set_slope_current(u16 ontime, u16 offtime)
 {
-	struct an30259a_data *data = i2c_get_clientdata(client);
+	struct an30259a_data *data = i2c_get_clientdata(b_client);
 	
 	u8 delay, dutymax, dutymid, dutymin, slptt1, slptt2, 
 			dt1, dt2, dt3, dt4;
-			
+
+	breathing_ontime = ontime;
+	breathing_offtime = offtime;
+
 	delay = 0;
 	
 	dutymid = dutymax = 0xF;
@@ -225,16 +229,14 @@ static void an30259a_set_slope_current(struct i2c_client *client,
 	/* Keep duty min always zero, as in blink has to be off for a while */
 	dutymin = 0;
 
-	if (!ontime)
+	slptt1 = ontime / 500;
+	if (!slptt1)
 		slptt1 = 1;
-	else
-		slptt1 = ontime / 500;
 
-	if (!offtime)
+	slptt2 = offtime / 500;
+	if (!slptt2)
 		slptt2 = 1;
-	else
-		slptt2 = offtime / 500;
-	
+
 	if(slptt1 > 1) {
 		slptt2 += (slptt1 >> 1);
 		
@@ -373,7 +375,6 @@ static int leds_set_imax(struct i2c_client *client, u8 imax)
 #ifdef SEC_LED_SPECIFIC
 static void an30259a_reset_register_work(struct work_struct *work)
 {
-	int retval;
 	struct i2c_client *client;
 	client = b_client;
 
@@ -586,13 +587,17 @@ static void do_powering(struct i2c_client *client)
 		leds_on(LED_G, false, false, 0);
 		leds_i2c_write_all(client);
 		mdelay(5);
-		leds_on(LED_B, true, true, 0xFF);
-		leds_set_slope_mode(client, LED_B,
+		leds_on(LED_G, true, true, 0xFF);
+		leds_set_slope_mode(client, LED_G,
 				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
+		leds_on(LED_B, true, true, 0xA7);
+		leds_set_slope_mode(client, LED_B,
+				0, 20, 15, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
 		mdelay(2010);
 		if (mxcounter == 15)
 			break;
+		leds_on(LED_G, false, false, 0);
 		leds_on(LED_B, false, false, 0);
 		leds_i2c_write_all(client);
 		mdelay(10);
@@ -1459,6 +1464,33 @@ static ssize_t store_##file_name		\
 	return count;				\
 }
 
+static ssize_t show_breathing(struct kobject *kobj, 
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u %u\n", breathing_ontime, breathing_offtime);
+}
+
+static ssize_t store_breathing(struct kobject *kobj,
+			   struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int input;
+	unsigned int input2;
+	int ret;
+	ret = sscanf(buf, "%u %u", &input, &input2);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input < 0)
+		input = 0;
+	if (input2 < 0)
+		input2 = 0;
+
+	an30259a_set_slope_current(input, input2);
+	return count;
+}
+
+MX_ATTR_RW(breathing);
+
 show_one_led(custom_led_colours);
 static ssize_t store_custom_led_colours(struct kobject *kobj,
 			   struct kobj_attribute *attr, const char *buf, size_t count)
@@ -1635,7 +1667,8 @@ static struct attribute_group cust_led_b_attr_group = {
 	.attrs = cust_led_b_attrs,
 };
 
-static struct attribute * mx_custom_leds_attrs[] = {
+static struct attribute *mx_custom_leds_attrs[] = {
+	&breathing_attr.attr,
 	&custom_led_colours_attr.attr,
 	NULL
 };
