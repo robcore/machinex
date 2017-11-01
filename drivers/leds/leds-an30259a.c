@@ -1234,8 +1234,8 @@ static ssize_t store_inhale(struct kobject *kobj,
 	if (input == inhale)
 		return count;
 	inhale = input;
-
-	an30259a_set_slope_current(inhale, exhale);
+	if (breathing_leds)
+		an30259a_set_slope_current(inhale, exhale);
 	return count;
 }
 MX_ATTR_RW(inhale);
@@ -1258,7 +1258,8 @@ static ssize_t store_exhale(struct kobject *kobj,
 		return count;
 	inhale = input;
 
-	an30259a_set_slope_current(inhale, exhale);
+	if (breathing_leds)
+		an30259a_set_slope_current(inhale, exhale);
 	return count;
 }
 
