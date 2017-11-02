@@ -36,6 +36,7 @@
 u8 led_dynamic_current = 0x28;
 unsigned int led_lowpower_mode = 0;
 unsigned int real_led_lowpower_mode = 0;
+struct wake_lock ledlock;
 
 static struct an30259_led_conf led_conf[] = {
 	{
@@ -731,14 +732,22 @@ void send_led_full_msg(bool enable)
 {
 	if (is_display_on())
 		return;
+
 	if (enable && current_led_mode == CHARGING &&
-		is_charger_connected)
+		is_charger_connected) {
+		wake_lock(&ledlock);
 		an30259a_start_led_pattern(FULLY_CHARGED);
-	else if (!enable && current_led_mode == FULLY_CHARGED && 
-			 is_charger_connected)
-		an30259a_start_led_pattern(CHARGING);
-	else
-		an30259a_start_led_pattern(PATTERN_OFF);
+		wake_unlock(&ledlock);
+		return;
+	} else if (!enable && current_led_mode == FULLY_CHARGED) {
+		if (is_charger_connected) {
+			wake_lock(&ledlock);
+			an30259a_start_led_pattern(CHARGING);
+			wake_unlock(&ledlock);
+			return;
+		} else
+			an30259a_start_led_pattern(PATTERN_OFF);
+	}
 }
 		
 /* Added for led common class */
@@ -1583,6 +1592,7 @@ static int __init mx_leds_late_init(void)
 		pr_err("Failed to create custom_b kobject!\n");
 		goto bexit;
 	}
+	wake_lock_init(&ledlock, WAKE_LOCK_SUSPEND, "led_wake");
 
 	return 0;
 
