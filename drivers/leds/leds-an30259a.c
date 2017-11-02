@@ -745,20 +745,19 @@ void send_led_full_msg(bool enable)
 
 	if (enable && current_led_mode == CHARGING &&
 		is_charger_connected) {
-		wake_lock(&ledlock);
 		is_full_charge = true;
+		wake_lock(&ledlock);
 		an30259a_start_led_pattern(FULLY_CHARGED);
 		wake_unlock(&ledlock);
 		return;
 	} else if (!enable && current_led_mode == FULLY_CHARGED) {
 		is_full_charge = false;
-		if (is_charger_connected) {
+		if (!is_charger_connected) {
 			wake_lock(&ledlock);
-			an30259a_start_led_pattern(CHARGING);
+			an30259a_start_led_pattern(PATTERN_OFF);
 			wake_unlock(&ledlock);
 			return;
-		} else
-			an30259a_start_led_pattern(PATTERN_OFF);
+		}
 	}
 }
 		
