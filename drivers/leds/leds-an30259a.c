@@ -153,14 +153,14 @@ static void an30259a_led_brightness_work(struct work_struct *work)
 		leds_on(led->channel, true, false, led->brightness);
 		leds_i2c_write_all(client);
 }
-
+static void __inline an30259a_reset(struct i2c_client *client);
 /**
 * an30259a_set_slope_current - To Set the LED intensity and enable them
 **/
 static unsigned int breathing_leds = 1;
 static unsigned int inhale = 2000;
 static unsigned int exhale = 2000;
-static void an30259a_set_slope_current(u16 ontime, u16 offtime)
+static void an30259a_set_slope_current(u16 ontime, u16 offtime, bool reset)
 {
 	struct i2c_client *client;
 
@@ -169,14 +169,20 @@ static void an30259a_set_slope_current(u16 ontime, u16 offtime)
 	u8 delay, dutymax, dutymid, dutymin, slptt1, slptt2, 
 			dt1, dt2, dt3, dt4;
 
-	if (!breathing_leds)
-		return;
 	client = b_client;
 	if (client == NULL)
 		return;
 
 	data = i2c_get_clientdata(client);
 	if (data == NULL)
+		return;
+
+	if (reset) {
+		an30259a_reset(client);
+		return;
+	}
+
+	if (!breathing_leds)
 		return;
 
 	delay = 0;
@@ -312,8 +318,8 @@ static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 
 	data->shadow_reg[AN30259A_REG_LED1CC + led] = ledcc;
 }
-
-static int leds_set_imax(struct i2c_client *client, u8 imax)
+static u8 imax_copy;
+static void leds_set_imax(struct i2c_client *client, u8 imax)
 {
 	int ret;
 	struct an30259a_data *data = i2c_get_clientdata(client);
@@ -328,7 +334,35 @@ static int leds_set_imax(struct i2c_client *client, u8 imax)
 			"%s: failure on i2c write\n",
 			__func__);
 	}
-	return 0;
+	return;
+}
+
+static void __inline an30259a_reset(struct i2c_client *client)
+{	
+	struct an30259a_data *data = i2c_get_clientdata(client);
+	int ret;
+	
+	/* Reset the IC */
+	if(unlikely((ret = i2c_smbus_write_byte_data(client, 
+			AN30259A_REG_SRESET, AN30259A_SRESET)) < 0)) {
+		dev_err(&client->adapter->dev,
+			"%s: failure on i2c reset\n",
+			__func__);
+	}
+			
+	/* Make a copy of IC register values to the driver */	
+	if(unlikely((ret = i2c_smbus_read_i2c_block_data(client,
+			AN30259A_REG_SRESET | AN30259A_CTN_RW_FLG,
+			AN30259A_REG_MAX, data->shadow_reg)) < 0)) {
+		dev_err(&client->adapter->dev,
+			"%s: failure on i2c read block(ledxcc)\n",
+			__func__);
+	}
+	
+	/* Set imax */
+	leds_set_imax(client, imax_copy);
+	
+	return;
 }
 
 #ifdef SEC_LED_SPECIFIC
@@ -337,9 +371,9 @@ static void an30259a_reset_register_work(struct work_struct *work)
 	struct i2c_client *client;
 	client = b_client;
 
-	leds_on(LED_R, false, false, 0);
-	leds_on(LED_G, false, false, 0);
-	leds_on(LED_B, false, false, 0);
+	leds_on(LED_R, false, false, 0x0);
+	leds_on(LED_G, false, false, 0x0);
+	leds_on(LED_B, false, false, 0x0);
 
 	leds_i2c_write_all(client);
 }
@@ -529,6 +563,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
+	if (breathing_leds && booted)
+		an30259a_reset(client);
 
 	if (mode > CUSTOM ||
 		mode <= PATTERN_OFF)
@@ -545,7 +581,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	b_brightness = LED_MAX_CURRENT;
 
 	if (breathing_leds && booted)
-		an30259a_set_slope_current(inhale, exhale);
+		an30259a_set_slope_current(inhale, exhale, false);
 
  	switch (mode) {
  	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
@@ -697,7 +733,6 @@ static ssize_t show_an30259a_led_lowpower(struct device *dev,
 	return sprintf(buf, "%u\n", led_lowpower_mode);
 }
 
-
 static ssize_t store_an30259a_led_lowpower(struct device *dev,
 					struct device_attribute *devattr,
 					const char *buf, size_t count)
@@ -717,6 +752,15 @@ static ssize_t store_an30259a_led_lowpower(struct device *dev,
 	return count;
 }
 
+/* Added for led common class */
+static ssize_t show_an30259a_led_br_lev(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct an30259a_data *data = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n", imax_copy);
+}
+
 static ssize_t store_an30259a_led_br_lev(struct device *dev,
 					struct device_attribute *devattr,
 					const char *buf, size_t count)
@@ -734,6 +778,7 @@ static ssize_t store_an30259a_led_br_lev(struct device *dev,
 	}
 
 	leds_set_imax(client, brightness_lev);
+	imax_copy = brightness_lev;
 
 	return count;
 }
@@ -984,7 +1029,7 @@ static DEVICE_ATTR(led_pattern, 0664, show_an30259a_led_pattern, \
 					store_an30259a_led_pattern);
 static DEVICE_ATTR(led_blink, 0664, NULL, \
 					store_an30259a_led_blink);
-static DEVICE_ATTR(led_br_lev, 0664, NULL, \
+static DEVICE_ATTR(led_br_lev, 0664, show_an30259a_led_br_lev, \
 					store_an30259a_led_br_lev);
 static DEVICE_ATTR(led_lowpower, 0664, show_an30259a_led_lowpower, \
 					store_an30259a_led_lowpower);
@@ -1195,7 +1240,8 @@ static ssize_t store_breathing_leds(struct kobject *kobj,
 {
 	int input, ret;
 	struct work_struct *reset = 0;
-
+	struct i2c_client *client;
+	client = b_client;
 	ret = sscanf(buf, "%d", &input);
 	if (ret != 1)
 		return -EINVAL;
@@ -1205,10 +1251,11 @@ static ssize_t store_breathing_leds(struct kobject *kobj,
 	breathing_leds = input;
 
 	if (breathing_leds)
-		an30259a_set_slope_current(inhale, exhale);
+		an30259a_set_slope_current(inhale, exhale, false);
 	else {
-		an30259a_set_slope_current(0, 0);
 		an30259a_reset_register_work(reset);
+		an30259a_set_slope_current(0, 0, true);
+
 	}
 	return count;
 }
@@ -1233,7 +1280,7 @@ static ssize_t store_inhale(struct kobject *kobj,
 		return count;
 	inhale = input;
 	if (breathing_leds)
-		an30259a_set_slope_current(inhale, exhale);
+		an30259a_set_slope_current(inhale, exhale, false);
 	return count;
 }
 MX_ATTR_RW(inhale);
@@ -1257,7 +1304,7 @@ static ssize_t store_exhale(struct kobject *kobj,
 	exhale = input;
 
 	if (breathing_leds)
-		an30259a_set_slope_current(inhale, exhale);
+		an30259a_set_slope_current(inhale, exhale, false);
 	return count;
 }
 
@@ -1554,6 +1601,7 @@ static int an30259a_initialize(struct i2c_client *client,
 	}
 
 	leds_set_imax(client, 0x00);
+	imax_copy = 0x00;
 
 	return 0;
 }
