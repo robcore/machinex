@@ -28,6 +28,7 @@
 #include <linux/sec_battery.h>
 #include <linux/sysfs.h>
 #include "leds-an30259a_reg.h"
+#include "linux/i2c/synaptics_rmi.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -727,14 +728,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 void send_led_full_msg(bool enable)
 {
-	if (enable) {
-		if (current_led_mode == CHARGING ||
-			current_led_mode == FULLY_CHARGED)
-			an30259a_start_led_pattern(FULLY_CHARGED);
-	} else {
-		if (current_led_mode == FULLY_CHARGED)
-			an30259a_start_led_pattern(PATTERN_OFF);
-	}
+	if (enable && current_led_mode == CHARGING &&
+		is_charger_connected)
+		an30259a_start_led_pattern(FULLY_CHARGED);
+	else if (!enable && current_led_mode == FULLY_CHARGED && 
+			 is_charger_connected)
+		an30259a_start_led_pattern(CHARGING);
+	else
+		an30259a_start_led_pattern(PATTERN_OFF);
 }
 		
 /* Added for led common class */
