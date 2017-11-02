@@ -511,8 +511,8 @@ static void do_powering(struct i2c_client *client)
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
-		leds_on(LED_R, true, true, 0xD6);
-		leds_on(LED_G, true, true, 0xEC);
+		leds_on(LED_R, true, true, 0xEA);
+		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_R,
 				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
 		leds_set_slope_mode(client, LED_G,
@@ -808,7 +808,14 @@ static ssize_t store_an30259a_led_pattern(struct device *dev,
 
 	return count;
 }
-
+/*
+static int is_blinking;
+static ssize_t show_an30259a_led_blink(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+		return sprintf(buf, "%u\n", current_led_mode);
+}
+*/
 static ssize_t store_an30259a_led_blink(struct device *dev,
 					struct device_attribute *devattr,
 					const char *buf, size_t count)
