@@ -728,6 +728,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 void send_led_full_msg(bool enable)
 {
+	if (is_display_on())
+		return;
 	if (enable && current_led_mode == CHARGING &&
 		is_charger_connected)
 		an30259a_start_led_pattern(FULLY_CHARGED);
