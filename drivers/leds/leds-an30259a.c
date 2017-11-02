@@ -468,7 +468,46 @@ static unsigned int custom_b_dt1 = 0;
 static unsigned int custom_b_dt2 = 0;
 static unsigned int custom_b_dt3 = 0;
 static unsigned int custom_b_dt4 = 0;
+#if 1
+static void do_powering(struct i2c_client *client)
+{
+loopme:
+	leds_on(LED_R, true, true, 0xD6);
+	leds_on(LED_G, true, true, 0xEC);
+	leds_set_slope_mode(client, LED_R,
+		0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
+	leds_set_slope_mode(client, LED_G,
+		0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
+	leds_i2c_write_all(client);
+	mdelay(2010);
+	leds_on(LED_R, false, false, 0);
+	leds_on(LED_G, false, false, 0);
+	leds_i2c_write_all(client);
+	mdelay(5);
+	leds_on(LED_G, true, true, 0x32);
+	leds_set_slope_mode(client, LED_G,
+		0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
+	leds_on(LED_B, true, true, 0xFF);
+	leds_set_slope_mode(client, LED_B,
+		0, 20, 15, 0, 4, 4, 1, 1, 1, 1);
+	leds_i2c_write_all(client);
+	mdelay(2010);
+	leds_on(LED_G, false, false, 0);
+	leds_on(LED_B, false, false, 0);
+	leds_i2c_write_all(client);
+	mdelay(10);
 
+	if (!userspace_ready)
+		goto loopme;
+
+	pr_info("[LEDS] USERSPACE HOOK\n");
+	leds_on(LED_R, false, false, 0);
+	leds_on(LED_G, false, false, 0);
+	leds_on(LED_B, false, false, 0);
+	leds_i2c_write_all(client);
+	return;
+}
+#else
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
@@ -512,7 +551,7 @@ static void do_powering(struct i2c_client *client)
 	pr_info("[MXCOUNTER]:%u\n", mxcounter);
 	return;
 }
-
+#endif
 static bool booted = false;
 static unsigned int current_led_mode;
 static void an30259a_start_led_pattern(unsigned int mode)
