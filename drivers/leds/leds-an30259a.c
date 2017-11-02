@@ -523,12 +523,12 @@ static void do_powering(struct i2c_client *client)
 		leds_on(LED_G, false, false, 0);
 		leds_i2c_write_all(client);
 		mdelay(5);
-		leds_on(LED_G, true, true, 0x32);
+		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_G,
-				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
+				0, 25, 15, 0, 4, 4, 1, 1, 1, 1);
 		leds_on(LED_B, true, true, 0xFF);
 		leds_set_slope_mode(client, LED_B,
-				0, 20, 15, 0, 4, 4, 1, 1, 1, 1);
+				0, 25, 15, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
 		mdelay(2010);
 		if (mxcounter == 15)
