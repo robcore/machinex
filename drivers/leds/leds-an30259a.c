@@ -588,12 +588,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	if (breathing_leds && booted)
 		an30259a_set_slope_current(inhale, exhale, false);
 
+	if (is_full_charge && mode == CHARGING)
+		mode = FULLY_CHARGED;
+
  	switch (mode) {
  	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
  		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
 		pr_info("LED Battery Charging Pattern on\n");
-		if (!is_full_charge) {
 			if (breathing_leds) {
 				leds_on(LED_R, true, true, r_brightness);
 				leds_set_slope_mode(client, LED_R,
@@ -601,15 +603,6 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			} else
 				leds_on(LED_R, true, false, r_brightness);
 			break;
-		} else {
-			if (breathing_leds) {
-				leds_on(LED_G, true, true, g_brightness);
-				leds_set_slope_mode(client, LED_G,
-						0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
-			} else
-				leds_on(LED_G, true, false, g_brightness);
-			break;
-		}
 	case CHARGING_ERR:
 			pr_info("LED Battery Charging error Pattern on\n");
 		if (breathing_leds) {
