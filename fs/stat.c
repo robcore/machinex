@@ -51,7 +51,7 @@ EXPORT_SYMBOL(generic_fillattr);
  */
 int vfs_getattr_nosec(struct path *path, struct kstat *stat)
 {
-	struct inode *inode = d_backing_inode(path->dentry);
+	struct inode *inode = path->dentry->d_inode;
 
 	if (inode->i_op->getattr)
 		return inode->i_op->getattr(path->mnt, path->dentry, stat);
@@ -66,6 +66,9 @@ int vfs_getattr(struct path *path, struct kstat *stat)
 {
 	int retval;
 
+	retval = security_inode_getattr(path->mnt, path->dentry);
+	if (retval)
+		return retval;
 	return vfs_getattr_nosec(path, stat);
 }
 
@@ -323,17 +326,15 @@ SYSCALL_DEFINE4(readlinkat, int, dfd, const char __user *, pathname,
 retry:
 	error = user_path_at_empty(dfd, pathname, lookup_flags, &path, &empty);
 	if (!error) {
-		struct inode *inode = d_backing_inode(path.dentry);
+		struct inode *inode = path.dentry->d_inode;
 
 		error = empty ? -ENOENT : -EINVAL;
-		/*
-		 * AFS mountpoints allow readlink(2) but are not symlinks
-		 */
-		if (d_is_symlink(path.dentry) || inode->i_op->readlink) {
+		if (inode->i_op->readlink) {
 			error = security_inode_readlink(path.dentry);
 			if (!error) {
 				touch_atime(&path);
-				error = vfs_readlink(path.dentry, buf, bufsiz);
+				error = inode->i_op->readlink(path.dentry,
+							      buf, bufsiz);
 			}
 		}
 		path_put(&path);
@@ -366,6 +367,8 @@ static long cp_new_stat64(struct kstat *stat, struct stat64 __user *statbuf)
 	INIT_STRUCT_STAT64_PADDING(tmp);
 #ifdef CONFIG_MIPS
 	/* mips has weird padding, so we don't get 64 bits there */
+	if (!new_valid_dev(stat->dev) || !new_valid_dev(stat->rdev))
+		return -EOVERFLOW;
 	tmp.st_dev = new_encode_dev(stat->dev);
 	tmp.st_rdev = new_encode_dev(stat->rdev);
 #else
