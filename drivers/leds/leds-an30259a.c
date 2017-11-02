@@ -553,6 +553,7 @@ static void do_powering(struct i2c_client *client)
 
 static bool booted = false;
 static unsigned int current_led_mode;
+static bool is_full_charge;
 static void an30259a_start_led_pattern(unsigned int mode)
 {
 	int retval;
@@ -592,14 +593,23 @@ static void an30259a_start_led_pattern(unsigned int mode)
  		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
 		pr_info("LED Battery Charging Pattern on\n");
-		if (breathing_leds) {
-			leds_on(LED_R, true, true, r_brightness);
-			leds_set_slope_mode(client, LED_R,
-					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
-		} else
-			leds_on(LED_R, true, false, r_brightness);
-	break;
-
+		if (!is_full_charge) {
+			if (breathing_leds) {
+				leds_on(LED_R, true, true, r_brightness);
+				leds_set_slope_mode(client, LED_R,
+						0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+			} else
+				leds_on(LED_R, true, false, r_brightness);
+			break;
+		} else {
+			if (breathing_leds) {
+				leds_on(LED_G, true, true, g_brightness);
+				leds_set_slope_mode(client, LED_G,
+						0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+			} else
+				leds_on(LED_G, true, false, g_brightness);
+			break;
+		}
 	case CHARGING_ERR:
 			pr_info("LED Battery Charging error Pattern on\n");
 		if (breathing_leds) {
@@ -736,10 +746,12 @@ void send_led_full_msg(bool enable)
 	if (enable && current_led_mode == CHARGING &&
 		is_charger_connected) {
 		wake_lock(&ledlock);
+		is_full_charge = true;
 		an30259a_start_led_pattern(FULLY_CHARGED);
 		wake_unlock(&ledlock);
 		return;
 	} else if (!enable && current_led_mode == FULLY_CHARGED) {
+		is_full_charge = false;
 		if (is_charger_connected) {
 			wake_lock(&ledlock);
 			an30259a_start_led_pattern(CHARGING);

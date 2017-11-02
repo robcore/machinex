@@ -1143,9 +1143,10 @@ static bool sec_bat_check_fullcharged(
 	if (!sec_bat_check_fullcharged_condition(battery)) {
 		send_led_full_msg(false);
 		goto not_full_charged;
-	} else {
-		send_led_full_msg(true);
 	}
+
+	if (battery->capacity == 100)
+		send_led_full_msg(true);
 
 	if (battery->charging_mode == SEC_BATTERY_CHARGING_1ST)
 		full_check_type = battery->pdata->full_check_type;
