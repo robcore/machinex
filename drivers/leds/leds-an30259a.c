@@ -28,7 +28,8 @@
 #include <linux/sec_battery.h>
 #include <linux/sysfs.h>
 #include "leds-an30259a_reg.h"
-#include "linux/i2c/synaptics_rmi.h"
+#include <linux/i2c/synaptics_rmi.h>
+#include <linux/display_state.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
