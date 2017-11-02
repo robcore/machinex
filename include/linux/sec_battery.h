@@ -51,6 +51,8 @@ struct sec_bat_platform_data {
 #endif
 };
 
+extern void send_led_full_msg(bool enable);
+
 #define ADJUST_RCOMP_WITH_CHARGING_STATUS
 #define ADJUST_RCOMP_WITH_TEMPER
 

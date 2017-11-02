@@ -725,6 +725,16 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	leds_i2c_write_all(client);
 }
 
+void send_led_full_msg(bool enable)
+{
+	if (enable) {
+		if (current_led_mode == CHARGING ||
+			current_led_mode == FULLY_CHARGED)
+			an30259a_start_led_pattern(FULLY_CHARGED);
+	} else
+			an30259a_start_led_pattern(PATTERN_OFF);
+}
+		
 /* Added for led common class */
 static ssize_t show_an30259a_led_lowpower(struct device *dev,
 			struct device_attribute *attr, char *buf)
