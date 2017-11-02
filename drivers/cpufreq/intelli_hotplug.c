@@ -24,6 +24,7 @@
 #include <linux/powersuspend.h>
 #include <linux/spinlock.h>
 #include <linux/sysfs_helpers.h>
+#include <linux/omniboost.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
 #define INTELLI_PLUG			"intelli_plug"
@@ -486,7 +487,7 @@ void intelli_boost(void)
 {
 	ktime_t delta;
 
-	if (!intelliread() || !is_display_on() || unlikely(intellinit) ||
+	if (!intelliread() || unlikely(!is_display_on()) ||
 		unlikely(prometheus_override))
 		return;
 
@@ -504,6 +505,28 @@ void intelli_boost(void)
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
 	last_boost_time = ktime_get();
 }
+
+static int intelli_omniboost_notifier(struct notifier_block *self, unsigned long val,
+		void *v)
+{
+	if (!intelliread())
+		return NOTIFY_OK;
+
+	switch (val) {
+	case BOOST_ON:
+		intelli_boost();
+		break;
+	case BOOST_OFF:
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block intelli_nb = {
+	.notifier_call = intelli_omniboost_notifier,
+};
 
 void intelli_suspend_booster(void)
 {
@@ -541,7 +564,7 @@ static void cycle_cpus(void)
 	intellinit = false;
 	report_current_cpus();
 	mod_delayed_work_on(0, updown_wq, &up_down_work, 0);
-	hardplug_all_cpus();
+	register_omniboost(&intelli_nb);
 	wake_unlock(&ipwlock);
 	pr_info("Intelliplug Start: Cycle Cpus Complete\n");
 }
@@ -725,7 +748,12 @@ static void intelli_plug_stop(void)
 	unsigned int cpu;
 	struct down_lock *dl;
 
+	unregister_omniboost(&intelli_nb);
+	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
+	unregister_power_suspend(&intelli_suspend_data);
+
 	cancel_delayed_work(&up_down_work);
+	cancel_delayed_work(&intelli_plug_work);
 	for_each_possible_cpu(cpu) {
 		if (cpu_out_of_range(cpu))
 			break;
@@ -734,11 +762,8 @@ static void intelli_plug_stop(void)
 		if (check_down_lock(cpu))
 			rm_down_lock(cpu, 0);
 	}
-	cancel_delayed_work(&intelli_plug_work);
-	unregister_power_suspend(&intelli_suspend_data);
 	destroy_workqueue(updown_wq);
 	destroy_workqueue(intelliplug_wq);
-	unregister_hotcpu_notifier(&intelliplug_cpu_notifier);
 	mutex_destroy(&(intellisleep_mutex));
 }
 

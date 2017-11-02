@@ -24,25 +24,38 @@
 #include <linux/module.h>
 #include <linux/cpufreq.h>
 #include <linux/display_state.h>
+#include <linux/omniboost.h>
 
-static bool __read_mostly boost_cores_first = true;
-module_param(boost_cores_first, bool, 0644);
+static RAW_NOTIFIER_HEAD(omniboost_chain);
+
+int register_omniboost(struct notifier_block *nb)
+{
+	return raw_notifier_chain_register(&omniboost_chain, nb);
+}
+EXPORT_SYMBOL(register_omniboost);
+
+int unregister_omniboost(struct notifier_block *nb)
+{
+	return raw_notifier_chain_unregister(&omniboost_chain, nb);
+}
+EXPORT_SYMBOL(unregister_omniboost);
+
+int omniboost_call_chain(unsigned long val, void *v)
+{
+	return raw_notifier_call_chain(&omniboost_chain, val, v);
+}
+EXPORT_SYMBOL_GPL(omniboost_call_chain);
 
 static void omniboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	if (!is_display_on())
 		return;
-/*boost functions go here*/
-	if (likely(boost_cores_first)) {
-		intelli_boost();
-		fuel_injector();
-		cpu_boost_event();
-	} else {
-		cpu_boost_event();
-		intelli_boost();
-		fuel_injector();
-	}
+	/* Input Event has been passed to us */
+	omniboost_call_chain(BOOST_ON, NULL);
+	cpu_boost_event();
+	/* Exists only to provide callers with an "off" switch */
+	omniboost_call_chain(BOOST_OFF, NULL);
 }
 
 static int input_dev_filter(struct input_dev *dev) {

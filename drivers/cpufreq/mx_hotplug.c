@@ -33,6 +33,7 @@
 #include <linux/kobject.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/powersuspend.h>
+#include <linux/omniboost.h>
 
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
 #define MX_SAMPLE_RATE MXMS(200UL)
@@ -66,8 +67,6 @@ static ktime_t last_fuelcheck;
 static ktime_t last_boost;
 static bool clutch;
 static bool should_boost;
-static bool ready;
-
 static unsigned int mxread(void)
 {
 	unsigned int ret;
@@ -234,12 +233,9 @@ again:
 	set_current_state(TASK_RUNNING);
 
 	if (should_boost) {
+		inject_nos(true, false);
+		last_boost = ktime_get();
 		should_boost = false;
-		delta = ktime_sub(ktime_get(), last_boost);
-		if (ktime_compare(delta, ms_to_ktime(boost_timeout))  >= 0) {
-			inject_nos(true, false);
-			last_boost = ktime_get();
-		}
 		goto purge;
 	}
 
@@ -298,19 +294,24 @@ out:
 
 void fuel_injector(void)
 {
-	if (!mxread() || hotplug_suspended ||
-		(unlikely(!ready)))
-		return;
+	ktime_t delta;
 
 	if (!mutex_trylock(&mx_mutex))
 		return;
+
+	delta = ktime_sub(ktime_get(), last_boost);
+	if (ktime_compare(delta, ms_to_ktime(boost_timeout)) < 0) {
+		mutex_unlock(&mx_mutex);
+		return;
+	}
 
 	if (!should_boost)
 		should_boost = true;
 
 	mutex_unlock(&mx_mutex);
 
-	mod_delayed_work_on(0, transmission, &gearbox, 0);
+	if (should_boost)
+		mod_delayed_work_on(0, transmission, &gearbox, 0);
 }
 	
 
@@ -335,6 +336,28 @@ static struct power_suspend mx_suspend_data =
 {
 	.suspend = mx_hotplug_suspend,
 	.resume = mx_hotplug_resume,
+};
+
+static int mx_omniboost_notifier(struct notifier_block *self, unsigned long val,
+		void *v)
+{
+	if (!mxread() || hotplug_suspended)
+		return NOTIFY_OK;
+
+	switch (val) {
+	case BOOST_ON:
+		fuel_injector();
+		break;
+	case BOOST_OFF:
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block mx_nb = {
+	.notifier_call = mx_omniboost_notifier,
 };
 
 static void ignition(unsigned int status)
@@ -366,10 +389,10 @@ static void ignition(unsigned int status)
 		INIT_DELAYED_WORK(&gearbox, shift_gears);
 		queue_delayed_work_on(0, transmission, &gearbox, sampling_rate);
 		register_power_suspend(&mx_suspend_data);
-		ready = true;
+		register_omniboost(&mx_nb);
 	} else {
-		ready = false;
 		mxput();
+		unregister_omniboost(&mx_nb);
 		unregister_power_suspend(&mx_suspend_data);
 		cancel_delayed_work_sync(&gearbox);
 		destroy_workqueue(transmission);
