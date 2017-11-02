@@ -564,6 +564,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
+	if (is_full_charge && mode == CHARGING)
+		mode = FULLY_CHARGED;
+
 	current_led_mode = mode;
 
 	/* Set all LEDs Off */
@@ -587,9 +590,6 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 	if (breathing_leds && booted)
 		an30259a_set_slope_current(inhale, exhale, false);
-
-	if (is_full_charge && mode == CHARGING)
-		mode = FULLY_CHARGED;
 
  	switch (mode) {
  	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
