@@ -32,7 +32,8 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 u8 led_dynamic_current = 0x28;
-u8 led_lowpower_mode = 0;
+unsigned int led_lowpower_mode = 0;
+unsigned int real_led_lowpower_mode = 0;
 
 static struct an30259_led_conf led_conf[] = {
 	{
@@ -571,7 +572,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		return;
 
 	/* Set to low power consumption mode */
-	if (led_lowpower_mode == 1)
+	if (real_led_lowpower_mode == 1)
 		led_dynamic_current = 0x9;
 	else
 		led_dynamic_current = 0x48;
@@ -1340,6 +1341,30 @@ static ssize_t store_custom_led_colours(struct kobject *kobj,
 }
 MX_ATTR_RW(custom_led_colours);
 
+static ssize_t show_real_led_lowpower_mode(struct kobject *kobj, 
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", real_led_lowpower_mode);
+}
+
+static ssize_t store_real_led_lowpower_mode(struct kobject *kobj,
+			   struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int input, ret;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input == real_led_lowpower_mode)
+		return count;
+
+	real_led_lowpower_mode = input;
+
+	return count;
+}
+MX_ATTR_RW(real_led_lowpower_mode);
+
 show_one_led(custom_r_delay);
 show_one_led(custom_r_dutymax);
 show_one_led(custom_r_dutymid);
@@ -1498,6 +1523,7 @@ static struct attribute *mx_custom_leds_attrs[] = {
 	&inhale_attr.attr,
 	&exhale_attr.attr,
 	&custom_led_colours_attr.attr,
+	&real_led_lowpower_mode_attr.attr,
 	NULL
 };
 
