@@ -523,12 +523,12 @@ static void do_powering(struct i2c_client *client)
 		leds_on(LED_G, false, false, 0);
 		leds_i2c_write_all(client);
 		mdelay(5);
-		leds_on(LED_G, true, true, 0xE2);
+		leds_on(LED_G, true, true, 0x01);
 		leds_set_slope_mode(client, LED_G,
-				0, 25, 15, 0, 4, 4, 1, 1, 1, 1);
+				0, 20, 10, 0, 4, 4, 1, 1, 1, 1);
 		leds_on(LED_B, true, true, 0xFF);
 		leds_set_slope_mode(client, LED_B,
-				0, 25, 15, 0, 4, 4, 1, 1, 1, 1);
+				0, 20, 15, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
 		mdelay(2010);
 		if (mxcounter == 15)
@@ -591,7 +591,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (breathing_leds) {
 			leds_on(LED_R, true, true, r_brightness);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 10, 0, 1, 1, 1, 1, 1, 1);
+					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 		} else
 			leds_on(LED_R, true, false, r_brightness);
 	break;
@@ -601,11 +601,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (breathing_leds) {
 			leds_on(LED_R, true, true, r_brightness);
 			leds_set_slope_mode(client, LED_R,
-					1, 15, 15, 0, 1, 1, 1, 1, 1, 1);
+					0, 15, 15, 0, 2, 2, 1, 1, 1, 1);
 		} else {
 			leds_on(LED_R, true, true, r_brightness);
 			leds_set_slope_mode(client, LED_R,
-					1, 15, 15, 0, 1, 1, 0, 0, 0, 0);
+					0, 15, 15, 0, 1, 1, 0, 0, 0, 0);
 		}
  		break;
 	case MISSED_NOTI:
@@ -615,11 +615,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (breathing_leds) {
 			leds_on(LED_B, true, true, b_brightness);
 			leds_set_slope_mode(client, LED_B,
-					0, 15, 15, 0, 1, 1, 1, 1, 1, 1);
+					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 		} else {
 			leds_on(LED_B, true, true, b_brightness);
 			leds_set_slope_mode(client, LED_B,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+					4, 15, 15, 0, 2, 8, 0, 0, 0, 0);
 		}
 		break;
 	case LOW_BATTERY:
@@ -629,11 +629,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (breathing_leds) {
 			leds_on(LED_R, true, true, r_brightness);
 			leds_set_slope_mode(client, LED_R,
-					4, 15, 15, 0, 1, 6, 1, 1, 1, 1);
+					4, 15, 10, 0, 2, 4, 1, 1, 1, 1);
 		} else {
 			leds_on(LED_R, true, true, r_brightness);
 			leds_set_slope_mode(client, LED_R,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+					4, 15, 15, 0, 2, 8, 1, 1, 1, 1);
 		}
  		break;
  	case FULLY_CHARGED:
@@ -641,7 +641,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (breathing_leds) {
 			leds_on(LED_G, true, true, g_brightness);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 15, 0, 1, 1, 1, 1, 1, 1);
+					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 		} else
 			leds_on(LED_G, true, false, g_brightness);
 		break;
@@ -660,11 +660,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					0, 2, 1, 0, 4, 10, 12, 10, 10, 12);
+					0, 1, 1, 0, 2, 6, 12, 10, 10, 12);
 			leds_set_slope_mode(client, LED_G,
-					0, 16, 3, 0, 4, 10, 12, 10, 10, 12);
+					0, 16, 2, 0, 2, 6, 12, 10, 10, 12);
 			leds_set_slope_mode(client, LED_B,
-					0, 16, 2, 0, 4, 10, 12, 10, 10, 12);
+					0, 16, 2, 0, 2, 6, 12, 10, 10, 12);
 			break;
 		}
 	case FAKE_POWERING:
