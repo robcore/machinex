@@ -551,15 +551,22 @@ static void do_powering(struct i2c_client *client)
 	return;
 }
 
+enum {
+	BATTERY_LOW = 0,
+	BATTERY_MIDLOW = 1,
+	BATTERY_MID = 2,
+	BATTERY_MIDHIGH = 3,
+	BATTERY_HIGH = 4,
+	BATTERY_FULL = 5,
+};
+
+static int battery_level;
 static bool booted = false;
 static unsigned int current_led_mode;
 static bool is_full_charge;
 static void an30259a_start_led_pattern(unsigned int mode)
 {
-	int retval;
-	u8 r_brightness;          /* Yank555.lu : Control LED intensity (normal, bright) */
-	u8 g_brightness;
-	u8 b_brightness;
+	int curr_level, retval;
 	struct i2c_client *client;
 	struct work_struct *reset = 0;
 	client = b_client;
@@ -584,33 +591,91 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	else
 		led_dynamic_current = 0x48;
 
-	r_brightness = LED_MAX_CURRENT;
-	g_brightness = LED_MAX_CURRENT;
-	b_brightness = LED_MAX_CURRENT;
-
 	if (breathing_leds && booted)
 		an30259a_set_slope_current(inhale, exhale, false);
+
+	curr_level = battery_level;
 
  	switch (mode) {
  	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
  		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
-		pr_info("LED Battery Charging Pattern on\n");
-			if (breathing_leds) {
-				leds_on(LED_R, true, true, r_brightness);
-				leds_set_slope_mode(client, LED_R,
-						0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
-			} else
-				leds_on(LED_R, true, false, r_brightness);
-			break;
+			pr_info("LED Battery Charging Pattern on\n");
+		switch (curr_level) {
+		case BATTERY_LOW:
+				if (breathing_leds) {
+					leds_on(LED_R, true, true, 0xFF);
+					leds_set_slope_mode(client, LED_R,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+				} else
+					leds_on(LED_R, true, true, 0xEA);
+				break;
+		case BATTERY_MIDLOW:
+				if (breathing_leds) {
+					leds_on(LED_R, true, true, 0xEA);
+					leds_on(LED_G, true, true, 0xE2);
+					leds_set_slope_mode(client, LED_R,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+					leds_set_slope_mode(client, LED_G,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+				} else {
+					leds_on(LED_R, true, true, 0xEA);
+					leds_on(LED_G, true, true, 0xE2);
+				}
+				break;
+		case BATTERY_MID:
+				if (breathing_leds) {
+					leds_on(LED_R, true, true, 0x69);
+					leds_on(LED_G, true, true, 0xAC);
+					leds_set_slope_mode(client, LED_R,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+					leds_set_slope_mode(client, LED_G,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+				} else {
+					leds_on(LED_R, true, true, 0x69);
+					leds_on(LED_G, true, true, 0xAC);
+				}
+				break;
+		case BATTERY_MIDHIGH:
+				if (breathing_leds) {
+					leds_on(LED_R, true, true, 0x70);
+					leds_on(LED_G, true, true, 0xAE);
+					leds_on(LED_B, true, true, 0x0E);
+					leds_set_slope_mode(client, LED_R,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+					leds_set_slope_mode(client, LED_G,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+					leds_set_slope_mode(client, LED_B,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+				} else {
+					leds_on(LED_R, true, true, 0x70);
+					leds_on(LED_G, true, true, 0xAE);
+					leds_on(LED_B, true, true, 0x0E);
+				}
+				break;
+		case BATTERY_HIGH:
+				if (breathing_leds) {
+					leds_on(LED_G, true, true, 0xE1);
+					leds_on(LED_B, true, true, 0xE1);
+					leds_set_slope_mode(client, LED_G,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+					leds_set_slope_mode(client, LED_B,
+							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+				} else {
+					leds_on(LED_G, true, true, 0xE1);
+					leds_on(LED_B, true, true, 0xE1);
+				}
+				break;
+		}
+		break;
 	case CHARGING_ERR:
 			pr_info("LED Battery Charging error Pattern on\n");
 		if (breathing_leds) {
-			leds_on(LED_R, true, true, r_brightness);
+			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
 					0, 15, 15, 0, 2, 2, 1, 1, 1, 1);
 		} else {
-			leds_on(LED_R, true, true, r_brightness);
+			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
 					0, 15, 15, 0, 1, 1, 0, 0, 0, 0);
 		}
@@ -620,11 +685,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		pr_info("LED Missed Notifications Pattern on\n");
 		if (breathing_leds) {
-			leds_on(LED_B, true, true, b_brightness);
+			leds_on(LED_B, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_B,
 					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 		} else {
-			leds_on(LED_B, true, true, b_brightness);
+			leds_on(LED_B, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 15, 0, 2, 8, 0, 0, 0, 0);
 		}
@@ -634,11 +699,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		pr_info("LED Low Battery Pattern on\n");
 		if (breathing_leds) {
-			leds_on(LED_R, true, true, r_brightness);
+			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
 					4, 15, 10, 0, 2, 4, 1, 1, 1, 1);
 		} else {
-			leds_on(LED_R, true, true, r_brightness);
+			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
 					4, 15, 15, 0, 2, 8, 1, 1, 1, 1);
 		}
@@ -646,11 +711,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
  	case FULLY_CHARGED:
 		pr_info("LED full Charged battery Pattern on\n");
 		if (breathing_leds) {
-			leds_on(LED_G, true, true, g_brightness);
+			leds_on(LED_G, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 		} else
-			leds_on(LED_G, true, false, g_brightness);
+			leds_on(LED_G, true, false, led_dynamic_current);
 		break;
 
 	case POWERING:
@@ -701,7 +766,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		if (poweroff_charging)
 			return;
 		if (custom_r_enabled) {
-			leds_on(LED_R, true, true, r_brightness);
+			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
 					custom_r_delay,
 					custom_r_dutymax, custom_r_dutymid, custom_r_dutymin,
@@ -709,7 +774,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					custom_r_dt1, custom_r_dt2, custom_r_dt3, custom_r_dt4);
 		}
 		if (custom_g_enabled) {
-			leds_on(LED_G, true, true, g_brightness);
+			leds_on(LED_G, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_G,
 					custom_g_delay,
 					custom_g_dutymax, custom_g_dutymid, custom_g_dutymin,
@@ -717,7 +782,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					custom_g_dt1, custom_g_dt2, custom_g_dt3, custom_g_dt4);
 		}
 		if (custom_b_enabled) {
-			leds_on(LED_B, true, true, b_brightness);
+			leds_on(LED_B, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_B,
 					custom_b_delay,
 					custom_b_dutymax, custom_b_dutymid, custom_b_dutymin,
@@ -731,26 +796,43 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	leds_i2c_write_all(client);
 }
 
-void send_led_full_msg(bool enable)
+void send_led_full_msg(int level)
 {
-	if (is_display_on())
+	if (level == battery_level)
 		return;
 
-	if (enable && current_led_mode == CHARGING &&
+	battery_level = level;
+
+	if (is_display_on() || (current_led_mode != CHARGING &&
+		current_led_mode != FULLY_CHARGED))
+		return;
+
+	if (battery_level == BATTERY_FULL && current_led_mode == CHARGING &&
 		is_charger_connected) {
 		is_full_charge = true;
 		wake_lock(&ledlock);
 		an30259a_start_led_pattern(FULLY_CHARGED);
 		wake_unlock(&ledlock);
 		return;
-	} else if (!enable && current_led_mode == FULLY_CHARGED) {
-		is_full_charge = false;
-		if (!is_charger_connected) {
-			wake_lock(&ledlock);
-			an30259a_start_led_pattern(PATTERN_OFF);
-			wake_unlock(&ledlock);
-			return;
-		}
+	}
+
+	is_full_charge = false;
+
+	if (current_led_mode == FULLY_CHARGED && !is_charger_connected) {
+		wake_lock(&ledlock);
+		an30259a_start_led_pattern(PATTERN_OFF);
+		wake_unlock(&ledlock);
+		return;
+	}
+
+
+	if (battery_level >= BATTERY_LOW && battery_level <= BATTERY_HIGH &&
+		current_led_mode == CHARGING &&
+		is_charger_connected) {
+		wake_lock(&ledlock);
+		an30259a_start_led_pattern(CHARGING);
+		wake_unlock(&ledlock);
+		return;
 	}
 }
 		

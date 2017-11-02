@@ -31,7 +31,7 @@
 #define ADC_SAMPLE_COUNT	10
 
 extern unsigned int machinex_charging_check;
-extern void send_led_full_msg(bool enable);
+extern void send_led_full_msg(int level);
 
 struct adc_sample_info {
 	unsigned int cnt;

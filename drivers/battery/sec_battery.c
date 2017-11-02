@@ -1129,6 +1129,27 @@ static bool sec_bat_time_management(
 	return true;
 }
 
+static void mx_capacity_check(
+				struct sec_battery_info *battery)
+{
+	if (battery->capacity >= 100)
+		send_led_full_msg(5);
+	else if (battery->capacity >= 80 &&
+		battery->capacity <=99)
+		send_led_full_msg(4);
+	else if (battery->capacity >= 60 &&
+		battery->capacity <=79)
+		send_led_full_msg(3);
+	else if (battery->capacity >= 40 &&
+		battery->capacity <=59)
+		send_led_full_msg(2);
+	else if (battery->capacity >= 20 &&
+		battery->capacity <=39)
+		send_led_full_msg(1);
+	else if (battery->capacity <=19)
+		send_led_full_msg(0);
+}
+
 static bool sec_bat_check_fullcharged(
 				struct sec_battery_info *battery)
 {
@@ -1139,11 +1160,6 @@ static bool sec_bat_check_fullcharged(
 	int err;
 
 	ret = false;
-
-	if (battery->capacity == 100)
-		send_led_full_msg(true);
-	else
-		send_led_full_msg(false);
 
 	if (!sec_bat_check_fullcharged_condition(battery))
 		goto not_full_charged;
@@ -1701,7 +1717,8 @@ skip_monitor:
 #if defined(CONFIG_MACH_JF)
 	max77693_muic_monitor_status();
 #endif
-
+	/*Send multistage led hook*/
+	mx_capacity_check(battery);
 	wake_unlock(&battery->monitor_wake_lock);
 
 	return;
