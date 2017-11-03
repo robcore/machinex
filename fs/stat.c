@@ -323,10 +323,13 @@ SYSCALL_DEFINE4(readlinkat, int, dfd, const char __user *, pathname,
 retry:
 	error = user_path_at_empty(dfd, pathname, lookup_flags, &path, &empty);
 	if (!error) {
-		struct inode *inode = path.dentry->d_inode;
+		struct inode *inode = d_backing_inode(path.dentry);
 
 		error = empty ? -ENOENT : -EINVAL;
-		if (inode->i_op->readlink) {
+		/*
+		 * AFS mountpoints allow readlink(2) but are not symlinks
+		 */
+		if (d_is_symlink(path.dentry) || inode->i_op->readlink) {
 			error = security_inode_readlink(path.dentry);
 			if (!error) {
 				touch_atime(&path);
