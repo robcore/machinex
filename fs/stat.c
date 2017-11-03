@@ -51,7 +51,7 @@ EXPORT_SYMBOL(generic_fillattr);
  */
 int vfs_getattr_nosec(struct path *path, struct kstat *stat)
 {
-	struct inode *inode = path->dentry->d_inode;
+	struct inode *inode = d_backing_inode(path->dentry);
 
 	if (inode->i_op->getattr)
 		return inode->i_op->getattr(path->mnt, path->dentry, stat);
@@ -66,9 +66,6 @@ int vfs_getattr(struct path *path, struct kstat *stat)
 {
 	int retval;
 
-	retval = security_inode_getattr(path->mnt, path->dentry);
-	if (retval)
-		return retval;
 	return vfs_getattr_nosec(path, stat);
 }
 
