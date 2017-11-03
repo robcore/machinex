@@ -662,7 +662,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 				if (breathing_leds) {
 					leds_on(LED_R, true, true, 0x41);
 					leds_on(LED_G, true, true, 0xFA);
-					leds_on(LED_B, true, true, 0xE1);
+					leds_on(LED_B, true, true, 0xA0);
 					leds_set_slope_mode(client, LED_R,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 					leds_set_slope_mode(client, LED_G,
@@ -672,7 +672,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 				} else {
 					leds_on(LED_R, true, true, 0x41);
 					leds_on(LED_G, true, true, 0xFA);
-					leds_on(LED_B, true, true, 0xE1);
+					leds_on(LED_B, true, true, 0xA0);
 				}
 				break;
 		}
