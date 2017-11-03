@@ -359,7 +359,9 @@ static void __inline an30259a_reset(struct i2c_client *client)
 {	
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	int ret;
-	
+
+	/*we need to set all the configs setting first, then LEDON later*/
+	mutex_lock(&data->mutex);
 	/* Reset the IC */
 	if(unlikely((ret = i2c_smbus_write_byte_data(client, 
 			AN30259A_REG_SRESET, AN30259A_SRESET)) < 0)) {
@@ -376,10 +378,10 @@ static void __inline an30259a_reset(struct i2c_client *client)
 			"%s: failure on i2c read block(ledxcc)\n",
 			__func__);
 	}
-	
+	mutex_unlock(&data->mutex);	
 	/* Set imax */
 	leds_set_imax(client, imax_copy);
-	
+
 	return;
 }
 
@@ -523,16 +525,15 @@ static unsigned int custom_b_dt4 = 0;
 
 static void do_powering(struct i2c_client *client)
 {
-	unsigned int mxcounter = 0;
+	unsigned int mxcounter;
+	struct work_struct *reset = 0;
+
 	for (mxcounter = 0; mxcounter < 13; mxcounter++) {
-		if (userspace_ready) {
-			pr_info("[LEDS] USERSPACE HOOK\n");
+		if (userspace_ready ||
+			current_led_mode != POWERING ||
+			!pattern_active || mxcounter >= 13)
 			break;
-		}
-		if (current_led_mode != POWERING || !pattern_active)
-			break;
-		if (mxcounter >= 13)
-			break;
+		msleep_interruptible(10);
 		leds_on(LED_R, true, true, 0xEA);
 		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_R,
@@ -540,11 +541,13 @@ static void do_powering(struct i2c_client *client)
 		leds_set_slope_mode(client, LED_G,
 				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
-		mdelay(2010);
-		leds_on(LED_R, false, false, 0);
-		leds_on(LED_G, false, false, 0);
-		leds_i2c_write_all(client);
-		mdelay(5);
+		msleep_interruptible(2010);
+		an30259a_reset_register_work(reset);
+		if (userspace_ready ||
+			current_led_mode != POWERING ||
+			!pattern_active)
+			break;
+		msleep_interruptible(10);
 		leds_on(LED_G, true, true, 0x01);
 		leds_set_slope_mode(client, LED_G,
 				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
@@ -552,18 +555,11 @@ static void do_powering(struct i2c_client *client)
 		leds_set_slope_mode(client, LED_B,
 				0, 15, 13, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
-		mdelay(2010);
-		leds_on(LED_G, false, false, 0);
-		leds_on(LED_B, false, false, 0);
-		leds_i2c_write_all(client);
-		mdelay(10);
+		msleep_interruptible(2010);
+		an30259a_reset_register_work(reset);
 	}
-
-	leds_on(LED_R, false, false, 0);
-	leds_on(LED_G, false, false, 0);
-	leds_on(LED_B, false, false, 0);
-	leds_i2c_write_all(client);
-	pr_info("[MXCOUNTER]:%u\n", mxcounter);
+	if (pattern_active)
+		an30259a_reset_register_work(reset);
 	return;
 }
 
@@ -583,7 +579,6 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	an30259a_reset_register_work(reset);
 	if (breathing_leds && booted)
 		an30259a_reset(client);
-
 
 	if (mode > CUSTOM ||
 		mode <= PATTERN_OFF) {
