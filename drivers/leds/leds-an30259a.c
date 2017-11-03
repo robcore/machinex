@@ -613,7 +613,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					leds_set_slope_mode(client, LED_R,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else
-					leds_on(LED_R, true, true, 0xEA);
+					leds_on(LED_R, true, false, 0xEA);
 				break;
 		case BATTERY_MIDLOW:
 				if (breathing_leds) {
@@ -624,8 +624,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					leds_set_slope_mode(client, LED_G,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
-					leds_on(LED_R, true, true, 0xEA);
-					leds_on(LED_G, true, true, 0xE2);
+					leds_on(LED_R, true, false, 0xEA);
+					leds_on(LED_G, true, false, 0xE2);
 				}
 				break;
 		case BATTERY_MID:
@@ -637,8 +637,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					leds_set_slope_mode(client, LED_G,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
-					leds_on(LED_R, true, true, 0x69);
-					leds_on(LED_G, true, true, 0xAC);
+					leds_on(LED_R, true, false, 0x69);
+					leds_on(LED_G, true, false, 0xAC);
 				}
 				break;
 		case BATTERY_MIDHIGH:
@@ -653,9 +653,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					leds_set_slope_mode(client, LED_B,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
-					leds_on(LED_R, true, true, 0x70);
-					leds_on(LED_G, true, true, 0xAE);
-					leds_on(LED_B, true, true, 0x0E);
+					leds_on(LED_R, true, false, 0x70);
+					leds_on(LED_G, true, false, 0xAE);
+					leds_on(LED_B, true, false, 0x0E);
 				}
 				break;
 		case BATTERY_HIGH:
@@ -670,9 +670,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					leds_set_slope_mode(client, LED_B,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
-					leds_on(LED_R, true, true, 0x41);
-					leds_on(LED_G, true, true, 0xFA);
-					leds_on(LED_B, true, true, 0xA0);
+					leds_on(LED_R, true, false, 0x41);
+					leds_on(LED_G, true, false, 0xFA);
+					leds_on(LED_B, true, false, 0xA0);
 				}
 				break;
 		}
