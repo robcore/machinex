@@ -162,8 +162,8 @@ static void __inline an30259a_reset(struct i2c_client *client);
 * an30259a_set_slope_current - To Set the LED intensity and enable them
 **/
 static unsigned int breathing_leds = 1;
-static unsigned int inhale = 2000;
-static unsigned int exhale = 2000;
+static unsigned int inhale = 1000;
+static unsigned int exhale = 1000;
 static void an30259a_set_slope_current(u16 ontime, u16 offtime, bool reset)
 {
 	struct i2c_client *client;
@@ -726,11 +726,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
  	case FULLY_CHARGED:
 		pr_info("LED full Charged battery Pattern on\n");
 		if (breathing_leds) {
-			leds_on(LED_G, true, true, led_dynamic_current);
+			leds_on(LED_G, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
+					0, 15, 13, 0, 2, 2, 1, 1, 1, 1);
 		} else
-			leds_on(LED_G, true, false, led_dynamic_current);
+			leds_on(LED_G, true, false, 0xFF);
 		break;
 
 	case POWERING:
