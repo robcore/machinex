@@ -510,12 +510,12 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
-	for (mxcounter = 0; mxcounter < 15; mxcounter++) {
+	for (mxcounter = 0; mxcounter < 10; mxcounter++) {
 		if (userspace_ready) {
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
-		if (mxcounter >= 15)
+		if (mxcounter >= 10)
 			break;
 		leds_on(LED_R, true, true, 0xEA);
 		leds_on(LED_G, true, true, 0xE2);
