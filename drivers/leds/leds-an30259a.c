@@ -571,6 +571,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
+	if (booted)
+		wake_lock(&ledlock);
+
 	if (is_full_charge && mode == CHARGING)
 		mode = FULLY_CHARGED;
 
@@ -582,9 +585,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		an30259a_reset(client);
 
 	if (mode > CUSTOM ||
-		mode <= PATTERN_OFF)
+		mode <= PATTERN_OFF) {
+		if (booted)
+			wake_unlock(&ledlock);
 		return;
-
+	}
 	/* Set to low power consumption mode */
 	if (real_led_lowpower_mode == 1)
 		led_dynamic_current = 0x9;
@@ -685,8 +690,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		}
  		break;
 	case MISSED_NOTI:
-		if (poweroff_charging)
+		if (poweroff_charging) {
+			if (booted)
+				wake_unlock(&ledlock);
 			return;
+		}
 		pr_info("LED Missed Notifications Pattern on\n");
 		if (breathing_leds) {
 			leds_on(LED_B, true, true, led_dynamic_current);
@@ -699,8 +707,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		}
 		break;
 	case LOW_BATTERY:
-		if (poweroff_charging)
+		if (poweroff_charging) {
+			if (booted)
+				wake_unlock(&ledlock);
 			return;
+		}
 		pr_info("LED Low Battery Pattern on\n");
 		if (breathing_leds) {
 			leds_on(LED_R, true, true, led_dynamic_current);
@@ -723,8 +734,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		break;
 
 	case POWERING:
-		if (poweroff_charging)
+		if (poweroff_charging) {
+			if (booted)
+				wake_unlock(&ledlock);
 			return;
+		}
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
 			do_powering(client);
@@ -744,8 +758,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			break;
 		}
 	case FAKE_POWERING:
-		if (poweroff_charging)
+		if (poweroff_charging) {
+			if (booted)
+				wake_unlock(&ledlock);
 			return;
+		}
 		pr_info("LED Fake Powering Pattern ON\n");
 			leds_on(LED_R, true, true, 192);
 			leds_on(LED_G, true, true, 221);
@@ -758,8 +775,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					4, 15, 9, 0, 4, 4, 1, 1, 1, 1);
 			break;
 	case BOOTING:
-		if (poweroff_charging)
+		if (poweroff_charging) {
+			if (booted)
+				wake_unlock(&ledlock);
 			return;
+		}
 		pr_info("LED Booting Pattern on\n");
 		an30259a_set_led_delayed_blink(LED_R, 1, 1, 1, 0xEA, false);
 		an30259a_set_led_delayed_blink(LED_G, 1, 1, 1, 0xE2, false);
@@ -767,8 +787,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		break;
 
 	case CUSTOM:
-		if (poweroff_charging)
+		if (poweroff_charging) {
+			if (booted)
+				wake_unlock(&ledlock);
 			return;
+		}
 		if (custom_r_enabled) {
 			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
@@ -795,9 +818,13 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		}
 		break;
 	default:
+		if (booted)
+			wake_unlock(&ledlock);
 		return;
 	}
 	leds_i2c_write_all(client);
+	if (booted)
+		wake_unlock(&ledlock);
 }
 
 void send_led_full_msg(int level)
@@ -807,35 +834,32 @@ void send_led_full_msg(int level)
 
 	battery_level = level;
 
-	if (is_display_on() || (current_led_mode != CHARGING &&
-		current_led_mode != FULLY_CHARGED))
+/*
+	if ((current_led_mode == FULLY_CHARGED || current_led_mode == CHARGING) 
+		&& !is_charger_connected) {
+		an30259a_start_led_pattern(PATTERN_OFF);
 		return;
+	}
+*/
+	if (is_display_on() || (current_led_mode != CHARGING &&
+		current_led_mode != FULLY_CHARGED)) {
+		is_full_charge = false;
+		return;
+	}
 
 	if (battery_level == BATTERY_FULL && current_led_mode == CHARGING &&
 		is_charger_connected) {
 		is_full_charge = true;
-		wake_lock(&ledlock);
 		an30259a_start_led_pattern(FULLY_CHARGED);
-		wake_unlock(&ledlock);
 		return;
 	}
 
 	is_full_charge = false;
 
-	if (current_led_mode == FULLY_CHARGED && !is_charger_connected) {
-		wake_lock(&ledlock);
-		an30259a_start_led_pattern(PATTERN_OFF);
-		wake_unlock(&ledlock);
-		return;
-	}
-
-
 	if (battery_level >= BATTERY_LOW && battery_level <= BATTERY_HIGH &&
 		current_led_mode == CHARGING &&
 		is_charger_connected) {
-		wake_lock(&ledlock);
 		an30259a_start_led_pattern(CHARGING);
-		wake_unlock(&ledlock);
 		return;
 	}
 }
