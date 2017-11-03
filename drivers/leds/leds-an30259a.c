@@ -583,12 +583,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	an30259a_reset_register_work(reset);
 	if (breathing_leds && booted)
 		an30259a_reset(client);
-	pattern_active = false;
+
 
 	if (mode > CUSTOM ||
 		mode <= PATTERN_OFF) {
+		pattern_active = false;
 		return;
 	}
+
 	pattern_active = true;
 	/* Set to low power consumption mode */
 	if (real_led_lowpower_mode == 1)
