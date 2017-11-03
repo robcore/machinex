@@ -562,6 +562,7 @@ enum {
 
 static int battery_level;
 static bool booted = false;
+static bool pattern_active;
 static unsigned int current_led_mode;
 static bool is_full_charge;
 static void an30259a_start_led_pattern(unsigned int mode)
@@ -583,8 +584,10 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 	if (mode > CUSTOM ||
 		mode <= PATTERN_OFF) {
+		pattern_active = false;
 		return;
 	}
+	pattern_active = true;
 	/* Set to low power consumption mode */
 	if (real_led_lowpower_mode == 1)
 		led_dynamic_current = 0x9;
@@ -808,7 +811,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 void send_led_full_msg(int level)
 {
-	if (level == battery_level)
+	if (level == battery_level && pattern_active)
 		return;
 
 	battery_level = level;
