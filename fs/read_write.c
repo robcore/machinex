@@ -1064,7 +1064,8 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	retval = rw_verify_area(READ, in.file, &pos, count);
 	if (retval < 0)
 		goto fput_in;
-	count = retval;
+	if (count > MAX_RW_COUNT)
+		count =  MAX_RW_COUNT;
 
 	/*
 	 * Get output file, and verify that it is ok..
@@ -1082,7 +1083,6 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	retval = rw_verify_area(WRITE, out.file, &out_pos, count);
 	if (retval < 0)
 		goto fput_out;
-	count = retval;
 
 	if (!max)
 		max = min(in_inode->i_sb->s_maxbytes, out_inode->i_sb->s_maxbytes);

@@ -510,11 +510,13 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
-	while (mxcounter < 16) {
+	for (mxcounter = 0; mxcounter < 15
 		if (userspace_ready) {
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
+		if (mxcounter >= 15)
+			break;
 		leds_on(LED_R, true, true, 0xEA);
 		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_R,
@@ -535,8 +537,6 @@ static void do_powering(struct i2c_client *client)
 				0, 20, 15, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
 		mdelay(2010);
-		if (mxcounter == 15)
-			break;
 		leds_on(LED_G, false, false, 0);
 		leds_on(LED_B, false, false, 0);
 		leds_i2c_write_all(client);
