@@ -103,6 +103,20 @@ struct device *led_dev;
 /*path : /sys/class/leds/led_b/brightness*/
 #endif
 
+enum {
+	BATTERY_LOW = 0,
+	BATTERY_MIDLOW = 1,
+	BATTERY_MID = 2,
+	BATTERY_MIDHIGH = 3,
+	BATTERY_HIGH = 4,
+	BATTERY_FULL = 5,
+};
+static int battery_level;
+static bool booted = false;
+static bool pattern_active;
+static unsigned int current_led_mode;
+static bool is_full_charge;
+
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 					u8 ledcc);
 
@@ -161,7 +175,7 @@ static void __inline an30259a_reset(struct i2c_client *client);
 /**
 * an30259a_set_slope_current - To Set the LED intensity and enable them
 **/
-static unsigned int breathing_leds = 1;
+static unsigned int breathing_leds = 0;
 static unsigned int inhale = 1000;
 static unsigned int exhale = 1000;
 static void an30259a_set_slope_current(u16 ontime, u16 offtime, bool reset)
@@ -510,12 +524,14 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter = 0;
-	for (mxcounter = 0; mxcounter < 10; mxcounter++) {
+	for (mxcounter = 0; mxcounter < 13; mxcounter++) {
 		if (userspace_ready) {
 			pr_info("[LEDS] USERSPACE HOOK\n");
 			break;
 		}
-		if (mxcounter >= 10)
+		if (current_led_mode != POWERING)
+			break;
+		if (mxcounter >= 13)
 			break;
 		leds_on(LED_R, true, true, 0xEA);
 		leds_on(LED_G, true, true, 0xE2);
@@ -551,20 +567,6 @@ static void do_powering(struct i2c_client *client)
 	return;
 }
 
-enum {
-	BATTERY_LOW = 0,
-	BATTERY_MIDLOW = 1,
-	BATTERY_MID = 2,
-	BATTERY_MIDHIGH = 3,
-	BATTERY_HIGH = 4,
-	BATTERY_FULL = 5,
-};
-
-static int battery_level;
-static bool booted = false;
-static bool pattern_active;
-static unsigned int current_led_mode;
-static bool is_full_charge;
 static void an30259a_start_led_pattern(unsigned int mode)
 {
 	int curr_level, retval;
