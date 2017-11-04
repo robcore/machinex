@@ -25,7 +25,7 @@
 
 struct led_pwm_data {
 	struct led_classdev	cdev;
-	struct pwm_device	*pwm;
+	struct generic_pwm_device	*pwm;
 	unsigned int		active_low;
 	unsigned int		period;
 };
@@ -39,11 +39,11 @@ static void led_pwm_set(struct led_classdev *led_cdev,
 	unsigned int period =  led_dat->period;
 
 	if (brightness == 0) {
-		pwm_config(led_dat->pwm, 0, period);
-		pwm_disable(led_dat->pwm);
+		generic_pwm_config(led_dat->pwm, 0, period);
+		generic_pwm_disable(led_dat->pwm);
 	} else {
-		pwm_config(led_dat->pwm, brightness * period / max, period);
-		pwm_enable(led_dat->pwm);
+		generic_pwm_config(led_dat->pwm, brightness * period / max, period);
+		generic_pwm_enable(led_dat->pwm);
 	}
 }
 
@@ -66,7 +66,7 @@ static int led_pwm_probe(struct platform_device *pdev)
 		cur_led = &pdata->leds[i];
 		led_dat = &leds_data[i];
 
-		led_dat->pwm = pwm_request(cur_led->pwm_id,
+		led_dat->pwm = generic_pwm_request(cur_led->pwm_id,
 				cur_led->name);
 		if (IS_ERR(led_dat->pwm)) {
 			ret = PTR_ERR(led_dat->pwm);
@@ -86,7 +86,7 @@ static int led_pwm_probe(struct platform_device *pdev)
 
 		ret = led_classdev_register(&pdev->dev, &led_dat->cdev);
 		if (ret < 0) {
-			pwm_free(led_dat->pwm);
+			generic_pwm_free(led_dat->pwm);
 			goto err;
 		}
 	}
@@ -99,7 +99,7 @@ err:
 	if (i > 0) {
 		for (i = i - 1; i >= 0; i--) {
 			led_classdev_unregister(&leds_data[i].cdev);
-			pwm_free(leds_data[i].pwm);
+			generic_pwm_free(leds_data[i].pwm);
 		}
 	}
 
@@ -118,7 +118,7 @@ static int led_pwm_remove(struct platform_device *pdev)
 
 	for (i = 0; i < pdata->num_leds; i++) {
 		led_classdev_unregister(&leds_data[i].cdev);
-		pwm_free(leds_data[i].pwm);
+		generic_pwm_free(leds_data[i].pwm);
 	}
 
 	kfree(leds_data);
@@ -128,7 +128,7 @@ static int led_pwm_remove(struct platform_device *pdev)
 
 static struct platform_driver led_pwm_driver = {
 	.probe		= led_pwm_probe,
-	.remove		= __devexit_p(led_pwm_remove),
+	.remove		= led_pwm_remove,
 	.driver		= {
 		.name	= "leds_pwm",
 		.owner	= THIS_MODULE,
