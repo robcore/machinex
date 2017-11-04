@@ -646,9 +646,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		} else {
 			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 15, 0, AN30259A_TIME_UNIT - 450) /
-				AN30259A_TIME_UNIT, AN30259A_TIME_UNIT - 450) /
-				AN30259A_TIME_UNIT, 0, 0, 0, 0);
+					0, 15, 15, 0, ((AN30259A_TIME_UNIT - 450) /
+				AN30259A_TIME_UNIT), ((AN30259A_TIME_UNIT - 450) /
+				AN30259A_TIME_UNIT), 0, 0, 0, 0);
 		}
  		break;
 	case MISSED_NOTI:
@@ -725,15 +725,15 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		}
 		pr_info("LED Fake Powering Pattern ON\n");
-			leds_on(LED_R, true, true, 192);
-			leds_on(LED_G, true, true, 221);
-			leds_on(LED_B, true, true, 254);
+			leds_on(LED_R, true, true, 0xEA);
+			leds_on(LED_G, true, true, 0xE2);
+			leds_on(LED_B, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_R,
-					0, 2, 0, 0, 4, 4, 1, 1, 1, 1);
+					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 10, 4, 4, 4, 1, 1, 1, 1);
+					0, 15, 5, 1, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 9, 0, 4, 4, 1, 1, 1, 1);
+					4, 15, 1, 0, 4, 4, 1, 1, 1, 1);
 			break;
 	case BOOTING:
 		if (poweroff_charging) {
