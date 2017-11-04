@@ -498,6 +498,7 @@ static unsigned int custom_r_dt1 = 0;
 static unsigned int custom_r_dt2 = 0;
 static unsigned int custom_r_dt3 = 0;
 static unsigned int custom_r_dt4 = 0;
+static unsigned int custom_r_brightness = 0;
 
 static unsigned int custom_g_enabled = 0;
 static unsigned int custom_g_delay = 0;
@@ -510,6 +511,7 @@ static unsigned int custom_g_dt1 = 0;
 static unsigned int custom_g_dt2 = 0;
 static unsigned int custom_g_dt3 = 0;
 static unsigned int custom_g_dt4 = 0;
+static unsigned int custom_g_brightness = 0;
 
 static unsigned int custom_b_enabled = 0;
 static unsigned int custom_b_delay = 0;
@@ -522,6 +524,7 @@ static unsigned int custom_b_dt1 = 0;
 static unsigned int custom_b_dt2 = 0;
 static unsigned int custom_b_dt3 = 0;
 static unsigned int custom_b_dt4 = 0;
+static unsigned int custom_b_brightness = 0;
 
 static void an30259a_start_led_pattern(unsigned int mode)
 {
@@ -698,9 +701,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xE2);
 			leds_on(LED_B, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 1, 0, 4, 4, 1, 1, 1, 1);
+					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 1, 1, 4, 4, 1, 1, 1, 1);
+					0, 15, 5, 1, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 1, 0, 4, 4, 1, 1, 1, 1);
 			booted = true;
@@ -726,7 +729,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 221);
 			leds_on(LED_B, true, true, 254);
 			leds_set_slope_mode(client, LED_R,
-					0, 2, 1, 0, 4, 4, 1, 1, 1, 1);
+					0, 2, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 10, 4, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
@@ -747,7 +750,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		}
 		if (custom_r_enabled) {
-			leds_on(LED_R, true, true, led_dynamic_current);
+			leds_on(LED_R, true, true, custom_r_brightness);
 			leds_set_slope_mode(client, LED_R,
 					custom_r_delay,
 					custom_r_dutymax, custom_r_dutymid, custom_r_dutymin,
@@ -755,7 +758,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					custom_r_dt1, custom_r_dt2, custom_r_dt3, custom_r_dt4);
 		}
 		if (custom_g_enabled) {
-			leds_on(LED_G, true, true, led_dynamic_current);
+			leds_on(LED_G, true, true, custom_g_brightness);
 			leds_set_slope_mode(client, LED_G,
 					custom_g_delay,
 					custom_g_dutymax, custom_g_dutymid, custom_g_dutymin,
@@ -763,7 +766,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					custom_g_dt1, custom_g_dt2, custom_g_dt3, custom_g_dt4);
 		}
 		if (custom_b_enabled) {
-			leds_on(LED_B, true, true, led_dynamic_current);
+			leds_on(LED_B, true, true, custom_b_brightness);
 			leds_set_slope_mode(client, LED_B,
 					custom_b_delay,
 					custom_b_dutymax, custom_b_dutymid, custom_b_dutymin,
@@ -792,7 +795,7 @@ void send_led_full_msg(int level)
 	}
 */
 	if (is_display_on() || (current_led_mode != CHARGING &&
-		current_led_mode != FULLY_CHARGED) || pattern_active || !booted) {
+		current_led_mode != FULLY_CHARGED) !pattern_active || !booted) {
 		return;
 	}
 
@@ -1469,6 +1472,7 @@ show_one_led(custom_r_dt1);
 show_one_led(custom_r_dt2);
 show_one_led(custom_r_dt3);
 show_one_led(custom_r_dt4);
+show_one_led(custom_r_brightness);
 
 store_long(custom_r_delay);
 store_duty(custom_r_dutymax);
@@ -1480,6 +1484,7 @@ store_slpdt(custom_r_dt1);
 store_slpdt(custom_r_dt2);
 store_slpdt(custom_r_dt3);
 store_slpdt(custom_r_dt4);
+store_one_clamp(custom_r_brightness, 0, 255);
 
 MX_ATTR_RW(custom_r_delay);
 MX_ATTR_RW(custom_r_dutymax);
@@ -1491,6 +1496,7 @@ MX_ATTR_RW(custom_r_dt1);
 MX_ATTR_RW(custom_r_dt2);
 MX_ATTR_RW(custom_r_dt3);
 MX_ATTR_RW(custom_r_dt4);
+MX_ATTR_RW(custom_r_brightness);
 
 show_one_led(custom_g_delay);
 show_one_led(custom_g_dutymax);
@@ -1502,6 +1508,7 @@ show_one_led(custom_g_dt1);
 show_one_led(custom_g_dt2);
 show_one_led(custom_g_dt3);
 show_one_led(custom_g_dt4);
+show_one_led(custom_g_brightness);
 
 store_long(custom_g_delay);
 store_duty(custom_g_dutymax);
@@ -1513,6 +1520,7 @@ store_slpdt(custom_g_dt1);
 store_slpdt(custom_g_dt2);
 store_slpdt(custom_g_dt3);
 store_slpdt(custom_g_dt4);
+store_one_clamp(custom_g_brightness, 0, 255);
 
 MX_ATTR_RW(custom_g_delay);
 MX_ATTR_RW(custom_g_dutymax);
@@ -1524,6 +1532,7 @@ MX_ATTR_RW(custom_g_dt1);
 MX_ATTR_RW(custom_g_dt2);
 MX_ATTR_RW(custom_g_dt3);
 MX_ATTR_RW(custom_g_dt4);
+MX_ATTR_RW(custom_g_brightness);
 
 show_one_led(custom_b_delay);
 show_one_led(custom_b_dutymax);
@@ -1535,6 +1544,7 @@ show_one_led(custom_b_dt1);
 show_one_led(custom_b_dt2);
 show_one_led(custom_b_dt3);
 show_one_led(custom_b_dt4);
+show_one_led(custom_b_brightness);
 
 store_long(custom_b_delay);
 store_duty(custom_b_dutymax);
@@ -1546,6 +1556,7 @@ store_slpdt(custom_b_dt1);
 store_slpdt(custom_b_dt2);
 store_slpdt(custom_b_dt3);
 store_slpdt(custom_b_dt4);
+store_one_clamp(custom_b_brightness, 0, 255);
 
 MX_ATTR_RW(custom_b_delay);
 MX_ATTR_RW(custom_b_dutymax);
@@ -1557,6 +1568,7 @@ MX_ATTR_RW(custom_b_dt1);
 MX_ATTR_RW(custom_b_dt2);
 MX_ATTR_RW(custom_b_dt3);
 MX_ATTR_RW(custom_b_dt4);
+MX_ATTR_RW(custom_b_brightness);
 
 static struct attribute *cust_led_r_attrs[] = {
 	&custom_r_delay_attr.attr,
@@ -1569,6 +1581,7 @@ static struct attribute *cust_led_r_attrs[] = {
 	&custom_r_dt2_attr.attr,
 	&custom_r_dt3_attr.attr,
 	&custom_r_dt4_attr.attr,
+	&custom_r_brightness_attr.attr,
 	NULL,
 };
 
@@ -1583,6 +1596,7 @@ static struct attribute *cust_led_g_attrs[] = {
 	&custom_g_dt2_attr.attr,
 	&custom_g_dt3_attr.attr,
 	&custom_g_dt4_attr.attr,
+	&custom_g_brightness_attr.attr,
 	NULL,
 };
 
@@ -1597,6 +1611,7 @@ static struct attribute *cust_led_b_attrs[] = {
 	&custom_b_dt2_attr.attr,
 	&custom_b_dt3_attr.attr,
 	&custom_b_dt4_attr.attr,
+	&custom_b_brightness_attr.attr,
 	NULL,
 };
 
