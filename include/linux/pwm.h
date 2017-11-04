@@ -33,6 +33,28 @@ int __weak pwm_enable(struct pwm_device *pwm);
  */
 void __weak pwm_disable(struct pwm_device *pwm);
 
+struct generic_pwm_device __weak *generic_pwm_request(int pwm_id, const char *label);
+
+/*
+ * pwm_free - free a PWM device
+ */
+void __weak generic_pwm_free(struct generic_pwm_device *pwm);
+
+/*
+ * pwm_config - change a PWM device configuration
+ */
+int __weak generic_pwm_config(struct generic_pwm_device *pwm, int duty_ns, int period_ns);
+
+/*
+ * pwm_enable - start a PWM output toggling
+ */
+int __weak generic_pwm_enable(struct generic_pwm_device *pwm);
+
+/*
+ * pwm_disable - stop a PWM output toggling
+ */
+void __weak generic_pwm_disable(struct generic_pwm_device *pwm);
+
 #ifdef CONFIG_PWM
 struct pwm_chip;
 

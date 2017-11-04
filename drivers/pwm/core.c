@@ -292,7 +292,7 @@ EXPORT_SYMBOL_GPL(pwmchip_remove);
  *
  * This function is deprecated, use pwm_get() instead.
  */
-struct generic_pwm_device *pwm_request(int pwm, const char *label)
+struct generic_pwm_device *generic_pwm_request(int pwm, const char *label)
 {
 	struct generic_pwm_device *dev;
 	int err;
@@ -317,7 +317,7 @@ out:
 
 	return dev;
 }
-EXPORT_SYMBOL_GPL(pwm_request);
+EXPORT_SYMBOL_GPL(generic_pwm_request);
 
 /**
  * pwm_request_from_chip() - request a PWM device relative to a PWM chip
@@ -357,11 +357,11 @@ EXPORT_SYMBOL_GPL(pwm_request_from_chip);
  *
  * This function is deprecated, use pwm_put() instead.
  */
-void pwm_free(struct generic_pwm_device *pwm)
+void generic_pwm_free(struct generic_pwm_device *pwm)
 {
 	pwm_put(pwm);
 }
-EXPORT_SYMBOL_GPL(pwm_free);
+EXPORT_SYMBOL_GPL(generic_pwm_free);
 
 /**
  * pwm_config() - change a PWM device configuration
@@ -369,14 +369,14 @@ EXPORT_SYMBOL_GPL(pwm_free);
  * @duty_ns: "on" time (in nanoseconds)
  * @period_ns: duration (in nanoseconds) of one cycle
  */
-int pwm_config(struct generic_pwm_device *pwm, int duty_ns, int period_ns)
+int generic_pwm_config(struct generic_pwm_device *pwm, int duty_ns, int period_ns)
 {
 	if (!pwm || duty_ns < 0 || period_ns <= 0 || duty_ns > period_ns)
 		return -EINVAL;
 
 	return pwm->chip->ops->config(pwm->chip, pwm, duty_ns, period_ns);
 }
-EXPORT_SYMBOL_GPL(pwm_config);
+EXPORT_SYMBOL_GPL(generic_pwm_config);
 
 /**
  * pwm_set_polarity() - configure the polarity of a PWM signal
@@ -404,118 +404,25 @@ EXPORT_SYMBOL_GPL(pwm_set_polarity);
  * pwm_enable() - start a PWM output toggling
  * @pwm: PWM device
  */
-int pwm_enable(struct generic_pwm_device *pwm)
+int generic_pwm_enable(struct generic_pwm_device *pwm)
 {
 	if (pwm && !test_and_set_bit(PWMF_ENABLED, &pwm->flags))
 		return pwm->chip->ops->enable(pwm->chip, pwm);
 
 	return pwm ? 0 : -EINVAL;
 }
-EXPORT_SYMBOL_GPL(pwm_enable);
+EXPORT_SYMBOL_GPL(generic_pwm_enable);
 
 /**
  * pwm_disable() - stop a PWM output toggling
  * @pwm: PWM device
  */
-void pwm_disable(struct generic_pwm_device *pwm)
+void generic_pwm_disable(struct generic_pwm_device *pwm)
 {
 	if (pwm && test_and_clear_bit(PWMF_ENABLED, &pwm->flags))
 		pwm->chip->ops->disable(pwm->chip, pwm);
 }
 EXPORT_SYMBOL_GPL(pwm_disable);
-
-static struct pwm_chip *of_node_to_pwmchip(struct device_node *np)
-{
-	struct pwm_chip *chip;
-
-	mutex_lock(&pwm_lock);
-
-	list_for_each_entry(chip, &pwm_chips, list)
-		if (chip->dev && chip->dev->of_node == np) {
-			mutex_unlock(&pwm_lock);
-			return chip;
-		}
-
-	mutex_unlock(&pwm_lock);
-
-	return ERR_PTR(-EPROBE_DEFER);
-}
-
-/**
- * of_pwm_request() - request a PWM via the PWM framework
- * @np: device node to get the PWM from
- * @con_id: consumer name
- *
- * Returns the PWM device parsed from the phandle and index specified in the
- * "pwms" property of a device tree node or a negative error-code on failure.
- * Values parsed from the device tree are stored in the returned PWM device
- * object.
- *
- * If con_id is NULL, the first PWM device listed in the "pwms" property will
- * be requested. Otherwise the "pwm-names" property is used to do a reverse
- * lookup of the PWM index. This also means that the "pwm-names" property
- * becomes mandatory for devices that look up the PWM device via the con_id
- * parameter.
- */
-static struct generic_pwm_device *of_pwm_request(struct device_node *np,
-					 const char *con_id)
-{
-	struct generic_pwm_device *pwm = NULL;
-	struct of_phandle_args args;
-	struct pwm_chip *pc;
-	int index = 0;
-	int err;
-
-	if (con_id) {
-		index = of_property_match_string(np, "pwm-names", con_id);
-		if (index < 0)
-			return ERR_PTR(index);
-	}
-
-	err = of_parse_phandle_with_args(np, "pwms", "#pwm-cells", index,
-					 &args);
-	if (err) {
-		pr_debug("%s(): can't parse \"pwms\" property\n", __func__);
-		return ERR_PTR(err);
-	}
-
-	pc = of_node_to_pwmchip(args.np);
-	if (IS_ERR(pc)) {
-		pr_debug("%s(): PWM chip not found\n", __func__);
-		pwm = ERR_CAST(pc);
-		goto put;
-	}
-
-	if (args.args_count != pc->of_pwm_n_cells) {
-		pr_debug("%s: wrong #pwm-cells for %s\n", np->full_name,
-			 args.np->full_name);
-		pwm = ERR_PTR(-EINVAL);
-		goto put;
-	}
-
-	pwm = pc->of_xlate(pc, &args);
-	if (IS_ERR(pwm))
-		goto put;
-
-	/*
-	 * If a consumer name was not given, try to look it up from the
-	 * "pwm-names" property if it exists. Otherwise use the name of
-	 * the user device node.
-	 */
-	if (!con_id) {
-		err = of_property_read_string_index(np, "pwm-names", index,
-						    &con_id);
-		if (err < 0)
-			con_id = np->name;
-	}
-
-	pwm->label = con_id;
-
-put:
-	of_node_put(args.np);
-
-	return pwm;
-}
 
 /**
  * pwm_add_table() - register PWM device consumers
@@ -555,10 +462,6 @@ struct generic_pwm_device *pwm_get(struct device *dev, const char *con_id)
 	struct pwm_lookup *p;
 	unsigned int index;
 	unsigned int match;
-
-	/* look up via DT first */
-	if (IS_ENABLED(CONFIG_OF) && dev && dev->of_node)
-		return of_pwm_request(dev->of_node, con_id);
 
 	/*
 	 * We look up the provider in the static table typically provided by
