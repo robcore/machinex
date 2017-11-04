@@ -526,14 +526,12 @@ static unsigned int custom_b_dt4 = 0;
 static void do_powering(struct i2c_client *client)
 {
 	unsigned int mxcounter;
-	struct work_struct *reset = 0;
 
 	for (mxcounter = 0; mxcounter < 13; mxcounter++) {
 		if (userspace_ready ||
 			current_led_mode != POWERING ||
 			!pattern_active || mxcounter >= 13)
 			break;
-		msleep_interruptible(10);
 		leds_on(LED_R, true, true, 0xEA);
 		leds_on(LED_G, true, true, 0xE2);
 		leds_set_slope_mode(client, LED_R,
@@ -541,13 +539,16 @@ static void do_powering(struct i2c_client *client)
 		leds_set_slope_mode(client, LED_G,
 				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
-		msleep_interruptible(2010);
-		an30259a_reset_register_work(reset);
+		mdelay(2010);
+		leds_on(LED_R, false, false, 0x0);
+		leds_on(LED_G, false, false, 0x0);
+		leds_on(LED_B, false, false, 0x0);
+		leds_i2c_write_all(client);
 		if (userspace_ready ||
 			current_led_mode != POWERING ||
 			!pattern_active)
 			break;
-		msleep_interruptible(10);
+		mdelay(10);
 		leds_on(LED_G, true, true, 0x01);
 		leds_set_slope_mode(client, LED_G,
 				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
@@ -555,11 +556,17 @@ static void do_powering(struct i2c_client *client)
 		leds_set_slope_mode(client, LED_B,
 				0, 15, 13, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
-		msleep_interruptible(2010);
-		an30259a_reset_register_work(reset);
+		mdelay(2010);
+		leds_on(LED_R, false, false, 0x0);
+		leds_on(LED_G, false, false, 0x0);
+		leds_on(LED_B, false, false, 0x0);
+		leds_i2c_write_all(client);
+		mdelay(10);
 	}
-	if (pattern_active)
-		an30259a_reset_register_work(reset);
+	leds_on(LED_R, false, false, 0x0);
+	leds_on(LED_G, false, false, 0x0);
+	leds_on(LED_B, false, false, 0x0);
+	leds_i2c_write_all(client);
 	return;
 }
 
