@@ -800,10 +800,11 @@ void send_led_full_msg(int level)
 	}
 
 	wake_lock(&ledlock);
-	if (battery_level == BATTERY_FULL && current_led_mode == CHARGING &&
-		is_charger_connected) {
+	if (battery_level == BATTERY_FULL) {
 		is_full_charge = true;
-		an30259a_start_led_pattern(FULLY_CHARGED);
+		if (current_led_mode == CHARGING &&
+			is_charger_connected)
+			an30259a_start_led_pattern(FULLY_CHARGED);
 		wake_unlock(&ledlock);
 		return;
 	}
