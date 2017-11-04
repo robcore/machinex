@@ -192,7 +192,7 @@ static unsigned int pt_t[NUM_LPG_PRE_DIVIDE][NUM_CLOCKS] = {
 /* Private data */
 struct pm8xxx_pwm_chip;
 
-struct pm8xxx_pwm_device {
+struct pwm_device {
 	int			pwm_id;		/* = bank/channel id */
 	int			in_use;
 	const char		*label;
@@ -211,7 +211,7 @@ struct pm8xxx_pwm_device {
 };
 
 struct pm8xxx_pwm_chip {
-	struct pm8xxx_pwm_device		*pwm_dev;
+	struct pwm_device		*pwm_dev;
 	u8				pwm_channels;
 	u8				pwm_total_pre_divs;
 	u8				lo_bank_mask;
@@ -254,7 +254,7 @@ static void pm8xxx_pwm_save(u8 *u8p, u8 mask, u8 val)
 	*u8p |= val & mask;
 }
 
-static int pm8xxx_pwm_bank_enable(struct pm8xxx_pwm_device *pwm, int enable)
+static int pm8xxx_pwm_bank_enable(struct pwm_device *pwm, int enable)
 {
 	int	rc;
 	u8	reg;
@@ -302,7 +302,7 @@ static int pm8xxx_pwm_bank_enable(struct pm8xxx_pwm_device *pwm, int enable)
 	return 0;
 }
 
-static int pm8xxx_pwm_bank_sel(struct pm8xxx_pwm_device *pwm)
+static int pm8xxx_pwm_bank_sel(struct pwm_device *pwm)
 {
 	int	rc;
 
@@ -313,7 +313,7 @@ static int pm8xxx_pwm_bank_sel(struct pm8xxx_pwm_device *pwm)
 	return rc;
 }
 
-static int pm8xxx_pwm_start(struct pm8xxx_pwm_device *pwm, int start, int ramp_start)
+static int pm8xxx_pwm_start(struct pwm_device *pwm, int start, int ramp_start)
 {
 	int	rc;
 	u8	reg;
@@ -338,7 +338,7 @@ static int pm8xxx_pwm_start(struct pm8xxx_pwm_device *pwm, int start, int ramp_s
 	return rc;
 }
 
-static int pm8xxx_pwm_disable(struct pm8xxx_pwm_device *pwm)
+static int pm8xxx_pwm_disable(struct pwm_device *pwm)
 {
 	int	rc;
 	u8	reg;
@@ -354,7 +354,7 @@ static int pm8xxx_pwm_disable(struct pm8xxx_pwm_device *pwm)
 	return rc;
 }
 
-static int pm8xxx_pwm_enable(struct pm8xxx_pwm_device *pwm)
+static int pm8xxx_pwm_enable(struct pwm_device *pwm)
 {
 	/**
 	 * A kind of best Effort: Just write the clock information that
@@ -432,7 +432,7 @@ static void pm8xxx_pwm_calc_period(unsigned int period_us,
 	period->pre_div_exp = best_m;
 }
 
-static void pm8xxx_pwm_calc_pwm_value(struct pm8xxx_pwm_device *pwm,
+static void pm8xxx_pwm_calc_pwm_value(struct pwm_device *pwm,
 				      unsigned int period_us,
 				      unsigned int duty_us)
 {
@@ -452,7 +452,7 @@ static void pm8xxx_pwm_calc_pwm_value(struct pm8xxx_pwm_device *pwm,
 		pwm->pwm_value = max_pwm_value;
 }
 
-static int pm8xxx_pwm_change_table(struct pm8xxx_pwm_device *pwm, int duty_pct[],
+static int pm8xxx_pwm_change_table(struct pwm_device *pwm, int duty_pct[],
 				   int start_idx, int len, int raw_value)
 {
 	unsigned int pwm_value, max_pwm_value;
@@ -487,7 +487,7 @@ static int pm8xxx_pwm_change_table(struct pm8xxx_pwm_device *pwm, int duty_pct[]
 	return rc;
 }
 
-static void pm8xxx_pwm_save_index(struct pm8xxx_pwm_device *pwm,
+static void pm8xxx_pwm_save_index(struct pwm_device *pwm,
 				   int low_idx, int high_idx, int flags)
 {
 	pwm->pwm_lpg_ctl[1] = high_idx & PM8XXX_PWM_HIGH_INDEX_MASK;
@@ -501,7 +501,7 @@ static void pm8xxx_pwm_save_index(struct pm8xxx_pwm_device *pwm,
 		pwm->pwm_lpg_ctl[2] |= PM8XXX_PWM_LOOP_EN;
 }
 
-static void pm8xxx_pwm_save_period(struct pm8xxx_pwm_device *pwm)
+static void pm8xxx_pwm_save_period(struct pwm_device *pwm)
 {
 	u8	mask, val;
 
@@ -534,7 +534,7 @@ static void pm8xxx_pwm_save_period(struct pm8xxx_pwm_device *pwm)
 	}
 }
 
-static void pm8xxx_pwm_save_pwm_value(struct pm8xxx_pwm_device *pwm)
+static void pm8xxx_pwm_save_pwm_value(struct pwm_device *pwm)
 {
 	u8	mask, val;
 
@@ -551,7 +551,7 @@ static void pm8xxx_pwm_save_pwm_value(struct pm8xxx_pwm_device *pwm)
 	}
 }
 
-static void pm8xxx_pwm_save_duty_time(struct pm8xxx_pwm_device *pwm,
+static void pm8xxx_pwm_save_duty_time(struct pwm_device *pwm,
 				      struct pm8xxx_pwm_lut *lut)
 {
 	int	i;
@@ -568,7 +568,7 @@ static void pm8xxx_pwm_save_duty_time(struct pm8xxx_pwm_device *pwm,
 	pm8xxx_pwm_save(&pwm->pwm_lpg_ctl[0], mask, val);
 }
 
-static void pm8xxx_pwm_save_pause(struct pm8xxx_pwm_device *pwm,
+static void pm8xxx_pwm_save_pause(struct pwm_device *pwm,
 				  struct pm8xxx_pwm_lut *lut)
 {
 	int	i, pause_cnt, time_cnt;
@@ -613,7 +613,7 @@ static void pm8xxx_pwm_save_pause(struct pm8xxx_pwm_device *pwm,
 	pm8xxx_pwm_save(&pwm->pwm_lpg_ctl[6], mask, val);
 }
 
-static int pm8xxx_pwm_write(struct pm8xxx_pwm_device *pwm)
+static int pm8xxx_pwm_write(struct pwm_device *pwm)
 {
 	int rc = 0;
 
@@ -638,7 +638,7 @@ static int pm8xxx_pwm_write(struct pm8xxx_pwm_device *pwm)
 	return rc;
 }
 
-static int pm8xxx_lpg_pwm_write(struct pm8xxx_pwm_device *pwm, int start, int end)
+static int pm8xxx_lpg_pwm_write(struct pwm_device *pwm, int start, int end)
 {
 	int	i, rc;
 
@@ -656,7 +656,7 @@ static int pm8xxx_lpg_pwm_write(struct pm8xxx_pwm_device *pwm, int start, int en
 	return 0;
 }
 
-static int pm8xxx_pwm_change_lut(struct pm8xxx_pwm_device *pwm,
+static int pm8xxx_pwm_change_lut(struct pwm_device *pwm,
 				 struct pm8xxx_pwm_lut *lut)
 {
 	int	rc;
@@ -673,7 +673,7 @@ static int pm8xxx_pwm_change_lut(struct pm8xxx_pwm_device *pwm,
 	return rc;
 }
 
-static int pm8xxx_pwm_set_dtest(struct pm8xxx_pwm_device *pwm, int enable)
+static int pm8xxx_pwm_set_dtest(struct pwm_device *pwm, int enable)
 {
 	int	rc;
 	u8	reg;
@@ -701,9 +701,9 @@ static int pm8xxx_pwm_set_dtest(struct pm8xxx_pwm_device *pwm, int enable)
  * @pwm_id: PWM id or channel
  * @label: the label to identify the user
  */
-struct pm8xxx_pwm_device *pwm_request(int pwm_id, const char *label)
+struct pwm_device *pwm_request(int pwm_id, const char *label)
 {
-	struct pm8xxx_pwm_device	*pwm;
+	struct pwm_device	*pwm;
 
 	if (pwm_chip == NULL) {
 		pr_err("No pwm_chip\n");
@@ -734,7 +734,7 @@ EXPORT_SYMBOL_GPL(pwm_request);
  * pwm_free - free a PWM device
  * @pwm: the PWM device
  */
-void pwm_free(struct pm8xxx_pwm_device *pwm)
+void pwm_free(struct pwm_device *pwm)
 {
 	if (pwm == NULL || IS_ERR(pwm) || pwm->chip == NULL) {
 		pr_err("Invalid pwm handle\n");
@@ -764,7 +764,7 @@ EXPORT_SYMBOL_GPL(pwm_free);
  * @period_us: period in microseconds
  * @duty_us: duty cycle in microseconds
  */
-int pwm_config(struct pm8xxx_pwm_device *pwm, int duty_us, int period_us)
+int pwm_config(struct pwm_device *pwm, int duty_us, int period_us)
 {
 	struct pm8xxx_pwm_period *period;
 	int	rc = 0;
@@ -823,7 +823,7 @@ EXPORT_SYMBOL_GPL(pwm_config);
  * pwm_enable - start a PWM output toggling
  * @pwm: the PWM device
  */
-int pwm_enable(struct pm8xxx_pwm_device *pwm)
+int pwm_enable(struct pwm_device *pwm)
 {
 	int	rc = 0;
 
@@ -869,7 +869,7 @@ EXPORT_SYMBOL_GPL(pwm_enable);
  * pwm_disable - stop a PWM output toggling
  * @pwm: the PWM device
  */
-void pwm_disable(struct pm8xxx_pwm_device *pwm)
+void pwm_disable(struct pwm_device *pwm)
 {
 	if (pwm == NULL || IS_ERR(pwm) || pwm->chip == NULL) {
 		pr_err("Invalid pwm handle or no pwm_chip\n");
@@ -898,7 +898,7 @@ EXPORT_SYMBOL_GPL(pwm_disable);
  * @pwm: the PWM device
  * @pwm_p: period in struct pm8xxx_pwm_period
  */
-int pm8xxx_pwm_config_period(struct pm8xxx_pwm_device *pwm,
+int pm8xxx_pwm_config_period(struct pwm_device *pwm,
 			     struct pm8xxx_pwm_period *period)
 {
 	int			rc;
@@ -941,7 +941,7 @@ EXPORT_SYMBOL(pm8xxx_pwm_config_period);
  * @pwm: the PWM device
  * @pwm_value: the duty cycle in raw PWM value (< 2^pwm_size)
  */
-int pm8xxx_pwm_config_pwm_value(struct pm8xxx_pwm_device *pwm, int pwm_value)
+int pm8xxx_pwm_config_pwm_value(struct pwm_device *pwm, int pwm_value)
 {
 	int	rc = 0;
 
@@ -994,7 +994,7 @@ EXPORT_SYMBOL_GPL(pm8xxx_pwm_config_pwm_value);
  * @pause_hi: pause time in milliseconds at high index
  * @flags: control flags
  */
-int pm8xxx_pwm_lut_config(struct pm8xxx_pwm_device *pwm, int period_us,
+int pm8xxx_pwm_lut_config(struct pwm_device *pwm, int period_us,
 			  int duty_pct[], int duty_time_ms, int start_idx,
 			  int idx_len, int pause_lo, int pause_hi, int flags)
 {
@@ -1093,7 +1093,7 @@ EXPORT_SYMBOL_GPL(pm8xxx_pwm_lut_config);
  * @pwm: the PWM device
  * @start: to start (1), or stop (0)
  */
-int pm8xxx_pwm_lut_enable(struct pm8xxx_pwm_device *pwm, int start)
+int pm8xxx_pwm_lut_enable(struct pwm_device *pwm, int start)
 {
 	if (pwm == NULL || IS_ERR(pwm)) {
 		pr_err("Invalid pwm handle\n");
@@ -1137,7 +1137,7 @@ struct pm8xxx_pwm_dbg_device;
 
 struct pm8xxx_pwm_user {
 	int				pwm_id;
-	struct pm8xxx_pwm_device		*pwm;
+	struct pwm_device		*pwm;
 	int				period;
 	int				duty_cycle;
 	int				enable;
@@ -1175,7 +1175,7 @@ static int dbg_pwm_check_duty_cycle(int duty_cycle, const char *func_name)
 
 static void dbg_pwm_check_handle(struct pm8xxx_pwm_user *puser)
 {
-	struct pm8xxx_pwm_device *tmp;
+	struct pwm_device *tmp;
 
 	if (puser->pwm == NULL) {
 		tmp = pwm_request(puser->pwm_id, "pwm-dbg");
@@ -1460,7 +1460,7 @@ static int pm8xxx_pwm_probe(struct platform_device *pdev)
 		chip->pwm_total_pre_divs = NUM_PWM_PRE_DIVIDE;
 	}
 
-	chip->pwm_dev = kcalloc(chip->pwm_channels, sizeof(struct pm8xxx_pwm_device),
+	chip->pwm_dev = kcalloc(chip->pwm_channels, sizeof(struct pwm_device),
 								GFP_KERNEL);
 	if (chip->pwm_dev == NULL) {
 		pr_err("kcalloc() failed.\n");

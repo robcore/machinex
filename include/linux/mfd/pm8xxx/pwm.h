@@ -107,7 +107,7 @@ struct pm8xxx_pwm_platform_data {
  * @pwm: the PWM device
  * @pwm_p: period in struct pm8xxx_pwm_period
  */
-int pm8xxx_pwm_config_period(struct pm8xxx_pwm_device *pwm,
+int pm8xxx_pwm_config_period(struct pwm_device *pwm,
 			     struct pm8xxx_pwm_period *pwm_p);
 
 /**
@@ -115,7 +115,7 @@ int pm8xxx_pwm_config_period(struct pm8xxx_pwm_device *pwm,
  * @pwm: the PWM device
  * @pwm_value: the duty cycle in raw PWM value (< 2^pwm_size)
  */
-int pm8xxx_pwm_config_pwm_value(struct pm8xxx_pwm_device *pwm, int pwm_value);
+int pm8xxx_pwm_config_pwm_value(struct pwm_device *pwm, int pwm_value);
 
 /**
  * pm8xxx_pwm_lut_config - change a PWM device configuration to use LUT
@@ -129,7 +129,7 @@ int pm8xxx_pwm_config_pwm_value(struct pm8xxx_pwm_device *pwm, int pwm_value);
  * @pause_hi: pause time in millisecond at high index
  * @flags: control flags
  */
-int pm8xxx_pwm_lut_config(struct pm8xxx_pwm_device *pwm, int period_us,
+int pm8xxx_pwm_lut_config(struct pwm_device *pwm, int period_us,
 			  int duty_pct[], int duty_time_ms, int start_idx,
 			  int len, int pause_lo, int pause_hi, int flags);
 
@@ -138,7 +138,7 @@ int pm8xxx_pwm_lut_config(struct pm8xxx_pwm_device *pwm, int period_us,
  * @pwm: the PWM device
  * @start: to start (1), or stop (0)
  */
-int pm8xxx_pwm_lut_enable(struct pm8xxx_pwm_device *pwm, int start);
+int pm8xxx_pwm_lut_enable(struct pwm_device *pwm, int start);
 
 /* Standard APIs supported */
 /**
