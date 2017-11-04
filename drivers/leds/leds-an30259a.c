@@ -1335,6 +1335,28 @@ static ssize_t store_##file_name		\
 	return count;				\
 }
 
+#define store_one_led_clamp(name, min, max)		\
+static ssize_t store_##name		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned int input;			\
+	int ret;				\
+	ret = sscanf(buf, "%u", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input == name)			\
+		return count;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	name = input;				\
+	an30259a_start_led_pattern(current_led_mode); \
+	return count;				\
+}
+
 static ssize_t show_breathing_leds(struct kobject *kobj, 
 				struct kobj_attribute *attr, char *buf)
 {
@@ -1485,7 +1507,7 @@ store_slpdt(custom_r_dt1);
 store_slpdt(custom_r_dt2);
 store_slpdt(custom_r_dt3);
 store_slpdt(custom_r_dt4);
-store_one_clamp(custom_r_brightness, 0, 255);
+store_one_led_clamp(custom_r_brightness, 0, 255);
 
 MX_ATTR_RW(custom_r_delay);
 MX_ATTR_RW(custom_r_dutymax);
@@ -1521,7 +1543,7 @@ store_slpdt(custom_g_dt1);
 store_slpdt(custom_g_dt2);
 store_slpdt(custom_g_dt3);
 store_slpdt(custom_g_dt4);
-store_one_clamp(custom_g_brightness, 0, 255);
+store_one_led_clamp(custom_g_brightness, 0, 255);
 
 MX_ATTR_RW(custom_g_delay);
 MX_ATTR_RW(custom_g_dutymax);
@@ -1557,7 +1579,7 @@ store_slpdt(custom_b_dt1);
 store_slpdt(custom_b_dt2);
 store_slpdt(custom_b_dt3);
 store_slpdt(custom_b_dt4);
-store_one_clamp(custom_b_brightness, 0, 255);
+store_one_led_clamp(custom_b_brightness, 0, 255);
 
 MX_ATTR_RW(custom_b_delay);
 MX_ATTR_RW(custom_b_dutymax);
