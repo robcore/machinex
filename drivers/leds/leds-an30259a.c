@@ -725,13 +725,13 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			return;
 		}
 		pr_info("LED Fake Powering Pattern ON\n");
-			leds_on(LED_R, true, true, 0xEA);
-			leds_on(LED_G, true, true, 0xE2);
+			leds_on(LED_R, true, true, 0xE5);
+			leds_on(LED_G, true, true, 0xE5);
 			leds_on(LED_B, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_R,
 					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 15, 3, 4, 4, 1, 1, 1, 1);
+					0, 15, 15, 5, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			break;
