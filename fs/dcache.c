@@ -213,9 +213,10 @@ static inline int dentry_string_cmp(const unsigned char *cs, const unsigned char
 
 static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *ct, unsigned tcount)
 {
+	const unsigned char *cs;
 	/*
 	 * Be careful about RCU walk racing with rename:
-	 * use 'lockless_dereference' to fetch the name pointer.
+	 * use ACCESS_ONCE to fetch the name pointer.
 	 *
 	 * NOTE! Even if a rename will mean that the length
 	 * was not loaded atomically, we don't care. The
@@ -229,8 +230,8 @@ static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *c
 	 * early because the data cannot match (there can
 	 * be no NUL in the ct/tcount data)
 	 */
-	const unsigned char *cs = lockless_dereference(dentry->d_name.name);
-
+	cs = ACCESS_ONCE(dentry->d_name.name);
+	smp_read_barrier_depends();
 	return dentry_string_cmp(cs, ct, tcount);
 }
 
@@ -354,14 +355,11 @@ static void dentry_unlink_inode(struct dentry * dentry)
 	__releases(dentry->d_inode->i_lock)
 {
 	struct inode *inode = dentry->d_inode;
-	bool hashed = !d_unhashed(dentry);
 
-	if (hashed)
-		raw_write_seqcount_begin(&dentry->d_seq);
+	raw_write_seqcount_begin(&dentry->d_seq);
 	__d_clear_type_and_inode(dentry);
 	hlist_del_init(&dentry->d_u.d_alias);
-	if (hashed)
-		raw_write_seqcount_end(&dentry->d_seq);
+	raw_write_seqcount_end(&dentry->d_seq);
 	spin_unlock(&dentry->d_lock);
 	spin_unlock(&inode->i_lock);
 	if (!inode->i_nlink)
@@ -529,10 +527,7 @@ static void __dentry_kill(struct dentry *dentry)
 	dentry->d_flags |= DCACHE_DENTRY_KILLED;
 	if (parent)
 		spin_unlock(&parent->d_lock);
-	if (dentry->d_inode)
-		dentry_iput(dentry);
-	else
-		spin_unlock(&dentry->d_lock);
+	dentry_iput(dentry);
 	/*
 	 * dentry_iput drops the locks, at which point nobody (except
 	 * transient RCU lookups) can reach this dentry.
@@ -581,6 +576,7 @@ static struct dentry *dentry_kill(struct dentry *dentry)
 
 failed:
 	spin_unlock(&dentry->d_lock);
+	cpu_relax();
 	return dentry; /* try again with same dentry */
 }
 
@@ -1520,15 +1516,13 @@ void d_invalidate(struct dentry *dentry)
 
 		if (data.select.found)
 			shrink_dentry_list(&data.select.dispose);
-		else if (!data.mountpoint)
-			return;
 
 		if (data.mountpoint) {
 			detach_mounts(data.mountpoint);
 			dput(data.mountpoint);
 		}
 
-		if (!data.select.found)
+		if (!data.mountpoint && !data.select.found)
 			break;
 
 		cond_resched();
@@ -1688,10 +1682,12 @@ EXPORT_SYMBOL(d_set_d_op);
 
 static unsigned d_flags_for_inode(struct inode *inode)
 {
-	unsigned add_flags = DCACHE_REGULAR_TYPE;
+	unsigned add_flags;
 
-	if (!inode)
+	if (inode == NULL)
 		return DCACHE_MISS_TYPE;
+
+	add_flags = DCACHE_REGULAR_TYPE;
 
 	if (S_ISDIR(inode->i_mode)) {
 		add_flags = DCACHE_DIRECTORY_TYPE;
@@ -1723,15 +1719,21 @@ type_determined:
 
 static void __d_instantiate(struct dentry *dentry, struct inode *inode)
 {
-	unsigned add_flags = d_flags_for_inode(inode);
+	unsigned add_flags;
+
+	if (inode == NULL || dentry == NULL)
+		return;
+
+	add_flags = d_flags_for_inode(inode);
 
 	spin_lock(&dentry->d_lock);
-	hlist_add_head(&dentry->d_u.d_alias, &inode->i_dentry);
+	if (inode)
+		hlist_add_head(&dentry->d_u.d_alias, &inode->i_dentry);
 	raw_write_seqcount_begin(&dentry->d_seq);
 	__d_set_inode_and_type(dentry, inode, add_flags);
 	raw_write_seqcount_end(&dentry->d_seq);
-	fsnotify_d_instantiate(dentry, inode);
 	spin_unlock(&dentry->d_lock);
+	fsnotify_d_instantiate(dentry, inode);
 }
 
 /**
@@ -1752,12 +1754,12 @@ static void __d_instantiate(struct dentry *dentry, struct inode *inode)
 void d_instantiate(struct dentry *entry, struct inode * inode)
 {
 	BUG_ON(!hlist_unhashed(&entry->d_u.d_alias));
-	if (inode) {
-		security_d_instantiate(entry, inode);
+	if (inode)
 		spin_lock(&inode->i_lock);
-		__d_instantiate(entry, inode);
+	__d_instantiate(entry, inode);
+	if (inode)
 		spin_unlock(&inode->i_lock);
-	}
+	security_d_instantiate(entry, inode);
 }
 EXPORT_SYMBOL(d_instantiate);
 
@@ -1849,7 +1851,6 @@ int d_instantiate_no_diralias(struct dentry *entry, struct inode *inode)
 {
 	BUG_ON(!hlist_unhashed(&entry->d_u.d_alias));
 
-	security_d_instantiate(entry, inode);
 	spin_lock(&inode->i_lock);
 	if (S_ISDIR(inode->i_mode) && !hlist_empty(&inode->i_dentry)) {
 		spin_unlock(&inode->i_lock);
@@ -1858,6 +1859,7 @@ int d_instantiate_no_diralias(struct dentry *entry, struct inode *inode)
 	}
 	__d_instantiate(entry, inode);
 	spin_unlock(&inode->i_lock);
+	security_d_instantiate(entry, inode);
 
 	return 0;
 }
@@ -1931,7 +1933,6 @@ static struct dentry *__d_obtain_alias(struct inode *inode, int disconnected)
 		goto out_iput;
 	}
 
-	security_d_instantiate(tmp, inode);
 	spin_lock(&inode->i_lock);
 	res = __d_find_any_alias(inode);
 	if (res) {
@@ -1954,10 +1955,13 @@ static struct dentry *__d_obtain_alias(struct inode *inode, int disconnected)
 	hlist_bl_unlock(&tmp->d_sb->s_anon);
 	spin_unlock(&tmp->d_lock);
 	spin_unlock(&inode->i_lock);
+	security_d_instantiate(tmp, inode);
 
 	return tmp;
 
  out_iput:
+	if (res && !IS_ERR(res))
+		security_d_instantiate(res, inode);
 	iput(inode);
 	return res;
 }
