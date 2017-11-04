@@ -658,8 +658,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		case BATTERY_HIGH:
 				if (breathing_leds) {
 					leds_on(LED_R, true, true, 0x41);
-					leds_on(LED_G, true, true, 0xFE);
-					leds_on(LED_B, true, true, 0x9B);
+					leds_on(LED_G, true, true, 0xFF);
+					leds_on(LED_B, true, true, 0x63);
 					leds_set_slope_mode(client, LED_R,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 					leds_set_slope_mode(client, LED_G,
@@ -668,8 +668,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
 					leds_on(LED_R, true, false, 0x41);
-					leds_on(LED_G, true, false, 0xFE);
-					leds_on(LED_B, true, false, 0x9B);
+					leds_on(LED_G, true, false, 0xFF);
+					leds_on(LED_B, true, false, 0x63);
 				}
 				break;
 		}
