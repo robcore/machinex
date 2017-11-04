@@ -42,17 +42,6 @@ DEFINE_EVENT(cpu, cpu_idle,
 #define PWR_EVENT_EXIT -1
 #endif
 
-#define pm_verb_symbolic(event) \
-	__print_symbolic(event, \
-		{ PM_EVENT_SUSPEND, "suspend" }, \
-		{ PM_EVENT_RESUME, "resume" }, \
-		{ PM_EVENT_FREEZE, "freeze" }, \
-		{ PM_EVENT_QUIESCE, "quiesce" }, \
-		{ PM_EVENT_HIBERNATE, "hibernate" }, \
-		{ PM_EVENT_THAW, "thaw" }, \
-		{ PM_EVENT_RESTORE, "restore" }, \
-		{ PM_EVENT_RECOVER, "recover" })
-
 DEFINE_EVENT(cpu, cpu_frequency,
 
 	TP_PROTO(unsigned int frequency, unsigned int cpu_id),
@@ -188,27 +177,6 @@ TRACE_EVENT(device_pm_report_time,
 		__get_str(driver), __get_str(device), __get_str(parent),
 		__get_str(pm_event_str), __get_str(pm_ops),
 		__entry->ops_time, __entry->error)
-
-TRACE_EVENT(suspend_resume,
-
-	TP_PROTO(const char *action, int val, bool start),
-
-	TP_ARGS(action, val, start),
-
-	TP_STRUCT__entry(
-		__field(const char *, action)
-		__field(int, val)
-		__field(bool, start)
-	),
-
-	TP_fast_assign(
-		__entry->action = action;
-		__entry->val = val;
-		__entry->start = start;
-	),
-
-	TP_printk("%s[%u] %s", __entry->action, (unsigned int)__entry->val,
-		(__entry->start)?"begin":"end")
 );
 
 DECLARE_EVENT_CLASS(wakeup_source,

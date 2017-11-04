@@ -17,7 +17,6 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/kmod.h>
-#include <trace/events/power.h>
 #include "power.h"
 #include <linux/cpuset.h>
 
