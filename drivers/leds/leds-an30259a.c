@@ -550,9 +550,9 @@ static void do_powering(struct i2c_client *client)
 			break;
 		mdelay(10);
 		leds_on(LED_G, true, true, 0x01);
+		leds_on(LED_B, true, true, 0xFF);
 		leds_set_slope_mode(client, LED_G,
 				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
-		leds_on(LED_B, true, true, 0xFF);
 		leds_set_slope_mode(client, LED_B,
 				0, 15, 13, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
