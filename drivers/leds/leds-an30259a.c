@@ -523,51 +523,6 @@ static unsigned int custom_b_dt2 = 0;
 static unsigned int custom_b_dt3 = 0;
 static unsigned int custom_b_dt4 = 0;
 
-static void do_powering(struct i2c_client *client)
-{
-	unsigned int mxcounter;
-
-	for (mxcounter = 0; mxcounter < 13; mxcounter++) {
-		if (userspace_ready ||
-			current_led_mode != POWERING ||
-			!pattern_active || mxcounter >= 13)
-			break;
-		leds_on(LED_R, true, true, 0xEA);
-		leds_on(LED_G, true, true, 0xE2);
-		leds_set_slope_mode(client, LED_R,
-				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
-		leds_set_slope_mode(client, LED_G,
-				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
-		leds_i2c_write_all(client);
-		mdelay(2010);
-		leds_on(LED_R, false, false, 0x0);
-		leds_on(LED_G, false, false, 0x0);
-		leds_i2c_write_all(client);
-		if (userspace_ready ||
-			current_led_mode != POWERING ||
-			!pattern_active)
-			break;
-		mdelay(10);
-		leds_on(LED_G, true, true, 0x01);
-		leds_on(LED_B, true, true, 0xFF);
-		leds_set_slope_mode(client, LED_G,
-				0, 15, 10, 0, 4, 4, 1, 1, 1, 1);
-		leds_set_slope_mode(client, LED_B,
-				0, 15, 13, 0, 4, 4, 1, 1, 1, 1);
-		leds_i2c_write_all(client);
-		mdelay(2010);
-		leds_on(LED_G, false, false, 0x0);
-		leds_on(LED_B, false, false, 0x0);
-		leds_i2c_write_all(client);
-		mdelay(10);
-	}
-	leds_on(LED_R, false, false, 0x0);
-	leds_on(LED_G, false, false, 0x0);
-	leds_on(LED_B, false, false, 0x0);
-	leds_i2c_write_all(client);
-	return;
-}
-
 static void an30259a_start_led_pattern(unsigned int mode)
 {
 	int curr_level, retval;
@@ -688,7 +643,9 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		} else {
 			leds_on(LED_R, true, true, led_dynamic_current);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 15, 0, 1, 1, 0, 0, 0, 0);
+					0, 15, 15, 0, AN30259A_TIME_UNIT - 450) /
+				AN30259A_TIME_UNIT, AN30259A_TIME_UNIT - 450) /
+				AN30259A_TIME_UNIT, 0, 0, 0, 0);
 		}
  		break;
 	case MISSED_NOTI:
@@ -737,9 +694,16 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		}
 		if (!booted) {
 			pr_info("LED Powering Pattern ON\n");
-			do_powering(client);
+			leds_on(LED_R, true, true, 0xEA);
+			leds_on(LED_G, true, true, 0xE2);
+			leds_on(LED_B, true, true, 0xFF);
+			leds_set_slope_mode(client, LED_R,
+					0, 15, 1, 0, 4, 4, 1, 1, 1, 1);
+			leds_set_slope_mode(client, LED_G,
+					0, 15, 1, 1, 4, 4, 1, 1, 1, 1);
+			leds_set_slope_mode(client, LED_B,
+					4, 15, 1, 0, 4, 4, 1, 1, 1, 1);
 			booted = true;
-			return;
 		} else {
 			pr_info("Fade to Black\n");
 			leds_on(LED_R, true, true, 0xE);
@@ -751,8 +715,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					0, 16, 2, 0, 2, 6, 12, 10, 10, 12);
 			leds_set_slope_mode(client, LED_B,
 					0, 16, 2, 0, 2, 6, 12, 10, 10, 12);
-			break;
 		}
+			break;
 	case FAKE_POWERING:
 		if (poweroff_charging) {
 			return;
