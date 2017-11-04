@@ -795,7 +795,7 @@ void send_led_full_msg(int level)
 	}
 */
 	if (is_display_on() || (current_led_mode != CHARGING &&
-		current_led_mode != FULLY_CHARGED) !pattern_active || !booted) {
+		current_led_mode != FULLY_CHARGED) || !pattern_active || !booted) {
 		return;
 	}
 
