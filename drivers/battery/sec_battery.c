@@ -1132,11 +1132,11 @@ static bool sec_bat_time_management(
 static void mx_capacity_check(
 				struct sec_battery_info *battery)
 {
-	if (sec_bat_check_fullcharged_condition(battery))
+	if (battery->capacity >= 100 &&
+		sec_bat_check_fullcharged_condition(battery))
 		send_led_full_msg(5);
-	else if (!sec_bat_check_fullcharged_condition(battery) &&
-		battery->capacity >= 80 &&
-		battery->capacity <=100)
+	else if (battery->capacity >= 80 &&
+		battery->capacity <=99)
 		send_led_full_msg(4);
 	else if (battery->capacity >= 60 &&
 		battery->capacity <=79)
