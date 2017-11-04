@@ -542,7 +542,6 @@ static void do_powering(struct i2c_client *client)
 		mdelay(2010);
 		leds_on(LED_R, false, false, 0x0);
 		leds_on(LED_G, false, false, 0x0);
-		leds_on(LED_B, false, false, 0x0);
 		leds_i2c_write_all(client);
 		if (userspace_ready ||
 			current_led_mode != POWERING ||
@@ -557,7 +556,6 @@ static void do_powering(struct i2c_client *client)
 				0, 15, 13, 0, 4, 4, 1, 1, 1, 1);
 		leds_i2c_write_all(client);
 		mdelay(2010);
-		leds_on(LED_R, false, false, 0x0);
 		leds_on(LED_G, false, false, 0x0);
 		leds_on(LED_B, false, false, 0x0);
 		leds_i2c_write_all(client);
@@ -609,7 +607,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
  	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
  		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
-			pr_info("LED Battery Charging Pattern on\n");
+		pr_info("LED Battery Charging Pattern on\n");
 		switch (curr_level) {
 		case BATTERY_LOW:
 				if (breathing_leds) {
@@ -817,7 +815,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 
 void send_led_full_msg(int level)
 {
-	if (level == battery_level && pattern_active)
+	if (level == battery_level)
 		return;
 
 	battery_level = level;
@@ -830,7 +828,7 @@ void send_led_full_msg(int level)
 	}
 */
 	if (is_display_on() || (current_led_mode != CHARGING &&
-		current_led_mode != FULLY_CHARGED)) {
+		current_led_mode != FULLY_CHARGED) || pattern_active || !booted) {
 		return;
 	}
 
