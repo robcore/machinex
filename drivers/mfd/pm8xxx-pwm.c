@@ -204,10 +204,16 @@ struct pwm_device {
 	u8			pwm_ctl1;
 	u8			pwm_ctl2;
 	int			irq;
-	struct pm8xxx_pwm_chip	*chip;
+	struct pm8xxx_pwm_chip	*pwmchip;
 	int			bypass_lut;
 	int			dtest_mode_supported;
 	int			banks;
+	unsigned long		flags;
+	unsigned int		hwpwm;
+	unsigned int		pwm;
+	struct pwm_chip		*chip;
+	void			*chip_data;
+	unsigned int		period; /* in nanoseconds */
 };
 
 struct pm8xxx_pwm_chip {

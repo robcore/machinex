@@ -55,17 +55,6 @@ enum {
 	PWMF_ENABLED = 1 << 1,
 };
 
-struct pwm_device {
-	const char		*label;
-	unsigned long		flags;
-	unsigned int		hwpwm;
-	unsigned int		pwm;
-	struct pwm_chip		*chip;
-	void			*chip_data;
-
-	unsigned int		period; /* in nanoseconds */
-};
-
 static inline void pwm_set_period(struct pwm_device *pwm, unsigned int period)
 {
 	if (pwm)
