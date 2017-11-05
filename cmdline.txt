@@ -1,0 +1,8 @@
+Kernel command line: console=null androidboot.hardware=qcom user_debug=23 ehci-hcd.park=3 maxcpus=4 
+sec_log=0x100000@0xffe00008 sec_dbg=0x80000@0xfff00008 sec_debug.reset_reason=0x1a2b3c00 androidboot.warranty_bit=1 lcd_attached=1 
+lcd_id=0x428047 androidboot.debug_level=0x4f4c sec_debug.enable=0 sec_debug.enable_user=0 androidboot.cp_debug_level=0x55FF 
+sec_debug.enable_cp_debug=0 cordon=8355e914c55dee6f8ae8f58ce4f49305 connie=SGH-I337M_NULL_CAN_c5c06913570330688425273357099315 
+lpj=67678 loglevel=4 samsung.hardware=SGH-I337M androidboot.emmc_checksum=3 androidboot.warranty_bit=1 androidboot.bootloader=I337MVLSGQB1 
+androidboot.nvdata_backup=0 androidboot.boot_recovery=0 
+androidboot.check_recovery_condition=0x0 level=0x574f4c44 vmalloc=450m sec_pvs=0 batt_id_value=0 diag=0 androidboot.csb_val=1 
+androidboot.emmc=true androidboot.serialno=670f74d8 androidboot.baseband=mdm

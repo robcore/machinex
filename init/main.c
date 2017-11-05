@@ -398,6 +398,16 @@ static inline void smp_prepare_cpus(unsigned int maxcpus) { }
 static void __init setup_command_line(char *command_line)
 {
 	replace_str(boot_command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+	replace_str(command_line, "androidboot.bootchg=true", "androidboot.mode=charger");
+
+	replace_str(boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+	replace_str(command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+
+	/*Again because we get two copies*/
+	replace_str(boot_command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+	replace_str(command_line, "androidboot.warranty_bit=1", "androidboot.warranty_bit=0");
+
+
 
 	saved_command_line =
 		memblock_virt_alloc(strlen(boot_command_line) + 1, 0);
