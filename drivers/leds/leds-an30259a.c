@@ -703,7 +703,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_set_slope_mode(client, LED_R,
 					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
-					0, 15, 15, 10, 4, 4, 1, 1, 1, 1);
+					0, 15, 15, 5, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
 					4, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			booted = true;
