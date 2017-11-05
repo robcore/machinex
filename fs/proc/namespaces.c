@@ -115,6 +115,9 @@ static void *proc_ns_follow_link(struct dentry *dentry, struct nameidata *nd)
 	struct path ns_path;
 	void *error = ERR_PTR(-EACCES);
 
+	if (!dentry)
+		return ERR_PTR(-ECHILD);
+
 	task = get_proc_task(inode);
 	if (!task)
 		return error;
@@ -230,6 +233,7 @@ out:
 const struct file_operations proc_ns_dir_operations = {
 	.read		= generic_read_dir,
 	.iterate	= proc_ns_dir_readdir,
+	.llseek		= generic_file_llseek,
 };
 
 static struct dentry *proc_ns_dir_lookup(struct inode *dir,
