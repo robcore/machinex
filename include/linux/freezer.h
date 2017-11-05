@@ -19,6 +19,12 @@ extern bool pm_nosig_freezing;		/* PM nosig freezing in effect */
 extern unsigned int freeze_timeout_msecs;
 
 /*
+ * Debug tasks that refused to freeze.
+ */
+
+extern unsigned int debug_unfrozen_tasks;
+
+/*
  * Check if a process has been frozen
  */
 static inline bool frozen(struct task_struct *p)

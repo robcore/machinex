@@ -1114,6 +1114,27 @@ static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
 
 power_attr(pm_freeze_timeout);
 
+static ssize_t debug_unfrozen_tasks_show(struct kobject *kobj,
+				      struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", debug_unfrozen_tasks);
+}
+
+static ssize_t debug_unfrozen_tasks_store(struct kobject *kobj,
+				       struct kobj_attribute *attr,
+				       const char *buf, size_t n)
+{
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val))
+		return -EINVAL;
+
+	debug_unfrozen_tasks = val;
+	return n;
+}
+
+power_attr(debug_unfrozen_tasks);
+
 #endif	/* CONFIG_FREEZER*/
 /* If set, sync filesystems on suspend. */
 int suspendsync = 0;
@@ -1210,6 +1231,7 @@ static struct attribute * g[] = {
 #endif
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
+	&debug_unfrozen_tasks_attr.attr,
 #endif
 	&suspend_sync_attr.attr,
 	&hard_reset_ctl_attr.attr,
