@@ -111,10 +111,6 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
 	} else {
 		ns = task_active_pid_ns(current);
 		options = data;
-
-		/* Does the mounter have privilege over the pid namespace? */
-		if (!ns_capable(ns->user_ns, CAP_SYS_ADMIN))
-			return ERR_PTR(-EPERM);
 	}
 
 	sb = sget(fs_type, proc_test_super, proc_set_super, flags, ns);
@@ -179,15 +175,11 @@ void __init proc_root_init(void)
 #endif
 	proc_mkdir("fs", NULL);
 	proc_mkdir("driver", NULL);
-	proc_create_mount_point("fs/nfsd"); /* somewhere for the nfsd filesystem to be mounted */
 #if defined(CONFIG_SUN_OPENPROMFS) || defined(CONFIG_SUN_OPENPROMFS_MODULE)
 	/* just give it a mountpoint */
 	proc_create_mount_point("openprom");
 #endif
 	proc_tty_init();
-#ifdef CONFIG_PROC_DEVICETREE
-	proc_device_tree_init();
-#endif
 	proc_mkdir("bus", NULL);
 	proc_sys_init();
 }

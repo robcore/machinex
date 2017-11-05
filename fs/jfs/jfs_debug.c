@@ -88,7 +88,8 @@ void jfs_proc_init(void)
 {
 	int i;
 
-	if (!(base = proc_mkdir("fs/jfs", NULL)))
+	base = proc_mkdir("fs/jfs", NULL)
+	if (!base) 
 		return;
 
 	for (i = 0; i < NPROCENT; i++)
