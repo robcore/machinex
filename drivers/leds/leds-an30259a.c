@@ -556,7 +556,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	else
 		led_dynamic_current = 0x48;
 
-	if (breathing_leds && booted)
+	if (breathing_leds && booted && mode != POWERING)
 		an30259a_set_slope_current(inhale, exhale, false);
 
 	curr_level = battery_level;
@@ -713,11 +713,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xFF);
 			leds_on(LED_B, true, true, 0xF6);
 			leds_set_slope_mode(client, LED_R,
-					0, 1, 1, 0, 2, 6, 12, 10, 10, 12);
+					0, 1, 1, 0, 1, 1, 2, 1, 1, 2);
 			leds_set_slope_mode(client, LED_G,
-					0, 16, 2, 0, 2, 6, 12, 10, 10, 12);
+					0, 15, 2, 0, 1, 1, 2, 1, 1, 2);
 			leds_set_slope_mode(client, LED_B,
-					0, 16, 2, 0, 2, 6, 12, 10, 10, 12);
+					0, 15, 2, 0, 1, 1, 2, 1, 1, 2);
 		}
 			break;
 	case FAKE_POWERING:
