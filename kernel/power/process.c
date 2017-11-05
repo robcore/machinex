@@ -51,11 +51,8 @@ static int try_to_freeze_tasks(bool user_only)
 			if (p == current || !freeze_task(p))
 				continue;
 
-			if (!freezer_should_skip(p)) {
+			if (!freezer_should_skip(p))
 				todo++;
-				if (!user_only && debug_unfrozen_tasks)
-					pr_info("%s refused to freeze\n", p->comm);				
-			}
 		}
 		read_unlock(&tasklist_lock);
 
@@ -101,8 +98,11 @@ static int try_to_freeze_tasks(bool user_only)
 			read_lock(&tasklist_lock);
 			for_each_process_thread(g, p) {
 				if (p != current && !freezer_should_skip(p)
-				    && freezing(p) && !frozen(p))
+				    && freezing(p) && !frozen(p)) {
+					if (!user_only && debug_unfrozen_tasks)
+						pr_info("%s refused to freeze\n", p->comm);	
 					sched_show_task(p);
+				}
 			}
 			read_unlock(&tasklist_lock);
 		}
