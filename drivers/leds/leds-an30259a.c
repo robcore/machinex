@@ -701,11 +701,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xE2);
 			leds_on(LED_B, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 0, 0, 4, 4, 1, 0, 2, 1);
+					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 15, 10, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 0, 0, 4, 4, 1, 2, 0, 1);
+					4, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			booted = true;
 		} else {
 			pr_info("Fade to Black\n");
@@ -729,11 +729,11 @@ static void an30259a_start_led_pattern(unsigned int mode)
 			leds_on(LED_G, true, true, 0xE2);
 			leds_on(LED_B, true, true, 0xFF);
 			leds_set_slope_mode(client, LED_R,
-					0, 15, 0, 0, 4, 4, 1, 0, 2, 1);
+					0, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_G,
 					0, 15, 15, 10, 4, 4, 1, 1, 1, 1);
 			leds_set_slope_mode(client, LED_B,
-					4, 15, 0, 0, 4, 4, 1, 2, 0, 1);
+					4, 15, 0, 0, 4, 4, 1, 1, 1, 1);
 			break;
 	case BOOTING:
 		if (poweroff_charging) {
