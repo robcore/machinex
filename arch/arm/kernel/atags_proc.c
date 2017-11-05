@@ -4,6 +4,7 @@
 #include <asm/types.h>
 #include <asm/page.h>
 
+#if 0
 struct buffer {
 	size_t size;
 	char data[];
@@ -20,7 +21,7 @@ static const struct file_operations atags_fops = {
 	.read = atags_read,
 	.llseek = default_llseek,
 };
-
+#endif
 #define BOOT_PARAMS_SIZE 1536
 static char __initdata atags_copy[BOOT_PARAMS_SIZE];
 
@@ -28,7 +29,7 @@ void __init save_atags(const struct tag *tags)
 {
 	memcpy(atags_copy, tags, sizeof(atags_copy));
 }
-
+#if 0
 static int __init init_atags_procfs(void)
 {
 	/*
@@ -73,3 +74,4 @@ nomem:
 	return -ENOMEM;
 }
 arch_initcall(init_atags_procfs);
+#endif

@@ -175,10 +175,6 @@ void __init proc_root_init(void)
 #endif
 	proc_mkdir("fs", NULL);
 	proc_mkdir("driver", NULL);
-#if defined(CONFIG_SUN_OPENPROMFS) || defined(CONFIG_SUN_OPENPROMFS_MODULE)
-	/* just give it a mountpoint */
-	proc_create_mount_point("openprom");
-#endif
 	proc_tty_init();
 	proc_mkdir("bus", NULL);
 	proc_sys_init();
