@@ -537,8 +537,9 @@ static bool sec_bat_ovp_uvlo_result(
 		default:
 			break;
 		}
-
-		power_supply_changed(&battery->psy_bat, true);
+		wake_lock(&battery->vbus_wake_lock);
+		power_supply_changed(&battery->psy_bat, false);
+		wake_unlock(&battery->vbus_wake_lock);
 		return true;
 	}
 
@@ -646,7 +647,9 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 			battery->status = POWER_SUPPLY_STATUS_CHARGING;
 			battery->voltage_now = 1080;
 			battery->voltage_avg = 1080;
-			power_supply_changed(&battery->psy_bat, true);
+			wake_lock(&battery->cable_wake_lock);
+			power_supply_changed(&battery->psy_bat, false);
+			wake_unlock(&battery->cable_wake_lock);
 			return false;
 		}
 	}
@@ -2504,7 +2507,9 @@ static int sec_bat_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		battery->capacity = val->intval;
-		power_supply_changed(&battery->psy_bat, true);
+		wake_lock(&battery->cable_wake_lock);
+		power_supply_changed(&battery->psy_bat, false);
+		wake_unlock(&battery->cable_wake_lock);
 		break;
 	default:
 		return -EINVAL;

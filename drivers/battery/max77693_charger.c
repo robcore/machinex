@@ -201,7 +201,8 @@ static void max77693_set_charger_state(struct max77693_charger_data *charger,
 	else
 		reg_data &= ~MAX77693_MODE_CHGR;
 
-	pr_debug("%s: CHG_CNFG_00(0x%02x)\n", __func__, reg_data);
+	pr_info("Charger is %s\n", enable ? "connected" : "disconnected");
+	pr_info("%s: CHG_CNFG_00(0x%02x)\n", __func__, reg_data);
 	max77693_write_reg(charger->max77693->i2c,
 			MAX77693_CHG_REG_CHG_CNFG_00, reg_data);
 }
