@@ -25,6 +25,7 @@
 #include <linux/device.h>
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
+#include <linux/omniplug.h>
 
 #define DEBUG 0
 
@@ -51,25 +52,17 @@ static struct workqueue_struct *hotplug_wq;
 
 static struct cpu_hotplug {
 	unsigned int startdelay;
-	unsigned int min_cpus_online_res;
-	unsigned int max_cpus_online_res;
 	unsigned int delay;
 	unsigned int down_lock_dur;
 	unsigned long int idle_freq;
-	unsigned int max_cpus_online;
-	unsigned int min_cpus_online;
 	unsigned int bricked_enabled;
 	struct mutex bricked_hotplug_mutex;
 	struct mutex bricked_cpu_mutex;
 } hotplug = {
 	.startdelay = MSM_MPDEC_STARTDELAY,
-	.min_cpus_online_res = DEFAULT_MIN_CPUS_ONLINE,
-	.max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE,
 	.delay = MSM_MPDEC_DELAY,
 	.down_lock_dur = DEFAULT_DOWN_LOCK_DUR,
 	.idle_freq = MSM_MPDEC_IDLE_FREQ,
-	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
-	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
 	.bricked_enabled = HOTPLUG_ENABLED,
 };
 
@@ -174,14 +167,14 @@ static int mp_decision(void) {
 	index = (nr_cpu_online - 1) * 2;
 	if ((nr_cpu_online < DEFAULT_MAX_CPUS_ONLINE) && (rq_depth >= NwNs_Threshold[index])) {
 		if ((total_time >= TwTs_Threshold[index]) &&
-			(nr_cpu_online < hotplug.max_cpus_online)) {
+			(nr_cpu_online < max_cpus_online)) {
 			new_state = MSM_MPDEC_UP;
 			if (get_slowest_cpu_rate() <=  hotplug.idle_freq)
 				new_state = MSM_MPDEC_IDLE;
 		}
 	} else if ((nr_cpu_online > 1) && (rq_depth <= NwNs_Threshold[index+1])) {
 		if ((total_time >= TwTs_Threshold[index+1]) &&
-			(nr_cpu_online > hotplug.min_cpus_online)) {
+			(nr_cpu_online > min_cpus_online)) {
 			new_state = MSM_MPDEC_DOWN;
 			if (get_slowest_cpu_rate() > hotplug.idle_freq)
 				new_state = MSM_MPDEC_IDLE;
@@ -329,8 +322,6 @@ static ssize_t show_##file_name						\
 show_one(startdelay, startdelay);
 show_one(delay, delay);
 show_one(down_lock_duration, down_lock_dur);
-show_one(min_cpus_online, min_cpus_online);
-show_one(max_cpus_online, max_cpus_online);
 show_one(bricked_enabled, bricked_enabled);
 
 #define define_one_twts(file_name, arraypos)				\
@@ -459,76 +450,6 @@ static ssize_t store_idle_freq(struct device *dev,
 	return count;
 }
 
-static ssize_t store_min_cpus_online(struct device *dev,
-				struct device_attribute *bricked_hotplug_attrs,
-				const char *buf, size_t count)
-{
-	unsigned int input, cpu;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-	if ((ret != 1) || input < 1 || input > DEFAULT_MAX_CPUS_ONLINE)
-		return -EINVAL;
-
-	if (hotplug.max_cpus_online < input)
-		hotplug.max_cpus_online = input;
-
-	hotplug.min_cpus_online = input;
-
-	if (!hotplug.bricked_enabled)
-		return count;
-
-	if (num_online_cpus() < hotplug.min_cpus_online) {
-		for (cpu = 1; cpu < DEFAULT_MAX_CPUS_ONLINE; cpu++) {
-			if (num_online_cpus() >= hotplug.min_cpus_online)
-				break;
-			if (cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
-				continue;
-			cpu_up(cpu);
-		}
-		pr_info(MPDEC_TAG": min_cpus_online set to %u. Affected CPUs were hotplugged!\n", input);
-	}
-
-	return count;
-}
-
-static ssize_t store_max_cpus_online(struct device *dev,
-				struct device_attribute *bricked_hotplug_attrs,
-				const char *buf, size_t count)
-{
-	unsigned int input, cpu;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-	if ((ret != 1) || input < 1 || input > DEFAULT_MAX_CPUS_ONLINE)
-			return -EINVAL;
-
-	if (hotplug.min_cpus_online > input)
-		hotplug.min_cpus_online = input;
-
-	hotplug.max_cpus_online = input;
-
-	if (!hotplug.bricked_enabled)
-		return count;
-
-	hardplug_all_cpus();
-
-	if (num_online_cpus() > hotplug.max_cpus_online) {
-		for (cpu = DEFAULT_MAX_CPUS_ONLINE; cpu > 0; cpu--) {
-			if (num_online_cpus() <= hotplug.max_cpus_online)
-				break;
-			if (!cpu_online(cpu) ||
-				!is_cpu_allowed(cpu) ||
-				thermal_core_controlled(cpu))
-				continue;
-			cpu_down(cpu);
-		}
-		pr_info(MPDEC_TAG": max_cpus set to %u. Affected CPUs were unplugged!\n", input);
-	}
-
-	return count;
-}
-
 static ssize_t store_bricked_enabled(struct device *dev,
 				struct device_attribute *bricked_hotplug_attrs,
 				const char *buf, size_t count)
@@ -564,10 +485,6 @@ static DEVICE_ATTR(startdelay, 0644, show_startdelay, store_startdelay);
 static DEVICE_ATTR(delay, 0644, show_delay, store_delay);
 static DEVICE_ATTR(down_lock_duration, 0644, show_down_lock_duration, store_down_lock_duration);
 static DEVICE_ATTR(idle_freq, 0644, show_idle_freq, store_idle_freq);
-static DEVICE_ATTR(min_cpus, 0644, show_min_cpus_online, store_min_cpus_online);
-static DEVICE_ATTR(max_cpus, 0644, show_max_cpus_online, store_max_cpus_online);
-static DEVICE_ATTR(min_cpus_online, 0644, show_min_cpus_online, store_min_cpus_online);
-static DEVICE_ATTR(max_cpus_online, 0644, show_max_cpus_online, store_max_cpus_online);
 static DEVICE_ATTR(enabled, 0644, show_bricked_enabled, store_bricked_enabled);
 
 static struct attribute *bricked_hotplug_attrs[] = {
@@ -575,10 +492,6 @@ static struct attribute *bricked_hotplug_attrs[] = {
 	&dev_attr_delay.attr,
 	&dev_attr_down_lock_duration.attr,
 	&dev_attr_idle_freq.attr,
-	&dev_attr_min_cpus.attr,
-	&dev_attr_max_cpus.attr,
-	&dev_attr_min_cpus_online.attr,
-	&dev_attr_max_cpus_online.attr,
 	&dev_attr_enabled.attr,
 	&dev_attr_twts_threshold_0.attr,
 	&dev_attr_twts_threshold_1.attr,

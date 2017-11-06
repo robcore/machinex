@@ -26,15 +26,13 @@
 #include <linux/slab.h>
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
-#include <linux/machinex_defines.h>
+#include <linux/omniplug.h>
 
 #define INIT_DELAY		20000
 #define DELAY			100
 #define UP_THRESHOLD		80
 #define DEF_DOWN_TIMER_CNT	6
 #define DEF_UP_TIMER_CNT	2
-#define MAX_CPUS_ONLINE_SUSP     1
-#define MAX_CPUS_ONLINE DEFAULT_MAX_CPUS_ONLINE
 #define DEF_PLUG_THRESHOLD      80
 #define BLU_PLUG_ENABLED	0
 
@@ -42,13 +40,11 @@ static unsigned int blu_plug_enabled = BLU_PLUG_ENABLED;
 
 static unsigned int up_threshold = UP_THRESHOLD;
 static unsigned int delay = DELAY;
-static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
-static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int down_timer;
 static unsigned int up_timer;
 static unsigned int down_timer_cnt = DEF_DOWN_TIMER_CNT;
 static unsigned int up_timer_cnt = DEF_UP_TIMER_CNT;
-static unsigned int plug_threshold[MAX_CPUS_ONLINE] = {[0 ... MAX_CPUS_ONLINE-1] = DEF_PLUG_THRESHOLD};
+static unsigned int plug_threshold[NR_CPUS] = {[0 ... NR_CPUS-1] = DEF_PLUG_THRESHOLD};
 
 static struct delayed_work dyn_work;
 static struct workqueue_struct *dyn_workq;
@@ -281,50 +277,6 @@ static ssize_t store_up_threshold(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t show_min_cpus_online(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", min_cpus_online);
-}
-
-static ssize_t store_min_cpus_online(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int val;
-
-	sscanf(buf, "%d\n", &val);
-
-	sanitize_min_max(val, 1, max_cpus_online);
-
-	if (val == min_cpus_online)
-		return count;
-
-	min_cpus_online = val;
-	return count;
-}
-
-static ssize_t show_max_cpus_online(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", max_cpus_online);
-}
-
-static ssize_t store_max_cpus_online(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int val;
-
-	sscanf(buf, "%d\n", &val);
-
-	sanitize_min_max(val, min_cpus_online, 4);
-
-	if (val == max_cpus_online)
-		return count;
-
-	max_cpus_online = val;
-	return count;
-}
-
 static ssize_t show_down_timer_cnt(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -399,8 +351,6 @@ static struct kobj_attribute _name##_attr = \
 	__ATTR(_name, 0644, show_##_name, store_##_name)
 
 BLU_ATTR(up_threshold);
-BLU_ATTR(min_cpus_online);
-BLU_ATTR(max_cpus_online);
 BLU_ATTR(down_timer_cnt);
 BLU_ATTR(up_timer_cnt);
 BLU_ATTR(blu_plug_enabled);
@@ -408,8 +358,6 @@ BLU_ATTR(blu_plug_enabled);
 static struct attribute *blu_attrs[] =
 {
 	&up_threshold_attr.attr,
-	&min_cpus_online_attr.attr,
-	&max_cpus_online_attr.attr,
 	&down_timer_cnt_attr.attr,
 	&up_timer_cnt_attr.attr,
 	&blu_plug_enabled_attr.attr,

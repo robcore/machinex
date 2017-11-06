@@ -22,10 +22,11 @@
 #include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/machinex_defines.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
+#include <linux/omniboost.h>
+#include <linux/omniplug.h>
 
 struct hotplug_cpuinfo {
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -53,15 +54,9 @@ static struct delayed_work alucard_hotplug_work;
 static struct hotplug_tuners {
 	unsigned int hotplug_sampling_rate;
 	unsigned int hotplug_enable;
-	unsigned int min_cpus_online;
-	unsigned int max_cpus_online;
-	unsigned int max_cpus_online_susp;
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
 	.hotplug_enable = 0,
-	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
-	.max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
-	.max_cpus_online_susp = 1,
 };
 
 bool alucard_enabled;
@@ -154,7 +149,6 @@ typedef enum {IDLE, ON, OFF} HOTPLUG_STATUS;
 static void hotplug_work_fn(struct work_struct *work)
 {
 	unsigned int upmax_cpus_online = 0;
-	unsigned int min_cpus_online = hotplug_tuners_ins.min_cpus_online;
 	unsigned int cpu = 0;
 	int online_cpu = 0;
 	int offline_cpu = 0;
@@ -169,7 +163,7 @@ static void hotplug_work_fn(struct work_struct *work)
 	hardplug_all_cpus();
 
 	rq_avg = get_nr_run_avg();
-	upmax_cpus_online = hotplug_tuners_ins.max_cpus_online;
+	upmax_cpus_online = max_cpus_online;
 
 	get_online_cpus();
 	online_cpus = num_online_cpus();
@@ -379,9 +373,6 @@ static ssize_t show_##file_name						\
 
 show_one(hotplug_sampling_rate, hotplug_sampling_rate);
 show_one(hotplug_enable, hotplug_enable);
-show_one(min_cpus_online, min_cpus_online);
-show_one(max_cpus_online, max_cpus_online);
-show_one(max_cpus_online_susp, max_cpus_online_susp);
 
 #define show_pcpu_param(file_name, var_name, num_core)		\
 static ssize_t show_##file_name		\
@@ -556,75 +547,8 @@ static ssize_t store_hotplug_enable(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-/* min_cpus_online */
-static ssize_t store_min_cpus_online(struct kobject *a, struct attribute *b,
-				  const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(input, 1, hotplug_tuners_ins.max_cpus_online);
-
-	if (hotplug_tuners_ins.min_cpus_online == input)
-		return count;
-
-	hotplug_tuners_ins.min_cpus_online = input;
-
-	return count;
-}
-
-/* max_cpus_online */
-static ssize_t store_max_cpus_online(struct kobject *a, struct attribute *b,
-				  const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(input, hotplug_tuners_ins.min_cpus_online, NR_CPUS);
-
-	if (hotplug_tuners_ins.max_cpus_online == input)
-		return count;
-
-	hotplug_tuners_ins.max_cpus_online = input;
-
-	return count;
-}
-
-/* max_cpus_online_susp */
-static ssize_t store_max_cpus_online_susp(struct kobject *a,
-				struct attribute *b,
-				const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(input, 1, 4);
-
-	if (hotplug_tuners_ins.max_cpus_online_susp == input)
-		return count;
-
-	hotplug_tuners_ins.max_cpus_online_susp = input;
-
-	return count;
-}
-
 define_one_global_rw(hotplug_sampling_rate);
 define_one_global_rw(hotplug_enable);
-define_one_global_rw(min_cpus_online);
-define_one_global_rw(max_cpus_online);
-define_one_global_rw(max_cpus_online_susp);
 
 static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_sampling_rate.attr,
@@ -653,9 +577,6 @@ static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_rate_3_0.attr,
 	&hotplug_rate_3_1.attr,
 	&hotplug_rate_4_0.attr,
-	&min_cpus_online.attr,
-	&max_cpus_online.attr,
-	&max_cpus_online_susp.attr,
 	NULL
 };
 

@@ -206,6 +206,28 @@ static ssize_t store_##object		\
 	return count;				\
 }
 
+#define store_one_ktimer(object, min, max)		\
+static ssize_t store_##object		\
+(struct kobject *kobj,				\
+ struct kobj_attribute *attr,			\
+ const char *buf, size_t count)			\
+{						\
+	unsigned long input;			\
+	int ret;				\
+	ret = sscanf(buf, "%lu", &input);	\
+	if (ret != 1)			\
+		return -EINVAL;			\
+	if (input <= min)	\
+		input = min;	\
+	if (input >= max)		\
+			input = max;		\
+	if (input == object) {			\
+		return count;			\
+	}					\
+	object = INTELLI_MS(input);				\
+	return count;				\
+}
+
 #define __MX_ATTR_RO(_name) {						\
 	.attr	= { .name = __stringify(_name), .mode = S_IRUGO },	\
 	.show	= show_##_name,						\

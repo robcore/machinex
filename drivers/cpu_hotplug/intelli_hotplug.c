@@ -25,6 +25,7 @@
 #include <linux/spinlock.h>
 #include <linux/sysfs_helpers.h>
 #include <linux/omniboost.h>
+#include <linux/omniplug.h>
 #include "../../arch/arm/mach-msm/acpuclock.h"
 
 #define INTELLI_PLUG			"intelli_plug"
@@ -79,8 +80,7 @@ static unsigned int intelli_plug_active = 0;
 static DEFINE_RWLOCK(ips_lock);
 
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
-static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
-static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
+
 static unsigned long full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 static unsigned int online_cpus;
@@ -783,106 +783,25 @@ static void intelli_plug_active_eval_fn(unsigned int status)
 		intelliput();
 }
 
-#define show_one(object)				\
-static ssize_t show_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%u\n", object);			\
-}
+mx_show_one(cpus_boosted);
+mx_show_one(min_cpus_online);
+mx_show_one(max_cpus_online);
+mx_show_long(full_mode_profile);
+mx_show_one(cpu_nr_run_threshold);
+mx_show_one(debug_intelli_plug);
+mx_show_long(min_input_interval);
+mx_show_long(boost_lock_duration);
+mx_show_long(down_lock_dur);
+mx_show_long(nr_run_hysteresis);
+mx_show_one(nr_fshift);
+mx_show_long(def_sampling_ms);
+mx_show_one(high_load_threshold);
+mx_show_one(target_cpus);
 
-#define show_long(object)				\
-static ssize_t show_##object					\
-(struct kobject *kobj, struct kobj_attribute *attr, char *buf)	\
-{								\
-	return sprintf(buf, "%lu\n", object);			\
-}
-
-show_one(cpus_boosted);
-show_one(min_cpus_online);
-show_one(max_cpus_online);
-show_long(full_mode_profile);
-show_one(cpu_nr_run_threshold);
-show_one(debug_intelli_plug);
-show_long(min_input_interval);
-show_long(boost_lock_duration);
-show_long(down_lock_dur);
-show_long(nr_run_hysteresis);
-show_one(nr_fshift);
-show_long(def_sampling_ms);
-show_one(high_load_threshold);
-show_one(target_cpus);
-
-#define store_one(object, min, max)		\
-static ssize_t store_##object		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned int input;			\
-	int ret;				\
-	ret = sscanf(buf, "%u", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	if (input == object) {			\
-		return count;			\
-	}					\
-	object = input;				\
-	return count;				\
-}
-
-store_one(cpus_boosted, 0, max_cpus_online);
-store_one(debug_intelli_plug, 0, 1);
-store_one(high_load_threshold, 0, MAX_LOAD_FREQ);
-
-#define store_one_long(object, min, max)		\
-static ssize_t store_##object		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned long input;			\
-	int ret;				\
-	ret = sscanf(buf, "%lu", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	if (input == object) {			\
-		return count;			\
-	}					\
-	object = input;				\
-	return count;				\
-}
-
-store_one_long(full_mode_profile, 0, 4);
-
-#define store_one_ktimer(object, min, max)		\
-static ssize_t store_##object		\
-(struct kobject *kobj,				\
- struct kobj_attribute *attr,			\
- const char *buf, size_t count)			\
-{						\
-	unsigned long input;			\
-	int ret;				\
-	ret = sscanf(buf, "%lu", &input);	\
-	if (ret != 1)			\
-		return -EINVAL;			\
-	if (input <= min)	\
-		input = min;	\
-	if (input >= max)		\
-			input = max;		\
-	if (input == object) {			\
-		return count;			\
-	}					\
-	object = INTELLI_MS(input);				\
-	return count;				\
-}
+store_one_clamp(cpus_boosted, 0, max_cpus_online);
+store_one_clamp(debug_intelli_plug, 0, 1);
+store_one_clamp(high_load_threshold, 0, MAX_LOAD_FREQ);
+mx_store_one_long(full_mode_profile, 0, 4);
 
 #define MAX_LOCK_TIMEOUT 1000
 store_one_ktimer(min_input_interval, 100, MAX_LOCK_TIMEOUT);
@@ -920,81 +839,23 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t store_min_cpus_online(struct kobject *kobj,
-				     struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	if (val <= 1)
-		val = 1;
-	if (val >= NR_CPUS)
-		val = NR_CPUS;
-	if (val >= max_cpus_online)
-		val = max_cpus_online;
-
-	min_cpus_online = val;
-
-	return count;
-}
-
-static ssize_t store_max_cpus_online(struct kobject *kobj,
-				     struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	if (val <= 1)
-		val = 1;
-	if (val >= NR_CPUS)
-		val = NR_CPUS;
-	if (val <= min_cpus_online)
-		val = min_cpus_online;
-
-	max_cpus_online = val;
-
-	return count;
-}
-
-#define KERNEL_ATTR_RW(_name) \
-static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0644, show_##_name, store_##_name)
-
-#define KERNEL_ATTR_RO(_name) \
-static struct kobj_attribute _name##_attr = \
-	__ATTR(_name, 0444, show_##_name, NULL)
-
-KERNEL_ATTR_RW(intelli_plug_active);
-KERNEL_ATTR_RW(cpus_boosted);
-KERNEL_ATTR_RW(min_cpus_online);
-KERNEL_ATTR_RW(max_cpus_online);
-KERNEL_ATTR_RW(full_mode_profile);
-KERNEL_ATTR_RO(cpu_nr_run_threshold);
-KERNEL_ATTR_RW(boost_lock_duration);
-KERNEL_ATTR_RW(def_sampling_ms);
-KERNEL_ATTR_RW(debug_intelli_plug);
-KERNEL_ATTR_RO(nr_fshift);
-KERNEL_ATTR_RO(nr_run_hysteresis);
-KERNEL_ATTR_RW(down_lock_dur);
-KERNEL_ATTR_RW(min_input_interval);
-KERNEL_ATTR_RW(high_load_threshold);
-KERNEL_ATTR_RO(target_cpus);
+MX_ATTR_RW(intelli_plug_active);
+MX_ATTR_RW(cpus_boosted);
+MX_ATTR_RW(full_mode_profile);
+MX_ATTR_RO(cpu_nr_run_threshold);
+MX_ATTR_RW(boost_lock_duration);
+MX_ATTR_RW(def_sampling_ms);
+MX_ATTR_RW(debug_intelli_plug);
+MX_ATTR_RO(nr_fshift);
+MX_ATTR_RO(nr_run_hysteresis);
+MX_ATTR_RW(down_lock_dur);
+MX_ATTR_RW(min_input_interval);
+MX_ATTR_RW(high_load_threshold);
+MX_ATTR_RO(target_cpus);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
 	&cpus_boosted_attr.attr,
-	&min_cpus_online_attr.attr,
-	&max_cpus_online_attr.attr,
 	&full_mode_profile_attr.attr,
 	&cpu_nr_run_threshold_attr.attr,
 	&boost_lock_duration_attr.attr,

@@ -34,6 +34,7 @@
 #include <linux/sysfs_helpers.h>
 #include <linux/powersuspend.h>
 #include <linux/omniboost.h>
+#include <linux/omniplug.h>
 
 #define MXMS(x) ((((x) * MSEC_PER_SEC) / MSEC_PER_SEC))
 #define MX_SAMPLE_RATE MXMS(200UL)
@@ -57,8 +58,6 @@ static unsigned long secondgear_rpm = 35ul;
 static unsigned long firstgear_rpm = 20ul;
 
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
-static unsigned int min_cpus_online = 2;
-static unsigned int max_cpus_online = NR_CPUS;
 static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
 unsigned long current_rpm;
@@ -403,8 +402,6 @@ static void ignition(unsigned int status)
 }
 
 mx_show_one(mx_hotplug_active);
-mx_show_one(min_cpus_online);
-mx_show_one(max_cpus_online);
 mx_show_one(cpus_boosted);
 
 static ssize_t store_mx_hotplug_active(struct kobject *kobj,
@@ -428,53 +425,6 @@ static ssize_t store_mx_hotplug_active(struct kobject *kobj,
 	return count;
 }
 
-
-static ssize_t store_min_cpus_online(struct kobject *kobj,
-				     struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	if (val <= 1)
-		val = 1;
-	if (val >= NR_CPUS)
-		val = NR_CPUS;
-	if (val >= max_cpus_online)
-		val = max_cpus_online;
-
-	min_cpus_online = val;
-
-	return count;
-}
-
-static ssize_t store_max_cpus_online(struct kobject *kobj,
-				     struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	if (val <= 1)
-		val = 1;
-	if (val >= NR_CPUS)
-		val = NR_CPUS;
-	if (val <= min_cpus_online)
-		val = min_cpus_online;
-
-	max_cpus_online = val;
-
-	return count;
-}
-
 static ssize_t store_cpus_boosted(struct kobject *kobj,
 				     struct kobj_attribute *attr,
 				     const char *buf, size_t count)
@@ -494,14 +444,10 @@ static ssize_t store_cpus_boosted(struct kobject *kobj,
 }
 
 MX_ATTR_RW(mx_hotplug_active);
-MX_ATTR_RW(min_cpus_online);
-MX_ATTR_RW(max_cpus_online);
 MX_ATTR_RW(cpus_boosted);
 
 static struct attribute *mx_hotplug_attributes[] = {
 	&mx_hotplug_active_attr.attr,
-	&min_cpus_online_attr.attr,
-	&max_cpus_online_attr.attr,
 	&cpus_boosted_attr.attr,
 	NULL,
 };

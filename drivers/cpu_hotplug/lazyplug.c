@@ -73,6 +73,7 @@
 #include <linux/cpufreq.h>
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
+#include <linux/omniplug.h>
 
 
 //#define DEBUG_LAZYPLUG
@@ -189,9 +190,6 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 #define NR_RUN_HYSTERESIS_DUAL	4
 
 #define CPU_NR_THRESHOLD	((THREAD_CAPACITY << 1) + (THREAD_CAPACITY / 2))
-
-static unsigned int __read_mostly nr_possible_cores;
-module_param(nr_possible_cores, uint, 0444);
 
 static unsigned int __read_mostly cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 module_param(cpu_nr_run_threshold, uint, 0664);
@@ -597,20 +595,14 @@ int __init lazyplug_init(void)
 {
 	int rc;
 
-	nr_possible_cores = num_possible_cpus();
-
 	pr_info("lazyplug: version %d.%d by arter97\n"
 		"          based on intelli_plug by faux123\n",
 		 LAZYPLUG_MAJOR_VERSION,
 		 LAZYPLUG_MINOR_VERSION);
 
-	if (nr_possible_cores > 2) {
-		nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
-		nr_run_profile_sel = 0;
-	} else {
-		nr_run_hysteresis = NR_RUN_HYSTERESIS_DUAL;
-		nr_run_profile_sel = NR_RUN_ECO_MODE_PROFILE;
-	}
+
+	nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
+	nr_run_profile_sel = 0;
 
 	if (lazyplug_active)
 		start_stop_lazy_plug(lazyplug_active);

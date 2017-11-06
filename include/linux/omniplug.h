@@ -4,8 +4,8 @@
  * on a global scale.
  */
 
-#ifndef __LINUX_MACHINEX_DEFINES_H
-#define __LINUX_MACHINEX_DEFINES_H
+#ifndef __LINUX_OMNIPLUG_H
+#define __LINUX_OMNIPLUG_H
 
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
@@ -40,4 +40,8 @@
 #include <asm/uaccess.h>
 #include <linux/notifier.h>
 
-#endif
+#define DEFAULT_MIN_CPUS_ONLINE 2
+#define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
+extern unsigned int min_cpus_online;
+extern unsigned int max_cpus_online;
+#endif /* __LINUX_OMNIPLUG_H */

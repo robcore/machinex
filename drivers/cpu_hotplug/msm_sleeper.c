@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/display_state.h>
 #include <linux/powersuspend.h>
+#include <linux/omniplug.h>
 
 #define MSM_SLEEPER "msm_sleeper"
 #define MSM_SLEEPER_MAJOR_VERSION	4
@@ -41,8 +42,6 @@ unsigned int msm_sleeper_enabled = 0;
 struct msm_sleeper_data {
 	unsigned int delay;
 	unsigned int up_threshold;
-	unsigned int max_cpus_online;
-	unsigned int min_cpus_online;
 	unsigned int down_count;
 	unsigned int up_count;
 	unsigned int down_count_max;
@@ -52,8 +51,6 @@ struct msm_sleeper_data {
 } sleeper_data = {
 	.delay = DELAY,
 	.up_threshold = DEF_UP_THRESHOLD,
-	.max_cpus_online = DEF_MAX_CPUS_ONLINE,
-	.min_cpus_online = DEF_MIN_CPUS_ONLINE,
 	.down_count_max = DEF_DOWN_COUNT_MAX,
 	.up_count_max = DEF_UP_COUNT_MAX,
 	.plug_all = DEF_PLUG_ALL
@@ -69,7 +66,7 @@ static inline void plug_cpu(void)
 	if (!is_display_on() || !msm_sleeper_enabled)
 		return;
 
-	if (num_online_cpus() == sleeper_data.max_cpus_online)
+	if (num_online_cpus() == max_cpus_online)
 		goto reset;
 
 	for_each_nonboot_offline_cpu(cpu) {
@@ -91,7 +88,7 @@ static inline void unplug_cpu(void)
 	if (!is_display_on() || !msm_sleeper_enabled)
 		return;
 
-	if (num_online_cpus() == sleeper_data.min_cpus_online)
+	if (num_online_cpus() == min_cpus_online)
 		goto reset;
 
 	get_online_cpus();
@@ -124,7 +121,7 @@ static void hotplug_func(struct work_struct *work)
 	if (!is_display_on() || !msm_sleeper_enabled)
 		return;
 
-	if (sleeper_data.max_cpus_online == sleeper_data.min_cpus_online)
+	if (max_cpus_online == min_cpus_online)
 		goto reschedule;
 
 	if (sleeper_data.plug_all) {
@@ -144,7 +141,7 @@ static void hotplug_func(struct work_struct *work)
 		++sleeper_data.up_count;
 		if (sleeper_data.up_count > sleeper_data.up_count_max)
 			plug_cpu();
-	} else if (loadavg > 95 && sleeper_data.up_count >= sleeper_data.min_cpus_online) {
+	} else if (loadavg > 95 && sleeper_data.up_count >= min_cpus_online) {
 		++sleeper_data.up_count;
 		plug_cpu();
 	} else {
@@ -248,54 +245,6 @@ static ssize_t store_plug_all(struct device *dev,
 	return count;
 }
 
-static ssize_t show_max_cpus_online(struct device *dev,
-				    struct device_attribute *msm_sleeper_attrs,
-				    char *buf)
-{
-	return sprintf(buf, "%u\n", sleeper_data.max_cpus_online);
-}
-
-static ssize_t store_max_cpus_online(struct device *dev,
-				     struct device_attribute *msm_sleeper_attrs,
-				     const char *buf, size_t count)
-{
-	int ret, cpu;
-	unsigned long val;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 1)
-		return -EINVAL;
-
-	sanitize_min_max(val, sleeper_data.min_cpus_online, 4);
-
-	sleeper_data.max_cpus_online = val;
-
-	return count;
-}
-
-static ssize_t show_min_cpus_online(struct device *dev,
-				    struct device_attribute *msm_sleeper_attrs,
-				    char *buf)
-{
-	return sprintf(buf, "%u\n", sleeper_data.min_cpus_online);
-}
-
-static ssize_t store_min_cpus_online(struct device *dev,
-				     struct device_attribute *msm_sleeper_attrs,
-				     const char *buf, size_t count)
-{
-	int ret, cpu;
-	unsigned long val;
-
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 1)
-		return -EINVAL;
-	sanitize_min_max(val, 1, sleeper_data.max_cpus_online);
-	sleeper_data.min_cpus_online = val;
-
-	return count;
-}
-
 static ssize_t show_up_threshold(struct device *dev,
 				    struct device_attribute *msm_sleeper_attrs,
 				    char *buf)
@@ -369,16 +318,12 @@ static ssize_t store_down_count_max(struct device *dev,
 static DEVICE_ATTR(enabled, 0644, show_enable_hotplug, store_enable_hotplug);
 static DEVICE_ATTR(up_threshold, 0644, show_up_threshold, store_up_threshold);
 static DEVICE_ATTR(plug_all, 0644, show_plug_all, store_plug_all);
-static DEVICE_ATTR(max_cpus_online, 0644, show_max_cpus_online, store_max_cpus_online);
-static DEVICE_ATTR(min_cpus_online, 0644, show_min_cpus_online, store_min_cpus_online);
 static DEVICE_ATTR(up_count_max, 0644, show_up_count_max, store_up_count_max);
 static DEVICE_ATTR(down_count_max, 0644, show_down_count_max, store_down_count_max);
 
 static struct attribute *msm_sleeper_attrs[] = {
 	&dev_attr_up_threshold.attr,
 	&dev_attr_plug_all.attr,
-	&dev_attr_max_cpus_online.attr,
-	&dev_attr_min_cpus_online.attr,
 	&dev_attr_up_count_max.attr,
 	&dev_attr_down_count_max.attr,
 	&dev_attr_enabled.attr,
