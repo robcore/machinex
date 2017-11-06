@@ -115,7 +115,6 @@ static int battery_level;
 static bool booted = false;
 static bool pattern_active;
 static unsigned int current_led_mode;
-static bool is_full_charge;
 
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 					u8 ledcc);
@@ -533,8 +532,10 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (is_full_charge && mode == CHARGING)
+	if (battery_level = BATTERY_FULL && mode == CHARGING)
 		mode = FULLY_CHARGED;
+	if (battery_level < BATTERY_FULL && mode == FULLY_CHARGED)
+		mode = CHARGING;
 
 	current_led_mode = mode;
 
@@ -604,7 +605,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 		case BATTERY_MIDHIGH:
 				if (breathing_leds) {
 					leds_on(LED_R, true, true, 0x70);
-					leds_on(LED_G, true, true, 0xD1);
+					leds_on(LED_G, true, true, 0xCA);
 					leds_on(LED_B, true, true, 0x0E);
 					leds_set_slope_mode(client, LED_R,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
@@ -614,14 +615,14 @@ static void an30259a_start_led_pattern(unsigned int mode)
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
 					leds_on(LED_R, true, false, 0x70);
-					leds_on(LED_G, true, false, 0xD1);
+					leds_on(LED_G, true, false, 0xCA);
 					leds_on(LED_B, true, false, 0x0E);
 				}
 				break;
 		case BATTERY_HIGH:
 				if (breathing_leds) {
-					leds_on(LED_R, true, true, 0x14);
-					leds_on(LED_G, true, true, 0xE1);
+					leds_on(LED_R, true, true, 0x4B);
+					leds_on(LED_G, true, true, 0xCF);
 					leds_on(LED_B, true, true, 0x4F);
 					leds_set_slope_mode(client, LED_R,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
@@ -630,8 +631,8 @@ static void an30259a_start_led_pattern(unsigned int mode)
 					leds_set_slope_mode(client, LED_B,
 							0, 15, 10, 0, 2, 2, 1, 1, 1, 1);
 				} else {
-					leds_on(LED_R, true, false, 0x14);
-					leds_on(LED_G, true, false, 0xE1);
+					leds_on(LED_R, true, false, 0x4B);
+					leds_on(LED_G, true, false, 0xCF);
 					leds_on(LED_B, true, false, 0x4F);
 				}
 				break;
@@ -801,26 +802,15 @@ void send_led_full_msg(int level)
 
 	wake_lock(&ledlock);
 	if (battery_level == BATTERY_FULL) {
-		is_full_charge = true;
 		if (current_led_mode == CHARGING &&
 			is_charger_connected)
 			an30259a_start_led_pattern(FULLY_CHARGED);
-		wake_unlock(&ledlock);
-		return;
-	}
-
-	is_full_charge = false;
-
-	if (battery_level >= BATTERY_LOW && battery_level <= BATTERY_HIGH &&
+	} else if (battery_level >= BATTERY_LOW && battery_level <= BATTERY_HIGH &&
 		current_led_mode == CHARGING &&
 		is_charger_connected) {
 		an30259a_start_led_pattern(CHARGING);
-		wake_unlock(&ledlock);
-		return;
 	}
-
-	if (wake_lock_active(&ledlock))
-		wake_unlock(&ledlock);
+	wake_unlock(&ledlock);
 }
 		
 /* Added for led common class */
