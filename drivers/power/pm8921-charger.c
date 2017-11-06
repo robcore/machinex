@@ -5082,12 +5082,14 @@ static struct platform_driver pm8921_charger_driver = {
 
 static int __init pm8921_charger_init(void)
 {
+	wake_lock_init(&pm8921_wake_lock, WAKE_LOCK_SUSPEND, "pm8921_changed");
 	return platform_driver_register(&pm8921_charger_driver);
 }
 
 static void __exit pm8921_charger_exit(void)
 {
 	platform_driver_unregister(&pm8921_charger_driver);
+	wake_lock_destroy(&pm8921_wake_lock);
 }
 
 late_initcall(pm8921_charger_init);
