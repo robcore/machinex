@@ -179,36 +179,18 @@ static int try_psy_changed(struct power_supply *psy)
 	return 0;
 }
 
-void power_supply_changed(struct power_supply *psy, bool needs_wake)
+void power_supply_changed(struct power_supply *psy)
 {
-display_check:
-	if (!is_display_on())
-		goto try_again;
-
-	if (needs_wake) {
-		if (!wake_trylock(&psy->work_wake_lock)) {
-			mdelay(1000);
-			goto display_check;
-		}
-		get_psy_changed(psy);
-		class_for_each_device(power_supply_class, NULL, psy,
-				      __power_supply_changed_work);
-		power_supply_update_leds(psy);
-		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-		put_psy_changed(psy);
-		wake_unlock(&psy->work_wake_lock);
-	} else {
 try_again:
-		if (!try_psy_changed(psy)) {
-			mdelay(1000);
-			goto display_check;
-		}
-		class_for_each_device(power_supply_class, NULL, psy,
-				      __power_supply_changed_work);
-		power_supply_update_leds(psy);
-		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
-		put_psy_changed(psy);
+	if (!try_psy_changed(psy)) {
+		mdelay(10);
+		goto try_again;
 	}
+	class_for_each_device(power_supply_class, NULL, psy,
+			      __power_supply_changed_work);
+	power_supply_update_leds(psy);
+	kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
+	put_psy_changed(psy);
 }
 EXPORT_SYMBOL_GPL(power_supply_changed);
 
