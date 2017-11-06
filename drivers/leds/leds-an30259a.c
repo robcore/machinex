@@ -532,7 +532,7 @@ static void an30259a_start_led_pattern(unsigned int mode)
 	struct work_struct *reset = 0;
 	client = b_client;
 
-	if (battery_level = BATTERY_FULL && mode == CHARGING)
+	if (battery_level == BATTERY_FULL && mode == CHARGING)
 		mode = FULLY_CHARGED;
 	if (battery_level < BATTERY_FULL && mode == FULLY_CHARGED)
 		mode = CHARGING;
