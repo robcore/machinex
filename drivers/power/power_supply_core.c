@@ -334,9 +334,11 @@ int power_supply_register(struct device *parent, struct power_supply *psy)
 	if (rc)
 		goto create_triggers_failed;
 
-	power_supply_changed(psy, true);
+	wake_lock(&psy->work_wake_lock);
+	power_supply_changed(psy);
+	wake_unlock(&psy->work_wake_lock);
 
-	goto success;
+	return rc;
 
 create_triggers_failed:
 	wake_lock_destroy(&psy->work_wake_lock);
@@ -344,7 +346,7 @@ create_triggers_failed:
 kobject_set_name_failed:
 device_add_failed:
 	put_device(dev);
-success:
+
 	return rc;
 }
 EXPORT_SYMBOL_GPL(power_supply_register);
