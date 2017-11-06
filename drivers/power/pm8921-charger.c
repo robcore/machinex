@@ -3001,7 +3001,7 @@ static irqreturn_t fastchg_irq_handler(int irq, void *data)
 						(chip->btc_delay_ms)));
 	}
 	changelock(1);
-	power_supply_changed(&chip->batt_psy, false);
+	power_supply_changed(&chip->batt_psy);
 	changelock(0);
 	bms_notify_check(chip);
 	return IRQ_HANDLED;
