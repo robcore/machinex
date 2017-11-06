@@ -1,8 +1,8 @@
 #include <linux/mount.h>
 #include <linux/seq_file.h>
 #include <linux/poll.h>
-#include <linux/ns_common.h>
 #include <linux/fs_pin.h>
+#include <linux/ns_common.h>
 
 struct mnt_namespace {
 	atomic_t		count;
@@ -117,6 +117,7 @@ static inline void unlock_mount_hash(void)
 }
 
 struct proc_mounts {
+	struct seq_file m;
 	struct mnt_namespace *ns;
 	struct path root;
 	int (*show)(struct seq_file *, struct vfsmount *);
@@ -124,6 +125,8 @@ struct proc_mounts {
 	u64 cached_event;
 	loff_t cached_index;
 };
+
+#define proc_mounts(p) (container_of((p), struct proc_mounts, m))
 
 extern const struct seq_operations mounts_op;
 
