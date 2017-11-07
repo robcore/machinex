@@ -72,20 +72,6 @@ obj-$(CONFIG_CPU_FREQ_GOV_HYPERX)	   += cpufreq_hyperx.o
 obj-$(CONFIG_CPU_FREQ_GOV_XPERIENCE)	+= cpufreq_xperience.o
 obj-$(CONFIG_CPU_FREQ_GOV_WHISKYACTIVE)	+= cpufreq_whiskyactive.o
 
-obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
-obj-$(CONFIG_MSM_HOTPLUG) += msm_hotplug.o
-obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
-obj-$(CONFIG_MSM_SLEEPER) += msm_sleeper.o
-obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
-obj-$(CONFIG_BLU_PLUG) += blu_plug.o
-obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
-obj-$(CONFIG_AUTOSMP)			+= autosmp.o
-obj-$(CONFIG_MX_HOTPLUG)		+= mx_hotplug.o
-obj-$(CONFIG_THUNDERPLUG_CONTROL) += thunderplug.o
-obj-$(CONFIG_LAZYPLUG)			+= lazyplug.o
-CFLAGS_lazyplug.o			+= -finline-functions
-obj-$(CONFIG_USERSPACE_HOTPLUG) += userspace_hotplug.o
-
 obj-$(CONFIG_GENERIC_CPUFREQ_CPU0)	+= cpufreq-cpu0.o
 
 ##################################################################################
