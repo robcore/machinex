@@ -38,7 +38,6 @@
 #define DEFAULT_SAMPLING_RATE INTELLI_MS(250UL)
 #define INPUT_INTERVAL INTELLI_MS(500UL)
 #define BOOST_LOCK_DUR INTELLI_MS(500UL)
-#define DEFAULT_NR_CPUS_BOOSTED (DEFAULT_MAX_CPUS_ONLINE)
 #define DEFAULT_NR_FSHIFT (DEFAULT_MAX_CPUS_ONLINE - 1)
 #define DEFAULT_DOWN_LOCK_DUR INTELLI_MS(500UL)
 #define DEFAULT_HYSTERESIS (NR_CPUS << 1)
@@ -78,8 +77,6 @@ static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
 /* HotPlug Driver controls */
 static unsigned int intelli_plug_active = 0;
 static DEFINE_RWLOCK(ips_lock);
-
-static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 
 static unsigned long full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
@@ -783,9 +780,6 @@ void intelli_plug_active_eval_fn(unsigned int status)
 		intelliput();
 }
 
-mx_show_one(cpus_boosted);
-mx_show_one(min_cpus_online);
-mx_show_one(max_cpus_online);
 mx_show_long(full_mode_profile);
 mx_show_one(cpu_nr_run_threshold);
 mx_show_one(debug_intelli_plug);
@@ -798,7 +792,6 @@ mx_show_long(def_sampling_ms);
 mx_show_one(high_load_threshold);
 mx_show_one(target_cpus);
 
-store_one_clamp(cpus_boosted, 0, max_cpus_online);
 store_one_clamp(debug_intelli_plug, 0, 1);
 store_one_clamp(high_load_threshold, 0, MAX_LOAD_FREQ);
 mx_store_one_long(full_mode_profile, 0, 4);
@@ -840,7 +833,6 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 }
 
 MX_ATTR_RW(intelli_plug_active);
-MX_ATTR_RW(cpus_boosted);
 MX_ATTR_RW(full_mode_profile);
 MX_ATTR_RO(cpu_nr_run_threshold);
 MX_ATTR_RW(boost_lock_duration);
@@ -855,7 +847,6 @@ MX_ATTR_RO(target_cpus);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
-	&cpus_boosted_attr.attr,
 	&full_mode_profile_attr.attr,
 	&cpu_nr_run_threshold_attr.attr,
 	&boost_lock_duration_attr.attr,

@@ -42,15 +42,16 @@ enum {
 	BRICKED_HOTPLUG = 3,
 	MSM_SLEEPER = 4,
 	LAZYPLUG = 5,
-	BLU_PLUG = 6,
-	UPLUG = 7,
-	DISABLED = 8,
+	UPLUG = 6,
+	DISABLED = 7,
 };
 
-unsigned int hotplug_driver = DISABLED;
+static unsigned int hotplug_driver = DISABLED;
 unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
+unsigned int cpus_boosted = NR_CPUS;
 
+mx_show_one(cpus_boosted);
 mx_show_one(hotplug_driver);
 mx_show_one(min_cpus_online);
 mx_show_one(max_cpus_online);
@@ -187,11 +188,13 @@ static ssize_t store_max_cpus_online(struct kobject *kobj,
 MX_ATTR_RW(hotplug_driver);
 MX_ATTR_RW(max_cpus_online);
 MX_ATTR_RW(min_cpus_online);
+MX_ATTR_RW(cpus_boosted);
 
 static struct attribute *omniplug_attributes[] = {
 	&hotplug_driver_attr.attr,
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
+	&cpus_boosted_attr.attr,
 	NULL,
 };
 

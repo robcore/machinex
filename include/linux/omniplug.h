@@ -44,6 +44,7 @@
 #define DEFAULT_MAX_CPUS_ONLINE NR_CPUS
 extern unsigned int min_cpus_online;
 extern unsigned int max_cpus_online;
+extern unsigned int cpus_boosted;
 
 /*Alucard*/
 void cpus_hotplugging(unsigned int status);

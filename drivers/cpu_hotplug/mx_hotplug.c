@@ -58,7 +58,6 @@ static unsigned long secondgear_rpm = 35ul;
 static unsigned long firstgear_rpm = 20ul;
 
 static unsigned long sampling_rate = MX_SAMPLE_RATE;
-static unsigned int cpus_boosted = NR_CPUS;
 unsigned long air_to_fuel;
 unsigned long current_rpm;
 static unsigned long boost_timeout = BOOST_LENGTH;
@@ -401,49 +400,8 @@ void ignition(unsigned int status)
 	}
 }
 
-mx_show_one(cpus_boosted);
-
-static ssize_t store_cpus_boosted(struct kobject *kobj,
-				     struct kobj_attribute *attr,
-				     const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	sanitize_min_max(val, min_cpus_online, max_cpus_online);
-
-	cpus_boosted = val;
-
-	return count;
-}
-
-MX_ATTR_RW(cpus_boosted);
-
-static struct attribute *mx_hotplug_attributes[] = {
-	&cpus_boosted_attr.attr,
-	NULL,
-};
-
-static struct attribute_group mx_hotplug_attr_group = {
-	.attrs = mx_hotplug_attributes,
-	.name = "mx_hotplug",
-};
-
 static int mx_hotplug_init(void)
 {
-	int sysfs_result;
-
-	sysfs_result = sysfs_create_group(kernel_kobj,
-		&mx_hotplug_attr_group);
-
-	if (sysfs_result) {
-		pr_info("%s group create failed!\n", __FUNCTION__);
-		return -ENOMEM;
-	}
 	return 0;
 }
 
