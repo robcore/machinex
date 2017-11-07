@@ -47,20 +47,20 @@ extern unsigned int max_cpus_online;
 extern unsigned int cpus_boosted;
 
 /*Alucard*/
-void cpus_hotplugging(unsigned int status);
+extern void cpus_hotplugging(unsigned int status);
 /*Intelliplug*/
-void intelli_plug_active_eval_fn(unsigned int status);
+extern void intelli_plug_active_eval_fn(unsigned int status);
 /*mx hotplug*/
-void ignition(unsigned int status);
+extern void ignition(unsigned int status);
 /*MSM Sleeper*/
-void start_stop_sleeper(int enabled);
+extern void start_stop_sleeper(int enabled);
 /*Bricked*/
-int bricked_hotplug_start(void);
-void bricked_hotplug_stop(void);
+extern int bricked_hotplug_start(void);
+extern void bricked_hotplug_stop(void);
 /*lazy*/
-void start_stop_lazy_plug(unsigned int enabled);
+extern void start_stop_lazy_plug(unsigned int enabled);
 /*blu*/
-void dyn_hp_init_exit(unsigned int enabled);
+extern void dyn_hp_init_exit(unsigned int enabled);
 /*userspace*/
-void uplug_start_stop(unsigned int enabled);
+extern void uplug_start_stop(unsigned int enabled);
 #endif /* __LINUX_OMNIPLUG_H */
